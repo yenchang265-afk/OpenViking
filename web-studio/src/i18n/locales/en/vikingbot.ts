@@ -117,6 +117,7 @@ export default {
   intro:
     'Talk to VikingBot here, or connect it to your team’s messaging platform.',
   newChat: 'New conversation',
+  accountRequired: 'Select an account before managing bots',
   web: 'Web',
   feishu: 'Feishu',
   all: 'All',

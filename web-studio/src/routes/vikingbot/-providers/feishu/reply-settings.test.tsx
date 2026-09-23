@@ -10,7 +10,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, expect, it, vi } from 'vitest'
 import { ReplySettings } from './reply-settings'
 import type { Connection } from '../../-api'
-import zh from '#/i18n/locales/zh-CN/vikingbot'
+import zh from '#/i18n/locales/zh-TW/vikingbot'
 
 const update = vi.hoisted(() => vi.fn())
 vi.mock('../../-api', () => ({ updateConnectionSettings: update }))

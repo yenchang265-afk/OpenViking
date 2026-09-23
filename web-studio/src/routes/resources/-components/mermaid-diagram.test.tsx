@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MermaidDiagram } from './mermaid-diagram'
 
 const testContext = vi.hoisted(() => ({
-  locale: 'en' as 'en' | 'zh-CN',
+  locale: 'en' as 'en' | 'zh-TW',
   theme: 'light',
   translations: {
     en: {
@@ -18,15 +18,15 @@ const testContext = vi.hoisted(() => ({
       'filePreview.mermaid.showSource': 'Show Mermaid source',
       'filePreview.mermaid.unknownError': 'Unknown Mermaid rendering error.',
     },
-    'zh-CN': {
-      'filePreview.mermaid.diagramLabel': 'Mermaid 图表',
-      'filePreview.mermaid.errorDetails': '错误详情',
-      'filePreview.mermaid.loading': '正在渲染 Mermaid 图表...',
-      'filePreview.mermaid.renderFailed': '无法渲染 Mermaid 图表。',
-      'filePreview.mermaid.showSource': '查看 Mermaid 源码',
-      'filePreview.mermaid.unknownError': '未知的 Mermaid 渲染错误。',
+    'zh-TW': {
+      'filePreview.mermaid.diagramLabel': 'Mermaid 圖表',
+      'filePreview.mermaid.errorDetails': '錯誤詳情',
+      'filePreview.mermaid.loading': '正在渲染 Mermaid 圖表...',
+      'filePreview.mermaid.renderFailed': '無法渲染 Mermaid 圖表。',
+      'filePreview.mermaid.showSource': '檢視 Mermaid 原始碼',
+      'filePreview.mermaid.unknownError': '未知的 Mermaid 渲染錯誤。',
     },
-  } as Record<'en' | 'zh-CN', Record<string, string>>,
+  } as Record<'en' | 'zh-TW', Record<string, string>>,
 }))
 
 vi.mock('next-themes', () => ({
@@ -129,16 +129,16 @@ describe('MermaidDiagram', () => {
   })
 
   it('localizes an error while preserving its diagnostic and source', async () => {
-    testContext.locale = 'zh-CN'
+    testContext.locale = 'zh-TW'
 
     render(<MermaidDiagram chart="this is not a diagram" />)
 
     const alert = await screen.findByRole('alert')
-    expect(alert.textContent).toContain('无法渲染 Mermaid 图表。')
+    expect(alert.textContent).toContain('無法渲染 Mermaid 圖表。')
     expect(alert.textContent).toContain(
       'No diagram type detected matching given configuration',
     )
-    expect(alert.textContent).toContain('查看 Mermaid 源码')
+    expect(alert.textContent).toContain('檢視 Mermaid 原始碼')
     expect(alert.textContent).toContain('this is not a diagram')
   })
 })

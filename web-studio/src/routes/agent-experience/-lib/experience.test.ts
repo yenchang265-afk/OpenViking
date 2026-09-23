@@ -259,15 +259,15 @@ describe('last-seen tracking', () => {
 
 describe('formatTimestamp', () => {
   it('formats parseable timestamps', () => {
-    const formatted = formatTimestamp('2026-08-05T02:00:00Z', 'zh-CN')
+    const formatted = formatTimestamp('2026-08-05T02:00:00Z', 'zh-TW')
     expect(formatted).toBeTruthy()
-    expect(formatTimestamp('2026-08-05T02:00:00Z', 'zh-CN')).toBe(formatted)
+    expect(formatTimestamp('2026-08-05T02:00:00Z', 'zh-TW')).toBe(formatted)
   })
 
   it('returns undefined for missing or invalid values', () => {
-    expect(formatTimestamp(undefined, 'zh-CN')).toBeUndefined()
-    expect(formatTimestamp('', 'zh-CN')).toBeUndefined()
-    expect(formatTimestamp('not-a-date', 'zh-CN')).toBeUndefined()
+    expect(formatTimestamp(undefined, 'zh-TW')).toBeUndefined()
+    expect(formatTimestamp('', 'zh-TW')).toBeUndefined()
+    expect(formatTimestamp('not-a-date', 'zh-TW')).toBeUndefined()
   })
 })
 

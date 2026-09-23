@@ -179,10 +179,10 @@ describe('ResourceUploadProvider remote completion', () => {
         ),
       )
 
-      await i18n.changeLanguage('zh-CN')
+      await i18n.changeLanguage('zh-TW')
 
       await waitFor(() =>
-        expect(screen.getByTestId('task-error').textContent).toBe('处理失败'),
+        expect(screen.getByTestId('task-error').textContent).toBe('處理失敗'),
       )
     } finally {
       await i18n.changeLanguage(previousLanguage)
