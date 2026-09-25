@@ -20,7 +20,7 @@ const uploadMocks = vi.hoisted(() => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    i18n: { resolvedLanguage: 'zh-CN' },
+    i18n: { resolvedLanguage: 'zh-TW' },
     t: (key: string) => key,
   }),
 }))

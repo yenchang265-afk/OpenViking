@@ -4,7 +4,7 @@ import { OvClientError } from '#/lib/ov-client'
 import { runCompileCommand, runCompileSubmission } from './terminal'
 import { CompileCommandError } from './commands'
 import en from '#/i18n/locales/en/compile'
-import zh from '#/i18n/locales/zh-CN/compile'
+import zh from '#/i18n/locales/zh-TW/compile'
 
 const api = vi.hoisted(() => ({
   createCompile: vi.fn(),
@@ -29,13 +29,13 @@ describe('Compile terminal regressions', () => {
     ])
   })
 
-  it.each(['en', 'zh-CN'])(
+  it.each(['en', 'zh-TW'])(
     'localizes known statuses and errors in %s without echoing private args',
     async (lng) => {
       const i18n = createInstance()
       await i18n.init({
         lng,
-        resources: { en: { compile: en }, 'zh-CN': { compile: zh } },
+        resources: { en: { compile: en }, 'zh-TW': { compile: zh } },
         defaultNS: 'compile',
       })
       api.fetchCompileTask.mockResolvedValue({
@@ -48,7 +48,7 @@ describe('Compile terminal regressions', () => {
         'key',
         (status) => i18n.t(`statuses.${status}`, { defaultValue: status }),
       )
-      expect(result.body).toContain(lng === 'en' ? 'Running' : '运行中')
+      expect(result.body).toContain(lng === 'en' ? 'Running' : '執行中')
       expect(result.body).toContain('custom-stage')
       const input = `compile --from viking://resources/a --to viking://resources/b --skill viking://agent/skills/s --args='{"api_key":"private-example"}'`
       const error: unknown = await runCompileCommand(input, 'key').catch(
@@ -213,8 +213,8 @@ it('does not create after a failed recovery lookup or expired key', async () => 
 it('localizes known stages while preserving unknown provider stages', async () => {
   const i18n = createInstance()
   await i18n.init({
-    lng: 'zh-CN',
-    resources: { 'zh-CN': { compile: zh } },
+    lng: 'zh-TW',
+    resources: { 'zh-TW': { compile: zh } },
     defaultNS: 'compile',
   })
   const localizeStage = (stage: string) =>

@@ -15,7 +15,7 @@ const t = ((key: string) => key) as TFunction<'retrieval'>
 afterEach(cleanup)
 
 describe('RetrievalResults', () => {
-  it.each(['en', 'zh-CN'] as const)(
+  it.each(['en', 'zh-TW'] as const)(
     'sizes the metadata column to fit translated labels in %s',
     async (language) => {
       const i18n = createInstance()

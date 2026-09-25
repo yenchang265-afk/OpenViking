@@ -186,8 +186,8 @@ const NAV_SECTIONS = [
 const LANGUAGE_OPTIONS = [
   {
     shortLabel: '中',
-    title: '中文',
-    value: 'zh-CN',
+    title: '繁體中文',
+    value: 'zh-TW',
   },
   {
     shortLabel: 'EN',
@@ -203,7 +203,7 @@ function resolveLanguage(
   value: string | undefined,
 ): (typeof LANGUAGE_OPTIONS)[number]['value'] {
   if (value?.toLowerCase().startsWith('zh')) {
-    return 'zh-CN'
+    return 'zh-TW'
   }
 
   return 'en'
@@ -304,10 +304,10 @@ function AppShellInner({ children }: { children: React.ReactNode }) {
     i18n.resolvedLanguage ?? i18n.language,
   )
   const agentIntegrationsHref = `https://docs.openviking.ai/${
-    currentLanguage === 'zh-CN' ? 'zh' : 'en'
+    currentLanguage === 'zh-TW' ? 'zh' : 'en'
   }/agent-integrations/01-overview`
   const sdkApiHref = `https://docs.openviking.ai/${
-    currentLanguage === 'zh-CN' ? 'zh' : 'en'
+    currentLanguage === 'zh-TW' ? 'zh' : 'en'
   }/api/01-overview`
   const [crossDeviceVerifyOpen, setCrossDeviceVerifyOpen] =
     React.useState(false)

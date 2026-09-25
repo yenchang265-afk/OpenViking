@@ -9,7 +9,7 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { FeishuConnect } from './connect'
-import zh from '#/i18n/locales/zh-CN/vikingbot'
+import zh from '#/i18n/locales/zh-TW/vikingbot'
 
 const api = vi.hoisted(() => ({
   current: vi.fn(),

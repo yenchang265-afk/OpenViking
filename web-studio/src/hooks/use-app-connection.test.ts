@@ -24,10 +24,10 @@ describe('createConnectionError', () => {
       await i18n.changeLanguage('en')
       const english = createConnectionError('credentialMismatch').message
 
-      await i18n.changeLanguage('zh-CN')
+      await i18n.changeLanguage('zh-TW')
       const chinese = createConnectionError('credentialMismatch').message
 
-      expect(chinese).toBe('所选凭证与目标账号和用户不匹配。')
+      expect(chinese).toBe('所選憑證與目標帳號和使用者不匹配。')
       expect(chinese).not.toBe(english)
     } finally {
       await i18n.changeLanguage(originalLanguage)

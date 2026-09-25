@@ -5,7 +5,7 @@ import { I18nextProvider } from 'react-i18next'
 import type { ComponentType } from 'react'
 import type * as TanStackRouter from '@tanstack/react-router'
 import en from '#/i18n/locales/en/workspace'
-import zh from '#/i18n/locales/zh-CN/workspace'
+import zh from '#/i18n/locales/zh-TW/workspace'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   cleanup,
@@ -83,7 +83,7 @@ async function renderPage(lng = 'en') {
   const i18n = createInstance()
   await i18n.init({
     lng,
-    resources: { en, 'zh-CN': zh },
+    resources: { en, 'zh-TW': zh },
     interpolation: { escapeValue: false },
   })
   const queryClient = new QueryClient({
@@ -102,7 +102,7 @@ async function renderPage(lng = 'en') {
 
 function taskRows() {
   return screen.queryAllByRole('row', {
-    name: /^(View details for task |查看任务 )/,
+    name: /^(View details for task |檢視任務 )/,
   })
 }
 
@@ -163,7 +163,7 @@ describe('task status presentation', () => {
 
   it.each([
     ['en', 'Pending', 'Task status'],
-    ['zh-CN', '等待中', '任务状态'],
+    ['zh-TW', '等待中', '任務狀態'],
   ])(
     'renders and filters actual pending tasks in %s',
     async (lng, pendingLabel, filterLabel) => {
@@ -252,13 +252,13 @@ describe('session commit re-trigger feedback', () => {
       'no_messages',
       'No new task created: this session has no pending messages',
     ],
-    ['zh-CN', 'no_messages', '未创建新任务：该会话没有待提交消息'],
+    ['zh-TW', 'no_messages', '未建立新任務：該會話沒有待提交訊息'],
     [
       'en',
       'all_within_keep_window',
       'No new task created: this session commit was skipped',
     ],
-    ['zh-CN', 'all_within_keep_window', '未创建新任务：本次会话提交已跳过'],
+    ['zh-TW', 'all_within_keep_window', '未建立新任務：本次會話提交已跳過'],
     ['en', undefined, 'No new task created: this session commit was skipped'],
   ])(
     'reports skipped commits without success in %s (%s)',
@@ -271,7 +271,7 @@ describe('session commit re-trigger feedback', () => {
       const user = await renderPage(lng)
       await user.click(
         await screen.findByTitle(
-          lng === 'en' ? 'Re-trigger Task' : '重新发起任务',
+          lng === 'en' ? 'Re-trigger Task' : '重新發起任務',
         ),
       )
       await waitFor(() => expect(toast.info).toHaveBeenCalledWith(message))

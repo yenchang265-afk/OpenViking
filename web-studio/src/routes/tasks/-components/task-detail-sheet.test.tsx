@@ -15,7 +15,7 @@ import { I18nextProvider } from 'react-i18next'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import en from '#/i18n/locales/en/workspace'
-import zh from '#/i18n/locales/zh-CN/workspace'
+import zh from '#/i18n/locales/zh-TW/workspace'
 import { TaskDetailSheet } from './task-detail-sheet'
 import type { TaskRecord } from '../-lib/task-record'
 
@@ -110,7 +110,7 @@ describe('recorded task execution events', () => {
         JSON.stringify([{ ...task, resource_id: 'stale-private-session' }]),
       )
       await showDetail(language)
-      const title = language === 'en' ? 'Task execution log' : '任务执行日志'
+      const title = language === 'en' ? 'Task execution log' : '任務執行日誌'
       const events = await screen.findByRole('region', { name: title })
       expect(api.getTask).toHaveBeenCalledWith({
         path: { task_id: 'task-1' },
@@ -124,7 +124,7 @@ describe('recorded task execution events', () => {
       expect(events.textContent).not.toContain('WorkerThread')
       fireEvent.click(
         within(events).getByRole('button', {
-          name: language === 'en' ? 'Copy events' : '复制事件',
+          name: language === 'en' ? 'Copy events' : '複製事件',
         }),
       )
       await waitFor(() => expect(api.copy).toHaveBeenCalledOnce())
@@ -134,9 +134,9 @@ describe('recorded task execution events', () => {
       expect(copied).toContain('2026-09-09T01:00:59.123Z')
       expect(copied).not.toContain('2026-09-09T01:00:00Z')
       expect(copied).toContain(
-        language === 'en' ? '2 earlier events' : '2 条事件',
+        language === 'en' ? '2 earlier events' : '2 條事件',
       )
-      expect(copied).toContain(language === 'en' ? 'tracking began' : '仅包含')
+      expect(copied).toContain(language === 'en' ? 'tracking began' : '僅包含')
     },
   )
 

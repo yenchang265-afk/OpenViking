@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import en from '#/i18n/locales/en/workspace'
-import zh from '#/i18n/locales/zh-CN/workspace'
+import zh from '#/i18n/locales/zh-TW/workspace'
 import { getTaskPipelineGroups, getTaskPipelineSteps } from './task-pipeline'
 import type { PipelineTranslate } from './task-pipeline'
 import type { TaskRecord } from './task-record'
@@ -35,7 +35,7 @@ function namesOf(task: TaskRecord, t?: PipelineTranslate): string[] {
 describe('task pipeline labels', () => {
   it.each([
     ['en', en.tasksPage],
-    ['zh-CN', zh.tasksPage],
+    ['zh-TW', zh.tasksPage],
   ])('resolves every step key to %s text', (_lng, namespace) => {
     const t = (key: string) =>
       key.split('.').reduce<any>((node, part) => node?.[part], namespace) ?? key
