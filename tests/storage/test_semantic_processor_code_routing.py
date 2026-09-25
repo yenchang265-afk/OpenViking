@@ -65,6 +65,24 @@ async def _generate(extraction=None, vlm_available=True):
     return result, config
 
 
+async def _generate_with_patched_extractor():
+    config = _config()
+    fs = MagicMock()
+    fs.read_file = AsyncMock(return_value="def run():\n    return 1\n")
+    with (
+        patch(
+            "openviking.storage.queuefs.semantic_processor.get_openviking_config",
+            return_value=config,
+        ),
+        patch("openviking.storage.queuefs.semantic_processor.get_viking_fs", return_value=fs),
+    ):
+        return await SemanticProcessor()._generate_text_summary(
+            "viking://resources/sample.py",
+            "sample.py",
+            asyncio.Semaphore(1),
+        )
+
+
 @pytest.mark.asyncio
 async def test_useful_skeleton_skips_llm_even_when_vlm_unavailable():
     extraction = SkeletonExtractionResult(
@@ -102,6 +120,28 @@ async def test_missing_skeleton_without_vlm_returns_empty_summary():
     result, config = await _generate(extraction, vlm_available=False)
     assert result["summary"] == ""
     config.vlm.get_completion_async.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_skeleton_extraction_runs_off_the_event_loop_thread():
+    import threading
+
+    loop_thread = threading.get_ident()
+    seen_threads = []
+
+    def _extract(*_args, **_kwargs):
+        seen_threads.append(threading.get_ident())
+        return SkeletonExtractionResult(
+            text="# sample.py [Python]\n\ndef run()",
+            provider="process",
+            should_fallback_to_llm=False,
+            reason="process extraction succeeded",
+        )
+
+    with patch("openviking.parse.parsers.code.ast.extract_skeleton_result", side_effect=_extract):
+        await _generate_with_patched_extractor()
+
+    assert seen_threads and seen_threads[0] != loop_thread
 
 
 def test_cuda_extensions_are_dispatched_as_code():

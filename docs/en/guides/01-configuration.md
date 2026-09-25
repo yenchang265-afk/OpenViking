@@ -884,7 +884,7 @@ Configuration for Feishu/Lark cloud document parsing. See [Resources](../api/02-
 
 ### code
 
-Code skeleton extraction is built into the code summary pipeline and has no parser-level configuration. OpenViking first uses maintained `tags.scm` queries when one exists for the language; if no corresponding `tags.scm` exists, it uses `tree-sitter-language-pack.process()`; when the current extraction route produces no useful skeleton, it invokes `semantic.code_summary` as fallback.
+Code skeleton extraction is built into the code summary pipeline and has no parser-level configuration. OpenViking first uses maintained `tags.scm` queries when one exists for the language; if no corresponding `tags.scm` exists, it uses `tree-sitter-language-pack.process()`; when the current extraction route produces no useful skeleton, it invokes `semantic.code_summary` as fallback. If `tree-sitter-language-pack` cannot download a parser (for example behind a firewall), bundled grammars are used for common languages; no configuration is needed.
 
 The remaining `code` configuration fields are for remote code resource network guards and code-hosting allowlists. See [Code Skeleton Extraction](../concepts/06-extraction.md#code-skeleton-extraction) for the extraction route.
 

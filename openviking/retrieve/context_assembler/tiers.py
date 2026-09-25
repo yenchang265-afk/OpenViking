@@ -115,7 +115,10 @@ def overview_from_content(candidate: Candidate, content: str) -> str:
         except AbstractOverviewFormatError:
             return ""
     if _is_code_uri(candidate.base_uri):
-        extraction = extract_skeleton_result(filename_from_uri(candidate.base_uri), content)
+        # Read path: use cached parsers only, never wait on a download.
+        extraction = extract_skeleton_result(
+            filename_from_uri(candidate.base_uri), content, allow_download=False
+        )
         if extraction.text:
             return extraction.text.strip()
     if _is_memory_uri(candidate.base_uri):

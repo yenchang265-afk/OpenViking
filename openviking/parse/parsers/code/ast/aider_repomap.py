@@ -46,8 +46,8 @@ def _load_tag_query(lang: str) -> Optional[str]:
     return query_scm.strip() or None
 
 
-def has_tag_query(file_name: str) -> bool:
-    """Return whether a maintained tags query exists for this file."""
+def tag_query_language(file_name: str) -> Optional[str]:
+    """Return the parser name for a file with a maintained tags query, or None."""
 
     try:
         from grep_ast import filename_to_lang
@@ -55,8 +55,16 @@ def has_tag_query(file_name: str) -> bool:
         lang = filename_to_lang(Path(file_name).name or "source.txt")
     except Exception as exc:
         logger.debug("Unable to detect tags-query language for '%s': %s", file_name, exc)
-        return False
-    return bool(lang and _load_tag_query(lang))
+        return None
+    if not lang or not _load_tag_query(lang):
+        return None
+    return _query_language_name(lang)
+
+
+def has_tag_query(file_name: str) -> bool:
+    """Return whether a maintained tags query exists for this file."""
+
+    return tag_query_language(file_name) is not None
 
 
 def _extract_with_grep_ast(

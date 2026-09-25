@@ -1229,7 +1229,8 @@ class SemanticProcessor(DequeueHandlerBase):
         if file_type == FILE_TYPE_CODE:
             from openviking.parse.parsers.code.ast import extract_skeleton_result
 
-            extraction = extract_skeleton_result(file_name, content)
+            # May wait on a one-time parser download; keep it off the event loop.
+            extraction = await asyncio.to_thread(extract_skeleton_result, file_name, content)
             if extraction.text:
                 skeleton_text = extraction.text
                 max_skeleton_chars = config.semantic.max_skeleton_chars

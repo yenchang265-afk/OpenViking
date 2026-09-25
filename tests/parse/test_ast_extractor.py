@@ -6,7 +6,6 @@ from unittest.mock import Mock
 import pytest
 
 from openviking.parse.parsers.code.ast import extract_skeleton_result
-from openviking.parse.parsers.code.ast.providers import is_skeleton_useful
 from openviking.parse.parsers.code.ast.aider_repomap import (
     _clean_repromap_rendered,
     _definition_lines,
@@ -16,9 +15,35 @@ from openviking.parse.parsers.code.ast.process_engine import (
     extract_process_skeleton,
     supports_process_skeleton,
 )
+from openviking.parse.parsers.code.ast.providers import is_skeleton_useful, supports_code_skeleton
 
 
-def test_tags_query_wins_without_calling_process(monkeypatch):
+@pytest.fixture
+def pack_available(monkeypatch):
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.ensure_pack_language",
+        lambda _lang, **_kwargs: True,
+    )
+
+
+@pytest.fixture
+def pack_unavailable(monkeypatch):
+    """Simulate a firewall: language-pack parsers cannot be downloaded."""
+
+    def _fail(*_args, **_kwargs):
+        raise AssertionError("language pack must not be used when unavailable")
+
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.ensure_pack_language",
+        lambda _lang, **_kwargs: False,
+    )
+    monkeypatch.setattr("openviking.parse.parsers.code.ast.providers._extract_with_grep_ast", _fail)
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.extract_process_skeleton", _fail
+    )
+
+
+def test_tags_query_wins_without_calling_process(pack_available, monkeypatch):
     process = Mock()
     monkeypatch.setattr(
         "openviking.parse.parsers.code.ast.providers.has_tag_query",
@@ -40,7 +65,7 @@ def test_tags_query_wins_without_calling_process(monkeypatch):
     process.assert_not_called()
 
 
-def test_low_quality_tags_request_llm_fallback_without_calling_process(monkeypatch):
+def test_low_quality_tags_request_llm_fallback_without_calling_process(pack_available, monkeypatch):
     process = Mock()
     process.return_value = "# sample.cpp [C/C++]\n\nclass Widget"
     monkeypatch.setattr(
@@ -65,7 +90,7 @@ def test_low_quality_tags_request_llm_fallback_without_calling_process(monkeypat
     process.assert_not_called()
 
 
-def test_no_tags_uses_process(monkeypatch):
+def test_no_tags_uses_process(pack_available, monkeypatch):
     process = Mock()
     process.return_value = "# sample.py [Python]\n\ndef run()"
     monkeypatch.setattr(
@@ -83,7 +108,7 @@ def test_no_tags_uses_process(monkeypatch):
     assert result.text
 
 
-def test_both_extractors_unavailable_requests_llm_fallback(monkeypatch):
+def test_both_extractors_unavailable_requests_llm_fallback(pack_available, monkeypatch):
     process = Mock()
     process.return_value = None
     monkeypatch.setattr(
@@ -100,6 +125,86 @@ def test_both_extractors_unavailable_requests_llm_fallback(monkeypatch):
     assert result.text is None
     assert result.provider == "llm"
     assert result.should_fallback_to_llm
+
+
+@pytest.mark.parametrize(
+    ("file_name", "content", "symbol"),
+    [
+        ("sample.py", "def build_order():\n    return 1\n", "def build_order():"),
+        ("sample.c", "int build_order(void) {\n    return 1;\n}\n", "int build_order(void) {"),
+        ("Order.cs", "class Order {\n    int Build() { return 1; }\n}\n", "class Order {"),
+    ],
+)
+def test_unavailable_pack_uses_bundled_grammar(pack_unavailable, file_name, content, symbol):
+    result = extract_skeleton_result(file_name, content)
+
+    assert result.provider == "bundled"
+    assert not result.should_fallback_to_llm
+    assert symbol in result.text
+
+
+def test_unavailable_pack_without_bundled_grammar_requests_llm_fallback(pack_unavailable):
+    result = extract_skeleton_result("sample.rb", "def build_order\n  1\nend\n")
+
+    assert result.text is None
+    assert result.provider == "llm"
+    assert result.should_fallback_to_llm
+    assert "language pack parser unavailable" in result.reason
+
+
+def test_unavailable_pack_and_empty_bundled_skeleton_requests_llm_fallback(pack_unavailable):
+    result = extract_skeleton_result("sample.py", "print('hello')\n")
+
+    assert result.provider == "llm"
+    assert result.should_fallback_to_llm
+    assert "bundled grammar produced no useful skeleton" in result.reason
+
+
+def test_available_pack_is_preferred_over_bundled_grammar(pack_available, monkeypatch):
+    bundled = Mock()
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.has_tag_query", lambda _name: False
+    )
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.extract_process_skeleton",
+        lambda *_args, **_kwargs: "# sample.py [Python]\n\ndef run()",
+    )
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.extract_bundled_skeleton", bundled
+    )
+
+    result = extract_skeleton_result("sample.py", "def run():\n    pass\n")
+
+    assert result.provider == "process"
+    bundled.assert_not_called()
+
+
+def test_download_disallowed_is_forwarded_to_pack_check(monkeypatch):
+    calls = []
+
+    def _ensure(lang, *, allow_download=True):
+        calls.append((lang, allow_download))
+        return False
+
+    monkeypatch.setattr("openviking.parse.parsers.code.ast.providers.ensure_pack_language", _ensure)
+
+    result = extract_skeleton_result("sample.py", "def run():\n    pass\n", allow_download=False)
+
+    assert calls == [("python", False)]
+    assert result.provider == "bundled"
+
+
+def test_supports_code_skeleton_covers_bundled_languages(monkeypatch):
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.has_tag_query", lambda _name: False
+    )
+    monkeypatch.setattr(
+        "openviking.parse.parsers.code.ast.providers.supports_process_skeleton",
+        lambda _name: False,
+    )
+
+    assert supports_code_skeleton("sample.py")
+    assert not supports_code_skeleton("sample.rb")
 
 
 @pytest.mark.parametrize(
