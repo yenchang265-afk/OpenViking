@@ -106,6 +106,30 @@ describe('UploadResourceFields', () => {
     })
   })
 
+  it('packages a dropped folder into a single zip entry', async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={(key) => key}
+      />,
+    )
+
+    const withPath = (file: File, path: string) =>
+      Object.defineProperty(file, 'path', { value: path })
+    mocks.onDrop?.([
+      withPath(new File(['a'], 'a.md'), '/docs/a.md'),
+      withPath(new File(['b'], 'b.md'), '/docs/sub/b.md'),
+    ])
+
+    await waitFor(() => expect(current).toHaveLength(1))
+    expect(current[0].file.name).toBe('docs.zip')
+    expect(current[0].fileType).toBe('application/zip')
+  })
+
   it('removes from the latest files after an asynchronous append', async () => {
     const existing: SelectedUploadFile = {
       id: 'existing',
