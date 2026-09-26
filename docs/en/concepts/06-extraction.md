@@ -153,6 +153,10 @@ Code skeleton extraction follows this fixed order:
 2. If no corresponding `tags.scm` exists, use `tree-sitter-language-pack.process()`.
 3. Invoke `semantic.code_summary` only as fallback when the extraction route produces no useful skeleton.
 
+Steps 1 and 2 need the language's parser from `tree-sitter-language-pack`, which downloads parsers from GitHub on first use. When the parser is not cached and cannot be downloaded (for example behind a firewall), OpenViking uses the grammars bundled as pip dependencies instead: Python, JavaScript, TypeScript/TSX, Java, C/C++, Rust, Go, C#, PHP, and Lua. The skeleton then lists each definition's source line. Other languages fall back to `semantic.code_summary`.
+
+The manifest lookup and download run under a 15-second timeout. After the first failure, OpenViking stops trying to download for the rest of the process and uses only parsers that are already cached, so a firewall that silently drops traffic delays at most one file.
+
 This routing applies to short and long code files alike.
 
 ## Three Context Types Extraction
