@@ -90,8 +90,9 @@ const resources = {
     description:
       'Upload a local file to the server. File type is auto-detected via magic bytes.',
     dropzone: {
-      title: 'Drag & drop a file here, or click to select',
-      hint: 'Up to 10 files at a time.',
+      title: 'Drag & drop files or folders here, or click to select',
+      hint: 'Up to 10 files at a time. Each folder is uploaded as one resource.',
+      selectFolder: 'Select folder',
       supportedFormats:
         'Supports PDF, Word, PPTX, Excel, Markdown, code files, images, and more',
     },
@@ -131,6 +132,10 @@ const resources = {
     fileBlocked: '"{{name}}" is not a supported file type.',
     fileTooLarge: '"{{name}}" exceeds the {{size}} file size limit.',
     tooManyFiles: 'Only the first {{count}} files were kept.',
+    folderEmpty: '"{{name}}" has no supported files to upload.',
+    folderSkipped:
+      'Skipped {{count}} hidden or unsupported file(s) in "{{name}}".',
+    folderZipFailed: 'Could not package "{{name}}" for upload.',
     error: 'Request Failed',
     dirPicker: {
       scope: 'Resource scope',

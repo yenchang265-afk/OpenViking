@@ -1,5 +1,5 @@
 import { fileTypeFromBlob } from 'file-type'
-import { FileIcon, Upload } from 'lucide-react'
+import { FileIcon, FolderUp, Upload } from 'lucide-react'
 import type { TFunction } from 'i18next'
 import { useCallback, useRef } from 'react'
 import type { Dispatch, SetStateAction } from 'react'
@@ -14,6 +14,12 @@ import {
   formatFileSize,
   isBlockedFile,
 } from '../-lib/upload'
+import {
+  getFolderSize,
+  groupFolderFiles,
+  zipFolder,
+} from '../-lib/folder-upload'
+import type { FolderGroup } from '../-lib/folder-upload'
 
 export type SelectedUploadFile = {
   id: string
@@ -46,6 +52,46 @@ async function detectFileType(file: File): Promise<string | null> {
   }
 }
 
+async function packageFolder(
+  folder: FolderGroup,
+  t: TFunction<'addResource'>,
+): Promise<SelectedUploadFile | null> {
+  if (folder.skippedCount > 0) {
+    toast(
+      t('folderSkipped', { name: folder.name, count: folder.skippedCount }),
+      {
+        duration: 2500,
+      },
+    )
+  }
+  if (folder.entries.length === 0) {
+    toast.error(t('folderEmpty', { name: folder.name }), { duration: 2500 })
+    return null
+  }
+  if (getFolderSize(folder) > MAX_UPLOAD_FILE_SIZE_BYTES) {
+    toast.error(
+      t('fileTooLarge', {
+        name: `${folder.name}/`,
+        size: formatFileSize(MAX_UPLOAD_FILE_SIZE_BYTES),
+      }),
+      { duration: 2500 },
+    )
+    return null
+  }
+  try {
+    return {
+      id: createLocalFileId(),
+      file: await zipFolder(folder),
+      fileType: 'application/zip',
+    }
+  } catch {
+    toast.error(t('folderZipFailed', { name: folder.name }), {
+      duration: 2500,
+    })
+    return null
+  }
+}
+
 export function UploadResourceFields({
   files,
   onFilesChange,
@@ -67,8 +113,14 @@ export function UploadResourceFields({
     (nextFiles: File[]) => {
       void (async () => {
         const accepted: SelectedUploadFile[] = []
+        const { looseFiles, folders } = groupFolderFiles(nextFiles)
 
-        for (const file of nextFiles) {
+        for (const folder of folders) {
+          const packaged = await packageFolder(folder, t)
+          if (packaged) accepted.push(packaged)
+        }
+
+        for (const file of looseFiles) {
           if (isBlockedFile(file.name)) {
             toast.error(t('fileBlocked', { name: file.name }), {
               duration: 2500,
@@ -114,6 +166,8 @@ export function UploadResourceFields({
     multiple: true,
   })
 
+  const folderInputRef = useRef<HTMLInputElement>(null)
+
   return (
     <div className="space-y-3">
       <div
@@ -133,8 +187,33 @@ export function UploadResourceFields({
           <p className="text-xs text-muted-foreground/70">
             {t('dropzone.supportedFormats')}
           </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-1"
+            onClick={(event) => {
+              event.stopPropagation()
+              folderInputRef.current?.click()
+            }}
+          >
+            <FolderUp className="size-4" />
+            {t('dropzone.selectFolder')}
+          </Button>
         </div>
       </div>
+      <input
+        ref={folderInputRef}
+        type="file"
+        className="hidden"
+        data-testid="folder-input"
+        {...{ webkitdirectory: '' }}
+        onChange={(event) => {
+          const picked = Array.from(event.target.files ?? [])
+          event.target.value = ''
+          if (picked.length) addFiles(picked)
+        }}
+      />
 
       {files.length ? (
         <div className="overflow-hidden rounded-lg border border-border/60 bg-muted/10">

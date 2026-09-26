@@ -86,8 +86,9 @@ const resources = {
     title: '新增資源',
     description: '上傳本地檔案到伺服器，檔案型別通過 magic bytes 自動檢測。',
     dropzone: {
-      title: '拖拽檔案到此處，或點選選擇檔案',
-      hint: '每次最多上傳 10 個檔案。',
+      title: '拖曳多個檔案或資料夾到此處，或點選選擇',
+      hint: '每次最多上傳 10 個檔案；每個資料夾會作為一個資源上傳。',
+      selectFolder: '選擇資料夾',
       supportedFormats:
         '支援 PDF、Word、PPTX、Excel、Markdown、程式碼檔案、圖片等',
     },
@@ -123,6 +124,9 @@ const resources = {
     fileBlocked: '"{{name}}" 不是支援的檔案型別。',
     fileTooLarge: '"{{name}}" 超過 {{size}} 檔案大小限制。',
     tooManyFiles: '僅保留前 {{count}} 個檔案，其餘已忽略。',
+    folderEmpty: '"{{name}}" 中沒有可上傳的支援檔案。',
+    folderSkipped: '已略過 "{{name}}" 中 {{count}} 個隱藏或不支援的檔案。',
+    folderZipFailed: '無法打包 "{{name}}" 以進行上傳。',
     error: '請求失敗',
     dirPicker: {
       scope: '資源範圍',
