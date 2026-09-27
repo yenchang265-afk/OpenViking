@@ -75,4 +75,40 @@ export default {
   connectionError: 'Bot service is unavailable. Check the service and retry.',
   lastReceived: 'Last received',
   lastSent: 'Last successful reply',
+  telegram: {
+    label: 'Telegram',
+    add: 'Add Telegram bot',
+    summary: 'Allowed users only',
+    setupTitle: 'Connect a Telegram bot',
+    setupHint:
+      'Create a bot with @BotFather, then paste its token here. The bot uses long polling, so no public URL is needed.',
+    connectedTitle: 'Telegram bot',
+    connectedHint:
+      'Open a chat with the bot and send it a message to try it out.',
+    close: 'Close',
+    token: 'Bot token',
+    tokenPlaceholder: '123456789:AA…',
+    allowFrom: 'Allowed Telegram users',
+    allowFromPlaceholder: '@alice, 123456789',
+    allowFromHint:
+      'Only these users can talk to the bot. Enter Telegram user IDs or @usernames, separated by commas or new lines. Messages from anyone else are ignored.',
+    instructions: 'How to create a Telegram bot',
+    step1: 'Open @BotFather in Telegram and send /newbot.',
+    step2: 'Choose a display name and a username that ends in “bot”.',
+    step3: 'Copy the token BotFather replies with and paste it above.',
+    step4:
+      'To use the bot in a group, add it to the group. By default Telegram only delivers commands, @mentions and replies to bots.',
+    openBotFather: 'Open @BotFather',
+    connect: 'Connect',
+    connecting: 'Connecting…',
+    openChat: 'Open @{{username}} in Telegram',
+    allowedUsers: 'Allowed users',
+    save: 'Save',
+    saving: 'Saving…',
+    cancel: 'Cancel',
+    rotate: 'Replace token',
+    rotateHint:
+      'Paste a new token for the same bot, for example after revoking the old one in @BotFather.',
+    saveToken: 'Save token',
+  },
 } as const
