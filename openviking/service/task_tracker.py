@@ -518,25 +518,6 @@ class TaskTracker:
                 updated.updated_at = self._next_updated_at(task)
                 await self._persist_and_publish("update", updated, previous=task)
 
-    async def record_feishu_response(
-        self,
-        task_id: str,
-        entry: str,
-        response_id: str,
-        account_id: str,
-        user_id: str,
-    ) -> None:
-        """Persist a child submission before polling so a source retry can resume it."""
-
-        async with self._task_locks.acquire(task_id):
-            task = await self._load_for_update(task_id, account_id, user_id)
-            if task is None or task.status not in (TaskStatus.PENDING, TaskStatus.RUNNING):
-                raise ValueError("Feishu source task is no longer active")
-            updated = deepcopy(task)
-            updated.meta.setdefault("feishu_responses", {})[entry] = response_id
-            updated.updated_at = self._next_updated_at(task)
-            await self._persist_and_publish("update", updated, previous=task)
-
     async def complete(
         self,
         task_id: str,

@@ -59,10 +59,10 @@ Only fields explicitly declared as runtime fields are exposed by the runtime con
 | Scope | Configuration | Lifecycle | Effective behavior |
 | --- | --- | --- | --- |
 | Cluster | `agent_evolution` | Dynamic | ROOT can update it through the Admin API; it is used as the cluster default. |
-| Account | `feishu`, `agent_evolution` | Dynamic | ROOT or the Account ADMIN can update them. Agent Evolution falls back to the whole Cluster section. An unset Account Feishu section also uses the Cluster section; once set, only `domain` comes from Cluster and omitted Account fields use Feishu defaults. Both are consumed through the runtime manager. |
+| Account | `agent_evolution` | Dynamic | ROOT or the Account ADMIN can update it. Agent Evolution falls back to the whole Cluster section. It is consumed through the runtime manager. |
 | Account | `github`, `acl` | Dynamic | ROOT or the Account ADMIN can update it. These sections have no Cluster fallback. |
 
-Cluster `embedding`, Cluster `vlm`, `query_planner`, Cluster `memory`, `feishu`, storage, parser, retrieval, and other ordinary configuration sections remain startup-only. Account `vlm`, `memory`, `embedding`, and `vectordb` are not on the current Account configuration API surface; requests that contain them are rejected.
+Cluster `embedding`, Cluster `vlm`, `query_planner`, Cluster `memory`, storage, parser, retrieval, and other ordinary configuration sections remain startup-only. Account `vlm`, `memory`, `embedding`, and `vectordb` are not on the current Account configuration API surface; requests that contain them are rejected.
 
 For runtime changes, use the following endpoints:
 
@@ -853,34 +853,6 @@ Then add the following to your OpenViking configuration:
 For `ollama/guoxuter/ov_intent_analysis_sft:v7_q8` (and `v4_q8`), OpenViking automatically uses the matching bundled prompt during search (`retrieval.ov_intent_analysis_sft_v7` and `retrieval.ov_intent_analysis_sft_v4` respectively). No prompt file replacement or `prompts.templates_dir` override is required. If you use an unmapped model, OpenViking keeps the default `retrieval.intent_analysis` prompt.
 
 This lets a small model handle retrieval planning with lower latency, while keeping a stronger `vlm` for semantic extraction, memory extraction, and multimodal processing.
-
-### feishu
-
-Configuration for Feishu/Lark cloud document parsing. See [Resources](../api/02-resources.md) for supported URL patterns.
-
-```json
-{
-  "feishu": {
-    "app_id": "",
-    "app_secret": "",
-    "domain": "https://open.feishu.cn",
-    "max_rows_per_sheet": 1000,
-    "max_records_per_table": 1000
-  }
-}
-```
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `app_id` | str | Feishu app ID (can also be set via `FEISHU_APP_ID` env var) |
-| `app_secret` | str | Feishu app secret (can also be set via `FEISHU_APP_SECRET` env var) |
-| `domain` | str | Feishu API domain. Use `https://open.larksuite.com` for Lark international |
-| `max_rows_per_sheet` | int | Maximum rows to import per spreadsheet sheet (default: `1000`) |
-| `max_records_per_table` | int | Maximum records to import per bitable table (default: `1000`) |
-
-**Dependency**: Included by default in `openviking[bot]` installation
-
-**Lark international**: For Lark URLs (`*.larksuite.com`), set `domain` to `https://open.larksuite.com`.
 
 ### code
 

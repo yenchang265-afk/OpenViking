@@ -388,12 +388,6 @@ Provider 和密钥管理配置见[加密指南](../guides/08-encryption.md)。
       "max_depth": 10,
       "max_concurrent": 4
     },
-    "feishu": {
-      "domain": "https://open.feishu.cn",
-      "max_rows_per_sheet": 1000,
-      "max_records_per_table": 1000,
-      "download_images": true
-    },
     "webfeed": {}
   }
 }
@@ -424,7 +418,6 @@ Parser 或 Understanding API 后端自身的限制和上传行为。
 | `markdown`、`html`、`text` | 文本文档分段 |
 | `anydoc` | Office 和 EPUB 转换；`enabled=false` 时拒绝这些格式 |
 | `directory` | 目录扫描和忽略规则 |
-| `feishu` | 飞书文档访问与解析 |
 | `webfeed` | Sitemap、RSS 和 Atom 导入 |
 
 各模型 provider、解析器、存储后端和加密后端包含较多专用字段，完整字段表和配置示例见[配置指南](../guides/01-configuration.md)。

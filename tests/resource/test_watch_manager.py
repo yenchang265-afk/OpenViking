@@ -105,7 +105,7 @@ class TestWatchTask:
         task = WatchTask(
             task_id="test-task-id",
             path="/test/path",
-            source_type="feishu_project",
+            source_type="git",
             to_uri="viking://resources/test",
             parent_uri="viking://resources",
             reason="Test reason",
@@ -120,7 +120,7 @@ class TestWatchTask:
 
         assert task.task_id == "test-task-id"
         assert task.path == "/test/path"
-        assert task.source_type == "feishu_project"
+        assert task.source_type == "git"
         assert task.to_uri == "viking://resources/test"
         assert task.parent_uri == "viking://resources"
         assert task.reason == "Test reason"
@@ -140,10 +140,10 @@ class TestWatchTask:
             source_type="url",
             to_uri="viking://test",
             auth_state={
-                "provider": "feishu",
-                "access_token": "u-test",
-                "refresh_token": "r-test",
-                "expires_at": None,
+                "provider": "git_http_basic",
+                "username": "oauth2",
+                "token": "u-test",
+                "repo_url": "https://github.com/example/repo",
             },
             created_at=now,
         )
@@ -360,14 +360,14 @@ class TestWatchManager:
         manager1 = WatchManager(viking_fs=mock_viking_fs)
         await manager1.initialize()
         task = await manager1.create_task(
-            path="https://example.feishu.cn/docx/doc_token",
-            to_uri="viking://resources/feishu",
+            path="https://github.com/example/repo",
+            to_uri="viking://resources/repo",
             watch_interval=30.0,
             auth_state={
-                "provider": "feishu",
-                "access_token": "u-test",
-                "refresh_token": "r-test",
-                "expires_at": None,
+                "provider": "git_http_basic",
+                "username": "oauth2",
+                "token": "u-test",
+                "repo_url": "https://github.com/example/repo",
             },
         )
 

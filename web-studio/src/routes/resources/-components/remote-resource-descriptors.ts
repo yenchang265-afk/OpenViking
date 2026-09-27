@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react'
-import { Cloud, FileDown, FileText, GitBranch, Globe2 } from 'lucide-react'
+import { Cloud, FileDown, GitBranch, Globe2 } from 'lucide-react'
 
 import type {
   RemoteResourceKind,
@@ -16,11 +16,6 @@ type RemoteResourceDescriptor = {
 }
 
 export const REMOTE_RESOURCE_DESCRIPTORS: RemoteResourceDescriptor[] = [
-  {
-    type: 'feishu',
-    icon: FileText,
-    exampleKey: 'sourcePicker.feishuExample',
-  },
   {
     type: 'git',
     icon: GitBranch,

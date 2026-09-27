@@ -442,18 +442,14 @@ three-state: an absent key is unchanged, `null` deletes that layer's value, and
 a concrete value updates it.
 
 The Cluster runtime surface currently contains `agent_evolution`. The Account
-surface contains `feishu`, `agent_evolution`, `github`, and `acl`, all of which
+surface contains `agent_evolution`, `github`, and `acl`, all of which
 are dynamic. Account `vlm`, `memory`, `embedding`, and `vectordb` are not on the
 current API surface and are rejected even during Account creation. Cluster
-`embedding`, `vlm`, `query_planner`, `memory`, `feishu`, storage, parser, and
+`embedding`, `vlm`, `query_planner`, `memory`, storage, parser, and
 retrieval fields are startup-only because they are not declared as runtime
 fields.
 
-Account Agent Evolution uses whole-section Cluster fallback when unset. Account
-Feishu also uses the complete Cluster section when unset. Once an Account Feishu
-section is set, `app_id`, `app_secret`, `max_rows_per_sheet`,
-`max_records_per_table`, `download_images`, and `request_timeout` come from the
-Account section or their Feishu defaults; only `domain` remains Cluster-owned.
+Account Agent Evolution uses whole-section Cluster fallback when unset.
 GitHub and ACL have no Cluster fallback.
 
 The PATCH is validated structurally before the merged configuration is built:

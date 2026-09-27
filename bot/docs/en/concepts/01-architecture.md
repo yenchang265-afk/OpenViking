@@ -6,7 +6,7 @@ VikingBot is the multi-channel AI Agent runtime in the OpenViking repository. It
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
-│ CLI │ Feishu │ Slack │ Telegram │ Discord │ Email │ HTTP API   │
+│ CLI │ Slack │ Telegram │ Discord │ Email │ HTTP API            │
 └─────────────────────────────┬────────────────────────────────────┘
                               │ InboundMessage
                     ┌─────────▼─────────┐

@@ -1,17 +1,13 @@
-import { ChevronRight, ExternalLink } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 type ResourceConfigurationGuideProps = {
   children: ReactNode
-  documentationLabel?: string
-  documentationUrl?: string
   title: string
 }
 
 export function ResourceConfigurationGuide({
   children,
-  documentationLabel,
-  documentationUrl,
   title,
 }: ResourceConfigurationGuideProps) {
   return (
@@ -22,17 +18,6 @@ export function ResourceConfigurationGuide({
       </summary>
       <div className="mt-2 space-y-2 border-t border-border/40 pt-2 text-xs text-muted-foreground">
         {children}
-        {documentationUrl && documentationLabel ? (
-          <a
-            href={documentationUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex w-fit items-center gap-1 font-medium text-foreground underline underline-offset-2"
-          >
-            {documentationLabel}
-            <ExternalLink className="size-3" />
-          </a>
-        ) : null}
       </div>
     </details>
   )

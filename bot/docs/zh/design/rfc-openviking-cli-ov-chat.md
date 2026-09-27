@@ -38,7 +38,6 @@ flowchart TB
         subgraph Vikingbot["Vikingbot (Process 2, Port 18790)"]
             subgraph Channels["Channels (BaseChannel 实现)"]
                 OC["OpenAPIChannel"]
-                FC["FeishuChannel<br/>(Webhook)"]
                 DC["DiscordChannel"]
                 TC["TelegramChannel"]
             end
@@ -52,14 +51,12 @@ flowchart TB
     BotAPIProxy -->|"Proxy to"| BotRouter
     BotRouter -->|"Forward to"| OC
 
-    FC -->|"Webhook Events"| MB
     DC -->|"WebSocket"| MB
     TC -->|"Bot API"| MB
     OC -->|"send_to_bus()"| MB
     MB --> AL
 
     OC -.->|"implements"| BaseChannel["BaseChannel"]
-    FC -.->|"implements"| BaseChannel
     DC -.->|"implements"| BaseChannel
     TC -.->|"implements"| BaseChannel
 ```
@@ -81,11 +78,6 @@ flowchart TB
                 OCService["Service:<br/>OpenAPIChannelService"]
             end
 
-            subgraph FC["FeishuChannel<br/>(飞书 Webhook)"]
-                FCEndpoints["Endpoints:<br/>- /webhook/event<br/>- /webhook/card"]
-                FCService["Service:<br/>FeishuChannelService"]
-            end
-
             subgraph Others["Other Channels"]
                 Discord["DiscordChannel"]
                 Telegram["TelegramChannel"]
@@ -101,34 +93,29 @@ flowchart TB
 
     subgraph External["External Clients / 外部客户端"]
         CLI["ov CLI"]
-        FeishuApp["Feishu App<br/>飞书应用"]
         DiscordClient["Discord Client"]
     end
 
     CLI -->|"HTTP POST<br/>http://localhost:1933/bot/v1/chat"| OCEndpoints
-    FeishuApp -->|"Webhook POST<br/>/webhook/event"| FCEndpoints
     DiscordClient -->|"WebSocket"| Discord
 
     OCEndpoints --> OCService
-    FCEndpoints --> FCService
 
     OCService -->|"send_to_bus()<br/>message → bus"| MB
-    FCService -->|"send_to_bus()<br/>message → bus"| MB
     Discord -->|"send_to_bus()"| MB
     Telegram -->|"send_to_bus()"| MB
 
     MB -->|"consume"| AL
     AL -->|"reply"| MB
     MB -->|"dispatch"| OCService
-    MB -->|"dispatch"| FCService
 
     classDef channelClass fill:#e1f5fe,stroke:#01579b,stroke-width:2px
     classDef coreClass fill:#fff3e0,stroke:#e65100,stroke-width:2px
     classDef externalClass fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
 
-    class OC,FC,Discord,Telegram,Others channelClass
+    class OC,Discord,Telegram,Others channelClass
     class MB,AL coreClass
-    class CLI,FeishuApp,DiscordClient externalClass
+    class CLI,DiscordClient externalClass
 ```
 
 ---
@@ -146,7 +133,7 @@ flowchart TB
 
 **Architecture Position / 架构位置：**
 - Process 1 (Port 1933) / 进程1（端口 1933）
-- Entry point for all external clients (CLI, Feishu, etc.) / 所有外部客户端的入口点
+- Entry point for all external clients (CLI, etc.) / 所有外部客户端的入口点
 
 ---
 
@@ -307,7 +294,7 @@ Vikingbot 的配置项统一放在 `ov.conf` 的 `bot` 字段下：
       "token": ""
     },
     "channels": [
-      {"type": "feishu", "enabled": false, "app_id": "", "app_secret": ""}
+      {"type": "slack", "enabled": false, "bot_token": "", "app_token": ""}
     ],
     "sandbox": {
       "backend": "direct",
@@ -321,7 +308,7 @@ Vikingbot 的配置项统一放在 `ov.conf` 的 `bot` 字段下：
 - `server.with_bot`: 启用时自动在同一机器上启动 Vikingbot gateway
 - `bot.agents`: Agent 配置，包括 LLM 模型、最大工具迭代次数、记忆窗口
 - `bot.gateway`: HTTP Gateway 监听地址；`host` 默认 `127.0.0.1`，当绑定到非 localhost 时必须配置 `token`（用于 `X-Gateway-Token` 鉴权），否则启动失败
-- `bot.channels`: 渠道配置列表，支持 openapi、feishu 等
+- `bot.channels`: 渠道配置列表，支持 openapi、slack 等
 - `bot.sandbox`: 沙箱执行配置
 
 ### 6.2 Command-line Options

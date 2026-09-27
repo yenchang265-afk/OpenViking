@@ -166,8 +166,8 @@ ov task watch rm viking://resources/guide.md
 }
 ```
 
-`source_type` 是可选的来源元数据。显式 Connector `add_type` 优先（例如 `tos` 或
-`feishu_project`）；原生导入返回 `feishu`、`git`、`url` 或 `local`。历史任务或
+`source_type` 是可选的来源元数据。显式 Connector `add_type` 优先（例如 `tos`）；
+原生导入返回 `git`、`url` 或 `local`。历史任务或
 无法分类的任务返回 `null`。
 
 首次执行前，`last_task_id`、`last_status` 和 `last_error` 均为 `null`。执行后，

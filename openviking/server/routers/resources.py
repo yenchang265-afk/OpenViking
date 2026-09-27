@@ -63,16 +63,12 @@ class AddResourceRequest(BaseModel):
         args: Parser-specific import options. Native HTTPS Git imports accept
             {"auth_config": {"username": "oauth2", "token": "..."}}; when
             watch_interval > 0 the credentials are stored in private watch state.
-            For Feishu one-time user-token imports,
-            pass {"feishu_access_token": "..."}. For Feishu user-token watches,
-            also pass "feishu_refresh_token". The optional "feishu_app_id" and
-            "feishu_app_secret" pair overrides the server app for that watch.
         watch_interval: Interval in minutes (default: 0). Positive values create a new
             Watch using explicit ``to`` or the imported ``root_uri``. Nonpositive values
             create no Watch: native imports with explicit ``to`` pause a single accessible
             Watch (409 if ambiguous); Connector imports leave Watches untouched.
             See the endpoint's Watch ownership rules.
-        is_active: Initial Watch state for Connector, native Feishu, and native Git imports. When false,
+        is_active: Initial Watch state for Connector and native Git imports. When false,
             requires watch_interval > 0 and an explicit to or parent target and creates the Watch
             paused; it stays paused until updated, regardless of the import result.
     """

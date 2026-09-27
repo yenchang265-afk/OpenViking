@@ -1,14 +1,7 @@
-import {
-  FeatherIcon,
-  Gamepad2Icon,
-  HashIcon,
-  SendIcon,
-  ZapIcon,
-} from 'lucide-react'
+import { Gamepad2Icon, HashIcon, SendIcon, ZapIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 const icons: Record<string, LucideIcon | undefined> = {
-  feishu: FeatherIcon,
   slack: HashIcon,
   dingtalk: ZapIcon,
   discord: Gamepad2Icon,

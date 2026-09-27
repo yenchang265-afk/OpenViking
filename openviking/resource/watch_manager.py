@@ -681,19 +681,6 @@ class WatchManager:
         logger.info(f"[WatchManager] Updated task {task_id} by user {account_id}/{user_id}")
         return task
 
-    async def update_auth_state(
-        self,
-        task_id: str,
-        auth_state: Optional[Dict[str, Any]],
-    ) -> None:
-        """Update private auth state for an existing watch task."""
-        async with self._lock:
-            task = self._tasks.get(task_id)
-            if not task:
-                return
-            task.auth_state = auth_state
-            await self._save_tasks()
-
     async def update_connector_states(
         self,
         task_id: str,

@@ -12,8 +12,7 @@ from vikingbot.agent.tools.message import MessageTool
 from vikingbot.agent.tools.spawn import SpawnTool
 from vikingbot.bus.events import InboundMessage, OutboundMessage
 from vikingbot.bus.queue import MessageBus
-from vikingbot.channels.feishu import FeishuChannel
-from vikingbot.config.schema import Config, FeishuChannelConfig, SessionKey
+from vikingbot.config.schema import Config, SessionKey
 from vikingbot.cron.service import CronService
 from vikingbot.cron.types import CronSchedule
 
@@ -28,7 +27,7 @@ async def test_message_tool_preserves_channel_metadata():
 
     tool = MessageTool(send_callback=send_callback)
     context = SimpleNamespace(
-        session_key=SessionKey(type="feishu", channel_id="cli_app", chat_id="oc_chat"),
+        session_key=SessionKey(type="slack", channel_id="cli_app", chat_id="oc_chat"),
         channel_metadata=metadata,
     )
 
@@ -51,7 +50,7 @@ async def test_spawn_tool_preserves_channel_metadata():
 
     tool = SpawnTool(manager=FakeSubagentManager())
     context = SimpleNamespace(
-        session_key=SessionKey(type="feishu", channel_id="cli_app", chat_id="oc_chat"),
+        session_key=SessionKey(type="slack", channel_id="cli_app", chat_id="oc_chat"),
         channel_metadata=metadata,
         openviking_connection=connection,
     )
@@ -68,7 +67,7 @@ async def test_subagent_announcement_preserves_channel_metadata(tmp_path):
     bus = MessageBus()
     metadata = {"reply_to": "oc_chat", "chat_type": "group", "message_id": "om_old"}
     connection = {"api_key": "request-key", "account_id": "acct", "user_id": "alice"}
-    session_key = SessionKey(type="feishu", channel_id="cli_app", chat_id="oc_chat")
+    session_key = SessionKey(type="slack", channel_id="cli_app", chat_id="oc_chat")
     manager = SubagentManager(
         provider=SimpleNamespace(get_default_model=lambda: "fake-model"),
         workspace=tmp_path,
@@ -101,7 +100,7 @@ async def test_system_message_response_preserves_channel_metadata(tmp_path, monk
     metadata = {"reply_to": "oc_chat", "chat_type": "group", "message_id": "om_old"}
     connection = {"api_key": "request-key", "account_id": "acct", "user_id": "alice"}
     captured = {}
-    session_key = SessionKey(type="feishu", channel_id="cli_app", chat_id="oc_chat")
+    session_key = SessionKey(type="slack", channel_id="cli_app", chat_id="oc_chat")
     config = Config(storage_workspace=str(tmp_path / "data"))
     loop = AgentLoop(
         bus=MessageBus(),
@@ -153,7 +152,7 @@ async def test_cron_tool_persists_only_delivery_metadata(tmp_path):
     service = CronService(tmp_path / "jobs.json")
     tool = CronTool(service)
     context = SimpleNamespace(
-        session_key=SessionKey(type="feishu", channel_id="cli_app", chat_id="oc_chat"),
+        session_key=SessionKey(type="slack", channel_id="cli_app", chat_id="oc_chat"),
         channel_metadata={
             "reply_to": "oc_chat",
             "chat_type": "group",
@@ -265,52 +264,3 @@ async def test_cron_service_without_callback_rearms_recurring_timer(tmp_path, mo
     persisted = CronService(path).list_jobs()
     assert persisted[0].state.last_status == "error"
     assert persisted[0].state.next_run_at_ms == 1_200
-
-
-def test_feishu_uses_thread_root_for_scheduled_delivery():
-    assert (
-        FeishuChannel._reply_to_message_id_from_metadata(
-            {
-                "reply_to": "oc_chat",
-                "chat_type": "group",
-                "chat_mode": "thread",
-                "root_id": "om_root",
-            }
-        )
-        == "om_root"
-    )
-
-
-@pytest.mark.parametrize("retry", [False, True], ids=["jpeg-upload", "normalize-and-retry"])
-async def test_feishu_uploads_jpeg(monkeypatch, retry):
-    import httpx
-
-    channel = FeishuChannel(FeishuChannelConfig(app_id="cli_app"), MessageBus())
-    original = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01original-with-metadata"
-    normalized = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01normalized"
-    uploads = []
-
-    def handle(request):
-        uploads.append(request.content)
-        assert b'filename="image.jpg"' in request.content
-        assert b"image/jpeg" in request.content
-        if retry and len(uploads) == 1:
-            return httpx.Response(400, json={"code": 234011, "msg": "can not recognize image"})
-        return httpx.Response(200, json={"code": 0, "data": {"image_key": "img_key"}})
-
-    async def token():
-        return "tenant-token"
-
-    real_client = httpx.AsyncClient
-    transport = httpx.MockTransport(handle)
-    monkeypatch.setattr(channel, "_get_tenant_access_token", token)
-    monkeypatch.setattr(channel, "_normalize_image_for_feishu", lambda data: normalized)
-    monkeypatch.setattr(
-        "vikingbot.channels.feishu.httpx.AsyncClient",
-        lambda **kwargs: real_client(transport=transport, **kwargs),
-    )
-    assert await channel._upload_image_to_feishu(original) == "img_key"
-    assert original in uploads[0]
-    assert len(uploads) == (2 if retry else 1)
-    if retry:
-        assert normalized in uploads[1]

@@ -361,17 +361,8 @@ async def test_no_split_bypasses_understanding_shortcut(
     service: ResourceService,
     ctx: RequestContext,
 ):
-    direct_probe = MagicMock(
-        side_effect=AssertionError("Understanding shortcut must not run in no_split mode")
-    )
     api_probe = MagicMock(
         side_effect=AssertionError("Understanding shortcut must not run in no_split mode")
-    )
-    monkeypatch.setattr(
-        service._resource_processor,
-        "should_use_understanding_directly",
-        direct_probe,
-        raising=False,
     )
     monkeypatch.setattr(
         service._resource_processor,
@@ -389,7 +380,6 @@ async def test_no_split_bypasses_understanding_shortcut(
     )
 
     assert result["root_uri"] == "viking://resources/test"
-    direct_probe.assert_not_called()
     api_probe.assert_not_called()
 
 

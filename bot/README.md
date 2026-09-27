@@ -1,6 +1,6 @@
 # VikingBot
 
-VikingBot is the multi-channel AI agent built into OpenViking. You can use it directly from the command line or run it as a long-lived Gateway connected to Feishu, Slack, Telegram, and other platforms. When connected to OpenViking, it also gains resource retrieval, user memory, experience memory, and session consolidation.
+VikingBot is the multi-channel AI agent built into OpenViking. You can use it directly from the command line or run it as a long-lived Gateway connected to Slack, Telegram, and other platforms. When connected to OpenViking, it also gains resource retrieval, user memory, experience memory, and session consolidation.
 
 ## Key Capabilities
 
@@ -238,19 +238,19 @@ The Gateway Token protects only the Gateway entry point. The OpenViking API Key 
 
 ## Connect Chat Platforms
 
-To use Feishu, Slack, Telegram, Discord, WhatsApp, DingTalk, QQ, Email, or MoChat, configure `bot.channels` on top of Scenario C and start the Gateway.
+To use Slack, Telegram, Discord, WhatsApp, DingTalk, QQ, Email, or MoChat, configure `bot.channels` on top of Scenario C and start the Gateway.
 
-For example, to configure Feishu:
+For example, to configure Slack:
 
 ```json
 {
   "bot": {
     "channels": [
       {
-        "type": "feishu",
+        "type": "slack",
         "enabled": true,
-        "app_id": "<feishu-app-id>",
-        "app_secret": "<feishu-app-secret>",
+        "bot_token": "<slack-bot-token>",
+        "app_token": "<slack-app-token>",
         "allow_from": [],
         "ov_tools_enable": true
       }

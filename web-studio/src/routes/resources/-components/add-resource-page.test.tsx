@@ -59,7 +59,7 @@ describe('AddResourceForm watch options', () => {
     expect(remoteUrlInput.getAttribute('placeholder')).toBe(
       'remoteUrl.placeholder',
     )
-    for (const type of ['feishu', 'git', 'webPage', 'remoteFile']) {
+    for (const type of ['git', 'webPage', 'remoteFile']) {
       expect(
         screen.getByRole('button', {
           name: new RegExp(`sourcePicker.${type}`),
@@ -67,23 +67,18 @@ describe('AddResourceForm watch options', () => {
       ).toBeTruthy()
     }
 
-    fireEvent.click(screen.getByRole('button', { name: /sourcePicker.feishu/ }))
-    expect(remoteUrlInput.getAttribute('placeholder')).toBe(
-      'sourcePicker.feishuExample',
+    fireEvent.click(
+      screen.getByRole('button', { name: /sourcePicker.remoteFile/ }),
     )
-    expect(screen.getByText('sourcePicker.feishuHint')).toBeTruthy()
-    expect(screen.getByText('feishu.auth.title')).toBeTruthy()
-    fireEvent.click(screen.getByText('configurationGuide.title'))
-    expect(screen.getByText('feishu.configuration.server')).toBeTruthy()
-    expect(
-      screen
-        .getByRole('link', { name: /configurationGuide.documentation/ })
-        .getAttribute('href'),
-    ).toBe('https://docs.openviking.ai/zh/guides/01-configuration#feishu')
+    expect(remoteUrlInput.getAttribute('placeholder')).toBe(
+      'sourcePicker.remoteFileExample',
+    )
+    expect(screen.getByText('sourcePicker.remoteFileHint')).toBeTruthy()
 
-    fireEvent.click(screen.getByRole('button', { name: /sourcePicker.feishu/ }))
-    expect(screen.queryByText('sourcePicker.feishuHint')).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: /sourcePicker.feishu/ }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /sourcePicker.remoteFile/ }),
+    )
+    expect(screen.queryByText('sourcePicker.remoteFileHint')).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /sourcePicker.git/ }))
     expect(remoteUrlInput.getAttribute('placeholder')).toBe(
@@ -117,7 +112,9 @@ describe('AddResourceForm watch options', () => {
       </QueryClientProvider>,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: /sourcePicker.feishu/ }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /sourcePicker.remoteFile/ }),
+    )
     fireEvent.change(screen.getByRole('textbox', { name: 'remoteUrl' }), {
       target: { value: 'https://github.com/volcengine/OpenViking' },
     })
@@ -177,7 +174,9 @@ describe('AddResourceForm watch options', () => {
       target: { value: 'feature/docs' },
     })
 
-    fireEvent.click(screen.getByRole('button', { name: /sourcePicker.feishu/ }))
+    fireEvent.click(
+      screen.getByRole('button', { name: /sourcePicker.webPage/ }),
+    )
     expect((remoteUrlInput as HTMLInputElement).value).toBe('')
 
     fireEvent.click(screen.getByRole('button', { name: /sourcePicker.git/ }))
@@ -217,43 +216,6 @@ describe('AddResourceForm watch options', () => {
       onCompleted: undefined,
       onFailed: undefined,
       url: 'https://github.com/volcengine/OpenViking',
-    })
-  })
-
-  it('submits Feishu user credentials and defers token validation', () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-    render(
-      <QueryClientProvider client={queryClient}>
-        <AddResourceForm initialMode="remote" initialWatchEnabled />
-      </QueryClientProvider>,
-    )
-
-    fireEvent.change(screen.getByRole('textbox', { name: 'remoteUrl' }), {
-      target: { value: 'https://example.feishu.cn/docx/doc-token' },
-    })
-    fireEvent.click(screen.getByRole('radio', { name: /feishu.auth.user/ }))
-    fireEvent.change(screen.getByLabelText('feishu.accessToken'), {
-      target: { value: 'u-token' },
-    })
-
-    const submit = screen.getByRole('button', { name: 'startProcessing' })
-    expect(submit.hasAttribute('disabled')).toBe(false)
-    fireEvent.click(submit)
-
-    expect(uploadMocks.startRemote).toHaveBeenCalledWith({
-      commonBody: expect.objectContaining({
-        args: {
-          feishu_access_token: 'u-token',
-          feishu_refresh_token: '',
-        },
-        watch_interval: 1440,
-      }),
-      onAccepted: undefined,
-      onCompleted: undefined,
-      onFailed: undefined,
-      url: 'https://example.feishu.cn/docx/doc-token',
     })
   })
 

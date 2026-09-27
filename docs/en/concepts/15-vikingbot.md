@@ -15,7 +15,7 @@ Together, they allow an Agent not only to complete the current task, but also to
 ## System Overview
 
 ```text
-CLI / Feishu / Slack / Telegram / Discord / Email / HTTP API
+CLI / Slack / Telegram / Discord / Email / HTTP API
                               │
                               ▼
                     Channel + MessageBus
@@ -35,7 +35,7 @@ CLI / Feishu / Slack / Telegram / Discord / Email / HTTP API
         Session synchronization and learning
 ```
 
-Every entry point ultimately uses the same AgentLoop. Channel-specific events are converted into common messages, so models and tools do not need to know whether a request came from the CLI, Feishu, or an HTTP API.
+Every entry point ultimately uses the same AgentLoop. Channel-specific events are converted into common messages, so models and tools do not need to know whether a request came from the CLI, a chat platform, or an HTTP API.
 
 ## Core Capabilities
 
@@ -44,7 +44,7 @@ Every entry point ultimately uses the same AgentLoop. Channel-specific events ar
 VikingBot supports three types of entry point:
 
 - `vikingbot chat` and `ov chat`: one-shot or interactive command-line conversations;
-- Feishu, Slack, Telegram, Discord, WhatsApp, DingTalk, QQ, Email, and MoChat: long-running chat bots;
+- Slack, Telegram, Discord, WhatsApp, DingTalk, QQ, Email, and MoChat: long-running chat bots;
 - the `/bot/v1` HTTP API: synchronous Chat, SSE streaming events, Sessions, and feedback.
 
 Each Channel handles platform authentication, sender allowlists, media parsing, reply formatting, and session routing. VikingBot uses `type + channel_id + chat_id` to isolate channel instances and conversations.

@@ -55,9 +55,9 @@ def test_compact_request_body_drops_null_and_empty_args():
 
 
 def test_compact_request_body_keeps_non_empty_args():
-    body = {"path": "x", "args": {"feishu_access_token": "u-x"}}
+    body = {"path": "x", "args": {"site": True}}
     compacted = AsyncHTTPClient._compact_request_body(body)
-    assert compacted["args"] == {"feishu_access_token": "u-x"}
+    assert compacted["args"] == {"site": True}
 
 
 async def test_find_omits_unset_optional_fields():
@@ -119,10 +119,10 @@ async def test_add_resource_omits_empty_args_and_null_fields():
 async def test_add_resource_keeps_explicit_args():
     client, fake = _client_with_fake()
 
-    await client.add_resource("https://example.com/doc", args={"feishu_access_token": "u-x"})
+    await client.add_resource("https://example.com/doc", args={"site": True})
 
     payload = fake.calls[-1]["json"]
-    assert payload["args"] == {"feishu_access_token": "u-x"}
+    assert payload["args"] == {"site": True}
 
 
 async def test_add_resource_keeps_explicit_no_split_mode():

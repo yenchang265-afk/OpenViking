@@ -90,9 +90,8 @@ to 120 seconds.
 ## Inputs and results
 
 The example supports local file uploads and public document, image, and audio URLs. It does not
-support video or credential-gated URLs. OpenViking identifies Lark and Feishu credentials with a
-`lark_file` field, so the bridge rejects that request with a clear `unsupported_input` error. Other
-private URLs fail through the normal LlamaParse error response.
+support video URLs. Private or credential-gated URLs fail through the normal LlamaParse error
+response.
 
 LlamaParse can complete a job when some pages fail. The bridge keeps the usable Markdown and adds a
 visible failed-page note. It fails the job only when there is no usable Markdown.

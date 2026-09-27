@@ -41,11 +41,6 @@ OpenViking 支持多种资源类型，按照功能分类如下：
 
 音视频解析器负责校验并保存原文件。内容理解在后续语义处理阶段执行，默认关闭（`vlm.media.enabled=false`），需启用兼容的供应商和模型；理解支持的格式与大小限制和导入格式不同。这不代表内置了 Whisper 转写或本地关键帧提取流程。详见[音视频配置](../guides/01-configuration.md)。
 
-云文档类
-| 类型 | 说明 |
-|------|------|
-| 飞书/Lark | URL 方式，支持 doc/docx、wiki、sheets、bitable、mindnote/mindnotes、Drive 文件和目录集。Wiki 默认仅导入入口文档，设置 `args.feishu_recursive=true` 可递归导入子节点。默认使用 FEISHU_APP_ID 和 FEISHU_APP_SECRET 应用凭证；用户 token 导入可传 `args.feishu_access_token`，用户 token watch 还需传 `args.feishu_refresh_token`，并可选传入 `args.feishu_app_id` / `args.feishu_app_secret`。Mindnote 及 Wiki 中的 Mindnote 要求本次使用的 token 具备 `mindnote:node:read` |
-
 网页类（递归网页爬虫）
 | 类型 | 资源名 | 说明 |
 |------|--------|------|
@@ -178,9 +173,9 @@ URL/文件  Parser  TreeBuilder  AGFS    Summarizer/Vector
 | exclude | string | 否 | None | 排除的文件模式（glob） |
 | directly_upload_media | bool | 否 | True | 是否直接上传媒体文件 |
 | preserve_structure | bool | 否 | None | 是否保留目录结构 |
-| args | object | 否 | `{}` | 传给特定 parser/accessor 的导入参数。原生 HTTPS Git 导入和 Watch 可通过 `args.auth_config={"username":"oauth2","token":"..."}` 在 TLS 上传递 HTTP Basic 凭据；`username` 默认为 `oauth2`。Git 的 `branch` 或 `commit` 仍放在 `args` 顶层。通过 HTTP(S) URL 导入私有 TOS 对象时，二选一传入非空字符串：`args.tos_signature`（映射为 `X-Tos-Signature`）或 `args.tos_access`（映射为 `X-Tos-Access`）。TOS 凭证只用于当前 HEAD/GET 抓取；资源会先保存为快照，凭证不会写入资源元数据或队列任务。`args.parse_mode` 支持 `default`（保持现有拆分行为）和 `no_split`（正常解析并将每个源文档正文保存为一个 Markdown 文件）。例如 `args.site=true/false` 强制/禁用整站（sitemap/RSS）导入，`args.max_pages` 等可覆盖 `webfeed` 配置；递归网页爬虫支持 `args.depth`、`args.max_pages`、`args.include_paths`、`args.exclude_paths`、`args.allow_external_links`、`args.skip_download_links`；飞书用户 token 导入传 `args.feishu_access_token`。`path`、`to`、`watch_interval`、`include`、`exclude` 等 `add_resource` 核心字段不能放入 `args` |
+| args | object | 否 | `{}` | 传给特定 parser/accessor 的导入参数。原生 HTTPS Git 导入和 Watch 可通过 `args.auth_config={"username":"oauth2","token":"..."}` 在 TLS 上传递 HTTP Basic 凭据；`username` 默认为 `oauth2`。Git 的 `branch` 或 `commit` 仍放在 `args` 顶层。通过 HTTP(S) URL 导入私有 TOS 对象时，二选一传入非空字符串：`args.tos_signature`（映射为 `X-Tos-Signature`）或 `args.tos_access`（映射为 `X-Tos-Access`）。TOS 凭证只用于当前 HEAD/GET 抓取；资源会先保存为快照，凭证不会写入资源元数据或队列任务。`args.parse_mode` 支持 `default`（保持现有拆分行为）和 `no_split`（正常解析并将每个源文档正文保存为一个 Markdown 文件）。例如 `args.site=true/false` 强制/禁用整站（sitemap/RSS）导入，`args.max_pages` 等可覆盖 `webfeed` 配置；递归网页爬虫支持 `args.depth`、`args.max_pages`、`args.include_paths`、`args.exclude_paths`、`args.allow_external_links`、`args.skip_download_links`。`path`、`to`、`watch_interval`、`include`、`exclude` 等 `add_resource` 核心字段不能放入 `args` |
 | watch_interval | float | 否 | 0 | 定时更新间隔（分钟）。>0 按目标占用规则为可重新读取的来源创建新 Watch；通过 `temp_file_id` 上传的一次性快照不能创建 Watch。≤0 不创建 Watch：原生导入显式指定 `to` 时暂停唯一可访问的任务（存在歧义时返回 409），Connector 导入不影响已有 Watch。显式 `to` 优先，否则绑定本次导入的 `root_uri`。 |
-| is_active | bool | 否 | True | Watch 初始调度状态。设为 `false` 时要求 `watch_interval > 0`，并在 `to`、`parent` 中二选一。`parent` 支持原生飞书 URL 和 Git 导入；Connector 仍要求精确的 `to`。首次导入仍执行一次，随后保持暂停 |
+| is_active | bool | 否 | True | Watch 初始调度状态。设为 `false` 时要求 `watch_interval > 0`，并在 `to`、`parent` 中二选一。`parent` 支持原生 Git 导入；Connector 仍要求精确的 `to`。首次导入仍执行一次，随后保持暂停 |
 | processing_mode | string | 否 | `semantic_and_vectors` | 入库后的处理模式。`semantic_and_vectors` 是默认流程：生成语义产物（`.abstract.md`、`.overview.md`）并生成向量。`vectors_only` 跳过语义理解/VLM 总结，只对当前资源文件生成向量 |
 | tags | string[] | 否 | None | 导入时写入向量检索记录的显式检索标签，格式必须是 `k=v`，例如 `["team=search", "env=test"]`。搜索接口可用同名 `tags` 参数过滤召回 |
 | tag_mode | string | 否 | `"replace"` | 标签写入模式：`replace` 覆盖、`append` 按 key 合并、`clear` 清空。`clear` 不要求传 `tags`；`replace` 配合空数组不会修改已有标签。导入时标签会随本次生成的每条向量记录写入；不会在完成后额外调用 `set_tags`，响应也不返回 `tags_result` |
@@ -205,14 +200,8 @@ URL/文件  Parser  TreeBuilder  AGFS    Summarizer/Vector
 - `processing_mode=vectors_only` 不调用 VLM 语义理解阶段，也不会生成或刷新 `.abstract.md` / `.overview.md`。对已存在目标，它会保留旧的语义产物和旧的语义向量；仍会更新资源树，在 `build_index=true` 时向量化当前非隐藏文件，并清理由本次刷新删除的文件 detail 向量。
 - `processing_mode` 只属于 `add_resource`。管理员维护已有数据时，`reindex` API/CLI 仍使用 `mode`（`vectors_only`、`semantic_and_vectors`、`prune_orphans`）。
 - `watch_interval > 0` 时，如果指定了 `to`，监控任务绑定该目标；如果未指定 `to`，监控任务绑定本次导入返回的 `root_uri`。如果无法得到稳定 `root_uri`，请求会报错并要求显式传 `to`。
-- Connector 导入设置 `is_active=false` 时会在提交前创建暂停状态的 Watch；原生飞书和 Git 导入会通过资源队列透传 `is_active`，解析出最终资源 URI 后再创建 Watch。两种情况下首次导入均执行一次，周期调度保持关闭。
-- 飞书/Lark 应用 token 导入不传 `args.feishu_access_token`。OpenViking 保持原有应用凭证流程，由 SDK 使用 `app_id` 和 `app_secret` 自动获取 app/tenant token。该模式支持一次性导入和 `watch_interval > 0`。
-- 飞书/Lark Mindnote URL 支持 `/mindnote/{token}` 和 `/mindnotes/{token}`；Wiki URL 若解析为 `obj_type=mindnote` 也走同一读取流程。Mindnote 使用与其他飞书导入一致的认证选择：传入 `args.feishu_access_token` 时使用用户 token，否则回退到配置的 app/tenant token。本次使用的 token 需具备 `mindnote:node:read`。
-- Mindnote 节点图片通过飞书 Drive 素材接口下载，并沿用本次 Mindnote 导入的 token 类型。用户 token 导入会向媒体下载透传用户 token；app-token 导入使用配置的应用凭证。本次使用的 token 需具备 `docs:document.media:download`。媒体下载不可用时，正文仍会成功导入并保留原始图片引用。
-- 飞书/Lark 一次性用户 token 导入通过 `args={"feishu_access_token": "u-..."}` 传入，且 `watch_interval <= 0`。OpenViking 只在本次导入使用该用户 token，不保存。
-- 飞书/Lark 用户 token watch 通过 `args={"feishu_access_token": "u-...", "feishu_refresh_token": "r-..."}` 传入，且 `watch_interval > 0`。还可同时传入 `feishu_app_id` 和 `feishu_app_secret`；OpenViking 会将其保存在 watch task 私有状态中，并用于刷新该 watch 的用户 token。
-- 请求未传应用凭证时，用户 token watch 回退使用 `FEISHU_APP_ID` 和 `FEISHU_APP_SECRET`，或 `ov.conf` 中的 `feishu.app_id` 和 `feishu.app_secret`。飞书 refresh token 绑定签发它的应用，因此实际使用的应用凭证必须与传入的用户 token 匹配。
-- Watch task 的 token 状态和请求传入的应用凭证保存在内部控制文件 `viking://resources/.watch_tasks.json` 中，不会出现在 watch API/MCP/CLI 返回里。若启用了 VikingFS 文件加密，该控制文件会静态加密；否则服务端控制文件中会包含这些明文私有状态。
+- Connector 导入设置 `is_active=false` 时会在提交前创建暂停状态的 Watch；原生 Git 导入会通过资源队列透传 `is_active`，解析出最终资源 URI 后再创建 Watch。两种情况下首次导入均执行一次，周期调度保持关闭。
+- Watch task 的凭据状态（例如 Git `args.auth_config`）保存在内部控制文件 `viking://resources/.watch_tasks.json` 中，不会出现在 watch API/MCP/CLI 返回里。若启用了 VikingFS 文件加密，该控制文件会静态加密；否则服务端控制文件中会包含这些明文私有状态。
 - 本地目录输入会遵循 `.gitignore`（根目录和子目录，标准 Git 语义）；`ignore_dirs`、`include`、`exclude` 会在此基础上进一步过滤。
 - 目录导入仅在至少一个入选文件成功时采用 best-effort：失败文件写入 `meta.failed_files`，成功文件正常提交。嵌套 ZIP 的叶子失败使用 `bundle.zip/path/to/file` 形式的归档限定路径，并保留远端任务 ID。如果没有任何文件成功，或筛选后没有可处理文件，任务会失败且不会保留空资源目录。
 - `args.parse_mode=no_split` 仍调用正常的格式 Parser。PDF、Word、PowerPoint、HTML 等受支持文档会转换为 Markdown，但跳过按标题、段落和长度拆分。目录导入会对每个受支持文档分别应用该规则，并继续遵循 `.gitignore`、筛选参数和 `preserve_structure`。该模式下，配置为走 Understanding 的目录文件会回退到对应的原生 Parser；没有原生解析能力的文件会写入 `meta.failed_files`，但不会阻止其他入选文件成功导入。
@@ -314,44 +303,6 @@ curl -X POST http://localhost:1933/api/v1/resources \
     \"tags\": [\"team=search\", \"env=test\"],
     \"tag_mode\": \"replace\"
   }"
-
-# 使用一次性用户 access token 添加飞书文档
-curl -X POST http://localhost:1933/api/v1/resources \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-key" \
-  -d '{
-    "path": "https://example.feishu.cn/docx/doc_token",
-    "args": {
-      "feishu_access_token": "u-..."
-    }
-  }'
-
-# 添加飞书 Mindnote（也可传底层类型为 Mindnote 的 Wiki URL）
-curl -X POST http://localhost:1933/api/v1/resources \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-key" \
-  -d '{
-    "path": "https://example.feishu.cn/mindnote/mindnote_token",
-    "args": {
-      "feishu_access_token": "u-..."
-    }
-  }'
-
-# 使用用户 token 自动刷新添加飞书文档
-curl -X POST http://localhost:1933/api/v1/resources \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-key" \
-  -d '{
-    "path": "https://example.feishu.cn/docx/doc_token",
-    "to": "viking://resources/feishu/doc",
-    "watch_interval": 1440,
-    "args": {
-      "feishu_access_token": "u-...",
-      "feishu_refresh_token": "r-...",
-      "feishu_app_id": "cli_...",
-      "feishu_app_secret": "..."
-    }
-  }'
 ```
 
 **Python SDK**
@@ -424,33 +375,6 @@ client.add_resource(
         "watch_interval": 60,  # 每60分钟更新一次
     },
 )
-
-# 使用一次性用户 access token 添加飞书文档
-client.add_resource(
-    path="https://example.feishu.cn/docx/doc_token",
-    options={"args": {"feishu_access_token": "u-..."}},
-)
-
-# 使用显式用户 token 添加飞书 Mindnote
-client.add_resource(
-    path="https://example.feishu.cn/mindnote/mindnote_token",
-    options={"args": {"feishu_access_token": "u-..."}},
-)
-
-# 使用用户 token 自动刷新添加飞书文档
-client.add_resource(
-    path="https://example.feishu.cn/docx/doc_token",
-    to="viking://resources/feishu/doc",
-    options={
-        "watch_interval": 1440,
-        "args": {
-            "feishu_access_token": "u-...",
-            "feishu_refresh_token": "r-...",
-            "feishu_app_id": "cli_...",
-            "feishu_app_secret": "...",
-        },
-    },
-)
 ```
 
 **TypeScript SDK**
@@ -512,18 +436,6 @@ ov add-resource https://github.com/example/repo.git --watch-interval 60
 # 通过 PATCH /api/v1/watches/{task_id} 提交 {"is_active": false} 暂停 Watch。
 # 原生导入也可通过 --watch-interval 0 暂停目标上唯一可访问的 Watch。
 # 一次性 Connector 导入不会影响已有 Watch。
-
-# 使用一次性用户 access token 添加飞书文档
-ov add-resource https://example.feishu.cn/docx/doc_token --args feishu_access_token:u-...
-
-# 使用用户 token 自动刷新添加飞书文档
-ov add-resource https://example.feishu.cn/docx/doc_token \
-  --to viking://resources/feishu/doc \
-  --watch-interval 1440 \
-  --args feishu_access_token:u-... \
-  --args feishu_refresh_token:r-... \
-  --args feishu_app_id:cli_... \
-  --args feishu_app_secret:...
 
 # 添加到指定父目录（父目录必须存在）
 ov add-resource ./documents/guide.md --parent viking://resources/docs

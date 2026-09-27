@@ -51,7 +51,6 @@ async def test_extensionless_remote_url_queues_frozen_understanding_route(
         pathlock_release=AsyncMock(),
     )
     processor = SimpleNamespace(
-        should_use_understanding_directly=lambda _source, **_kwargs: False,
         prepare_durable_source=AsyncMock(return_value=prepared),
         should_use_understanding_api=lambda resource: resource is prepared,
         submit_understanding=AsyncMock(return_value="response-1"),
@@ -152,7 +151,6 @@ async def test_remote_mpeg_ts_url_queues_understanding_after_prepare(
         )
     )
     processor = SimpleNamespace(
-        should_use_understanding_directly=lambda _source, **_kwargs: False,
         prepare_durable_source=AsyncMock(return_value=prepared),
         should_use_understanding_api=lambda resource: resource is prepared,
         submit_understanding=AsyncMock(return_value="response-1"),
@@ -244,7 +242,6 @@ async def test_temp_uploaded_file_queues_external_parse_with_file_id(
         pathlock_release=AsyncMock(),
     )
     processor = SimpleNamespace(
-        should_use_understanding_directly=lambda _source, **_kwargs: False,
         prepare_durable_source=AsyncMock(return_value=prepared),
         should_use_understanding_api=lambda resource: resource is prepared,
         upload_understanding_file=AsyncMock(return_value="file-1"),

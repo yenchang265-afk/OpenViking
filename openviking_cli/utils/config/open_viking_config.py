@@ -6,7 +6,6 @@ import os
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional
-from urllib.parse import urlsplit
 
 from pydantic import BaseModel, Field, ValidationError, model_validator
 
@@ -40,7 +39,6 @@ from .parser_config import (
     AudioConfig,
     CodeConfig,
     DirectoryConfig,
-    FeishuConfig,
     HTMLConfig,
     ImageConfig,
     MarkdownConfig,
@@ -72,26 +70,12 @@ class ConnectorConfig(BaseModel):
     enable: bool = False
     connector: str = ""
     tracker: str = ""
-    auth: str = ""
     timeout_seconds: int = 3600
     poll_interval_ms: int = 5000
     allowed_add_types: List[str] = Field(default_factory=lambda: ["tos"])
 
     @model_validator(mode="after")
     def _validate(self) -> "ConnectorConfig":
-        self.auth = self.auth.strip()
-        if self.auth:
-            url = urlsplit(self.auth)
-            if (
-                url.scheme not in {"http", "https"}
-                or not url.hostname
-                or url.username
-                or url.password
-                or url.fragment
-            ):
-                raise ValueError(
-                    "connector.auth must be an HTTP(S) endpoint URL without credentials or fragment"
-                )
         if self.enable:
             for name, url in (("connector", self.connector), ("tracker", self.tracker)):
                 if not url.strip():
@@ -115,7 +99,6 @@ class ParserApiConfig(BaseModel):
     extensions: List[str] = Field(default_factory=list)
     host: str = ""
     api_key: str = ""
-    enable_feishu_url: bool = False
     enable_resumable_upload: bool = False
     upload_simple_max_bytes: int = 512 * 1024 * 1024
     upload_part_size_bytes: int = 8 * 1024 * 1024
@@ -275,11 +258,6 @@ class OpenVikingConfig(BaseModel):
 
     directory: DirectoryConfig = Field(
         default_factory=DirectoryConfig, description="Directory parsing configuration"
-    )
-
-    feishu: FeishuConfig = Field(
-        default_factory=FeishuConfig,
-        description="Feishu/Lark document parsing configuration",
     )
 
     webfeed: WebFeedConfig = Field(
@@ -492,7 +470,6 @@ class OpenVikingConfig(BaseModel):
                 "html",
                 "text",
                 "directory",
-                "feishu",
                 "webfeed",
             ]
 

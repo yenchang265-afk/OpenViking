@@ -1105,8 +1105,8 @@ Usage: ov config [OPTIONS] [COMMAND]
     fn structured_api_errors_are_not_reclassified_from_message_text() {
         let error = Error::api_response(
             Some("FAILED_PRECONDITION".to_string()),
-            "Apply permission at https://open.feishu.cn/app/auth?token=abc",
-            Some(serde_json::json!({"feishu_code": 99991672})),
+            "Apply permission at https://example.com/app/auth?token=abc",
+            Some(serde_json::json!({"provider_code": 99991672})),
             412,
         );
 
@@ -1119,7 +1119,7 @@ Usage: ov config [OPTIONS] [COMMAND]
         let json: serde_json::Value =
             serde_json::from_str(&render_json_error(&error, true)).unwrap();
         assert_eq!(json["error"]["code"], "FAILED_PRECONDITION");
-        assert_eq!(json["error"]["details"]["feishu_code"], 99991672);
+        assert_eq!(json["error"]["details"]["provider_code"], 99991672);
     }
 
     #[test]

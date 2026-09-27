@@ -28,7 +28,6 @@ const BASE_FORM_STATE: ResourceImportFormState = {
   reason: '',
   remoteResourceKind: 'unknown',
   sourceOptionState: {
-    feishu: { accessToken: '', authMode: 'app', refreshToken: '' },
     git: {
       authMode: 'public',
       refMode: 'branch',
@@ -156,27 +155,21 @@ describe('resource import request builders', () => {
 
   it('preserves source-specific remote options', () => {
     expect(
-      buildRemoteResourceRequest(' https://example.feishu.cn/docx/doc ', {
-        args: {
-          feishu_access_token: 'u-token',
-          feishu_refresh_token: 'r-token',
-        },
+      buildRemoteResourceRequest(' https://github.com/org/repo ', {
+        args: { branch: 'main' },
         processing_mode: 'vectors_only',
         tags: ['team=docs'],
         tag_mode: 'append',
-        to: 'viking://resources/feishu/doc',
+        to: 'viking://resources/repo',
         watch_interval: 1440,
       }),
     ).toEqual({
-      args: {
-        feishu_access_token: 'u-token',
-        feishu_refresh_token: 'r-token',
-      },
-      path: 'https://example.feishu.cn/docx/doc',
+      args: { branch: 'main' },
+      path: 'https://github.com/org/repo',
       processing_mode: 'vectors_only',
       tags: ['team=docs'],
       tag_mode: 'append',
-      to: 'viking://resources/feishu/doc',
+      to: 'viking://resources/repo',
       watch_interval: 1440,
     })
   })

@@ -530,69 +530,6 @@ class TextConfig(ParserConfig):
 
 
 @dataclass
-class FeishuConfig(ParserConfig):
-    """
-    Configuration for Feishu/Lark document parsing.
-
-    Attributes:
-        app_id: Feishu app ID (can also be set via FEISHU_APP_ID env var)
-        app_secret: Feishu app secret (can also be set via FEISHU_APP_SECRET env var)
-        domain: Feishu API domain
-        max_rows_per_sheet: Maximum rows per sheet for spreadsheets
-        max_records_per_table: Maximum records per table for bitable
-        download_images: Whether to download images from documents
-        request_timeout: HTTP request timeout in seconds
-    """
-
-    app_id: str = ""
-    app_secret: str = ""
-    domain: str = "https://open.feishu.cn"
-    max_rows_per_sheet: int = 1000
-    max_records_per_table: int = 1000
-    download_images: bool = True
-    request_timeout: float = (
-        30.0  # TODO: not yet passed to lark-oapi client, reserved for future use
-    )
-
-    def __post_init__(self) -> None:
-        self.validate()
-
-    def validate(self) -> None:
-        """
-        Validate configuration.
-
-        Raises:
-            ValueError: If configuration is invalid
-        """
-        super().validate()
-
-        if not isinstance(self.domain, str) or not self.domain.strip():
-            raise ValueError("domain cannot be empty")
-        self.domain = self.domain.strip()
-
-        if (
-            isinstance(self.max_rows_per_sheet, bool)
-            or not isinstance(self.max_rows_per_sheet, int)
-            or self.max_rows_per_sheet <= 0
-        ):
-            raise ValueError("max_rows_per_sheet must be positive")
-
-        if (
-            isinstance(self.max_records_per_table, bool)
-            or not isinstance(self.max_records_per_table, int)
-            or self.max_records_per_table <= 0
-        ):
-            raise ValueError("max_records_per_table must be positive")
-
-        if (
-            isinstance(self.request_timeout, bool)
-            or not isinstance(self.request_timeout, (int, float))
-            or self.request_timeout <= 0
-        ):
-            raise ValueError("request_timeout must be positive")
-
-
-@dataclass
 class DirectoryConfig(ParserConfig):
     """
     Configuration for directory parsing.
@@ -603,7 +540,7 @@ class DirectoryConfig(ParserConfig):
             relative path hierarchy. When False, all files are flattened to a
             single level under the resource root.
         max_files: Optional maximum number of selected files admitted by one
-            Understanding or Feishu directory import. None (default) means unlimited.
+            Understanding directory import. None (default) means unlimited.
         max_depth: Maximum nested directory depth below an Understanding directory
             import root.
         max_concurrent: Maximum concurrent Understanding jobs shared by all
@@ -750,7 +687,6 @@ PARSER_CONFIG_REGISTRY = {
     "html": HTMLConfig,
     "text": TextConfig,
     "directory": DirectoryConfig,
-    "feishu": FeishuConfig,
     "webfeed": WebFeedConfig,
 }
 

@@ -7,7 +7,7 @@ from vikingbot.openviking_mount.ov_server import VikingClient
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("target_uri", [None, "viking://resources/feishu/doc/config"])
+@pytest.mark.parametrize("target_uri", [None, "viking://resources/wiki/doc/config"])
 async def test_add_resource_tool_submits_to_sdk(monkeypatch, target_uri):
     expected_uri = target_uri or "viking://resources/doc"
     sdk_client = AsyncMock()

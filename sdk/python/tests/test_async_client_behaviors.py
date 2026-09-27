@@ -79,7 +79,7 @@ async def test_async_http_client_batch_add_messages_url_encodes_session_id():
     }
 
     session_id = (
-        "feishu__cli_a938e530eb7c9bd9__"
+        "telegram__cli_a938e530eb7c9bd9__"
         "oc_aa9e08fddf5727f9c53400a07ff505cd#om_x100b6ff6c3df48ace10030ac68d3eb4"
     )
 
@@ -87,7 +87,7 @@ async def test_async_http_client_batch_add_messages_url_encodes_session_id():
 
     fake_http.post.assert_awaited_once_with(
         "/api/v1/sessions/"
-        "feishu__cli_a938e530eb7c9bd9__"
+        "telegram__cli_a938e530eb7c9bd9__"
         "oc_aa9e08fddf5727f9c53400a07ff505cd%23om_x100b6ff6c3df48ace10030ac68d3eb4"
         "/messages/batch",
         json={"messages": [{"role": "user", "content": "hello"}]},
@@ -1007,19 +1007,19 @@ async def test_add_resource_forwards_declared_add_type_with_exact_target():
     fake_http = SimpleNamespace(post=AsyncMock(return_value=object()))
     client._http = fake_http
     client._handle_response_data = lambda _response: {
-        "result": {"root_uri": "viking://resources/feishu"}
+        "result": {"root_uri": "viking://resources/wiki"}
     }
 
     await client.add_resource(
         "space:home",
-        to="viking://resources/feishu",
-        options={"add_type": " feishu "},
+        to="viking://resources/wiki",
+        options={"add_type": " wiki "},
     )
 
     payload = fake_http.post.await_args.kwargs["json"]
     assert payload["path"] == "space:home"
-    assert payload["add_type"] == "feishu"
-    assert payload["to"] == "viking://resources/feishu"
+    assert payload["add_type"] == "wiki"
+    assert payload["to"] == "viking://resources/wiki"
 
 
 @pytest.mark.asyncio
@@ -1027,7 +1027,7 @@ async def test_add_resource_declared_add_type_requires_exact_target():
     client = AsyncHTTPClient(url="http://127.0.0.1:1933")
 
     with pytest.raises(ValueError, match="exact 'to'"):
-        await client.add_resource("space:home", options={"add_type": "feishu"})
+        await client.add_resource("space:home", options={"add_type": "wiki"})
 
 
 @pytest.mark.asyncio
@@ -1037,10 +1037,10 @@ async def test_add_resource_declared_add_type_rejects_parent():
     with pytest.raises(ValueError, match="'parent'"):
         await client.add_resource(
             "space:home",
-            to="viking://resources/feishu",
+            to="viking://resources/wiki",
             parent="viking://resources/imports",
             options={
-                "add_type": "feishu",
+                "add_type": "wiki",
             },
         )
 
@@ -1055,13 +1055,13 @@ async def test_add_resource_declared_add_type_skips_local_file_upload(tmp_path):
     client._http = fake_http
     client._upload_temp_file = AsyncMock(return_value="unexpected-upload")
     client._handle_response_data = lambda _response: {
-        "result": {"root_uri": "viking://resources/feishu"}
+        "result": {"root_uri": "viking://resources/wiki"}
     }
 
     await client.add_resource(
         str(source),
-        to="viking://resources/feishu",
-        options={"add_type": "feishu"},
+        to="viking://resources/wiki",
+        options={"add_type": "wiki"},
     )
 
     client._upload_temp_file.assert_not_awaited()
@@ -1077,21 +1077,21 @@ def test_sync_add_resource_accepts_and_forwards_declared_add_type():
         client._async_client,
         "add_resource",
         new_callable=AsyncMock,
-        return_value={"root_uri": "viking://resources/feishu"},
+        return_value={"root_uri": "viking://resources/wiki"},
     ) as mock_add_resource:
         result = client.add_resource(
             "space:home",
-            to="viking://resources/feishu",
-            options={"add_type": "feishu"},
+            to="viking://resources/wiki",
+            options={"add_type": "wiki"},
         )
 
-    assert result["root_uri"] == "viking://resources/feishu"
+    assert result["root_uri"] == "viking://resources/wiki"
     assert mock_add_resource.await_args.kwargs == {
-        "to": "viking://resources/feishu",
+        "to": "viking://resources/wiki",
         "parent": None,
         "wait": False,
         "timeout": None,
-        "options": {"add_type": "feishu"},
+        "options": {"add_type": "wiki"},
     }
 
 

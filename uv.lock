@@ -2230,21 +2230,6 @@ wheels = [
 ]
 
 [[package]]
-name = "lark-oapi"
-version = "1.5.3"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pycryptodome" },
-    { name = "requests" },
-    { name = "requests-toolbelt" },
-    { name = "websockets" },
-]
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/bf/ff/2ece5d735ebfa2af600a53176f2636ae47af2bf934e08effab64f0d1e047/lark_oapi-1.5.3-py3-none-any.whl", hash = "sha256:fda6b32bb38d21b6bdaae94979c600b94c7c521e985adade63a54e4b3e20cc36", size = 6993016, upload-time = "2026-01-27T08:21:49.307Z" },
-]
-
-[[package]]
 name = "librt"
 version = "0.8.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3420,7 +3405,6 @@ dependencies = [
     { name = "httpx" },
     { name = "jinja2" },
     { name = "json-repair" },
-    { name = "lark-oapi" },
     { name = "litellm" },
     { name = "loguru" },
     { name = "mcp" },
@@ -3491,7 +3475,6 @@ bot = [
     { name = "html2text" },
     { name = "httpx", extra = ["socks"] },
     { name = "langfuse" },
-    { name = "lark-oapi" },
     { name = "mcp" },
     { name = "msgpack" },
     { name = "opencode-ai" },
@@ -3614,8 +3597,6 @@ requires-dist = [
     { name = "langchain-core", marker = "extra == 'benchmark'", specifier = ">=1.0.0" },
     { name = "langchain-openai", marker = "extra == 'benchmark'", specifier = ">=1.0.0" },
     { name = "langfuse", marker = "extra == 'bot'", specifier = ">=3.0.0" },
-    { name = "lark-oapi", specifier = ">=1.5.3" },
-    { name = "lark-oapi", marker = "extra == 'bot'", specifier = ">=1.0.0" },
     { name = "litellm", specifier = ">=1.83.7,<1.91.2" },
     { name = "llama-cpp-python", marker = "extra == 'local-embed'", specifier = ">=0.3.0" },
     { name = "loguru", specifier = ">=0.7.3" },

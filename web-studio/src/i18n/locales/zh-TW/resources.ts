@@ -148,8 +148,6 @@ const resources = {
     'remoteUrl.placeholder': '貼上遠端資源地址',
     'remoteUrl.hint': 'HTTP(S) 連結、Git 倉庫地址或其他遠端資源地址。',
     sourceKind: {
-      feishu: '飛書 / Lark',
-      feishuHint: '支援文件、知識庫、電子表格和多維表格連結。',
       git: 'Git 倉庫',
       gitHint: '支援公開或私有 Git 倉庫，並可指定分支或提交。',
       remoteFile: '遠端檔案',
@@ -164,9 +162,6 @@ const resources = {
     sourcePicker: {
       title: '支援的遠端資源型別',
       hint: '以下型別均有服務端處理鏈路；選擇後可填寫對應引數，也可以保持自動識別。',
-      feishu: '飛書 / Lark',
-      feishuHint: '文件、知識庫、電子表格和多維表格',
-      feishuExample: 'https://example.feishu.cn/docx/...',
       git: 'Git 倉庫',
       gitHint: '公開或私有倉庫，可指定分支或提交',
       gitExample: 'https://github.com/org/repo',
@@ -182,30 +177,6 @@ const resources = {
     },
     configurationGuide: {
       title: '如何配置？',
-      documentation: '檢視服務端配置文件',
-    },
-    feishu: {
-      auth: {
-        title: '訪問方式',
-        hint: '選擇 OpenViking 訪問該飛書資源時使用的身份。',
-        app: '服務端應用憑證',
-        appHint: '使用服務端配置的 FEISHU_APP_ID 和 FEISHU_APP_SECRET。',
-        user: '使用者授權',
-        userHint: '使用當前使用者的飛書訪問令牌訪問私有文件。',
-      },
-      accessToken: '訪問令牌',
-      'accessToken.placeholder': 'u-...',
-      'accessToken.hint': '訪問令牌僅用於本次匯入，不會儲存。',
-      refreshToken: '重新整理令牌',
-      'refreshToken.placeholder': 'r-...',
-      'refreshToken.hint':
-        '定時同步需要重新整理令牌；服務端還需配置簽發該令牌的同一個飛書應用。',
-      configuration: {
-        credentials: '在飛書開放平臺獲取應用的 App ID 和 App Secret。',
-        server:
-          '在服務端設定 FEISHU_APP_ID、FEISHU_APP_SECRET，或寫入 ov.conf 的 feishu.app_id、feishu.app_secret。',
-        restart: '重啟 OpenViking 服務，使配置生效；無需額外開啟開關。',
-      },
     },
     git: {
       refType: '版本定位',

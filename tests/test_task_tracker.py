@@ -717,7 +717,7 @@ async def test_persistent_store_writes_task_record_json():
     task = await tracker.create(
         "add_resource",
         resource_id="viking://resources/demo",
-        auth={"provider": "feishu", "access_token": "secret-token"},
+        auth={"provider": "git_http_basic", "token": "secret-token"},
         **_owner_kwargs(),
     )
 
@@ -731,8 +731,8 @@ async def test_persistent_store_writes_task_record_json():
     assert payload["user_id"] == "alice"
     assert payload["stage"] is None
     assert payload["auth"] == {
-        "provider": "feishu",
-        "access_token": "secret-token",
+        "provider": "git_http_basic",
+        "token": "secret-token",
     }
     assert "schema_version" not in payload
 
@@ -756,7 +756,7 @@ async def test_persistent_store_survives_tracker_reset():
     task = await tracker1.create(
         "session_commit",
         resource_id="sess-123",
-        auth={"provider": "feishu", "access_token": "secret-token"},
+        auth={"provider": "git_http_basic", "token": "secret-token"},
         **_owner_kwargs(),
     )
     await tracker1.start(task.task_id, account_id="acme", user_id="alice")
@@ -768,8 +768,8 @@ async def test_persistent_store_survives_tracker_reset():
     assert loaded.status == TaskStatus.RUNNING
     assert loaded.auth == {}
     assert await tracker2.get_task_auth(task.task_id, **_owner_kwargs()) == {
-        "provider": "feishu",
-        "access_token": "secret-token",
+        "provider": "git_http_basic",
+        "token": "secret-token",
     }
 
 
@@ -839,14 +839,6 @@ async def test_session_service_get_commit_task_also_filters_account():
     )
 
     assert other_account_result is None
-
-
-async def test_feishu_response_checkpoint_survives_reload(tracker):
-    task = await tracker.create("add_resource", **_owner_kwargs())
-    await tracker.record_feishu_response(task.task_id, "nested/doc", "response-1", "acme", "alice")
-    restored = TaskTracker(store=tracker._store)
-    record = await restored.get(task.task_id, **_owner_kwargs())
-    assert record.meta["feishu_responses"] == {"nested/doc": "response-1"}
 
 
 async def test_execution_events_survive_restart_and_preserve_reported_facts():

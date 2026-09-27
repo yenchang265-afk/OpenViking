@@ -57,7 +57,6 @@ class StagedSource:
             SourceType.LOCAL,
             SourceType.GIT,
             SourceType.HTTP,
-            SourceType.FEISHU,
         }:
             raise ValueError("staged_source.source_type is invalid")
         if not isinstance(original_source, str):

@@ -7,11 +7,6 @@ import {
 import type { RemoteSourceOptionState } from './resource-source-strategy'
 
 const DEFAULT_STATE: RemoteSourceOptionState = {
-  feishu: {
-    accessToken: '',
-    authMode: 'app',
-    refreshToken: '',
-  },
   git: {
     authMode: 'public',
     refMode: 'branch',
@@ -41,25 +36,6 @@ describe('remote resource source strategy', () => {
     })
     expect(buildRemoteSourceRequestOptions('tos', DEFAULT_STATE)).toEqual({
       add_type: 'tos',
-    })
-  })
-
-  it('builds watched Feishu user credentials', () => {
-    const state: RemoteSourceOptionState = {
-      ...DEFAULT_STATE,
-      feishu: {
-        accessToken: 'u-token',
-        authMode: 'user',
-        refreshToken: 'r-token',
-      },
-      watchEnabled: true,
-    }
-
-    expect(buildRemoteSourceRequestOptions('feishu', state)).toEqual({
-      args: {
-        feishu_access_token: 'u-token',
-        feishu_refresh_token: 'r-token',
-      },
     })
   })
 

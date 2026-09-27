@@ -870,9 +870,7 @@ def chat(
     config_path: str = typer.Option(
         None, "--config", "-c", help="Path to ov.conf, default .openviking/ov.conf"
     ),
-    sender: str = typer.Option(
-        None, "--sender", help="Sender ID, same usage as feishu channel sender"
-    ),
+    sender: str = typer.Option(None, "--sender", help="Sender ID, same usage as a channel sender"),
     memory_peer: list[str] = typer.Option(
         None, "--memory-peer", help="Peer ID for memory retrieval (can be repeated)"
     ),
@@ -1016,8 +1014,6 @@ def channels_status():
         config_info = ""
         if channel.type == ChannelType.WHATSAPP:
             config_info = channel.bridge_url
-        elif channel.type == ChannelType.FEISHU:
-            config_info = f"app_id: {channel.app_id[:10]}..." if channel.app_id else ""
         elif channel.type == ChannelType.DISCORD:
             config_info = channel.gateway_url
         elif channel.type == ChannelType.MOCHAT:

@@ -8,7 +8,6 @@ import {
   updateConnection,
   verifyConnection,
 } from './-api'
-import { currentOnboarding, updateOnboarding } from './-providers/feishu/api'
 import type { Connection } from './-api'
 
 const transport = vi.hoisted(() => ({
@@ -75,17 +74,5 @@ it('uses current account and encodes identifiers without moving conversation key
   expect(transport.get).toHaveBeenCalledWith({
     url: '/api/v1/admin/accounts/team%20two/bot/connections/app%2Fid/messages',
     query: { conversation: 'group/thread:topic', before: 7 },
-  })
-})
-it('uses provider selection for current setup and explicit job actions', () => {
-  currentOnboarding()
-  expect(transport.get).toHaveBeenCalledWith({
-    url: `${base}/onboarding-runs/current`,
-    query: { type: 'feishu' },
-  })
-  updateOnboarding('job', 'retry')
-  expect(transport.post).toHaveBeenCalledWith({
-    url: `${base}/onboarding-runs/job/actions`,
-    body: { action: 'retry' },
   })
 })

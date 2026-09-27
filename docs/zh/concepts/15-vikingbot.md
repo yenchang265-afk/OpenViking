@@ -14,7 +14,7 @@ VikingBot 是 OpenViking 提供的多渠道 AI Agent。OpenViking 负责统一�
 ## 系统概览
 
 ```text
-CLI / Feishu / Slack / Telegram / Discord / Email / HTTP API
+CLI / Slack / Telegram / Discord / Email / HTTP API
                               │
                               ▼
                     Channel + MessageBus
@@ -34,7 +34,7 @@ CLI / Feishu / Slack / Telegram / Discord / Email / HTTP API
              Session 同步与经验沉淀
 ```
 
-所有入口最终使用同一套 AgentLoop。渠道差异被转换为统一消息，模型和工具无需感知消息来自命令行、飞书还是 HTTP API。
+所有入口最终使用同一套 AgentLoop。渠道差异被转换为统一消息，模型和工具无需感知消息来自命令行、聊天平台还是 HTTP API。
 
 ## 核心能力
 
@@ -43,7 +43,7 @@ CLI / Feishu / Slack / Telegram / Discord / Email / HTTP API
 VikingBot 支持三类入口：
 
 - `vikingbot chat` 和 `ov chat`：单次调用或交互式命令行对话；
-- Feishu、Slack、Telegram、Discord、WhatsApp、DingTalk、QQ、Email 和 MoChat：长期运行的聊天机器人；
+- Slack、Telegram、Discord、WhatsApp、DingTalk、QQ、Email 和 MoChat：长期运行的聊天机器人；
 - `/bot/v1` HTTP API：同步 Chat、SSE 流式事件、Session 和反馈接口。
 
 每个渠道负责平台鉴权、发送者白名单、媒体解析、回复格式和会话路由。VikingBot 使用 `type + channel_id + chat_id` 隔离不同渠道实例和会话。

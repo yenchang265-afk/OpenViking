@@ -1,13 +1,12 @@
 ## 💬 聊天应用
 
-通过 Telegram、Discord、WhatsApp、飞书、Mochat、钉钉、Slack、邮件或 QQ 与您的 vikingbot 对话 —— 随时随地。
+通过 Telegram、Discord、WhatsApp、Mochat、钉钉、Slack、邮件或 QQ 与您的 vikingbot 对话 —— 随时随地。
 
 | 渠道 | 设置难度 |
 |---------|-------|
 | **Telegram** | 简单（只需一个令牌） |
 | **Discord** | 简单（机器人令牌 + 权限） |
 | **WhatsApp** | 中等（扫描二维码） |
-| **飞书** | 中等（应用凭证） |
 | **Mochat** | 中等（claw 令牌 + websocket） |
 | **钉钉** | 中等（应用凭证） |
 | **Slack** | 中等（机器人 + 应用令牌） |
@@ -190,57 +189,6 @@ vikingbot channels login
 # 终端 2
 vikingbot gateway
 ```
-
-</details>
-
-<details>
-<summary><b>飞书</b></summary>
-
-使用 **WebSocket** 长连接 —— 不需要公网 IP。
-
-**1. 创建飞书机器人**
-- 访问 [飞书开放平台](https://open.feishu.cn/app)
-- 创建新应用 → 启用 **机器人** 功能
-- **权限**：添加 `im:message`（发送消息）
-- **事件**：添加 `im.message.receive_v1`（接收消息）
-  - 选择 **长连接** 模式（需要先运行 vikingbot 来建立连接）
-- 从「凭证与基础信息」获取 **App ID** 和 **App Secret**
-- 发布应用
-
-**2. 配置**
-
-```json
-{
-  "channels": [
-    {
-      "type": "feishu",
-      "enabled": true,
-      "appId": "cli_xxx",
-      "appSecret": "xxx",
-      "botName": "",
-      "encryptKey": "",
-      "verificationToken": "",
-      "allowFrom": [],
-      "threadRequireMention": true
-    }
-  ]
-}
-```
-
-> 长连接模式下，`encryptKey` 和 `verificationToken` 是可选的。
-> `domain`：开放平台域名，默认 `https://open.feishu.cn`（飞书）。对接 **Lark 国际版**时填 `https://open.larksuite.com`，HTTP 调用和 WebSocket 长连接都会走这个域名。
-> `allowFrom`：留空以允许所有用户，或添加 `["ou_xxx"]` 以限制访问。
-> `botName`：用于在传给模型的群聊上下文中把 `@<open_id>` 提及替换为机器人名称，以及标注机器人自身发出的消息；留空则回退为 `"Bot"`。
-> `threadRequireMention`：群聊是否需要 `@` 机器人才响应。默认 `true` —— 普通群和话题群的所有消息都需要 `@`；设为 `false` 时，普通群无需 `@`，话题群仅首条消息无需 `@`，非 `DEBUG` 模式下后续回复仍需 `@`。
-
-**3. 运行**
-
-```bash
-vikingbot gateway
-```
-
-> [!TIP]
-> 飞书使用 WebSocket 接收消息 —— 不需要 webhook 或公网 IP！
 
 </details>
 

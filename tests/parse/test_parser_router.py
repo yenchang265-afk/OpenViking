@@ -22,7 +22,6 @@ def test_should_use_understanding_api_for_signed_video_url(monkeypatch):
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["mp4"],
         ),
     )
@@ -42,7 +41,6 @@ def test_resolved_extension_routes_extensionless_download(monkeypatch, tmp_path)
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["pdf"],
         ),
     )
@@ -71,7 +69,6 @@ def test_should_use_understanding_api_for_local_mpeg_ts(monkeypatch, tmp_path):
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["mpegts"],
         ),
     )
@@ -100,7 +97,6 @@ def test_should_use_understanding_api_for_typescript_when_ts_configured(monkeypa
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["ts"],
         ),
     )
@@ -120,7 +116,6 @@ def test_should_not_use_understanding_api_for_typescript_source(monkeypatch, tmp
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["mpegts"],
         ),
     )
@@ -143,7 +138,6 @@ def test_should_not_use_understanding_api_for_mpeg_ts_when_extension_disabled(
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["mp4"],
         ),
     )
@@ -175,59 +169,10 @@ def test_parser_registry_keeps_typescript_ts_on_text_fallback(tmp_path):
     assert ParserRegistry().get_parser_for_file(path) is None
 
 
-def test_should_use_understanding_api_for_feishu_url(monkeypatch):
-    config = SimpleNamespace(
-        parser_api=SimpleNamespace(
-            enable=True,
-            enable_feishu_url=True,
-            extensions=[],
-        ),
-    )
-    monkeypatch.setattr(
-        "openviking_cli.utils.config.open_viking_config.get_openviking_config",
-        lambda: config,
-    )
-
-    router = ParserRouter(parser_registry=object())
-    router._understanding_api = SimpleNamespace(
-        can_submit_url_directly=lambda _source, **kwargs: bool(kwargs.get("feishu_access_token"))
-    )
-
-    assert router.should_use_understanding_api("https://example.larkoffice.com/wiki/wikicnToken")
-    assert router.should_use_understanding_directly(
-        "https://example.larkoffice.com/wiki/wikicnToken",
-        feishu_access_token="u-test",
-    )
-    assert not router.should_use_understanding_api(
-        "https://larkoffice.com.evil.example/wiki/wikicnToken"
-    )
-
-
-def test_feishu_url_flag_is_required_even_when_extension_matches(monkeypatch):
-    config = SimpleNamespace(
-        parser_api=SimpleNamespace(
-            enable=True,
-            enable_feishu_url=False,
-            extensions=["pdf"],
-        ),
-    )
-    monkeypatch.setattr(
-        "openviking_cli.utils.config.open_viking_config.get_openviking_config",
-        lambda: config,
-    )
-
-    router = ParserRouter(parser_registry=object())
-
-    assert not router.should_use_understanding_api(
-        "https://example.larkoffice.com/docx/doxcnToken.pdf"
-    )
-
-
 def test_directories_never_route_to_understanding(monkeypatch, tmp_path):
     config = SimpleNamespace(
         parser_api=SimpleNamespace(
             enable=True,
-            enable_feishu_url=False,
             extensions=["pdf"],
         ),
     )
@@ -244,44 +189,6 @@ def test_directories_never_route_to_understanding(monkeypatch, tmp_path):
     )
 
     assert not UnifiedResourceProcessor().should_use_understanding_api(resource)
-
-
-@pytest.mark.asyncio
-async def test_normalized_feishu_markdown_stays_internal(monkeypatch, tmp_path):
-    config = SimpleNamespace(
-        parser_api=SimpleNamespace(
-            enable=True,
-            enable_feishu_url=True,
-            extensions=["md"],
-        ),
-    )
-    monkeypatch.setattr(
-        "openviking_cli.utils.config.open_viking_config.get_openviking_config",
-        lambda: config,
-    )
-    resource = LocalResource(
-        path=tmp_path / "document.md",
-        source_type=SourceType.FEISHU,
-        original_source="https://example.feishu.cn/docx/doc-token",
-        meta={"resolved_extension": ".md"},
-        is_temporary=False,
-    )
-    registry = SimpleNamespace(parse=AsyncMock(return_value=object()))
-    understanding = SimpleNamespace(parse=AsyncMock(return_value=object()))
-    router = ParserRouter(registry)
-    router._understanding_api = understanding
-    processor = UnifiedResourceProcessor()
-    processor._parser_router = router
-
-    assert not processor.should_use_understanding_api(resource)
-    await router.parse(
-        resource,
-        resolved_extension=".md",
-        parser_backend="understanding",
-    )
-
-    registry.parse.assert_awaited_once()
-    understanding.parse.assert_not_awaited()
 
 
 @pytest.mark.asyncio

@@ -52,7 +52,7 @@
 
 | 层级 | 抽象接口 | 职责 | 示例 |
 |-----|---------|------|------|
-| **L1: Accessor** | `DataAccessor` | 获取数据：远程 URL / 特殊路径 → 本地文件/目录 | `GitAccessor`, `HTTPAccessor`, `FeishuAccessor` |
+| **L1: Accessor** | `DataAccessor` | 获取数据：远程 URL / 特殊路径 → 本地文件/目录 | `GitAccessor`, `HTTPAccessor`, `LocalAccessor` |
 | **L2: Parser** | `BaseParser` | 解析数据：本地文件/目录 → `ParseResult` | `MarkdownParser`, `PDFParser`, `ZipParser` |
 
 ### 调用流程
@@ -69,7 +69,6 @@ UnifiedResourceProcessor.process()
 ├─────────────────────────────────────────┤
 │  AccessorRegistry.route(source)         │
 │    ├─→ GitAccessor    (priority: 80)   │
-│    ├─→ FeishuAccessor (priority: 100)  │
 │    ├─→ HTTPAccessor   (priority: 50)   │
 │    └─→ LocalAccessor  (priority: 10)   │
 │         ↓                                │
@@ -107,7 +106,7 @@ TreeBuilder + SemanticQueue (保持不变)
 @dataclass
 class LocalResource:
     path: Path                    # 本地文件/目录路径
-    source_type: str              # 原始来源类型 (SourceType.GIT/HTTP/FEISHU/LOCAL)
+    source_type: str              # 原始来源类型 (SourceType.GIT/HTTP/LOCAL)
     original_source: str           # 原始 source 字符串
     meta: Dict[str, Any]          # 元数据（repo_name, branch, content_type 等）
     is_temporary: bool = True      # 是否为临时文件，解析后可清理
@@ -134,7 +133,6 @@ class DataAccessor(ABC):
     @abstractmethod
     def priority(self) -> int
         """优先级：数字越大优先级越高
-           - 100: 特定服务 (Feishu)
            - 80: 版本控制 (Git)
            - 50: 通用协议 (HTTP)
            - 10: 兜底 (Local)
@@ -167,10 +165,9 @@ class AccessorRegistry:
 ```
 
 默认注册的 Accessor（按优先级）：
-1. `FeishuAccessor` (100) - 处理飞书/ Lark 文档
-2. `GitAccessor` (80) - 处理 Git 仓库
-3. `HTTPAccessor` (50) - 处理 HTTP/HTTPS URL
-4. `LocalAccessor` (10) - 处理本地文件（兜底）
+1. `GitAccessor` (80) - 处理 Git 仓库
+2. `HTTPAccessor` (50) - 处理 HTTP/HTTPS URL
+3. `LocalAccessor` (10) - 处理本地文件（兜底）
 
 ---
 
@@ -183,7 +180,6 @@ class AccessorRegistry:
 - [x] 实现 `AccessorRegistry`（含优先级机制）
 - [x] 实现 `GitAccessor` - 处理 Git 仓库
 - [x] 实现 `HTTPAccessor` - 处理 HTTP URL
-- [x] 实现 `FeishuAccessor` - 处理飞书文档
 - [x] 实现 `LocalAccessor` - 处理本地文件
 - [x] 全局注册表 `get_accessor_registry()`
 - [x] 更新 `PDFParser`、`resources.py`、`local_input_guard.py` 使用新架构
@@ -200,7 +196,6 @@ openviking/parse/
 │   ├── registry.py              # AccessorRegistry
 │   ├── git_accessor.py          # GitAccessor
 │   ├── http_accessor.py         # HTTPAccessor
-│   ├── feishu_accessor.py       # FeishuAccessor
 │   └── local_accessor.py        # LocalAccessor
 ├── parsers/                      # 数据解析层（保持不变）
 │   ├── base_parser.py

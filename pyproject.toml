@@ -81,7 +81,6 @@ dependencies = [
     "loguru>=0.7.3",
     "cryptography>=48.0.1",
     "argon2-cffi>=23.0.0",
-    "lark-oapi>=1.5.3",
     "mcp>=1.27,<2",
     "pathspec>=1.1.1",
     "grep-ast==0.9.0",
@@ -164,7 +163,6 @@ bot = [
   # All optional features included by default
   "langfuse>=3.0.0",
   "python-telegram-bot[socks]>=21.0",
-  "lark-oapi>=1.0.0",
   "dingtalk-stream>=0.4.0",
   "slack-sdk>=3.26.0",
   "qq-botpy>=1.0.0",
@@ -218,7 +216,6 @@ include = ["openviking*", "vikingbot*"]
 exclude = ["tests*", "docs*", "examples*"]
 
 [tool.setuptools.package-data]
-"vikingbot.studio.providers.feishu" = ["icon.png"]
 openviking = [
     "prompts/templates/**/*.yaml",
     "server/static/**/*",

@@ -448,7 +448,7 @@ enum Commands {
         processing_mode: String,
         /// Extra options as key:value pairs or a JSON object. With a path/URL:
         /// parser-specific import options sent to the server, e.g.
-        /// --args feishu_access_token:u-xxx. With --manifest: run options consumed
+        /// --args key:value. With --manifest: run options consumed
         /// locally, e.g. --args dry_run:true (supported keys: catalog, dry_run, skip_failed)
         #[arg(long = "args")]
         resource_args: Option<String>,
@@ -4689,18 +4689,18 @@ mod tests {
     #[test]
     fn cli_add_resource_add_type_requires_exact_to() {
         assert!(
-            Cli::try_parse_from(["ov", "add-resource", "space:home", "--add-type", "feishu"])
+            Cli::try_parse_from(["ov", "add-resource", "tos://bucket/docs", "--add-type", "tos"])
                 .is_err()
         );
         assert!(
             Cli::try_parse_from([
                 "ov",
                 "add-resource",
-                "space:home",
+                "tos://bucket/docs",
                 "--add-type",
-                "feishu",
+                "tos",
                 "--to",
-                "viking://resources/feishu",
+                "viking://resources/tos-docs",
                 "--parent",
                 "viking://resources/imports",
             ])
@@ -4710,11 +4710,11 @@ mod tests {
             Cli::try_parse_from([
                 "ov",
                 "add-resource",
-                "space:home",
+                "tos://bucket/docs",
                 "--add-type",
-                "feishu",
+                "tos",
                 "--to",
-                "viking://resources/feishu",
+                "viking://resources/tos-docs",
                 "--parent-auto-create",
                 "viking://resources/imports",
             ])
@@ -4724,18 +4724,18 @@ mod tests {
         let cli = Cli::try_parse_from([
             "ov",
             "add-resource",
-            "space:home",
+            "tos://bucket/docs",
             "--add-type",
-            "feishu",
+            "tos",
             "--to",
-            "viking://resources/feishu",
+            "viking://resources/tos-docs",
         ])
         .expect("declared add type with an exact target should parse");
 
         match cli.command {
             Commands::AddResource { add_type, to, .. } => {
-                assert_eq!(add_type.as_deref(), Some("feishu"));
-                assert_eq!(to.as_deref(), Some("viking://resources/feishu"));
+                assert_eq!(add_type.as_deref(), Some("tos"));
+                assert_eq!(to.as_deref(), Some("viking://resources/tos-docs"));
             }
             _ => panic!("expected add-resource command"),
         }

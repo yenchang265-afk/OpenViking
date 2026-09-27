@@ -76,14 +76,6 @@ class AccessorRegistry:
         except Exception as e:
             logger.debug(f"[AccessorRegistry] Failed to register HTTPAccessor: {e}")
 
-        # FeishuAccessor - handles Feishu/Lark documents
-        try:
-            from .feishu_accessor import FeishuAccessor
-
-            self.register(FeishuAccessor())
-        except Exception as e:
-            logger.debug(f"[AccessorRegistry] Failed to register FeishuAccessor: {e}")
-
         # LocalAccessor - handles local files (lowest priority)
         try:
             from .local_accessor import LocalAccessor

@@ -2821,13 +2821,8 @@ Respond with ONLY valid JSON, no markdown fences."""
         allow_from = []
         if self.config.ov_server and self.config.ov_server.admin_user_id:
             allow_from.append(self.config.ov_server.admin_user_id)
-        channel_config = self._get_channel_config(msg.session_key)
-        if channel_config:
-            allow_cmd = getattr(channel_config, "allow_cmd_from", [])
-            if allow_cmd:
-                allow_from.extend(allow_cmd)
 
-        # If channel not found or sender not in allow_from list, ignore message
+        # If sender not in allow_from list, ignore message
         if msg.sender_id not in allow_from:
             logger.debug(
                 f"Sender {msg.sender_id} not allowed in channel {msg.session_key.channel_key()}"

@@ -405,8 +405,6 @@ def _source(payload: dict[str, Any]) -> tuple[str, str]:
     if not isinstance(content, list) or len(content) != 1 or not isinstance(content[0], dict):
         raise BridgeError(400, "invalid_request", "input must contain one content item")
     item = content[0]
-    if "lark_file" in item:
-        raise BridgeError(400, "unsupported_input", "credential-gated URLs are not supported")
     if item.get("type") == "file":
         file = item.get("file")
         file_id = file.get("file_id") if isinstance(file, dict) else None

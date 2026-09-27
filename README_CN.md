@@ -26,7 +26,6 @@
 </p>
 
 <p>
-  <a href="https://docs.openviking.ai/zh/about/01-about-us#飞书群"><img src="docs/images/community/lark.svg" width="18" height="18" alt="飞书">&nbsp;飞书</a> ·
   <a href="https://docs.openviking.ai/zh/about/01-about-us#微信群"><img src="docs/images/community/wechat.svg" width="18" height="18" alt="微信">&nbsp;微信</a> ·
   <a href="https://discord.com/invite/eHvx8E9XF3"><img src="docs/images/community/discord.svg" width="18" height="18" alt="Discord">&nbsp;Discord</a> ·
   <a href="https://x.com/openvikingai"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/community/x-dark.svg"><img src="docs/images/community/x.svg" width="16" height="16" alt="X"></picture>&nbsp;X</a>
@@ -272,7 +271,7 @@ ov chat   # 在另一个终端运行
 <img src="docs/images/commercial-self-hosted.png" alt="私有化部署版" width="100%" />
 
 <h3>🏢 私有化部署版</h3>
-<p>部署在自己的云账号 / VPC（BYOC）或离线环境中，提供分布式部署和官方技术支持，通过激活码启用。<a href="https://my.feishu.cn/share/base/form/shrcnMFqymCd9sq77sLk34Krxoc">咨询私有化部署</a>。</p>
+<p>部署在自己的云账号 / VPC（BYOC）或离线环境中，提供分布式部署和官方技术支持，通过激活码启用。<a href="https://docs.google.com/forms/d/e/1FAIpQLScQqwsm7fvKdjtNiW5rWNXJjoHPtedVzLsKSMJgObtsj2_udA/viewform">咨询私有化部署</a>。</p>
 
 </td>
 </tr>
@@ -315,7 +314,7 @@ ov chat   # 在另一个终端运行
 - **文档**：[docs.openviking.ai](https://docs.openviking.ai/) · [FAQ](https://docs.openviking.ai/zh/faq/faq)
 - **博客**：[blog.openviking.ai](https://blog.openviking.ai/)
 - **团队**：[关于我们](https://docs.openviking.ai/zh/about/01-about-us)
-- **交流**：<a href="https://docs.openviking.ai/zh/about/01-about-us#飞书群"><img src="docs/images/community/lark.svg" width="18" height="18" alt="飞书">&nbsp;飞书</a> · <a href="https://docs.openviking.ai/zh/about/01-about-us#微信群"><img src="docs/images/community/wechat.svg" width="18" height="18" alt="微信">&nbsp;微信</a> · <a href="https://discord.com/invite/eHvx8E9XF3"><img src="docs/images/community/discord.svg" width="18" height="18" alt="Discord">&nbsp;Discord</a> · <a href="https://x.com/openvikingai"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/community/x-dark.svg"><img src="docs/images/community/x.svg" width="16" height="16" alt="X"></picture>&nbsp;X</a>
+- **交流**：<a href="https://docs.openviking.ai/zh/about/01-about-us#微信群"><img src="docs/images/community/wechat.svg" width="18" height="18" alt="微信">&nbsp;微信</a> · <a href="https://discord.com/invite/eHvx8E9XF3"><img src="docs/images/community/discord.svg" width="18" height="18" alt="Discord">&nbsp;Discord</a> · <a href="https://x.com/openvikingai"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/community/x-dark.svg"><img src="docs/images/community/x.svg" width="16" height="16" alt="X"></picture>&nbsp;X</a>
 - **贡献**：修 bug、加新功能都欢迎——见 [CONTRIBUTING_CN.md](CONTRIBUTING_CN.md)
 
 <a href="https://github.com/volcengine/OpenViking/graphs/contributors">

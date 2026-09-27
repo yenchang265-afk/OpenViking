@@ -152,10 +152,10 @@ of that skill.
    - a plugin or marketplace ships it (its real path contains `/plugins/` or
      `/marketplaces/`), so the plugin reinstalls it on update;
    - the directory is a symlink or resolves outside the skills folder, the way
-     CLI installers such as lark-cli link their own skills;
+     some CLI installers link their own skills;
    - it needs a local binary, CLI, or service to work (for example
      `metadata.<vendor>.requires.bins`, or steps that run a vendor CLI);
-   - its name carries a vendor prefix such as `lark-`, `volcengine-`, `ve-`,
+   - its name carries a vendor prefix such as `volcengine-`, `ve-`,
      `claude-`, or `mcp-` (a hint, not proof: check the body);
    - it is `openviking-skills` or `openviking-memory`.
 

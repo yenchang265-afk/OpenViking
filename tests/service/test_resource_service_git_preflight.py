@@ -44,7 +44,6 @@ async def test_account_github_token_is_used_for_repository_preflight(monkeypatch
         mode=ParseMode.DEFAULT,
         allow_local_path_resolution=False,
         processor_kwargs={},
-        watch_auth_state=None,
     )
 
     token_resolver.assert_awaited_once_with("https://github.com/org/private", ctx)
@@ -87,7 +86,6 @@ async def test_default_github_token_is_not_applied_to_ssh_preflight(monkeypatch,
         mode=ParseMode.DEFAULT,
         allow_local_path_resolution=False,
         processor_kwargs={},
-        watch_auth_state=None,
     )
 
     token_resolver.assert_not_awaited()

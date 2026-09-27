@@ -127,9 +127,6 @@ class UnifiedResourceProcessor:
             )
         return self._get_parser_router().should_use_understanding_api(source)
 
-    def should_use_understanding_directly(self, source: str, **kwargs) -> bool:
-        return self._get_parser_router().should_use_understanding_directly(source, **kwargs)
-
     def durable_route_requires_preparation(
         self,
         source: str,
@@ -144,11 +141,10 @@ class UnifiedResourceProcessor:
         if parser_backend is ParserBackend.INTERNAL:
             return False
 
-        from openviking.parse.accessors.feishu_accessor import FeishuAccessor
         from openviking.parse.accessors.web_feed_accessor import WebFeedAccessor
 
         accessor = self._get_accessor_registry().get_accessor(source, **kwargs)
-        if isinstance(accessor, (FeishuAccessor, WebFeedAccessor)):
+        if isinstance(accessor, WebFeedAccessor):
             return False
 
         router = self._get_parser_router()
@@ -205,26 +201,6 @@ class UnifiedResourceProcessor:
                 "direct host filesystem paths are not allowed."
             )
 
-        from openviking.parse.accessors.feishu_accessor import FeishuAccessor
-        from openviking.parse.feishu_import import recursive_wiki
-
-        if FeishuAccessor._is_feishu_url(str(source)) and (
-            FeishuAccessor._parse_feishu_url(str(source))[0] == "folder"
-            or (
-                FeishuAccessor._parse_feishu_url(str(source))[0] == "wiki"
-                and recursive_wiki(kwargs)
-            )
-        ):
-            backend = normalize_parser_backend(kwargs.get("parser_backend"))
-            mode = normalize_parse_mode(kwargs.get("parse_mode", ParseMode.DEFAULT))
-            kwargs["_feishu_use_understanding"] = bool(
-                mode is ParseMode.DEFAULT
-                and backend is not ParserBackend.INTERNAL
-                and (
-                    backend is ParserBackend.UNDERSTANDING
-                    or self._get_parser_router().should_use_understanding_api(source)
-                )
-            )
         resource = await self._get_accessor_registry().access(source, **kwargs)
         try:
             self._set_resolved_identity(resource, kwargs.get("source_name"))
@@ -344,31 +320,6 @@ class UnifiedResourceProcessor:
             }
             parse_kwargs["original_source"] = source
             parse_kwargs["parser_backend"] = ParserBackend.UNDERSTANDING
-            parse_kwargs.pop("feishu_access_token", None)
-
-            explicit_name = kwargs.get("resource_name") or kwargs.get("source_name")
-            if explicit_name:
-                parse_kwargs["resource_name"] = _smart_stem(explicit_name)
-            return await run_stage(
-                "parse_artifact", self._get_parser_router().parse(source, **parse_kwargs)
-            )
-
-        if (
-            mode is ParseMode.DEFAULT
-            and prepared_resource is None
-            and self.should_use_understanding_directly(source, **kwargs)
-        ):
-            parse_kwargs = dict(kwargs)
-            parse_kwargs.pop("tos_signature", None)
-            parse_kwargs.pop("tos_access", None)
-            parse_kwargs["instruction"] = instruction
-            parse_kwargs["vlm_processor"] = self._get_vlm_processor()
-            parse_kwargs["storage"] = self.storage
-            parse_kwargs["_source_meta"] = {
-                "source_type": SourceType.HTTP,
-                "original_url": source,
-            }
-            parse_kwargs["original_source"] = source
 
             explicit_name = kwargs.get("resource_name") or kwargs.get("source_name")
             if explicit_name:
@@ -444,7 +395,6 @@ class UnifiedResourceProcessor:
                 from openviking.parse.parsers.directory import DirectoryParser
 
                 parser = DirectoryParser()
-                parse_kwargs["_feishu_import_plan"] = local_resource.feishu_plan
 
                 result = await run_stage(
                     "parse_artifact", parser.parse(str(local_resource.path), **parse_kwargs)
@@ -458,24 +408,6 @@ class UnifiedResourceProcessor:
 
             # For files, use ParserRouter to decide which parser to use
             parser_router = self._get_parser_router()
-            if (
-                mode is ParseMode.NO_SPLIT
-                and local_resource.source_type == SourceType.FEISHU
-                and local_resource.meta.get("feishu_content_kind") == "file"
-            ):
-                parse_kwargs["parser_backend"] = ParserBackend.INTERNAL
-            parse_kwargs.pop("feishu_access_token", None)
-            parse_kwargs.pop("lark_file", None)
-            checkpoint = parse_kwargs.pop("_feishu_checkpoint", None)
-            if checkpoint is not None and local_resource.meta.get("feishu_content_kind") == "file":
-                saved, save = checkpoint
-                if "file" in saved:
-                    parse_kwargs["understanding_response_id"] = saved["file"]
-
-                async def record(response_id):
-                    await save("file", response_id)
-
-                parse_kwargs["_response_checkpoint"] = record
             return await run_stage(
                 "parse_artifact", parser_router.parse(local_resource, **parse_kwargs)
             )

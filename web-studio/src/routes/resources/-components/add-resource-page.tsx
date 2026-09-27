@@ -35,8 +35,6 @@ import type { RemoteSourceOptionState } from '../-lib/resource-source-strategy'
 import { DirectoryPickerDialog } from './directory-picker-dialog'
 import { AdditionalResourceOptions } from './additional-resource-options'
 import type { AdditionalResourceOptionsValue } from './additional-resource-options'
-import { FeishuResourceOptions } from './feishu-resource-options'
-import type { FeishuResourceOptionsValue } from './feishu-resource-options'
 import { GitResourceOptions } from './git-resource-options'
 import type { GitResourceOptionsValue } from './git-resource-options'
 import { RemoteResourceFields } from './remote-resource-fields'
@@ -58,12 +56,6 @@ const DEFAULT_WEB_OPTIONS: WebResourceOptionsValue = {
   maxPages: '50',
   mode: 'auto',
   skipDownloadLinks: true,
-}
-
-const DEFAULT_FEISHU_OPTIONS: FeishuResourceOptionsValue = {
-  accessToken: '',
-  authMode: 'app',
-  refreshToken: '',
 }
 
 const DEFAULT_GIT_OPTIONS: GitResourceOptionsValue = {
@@ -101,7 +93,7 @@ export function AddResourceForm({
   onSubmitted?: () => void
   watchRequired?: boolean
 } = {}) {
-  const { i18n, t } = useTranslation('addResource')
+  const { t } = useTranslation('addResource')
   const { enqueueUploads, startRemote, resetRemote, remoteState } =
     useResourceUpload()
 
@@ -123,15 +115,11 @@ export function AddResourceForm({
   const [exclude, setExclude] = useState('')
   const [watchEnabled, setWatchEnabled] = useState(initialWatchEnabled)
   const [watchInterval, setWatchInterval] = useState('1440')
-  const [feishuOptions, setFeishuOptions] = useState(DEFAULT_FEISHU_OPTIONS)
   const [gitOptions, setGitOptions] = useState(DEFAULT_GIT_OPTIONS)
   const [webOptions, setWebOptions] =
     useState<WebResourceOptionsValue>(DEFAULT_WEB_OPTIONS)
   const [additionalOptions, setAdditionalOptions] =
     useState<AdditionalResourceOptionsValue>(DEFAULT_ADDITIONAL_OPTIONS)
-  const feishuConfigurationUrl = i18n.resolvedLanguage?.startsWith('zh')
-    ? 'https://docs.openviking.ai/zh/guides/01-configuration#feishu'
-    : 'https://docs.openviking.ai/en/guides/01-configuration#feishu'
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [dirPickerOpen, setDirPickerOpen] = useState(false)
 
@@ -156,7 +144,6 @@ export function AddResourceForm({
   const effectiveDestinationMode: ResourceDestinationMode =
     sourceCapabilities.exactDestination ? 'to' : destinationMode
   const sourceOptionState: RemoteSourceOptionState = {
-    feishu: feishuOptions,
     git: {
       ...gitOptions,
       supportsHttpAuth: gitSupportsHttpAuth,
@@ -189,7 +176,6 @@ export function AddResourceForm({
   const resetRemoteSourceFields = useCallback(() => {
     setWatchEnabled(initialWatchEnabled)
     setWatchInterval('1440')
-    setFeishuOptions(DEFAULT_FEISHU_OPTIONS)
     setGitOptions(DEFAULT_GIT_OPTIONS)
     setWebOptions(DEFAULT_WEB_OPTIONS)
   }, [initialWatchEnabled])
@@ -331,16 +317,6 @@ export function AddResourceForm({
             watchRequired={watchRequired}
             watchSupported={sourceCapabilities.watch}
           >
-            {remoteResourceKind === 'feishu' ? (
-              <FeishuResourceOptions
-                disabled={remotePhase === 'processing'}
-                documentationUrl={feishuConfigurationUrl}
-                onChange={setFeishuOptions}
-                t={t}
-                value={feishuOptions}
-                watchEnabled={effectiveWatchEnabled}
-              />
-            ) : null}
             {remoteResourceKind === 'git' ? (
               <GitResourceOptions
                 disabled={remotePhase === 'processing'}

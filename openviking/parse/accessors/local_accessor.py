@@ -20,7 +20,7 @@ class LocalAccessor(DataAccessor):
 
     This accessor handles local files and directories. It should be
     registered with the lowest priority so that it only handles sources
-    that aren't picked up by other accessors (Git, HTTP, Feishu, etc.).
+    that aren't picked up by other accessors (Git, HTTP, etc.).
 
     Features:
     - Handles any existing local path (file or directory)
@@ -106,7 +106,7 @@ class LocalAccessor(DataAccessor):
         used when no other accessor can handle the source.
 
         Standard priority levels:
-        - 100: Specific service (Feishu, etc.)
+        - 100: Specific services
         - 80: Version control (Git, etc.)
         - 50: Generic protocols (HTTP, etc.)
         - 10: Fallback accessors

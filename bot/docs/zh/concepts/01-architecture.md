@@ -6,7 +6,7 @@ VikingBot 是 OpenViking 仓库内的多渠道 AI Agent 运行时。它将命令
 
 ```text
 ┌──────────────────────────────────────────────────────────────────┐
-│ CLI │ Feishu │ Slack │ Telegram │ Discord │ Email │ HTTP API   │
+│ CLI │ Slack │ Telegram │ Discord │ Email │ HTTP API            │
 └─────────────────────────────┬────────────────────────────────────┘
                               │ InboundMessage
                     ┌─────────▼─────────┐
