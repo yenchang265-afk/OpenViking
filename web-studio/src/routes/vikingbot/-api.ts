@@ -8,6 +8,7 @@ export type Connection = {
   onboarding_id?: string
   app_id: string
   bot_name: string
+  bot_username?: string
   enabled: boolean
   step: number
   revision: number
@@ -17,6 +18,7 @@ export type Connection = {
     state: string
     last_received?: string
     last_sent?: string
+    last_error?: string
     verification?: {
       code: string
       expires_at: number

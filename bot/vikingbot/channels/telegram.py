@@ -195,15 +195,15 @@ class TelegramChannel(BaseChannel):
             await self._app.shutdown()
             self._app = None
 
-    async def send(self, msg: OutboundMessage) -> None:
+    async def send(self, msg: OutboundMessage) -> bool:
         """Send a message through Telegram."""
         # Only send normal response messages, skip thinking/tool_call/etc.
         if not msg.is_normal_message:
-            return
+            return False
 
         if not self._app:
             logger.warning("Telegram bot not running")
-            return
+            return False
 
         # Stop typing indicator for this chat
         self._stop_typing(msg.session_key.chat_id)
@@ -235,8 +235,10 @@ class TelegramChannel(BaseChannel):
                 await self._app.bot.send_message(
                     chat_id=chat_id, text=html_content, parse_mode="HTML"
                 )
+            return True
         except ValueError:
             logger.exception(f"Invalid chat_id: {msg.session_key.chat_id}")
+            return False
         except Exception as e:
             # Fallback to plain text if HTML parsing fails
             logger.warning(f"HTML parse failed, falling back to plain text: {e}")
@@ -244,8 +246,10 @@ class TelegramChannel(BaseChannel):
                 await self._app.bot.send_message(
                     chat_id=int(msg.session_key.chat_id), text=msg.content
                 )
+                return True
             except Exception as e2:
                 logger.exception(f"Error sending Telegram message: {e2}")
+                return False
 
     async def _on_start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle /start command."""
@@ -253,6 +257,9 @@ class TelegramChannel(BaseChannel):
             return
 
         user = update.effective_user
+        # Do not confirm the bot to senders it would otherwise ignore.
+        if not self.is_allowed(self._sender_id(user)):
+            return
         await update.message.reply_text(
             f"👋 Hi {user.first_name}! I'm vikingbot.\n\n"
             "Send me a message and I'll respond!\n"
@@ -263,12 +270,24 @@ class TelegramChannel(BaseChannel):
         """Forward slash commands to the bus for unified handling in AgentLoop."""
         if not update.message or not update.effective_user:
             return
+        message = update.message
+        user = update.effective_user
         await self._handle_message(
-            sender_id=str(update.effective_user.id),
-            sender_name=update.effective_user.full_name or str(update.effective_user.id),
-            chat_id=str(update.message.chat_id),
-            content=update.message.text,
+            sender_id=self._sender_id(user),
+            sender_name=user.full_name or str(user.id),
+            chat_id=str(message.chat_id),
+            content=message.text,
+            metadata={
+                "message_id": message.message_id,
+                "is_group": message.chat.type != "private",
+                "chat_title": message.chat.title or "",
+            },
         )
+
+    @staticmethod
+    def _sender_id(user) -> str:
+        # Use stable numeric ID, but keep username for allowlist compatibility
+        return f"{user.id}|{user.username}" if user.username else str(user.id)
 
     async def _on_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Handle incoming messages (text, photos, voice, documents)."""
@@ -279,10 +298,7 @@ class TelegramChannel(BaseChannel):
         user = update.effective_user
         chat_id = message.chat_id
 
-        # Use stable numeric ID, but keep username for allowlist compatibility
-        sender_id = str(user.id)
-        if user.username:
-            sender_id = f"{sender_id}|{user.username}"
+        sender_id = self._sender_id(user)
 
         # Store chat_id for replies
         self._chat_ids[sender_id] = chat_id
@@ -375,6 +391,7 @@ class TelegramChannel(BaseChannel):
                 "username": user.username,
                 "first_name": user.first_name,
                 "is_group": message.chat.type != "private",
+                "chat_title": message.chat.title or "",
             },
         )
 

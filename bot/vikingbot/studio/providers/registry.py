@@ -2,7 +2,9 @@
 
 from fastapi import HTTPException
 
-PROVIDERS = {}
+from vikingbot.studio.providers.telegram.provider import TelegramProvider
+
+PROVIDERS = {"telegram": TelegramProvider()}
 
 
 def get_provider(record):
