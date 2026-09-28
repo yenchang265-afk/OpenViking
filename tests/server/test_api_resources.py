@@ -36,12 +36,12 @@ def test_add_resource_request_defaults_processing_mode():
 def test_add_resource_request_accepts_declared_add_type():
     request = AddResourceRequest(
         path="https://example.com/space",
-        add_type=" feishu ",
-        to="viking://resources/feishu",
+        add_type=" wiki ",
+        to="viking://resources/wiki",
     )
 
-    assert request.add_type == "feishu"
-    assert request.to == "viking://resources/feishu"
+    assert request.add_type == "wiki"
+    assert request.to == "viking://resources/wiki"
 
 
 @pytest.mark.parametrize(
@@ -53,7 +53,7 @@ def test_add_resource_request_accepts_declared_add_type():
 )
 def test_add_resource_request_accepts_paused_watch_with_target(target):
     request = AddResourceRequest(
-        path="https://example.feishu.cn/docx/doc_token",
+        path="https://github.com/example/repo",
         watch_interval=30,
         is_active=False,
         **target,
@@ -82,14 +82,14 @@ def test_add_resource_request_rejects_add_type_with_temp_file_id():
     import pytest
 
     with pytest.raises(ValueError, match="temp_file_id"):
-        AddResourceRequest(temp_file_id="upload_abc", add_type="feishu")
+        AddResourceRequest(temp_file_id="upload_abc", add_type="wiki")
 
 
 def test_add_resource_request_requires_exact_to_for_declared_add_type():
     import pytest
 
     with pytest.raises(ValueError, match="exact 'to'"):
-        AddResourceRequest(path="space:home", add_type="feishu")
+        AddResourceRequest(path="space:home", add_type="wiki")
 
 
 def test_add_resource_request_rejects_add_type_with_parent():
@@ -98,8 +98,8 @@ def test_add_resource_request_rejects_add_type_with_parent():
     with pytest.raises(ValueError, match="'parent'"):
         AddResourceRequest(
             path="space:home",
-            add_type="feishu",
-            to="viking://resources/feishu",
+            add_type="wiki",
+            to="viking://resources/wiki",
             parent="viking://resources/imports",
         )
 
@@ -108,7 +108,7 @@ def test_require_remote_resource_source_allows_declared_add_type():
     from openviking.server.local_input_guard import require_remote_resource_source
 
     assert (
-        require_remote_resource_source("space:home", declared_connector_add_type="feishu")
+        require_remote_resource_source("space:home", declared_connector_add_type="wiki")
         == "space:home"
     )
 
@@ -252,12 +252,12 @@ async def test_add_resource_forwards_args_to_service(
         "/api/v1/resources",
         json={
             "path": "https://example.com/demo.md",
-            "args": {"feishu_access_token": "u-test"},
+            "args": {"site": True},
         },
     )
 
     assert resp.status_code == 200
-    assert seen["args"] == {"feishu_access_token": "u-test"}
+    assert seen["args"] == {"site": True}
     assert seen["internal_task"] is False
 
 

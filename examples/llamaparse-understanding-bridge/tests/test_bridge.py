@@ -257,14 +257,6 @@ async def test_bridge_uploads_local_file(
 @pytest.mark.parametrize(
     ("content", "message"),
     [
-        (
-            {
-                "type": "input_file",
-                "file_url": "https://example.feishu.cn/docx/a",
-                "lark_file": {"user_access_token": "secret"},
-            },
-            "credential-gated URLs",
-        ),
         ({"type": "input_video", "video_url": "https://x.test/a.mp4"}, "input_video"),
     ],
 )

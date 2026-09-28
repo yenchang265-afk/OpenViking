@@ -1216,9 +1216,9 @@ async def add_resource(
         tag_mode: Tag update mode: "replace", "append", or "clear". Clear removes
             existing tags without requiring ``tags``. Defaults to "replace".
         args: Parser-specific options, e.g. {"auth_config": {"token": "..."}}
-            for native HTTPS Git imports and watches, {"feishu_access_token": "..."}
-            for Feishu imports, {"site": true} for whole-site ingestion, or
-            {"parse_mode": "no_split"} to keep each parsed document body in one file.
+            for native HTTPS Git imports and watches, {"site": true} for whole-site
+            ingestion, or {"parse_mode": "no_split"} to keep each parsed document body
+            in one file.
     """
     from openviking.server.local_input_guard import require_remote_resource_source
 

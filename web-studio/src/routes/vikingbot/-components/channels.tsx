@@ -42,14 +42,13 @@ export function Channels({
   const [search, setSearch] = useState('')
   const visibleConnections = (connections.data ?? []).filter(
     (connection) =>
-      (channelFilter === 'all' ||
-        (connection.type ?? 'feishu') === channelFilter) &&
+      (channelFilter === 'all' || connection.type === channelFilter) &&
       `${connection.bot_name} ${connection.identity_user}`
         .toLowerCase()
         .includes(search.trim().toLowerCase()),
   )
   const [editing, setEditing] = useState<string>()
-  const [newType, setNewType] = useState('feishu')
+  const [newType, setNewType] = useState<string>()
   const selected = connections.data?.find((c) => c.id === editing)
   function changed(value: Connection) {
     client.setQueryData<Connection[]>(key, (old) => [

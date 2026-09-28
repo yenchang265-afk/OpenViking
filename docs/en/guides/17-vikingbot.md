@@ -190,7 +190,7 @@ When no OpenViking Server is available, VikingBot runs in standalone mode. Local
 
 ## Scenario C: Use the Gateway as a Unified Entry Point
 
-Use this scenario for a long-running service, remote access, or chat platforms such as Feishu, Slack, and Telegram. The Gateway exposes the Bot HTTP API and can proxy OpenViking APIs, allowing the `ov` CLI to use one entry point.
+Use this scenario for a long-running service, remote access, or chat platforms such as Slack and Telegram. The Gateway exposes the Bot HTTP API and can proxy OpenViking APIs, allowing the `ov` CLI to use one entry point.
 
 ### 1. Configure the Gateway and OpenViking
 

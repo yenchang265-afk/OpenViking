@@ -167,8 +167,7 @@ Listing tasks returns:
 ```
 
 `source_type` is optional provenance metadata. Explicit Connector `add_type` values take
-precedence (for example, `tos` or `feishu_project`); native imports report `feishu`, `git`,
-`url`, or `local`. Legacy or unclassified watches return `null`.
+precedence (for example, `tos`); native imports report `git`, `url`, or `local`. Legacy or unclassified watches return `null`.
 
 Before the first run, `last_task_id`, `last_status`, and `last_error` are `null`. After a run,
 `last_task_id` points to the corresponding ingestion task (and can remain `null` for preflight

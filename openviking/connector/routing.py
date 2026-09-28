@@ -44,7 +44,7 @@ CONNECTOR_CREDENTIAL_ARGS: Dict[str, FrozenSet[str]] = {
 
 
 # Reserved ``args`` key for source credentials of declared add_types outside
-# the registries above (e.g. add_type="feishu"). OpenViking cannot know each
+# the registries above (e.g. a plugin-defined add_type). OpenViking cannot know each
 # plugin's credential fields, so the caller supplies them as a mapping under
 # this key; it is lifted verbatim into the top-level ``auth_config`` request
 # field and never merged into param_config. All other args keys travel to the

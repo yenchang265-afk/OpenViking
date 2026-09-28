@@ -313,7 +313,7 @@ request_tools = compile_tools + submit_wiki_bundle
 
 `_COMPILE_CORE_TOOLS` 固定为 `read_file`、`write_file`、`edit_file` 和 `exec`；`_OV_READ_TOOLS` 固定为 `openviking_list`、`openviking_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read` 和 `openviking_export`。OpenViking 工具仍受用户权限和 Compile URI scope 限制，本地文件和 shell 工具仍受 task workspace 与 sandbox policy 限制。
 
-Compile 不使用 Skill 的 `allowed-tools` 推导、授权或限制工具，也不为 Skill 连接 MCP。该字段可作为其他 Skill 宿主的兼容 metadata 保留。Skill 需要飞书、方舟等外部能力时，通过 `exec` 调用 task sandbox 中预装的 CLI；可选的 `requires.bins/env` 只用于提前检查运行条件，不负责安装 CLI 或依赖。
+Compile 不使用 Skill 的 `allowed-tools` 推导、授权或限制工具，也不为 Skill 连接 MCP。该字段可作为其他 Skill 宿主的兼容 metadata 保留。Skill 需要方舟等外部能力时，通过 `exec` 调用 task sandbox 中预装的 CLI；可选的 `requires.bins/env` 只用于提前检查运行条件，不负责安装 CLI 或依赖。
 
 固定 allowlist 已排除 `message`、`cron`、`spawn`、Web、image、MCP 和 OpenViking 写入/提交工具，无需维护额外 blocklist。`exec` 仍可能产生外部副作用；现有 `direct` sandbox 只提供 task cwd，不是 OS 级隔离。`bot.sandbox.backends.direct.allow_compile_exec` 默认为 `true`（Compile 工具链开源，`exec` 默认直接以用户 shell 权限运行），使用 `direct` 时 Compile 工具集默认注册 `exec`；普通整理任务仍可通过文件工具完成。声明 `requires.bins` 或 `requires.env` 的 Skill 会先探测命令；如需关闭 `exec`，可显式设为 `false`，此时此类 Skill 会在执行任何命令探测前返回 `SKILL_CAPABILITY_UNAVAILABLE`。生产或多用户部署应使用配置了文件系统和网络 policy 的隔离 backend。
 

@@ -372,17 +372,14 @@ Content-Type: application/json
 `null` 表示删除当前层配置，具体值表示更新。
 
 当前 Cluster 运行时配置面仅包含 `agent_evolution`。Account 配置面包含
-`feishu`、`agent_evolution`、`github` 和 `acl`，且均为动态字段。Account 的
+`agent_evolution`、`github` 和 `acl`，且均为动态字段。Account 的
 `vlm`、`memory`、`embedding` 和 `vectordb` 不在当前 API 范围内，即使创建
 Account 时提交也会被拒绝。Cluster 的 `embedding`、`vlm`、`query_planner`、
-`memory`、`feishu`、存储、解析器和检索配置没有声明为运行时字段，因此仍然只能
+`memory`、存储、解析器和检索配置没有声明为运行时字段，因此仍然只能
 在启动配置中修改。
 
-Account Agent Evolution 未设置时整段回落到 Cluster 配置。Account 未设置
-Feishu 时也整段使用 Cluster 配置；一旦设置，`app_id`、`app_secret`、
-`max_rows_per_sheet`、`max_records_per_table`、`download_images` 和
-`request_timeout` 来自 Account 配置或 Feishu 默认值，只有 `domain` 仍由
-Cluster 管理。GitHub 和 ACL 没有 Cluster fallback。
+Account Agent Evolution 未设置时整段回落到 Cluster 配置。GitHub 和 ACL 没有
+Cluster fallback。
 
 PATCH 会先做结构校验，再构造合并后的配置：未知路径和运行时配置面之外的字段会被拒绝。
 对象递归合并，数组整体替换；嵌套 null 只删除对应叶子。删除整个对象覆盖需要在父路径

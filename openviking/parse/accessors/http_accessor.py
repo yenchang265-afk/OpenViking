@@ -433,7 +433,7 @@ class HTTPAccessor(DataAccessor):
         Check if this accessor can handle the source.
 
         Handles any HTTP/HTTPS URL.
-        NOTE: GitAccessor and FeishuAccessor have higher priority
+        NOTE: GitAccessor and WebFeedAccessor have higher priority
         and will be checked first for their specific URL types.
         """
         source_str = str(source)

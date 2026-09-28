@@ -1,14 +1,4 @@
 export default {
-  replyMode: '群聊回覆方式',
-  withoutMention: '無需 @ 即可回覆',
-  mentionModeHint: '群聊中僅在被 @ 時回覆，私聊不受影響。',
-  withoutMentionHint:
-    '普通群無需 @；話題群首條訊息無需 @，後續回覆仍需 @（DEBUG 模式除外）。私聊不受影響。',
-  groupMessagePermission:
-    '需要飛書“獲取群組中所有訊息”許可權。掃碼新建時會申請；手動接入或後續切換時，請在飛書開放平臺補充許可權併發布應用。',
-  saveReplyMode: '儲存回覆方式',
-  savingReplyMode: '儲存中…',
-
   operationFailed: '操作未完成，請重試。錯誤詳情：',
   viewSetup: '檢視配置',
   chooseBotChannel: '選擇機器人接入的平臺。',
@@ -18,76 +8,10 @@ export default {
   channelFilter: '渠道',
   addBot: '新增機器人',
   botsHint: '管理已新增的機器人，按渠道篩選。',
-  platformReady: '掃碼連線，將機器人新增到飛書群。',
   connectedBots: '已連線的機器人',
   noConnectedBots: '暫無機器人，點選“新增機器人”開始。',
   dingtalk: '釘釘',
 
-  qr: {
-    manualRecovery: '改用手動配置',
-    intro: '選擇執行使用者，用飛書掃碼後自動配置機器人，最後新增到群。',
-    choose: '選擇使用者',
-    scan: '飛書掃碼',
-    addGroup: '新增到群',
-    close: '關閉',
-    botName: '機器人名稱',
-    start: '生成飛書二維碼',
-    manual: '已有應用？手動連線',
-    consent:
-      '掃碼確認後，將在掃碼帳號所屬企業建立應用，配置群聊 @訊息、傳送訊息和群資訊讀取許可權，並提交發布。',
-    scanHint:
-      '請用飛書 App 掃碼並在手機確認。二維碼約 2 分鐘有效；確認後將自動建立並配置應用。',
-    approvalHint:
-      '釋出已提交，正在等待企業管理員審批。可以關閉頁面，稍後從此處繼續。',
-    retryScan: '重新掃碼並繼續',
-    cancel: '取消掃碼',
-    copyFailed: '複製失敗，請選擇上方文本手動複製。',
-    visibilityHint:
-      '初始可用範圍為掃碼建立者。若群內其他成員無法使用，請在飛書開放平臺調整應用可用範圍併發布。',
-    resumeFirst: '連線已暫停，請回到渠道列表恢復後再測試。',
-    states: {
-      initializing: '正在準備二維碼…',
-      waiting_for_scan: '等待飛書掃碼',
-      scanned: '已掃碼，請在手機確認',
-      creating: '正在建立應用…',
-      configuring: '正在配置許可權和訊息接收…',
-      publishing: '正在提交發布…',
-      awaiting_approval: '等待企業管理員審批',
-      ready: '應用已釋出，準備新增到群',
-      failed: '自動配置暫未完成',
-      expired: '二維碼已過期',
-      interrupted: '配置任務已中斷，可繼續恢復',
-      cancelled: '掃碼已取消',
-    },
-    errors: {
-      expired: '二維碼已過期，請重新掃碼。',
-      interrupted: '服務已重啟。重新掃碼後將從已儲存的進度繼續。',
-      identity_changed: '掃碼帳號或企業與建立時不一致，請使用原帳號重新掃碼。',
-      creation_uncertain:
-        '建立請求的結果尚未確認。請先在開放平臺檢查同名應用，避免重複建立。',
-      publication_uncertain:
-        '釋出結果尚未確認。請在開放平臺檢查當前版本；流程不會重複建立或提交版本。',
-      approval_pending:
-        '企業審批尚未完成。審批後重新掃碼檢查釋出狀態，不會重複建立應用。',
-      permissions_unavailable:
-        '未能從飛書許可權目錄匹配所需許可權。請重新掃碼重試；若仍失敗，可改用手動配置。',
-      events_not_ready: '訊息事件尚未配置成功，請重新掃碼繼續配置。',
-      connection_unavailable:
-        '機器人長連線尚未建立，請檢查伺服器網路後重新掃碼。',
-      platform_request_failed: '飛書請求失敗，請稍後重試。',
-      platform_rejected:
-        '飛書拒絕了當前操作，請檢查帳號的應用管理許可權或企業策略。',
-      session_expired: '飛書登入已失效，請重新掃碼。',
-      identity_unavailable: '無法確認掃碼帳號和企業，尚未建立應用。',
-      untrusted_redirect: '飛書登入跳轉地址不受支援，已停止操作。',
-      login_unavailable: '暫時無法生成二維碼，請稍後重試。',
-      icon_upload_failed: '機器人圖示上傳失敗，請重試。',
-      credentials_unavailable:
-        '應用已建立，但暫時無法讀取憑證，請重新掃碼繼續。',
-      setup_failed:
-        '自動配置未完成。可重新掃碼從已儲存的進度繼續；若仍失敗，請在飛書開放平臺檢查應用。',
-    },
-  },
   runtimeUser: '執行使用者',
   selectUser: '選擇使用者',
   runtimeUserHint:
@@ -95,13 +19,7 @@ export default {
   userUnavailable: '憑證不可自動繫結',
   noUsers: '暫無普通使用者，請先建立使用者，再重新整理列表。',
   manageUsers: '管理使用者',
-  rotateHint:
-    '應用金鑰不變時可留空。執行使用者的憑證由服務端自動同步，驗證失敗會保留原連線。',
-  rotate: '更新憑證',
-  cancelEdit: '取消',
 
-  saveCredentials: '驗證並儲存',
-  credentialsSaved: '憑證已更新',
   title: 'VikingBot',
   conversations: '對話',
   channels: '機器人',
@@ -109,7 +27,6 @@ export default {
   newChat: '新建對話',
   accountRequired: '請先選擇帳號再管理機器人',
   web: '網頁',
-  feishu: '飛書',
   all: '全部',
   search: '搜尋對話',
   empty: '開始與 VikingBot 對話',
@@ -121,95 +38,28 @@ export default {
   retry: '重試',
   loading: '載入中…',
   error: '操作失敗：{{error}}',
-  addFeishu: '連線飛書',
   comingSoon: '開發中',
-  adminOnly: '僅服務管理員可以管理連線和檢視飛書歷史。',
+  adminOnly: '僅服務管理員可以管理連線和檢視平臺歷史。',
   webReady: '網頁對話使用當前 OpenViking 身份。',
   manageHint: '連線一個應用後，可將它的機器人加入多個群。',
-  steps: [
-    '建立應用',
-    '連線應用',
-    '許可權與事件',
-    '釋出應用',
-    '新增到群並驗證',
-    '開始對話',
-  ],
-  setupTitle: '將 VikingBot 連線到飛書',
-  setupHint:
-    '你需要飛書企業自建應用的管理許可權，以及向企業內部群新增機器人的許可權。',
-  createHint:
-    '在飛書開放平臺建立企業自建應用，設定名稱與頭像，然後新增「機器人」能力。群 Webhook 無法完成對話接入。',
-  openPlatform: '開啟飛書開放平臺',
-  next: '下一步',
   back: '上一步',
-  close: '儲存並關閉',
-  credentialsHint:
-    '在「憑證與基礎資訊」找到 App ID 與 App Secret。驗證成功後先建立長連線，再配置事件訂閱。',
-  appId: 'App ID',
-  appSecret: 'App Secret',
-  userKey: '專用 OpenViking 使用者 API Key',
-  userKeyHint:
-    '在當前帳戶下為機器人建立專用普通使用者，不要複用個人金鑰。Root 和管理員金鑰不可用。僅向該使用者授權允許群成員使用的資源。',
-  connect: '驗證並建立連線',
-  connectedAs: '機器人：{{name}} · OpenViking 使用者：{{user}}',
-  permissionsHint:
-    '開啟接收群聊 @機器人訊息、以機器人身份傳送訊息的許可權。如需私聊，再開啟接收單聊訊息許可權。顯示成員姓名需開啟 im:chat.members:read（獲取群成員列表），並重新發布應用。',
-  eventsHint:
-    '在「事件與回呼」中選擇長連線，訂閱 im.message.receive_v1。無需公網回呼地址，請等待連線建立後再儲存訂閱。',
-  officialDocs: '檢視官方事件說明',
-  permissionsNote:
-    '此處無法完整讀取許可權與釋出狀態，後續群內測試將驗證實際收發能力。',
-  publishHint:
-    '前往「版本管理與釋出」建立版本，設定可用範圍並提交發布。如需審批，等待管理員審批後繼續。修改許可權後可能需要重新發布。',
-  publishDone: '我已釋出應用',
-  groupHint:
-    '開啟飛書目標群的群設定，新增此應用機器人。生成測試訊息後，在飛書使用 @選擇器選中機器人併發送。複製的普通文本不等於真正的 @。',
-  test: '生成連線測試訊息',
-  testText: 'VikingBot connection test {{code}}',
-  copy: '複製',
-  copied: '已複製',
-  received: '收到群訊息',
-  sent: '回覆已被飛書接受',
-  waiting: '等待中',
-  verified: '已驗證',
-  visible: '我已在群裡看到測試回覆',
-  expired: '測試已過期，請重新生成測試訊息。',
-  troubleshoot:
-    '沒有回覆？依次檢查釋出與可用範圍、機器人是否入群、是否真正 @機器人、訊息許可權、事件訂閱與長連線。已收到訊息時，請檢查傳送許可權。',
-  done: '飛書已接通',
-  doneHint:
-    '現在可以在群裡 @機器人提出真實問題。連線測試不會呼叫模型；若正常對話失敗，請檢查模型配置。',
-  setupComplete: '飛書配置已完成',
-  startUsingHint:
-    '在飛書群設定中新增此應用，然後在群裡 @它即可開始對話。無需傳送測試碼。',
-  noActivity: '暫無記錄',
-  connectionHelp: '排查連線問題（可選）',
   deleteConnection: '刪除連線',
   deleteConnectionHint:
-    '確定刪除“{{title}}”的連線嗎？這將停止機器人連線，並刪除此連線在 Studio 中的聊天記錄，無法恢復。飛書平臺上的應用和群訊息不會刪除。',
+    '確定刪除“{{title}}”的連線嗎？這將停止機器人連線，並刪除此連線在 Studio 中的聊天記錄，無法恢復。訊息平臺上的應用和群訊息不會刪除。',
   deleteFailed: '刪除失敗：{{error}}',
   cancelDelete: '取消',
   deletingConnection: '刪除中…',
   confirmDeleteConnection: '確認刪除',
-  manualTitle: '連線已有應用',
-  manualHint: '填寫已有飛書應用的憑證，繫結執行使用者。',
-  manualInstructions: '配置說明：許可權、事件與釋出',
-  manualConnected: '應用憑證已驗證',
-  manualConnectedHint:
-    '連線已儲存。請確保已在飛書配置訊息許可權、長連線事件併發布應用，即可新增到群使用。',
-  finish: '完成',
   continueSetup: '繼續配置',
   pause: '暫停',
   resume: '恢復',
   state: { connected: '已連線', connecting: '連線中', paused: '已暫停' },
-  onlyMention: '僅 @機器人時回覆',
-  historyHint: '僅展示此連線建立後機器人收到的訊息，不包含完整飛書群歷史。',
-  readonly: '此會話來自飛書，請前往飛書繼續對話。',
-  group: '飛書會話',
+  historyHint: '僅展示此連線建立後機器人收到的訊息，不包含完整群歷史。',
+  readonly: '此會話來自訊息平臺，請前往該平臺繼續對話。',
   unknownSender: '群成員',
   noHistory: '暫無收到的訊息',
   earlier: '載入更早訊息',
-  delivery: { received: '已收到', sent: '飛書已接受', send_failed: '傳送失敗' },
+  delivery: { received: '已收到', sent: '平臺已接受', send_failed: '傳送失敗' },
   connectionError: '暫時無法連線 Bot 服務，請檢查服務後重試。',
   lastReceived: '最近收訊息',
   lastSent: '最近成功回覆',

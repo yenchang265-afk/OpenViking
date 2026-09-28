@@ -11,10 +11,7 @@ import shutil
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
-
-if TYPE_CHECKING:
-    from openviking.parse.feishu_import import FeishuImportPlan
+from typing import Any, Dict, Union
 
 
 class SourceType:
@@ -32,9 +29,6 @@ class SourceType:
 
     HTTP = "http"
     """HTTP/HTTPS resource (from HTTPAccessor)."""
-
-    FEISHU = "feishu"
-    """Feishu/Lark document (from FeishuAccessor)."""
 
 
 @dataclass
@@ -60,8 +54,6 @@ class LocalResource:
 
     is_temporary: bool = True
     """Whether this is a temporary resource that can be cleaned up after parsing."""
-
-    feishu_plan: Optional["FeishuImportPlan"] = None
 
     def cleanup(self) -> None:
         """
@@ -159,7 +151,7 @@ class DataAccessor(ABC):
         can handle the same source, the one with the highest priority wins.
 
         Standard priority levels:
-        - 100: Specific service (Feishu, etc.)
+        - 100: Specific services
         - 80: Version control (Git, etc.)
         - 50: Generic protocols (HTTP, etc.)
         - 10: Fallback accessors

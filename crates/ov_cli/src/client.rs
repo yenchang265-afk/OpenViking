@@ -2020,7 +2020,7 @@ mod tests {
 
     #[test]
     fn compact_request_body_keeps_non_empty_args() {
-        let mut body = json!({"path": "x", "args": {"feishu_access_token": "u-x"}});
+        let mut body = json!({"path": "x", "args": {"api_token": "u-x"}});
         super::compact_request_body(&mut body);
         assert!(body.as_object().unwrap().contains_key("args"));
     }

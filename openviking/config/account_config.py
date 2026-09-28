@@ -25,22 +25,6 @@ class AccountAclSettings(BaseModel):
     enabled: bool = RuntimeField(default=False)
 
 
-class AccountFeishuConfig(BaseModel):
-    """Sparse account-level Feishu overrides.
-
-    ``domain`` intentionally does not exist here. It is a cluster deployment
-    setting and is selected from the cluster configuration by the business
-    resolver.
-    """
-
-    app_id: Optional[str] = RuntimeField(default=None)
-    app_secret: Optional[str] = RuntimeField(default=None)
-    max_rows_per_sheet: Optional[int] = RuntimeField(default=None, gt=0)
-    max_records_per_table: Optional[int] = RuntimeField(default=None, gt=0)
-    download_images: Optional[bool] = RuntimeField(default=None)
-    request_timeout: Optional[float] = RuntimeField(default=None, gt=0)
-
-
 class AccountConfig(BaseModel):
     """Sparse per-account override model.
 
@@ -50,7 +34,6 @@ class AccountConfig(BaseModel):
     """
 
     # Account-level settings with active business consumers.
-    feishu: Optional[AccountFeishuConfig] = RuntimeField(default=None)
     github: Optional[GitHubConfig] = RuntimeField(default=None)
     agent_evolution: Optional[AgentEvolutionConfig] = RuntimeField(
         default=None,

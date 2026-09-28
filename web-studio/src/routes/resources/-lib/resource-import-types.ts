@@ -17,8 +17,6 @@ export type ResourceImportArgs = Record<string, unknown> & {
   commit?: string
   depth?: number
   exclude_paths?: string[]
-  feishu_access_token?: string
-  feishu_refresh_token?: string
   include_paths?: string[]
   max_pages?: number
   parse_mode?: 'default' | 'no_split'

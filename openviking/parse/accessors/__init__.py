@@ -9,7 +9,6 @@ This module provides the two-layer architecture for resource processing:
 """
 
 from .base import DataAccessor, LocalResource
-from .feishu_accessor import FeishuAccessor
 from .git_accessor import GitAccessor
 from .http_accessor import HTTPAccessor
 from .local_accessor import LocalAccessor
@@ -31,7 +30,6 @@ __all__ = [
     # Accessors
     "GitAccessor",
     "HTTPAccessor",
-    "FeishuAccessor",
     "LocalAccessor",
     "WebFeedAccessor",
     # Helpers

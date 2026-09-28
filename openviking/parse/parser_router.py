@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Union
 from urllib.parse import urlparse
 
-from openviking.parse.accessors.base import LocalResource, SourceType
+from openviking.parse.accessors.base import LocalResource
 from openviking.parse.backend import ParserBackend, normalize_parser_backend
 from openviking.parse.base import ParseResult
 from openviking.parse.registry import ParserRegistry
@@ -52,14 +52,6 @@ class ParserRouter:
         """
         Decide whether to use UnderstandingAPI.
         """
-        # FeishuAccessor has already normalized proprietary content to Markdown.
-        if (
-            isinstance(source, LocalResource)
-            and source.source_type == SourceType.FEISHU
-            and source.meta.get("feishu_content_kind") != "file"
-        ):
-            return False
-
         try:
             from openviking_cli.utils.config.open_viking_config import get_openviking_config
 
@@ -72,27 +64,9 @@ class ParserRouter:
             return False
 
         source_path = self._extract_source_path(source)
-        try:
-            from openviking.parse.accessors.feishu_accessor import FeishuAccessor
-
-            if FeishuAccessor._is_feishu_url(str(source_path)):
-                return bool(getattr(parser_api, "enable_feishu_url", False))
-        except Exception:
-            pass
-
         ext = self._normalize_extension(resolved_extension) or self._extract_extension(source_path)
         extensions = getattr(parser_api, "extensions", None) or []
         return ext in extensions
-
-    def should_use_understanding_directly(self, source: str, **kwargs) -> bool:
-        parser_backend = normalize_parser_backend(kwargs.get("parser_backend"))
-        if parser_backend is ParserBackend.INTERNAL:
-            return False
-        forced = parser_backend is ParserBackend.UNDERSTANDING
-        return bool(
-            (forced or self.should_use_understanding_api(source))
-            and self._get_understanding_api().can_submit_url_directly(source, **kwargs)
-        )
 
     @staticmethod
     def _normalize_extension(extension: str) -> str:
@@ -113,19 +87,11 @@ class ParserRouter:
 
         parser_backend = normalize_parser_backend(kwargs.pop("parser_backend", None))
 
-        normalized_feishu = (
-            isinstance(source, LocalResource)
-            and source.source_type == SourceType.FEISHU
-            and source.meta.get("feishu_content_kind") != "file"
-        )
-        use_understanding = not normalized_feishu and (
-            parser_backend is ParserBackend.UNDERSTANDING
-            or (
-                parser_backend is None
-                and self.should_use_understanding_api(
-                    source,
-                    resolved_extension=str(kwargs.get("resolved_extension") or ""),
-                )
+        use_understanding = parser_backend is ParserBackend.UNDERSTANDING or (
+            parser_backend is None
+            and self.should_use_understanding_api(
+                source,
+                resolved_extension=str(kwargs.get("resolved_extension") or ""),
             )
         )
 

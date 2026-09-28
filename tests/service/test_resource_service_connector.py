@@ -816,7 +816,7 @@ async def test_declared_connector_watch_returns_original_add_type(
     ctx,
     service,
 ):
-    connector_config.allowed_add_types = ["feishu_project"]
+    connector_config.allowed_add_types = ["wiki_project"]
     watch_manager = WatchManager()
     service._watch_scheduler = SimpleNamespace(watch_manager=watch_manager)
     submitted = {}
@@ -829,7 +829,7 @@ async def test_declared_connector_watch_returns_original_add_type(
     await service.add_resource(
         path="project-ptat4n",
         ctx=ctx,
-        add_type="feishu_project",
+        add_type="wiki_project",
         to="viking://resources/Project/ptat4n",
         watch_interval=5,
     )
@@ -843,7 +843,7 @@ async def test_declared_connector_watch_returns_original_add_type(
         role=str(Role.USER),
     )
     assert task is not None
-    assert task.source_type == "feishu_project"
+    assert task.source_type == "wiki_project"
     assert task.connector_states == states
 
 
@@ -2700,7 +2700,7 @@ async def test_declared_add_type_routes_generic_type_to_connector(
     ctx,
     service,
 ):
-    connector_config.allowed_add_types = ["feishu"]
+    connector_config.allowed_add_types = ["wiki"]
     tracker = _task_tracker()
     connector_client = SimpleNamespace(
         submit_doc_add=AsyncMock(return_value={"task_key": "connector-1"})
@@ -2710,23 +2710,23 @@ async def test_declared_add_type_routes_generic_type_to_connector(
     monkeypatch.setattr(connector_delegate_module.logger, "info", info_log)
 
     result = await service.add_resource(
-        path="https://example.feishu.cn/wiki/space-home",
+        path="https://wiki.example.com/wiki/space-home",
         ctx=ctx,
-        add_type="feishu",
-        to="viking://resources/kb/feishu",
+        add_type="wiki",
+        to="viking://resources/kb/wiki",
         args={"space_id": "spc1", "auth_config": {"app_secret": "s3cret"}},
     )
 
     assert result["status"] == "accepted"
     connector_client.submit_doc_add.assert_awaited_once_with(
-        add_type="feishu",
+        add_type="wiki",
         api_key="secret",
         tos_path=None,
-        to="viking://resources/kb/feishu",
+        to="viking://resources/kb/wiki",
         include_child=True,
         param_config={
             "space_id": "spc1",
-            "path": "https://example.feishu.cn/wiki/space-home",
+            "path": "https://wiki.example.com/wiki/space-home",
         },
         auth_config={"app_secret": "s3cret"},
         extra_params=None,
@@ -2774,31 +2774,31 @@ def test_declared_add_type_requires_enabled_and_allowed(connector_config, ctx, s
     # Not in allowed_add_types (fixture allows only "tos").
     with pytest.raises(InvalidArgumentError, match="disabled or does not allow"):
         service._connector.should_delegate(
-            "https://example.feishu.cn/wiki/x",
+            "https://wiki.example.com/wiki/x",
             ctx=ctx,
-            declared_add_type="feishu",
+            declared_add_type="wiki",
             to="viking://resources/x",
         )
     # Connector disabled entirely.
     connector_config.enable = False
-    connector_config.allowed_add_types = ["feishu"]
+    connector_config.allowed_add_types = ["wiki"]
     with pytest.raises(InvalidArgumentError, match="disabled or does not allow"):
         service._connector.should_delegate(
-            "https://example.feishu.cn/wiki/x",
+            "https://wiki.example.com/wiki/x",
             ctx=ctx,
-            declared_add_type="feishu",
+            declared_add_type="wiki",
             to="viking://resources/x",
         )
 
 
 def test_declared_add_type_rejects_probe_mismatch(connector_config, ctx, service):
-    connector_config.allowed_add_types = ["tos", "git", "feishu"]
+    connector_config.allowed_add_types = ["tos", "git", "wiki"]
     # Generic declared type claiming a path that probes as a registry type.
     with pytest.raises(InvalidArgumentError, match="does not match the source path"):
         service._connector.should_delegate(
             "tos://bucket/x",
             ctx=ctx,
-            declared_add_type="feishu",
+            declared_add_type="wiki",
             to="viking://resources/x",
         )
     # Registry declared type on a path that probes differently (or not at all).
@@ -2830,12 +2830,12 @@ def test_declared_add_type_never_degrades(connector_config, ctx, service):
             wait=True,
         )
     # Same for an unsupported top-level param on a generic declared type.
-    connector_config.allowed_add_types = ["feishu"]
+    connector_config.allowed_add_types = ["wiki"]
     with pytest.raises(InvalidArgumentError, match="instruction"):
         service._connector.should_delegate(
-            "https://example.feishu.cn/wiki/x",
+            "https://wiki.example.com/wiki/x",
             ctx=ctx,
-            declared_add_type="feishu",
+            declared_add_type="wiki",
             to="viking://resources/x",
             instruction="summarize",
         )
@@ -2854,12 +2854,12 @@ def test_declared_git_rejects_abbreviated_commit(connector_config, ctx, service)
 
 
 def test_declared_add_type_rejects_non_mapping_auth_config(connector_config, ctx, service):
-    connector_config.allowed_add_types = ["feishu"]
+    connector_config.allowed_add_types = ["wiki"]
     with pytest.raises(InvalidArgumentError, match="auth_config"):
         service._connector.should_delegate(
-            "https://example.feishu.cn/wiki/x",
+            "https://wiki.example.com/wiki/x",
             ctx=ctx,
-            declared_add_type="feishu",
+            declared_add_type="wiki",
             to="viking://resources/x",
             connector_args={"auth_config": "not-a-dict"},
         )

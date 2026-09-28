@@ -35,7 +35,7 @@ async def test_management_rejects_non_root(app, role, monkeypatch):
             ("GET", "/api/v1/admin/accounts/a/bot/connections"),
             ("POST", "/api/v1/admin/accounts/a/bot/connections"),
             ("POST", "/api/v1/admin/accounts/a/bot/onboarding-runs"),
-            ("GET", "/api/v1/admin/accounts/a/bot/onboarding-runs/current?type=feishu"),
+            ("GET", "/api/v1/admin/accounts/a/bot/onboarding-runs/current?type=example"),
             ("GET", "/api/v1/admin/accounts/a/bot/onboarding-runs/job"),
             ("POST", "/api/v1/admin/accounts/a/bot/onboarding-runs/job/actions"),
             ("DELETE", "/api/v1/admin/accounts/a/bot/connections/x?revision=1"),
@@ -170,7 +170,7 @@ async def test_onboarding_identity_is_selected_server_side(app, monkeypatch):
             "/api/v1/admin/accounts/a/bot/onboarding-runs",
             json={
                 "user_id": "bot",
-                "type": "feishu",
+                "type": "example",
                 "request_id": "e232e744-f13a-44f3-8fda-4e82ad1b58b4",
             },
         )

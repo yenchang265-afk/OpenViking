@@ -185,43 +185,12 @@ class TestHTTPAccessor:
                 return local
 
         class Router:
-            def should_use_understanding_directly(self, *_args, **_kwargs):
-                return False
-
             async def parse(self, _source, **kwargs):
                 received.update(kwargs)
                 return SimpleNamespace()
 
         processor = UnifiedResourceProcessor()
         processor._accessor_registry = Registry()
-        processor._parser_router = Router()
-        monkeypatch.setattr(processor, "_get_vlm_processor", lambda: None)
-
-        await processor.process(
-            "https://tos.example.com/object",
-            tos_signature="signed-value",
-            tos_access="access-key",
-        )
-
-        assert "tos_signature" not in received
-        assert "tos_access" not in received
-
-    async def test_tos_auth_args_do_not_reach_direct_understanding_parser(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        from openviking.utils.media_processor import UnifiedResourceProcessor
-
-        received: dict[str, object] = {}
-
-        class Router:
-            def should_use_understanding_directly(self, *_args, **_kwargs):
-                return True
-
-            async def parse(self, _source, **kwargs):
-                received.update(kwargs)
-                return SimpleNamespace()
-
-        processor = UnifiedResourceProcessor()
         processor._parser_router = Router()
         monkeypatch.setattr(processor, "_get_vlm_processor", lambda: None)
 

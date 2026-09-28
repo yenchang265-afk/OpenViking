@@ -65,16 +65,6 @@ class ChannelManager:
                     workspace_path=workspace_path,
                 )
 
-            elif channel_config.type == ChannelType.FEISHU:
-                from vikingbot.channels.feishu import FeishuChannel
-
-                channel = FeishuChannel(
-                    channel_config,
-                    self.bus,
-                    workspace_path=workspace_path,
-                    bot_config=additional_deps.get("bot_config"),
-                )
-
             elif channel_config.type == ChannelType.DISCORD:
                 from vikingbot.channels.discord import DiscordChannel
 

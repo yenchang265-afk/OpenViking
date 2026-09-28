@@ -1,13 +1,12 @@
 ## 💬 Chat Applications
 
-Talk to your vikingbot through Telegram, Discord, WhatsApp, Feishu, Mochat, DingTalk, Slack, email, or QQ—wherever you are.
+Talk to your vikingbot through Telegram, Discord, WhatsApp, Mochat, DingTalk, Slack, email, or QQ—wherever you are.
 
 | Channel | Setup difficulty |
 |---------|------------------|
 | **Telegram** | Easy (one token) |
 | **Discord** | Easy (bot token + permissions) |
 | **WhatsApp** | Medium (scan a QR code) |
-| **Feishu** | Medium (app credentials) |
 | **Mochat** | Medium (claw token + WebSocket) |
 | **DingTalk** | Medium (app credentials) |
 | **Slack** | Medium (bot + app tokens) |
@@ -193,58 +192,6 @@ vikingbot channels login
 # Terminal 2
 vikingbot gateway
 ```
-
-</details>
-
-<details>
-<summary><b>Feishu</b></summary>
-
-Feishu uses a persistent **WebSocket** connection, so no public IP address is required.
-
-**1. Create a Feishu bot**
-
-- Go to the [Feishu Open Platform](https://open.feishu.cn/app).
-- Create an application and enable the **Bot** capability.
-- Under **Permissions**, add `im:message` for sending messages.
-- Under **Events**, add `im.message.receive_v1` for receiving messages.
-  - Select **Long Connection** mode. vikingbot must be running first so it can establish the connection.
-- Copy the **App ID** and **App Secret** from **Credentials & Basic Info**.
-- Publish the application.
-
-**2. Configure it**
-
-```json
-{
-  "channels": [
-    {
-      "type": "feishu",
-      "enabled": true,
-      "appId": "cli_xxx",
-      "appSecret": "xxx",
-      "botName": "",
-      "encryptKey": "",
-      "verificationToken": "",
-      "allowFrom": [],
-      "threadRequireMention": true
-    }
-  ]
-}
-```
-
-> In long-connection mode, `encryptKey` and `verificationToken` are optional.
-> `domain`: the open-platform domain. Defaults to `https://open.feishu.cn` (Feishu). For **Lark international**, set it to `https://open.larksuite.com`; both the HTTP calls and the WebSocket long connection follow it.
-> `allowFrom`: leave it empty to allow every user, or add `["ou_xxx"]` to restrict access.
-> `botName`: replaces `@<open_id>` mentions with the bot name in group-chat context sent to the model, and labels messages sent by the bot itself. When empty, it falls back to `"Bot"`.
-> `threadRequireMention`: controls whether group messages must mention the bot. The default is `true`, meaning every message in regular groups and topic groups requires an `@` mention. When set to `false`, regular groups do not require a mention, and only the first message in a topic group can omit it; later replies still require an `@` mention outside `DEBUG` mode.
-
-**3. Run it**
-
-```bash
-vikingbot gateway
-```
-
-> [!TIP]
-> Feishu receives messages over WebSocket, so you do not need a webhook or public IP address.
 
 </details>
 

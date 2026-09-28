@@ -17,7 +17,7 @@ import json
 import mimetypes
 import tempfile
 import zipfile
-from pathlib import Path, PurePosixPath
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 from urllib.parse import urlparse
 
@@ -40,7 +40,7 @@ from openviking.parse.parsers.media.constants import (
     VIDEO_EXTENSIONS,
 )
 from openviking.storage.viking_fs import get_viking_fs
-from openviking.utils.zip_safe import normalize_zip_filenames, safe_extract_zip
+from openviking.utils.zip_safe import safe_extract_zip
 from openviking_cli.exceptions import InvalidArgumentError
 from openviking_cli.utils.logger import get_logger
 
@@ -120,15 +120,6 @@ class UnderstandingAPI(BaseParser):
                 f"{PREPARED_RESPONSE_ID_ARG} and {PREPARED_FILE_ID_ARG} are mutually exclusive"
             )
 
-        # Only a directly routed Feishu URL uses the Lark protocol. Accessor
-        # output is an existing local Markdown file and must stay local.
-        is_feishu_url = self._is_feishu_url(source_str)
-        lark_file = (
-            await self._resolve_lark_file(kwargs)
-            if is_feishu_url and not prepared_response_id and not prepared_file_id
-            else None
-        )
-
         url: Optional[str] = None
         local_path: Optional[Path] = None
         source_path = Path(source_str)
@@ -149,12 +140,6 @@ class UnderstandingAPI(BaseParser):
             parsed = urlparse(url)
             inferred_name = Path(parsed.path).name
             doc_type = resolved_extension or Path(parsed.path).suffix.lower().lstrip(".")
-            if is_feishu_url:
-                path_parts = [part for part in parsed.path.split("/") if part]
-                doc_type = {
-                    "sheets": "sheet",
-                    "base": "bitable",
-                }.get(path_parts[0], path_parts[0])
         else:
             inferred_name = local_path.name if local_path is not None else Path(source_str).name
             if not prepared_file_id and (local_path is None or not local_path.is_file()):
@@ -200,11 +185,7 @@ class UnderstandingAPI(BaseParser):
             else:
                 if url is None:
                     raise RuntimeError("missing url for url mode")
-                response_obj = await self._create_response_for_url(
-                    url=url,
-                    doc_type=doc_type,
-                    lark_file=lark_file,
-                )
+                response_obj = await self._create_response_for_url(url=url, doc_type=doc_type)
 
             if not prepared_response_id:
                 response_id_value = response_obj.get("id")
@@ -214,9 +195,6 @@ class UnderstandingAPI(BaseParser):
                     )
                 response_id = str(response_id_value)
             task_meta["response_id"] = response_id
-            checkpoint = kwargs.get("_response_checkpoint")
-            if checkpoint is not None:
-                await checkpoint(response_id)
 
             response_obj = await self._poll_response(response_id=response_id)
             zip_url = self._extract_zip_url(response_obj)
@@ -228,11 +206,6 @@ class UnderstandingAPI(BaseParser):
 
             zip_path = await self._download_zip(zip_url)
             try:
-                if is_feishu_url and not display_name:
-                    archive_root = self._single_zip_root_name(zip_path)
-                    if archive_root:
-                        doc_name = archive_root
-                        task_meta["doc_name"] = doc_name
                 unpack_kwargs = {
                     "zip_path": zip_path,
                     "resource_name": doc_name,
@@ -337,49 +310,16 @@ class UnderstandingAPI(BaseParser):
         if not isinstance(source, str) or not source.startswith(("http://", "https://")):
             raise ValueError("UnderstandingAPI URL submission requires an http(s) URL")
 
-        is_feishu_url = self._is_feishu_url(source)
-        lark_file = await self._resolve_lark_file(kwargs) if is_feishu_url else None
-
         parsed = urlparse(source)
         doc_type = Path(parsed.path).suffix.lower().lstrip(".") or "unknown"
-        if is_feishu_url:
-            path_parts = [part for part in parsed.path.split("/") if part]
-            doc_type = {
-                "sheets": "sheet",
-                "base": "bitable",
-            }.get(path_parts[0], path_parts[0])
 
-        response_obj = await self._create_response_for_url(
-            url=source,
-            doc_type=doc_type,
-            lark_file=lark_file if is_feishu_url else None,
-        )
+        response_obj = await self._create_response_for_url(url=source, doc_type=doc_type)
         response_id = response_obj.get("id")
         if not response_id:
             raise RuntimeError(
                 f"responses api missing id: {self._safe_error_summary(response_obj)}"
             )
         return str(response_id)
-
-    def can_submit_url_directly(self, source: str, **kwargs) -> bool:
-        """Return whether this URL can bypass source materialization."""
-        if not source.startswith(("http://", "https://")) or not self._is_feishu_url(source):
-            return False
-        from openviking.parse.accessors.feishu_accessor import FeishuAccessor
-        from openviking.parse.feishu_import import recursive_wiki
-
-        doc_type, _ = FeishuAccessor._parse_feishu_url(source)
-        if doc_type in {"folder", "file"} or (doc_type == "wiki" and recursive_wiki(kwargs)):
-            return False
-        if self._normalize_lark_file(kwargs):
-            return True
-        try:
-            from openviking.resource.feishu_watch_auth import load_feishu_app_credentials
-
-            load_feishu_app_credentials(config=kwargs.get("feishu_config"))
-            return True
-        except (FileNotFoundError, ValueError):
-            return False
 
     async def parse_content(
         self, content: str, source_path: Optional[str] = None, instruction: str = "", **kwargs
@@ -531,7 +471,6 @@ class UnderstandingAPI(BaseParser):
         *,
         url: str,
         doc_type: str,
-        lark_file: Optional[Dict[str, str]] = None,
     ) -> Dict[str, Any]:
         if doc_type in self._video_exts:
             content: Dict[str, Any] = {"type": "input_video", "video_url": url}
@@ -541,8 +480,6 @@ class UnderstandingAPI(BaseParser):
             content = {"type": "input_audio", "audio_url": url}
         else:
             content = {"type": "input_file", "file_url": url}
-        if lark_file:
-            content["lark_file"] = dict(lark_file)
         payload = {
             "input": [{"role": "user", "content": [content]}],
             "tools": [{"type": "understanding"}],
@@ -557,74 +494,6 @@ class UnderstandingAPI(BaseParser):
                 headers=self._auth_headers({"Content-Type": "application/json;charset=UTF-8"}),
             )
         return self._read_api_response(rsp, context="responses api error")
-
-    @staticmethod
-    def _is_feishu_url(source: str) -> bool:
-        try:
-            from openviking.parse.accessors.feishu_accessor import FeishuAccessor
-
-            return FeishuAccessor._is_feishu_url(source)
-        except Exception:
-            return False
-
-    @staticmethod
-    def _normalize_lark_file(kwargs: Dict[str, Any]) -> Optional[Dict[str, str]]:
-        raw_lark_file = kwargs.get("lark_file")
-        if raw_lark_file is None:
-            raw_lark_file = {"user_access_token": kwargs.get("feishu_access_token")}
-        if not isinstance(raw_lark_file, dict):
-            raise ValueError("lark_file must be an object")
-
-        auth = {}
-        for key in ("user_access_token", "tenant_access_token"):
-            value = raw_lark_file.get(key)
-            if isinstance(value, str) and value.strip():
-                auth[key] = value.strip()
-        if len(auth) > 1:
-            raise ValueError(
-                "lark_file must contain exactly one of user_access_token or tenant_access_token"
-            )
-        return auth or None
-
-    async def _resolve_lark_file(self, kwargs: Dict[str, Any]) -> Dict[str, str]:
-        from openviking.connector.auth import current_feishu_token
-
-        token_provider = current_feishu_token.get()
-        if token_provider is not None:
-            return {"user_access_token": await asyncio.to_thread(token_provider.get_token)}
-        auth = self._normalize_lark_file(kwargs)
-        if auth:
-            return auth
-        try:
-            from openviking.resource.feishu_watch_auth import FeishuOAuthClient
-
-            token = await FeishuOAuthClient.from_config(
-                config=kwargs.get("feishu_config")
-            ).get_tenant_access_token()
-        except (FileNotFoundError, ValueError) as exc:
-            raise ValueError(
-                "exactly one Feishu user or tenant access token is required for parser API imports"
-            ) from exc
-        return {"tenant_access_token": token}
-
-    @staticmethod
-    def _single_zip_root_name(zip_path: Path) -> Optional[str]:
-        roots = set()
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            normalize_zip_filenames(zf)
-            for info in zf.infolist():
-                raw_name = info.filename.rstrip("/")
-                if not raw_name:
-                    continue
-                path = PurePosixPath(raw_name)
-                if path.is_absolute() or not path.parts or path.parts[0] in {".", ".."}:
-                    return None
-                roots.add(path.parts[0])
-                if len(path.parts) == 1 and not info.is_dir():
-                    return None
-        if len(roots) != 1:
-            return None
-        return next(iter(roots))
 
     async def _poll_response(self, *, response_id: str) -> Dict[str, Any]:
         deadline = asyncio.get_running_loop().time() + float(self._timeout_sec)

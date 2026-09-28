@@ -23,14 +23,13 @@ from pathlib import Path, PurePosixPath
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 from weakref import WeakKeyDictionary
 
-from openviking.parse.backend import ParserBackend, normalize_parser_backend
+from openviking.parse.backend import ParserBackend
 from openviking.parse.base import (
     NodeType,
     ParseResult,
     ResourceNode,
     create_parse_result,
 )
-from openviking.parse.gitignore import GitignoreMatcher
 from openviking.parse.image_rewrite import IMAGE_MAPPINGS_FILENAME
 from openviking.parse.output import (
     ParseArtifactWriter,
@@ -170,22 +169,11 @@ class DirectoryParser(BaseParser):
             directory_config = getattr(ov_config, "directory", None) or DirectoryConfig()
 
             split_content = kwargs.get("split_content", True)
-            plan = kwargs.get("_feishu_import_plan")
-            # Ordinary source jobs use INTERNAL for directory orchestration;
-            # their files still select a parser independently by extension.
-            backend = normalize_parser_backend(kwargs.get("parser_backend")) if plan else None
             parser_api_config = getattr(ov_config, "parser_api", None)
             understanding_limits_enabled = bool(
                 split_content
-                and backend is not ParserBackend.INTERNAL
-                and (
-                    (plan and plan.use_understanding)
-                    or backend is ParserBackend.UNDERSTANDING
-                    or (
-                        parser_router.understanding_api_enabled()
-                        and getattr(parser_api_config, "extensions", None)
-                    )
-                )
+                and parser_router.understanding_api_enabled()
+                and getattr(parser_api_config, "extensions", None)
             )
 
             scan_result = scan_directory(
@@ -196,9 +184,7 @@ class DirectoryParser(BaseParser):
                 include=kwargs.get("include"),
                 exclude=kwargs.get("exclude"),
                 additional_can_process=parser_router.should_use_understanding_api,
-                max_files=directory_config.max_files
-                if plan or understanding_limits_enabled
-                else None,
+                max_files=directory_config.max_files if understanding_limits_enabled else None,
                 max_depth=directory_config.max_depth if understanding_limits_enabled else None,
             )
             directly_upload_media = kwargs.get("directly_upload_media", True)
@@ -206,55 +192,12 @@ class DirectoryParser(BaseParser):
             if preserve_structure is None:
                 preserve_structure = directory_config.preserve_structure
             processable_files = list(scan_result.all_processable_files())
-            entry_map = {entry.path.resolve(): entry for entry in plan.entries} if plan else {}
-            feishu_gitignore = GitignoreMatcher(source_path) if plan else None
-            if plan:
-                from openviking.parse.directory_scan import CLASS_PROCESSABLE, ClassifiedFile
-
-                for entry in plan.entries:
-                    if entry.kind != "url":
-                        continue
-                    entry_path = entry.path.resolve()
-                    relative = entry_path.relative_to(source_path).as_posix()
-                    if not self._include_feishu_path(
-                        entry_path, source_path, kwargs, gitignore=feishu_gitignore
-                    ):
-                        scan_result.skipped.append(f"{relative} (excluded by source filter)")
-                        continue
-                    processable_files.append(
-                        ClassifiedFile(entry_path, relative, CLASS_PROCESSABLE)
-                    )
-                if (
-                    directory_config.max_files is not None
-                    and len(processable_files) > directory_config.max_files
-                ):
-                    raise InvalidArgumentError("Feishu directory file limit exceeded")
-                processable_files.sort(key=lambda item: item.rel_path)
             warnings.extend(scan_result.warnings)
-            source_skipped_items = self._source_skipped_items(
-                kwargs.get("_source_meta"),
-                source_path,
-            )
-            warnings.extend(
-                f"Skipped Feishu Drive item {item['path']}: {item.get('reason', 'unknown error')}"
-                for item in source_skipped_items
-            )
 
             file_jobs: List[Dict[str, Any]] = []
             understanding_jobs: List[Dict[str, Any]] = []
             for index, cf in enumerate(processable_files):
-                entry = entry_map.get(cf.path)
-                remote = entry is not None and entry.kind == "url"
-                normalized = entry is not None and entry.kind == "markdown"
-                configured_for_understanding = bool(
-                    backend is not ParserBackend.INTERNAL
-                    and not normalized
-                    and (
-                        remote
-                        or backend is ParserBackend.UNDERSTANDING
-                        or parser_router.should_use_understanding_api(cf.path)
-                    )
-                )
+                configured_for_understanding = parser_router.should_use_understanding_api(cf.path)
                 use_understanding = bool(split_content and configured_for_understanding)
                 native_parser = None if use_understanding else self._assign_parser(cf, registry)
                 file_parser = parser_router if use_understanding else native_parser
@@ -292,28 +235,7 @@ class DirectoryParser(BaseParser):
                     ),
                 }
                 if use_understanding:
-                    parse_options = {"parser_backend": ParserBackend.UNDERSTANDING}
-                    if remote:
-                        parse_options.update(
-                            _source=entry.url,
-                            resource_name=cf.path.name,
-                            feishu_access_token=kwargs.get("feishu_access_token"),
-                            feishu_config=kwargs.get("feishu_config"),
-                        )
-                        if kwargs.get("lark_file"):
-                            parse_options["lark_file"] = kwargs["lark_file"]
-                    checkpoint = kwargs.get("_feishu_checkpoint")
-                    if plan and checkpoint is not None:
-                        saved, save = checkpoint
-                        key = entry.checkpoint_key(plan.root) if entry else cf.rel_path
-                        if key in saved:
-                            parse_options["understanding_response_id"] = saved[key]
-
-                        async def record(response_id, key=key, save=save):
-                            await save(key, response_id)
-
-                        parse_options["_response_checkpoint"] = record
-                    job["parse_options"] = parse_options
+                    job["parse_options"] = {"parser_backend": ParserBackend.UNDERSTANDING}
                 file_jobs.append(job)
                 if use_understanding:
                     understanding_jobs.append(job)
@@ -346,7 +268,7 @@ class DirectoryParser(BaseParser):
                 result.meta["dir_name"] = dir_name
                 result.meta["total_processable"] = 0
                 result.meta["processed_files"] = []
-                result.meta["failed_files"] = source_skipped_items
+                result.meta["failed_files"] = []
                 result.meta["unsupported_files"] = []
                 result.meta["skipped_files"] = self._parse_skipped(scan_result.skipped)
                 keep_temp = True
@@ -459,14 +381,6 @@ class DirectoryParser(BaseParser):
                     )
 
                 file_entry = self._file_status_entry(cf, parser_name, detail)
-                entry = entry_map.get(cf.path)
-                if entry:
-                    file_entry["source_url"] = entry.url
-                    file_entry["source_token"] = entry.token
-                if plan and not detail["ok"] and kwargs.get("strict", False):
-                    raise InvalidArgumentError(
-                        f"Failed to import {cf.rel_path}: {detail.get('error')}"
-                    )
                 if detail["ok"]:
                     file_count += 1
                     processed_files.append(file_entry)
@@ -511,7 +425,7 @@ class DirectoryParser(BaseParser):
             result.meta["dir_name"] = dir_name
             result.meta["total_processable"] = len(processable_files)
             result.meta["processed_files"] = processed_files
-            result.meta["failed_files"] = failed_files + source_skipped_items
+            result.meta["failed_files"] = failed_files
             result.meta["unsupported_files"] = unsupported_files
             result.meta["skipped_files"] = skipped_files
 
@@ -558,44 +472,6 @@ class DirectoryParser(BaseParser):
                         pending_result.temp_dir_path,
                         exc,
                     )
-
-    @staticmethod
-    def _include_feishu_path(
-        path: Path,
-        root: Path,
-        options: Dict[str, Any],
-        *,
-        gitignore: Optional[GitignoreMatcher] = None,
-    ) -> bool:
-        from openviking.parse.directory_scan import (
-            _matches_exclude,
-            _matches_include,
-            _parse_patterns,
-            _should_skip_directory,
-        )
-
-        relative = path.relative_to(root).as_posix()
-        ignored = options.get("ignore_dirs") or set()
-        if isinstance(ignored, str):
-            ignored = set(_parse_patterns(ignored))
-        for parent in path.parents:
-            if parent == root:
-                break
-            if _should_skip_directory(parent, root, ignored)[0]:
-                return False
-            if gitignore and gitignore.is_ignored_dir(
-                parent, gitignore.spec_for_dir(parent.parent)
-            ):
-                return False
-        if path.name.startswith("."):
-            return False
-        if gitignore and gitignore.is_ignored_file(path, gitignore.spec_for_dir(path.parent)):
-            return False
-        includes = _parse_patterns(options.get("include"))
-        excludes = _parse_patterns(options.get("exclude"))
-        return (not includes or _matches_include(path.name, includes)) and not _matches_exclude(
-            relative, path.name, excludes
-        )
 
     # ------------------------------------------------------------------
     # parse_content – not applicable for directories
@@ -646,41 +522,6 @@ class DirectoryParser(BaseParser):
             status = DirectoryParser._REASON_TO_STATUS.get(reason, "skip")
             result.append({"path": path, "status": status, "reason": reason})
         return result
-
-    @staticmethod
-    def _source_skipped_items(source_meta: Any, source_path: Path) -> List[Dict[str, str]]:
-        """Normalize skipped items reported by a remote source accessor."""
-        if not isinstance(source_meta, dict):
-            return []
-        items = source_meta.get("feishu_folder_skipped_items") or []
-        if not isinstance(items, list):
-            return []
-
-        normalized: List[Dict[str, str]] = []
-        for item in items:
-            if not isinstance(item, dict):
-                continue
-            raw_path = str(item.get("path") or item.get("name") or item.get("token") or "unknown")
-            display_path = raw_path
-            try:
-                path = Path(raw_path).resolve(strict=False)
-                if path.is_absolute():
-                    display_path = str(path.relative_to(source_path.resolve(strict=False)))
-            except Exception:
-                pass
-            display_path = display_path.replace("\\", "/")
-
-            normalized.append(
-                {
-                    "path": display_path,
-                    "parser": "feishu",
-                    "status": "failed",
-                    "type": str(item.get("type") or ""),
-                    "token": str(item.get("token") or ""),
-                    "reason": str(item.get("reason") or "unknown error"),
-                }
-            )
-        return normalized
 
     @staticmethod
     def _nested_failed_files(
@@ -846,7 +687,6 @@ class DirectoryParser(BaseParser):
         options = dict(parse_options or {})
         if output_store is not None:
             options["parse_output_store"] = output_store
-        source = options.pop("_source", str(classified_file.path))
         options.update(
             enable_link_rewrite=preserve_structure,
             link_rewrite_root=import_root,
@@ -854,7 +694,7 @@ class DirectoryParser(BaseParser):
             split_content=split_content,
             flatten_single_output=bool(not split_content and preserve_structure),
         )
-        return await parser.parse(source, **options)
+        return await parser.parse(str(classified_file.path), **options)
 
     @staticmethod
     async def _merge_parser_result(

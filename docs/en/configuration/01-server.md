@@ -389,12 +389,6 @@ Parsers live under `parsers`:
       "max_depth": 10,
       "max_concurrent": 4
     },
-    "feishu": {
-      "domain": "https://open.feishu.cn",
-      "max_rows_per_sheet": 1000,
-      "max_records_per_table": 1000,
-      "download_images": true
-    },
     "webfeed": {}
   }
 }
@@ -430,7 +424,6 @@ Understanding API backend.
 | `markdown`, `html`, `text` | Text document chunking |
 | `anydoc` | Office and EPUB conversion; `enabled=false` rejects those formats |
 | `directory` | Directory scanning and ignore rules |
-| `feishu` | Feishu/Lark access and parsing |
 | `webfeed` | Sitemap, RSS, and Atom ingestion |
 
 Provider-, parser-, storage-, and encryption-specific fields are documented in [Configuration](../guides/01-configuration.md).

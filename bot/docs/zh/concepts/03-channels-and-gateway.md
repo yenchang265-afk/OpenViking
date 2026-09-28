@@ -6,7 +6,6 @@ Channels 负责把不同聊天平台适配为统一消息，Gateway 则把 Chann
 
 | 类型 | 连接方式 | 主要能力 |
 |------|----------|----------|
-| `feishu` | 飞书事件/长连接 | 私聊、群聊、话题、@ 规则、媒体 |
 | `slack` | Socket Mode | 私聊和群聊策略 |
 | `telegram` | Bot API | 文本、媒体和音频转写 |
 | `discord` | Gateway | 文本与媒体 |
@@ -32,7 +31,7 @@ BaseChannel 和具体平台实现共同负责：
 5. 将 OutboundMessage 转换为平台原生回复；
 6. 按平台能力展示处理中状态或 reaction。
 
-平台差异留在具体 Channel 内，AgentLoop 不依赖飞书、Slack 等 SDK。
+平台差异留在具体 Channel 内，AgentLoop 不依赖 Slack 等 SDK。
 
 ChannelManager 从 `bot.channels` 创建所有启用实例，并以 `type__channel_id` 区分同类型的多个 Bot。它消费 MessageBus 出站队列，根据 SessionKey 将回复路由到原渠道。
 

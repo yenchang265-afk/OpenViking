@@ -17,7 +17,6 @@ class ChannelType(str, Enum):
     WHATSAPP = "whatsapp"
     TELEGRAM = "telegram"
     DISCORD = "discord"
-    FEISHU = "feishu"
     MOCHAT = "mochat"
     DINGTALK = "dingtalk"
     EMAIL = "email"
@@ -115,34 +114,6 @@ class TelegramChannelConfig(BaseChannelConfig):
     def channel_id(self) -> str:
         # Use the bot ID from token (before colon)
         return self.token.split(":")[0] if ":" in self.token else self.token
-
-
-class FeishuChannelConfig(BaseChannelConfig):
-    """Feishu/Lark channel configuration (multi-channel support)."""
-
-    type: ChannelType = ChannelType.FEISHU
-    app_id: str = ""
-    bot_name: str = ""
-    app_secret: str = ""
-    encrypt_key: str = ""
-    verification_token: str = ""
-    domain: str = Field(
-        default="https://open.feishu.cn",
-        description="开放平台域名：飞书用 https://open.feishu.cn，Lark 国际版用 https://open.larksuite.com",
-    )
-    allow_from: list[str] = Field(default_factory=list)
-    allow_cmd_from: list[str] = Field(default_factory=list)  ## 允许执行命令的Feishu用户ID列表
-    thread_require_mention: bool = Field(
-        default=True,
-        description="群聊是否需要@才响应：默认True=普通群和话题群的所有消息都必须@才响应；False=普通群无需@，话题群仅首条消息无需@，非DEBUG模式下后续回复必须@",
-    )
-
-    def channel_id(self) -> str:
-        # Use app_id directly as the ID
-        return self.app_id
-
-    def channel_key(self):
-        return f"{self.type.value}__{self.channel_id()}"
 
 
 class DiscordChannelConfig(BaseChannelConfig):
@@ -313,17 +284,9 @@ class ChannelsConfig(BaseModel):
         """Parse a single channel config dict into the appropriate type."""
         channel_type = config.get("type")
 
-        # Handle both snake_case and camelCase for feishu
+        # Handle camelCase for fields
         if "appId" in config and "app_id" not in config:
             config["app_id"] = config.pop("appId")
-        if "appSecret" in config and "app_secret" not in config:
-            config["app_secret"] = config.pop("appSecret")
-        if "encryptKey" in config and "encrypt_key" not in config:
-            config["encrypt_key"] = config.pop("encryptKey")
-        if "verificationToken" in config and "verification_token" not in config:
-            config["verification_token"] = config.pop("verificationToken")
-
-        # Handle camelCase for other fields
         if "allowFrom" in config and "allow_from" not in config:
             config["allow_from"] = config.pop("allowFrom")
         if "bridgeUrl" in config and "bridge_url" not in config:
@@ -385,8 +348,6 @@ class ChannelsConfig(BaseModel):
 
         if channel_type == ChannelType.TELEGRAM:
             return TelegramChannelConfig(**config)
-        elif channel_type == ChannelType.FEISHU:
-            return FeishuChannelConfig(**config)
         elif channel_type == ChannelType.DISCORD:
             return DiscordChannelConfig(**config)
         elif channel_type == ChannelType.WHATSAPP:

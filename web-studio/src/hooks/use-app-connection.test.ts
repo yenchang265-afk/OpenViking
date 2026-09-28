@@ -339,7 +339,7 @@ describe('shouldRedirectToLoginOnApiError', () => {
         {
           statusCode: 403,
           code: 'PERMISSION_DENIED',
-          details: { feishu_code: 1770032 },
+          details: { reason: 'insufficient_scope' },
         },
         acceptClientError,
       ),

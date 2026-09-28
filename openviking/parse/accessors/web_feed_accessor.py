@@ -260,7 +260,7 @@ def _load_webfeed_config():
 class WebFeedAccessor(DataAccessor):
     """Accessor that ingests a whole website from a sitemap / RSS / Atom URL."""
 
-    PRIORITY = 60  # Feishu 100 > Git 80 > WebFeed 60 > HTTP 50 > Local 1
+    PRIORITY = 60  # Git 80 > WebFeed 60 > HTTP 50 > Local 1
 
     @property
     def priority(self) -> int:

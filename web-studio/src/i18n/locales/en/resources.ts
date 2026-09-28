@@ -158,9 +158,6 @@ const resources = {
     'remoteUrl.hint':
       'HTTP(S) URL, Git repository, or other remote resource address.',
     sourceKind: {
-      feishu: 'Feishu / Lark',
-      feishuHint:
-        'Supports documents, wiki pages, spreadsheets, and bitable links.',
       git: 'Git Repository',
       gitHint:
         'Supports public or private Git repositories with an optional branch or commit.',
@@ -177,9 +174,6 @@ const resources = {
     sourcePicker: {
       title: 'Supported Remote Resource Types',
       hint: 'Every listed type has a server-side import path. Choose one to configure its parameters, or keep auto detection.',
-      feishu: 'Feishu / Lark',
-      feishuHint: 'Documents, wiki pages, spreadsheets, and bitables',
-      feishuExample: 'https://example.feishu.cn/docx/...',
       git: 'Git Repository',
       gitHint: 'Public or private repositories with a branch or commit',
       gitExample: 'https://github.com/org/repo',
@@ -195,35 +189,6 @@ const resources = {
     },
     configurationGuide: {
       title: 'How do I configure this?',
-      documentation: 'Open the server configuration guide',
-    },
-    feishu: {
-      auth: {
-        title: 'Access Method',
-        hint: 'Choose the identity OpenViking uses to access this resource.',
-        app: 'Server App Credentials',
-        appHint:
-          'Uses FEISHU_APP_ID and FEISHU_APP_SECRET configured on the server.',
-        user: 'User Authorization',
-        userHint:
-          "Uses the current user's Feishu access token for private documents.",
-      },
-      accessToken: 'Access Token',
-      'accessToken.placeholder': 'u-...',
-      'accessToken.hint':
-        'The token is used only for this import and is not stored.',
-      refreshToken: 'Refresh Token',
-      'refreshToken.placeholder': 'r-...',
-      'refreshToken.hint':
-        'Scheduled sync requires a refresh token and the same issuing Feishu app configured on the server.',
-      configuration: {
-        credentials:
-          'Get the App ID and App Secret from the Feishu Open Platform.',
-        server:
-          'Set FEISHU_APP_ID and FEISHU_APP_SECRET on the server, or configure feishu.app_id and feishu.app_secret in ov.conf.',
-        restart:
-          'Restart OpenViking so the configuration takes effect; there is no separate enable switch.',
-      },
     },
     git: {
       refType: 'Revision',

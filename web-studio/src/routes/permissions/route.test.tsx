@@ -86,7 +86,7 @@ beforeEach(() => {
       uri === root
         ? ['im/', 'volcengine/']
         : uri === `${root}im/`
-          ? ['feishu/']
+          ? ['slack/']
           : [],
   }))
 })
@@ -118,7 +118,7 @@ it('shows parent ACL errors and restores child controls after retry', async () =
   })
   const { user } = mount()
   await user.click(await screen.findByRole('button', { name: 'im' }))
-  const row = (await screen.findByRole('button', { name: 'feishu' })).closest(
+  const row = (await screen.findByRole('button', { name: 'slack' })).closest(
     'tr',
   )!
   const alert = await screen.findByRole('alert')
@@ -185,14 +185,14 @@ it('browses resources one directory at a time and edits permissions separately',
   )
 
   await user.click(screen.getByRole('button', { name: 'im' }))
-  expect(await screen.findByRole('button', { name: 'feishu' })).toBeTruthy()
+  expect(await screen.findByRole('button', { name: 'slack' })).toBeTruthy()
   expect(screen.queryByRole('button', { name: 'volcengine' })).toBeNull()
   await user.click(
     screen.getByRole('button', { name: 'acl.page.manageAction' }),
   )
   expect(
     within(screen.getByRole('dialog')).getByTestId('editor').textContent,
-  ).toBe(`${root}im/feishu/`)
+  ).toBe(`${root}im/slack/`)
   await user.keyboard('{Escape}')
   await user.click(screen.getByRole('button', { name: 'acl.page.back' }))
   expect(await screen.findByRole('button', { name: 'volcengine' })).toBeTruthy()
@@ -290,7 +290,7 @@ it('toggles a root child restriction independently of inherited grants', async (
 it('lets a child stop and restore inheritance without clearing its grants', async () => {
   const { user } = mount()
   await user.click(await screen.findByRole('button', { name: 'im' }))
-  const row = (await screen.findByRole('button', { name: 'feishu' })).closest(
+  const row = (await screen.findByRole('button', { name: 'slack' })).closest(
     'tr',
   )!
   await waitFor(() => expect(within(row).getByRole('switch')).toBeTruthy())
@@ -302,7 +302,7 @@ it('lets a child stop and restore inheritance without clearing its grants', asyn
     }),
   )
   await waitFor(() =>
-    expect(mocks.change).toHaveBeenCalledWith(`${root}im/feishu/`, {
+    expect(mocks.change).toHaveBeenCalledWith(`${root}im/slack/`, {
       kind: 'mode',
       mode: 'restricted',
     }),
@@ -319,7 +319,7 @@ it('lets a child stop and restore inheritance without clearing its grants', asyn
     }),
   )
   await waitFor(() =>
-    expect(mocks.change).toHaveBeenCalledWith(`${root}im/feishu/`, {
+    expect(mocks.change).toHaveBeenCalledWith(`${root}im/slack/`, {
       kind: 'mode',
       mode: 'inherit',
     }),
@@ -334,7 +334,7 @@ it('loads the tree from the server for each account, without a browser-maintaine
   const view = mount()
   await screen.findByRole('button', { name: 'im' })
   await view.user.click(screen.getByRole('button', { name: 'im' }))
-  await screen.findByRole('button', { name: 'feishu' })
+  await screen.findByRole('button', { name: 'slack' })
   mocks.accountId = 'other'
   view.refresh()
   expect(await screen.findByRole('button', { name: 'volcengine' })).toBeTruthy()
@@ -390,7 +390,7 @@ it('keeps advanced account settings in the header and shows inline controls when
 it('refreshes parent and child ACL reports even when directory entries are unchanged', async () => {
   const { user } = mount()
   await user.click(await screen.findByRole('button', { name: 'im' }))
-  await screen.findByRole('button', { name: 'feishu' })
+  await screen.findByRole('button', { name: 'slack' })
   await waitFor(() =>
     expect(screen.getByRole('switch').hasAttribute('disabled')).toBe(false),
   )
@@ -406,7 +406,7 @@ it('refreshes parent and child ACL reports even when directory entries are uncha
   await user.click(screen.getByRole('button', { name: 'actions.refresh' }))
   await waitFor(() => {
     expect(mocks.get).toHaveBeenCalledWith(`${root}im/`)
-    expect(mocks.get).toHaveBeenCalledWith(`${root}im/feishu/`)
+    expect(mocks.get).toHaveBeenCalledWith(`${root}im/slack/`)
     expect(screen.getByText('bob')).toBeTruthy()
     expect(screen.getByText('acl.modes.restricted')).toBeTruthy()
   })
@@ -417,7 +417,7 @@ it('refreshes parent and child ACL reports even when directory entries are uncha
     }),
   )
   await waitFor(() =>
-    expect(mocks.change).toHaveBeenCalledWith(`${root}im/feishu/`, {
+    expect(mocks.change).toHaveBeenCalledWith(`${root}im/slack/`, {
       kind: 'reset',
     }),
   )

@@ -189,7 +189,7 @@ vikingbot chat --session my-session
 
 ## 场景 C：Gateway 统一入口
 
-适合长期运行、远程访问和接入飞书、Slack、Telegram 等聊天平台。Gateway 提供 Bot HTTP API，也可以代理 OpenViking API，让 `ov` CLI 使用同一个入口。
+适合长期运行、远程访问和接入 Slack、Telegram 等聊天平台。Gateway 提供 Bot HTTP API，也可以代理 OpenViking API，让 `ov` CLI 使用同一个入口。
 
 ### 1. 配置 Gateway 和 OpenViking
 

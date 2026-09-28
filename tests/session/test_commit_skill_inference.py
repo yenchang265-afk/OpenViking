@@ -484,13 +484,13 @@ def test_skill_loader_to_skill_md_round_trip_with_lists():
 def test_skill_loader_preserves_metadata():
     skill_md = SkillLoader.to_skill_md(
         {
-            "name": "lark-ov-compile-progress",
+            "name": "acme-ov-compile-progress",
             "description": "Track OV Compile progress",
-            "content": "Use lark-cli.",
-            "metadata": {"vikingbot": {"requires": {"bins": ["lark-cli"]}}},
+            "content": "Use acme-cli.",
+            "metadata": {"vikingbot": {"requires": {"bins": ["acme-cli"]}}},
         }
     )
 
     assert SkillLoader.parse(skill_md)["metadata"] == {
-        "vikingbot": {"requires": {"bins": ["lark-cli"]}}
+        "vikingbot": {"requires": {"bins": ["acme-cli"]}}
     }

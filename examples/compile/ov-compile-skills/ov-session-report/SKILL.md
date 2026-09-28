@@ -1,6 +1,6 @@
 ---
 name: ov-session-report
-description: Analyze local Q&A session JSONL files and produce a complete, auditable English Markdown weekly report over consecutive time windows, with all data required for downstream Feishu document and whiteboard rendering. Use for requests such as "analyze the latest week of sessions," "generate a community Q&A weekly report," or "compare with last week." This skill does not ingest other message sources or create/upload online documents.
+description: Analyze local Q&A session JSONL files and produce a complete, auditable English Markdown weekly report over consecutive time windows, with all data required for downstream document and whiteboard rendering. Use for requests such as "analyze the latest week of sessions," "generate a community Q&A weekly report," or "compare with last week." This skill does not ingest other message sources or create/upload online documents.
 ---
 
 # OpenViking Session Q&A Weekly Report

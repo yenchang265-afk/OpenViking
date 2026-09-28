@@ -1,6 +1,5 @@
 export type RemoteResourceKind =
   | 'unknown'
-  | 'feishu'
   | 'git'
   | 'webFeed'
   | 'webPage'
@@ -11,8 +10,6 @@ export type RemoteResourceTypeSelection =
   | 'auto'
   | Exclude<RemoteResourceKind, 'unknown' | 'webFeed'>
 
-const FEISHU_HOST_SUFFIXES = ['feishu.cn', 'larksuite.com', 'larkoffice.com']
-const FEISHU_PATH_PREFIXES = ['docx', 'wiki', 'sheets', 'base']
 const CODE_HOSTS = new Set([
   'github.com',
   'gitlab.com',
@@ -56,19 +53,6 @@ const REMOTE_FILE_EXTENSIONS = new Set([
   'mkv',
   'webm',
 ])
-
-function hasHostSuffix(host: string, suffix: string): boolean {
-  return host === suffix || host.endsWith(`.${suffix}`)
-}
-
-function looksLikeFeishuUrl(url: URL): boolean {
-  const host = url.hostname.toLowerCase().replace(/\.$/, '')
-  const firstPathSegment = url.pathname.split('/').filter(Boolean)[0]
-  return (
-    FEISHU_HOST_SUFFIXES.some((suffix) => hasHostSuffix(host, suffix)) &&
-    FEISHU_PATH_PREFIXES.includes(firstPathSegment)
-  )
-}
 
 function looksLikeWebFeed(url: URL): boolean {
   const basename = url.pathname
@@ -130,7 +114,6 @@ export function detectRemoteResourceKind(
     return 'unknown'
   }
 
-  if (looksLikeFeishuUrl(url)) return 'feishu'
   if (looksLikeGitRepository(url)) return 'git'
   if (looksLikeWebFeed(url)) return 'webFeed'
   if (looksLikeRemoteFile(url)) return 'remoteFile'

@@ -321,7 +321,7 @@ def test_hermes_group_username(tmp_path):
     _write_jsonl(
         root / "grp.jsonl",
         [
-            {"role": "session_meta", "model": "doubao-x", "platform": "feishu"},
+            {"role": "session_meta", "model": "doubao-x", "platform": "telegram"},
             {
                 "role": "user",
                 "content": "hi",

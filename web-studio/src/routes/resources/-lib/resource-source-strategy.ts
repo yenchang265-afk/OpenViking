@@ -1,4 +1,3 @@
-import type { FeishuAuthMode } from '../-components/feishu-resource-options'
 import type {
   GitAuthMode,
   GitRefMode,
@@ -40,11 +39,6 @@ const TOS_CAPABILITIES: RemoteResourceCapabilities = {
 }
 
 export type RemoteSourceOptionState = {
-  feishu: {
-    accessToken: string
-    authMode: FeishuAuthMode
-    refreshToken: string
-  }
   git: {
     authMode: GitAuthMode
     refMode: GitRefMode
@@ -59,21 +53,6 @@ export type RemoteSourceOptionState = {
 
 const DEFAULT_STRATEGY: RemoteSourceStrategy = {
   build: () => ({}),
-  capabilities: DEFAULT_CAPABILITIES,
-}
-
-const FEISHU_STRATEGY: RemoteSourceStrategy = {
-  build: (state) =>
-    state.feishu.authMode === 'user'
-      ? {
-          args: {
-            feishu_access_token: state.feishu.accessToken.trim(),
-            ...(state.watchEnabled
-              ? { feishu_refresh_token: state.feishu.refreshToken.trim() }
-              : {}),
-          },
-        }
-      : {},
   capabilities: DEFAULT_CAPABILITIES,
 }
 
@@ -144,7 +123,6 @@ const REMOTE_SOURCE_STRATEGIES: Record<
   RemoteSourceStrategy
 > = {
   unknown: DEFAULT_STRATEGY,
-  feishu: FEISHU_STRATEGY,
   git: GIT_STRATEGY,
   webFeed: WEB_STRATEGY,
   webPage: WEB_STRATEGY,

@@ -50,7 +50,6 @@ function VikingBotWorkspace({ scope }: { scope: string }) {
     connection?: string
     draft?: boolean
   }>()
-  const [filter, setFilter] = useState('all')
   const [search, setSearch] = useState('')
   const capabilities = useQuery({
     queryKey: ['vikingbot', scope, 'capabilities'],
@@ -64,13 +63,6 @@ function VikingBotWorkspace({ scope }: { scope: string }) {
     queryFn: getConnections,
     enabled: canManage,
   })
-  const hasFeishu =
-    canManage &&
-    connections.data?.some(
-      (connection) => (connection.type ?? 'feishu') === 'feishu',
-    )
-  const sourceFilters = hasFeishu ? (['all', 'web', 'feishu'] as const) : []
-  const activeFilter = hasFeishu ? filter : 'all'
   const sessions = useSessionListByRecency()
   const { getTitle, removeTitle } = useSessionTitles(scope)
   useDefaultConversationTitles(
@@ -111,17 +103,15 @@ function VikingBotWorkspace({ scope }: { scope: string }) {
         connection: connections.data![index].id,
         title: item.title || t('newChat'),
         time: item.time,
-        channel: connections.data![index].type ?? 'feishu',
+        channel: connections.data![index].type ?? '',
         groupName: item.group_name ?? '',
       })),
     ),
   ]
-    .filter(
-      (row) =>
-        (activeFilter === 'all' || row.channel === activeFilter) &&
-        `${row.title} ${row.groupName}`
-          .toLowerCase()
-          .includes(search.toLowerCase()),
+    .filter((row) =>
+      `${row.title} ${row.groupName}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
     )
     .sort(
       (a, b) =>
@@ -207,20 +197,6 @@ function VikingBotWorkspace({ scope }: { scope: string }) {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              {sourceFilters.length > 0 && (
-                <div className="flex gap-1">
-                  {sourceFilters.map((value) => (
-                    <Button
-                      size="sm"
-                      variant={activeFilter === value ? 'secondary' : 'ghost'}
-                      key={value}
-                      onClick={() => setFilter(value)}
-                    >
-                      {t(value)}
-                    </Button>
-                  ))}
-                </div>
-              )}
             </div>
             <div className="flex-1 overflow-auto p-2">
               {platformQueries.map(
@@ -275,11 +251,6 @@ function VikingBotWorkspace({ scope }: { scope: string }) {
                   }
                 />
               ))}
-              {activeFilter === 'feishu' && !canManage && (
-                <p className="p-3 text-sm text-muted-foreground">
-                  {t('adminOnly')}
-                </p>
-              )}
             </div>
           </aside>
           <main

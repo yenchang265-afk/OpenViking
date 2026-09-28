@@ -6,7 +6,6 @@ Channels adapt different chat platforms into unified messages. The Gateway assem
 
 | Type | Connection | Main capabilities |
 |------|------------|-------------------|
-| `feishu` | Feishu events/long connection | DMs, groups, topics, mention rules, media |
 | `slack` | Socket Mode | DM and group policies |
 | `telegram` | Bot API | Text, media, and audio transcription |
 | `discord` | Gateway | Text and media |
@@ -32,7 +31,7 @@ BaseChannel and platform-specific implementations jointly handle:
 5. converting OutboundMessage into a platform-native reply;
 6. displaying processing state or reactions when supported by the platform.
 
-Platform differences remain inside individual Channels, so AgentLoop does not depend on Feishu, Slack, or other platform SDKs.
+Platform differences remain inside individual Channels, so AgentLoop does not depend on Slack or other platform SDKs.
 
 ChannelManager creates every enabled instance from `bot.channels` and distinguishes multiple Bots of the same type using `type__channel_id`. It consumes the MessageBus outbound queue and routes replies back to the originating channel using SessionKey.
 

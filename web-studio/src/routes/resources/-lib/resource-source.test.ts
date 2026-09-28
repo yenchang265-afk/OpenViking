@@ -4,8 +4,6 @@ import { detectRemoteResourceKind } from './resource-source'
 
 describe('detectRemoteResourceKind', () => {
   it.each([
-    ['https://example.feishu.cn/docx/doxcn123', 'feishu'],
-    ['https://open.larksuite.com/wiki/wikcn123', 'feishu'],
     ['https://github.com/volcengine/OpenViking', 'git'],
     ['git@github.com:volcengine/OpenViking.git', 'git'],
     ['https://gitlab.com/group/repo.git', 'git'],

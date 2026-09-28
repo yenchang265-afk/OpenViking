@@ -60,10 +60,10 @@ OpenViking 的配置分为两个层级：
 | 范围 | 配置 | 生命周期 | 生效说明 |
 | --- | --- | --- | --- |
 | Cluster | `agent_evolution` | 动态配置 | ROOT 可通过 Admin API 修改，作为集群默认值使用。 |
-| Account | `feishu`、`agent_evolution` | 动态配置 | ROOT 或该 Account 的 ADMIN 可修改。Agent Evolution 整段回落到 Cluster 配置。Account 未设置 Feishu 时也整段使用 Cluster 配置；一旦设置，则仅 `domain` 来自 Cluster，省略的 Account 字段使用 Feishu 默认值。两者都已通过运行时管理器接入业务读取。 |
+| Account | `agent_evolution` | 动态配置 | ROOT 或该 Account 的 ADMIN 可修改。Agent Evolution 整段回落到 Cluster 配置。已通过运行时管理器接入业务读取。 |
 | Account | `github`、`acl` | 动态配置 | ROOT 或该 Account 的 ADMIN 可修改；没有 Cluster fallback。 |
 
-Cluster 的 `embedding`、`vlm`、`query_planner`、`memory`、`feishu`、存储、解析器、检索等普通配置仍然是启动配置。Account 的 `vlm`、`memory`、`embedding` 和 `vectordb` 不在当前 Account 配置 API 范围内，包含这些字段的请求会被拒绝。
+Cluster 的 `embedding`、`vlm`、`query_planner`、`memory`、存储、解析器、检索等普通配置仍然是启动配置。Account 的 `vlm`、`memory`、`embedding` 和 `vectordb` 不在当前 Account 配置 API 范围内，包含这些字段的请求会被拒绝。
 
 修改运行时配置使用以下接口：
 
@@ -822,34 +822,6 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 
 这样可以用小模型承担检索规划，降低延迟，同时保留更强的 `vlm` 处理语义提取、记忆提取和多模态内容。
 
-
-### feishu
-
-飞书/Lark 云端文档解析配置。支持的 URL 格式详见[资源管理](../api/02-resources.md)。
-
-```json
-{
-  "feishu": {
-    "app_id": "",
-    "app_secret": "",
-    "domain": "https://open.feishu.cn",
-    "max_rows_per_sheet": 1000,
-    "max_records_per_table": 1000
-  }
-}
-```
-
-| 参数 | 类型 | 说明 |
-|------|------|------|
-| `app_id` | str | 飞书应用 ID（也可通过 `FEISHU_APP_ID` 环境变量设置） |
-| `app_secret` | str | 飞书应用密钥（也可通过 `FEISHU_APP_SECRET` 环境变量设置） |
-| `domain` | str | 飞书 API 域名。Lark 国际版请设为 `https://open.larksuite.com` |
-| `max_rows_per_sheet` | int | 电子表格每个 sheet 最大导入行数（默认 `1000`） |
-| `max_records_per_table` | int | 多维表格每个表最大导入记录数（默认 `1000`） |
-
-**依赖**：已默认包含在 `openviking[bot]` 安装中
-
-**Lark 国际版**：对于 Lark URL（`*.larksuite.com`），请将 `domain` 设为 `https://open.larksuite.com`。
 
 ### code
 

@@ -1,6 +1,6 @@
 # VikingBot
 
-VikingBot 是 OpenViking 内置的多渠道 AI Agent。它可以在命令行中直接使用，也可以作为长期运行的 Gateway 接入飞书、Slack、Telegram 等平台；连接 OpenViking 后，还能使用资源检索、用户记忆、经验记忆和会话沉淀能力。
+VikingBot 是 OpenViking 内置的多渠道 AI Agent。它可以在命令行中直接使用，也可以作为长期运行的 Gateway 接入 Slack、Telegram 等平台；连接 OpenViking 后，还能使用资源检索、用户记忆、经验记忆和会话沉淀能力。
 
 ## 主要能力
 
@@ -235,19 +235,19 @@ Gateway Token 只保护 Gateway 入口；OpenViking API Key 表示调用者身�
 
 ## 接入聊天平台
 
-需要飞书、Slack、Telegram、Discord、WhatsApp、钉钉、QQ、Email 或 MoChat 时，在场景 C 的基础上配置 `bot.channels`，然后启动 Gateway。
+需要 Slack、Telegram、Discord、WhatsApp、钉钉、QQ、Email 或 MoChat 时，在场景 C 的基础上配置 `bot.channels`，然后启动 Gateway。
 
-以飞书为例：
+以 Slack 为例：
 
 ```json
 {
   "bot": {
     "channels": [
       {
-        "type": "feishu",
+        "type": "slack",
         "enabled": true,
-        "app_id": "<feishu-app-id>",
-        "app_secret": "<feishu-app-secret>",
+        "bot_token": "<slack-bot-token>",
+        "app_token": "<slack-app-token>",
         "allow_from": [],
         "ov_tools_enable": true
       }

@@ -173,7 +173,7 @@ pub(crate) fn parse_add_resource_args(raw: Option<&str>) -> Result<Option<Map<St
         return match value {
             Value::Object(map) => Ok(Some(map)),
             _ => Err(Error::Client(
-                "--args JSON form must be an object, e.g. '{\"feishu_access_token\":\"u-...\"}'"
+                "--args JSON form must be an object, e.g. '{\"key\":\"value\"}'"
                     .to_string(),
             )),
         };
@@ -293,7 +293,7 @@ mod add_resource_args_tests {
         assert!(message.contains("dry_run"), "{message}");
         assert!(message.contains("--manifest"), "{message}");
 
-        let server_args = parse_add_resource_args(Some("feishu_access_token:u-xxx"))
+        let server_args = parse_add_resource_args(Some("api_token:u-xxx"))
             .unwrap()
             .unwrap();
         assert!(reject_manifest_run_keys(&server_args).is_ok());

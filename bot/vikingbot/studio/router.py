@@ -27,7 +27,7 @@ def create_router(channel, service):
         if action == "onboarding_start":
             return await service.onboarding.start(account, payload, body["identity"])
         if action == "onboarding_current":
-            return service.onboarding.current(account, payload.get("type", "feishu"))
+            return service.onboarding.current(account, payload.get("type"))
         if action == "onboarding_get":
             return service.onboarding.public(service.onboarding.get(account, payload.get("id")))
         if action == "onboarding_update":
