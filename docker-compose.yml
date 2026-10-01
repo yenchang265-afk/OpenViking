@@ -65,7 +65,68 @@ services:
     depends_on:
       - openviking
 
-# Uncomment for public HTTPS:
-# volumes:
-#   caddy_data:
-#   caddy_config:
+  # Optional S3-compatible storage for RAGFS (storage.agfs.backend = "s3"),
+  # served by SeaweedFS. Start with: docker compose --profile s3 up -d
+  # Set S3_ACCESS_KEY / S3_SECRET_KEY in .env — do not use the defaults
+  # outside local testing. Matching ov.conf snippet:
+  #   "agfs": {"backend": "s3", "s3": {"bucket": "openviking",
+  #     "endpoint": "http://seaweedfs:8333", "region": "us-east-1",
+  #     "access_key": "<S3_ACCESS_KEY>", "secret_key": "<S3_SECRET_KEY>",
+  #     "use_ssl": false, "use_path_style": true}}
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: openviking-seaweedfs
+    profiles: ["s3"]
+    environment:
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-ovadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-ovadmin-secret}
+    # Render the S3 identity file from env, then run master+volume+filer+s3.
+    entrypoint: >
+      /bin/sh -c "
+      printf '{\"identities\":[{\"name\":\"admin\",\"credentials\":[{\"accessKey\":\"%s\",\"secretKey\":\"%s\"}],\"actions\":[\"Admin\",\"Read\",\"List\",\"Tagging\",\"Write\"]}]}' \"$$S3_ACCESS_KEY\" \"$$S3_SECRET_KEY\" > /tmp/s3.json &&
+      exec weed server -dir=/data -ip.bind=0.0.0.0 -s3 -s3.port=8333 -s3.config=/tmp/s3.json
+      "
+    ports:
+      # Bound to localhost; openviking reaches it via http://seaweedfs:8333.
+      - "127.0.0.1:8333:8333"
+    volumes:
+      - seaweedfs_data:/data
+    networks:
+      default:
+      # Also join the network of a separately run OpenViking container
+      # (`docker run --network openviking-net ...`). It must already exist:
+      #   docker network create openviking-net
+      ov-app:
+        aliases: [seaweedfs]
+    restart: unless-stopped
+
+  # One-shot job: RAGFS does not create buckets, so create it here.
+  s3-init:
+    image: amazon/aws-cli:latest
+    container_name: openviking-s3-init
+    profiles: ["s3"]
+    depends_on:
+      - seaweedfs
+    environment:
+      AWS_ACCESS_KEY_ID: ${S3_ACCESS_KEY:-ovadmin}
+      AWS_SECRET_ACCESS_KEY: ${S3_SECRET_KEY:-ovadmin-secret}
+      AWS_DEFAULT_REGION: us-east-1
+      S3_BUCKET: ${S3_BUCKET:-openviking}
+    entrypoint: >
+      /bin/sh -c "
+      until aws --endpoint-url http://seaweedfs:8333 s3api list-buckets >/dev/null 2>&1; do sleep 1; done;
+      aws --endpoint-url http://seaweedfs:8333 s3api head-bucket --bucket \"$$S3_BUCKET\" 2>/dev/null ||
+      aws --endpoint-url http://seaweedfs:8333 s3 mb \"s3://$$S3_BUCKET\"
+      "
+    restart: "no"
+
+networks:
+  ov-app:
+    external: true
+    name: ${OV_APP_NETWORK:-openviking-net}
+
+volumes:
+  seaweedfs_data:
+  # Uncomment for public HTTPS:
+  # caddy_data:
+  # caddy_config:
