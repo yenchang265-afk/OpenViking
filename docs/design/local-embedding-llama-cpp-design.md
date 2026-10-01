@@ -1,13 +1,13 @@
-# OpenViking 本地 Embedding Llama-cpp 设计文档
+# Business Data Platform 本地 Embedding Llama-cpp 设计文档
 
 Date: 2026-04-11
 Status: 已批准进入实现
 
 ## 目标
 
-为 OpenViking 增加内置的本地 dense embedding 能力，并满足以下产品行为：
+为 Business Data Platform 增加内置的本地 dense embedding 能力，并满足以下产品行为：
 
-- 当用户没有显式配置 `embedding` 时，OpenViking 默认使用本地 embedding backend
+- 当用户没有显式配置 `embedding` 时，Business Data Platform 默认使用本地 embedding backend
 - 默认本地模型为 `bge-small-zh-v1.5-f16`
 - 本地推理基于 `llama-cpp-python` 加载 GGUF 模型
 - 本地推理依赖不放入主依赖，而是通过 optional extra 单独分发，降低安装风险
@@ -38,14 +38,14 @@ Status: 已批准进入实现
 
 ## 决策摘要
 
-OpenViking 采用以下组合策略：
+Business Data Platform 采用以下组合策略：
 
-1. 产品默认行为：如果用户没有配置 embedding，OpenViking 会隐式选择本地 embedding backend。
+1. 产品默认行为：如果用户没有配置 embedding，Business Data Platform 会隐式选择本地 embedding backend。
 2. 依赖分发策略：`llama-cpp-python` 不进入主依赖，而是通过 `openviking[local-embed]` 之类的 optional extra 分发。
 3. 默认本地模型：`bge-small-zh-v1.5-f16`。
 4. 失败策略：如果系统默认选择了本地 embedding，但本地依赖或模型不可用，则直接报错，并给出清晰恢复指引；不会静默回退到远程模型。
 
-这和 QMD 的做法不完全相同。QMD 是 Node CLI 产品，可以把 `node-llama-cpp` 作为主依赖；而 OpenViking 是 Python SDK 和服务组件，如果让原生依赖阻断主包安装，代价会更高。
+这和 QMD 的做法不完全相同。QMD 是 Node CLI 产品，可以把 `node-llama-cpp` 作为主依赖；而 Business Data Platform 是 Python SDK 和服务组件，如果让原生依赖阻断主包安装，代价会更高。
 
 ## 为什么这样设计
 
@@ -53,7 +53,7 @@ OpenViking 采用以下组合策略：
 
 - QMD 证明了“默认本地 embedding”这个产品方向是成立的。
 - OpenClaw / ArkClaw 证明了基于 GGUF 的本地 memory search 有明确用户价值。
-- OpenViking 当前架构决定了 embedding 初始化失败会在启动期暴露，而不是延后到查询时。
+- Business Data Platform 当前架构决定了 embedding 初始化失败会在启动期暴露，而不是延后到查询时。
 - 在 Python 生态里，原生依赖失败的成本通常比 QMD 所在的 npm/Node 生态更高。
 
 因此，这个设计是在保留产品目标的前提下，尽量缩小原生依赖失败的影响范围。
@@ -64,7 +64,7 @@ OpenViking 采用以下组合策略：
 
 如果配置中没有 `embedding`：
 
-- OpenViking 自动生成一份隐式 local dense embedding 配置
+- Business Data Platform 自动生成一份隐式 local dense embedding 配置
 - backend 设置为 `local`
 - model 设置为 `bge-small-zh-v1.5-f16`
 - dimension 设置为该模型对应维度
@@ -194,7 +194,7 @@ BGE/E5 一类模型是检索导向模型，通常需要区分：
 - query：用户输入的搜索词或问题
 - document：被存储和检索的文本块
 
-OpenViking 当前只有 `embed(text)`，这不足以表达这种语义差异。
+Business Data Platform 当前只有 `embed(text)`，这不足以表达这种语义差异。
 
 设计上新增显式接口：
 
@@ -242,7 +242,7 @@ query/document 的格式规则必须封装在本地 embedder 内部，而不是�
 
 ## 启动时机与失败行为
 
-OpenViking 当前在 client 启动时就初始化 embedder，本地方案保持这一行为。
+Business Data Platform 当前在 client 启动时就初始化 embedder，本地方案保持这一行为。
 
 因此，下面这些问题都会在启动期直接暴露：
 

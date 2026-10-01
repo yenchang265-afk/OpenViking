@@ -1,5 +1,5 @@
 export const TAKEOVER_ENTRY_TYPE: "ov-takeover";
-export const OVERVIEW_MARKER: "[OpenViking Session Context]";
+export const OVERVIEW_MARKER: "[Business Data Platform Session Context]";
 
 export interface TakeoverMessage {
   role: string;

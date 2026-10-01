@@ -29,7 +29,7 @@ import { registerOpenVikingRecallTraceTools } from "../../plugin/openviking-reca
 import { registerOpenVikingToolResultTools } from "../../plugin/openviking-tool-result-tools.js";
 
 describe("plugin module seams", () => {
-  it("registers only enabled OpenViking tools through the tool-registration seam", () => {
+  it("registers only enabled Business Data Platform tools through the tool-registration seam", () => {
     const api = { registerTool: vi.fn() };
     const logger = { debug: vi.fn() };
     const registrar = createOpenVikingToolRegistrar({
@@ -51,7 +51,7 @@ describe("plugin module seams", () => {
   it("registers command definitions without changing names or handlers", async () => {
     const command = {
       name: "ov-search",
-      description: "Search OpenViking resources and skills.",
+      description: "Search Business Data Platform resources and skills.",
       acceptsArgs: true,
       handler: vi.fn().mockResolvedValue({ text: "ok" }),
     };
@@ -65,7 +65,7 @@ describe("plugin module seams", () => {
     expect(command.handler).toHaveBeenCalledWith({ args: "query" });
   });
 
-  it("builds OpenViking command definitions through a dedicated plugin module", async () => {
+  it("builds Business Data Platform command definitions through a dedicated plugin module", async () => {
     const addResourceOpenViking = vi.fn().mockResolvedValue({
       content: [{ type: "text" as const, text: "resource imported" }],
       details: { action: "resource_imported" },
@@ -246,7 +246,7 @@ describe("plugin module seams", () => {
     expect(read).not.toHaveBeenCalled();
   });
 
-  it("creates OpenViking query runtime for search/read behavior", async () => {
+  it("creates Business Data Platform query runtime for search/read behavior", async () => {
     const find = vi.fn(async (_query: string, options: { targetUri?: string }) => {
       if (options.targetUri === "viking://resources") {
         return {
@@ -280,7 +280,7 @@ describe("plugin module seams", () => {
 
     const search = await runtime.searchOpenViking({ query: "spec" }, "agent-main", { agentId: "agent-main", sessionId: "session-1" }) as any;
     expect(find.mock.calls.map(([, options]) => options.targetUri)).toEqual(["viking://resources", "viking://~/skills"]);
-    expect(search.content[0].text).toContain("Found 2 OpenViking results for \"spec\"");
+    expect(search.content[0].text).toContain("Found 2 Business Data Platform results for \"spec\"");
     expect(search.details).toMatchObject({ action: "searched", total: 2 });
     expect(recordAndFlush).toHaveBeenCalledWith(expect.objectContaining({
       traceId: "trace-query-1",
@@ -294,7 +294,7 @@ describe("plugin module seams", () => {
     expect(readResult.content[0].text).toContain("--- START OF viking://resources/spec.md ---");
   });
 
-  it("handles OpenViking query config commands through a dedicated module", async () => {
+  it("handles Business Data Platform query config commands through a dedicated module", async () => {
     const session = { agentId: "agent-main", sessionId: "session-1", sessionKey: "key-1", ovSessionId: "ov-session-1" };
     const queryCtx = { agentId: "agent-main", sessionId: "session-1", sessionKey: "key-1", ovSessionId: "ov-session-1" };
     const effective = { ovSearchLimit: 7, targetUri: "viking://resources", warnings: [] };
@@ -318,26 +318,26 @@ describe("plugin module seams", () => {
     });
 
     await expect(handler({ args: "set --ovSearchLimit 3 --scope session" })).resolves.toMatchObject({
-      text: "Updated OpenViking query config (session). Warnings: normalized",
+      text: "Updated Business Data Platform query config (session). Warnings: normalized",
       details: { scope: "session", params: { ovSearchLimit: 3 }, warnings: ["normalized"], effective },
     });
     expect(normalizeRuntimeQueryParams).toHaveBeenCalledWith({ ovSearchLimit: 3 });
     expect(queryConfigStore.set).toHaveBeenCalledWith("session", queryCtx, { ovSearchLimit: 3 });
 
     await expect(handler({ args: "unset ovSearchLimit targetUri --scope claw" })).resolves.toMatchObject({
-      text: "Unset OpenViking query config fields (claw): ovSearchLimit, targetUri",
+      text: "Unset Business Data Platform query config fields (claw): ovSearchLimit, targetUri",
       details: { scope: "claw", fields: ["ovSearchLimit", "targetUri"], effective },
     });
     expect(queryConfigStore.unset).toHaveBeenCalledWith("claw", queryCtx, ["ovSearchLimit", "targetUri"]);
 
     await expect(handler({ args: "reset" })).resolves.toMatchObject({
-      text: "Reset OpenViking query config (session).",
+      text: "Reset Business Data Platform query config (session).",
       details: { scope: "session", effective },
     });
     expect(queryConfigStore.reset).toHaveBeenCalledWith("session", queryCtx);
   });
 
-  it("creates OpenViking import runtime for command import behavior", async () => {
+  it("creates Business Data Platform import runtime for command import behavior", async () => {
     const addResource = vi.fn().mockResolvedValue({
       root_uri: "viking://resources/project-docs",
       warnings: ["kept existing metadata"],
@@ -361,7 +361,7 @@ describe("plugin module seams", () => {
       wait: true,
       timeout: 30,
     }, "agent-main")).resolves.toEqual({
-      content: [{ type: "text", text: "Imported OpenViking resource. viking://resources/project-docs Warnings: kept existing metadata" }],
+      content: [{ type: "text", text: "Imported Business Data Platform resource. viking://resources/project-docs Warnings: kept existing metadata" }],
       details: {
         action: "resource_imported",
         root_uri: "viking://resources/project-docs",
@@ -385,7 +385,7 @@ describe("plugin module seams", () => {
       wait: false,
       timeout: 5,
     }, "agent-main")).resolves.toEqual({
-      content: [{ type: "text", text: "Imported OpenViking skill (debugger). viking://user/skills/debugger" }],
+      content: [{ type: "text", text: "Imported Business Data Platform skill (debugger). viking://user/skills/debugger" }],
       details: {
         action: "skill_imported",
         uri: "viking://user/skills/debugger",
@@ -401,7 +401,7 @@ describe("plugin module seams", () => {
     }, "agent-main");
   });
 
-  it("creates the OpenViking lifecycle service without changing start/stop behavior", async () => {
+  it("creates the Business Data Platform lifecycle service without changing start/stop behavior", async () => {
     const healthCheck = vi.fn().mockResolvedValue({ ok: true });
     const logger = { info: vi.fn(), warn: vi.fn() };
     const registerRecallTraceRoutes = vi.fn().mockReturnValue(true);
@@ -480,7 +480,7 @@ describe("plugin module seams", () => {
 
     registerOpenVikingContextEngine({
       api,
-      plugin: { id: "openviking", name: "OpenViking" },
+      plugin: { id: "openviking", name: "Business Data Platform" },
       version: "0.1.0",
       cfg: { baseUrl: "http://127.0.0.1:1933" },
       logger,
@@ -500,7 +500,7 @@ describe("plugin module seams", () => {
     expect(registeredFactory()).toBe(engine);
     expect(createContextEngine).toHaveBeenCalledWith({
       id: "openviking",
-      name: "OpenViking",
+      name: "Business Data Platform",
       version: "0.1.0",
       hostVersion: "2026.9.3",
       cfg: { baseUrl: "http://127.0.0.1:1933" },
@@ -520,7 +520,7 @@ describe("plugin module seams", () => {
 
     registerOpenVikingContextEngine({
       api: {},
-      plugin: { id: "openviking", name: "OpenViking" },
+      plugin: { id: "openviking", name: "Business Data Platform" },
       version: "0.1.0",
       cfg: {},
       logger,
@@ -688,7 +688,7 @@ describe("plugin module seams", () => {
       wait: true,
       timeout: 30,
     }, "agent-main");
-    expect(resourceResult.content[0].text).toBe("Imported OpenViking resource. viking://resources/docs Warnings: warn");
+    expect(resourceResult.content[0].text).toBe("Imported Business Data Platform resource. viking://resources/docs Warnings: warn");
     expect(resourceResult.details).toMatchObject({ action: "resource_imported", root_uri: "viking://resources/docs" });
 
     const addSkillFactory = registerTool.mock.calls[1]?.[0];
@@ -700,7 +700,7 @@ describe("plugin module seams", () => {
       wait: undefined,
       timeout: undefined,
     }, "agent-main");
-    expect(skillResult.content[0].text).toBe("Imported OpenViking skill (demo). viking://user/skills/demo");
+    expect(skillResult.content[0].text).toBe("Imported Business Data Platform skill (demo). viking://user/skills/demo");
     expect(skillResult.details).toMatchObject({ action: "skill_imported", uri: "viking://user/skills/demo" });
   });
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Large image processing utilities for OpenViking.
+Large image processing utilities for Business Data Platform.
 
 This module provides functionality to:
 1. Detect large images (>10MB or any dimension >4096px)

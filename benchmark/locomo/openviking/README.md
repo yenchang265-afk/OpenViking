@@ -1,15 +1,15 @@
-# LoCoMo OpenViking Benchmark
+# LoCoMo Business Data Platform Benchmark
 
-This directory contains the OpenViking evaluation flow for LoCoMo:
+This directory contains the Business Data Platform evaluation flow for LoCoMo:
 
-1. import each conversation into an isolated OpenViking user space;
+1. import each conversation into an isolated Business Data Platform user space;
 2. run one retrieval call per question;
 3. optionally rerank the retrieved memories;
 4. answer from the selected memory context;
 5. judge and summarize the result CSV.
 
-The benchmark expects an OpenViking server to already be running. The commands
-below use the default local OpenViking client configuration. If you need a
+The benchmark expects a Business Data Platform server to already be running. The commands
+below use the default local Business Data Platform client configuration. If you need a
 different endpoint, pass `--openviking-url` to both import and eval.
 
 ## Data
@@ -25,10 +25,10 @@ Evaluation uses the same `sample_{idx}` user id, so import and eval must use the
 same dataset order.
 
 LoCoMo image evidence is imported as text from `blip_caption` by default. This
-keeps benchmark runs compatible with older OpenViking servers and avoids making
+keeps benchmark runs compatible with older Business Data Platform servers and avoids making
 results depend on whether the configured VLM can download external image URLs.
 Use `--use-image-url` when you explicitly want to import structured
-`image_url` parts and let OpenViking's VLM describe images during memory
+`image_url` parts and let Business Data Platform's VLM describe images during memory
 extraction.
 
 ## Import

@@ -90,7 +90,7 @@ class Message:
 | Type | Description |
 |------|-------------|
 | `TextPart` | Text content |
-| `ImagePart` | Image URL content. During memory extraction, OpenViking can describe it with the configured VLM. |
+| `ImagePart` | Image URL content. During memory extraction, Business Data Platform can describe it with the configured VLM. |
 | `ContextPart` | Context reference (URI + abstract) |
 | `ToolPart` | Tool call (input + output) |
 
@@ -136,9 +136,9 @@ Unfinished tasks
 
 ### Memory Types
 
-After a session is committed, OpenViking uses the conversation and active memory policy to extract information that can improve future interactions. It stores the result in the current user's memory space. When a conversation involves a stable Peer, relevant memories can also be stored in that Peer's space.
+After a session is committed, Business Data Platform uses the conversation and active memory policy to extract information that can improve future interactions. It stores the result in the current user's memory space. When a conversation involves a stable Peer, relevant memories can also be stored in that Peer's space.
 
-OpenViking includes memory types such as `profile`, `preferences`, `entities`, `events`, `identity`, `soul`, `cases`, `trajectories`, and `experiences`, and supports custom types for application-specific needs. See [Context Types](./02-context-types.md) for the complete purpose and path mapping.
+Business Data Platform includes memory types such as `profile`, `preferences`, `entities`, `events`, `identity`, `soul`, `cases`, `trajectories`, and `experiences`, and supports custom types for application-specific needs. See [Context Types](./02-context-types.md) for the complete purpose and path mapping.
 
 Within `memory_policy.memory_types`, `experiences` enables the complete Agent Evolution pipeline and automatically activates `cases` and `trajectories`. If `experiences` is absent, explicitly supplied `cases` and `trajectories` entries are ignored without an error.
 

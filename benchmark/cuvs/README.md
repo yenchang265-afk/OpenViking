@@ -1,6 +1,6 @@
-# OpenViking cuVS index benchmark
+# Business Data Platform cuVS index benchmark
 
-This benchmark compares the existing OpenViking native flat index with cuVS
+This benchmark compares the existing Business Data Platform native flat index with cuVS
 brute-force and CAGRA. It is intentionally limited to vector-index work and
 does not include embedding, HTTP, record lookup, reranking, or LLM inference.
 
@@ -74,7 +74,7 @@ measuring cold storage reads.
 
 ## Backend interpretation
 
-- `native` is OpenViking's C++ flat index and is exact within its configured
+- `native` is Business Data Platform's C++ flat index and is exact within its configured
   representation.
 - `cuvs_brute_force` is GPU exact search over its retained representation.
 - `cuvs_brute_force_fp16` uses the same exact algorithm after casting dataset
@@ -111,7 +111,7 @@ host shadow or the native index metadata. Collection/service results are
 therefore application-path comparisons, not equal-dtype or equal-memory
 comparisons, and must be reported with Recall@K and the dtype caveat.
 
-The native measurement uses the current OpenViking single-query call path; it
+The native measurement uses the current Business Data Platform single-query call path; it
 is not a claim about the maximum throughput of a separately tuned,
 multi-threaded CPU ANN library. Record CPU and GPU hardware with every result
 and describe this scope when publishing comparisons.
@@ -181,7 +181,7 @@ vector limit disables the supplied ground truth because neighbor IDs may refer
 to omitted rows; include `native` or `cuvs_brute_force` in that case. A query
 limit retains the corresponding prefix of supplied ground truth.
 
-`query_batch_size=1` most closely represents one public OpenViking API request
+`query_batch_size=1` most closely represents one public Business Data Platform API request
 and the default configuration, where request micro-batching is disabled.
 Opt-in brute-force micro-batching can internally coalesce compatible concurrent
 single-row API requests into one matrix-query call; that behavior must be
@@ -209,7 +209,7 @@ dataset or real embedding corpus before reporting a CAGRA recall/QPS frontier.
 
 ## Collection, filter, and lifecycle benchmark
 
-`run_collection_benchmark.py` exercises the OpenViking collection adapter
+`run_collection_benchmark.py` exercises the Business Data Platform collection adapter
 rather than calling cuVS directly. It includes scalar-filter evaluation,
 label-to-record lookup, result normalization, and lazy rebuild after mutation
 or restart:
@@ -258,7 +258,7 @@ python benchmark/cuvs/summarize_collection_runs.py \
 
 ## Async service concurrency benchmark
 
-`run_service_concurrency_benchmark.py` uses OpenViking's
+`run_service_concurrency_benchmark.py` uses Business Data Platform's
 `VikingVectorIndexBackend` and its `asyncio.to_thread` scheduling boundary. It
 keeps query vectors precomputed, so this is a service-facade benchmark rather
 than an embedding or HTTP benchmark. It covers repeated tenant filters, a

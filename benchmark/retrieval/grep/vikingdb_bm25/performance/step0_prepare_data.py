@@ -215,7 +215,7 @@ def main():
 
     print()
     print(f"Data ready at: {output}")
-    print("Next: run step1_add_resource.py to import into OpenViking")
+    print("Next: run step1_add_resource.py to import into Business Data Platform")
 
 
 if __name__ == "__main__":

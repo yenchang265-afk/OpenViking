@@ -384,8 +384,8 @@ test("combined hook-host install preserves unrelated hooks and is idempotent", (
     assert.equal(cursorMcp.env.OPENVIKING_HOOK_SOURCE, "cursor");
     assert.ok(cursorServers["ov-mcp-server"], "unknown legacy aliases must be preserved");
     assert.ok(cursorServers["third-party"]);
-    assert.match(readFileSync(join(home, ".cursor", "rules", "openviking-memory.mdc"), "utf8"), /OpenViking/);
-    assert.match(readFileSync(join(home, ".cursor", "skills", "openviking-memory", "SKILL.md"), "utf8"), /OpenViking Memory/);
+    assert.match(readFileSync(join(home, ".cursor", "rules", "openviking-memory.mdc"), "utf8"), /Business Data Platform/);
+    assert.match(readFileSync(join(home, ".cursor", "skills", "openviking-memory", "SKILL.md"), "utf8"), /Business Data Platform Memory/);
     const shared = join(home, ".openviking", "agent-integrations", "memory-plugin-shared", "lib");
     assert.ok(existsSync(join(shared, "agent-hook-runtime.mjs")));
     assert.ok(existsSync(join(shared, "batch-send.mjs")));
@@ -419,7 +419,7 @@ test("combined hook-host install preserves unrelated hooks and is idempotent", (
     for (const [file, label] of [[cursorHooks, "cursor"], [traeHooks, "trae"], [traeCnHooks, "trae-cn"]]) {
       const commands = hookCommands(JSON.parse(readFileSync(file, "utf8")))
         .filter((command) => command.includes("# openviking-memory"));
-      assert.ok(commands.length > 0, `${label}: no OpenViking hook commands were installed`);
+      assert.ok(commands.length > 0, `${label}: no Business Data Platform hook commands were installed`);
       for (const command of commands) {
         const script = /'([^']*\.mjs)'/u.exec(command)?.[1];
         assert.ok(script, `${label}: ${command} names no script`);

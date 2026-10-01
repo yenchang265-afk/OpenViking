@@ -1011,7 +1011,7 @@ Add a message to the session. Supports two modes: simple text mode and Parts mod
 
 **Part Types:**
 - `TextPart`: Pure text content
-- `ImagePart`: OpenAI-style image URL content. During memory extraction, OpenViking can use the configured VLM to turn images into text descriptions.
+- `ImagePart`: OpenAI-style image URL content. During memory extraction, Business Data Platform can use the configured VLM to turn images into text descriptions.
 - `ContextPart`: Context reference pointing to resources or memories
 - `ToolPart`: Tool call and result
 

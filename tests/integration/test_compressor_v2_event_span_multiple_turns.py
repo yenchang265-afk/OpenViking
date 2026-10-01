@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenViking 记忆演示脚本 — 事件跨多个 turn 的测试
+Business Data Platform 记忆演示脚本 — 事件跨多个 turn 的测试
 """
 
 import argparse
@@ -234,7 +234,7 @@ def run_verify(client: ov.SyncHTTPClient):
 
 def main():
     """入口函数"""
-    parser = argparse.ArgumentParser(description=f"OpenViking 记忆演示 — {DISPLAY_NAME}")
+    parser = argparse.ArgumentParser(description=f"Business Data Platform 记忆演示 — {DISPLAY_NAME}")
     parser.add_argument("--url", default=DEFAULT_URL, help=f"Server URL (默认: {DEFAULT_URL})")
     parser.add_argument("--api-key", default=DEFAULT_API_KEY, help=API_KEY_HELP)
     parser.add_argument(

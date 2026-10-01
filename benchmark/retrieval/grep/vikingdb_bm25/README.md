@@ -1,6 +1,6 @@
 # VikingDB BM25 Grep Benchmark
 
-Benchmark suite for evaluating OpenViking's grep retrieval with VikingDB BM25 engine.
+Benchmark suite for evaluating Business Data Platform's grep retrieval with VikingDB BM25 engine.
 
 Start `openviking-server` before running any import, reindex, or benchmark step.
 

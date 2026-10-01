@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Adapter that bridges the official MCP SDK OAuth provider Protocol to OpenViking's
+"""Adapter that bridges the official MCP SDK OAuth provider Protocol to Business Data Platform's
 ``OAuthStore``.
 
 The SDK ships a stdlib-only OAuth 2.1 server (RFC 6749 / 7591 / 8414) under
@@ -42,7 +42,7 @@ ACCESS_TOKEN_PREFIX = "ovat_"
 REFRESH_TOKEN_PREFIX = "ovrt_"
 AUTH_CODE_PREFIX = "ovac_"
 
-# The only scope OpenViking defines. Single source for the three places that
+# The only scope Business Data Platform defines. Single source for the three places that
 # must agree on it: the RFC 9728 PRM document (router.py), the DCR default
 # (app.py ClientRegistrationOptions), and the missing-scope fallback below.
 MCP_SCOPE = "mcp"
@@ -86,7 +86,7 @@ class OVAccessToken(AccessToken):
 class OpenVikingOAuthProvider(
     OAuthAuthorizationServerProvider[OVAuthorizationCode, OVRefreshToken, OVAccessToken]
 ):
-    """OpenViking implementation of the MCP SDK OAuth provider Protocol."""
+    """Business Data Platform implementation of the MCP SDK OAuth provider Protocol."""
 
     def __init__(
         self,
@@ -142,7 +142,7 @@ class OpenVikingOAuthProvider(
                 error="invalid_client_metadata",
                 error_description="client_id is required",
             )
-        # OpenViking treats every registered client as public + PKCE.
+        # Business Data Platform treats every registered client as public + PKCE.
         # We do not enforce client_secret on the token endpoint — get_client
         # returns client_secret=None unconditionally, so the SDK's
         # ClientAuthenticator skips secret validation regardless of what
@@ -157,7 +157,7 @@ class OpenVikingOAuthProvider(
         if requested and requested != "none":
             logger.warning(
                 "DCR: client %s requested token_endpoint_auth_method=%s; "
-                "downgrading to 'none' (OpenViking only supports public PKCE clients).",
+                "downgrading to 'none' (Business Data Platform only supports public PKCE clients).",
                 client_info.client_id,
                 requested,
             )
@@ -188,7 +188,7 @@ class OpenVikingOAuthProvider(
         """Mint a verification code and stash the AuthorizationParams.
 
         Returns the URL of the configured authorize page. By default this is
-        ``/studio/oauth/consent``, a SPA route inside OpenViking Studio that
+        ``/studio/oauth/consent``, a SPA route inside Business Data Platform Studio that
         renders a consent card using the Studio user's existing session and
         calls ``/api/v1/auth/oauth-verify`` directly. For CLI / cross-device
         flows the user can switch to ``/oauth/authorize/page`` (the

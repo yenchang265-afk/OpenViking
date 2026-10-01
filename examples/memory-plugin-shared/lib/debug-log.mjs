@@ -1,5 +1,5 @@
 /**
- * Shared structured debug logger for OpenViking memory plugin hook scripts.
+ * Shared structured debug logger for Business Data Platform memory plugin hook scripts.
  *
  * Harness-specific wrappers load config and pass {debug, debugLogPath}. This
  * module stays path-agnostic so it can be vendored into each plugin snapshot.

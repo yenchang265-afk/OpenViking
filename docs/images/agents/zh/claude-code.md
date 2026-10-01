@@ -8,14 +8,14 @@
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness claude --dist tos
    ```
 
-2. 安装器会依次询问以下信息：语言（English / 中文）、OpenViking 凭据、是否开启 Statusline 状态栏。
-3. 在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安装器会依次询问以下信息：语言（English / 中文）、Business Data Platform 凭据、是否开启 Statusline 状态栏。
+3. 在 Business Data Platform 凭据配置中，选择连接至「火山引擎 Business Data Platform 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-4. OpenViking StatusLine 是输入框下方的一行状态提示栏，用于实时展示 OpenViking 记忆插件的运行状态。可根据个人需要选择「开启」或「跳过」。状态提示栏示例如下：
+4. Business Data Platform StatusLine 是输入框下方的一行状态提示栏，用于实时展示 Business Data Platform 记忆插件的运行状态。可根据个人需要选择「开启」或「跳过」。状态提示栏示例如下：
 
    ```text
    OV ✓ │ Fable 5 · ctx 42% │ ↪ 6 mem (0.92) · 50ms │ ✎ 573/20k · 2 arch
@@ -42,8 +42,8 @@
 4. 执行 `/openviking-memory:ov` 命令，确认服务状态正常：
 
    ```text
-   OpenViking Memory Status
-     ✅ Status: OpenViking server is healthy and running
+   Business Data Platform Memory Status
+     ✅ Status: Business Data Platform server is healthy and running
    ```
 
 ## 故障排查
@@ -58,5 +58,5 @@
 ## 参考
 
 - 手动配置文档：[Claude Code](https://docs.openviking.net/zh/agent-integrations/02-claude-code)
-- 原理博客：[OpenViking for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
+- 原理博客：[Business Data Platform for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
 - 源码：[examples/claude-code-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/claude-code-memory-plugin)

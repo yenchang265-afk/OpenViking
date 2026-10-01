@@ -169,9 +169,9 @@ function buildLlmsTxt(siteConfig: any) {
   }
 
   const lines: string[] = [
-    '# OpenViking',
+    '# Business Data Platform',
     '',
-    '> Open-source context database for AI Agents. OpenViking unifies memory, resources, and skills management for AI Agents through a file system paradigm.',
+    '> Open-source context database for AI Agents. Business Data Platform unifies memory, resources, and skills management for AI Agents through a file system paradigm.',
     '',
     `- Source: ${githubRepositoryUrl}`,
     '',
@@ -189,7 +189,7 @@ function buildLlmsTxt(siteConfig: any) {
 
   // llms-full.txt: all content concatenated
   const fullLines: string[] = [
-    '# OpenViking — Full Documentation',
+    '# Business Data Platform — Full Documentation',
     '',
     '> This file contains the English documentation for LLM consumption.',
     '',
@@ -217,7 +217,7 @@ function buildLlmsTxt(siteConfig: any) {
 
 export default defineConfig({
   base,
-  title: 'OpenViking',
+  title: 'Business Data Platform',
   description: 'Open-source context database for AI Agents',
   cleanUrls: true,
   lastUpdated: true,
@@ -283,7 +283,7 @@ export default defineConfig({
     ],
     footer: {
       message: 'Open source under the AGPL-3.0 License.',
-      copyright: 'Copyright OpenViking contributors'
+      copyright: 'Copyright Business Data Platform contributors'
     }
   },
   locales: {
@@ -316,7 +316,7 @@ export default defineConfig({
       label: '简体中文',
       lang: 'zh-CN',
       link: '/zh/',
-      title: 'OpenViking',
+      title: 'Business Data Platform',
       description: '面向 AI Agent 的开源上下文数据库',
       themeConfig: {
         logoLink: '/zh/',

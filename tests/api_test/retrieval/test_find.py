@@ -35,7 +35,7 @@ class TestFind:
 
     def test_find_with_different_query(self, api_client):
         try:
-            response = api_client.find("what is OpenViking", limit=5)
+            response = api_client.find("what is Business Data Platform", limit=5)
             print(f"\nFind API (different query) status code: {response.status_code}")
 
             data = response.json()

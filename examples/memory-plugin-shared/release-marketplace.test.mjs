@@ -91,7 +91,7 @@ test("release marketplace archive supports ZCode and pi TOS installs", () => {
     const commands = JSON.stringify(config.hooks.events)
       .split(/"/u)
       .filter((part) => part.includes("# openviking-memory"));
-    assert.ok(commands.length > 0, "no OpenViking hook commands were installed");
+    assert.ok(commands.length > 0, "no Business Data Platform hook commands were installed");
     for (const command of commands) {
       const script = /'([^']*\.mjs)'/u.exec(command)?.[1];
       assert.ok(script, `${command} names no script`);

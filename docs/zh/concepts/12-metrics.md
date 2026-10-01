@@ -1,6 +1,6 @@
 # 指标与 Metrics
 
-OpenViking 提供一套面向机器抓取的指标体系，用于暴露系统运行态、请求质量、模型调用情况、资源处理吞吐、探针健康状态等信息。
+Business Data Platform 提供一套面向机器抓取的指标体系，用于暴露系统运行态、请求质量、模型调用情况、资源处理吞吐、探针健康状态等信息。
 
 与人类排障用的 `/api/v1/observer/*` 和业务分析用的 `/api/v1/stats/*` 不同，Metrics 的目标是：
 
@@ -42,7 +42,7 @@ Metrics 适合回答这类问题：
 
 ## 指标体系架构
 
-OpenViking 当前的 metrics 体系由四层组成：
+Business Data Platform 当前的 metrics 体系由四层组成：
 
 ```text
 业务逻辑 / HTTP 请求 / 后台任务
@@ -491,7 +491,7 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 
 ### Exporters 配置
 
-默认情况下，OpenViking 会通过 Prometheus exposition 格式在 `/metrics` 输出指标。
+默认情况下，Business Data Platform 会通过 Prometheus exposition 格式在 `/metrics` 输出指标。
 如果希望在保留 `/metrics` 的同时把同一份进程内指标导出到 OTLP 后端，可以在 `server.observability.metrics.exporters` 下启用 exporter。
 
 关键字段：
@@ -547,7 +547,7 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 
 ## 相关文档
 
-- [架构概述](./01-architecture.md) - OpenViking 总体架构
+- [架构概述](./01-architecture.md) - Business Data Platform 总体架构
 - [多租户](./11-multi-tenant.md) - `account/user/peer` 隔离模型
 - [数据加密](./10-encryption.md) - 存储层加密与隔离
 - [Metrics API](../api/09-metrics.md) - `/metrics` 端点用法

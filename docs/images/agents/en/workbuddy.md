@@ -14,7 +14,7 @@
    ```json
    {
      "mcpServers": {
-       "OpenViking": {
+       "Business Data Platform": {
          "url": "https://api.vikingdb.cn-beijing.volces.com/openviking/mcp",
          "headers": {
            "Authorization": "Bearer {{OPENVIKING_API_KEY}}"
@@ -28,17 +28,17 @@
 ![Save the MCP configuration](https://docs.openviking.net/agents/image/workbuddy/04-save-config.webp)
 
 6. Return to the MCP list. If WorkBuddy asks you to trust this MCP service on first connection, select **Trust**.
-![Trust the OpenViking MCP service](https://docs.openviking.net/agents/image/workbuddy/05-trust-server.webp)
+![Trust the Business Data Platform MCP service](https://docs.openviking.net/agents/image/workbuddy/05-trust-server.webp)
 
 ## Step 2: Verify
 
-Return to the MCP list. Confirm that `OpenViking` appears under “My MCP,” is enabled, and shows enabled tools when expanded.
+Return to the MCP list. Confirm that `Business Data Platform` appears under “My MCP,” is enabled, and shows enabled tools when expanded.
 
-![Verify OpenViking MCP tools](https://docs.openviking.net/agents/image/workbuddy/06-verify-tools.webp)
+![Verify Business Data Platform MCP tools](https://docs.openviking.net/agents/image/workbuddy/06-verify-tools.webp)
 
 ## Troubleshooting
 
 | Issue | Resolution |
 |---|---|
-| `OpenViking` does not appear in the MCP list | Check the JSON syntax and save again |
+| `Business Data Platform` does not appear in the MCP list | Check the JSON syntax and save again |
 | MCP connection status is abnormal | Refresh the connection; if it still fails, check the JSON configuration and network connectivity |

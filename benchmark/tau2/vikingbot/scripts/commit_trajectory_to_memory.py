@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Commit runner trajectories into OpenViking memory.
+"""Commit runner trajectories into Business Data Platform memory.
 
 This script reads trajectory JSON files produced by vikingbot_tau2_runner.py
-and commits a minimal conversation (user -> assistant) into OpenViking.
+and commits a minimal conversation (user -> assistant) into Business Data Platform.
 
 Usage:
   python3 commit_trajectory_to_memory.py --input /path/to/result_dir
@@ -117,7 +117,7 @@ async def _commit_single(
 
 
 async def main_async() -> int:
-    parser = argparse.ArgumentParser(description="Commit runner trajectories to OpenViking")
+    parser = argparse.ArgumentParser(description="Commit runner trajectories to Business Data Platform")
     parser.add_argument("--input", required=True, help="Trajectory file or directory")
     parser.add_argument(
         "--pattern",

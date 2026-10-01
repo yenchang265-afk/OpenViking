@@ -1,6 +1,6 @@
 # Hook + MCP Agent 插件开发与维护规范
 
-本文规定如何新增和维护通过生命周期 hook 自动读写记忆、通过 MCP 提供工具的 OpenViking Agent 插件，涵盖模块职责、协议、状态、安装、测试和发布。宿主是指承载 Agent 的客户端或运行时，代码中也称 harness。
+本文规定如何新增和维护通过生命周期 hook 自动读写记忆、通过 MCP 提供工具的 Business Data Platform Agent 插件，涵盖模块职责、协议、状态、安装、测试和发布。宿主是指承载 Agent 的客户端或运行时，代码中也称 harness。
 
 新增宿主时，应主要实现事件、消息格式、上下文注入和安装方式的差异。配置解析、鉴权、召回、捕获过滤、网络请求和离线重试应复用共享实现。Claude Code、Codex 和其他插件可作为参考，但仍需核对目标宿主的实际契约。MCP-only 或原生工具集成可采用相关规则，不必补齐不适用的 hook 能力。
 
@@ -13,7 +13,7 @@
 下面的提示词可以直接交给 coding agent；把最后一行替换为具体任务：
 
 ```text
-Before changing any OpenViking agent plugin, read and follow
+Before changing any Business Data Platform agent plugin, read and follow
 docs/en/agent-integrations/18-plugin-development.md
 (Chinese: docs/zh/agent-integrations/18-plugin-development.md).
 
@@ -92,7 +92,7 @@ runHookStage + 宿主生命周期调度           buildMcpProxyConfig
           ↓ createOvHttp                   共享 MCP transport
           └────────── buildOvHeaders ────────────┘
                                ↓
-                         OpenViking Server
+                         Business Data Platform Server
 
 buildPluginConfig / credentials 为两条链提供配置和身份
 sync / install / pack 负责把这张依赖图完整交付到机器上
@@ -261,7 +261,7 @@ Commit 表示请求服务端归档并触发处理，不代表长期记忆已经�
 
 ## 6. MCP 与模型可见工具
 
-Hook 提供自动生命周期行为，MCP 提供模型主动调用的工具。两者通过同一套配置和身份连接 OpenViking，但职责独立。插件启动时应能回答：哪些内容自动注入，哪些操作必须由模型调用，哪些行为禁用后仍可使用 MCP。
+Hook 提供自动生命周期行为，MCP 提供模型主动调用的工具。两者通过同一套配置和身份连接 Business Data Platform，但职责独立。插件启动时应能回答：哪些内容自动注入，哪些操作必须由模型调用，哪些行为禁用后仍可使用 MCP。
 
 支持 stdio MCP 的宿主，应采用 Claude Code、Codex 已使用的共享 proxy：入口解析配置，经 `buildMcpProxyConfig()` 整理，再交给 `createOpenVikingMcpProxy()`。HTTP transport 有 MCP 自身的 session、SSE 和协议协商，不能简单用 REST 的 JSON helper 替换；公共鉴权头仍由 `buildOvHeaders()` 生成。
 
@@ -283,7 +283,7 @@ proxy 入口不得拥有自己的工具 schema、副本 API client、SSE parser 
 
 共享 Skill 的源文件放在 [`examples/skills/`](https://github.com/volcengine/OpenViking/tree/main/examples/skills/)，通过 `SKILL_TARGETS` 交付，禁止在多个插件副本里分别修改同一段指导。Skill 只描述真实可调用工具和实际能力；自动 hook 已处理的捕获、提交不应再要求模型每轮手动重复执行。不同工具集确有不同操作语义时，可以保留独立 Skill，并说明理由。生成 Skill 时不能在 YAML frontmatter 前插入生成标记。
 
-存放在 OpenViking 里的 skill 只通过服务端的 `add_skill` MCP 工具新建、安装、共享和替换，它和 REST `POST /api/v1/skills` 共用同一套安装代码。宿主不得自己实现安装：适配器不能把 `SKILL.md` 写进 skills 子树，也不能自行解包或上传 skill 目录。服务端的 `write`、`edit` 拒绝写用户根下的 skills 子树；本地 write/edit 指向 skill URI 而被拒绝时，URI guard 通过 `isSkillUri()` 把模型引导到 `add_skill`。`openviking-skills` 这个 Skill 负责教模型走这套流程，所以 `SKILL_TARGETS` 只把它交付给自带 Skill、且 `add_skill` 确实可用的 MCP 宿主。
+存放在 Business Data Platform 里的 skill 只通过服务端的 `add_skill` MCP 工具新建、安装、共享和替换，它和 REST `POST /api/v1/skills` 共用同一套安装代码。宿主不得自己实现安装：适配器不能把 `SKILL.md` 写进 skills 子树，也不能自行解包或上传 skill 目录。服务端的 `write`、`edit` 拒绝写用户根下的 skills 子树；本地 write/edit 指向 skill URI 而被拒绝时，URI guard 通过 `isSkillUri()` 把模型引导到 `add_skill`。`openviking-skills` 这个 Skill 负责教模型走这套流程，所以 `SKILL_TARGETS` 只把它交付给自带 Skill、且 `add_skill` 确实可用的 MCP 宿主。
 
 doctor 使用 `runDoctor(hostSpec)`，宿主只补充安装位置、manifest、hook 注册、状态文件等检查。公共配置、凭据、网络和输出格式由 `doctor-core.mjs` 负责。必须能够检查安装版本、配置来源、生效值、peer、MCP 入口、hook 时间限制和 pending/会话状态。优先提供离线模式和 JSON 输出，离线检查不应偷偷发起网络请求。
 

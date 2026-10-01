@@ -1,6 +1,6 @@
 import { evaluateUriGuard, evaluateUriNotice, normalizeToolName } from "../shared/uri-guard.mjs";
 
-// pi's builtin file tools mapped to the OpenViking MCP tools the bridge
+// pi's builtin file tools mapped to the Business Data Platform MCP tools the bridge
 // registers. Every example is a valid call against the server's own schemas:
 // `read` takes a `uris` array, `grep` takes a `uri` plus a `pattern` array,
 // `glob` takes a pattern plus an optional `uri`, and `write`/`edit` address

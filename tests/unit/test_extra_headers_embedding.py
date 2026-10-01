@@ -62,7 +62,7 @@ class TestExtraHeadersDirectConstruction:
 
     @patch("openviking.models.embedder.openai_embedders.openai.OpenAI")
     def test_sdk_retries_disabled(self, mock_openai_class):
-        """OpenAI SDK retries should be disabled in favor of OpenViking retries."""
+        """OpenAI SDK retries should be disabled in favor of Business Data Platform retries."""
         mock_openai_class.return_value = _make_mock_client()
 
         OpenAIDenseEmbedder(

@@ -11,7 +11,7 @@ test('uses the localized docs index title for Chinese remote results', () => {
     [
       {
         relativePath: 'agent-integrations/08-community-plugins.md',
-        snippet: '这是一份面向 OpenViking 使用者的社区插件参考文档。',
+        snippet: '这是一份面向 Business Data Platform 使用者的社区插件参考文档。',
         title: 'Community Plugins',
         url: '/zh/agent-integrations/08-community-plugins'
       }

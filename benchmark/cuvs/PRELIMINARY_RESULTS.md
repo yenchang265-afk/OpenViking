@@ -1,6 +1,6 @@
 # Preliminary cuVS index results
 
-These results are an engineering checkpoint for the OpenViking cuVS
+These results are an engineering checkpoint for the Business Data Platform cuVS
 integration. They are not a final performance claim. The measurements use one
 GPU, one public ANN dataset, and deterministic synthetic vectors for exact
 high-dimensional scaling. Every reported row aggregates five independent
@@ -27,7 +27,7 @@ processes as median +/- median absolute deviation (MAD).
 - GPU: NVIDIA H20
 - Software: cuVS 26.06, CuPy 14.1.1, CUDA runtime 12.9
 
-The native backend is the existing OpenViking CPU flat-index call path. In
+The native backend is the existing Business Data Platform CPU flat-index call path. In
 this document, **cuVS GPU exact** specifically means cuVS brute-force on the
 GPU. It does not mean CAGRA. CAGRA is the approximate GPU index and uses
 `graph_degree=64` and `intermediate_graph_degree=128` for the high-recall
@@ -81,13 +81,13 @@ budget keeps the native path for that query and allows a later retry.
 ## Batch size 1
 
 This is the closest index-level approximation of the measured pre-microbatch
-OpenViking single-query integration. It includes Python dispatch,
+Business Data Platform single-query integration. It includes Python dispatch,
 host-to-device query copy, GPU execution, and result copy back to host. It
 excludes embedding, HTTP, record lookup, reranking, and LLM work.
 
 | Backend | Recall@10 | warm p50 (ms/query) | warm p95 (ms/query) | warm QPS |
 | --- | ---: | ---: | ---: | ---: |
-| OpenViking native exact | 1.0000 +/- 0.0000 | 40.209 +/- 0.071 | 40.798 +/- 0.043 | 24.7 +/- 0.1 |
+| Business Data Platform native exact | 1.0000 +/- 0.0000 | 40.209 +/- 0.071 | 40.798 +/- 0.043 | 24.7 +/- 0.1 |
 | cuVS GPU brute-force exact | 1.0000 +/- 0.0000 | 0.796 +/- 0.005 | 0.815 +/- 0.005 | 1,254.5 +/- 7.1 |
 | cuVS CAGRA ANN, `itopk_size=512` | 0.9633 +/- 0.0003 | 1.730 +/- 0.016 | 1.995 +/- 0.008 | 562.8 +/- 1.7 |
 | cuVS CAGRA ANN, `itopk_size=2048` | 0.9944 +/- 0.0002 | 1.797 +/- 0.019 | 2.036 +/- 0.006 | 549.0 +/- 0.9 |
@@ -106,7 +106,7 @@ read as startup latency.
 
 ## Batch size 128
 
-This measures vector-index throughput capacity. It is not current OpenViking
+This measures vector-index throughput capacity. It is not current Business Data Platform
 server throughput because the integration currently submits one query at a
 time.
 
@@ -168,19 +168,19 @@ repetitions, or 10,000 timed queries per process:
 | 1024 | 100K | 57,385 +/- 10 |
 | 1024 | 1M | 9,880 +/- 0.3 |
 
-These capacity numbers do not represent current OpenViking server throughput;
+These capacity numbers do not represent current Business Data Platform server throughput;
 the integration still submits one query at a time.
 
 ## Build scope
 
 | Backend | Build time (s) | Scope |
 | --- | ---: | --- |
-| OpenViking native exact | 10.537 +/- 0.099 | Python `DeltaRecord` creation plus native upsert |
+| Business Data Platform native exact | 10.537 +/- 0.099 | Python `DeltaRecord` creation plus native upsert |
 | cuVS GPU brute-force exact | 0.219 +/- 0.001 | host-to-device matrix copy plus index wrapper |
 | cuVS CAGRA high-recall graph | 4.719 +/- 0.085 | matrix copy plus graph construction |
 
 These build times do not isolate equivalent kernels. In particular, the native
-path includes the current row-oriented OpenViking ingestion interface while
+path includes the current row-oriented Business Data Platform ingestion interface while
 the cuVS paths accept the full matrix. They should be treated as integration
 costs, not as a pure CPU-versus-GPU algorithm comparison.
 
@@ -197,7 +197,7 @@ delta:
 ## Collection adapter, filter, and lifecycle
 
 This matrix moves one level above the index microbenchmark. It calls
-`CollectionAdapter.query()` and therefore includes OpenViking filter handling,
+`CollectionAdapter.query()` and therefore includes Business Data Platform filter handling,
 label-to-record lookup, result normalization, persistence, and lazy index
 rebuild. The initial uncached-filter run uses revision
 `84f79c5f52b553561299d42730949b612f3fe29c`; the prepared-filter-cache follow-up
@@ -266,7 +266,7 @@ ms for cuVS and 8.643 +/- 0.151 ms for native, an approximately 9.0x ratio.
 
 The cache addresses repeated filters but not first-use or high-cardinality
 filters: a new predicate still costs approximately 119--141 ms at 100K records.
-Reusing OpenViking's scalar-index candidate labels is still worth evaluating
+Reusing Business Data Platform's scalar-index candidate labels is still worth evaluating
 for those cases. The cache's configured size is 16 prepared filters, and data
 mutation clears it before rebuilding the dense index.
 
@@ -274,7 +274,7 @@ mutation clears it before rebuilding the dense index.
 
 The next follow-up removes that Python predicate scan. Each GPU rebuild now
 registers its label order with the native engine once. A new filter is evaluated
-by OpenViking's existing scalar/path index and projected through the registered
+by Business Data Platform's existing scalar/path index and projected through the registered
 native-offset layout into a cuVS-row bitset. Repeated filters retain the device
 bitset; mutations invalidate both the layout and filter cache.
 
@@ -379,7 +379,7 @@ benchmark because both backends run sequentially in each process.
 
 ## Async service-facade concurrency
 
-This level calls `VikingVectorIndexBackend.query()` through OpenViking's normal
+This level calls `VikingVectorIndexBackend.query()` through Business Data Platform's normal
 `asyncio.to_thread` boundary. It includes tenant-filter injection and async
 request scheduling, but deliberately uses precomputed query vectors: HTTP,
 authentication, embedding, reranking, and LLM work are still excluded.

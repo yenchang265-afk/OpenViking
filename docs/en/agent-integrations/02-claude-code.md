@@ -6,7 +6,7 @@ Source: [examples/claude-code-memory-plugin](https://github.com/volcengine/OpenV
 
 ## Install
 
-Claude Code and Codex share one installer. It asks for your language (English/中文), which harnesses to install, the download source, and your OpenViking credentials; every step is idempotent—re-running it is entirely safe.
+Claude Code and Codex share one installer. It asks for your language (English/中文), which harnesses to install, the download source, and your Business Data Platform credentials; every step is idempotent—re-running it is entirely safe.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
@@ -40,7 +40,7 @@ If you prefer to set it up manually:
 
    Or, for development, register a local checkout: `claude plugin marketplace add "<repo>/examples"` then install the same plugin id.
 
-3. **Start Claude Code** and run `/mcp` to verify that the OpenViking entry is connected.
+3. **Start Claude Code** and run `/mcp` to verify that the Business Data Platform entry is connected.
 
 > Don't have `ovcli.conf` yet? See the [Deployment Guide → CLI](../guides/03-deployment.md#cli).
 >
@@ -55,7 +55,7 @@ If you prefer to set it up manually:
 Launch `claude`, then:
 
 - `/plugins` → Verify that **openviking-memory** is listed under "Installed", with the **openviking** MCP connected below it.
-- `/mcp` → Ensure the OpenViking entry displays your server URL along with valid authentication.
+- `/mcp` → Ensure the Business Data Platform entry displays your server URL along with valid authentication.
 - `/openviking-memory:ov` → View server health, identity, recall/injection statistics, and toggle states.
 
 If the plugin does not seem to activate, set `OPENVIKING_DEBUG=1` and check the logs at `~/.openviking/logs/cc-hooks.log`.
@@ -64,16 +64,16 @@ If the plugin does not seem to activate, set `OPENVIKING_DEBUG=1` and check the 
 
 The plugin hooks into the Claude Code lifecycle:
 
-- **Before every prompt** — searches OpenViking and injects relevant memories
+- **Before every prompt** — searches Business Data Platform and injects relevant memories
 - **After each response** — captures new conversation turns
 - **On session start** — injects your profile, memory index, and skill catalog
 - **Before compaction and on session end** — commits pending messages
 - **For each subagent** — assigns an isolated memory session
-- **Before a native file tool touches a `viking://` path** — blocks the call and names the OpenViking MCP tool to use instead; a `Write` or `Edit` on a skill path is pointed to `add_skill`
+- **Before a native file tool touches a `viking://` path** — blocks the call and names the Business Data Platform MCP tool to use instead; a `Write` or `Edit` on a skill path is pointed to `add_skill`
 
 All write operations run asynchronously, ensuring they never block your conversation.
 
-The skill catalog is an `<available-skills>` block that lists the skills stored in OpenViking: your own under `viking://~/skills` first, then the ones shared with your account under `viking://agent/skills`, each with a short description. Before following a listed skill, Claude reads its `SKILL.md` with the OpenViking `read` tool. The catalog has its own token budget: when the descriptions do not fit, it lists names only, and when not even one name fits, it shrinks to a one-line count. The bundled `openviking-skills` skill tells Claude how to find and use OpenViking skills, create, install, and share them with the `add_skill` MCP tool, delete them, and move local skills such as `~/.claude/skills` into OpenViking when you ask.
+The skill catalog is an `<available-skills>` block that lists the skills stored in Business Data Platform: your own under `viking://~/skills` first, then the ones shared with your account under `viking://agent/skills`, each with a short description. Before following a listed skill, Claude reads its `SKILL.md` with the Business Data Platform `read` tool. The catalog has its own token budget: when the descriptions do not fit, it lists names only, and when not even one name fits, it shrinks to a one-line count. The bundled `openviking-skills` skill tells Claude how to find and use Business Data Platform skills, create, install, and share them with the `add_skill` MCP tool, delete them, and move local skills such as `~/.claude/skills` into Business Data Platform when you ask.
 
 Tool calls and results are captured as dedicated `tool` parts, and `tool_output` is reported verbatim. Truncation is the server's job: output larger than `tool_output_externalization.threshold_chars` (default `20000`) is written to the session's tool-result store, and the part keeps a synopsis stub plus `tool_output_ref`, so the original stays readable through [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result).
 
@@ -114,7 +114,7 @@ Change it with `OPENVIKING_PEER_SOURCE`, with `plugin.peerSource` in `ovcli.conf
 
 ## Statusline
 
-The plugin renders an OpenViking status indicator beneath your Claude Code input box, allowing you to check connection health, recall count, capture progress, and session state at a glance. See [STATUSLINE.md](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/STATUSLINE.md) for a complete glossary of segments and personalization recipes.
+The plugin renders a Business Data Platform status indicator beneath your Claude Code input box, allowing you to check connection health, recall count, capture progress, and session state at a glance. See [STATUSLINE.md](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/STATUSLINE.md) for a complete glossary of segments and personalization recipes.
 
 ## Troubleshooting
 
@@ -129,7 +129,7 @@ The plugin renders an OpenViking status indicator beneath your Claude Code input
 ## See also
 
 - [Capability Reference](./16-capability-reference.md)
-- [Blog: OpenViking in Claude Code / Codex](https://blog.openviking.ai/post/openviking-coding-agent/) — Motivation, architecture overview, and demo
+- [Blog: Business Data Platform in Claude Code / Codex](https://blog.openviking.ai/post/openviking-coding-agent/) — Motivation, architecture overview, and demo
 - [Plugin README](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md) — Full environment variable tables, hook details, and architecture diagrams
 - [MCP Clients](./06-mcp-clients.md) — Information on MCP tool parameters and other clients
 - [Deployment Guide → CLI](../guides/03-deployment.md#cli) — `ovcli.conf` setup instructions

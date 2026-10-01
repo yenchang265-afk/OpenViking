@@ -1,9 +1,9 @@
 ---
 name: ov-memory-troubleshoot
-description: Diagnose OpenViking memory issues by tracing backward from a memory file to its archive memory_diff.json and, when needed, session messages. Read-only; use for incorrect content, wrong paths or owners, missing memories, and unexplained updates or deletes.
+description: Diagnose Business Data Platform memory issues by tracing backward from a memory file to its archive memory_diff.json and, when needed, session messages. Read-only; use for incorrect content, wrong paths or owners, missing memories, and unexplained updates or deletes.
 ---
 
-# OpenViking Memory Troubleshoot
+# Business Data Platform Memory Troubleshoot
 
 Session messages are the source of extracted memories. The archive's `memory_diff.json` records the resulting changes to memory files:
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate independent OpenViking collection benchmark processes."""
+"""Aggregate independent Business Data Platform collection benchmark processes."""
 
 from __future__ import annotations
 

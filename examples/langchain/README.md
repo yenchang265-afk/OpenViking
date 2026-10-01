@@ -1,11 +1,11 @@
 # langchain-openviking
 
-`langchain-openviking` is the official OpenViking integration package for
+`langchain-openviking` is the official Business Data Platform integration package for
 LangChain and LangGraph applications. It keeps framework-specific adapters
-separate from the OpenViking server and communicates with remote OpenViking
+separate from the Business Data Platform server and communicates with remote Business Data Platform
 instances through the lightweight `openviking-sdk` package.
 
-> **OpenViking Server requirement**: examples here use the `viking://~` home alias
+> **Business Data Platform Server requirement**: examples here use the `viking://~` home alias
 > (for example `viking://~/memories`), which the server expands to the authenticated
 > caller's own user space, so they require a server with `viking://~` support. The
 > uid-less `viking://user/memories` shorthand is rejected by newer servers; pass an
@@ -60,5 +60,5 @@ The package also provides `OpenVikingSessionRecorder`,
 The previous `openviking.integrations.langchain` import path remains available
 from the full `openviking` distribution as a compatibility shim.
 
-See the [OpenViking documentation](https://openviking.ai) and the repository's
+See the [Business Data Platform documentation](https://openviking.ai) and the repository's
 `examples/langchain-langgraph` directory for complete examples.

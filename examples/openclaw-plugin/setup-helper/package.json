@@ -1,7 +1,7 @@
 {
   "name": "openclaw-openviking-setup-helper",
   "version": "2026.6.18",
-  "description": "Setup helper for installing OpenViking memory plugin into OpenClaw",
+  "description": "Setup helper for installing Business Data Platform memory plugin into OpenClaw",
   "type": "module",
   "bin": {
     "openclaw-openviking-setup-helper": "install.js",
@@ -16,7 +16,7 @@
     "agent",
     "installer"
   ],
-  "author": "OpenViking",
+  "author": "Business Data Platform",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",

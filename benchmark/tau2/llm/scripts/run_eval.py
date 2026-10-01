@@ -555,7 +555,7 @@ def _build_plan(
                 non_executable_reason = None
                 if command is None:
                     non_executable_reason = (
-                        "This OpenViking memory strategy is planned but not wired to "
+                        "This Business Data Platform memory strategy is planned but not wired to "
                         "the TAU-2 adapter in this PR."
                     )
                 cells.append(
@@ -1052,7 +1052,7 @@ def main() -> int:
         "--num-tasks", type=int, help="Run the first N tasks from the selected split."
     )
     parser.add_argument(
-        "--train-num-tasks", type=int, help="Train OpenViking memory on the first N train tasks."
+        "--train-num-tasks", type=int, help="Train Business Data Platform memory on the first N train tasks."
     )
     parser.add_argument(
         "--preflight",

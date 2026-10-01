@@ -6,7 +6,7 @@
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness codex --dist tos
    ```
 
-2. 安装器会依次询问以下信息：语言（English / 中文）、OpenViking 凭据。在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安装器会依次询问以下信息：语言（English / 中文）、Business Data Platform 凭据。在 Business Data Platform 凭据配置中，选择连接至「火山引擎 Business Data Platform 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
@@ -26,7 +26,7 @@
      3. Continue without trusting (hooks won't run)
    ```
 
-   OpenViking 注册的 6 个 Hook 是（Codex 版本较旧时可能少几个）：
+   Business Data Platform 注册的 6 个 Hook 是（Codex 版本较旧时可能少几个）：
 
    ```text
    SessionStart
@@ -44,7 +44,7 @@
    ```text
    • UserPromptSubmit hook (completed)
      hook context: <openviking-context source="auto-recall" format="digest">
-       OpenViking memory digest:
+       Business Data Platform memory digest:
    ```
 
 ## 故障排查
@@ -59,5 +59,5 @@
 ## 参考
 
 - 手动配置文档：[Codex](https://docs.openviking.net/zh/agent-integrations/04-codex)
-- 原理博客：[OpenViking for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
+- 原理博客：[Business Data Platform for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
 - 源码：[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin)

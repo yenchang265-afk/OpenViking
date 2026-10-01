@@ -1,8 +1,8 @@
-# OpenViking CLI Setup
+# Business Data Platform CLI Setup
 
-This guide helps you install the OpenViking CLI, configure it, and verify that it can connect to OpenViking.
+This guide helps you install the Business Data Platform CLI, configure it, and verify that it can connect to Business Data Platform.
 
-`ov` is the client CLI. It connects to an existing OpenViking server or to OpenViking Service (VolcEngine Cloud). It does not replace server setup. If you still need to install or start a custom OpenViking server, follow the [Quick Start](02-quickstart.md) first.
+`ov` is the client CLI. It connects to an existing Business Data Platform server or to Business Data Platform Service (VolcEngine Cloud). It does not replace server setup. If you still need to install or start a custom Business Data Platform server, follow the [Quick Start](02-quickstart.md) first.
 
 Use this page in either of two ways:
 
@@ -23,13 +23,13 @@ When you create named configs, `ov` stores them next to the active file as `~/.o
 
 ## Choose a Target
 
-Choose the OpenViking target before running setup commands.
+Choose the Business Data Platform target before running setup commands.
 
 Agents should ask the user which target they want unless it has already been specified. Existing configs, active configs, local files, default ports, and running services can inform follow-up questions, but they are not consent for the agent to choose a target, switch or replace configs, probe local services, start servers, or write data.
 
-### OpenViking Service (VolcEngine Cloud)
+### Business Data Platform Service (VolcEngine Cloud)
 
-Choose this when you want OpenViking hosted as a managed service on VolcEngine Cloud.
+Choose this when you want Business Data Platform hosted as a managed service on VolcEngine Cloud.
 
 - Server endpoint used by `ov`: `https://api.vikingdb.cn-beijing.volces.com/openviking`
 - Console page for API keys: https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing
@@ -39,7 +39,7 @@ Choose this when you want OpenViking hosted as a managed service on VolcEngine C
 
 ### Remote Custom
 
-Choose this when you connect to a custom OpenViking server hosted somewhere other than the current machine.
+Choose this when you connect to a custom Business Data Platform server hosted somewhere other than the current machine.
 
 - Server URL is provided by the user or server administrator.
 - API key may be required.
@@ -47,7 +47,7 @@ Choose this when you connect to a custom OpenViking server hosted somewhere othe
 
 ### Local Custom
 
-Choose this only when the user wants to connect to a custom OpenViking server on the current machine.
+Choose this only when the user wants to connect to a custom Business Data Platform server on the current machine.
 
 - Default local URL: `http://127.0.0.1:1933`
 - API key is usually not needed for a local unauthenticated server.
@@ -62,9 +62,9 @@ You need:
 - A way to install the CLI:
   - Node.js and npm for the standalone `@openviking/cli` package, or
   - Python tooling if you install the full `openviking` package.
-- A reachable OpenViking target:
-  - OpenViking Service (VolcEngine Cloud), or
-  - a custom OpenViking server.
+- A reachable Business Data Platform target:
+  - Business Data Platform Service (VolcEngine Cloud), or
+  - a custom Business Data Platform server.
 - An API key if your target requires authentication.
 
 API keys are sensitive. Prefer entering them through the interactive `ov config` prompt when you configure `ov` yourself. Only provide API keys to an agent through a channel you intentionally trust. The agent should pass the key through stdin and must not put it in shell commands, logs, long-term memory, or raw config output. Use an environment variable only when the key is already present in the shell environment.
@@ -78,7 +78,7 @@ command -v ov
 ov --version
 ```
 
-If `ov --version` or any other `ov` command says OpenViking needs a display language, choose one and retry:
+If `ov --version` or any other `ov` command says Business Data Platform needs a display language, choose one and retry:
 
 ```bash
 ov language en
@@ -116,7 +116,7 @@ On macOS and Linux, the global npm binary directory is usually `$(npm prefix -g)
 
 ## Key Types
 
-OpenViking CLI configs can hold a user key, a root key, or both.
+Business Data Platform CLI configs can hold a user key, a root key, or both.
 
 - User key: use this for normal data commands such as `ov add-resource`, `ov find`, and `ov tree`. The server derives the identity from the key, so you usually do not pass `--account` or `--user`. This is what most users want.
 - Root key: use this for admin work and commands that require `--sudo`. In `api_key` mode, root keys cannot access tenant data, even with `--account` and `--user`. Only a `trusted` server accepts those identity headers for root-key-authenticated data access.
@@ -135,12 +135,12 @@ ov config
 Then choose:
 
 1. `Add config`
-2. `OpenViking Service (VolcEngine Cloud)` or `Custom`
+2. `Business Data Platform Service (VolcEngine Cloud)` or `Custom`
 3. A config name, or leave it empty to generate one
 4. The required URL and API key values for the target you chose above
 5. Save the config after validation
 
-If you manage more than one OpenViking target, use:
+If you manage more than one Business Data Platform target, use:
 
 ```bash
 ov config switch
@@ -156,7 +156,7 @@ Use this path when an agent is setting up `ov` for a user. The agent should read
 
 ### Agent Checklist
 
-1. Ask which target the user wants unless it has already been specified: OpenViking Service (VolcEngine Cloud), remote custom, or local custom.
+1. Ask which target the user wants unless it has already been specified: Business Data Platform Service (VolcEngine Cloud), remote custom, or local custom.
 2. Do not infer the intended setup from existing configs, active configs, local files, default ports, or running services.
 3. Ask before switching configs, replacing configs, probing local services, starting servers, or writing data.
 4. Run `ov --help`, `ov config --help`, and the relevant config subcommand help before choosing commands.
@@ -183,7 +183,7 @@ ov config edit --help
 
 Use the installed CLI help as the source of truth. If this page and the installed help disagree, follow the installed help and tell the user what changed.
 
-If a help command says OpenViking needs a display language, run `ov language en`, or `ov language zh-CN` if the user wants Chinese, then retry. Non-interactive config subcommands such as `ov config add`, `ov config list`, `ov config edit`, `ov config switch <name>`, and `ov config delete` can run before the display language is set.
+If a help command says Business Data Platform needs a display language, run `ov language en`, or `ov language zh-CN` if the user wants Chinese, then retry. Non-interactive config subcommands such as `ov config add`, `ov config list`, `ov config edit`, `ov config switch <name>`, and `ov config delete` can run before the display language is set.
 
 ### Use Stable Names for Retries
 
@@ -229,7 +229,7 @@ ov config list -o json
 The list output shape is:
 
 ```json
-{"status":"ok","result":[{"name":"<CONFIG-NAME>","kind":"OpenViking Service","url":"https://api.vikingdb.cn-beijing.volces.com/openviking","active":true}]}
+{"status":"ok","result":[{"name":"<CONFIG-NAME>","kind":"Business Data Platform Service","url":"https://api.vikingdb.cn-beijing.volces.com/openviking","active":true}]}
 ```
 
 For an existence check, inspect `result[].name`. To decide whether a config already needs switching, inspect the matching entry's `active` flag.
@@ -242,7 +242,7 @@ ov config switch <CONFIG-NAME> -o json
 
 Then run the verification commands.
 
-### Add OpenViking Service
+### Add Business Data Platform Service
 
 If the agent already holds the API key through a trusted channel, run:
 
@@ -258,7 +258,7 @@ printf '%s' "$API_KEY" | ov config add ov-service --name <CONFIG-NAME> --api-key
 
 `$API_KEY` stands for a trusted runtime secret source, not the literal key. Use stdin when the agent can supply the key without putting it in the command text, shell history, logs, or a long-lived exported environment variable.
 
-Write only the API key bytes to stdin. Do not place the key in the shell command. This writes an OpenViking Service config using the fixed endpoint `https://api.vikingdb.cn-beijing.volces.com/openviking`. The `ov-service` target does not take a custom server URL.
+Write only the API key bytes to stdin. Do not place the key in the shell command. This writes a Business Data Platform Service config using the fixed endpoint `https://api.vikingdb.cn-beijing.volces.com/openviking`. The `ov-service` target does not take a custom server URL.
 
 Use an environment variable only if it already exists in the shell:
 
@@ -266,7 +266,7 @@ Use an environment variable only if it already exists in the shell:
 ov config add ov-service --name <CONFIG-NAME> --api-key-env <API-KEY-ENV-VAR> --activate -o json
 ```
 
-Do not pass `--account` or `--user` for standard OpenViking Service setup. Use them only when the user or their OpenViking administrator provides identity override values.
+Do not pass `--account` or `--user` for standard Business Data Platform Service setup. Use them only when the user or their Business Data Platform administrator provides identity override values.
 
 ### Add a Local Custom Server
 
@@ -373,7 +373,7 @@ Use `ov config show` for inspection because it redacts secrets.
 
 Do not print the raw config file unless you understand that it may contain secrets.
 
-If a verification command says OpenViking needs a display language, run `ov language en`, or `ov language zh-CN` if the user wants Chinese, then rerun verification.
+If a verification command says Business Data Platform needs a display language, run `ov language en`, or `ov language zh-CN` if the user wants Chinese, then rerun verification.
 
 `ov status` includes broader server and data diagnostics. If `ov config validate` and `ov health` pass, a warning in `ov status` does not always mean CLI setup failed.
 
@@ -391,7 +391,7 @@ Agents should refresh this help before running unfamiliar commands. If an agent 
 
 ## Credential Safety
 
-- API keys may grant access to your OpenViking data.
+- API keys may grant access to your Business Data Platform data.
 - Prefer the interactive `ov config` prompt for manual setup.
 - For agent-assisted setup, provide API keys only through a channel you intentionally trust.
 - Agents should pass keys through stdin. Use environment variables only when they already exist in the shell.
@@ -429,7 +429,7 @@ If it fails, start the server before configuring `ov`. See the [Deployment Guide
 
 ### API Key Validation Fails
 
-Run `ov config` again and edit the config. For OpenViking Service, confirm the key came from the OpenViking console URL above. For custom servers, confirm whether the server requires authentication.
+Run `ov config` again and edit the config. For Business Data Platform Service, confirm the key came from the Business Data Platform console URL above. For custom servers, confirm whether the server requires authentication.
 
 Agents should not keep retrying unknown keys. Ask the user to confirm the target type, server URL, key type, account, and user.
 
@@ -469,13 +469,13 @@ Use `ov config`. Do not use old or removed setup commands such as `ov config set
 
 Once the CLI is configured, use `ov --help` and `ov <command> --help` to learn the rest of the CLI.
 
-Adding a resource writes data into the active OpenViking server. If you want a small demo, use a resource you are comfortable storing. Agents must ask the user for permission before running this kind of demo command.
+Adding a resource writes data into the active Business Data Platform server. If you want a small demo, use a resource you are comfortable storing. Agents must ask the user for permission before running this kind of demo command.
 
 ```bash
 ov add-resource https://github.com/volcengine/OpenViking
 # Use the returned task_id; search after its status reaches completed
 ov task status TASK_ID
-ov find "what is OpenViking"
+ov find "what is Business Data Platform"
 ov tree viking://resources/ -L 2
 ```
 

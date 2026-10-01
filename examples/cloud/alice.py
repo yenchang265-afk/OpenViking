@@ -64,7 +64,7 @@ def main():
 
     try:
         # ── 1. 添加资源 ──
-        print("\n== 1. 添加资源: OpenViking README ==")
+        print("\n== 1. 添加资源: Business Data Platform README ==")
         result = client.add_resource(
             path="https://raw.githubusercontent.com/volcengine/OpenViking/refs/heads/main/README.md",
             options={"reason": "项目核心文档"},
@@ -105,10 +105,10 @@ def main():
         print(f"  Session: {session.session_id}")
 
         messages = [
-            ("user", "我们的项目选择用 OpenViking 做 Context Database，主要原因是什么？"),
+            ("user", "我们的项目选择用 Business Data Platform 做 Context Database，主要原因是什么？"),
             (
                 "assistant",
-                "选择 OpenViking 的核心原因：1) 文件系统范式统一管理上下文 "
+                "选择 Business Data Platform 的核心原因：1) 文件系统范式统一管理上下文 "
                 "2) 分层加载（L0/L1/L2）节省 token 3) 目录递归检索比传统 RAG 效果好 "
                 "4) 内置 session 管理和 memory 自动沉淀。",
             ),

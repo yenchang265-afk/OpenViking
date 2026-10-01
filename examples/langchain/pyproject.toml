@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "langchain-openviking"
 dynamic = ["version"]
-description = "OpenViking integrations for LangChain and LangGraph"
+description = "Business Data Platform integrations for LangChain and LangGraph"
 readme = "README.md"
 requires-python = ">=3.10"
 authors = [

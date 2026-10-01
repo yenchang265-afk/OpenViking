@@ -1,6 +1,6 @@
 # ARA Compiler Profile for ov-add-paper
 
-This profile adapts the Agent-Native Research Artifact compiler pattern for OpenViking ingestion. It keeps the ARA compiler's epistemic structure, but the final deliverable is an OV resource directory.
+This profile adapts the Agent-Native Research Artifact compiler pattern for Business Data Platform ingestion. It keeps the ARA compiler's epistemic structure, but the final deliverable is an OV resource directory.
 
 Source reference: https://github.com/AmberLJC/Agent-Native-Research-Artifact
 

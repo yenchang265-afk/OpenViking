@@ -18,7 +18,7 @@ def test_build_openviking_connection_forwards_actor_peer_id():
         effective_auth_mode="api_key",
         server_url="http://127.0.0.1:1933",
     )
-    # Assert the OpenViking-side forward only; vikingbot owns connection > body fallback.
+    # Assert the Business Data Platform-side forward only; vikingbot owns connection > body fallback.
     assert connection["actor_peer_id"] == "peer-a"
 
 

@@ -24,7 +24,7 @@ test("compressed context keeps only citations to served URIs", () => {
 
   assert.equal(
     repairDigestUris(normalized, [served]),
-    `OpenViking memory digest:\n- good 来源：${served}`,
+    `Business Data Platform memory digest:\n- good 来源：${served}`,
   );
 });
 
@@ -75,7 +75,7 @@ test("compression cache is reused only for the same request", async () => {
     query: "first", rendered, entries, runCompressor, cachePath,
   });
   const cached = JSON.parse(await readFile(cachePath, "utf8"));
-  await writeFile(cachePath, JSON.stringify({ ...cached, digest: "OpenViking memory digest:" }));
+  await writeFile(cachePath, JSON.stringify({ ...cached, digest: "Business Data Platform memory digest:" }));
   await compressRecallContext({
     query: "first", rendered, entries, runCompressor, cachePath,
   });

@@ -1,10 +1,10 @@
 # VikingBot API
 
-When OpenViking Server starts with `--with-bot`, it proxies VikingBot's core interaction endpoints below `/bot/v1`. These endpoints return `503` when Bot is not enabled.
+When Business Data Platform Server starts with `--with-bot`, it proxies VikingBot's core interaction endpoints below `/bot/v1`. These endpoints return `503` when Bot is not enabled.
 
 **Code entry points**:
 
-- `openviking/server/routers/bot.py` - OpenViking Server proxy and identity forwarding
+- `openviking/server/routers/bot.py` - Business Data Platform Server proxy and identity forwarding
 - `bot/vikingbot/channels/openapi.py` - VikingBot Gateway routes
 - `bot/vikingbot/channels/openapi_models.py` - request, response, and SSE event models
 
@@ -179,7 +179,7 @@ A missing target response returns `404`. Rating feedback without `feedback_score
 
 ## Client Scope
 
-The standard OpenViking Python, TypeScript, and Go SDKs do not currently wrap the Bot proxy. Chat is available through the `ov` CLI and HTTP. The VikingBot Gateway also exposes Session and Channel APIs; see the [VikingBot documentation](https://github.com/volcengine/OpenViking/blob/main/bot/README.md#http-api).
+The standard Business Data Platform Python, TypeScript, and Go SDKs do not currently wrap the Bot proxy. Chat is available through the `ov` CLI and HTTP. The VikingBot Gateway also exposes Session and Channel APIs; see the [VikingBot documentation](https://github.com/volcengine/OpenViking/blob/main/bot/README.md#http-api).
 
 ## Related Documentation
 

@@ -1,6 +1,6 @@
 # Multi-Write Storage
 
-Multi-write storage lets OpenViking use one primary storage backend together with multiple backup backends under a unified filesystem abstraction. It is suitable for high availability, cross-region replicas, read acceleration, and storage migration.
+Multi-write storage lets Business Data Platform use one primary storage backend together with multiple backup backends under a unified filesystem abstraction. It is suitable for high availability, cross-region replicas, read acceleration, and storage migration.
 
 From the API user's point of view, interfaces such as `read()`, `write()`, `ls()`, and `stat()` do not change. Multi-write logic lives inside RAGFS, so callers do not need to care which underlying backend ultimately stores a file.
 
@@ -13,7 +13,7 @@ Multi-write storage consists of one primary backend and multiple backup backends
 | primary | `storage.agfs.backend` | Authoritative write target and final read fallback |
 | backup | `storage.agfs.backups.items[]` | Receives replicated writes and may optionally participate in reads |
 
-If `backups` is not configured, OpenViking continues to use the original single-backend mode.
+If `backups` is not configured, Business Data Platform continues to use the original single-backend mode.
 
 ## Write Path
 
@@ -21,7 +21,7 @@ By default, writes land on the primary backend first and are then replicated to 
 
 ```text
 Client
-  -> OpenViking API
+  -> Business Data Platform API
   -> RAGFS MultiWrite
   -> primary
   -> backup1 / backup2 / ...
@@ -67,7 +67,7 @@ Common cases:
 - Specific file extensions go to a dedicated backend.
 - The primary backend keeps standard content, while special files live elsewhere.
 
-Redirect policies are configured on the primary backend. When a file matches a policy, OpenViking records the mapping in internal metadata. Calls such as `ls()`, `stat()`, and `read()` still expose a normal filesystem view.
+Redirect policies are configured on the primary backend. When a file matches a policy, Business Data Platform records the mapping in internal metadata. Calls such as `ls()`, `stat()`, and `read()` still expose a normal filesystem view.
 
 ## Exclude
 
@@ -96,7 +96,7 @@ If the primary backend enables at-rest encryption, these internal metadata files
 
 ## Encryption Relationship
 
-Multi-write does not change OpenViking's transparent encryption model.
+Multi-write does not change Business Data Platform's transparent encryption model.
 
 Rules:
 

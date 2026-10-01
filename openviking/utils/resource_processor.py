@@ -1,10 +1,10 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Context Processor for OpenViking.
+Context Processor for Business Data Platform.
 
 Handles coordinated writes and self-iteration processes
-as described in the OpenViking design document.
+as described in the Business Data Platform design document.
 """
 
 import asyncio

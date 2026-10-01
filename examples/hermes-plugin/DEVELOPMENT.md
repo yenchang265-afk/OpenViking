@@ -1,6 +1,6 @@
 # Developing the Hermes memory provider
 
-This directory imports the OpenViking provider from
+This directory imports the Business Data Platform provider from
 [`NousResearch/hermes-plugin-openviking`](https://github.com/NousResearch/hermes-plugin-openviking/tree/5dca75f4d3dcef9467ce2ff32e170d84c679de5f),
 commit `5dca75f4d3dcef9467ce2ff32e170d84c679de5f`.
 
@@ -20,7 +20,7 @@ settings, environment variables, linked `ovcli.conf` files, data paths, and
 
 The active-session commit lifecycle was ported from
 [KoNit-K's Hermes PR #112533](https://github.com/NousResearch/hermes-agent/pull/112533),
-with the original author retained. The OpenViking adaptation uses a configurable
+with the original author retained. The Business Data Platform adaptation uses a configurable
 pending-token threshold instead of the original six-turn trigger.
 
 Native memory mirroring is adapted from
@@ -29,7 +29,7 @@ commit `32f75a9e6728a9a3d2f50a870dab3715a1f34fd7`, which continues
 [austinlaw076's PR #85860](https://github.com/NousResearch/hermes-agent/pull/85860).
 The external plugin uses relative imports and Hermes's context-preserving worker
 helper. Its connection cache and session-commit lifecycle retain the later
-OpenViking fixes.
+Business Data Platform fixes.
 
 Gateway sender attribution and recall scope adapt
 [Hermes PR #105812](https://github.com/NousResearch/hermes-agent/pull/105812),
@@ -48,7 +48,7 @@ After this directory is merged, submit a Hermes catalog entry with:
 - `name: openviking`
 - `repo: https://github.com/volcengine/OpenViking`
 - `subdir: examples/hermes-plugin`
-- `sha`: the full reviewed OpenViking commit SHA
+- `sha`: the full reviewed Business Data Platform commit SHA
 
 Publish the catalog entry and validate migration before Hermes removes its
 bundled provider. Hermes PR [#114569](https://github.com/NousResearch/hermes-agent/pull/114569)
@@ -58,7 +58,7 @@ bundled provider takes precedence while it remains present.
 This plugin does not add a Desktop `config_schema.py`.
 The wizard uses private helpers from `hermes_cli.memory_setup`; changes to
 those helpers require compatibility checks. The plugin uses HTTP and does not
-install or package the OpenViking server.
+install or package the Business Data Platform server.
 
 ## Validation
 
@@ -94,7 +94,7 @@ actual Hermes session keys.
 Provider-specific regression tests belong here and must use the shared external
 loader fixture. Generic Hermes framework tests remain in Hermes.
 
-For compatibility checks while Hermes still bundles OpenViking, also run its
+For compatibility checks while Hermes still bundles Business Data Platform, also run its
 provider tests. These load the bundled copy unless explicitly routed through the
 external loader; they do not replace this directory's tests:
 

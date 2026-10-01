@@ -105,7 +105,7 @@ class PrometheusExporter(MetricExporter):
 
     def _add_help_and_type(self, lines: list[str], name: str, metric_type: str) -> None:
         """Append the Prometheus `HELP` and `TYPE` prelude for one metric family."""
-        lines.append(f"# HELP {name} OpenViking metric.")
+        lines.append(f"# HELP {name} Business Data Platform metric.")
         lines.append(f"# TYPE {name} {metric_type}")
 
     def _process_counter_series(self, lines: list[str], name: str, counter) -> None:

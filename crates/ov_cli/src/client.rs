@@ -141,7 +141,7 @@ struct CompileCreateRequest<'a> {
 
 // ============ HttpClient ============
 
-/// High-level HTTP client for OpenViking API
+/// High-level HTTP client for Business Data Platform API
 #[derive(Clone)]
 pub struct HttpClient {
     base: BaseClient,
@@ -2366,7 +2366,7 @@ mod tests {
         let _: serde_json::Value = client
             .get("/health", &[])
             .await
-            .expect("direct OpenViking request should succeed");
+            .expect("direct Business Data Platform request should succeed");
 
         let request = request_rx.await.expect("request should be captured");
         assert!(!request.to_ascii_lowercase().contains("x-gateway-token"));

@@ -182,7 +182,7 @@ Parser 的内部实现，不回到顶层 `ResourceService`。`DirectoryParser` �
 
 启用 Understanding 目录路由后，每次 `DirectoryParser` 扫描在发起该层远程请求前执行
 预检，默认限制为 1000 个入选文件和 10 层目录深度；关闭 Understanding 时，
-OpenViking 原生目录解析不应用这两个限制。内置 `ZipParser` 递归展开压缩包时会创建新的
+Business Data Platform 原生目录解析不应用这两个限制。内置 `ZipParser` 递归展开压缩包时会创建新的
 目录扫描，嵌套 ZIP 不与外层共享文件数量和深度预算。
 客户端导入本地目录时，会先将整个目录压缩为 ZIP，再由
 `/resources/temp_upload` 对整个 ZIP 执行上传大小限制。ZIP 解压后的叶子文件不再由
@@ -221,7 +221,7 @@ TreeBuilder + 标准摘要/索引链
 
 Understanding 返回 ZIP 时，本地适配器会安全解压，并根据 Markdown 的相对图片引用生成受控的图片映射 sidecar。TreeBuilder 后续仍使用统一的图片 URI 改写链。
 
-这条链的关键特征是：Understanding 只替代 Parser，后面的 `ParseResult`、URI 规划、TreeBuilder 落盘、摘要和索引仍属于 OpenViking。
+这条链的关键特征是：Understanding 只替代 Parser，后面的 `ParseResult`、URI 规划、TreeBuilder 落盘、摘要和索引仍属于 Business Data Platform。
 
 ## Connector 链路
 
@@ -238,10 +238,10 @@ ResourceService
     |
     +--> 后台轮询 Connector task/info
               |
-              +--> 更新 OpenViking TaskRecord
+              +--> 更新 Business Data Platform TaskRecord
 ```
 
-Connector 不返回本地 `ParseResult`，也不调用当前进程的 `TreeBuilder`。OpenViking 只负责校验这次请求能否无损委派、提交任务、返回 OpenViking `task_id`，再把 Connector 的终态同步到任务记录。
+Connector 不返回本地 `ParseResult`，也不调用当前进程的 `TreeBuilder`。Business Data Platform 只负责校验这次请求能否无损委派、提交任务、返回 Business Data Platform `task_id`，再把 Connector 的终态同步到任务记录。
 
 Connector 当前要求提供精确 `to`，不接受 `parent`；也不支持 `wait=true`、watch、instruction、关闭建索引、摘要、strict、include/exclude 等。无凭证的 Git 请求可回退到标准链；带 Connector 专用凭证的 Git 和 Connector-only 来源会立即报错，避免凭证落入本地持久化任务。
 
@@ -262,7 +262,7 @@ Connector 当前要求提供精确 `to`，不接受 `parent`；也不支持 `wai
 - 锁通过 handoff 交给后台任务或队列 Worker；入队失败时立即释放，并把任务标为失败。
 - 临时 `LocalResource` 由拥有它的调用层清理；交给标准处理器后，清理责任随之转移。
 - Parser 产生 `ParseResult` 后才进入 TreeBuilder。没有临时解析产物时标准链返回解析错误；目录允许带 warnings 的部分成功，`strict` 决定是否暴露这些警告。
-- Connector 的失败边界在外部任务终态，OpenViking 不对其内部文件逐个回滚。
+- Connector 的失败边界在外部任务终态，Business Data Platform 不对其内部文件逐个回滚。
 
 ## 代码定位
 

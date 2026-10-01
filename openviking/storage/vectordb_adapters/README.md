@@ -1,6 +1,6 @@
 # VectorDB Adapter 接入指南（新增第三方后端）
 
-本指南说明如何在 `openviking/storage/vectordb_adapters` 下新增一个第三方向量库后端，并接入 OpenViking 现有检索链路。
+本指南说明如何在 `openviking/storage/vectordb_adapters` 下新增一个第三方向量库后端，并接入 Business Data Platform 现有检索链路。
 
 ---
 
@@ -21,7 +21,7 @@
 
 当前分层职责如下：
 
-1. **上层语义层（OpenViking 业务）**  
+1. **上层语义层（Business Data Platform 业务）**  
    面向语义接口，不关心后端协议差异。
 
 2. **通用向量存储层（Store/Backend）**  

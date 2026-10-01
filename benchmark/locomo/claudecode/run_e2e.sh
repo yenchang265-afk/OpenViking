@@ -5,7 +5,7 @@
 # Mirrors a real CC user behaviour:
 #   - Each LoCoMo session is fed turn-by-turn into one `claude -p`
 #     subprocess (stream-json input). Plugin's auto-capture (Stop hook) and
-#     session-end (SessionEnd hook) push memories into OpenViking. The
+#     session-end (SessionEnd hook) push memories into Business Data Platform. The
 #     benchmark's auto-capture wrapper adds per-message `created_at` so
 #     event archive dates line up with conv timestamps.
 #   - After ingest, snapshot HOME + OV data.

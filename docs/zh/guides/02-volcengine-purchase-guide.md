@@ -1,10 +1,10 @@
 # 火山引擎模型购买指南
 
-本指南介绍如何在火山引擎购买和配置 OpenViking 所需的模型服务。
+本指南介绍如何在火山引擎购买和配置 Business Data Platform 所需的模型服务。
 
 ## 概述
 
-OpenViking 需要以下模型服务：
+Business Data Platform 需要以下模型服务：
 
 | 模型类型 | 用途 | 推荐模型 |
 |---------|------|---------|
@@ -86,7 +86,7 @@ OpenViking 需要以下模型服务：
 
 开通后使用模型 ID：`doubao-embedding-vision-251215`
 
-## 配置 OpenViking
+## 配置 Business Data Platform
 
 ### 配置模板
 
@@ -214,7 +214,7 @@ asyncio.run(test())
 火山引擎为新用户提供免费额度：
 
 - 首次开通赠送 Token
-- 足够完成 OpenViking 的试用体验
+- 足够完成 Business Data Platform 的试用体验
 - 详见：[火山方舟定价说明](https://www.volcengine.com/docs/82379/1399514)
 
 ## 故障排除
@@ -259,12 +259,12 @@ Error: Connection timeout
 
 - [火山引擎文档中心](https://www.volcengine.com/docs)
 - [火山方舟 API 文档](https://www.volcengine.com/docs/82379)
-- [OpenViking GitHub Issues](https://github.com/volcengine/OpenViking/issues)
+- [Business Data Platform GitHub Issues](https://github.com/volcengine/OpenViking/issues)
 
 ## 相关文档
 
 - [配置指南](./01-configuration.md) - 完整配置参考
-- [快速开始](../getting-started/02-quickstart.md) - 开始使用 OpenViking
+- [快速开始](../getting-started/02-quickstart.md) - 开始使用 Business Data Platform
 
 ## 附录
 

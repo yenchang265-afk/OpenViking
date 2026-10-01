@@ -9,7 +9,7 @@
 
 ## 1. 目标与边界
 
-Compile 使用一个指定 Skill，加工一个或多个 OpenViking 素材目录，并将结果写入目标目录。用户应能理解“用什么方法、处理什么内容、结果放在哪里”，无需先学习 API 或 Runtime 配置。
+Compile 使用一个指定 Skill，加工一个或多个 Business Data Platform 素材目录，并将结果写入目标目录。用户应能理解“用什么方法、处理什么内容、结果放在哪里”，无需先学习 API 或 Runtime 配置。
 
 提供两个平等入口：
 
@@ -38,7 +38,7 @@ Compile 使用一个指定 Skill，加工一个或多个 OpenViking 素材目录
 | Studio 终端 | 自有命令解释器，不是操作系统 Shell | 增加命令解析与 API 调用 |
 | 原生 CLI | 已支持 `ov compile` 和 `ov task status/cancel/list` | Studio 对齐对应语法 |
 
-`docs/design/ov-compile-design.md` 保留了历史 Bot 直连方案。本文以现行 OpenViking 托管任务的接口为准；浏览器不直接调用 Runtime 或旧 Bot compile 接口。
+`docs/design/ov-compile-design.md` 保留了历史 Bot 直连方案。本文以现行 Business Data Platform 托管任务的接口为准；浏览器不直接调用 Runtime 或旧 Bot compile 接口。
 
 ## 3. 页面和路由
 

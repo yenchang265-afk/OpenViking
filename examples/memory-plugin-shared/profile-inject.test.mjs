@@ -46,7 +46,7 @@ test("the catalog lists the user's own skills before shared ones and drops shado
 
   assert.equal(result.block, [
     "<available-skills>",
-    "  OpenViking skills (stored in OpenViking, not local files). Before following one, read <dir>/<name>/SKILL.md with the OpenViking read tool.",
+    "  Business Data Platform skills (stored in Business Data Platform, not local files). Before following one, read <dir>/<name>/SKILL.md with the Business Data Platform read tool.",
     `  ${OWN}/`,
     "    - pr-review — My own review checklist",
     "    - release-notes — Draft release notes",
@@ -69,11 +69,11 @@ test("the catalog falls back to names, then to a one-line count, as the budget s
   assert.ok(namesOnly.skillTokens <= 150);
 
   const partial = await buildProfileBlock(fetchJSON, 2000, "", { skillCatalog: true, skillCatalogTokenBudget: 90 });
-  assert.match(partial.block, /\.\.\. \+\d+ more, search OpenViking skills to find the rest/);
+  assert.match(partial.block, /\.\.\. \+\d+ more, search Business Data Platform skills to find the rest/);
   assert.ok(partial.droppedSkill > 0 && partial.droppedSkill < skills.length);
 
   const stub = await buildProfileBlock(fetchJSON, 2000, "", { skillCatalog: true, skillCatalogTokenBudget: 40 });
-  assert.equal(stub.block, "<available-skills>12 OpenViking skills; search OpenViking skills to find them.</available-skills>");
+  assert.equal(stub.block, "<available-skills>12 Business Data Platform skills; search Business Data Platform skills to find them.</available-skills>");
   assert.equal(stub.droppedSkill, 12);
 });
 

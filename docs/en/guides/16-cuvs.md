@@ -1,6 +1,6 @@
 # NVIDIA cuVS dense search backend
 
-The `cuvs` backend keeps OpenViking's embedded record store, scalar indexes, sparse retrieval, and recovery logic, while executing dense vector search with NVIDIA cuVS. cuVS 26.06 Python wheels require Python 3.11 or newer.
+The `cuvs` backend keeps Business Data Platform's embedded record store, scalar indexes, sparse retrieval, and recovery logic, while executing dense vector search with NVIDIA cuVS. cuVS 26.06 Python wheels require Python 3.11 or newer.
 
 ## Requirements and installation
 
@@ -166,7 +166,7 @@ Cosine search L2-normalizes vectors before computing inner products. L2 scores u
 
 ## Data type and native-index behavior
 
-Enabling cuVS does not change OpenViking's default backend or rewrite the
+Enabling cuVS does not change Business Data Platform's default backend or rewrite the
 native CPU index. The normal collection metadata remains
 `VectorIndex.Quant=int8`, so native fallback searches keep the existing
 per-vector-scale int8 quantization. In parallel, the cuVS device dataset and
@@ -174,7 +174,7 @@ queries use the configured `dtype`: float32 by default, or float16 when
 explicitly selected. The host record shadow retains prepared Python
 floating-point values; only the device dataset and queries are cast to the
 configured dtype when each is created. The cuVS Python brute-force API accepts
-those two device representations rather than OpenViking's scaled int8 record
+those two device representations rather than Business Data Platform's scaled int8 record
 format.
 
 The two dense paths therefore do not have equal memory or numerical semantics:
@@ -194,7 +194,7 @@ Lower-precision GPU storage is explicit rather than an implicit cast. Setting
 brute-force or CAGRA; mixed query/index dtypes are not used. This is a storage
 cast, not per-vector quantization, and must be reported with Recall@K against
 the default float32 path. Native-compatible int8 still requires a separate
-design because OpenViking uses a per-vector scale that cuVS brute-force does
+design because Business Data Platform uses a per-vector scale that cuVS brute-force does
 not accept directly. CAGRA int8 or PQ compression must likewise be evaluated
 as approximate modes with an explicit recall/latency/memory frontier.
 
@@ -208,7 +208,7 @@ first query after an upsert or delete rebuilds synchronously; optional
 background rebuild changes dirty queries to native fallback until the new
 snapshot is ready. On each rebuild it registers the cuVS label order with the
 native engine once.
-The first use of a scalar or URI filter then reuses OpenViking's native
+The first use of a scalar or URI filter then reuses Business Data Platform's native
 scalar/path index and projects its bitmap into cuVS row order; it does not scan
 all host-side records in Python. `filter_cache_size` retains the resulting
 device bitsets and routing decisions and invalidates them on mutation. In auto
@@ -271,7 +271,7 @@ The options are validated as follows:
 - Micro-batching supports only `algorithm: "brute_force"` and requires
   `max_concurrent_gpu_searches: 1`.
 
-This OpenViking micro-batcher is disabled by default and is distinct from the
+This Business Data Platform micro-batcher is disabled by default and is distinct from the
 cuVS feature named Dynamic Batching. Its first version supports
 exact brute-force; CAGRA and multiple concurrent batch dispatches are rejected
 until separately validated. Auto mode can use the same options, but requests
@@ -279,7 +279,7 @@ routed to the native CPU path never enter the GPU batch queue. Near-tie
 neighbor ordering may differ between single-row and matrix-query calls;
 validate set overlap and scores when tuning for a workload.
 
-Sparse/hybrid queries fall back to OpenViking's native local index when
+Sparse/hybrid queries fall back to Business Data Platform's native local index when
 `fallback_to_native` is enabled. The canonical vectors remain in the local
 store and repopulate cuVS after restart.
 

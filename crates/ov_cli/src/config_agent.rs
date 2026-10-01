@@ -315,7 +315,7 @@ async fn add_ov_service(
     let name = config_name_or_generate(store, args.name, ConfigKind::OpenVikingService)?;
     let api_key = read_required_secret(
         secret_input(args.api_key_stdin, args.api_key_env.as_deref()),
-        "OpenViking Service API key",
+        "Business Data Platform Service API key",
     )?;
     validate_optional_identity(args.account.as_deref(), args.user.as_deref())?;
     validate_optional_actor_peer_id(args.actor_peer_id.as_deref())?;
@@ -423,7 +423,7 @@ async fn edit_saved_config(
 
     if old_kind == ConfigKind::OpenVikingService && args.url.is_some() {
         return Err(AgentError::bad_input(
-            "OpenViking Service configs use a fixed server URL.",
+            "Business Data Platform Service configs use a fixed server URL.",
         ));
     }
 
@@ -929,7 +929,7 @@ fn validation_error(kind: ConfigKind, error: Error) -> AgentError {
         Error::Network(message) | Error::Timeout(message) => AgentError::validation(format!(
             "{} {message}",
             match kind {
-                ConfigKind::OpenVikingService => "Could not reach OpenViking Service.",
+                ConfigKind::OpenVikingService => "Could not reach Business Data Platform Service.",
                 ConfigKind::Custom => "Could not reach the custom server.",
             }
         )),
@@ -1091,7 +1091,7 @@ mod tests {
             false,
         );
 
-        assert_eq!(result.kind, "OpenViking Service");
+        assert_eq!(result.kind, "Business Data Platform Service");
     }
 
     #[test]

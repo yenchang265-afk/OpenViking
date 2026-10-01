@@ -13,8 +13,8 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
   pi.registerTool({
     name: "viking_search",
     label: "Viking Search",
-    description: "Semantic search over the OpenViking knowledge base. Returns ranked results with viking:// URIs and abstracts. Use to recall past decisions, user preferences, or project-specific knowledge not in current context.",
-    promptSnippet: "Search OpenViking for past decisions, preferences, and project knowledge",
+    description: "Semantic search over the Business Data Platform knowledge base. Returns ranked results with viking:// URIs and abstracts. Use to recall past decisions, user preferences, or project-specific knowledge not in current context.",
+    promptSnippet: "Search Business Data Platform for past decisions, preferences, and project knowledge",
     promptGuidelines: [
       "Use viking_search when you need information from previous sessions not in MEMORY.md.",
       "Use viking_search before making decisions that might conflict with past decisions.",
@@ -35,7 +35,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
       _onUpdate: any, _ctx: any,
     ) {
       if (!client.connected) {
-        return { content: [{ type: "text", text: "OpenViking server is not reachable." }] };
+        return { content: [{ type: "text", text: "Business Data Platform server is not reachable." }] };
       }
       const results = await client.find(params.query, {
         targetUri: params.scope,
@@ -63,7 +63,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
     name: "viking_read",
     label: "Viking Read",
     description: "Read content at a viking:// URI. Three detail levels: 'abstract' (~100 tokens), 'overview' (~2k tokens), 'full' (complete). Start with abstract, escalate when needed.",
-    promptSnippet: "Read OpenViking content at a viking:// URI with tiered detail levels",
+    promptSnippet: "Read Business Data Platform content at a viking:// URI with tiered detail levels",
     parameters: Type.Object({
       uri: Type.String({ description: "viking:// URI to read" }),
       level: StringEnum(["abstract", "overview", "full"] as const),
@@ -73,7 +73,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
       _onUpdate: any, _ctx: any,
     ) {
       if (!client.connected) {
-        return { content: [{ type: "text", text: "OpenViking server is not reachable." }] };
+        return { content: [{ type: "text", text: "Business Data Platform server is not reachable." }] };
       }
       let content: string | null = null;
       switch (params.level) {
@@ -92,8 +92,8 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
   pi.registerTool({
     name: "viking_browse",
     label: "Viking Browse",
-    description: "Browse the OpenViking knowledge store like a filesystem. List directory contents or get metadata.",
-    promptSnippet: "Browse the viking:// directory tree in OpenViking",
+    description: "Browse the Business Data Platform knowledge store like a filesystem. List directory contents or get metadata.",
+    promptSnippet: "Browse the viking:// directory tree in Business Data Platform",
     parameters: Type.Object({
       action: StringEnum(["list", "stat"] as const),
       uri: Type.Optional(Type.String({ description: "viking:// URI (default: 'viking://')" })),
@@ -103,7 +103,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
       _onUpdate: any, _ctx: any,
     ) {
       if (!client.connected) {
-        return { content: [{ type: "text", text: "OpenViking server is not reachable." }] };
+        return { content: [{ type: "text", text: "Business Data Platform server is not reachable." }] };
       }
       const uri = params.uri ?? "viking://";
       if (params.action === "stat") {
@@ -125,8 +125,8 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
   pi.registerTool({
     name: "viking_remember",
     label: "Viking Remember",
-    description: "Store a fact or memory in OpenViking. Stored as a session message and extracted into long-term memory on commit. Use for important information the agent should remember: preferences, decisions, gotchas, lessons learned.",
-    promptSnippet: "Store a fact in OpenViking for cross-session persistence",
+    description: "Store a fact or memory in Business Data Platform. Stored as a session message and extracted into long-term memory on commit. Use for important information the agent should remember: preferences, decisions, gotchas, lessons learned.",
+    promptSnippet: "Store a fact in Business Data Platform for cross-session persistence",
     promptGuidelines: [
       "Use viking_remember for facts that should survive across sessions but don't belong in MEMORY.md.",
       "Good for: user preferences, architectural decisions, gotchas, environment details.",
@@ -140,7 +140,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
       _onUpdate: any, _ctx: any,
     ) {
       if (!client.connected) {
-        return { content: [{ type: "text", text: "OpenViking server is not reachable." }] };
+        return { content: [{ type: "text", text: "Business Data Platform server is not reachable." }] };
       }
       // Store as a tagged message directly in OV — the extractor picks up [Remember — ...] prefix
       const category = params.category ?? "general";
@@ -156,8 +156,8 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
         content: [{
           type: "text",
           text: stored
-            ? `Remembered in OpenViking: "${params.content}" (${category})`
-            : `Not stored: OpenViking did not accept the message and nothing was queued. ` +
+            ? `Remembered in Business Data Platform: "${params.content}" (${category})`
+            : `Not stored: Business Data Platform did not accept the message and nothing was queued. ` +
               `Repeat "${params.content}" in your next handoff notes if it matters.`,
         }],
         details: { stored, category, tagged },
@@ -170,7 +170,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
     name: "viking_forget",
     label: "Viking Forget",
     description: "Delete a memory by URI, or search for a specific memory and remove it. Use to correct outdated or wrong information.",
-    promptSnippet: "Delete a memory from OpenViking by URI or query",
+    promptSnippet: "Delete a memory from Business Data Platform by URI or query",
     parameters: Type.Object({
       uri: Type.Optional(Type.String({ description: "Exact viking:// URI to delete" })),
       query: Type.Optional(Type.String({ description: "Search query — deletes the strongest match if score > 0.8" })),
@@ -180,7 +180,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
       _onUpdate: any, _ctx: any,
     ) {
       if (!client.connected) {
-        return { content: [{ type: "text", text: "OpenViking server is not reachable." }] };
+        return { content: [{ type: "text", text: "Business Data Platform server is not reachable." }] };
       }
       if (params.uri) {
         const ok = await client.delete(params.uri);
@@ -206,8 +206,8 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
   pi.registerTool({
     name: "viking_add_resource",
     label: "Viking Add Resource",
-    description: "Ingest a URL into OpenViking. The page is auto-processed into L0/L1/L2 tiers and indexed for semantic search. HTTP only — local file paths are not supported by the OV server.",
-    promptSnippet: "Ingest a URL into OpenViking for indexed retrieval",
+    description: "Ingest a URL into Business Data Platform. The page is auto-processed into L0/L1/L2 tiers and indexed for semantic search. HTTP only — local file paths are not supported by the OV server.",
+    promptSnippet: "Ingest a URL into Business Data Platform for indexed retrieval",
     parameters: Type.Object({
       url: Type.String({ description: "URL to ingest (HTTP only, no file paths)" }),
     }),
@@ -216,7 +216,7 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
       _onUpdate: any, _ctx: any,
     ) {
       if (!client.connected) {
-        return { content: [{ type: "text", text: "OpenViking server is not reachable." }] };
+        return { content: [{ type: "text", text: "Business Data Platform server is not reachable." }] };
       }
       const result = await client.addResource(params.url);
       if (!result) {
@@ -235,8 +235,8 @@ export function registerTools(pi: any, client: OVClient, sync?: SyncManager): vo
 // get_context_remaining — plan §4)
 // ================================================================
 
-const NOT_REACHABLE = "OpenViking server is not reachable.";
-const NO_SESSION = "No OpenViking session is attached to this pi session yet.";
+const NOT_REACHABLE = "Business Data Platform server is not reachable.";
+const NO_SESSION = "No Business Data Platform session is attached to this pi session yet.";
 
 /** Options the extension passes through so the tools stay free of pi state. */
 export interface ContextWindowToolOptions {
@@ -372,7 +372,7 @@ function renderStatusReport(snap: any): string {
   );
   if (Number(snap.undeliveredCount) > 0) {
     lines.push(
-      `missing from the archives: ${snap.undeliveredCount} message(s) OpenViking rejected; history cannot show them`,
+      `missing from the archives: ${snap.undeliveredCount} message(s) Business Data Platform rejected; history cannot show them`,
     );
   }
   lines.push(`accuracy: ${snap.estimated ? "estimated" : "exact"}`);
@@ -397,13 +397,13 @@ export function registerContextWindowTools(
     label: "New Context Window",
     description:
       "Start a new context window. Does not clear, reset, or otherwise affect environment state. " +
-      "The conversation so far is archived to OpenViking (which generates a Working Memory of it) and " +
+      "The conversation so far is archived to Business Data Platform (which generates a Working Memory of it) and " +
       "your next window starts with that Working Memory, your handoff notes and the user's last request. " +
       "Call it alone — tool results from the same batch are discarded with the old window — and read the " +
       '<openviking-context source="context-window"> block that follows. If instead this result says ' +
       '"Context window NOT reset", nothing was archived and nothing was removed from your context: read ' +
       "the reason, keep working in the current window, and do not call new_context again until that reason is gone.",
-    promptSnippet: "Archive this context window to OpenViking and continue in a fresh one",
+    promptSnippet: "Archive this context window to Business Data Platform and continue in a fresh one",
     promptGuidelines: [
       "Call new_context when a phase of the work is finished and its details are no longer needed, when the user switches to an unrelated topic or code area, when they come back after a long idle gap with something new, or when the context status line or a [context-reminder] says the window is filling up.",
       'A result starting with "Context window NOT reset" means nothing changed: no archive was written and your context is intact. Keep working; do not retry the call until the stated cause is gone.',
@@ -455,7 +455,7 @@ export function registerContextWindowTools(
     name: "history",
     label: "Context History",
     description:
-      "Read the context windows of this session that were already archived to OpenViking. " +
+      "Read the context windows of this session that were already archived to Business Data Platform. " +
       "list_windows lists them, list_items lists the messages of one window, read_item reads one message " +
       "in full, and search_contents greps every archive. Window ids are the ones in the window header, " +
       "oldest first; the numbering can have gaps, because a window that ended without being archived is " +
@@ -484,7 +484,7 @@ export function registerContextWindowTools(
       const archives = await client.listSessionArchives(sid);
       if (archives === null) {
         return text(
-          "OpenViking did not answer the archive listing, so the archived windows are unreadable right now. " +
+          "Business Data Platform did not answer the archive listing, so the archived windows are unreadable right now. " +
             "This is not the same as an empty history — do not conclude that nothing was archived, and do not " +
             "ask the user to repeat what an archived window holds. Try again later or work from the window header.",
           { error: "listing-failed" },
@@ -534,7 +534,7 @@ export function registerContextWindowTools(
           const items = await client.readArchiveMessages(target.entry.uri);
           if (!items) {
             return text(
-              `${target.windowId} (${target.entry.archiveId}): its messages could not be read from OpenViking right now ` +
+              `${target.windowId} (${target.entry.archiveId}): its messages could not be read from Business Data Platform right now ` +
                 `(the archive itself is readable as soon as it is committed, so this is a transport, permission or ` +
                 `routing failure rather than a wait). Try {"action":"search_contents"} instead, or continue from the ` +
                 `window header; do not repeat this call more than once.`,
@@ -576,7 +576,7 @@ export function registerContextWindowTools(
           const items = await client.readArchiveMessages(target.entry.uri);
           if (!items) {
             return text(
-              `${target.windowId} (${target.entry.archiveId}): its messages could not be read from OpenViking right now ` +
+              `${target.windowId} (${target.entry.archiveId}): its messages could not be read from Business Data Platform right now ` +
                 `(the archive itself is readable as soon as it is committed, so this is a transport, permission or ` +
                 `routing failure rather than a wait). Try {"action":"search_contents"} instead, or continue from the ` +
                 `window header; do not repeat this call more than once.`,

@@ -12,7 +12,7 @@
 | 特定环境变量在不同 harness 下的生效情况 | [§3.1.4](#_3-1-4-配置体系分层) 配置体系分层 + 各档案卡"配置" |
 | 服务端是否具备自动 commit 兜底机制 | [§2.3](#_2-3-服务端会话与-commit-语义) |
 | ov CLI 命令全集 | [§5](#_5-ov-cli-命令参考) |
-| 自定义 agent 如何接入 OpenViking | [§6](#_6-自定义-agent-接入指南) |
+| 自定义 agent 如何接入 Business Data Platform | [§6](#_6-自定义-agent-接入指南) |
 | 某个集成怎么安装、怎么配、怎么排障 | 该集成的单独页面（[§4](#_4-harness-档案卡) 各档案卡首行给出链接） |
 
 ---
@@ -42,7 +42,7 @@
 
 ¹ MCP `write` 拒绝写用户自己的 `skills/` 子树；写 `viking://agent/skills` 时会生成一个绕过 skill 安装流程的普通文件（没有 frontmatter abstract，也不做 privacy 抽取），所以共享 skill 同样要走 `add_skill`。skill 的新建、安装和替换走 MCP `add_skill` 工具（内联 SKILL.md 文本、Git URL，或本地目录/zip 的签名上传），它和 REST `POST /api/v1/skills` 共用同一套安装实现。
 ² MCP `forget` 不区分 memory/resource/skill 类型；存储层保留了命名空间根保护机制（裸 `viking://`、`viking://user`、`viking://agent` 根拒删），详见 [§3.5](#_3-5-写入与删除的类型边界)。
-³ pi 工具注册前置：需未命中 `bypassSessionPatterns`、`client.health()` 通过、`ensureSession` 成功，且 `/mcp` 握手取回工具清单（`index.ts:150-205`）；共享键 `mcpEnabled: false` 则整个桥接都不发起，不算失败。握手失败只让本次会话没有 OpenViking 工具，召回、会话同步与 takeover 照常，`before_agent_start` 会在后续轮次重试（`index.ts:252-255`），因此 pi 启动之后才拉起的 server 不必重启 pi 就能接上。详见 [§3.6](#_3-6-降级与容错)。
+³ pi 工具注册前置：需未命中 `bypassSessionPatterns`、`client.health()` 通过、`ensureSession` 成功，且 `/mcp` 握手取回工具清单（`index.ts:150-205`）；共享键 `mcpEnabled: false` 则整个桥接都不发起，不算失败。握手失败只让本次会话没有 Business Data Platform 工具，召回、会话同步与 takeover 照常，`before_agent_start` 会在后续轮次重试（`index.ts:252-255`），因此 pi 启动之后才拉起的 server 不必重启 pi 就能接上。详见 [§3.6](#_3-6-降级与容错)。
 ⁴ openclaw 的 `add_resource` 需经过双重 opt-in 后方可开启。
 
 **skill 的增删边界**：新增入口包含 MCP `add_skill`、openclaw `add_skill`（默认开）、`ov add-skill` 与 REST；删除边界分四档，详见 [§3.5](#_3-5-写入与删除的类型边界)。
@@ -127,7 +127,7 @@ per-harness 章节（档案卡）只写差异；所有共享事实均在本章�
 | `recall-core.mjs` | 召回请求构造 + 三级降级 + 本地兜底排序注入 | 全部 JS 系 harness |
 | `agent-hook-runtime.mjs` | "瘦 hook"一体化运行时（配置经共享 schema 解析、session id 派生、跨进程锁、fetch、commit） | cc / codex / cursor / trae / trae-cn / zcode |
 | `mcp-proxy-core.mjs` | stdio↔streamable-HTTP MCP 代理内核 | 使用子进程通信的 MCP 集成与 agent-plugins；pi 直接使用官方客户端 |
-| `ov-http.mjs` | hook 到 OpenViking 服务端的唯一出网路径：请求头、AbortController、信封解析 | 全部 JS 系 + agent-plugins |
+| `ov-http.mjs` | hook 到 Business Data Platform 服务端的唯一出网路径：请求头、AbortController、信封解析 | 全部 JS 系 + agent-plugins |
 | `pending-queue.mjs` | 磁盘离线队列 + 会话启动重放 | cc / codex / cursor / trae×2 / zcode / opencode / dsh / pi |
 | `batch-send.mjs` | 100 条/批写入 + 404/405 逐条降级 + 连续前缀入队 | cc / codex / opencode + agent-hook 系 |
 | `profile-inject.mjs` | session-start 的 profile + 可用记忆清单 + `<available-skills>` skill 清单注入 | 9 个 harness（openclaw / hermes 除外） |
@@ -299,7 +299,7 @@ JS 系 harness 的召回逻辑均由 `recall-core.mjs` 中的三级降级链处�
 - **谁注入、何时、预算**：claude-code（SessionStart 全部 source，10000）；codex（SessionStart startup/clear/resume，10000）；cursor/trae×2/zcode（SessionStart，10000，2s 去抖）；opencode（每会话首条 chat.message 一次，10000，进程内 Set 去重，subagent 会话跳过；注意开场注入每会话只尝试一次，失败后本进程内不重试）；dsh（每 session 投一次 `profileDelivered`，10000；compaction 之后不重投）；pi（进 systemPrompt，每个 prompt 重拼，10000 常驻）。openclaw、hermes 无 profile 注入。
 - **skill 清单**（`<available-skills>`）：由 `buildProfileBlock()` 追加在同一个 `<openviking-context>` 信封里，排在 `<user-profile>` 和 `<available-memories>` 之后，所以上面每个 harness 都会随 profile 一起注入它（codex 覆盖 trae-cli）。数据来自一次 `GET /api/v1/skills?node_limit=200`，包含用户自己的 skill 和账户共享的 `viking://agent/skills`：自己的排在前面，和自己某个 skill 同名的共享 skill 不再列出。每条描述按同一套 CJK 感知估算截到约 40 token，描述里出现的信封标签会被转义。
   - **预算与开关**：`skillCatalogTokenBudget`（默认 1200 token，取值 0-20000，env `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`）是这一块自己的预算，不占 `profileTokenBudget`。`skillCatalog`（默认 true，env `OPENVIKING_SKILL_CATALOG`）控制开关，预算设为 0 同样关闭。两者都在 `config-schema.mjs` 中声明，因此和其他旋钮一样，也能在 ovcli.conf 的 `plugin` / `plugin.<harness>` 段里设置。
-  - **降级**：放得下时每条都带描述；放不下就只列名称，名称也列不全时以 `... +N more, search OpenViking skills to find the rest` 收尾；连一个名称都放不下时，只剩一行 `<available-skills>N OpenViking skills; search OpenViking skills to find them.</available-skills>`。没有任何 skill，或服务端没有 `GET /api/v1/skills` 时，整块省略。
+  - **降级**：放得下时每条都带描述；放不下就只列名称，名称也列不全时以 `... +N more, search Business Data Platform skills to find the rest` 收尾；连一个名称都放不下时，只剩一行 `<available-skills>N Business Data Platform skills; search Business Data Platform skills to find them.</available-skills>`。没有任何 skill，或服务端没有 `GET /api/v1/skills` 时，整块省略。
   - **总量上限**：`sessionStartMaxBytes`（env `OPENVIKING_SESSION_START_MAX_BYTES`）按 UTF-8 字节限制整个会话开场注入：claude-code 和 codex 为 9500，因为这两个宿主会把超过约 10,000 字符或字节的 hook 上下文存成文件、只给模型看预览；zcode 为 20000，因为它会丢弃超过 32 KB 的 stdout；其余不设上限。在上限内各项预算相应收缩，仍放不下时先去掉记忆索引，再去掉 skill 清单。resume/compact 时会话归档最多占一半，截断处附 `viking://~/sessions/<id>/history/` 指针；resume 时 claude-code 和 codex 若 profile 块与本会话上次注入的相同就不再重复注入。
   - **示例**（claude-code，`source="startup"`）：
     ```text
@@ -307,7 +307,7 @@ JS 系 harness 的召回逻辑均由 `recall-core.mjs` 中的三级降级链处�
     <user-profile uri="viking://user/default/memories/profile.md">...</user-profile>
     <available-memories>...</available-memories>
     <available-skills>
-      OpenViking skills (stored in OpenViking, not local files). Before following one, read <dir>/<name>/SKILL.md with the OpenViking read tool.
+      Business Data Platform skills (stored in Business Data Platform, not local files). Before following one, read <dir>/<name>/SKILL.md with the Business Data Platform read tool.
       viking://user/default/skills/
         - pr-review — Review a pull request against the team checklist.
       viking://agent/skills/
@@ -326,7 +326,7 @@ JS 系 harness 的召回逻辑均由 `recall-core.mjs` 中的三级降级链处�
 
 ### 3.2.5 召回再摘要
 
-**服务端实现（对所有调用方可用）**：context 检索面（涵盖 REST 的 `mode="context"` 与 legacy 的 `/recall`）支持传入 `rewrite` 参数——可选值为 `false | true | "auto"`，默认为 `false`；并配套提供 `rewrite_max_bullets`（默认 6，1-20）。开启后，服务端会用 `query_planner` 模型（`rewrite=true` 时未配置则回落主 `vlm`；`"auto"` 仅在显式配置了 `query_planner` 时生效）把召回结果改写成带引用的 digest：`OpenViking memory digest:` 头 + `- ` bullets，每条 ≤500 字符且必须引用一条本次命中的 `viking://` URI（无引用或引用越界的 bullet 被丢弃）；判定无相关记忆时输出哨兵并清空注入块（该轮不记入去重台账）。模型调用受 `retrieval.recall_rewrite_timeout_s=30s` 熔断，超时回落未改写的 rendered 块（`rewrite.py:78-141`、`pipeline.py:122-130`、`search.py:195-196`）。
+**服务端实现（对所有调用方可用）**：context 检索面（涵盖 REST 的 `mode="context"` 与 legacy 的 `/recall`）支持传入 `rewrite` 参数——可选值为 `false | true | "auto"`，默认为 `false`；并配套提供 `rewrite_max_bullets`（默认 6，1-20）。开启后，服务端会用 `query_planner` 模型（`rewrite=true` 时未配置则回落主 `vlm`；`"auto"` 仅在显式配置了 `query_planner` 时生效）把召回结果改写成带引用的 digest：`Business Data Platform memory digest:` 头 + `- ` bullets，每条 ≤500 字符且必须引用一条本次命中的 `viking://` URI（无引用或引用越界的 bullet 被丢弃）；判定无相关记忆时输出哨兵并清空注入块（该轮不记入去重台账）。模型调用受 `retrieval.recall_rewrite_timeout_s=30s` 熔断，超时回落未改写的 rendered 块（`rewrite.py:78-141`、`pipeline.py:122-130`、`search.py:195-196`）。
 
 **客户端侧现状**：
 
@@ -434,7 +434,7 @@ JS 系 harness 的召回逻辑均由 `recall-core.mjs` 中的三级降级链处�
 ### 3.4.2 pi takeover
 
 - 接管面是 `context` 事件的 messages 改写，不接管 pi 的历史存储。触发是 token 压力（30000 + 保留 3 轮），而非 pi 的压缩事件。
-- 替换动作：先定位边界，再把边界前的全部消息替换成一条合成 user 消息 `[OpenViking Session Context]`。其中 overview 按 3000 token 截断；timestamp 取保留首条 -1，以稳定 provider payload 吃 prompt cache。
+- 替换动作：先定位边界，再把边界前的全部消息替换成一条合成 user 消息 `[Business Data Platform Session Context]`。其中 overview 按 3000 token 截断；timestamp 取保留首条 -1，以稳定 provider payload 吃 prompt cache。
 - 数据源是 `GET /sessions/{id}/context` 的 `latest_archive_overview`（轮询 15×2s）；状态持久化在 pi 自己的 branch custom entry `ov-takeover`。
 - 失败姿态 = fail-open 回完整历史（指纹不匹配 / 历史短于边界 / overview 拿不到三重回退）。
 - 与 pi 原生压缩的关系：`session_before_compact` 成功时返回 `{compaction:{summary, firstKeptEntryId, …, details:{source:"openviking"}}}` 覆盖 pi 摘要；缺 `firstKeptEntryId` 时走 pi 默认压缩。
@@ -533,7 +533,7 @@ MCP `write` / REST `content/write` 的三道 guard（`content_write.py`）：可
 
 - **集成文档**：[Codex 记忆插件](./04-codex.md)
 - **形态**：Codex 插件（marketplace），6 hook（SessionStart 70s / UserPromptSubmit 130s / Stop 30s / SessionEnd 3s / PreCompact 60s / PreToolUse:Bash 5s）+ MCP 代理 + 与 claude-code 相同的 4 个 skill。版本 0.10.1。
-- **能力亮点**：本地召回压缩管线（`codex exec`，[§3.2.5](#_3-2-5-召回再摘要)）；SessionEnd（Codex ≥ 0.145）在正常退出时补齐 Stop 漏掉的轮次并 commit，SessionStart 的兜底扫描回收那些没触发 SessionEnd 的退出所遗留的未归档消息（[§3.3.3](#_3-3-3-关闭方式-×-harness-终局矩阵)）；PreToolUse:Bash（uri-guard）放行带 `viking://` URI 的 shell 命令，并附加提示，建议改用 OpenViking MCP 工具；Codex 通过 `apply_patch` 编辑文件，输入里没有路径参数，因此 guard 不会拒绝任何调用。
+- **能力亮点**：本地召回压缩管线（`codex exec`，[§3.2.5](#_3-2-5-召回再摘要)）；SessionEnd（Codex ≥ 0.145）在正常退出时补齐 Stop 漏掉的轮次并 commit，SessionStart 的兜底扫描回收那些没触发 SessionEnd 的退出所遗留的未归档消息（[§3.3.3](#_3-3-3-关闭方式-×-harness-终局矩阵)）；PreToolUse:Bash（uri-guard）放行带 `viking://` URI 的 shell 命令，并附加提示，建议改用 Business Data Platform MCP 工具；Codex 通过 `apply_patch` 编辑文件，输入里没有路径参数，因此 guard 不会拒绝任何调用。
 - **行为要点**：session id 为 `cx-<safeId>`（确定性推导，不读 state）；SessionEnd 只在正常退出、且 Codex 0.145+ 时触发，信号、崩溃、旧版本以及 `codex app-server` 延后的场景都落到扫描路径；不使用磁盘 pending queue（离线靠游标不推进、下一轮重发补偿，[§3.3.4](#_3-3-4-pending-queue-离线补偿对照)）；idle-TTL 1800000ms、锁等待 120000ms（env 配置）；Stop 与 SessionEnd 默认 detach（`appended N turn(s)` 提示默认不展示）；单会话 mkdir 锁串行化 Stop worker、PreCompact、SessionEnd worker 与扫描。新增的 hook 在 Codex 侧没有信任记录，升级后需在 `/hooks` 中批准这次升级新增的 hook（SessionEnd、PreToolUse）。
 - **配置**：env + ovcli.conf `plugin.codex` + ov.conf `codex`；hooks 只用 `Authorization: Bearer` 认证（[§3.1.3](#_3-1-3-凭据体系)）。
 - **维度索引**：工具面 [§2.1](#_2-1-服务端-mcp-工具面) ｜召回 [§3.2](#_3-2-自动召回与注入) ｜commit [§3.3.2](#_3-3-2-常规-commit-触发条件)/[§3.3.3](#_3-3-3-关闭方式-×-harness-终局矩阵) ｜降级 [§3.6](#_3-6-降级与容错)。
@@ -541,7 +541,7 @@ MCP `write` / REST `content/write` 的三道 guard（`content_write.py`）：可
 ## trae-cli（TraeCode CLI 2.0）
 
 - **集成文档**：[TRAE 记忆集成](./13-trae.md)
-- **形态**：TraeCode CLI 2.0 是 Codex 系 CLI（binary `traecli`，用户配置 `~/.trae/traecli.toml`，TUI 支持 `/plugins` `/skills` `/mcp`）。OpenViking 经 **codex 插件别名安装**接入：`--harness trae-cli` 复用 codex 安装流程，仅安装参数（binary / home / 配置路径）指向 TraeCode CLI。
+- **形态**：TraeCode CLI 2.0 是 Codex 系 CLI（binary `traecli`，用户配置 `~/.trae/traecli.toml`，TUI 支持 `/plugins` `/skills` `/mcp`）。Business Data Platform 经 **codex 插件别名安装**接入：`--harness trae-cli` 复用 codex 安装流程，仅安装参数（binary / home / 配置路径）指向 TraeCode CLI。
 - **能力面**：与 codex 同一套插件——6 个已注册 hook + MCP 代理 + 同样的 4 个 skill、本地召回压缩、idle-TTL commit 回收、resume archive 注入等，详见 codex 档案卡。若 TraeCode CLI 所基于的 Codex 版本没有 `SessionEnd`，该 hook 会被忽略，关闭时的 commit 全部依赖 idle-TTL 扫描。
 - **版本支持**：仅支持 TraeCode CLI 2.0。1.0 与 2.0 不是同一套 CLI，2.0 才是 Codex 系、才能走 codex 插件别名安装；早期面向 1.0 的独立插件（`~/.trae/cli/hooks.json` + `[mcp_servers."openviking-memory"]` 方案）已随仓库移除；安装器仍保留 `--harness trae-cli --uninstall`，用于清掉旧安装留在磁盘上的那份。
 - **维度索引**：同 codex 卡。
@@ -577,7 +577,7 @@ MCP `write` / REST `content/write` 的三道 guard（`content_write.py`）：可
 
 - **集成文档**：[社区插件 → Kimi Code](./08-community-plugins.md)
 - **形态**：原生 managed plugin，包含 7 个 hook 和 MCP 代理。安装器在 `$KIMI_CODE_HOME/plugins/managed/openviking-memory` 下组装一份自包含副本，不向仓库提交 Kimi 的共享运行时副本。版本 0.5.0；已在 Kimi Code CLI 0.43.1 契约上验证。
-- **能力亮点**：`wire.jsonl` 作为稳定的增量回合来源；profile 在 prompt hook 上重试，直到首次成功。Stop、PreCompact 和 SessionEnd 可 detached；Interrupt 保持同步，所有 OpenViking 请求共用 2 秒总预算。
+- **能力亮点**：`wire.jsonl` 作为稳定的增量回合来源；profile 在 prompt hook 上重试，直到首次成功。Stop、PreCompact 和 SessionEnd 可 detached；Interrupt 保持同步，所有 Business Data Platform 请求共用 2 秒总预算。
 - **行为要点**：UserPromptSubmit 输出原始上下文文本，不输出 JSON 字符串。只有在发送成功或已持久化入队后才推进增量游标。安装时保留其他插件记录，不修改旧式 `config.toml` 或 `mcp.json`。
 - **配置**：env + ovcli.conf `plugin.kimicode` + workspace 文件。
 - **维度索引**：工具面 [§2.1](#_2-1-服务端-mcp-工具面) ｜召回 [§3.2](#_3-2-自动召回与注入) ｜commit [§3.3.2](#_3-3-2-常规-commit-触发条件)/[§3.3.3](#_3-3-3-关闭方式-×-harness-终局矩阵) ｜降级 [§3.6](#_3-6-降级与容错)。
@@ -736,7 +736,7 @@ MCP `write` / REST `content/write` 的三道 guard（`content_write.py`）：可
 | **C. [Agent Plugins 1.0](./15-agent-plugins.md)** | 便携包 `plugin.json` + `skills/` + `mcp.json`（stdio→HTTP 代理） | MCP 透传 16 工具；刻意无 hooks（召回靠 skill 教模型） | 仅 `remember` 建临时会话 | MCP 代理层重试（401/403 换凭据、400/404 重初始化各 1 次） | 客户端加载后工具即用 |
 | **D. [通用 MCP 直连](./06-mcp-clients.md)** | 零本地组件，直连 `/mcp` | 同 C（16 工具） | 同 C | 由客户端自定 | `/mcp` 常驻 |
 | **E. [log ingestion](./09-log-ingestion.md)** | `openviking-server ingest` CLI（跑在日志所在机器，反向导入） | 无（只写不召回） | 会话 id `{prefix}__{harness}__{sanitized native id}`；commit token 6000/idle 5s/keep 0 | 唯一有崩溃恢复：SQLite 游标库 + 单实例锁 + reconcile 判定批次落地 | 双重默认关（`ingest.enabled` + 每 harness `enabled` 都 false）；支持 claude_code/codex/hermes/opencode/openclaw/cursor 适配器 |
-| **F. [OpenViking Helper](./14-openviking-helper.md)** | 闭源桌面 App | — | — | — | 不在本文代码基线内 |
+| **F. [Business Data Platform Helper](./14-openviking-helper.md)** | 闭源桌面 App | — | — | — | 不在本文代码基线内 |
 
 ---
 

@@ -1,6 +1,6 @@
 # Data Encryption
 
-OpenViking provides transparent at-rest data encryption to ensure data security and isolation in multi-tenant environments.
+Business Data Platform provides transparent at-rest data encryption to ensure data security and isolation in multi-tenant environments.
 
 ## Overview
 
@@ -22,12 +22,12 @@ Encryption is completely transparent to users and developers:
 
 ## Three-Layer Key Architecture
 
-OpenViking uses an Envelope Encryption architecture with a three-layer key system:
+Business Data Platform uses an Envelope Encryption architecture with a three-layer key system:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 1: Root Key                                     │
-│  • Global unique per OpenViking instance               │
+│  • Global unique per Business Data Platform instance               │
 │  • Storage: KMS service / ~/.openviking/master.key    │
 │  • Purpose: Derive all account keys                    │
 └────────────────────┬────────────────────────────────────┘
@@ -59,7 +59,7 @@ OpenViking uses an Envelope Encryption architecture with a three-layer key syste
 
 ## Key Providers
 
-OpenViking supports three key providers for different deployment scenarios:
+Business Data Platform supports three key providers for different deployment scenarios:
 
 | Provider | Use Case | Root Key Storage | Features |
 |----------|----------|-----------------|----------|
@@ -188,7 +188,7 @@ Client              VikingFS             FileEncryptor         KeyManager       
 
 ### Envelope Format
 
-Encrypted files use a unified envelope format starting with the magic number `OVE1` (OpenViking Encryption v1):
+Encrypted files use a unified envelope format starting with the magic number `OVE1` (Business Data Platform Encryption v1):
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

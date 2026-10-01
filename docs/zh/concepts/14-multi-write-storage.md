@@ -1,6 +1,6 @@
 # 多写存储
 
-多写存储让 OpenViking 在一个统一的文件系统抽象下，同时使用一个主存储和多个备份存储。它适合数据高可用、跨区域副本、读加速、存储迁移等场景。
+多写存储让 Business Data Platform 在一个统一的文件系统抽象下，同时使用一个主存储和多个备份存储。它适合数据高可用、跨区域副本、读加速、存储迁移等场景。
 
 从 API 使用者视角看，`read()`、`write()`、`ls()`、`stat()` 等接口不变。多写逻辑位于 RAGFS 内部，调用方不需要关心文件最终落在哪个底层后端。
 
@@ -13,7 +13,7 @@
 | primary | `storage.agfs.backend` | 权威写入目标，也是读取兜底 |
 | backup | `storage.agfs.backups.items[]` | 接收复制写入，可选参与读取 |
 
-没有配置 `backups` 时，OpenViking 继续使用原有单后端模式。
+没有配置 `backups` 时，Business Data Platform 继续使用原有单后端模式。
 
 ## 写入路径
 
@@ -21,7 +21,7 @@
 
 ```text
 Client
-  -> OpenViking API
+  -> Business Data Platform API
   -> RAGFS MultiWrite
   -> primary
   -> backup1 / backup2 / ...
@@ -67,7 +67,7 @@ Redirect 表示“某些文件不写入 primary，而是写入指定 backup”�
 - 特定后缀文件进入专门 backend。
 - 主存储只保存常规内容，特殊文件由其他 backend 保存。
 
-Redirect 策略配置在 primary 上。命中策略后，OpenViking 会把映射记录到内部元数据中。用户执行 `ls()`、`stat()`、`read()` 时仍能看到正常的文件系统视图。
+Redirect 策略配置在 primary 上。命中策略后，Business Data Platform 会把映射记录到内部元数据中。用户执行 `ls()`、`stat()`、`read()` 时仍能看到正常的文件系统视图。
 
 ## Exclude
 
@@ -96,7 +96,7 @@ Exclude 策略配置在 backup 上，只影响该 backup 是否接收写入。
 
 ## 加密关系
 
-多写不会改变 OpenViking 的透明加密模型。
+多写不会改变 Business Data Platform 的透明加密模型。
 
 规则如下：
 

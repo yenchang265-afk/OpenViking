@@ -1,6 +1,6 @@
 # Multi-Write Storage Guide
 
-This guide explains how to configure multi-write storage in OpenViking. Multi-write storage lets one primary backend replicate writes to multiple backup backends for high availability, cross-region replicas, read acceleration, and storage migration.
+This guide explains how to configure multi-write storage in Business Data Platform. Multi-write storage lets one primary backend replicate writes to multiple backup backends for high availability, cross-region replicas, read acceleration, and storage migration.
 
 Multi-write lives inside RAGFS. The Python SDK, HTTP API, and CLI usage remain unchanged.
 
@@ -127,7 +127,7 @@ When using S3-compatible services (MinIO, RustFS, Ceph, etc.), the `s3` section 
 
 ### Docker Networking for S3 Backup
 
-When running OpenViking in Docker with an S3 backup on the same host:
+When running Business Data Platform in Docker with an S3 backup on the same host:
 
 - **Linux Docker**: Use `--network host` or the host's LAN IP. Docker bridge network can reach the host's LAN via gateway IP (e.g. `172.17.0.1:9000`).
 - **macOS/Windows Docker Desktop**: `--network host` is **not supported** on Docker Desktop. Use `host.docker.internal` as the S3 endpoint (maps to the host's localhost). Alternatively, use the host's LAN IP.
@@ -305,7 +305,7 @@ If the target backup of a redirect also excludes the same file, the configuratio
 
 ## Encryption Configuration
 
-Multi-write storage reuses OpenViking's transparent at-rest encryption.
+Multi-write storage reuses Business Data Platform's transparent at-rest encryption.
 
 Example with global encryption enabled:
 

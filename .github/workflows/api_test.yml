@@ -184,7 +184,7 @@ jobs:
           cd tests/api_test
           uv pip install -r requirements.txt
 
-      - name: Create OpenViking config file (Unix)
+      - name: Create Business Data Platform config file (Unix)
         if: runner.os != 'Windows'
         id: create-config-unix
         env:
@@ -259,7 +259,7 @@ jobs:
           
           echo "Config file created at $HOME/.openviking/ov.conf"
 
-      - name: Create OpenViking config file (Windows)
+      - name: Create Business Data Platform config file (Windows)
         if: runner.os == 'Windows'
         id: create-config-windows
         env:
@@ -337,7 +337,7 @@ jobs:
           $config | Out-File -FilePath "$configDir\ov.conf" -Encoding utf8
           Write-Host "Config file created at $configDir\ov.conf"
 
-      - name: Find available port and start OpenViking Server (Unix)
+      - name: Find available port and start Business Data Platform Server (Unix)
         if: runner.os != 'Windows'
         id: start-server-unix
         run: |
@@ -356,7 +356,7 @@ jobs:
           echo "Using port: $SERVER_PORT"
           echo "SERVER_PORT=$SERVER_PORT" >> $GITHUB_ENV
           
-          echo "Starting OpenViking Server on port $SERVER_PORT..."
+          echo "Starting Business Data Platform Server on port $SERVER_PORT..."
           export ROOT_API_KEY=test-root-api-key
           export SERVER_PORT=$SERVER_PORT
           nohup uv run python -m openviking.server.bootstrap > openviking-server.log 2>&1 &
@@ -380,7 +380,7 @@ jobs:
             exit 1
           fi
 
-      - name: Find available port and start OpenViking Server (Windows)
+      - name: Find available port and start Business Data Platform Server (Windows)
         if: runner.os == 'Windows'
         id: start-server-windows
         shell: pwsh
@@ -389,7 +389,7 @@ jobs:
           Write-Host "Using port: $port"
           echo "SERVER_PORT=$port" >> $env:GITHUB_ENV
           
-          Write-Host "Starting OpenViking Server on port $port..."
+          Write-Host "Starting Business Data Platform Server on port $port..."
           
           $logFile = Join-Path $PWD "openviking-server.log"
           $errFile = Join-Path $PWD "openviking-server-error.log"
@@ -489,10 +489,10 @@ jobs:
             Write-Host "Running basic tests only (no VLM/Embedding, Windows: skipping filesystem and slow tests)"
             uv run python -m pytest . -v -n 4 --html=api-test-report.html --self-contained-html --ignore=retrieval/ --ignore=resources/test_add_resource.py --ignore=resources/test_pack.py --ignore=resources/test_wait_processed.py --ignore=admin/ --ignore=skills/ --ignore=system/test_system_status.py --ignore=system/test_is_healthy.py --ignore=system/test_system_wait.py --ignore=filesystem/ --ignore=scenarios/ --ignore=common/slow/ --ignore=content/slow/ --ignore=resources/slow/ --ignore=sessions/slow/ --ignore=tasks/slow/ --ignore=skills/slow/ -k "not test_observer"
           }
-      - name: Install released OpenViking CLI for compatibility tests (Unix)
+      - name: Install released Business Data Platform CLI for compatibility tests (Unix)
         if: runner.os != 'Windows'
         run: |
-          echo "Installing OpenViking CLI..."
+          echo "Installing Business Data Platform CLI..."
           curl -fsSL http://openviking.tos-cn-beijing.volces.com/cli/install.sh | bash
 
           echo "Verifying CLI installation..."
@@ -523,7 +523,7 @@ jobs:
           echo "Running CLI compatibility tests (serial)..."
           uv run python -m pytest test_cli_compatibility.py -v --tb=short -m cli_remote
 
-      - name: Build OpenViking CLI from current source (Unix)
+      - name: Build Business Data Platform CLI from current source (Unix)
         if: runner.os != 'Windows'
         shell: bash
         run: |
@@ -568,7 +568,7 @@ jobs:
             tests/cli/cli-test-report.html
             openviking-server.log
 
-      - name: Stop OpenViking Server (Unix)
+      - name: Stop Business Data Platform Server (Unix)
         if: runner.os != 'Windows' && always()
         run: |
           if [ -f openviking-server.pid ]; then
@@ -576,7 +576,7 @@ jobs:
             pkill -f "openviking.server.bootstrap" 2>/dev/null || true
           fi
 
-      - name: Stop OpenViking Server (Windows)
+      - name: Stop Business Data Platform Server (Windows)
         if: runner.os == 'Windows' && always()
         shell: pwsh
         run: |

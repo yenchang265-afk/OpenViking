@@ -1,13 +1,13 @@
 # VikingDB Content Backfill
 
-This maintenance script backfills empty `content` fields in historical OpenViking
+This maintenance script backfills empty `content` fields in historical Business Data Platform
 VikingDB records. It is intended for one-off operational use after the target
 VikingDB collection already has the `content` text field and FullText configured.
 
 ## What It Does
 
 - Enumerates source data from each account root in Local AGFS.
-- Computes the deterministic OpenViking vector record ID for each expected
+- Computes the deterministic Business Data Platform vector record ID for each expected
   L0/L1/L2 record.
 - Fetches existing VikingDB records by ID.
 - Updates only empty or missing `content` fields with `update_data`.
@@ -31,7 +31,7 @@ Run from the repository root with the project virtual environment:
 ./venv/bin/python scripts/maintenance/vikingdb_content_backfill/backfill_vikingdb_content.py
 ```
 
-The script depends on the current OpenViking codebase and configuration:
+The script depends on the current Business Data Platform codebase and configuration:
 
 - `ov.conf` must point to the target environment.
 - `storage.vectordb.backend` must be `volcengine` or `vikingdb`.
@@ -43,9 +43,9 @@ The script depends on the current OpenViking codebase and configuration:
 - If encryption is enabled, the same encryption configuration and root key must
   be available so Local AGFS reads return plaintext.
 
-## OpenViking Code Assumptions
+## Business Data Platform Code Assumptions
 
-The script is designed for OpenViking versions that use the current
+The script is designed for Business Data Platform versions that use the current
 deterministic vector ID rule:
 
 ```text

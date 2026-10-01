@@ -1,6 +1,6 @@
 # Hook + MCP Agent Plugin Development and Maintenance Standard
 
-This guide defines how to add and maintain OpenViking agent plugins that automatically read and write memory through lifecycle hooks and expose tools through MCP. It covers module responsibilities, protocols, state handling, installation, testing, and releases. A host is the client or runtime that runs the agent; the code also calls it a harness.
+This guide defines how to add and maintain Business Data Platform agent plugins that automatically read and write memory through lifecycle hooks and expose tools through MCP. It covers module responsibilities, protocols, state handling, installation, testing, and releases. A host is the client or runtime that runs the agent; the code also calls it a harness.
 
 A new host should primarily add its event, message-format, context-injection, and installation differences. Reuse shared implementations for configuration resolution, authentication, recall, capture filtering, HTTP requests, and offline retries. Claude Code, Codex, and other plugins are useful references, but verify the target host's actual contract. MCP-only and native-tool integrations can adopt relevant rules without adding hooks that do not apply.
 
@@ -13,7 +13,7 @@ Start with the [Claude Code](./02-claude-code.md) and [Codex](./04-codex.md) plu
 Copy the following prompt into your coding agent and replace the final line with the specific task:
 
 ```text
-Before changing any OpenViking agent plugin, read and follow
+Before changing any Business Data Platform agent plugin, read and follow
 docs/en/agent-integrations/18-plugin-development.md
 (Chinese: docs/zh/agent-integrations/18-plugin-development.md).
 
@@ -92,7 +92,7 @@ Shared recall / capture / session                 ↓
           ↓ createOvHttp                    Shared MCP transport
           └────────── buildOvHeaders ─────────────┘
                                ↓
-                         OpenViking Server
+                         Business Data Platform Server
 
 buildPluginConfig / credentials configure both paths and their identity
 sync / install / pack deliver the complete dependency graph
@@ -283,7 +283,7 @@ Use direct remote MCP connections only when the host has suitable credential and
 
 Shared skill sources live in [`examples/skills/`](https://github.com/volcengine/OpenViking/tree/main/examples/skills/) and are shipped through `SKILL_TARGETS`. Do not edit the same guidance separately in several plugin copies. Skills must describe tools that can actually be called and capabilities that exist. Do not instruct the model to repeat capture or commits each turn when hooks already own them. Distinct tool surfaces may need distinct skills; explain why. Generated skill files must not receive a banner before their YAML frontmatter.
 
-Skills stored in OpenViking are created, installed, shared, and replaced through the server's `add_skill` MCP tool, which shares its install code with REST `POST /api/v1/skills`. Do not reimplement installation in a host: no adapter code that writes `SKILL.md` into the skills subtree, unpacks archives, or uploads skill directories on its own. The server's `write` and `edit` refuse the skills subtree under the user root, and the URI guard (`isSkillUri()`) points a denied local write or edit on a skill URI to `add_skill`. The `openviking-skills` skill teaches the model this flow, so `SKILL_TARGETS` ships it only to MCP hosts that bundle skills, where `add_skill` is a real tool.
+Skills stored in Business Data Platform are created, installed, shared, and replaced through the server's `add_skill` MCP tool, which shares its install code with REST `POST /api/v1/skills`. Do not reimplement installation in a host: no adapter code that writes `SKILL.md` into the skills subtree, unpacks archives, or uploads skill directories on its own. The server's `write` and `edit` refuse the skills subtree under the user root, and the URI guard (`isSkillUri()`) points a denied local write or edit on a skill URI to `add_skill`. The `openviking-skills` skill teaches the model this flow, so `SKILL_TARGETS` ships it only to MCP hosts that bundle skills, where `add_skill` is a real tool.
 
 Use `runDoctor(hostSpec)` for diagnostics. Hosts supply installation paths, manifests, hook registrations, and state checks; `doctor-core.mjs` owns common configuration, credential, network, and output handling. Diagnostics must make it possible to inspect the installed version, configuration sources and effective values, peer, MCP entrypoint, hook budgets, and pending/session state. Prefer offline and JSON modes; offline checks must not silently access the network.
 

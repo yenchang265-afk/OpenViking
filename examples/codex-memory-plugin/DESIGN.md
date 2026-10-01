@@ -1,7 +1,7 @@
 # Codex memory plugin — commit decision design
 
 This document records *why* the plugin commits when it commits. The commit
-shape (which OpenViking session is sealed by which hook event) is the part
+shape (which Business Data Platform session is sealed by which hook event) is the part
 worth understanding before reading code: `SessionEnd` gives us a
 deterministic end signal for graceful exits, but it does not cover signals,
 crashes or older Codex builds, so we still reason about which observable
@@ -112,7 +112,7 @@ Short reconnects and `/resume` re-fire `SessionStart` for the same
 `resume` is a no-op for commit purposes.
 
 All `SessionStart` sources (`startup`, `clear`, and `resume`) independently
-load the shared OpenViking profile block unless
+load the shared Business Data Platform profile block unless
 `OPENVIKING_NO_AUTO_INJECT=1`. The implementation is the same
 `buildProfileBlock()` used by the other coding-agent integrations: full
 `profile.md` plus abstract-annotated URI indexes for `preferences/` and
@@ -129,7 +129,7 @@ committed the live OV session. If local state has `ovSessionId = null`
 calls `GET /api/v1/sessions/{id}/context?token_budget=...`, and injects
 `latest_archive_overview` via `hookSpecificOutput.additionalContext` when
 present. The injected block includes
-`viking://user/sessions/{id}/history/` so the model can use OpenViking MCP
+`viking://user/sessions/{id}/history/` so the model can use Business Data Platform MCP
 read/search tools for exact prior details. When both profile and archive are
 available, they are combined in one `SessionStart` response.
 
@@ -230,9 +230,9 @@ commit-on-every-turn fragmentation.
 ## Injected context boundary
 
 `UserPromptSubmit` stdin includes the user's `prompt` plus the Codex
-`session_id`. Recall derives the same OpenViking session id used by Stop
+`session_id`. Recall derives the same Business Data Platform session id used by Stop
 capture (`cx-<safe-session-id>`) directly from the Codex session id and
-calls `/api/v1/search/search` with that `session_id`, so OpenViking can
+calls `/api/v1/search/search` with that `session_id`, so Business Data Platform can
 use recent session messages and archive overview during query expansion.
 Recall does not read plugin state, so a corrupt or missing state file
 cannot crash the recall hook. Recalled memory is sent back through
@@ -243,7 +243,7 @@ wrapped in a deterministic boundary:
 
 ```text
 <openviking-context source="auto-recall" format="digest">
-OpenViking memory digest:
+Business Data Platform memory digest:
 - ...
 </openviking-context>
 ```
@@ -251,7 +251,7 @@ OpenViking memory digest:
 The compressor is still instructed not to generate XML/HTML wrappers. The
 wrapper is added by the hook after compression so capture can strip it
 mechanically. Legacy `<relevant-memory>` / `<relevant-memories>` blocks and
-unwrapped `OpenViking memory digest:` blocks are stripped as backward
+unwrapped `Business Data Platform memory digest:` blocks are stripped as backward
 compatibility fallbacks.
 
 ## Edge cases handled
@@ -418,7 +418,7 @@ for the model.
 
 Injected context is intentionally a summary, not raw history. If exact
 commands, file paths, code snippets, config values, or tool outputs matter,
-the injected `viking://` URI tells the model to use OpenViking MCP
+the injected `viking://` URI tells the model to use Business Data Platform MCP
 read/search tools.
 
 ## Recall compressor profile
@@ -503,7 +503,7 @@ Configured `off` (`OPENVIKING_RECALL_COMPRESS=0`, model `off`, or thinking
 - `auto-capture.mjs` Stop hook guards against post-compact transcript
   shrink (resets `capturedTurnCount` to 0 if `allTurns.length` < cached).
 - Capture parsing shared by Stop and PreCompact now filters obvious hook
-  noise, strips deterministic OpenViking context wrappers, and compresses
+  noise, strips deterministic Business Data Platform context wrappers, and compresses
   tool calls/results instead of dropping them or storing full blobs.
 - `auto-recall.mjs` has a whole-hook timeout (default 2 min) in addition
   to per-request timeouts.

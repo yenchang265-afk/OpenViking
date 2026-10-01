@@ -72,7 +72,7 @@ def _resolve_ov_conf_path() -> Path:
     )
 
     if _is_interactive():
-        _log_info(f"OpenViking 配置默认路径: {default_path}")
+        _log_info(f"Business Data Platform 配置默认路径: {default_path}")
         chosen = _prompt_text("直接回车使用默认，或输入新路径", default=default_path)
     else:
         chosen = default_path
@@ -103,7 +103,7 @@ def main() -> int:
             return 1
 
         _warn_deprecated_or_conflicting_fields(ov_data)
-        _log_ok("本地配置可读取；将继续连接 OpenViking 校验 API key。")
+        _log_ok("本地配置可读取；将继续连接 Business Data Platform 校验 API key。")
         return 0
     except KeyboardInterrupt:
         _log_error("用户取消。")

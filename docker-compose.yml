@@ -6,7 +6,7 @@ version: "3.8"
 #   .env example for local-only (leave unset or empty):
 #     # no .env needed — just `docker compose up -d`
 #
-#   .env example for a custom OpenViking port:
+#   .env example for a custom Business Data Platform port:
 #     OPENVIKING_SERVER_PORT=2000
 #
 #   .env example for public HTTPS:
@@ -93,7 +93,7 @@ services:
       - seaweedfs_data:/data
     networks:
       default:
-      # Also join the network of a separately run OpenViking container
+      # Also join the network of a separately run Business Data Platform container
       # (`docker run --network openviking-net ...`). It must already exist:
       #   docker network create openviking-net
       ov-app:

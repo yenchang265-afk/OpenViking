@@ -20,8 +20,8 @@ Run a fixed LoCoMo benchmark suite.
 
 Suites:
   e2e        Import through Hermes/OpenViking, then eval/judge/stats.
-  preingest  Import directly into OpenViking, then eval/judge/stats.
-  native     Import into Hermes native memory, then eval/judge/stats. No OpenViking checkpoint.
+  preingest  Import directly into Business Data Platform, then eval/judge/stats.
+  native     Import into Hermes native memory, then eval/judge/stats. No Business Data Platform checkpoint.
 
 Usage:
   ./run_full_eval.sh --suite e2e [-cp] [options]
@@ -30,7 +30,7 @@ Usage:
 
 Options:
   --suite NAME            Required: e2e, preingest, or native.
-  -cp, --checkpoint       Copy an OpenViking checkpoint after import (e2e/preingest only).
+  -cp, --checkpoint       Copy a Business Data Platform checkpoint after import (e2e/preingest only).
   --sample N              Process one LoCoMo sample index.
   --count N               Limit QA questions per sample during eval.
   --force-ingest          Re-ingest even if import_success.csv exists.
@@ -38,8 +38,8 @@ Options:
   --skip-import           Run eval/judge/stats only; assumes benchmark state is already loaded.
   --import-csv PATH       Import CSV used for stats when --skip-import is used.
   --result-dir PATH       Result directory for CSVs and logs.
-  --snapshot-root PATH    Root directory for OpenViking checkpoints when -cp is used.
-  --state-source PATH     OpenViking workspace to copy when -cp is used.
+  --snapshot-root PATH    Root directory for Business Data Platform checkpoints when -cp is used.
+  --state-source PATH     Business Data Platform workspace to copy when -cp is used.
   --run-id ID             Stable id used in result/checkpoint names.
   -h, --help              Show this help.
 
@@ -165,7 +165,7 @@ case "$SUITE" in
         SUITE_LABEL="e2e"
         EVAL_SUITE="e2e"
         IMPORT_SCRIPT="import_e2e.py"
-        BENCHMARK_TITLE="Hermes OpenViking E2E LoCoMo benchmark"
+        BENCHMARK_TITLE="Hermes Business Data Platform E2E LoCoMo benchmark"
         RUN_ID="${RUN_ID:-locomo-e2e-session-no-pe-$(date +%Y%m%d-%H%M%S)}"
         CAN_CHECKPOINT_OPENVIKING=1
         if [[ -z "$RESULT_DIR" ]]; then
@@ -180,7 +180,7 @@ case "$SUITE" in
         SUITE_LABEL="preingest"
         EVAL_SUITE="preingest"
         IMPORT_SCRIPT="import_to_ov.py"
-        BENCHMARK_TITLE="Hermes + OpenViking pre-ingest LoCoMo benchmark"
+        BENCHMARK_TITLE="Hermes + Business Data Platform pre-ingest LoCoMo benchmark"
         RUN_ID="${RUN_ID:-locomo-preingest-session-timestamps-visuals-no-pe-$(date +%Y%m%d-%H%M%S)}"
         RESULT_DIR="${RESULT_DIR:-$SCRIPT_DIR/result_preingest_${RUN_ID}}"
         CAN_CHECKPOINT_OPENVIKING=1
@@ -203,7 +203,7 @@ if [[ "$CHECKPOINT_REQUESTED" == "1" ]]; then
     if [[ "$CAN_CHECKPOINT_OPENVIKING" == "1" ]]; then
         CHECKPOINT_OPENVIKING=1
     else
-        echo "Note: -cp/--checkpoint is ignored for native suite; native has no OpenViking checkpoint." >&2
+        echo "Note: -cp/--checkpoint is ignored for native suite; native has no Business Data Platform checkpoint." >&2
     fi
 fi
 
@@ -275,7 +275,7 @@ ensure_openviking_state_source() {
     fi
 
     if [[ -z "$OPENVIKING_STATE_SOURCE" || ! -d "$OPENVIKING_STATE_SOURCE" ]]; then
-        echo "OpenViking state source does not exist: ${OPENVIKING_STATE_SOURCE:-<empty>}" >&2
+        echo "Business Data Platform state source does not exist: ${OPENVIKING_STATE_SOURCE:-<empty>}" >&2
         echo "Pass --state-source PATH or set OPENVIKING_STATE_SOURCE." >&2
         exit 1
     fi
@@ -283,14 +283,14 @@ ensure_openviking_state_source() {
 
 verify_openviking_archive_readiness() {
     if [[ "$SUITE_LABEL" != "e2e" && "$SUITE_LABEL" != "preingest" ]]; then
-        echo ">>> Step 2: SKIPPED (OpenViking archive readiness is not used for native suite)."
+        echo ">>> Step 2: SKIPPED (Business Data Platform archive readiness is not used for native suite)."
         return
     fi
 
     ensure_openviking_state_source
 
     echo ""
-    echo ">>> Step 2: Waiting for OpenViking archive readiness..."
+    echo ">>> Step 2: Waiting for Business Data Platform archive readiness..."
     OPENVIKING_STATE_SOURCE="$OPENVIKING_STATE_SOURCE" \
     LOCOMO_JSON="$LOCOMO_JSON" \
     SAMPLE="$SAMPLE" \
@@ -415,7 +415,7 @@ while True:
     )
 
     if failed_files:
-        print("OpenViking failed archive markers exist:", file=sys.stderr)
+        print("Business Data Platform failed archive markers exist:", file=sys.stderr)
         for path in failed_files[:20]:
             print(f"  {path}", file=sys.stderr)
         if len(failed_files) > 20:
@@ -452,7 +452,7 @@ while True:
 
     if time.monotonic() >= deadline:
         print(
-            "OpenViking archive readiness timed out: "
+            "Business Data Platform archive readiness timed out: "
             f"{len(missing)} expected session(s) have no .done marker.",
             file=sys.stderr,
         )
@@ -472,7 +472,7 @@ PY
 
 copy_openviking_state() {
     if [[ "$CHECKPOINT_OPENVIKING" != "1" ]]; then
-        echo ">>> Step 2: SKIPPED (OpenViking checkpoint disabled)."
+        echo ">>> Step 2: SKIPPED (Business Data Platform checkpoint disabled)."
         return
     fi
 
@@ -488,7 +488,7 @@ copy_openviking_state() {
     snapshot_abs="$("$PYTHON" -c 'import pathlib, sys; print(pathlib.Path(sys.argv[1]).expanduser().resolve())' "$SNAPSHOT_DIR")"
     case "${snapshot_abs}/" in
         "${OPENVIKING_STATE_SOURCE}/"*)
-            echo "Refusing to place checkpoint inside the OpenViking source workspace." >&2
+            echo "Refusing to place checkpoint inside the Business Data Platform source workspace." >&2
             echo "Source: $OPENVIKING_STATE_SOURCE" >&2
             echo "Destination: $snapshot_abs" >&2
             exit 1
@@ -498,7 +498,7 @@ copy_openviking_state() {
     mkdir -p "$SNAPSHOT_RUN_DIR"
 
     echo ""
-    echo ">>> Step 2: Copying OpenViking state checkpoint..."
+    echo ">>> Step 2: Copying Business Data Platform state checkpoint..."
     echo "Source:      $OPENVIKING_STATE_SOURCE"
     echo "Checkpoint:  $SNAPSHOT_DIR"
 
@@ -514,7 +514,7 @@ copy_openviking_state() {
     fi
 
     {
-        echo "OpenViking ${SUITE_LABEL} checkpoint"
+        echo "Business Data Platform ${SUITE_LABEL} checkpoint"
         echo "created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
         echo "run_id=$RUN_ID"
         echo "suite=$SUITE_LABEL"
@@ -553,7 +553,7 @@ verify_hermes_openviking_target() {
 
     local probe_session_id="openviking-e2e-preflight-${RUN_ID}-$$"
     echo ""
-    echo ">>> Preflight: verifying Hermes writes to the configured OpenViking target..."
+    echo ">>> Preflight: verifying Hermes writes to the configured Business Data Platform target..."
     echo "Probe session: $probe_session_id"
 
     HERMES_URL="$HERMES_URL" \
@@ -592,7 +592,7 @@ payload = {
     "messages": [
         {
             "role": "user",
-            "content": f"OpenViking benchmark preflight probe {session_id}. Acknowledge with OK.",
+            "content": f"Business Data Platform benchmark preflight probe {session_id}. Acknowledge with OK.",
         }
     ],
 }
@@ -644,7 +644,7 @@ while time.monotonic() < deadline:
         last_observed = f"pending_tokens={pending_tokens}, message_count={message_count}"
         if pending_tokens > 0 or message_count > 0:
             print(
-                "Preflight OK: expected OpenViking target received "
+                "Preflight OK: expected Business Data Platform target received "
                 f"{resolved_session_id} ({last_observed})."
             )
             try:
@@ -660,7 +660,7 @@ while time.monotonic() < deadline:
     time.sleep(0.5)
 
 fail(
-    "Hermes completed the probe, but the configured OpenViking target did not receive it. "
+    "Hermes completed the probe, but the configured Business Data Platform target did not receive it. "
     f"Expected OPENVIKING_URL={openviking_url}, session={resolved_session_id}, "
     f"namespace={ov_headers.get('X-OpenViking-Account')}/"
     f"{ov_headers.get('X-OpenViking-User')}; "
@@ -699,7 +699,7 @@ if token:
 
 payload = {
     "model": model,
-    "input": "OpenViking memory provider warmup. Acknowledge with OK.",
+    "input": "Business Data Platform memory provider warmup. Acknowledge with OK.",
     "conversation": session_id,
     "session_id": session_id,
     "store": False,
@@ -754,7 +754,7 @@ echo "Suite:          $SUITE_LABEL"
 echo "Run id:         $RUN_ID"
 echo "LoCoMo data:    $LOCOMO_JSON"
 echo "Hermes URL:     $HERMES_URL"
-echo "OpenViking URL: $OPENVIKING_URL"
+echo "Business Data Platform URL: $OPENVIKING_URL"
 echo "Result dir:     $RESULT_DIR"
 echo "Python:         $PYTHON"
 echo "Checkpoint:     $([[ "$CHECKPOINT_OPENVIKING" == "1" ]] && echo enabled || echo disabled)"
@@ -834,13 +834,13 @@ else
             echo ">>> Step 1 import command failed with status $IMPORT_RC." >&2
             exit "$IMPORT_RC"
         fi
-        echo ">>> Step 1 import command exited with status $IMPORT_RC; checking OpenViking archive readiness before deciding whether to continue." >&2
+        echo ">>> Step 1 import command exited with status $IMPORT_RC; checking Business Data Platform archive readiness before deciding whether to continue." >&2
     fi
     echo ">>> Step 1 done."
 
     verify_openviking_archive_readiness
     if [[ "$IMPORT_RC" -ne 0 ]]; then
-        echo ">>> Continuing because OpenViking archive readiness passed." >&2
+        echo ">>> Continuing because Business Data Platform archive readiness passed." >&2
     fi
 
     copy_openviking_state
@@ -901,6 +901,6 @@ echo "  Benchmark complete"
 echo "================================================================="
 echo "Result dir: $RESULT_DIR"
 if [[ "$CHECKPOINT_OPENVIKING" == "1" ]]; then
-    echo "OpenViking checkpoint: $SNAPSHOT_DIR"
+    echo "Business Data Platform checkpoint: $SNAPSHOT_DIR"
     echo "Checkpoint manifest:   $SNAPSHOT_MANIFEST"
 fi

@@ -1,7 +1,7 @@
 {
   "name": "@openviking/cli",
   "version": "0.0.0",
-  "description": "OpenViking CLI — agent-native context database",
+  "description": "Business Data Platform CLI — agent-native context database",
   "bin": {
     "ov": "bin/ov.mjs"
   },

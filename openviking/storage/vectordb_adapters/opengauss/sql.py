@@ -337,7 +337,7 @@ def _resolve_search_params(index_type: str, meta_data: Dict[str, Any]) -> Dict[s
 
 
 def _field_to_column_ddl(field: Dict[str, Any]) -> Optional[str]:
-    """Convert an OpenViking field definition to a SQL column definition.
+    """Convert a Business Data Platform field definition to a SQL column definition.
 
     Returns None for vector fields (handled separately) and
     for unrecognised types (skipped with a warning).
@@ -358,7 +358,7 @@ def _field_to_column_ddl(field: Dict[str, Any]) -> Optional[str]:
 
 
 def _date_time_to_epoch_ms(value: Any) -> int:
-    """Normalize OpenViking date_time values to epoch milliseconds."""
+    """Normalize Business Data Platform date_time values to epoch milliseconds."""
     if isinstance(value, bool):
         raise ValueError("date_time value cannot be boolean")
     if isinstance(value, (int, float)):
@@ -382,7 +382,7 @@ def _date_time_to_epoch_ms(value: Any) -> int:
 
 
 def _distance_to_similarity(distance_metric: str, distance_value: Any) -> float:
-    """Convert a DataVec distance into OpenViking's higher-is-better score."""
+    """Convert a DataVec distance into Business Data Platform's higher-is-better score."""
     try:
         distance = float(distance_value)
     except (TypeError, ValueError):
@@ -401,7 +401,7 @@ def _build_where_clause(
     filters: Optional[Dict[str, Any]],
     array_fields: Optional[set[str]] = None,
 ) -> tuple[str, list]:
-    """Recursively convert OpenViking filter DSL to a SQL WHERE clause.
+    """Recursively convert Business Data Platform filter DSL to a SQL WHERE clause.
 
     Returns (sql_fragment, params_list).
     """

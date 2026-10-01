@@ -1,8 +1,8 @@
 # 导入本地 Agent 日志（openviking-server ingest）
 
-`openviking-server ingest` 把你本地已有的 AI 编码 / agent harness 的对话日志（Claude Code、Codex、WorkBuddy、OpenCode、MiMo、Hermes、OpenClaw）解析成标准消息，再通过 OpenViking 既有的会话管线“重放”进去（`创建会话 → 批量追加消息 → 提交`，提交时触发记忆抽取），从而把这些历史与新增对话沉淀为长期记忆。它与各 harness 的“记忆插件”互补：插件在对话**进行时**实时挂载捕获，而本工具用于**导入既有日志**与**离线监听新增日志**，无需插件、也无需改动对应 harness。
+`openviking-server ingest` 把你本地已有的 AI 编码 / agent harness 的对话日志（Claude Code、Codex、WorkBuddy、OpenCode、MiMo、Hermes、OpenClaw）解析成标准消息，再通过 Business Data Platform 既有的会话管线“重放”进去（`创建会话 → 批量追加消息 → 提交`，提交时触发记忆抽取），从而把这些历史与新增对话沉淀为长期记忆。它与各 harness 的“记忆插件”互补：插件在对话**进行时**实时挂载捕获，而本工具用于**导入既有日志**与**离线监听新增日志**，无需插件、也无需改动对应 harness。
 
-与插件方案的关键区别：本工具是 OpenViking 的**客户端**，跑在日志所在的机器上，通过 SDK 指向本地或远端 server；它默认**完全关闭**，不会“装上就扫你本地文件”。
+与插件方案的关键区别：本工具是 Business Data Platform 的**客户端**，跑在日志所在的机器上，通过 SDK 指向本地或远端 server；它默认**完全关闭**，不会“装上就扫你本地文件”。
 
 源码：[openviking/ingest](https://github.com/volcengine/OpenViking/tree/main/openviking/ingest)
 
@@ -27,7 +27,7 @@
 | `mimo` | 实验性 | `~/.local/share/mimocode/mimocode.db` | SQLite，按 `(time, id)` 轮询；跳过 `part.synthetic` 文本与 `agent_id != main` |
 | `cursor` | 暂缓 | `~/Library/Application Support/Cursor/User/**/state.vscdb` | 无文档、随版本漂移的 KV blob，暂未实现 |
 
-> 这里的 harness（agent 框架）指 CC / Codex 等整套工具，区别于 OpenViking 里“tool（工具调用）”的概念。
+> 这里的 harness（agent 框架）指 CC / Codex 等整套工具，区别于 Business Data Platform 里“tool（工具调用）”的概念。
 
 ## 在 ov.conf 中开启
 
@@ -73,7 +73,7 @@ export OPENVIKING_API_KEY=""  # 仅用于本地 dev；认证部署应填写 user
 
 ## 使用
 
-`openviking-server ingest` 命令随 OpenViking 一同安装。
+`openviking-server ingest` 命令随 Business Data Platform 一同安装。
 
 ```bash
 # 查看已注册 harness 及其配置
@@ -102,7 +102,7 @@ openviking-server ingest status
 
 ## peer_id
 
-每条消息都会带上 peer_id，便于 OpenViking 同时为人类与模型建立画像：
+每条消息都会带上 peer_id，便于 Business Data Platform 同时为人类与模型建立画像：
 
 - assistant 消息：`{harness}/{模型名}`（provider 有意义时为 `{harness}/{provider}/{模型名}`），例如 `claude_code/claude-opus-4-8`、`opencode/bytedance_ark/doubao-...`；
 - user 消息：单用户开发型 harness（claude_code / codex / opencode）取会话 cwd 所在仓库的 git 身份（`user.email` / `user.name`），无 git 仓库时回退为配置的 `ingest.user`；群聊 harness（hermes / openclaw）取日志里的原始用户名（由 `user_field` 指定）。
@@ -111,7 +111,7 @@ openviking-server ingest status
 `ext-<base64>` 形式。`ext-` 命名空间为编码身份保留；如果 ASCII 身份清理后会成为
 `ext-` id，系统也会对其编码，避免它冒充已有编码身份。新的读取和写入只使用规范 id。
 旧版本可能把多个混合文字身份，或一个混合文字身份与真实 ASCII 身份，折叠到同一个 peer
-目录中。OpenViking 不会把这些归属不明确的目录自动附加为别名；迁移既有数据前，
+目录中。Business Data Platform 不会把这些归属不明确的目录自动附加为别名；迁移既有数据前，
 运维人员必须先确认其真实归属。
 
 ## 工作原理
@@ -119,7 +119,7 @@ openviking-server ingest status
 每个 harness 对应一个轻量适配器，把其日志解析为标准消息，交给“重放器”执行 `ensure_session → 批量追加（每批 ≤100）→ commit`。记忆抽取只在 **commit** 时由 server 端触发。OV 会话 id 形如 `import__{harness}__{原始会话id}`，确定且幂等。
 
 - **存量回填**：枚举所有会话，从游标读到末尾后逐会话提交一次。
-- **监听增量**：参照 OpenViking 自身的 `WatchScheduler`，用**定时轮询**（非文件系统事件）+ 持久游标驱动；漏一拍、休眠或重启后，下一拍从游标读到末尾即可自愈。JSONL 用字节偏移游标（含半行/截断/轮转处理），SQLite 用 `(time, id)` 游标只读读取（兼容 WAL）。
+- **监听增量**：参照 Business Data Platform 自身的 `WatchScheduler`，用**定时轮询**（非文件系统事件）+ 持久游标驱动；漏一拍、休眠或重启后，下一拍从游标读到末尾即可自愈。JSONL 用字节偏移游标（含半行/截断/轮转处理），SQLite 用 `(time, id)` 游标只读读取（兼容 WAL）。
 
 游标状态持久化在 `~/.openviking/ingest/state.db`，因此回填与监听都能在重启后续传，且不会重复入库。
 

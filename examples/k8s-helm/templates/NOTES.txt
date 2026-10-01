@@ -1,4 +1,4 @@
-OpenViking has been deployed!
+Business Data Platform has been deployed!
 
 Access the server via port-forward:
 

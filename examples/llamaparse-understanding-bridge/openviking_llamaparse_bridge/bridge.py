@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: Apache-2.0
-"""Reference adapter from OpenViking's Understanding API to LlamaParse v2.
+"""Reference adapter from Business Data Platform's Understanding API to LlamaParse v2.
 
 Files API -> LlamaParse upload; Responses API -> LlamaParse parse and status;
 LlamaParse Markdown and images -> the ZIP returned through ``result.zip_url``.
@@ -578,7 +578,7 @@ def create_app(
 ) -> FastAPI:
     resolved = settings or load_settings()
     bridge = Bridge(resolved, client or LlamaParseClient(resolved), client is None)
-    app = FastAPI(title="OpenViking LlamaParse bridge", lifespan=bridge.lifespan)
+    app = FastAPI(title="Business Data Platform LlamaParse bridge", lifespan=bridge.lifespan)
     app.add_exception_handler(BridgeError, _bridge_error)
     app.add_exception_handler(LlamaParseError, _llama_error)
     auth = [Depends(bridge.require_auth)]

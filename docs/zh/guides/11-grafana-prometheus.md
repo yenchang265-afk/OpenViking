@@ -1,25 +1,25 @@
-# 使用 Prometheus 和 Grafana 查看 OpenViking 指标
+# 使用 Prometheus 和 Grafana 查看 Business Data Platform 指标
 
 这份文档给出一条从零开始的完整链路：
 
-1. 启动 OpenViking 并确认 `/metrics` 可访问
-2. 启动 Prometheus 抓取 OpenViking 指标
+1. 启动 Business Data Platform 并确认 `/metrics` 可访问
+2. 启动 Prometheus 抓取 Business Data Platform 指标
 3. 启动 Grafana 并连接 Prometheus 数据源
-4. 导入 OpenViking 自带 dashboard 或在 Explore 中直接查询
+4. 导入 Business Data Platform 自带 dashboard 或在 Explore 中直接查询
 
 如果你已经能访问 `http://<host>:<port>/metrics`，可以直接从本文的“启动 Prometheus”开始。
 
 ## 架构关系
 
-OpenViking 不直接提供 Grafana 页面。标准链路是：
+Business Data Platform 不直接提供 Grafana 页面。标准链路是：
 
 ```text
-OpenViking -> /metrics -> Prometheus -> Grafana
+Business Data Platform -> /metrics -> Prometheus -> Grafana
 ```
 
 其中：
 
-- OpenViking 负责暴露 Prometheus exposition 文本
+- Business Data Platform 负责暴露 Prometheus exposition 文本
 - Prometheus 负责定时抓取 `/metrics`
 - Grafana 负责读取 Prometheus 并展示 dashboard
 
@@ -27,13 +27,13 @@ OpenViking -> /metrics -> Prometheus -> Grafana
 
 开始前请确认：
 
-- OpenViking Server 已安装并可正常启动
+- Business Data Platform Server 已安装并可正常启动
 - Docker 已安装，可用于快速启动 Prometheus 和 Grafana
-- 你知道 OpenViking 当前监听的 HTTP 地址，例如 `http://localhost:30300`
+- 你知道 Business Data Platform 当前监听的 HTTP 地址，例如 `http://localhost:30300`
 
-## 第 1 步：确认 OpenViking 已暴露 `/metrics`
+## 第 1 步：确认 Business Data Platform 已暴露 `/metrics`
 
-OpenViking 需要先启用 metrics。最小配置参考：
+Business Data Platform 需要先启用 metrics。最小配置参考：
 
 ```json
 {
@@ -47,7 +47,7 @@ OpenViking 需要先启用 metrics。最小配置参考：
 }
 ```
 
-配置写入 `~/.openviking/ov.conf` 后，重启 OpenViking Server。
+配置写入 `~/.openviking/ov.conf` 后，重启 Business Data Platform Server。
 
 如果你还没有启动服务，可参考：
 
@@ -81,7 +81,7 @@ openviking_http_requests_total{method="GET",route="/api/v1/system/status",status
 - `examples/grafana/grafana/provisioning/datasources/prometheus.yml`
 - `examples/grafana/grafana/provisioning/dashboards/openviking.yml`
 
-另外，针对 Linux 上 OpenViking 继续监听 `127.0.0.1` / `localhost` 的场景，仓库还提供了一套 localhost 专用示例：
+另外，针对 Linux 上 Business Data Platform 继续监听 `127.0.0.1` / `localhost` 的场景，仓库还提供了一套 localhost 专用示例：
 
 - `examples/grafana/docker-compose.localhost.yml`
 - `examples/grafana/prometheus.localhost.yml`
@@ -90,18 +90,18 @@ openviking_http_requests_total{method="GET",route="/api/v1/system/status",status
 
 两套方案的区别是：
 
-- `docker-compose.yml`：通用方案，Prometheus 从容器网络访问宿主机，适合 OpenViking 监听 `0.0.0.0`
-- `docker-compose.localhost.yml`：Linux localhost 方案，Prometheus 和 Grafana 直接使用宿主机网络，适合 OpenViking 继续监听 `127.0.0.1`
+- `docker-compose.yml`：通用方案，Prometheus 从容器网络访问宿主机，适合 Business Data Platform 监听 `0.0.0.0`
+- `docker-compose.localhost.yml`：Linux localhost 方案，Prometheus 和 Grafana 直接使用宿主机网络，适合 Business Data Platform 继续监听 `127.0.0.1`
 
-如果你当前不想把 OpenViking 暴露到 `0.0.0.0`，推荐优先使用 `docker-compose.localhost.yml`。
+如果你当前不想把 Business Data Platform 暴露到 `0.0.0.0`，推荐优先使用 `docker-compose.localhost.yml`。
 
 这套配置默认会做几件事：
 
 - 启动 Prometheus，并把宿主机端口映射到 `30909`
 - 启动 Grafana，并把宿主机端口映射到 `13000`
 - 自动把 Grafana 数据源配置为 `http://127.0.0.1:30909`
-- 自动加载仓库里的 OpenViking demo dashboard
-- 自动加载 `OpenViking - Feedback Baseline`，方便直接查看 `openviking_feedback_*` 与 `openviking_feedback_channel_*` 的基线指标
+- 自动加载仓库里的 Business Data Platform demo dashboard
+- 自动加载 `Business Data Platform - Feedback Baseline`，方便直接查看 `openviking_feedback_*` 与 `openviking_feedback_channel_*` 的基线指标
 
 ### 方案 A：通用方案
 
@@ -125,7 +125,7 @@ Grafana 默认账号密码在这个示例里固定为：
 
 ### 方案 B：Linux localhost 方案
 
-如果你的 OpenViking 继续监听在 `127.0.0.1:30300`，并且你不想为了 Prometheus 抓取而把 OpenViking 改成 `0.0.0.0`，请使用下面这套 compose：
+如果你的 Business Data Platform 继续监听在 `127.0.0.1:30300`，并且你不想为了 Prometheus 抓取而把 Business Data Platform 改成 `0.0.0.0`，请使用下面这套 compose：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.localhost.yml up -d
@@ -135,7 +135,7 @@ docker compose -f examples/grafana/docker-compose.localhost.yml up -d
 
 - Prometheus 使用宿主机网络，直接抓取 `127.0.0.1:30300/metrics`
 - Grafana 也使用宿主机网络，并直接连接 `http://127.0.0.1:30909`
-- 不需要把 OpenViking 改成 `0.0.0.0`
+- 不需要把 Business Data Platform 改成 `0.0.0.0`
 - 不会触发“非 localhost 监听必须配置 `root_api_key`”这条安全限制
 
 访问地址仍然是：
@@ -170,11 +170,11 @@ scrape_configs:
 
 说明：
 
-- 如果 Prometheus 运行在 Docker 容器里，而 OpenViking 运行在宿主机，`targets` 推荐写成 `host.docker.internal:30300`
+- 如果 Prometheus 运行在 Docker 容器里，而 Business Data Platform 运行在宿主机，`targets` 推荐写成 `host.docker.internal:30300`
 - 如果 Prometheus 也运行在宿主机，改成 `localhost:30300`
 - 如果 `host.docker.internal` 在你的 Linux Docker 环境中不可用，就改成宿主机实际 IP，例如 `192.168.1.10:30300`
 
-如果你的 OpenViking 不是监听在 `30300`，就把这个文件里的目标地址改成你的实际端口，然后重新执行：
+如果你的 Business Data Platform 不是监听在 `30300`，就把这个文件里的目标地址改成你的实际端口，然后重新执行：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.yml up -d
@@ -184,7 +184,7 @@ docker compose -f examples/grafana/docker-compose.yml up -d
 
 - `examples/grafana/prometheus.localhost.yml`
 
-例如 OpenViking 实际监听 `127.0.0.1:1933`，就改成：
+例如 Business Data Platform 实际监听 `127.0.0.1:1933`，就改成：
 
 ```yaml
 targets: ["127.0.0.1:1933"]
@@ -241,7 +241,7 @@ openviking_http_requests_total
 openviking_service_readiness
 ```
 
-如果能查到时间序列，说明 Prometheus 已经成功抓到 OpenViking 指标。
+如果能查到时间序列，说明 Prometheus 已经成功抓到 Business Data Platform 指标。
 
 ### 如果 Prometheus 容器启动失败
 
@@ -357,9 +357,9 @@ rate(openviking_operation_tokens_total[5m])
 {__name__=~"openviking_.*"}
 ```
 
-## 第 9 步：导入 OpenViking 自带 Dashboard
+## 第 9 步：导入 Business Data Platform 自带 Dashboard
 
-如果你使用的是仓库自带 compose 文件，这两个 dashboard 会在 Grafana 启动后自动加载到 `OpenViking` 文件夹下。
+如果你使用的是仓库自带 compose 文件，这两个 dashboard 会在 Grafana 启动后自动加载到 `Business Data Platform` 文件夹下。
 
 如果你想手动导入，继续按下面步骤操作即可。
 
@@ -433,7 +433,7 @@ Bind for 0.0.0.0:9090 failed: port is already allocated
 -p 13000:3000
 ```
 
-### 4. Grafana 里没有任何 OpenViking 指标
+### 4. Grafana 里没有任何 Business Data Platform 指标
 
 优先检查：
 
@@ -444,7 +444,7 @@ Bind for 0.0.0.0:9090 failed: port is already allocated
 如果你使用的是 compose 自动导入方案，还可以先确认 dashboard 是否已经被加载：
 
 - 左侧进入 `Dashboards`
-- 查看 `OpenViking` 文件夹是否存在
+- 查看 `Business Data Platform` 文件夹是否存在
 
 ### 5. Dashboard 导入成功但面板为空
 

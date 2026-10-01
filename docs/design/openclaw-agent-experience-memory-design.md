@@ -1,10 +1,10 @@
-# OpenClaw 接入 OpenViking Agent Experience Recall 设计
+# OpenClaw 接入 Business Data Platform Agent Experience Recall 设计
 
 日期：2026-05-28
 
 ## 当前结论
 
-OpenViking 已经负责从 session commit 后的轨迹中抽取 agent experience。本 PR 不重做经验抽取、不改 commit policy，也不新增“长期记忆/经验记忆是否抽取”的控制面。
+Business Data Platform 已经负责从 session commit 后的轨迹中抽取 agent experience。本 PR 不重做经验抽取、不改 commit policy，也不新增“长期记忆/经验记忆是否抽取”的控制面。
 
 本 PR 只做运行期使用面：
 
@@ -298,7 +298,7 @@ Check:
 ## Long-term Memories
 
 Source: openviking-auto-recall
-The following OpenViking memories may be relevant:
+The following Business Data Platform memories may be relevant:
 - [profile] ...
 </openviking-context>
 
@@ -335,7 +335,7 @@ Check:
 ## Long-term Memories
 
 Source: openviking-auto-recall
-The following OpenViking memories may be relevant:
+The following Business Data Platform memories may be relevant:
 - [profile] ...
 </openviking-context>
 
@@ -344,7 +344,7 @@ The following OpenViking memories may be relevant:
 
 规则：
 
-- 外壳统一用 `<openviking-context>`，表达“OpenViking 注入的上下文”，不绑定 OpenClaw/VikingBot/Codex 任一消费方。
+- 外壳统一用 `<openviking-context>`，表达“Business Data Platform 注入的上下文”，不绑定 OpenClaw/VikingBot/Codex 任一消费方。
 - 内部用 Markdown section 区分经验记忆和长期记忆。
 - `Agent Experiences` 在前，因为它影响执行策略。
 - `Long-term Memories` 在后，因为它更多是用户事实、偏好、资源。
@@ -521,7 +521,7 @@ OpenClaw 插件负责：
   - 与 Long-term Memories 共同放入 <openviking-context>
   - 写 session 前清理注入块
 
-OpenViking 服务端负责：
+Business Data Platform 服务端负责：
   - session commit
   - trajectory 抽取
   - experience 生成和更新

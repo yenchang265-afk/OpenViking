@@ -1,10 +1,10 @@
 # RAGFS Cache
 
-RAGFS cache is an optional read-cache layer for OpenViking. It speeds up full file reads and directory reads. It is only an acceleration layer, not the source of truth; backend filesystem data remains authoritative.
+RAGFS cache is an optional read-cache layer for Business Data Platform. It speeds up full file reads and directory reads. It is only an acceleration layer, not the source of truth; backend filesystem data remains authoritative.
 
 CachedFileSystem assumptions:
 
-- Only one OpenViking / RAGFS process writes to the same namespace.
+- Only one Business Data Platform / RAGFS process writes to the same namespace.
 - File and directory changes go through RAGFS.
 - The backend is not modified externally by bypassing RAGFS.
 - After a cache Provider successfully writes or deletes one key, later reads of that key do not return the old value.
@@ -56,7 +56,7 @@ Configure the global top-level `cache` Provider, then select `backend=cache` und
 }
 ```
 
-Start Redis and OpenViking:
+Start Redis and Business Data Platform:
 
 ```bash
 redis-server
@@ -81,9 +81,9 @@ Available Providers:
 ### Cache-backed PathLock
 
 Set `storage.agfs.pathlock.provider` to `cache` to coordinate path locks
-between OpenViking processes through the shared Redis CacheRuntime.
+between Business Data Platform processes through the shared Redis CacheRuntime.
 `pathlock.namespace` is required and must be the same for every process in
-one OpenViking deployment. Cache-backed PathLock only supports the built-in
+one Business Data Platform deployment. Cache-backed PathLock only supports the built-in
 Redis Provider.
 
 Redis HASH keys are partitioned by logical path scope:
@@ -118,11 +118,11 @@ Legacy cache configuration is no longer accepted. Migrate before upgrading:
 | `read_from_replica` | removed; all reads use the primary |
 | Redis Provider `key_prefix` | CacheFS uses `cachefs.namespace`; QueueFS uses `queuefs.cache_key_prefix` |
 
-OpenViking rejects removed fields with a migration error instead of silently translating them.
+Business Data Platform rejects removed fields with a migration error instead of silently translating them.
 
 ## DynamicProvider
 
-OpenViking ships the DynamicProvider loader and a versioned C ABI. The default wheel does not bundle third-party SDKs or Provider libraries. Deploy the Provider shared library separately and configure `provider=dynamic` when an external cache system is required.
+Business Data Platform ships the DynamicProvider loader and a versioned C ABI. The default wheel does not bundle third-party SDKs or Provider libraries. Deploy the Provider shared library separately and configure `provider=dynamic` when an external cache system is required.
 
 A dynamic library must export this versioned entry point:
 
@@ -134,7 +134,7 @@ The C contract is defined by `crates/ragfs/include/openviking_cache_provider_v1.
 
 Provider artifacts should declare the ABI version, target OS and CPU, minimum runtime version, external SDK version, dynamic dependencies, and SHA256. When a Provider depends on native libraries, its publisher must make them discoverable through RPATH, `LD_LIBRARY_PATH`, or deployment instructions.
 
-External Providers can be upgraded independently without rebuilding the default OpenViking wheel. OpenViking only needs a coordinated upgrade when the DynamicProvider ABI becomes incompatible.
+External Providers can be upgraded independently without rebuilding the default Business Data Platform wheel. Business Data Platform only needs a coordinated upgrade when the DynamicProvider ABI becomes incompatible.
 
 ## Configuration
 
@@ -160,7 +160,7 @@ The top-level `cache` section is a sibling of `storage`:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `provider` | str | `"filesystem"` | `filesystem`, `memory`, or `cache` |
-| `namespace` | str or null | `null` | Required OpenViking instance name when `provider=cache` |
+| `namespace` | str or null | `null` | Required Business Data Platform instance name when `provider=cache` |
 | `lock_expire_secs` | float | `30.0` | Lock stale timeout; must be at least `1.0` |
 
 Redis configuration:
@@ -181,7 +181,7 @@ All Redis reads are sent to the primary node so QueueFS does not observe stale q
 
 DynamicProvider configuration:
 
-OpenViking uses `cache.params.library` to load the dynamic library. All remaining fields are Provider-owned and passed to `create` as JSON. Use the schema documented by the Provider publisher.
+Business Data Platform uses `cache.params.library` to load the dynamic library. All remaining fields are Provider-owned and passed to `create` as JSON. Use the schema documented by the Provider publisher.
 
 ```json
 {
@@ -207,7 +207,7 @@ RAGFS separates Provider access from its consumers:
 Call flow:
 
 ```text
-OpenViking
+Business Data Platform
   -> RAGFS / MountableFS
        |-> CachedFileSystem ------\
        |-> QueueFS cache backend --+-> shared CacheRuntime -> RedisProvider
@@ -245,7 +245,7 @@ Directory key:
 ragfs:v1:{namespace}:dir:{hash(path)}
 ```
 
-The directory cache stores raw backend `read_dir` entries, not permission-filtered final results. Permission, role, and agent-context filtering still happens in the OpenViking upper layer at request time.
+The directory cache stores raw backend `read_dir` entries, not permission-filtered final results. Permission, role, and agent-context filtering still happens in the Business Data Platform upper layer at request time.
 
 This lets one directory cache object serve `ls`, `tree`, `glob`, the file-collection phase of `grep`, and path collection before delete or move operations.
 
@@ -289,7 +289,7 @@ Later requests for the same key become followers and wait for the leader result.
 The inflight entry is removed after the request completes.
 ```
 
-This only reduces duplicate backend access within one OpenViking process. It does not change the Provider consistency boundary.
+This only reduces duplicate backend access within one Business Data Platform process. It does not change the Provider consistency boundary.
 
 ## Cache Policy
 

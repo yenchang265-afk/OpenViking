@@ -234,8 +234,8 @@ impl StatusFailureKind {
             Self::Authentication => copy(language, "API key rejected", "API Key 被拒绝"),
             Self::Api => copy(
                 language,
-                "OpenViking returned an API error",
-                "OpenViking 返回 API 错误",
+                "Business Data Platform returned an API error",
+                "Business Data Platform 返回 API 错误",
             ),
             Self::Timeout => copy(
                 language,
@@ -326,7 +326,7 @@ fn kind_label(kind: ConfigKind, language: Language) -> &'static str {
     match language {
         Language::En => kind.compact_label(),
         Language::ZhCn => match kind {
-            ConfigKind::OpenVikingService => "OpenViking 服务",
+            ConfigKind::OpenVikingService => "Business Data Platform 服务",
             ConfigKind::Custom => "自定义",
         },
     }

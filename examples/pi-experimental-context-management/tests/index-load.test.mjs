@@ -281,7 +281,7 @@ test("the context hook returns the messages untouched while no window is armed",
 });
 
 // ---------------------------------------------------------------------------
-// End to end through the wiring: a fake OpenViking server, a real reset, the
+// End to end through the wiring: a fake Business Data Platform server, a real reset, the
 // cut the next sampling sees, and the signals that follow it.
 // ---------------------------------------------------------------------------
 
@@ -295,7 +295,7 @@ const ARCHIVED_MESSAGES = [
   .map((row) => JSON.stringify(row))
   .join("\n");
 
-/** The handful of OpenViking routes one reset (and `history`) walks through. */
+/** The handful of Business Data Platform routes one reset (and `history`) walks through. */
 function startFakeOv(t, options = {}) {
   const seen = [];
   const greps = [];
@@ -569,7 +569,7 @@ test("history reads the archived window back and get_context_remaining reports t
   assert.match(remaining, /^advice: /m);
 });
 
-test("a window restored with OpenViking down still cuts the archived conversation", { skip: !JITI_PATH }, async (t) => {
+test("a window restored with Business Data Platform down still cuts the archived conversation", { skip: !JITI_PATH }, async (t) => {
   withDeadServer(t);
   const calls = await loadExtension();
 
@@ -719,7 +719,7 @@ test("a peer that registers viking_search later still makes this extension stand
   );
   assert.equal(result, undefined, "the second writer stands down instead of syncing the same session");
   assert.ok(
-    notified.some(([message]) => /another OpenViking extension is already active/.test(message)),
+    notified.some(([message]) => /another Business Data Platform extension is already active/.test(message)),
     JSON.stringify(notified),
   );
 
@@ -749,7 +749,7 @@ test("a peer that registers the renamed openviking_search stands this extension 
   );
   assert.equal(result, undefined, "the second writer stands down instead of syncing the same session");
   assert.ok(
-    notified.some(([message]) => /another OpenViking extension is already active/.test(message)),
+    notified.some(([message]) => /another Business Data Platform extension is already active/.test(message)),
     JSON.stringify(notified),
   );
 
@@ -779,7 +779,7 @@ test("the peer marker alone stands this extension down, with no tool registered"
   );
   assert.equal(result, undefined, "a tool-less peer is still a second writer");
   assert.ok(
-    notified.some(([message]) => /another OpenViking extension is already active/.test(message)),
+    notified.some(([message]) => /another Business Data Platform extension is already active/.test(message)),
     JSON.stringify(notified),
   );
 
@@ -849,7 +849,7 @@ test("without sourceInfo, only a name we never register counts as a peer's", { s
   );
   assert.equal(result, undefined, "the peer's openviking_search wins over our own entry in the list");
   assert.ok(
-    notified.some(([message]) => /another OpenViking extension is already active/.test(message)),
+    notified.some(([message]) => /another Business Data Platform extension is already active/.test(message)),
     JSON.stringify(notified),
   );
 });
@@ -964,7 +964,7 @@ test("a recall failure costs the recall block, never the window cut", { skip: !J
   assert.equal(JSON.stringify(cut.messages).includes("recalled memory"), false, "recall failed, the cut did not");
 });
 
-test("history says so when OpenViking cannot answer the archive listing", { skip: !JITI_PATH }, async (t) => {
+test("history says so when Business Data Platform cannot answer the archive listing", { skip: !JITI_PATH }, async (t) => {
   const { port } = await startFakeOv(t, { blockLs: true });
   withFakeServer(t, port);
   const calls = await loadExtension();

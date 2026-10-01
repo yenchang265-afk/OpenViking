@@ -6,7 +6,7 @@ Skill 源码：[examples/compile/ov-compile-skills/daily-report](https://github.
 
 ## 第一步：准备来源
 
-日报的来源通常是已经在 OpenViking 里的会话、消息或文档。如果要从本地导入一批记录：
+日报的来源通常是已经在 Business Data Platform 里的会话、消息或文档。如果要从本地导入一批记录：
 
 ```bash
 ov add-resource ./work-logs --to viking://resources/work-logs

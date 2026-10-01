@@ -61,8 +61,8 @@ ov_archive_expand 归档展开端到端测试 — 用户: 小杰（后端开发�
 三、环境前提
 ================================================================================
 
-  1. OpenViking 服务已启动（提供归档存储和展开能力）
-  2. OpenClaw Gateway 已启动并配置了 OpenViking 插件
+  1. Business Data Platform 服务已启动（提供归档存储和展开能力）
+  2. OpenClaw Gateway 已启动并配置了 Business Data Platform 插件
   3. LLM 后端可达（Gateway 需要调用 LLM 生成回复和触发工具调用）
   4. 有效的 Gateway auth token（通过 --token 传入或自动发现）
 
@@ -78,7 +78,7 @@ ov_archive_expand 归档展开端到端测试 — 用户: 小杰（后端开发�
       ↑ 必须显式允许 ov_archive_expand 工具，否则 LLM 无法调用
 
   服务部署参考:
-    - OpenViking: openviking-server（HTTP 默认 2934，AGFS 默认 2833）
+    - Business Data Platform: openviking-server（HTTP 默认 2934，AGFS 默认 2833）
     - Gateway: openclaw gateway（HTTP 默认 19789）
 
 ================================================================================
@@ -165,7 +165,7 @@ ov_archive_expand 归档展开端到端测试 — 用户: 小杰（后端开发�
      编号依赖前序批次。不能单独跑 chat2 而跳过 chat1。
 
   5. 环境要求:
-     Gateway 必须配置 OpenViking 插件且启用 ov_archive_expand 工具定义，
+     Gateway 必须配置 Business Data Platform 插件且启用 ov_archive_expand 工具定义，
      否则 LLM 无法调用归档展开。
 
 ================================================================================
@@ -352,7 +352,7 @@ def set_gateway_token(token: str):
     _gateway_token = token
 
 
-# ── Gateway / OpenViking API ─────────────────────────────────────────────
+# ── Gateway / Business Data Platform API ─────────────────────────────────────────────
 
 
 def send_message(gateway_url: str, message: str, user_id: str) -> dict:
@@ -562,7 +562,7 @@ def run_phase_verify_index(openviking_url: str, verbose: bool) -> str:
     inspector = OVInspector(openviking_url)
 
     healthy = inspector.health_check()
-    check("OpenViking 服务可达", healthy)
+    check("Business Data Platform 服务可达", healthy)
     if not healthy:
         return ""
 
@@ -775,7 +775,7 @@ def run_full_test(
         Panel.fit(
             f"[bold]ov_archive_expand 归档展开测试 — {DISPLAY_NAME}[/bold]\n\n"
             f"Gateway: {gateway_url}\n"
-            f"OpenViking: {openviking_url}\n"
+            f"Business Data Platform: {openviking_url}\n"
             f"User ID: {user_id}\n"
             f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             title="测试信息",
@@ -1023,7 +1023,7 @@ def main():
     parser.add_argument(
         "--openviking",
         default=DEFAULT_OPENVIKING,
-        help=f"OpenViking 地址 (默认: {DEFAULT_OPENVIKING})",
+        help=f"Business Data Platform 地址 (默认: {DEFAULT_OPENVIKING})",
     )
     parser.add_argument("--user-id", default=USER_ID, help="测试用户 ID (默认: 随机)")
     parser.add_argument(
@@ -1057,7 +1057,7 @@ def main():
 
     console.print(f"[bold]ov_archive_expand 归档展开测试 — {DISPLAY_NAME}[/bold]")
     console.print(f"[yellow]Gateway:[/yellow] {gateway_url}")
-    console.print(f"[yellow]OpenViking:[/yellow] {openviking_url}")
+    console.print(f"[yellow]Business Data Platform:[/yellow] {openviking_url}")
     console.print(f"[yellow]User ID:[/yellow] {user_id}")
 
     if args.phase == "all":

@@ -17,7 +17,7 @@ describe("context-engine message adapter seam", () => {
     expect(toRoleId("@#$")).toBeUndefined();
   });
 
-  it("formats OpenViking messages in the concrete message adapter", () => {
+  it("formats Business Data Platform messages in the concrete message adapter", () => {
     const message = {
       role: "assistant",
       parts: [
@@ -190,7 +190,7 @@ describe("context-engine lifecycle service seam", () => {
     }));
   });
 
-  it("commits an OpenViking session with stable identity, agent resolution, and memory-count logging", async () => {
+  it("commits a Business Data Platform session with stable identity, agent resolution, and memory-count logging", async () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const client = {
       commitSession: vi.fn().mockResolvedValue({
@@ -248,7 +248,7 @@ describe("context-engine lifecycle service seam", () => {
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("trace_id=trace-failed-commit"));
   });
 
-  it("compacts an OpenViking session behind the lifecycle service seam", async () => {
+  it("compacts a Business Data Platform session behind the lifecycle service seam", async () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const client = {
       getSessionContext: vi.fn()

@@ -263,12 +263,12 @@ describe("OpenVikingClient resource and skill import", () => {
     });
   });
 
-  it("surfaces OpenViking error responses", async () => {
+  it("surfaces Business Data Platform error responses", async () => {
     const transport = vi.fn().mockResolvedValue(errorResponse("bad import"));
 
     const client = new OpenVikingClient("http://127.0.0.1:1933", "", "agent", 5000, "", "", undefined, false, true, { transport });
     await expect(client.addResource({ pathOrUrl: "https://example.com/bad" })).rejects.toThrow(
-      "OpenViking request failed [INVALID_ARGUMENT]: bad import",
+      "Business Data Platform request failed [INVALID_ARGUMENT]: bad import",
     );
   });
 

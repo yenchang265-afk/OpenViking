@@ -969,7 +969,7 @@ fn render_chat_banner(
         value_text(endpoint),
     ));
     lines.push(chat_detail_line(
-        "OpenViking",
+        "Business Data Platform",
         enabled_value(openviking_info.enabled, language),
     ));
     lines.push(chat_detail_line(
@@ -1024,8 +1024,8 @@ fn chat_warning_copy(warning: ChatAuthWarning, language: Language) -> (&'static 
         ChatAuthWarning::MissingUserKey => (
             copy(
                 language,
-                "OpenViking server is in api_key mode and requires a User/Admin API key",
-                "OpenViking server 是 api_key 模式，需使用 User/Admin API Key 访问",
+                "Business Data Platform server is in api_key mode and requires a User/Admin API key",
+                "Business Data Platform server 是 api_key 模式，需使用 User/Admin API Key 访问",
             ),
             copy(
                 language,
@@ -1048,8 +1048,8 @@ fn chat_warning_copy(warning: ChatAuthWarning, language: Language) -> (&'static 
         ChatAuthWarning::RootKey => (
             copy(
                 language,
-                "OpenViking server is in api_key mode and requires a User/Admin API key. The current request uses root_api_key, so VikingBot cannot use OpenViking features correctly.",
-                "OpenViking server 是 api_key 模式，需使用 User/Admin API Key 访问。当前请求实际使用的是 root_api_key，bot 将无法正常使用 OpenViking 功能。",
+                "Business Data Platform server is in api_key mode and requires a User/Admin API key. The current request uses root_api_key, so VikingBot cannot use Business Data Platform features correctly.",
+                "Business Data Platform server 是 api_key 模式，需使用 User/Admin API Key 访问。当前请求实际使用的是 root_api_key，bot 将无法正常使用 Business Data Platform 功能。",
             ),
             copy(
                 language,
@@ -1444,12 +1444,12 @@ mod tests {
 
         assert!(plain.contains("VIKINGBOT CHAT"));
         assert!(plain.contains("Warning"));
-        assert!(plain.contains("Issue       OpenViking server is in api_key mode"));
+        assert!(plain.contains("Issue       Business Data Platform server is in api_key mode"));
         assert!(plain.contains("The current request uses root_api_key"));
         assert!(plain.contains("Fix         Set api_key in ovcli.conf to a User/Admin API key."));
         assert!(plain.contains("Connection"));
         assert!(plain.contains("Endpoint    http://localhost:18791/bot/v1"));
-        assert!(plain.contains("OpenViking"));
+        assert!(plain.contains("Business Data Platform"));
         assert!(plain.contains("Yes"));
         assert!(plain.contains("OV Server   http://localhost:18791"));
         assert!(plain.contains("Session     session-1"));
@@ -1475,10 +1475,10 @@ mod tests {
 
         assert!(plain.contains("VIKINGBOT 对话"));
         assert!(plain.contains("警告"));
-        assert!(plain.contains("OpenViking server 是 api_key 模式"));
+        assert!(plain.contains("Business Data Platform server 是 api_key 模式"));
         assert!(plain.contains("连接"));
         assert!(plain.contains("端点"));
-        assert!(plain.contains("OpenViking"));
+        assert!(plain.contains("Business Data Platform"));
         assert!(plain.contains("否"));
         assert!(plain.contains("OV Server   未配置"));
         assert!(plain.contains("新会话"));
@@ -1492,9 +1492,9 @@ mod tests {
         let plain = strip_ansi(&rendered);
 
         assert!(plain.contains("问题"));
-        assert!(plain.contains("OpenViking server 是 api_key 模式"));
+        assert!(plain.contains("Business Data Platform server 是 api_key 模式"));
         assert!(plain.contains("当前请求实际使用的是 root_api_key"));
-        assert!(plain.contains("bot 将无法正常使用 OpenViking 功能"));
+        assert!(plain.contains("bot 将无法正常使用 Business Data Platform 功能"));
         assert!(plain.contains("处理"));
         assert!(plain.contains("请在 ovcli.conf 中配置 api_key 为 User/Admin API Key。"));
     }

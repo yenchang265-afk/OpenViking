@@ -152,8 +152,8 @@ type RecallTraceRouteAdapter = {
 
 const contextEnginePlugin = {
   id: "openviking",
-  name: "Context Engine (OpenViking)",
-  description: "OpenViking-backed context-engine memory with auto-recall/capture",
+  name: "Context Engine (Business Data Platform)",
+  description: "Business Data Platform-backed context-engine memory with auto-recall/capture",
   kind: "context-engine" as const,
   configSchema: memoryOpenVikingConfigSchema,
 

@@ -2,7 +2,7 @@
 # One-step environment setup for the VikingBot × tau2-bench runner.
 #
 # Does everything in a single step:
-#   1. creates a fresh .venv at the OpenViking repo root (if missing)
+#   1. creates a fresh .venv at the Business Data Platform repo root (if missing)
 #   2. clones tau2-bench into ./tau2-bench (if missing; external dependency)
 #   3. installs openviking + vikingbot  (pip install -e .[bot]  -> runs the Cargo build;
 #      the [bot] extra provides prompt_toolkit/mcp/... needed by the runner and
@@ -28,7 +28,7 @@
 #   OPENVIKING_CONFIG_FILE, OPENVIKING_PROVISION_API_KEY, OPENAI_API_KEY / ARK_API_KEY, OPENAI_API_BASE
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# OpenViking repo root (this folder lives at benchmark/tau2/vikingbot/).
+# Business Data Platform repo root (this folder lives at benchmark/tau2/vikingbot/).
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
 VENV="${REPO_ROOT}/.venv"
 SETUP_MARKER="${VENV}/.tau2_setup_complete"
@@ -212,7 +212,7 @@ export PYTHONPATH="${OPENVIKING_TAU2_ROOT}:${VIKINGBOT_ROOT}:${PYTHONPATH:-}"
 # tau2 dataset root (derived from the tau2-bench checkout)
 export TAU2_DATA_ROOT="${TAU2_DATA_ROOT:-${TAU2_BENCH_ROOT}/data/tau2}"
 
-# OpenViking server config
+# Business Data Platform server config
 export OPENVIKING_CONFIG_FILE="${OPENVIKING_CONFIG_FILE:-${HOME}/.openviking/ov.conf}"
 
 # LLM for the tau2 user simulator (e.g. Doubao via volcengine ARK, OpenAI-compatible).

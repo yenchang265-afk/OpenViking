@@ -131,7 +131,7 @@ export function checkMinClientVersion(declared, clientVersion, warnings = []) {
   if (!required || !current) return true;
   if (compareVersions(current, required) >= 0) return true;
   warnings.push(
-    `this workspace asks for OpenViking plugin ${required} and this one is ${current}; `
+    `this workspace asks for Business Data Platform plugin ${required} and this one is ${current}; `
     + "settings it introduced will be ignored rather than blocking the session",
   );
   return false;

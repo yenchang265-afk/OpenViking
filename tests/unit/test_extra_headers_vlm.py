@@ -213,7 +213,7 @@ class TestVLMExtraHeaders:
 
 
 class TestOpenAIVLMClientRetries:
-    """Test OpenAI SDK retries are disabled in favor of OpenViking retries."""
+    """Test OpenAI SDK retries are disabled in favor of Business Data Platform retries."""
 
     @patch("openviking.models.vlm.backends.openai_vlm.openai.OpenAI")
     def test_openai_sync_client_disables_sdk_retries(self, mock_openai_class):

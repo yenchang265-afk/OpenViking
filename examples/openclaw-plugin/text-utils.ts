@@ -15,7 +15,7 @@ const RELEVANT_MEMORIES_BLOCK_RE = /<relevant-memories>[\s\S]*?<\/relevant-memor
 const OPENVIKING_CONTEXT_BLOCK_RE = /<openviking-context\b[^>]*>[\s\S]*?<\/openviking-context>/gi;
 const CONVERSATION_METADATA_BLOCK_RE =
   /(?:^|\n)\s*(?:Conversation info|Conversation metadata|会话信息|对话信息)\s*(?:\([^)]+\))?\s*:\s*```[\s\S]*?```/gi;
-/** Strips "Sender (untrusted metadata): ```json ... ```" so capture sends clean text to OpenViking extract. */
+/** Strips "Sender (untrusted metadata): ```json ... ```" so capture sends clean text to Business Data Platform extract. */
 const SENDER_METADATA_BLOCK_RE = /Sender\s*\([^)]*\)\s*:\s*```[\s\S]*?```/gi;
 const FENCED_JSON_BLOCK_RE = /```json\s*([\s\S]*?)```/gi;
 const METADATA_JSON_KEY_RE =
@@ -325,7 +325,7 @@ function extractPartText(content: unknown): string {
 }
 
 /**
- * 结构化消息类型 - 用于 afterTurn 发送到 OpenViking
+ * 结构化消息类型 - 用于 afterTurn 发送到 Business Data Platform
  */
 type ExtractedMessage = {
   role: "user" | "assistant";

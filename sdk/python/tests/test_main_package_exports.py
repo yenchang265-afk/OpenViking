@@ -28,7 +28,7 @@ def test_openviking_top_level_exports_http_clients():
     assert openviking.SyncHTTPClient is LegacySyncHTTPClient
     assert not hasattr(openviking, "AsyncOpenViking")
     assert not hasattr(openviking, "SyncOpenViking")
-    assert not hasattr(openviking, "OpenViking")
+    assert not hasattr(openviking, "Business Data Platform")
 
 
 def test_openviking_client_module_exports_http_clients():

@@ -1,4 +1,4 @@
-# OpenViking 解析器两层架构重构
+# Business Data Platform 解析器两层架构重构
 
 > 本文是 Accessor / Parser 两层拆分的历史重构记录。当前 `add_resource` 的完整入口分流、Understanding、Connector 与异步执行规则，见 [添加资源后的解析路由](./resource-ingestion-routing.md)。
 
@@ -264,4 +264,4 @@ registry.register(MyAccessor())
 ## 相关文档
 
 - [解析系统 README](https://github.com/volcengine/OpenViking/blob/main/openviking/parse/parsers/README.md)
-- [OpenViking 整体架构](../zh/concepts/01-architecture.md)
+- [Business Data Platform 整体架构](../zh/concepts/01-architecture.md)

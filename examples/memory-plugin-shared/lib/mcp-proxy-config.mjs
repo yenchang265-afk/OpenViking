@@ -113,7 +113,7 @@ export function resolveMcpActorPeerId({
   const explicitPeerId = String(peerId || "").trim();
   if (explicitPeerId) return explicitPeerId;
 
-  const message = "OpenViking MCP: actor-scoped recall needs an explicit peer id, which an MCP proxy cannot "
+  const message = "Business Data Platform MCP: actor-scoped recall needs an explicit peer id, which an MCP proxy cannot "
     + "derive from its launch directory. Falling back to broad recall across every peer under this user. "
     + "Set actor_peer_id in ovcli.conf, or OPENVIKING_PEER_ID in the MCP server environment, to scope it.";
   if (typeof onWarn === "function") onWarn(message);

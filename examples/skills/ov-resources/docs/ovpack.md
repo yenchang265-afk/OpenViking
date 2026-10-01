@@ -1,6 +1,6 @@
 # OVPack Import/Export/Backup/Restore
 
-OVPack is a `.ovpack` archive format for backing up and migrating OpenViking resource trees. Requires ROOT or ADMIN permissions.
+OVPack is a `.ovpack` archive format for backing up and migrating Business Data Platform resource trees. Requires ROOT or ADMIN permissions.
 
 ## Export (`ov export`)
 

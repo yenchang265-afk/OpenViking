@@ -209,7 +209,7 @@ export function createOpenVikingCommandDefinitions(
   return [
     {
       name: "add-resource",
-      description: "Add a resource into OpenViking.",
+      description: "Add a resource into Business Data Platform.",
       acceptsArgs: true,
       handler: async (ctx: PluginCommandContext) => {
         try {
@@ -220,13 +220,13 @@ export function createOpenVikingCommandDefinitions(
           const input = deps.parseAddResourceCommandArgs(ctx.args ?? "");
           return toCommandResult(await deps.addResourceOpenViking(input, session.actorPeerId));
         } catch (err) {
-          return { text: `OpenViking add resource failed: ${err instanceof Error ? err.message : String(err)}` };
+          return { text: `Business Data Platform add resource failed: ${err instanceof Error ? err.message : String(err)}` };
         }
       },
     },
     {
       name: "add-skill",
-      description: "Add a skill into OpenViking.",
+      description: "Add a skill into Business Data Platform.",
       acceptsArgs: true,
       handler: async (ctx: PluginCommandContext) => {
         try {
@@ -237,13 +237,13 @@ export function createOpenVikingCommandDefinitions(
           const input = deps.parseAddSkillCommandArgs(ctx.args ?? "");
           return toCommandResult(await deps.addSkillOpenViking(input, session.actorPeerId));
         } catch (err) {
-          return { text: `OpenViking add skill failed: ${err instanceof Error ? err.message : String(err)}` };
+          return { text: `Business Data Platform add skill failed: ${err instanceof Error ? err.message : String(err)}` };
         }
       },
     },
     {
       name: "ov-search",
-      description: "Search OpenViking resources and skills.",
+      description: "Search Business Data Platform resources and skills.",
       acceptsArgs: true,
       handler: async (ctx: PluginCommandContext) => {
         try {
@@ -254,25 +254,25 @@ export function createOpenVikingCommandDefinitions(
           const input = deps.parseOVSearchCommandArgs(ctx.args ?? "");
           return toCommandResult(await deps.searchOpenViking(input, session.actorPeerId, session));
         } catch (err) {
-          return { text: `OpenViking search failed: ${err instanceof Error ? err.message : String(err)}` };
+          return { text: `Business Data Platform search failed: ${err instanceof Error ? err.message : String(err)}` };
         }
       },
     },
     {
       name: "ov-query-config",
-      description: "Get or set runtime OpenViking query parameters for the current claw/session.",
+      description: "Get or set runtime Business Data Platform query parameters for the current claw/session.",
       acceptsArgs: true,
       handler: async (ctx: PluginCommandContext) => {
         try {
           return await deps.handleQueryConfigCommand(ctx);
         } catch (err) {
-          return { text: `OpenViking query config failed: ${err instanceof Error ? err.message : String(err)}` };
+          return { text: `Business Data Platform query config failed: ${err instanceof Error ? err.message : String(err)}` };
         }
       },
     },
     {
       name: "ov-recall-trace",
-      description: "Query OpenViking recall trace records.",
+      description: "Query Business Data Platform recall trace records.",
       acceptsArgs: true,
       handler: async (ctx: PluginCommandContext) => {
         try {
@@ -287,7 +287,7 @@ export function createOpenVikingCommandDefinitions(
             details: { count: result.entries.length, lookupLayer: result.lookupLayer, warnings: result.warnings, entries: result.entries },
           };
         } catch (err) {
-          return { text: `OpenViking recall trace query failed: ${err instanceof Error ? err.message : String(err)}` };
+          return { text: `Business Data Platform recall trace query failed: ${err instanceof Error ? err.message : String(err)}` };
         }
       },
     },

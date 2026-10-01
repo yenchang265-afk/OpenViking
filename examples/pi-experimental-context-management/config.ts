@@ -110,7 +110,7 @@ const DEFAULT_CONFIG: OVConfig = {
   commitKeepRecentCount: 10,
   faithfulCapture: true,
   // The `history` tool promises the archive can be read back, so tool output
-  // has to reach OpenViking — unlike the non-experimental extension.
+  // has to reach Business Data Platform — unlike the non-experimental extension.
   captureToolResults: true,
   captureMaxLength: 24000,
   captureToolMaxChars: 1000000,

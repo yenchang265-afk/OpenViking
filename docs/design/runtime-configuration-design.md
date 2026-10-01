@@ -2,7 +2,7 @@
 
 ## 1. Scope and goals
 
-OpenViking has two configuration planes:
+Business Data Platform has two configuration planes:
 
 - `ov.conf` is the startup configuration. It defines the process baseline and the runtime-config source selection. It is read during startup and is never rewritten by the runtime configuration API.
 - Runtime overrides are sparse values persisted by a `ConfigSource`. They can be published without rebuilding the process and are resolved independently at Cluster and Account scopes.

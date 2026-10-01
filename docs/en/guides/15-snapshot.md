@@ -1,6 +1,6 @@
 # Snapshots (Multi-Version Management) Guide
 
-This guide explains how to enable and use OpenViking's multi-version management (snapshots). On top of VikingFS, it provides Git-based `commit`/`log`/`show`/`restore` primitives, letting you save an account's resource tree as a series of immutable snapshots, walk history, compare versions, and restore the workspace to any past state.
+This guide explains how to enable and use Business Data Platform's multi-version management (snapshots). On top of VikingFS, it provides Git-based `commit`/`log`/`show`/`restore` primitives, letting you save an account's resource tree as a series of immutable snapshots, walk history, compare versions, and restore the workspace to any past state.
 
 Multi-version management is powered by [gitoxide](https://github.com/Byron/gitoxide) embedded in the Rust RAGFS layer, maintaining one logical Git repository per `account_id`. It is fully transparent to callers — you never run any `git` command yourself.
 
@@ -126,13 +126,13 @@ Configuration reference:
 | `git.s3.use_path_style` | `true` | `true` uses path-style addressing (MinIO, etc.); `false` uses virtual-host style (TOS, etc.) |
 | `git.s3.cas_mode` | `native` | Ref CAS mode. `native` uses S3 conditional writes (If-Match) |
 
-After editing the config, restart the OpenViking service (or re-initialize the SDK client) for it to take effect.
+After editing the config, restart the Business Data Platform service (or re-initialize the SDK client) for it to take effect.
 
 > The repository ships ready-to-use examples: [ov.conf.git-local.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-local.example) and [ov.conf.git-s3-tos.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-s3-tos.example).
 
 ## Directory Layout Change: the `.ovgit` Directory
 
-When the `local` backend is enabled and `base_dir` is left empty, OpenViking adds a **`.ovgit`** directory under the workspace to hold Git objects and refs:
+When the `local` backend is enabled and `base_dir` is left empty, Business Data Platform adds a **`.ovgit`** directory under the workspace to hold Git objects and refs:
 
 ```text
 data/                      # storage.workspace
@@ -150,7 +150,7 @@ data/                      # storage.workspace
 Key points:
 
 - `.ovgit` is an internal data directory. It is **not** exposed through `viking://` — users cannot see or modify it through the filesystem APIs (`ls`/`read`, etc.).
-- Its layout matches a standard Git object store (content-addressed `objects/`, loose `refs/`), but it is managed automatically by OpenViking. You should **not** run `git` commands against it.
+- Its layout matches a standard Git object store (content-addressed `objects/`, loose `refs/`), but it is managed automatically by Business Data Platform. You should **not** run `git` commands against it.
 - When backing up or migrating the workspace, copy `.ovgit` along with it to preserve the full version history.
 - With the `s3` backend, no local `.ovgit` directory is created; data lives under the bucket's `{prefix}/{account}/...` keys instead.
 
@@ -338,7 +338,7 @@ curl -X DELETE "http://localhost:1933/api/v1/snapshot/ignore" \
 - With the `s3` backend, `git.s3.bucket` and `git.s3.region` are required; missing them causes initialization to fail.
 - If a restore has vector side effects (files written/deleted), the response carries a `task_id` you can poll via `GET /api/v1/tasks/{task_id}` to track the background vector rebuild (see the [Observability guide](05-observability.md) and [API Overview](../api/01-overview.md)).
 - If `.ovgitignore` is too large (over 64 KiB) or contains unsupported syntax (`!` negation, backslash escaping), `commit` fails with an `invalid operation` error; `set_gitignore` validates the size up front.
-- Do not operate on the `.ovgit` directory with an external `git` tool; it is maintained by OpenViking.
+- Do not operate on the `.ovgit` directory with an external `git` tool; it is maintained by Business Data Platform.
 
 ## Related Documentation
 

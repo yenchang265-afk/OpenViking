@@ -916,7 +916,7 @@ def main():
     run_parser.add_argument(
         "--ov-config-path",
         default=str(Path.home() / ".openviking" / "ov.conf"),
-        help="Path to OpenViking configuration file",
+        help="Path to Business Data Platform configuration file",
     )
 
     args = parser.parse_args()

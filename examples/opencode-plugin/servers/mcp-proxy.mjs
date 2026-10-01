@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * stdio -> streamable-HTTP MCP proxy for the OpenViking OpenCode plugin.
+ * stdio -> streamable-HTTP MCP proxy for the Business Data Platform OpenCode plugin.
  *
  * OpenCode starts this process as a local MCP server. The proxy resolves its
  * connection through the plugin's own `loadConfig()`, forwards JSON-RPC

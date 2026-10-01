@@ -2,7 +2,7 @@
 
 **EXPERIMENTAL.** This document describes the context-window mode of
 `examples/pi-experimental-context-management`: how OpenAI's Codex does it, what
-this extension maps onto OpenViking, what actually happens during a reset, and
+this extension maps onto Business Data Platform, what actually happens during a reset, and
 the exact text the model sees.
 
 Everything below is taken from the code in this directory:
@@ -58,7 +58,7 @@ already closed.
 
 | Codex | Here | Notes |
 | --- | --- | --- |
-| History backend (`alpha/history/v2`) | The OpenViking session message stream, archived per window to `<session root>/history/archive_NNN/messages.jsonl` | Written by `POST /sessions/{id}/commit` |
+| History backend (`alpha/history/v2`) | The Business Data Platform session message stream, archived per window to `<session root>/history/archive_NNN/messages.jsonl` | Written by `POST /sessions/{id}/commit` |
 | Notes backend (`alpha/notes/v2`) | The `notes` parameter of `new_context` | No separate notes tool in v1 (see limitations) |
 | `thread_hint` in the window block | The server-written Working Memory (`.overview.md`) plus the model's own handoff notes | Working Memory has 7 sections: Session Title, Current State, Task & Goals, Key Facts & Decisions, Files & Context, Errors & Corrections, Open Issues |
 | `history.list_windows` | `history {"action":"list_windows"}` → `GET /fs/ls?uri=<root>/history` | Window ids come from the core's own `{windowId, archiveId}` ledger, so a window that closed without producing an archive cannot shift them |
@@ -81,7 +81,7 @@ already closed.
   usage plus a chars/4 estimate over the *untransformed* session, so right
   after a reset it is too high; the core keeps its own estimate over the
   transformed list and marks numbers as `estimated` when it uses them.
-- **Notes are not private.** Anything mirrored into OpenViking gets indexed and
+- **Notes are not private.** Anything mirrored into Business Data Platform gets indexed and
   becomes searchable, so v1 carries notes as a tool parameter instead of
   building a separate notes namespace.
 - **No parameterless `new_context`.** Without a notes backend, the reason and
@@ -94,7 +94,7 @@ the whole pipeline blocks inside the tool call, bounded by one deadline
 (`contextWindow.resetDeadlineMs`, default 60s).
 
 1. **Guards.** Refuse if a reset is already running, if the call has no tool
-   call id, if the OpenViking session id is unknown, or if the client is not
+   call id, if the Business Data Platform session id is unknown, or if the client is not
    connected. Refuse also when a previous commit failed in transport and the
    server is still unreachable.
 2. **`sync.syncBranch(branch)`** — pi has already persisted the assistant
@@ -117,10 +117,10 @@ the whole pipeline blocks inside the tool call, bounded by one deadline
    Every refusal from here on first posts a one-line
    `[Context Window Handoff] … RETRACTED` message, because the handoff note is
    already in the live session and would otherwise be archived as a window
-   boundary that never happened. (OpenViking has no delete for a session
+   boundary that never happened. (Business Data Platform has no delete for a session
    message, so this is a repair, not a rollback.)
 6. **Point of no return.** Once the commit returns an `archive_uri` the
-   OpenViking session is empty, so every path below must open a window.
+   Business Data Platform session is empty, so every path below must open a window.
    `archiveId = basename(archive_uri)`; the core polls
    `GET /content/read?uri=<archive_uri>/.overview.md` every
    `archivePollMs` until the deadline (404 while commit phase 2 runs, 200 with
@@ -167,10 +167,10 @@ alone (§4.2).
 
 ```text
 <context-window-management>
-You manage your own context window in this session. When the conversation grows it is not summarized behind your back: you decide when the current window ends, and OpenViking archives it so you can read it back afterwards.
+You manage your own context window in this session. When the conversation grows it is not summarized behind your back: you decide when the current window ends, and Business Data Platform archives it so you can read it back afterwards.
 
 Three tools do this:
-- new_context — archive the current window and continue in a fresh one. OpenViking generates a Working Memory of the archived window, and your next window opens with that Working Memory, your handoff notes and the user's most recent request.
+- new_context — archive the current window and continue in a fresh one. Business Data Platform generates a Working Memory of the archived window, and your next window opens with that Working Memory, your handoff notes and the user's most recent request.
 - history — read windows that were already archived: list_windows, list_items, read_item, search_contents. Closing a window loses nothing; it only stops being in front of you.
 - get_context_remaining — how much room is left, how long this window has been open, and how long it has been since the user's last message.
 
@@ -196,7 +196,7 @@ In a new window, read the <openviking-context source="context-window"> block fir
 Followed by one tool-list line:
 
 ```text
-OpenViking tools: viking_search, viking_read, viking_browse, viking_remember, viking_forget, viking_add_resource. Context window tools: new_context, history, get_context_remaining.
+Business Data Platform tools: viking_search, viking_read, viking_browse, viking_remember, viking_forget, viking_add_resource. Context window tools: new_context, history, get_context_remaining.
 ```
 
 Unlike Codex, the model is *not* asked to hide this machinery from the user —
@@ -243,7 +243,7 @@ prompt of a process — a resumed session (`pi -c`) would otherwise open with
 running. `observeMessages` is `transformContext` minus the right to release the
 boundary: a status readout must never disarm a window over a list pi has not
 finished writing. Nothing is persisted and no request is made, so the line is
-identical whether or not OpenViking answers.
+identical whether or not Business Data Platform answers.
 
 ### 4.3 Reminders (at most one of each per window, `customType: "ov-context-reminder"`)
 
@@ -286,7 +286,7 @@ as `(none given)` and empty notes as `(none)`.
 ```text
 <openviking-context source="context-window">
 <context_window id="w3" previous="w2" archive="archive_002" opened="2026-09-10T06:41:12Z">
-This is a fresh context window. The earlier conversation of this session was archived to OpenViking and is no longer in context. Files, the working directory, running processes and tools are unchanged.
+This is a fresh context window. The earlier conversation of this session was archived to Business Data Platform and is no longer in context. Files, the working directory, running processes and tools are unchanged.
 
 Reason you gave: REASON
 
@@ -300,7 +300,7 @@ Next steps you planned:
 The user's most recent message in the previous window was:
 <pending-request>PENDING</pending-request>
 
-Working Memory of the archived window, generated by OpenViking:
+Working Memory of the archived window, generated by Business Data Platform:
 <working-memory archive="archive_002">WORKING MEMORY</working-memory>
 
 2 other tool results were discarded with the same batch; re-run them if needed. Tools: bash, read.
@@ -321,9 +321,9 @@ truncated to their token budgets and then get a `\n...(truncated)` marker.
 
 One more line appears only when the sync manager lost messages for good (a
 non-retryable rejection, or a queue entry whose retries ran out): `N messages of
-this session were rejected by OpenViking and are missing from the archive, so
+this session were rejected by Business Data Platform and are missing from the archive, so
 history cannot show them.` (singular wording: `1 message of this session was
-rejected by OpenViking and is missing …, so history cannot show it.`) The
+rejected by Business Data Platform and is missing …, so history cannot show it.`) The
 barrier cannot catch those — they are counted as accepted so the watermark can
 move past them — so the header names them instead of letting `history` quietly
 under-report the window.
@@ -333,7 +333,7 @@ under-report the window.
 The Working Memory paragraph is replaced by:
 
 ```text
-Working Memory for archive_002 is not ready yet: OpenViking is still summarizing it. Rely on your handoff notes above and use history to read the archived messages directly.
+Working Memory for archive_002 is not ready yet: Business Data Platform is still summarizing it. Rely on your handoff notes above and use history to read the archived messages directly.
 <working-memory status="stale" archive="archive_001" describes="an earlier window, not the archive above">OLD WORKING MEMORY</working-memory>
 ```
 
@@ -347,7 +347,7 @@ of a session there is none, and no empty block is written.
 ### 4.7 Window header — Working Memory unavailable
 
 ```text
-Working Memory for archive_001 is unavailable: OpenViking could not summarize it. Rely on your handoff notes above and use history to read the archived messages directly.
+Working Memory for archive_001 is unavailable: Business Data Platform could not summarize it. Rely on your handoff notes above and use history to read the archived messages directly.
 ```
 
 Reached when the archive task reports `failed` or `cancelled`, when it reports
@@ -361,7 +361,7 @@ Reached when the archive task reports `failed` or `cancelled`, when it reports
 Description (verbatim from `tools.ts`):
 
 > Start a new context window. Does not clear, reset, or otherwise affect
-> environment state. The conversation so far is archived to OpenViking (which
+> environment state. The conversation so far is archived to Business Data Platform (which
 > generates a Working Memory of it) and your next window starts with that
 > Working Memory, your handoff notes and the user's last request. Call it alone
 > — tool results from the same batch are discarded with the old window — and
@@ -486,7 +486,7 @@ and the notes would never be written.
 
 One `pi.appendEntry("ov-context-window", …)` per window open, per Working
 Memory upgrade and at shutdown. `restore()` takes the newest entry that belongs
-to this OpenViking session and ignores malformed ones and entries of other
+to this Business Data Platform session and ignores malformed ones and entries of other
 sessions.
 
 ```json
@@ -522,7 +522,7 @@ sessions.
 through, appended on every successful commit (agent reset and pi-compaction
 fallback alike) and capped at the last 100 entries. `previousArchiveId` is what
 the stale Working Memory block is tagged with, and `undeliveredCount` is how
-many messages OpenViking rejected for good.
+many messages Business Data Platform rejected for good.
 
 `lastResetBy` is `agent`, `pi-compaction` or `external`. In-memory only, never
 persisted: the `resetting` mutex, `remindersSent`, `awaitingFirstObservation`,
@@ -536,14 +536,14 @@ byte for byte in the next process.
 
 | Situation | Cut? | What the model gets |
 | --- | --- | --- |
-| OpenViking unreachable, or no OV session id | no | `Context window NOT reset: OpenViking is unreachable, so this window cannot be archived. Nothing changed; keep working; the harness will compact for you if the window fills up.` |
-| Branch not fully delivered to OpenViking | no | `… the conversation so far could not be fully delivered to OpenViking. …` |
+| Business Data Platform unreachable, or no OV session id | no | `Context window NOT reset: Business Data Platform is unreachable, so this window cannot be archived. Nothing changed; keep working; the harness will compact for you if the window fills up.` |
+| Branch not fully delivered to Business Data Platform | no | `… the conversation so far could not be fully delivered to Business Data Platform. …` |
 | Pending queue did not drain | no | `… the archive barrier did not clear — N captured message(s) are still queued. …` |
-| Deadline exhausted before the handoff note | no | `… the reset deadline was exhausted while syncing this window to OpenViking. …` |
-| Handoff note rejected | no | `… the handoff note could not be written to OpenViking. …` |
+| Deadline exhausted before the handoff note | no | `… the reset deadline was exhausted while syncing this window to Business Data Platform. …` |
+| Handoff note rejected | no | `… the handoff note could not be written to Business Data Platform. …` |
 | Commit threw in transport | no | `… the archive commit failed in transport; the archive may or may not exist, so nothing was cut. …` — remembered, so the next attempt re-checks connectivity first |
-| Commit refused, or accepted without an `archive_uri` | no | `… OpenViking refused the archive commit (trace …). …` — the handoff note is retracted |
-| Commit `skipped` / `no_messages` | no | `Context window NOT reset: OpenViking had nothing to archive for this window. Keep working; call new_context again once there is something worth archiving.` |
+| Commit refused, or accepted without an `archive_uri` | no | `… Business Data Platform refused the archive commit (trace …). …` — the handoff note is retracted |
+| Commit `skipped` / `no_messages` | no | `Context window NOT reset: Business Data Platform had nothing to archive for this window. Keep working; call new_context again once there is something worth archiving.` |
 | Aborted before the commit (Esc) | no | `Context window NOT reset: the reset was cancelled before anything was archived. Nothing changed; keep working.` — the handoff note is retracted if it was already written |
 | Another reset already running | no | `Context window NOT reset: a reset is already in progress. …` |
 | Commit succeeded, Working Memory slow / aborted / deadline hit | **yes** | Window opens with the `status="pending"` header variant |
@@ -559,7 +559,7 @@ boundary too many.
 
 The rule behind the table: **fail closed before the commit, fail open after
 it.** Before the commit nothing was archived, so keeping the context is the
-safe answer. After it the OpenViking session is empty
+safe answer. After it the Business Data Platform session is empty
 (`keep_recent_count: 0`), so refusing would leave the model holding the old
 conversation while believing its history is still live.
 
@@ -613,7 +613,7 @@ If the model never resets and pi's own threshold hits first,
    what is in context.
 
 `session_before_compact` is skipped only while the extension is bypassed. With
-OpenViking unreachable the handler still runs, because step 1 needs no network
+Business Data Platform unreachable the handler still runs, because step 1 needs no network
 and is what stops a stale usage estimate from compacting a window that opened a
 moment ago; the core then refuses to commit on its own (`io.connected()` is
 false) and returns `undefined`, so an offline pi falls back to its own
@@ -636,7 +636,7 @@ summarizer.
 - **Tool-count pressure.** Nine tools ship here (six `viking_*` plus three
   window tools). On models with small tool budgets that is a real cost, which
   is why `history` is one tool with an `action` enum rather than four.
-- **Notes are not private.** They travel into the OpenViking archive inside the
+- **Notes are not private.** They travel into the Business Data Platform archive inside the
   handoff message, get summarized into Working Memory and are searchable by
   `history search_contents` and ordinary memory search — unlike the Codex notes
   backend. Do not treat them as a hidden scratchpad.
@@ -646,7 +646,7 @@ summarizer.
 - **Sibling tool results are lost.** Calling `new_context` alongside other tools
   discards their results (the header says so and names them), so they must be
   re-run if they mattered.
-- **Windows are per-session.** Window ids belong to this OpenViking session; a
+- **Windows are per-session.** Window ids belong to this Business Data Platform session; a
   restored state belonging to another session is dropped. They come from the
   core's own `{windowId, archiveId}` ledger, so a window closed by a compaction
   that produced no archive keeps its number without appearing in `history` —
@@ -664,7 +664,7 @@ summarizer.
 ## 12. Manual demo
 
 1. Disable the non-experimental extension first — they both register `viking_*`
-   and both write the same OpenViking session. Set `"enabled": false` in
+   and both write the same Business Data Platform session. Set `"enabled": false` in
    `~/.pi/agent/extensions/openviking/config.json`, or drop it from
    `settings.json`'s `packages`. (If you forget, this extension notices a
    `viking_search` registered from another directory — on startup and again on
@@ -692,14 +692,14 @@ ready, waited 34211ms)`.
 ## 13. End-to-end gate
 
 `scripts/e2e-window.mjs` (with the `scripts/e2e-window.sh` wrapper) drives a
-real pi binary against a real OpenViking server and a real OpenAI-compatible
+real pi binary against a real Business Data Platform server and a real OpenAI-compatible
 LLM, in a throwaway agent directory that has only this extension installed. It
 is a manual gate, not part of CI.
 
 | Variable | Required | Meaning |
 | --- | --- | --- |
-| `OPENVIKING_URL` | yes | OpenViking server base URL |
-| `OPENVIKING_API_KEY` | yes | OpenViking API key |
+| `OPENVIKING_URL` | yes | Business Data Platform server base URL |
+| `OPENVIKING_API_KEY` | yes | Business Data Platform API key |
 | `E2E_LLM_API_KEY` | yes | API key of the OpenAI-compatible LLM endpoint |
 | `E2E_LLM_BASE_URL` | yes | LLM base URL. No default: a private relay must not end up hardcoded in the repo |
 | `E2E_LLM_MODEL` | yes | Model id served by that endpoint |
@@ -707,8 +707,8 @@ is a manual gate, not part of CI.
 | `E2E_LLM_REASONING` | no | `off` (default), `minimal`, `low`, `medium`, `high`, `xhigh`. Anything but `off` marks the model as reasoning-capable, sets pi's `defaultThinkingLevel` and, for a custom relay, turns on `compat.supportsReasoningEffort` so the request carries `reasoning_effort` |
 | `PI_BIN` | no | Path to the pi binary; defaults to `which pi` |
 | `E2E_KEEP_TMP` | no | `1` keeps the temporary workspace on success |
-| `E2E_KEEP_OV_SESSION` | no | `1` leaves the OpenViking sessions in place so the archives stay readable afterwards; you clean them up |
-| `E2E_WINDOW_FAILCLOSED` | no | `1` runs only the fail-closed scenario, `both` runs it after the main one. The script points pi at a dead port itself; `OPENVIKING_URL` / `OPENVIKING_API_KEY` stay required because the gate also checks the OpenViking side |
+| `E2E_KEEP_OV_SESSION` | no | `1` leaves the Business Data Platform sessions in place so the archives stay readable afterwards; you clean them up |
+| `E2E_WINDOW_FAILCLOSED` | no | `1` runs only the fail-closed scenario, `both` runs it after the main one. The script points pi at a dead port itself; `OPENVIKING_URL` / `OPENVIKING_API_KEY` stay required because the gate also checks the Business Data Platform side |
 | `E2E_WINDOW_LONG` | no | `1` runs only the long-context scenario, `both` adds it. The workspace is seeded with this extension's own sources — 22 files, around 105k tokens of material — and the agent is asked to inventory them one file at a time. The prompt never mentions the context tools: the point is whether the agent reaches for them once the window fills. Slow (25-40 minutes) and dependent on model judgement, so the judgement checks warn while harness behaviour still fails the gate |
 | `E2E_WINDOW_LONG_MIN_PERCENT` | no | Share of the window the long run should reach before resetting; default `40`. Measured from the provider payloads, because the per-prompt `[context-status]` line undersamples a tool-heavy turn |
 | `E2E_WINDOW_LONG_SOFT_PERCENT` | no | Where the soft reminder fires in the long run; default `45` |
@@ -736,7 +736,7 @@ provider payloads that the post-reset request starts with a user message
 opening on `<openviking-context source="context-window">`, carries `id="w2"`
 and the codename from the notes, no longer contains the padding or the
 `new_context` call and result, and leaves no orphan `tool_result`; plus, on the
-OpenViking side, that `.overview.md` exists, `messages.jsonl` contains the
+Business Data Platform side, that `.overview.md` exists, `messages.jsonl` contains the
 `[Context Window Handoff]` note and `[tool-result …]` entries, and a grep for
 the codename hits.
 

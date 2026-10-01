@@ -17,7 +17,7 @@ function run(...args) {
   });
 }
 
-test("install preserves unrelated records and remove deletes only OpenViking", async () => {
+test("install preserves unrelated records and remove deletes only Business Data Platform", async () => {
   const root = await mkdtemp(join(tmpdir(), "ov-kimi-install-"));
   const source = join(root, "source");
   const home = join(root, "home");

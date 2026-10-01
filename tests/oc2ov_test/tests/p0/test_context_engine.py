@@ -15,7 +15,7 @@ Context Engine 核心交互链路测试
 
 前置条件：
 - ECS 上 commitTokenThreshold 已调低（如 500），以减少 archive 生成的对话轮次
-- OpenViking 服务正常运行
+- Business Data Platform 服务正常运行
 """
 
 import os

@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Pack endpoints for OpenViking HTTP Server."""
+"""Pack endpoints for Business Data Platform HTTP Server."""
 
 import os
 import tempfile
@@ -132,7 +132,7 @@ async def backup_ovpack(
     body: BackupRequest | None = None,
     ctx: RequestContext = Depends(get_request_context),
 ):
-    """Back up all public OpenViking scopes as a restore-only .ovpack file."""
+    """Back up all public Business Data Platform scopes as a restore-only .ovpack file."""
     service = get_service()
     temp_dir = tempfile.gettempdir()
     temp_file = os.path.join(temp_dir, f"backup_{os.urandom(16).hex()}.ovpack")

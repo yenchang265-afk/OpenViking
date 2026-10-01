@@ -83,7 +83,7 @@ def read_manifest(zf: zipfile.ZipFile, base_name: str) -> dict[str, Any]:
     if version_int != OVPACK_FORMAT_VERSION:
         raise invalid_manifest(
             f"Unsupported ovpack format_version {version}; "
-            f"this OpenViking requires {OVPACK_FORMAT_VERSION}",
+            f"this Business Data Platform requires {OVPACK_FORMAT_VERSION}",
             manifest_path,
             format_version=version_int,
             supported_format_version=OVPACK_FORMAT_VERSION,

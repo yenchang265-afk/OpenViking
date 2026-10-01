@@ -139,7 +139,7 @@ def test_question_loader():
 
 def main():
     print("=" * 60)
-    print("🧪 OpenViking Eval Module Validation")
+    print("🧪 Business Data Platform Eval Module Validation")
     print("=" * 60)
 
     jsonl_path = (

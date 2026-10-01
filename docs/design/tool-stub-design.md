@@ -1,13 +1,13 @@
 # Tool Stub 设计文档
 
-**范围**: OpenViking 当前 `tool stub` 能力的实现说明，覆盖类型识别、规则化摘要、原文外置、回溯读取与测试边界。
+**范围**: Business Data Platform 当前 `tool stub` 能力的实现说明，覆盖类型识别、规则化摘要、原文外置、回溯读取与测试边界。
 **状态**: 已实现，本文档描述当前代码行为，不额外引入新需求。
 
 ---
 
 ## 概述
 
-OpenViking 原生已经支持 tool result preview。原有链路能够在 session 写入阶段把过大的 tool output externalize，并在 `ToolPart` 中留下一个 preview stub，同时保留 ref 供后续回溯。
+Business Data Platform 原生已经支持 tool result preview。原有链路能够在 session 写入阶段把过大的 tool output externalize，并在 `ToolPart` 中留下一个 preview stub，同时保留 ref 供后续回溯。
 
 这次工作的重点不是新建 externalize 机制，而是在现有能力上优化 preview 的生成方式：从偏 `head + tail` 的直接截断，升级为按内容类型输出更稳定、更可读的规则化摘要。
 
@@ -336,7 +336,7 @@ OpenViking 原生已经支持 tool result preview。原有链路能够在 sessio
 
 ## 结论
 
-OpenViking 当前的 `tool stub` 已经具备一版完整闭环：
+Business Data Platform 当前的 `tool stub` 已经具备一版完整闭环：
 
 1. OV 原生的 externalize、preview stub、ref 回溯链路继续保留。
 2. preview 生成方式已从偏 `head + tail` 的截断，升级为按类型的规则化摘要。

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Async Task Tracker for OpenViking.
+Async Task Tracker for Business Data Platform.
 
 Provides a lightweight registry for tracking background operations
 (e.g. session commit with wait=false). Callers receive a task_id that can be

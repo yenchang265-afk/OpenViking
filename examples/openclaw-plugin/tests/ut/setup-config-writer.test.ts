@@ -31,7 +31,7 @@ function createMemoryIO(initialConfig: Record<string, unknown> = {}): SetupIO & 
 }
 
 describe("setup config writer service", () => {
-  it("writes OpenViking plugin config while preserving entry metadata and cleaning stale install records", () => {
+  it("writes Business Data Platform plugin config while preserving entry metadata and cleaning stale install records", () => {
     const io = createMemoryIO({
       plugins: {
         allow: ["other"],

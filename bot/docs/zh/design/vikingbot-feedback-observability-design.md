@@ -1,6 +1,6 @@
 # Vikingbot 问答效果反馈观测方案设计
 
-**Author:** OpenViking Team
+**Author:** Business Data Platform Team
 **Status:** Revised Draft
 **Date:** 2026-04-30
 
@@ -850,5 +850,5 @@ uv run --extra test --extra bot -m pytest bot/tests/test_feedback_stats.py bot/t
 
 ## 15. Related Docs
 
-- [OpenViking Metrics 概念文档](../../docs/zh/concepts/12-metrics.md) - feedback 指标族、PromQL 示例与 `/metrics` 暴露说明
-- [OpenViking Metrics API 文档](../../docs/zh/api/09-metrics.md) - `/metrics` 端点行为与抓取方式
+- [Business Data Platform Metrics 概念文档](../../docs/zh/concepts/12-metrics.md) - feedback 指标族、PromQL 示例与 `/metrics` 暴露说明
+- [Business Data Platform Metrics API 文档](../../docs/zh/api/09-metrics.md) - `/metrics` 端点行为与抓取方式

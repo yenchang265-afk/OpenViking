@@ -4,7 +4,7 @@
 """
 Encryption integration tests
 
-Tests encryption functionality integrated with VikingFS and OpenViking service.
+Tests encryption functionality integrated with VikingFS and Business Data Platform service.
 """
 
 import os
@@ -593,7 +593,7 @@ This is a test skill for verifying encryption functionality.
         print(
             "[1.1] Create test resources directly using VikingFS (avoid waiting for semantic processing)"
         )
-        test_resource_content = "This is test resource file content for verifying encryption functionality. Contains keyword OpenViking."
+        test_resource_content = "This is test resource file content for verifying encryption functionality. Contains keyword Business Data Platform."
 
         # Create test file directly using VikingFS
         test_resource_uri = "viking://resources/test_encryption_file.txt"
@@ -647,9 +647,9 @@ This is a test skill for verifying encryption functionality.
 
         # grep operation
         print("  Executing grep operation...")
-        grep_result = await svc.viking_fs.grep(resources_dir_uri, "OpenViking", ctx=ctx)
+        grep_result = await svc.viking_fs.grep(resources_dir_uri, "Business Data Platform", ctx=ctx)
         assert grep_result["count"] > 0
-        assert any("OpenViking" in match["content"] for match in grep_result["matches"])
+        assert any("Business Data Platform" in match["content"] for match in grep_result["matches"])
         print("  ✓ grep operation successful")
 
         # abstract operation

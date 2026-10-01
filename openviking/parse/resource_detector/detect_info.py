@@ -18,7 +18,7 @@ class VisitType(Enum):
     FILE_SYS = "FILE_SYS"
     # Resources that require download, e.g., files from network, web pages, remote objects, remote code repositories, etc.
     NEED_DOWNLOAD = "NEED_DOWNLOAD"
-    # Pre-processed context pack conforming to OpenViking's structure, typically with .ovpack extension
+    # Pre-processed context pack conforming to Business Data Platform's structure, typically with .ovpack extension
     READY_CONTEXT_PACK = "READY_CONTEXT_PACK"
 
 

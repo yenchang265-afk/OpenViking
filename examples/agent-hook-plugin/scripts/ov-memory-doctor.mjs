@@ -6,7 +6,7 @@
  * Cursor, TRAE, TRAE CN and ZCode are installed by writing into the host's own
  * configuration files rather than through a plugin marketplace, so what can go
  * wrong is different from Claude Code's and Codex's: the host config may have
- * lost the OpenViking entries, the assembled runtime beside the integration may
+ * lost the Business Data Platform entries, the assembled runtime beside the integration may
  * be missing or stale, or the client may simply never have been installed. The
  * configuration and connection sections are the ones every harness shares.
  *
@@ -139,7 +139,7 @@ function checkInstall(report) {
   else {
     const text = JSON.stringify(hooks.data);
     const events = Object.keys(hooks.data.hooks?.events || hooks.data.hooks || {});
-    if (!text.includes("OPENVIKING_INTEGRATION_ID")) report.fail(`${homeShort(hooksPath)} has no OpenViking hooks`, `events present: ${events.join(", ") || "(none)"}`, `re-run the installer with --harness ${CLIENT}`);
+    if (!text.includes("OPENVIKING_INTEGRATION_ID")) report.fail(`${homeShort(hooksPath)} has no Business Data Platform hooks`, `events present: ${events.join(", ") || "(none)"}`, `re-run the installer with --harness ${CLIENT}`);
     else {
       report.ok(`hooks in ${homeShort(hooksPath)}: ${events.join(", ")}`);
       if (!text.includes("scripts/hook.mjs")) report.warn("the installed hook commands do not name scripts/hook.mjs", "they were written by an older installer", "re-run the installer");

@@ -468,7 +468,7 @@ class AgentLoop:
         query: str,
         result: str,
     ) -> dict[str, Any]:
-        """Expose automatic OpenViking memory lookup using the existing tool event stream."""
+        """Expose automatic Business Data Platform memory lookup using the existing tool event stream."""
         args_str = json.dumps({"query": query}, ensure_ascii=False)
         await self.bus.publish_outbound(
             OutboundMessage(
@@ -842,7 +842,7 @@ class AgentLoop:
                     low = candidate + 1
             return minimum
 
-        # OpenViking already returns Turn-aware context, but VikingBot applies a
+        # Business Data Platform already returns Turn-aware context, but VikingBot applies a
         # second budget with a different estimator after adding the local tail.
         # Jointly reserve room for the latest User anchor and final Assistant so
         # this final boundary cannot turn the prompt back into a half Turn.
@@ -941,7 +941,7 @@ class AgentLoop:
             unsynced_messages = get_unsynced_messages(session)
             if not ov_history and len(unsynced_messages) < len(session.messages):
                 logger.warning(
-                    f"OpenViking returned no session context for {session_id}; "
+                    f"Business Data Platform returned no session context for {session_id}; "
                     "falling back to complete local session history."
                 )
                 unsynced_messages = session.messages
@@ -964,14 +964,14 @@ class AgentLoop:
                 )
             ):
                 logger.info(
-                    f"Trimmed OpenViking session history for {session_id} to "
+                    f"Trimmed Business Data Platform session history for {session_id} to "
                     f"token_budget={token_budget}: messages={len(combined_history)}"
                     f"->{len(trimmed_history)}"
                 )
             return trimmed_history
         except Exception as e:
             logger.warning(
-                f"Failed to load OpenViking session context for {session_id}: {e}. "
+                f"Failed to load Business Data Platform session context for {session_id}: {e}. "
                 "Falling back to local session history."
             )
             return session.get_history(provider_name=provider_name)
@@ -1360,13 +1360,13 @@ class AgentLoop:
             session_key: Session key for tool execution context
             publish_events: Whether to publish ITERATION/REASONING/TOOL_CALL events to the bus
             sender_id: Sender identity forwarded to the tool execution context
-            actor_peer_id: Authenticated OpenViking peer identity for tools
-            ov_tools_enable: Whether to enable OpenViking tools for this session
+            actor_peer_id: Authenticated Business Data Platform peer identity for tools
+            ov_tools_enable: Whether to enable Business Data Platform tools for this session
             memory_peer_ids: List of peer IDs for memory retrieval
-            memory_owner_user_ids: List of explicit OpenViking user IDs for
+            memory_owner_user_ids: List of explicit Business Data Platform user IDs for
                 trusted-mode owner-user memory lookup
             disabled_tools: Tool names to hide from the model for this request
-            openviking_connection: Request-scoped OpenViking identity for tools
+            openviking_connection: Request-scoped Business Data Platform identity for tools
             stop_tool_names: Tool names that terminate the loop immediately after execution
             on_plain_text: Optional async callback invoked when the model returns a non-empty
                 plain-text reply (no tool calls). It receives (messages, text, iteration) and
@@ -1381,7 +1381,7 @@ class AgentLoop:
             tool_registry: Optional request-scoped registry used for tool definitions and
                 execution. Defaults to the agent's shared tool registry.
             openviking_tool_names: Optional collection of tool names allowed to receive the
-                request-scoped OpenViking connection. None preserves the legacy behavior of
+                request-scoped Business Data Platform connection. None preserves the legacy behavior of
                 forwarding the connection to all tools; an empty collection forwards it to none.
             allow_final_fallback: Whether to make a final tool-free LLM call after the
                 tool-use iteration limit is reached.
@@ -2225,7 +2225,7 @@ class AgentLoop:
                 config=self.config,
             )
 
-            # Build initial messages (use OpenViking session context when enabled)
+            # Build initial messages (use Business Data Platform session context when enabled)
             provider_name = self.config.get_provider_name(self.model) if self.config else None
             history = await self._build_prompt_history(
                 session,

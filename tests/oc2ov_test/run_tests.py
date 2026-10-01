@@ -33,7 +33,7 @@ def get_test_suite(test_type: str = None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OpenClaw - OpenViking 端到端自动化测试")
+    parser = argparse.ArgumentParser(description="OpenClaw - Business Data Platform 端到端自动化测试")
     parser.add_argument(
         "--type",
         "-t",

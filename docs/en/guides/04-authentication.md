@@ -1,6 +1,6 @@
 # Authentication
 
-OpenViking Server supports multiple built-in authentication modes with role-based access control. The mode is auto-detected if not explicitly configured. In addition, custom authentication plugins can be registered to support arbitrary identity sources.
+Business Data Platform Server supports multiple built-in authentication modes with role-based access control. The mode is auto-detected if not explicitly configured. In addition, custom authentication plugins can be registered to support arbitrary identity sources.
 
 > **Recommended:** API Key mode is the most common and secure default choice, suitable for most deployment scenarios.
 
@@ -104,7 +104,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 
 ### Client Usage
 
-OpenViking accepts API keys via two headers:
+Business Data Platform accepts API keys via two headers:
 
 **X-API-Key header**
 
@@ -732,7 +732,7 @@ Custom roles work with `require_role()` and `require_auth_role()` decorators out
 
 ## CLI LDAP Authentication Configuration
 
-The OpenViking CLI (`ov`) supports LDAP authentication. Once configured, all CLI commands automatically use LDAP credentials.
+The Business Data Platform CLI (`ov`) supports LDAP authentication. Once configured, all CLI commands automatically use LDAP credentials.
 
 ### Configuration Methods
 
@@ -754,11 +754,11 @@ Edit `~/.openviking/ovcli.conf` to add LDAP authentication settings:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `url` | Yes | OpenViking server URL |
+| `url` | Yes | Business Data Platform server URL |
 | `auth_mode` | Yes | Authentication mode, set to `"ldap"` to enable LDAP |
 | `ldap_username` | Yes | LDAP username (UID) |
 | `ldap_password` | No | LDAP password (omit to skip password in CLI) |
-| `account` | No | OpenViking account ID (defaults to `"default"`) |
+| `account` | No | Business Data Platform account ID (defaults to `"default"`) |
 
 #### 2. Mixed Configuration
 
@@ -812,7 +812,7 @@ You can switch between LDAP and API Key authentication by editing `~/.openviking
 - Review server logs for detailed error messages
 
 **"Permission denied" error:**
-- Confirm the user's LDAP groups map to the correct OpenViking role
+- Confirm the user's LDAP groups map to the correct Business Data Platform role
 - Check if the operation requires admin privileges
 - Contact your system administrator to verify permissions
 

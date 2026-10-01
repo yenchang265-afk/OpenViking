@@ -1,10 +1,10 @@
-# VikingBot 接入 OpenViking 会话压缩改造方案
+# VikingBot 接入 Business Data Platform 会话压缩改造方案
 
 ## 结论
 
-该方案可行，但不能直接沿用当前 VikingBot 的 OpenViking 接入方式。
+该方案可行，但不能直接沿用当前 VikingBot 的 Business Data Platform 接入方式。
 
-当前 OpenViking 服务端已经具备以下关键能力：
+当前 Business Data Platform 服务端已经具备以下关键能力：
 
 - 稳定 session 的消息追加
 - `pending_tokens` 累积
@@ -17,18 +17,18 @@
 
 把 VikingBot 的长对话压缩链路改为：
 
-1. 同一个 bot session 持续写入同一个 OpenViking session。
+1. 同一个 bot session 持续写入同一个 Business Data Platform session。
 2. 每轮仅增量同步本轮新增消息，不重复全量重传。
-3. 当 OpenViking session 的 `pending_tokens` 达到阈值时触发 `commit`。
-4. 下一轮模型调用前，从 OpenViking 读取已压缩上下文。
-5. 本地 session 在未压缩前保留原始消息日志；OpenViking commit 成功后清空本地 JSONL，由 OpenViking 负责长上下文压缩与回放。
+3. 当 Business Data Platform session 的 `pending_tokens` 达到阈值时触发 `commit`。
+4. 下一轮模型调用前，从 Business Data Platform 读取已压缩上下文。
+5. 本地 session 在未压缩前保留原始消息日志；Business Data Platform commit 成功后清空本地 JSONL，由 Business Data Platform 负责长上下文压缩与回放。
 
 ## 非目标
 
 第一版不做以下事情：
 
-- 不让 OpenViking 完全替代本地 session 存储。
-- 不把全部 tool trace / reasoning 直接纳入 OpenViking 压缩主链路。
+- 不让 Business Data Platform 完全替代本地 session 存储。
+- 不把全部 tool trace / reasoning 直接纳入 Business Data Platform 压缩主链路。
 - 不依赖 memory extraction 完成后才能继续下一轮对话。
 - 不同时保留两套自动压缩主链路并行工作。
 
@@ -53,7 +53,7 @@
 - `session.get_history(...)` 作为模型 history
 - `len(session.messages) > self.memory_window` 作为本地自动压缩触发条件
 
-这意味着现有主链路仍是“本地 session 驱动”，而不是“OpenViking session 驱动”。
+这意味着现有主链路仍是“本地 session 驱动”，而不是“Business Data Platform session 驱动”。
 
 ### 3. 当前 `context.py` 只会拼本地 history
 
@@ -64,7 +64,7 @@
 3. memory/context 注入
 4. 当前 user message
 
-如果要接入 OpenViking 压缩上下文，必须显式扩展 prompt assembly。
+如果要接入 Business Data Platform 压缩上下文，必须显式扩展 prompt assembly。
 
 ### 4. 现有旧 compact hook 会与新链路冲突
 
@@ -77,18 +77,18 @@
 
 ## 设计原则
 
-### 1. OpenViking 负责长上下文压缩，本地 session 负责压缩前原始日志
+### 1. Business Data Platform 负责长上下文压缩，本地 session 负责压缩前原始日志
 
-第一版不建议让 OpenViking 直接替代本地 session 的短期落盘能力。
+第一版不建议让 Business Data Platform 直接替代本地 session 的短期落盘能力。
 
 推荐职责划分：
 
 - 本地 session：在压缩前保存原始消息，兼容现有 provider-specific 字段
-- OpenViking session：保存用于长对话压缩和回放的核心消息链路
+- Business Data Platform session：保存用于长对话压缩和回放的核心消息链路
 
-达到 token/window 阈值并成功 commit 后，本地 session JSONL 会被清空，下一轮通过 OpenViking context 回放已压缩历史。
+达到 token/window 阈值并成功 commit 后，本地 session JSONL 会被清空，下一轮通过 Business Data Platform context 回放已压缩历史。
 
-### 2. OpenViking session 必须稳定
+### 2. Business Data Platform session 必须稳定
 
 一个 `SessionKey.safe_name()` 对应一个稳定的 `ov_session_id`。
 
@@ -98,9 +98,9 @@
 
 不再在每次 commit 时重新 `create_session()`。
 
-### 3. OpenViking 读路径优先，本地只补 unsynced delta
+### 3. Business Data Platform 读路径优先，本地只补 unsynced delta
 
-OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
+Business Data Platform 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 - `latest_archive_overview`
 - pending archive messages
@@ -110,8 +110,8 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 正确规则应为：
 
-- 以 OpenViking 返回内容作为主 history
-- 本地仅补“尚未成功写入 OpenViking 的尾部 delta”
+- 以 Business Data Platform 返回内容作为主 history
+- 本地仅补“尚未成功写入 Business Data Platform 的尾部 delta”
 
 否则会产生重复上下文。
 
@@ -119,7 +119,7 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 群聊场景中要区分两层身份：
 
-- OpenViking request identity：谁在发起这次 API 调用
+- Business Data Platform request identity：谁在发起这次 API 调用
 - message speaker identity：这条消息是谁说的
 
 第一版建议：
@@ -127,11 +127,11 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 - 请求继续使用当前合法的 bot/account/user 身份
 - 每条消息的真实说话人通过 `peer_id` 记录
 
-不要把“当前 `sender_id`”直接等同于每次请求的 OpenViking user 身份，否则会和现有权限/命名空间语义冲突。
+不要把“当前 `sender_id`”直接等同于每次请求的 Business Data Platform user 身份，否则会和现有权限/命名空间语义冲突。
 
 ## 核心方案
 
-## 1. 稳定的 OpenViking Session 绑定
+## 1. 稳定的 Business Data Platform Session 绑定
 
 在本地 session metadata 中维护：
 
@@ -151,8 +151,8 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 字段说明：
 
-- `session_id`: 稳定的 OpenViking session id
-- `last_synced_local_index`: 已成功同步到 OpenViking 的本地消息下标上界
+- `session_id`: 稳定的 Business Data Platform session id
+- `last_synced_local_index`: 已成功同步到 Business Data Platform 的本地消息下标上界
 - `last_commit_at`: 最近一次 commit 时间
 - `last_pending_tokens`: 最近一次观测到的 `pending_tokens`
 - `last_context_read_at`: 最近一次读 context 时间
@@ -160,7 +160,7 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 其中最关键的是 `last_synced_local_index`，它决定增量同步与去重是否正确。
 
-## 2. 写路径：每轮结束后增量同步到 OpenViking
+## 2. 写路径：每轮结束后增量同步到 Business Data Platform
 
 写路径触发点位于 `bot/vikingbot/agent/loop.py` 当前一轮完成、本地 `session.add_message(...)` + `save(...)` 之后。
 
@@ -201,10 +201,10 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 - 只在“成功写入 OV”后推进 `last_synced_local_index`
 - commit 失败不应回滚已成功写入的消息游标
-- commit 成功代表本轮压缩完成，应清空本地 session JSONL；后续 prompt 由 OpenViking context + 新的本地未同步 tail 组成
+- commit 成功代表本轮压缩完成，应清空本地 session JSONL；后续 prompt 由 Business Data Platform context + 新的本地未同步 tail 组成
 - commit 与 extract 异步执行时，下一轮仍可继续读取 session context
 
-## 3. 读路径：模型调用前优先从 OpenViking 组装 history
+## 3. 读路径：模型调用前优先从 Business Data Platform 组装 history
 
 读路径触发点位于 `bot/vikingbot/agent/loop.py` 当前构建 `messages = await message_context.build_messages(...)` 之前。
 
@@ -222,8 +222,8 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 ### 推荐上下文顺序
 
 1. system prompt
-2. OpenViking `latest_archive_overview`
-3. OpenViking `messages`
+2. Business Data Platform `latest_archive_overview`
+3. Business Data Platform `messages`
 4. 本地 unsynced delta history
 5. 当前 user message
 
@@ -231,8 +231,8 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 这是第一版最关键的边界条件：
 
-- 不能再把本地 `session.get_history(...)` 全量拼到 OpenViking context 后面
-- 本地只允许补尚未成功同步到 OpenViking 的消息
+- 不能再把本地 `session.get_history(...)` 全量拼到 Business Data Platform context 后面
+- 本地只允许补尚未成功同步到 Business Data Platform 的消息
 - 一旦消息已确认 append 成功，就不应再出现在 local delta 中
 
 否则很容易出现重复轮次，导致模型重复理解、工具误触发或 token 浪费。
@@ -243,7 +243,7 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 第一版应采用两层预算：
 
-### 第一层：OpenViking context budget
+### 第一层：Business Data Platform context budget
 
 用于控制调用 `get_session_context(session_id, token_budget=...)` 的预算目标。
 
@@ -265,7 +265,7 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 群聊推荐语义如下：
 
 - 一个聊天房间对应一个稳定 `ov_session_id`
-- OpenViking request identity 继续按当前 bot/account 配置走
+- Business Data Platform request identity 继续按当前 bot/account 配置走
 - 每条 user/assistant message 的实际说话者写入 `peer_id`
 
 建议映射：
@@ -277,7 +277,7 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 - 会话不被拆碎
 - 群聊参与者身份可保留
-- 不破坏当前 OpenViking 的身份回退逻辑
+- 不破坏当前 Business Data Platform 的身份回退逻辑
 
 ## 需要改动的文件
 
@@ -321,7 +321,7 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 - `loop.py` 先准备好 `history`
 - `context.py` 只负责拼：system prompt、memory、当前 user message
 
-这样可以避免把 OpenViking 逻辑硬塞进 `ContextBuilder` 内部。
+这样可以避免把 Business Data Platform 逻辑硬塞进 `ContextBuilder` 内部。
 
 ### 4. `bot/vikingbot/session/manager.py`
 
@@ -347,9 +347,9 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 - `commit_token_threshold`：触发 commit 的阈值
 - `commit_keep_recent_count`：commit 后保留的 recent live messages 数量
 
-## OpenViking Python HTTP SDK 需要补的能力
+## Business Data Platform Python HTTP SDK 需要补的能力
 
-OpenViking 服务端和 Python HTTP SDK 需要完整透出以下调用能力：
+Business Data Platform 服务端和 Python HTTP SDK 需要完整透出以下调用能力：
 
 - `commit_session(session_id, keep_recent_count=0, telemetry=False)`
 - `Session.commit(keep_recent_count=0, telemetry=False)`
@@ -371,7 +371,7 @@ OpenViking 服务端和 Python HTTP SDK 需要完整透出以下调用能力：
 
 当 `session_context_enabled=true` 时：
 
-1. 禁用旧的 `message.compact` OpenViking hook 主路径
+1. 禁用旧的 `message.compact` Business Data Platform hook 主路径
 2. 禁用 `len(session.messages) > self.memory_window` 的旧自动压缩
 3. 保留 `/compact` 作为显式运维命令，但它应调用新的 stable-session commit 逻辑，而不是旧 fanout 逻辑
 
@@ -379,7 +379,7 @@ OpenViking 服务端和 Python HTTP SDK 需要完整透出以下调用能力：
 
 ## 第一阶段：打通最小闭环
 
-目标：不动 provider 行为的前提下，让 OpenViking 真正接管长对话压缩。
+目标：不动 provider 行为的前提下，让 Business Data Platform 真正接管长对话压缩。
 
 实施项：
 
@@ -401,7 +401,7 @@ OpenViking 服务端和 Python HTTP SDK 需要完整透出以下调用能力：
 
 实施项：
 
-1. 修改 OpenViking Python client wrapper
+1. 修改 Business Data Platform Python client wrapper
 2. 让 `commit_keep_recent_count` 配置生效
 3. 在 VikingBot 侧增加最终 prompt trim
 
@@ -454,4 +454,4 @@ commit 之后的 memory extraction 是后台过程。
 
 ## 一句话总结
 
-把 VikingBot 改成“本地原始日志 + OpenViking 长上下文压缩层”的双层结构：每轮增量写入稳定 OV session，达到 `pending_tokens` 阈值就 commit，下一轮优先读取 `latest_archive_overview + live messages`，本地只补尚未同步的 delta，并在启用新链路后退场旧的 compact/fanout 逻辑。
+把 VikingBot 改成“本地原始日志 + Business Data Platform 长上下文压缩层”的双层结构：每轮增量写入稳定 OV session，达到 `pending_tokens` 阈值就 commit，下一轮优先读取 `latest_archive_overview + live messages`，本地只补尚未同步的 delta，并在启用新链路后退场旧的 compact/fanout 逻辑。

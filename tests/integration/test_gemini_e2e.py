@@ -44,7 +44,7 @@ def test_default_dimension_is_3072(embedder):
 
 class TestGeminiE2ETextEmbedding:
     def test_embed_text_returns_correct_dimension(self, embedder):
-        result = embedder.embed("OpenViking is a knowledge management system")
+        result = embedder.embed("Business Data Platform is a knowledge management system")
         assert result.dense_vector is not None
         assert len(result.dense_vector) == 3072
 

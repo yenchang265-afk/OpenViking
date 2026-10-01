@@ -1,6 +1,6 @@
-# OpenViking Prompt 说明与自定义指南
+# Business Data Platform Prompt 说明与自定义指南
 
-本文介绍 OpenViking 当前的 prompt 模板体系，重点说明：
+本文介绍 Business Data Platform 当前的 prompt 模板体系，重点说明：
 
 - 当前有哪些 prompt
 - 它们分别用于哪个处理环节
@@ -12,7 +12,7 @@
 
 ## 总览
 
-OpenViking 当前的 prompt 主要分为两类：
+Business Data Platform 当前的 prompt 主要分为两类：
 
 1. 普通 prompt 模板
    - 存放在 `openviking/prompts/templates/<category>/*.yaml`
@@ -416,7 +416,7 @@ peer_enabled: true
 
 ## 如何自定义 Prompt
 
-OpenViking 支持两种主要的自定义方式：
+Business Data Platform 支持两种主要的自定义方式：
 
 1. 覆盖普通 prompt 模板
 2. 扩展 memory schema

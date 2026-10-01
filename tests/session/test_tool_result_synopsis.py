@@ -35,7 +35,7 @@ def test_render_stub_preserves_navigation_contract():
         preview_chars=80,
     )
 
-    assert "[OpenViking tool result externalized]" in rendered
+    assert "[Business Data Platform tool result externalized]" in rendered
     assert "kind: text" in rendered
     assert "tool_name: read_file" in rendered
     assert "original_chars: 120" in rendered

@@ -40,13 +40,13 @@ export type OpenVikingImportToolsDeps = {
 function formatResourceImportText(result: AddResourceResult): string {
   const root = result.root_uri ? ` ${result.root_uri}` : "";
   const warnings = result.warnings?.length ? ` Warnings: ${result.warnings.join("; ")}` : "";
-  return `Imported OpenViking resource.${root}${warnings}`.trim();
+  return `Imported Business Data Platform resource.${root}${warnings}`.trim();
 }
 
 function formatSkillImportText(result: AddSkillResult): string {
   const uri = result.uri ? ` ${result.uri}` : "";
   const name = result.name ? ` (${result.name})` : "";
-  return `Imported OpenViking skill${name}.${uri}`.trim();
+  return `Imported Business Data Platform skill${name}.${uri}`.trim();
 }
 
 export function registerOpenVikingImportTools(deps: OpenVikingImportToolsDeps): void {
@@ -54,11 +54,11 @@ export function registerOpenVikingImportTools(deps: OpenVikingImportToolsDeps): 
     deps.registerTool(
       (ctx: OpenVikingImportToolContext) => ({
         name: "add_resource",
-        label: "Add Resource (OpenViking)",
+        label: "Add Resource (Business Data Platform)",
         description:
-          "Use only when the user explicitly asks to import, add, upload, save, or index a document, directory, URL, Git repository, or OpenClaw media attachment into OpenViking resources. " +
+          "Use only when the user explicitly asks to import, add, upload, save, or index a document, directory, URL, Git repository, or OpenClaw media attachment into Business Data Platform resources. " +
           "Never use this during search, retrieval, URI reading, or search-result optimization; use ov_search and ov_read for those flows. " +
-          "For a '[media attached: /path ...]' document, set source to that exact local media path. Do not invent OpenViking upload REST endpoints.",
+          "For a '[media attached: /path ...]' document, set source to that exact local media path. Do not invent Business Data Platform upload REST endpoints.",
         parameters: Type.Object({
           source: Type.String({ description: "Local path, OpenClaw media attachment path, directory path, public URL, or Git URL" }),
           to: Type.Optional(Type.String({ description: "Exact target URI, e.g. viking://resources/project-docs" })),
@@ -99,9 +99,9 @@ export function registerOpenVikingImportTools(deps: OpenVikingImportToolsDeps): 
   deps.registerTool(
     (ctx: OpenVikingImportToolContext) => ({
       name: "add_skill",
-      label: "Add Skill (OpenViking)",
+      label: "Add Skill (Business Data Platform)",
       description:
-        "Use only when the user explicitly asks to import, add, install, or register a skill into OpenViking. " +
+        "Use only when the user explicitly asks to import, add, install, or register a skill into Business Data Platform. " +
         "Set source to a local SKILL.md file or skill directory, or data to raw SKILL.md content or an MCP tool dict.",
       parameters: Type.Object({
         source: Type.Optional(Type.String({ description: "Local SKILL.md path or skill directory path" })),

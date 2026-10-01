@@ -1,6 +1,6 @@
-# OpenViking Vector Backend 性能 Benchmark
+# Business Data Platform Vector Backend 性能 Benchmark
 
-这个 benchmark 用来快速验收新的 VectorDB storage backend 在 OpenViking 场景下的表现。
+这个 benchmark 用来快速验收新的 VectorDB storage backend 在 Business Data Platform 场景下的表现。
 它不直接调用 `CollectionAdapter`，而是走 `VikingVectorIndexBackend`：
 
 - 建表使用 `CollectionSchemas.context_collection`
@@ -8,7 +8,7 @@
 - 查询使用 `VikingVectorIndexBackend.search_in_tenant(...)`
 - 目录范围使用 `target_directories`，内部会编译成 `PathScope("uri", ..., depth=-1)`
 
-它仍然不经过 OpenViking Server、AGFS、embedding 服务和 rerank；向量直接来自模拟数据或
+它仍然不经过 Business Data Platform Server、AGFS、embedding 服务和 rerank；向量直接来自模拟数据或
 dir-vector-dataset 的 `.fvecs` 文件。
 
 ## 先选模式
@@ -315,7 +315,7 @@ Volcengine VikingDB：
 
 | 参数 | 说明 |
 | --- | --- |
-| `--config` | OpenViking 配置文件路径 |
+| `--config` | Business Data Platform 配置文件路径 |
 | `--output-dir` | 报告输出目录；默认在 `benchmark/results/vectordb_perf/<run-id>/` |
 | `--run-id` | 本次运行标识；会进入 collection 名和报告 |
 | `--profile` | `smoke`、`standard`、`stress` |

@@ -2,7 +2,7 @@
 
 [Agent Plugins 1.0](https://agent-plugins.org/specification) 是一套与厂商无关的 AI 编码 Agent 插件打包规范。一个插件就是一个普通目录：`plugin.json` 清单、`skills/` 下自动发现的 Agent Skills，以及可选的 `mcp.json` MCP 服务声明。所有符合规范的客户端都以同样的方式加载它 —— 不再需要为每个客户端各写一套接入。
 
-OpenViking 的这个插件包位于仓库的 [`agent-plugins/`](https://github.com/volcengine/OpenViking/tree/main/agent-plugins) 目录。
+Business Data Platform 的这个插件包位于仓库的 [`agent-plugins/`](https://github.com/volcengine/OpenViking/tree/main/agent-plugins) 目录。
 
 ## 目录结构
 
@@ -16,7 +16,7 @@ agent-plugins/
 ├── skills/openviking-memory/SKILL.md    # 教模型完成「召回 + 沉淀」闭环
 ├── skills/ov-experience-memory/SKILL.md # 检索并应用以往任务的 Experience
 ├── skills/ov-memory-troubleshoot/SKILL.md # 追溯记忆问题的会话依据
-├── skills/openviking-skills/SKILL.md    # 查找、使用、创建和共享 OpenViking 中的 skill
+├── skills/openviking-skills/SKILL.md    # 查找、使用、创建和共享 Business Data Platform 中的 skill
 └── plugin.test.mjs                      # node --test 规范一致性校验
 ```
 
@@ -24,7 +24,7 @@ agent-plugins/
 
 ## 安装
 
-1. 准备一个可访问的 OpenViking 服务。还没有的话，先按 [快速开始](../getting-started/02-quickstart.md) 部署；本地默认端点是 `http://127.0.0.1:1933`。
+1. 准备一个可访问的 Business Data Platform 服务。还没有的话，先按 [快速开始](../getting-started/02-quickstart.md) 部署；本地默认端点是 `http://127.0.0.1:1933`。
 2. 让你的 Agent Plugins 客户端指向 `agent-plugins/` 目录。各客户端的安装命令或插件目录不同，请查阅其文档。加载时客户端会：
    - 按 `mcp.json` 注册名为 `openviking` 的 MCP server，以 stdio 方式运行 `node <plugin>/servers/mcp-proxy.mjs`；
    - 从 `skills/` 发现 `openviking-memory`、`ov-experience-memory`、`ov-memory-troubleshoot` 和 `openviking-skills` 技能。
@@ -32,11 +32,11 @@ agent-plugins/
 
 ## 为什么用 stdio 代理，而不是 `streamable-http`
 
-OpenViking 服务端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 里直接写 `streamable-http` 条目无法做到可移植：服务地址因部署而异（有人是 localhost，有人是远端），而规范禁止把凭据写进静态 `headers`。stdio 代理同时解决这两点 —— 它在运行时从与 `ov` CLI 相同的本地来源解析 URL 和 API Key，逐请求注入，再把 JSON-RPC 原样通过 streamable HTTP 转发。
+Business Data Platform 服务端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 里直接写 `streamable-http` 条目无法做到可移植：服务地址因部署而异（有人是 localhost，有人是远端），而规范禁止把凭据写进静态 `headers`。stdio 代理同时解决这两点 —— 它在运行时从与 `ov` CLI 相同的本地来源解析 URL 和 API Key，逐请求注入，再把 JSON-RPC 原样通过 streamable HTTP 转发。
 
 ## 凭据解析顺序
 
-从高到低 —— 与 `ov` CLI 及其他 OpenViking 插件完全一致：
+从高到低 —— 与 `ov` CLI 及其他 Business Data Platform 插件完全一致：
 
 1. 环境变量：`OPENVIKING_URL`（或 `OPENVIKING_BASE_URL`）、`OPENVIKING_MCP_URL`、`OPENVIKING_API_KEY`（或 `OPENVIKING_BEARER_TOKEN`）、`OPENVIKING_ACCOUNT`、`OPENVIKING_USER`、`OPENVIKING_PEER_ID`、`OPENVIKING_AUTH_MODE`
 2. `~/.openviking/ovcli.conf`（`url`、`api_key`、`account` / `account_id`、`user` / `user_id`、`actor_peer_id` / `peer_id`），其后是它的 `plugin.agent_plugins` 与共享 `plugin` 键（`apiKey`、`accountId`、`userId`、`authMode`）—— 可用 `OPENVIKING_CLI_CONFIG_FILE` 覆盖路径
@@ -69,11 +69,11 @@ Agent Plugins 1.0 只覆盖 skills 和 MCP servers；hooks、commands、agents �
 
 内置的 `ov-experience-memory` 技能让模型在执行类任务前检索 `viking://~/memories/experiences`，并读取适用的 Experience 文件。在这个包里它只做检索：没有会话捕获，这些读取不会关联回所用的 Experience，也不会产生新的轨迹。它检索到的 Experience 来自会捕获会话的 harness。
 
-内置的 `openviking-skills` 技能覆盖存放在 OpenViking 里的 skill 本身：用 `find(context_type="skill")` 查找、读取并按 `SKILL.md` 执行、用 `add_skill` 新建或替换、从 Git 或本地文件夹安装、共享给整个账号，以及把本地 skill 目录迁入 OpenViking。这里没有会话启动 hook，也就没有 `<available-skills>` 清单，所以该技能让模型自己检索 skill，而不是从清单里读。
+内置的 `openviking-skills` 技能覆盖存放在 Business Data Platform 里的 skill 本身：用 `find(context_type="skill")` 查找、读取并按 `SKILL.md` 执行、用 `add_skill` 新建或替换、从 Git 或本地文件夹安装、共享给整个账号，以及把本地 skill 目录迁入 Business Data Platform。这里没有会话启动 hook，也就没有 `<available-skills>` 清单，所以该技能让模型自己检索 skill，而不是从清单里读。
 
 **如果你的 harness 支持 hooks 机制，推荐使用专属插件。** hook 驱动的召回与捕获不需要模型花费工具调用、也不依赖模型「想起来要记」，比技能驱动的闭环更省 token、也更可靠。本 Agent Plugins 包适用于没有 hooks 的 harness，或你希望用同一个包覆盖多个客户端的场景。
 
-Claude Code、Codex、Cursor、TRAE / TRAE CN、ZCode、OpenCode、pi 共用同一个安装脚本。它会依次询问界面语言、要安装的 harness、下载源和 OpenViking 凭据，所有步骤幂等，重复运行安全：
+Claude Code、Codex、Cursor、TRAE / TRAE CN、ZCode、OpenCode、pi 共用同一个安装脚本。它会依次询问界面语言、要安装的 harness、下载源和 Business Data Platform 凭据，所有步骤幂等，重复运行安全：
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)

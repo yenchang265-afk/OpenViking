@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 
 """
-In-process metric registry used by OpenViking.
+In-process metric registry used by Business Data Platform.
 
 Design goals:
 1) Keep the registry as a "current state store" for metrics (no snapshot/view layer).

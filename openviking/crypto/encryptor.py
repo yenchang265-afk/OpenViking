@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Magic number: OpenViking Encryption v1
+# Magic number: Business Data Platform Encryption v1
 MAGIC = b"OVE1"
 MAGIC_LENGTH = len(MAGIC)
 

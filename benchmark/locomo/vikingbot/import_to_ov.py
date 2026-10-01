@@ -1,7 +1,7 @@
 """
-OpenViking data import tool.
+Business Data Platform data import tool.
 
-Import conversations from LoCoMo JSON or plain text files into OpenViking memory.
+Import conversations from LoCoMo JSON or plain text files into Business Data Platform memory.
 
 Usage:
     # Import LoCoMo JSON conversations
@@ -485,7 +485,7 @@ def mark_ingested(
 
 
 # ---------------------------------------------------------------------------
-# OpenViking import
+# Business Data Platform import
 # ---------------------------------------------------------------------------
 def _parse_token_usage(commit_result: Dict[str, Any]) -> Dict[str, int]:
     """解析Token使用数据（从commit返回的telemetry或task result中提取）"""
@@ -537,16 +537,16 @@ async def viking_ingest(
     api_key: Optional[str] = None,
     group_chat: bool = False,
 ) -> Dict[str, int]:
-    """Save messages to OpenViking via OpenViking SDK client.
+    """Save messages to Business Data Platform via Business Data Platform SDK client.
     Returns token usage dict with embedding and vlm token counts.
 
     Args:
         messages: List of message dicts with role and text
-        openviking_url: OpenViking service URL
+        openviking_url: Business Data Platform service URL
         session_time: Session time string (e.g., "9:36 am on 2 April, 2023")
         user_id: User identifier for separate userspace (e.g., "conv-26")
-        account: OpenViking account identifier
-        api_key: Optional API key for OpenViking client authentication
+        account: Business Data Platform account identifier
+        api_key: Optional API key for Business Data Platform client authentication
         group_chat: Whether to enable peer-memory extraction for group-chat sessions
     """
     # 解析 session_time - 为每条消息计算递增的时间戳
@@ -1343,7 +1343,7 @@ def main():
     script_dir = Path(__file__).parent.resolve()
     default_input = str(script_dir / ".." / "data" / "locomo10.json")
 
-    parser = argparse.ArgumentParser(description="Import conversations into OpenViking")
+    parser = argparse.ArgumentParser(description="Import conversations into Business Data Platform")
     parser.add_argument(
         "--input",
         default=default_input,
@@ -1362,28 +1362,28 @@ def main():
     parser.add_argument(
         "--openviking-url",
         default="http://localhost:1933",
-        help="OpenViking service URL (default: http://localhost:1933)",
+        help="Business Data Platform service URL (default: http://localhost:1933)",
     )
     parser.add_argument(
         "--api-key",
         default=None,
-        help="OpenViking API key to pass to AsyncHTTPClient",
+        help="Business Data Platform API key to pass to AsyncHTTPClient",
     )
     parser.add_argument(
         "--account",
         default="default",
-        help="OpenViking account identifier (default: default)",
+        help="Business Data Platform account identifier (default: default)",
     )
     parser.add_argument(
         "--user",
         default="default",
-        help="OpenViking user identifier for trusted mode when --no-separate-user-by-sample is used (default: default)",
+        help="Business Data Platform user identifier for trusted mode when --no-separate-user-by-sample is used (default: default)",
     )
     parser.add_argument(
         "--auth-mode",
         choices=["api_key", "trusted"],
         default="api_key",
-        help="OpenViking server auth mode for request identity wiring (default: api_key)",
+        help="Business Data Platform server auth mode for request identity wiring (default: api_key)",
     )
     parser.add_argument(
         "--sample",
@@ -1406,7 +1406,7 @@ def main():
         "--separate-user-by-sample",
         action=argparse.BooleanOptionalAction,
         default=True,
-        help="Whether to isolate OpenViking users by sample (default: true). Ignored when --api-key is provided because User keys pin account/user identity.",
+        help="Whether to isolate Business Data Platform users by sample (default: true). Ignored when --api-key is provided because User keys pin account/user identity.",
     )
     parser.add_argument(
         "--parallel-samples",

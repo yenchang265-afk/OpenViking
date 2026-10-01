@@ -1,7 +1,7 @@
 """Stable mirroring for Hermes native MEMORY.md / USER.md entries.
 
 Hermes' built-in memory tool selects entries by text and reports their full
-previous content after a committed write. OpenViking needs an exact ``viking://``
+previous content after a committed write. Business Data Platform needs an exact ``viking://``
 file URI to update or delete a memory safely. This module keeps the identity map
 in a small profile-scoped registry and serializes mirror operations through one
 FIFO worker.
@@ -52,7 +52,7 @@ def _registry_lock(path: Path) -> threading.Lock:
 
 
 def _connection_fingerprint(client: Any) -> str:
-    """Identify the captured OpenViking connection without storing its key."""
+    """Identify the captured Business Data Platform connection without storing its key."""
     identity = [
         str(getattr(client, "_endpoint", "") or "").rstrip("/"),
         str(getattr(client, "_api_key", "") or ""),
@@ -65,7 +65,7 @@ def _connection_fingerprint(client: Any) -> str:
 
 
 class NativeMemoryMirror:
-    """FIFO, profile-scoped mirror of Hermes native memory into OpenViking."""
+    """FIFO, profile-scoped mirror of Hermes native memory into Business Data Platform."""
 
     def __init__(self, provider: Any):
         self._provider = provider
@@ -106,7 +106,7 @@ class NativeMemoryMirror:
         with self._state_lock:
             if self._shutting_down:
                 logger.warning(
-                    "OpenViking memory mirror skipped %s during provider shutdown",
+                    "Business Data Platform memory mirror skipped %s during provider shutdown",
                     action,
                 )
                 return
@@ -136,7 +136,7 @@ class NativeMemoryMirror:
         if worker.is_alive() and remaining:
             worker.join(timeout=remaining)
         if worker.is_alive():
-            logger.warning("OpenViking memory mirror worker did not drain before shutdown")
+            logger.warning("Business Data Platform memory mirror worker did not drain before shutdown")
 
     def _run(self) -> None:
         while True:
@@ -153,9 +153,9 @@ class NativeMemoryMirror:
             try:
                 self._apply(event)
             except _MappingError as exc:
-                logger.warning("OpenViking memory mirror skipped: %s", exc)
+                logger.warning("Business Data Platform memory mirror skipped: %s", exc)
             except Exception as exc:
-                logger.warning("OpenViking memory mirror failed: %s", exc)
+                logger.warning("Business Data Platform memory mirror failed: %s", exc)
             finally:
                 self._queue.task_done()
 
@@ -219,7 +219,7 @@ class NativeMemoryMirror:
             raise _MappingError(
                 f"{action} requires authoritative previous_content from Hermes; "
                 "upgrade Hermes to a version with committed-entry metadata; "
-                "leaving OpenViking unchanged"
+                "leaving Business Data Platform unchanged"
             )
 
         matches = [
@@ -231,13 +231,13 @@ class NativeMemoryMirror:
         ]
         if not matches:
             raise _MappingError(
-                f"{action} has no stable OpenViking URI mapping for target={target!r}; "
-                "leaving OpenViking unchanged"
+                f"{action} has no stable Business Data Platform URI mapping for target={target!r}; "
+                "leaving Business Data Platform unchanged"
             )
         if len(matches) != 1:
             raise _MappingError(
-                f"{action} matched {len(matches)} OpenViking URI mappings for "
-                f"target={target!r}; leaving OpenViking unchanged"
+                f"{action} matched {len(matches)} Business Data Platform URI mappings for "
+                f"target={target!r}; leaving Business Data Platform unchanged"
             )
         return matches[0]
 
@@ -248,7 +248,7 @@ class NativeMemoryMirror:
         ]
         if failed:
             logger.warning(
-                "OpenViking memory file updated at %s, but indexing failed (%s); "
+                "Business Data Platform memory file updated at %s, but indexing failed (%s); "
                 "search results may be stale. The URI mapping was retained.",
                 uri,
                 ", ".join(failed),
@@ -293,7 +293,7 @@ class NativeMemoryMirror:
             )
             result = response.get("result", {}) if isinstance(response, dict) else {}
             if isinstance(result, dict) and result.get("content_updated") is False:
-                raise RuntimeError("OpenViking memory file was not updated")
+                raise RuntimeError("Business Data Platform memory file was not updated")
             canonical_uri = (
                 str(result.get("uri") or "").strip() if isinstance(result, dict) else ""
             ) or requested_uri
@@ -324,7 +324,7 @@ class NativeMemoryMirror:
             )
             result = response.get("result", {}) if isinstance(response, dict) else {}
             if isinstance(result, dict) and result.get("content_updated") is False:
-                raise RuntimeError("OpenViking memory file was not updated")
+                raise RuntimeError("Business Data Platform memory file was not updated")
             registry["entries"][index] = {
                 "connection": connection,
                 "target": target,
@@ -361,7 +361,7 @@ def enqueue_native_memory_write(
     with provider._native_memory_mirror_lock:
         if provider._shutting_down:
             logger.warning(
-                "OpenViking memory mirror skipped %s during provider shutdown",
+                "Business Data Platform memory mirror skipped %s during provider shutdown",
                 action,
             )
             return

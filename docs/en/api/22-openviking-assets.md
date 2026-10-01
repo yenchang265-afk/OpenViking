@@ -1,6 +1,6 @@
-# OpenViking Assets Resolver
+# Business Data Platform Assets Resolver
 
-The OpenViking Assets Resolver parses and validates an
+The Business Data Platform Assets Resolver parses and validates an
 [`openviking-assets/1`](../guides/18-openviking-assets.md) Manifest — either
 self-contained, with assets defined under its `catalog` field, or paired with a
 separate Catalog file — then returns a normalized asset plan for a client to
@@ -19,7 +19,7 @@ POST /api/v1/openviking-assets/resolve
 
 ### Authentication
 
-The endpoint uses the standard OpenViking Server authentication mechanism. When
+The endpoint uses the standard Business Data Platform Server authentication mechanism. When
 API-key authentication is enabled, include:
 
 ```http
@@ -112,7 +112,7 @@ request validation with HTTP `422`.
 POST /api/v1/openviking-assets/preflight
 ```
 
-This endpoint runs read-only `git ls-remote` in the OpenViking Server execution
+This endpoint runs read-only `git ls-remote` in the Business Data Platform Server execution
 environment to verify that a repository and optional ref are readable. It does
 not clone the repository, create a resource, or start a task. Manifest mode
 calls it during both dry-run and pre-submission validation.
@@ -174,5 +174,5 @@ environment and does not appear in Git command arguments or the response.
 
 ## Related documentation
 
-- [OpenViking Assets protocol and operations guide](../guides/18-openviking-assets.md)
+- [Business Data Platform Assets protocol and operations guide](../guides/18-openviking-assets.md)
 - [Resource Management API](02-resources.md)

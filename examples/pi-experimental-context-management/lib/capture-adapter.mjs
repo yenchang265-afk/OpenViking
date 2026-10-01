@@ -22,7 +22,7 @@ function normalizeRole(role) {
   const value = String(role || "").toLowerCase();
   if (value === "user") return "user";
   if (value === "assistant") return "assistant";
-  // OpenViking sessions have no tool role: tool output is archived as a user
+  // Business Data Platform sessions have no tool role: tool output is archived as a user
   // turn, which is also how the server's extraction prompts read it.
   if (TOOL_RESULT_ROLES.has(value)) return "user";
   if (value === "tool_call" || value === "toolcall") return "assistant";

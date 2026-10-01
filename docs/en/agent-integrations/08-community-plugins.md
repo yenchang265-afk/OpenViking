@@ -6,18 +6,18 @@ Community-maintained integrations for various agent runtimes. Each differs in ta
 
 Source: [examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
 
-The ZCode community integration adds cross-project, cross-session memory through config-driven lifecycle hooks and an OpenViking MCP server:
+The ZCode community integration adds cross-project, cross-session memory through config-driven lifecycle hooks and a Business Data Platform MCP server:
 
 - **SessionStart** injects the user profile.
 - **UserPromptSubmit** recalls relevant memories.
 - **PreToolUse** redirects direct `viking://` reads to MCP tools.
-- **Stop** captures unseen rollout turns in a detached worker, then commits the OpenViking session.
+- **Stop** captures unseen rollout turns in a detached worker, then commits the Business Data Platform session.
 
 ZCode does not expose `PreCompact`, `SessionEnd`, or subagent lifecycle hooks. The adapter therefore commits on `Stop`, uses ZCode rollout files as the authoritative incremental transcript, and falls back to hook stdin only when no rollout file is available.
 
 ### Install
 
-Prerequisites: Node.js 18+, a running OpenViking server, and ZCode.
+Prerequisites: Node.js 18+, a running Business Data Platform server, and ZCode.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
@@ -35,13 +35,13 @@ The installer detects `~/.zcode/` or the `zcode` binary, installs the runtime un
 
 After restarting ZCode, verify that:
 
-- `~/.zcode/cli/config.json` contains `hooks.enabled: true`, OpenViking entries under `hooks.events`, and `mcp.servers.openviking`.
+- `~/.zcode/cli/config.json` contains `hooks.enabled: true`, Business Data Platform entries under `hooks.events`, and `mcp.servers.openviking`.
 - `OPENVIKING_DEBUG=1` produces diagnostics in `~/.openviking/logs/zcode-hooks.log`.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
 | Hooks not firing | Hook configuration is disabled or stale | Re-run the installer and restart ZCode |
-| Recall returns nothing | OpenViking is unavailable or has not extracted memories yet | Check `curl http://127.0.0.1:1933/health` and wait for extraction |
+| Recall returns nothing | Business Data Platform is unavailable or has not extracted memories yet | Check `curl http://127.0.0.1:1933/health` and wait for extraction |
 | MCP tools not appearing | The MCP proxy failed to start | Check the absolute `mcp.servers.openviking` command in `~/.zcode/cli/config.json` |
 | Duplicate captures | An older installation left duplicate hook entries | Run `install.sh --harness zcode --uninstall`, then reinstall |
 
@@ -52,17 +52,17 @@ Implementation details and currently verified ZCode assumptions are documented i
 Source: [examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
 
 The Kimi Code integration is a native managed plugin. It reuses the shared
-OpenViking hook runtime and adds only Kimi-specific event mapping, wire
+Business Data Platform hook runtime and adds only Kimi-specific event mapping, wire
 transcript decoding, output formatting, and commit policy:
 
 - **UserPromptSubmit** recalls memory and prints raw context text for Kimi to inject.
 - **PreToolUse** blocks direct Read/Glob/Grep access to `viking://` URIs.
-- **Stop**, **PreCompact**, and **SessionEnd** capture new `wire.jsonl` turns; **Interrupt** runs the same capture synchronously within one two-second OpenViking request budget.
-- The plugin manifest exposes the OpenViking MCP server without editing Kimi's legacy config files.
+- **Stop**, **PreCompact**, and **SessionEnd** capture new `wire.jsonl` turns; **Interrupt** runs the same capture synchronously within one two-second Business Data Platform request budget.
+- The plugin manifest exposes the Business Data Platform MCP server without editing Kimi's legacy config files.
 
 ### Install
 
-Prerequisites: Node.js 18+, a running OpenViking server, and Kimi Code CLI.
+Prerequisites: Node.js 18+, a running Business Data Platform server, and Kimi Code CLI.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
@@ -93,7 +93,7 @@ Source: [astrbot_plugin_openviking_memory](https://github.com/t0saki/astrbot_plu
 
 Provides auto-capture of group/DM conversations, semantic recall before each LLM request, and configurable venue memory isolation.
 
-**Install**: In AstrBot WebUI, search **OpenViking Memory** in the Plugin Marketplace; or install from URL: `https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
+**Install**: In AstrBot WebUI, search **Business Data Platform Memory** in the Plugin Marketplace; or install from URL: `https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
 
 **Key features**:
 
@@ -108,7 +108,7 @@ Provides auto-capture of group/DM conversations, semantic recall before each LLM
 
 Source: [examples/openwebui-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openwebui-plugin)
 
-A standalone FastAPI server that exposes a curated subset of OpenViking endpoints as OpenAPI tools, so Open WebUI can call them as native tools. Setup and endpoint details are in the README.
+A standalone FastAPI server that exposes a curated subset of Business Data Platform endpoints as OpenAPI tools, so Open WebUI can call them as native tools. Setup and endpoint details are in the README.
 
 ## More examples
 

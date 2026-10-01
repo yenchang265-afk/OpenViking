@@ -380,7 +380,7 @@ def process_question(
     if ov_preamble_override is not None:
         ov_preamble = ov_preamble_override + "\n\n" if ov_preamble_override else ""
     elif ov_config:
-        ov_preamble = "If context is insufficient, use OpenViking MCP tools or auto-memory files to find more information.\n\n"
+        ov_preamble = "If context is insufficient, use Business Data Platform MCP tools or auto-memory files to find more information.\n\n"
     else:
         ov_preamble = ""
 
@@ -546,7 +546,7 @@ def main():
     parser.add_argument(
         "--ov-config",
         default=None,
-        help="Path to ov.conf for OpenViking (sets OPENVIKING_CONFIG_FILE env var)",
+        help="Path to ov.conf for Business Data Platform (sets OPENVIKING_CONFIG_FILE env var)",
     )
     parser.add_argument(
         "--ov-cli-config",
@@ -556,7 +556,7 @@ def main():
     parser.add_argument(
         "--ov-shared-id",
         default=None,
-        help="If set, use this single OpenViking user for all samples (no per-sample isolation). Empty string '' means do not set OPENVIKING_USER.",
+        help="If set, use this single Business Data Platform user for all samples (no per-sample isolation). Empty string '' means do not set OPENVIKING_USER.",
     )
     parser.add_argument(
         "--ov-preamble",

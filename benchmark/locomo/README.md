@@ -9,14 +9,14 @@ benchmark/locomo/
 ├── vikingbot/          # VikingBot 评测脚本
 │   ├── run_eval.py     # 运行 QA 评估
 │   ├── judge.py        # LLM 裁判打分
-│   ├── import_to_ov.py # 导入数据到 OpenViking
+│   ├── import_to_ov.py # 导入数据到 Business Data Platform
 │   ├── import_and_eval_one.sh  # 单题/批量测试脚本
 │   ├── stat_judge_result.py    # 统计评分结果
 │   ├── run_full_eval.sh        # 一键运行完整评测流程
 │   ├── data/           # 测试数据目录
 │   └── result/         # 评测结果目录
 ├── openclaw/           # OpenClaw 评测脚本
-│   ├── import_to_ov.py # 导入数据到 OpenViking
+│   ├── import_to_ov.py # 导入数据到 Business Data Platform
 │   ├── eval.py         # OpenClaw 评估脚本 (ingest/qa)
 │   ├── judge.py        # LLM 裁判打分（适配 OpenClaw）
 │   ├── stat_judge_result.py    # 统计评分结果和 token 使用
@@ -34,7 +34,7 @@ benchmark/locomo/
 ## VikingBot 评测流程
 
 ### 前置配置说明
-- vikingbot评测须确保 OpenViking 服务端已配置 root_api_key，即开启多租户模式。每个sample数据都会使用sample_id如`conv-26`作为user_id，存储在OpenViking中。
+- vikingbot评测须确保 Business Data Platform 服务端已配置 root_api_key，即开启多租户模式。每个sample数据都会使用sample_id如`conv-26`作为user_id，存储在Business Data Platform中。
 ```json
 {
   "server": {
@@ -42,9 +42,9 @@ benchmark/locomo/
   }
 }
 ```
-- OpenViking数据导入account会优先使用`ovcli.conf`中的account值，若未配置默认使用`default`；
-- vikingbot必须配置OpenViking 的root级别API KEY，默认使用上述的server.root_api_key，也可单独配置；
-- vikingbot查询数据account默认为`default`，如更改必须与导入OpenViking的account一致，即`ovcli.conf`中的account值，可通过`ov.conf`如下配置：
+- Business Data Platform数据导入account会优先使用`ovcli.conf`中的account值，若未配置默认使用`default`；
+- vikingbot必须配置Business Data Platform 的root级别API KEY，默认使用上述的server.root_api_key，也可单独配置；
+- vikingbot查询数据account默认为`default`，如更改必须与导入Business Data Platform的account一致，即`ovcli.conf`中的account值，可通过`ov.conf`如下配置：
 ```json
 {
   "bot": {
@@ -91,7 +91,7 @@ cd benchmark/locomo/vikingbot
 
 #### 步骤 1: 导入对话数据
 
-使用 `import_to_ov.py` 将 LoCoMo 数据集导入到 OpenViking：
+使用 `import_to_ov.py` 将 LoCoMo 数据集导入到 Business Data Platform：
 
 ```bash
 python import_to_ov.py --input <数据文件路径> [选项]
@@ -104,7 +104,7 @@ python import_to_ov.py --input <数据文件路径> [选项]
 - `--parallel`: 并发导入数，默认 5
 - `--force-ingest`: 强制重新导入，即使已导入过
 - `--clear-ingest-record`: 清除所有导入记录
-- `--openviking-url`: OpenViking 服务地址，默认 `http://localhost:1933`
+- `--openviking-url`: Business Data Platform 服务地址，默认 `http://localhost:1933`
 - `--account`: 导入时使用的 account，默认 `default`
 
 **示例：**
@@ -187,8 +187,8 @@ python stat_judge_result.py --input <评分结果文件>
 
 ```bash
 cd benchmark/locomo/openclaw
-bash run_full_eval.sh                      # 只导入 OpenViking（跳过已导入的）
-bash run_full_eval.sh --with-claw-import   # 同时导入 OpenViking 和 OpenClaw（并行执行）
+bash run_full_eval.sh                      # 只导入 Business Data Platform（跳过已导入的）
+bash run_full_eval.sh --with-claw-import   # 同时导入 Business Data Platform 和 OpenClaw（并行执行）
 bash run_full_eval.sh --skip-import        # 跳过导入步骤，直接运行 QA 评估
 bash run_full_eval.sh --force-ingest       # 强制重新导入所有数据
 bash run_full_eval.sh --sample 0           # 只处理第 0 个 sample
@@ -199,12 +199,12 @@ bash run_full_eval.sh --sample 0           # 只处理第 0 个 sample
 | 参数 | 说明 |
 |------|------|
 | `--skip-import` | 跳过导入步骤，直接运行 QA 评估 |
-| `--with-claw-import` | 同时导入 OpenViking 和 OpenClaw（并行执行） |
+| `--with-claw-import` | 同时导入 Business Data Platform 和 OpenClaw（并行执行） |
 | `--force-ingest` | 强制重新导入所有数据（忽略已导入记录） |
 | `--sample <index>` | 只处理指定的 sample（0-based） |
 
 **脚本执行流程：**
-1. 导入数据到 OpenViking（可选同时导入 OpenClaw）
+1. 导入数据到 Business Data Platform（可选同时导入 OpenClaw）
 2. 等待 60 秒确保数据导入完成
 3. 运行 QA 评估（`eval.py qa`，输出到 `result/qa_results.csv`）
 4. 裁判打分（`judge.py`，并行度 40）
@@ -223,14 +223,14 @@ bash run_full_eval.sh --sample 0           # 只处理第 0 个 sample
 ### 分步使用说明
 
 OpenClaw 评测包含以下脚本：
-- `import_to_ov.py`: 导入数据到 OpenViking
+- `import_to_ov.py`: 导入数据到 Business Data Platform
 - `eval.py`: OpenClaw 评估脚本（ingest/qa 两种模式）
 - `judge.py`: LLM 裁判打分
 - `stat_judge_result.py`: 统计评分结果和 token 使用
 
 ---
 
-#### import_to_ov.py - 导入对话数据到 OpenViking
+#### import_to_ov.py - 导入对话数据到 Business Data Platform
 
 ```bash
 python import_to_ov.py [选项]
@@ -242,8 +242,8 @@ python import_to_ov.py [选项]
 - `--sessions`: 指定会话范围，如 `1-4`
 - `--question-index`: 根据 question 的 evidence 自动推断需要的 session
 - `--force-ingest`: 强制重新导入
-- `--no-user-id`: 不传入 user_id 给 OpenViking 客户端
-- `--openviking-url`: OpenViking 服务地址，默认 `http://localhost:1933`
+- `--no-user-id`: 不传入 user_id 给 Business Data Platform 客户端
+- `--openviking-url`: Business Data Platform 服务地址，默认 `http://localhost:1933`
 - `--success-csv`: 成功记录 CSV 路径，默认 `./result/import_success.csv`
 - `--error-log`: 错误日志路径，默认 `./result/import_errors.log`
 
@@ -334,7 +334,7 @@ python judge.py --input ./result/qa_results.csv --parallel 40
 
 #### stat_judge_result.py - 统计结果
 
-同时统计 QA 结果和 OpenViking Import 的 token 使用：
+同时统计 QA 结果和 Business Data Platform Import 的 token 使用：
 
 ```bash
 python stat_judge_result.py [选项]
@@ -346,7 +346,7 @@ python stat_judge_result.py [选项]
 
 **输出统计包括：**
 - QA 结果统计：正确率、token 使用（no-cache、cacheRead、output）
-- OpenViking Import 统计：embedding_tokens、vlm_tokens、total_tokens
+- Business Data Platform Import 统计：embedding_tokens、vlm_tokens、total_tokens
 
 **示例：**
 ```bash
@@ -430,14 +430,14 @@ A: 使用 `--force-ingest`（导入）或删除结果 CSV 文件。
 ### Q: 评测速度慢怎么办？
 A: 增加 `--threads`（run_eval.py）或 `--parallel`（其他脚本）参数值。
 
-### Q: 评测效果低，怎么排查 OpenViking 导入与评测查询的 account/user 是否一致？
+### Q: 评测效果低，怎么排查 Business Data Platform 导入与评测查询的 account/user 是否一致？
 A: 先核对三处是否对齐：`ovcli.conf.account`（导入 account）、`ov.conf.bot.ov_server.account_id`（Vikingbot 查询 account）、评测脚本使用的 user（Vikingbot 按 `sample_id`，OpenClaw 默认 `eval-1`）。这几项不一致时，常见现象是“导入看起来成功，但评测回答质量明显下降或查不到上下文”。
 
 ---
 
 ## 常见问题排查
 
-### 1. 检查 OpenViking 数据导入是否成功
+### 1. 检查 Business Data Platform 数据导入是否成功
 
 导入完成后，查看 `import_success.csv`：
 
@@ -468,7 +468,7 @@ grep -i "error" result/qa_results.csv
 - `response` 列不应为空或报错信息
 - `result` 列（judge 后）应有 `CORRECT` 或 `WRONG`
 
-### 3. 验证 OpenViking 记忆是否被正确加载
+### 3. 验证 Business Data Platform 记忆是否被正确加载
 
 如果 QA 回答不正常，可以检查 session 文件确认记忆是否被加载：
 
@@ -488,7 +488,7 @@ grep -i "error" result/qa_results.csv
    cat ~/.openclaw/agents/locomo-eval/sessions/<jsonl_filename> | grep -A 20 "type.*message"
    ```
 
-**预期结果**：在用户提问（query）之前，应该有从 OpenViking 加载的记忆内容。
+**预期结果**：在用户提问（query）之前，应该有从 Business Data Platform 加载的记忆内容。
 
 ### 4. 评测效果低时，先口语化排查 account/user
 
@@ -498,7 +498,7 @@ grep -i "error" result/qa_results.csv
 2. 打开 `~/.openviking/ov.conf`，重点看：
    - `bot.ov_server.account_id`
    - `server.host` / `server.port`
-3. 跑 Vikingbot 脚本时留意 preflight 日志里打印的 `account` 和 `OpenViking URL`，确认和你配置里看到的一致。
+3. 跑 Vikingbot 脚本时留意 preflight 日志里打印的 `account` 和 `Business Data Platform URL`，确认和你配置里看到的一致。
 4. 记住查询侧是谁在查：
    - Vikingbot 评测默认用 `sample_id` 当 user。
    - OpenClaw QA 默认是 `--user eval-1 --agent-id locomo-eval`。

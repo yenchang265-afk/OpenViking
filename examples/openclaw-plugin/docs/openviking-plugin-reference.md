@@ -1,10 +1,10 @@
-# OpenViking OpenClaw 插件参考文档
+# Business Data Platform OpenClaw 插件参考文档
 
-> 本文档汇总当前分支提供的插件配置参数、安装/配置命令、Slash 命令、Agent 可见 Tools、Gateway API 以及插件调用的 OpenViking 后端 API。适用于接入、运维、排障和二次开发。
+> 本文档汇总当前分支提供的插件配置参数、安装/配置命令、Slash 命令、Agent 可见 Tools、Gateway API 以及插件调用的 Business Data Platform 后端 API。适用于接入、运维、排障和二次开发。
 
 ## 1. 插件入口与运行结构
 
-OpenViking 插件以 OpenClaw context-engine plugin 方式运行：
+Business Data Platform 插件以 OpenClaw context-engine plugin 方式运行：
 
 - 插件入口：`dist/index.js`
 - Setup CLI 入口：`dist/commands/setup.js`
@@ -18,7 +18,7 @@ OpenViking 插件以 OpenClaw context-engine plugin 方式运行：
 3. **Agent Tools 层**：向模型暴露记忆、资源查询、归档检索、工具结果恢复等工具。
 4. **Slash Commands 层**：向用户暴露 `/add-resource`、`/add-skill`、`/ov-search`、`/ov-recall-trace`。
 5. **Gateway API 层**：向外提供 recall trace 查询接口。
-6. **OpenViking Client 层**：封装 OpenViking Server HTTP API。
+6. **Business Data Platform Client 层**：封装 Business Data Platform Server HTTP API。
 
 ## 2. 配置文件位置与基本结构
 
@@ -65,11 +65,11 @@ $OPENCLAW_STATE_DIR/openclaw.json
 | 参数 | 类型 | 默认值 | 环境变量 | 说明 |
 | --- | --- | --- | --- | --- |
 | `mode` | string | `"remote"` | — | 当前仅支持远程模式。旧的 local mode 会被迁移到 remote。 |
-| `baseUrl` | string | `http://127.0.0.1:1933` | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | OpenViking Server HTTP 地址；末尾 `/` 会自动去掉。 |
-| `apiKey` | string | 空 | `OPENVIKING_API_KEY` | OpenViking API Key；请求时写入 `X-API-Key`。 |
+| `baseUrl` | string | `http://127.0.0.1:1933` | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | Business Data Platform Server HTTP 地址；末尾 `/` 会自动去掉。 |
+| `apiKey` | string | 空 | `OPENVIKING_API_KEY` | Business Data Platform API Key；请求时写入 `X-API-Key`。 |
 | `accountId` | string | 空 | `OPENVIKING_ACCOUNT_ID` | 高级租户路由字段；请求时写入 `X-OpenViking-Account`。Root key 或 trusted 部署通常需要。 |
 | `userId` | string | 空 | `OPENVIKING_USER_ID` | 高级租户路由字段；请求时写入 `X-OpenViking-User`。Root key 或 trusted 部署通常需要。 |
-| `timeoutMs` | number | `15000` | — | OpenViking HTTP 请求超时，最低会 clamp 到 `1000`。 |
+| `timeoutMs` | number | `15000` | — | Business Data Platform HTTP 请求超时，最低会 clamp 到 `1000`。 |
 
 ### 3.2 Peer 身份与数据面路由
 
@@ -82,7 +82,7 @@ $OPENCLAW_STATE_DIR/openclaw.json
 
 | 参数 | 类型 | 默认值 | 环境变量 | 说明 |
 | --- | --- | --- | --- | --- |
-| `autoCapture` | boolean | `true` | — | 是否在会话过程中自动将消息写入 OpenViking session 并触发记忆抽取。 |
+| `autoCapture` | boolean | `true` | — | 是否在会话过程中自动将消息写入 Business Data Platform session 并触发记忆抽取。 |
 | `captureMode` | `"semantic"` \| `"keyword"` | `"semantic"` | — | 捕获模式。非法值会导致配置解析失败。 |
 | `captureMaxLength` | number | `24000` | — | 自动捕获文本最大长度，范围 `200` 到 `200000`。 |
 | `commitTokenThreshold` | number | 已废弃 | — | 旧的绝对 token 阈值，已被 `commitTokenThresholdRatio` 取代；为兼容老配置保留（可解析但被忽略，不再生效）。 |
@@ -126,7 +126,7 @@ $OPENCLAW_STATE_DIR/openclaw.json
 
 | 参数 | 类型 | 默认值 | 环境变量 | 说明 |
 | --- | --- | --- | --- | --- |
-| `bypassSessionPatterns` | string[] \| string | `[]` | — | 匹配 sessionId / sessionKey 后绕过 OpenViking 链路；支持 `*` 和 `**`。 |
+| `bypassSessionPatterns` | string[] \| string | `[]` | — | 匹配 sessionId / sessionKey 后绕过 Business Data Platform 链路；支持 `*` 和 `**`。 |
 | `emitStandardDiagnostics` | boolean | `false` | — | 是否输出标准诊断日志。 |
 | `logFindRequests` | boolean | `false` | `OPENVIKING_LOG_ROUTING` / `OPENVIKING_DEBUG` | 打印 find/session/commit 路由日志，不打印 API Key。 |
 | `enableAddResourceTool` | boolean | `false` | — | Agent 可见 `add_resource` 的二级开关；手动 `/add-resource` 不受影响。 |
@@ -152,7 +152,7 @@ $OPENCLAW_STATE_DIR/openclaw.json
 
 ### 4.2 只保留资源查询工具
 
-适用于“禁用记忆，但允许 Agent 查询 OpenViking 知识库资源”的场景：
+适用于“禁用记忆，但允许 Agent 查询 Business Data Platform 知识库资源”的场景：
 
 ```json
 {
@@ -217,7 +217,7 @@ $OPENCLAW_STATE_DIR/openclaw.json
 
 ### 5.1 `openclaw openviking setup`
 
-用途：配置插件连接 OpenViking Server，并激活 context-engine slot。
+用途：配置插件连接 Business Data Platform Server，并激活 context-engine slot。
 
 ```bash
 openclaw openviking setup [options]
@@ -229,7 +229,7 @@ openclaw openviking setup [options]
 | --- | --- |
 | `--reconfigure` | 强制重新录入已有配置。 |
 | `--zh` | 使用中文提示。 |
-| `--base-url <url>` | OpenViking Server URL。传入后进入非交互模式。 |
+| `--base-url <url>` | Business Data Platform Server URL。传入后进入非交互模式。 |
 | `--api-key <key>` | API Key。 |
 | `--peer-role <role>` | 记忆归属：`none`、`assistant` 或 `sender`；旧值 `person` 作为 `sender` 的别名兼容。 |
 | `--peer-prefix <prefix>` | Peer 路由前缀。 |
@@ -323,7 +323,7 @@ Manifest 中声明了 runtime slash alias：
 
 ### 6.1 `/add-resource`
 
-用途：手动把文件、目录、URL、Git 仓库或 OpenClaw media attachment 导入 OpenViking resources。
+用途：手动把文件、目录、URL、Git 仓库或 OpenClaw media attachment 导入 Business Data Platform resources。
 
 ```text
 /add-resource <source> [--to URI] [--parent URI] [--reason TEXT] [--instruction TEXT] [--wait] [--timeout SEC]
@@ -373,7 +373,7 @@ Manifest 中声明了 runtime slash alias：
 
 ### 6.3 `/ov-search`
 
-用途：搜索 OpenViking resources 和 skills。
+用途：搜索 Business Data Platform resources 和 skills。
 
 ```text
 /ov-search <query> [--uri URI] [--limit N]
@@ -390,10 +390,10 @@ Manifest 中声明了 runtime slash alias：
 示例：
 
 ```text
-/ov-search "OpenViking install" --uri viking://resources --limit 5
+/ov-search "Business Data Platform install" --uri viking://resources --limit 5
 ```
 
-返回的 `viking://...` 是 OpenViking 虚拟 URI，不是本地文件路径。如需读取完整内容，请使用 `ov_read` Agent Tool。
+返回的 `viking://...` 是 Business Data Platform 虚拟 URI，不是本地文件路径。如需读取完整内容，请使用 `ov_read` Agent Tool。
 
 ### 6.4 `/ov-recall-trace`
 
@@ -411,7 +411,7 @@ Manifest 中声明了 runtime slash alias：
 | `--trace-id ID` | 精确 trace id。 |
 | `--session-id ID` | OpenClaw session id。 |
 | `--session-key KEY` | OpenClaw session key。 |
-| `--ov-session-id ID` | OpenViking session id。 |
+| `--ov-session-id ID` | Business Data Platform session id。 |
 | `--source SOURCE` | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
 | `--resource-types TYPES` | 逗号分隔资源类型，如 `resource,user`。 |
 | `--since TS` | 毫秒时间戳下界。 |
@@ -431,11 +431,11 @@ Manifest 中声明了 runtime slash alias：
 
 | Tool | 参数 | 用途 |
 | --- | --- | --- |
-| `add_skill` | `source?`、`data?`、`wait?`、`timeout?` | 导入或注册 OpenViking agent skill。 |
-| `ov_search` | `query`、`uri?`、`limit?` | 搜索 OpenViking resources 和 skills。 |
-| `ov_read` | `uri` | 读取精确 `viking://...` OpenViking URI 的完整内容。 |
+| `add_skill` | `source?`、`data?`、`wait?`、`timeout?` | 导入或注册 Business Data Platform agent skill。 |
+| `ov_search` | `query`、`uri?`、`limit?` | 搜索 Business Data Platform resources 和 skills。 |
+| `ov_read` | `uri` | 读取精确 `viking://...` Business Data Platform URI 的完整内容。 |
 | `ov_multi_read` | `uris` | 一次读取多个精确 `viking://...` URI，适合 overview + 同级切片。 |
-| `ov_list` | `uri`、`recursive?`、`simple?`、`limit?` | 列出 OpenViking 目录，用于补齐同级切片和 `.overview.md`。 |
+| `ov_list` | `uri`、`recursive?`、`simple?`、`limit?` | 列出 Business Data Platform 目录，用于补齐同级切片和 `.overview.md`。 |
 | `memory_recall` | `query`、`limit?`、`scoreThreshold?`、`targetUri?`、`resourceTypes?` | 显式召回长期记忆或资源；session 历史请用 archive 工具。 |
 | `ov_recall_trace` | `turn?`、`traceId?`、`sessionId?`、`sessionKey?`、`ovSessionId?`、`source?`、`resourceTypes?`、`since?`、`until?`、`includeContent?`、`limit?` | 查询 recall trace。 |
 | `memory_store` | `text`、`role?`、`sessionId?` | 将文本写入 session 并触发记忆抽取。 |
@@ -468,7 +468,7 @@ Query 参数：
 | `traceId` | string | 精确 trace id。 |
 | `sessionId` | string | OpenClaw session id。 |
 | `sessionKey` | string | OpenClaw session key。 |
-| `ovSessionId` | string | OpenViking session id。 |
+| `ovSessionId` | string | Business Data Platform session id。 |
 | `source` | string | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
 | `resourceTypes` | string | 逗号分隔资源类型。 |
 | `since` | number | 毫秒时间戳下界。 |
@@ -499,9 +499,9 @@ curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/ov_search-178
 - Agent Tool：`ov_recall_trace`
 - Slash Command：`/ov-recall-trace`
 
-## 9. OpenViking 后端 API 封装
+## 9. Business Data Platform 后端 API 封装
 
-插件通过 `OpenVikingClient` 调用 OpenViking Server。统一 Header：
+插件通过 `OpenVikingClient` 调用 Business Data Platform Server。统一 Header：
 
 | Header | 来源 | 说明 |
 | --- | --- | --- |
@@ -594,8 +594,8 @@ curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/ov_search-178
 
 ## 11. 注意事项
 
-1. `viking://...` 是 OpenViking 虚拟 URI，不是本地文件路径。
-2. 读取 OpenViking 搜索结果全文应使用 `ov_read` 或 `/api/v1/content/read`，不要交给本地文件读取工具。
+1. `viking://...` 是 Business Data Platform 虚拟 URI，不是本地文件路径。
+2. 读取 Business Data Platform 搜索结果全文应使用 `ov_read` 或 `/api/v1/content/read`，不要交给本地文件读取工具。
 3. `add_resource` Agent Tool 默认禁用；手动 `/add-resource` 始终可用。
 4. 如果只想保留资源查询能力，优先设置 `autoCapture=false`、`autoRecall=false`、`enabledTools=["resource_query"]`。
 5. 如果要排查召回未命中，开启 `traceRecall=true`，并使用 `/ov-recall-trace` 或 Gateway recall trace API。

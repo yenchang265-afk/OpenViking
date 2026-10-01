@@ -1,7 +1,7 @@
 # 狼人杀 Demo（中文版）
 
 本目录提供一个狼人杀演示服务，包含：
-- OpenViking + bot 通道初始化
+- Business Data Platform + bot 通道初始化
 - Web UI（默认端口 `1995`）
 - 对局记录、排行榜、回放查看
 
@@ -25,13 +25,13 @@ python start_werewolf_demo.py --config ~/.openviking/ov.conf
 默认行为：
 - 自动补齐狼人杀所需 channel（`god`、`player_1`...`player_6`）
 - 自动准备工作目录与 SOUL 文件
-- 启动 OpenViking 服务
+- 启动 Business Data Platform 服务
 - 等待 bot 健康检查通过后启动 UI 服务
 
 默认参数：
 - UI 端口：`1995`
-- OpenViking host：`127.0.0.1`
-- OpenViking port：`1933`
+- Business Data Platform host：`127.0.0.1`
+- Business Data Platform port：`1933`
 - Vikingbot URL：`http://localhost:18790`
 - game mode：`all_agents`
 
@@ -53,7 +53,7 @@ python start_werewolf_demo.py \
 
 如果你要分开调试服务，可以手动启动：
 
-### 3.1 启动 OpenViking
+### 3.1 启动 Business Data Platform
 
 ```bash
 openviking-server \
@@ -86,7 +86,7 @@ python werewolf_server.py \
 ## 5.1 顶部导航
 
 - **游戏**：主对局页
-- **记忆**：查看 OpenViking memory 目录
+- **记忆**：查看 Business Data Platform memory 目录
 - **排行榜**：查看累计战绩与胜率曲线
 - **回放**：按历史会话回放对局
 

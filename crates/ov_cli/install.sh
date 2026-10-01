@@ -2,7 +2,7 @@
 set -e
 
 cat >&2 <<'EOF'
-[DEPRECATED] crates/ov_cli/install.sh no longer installs OpenViking CLI.
+[DEPRECATED] crates/ov_cli/install.sh no longer installs Business Data Platform CLI.
 
 Install the CLI from npm instead:
 

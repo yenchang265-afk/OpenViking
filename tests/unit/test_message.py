@@ -612,7 +612,7 @@ class TestMessageFromDict:
                     "type": "control",
                     "control_type": "batch_training_case_spec",
                     "payload": {"protocol": "v1"},
-                    "text": "# OpenViking Batch Training CaseSpec v1",
+                    "text": "# Business Data Platform Batch Training CaseSpec v1",
                 }
             ],
             "created_at": "2026-03-26T10:30:00Z",
@@ -622,7 +622,7 @@ class TestMessageFromDict:
 
         assert len(msg.parts) == 1
         assert isinstance(msg.parts[0], TextPart)
-        assert msg.parts[0].text == "# OpenViking Batch Training CaseSpec v1"
+        assert msg.parts[0].text == "# Business Data Platform Batch Training CaseSpec v1"
 
     def test_from_dict_missing_part_type_defaults_to_text(self):
         """Serialized dict parts without type should default to TextPart."""

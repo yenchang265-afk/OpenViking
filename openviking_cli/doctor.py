@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""openviking-server doctor - validate OpenViking subsystems and report actionable diagnostics.
+"""openviking-server doctor - validate Business Data Platform subsystems and report actionable diagnostics.
 
 Unlike ``ov health`` (which pings a running server), ``openviking-server doctor`` checks
 local prerequisites without requiring a server: config file, Python version,
@@ -170,7 +170,7 @@ def check_native_engine() -> tuple[bool, str, Optional[str]]:
 
 
 def check_agfs() -> tuple[bool, str, Optional[str]]:
-    """Verify the bundled OpenViking AGFS client loads."""
+    """Verify the bundled Business Data Platform AGFS client loads."""
     try:
         pyagfs = importlib.import_module("openviking.pyagfs")
 
@@ -230,7 +230,7 @@ def _probe_embedding_provider(
 
     async def _run_probe():
         return await asyncio.wait_for(
-            embed_compat(embedder, "OpenViking doctor embedding probe", is_query=True),
+            embed_compat(embedder, "Business Data Platform doctor embedding probe", is_query=True),
             timeout=10.0,
         )
 
@@ -475,7 +475,7 @@ def _bot_openviking_server_url(ov_server: dict[str, Any], server: dict[str, Any]
 
 
 def check_vikingbot() -> CheckResult:
-    """Check VikingBot OpenViking Server auth config.
+    """Check VikingBot Business Data Platform Server auth config.
 
     VikingBot is optional, so missing auth configuration is a warning rather
     than a hard failure. In api_key mode VikingBot must use a User API key; in
@@ -525,7 +525,7 @@ def check_vikingbot() -> CheckResult:
                 f"but that server is auth_mode={auth_mode}",
                 f"To use {bot_server_url}, set bot.ov_server.api_key_type to 'user' "
                 "and configure a User API key in bot.ov_server.api_key or ovcli.conf api_key.\n"
-                "To use root mode, change that OpenViking server to server.auth_mode='trusted'.\n"
+                "To use root mode, change that Business Data Platform server to server.auth_mode='trusted'.\n"
                 "To use another trusted server, set bot.ov_server.server_url to that server "
                 "and keep api_key_type='root'.",
             )
@@ -544,18 +544,18 @@ def check_vikingbot() -> CheckResult:
                 return (
                     "warn",
                     "server.auth_mode=trusted without server.root_api_key",
-                    "Configure server.root_api_key for VikingBot trusted OpenViking calls "
+                    "Configure server.root_api_key for VikingBot trusted Business Data Platform calls "
                     "outside localhost",
                 )
             return (
                 "warn",
                 "bot.ov_server.api_key_type=root without root API key",
-                "Configure bot.ov_server.api_key with a root API key for trusted OpenViking access",
+                "Configure bot.ov_server.api_key with a root API key for trusted Business Data Platform access",
             )
-        return "pass", "bot.ov_server configured for trusted OpenViking auth", None
+        return "pass", "bot.ov_server configured for trusted Business Data Platform auth", None
 
     if bot_uses_current_server and auth_mode == "dev":
-        return "pass", "VikingBot aligned with dev OpenViking auth", None
+        return "pass", "VikingBot aligned with dev Business Data Platform auth", None
 
     ovcli_api_key = "" if not _is_placeholder_secret(api_key) else _load_ovcli_api_key_for_doctor()
     if not _is_placeholder_secret(api_key):
@@ -576,12 +576,12 @@ def check_vikingbot() -> CheckResult:
                 "warn",
                 "bot.ov_server not configured and ovcli.conf api_key not configured",
                 "Configure bot.ov_server.api_key or ovcli.conf api_key with an "
-                "OpenViking User API key",
+                "Business Data Platform User API key",
             )
         return (
             "warn",
             "bot.ov_server.api_key and ovcli.conf api_key not configured",
-            "Create an OpenViking User API key and set bot.ov_server.api_key or ovcli.conf api_key",
+            "Create a Business Data Platform User API key and set bot.ov_server.api_key or ovcli.conf api_key",
         )
     return "pass", "bot.ov_server.api_key configured for api_key mode", None
 
@@ -663,7 +663,7 @@ def check_disk() -> tuple[bool, str, Optional[str]]:
         return (
             False,
             f"{free_gb:.1f} GB free in {check_path}",
-            "Free up disk space (OpenViking needs at least 1 GB for vector storage)",
+            "Free up disk space (Business Data Platform needs at least 1 GB for vector storage)",
         )
 
     return True, f"{free_gb:.1f} GB free in {check_path}", None
@@ -692,7 +692,7 @@ def run_doctor() -> int:
 
     Returns 0 if all checks pass, 1 otherwise.
     """
-    print("\nOpenViking Doctor\n")
+    print("\nBusiness Data Platform Doctor\n")
 
     failed = 0
     warned = 0

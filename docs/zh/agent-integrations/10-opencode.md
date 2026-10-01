@@ -1,6 +1,6 @@
 # OpenCode 插件
 
-为 [OpenCode](https://opencode.ai/) 提供跨项目、跨会话的长期记忆和已索引仓库上下文。安装后，每次对话都会通过 OpenCode plugin hooks 自动召回相关记忆并捕获新内容；模型可调用工具来自 Claude Code / Codex 记忆插件同款的 OpenViking stdio MCP proxy。
+为 [OpenCode](https://opencode.ai/) 提供跨项目、跨会话的长期记忆和已索引仓库上下文。安装后，每次对话都会通过 OpenCode plugin hooks 自动召回相关记忆并捕获新内容；模型可调用工具来自 Claude Code / Codex 记忆插件同款的 Business Data Platform stdio MCP proxy。
 
 源码：[examples/opencode-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)
 
@@ -10,10 +10,10 @@
 
 - [OpenCode](https://opencode.ai/)
 - Node.js 18+
-- OpenViking HTTP server
-- 如果服务端启用了鉴权，需要一个可用的 OpenViking API key
+- Business Data Platform HTTP server
+- 如果服务端启用了鉴权，需要一个可用的 Business Data Platform API key
 
-先启动 OpenViking server：
+先启动 Business Data Platform server：
 
 ```bash
 openviking-server --config ~/.openviking/ov.conf
@@ -29,7 +29,7 @@ curl http://localhost:1933/health
 
 ### 一键安装（推荐）
 
-OpenCode 与 Claude Code、Codex 共用同一个安装器。它会询问语言（English/中文）、要安装的 harness、下载源和 OpenViking 凭据；每一步都是幂等的，重复运行完全安全。
+OpenCode 与 Claude Code、Codex 共用同一个安装器。它会询问语言（English/中文）、要安装的 harness、下载源和 Business Data Platform 凭据；每一步都是幂等的，重复运行完全安全。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness opencode
@@ -66,7 +66,7 @@ opencode
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
-cd OpenViking
+cd Business Data Platform
 node examples/memory-plugin-shared/sync.mjs
 mkdir -p ~/.config/opencode/plugins/openviking
 cp examples/opencode-plugin/wrappers/openviking.js ~/.config/opencode/plugins/openviking.js
@@ -151,7 +151,7 @@ API key 会由 hooks 和 MCP proxy 作为 `Authorization: Bearer ...` 发送；`
 - `openviking_remember`、`openviking_write`、`openviking_edit`、`openviking_add_resource`、`openviking_add_skill`
 - `openviking_list_watches`、`openviking_cancel_watch`、`openviking_forget`、`openviking_health`
 
-可以让 OpenCode 搜索或浏览 OpenViking memory。运行时状态和错误日志会写入：
+可以让 OpenCode 搜索或浏览 Business Data Platform memory。运行时状态和错误日志会写入：
 
 ```bash
 ~/.config/opencode/openviking/openviking-memory.log
@@ -165,8 +165,8 @@ API key 会由 hooks 和 MCP proxy 作为 `Authorization: Bearer ...` 发送；`
 | 插件没有加载 | 确认 `~/.config/opencode/opencode.json` 引用了 `@openviking/opencode-plugin`；源码安装时确认 `~/.config/opencode/plugins/openviking.js` 存在 |
 | 加载时报找不到 `lib/shared/*.mjs` | 源码复制前没有运行 `sync.mjs`。在仓库根目录运行 `node examples/memory-plugin-shared/sync.mjs` 后重新复制 `lib/` |
 | MCP tools 连到了错误的 server | 检查 `~/.openviking/ovcli.conf`，或用 `OPENVIKING_*` 环境变量；`OPENVIKING_CLI_CONFIG_FILE` 可让插件改读另一份 ovcli.conf |
-| OpenViking 返回 401 / 403 | 检查 `OPENVIKING_API_KEY`；trusted-mode 部署还要检查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
-| recall 为空 | 确认 OpenViking server 中已有 memories/resources，且 `autoRecall` 没有被设成 `false` |
+| Business Data Platform 返回 401 / 403 | 检查 `OPENVIKING_API_KEY`；trusted-mode 部署还要检查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
+| recall 为空 | 确认 Business Data Platform server 中已有 memories/resources，且 `autoRecall` 没有被设成 `false` |
 | 本地 `openviking_add_resource` 失败 | 传入文件路径而不是目录；目前还不支持自动上传本地目录 |
 
 完整 tools、配置字段和运行时文件说明见 [插件 README](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)。

@@ -3,7 +3,7 @@
 """LDAP authentication plugin.
 
 Supports authenticating users against an LDAP server (Active Directory, OpenLDAP, etc.)
-and mapping LDAP attributes to OpenViking identities.
+and mapping LDAP attributes to Business Data Platform identities.
 """
 
 from __future__ import annotations
@@ -73,7 +73,7 @@ class LDAPAuthPlugin(AuthPlugin):
     """LDAP authentication plugin.
 
     Authenticates users against an LDAP server and maps attributes
-    to OpenViking account/user identities.
+    to Business Data Platform account/user identities.
     """
 
     auth_mode = "ldap"
@@ -134,11 +134,11 @@ class LDAPAuthPlugin(AuthPlugin):
             )
             raise UnauthenticatedError(f"LDAP authentication failed: {e}") from e
 
-        # Map LDAP attributes to OpenViking identity.
+        # Map LDAP attributes to Business Data Platform identity.
         # Role is always USER for LDAP-authenticated identities. This is by
         # design: LDAP authenticates directory users, and their role in the
         # directory (e.g., membership in an "admins" group) should not
-        # automatically grant OpenViking admin privileges. Operators who
+        # automatically grant Business Data Platform admin privileges. Operators who
         # need admin access should use the root API key mechanism.
         try:
             normalized_attrs = self._normalize_attributes(attributes)

@@ -1,6 +1,6 @@
 # 检索
 
-OpenViking 提供多种检索方法，包括简单的向量相似度搜索、带会话上下文的智能检索、正则表达式匹配搜索和文件模式匹配。
+Business Data Platform 提供多种检索方法，包括简单的向量相似度搜索、带会话上下文的智能检索、正则表达式匹配搜索和文件模式匹配。
 
 ## find 与 search 对比
 
@@ -351,7 +351,7 @@ openviking find "红色海报风格" --image ./poster.png --uri "viking://resour
                 "score": 0.12054087276495282,
                 "category": "",
                 "match_reason": "",
-                "abstract": "This directory contains structured API reference documentation for the OpenViking platform, compiling detailed HTTP endpoint specifications for core and extended platform capabilities. It covers functional modules including system health checks, semanti...",
+                "abstract": "This directory contains structured API reference documentation for the Business Data Platform platform, compiling detailed HTTP endpoint specifications for core and extended platform capabilities. It covers functional modules including system health checks, semanti...",
                 "overview": null
             }
         ],
@@ -726,7 +726,7 @@ curl -X POST http://localhost:1933/api/v1/search/search \
         "category": "entities",
         "score": 0.43,
         "detail": "abstract",
-        "text": "OpenViking FS 存储层……",
+        "text": "Business Data Platform FS 存储层……",
         "origin": "self"
       }
     ],

@@ -13,7 +13,7 @@ export function toRoleId(senderId: string | undefined): string | undefined {
 }
 
 /**
- * Convert an OpenViking stored message (parts-based format) into one or more
+ * Convert a Business Data Platform stored message (parts-based format) into one or more
  * OpenClaw AgentMessages (content-blocks format).
  *
  * For assistant messages with ToolParts, this produces:

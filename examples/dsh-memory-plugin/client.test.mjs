@@ -8,7 +8,7 @@ afterEach(() => {
   globalThis.fetch = originalFetch;
 });
 
-test("client sends OpenViking identity headers and preserves response trace ids", async () => {
+test("client sends Business Data Platform identity headers and preserves response trace ids", async () => {
   let seen;
   globalThis.fetch = async (url, init) => {
     seen = { url, init };
@@ -67,7 +67,7 @@ test("per-session actor peer overrides the process default", async () => {
   assert.equal(headers["X-OpenViking-Actor-Peer"], "workspace-peer");
 });
 
-test("client normalizes non-2xx OpenViking envelopes", async () => {
+test("client normalizes non-2xx Business Data Platform envelopes", async () => {
   globalThis.fetch = async () => new Response(JSON.stringify({
     status: "error",
     error: { code: "FAILED", message: "nope", trace_id: "trace-error" },

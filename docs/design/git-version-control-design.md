@@ -1,12 +1,12 @@
-# OpenViking 多版本管理技术方案 — 基于 Gitoxide 的 in-process Git 集成
+# Business Data Platform 多版本管理技术方案 — 基于 Gitoxide 的 in-process Git 集成
 
-> 💡 **一句话摘要**：在现有 OpenViking 的 RAGFS Rust 实现中嵌入一套基于 `gitoxide` 的 in-process Git 服务，以 **账号(account\_id)粒度** 提供 `commit / restore / show` 三个版本管理原语;通过 PyO3 binding 直接被 `VikingFS` Python 层调用,全程零 HTTP、零额外进程,Git 对象/Ref 后端复用现有 `localfs`/`s3fs` 客户端,实现"本地或远程"对称配置。
+> 💡 **一句话摘要**：在现有 Business Data Platform 的 RAGFS Rust 实现中嵌入一套基于 `gitoxide` 的 in-process Git 服务，以 **账号(account\_id)粒度** 提供 `commit / restore / show` 三个版本管理原语;通过 PyO3 binding 直接被 `VikingFS` Python 层调用,全程零 HTTP、零额外进程,Git 对象/Ref 后端复用现有 `localfs`/`s3fs` 客户端,实现"本地或远程"对称配置。
 
 # 1. 背景与目标
 
 ## 1.1 业务背景
 
-OpenViking 现有存储架构是一套以 `viking://` URI 为入口的双层抽象:上层 `VikingFS`(Python)负责 URI 规范化、L0/L1 摘要、向量同步、租户隔离;下层 RAGFS(Rust + PyO3 binding)提供 `FileSystem` trait 与 `MountableFS` radix-trie 路由,实际数据落到 `localfs`、`s3fs`、`memfs` 等插件后端。
+Business Data Platform 现有存储架构是一套以 `viking://` URI 为入口的双层抽象:上层 `VikingFS`(Python)负责 URI 规范化、L0/L1 摘要、向量同步、租户隔离;下层 RAGFS(Rust + PyO3 binding)提供 `FileSystem` trait 与 `MountableFS` radix-trie 路由,实际数据落到 `localfs`、`s3fs`、`memfs` 等插件后端。
 
 在持续运行过程中,用户/Agent 对 `viking://resources/`、`viking://agent/skills/` 等命名空间的写入是连续且不可逆的——出错后无法回滚,跨多个文件的"逻辑事务"难以原子化捕获,实验性改动需要手动备份。这些场景的本质需求都是一套**面向账号的多版本快照机制**,语义与 Git 的 commit/restore/show 高度同构。
 
@@ -37,7 +37,7 @@ OpenViking 现有存储架构是一套以 `viking://` URI 为入口的双层抽�
 | **纯 API 触发,不接 hook**           | `content_write.py` / `viking_fs.write/rm/mv` 完全不动;Git 仅通过 `VikingFS.commit/restore/show` 三个新方法被显式调用                         | hook 模式会让每次小写入都触发 Git 写入,放大延迟、放大冲突窗口、放大 ref CAS 失败率;首版优先简单               |
 | **Git 存储后端与 resources 同构**     | 定义 `ObjectStore` / `RefStore` trait,提供 local 与 s3 两种实现,直接复用 `plugins::localfs::LocalFileSystem` 和 `plugins::s3fs::S3Client` | 独立实现 Git 存储后端会重复造轮子;走 `MountableFS` 又会让 Git 数据进入用户命名空间                   |
 | **嵌入为 crates/ragfs 子模块**       | 新增 `crates/ragfs/src/git/` 模块,与 `core/`、`plugins/`、`server/` 平级;PyO3 binding 在 `RAGFSBindingClient` 上加 3 个方法                | 独立 crate 会引入额外配置、额外 runtime、额外鉴权;`ServicePlugin` 又无法表达 commit 这种非文件操作的语义 |
-| **暴露方式 = PyO3 binding,非 HTTP** | 三个新方法挂在现有 `RAGFSBindingClient` 上,通过 `AsyncAGFSClient.run` 由 `VikingFS` 调用,与 `ls/read/write` 一致                              | HTTP server 路径在 OpenViking 当前架构中已是 legacy,生产路径是 in-process binding       |
+| **暴露方式 = PyO3 binding,非 HTTP** | 三个新方法挂在现有 `RAGFSBindingClient` 上,通过 `AsyncAGFSClient.run` 由 `VikingFS` 调用,与 `ls/read/write` 一致                              | HTTP server 路径在 Business Data Platform 当前架构中已是 legacy,生产路径是 in-process binding       |
 
 ***
 
@@ -1253,18 +1253,18 @@ current=commit_a]
 
 | 术语           | 含义                                                                                               |
 | ------------ | ------------------------------------------------------------------------------------------------ |
-| VFS          | Virtual File System,本文特指 OpenViking 的 `MountableFS` + plugin 体系                                  |
+| VFS          | Virtual File System,本文特指 Business Data Platform 的 `MountableFS` + plugin 体系                                  |
 | Loose Object | Git 的基础存储单元,zlib 压缩,按 SHA 寻址的单文件                                                                 |
 | CAS          | Compare-And-Swap,本文特指 ref 更新时"仅当当前值 = 期望值才写入"                                                    |
 | Root Tree    | commit 对象指向的最顶层 tree 对象,代表整个仓库快照                                                                 |
 | Tree Editor  | `gix_object::tree::Editor`,gitoxide 提供的内存中 tree 构建器,支持 upsert/remove/write                       |
-| 派生文件         | `.abstract.md` / `.overview.md`,由 OpenViking 模型异步生成的 L0/L1 摘要文件,已纳入 Git 版本管理 |
+| 派生文件         | `.abstract.md` / `.overview.md`,由 Business Data Platform 模型异步生成的 L0/L1 摘要文件,已纳入 Git 版本管理 |
 
 ## 20.2 参考资料
 
 - [GitoxideLabs/gitoxide](https://github.com/GitoxideLabs/gitoxide)
 - [volcengine/OpenViking](https://github.com/volcengine/OpenViking)
-- [OpenViking 存储架构文档](../zh/concepts/05-storage.md)
+- [Business Data Platform 存储架构文档](../zh/concepts/05-storage.md)
 - [Git Pack Format (后续 Phase 参考)](https://git-scm.com/docs/gitformat-pack)
 
 > 💡 **文档完成**。如需对某一章节细化(如某后端实现细节、某测试用例代码、迁移脚本),请告知具体目标。

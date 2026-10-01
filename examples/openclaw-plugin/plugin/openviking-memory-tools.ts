@@ -73,13 +73,13 @@ export function registerOpenVikingMemoryTools(deps: OpenVikingMemoryToolsDeps): 
   deps.registerTool(
     (ctx: OpenVikingMemoryToolContext) => ({
       name: "memory_store",
-      label: "Memory Store (OpenViking)",
+      label: "Memory Store (Business Data Platform)",
       description:
-        "Store text in OpenViking memory pipeline by writing to a session and running memory extraction. Use when the user explicitly asks to remember, save, or store an important long-term fact, preference, project, or decision; automatic capture is threshold/commit dependent.",
+        "Store text in Business Data Platform memory pipeline by writing to a session and running memory extraction. Use when the user explicitly asks to remember, save, or store an important long-term fact, preference, project, or decision; automatic capture is threshold/commit dependent.",
       parameters: Type.Object({
         text: Type.String({ description: "Information to store as memory source text" }),
         role: Type.Optional(Type.String({ description: "Session role, default user" })),
-        sessionId: Type.Optional(Type.String({ description: "Existing OpenViking session ID" })),
+        sessionId: Type.Optional(Type.String({ description: "Existing Business Data Platform session ID" })),
       }),
       async execute(_toolCallId: string, params: Record<string, unknown>) {
         if (deps.isBypassedSession(ctx)) {
@@ -177,7 +177,7 @@ export function registerOpenVikingMemoryTools(deps: OpenVikingMemoryToolsDeps): 
           if (memoriesCount === 0) {
             deps.logger.warn(
               `openviking: memory_store committed but 0 memories extracted (sessionId=${sessionId}). ` +
-                "Check OpenViking server logs for embedding/extract errors (e.g. 401 API key, or extraction pipeline).",
+                "Check Business Data Platform server logs for embedding/extract errors (e.g. 401 API key, or extraction pipeline).",
             );
           } else {
             deps.logger.info?.(
@@ -189,7 +189,7 @@ export function registerOpenVikingMemoryTools(deps: OpenVikingMemoryToolsDeps): 
             content: [
               {
                 type: "text",
-                text: `Stored in OpenViking session ${sessionId} and committed ${memoriesCount} memories.` +
+                text: `Stored in Business Data Platform session ${sessionId} and committed ${memoriesCount} memories.` +
                   (commitResult.trace_id ? ` (trace_id=${commitResult.trace_id})` : ""),
               },
             ],
@@ -215,7 +215,7 @@ export function registerOpenVikingMemoryTools(deps: OpenVikingMemoryToolsDeps): 
   deps.registerTool(
     (ctx: OpenVikingMemoryToolContext) => ({
       name: "memory_forget",
-      label: "Memory Forget (OpenViking)",
+      label: "Memory Forget (Business Data Platform)",
       description:
         "Forget memory by URI, or search then delete when a strong single match is found.",
       parameters: Type.Object({

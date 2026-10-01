@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Authentication and authorization middleware for OpenViking multi-tenant HTTP Server."""
+"""Authentication and authorization middleware for Business Data Platform multi-tenant HTTP Server."""
 
 from typing import Optional
 

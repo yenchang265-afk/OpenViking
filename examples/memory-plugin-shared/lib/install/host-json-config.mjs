@@ -116,7 +116,7 @@ export function writeHostJsonConfigs({ kind, hooksPath, mcpPath, root, clientId,
   const packageManifest = readJson(path.join(hostDir, "openviking.integration.json"));
   if (packageManifest.id !== "openviking-memory" || !Array.isArray(packageManifest.clients)
     || !packageManifest.clients.includes(clientId)) {
-    throw new Error(`Invalid OpenViking integration manifest for ${clientId}`);
+    throw new Error(`Invalid Business Data Platform integration manifest for ${clientId}`);
   }
   const integrationEnv = {
     OPENVIKING_INTEGRATION_ID: packageManifest.id,
@@ -177,7 +177,7 @@ export function writeHostJsonConfigs({ kind, hooksPath, mcpPath, root, clientId,
   const mcp = readJson(mcpPath);
   mcp.mcpServers = mcp.mcpServers && typeof mcp.mcpServers === "object" && !Array.isArray(mcp.mcpServers)
     ? mcp.mcpServers : {};
-  // Migrate only the exact OpenViking endpoints published by the earlier manual
+  // Migrate only the exact Business Data Platform endpoints published by the earlier manual
   // guides. A coincidentally named third-party server must remain untouched.
   if (isKnownLegacyOpenVikingServer(mcp.mcpServers["ov-mcp-server"])) {
     delete mcp.mcpServers["ov-mcp-server"];
@@ -274,7 +274,7 @@ export function mergeZcodeConfig({ configPath, hooksPath, mcpPath }) {
       const existing = config.mcp.servers[name];
       // Only replace an entry that does not exist yet or is already ours.
       if (existing && !JSON.stringify(existing).includes("openviking-memory")) {
-        process.stderr.write(`Skipping ${name} MCP server: already exists and is not managed by OpenViking\n`);
+        process.stderr.write(`Skipping ${name} MCP server: already exists and is not managed by Business Data Platform\n`);
         continue;
       }
       config.mcp.servers[name] = server;

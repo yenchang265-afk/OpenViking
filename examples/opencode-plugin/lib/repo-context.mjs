@@ -38,10 +38,10 @@ export function createRepoContext({ config }) {
   function getRepoSystemPrompt() {
     if (!config.repoContext?.enabled || !cachedRepos) return null
     return [
-      "## OpenViking - Indexed Code Repositories",
+      "## Business Data Platform - Indexed Code Repositories",
       "",
-      "The following external repositories are indexed in OpenViking and searchable through tools.",
-      "When the user asks about these projects or their internals, use the OpenViking tools before answering.",
+      "The following external repositories are indexed in Business Data Platform and searchable through tools.",
+      "When the user asks about these projects or their internals, use the Business Data Platform tools before answering.",
       "",
       "Tool guidance:",
       "- Use the `openviking_search` MCP tool for semantic or conceptual repository questions.",

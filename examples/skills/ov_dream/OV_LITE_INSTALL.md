@@ -1,18 +1,18 @@
 # OV Lite Install
 
-This guide installs OV Lite for OpenClaw through the `ov_dream` skill. It syncs OpenClaw chat sessions to OpenViking serverless without installing the OpenViking `contextEngine` plugin or consuming a plugin slot.
+This guide installs OV Lite for OpenClaw through the `ov_dream` skill. It syncs OpenClaw chat sessions to Business Data Platform serverless without installing the Business Data Platform `contextEngine` plugin or consuming a plugin slot.
 
 ## Prerequisites
 
 Set these values before running sync or recall:
 
-- `OPENVIKING_API_KEY`: OpenViking serverless API key
+- `OPENVIKING_API_KEY`: Business Data Platform serverless API key
 
 Do not print API keys in logs, shell history snippets, or replies.
 
 ## Install Or Update
 
-Choose the OpenViking source ref explicitly. Use `main` after this guide has been merged, or replace `SOURCE_BASE` with another trusted raw source when testing an unmerged change.
+Choose the Business Data Platform source ref explicitly. Use `main` after this guide has been merged, or replace `SOURCE_BASE` with another trusted raw source when testing an unmerged change.
 
 ```bash
 SOURCE_BASE=https://raw.githubusercontent.com/volcengine/OpenViking/main
@@ -50,7 +50,7 @@ Create `~/.openclaw/ov_dream.env` if it does not exist. If it already exists, ke
 ```bash
 cat > ~/.openclaw/ov_dream.env <<'EOF'
 OPENVIKING_BASE_URL=https://api.vikingdb.cn-beijing.volces.com/openviking
-OPENVIKING_API_KEY=<replace with OpenViking serverless API key>
+OPENVIKING_API_KEY=<replace with Business Data Platform serverless API key>
 OPENVIKING_AUTH_MODE=serverless
 EOF
 chmod 600 ~/.openclaw/ov_dream.env
@@ -94,4 +94,4 @@ python3 scripts/dream.py recall "<query>"
 - OV Lite reads chat sessions from `~/.openclaw/agents/main/sessions/sessions.json`.
 - OV Lite does not fall back to scanning latest raw jsonl files.
 - OV Lite filters non-chat sessions containing `:cron:`, `:heartbeat:`, `:subagent:`, `:acp:`, or `:hook:`.
-- OV Lite reuses the OpenClaw `session_id` when writing to OpenViking serverless.
+- OV Lite reuses the OpenClaw `session_id` when writing to Business Data Platform serverless.

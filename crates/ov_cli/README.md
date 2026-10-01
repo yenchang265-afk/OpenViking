@@ -1,8 +1,8 @@
-# OpenViking CLI
+# Business Data Platform CLI
 
-Command-line interface for [OpenViking](https://github.com/volcengine/OpenViking), an Agent-native context database.
+Command-line interface for [Business Data Platform](https://github.com/volcengine/OpenViking), an Agent-native context database.
 
-This package builds the native `ov` binary. Use it to configure an OpenViking endpoint, import resources, browse `viking://` paths, retrieve context, inspect server status, manage sessions, and run administrative workflows.
+This package builds the native `ov` binary. Use it to configure a Business Data Platform endpoint, import resources, browse `viking://` paths, retrieve context, inspect server status, manage sessions, and run administrative workflows.
 
 中文文档见 [README_CN.md](README_CN.md).
 
@@ -19,7 +19,7 @@ The npm package installs the platform-specific `ov` binary for macOS, Linux, or 
 ### Install from source
 
 ```bash
-# OpenViking requires Rust >= 1.91.1.
+# Business Data Platform requires Rust >= 1.91.1.
 cargo install --path crates/ov_cli
 ```
 
@@ -51,7 +51,7 @@ ov language zh-CN
 For scripts and agents, prefer deterministic config commands and pass secrets through stdin or existing environment variables:
 
 ```bash
-# OpenViking Service
+# Business Data Platform Service
 printf '%s' "$OPENVIKING_API_KEY" | \
   ov config add ov-service --name prod --api-key-stdin --activate -o json
 
@@ -122,7 +122,7 @@ Run `ov --help` and `ov <command> --help` for the exact command surface of your 
 - `add-skill` - Add a skill from a directory, `SKILL.md`, or raw content.
 - `skills` - List, find, show, update, remove, and validate installed skills.
 - `export` / `import` - Export or import context as `.ovpack`.
-- `backup` / `restore` - Back up and restore public OpenViking scopes as restore-only `.ovpack` files.
+- `backup` / `restore` - Back up and restore public Business Data Platform scopes as restore-only `.ovpack` files.
 
 ### Filesystem
 

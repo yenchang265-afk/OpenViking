@@ -794,7 +794,7 @@ class TestCheckVikingBot:
             status, detail, fix = check_vikingbot()
 
         assert status == "pass"
-        assert "dev OpenViking auth" in detail
+        assert "dev Business Data Platform auth" in detail
         assert fix is None
 
     def test_pass_dev_mode_with_ignored_bot_api_key(self, tmp_path: Path):
@@ -805,7 +805,7 @@ class TestCheckVikingBot:
             status, detail, fix = check_vikingbot()
 
         assert status == "pass"
-        assert "dev OpenViking auth" in detail
+        assert "dev Business Data Platform auth" in detail
         assert fix is None
 
     def test_warn_when_bot_ov_server_missing_in_api_key_mode(self, tmp_path: Path):
@@ -894,7 +894,7 @@ class TestCheckVikingBot:
             status, detail, fix = check_vikingbot()
 
         assert status == "pass"
-        assert "trusted OpenViking auth" in detail
+        assert "trusted Business Data Platform auth" in detail
         assert fix is None
 
     def test_warn_when_external_root_key_omits_root_api_key_type(self, tmp_path: Path):
@@ -971,7 +971,7 @@ class TestCheckVikingBot:
             status, detail, fix = check_vikingbot()
 
         assert status == "pass"
-        assert "trusted OpenViking auth" in detail
+        assert "trusted Business Data Platform auth" in detail
         assert fix is None
 
     def test_pass_with_trusted_root_api_key(self, tmp_path: Path):
@@ -991,7 +991,7 @@ class TestCheckVikingBot:
             status, detail, fix = check_vikingbot()
 
         assert status == "pass"
-        assert "trusted OpenViking auth" in detail
+        assert "trusted Business Data Platform auth" in detail
         assert fix is None
 
     def test_pass_current_trusted_prefers_server_root_key(self, tmp_path: Path):
@@ -1012,7 +1012,7 @@ class TestCheckVikingBot:
             status, detail, fix = check_vikingbot()
 
         assert status == "pass"
-        assert "trusted OpenViking auth" in detail
+        assert "trusted Business Data Platform auth" in detail
         assert fix is None
 
     def test_warn_with_trusted_missing_root_api_key(self, tmp_path: Path):
@@ -1053,7 +1053,7 @@ class TestRunDoctor:
             ):
                 code = run_doctor()
         captured = capsys.readouterr()
-        assert "OpenViking Doctor" in captured.out
+        assert "Business Data Platform Doctor" in captured.out
         # May not be 0 if native engine is missing, but the function should complete
         assert isinstance(code, int)
 

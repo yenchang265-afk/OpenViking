@@ -5,7 +5,7 @@ import {
   resolveOpenVikingRequestHeaders,
 } from "../../request-headers.js";
 
-describe("OpenViking request headers", () => {
+describe("Business Data Platform request headers", () => {
   it("preserves string-valued headers exactly", () => {
     expect(cleanOpenVikingRequestHeaders({
       openviking: " i18n-instance ",
@@ -16,7 +16,7 @@ describe("OpenViking request headers", () => {
     });
   });
 
-  it("resolves configured OpenViking routing headers", () => {
+  it("resolves configured Business Data Platform routing headers", () => {
     expect(resolveOpenVikingRequestHeaders({
       headers: {
         openviking: "i18n_bi_claw_1781078526__bi_claw_openviking",

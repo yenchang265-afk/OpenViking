@@ -1,6 +1,6 @@
 # 简介
 
-OpenViking 是面向 AI Agent 的开源上下文数据库。它用虚拟文件系统组织资源、记忆和技能，让应用按路径浏览、检索相关上下文，并按需读取详细内容。
+Business Data Platform 是面向 AI Agent 的开源上下文数据库。它用虚拟文件系统组织资源、记忆和技能，让应用按路径浏览、检索相关上下文，并按需读取详细内容。
 
 当 Agent 需要跨会话复用文档和经验时，可以用它集中组织和检索这些上下文。
 
@@ -10,7 +10,7 @@ OpenViking 是面向 AI Agent 的开源上下文数据库。它用虚拟文件�
 | --- | --- |
 | 连接服务并检索第一份文档 | [快速开始](./02-quickstart.md) |
 | 接入已有 Agent 或编程工具 | [Agent 集成](../agent-integrations/01-overview.md) |
-| 在终端使用 OpenViking | [CLI 配置](./05-cli-setup.md) |
+| 在终端使用 Business Data Platform | [CLI 配置](./05-cli-setup.md) |
 | 部署和运维共享服务 | [部署](../guides/03-deployment.md)与[认证](../guides/04-authentication.md) |
 | 使用 SDK 或 HTTP API 开发 | [API 参考](../api/01-overview.md) |
 
@@ -28,7 +28,7 @@ OpenViking 是面向 AI Agent 的开源上下文数据库。它用虚拟文件�
 
 ## 按层读取内容
 
-OpenViking 可在语义处理时生成目录摘要：
+Business Data Platform 可在语义处理时生成目录摘要：
 
 | 层级 | 内容 | 默认正文上限 |
 | --- | --- | --- |

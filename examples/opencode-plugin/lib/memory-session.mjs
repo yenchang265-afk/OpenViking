@@ -180,7 +180,7 @@ export function createMemorySessionManager({ config, pluginRoot }) {
         (stage, data) => log("DEBUG", "pending", stage, data),
       )
     }
-    log("INFO", "event", "OpenViking session derived", {
+    log("INFO", "event", "Business Data Platform session derived", {
       opencode_session: sessionId,
       openviking_session: state.ovSessionId,
     })
@@ -423,7 +423,7 @@ export function createMemorySessionManager({ config, pluginRoot }) {
         item.message.captured = true
       }
       if (res.failed > 0 || res.enqueueFailed > 0) {
-        log("ERROR", "message", "Failed to add message to OpenViking session", {
+        log("ERROR", "message", "Failed to add message to Business Data Platform session", {
           openviking_session: state.ovSessionId,
           status: res.lastError?.status,
           error: res.lastError,
@@ -467,7 +467,7 @@ export function createMemorySessionManager({ config, pluginRoot }) {
         if (state.ovSessionId === ovSessionId) state.lastCommitTime = Date.now()
       }
       const traceId = res.traceId || res.result?.trace_id
-      log("INFO", "session", "Committed OpenViking session", {
+      log("INFO", "session", "Committed Business Data Platform session", {
         openviking_session: ovSessionId,
         reason,
         trace_id: traceId,
@@ -476,7 +476,7 @@ export function createMemorySessionManager({ config, pluginRoot }) {
     }
     if (isRetryableFailure(res)) {
       await enqueue("commitSession", ovSessionId, body)
-      log("WARN", "session", "Queued OpenViking session commit", {
+      log("WARN", "session", "Queued Business Data Platform session commit", {
         openviking_session: ovSessionId,
         reason,
         trace_id: res.traceId,
@@ -484,7 +484,7 @@ export function createMemorySessionManager({ config, pluginRoot }) {
       })
       return { status: "queued" }
     }
-    log("ERROR", "session", "Failed to commit OpenViking session", {
+    log("ERROR", "session", "Failed to commit Business Data Platform session", {
       openviking_session: ovSessionId,
       reason,
       trace_id: res.traceId,
@@ -492,7 +492,7 @@ export function createMemorySessionManager({ config, pluginRoot }) {
       error: res.error?.message || res.error?.code,
     })
     throw new Error(
-      `Failed to commit OpenViking session ${ovSessionId}: ${res.error?.message || res.status}` +
+      `Failed to commit Business Data Platform session ${ovSessionId}: ${res.error?.message || res.status}` +
       (res.traceId ? ` (trace_id=${res.traceId})` : ""),
     )
   }

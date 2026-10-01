@@ -1,6 +1,6 @@
 # 数据加密
 
-OpenViking 提供透明的静态数据加密，确保多租户环境下的数据安全与隔离。
+Business Data Platform 提供透明的静态数据加密，确保多租户环境下的数据安全与隔离。
 
 ## 概述
 
@@ -22,12 +22,12 @@ OpenViking 提供透明的静态数据加密，确保多租户环境下的数据
 
 ## 三层密钥架构
 
-OpenViking 采用信封加密（Envelope Encryption）架构，使用三层密钥体系：
+Business Data Platform 采用信封加密（Envelope Encryption）架构，使用三层密钥体系：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  Layer 1: Root Key（根密钥）                          │
-│  • 整个 OpenViking 实例全局唯一                       │
+│  • 整个 Business Data Platform 实例全局唯一                       │
 │  • 存储：KMS 服务 / ~/.openviking/master.key         │
 │  • 用途：派生所有账户密钥                              │
 └────────────────────┬────────────────────────────────────┘
@@ -59,7 +59,7 @@ OpenViking 采用信封加密（Envelope Encryption）架构，使用三层密�
 
 ## 密钥提供程序
 
-OpenViking 支持三种密钥提供程序，适应不同的部署场景：
+Business Data Platform 支持三种密钥提供程序，适应不同的部署场景：
 
 | 提供程序 | 适用场景 | Root Key 存储 | 特点 |
 |---------|---------|--------------|------|
@@ -188,7 +188,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ### 信封格式
 
-加密文件使用统一的信封格式，以魔术数 `OVE1`（OpenViking Encryption v1）开头：
+加密文件使用统一的信封格式，以魔术数 `OVE1`（Business Data Platform Encryption v1）开头：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐

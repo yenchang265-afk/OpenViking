@@ -4,7 +4,7 @@
 
 [中文版 README](./README_zh.md)
 
-RAG is an independent RAG (Retrieval-Augmented Generation) system evaluation framework, fully compatible with the latest version of OpenViking.
+RAG is an independent RAG (Retrieval-Augmented Generation) system evaluation framework, fully compatible with the latest version of Business Data Platform.
 
 ### Project Structure
 
@@ -52,7 +52,7 @@ benchmark/RAG/
 #### 1. Install Dependencies
 
 ```bash
-cd OpenViking
+cd Business Data Platform
 uv pip install -e ".[benchmark]"
 source .venv/bin/activate
 ```
@@ -191,11 +191,11 @@ Edit LLM configuration in `config/*.yaml`. This configuration is used for both:
 - **Answer generation**: Generating answers from retrieved context
 - **LLM-as-judge evaluation**: Using LLM to evaluate the quality of generated answers
 
-#### 4. Configure OpenViking
+#### 4. Configure Business Data Platform
 
-If you need to use custom OpenViking configuration (for data ingestion and retrieval), create an `ov.conf` file in the benchmark/RAG directory. This will override the default OpenViking settings.
+If you need to use custom Business Data Platform configuration (for data ingestion and retrieval), create an `ov.conf` file in the benchmark/RAG directory. This will override the default Business Data Platform settings.
 
-You can refer to `examples/ov.conf.example` in the OpenViking root directory for the configuration format.
+You can refer to `examples/ov.conf.example` in the Business Data Platform root directory for the configuration format.
 
 #### 5. Run Evaluation
 
@@ -290,10 +290,10 @@ RAG uses YAML configuration files to control the evaluation process. Each datase
 The evaluation process consists of 5 main stages:
 
 1. **Data Preparation**
-   - Convert raw dataset into OpenViking-friendly format
+   - Convert raw dataset into Business Data Platform-friendly format
    - Process documents for ingestion
 2. **Data Ingestion**
-   - Ingest processed documents into OpenViking vector store
+   - Ingest processed documents into Business Data Platform vector store
    - Create embeddings for documents
    - Store vector index for retrieval
 3. **Answer Generation**
@@ -329,8 +329,8 @@ Output/
         └── benchmark.log                 # Log file
 ```
 
-**OpenViking Storage:**
-The benchmark uses the OpenViking Server configured for the Python HTTP SDK. Storage and vector-index locations are owned by that Server rather than by the benchmark process.
+**Business Data Platform Storage:**
+The benchmark uses the Business Data Platform Server configured for the Python HTTP SDK. Storage and vector-index locations are owned by that Server rather than by the benchmark process.
 
 #### File descriptions and examples
 
@@ -629,13 +629,13 @@ FinanceBench has 3 question types:
    - `build_prompt()`: Build prompt
    - `post_process_answer()`: Post-process answer
 
-### Integration with OpenViking
+### Integration with Business Data Platform
 
-This project integrates with OpenViking through:
+This project integrates with Business Data Platform through:
 
-- Using the OpenViking Python HTTP SDK for data ingestion and retrieval
-- Configuring the OpenViking connection via `ovcli.conf` or SDK environment variables
-- Supporting dynamic loading of OpenViking's latest features
+- Using the Business Data Platform Python HTTP SDK for data ingestion and retrieval
+- Configuring the Business Data Platform connection via `ovcli.conf` or SDK environment variables
+- Supporting dynamic loading of Business Data Platform's latest features
 
 ### Frequently Asked Questions (FAQ)
 
@@ -666,4 +666,4 @@ A: Results are saved in the directory specified by `output_dir` in the configura
 
 ### License
 
-Same license as OpenViking.
+Same license as Business Data Platform.

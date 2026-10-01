@@ -186,7 +186,7 @@ class IOPlayback:
         Initialize IOPlayback.
 
         Args:
-            config_file: Path to OpenViking config file (ov.conf)
+            config_file: Path to Business Data Platform config file (ov.conf)
             compare_response: Whether to compare playback response with original
             fail_fast: Stop on first error
             enable_fs: Whether to play FS operations

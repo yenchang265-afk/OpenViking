@@ -10,7 +10,7 @@ import (
 
 const defaultTimeout = 60 * time.Second
 
-// Client is an HTTP client for an OpenViking server.
+// Client is an HTTP client for a Business Data Platform server.
 type Client struct {
 	baseURL      string
 	httpClient   *http.Client
@@ -23,7 +23,7 @@ type Client struct {
 	uploadMode   string
 }
 
-// NewClient creates an OpenViking HTTP client.
+// NewClient creates a Business Data Platform HTTP client.
 func NewClient(cfg Config) (*Client, error) {
 	if strings.TrimSpace(cfg.BaseURL) == "" {
 		return nil, fmt.Errorf("openviking: BaseURL is required")
@@ -69,7 +69,7 @@ func (c *Client) CloseIdleConnections() {
 	c.httpClient.CloseIdleConnections()
 }
 
-// NormalizeURI normalizes a short OpenViking URI into viking:// form.
+// NormalizeURI normalizes a short Business Data Platform URI into viking:// form.
 func NormalizeURI(uri string) string {
 	if strings.HasPrefix(uri, "viking://") {
 		return uri

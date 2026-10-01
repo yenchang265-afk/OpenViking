@@ -1,6 +1,6 @@
 # Context Compilation Overview
 
-`ov compile` turns the raw material scattered across OpenViking — documents, notes, web pages, transcripts, research files, code repositories — into structured, retrievable knowledge that people and agents can reuse over and over.
+`ov compile` turns the raw material scattered across Business Data Platform — documents, notes, web pages, transcripts, research files, code repositories — into structured, retrievable knowledge that people and agents can reuse over and over.
 
 ## How it works
 
@@ -12,7 +12,7 @@ You supply three things:
 
 Plus an optional **`--instruction`**: extra instructions for this run — scope, audience, language, emphasis, or date range. The Skill defines *what shape* to compile into; `--instruction` tells the agent *what you want this particular time* on top of that.
 
-OpenViking does the rest. Compile is powered by [VikingBot](../concepts/15-vikingbot.md): once a task is accepted, VikingBot loads the Skill you named, reads the sources under your identity, and works through them autonomously in a dedicated **agent loop** — reading, distilling, organizing, and writing pages, much like hiring someone to turn a pile of material into a clean knowledge base and hand you back the finished result. The whole thing runs asynchronously: you can wait for it, or grab the `task_id` and move on.
+Business Data Platform does the rest. Compile is powered by [VikingBot](../concepts/15-vikingbot.md): once a task is accepted, VikingBot loads the Skill you named, reads the sources under your identity, and works through them autonomously in a dedicated **agent loop** — reading, distilling, organizing, and writing pages, much like hiring someone to turn a pile of material into a clean knowledge base and hand you back the finished result. The whole thing runs asynchronously: you can wait for it, or grab the `task_id` and move on.
 
 In other words: **you provide the material and the goal, the agent does the actual work of organizing the knowledge.** 
 
@@ -43,7 +43,7 @@ The first two examples also give the complete `ov` commands from **importing sou
 
 ## Prerequisites
 
-- A running OpenViking service with Bot enabled (`--with-bot`). The default endpoint is `http://localhost:1933`; remote use needs an API Key — see [Authentication](../guides/04-authentication.md). No service yet? Start with the [Quick Start](../getting-started/02-quickstart.md).
+- A running Business Data Platform service with Bot enabled (`--with-bot`). The default endpoint is `http://localhost:1933`; remote use needs an API Key — see [Authentication](../guides/04-authentication.md). No service yet? Start with the [Quick Start](../getting-started/02-quickstart.md).
 - The `ov` CLI configured with a connection (`~/.openviking/ovcli.conf` or `OPENVIKING_*` environment variables).
 - Python 3 for the visualization scripts; the LLM Wiki script also uses the `openviking` Python package to read Wiki pages straight from the service.
 

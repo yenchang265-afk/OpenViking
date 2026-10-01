@@ -16,7 +16,7 @@ function makeEngine(hostVersion: string | undefined, overrides = {}) {
   const getClient = vi.fn().mockResolvedValue(client);
   const engine = createMemoryOpenVikingContextEngine({
     id: "openviking",
-    name: "Context Engine (OpenViking)",
+    name: "Context Engine (Business Data Platform)",
     version: "test",
     hostVersion,
     cfg: memoryOpenVikingConfigSchema.parse({

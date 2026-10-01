@@ -1,6 +1,6 @@
 # Filesystem Operations
 
-OpenViking provides Unix-like filesystem operations for the `viking://resources/` namespace.
+Business Data Platform provides Unix-like filesystem operations for the `viking://resources/` namespace.
 
 ## Read Operations
 
@@ -135,7 +135,7 @@ Parameters: `pattern` (required), `--uri`, `--node-limit`.
 
 ## WebDAV
 
-OpenViking exposes a minimal WebDAV adapter at `/webdav/resources`:
+Business Data Platform exposes a minimal WebDAV adapter at `/webdav/resources`:
 
 - Resources only (memories, skills, sessions not exposed)
 - `PUT` accepts UTF-8 text only

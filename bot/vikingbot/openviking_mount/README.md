@@ -1,13 +1,13 @@
-# OpenViking 文件系统挂载模块
+# Business Data Platform 文件系统挂载模块
 
-这个模块将 OpenViking 的虚拟文件系统挂载到本地文件系统路径，让用户可以像操作普通文件一样操作 OpenViking 上的数据。
+这个模块将 Business Data Platform 的虚拟文件系统挂载到本地文件系统路径，让用户可以像操作普通文件一样操作 Business Data Platform 上的数据。
 
 这个模块只是一个实验功能，并没有被实际使用
 
 
 ## 功能特性
 
-- **文件系统范式**: 将 OpenViking 的 `viking://` URI 映射到本地文件路径
+- **文件系统范式**: 将 Business Data Platform 的 `viking://` URI 映射到本地文件路径
 - **多作用域支持**: 支持 resources、session、user 等多种作用域挂载
 - **挂载管理**: 支持多个挂载点的生命周期管理
 - **语义搜索**: 通过文件系统路径进行语义搜索
@@ -48,7 +48,7 @@ with OpenVikingMount(config) as mount:
     print(f"概览: {overview}")
     
     # 语义搜索
-    results = mount.search("什么是 OpenViking")
+    results = mount.search("什么是 Business Data Platform")
     for r in results:
         print(f"{r.uri}")
 ```
@@ -131,7 +131,7 @@ vikingbot/openviking_mount/
 
 | 方法 | 说明 |
 |------|------|
-| `initialize()` | 初始化 OpenViking 客户端 |
+| `initialize()` | 初始化 Business Data Platform 客户端 |
 | `list_dir(path)` | 列出目录内容 |
 | `read_file(path)` | 读取文件内容 |
 | `write_file(path, content)` | 写入文件内容 |
@@ -168,10 +168,10 @@ vikingbot/openviking_mount/
 
 ## 路径映射
 
-OpenViking URI 到本地文件路径的映射规则：
+Business Data Platform URI 到本地文件路径的映射规则：
 
 ```
-OpenViking URI                    本地路径
+Business Data Platform URI                    本地路径
 -------------------               ------------------
 viking://resources/foo     ->    {mount_point}/resources/foo
 viking://session/bar       ->    {mount_point}/session/bar
@@ -189,7 +189,7 @@ cd /Users/bytedance/workspace/openviking/bot
 
 ## 注意事项
 
-1. **直接写入限制**: OpenViking 主要通过 `add_resource` 添加外部资源，直接文件写入需要特殊处理
+1. **直接写入限制**: Business Data Platform 主要通过 `add_resource` 添加外部资源，直接文件写入需要特殊处理
 2. **性能考虑**: 大量文件操作可能影响性能，建议批量处理
 3. **数据同步**: `sync_to_disk` 是一个简化实现，生产环境可能需要更复杂的同步机制
 4. **只读模式**: 设置 `read_only=True` 可以防止意外修改

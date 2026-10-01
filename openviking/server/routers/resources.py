@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Resource endpoints for OpenViking HTTP Server."""
+"""Resource endpoints for Business Data Platform HTTP Server."""
 
 from typing import Any, Dict, Literal, Optional
 
@@ -236,7 +236,7 @@ async def add_resource(
     request: AddResourceRequest,
     _ctx: RequestContext = Depends(get_request_context),
 ):
-    """Add resource to OpenViking.
+    """Add resource to Business Data Platform.
 
     Native Watches require an unoccupied resolved target and keep it while paused.
     Connector Watches may share targets only with other Connector Watches; repeating
@@ -362,7 +362,7 @@ async def add_skill(
     request: AddSkillRequest,
     _ctx: RequestContext = Depends(get_request_context),
 ):
-    """Add skill to OpenViking."""
+    """Add skill to Business Data Platform."""
     target_uri = resolve_path_variables(request.target_uri).strip() if request.target_uri else ""
     if target_uri:
         target_uri = validate_content_target_uri(

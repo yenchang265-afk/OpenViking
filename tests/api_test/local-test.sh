@@ -1,5 +1,5 @@
 #!/bin/bash
-# OpenViking API 测试 - 本地测试脚本
+# Business Data Platform API 测试 - 本地测试脚本
 # 模拟 GitHub Actions 流水线的执行流程
 
 set -e
@@ -10,7 +10,7 @@ YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  OpenViking API 测试 - 本地执行${NC}"
+echo -e "${GREEN}  Business Data Platform API 测试 - 本地执行${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -22,11 +22,11 @@ python3 -c "import sys; assert sys.version_info >= (3, 10), 'Python 3.10+ requir
 echo -e "${GREEN}✓ Python 版本检查通过${NC}"
 echo ""
 
-# 2. 安装 OpenViking
-echo -e "${YELLOW}[2/7] 安装 OpenViking...${NC}"
+# 2. 安装 Business Data Platform
+echo -e "${YELLOW}[2/7] 安装 Business Data Platform...${NC}"
 cd "$(dirname "$0")/../.."
 pip install -e .
-echo -e "${GREEN}✓ OpenViking 安装成功${NC}"
+echo -e "${GREEN}✓ Business Data Platform 安装成功${NC}"
 echo ""
 
 # 3. 安装测试依赖
@@ -36,8 +36,8 @@ pip install -r requirements.txt
 echo -e "${GREEN}✓ 测试依赖安装成功${NC}"
 echo ""
 
-# 4. 创建 OpenViking 配置文件
-echo -e "${YELLOW}[4/8] 创建 OpenViking 配置文件...${NC}"
+# 4. 创建 Business Data Platform 配置文件
+echo -e "${YELLOW}[4/8] 创建 Business Data Platform 配置文件...${NC}"
 mkdir -p ~/.openviking
 cat > ~/.openviking/ov.conf << EOF
 {
@@ -84,8 +84,8 @@ echo "使用端口: $SERVER_PORT"
 echo -e "${GREEN}✓ 找到可用端口${NC}"
 echo ""
 
-# 6. 启动 OpenViking Server
-echo -e "${YELLOW}[6/8] 启动 OpenViking Server...${NC}"
+# 6. 启动 Business Data Platform Server
+echo -e "${YELLOW}[6/8] 启动 Business Data Platform Server...${NC}"
 export ROOT_API_KEY=test-root-api-key
 export SERVER_PORT=$SERVER_PORT
 nohup python -m openviking.server.bootstrap > openviking-server.log 2>&1 &
@@ -122,7 +122,7 @@ TEST_RESULT=$?
 echo ""
 
 # 8. 停止服务
-echo -e "${YELLOW}[8/8] 停止 OpenViking Server...${NC}"
+echo -e "${YELLOW}[8/8] 停止 Business Data Platform Server...${NC}"
 if [ -f openviking-server.pid ]; then
     kill $SERVER_PID 2>/dev/null || true
     pkill -f "openviking.server.bootstrap" 2>/dev/null || true

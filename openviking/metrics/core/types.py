@@ -6,7 +6,7 @@ Shared metric utility types.
 
 This module enforces label safety rules that protect Prometheus from cardinality explosions:
 - Only allow label keys that match Prometheus label naming rules.
-- Explicitly forbid label keys that are known to be high-cardinality in OpenViking
+- Explicitly forbid label keys that are known to be high-cardinality in Business Data Platform
   (e.g., session_id, resource_uri, query, prompt, url).
 
 All labels are normalized into a sorted tuple of (key, value) pairs to provide:

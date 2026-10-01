@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Directory parser for OpenViking.
+Directory parser for Business Data Platform.
 
 Handles local directories containing mixed document types (PDF, Markdown,
 Text, code, etc.).  Follows the same three-phase pattern as

@@ -1,6 +1,6 @@
 # 可观测性与排障
 
-这份指南把 OpenViking 当前和“观测”有关的入口放在一起介绍，包括：
+这份指南把 Business Data Platform 当前和“观测”有关的入口放在一起介绍，包括：
 
 - 服务健康检查与组件状态
 - 请求级 `telemetry`
@@ -135,7 +135,7 @@ ov tui viking://resources
 
 使用前提：
 
-- OpenViking Server 已启动
+- Business Data Platform Server 已启动
 - 已配置好 `ovcli.conf`
 - 当前 `X-API-Key` 有权读取对应租户数据
 
@@ -191,7 +191,7 @@ Studio 更适合“边点边看”的交互式排查；如果你要把观测数�
 
 ## 请求级 Telemetry
 
-OpenViking 的请求级追踪能力对外名称是 `operation telemetry`。它会在响应里附带一份结构化摘要，用来说明这次调用里发生了什么，例如：
+Business Data Platform 的请求级追踪能力对外名称是 `operation telemetry`。它会在响应里附带一份结构化摘要，用来说明这次调用里发生了什么，例如：
 
 - 总耗时
 - LLM / embedding token 消耗
@@ -224,11 +224,11 @@ curl -X POST http://localhost:1933/api/v1/search/find \
 
 ## 产生本地 Trace 并提交排查
 
-如果一次问题无法只靠响应里的 `telemetry.summary` 判断，可以让 OpenViking 把 OpenTelemetry trace 写到本地 JSONL 文件。用户把 JSONL 文件和有问题的 `trace_id` 提交给管理员/支持人员，由管理员上传到排查环境并继续分析。这个方式适合离线客户环境、无法直连 OTLP 后端的环境，或者需要把复现过程打包给支持人员分析的场景。
+如果一次问题无法只靠响应里的 `telemetry.summary` 判断，可以让 Business Data Platform 把 OpenTelemetry trace 写到本地 JSONL 文件。用户把 JSONL 文件和有问题的 `trace_id` 提交给管理员/支持人员，由管理员上传到排查环境并继续分析。这个方式适合离线客户环境、无法直连 OTLP 后端的环境，或者需要把复现过程打包给支持人员分析的场景。
 
 ### 1. 开启本地 trace 文件
 
-在运行 OpenViking Server 的机器上，编辑 `~/.openviking/ov.conf`（或你启动时通过 `--config` 指定的配置文件），加入或调整：
+在运行 Business Data Platform Server 的机器上，编辑 `~/.openviking/ov.conf`（或你启动时通过 `--config` 指定的配置文件），加入或调整：
 
 ```json
 {
@@ -247,7 +247,7 @@ curl -X POST http://localhost:1933/api/v1/search/find \
 }
 ```
 
-改完后需要**重启 OpenViking Server**。默认文件路径是：
+改完后需要**重启 Business Data Platform Server**。默认文件路径是：
 
 ```text
 ~/.openviking/logs/traces.jsonl
@@ -305,12 +305,12 @@ tar czf /tmp/openviking-traces.tgz traces.jsonl*
 - `traces.jsonl*` 文件或打包后的 `openviking-traces.tgz`
 - 有问题的 `trace_id`（如果已知）
 - 复现问题的时间段和操作步骤
-- OpenViking 版本/commit、启动命令、关键配置（去掉密钥和 token）
+- Business Data Platform 版本/commit、启动命令、关键配置（去掉密钥和 token）
 - 相关错误日志或请求 id（如果有）
 
 #### 管理员上传参考
 
-管理员在有 OpenViking 源码、且能访问远端 OTLP 排查环境的机器上，从仓库根目录运行：
+管理员在有 Business Data Platform 源码、且能访问远端 OTLP 排查环境的机器上，从仓库根目录运行：
 
 ```bash
 python tests/upload_offline_trace.py \
@@ -367,7 +367,7 @@ Uploaded:
 
 ## 用 `/metrics` 做时序观测
 
-`/metrics` 是 OpenViking 面向 Prometheus 抓取模型提供的时序指标端点，适合回答这类问题：
+`/metrics` 是 Business Data Platform 面向 Prometheus 抓取模型提供的时序指标端点，适合回答这类问题：
 
 - 最近一段时间 HTTP 请求量是不是突然升高了
 - 某个接口或操作的错误率是不是在持续上升
@@ -400,11 +400,11 @@ Uploaded:
   }
 }
 ```
-改完配置后需要**重启 OpenViking Server** 才会生效。
+改完配置后需要**重启 Business Data Platform Server** 才会生效。
 
 ### observability 配置层级
 
-OpenViking 将信号级别的可观测性配置统一放在 `server.observability` 下：
+Business Data Platform 将信号级别的可观测性配置统一放在 `server.observability` 下：
 
 - `server.observability.metrics`：metrics 子系统与 exporter 配置
 - `server.observability.traces`：trace 导出配置
@@ -506,11 +506,11 @@ scrape_configs:
 
 ### 在 Grafana 中导入和查看 Dashboard
 
-如果你已经让 Prometheus 成功抓取 `/metrics`，下一步最常见的做法就是在 Grafana 中导入 OpenViking 的 demo dashboard。
+如果你已经让 Prometheus 成功抓取 `/metrics`，下一步最常见的做法就是在 Grafana 中导入 Business Data Platform 的 demo dashboard。
 
 **第 1 步：先确认 Prometheus 已经抓到 `/metrics`**
 
-在导入 Grafana dashboard 之前，先确认 Prometheus 数据源里已经能查到 OpenViking 指标。最简单的判断方式是：
+在导入 Grafana dashboard 之前，先确认 Prometheus 数据源里已经能查到 Business Data Platform 指标。最简单的判断方式是：
 
 - 在 Prometheus UI 里执行 `openviking_http_requests_total`
 - 或执行 `openviking_service_readiness`
@@ -520,7 +520,7 @@ scrape_configs:
 
 **第 2 步：在 Grafana 导入官方 demo dashboard**
 
-OpenViking 仓库里已经提供了可直接导入的 dashboard JSON：
+Business Data Platform 仓库里已经提供了可直接导入的 dashboard JSON：
 
 - [openviking_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_demo_dashboard.json)
 - [openviking_token_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_token_demo_dashboard.json) （注意，该 dashboard 依赖 `tim012432-calendarheatmap-panel` grafana 插件，需要先安装才能正常工作）
@@ -550,7 +550,7 @@ OpenViking 仓库里已经提供了可直接导入的 dashboard JSON：
 
 **第 4 步：最终效果长什么样**
 
-导入成功后，你最终会看到一个以 OpenViking 请求、队列、探针、模型调用和系统状态为主的总览 dashboard。效果示意可以参考：
+导入成功后，你最终会看到一个以 Business Data Platform 请求、队列、探针、模型调用和系统状态为主的总览 dashboard。效果示意可以参考：
 
 - [grafana-demo-dashboard.png](../../images/grafana-demo-dashboard.png)
 
@@ -574,7 +574,7 @@ OpenViking 仓库里已经提供了可直接导入的 dashboard JSON：
 
 ## 相关文档
 
-- [使用 Prometheus 和 Grafana 查看 OpenViking 指标](11-grafana-prometheus.md) - 从 `/metrics` 到 Prometheus、Grafana dashboard 的完整操作流程
+- [使用 Prometheus 和 Grafana 查看 Business Data Platform 指标](11-grafana-prometheus.md) - 从 `/metrics` 到 Prometheus、Grafana dashboard 的完整操作流程
 - [使用真实问答验证 Vikingbot 指标](12-vikingbot-metrics-validation.md) - 用 `/bot/v1/chat`、`/bot/v1/feedback` 和真实 follow-up 场景校验反馈与 outcome 指标
 - [部署](03-deployment.md) - 服务器设置
 - [认证](04-authentication.md) - API Key 设置

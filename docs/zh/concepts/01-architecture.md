@@ -1,17 +1,17 @@
 # 架构概述
 
-OpenViking 是为 AI Agent 设计的上下文数据库，将所有上下文（Memory、Resource、Skill）统一抽象为目录结构，支持语义检索和渐进式内容加载。
+Business Data Platform 是为 AI Agent 设计的上下文数据库，将所有上下文（Memory、Resource、Skill）统一抽象为目录结构，支持语义检索和渐进式内容加载。
 
 ## 系统概览
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                           OpenViking 系统架构                               │
+│                           Business Data Platform 系统架构                               │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
 │                              ┌─────────────┐                               │
 │                              │   Client    │                               │
-│                              │ (OpenViking)│                               │
+│                              │ (Business Data Platform)│                               │
 │                              └──────┬──────┘                               │
 │                                     │ 委托                                  │
 │                              ┌──────▼──────┐                               │
@@ -75,7 +75,7 @@ Service 层将业务逻辑与传输层解耦，便于 HTTP Server 和 CLI 复用
 
 ## 双层存储
 
-OpenViking 采用双层存储架构，实现内容与索引分离（详见 [存储架构](./05-storage.md)）：
+Business Data Platform 采用双层存储架构，实现内容与索引分离（详见 [存储架构](./05-storage.md)）：
 
 | 存储层 | 职责 | 内容 |
 |--------|------|------|
@@ -125,7 +125,7 @@ OpenViking 采用双层存储架构，实现内容与索引分离（详见 [存�
 用于团队共享、生产环境和跨语言集成：
 
 ```python
-# Python SDK 连接 OpenViking Server
+# Python SDK 连接 Business Data Platform Server
 client = SyncHTTPClient(url="http://localhost:1933", api_key="xxx")
 ```
 

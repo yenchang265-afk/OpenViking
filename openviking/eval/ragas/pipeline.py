@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-RAG Query Pipeline for OpenViking evaluation.
+RAG Query Pipeline for Business Data Platform evaluation.
 """
 
 from pathlib import Path
@@ -17,7 +17,7 @@ class RAGQueryPipeline:
     RAG query pipeline for document and code repositories.
 
     This pipeline:
-    1. Adds documents/code to OpenViking
+    1. Adds documents/code to Business Data Platform
     2. Performs retrieval for queries
     3. Generates answers using LLM
     """
@@ -31,8 +31,8 @@ class RAGQueryPipeline:
         Initialize the RAG pipeline.
 
         Args:
-            config_path: Path to OpenViking config file
-            server_url: OpenViking HTTP server URL
+            config_path: Path to Business Data Platform config file
+            server_url: Business Data Platform HTTP server URL
         """
         self.config_path = config_path
         self.server_url = server_url
@@ -40,13 +40,13 @@ class RAGQueryPipeline:
         self._llm = None
 
     def _get_client(self):
-        """Lazy initialization of OpenViking client."""
+        """Lazy initialization of Business Data Platform client."""
         if self._client is None:
             from openviking_sdk import SyncHTTPClient
 
             self._client = SyncHTTPClient(url=self.server_url)
             self._client.initialize()
-            logger.info("OpenViking client initialized")
+            logger.info("Business Data Platform client initialized")
         return self._client
 
     def _get_llm(self):
@@ -65,7 +65,7 @@ class RAGQueryPipeline:
         timeout: float = 300,
     ) -> List[str]:
         """
-        Add document directories/files to OpenViking.
+        Add document directories/files to Business Data Platform.
 
         Args:
             docs_dirs: List of document directory or file paths
@@ -107,7 +107,7 @@ class RAGQueryPipeline:
         timeout: float = 300,
     ) -> List[str]:
         """
-        Add code repositories to OpenViking.
+        Add code repositories to Business Data Platform.
 
         Args:
             code_dirs: List of code repository paths (local or git URLs)
@@ -198,7 +198,7 @@ Answer:"""
         return result
 
     def close(self):
-        """Close the OpenViking client."""
+        """Close the Business Data Platform client."""
         if self._client:
             self._client.close()
             self._client = None

@@ -1,6 +1,6 @@
-# OpenViking Helm Chart
+# Business Data Platform Helm Chart
 
-Deploy OpenViking on Kubernetes using Helm.
+Deploy Business Data Platform on Kubernetes using Helm.
 
 ## Prerequisites
 
@@ -135,7 +135,7 @@ extraEnv:
         key: vlm-api-key
 ```
 
-OpenViking expands environment variables inside `ov.conf` at startup, so the
+Business Data Platform expands environment variables inside `ov.conf` at startup, so the
 ConfigMap can contain placeholders while the actual secrets stay in Kubernetes
 Secrets.
 
@@ -152,7 +152,7 @@ Secrets.
 | `persistence.enabled` | Enable persistent storage | `true` |
 | `persistence.size` | PVC size | `20Gi` |
 | `persistence.storageClass` | Storage class name | `""` (default) |
-| `persistence.mountPath` | Container path for OpenViking persistent state | `/app/.openviking` |
+| `persistence.mountPath` | Container path for Business Data Platform persistent state | `/app/.openviking` |
 | `bot.enabled` | Start vikingbot alongside the API server | `false` |
 | `persistence.existingClaim` | Use an existing PVC | `""` |
 | `resources.limits.cpu` | CPU limit | `2` |

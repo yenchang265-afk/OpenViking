@@ -1,8 +1,8 @@
 """
-OpenViking Filesystem Mount Module
+Business Data Platform Filesystem Mount Module
 
-这个模块将OpenViking的虚拟文件系统挂载到本地文件系统路径，
-让用户可以像操作普通文件一样操作OpenViking上的数据。
+这个模块将Business Data Platform的虚拟文件系统挂载到本地文件系统路径，
+让用户可以像操作普通文件一样操作Business Data Platform上的数据。
 """
 
 from typing import TYPE_CHECKING

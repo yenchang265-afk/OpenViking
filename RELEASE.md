@@ -1,13 +1,13 @@
-# OpenViking Release Guide
+# Business Data Platform Release Guide
 
-This document explains the release goals, version and tag conventions, primary release flows, republishing paths, and verification steps for the OpenViking repository. It is based on the tracked GitHub Actions workflows, build configuration, and package configuration in this repository.
+This document explains the release goals, version and tag conventions, primary release flows, republishing paths, and verification steps for the Business Data Platform repository. It is based on the tracked GitHub Actions workflows, build configuration, and package configuration in this repository.
 
 ## Release Goals
 
-OpenViking does not release a single artifact. A release publishes a set of related assets for different usage paths:
+Business Data Platform does not release a single artifact. A release publishes a set of related assets for different usage paths:
 
 - `openviking` Python package: for users who need the local runtime, server, CLI, and full feature set.
-- Python SDK `openviking-sdk`: for lightweight HTTP clients that call an existing OpenViking server.
+- Python SDK `openviking-sdk`: for lightweight HTTP clients that call an existing Business Data Platform server.
 - Docker images: for containerized deployments, published to GHCR and Docker Hub.
 - TOS release assets: for source archives, installation scripts, and stable download paths.
 - Rust CLI / npm packages: for users who install the `ov` CLI through npm.
@@ -128,7 +128,7 @@ The workflow injects the version from the tag into the platform packages and wra
 
 ## OpenClaw / ClawHub Plugin Release
 
-The OpenClaw plugin is published manually through the `OpenViking OpenClaw plugin release` workflow. Inputs include:
+The OpenClaw plugin is published manually through the `Business Data Platform OpenClaw plugin release` workflow. Inputs include:
 
 - `version`: optional; when empty, the workflow generates a date-based version.
 - `channel`: `auto`, `dev`, or `latest`.

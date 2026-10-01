@@ -499,19 +499,19 @@ function stripInjectedDigestBlocks(text) {
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (/^OpenViking session archive digest:/i.test(trimmed)) {
+    if (/^(?:OpenViking|Business Data Platform) session archive digest:/i.test(trimmed)) {
       skipping = true;
       skipUntilMcpHint = true;
       continue;
     }
-    if (/^OpenViking memory digest:/i.test(trimmed)) {
+    if (/^(?:OpenViking|Business Data Platform) memory digest:/i.test(trimmed)) {
       skipping = true;
       skipUntilMcpHint = false;
       continue;
     }
     if (skipping) {
       if (skipUntilMcpHint) {
-        if (/^More detail: use the OpenViking MCP /i.test(trimmed)) {
+        if (/^More detail: use the (?:OpenViking|Business Data Platform) MCP /i.test(trimmed)) {
           skipping = false;
           skipUntilMcpHint = false;
         }
@@ -522,7 +522,7 @@ function stripInjectedDigestBlocks(text) {
         continue;
       }
       if (
-        /^(?:[-*]\s+|#{1,6}\s+|More detail:|Use OpenViking MCP|Latest committed archive|Resume continuity|viking:\/\/)/i.test(trimmed) ||
+        /^(?:[-*]\s+|#{1,6}\s+|More detail:|Use (?:OpenViking|Business Data Platform) MCP|Latest committed archive|Resume continuity|viking:\/\/)/i.test(trimmed) ||
         /^\s{2,}\S/.test(line)
       ) {
         continue;
@@ -559,7 +559,7 @@ export function sanitizeCapturedText(text) {
     .replace(/^\s*\d{10,13}\s+/gm, "");
   value = stripMetadataFences(value);
   value = stripInjectedDigestBlocks(value);
-  value = value.replace(/^\s*More detail: use the OpenViking MCP .*$/gim, " ");
+  value = value.replace(/^\s*More detail: use the (?:OpenViking|Business Data Platform) MCP .*$/gim, " ");
   return value
     .replace(/[ \t]+\n/g, "\n")
     .replace(/\n{3,}/g, "\n\n")

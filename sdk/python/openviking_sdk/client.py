@@ -1216,7 +1216,7 @@ class AsyncHTTPClient:
         return self._handle_response(response)
 
     async def download_bytes(self, uri: str) -> bytes:
-        """Download an OpenViking file without interpreting its contents."""
+        """Download a Business Data Platform file without interpreting its contents."""
         response = await self._request(
             "GET",
             "/api/v1/content/download",

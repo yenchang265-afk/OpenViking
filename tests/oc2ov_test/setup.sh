@@ -4,7 +4,7 @@
 set -e
 
 echo "====================================="
-echo "OpenClaw - OpenViking 测试环境设置"
+echo "OpenClaw - Business Data Platform 测试环境设置"
 echo "====================================="
 echo ""
 

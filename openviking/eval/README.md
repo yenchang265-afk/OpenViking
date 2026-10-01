@@ -1,6 +1,6 @@
-# OpenViking Eval 模块
+# Business Data Platform Eval 模块
 
-OpenViking 的评估模块，提供 RAG 系统的多维度评估能力。
+Business Data Platform 的评估模块，提供 RAG 系统的多维度评估能力。
 
 ## 模块作用
 
@@ -84,10 +84,10 @@ async def main():
     # 准备评估数据
     samples = [
         EvalSample(
-            query="OpenViking 是什么？",
-            context=["OpenViking 是上下文数据库..."],
-            response="OpenViking 是 AI Agent 数据库",
-            ground_truth="OpenViking 是开源上下文数据库"
+            query="Business Data Platform 是什么？",
+            context=["Business Data Platform 是上下文数据库..."],
+            response="Business Data Platform 是 AI Agent 数据库",
+            ground_truth="Business Data Platform 是开源上下文数据库"
         ),
     ]
     dataset = EvalDataset(name="eval", samples=samples)
@@ -112,7 +112,7 @@ asyncio.run(main())
 
 ```bash
 # 基础评估
-# --docs_dir 评估前会将指定的路径加载到 OpenViking 中
+# --docs_dir 评估前会将指定的路径加载到 Business Data Platform 中
 python -m openviking.eval.ragas.rag_eval \
     --docs_dir ./docs \
     --question_file ./questions.jsonl \
@@ -136,7 +136,7 @@ python -m openviking.eval.ragas.rag_eval \
 
 ### 示例 3：基于本仓库的评估
 
-在 OpenViking 仓库根目录下执行：
+在 Business Data Platform 仓库根目录下执行：
 
 ```bash
 # 评估文档检索效果

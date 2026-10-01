@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Search Service for OpenViking.
+Search Service for Business Data Platform.
 
 Provides semantic search operations: search, find.
 """

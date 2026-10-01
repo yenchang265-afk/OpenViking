@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate an ARA-style paper artifact before OpenViking ingestion."""
+"""Validate an ARA-style paper artifact before Business Data Platform ingestion."""
 
 from __future__ import annotations
 

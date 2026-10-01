@@ -1,8 +1,8 @@
-# Contributing to OpenViking
+# Contributing to Business Data Platform
 
 English / [中文](CONTRIBUTING_CN.md) / [日本語](CONTRIBUTING_JA.md)
 
-Thank you for contributing to OpenViking. This guide exists to help contributors
+Thank you for contributing to Business Data Platform. This guide exists to help contributors
 submit changes that are clear, focused, and practical to review.
 
 We welcome bug reports, feature requests, documentation improvements, and code
@@ -10,7 +10,7 @@ contributions.
 
 ## What We Value
 
-OpenViking values focused, well-understood changes. Contributors are responsible
+Business Data Platform values focused, well-understood changes. Contributors are responsible
 for understanding, explaining, and validating their changes, whether or not AI
 tools were used.
 
@@ -116,7 +116,7 @@ Fork the repository, then clone your fork:
 
 ```bash
 git clone https://github.com/YOUR_USERNAME/OpenViking.git
-cd OpenViking
+cd Business Data Platform
 ```
 
 We recommend using `uv`:
@@ -172,7 +172,7 @@ special branches throughout the main path.
 
 ### Security Requirements
 
-These requirements define the security boundaries that OpenViking changes must preserve. They are review and remediation requirements, not a claim that every existing feature or released version already satisfies them.
+These requirements define the security boundaries that Business Data Platform changes must preserve. They are review and remediation requirements, not a claim that every existing feature or released version already satisfies them.
 
 #### Untrusted input must not become executable commands
 
@@ -185,7 +185,7 @@ Treat external requests, tool arguments, imported data, metadata, and model-gene
 
 #### Remote operations must not access arbitrary server files
 
-Server APIs operate on authorized OpenViking resources and uploads, not arbitrary host paths. Legitimate access to service-managed storage must remain scoped to the authenticated account, user, and resource permissions.
+Server APIs operate on authorized Business Data Platform resources and uploads, not arbitrary host paths. Legitimate access to service-managed storage must remain scoped to the authenticated account, user, and resource permissions.
 
 - Do not accept server-local paths or `file://` URLs as a way to ingest, read, search, preview, or export host files. Remote clients must use authorized resource URIs or uploads owned by the requesting principal. Do not expose server configuration, credentials, process-environment files, or another tenant's data through these operations or their error responses.
 - Enforce containment and authorization at the layer that resolves and performs the actual file operation. Validate the resolved target, including traversal, encoded paths, absolute paths, symbolic links, and archive entries. Checking only the original path string or a caller's initial directory is insufficient; every accessed file must remain inside its permitted boundary.

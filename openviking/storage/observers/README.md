@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `observers` module provides observability capabilities for the OpenViking storage system. Observers allow monitoring and reporting the status of various storage components in real-time.
+The `observers` module provides observability capabilities for the Business Data Platform storage system. Observers allow monitoring and reporting the status of various storage components in real-time.
 
 ## Architecture
 

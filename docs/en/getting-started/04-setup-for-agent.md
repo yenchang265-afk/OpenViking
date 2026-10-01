@@ -1,10 +1,10 @@
-# OpenViking Setup SOP (For Agent)
+# Business Data Platform Setup SOP (For Agent)
 
 ## Goal
 
-Help the user install, configure, validate, and start OpenViking with the smallest viable path.
+Help the user install, configure, validate, and start Business Data Platform with the smallest viable path.
 
-This page is for OpenViking server setup. For client-only CLI setup, use the [OpenViking CLI Setup](05-cli-setup.md) guide instead.
+This page is for Business Data Platform server setup. For client-only CLI setup, use the [Business Data Platform CLI Setup](05-cli-setup.md) guide instead.
 
 ## General Principles
 
@@ -21,8 +21,8 @@ First determine which category the user belongs to.
 
 #### A. Standard minimal install
 Use this path if any of the following is true:
-- The user just wants OpenViking installed and running
-- The user just wants to try or integrate OpenViking
+- The user just wants Business Data Platform installed and running
+- The user just wants to try or integrate Business Data Platform
 - The user is not asking for source-level development
 - The user is not asking to modify low-level native components
 
@@ -403,7 +403,7 @@ Handling rule:
 - fix wheel, path, and environment variable issues first
 - only add build dependencies if local compilation is clearly required
 
-#### Case 7: Docker starts but OpenViking is unusable
+#### Case 7: Docker starts but Business Data Platform is unusable
 
 Check first:
 - whether `~/.openviking` is correctly mounted to `/app/.openviking`
@@ -426,4 +426,4 @@ Guidance rules:
 - if the user wants `openai-codex`, remind them that it mainly solves the VLM side and embedding still needs to be configured separately
 
 ## Additional reference
-- [OpenViking GitHub repository](https://github.com/volcengine/OpenViking)
+- [Business Data Platform GitHub repository](https://github.com/volcengine/OpenViking)

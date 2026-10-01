@@ -72,16 +72,16 @@ ChatRequest 支持 session ID、是否回复、请求级禁用工具和渠道 ID
 
 SSE 会发送 reasoning、content delta、tool call、tool result、iteration 和最终 response 等事件。
 
-## OpenViking API 代理
+## Business Data Platform API 代理
 
-当配置 OpenViking Server 时，Gateway 还提供：
+当配置 Business Data Platform Server 时，Gateway 还提供：
 
 | 路径 | 作用 |
 |------|------|
-| `/health` | 汇总 Gateway 和 OpenViking upstream 状态 |
-| `/api/v1/{path}` | 代理 OpenViking API |
+| `/health` | 汇总 Gateway 和 Business Data Platform upstream 状态 |
+| `/api/v1/{path}` | 代理 Business Data Platform API |
 
-代理会过滤 hop-by-hop headers，转发经过校验的身份头，并保持上游响应状态。详细连接与身份流程见 [与 OpenViking 集成](./04-openviking-integration.md)。
+代理会过滤 hop-by-hop headers，转发经过校验的身份头，并保持上游响应状态。详细连接与身份流程见 [与 Business Data Platform 集成](./04-openviking-integration.md)。
 
 ## 访问控制
 
@@ -89,11 +89,11 @@ Gateway 使用多层安全边界：
 
 1. 非本地监听要求 `X-Gateway-Token`；
 2. loopback 请求可以使用本地开发边界；
-3. OpenViking API key 通过 upstream `/health` 验证身份和实际 auth mode；
-4. 只有可信 OpenViking Server 代理才能传入 `openviking_connection`；
+3. Business Data Platform API key 通过 upstream `/health` 验证身份和实际 auth mode；
+4. 只有可信 Business Data Platform Server 代理才能传入 `openviking_connection`；
 5. API Session 使用认证主体 scope 与外部 session ID 组合隔离。
 
-普通请求字段中的 `user_id`、account ID 或 connection 信息不能自行证明 OpenViking 身份。
+普通请求字段中的 `user_id`、account ID 或 connection 信息不能自行证明 Business Data Platform 身份。
 
 ## 反馈与结果评估
 
@@ -123,5 +123,5 @@ Gateway 使用多层安全边界：
 
 - [VikingBot 架构](./01-architecture.md)
 - [Agent 能力体系](./02-agent-capabilities.md)
-- [与 OpenViking 集成](./04-openviking-integration.md)
+- [与 Business Data Platform 集成](./04-openviking-integration.md)
 - [渠道配置](../../CHANNEL.md)

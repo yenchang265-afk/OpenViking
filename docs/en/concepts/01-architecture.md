@@ -1,17 +1,17 @@
 # Architecture Overview
 
-OpenViking is a context database designed for AI Agents, unifying all context types (Memory, Resource, Skill) into a directory structure with semantic retrieval and progressive content loading.
+Business Data Platform is a context database designed for AI Agents, unifying all context types (Memory, Resource, Skill) into a directory structure with semantic retrieval and progressive content loading.
 
 ## System Overview
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────┐
-│                        OpenViking System Architecture                       │
+│                        Business Data Platform System Architecture                       │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
 │                              ┌─────────────┐                               │
 │                              │   Client    │                               │
-│                              │ (OpenViking)│                               │
+│                              │ (Business Data Platform)│                               │
 │                              └──────┬──────┘                               │
 │                                     │ delegates                            │
 │                              ┌──────▼──────┐                               │
@@ -76,7 +76,7 @@ The Service layer decouples business logic from the transport layer, enabling re
 
 ## Dual-Layer Storage
 
-OpenViking uses a dual-layer storage architecture separating content from index (see [Storage Architecture](./05-storage.md)):
+Business Data Platform uses a dual-layer storage architecture separating content from index (see [Storage Architecture](./05-storage.md)):
 
 | Layer | Responsibility | Content |
 |-------|----------------|---------|
@@ -126,7 +126,7 @@ Messages → Compress → Archive → Memory Extraction → Storage
 For team sharing, production deployment, and cross-language integration:
 
 ```python
-# Python SDK connects to OpenViking Server
+# Python SDK connects to Business Data Platform Server
 client = SyncHTTPClient(url="http://localhost:1933", api_key="xxx")
 ```
 

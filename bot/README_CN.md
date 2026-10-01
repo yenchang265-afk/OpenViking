@@ -1,19 +1,19 @@
 # VikingBot
 
-VikingBot 是 OpenViking 内置的多渠道 AI Agent。它可以在命令行中直接使用，也可以作为长期运行的 Gateway 接入 Slack、Telegram 等平台；连接 OpenViking 后，还能使用资源检索、用户记忆、经验记忆和会话沉淀能力。
+VikingBot 是 Business Data Platform 内置的多渠道 AI Agent。它可以在命令行中直接使用，也可以作为长期运行的 Gateway 接入 Slack、Telegram 等平台；连接 Business Data Platform 后，还能使用资源检索、用户记忆、经验记忆和会话沉淀能力。
 
 ## 主要能力
 
 - **多入口对话**：支持 `vikingbot chat`、`ov chat`、HTTP API 和多个聊天平台。
-- **Agent 工具**：内置文件、Shell、Web、图片生成、定时任务和 OpenViking 工具。
+- **Agent 工具**：内置文件、Shell、Web、图片生成、定时任务和 Business Data Platform 工具。
 - **Skill 与子 Agent**：按需加载 Skill，可使用后台子 Agent 处理独立任务。
-- **长期上下文**：从 OpenViking 召回 Resource、Peer Memory 和 Experience，并自动提交会话。
+- **长期上下文**：从 Business Data Platform 召回 Resource、Peer Memory 和 Experience，并自动提交会话。
 - **安全执行**：支持 Direct、SRT、OpenSandbox 和 AIO Sandbox 后端。
-- **服务化运行**：Gateway 提供同步 Chat API、SSE 流式事件、反馈和 OpenViking API 代理。
+- **服务化运行**：Gateway 提供同步 Chat API、SSE 流式事件、反馈和 Business Data Platform API 代理。
 
 ## 安装
 
-> **OpenViking Server 要求**：VikingBot 通过 `viking://~` Home 别名访问调用方自己的上下文空间（例如 `viking://~/memories/`），因此需要一个支持 `viking://~` 的 Server。不带 uid 的旧写法 `viking://user/memories` 已不再产生，且会被新版 Server 拒绝。
+> **Business Data Platform Server 要求**：VikingBot 通过 `viking://~` Home 别名访问调用方自己的上下文空间（例如 `viking://~/memories/`），因此需要一个支持 `viking://~` 的 Server。不带 uid 的旧写法 `viking://user/memories` 已不再产生，且会被新版 Server 拒绝。
 
 ### 从 PyPI 安装
 
@@ -27,7 +27,7 @@ pip install "openviking[bot]"
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
-cd OpenViking
+cd Business Data Platform
 uv venv --python 3.11
 source .venv/bin/activate
 uv pip install -e ".[bot]"
@@ -43,25 +43,25 @@ Windows 激活虚拟环境：
 
 VikingBot 有三种主要使用方式。它们不是互相替代的模式，而是面向不同需求的入口。
 
-| 场景 | 适合谁                             | 启动命令 | OpenViking                    |
+| 场景 | 适合谁                             | 启动命令 | Business Data Platform                    |
 |------|---------------------------------|----------|-------------------------------|
-| **A. OpenViking + Bot 一体启动** | 本地完整体验资源、记忆和 Agent              | `openviking-server --with-bot` | bot将使用当前启动的 OpenViking Server |
-| **B. 本地调试 Agent** | 想快速测试 Bot、开发 Tool/Skill         | `vikingbot chat` | 可选；未配置时，bot无法使用OpenViking功能   |
-| **C. Gateway 统一入口** | 单独启动bot，并配置已有的OpenViking Server | `vikingbot gateway` | 可显式配置或不配置                     |
+| **A. Business Data Platform + Bot 一体启动** | 本地完整体验资源、记忆和 Agent              | `openviking-server --with-bot` | bot将使用当前启动的 Business Data Platform Server |
+| **B. 本地调试 Agent** | 想快速测试 Bot、开发 Tool/Skill         | `vikingbot chat` | 可选；未配置时，bot无法使用Business Data Platform功能   |
+| **C. Gateway 统一入口** | 单独启动bot，并配置已有的Business Data Platform Server | `vikingbot gateway` | 可显式配置或不配置                     |
 
-### 场景 A：OpenViking + Bot 一体启动
+### 场景 A：Business Data Platform + Bot 一体启动
 
-适合本地完整体验。OpenViking Server 和 VikingBot Gateway 一起启动，`ov chat` 先访问 OpenViking Server，再由 Server 的 `/bot/v1` 路由转发到 VikingBot。
+适合本地完整体验。Business Data Platform Server 和 VikingBot Gateway 一起启动，`ov chat` 先访问 Business Data Platform Server，再由 Server 的 `/bot/v1` 路由转发到 VikingBot。
 
 ```text
-ov chat → OpenViking Server → VikingBot Gateway → Agent
+ov chat → Business Data Platform Server → VikingBot Gateway → Agent
 ```
 
 #### 1. 准备配置
 
-先按照 [OpenViking 快速开始](../docs/zh/getting-started/03-quickstart-server.md)配置好 OpenViking 所需的模型和存储。Bot 默认继承根级 `vlm` 作为 Agent 模型；如需使用独立模型，再配置 `bot.agents`。
+先按照 [Business Data Platform 快速开始](../docs/zh/getting-started/03-quickstart-server.md)配置好 Business Data Platform 所需的模型和存储。Bot 默认继承根级 `vlm` 作为 Agent 模型；如需使用独立模型，再配置 `bot.agents`。
 
-一体启动时，Bot 固定使用当前启动的 OpenViking Server；`bot.ov_server.server_url` 会被忽略，但显式配置的 `bot.ov_server.api_key` 和其他 Bot 侧 OpenViking 设置会保留。`api_key` 模式下，该 key 必须是 User/Admin key。OpenViking Server 会为每个 Chat 请求向 Bot 注入已经认证的 request-scoped 身份。
+一体启动时，Bot 固定使用当前启动的 Business Data Platform Server；`bot.ov_server.server_url` 会被忽略，但显式配置的 `bot.ov_server.api_key` 和其他 Bot 侧 Business Data Platform 设置会保留。`api_key` 模式下，该 key 必须是 User/Admin key。Business Data Platform Server 会为每个 Chat 请求向 Bot 注入已经认证的 request-scoped 身份。
 
 #### 2. 一体启动
 
@@ -69,7 +69,7 @@ ov chat → OpenViking Server → VikingBot Gateway → Agent
 openviking-server --with-bot
 ```
 
-该命令会启动当前 OpenViking Server，并启动一个受管的 VikingBot Gateway。此时 Bot 使用当前 Server，不会连接 `bot.ov_server.server_url` 指向的另一套服务。
+该命令会启动当前 Business Data Platform Server，并启动一个受管的 VikingBot Gateway。此时 Bot 使用当前 Server，不会连接 `bot.ov_server.server_url` 指向的另一套服务。
 
 #### 3. 配置并使用 `ov` CLI
 
@@ -79,7 +79,7 @@ openviking-server --with-bot
 ov config
 ```
 
-让当前 CLI 配置指向 OpenViking Server，例如 `http://127.0.0.1:1933`；如果 Server 开启了鉴权，再填写调用者的 User/Admin API Key。然后：
+让当前 CLI 配置指向 Business Data Platform Server，例如 `http://127.0.0.1:1933`；如果 Server 开启了鉴权，再填写调用者的 User/Admin API Key。然后：
 
 ```bash
 ov chat
@@ -90,7 +90,7 @@ ov find "我的回答偏好"
 这里的身份关系是：
 
 - `ovcli.conf.api_key` 是当前调用者身份；
-- OpenViking Server 校验该身份后，将 request-scoped 连接传给 Bot；
+- Business Data Platform Server 校验该身份后，将 request-scoped 连接传给 Bot；
 - 该请求身份优先于任何进程级默认身份，避免多个调用者共享同一个 Bot 用户。
 
 ### 场景 B：本地调试 Agent
@@ -129,9 +129,9 @@ vikingbot chat
 vikingbot chat --session my-session
 ```
 
-没有可用 OpenViking Server 时，VikingBot 会以 standalone 方式运行：文件、Shell、Web、Skill 等能力仍可使用，但不会提供 OpenViking 记忆和文件工具。
+没有可用 Business Data Platform Server 时，VikingBot 会以 standalone 方式运行：文件、Shell、Web、Skill 等能力仍可使用，但不会提供 Business Data Platform 记忆和文件工具。
 
-如果希望调试时连接 OpenViking，可在同一个 `ov.conf` 中配置 `server`，或显式配置 `bot.ov_server.server_url`，参见[连接 OpenViking](#连接-openviking)。
+如果希望调试时连接 Business Data Platform，可在同一个 `ov.conf` 中配置 `server`，或显式配置 `bot.ov_server.server_url`，参见[连接 Business Data Platform](#连接-openviking)。
 
 ### 场景 C：Gateway 统一入口
 
@@ -139,20 +139,20 @@ vikingbot chat --session my-session
 
 ```text
 ov chat                  → Gateway /bot/v1/chat
-ov ls/find/session/...   → Gateway /api/v1/* → OpenViking Server
+ov ls/find/session/...   → Gateway /api/v1/* → Business Data Platform Server
 ```
 
-Gateway 与 OpenViking 有三种连接状态：
+Gateway 与 Business Data Platform 有三种连接状态：
 
 | 状态 | 条件 | 行为 |
 |------|------|------|
-| **Explicit** | 配置 `bot.ov_server.server_url` | 连接指定 OpenViking；不可达时启动失败 |
-| **Inherited** | 未显式配置 URL，但同一 `ov.conf` 有 `server` | 连接该 OpenViking；不可达时降级为 standalone |
-| **Standalone** | 没有可用 OpenViking | Chat 可用；OpenViking 工具禁用，`/api/v1/*` 返回 503 |
+| **Explicit** | 配置 `bot.ov_server.server_url` | 连接指定 Business Data Platform；不可达时启动失败 |
+| **Inherited** | 未显式配置 URL，但同一 `ov.conf` 有 `server` | 连接该 Business Data Platform；不可达时降级为 standalone |
+| **Standalone** | 没有可用 Business Data Platform | Chat 可用；Business Data Platform 工具禁用，`/api/v1/*` 返回 503 |
 
-#### 1. 配置 Gateway 和 OpenViking
+#### 1. 配置 Gateway 和 Business Data Platform
 
-下面是显式连接远端 OpenViking 的示例：
+下面是显式连接远端 Business Data Platform 的示例：
 
 ```json
 {
@@ -174,7 +174,7 @@ Gateway 与 OpenViking 有三种连接状态：
 }
 ```
 
-如果远端 OpenViking 使用 `trusted` 模式，应设置 `api_key_type: "root"`，并在 `api_key` 中填写 Root Key。
+如果远端 Business Data Platform 使用 `trusted` 模式，应设置 `api_key_type: "root"`，并在 `api_key` 中填写 Root Key。
 
 #### 2. 启动 Gateway
 
@@ -196,7 +196,7 @@ vikingbot gateway
 }
 ```
 
-随后 Chat 和其他 OpenViking 命令都使用同一个入口：
+随后 Chat 和其他 Business Data Platform 命令都使用同一个入口：
 
 ```bash
 ov chat -m "检索项目资料并给我一个结论"
@@ -231,7 +231,7 @@ Gateway 默认只监听 `127.0.0.1`。改成 `0.0.0.0` 或其他非 localhost �
 }
 ```
 
-Gateway Token 只保护 Gateway 入口；OpenViking API Key 表示调用者身份，两者不能互相替代。Gateway Token 不会转发给 OpenViking。
+Gateway Token 只保护 Gateway 入口；Business Data Platform API Key 表示调用者身份，两者不能互相替代。Gateway Token 不会转发给 Business Data Platform。
 
 ## 接入聊天平台
 
@@ -263,9 +263,9 @@ vikingbot channels status
 
 同一种渠道可以配置多个实例。VikingBot 使用 `type + channel_id + chat_id` 隔离会话和路由回复。各平台的凭证、事件订阅和权限配置见 [渠道配置](docs/zh/concepts/05-channel.md)。
 
-## 连接 OpenViking
+## 连接 Business Data Platform
 
-VikingBot 与 OpenViking 共用 `~/.openviking/ov.conf`。连接优先级和行为如下：
+VikingBot 与 Business Data Platform 共用 `~/.openviking/ov.conf`。连接优先级和行为如下：
 
 1. `openviking-server --with-bot` 启动的受管 Bot 使用当前 Server；
 2. 普通 `vikingbot gateway/chat` 优先使用显式 `bot.ov_server.server_url`；
@@ -274,15 +274,15 @@ VikingBot 与 OpenViking 共用 `~/.openviking/ov.conf`。连接优先级和行�
 
 鉴权要求：
 
-| OpenViking `auth_mode` | Bot 凭证 | Gateway 请求 |
+| Business Data Platform `auth_mode` | Bot 凭证 | Gateway 请求 |
 |------------------------|----------|----------------|
 | `dev` | 本地使用 | Gateway 必须监听 localhost |
 | `api_key` | `bot.ov_server.api_key` 必须是 User/Admin Key | Chat 调用者也必须提供有效 User/Admin Key；Root Key 不可用于数据接口 |
 | `trusted` | 显式连接使用 Root Key；继承连接可读取 `server.root_api_key` | 非本地入口还必须先通过 Gateway Token |
 
-Gateway 会在启动时校验 upstream 和 Bot 凭证，并在每个请求中检查 OpenViking 当前鉴权模式。运行时模式发生变化时会 fail closed，要求修正配置或重启 Gateway。
+Gateway 会在启动时校验 upstream 和 Bot 凭证，并在每个请求中检查 Business Data Platform 当前鉴权模式。运行时模式发生变化时会 fail closed，要求修正配置或重启 Gateway。
 
-VikingBot 使用 OpenViking 完成：
+VikingBot 使用 Business Data Platform 完成：
 
 - 读取当前 Peer Profile；
 - 按类型召回 events、entities 和 preferences；
@@ -290,7 +290,7 @@ VikingBot 使用 OpenViking 完成：
 - 浏览、搜索和读取 Resource；
 - 增量同步并提交 Session，提取长期记忆与经验。
 
-详细调用链见 [VikingBot 与 OpenViking 集成](docs/zh/concepts/04-openviking-integration.md)。Gateway 入口与鉴权边界来自 [RFC #3042](https://github.com/volcengine/OpenViking/discussions/3042)。
+详细调用链见 [VikingBot 与 Business Data Platform 集成](docs/zh/concepts/04-openviking-integration.md)。Gateway 入口与鉴权边界来自 [RFC #3042](https://github.com/volcengine/OpenViking/discussions/3042)。
 
 ## 配置说明
 
@@ -322,7 +322,7 @@ export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 | `bot.heartbeat.interval_seconds` | `600` | 心跳间隔 |
 | `bot.mode` | `normal` | 可选 `normal`、`readonly`、`debug` |
 
-### OpenViking 召回配置
+### Business Data Platform 召回配置
 
 | 配置 | 默认值 | 说明 |
 |------|--------|------|
@@ -336,7 +336,7 @@ export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 
 ## Workspace 与 Agent 定制
 
-Workspace 是 VikingBot 的本地工作目录。它保存 Agent 启动指令、Skill、Heartbeat 任务以及文件和 Shell 工具操作的内容；OpenViking Workspace 则通过 `openviking_*` 工具访问 Resource、Memory 和 Skill，两者不是同一个目录。
+Workspace 是 VikingBot 的本地工作目录。它保存 Agent 启动指令、Skill、Heartbeat 任务以及文件和 Shell 工具操作的内容；Business Data Platform Workspace 则通过 `openviking_*` 工具访问 Resource、Memory 和 Skill，两者不是同一个目录。
 
 ### 找到当前 Workspace
 
@@ -406,10 +406,10 @@ Agent 实际使用的活动目录还取决于 `bot.sandbox.mode`：
 |------|------|
 | 文件与命令 | `read_file`、`write_file`、`edit_file`、`list_dir`、`exec` |
 | Web | `web_search`、`web_fetch` |
-| OpenViking | `openviking_list`、`openviking_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read`、`openviking_add_resource`、`openviking_memory_commit` |
+| Business Data Platform | `openviking_list`、`openviking_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read`、`openviking_add_resource`、`openviking_memory_commit` |
 | 其他 | `message`、`generate_image`、`cron`、`spawn` |
 
-`readonly` 模式不会注册 `openviking_add_resource`。渠道设置 `ov_tools_enable: false` 时，该渠道不显示 OpenViking 工具，也不注入 Profile、Memory 和 Experience。
+`readonly` 模式不会注册 `openviking_add_resource`。渠道设置 `ov_tools_enable: false` 时，该渠道不显示 Business Data Platform 工具，也不注入 Profile、Memory 和 Experience。
 
 ### 定时任务配置
 
@@ -508,7 +508,7 @@ Docker Desktop + WSL2，并在 WSL2 内运行 Bot），然后在实际使用的 
 }
 ```
 
-`vikingbot gateway --config /path/to/ov.conf` 和 OpenViking `--with-bot` 共用启动流程：
+`vikingbot gateway --config /path/to/ov.conf` 和 Business Data Platform `--with-bot` 共用启动流程：
 检查 SDK、Server、Docker 服务及 Linux 容器模式 → 准备镜像 → 生成服务配置和管理密钥 →
 启动 OpenSandbox Server → 验证命令执行和文件往返 → Gateway 就绪。初始化失败会退出，
 不会回退到 `direct`。`--with-bot` 等待真实就绪，不再把子进程存活当作启动成功。
@@ -587,7 +587,7 @@ Gateway 的 Bot API 前缀为 `/bot/v1`：
 | GET/POST | `/bot/v1/sessions` | 查询或创建 API Session |
 | GET/DELETE | `/bot/v1/sessions/{id}` | 查询或删除 Session |
 
-配置 OpenViking upstream 后，`/api/v1/*` 会代理到 OpenViking Server。
+配置 Business Data Platform upstream 后，`/api/v1/*` 会代理到 Business Data Platform Server。
 
 ## 运维命令
 
@@ -620,9 +620,9 @@ Gateway 的 Bot API 前缀为 `/bot/v1`：
 
 ## 安全提示
 
-- 不要把模型 API Key、OpenViking API Key 或 Gateway Token 提交到仓库。
+- 不要把模型 API Key、Business Data Platform API Key 或 Gateway Token 提交到仓库。
 - 非 localhost Gateway 必须配置高强度随机 Token，并在网络层启用 HTTPS。
-- `X-Gateway-Token` 只保护 Gateway，不能代替 OpenViking 用户身份。
+- `X-Gateway-Token` 只保护 Gateway，不能代替 Business Data Platform 用户身份。
 - `allow_from: []` 表示不限制发送者；对外服务建议配置明确白名单。
 - `direct` 后端会以 Bot 进程用户权限执行文件和 Shell 操作，不适合不可信调用者。
 - `openviking_connection` 只能来自可信 Server 代理或本地可信链路，不应接受公网请求体自行声明。
@@ -632,6 +632,6 @@ Gateway 的 Bot API 前缀为 `/bot/v1`：
 - [VikingBot 架构](docs/zh/concepts/01-architecture.md)
 - [Agent 能力体系](docs/zh/concepts/02-agent-capabilities.md)
 - [渠道、Gateway 与运行管理](docs/zh/concepts/03-channels-and-gateway.md)
-- [VikingBot 与 OpenViking 集成](docs/zh/concepts/04-openviking-integration.md)
+- [VikingBot 与 Business Data Platform 集成](docs/zh/concepts/04-openviking-integration.md)
 - [渠道配置](docs/zh/concepts/05-channel.md)
 - [Skills：本地与远程技能](docs/zh/concepts/06-skills.md)

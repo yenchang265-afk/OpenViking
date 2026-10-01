@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Live acceptance gate for the agent-driven context window:
-# real pi + real OpenViking + real LLM relay. Manual, never run in CI.
+# real pi + real Business Data Platform + real LLM relay. Manual, never run in CI.
 #
 # Required env (documented in e2e-window.mjs):
 #   OPENVIKING_URL OPENVIKING_API_KEY E2E_LLM_API_KEY

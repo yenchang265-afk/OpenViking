@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Server configuration for OpenViking HTTP Server."""
+"""Server configuration for Business Data Platform HTTP Server."""
 
 import sys
 from typing import Any, Dict, List, Literal, Optional
@@ -402,7 +402,7 @@ def map_bind_host_to_loopback(host: str) -> str:
 
 
 def get_server_url_from_server_data(server_data: object) -> str:
-    """Return the loopback URL clients use for the configured OpenViking server."""
+    """Return the loopback URL clients use for the configured Business Data Platform server."""
     if isinstance(server_data, dict):
         host_value = server_data.get("host")
         port_value = server_data.get("port")
@@ -440,7 +440,7 @@ def load_server_config(config_path: Optional[str] = None) -> ServerConfig:
         default_path_user = DEFAULT_CONFIG_DIR / DEFAULT_OV_CONF
         default_path_system = SYSTEM_CONFIG_DIR / DEFAULT_OV_CONF
         raise FileNotFoundError(
-            f"OpenViking configuration file not found.\n"
+            f"Business Data Platform configuration file not found.\n"
             f"Please create {default_path_user} or {default_path_system}, or set {OPENVIKING_CONFIG_ENV}.\n"
             f"See: https://openviking.ai/docs"
         )

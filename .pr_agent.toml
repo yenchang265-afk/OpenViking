@@ -1,7 +1,7 @@
 # =============================================================================
-# Qodo PR-Agent Configuration for OpenViking
+# Qodo PR-Agent Configuration for Business Data Platform
 # =============================================================================
-# OpenViking: polyglot (Python/TypeScript/Rust) context database for AI agents.
+# Business Data Platform: polyglot (Python/TypeScript/Rust) context database for AI agents.
 # By ByteDance/Volcengine — AGPL-3.0 licensed.
 #
 # Rules derived from: real bug history (PRs #505, #728, #749, #740/#745),
@@ -9,7 +9,7 @@
 # practices (Rule System blog, 2.2 PR History, raw configuration.toml).
 #
 # Principle: edit only what you need (Qodo Tip #1). Every override here has
-# a documented reason tied to OpenViking's specific patterns.
+# a documented reason tied to Business Data Platform's specific patterns.
 # =============================================================================
 
 # ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ patch_extra_lines_after = 3
 allow_dynamic_context = true
 # Auto-detect language from PR content (Chinese contributors are common)
 response_language = "en-US"
-# Custom labels for OpenViking-specific PR categorization
+# Custom labels for Business Data Platform-specific PR categorization
 enable_custom_labels = true
 
 # ---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ push_commands = [
 ]
 
 # ---------------------------------------------------------------------------
-# Custom Labels: OpenViking-specific PR categorization
+# Custom Labels: Business Data Platform-specific PR categorization
 # Each description is a conditional statement (Qodo best practice) so the
 # model knows exactly when to apply it.
 # ---------------------------------------------------------------------------
@@ -110,7 +110,7 @@ description = "Apply when the PR modifies Rust source files (src/*.rs) or Cargo.
 [pr_reviewer]
 persistent_comment = true
 final_update_message = true
-# Increased from default 3 → 8 because OpenViking PRs often span multiple
+# Increased from default 3 → 8 because Business Data Platform PRs often span multiple
 # subsystems (Python core + TypeScript bot + config) with cross-cutting concerns.
 num_max_findings = 8
 enable_intro_text = true
@@ -131,7 +131,7 @@ enable_review_labels_security = true
 enable_review_labels_effort = true
 
 extra_instructions = """\
-You are reviewing OpenViking — an agent-native context database.
+You are reviewing Business Data Platform — an agent-native context database.
 Stack: Python 3.10+ core (FastAPI, pydantic, httpx, loguru), TypeScript bot
 (Vikingbot/OpenClaw plugin), Rust CLI, C++ extensions (AGFS).
 
@@ -301,7 +301,7 @@ max_number_of_calls = 3
 parallel_calls = true
 
 extra_instructions = """\
-Focus suggestions on these OpenViking-specific anti-patterns:
+Focus suggestions on these Business Data Platform-specific anti-patterns:
 
 1. BLOCKING IN ASYNC: Replace `commit()`, `requests.get()`, `time.sleep()` with
    `commit_async()`, `httpx.AsyncClient`, `asyncio.sleep()` inside async functions.
@@ -345,7 +345,7 @@ publish_labels = true
 final_update_message = true
 
 extra_instructions = """\
-For OpenViking PRs, structure the description to include:
+For Business Data Platform PRs, structure the description to include:
 - **Layer affected**: core (Python), bot (TypeScript), CLI (Rust), AGFS (C++/Go), or docs.
 - **Backward compatibility**: state whether existing APIs, config keys, or SDK params are affected.
 - **Memory pipeline impact**: if session/ is touched, list which of the 6 memory categories

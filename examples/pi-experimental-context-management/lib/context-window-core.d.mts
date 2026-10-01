@@ -75,7 +75,7 @@ export function buildWindowHeader(opts: {
   previousOverview?: string;
   /** Archive the stale Working Memory block actually belongs to. */
   previousArchiveId?: string;
-  /** Messages OpenViking rejected for good; named in the header when > 0. */
+  /** Messages Business Data Platform rejected for good; named in the header when > 0. */
   undeliveredCount?: number;
   siblingToolNames?: string[];
   config?: Partial<WindowConfig> & Record<string, any>;
@@ -155,7 +155,7 @@ export interface WindowPersistedState {
   archives: ArchiveRef[];
   /** Archive of the window before the current one. */
   previousArchiveId: string;
-  /** Messages OpenViking rejected for good; they are missing from the archive. */
+  /** Messages Business Data Platform rejected for good; they are missing from the archive. */
   undeliveredCount: number;
   overviewReady: boolean;
   /** The archive will never get a Working Memory (task failed / budget spent). */
@@ -262,7 +262,7 @@ export class ContextWindowCore {
     turnsInWindow: number;
     lastCommitError: CommitTransportError | null;
   };
-  /** True while a restore is still waiting for the OpenViking session id. */
+  /** True while a restore is still waiting for the Business Data Platform session id. */
   pendingSessionCheck: boolean;
   /** Archives of this session, oldest first, with the window each belongs to. */
   archives: ArchiveRef[];

@@ -1,7 +1,7 @@
 ---
 name: ov-add-paper
-description: "Load when the user asks to add, import, compile, or ingest a research paper/PDF into OpenViking, especially when they mention ov-add-paper, ARA, claims, evidence, figures, tables, or paper-to-OV knowledge resources."
-compatibility: OpenViking CLI configured at `~/.openviking/ovcli.conf`
+description: "Load when the user asks to add, import, compile, or ingest a research paper/PDF into Business Data Platform, especially when they mention ov-add-paper, ARA, claims, evidence, figures, tables, or paper-to-OV knowledge resources."
+compatibility: Business Data Platform CLI configured at `~/.openviking/ovcli.conf`
 version: 0.1.1
 last_updated: 2026-06-10
 allowed-tools:
@@ -22,12 +22,12 @@ tags:
 
 ## Goal
 
-Turn a research paper into an OpenViking-ready structured resource, then complete ingestion with `ov add-resource`. The job is not done until the generated artifact directory has been validated and submitted to OpenViking.
+Turn a research paper into a Business Data Platform-ready structured resource, then complete ingestion with `ov add-resource`. The job is not done until the generated artifact directory has been validated and submitted to Business Data Platform.
 
 ## Inputs
 
 - Required: a paper source, usually a local PDF path or paper URL.
-- Optional: output directory, OpenViking target URI, domain notes, related repo/source files, and whether to wait for OV processing.
+- Optional: output directory, Business Data Platform target URI, domain notes, related repo/source files, and whether to wait for OV processing.
 - If the paper source is missing or inaccessible, ask for it before starting.
 
 ## Workflow
@@ -71,7 +71,7 @@ Before ingest, use `ov -o json stat <target-uri>` to check whether the target al
 
 ## Permissions
 
-- Writing a new OpenViking resource is allowed when the user asked to add or ingest the paper.
+- Writing a new Business Data Platform resource is allowed when the user asked to add or ingest the paper.
 - Ask before intentionally reusing a target URI that may overwrite or replace an existing resource.
 - `--skip-validation` may be used only when the user explicitly accepts the listed validation errors.
 

@@ -717,7 +717,7 @@ impl LocalFileSystem {
         // Directory traversal: use ignore::WalkBuilder and explicitly set rg-like defaults.
         //
         // NOTE: We intentionally do NOT inherit ignore rules from parent directories.
-        // In OpenViking, a localfs mount may live under a git repo whose root `.gitignore`
+        // In Business Data Platform, a localfs mount may live under a git repo whose root `.gitignore`
         // ignores the storage directory (e.g. `data/`). Inheriting parent ignore rules would
         // cause grep to return empty results unexpectedly.
         let mut builder = WalkBuilder::new(&local_root);

@@ -1,6 +1,6 @@
 # Storage Architecture
 
-OpenViking uses a dual-layer storage architecture that separates content storage from index storage.
+Business Data Platform uses a dual-layer storage architecture that separates content storage from index storage.
 
 ## Overview
 
@@ -64,7 +64,7 @@ AGFS provides POSIX-style file operations with multiple backend support.
 
 ### Single-Backend and Multi-Write Modes
 
-By default, AGFS uses a single backend for content storage. Once `storage.agfs.backups` is configured, OpenViking enters multi-write mode:
+By default, AGFS uses a single backend for content storage. Once `storage.agfs.backups` is configured, Business Data Platform enters multi-write mode:
 
 - Top-level `storage.agfs.backend` is the primary backend and remains the authoritative write target.
 - `storage.agfs.backups.items[]` defines backup backends for replicas, migration, or read acceleration.

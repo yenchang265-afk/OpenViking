@@ -92,7 +92,7 @@ def default_single_turn_prompt(
 
     return "\n".join(
         [
-            "You are executing an offline training case for OpenViking.",
+            "You are executing an offline training case for Business Data Platform.",
             "Use the current experience policies when they are relevant.",
             "Return the best final answer/action for the case.",
             "",

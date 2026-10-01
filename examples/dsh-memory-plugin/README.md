@@ -1,8 +1,8 @@
-# OpenViking Memory for DeepSeek Harness
+# Business Data Platform Memory for DeepSeek Harness
 
-An installable DeepSeek Harness bundle that adds OpenViking auto-recall, session capture, `viking://` URI protection, and the OpenViking MCP tool surface.
+An installable DeepSeek Harness bundle that adds Business Data Platform auto-recall, session capture, `viking://` URI protection, and the Business Data Platform MCP tool surface.
 
-> **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the
+> **Requires a Business Data Platform server with `viking://~` home-alias support.** Recall targets the
 > caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less
 > `viking://user/memories` shorthand is rejected by newer servers.
 
@@ -36,7 +36,7 @@ It also needs `node examples/memory-plugin-shared/sync.mjs` run first: the
 
 - `@deepseek-ai/dsh` `0.1.0-rc.6`, `0.1.5-rc.1`, or `0.1.5-rc.2`; stable `0.1.x` releases are also admitted by the peer range
 - Node.js `^22.19.0` or `>=24`
-- A reachable OpenViking server
+- A reachable Business Data Platform server
 
 The bundle has no runtime npm dependencies. Its message structures come from
 `createUserMessage` (`@deepseek-ai/dsh-llm`), its tool surface from
@@ -118,7 +118,7 @@ reaches `request/header`.
 ### How the tool surface is mounted
 
 `mcp.mjs` mounts `@deepseek-ai/dsh-mcp-client` on `servers/mcp-proxy.mjs`, the
-same stdio proxy every other OpenViking memory integration starts, so the model
+same stdio proxy every other Business Data Platform memory integration starts, so the model
 gets the server's full tool set instead of a hand-maintained subset and the
 transport behaves identically across harnesses. Pointing the bridge straight at
 the server's `/mcp` endpoint does not work: with `stateless_http=True` the
@@ -157,7 +157,7 @@ catalog or override higher-priority project skills.
 
 ## Configuration
 
-OpenViking credentials use the same resolution order as the other memory plugins:
+Business Data Platform credentials use the same resolution order as the other memory plugins:
 
 1. `OPENVIKING_*` environment variables
 2. `~/.openviking/ovcli.conf`
@@ -167,7 +167,7 @@ Common environment variables:
 
 | Variable | Purpose |
 | --- | --- |
-| `OPENVIKING_URL` / `OPENVIKING_BASE_URL` | OpenViking server endpoint |
+| `OPENVIKING_URL` / `OPENVIKING_BASE_URL` | Business Data Platform server endpoint |
 | `OPENVIKING_API_KEY` / `OPENVIKING_BEARER_TOKEN` | Bearer credential |
 | `OPENVIKING_ACCOUNT` | Trusted-mode account |
 | `OPENVIKING_USER` | Trusted-mode user |
@@ -199,22 +199,22 @@ The patch can also carry plugin config:
 
 ## Behavior
 
-- `agent/session-start` injects the OpenViking profile, the available-memory index, and the `<available-skills>` catalog through `agent.inject()`.
+- `agent/session-start` injects the Business Data Platform profile, the available-memory index, and the `<available-skills>` catalog through `agent.inject()`.
 - `agent/pre-step` retrieves with the current step input and appends a durable plugin message to that same step.
 - `session/event` captures user, assistant, and optionally tool-result messages without scraping a transcript.
-- `turn/end` checks the OpenViking pending-token threshold and commits when required.
+- `turn/end` checks the Business Data Platform pending-token threshold and commits when required.
 - `skipSubagentSessions: true` excludes sessions marked with `header.origin: subagent` from automatic profile, recall, capture, and commit; it defaults to `false`.
 - `syncTurns: false` stops every new write: no captured messages, no threshold or shutdown commit. Writes queued while the toggle was on are still replayed by the background drainer once the server recovers — they were captured with the toggle on. Profile injection and recall are unaffected; it defaults to `true`.
 - `skillCatalog` (default `true`) and `skillCatalogTokenBudget` (default `1200`; `0` also turns the catalog off) govern `<available-skills>`. The catalog comes from one `GET /api/v1/skills?node_limit=200` call: the user's own skills first, then those shared under `viking://agent/skills` minus any whose name the user also owns, each description cut to about 40 tokens. Its budget is separate from `profileTokenBudget`. When the descriptions do not fit, the catalog lists names only (with a `... +N more` tail if even the names do not all fit); when not even one name fits, it shrinks to a one-line count; with no skills, or a server without the endpoint, it is omitted.
-- Failed writes enter the shared OpenViking pending queue. A background drainer (default every 60s, `OPENVIKING_PENDING_DRAIN_INTERVAL_MS`) probes the server health and replays the queue in-process, so a transient write failure recovers without restarting dsh; it does not consume the session-start retry budget. Session-start replays keep consuming retries as before.
+- Failed writes enter the shared Business Data Platform pending queue. A background drainer (default every 60s, `OPENVIKING_PENDING_DRAIN_INTERVAL_MS`) probes the server health and replays the queue in-process, so a transient write failure recovers without restarting dsh; it does not consume the session-start retry budget. Session-start replays keep consuming retries as before.
 - `tools/pre-execute` denies a DSH filesystem tool (`read`, `glob`, `grep`, `edit`, `write`, `str_replace_editor`) whose path argument is a `viking://` URI, pointing the model at the bridged `mcp__openviking__*` tools instead. A `write` or `edit` under a skill directory (`viking://~/skills/...`, `viking://user/<id>/skills/...`, `viking://agent/skills/...`) points at `mcp__openviking__add_skill` instead, which creates or replaces a whole skill from its `SKILL.md` text. A `grep` whose pattern is `viking://` text still runs.
-- `tools/post-execute` lets a `bash` command that carries a `viking://` URI run unchanged and attaches a notice for the model: use the bridged tools if it meant OpenViking content, or ignore the notice when the URI is intentional data such as an `ov` argument or an HTTP payload.
+- `tools/post-execute` lets a `bash` command that carries a `viking://` URI run unchanged and attaches a notice for the model: use the bridged tools if it meant Business Data Platform content, or ignore the notice when the URI is intentional data such as an `ov` argument or an HTTP payload.
 
-Each DSH session maps to `dsh-<session-id>` in OpenViking. Workspace-derived actor peers are resolved per session and sent on every session-specific request: the peer is the git identity of the session's workspace — the normalized `origin` URL (`git@github.com:volcengine/OpenViking.git` becomes `github.com-volcengine-openviking`), else the repository root path, that fallback keeping the older rule where every non-letter-or-digit character becomes `-`. Outside a git repository no peer is sent at all, and what is remembered there goes to the user-level space `viking://user/<you>/memories`. One repository therefore keeps one peer across subdirectories, worktrees, clones and machines, while a fork's different origin keeps it separate. DSH does not read workspace `.openviking/config.json` files, so a `peer.id` written there has no effect; pin a peer with `OPENVIKING_PEER_ID` instead. Memories written under the older path-derived peer stay reachable: the default `recallPeerScope: all` sweeps every peer under the user.
+Each DSH session maps to `dsh-<session-id>` in Business Data Platform. Workspace-derived actor peers are resolved per session and sent on every session-specific request: the peer is the git identity of the session's workspace — the normalized `origin` URL (`git@github.com:volcengine/OpenViking.git` becomes `github.com-volcengine-openviking`), else the repository root path, that fallback keeping the older rule where every non-letter-or-digit character becomes `-`. Outside a git repository no peer is sent at all, and what is remembered there goes to the user-level space `viking://user/<you>/memories`. One repository therefore keeps one peer across subdirectories, worktrees, clones and machines, while a fork's different origin keeps it separate. DSH does not read workspace `.openviking/config.json` files, so a `peer.id` written there has no effect; pin a peer with `OPENVIKING_PEER_ID` instead. Memories written under the older path-derived peer stay reachable: the default `recallPeerScope: all` sweeps every peer under the user.
 
 ## Tools
 
-The model sees the OpenViking MCP tools under the bridge's server-qualified
+The model sees the Business Data Platform MCP tools under the bridge's server-qualified
 names — `mcp__openviking__search`, `mcp__openviking__read`,
 `mcp__openviking__list`, `mcp__openviking__tree`, `mcp__openviking__grep`,
 `mcp__openviking__glob`, `mcp__openviking__remember`,
@@ -230,7 +230,7 @@ use it only when the user explicitly requests deletion.
 The bundle also serves the shared `openviking-memory` and `openviking-skills`
 skills from `skills/` through its own isolated `ctx.skills` provider, so the
 model gets the same guidance the other integrations ship: when to search, read,
-and write, and how to find, use, create, share, and migrate OpenViking skills.
+and write, and how to find, use, create, share, and migrate Business Data Platform skills.
 
 ## Testing
 
@@ -254,7 +254,7 @@ old skill packages to an rc.2 profile; removing those direct dependencies and
 reinstalling the bundle restored the same integration checks. A clean rc.2
 profile with the published `0.3.0` bundle did not reproduce that import error.
 
-`live-recall.test.mjs` is an opt-in end-to-end gate against a real OpenViking
+`live-recall.test.mjs` is an opt-in end-to-end gate against a real Business Data Platform
 server: it stores a sentinel memory through a session commit, waits for
 extraction, and asserts recall returns that sentinel — the property no stub
 can certify. Enable it with `OPENVIKING_E2E=1` plus the normal credential

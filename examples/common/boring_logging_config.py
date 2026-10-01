@@ -33,7 +33,7 @@ else:
             },
             "root": {"level": "CRITICAL", "handlers": ["null"]},
             "loggers": {
-                # Suppress all OpenViking loggers
+                # Suppress all Business Data Platform loggers
                 "openviking": {"level": "CRITICAL", "handlers": ["null"], "propagate": False},
                 "openviking.agfs_manager": {
                     "level": "CRITICAL",

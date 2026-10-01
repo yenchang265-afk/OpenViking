@@ -158,7 +158,7 @@ async def test_async_http_client_normalizes_message_part_objects():
             ToolPart(
                 tool_id="call-1",
                 tool_name="search",
-                tool_input={"query": "OpenViking"},
+                tool_input={"query": "Business Data Platform"},
                 tool_status="completed",
                 duration_ms=12.5,
                 prompt_tokens=42,
@@ -195,7 +195,7 @@ async def test_async_http_client_normalizes_message_part_objects():
                     "type": "tool",
                     "tool_id": "call-1",
                     "tool_name": "search",
-                    "tool_input": {"query": "OpenViking"},
+                    "tool_input": {"query": "Business Data Platform"},
                     "tool_status": "completed",
                     "duration_ms": 12.5,
                     "prompt_tokens": 42,

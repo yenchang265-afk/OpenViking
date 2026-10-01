@@ -18,7 +18,7 @@ test("extractCurrentUserText skips synthetic session context before user text", 
   assert.equal(query, "Find the deployment notes for the recall test")
 })
 
-test("extractCurrentUserText still rejects non-synthetic OpenViking context text", () => {
+test("extractCurrentUserText still rejects non-synthetic Business Data Platform context text", () => {
   const query = extractCurrentUserText([
     {
       type: "text",

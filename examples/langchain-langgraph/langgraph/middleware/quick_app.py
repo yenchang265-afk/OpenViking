@@ -1,4 +1,4 @@
-"""Deterministic LangGraph app using OpenViking context middleware."""
+"""Deterministic LangGraph app using Business Data Platform context middleware."""
 
 from typing import Any
 
@@ -22,7 +22,7 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
     client = client or InMemoryOpenVikingClient(
         {
             "viking://~/memories/profile.md": (
-                "OpenViking middleware examples should answer with azure."
+                "Business Data Platform middleware examples should answer with azure."
             )
         }
     )
@@ -62,8 +62,8 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
                 else ""
             )
             if "azure" in context.lower():
-                return AIMessage(content="OpenViking middleware context says azure.")
-            return AIMessage(content="OpenViking middleware context was missing.")
+                return AIMessage(content="Business Data Platform middleware context says azure.")
+            return AIMessage(content="Business Data Platform middleware context was missing.")
 
         response = middleware.wrap_model_call(Request(), handler)
         middleware.after_agent(

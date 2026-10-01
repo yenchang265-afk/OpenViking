@@ -171,7 +171,7 @@ def test_create_openviking_tools_exposes_common_viking_primitives():
 
     health_tool = next(tool for tool in tools if tool.name == "viking_health")
     health = health_tool.invoke({})
-    assert '"backend": "OpenViking"' in health
+    assert '"backend": "Business Data Platform"' in health
     assert "VikingDB is internal vector/index storage" in health
 
 
@@ -379,7 +379,7 @@ def test_openviking_health_tool_returns_safe_summary():
     tools = {tool.name: tool for tool in create_openviking_tools(client=StatusClient())}
     payload = json.loads(tools["viking_health"].invoke({}))
 
-    assert payload["backend"] == "OpenViking"
+    assert payload["backend"] == "Business Data Platform"
     assert payload["state"] == "degraded"
     assert payload["healthy"] is False
     assert payload["summary"] == {
@@ -471,13 +471,13 @@ def test_openviking_client_retries_recoverable_read_with_fresh_client(monkeypatc
 
         def find(self, **_kwargs):
             if self.index == 0:
-                raise ConnectionError("OpenViking server was not ready")
+                raise ConnectionError("Business Data Platform server was not ready")
             return {
                 "memories": [
                     {
                         "uri": "viking://user/default/memories/profile.md",
-                        "abstract": "OpenViking recovered",
-                        "overview": "OpenViking recovered",
+                        "abstract": "Business Data Platform recovered",
+                        "overview": "Business Data Platform recovered",
                     }
                 ],
                 "resources": [],
@@ -491,7 +491,7 @@ def test_openviking_client_retries_recoverable_read_with_fresh_client(monkeypatc
     client = ensure_client(OpenVikingConnection(url="http://localhost:1933"))
     result = call_openviking(client, "find", query="recover")
 
-    assert result["memories"][0]["abstract"] == "OpenViking recovered"
+    assert result["memories"][0]["abstract"] == "Business Data Platform recovered"
     assert len(instances) == 2
     assert instances[0].closed is True
     assert instances[1]._initialized is True
@@ -601,7 +601,7 @@ def test_openviking_client_evicts_but_does_not_retry_mutating_call(monkeypatch):
             self.closed = True
 
         def add_message(self, **_kwargs):
-            raise ConnectionError("OpenViking connection dropped during write")
+            raise ConnectionError("Business Data Platform connection dropped during write")
 
     import openviking_sdk as client_module
 
@@ -792,7 +792,7 @@ def test_system_messages_are_never_persisted_to_openviking_history():
 
 def test_session_context_assembler_uses_archive_active_messages_and_recall():
     client = InMemoryOpenVikingClient(
-        {"viking://resources/runbooks/deploy.md": "Azure deployments use OpenViking context."}
+        {"viking://resources/runbooks/deploy.md": "Azure deployments use Business Data Platform context."}
     )
     client.add_message("assembler-session", "user", content="Earlier user turn")
     client.add_message("assembler-session", "assistant", content="Earlier assistant turn")
@@ -905,7 +905,7 @@ def test_with_openviking_context_wraps_runnable_with_history():
 
     def answer(messages):
         assert "Azure is the deployment color" in messages[0].content
-        return AIMessage(content="OpenViking says azure.")
+        return AIMessage(content="Business Data Platform says azure.")
 
     runnable = with_openviking_context(
         RunnableLambda(answer),
@@ -918,7 +918,7 @@ def test_with_openviking_context_wraps_runnable_with_history():
         [HumanMessage(content="What deployment color?")],
     )
 
-    assert result.content == "OpenViking says azure."
+    assert result.content == "Business Data Platform says azure."
     assert len(client.sessions["wrapped-session"]) == 2
     assert any(part["type"] == "context" for part in client.sessions["wrapped-session"][1]["parts"])
 
@@ -1444,7 +1444,7 @@ def test_langgraph_middleware_injects_recall_and_captures_messages():
         return AIMessage(content="ok")
 
     middleware.wrap_model_call(Request(), handler)
-    assert "OpenViking context" in captured_request["request"].system_message.content
+    assert "Business Data Platform context" in captured_request["request"].system_message.content
     assert "azure deployments" in captured_request["request"].system_message.content
 
     middleware.after_agent(
@@ -1564,12 +1564,12 @@ def test_langgraph_middleware_does_not_duplicate_active_messages_in_context():
     client.add_message(
         "middleware-active-session",
         "user",
-        content="OpenViking active duplicate user turn.",
+        content="Business Data Platform active duplicate user turn.",
     )
     client.add_message(
         "middleware-active-session",
         "assistant",
-        content="OpenViking active duplicate assistant turn.",
+        content="Business Data Platform active duplicate assistant turn.",
     )
     middleware = OpenVikingContextMiddleware(
         client=client,
@@ -1595,8 +1595,8 @@ def test_langgraph_middleware_does_not_duplicate_active_messages_in_context():
     middleware.wrap_model_call(Request(), handler)
     system_content = captured_request["request"].system_message.content
     assert "Middleware recall uses green context" in system_content
-    assert "OpenViking active duplicate user turn" not in system_content
-    assert "OpenViking active duplicate assistant turn" not in system_content
+    assert "Business Data Platform active duplicate user turn" not in system_content
+    assert "Business Data Platform active duplicate assistant turn" not in system_content
 
 
 def test_langgraph_middleware_uses_runtime_thread_id():

@@ -1,14 +1,14 @@
-# VikingBot: A Multi-Channel AI Agent Powered by OpenViking
+# VikingBot: A Multi-Channel AI Agent Powered by Business Data Platform
 
-VikingBot is a multi-channel AI Agent provided by OpenViking. OpenViking manages long-term context such as Resources, Memories, and Skills; VikingBot receives user messages, assembles context, invokes models and tools, and delivers results to a command line, chat platform, or HTTP client.
+VikingBot is a multi-channel AI Agent provided by Business Data Platform. Business Data Platform manages long-term context such as Resources, Memories, and Skills; VikingBot receives user messages, assembles context, invokes models and tools, and delivers results to a command line, chat platform, or HTTP client.
 
 Together, they allow an Agent not only to complete the current task, but also to accumulate user memories, session summaries, and task experience for future work.
 
-## Responsibilities of VikingBot and OpenViking
+## Responsibilities of VikingBot and Business Data Platform
 
 | Component | Primary responsibility | Typical capabilities |
 |-----------|------------------------|----------------------|
-| **OpenViking** | Context storage, organization, and retrieval | Resources, Memories, Skills, Sessions, semantic retrieval, memory and experience extraction |
+| **Business Data Platform** | Context storage, organization, and retrieval | Resources, Memories, Skills, Sessions, semantic retrieval, memory and experience extraction |
 | **VikingBot** | Agent runtime and interaction | Multi-channel messaging, model reasoning, tool calls, Skill execution, sandboxing, automation, and result delivery |
 
 
@@ -26,7 +26,7 @@ CLI / Slack / Telegram / Discord / Email / HTTP API
                     │                   │
           ┌─────────┴─────────┐         ▼
           ▼                   ▼    Replies and events
-  OpenViking Context     Tools / Skills
+  Business Data Platform Context     Tools / Skills
   Resource / Memory      Files / Shell / Web
   Experience / Session   MCP / Cron / Subagent
           │                   │
@@ -53,17 +53,17 @@ Each Channel handles platform authentication, sender allowlists, media parsing, 
 
 AgentLoop is the execution core of VikingBot. Each message goes through the following flow:
 
-1. load identity, workspace rules, Skills, session history, and OpenViking context;
+1. load identity, workspace rules, Skills, session history, and Business Data Platform context;
 2. call the configured model;
 3. when the model returns a tool call, validate and execute it through ToolRegistry;
 4. add the tool result to the context and call the model again;
 5. produce the final response, save the Session, and deliver it to the originating Channel.
 
-The Provider layer normalizes text, reasoning, streaming deltas, tool calls, and token usage. The Bot inherits OpenViking's root-level `vlm` by default, or it can use a dedicated model configured through `bot.agents`.
+The Provider layer normalizes text, reasoning, streaming deltas, tool calls, and token usage. The Bot inherits Business Data Platform's root-level `vlm` by default, or it can use a dedicated model configured through `bot.agents`.
 
 ### Tools, Skills, and Subagents
 
-VikingBot includes file, Shell, Web, image, scheduling, and OpenViking tools, and it can connect to external MCP Servers.
+VikingBot includes file, Shell, Web, image, scheduling, and Business Data Platform tools, and it can connect to external MCP Servers.
 
 | Capability | Purpose |
 |------------|---------|
@@ -96,12 +96,12 @@ Both use the same AgentLoop and can deliver results to the original Session and 
 - configured chat Channels;
 - the Bot HTTP API and SSE streaming events;
 - AgentLoop, Sessions, Cron, and Heartbeat;
-- OpenViking API proxying;
+- Business Data Platform API proxying;
 - user feedback, outcome evaluation, logs, and optional Langfuse observability.
 
-After an OpenViking upstream is configured, Bot Chat and `/api/v1/*` can use the same Gateway address. The Gateway Token and OpenViking user identity remain separate security boundaries.
+After a Business Data Platform upstream is configured, Bot Chat and `/api/v1/*` can use the same Gateway address. The Gateway Token and Business Data Platform user identity remain separate security boundaries.
 
-## How OpenViking Enhances VikingBot
+## How Business Data Platform Enhances VikingBot
 
 ### Resources: Task Knowledge
 
@@ -123,14 +123,14 @@ Experience stores methods that helped the Agent complete similar tasks in the pa
 
 ### Sessions: From Conversation to Long-term Context
 
-The local VikingBot Session stores runtime history and Channel state. The OpenViking Session handles message archiving, compressed summaries, and memory and experience extraction.
+The local VikingBot Session stores runtime history and Channel state. The Business Data Platform Session handles message archiving, compressed summaries, and memory and experience extraction.
 
 ```text
 Current task
   → Recall Resource / Memory / Experience
   → Agent executes with Skills and tools
   → Save the local Session
-  → Incrementally synchronize and commit the OpenViking Session
+  → Incrementally synchronize and commit the Business Data Platform Session
   → Extract new Memory and Experience
   → Recall them in a future task
 ```
@@ -139,9 +139,9 @@ Ordinary conversations are synchronized according to policy. The Agent actively 
 
 ## Three Runtime Entry Points
 
-| Entry point | Best for | OpenViking connection |
+| Entry point | Best for | Business Data Platform connection |
 |-------------|----------|-----------------------|
-| `openviking-server --with-bot` | Complete local experience | Uses the OpenViking Server being started |
+| `openviking-server --with-bot` | Complete local experience | Uses the Business Data Platform Server being started |
 | `vikingbot chat` | Quick trials and Agent development | Optional; runs standalone when unavailable |
 | `vikingbot gateway` | Long-running service, remote access, and chat platforms | Connects to an explicit or inherited Server, or runs standalone |
 
@@ -153,18 +153,18 @@ VikingBot applies access control at several layers:
 
 - Channels restrict senders with policies such as `allow_from`;
 - a non-localhost Gateway requires a Gateway Token;
-- OpenViking Server validates User/Admin API Keys or trusted identities;
-- request-scoped OpenViking connections are accepted only from a trusted Server proxy;
+- Business Data Platform Server validates User/Admin API Keys or trusted identities;
+- request-scoped Business Data Platform connections are accepted only from a trusted Server proxy;
 - the Sandbox controls filesystem, command, and network boundaries.
 
-A Gateway Token protects only the Gateway entry point and does not replace an OpenViking user identity. Public or multi-user deployments should not process untrusted requests with the `direct` backend.
+A Gateway Token protects only the Gateway entry point and does not replace a Business Data Platform user identity. Public or multi-user deployments should not process untrusted requests with the `direct` backend.
 
 ## Typical Use Cases
 
 - personal or team assistants with long-term memory;
 - knowledge and task bots connected to enterprise chat platforms;
 - general-purpose Agents that need files, Shell, Web, MCP, and Skills;
-- a unified Gateway exposing both Chat and OpenViking APIs;
+- a unified Gateway exposing both Chat and Business Data Platform APIs;
 - continuously improving Agents that retain feedback, outcomes, and task experience.
 
 ## Related Documentation
@@ -174,6 +174,6 @@ A Gateway Token protects only the Gateway entry point and does not replace an Op
 - [VikingBot Architecture](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/01-architecture.md)
 - [Agent Capabilities](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/02-agent-capabilities.md)
 - [Channels, Gateway, and Operations](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/03-channels-and-gateway.md)
-- [VikingBot and OpenViking Integration](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/04-openviking-integration.md)
-- [OpenViking Context Types](./02-context-types.md)
-- [OpenViking Session Management](./08-session.md)
+- [VikingBot and Business Data Platform Integration](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/04-openviking-integration.md)
+- [Business Data Platform Context Types](./02-context-types.md)
+- [Business Data Platform Session Management](./08-session.md)

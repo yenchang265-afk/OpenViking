@@ -15,7 +15,7 @@ Verified against Kimi Code CLI 0.43.1 and Node.js 18+.
   If log rotation removes the acknowledged cursor, capture restarts from the
   current file and the bounded acknowledgement set suppresses duplicates.
 - Stop, PreCompact, and SessionEnd capture may detach. Interrupt stays
-  synchronous and all of its OpenViking requests share a two-second budget.
+  synchronous and all of its Business Data Platform requests share a two-second budget.
 - The native plugin manifest owns hooks and MCP. Installation does not edit
   legacy `config.toml` or `mcp.json` files.
 

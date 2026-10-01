@@ -15,7 +15,7 @@
 
 ### Step 2: Test MCP tool connectivity
 
-Enter `ov health` to check the OpenViking version and connection status.
+Enter `ov health` to check the Business Data Platform version and connection status.
 ```bash
 ov health
 ```

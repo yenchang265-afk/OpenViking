@@ -58,7 +58,7 @@ impl TreeState {
         }
     }
 
-    /// Known root-level scopes in OpenViking
+    /// Known root-level scopes in Business Data Platform
     const ROOT_SCOPES: &'static [&'static str] = &["agent", "resources", "session", "user"];
 
     pub async fn load_root(&mut self, client: &HttpClient, uri: &str) {

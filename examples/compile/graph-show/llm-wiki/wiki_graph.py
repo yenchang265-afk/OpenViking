@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Generate an interactive graph for one or more compiled LLM-Wiki URIs.
 
-The script connects to an OpenViking service, verifies that the service is
+The script connects to a Business Data Platform service, verifies that the service is
 healthy, checks the current identity's read access to every supplied URI, and
 then writes a standalone HTML document containing the Wiki pages and graph.
 
-Connection settings are resolved in the usual OpenViking order: command-line
+Connection settings are resolved in the usual Business Data Platform order: command-line
 arguments, OPENVIKING_* environment variables, then ~/.openviking/ovcli.conf.
 
 Examples:
@@ -608,12 +608,12 @@ def generate(args: argparse.Namespace) -> Path:
         client = ov.SyncHTTPClient(**_client_kwargs(args))
         client.initialize()
     except Exception as exc:
-        raise GraphShowError(f"无法初始化 OpenViking 客户端：{exc}", exit_code=3) from exc
+        raise GraphShowError(f"无法初始化 Business Data Platform 客户端：{exc}", exit_code=3) from exc
 
     try:
         if not client.health():
             raise GraphShowError(
-                "OpenViking 服务不可用。请确认 OV 服务已启动且 --url/OPENVIKING_URL 正确。",
+                "Business Data Platform 服务不可用。请确认 OV 服务已启动且 --url/OPENVIKING_URL 正确。",
                 exit_code=3,
             )
         specs = discover_pages(client, args.uris, args.node_limit)

@@ -1,6 +1,6 @@
 ## 步骤1：安装
 
-1. 在终端执行如下命令，启动 OpenViking 记忆配置向导：
+1. 在终端执行如下命令，启动 Business Data Platform 记忆配置向导：
 
    ```bash
    hermes memory setup openviking
@@ -9,25 +9,25 @@
 2. 执行后将出现配置来源选择界面：
 
    ```text
-   OpenViking config source
+   Business Data Platform config source
      ↑↓ navigate  ENTER/SPACE select  ESC cancel
-    → (●) Use existing OpenViking profile - choose from detected ovcli.conf profiles
-      (○) Create new OpenViking profile - enter a new URL/API key
+    → (●) Use existing Business Data Platform profile - choose from detected ovcli.conf profiles
+      (○) Create new Business Data Platform profile - enter a new URL/API key
    ```
 
    选项说明：
 
-   - 复用现有 Profile：直接读取本地已有的 `ovcli.conf` 中的 OpenViking 地址和密钥，无需重复填写。
-   - 新建 Profile：需手动输入 OpenViking 服务的访问 URL 和 API 密钥，适合首次配置或连接新实例的场景。
+   - 复用现有 Profile：直接读取本地已有的 `ovcli.conf` 中的 Business Data Platform 地址和密钥，无需重复填写。
+   - 新建 Profile：需手动输入 Business Data Platform 服务的访问 URL 和 API 密钥，适合首次配置或连接新实例的场景。
 
-3. 若选择「Create new OpenViking profile」，将出现连接方式选择，请选择「OpenViking Service (VolcEngine Cloud)」：
+3. 若选择「Create new Business Data Platform profile」，将出现连接方式选择，请选择「Business Data Platform Service (VolcEngine Cloud)」：
 
    ```text
-   OpenViking connection
+   Business Data Platform connection
      ↑↓ navigate  ENTER/SPACE select  ESC cancel
 
-    → (●) OpenViking Service (VolcEngine Cloud) - use the managed OpenViking endpoint
-      (○) Custom - use a local, VPS, or self-hosted OpenViking server
+    → (●) Business Data Platform Service (VolcEngine Cloud) - use the managed Business Data Platform endpoint
+      (○) Custom - use a local, VPS, or self-hosted Business Data Platform server
    ```
 
 4. 填入 API KEY：
@@ -36,22 +36,22 @@
    {{OPENVIKING_API_KEY}}
    ```
 
-5. 填写「Hermes peer ID in OpenViking」：该字段为 Hermes 在 OpenViking 中的 Agent 身份标识，用于区分不同 Agent 产生的记忆。可直接按 Enter 使用默认值「hermes」，也可自定义填写。
-6. 选择配置保存方式，建议选择「Mirror to OpenViking store」：
+5. 填写「Hermes peer ID in Business Data Platform」：该字段为 Hermes 在 Business Data Platform 中的 Agent 身份标识，用于区分不同 Agent 产生的记忆。可直接按 Enter 使用默认值「hermes」，也可自定义填写。
+6. 选择配置保存方式，建议选择「Mirror to Business Data Platform store」：
 
    ```text
-   Save OpenViking config
+   Save Business Data Platform config
      ↑↓ navigate  ENTER/SPACE select  ESC cancel
       (○) Keep in Hermes only - write values only to Hermes .env
-    → (●) Mirror to OpenViking store - write ~/.openviking/ovcli.conf.<name> and link it
+    → (●) Mirror to Business Data Platform store - write ~/.openviking/ovcli.conf.<name> and link it
    ```
 
-7. 填写「OpenViking profile name」：Hermes 的多租户能力可隔离不同 Profile 的模型、记忆、配置及凭据。建议为每个 Hermes Profile 配置独立的 OpenViking 环境或身份，并在此填写一个便于识别的本地配置名称，以区分对应的 OpenViking 配置。该名称仅用于本地标识，不会创建新用户，也不会改变账号身份或权限。
+7. 填写「Business Data Platform profile name」：Hermes 的多租户能力可隔离不同 Profile 的模型、记忆、配置及凭据。建议为每个 Hermes Profile 配置独立的 Business Data Platform 环境或身份，并在此填写一个便于识别的本地配置名称，以区分对应的 Business Data Platform 配置。该名称仅用于本地标识，不会创建新用户，也不会改变账号身份或权限。
 8. 配置完成后将显示如下确认信息：
 
    ```text
-   OpenViking memory is ready
-     Created and linked OpenViking profile.
+   Business Data Platform memory is ready
+     Created and linked Business Data Platform profile.
      Config file: ~/.openviking/ovcli.conf.hermes
      Start a new Hermes session to activate.
    ```
@@ -105,4 +105,4 @@
 ## 参考
 
 - 手动配置文档：[Hermes](https://docs.openviking.net/zh/agent-integrations/05-hermes)
-- 原理说明：[OpenViking memory provider](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers#openviking)
+- 原理说明：[Business Data Platform memory provider](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers#openviking)

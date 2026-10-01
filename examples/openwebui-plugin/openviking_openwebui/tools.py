@@ -99,7 +99,7 @@ class SessionStatusRequest(BaseModel):
 
 
 def _hits_from_find(payload: Dict[str, Any]) -> List[SearchHit]:
-    """Flatten an OpenViking /search/find response into typed hits."""
+    """Flatten a Business Data Platform /search/find response into typed hits."""
     result = payload.get("result") if isinstance(payload, dict) else None
     if not isinstance(result, dict):
         return []
@@ -141,13 +141,13 @@ def _memory_uri(settings: Settings, name: str) -> str:
     "/tools/ov_search",
     response_model=SearchResponse,
     operation_id="ov_search",
-    summary="Semantic search across OpenViking memories, resources, and skills.",
+    summary="Semantic search across Business Data Platform memories, resources, and skills.",
 )
 async def ov_search(
     body: SearchRequest,
     client: OVClient = Depends(get_client),
 ) -> SearchResponse:
-    """Run a semantic find over OpenViking and return the top hits."""
+    """Run a semantic find over Business Data Platform and return the top hits."""
     payload: Dict[str, Any] = {"query": body.query, "limit": body.limit}
     if body.target_uri:
         payload["target_uri"] = body.target_uri
@@ -256,7 +256,7 @@ async def ov_read_resource(
 @router.post(
     "/tools/ov_add_resource",
     operation_id="ov_add_resource",
-    summary="Ingest a remote URL or path-reachable file as an OpenViking resource.",
+    summary="Ingest a remote URL or path-reachable file as a Business Data Platform resource.",
 )
 async def ov_add_resource(
     body: AddResourceRequest,
@@ -282,7 +282,7 @@ async def ov_add_resource(
 @router.post(
     "/tools/ov_session_status",
     operation_id="ov_session_status",
-    summary="Get OpenViking session metadata (counts, archive state, pending tokens).",
+    summary="Get Business Data Platform session metadata (counts, archive state, pending tokens).",
 )
 async def ov_session_status(
     body: SessionStatusRequest,

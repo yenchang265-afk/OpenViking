@@ -3,12 +3,12 @@ import subprocess
 
 import openviking
 
-print("Searching for root_api_key in OpenViking code...")
+print("Searching for root_api_key in Business Data Platform code...")
 
 # Find where openviking is installed
 
 openviking_path = os.path.dirname(openviking.__file__)
-print(f"OpenViking path: {openviking_path}")
+print(f"Business Data Platform path: {openviking_path}")
 
 # Search for root_api_key in the code
 print("\nSearching in openviking package...")
@@ -28,7 +28,7 @@ try:
     import openviking_cli
 
     cli_path = os.path.dirname(openviking_cli.__file__)
-    print(f"\nOpenViking CLI path: {cli_path}")
+    print(f"\nBusiness Data Platform CLI path: {cli_path}")
     print("\nSearching in openviking_cli package...")
     result = subprocess.run(
         ["grep", "-r", "root_api_key", cli_path], capture_output=True, text=True

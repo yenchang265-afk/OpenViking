@@ -1,7 +1,7 @@
 [project]
 name = "multi-tenant-example"
 version = "0.1.0"
-description = "OpenViking Multi-Tenant admin workflow example"
+description = "Business Data Platform Multi-Tenant admin workflow example"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

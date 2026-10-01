@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-IO Recorder types for OpenViking evaluation.
+IO Recorder types for Business Data Platform evaluation.
 """
 
 from dataclasses import asdict, dataclass, field

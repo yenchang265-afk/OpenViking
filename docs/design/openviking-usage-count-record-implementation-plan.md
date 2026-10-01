@@ -62,7 +62,7 @@
 {"event_time":"<UTC time>","tenant_id":"resource_id:<resource>;account_id:<account>;user_id:<user>;resource_uri:<uri>","event_name":"<event>","object_id":"<event_id>","count":1,"tags":{"resource_type":"experience"}}
 ```
 
-日志文件不复用 OpenViking stdout，按 UTC 小时滚动，并保留配置数量的历史
+日志文件不复用 Business Data Platform stdout，按 UTC 小时滚动，并保留配置数量的历史
 文件。多个 server worker 写入同一路径时，文件追加和滚动通过进程间锁串行化。
 
 文件落盘及后续采集均采用 best-effort 语义。下游必须按

@@ -1,6 +1,6 @@
-# Reading and Personalizing the OpenViking Statusline
+# Reading and Personalizing the Business Data Platform Statusline
 
-A guide for an AI assistant (or you) to read the OpenViking statusline and **customize** it beyond the defaults the installer sets up. The "What each segment means" section below is the canonical glossary; the rest covers personalization recipes that env vars don't cover. For the environment-variable reference, see `$REPO/docs/en/agent-integrations/02-claude-code.md`.
+A guide for an AI assistant (or you) to read the Business Data Platform statusline and **customize** it beyond the defaults the installer sets up. The "What each segment means" section below is the canonical glossary; the rest covers personalization recipes that env vars don't cover. For the environment-variable reference, see `$REPO/docs/en/agent-integrations/02-claude-code.md`.
 
 When a user asks for something the env vars don't cover, prefer the smallest local edit over inventing a new configurable knob.
 
@@ -8,9 +8,9 @@ When a user asks for something the env vars don't cover, prefer the smallest loc
 
 ## Where everything lives
 
-The OpenViking repo and plugin code are checked out to a known location by the installer. Throughout this doc:
+The Business Data Platform repo and plugin code are checked out to a known location by the installer. Throughout this doc:
 
-- **`$REPO`** = the OpenViking repo root. Default: `~/.openviking/openviking-repo` (override via `OPENVIKING_REPO_DIR` at install time). Verify with `ls "$REPO/examples/claude-code-memory-plugin"` — if that path is wrong, find the real one with `jq -r '.statusLine.command' ~/.claude/settings.json` (the registered command points into the plugin) or `find ~ -path '*/claude-code-memory-plugin/scripts/statusline.mjs' 2>/dev/null`.
+- **`$REPO`** = the Business Data Platform repo root. Default: `~/.openviking/openviking-repo` (override via `OPENVIKING_REPO_DIR` at install time). Verify with `ls "$REPO/examples/claude-code-memory-plugin"` — if that path is wrong, find the real one with `jq -r '.statusLine.command' ~/.claude/settings.json` (the registered command points into the plugin) or `find ~ -path '*/claude-code-memory-plugin/scripts/statusline.mjs' 2>/dev/null`.
 - **`$PLUGIN`** = `$REPO/examples/claude-code-memory-plugin`. The plugin's own root.
 - **`$STATE`** = `~/.openviking/state` (override via `OPENVIKING_HOME`). Where hook-written JSON snapshots live.
 

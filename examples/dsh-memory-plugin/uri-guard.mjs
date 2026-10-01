@@ -3,7 +3,7 @@ import { pluginMessage } from "./capture.mjs";
 import { MCP_SERVER_NAME } from "./config.mjs";
 import { addSkillExample, evaluateUriGuard, evaluateUriNotice, isSkillUri } from "./shared/uri-guard.mjs";
 
-/** Model-facing name of a bridged OpenViking MCP tool. */
+/** Model-facing name of a bridged Business Data Platform MCP tool. */
 const mcp = rawName => `mcp__${MCP_SERVER_NAME}__${rawName}`;
 
 const GUARDED_TOOLS = {
@@ -39,7 +39,7 @@ const GUARDED_TOOLS = {
         : `${mcp("write")}(uri="${uri}", content="...")`,
   },
   str_replace_editor: {
-    tool: "the OpenViking MCP tools",
+    tool: "the Business Data Platform MCP tools",
     example: uri => `${mcp("read")}(uris="${uri}")`,
   },
 };
@@ -58,7 +58,7 @@ export async function noticeVikingUri(exec, _result, next) {
   const decision = await next();
   const context = pluginMessage(notice.reason, {
     form: "notice",
-    summary: boundContextSummary(`OpenViking URI guard: shell command contains ${notice.uri}`),
+    summary: boundContextSummary(`Business Data Platform URI guard: shell command contains ${notice.uri}`),
   });
   return {
     ...decision,

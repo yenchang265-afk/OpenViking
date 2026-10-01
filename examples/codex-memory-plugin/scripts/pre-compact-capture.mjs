@@ -4,7 +4,7 @@
  * PreCompact hook for Codex.
  *
  * Codex is about to summarize/compact the conversation. We commit the
- * long-lived OpenViking session for this codex session_id (Stop hooks
+ * long-lived Business Data Platform session for this codex session_id (Stop hooks
  * have already been appending turns), which triggers OV's memory
  * extractor on the full pre-compact transcript.
  *
@@ -134,7 +134,7 @@ async function compact(sessionId, transcriptPath, trigger, cwd, heartbeat) {
   state.ovSessionId = null;
   await saveState(state);
 
-  return `OpenViking session ${liveOvSessionId} is committed` + (traceId ? ` (trace_id=${traceId})` : "");
+  return `Business Data Platform session ${liveOvSessionId} is committed` + (traceId ? ` (trace_id=${traceId})` : "");
 }
 
 runHookStage({

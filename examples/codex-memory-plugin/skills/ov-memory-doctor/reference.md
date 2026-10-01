@@ -1,4 +1,4 @@
-# OpenViking Memory Doctor (Codex) — reference
+# Business Data Platform Memory Doctor (Codex) — reference
 
 Companion to SKILL.md: where things live, what the exact error strings mean,
 and the symptom catalogue. Paths assume the defaults; `OPENVIKING_CONFIG_FILE`,
@@ -61,7 +61,7 @@ Sent headers: `Authorization: Bearer <key>`, `X-OpenViking-Account/User` (truste
 mode only), `X-OpenViking-Actor-Peer`, `User-Agent: openviking-memory-codex/<version>`.
 The plugin never sends `X-API-Key`. The open-source server still accepts it (and
 prefers it when both are sent), so a gateway that injects one shadows the key
-here; the Volcengine-hosted OpenViking Service (`https://api.vikingdb.cn-beijing.volces.com/openviking`) accepts Bearer only.
+here; the Volcengine-hosted Business Data Platform Service (`https://api.vikingdb.cn-beijing.volces.com/openviking`) accepts Bearer only.
 
 The doctor checks explicit `features.hooks` first, then the live `hooks` entry
 from `codex features list`. Legacy `plugin_hooks` only decides the result when
@@ -124,10 +124,10 @@ Plugin MCP proxy (what Codex shows for a failing tool call):
 
 | JSON-RPC | Message | Meaning |
 |---|---|---|
-| `-32001` | `OpenViking MCP authentication failed (HTTP 401\|403). Check ~/.openviking/ovcli.conf or OPENVIKING_API_KEY …` | Credentials; `data.serverMessage` carries the server text |
-| `-32001` | `OpenViking MCP request failed. Check the configured URL (<mcpUrl>) …` | Transport: `data.cause` = `fetch failed` (refused/DNS/TLS), `This operation was aborted` (timeout). The url in the message is the one actually used. |
-| `-32002` | `OpenViking MCP upstream returned HTTP <n>.` | Any other status; HTML in `data.serverMessage` means the url is not an OpenViking endpoint |
-| `-32003` | `OpenViking MCP upstream returned an empty response` | 2xx with blank/non-JSON body — captive portal or proxy interstitial |
+| `-32001` | `Business Data Platform MCP authentication failed (HTTP 401\|403). Check ~/.openviking/ovcli.conf or OPENVIKING_API_KEY …` | Credentials; `data.serverMessage` carries the server text |
+| `-32001` | `Business Data Platform MCP request failed. Check the configured URL (<mcpUrl>) …` | Transport: `data.cause` = `fetch failed` (refused/DNS/TLS), `This operation was aborted` (timeout). The url in the message is the one actually used. |
+| `-32002` | `Business Data Platform MCP upstream returned HTTP <n>.` | Any other status; HTML in `data.serverMessage` means the url is not a Business Data Platform endpoint |
+| `-32003` | `Business Data Platform MCP upstream returned an empty response` | 2xx with blank/non-JSON body — captive portal or proxy interstitial |
 
 Hook log (`codex-hooks.log`) hooks: `session-start`, `auto-recall`,
 `auto-capture`, `session-end`, `pre-compact`, `mcp-proxy`. Stages worth grepping:
@@ -163,11 +163,11 @@ Startup failures (printed by the server; exit 1 unless noted):
 
 | Text | Cause |
 |---|---|
-| `OpenViking configuration file not found.` | No ov.conf at any resolved path |
+| `Business Data Platform configuration file not found.` | No ov.conf at any resolved path |
 | `Unknown config field '…' in OpenVikingConfig` / `Extra inputs are not permitted` | Unknown key — including a top-level block named after any harness (`claude_code`, `codex`, `cursor`, `trae`, `trae_cn`, `zcode`, `opencode`, `dsh`, `pi`) and `server.url`, which only the plugins read |
 | `SECURITY: server.auth_mode='dev' requires server.host to be localhost` | Dev mode (no `auth_mode`, no `root_api_key`) on a non-loopback bind |
 | `Invalid server.root_api_key: empty string is not allowed` | `""` instead of `null` |
-| `Another OpenViking process is already using the data directory` | Two servers on one workspace (exit 3, `Application startup failed. Exiting.`) |
+| `Another Business Data Platform process is already using the data directory` | Two servers on one workspace (exit 3, `Application startup failed. Exiting.`) |
 | `EmbeddingRebuildRequiredError` / `embedding dimension (…) does not match current configuration` | Embedding model changed on an existing workspace (exit 3) |
 | `[Errno 48] / [Errno 98] Address already in use` | Port taken — `lsof -nP -iTCP:1933 -sTCP:LISTEN` |
 | `FATAL: AUTHENTICATION HEALTH CHECK FAILED` | OIDC/LDAP backend unreachable |

@@ -94,7 +94,7 @@ describe("OpenClaw plugin package and install contract", () => {
     );
 
     for (const stepName of [
-      "Pack OpenViking plugin",
+      "Pack Business Data Platform plugin",
       "Prepare ClawHub legacy package folder",
     ]) {
       const stepStart = workflow.indexOf(`      - name: ${stepName}`);

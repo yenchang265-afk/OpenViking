@@ -3,7 +3,7 @@
 """OIDC (OpenID Connect) authentication plugin.
 
 Supports validating JWT tokens from external OIDC providers (Okta, Auth0, Keycloak, etc.)
-and mapping claims to OpenViking identities.
+and mapping claims to Business Data Platform identities.
 """
 
 from __future__ import annotations
@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Characters allowed in OpenViking user/account identifiers. Any character
+# Characters allowed in Business Data Platform user/account identifiers. Any character
 # not in this set (e.g. Auth0's "|" in sub="auth0|123456") is replaced with
 # "_" during identity mapping.
 _ALLOWED_IDENTIFIER_CHARS = re.compile(r"[^a-zA-Z0-9_.@-]")
@@ -69,7 +69,7 @@ class OIDCAuthPlugin(AuthPlugin):
     """OIDC authentication plugin.
 
     Validates JWT tokens from an external OIDC provider and maps claims
-    to OpenViking account/user identities.
+    to Business Data Platform account/user identities.
     """
 
     auth_mode = "oidc"
@@ -118,14 +118,14 @@ class OIDCAuthPlugin(AuthPlugin):
             logger.debug("Token validation failed: %s", e)
             raise UnauthenticatedError(f"Invalid OIDC token: {e}") from e
 
-        # Map claims to OpenViking identity.
+        # Map claims to Business Data Platform identity.
         # Role is always USER for OIDC-authenticated identities. External
         # identity providers determine authentication, not authorization;
         # operators who need admin access should use the root API key mechanism.
         try:
             account_id = self._mapper.map_account_id(claims=claims)
             user_id = self._mapper.map_user_id(claims=claims)
-            # Sanitize: replace characters not allowed in OpenViking identifiers
+            # Sanitize: replace characters not allowed in Business Data Platform identifiers
             # (e.g. Auth0's "|" in sub="auth0|123456") so that valid OIDC
             # tokens from supported providers always produce a usable identity.
             user_id = _ALLOWED_IDENTIFIER_CHARS.sub("_", user_id)

@@ -665,7 +665,7 @@
       <div class="leftCol" style="height: 100%; display: flex; flex-direction: column; min-height: 0;">
         <section class="panel" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
           <div class="panelHeader">
-            <h2>OpenViking 记忆目录</h2>
+            <h2>Business Data Platform 记忆目录</h2>
             <div class="hint">世界记忆 / agent / user / 智能体</div>
           </div>
           <div class="memoryBody" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-right: 8px;">
@@ -1918,11 +1918,11 @@
         m.set('world/GAME_RECORD.md', { title: '世界记忆 / GAME_RECORD.md', content: record });
       }
 
-      m.set('openviking/User Memory/.overview.md', { title: 'OpenViking / User Memory / .overview.md', content: world.overview || '' });
-      m.set('openviking/User Memory/.abstract.md', { title: 'OpenViking / User Memory / .abstract.md', content: world.abstract || '' });
-      m.set('openviking/entities/.overview.md', { title: 'OpenViking / entities / .overview.md', content: world.entities || '' });
-      m.set('openviking/events/.overview.md', { title: 'OpenViking / events / .overview.md', content: world.events || '' });
-      m.set('openviking/preferences/.overview.md', { title: 'OpenViking / preferences / .overview.md', content: world.preferences || '' });
+      m.set('openviking/User Memory/.overview.md', { title: 'Business Data Platform / User Memory / .overview.md', content: world.overview || '' });
+      m.set('openviking/User Memory/.abstract.md', { title: 'Business Data Platform / User Memory / .abstract.md', content: world.abstract || '' });
+      m.set('openviking/entities/.overview.md', { title: 'Business Data Platform / entities / .overview.md', content: world.entities || '' });
+      m.set('openviking/events/.overview.md', { title: 'Business Data Platform / events / .overview.md', content: world.events || '' });
+      m.set('openviking/preferences/.overview.md', { title: 'Business Data Platform / preferences / .overview.md', content: world.preferences || '' });
       const players = data.players || [];
       players.forEach((p, i) => {
         const seat = i + 1;
@@ -1986,7 +1986,7 @@
       }
       html += '</div></details>';
 
-      html += '<details open><summary>OpenViking 记忆</summary><div class="node">';
+      html += '<details open><summary>Business Data Platform 记忆</summary><div class="node">';
       html += '<details open><summary>User Memory</summary><div class="node">';
       html += fileButton('openviking/User Memory/.overview.md', '.overview.md', 'User Memory');
       html += fileButton('openviking/User Memory/.abstract.md', '.abstract.md', 'User Memory');
@@ -2330,7 +2330,7 @@
         updateEndOverlay(info, uiState.lastStatus);
         renderChat(data, info);
 
-        // 加载OpenViking树
+        // 加载Business Data Platform树
         await loadOpenvikingTree();
 
         renderMemoryPage(data);
@@ -2347,7 +2347,7 @@
           uiState.openvikingTree = await res.json();
         }
       } catch (e) {
-        console.error('Failed to load OpenViking tree:', e);
+        console.error('Failed to load Business Data Platform tree:', e);
       }
       // 同时加载对话列表
       try {
@@ -2413,7 +2413,7 @@
           return await res.json();
         }
       } catch (e) {
-        console.error('Failed to load OpenViking file:', e);
+        console.error('Failed to load Business Data Platform file:', e);
       }
       return null;
     }
@@ -2485,10 +2485,10 @@
       }
       html += '</div></details>';
 
-      // OpenViking 记忆 - 保持打开状态
+      // Business Data Platform 记忆 - 保持打开状态
       const ovKey = 'mem/openviking';
       const ovOpen = uiState.expandedDetails.size === 0 || uiState.expandedDetails.has(ovKey) ? ' open' : '';
-      html += '<details' + ovOpen + ' data-details-key="' + ovKey + '"><summary>OpenViking 记忆</summary><div class="node">';
+      html += '<details' + ovOpen + ' data-details-key="' + ovKey + '"><summary>Business Data Platform 记忆</summary><div class="node">';
 
       // agent目录 - 保持打开状态
       const agentKey = 'ov/agent';
@@ -2633,7 +2633,7 @@
       } else {
         const fileData = await loadOpenvikingFile(path);
         if (fileData) {
-          setViewer('OpenViking / ' + fileData.path, fileData.content);
+          setViewer('Business Data Platform / ' + fileData.path, fileData.content);
         }
       }
     }
@@ -2665,7 +2665,7 @@
     }
 
     function renderMemoryPage(data) {
-      // 如果OpenViking树已加载，使用新的渲染方式
+      // 如果Business Data Platform树已加载，使用新的渲染方式
       if (uiState.openvikingTree) {
         renderOpenvikingTree();
       } else {
@@ -2981,7 +2981,7 @@
   addLine(260, 225, 280, 156, '#f87171', false);
   addLine(310, 225, 330, 156, '#f87171', false);
 
-  // OpenViking connections (only for P1-P3)
+  // Business Data Platform connections (only for P1-P3)
   addLine(60, 235, 210, 310, '#a78bfa', true);
   addLine(210, 300, 60, 245, '#a78bfa', true);
   addLabel(135, 295, 'R/W', '#a78bfa');
@@ -3007,8 +3007,8 @@
   addNode(260, 220, 'P5', '○', '#9aa4b2', false);
   addNode(310, 220, 'P6', '○', '#9aa4b2', false);
 
-  // OpenViking node (bottom, centered)
-  addNode(210, 315, 'OpenViking', '◈', '#a78bfa', true);
+  // Business Data Platform node (bottom, centered)
+  addNode(210, 315, 'Business Data Platform', '◈', '#a78bfa', true);
 
   root.appendChild(svg);
 }

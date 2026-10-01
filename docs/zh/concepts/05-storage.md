@@ -1,6 +1,6 @@
 # 存储架构
 
-OpenViking 采用双层存储架构，分离内容存储和索引存储。
+Business Data Platform 采用双层存储架构，分离内容存储和索引存储。
 
 ## 概览
 
@@ -63,7 +63,7 @@ AGFS 提供 POSIX 风格的文件操作，支持多种后端。
 
 ### 单后端与多写模式
 
-默认情况下，AGFS 使用一个后端作为内容存储。配置 `storage.agfs.backups` 后，OpenViking 会启用多写模式：
+默认情况下，AGFS 使用一个后端作为内容存储。配置 `storage.agfs.backups` 后，Business Data Platform 会启用多写模式：
 
 - 顶层 `storage.agfs.backend` 是 primary，作为权威写入目标。
 - `storage.agfs.backups.items[]` 是 backup，用于副本、迁移或读加速。

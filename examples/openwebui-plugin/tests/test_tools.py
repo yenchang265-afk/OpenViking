@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Tests for the OpenWebUI tool server.
 
-Each test mocks the OpenViking HTTP layer with respx and asserts that the
+Each test mocks the Business Data Platform HTTP layer with respx and asserts that the
 matching tool route forwards the right method, path, body, and tenant
 headers, and returns a payload matching its Pydantic model.
 """

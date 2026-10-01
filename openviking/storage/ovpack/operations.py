@@ -535,7 +535,7 @@ async def export_ovpack(
         )
         if not report.ok:
             raise InvalidArgumentError(
-                "Cannot export incomplete OpenViking vector index snapshot",
+                "Cannot export incomplete Business Data Platform vector index snapshot",
                 details=report.details(),
             )
     manifest, index_records, dense_values = await build_manifest(
@@ -570,7 +570,7 @@ async def backup_ovpack(
     vector_store=None,
     include_vectors: bool = False,
 ) -> str:
-    """Export all public OpenViking scopes as a restore-only backup package."""
+    """Export all public Business Data Platform scopes as a restore-only backup package."""
     base_name = OVPACK_BACKUP_NAME
     if os.path.isdir(to):
         to = os.path.join(to, f"{base_name}.ovpack")
@@ -590,7 +590,7 @@ async def backup_ovpack(
         )
         if not report.ok:
             raise InvalidArgumentError(
-                "Cannot export incomplete OpenViking vector index snapshot",
+                "Cannot export incomplete Business Data Platform vector index snapshot",
                 details=report.details(),
             )
     manifest, index_records, dense_values = await build_manifest(
@@ -616,7 +616,7 @@ async def backup_ovpack(
         ctx,
     )
 
-    logger.info(f"[ovpack] Backed up OpenViking public scopes to {to}")
+    logger.info(f"[ovpack] Backed up Business Data Platform public scopes to {to}")
     return to
 
 

@@ -1,5 +1,5 @@
 /**
- * Configuration for the Codex OpenViking memory plugin.
+ * Configuration for the Codex Business Data Platform memory plugin.
  *
  * Every knob is declared once in `shared/config-schema.mjs` and the whole
  * configuration is assembled by `buildPluginConfig()`, which reads the layers

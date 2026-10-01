@@ -14,7 +14,7 @@
       "id": "cli",
       "name": "CLI Integration",
       "icon": "terminal",
-      "summary": "Install, configure, and use OpenViking CLI directly from a terminal.",
+      "summary": "Install, configure, and use Business Data Platform CLI directly from a terminal.",
       "detailPath": "https://docs.openviking.net/agents/en/cli.md"
     },
     {
@@ -28,7 +28,7 @@
       "id": "api",
       "name": "API Integration",
       "icon": "code",
-      "summary": "Call OpenViking capabilities through the REST API.",
+      "summary": "Call Business Data Platform capabilities through the REST API.",
       "detailPath": "https://docs.openviking.net/agents/en/api.md"
     },
     {
@@ -53,7 +53,7 @@
       "name": "Codex",
       "tags": ["Plugin"],
       "logo": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_sth/ljhwZthlaukjlkulzlp/agent_logo/codex.png",
-      "summary": "Adds persistent cross-session memory to Codex through lifecycle hooks and the OpenViking MCP endpoint.",
+      "summary": "Adds persistent cross-session memory to Codex through lifecycle hooks and the Business Data Platform MCP endpoint.",
       "detailPath": "https://docs.openviking.net/agents/en/codex.md"
     },
     {
@@ -101,7 +101,7 @@
       "name": "Hermes Agent",
       "tags": ["Provider"],
       "logo": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_sth/ljhwZthlaukjlkulzlp/agent_logo/Hermes-Agent.png",
-      "summary": "Hermes includes OpenViking as a native memory provider. Run hermes memory setup openviking, keep VolcEngine Cloud, and paste the API key.",
+      "summary": "Hermes includes Business Data Platform as a native memory provider. Run hermes memory setup openviking, keep VolcEngine Cloud, and paste the API key.",
       "detailPath": "https://docs.openviking.net/agents/en/hermes.md"
     },
     {
@@ -117,7 +117,7 @@
       "name": "DeepSeek Harness",
       "tags": ["Plugin"],
       "logo": "https://docs.openviking.net/agents/image/deepseek-harness/logo.png",
-      "summary": "Give DeepSeek Harness long-term memory across projects and sessions, with automatic recall, capture, OpenViking tools, and the openviking-memory skill.",
+      "summary": "Give DeepSeek Harness long-term memory across projects and sessions, with automatic recall, capture, Business Data Platform tools, and the openviking-memory skill.",
       "detailPath": "https://docs.openviking.net/agents/en/deepseek-harness.md"
     },
     {

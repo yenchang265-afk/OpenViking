@@ -107,7 +107,7 @@ class VikingDBObserver(BaseObserver):
                 if not await self._vikingdb_manager.collection_exists():
                     continue
 
-                # Current OpenViking flow uses one managed default index per collection.
+                # Current Business Data Platform flow uses one managed default index per collection.
                 index_count = 1
                 vector_count = await self._vikingdb_manager.count(ctx=ctx)
 

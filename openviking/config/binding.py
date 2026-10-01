@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Bind the generic runtime-config machinery to concrete OpenViking models.
+"""Bind the generic runtime-config machinery to concrete Business Data Platform models.
 
 The manager receives hooks for cluster publication, model construction and
 request validation. This module binds those hooks to ``OpenVikingConfig`` and
@@ -96,7 +96,7 @@ def manager_over_source(
     *,
     base_config: OpenVikingConfig | None = None,
 ) -> OpenVikingRuntimeConfigManager:
-    """Wire the concrete OpenViking hooks onto an arbitrary :class:`ConfigSource`.
+    """Wire the concrete Business Data Platform hooks onto an arbitrary :class:`ConfigSource`.
 
     Split out from :func:`build_runtime_config_manager` so callers that already
     hold a source (e.g. tests using an in-memory source) reuse the same

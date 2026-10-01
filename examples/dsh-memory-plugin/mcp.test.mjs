@@ -36,7 +36,7 @@ test("the mount config validates against the pinned bridge's own schema", () => 
   }, {});
   const parsed = Config(buildMcpConfig(config));
 
-  // stdio, not streamable-http: every other OpenViking integration reaches the
+  // stdio, not streamable-http: every other Business Data Platform integration reaches the
   // server through this same proxy, and it owns the transport quirks.
   assert.equal(parsed.transport, "stdio");
   assert.equal(parsed.serverName, "openviking");

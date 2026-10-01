@@ -1,4 +1,4 @@
-# OpenViking Memory for thin hook hosts
+# Business Data Platform Memory for thin hook hosts
 
 Cursor, TRAE, TRAE CN and ZCode use host configuration files. Kimi Code uses its native managed-plugin directory. They share the same dispatcher and memory runtime; the installer assembles the runtime at install time rather than committing a copy per host.
 
@@ -9,14 +9,14 @@ bash examples/memory-plugin-shared/install.sh --harness zcode
 bash examples/memory-plugin-shared/install.sh --harness kimicode
 ```
 
-> **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less `viking://user/memories` shorthand is rejected by newer servers.
+> **Requires a Business Data Platform server with `viking://~` home-alias support.** Recall targets the caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less `viking://user/memories` shorthand is rejected by newer servers.
 
 ## What the hooks do
 
-- **Session start** — injects the user profile and preferences, plus an `<available-skills>` catalog of the user's own and account-shared OpenViking skills, and replays anything an offline session queued. Kimi replays a bounded batch at startup and injects the profile on the first successful prompt hook because its SessionStart output is not a context channel.
-- **Prompt submit** — searches OpenViking for memories and skills relevant to the prompt and injects them, deduplicated by event id and a 500ms window.
-- **Tool use** — denies local file tools a `viking://` virtual path and points the agent back at the OpenViking MCP tools. On TRAE a shell command that carries a `viking://` URI still runs, with a notice pointing at the same tools.
-- **Stop** — captures the finished turn and commits the OpenViking session. Cursor also runs this before a compaction and at session end; ZCode answers first and finishes the writes in a detached worker.
+- **Session start** — injects the user profile and preferences, plus an `<available-skills>` catalog of the user's own and account-shared Business Data Platform skills, and replays anything an offline session queued. Kimi replays a bounded batch at startup and injects the profile on the first successful prompt hook because its SessionStart output is not a context channel.
+- **Prompt submit** — searches Business Data Platform for memories and skills relevant to the prompt and injects them, deduplicated by event id and a 500ms window.
+- **Tool use** — denies local file tools a `viking://` virtual path and points the agent back at the Business Data Platform MCP tools. On TRAE a shell command that carries a `viking://` URI still runs, with a notice pointing at the same tools.
+- **Stop** — captures the finished turn and commits the Business Data Platform session. Cursor also runs this before a compaction and at session end; ZCode answers first and finishes the writes in a detached worker.
 
 ## Layout
 
@@ -33,7 +33,7 @@ The memory logic itself is not here: recall, batching, the pending queue, creden
 - **Cursor** — six events, including the `preCompact` and `sessionEnd` no other host in this plugin has. Commits on Stop once `capturedSinceCommit` reaches the threshold, and unconditionally before a compaction. Sessions are `cu-`. See the [Cursor guide](../../docs/en/agent-integrations/12-cursor.md).
 - **TRAE / TRAE CN** — capture reads `prompt`, `text_content` and `last_assistant_message` off the Stop event rather than parsing a transcript. Every Stop that carries content commits. Sessions are `tr-` and `trcn-`. See the [TRAE guide](../../docs/en/agent-integrations/13-trae.md).
 - **ZCode** — the rollout file is the authoritative incremental transcript: stable host `turnId` values drive deduplication and let a later Stop recover missed turns, and hook stdin is only the fallback. ZCode supports neither `PreCompact` nor `SessionEnd`, so committing on every Stop stands in for both. Its output schema is strict, so a pass-through writes nothing at all. Sessions are `zc-`. [DESIGN.md](./DESIGN.md) records the verified extension surface.
-- **Kimi Code** — `wire.jsonl` is the authoritative transcript. UserPromptSubmit emits raw context text, while Stop, PreCompact and SessionEnd may detach; Interrupt remains synchronous under a two-second OpenViking request budget. The installer creates a self-contained native plugin without editing legacy `config.toml` or `mcp.json`. Sessions are `kc-`. [Host contract](./hosts/kimicode/DESIGN.md).
+- **Kimi Code** — `wire.jsonl` is the authoritative transcript. UserPromptSubmit emits raw context text, while Stop, PreCompact and SessionEnd may detach; Interrupt remains synchronous under a two-second Business Data Platform request budget. The installer creates a self-contained native plugin without editing legacy `config.toml` or `mcp.json`. Sessions are `kc-`. [Host contract](./hosts/kimicode/DESIGN.md).
 
 ## Diagnostics
 

@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Preset directory structure definitions for OpenViking.
+Preset directory structure definitions for Business Data Platform.
 
-OpenViking uses a virtual filesystem where all directories are data records.
+Business Data Platform uses a virtual filesystem where all directories are data records.
 This module defines the preset directory structure that is created on initialization.
 """
 
@@ -75,7 +75,7 @@ PRESET_DIRECTORIES: Dict[str, DirectoryDefinition] = {
                         abstract="Entity memories from user's world. Each entity has its own subdirectory, including projects, people, concepts, etc. "
                         "Entities are important objects in user's world, can append additional information.",
                         overview="Access when referencing user-related projects, people, concepts. "
-                        "Examples: OpenViking project, colleague Zhang San, certain technical concept. "
+                        "Examples: Business Data Platform project, colleague Zhang San, certain technical concept. "
                         "Each entity stored independently, can append updates.",
                     ),
                     DirectoryDefinition(

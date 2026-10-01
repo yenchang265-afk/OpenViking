@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Directory pre-scan validation module for OpenViking.
+Directory pre-scan validation module for Business Data Platform.
 
 Implements phase-one of directory import (RFC #83): traverse directory tree,
 classify files as processable / unsupported, validate format,

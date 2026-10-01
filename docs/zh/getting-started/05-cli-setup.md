@@ -1,8 +1,8 @@
-# OpenViking CLI 配置指南
+# Business Data Platform CLI 配置指南
 
-本文介绍如何安装 OpenViking CLI、完成配置，并验证它可以连接到 OpenViking。
+本文介绍如何安装 Business Data Platform CLI、完成配置，并验证它可以连接到 Business Data Platform。
 
-`ov` 是客户端 CLI。它连接到已经存在的 OpenViking 服务端，或连接到 OpenViking Service（火山引擎云）。它不是服务端安装命令。如果你还没有安装或启动自定义 OpenViking 服务端，请先阅读[快速开始](02-quickstart.md)。
+`ov` 是客户端 CLI。它连接到已经存在的 Business Data Platform 服务端，或连接到 Business Data Platform Service（火山引擎云）。它不是服务端安装命令。如果你还没有安装或启动自定义 Business Data Platform 服务端，请先阅读[快速开始](02-quickstart.md)。
 
 你可以用两种方式阅读本文：
 
@@ -23,13 +23,13 @@ CLI 使用 `~/.openviking/ovcli.conf` 作为 active 客户端连接配置。
 
 ## 选择连接目标
 
-运行配置命令前，先选择要连接的 OpenViking 目标。
+运行配置命令前，先选择要连接的 Business Data Platform 目标。
 
 除非用户已经明确说明，Agent 应先询问用户要连接哪种目标。已有配置、active 配置、本地文件、默认端口和正在运行的服务可以帮助 Agent 追问细节，但不代表用户同意 Agent 选择目标、切换或替换配置、探测本地服务、启动服务端，或写入数据。
 
-### OpenViking Service（火山引擎云）
+### Business Data Platform Service（火山引擎云）
 
-如果你希望使用火山引擎云上的 OpenViking 托管服务，选择此项。
+如果你希望使用火山引擎云上的 Business Data Platform 托管服务，选择此项。
 
 - `ov` 使用的服务端端点：`https://api.vikingdb.cn-beijing.volces.com/openviking`
 - 管理 API Key 的控制台页面：https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing
@@ -39,7 +39,7 @@ CLI 使用 `~/.openviking/ovcli.conf` 作为 active 客户端连接配置。
 
 ### 远程自定义
 
-如果你要连接不在当前机器上的自定义 OpenViking 服务端，选择此项。
+如果你要连接不在当前机器上的自定义 Business Data Platform 服务端，选择此项。
 
 - 服务端 URL 由用户或服务端管理员提供。
 - 可能需要 API Key。
@@ -47,7 +47,7 @@ CLI 使用 `~/.openviking/ovcli.conf` 作为 active 客户端连接配置。
 
 ### 本地自定义
 
-只有当用户要连接当前机器上的自定义 OpenViking 服务端时，才选择此项。
+只有当用户要连接当前机器上的自定义 Business Data Platform 服务端时，才选择此项。
 
 - 本地默认 URL：`http://127.0.0.1:1933`
 - 本地无鉴权服务通常不需要 API Key。
@@ -62,9 +62,9 @@ CLI 使用 `~/.openviking/ovcli.conf` 作为 active 客户端连接配置。
 - 一种安装 CLI 的方式：
   - 使用 Node.js 和 npm 安装独立的 `@openviking/cli` 包，或
   - 使用 Python 工具安装完整的 `openviking` 包。
-- 一个可访问的 OpenViking 目标：
-  - OpenViking Service（火山引擎云），或
-  - 自定义 OpenViking 服务端。
+- 一个可访问的 Business Data Platform 目标：
+  - Business Data Platform Service（火山引擎云），或
+  - 自定义 Business Data Platform 服务端。
 - 如果目标需要鉴权，需要准备 API Key。
 
 API Key 是敏感凭证。手动配置时优先通过 `ov config` 的交互式输入框输入。只有当你明确相信当前渠道时，才把 API Key 提供给 Agent。Agent 应通过 stdin 传入 key，不能把 key 写进 shell 命令、日志、长期记忆或原始配置输出。只有当 key 已经存在于当前 shell 环境变量中时，才使用环境变量。
@@ -78,7 +78,7 @@ command -v ov
 ov --version
 ```
 
-如果 `ov --version` 或任何其他 `ov` 命令提示 OpenViking 需要显示语言，请先选择语言再重试：
+如果 `ov --version` 或任何其他 `ov` 命令提示 Business Data Platform 需要显示语言，请先选择语言再重试：
 
 ```bash
 ov language en
@@ -116,7 +116,7 @@ npm prefix -g
 
 ## 密钥类型
 
-OpenViking CLI 配置可以包含 user key、root key，或同时包含两者。
+Business Data Platform CLI 配置可以包含 user key、root key，或同时包含两者。
 
 - User key：用于普通数据命令，例如 `ov add-resource`、`ov find` 和 `ov tree`。服务端会从 key 推导身份，所以通常不需要传 `--account` 或 `--user`。这是大多数用户需要的方式。
 - Root key：用于管理操作和需要 `--sudo` 的命令。`api_key` 模式下，即使传入 `--account` 和 `--user`，root key 也不能访问租户数据。只有 `trusted` 服务端接受 root key 认证的数据请求通过这些 header 指定身份。
@@ -135,12 +135,12 @@ ov config
 然后选择：
 
 1. `Add config`
-2. `OpenViking Service（火山引擎云）` 或 `自定义`
+2. `Business Data Platform Service（火山引擎云）` 或 `自定义`
 3. 配置名称，或留空自动生成
 4. 上面选择的目标所需的 URL 和 API Key
 5. 校验成功后保存配置
 
-如果你维护多个 OpenViking 目标，之后可以使用：
+如果你维护多个 Business Data Platform 目标，之后可以使用：
 
 ```bash
 ov config switch
@@ -156,7 +156,7 @@ ov config switch
 
 ### Agent 检查清单
 
-1. 除非用户已经明确说明，先询问用户要连接哪种目标：OpenViking Service（火山引擎云）、远程自定义，还是本地自定义。
+1. 除非用户已经明确说明，先询问用户要连接哪种目标：Business Data Platform Service（火山引擎云）、远程自定义，还是本地自定义。
 2. 不要根据已有配置、active 配置、本地文件、默认端口或正在运行的服务推断用户想要的 setup。
 3. 切换配置、替换配置、探测本地服务、启动服务端或写入数据前，都要先询问用户。
 4. 在选择命令前，运行 `ov --help`、`ov config --help` 和相关 config 子命令的帮助。
@@ -183,7 +183,7 @@ ov config edit --help
 
 以当前安装版本的 CLI 帮助为准。如果本文与本地帮助不一致，请遵循本地帮助，并告诉用户差异是什么。
 
-如果 help 命令提示 OpenViking 需要显示语言，请运行 `ov language en`；如果用户希望使用中文，则运行 `ov language zh-CN`，然后重试。`ov config add`、`ov config list`、`ov config edit`、`ov config switch <name>` 和 `ov config delete` 等非交互式 config 子命令可以在设置显示语言前运行。
+如果 help 命令提示 Business Data Platform 需要显示语言，请运行 `ov language en`；如果用户希望使用中文，则运行 `ov language zh-CN`，然后重试。`ov config add`、`ov config list`、`ov config edit`、`ov config switch <name>` 和 `ov config delete` 等非交互式 config 子命令可以在设置显示语言前运行。
 
 ### 使用稳定名称便于重试
 
@@ -229,7 +229,7 @@ ov config list -o json
 列表输出形状如下：
 
 ```json
-{"status":"ok","result":[{"name":"<CONFIG-NAME>","kind":"OpenViking Service","url":"https://api.vikingdb.cn-beijing.volces.com/openviking","active":true}]}
+{"status":"ok","result":[{"name":"<CONFIG-NAME>","kind":"Business Data Platform Service","url":"https://api.vikingdb.cn-beijing.volces.com/openviking","active":true}]}
 ```
 
 做存在性检查时，读取 `result[].name`。判断是否还需要切换 active config 时，读取匹配项的 `active` 标记。
@@ -242,7 +242,7 @@ ov config switch <CONFIG-NAME> -o json
 
 然后运行验证命令。
 
-### 添加 OpenViking Service
+### 添加 Business Data Platform Service
 
 如果 Agent 已经通过可信渠道拿到 API Key，运行：
 
@@ -258,7 +258,7 @@ printf '%s' "$API_KEY" | ov config add ov-service --name <CONFIG-NAME> --api-key
 
 `$API_KEY` 表示可信的运行时密钥来源，不是字面量 key。Agent 能在不把 key 写进命令文本、shell history、日志或长期 export 的环境变量时提供 key，就应使用 stdin。
 
-只把 API Key 内容写入 stdin，不要把 key 放进 shell 命令本身。这会写入一个 OpenViking Service 配置，并使用固定端点：`https://api.vikingdb.cn-beijing.volces.com/openviking`。`ov-service` 目标不接受自定义服务端 URL。
+只把 API Key 内容写入 stdin，不要把 key 放进 shell 命令本身。这会写入一个 Business Data Platform Service 配置，并使用固定端点：`https://api.vikingdb.cn-beijing.volces.com/openviking`。`ov-service` 目标不接受自定义服务端 URL。
 
 只有当环境变量已经存在时，才使用环境变量：
 
@@ -266,7 +266,7 @@ printf '%s' "$API_KEY" | ov config add ov-service --name <CONFIG-NAME> --api-key
 ov config add ov-service --name <CONFIG-NAME> --api-key-env <API-KEY-ENV-VAR> --activate -o json
 ```
 
-标准 OpenViking Service 配置不要传 `--account` 或 `--user`。只有当用户或 OpenViking 管理员提供身份覆盖值时，才使用它们。
+标准 Business Data Platform Service 配置不要传 `--account` 或 `--user`。只有当用户或 Business Data Platform 管理员提供身份覆盖值时，才使用它们。
 
 ### 添加本地自定义服务
 
@@ -373,7 +373,7 @@ ov status
 
 除非你理解配置文件可能包含密钥，否则不要打印原始配置文件。
 
-如果验证命令提示 OpenViking 需要显示语言，请运行 `ov language en`；如果用户希望使用中文，则运行 `ov language zh-CN`，然后重新验证。
+如果验证命令提示 Business Data Platform 需要显示语言，请运行 `ov language en`；如果用户希望使用中文，则运行 `ov language zh-CN`，然后重新验证。
 
 `ov status` 包含更宽泛的服务端和数据诊断。如果 `ov config validate` 和 `ov health` 通过，`ov status` 中的 warning 不一定代表 CLI 配置失败。
 
@@ -391,7 +391,7 @@ Agent 在运行不熟悉的命令前，应该重新查看帮助。如果 Agent �
 
 ## 凭证安全
 
-- API Key 可能允许访问你的 OpenViking 数据。
+- API Key 可能允许访问你的 Business Data Platform 数据。
 - 手动配置时，优先使用 `ov config` 的交互式输入框。
 - Agent 辅助配置时，只有通过你明确相信的渠道提供 API Key。
 - Agent 应通过 stdin 传入 key。只有当环境变量已经存在于当前 shell 中时，才使用环境变量。
@@ -429,7 +429,7 @@ curl http://127.0.0.1:1933/health
 
 ### API Key 校验失败
 
-重新运行 `ov config` 并编辑配置。对于 OpenViking Service，确认 API Key 来自上面的 OpenViking 控制台地址。对于自定义服务，确认服务端是否要求鉴权。
+重新运行 `ov config` 并编辑配置。对于 Business Data Platform Service，确认 API Key 来自上面的 Business Data Platform 控制台地址。对于自定义服务，确认服务端是否要求鉴权。
 
 Agent 不应该反复重试未知 key。请让用户确认目标类型、服务端 URL、key 类型、account 和 user。
 
@@ -469,13 +469,13 @@ ov config
 
 CLI 配置完成后，使用 `ov --help` 和 `ov <command> --help` 继续了解其他命令。
 
-添加资源会把数据写入 active OpenViking 服务端。如果你想做一个小演示，请选择你愿意存入服务端的资源。Agent 运行这类演示命令前，必须先征得用户同意。
+添加资源会把数据写入 active Business Data Platform 服务端。如果你想做一个小演示，请选择你愿意存入服务端的资源。Agent 运行这类演示命令前，必须先征得用户同意。
 
 ```bash
 ov add-resource https://github.com/volcengine/OpenViking
 # 使用返回的 task_id 查询状态；completed 后再检索
 ov task status TASK_ID
-ov find "what is OpenViking"
+ov find "what is Business Data Platform"
 ov tree viking://resources/ -L 2
 ```
 

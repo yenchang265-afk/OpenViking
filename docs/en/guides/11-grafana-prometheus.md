@@ -1,25 +1,25 @@
-# Using Prometheus and Grafana to View OpenViking Metrics
+# Using Prometheus and Grafana to View Business Data Platform Metrics
 
 This document provides a complete end-to-end guide from scratch:
 
-1. Start OpenViking and verify that `/metrics` is accessible
-2. Start Prometheus to scrape OpenViking metrics
+1. Start Business Data Platform and verify that `/metrics` is accessible
+2. Start Prometheus to scrape Business Data Platform metrics
 3. Start Grafana and connect the Prometheus data source
-4. Import the OpenViking built-in dashboard or query directly in Explore
+4. Import the Business Data Platform built-in dashboard or query directly in Explore
 
 If you can already access `http://<host>:<port>/metrics`, you can skip ahead to the "Start Prometheus" section of this document.
 
 ## Architecture Overview
 
-OpenViking does not directly provide a Grafana page. The standard pipeline is:
+Business Data Platform does not directly provide a Grafana page. The standard pipeline is:
 
 ```text
-OpenViking -> /metrics -> Prometheus -> Grafana
+Business Data Platform -> /metrics -> Prometheus -> Grafana
 ```
 
 Where:
 
-- OpenViking is responsible for exposing Prometheus exposition text
+- Business Data Platform is responsible for exposing Prometheus exposition text
 - Prometheus is responsible for periodically scraping `/metrics`
 - Grafana is responsible for reading from Prometheus and displaying dashboards
 
@@ -27,13 +27,13 @@ Where:
 
 Before starting, please confirm:
 
-- OpenViking Server is installed and can start normally
+- Business Data Platform Server is installed and can start normally
 - Docker is installed and can be used to quickly start Prometheus and Grafana
-- You know the HTTP address that OpenViking is currently listening on, for example `http://localhost:30300`
+- You know the HTTP address that Business Data Platform is currently listening on, for example `http://localhost:30300`
 
-## Step 1: Confirm OpenViking Exposes `/metrics`
+## Step 1: Confirm Business Data Platform Exposes `/metrics`
 
-OpenViking must have metrics enabled first. Minimal configuration reference:
+Business Data Platform must have metrics enabled first. Minimal configuration reference:
 
 ```json
 {
@@ -47,7 +47,7 @@ OpenViking must have metrics enabled first. Minimal configuration reference:
 }
 ```
 
-After writing the configuration to `~/.openviking/ov.conf`, restart OpenViking Server.
+After writing the configuration to `~/.openviking/ov.conf`, restart Business Data Platform Server.
 
 If you have not started the service yet, you can refer to:
 
@@ -81,7 +81,7 @@ The repository already provides a set of ready-to-run observability examples, lo
 - `examples/grafana/grafana/provisioning/datasources/prometheus.yml`
 - `examples/grafana/grafana/provisioning/dashboards/openviking.yml`
 
-In addition, for the scenario where OpenViking continues to listen on `127.0.0.1` / `localhost` on Linux, the repository also provides a localhost-specific set of examples:
+In addition, for the scenario where Business Data Platform continues to listen on `127.0.0.1` / `localhost` on Linux, the repository also provides a localhost-specific set of examples:
 
 - `examples/grafana/docker-compose.localhost.yml`
 - `examples/grafana/prometheus.localhost.yml`
@@ -90,18 +90,18 @@ In addition, for the scenario where OpenViking continues to listen on `127.0.0.1
 
 The difference between the two approaches is:
 
-- `docker-compose.yml`: the general-purpose approach, where Prometheus accesses the host from the container network, suitable when OpenViking listens on `0.0.0.0`
-- `docker-compose.localhost.yml`: the Linux localhost approach, where Prometheus and Grafana directly use the host network, suitable when OpenViking continues to listen on `127.0.0.1`
+- `docker-compose.yml`: the general-purpose approach, where Prometheus accesses the host from the container network, suitable when Business Data Platform listens on `0.0.0.0`
+- `docker-compose.localhost.yml`: the Linux localhost approach, where Prometheus and Grafana directly use the host network, suitable when Business Data Platform continues to listen on `127.0.0.1`
 
-If you do not currently want to expose OpenViking on `0.0.0.0`, it is recommended to use `docker-compose.localhost.yml` first.
+If you do not currently want to expose Business Data Platform on `0.0.0.0`, it is recommended to use `docker-compose.localhost.yml` first.
 
 By default, this configuration does several things:
 
 - Starts Prometheus and maps the host port to `30909`
 - Starts Grafana and maps the host port to `13000`
 - Automatically configures the Grafana data source to `http://127.0.0.1:30909`
-- Automatically loads the OpenViking demo dashboard from the repository
-- Automatically loads `OpenViking - Feedback Baseline`, making it easy to directly view the baseline metrics for `openviking_feedback_*` and `openviking_feedback_channel_*`
+- Automatically loads the Business Data Platform demo dashboard from the repository
+- Automatically loads `Business Data Platform - Feedback Baseline`, making it easy to directly view the baseline metrics for `openviking_feedback_*` and `openviking_feedback_channel_*`
 
 ### Approach A: General-Purpose
 
@@ -125,7 +125,7 @@ In this example, the default Grafana credentials are fixed as:
 
 ### Approach B: Linux localhost
 
-If your OpenViking continues to listen on `127.0.0.1:30300`, and you do not want to change OpenViking to `0.0.0.0` just for Prometheus scraping, use the following compose setup:
+If your Business Data Platform continues to listen on `127.0.0.1:30300`, and you do not want to change Business Data Platform to `0.0.0.0` just for Prometheus scraping, use the following compose setup:
 
 ```bash
 docker compose -f examples/grafana/docker-compose.localhost.yml up -d
@@ -135,7 +135,7 @@ The characteristics of this approach are:
 
 - Prometheus uses the host network and directly scrapes `127.0.0.1:30300/metrics`
 - Grafana also uses the host network and directly connects to `http://127.0.0.1:30909`
-- There is no need to change OpenViking to `0.0.0.0`
+- There is no need to change Business Data Platform to `0.0.0.0`
 - It does not trigger the security restriction that "non-localhost listening must configure `root_api_key`"
 
 The access addresses are still:
@@ -170,11 +170,11 @@ scrape_configs:
 
 Explanation:
 
-- If Prometheus runs inside a Docker container while OpenViking runs on the host, it is recommended to write `targets` as `host.docker.internal:30300`
+- If Prometheus runs inside a Docker container while Business Data Platform runs on the host, it is recommended to write `targets` as `host.docker.internal:30300`
 - If Prometheus also runs on the host, change it to `localhost:30300`
 - If `host.docker.internal` is not available in your Linux Docker environment, change it to the actual host IP, for example `192.168.1.10:30300`
 
-If your OpenViking is not listening on `30300`, change the target address in this file to your actual port, then re-run:
+If your Business Data Platform is not listening on `30300`, change the target address in this file to your actual port, then re-run:
 
 ```bash
 docker compose -f examples/grafana/docker-compose.yml up -d
@@ -184,7 +184,7 @@ If you are using the Linux localhost approach, the corresponding file to modify 
 
 - `examples/grafana/prometheus.localhost.yml`
 
-For example, if OpenViking is actually listening on `127.0.0.1:1933`, change it to:
+For example, if Business Data Platform is actually listening on `127.0.0.1:1933`, change it to:
 
 ```yaml
 targets: ["127.0.0.1:1933"]
@@ -241,7 +241,7 @@ Or:
 openviking_service_readiness
 ```
 
-If you can find time series, it means Prometheus has successfully scraped OpenViking metrics.
+If you can find time series, it means Prometheus has successfully scraped Business Data Platform metrics.
 
 ### If the Prometheus Container Fails to Start
 
@@ -357,9 +357,9 @@ If you are not yet sure which metric names exist, you can first query:
 {__name__=~"openviking_.*"}
 ```
 
-## Step 9: Import the OpenViking Built-in Dashboards
+## Step 9: Import the Business Data Platform Built-in Dashboards
 
-If you are using the repository's built-in compose files, these two dashboards will be automatically loaded into the `OpenViking` folder after Grafana starts.
+If you are using the repository's built-in compose files, these two dashboards will be automatically loaded into the `Business Data Platform` folder after Grafana starts.
 
 If you want to import them manually, just follow the steps below.
 
@@ -433,7 +433,7 @@ How to handle: change to a different host port, for example:
 -p 13000:3000
 ```
 
-### 4. There Are No OpenViking Metrics in Grafana
+### 4. There Are No Business Data Platform Metrics in Grafana
 
 First check:
 
@@ -444,7 +444,7 @@ First check:
 If you are using the compose auto-import approach, you can also first confirm whether the dashboard has been loaded:
 
 - Go to `Dashboards` in the left sidebar
-- Check whether the `OpenViking` folder exists
+- Check whether the `Business Data Platform` folder exists
 
 ### 5. The Dashboard Imports Successfully but the Panels Are Empty
 

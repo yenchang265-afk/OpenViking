@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Markdown parser for OpenViking (v5.0).
+Markdown parser for Business Data Platform (v5.0).
 
 This parser implements the new simplified architecture:
 - Parse structure and create directory structure directly in VikingFS
@@ -165,7 +165,7 @@ if TYPE_CHECKING:
 
 class MarkdownParser(BaseParser):
     """
-    Markdown parser for OpenViking v5.0.
+    Markdown parser for Business Data Platform v5.0.
 
     Supports: .md, .markdown, .mdown, .mkd
 

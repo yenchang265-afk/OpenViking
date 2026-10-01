@@ -1,6 +1,6 @@
 # OAuth 2.1 Guide
 
-OpenViking server ships a native OAuth 2.1 implementation. Any client that
+Business Data Platform server ships a native OAuth 2.1 implementation. Any client that
 needs OAuth — including MCP clients (Claude.ai, Claude Desktop, ChatGPT,
 Cursor) and any future first-party browser app — can authorize against the
 server directly, without a third-party proxy. The protocol surface (DCR,
@@ -57,7 +57,7 @@ API-Key auth still works as before — OAuth layers on top.
 
 ## How it works
 
-OpenViking's authorize UI runs inside **OpenViking Studio** by default
+Business Data Platform's authorize UI runs inside **Business Data Platform Studio** by default
 (same-origin with the main server and sharing Studio's session). When an MCP
 client opens the browser to authorize:
 
@@ -288,7 +288,7 @@ Environment variables:
 | Authorization code | `secrets.token_urlsafe(40)` | `ovac_` | 5 minutes | SQLite (SHA-256 indexed) |
 | Display code (page) | 6-char alphanumeric (no O/0/I/1) | — | 10 minutes | SQLite (`oauth_pending_authorizations`) |
 
-All tokens are opaque; OpenViking does **not** issue JWTs. There is no
+All tokens are opaque; Business Data Platform does **not** issue JWTs. There is no
 cryptographic key to manage on the server side. Token claims are looked up
 from SQLite on every request, so revoking a token is a single `UPDATE`.
 
@@ -379,4 +379,4 @@ curl -i https://my.ov/mcp -d '{}' -H 'Content-Type: application/json' | grep -i 
 - [RFC 9728 — OAuth 2.0 Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728)
 - [RFC 7591 — Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591)
 - [RFC 7636 — PKCE](https://datatracker.ietf.org/doc/html/rfc7636)
-- [OpenViking MCP Integration Guide](06-mcp-integration.md)
+- [Business Data Platform MCP Integration Guide](06-mcp-integration.md)

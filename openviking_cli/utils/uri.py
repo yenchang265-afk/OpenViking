@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-URI utilities for OpenViking.
+URI utilities for Business Data Platform.
 
-All context objects in OpenViking are identified by URIs in the format:
+All context objects in Business Data Platform are identified by URIs in the format:
 viking://<scope>/<path>
 """
 

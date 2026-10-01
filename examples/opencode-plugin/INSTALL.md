@@ -1,8 +1,8 @@
-# Install the Unified OpenViking OpenCode Plugin
+# Install the Unified Business Data Platform OpenCode Plugin
 
-This plugin adds one unified OpenViking plugin for OpenCode:
+This plugin adds one unified Business Data Platform plugin for OpenCode:
 
-- OpenViking MCP tools for memory, resources, and code context
+- Business Data Platform MCP tools for memory, resources, and code context
 - Long-term memory, session synchronization, lifecycle commit, and automatic recall
 
 This is the only OpenCode plugin example maintained in this repository. It does not install `skills/openviking/SKILL.md`, and it does not require the agent to use the `ov` command. Model tools are provided by the same stdio MCP proxy used by the Claude Code and Codex memory plugins.
@@ -12,11 +12,11 @@ This is the only OpenCode plugin example maintained in this repository. It does 
 Prepare the following first:
 
 - OpenCode
-- OpenViking HTTP Server
+- Business Data Platform HTTP Server
 - Node.js 18+
-- A valid OpenViking API key if authentication is enabled on the server
+- A valid Business Data Platform API key if authentication is enabled on the server
 
-Start OpenViking first:
+Start Business Data Platform first:
 
 ```bash
 openviking-server --config ~/.openviking/ov.conf
@@ -143,7 +143,7 @@ For advanced setups, use `OPENVIKING_CLI_CONFIG_FILE` to point to an `ovcli.conf
 
 ### Hook-only mode
 
-If another MCP server already exposes OpenViking, set the bundled MCP registration to `false` while
+If another MCP server already exposes Business Data Platform, set the bundled MCP registration to `false` while
 keeping this plugin's lifecycle hooks active:
 
 ```json
@@ -159,9 +159,9 @@ does not add or overwrite OpenCode's `mcp.openviking` entry.
 
 ## Verify
 
-Restart OpenCode after changing plugin or OpenViking configuration.
+Restart OpenCode after changing plugin or Business Data Platform configuration.
 
-In a new OpenCode session, ask the agent to browse OpenViking memory or search for a known indexed resource. The plugin should expose the OpenViking MCP server, with tools namespaced by OpenCode as `openviking_*`:
+In a new OpenCode session, ask the agent to browse Business Data Platform memory or search for a known indexed resource. The plugin should expose the Business Data Platform MCP server, with tools namespaced by OpenCode as `openviking_*`:
 
 - `openviking_search`, `openviking_find`
 - `openviking_read`, `openviking_list`, `openviking_tree`, `openviking_grep`, `openviking_glob`
@@ -175,7 +175,7 @@ ls ~/.config/opencode/openviking/
 tail -n 100 ~/.config/opencode/openviking/openviking-memory.log
 ```
 
-For a local server, also confirm OpenViking is reachable:
+For a local server, also confirm Business Data Platform is reachable:
 
 ```bash
 curl http://localhost:1933/health
@@ -183,7 +183,7 @@ curl http://localhost:1933/health
 
 ## Available MCP Tools
 
-The plugin registers OpenViking's stdio MCP proxy through OpenCode config. The server's real `tools/list` response is the source of truth; current OpenViking servers expose:
+The plugin registers Business Data Platform's stdio MCP proxy through OpenCode config. The server's real `tools/list` response is the source of truth; current Business Data Platform servers expose:
 
 - `openviking_search`: deep semantic retrieval across memories, resources, and skills; use `mode="context"` for balanced, injection-ready context.
 - `openviking_find`: fast semantic retrieval.
@@ -199,7 +199,7 @@ The plugin registers OpenViking's stdio MCP proxy through OpenCode config. The s
 - `openviking_add_skill`: create or replace a skill from its full `SKILL.md` text (`data`), or install one from a Git URL or a local `SKILL.md`, skill directory, or `.zip` (`path`); `target_uri="viking://agent/skills"` shares it with the account.
 - `openviking_forget`: delete a `viking://` URI after explicit user confirmation.
 - `openviking_list_watches` / `openviking_cancel_watch`: inspect or cancel resource watches.
-- `openviking_health`: check OpenViking server health.
+- `openviking_health`: check Business Data Platform server health.
 
 Usage guidance:
 
@@ -255,6 +255,6 @@ These are local runtime files and should not be committed to the repository.
 | Plugin does not load | For package installs, confirm `~/.config/opencode/opencode.json` contains `@openviking/opencode-plugin`; for source installs, confirm `~/.config/opencode/plugins/openviking.js` exists |
 | Load fails with a missing `lib/shared/*.mjs` module | The source copy was made without running `sync.mjs` first. Run `node examples/memory-plugin-shared/sync.mjs` from the repository root and copy `lib/` again |
 | MCP tools call the wrong server | Check `~/.openviking/ovcli.conf`, or set `OPENVIKING_*` env vars / `OPENVIKING_CLI_CONFIG_FILE` to the intended config path |
-| 401 / 403 from OpenViking | Verify `OPENVIKING_API_KEY`; for trusted-mode deployments, also verify `OPENVIKING_ACCOUNT` and `OPENVIKING_USER` |
-| Recall is empty | Confirm OpenViking has indexed memories/resources and `autoRecall` is `true` |
+| 401 / 403 from Business Data Platform | Verify `OPENVIKING_API_KEY`; for trusted-mode deployments, also verify `OPENVIKING_ACCOUNT` and `OPENVIKING_USER` |
+| Recall is empty | Confirm Business Data Platform has indexed memories/resources and `autoRecall` is `true` |
 | Local `openviking_add_resource` fails | Pass a file path, not a directory; local directories are not uploaded automatically yet |

@@ -1,22 +1,22 @@
 ---
 name: ov-memory-doctor
 description: >
-  Diagnose and fix the OpenViking memory plugin on this machine: the plugin
+  Diagnose and fix the Business Data Platform memory plugin on this machine: the plugin
   install (enablement, hooks, MCP server), the client configuration
   (ovcli.conf / ov.conf / OPENVIKING_* env) and the connection to the
-  OpenViking server (reachability, 401/403, /mcp). Use whenever memory "isn't
+  Business Data Platform server (reachability, 401/403, /mcp). Use whenever memory "isn't
   working": no <openviking-context> block, empty recall, captures not landing,
   missing or failing MCP memory tools, 401/403, an offline statusline, right
   after installing/updating the plugin or switching servers/keys, or when the
   user asks for the plugin's status. Triggers: "memory not working", "check
-  OpenViking", "plugin status", "记忆没生效", "插件状态", "连不上 OpenViking",
+  Business Data Platform", "plugin status", "记忆没生效", "插件状态", "连不上 Business Data Platform",
   "recall 为空", "401".
 allowed-tools: Bash(node ${CLAUDE_PLUGIN_ROOT}/scripts/ov-memory-doctor.mjs *)
 ---
 
-# OpenViking Memory Doctor
+# Business Data Platform Memory Doctor
 
-Client-side troubleshooting for the OpenViking memory plugin. The plugin has
+Client-side troubleshooting for the Business Data Platform memory plugin. The plugin has
 three moving parts and each fails silently in its own way:
 
 - **Install** — marketplace registration, plugin enablement, the nine hooks,
@@ -28,7 +28,7 @@ three moving parts and each fails silently in its own way:
   disables the plugin; a stray env var silently overrides the file.
 - **Connection** — on a self-hosted server `/health` answers 200 even with a
   bad key, so the statusline can be green while every real request 401s. On
-  OpenViking Cloud the gateway authenticates `/health` and `/ready` too, so
+  Business Data Platform Cloud the gateway authenticates `/health` and `/ready` too, so
   the same probe answers 401 without a key and says nothing about the url.
 
 When the resolved url is loopback, the server runs on this machine and the
@@ -83,7 +83,7 @@ Work top-down; fix the first ✗ and rerun before chasing the next.
 | `node is not on PATH` / node < 18 | Hooks and `.mcp.json` run the bare command `node`; GUI/IDE launches often lack nvm/volta shims | Put node on PATH for the launching environment, or set `PATH` in the `env` block of `~/.claude/settings.json`. |
 | `server unreachable` (refused / dns / timeout / tls) | Wrong url/port, server down, DNS/VPN, private CA | Compare with `curl -sS <url>/health`. curl OK + doctor fails ⇒ proxy or CA issue (see Step 3). |
 | `base URL ends with /api/v1` or `/mcp`, no scheme, `GET /health → 404` | url shape wrong (paths are concatenated bare); Cloud needs the `/openviking` prefix | Fix `url` to the API root. |
-| `/health is authenticated at this deployment` (info) / `api key rejected on /health → 401` | OpenViking Cloud gates `/health` and `/ready` at the gateway, so the probe without a key 401s and says nothing about the url | The info line needs no fix — the report reads /health with the key instead. The ✗ means the gateway rejected this key: use one issued for that deployment (Cloud keys come from the Volcengine console). |
+| `/health is authenticated at this deployment` (info) / `api key rejected on /health → 401` | Business Data Platform Cloud gates `/health` and `/ready` at the gateway, so the probe without a key 401s and says nothing about the url | The info line needs no fix — the report reads /health with the key instead. The ✗ means the gateway rejected this key: use one issued for that deployment (Cloud keys come from the Volcengine console). |
 | `api key rejected` (200 from /health with no identity) then `system/status → 401 Invalid API Key` | Key invalid/revoked/for another deployment. A 3-segment key for a non-existent account looks identical. | Get the key re-issued; check no env var shadows ovcli.conf ("← env" in the Configuration section). |
 | `using the ROOT api key` / `403 ROOT API keys cannot access tenant-scoped data APIs` | `api_key` fell through to `ov.conf server.root_api_key`, or the user pasted the root key | Create a user key (`POST /api/v1/admin/accounts/<account>/users` with the root key) and put it in ovcli.conf. |
 | `server is in trusted mode and needs account + user` / 400 `Trusted mode requests must include…` | Server identity comes from headers | Set `account` and `user` in ovcli.conf. |
@@ -181,7 +181,7 @@ ask before stopping or restarting it.
 
 - Source and issues: <https://github.com/volcengine/OpenViking> — plugin code lives under `examples/`, the shared installer under `examples/memory-plugin-shared/`.
 - Documentation index (LLM-friendly): <https://docs.openviking.ai/llms.txt>; the harness integration pages under it cover install paths, configuration keys and known limitations.
-- `https://api.vikingdb.cn-beijing.volces.com/openviking` is the Volcengine-hosted OpenViking Service (OpenViking Cloud): the path prefix is part of the base url, it accepts `Authorization: Bearer` only, and its keys are issued from the Volcengine console rather than by a self-hosted admin.
+- `https://api.vikingdb.cn-beijing.volces.com/openviking` is the Volcengine-hosted Business Data Platform Service (Business Data Platform Cloud): the path prefix is part of the base url, it accepts `Authorization: Bearer` only, and its keys are issued from the Volcengine console rather than by a self-hosted admin.
 
 ## Rules
 

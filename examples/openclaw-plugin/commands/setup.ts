@@ -487,14 +487,14 @@ export function registerSetupCli(api: any): void {
 
   api.registerCli(
     ({ program }: RegisterCliArgs) => {
-      const ovCmd = program.command("openviking").description("OpenViking plugin commands");
+      const ovCmd = program.command("openviking").description("Business Data Platform plugin commands");
 
       ovCmd
         .command("setup")
-        .description("Setup OpenViking plugin (supports both interactive and non-interactive modes)")
+        .description("Setup Business Data Platform plugin (supports both interactive and non-interactive modes)")
         .option("--reconfigure", "Force re-entry of all configuration values")
         .option("--zh", "Chinese prompts")
-        .option("--base-url <url>", "OpenViking server URL (enables non-interactive mode)")
+        .option("--base-url <url>", "Business Data Platform server URL (enables non-interactive mode)")
         .option("--api-key <key>", "API key for authentication")
         .option("--peer-role <role>", "Memory scope: none (shared), assistant (per assistant), or sender (per sender); person is a legacy alias")
         .option("--peer-prefix <prefix>", "Prefix for assistant peer_id values")
@@ -554,7 +554,7 @@ export function registerSetupCli(api: any): void {
           }
 
           console.log("");
-          console.log(`🦣 ${tr(zh, "OpenViking Plugin Setup", "OpenViking 插件配置向导")}`);
+          console.log(`🦣 ${tr(zh, "Business Data Platform Plugin Setup", "Business Data Platform 插件配置向导")}`);
           console.log("");
 
           const config = readOpenClawConfig(configPath);
@@ -573,8 +573,8 @@ export function registerSetupCli(api: any): void {
                 ));
                 console.log(tr(
                   zh,
-                  "Run `openclaw openviking setup --reconfigure` to configure a remote OpenViking server.",
-                  "请运行 `openclaw openviking setup --reconfigure` 以配置远程 OpenViking 服务。",
+                  "Run `openclaw openviking setup --reconfigure` to configure a remote Business Data Platform server.",
+                  "请运行 `openclaw openviking setup --reconfigure` 以配置远程 Business Data Platform 服务。",
                 ));
                 console.log("");
                 return;
@@ -641,7 +641,7 @@ export function registerSetupCli(api: any): void {
 
       ovCmd
         .command("status")
-        .description("Show current OpenViking plugin status and connectivity")
+        .description("Show current Business Data Platform plugin status and connectivity")
         .option("--zh", "Chinese prompts")
         .option("--json", "Output result as JSON (machine-readable)")
         .action(async (...args: unknown[]) => {
@@ -668,13 +668,13 @@ export function registerSetupCli(api: any): void {
 function printCompatibilityWarning(zh: boolean, health: HealthResult): void {
   if (health.compatibility === "server_too_old") {
     console.log(`  ⚠ ${tr(zh,
-      `Server version ${health.version} is older than recommended (${health.compatRange}). Some features may not work. Please upgrade OpenViking server.`,
-      `服务端版本 ${health.version} 低于推荐范围（${health.compatRange}）。部分功能可能不可用，请升级 OpenViking 服务端。`,
+      `Server version ${health.version} is older than recommended (${health.compatRange}). Some features may not work. Please upgrade Business Data Platform server.`,
+      `服务端版本 ${health.version} 低于推荐范围（${health.compatRange}）。部分功能可能不可用，请升级 Business Data Platform 服务端。`,
     )}`);
   } else if (health.compatibility === "server_too_new") {
     console.log(`  ⚠ ${tr(zh,
-      `Server version ${health.version} is newer than supported (${health.compatRange}). Please upgrade the OpenViking plugin.`,
-      `服务端版本 ${health.version} 高于插件支持范围（${health.compatRange}）。请升级 OpenViking 插件。`,
+      `Server version ${health.version} is newer than supported (${health.compatRange}). Please upgrade the Business Data Platform plugin.`,
+      `服务端版本 ${health.version} 高于插件支持范围（${health.compatRange}）。请升级 Business Data Platform 插件。`,
     )}`);
   } else if (health.compatibility === "unknown" && health.ok) {
     console.log(`  ⚠ ${tr(zh,
@@ -825,7 +825,7 @@ async function setupNonInteractive(
 function printSetupResult(zh: boolean, result: SetupResult): void {
   console.log("");
   if (result.success) {
-    console.log(`🦣 ${tr(zh, "OpenViking Plugin Setup Complete", "OpenViking 插件配置完成")}`);
+    console.log(`🦣 ${tr(zh, "Business Data Platform Plugin Setup Complete", "Business Data Platform 插件配置完成")}`);
     console.log("");
     if (result.config) {
       console.log(`  mode:    ${result.config.mode}`);
@@ -935,7 +935,7 @@ function printKeyProbeWarning(zh: boolean, probe: ApiKeyProbeResult): void {
 
 function printStatus(zh: boolean, result: StatusResult): void {
   console.log("");
-  console.log(`🦣 ${tr(zh, "OpenViking Plugin Status", "OpenViking 插件状态")}`);
+  console.log(`🦣 ${tr(zh, "Business Data Platform Plugin Status", "Business Data Platform 插件状态")}`);
   console.log("");
 
   if (!result.configured) {
@@ -990,7 +990,7 @@ async function setupRemote(
   const defaultPeerPrefix = resolveExistingPeerPrefix(existing);
   const headers = nonEmptyOpenVikingRequestHeaders(existing?.headers);
 
-  const baseUrl = await q(tr(zh, "OpenViking server URL", "OpenViking 服务器地址"), defaultUrl);
+  const baseUrl = await q(tr(zh, "Business Data Platform server URL", "Business Data Platform 服务器地址"), defaultUrl);
   const apiKey = await q(tr(zh, "API Key (optional)", "API Key（可选）"), defaultApiKey);
 
   let accountId = existing?.accountId ? String(existing.accountId) : "";

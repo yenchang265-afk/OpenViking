@@ -1,7 +1,7 @@
 # Demo evidence
 
 `pi-ctxwin-demo.zip` is a redacted snapshot of the sandbox this extension was
-demonstrated in, captured on 2026-09-11 against a live OpenViking server and
+demonstrated in, captured on 2026-09-11 against a live Business Data Platform server and
 Volcengine's Doubao 2.1 Pro (`doubao-seed-2-1-pro-260628`) on Ark, with
 `reasoning_effort: high`. It is here as evidence for the numbers quoted in the
 docs: unpack it and read the transcripts rather than taking them on trust.
@@ -23,7 +23,7 @@ remaining 14 files."
 **`demo/`** — the short scripted gate, where the reset is instructed rather than
 chosen, so the mechanics are easy to follow: the request before the cut, the
 request after it, the same frozen header surviving a process restart, and the
-OpenViking archive with the handoff message inside it.
+Business Data Platform archive with the handoff message inside it.
 
 Both folders carry the pi session file, the extension debug log, the provider
 payloads either side of each reset, and the archives pulled back off the server

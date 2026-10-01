@@ -1,6 +1,6 @@
-# 基础使用示例：OpenViking Python SDK
+# 基础使用示例：Business Data Platform Python SDK
 
-这个示例的目标很明确：用最短路径带你理解 OpenViking Python SDK 的核心工作流。
+这个示例的目标很明确：用最短路径带你理解 Business Data Platform Python SDK 的核心工作流。
 你会从初始化客户端开始，完成资源导入、`viking://` 文件系统浏览、上下文检索，
 以及创建一个后续可以提交为长期记忆的会话。
 
@@ -17,7 +17,7 @@
 
 ## 先选对接入方式
 
-目前 OpenViking 常见有两种接入路径：
+目前 Business Data Platform 常见有两种接入路径：
 
 | 模式 | 适合场景 | 是否推荐 |
 |------|----------|----------|
@@ -29,13 +29,13 @@
 ## 前置条件
 
 1. Python 3.10+
-2. 安装 OpenViking：
+2. 安装 Business Data Platform：
 
 ```bash
 pip install openviking-sdk --upgrade
 ```
 
-3. 启动 OpenViking Server
+3. 启动 Business Data Platform Server
 
 ## 快速开始
 
@@ -47,7 +47,7 @@ cd OpenViking/examples/basic-usage
 python basic_usage.py
 ```
 
-脚本默认连接本地 OpenViking Server：
+脚本默认连接本地 Business Data Platform Server：
 
 ```python
 from openviking_sdk import SyncHTTPClient
@@ -75,7 +75,7 @@ client.initialize()
 
 ### 初始化
 
-使用 HTTP 客户端连接 OpenViking Server：
+使用 HTTP 客户端连接 Business Data Platform Server：
 
 ```python
 from openviking_sdk import SyncHTTPClient
@@ -119,7 +119,7 @@ result = client.add_resource(
 
 ### 文件系统访问
 
-OpenViking 的上下文统一组织在虚拟文件系统里：
+Business Data Platform 的上下文统一组织在虚拟文件系统里：
 
 ```python
 files = client.ls(uri="viking://resources/")
@@ -238,8 +238,8 @@ memories = client.find(
 - [配置指南](../../docs/zh/guides/01-configuration.md)：先确认当前配置模型，再过渡到共享部署。
 - [快速开始：服务端模式](../../docs/zh/getting-started/03-quickstart-server.md)：正确启动 `openviking-server`。
 - [MCP 集成指南](../../docs/zh/guides/06-mcp-integration.md)：接入 Claude Code、Cursor、Claude Desktop、OpenClaw 等 MCP 宿主。
-- [Claude Code 记忆插件](../claude-code-memory-plugin/README.md)：在 Claude Code 中使用 OpenViking 长期记忆。
-- [OpenCode 插件](../opencode-plugin/INSTALL-ZH.md)：在 OpenCode 中使用 OpenViking 仓库上下文与记忆工具。
+- [Claude Code 记忆插件](../claude-code-memory-plugin/README.md)：在 Claude Code 中使用 Business Data Platform 长期记忆。
+- [OpenCode 插件](../opencode-plugin/INSTALL-ZH.md)：在 OpenCode 中使用 Business Data Platform 仓库上下文与记忆工具。
 - [OpenClaw 插件](../openclaw-plugin/README_CN.md)：与 OpenClaw 集成。
 
 ## 常见问题

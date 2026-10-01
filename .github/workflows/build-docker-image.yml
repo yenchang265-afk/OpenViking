@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "application version for OpenViking"
+        description: "application version for Business Data Platform"
         required: true
         type: string
   push:
@@ -47,7 +47,7 @@ jobs:
         run: |
           echo "image=$(echo "$RAW_IMAGE_NAME" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Resolve OpenViking version
+      - name: Resolve Business Data Platform version
         id: openviking-version
         shell: bash
         run: |
@@ -63,7 +63,7 @@ jobs:
             )"
           fi
           if [ -z "${version}" ] || [ "${version}" = "0.0.0" ]; then
-            echo "Resolved invalid OpenViking version: ${version}" >&2
+            echo "Resolved invalid Business Data Platform version: ${version}" >&2
             exit 2
           fi
           echo "version=${version}" >> "$GITHUB_OUTPUT"

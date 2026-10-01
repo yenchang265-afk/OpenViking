@@ -64,7 +64,7 @@ log() {
 }
 
 log "========================================="
-log "OpenViking Upgrade Script Started"
+log "Business Data Platform Upgrade Script Started"
 log "========================================="
 
 log "[0/8] Checking disk space..."
@@ -87,9 +87,9 @@ log "Disk space: ${AVAILABLE_GB}GB available"
 
 log "[1/8] Checking prerequisites and activating virtual environment..."
 
-# Check if OpenViking virtual environment exists
+# Check if Business Data Platform virtual environment exists
 if [ -d "$VENV_DIR" ]; then
-    log "Found OpenViking virtual environment at: $VENV_DIR"
+    log "Found Business Data Platform virtual environment at: $VENV_DIR"
     
     # Activate virtual environment
     if [ -f "$VENV_DIR/bin/activate" ]; then
@@ -107,12 +107,12 @@ if [ -d "$VENV_DIR" ]; then
         log "⚠️  Virtual environment found but activate script missing"
     fi
 else
-    log "⚠️  OpenViking virtual environment not found at $VENV_DIR"
+    log "⚠️  Business Data Platform virtual environment not found at $VENV_DIR"
     log "Using system Python"
 fi
 
 if [ ! -d "$PROJECT_DIR" ]; then
-    log "ERROR: OpenViking directory not found: $PROJECT_DIR"
+    log "ERROR: Business Data Platform directory not found: $PROJECT_DIR"
     exit 1
 fi
 
@@ -155,14 +155,14 @@ CURRENT_COMMIT=$(git rev-parse HEAD)
 log "Current commit: $CURRENT_COMMIT"
 fi
 
-log "[4/8] Checking OpenViking installation mode..."
+log "[4/8] Checking Business Data Platform installation mode..."
 
 # Use python (from venv if activated) instead of python3
 INSTALL_MODE=$(python -c "import openviking; import os; path = openviking.__file__; print('dev' if 'site-packages' not in path else 'site-packages')" 2>/dev/null || echo "not_installed")
 log "Current installation mode: $INSTALL_MODE"
 
 if [ "$INSTALL_MODE" = "site-packages" ]; then
-    log "⚠️  OpenViking is installed in site-packages mode"
+    log "⚠️  Business Data Platform is installed in site-packages mode"
     log "Uninstalling to switch to development mode..."
     pip uninstall -y openviking 2>&1 | tee -a "$LOG_FILE" || true
     log "✅ Uninstalled site-packages version"
@@ -283,7 +283,7 @@ log "[6/8] Cleaning previous build artifacts..."
 make clean 2>/dev/null || true
 log "Clean completed"
 
-log "[7/8] Building and installing OpenViking in development mode..."
+log "[7/8] Building and installing Business Data Platform in development mode..."
 export OV_SKIP_OV_BUILD=1
 export OV_SKIP_OV_BUILD=1
 log "OV_SKIP_OV_BUILD=1 set, skipping ov CLI Rust build (ragfs build still needed for server)"
@@ -383,7 +383,7 @@ sys.exit(1)
             log "Build completed successfully on attempt $i"
             
             INSTALL_PATH=$(python -c "import openviking; print(openviking.__file__)" 2>/dev/null || echo "unknown")
-            log "OpenViking installed at: $INSTALL_PATH"
+            log "Business Data Platform installed at: $INSTALL_PATH"
             
             if [[ "$INSTALL_PATH" == *"$PROJECT_DIR"* ]]; then
                 log "✅ Confirmed: Using development mode (source code directory)"
@@ -432,7 +432,7 @@ else
     log "⚠️  Plugin directory not found: $PLUGIN_DIR, skipping"
 fi
 
-log "[8/8] Restarting OpenClaw service to load latest OpenViking..."
+log "[8/8] Restarting OpenClaw service to load latest Business Data Platform..."
 
 # Load OpenClaw environment variables
 if [ -f ~/.openclaw/openviking.env ]; then
@@ -560,37 +560,37 @@ fi
 
 log "✅ Pre-start cleanup completed (locks: $LOCK_COUNT, session locks: $SESSION_LOCK_COUNT, cache cleared)"
 
-# Step 3: Verify OpenViking installation path before starting
-log "Step 3: Verifying OpenViking installation path..."
+# Step 3: Verify Business Data Platform installation path before starting
+log "Step 3: Verifying Business Data Platform installation path..."
 OV_PATH=$(python -c "import openviking; print(openviking.__file__)" 2>/dev/null || echo "unknown")
-log "OpenViking path: $OV_PATH"
+log "Business Data Platform path: $OV_PATH"
 
 if [[ "$OV_PATH" == *"$PROJECT_DIR"* ]]; then
-    log "✅ Confirmed: OpenViking is in development mode"
+    log "✅ Confirmed: Business Data Platform is in development mode"
 else
-    log "⚠️  WARNING: OpenViking is not in development mode!"
+    log "⚠️  WARNING: Business Data Platform is not in development mode!"
     log "Expected path to contain: $PROJECT_DIR"
     log "Actual path: $OV_PATH"
 fi
 
-# Step 3.5: Ensure OpenViking server is running on port 1933
-log "Step 3.5: Ensuring OpenViking server is running..."
+# Step 3.5: Ensure Business Data Platform server is running on port 1933
+log "Step 3.5: Ensuring Business Data Platform server is running..."
 OV_SERVER_RUNNING=false
 
 if command -v ss &> /dev/null; then
     if ss -tuln 2>/dev/null | grep -q ":1933 "; then
         OV_SERVER_RUNNING=true
-        log "✅ OpenViking server is already listening on port 1933"
+        log "✅ Business Data Platform server is already listening on port 1933"
     fi
 elif command -v netstat &> /dev/null; then
     if netstat -tuln 2>/dev/null | grep -q ":1933 "; then
         OV_SERVER_RUNNING=true
-        log "✅ OpenViking server is already listening on port 1933"
+        log "✅ Business Data Platform server is already listening on port 1933"
     fi
 fi
 
 if [ "$OV_SERVER_RUNNING" = false ]; then
-    log "OpenViking server not running, starting it..."
+    log "Business Data Platform server not running, starting it..."
 
     pkill -f "openviking.server.bootstrap" 2>/dev/null || true
     sleep 2
@@ -668,17 +668,17 @@ except Exception as e:
     if [ -n "$OV_CONF" ]; then
         nohup $OV_PYTHON -u -m openviking.server.bootstrap --config "$OV_CONF" > /tmp/openviking.log 2>&1 &
         OV_SERVER_PID=$!
-        log "Started OpenViking server with config: $OV_CONF (PID: $OV_SERVER_PID)"
+        log "Started Business Data Platform server with config: $OV_CONF (PID: $OV_SERVER_PID)"
     else
         nohup $OV_PYTHON -u -m openviking.server.bootstrap > /tmp/openviking.log 2>&1 &
         OV_SERVER_PID=$!
-        log "Started OpenViking server without explicit config (PID: $OV_SERVER_PID)"
+        log "Started Business Data Platform server without explicit config (PID: $OV_SERVER_PID)"
     fi
 
     for i in $(seq 1 20); do
         sleep 3
         if ! kill -0 $OV_SERVER_PID 2>/dev/null; then
-            log "⚠️  OpenViking server process (PID: $OV_SERVER_PID) exited prematurely after ${i}x3s"
+            log "⚠️  Business Data Platform server process (PID: $OV_SERVER_PID) exited prematurely after ${i}x3s"
             log "   Last 30 lines of server log:"
             tail -30 /tmp/openviking.log 2>/dev/null | tee -a "$LOG_FILE" || true
             break
@@ -693,11 +693,11 @@ except Exception as e:
             HEALTH_RESP=$(curl -sf http://127.0.0.1:1933/health 2>/dev/null || echo "")
             if echo "$HEALTH_RESP" | grep -qi "healthy\|ok\|running"; then
                 OV_SERVER_RUNNING=true
-                log "✅ OpenViking server is healthy on port 1933 (after ${i}x3s)"
+                log "✅ Business Data Platform server is healthy on port 1933 (after ${i}x3s)"
                 break
             elif [ $i -ge 10 ]; then
                 OV_SERVER_RUNNING=true
-                log "⚠️  OpenViking server is listening on port 1933 but /health not ready (after ${i}x3s), proceeding anyway"
+                log "⚠️  Business Data Platform server is listening on port 1933 but /health not ready (after ${i}x3s), proceeding anyway"
                 break
             else
                 log "   Port 1933 listening but /health not ready, waiting... (${i}x3s)"
@@ -706,7 +706,7 @@ except Exception as e:
     done
 
     if [ "$OV_SERVER_RUNNING" = false ]; then
-        log "❌ ERROR: OpenViking server failed to start on port 1933"
+        log "❌ ERROR: Business Data Platform server failed to start on port 1933"
         log "   Server log (last 50 lines):"
         tail -50 /tmp/openviking.log 2>/dev/null | tee -a "$LOG_FILE" || true
         log ""
@@ -716,7 +716,7 @@ except Exception as e:
 
         nohup $OV_PYTHON -u -m openviking.server.bootstrap ${OV_CONF:+--config "$OV_CONF"} > /tmp/openviking.log 2>&1 &
         OV_SERVER_PID=$!
-        log "Restarted OpenViking server (PID: $OV_SERVER_PID)"
+        log "Restarted Business Data Platform server (PID: $OV_SERVER_PID)"
 
         for i in $(seq 1 15); do
             sleep 3
@@ -846,18 +846,18 @@ if [ "$RESTART_SUCCESS" = false ]; then
     log "Please manually verify OpenClaw is running: ps aux | grep openclaw"
 fi
 
-# Step 5: Verify OpenViking is correctly loaded by OpenClaw
-log "Step 5: Verifying OpenViking is loaded by OpenClaw..."
+# Step 5: Verify Business Data Platform is correctly loaded by OpenClaw
+log "Step 5: Verifying Business Data Platform is loaded by OpenClaw..."
 sleep 3
 
-# Check OpenClaw logs for OpenViking registration
+# Check OpenClaw logs for Business Data Platform registration
 if [ -f "/tmp/openclaw/openclaw-$(date +%Y-%m-%d).log" ]; then
     OV_LOADED=$(grep -i "openviking: registered context-engine" /tmp/openclaw/openclaw-$(date +%Y-%m-%d).log | tail -1)
     if [ -n "$OV_LOADED" ]; then
-        log "✅ OpenViking is successfully loaded by OpenClaw"
+        log "✅ Business Data Platform is successfully loaded by OpenClaw"
         log "   $OV_LOADED"
     else
-        log "⚠️  WARNING: Could not verify OpenViking registration in logs"
+        log "⚠️  WARNING: Could not verify Business Data Platform registration in logs"
         log "   Check logs manually: tail -f /tmp/openclaw/openclaw-$(date +%Y-%m-%d).log | grep openviking"
     fi
 else
@@ -866,11 +866,11 @@ fi
 
 log ""
 log "========================================="
-log "OpenViking Upgrade Completed"
+log "Business Data Platform Upgrade Completed"
 log "========================================="
 log "Commit: $CURRENT_COMMIT"
 OPENVIKING_VERSION=$(python -c "import openviking; print(openviking.__version__)" 2>/dev/null || echo "unknown")
-log "OpenViking version: $OPENVIKING_VERSION"
+log "Business Data Platform version: $OPENVIKING_VERSION"
 OPENCLAW_VERSION=$(openclaw --version 2>/dev/null || echo "unknown")
 log "OpenClaw version: $OPENCLAW_VERSION"
 log "Backup: $BACKUP_DIR"

@@ -1,5 +1,5 @@
-## 步骤 1 安装 OpenViking
-执行以下命令以安装 OpenViking
+## 步骤 1 安装 Business Data Platform
+执行以下命令以安装 Business Data Platform
 
 ```bash
 pip install openviking --upgrade --force-reinstall

@@ -453,12 +453,12 @@ class AgentsConfig(BaseModel):
     commit_keep_recent_turn_count: int = Field(
         default=3,
         ge=0,
-        description="Number of newest logical user Turns retained after an OpenViking commit.",
+        description="Number of newest logical user Turns retained after a Business Data Platform commit.",
     )
     commit_retained_message_token_budget: int = Field(
         default=6_000,
         gt=0,
-        description="Token budget for retained raw OpenViking session messages and checkpoints.",
+        description="Token budget for retained raw Business Data Platform session messages and checkpoints.",
     )
     commit_min_raw_tail_steps: int = Field(
         default=1,
@@ -555,7 +555,7 @@ class OpenVikingConfig(BaseModel):
     _server_managed: bool = PrivateAttr(default=False)
 
     # Deprecated as user config. Kept for compatibility; load_config derives it
-    # from OpenViking's effective dev auth mode.
+    # from Business Data Platform's effective dev auth mode.
     mode: str = "remote"
     api_key_type: Literal["root", "user"] | None = None
     server_url: str = ""
@@ -806,7 +806,7 @@ class SandboxConfig(BaseModel):
 
 
 class RemoteSkillsConfig(BaseModel):
-    """OpenViking-backed Skill runtime configuration."""
+    """Business Data Platform-backed Skill runtime configuration."""
 
     discovery_limit: int = Field(default=8, ge=1, le=50)
     score_threshold: float = Field(default=0.35, ge=0.0, le=1.0)

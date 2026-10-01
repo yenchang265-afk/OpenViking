@@ -4,7 +4,7 @@
 """Unit tests for WM v2 guards, regex recovery, merge, and pending_tokens.
 
 These tests target pure/static methods on Session and related helpers,
-so they don't need a running OpenViking server.
+so they don't need a running Business Data Platform server.
 """
 
 import json

@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Session management for OpenViking.
+"""Session management for Business Data Platform.
 
 Session as Context: Sessions integrated into L0/L1/L2 system.
 """
@@ -98,7 +98,7 @@ _B64_JSON_RE = re.compile(
 
 
 def _inline_image_placeholder(mime: str, base64_chars: int) -> str:
-    return f"[OpenViking inline image omitted: mime={mime}, base64_chars={base64_chars}]"
+    return f"[Business Data Platform inline image omitted: mime={mime}, base64_chars={base64_chars}]"
 
 
 def _redact_inline_images(text: str) -> str:
@@ -1655,7 +1655,7 @@ class Session:
         """
         marker = await self._read_phase1_meta(archive_uri)
         if not marker:
-            # Archives created by older OpenViking versions have no Phase 1
+            # Archives created by older Business Data Platform versions have no Phase 1
             # metadata and keep their previous processing contract.
             return True
         if marker.get("status") == "ready":
@@ -3988,7 +3988,7 @@ class Session:
                             abstract=abstract,
                         )
                     ],
-                    # The checkpoint is synthesized by OpenViking, not authored
+                    # The checkpoint is synthesized by Business Data Platform, not authored
                     # by the user who owns the retained anchor.
                     peer_id=None,
                     created_at=message.created_at,

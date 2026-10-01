@@ -1,13 +1,13 @@
-# OpenViking 云上部署指南（火山引擎）
+# Business Data Platform 云上部署指南（火山引擎）
 
-本文档介绍如何将 OpenViking 部署到火山引擎云上，使用 TOS（对象存储）+ VikingDB（向量数据库）+ 方舟大模型作为后端。
+本文档介绍如何将 Business Data Platform 部署到火山引擎云上，使用 TOS（对象存储）+ VikingDB（向量数据库）+ 方舟大模型作为后端。
 
 ## 概览
 
 云上部署架构：
 
 ```
-用户请求 → OpenViking Server (1933)
+用户请求 → Business Data Platform Server (1933)
                 ├── AGFS → TOS (S3 兼容协议，存储文件数据)
                 ├── VectorDB → VikingDB (向量检索)
                 ├── Embedding → 方舟 API (doubao-embedding-vision)
@@ -19,7 +19,7 @@
 ## 前置条件
 
 - 火山引擎账号（[注册地址](https://console.volcengine.com/)）
-- 已安装 OpenViking（`pip install openviking --upgrade --force-reinstall` 或从源码安装）
+- 已安装 Business Data Platform（`pip install openviking --upgrade --force-reinstall` 或从源码安装）
 - Python 3.11+
 
 ---
@@ -28,7 +28,7 @@
 
 ### 1.1 开通 TOS（对象存储）
 
-TOS 用于持久化存储 OpenViking 的文件数据（AGFS 后端）。
+TOS 用于持久化存储 Business Data Platform 的文件数据（AGFS 后端）。
 
 1. 登录 [火山引擎控制台](https://console.volcengine.com/)
 2. 进入 **对象存储 TOS** → 开通服务
@@ -53,8 +53,8 @@ VikingDB 用于存储和检索向量嵌入。
 
 1. 登陆 [火山引擎控制台](https://console.volcengine.com/) →  [进入 VikingDB 下单开通界面](https://console.volcengine.com/vikingdb/region:vikingdb+cn-beijing/home) -> 选择对应的地域并开通向量数据库
 2. 开通服务（按量付费即可），选择与 TOS 相同的地域
-3. 无需手动创建 Collection，OpenViking 启动后会自动创建
-4. 在配置文件中填写 `storage.vectordb.volcengine.region`，OpenViking 会自动路由到对应地域的 VikingDB 服务
+3. 无需手动创建 Collection，Business Data Platform 启动后会自动创建
+4. 在配置文件中填写 `storage.vectordb.volcengine.region`，Business Data Platform 会自动路由到对应地域的 VikingDB 服务
 
 ### 1.3 申请 AK/SK（IAM 访问密钥）
 
@@ -178,7 +178,7 @@ cp examples/cloud/ov.conf.example examples/cloud/ov.conf
 
 适合在 VM 上以系统服务方式长期运行。
 
-1. 安装 OpenViking：
+1. 安装 Business Data Platform：
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -197,7 +197,7 @@ sudo chmod 600 /etc/openviking/ov.conf
 ```bash
 sudo tee /etc/systemd/system/openviking.service > /dev/null << 'EOF'
 [Unit]
-Description=OpenViking Server
+Description=Business Data Platform Server
 After=network.target
 
 [Service]
@@ -411,7 +411,7 @@ curl http://localhost:1933/ready
 
 ## 5. 多租户管理
 
-OpenViking 支持多租户隔离。配置了 `root_api_key` 后自动启用多租户模式。
+Business Data Platform 支持多租户隔离。配置了 `root_api_key` 后自动启用多租户模式。
 
 ### 5.1 创建租户（Account）
 
@@ -562,7 +562,7 @@ docker logs -f openviking
 
 ### systemd 启动失败（status=203/EXEC）
 
-`status=203/EXEC` 表示 systemd 找不到 `ExecStart` 指定的可执行文件。常见于使用 venv / conda 环境安装 OpenViking 的情况，`openviking-server` 不在 `/usr/local/bin/` 下。
+`status=203/EXEC` 表示 systemd 找不到 `ExecStart` 指定的可执行文件。常见于使用 venv / conda 环境安装 Business Data Platform 的情况，`openviking-server` 不在 `/usr/local/bin/` 下。
 
 排查步骤：
 
@@ -653,7 +653,7 @@ kubectl get nodes
 Error: INSTALLATION FAILED: path "./examples/k8s-helm" not found
 ```
 
-需要在 OpenViking 项目根目录下执行 `helm install` 命令：
+需要在 Business Data Platform 项目根目录下执行 `helm install` 命令：
 
 ```bash
 cd /path/to/OpenViking

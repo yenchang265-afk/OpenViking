@@ -2,7 +2,7 @@
 #
 # LoCoMo evaluation: SDK pre-ingest + per-sample namespace isolation.
 #
-# Each LoCoMo sample (conv-XX) gets its own OpenViking user.
+# Each LoCoMo sample (conv-XX) gets its own Business Data Platform user.
 # Ingest goes straight to the OV server via the openviking Python SDK
 # (import_to_ov.py); no Claude Code is involved at ingest time.
 # QA uses Claude Code with the plugin's auto-recall hook + MCP, talking to
@@ -15,7 +15,7 @@
 #   OPENVIKING_PLUGIN_DIR  - path to claude-code-memory-plugin (for hooks)
 #   OPENVIKING_CLI_CONFIG_FILE (optional) - ovcli.conf override, e.g. ovcli-local.conf
 #
-# OpenViking server must be running at 127.0.0.1:1933.
+# Business Data Platform server must be running at 127.0.0.1:1933.
 
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"

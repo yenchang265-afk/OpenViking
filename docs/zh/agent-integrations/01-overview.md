@@ -1,6 +1,6 @@
 # Agent 集成概览
 
-OpenViking 可以作为多种 Agent 运行时的长期记忆与上下文后端。按你的运行时挑选合适的接入方式即可。
+Business Data Platform 可以作为多种 Agent 运行时的长期记忆与上下文后端。按你的运行时挑选合适的接入方式即可。
 
 ## 该用哪个集成？
 
@@ -10,14 +10,14 @@ OpenViking 可以作为多种 Agent 运行时的长期记忆与上下文后端�
 | **OpenClaw** | [OpenClaw 插件](./03-openclaw.md) — 全生命周期一体化集成 |
 | **Codex / TraeCode CLI 2.0** | [Codex 记忆插件](./04-codex.md) — 生命周期 hooks 自动召回与增量捕获 |
 | **Cursor** | [Cursor 记忆集成](./12-cursor.md) — 一条命令安装生命周期 Hook、MCP 工具、Rules 与 Skills |
-| **TRAE / TRAE CN** | [TRAE 记忆集成](./13-trae.md) — 一个安装器完成 prompt 召回、回合捕获与 OpenViking 工具接入 |
-| **DeepSeek Harness（`dsh`）** | [DeepSeek Harness 记忆插件](./17-dsh.md) — 进程内 Cordis 插件，pre-step 召回、事件捕获与 OpenViking MCP 工具 |
-| **Hermes Agent** | [Hermes Agent](./05-hermes.md) — 内置 OpenViking 记忆提供方，无需安装插件 |
+| **TRAE / TRAE CN** | [TRAE 记忆集成](./13-trae.md) — 一个安装器完成 prompt 召回、回合捕获与 Business Data Platform 工具接入 |
+| **DeepSeek Harness（`dsh`）** | [DeepSeek Harness 记忆插件](./17-dsh.md) — 进程内 Cordis 插件，pre-step 召回、事件捕获与 Business Data Platform MCP 工具 |
+| **Hermes Agent** | [Hermes Agent](./05-hermes.md) — 内置 Business Data Platform 记忆提供方，无需安装插件 |
 | **OpenCode** | [OpenCode 插件](./10-opencode.md) — MCP 工具 + 生命周期 hooks，覆盖仓库上下文、自动召回与捕获 |
 | **pi** | [pi Coding Agent 扩展](./11-pi.md) — 原生扩展，自动召回、逐轮捕获、阈值 commit，并把服务端的 MCP 工具注册为 pi 原生工具 |
 | **LangChain / LangGraph** | [LangChain 和 LangGraph](./07-langchain-langgraph.md) — retriever、tools、context backend、store 和 middleware |
-| **多个本地开发 Agent / 希望使用桌面界面** | [OpenViking Helper](./14-openviking-helper.md) — 可视化完成 Agent 接入、会话分析和记忆管理 |
-| **任意支持 Agent Plugins 1.0 的客户端** | [Agent Plugins 1.0 插件包](./15-agent-plugins.md) — 一个可移植的包：`openviking-memory` 技能 + OpenViking MCP 工具 |
+| **多个本地开发 Agent / 希望使用桌面界面** | [Business Data Platform Helper](./14-openviking-helper.md) — 可视化完成 Agent 接入、会话分析和记忆管理 |
+| **任意支持 Agent Plugins 1.0 的客户端** | [Agent Plugins 1.0 插件包](./15-agent-plugins.md) — 一个可移植的包：`openviking-memory` 技能 + Business Data Platform MCP 工具 |
 | **Manus / Claude Desktop / ChatGPT / 其他 MCP 客户端** | [MCP 客户端](./06-mcp-clients.md) — 任何兼容 MCP 的客户端直接对接内置 `/mcp` 端点 |
 | **ZCode / AstrBot / …** | [社区插件](./08-community-plugins.md) — 社区维护的各运行时集成 |
 
@@ -31,7 +31,7 @@ OpenViking 可以作为多种 Agent 运行时的长期记忆与上下文后端�
 
 ## 所有集成的共同前置
 
-本页所有集成都需要连接到一个正在运行的 OpenViking 服务。如果你还没有，请先按 [快速开始](../getting-started/02-quickstart.md) 部署。默认端点是 `http://localhost:1933`；远程使用需要 API Key（参见 [鉴权](../guides/04-authentication.md)）。
+本页所有集成都需要连接到一个正在运行的 Business Data Platform 服务。如果你还没有，请先按 [快速开始](../getting-started/02-quickstart.md) 部署。默认端点是 `http://localhost:1933`；远程使用需要 API Key（参见 [鉴权](../guides/04-authentication.md)）。
 
 ## 低延迟召回
 
@@ -46,7 +46,7 @@ export OPENVIKING_RECALL_COMPRESS=off
 
 两个插件都有本地压缩逻辑，但配置模型不同：
 
-- Claude Code 默认使用 `recallCompress=auto`：优先调用本地 `claude -p`（Sonnet + low），本地 CLI 不可用时回落到 OpenViking 服务端生成 digest。`client` 强制只用本地，`server` 强制只用服务端。
+- Claude Code 默认使用 `recallCompress=auto`：优先调用本地 `claude -p`（Sonnet + low），本地 CLI 不可用时回落到 Business Data Platform 服务端生成 digest。`client` 强制只用本地，`server` 强制只用服务端。
 - Codex 默认调用本地 `codex exec`，模型顺序为 `gpt-5.3-codex-spark`，其次 `gpt-5.6-luna` + low。它不会启用服务端压缩。
 
 两端的共同默认配置是 `recallCompress=auto`。`OPENVIKING_RECALL_COMPRESS=off` 会同时关闭两端压缩；Codex 将 `auto` 或 `client` 解释为启用本地压缩。旧的 Claude Code 变量 `OPENVIKING_RECALL_REWRITE` 仍可兼容，但新配置请使用统一名称。

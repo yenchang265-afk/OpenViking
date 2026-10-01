@@ -1,4 +1,4 @@
-# OpenViking Memory Doctor — reference
+# Business Data Platform Memory Doctor — reference
 
 Companion to SKILL.md: where things live, what the exact error strings mean,
 and the symptom catalogue. Paths assume the defaults; `OPENVIKING_HOME`,
@@ -42,7 +42,7 @@ and `OPENVIKING_PENDING_DIR` relocate individual pieces.
 The order above is the `auto` mode with a credential variable set, or with no ovcli.conf credentials. When ovcli.conf names a url, key, identity or peer and no credential variable is set, the chain is pinned to that file: the credential variables are skipped, `api_key` still falls back through the `plugin` keys, `ov.conf claude_code.apiKey` and `server.root_api_key`, and account/user stop at the `plugin` keys. `OPENVIKING_CREDENTIAL_SOURCE=cli` forces that; `=env` reads the variables only, and neither file. The MCP proxy resolves this same chain.
 
 Only trailing slashes are stripped from the url; no scheme check, no path
-normalisation. `https://api.vikingdb.cn-beijing.volces.com/openviking` (the Volcengine-hosted OpenViking Service)
+normalisation. `https://api.vikingdb.cn-beijing.volces.com/openviking` (the Volcengine-hosted Business Data Platform Service)
 is a legitimate path prefix; `/api/v1` or `/mcp` suffixes are not.
 
 `peer.source` decides the derivation. `git` (the default) is the template list `["{git_remote}", "{git_root}"]`: the normalized origin URL (`git@github.com:volcengine/OpenViking.git` → `github.com-volcengine-openviking`, userinfo dropped so an embedded token can never reach the id), else the repository root path (the legacy `[^A-Za-z0-9] → -` rule), else nothing — outside a git repository no peer is sent at all, and what is remembered there goes to the user-level space. `{cwd}` is still a variable but sits in no default chain, and `{dir}` is the workspace root's directory name, empty when the directory is not a workspace. `cwd` is that legacy rule alone (the pre-git behaviour); `none` sends no peer, which is also what `OPENVIKING_WORKSPACE_PEER=0` means. Anything else is a template, or a list of templates tried in order (`"git-{git_remote}"`, `["team-{dir}", "{cwd}"]`); a template naming an empty variable falls through to the next. Derivation is filesystem-only — no `git` subprocess — so it survives a missing `git` and a dubious-ownership refusal; worktrees converge through `commondir`, a submodule keeps its own identity, and `$HOME` and `/` are never workspace roots. Every clone of one repository shares one peer; a fork's origin differs, so it stays separate, and `gh pr checkout` does not change origin.
@@ -55,7 +55,7 @@ Sent headers: `Authorization: Bearer <key>`, `X-OpenViking-Account/User` (truste
 mode only), `X-OpenViking-Actor-Peer`, `User-Agent: openviking-memory-claude-code/<version>`.
 The plugin never sends `X-API-Key`. The open-source server still accepts it (and
 prefers it when both are sent), so a gateway that injects one shadows the key
-here; the Volcengine-hosted OpenViking Service (`https://api.vikingdb.cn-beijing.volces.com/openviking`) accepts Bearer only.
+here; the Volcengine-hosted Business Data Platform Service (`https://api.vikingdb.cn-beijing.volces.com/openviking`) accepts Bearer only.
 
 ## Peer: giving a directory its own memory
 
@@ -114,10 +114,10 @@ Plugin MCP proxy (what Claude Code shows for a failing tool call):
 
 | JSON-RPC | Message | Meaning |
 |---|---|---|
-| `-32001` | `OpenViking MCP authentication failed (HTTP 401\|403). Check ~/.openviking/ovcli.conf or OPENVIKING_API_KEY …` | Credentials; `data.serverMessage` carries the server text. `data.credentialPath` may name ov.conf even when the key came from ovcli.conf on older versions. |
-| `-32001` | `OpenViking MCP request failed. Check the configured URL (<mcpUrl>) …` | Transport: `data.cause` = `fetch failed` (refused/DNS/TLS), `This operation was aborted` (timeout), a JSON `SyntaxError` (garbage SSE body). The url in the message is the one actually used. |
-| `-32002` | `OpenViking MCP upstream returned HTTP <n>.` | Any other status; HTML in `data.serverMessage` means the url is not an OpenViking endpoint |
-| `-32003` | `OpenViking MCP upstream returned an empty response` | 2xx with blank/non-JSON body — captive portal or proxy interstitial |
+| `-32001` | `Business Data Platform MCP authentication failed (HTTP 401\|403). Check ~/.openviking/ovcli.conf or OPENVIKING_API_KEY …` | Credentials; `data.serverMessage` carries the server text. `data.credentialPath` may name ov.conf even when the key came from ovcli.conf on older versions. |
+| `-32001` | `Business Data Platform MCP request failed. Check the configured URL (<mcpUrl>) …` | Transport: `data.cause` = `fetch failed` (refused/DNS/TLS), `This operation was aborted` (timeout), a JSON `SyntaxError` (garbage SSE body). The url in the message is the one actually used. |
+| `-32002` | `Business Data Platform MCP upstream returned HTTP <n>.` | Any other status; HTML in `data.serverMessage` means the url is not a Business Data Platform endpoint |
+| `-32003` | `Business Data Platform MCP upstream returned an empty response` | 2xx with blank/non-JSON body — captive portal or proxy interstitial |
 
 Hook log (`cc-hooks.log`) stages worth grepping: `health_check`
 (connectivity), `push_turns` / `capture_write` / `pending_enqueue` (capture),
@@ -170,11 +170,11 @@ Startup failures (printed by the server; exit 1 unless noted):
 
 | Text | Cause |
 |---|---|
-| `OpenViking configuration file not found.` | No ov.conf at any resolved path |
+| `Business Data Platform configuration file not found.` | No ov.conf at any resolved path |
 | `Unknown config field '…' in OpenVikingConfig` / `Extra inputs are not permitted` | Unknown key — including a top-level block named after any harness (`claude_code`, `codex`, `cursor`, `trae`, `trae_cn`, `zcode`, `opencode`, `dsh`, `pi`) and `server.url`, which only the plugins read |
 | `SECURITY: server.auth_mode='dev' requires server.host to be localhost` | Dev mode (no `auth_mode`, no `root_api_key`) on a non-loopback bind |
 | `Invalid server.root_api_key: empty string is not allowed` | `""` instead of `null` |
-| `Another OpenViking process is already using the data directory` | Two servers on one workspace (exit 3, `Application startup failed. Exiting.`) |
+| `Another Business Data Platform process is already using the data directory` | Two servers on one workspace (exit 3, `Application startup failed. Exiting.`) |
 | `EmbeddingRebuildRequiredError` / `embedding dimension (…) does not match current configuration` | Embedding model changed on an existing workspace (exit 3) |
 | `[Errno 48] / [Errno 98] Address already in use` | Port taken — `lsof -nP -iTCP:1933 -sTCP:LISTEN` |
 | `FATAL: AUTHENTICATION HEALTH CHECK FAILED` | OIDC/LDAP backend unreachable |
@@ -210,8 +210,8 @@ reports `unknown command`.
 | Every prompt is slow by ~10–30s | Local compressor spawns `claude -p` (`recallCompress: auto`) | log `host_compressor_*`; `state/host-cli-probe.json` | `OPENVIKING_RECALL_COMPRESS=off` or `server` |
 | `Stop` hook timeouts | Sync write path against a slow server | `writePathAsync` in doctor toggles | Keep `OPENVIKING_WRITE_PATH_ASYNC=1` |
 | curl works, plugin says offline | Corporate proxy or private CA; Node ignores both | doctor proxy/TLS hints; `node -e "fetch('<url>/health')"` | `NODE_USE_ENV_PROXY=1` / `NODE_EXTRA_CA_CERTS` in the launching environment |
-| Local `Write`/`Edit` denied with "viking:// URIs are OpenViking virtual paths" | Old uri-guard in a stale cache | `grep -c DEFAULT_CONTENT_KEYS <installPath>/scripts/shared/uri-guard.mjs` → 0 | Update the plugin |
-| Installer exits silently | Pre-2026-07 installer | No `OpenViking installer stopped unexpectedly.` line | Re-fetch the installer |
+| Local `Write`/`Edit` denied with "viking:// URIs are Business Data Platform virtual paths" | Old uri-guard in a stale cache | `grep -c DEFAULT_CONTENT_KEYS <installPath>/scripts/shared/uri-guard.mjs` → 0 | Update the plugin |
+| Installer exits silently | Pre-2026-07 installer | No `Business Data Platform installer stopped unexpectedly.` line | Re-fetch the installer |
 | Installer: `Unsupported OS` | Windows | — | Manual marketplace install |
 | `0 memories extracted` / commits never produce memories | VLM missing or failing, or embedding failing on the server | doctor `/ready: embedding`; ov.conf without a `vlm` section; server log `Backup VLM also failed` / `Credential … failed with auth` | Fix vlm/embedding in ov.conf, restart the server |
 | "server unreachable" right after editing ov.conf | The server exited at its restart because of the edit | doctor Server health lint; the startup text in the server's terminal | Fix the finding, start it again |

@@ -9,7 +9,7 @@ image:
   # Use Always for the default moving tag. Pin a version and set IfNotPresent if
   # you want Kubernetes to reuse cached immutable images.
   pullPolicy: Always
-  # Image tag to deploy. Defaults to the latest released OpenViking image.
+  # Image tag to deploy. Defaults to the latest released Business Data Platform image.
   # Set to "main" for the newest image from the main branch, a version such as
   # "v0.3.17" for a pinned release, or "" to use latest.
   tag: latest
@@ -73,16 +73,16 @@ persistence:
   size: 20Gi
   # Existing PVC name. If set, no new PVC is created.
   existingClaim: ""
-  # Mount path inside the container for OpenViking persistent state. The official
+  # Mount path inside the container for Business Data Platform persistent state. The official
   # Docker image expects ov.conf, ovcli.conf, and workspace data under this path.
   mountPath: /app/.openviking
 
 bot:
   # The Docker image can start vikingbot with the API server. Keep it disabled
-  # for Kubernetes by default so the chart exposes only the OpenViking API port.
+  # for Kubernetes by default so the chart exposes only the Business Data Platform API port.
   enabled: false
 
-# OpenViking server configuration (ov.conf).
+# Business Data Platform server configuration (ov.conf).
 # This is rendered into a ConfigMap and mounted at
 # ${persistence.mountPath}/ov.conf.
 config:

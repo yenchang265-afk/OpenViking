@@ -558,12 +558,12 @@ def main():
         "--timeout",
         type=int,
         default=300,
-        help="Per-question OpenViking client timeout in seconds, default: 300",
+        help="Per-question Business Data Platform client timeout in seconds, default: 300",
     )
     parser.add_argument(
         "--openviking-url",
         default=None,
-        help="OpenViking server URL, e.g. http://127.0.0.1:1934. Defaults to ovcli.conf.",
+        help="Business Data Platform server URL, e.g. http://127.0.0.1:1934. Defaults to ovcli.conf.",
     )
     parser.add_argument(
         "--answer-mode",

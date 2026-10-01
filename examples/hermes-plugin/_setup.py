@@ -1,4 +1,4 @@
-"""Interactive ``hermes memory setup`` wizard for the OpenViking provider.
+"""Interactive ``hermes memory setup`` wizard for the Business Data Platform provider.
 
 Pure UI flow: prompts, menus, and persistence of the chosen connection (Hermes
 ``.env`` only, or mirrored to an ``ovcli.conf.<name>`` profile that Hermes then
@@ -33,7 +33,7 @@ def _select_usage_profile(select, cancelled, provider_config: dict) -> str | obj
     default = 1 if provider_config.get("recall_scope") == "shared" else 0
     while True:
         choice = select(
-            "  OpenViking usage profile",
+            "  Business Data Platform usage profile",
             [("Personal Agent", "recall common and sender memory; keep sessions"),
              ("Shared Agent", "share history and recall all senders")],
             default=default, cancel_returns=cancelled,
@@ -51,7 +51,7 @@ def _select_usage_profile(select, cancelled, provider_config: dict) -> str | obj
             "  Participants share conversation history within each group or thread.\n"
             "  Different groups keep separate conversation histories.\n"
             "  Recall includes common memory and all senders under this\n"
-            "  OpenViking user, across chats."
+            "  Business Data Platform user, across chats."
         )
         print(description, flush=True)  # Also visible with Hermes's numbered fallback.
         confirm = curses_radiolist(
@@ -76,7 +76,7 @@ def _apply_usage_profile(config: dict, provider_config: dict, profile: str) -> N
         config["group_sessions_per_user"] = False
         config["thread_sessions_per_user"] = False
     else:
-        raise ValueError(f"Unknown OpenViking usage profile: {profile}")
+        raise ValueError(f"Unknown Business Data Platform usage profile: {profile}")
 
 
 def _retry_or_cancel_manual_setup(select, title: str, message: str, cancelled):
@@ -91,11 +91,11 @@ def _handle_unreachable_endpoint(endpoint: str, message: str, select, cancelled,
     ov = _ov()
     is_local = ov._is_local_openviking_url(endpoint)
     if not (is_local and allow_local_autostart):
-        title = "  OpenViking server unhealthy" if is_local else "  OpenViking server unreachable"
+        title = "  Business Data Platform server unhealthy" if is_local else "  Business Data Platform server unreachable"
         return _retry_or_cancel_manual_setup(select, title, message, cancelled)
     _say(message)
-    choice = select("  Local OpenViking server is down",
-                    [("Start local OpenViking", "run openviking-server and retry"), ("Retry URL", "enter the server URL again"), _CANCEL_OPTION],
+    choice = select("  Local Business Data Platform server is down",
+                    [("Start local Business Data Platform", "run openviking-server and retry"), ("Retry URL", "enter the server URL again"), _CANCEL_OPTION],
                     default=0, cancel_returns=cancelled)
     if choice == 1:
         return False
@@ -105,22 +105,22 @@ def _handle_unreachable_endpoint(endpoint: str, message: str, select, cancelled,
     _say(start_message)
     if start_state != ov._LOCAL_SERVER_STARTED:
         return False
-    _say("Waiting for OpenViking server to become reachable...")
+    _say("Waiting for Business Data Platform server to become reachable...")
     if ov._wait_for_openviking_health(endpoint, timeout_seconds=ov._LOCAL_OPENVIKING_AUTOSTART_TIMEOUT):
-        _say("OpenViking server is reachable.")
+        _say("Business Data Platform server is reachable.")
         return True
-    _say("OpenViking server did not become reachable.")
+    _say("Business Data Platform server did not become reachable.")
     return False
 
 
 def _prompt_profile_name(prompt, select, cancelled) -> str | object:
     ov = _ov()
     while True:
-        name = ov._clean_config_value(prompt("OpenViking profile name"))
+        name = ov._clean_config_value(prompt("Business Data Platform profile name"))
         if ov._is_valid_ovcli_profile_name(name):
             return name
         if _retry_or_cancel_manual_setup(
-            select, "  Invalid OpenViking profile name",
+            select, "  Invalid Business Data Platform profile name",
             "Profile names can only contain letters, numbers, '-' and '_'.", cancelled,
         ) is _SETUP_CANCELLED:
             return _SETUP_CANCELLED
@@ -137,8 +137,8 @@ def _confirm_replace_existing_profile(path: Path, values: dict, select, cancelle
         existing_data = {}
     if existing_data == ov._ovcli_data_from_connection_values(values):
         return True
-    choice = select("  OpenViking profile already exists",
-                    [("Choose another name", "leave the existing profile unchanged"), ("Replace profile", "overwrite this saved OpenViking profile"), _CANCEL_OPTION],
+    choice = select("  Business Data Platform profile already exists",
+                    [("Choose another name", "leave the existing profile unchanged"), ("Replace profile", "overwrite this saved Business Data Platform profile"), _CANCEL_OPTION],
                     default=0, cancel_returns=cancelled)
     return {1: True, 0: False}.get(choice, _SETUP_CANCELLED)
 
@@ -148,15 +148,15 @@ def _prompt_endpoint(prompt, select, cancelled) -> str | object:
     ov = _ov()
     while True:
         try:
-            endpoint = ov._normalize_openviking_url(prompt("OpenViking server URL", default=ov._DEFAULT_ENDPOINT))
+            endpoint = ov._normalize_openviking_url(prompt("Business Data Platform server URL", default=ov._DEFAULT_ENDPOINT))
         except ov._OpenVikingEndpointError as exc:
-            if _retry_or_cancel_manual_setup(select, "  Invalid OpenViking endpoint", str(exc), cancelled) is _SETUP_CANCELLED:
+            if _retry_or_cancel_manual_setup(select, "  Invalid Business Data Platform endpoint", str(exc), cancelled) is _SETUP_CANCELLED:
                 return _SETUP_CANCELLED
             continue
-        _say("Checking OpenViking server...")
+        _say("Checking Business Data Platform server...")
         reachable, message = ov._validate_openviking_reachability(endpoint)
         if reachable:
-            _say("OpenViking server is reachable.")
+            _say("Business Data Platform server is reachable.")
             return endpoint
         retry = _handle_unreachable_endpoint(endpoint, message, select, cancelled,
                                              allow_local_autostart=not (message or "").startswith(ov._OPENVIKING_RESPONDED_FAILURE_PREFIX))
@@ -168,9 +168,9 @@ def _prompt_endpoint(prompt, select, cancelled) -> str | object:
 
 # When the entered key turns out to have the other role: (note, menu title, switch option, re-enter label).
 _REROUTE = {
-    "root": ("That key is valid, but it is a user API key.", "  OpenViking key is a user key",
+    "root": ("That key is valid, but it is a user API key.", "  Business Data Platform key is a user key",
              ("Use as User API key", "server derives account/user automatically"), "Root API key"),
-    "user": ("That key is valid, but it has root access.", "  OpenViking user API key is root key",
+    "user": ("That key is valid, but it has root access.", "  Business Data Platform user API key is root key",
              ("Configure as Root API key", "provide account and user IDs"), "User API key"),
 }
 
@@ -185,7 +185,7 @@ def _prompt_manual_connection_values(prompt, select, cancelled, *, service: bool
     ov = _ov()
     if service:
         endpoint = ov._OPENVIKING_SERVICE_ENDPOINT
-        _say(f"OpenViking Service endpoint: {endpoint}")
+        _say(f"Business Data Platform Service endpoint: {endpoint}")
     else:
         endpoint = _prompt_endpoint(prompt, select, cancelled)
         if endpoint is _SETUP_CANCELLED:
@@ -222,62 +222,62 @@ def _prompt_manual_connection_values(prompt, select, cancelled, *, service: bool
                 ]
                 if is_local:
                     options.append(("No API key", "only for explicitly unauthenticated local development"))
-                credential_choice = select("  OpenViking credential" if is_local else "  OpenViking API key type", options, default=0, cancel_returns=cancelled)
+                credential_choice = select("  Business Data Platform credential" if is_local else "  Business Data Platform API key type", options, default=0, cancel_returns=cancelled)
                 if credential_choice == cancelled:
                     raise _Cancelled
                 if is_local and credential_choice == 2:
-                    _say("Validating OpenViking local dev access...")
+                    _say("Validating Business Data Platform local dev access...")
                     valid, message, _role = ov._validate_openviking_setup_values(values)
                     if valid:
-                        _say("OpenViking local dev access validated.")
+                        _say("Business Data Platform local dev access validated.")
                         return values
-                    retry("  OpenViking credential failed", message)
+                    retry("  Business Data Platform credential failed", message)
                     continue
                 api_key_type = "root" if credential_choice == 1 else "user"
 
             values["api_key_type"] = api_key_type
-            api_key_label = "OpenViking API key" if service else f"OpenViking {api_key_type} API key"
+            api_key_label = "Business Data Platform API key" if service else f"Business Data Platform {api_key_type} API key"
             if prefilled_api_key:
                 values["api_key"], prefilled_api_key = prefilled_api_key, ""
             else:
                 values["api_key"] = ov._clean_config_value(prompt(api_key_label, secret=True))
             if not values["api_key"]:
-                retry("  OpenViking API key required", f"{api_key_label} is required.")
+                retry("  Business Data Platform API key required", f"{api_key_label} is required.")
                 continue
 
             if api_key_type == "root":
-                _say("Validating OpenViking root API key...")
+                _say("Validating Business Data Platform root API key...")
                 valid, message, role = ov._validate_openviking_setup_values(values, require_api_key=True)
                 if valid and role == "user":
                     reroute("root")
                     continue
                 if not (valid and role == "root"):
-                    retry("  OpenViking root API key failed", message)
+                    retry("  Business Data Platform root API key failed", message)
                     continue
-                _say("OpenViking root API key validated.")
+                _say("Business Data Platform root API key validated.")
                 values["root_api_key"] = values["api_key"]
                 identity_errors = []
-                for field, label in (("account", "OpenViking account"), ("user", "OpenViking user")):
+                for field, label in (("account", "Business Data Platform account"), ("user", "Business Data Platform user")):
                     ok, error, values[field] = ov._validate_openviking_identity_value(prompt(label), field=field)
                     if not ok:
                         identity_errors.append(error)
                 if identity_errors:
-                    retry("  OpenViking tenant identity required", identity_errors[0])
+                    retry("  Business Data Platform tenant identity required", identity_errors[0])
                     prefilled_api_key = values["api_key"]
                     continue
 
-            _say("Validating OpenViking API access...")
+            _say("Validating Business Data Platform API access...")
             valid, message, role = ov._validate_openviking_setup_values(values, require_api_key=service or not is_local)
             if not valid:
-                retry("  OpenViking API access failed", message)
+                retry("  Business Data Platform API access failed", message)
                 continue
             if api_key_type == "user" and role == "root":
                 reroute("user")
                 continue
             if api_key_type == "root" and role != "root":
-                retry("  OpenViking root API key failed", "The supplied key was not accepted as a root API key.")
+                retry("  Business Data Platform root API key failed", "The supplied key was not accepted as a root API key.")
                 continue
-            _say("OpenViking API access validated.")
+            _say("Business Data Platform API access validated.")
             return values
     except _Cancelled:
         return _SETUP_CANCELLED
@@ -323,7 +323,7 @@ def _profile_display_name(profile) -> str:
 
 
 def _print_openviking_ready(message: str, path: Optional[Path] = None) -> None:
-    print("\n  OpenViking memory is ready")
+    print("\n  Business Data Platform memory is ready")
     _say(message)
     if path is not None:
         _say(f"Config file: {path}")
@@ -334,7 +334,7 @@ def _run_existing_profile_setup(*, profiles: list, select, cancelled, config: di
     ov = _ov()
     while True:
         choice = select(
-            "  OpenViking profile",
+            "  Business Data Platform profile",
             [(_profile_display_name(p), f"{ov._clean_config_value(p.values.get('endpoint')) or ov._DEFAULT_ENDPOINT} ({p.path})") for p in profiles],
             default=0, cancel_returns=cancelled,
         )
@@ -343,7 +343,7 @@ def _run_existing_profile_setup(*, profiles: list, select, cancelled, config: di
         profile = profiles[choice]
 
         for attempt in (0, 1):
-            _say("Validating OpenViking profile...")
+            _say("Validating Business Data Platform profile...")
             require_api_key = not ov._is_local_openviking_url(profile.values.get("endpoint", ""))
             ok, message, _role = ov._validate_openviking_setup_values(profile.values, require_api_key=require_api_key)
             if ok:
@@ -353,8 +353,8 @@ def _run_existing_profile_setup(*, profiles: list, select, cancelled, config: di
             _say(message)
             if attempt == 1:
                 break  # second failure returns to the profile picker
-            retry = select("  OpenViking profile validation failed",
-                           [("Choose another profile", "select a different OpenViking profile"), ("Retry validation", "try this profile again"), _CANCEL_OPTION],
+            retry = select("  Business Data Platform profile validation failed",
+                           [("Choose another profile", "select a different Business Data Platform profile"), ("Retry validation", "try this profile again"), _CANCEL_OPTION],
                            default=0, cancel_returns=cancelled)
             if retry == 0:
                 break
@@ -383,9 +383,9 @@ def _mirror_manual_config_to_openviking_store(*, prompt, select, cancelled, valu
 
 
 def _run_create_profile_setup(*, prompt, select, cancelled, config: dict, provider_config: dict, env_path: Path) -> bool | object:
-    source_choice = select("  OpenViking connection",
-                           [("OpenViking Service (VolcEngine Cloud)", "use the managed OpenViking endpoint"),
-                            ("Custom", "use a local, VPS, or self-hosted OpenViking server")],
+    source_choice = select("  Business Data Platform connection",
+                           [("Business Data Platform Service (VolcEngine Cloud)", "use the managed Business Data Platform endpoint"),
+                            ("Custom", "use a local, VPS, or self-hosted Business Data Platform server")],
                            default=0, cancel_returns=cancelled)
     if source_choice == cancelled:
         return _SETUP_CANCELLED
@@ -396,9 +396,9 @@ def _run_create_profile_setup(*, prompt, select, cancelled, config: dict, provid
     if values is None:
         return False
 
-    save_choice = select("  Save OpenViking config",
+    save_choice = select("  Save Business Data Platform config",
                          [("Keep in Hermes only", "write values only to Hermes .env"),
-                          ("Mirror to OpenViking store", "write ~/.openviking/ovcli.conf.<name> and link it")],
+                          ("Mirror to Business Data Platform store", "write ~/.openviking/ovcli.conf.<name> and link it")],
                          default=1, cancel_returns=cancelled)
     if save_choice == cancelled:
         return _SETUP_CANCELLED
@@ -408,7 +408,7 @@ def _run_create_profile_setup(*, prompt, select, cancelled, config: dict, provid
         if ovcli_path is _SETUP_CANCELLED:
             return _SETUP_CANCELLED
         _link_ovcli_profile(config=config, provider_config=provider_config, env_path=env_path, ovcli_path=ovcli_path)
-        _print_openviking_ready("Created and linked OpenViking profile.", ovcli_path)
+        _print_openviking_ready("Created and linked Business Data Platform profile.", ovcli_path)
         return True
 
     _save_hermes_only_config(config=config, provider_config=provider_config, env_path=env_path, values=values)
@@ -425,7 +425,7 @@ def run_setup(hermes_home: str, config: dict) -> None:
     memory_config = config.get("memory")
     provider_config = memory_config.get("openviking", {}) if isinstance(memory_config, dict) else {}
     provider_config = provider_config if isinstance(provider_config, dict) else {}
-    print("\n  OpenViking memory setup\n")
+    print("\n  Business Data Platform memory setup\n")
     usage_profile = _select_usage_profile(_curses_select, _CANCELLED, provider_config)
     if usage_profile is _SETUP_CANCELLED:
         _print_cancelled_setup()
@@ -436,9 +436,9 @@ def run_setup(hermes_home: str, config: dict) -> None:
 
     profiles = _ov()._discover_ovcli_profiles()
     if profiles:
-        choice = _curses_select("  OpenViking config source",
-                                [("Use existing OpenViking profile", "choose from detected ovcli.conf profiles"),
-                                 ("Create new OpenViking profile", "enter a new URL/API key")],
+        choice = _curses_select("  Business Data Platform config source",
+                                [("Use existing Business Data Platform profile", "choose from detected ovcli.conf profiles"),
+                                 ("Create new Business Data Platform profile", "enter a new URL/API key")],
                                 default=0, cancel_returns=_CANCELLED)
         if choice == _CANCELLED:
             _print_cancelled_setup()
@@ -448,7 +448,7 @@ def run_setup(hermes_home: str, config: dict) -> None:
         else:
             result = _run_create_profile_setup(prompt=_prompt, **common)
     else:
-        _say("No existing OpenViking CLI profiles found. Creating a new config.")
+        _say("No existing Business Data Platform CLI profiles found. Creating a new config.")
         result = _run_create_profile_setup(prompt=_prompt, **common)
     if result is _SETUP_CANCELLED:
         _print_cancelled_setup()

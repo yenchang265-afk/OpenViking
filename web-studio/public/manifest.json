@@ -1,7 +1,7 @@
 {
-  "short_name": "OpenViking",
-  "name": "OpenViking Studio",
-  "description": "OpenViking Studio — agent-native context database UI",
+  "short_name": "Business Data Platform",
+  "name": "Business Data Platform Studio",
+  "description": "Business Data Platform Studio — agent-native context database UI",
   "icons": [
     {
       "src": "favicon-32.png",

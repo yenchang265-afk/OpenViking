@@ -1,6 +1,6 @@
 # 系统状态
 
-OpenViking 系统 API 提供健康检查、就绪检查、一致性检查和多写后端同步状态。组件级观测和 Prometheus 指标分别提供独立文档。
+Business Data Platform 系统 API 提供健康检查、就绪检查、一致性检查和多写后端同步状态。组件级观测和 Prometheus 指标分别提供独立文档。
 
 ## API 参考
 
@@ -27,7 +27,7 @@ Trusted 模式下，完整的 `X-OpenViking-Account` 和 `X-OpenViking-User` 请
 | profile | string | 否 | - | 传 `1`、`true`、`yes` 或 `on` 时，为本次请求开启 `cProfile`，并在 JSON 响应里追加 `profile` 字段 |
 
 **profile 行为说明**:
-- `profile` 是 HTTP middleware 级能力，对任意返回 JSON 的 OpenViking 接口都生效，不限于 `/health`。
+- `profile` 是 HTTP middleware 级能力，对任意返回 JSON 的 Business Data Platform 接口都生效，不限于 `/health`。
 - 仅当服务端在 `ov.conf` 中开启 `server.profile_enabled = true` 时，请求里的 `profile=1` 才会生效；否则服务端会忽略该参数。
 - `profile` 仅对当前请求生效，请求结束后自动关闭；后续请求默认不会继承这次 profile 状态。
 - 仅 JSON 响应会追加 `profile` 字段；纯文本、文件、流式响应不会被改写。

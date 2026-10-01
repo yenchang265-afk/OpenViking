@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-RAG Evaluation CLI Tool for OpenViking.
+RAG Evaluation CLI Tool for Business Data Platform.
 
 Usage:
     python -m openviking.eval.rag_eval --docs_dir ./docs --question_file ./questions.jsonl
@@ -57,7 +57,7 @@ def load_questions(question_file: str) -> List[Dict[str, Any]]:
 
 class RAGEvaluator:
     """
-    RAG evaluator that uses OpenViking for retrieval and evaluation.
+    RAG evaluator that uses Business Data Platform for retrieval and evaluation.
     """
 
     def __init__(
@@ -73,8 +73,8 @@ class RAGEvaluator:
         Args:
             docs_dirs: List of document directories or files
             code_dirs: List of code repository paths
-            config_path: Path to OpenViking config file
-            server_url: OpenViking HTTP server URL
+            config_path: Path to Business Data Platform config file
+            server_url: Business Data Platform HTTP server URL
         """
         self.docs_dirs = docs_dirs
         self.code_dirs = code_dirs
@@ -84,7 +84,7 @@ class RAGEvaluator:
         self._initialized = False
 
     def _get_client(self):
-        """Get or create OpenViking client."""
+        """Get or create Business Data Platform client."""
         if self._client is None:
             try:
                 from openviking_sdk import SyncHTTPClient
@@ -97,7 +97,7 @@ class RAGEvaluator:
                 self._client = SyncHTTPClient(url=self.server_url)
                 self._client.initialize()
             except Exception as e:
-                logger.error(f"Failed to create OpenViking client: {e}")
+                logger.error(f"Failed to create Business Data Platform client: {e}")
                 raise
         return self._client
 
@@ -378,7 +378,7 @@ async def main_async(args):
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="RAG Evaluation Tool for OpenViking",
+        description="RAG Evaluation Tool for Business Data Platform",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -416,13 +416,13 @@ Examples:
     parser.add_argument(
         "--config",
         default="./ov.conf",
-        help="Path to OpenViking config file (default: ./ov.conf)",
+        help="Path to Business Data Platform config file (default: ./ov.conf)",
     )
 
     parser.add_argument(
         "--url",
         default="http://127.0.0.1:1933",
-        help="OpenViking server URL (default: http://127.0.0.1:1933)",
+        help="Business Data Platform server URL (default: http://127.0.0.1:1933)",
     )
 
     parser.add_argument(

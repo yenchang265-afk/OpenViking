@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Unified context class for OpenViking."""
+"""Unified context class for Business Data Platform."""
 
 from datetime import datetime, timezone
 from enum import Enum
@@ -57,7 +57,7 @@ class Vectorize:
 
 class Context:
     """
-    Unified context class for all context types in OpenViking.
+    Unified context class for all context types in Business Data Platform.
     """
 
     def __init__(

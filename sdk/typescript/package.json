@@ -1,7 +1,7 @@
 {
   "name": "@openviking/sdk",
   "version": "0.1.0",
-  "description": "Lightweight JavaScript and TypeScript HTTP SDK for OpenViking",
+  "description": "Lightweight JavaScript and TypeScript HTTP SDK for Business Data Platform",
   "license": "Apache-2.0",
   "repository": { "type": "git", "url": "git+https://github.com/volcengine/OpenViking.git", "directory": "sdk/typescript" },
   "publishConfig": { "access": "public" },

@@ -112,7 +112,7 @@ typedef struct {
 /*
  * Provider contract:
  *
- * - OpenViking consumes cache.params.library and passes the remaining fields
+ * - Business Data Platform consumes cache.params.library and passes the remaining fields
  *   to create as opaque JSON.
  * - Input slices and arrays are borrowed only for the duration of the callback.
  *   The provider must not retain their pointers after the callback returns.
@@ -130,7 +130,7 @@ typedef struct {
  *   be fully initialized. On any error status, normal outputs must remain in
  *   their zero representation and only the error buffer may be returned.
  * - The provider owns and must release all partially constructed output before
- *   returning an error. Once a successful output is returned, OpenViking owns
+ *   returning an error. Once a successful output is returned, Business Data Platform owns
  *   every allocation and releases it through the matching host allocator.
  * - host->alloc may reject unreasonable sizes or invalid alignments by
  *   returning NULL. The provider must handle allocation failure.
@@ -138,7 +138,7 @@ typedef struct {
  *   means that operation is unsupported.
  * - close is terminal and consumes the provider handle even when it returns an
  *   error status. It must stop and join provider-owned background work before
- *   returning. OpenViking never retries close and unloads the library only
+ *   returning. Business Data Platform never retries close and unloads the library only
  *   after close returns.
  */
 

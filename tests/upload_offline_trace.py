@@ -269,7 +269,7 @@ def main() -> int:
     parser.add_argument(
         "--config",
         default=None,
-        help="Optional ov.conf path for the upload environment. Defaults to OpenViking config lookup.",
+        help="Optional ov.conf path for the upload environment. Defaults to Business Data Platform config lookup.",
     )
     parser.add_argument(
         "--no-include-rotated",

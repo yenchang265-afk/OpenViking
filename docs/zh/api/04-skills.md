@@ -1,12 +1,12 @@
 # 技能
 
-技能是供智能体读取的任务指令与配套资源。OpenViking 负责存储、检索和管理技能；读取后的激活、工具权限与执行由使用它的 Agent/Harness 负责。本文以当前仓库的 HTTP API、SDK 和 `ov` CLI 实现为准。
+技能是供智能体读取的任务指令与配套资源。Business Data Platform 负责存储、检索和管理技能；读取后的激活、工具权限与执行由使用它的 Agent/Harness 负责。本文以当前仓库的 HTTP API、SDK 和 `ov` CLI 实现为准。
 
 ## 核心概念
 
 ### 技能类型
 
-OpenViking 支持多种技能定义格式：
+Business Data Platform 支持多种技能定义格式：
 
 1. **结构化技能数据**：包含 name、description、content 等字段的字典
 2. **SKILL.md 文件**：带有 YAML frontmatter 的 Markdown 文件
@@ -86,13 +86,13 @@ Concrete examples of skill invocation.
 |------|------|------|
 | allowed-tools | str / List[str] | 空格分隔的工具声明，也兼容字符串列表；括号内可含空格，由消费方解释和执行策略 |
 | tags | List[str] | 用于分类的标签 |
-| metadata | object | 原样保留的扩展字段，如 `metadata.vikingbot.requires`；OpenViking 不自动安装这些依赖 |
+| metadata | object | 原样保留的扩展字段，如 `metadata.vikingbot.requires`；Business Data Platform 不自动安装这些依赖 |
 
 `SKILL.md` 使用带连字符的 **`allowed-tools`**，解析后的结构化数据和 API 摘要使用 **`allowed_tools`**。不要在 frontmatter 中用下划线拼写替代它。未声明和显式空声明可能在 Harness 中有不同权限含义，摘要里的 `allowed_tools: []` 不能区分二者；执行前应读取完整 `SKILL.md`。正文与扩展字段的消费方式见 [VikingBot Skills](../../../bot/docs/zh/concepts/06-skills.md)。
 
 ### MCP 格式自动转换
 
-OpenViking 会自动检测并将 MCP Tool 定义转换为技能格式。
+Business Data Platform 会自动检测并将 MCP Tool 定义转换为技能格式。
 
 **检测规则**：如果字典包含 `inputSchema` 字段，则被视为 MCP 格式。
 
@@ -232,7 +232,7 @@ This tool wraps the MCP tool `search-web`. Call this when the user needs functio
 HTTP 字段和 SDK 参数并非同名同层级：Python `add_skill(data, wait=False, timeout=None, options=None)` / `update_skill(skill_name, data, ...)` 将 `target_uri`、`telemetry` 放在 `options` 中；`skills`、`list_only`、`source_metadata`（新增）及 `from_source`（更新）等字段放在 `options["extra"]` 中。TypeScript 使用 `targetUri` 和 `extra`，Go 使用 `TargetURI` 和 `Extra`。TypeScript 的本地路径自动上传仅适用于 Node.js。
 
 ```python
-# 预览本地集合；不写入 OpenViking
+# 预览本地集合；不写入 Business Data Platform
 listing = client.add_skill(
     "./skills",
     options={"extra": {"list_only": True}},
@@ -460,8 +460,8 @@ task_id         uuid-xxx
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `status` | string | 成功导入结果为 `success`；同步失败使用 HTTP 错误响应 |
-| `root_uri` | string | 技能在 OpenViking 中的 canonical 最终 URI（同 `uri`）|
-| `uri` | string | 技能在 OpenViking 中的 canonical 最终 URI（同 `root_uri`）|
+| `root_uri` | string | 技能在 Business Data Platform 中的 canonical 最终 URI（同 `uri`）|
+| `uri` | string | 技能在 Business Data Platform 中的 canonical 最终 URI（同 `root_uri`）|
 | `name` | string | 技能名称 |
 | `auxiliary_files` | number | 技能附带的辅助文件数量 |
 | `task_id` | string | 默认异步模式下返回的后台处理任务 ID；通过任务 API 查询最终状态 |

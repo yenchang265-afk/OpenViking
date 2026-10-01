@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenViking 记忆演示脚本 — 工具调用和Skill调用记忆测试
+Business Data Platform 记忆演示脚本 — 工具调用和Skill调用记忆测试
 
 测试 assistant 调用工具和使用 skill 的记忆是否被正确提取和召回
 """
@@ -335,7 +335,7 @@ def run_verify(client: ov.SyncHTTPClient):
 
 def main():
     """入口函数"""
-    parser = argparse.ArgumentParser(description="OpenViking 记忆演示 — 工具调用和Skill调用")
+    parser = argparse.ArgumentParser(description="Business Data Platform 记忆演示 — 工具调用和Skill调用")
     parser.add_argument("--url", default=DEFAULT_URL, help=f"Server URL (默认: {DEFAULT_URL})")
     parser.add_argument("--api-key", default=DEFAULT_API_KEY, help=API_KEY_HELP)
     parser.add_argument(

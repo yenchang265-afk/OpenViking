@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Dependency injection for OpenViking HTTP Server."""
+"""Dependency injection for Business Data Platform HTTP Server."""
 
 from typing import TYPE_CHECKING, Optional
 

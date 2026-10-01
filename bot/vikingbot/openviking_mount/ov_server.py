@@ -58,7 +58,7 @@ class VikingClient:
         openviking_config = config.ov_server
         self.openviking_config = openviking_config
         if not str(getattr(openviking_config, "server_url", "") or "").strip():
-            raise RuntimeError("OpenViking is unavailable in VikingBot standalone mode")
+            raise RuntimeError("Business Data Platform is unavailable in VikingBot standalone mode")
         self.workspace_id = agent_id
         self.agent_id = agent_id
         self.ov_path = config.ov_data_path
@@ -310,7 +310,7 @@ class VikingClient:
         return user_id or self.admin_user_id
 
     def session_owner_user_id(self) -> Optional[str]:
-        """Return the explicit OpenViking user for session operations, when needed."""
+        """Return the explicit Business Data Platform user for session operations, when needed."""
         return self._effective_session_user_id()
 
     @staticmethod
@@ -1273,7 +1273,7 @@ class VikingClient:
             **retention_kwargs,
         )
         logger.debug(
-            f"Committed OpenViking session {session_id}, "
+            f"Committed Business Data Platform session {session_id}, "
             f"api_key_type={self.api_key_type}, appended={appended.get('added', 0)}"
         )
         return {

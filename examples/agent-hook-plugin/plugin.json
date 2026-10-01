@@ -1,9 +1,9 @@
 {
   "name": "agent-hook-plugin",
   "version": "0.5.0",
-  "description": "Long-term semantic memory for Cursor, TRAE, TRAE CN, ZCode and Kimi Code — powered by OpenViking. Auto-recall relevant memories and capture the conversation as it happens.",
+  "description": "Long-term semantic memory for Cursor, TRAE, TRAE CN, ZCode and Kimi Code — powered by Business Data Platform. Auto-recall relevant memories and capture the conversation as it happens.",
   "author": {
-    "name": "OpenViking",
+    "name": "Business Data Platform",
     "url": "https://github.com/volcengine/OpenViking"
   },
   "repository": "https://github.com/volcengine/OpenViking",

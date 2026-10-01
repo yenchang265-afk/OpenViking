@@ -1,6 +1,6 @@
 # Context Types
 
-Based on a simplified mapping of human cognitive patterns and engineering considerations, OpenViking abstracts context into **three basic types: Resource, Memory, and Skill**, each serving different purposes in Agent applications.
+Based on a simplified mapping of human cognitive patterns and engineering considerations, Business Data Platform abstracts context into **three basic types: Resource, Memory, and Skill**, each serving different purposes in Agent applications.
 
 ## Overview
 

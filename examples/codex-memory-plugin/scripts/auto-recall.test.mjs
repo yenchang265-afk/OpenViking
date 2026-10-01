@@ -191,7 +191,7 @@ async function runEndpointCompressionCase({
   }
 }
 
-test("auto-recall asks the context face with the derived OpenViking session id", async () => {
+test("auto-recall asks the context face with the derived Business Data Platform session id", async () => {
   const stateDir = await mkdtemp(join(tmpdir(), "ov-auto-recall-state-"));
   const requests = [];
 
@@ -499,7 +499,7 @@ test("auto-recall repairs a mangled viking:// URI in the compressed digest", asy
     },
     rendered: "<memory_group>Use Vim</memory_group>",
     compressorOutput: [
-      "OpenViking memory digest:",
+      "Business Data Platform memory digest:",
       "- [preferences] Use Vim (viking://user/zeus/memories/preference/edtior.md)",
     ].join("\n"),
     extraEnv: { OPENVIKING_RECALL_COMPRESS_MIN_INPUT_CHARS: "0" },

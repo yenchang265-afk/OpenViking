@@ -7,7 +7,7 @@
  * last_assistant_message. Stop fires per turn — NOT at session end.
  *
  * Strategy:
- *   1. For this codex session_id, derive one long-lived OpenViking session
+ *   1. For this codex session_id, derive one long-lived Business Data Platform session
  *      id (`cx-<codex-session-id>`) and remember it in state.
  *   2. Read transcript_path, parse JSONL rollout, append every new
  *      user/assistant turn since last capture via add_message.
@@ -130,7 +130,7 @@ async function capture(sessionId, transcriptPath, cwd, heartbeat) {
   await saveState(state);
 
   if (added <= 0) return "";
-  return `appended ${added} turn(s) to OpenViking session ${state.ovSessionId}` +
+  return `appended ${added} turn(s) to Business Data Platform session ${state.ovSessionId}` +
     (commitInfo.committed
       ? ` (committed${commitInfo.traceId ? `; trace_id=${commitInfo.traceId}` : ""})`
       : "");

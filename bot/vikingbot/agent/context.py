@@ -112,7 +112,7 @@ class ContextBuilder:
 
         Args:
             session_key: Session key for the context.
-            ov_tools_enable: Whether to enable OpenViking tools and memory.
+            ov_tools_enable: Whether to enable Business Data Platform tools and memory.
             profile_user_list: Deprecated list of additional peer IDs to fetch profiles for.
             memory_peer_ids: Peer IDs used for memory retrieval; profiles are fetched too.
             memory_owner_user_ids: Deprecated owner-user IDs used for trusted-mode lookup.
@@ -172,7 +172,7 @@ Read local SKILL.md files with the read_file tool.
 {skills_summary}"""
             remote_section = ""
             if self._remote_skills_summary:
-                remote_section = f"""## OpenViking Skills
+                remote_section = f"""## Business Data Platform Skills
 
 These are remote Skill summaries. Read a selected SKILL.md with openviking_multi_read.
 Do not use read_file for their viking:// locations. Text references stay remote; the
@@ -190,7 +190,7 @@ The following local and remote Skills extend your capabilities.
 {remote_section}""")
 
         # Viking peer profile (only if ov tools are enabled). In the current
-        # OpenViking identity model, the bot API key owns the User, and the
+        # Business Data Platform identity model, the bot API key owns the User, and the
         # message sender is represented as a peer under that User.
         if ov_tools_enable:
             # Fetch the authenticated actor's peer profile.
@@ -267,7 +267,7 @@ The following local and remote Skills extend your capabilities.
 
         if ov_tools_enable:
             start = _time.time()
-            # Default recall runs under the configured/request OpenViking user.
+            # Default recall runs under the configured/request Business Data Platform user.
             # actor_peer_id is passed separately as peer identity.
             search_peer_ids = memory_peer_ids if memory_peer_ids else None
             viking_memory = await self.memory.get_viking_memory_context(
@@ -289,7 +289,7 @@ The following local and remote Skills extend your capabilities.
                 parts.append(f"## openviking_search(query=[user_query])\n{viking_memory}")
 
             parts.append(
-                "## OpenViking Memory Retrieval\n"
+                "## Business Data Platform Memory Retrieval\n"
                 "- For questions about the user's remembered facts, preferences, profile, or personal context, use openviking_search for the current question before saying there is no relevant record.\n"
                 "- A previous empty search result does not prove that a different follow-up question has no memory; search again when the requested fact changes.\n"
                 "- Injected memories are grouped by memory_type: events contain atomic time-based facts; entities contain stable topic/entity facts; preferences contain likes, habits, and recurring tendencies.\n"
@@ -317,7 +317,7 @@ The following local and remote Skills extend your capabilities.
             workspace_display = workspace_path
 
         capabilities = [
-            "- Read, search, and grep OpenViking files",
+            "- Read, search, and grep Business Data Platform files",
             "- Read, write, and edit local files",
             "- Execute shell commands",
             "- Search the web and fetch web pages",
@@ -329,8 +329,8 @@ The following local and remote Skills extend your capabilities.
 
         return f"""# vikingbot 🐈
 
-You are VikingBot, an AI assistant built based on the OpenViking context database.
-When acquiring information, data, and knowledge, you **prioritize using openviking tools to read and search OpenViking (a context database) above all other sources**.
+You are VikingBot, an AI assistant built based on the Business Data Platform context database.
+When acquiring information, data, and knowledge, you **prioritize using openviking tools to read and search Business Data Platform (a context database) above all other sources**.
 You have access to tools that allow you to:
 {capabilities_text}
 
@@ -340,7 +340,7 @@ You have access to tools that allow you to:
 ## Workspace
 You have two workspaces:
 1. Local workspace: {workspace_display}
-2. OpenViking workspace: managed via OpenViking tools
+2. Business Data Platform workspace: managed via Business Data Platform tools
 - Custom skills: {workspace_display}/skills/{{skill-name}}/SKILL.md
 
 IMPORTANT:
@@ -386,12 +386,12 @@ IMPORTANT:
             current_message: The new user message.
             media: Optional list of local file paths for images/media.
             session_key: Optional session key.
-            ov_tools_enable: Whether to enable OpenViking tools and memory.
+            ov_tools_enable: Whether to enable Business Data Platform tools and memory.
             profile_user_list: Deprecated list of additional peer IDs to fetch profiles for.
             memory_peer_ids: Optional list of peer IDs to fetch memory for.
             memory_owner_user_ids: Deprecated legacy owner-user IDs used for root-key fanout.
             experience_recall_enable: Whether automatic experience recall may run independently
-                from exposing OpenViking tools. Defaults to ov_tools_enable.
+                from exposing Business Data Platform tools. Defaults to ov_tools_enable.
             exp_exclude_uris: Optional list of experience URIs that have already been recalled
                 in this session and should be skipped (deduplication).
 

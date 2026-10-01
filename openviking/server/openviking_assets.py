@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Server-side parsing and validation for OpenViking Assets manifests."""
+"""Server-side parsing and validation for Business Data Platform Assets manifests."""
 
 from __future__ import annotations
 
@@ -350,7 +350,7 @@ async def preflight_git_repository(
             start_new_session=os.name == "posix",
         )
     except FileNotFoundError as exc:
-        raise UnavailableError("git", "executable not found on the OpenViking Server") from exc
+        raise UnavailableError("git", "executable not found on the Business Data Platform Server") from exc
 
     try:
         _stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)

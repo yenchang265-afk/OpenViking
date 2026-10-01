@@ -55,7 +55,7 @@ test("marketplace package ships the canonical Experience skill", () => {
   );
 });
 
-test("marketplace package ships the canonical OpenViking skills skill", () => {
+test("marketplace package ships the canonical Business Data Platform skills skill", () => {
   const packaged = join(pluginDir, "skills", "openviking-skills", "SKILL.md");
   assert.ok(existsSync(packaged), "Claude plugin must package the openviking-skills skill");
   assert.equal(

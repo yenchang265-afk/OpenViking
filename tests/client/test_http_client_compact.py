@@ -1,6 +1,6 @@
 """Unit tests for request-body compaction on find/search/add_resource.
 
-Older OpenViking instances use ``model_config = ConfigDict(extra="forbid")`` and
+Older Business Data Platform instances use ``model_config = ConfigDict(extra="forbid")`` and
 reject any field they do not yet define. The SDK must not attach optional fields
 as ``null``/``{}`` when the caller never set them, otherwise the whole request
 fails with ``body.<field>: Extra inputs are not permitted`` (see PR #2799 for the

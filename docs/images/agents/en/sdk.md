@@ -1,6 +1,6 @@
-## Step 1: Install OpenViking
+## Step 1: Install Business Data Platform
 
-Run the following command to install OpenViking:
+Run the following command to install Business Data Platform:
 
 ```bash
 pip install openviking --upgrade --force-reinstall

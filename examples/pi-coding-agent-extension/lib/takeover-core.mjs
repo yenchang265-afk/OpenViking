@@ -1,5 +1,5 @@
 export const TAKEOVER_ENTRY_TYPE = "ov-takeover";
-export const OVERVIEW_MARKER = "[OpenViking Session Context]";
+export const OVERVIEW_MARKER = "[Business Data Platform Session Context]";
 
 const DEFAULT_CONFIG = {
   takeoverEnabled: true,
@@ -144,7 +144,7 @@ export function buildOverviewMessage(overview, firstKeptTs = 0, budget = DEFAULT
   return {
     role: "user",
     content:
-      `${OVERVIEW_MARKER} Earlier conversation was archived to OpenViking and summarized below. ` +
+      `${OVERVIEW_MARKER} Earlier conversation was archived to Business Data Platform and summarized below. ` +
       `Use openviking_search for details.\n\n${body}`,
     timestamp,
   };

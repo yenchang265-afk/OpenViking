@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""FastAPI app exposing OpenViking endpoints as OpenWebUI tools."""
+"""FastAPI app exposing Business Data Platform endpoints as OpenWebUI tools."""
 
 from __future__ import annotations
 
@@ -29,10 +29,10 @@ def create_app(settings: Optional[Settings] = None) -> FastAPI:
             await client.aclose()
 
     app = FastAPI(
-        title="OpenViking OpenWebUI Tools",
+        title="Business Data Platform OpenWebUI Tools",
         version="0.1.0",
         description=(
-            "OpenAPI tool server that fronts a curated set of OpenViking "
+            "OpenAPI tool server that fronts a curated set of Business Data Platform "
             "endpoints so OpenWebUI can call them as tools."
         ),
         lifespan=lifespan,

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Logging utilities for OpenViking.
+Logging utilities for Business Data Platform.
 """
 
 import atexit
@@ -920,7 +920,7 @@ default_logger = _LazyDefaultLogger()
 
 
 def reconfigure_logging() -> None:
-    """Re-apply logging configuration to already-created OpenViking loggers."""
+    """Re-apply logging configuration to already-created Business Data Platform loggers."""
     log_level_str, log_format, log_output, config = _load_log_config()
     level = getattr(logging, log_level_str, logging.INFO)
     handler = _get_shared_handler(log_output, config, log_format, force=True)
@@ -945,7 +945,7 @@ def reconfigure_logging() -> None:
 
 
 def configure_uvicorn_logging() -> None:
-    """Configure Uvicorn logging to use OpenViking's logging configuration.
+    """Configure Uvicorn logging to use Business Data Platform's logging configuration.
 
     Configures the 'uvicorn', 'uvicorn.error', and 'uvicorn.access' loggers
     to use the same handlers, format, and trace context injection as openviking logs.

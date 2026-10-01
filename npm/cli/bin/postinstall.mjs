@@ -82,7 +82,7 @@ function printPathDiagnostics() {
 
 process.stderr.write(`
   ╔═══════════════════════════════════════════════════╗
-  ║            OpenViking CLI installed               ║
+  ║            Business Data Platform CLI installed               ║
   ╚═══════════════════════════════════════════════════╝
 
   Installed package target: ${packageTarget}

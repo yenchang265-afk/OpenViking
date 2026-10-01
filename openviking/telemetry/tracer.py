@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""OpenTelemetry tracer integration for OpenViking."""
+"""OpenTelemetry tracer integration for Business Data Platform."""
 
 import functools
 import inspect

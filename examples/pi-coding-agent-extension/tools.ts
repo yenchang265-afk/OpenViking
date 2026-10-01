@@ -11,8 +11,8 @@ export function registerMcpTools(pi: any, bridge: McpBridge): string[] {
     const validate = validator.getValidator(tool.inputSchema);
     pi.registerTool({
       name,
-      label: "OpenViking " + tool.name,
-      description: tool.description?.trim() || tool.title || "OpenViking " + tool.name,
+      label: "Business Data Platform " + tool.name,
+      description: tool.description?.trim() || tool.title || "Business Data Platform " + tool.name,
       parameters: tool.inputSchema,
       // Validate before pi coerces values or drops optional null properties.
       prepareArguments(args: unknown) {

@@ -1,6 +1,6 @@
 # Operation Telemetry Reference
 
-Operation telemetry lets you ask OpenViking to return a compact summary of what happened during a request, such as duration, token usage, vector retrieval activity, queue progress, and resource-processing stages.
+Operation telemetry lets you ask Business Data Platform to return a compact summary of what happened during a request, such as duration, token usage, vector retrieval activity, queue progress, and resource-processing stages.
 
 Use it when you want to:
 
@@ -8,11 +8,11 @@ Use it when you want to:
 - inspect token or retrieval behavior
 - capture structured execution data in your own logs or observability pipeline
 
-For the broader observability entry points, including health checks, `ov tui`, and `OpenViking Console`, see [Observability & Diagnostics](05-observability.md).
+For the broader observability entry points, including health checks, `ov tui`, and `Business Data Platform Console`, see [Observability & Diagnostics](05-observability.md).
 
 ## How it works
 
-Telemetry is opt-in. OpenViking only returns a top-level `telemetry` object when you request it.
+Telemetry is opt-in. Business Data Platform only returns a top-level `telemetry` object when you request it.
 
 Typical response shape:
 
@@ -189,7 +189,7 @@ coalesced into the bounded `other` bucket.
 | `summary.vector.cuvs.dtypes.<dtype>` | Search count by GPU dataset/query dtype, `float32` or `float16` |
 | `summary.vector.cuvs.max_concurrent_gpu_searches` | Maximum configured per-index in-flight GPU search limit observed |
 | `summary.vector.cuvs.auto_mode_searches` | Number of searches with automatic CPU/GPU routing enabled |
-| `summary.vector.cuvs.micro_batching_searches` | Number of searches that used the opt-in OpenViking micro-batch scheduler |
+| `summary.vector.cuvs.micro_batching_searches` | Number of searches that used the opt-in Business Data Platform micro-batch scheduler |
 | `summary.vector.cuvs.micro_batched_searches` | Number of those searches dispatched with more than one query row |
 | `summary.vector.cuvs.micro_batching_warm_fast_path_searches` | Number of micro-batching-scheduler searches enqueued from a clean current snapshot without caller-side device-gate admission |
 | `summary.vector.cuvs.batch_size_max` | Maximum query-row count observed in one shared cuVS call |
@@ -249,7 +249,7 @@ This group appears on resource ingestion operations such as `resources.add_resou
 
 ### `summary.queue`
 
-This group appears when OpenViking waits for queue-backed work to complete.
+This group appears when Business Data Platform waits for queue-backed work to complete.
 
 | Field | Meaning |
 | --- | --- |
@@ -357,7 +357,7 @@ print(result["telemetry"]["summary"]["duration_ms"])
 
 ## Limitations and behavior
 
-- OpenViking currently exposes summary-only telemetry to users
+- Business Data Platform currently exposes summary-only telemetry to users
 - `{"telemetry": {"events": true}}` is not a supported public request shape
 - event-stream style selection is not part of the public API
 - `session.commit` supports telemetry only when `wait=true`

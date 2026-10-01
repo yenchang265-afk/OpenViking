@@ -1,6 +1,6 @@
-# OpenViking Go SDK
+# Business Data Platform Go SDK
 
-Go SDK 是面向 OpenViking Server 的 HTTP 客户端，作为独立 Go module 放在主仓库 `sdk/go` 下。
+Go SDK 是面向 Business Data Platform Server 的 HTTP 客户端，作为独立 Go module 放在主仓库 `sdk/go` 下。
 
 ```bash
 go get github.com/volcengine/OpenViking/sdk/go
@@ -168,7 +168,7 @@ cd sdk/go
 go run ./examples/basic_usage
 ```
 
-脚本会创建一个临时 Markdown 文件，导入为 OpenViking resource，读取并更新内容，执行语义检索，验证 watch 和 skill 管理接口，然后创建多消息 session、commit、轮询记忆抽取任务，并检索用户记忆和 peer-scoped 记忆。
+脚本会创建一个临时 Markdown 文件，导入为 Business Data Platform resource，读取并更新内容，执行语义检索，验证 watch 和 skill 管理接口，然后创建多消息 session、commit、轮询记忆抽取任务，并检索用户记忆和 peer-scoped 记忆。
 
 ## 测试
 

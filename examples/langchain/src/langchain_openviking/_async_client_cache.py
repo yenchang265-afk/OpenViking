@@ -33,7 +33,7 @@ class LoopScopedAsyncClientCache:
 
     HTTP clients may bind internal asyncio primitives to the loop that first
     uses them. Keeping this small cache private lets the adapter own that
-    lifecycle without importing OpenViking server utilities.
+    lifecycle without importing Business Data Platform server utilities.
     """
 
     def __init__(self) -> None:

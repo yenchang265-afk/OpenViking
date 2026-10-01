@@ -1,7 +1,7 @@
 /**
- * Per-codex-session state for the OpenViking memory plugin.
+ * Per-codex-session state for the Business Data Platform memory plugin.
  *
- * One state file per codex session_id, holding the long-lived OpenViking
+ * One state file per codex session_id, holding the long-lived Business Data Platform
  * session id that we incrementally append turns to via the Stop hook. The
  * OV session id is derived as `cx-<codex-session-id>` for new captures.
  * The OV session is committed (which extracts memories) by SessionEnd, by

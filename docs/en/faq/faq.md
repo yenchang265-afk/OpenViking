@@ -2,20 +2,20 @@
 
 ## Basic Concepts
 
-### What is OpenViking? What problems does it solve?
+### What is Business Data Platform? What problems does it solve?
 
-OpenViking is an open-source context database designed specifically for AI Agents. It solves core pain points when building AI Agents:
+Business Data Platform is an open-source context database designed specifically for AI Agents. It solves core pain points when building AI Agents:
 
 - **Fragmented Context**: Memories, resources, and skills are scattered everywhere, difficult to manage uniformly
 - **Poor Retrieval Effectiveness**: Traditional RAG's flat storage lacks global view, making it hard to understand complete context
 - **Unobservable Context**: Implicit retrieval chains are like black boxes, difficult to debug when errors occur
 - **Limited Memory Iteration**: Lacks Agent-related task memory and self-evolution capabilities
 
-OpenViking unifies all context management through a filesystem paradigm, enabling tiered delivery and self-iteration.
+Business Data Platform unifies all context management through a filesystem paradigm, enabling tiered delivery and self-iteration.
 
-### What's the fundamental difference between OpenViking and traditional vector databases?
+### What's the fundamental difference between Business Data Platform and traditional vector databases?
 
-| Dimension | Traditional Vector DB | OpenViking |
+| Dimension | Traditional Vector DB | Business Data Platform |
 |-----------|----------------------|------------|
 | **Storage Model** | Flat vector storage | Hierarchical filesystem (AGFS) |
 | **Retrieval Method** | Single vector similarity search | Directory recursive retrieval + Intent analysis + Rerank |
@@ -26,7 +26,7 @@ OpenViking unifies all context management through a filesystem paradigm, enablin
 
 ### What is the L0/L1/L2 layered model? Why is it needed?
 
-L0/L1/L2 is OpenViking's progressive content loading mechanism, solving the problem of "stuffing massive context into prompts all at once":
+L0/L1/L2 is Business Data Platform's progressive content loading mechanism, solving the problem of "stuffing massive context into prompts all at once":
 
 | Layer | Name | Token Limit | Purpose |
 |-------|------|-------------|---------|
@@ -38,7 +38,7 @@ This design allows Agents to browse abstracts for quick positioning, then load d
 
 ### What is Viking URI? What's its purpose?
 
-Viking URI is OpenViking's unified resource identifier, formatted as `viking://{scope}/{path}`. It enables precise location of any context:
+Viking URI is Business Data Platform's unified resource identifier, formatted as `viking://{scope}/{path}`. It enables precise location of any context:
 
 ```
 viking://
@@ -67,16 +67,16 @@ viking://
   - VLM (Vision Language Model): For multimodal content processing and semantic extraction
   - Rerank model: For improved retrieval precision
 
-### How does OpenViking access the AGFS filesystem?
+### How does Business Data Platform access the AGFS filesystem?
 
-OpenViking runs the RAGFS filesystem in-process through the Rust binding
+Business Data Platform runs the RAGFS filesystem in-process through the Rust binding
 (`ragfs_python` / `RAGFSBindingClient`). The binding executes filesystem logic
 directly within the Python process, giving extremely high performance and zero
 network latency. A compiled RAGFS shared library must be available locally
 (shipped in the prebuilt Wheel, or built from source).
 
 > [!WARNING]
-> OpenViking no longer supports the AGFS HTTP client mode. AGFS / RAGFS filesystem access now happens only through the in-process Rust binding (`RAGFSBindingClient`). This does not affect the OpenViking server HTTP API, the `ov` CLI, or `AsyncHTTPClient` / `SyncHTTPClient` when they connect to an OpenViking server.
+> Business Data Platform no longer supports the AGFS HTTP client mode. AGFS / RAGFS filesystem access now happens only through the in-process Rust binding (`RAGFSBindingClient`). This does not affect the Business Data Platform server HTTP API, the `ov` CLI, or `AsyncHTTPClient` / `SyncHTTPClient` when they connect to a Business Data Platform server.
 
 ### What should I do if I encounter "AGFS binding library not found"?
 
@@ -85,14 +85,14 @@ environment. Re-compile and install it by running
 `pip install -e . --force-reinstall` in the project root (requires a Rust
 toolchain).
 
-### How do I install/upgrade OpenViking?
+### How do I install/upgrade Business Data Platform?
 
 ```bash
 pip install openviking --upgrade --force-reinstall
 
 ```
 
-### How do I configure OpenViking?
+### How do I configure Business Data Platform?
 
 Create an `~/.openviking/ov.conf` configuration file in your project directory:
 
@@ -151,7 +151,7 @@ client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
 await client.initialize()
 ```
 
-Embedding, VLM, storage, and other service configuration is managed by the OpenViking Server through `ov.conf`.
+Embedding, VLM, storage, and other service configuration is managed by the Business Data Platform Server through `ov.conf`.
 
 ### What file formats are supported?
 
@@ -236,7 +236,7 @@ results = await client.search(
 
 ### How do I use session management?
 
-Session management is a core capability of OpenViking, supporting conversation tracking and memory extraction:
+Session management is a core capability of Business Data Platform, supporting conversation tracking and memory extraction:
 
 ```python
 from openviking_sdk import TextPart
@@ -259,9 +259,9 @@ await session.add_message(
 await session.commit()
 ```
 
-### What memory types does OpenViking support?
+### What memory types does Business Data Platform support?
 
-OpenViking includes memory types such as `profile`, `preferences`, `entities`, `events`, `identity`, `soul`, `cases`, `trajectories`, `experiences`, `tools`, and `skills`. After a session is committed, the active memory policy determines which useful information to extract. Applications can also extend or adjust the memory types for their own needs.
+Business Data Platform includes memory types such as `profile`, `preferences`, `entities`, `events`, `identity`, `soul`, `cases`, `trajectories`, `experiences`, `tools`, and `skills`. After a session is committed, the active memory policy determines which useful information to extract. Applications can also extend or adjust the memory types for their own needs.
 
 Memories are stored in the current User or Peer namespace; there is no current writable `viking://agent/memories` directory. See [Context Types](../concepts/02-context-types.md) for the complete type and path mapping.
 
@@ -293,7 +293,7 @@ overview = await client.overview(uri="viking://resources")
 
 ### How is the retrieval result score calculated?
 
-OpenViking uses a score propagation mechanism:
+Business Data Platform uses a score propagation mechanism:
 
 ```
 Final Score = 0.5 × Embedding Similarity + 0.5 × Parent Directory Score
@@ -303,7 +303,7 @@ This design gives content under high-scoring directories a boost, reflecting the
 
 ### What is directory recursive retrieval?
 
-Directory recursive retrieval is OpenViking's innovative retrieval strategy:
+Directory recursive retrieval is Business Data Platform's innovative retrieval strategy:
 
 1. **Intent Analysis**: Analyze query to generate multiple retrieval conditions
 2. **Initial Positioning**: Vector retrieval to locate high-scoring directories
@@ -399,13 +399,13 @@ This strategy finds semantically matching fragments while understanding the comp
 
 ## Deployment
 
-### Is OpenViking open source?
+### Is Business Data Platform open source?
 
-Yes, OpenViking main project is open source under the AGPL-3.0 license, and examples/ and crates/ov_cli are licensed under the Apache 2.0 license.
+Yes, Business Data Platform main project is open source under the AGPL-3.0 license, and examples/ and crates/ov_cli are licensed under the Apache 2.0 license.
 
 ## Related Documentation
 
-- [Introduction](../getting-started/01-introduction.md) - Understand OpenViking's design philosophy
+- [Introduction](../getting-started/01-introduction.md) - Understand Business Data Platform's design philosophy
 - [Quick Start](../getting-started/02-quickstart.md) - 5-minute tutorial
 - [Architecture Overview](../concepts/01-architecture.md) - Deep dive into system design
 - [Retrieval Mechanism](../concepts/07-retrieval.md) - Detailed retrieval process

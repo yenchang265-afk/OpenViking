@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Plain text parser for OpenViking.
+Plain text parser for Business Data Platform.
 
 Delegates to MarkdownParser since plain text is just unformatted markdown.
 """

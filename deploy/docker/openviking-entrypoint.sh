@@ -21,7 +21,7 @@ if not port and os.path.isfile(sys.argv[1]):
     port = str((config.get("server") or {}).get("port", 1933)).strip()
 port = port or "1933"
 if not port.isdigit() or not 1 <= int(port) <= 65535:
-    raise SystemExit(f"invalid OpenViking server port: {port}")
+    raise SystemExit(f"invalid Business Data Platform server port: {port}")
 print(port)
 PY
     )"
@@ -49,7 +49,7 @@ ensure_config() {
     cat >&2 <<EOF
 [openviking-entrypoint] ${CONFIG_FILE} not found.
 
-To start OpenViking, do one of:
+To start Business Data Platform, do one of:
   - mount ~/.openviking on the host to /app/.openviking
   - set OPENVIKING_CONF_CONTENT to the full ov.conf JSON
   - docker exec into this container and run: openviking-server init
@@ -75,7 +75,7 @@ EOF
 
     stop_pending_health
     trap - INT TERM
-    echo "[openviking-entrypoint] detected ${CONFIG_FILE}, starting OpenViking"
+    echo "[openviking-entrypoint] detected ${CONFIG_FILE}, starting Business Data Platform"
 }
 
 normalize_with_bot() {

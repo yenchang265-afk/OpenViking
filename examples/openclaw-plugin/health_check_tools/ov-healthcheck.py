@@ -178,7 +178,7 @@ class Recorder:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="End-to-end healthcheck for the OpenClaw OpenViking plugin.",
+        description="End-to-end healthcheck for the OpenClaw Business Data Platform plugin.",
     )
     parser.add_argument(
         "--gateway", default="", help=f"Gateway base URL (default: {DEFAULT_GATEWAY_URL})"
@@ -186,7 +186,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--openviking",
         default="",
-        help=f"OpenViking base URL (default: {DEFAULT_OPENVIKING_URL})",
+        help=f"Business Data Platform base URL (default: {DEFAULT_OPENVIKING_URL})",
     )
     parser.add_argument(
         "--token", default="", help="Gateway bearer token. Auto-discovered when possible."
@@ -194,12 +194,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--openviking-api-key",
         default="",
-        help="OpenViking API key. Auto-discovered from plugin config when possible.",
+        help="Business Data Platform API key. Auto-discovered from plugin config when possible.",
     )
     parser.add_argument(
         "--actor-peer",
         default="",
-        help=f"OpenViking actor peer for direct inspection requests (default: {DEFAULT_ACTOR_PEER})",
+        help=f"Business Data Platform actor peer for direct inspection requests (default: {DEFAULT_ACTOR_PEER})",
     )
     parser.add_argument("--user-id", default="", help="User id for the real conversation session.")
     parser.add_argument(
@@ -214,7 +214,7 @@ def parse_args() -> argparse.Namespace:
         "--capture-wait",
         type=float,
         default=4.0,
-        help="Wait time after chat before reading OpenViking session state.",
+        help="Wait time after chat before reading Business Data Platform session state.",
     )
     parser.add_argument(
         "--commit-wait",
@@ -1149,9 +1149,9 @@ def main() -> int:
     ov_log_path = openviking_log_path(ov_config)
     should_continue = True
 
-    print(bold("OpenViking Plugin Healthcheck"))
+    print(bold("Business Data Platform Plugin Healthcheck"))
     print(f"Gateway: {gateway_url}")
-    print(f"OpenViking: {openviking_url}")
+    print(f"Business Data Platform: {openviking_url}")
     print(f"User ID: {user_id}")
     print(f"Probe: {probe}")
     if config_path:
@@ -1190,7 +1190,7 @@ def main() -> int:
             mode = str(plugin_config.get("mode", "remote"))
             recorder.add("INFO", "Plugin mode", mode)
             if ov_config_path:
-                recorder.add("INFO", "OpenViking config discovered", str(ov_config_path))
+                recorder.add("INFO", "Business Data Platform config discovered", str(ov_config_path))
             if plugin_config.get("autoCapture") is False:
                 recorder.add(
                     "WARN", "autoCapture is disabled", "afterTurn capture checks are likely to fail"
@@ -1223,9 +1223,9 @@ def main() -> int:
         recorder.add("FAIL", "Gateway health check failed", gateway_url)
 
     if inspector.health():
-        recorder.add("PASS", "OpenViking health check succeeded")
+        recorder.add("PASS", "Business Data Platform health check succeeded")
     else:
-        recorder.add("FAIL", "OpenViking health check failed", openviking_url)
+        recorder.add("FAIL", "Business Data Platform health check failed", openviking_url)
 
     if recorder.has_failures():
         print()
@@ -1273,7 +1273,7 @@ def main() -> int:
 
     if should_continue:
         print()
-        print(bold("Phase 2: OpenViking session inspection"))
+        print(bold("Phase 2: Business Data Platform session inspection"))
         try:
             session_id, _session_detail, session_context = find_session_with_probe(
                 inspector,
@@ -1282,15 +1282,15 @@ def main() -> int:
                 verbose=args.verbose,
             )
         except Exception as exc:
-            recorder.add("FAIL", "Failed to inspect OpenViking sessions", str(exc))
+            recorder.add("FAIL", "Failed to inspect Business Data Platform sessions", str(exc))
             session_id = None
             session_context = None
 
         if session_id:
-            recorder.add("PASS", "Probe session located in OpenViking", session_id)
+            recorder.add("PASS", "Probe session located in Business Data Platform", session_id)
         else:
             recorder.add(
-                "FAIL", "Probe session not found in OpenViking", "afterTurn capture may be broken"
+                "FAIL", "Probe session not found in Business Data Platform", "afterTurn capture may be broken"
             )
 
         if session_context:
@@ -1310,11 +1310,11 @@ def main() -> int:
                     "WARN", "Captured session context contains too few seeded facts", ",".join(hits)
                 )
         else:
-            recorder.add("FAIL", "Failed to read OpenViking session context")
+            recorder.add("FAIL", "Failed to read Business Data Platform session context")
 
     if should_continue and not session_id:
         print()
-        print(red("Stopping because no matching OpenViking session was found."))
+        print(red("Stopping because no matching Business Data Platform session was found."))
         should_continue = False
 
     if should_continue:
@@ -1324,22 +1324,22 @@ def main() -> int:
             commit_result = inspector.commit(session_id)
         except Exception as exc:
             commit_result = None
-            recorder.add("FAIL", "OpenViking commit request failed", str(exc))
+            recorder.add("FAIL", "Business Data Platform commit request failed", str(exc))
 
         if isinstance(commit_result, dict):
             status = str(commit_result.get("status", ""))
             if status == "failed":
                 recorder.add(
                     "FAIL",
-                    "OpenViking commit finished with failure",
+                    "Business Data Platform commit finished with failure",
                     str(commit_result.get("error", "")),
                 )
             elif status:
-                recorder.add("PASS", "OpenViking commit accepted", status)
+                recorder.add("PASS", "Business Data Platform commit accepted", status)
             else:
-                recorder.add("WARN", "OpenViking commit returned no explicit status")
+                recorder.add("WARN", "Business Data Platform commit returned no explicit status")
         elif session_id:
-            recorder.add("FAIL", "OpenViking commit returned no usable payload")
+            recorder.add("FAIL", "Business Data Platform commit returned no usable payload")
 
         print(
             f"Waiting up to {args.commit_wait:.0f}s for commit, archive, and memory extraction..."
@@ -1474,7 +1474,7 @@ def main() -> int:
                     fresh_session_id = None
                 if fresh_session_id:
                     recorder.add(
-                        "INFO", "Fresh-session OpenViking session located", fresh_session_id
+                        "INFO", "Fresh-session Business Data Platform session located", fresh_session_id
                     )
         else:
             recorder.add(

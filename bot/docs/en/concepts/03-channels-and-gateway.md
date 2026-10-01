@@ -72,16 +72,16 @@ ChatRequest supports a session ID, reply control, request-level disabled tools, 
 
 SSE emits reasoning, content delta, tool call, tool result, iteration, and final response events.
 
-## OpenViking API Proxy
+## Business Data Platform API Proxy
 
-When an OpenViking Server is configured, the Gateway also provides:
+When a Business Data Platform Server is configured, the Gateway also provides:
 
 | Path | Purpose |
 |------|---------|
-| `/health` | Aggregate Gateway and OpenViking upstream status |
-| `/api/v1/{path}` | Proxy OpenViking APIs |
+| `/health` | Aggregate Gateway and Business Data Platform upstream status |
+| `/api/v1/{path}` | Proxy Business Data Platform APIs |
 
-The proxy removes hop-by-hop headers, forwards validated identity headers, and preserves the upstream response status. See [OpenViking Integration](./04-openviking-integration.md) for the complete connection and identity flow.
+The proxy removes hop-by-hop headers, forwards validated identity headers, and preserves the upstream response status. See [Business Data Platform Integration](./04-openviking-integration.md) for the complete connection and identity flow.
 
 ## Access Control
 
@@ -89,11 +89,11 @@ The Gateway enforces several security boundaries:
 
 1. non-local listeners require `X-Gateway-Token`;
 2. loopback requests may use the local development boundary;
-3. an OpenViking API Key is checked through upstream `/health` to validate identity and the effective auth mode;
-4. only a trusted OpenViking Server proxy may supply `openviking_connection`;
+3. a Business Data Platform API Key is checked through upstream `/health` to validate identity and the effective auth mode;
+4. only a trusted Business Data Platform Server proxy may supply `openviking_connection`;
 5. API Sessions are isolated by combining the authenticated principal scope with the external session ID.
 
-Ordinary request fields such as `user_id`, account ID, or connection data cannot prove an OpenViking identity by themselves.
+Ordinary request fields such as `user_id`, account ID, or connection data cannot prove a Business Data Platform identity by themselves.
 
 ## Feedback and Outcome Evaluation
 
@@ -123,5 +123,5 @@ Runtime logs use Loguru. Gateway's `--verbose` flag enables more detailed logs. 
 
 - [VikingBot Architecture](./01-architecture.md)
 - [Agent Capabilities](./02-agent-capabilities.md)
-- [OpenViking Integration](./04-openviking-integration.md)
+- [Business Data Platform Integration](./04-openviking-integration.md)
 - [Channel Configuration](./05-channel.md)

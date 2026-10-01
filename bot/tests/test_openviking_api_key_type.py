@@ -575,7 +575,7 @@ def test_validate_openviking_auth_warns_when_server_unavailable(monkeypatch, cap
     config_loader_module.validate_openviking_auth(config)
 
     captured = capsys.readouterr()
-    assert "OpenViking server at http://ov.local is unavailable" in captured.err
+    assert "Business Data Platform server at http://ov.local is unavailable" in captured.err
     assert "standalone mode" in captured.err
     assert "user-key" not in captured.err
     assert config.ov_server.server_url == ""
@@ -604,7 +604,7 @@ def test_validate_openviking_auth_exits_when_explicit_server_unavailable(monkeyp
 
     captured = capsys.readouterr()
     assert "configured bot.ov_server.server_url is unavailable" in captured.err
-    assert "OpenViking server URL: http://ov.remote" in captured.err
+    assert "Business Data Platform server URL: http://ov.remote" in captured.err
     assert "user-key" not in captured.err
 
 
@@ -677,10 +677,10 @@ def test_validate_openviking_auth_exits_for_auth_mode_mismatch(monkeypatch, caps
 
     captured = capsys.readouterr()
     assert "does not match the current ov.conf" in captured.err
-    assert "OpenViking server URL: http://ov.local" in captured.err
+    assert "Business Data Platform server URL: http://ov.local" in captured.err
     assert "Running server auth_mode: trusted" in captured.err
     assert "Current ov.conf server auth_mode: api_key" in captured.err
-    assert "restart OpenViking server with the current ov.conf" in captured.err
+    assert "restart Business Data Platform server with the current ov.conf" in captured.err
     assert "server.auth_mode='trusted'" in captured.err
     assert "bot.ov_server.api_key_type" not in captured.err
     assert "user-key" not in captured.err
@@ -711,7 +711,7 @@ def test_inherited_dev_config_mismatch_explains_stale_api_key_server(monkeypatch
     assert "Running server auth_mode: api_key" in captured.err
     assert "Current ov.conf server auth_mode: dev" in captured.err
     assert "started with different authentication settings" in captured.err
-    assert "configure bot.ov_server.api_key with an OpenViking User/Admin API key" in captured.err
+    assert "configure bot.ov_server.api_key with a Business Data Platform User/Admin API key" in captured.err
     assert "dev-mode VikingBot gateway must listen on localhost" in captured.err
     assert "bot.ov_server.api_key_type" not in captured.err
 
@@ -737,7 +737,7 @@ def test_validate_openviking_auth_exits_for_api_key_mode_without_user_key(monkey
 
     captured = capsys.readouterr()
     assert "Error:" in captured.err
-    assert "OpenViking User/Admin API key" in captured.err
+    assert "Business Data Platform User/Admin API key" in captured.err
     assert "bot.ov_server.api_key" in captured.err
     assert "Root API keys cannot access" in captured.err
 

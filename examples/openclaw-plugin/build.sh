@@ -74,7 +74,7 @@ copy_optional_file() {
   fi
 }
 
-info "Building OpenViking plugin package $VERSION"
+info "Building Business Data Platform plugin package $VERSION"
 rm -rf dist "$OUTPUT_DIR"
 
 info "Installing dependencies"

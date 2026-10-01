@@ -2,7 +2,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Comprehensive edge case tests for OpenViking.
+Comprehensive edge case tests for Business Data Platform.
 
 This module tests boundary conditions, unicode edge cases, concurrent operations,
 and security considerations that might not be covered in regular testing.

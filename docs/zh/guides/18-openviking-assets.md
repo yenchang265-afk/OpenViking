@@ -1,11 +1,11 @@
-# OpenViking Assets
+# Business Data Platform Assets
 
 > 实验性功能。`openviking-assets/1` 协议和命令行行为仍可能在后续版本中调整。
 
-OpenViking Assets 用声明文件描述“一个知识库应该由哪些资源组成”。最简单的形态是
+Business Data Platform Assets 用声明文件描述“一个知识库应该由哪些资源组成”。最简单的形态是
 一个 Manifest 文件直接定义要接入的资产；团队也可以在共享的 Catalog 中维护可接入
 资源的全集，再用多个 Manifest 按名称选择不同用途所需的资源。执行 Manifest 时，
-OpenViking 会逐项创建或更新资源，并在本地保存资产与 `viking://` 资源之间的映射。
+Business Data Platform 会逐项创建或更新资源，并在本地保存资产与 `viking://` 资源之间的映射。
 
 它适合管理多仓代码问答库、团队文档集和其他需要重复构建、持续更新的资源集合。
 
@@ -14,15 +14,15 @@ OpenViking 会逐项创建或更新资源，并在本地保存资产与 `viking:
 | 能力 | 描述 |
 | --- | --- |
 | `ov add-resource <source>` | 添加或更新一个资源，描述的是一次资源操作。 |
-| OpenViking Assets | 声明一组资源的预期构成，可以 review、共享并重复执行。 |
+| Business Data Platform Assets | 声明一组资源的预期构成，可以 review、共享并重复执行。 |
 | OVPack | 导出或导入已经生成的数据快照，搬运的是内容和可选索引数据。 |
 
-OpenViking Assets 不替代现有资源处理流程。Git 拉取、内容解析、语义提取、向量化和
+Business Data Platform Assets 不替代现有资源处理流程。Git 拉取、内容解析、语义提取、向量化和
 Watch 更新仍由 `add_resource` 及服务端连接器完成；Assets 只增加声明、解析和逐项编排。
 
 ## 概念模型
 
-OpenViking Assets 包含三个主要对象：
+Business Data Platform Assets 包含三个主要对象：
 
 - **Manifest**：实际执行的文件。可以在 `catalog:` 下直接定义要接入的资产，也可以按名称
   从单独的 Catalog 文件中选择资产。
@@ -47,7 +47,7 @@ CLI 解析本地凭据和 State
 ```
 
 服务端是协议解析的权威实现。CLI 会把 Manifest 的原始 YAML（使用单独 Catalog 文件时
-一并发送 Catalog YAML）发送到当前配置的 OpenViking 服务，由服务端完成严格校验并返回
+一并发送 Catalog YAML）发送到当前配置的 Business Data Platform 服务，由服务端完成严格校验并返回
 执行计划；服务端的解析接口本身不会创建资源。
 
 ## 协议
@@ -68,7 +68,7 @@ defaults:
 catalog:
   - name: openviking
     connector: git
-    description: OpenViking 主仓库
+    description: Business Data Platform 主仓库
     params:
       repo_url: https://github.com/volcengine/OpenViking
       branch: main
@@ -136,7 +136,7 @@ defaults:
 catalog:
   - name: openviking
     connector: git
-    description: OpenViking 主仓库
+    description: Business Data Platform 主仓库
     params:
       repo_url: https://github.com/volcengine/OpenViking
       branch: main
@@ -192,8 +192,8 @@ Git URL 会去除协议、用户名前缀、端口、结尾的 `.git` 和 `/`，
 
 ### 前置条件
 
-1. 安装支持 OpenViking Assets 的 `ov` CLI。
-2. 配置支持 `/api/v1/openviking-assets/resolve` 的 OpenViking 服务。
+1. 安装支持 Business Data Platform Assets 的 `ov` CLI。
+2. 配置支持 `/api/v1/openviking-assets/resolve` 的 Business Data Platform 服务。
 3. 确认 CLI 可以连接服务：
 
 ```bash
@@ -224,7 +224,7 @@ ov add-resource --manifest manifest.yaml --args dry_run:true
 `dry_run` 会完成以下操作：
 
 - 读取本地 YAML 文件（使用单独 Catalog 文件时一并读取）；
-- 调用当前 OpenViking 服务解析并校验协议；
+- 调用当前 Business Data Platform 服务解析并校验协议；
 - 检查所有 `auth_ref` 是否能在本地解析；
 - 让服务端使用最终凭据对每个 Git 仓库执行只读 `git ls-remote` 权限预检；
 - 输出每个资产将执行的 create 或 sync 操作；
@@ -272,9 +272,9 @@ export OPENVIKING_ASSETS_CREDENTIALS_FILE=/secure/path/assets-credentials.yaml
 在提交任何资源之前失败；`dry_run` 也执行相同预检。原生 Git 凭据别名只支持 `username` 和
 `token`，并保持上述扁平结构。使用默认的原生 Git 链路时，CLI 会在调用 `add_resource` 时将它们放入
 `args.auth_config`，而 `branch` 或 `commit` 仍留在 `args` 顶层。解析出的 Git 参数会通过
-当前配置的 OpenViking 服务连接发送，因此远程部署应使用 TLS，并限制凭据文件的本地访问权限。
+当前配置的 Business Data Platform 服务连接发送，因此远程部署应使用 TLS，并限制凭据文件的本地访问权限。
 
-当最终 `watch_interval` 大于 `0` 时，OpenViking 会把通过 `auth_ref` 解析出的 HTTPS Git
+当最终 `watch_interval` 大于 `0` 时，Business Data Platform 会把通过 `auth_ref` 解析出的 HTTPS Git
 token 保存到 Watch task 私有且与仓库 URL 绑定的鉴权状态中。token 不会写入 Manifest
 State、普通入库队列或 Watch API/MCP/CLI 返回。周期为 `0` 时，token 仍只在本次请求内使用。
 Git PAT 没有通用刷新流程，token 过期或被撤销后需要重建 Watch。
@@ -327,7 +327,7 @@ State 属于执行环境，不是 Catalog 或 Manifest 协议的一部分。共�
 
 不要并发执行同一个 Manifest；当前 State 文件不提供跨进程锁。
 
-内容级同步进度不保存在 Manifest State 中。持续刷新由 OpenViking Watch 和连接器负责。
+内容级同步进度不保存在 Manifest State 中。持续刷新由 Business Data Platform Watch 和连接器负责。
 
 ## 更新周期
 
@@ -416,8 +416,8 @@ ov add-resource --manifest manifest.yaml --args skip_failed:true
 
 ## 相关文档
 
-- [OpenViking Assets API](../api/22-openviking-assets.md)
+- [Business Data Platform Assets API](../api/22-openviking-assets.md)
 - [资源管理 API](../api/02-resources.md)
 - [资源 Watch API](../api/15-watches.md)
 - [OVPack 导入导出](09-ovpack.md)
-- [OpenViking Assets 示例](https://github.com/volcengine/OpenViking/tree/main/examples/openviking-assets)
+- [Business Data Platform Assets 示例](https://github.com/volcengine/OpenViking/tree/main/examples/openviking-assets)

@@ -1,8 +1,8 @@
 """
-OpenViking Filesystem Mount Module - Core Implementation
+Business Data Platform Filesystem Mount Module - Core Implementation
 
-这个模块将OpenViking的虚拟文件系统挂载到本地文件系统路径，
-让用户可以像操作普通文件一样操作OpenViking上的数据。
+这个模块将Business Data Platform的虚拟文件系统挂载到本地文件系统路径，
+让用户可以像操作普通文件一样操作Business Data Platform上的数据。
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import openviking as ov
 
 
 class MountScope(Enum):
-    """OpenViking挂载作用域"""
+    """Business Data Platform挂载作用域"""
 
     RESOURCES = "resources"
     SESSION = "session"
@@ -43,7 +43,7 @@ class MountConfig:
 class FileInfo:
     """文件信息"""
 
-    uri: str  # OpenViking URI
+    uri: str  # Business Data Platform URI
     name: str  # 文件名
     is_dir: bool  # 是否是目录
     size: int = 0  # 文件大小
@@ -54,14 +54,14 @@ class FileInfo:
 
 class OpenVikingMount:
     """
-    OpenViking文件系统挂载类
+    Business Data Platform文件系统挂载类
 
-    将OpenViking的虚拟文件系统映射到本地文件系统操作
+    将Business Data Platform的虚拟文件系统映射到本地文件系统操作
     """
 
     def __init__(self, config: MountConfig):
         """
-        初始化OpenViking挂载
+        初始化Business Data Platform挂载
 
         Args:
             config: 挂载配置
@@ -82,20 +82,20 @@ class OpenVikingMount:
             logger.info(f"Created mount point: {self.config.mount_point}")
 
     def initialize(self) -> None:
-        """初始化OpenViking客户端"""
+        """初始化Business Data Platform客户端"""
         if self._initialized:
             return
 
         if ov is None:
             raise ImportError("openviking module is not available")
 
-        logger.info("Connecting to the configured OpenViking Server")
+        logger.info("Connecting to the configured Business Data Platform Server")
 
         self._client = ov.SyncHTTPClient()
         self._client.initialize()
 
         self._initialized = True
-        logger.info("OpenViking initialized successfully")
+        logger.info("Business Data Platform initialized successfully")
 
     def _ensure_client(self) -> None:
         """确保客户端已初始化"""
@@ -103,19 +103,19 @@ class OpenVikingMount:
             if self.config.auto_init:
                 self.initialize()
             else:
-                raise RuntimeError("OpenViking client not initialized. Call initialize() first.")
+                raise RuntimeError("Business Data Platform client not initialized. Call initialize() first.")
 
     @property
     def client(self) -> Optional[ov.SyncHTTPClient]:
-        """获取底层OpenViking客户端"""
+        """获取底层Business Data Platform客户端"""
         return self._client
 
     def _uri_to_path(self, uri: str) -> Path:
         """
-        将OpenViking URI转换为本地文件路径
+        将Business Data Platform URI转换为本地文件路径
 
         Args:
-            uri: OpenViking URI (e.g., viking://resources/path/to/file)
+            uri: Business Data Platform URI (e.g., viking://resources/path/to/file)
 
         Returns:
             本地文件路径
@@ -142,13 +142,13 @@ class OpenVikingMount:
 
     def _path_to_uri(self, path: Union[str, Path]) -> str:
         """
-        将本地文件路径转换为OpenViking URI
+        将本地文件路径转换为Business Data Platform URI
 
         Args:
             path: 本地文件路径
 
         Returns:
-            OpenViking URI
+            Business Data Platform URI
         """
         path = Path(path)
 
@@ -242,17 +242,17 @@ class OpenVikingMount:
 
         self._ensure_client()
 
-        # 注意：OpenViking的add_resource主要用于添加外部资源
+        # 注意：Business Data Platform的add_resource主要用于添加外部资源
         # 对于直接写入，可能需要不同的方法
         # 这里我们先实现一个简化版本
-        logger.warning("Direct file write is limited in OpenViking. Using add_resource approach.")
+        logger.warning("Direct file write is limited in Business Data Platform. Using add_resource approach.")
 
         uri = self._path_to_uri(path)
         logger.debug(f"Writing file: {uri}")
 
         # 这种情况下，我们可能需要先写入临时文件，然后add_resource
         # 或者使用其他方法
-        raise NotImplementedError("Direct file write requires special handling in OpenViking")
+        raise NotImplementedError("Direct file write requires special handling in Business Data Platform")
 
     def mkdir(self, path: Union[str, Path]) -> None:
         """
@@ -344,11 +344,11 @@ class OpenVikingMount:
         wait: bool = True,
     ) -> str:
         """
-        添加资源到OpenViking
+        添加资源到Business Data Platform
 
         Args:
             source_path: 源文件/目录路径
-            target_path: 目标路径（在OpenViking中）
+            target_path: 目标路径（在Business Data Platform中）
             wait: 是否等待语义提取和向量化完成
 
         Returns:
@@ -374,7 +374,7 @@ class OpenVikingMount:
 
     def sync_to_disk(self, path: Optional[Union[str, Path]] = None) -> None:
         """
-        将OpenViking内容同步到磁盘
+        将Business Data Platform内容同步到磁盘
 
         注意：这是一个简化的实现，用于演示目的
         实际生产环境可能需要更复杂的同步机制
@@ -434,7 +434,7 @@ class OpenVikingMount:
         if self._client and self._initialized:
             try:
                 self._client.close()
-                logger.info("OpenViking client closed")
+                logger.info("Business Data Platform client closed")
             except Exception as e:
                 logger.warning(f"Error closing client: {e}")
 

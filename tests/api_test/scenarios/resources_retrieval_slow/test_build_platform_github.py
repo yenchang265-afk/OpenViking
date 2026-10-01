@@ -50,7 +50,7 @@ class TestBuildPlatformGithub:
         stat_resp = api_client.fs_stat(root_uri)
         assert stat_resp.status_code == 200
 
-        assert_resource_indexed(api_client, root_uri, "OpenViking")
+        assert_resource_indexed(api_client, root_uri, "Business Data Platform")
 
         print(f"✓ TC-P03 GitHub原始文件下载通过, root_uri: {root_uri}")
 
@@ -81,6 +81,6 @@ class TestBuildPlatformGithub:
         stat_resp = api_client.fs_stat(root_uri)
         assert stat_resp.status_code == 200
 
-        assert_resource_indexed(api_client, root_uri, "OpenViking")
+        assert_resource_indexed(api_client, root_uri, "Business Data Platform")
 
         print(f"✓ TC-P04 GitHub Blob页面构建通过, root_uri: {root_uri}")

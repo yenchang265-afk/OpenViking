@@ -105,7 +105,7 @@ def _get_windows_python_sabi_library() -> Path:
 
 
 class OpenVikingBuildExt(build_ext):
-    """Build OpenViking runtime artifacts and Python native extensions."""
+    """Build Business Data Platform runtime artifacts and Python native extensions."""
 
     def run(self):
         self.build_ov_cli_artifact()

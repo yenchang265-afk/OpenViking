@@ -155,16 +155,16 @@ def _write_runtime_config(
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Create an OpenViking benchmark user and write a user-key ov.conf."
+        description="Create a Business Data Platform benchmark user and write a user-key ov.conf."
     )
     parser.add_argument(
         "--user",
         required=True,
         help="Benchmark runtime user id, e.g. tau2_airline_v0",
     )
-    parser.add_argument("--account", default="default", help="OpenViking account id")
+    parser.add_argument("--account", default="default", help="Business Data Platform account id")
     parser.add_argument("--role", default="user", help="Role for newly registered users")
-    parser.add_argument("--server-url", default=None, help="OpenViking server URL")
+    parser.add_argument("--server-url", default=None, help="Business Data Platform server URL")
     parser.add_argument(
         "--provision-api-key",
         default=os.environ.get("OPENVIKING_PROVISION_API_KEY"),

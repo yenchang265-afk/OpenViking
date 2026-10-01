@@ -6,19 +6,19 @@
 | 目标版本 | v1 |
 | 更新日期 | 2026-08-28 |
 
-> 本文保留最初由 VikingBot 直接托管任务的历史设计。现行方案由 OpenViking 托管 TaskRecord、QueueFS、查询和取消，外部 Server 只负责执行。
+> 本文保留最初由 VikingBot 直接托管任务的历史设计。现行方案由 Business Data Platform 托管 TaskRecord、QueueFS、查询和取消，外部 Server 只负责执行。
 
 ## 1. 概述
 
-`ov compile` 使用指定 Skill 整理 OpenViking 中的材料，并在目标目录生成或更新 Wiki 页面。
+`ov compile` 使用指定 Skill 整理 Business Data Platform 中的材料，并在目标目录生成或更新 Wiki 页面。
 
-命令由 VikingBot 执行。`ov` CLI 通过 OpenViking 的 Bot 代理调用 VikingBot，VikingBot 运行 AgentLoop，并使用当前用户身份读取和写入 OpenViking 数据。
+命令由 VikingBot 执行。`ov` CLI 通过 Business Data Platform 的 Bot 代理调用 VikingBot，VikingBot 运行 AgentLoop，并使用当前用户身份读取和写入 Business Data Platform 数据。
 
 ```text
 ov compile
-  -> OpenViking /bot/v1/compile
+  -> Business Data Platform /bot/v1/compile
   -> VikingBot Compile AgentLoop
-  -> OpenViking content APIs
+  -> Business Data Platform content APIs
 ```
 
 v1 的核心目标：
@@ -50,12 +50,12 @@ ov compile \
 | `--instruction` | 可选，本次整理任务的描述 |
 | `--args` | 可选，Provider 扩展参数 JSON 对象；`model_name` 可传模型 Endpoint ID |
 
-参数在 OpenViking 用户身份下 canonicalize 后满足以下约束：
+参数在 Business Data Platform 用户身份下 canonicalize 后满足以下约束：
 
 - `from` 必须是一个或多个可读目录；重复项去重，空项报错；
-- `to` 必须是可写的 resource 或 memory 目录，不能是 namespace 根、文件、Skill 目录或 OpenViking 派生目录；
+- `to` 必须是可写的 resource 或 memory 目录，不能是 namespace 根、文件、Skill 目录或 Business Data Platform 派生目录；
 - `skill` 必须解析为 Skill root，目录 URI 和其 `SKILL.md` URI 视为同一个 Skill；
-- `from`、`to` 和 `skill` 的权限最终仍由 OpenViking Server 校验，CLI 不根据 URI 文本推断权限。
+- `from`、`to` 和 `skill` 的权限最终仍由 Business Data Platform Server 校验，CLI 不根据 URI 文本推断权限。
 
 `--instruction` 为空时，VikingBot 使用以下默认任务描述：
 
@@ -86,7 +86,7 @@ Task 结果中的 `created`、`updated` 和 `unchanged` 只统计 Agent 本次�
        │ POST /bot/v1/compile
        ▼
 ┌────────────────────────────┐
-│ OpenViking Bot Proxy       │
+│ Business Data Platform Bot Proxy       │
 │ auth + identity forwarding │
 └──────────────┬─────────────┘
                ▼
@@ -98,12 +98,12 @@ Task 结果中的 `created`、`updated` 和 `unchanged` 只统计 Agent 本次�
 │   ├─ Context Tools         │
 │   ├─ AgentLoop             │
 │   ├─ Wiki Renderer         │
-│   └─ OpenViking Writer     │
+│   └─ Business Data Platform Writer     │
 └──────────────┬─────────────┘
                │ read / search / batch-write
                ▼
 ┌────────────────────────────┐
-│ OpenViking Data APIs       │
+│ Business Data Platform Data APIs       │
 └────────────────────────────┘
 ```
 
@@ -114,9 +114,9 @@ Task 结果中的 `created`、`updated` 和 `unchanged` 只统计 Agent 本次�
 | `crates/ov_cli` | 参数解析、HTTP 调用、任务轮询和结果展示 |
 | `openviking/server/routers/bot.py` | 认证请求并代理到 VikingBot |
 | `bot/vikingbot/compile` | Compile 任务、Skill、AgentLoop、渲染和写入编排 |
-| OpenViking content service | 数据权限、内容读写和索引刷新 |
+| Business Data Platform content service | 数据权限、内容读写和索引刷新 |
 
-OpenViking Server 必须启用 Bot 服务。未启用时，命令返回与 `ov chat` 一致的 503 错误。
+Business Data Platform Server 必须启用 Bot 服务。未启用时，命令返回与 `ov chat` 一致的 503 错误。
 
 ### 3.1 现有能力复用
 
@@ -128,7 +128,7 @@ Compile 只增加任务编排和领域规则，基础能力使用现有实现：
 | Bot proxy | `get_bot_url()`、`_create_bot_proxy_client()`、`_attach_openviking_connection()` | create/status 路由 |
 | Gateway 认证 | `OpenAPIChannel` 的 Gateway Token dependency、`OpenVikingConnection` 和 principal scope | compile request model 和 task owner 绑定 |
 | URI 与权限 | `fs/attrs` 返回的 canonical URI、请求边界 URI 校验与简写展开、`context_type_for_uri()`、VikingFS access check | 用户上下文中的目录约束和 target containment |
-| Skill | OpenViking Skills API、`SkillLoader.parse()`、VikingBot `SkillsLoader`、`SandboxManager` | OV bundle 快照和 task-local materialization |
+| Skill | Business Data Platform Skills API、`SkillLoader.parse()`、VikingBot `SkillsLoader`、`SandboxManager` | OV bundle 快照和 task-local materialization |
 | Agent | `AgentLoop._run_agent_loop()`、`ToolRegistry`、`register_default_tools()` | structured wrapper、scope guard 和 `submit_wiki_bundle` |
 | 内容读取 | `openviking_list/search/grep/glob/multi_read` | 限定允许的 URI roots；不增加同义读取工具 |
 | Link 与 metadata | `WikiLink`、`StoredLink`、`LinkRenderer`；Memory 目标额外复用 `MemoryFileUtils`、`next_memory_version()` 和 resource refs helper | OKF path、citation 和严格校验 |
@@ -237,14 +237,14 @@ GET /bot/v1/compile/{task_id}
 }
 ```
 
-创建请求继续通过 body 中的 `openviking_connection` 传递当前用户身份。查询请求是 GET，没有 body；OpenViking proxy 转发原认证凭证，并从已认证的 `RequestContext` 设置 canonical `X-OpenViking-Account/User` header。VikingBot 先做现有 Gateway Token/loopback 校验，再通过 `_resolve_request_principal()` 向 OpenViking 验证凭证并计算 principal scope。无权查询与 task 不存在统一返回 `NOT_FOUND`，避免泄露其他用户的 task ID。
+创建请求继续通过 body 中的 `openviking_connection` 传递当前用户身份。查询请求是 GET，没有 body；Business Data Platform proxy 转发原认证凭证，并从已认证的 `RequestContext` 设置 canonical `X-OpenViking-Account/User` header。VikingBot 先做现有 Gateway Token/loopback 校验，再通过 `_resolve_request_principal()` 向 Business Data Platform 验证凭证并计算 principal scope。无权查询与 task 不存在统一返回 `NOT_FOUND`，避免泄露其他用户的 task ID。
 
 ## 5. 执行流程
 
 VikingBot 创建异步任务后依次执行：
 
 1. 计算 `effective_instruction`，并对 `from`、`to` 和 `skill` 做 URI 语法校验。
-2. 通过 OpenViking 现有 `fs/attrs` 取得来源和目标的 canonical URI，再用 stat/list/read 路径验证形状与权限；Skill API 直接返回 canonical Skill root。VikingBot 后续只使用这些响应中的 canonical URI。
+2. 通过 Business Data Platform 现有 `fs/attrs` 取得来源和目标的 canonical URI，再用 stat/list/read 路径验证形状与权限；Skill API 直接返回 canonical Skill root。VikingBot 后续只使用这些响应中的 canonical URI。
 3. 通过 Skills API 取得 Skill root、定义和文件清单，通过现有 content read/download 路径读取辅助文件，在 task workspace 中物化快照，并交给 `SkillsLoader` 加载。
 4. 为每个来源建立 `source_id + directory_uri + overview` 描述，并使用现有 list/tree 能力建立目标 Wiki 的有界轻量 catalog。
 5. 从现有 `ToolRegistry` 构建 request-local 工具集，用显式 Compile Prompt 和 selected Skill 正文运行 structured AgentLoop；不加载普通 chat history、自动 memory recall 或其他 workspace Skill。
@@ -264,7 +264,7 @@ VikingBot 创建异步任务后依次执行：
 
 VikingBot 从 canonical Skill URI 拆出 `skill_name` 和 `target_uri`，调用现有 Skills API 取得 Skill root、`SKILL.md` 和文件列表，再通过同一用户连接调用现有 content read/download 路径读取辅助文件；确定性加载阶段不调用 Agent tool，也不解析 `openviking_multi_read` 的展示文本。`SKILL.md` 使用现有 `openviking.core.skill_loader.SkillLoader.parse()` 校验并取得 `allowed_tools`；该 parser 增加 `allowed_tools_declared` 布尔值，以保留“未声明”和“显式空数组”的区别，Compile 不为此再解析一遍 YAML。快照物化到 task-local workspace 后，使用现有 `vikingbot.agent.skills.SkillsLoader` 加载正文和 VikingBot metadata。requirements 使用 `SkillsLoader` 解析出的 `requires.bins/env`，但在实际 task sandbox 中做存在性检查，避免使用 Bot host 环境误判。
 
-该层只负责远程 bundle 的快照和物化，不实现新的 frontmatter parser、Skill 目录规范或 requirements 协议。OpenViking 派生文件和 Skill source metadata 不进入快照；加载过程限制文件数量、单文件大小和总大小，并拒绝逃逸 Skill root 的相对路径。task workspace 只包含本次选择的 Skill，selected Skill 正文直接加入 structured system prompt。任务结束后先调用 `SandboxManager.cleanup_session()` 停止 backend，再删除 compile 专属 workspace；现有 `cleanup_session()` 本身不会删除 direct-backend 目录，不能把它当成文件清理。
+该层只负责远程 bundle 的快照和物化，不实现新的 frontmatter parser、Skill 目录规范或 requirements 协议。Business Data Platform 派生文件和 Skill source metadata 不进入快照；加载过程限制文件数量、单文件大小和总大小，并拒绝逃逸 Skill root 的相对路径。task workspace 只包含本次选择的 Skill，selected Skill 正文直接加入 structured system prompt。任务结束后先调用 `SandboxManager.cleanup_session()` 停止 backend，再删除 compile 专属 workspace；现有 `cleanup_session()` 本身不会删除 direct-backend 目录，不能把它当成文件清理。
 
 Skill package 内的文件使用 `read_file` 读取 task workspace 路径 `skills/<skill-name>/...`；`openviking_*` 工具只读取任务范围内的 `viking://` URI。
 
@@ -283,7 +283,7 @@ VikingBot 按 canonical `from` 顺序为每个来源分配稳定的 request-loca
 source_id, directory_uri, overview
 ```
 
-`source_id` 只标识用户传入的来源目录，例如 `src_1`；它不是文件读取追踪 ID。Agent 首先获得这些来源描述和有界轻量目录信息，再通过 VikingBot 已有 OpenViking 工具按需读取：
+`source_id` 只标识用户传入的来源目录，例如 `src_1`；它不是文件读取追踪 ID。Agent 首先获得这些来源描述和有界轻量目录信息，再通过 VikingBot 已有 Business Data Platform 工具按需读取：
 
 - `openviking_list`：浏览来源目录；
 - `openviking_search`：语义检索；
@@ -311,11 +311,11 @@ compile_tools = available_tools ∩ (_COMPILE_CORE_TOOLS ∪ _OV_READ_TOOLS)
 request_tools = compile_tools + submit_wiki_bundle
 ```
 
-`_COMPILE_CORE_TOOLS` 固定为 `read_file`、`write_file`、`edit_file` 和 `exec`；`_OV_READ_TOOLS` 固定为 `openviking_list`、`openviking_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read` 和 `openviking_export`。OpenViking 工具仍受用户权限和 Compile URI scope 限制，本地文件和 shell 工具仍受 task workspace 与 sandbox policy 限制。
+`_COMPILE_CORE_TOOLS` 固定为 `read_file`、`write_file`、`edit_file` 和 `exec`；`_OV_READ_TOOLS` 固定为 `openviking_list`、`openviking_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read` 和 `openviking_export`。Business Data Platform 工具仍受用户权限和 Compile URI scope 限制，本地文件和 shell 工具仍受 task workspace 与 sandbox policy 限制。
 
 Compile 不使用 Skill 的 `allowed-tools` 推导、授权或限制工具，也不为 Skill 连接 MCP。该字段可作为其他 Skill 宿主的兼容 metadata 保留。Skill 需要方舟等外部能力时，通过 `exec` 调用 task sandbox 中预装的 CLI；可选的 `requires.bins/env` 只用于提前检查运行条件，不负责安装 CLI 或依赖。
 
-固定 allowlist 已排除 `message`、`cron`、`spawn`、Web、image、MCP 和 OpenViking 写入/提交工具，无需维护额外 blocklist。`exec` 仍可能产生外部副作用；现有 `direct` sandbox 只提供 task cwd，不是 OS 级隔离。`bot.sandbox.backends.direct.allow_compile_exec` 默认为 `true`（Compile 工具链开源，`exec` 默认直接以用户 shell 权限运行），使用 `direct` 时 Compile 工具集默认注册 `exec`；普通整理任务仍可通过文件工具完成。声明 `requires.bins` 或 `requires.env` 的 Skill 会先探测命令；如需关闭 `exec`，可显式设为 `false`，此时此类 Skill 会在执行任何命令探测前返回 `SKILL_CAPABILITY_UNAVAILABLE`。生产或多用户部署应使用配置了文件系统和网络 policy 的隔离 backend。
+固定 allowlist 已排除 `message`、`cron`、`spawn`、Web、image、MCP 和 Business Data Platform 写入/提交工具，无需维护额外 blocklist。`exec` 仍可能产生外部副作用；现有 `direct` sandbox 只提供 task cwd，不是 OS 级隔离。`bot.sandbox.backends.direct.allow_compile_exec` 默认为 `true`（Compile 工具链开源，`exec` 默认直接以用户 shell 权限运行），使用 `direct` 时 Compile 工具集默认注册 `exec`；普通整理任务仍可通过文件工具完成。声明 `requires.bins` 或 `requires.env` 的 Skill 会先探测命令；如需关闭 `exec`，可显式设为 `false`，此时此类 Skill 会在执行任何命令探测前返回 `SKILL_CAPABILITY_UNAVAILABLE`。生产或多用户部署应使用配置了文件系统和网络 policy 的隔离 backend。
 
 ### 6.5 结构感知探索（survey → 定向精读）
 
@@ -331,7 +331,7 @@ Compile 不采用“每个文件读开头 N 行”的线性扫描（开头几行
 
 ### 6.6 物化与来源采样
 
-物化与 `to` 类型解耦：只要有 sandbox（`--to` 为 resource/memory/skill 均满足），`--from` 的所有源文件都会 eager 物化到 `compile_resources/<source_id>/...`（无单文件/总字节上限；二进制与下载失败文件记为未物化，URI → 本地路径映射记录在 `compile_resources/_manifest.tsv`）。物化让模型能用 `exec` 本地 grep/jq/python 扫文件，而不是逐个 round-trip 到 OpenViking server。memory/skill 目标同样物化。salvage 仍仅 resource 目标（memory 只支持 Wiki pages、skill 走原子 add/update，均无“捞 workspace 产物”语义）。
+物化与 `to` 类型解耦：只要有 sandbox（`--to` 为 resource/memory/skill 均满足），`--from` 的所有源文件都会 eager 物化到 `compile_resources/<source_id>/...`（无单文件/总字节上限；二进制与下载失败文件记为未物化，URI → 本地路径映射记录在 `compile_resources/_manifest.tsv`）。物化让模型能用 `exec` 本地 grep/jq/python 扫文件，而不是逐个 round-trip 到 Business Data Platform server。memory/skill 目标同样物化。salvage 仍仅 resource 目标（memory 只支持 Wiki pages、skill 走原子 add/update，均无“捞 workspace 产物”语义）。
 
 来源清单（`_build_sources`）生成每源紧凑清单（文件数、字节数、扩展名分布，作为 prompt 里的 Source inventory），模型据此在 prompt 指导下自行完成 survey 与定向精读。
 
@@ -357,7 +357,7 @@ BotCompileService 使用当前 provider/config、`workspace=task_workspace` 和 
 
 现有 `_run_agent_loop()` 的 stop 判定需要从“出现 stop tool name”改成“该 stop tool 的结果通过 `_is_tool_result_success()`”；这是 structured task 正确重试的必要条件，默认聊天未传 `stop_tool_names`，行为不变。
 
-`request_tools` 仍使用现有 `ToolRegistry` 中的工具实例；OpenViking 权限不在 Bot 中模拟，实际调用继续由 Server 校验。`submit_wiki_bundle` 最后注册。Skill 的文件操作和 CLI 命令继续在 task-local `SandboxManager` 中执行；Prompt 明确要求将 Bash、shell 或 CLI 指令交给 `exec`。
+`request_tools` 仍使用现有 `ToolRegistry` 中的工具实例；Business Data Platform 权限不在 Bot 中模拟，实际调用继续由 Server 校验。`submit_wiki_bundle` 最后注册。Skill 的文件操作和 CLI 命令继续在 task-local `SandboxManager` 中执行；Prompt 明确要求将 Bash、shell 或 CLI 指令交给 `exec`。
 
 当 `write_file` 可用时，artifact 必须先由 `write_file` 或 `exec` 生成到 task workspace，再通过 `workspace_path` 提交；Wiki page body 同样先写到 `__compile_staging__/wiki_pages/`，再通过 `body_workspace_path` 提交。此时 `submit_wiki_bundle` 的动态 schema 不暴露内联 `content` / `body_markdown`，运行时也执行相同校验，避免大型多文件产物被拼进单次 tool call。
 
@@ -393,7 +393,7 @@ class WikiBundleDraft(BaseModel):
 - create 的最终 canonical path 不能与 catalog 中的已有文件或本 bundle 的其他页面冲突；
 - link 的 `f/t` 必须非空、非 self-link，并引用 bundle 中的页面；
 - `pages` 非空时，每个页面至少引用一个 `source_id`，且必须来自本次请求的来源描述；
-- Agent 不提供最终文件 URI，也不能直接写入 OpenViking。
+- Agent 不提供最终文件 URI，也不能直接写入 Business Data Platform。
 
 Pydantic model 使用 `extra="forbid"`；字段校验和 CompileLimits 都在 `submit_wiki_bundle` 内执行。校验失败时，工具将错误返回给 Agent 修复。达到迭代上限仍未提交合法结果时，Resource 目标按上述规则尝试 salvage；其他目标或没有合格 workspace 产物的 Resource 任务失败。
 
@@ -412,7 +412,7 @@ VikingBot renderer 将 `WikiBundleDraft` 转成最终写入计划。Compile 新�
 
 ### 8.1 OKF 与 metadata
 
-v1 以 [Open Knowledge Format v0.1 Draft](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) 为格式基线。每个 Compile 页面都是 UTF-8 Markdown concept document：YAML frontmatter 中 `type` 必填；OpenViking 额外要求 `title` 和单行 `description` 非空，`tags` 可选。
+v1 以 [Open Knowledge Format v0.1 Draft](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md) 为格式基线。每个 Compile 页面都是 UTF-8 Markdown concept document：YAML frontmatter 中 `type` 必填；Business Data Platform 额外要求 `title` 和单行 `description` 非空，`tags` 可选。
 
 字段映射固定为：
 
@@ -431,11 +431,11 @@ concept 页面不写 `okf_version`；该字段按 OKF 只能出现在 bundle-roo
 
 ### 8.2 路径、链接与 Citations
 
-create 的目标路径通过 `sanitize_relative_viking_path()` 和 `safe_join_viking_uri()` 约束在 canonical `to` 下；`path_hint` 为空时使用 `VikingURI.sanitize_segment(title)`，并自动追加 `.md`。点号文件、`index.md`、`log.md`、OpenViking 派生文件名和清洗后的重复路径均拒绝。update 始终使用已有 URI。
+create 的目标路径通过 `sanitize_relative_viking_path()` 和 `safe_join_viking_uri()` 约束在 canonical `to` 下；`path_hint` 为空时使用 `VikingURI.sanitize_segment(title)`，并自动追加 `.md`。点号文件、`index.md`、`log.md`、Business Data Platform 派生文件名和清洗后的重复路径均拒绝。update 始终使用已有 URI。
 
 bundle link 的两端必须是本次提交的页面。`match_text` 必须实际命中来源页面的 `body_markdown`，且命中位置不能位于 YAML、代码块、inline code、已有 Markdown link 或 Citations section；renderer 只对正文做 link rendering，再拼接 frontmatter 和 Citations。它使用 target-root-aware 相对路径生成标准 Markdown link，未渲染出的 link 不计入 `link_count`。Resource 目标只保留可见链接；Memory 目标还将 resolved link/backlink 合并进 `MEMORY_FIELDS`，但 v1 不写独立 relation store。
 
-renderer 把每页 `source_ids` 映射为用户传入的 canonical source directory URI，并在可见正文末尾合并成唯一的顶层 `# Citations`。已有 citation 先保留，再按 canonical target 去重追加本次来源；最终统一渲染为连续的 `[n] [label](target)` 列表，来源目录使用 canonical URI 的末级目录名作为 label，无法取得时回退为 `Source src_n`。代码块中的同名标题不视为 citation section。Agent 也可以在正文中引用来源范围内的具体文件 URI，这些 Markdown citation 的 label 和 target 会被保留并参与去重。`viking://` 是 OpenViking 对 citation target 的内部扩展，其他 OKF consumer 未必能够解析该 scheme。
+renderer 把每页 `source_ids` 映射为用户传入的 canonical source directory URI，并在可见正文末尾合并成唯一的顶层 `# Citations`。已有 citation 先保留，再按 canonical target 去重追加本次来源；最终统一渲染为连续的 `[n] [label](target)` 列表，来源目录使用 canonical URI 的末级目录名作为 label，无法取得时回退为 `Source src_n`。代码块中的同名标题不视为 citation section。Agent 也可以在正文中引用来源范围内的具体文件 URI，这些 Markdown citation 的 label 和 target 会被保留并参与去重。`viking://` 是 Business Data Platform 对 citation target 的内部扩展，其他 OKF consumer 未必能够解析该 scheme。
 
 写入使用通用内容接口。它是现有内容写入能力的批量入口，不实现新的存储或索引协议：
 
@@ -497,7 +497,7 @@ Memory 现有 `refresh_schema_overview()` / `refresh_file_embedding()` 会记录
 
 该接口不是跨文件原子存储事务：底层 I/O 在中途失败时可能已有少量文件可见。错误路径必须释放 tree lock，并为已成功写入的 `changed_uris` 触发一次 refresh；调用方可重试同一组 `upsert` operation。
 
-成功响应使用 OpenViking 标准 envelope：
+成功响应使用 Business Data Platform 标准 envelope：
 
 ```json
 {
@@ -517,24 +517,24 @@ Bot 以该响应为最终提交事实，不根据请求计划假定所有文件�
 
 ## 9. 身份与安全
 
-OpenViking Bot proxy 认证 CLI 请求，并将当前用户的 OpenViking connection 转交给 VikingBot。VikingBot 使用同一身份完成所有读取和写入。
+Business Data Platform Bot proxy 认证 CLI 请求，并将当前用户的 Business Data Platform connection 转交给 VikingBot。VikingBot 使用同一身份完成所有读取和写入。
 
-OpenViking proxy 复用 `bot.py` 现有 Bot URL、httpx client、Gateway Token、身份附加和错误映射。VikingBot compile router 复用 `OpenAPIChannel._verify_gateway_request()` 和 `OpenVikingConnection`，不定义第二套 Gateway 认证或 principal 格式。
+Business Data Platform proxy 复用 `bot.py` 现有 Bot URL、httpx client、Gateway Token、身份附加和错误映射。VikingBot compile router 复用 `OpenAPIChannel._verify_gateway_request()` 和 `OpenVikingConnection`，不定义第二套 Gateway 认证或 principal 格式。
 
 安全要求：
 
 - task 查询校验创建者身份；
 - API key 只存在于运行中任务的内存，不写入 task store 和日志；
-- Agent 的 OpenViking 读取范围只包含 `from`、`to` 和 Skill；
-- OpenViking adapter 的写入和删除工具不进入 request registry；Compile 管理的 Wiki 写入只能由 batch-write 完成；
-- 用户 connection 只注入 scope-guarded OpenViking read adapter，不传给 file 或 shell tool；
+- Agent 的 Business Data Platform 读取范围只包含 `from`、`to` 和 Skill；
+- Business Data Platform adapter 的写入和删除工具不进入 request registry；Compile 管理的 Wiki 写入只能由 batch-write 完成；
+- 用户 connection 只注入 scope-guarded Business Data Platform read adapter，不传给 file 或 shell tool；
 - Compile 忽略 Skill 的 `allowed-tools`，固定工具集合中的 `exec` 可能产生 Compile 之外的副作用，不纳入 batch-write 的一致性保证；
 - Compile Prompt 明确把来源正文、catalog 和工具结果视为待整理数据，不能把其中的文本当作指令；只有用户的 instruction、所选 Skill 和系统 Compile 规则构成指令层；
 - file tool 只能访问 task workspace；shell 的隔离强度取决于 backend，多用户部署必须关闭 `direct` Compile exec 或使用隔离 backend；
 - 最终 URI、写入条件和 metadata 由可信代码生成；
 - 日志不记录 source 正文、Skill 正文、完整 Prompt 或凭证。
 
-远程使用时，Bot 运行在 OpenViking Server 一侧。CLI 不在用户本机启动 Bot。
+远程使用时，Bot 运行在 Business Data Platform Server 一侧。CLI 不在用户本机启动 Bot。
 
 ## 10. 任务存储与并发
 
@@ -572,7 +572,7 @@ v1 先使用集中定义、可测试的 `CompileLimits`，不把常量散落在 
 | accepted tasks（全局 / 单 principal）/ queue wait | 40 / 10 / 60 min |
 | terminal task retention / records | 24 h / 1,000 |
 
-OpenViking batch-write 自己还要设置独立的 request 上限，至少覆盖 Compile 的 256 combined operations / 4 MiB，但不能信任 Bot 已经做过限制。超限统一返回 `RESOURCE_EXHAUSTED`。
+Business Data Platform batch-write 自己还要设置独立的 request 上限，至少覆盖 Compile 的 256 combined operations / 4 MiB，但不能信任 Bot 已经做过限制。超限统一返回 `RESOURCE_EXHAUSTED`。
 
 ## 11. 错误处理
 
@@ -592,7 +592,7 @@ OpenViking batch-write 自己还要设置独立的 request 上限，至少覆盖
 | `DEADLINE_EXCEEDED` | Agent、batch refresh 或 CLI 等待超时 |
 | `BOT_RESTARTED` | Bot 重启中断了非终态 Compile 任务 |
 
-同步参数和服务错误沿用 OpenViking 标准 HTTP error code。任务执行错误通过 task 的 `status=failed` 和 `error` 返回；其中 batch API 的标准 `CONFLICT` 在 Compile task 中映射为更具体的 `WRITE_CONFLICT`。
+同步参数和服务错误沿用 Business Data Platform 标准 HTTP error code。任务执行错误通过 task 的 `status=failed` 和 `error` 返回；其中 batch API 的标准 `CONFLICT` 在 Compile task 中映射为更具体的 `WRITE_CONFLICT`。
 
 ## 12. 代码改动
 
@@ -604,7 +604,7 @@ OpenViking batch-write 自己还要设置独立的 request 上限，至少覆盖
 - `crates/ov_cli/src/client.rs`：增加 compile create/status 的 typed request 方法；
 - `crates/ov_cli/src/help_ui.rs`：增加命令说明和示例。
 
-### OpenViking
+### Business Data Platform
 
 - `openviking/server/routers/bot.py`：基于现有 Bot proxy helper 增加 compile 创建和查询请求；
 - `openviking/server/routers/content.py`：提供 batch write API；
@@ -625,7 +625,7 @@ bot/vikingbot/compile/
   renderer.py
 ```
 
-`service.py` 只编排现有 Skills API/loader、OpenViking tools、AgentLoop 和 batch-write client；不为这些能力增加一层同义 wrapper。只有某部分出现独立状态或被第二个调用者复用时再拆文件。
+`service.py` 只编排现有 Skills API/loader、Business Data Platform tools、AgentLoop 和 batch-write client；不为这些能力增加一层同义 wrapper。只有某部分出现独立状态或被第二个调用者复用时再拆文件。
 
 同时对现有模块做小型扩展：
 
@@ -642,9 +642,9 @@ bot/vikingbot/compile/
 - CLI 参数展开、默认 instruction 和 Task ID 返回；
 - Bot proxy 的创建/GET 查询身份转交、未启用 Bot 的 503 和上游错误；
 - Skill 复用现有 parser/loader、相对引用、requirements 和路径逃逸检查；`allowed-tools` 可正常解析但不影响 Compile 工具集合；
-- request registry 固定包含本地核心工具、scope-guarded OpenViking 只读工具和 `submit_wiki_bundle`，不包含 message/cron/spawn/Web/image/MCP/OV write，用户 connection 只进入 OV read adapter；
+- request registry 固定包含本地核心工具、scope-guarded Business Data Platform 只读工具和 `submit_wiki_bundle`，不包含 message/cron/spawn/Web/image/MCP/OV write，用户 connection 只进入 OV read adapter；
 - Agent structured wrapper 复用原 loop；失败 submit 不停止、plain text 会修复、iteration limit 不额外生成普通回答，Resource 目标只 salvage 合格产物，普通 chat 行为不回归；
-- OpenViking 工具的 URI scope、缺省全库参数和数量/单次/累计输出上限，并确认没有注册第二组 source tools；
+- Business Data Platform 工具的 URI scope、缺省全库参数和数量/单次/累计输出上限，并确认没有注册第二组 source tools；
 - 非法 bundle 的 loop 内修复、空 bundle no-op 和最终失败；
 - 单页面零 link、多页面互链和已有页面更新；
 - OKF frontmatter、保留未知字段、Resource/Memory 格式差异、protected anchor、路径 containment、citation merge、WikiLink、Memory version 和 resource refs；

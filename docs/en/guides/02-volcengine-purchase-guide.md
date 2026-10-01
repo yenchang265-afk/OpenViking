@@ -1,10 +1,10 @@
 # Volcengine Model Purchase Guide
 
-This guide introduces how to purchase and configure the model services required by OpenViking on Volcengine.
+This guide introduces how to purchase and configure the model services required by Business Data Platform on Volcengine.
 
 ## Overview
 
-OpenViking requires the following model services:
+Business Data Platform requires the following model services:
 
 | Model Type | Purpose | Recommended Model |
 |------------|---------|-------------------|
@@ -84,7 +84,7 @@ Visit: [Model Management Page](https://console.volcengine.com/ark/region:ark+cn-
 
 After activation, use the model ID: `doubao-embedding-vision-251215`
 
-## Configure OpenViking
+## Configure Business Data Platform
 
 ### Configuration Template
 
@@ -212,7 +212,7 @@ In the Volcano Ark Console:
 Volcengine provides a free tier for new users:
 
 - Free Tokens upon first activation
-- Sufficient to complete the OpenViking trial experience
+- Sufficient to complete the Business Data Platform trial experience
 - See details: [Volcano Ark Pricing](https://www.volcengine.com/docs/82379/1399514)
 
 ## Troubleshooting
@@ -257,12 +257,12 @@ Error: Connection timeout
 
 - [Volcengine Documentation Center](https://www.volcengine.com/docs)
 - [Volcano Ark API Documentation](https://www.volcengine.com/docs/82379)
-- [OpenViking GitHub Issues](https://github.com/volcengine/OpenViking/issues)
+- [Business Data Platform GitHub Issues](https://github.com/volcengine/OpenViking/issues)
 
 ## Related Documentation
 
 - [Configuration Guide](./01-configuration.md) - Complete configuration reference
-- [Quick Start](../getting-started/02-quickstart.md) - Start using OpenViking
+- [Quick Start](../getting-started/02-quickstart.md) - Start using Business Data Platform
 
 ## Appendix
 

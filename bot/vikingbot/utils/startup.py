@@ -1,4 +1,4 @@
-"""Readiness handshake with the parent OpenViking process."""
+"""Readiness handshake with the parent Business Data Platform process."""
 
 import json
 import os

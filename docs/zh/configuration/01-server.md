@@ -2,7 +2,7 @@
 
 首次配置建议使用 `openviking-server init`，保存后运行 `openviking-server doctor`。
 
-OpenViking 服务端读取 `ov.conf`。默认路径是：
+Business Data Platform 服务端读取 `ov.conf`。默认路径是：
 
 ```text
 ~/.openviking/ov.conf
@@ -198,7 +198,7 @@ Search 和 Find 请求的默认 `limit` 为 `10`，可以在每次 API 或 SDK �
 
 | 字段 | 类型 / 常用值 | 默认值 | 作用 |
 |---|---|---|---|
-| `workspace` | path | `"./data"` | OpenViking 工作目录 |
+| `workspace` | path | `"./data"` | Business Data Platform 工作目录 |
 | `agfs.backend` | `local`、`memory`、`s3` | `local` | 文件与元数据存储后端 |
 | `vectordb.backend` | `local`、`cuvs`、`http`、`volcengine`、`vikingdb` | `local` | 向量数据库后端 |
 | `vectordb.dimension` | integer | 跟随 Embedding | 向量集合维度 |
@@ -402,7 +402,7 @@ Provider 和密钥管理配置见[加密指南](../guides/08-encryption.md)。
 
 启用 Understanding 目录路由时，`max_files` 和 `max_depth` 才约束目录导入。每次
 `DirectoryParser` 扫描会在提交该层 Understanding 请求前独立应用限制；嵌套 ZIP 会启动
-新的目录扫描，不与外层共享文件数量和深度预算。关闭 Understanding 时，OpenViking
+新的目录扫描，不与外层共享文件数量和深度预算。关闭 Understanding 时，Business Data Platform
 原生目录解析不应用这两个限制。
 
 客户端导入本地目录时，完整目录 ZIP 受 `/resources/temp_upload` 上传大小限制。ZIP

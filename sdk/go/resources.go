@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-// AddResource imports a local path or remote URL into OpenViking resources.
+// AddResource imports a local path or remote URL into Business Data Platform resources.
 func (c *Client) AddResource(ctx context.Context, path string, opts *AddResourceOptions) (map[string]any, error) {
 	if opts == nil {
 		opts = &AddResourceOptions{}

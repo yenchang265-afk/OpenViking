@@ -22,7 +22,7 @@ pub const HKDF_SALT: &[u8] = b"openviking-kek-salt-v1";
 /// HKDF info prefix; full info = prefix ‖ account_id. Mirrors `providers.py::HKDF_INFO_PREFIX`.
 pub const HKDF_INFO_PREFIX: &[u8] = b"openviking:kek:v1:";
 
-/// Envelope magic: "OpenViking Encryption v1". Mirrors `encryptor.py::MAGIC`.
+/// Envelope magic: "Business Data Platform Encryption v1". Mirrors `encryptor.py::MAGIC`.
 pub const MAGIC: &[u8; 4] = b"OVE1";
 /// Envelope format version. Mirrors `encryptor.py::VERSION`.
 pub const VERSION: u8 = 0x01;

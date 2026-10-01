@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""FastAPI application for OpenViking HTTP Server."""
+"""FastAPI application for Business Data Platform HTTP Server."""
 
 import asyncio
 import os
@@ -343,7 +343,7 @@ def create_app(
             logger.info("Prometheus metrics enabled at /metrics")
         await init_usage_audit_from_server_config(config, app=app, service=service)
 
-        # Initialize OAuth 2.1 store + provider when enabled in OpenViking config.
+        # Initialize OAuth 2.1 store + provider when enabled in Business Data Platform config.
         # The store + provider instances were already constructed at app
         # creation time so the SDK routes could capture them; here we just
         # async-initialize the SQLite connection on the same instance.
@@ -425,8 +425,8 @@ def create_app(
             await usage_reporter.close()
 
     app = FastAPI(
-        title="OpenViking API",
-        description="OpenViking HTTP Server - Agent-native context database",
+        title="Business Data Platform API",
+        description="Business Data Platform HTTP Server - Agent-native context database",
         version="0.1.0",
         lifespan=lifespan,
     )

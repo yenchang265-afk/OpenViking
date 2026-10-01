@@ -131,7 +131,7 @@ test("buildOverviewMessage is byte-stable for the same inputs", () => {
   const b = buildOverviewMessage("summary", 42, 1000);
   assert.deepEqual(a, b);
   assert.equal(a.timestamp, 41);
-  assert.match(a.content, /\[OpenViking Session Context\]/);
+  assert.match(a.content, /\[Business Data Platform Session Context\]/);
 });
 
 test("buildOverviewMessage points the model at the openviking_search tool", () => {

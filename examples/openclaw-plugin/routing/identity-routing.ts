@@ -71,7 +71,7 @@ export type SessionAgentResolveResult = {
 };
 
 /**
- * Map OpenClaw session identity to an OpenViking session_id that is safe as a single
+ * Map OpenClaw session identity to a Business Data Platform session_id that is safe as a single
  * AGFS path segment on Windows (no `:` etc.). Prefer UUID sessionId when present;
  * otherwise derive a stable sha256 from sessionKey.
  */
@@ -113,7 +113,7 @@ export function openClawSessionRefToOvStorageId(ref: string): string {
 }
 
 /**
- * OpenViking peer identifiers allow only [a-zA-Z0-9_-].
+ * Business Data Platform peer identifiers allow only [a-zA-Z0-9_-].
  * OpenClaw ids may contain ":"; never send raw colons in X-OpenViking-Actor-Peer.
  */
 export function sanitizeOpenVikingAgentIdHeader(raw: string): string {

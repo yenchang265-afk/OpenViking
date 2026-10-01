@@ -1,7 +1,7 @@
 # Quick Start Has Moved
 
 <a id="quick-start-server-mode"></a>
-OpenViking runs as an HTTP service. Server setup and client verification are now combined in the [Quick Start](02-quickstart.md), which starts with the independent CLI and covers managed, existing, and self-hosted services.
+Business Data Platform runs as an HTTP service. Server setup and client verification are now combined in the [Quick Start](02-quickstart.md), which starts with the independent CLI and covers managed, existing, and self-hosted services.
 
 <a id="prerequisites"></a>
 <a id="start-the-server"></a>

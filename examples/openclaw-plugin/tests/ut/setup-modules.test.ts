@@ -27,7 +27,7 @@ describe("setup IO seam", () => {
     return path.join(dir, "openclaw.json");
   }
 
-  it("writes OpenViking plugin config while preserving entry metadata and install allow-list behavior", () => {
+  it("writes Business Data Platform plugin config while preserving entry metadata and install allow-list behavior", () => {
     const configPath = tempConfigPath();
     fs.writeFileSync(configPath, JSON.stringify({
       plugins: {

@@ -1,6 +1,6 @@
 # Public Access & Reverse Proxy
 
-OpenViking serves REST API, MCP, OAuth, `.well-known/*`, and Web Studio
+Business Data Platform serves REST API, MCP, OAuth, `.well-known/*`, and Web Studio
 (`/studio`) on port 1933 by default. This guide shows how to put it behind a
 public HTTPS domain.
 
@@ -63,7 +63,7 @@ OPENVIKING_PUBLIC_BASE_URL=https://ov.your-domain.com
 OV_ACME_EMAIL=admin@your-domain.com   # optional; recommended for Let's Encrypt
 ```
 
-`OPENVIKING_PUBLIC_BASE_URL` is read by both the OpenViking container (used
+`OPENVIKING_PUBLIC_BASE_URL` is read by both the Business Data Platform container (used
 as the issuer in OAuth metadata and `WWW-Authenticate` headers) and Caddy
 (as the HTTPS site address).
 

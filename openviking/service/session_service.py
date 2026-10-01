@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Session Service for OpenViking.
+Session Service for Business Data Platform.
 
 Provides session management operations: session, sessions, add_message, commit, delete.
 """

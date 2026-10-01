@@ -230,7 +230,7 @@ describe("OpenVikingClient", () => {
     expect(second.searchParams.get("end_date")).toBe("2026-08-10");
   });
 
-  it("resolves and preflights OpenViking Assets with latest Git fields", async () => {
+  it("resolves and preflights Business Data Platform Assets with latest Git fields", async () => {
     const fetcher = vi
       .fn<typeof fetch>()
       .mockImplementation(async () => ok({}));

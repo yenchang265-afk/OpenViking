@@ -155,7 +155,7 @@ class VolcengineApiKeyCollection(ICollection):
     def _normalize_date_time_filter(cls, obj: Any) -> Any:
         """Rewrite ``range`` nodes on date_time fields to VikingDB ``time_range``.
 
-        OpenViking compiles ``TimeRange`` down to the internal ``range`` DSL, but the
+        Business Data Platform compiles ``TimeRange`` down to the internal ``range`` DSL, but the
         commercial data-plane expects ``time_range`` for date_time fields and ``range``
         only for numeric fields. Numeric ``range`` nodes are left untouched.
         """

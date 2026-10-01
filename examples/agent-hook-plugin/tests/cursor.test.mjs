@@ -49,13 +49,13 @@ test("Cursor command-installed integration contains Hook, Rule, Skill, and MCP e
   ]);
 });
 
-test("Cursor URI guard redirects virtual paths to OpenViking MCP tools", () => {
+test("Cursor URI guard redirects virtual paths to Business Data Platform MCP tools", () => {
   const readDecision = evaluateHostUriGuard("cursor", {
     file_path: "viking://resources/project/file.md",
   });
   assert.deepEqual(Object.keys(readDecision).sort(), ["permission", "user_message"]);
   assert.equal(readDecision.permission, "deny");
-  assert.match(readDecision.user_message, /OpenViking MCP read/);
+  assert.match(readDecision.user_message, /Business Data Platform MCP read/);
 
   assert.deepEqual(evaluateHostUriGuard("cursor", { file_path: "/tmp/file.md" }), {});
 });

@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 """Pluggable network clients for model providers.
 
-The public OpenViking package owns only this neutral extension point. Internal
+The public Business Data Platform package owns only this neutral extension point. Internal
 distributions may register an adapter for additional URL schemes without
 making upstream model providers depend on private networking packages.
 """

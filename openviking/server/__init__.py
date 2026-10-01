@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""OpenViking HTTP Server module."""
+"""Business Data Platform HTTP Server module."""
 
 from typing import TYPE_CHECKING
 

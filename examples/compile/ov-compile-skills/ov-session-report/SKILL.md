@@ -3,7 +3,7 @@ name: ov-session-report
 description: Analyze local Q&A session JSONL files and produce a complete, auditable English Markdown weekly report over consecutive time windows, with all data required for downstream document and whiteboard rendering. Use for requests such as "analyze the latest week of sessions," "generate a community Q&A weekly report," or "compare with last week." This skill does not ingest other message sources or create/upload online documents.
 ---
 
-# OpenViking Session Q&A Weekly Report
+# Business Data Platform Session Q&A Weekly Report
 
 Read only the session data supplied by the user. Clean and normalize it, apply time windows, compute metrics, classify topics, review risks, compare with the previous period, and produce one self-contained Markdown file. The default timezone is `Asia/Shanghai`.
 
@@ -38,7 +38,7 @@ Infer missing values from the directory structure, timestamps, and previous repo
 
 The Markdown report must use this order:
 
-1. Title: `OpenViking Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD`
+1. Title: `Business Data Platform Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD`
 2. `Executive Summary`
 3. `Releases This Week`
 4. `Weekly Topic Ranking`
@@ -88,7 +88,7 @@ rg --files "$SESSION_ROOT" -g '*.jsonl'
 Do not assume every file in the directory belongs to the target dataset:
 
 1. Group files by directory level, filename prefix, and available metadata. Count files and determine the time range for each group.
-2. Sample human messages from the beginning, middle, and end of each group to verify that it contains OpenViking community Q&A sessions.
+2. Sample human messages from the beginning, middle, and end of each group to verify that it contains Business Data Platform community Q&A sessions.
 3. Exclude test conversations, internal debugging, bot self-tests, unrelated products, and clearly irrelevant data.
 4. When the user supplies an exact `session_scope`, honor it but still verify that it contains data.
 5. Record discovered, included, and excluded file counts plus exclusion reasons in the methodology section. Only disclose masked summaries of internal identifiers.
@@ -349,7 +349,7 @@ Required fields:
 {
   "schema_version": "qa-report.v3",
   "report": {
-    "title": "OpenViking Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD",
+    "title": "Business Data Platform Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD",
     "generated_at": "YYYY-MM-DDTHH:mm:ss+08:00",
     "timezone": "Asia/Shanghai",
     "window": {
@@ -531,7 +531,7 @@ previous_end: YYYY-MM-DDTHH:mm:ss+08:00
 generated_at: YYYY-MM-DDTHH:mm:ss+08:00
 ---
 
-# OpenViking Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD
+# Business Data Platform Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD
 
 ## Executive Summary
 
@@ -612,7 +612,7 @@ generated_at: YYYY-MM-DDTHH:mm:ss+08:00
 
 ## Previous Reports
 
-- [OpenViking Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD](verified link or path)
+- [Business Data Platform Community Q&A Weekly Report: YYYY-MM-DD to YYYY-MM-DD](verified link or path)
 
 ## Appendix: Structured Report Data
 

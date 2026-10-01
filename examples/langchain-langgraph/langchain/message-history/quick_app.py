@@ -1,4 +1,4 @@
-"""Deterministic LangChain app using OpenViking-backed chat history."""
+"""Deterministic LangChain app using Business Data Platform-backed chat history."""
 
 from __future__ import annotations
 
@@ -19,8 +19,8 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
     def answer(messages: list[BaseMessage]) -> AIMessage:
         text = "\n".join(extract_message_text(message.content) for message in messages)
         if "azure" in text.lower():
-            return AIMessage(content="OpenViking history remembers azure.")
-        return AIMessage(content="OpenViking history is waiting for a preference.")
+            return AIMessage(content="Business Data Platform history remembers azure.")
+        return AIMessage(content="Business Data Platform history is waiting for a preference.")
 
     return RunnableWithMessageHistory(
         RunnableLambda(answer),

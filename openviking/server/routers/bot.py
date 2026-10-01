@@ -86,7 +86,7 @@ def _build_openviking_connection(
     if api_key:
         connection["api_key"] = api_key
     # Preserve request-scoped actor peer so vikingbot does not fall back to
-    # body user_id / authenticated OpenViking user_id (#4649).
+    # body user_id / authenticated Business Data Platform user_id (#4649).
     actor_peer_id = str(ctx.actor_peer_id or "").strip()
     if actor_peer_id:
         connection["actor_peer_id"] = actor_peer_id
@@ -102,7 +102,7 @@ def _attach_openviking_connection(
 ) -> dict:
     """Attach the authenticated Studio connection to the bot request body.
 
-    The OpenViking proxy authenticates the browser request before forwarding it to
+    The Business Data Platform proxy authenticates the browser request before forwarding it to
     vikingbot. Bot tools must keep using that same identity instead of falling back
     to vikingbot's static root/user-key configuration.
 
@@ -132,7 +132,7 @@ def _attach_openviking_connection(
             return enriched
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Bot proxy requires a forwardable OpenViking API key.",
+            detail="Bot proxy requires a forwardable Business Data Platform API key.",
         )
     enriched["openviking_connection"] = _build_openviking_connection(
         api_key=api_key,

@@ -1,6 +1,6 @@
 # Agent Runtime API
 
-Agent Runtime Server executes Agent tasks and currently supports Compile. Applications submit tasks through OpenViking's Compile API. OpenViking validates requests, persists tasks, and manages their lifecycle while calling the Runtime execution API. The bundled VikingBot implements the same execution protocol for local deployments.
+Agent Runtime Server executes Agent tasks and currently supports Compile. Applications submit tasks through Business Data Platform's Compile API. Business Data Platform validates requests, persists tasks, and manages their lifecycle while calling the Runtime execution API. The bundled VikingBot implements the same execution protocol for local deployments.
 
 **Code entry points**:
 

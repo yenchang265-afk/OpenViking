@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Base parser interface for OpenViking document processing.
+Base parser interface for Business Data Platform document processing.
 
 Following PageIndex philosophy: preserve natural document structure
 rather than arbitrary chunking.

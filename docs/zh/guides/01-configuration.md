@@ -1,6 +1,6 @@
 # 配置
 
-OpenViking 使用 JSON 配置文件（`ov.conf`）进行设置。配置文件支持 Embedding、VLM、Rerank、存储、解析器等多个模块的配置。
+Business Data Platform 使用 JSON 配置文件（`ov.conf`）进行设置。配置文件支持 Embedding、VLM、Rerank、存储、解析器等多个模块的配置。
 
 首次配置推荐优先使用：
 
@@ -50,7 +50,7 @@ openviking-server doctor
 
 ## 配置范围与生效方式
 
-OpenViking 的配置分为两个层级：
+Business Data Platform 的配置分为两个层级：
 
 - **启动配置**从 `ov.conf` 读取，用于定义进程基线和运行时配置源。修改后需要重启服务；运行时配置接口不会改写 `ov.conf`。
 - **运行时覆盖配置**由配置源持久化保存，可以通过 Admin API 在 Cluster 或 Account 层修改。
@@ -167,7 +167,7 @@ PATCH 采用三态语义：字段缺失表示不修改，具体值表示设置�
 }
 ```
 
-OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 `gpt-5.4`](https://learn.chatgpt.com/docs/models#deprecated-codex-models)。已有配置需将 `ov.conf` 中的 `vlm.model` 改为 `gpt-5.6-terra` 并重启服务；升级 OpenViking 不会自动修改已保存的模型设置。此次退役不影响使用 API Key 的 `provider: "openai"`。
+OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 `gpt-5.4`](https://learn.chatgpt.com/docs/models#deprecated-codex-models)。已有配置需将 `ov.conf` 中的 `vlm.model` 改为 `gpt-5.6-terra` 并重启服务；升级 Business Data Platform 不会自动修改已保存的模型设置。此次退役不影响使用 API Key 的 `provider: "openai"`。
 
 </details>
 
@@ -221,7 +221,7 @@ OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 
 }
 ```
 
-如果 OpenViking 需要处理图片，请使用 `glm-4.6v` 或 `glm-5v-turbo` 这类支持视觉输入的模型。
+如果 Business Data Platform 需要处理图片，请使用 `glm-4.6v` 或 `glm-5v-turbo` 这类支持视觉输入的模型。
 
 </details>
 
@@ -273,7 +273,7 @@ OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 
 
 #### Embedding 熔断（Circuit Breaker）
 
-当 embedding provider 出现连续瞬时错误（如 `429`、`5xx`）时，OpenViking 会触发熔断，在一段时间内暂停调用 provider，并将 embedding 任务重新入队。超过基础 `reset_timeout` 后进入 HALF_OPEN，允许一次探测请求；如果探测失败，则下一次 `reset_timeout` 翻倍（上限为 `max_reset_timeout`）。
+当 embedding provider 出现连续瞬时错误（如 `429`、`5xx`）时，Business Data Platform 会触发熔断，在一段时间内暂停调用 provider，并将 embedding 任务重新入队。超过基础 `reset_timeout` 后进入 HALF_OPEN，允许一次探测请求；如果探测失败，则下一次 `reset_timeout` 翻倍（上限为 `max_reset_timeout`）。
 
 ```json
 {
@@ -300,7 +300,7 @@ OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 
 | `doubao-embedding-vision-251215` | 1024 | multimodal | 推荐 |
 | `doubao-embedding-250615` | 1024 | text | 仅文本 |
 
-使用 `input: "multimodal"` 时，OpenViking 可以嵌入文本、图片（PNG、JPG 等）和混合内容。以图搜图需要该模式；纯文本 embedding 模型仍会索引图片 summary，但不能接收图片查询。
+使用 `input: "multimodal"` 时，Business Data Platform 可以嵌入文本、图片（PNG、JPG 等）和混合内容。以图搜图需要该模式；纯文本 embedding 模型仍会索引图片 summary，但不能接收图片查询。
 
 **支持的 provider:**
 - `openai`: OpenAI Embedding API
@@ -522,7 +522,7 @@ OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 
 | 中国 | `https://dashscope.aliyuncs.com`（默认） | 推荐中国大陆用户使用 |
 | 国际 | `https://dashscope-intl.aliyuncs.com` | 推荐中国境外用户使用 |
 
-如果使用自定义网关，`api_base` 应填写网关根地址。OpenViking 会根据
+如果使用自定义网关，`api_base` 应填写网关根地址。Business Data Platform 会根据
 输入模式自动追加 endpoint 路径，因此不要在 `api_base` 中包含
 `/compatible-mode/v1`（文本模式）或
 `/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding`
@@ -566,16 +566,16 @@ OpenAI 已于 2026 年 8 月 31 日[停止在 ChatGPT 登录的 Codex 中提供 
 ```
 
 Sparse 输出是 embedding provider 的能力，不会因为设置
-`storage.vectordb.sparse_weight` 就自动出现。OpenViking 当前只为
+`storage.vectordb.sparse_weight` 就自动出现。Business Data Platform 当前只为
 `volcengine` 和 `vikingdb` 实现了 `sparse` / `hybrid` embedding provider；
 OpenAI 兼容接口、Ollama 和内置 `local` provider 目前都只支持 dense。
-因此，自托管的 `/v1/embeddings` 不会被自动当成 sparse 接口，OpenViking
+因此，自托管的 `/v1/embeddings` 不会被自动当成 sparse 接口，Business Data Platform
 也不会额外探测 `/v1/embeddings/sparse` 路由。
 
-当 provider 只返回 dense vector 时，OpenViking 不会自动补充 BM25 或其他
+当 provider 只返回 dense vector 时，Business Data Platform 不会自动补充 BM25 或其他
 sparse-vector 兜底。若要启用混合检索，需要配置受支持的 sparse/hybrid
 provider，并设置 `storage.vectordb.sparse_weight > 0`。自托管模型的内存需求
-取决于具体 provider 和模型，不由 OpenViking 控制；生产启用前请按模型文档
+取决于具体 provider 和模型，不由 Business Data Platform 控制；生产启用前请按模型文档
 评估资源占用。
 
 #### Hybrid Embedding
@@ -645,7 +645,7 @@ provider，并设置 `storage.vectordb.sparse_weight > 0`。自托管模型的�
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `api_key` | str | API Key。`openai-codex` 在 Codex OAuth 可用时可省略；使用 provider 原生凭据的 `litellm` 路由也可省略 |
-| `forward_api_key` | bool | 仅 LiteLLM 使用。覆盖是否把 `api_key` 透传给 LiteLLM。默认情况下，OpenViking 不会把占位 key 透传给 `bedrock/`、`sagemaker/`、`vertex_ai/` 等 AWS/GCP 原生鉴权路由；如果明确使用 LiteLLM 的 Bedrock bearer-token API-key 鉴权，可设为 `true` |
+| `forward_api_key` | bool | 仅 LiteLLM 使用。覆盖是否把 `api_key` 透传给 LiteLLM。默认情况下，Business Data Platform 不会把占位 key 透传给 `bedrock/`、`sagemaker/`、`vertex_ai/` 等 AWS/GCP 原生鉴权路由；如果明确使用 LiteLLM 的 Bedrock bearer-token API-key 鉴权，可设为 `true` |
 | `model` | str | 模型名称 |
 | `api_base` | str | API 端点（可选） |
 | `thinking` | bool | 启用思考模式（仅对部分火山模型生效，默认：`false`） |
@@ -725,7 +725,7 @@ LiteLLM 的 Bedrock bearer-token API-key 鉴权，请设置 `forward_api_key=tru
 
 **自定义请求 Body**
 
-对于接受 provider 专有 JSON body 字段的 OpenAI 兼容 provider，可以通过 `extra_request_body` 配置。OpenViking 会把这些字段合并到 OpenAI SDK 或 LiteLLM 发送的 `extra_body` 中：
+对于接受 provider 专有 JSON body 字段的 OpenAI 兼容 provider，可以通过 `extra_request_body` 配置。Business Data Platform 会把这些字段合并到 OpenAI SDK 或 LiteLLM 发送的 `extra_body` 中：
 
 ```json
 {
@@ -768,7 +768,7 @@ LiteLLM 的 Bedrock bearer-token API-key 鉴权，请设置 `forward_api_key=tru
 
 VLM 的 `model` 填写对应的方舟模型 endpoint ID。`video_fps` 仅用于视频，控制发送给方舟的视频采样帧率。
 
-推荐使用 `doubao-seed-2-0-lite-260428` 或 `doubao-seed-2-0-mini-260428` 作为音视频理解模型。它们是可直接采用的推荐示例，并非完整的支持模型列表；方舟会持续更新模型及其输入能力。视频理解的可选模型请参考方舟官方[视频输入能力列表](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#ff5ef604)，音频理解的可选模型请参考方舟官方[音频输入能力列表](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#9619c0ba)。如果 `model` 填写的是 `ep-*` 推理接入点 ID，请确认该接入点背后的基础模型支持对应的媒体输入。OpenViking 不会在配置加载时校验模型的音频或视频能力。
+推荐使用 `doubao-seed-2-0-lite-260428` 或 `doubao-seed-2-0-mini-260428` 作为音视频理解模型。它们是可直接采用的推荐示例，并非完整的支持模型列表；方舟会持续更新模型及其输入能力。视频理解的可选模型请参考方舟官方[视频输入能力列表](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#ff5ef604)，音频理解的可选模型请参考方舟官方[音频输入能力列表](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#9619c0ba)。如果 `model` 填写的是 `ep-*` 推理接入点 ID，请确认该接入点背后的基础模型支持对应的媒体输入。Business Data Platform 不会在配置加载时校验模型的音频或视频能力。
 
 **可接入格式与可理解格式**
 
@@ -777,9 +777,9 @@ VLM 的 `model` 填写对应的方舟模型 endpoint ID。`video_fps` 仅用于�
 | 音频 | MP3、WAV、OGG、FLAC、AAC、M4A、OPUS、AC3 | MP3、WAV、AAC、M4A |
 | 视频 | MP4、AVI、MOV、MKV、WEBM、FLV、WMV、TS | MP4、AVI、MOV |
 
-不在“可理解”列中的格式继续沿用现有 Parser 和存储行为；OpenViking 不会对这些文件转码，也不会把它们发送给理解模型。当文件被识别为音频或视频叶子节点时，空媒体摘要会使用文件名入库。
+不在“可理解”列中的格式继续沿用现有 Parser 和存储行为；Business Data Platform 不会对这些文件转码，也不会把它们发送给理解模型。当文件被识别为音频或视频叶子节点时，空媒体摘要会使用文件名入库。
 
-对于支持的文件，OpenViking 将媒体上传到方舟 Files API，且不显式指定 `expire_at`，因此文件保留时间遵循方舟的默认策略。文件处理完成后，OpenViking 通过禁用响应存储的 Responses API 请求引用其 `file_id`，最后在较短的清理超时内尝试删除方舟文件。远端删除属于 best-effort；如果删除失败或超时，不会覆盖已经成功的理解结果，文件将继续遵循方舟的默认保留策略。本地临时文件独立清理，即使远端清理失败或请求被取消也会删除。
+对于支持的文件，Business Data Platform 将媒体上传到方舟 Files API，且不显式指定 `expire_at`，因此文件保留时间遵循方舟的默认策略。文件处理完成后，Business Data Platform 通过禁用响应存储的 Responses API 请求引用其 `file_id`，最后在较短的清理超时内尝试删除方舟文件。远端删除属于 best-effort；如果删除失败或超时，不会覆盖已经成功的理解结果，文件将继续遵循方舟的默认保留策略。本地临时文件独立清理，即使远端清理失败或请求被取消也会删除。
 
 - 目录中只有一个音频或视频文件且理解成功时，该摘要直接成为目录 L1，并通过现有语义链路派生 L0，不再调用通用 VLM 做第二次总结。
 - 媒体位于混合目录时，其摘要仍参与现有通用 VLM 聚合。
@@ -789,7 +789,7 @@ VLM 的 `model` 填写对应的方舟模型 endpoint ID。`video_fps` 仅用于�
 
 ### query_planner
 
-可选的轻量模型配置，用于检索前的意图分析和 query 规划/改写。配置结构与 `vlm` 相同，但只影响 `search()` 的意图分析和 query expansion。未配置或配置为空时，OpenViking 会回退到 `vlm`，保持向后兼容。
+可选的轻量模型配置，用于检索前的意图分析和 query 规划/改写。配置结构与 `vlm` 相同，但只影响 `search()` 的意图分析和 query expansion。未配置或配置为空时，Business Data Platform 会回退到 `vlm`，保持向后兼容。
 
 > 在 `openviking-server init` 里可勾选启用本地轻量 query planner，向导会自动拉取 Ollama 模型并写入 `query_planner` 配置。对于已知的 query planner 模型，`search()` 会在运行时自动选择匹配的内置 prompt；不在映射表中的模型继续使用 `retrieval.intent_analysis`。
 
@@ -801,7 +801,7 @@ VLM 的 `model` 填写对应的方舟模型 endpoint ID。`video_fps` 仅用于�
 ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 ```
 
-然后在 OpenViking 配置中添加：
+然后在 Business Data Platform 配置中添加：
 
 ```json
 {
@@ -818,20 +818,20 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 }
 ```
 
-对于 `ollama/guoxuter/ov_intent_analysis_sft:v7_q8`（以及 `v4_q8`），OpenViking 会在 search 阶段自动使用对应的内置 prompt（分别为 `retrieval.ov_intent_analysis_sft_v7` 和 `retrieval.ov_intent_analysis_sft_v4`），不需要替换 prompt 文件，也不需要设置 `prompts.templates_dir`。如果使用未映射的模型，OpenViking 会继续使用默认的 `retrieval.intent_analysis` prompt。
+对于 `ollama/guoxuter/ov_intent_analysis_sft:v7_q8`（以及 `v4_q8`），Business Data Platform 会在 search 阶段自动使用对应的内置 prompt（分别为 `retrieval.ov_intent_analysis_sft_v7` 和 `retrieval.ov_intent_analysis_sft_v4`），不需要替换 prompt 文件，也不需要设置 `prompts.templates_dir`。如果使用未映射的模型，Business Data Platform 会继续使用默认的 `retrieval.intent_analysis` prompt。
 
 这样可以用小模型承担检索规划，降低延迟，同时保留更强的 `vlm` 处理语义提取、记忆提取和多模态内容。
 
 
 ### code
 
-代码骨架提取内置在代码摘要流程中，不再提供解析器级配置。OpenViking 会在语言存在维护中的 `tags.scm` 时优先使用 tags query；不存在对应的 `tags.scm` 时，使用 `tree-sitter-language-pack.process()`；当前提取路线无可用结果时，才将 `semantic.code_summary` 作为兜底处理。若 `tree-sitter-language-pack` 无法下载解析器（例如处于防火墙之后），常用语言会改用随依赖安装的语法包，无需额外配置。
+代码骨架提取内置在代码摘要流程中，不再提供解析器级配置。Business Data Platform 会在语言存在维护中的 `tags.scm` 时优先使用 tags query；不存在对应的 `tags.scm` 时，使用 `tree-sitter-language-pack.process()`；当前提取路线无可用结果时，才将 `semantic.code_summary` 作为兜底处理。若 `tree-sitter-language-pack` 无法下载解析器（例如处于防火墙之后），常用语言会改用随依赖安装的语法包，无需额外配置。
 
 当前保留的 `code` 配置字段用于远程代码资源的网络防护和代码托管白名单。提取路线详见 [代码骨架提取](../concepts/06-extraction.md#代码骨架提取)。
 
 #### 远程资源网络防护
 
-通过 URL 拉取资源时，OpenViking 会拒绝环回、链路本地、私有及其他非公网目标，以及不在代码托管白名单中的主机，并抛出 `PermissionDeniedError`。要从自建 GitHub Enterprise / GitLab / Azure DevOps 拉取代码，请将主机加入 `code` 下对应的白名单：
+通过 URL 拉取资源时，Business Data Platform 会拒绝环回、链路本地、私有及其他非公网目标，以及不在代码托管白名单中的主机，并抛出 `PermissionDeniedError`。要从自建 GitHub Enterprise / GitLab / Azure DevOps 拉取代码，请将主机加入 `code` 下对应的白名单：
 
 | 字段 | 类型 | 说明 | 默认值 |
 |------|------|------|--------|
@@ -1037,7 +1037,7 @@ Grep 引擎配置，用于内容模式搜索。这些设置为服务端配置，
 | `engine` | str | 搜索引擎模式：`"auto"` 在可用时使用 VikingDB BM25 召回，不可用时回退到本地文件系统搜索；`"fs"` 强制仅使用本地文件系统搜索。 | `"auto"` |
 | `switch_to_remote_threshold` | int | 切换到 VikingDB BM25 召回的 L2 记录数阈值。当搜索范围内的 L2 文件数达到此阈值时，使用 VikingDB BM25 进行第一阶段召回；否则使用本地文件系统搜索。设为 `0` 表示始终使用 VikingDB BM25。必须 ≥ 0。 | `10000` |
 
-对于 VikingDB / Volcengine FullText grep，OpenViking 会写入 `content` text 字段用于 BM25 召回。源上下文中保留完整内容，仅在最终写入向量库 adapter payload 时将该字段截断到 **1 MB**，以满足后端 payload 限制。只有 VikingDB 系后端使用 `content`；其它后端（`local`、`cuvs`、`http`）不写入该字段。
+对于 VikingDB / Volcengine FullText grep，Business Data Platform 会写入 `content` text 字段用于 BM25 召回。源上下文中保留完整内容，仅在最终写入向量库 adapter payload 时将该字段截断到 **1 MB**，以满足后端 payload 限制。只有 VikingDB 系后端使用 `content`；其它后端（`local`、`cuvs`、`http`）不写入该字段。
 
 ### glob
 
@@ -1104,11 +1104,11 @@ Glob 引擎配置，用于路径模式匹配。这些设置为服务端配置，
 RAGFS 默认使用 Rust binding 模式，通过 Rust 实现直接访问文件系统。
 
 > [!WARNING]
-> `storage.agfs` 已不再支持 AGFS HTTP client 模式，也无需再配置旧的 HTTP client 入口。当前 AGFS / RAGFS 文件系统访问仅通过 Rust binding（`RAGFSBindingClient`）在进程内完成。这不影响 OpenViking server 的 HTTP API、`ov` CLI，或 `AsyncHTTPClient` / `SyncHTTPClient` 访问 OpenViking 服务端的能力。
+> `storage.agfs` 已不再支持 AGFS HTTP client 模式，也无需再配置旧的 HTTP client 入口。当前 AGFS / RAGFS 文件系统访问仅通过 Rust binding（`RAGFSBindingClient`）在进程内完成。这不影响 Business Data Platform server 的 HTTP API、`ov` CLI，或 `AsyncHTTPClient` / `SyncHTTPClient` 访问 Business Data Platform 服务端的能力。
 
 ##### 多写存储配置
 
-`storage.agfs.backups` 用于启用多写存储。未配置时，OpenViking 保持单 backend 模式。
+`storage.agfs.backups` 用于启用多写存储。未配置时，Business Data Platform 保持单 backend 模式。
 
 ```json
 {
@@ -1206,7 +1206,7 @@ RAGFS 默认使用 Rust binding 模式，通过 Rust 实现直接访问文件系
 | 参数 | 类型 | 说明 | 默认值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory` 或 `cache`；`cache` 复用 Redis CacheRuntime | `filesystem` |
-| `namespace` | str（可选） | Redis PathLock key 使用的 OpenViking 实例名；`provider=cache` 时必填 | `null` |
+| `namespace` | str（可选） | Redis PathLock key 使用的 Business Data Platform 实例名；`provider=cache` 时必填 | `null` |
 | `lock_expire_secs` | float | 未刷新的锁进入 stale 状态前的秒数；不得小于 `1.0` | `30.0` |
 | `lock_timeout_secs` | float | 已废弃且忽略；运行时等待超时固定为 `0.0` | `0.0` |
 
@@ -1554,20 +1554,20 @@ acl_inherited_grants
 
 本地 backend 会在启动时为存量 collection 增加字段并重建标量索引。旧记录不做全量回填；缺失 ACL 字段按 `acl_mode=none` 和空列表读取。
 
-火山向量库等远端 backend 的存量 collection 需要由部署方预先添加这些字段和 scalar index，OpenViking 只校验 schema。`volcengine` API key 数据面模式还要求 context collection 和配置的 index 已存在。权限模型详见 [资源访问控制（ACL）](../concepts/15-acl.md)。
+火山向量库等远端 backend 的存量 collection 需要由部署方预先添加这些字段和 scalar index，Business Data Platform 只校验 schema。`volcengine` API key 数据面模式还要求 context collection 和配置的 index 已存在。权限模型详见 [资源访问控制（ACL）](../concepts/15-acl.md)。
 
 
 
 ## 配置文件
 
-OpenViking 使用两个配置文件：
+Business Data Platform 使用两个配置文件：
 
 | 配置文件 | 用途 | 默认路径 |
 |---------|------|---------|
-| `ov.conf` | OpenViking Server 配置 | `~/.openviking/ov.conf` |
+| `ov.conf` | Business Data Platform Server 配置 | `~/.openviking/ov.conf` |
 | `ovcli.conf` | HTTP 客户端和 CLI 连接远程服务端 | `~/.openviking/ovcli.conf` |
 
-配置文件放在默认路径时，OpenViking 自动加载，无需额外设置。
+配置文件放在默认路径时，Business Data Platform 自动加载，无需额外设置。
 
 > **Root key 双文件规则：** `ov.conf` 中的 `server.root_api_key` 是服务端
 > 接受的凭据；`ovcli.conf` 中的 `root_api_key` 是 `ov --sudo` 使用的客户端
@@ -1578,7 +1578,7 @@ OpenViking 使用两个配置文件：
 
 服务端只在进程启动时读取 `ov.conf`，不会监听文件变化。修改 `embedding`、
 `vlm`、`rerank`、`retrieval`、`storage` 或 `server` 配置后，需要重启
-OpenViking 服务。已经运行中的队列任务不会自动迁移到新配置；请使用部署环境
+Business Data Platform 服务。已经运行中的队列任务不会自动迁移到新配置；请使用部署环境
 原有的服务管理方式重启，并在服务恢复后运行 `openviking-server doctor` 验证。
 
 `ovcli.conf` 属于客户端配置。新的 `ov` 命令或新建的 HTTP client 会读取当前
@@ -1612,7 +1612,7 @@ openviking-server --config /path/to/ov.conf
 
 | 字段 | 说明 | 默认值 |
 |------|------|--------|
-| `version` | 已废弃且会被忽略。OpenViking 始终使用 v3 记忆抽取链路；已有配置中保留该字段仍可正常加载，不会报错。 | `"v3"` |
+| `version` | 已废弃且会被忽略。Business Data Platform 始终使用 v3 记忆抽取链路；已有配置中保留该字段仍可正常加载，不会报错。 | `"v3"` |
 | `custom_templates_dir` | 自定义 memory templates 目录。设置后会在内置模板之外加载该目录中的模板。 | `""` |
 | `extraction_enabled` | session commit 时是否执行长期记忆抽取。 | `true` |
 | `session_skill_extraction_enabled` | session commit 时是否同时抽取可复用 skill 到当前用户的 skill 目录。 | `false` |
@@ -1623,7 +1623,7 @@ openviking-server --config /path/to/ov.conf
 
 你可以手动编辑此文件，也可以用 `ov config` 交互式生成。如果你维护着多个服务端的配置，可以用 `ov config switch` 在它们之间切换。
 
-如需按步骤配置 CLI，请阅读 [OpenViking CLI 配置指南](../getting-started/05-cli-setup.md)。
+如需按步骤配置 CLI，请阅读 [Business Data Platform CLI 配置指南](../getting-started/05-cli-setup.md)。
 
 HTTP 客户端（`SyncHTTPClient` / `AsyncHTTPClient`）和 CLI 工具连接远程服务端的配置文件：
 
@@ -1673,7 +1673,7 @@ ov add-resource ./docs --exclude "*.tmp"
 
 ## server 段
 
-将 OpenViking 作为 HTTP 服务运行时，在 `ov.conf` 中添加 `server` 段：
+将 Business Data Platform 作为 HTTP 服务运行时，在 `ov.conf` 中添加 `server` 段：
 
 ```json
 {
@@ -1762,7 +1762,7 @@ ov add-resource ./docs --exclude "*.tmp"
 `"type": "http"` 的部署需要迁移为 `file_log` 并采集专用日志文件，或配置实现
 原投递协议的 `custom` Sink。
 
-启动服务前需要设置 `resource_id_env` 指定的环境变量。该变量的值用于标识当前部署的 OpenViking 资源，隔离 account、user 和 URI 相同但 resource 不同的数据。Sink 会自动创建父目录、立即追加事件、按 UTC 每小时滚动文件，并保留 `backup_count` 个历史文件；它不会写入 OpenViking 默认 stdout 日志。
+启动服务前需要设置 `resource_id_env` 指定的环境变量。该变量的值用于标识当前部署的 Business Data Platform 资源，隔离 account、user 和 URI 相同但 resource 不同的数据。Sink 会自动创建父目录、立即追加事件、按 UTC 每小时滚动文件，并保留 `backup_count` 个历史文件；它不会写入 Business Data Platform 默认 stdout 日志。
 
 每行格式如下：
 
@@ -1877,7 +1877,7 @@ ov add-resource ./docs --exclude "*.tmp"
 
 ## storage.transaction 段
 
-`storage.transaction` 已废弃，仅保留为兼容旧配置。新配置请使用 `storage.agfs.pathlock` 配置 PathLock Provider、namespace 和过期时间。若旧字段仍然出现，OpenViking 会在运行时给出 warning；其中 `lock_timeout` 已废弃且会被忽略，`lock_expire` 会在未显式配置新字段时自动映射到新的 `pathlock` 配置，`redo_recovery_enabled` 则会被忽略。
+`storage.transaction` 已废弃，仅保留为兼容旧配置。新配置请使用 `storage.agfs.pathlock` 配置 PathLock Provider、namespace 和过期时间。若旧字段仍然出现，Business Data Platform 会在运行时给出 warning；其中 `lock_timeout` 已废弃且会被忽略，`lock_expire` 会在未显式配置新字段时自动映射到新的 `pathlock` 配置，`redo_recovery_enabled` 则会被忽略。
 
 推荐写法：
 
@@ -1918,7 +1918,7 @@ ov add-resource ./docs --exclude "*.tmp"
 
 任务跟踪器记录异步任务状态，适用于返回 `task_id` 的接口（任务类型包括 `session_commit`、`add_resource`、`add_skill`、`admin_reindex`）。Task 记录始终持久化到 AGFS，因此一个实例返回的 `task_id` 可以在另一个实例上查询，任务历史也能在重启后继续访问。
 
-无需配置 `storage.task_tracker`。如果旧配置里仍包含 `storage.task_tracker`，OpenViking 会记录 warning 并忽略它。
+无需配置 `storage.task_tracker`。如果旧配置里仍包含 `storage.task_tracker`，Business Data Platform 会记录 warning 并忽略它。
 
 Task 记录文件位于所属账号的系统目录：
 

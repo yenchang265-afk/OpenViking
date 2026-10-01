@@ -15,7 +15,7 @@ def main():
             return 1
 
         print("\n" + "=" * 60)
-        print("OpenViking services are running!")
+        print("Business Data Platform services are running!")
         print("=" * 60)
         print(f"Server: {Config.SERVER_URL}")
         print(f"Console: {Config.CONSOLE_URL}")

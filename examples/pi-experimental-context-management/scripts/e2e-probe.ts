@@ -1,7 +1,7 @@
 /**
  * Probe extension for live e2e runs.
  *
- * Loaded next to the OpenViking extension to capture the exact provider
+ * Loaded next to the Business Data Platform extension to capture the exact provider
  * payload pi sends after context hooks have run.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";

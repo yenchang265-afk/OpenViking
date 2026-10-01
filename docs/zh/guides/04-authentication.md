@@ -6,7 +6,7 @@
 
 | 认证模式 | 是什么？ | 适合谁？ | **推荐度** |
 |---------|----------|---------|------------|
-| **API Key** (默认) | OpenViking 自己管理用户和密钥 | 小团队、独立部署 | ⭐⭐⭐⭐⭐ |
+| **API Key** (默认) | Business Data Platform 自己管理用户和密钥 | 小团队、独立部署 | ⭐⭐⭐⭐⭐ |
 | **OIDC** | 对接企业单点登录（Okta/Auth0/Keycloak/Azure AD 等） | 企业 SSO 集成 | ⭐⭐⭐⭐ |
 | **LDAP** | 对接企业用户目录（Windows AD/OpenLDAP） | 已有企业目录服务 | ⭐⭐⭐⭐ |
 | **Trusted** | 上游网关/反向代理断言身份 | 部署在受信任内网/网关后 | ⭐⭐⭐ |
@@ -142,10 +142,10 @@ LDAP (Lightweight Directory Access Protocol) 是企业用户目录的标准协�
 
 ### Identity Mapping 是什么？
 
-简单说：**把外部身份源的字段映射到 OpenViking 的身份上。**
+简单说：**把外部身份源的字段映射到 Business Data Platform 的身份上。**
 
 ```
-外部身份源       →       Mapping 规则       →       OpenViking 身份
+外部身份源       →       Mapping 规则       →       Business Data Platform 身份
 ─────────────────────────────────────────────────────────────────────
 OIDC Claims: {
   "sub": "user123",          →      claim="sub"        →  user_id = "user123"
@@ -505,7 +505,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 
 ## 客户端使用
 
-OpenViking 支持两种方式传递 API Key：
+Business Data Platform 支持两种方式传递 API Key：
 
 **X-API-Key 请求头**
 
@@ -636,7 +636,7 @@ Trusted 模式不会查询 user key，而是直接信任每个请求显式携带
 
 ## CLI 配置 LDAP 认证
 
-OpenViking CLI (`ov`) 支持通过 LDAP 进行认证。配置完成后，所有 CLI 命令会自动使用 LDAP 凭据。
+Business Data Platform CLI (`ov`) 支持通过 LDAP 进行认证。配置完成后，所有 CLI 命令会自动使用 LDAP 凭据。
 
 ### 配置方式
 
@@ -658,11 +658,11 @@ OpenViking CLI (`ov`) 支持通过 LDAP 进行认证。配置完成后，所有 
 
 | 配置项 | 必需 | 说明 |
 |--------|------|------|
-| `url` | 是 | OpenViking 服务器地址 |
+| `url` | 是 | Business Data Platform 服务器地址 |
 | `auth_mode` | 是 | 认证模式，设置为 `"ldap"` 启用 LDAP |
 | `ldap_username` | 是 | LDAP 用户名（UID） |
 | `ldap_password` | 否 | LDAP 密码（不提供时 CLI 不发送密码） |
-| `account` | 否 | OpenViking 账户 ID（默认为 `"default"`） |
+| `account` | 否 | Business Data Platform 账户 ID（默认为 `"default"`） |
 
 #### 2. 混合配置
 
@@ -716,7 +716,7 @@ make build-cli
 - 查看服务器端日志获取详细错误信息
 
 **"Permission denied" 错误：**
-- 确认用户 LDAP 组是否映射到正确的 OpenViking 角色
+- 确认用户 LDAP 组是否映射到正确的 Business Data Platform 角色
 - 检查操作是否需要管理员权限
 - 联系系统管理员确认权限配置
 

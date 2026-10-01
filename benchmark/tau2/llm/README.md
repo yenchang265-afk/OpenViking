@@ -1,13 +1,13 @@
 # TAU-2 Benchmark
 
-This directory contains the OpenViking TAU-2 LLM benchmark entry point. The
+This directory contains the Business Data Platform TAU-2 LLM benchmark entry point. The
 reproduction surface is intentionally narrow:
 
-- `no_memory`: same-seed TAU-2 baseline without OpenViking memory injection;
+- `no_memory`: same-seed TAU-2 baseline without Business Data Platform memory injection;
 - `template_indexed_trajectory_top4_prewrite_top2`: the current best
   template-indexed trajectory memory treatment.
 
-The template-indexed trajectory treatment trains OpenViking Memory V2 from
+The template-indexed trajectory treatment trains Business Data Platform Memory V2 from
 TAU-2 train conversations, retrieves generated `trajectories`, and uses the
 trajectory embedding template `{{ trajectory_name }}\n\n{{ retrieval_anchor }}`
 instead of broad procedure bodies for retrieval. It injects trajectory top4 at
@@ -65,7 +65,7 @@ benchmark/tau2/llm/scripts/setup_tau2_repo.sh
 source benchmark/tau2/llm/.env.tau2
 ```
 
-The default OpenViking TAU-2 memory evidence protocol is
+The default Business Data Platform TAU-2 memory evidence protocol is
 `fixed_first_user_full8`: retail + airline, 8 repeats, same seeds,
 confirmation-aware user simulator, and fixed first-user fixtures for both
 domains. Later user simulator turns remain live.
@@ -175,7 +175,7 @@ benchmark/tau2/llm/run_full_eval.sh \
   --execute
 ```
 
-Run a tiny template-indexed trajectory smoke against a clean local OpenViking
+Run a tiny template-indexed trajectory smoke against a clean local Business Data Platform
 service:
 
 ```bash
@@ -190,7 +190,7 @@ benchmark/tau2/llm/run_full_eval.sh \
   --execute
 ```
 
-Start the OpenViking service before executing memory cells, and verify it with
+Start the Business Data Platform service before executing memory cells, and verify it with
 `ov status`. For trajectory memory evidence, start the service from this branch
 and inspect generated trajectory files; changing `search_uri` alone does not
 prove the template-indexed trajectory prompt was used.
@@ -227,14 +227,14 @@ under `memory_corpora/`.
 
 Memory cells run through a small TAU-2 agent adapter in this directory:
 
-- train by writing TAU-2 training conversations into OpenViking sessions;
-- retrieve OpenViking memory at the first user turn;
+- train by writing TAU-2 training conversations into Business Data Platform sessions;
+- retrieve Business Data Platform memory at the first user turn;
 - for pre-write recall, retrieve again before write-like tool calls and
   regenerate that step with the matched memories;
 - optionally apply a generic scope prompt that keeps retrieved memories
   advisory and asks the agent to preserve the current task scope before
   write-like tool calls;
-- emit artifact metadata identifying the OpenViking account, agent, corpus,
+- emit artifact metadata identifying the Business Data Platform account, agent, corpus,
   retrieval mode, search memory type, and simulator policy used by each cell.
 
 The current trajectory config uses:
@@ -253,11 +253,11 @@ The current trajectory config uses:
 The runner prepares each distinct `domain + corpus_id` once and reuses it across
 eval run ids when the cached `corpus_manifest.json` is present. Different
 corpora may be prepared in parallel with `benchmark.corpus_prepare_concurrency`;
-session commits inside one corpus remain serial to preserve OpenViking write
+session commits inside one corpus remain serial to preserve Business Data Platform write
 semantics.
 
 By default, trajectory extraction is transcript-only: the runner replays TAU-2
-messages into an OpenViking session and does not expose held-out reward or
+messages into a Business Data Platform session and does not expose held-out reward or
 assertion results to the extractor.
 
 Eval cells run in parallel with `benchmark.strategy_concurrency` by default and
@@ -273,7 +273,7 @@ long-running evidence jobs.
 ## User Simulator Policy
 
 The runner default is the official TAU-2 user simulator if
-`eval.user_simulator_policy` is omitted. The bundled OpenViking memory benchmark
+`eval.user_simulator_policy` is omitted. The bundled Business Data Platform memory benchmark
 configs set `confirmation_aware`, because a memory benchmark should not treat
 user confirmation as task completion before the backend write has happened.
 
@@ -289,7 +289,7 @@ while preserving live simulator behavior after that turn.
 
 Only completed `retail + airline` runs with the same config, same seeds/repeats,
 and non-empty artifacts should be read as benchmark evidence. Partial runs,
-single-task probes, or missing OpenViking corpus identity are diagnostics.
+single-task probes, or missing Business Data Platform corpus identity are diagnostics.
 Executed runs write per-cell JSON under `cell_results/` and a strategy/domain
 aggregate under `scoreboard.json`. Memory training artifacts are shared by
 domain and strategy under `memory_corpora/`, so repeated eval cells reuse the

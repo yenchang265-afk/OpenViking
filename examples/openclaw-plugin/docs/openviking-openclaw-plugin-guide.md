@@ -1,12 +1,12 @@
-# OpenViking OpenClaw 插件帮助文档
+# Business Data Platform OpenClaw 插件帮助文档
 
-> 本文档面向插件使用者、集成方、排障同学和后续维护者，系统梳理 `@openviking/openclaw-plugin` 的实现原理、执行流程、核心功能、安装配置、构建测试、Debug、发布上线与验证方式，以及它与火山 OpenViking 的联动机制。
+> 本文档面向插件使用者、集成方、排障同学和后续维护者，系统梳理 `@openviking/openclaw-plugin` 的实现原理、执行流程、核心功能、安装配置、构建测试、Debug、发布上线与验证方式，以及它与火山 Business Data Platform 的联动机制。
 
 ## 1. 一句话结论
 
-`@openviking/openclaw-plugin` 是一个 OpenClaw `context-engine` 插件。它把 OpenClaw 的会话生命周期、上下文组装、记忆召回、会话归档、工具结果回读、资源/技能导入等能力，通过 HTTP API 接到远端 OpenViking 服务上，让 Agent 拥有长期记忆、工作记忆、历史压缩、语义检索和 RAG 能力。
+`@openviking/openclaw-plugin` 是一个 OpenClaw `context-engine` 插件。它把 OpenClaw 的会话生命周期、上下文组装、记忆召回、会话归档、工具结果回读、资源/技能导入等能力，通过 HTTP API 接到远端 Business Data Platform 服务上，让 Agent 拥有长期记忆、工作记忆、历史压缩、语义检索和 RAG 能力。
 
-它不负责启动本地 OpenViking Server，也不替代 OpenClaw Runtime；OpenClaw 仍负责 Agent 执行、prompt 编排和工具调用，OpenViking 负责上下文数据库、长期记忆、session/archive、resource/skill 检索与服务端抽取。
+它不负责启动本地 Business Data Platform Server，也不替代 OpenClaw Runtime；OpenClaw 仍负责 Agent 执行、prompt 编排和工具调用，Business Data Platform 负责上下文数据库、长期记忆、session/archive、resource/skill 检索与服务端抽取。
 
 ---
 
@@ -14,12 +14,12 @@
 
 | 问题 | 没有插件时的表现 | 插件提供的能力 |
 | --- | --- | --- |
-| 长对话上下文膨胀 | 会话越来越长，token 成本和模型输入风险持续上升 | 通过 OpenViking session/archive 把长历史压缩为工作记忆，并在 `assemble` 时重建可控上下文 |
+| 长对话上下文膨胀 | 会话越来越长，token 成本和模型输入风险持续上升 | 通过 Business Data Platform session/archive 把长历史压缩为工作记忆，并在 `assemble` 时重建可控上下文 |
 | 过去偏好/事实容易遗忘 | Agent 需要用户反复提醒 | `autoRecall` 自动搜索长期记忆并注入当前 user message |
 | 会话历史压缩后细节丢失 | summary 不含原命令、路径、配置值时难以追溯 | `ov_archive_search` / `ov_archive_expand` 回查归档原文 |
-| 大工具结果污染上下文 | 大量工具输出挤占模型窗口 | OpenViking 支持 tool result 外置存储，插件提供读/搜/列工具 |
+| 大工具结果污染上下文 | 大量工具输出挤占模型窗口 | Business Data Platform 支持 tool result 外置存储，插件提供读/搜/列工具 |
 | 文档、仓库、URL 无法沉淀为知识库 | Agent 临时读取，跨会话不可复用 | 手动 `/add-resource` 导入 resource，`ov_search` / `ov_read` 检索消费；Agent 可见 `add_resource` 默认禁用 |
-| Skill 难以沉淀和语义发现 | 技能依赖本地或手工注入 | `add_skill` 导入到 OpenViking agent skill 空间 |
+| Skill 难以沉淀和语义发现 | 技能依赖本地或手工注入 | `add_skill` 导入到 Business Data Platform agent skill 空间 |
 | 多租户/多 Agent 记忆串用 | 不同 session/agent 可能共用错误上下文 | 插件按 `sessionId/sessionKey/agentId/peer_prefix` 解析 `X-OpenViking-Actor-Peer`，并支持 account/user header 与 peer identity routing |
 
 ---
@@ -45,7 +45,7 @@
 | --- | --- |
 | `index.ts` | 插件注册入口；解析配置；注册工具、命令、hook、context engine 和 service |
 | `context-engine.ts` | 实现 ContextEngine：`assemble`、`afterTurn`、`compact`、session ID 映射、消息转换、工作记忆组装 |
-| `client.ts` | OpenViking HTTP Client；统一添加认证/租户/agent header；封装 session、search、resource、skill、tool-result API |
+| `client.ts` | Business Data Platform HTTP Client；统一添加认证/租户/agent header；封装 session、search、resource、skill、tool-result API |
 | `config.ts` | 插件配置 schema、默认值、环境变量解析、peer identity routing 配置 |
 | `auto-recall.ts` | 自动召回查询清洗、召回超时控制、记忆块构建与注入 |
 | `memory-ranking.ts` | 显式 `memory_recall` 的结果去重、阈值过滤和本地重排；自动召回由服务端组装 |
@@ -67,7 +67,7 @@
 
 ### 4.2 会话 ID 与 Agent 路由流程
 
-OpenClaw 的 `sessionId/sessionKey` 不能总是直接作为 OpenViking 存储路径。插件用 `openClawSessionToOvStorageId` 生成安全稳定的 OpenViking session id：
+OpenClaw 的 `sessionId/sessionKey` 不能总是直接作为 Business Data Platform 存储路径。插件用 `openClawSessionToOvStorageId` 生成安全稳定的 Business Data Platform session id：
 
 - 如果 `sessionId` 是 UUID，直接小写复用。
 - 如果有 `sessionKey`，用 SHA-256 生成稳定 id。
@@ -84,7 +84,7 @@ OpenClaw 会在 context engine 上调用 `assemble`。当前实现把 assemble �
 
 | 调用形态 | 判断方式 | 插件行为 |
 | --- | --- | --- |
-| 主 assemble / preflight | 参数带 `prompt`、`availableTools` 或 `citationsMode` | 从 OpenViking 获取 session context，回放 archive summary + active messages |
+| 主 assemble / preflight | 参数带 `prompt`、`availableTools` 或 `citationsMode` | 从 Business Data Platform 获取 session context，回放 archive summary + active messages |
 | transformContext assemble | 不带上述字段，通常最后一条已经是当前 user | 执行 auto recall，把长期记忆块 prepend 到最新 user message |
 
 判断逻辑在 `context-engine.ts:1097`。
@@ -93,9 +93,9 @@ OpenClaw 会在 context engine 上调用 `assemble`。当前实现把 assemble �
 
 1. 解析 session 身份，计算 token budget，记录诊断日志。
 2. 调用 `GET /api/v1/sessions/{sessionId}/context?token_budget=...`：`context-engine.ts:1193`、`client.ts:873`。
-3. 如果 OpenViking 没有可用 archive/session 数据，直接 passthrough，不影响主链路。
+3. 如果 Business Data Platform 没有可用 archive/session 数据，直接 passthrough，不影响主链路。
 4. 将 `latest_archive_overview` 转成 `[Session History Summary]`。
-5. 将 OpenViking parts 消息转换为 OpenClaw `AgentMessage`，包括 tool part → `toolCall` + `toolResult`。
+5. 将 Business Data Platform parts 消息转换为 OpenClaw `AgentMessage`，包括 tool part → `toolCall` + `toolResult`。
 6. 修复 transcript：合并连续 user/assistant、修复 toolCall/toolResult 配对，必要时插入占位 user 以满足 provider 交替约束。
 7. 返回组装后的 messages 和可选 `systemPromptAddition`。
 
@@ -103,8 +103,8 @@ transformContext auto recall 流程：
 
 1. 从最新 user message 提取查询文本。
 2. 清洗 metadata、心跳、已注入记忆块等噪音。
-3. 快速 precheck，OpenViking 不可用时跳过召回，避免拖慢模型请求。
-4. 向 `POST /api/v1/search/search` 发送一次 `mode="context"` 请求，并把映射后的 OpenViking session ID、Actor Peer 和 `recallTargetTypes` 一并传入。
+3. 快速 precheck，Business Data Platform 不可用时跳过召回，避免拖慢模型请求。
+4. 向 `POST /api/v1/search/search` 发送一次 `mode="context"` 请求，并把映射后的 Business Data Platform session ID、Actor Peer 和 `recallTargetTypes` 一并传入。
 5. 服务端结合 session 历史扩展查询，完成阈值过滤、排序、5 轮跨轮去重和内容层级选择。
 6. `recallMaxInjectedChars` 按 4 字符/token 转成服务端 `max_tokens`，由服务端在预算内生成 `rendered` 上下文。
 7. 插件只保留 `<relevant-memories>` 外层标记并 prepend 到最新 user message，不再逐条 `read` 或本地重排。
@@ -113,13 +113,13 @@ transformContext auto recall 流程：
 
 ### 4.4 `afterTurn`：每轮对话后自动捕获
 
-`afterTurn` 负责把本轮新增消息写入 OpenViking session，并在 `pending_tokens` 超过阈值时异步 commit。
+`afterTurn` 负责把本轮新增消息写入 Business Data Platform session，并在 `pending_tokens` 超过阈值时异步 commit。
 
 流程：
 
 1. 若 `autoCapture=false`、heartbeat 或 session 被 bypass，直接跳过。
 2. 根据 `prePromptMessageCount` 只提取本轮新增消息，不重写全量 transcript。
-3. `extractNewTurnMessages` 将 user/assistant 文本和 toolResult 转成 OpenViking parts：`text-utils.ts:342`。
+3. `extractNewTurnMessages` 将 user/assistant 文本和 toolResult 转成 Business Data Platform parts：`text-utils.ts:342`。
 4. 清理 `<relevant-memories>`、metadata、时间戳、心跳等噪音。
 5. 逐条调用 `POST /api/v1/sessions/{sessionId}/messages`：`context-engine.ts:1378`、`client.ts:703`。
 6. 调 `GET /api/v1/sessions/{sessionId}` 读取 `pending_tokens`：`context-engine.ts:1389`、`client.ts:770`。
@@ -133,7 +133,7 @@ transformContext auto recall 流程：
 
 流程：
 
-1. 解析 OpenViking session id。
+1. 解析 Business Data Platform session id。
 2. 调用 `commitSession(wait=true, keepRecentCount=0)`，要求服务端归档所有当前消息：`context-engine.ts:1500`。
 3. 如果 Phase 2 failed/timeout，返回失败原因。
 4. 如果没有生成 archive，返回 `commit_no_archive`。
@@ -142,7 +142,7 @@ transformContext auto recall 流程：
 
 ### 4.6 `before_reset`：重置前保护性提交
 
-插件监听 `before_reset`，在 reset 前尽量 commit 当前 OpenViking session，避免对话被重置时未归档内容丢失：`index.ts:1919`。
+插件监听 `before_reset`，在 reset 前尽量 commit 当前 Business Data Platform session，避免对话被重置时未归档内容丢失：`index.ts:1919`。
 
 ---
 
@@ -168,7 +168,7 @@ transformContext auto recall 流程：
 
 ### 5.2 会话归档与 Working Memory
 
-插件把 OpenClaw turn 持续写入 OpenViking session，由服务端维护 `pending_tokens` 与 archive。超过阈值时：
+插件把 OpenClaw turn 持续写入 Business Data Platform session，由服务端维护 `pending_tokens` 与 archive。超过阈值时：
 
 - `afterTurn` 路径：`wait=false`，异步 Phase 2，默认保留最近 10 条消息。
 - `compact` 路径：`wait=true`，同步等待 Phase 2，`keepRecentCount=0`，形成明确压缩边界。
@@ -203,13 +203,13 @@ transformContext auto recall 流程：
 | `/add-resource`（手动）/ `add_resource`（opt-in） | 导入本地文件、目录、URL、Git 仓库、媒体附件；`add_resource` 默认不注册，需 `enableAddResourceTool=true` | `viking://resources/...` |
 | `add_skill` / `/add-skill` | 导入 `SKILL.md` 或 skill 目录 | `viking://user/skills/...` |
 | `ov_search` / `/ov-search` | 搜索 resources 和 skills | 默认同时搜 resources + agent skills |
-| `ov_read` | 读取 `ov_search` / trace 命中的完整内容 | 只接受精确 `viking://...` OpenViking 虚拟 URI |
+| `ov_read` | 读取 `ov_search` / trace 命中的完整内容 | 只接受精确 `viking://...` Business Data Platform 虚拟 URI |
 
 本地文件/目录不会把原路径直接传给服务端，而是先 temp upload；目录会用纯 JS zip 打包后上传：`client.ts:609`、`client.ts:552`。
 
 ### 5.6 外置 Tool Result 回读
 
-当 OpenViking 服务端将大工具结果外置为 `viking://session/.../tool-results/...` 时，插件提供：
+当 Business Data Platform 服务端将大工具结果外置为 `viking://session/.../tool-results/...` 时，插件提供：
 
 | 工具 | 用途 |
 | --- | --- |
@@ -221,26 +221,26 @@ transformContext auto recall 流程：
 
 ---
 
-## 6. 与火山 OpenViking 的联动方式
+## 6. 与火山 Business Data Platform 的联动方式
 
 ### 6.1 HTTP Client 与认证头
 
-插件是 OpenViking 的纯 HTTP Client。所有请求统一走 `OpenVikingClient.request`：`client.ts:313`。
+插件是 Business Data Platform 的纯 HTTP Client。所有请求统一走 `OpenVikingClient.request`：`client.ts:313`。
 
 请求头逻辑：
 
 | Header | 来源 | 说明 |
 | --- | --- | --- |
-| `X-API-Key` | `apiKey` / `OPENVIKING_API_KEY` | OpenViking API Key |
+| `X-API-Key` | `apiKey` / `OPENVIKING_API_KEY` | Business Data Platform API Key |
 | `X-OpenViking-Account` | `accountId` / `OPENVIKING_ACCOUNT_ID` | Root key 或 trusted 部署需要的租户 account |
 | `X-OpenViking-User` | `userId` / `OPENVIKING_USER_ID` | Root key 或 trusted 部署需要的用户 |
 | `X-OpenViking-Actor-Peer` | 当前 session 解析出的 agentId | 用于 peer scope 隔离 |
 
 注意：配置说明中历史文档可能提到 `X-OpenViking-Key`，当前代码实际发送的是 `X-API-Key`：`client.ts:325`。
 
-### 6.2 OpenViking 官方 API 完整清单与插件映射
+### 6.2 Business Data Platform 官方 API 完整清单与插件映射
 
-官方 HTTP API 统一前缀为 `/api/v1/`，成功响应一般为 `{ "status": "ok", "result": ..., "time": ... }`，错误响应为 `{ "status": "error", "error": { "code", "message" }, "time" }`。插件只做 HTTP Client，不嵌入 OpenViking SDK；统一封装点是 `OpenVikingClient.request`：`client.ts:313`。
+官方 HTTP API 统一前缀为 `/api/v1/`，成功响应一般为 `{ "status": "ok", "result": ..., "time": ... }`，错误响应为 `{ "status": "error", "error": { "code", "message" }, "time" }`。插件只做 HTTP Client，不嵌入 Business Data Platform SDK；统一封装点是 `OpenVikingClient.request`：`client.ts:313`。
 
 #### 6.2.1 System / Observer
 
@@ -293,7 +293,7 @@ transformContext auto recall 流程：
 
 | API | 官方用途 | 当前插件映射 | 关键参数 / 返回 |
 | --- | --- | --- | --- |
-| `POST /api/v1/sessions` | 创建新 session | 暂未显式调用 | 官方创建后返回 `session_id`；当前插件用 OpenClaw session id 映射成 OpenViking storage id，服务端 `GET`/写消息可自动创建 |
+| `POST /api/v1/sessions` | 创建新 session | 暂未显式调用 | 官方创建后返回 `session_id`；当前插件用 OpenClaw session id 映射成 Business Data Platform storage id，服务端 `GET`/写消息可自动创建 |
 | `GET /api/v1/sessions` | 列出当前用户 session | 暂未封装 | 返回 `session_id`、`uri`、`is_dir` |
 | `GET /api/v1/sessions/{sessionId}` | 获取 session 元信息 | `afterTurn` 元信息检查 | 返回 `message_count`，插件兼容读取 `commit_count`、`pending_tokens`、`llm_token_usage`：`client.ts:770` |
 | `DELETE /api/v1/sessions/{sessionId}` | 删除 session | `deleteSession`（内部能力，未暴露普通用户工具） | 删除 active messages、archives、tools、元数据；不删除已抽取 memories：`client.ts:931` |
@@ -313,7 +313,7 @@ transformContext auto recall 流程：
 | `GET /api/v1/fs/ls?uri=viking://user/skills/` | 列 skill | `ov_search` 默认会搜 skills；未单独 list | 官方 `List Skills` 页面本质复用 `fs/ls` |
 | `POST /api/v1/skills` | Add Skill / MCP tool conversion | `add_skill` | 与资源导入章节相同 |
 | 读取 `viking://user/skills/{name}/SKILL.md` | 读 skill 全文 | `ov_read` 或 `content/read` 手工读取 | 官方建议按 L0/L1/L2 逐级读取 |
-| `call-skill` 页面 | 官方导航存在但当前内容实际为 Add Skill | 插件不通过 OpenViking 执行 skill | OpenClaw 自己负责工具执行，OpenViking 主要存储/检索 skill 文档 |
+| `call-skill` 页面 | 官方导航存在但当前内容实际为 Add Skill | 插件不通过 Business Data Platform 执行 skill | OpenClaw 自己负责工具执行，Business Data Platform 主要存储/检索 skill 文档 |
 
 #### 6.2.7 Admin / Authentication
 
@@ -328,11 +328,11 @@ transformContext auto recall 流程：
 | `PUT /api/v1/admin/accounts/{account_id}/users/{user_id}/role` | ROOT | 修改角色 | 运维使用 |
 | `POST /api/v1/admin/accounts/{account_id}/users/{user_id}/key` | ROOT/ADMIN | 重置用户 API key | key 泄露/轮换时使用 |
 
-认证方式：OpenViking HTTP 支持 `X-API-Key: <key>` 和 `Authorization: Bearer <key>`；插件固定使用 `X-API-Key`。如果服务端启用了多租户且当前 key 需要显式租户上下文，插件还会附加 `X-OpenViking-Account`、`X-OpenViking-User`、`X-OpenViking-Actor-Peer`。
+认证方式：Business Data Platform HTTP 支持 `X-API-Key: <key>` 和 `Authorization: Bearer <key>`；插件固定使用 `X-API-Key`。如果服务端启用了多租户且当前 key 需要显式租户上下文，插件还会附加 `X-OpenViking-Account`、`X-OpenViking-User`、`X-OpenViking-Actor-Peer`。
 
 ### 6.3 URI 与命名空间
 
-插件使用 OpenViking 的 filesystem paradigm，常见 URI：
+插件使用 Business Data Platform 的 filesystem paradigm，常见 URI：
 
 | URI | 含义 |
 | --- | --- |
@@ -342,7 +342,7 @@ transformContext auto recall 流程：
 | `viking://session/{sessionId}/history` | session archive 历史 |
 | `viking://session/{sessionId}/tool-results/{id}` | 外置工具结果 |
 
-插件通过 `viking://user/...` 写入和检索 user-scoped memory；OpenViking 会根据请求里的租户身份和 actor peer context 解析这个别名。agent 维度通过 `peer_id` / `X-OpenViking-Actor-Peer` 表达，不再使用旧 agent URI namespace。
+插件通过 `viking://user/...` 写入和检索 user-scoped memory；Business Data Platform 会根据请求里的租户身份和 actor peer context 解析这个别名。agent 维度通过 `peer_id` / `X-OpenViking-Actor-Peer` 表达，不再使用旧 agent URI namespace。
 
 ---
 
@@ -353,13 +353,13 @@ transformContext auto recall 流程：
 如果你只想先把插件跑起来，按这 4 步执行：
 
 ```bash
-# 1. 确认 OpenViking Server 已启动
+# 1. 确认 Business Data Platform Server 已启动
 curl http://127.0.0.1:1933/health
 
 # 2. 安装插件
 openclaw plugins install clawhub:@openviking/openclaw-plugin
 
-# 3. 写入 OpenViking 连接配置并激活 contextEngine slot
+# 3. 写入 Business Data Platform 连接配置并激活 contextEngine slot
 openclaw openviking setup --base-url http://127.0.0.1:1933 --api-key <OPENVIKING_API_KEY> --json
 
 # 4. 重启并验证
@@ -391,13 +391,13 @@ bash install.sh --source tos --channel prod --version 2026.6.2
 | --- | --- |
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
-| OpenViking Server | >= 0.4.1 |
+| Business Data Platform Server | >= 0.4.1 |
 
 兼容性声明在 `install-manifest.json` 的 `compatibility` 字段。
 
-### 7.2 启动 OpenViking Server
+### 7.2 启动 Business Data Platform Server
 
-插件只连接远端 OpenViking，不启动服务端。先启动服务端：
+插件只连接远端 Business Data Platform，不启动服务端。先启动服务端：
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -406,7 +406,7 @@ openviking-server doctor
 openviking-server --host 0.0.0.0 --port 1933
 ```
 
-`openviking-server init` 会生成 OpenViking 服务端配置；`openviking-server doctor` 会检查模型 provider、embedding provider、workspace 权限等基础依赖；`openviking-server` 才是真正启动 HTTP API 的进程。OpenClaw 使用插件期间，这个服务进程需要一直运行。
+`openviking-server init` 会生成 Business Data Platform 服务端配置；`openviking-server doctor` 会检查模型 provider、embedding provider、workspace 权限等基础依赖；`openviking-server` 才是真正启动 HTTP API 的进程。OpenClaw 使用插件期间，这个服务进程需要一直运行。
 
 验证服务：
 
@@ -421,7 +421,7 @@ mkdir -p ~/.openviking/data/log
 nohup openviking-server > ~/.openviking/data/log/openviking.log 2>&1 &
 ```
 
-如果 OpenViking 跑在另一台机器或容器中，需要监听可访问地址：
+如果 Business Data Platform 跑在另一台机器或容器中，需要监听可访问地址：
 
 ```bash
 openviking-server --host 0.0.0.0 --port 1933
@@ -429,16 +429,16 @@ openviking-server --host 0.0.0.0 --port 1933
 
 此时 OpenClaw 插件的 `baseUrl` 要配置为调用方可访问的地址，例如 `http://your-server:1933`，而不是服务端本机视角的 `127.0.0.1`。
 
-### 7.3 OpenViking 服务端配置文件
+### 7.3 Business Data Platform 服务端配置文件
 
-OpenViking 服务端配置与 OpenClaw 插件配置是两层配置，位置不同、作用也不同：
+Business Data Platform 服务端配置与 OpenClaw 插件配置是两层配置，位置不同、作用也不同：
 
 | 配置层 | 默认位置 | 作用 | 常见写入方式 |
 | --- | --- | --- | --- |
-| OpenViking 服务端 | `~/.openviking/ov.conf` | 配置服务端 workspace、日志、embedding、VLM/model provider | `openviking-server init` 交互生成；也可提前创建文件 |
-| OpenViking 服务端自定义路径 | `OV_CONFIG=/path/to/ov.conf` | 指定非默认配置文件 | 启动 `openviking-server` 前导出环境变量 |
-| OpenClaw 插件层 | `~/.openclaw/openclaw.json` | 配置插件连接哪个 OpenViking HTTP 服务、API key、account/user、召回/捕获策略 | `openclaw openviking setup` 或 `openclaw config set` |
-| 一键安装脚本环境文件 | `~/.openclaw/openviking.env` | 保存一键安装脚本使用过的 OpenViking 连接参数，便于排查/复用 | `scripts/volcengine-openviking-install.sh` |
+| Business Data Platform 服务端 | `~/.openviking/ov.conf` | 配置服务端 workspace、日志、embedding、VLM/model provider | `openviking-server init` 交互生成；也可提前创建文件 |
+| Business Data Platform 服务端自定义路径 | `OV_CONFIG=/path/to/ov.conf` | 指定非默认配置文件 | 启动 `openviking-server` 前导出环境变量 |
+| OpenClaw 插件层 | `~/.openclaw/openclaw.json` | 配置插件连接哪个 Business Data Platform HTTP 服务、API key、account/user、召回/捕获策略 | `openclaw openviking setup` 或 `openclaw config set` |
+| 一键安装脚本环境文件 | `~/.openclaw/openviking.env` | 保存一键安装脚本使用过的 Business Data Platform 连接参数，便于排查/复用 | `scripts/volcengine-openviking-install.sh` |
 
 最小 `~/.openviking/ov.conf` 示例：
 
@@ -530,7 +530,7 @@ openviking-server --host 127.0.0.1 --port 1933
 本机单机版适合开发、调试和端到端验证。推荐最小链路如下：
 
 ```bash
-# 1. 安装 OpenViking Python 包
+# 1. 安装 Business Data Platform Python 包
 python3 -m pip install openviking --upgrade --force-reinstall
 
 # 2. 初始化服务端配置
@@ -564,7 +564,7 @@ openclaw gateway restart
 openclaw openviking status --json
 ```
 
-如果本机 OpenViking 服务没有开启 API key 校验，可按服务端实际策略传空 key 或测试 key；如果使用火山 OpenViking Service / root key / trusted server 流程，则按服务端要求补充 `--account-id` 和 `--user-id`。
+如果本机 Business Data Platform 服务没有开启 API key 校验，可按服务端实际策略传空 key 或测试 key；如果使用火山 Business Data Platform Service / root key / trusted server 流程，则按服务端要求补充 `--account-id` 和 `--user-id`。
 
 单机版联调检查点：
 
@@ -572,7 +572,7 @@ openclaw openviking status --json
 2. `openclaw openviking status --json` 中 `configured=true`、`health.ok=true`。
 3. `openclaw config get plugins.slots.contextEngine` 输出 `openviking`。
 4. 与 Agent 对话一轮后，服务端日志 `~/.openviking/data/log/openviking.log` 或前台输出能看到 session/message/commit 相关请求。
-5. 触发 `/compact` 或等待 `pending_tokens` 超过阈值后，在 OpenViking Console/TUI 或插件工具中能检索到 archive/memory。
+5. 触发 `/compact` 或等待 `pending_tokens` 超过阈值后，在 Business Data Platform Console/TUI 或插件工具中能检索到 archive/memory。
 
 ### 7.5 安装插件
 
@@ -686,7 +686,7 @@ openclaw config get plugins.slots.contextEngine
 /add-resource ./README.md --to viking://resources/openviking-readme --wait
 /add-resource https://example.com/spec.html --parent viking://resources/project-docs --wait
 /add-skill ./skills/install-openviking-memory --wait
-/ov-search "OpenViking install" --uri viking://resources/openviking-readme
+/ov-search "Business Data Platform install" --uri viking://resources/openviking-readme
 /ov-search "memory install skill" --uri viking://user/skills
 ```
 
@@ -698,9 +698,9 @@ openclaw config get plugins.slots.contextEngine
 | “你还记得我之前说过什么吗” | `memory_recall` |
 | “忘掉那条记忆” | `memory_forget` |
 | “把这个文档/目录/URL/仓库加入知识库” | 手动 `/add-resource`；只有显式开启 `enableAddResourceTool=true` 时才使用 `add_resource` |
-| “把这个 skill 导入 OpenViking” | `add_skill` |
-| “在 OpenViking 里搜一下资源/技能” | `ov_search` |
-| “读取这个 OpenViking 命中 URI 的完整内容” | `ov_read` |
+| “把这个 skill 导入 Business Data Platform” | `add_skill` |
+| “在 Business Data Platform 里搜一下资源/技能” | `ov_search` |
+| “读取这个 Business Data Platform 命中 URI 的完整内容” | `ov_read` |
 | “summary 里没有细节，回查历史” | `ov_archive_search` / `ov_archive_expand` |
 | “这个 tool result 被截断了，读取完整内容” | `openviking_tool_result_read` / `search` / `list` |
 
@@ -711,15 +711,15 @@ openclaw config get plugins.slots.contextEngine
 | 参数 | 默认值 | 说明 |
 | --- | --- | --- |
 | `mode` | `remote` | 兼容字段；当前仅支持 remote |
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking HTTP 地址 |
-| `apiKey` | 环境变量或空 | OpenViking API Key |
+| `baseUrl` | `http://127.0.0.1:1933` | Business Data Platform HTTP 地址 |
+| `apiKey` | 环境变量或空 | Business Data Platform API Key |
 | `accountId` | 空 | Root key/trusted 部署需要 |
 | `userId` | 空 | Root key/trusted 部署需要 |
 | `peer_role` | `none` | 记忆归属：`none`、`assistant` 或 `sender`；旧值 `person` 作为 `sender` 的别名兼容 |
 | `peer_prefix` | 空 | Peer 路由前缀；非空时形成 `<prefix>_<ctx.agentId>` |
 | `targetUri` | `viking://user/memories` | 默认 memory search 目标 |
 | `timeoutMs` | `15000` | HTTP 请求超时 |
-| `autoCapture` | `true` | 是否每轮后写入 OpenViking session |
+| `autoCapture` | `true` | 是否每轮后写入 Business Data Platform session |
 | `captureMode` | `semantic` | `semantic` 全量候选；`keyword` 先过触发词 |
 | `captureMaxLength` | `24000` | 自动捕获文本最大长度 |
 | `autoRecall` | `true` | 是否回复前自动召回 |
@@ -731,7 +731,7 @@ openclaw config get plugins.slots.contextEngine
 | `recallMaxInjectedChars` | `4000` | 注入字符预算 |
 | `commitTokenThresholdRatio` | `0.5` | `pending_tokens` 达到「模型上下文窗口 × 该比例」触发 afterTurn commit（0-1，例 0.5=50%）；设 0 可每轮 commit |
 | `commitKeepRecentCount` | `10` | afterTurn commit 后保留最近消息数；compact 固定 0 |
-| `bypassSessionPatterns` | `[]` | 匹配 sessionKey/sessionId 时完全绕过 OpenViking |
+| `bypassSessionPatterns` | `[]` | 匹配 sessionKey/sessionId 时完全绕过 Business Data Platform |
 | `emitStandardDiagnostics` | `false` | 输出 `openviking: diag {...}` 结构化诊断日志 |
 | `logFindRequests` | `false` | 输出 routing/search/session 写入日志；也可用 `OPENVIKING_LOG_ROUTING=1` 或 `OPENVIKING_DEBUG=1` |
 | `traceRecall` | `false` | Recall trace 总开关；不开启时不记录、不建目录、查询只返回未启用提示 |
@@ -754,10 +754,10 @@ openclaw config get plugins.slots.contextEngine
 | 值 | 归因与路径 | 案例 |
 | --- | --- | --- |
 | `none`（默认） | user / assistant message 都不写 `peer_id`；新增长期记忆位于 `viking://user/<user_id>/memories/...` | 通用场景，所有对话共享 user-level 记忆 |
-| `assistant` | assistant message 写入 `peer_id=<assistant_id>`；助手归因记忆位于 `.../peers/<assistant_id>/memories/...` | **人是 OpenViking user**：Alice 使用 `main` 和 `research` 两个助手，分别使用 `.../peers/main/...` 和 `.../peers/research/...` |
-| `sender` | user message 写入 `peer_id=<sender_id>`；发送者归因记忆位于 `.../peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：`support-agent` 面向 `customer-42` 和 `customer-99`，将两人的 peer 记忆分开 |
+| `assistant` | assistant message 写入 `peer_id=<assistant_id>`；助手归因记忆位于 `.../peers/<assistant_id>/memories/...` | **人是 Business Data Platform user**：Alice 使用 `main` 和 `research` 两个助手，分别使用 `.../peers/main/...` 和 `.../peers/research/...` |
+| `sender` | user message 写入 `peer_id=<sender_id>`；发送者归因记忆位于 `.../peers/<sender_id>/memories/...` | **Agent 是 Business Data Platform user**：`support-agent` 面向 `customer-42` 和 `customer-99`，将两人的 peer 记忆分开 |
 
-`person` 是 `sender` 的旧别名；新配置统一使用 `sender`。OpenViking 会为每个用户初始化受管的 `peers/` 容器，`none` 只表示不使用具体的 `peers/<peer_id>/memories` 子树。在 peer 模式下，共享／自身记忆仍位于用户根记忆目录，召回范围是共享记忆 + 当前 peer 记忆，不包含其他 peer。切换 scope 不会搬迁已有记忆。Session 路径不受影响，始终位于 `viking://user/<user_id>/sessions/<session_id>`。
+`person` 是 `sender` 的旧别名；新配置统一使用 `sender`。Business Data Platform 会为每个用户初始化受管的 `peers/` 容器，`none` 只表示不使用具体的 `peers/<peer_id>/memories` 子树。在 peer 模式下，共享／自身记忆仍位于用户根记忆目录，召回范围是共享记忆 + 当前 peer 记忆，不包含其他 peer。切换 scope 不会搬迁已有记忆。Session 路径不受影响，始终位于 `viking://user/<user_id>/sessions/<session_id>`。
 
 ### 9.1 搜索 / 召回相关配置总表
 
@@ -769,7 +769,7 @@ openclaw config get plugins.slots.contextEngine
 
 | 配置项 | 作用范围 | 默认值 | 可否写入插件配置文件 | 可否用环境变量 | 环境变量名 | 说明 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `baseUrl` | 所有搜索/召回请求 | `http://127.0.0.1:1933` | 是 | 是 | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | OpenViking 服务地址；所有 context search、`find/read/grep/session` 都依赖它：`config.ts:139` |
+| `baseUrl` | 所有搜索/召回请求 | `http://127.0.0.1:1933` | 是 | 是 | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | Business Data Platform 服务地址；所有 context search、`find/read/grep/session` 都依赖它：`config.ts:139` |
 | `apiKey` | 所有搜索/召回请求 | 空 | 是 | 是 | `OPENVIKING_API_KEY` | HTTP 认证 key；不配通常只能访问关闭认证的本地服务：`config.ts:202` |
 | `accountId` | 多租户搜索路由 | 空 | 是 | 是 | `OPENVIKING_ACCOUNT_ID` | Root key / trusted 部署下显式指定 account，影响搜索命中空间：`config.ts:212` |
 | `userId` | 多租户搜索路由 | 空 | 是 | 是 | `OPENVIKING_USER_ID` | Root key / trusted 部署下显式指定 user，影响 user memory 检索范围：`config.ts:216` |
@@ -789,7 +789,7 @@ openclaw config get plugins.slots.contextEngine
 | `recallMaxContentChars` | 旧版单条截断兼容项 | `5000` | 是 | 否 | — | 已废弃；当前自动召回不再裁剪单条 memory 内容：`config.ts:290` |
 | `captureMode` | 间接影响可搜索记忆的入库方式 | `semantic` | 是 | 否 | — | 虽然不是“搜索参数”，但它决定哪些用户内容会先被写入 session 并进入后续可检索空间：`config.ts:203`、`config.ts:278` |
 | `captureMaxLength` | 间接影响可搜索记忆来源长度 | `24000` | 是 | 否 | — | 超过该长度的用户文本不会完整进入自动捕获链路：`config.ts:279` |
-| `bypassSessionPatterns` | 绕过搜索/召回 | `[]` | 是 | 否 | — | 命中指定 sessionId / sessionKey 时，插件整条 OpenViking 链路直接跳过，包括 recall、store、archive search：`config.ts:311` |
+| `bypassSessionPatterns` | 绕过搜索/召回 | `[]` | 是 | 否 | — | 命中指定 sessionId / sessionKey 时，插件整条 Business Data Platform 链路直接跳过，包括 recall、store、archive search：`config.ts:311` |
 | `logFindRequests` | 搜索调试日志 | `false` | 是 | 是 | `OPENVIKING_LOG_ROUTING` / `OPENVIKING_DEBUG` | 打开后会记录 context search、`find`、session 写入和 commit 路由信息，便于排查检索空间错误。 |
 | `enabledTools` | Agent 可见工具白名单 | `default` 工具组 | 是 | 否 | — | 支持工具名或分组：`default`、`all`、`memory`、`resource_query`、`import`、`recall_trace`、`archive`、`tool_result`。例如只保留资源查询：`["resource_query"]`。`add_resource` 即使被选中仍需 `enableAddResourceTool=true`：`config.ts:119`、`index.ts:688` |
 | `disabledTools` | Agent 可见工具黑名单 | `[]`（`add_resource` 默认仍禁用） | 是 | 否 | — | 在 `enabledTools` 之后应用，支持同样的工具名或分组。例如保留默认工具但隐藏记忆相关工具：`["memory"]`，会禁用 `memory_recall` / `memory_store` / `memory_forget`：`config.ts:136`、`config.ts:268` |
@@ -800,9 +800,9 @@ openclaw config get plugins.slots.contextEngine
 
 | 环境变量 | 对应配置项 | 作用 |
 | --- | --- | --- |
-| `OPENVIKING_BASE_URL` | `baseUrl` | 指定 OpenViking 服务地址 |
+| `OPENVIKING_BASE_URL` | `baseUrl` | 指定 Business Data Platform 服务地址 |
 | `OPENVIKING_URL` | `baseUrl` | `baseUrl` 的兼容别名 |
-| `OPENVIKING_API_KEY` | `apiKey` | 指定 OpenViking API key |
+| `OPENVIKING_API_KEY` | `apiKey` | 指定 Business Data Platform API key |
 | `OPENVIKING_ACCOUNT_ID` | `accountId` | 指定租户 account |
 | `OPENVIKING_USER_ID` | `userId` | 指定租户 user |
 | `OPENVIKING_PEER_ROLE` | `peer_role` | 安装脚本/setup 写入的记忆归属（`none` / `assistant` / `sender`；兼容旧值 `person`） |
@@ -964,7 +964,7 @@ openviking: diag {"stage":"compact_result"...}
 
 ### 10.4 对话时观测召回与文档命中
 
-如果需要在与 OpenClaw 对话时确认“本轮到底从 OpenViking 召回了哪些数据、用了哪些文档、对应路径是什么”，推荐按以下顺序排查。
+如果需要在与 OpenClaw 对话时确认“本轮到底从 Business Data Platform 召回了哪些数据、用了哪些文档、对应路径是什么”，推荐按以下顺序排查。
 
 #### 10.4.0 启用 recall trace
 
@@ -1074,7 +1074,7 @@ fi
 #### 10.4.1 先打开插件侧可观测配置
 
 ```bash
-# 打印 OpenViking search/session 路由、target_uri、query、agent/account/user header 等
+# 打印 Business Data Platform search/session 路由、target_uri、query、agent/account/user header 等
 openclaw config set plugins.entries.openviking.config.logFindRequests true
 
 # 打印 assemble/afterTurn/compact 标准诊断
@@ -1106,19 +1106,19 @@ OPENVIKING_DEBUG=1 openclaw gateway restart
 
 | 日志/字段 | 含义 | 关键路径 |
 | --- | --- | --- |
-| `openviking: context search POST .../api/v1/search/search {...}` | 自动召回向 OpenViking 发起服务端组装检索 | `purpose` / `quotas` / `session_id` / `context_type` / `query_expansion` / `max_tokens` / `peer_scope` / actor 与租户路由 |
+| `openviking: context search POST .../api/v1/search/search {...}` | 自动召回向 Business Data Platform 发起服务端组装检索 | `purpose` / `quotas` / `session_id` / `context_type` / `query_expansion` / `max_tokens` / `peer_scope` / actor 与租户路由 |
 | `openviking: find POST .../api/v1/search/find {...}` | 显式 recall/search 工具发起底层语义检索 | `target_uri` / `target_uri_input` / `query` / `X_OpenViking_Agent` |
 | `openviking: injecting N memories ...` | 插件决定向本轮 prompt 注入 N 条召回内容 | `N`、注入字符数、估算 token |
 | `openviking: inject-detail {...}` | 本轮实际注入模型的服务端组装条目摘要 | `entries[].uri`、`category`、`score`、`detail` |
 | `openviking: diag {"stage":"assemble_result"...}` | assemble 阶段是否发生自动召回 | `phase=transform_context`、`autoRecallMemoryCount` |
 
-其中 `inject-detail` 是排查“本轮模型实际看到了哪些 OpenViking 召回内容”的首选入口。它会列出每条被注入内容的 `uri`，例如：
+其中 `inject-detail` 是排查“本轮模型实际看到了哪些 Business Data Platform 召回内容”的首选入口。它会列出每条被注入内容的 `uri`，例如：
 
 ```text
 openviking: inject-detail {"count":2,"memories":[{"uri":"viking://user/default/memories/preferences/...","category":"preferences","abstract":"...","score":0.82,"is_leaf":true},{"uri":"viking://resources/project-docs/api.md#chunk-3","category":"resource","abstract":"...","score":0.71,"is_leaf":true}]}
 ```
 
-注意：自动注入到模型输入里的 `<relevant-memories>` 块默认只包含类别和内容，不直接暴露 URI；URI/路径主要从插件日志、`memory_recall` / `ov_search` 工具 `details`、或 OpenViking API 返回中获取。
+注意：自动注入到模型输入里的 `<relevant-memories>` 块默认只包含类别和内容，不直接暴露 URI；URI/路径主要从插件日志、`memory_recall` / `ov_search` 工具 `details`、或 Business Data Platform API 返回中获取。
 
 #### 10.4.3 用 OpenClaw 工具显式复现召回
 
@@ -1137,11 +1137,11 @@ ov_search(query="用户问题关键词", uri="viking://user/skills", limit=10)
 
 `ov_search` 的文本结果会显示 `type`、`uri`、`level`、`score` 和摘要；工具 `details` 里也会保留原始 `resources[]` / `skills[]` / `memories[]` 数组。
 
-注意：这些 `uri` 是 OpenViking 虚拟 URI，不是本地文件路径。需要完整内容时，让 Agent 调用 `ov_read(uri="viking://...")`，不要把 `viking://...` 或历史兼容展示里的 `openviking://...` 当作本地路径交给文件读取工具。
+注意：这些 `uri` 是 Business Data Platform 虚拟 URI，不是本地文件路径。需要完整内容时，让 Agent 调用 `ov_read(uri="viking://...")`，不要把 `viking://...` 或历史兼容展示里的 `openviking://...` 当作本地路径交给文件读取工具。
 
-#### 10.4.4 直接调用 OpenViking API 获取路径和内容
+#### 10.4.4 直接调用 Business Data Platform API 获取路径和内容
 
-插件调用 OpenViking 时统一携带认证和路由 header。手工排查时也要保持一致：
+插件调用 Business Data Platform 时统一携带认证和路由 header。手工排查时也要保持一致：
 
 ```bash
 export OPENVIKING_BASE_URL="http://127.0.0.1:1933"
@@ -1205,9 +1205,9 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
   "${headers[@]}"
 ```
 
-#### 10.4.5 OpenViking API 速查表
+#### 10.4.5 Business Data Platform API 速查表
 
-完整官方 API 清单、参数说明和插件映射见 [6.2 OpenViking 官方 API 完整清单与插件映射](#62-openviking-官方-api-完整清单与插件映射)。本节只保留排查“召回了哪些数据 / 用了哪些文档”时最常用的调用。
+完整官方 API 清单、参数说明和插件映射见 [6.2 Business Data Platform 官方 API 完整清单与插件映射](#62-openviking-官方-api-完整清单与插件映射)。本节只保留排查“召回了哪些数据 / 用了哪些文档”时最常用的调用。
 
 | 目标 | API | 插件入口 | 用途 |
 | --- | --- | --- | --- |
@@ -1237,7 +1237,7 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
 - 如果自动召回只看到了 `context search POST` 但没有 `injecting` / `inject-detail`：说明请求已发出，但服务端可能没有返回可注入内容，或发生了超时/检索错误；结合 warning、trace 和返回 stats 排查。
 - 如果未显式配置 `recallTargetTypes`，自动召回默认只查当前用户及 actor scope 内的 memory，不会把 `viking://resources` 文档自动注入；resource-only 用 `recallTargetTypes=["resource"]`，默认记忆 + resources 用 `recallResources=true` 或 `recallTargetTypes=["user","agent","resource"]`。
 - 如果没查到 recall trace，先检查 `traceRecall=true` 是否已配置并重启 Gateway；`recallTargetTypes` / `recallResources` 不负责启用 trace。
-- 当前插件没有单独生成“模型最终引用/采纳哪些文档”的 citation 文件；最可靠的依据是本轮注入内容、工具调用结果、OpenViking API 返回和模型回复本身。
+- 当前插件没有单独生成“模型最终引用/采纳哪些文档”的 citation 文件；最可靠的依据是本轮注入内容、工具调用结果、Business Data Platform API 返回和模型回复本身。
 
 ### 10.5 常见问题定位
 
@@ -1245,16 +1245,16 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
 | --- | --- | --- |
 | 插件未生效 | `plugins.slots.contextEngine` | slot 没有指向 `openviking` 或被其他插件覆盖 |
 | `setup` 成功但 gateway 中没调用插件 | `openclaw gateway restart` | Gateway 未重启，仍用旧插件状态 |
-| `status` 服务不可达 | `baseUrl`、`curl /health` | OpenViking 未启动、端口/网络错误 |
+| `status` 服务不可达 | `baseUrl`、`curl /health` | Business Data Platform 未启动、端口/网络错误 |
 | Root key 报 tenant 错误 | `accountId/userId` | Root key 需要显式租户上下文 |
 | 不同 peer 记忆串用 | `logFindRequests` 中的 `X-OpenViking-Actor-Peer` | `peer_prefix` 或 session agent 解析不符合预期 |
 | 搜不到刚保存的记忆 | 服务端 task 状态和日志 | afterTurn commit 是异步 Phase 2，记忆抽取可能还未完成或服务端失败 |
 | summary 有但细节没有 | `ov_archive_search` / `ov_archive_expand` | Working Memory 是有损摘要，需要 archive 回查 |
-| auto recall 没注入 | `autoRecall`、precheck、阈值、预算 | OpenViking 不可达、query 太短、阈值太高、记忆超预算 |
+| auto recall 没注入 | `autoRecall`、precheck、阈值、预算 | Business Data Platform 不可达、query 太短、阈值太高、记忆超预算 |
 | 工具结果缺完整内容 | tool result ref | 用 `openviking_tool_result_read`，不要反复读截断 preview |
 | 本地目录导入失败 | 路径、权限、zip 打包日志 | 目录会先 zip 再 temp upload，需本地可读 |
 
-### 10.6 OpenViking 服务侧排查
+### 10.6 Business Data Platform 服务侧排查
 
 ```bash
 # 服务端日志，路径以实际部署为准
@@ -1311,7 +1311,7 @@ openclaw config get plugins.slots.contextEngine
 python health_check_tools/ov-healthcheck.py
 ```
 
-该脚本用于注入真实对话，并在 OpenViking 侧验证会话捕获、提交、归档和记忆抽取。说明见 `health_check_tools/HEALTHCHECK-ZH.md`。
+该脚本用于注入真实对话，并在 Business Data Platform 侧验证会话捕获、提交、归档和记忆抽取。说明见 `health_check_tools/HEALTHCHECK-ZH.md`。
 
 ### 11.4 手工端到端验证建议
 
@@ -1321,14 +1321,14 @@ python health_check_tools/ov-healthcheck.py
 4. 等待 afterTurn 或手动触发 `/compact`。
 5. 新开一轮问“我之前偏好什么语言回复技术文档？”。
 6. 观察最新 user message 是否注入 `<relevant-memories>`，或用 `memory_recall` 显式查。
-7. 用 OpenViking Console/TUI 检查 `viking://user/.../memories` 是否产生 leaf memory。
+7. 用 Business Data Platform Console/TUI 检查 `viking://user/.../memories` 是否产生 leaf memory。
 8. 对长工具输出场景，确认 preview 中有 `viking://session/.../tool-results/...`，再用 tool-result 工具读取完整内容。
 
 ---
 
 ## 12. 注意事项
 
-1. **插件只支持 remote 模式**：旧 local mode 会被迁移提示，不会启动本地 OpenViking 进程。
+1. **插件只支持 remote 模式**：旧 local mode 会被迁移提示，不会启动本地 Business Data Platform 进程。
 2. **必须重启 Gateway**：安装或配置后要 `openclaw gateway restart` 才能生效。
 3. **不要装错包**：`@openviking/openclaw-plugin` 是插件；`clawhub install openviking` 是 AgentSkill。
 4. **API Key 不进日志**：插件路由日志不会打印 key，但仍应避免把 key 写入公开文档或命令历史。
@@ -1337,7 +1337,7 @@ python health_check_tools/ov-healthcheck.py
 7. **afterTurn commit 是异步抽取**：立即返回不代表长期记忆已可检索；看 task 或服务端日志。
 8. **compact 是同步边界**：需要明确压缩和抽取完成时用 compact，但它会阻塞等待服务端 Phase 2。
 9. **记忆注入有预算**：`recallMaxInjectedChars` 会跳过放不下的完整记忆，而不是截断。
-10. **bypassSessionPatterns 会完全绕过 OpenViking**：匹配后自动捕获、召回、工具都会跳过。
+10. **bypassSessionPatterns 会完全绕过 Business Data Platform**：匹配后自动捕获、召回、工具都会跳过。
 11. **tool result 工具限制当前 session**：插件拒绝读取其他 session 的外置结果。
 12. **本地资源导入先上传**：本地文件/目录通过 temp upload，不把本地路径直接交给服务端；目录会 zip，注意权限与体积。
 
@@ -1351,7 +1351,7 @@ python health_check_tools/ov-healthcheck.py
 2. `package.json`：了解构建、OpenClaw 入口、兼容版本。
 3. `commands/setup.ts`：了解用户安装配置如何写入 OpenClaw config。
 4. `index.ts`：了解插件注册、工具、hook 和 service。
-5. `client.ts`：了解 OpenViking API 封装和 header/URI 处理。
+5. `client.ts`：了解 Business Data Platform API 封装和 header/URI 处理。
 6. `context-engine.ts`：理解 assemble/afterTurn/compact 主链路。
 7. `auto-recall.ts` + `memory-ranking.ts`：理解召回注入和排序。
 8. `text-utils.ts` + `session-transcript-repair.ts`：理解消息清洗与 transcript 结构修复。
@@ -1361,7 +1361,7 @@ python health_check_tools/ov-healthcheck.py
 
 ## 14. 快速排障 Checklist
 
-- [ ] OpenViking Server `GET /health` 可达。
+- [ ] Business Data Platform Server `GET /health` 可达。
 - [ ] `openclaw openviking status --json` 中 `configured=true`。
 - [ ] `slotActive=true`。
 - [ ] Gateway 已重启。
@@ -1551,7 +1551,7 @@ TOS 对象不可变策略：release artifact、manifest、checksums、release no
 3. **ppe**：复用相同 release notes 发布到 ppe，验证安装、setup、gateway、status、一次真实召回。
 4. **prod dry-run**：确认 prod 稳定版本、manifest 和最新 Git hash。
 5. **prod 发布**：工作区干净后执行 `scripts/release-to-tos.sh --env prod --stable --notes ./release-notes.md`。
-6. **线上验证**：安装 prod latest 或指定版本，检查 `openclaw openviking status --json`、slot、OpenViking `/health`、一次 `memory_recall` 或 `ov_search`。
+6. **线上验证**：安装 prod latest 或指定版本，检查 `openclaw openviking status --json`、slot、Business Data Platform `/health`、一次 `memory_recall` 或 `ov_search`。
 
 回滚方式：
 
@@ -1607,7 +1607,7 @@ openclaw gateway restart
 | TOS 上传拒绝覆盖 | 同版本 release 对象已存在且不可变 | 换新版本；不要覆盖已发布对象 |
 | 安装包校验失败 | 下载的 `openviking.tgz` SHA256 与 manifest 不一致 | 停止安装，检查 TOS 对象和 CDN/代理缓存 |
 | OpenClaw 加载失败并提示缺依赖 | 包内缺运行时依赖 | 重新运行当前 `build.sh`，确认包内有 `node_modules/@sinclair/typebox` |
-| status 不健康 | OpenViking Server 不可达或 key/租户错误 | 检查 `baseUrl`、`apiKey`、`accountId`、`userId`、服务端 `/health` |
+| status 不健康 | Business Data Platform Server 不可达或 key/租户错误 | 检查 `baseUrl`、`apiKey`、`accountId`、`userId`、服务端 `/health` |
 
 ---
 

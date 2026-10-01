@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""System endpoints for OpenViking HTTP Server."""
+"""System endpoints for Business Data Platform HTTP Server."""
 
 import asyncio
 from typing import Optional

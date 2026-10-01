@@ -1,6 +1,6 @@
 # VikingDB BM25 Grep 基准测试
 
-用于评估 OpenViking grep 检索配合 VikingDB BM25 引擎的基准测试套件。
+用于评估 Business Data Platform grep 检索配合 VikingDB BM25 引擎的基准测试套件。
 
 执行导入、重建索引或基准测试前，需要先启动 `openviking-server`。
 

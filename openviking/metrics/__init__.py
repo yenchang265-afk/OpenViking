@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 
 """
-OpenViking metrics subsystem.
+Business Data Platform metrics subsystem.
 
 High-level architecture:
 - DataSource: emits events or exposes read APIs; must not write MetricRegistry directly.

@@ -44,7 +44,7 @@ export function createSessionInject({ config, sessionManager }) {
       messageID,
     })
     injectedSessions.add(sessionID)
-    log("INFO", "session-inject", "Injected OpenViking session context", {
+    log("INFO", "session-inject", "Injected Business Data Platform session context", {
       opencode_session: sessionID,
       openviking_session: ovSessionId,
       hasProfile: Boolean(profile?.block),

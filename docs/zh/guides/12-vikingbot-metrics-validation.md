@@ -10,9 +10,9 @@
 
 - 启用 `server.observability.metrics.enabled=true`，通过 `openviking-server --with-bot --port 30300` 启动服务。
 - 确认 `/bot/v1/health` 返回 HTTP 200，`/metrics` 返回 Prometheus exposition 文本。
-- 确认 Prometheus 能抓取 OpenViking，Grafana 使用该 Prometheus 数据源。
+- 确认 Prometheus 能抓取 Business Data Platform，Grafana 使用该 Prometheus 数据源。
 
-上一篇的 localhost 方案使用 OpenViking `http://127.0.0.1:30300`、Prometheus `http://127.0.0.1:30909` 和 Grafana `http://127.0.0.1:13000`。如果启用了认证，请为每个请求添加部署要求的凭据，参见 [认证](04-authentication.md)。
+上一篇的 localhost 方案使用 Business Data Platform `http://127.0.0.1:30300`、Prometheus `http://127.0.0.1:30909` 和 Grafana `http://127.0.0.1:13000`。如果启用了认证，请为每个请求添加部署要求的凭据，参见 [认证](04-authentication.md)。
 
 ## 指标口径
 
@@ -50,7 +50,7 @@ curl -sS -X POST "http://127.0.0.1:30300/bot/v1/chat" \
   -d '{
     "session_id": "realcase-01-chat",
     "user_id": "metrics-validation-user",
-    "message": "请用一句话介绍 OpenViking。"
+    "message": "请用一句话介绍 Business Data Platform。"
   }'
 ```
 
@@ -152,7 +152,7 @@ curl -sS -X POST "http://127.0.0.1:30300/bot/v1/chat/channel" \
     "session_id": "realcase-07-channel-demo",
     "user_id": "metrics-validation-user",
     "channel_id": "demo",
-    "message": "请简要介绍 OpenViking。"
+    "message": "请简要介绍 Business Data Platform。"
   }'
 ```
 

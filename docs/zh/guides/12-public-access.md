@@ -1,6 +1,6 @@
 # 公网访问与反向代理
 
-OpenViking 默认在 1933 端口对外提供 REST API、MCP、OAuth、`.well-known/*`
+Business Data Platform 默认在 1933 端口对外提供 REST API、MCP、OAuth、`.well-known/*`
 以及 Web Studio (`/studio`)。本指南讲怎么把它放到公网 HTTPS 域名后面。
 
 > **为什么需要 HTTPS**：OAuth 2.1 / MCP SDK 对非 localhost 的 issuer
@@ -60,7 +60,7 @@ OPENVIKING_PUBLIC_BASE_URL=https://ov.your-domain.com
 OV_ACME_EMAIL=admin@your-domain.com   # 可选；推荐用于 Let's Encrypt
 ```
 
-`OPENVIKING_PUBLIC_BASE_URL` 同时被 OpenViking 容器（发布在 OAuth 元数据和
+`OPENVIKING_PUBLIC_BASE_URL` 同时被 Business Data Platform 容器（发布在 OAuth 元数据和
 `WWW-Authenticate` 头中）和 Caddy（作为 HTTPS 站点地址）读取。
 
 ### 2. 在 `Caddyfile` 追加域名块

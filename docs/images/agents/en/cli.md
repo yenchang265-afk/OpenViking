@@ -1,12 +1,12 @@
-Copy and run the following commands step by step in your terminal to complete OpenViking CLI installation, configuration, and usage:
+Copy and run the following commands step by step in your terminal to complete Business Data Platform CLI installation, configuration, and usage:
 
-### Step 1: Install OpenViking CLI and enter the configuration flow:
+### Step 1: Install Business Data Platform CLI and enter the configuration flow:
 
 ```bash
 npm i -g @openviking/cli && ov config
 ```
 
-### Step 2: When prompted, enter the OpenViking Base URL and API Key
+### Step 2: When prompted, enter the Business Data Platform Base URL and API Key
 
 - Base URL: Copy the following Base URL into your terminal
 ```text

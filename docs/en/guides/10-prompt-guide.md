@@ -1,6 +1,6 @@
-# OpenViking Prompt Guide and Customization
+# Business Data Platform Prompt Guide and Customization
 
-This document introduces OpenViking's current prompt template system, with a focus on:
+This document introduces Business Data Platform's current prompt template system, with a focus on:
 
 - what prompts currently exist
 - which processing stage each prompt is used in
@@ -12,7 +12,7 @@ This document only covers templates under `openviking/prompts/templates/` plus a
 
 ## Overview
 
-OpenViking's current prompts fall into two main groups:
+Business Data Platform's current prompts fall into two main groups:
 
 1. Regular prompt templates
    - Stored under `openviking/prompts/templates/<category>/*.yaml`
@@ -416,7 +416,7 @@ These prompts are mainly used for image, page, table, and multimodal document an
 
 ## How to Customize Prompts
 
-OpenViking supports two main customization patterns:
+Business Data Platform supports two main customization patterns:
 
 1. Override regular prompt templates
 2. Extend memory schemas

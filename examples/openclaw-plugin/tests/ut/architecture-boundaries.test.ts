@@ -448,7 +448,7 @@ describe("architecture boundaries", () => {
   it("keeps MCP addSkill data tests on the injected transport seam", () => {
     const clientTestSource = readFileSync(join(rootDir, "tests/ut/client.test.ts"), "utf8");
     const start = clientTestSource.indexOf('it("addSkill posts MCP tool dict directly"');
-    const end = clientTestSource.indexOf('  it("surfaces OpenViking error responses"', start);
+    const end = clientTestSource.indexOf('  it("surfaces Business Data Platform error responses"', start);
 
     expect(start).toBeGreaterThanOrEqual(0);
     expect(end).toBeGreaterThan(start);
@@ -458,9 +458,9 @@ describe("architecture boundaries", () => {
     expect(mcpSkillBlock).toMatch(/new OpenVikingClient\([\s\S]*\{\s*transport\s*\}/);
   });
 
-  it("keeps OpenViking error response client tests on the injected transport seam", () => {
+  it("keeps Business Data Platform error response client tests on the injected transport seam", () => {
     const clientTestSource = readFileSync(join(rootDir, "tests/ut/client.test.ts"), "utf8");
-    const start = clientTestSource.indexOf('it("surfaces OpenViking error responses"');
+    const start = clientTestSource.indexOf('it("surfaces Business Data Platform error responses"');
     const end = clientTestSource.indexOf('  it("uses an extended request timeout for wait=true imports"', start);
 
     expect(start).toBeGreaterThanOrEqual(0);
@@ -590,9 +590,9 @@ describe("architecture boundaries", () => {
     expect(memoryStoreBlock).toContain("openVikingTransport");
   });
 
-  it("keeps OpenViking tool result access tests on the plugin-injected transport seam", () => {
+  it("keeps Business Data Platform tool result access tests on the plugin-injected transport seam", () => {
     const toolsTestSource = readFileSync(join(rootDir, "tests/ut/tools.test.ts"), "utf8");
-    const start = toolsTestSource.indexOf('describe("Tool: OpenViking tool result access"');
+    const start = toolsTestSource.indexOf('describe("Tool: Business Data Platform tool result access"');
     const end = toolsTestSource.indexOf('describe("Tool: add_resource, add_skill, and ov_search (registration)"', start);
 
     expect(start).toBeGreaterThanOrEqual(0);
@@ -816,7 +816,7 @@ describe("architecture boundaries", () => {
     expect(indexSource).not.toContain("enabledToolNames");
   });
 
-  it("keeps OpenViking query runtime out of the composition root", () => {
+  it("keeps Business Data Platform query runtime out of the composition root", () => {
     const indexSource = readFileSync(join(rootDir, "index.ts"), "utf8");
 
     expect(indexSource).toContain("createOpenVikingQueryRuntime");
@@ -846,13 +846,13 @@ describe("architecture boundaries", () => {
     expect(indexSource).not.toContain("toQueryObject");
   });
 
-  it("keeps OpenViking command handlers out of the composition root", () => {
+  it("keeps Business Data Platform command handlers out of the composition root", () => {
     const indexSource = readFileSync(join(rootDir, "index.ts"), "utf8");
 
     expect(indexSource).toContain("createOpenVikingCommandDefinitions");
     expect(indexSource).not.toContain("openVikingCommands.push");
-    expect(indexSource).not.toContain("OpenViking add resource failed");
-    expect(indexSource).not.toContain("OpenViking recall trace query failed");
+    expect(indexSource).not.toContain("Business Data Platform add resource failed");
+    expect(indexSource).not.toContain("Business Data Platform recall trace query failed");
   });
 
   it("keeps slash-command argument parsing out of the composition root", () => {
@@ -899,7 +899,7 @@ describe("architecture boundaries", () => {
     expect(indexSource).not.toContain("prepareRecallQuery");
   });
 
-  it("keeps OpenViking runtime utility helpers out of the composition root", () => {
+  it("keeps Business Data Platform runtime utility helpers out of the composition root", () => {
     const indexSource = readFileSync(join(rootDir, "index.ts"), "utf8");
 
     expect(indexSource).toContain("./plugin/openviking-runtime-utils.js");
@@ -913,7 +913,7 @@ describe("architecture boundaries", () => {
     expect(indexSource).not.toContain("Math.random().toString(36)");
   });
 
-  it("keeps OpenViking session routing runtime out of the composition root", () => {
+  it("keeps Business Data Platform session routing runtime out of the composition root", () => {
     const indexSource = readFileSync(join(rootDir, "index.ts"), "utf8");
 
     expect(indexSource).toContain("./plugin/openviking-session-routing-runtime.js");
@@ -925,7 +925,7 @@ describe("architecture boundaries", () => {
     expect(indexSource).not.toContain("sessionAgentResolver.resolve");
   });
 
-  it("keeps OpenViking client runtime creation out of the composition root", () => {
+  it("keeps Business Data Platform client runtime creation out of the composition root", () => {
     const indexSource = readFileSync(join(rootDir, "index.ts"), "utf8");
 
     expect(indexSource).toContain("./plugin/openviking-client-runtime.js");
@@ -937,7 +937,7 @@ describe("architecture boundaries", () => {
     expect(indexSource).not.toMatch(/const\s+verboseRoutingInfo\s*=/);
   });
 
-  it("keeps OpenViking runtime state construction out of the composition root", () => {
+  it("keeps Business Data Platform runtime state construction out of the composition root", () => {
     const indexSource = readFileSync(join(rootDir, "index.ts"), "utf8");
 
     expect(indexSource).toContain("./plugin/openviking-runtime-state.js");
@@ -963,7 +963,7 @@ describe("architecture boundaries", () => {
     expect(indexSource).toContain("createOpenVikingQueryConfigCommandHandler");
     expect(indexSource).not.toContain("parseQueryConfigPatch");
     expect(indexSource).not.toContain("No query config parameters provided for /ov-query-config set");
-    expect(indexSource).not.toContain("Reset OpenViking query config");
+    expect(indexSource).not.toContain("Reset Business Data Platform query config");
   });
 
   it("keeps lifecycle hook handlers out of the composition root", () => {

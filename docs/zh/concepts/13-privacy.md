@@ -1,6 +1,6 @@
 # 隐私配置与 Skill 隐私提取/加载
 
-本文介绍 OpenViking 的隐私配置能力，以及它与 Skill 写入（提取）和读取（加载还原）的协作机制。
+本文介绍 Business Data Platform 的隐私配置能力，以及它与 Skill 写入（提取）和读取（加载还原）的协作机制。
 
 ## 目标
 
@@ -110,7 +110,7 @@ fs.read(uri)
    -> 记入“额外配置”提示（`Configured but not referenced in content`）。
 
 4. 当存在 `unresolved_entries` 或“额外配置”时，会在内容末尾追加：
-   - `[OpenViking Privacy Notice]`
+   - `[Business Data Platform Privacy Notice]`
    - `Related configured privacy values: ...`
    - `Not replaced (missing config): ...`（如有）
    - `Configured but not referenced in content: ...`（如有）

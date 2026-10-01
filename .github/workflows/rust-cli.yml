@@ -153,7 +153,7 @@ jobs:
           const pkg = {
             name: '@openviking/${{ matrix.npm_pkg }}',
             version: '$VERSION',
-            description: 'OpenViking CLI native binary for ${{ matrix.npm_os }}-${{ matrix.npm_cpu }}',
+            description: 'Business Data Platform CLI native binary for ${{ matrix.npm_os }}-${{ matrix.npm_cpu }}',
             os: ['${{ matrix.npm_os }}'],
             cpu: ['${{ matrix.npm_cpu }}'],
             files: ['bin'],

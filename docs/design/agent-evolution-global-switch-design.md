@@ -3,7 +3,7 @@
 ## Scope
 
 Agent Evolution is controlled by one deployment-level switch for the entire
-OpenViking server instance. All accounts and users served by the same process
+Business Data Platform server instance. All accounts and users served by the same process
 share the same effective value.
 
 The switch controls whether session commits may generate or update these memory
@@ -56,7 +56,7 @@ Asynchronous Phase 2 reads that snapshot, so normal queue processing and direct
 recovery of that archive use the value accepted at commit time.
 
 When a later commit rolls earlier failed archives into one recovery batch, the
-entire batch uses the triggering archive's snapshot. OpenViking keeps one
+entire batch uses the triggering archive's snapshot. Business Data Platform keeps one
 extraction policy per batch instead of splitting the merged conversation across
 different Agent Evolution settings. Therefore, changing the deployment setting
 before a later recovery commit can affect replayed messages from earlier failed

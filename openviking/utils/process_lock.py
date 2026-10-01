@@ -24,7 +24,7 @@ _LOCKS: dict[str, tuple[int, int]] = {}  # normalized path -> (descriptor, refer
 
 
 class DataDirectoryLocked(RuntimeError):
-    """Raised when another OpenViking process holds the workspace lock."""
+    """Raised when another Business Data Platform process holds the workspace lock."""
 
 
 def release_data_dir_lock(lock_path: str) -> None:
@@ -85,13 +85,13 @@ def acquire_data_dir_lock(data_dir: str) -> str:
             if exc.errno not in (errno.EACCES, errno.EAGAIN):
                 raise
             raise DataDirectoryLocked(
-                f"Another OpenViking process is already using the data directory '{data_dir}'. "
-                "Running multiple OpenViking instances on the same data directory causes "
+                f"Another Business Data Platform process is already using the data directory '{data_dir}'. "
+                "Running multiple Business Data Platform instances on the same data directory causes "
                 "storage contention and data corruption.\n\n"
                 "To fix this, use one of these approaches:\n"
-                "  1. Start a single OpenViking server and connect clients over HTTP\n"
+                "  1. Start a single Business Data Platform server and connect clients over HTTP\n"
                 "  2. Use separate data directories for each instance\n"
-                "  3. Stop the other OpenViking process first"
+                "  3. Stop the other Business Data Platform process first"
             ) from exc
         except BaseException:
             os.close(descriptor)

@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Debug endpoints for OpenViking HTTP Server.
+"""Debug endpoints for Business Data Platform HTTP Server.
 
 Provides debug API for system diagnostics.
 - /api/v1/debug/health - Quick health check

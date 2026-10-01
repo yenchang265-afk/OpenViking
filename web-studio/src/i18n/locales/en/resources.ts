@@ -251,7 +251,7 @@ const resources = {
         endpoints:
           'Set connector.enable=true in ov.conf. Set connector.connector to the full doc/add endpoint URL and connector.tracker to the full task/info endpoint URL.',
         allow: 'Add tos to connector.allowed_add_types.',
-        restart: 'Restart OpenViking, then import with tos://bucket/path.',
+        restart: 'Restart Business Data Platform, then import with tos://bucket/path.',
         noDocumentation:
           'Your Connector deployment provides the service endpoints; Studio does not fill them automatically. A dedicated TOS Connector deployment guide is not currently available.',
       },
@@ -560,7 +560,7 @@ const resources = {
       title: 'Search failed',
       fallback: 'The request could not be completed. Please try again.',
       network:
-        'The OpenViking service could not be reached. Check the connection URL, service status, or CORS configuration.',
+        'The Business Data Platform service could not be reached. Check the connection URL, service status, or CORS configuration.',
       code: 'Error code',
       status: 'HTTP status',
       requestId: 'Request ID',

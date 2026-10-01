@@ -1,6 +1,6 @@
-# RFC: OpenViking CLI Support for ov chat Command
+# RFC: Business Data Platform CLI Support for ov chat Command
 
-**Author:** OpenViking Team
+**Author:** Business Data Platform Team
 **Status:** Implemented
 **Date:** 2025-03-03
 
@@ -8,9 +8,9 @@
 
 ## 1. Executive Summary / 执行摘要
 
-This document describes the integration architecture between `ov` CLI (Rust), `openviking-server` (Python/FastAPI), and `vikingbot` (Python AI agent framework). The goal is to provide a unified chat interface where the bot service shares the same port and authentication mechanism as the OpenViking server.
+This document describes the integration architecture between `ov` CLI (Rust), `openviking-server` (Python/FastAPI), and `vikingbot` (Python AI agent framework). The goal is to provide a unified chat interface where the bot service shares the same port and authentication mechanism as the Business Data Platform server.
 
-本文档描述了 `ov` CLI（Rust）、`openviking-server`（Python/FastAPI）和 `vikingbot`（Python AI agent 框架）之间的集成架构。目标是提供一个统一的聊天界面，使 bot 服务与 OpenViking 服务器共享相同的端口和认证机制。
+本文档描述了 `ov` CLI（Rust）、`openviking-server`（Python/FastAPI）和 `vikingbot`（Python AI agent 框架）之间的集成架构。目标是提供一个统一的聊天界面，使 bot 服务与 Business Data Platform 服务器共享相同的端口和认证机制。
 
 ---
 
@@ -18,7 +18,7 @@ This document describes the integration architecture between `ov` CLI (Rust), `o
 
 ### 2.1 系统整体架构 / System Architecture
 
-**部署说明 / Deployment Note:** OpenViking Server 和 Vikingbot 部署在同一台机器上，通过本地端口通信。
+**部署说明 / Deployment Note:** Business Data Platform Server 和 Vikingbot 部署在同一台机器上，通过本地端口通信。
 
 ```mermaid
 flowchart TB
@@ -29,7 +29,7 @@ flowchart TB
     subgraph SameMachine["同一台机器 / Same Machine"]
         direction TB
 
-        subgraph Server["OpenViking Server<br/>(Python/FastAPI, Port 1933)"]
+        subgraph Server["Business Data Platform Server<br/>(Python/FastAPI, Port 1933)"]
             Auth["统一认证中间件<br/>Unified Auth"]
             BotAPIProxy["Bot API Proxy<br/>(--with-bot)"]
             BotRouter["/bot/v1/*<br/>Router"]
@@ -122,7 +122,7 @@ flowchart TB
 
 ## 3. Key Components / 关键组件
 
-### 3.1 OpenViking Server (`openviking-server`)
+### 3.1 Business Data Platform Server (`openviking-server`)
 
 **Role:** HTTP API Gateway with Bot API proxy / 带 Bot API 代理的 HTTP API 网关
 
@@ -148,7 +148,7 @@ flowchart TB
 
 **Architecture Position / 架构位置：**
 - External client layer / 外部客户端层
-- Communicates with OpenViking Server (Port 1933) / 与 OpenViking 服务器通信（端口 1933）
+- Communicates with Business Data Platform Server (Port 1933) / 与 Business Data Platform 服务器通信（端口 1933）
 
 ---
 
@@ -163,7 +163,7 @@ flowchart TB
 
 **Architecture Position / 架构位置：**
 - Process 2 (Port 18790 default) / 进程2（默认端口 18790）
-- Receives proxied requests from OpenViking Server / 接收来自 OpenViking 服务器的代理请求
+- Receives proxied requests from Business Data Platform Server / 接收来自 Business Data Platform 服务器的代理请求
 
 ---
 
@@ -184,7 +184,7 @@ Channel → MessageBus.inbound → Agent Loop → MessageBus.outbound → Channe
 
 ## 4. API Endpoints / API 端点
 
-### 4.1 Bot API (via OpenViking Server)
+### 4.1 Bot API (via Business Data Platform Server)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -207,22 +207,22 @@ Channel → MessageBus.inbound → Agent Loop → MessageBus.outbound → Channe
 ### 5.1 Start the services / 启动服务
 
 ```bash
-# 启动 OpenViking Server (带 --with-bot 会自动启动 vikingbot gateway)
+# 启动 Business Data Platform Server (带 --with-bot 会自动启动 vikingbot gateway)
 openviking-server --with-bot
 
 # Output:
-# OpenViking HTTP Server is running on 127.0.0.1:1933
+# Business Data Platform HTTP Server is running on 127.0.0.1:1933
 # Bot API proxy enabled, forwarding to http://127.0.0.1:18790
 # Starting vikingbot gateway...
 ```
 
 **说明 / Note:**
 - `--with-bot`: 自动在同一机器上启动 `vikingbot gateway` 进程
-- 不加 `--with-bot`: 仅启动 OpenViking Server，不会启动 Vikingbot
+- 不加 `--with-bot`: 仅启动 Business Data Platform Server，不会启动 Vikingbot
 
 **设计意图 / Design Rationale:**
-OpenViking Server 统一代理 Vikingbot 的 CLI 请求，目的是：
-1. **共享鉴权机制** - 复用 OpenViking Server 的统一认证中间件
+Business Data Platform Server 统一代理 Vikingbot 的 CLI 请求，目的是：
+1. **共享鉴权机制** - 复用 Business Data Platform Server 的统一认证中间件
 2. **端口共享** - 服务端部署时可共享端口，简化网络配置
 
 ### 5.2 Using `ov chat` CLI / 使用 `ov chat` CLI
@@ -269,7 +269,7 @@ curl -X POST http://localhost:1933/bot/v1/chat/stream \
 
 ### 6.1 配置共享说明 / Configuration Sharing
 
-**重要 / Important:** Vikingbot 与 OpenViking Server 共享同一个 `ov.conf` 配置文件，不再使用 `~/.vikingbot/config.json`。
+**重要 / Important:** Vikingbot 与 Business Data Platform Server 共享同一个 `ov.conf` 配置文件，不再使用 `~/.vikingbot/config.json`。
 
 Vikingbot 的配置项统一放在 `ov.conf` 的 `bot` 字段下：
 

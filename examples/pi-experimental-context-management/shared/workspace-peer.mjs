@@ -60,7 +60,7 @@ export function peerSourceTemplates(source, onWarn = null) {
   if (Object.hasOwn(PEER_SOURCE_PRESETS, raw)) return PEER_SOURCE_PRESETS[raw];
   if (raw.includes("{")) return [raw];
 
-  const message = `OpenViking: ignored peer.source ${JSON.stringify(raw)}: it is neither a preset `
+  const message = `Business Data Platform: ignored peer.source ${JSON.stringify(raw)}: it is neither a preset `
     + `(${Object.keys(PEER_SOURCE_PRESETS).join(", ")}) nor a template such as "team-{dir}". `
     + `Falling back to ${DEFAULT_PEER_SOURCE}.`;
   if (typeof onWarn === "function") onWarn(message);

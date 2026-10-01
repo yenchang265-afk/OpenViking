@@ -84,7 +84,7 @@ class TestSkillExperiencePrecipitation(BaseOpenClawCLITest):
 class TestSkillMemoryLogVerification(BaseOpenClawCLITest):
     """
     技能调用记忆注入日志验证（P0）
-    测试目标：验证发送数据后，记忆成功注入OpenViking
+    测试目标：验证发送数据后，记忆成功注入Business Data Platform
     测试场景：发送简单数据，然后给出手动检查日志的提示
     """
 

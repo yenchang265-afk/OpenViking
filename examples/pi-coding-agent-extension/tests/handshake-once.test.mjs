@@ -205,7 +205,7 @@ test("a refused handshake still leaves the session working", async (t) => {
     // No tools registered, but the session is live: the system prompt still
     // comes back (or at worst undefined), and the status line flags the gap.
     assert.deepEqual(tools, []);
-    if (result) assert.ok(!/OpenViking tools/.test(result.systemPrompt));
+    if (result) assert.ok(!/Business Data Platform tools/.test(result.systemPrompt));
     assert.ok(
       statuses.some(([, status]) => /OV ✓/.test(status) && /tools ✗/.test(status)),
       JSON.stringify(statuses),

@@ -676,7 +676,7 @@ class TestFilterOpsPath(unittest.TestCase):
 
     def test_path_must_not_after_another_condition(self):
         """Test MustNot excluding path prefix when it is not the first condition of an and"""
-        # OpenViking always puts the tenant filter first and a caller's filter after it.
+        # Business Data Platform always puts the tenant filter first and a caller's filter after it.
         every_record = {"op": "must", "field": "id", "conds": [1, 2, 3, 4, 5]}
 
         def after_every_record(condition):

@@ -1,6 +1,6 @@
 # Viking URI
 
-Viking URI is the unified resource identifier for all content in OpenViking.
+Viking URI is the unified resource identifier for all content in Business Data Platform.
 
 ## Format
 
@@ -148,7 +148,7 @@ including skills, endpoints, tools, payments, and other subdirectories. Director
 do not identify agents, and `actor_peer_id` does not filter this scope. Sharing is limited
 to the current account. Peer data belongs under `viking://user/<user_id>/peers/<peer_id>/...`.
 
-The home alias `viking://~/...` is relative to the current request identity. OpenViking
+The home alias `viking://~/...` is relative to the current request identity. Business Data Platform
 expands it internally to the explicit namespace path `viking://user/{user_id}/...` before
 storage and retrieval, and responses echo the expanded form.
 

@@ -967,7 +967,7 @@ def run_large_scale_tests():
 
 if __name__ == "__main__":
     print("\n" + "=" * 70)
-    print("OpenViking Collection - Large Scale Scenario Tests")
+    print("Business Data Platform Collection - Large Scale Scenario Tests")
     print("=" * 70)
 
     success = run_large_scale_tests()

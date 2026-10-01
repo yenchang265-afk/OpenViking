@@ -1,4 +1,4 @@
-"""Competition API contract through the real OpenViking SDK request builder."""
+"""Competition API contract through the real Business Data Platform SDK request builder."""
 
 import asyncio
 import json

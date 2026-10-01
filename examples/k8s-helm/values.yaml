@@ -19,7 +19,7 @@ server:
   host: "0.0.0.0"
   port: 1933
 
-# OpenViking confmap - only embedding and vlm are valid fields
+# Business Data Platform confmap - only embedding and vlm are valid fields
 # Stored as a Secret and mounted into the container
 openviking:
   config:

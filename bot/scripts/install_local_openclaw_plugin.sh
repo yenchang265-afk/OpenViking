@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# 安装本地 OpenClaw OpenViking 插件
+# 安装本地 OpenClaw Business Data Platform 插件
 # 用法: ./install_local_openclaw_plugin.sh [--rebuild]
 #
 # 选项:
@@ -18,7 +18,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 OPENCLAW_PLUGIN_SOURCE="$(dirname "$SCRIPT_DIR")/../examples/openclaw-plugin"
 OPENCLAW_PLUGIN_DIR="$HOME/.openclaw/extensions/openviking"
 
-echo "=== 安装本地 OpenClaw OpenViking 插件 ==="
+echo "=== 安装本地 OpenClaw Business Data Platform 插件 ==="
 echo "源目录: $OPENCLAW_PLUGIN_SOURCE"
 echo "目标目录: $OPENCLAW_PLUGIN_DIR"
 

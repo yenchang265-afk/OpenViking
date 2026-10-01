@@ -1,10 +1,10 @@
-# OpenViking Web Studio
+# Business Data Platform Web Studio
 
 [English](README.md) / 中文
 
-Web Studio 是 OpenViking 的 React/Vite 前端工作台，面向开发者使用。它是一个静态单页应用，用于资源管理、检索、Bot 会话和运维诊断。
+Web Studio 是 Business Data Platform 的 React/Vite 前端工作台，面向开发者使用。它是一个静态单页应用，用于资源管理、检索、Bot 会话和运维诊断。
 
-Web Studio 不内嵌 OpenViking 的存储、索引、检索、任务队列或 VikingBot 运行时。它必须连接一个正在运行的 OpenViking Server。
+Web Studio 不内嵌 Business Data Platform 的存储、索引、检索、任务队列或 VikingBot 运行时。它必须连接一个正在运行的 Business Data Platform Server。
 
 ## 运行契约
 
@@ -14,7 +14,7 @@ Web Studio 不内嵌 OpenViking 的存储、索引、检索、任务队列或 Vi
 http://127.0.0.1:1933
 ```
 
-会话界面依赖 OpenViking Server 代理出来的 VikingBot API：
+会话界面依赖 Business Data Platform Server 代理出来的 VikingBot API：
 
 ```text
 GET  /bot/v1/health
@@ -23,7 +23,7 @@ POST /bot/v1/chat/stream
 POST /bot/v1/feedback
 ```
 
-本地开发和部署时，都应使用 bot 支持启动 OpenViking Server：
+本地开发和部署时，都应使用 bot 支持启动 Business Data Platform Server：
 
 ```bash
 openviking-server --with-bot
@@ -104,7 +104,7 @@ VITE_OV_BASE_URL=http://127.0.0.1:1933 npm run dev
 - `X-OpenViking-Account`
 - `X-OpenViking-User`
 
-生产或多租户部署应在 OpenViking Server 中配置真实的 `server.root_api_key` 或 user key，并在 Web Studio 中填写匹配的连接信息。
+生产或多租户部署应在 Business Data Platform Server 中配置真实的 `server.root_api_key` 或 user key，并在 Web Studio 中填写匹配的连接信息。
 
 ## 常用命令
 
@@ -127,7 +127,7 @@ VITE_OV_BASE_URL=http://127.0.0.1:1933 npm run dev
 src/gen/ov-client
 ```
 
-不要手动修改生成产物。需要从目标 OpenViking Server 版本重新生成：
+不要手动修改生成产物。需要从目标 Business Data Platform Server 版本重新生成：
 
 ```bash
 openviking-server --with-bot
@@ -152,7 +152,7 @@ src/routes/<page>/-*     页面私有组件、hooks、schemas 和工具函数
 src/components/ui/       共享基础 UI 组件
 src/components/          共享业务组件
 src/hooks/               共享 React hooks
-src/lib/ov-client/       OpenViking client 运行时适配层
+src/lib/ov-client/       Business Data Platform client 运行时适配层
 src/gen/ov-client/       OpenAPI 生成客户端
 src/i18n/locales/        en 和 zh-CN 翻译资源
 src/styles.css           全局样式和设计 token
@@ -163,7 +163,7 @@ types/ov-server/         手工补充的服务端 typed result 子集
 
 ## 部署
 
-Web Studio 的部署产物是 `dist/` 静态文件。OpenViking Server 仍然是独立运行依赖。
+Web Studio 的部署产物是 `dist/` 静态文件。Business Data Platform Server 仍然是独立运行依赖。
 
 ### 1. 启动必需的服务端
 
@@ -173,7 +173,7 @@ Web Studio 的部署产物是 `dist/` 静态文件。OpenViking Server 仍然是
 openviking-server --host 0.0.0.0 --port 1933 --with-bot
 ```
 
-生产环境应在 `ov.conf` 中配置 `server.root_api_key`。如果 Web Studio 和 OpenViking Server 不同源，需要把 Web Studio 的访问源加入 `server.cors_origins`。
+生产环境应在 `ov.conf` 中配置 `server.root_api_key`。如果 Web Studio 和 Business Data Platform Server 不同源，需要把 Web Studio 的访问源加入 `server.cors_origins`。
 
 最小健康检查：
 
@@ -195,7 +195,7 @@ npm ci
 VITE_OV_BASE_URL=https://ov-api.example.com npm run build
 ```
 
-`VITE_OV_BASE_URL` 是浏览器中的初始 OpenViking API origin。用户仍可以在连接弹窗中修改它。
+`VITE_OV_BASE_URL` 是浏览器中的初始 Business Data Platform API origin。用户仍可以在连接弹窗中修改它。
 
 ### 3. 独立 host 部署
 
@@ -229,7 +229,7 @@ server {
 https://ov.example.com/
 ```
 
-将 OpenViking API 路径反向代理到 server，并把 Web Studio 发布在 `/`：
+将 Business Data Platform API 路径反向代理到 server，并把 Web Studio 发布在 `/`：
 
 ```nginx
 server {
@@ -275,7 +275,7 @@ VITE_OV_BASE_URL=https://ov.example.com npm run build
 https://ov.example.com/web-studio/
 ```
 
-这种布局下，Web Studio 挂载在 `/web-studio/`，OpenViking API 仍保留在 host 根路径：
+这种布局下，Web Studio 挂载在 `/web-studio/`，Business Data Platform API 仍保留在 host 根路径：
 
 ```text
 https://ov.example.com/api/*
@@ -338,11 +338,11 @@ server {
 }
 ```
 
-不要把 `VITE_OV_BASE_URL` 设置成 `https://ov.example.com/web-studio`。`/web-studio/` 只是前端挂载路径；OpenViking API 请求仍应访问 `https://ov.example.com/api/*` 和 `https://ov.example.com/bot/*`。
+不要把 `VITE_OV_BASE_URL` 设置成 `https://ov.example.com/web-studio`。`/web-studio/` 只是前端挂载路径；Business Data Platform API 请求仍应访问 `https://ov.example.com/api/*` 和 `https://ov.example.com/bot/*`。
 
 ### 6. Docker 服务端依赖
 
-官方 OpenViking 镜像可以作为 API server 依赖：
+官方 Business Data Platform 镜像可以作为 API server 依赖：
 
 ```bash
 # 推荐优先使用 ghcr.io；如果访问有问题，可改用 openviking-cn-beijing.cr.volces.com/volcengine/openviking:latest
@@ -378,7 +378,7 @@ openviking-server --with-bot
 
 ### 浏览器出现 CORS 错误
 
-如果 Web Studio 和 OpenViking Server 不同源，需要在 `ov.conf` 的 `server.cors_origins` 中加入 Web Studio 的访问源并重启 server。同源部署时，反向代理 `/api/`、`/bot/`、`/health` 和 `/ready` 到 OpenViking Server。
+如果 Web Studio 和 Business Data Platform Server 不同源，需要在 `ov.conf` 的 `server.cors_origins` 中加入 Web Studio 的访问源并重启 server。同源部署时，反向代理 `/api/`、`/bot/`、`/health` 和 `/ready` 到 Business Data Platform Server。
 
 ### 连接弹窗反复打开
 
@@ -387,5 +387,5 @@ openviking-server --with-bot
 ## 相关文档
 
 - [Web Studio 国际化贡献指南](./CONTRIBUTING_CN.md)：翻译归属、服务端动态文本和审查清单。
-- [OpenViking server deployment](../docs/en/guides/03-deployment.md)：服务端部署说明。
-- [VikingBot validation with OpenViking Server](../bot/docs/vikingbot-phase1-validation-with-openviking-server.md)：Bot proxy 验证流程。
+- [Business Data Platform server deployment](../docs/en/guides/03-deployment.md)：服务端部署说明。
+- [VikingBot validation with Business Data Platform Server](../bot/docs/vikingbot-phase1-validation-with-openviking-server.md)：Bot proxy 验证流程。

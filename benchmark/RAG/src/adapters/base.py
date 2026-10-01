@@ -45,11 +45,11 @@ class BaseAdapter(ABC):
     def data_prepare(self, doc_dir:str) -> List[StandardDoc]:
         """
         Data preparation.
-        1. Convert dataset format to OpenViking-friendly format
+        1. Convert dataset format to Business Data Platform-friendly format
         2. Return converted (or unconverted) file paths
         
         Returns:
-            List[StandardDoc]: Array of file paths expected to be input to OpenViking
+            List[StandardDoc]: Array of file paths expected to be input to Business Data Platform
         """
         pass
 

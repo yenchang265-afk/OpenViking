@@ -1,4 +1,4 @@
-"""Deterministic LangChain app using OpenViking as a session context backend."""
+"""Deterministic LangChain app using Business Data Platform as a session context backend."""
 
 from __future__ import annotations
 
@@ -16,15 +16,15 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
     client = client or InMemoryOpenVikingClient(
         {
             "viking://resources/runbooks/context-backend.md": (
-                "OpenViking context backend examples should answer with azure."
+                "Business Data Platform context backend examples should answer with azure."
             )
         }
     )
 
     def answer(messages):
         context = messages[0].content
-        assert "OpenViking context backend examples" in context
-        return AIMessage(content="OpenViking context says azure.")
+        assert "Business Data Platform context backend examples" in context
+        return AIMessage(content="Business Data Platform context says azure.")
 
     return with_openviking_context(
         RunnableLambda(answer),

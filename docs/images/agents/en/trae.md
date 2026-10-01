@@ -20,7 +20,7 @@
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae-cli --dist tos
    ```
 
-2. The installer will ask for language (English / Chinese) and OpenViking credentials. In the OpenViking credential step, choose **VolcEngine OpenViking Cloud Service [api.vikingdb.cn-beijing.volces.com]** and enter the API KEY:
+2. The installer will ask for language (English / Chinese) and Business Data Platform credentials. In the Business Data Platform credential step, choose **VolcEngine Business Data Platform Cloud Service [api.vikingdb.cn-beijing.volces.com]** and enter the API KEY:
 
    ```text
    {{OPENVIKING_API_KEY}}

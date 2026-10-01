@@ -1,6 +1,6 @@
 # @openviking/sdk
 
-OpenViking 的轻量级 JavaScript/TypeScript HTTP SDK，面向 Node.js 18+，没有运行时依赖。
+Business Data Platform 的轻量级 JavaScript/TypeScript HTTP SDK，面向 Node.js 18+，没有运行时依赖。
 
 ```bash
 npm install @openviking/sdk

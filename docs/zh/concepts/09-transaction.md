@@ -1,10 +1,10 @@
 # 路径锁与崩溃恢复
 
-OpenViking 通过**路径锁**和**持久化队列恢复**两个简单原语保护核心写操作（`rm`、`mv`、`add_resource`、`session.commit`）的一致性，协调并发写入，并在进程重启后继续处理已入队的会话任务。路径锁和队列恢复不构成跨 VikingFS、VectorDB、QueueManager 的原子事务。
+Business Data Platform 通过**路径锁**和**持久化队列恢复**两个简单原语保护核心写操作（`rm`、`mv`、`add_resource`、`session.commit`）的一致性，协调并发写入，并在进程重启后继续处理已入队的会话任务。路径锁和队列恢复不构成跨 VikingFS、VectorDB、QueueManager 的原子事务。
 
 ## 设计哲学
 
-OpenViking 是上下文数据库，FS 是源数据，VectorDB 是派生索引。索引丢了可从源数据重建，源数据丢失不可恢复。因此：
+Business Data Platform 是上下文数据库，FS 是源数据，VectorDB 是派生索引。索引丢了可从源数据重建，源数据丢失不可恢复。因此：
 
 > **宁可搜不到，不要搜到坏结果。**
 
@@ -480,7 +480,7 @@ Redis 配置：
 | 参数 | 类型 | 说明 | 默认值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory` 或 `cache` | `filesystem` |
-| `namespace` | str 或 null | `provider=cache` 时必填，用于标识一个 OpenViking 部署 | `null` |
+| `namespace` | str 或 null | `provider=cache` 时必填，用于标识一个 Business Data Platform 部署 | `null` |
 | `lock_expire_secs` | float | 未刷新的锁进入 stale 状态前的秒数 | `30.0` |
 
 兼容旧写法：

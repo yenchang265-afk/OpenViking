@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-HTML Parser for OpenViking.
+HTML Parser for Business Data Platform.
 
 Parses local HTML files.
 

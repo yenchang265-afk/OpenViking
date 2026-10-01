@@ -35,7 +35,7 @@ class TestSearch:
 
     def test_search_with_different_query(self, api_client):
         try:
-            response = api_client.search("what is OpenViking", limit=5)
+            response = api_client.search("what is Business Data Platform", limit=5)
             print(f"\nSearch API (different query) status code: {response.status_code}")
 
             data = response.json()

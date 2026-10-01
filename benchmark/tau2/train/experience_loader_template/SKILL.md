@@ -1,6 +1,6 @@
 ---
 name: experience_loader
-description: Load relevant OpenViking experience memories via case-linked experience candidates before solving a task.
+description: Load relevant Business Data Platform experience memories via case-linked experience candidates before solving a task.
 ---
 
 # experience_loader
@@ -31,5 +31,5 @@ Refusal, no-option, policy-ineligible, missing-input, and `transfer_to_human_age
 
 ## Tools
 
-- `search_experience(query, limit=10)`: searches OpenViking `memories/cases` under the current user, reads each matched case's `## Linked Experiences` section, and returns JSON candidates with case score, case URI, task signature, input summary, and linked experience entries (each with `name`, `uri`, and a `situation` snippet from the experience's `## Situation` section).
-- `read_experience(experience_uri)`: reads one OpenViking experience memory by full URI and returns Markdown.
+- `search_experience(query, limit=10)`: searches Business Data Platform `memories/cases` under the current user, reads each matched case's `## Linked Experiences` section, and returns JSON candidates with case score, case URI, task signature, input summary, and linked experience entries (each with `name`, `uri`, and a `situation` snippet from the experience's `## Situation` section).
+- `read_experience(experience_uri)`: reads one Business Data Platform experience memory by full URI and returns Markdown.

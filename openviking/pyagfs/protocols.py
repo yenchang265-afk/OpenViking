@@ -10,7 +10,7 @@ AGFSByteStream = Iterator[bytes]
 
 @runtime_checkable
 class AGFSSyncClientProtocol(Protocol):
-    """Minimal synchronous AGFS client contract used by OpenViking."""
+    """Minimal synchronous AGFS client contract used by Business Data Platform."""
 
     def ls(
         self,

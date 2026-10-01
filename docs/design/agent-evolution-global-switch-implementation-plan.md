@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace the per-user Agent Evolution setting with one deployment-level switch shared by every account and user in an OpenViking server instance.
+**Goal:** Replace the per-user Agent Evolution setting with one deployment-level switch shared by every account and user in a Business Data Platform server instance.
 
 **Architecture:** `ServerConfig.agent_evolution.enabled` is the only active Agent Evolution setting for HTTP server deployments. `SessionService` snapshots it into each `Session`; commit Phase 1 stores the effective value in archive metadata and Phase 2 consumes that snapshot. Directly constructed services retain the enabled default because they do not load `ServerConfig`. The former user field remains parse-only for compatibility, while user-facing management APIs, clients, and CLI commands are removed.
 

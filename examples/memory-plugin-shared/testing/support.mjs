@@ -124,7 +124,7 @@ export function writeJson(res, value, statusCode = 200) {
 }
 
 /**
- * Run `fn` against a mock OpenViking listening on loopback.
+ * Run `fn` against a mock Business Data Platform listening on loopback.
  *
  * `handler` may be sync or async; whatever it throws becomes a 500 rather than
  * an unhandled rejection that outlives the test. `fn` receives the base URL and

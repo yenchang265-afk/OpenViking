@@ -1,7 +1,7 @@
 # Usage/Audit 使用说明
 
-Usage/Audit 是 OpenViking Server 给 Console 使用的产品统计与请求审计模块。它复用
-OpenViking 已有的 observability 事件，不要求 Console 直接依赖 Prometheus，也不会在正常
+Usage/Audit 是 Business Data Platform Server 给 Console 使用的产品统计与请求审计模块。它复用
+Business Data Platform 已有的 observability 事件，不要求 Console 直接依赖 Prometheus，也不会在正常
 API 请求链路里同步写统计库。
 
 ## 适用场景
@@ -83,7 +83,7 @@ Observability Event Bus
 | --- | --- | --- |
 | `enabled` | `true` | 是否启用 Usage/Audit |
 | `backend` | `"sqlite"` | 当前仅支持 SQLite |
-| `sqlite_path` | `null` | SQLite 文件路径；为空时使用当前 OpenViking workspace 下的 `_system/usage_audit/usage_audit.sqlite3` |
+| `sqlite_path` | `null` | SQLite 文件路径；为空时使用当前 Business Data Platform workspace 下的 `_system/usage_audit/usage_audit.sqlite3` |
 | `queue_size` | `10000` | 后台写入队列大小 |
 | `batch_size` | `500` | 单次批量写入的最大事件数 |
 | `flush_interval_seconds` | `1.0` | worker 定时 flush 间隔 |
@@ -173,7 +173,7 @@ vector filter，也不从历史写入事件累计当前库存。
 - `error_details`（仅标准错误响应，可空）
 - `created_at`
 
-错误字段来自 OpenViking 已返回给调用方的标准错误结构，不读取或缓存 HTTP response
+错误字段来自 Business Data Platform 已返回给调用方的标准错误结构，不读取或缓存 HTTP response
 body。`error_details` 经过凭据脱敏和大小限制；它可能包含被拒绝的参数值，但不会额外保存
 原始 request body、header、query string、stack trace 或 exception text。
 
@@ -416,7 +416,7 @@ Console BFF 查询的是账号级聚合和审计明细，当前只允许 `ROOT` 
 
 ### SQLite 文件在哪里？
 
-如果没有配置 `sqlite_path`，默认在 OpenViking workspace 下：
+如果没有配置 `sqlite_path`，默认在 Business Data Platform workspace 下：
 
 ```text
 <workspace>/_system/usage_audit/usage_audit.sqlite3

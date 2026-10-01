@@ -1,6 +1,6 @@
 # 操作级 Telemetry 参考
 
-操作级 telemetry 用来让 OpenViking 在请求结果里额外返回一份结构化摘要，帮助你了解这次操作实际发生了什么，例如耗时、token 消耗、向量检索情况、队列处理进度，以及资源导入阶段统计。
+操作级 telemetry 用来让 Business Data Platform 在请求结果里额外返回一份结构化摘要，帮助你了解这次操作实际发生了什么，例如耗时、token 消耗、向量检索情况、队列处理进度，以及资源导入阶段统计。
 
 适合这些场景：
 
@@ -8,11 +8,11 @@
 - 观察 token 或检索行为
 - 把结构化执行摘要接入你自己的日志或观测系统
 
-更完整的观测入口说明，包括健康检查、`ov tui` 和 `OpenViking Console`，请先看 [可观测性与排障](05-observability.md)。
+更完整的观测入口说明，包括健康检查、`ov tui` 和 `Business Data Platform Console`，请先看 [可观测性与排障](05-observability.md)。
 
 ## 基本说明
 
-Telemetry 是按需返回的。只有你显式请求时，OpenViking 才会在响应顶层返回 `telemetry` 字段。
+Telemetry 是按需返回的。只有你显式请求时，Business Data Platform 才会在响应顶层返回 `telemetry` 字段。
 
 典型响应结构如下：
 
@@ -187,7 +187,7 @@ CPU/GPU 路由和分阶段耗时；并发 query 的完成顺序不会改变结�
 | `summary.vector.cuvs.dtypes.<dtype>` | 按 GPU dataset/query dtype 统计的 search 数：`float32` 或 `float16` |
 | `summary.vector.cuvs.max_concurrent_gpu_searches` | 观测到的单 index in-flight GPU search 配置上限最大值 |
 | `summary.vector.cuvs.auto_mode_searches` | 启用自动 CPU/GPU 路由的 search 数量 |
-| `summary.vector.cuvs.micro_batching_searches` | 使用 OpenViking 可选 micro-batch scheduler 的 search 数量 |
+| `summary.vector.cuvs.micro_batching_searches` | 使用 Business Data Platform 可选 micro-batch scheduler 的 search 数量 |
 | `summary.vector.cuvs.micro_batched_searches` | 其中以多于一行 query 共同 dispatch 的 search 数量 |
 | `summary.vector.cuvs.micro_batching_warm_fast_path_searches` | 使用 micro-batch scheduler、从 clean current snapshot 入队且未经过 caller 侧 device-gate admission 的 search 数量 |
 | `summary.vector.cuvs.batch_size_max` | 单次共享 cuVS call 观测到的最大 query 行数 |

@@ -42,7 +42,7 @@ use crate::plugins::{
 pub struct RagfsConfig {
     /// Encryption section: `None` → plaintext stack; `Some` → per-backend encryption wrapping.
     pub encryption: Option<EncryptionConfig>,
-    /// PathLock configuration. OpenViking always requires PathLock to be present.
+    /// PathLock configuration. Business Data Platform always requires PathLock to be present.
     pub pathlock: PathLockConfig,
 }
 
@@ -112,7 +112,7 @@ pub struct RagfsStack {
     pub mountable: Arc<MountableFS>,
     /// Data entry point: `Stats(PathLock(Mountable))`.
     pub top: Arc<dyn FileSystem>,
-    /// PathLock manager. OpenViking always constructs the stack with PathLock enabled.
+    /// PathLock manager. Business Data Platform always constructs the stack with PathLock enabled.
     pub pathlock_manager: Arc<PathLockManager>,
     /// Shared cache runtime, present only when a provider was configured.
     #[cfg(feature = "cache")]

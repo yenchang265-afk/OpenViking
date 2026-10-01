@@ -1,6 +1,6 @@
-# 为 OpenClaw 安装 OpenViking
+# 为 OpenClaw 安装 Business Data Platform
 
-OpenViking 通过 `@openviking/openclaw-plugin` 插件为 OpenClaw 提供长期记忆、知识库检索、语义搜索和 RAG 上下文能力。
+Business Data Platform 通过 `@openviking/openclaw-plugin` 插件为 OpenClaw 提供长期记忆、知识库检索、语义搜索和 RAG 上下文能力。
 
 这份文档同时面向用户和自动化 agent：用户可以按步骤执行，agent 可以按命令和 JSON 结果判断下一步。
 
@@ -29,7 +29,7 @@ openclaw plugins install clawhub:@openviking/openclaw-plugin
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
 
-插件以远程模式连接到已有的 OpenViking 服务。它不会帮你启动 OpenViking server。需要先启动 OpenViking，并保持服务运行，再把插件的 `baseUrl` 指向这个 HTTP 服务。默认本地地址是 `http://127.0.0.1:1933`。
+插件以远程模式连接到已有的 Business Data Platform 服务。它不会帮你启动 Business Data Platform server。需要先启动 Business Data Platform，并保持服务运行，再把插件的 `baseUrl` 指向这个 HTTP 服务。默认本地地址是 `http://127.0.0.1:1933`。
 
 OpenClaw 插件包版本边界：
 
@@ -46,9 +46,9 @@ node -v
 openclaw --version
 ```
 
-## 火山 OpenViking Service 一键接入
+## 火山 Business Data Platform Service 一键接入
 
-如果你使用的是火山控制台创建的 OpenViking Service 库，不需要启动本地 `openviking-server`。从控制台复制 OpenViking Service 的 server url、API Key，并按需配置 peer 标识：
+如果你使用的是火山控制台创建的 Business Data Platform Service 库，不需要启动本地 `openviking-server`。从控制台复制 Business Data Platform Service 的 server url、API Key，并按需配置 peer 标识：
 
 ```bash
 OPENVIKING_BASE_URL="https://api.vikingdb.cn-beijing.volces.com/openviking" \
@@ -58,7 +58,7 @@ bash scripts/install.sh --json
 
 这条命令会完成：
 
-- 默认从 TOS `latest` 安装 OpenViking 插件。
+- 默认从 TOS `latest` 安装 Business Data Platform 插件。
 - 写入 `$OPENCLAW_STATE_DIR/openviking.env`，默认是 `~/.openclaw/openviking.env`，权限为 `0600`。
 - 调用 `openclaw openviking setup --base-url ... --api-key ...` 写入插件配置。
 - 重启 `openclaw gateway`。
@@ -95,16 +95,16 @@ OPENVIKING_PEER_PREFIX="openclaw-prod" \
 bash output/install.sh --source tarball --tarball output/openviking.tgz --json
 ```
 
-接入后，在火山 OpenViking Service 控制台检查：
+接入后，在火山 Business Data Platform Service 控制台检查：
 
 - 发送一轮 OpenClaw 对话后，`Session` 下出现原始会话。
 - 触发 `/compact` 或等待 commit 后，`User/memories` 出现长期记忆。
 - 如果配置了 `peer_role=assistant`，数据面 recall/search 会携带对应 `X-OpenViking-Actor-Peer`，session message 仍用 body `peer_id` 做消息归因。
 - 通过手动 `/add-resource` 导入文档、URL 或目录后，`Resources` 下出现对应知识，并可做目录递归检索。Agent 可见的 `add_resource` 工具默认禁用，只有显式设置 `enableAddResourceTool=true` 后才暴露。
 
-## 启动 OpenViking Server
+## 启动 Business Data Platform Server
 
-如果 OpenViking 和 OpenClaw 在同一台机器上，最短流程是：
+如果 Business Data Platform 和 OpenClaw 在同一台机器上，最短流程是：
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -122,7 +122,7 @@ mkdir -p ~/.openviking/data/log
 nohup openviking-server > ~/.openviking/data/log/openviking.log 2>&1 &
 ```
 
-如果 OpenViking 跑在另一台机器上，需要监听可访问的地址和端口，例如：
+如果 Business Data Platform 跑在另一台机器上，需要监听可访问的地址和端口，例如：
 
 ```bash
 openviking-server --host 0.0.0.0 --port 1933
@@ -174,7 +174,7 @@ openclaw openviking setup --base-url http://127.0.0.1:1933 --api-key sk-xxx --js
 
 `setup` 会写入 `plugins.entries.openviking.config`，并激活 `plugins.slots.contextEngine=openviking`。
 
-如果 OpenViking 服务暂时不可达，但你仍希望先保存配置：
+如果 Business Data Platform 服务暂时不可达，但你仍希望先保存配置：
 
 ```bash
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --allow-offline --json
@@ -197,13 +197,13 @@ openclaw openviking setup \
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --force-slot --json
 ```
 
-根据 OpenViking user 代表谁来选择 `--peer-role`：
+根据 Business Data Platform user 代表谁来选择 `--peer-role`：
 
 | 值 | 存储示例 | 适用场景 |
 | --- | --- | --- |
-| `none`（默认） | `viking://user/alice/memories/...` | 该 OpenViking 用户下的所有对话共享 user-level 记忆，不使用具体 peer 的记忆子树。 |
-| `assistant` | `viking://user/alice/peers/main/memories/...` | OpenViking user 代表人，并希望把 assistant 归因的 peer 记忆按不同 OpenClaw 助手分开。 |
-| `sender` | `viking://user/support-agent/peers/customer-42/memories/...` | OpenViking user 代表 agent，并希望把 sender 归因的 peer 记忆按不同发送者分开。 |
+| `none`（默认） | `viking://user/alice/memories/...` | 该 Business Data Platform 用户下的所有对话共享 user-level 记忆，不使用具体 peer 的记忆子树。 |
+| `assistant` | `viking://user/alice/peers/main/memories/...` | Business Data Platform user 代表人，并希望把 assistant 归因的 peer 记忆按不同 OpenClaw 助手分开。 |
+| `sender` | `viking://user/support-agent/peers/customer-42/memories/...` | Business Data Platform user 代表 agent，并希望把 sender 归因的 peer 记忆按不同发送者分开。 |
 
 `person` 仍作为 `sender` 的旧配置别名被兼容；新配置请使用 `sender`。
 
@@ -213,13 +213,13 @@ openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --forc
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --peer-role assistant --peer-prefix <PREFIX> --json
 ```
 
-如果 OpenViking user 是 agent，按给它发消息的 sender 分开 peer 记忆：
+如果 Business Data Platform user 是 agent，按给它发消息的 sender 分开 peer 记忆：
 
 ```bash
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --peer-role sender --json
 ```
 
-OpenViking 会为每个用户初始化受管的 `peers/` 容器。`none` 表示插件不创建、也不路由到具体的 `peers/<peer_id>/memories` 子树。Actor-peer 召回同时包含用户共享记忆和当前 peer 记忆；切换配置不会搬迁已有记忆。
+Business Data Platform 会为每个用户初始化受管的 `peers/` 容器。`none` 表示插件不创建、也不路由到具体的 `peers/<peer_id>/memories` 子树。Actor-peer 召回同时包含用户共享记忆和当前 peer 记忆；切换配置不会搬迁已有记忆。
 
 #### 无法执行 CLI 时直接配置文件
 
@@ -316,8 +316,8 @@ plugins.entries.openviking.config
 | 字段 | 默认值 | 说明 |
 | --- | --- | --- |
 | `mode` | `remote` | 兼容旧配置的字段。当前只支持 remote。 |
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking HTTP 地址 |
-| `apiKey` | 空 | OpenViking API key |
+| `baseUrl` | `http://127.0.0.1:1933` | Business Data Platform HTTP 地址 |
+| `apiKey` | 空 | Business Data Platform API key |
 | `peer_role` | `none` | 记忆归属：`none`（共享 `viking://user/<user_id>/memories`）、`assistant`（`.../peers/<assistant_id>/memories`）或 `sender`（`.../peers/<sender_id>/memories`）。旧值 `person` 作为 `sender` 的别名兼容。Session message 使用 body `peer_id`；数据面 recall/search 使用 `X-OpenViking-Actor-Peer`。 |
 | `peer_prefix` | 空 | `peer_role=assistant` 时 assistant `peer_id` / actor peer 值的可选前缀。 |
 | `accountId` | 空 | 使用 root API key 时需要 |
@@ -337,12 +337,12 @@ openclaw config get plugins.entries.openviking.config
 
 ### 配置参数
 
-插件连接到已有的远端 OpenViking 服务。
+插件连接到已有的远端 Business Data Platform 服务。
 
 | 参数 | 默认值 | 含义 |
 | --- | --- | --- |
-| `baseUrl` | `http://127.0.0.1:1933` | 远端 OpenViking 服务地址 |
-| `apiKey` | 空 | 远端 OpenViking API Key；服务端未开启认证时可不填 |
+| `baseUrl` | `http://127.0.0.1:1933` | 远端 Business Data Platform 服务地址 |
+| `apiKey` | 空 | 远端 Business Data Platform API Key；服务端未开启认证时可不填 |
 | `peer_role` | `none` | 记忆归属：`none`、`assistant` 或 `sender`；旧值 `person` 作为 `sender` 的别名兼容。Session message 使用 body `peer_id`，数据面 recall/search 使用 `X-OpenViking-Actor-Peer` |
 | `peer_prefix` | 空 | `peer_role=assistant` 时 assistant `peer_id` / actor peer 值的可选前缀 |
 
@@ -377,13 +377,13 @@ openclaw gateway restart
 
 ## 可选链路健康检查
 
-如果 status 已通过，还想验证 Gateway 到 OpenViking 的完整链路，可以在仓库 checkout 中运行：
+如果 status 已通过，还想验证 Gateway 到 Business Data Platform 的完整链路，可以在仓库 checkout 中运行：
 
 ```bash
 python examples/openclaw-plugin/health_check_tools/ov-healthcheck.py
 ```
 
-该脚本会注入一次真实对话，并在 OpenViking 侧验证会话捕获、提交、归档和记忆提取。详见 [health_check_tools/HEALTHCHECK-ZH.md](./health_check_tools/HEALTHCHECK-ZH.md)。
+该脚本会注入一次真实对话，并在 Business Data Platform 侧验证会话捕获、提交、归档和记忆提取。详见 [health_check_tools/HEALTHCHECK-ZH.md](./health_check_tools/HEALTHCHECK-ZH.md)。
 
 ## 备用路径：ov-install
 
@@ -403,8 +403,8 @@ ov-install
 | `--workdir PATH` | 指定 OpenClaw state 目录 |
 | `--plugin-version=REF` | 指定插件版本：npm 版本、npm dist-tag 或 Git ref |
 | `--current-version` | 查看 helper 记录的当前版本 |
-| `--base-url URL` | OpenViking 服务器地址（启用非交互模式） |
-| `--api-key KEY` | OpenViking API key |
+| `--base-url URL` | Business Data Platform 服务器地址（启用非交互模式） |
+| `--api-key KEY` | Business Data Platform API key |
 | `--peer-role ROLE` | 记忆归属：`none`、`assistant` 或 `sender`；旧值 `person` 作为 `sender` 的别名兼容 |
 | `--peer-prefix PREFIX` | assistant `peer_id` / actor peer 值的前缀 |
 | `--update` | 更新 helper 管理的安装 |
@@ -413,7 +413,7 @@ ov-install
 
 ## 从 ov-install 迁移到 openclaw plugin install
 
-如果之前通过 `ov-install` 安装了 OpenViking，切换到推荐的 `openclaw plugins install` 安装方式前需要清理。
+如果之前通过 `ov-install` 安装了 Business Data Platform，切换到推荐的 `openclaw plugins install` 安装方式前需要清理。
 
 ### 同一插件 ID（openviking，版本 >= 0.3.x）
 

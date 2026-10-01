@@ -6,18 +6,18 @@
 
 源码：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
 
-ZCode 社区集成通过配置驱动的生命周期 Hook 和 OpenViking MCP 服务提供跨项目、跨会话记忆：
+ZCode 社区集成通过配置驱动的生命周期 Hook 和 Business Data Platform MCP 服务提供跨项目、跨会话记忆：
 
 - **SessionStart** 注入用户画像。
 - **UserPromptSubmit** 召回相关记忆。
 - **PreToolUse** 将直接读取 `viking://` 的操作引导至 MCP 工具。
-- **Stop** 在 detached worker 中捕获 rollout 里的未处理回合，并 commit OpenViking session。
+- **Stop** 在 detached worker 中捕获 rollout 里的未处理回合，并 commit Business Data Platform session。
 
 ZCode 不提供 `PreCompact`、`SessionEnd` 和 subagent 生命周期 Hook。因此该适配器在 `Stop` 时 commit，以 ZCode rollout 文件作为权威增量对话源，只有 rollout 文件不可用时才回退到 Hook stdin。
 
 ### 安装
 
-前置条件：Node.js 18+、正在运行的 OpenViking 服务，以及 ZCode。
+前置条件：Node.js 18+、正在运行的 Business Data Platform 服务，以及 ZCode。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
@@ -35,13 +35,13 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 重启 ZCode 后，请确认：
 
-- `~/.zcode/cli/config.json` 包含 `hooks.enabled: true`、`hooks.events` 下的 OpenViking 条目，以及 `mcp.servers.openviking`。
+- `~/.zcode/cli/config.json` 包含 `hooks.enabled: true`、`hooks.events` 下的 Business Data Platform 条目，以及 `mcp.servers.openviking`。
 - 设置 `OPENVIKING_DEBUG=1` 后，可在 `~/.openviking/logs/zcode-hooks.log` 查看诊断日志。
 
 | 现象 | 原因 | 处理方式 |
 |------|------|----------|
 | Hook 未执行 | Hook 配置被禁用或已过期 | 重跑安装器并重启 ZCode |
-| 召回为空 | OpenViking 不可用或记忆尚未提取 | 检查 `curl http://127.0.0.1:1933/health`，并等待提取完成 |
+| 召回为空 | Business Data Platform 不可用或记忆尚未提取 | 检查 `curl http://127.0.0.1:1933/health`，并等待提取完成 |
 | MCP 工具未出现 | MCP proxy 启动失败 | 检查 `~/.zcode/cli/config.json` 中 `mcp.servers.openviking` 的绝对路径命令 |
 | 重复捕获 | 旧安装留下了重复 Hook 条目 | 先运行 `install.sh --harness zcode --uninstall`，再重新安装 |
 
@@ -51,16 +51,16 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 源码：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
 
-Kimi Code 集成是原生 managed plugin。它复用 OpenViking 的共享 Hook 运行时，只在适配层保留 Kimi 特有的事件映射、wire transcript 解码、输出格式和 commit 策略：
+Kimi Code 集成是原生 managed plugin。它复用 Business Data Platform 的共享 Hook 运行时，只在适配层保留 Kimi 特有的事件映射、wire transcript 解码、输出格式和 commit 策略：
 
 - **UserPromptSubmit** 召回记忆，并输出 Kimi 可直接注入的原始文本。
 - **PreToolUse** 拒绝 Read/Glob/Grep 直接访问 `viking://` URI。
-- **Stop**、**PreCompact** 和 **SessionEnd** 增量捕获 `wire.jsonl` 回合；**Interrupt** 同步执行同一捕获流程，全部 OpenViking 请求共用 2 秒总预算。
-- 原生插件 manifest 提供 OpenViking MCP server，不修改 Kimi 的旧式配置文件。
+- **Stop**、**PreCompact** 和 **SessionEnd** 增量捕获 `wire.jsonl` 回合；**Interrupt** 同步执行同一捕获流程，全部 Business Data Platform 请求共用 2 秒总预算。
+- 原生插件 manifest 提供 Business Data Platform MCP server，不修改 Kimi 的旧式配置文件。
 
 ### 安装
 
-前置条件：Node.js 18+、正在运行的 OpenViking 服务，以及 Kimi Code CLI。
+前置条件：Node.js 18+、正在运行的 Business Data Platform 服务，以及 Kimi Code CLI。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
@@ -90,7 +90,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 为 AstrBot 提供群聊/私聊的自动捕获、LLM 请求前的语义召回，以及可配置的 venue 记忆隔离。
 
-**安装**：在 AstrBot WebUI → 插件市场搜索 **OpenViking Memory** 并安装；或从链接安装：`https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
+**安装**：在 AstrBot WebUI → 插件市场搜索 **Business Data Platform Memory** 并安装；或从链接安装：`https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
 
 **主要特性**：
 
@@ -105,7 +105,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 源码：[examples/openwebui-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openwebui-plugin)
 
-一个独立的 FastAPI server，把 OpenViking 的一组精选端点以 OpenAPI tools 形式暴露，让 Open WebUI 作为原生工具调用。部署与端点说明见 README。
+一个独立的 FastAPI server，把 Business Data Platform 的一组精选端点以 OpenAPI tools 形式暴露，让 Open WebUI 作为原生工具调用。部署与端点说明见 README。
 
 ## 更多示例
 

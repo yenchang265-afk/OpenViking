@@ -54,7 +54,7 @@ logger = get_logger(__name__)
 
 
 class OpenGaussCollectionAdapter(CollectionAdapter):
-    """OpenViking CollectionAdapter backed by openGauss DataVec.
+    """Business Data Platform CollectionAdapter backed by openGauss DataVec.
 
     Supports two deployment modes controlled by ``opengauss.mode``:
 

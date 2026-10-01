@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class PromptsConfig(BaseModel):
-    """Prompt template configuration for OpenViking."""
+    """Prompt template configuration for Business Data Platform."""
 
     templates_dir: str = Field(
         default="",

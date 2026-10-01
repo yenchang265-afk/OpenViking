@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenViking 记忆演示脚本 — 群聊场景
+Business Data Platform 记忆演示脚本 — 群聊场景
 测试当前 user/peer 记忆模型：
 1. 登录 user 维护自己的记忆空间
 2. peer_id 维护同一 user 下的一对多外部参与者记忆
@@ -311,7 +311,7 @@ def main():
 
     console.print(
         Panel(
-            f"[bold]OpenViking 数据隔离测试[/bold]\nServer: {args.url}",
+            f"[bold]Business Data Platform 数据隔离测试[/bold]\nServer: {args.url}",
             style="magenta",
             width=PANEL_WIDTH,
         )

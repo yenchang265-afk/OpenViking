@@ -1,7 +1,7 @@
 /**
  * Local pending queue for offline resilience.
  *
- * When the OpenViking server is temporarily unreachable, write operations
+ * When the Business Data Platform server is temporarily unreachable, write operations
  * (addMessage, commitSession) serialize their payloads to
  * `~/.openviking/pending/` as JSON files. The queue is replayed in small
  * batches, either at session-start (consuming retry budgets, with

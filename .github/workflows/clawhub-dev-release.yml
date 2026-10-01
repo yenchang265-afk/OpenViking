@@ -1,4 +1,4 @@
-name: OpenViking OpenClaw plugin release
+name: Business Data Platform OpenClaw plugin release
 
 # Publishes examples/openclaw-plugin as @openviking/openclaw-plugin. The
 # workflow publishes a legacy zip artifact to ClawHub for old OpenClaw
@@ -36,7 +36,7 @@ on:
       changelog:
         description: "Changelog text for this release."
         required: false
-        default: "OpenViking plugin release via GitHub Actions."
+        default: "Business Data Platform plugin release via GitHub Actions."
       publish_clawhub:
         description: "Publish to ClawHub."
         required: false
@@ -256,7 +256,7 @@ jobs:
           echo "package_ref=${{ inputs.package_ref || 'main' }}"
           echo "publish_clawhub=${{ inputs.publish_clawhub }}"
           echo "publish_npm=${{ inputs.publish_npm }}"
-          echo "changelog=${{ github.event.inputs.changelog || 'OpenViking plugin release via GitHub Actions.' }}"
+          echo "changelog=${{ github.event.inputs.changelog || 'Business Data Platform plugin release via GitHub Actions.' }}"
 
   prepare-package-source:
     name: Prepare plugin package artifacts
@@ -308,7 +308,7 @@ jobs:
           cache: npm
           cache-dependency-path: examples/openclaw-plugin/package-lock.json
 
-      - name: Pack OpenViking plugin
+      - name: Pack Business Data Platform plugin
         id: pack
         working-directory: examples/openclaw-plugin
         env:

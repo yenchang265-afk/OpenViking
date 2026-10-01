@@ -12,7 +12,7 @@ Bot 身份
   + 工作区启动文件
   + Always Skill 完整内容
   + 可用 Skill 摘要
-  + OpenViking Profile、记忆和经验
+  + Business Data Platform Profile、记忆和经验
   + 本地或压缩后的会话历史
   + 本轮文本与媒体
 ```
@@ -26,7 +26,7 @@ Bot 身份
 | **Skill** | 告诉 Agent 如何完成一类任务 | `SKILL.md` 指令和资源 |
 | **Tool** | 让 Agent执行具体操作 | 注册给模型的 JSON Schema 函数 |
 
-Skill 采用渐进式加载：本地 Always Skill 每轮注入完整内容，其他本地 Skill 只注入摘要，需要时用 `read_file` 读取；启用 OpenViking 工具后，远程 Skill 按用户问题召回摘要，再用 `openviking_multi_read` 读取并激活。本地依赖用于过滤摘要，远程依赖在执行沙箱检查。完整用法和元数据字段见 [Skills](./06-skills.md)。
+Skill 采用渐进式加载：本地 Always Skill 每轮注入完整内容，其他本地 Skill 只注入摘要，需要时用 `read_file` 读取；启用 Business Data Platform 工具后，远程 Skill 按用户问题召回摘要，再用 `openviking_multi_read` 读取并激活。本地依赖用于过滤摘要，远程依赖在执行沙箱检查。完整用法和元数据字段见 [Skills](./06-skills.md)。
 
 Skill 可以编排多个工具，但不会自动获得额外权限。工具是否可见仍由运行模式、渠道设置、请求参数和沙箱决定。
 
@@ -37,15 +37,15 @@ Skill 可以编排多个工具，但不会自动获得额外权限。工具是�
 | 文件 | `read_file`、`write_file`、`edit_file`、`list_dir` | 操作工作区文件 |
 | 命令 | `exec` | 在沙箱后端执行 shell 命令 |
 | 网络 | `web_search`、`web_fetch` | 搜索和读取网页 |
-| OpenViking | `openviking_list/search/grep/glob/multi_read` | 浏览、检索和读取上下文 |
-| OpenViking | `openviking_add_resource`、`openviking_memory_commit` | 添加资源和提交记忆 |
+| Business Data Platform | `openviking_list/search/grep/glob/multi_read` | 浏览、检索和读取上下文 |
+| Business Data Platform | `openviking_add_resource`、`openviking_memory_commit` | 添加资源和提交记忆 |
 | 对外操作 | `message`、`generate_image` | 主动发送消息或生成图片 |
 | 自动化 | `cron` | 管理定时 Agent 任务，默认关闭 |
 | 并行任务 | `spawn` | 启动后台子 Agent |
 
-ToolRegistry 负责注册、参数校验、执行和 Hook。ToolContext 为每次调用提供当前 SessionKey、发送者身份、渠道 metadata、沙箱和已认证的 OpenViking 连接。
+ToolRegistry 负责注册、参数校验、执行和 Hook。ToolContext 为每次调用提供当前 SessionKey、发送者身份、渠道 metadata、沙箱和已认证的 Business Data Platform 连接。
 
-OpenAPI 的 `disabled_tools` 可以按请求隐藏工具；渠道的 `ov_tools_enable=false` 会隐藏 OpenViking 工具并关闭自动记忆上下文；`readonly` 模式不注册资源写入工具。
+OpenAPI 的 `disabled_tools` 可以按请求隐藏工具；渠道的 `ov_tools_enable=false` 会隐藏 Business Data Platform 工具并关闭自动记忆上下文；`readonly` 模式不注册资源写入工具。
 
 ## MCP 扩展
 
@@ -67,13 +67,13 @@ MCP 参数 Schema 会先做兼容转换，再交给模型和 ToolRegistry。
 - 保留文件、命令和 Web 工具；
 - 不提供 `message`，避免直接对外发送；
 - 不提供 `spawn`，避免递归创建子 Agent；
-- 不提供 Cron、图片生成和 OpenViking 工具。
+- 不提供 Cron、图片生成和 Business Data Platform 工具。
 
 子 Agent 完成后把结果通知主会话，由主 Agent 负责身份相关操作和最终交付。
 
 ## Workspace 与 Agent 定制
 
-Workspace 同时承担两个职责：一是保存构成 Agent 系统提示的启动文件和 Skill，二是作为文件与命令工具的本地工作目录。它与通过 `openviking_*` 工具访问的 OpenViking Workspace 相互独立。
+Workspace 同时承担两个职责：一是保存构成 Agent 系统提示的启动文件和 Skill，二是作为文件与命令工具的本地工作目录。它与通过 `openviking_*` 工具访问的 Business Data Platform Workspace 相互独立。
 
 ### 路径与隔离范围
 
@@ -102,13 +102,13 @@ ContextBuilder 在每轮构建系统提示时，按 `AGENTS.md`、`SOUL.md`、`T
 
 这些文件补充 VikingBot 内置身份和运行环境提示，不会改变真实工具 Schema、Channel 鉴权或 Sandbox 权限。例如，在 `SOUL.md` 中要求“始终执行 Shell”并不能让不可见的 `exec` 工具出现，也不能绕过沙箱策略。
 
-初始模板中还包含 `USER.md`，但当前 ContextBuilder 不会把它自动加入系统提示。长期用户资料应优先保存在 OpenViking Peer Profile 和 Memory 中；需要静态行为规则时，应写入 `AGENTS.md` 或 `SOUL.md`。
+初始模板中还包含 `USER.md`，但当前 ContextBuilder 不会把它自动加入系统提示。长期用户资料应优先保存在 Business Data Platform Peer Profile 和 Memory 中；需要静态行为规则时，应写入 `AGENTS.md` 或 `SOUL.md`。
 
 ### Skill、Heartbeat 与本地记忆
 
 - `skills/<name>/SKILL.md` 定义某类任务的流程。Workspace Skill 优先于同名内置 Skill，并采用摘要注入、按需读取全文的渐进加载方式。
 - `HEARTBEAT.md` 不属于普通系统提示，只由 HeartbeatService 周期读取。
-- `memory/MEMORY.md` 和 `memory/HISTORY.md` 是本地记忆文件；只有启用 `bot.use_local_memory` 时，旧会话整理结果才会写回本地文件。默认长期上下文由 OpenViking 管理。
+- `memory/MEMORY.md` 和 `memory/HISTORY.md` 是本地记忆文件；只有启用 `bot.use_local_memory` 时，旧会话整理结果才会写回本地文件。默认长期上下文由 Business Data Platform 管理。
 
 ### 初始化与生效时机
 
@@ -182,7 +182,7 @@ Heartbeat 跳过空文件、明确禁用心跳的 Session 和长期不活跃 Ses
 
 HookManager 提供运行时扩展点。当前内置 Hook 主要用于：
 
-- `message.compact`：增量同步并按阈值提交 OpenViking Session；
+- `message.compact`：增量同步并按阈值提交 Business Data Platform Session；
 - `tool.post_call`：读取 Skill 后检索并追加相关 Experience。
 
 自定义 Hook 可以通过 `bot.hooks` 配置加载。
@@ -203,5 +203,5 @@ HookManager 提供运行时扩展点。当前内置 Hook 主要用于：
 
 - [VikingBot 架构](./01-architecture.md)
 - [渠道、Gateway 与运行管理](./03-channels-and-gateway.md)
-- [与 OpenViking 集成](./04-openviking-integration.md)
+- [与 Business Data Platform 集成](./04-openviking-integration.md)
 - [Skills](./06-skills.md)

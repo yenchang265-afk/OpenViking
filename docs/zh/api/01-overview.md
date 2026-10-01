@@ -1,19 +1,19 @@
 # API 概览
 
-本页介绍如何连接 OpenViking 以及所有 API 端点共享的约定。
+本页介绍如何连接 Business Data Platform 以及所有 API 端点共享的约定。
 
 ## 连接模式
 
-OpenViking 客户端通过 HTTP 连接 OpenViking Server。
+Business Data Platform 客户端通过 HTTP 连接 Business Data Platform Server。
 
 | 模式 | 适用场景 | 说明 |
 |------|----------|------|
-| **HTTP** | 连接 OpenViking 服务器 | 通过 HTTP API 连接远程服务器 |
+| **HTTP** | 连接 Business Data Platform 服务器 | 通过 HTTP API 连接远程服务器 |
 | **CLI** | Shell 脚本、Agent 工具使用 | 通过 CLI 命令连接服务器 |
 
 ### Client-Server 模式
 
-Client-Server 模式通过 HTTP API 连接 OpenViking 服务器，支持多租户、远程访问等特性。OpenViking 的服务器启动方式请参见相关部署文档。
+Client-Server 模式通过 HTTP API 连接 Business Data Platform 服务器，支持多租户、远程访问等特性。Business Data Platform 的服务器启动方式请参见相关部署文档。
 
 #### Python SDK 客户端
 
@@ -161,7 +161,7 @@ curl http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 
 #### CLI 模式
 
-OpenViking CLI 的命令是 `ov`（通过 `npm install -g @openviking/cli` 安装），连接到 OpenViking 服务端，将所有操作暴露为 Shell 命令。CLI 同样从 `ovcli.conf` 读取连接信息（与 HTTP 客户端共享）。
+Business Data Platform CLI 的命令是 `ov`（通过 `npm install -g @openviking/cli` 安装），连接到 Business Data Platform 服务端，将所有操作暴露为 Shell 命令。CLI 同样从 `ovcli.conf` 读取连接信息（与 HTTP 客户端共享）。
 
 基本用法：
 
@@ -530,7 +530,7 @@ JSON 输出 - 错误：
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | 写入并激活新版本 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
 
-### [OpenViking Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Agent Runtime API](23-agent-runtime.md) 与 [VikingBot API](24-vikingbot.md)
+### [Business Data Platform Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Agent Runtime API](23-agent-runtime.md) 与 [VikingBot API](24-vikingbot.md)
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -567,4 +567,4 @@ JSON 输出 - 错误：
 | 数据生命周期 | Watch、快照、OVPack |
 | 运维与观测 | 系统、任务、Observer、Metrics |
 | 身份与治理 | 管理员、ACL、隐私配置 |
-| 协议与扩展 | OpenViking Assets、WebDAV、Agent Runtime API、VikingBot API |
+| 协议与扩展 | Business Data Platform Assets、WebDAV、Agent Runtime API、VikingBot API |

@@ -1,6 +1,6 @@
 # MCP 客户端
 
-任何兼容 [MCP](https://modelcontextprotocol.io/) 的客户端都可以直接连接 OpenViking 内置的 `/mcp` 端点——无需安装插件或启动额外进程。适用于 Cursor、Trae、Manus、Claude Desktop、ChatGPT 等。
+任何兼容 [MCP](https://modelcontextprotocol.io/) 的客户端都可以直接连接 Business Data Platform 内置的 `/mcp` 端点——无需安装插件或启动额外进程。适用于 Cursor、Trae、Manus、Claude Desktop、ChatGPT 等。
 
 ## 快速配置
 
@@ -67,15 +67,15 @@ Codex 请使用 [Codex 记忆插件](./04-codex.md)。插件通过 manifest 提�
 
 ### Claude Desktop / Claude.ai (OAuth)
 
-这些客户端要求 OAuth 2.1——无法直接传 API Key。OpenViking 自带原生 OAuth 2.1 实现，无需外部代理。
+这些客户端要求 OAuth 2.1——无法直接传 API Key。Business Data Platform 自带原生 OAuth 2.1 实现，无需外部代理。
 
-如果你已经为 OpenViking 服务配好了 HTTPS，直接连接 `https://your-server.com/mcp` 端点即可——客户端会自动引导你完成 OAuth 授权流程。
+如果你已经为 Business Data Platform 服务配好了 HTTPS，直接连接 `https://your-server.com/mcp` 端点即可——客户端会自动引导你完成 OAuth 授权流程。
 
 HTTPS 配置、部署模板和完整授权流程详见 [OAuth 2.1 指南](../guides/11-oauth.md) 和 [公网访问指南](../guides/12-public-access.md)。
 
 ## 可用工具
 
-连接后，OpenViking 会提供检索、记忆、资源、watch 和文件系统工具。完整工具清单、参数、渐进式文件上传和高级配置见 [MCP 集成指南](../guides/06-mcp-integration.md#可用的-mcp-工具)。
+连接后，Business Data Platform 会提供检索、记忆、资源、watch 和文件系统工具。完整工具清单、参数、渐进式文件上传和高级配置见 [MCP 集成指南](../guides/06-mcp-integration.md#可用的-mcp-工具)。
 
 ## 故障排查
 

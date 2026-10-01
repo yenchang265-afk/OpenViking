@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Data Accessors for OpenViking.
+Data Accessors for Business Data Platform.
 
 This module provides the two-layer architecture for resource processing:
 - DataAccessor: Fetches data from remote sources or special paths

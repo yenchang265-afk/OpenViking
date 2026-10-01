@@ -4,7 +4,7 @@
 """
 Resource Watch Feature Example
 
-This example demonstrates how to use the resource watch feature in OpenViking.
+This example demonstrates how to use the resource watch feature in Business Data Platform.
 The watch feature allows you to automatically re-process resources at specified
 intervals.
 
@@ -136,7 +136,7 @@ async def example_handle_conflict():
 
 async def main():
     print("\n" + "=" * 60)
-    print("OpenViking Resource Watch Examples")
+    print("Business Data Platform Resource Watch Examples")
     print("=" * 60)
 
     await example_basic_watch()

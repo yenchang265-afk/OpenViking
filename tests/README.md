@@ -1,6 +1,6 @@
-# OpenViking Tests
+# Business Data Platform Tests
 
-Unit tests and integration tests for OpenViking.
+Unit tests and integration tests for Business Data Platform.
 
 ## Directory Structure
 
@@ -123,7 +123,7 @@ Tests for the Python HTTP client API.
 
 ### server/
 
-Tests for the OpenViking HTTP server API and AsyncHTTPClient SDK.
+Tests for the Business Data Platform HTTP server API and AsyncHTTPClient SDK.
 
 | File | Description | Key Test Cases |
 |------|-------------|----------------|

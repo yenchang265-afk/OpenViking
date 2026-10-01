@@ -37,7 +37,7 @@ async def encryptor():
 async def test_encrypt_decrypt_roundtrip(encryptor):
     """Test encryption and decryption roundtrip."""
     account_id = "test_account"
-    plaintext = b"Hello, OpenViking!"
+    plaintext = b"Hello, Business Data Platform!"
 
     # Encrypt
     ciphertext = await encryptor.encrypt(account_id, plaintext)

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * OpenClaw OpenViking plugin installer (remote OpenViking server — does not install Python/OpenViking server).
+ * OpenClaw Business Data Platform plugin installer (remote Business Data Platform server — does not install Python/OpenViking server).
  *
  * One-liner (after npm publish; use package name + bin name):
  *   npx -p openclaw-openviking-setup-helper ov-install [ --base-url URL ] [ --api-key KEY ] [ --zh ] [ --workdir PATH ]
@@ -370,15 +370,15 @@ function printHelp() {
   console.log("                           Upgrade only the plugin to the requested --plugin-version; keeps existing plugin runtime config");
   console.log("  --rollback, --rollback-last-upgrade");
   console.log("                           Roll back the last plugin upgrade using the saved audit/backup files");
-  console.log("  --uninstall, --remove    Uninstall OpenViking plugin from OpenClaw (backup config, remove plugin entries)");
-  console.log("  --base-url=URL           OpenViking server URL (default: $OPENVIKING_BASE_URL or http://127.0.0.1:1933)");
-  console.log("  --api-key=KEY            OpenViking API key (default: $OPENVIKING_API_KEY)");
+  console.log("  --uninstall, --remove    Uninstall Business Data Platform plugin from OpenClaw (backup config, remove plugin entries)");
+  console.log("  --base-url=URL           Business Data Platform server URL (default: $OPENVIKING_BASE_URL or http://127.0.0.1:1933)");
+  console.log("  --api-key=KEY            Business Data Platform API key (default: $OPENVIKING_API_KEY)");
   console.log("  --peer-role=ROLE         Memory scope: none (shared), assistant (per assistant), sender (per sender); person is a legacy alias (default: $OPENVIKING_PEER_ROLE or none)");
   console.log("  --peer-prefix=PREFIX     Prefix for assistant peer_id values (default: $OPENVIKING_PEER_PREFIX)");
   console.log("  --account-id=ID          Account ID for root API key (default: $OPENVIKING_ACCOUNT_ID)");
   console.log("  --user-id=ID             User ID for root API key (default: $OPENVIKING_USER_ID)");
   console.log("  --force-slot             Explicitly replace an existing contextEngine slot owner");
-  console.log("  --allow-offline          Explicitly save config when the OpenViking server is unreachable");
+  console.log("  --allow-offline          Explicitly save config when the Business Data Platform server is unreachable");
   console.log("  --zh                     Chinese prompts");
   console.log("  -h, --help               This help");
   console.log("");
@@ -629,7 +629,7 @@ async function selectWorkdir() {
 
 async function collectRemoteConfig() {
   if (nonInteractive) return;
-  remoteBaseUrl = await question(tr("OpenViking server URL", "OpenViking 服务器地址"), remoteBaseUrl);
+  remoteBaseUrl = await question(tr("Business Data Platform server URL", "Business Data Platform 服务器地址"), remoteBaseUrl);
   remoteApiKey = await question(tr("API Key (optional)", "API Key（可选）"), remoteApiKey);
   remotePeerRole = await questionPeerRole(remotePeerRole);
   remotePeerPrefix = remotePeerRole === "assistant"
@@ -1349,7 +1349,7 @@ async function printCurrentVersionInfo() {
   if (pluginRequestedRef && pluginReleaseId && pluginRequestedRef !== pluginReleaseId) {
     console.log(`Plugin requested ref: ${pluginRequestedRef}`);
   }
-  console.log(tr("OpenViking server: not installed by this tool (use a remote URL in plugin config)", "OpenViking 服务端：本工具不安装；请在插件配置中填写远程服务地址"));
+  console.log(tr("Business Data Platform server: not installed by this tool (use a remote URL in plugin config)", "Business Data Platform 服务端：本工具不安装；请在插件配置中填写远程服务地址"));
   if (pluginInstalledAt) {
     console.log(`Installed at: ${pluginInstalledAt}`);
   }
@@ -1734,12 +1734,12 @@ async function cleanupInstalledPluginConfig(installedState) {
   }
 
   if (!changed) {
-    info(tr("No OpenViking plugin config changes were required", "无需修改 OpenViking 插件配置"));
+    info(tr("No Business Data Platform plugin config changes were required", "无需修改 Business Data Platform 插件配置"));
     return;
   }
 
   await writeFile(installedState.configPath, `${JSON.stringify(nextConfig, null, 2)}\n`, "utf8");
-  info(tr("Cleaned existing OpenViking plugin config only", "已仅清理 OpenViking 自身插件配置"));
+  info(tr("Cleaned existing Business Data Platform plugin config only", "已仅清理 Business Data Platform 自身插件配置"));
 }
 
 async function prepareStrongPluginUpgrade() {
@@ -1747,8 +1747,8 @@ async function prepareStrongPluginUpgrade() {
   if (installedState.generation === "none") {
     err(
       tr(
-        "Plugin upgrade mode requires an existing OpenViking plugin entry in openclaw.json.",
-        "插件升级模式要求 openclaw.json 中已经存在 OpenViking 插件记录。",
+        "Plugin upgrade mode requires an existing Business Data Platform plugin entry in openclaw.json.",
+        "插件升级模式要求 openclaw.json 中已经存在 Business Data Platform 插件记录。",
       ),
     );
     process.exit(1);
@@ -1760,8 +1760,8 @@ async function prepareStrongPluginUpgrade() {
   const toVersion = formatTargetVersionLabel();
   info(
     tr(
-      `Detected installed OpenViking plugin state: ${installedState.generation}`,
-      `检测到已安装 OpenViking 插件状态: ${installedState.generation}`,
+      `Detected installed Business Data Platform plugin state: ${installedState.generation}`,
+      `检测到已安装 Business Data Platform 插件状态: ${installedState.generation}`,
     ),
   );
   remoteBaseUrl = upgradeRuntimeConfig.baseUrl || remoteBaseUrl;
@@ -1770,7 +1770,7 @@ async function prepareStrongPluginUpgrade() {
   remotePeerPrefix = upgradeRuntimeConfig.peer_prefix || "";
   remoteAccountId = upgradeRuntimeConfig.accountId || "";
   remoteUserId = upgradeRuntimeConfig.userId || "";
-  info(tr(`Upgrade runtime mode: ${selectedMode} (remote OpenViking server)`, `升级运行模式: ${selectedMode}（远程 OpenViking 服务）`));
+  info(tr(`Upgrade runtime mode: ${selectedMode} (remote Business Data Platform server)`, `升级运行模式: ${selectedMode}（远程 Business Data Platform 服务）`));
 
   info(tr(`Upgrade path: ${fromVersion} -> ${toVersion}`, `升级路径: ${fromVersion} -> ${toVersion}`));
 
@@ -2551,8 +2551,8 @@ async function configureOpenClawPlugin({
     if (parsed.action === "slot_blocked" && !forceSlotExplicit) {
       const answer = await question(
         tr(
-          `contextEngine slot is owned by "${parsed.slot?.previousOwner}". Replace it with OpenViking? (y/N)`,
-          `contextEngine slot is owned by "${parsed.slot?.previousOwner}". Replace it with OpenViking? (y/N)`,
+          `contextEngine slot is owned by "${parsed.slot?.previousOwner}". Replace it with Business Data Platform? (y/N)`,
+          `contextEngine slot is owned by "${parsed.slot?.previousOwner}". Replace it with Business Data Platform? (y/N)`,
         ),
       );
       if (isYes(answer)) {
@@ -2565,8 +2565,8 @@ async function configureOpenClawPlugin({
     ) {
       const answer = await question(
         tr(
-          "OpenViking server is unreachable. Save config offline anyway? (y/N)",
-          "OpenViking server is unreachable. Save config offline anyway? (y/N)",
+          "Business Data Platform server is unreachable. Save config offline anyway? (y/N)",
+          "Business Data Platform server is unreachable. Save config offline anyway? (y/N)",
         ),
       );
       if (isYes(answer)) {
@@ -2744,8 +2744,8 @@ async function performUninstall() {
   const installedState = await detectInstalledPluginState();
   if (installedState.generation === "none") {
     info(tr(
-      "No OpenViking plugin entries found in openclaw.json. Nothing to uninstall.",
-      "openclaw.json 中未找到 OpenViking 插件配置，无需卸载。",
+      "No Business Data Platform plugin entries found in openclaw.json. Nothing to uninstall.",
+      "openclaw.json 中未找到 Business Data Platform 插件配置，无需卸载。",
     ));
     return;
   }
@@ -2830,7 +2830,7 @@ async function performUninstall() {
   bold("═══════════════════════════════════════════════════════════");
   console.log("");
 
-  info(tr("OpenViking server/runtime is preserved (not uninstalled).", "OpenViking 服务端/运行时已保留（未卸载）。"));
+  info(tr("Business Data Platform server/runtime is preserved (not uninstalled).", "Business Data Platform 服务端/运行时已保留（未卸载）。"));
   console.log("");
 
   info(tr("To restore the plugin configuration:", "如需恢复插件配置："));
@@ -2849,7 +2849,7 @@ async function performUninstall() {
 
 async function main() {
   console.log("");
-  bold(tr("🦣 OpenClaw OpenViking plugin installer", "🦣 OpenClaw OpenViking 插件安装"));
+  bold(tr("🦣 OpenClaw Business Data Platform plugin installer", "🦣 OpenClaw Business Data Platform 插件安装"));
   console.log("");
 
   await selectWorkdir();
@@ -2970,7 +2970,7 @@ async function main() {
   console.log(`  4) ${wrapCommand("openclaw status", envFiles)}`);
   console.log("");
 
-  info(tr(`OpenViking server URL (plugin): ${remoteBaseUrl}`, `OpenViking 服务地址（插件）: ${remoteBaseUrl}`));
+  info(tr(`Business Data Platform server URL (plugin): ${remoteBaseUrl}`, `Business Data Platform 服务地址（插件）: ${remoteBaseUrl}`));
   console.log("");
 }
 

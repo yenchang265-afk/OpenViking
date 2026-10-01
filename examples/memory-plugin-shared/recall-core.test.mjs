@@ -154,13 +154,13 @@ test("buildRecallBlock prefers a cited server digest", async () => {
     ok: true,
     result: {
       rendered: '<memory uri="viking://a">body</memory>',
-      digest: "OpenViking memory digest:\n- fact 来源：viking://a",
+      digest: "Business Data Platform memory digest:\n- fact 来源：viking://a",
       entries: [{ uri: "viking://a" }],
       stats: { rewrite: "ok" },
     },
   }), {}, "hello", { legacyCachePath });
 
-  assert.match(block, /OpenViking memory digest:/);
+  assert.match(block, /Business Data Platform memory digest:/);
   assert.doesNotMatch(block, /<memory /);
 });
 
@@ -196,7 +196,7 @@ test("buildRecallBlock uses local compression when configured", async () => {
     runCompressor: async () => "- local fact 来源：viking://a",
   });
 
-  assert.match(block, /OpenViking memory digest:/);
+  assert.match(block, /Business Data Platform memory digest:/);
   assert.match(block, /local fact/);
 });
 

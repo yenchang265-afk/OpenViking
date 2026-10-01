@@ -2,9 +2,9 @@
 /**
  * Live e2e gate for the agent-driven context window.
  *
- * Manual by design: it drives a real pi binary, a real OpenViking server and a
+ * Manual by design: it drives a real pi binary, a real Business Data Platform server and a
  * real OpenAI-compatible LLM relay, and asserts the whole reset pipeline —
- * archive to OpenViking, virtual cut of the provider payload, frozen window
+ * archive to Business Data Platform, virtual cut of the provider payload, frozen window
  * header, cross-process restore, fail-closed refusal.
  *
  * Scenario (plan "端到端"):
@@ -33,7 +33,7 @@
  *                            pi's defaultThinkingLevel, so an OpenAI-compatible
  *                            relay receives reasoning_effort.
  *   E2E_KEEP_TMP=1           keep the temp workspaces even on success
- *   E2E_KEEP_OV_SESSION=1    do not delete the OpenViking sessions afterwards,
+ *   E2E_KEEP_OV_SESSION=1    do not delete the Business Data Platform sessions afterwards,
  *                            so the archives stay readable on the server (for
  *                            demos; the sessions are yours to clean up)
  *   E2E_WINDOW_LONG=1        run ONLY the long-context scenario: the agent
@@ -98,7 +98,7 @@ const LONG_SOFT_PERCENT = Number(process.env.E2E_WINDOW_LONG_SOFT_PERCENT ?? 45)
 /** What models.json tells pi the window is; used to turn payload size into a share. */
 const LONG_CONTEXT_WINDOW = 128000;
 
-/** A port nothing listens on: the fail-closed variant's "OpenViking is down". */
+/** A port nothing listens on: the fail-closed variant's "Business Data Platform is down". */
 const DEAD_OV_URL = "http://127.0.0.1:9";
 
 const PROVIDER_ID = "e2e-relay";
@@ -208,7 +208,7 @@ function makeWorkspace(label, { windowConfig = {}, seedSourceTree = false } = {}
       {
         providers: {
           [PROVIDER_ID]: {
-            name: "OpenViking e2e relay",
+            name: "Business Data Platform e2e relay",
             baseUrl: LLM_BASE,
             api: LLM_API,
             apiKey: "$E2E_LLM_API_KEY",
@@ -218,7 +218,7 @@ function makeWorkspace(label, { windowConfig = {}, seedSourceTree = false } = {}
             models: [
               {
                 id: LLM_MODEL,
-                name: "OpenViking e2e model",
+                name: "Business Data Platform e2e model",
                 reasoning: LLM_REASONING !== "off",
                 // A custom relay is not recognised by pi-ai's URL-based
                 // auto-detection, so reasoning_effort has to be enabled here.
@@ -393,7 +393,7 @@ function runTurn(ws, turn, prompt, { continueSession = false, ovUrl = OV_URL, ti
 }
 
 // ============================================================================
-// OpenViking HTTP
+// Business Data Platform HTTP
 // ============================================================================
 
 async function ovFetch(path, init, baseUrl = OV_URL) {
@@ -783,8 +783,8 @@ async function runMainScenario() {
     fail(`no debug log at ${logPath}`);
   }
 
-  // ---- OpenViking ----------------------------------------------------------
-  section("OpenViking archive");
+  // ---- Business Data Platform ----------------------------------------------------------
+  section("Business Data Platform archive");
   const sessionIdFile = join(ws.outDir, "session-id.txt");
   let ovSessionId = null;
   if (!existsSync(sessionIdFile)) {
@@ -895,12 +895,12 @@ function contextPressureSeen(ws, entries) {
 }
 
 /**
- * The OpenViking side of a scenario that does not control when the reset
+ * The Business Data Platform side of a scenario that does not control when the reset
  * happens: assert the archive exists and carries the handoff, without assuming
  * a particular reason string.
  */
 async function checkOpenVikingSide(ws, { requireHandoff }) {
-  section("long: OpenViking archive");
+  section("long: Business Data Platform archive");
   const sessionIdFile = join(ws.outDir, "session-id.txt");
   if (!existsSync(sessionIdFile)) {
     fail("probe did not record a pi session id");

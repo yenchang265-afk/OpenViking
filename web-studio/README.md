@@ -1,10 +1,10 @@
-# OpenViking Web Studio
+# Business Data Platform Web Studio
 
 English / [中文](README_CN.md)
 
-Web Studio is the React/Vite frontend workspace for OpenViking. It is a static single page application for resource management, retrieval, bot-backed sessions, and operational diagnostics.
+Web Studio is the React/Vite frontend workspace for Business Data Platform. It is a static single page application for resource management, retrieval, bot-backed sessions, and operational diagnostics.
 
-Web Studio does not embed OpenViking storage, indexing, retrieval, task queues, or VikingBot runtime. It must connect to a running OpenViking Server.
+Web Studio does not embed Business Data Platform storage, indexing, retrieval, task queues, or VikingBot runtime. It must connect to a running Business Data Platform Server.
 
 ## Runtime Contract
 
@@ -14,7 +14,7 @@ Default local server URL:
 http://127.0.0.1:1933
 ```
 
-The sessions UI requires VikingBot endpoints proxied by OpenViking Server:
+The sessions UI requires VikingBot endpoints proxied by Business Data Platform Server:
 
 ```text
 GET  /bot/v1/health
@@ -23,7 +23,7 @@ POST /bot/v1/chat/stream
 POST /bot/v1/feedback
 ```
 
-For local development and deployment, start OpenViking Server with bot support:
+For local development and deployment, start Business Data Platform Server with bot support:
 
 ```bash
 openviking-server --with-bot
@@ -104,7 +104,7 @@ Request headers injected by the adapter:
 - `X-OpenViking-Account`
 - `X-OpenViking-User`
 
-For production or multi-tenant deployments, configure a real `server.root_api_key` or user key in OpenViking Server and enter the matching connection settings in Web Studio.
+For production or multi-tenant deployments, configure a real `server.root_api_key` or user key in Business Data Platform Server and enter the matching connection settings in Web Studio.
 
 ## Commands
 
@@ -127,7 +127,7 @@ Generated code lives under:
 src/gen/ov-client
 ```
 
-Do not edit generated files by hand. Regenerate them from the target OpenViking Server version:
+Do not edit generated files by hand. Regenerate them from the target Business Data Platform Server version:
 
 ```bash
 openviking-server --with-bot
@@ -153,7 +153,7 @@ src/routes/<page>/-*     Page-private components, hooks, schemas, and helpers
 src/components/ui/       Shared base UI primitives
 src/components/          Shared app components
 src/hooks/               Shared React hooks
-src/lib/ov-client/       Runtime OpenViking client adapter
+src/lib/ov-client/       Runtime Business Data Platform client adapter
 src/gen/ov-client/       Generated OpenAPI client
 src/i18n/locales/        en and zh-CN translation resources
 src/styles.css           Global CSS and design tokens
@@ -164,7 +164,7 @@ Keep route-specific implementation colocated under the corresponding route direc
 
 ## Deployment
 
-Web Studio deploys as static files from `dist/`. OpenViking Server remains a separate runtime dependency.
+Web Studio deploys as static files from `dist/`. Business Data Platform Server remains a separate runtime dependency.
 
 ### 1. Start the Required Server
 
@@ -174,7 +174,7 @@ Production-like example:
 openviking-server --host 0.0.0.0 --port 1933 --with-bot
 ```
 
-Production deployments should configure `server.root_api_key` in `ov.conf`. If Web Studio and OpenViking Server are served from different origins, include the Web Studio origin in `server.cors_origins`.
+Production deployments should configure `server.root_api_key` in `ov.conf`. If Web Studio and Business Data Platform Server are served from different origins, include the Web Studio origin in `server.cors_origins`.
 
 Minimum health checks:
 
@@ -196,7 +196,7 @@ npm ci
 VITE_OV_BASE_URL=https://ov-api.example.com npm run build
 ```
 
-`VITE_OV_BASE_URL` is the initial OpenViking API origin used in the browser. Users can still change it in the connection dialog.
+`VITE_OV_BASE_URL` is the initial Business Data Platform API origin used in the browser. Users can still change it in the connection dialog.
 
 ### 3. Serve from a Dedicated Host
 
@@ -230,7 +230,7 @@ Example URL:
 https://ov.example.com/
 ```
 
-Proxy OpenViking API paths to the server and serve Web Studio at `/`:
+Proxy Business Data Platform API paths to the server and serve Web Studio at `/`:
 
 ```nginx
 server {
@@ -276,7 +276,7 @@ Example URL:
 https://ov.example.com/web-studio/
 ```
 
-In this layout, Web Studio is mounted under `/web-studio/`, while OpenViking API paths stay at the host root:
+In this layout, Web Studio is mounted under `/web-studio/`, while Business Data Platform API paths stay at the host root:
 
 ```text
 https://ov.example.com/api/*
@@ -339,11 +339,11 @@ server {
 }
 ```
 
-Do not set `VITE_OV_BASE_URL` to `https://ov.example.com/web-studio`. `/web-studio/` is only the frontend mount path; OpenViking API requests should still go to `https://ov.example.com/api/*` and `https://ov.example.com/bot/*`.
+Do not set `VITE_OV_BASE_URL` to `https://ov.example.com/web-studio`. `/web-studio/` is only the frontend mount path; Business Data Platform API requests should still go to `https://ov.example.com/api/*` and `https://ov.example.com/bot/*`.
 
 ### 6. Docker Server Dependency
 
-The official OpenViking image can be used as the API server dependency:
+The official Business Data Platform image can be used as the API server dependency:
 
 ```bash
 # Prefer ghcr.io. If it is hard to reach, use openviking-cn-beijing.cr.volces.com/volcengine/openviking:latest
@@ -379,7 +379,7 @@ Check server logs for `Bot API proxy enabled`.
 
 ### Browser Shows CORS Errors
 
-If Web Studio and OpenViking Server use different origins, add the Web Studio origin to `server.cors_origins` in `ov.conf` and restart the server. For same-origin deployment, proxy `/api/`, `/bot/`, `/health`, and `/ready` to OpenViking Server.
+If Web Studio and Business Data Platform Server use different origins, add the Web Studio origin to `server.cors_origins` in `ov.conf` and restart the server. For same-origin deployment, proxy `/api/`, `/bot/`, `/health`, and `/ready` to Business Data Platform Server.
 
 ### Connection Dialog Keeps Reopening
 
@@ -388,5 +388,5 @@ The API key is missing or invalid, the key belongs to a different server, or the
 ## Related Docs
 
 - [Web Studio internationalization contribution guide](./CONTRIBUTING.md): translation ownership, dynamic server text, and the review checklist.
-- [OpenViking server deployment](../docs/en/guides/03-deployment.md): server-side deployment details.
-- [VikingBot validation with OpenViking Server](../bot/docs/vikingbot-phase1-validation-with-openviking-server.md): bot proxy validation flow.
+- [Business Data Platform server deployment](../docs/en/guides/03-deployment.md): server-side deployment details.
+- [VikingBot validation with Business Data Platform Server](../bot/docs/vikingbot-phase1-validation-with-openviking-server.md): bot proxy validation flow.

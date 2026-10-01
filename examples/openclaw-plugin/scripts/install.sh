@@ -185,7 +185,7 @@ download_manifest() {
   local output="$1"
   local manifest_url
   manifest_url=$(manifest_url)
-  info "Downloading OpenViking release manifest: $manifest_url"
+  info "Downloading Business Data Platform release manifest: $manifest_url"
   if ! download_url "$manifest_url" "$output"; then
     info "Manifest is unavailable; continuing with direct package download"
     return 1
@@ -304,7 +304,7 @@ update_openclaw_config() {
 
   if [ -n "$context_engine" ] && [ "$context_engine" != "null" ] && [ "$context_engine" != "$PLUGIN_ID" ]; then
     echo "Existing context engine '$context_engine' was preserved."
-    echo "To switch to OpenViking, run: openclaw config set plugins.slots.contextEngine openviking"
+    echo "To switch to Business Data Platform, run: openclaw config set plugins.slots.contextEngine openviking"
   fi
 }
 
@@ -367,7 +367,7 @@ download_and_install() {
   url=$(package_url)
 
   download_manifest "$manifest_path" || true
-  info "Downloading OpenViking package: $url"
+  info "Downloading Business Data Platform package: $url"
   download_url "$url" "$tgz_path"
   install_package_from_tgz "$tgz_path"
 }
@@ -396,8 +396,8 @@ configure_openviking_service() {
     info "DRY RUN: write service env -> $ENV_FILE"
   fi
 
-  info "OpenViking Service URL: $OPENVIKING_BASE_URL"
-  info "OpenViking API Key: $(mask_secret "$OPENVIKING_API_KEY")"
+  info "Business Data Platform Service URL: $OPENVIKING_BASE_URL"
+  info "Business Data Platform API Key: $(mask_secret "$OPENVIKING_API_KEY")"
 
   set -- openclaw openviking setup --base-url "$OPENVIKING_BASE_URL" --api-key "$OPENVIKING_API_KEY" --force-slot
   [ -z "$OPENVIKING_PEER_ROLE" ] || set -- "$@" --peer-role "$OPENVIKING_PEER_ROLE"
@@ -549,10 +549,10 @@ while [ "$#" -gt 0 ]; do
 done
 
 echo
-info "Installing OpenViking plugin release $VERSION from $RELEASE_PATH"
+info "Installing Business Data Platform plugin release $VERSION from $RELEASE_PATH"
 
 if [ "$install_source" = "existing" ]; then
-  info "Using existing OpenViking installation; no package download or file changes will be performed"
+  info "Using existing Business Data Platform installation; no package download or file changes will be performed"
 elif [ "$install_source" = "local" ]; then
   if [ -z "$INSTALL_TARBALL" ]; then
     INSTALL_TARBALL="$(script_dir)/openviking.tgz"
@@ -568,4 +568,4 @@ if [ "$VERIFY_ONLY" -eq 0 ]; then
 fi
 
 echo
-info "OpenViking plugin install complete"
+info "Business Data Platform plugin install complete"

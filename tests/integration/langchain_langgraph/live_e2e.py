@@ -56,7 +56,7 @@ def test_true_live_langchain_context_backend_e2e():
             [
                 HumanMessage(
                     content=(
-                        "What is the OpenViking LangChain live e2e exact code? "
+                        "What is the Business Data Platform LangChain live e2e exact code? "
                         "Answer only the exact code."
                     )
                 )
@@ -143,7 +143,7 @@ def test_true_live_langchain_message_history_e2e():
             [
                 HumanMessage(
                     content=(
-                        f"Remember this OpenViking LangChain history exact code: {code}. "
+                        f"Remember this Business Data Platform LangChain history exact code: {code}. "
                         "Answer only the exact code."
                     )
                 )
@@ -156,7 +156,7 @@ def test_true_live_langchain_message_history_e2e():
             [
                 HumanMessage(
                     content=(
-                        "Repeat the OpenViking LangChain history exact code from the "
+                        "Repeat the Business Data Platform LangChain history exact code from the "
                         "conversation. Answer only the exact code."
                     )
                 )
@@ -200,7 +200,7 @@ def test_true_live_langgraph_middleware_e2e():
                 "messages": [
                     HumanMessage(
                         content=(
-                            "What is the OpenViking LangGraph live e2e exact code? "
+                            "What is the Business Data Platform LangGraph live e2e exact code? "
                             "Answer only the exact code."
                         )
                     )
@@ -269,7 +269,7 @@ def test_true_live_langgraph_create_agent_middleware_e2e():
         agent = create_agent(
             model=_LiveOpenAIChatModel(
                 instruction=(
-                    "You are validating OpenViking with LangGraph create_agent "
+                    "You are validating Business Data Platform with LangGraph create_agent "
                     "middleware. Return only the exact lg_agent_live_* code if one "
                     "appears in the context or conversation."
                 )
@@ -283,7 +283,7 @@ def test_true_live_langgraph_create_agent_middleware_e2e():
                 "messages": [
                     HumanMessage(
                         content=(
-                            "What is the OpenViking LangGraph create_agent live e2e "
+                            "What is the Business Data Platform LangGraph create_agent live e2e "
                             "exact code? Answer only the exact code."
                         )
                     )
@@ -326,7 +326,7 @@ def test_true_live_retriever_and_langgraph_store_e2e():
                 "framework": "langgraph",
                 "deployment_color": "azure",
                 "exact_code": code,
-                "note": f"OpenViking live store and retriever validation code {code}.",
+                "note": f"Business Data Platform live store and retriever validation code {code}.",
             },
         )
 
@@ -366,7 +366,7 @@ def _langchain_live_model(messages: list[BaseMessage]) -> AIMessage:
         _langchain_messages_to_openai(
             messages,
             instruction=(
-                "You are validating OpenViking as a LangChain context backend. "
+                "You are validating Business Data Platform as a LangChain context backend. "
                 "Return only the exact lc_live_* code if one appears in the context "
                 "or conversation."
             ),
@@ -434,7 +434,7 @@ def _build_langgraph_live_app(*, client: Any, session_id: str):
                 _langchain_messages_to_openai(
                     messages,
                     instruction=(
-                        "You are validating OpenViking as LangGraph middleware. "
+                        "You are validating Business Data Platform as LangGraph middleware. "
                         "Return only the exact lg_live_* code if one appears in the "
                         "context or conversation."
                     ),
@@ -502,7 +502,7 @@ def _require_openviking_live_env() -> None:
 
         cli_config = load_ovcli_config()
     except Exception as exc:
-        pytest.skip(f"OpenViking live connection config is unavailable: {exc}")
+        pytest.skip(f"Business Data Platform live connection config is unavailable: {exc}")
     if cli_config is None or not cli_config.url:
         pytest.skip("OPENVIKING_URL or ovcli.conf url is required for live e2e")
 
@@ -528,7 +528,7 @@ def _seed_session_context(client, session_id: str, code: str, *, framework: str)
             {
                 "type": "text",
                 "text": (
-                    f"Remember this OpenViking {framework} live e2e exact code: {code}. "
+                    f"Remember this Business Data Platform {framework} live e2e exact code: {code}. "
                     "This is durable session context for the next agent turn."
                 ),
             }
@@ -540,7 +540,7 @@ def _seed_session_context(client, session_id: str, code: str, *, framework: str)
         parts=[
             {
                 "type": "text",
-                "text": f"Stored the OpenViking {framework} live e2e exact code: {code}.",
+                "text": f"Stored the Business Data Platform {framework} live e2e exact code: {code}.",
             }
         ],
     )
@@ -591,7 +591,7 @@ def _invoke_until_contains(
                 return value
         time.sleep(0.5)
     pytest.fail(
-        f"OpenViking {label} did not contain {expected!r}; "
+        f"Business Data Platform {label} did not contain {expected!r}; "
         f"last_error={last_error!r}; last_value={last_value[:1000]!r}"
     )
 
@@ -599,7 +599,7 @@ def _invoke_until_contains(
 def _wait_for_commit_task(client, commit: dict[str, object]) -> None:
     assert commit.get("archived") is True
     task_id = commit.get("task_id")
-    assert task_id, f"OpenViking commit did not start extraction: {commit}"
+    assert task_id, f"Business Data Platform commit did not start extraction: {commit}"
     timeout = float(os.environ.get("OPENVIKING_LIVE_COMMIT_TIMEOUT", "180"))
     deadline = time.monotonic() + timeout
     last_task = None
@@ -609,6 +609,6 @@ def _wait_for_commit_task(client, commit: dict[str, object]) -> None:
         if task and task.get("status") == "completed":
             return
         if task and task.get("status") == "failed":
-            pytest.fail(f"OpenViking commit task failed: {task}")
+            pytest.fail(f"Business Data Platform commit task failed: {task}")
         time.sleep(0.5)
-    pytest.fail(f"OpenViking commit task did not complete: {task_id}; last_task={last_task}")
+    pytest.fail(f"Business Data Platform commit task did not complete: {task_id}; last_task={last_task}")

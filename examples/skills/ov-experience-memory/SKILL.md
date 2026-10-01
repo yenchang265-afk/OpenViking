@@ -1,9 +1,9 @@
 ---
 name: ov-experience-memory
-description: Retrieve and apply OpenViking Experience memories through the Agent runtime's generic OpenViking search and read tools. Use before or during executable, multi-step, or tool-based work such as coding, file or data changes, configuration, deployment, workflow execution, and failure recovery when prior operational guidance could improve reliability. Do not use for casual chat or simple factual questions.
+description: Retrieve and apply Business Data Platform Experience memories through the Agent runtime's generic Business Data Platform search and read tools. Use before or during executable, multi-step, or tool-based work such as coding, file or data changes, configuration, deployment, workflow execution, and failure recovery when prior operational guidance could improve reliability. Do not use for casual chat or simple factual questions.
 ---
 
-# OpenViking Experience Memory
+# Business Data Platform Experience Memory
 
 Use prior task Experience as advisory operational guidance. Keep the current
 user request, current environment, and verified tool results authoritative.
@@ -12,7 +12,7 @@ user memory, events, preferences, session archives, resources, or Agent Skills.
 
 ## Preconditions
 
-- Use only OpenViking tools that are actually registered in the current Agent
+- Use only Business Data Platform tools that are actually registered in the current Agent
   runtime.
 - Require both a semantic search capability and an exact URI read capability.
 - If either capability is unavailable, continue without Experience. Do not
@@ -29,7 +29,7 @@ Choose the registered names that match the current runtime:
 
 | Runtime | Search | Read |
 | --- | --- | --- |
-| OpenViking MCP, Codex, Claude Code | `find` or `search` | `read` |
+| Business Data Platform MCP, Codex, Claude Code | `find` or `search` | `read` |
 | OpenCode | `openviking_find` or `openviking_search` | `openviking_read` |
 | OpenClaw | `ov_search` | `ov_read` or `ov_multi_read` |
 
@@ -65,7 +65,7 @@ context or deeper intent analysis is useful.
    Require an exact file URI without a query or fragment. Ignore directories,
    unrelated memory types, and sidecars such as `.abstract.md` and `.overview.md`.
 6. Read every selected canonical `viking://.../memories/experiences/...` URI
-   with the runtime's OpenViking read tool. Search abstracts help selection but
+   with the runtime's Business Data Platform read tool. Search abstracts help selection but
    are not a substitute for reading the Experience body.
 7. Apply relevant steps and checks while executing the task. Do not repeat the
    Experience verbatim to the user unless its content is directly needed in the
@@ -77,12 +77,12 @@ context or deeper intent analysis is useful.
 ## Servers Without the Home Alias
 
 `viking://~` is the home alias for the caller's own space. A server released
-before the alias (OpenViking v0.4.16) does not resolve it and rejects the
+before the alias (Business Data Platform v0.4.16) does not resolve it and rejects the
 request with `INVALID_URI` (HTTP 400) instead of searching. Retry once against
 the caller's explicit root, resolved from evidence rather than guessed:
 
 - If a canonical `viking://user/<user_id>/...` URI is already visible in this
-  session — injected memory context, or an earlier OpenViking tool result —
+  session — injected memory context, or an earlier Business Data Platform tool result —
   reuse that `<user_id>` and search
   `viking://user/<user_id>/memories/experiences`.
 - Otherwise repeat the same query with no target scope, narrowed to memories
@@ -110,12 +110,12 @@ explicit root can be resolved, continue without Experience.
 
 ## Session Evidence
 
-Use real Agent tool calls so the committed OpenViking session retains their
+Use real Agent tool calls so the committed Business Data Platform session retains their
 ToolParts:
 
-- A completed generic OpenViking `find`, `search`, or `list` result containing
+- A completed generic Business Data Platform `find`, `search`, or `list` result containing
   an Experience URI records recall for that Experience.
-- A completed generic OpenViking `read` or `multi_read` of an Experience URI
+- A completed generic Business Data Platform `read` or `multi_read` of an Experience URI
   records injection and can associate the resulting trajectory with that
   Experience.
 - Failed, cancelled, or incomplete calls do not count.

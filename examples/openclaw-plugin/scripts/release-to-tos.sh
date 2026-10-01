@@ -14,7 +14,7 @@ usage() {
   cat <<'EOF'
 Usage: scripts/release-to-tos.sh [options]
 
-Build and publish the simplified OpenViking TOS release bundle:
+Build and publish the simplified Business Data Platform TOS release bundle:
   install.sh, openviking.tgz, manifest.json
 
 Options:

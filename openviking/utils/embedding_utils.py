@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Embedding utilities for OpenViking.
+Embedding utilities for Business Data Platform.
 
 Common logic for creating Context objects and enqueuing them to EmbeddingQueue.
 """

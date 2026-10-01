@@ -92,7 +92,7 @@ def register_default_tools(
     )
     registry.register(WebFetchTool())
 
-    # Open Viking tools
+    # Business Data Platform tools
     if include_viking_tools:
         registry.register(VikingMultiReadTool(config=config))
         registry.register(VikingListTool(config=config))

@@ -1,12 +1,12 @@
-# OpenViking Memory Provider
+# Business Data Platform Memory Provider
 
 Context database by Volcengine (ByteDance) with filesystem-style knowledge hierarchy, tiered retrieval, and automatic memory extraction.
 
-This directory prepares the standalone OpenViking provider for migration out of
+This directory prepares the standalone Business Data Platform provider for migration out of
 Hermes core. The installation and upgrade steps below are for migration testing
 in a separate Hermes profile.
 
-For normal use while Hermes still bundles OpenViking, follow the
+For normal use while Hermes still bundles Business Data Platform, follow the
 [Hermes integration guide](../../docs/en/agent-integrations/05-hermes.md) and run
 `hermes memory setup openviking`. No external plugin installation is needed.
 
@@ -28,7 +28,7 @@ The equivalent shorthand is `volcengine/OpenViking/examples/hermes-plugin`.
 Hermes installs this directory as `$HERMES_HOME/plugins/openviking/` and installs
 its `pyproject.toml` dependencies under Hermes's dependency constraints.
 
-If Hermes still includes the bundled OpenViking provider, that copy takes
+If Hermes still includes the bundled Business Data Platform provider, that copy takes
 precedence. The external copy becomes active after the bundled copy is removed.
 Keep `memory.provider: openviking` and your existing configuration. No memory
 data needs to move. Automatic installation after core removal also requires a
@@ -41,7 +41,7 @@ For a direct subdirectory installation, use force-reinstallation instead of
 `hermes plugins update openviking`. Hermes does not retain the repository's
 `.git` directory when it installs a subdirectory.
 
-Replace the placeholder with the reviewed OpenViking commit's full 40-character
+Replace the placeholder with the reviewed Business Data Platform commit's full 40-character
 SHA, and run this command in the same Hermes profile as the original installation:
 
 ```bash
@@ -56,22 +56,22 @@ catalog, copies installed through the catalog use `hermes plugins update openvik
 ## Requirements
 
 - Python 3.11 or newer in the Hermes environment
-- An OpenViking server reachable from Hermes, or OpenViking Service credentials
-- For a self-hosted server, OpenViking installed in its own environment or container
+- A Business Data Platform server reachable from Hermes, or Business Data Platform Service credentials
+- For a self-hosted server, Business Data Platform installed in its own environment or container
 
-The plugin connects over HTTP. Do not install the OpenViking server into the
+The plugin connects over HTTP. Do not install the Business Data Platform server into the
 Hermes environment. For local server start from the setup wizard, make the
 `openviking-server` command available on `PATH`.
 
-OpenViking 0.2.14 or newer is required. Hermes can identify older servers that
+Business Data Platform 0.2.14 or newer is required. Hermes can identify older servers that
 expose the legacy status-only health response, but those releases do not provide
 the authenticated-user identity contract required by this integration.
-The `viking://~` home alias requires OpenViking 0.4.16 or newer for user and
-admin credentials, and OpenViking 0.4.17 or newer for root or local development.
+The `viking://~` home alias requires Business Data Platform 0.4.16 or newer for user and
+admin credentials, and Business Data Platform 0.4.17 or newer for root or local development.
 
 ## Setup
 
-For a self-hosted deployment, prepare OpenViking in its server environment:
+For a self-hosted deployment, prepare Business Data Platform in its server environment:
 
 ```bash
 openviking-server init
@@ -91,10 +91,10 @@ not exist.
 
 Setup first asks how the Hermes instance is used:
 
-| Preset | Hermes conversation history | OpenViking long-term recall |
+| Preset | Hermes conversation history | Business Data Platform long-term recall |
 |--------|-----------------------------|-----------------------------|
 | **Personal Agent** | Keeps existing group/thread session settings | Common memory and the current sender's memory (`peer`) |
-| **Shared Agent** | Shares each group or thread session between its participants | Common memory and all sender memories under the same OpenViking user (`shared`) |
+| **Shared Agent** | Shares each group or thread session between its participants | Common memory and all sender memories under the same Business Data Platform user (`shared`) |
 
 Shared Agent requires confirmation before it sets `group_sessions_per_user` and
 `thread_sessions_per_user` to `false`. Different groups still have separate
@@ -102,7 +102,7 @@ conversation histories. Restart the gateway to apply changed session settings.
 Personal Agent does not make an already shared conversation private.
 
 Both presets retain sender attribution during capture. After commit and
-extraction, OpenViking can recall those memories across chats according to the
+extraction, Business Data Platform can recall those memories across chats according to the
 chosen scope. Upgrading the plugin alone does not apply a preset or change
 session settings. Rerunning setup preselects the saved recall choice; a new
 setup starts on Personal Agent.
@@ -126,10 +126,10 @@ OPENVIKING_ENDPOINT=http://127.0.0.1:1933
 
 ## Config
 
-OpenViking's server config is separate from Hermes:
+Business Data Platform's server config is separate from Hermes:
 
-- `ov.conf` configures OpenViking storage, embedding/VLM models, auth, and
-  server behavior. OpenViking reads it from `--config`,
+- `ov.conf` configures Business Data Platform storage, embedding/VLM models, auth, and
+  server behavior. Business Data Platform reads it from `--config`,
   `OPENVIKING_CONFIG_FILE`, or `~/.openviking/ov.conf`.
 - `ovcli.conf` stores client/CLI connection values such as `url`, `api_key`,
   `account`, and `user`. It is read from `OPENVIKING_CLI_CONFIG_FILE` or
@@ -146,16 +146,16 @@ profile's `.env`:
 | `OPENVIKING_USER` | `default` | Tenant user for local/trusted mode |
 | `OPENVIKING_AGENT` | (none) | Optional peer ID for separate assistant context |
 
-When `OPENVIKING_API_KEY` is set, Hermes lets OpenViking derive account/user
+When `OPENVIKING_API_KEY` is set, Hermes lets Business Data Platform derive account/user
 identity from the key. In local or trusted deployments without an API key,
 Hermes sends `OPENVIKING_ACCOUNT` and `OPENVIKING_USER` as identity headers.
 Hermes also sends `User-Agent: openviking-memory-hermes/<version>` on
-OpenViking requests. This standard harness identifier contains the Hermes
+Business Data Platform requests. This standard harness identifier contains the Hermes
 version, but no per-user identifier, and does not add a separate request.
 
 ### Optional peer identity
 
-New connections use the OpenViking user's memory directory by default. Setup
+New connections use the Business Data Platform user's memory directory by default. Setup
 does not ask for a peer ID. Without a configured peer, Hermes sends neither
 `X-OpenViking-Actor-Peer` nor assistant-message `peer_id`.
 
@@ -168,16 +168,16 @@ memory:
     agent: work-assistant
 ```
 
-Existing non-empty `OPENVIKING_AGENT`, YAML `agent`, and linked OpenViking
+Existing non-empty `OPENVIKING_AGENT`, YAML `agent`, and linked Business Data Platform
 `actor_peer_id` or legacy `agent_id` values retain their behavior. Resolution
-order remains environment, linked OpenViking config, then Hermes YAML. To use
+order remains environment, linked Business Data Platform config, then Hermes YAML. To use
 no peer, remove the peer value from each configured source and start a new
 Hermes session.
 
 Upgrades do not move or delete existing memories. Installations that relied
 on the old implicit `hermes` peer now use user memory for new writes. Without
-a peer ID, default OpenViking search covers user memory and existing peer
-memories under the same OpenViking user. Old peer memories stay at their
+a peer ID, default Business Data Platform search covers user memory and existing peer
+memories under the same Business Data Platform user. Old peer memories stay at their
 existing paths and remain searchable. Ranking and result limits determine
 which memories are returned. Keep a peer ID if you need the narrower view.
 
@@ -188,7 +188,7 @@ changes future writes, not the location of existing memories.
 ### Gateway senders and automatic recall
 
 The external provider attaches the current gateway sender to captured user
-messages as a peer, for example `telegram.123456`. The OpenViking account and
+messages as a peer, for example `telegram.123456`. The Business Data Platform account and
 user stay unchanged. Assistant messages keep the configured `agent` peer.
 CLI messages without a gateway sender keep their existing user-level attribution.
 Existing memories are not moved.
@@ -204,7 +204,7 @@ memory:
 
 | Value | Automatic recall |
 |-------|------------------|
-| `shared` | Common memory and all peer memories under the same OpenViking user. |
+| `shared` | Common memory and all peer memories under the same Business Data Platform user. |
 | `peer` | Common memory and the current gateway sender's memory. With no sender, only common memory is recalled. |
 
 With no scope set, the provider preserves the previous requests: normally
@@ -231,7 +231,7 @@ shared conversation history or change explicit `viking_*` tools, native memory
 mirroring, or credentials. Setting `recall_scope` alone does not change gateway
 sessions; the confirmed Shared Agent setup preset applies those settings.
 Explicit tools retain
-the configured assistant view. Use separate OpenViking users and credentials
+the configured assistant view. Use separate Business Data Platform users and credentials
 when participants require separate access rights.
 
 ## Tools
@@ -241,15 +241,15 @@ when participants require separate access rights.
 | `viking_search` | Semantic search with fast/deep/auto modes |
 | `viking_read` | Read content at a viking:// URI (abstract/overview/full) |
 | `viking_browse` | Filesystem-style navigation (list/tree/stat) |
-| `viking_remember` | Submit a fact through OpenViking session memory extraction |
+| `viking_remember` | Submit a fact through Business Data Platform session memory extraction |
 | `viking_forget` | Delete one exact `viking://` memory file URI |
 | `viking_add_resource` | Ingest URLs/docs into the knowledge base |
 
 ## Memory Writes And Deletes
 
-`viking_remember` creates a one-shot `hermes-remember-<random>` OpenViking
+`viking_remember` creates a one-shot `hermes-remember-<random>` Business Data Platform
 session, adds the fact as one message, and commits the session with no retained
-tail. The session remains available in OpenViking for audit. OpenViking then
+tail. The session remains available in Business Data Platform for audit. Business Data Platform then
 classifies the source and can add, merge, or skip a memory through its normal
 extraction pipeline. The tool returns the one-shot session ID and the
 extraction task ID when the server provides one. Extraction continues
@@ -257,8 +257,8 @@ asynchronously after the tool returns.
 
 The tool returns `status: submitted` because extraction can add a memory, merge
 the fact into an existing memory, or produce no memory operation. It does not
-promise that OpenViking created a distinct memory file. The fact is submitted
-as an unchanged `user` message so OpenViking owns the final classification.
+promise that Business Data Platform created a distinct memory file. The fact is submitted
+as an unchanged `user` message so Business Data Platform owns the final classification.
 The legacy `category` argument is still accepted from existing callers but is
 not advertised or used. The one-shot session is separate from the live Hermes
 conversation, so an explicit remember does not commit or rotate the active
@@ -270,23 +270,23 @@ commit <session-id>` recovery command. Inspect the session first. An archive
 means the commit completed. A non-empty live `messages.jsonl` with no archive
 means the message was accepted but still needs a commit. An empty live file
 without an archive is ambiguous and must not trigger an automatic resubmission.
-Use the same OpenViking profile and credentials as Hermes for manual recovery.
-OpenViking server auto-commit is disabled by default, so an accepted message
+Use the same Business Data Platform profile and credentials as Hermes for manual recovery.
+Business Data Platform server auto-commit is disabled by default, so an accepted message
 whose explicit commit fails normally remains live and unextracted until it is
 manually committed.
 
-Successful Hermes built-in `memory` mutations are mirrored to OpenViking in
+Successful Hermes built-in `memory` mutations are mirrored to Business Data Platform in
 order. The active profile records each mirrored entry's exact URI in
 `$HERMES_HOME/openviking/memory_mirror_registry.json`:
 
-| Hermes action | OpenViking operation |
+| Hermes action | Business Data Platform operation |
 |---------------|----------------------|
 | `add` | Create a file under user memory or the configured peer, then record its URI |
 | `replace` | Match the committed event's full previous content and target, update the same URI, and wait for semantic/vector refresh |
 | `remove` | Match the committed event's full previous content and target, delete that exact URI, and wait for semantic cleanup |
 
 Replacing a mapped entry recreates its file if it was deleted directly in
-OpenViking, for example with `viking_forget`.
+Business Data Platform, for example with `viking_forget`.
 
 The registry stores the current entry text and a connection fingerprint, not
 the raw API key. Endpoint, credentials, user, account, and peer changes isolate
@@ -332,9 +332,9 @@ file URIs, such as
 and must match the calling identity; the uid-less `viking://user/memories/...`
 and `viking://user/peers/...` shorthands are deprecated and rejected. Files
 directly under `memories/`, such as `viking://user/default/memories/profile.md`,
-are also allowed because OpenViking supports them. The tool rejects directories,
+are also allowed because Business Data Platform supports them. The tool rejects directories,
 resources, skills, sessions, generated summary files, and URIs with query
-strings or fragments. Use OpenViking's MCP, CLI, or admin APIs for broader
+strings or fragments. Use Business Data Platform's MCP, CLI, or admin APIs for broader
 resource and directory cleanup.
 
 
@@ -353,7 +353,7 @@ to the existing search path within that deadline.
 
 ### Active-session commits
 
-The standalone provider checks OpenViking's `pending_tokens` after each successful
+The standalone provider checks Business Data Platform's `pending_tokens` after each successful
 turn upload. At **20,000 tokens** by default, it requests a background commit
 without ending the Hermes session. Memory extraction then runs on the server.
 Session-end and session-switch commits still flush messages below this threshold.

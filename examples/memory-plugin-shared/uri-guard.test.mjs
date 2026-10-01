@@ -48,7 +48,7 @@ test("buildGuardMessage names replacement tool and example", () => {
 test("evaluateUriGuard denies a guarded tool and passes everything else", () => {
   const denied = evaluateUriGuard("Read", { file_path: "viking://resources/a.md" })
   assert.equal(denied?.uri, "viking://resources/a.md")
-  assert.match(denied?.reason ?? "", /Use OpenViking MCP read instead/)
+  assert.match(denied?.reason ?? "", /Use Business Data Platform MCP read instead/)
   assert.match(denied?.reason ?? "", /Example: read\(uris="viking:\/\/resources\/a\.md"\)/)
 
   assert.equal(evaluateUriGuard("Read", { file_path: "/tmp/a.md" }), null)
@@ -92,7 +92,7 @@ test("buildGuardNotice names the plugin, the URI, the replacement and the way ou
     tool: "openviking_read",
     example: 'openviking_read(uris=["viking://resources/a.md"])',
   })
-  assert.match(notice, /OpenViking memory plugin/)
+  assert.match(notice, /Business Data Platform memory plugin/)
   assert.match(notice, /viking:\/\/resources\/a\.md/)
   assert.match(notice, /use openviking_read instead/)
   assert.match(notice, /Example: openviking_read/)
@@ -170,7 +170,7 @@ test("a write or edit aimed at a skill points at add_skill, not the refused writ
   for (const [uri, example] of cases) {
     assert.equal(isSkillUri(uri), true, uri)
     const { reason } = evaluateUriGuard("Write", { file_path: uri })
-    assert.match(reason, /Use OpenViking MCP add_skill instead\./, uri)
+    assert.match(reason, /Use Business Data Platform MCP add_skill instead\./, uri)
     assert.ok(reason.includes(`Example: ${example}`), `${uri}: ${reason}`)
   }
   const { reason: edit } = evaluateUriGuard("Edit", { file_path: "viking://agent/skills/pr-review/SKILL.md" })
@@ -178,5 +178,5 @@ test("a write or edit aimed at a skill points at add_skill, not the refused writ
 
   assert.equal(isSkillUri("viking://resources/skills/notes.md"), false)
   const { reason } = evaluateUriGuard("Write", { file_path: "viking://~/notes/todo.md" })
-  assert.match(reason, /Use OpenViking MCP write instead\./)
+  assert.match(reason, /Use Business Data Platform MCP write instead\./)
 })

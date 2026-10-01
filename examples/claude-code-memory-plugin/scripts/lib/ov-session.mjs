@@ -1,5 +1,5 @@
 /**
- * Persistent OpenViking session helpers for Claude Code hooks.
+ * Persistent Business Data Platform session helpers for Claude Code hooks.
  *
  * ovSessionId is deterministically derived from the CC session_id so that
  * resume / multi-hook invocations all target the same OV session.

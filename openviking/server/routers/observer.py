@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Observer endpoints for OpenViking HTTP Server.
+"""Observer endpoints for Business Data Platform HTTP Server.
 
 Provides observability API for monitoring component status.
 Mirrors SDK's client.observer API:

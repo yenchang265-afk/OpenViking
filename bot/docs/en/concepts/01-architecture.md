@@ -1,6 +1,6 @@
 # VikingBot Architecture
 
-VikingBot is the multi-channel AI Agent runtime in the OpenViking repository. It converts input from the CLI, chat platforms, and HTTP APIs into a unified message format. The Agent then builds context, runs model inference, invokes tools, and delivers the result back to the originating channel.
+VikingBot is the multi-channel AI Agent runtime in the Business Data Platform repository. It converts input from the CLI, chat platforms, and HTTP APIs into a unified message format. The Agent then builds context, runs model inference, invokes tools, and delivers the result back to the originating channel.
 
 ## System Overview
 
@@ -21,7 +21,7 @@ VikingBot is the multi-channel AI Agent runtime in the OpenViking repository. It
                     └───┬─────┬─────┬───┘
                         │     │     │
                 ┌───────▼┐ ┌──▼───┐ ┌▼───────────────┐
-                │Session │ │Tools │ │  OpenViking    │
+                │Session │ │Tools │ │  Business Data Platform    │
                 │history │ │Skills│ │resources/memory│
                 └────────┘ └──┬───┘ └────────────────┘
                               │
@@ -42,7 +42,7 @@ VikingBot is the multi-channel AI Agent runtime in the OpenViking repository. It
 | **Providers** | Normalize model, streaming, and tool-call protocols | `vikingbot/providers/` |
 | **Tools & Sandbox** | Provide executable capabilities and their runtime boundaries | `vikingbot/agent/tools/`, `vikingbot/sandbox/` |
 | **Session** | Cache and persist Bot conversation state | `vikingbot/session/` |
-| **OpenViking** | Provide resources, long-term memory, experiences, and session consolidation | `vikingbot/openviking_mount/`, `vikingbot/hooks/` |
+| **Business Data Platform** | Provide resources, long-term memory, experiences, and session consolidation | `vikingbot/openviking_mount/`, `vikingbot/hooks/` |
 | **Gateway** | Run the multi-channel service and expose HTTP APIs | `vikingbot/channels/openapi.py` |
 
 ## Main Flow for One Message
@@ -57,7 +57,7 @@ Platform event
   → Provider calls the model
       ├─ Text response: produce the final reply
       └─ Tool call: ToolRegistry executes it, then calls the model again
-  → Save the local Session and synchronize OpenViking according to policy
+  → Save the local Session and synchronize Business Data Platform according to policy
   → MessageBus outbound queue
   → Channel delivers the reply
 ```
@@ -70,7 +70,7 @@ All channels share two message structures:
 
 | Structure | Main content |
 |-----------|--------------|
-| `InboundMessage` | Sender, text, media, SessionKey, channel metadata, and OpenViking identity |
+| `InboundMessage` | Sender, text, media, SessionKey, channel metadata, and Business Data Platform identity |
 | `OutboundMessage` | Text, event type, reply target, media, token usage, and response ID |
 
 `SessionKey` consists of `type + channel_id + chat_id`. It is the isolation key for a conversation and also determines outbound routing and workspace selection. When persisted, it is encoded as `type__channel_id__chat_id`.
@@ -82,7 +82,7 @@ Each model call may return normal text or one or more tool calls. AgentLoop:
 1. computes the tools visible to the current channel and request;
 2. calls the Provider and publishes streaming events;
 3. sends the tool name and arguments to ToolRegistry for validation;
-4. injects the SessionKey, sender, sandbox, and OpenViking connection into ToolContext;
+4. injects the SessionKey, sender, sandbox, and Business Data Platform connection into ToolContext;
 5. appends the tool result to the current message context;
 6. calls the model again until it produces a final answer or reaches `max_tool_iterations`.
 
@@ -97,7 +97,7 @@ The Provider layer gives AgentLoop a unified `chat()` and `chat_stream()` interf
 - Provider-specific system message and thinking parameters;
 - `prompt_tokens`, `completion_tokens`, and `total_tokens`.
 
-VLMProviderAdapter connects all model services through OpenViking VLM, including its LiteLLM backend. Models are read from the root-level `vlm` configuration by default, while `bot.agents` can override Bot-specific parameters.
+VLMProviderAdapter connects all model services through Business Data Platform VLM, including its LiteLLM backend. Models are read from the root-level `vlm` configuration by default, while `bot.agents` can override Bot-specific parameters.
 
 The old `bot.providers` field has been removed. Loading an `ov.conf` that contains it emits a warning and ignores its model settings without overriding `vlm` or `bot.agents` or rewriting the file. Saving Bot configuration no longer writes this field. Configure model credentials in `vlm` or `bot.agents` instead. Root-level `vlm.providers` remains supported. The only preserved legacy use is Telegram voice transcription: `bot.providers.groq.api_key` is migrated on load into each Telegram channel's `groq_api_key`, without overriding an explicitly configured value (including an empty string).
 
@@ -105,7 +105,7 @@ The old `bot.providers` field has been removed. Loading an `ov.conf` that contai
 
 A local Session stores user, assistant, tool, and analytics events. It is persisted as JSONL under the Bot data directory's `sessions/` folder. SessionManager maintains an in-memory cache and protects writes with a per-SessionKey asynchronous lock.
 
-Local Sessions and OpenViking Sessions have different responsibilities: the former keeps Bot conversations operational, while the latter handles archival, summaries, long-term memory, and experience extraction. See [OpenViking Integration](./04-openviking-integration.md).
+Local Sessions and Business Data Platform Sessions have different responsibilities: the former keeps Bot conversations operational, while the latter handles archival, summaries, long-term memory, and experience extraction. See [Business Data Platform Integration](./04-openviking-integration.md).
 
 ## Runtime Entry Points
 
@@ -114,18 +114,18 @@ Local Sessions and OpenViking Sessions have different responsibilities: the form
 | `vikingbot chat` / `ov chat` | One-shot or interactive chat | CLI Channel, AgentLoop, Session, Sandbox |
 | `vikingbot gateway` | Long-running service | Gateway, configured Channels, AgentLoop, Cron, Heartbeat, OpenAPI |
 
-VikingBot and OpenViking share `ov.conf`. Bot configuration lives under `bot`, and `OPENVIKING_CONFIG_FILE` can select another file.
+VikingBot and Business Data Platform share `ov.conf`. Bot configuration lives under `bot`, and `OPENVIKING_CONFIG_FILE` can select another file.
 
 ## Runtime Modes
 
 | Mode | Behavior |
 |------|----------|
 | `normal` | Run the normal model, tool, and memory flow |
-| `readonly` | Do not register OpenViking resource-write tools or perform active memory consolidation |
+| `readonly` | Do not register Business Data Platform resource-write tools or perform active memory consolidation |
 | `debug` | Record incoming user messages without running model inference or replying |
 
 ## Related Documentation
 
 - [Agent Capabilities](./02-agent-capabilities.md)
 - [Channels, Gateway, and Operations](./03-channels-and-gateway.md)
-- [OpenViking Integration](./04-openviking-integration.md)
+- [Business Data Platform Integration](./04-openviking-integration.md)

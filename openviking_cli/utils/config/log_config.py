@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 
 class LogConfig(BaseModel):
-    """Logging configuration for OpenViking."""
+    """Logging configuration for Business Data Platform."""
 
     level: str = Field(
         default="WARNING", description="Logging level: DEBUG, INFO, WARNING, ERROR, CRITICAL"

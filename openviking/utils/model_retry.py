@@ -354,7 +354,7 @@ def _structured_rate_limit_match(exc: BaseException) -> bool:
 def is_retryable_rate_limit_error(exc: BaseException) -> bool:
     """Return True for SDK/text-shaped LLM rate-limit errors.
 
-    This intentionally lives in a lightweight OpenViking utility module so both
+    This intentionally lives in a lightweight Business Data Platform utility module so both
     VikingBot provider adapters and benchmark integrations can share the same
     classifier without importing each other's heavier runtime dependencies.
     """

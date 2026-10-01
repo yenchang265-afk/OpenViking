@@ -1,8 +1,8 @@
-# OpenViking 0.3.x to 0.4.0 Upgrade Guide
+# Business Data Platform 0.3.x to 0.4.0 Upgrade Guide
 
 > **Version scope:** This page documents the historical 0.3.x-to-0.4.0 migration. Its Agent directory compatibility and migration instructions do not apply to current versions. `viking://agent/...` now denotes account-shared directories; Agent ID path compatibility, migration, and cleanup have been removed. The current `admin migrate` command handles legacy sessions only.
 
-This guide is for users already running OpenViking 0.3.x. It explains what to do before and after upgrading to 0.4.0, which legacy usage remains compatible, how to migrate data, and how to move application code to the new model.
+This guide is for users already running Business Data Platform 0.3.x. It explains what to do before and after upgrading to 0.4.0, which legacy usage remains compatible, how to migrate data, and how to move application code to the new model.
 
 ## Upgrade Decision
 
@@ -184,7 +184,7 @@ Preflight fails before creating a task for:
 
 - Legacy data under a physical account that is not present in the API key user registry.
 - A legacy session in a multi-user account with no identifiable owner.
-- A session owner that is present but is not a valid OpenViking user id.
+- A session owner that is present but is not a valid Business Data Platform user id.
 
 Preflight records warnings or skips, then continues, for:
 

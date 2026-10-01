@@ -2,13 +2,13 @@
 
 A Skill describes when and how to perform a task in `SKILL.md`, alongside any supporting resources. The model reads those instructions and calls tools already registered in VikingBot. A Skill does not register tools or provide an execution backend.
 
-VikingBot supports local Skills in the active Workspace and remote Skills stored in OpenViking. This chapter describes the current implementation; see [RFC #3656](https://github.com/volcengine/OpenViking/discussions/3656) for the remote Skill design background.
+VikingBot supports local Skills in the active Workspace and remote Skills stored in Business Data Platform. This chapter describes the current implementation; see [RFC #3656](https://github.com/volcengine/OpenViking/discussions/3656) for the remote Skill design background.
 
 ## Local and Remote Skills
 
-| Area | Local Skill | OpenViking remote Skill |
+| Area | Local Skill | Business Data Platform remote Skill |
 |------|-------------|-------------------------|
-| Storage | `<active-workspace>/skills/<name>/` | Canonical Skill URI returned by OpenViking |
+| Storage | `<active-workspace>/skills/<name>/` | Canonical Skill URI returned by Business Data Platform |
 | Discovery | Scan Workspace Skill directories | Call `find_skills` with the current user query; retrieve L0 summaries only |
 | Default context | Name, description, local path | Name, description, `SKILL.md` URI, read tool |
 | Read instructions | `read_file` | `openviking_multi_read`; reading the definition activates it |
@@ -18,7 +18,7 @@ VikingBot supports local Skills in the active Workspace and remote Skills stored
 | Resources | Already in the Workspace | Read text by URI; download the package when a tool needs local paths |
 | Lifetime | Files persist; rebuild context each turn | Activate for each user message; remove execution copies at turn completion |
 
-Both types remain subject to Bot, channel, request, and sandbox policies. Disabling OpenViking tools does not disable local Skill loading.
+Both types remain subject to Bot, channel, request, and sandbox policies. Disabling Business Data Platform tools does not disable local Skill loading.
 
 ## Using a Local Skill
 
@@ -45,14 +45,14 @@ Tool paths in local Skills are relative to the Workspace, for example `python3 s
 
 ### Setup
 
-1. Configure an available connection as described in [OpenViking Integration](./04-openviking-integration.md#connection-modes), and ensure the Bot's current identity can read the Skill.
-2. Upload the Skill to that OpenViking service. Upload the directory when it contains supporting files:
+1. Configure an available connection as described in [Business Data Platform Integration](./04-openviking-integration.md#connection-modes), and ensure the Bot's current identity can read the Skill.
+2. Upload the Skill to that Business Data Platform service. Upload the directory when it contains supporting files:
 
    ```bash
    ov add-skill ./skills/report-summary/
    ```
 
-   Configure the CLI for the target service and an appropriately authorized identity. Save the returned URI. If the operation returns a background `task_id`, check progress with `ov task status TASK_ID`. See the [OpenViking Skills API](../../../../docs/en/api/04-skills.md) for other import methods.
+   Configure the CLI for the target service and an appropriately authorized identity. Save the returned URI. If the operation returns a background `task_id`, check progress with `ov task status TASK_ID`. See the [Business Data Platform Skills API](../../../../docs/en/api/04-skills.md) for other import methods.
 3. Keep `ov_tools_enable: true` on the current channel. `openviking_multi_read` must be registered and must not appear in `disabled_tools`.
 4. Describe a task to let the Bot select a Skill from remote summaries, or explicitly ask it to read a particular canonical `SKILL.md` URI.
 
@@ -69,7 +69,7 @@ User query → find_skills → local + remote summaries
   → save results and usage → close runtime and clean request copies
 ```
 
-Name collisions prefer local Workspace Skills, then OpenViking user Skills, then shared Skills (`viking://agent/skills/`). A local directory shadows a remote candidate even if unmet requirements hide its local summary. Explicit URIs bypass name selection. Use canonical URIs actually returned by the service; a name alone is not a unique identity across users.
+Name collisions prefer local Workspace Skills, then Business Data Platform user Skills, then shared Skills (`viking://agent/skills/`). A local directory shadows a remote candidate even if unmet requirements hide its local summary. Explicit URIs bypass name selection. Use canonical URIs actually returned by the service; a name alone is not a unique identity across users.
 
 For example, read a user Skill at the URI returned by the service:
 
@@ -118,7 +118,7 @@ Run python3 scripts/summarize.py and summarize its output.
 | `name` | String; required remotely | Must match the Skill name in the remote URI; local identity remains the directory name, so keep them consistent |
 | `description` | String; required remotely | Describes applicable tasks for model selection; local summaries fall back to the directory name when absent |
 | `allowed-tools` | Space-separated string or compatible string list; undeclared by default | Remote tool policy, described below; not enforced by the local loader |
-| `tags` | String list; `[]` | Classification data retained by OpenViking; does not change Bot permissions or activation |
+| `tags` | String list; `[]` | Classification data retained by Business Data Platform; does not change Bot permissions or activation |
 | `metadata` | YAML object or compatible JSON string | Extension metadata container |
 | `metadata.vikingbot` | Object | VikingBot extension scope; when present, extension fields are read from this object |
 | `metadata.vikingbot.always` | Boolean; `false` | Local only: inject complete instructions each turn when requirements are met |
@@ -130,7 +130,7 @@ Run python3 scripts/summarize.py and summarize its output.
 | `metadata.vikingbot.install` | Optional object list | Installation hints in some templates, commonly containing `id`, `kind`, `bins`, `label`, `formula`, or `package`; not executed automatically |
 | Other metadata, such as `author`, `version` | Custom | Informational; the Bot does not use it to control execution or version its cache |
 
-The frontmatter permission field must be **`allowed-tools`**. `allowed_tools` is the parsed structured-data field in OpenViking and does not replace the hyphenated field in `SKILL.md`. Use actual YAML booleans `true` / `false`, not strings such as `"false"`.
+The frontmatter permission field must be **`allowed-tools`**. `allowed_tools` is the parsed structured-data field in Business Data Platform and does not replace the hyphenated field in `SKILL.md`. Use actual YAML booleans `true` / `false`, not strings such as `"false"`.
 
 Both older metadata forms below are supported. Prefer the scoped form for new Skills to keep Bot extensions separate from other systems' metadata:
 
@@ -209,7 +209,7 @@ File storage has two layers:
 | Bot host cache | `<bot-data>/remote_skill_cache/` | Isolated by permission scope, canonical root URI, and server revision; evicted by TTL/LRU |
 | Tool execution copy | `<sandbox>/.remote-skill/<request-id>/<root-uri-sha256>/<skill-name>/` | Reused within the current turn and cleaned at completion; tools do not execute host cache files directly |
 
-`.remote-skill/` is the current implementation path. Cache hits still require reading and activating with the current identity and rechecking the manifest. Files are validated by size and SHA-256 before use in the request sandbox. Revision changes or failed file validation prevent further use of that snapshot. Caching avoids repeated downloads without bypassing OpenViking ACL; `metadata.version` is not the cache revision.
+`.remote-skill/` is the current implementation path. Cache hits still require reading and activating with the current identity and rechecking the manifest. Files are validated by size and SHA-256 before use in the request sandbox. Revision changes or failed file validation prevent further use of that snapshot. Caching avoids repeated downloads without bypassing Business Data Platform ACL; `metadata.version` is not the cache revision.
 
 These fields belong under **`bot.remote_skills`** in `ov.conf`. They are deployment configuration, not frontmatter:
 
@@ -229,7 +229,7 @@ File counts, sizes, and cache capacities must be positive. Later cache activity 
 
 ## Subagents and Troubleshooting
 
-Subagents use local Workspace Skill summaries and Always content. They currently do not register OpenViking tools, so they do not discover, activate, or inherit the main Agent's remote Skill runtime or snapshots.
+Subagents use local Workspace Skill summaries and Always content. They currently do not register Business Data Platform tools, so they do not discover, activate, or inherit the main Agent's remote Skill runtime or snapshots.
 
 | Symptom or error | What to check |
 |------------------|---------------|
@@ -253,10 +253,10 @@ Subagents use local Workspace Skill summaries and Always content. They currently
 | Tool batches, schemas, and calls | `vikingbot/agent/loop.py`, `vikingbot/agent/tools/registry.py` |
 | Remote reads and Experience Hook | `vikingbot/agent/tools/ov_file.py`, `vikingbot/hooks/builtins/openviking_hooks.py` |
 | Configuration defaults | `vikingbot/config/schema.py` |
-| OpenViking frontmatter parsing | `openviking/core/skill_loader.py` at the repository root |
+| Business Data Platform frontmatter parsing | `openviking/core/skill_loader.py` at the repository root |
 
 ## Related Documentation
 
 - [Agent Capabilities](./02-agent-capabilities.md)
-- [VikingBot and OpenViking Integration](./04-openviking-integration.md)
-- [OpenViking Skills API](../../../../docs/en/api/04-skills.md)
+- [VikingBot and Business Data Platform Integration](./04-openviking-integration.md)
+- [Business Data Platform Skills API](../../../../docs/en/api/04-skills.md)

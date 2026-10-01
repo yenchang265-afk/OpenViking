@@ -3,14 +3,14 @@
 """cuVS-backed dense vector search for the embedded VectorDB.
 
 cuVS is an index library rather than a complete vector database.  This module
-therefore owns only the dense vectors and their label mapping.  OpenViking's
+therefore owns only the dense vectors and their label mapping.  Business Data Platform's
 existing local engine remains responsible for durable records, scalar indexes,
 sparse retrieval, and crash recovery.
 
 The first implementation deliberately favors correctness and simple lifecycle
 semantics: upserts and deletes update a host-side snapshot and invalidate the
 GPU index.  The next search rebuilds the cuVS index in one batch.  This makes
-all OpenViking mutations work with both brute-force and CAGRA even though cuVS
+all Business Data Platform mutations work with both brute-force and CAGRA even though cuVS
 does not expose the same update/delete contract for every index type.
 """
 
@@ -335,7 +335,7 @@ def matches_filter(
     """Evaluate the scalar-filter subset supported by the cuVS backend.
 
     The supported DSL is the one emitted by ``CollectionAdapter`` for normal
-    OpenViking search: ``and``, ``or``, ``must``, ``must_not``, ``contains``,
+    Business Data Platform search: ``and``, ``or``, ``must``, ``must_not``, ``contains``,
     ``range``, ``range_out``, and path depth parameters.  Unsupported nodes are
     rejected so the caller can safely fall back to the native local engine.
     """
@@ -365,7 +365,7 @@ def matches_filter(
         raise UnsupportedCuVSFilterError(f"Filter field must be a string: {node!r}")
     field_type = str(field_types.get(field, "")).lower()
     if field_type in {"date_time", "geo_point"}:
-        # Those fields require OpenViking's type conversion logic.  Falling back
+        # Those fields require Business Data Platform's type conversion logic.  Falling back
         # avoids subtly different results for timezone and geo comparisons.
         raise UnsupportedCuVSFilterError(f"cuVS prefilter does not support {field_type} fields")
     value = fields.get(field)
@@ -540,7 +540,7 @@ class _CuVSRuntime:
             try:
                 if isinstance(dataset, _PackedFP32Rows):
                     # CuPy already depends on NumPy, but keep the import on the
-                    # GPU-only path so native OpenViking users do not gain a
+                    # GPU-only path so native Business Data Platform users do not gain a
                     # new import-time dependency through this module.
                     import numpy as np
 
@@ -892,7 +892,7 @@ class _NativeFilterPreflightFlight:
 
 
 class CuVSDenseIndex:
-    """Mutable OpenViking label space backed by a lazily rebuilt cuVS index."""
+    """Mutable Business Data Platform label space backed by a lazily rebuilt cuVS index."""
 
     _SUPPORTED_ALGORITHMS = {"brute_force", "cagra"}
 
@@ -919,7 +919,7 @@ class CuVSDenseIndex:
                 f"choose one of {sorted(self._SUPPORTED_ALGORITHMS)}"
             )
         if self.distance not in {"ip", "l2"}:
-            raise ValueError(f"Unsupported OpenViking distance for cuVS: {self.distance!r}")
+            raise ValueError(f"Unsupported Business Data Platform distance for cuVS: {self.distance!r}")
         self.dtype = str(config.get("dtype", "float32")).lower()
         if self.dtype not in {"float32", "float16"}:
             raise ValueError(

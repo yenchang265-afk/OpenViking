@@ -73,7 +73,7 @@ class _StubOAuthCfg:
 
 @pytest_asyncio.fixture
 async def app_with_oauth(tmp_path):
-    """FastAPI app wired with the SDK auth routes + OpenViking authorize page."""
+    """FastAPI app wired with the SDK auth routes + Business Data Platform authorize page."""
     store = OAuthStore(tmp_path / "oauth.db")
     await store.initialize()
     issuer = "http://127.0.0.1"
@@ -204,7 +204,7 @@ async def test_protected_resource_metadata_honors_public_base_url_env(client, mo
 
 @pytest.mark.asyncio
 async def test_dcr_registers_client(client):
-    # OpenViking only accepts public clients (PKCE). Real MCP clients
+    # Business Data Platform only accepts public clients (PKCE). Real MCP clients
     # always send "none" — the SDK's OAuth 2.0 default is client_secret_post,
     # which we deliberately reject (see test_dcr_rejects_confidential_auth_methods).
     resp = await client.post(
@@ -568,7 +568,7 @@ async def test_oauth_verify_rejects_verifier_without_fingerprint(app_with_oauth,
 
 @pytest.mark.asyncio
 async def test_dcr_downgrades_confidential_auth_to_public(app_with_oauth, client):
-    """OpenViking treats every client as public+PKCE. A registrar that asks
+    """Business Data Platform treats every client as public+PKCE. A registrar that asks
     for client_secret_basic / client_secret_post is silently downgraded to
     'none' so that the OAuth 2.0 default (client_secret_basic, which some
     SDKs fill in unconditionally) does not break compatibility — but the

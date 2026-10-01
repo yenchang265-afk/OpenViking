@@ -1,6 +1,6 @@
 # 指标与 Metrics
 
-OpenViking 提供 `/metrics` 端点，用于向 Prometheus、Grafana Agent 等监控系统导出运行时指标。
+Business Data Platform 提供 `/metrics` 端点，用于向 Prometheus、Grafana Agent 等监控系统导出运行时指标。
 
 与 `/api/v1/observer/*` 不同，`/metrics` 的定位是：
 
@@ -77,7 +77,7 @@ scrape_configs:
 **注意事项**
 
 - `/metrics` 适合高频抓取，因此其中的指标应保持低基数、低成本。
-- `/metrics` 返回的是 Prometheus 文本，不是标准 OpenViking API 的 `{status, result, time}` JSON 结构。
+- `/metrics` 返回的是 Prometheus 文本，不是标准 Business Data Platform API 的 `{status, result, time}` JSON 结构。
 - 人工查看组件瞬时状态更适合使用 `/api/v1/observer/*`。
 - `/metrics` 现在也包含 VikingBot feedback observability 指标，这些指标来自对持久化 session 数据的 scrape-time 聚合；具体指标族与示例可参见 Metrics 概念文档中的 feedback 章节。
 

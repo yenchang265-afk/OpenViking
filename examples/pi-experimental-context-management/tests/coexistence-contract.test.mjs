@@ -2,7 +2,7 @@
  * The coexistence contract between this fork and the non-experimental
  * extension, pinned at the text level.
  *
- * The two pi extensions must never drive the same OpenViking session: both
+ * The two pi extensions must never drive the same Business Data Platform session: both
  * would capture every message and both would race on the same commit. This
  * fork therefore stands down as soon as it detects the peer, on two signals —
  * a search tool registered from another extension's directory, and the
@@ -91,8 +91,8 @@ function peerProbeBody(text) {
     start,
     -1,
     "index.ts no longer defines peerOwnsToolSurface(). That function is how this fork notices " +
-      "the other OpenViking extension and stands down; without it both extensions sync the same " +
-      "OpenViking session.",
+      "the other Business Data Platform extension and stands down; without it both extensions sync the same " +
+      "Business Data Platform session.",
   );
   const end = text.indexOf("\n  };", start);
   return end === -1 ? text.slice(start, start + 4000) : text.slice(start, end);
@@ -110,7 +110,7 @@ test("the probe set names the peer's search tool under both its old and its curr
     names.includes("viking_search"),
     "COEXISTENCE_PROBE_TOOLS dropped `viking_search`. The peer registered that name before 0.4 " +
       "and such a build may still be installed; without it in the probe set this fork does not " +
-      "see an old peer and both extensions capture every message into the same OpenViking " +
+      "see an old peer and both extensions capture every message into the same Business Data Platform " +
       "session.",
   );
   assert.ok(
@@ -151,7 +151,7 @@ test("the fork reads the peer's globalThis marker, not only its tool names", () 
     /PEER_GLOBAL_MARKER|__OPENVIKING_PI_EXTENSION__/,
     "peerOwnsToolSurface() no longer looks at the peer's globalThis marker. Tool names alone are " +
       "not enough: when `/mcp` answers 401/403 the peer registers ZERO tools and still writes the " +
-      "OpenViking session, and the marker is the only thing left to see it by.",
+      "Business Data Platform session, and the marker is the only thing left to see it by.",
   );
 });
 
@@ -165,7 +165,7 @@ test("the peer still writes the globalThis marker this fork probes for", {
     peer.includes(marker),
     `pi-coding-agent-extension/index.ts no longer mentions \`${marker}\`, the marker this fork ` +
       "reads to decide whether the peer is active. If the peer stops announcing itself, this " +
-      "fork keeps running beside it and both sync the same OpenViking session.",
+      "fork keeps running beside it and both sync the same Business Data Platform session.",
   );
 
   const assignment = new RegExp(`${marker}(?:["'\`]?\\s*\\])?\\s*=\\s*[^=]`);

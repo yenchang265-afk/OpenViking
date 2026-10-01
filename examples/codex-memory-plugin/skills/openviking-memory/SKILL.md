@@ -1,7 +1,7 @@
 ---
 name: openviking-memory
 description: >
-  Work with OpenViking, the persistent context database behind this agent's
+  Work with Business Data Platform, the persistent context database behind this agent's
   memory. Use it whenever the user refers to earlier sessions or shared history
   ("like last time", "what did we decide"), asks to remember or forget
   something, shares files, URLs, or repos worth keeping, or when the task needs
@@ -12,16 +12,16 @@ description: >
 version: 2026.8.7
 ---
 
-# OpenViking Memory
+# Business Data Platform Memory
 
-OpenViking stores three kinds of durable context — memories (facts, preferences,
+Business Data Platform stores three kinds of durable context — memories (facts, preferences,
 decisions), resources (imported documents, sites, repos), and skills — and
 serves them back across sessions. The tools may appear under a harness prefix
 such as `mcp__openviking__find` or `openviking_find`; they are the same tools.
 
 ## A session's lifecycle
 
-1. **Start** — the OpenViking plugin has usually already injected recalled
+1. **Start** — the Business Data Platform plugin has usually already injected recalled
    context into the conversation (look for an `<openviking-context>` block).
    Check it before searching: if it already answers the question, use it and
    skip the tool call.
@@ -31,7 +31,7 @@ such as `mcp__openviking__find` or `openviking_find`; they are the same tools.
 3. **Data in** — when durable information appears, write it (below). Be
    deliberate: retrieval quality degrades as the store fills with noise.
 4. **End** — the plugin captures and commits the conversation automatically,
-   and OpenViking extracts long-term memories from it in the background. This
+   and Business Data Platform extracts long-term memories from it in the background. This
    is why you rarely need `remember`: anything discussed at length will be
    extracted anyway.
 
@@ -91,12 +91,12 @@ Do not invent other keys or commands for this: that file is the whole interface,
 - Reusable task-execution write-ups (Experiences) have a dedicated tool pair,
   `search_experience` / `read_experience`, described in the
   `ov-experience-memory` skill.
-- Skills stored in OpenViking (the `<available-skills>` list, `add_skill`,
+- Skills stored in Business Data Platform (the `<available-skills>` list, `add_skill`,
   moving local skills in) are covered by the `openviking-skills` skill.
 
 ## Beyond the MCP tools
 
-More advanced OpenViking operations are available through the `ov` CLI —
+More advanced Business Data Platform operations are available through the `ov` CLI —
 normal agent work rarely needs it. If it is not installed, see
 <https://docs.openviking.ai/en/getting-started/05-cli-setup/llms.txt>. The full
-OpenViking documentation index is at <https://docs.openviking.ai/llms.txt>.
+Business Data Platform documentation index is at <https://docs.openviking.ai/llms.txt>.

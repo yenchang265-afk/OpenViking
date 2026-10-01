@@ -1,4 +1,4 @@
-"""Request-scoped OpenViking Skill discovery, activation, and materialization."""
+"""Request-scoped Business Data Platform Skill discovery, activation, and materialization."""
 
 from __future__ import annotations
 
@@ -217,7 +217,7 @@ def _skill_identity_from_uri(uri: str) -> tuple[str, str, str, str]:
     index = classification.content_index
     if not classification.is_skill or index is None:
         raise SkillRuntimeError(
-            "SKILL_INVALID", "Skill URI is outside an OpenViking skills namespace"
+            "SKILL_INVALID", "Skill URI is outside a Business Data Platform skills namespace"
         )
 
     has_definition = len(parts) == index + 3 and parts[-1] == "SKILL.md"
@@ -371,7 +371,7 @@ class SkillRuntimeContext:
                 timeout=self.settings.discovery_timeout_seconds,
             )
         except Exception as exc:
-            logger.warning("OpenViking Skill discovery skipped: {}", exc)
+            logger.warning("Business Data Platform Skill discovery skipped: {}", exc)
             self.candidates = []
             return []
 
@@ -504,14 +504,14 @@ class SkillRuntimeContext:
             returned_root = _normalize_uri(str(result.get("root_uri") or result.get("uri") or ""))
             if returned_root != root_uri:
                 raise SkillRuntimeError(
-                    "SKILL_INVALID", "OpenViking returned a different canonical Skill root"
+                    "SKILL_INVALID", "Business Data Platform returned a different canonical Skill root"
                 )
 
             canonical_content = str(result.get("content") or "")
             if not canonical_content:
                 raise SkillRuntimeError(
                     "SKILL_INTEGRITY_UNAVAILABLE",
-                    "OpenViking did not return the canonical SKILL.md content",
+                    "Business Data Platform did not return the canonical SKILL.md content",
                 )
             if canonical_content != content:
                 raise SkillRuntimeError(
@@ -522,18 +522,18 @@ class SkillRuntimeContext:
             if not content_checksum:
                 raise SkillRuntimeError(
                     "SKILL_INTEGRITY_UNAVAILABLE",
-                    "OpenViking did not return a SKILL.md content checksum",
+                    "Business Data Platform did not return a SKILL.md content checksum",
                 )
             if hashlib.sha256(canonical_content.encode("utf-8")).hexdigest() != content_checksum:
                 raise SkillRuntimeError(
                     "SKILL_REVISION_CHANGED",
-                    "OpenViking returned inconsistent SKILL.md integrity metadata",
+                    "Business Data Platform returned inconsistent SKILL.md integrity metadata",
                 )
             revision = str(result.get("revision") or "").strip()
             if not revision:
                 raise SkillRuntimeError(
                     "SKILL_INTEGRITY_UNAVAILABLE",
-                    "OpenViking did not return a Skill revision",
+                    "Business Data Platform did not return a Skill revision",
                 )
 
             files: dict[str, RemoteSkillFile] = {}
@@ -564,7 +564,7 @@ class SkillRuntimeContext:
                 if not is_dir and (size is None or checksum is None):
                     raise SkillRuntimeError(
                         "SKILL_INTEGRITY_UNAVAILABLE",
-                        f"OpenViking did not return integrity metadata for {path}",
+                        f"Business Data Platform did not return integrity metadata for {path}",
                     )
                 if not is_dir and (
                     size < 0 or re.fullmatch(r"[0-9a-f]{64}", checksum or "") is None
@@ -585,7 +585,7 @@ class SkillRuntimeContext:
             definition = files.get("SKILL.md")
             if definition is None or definition.is_dir:
                 raise SkillRuntimeError(
-                    "SKILL_INVALID", "OpenViking Skill manifest is missing SKILL.md"
+                    "SKILL_INVALID", "Business Data Platform Skill manifest is missing SKILL.md"
                 )
             definition_bytes = canonical_content.encode("utf-8")
             if definition.size != len(definition_bytes) or definition.sha256 != content_checksum:
@@ -639,10 +639,10 @@ class SkillRuntimeContext:
         lines = [
             skill.content.rstrip(),
             "",
-            "## OpenViking resource bindings",
+            "## Business Data Platform resource bindings",
             "",
             "Packaged resources are managed by VikingBot. Do not recreate, copy, or write "
-            "them into the workspace, and do not set `working_dir` to an OpenViking storage "
+            "them into the workspace, and do not set `working_dir` to a Business Data Platform storage "
             "or materialization path. Pass the exact relative path below (or its canonical "
             "URI) directly to the consuming tool; VikingBot materializes and rewrites it "
             "automatically. Use `workspace:<relative-path>` or an absolute path only for an "
@@ -692,7 +692,7 @@ class SkillRuntimeContext:
         used: list[str] = []
 
         # Text resources stay remote. Resolve relative references such as
-        # ``references/checklist.md`` to their canonical OpenViking URI before
+        # ``references/checklist.md`` to their canonical Business Data Platform URI before
         # handing the call to the existing multi-read transport.
         if tool.name == "openviking_multi_read" and isinstance(effective.get("uris"), list):
             resolved_uris: list[Any] = []
@@ -1407,7 +1407,7 @@ class SkillRuntimeContext:
             try:
                 await self._client.close()
             except Exception as exc:
-                logger.warning("Failed to close remote Skill OpenViking client: {}", exc)
+                logger.warning("Failed to close remote Skill Business Data Platform client: {}", exc)
             self._client = None
 
     def _active_skill_for_uri(self, uri: str) -> ActiveRemoteSkill | None:

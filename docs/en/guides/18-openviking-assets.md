@@ -1,8 +1,8 @@
-# OpenViking Assets
+# Business Data Platform Assets
 
 > Experimental. The `openviking-assets/1` protocol and CLI behavior may change in later releases.
 
-OpenViking Assets describes what a knowledge base should contain as declarative files. In the
+Business Data Platform Assets describes what a knowledge base should contain as declarative files. In the
 simplest form, one Manifest file defines the assets to ingest. A team can also keep its ingestible
 sources in a shared Catalog and write Manifests that select named assets for different use cases.
 Applying a Manifest creates or updates each resource and stores the mapping between assets and
@@ -16,16 +16,16 @@ resource collections that need to be reproducible and continuously refreshed.
 | Capability | Description |
 | --- | --- |
 | `ov add-resource <source>` | Adds or updates one resource; it describes one operation. |
-| OpenViking Assets | Declares the expected composition of a resource set for review, sharing, and repeated application. |
+| Business Data Platform Assets | Declares the expected composition of a resource set for review, sharing, and repeated application. |
 | OVPack | Exports or imports an existing data snapshot, including content and optional index data. |
 
-OpenViking Assets does not replace the existing ingestion pipeline. Git fetching, parsing,
+Business Data Platform Assets does not replace the existing ingestion pipeline. Git fetching, parsing,
 semantic extraction, vectorization, and Watch refreshes still use `add_resource` and server-side
 connectors. Assets adds only the declaration, resolution, and per-asset orchestration layers.
 
 ## Conceptual Model
 
-OpenViking Assets has three primary objects:
+Business Data Platform Assets has three primary objects:
 
 - **Manifest**: the file you apply. It defines the assets to ingest directly under `catalog:`, or
   selects assets by name from a separate Catalog file.
@@ -52,7 +52,7 @@ One add_resource call per asset -> viking:// resources
 ```
 
 The server is the authoritative protocol parser. The CLI sends the raw Manifest YAML — plus the
-Catalog YAML when a separate Catalog file is used — to the configured OpenViking service. The
+Catalog YAML when a separate Catalog file is used — to the configured Business Data Platform service. The
 server validates them and returns an execution plan; the resolver endpoint itself does not create
 resources.
 
@@ -74,7 +74,7 @@ defaults:
 catalog:
   - name: openviking
     connector: git
-    description: OpenViking main repository
+    description: Business Data Platform main repository
     params:
       repo_url: https://github.com/volcengine/OpenViking
       branch: main
@@ -144,7 +144,7 @@ defaults:
 catalog:
   - name: openviking
     connector: git
-    description: OpenViking main repository
+    description: Business Data Platform main repository
     params:
       repo_url: https://github.com/volcengine/OpenViking
       branch: main
@@ -204,8 +204,8 @@ For safety, clone URLs cannot:
 
 ### Prerequisites
 
-1. Install an `ov` CLI version that supports OpenViking Assets.
-2. Configure an OpenViking service that provides `/api/v1/openviking-assets/resolve`.
+1. Install an `ov` CLI version that supports Business Data Platform Assets.
+2. Configure a Business Data Platform service that provides `/api/v1/openviking-assets/resolve`.
 3. Verify the connection:
 
 ```bash
@@ -236,7 +236,7 @@ ov add-resource --manifest manifest.yaml --args dry_run:true
 `dry_run`:
 
 - reads the local YAML file, plus the Catalog file when one is used;
-- asks the configured OpenViking service to resolve and validate the protocol;
+- asks the configured Business Data Platform service to resolve and validate the protocol;
 - checks that all selected `auth_ref` aliases resolve locally;
 - asks the server to run a read-only `git ls-remote` permission preflight for every repository
   with the effective credentials;
@@ -289,10 +289,10 @@ alias or unreadable repository fails the whole operation before the first submis
 performs the same preflight. `username` and `token` are the only supported fields under a native
 Git credentials alias; keep them flat as shown above. For the standard, native Git path, the CLI sends them to `add_resource` as
 `args.auth_config`, while `branch` or `commit` remains a top-level member of `args`. Resolved Git
-arguments are sent over the configured OpenViking service connection. Use TLS for remote
+arguments are sent over the configured Business Data Platform service connection. Use TLS for remote
 deployments and restrict local access to the credentials file.
 
-When the effective `watch_interval` is positive, OpenViking stores an HTTPS Git token resolved
+When the effective `watch_interval` is positive, Business Data Platform stores an HTTPS Git token resolved
 from `auth_ref` in the Watch task's private, repository-bound authentication state. The token is
 not written to Manifest State, ordinary ingestion queues, or watch API/MCP/CLI responses. A zero
 interval keeps the token request-local. Git PATs have no generic refresh flow, so recreate the
@@ -349,7 +349,7 @@ A repository that shares Manifests should normally add this to its `.gitignore`:
 Do not apply the same Manifest concurrently. The current State file has no cross-process lock.
 
 Content-level synchronization cursors do not live in Manifest State. Continuous refreshes are
-managed by OpenViking Watches and connectors.
+managed by Business Data Platform Watches and connectors.
 
 ## Refresh Intervals
 
@@ -443,8 +443,8 @@ arguments; an unknown key is an error.
 
 ## Related Documentation
 
-- [OpenViking Assets API](../api/22-openviking-assets.md)
+- [Business Data Platform Assets API](../api/22-openviking-assets.md)
 - [Resource Management API](../api/02-resources.md)
 - [Resource Watch API](../api/15-watches.md)
 - [OVPack Import and Export](09-ovpack.md)
-- [OpenViking Assets Examples](https://github.com/volcengine/OpenViking/tree/main/examples/openviking-assets)
+- [Business Data Platform Assets Examples](https://github.com/volcengine/OpenViking/tree/main/examples/openviking-assets)

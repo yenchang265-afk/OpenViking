@@ -20,7 +20,7 @@ class SessionAutoCommitConfig(BaseModel):
 
 
 class MemoryConfig(BaseModel):
-    """Memory configuration for OpenViking."""
+    """Memory configuration for Business Data Platform."""
 
     version: str = Field(
         default="v3",

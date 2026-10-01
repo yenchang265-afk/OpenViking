@@ -10,7 +10,7 @@ from tests.base_cli_test import BaseOpenClawCLITest
 class TestMemoryPersistence(BaseOpenClawCLITest):
     """
     记忆跨会话读取验证
-    测试目标：验证OpenClaw重启后，可从OpenViking正常读取历史记忆，记忆持久化生效
+    测试目标：验证OpenClaw重启后，可从Business Data Platform正常读取历史记忆，记忆持久化生效
     测试场景：写入用户信息，使用不同session-id模拟新会话，验证记忆读取
     """
 

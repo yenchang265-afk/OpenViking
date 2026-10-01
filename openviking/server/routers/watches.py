@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Watch management endpoints for OpenViking HTTP Server.
+"""Watch management endpoints for Business Data Platform HTTP Server.
 
 Implements RFC #2104 (Watch Management API) on the REST control plane.
 Routes mirror WatchManager primitives with dual-key support: every
@@ -127,7 +127,7 @@ async def _resolve_task(
     # leaking the existence of another tenant's task to an unauthorized
     # caller. The trade-off is that callers see 404 instead of 403 on a
     # cross-tenant access attempt, which matches the security-first stance
-    # used elsewhere in OpenViking.
+    # used elsewhere in Business Data Platform.
     if task is None:
         raise NotFoundError(task_id or to_uri or "", "watch_task")
     if task_id and to_uri and task.to_uri != to_uri:

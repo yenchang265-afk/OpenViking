@@ -1,4 +1,4 @@
-# OpenViking TOS 安装包发布与安装说明
+# Business Data Platform TOS 安装包发布与安装说明
 
 > 更新时间：2026-06-03
 > 发布目录：`latest`（默认）与可指定日期目录（示例：`2026.6.3`）

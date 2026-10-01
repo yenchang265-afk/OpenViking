@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Thin async HTTP client around the OpenViking server."""
+"""Thin async HTTP client around the Business Data Platform server."""
 
 from __future__ import annotations
 
@@ -12,16 +12,16 @@ from .config import Settings
 
 
 class OVError(Exception):
-    """Raised when the OpenViking server returns a non-2xx response."""
+    """Raised when the Business Data Platform server returns a non-2xx response."""
 
     def __init__(self, status: int, payload: Any):
         self.status = status
         self.payload = payload
-        super().__init__(f"OpenViking error {status}: {payload!r}")
+        super().__init__(f"Business Data Platform error {status}: {payload!r}")
 
 
 class OVClient:
-    """Forward HTTP calls to OpenViking, attaching tenant headers."""
+    """Forward HTTP calls to Business Data Platform, attaching tenant headers."""
 
     def __init__(self, settings: Settings, client: Optional[httpx.AsyncClient] = None):
         self._settings = settings

@@ -1,8 +1,8 @@
 {
   "name": "openviking",
-  "description": "OpenViking plugins for OpenAI Codex (local directory / archive install).",
+  "description": "Business Data Platform plugins for OpenAI Codex (local directory / archive install).",
   "interface": {
-    "displayName": "OpenViking"
+    "displayName": "Business Data Platform"
   },
   "plugins": [
     {

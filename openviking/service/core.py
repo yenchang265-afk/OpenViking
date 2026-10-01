@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-OpenViking Service Core.
+Business Data Platform Service Core.
 
 Main service class that composes all sub-services and manages infrastructure lifecycle.
 """
@@ -62,7 +62,7 @@ if TYPE_CHECKING:
 
 class OpenVikingService:
     """
-    OpenViking main service class.
+    Business Data Platform main service class.
 
     Composes all sub-services and manages infrastructure lifecycle.
     """
@@ -72,7 +72,7 @@ class OpenVikingService:
         path: Optional[str] = None,
         user: Optional[UserIdentifier] = None,
     ):
-        """Initialize OpenViking service.
+        """Initialize Business Data Platform service.
 
         Args:
             path: Local storage path (overrides ov.conf storage path).
@@ -208,7 +208,7 @@ class OpenVikingService:
         set_task_tracker(config.build_task_tracker(self._agfs_client))
 
     def _build_ragfs_binding_config(self) -> Any:
-        """Build the single runtime binding config from OpenViking storage + encryption settings."""
+        """Build the single runtime binding config from Business Data Platform storage + encryption settings."""
         binding_config, self._encryptor = build_runtime_ragfs_binding_config(self._config)
         return binding_config
 
@@ -375,7 +375,7 @@ class OpenVikingService:
         return self._compile_service
 
     async def initialize(self) -> None:
-        """Initialize OpenViking storage and indexes."""
+        """Initialize Business Data Platform storage and indexes."""
         if self._initialized:
             logger.debug("Already initialized")
             return
@@ -606,7 +606,7 @@ class OpenVikingService:
         logger.info("OpenVikingService initialized")
 
     async def close(self) -> None:
-        """Close OpenViking and release resources."""
+        """Close Business Data Platform and release resources."""
         await self._resource_service.close_background_tasks()
 
         if self._runtime_config_manager:

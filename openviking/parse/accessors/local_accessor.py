@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Local file system accessor for OpenViking.
+Local file system accessor for Business Data Platform.
 
 Provides a DataAccessor implementation for local files and directories.
 This is the lowest-priority accessor that handles any path-like source

@@ -6,8 +6,8 @@ set -e
 OpenClaw 完整评估流程脚本
 
 用法:
-  ./run_full_eval.sh                      # 只导入 OpenViking (所有 samples)
-  ./run_full_eval.sh --with-claw-import   # 同时导入 OpenViking 和 OpenClaw (所有 samples)
+  ./run_full_eval.sh                      # 只导入 Business Data Platform (所有 samples)
+  ./run_full_eval.sh --with-claw-import   # 同时导入 Business Data Platform 和 OpenClaw (所有 samples)
   ./run_full_eval.sh --skip-import        # 跳过导入步骤 (所有 samples)
   ./run_full_eval.sh --sample 0           # 只处理第 0 个 sample
   ./run_full_eval.sh --sample 1 --with-claw-import  # 只处理第 1 个 sample，同时导入 OpenClaw
@@ -77,9 +77,9 @@ mkdir -p "$RESULT_DIR"
 # Step 1: 导入数据
 if [ "$SKIP_IMPORT" = false ]; then
     if [ "$WITH_CLAW_IMPORT" = true ]; then
-        echo "[1/5] 导入数据到 OpenViking 和 OpenClaw..."
+        echo "[1/5] 导入数据到 Business Data Platform 和 OpenClaw..."
 
-        # 后台运行 OpenViking 导入
+        # 后台运行 Business Data Platform 导入
         python "$SCRIPT_DIR/import_to_ov.py" --no-user-id --input "$INPUT_FILE" $FORCE_INGEST_ARG $SAMPLE_ARG > "$RESULT_DIR/import_ov.log" 2>&1 &
         PID_OV=$!
 
@@ -90,7 +90,7 @@ if [ "$SKIP_IMPORT" = false ]; then
         # 等待两个导入任务完成
         wait $PID_OV $PID_CLAW
     else
-        echo "[1/5] 导入数据到 OpenViking..."
+        echo "[1/5] 导入数据到 Business Data Platform..."
         python "$SCRIPT_DIR/import_to_ov.py" --no-user-id --input "$INPUT_FILE" $FORCE_INGEST_ARG $SAMPLE_ARG
     fi
 

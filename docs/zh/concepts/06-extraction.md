@@ -1,6 +1,6 @@
 # 上下文提取
 
-OpenViking 采用三层异步架构处理文档解析和上下文提取。
+Business Data Platform 采用三层异步架构处理文档解析和上下文提取。
 
 ## 概览
 
@@ -138,7 +138,7 @@ L0/L1 是目录级 sidecar，不是 per-file sidecar。生成父目录摘要时�
 
 ## 代码骨架提取
 
-对于代码文件，OpenViking 使用固定的代码骨架提取路线。该路线内置在代码摘要流程中，不再通过逐语言解析参数选择或调节。
+对于代码文件，Business Data Platform 使用固定的代码骨架提取路线。该路线内置在代码摘要流程中，不再通过逐语言解析参数选择或调节。
 
 ### 代码骨架内容
 
@@ -152,7 +152,7 @@ L0/L1 是目录级 sidecar，不是 per-file sidecar。生成父目录摘要时�
 2. 不存在对应的 `tags.scm` 时，使用 `tree-sitter-language-pack.process()`。
 3. 两种提取方式都无可用结果时，才将 `semantic.code_summary` 作为兜底处理。
 
-第 1、2 步需要 `tree-sitter-language-pack` 中对应语言的解析器，该解析器会在首次使用时从 GitHub 下载。当解析器未缓存且无法下载时（例如处于防火墙之后），OpenViking 改用随 pip 依赖安装的语法包：Python、JavaScript、TypeScript/TSX、Java、C/C++、Rust、Go、C#、PHP 和 Lua，此时骨架会列出每个定义所在的源码行。其他语言则使用 `semantic.code_summary` 兜底。
+第 1、2 步需要 `tree-sitter-language-pack` 中对应语言的解析器，该解析器会在首次使用时从 GitHub 下载。当解析器未缓存且无法下载时（例如处于防火墙之后），Business Data Platform 改用随 pip 依赖安装的语法包：Python、JavaScript、TypeScript/TSX、Java、C/C++、Rust、Go、C#、PHP 和 Lua，此时骨架会列出每个定义所在的源码行。其他语言则使用 `semantic.code_summary` 兜底。
 
 manifest 查询与下载共用 15 秒超时。首次失败后，当前进程不再尝试下载，只使用已缓存的解析器，因此静默丢包的防火墙最多只会拖慢一个文件。
 

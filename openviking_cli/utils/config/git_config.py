@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Git version control configuration for OpenViking."""
+"""Git version control configuration for Business Data Platform."""
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator

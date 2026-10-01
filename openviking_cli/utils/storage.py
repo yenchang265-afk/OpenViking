@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Storage path management for OpenViking.
+Storage path management for Business Data Platform.
 
 Manages file storage in .openviking/ directory for media files (images, tables, etc.).
 """
@@ -151,10 +151,10 @@ class StoragePath:
             logger.info("Cleaned up downloads directory")
 
     def cleanup_all(self) -> None:
-        """Remove all OpenViking storage."""
+        """Remove all Business Data Platform storage."""
         if self.openviking_dir.exists():
             shutil.rmtree(self.openviking_dir)
-            logger.info("Cleaned up all OpenViking storage")
+            logger.info("Cleaned up all Business Data Platform storage")
 
     def get_all_resource_media(self, resource_name: str) -> dict:
         """

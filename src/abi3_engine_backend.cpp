@@ -2076,7 +2076,7 @@ PyMethodDef kModuleMethods[] = {
 PyModuleDef kModuleDef = {
     PyModuleDef_HEAD_INIT,
     "_ov_engine_backend",
-    "OpenViking abi3 vectordb backend.",
+    "Business Data Platform abi3 vectordb backend.",
     -1,
     kModuleMethods,
 };

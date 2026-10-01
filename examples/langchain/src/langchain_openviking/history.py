@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""LangChain chat history backed by OpenViking sessions."""
+"""LangChain chat history backed by Business Data Platform sessions."""
 
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 
 class OpenVikingChatMessageHistory(BaseChatMessageHistory):
-    """LangChain chat history implementation stored in an OpenViking session."""
+    """LangChain chat history implementation stored in a Business Data Platform session."""
 
     def __init__(
         self,
@@ -115,7 +115,7 @@ class OpenVikingChatMessageHistory(BaseChatMessageHistory):
                 token_budget=self.token_budget,
             )
         except Exception as exc:
-            logger.debug("OpenViking chat history context fetch failed", exc_info=True)
+            logger.debug("Business Data Platform chat history context fetch failed", exc_info=True)
             if is_not_found_error(exc):
                 self._ensure_session(client)
             return []
@@ -123,7 +123,7 @@ class OpenVikingChatMessageHistory(BaseChatMessageHistory):
         return restore_openviking_messages(context.get("messages") or [])
 
     async def aget_messages(self) -> list[BaseMessage]:
-        """Asynchronously return active messages from the OpenViking session."""
+        """Asynchronously return active messages from the Business Data Platform session."""
 
         client = await self._get_async_client()
         try:
@@ -134,7 +134,7 @@ class OpenVikingChatMessageHistory(BaseChatMessageHistory):
                 token_budget=self.token_budget,
             )
         except Exception as exc:
-            logger.debug("OpenViking chat history context fetch failed", exc_info=True)
+            logger.debug("Business Data Platform chat history context fetch failed", exc_info=True)
             if is_not_found_error(exc):
                 await self._aensure_session(client)
             return []
@@ -189,7 +189,7 @@ class OpenVikingChatMessageHistory(BaseChatMessageHistory):
         self._acknowledge_context_parts()
 
     async def aclear(self) -> None:
-        """Asynchronously reset this OpenViking session."""
+        """Asynchronously reset this Business Data Platform session."""
 
         client = await self._get_async_client()
         await acall_openviking(client, "delete_session", session_id=self.session_id)
@@ -220,14 +220,14 @@ class OpenVikingChatMessageHistory(BaseChatMessageHistory):
         try:
             call_openviking(client, "create_session", session_id=self.session_id)
         except Exception:
-            logger.debug("OpenViking chat history session ensure failed", exc_info=True)
+            logger.debug("Business Data Platform chat history session ensure failed", exc_info=True)
             pass
 
     async def _aensure_session(self, client: Any) -> None:
         try:
             await acall_openviking(client, "create_session", session_id=self.session_id)
         except Exception:
-            logger.debug("OpenViking chat history session ensure failed", exc_info=True)
+            logger.debug("Business Data Platform chat history session ensure failed", exc_info=True)
 
     def _effective_peer_id(self) -> str | None:
         if self.peer_id_provider is None:
@@ -264,13 +264,13 @@ class OpenVikingChatMessageHistory(BaseChatMessageHistory):
             self.context_parts_acknowledger(self.session_id)
         except Exception:
             logger.warning(
-                "OpenViking context-parts acknowledgement failed",
+                "Business Data Platform context-parts acknowledgement failed",
                 exc_info=True,
             )
 
 
 def context_parts_from_documents(documents: Sequence[Any]) -> list[dict[str, Any]]:
-    """Build OpenViking ContextPart dictionaries from LangChain Documents."""
+    """Build Business Data Platform ContextPart dictionaries from LangChain Documents."""
 
     parts: list[dict[str, Any]] = []
     for doc in documents:

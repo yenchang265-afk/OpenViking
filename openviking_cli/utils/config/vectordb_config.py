@@ -284,7 +284,7 @@ class CuVSConfig(BaseModel):
     fallback_to_native: bool = Field(
         default=True,
         description=(
-            "Use OpenViking's native local index for sparse/hybrid search or other "
+            "Use Business Data Platform's native local index for sparse/hybrid search or other "
             "operations outside cuVS dense top-k."
         ),
     )
@@ -346,7 +346,7 @@ class CuVSConfig(BaseModel):
         default=False,
         description=(
             "Coalesce compatible concurrent cuVS dense queries into one matrix-search call. "
-            "This OpenViking scheduler is opt-in and distinct from cuVS Dynamic Batching."
+            "This Business Data Platform scheduler is opt-in and distinct from cuVS Dynamic Batching."
         ),
     )
     micro_batching_max_batch_size: int = Field(

@@ -5,7 +5,7 @@
  *
  * Triggered by Stop hook.
  * Reads transcript_path from stdin → extracts INCREMENTAL new turns since last
- * capture → pushes them to a PERSISTENT per-CC-session OpenViking session.
+ * capture → pushes them to a PERSISTENT per-CC-session Business Data Platform session.
  *
  * Unlike the previous one-shot model (create→add→extract→delete every Stop),
  * this keeps a stable ovSessionId derived from the CC session_id. OV's own

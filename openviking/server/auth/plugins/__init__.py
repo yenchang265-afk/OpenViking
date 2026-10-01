@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Built-in authentication plugins for OpenViking."""
+"""Built-in authentication plugins for Business Data Platform."""
 
 from openviking.server.auth.plugins.api_key import ApiKeyAuthPlugin
 from openviking.server.auth.plugins.dev import DevAuthPlugin

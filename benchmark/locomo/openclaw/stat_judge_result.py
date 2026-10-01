@@ -13,7 +13,7 @@ def main():
     parser.add_argument(
         "--import-csv",
         default="./result/import_success.csv",
-        help="Path to import_success.csv file for OpenViking token stats, default: ./result/import_success.csv",
+        help="Path to import_success.csv file for Business Data Platform token stats, default: ./result/import_success.csv",
     )
     args = parser.parse_args()
 
@@ -180,7 +180,7 @@ def process_import_csv(input_path: str) -> list[str]:
     avg_total = total_total / valid_rows if valid_rows > 0 else 0.0
 
     return [
-        "=== OpenViking Import Token Statistics ===",
+        "=== Business Data Platform Import Token Statistics ===",
         f"Total sessions: {valid_rows:,}",
         "\nToken usage (Import):",
         f"  Total embedding tokens: {total_embedding:,}",

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# OpenViking Memory Plugin shared installer for Claude Code, Codex, Cursor,
+# Business Data Platform Memory Plugin shared installer for Claude Code, Codex, Cursor,
 # TRAE / TRAE CN, TraeCode CLI 2.0, ZCode, Kimi Code, OpenCode, and pi.
 #
 # One-liner (GitHub):
@@ -124,7 +124,7 @@ report_unexpected_error() { # report_unexpected_error <status> <line> <command>
   fi
   printf '\033[?25h' 2>/dev/null >/dev/tty || true
   printf '\n' >&2
-  err "$(t 'OpenViking installer stopped unexpectedly.' 'OpenViking 安装程序意外退出。')"
+  err "$(t 'Business Data Platform installer stopped unexpectedly.' 'Business Data Platform 安装程序意外退出。')"
   printf '    %s: %s\n' "$(t 'Exit status' '状态码')" "$status" >&2
   printf '    %s: %s\n' "$(t 'Script line' '脚本行号')" "$line" >&2
   printf '    %s: %s\n' "$(t 'Command' '失败命令')" "$command" >&2
@@ -151,10 +151,10 @@ Options:
   --dist CHANNEL     github (default) | tos (mirror for GitHub-blocked regions).
   --lang LANG        en | zh (interactive prompts language; auto-detected).
   --source MODE      Advanced: remote | archive | dev (default: auto-detect).
-  --url URL          OpenViking server base URL.
-  --api-key KEY      OpenViking API key. Pass '' for unauthenticated local mode.
-  --account ID       Optional OpenViking account.
-  --user ID          Optional OpenViking user.
+  --url URL          Business Data Platform server base URL.
+  --api-key KEY      Business Data Platform API key. Pass '' for unauthenticated local mode.
+  --account ID       Optional Business Data Platform account.
+  --user ID          Optional Business Data Platform user.
   --statusline       Register the Claude Code statusline without asking.
   --no-statusline    Skip the statusline prompt.
   --uninstall        Remove Cursor/TRAE/TRAE CN/ZCode/Kimi Code integration files and config,
@@ -1207,9 +1207,9 @@ select_dist() {
 
 prompt_connection() { # sets WIZ_URL / WIZ_KEY (WIZ_KEY may stay __OPENVIKING_KEEP__)
   local current_url="$1" current_key="$2" url_input reply
-  tui_menu "$(t 'Where do you connect to OpenViking?' '连接到哪个 OpenViking 服务？')" 2 \
+  tui_menu "$(t 'Where do you connect to Business Data Platform?' '连接到哪个 Business Data Platform 服务？')" 2 \
     "$(t 'Self-hosted / local' '自建 / 本地')  [http://127.0.0.1:1933]" \
-    "$(t 'Volcengine OpenViking Cloud' '火山引擎 OpenViking 云服务')  [api.vikingdb.cn-beijing.volces.com]" \
+    "$(t 'Volcengine Business Data Platform Cloud' '火山引擎 Business Data Platform 云服务')  [api.vikingdb.cn-beijing.volces.com]" \
     "$(t 'Custom URL / keep current' '自定义 URL / 保持当前')  [${current_url:-http://127.0.0.1:1933}]"
   case "$TUI_MENU_CHOICE" in
     0) WIZ_URL="http://127.0.0.1:1933" ;;
@@ -1243,7 +1243,7 @@ prompt_connection() { # sets WIZ_URL / WIZ_KEY (WIZ_KEY may stay __OPENVIKING_KE
 
 configure_ovcli() {
   local current_url current_key current_account current_user url key account user reply
-  heading "$(t '2. OpenViking credentials' '2. OpenViking 凭据配置') ($OVCLI_CONF)"
+  heading "$(t '2. Business Data Platform credentials' '2. Business Data Platform 凭据配置') ($OVCLI_CONF)"
   mkdir -p "$OV_HOME"
   chmod 700 "$OV_HOME" 2>/dev/null || true
 
@@ -1325,7 +1325,7 @@ fetch_archive() { # fetch_archive <url> <dest> <required-subpath>
     rm -rf "$tmp_zip" "$tmp_dir"; exit 1
   fi
   if [ -e "$dest" ] && [ ! -f "$dest/$ARCHIVE_MARKER" ] && [ ! -d "$dest/.git" ]; then
-    err "$dest exists and is not an OpenViking checkout/archive."
+    err "$dest exists and is not a Business Data Platform checkout/archive."
     rm -rf "$tmp_zip" "$tmp_dir"; exit 1
   fi
   rm -rf "$dest"
@@ -1544,12 +1544,12 @@ const fs = require("node:fs");
 const [file, name, url, ref] = process.argv.slice(2);
 const manifest = {
   name,
-  description: `OpenViking plugins for Claude Code (remote: ${url} @ ${ref}).`,
-  owner: { name: "OpenViking" },
+  description: `Business Data Platform plugins for Claude Code (remote: ${url} @ ${ref}).`,
+  owner: { name: "Business Data Platform" },
   plugins: [
     {
       name: "openviking-memory",
-      description: "Long-term semantic memory for Claude Code, powered by OpenViking",
+      description: "Long-term semantic memory for Claude Code, powered by Business Data Platform",
       source: { source: "git-subdir", url, path: "examples/claude-code-memory-plugin", ref },
       category: "productivity",
     },
@@ -1648,9 +1648,9 @@ register_statusline() {
   if [ "$STATUSLINE_ARG" != "yes" ]; then
     [ "$INTERACTIVE" -eq 1 ] || return 0
     heading "$(t 'Statusline (optional)' 'Statusline 状态栏（可选）')"
-    info "$(t 'OpenViking can show a one-line server/recall status under the input box.' 'OpenViking 可以在输入框下方显示一行服务/召回状态。')"
+    info "$(t 'Business Data Platform can show a one-line server/recall status under the input box.' 'Business Data Platform 可以在输入框下方显示一行服务/召回状态。')"
     info 'Sample: "OV ✓ │ Fable 5 · ctx 42% │ ↩ 6 mem (0.92) · 50ms │ ✎ 573/20k · 2 arch │ +3 today"'
-    tui_menu "$(t 'Enable the OpenViking statusline?' '启用 OpenViking statusline？')" 1 \
+    tui_menu "$(t 'Enable the Business Data Platform statusline?' '启用 Business Data Platform statusline？')" 1 \
       "$(t 'Enable' '启用')" \
       "$(t 'Skip' '跳过')"
     if [ "$TUI_MENU_CHOICE" -ne 0 ]; then
@@ -1677,7 +1677,7 @@ register_statusline() {
   fi
   if [ -n "$existing" ] && [ "$STATUSLINE_ARG" != "yes" ]; then
     warn "$(t 'Existing statusline detected:' '检测到已有 statusline：') $existing"
-    tui_menu "$(t 'Replace it with the OpenViking statusline?' '替换为 OpenViking statusline？')" 1 \
+    tui_menu "$(t 'Replace it with the Business Data Platform statusline?' '替换为 Business Data Platform statusline？')" 1 \
       "$(t 'Replace' '替换')" \
       "$(t 'Keep existing' '保留现有')"
     if [ "$TUI_MENU_CHOICE" -ne 0 ]; then
@@ -2027,7 +2027,7 @@ agent_remove_json_configs() { # agent_remove_json_configs <hooks> [mcp]
   # can and tell the user what it left behind; aborting here would leave both
   # the host's entries and the integration directory they point at.
   lib="$(install_lib_dir)" || {
-    warn "$(t 'Installer runtime not found; remove the OpenViking hook and MCP entries by hand from:' '未找到安装器运行时，请手动移除以下文件中的 OpenViking hook 与 MCP 条目：') $1${2:+, $2}"
+    warn "$(t 'Installer runtime not found; remove the Business Data Platform hook and MCP entries by hand from:' '未找到安装器运行时，请手动移除以下文件中的 Business Data Platform hook 与 MCP 条目：') $1${2:+, $2}"
     return 0
   }
   "$NODE_BIN" "$lib/host-json-config.mjs" remove "$1" "${2:-}"
@@ -2062,24 +2062,24 @@ uninstall_agent_integrations() {
     rm -f "$HOME/.cursor/rules/openviking-memory.mdc"
     rm -rf "$HOME/.cursor/skills/openviking-memory" "$HOME/.cursor/skills/openviking-skills"
     rm -rf "$OV_HOME/agent-integrations/cursor"
-    info "$(t 'Removed the Cursor OpenViking integration.' '已移除 Cursor OpenViking 集成。')"
+    info "$(t 'Removed the Cursor Business Data Platform integration.' '已移除 Cursor Business Data Platform 集成。')"
   fi
   if contains_harness trae; then
     agent_remove_json_configs "$HOME/.trae/hooks.json" "$(trae_mcp_path trae)"
     rm -rf "$OV_HOME/agent-integrations/trae"
-    info "$(t 'Removed TRAE OpenViking hooks and MCP config.' '已移除 TRAE OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed TRAE Business Data Platform hooks and MCP config.' '已移除 TRAE Business Data Platform hooks 与 MCP 配置。')"
   fi
   if contains_harness trae-cn; then
     agent_remove_json_configs "$HOME/.trae-cn/hooks.json" "$(trae_mcp_path trae-cn)"
     rm -rf "$OV_HOME/agent-integrations/trae-cn"
-    info "$(t 'Removed TRAE CN OpenViking hooks and MCP config.' '已移除 TRAE CN OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed TRAE CN Business Data Platform hooks and MCP config.' '已移除 TRAE CN Business Data Platform hooks 与 MCP 配置。')"
   fi
   if contains_harness trae-cli; then
     local trae_home="${TRAE_HOME:-$HOME/.trae}"
     local trae_cli_home="${TRAECLI_HOME:-$trae_home/cli}"
     agent_remove_trae_cli_configs "$trae_cli_home/hooks.json" "$trae_home/traecli.toml"
     rm -rf "$OV_HOME/agent-integrations/trae-cli"
-    info "$(t 'Removed TRAE CLI OpenViking hooks and MCP config.' '已移除 TRAE CLI OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed TRAE CLI Business Data Platform hooks and MCP config.' '已移除 TRAE CLI Business Data Platform hooks 与 MCP 配置。')"
   fi
   if contains_harness zcode; then
     # ZCode reads hooks/MCP from config.json, not standalone files.
@@ -2122,7 +2122,7 @@ CLEAN_NODE
     # Clean up intermediate files generated by agent_write_json_configs
     rm -f "$HOME/.zcode/hooks.json" "$HOME/.zcode/mcp.json" 2>/dev/null
     rm -rf "$OV_HOME/agent-integrations/zcode"
-    info "$(t 'Removed ZCode OpenViking hooks and MCP config.' '已移除 ZCode OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed ZCode Business Data Platform hooks and MCP config.' '已移除 ZCode Business Data Platform hooks 与 MCP 配置。')"
   fi
   if contains_harness kimicode; then
     local kimi_home="${KIMI_CODE_HOME:-$HOME/.kimi-code}" kimicode_lib kimicode_installed
@@ -2218,7 +2218,7 @@ install_cursor() {
   info "$(t 'Cursor Rule and Skill installed under ~/.cursor.' 'Cursor Rule 与 Skill 已安装到 ~/.cursor。')"
   legacy_plugins="$(cursor_legacy_claude_plugins)"
   if [ -n "$legacy_plugins" ]; then
-    warn "$(t 'Cursor may also import these older Claude OpenViking plugins and run duplicate Hooks:' 'Cursor 还可能导入以下旧版 Claude OpenViking 插件并重复执行 Hook：') $legacy_plugins"
+    warn "$(t 'Cursor may also import these older Claude Business Data Platform plugins and run duplicate Hooks:' 'Cursor 还可能导入以下旧版 Claude Business Data Platform 插件并重复执行 Hook：') $legacy_plugins"
     warn "$(t 'Upgrade or remove those legacy plugin ids, then restart Cursor.' '请升级或移除这些旧插件 id，然后重启 Cursor。')"
   fi
 }
@@ -2554,7 +2554,7 @@ EOF
       fi
       info "cursor: $(t 'integration installed (Hooks, MCP, Rule, Skill)' '集成已安装（Hook、MCP、Rule、Skill）')"
     else
-      warn "cursor: $(t 'OpenViking integration installation is incomplete' 'OpenViking 集成安装不完整')"
+      warn "cursor: $(t 'Business Data Platform integration installation is incomplete' 'Business Data Platform 集成安装不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2580,7 +2580,7 @@ EOF
       fi
       info "trae: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
     else
-      warn "trae: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
+      warn "trae: $(t 'Business Data Platform hook or MCP config is incomplete' 'Business Data Platform hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2606,7 +2606,7 @@ EOF
       fi
       info "trae-cn: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
     else
-      warn "trae-cn: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
+      warn "trae-cn: $(t 'Business Data Platform hook or MCP config is incomplete' 'Business Data Platform hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2636,7 +2636,7 @@ EOF
       fi
       info "trae-cli: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
     else
-      warn "trae-cli: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
+      warn "trae-cli: $(t 'Business Data Platform hook or MCP config is incomplete' 'Business Data Platform hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2661,7 +2661,7 @@ EOF
       fi
       info "zcode: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
     else
-      warn "zcode: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
+      warn "zcode: $(t 'Business Data Platform hook or MCP config is incomplete' 'Business Data Platform hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2709,7 +2709,7 @@ EOF
     elif [ -f "$OV_HOME/opencode-mcp-proxy/openviking/servers/mcp-proxy.mjs" ]; then
       node --check "$OV_HOME/opencode-mcp-proxy/openviking/servers/mcp-proxy.mjs" || ok=0
     else
-      warn "opencode: $(t 'OpenViking MCP proxy not found' '未找到 OpenViking MCP proxy')"
+      warn "opencode: $(t 'Business Data Platform MCP proxy not found' '未找到 Business Data Platform MCP proxy')"
       ok=0
     fi
     if grep -q '"openviking"' "$ocfg" "$ocfgc" 2>/dev/null && grep -q '"mcp"' "$ocfg" "$ocfgc" 2>/dev/null; then

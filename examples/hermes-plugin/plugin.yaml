@@ -1,6 +1,6 @@
 name: openviking
 version: 2.0.1
-description: "OpenViking context database — session-managed memory with automatic extraction, tiered retrieval, and filesystem-style knowledge browsing."
+description: "Business Data Platform context database — session-managed memory with automatic extraction, tiered retrieval, and filesystem-style knowledge browsing."
 pip_dependencies:
   - httpx
 requires_env: []

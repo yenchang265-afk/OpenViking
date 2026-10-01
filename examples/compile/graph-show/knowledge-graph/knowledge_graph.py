@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Render an OpenViking Knowledge Graph artifact directory as interactive HTML.
+"""Render a Business Data Platform Knowledge Graph artifact directory as interactive HTML.
 
 Expected input layout:
 
@@ -583,7 +583,7 @@ def generate(input_path: Path, output_path: Path, title: str | None = None) -> P
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="校验 OpenViking Knowledge Graph 产物并生成酷炫的交互式 HTML。"
+        description="校验 Business Data Platform Knowledge Graph 产物并生成酷炫的交互式 HTML。"
     )
     parser.add_argument("path", type=Path, help="包含 entities/ 和 relations.jsonl 的本地目录")
     parser.add_argument(

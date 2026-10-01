@@ -339,7 +339,7 @@ describe("extractNewTurnMessages", () => {
         role: "toolResult",
         toolCallId: "call_failed",
         toolName: "ov_read",
-        content: [{ type: "text", text: "OpenViking request failed" }],
+        content: [{ type: "text", text: "Business Data Platform request failed" }],
         isError: true,
       },
     ];
@@ -355,7 +355,7 @@ describe("extractNewTurnMessages", () => {
             toolCallId: "call_failed",
             toolName: "ov_read",
             toolInput: { uri: "viking://user/test/memories/experiences/missing.md" },
-            toolOutput: "OpenViking request failed",
+            toolOutput: "Business Data Platform request failed",
             toolStatus: "error",
           },
         ],

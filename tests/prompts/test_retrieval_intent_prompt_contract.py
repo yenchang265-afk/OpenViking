@@ -18,7 +18,7 @@ def test_sft_intent_prompts_use_compact_queries_contract(prompt_id: str):
     rendered = manager.render(
         prompt_id,
         {
-            "compression_summary": "The user is working on OpenViking retrieval.",
+            "compression_summary": "The user is working on Business Data Platform retrieval.",
             "recent_messages": "[user]: Improve semantic search.",
             "current_message": "Use the style we discussed earlier.",
             "context_type": "",

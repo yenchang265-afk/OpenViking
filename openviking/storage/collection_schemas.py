@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Collection schema definitions for OpenViking.
+Collection schema definitions for Business Data Platform.
 
 Provides centralized schema definitions and factory functions for creating collections,
 similar to how init_viking_fs encapsulates VikingFS initialization.

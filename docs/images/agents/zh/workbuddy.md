@@ -14,7 +14,7 @@
    ```json
    {
      "mcpServers": {
-       "OpenViking": {
+       "Business Data Platform": {
          "url": "https://api.vikingdb.cn-beijing.volces.com/openviking/mcp",
          "headers": {
            "Authorization": "Bearer {{OPENVIKING_API_KEY}}"
@@ -28,17 +28,17 @@
 ![保存 MCP 配置](https://docs.openviking.net/agents/image/workbuddy/04-save-config.webp)
 
 6. 返回 MCP 列表。如果系统提示“首次连接此 MCP 服务需要您的信任确认”，点击 **信任** 完成接入。
-![信任 OpenViking MCP 服务](https://docs.openviking.net/agents/image/workbuddy/05-trust-server.webp)
+![信任 Business Data Platform MCP 服务](https://docs.openviking.net/agents/image/workbuddy/05-trust-server.webp)
 
 ## 步骤2：验证
 
-返回 MCP 列表页，确认 `OpenViking` 出现在“我的 MCP”中、状态为开启，展开后可看到已启用工具。
+返回 MCP 列表页，确认 `Business Data Platform` 出现在“我的 MCP”中、状态为开启，展开后可看到已启用工具。
 
-![验证 OpenViking MCP 工具](https://docs.openviking.net/agents/image/workbuddy/06-verify-tools.webp)
+![验证 Business Data Platform MCP 工具](https://docs.openviking.net/agents/image/workbuddy/06-verify-tools.webp)
 
 ## 故障排查
 
 | 问题 | 处理 |
 |---|---|
-| MCP 列表中未出现 `OpenViking` | 检查 JSON 配置格式并重新保存 |
+| MCP 列表中未出现 `Business Data Platform` | 检查 JSON 配置格式并重新保存 |
 | MCP 连接状态异常 | 刷新连接；若仍异常，检查 JSON 配置及网络连通性 |

@@ -404,7 +404,7 @@ describe('FilePreview OKF semantic sidecars', () => {
           '    strategy: semantic',
           '---',
           '',
-          '**这是 OpenViking 相关项目的 PR 贡献规范集合。**',
+          '**这是 Business Data Platform 相关项目的 PR 贡献规范集合。**',
         ].join('\n'),
         fileType: 'markdown',
       }
@@ -426,7 +426,7 @@ describe('FilePreview OKF semantic sidecars', () => {
       expect(screen.getByText('SemanticProcessor')).toBeDefined()
       expect(screen.getByText('parent_refresh')).toBeDefined()
       expect(
-        screen.getByText('这是 OpenViking 相关项目的 PR 贡献规范集合。'),
+        screen.getByText('这是 Business Data Platform 相关项目的 PR 贡献规范集合。'),
       ).toBeDefined()
       const article = container.querySelector('article')
       expect(article?.textContent).not.toContain('generated_by:')
@@ -558,7 +558,7 @@ function classify(...lines: Array<string>) {
 }
 
 describe('JSONL message classification', () => {
-  it('classifies a plain-text user message from the OpenViking parts shape', () => {
+  it('classifies a plain-text user message from the Business Data Platform parts shape', () => {
     const [message] = classify(
       JSON.stringify({
         created_at: '2026-08-04T12:00:00Z',
@@ -691,7 +691,7 @@ describe('JSONL message classification', () => {
     ])
   })
 
-  it('expands an OpenViking tool part into a call and its output', () => {
+  it('expands a Business Data Platform tool part into a call and its output', () => {
     const [message] = classify(
       JSON.stringify({
         parts: [
@@ -713,7 +713,7 @@ describe('JSONL message classification', () => {
     ])
   })
 
-  it('classifies an OpenViking tool part with only an output as a result', () => {
+  it('classifies a Business Data Platform tool part with only an output as a result', () => {
     // Shape written by the claude-code peer: the result lands as its own
     // role=user record with no `tool_input` at all.
     const [message] = classify(

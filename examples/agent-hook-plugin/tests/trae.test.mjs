@@ -43,7 +43,7 @@ test("TRAE URI guard follows the Claude Code PreToolUse response contract", () =
   assert.equal(denied.hookSpecificOutput?.permissionDecision, "deny");
   assert.match(
     denied.hookSpecificOutput?.permissionDecisionReason ?? "",
-    /OpenViking MCP read/,
+    /Business Data Platform MCP read/,
   );
   assert.deepEqual(evaluateHostUriGuard("trae", {
     tool_name: "Read",

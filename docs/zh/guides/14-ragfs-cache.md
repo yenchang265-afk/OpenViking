@@ -1,10 +1,10 @@
 # RAGFS 缓存
 
-RAGFS 缓存是 OpenViking 的可选读缓存层，用于加速文件全量读取和目录读取。它只作为加速层，不作为事实数据源；数据仍以 backend filesystem 为准。
+RAGFS 缓存是 Business Data Platform 的可选读缓存层，用于加速文件全量读取和目录读取。它只作为加速层，不作为事实数据源；数据仍以 backend filesystem 为准。
 
 CachedFileSystem 适用前提：
 
-- 只有一个 OpenViking / RAGFS 进程写入同一 namespace。
+- 只有一个 Business Data Platform / RAGFS 进程写入同一 namespace。
 - 文件和目录变更都经过 RAGFS。
 - backend 不被外部绕过 RAGFS 直接修改。
 - 缓存 Provider 的同一 key 写入或删除成功后，后续读取不会返回旧值。
@@ -55,7 +55,7 @@ openviking-server doctor
 }
 ```
 
-启动 Redis 和 OpenViking：
+启动 Redis 和 Business Data Platform：
 
 ```bash
 redis-server
@@ -80,8 +80,8 @@ openviking-server
 ### Cache PathLock
 
 将 `storage.agfs.pathlock.provider` 设为 `cache`，即可通过共享 Redis
-CacheRuntime 协调多个 OpenViking 进程的路径锁。`pathlock.namespace`
-为必填项，同一 OpenViking 部署的所有进程必须使用相同值。Cache PathLock
+CacheRuntime 协调多个 Business Data Platform 进程的路径锁。`pathlock.namespace`
+为必填项，同一 Business Data Platform 部署的所有进程必须使用相同值。Cache PathLock
 只支持内置 Redis Provider。
 
 Redis HASH key 按逻辑路径 scope 拆分：
@@ -113,11 +113,11 @@ ov:pathlock:{namespace}:scope:account:{account}:tokens
 | `read_from_replica` | 已删除，所有读命令统一访问主节点 |
 | Redis Provider `key_prefix` | CacheFS 使用 `cachefs.namespace`；QueueFS 使用 `queuefs.cache_key_prefix` |
 
-OpenViking 会对已删除字段直接返回迁移错误，不再静默转换。
+Business Data Platform 会对已删除字段直接返回迁移错误，不再静默转换。
 
 ## DynamicProvider
 
-OpenViking 已内置 DynamicProvider 加载器和版本化 C ABI。默认 wheel 不携带第三方 SDK 或 Provider 动态库；需要接入外部缓存系统时，独立部署 Provider 动态库并配置 `provider=dynamic`。
+Business Data Platform 已内置 DynamicProvider 加载器和版本化 C ABI。默认 wheel 不携带第三方 SDK 或 Provider 动态库；需要接入外部缓存系统时，独立部署 Provider 动态库并配置 `provider=dynamic`。
 
 动态库必须导出以下版本化入口：
 
@@ -129,7 +129,7 @@ C 接口契约定义在 `crates/ragfs/include/openviking_cache_provider_v1.h`。
 
 Provider 发布物应注明 ABI 版本、目标 OS/CPU、最低运行时版本、外部 SDK 版本、动态依赖和 SHA256。依赖外部原生库时，由 Provider 发布方通过 RPATH、`LD_LIBRARY_PATH` 或部署说明保证动态链接器能够找到依赖。
 
-外部 Provider 可以独立升级，不需要重新构建默认 OpenViking wheel；只有 DynamicProvider ABI 不兼容时，才需要同步升级 OpenViking。
+外部 Provider 可以独立升级，不需要重新构建默认 Business Data Platform wheel；只有 DynamicProvider ABI 不兼容时，才需要同步升级 Business Data Platform。
 
 ## 配置项
 
@@ -155,7 +155,7 @@ Provider 发布物应注明 ABI 版本、目标 OS/CPU、最低运行时版本�
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
 | `provider` | str | `"filesystem"` | `filesystem`、`memory` 或 `cache` |
-| `namespace` | str 或 null | `null` | `provider=cache` 时必填的 OpenViking 实例名 |
+| `namespace` | str 或 null | `null` | `provider=cache` 时必填的 Business Data Platform 实例名 |
 | `lock_expire_secs` | float | `30.0` | 锁 stale 超时；不得小于 `1.0` |
 
 Redis 配置：
@@ -176,7 +176,7 @@ Redis 配置：
 
 DynamicProvider 配置：
 
-`cache.params.library` 由 OpenViking 用于加载动态库，其余字段由外部 Provider 定义并作为 JSON 传入 `create`。实际参数以 Provider 发布说明为准。
+`cache.params.library` 由 Business Data Platform 用于加载动态库，其余字段由外部 Provider 定义并作为 JSON 传入 `create`。实际参数以 Provider 发布说明为准。
 
 ```json
 {
@@ -202,7 +202,7 @@ RAGFS 将 Provider 访问和各业务消费者分开：
 调用关系：
 
 ```text
-OpenViking
+Business Data Platform
   -> RAGFS / MountableFS
        |-> CachedFileSystem ------\
        |-> QueueFS cache backend --+-> shared CacheRuntime -> RedisProvider
@@ -239,7 +239,7 @@ ragfs:v1:{namespace}:file:{hash(path)}
 ragfs:v1:{namespace}:dir:{hash(path)}
 ```
 
-目录缓存保存 backend 原始 `read_dir` entries，而不是权限过滤后的最终结果。权限、角色和 agent context 仍在 OpenViking 上层实时处理。
+目录缓存保存 backend 原始 `read_dir` entries，而不是权限过滤后的最终结果。权限、角色和 agent context 仍在 Business Data Platform 上层实时处理。
 
 这样同一份目录缓存可以服务 `ls`、`tree`、`glob`、`grep` 的文件收集阶段，以及删除或移动前的路径收集。
 
@@ -283,7 +283,7 @@ ragfs:v1:{namespace}:subtree:{hash(scope)}
 请求完成后删除 inflight 条目。
 ```
 
-这只减少同一 OpenViking 进程内的重复 backend 访问，不改变 Provider 的一致性边界。
+这只减少同一 Business Data Platform 进程内的重复 backend 访问，不改变 Provider 的一致性边界。
 
 ## 缓存策略
 

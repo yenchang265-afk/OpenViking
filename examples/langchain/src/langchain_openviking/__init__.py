@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""LangChain and LangGraph integrations for OpenViking.
+"""LangChain and LangGraph integrations for Business Data Platform.
 
 The base distribution depends on ``langchain-core``. LangGraph middleware is
 loaded only when the ``langgraph`` extra (or compatible dependencies) is

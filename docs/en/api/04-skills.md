@@ -1,12 +1,12 @@
 # Skills
 
-Skills are task instructions and supporting resources for agents to read. OpenViking stores, retrieves, and manages them; the consuming Agent/Harness handles activation, tool policies, and execution. This page follows the HTTP API, SDKs, and `ov` CLI in the current repository.
+Skills are task instructions and supporting resources for agents to read. Business Data Platform stores, retrieves, and manages them; the consuming Agent/Harness handles activation, tool policies, and execution. This page follows the HTTP API, SDKs, and `ov` CLI in the current repository.
 
 ## Core Concepts
 
 ### Skill Types
 
-OpenViking supports multiple skill definition formats:
+Business Data Platform supports multiple skill definition formats:
 
 1. **Structured skill data**: Dictionary with name, description, content, etc.
 2. **SKILL.md files**: Markdown files with YAML frontmatter
@@ -86,13 +86,13 @@ Concrete examples of skill invocation.
 |-------|------|-------------|
 | allowed-tools | str / List[str] | Space-separated tool declarations or a compatible string list; parentheses can contain spaces; the consumer interprets and enforces policies |
 | tags | List[str] | Tags for categorization |
-| metadata | object | Preserved extensions such as `metadata.vikingbot.requires`; OpenViking does not install these dependencies |
+| metadata | object | Preserved extensions such as `metadata.vikingbot.requires`; Business Data Platform does not install these dependencies |
 
 Use hyphenated **`allowed-tools`** in `SKILL.md`; parsed structured data and API summaries use **`allowed_tools`**. Do not substitute the underscore spelling in frontmatter. An omitted declaration and an explicit empty declaration can have different Harness permissions; a summary with `allowed_tools: []` cannot distinguish them. Read the full definition before execution. See [VikingBot Skills](../../../bot/docs/en/concepts/06-skills.md) for instruction and metadata handling.
 
 ### MCP Format Automatic Conversion
 
-OpenViking automatically detects and converts MCP tool definitions to skill format.
+Business Data Platform automatically detects and converts MCP tool definitions to skill format.
 
 **Detection Rule**: A dictionary is treated as MCP format if it contains an `inputSchema` field.
 
@@ -231,7 +231,7 @@ Single-Skill imports return a `task_id` by default. Query the [Task API](17-task
 HTTP fields and SDK parameters do not have identical names or nesting. Python `add_skill(data, wait=False, timeout=None, options=None)` / `update_skill(skill_name, data, ...)` take `target_uri` and `telemetry` inside `options`. Put fields such as `skills`, `list_only`, `source_metadata` (add), and `from_source` (update) in `options["extra"]`. TypeScript uses `targetUri` and `extra`; Go uses `TargetURI` and `Extra`. TypeScript local path uploads require Node.js.
 
 ```python
-# Preview a local collection without writing to OpenViking
+# Preview a local collection without writing to Business Data Platform
 listing = client.add_skill(
     "./skills",
     options={"extra": {"list_only": True}},
@@ -460,8 +460,8 @@ task_id         uuid-xxx
 | Field | Type | Description |
 |-------|------|-------------|
 | `status` | string | Successful import results use `success`; synchronous failures use HTTP error responses |
-| `root_uri` | string | Canonical final URI of the skill in OpenViking (same as `uri`) |
-| `uri` | string | Canonical final URI of the skill in OpenViking (same as `root_uri`) |
+| `root_uri` | string | Canonical final URI of the skill in Business Data Platform (same as `uri`) |
+| `uri` | string | Canonical final URI of the skill in Business Data Platform (same as `root_uri`) |
 | `name` | string | Skill name |
 | `auxiliary_files` | number | Number of auxiliary files included with the skill |
 | `task_id` | string | Returned in the default asynchronous mode; query the Task API for the background processing task's final status |

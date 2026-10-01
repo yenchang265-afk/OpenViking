@@ -11,7 +11,7 @@ const turns = [
   { role: "assistant", content: "answer", turnId: "turn-001" },
 ];
 
-test("capture plan maps host identity to the OpenViking turn_id contract", () => {
+test("capture plan maps host identity to the Business Data Platform turn_id contract", () => {
   const plan = buildZcodeCapturePlan(turns, {});
   assert.deepEqual(plan.payloads, [
     { role: "user", content: "question", turn_id: "turn-001" },

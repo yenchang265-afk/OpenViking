@@ -1,10 +1,10 @@
 ---
 name: openviking-context-database
 description: >
-  Use OpenViking from OpenClaw through @openviking/openclaw-plugin: long-term memory,
+  Use Business Data Platform from OpenClaw through @openviking/openclaw-plugin: long-term memory,
   session archives, resource and Agent Skill import, semantic recall, recall trace debugging,
   and externalized tool-result recovery. Prefer this skill when the user wants to use, query,
-  debug, or operate OpenViking context from an OpenClaw agent. For first-time plugin installation,
+  debug, or operate Business Data Platform context from an OpenClaw agent. For first-time plugin installation,
   use the install-openviking-memory skill instead.
 version: 2026.6.5
 metadata:
@@ -21,28 +21,28 @@ tags:
   - recall-trace
 ---
 
-# OpenViking Context Database — OpenClaw Plugin Operator Skill
+# Business Data Platform Context Database — OpenClaw Plugin Operator Skill
 
-Use this skill after `@openviking/openclaw-plugin` is installed and configured. It describes the current OpenClaw plugin implementation, not the standalone OpenViking Python SDK.
+Use this skill after `@openviking/openclaw-plugin` is installed and configured. It describes the current OpenClaw plugin implementation, not the standalone Business Data Platform Python SDK.
 
 ## Scope and Safety Rules
 
-- The plugin is **remote-only**. It talks to an existing OpenViking server through HTTP and does not start or manage `openviking-server`.
-- Do not invent OpenViking REST endpoints. Use the registered OpenClaw tools and commands described below.
+- The plugin is **remote-only**. It talks to an existing Business Data Platform server through HTTP and does not start or manage `openviking-server`.
+- Do not invent Business Data Platform REST endpoints. Use the registered OpenClaw tools and commands described below.
 - The agent-visible `add_resource` tool is disabled by default (`enableAddResourceTool=false`). Do not use `add_resource` during search, retrieval, URI reading, or search-result optimization. Use `ov_search` and `ov_read` in those flows.
 - Use manual `/add-resource`, or `add_resource` only when it is explicitly enabled and the user explicitly asks to import, add, upload, save, or index a resource.
-- Use `add_skill` only when the user explicitly asks to import, add, install, or register an Agent Skill into OpenViking.
+- Use `add_skill` only when the user explicitly asks to import, add, install, or register an Agent Skill into Business Data Platform.
 - For local files and directories, pass the local path to the plugin tool. The plugin uploads them through `/api/v1/resources/temp_upload`; do not send raw local filesystem paths to a remote server yourself.
 - Never log or echo API keys. The plugin sends API keys as `X-API-Key` / setup probe headers and masks them in setup output.
 
 ## Current Architecture
 
-OpenClaw owns agent execution, prompts, and tool invocation. OpenViking owns long-lived context:
+OpenClaw owns agent execution, prompts, and tool invocation. Business Data Platform owns long-lived context:
 
 | Layer | Current behavior |
 |---|---|
-| `assemble` | Rebuilds compressed session history from OpenViking and injects relevant recall into the latest user message. |
-| `afterTurn` | Appends only the new turn to the OpenViking session; may trigger async commit when `pending_tokens >= tokenBudget * commitTokenThresholdRatio`. |
+| `assemble` | Rebuilds compressed session history from Business Data Platform and injects relevant recall into the latest user message. |
+| `afterTurn` | Appends only the new turn to the Business Data Platform session; may trigger async commit when `pending_tokens >= tokenBudget * commitTokenThresholdRatio`. |
 | `compact` | Runs `commit(wait=true)`, waits for archive/extraction completion, and reads back latest archive overview. |
 | Tools | Memory recall/store/forget, archive search/expand, resource/skill import/search, recall trace query, tool-result list/search/read. |
 
@@ -62,13 +62,13 @@ Core config lives under `plugins.entries.openviking.config`:
 
 | Field | Default | Purpose |
 |---|---:|---|
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking HTTP endpoint. Can also come from `OPENVIKING_BASE_URL` / `OPENVIKING_URL`. |
+| `baseUrl` | `http://127.0.0.1:1933` | Business Data Platform HTTP endpoint. Can also come from `OPENVIKING_BASE_URL` / `OPENVIKING_URL`. |
 | `apiKey` | empty | Optional API key. Can also come from `OPENVIKING_API_KEY`. |
 | `peer_role` | `none` | Memory scope: `none` (shared `viking://user/<user_id>/memories`), `assistant` (assistant-attributed memory under `.../peers/<assistant_id>/memories`), or `sender` (sender-attributed memory under `.../peers/<sender_id>/memories`). Legacy `person` is accepted as `sender`. |
 | `peer_prefix` | empty | Optional prefix for assistant `peer_id` / actor peer values when `peer_role=assistant`. |
 | `accountId` / `userId` | empty | Advanced tenant identity headers for root-key or trusted deployments. |
 | `targetUri` | `viking://~/memories` | Default search scope for legacy targeted memory search. |
-| `autoCapture` | `true` | Append sanitized turn text to OpenViking sessions. |
+| `autoCapture` | `true` | Append sanitized turn text to Business Data Platform sessions. |
 | `captureMode` | `semantic` | `semantic` or `keyword`; affects server-side extraction filtering. |
 | `captureMaxLength` | `24000` | Max sanitized text length per captured turn. |
 | `autoRecall` | `true` | Run recall before replies and inject relevant context. |
@@ -79,7 +79,7 @@ Core config lives under `plugins.entries.openviking.config`:
 | `recallMaxInjectedChars` | `4000` | Total injected character cap; complete memories that do not fit are skipped. |
 | `commitTokenThresholdRatio` | `0.5` | Async-commit threshold as a fraction (0-1) of the model context window (e.g. 0.5 = 50%); `0` commits every turn. |
 | `commitKeepRecentCount` | `10` | Recent messages kept live after afterTurn commit. Compact always uses `0`. |
-| `bypassSessionPatterns` | empty | Glob-like session keys that completely bypass OpenViking (`*` segment, `**` multi-segment). |
+| `bypassSessionPatterns` | empty | Glob-like session keys that completely bypass Business Data Platform (`*` segment, `**` multi-segment). |
 | `emitStandardDiagnostics` | `false` | Emit structured `openviking: diag {...}` lines. |
 | `logFindRequests` | `false` | Log routing for find/session writes. Also enabled by `OPENVIKING_LOG_ROUTING=1` or `OPENVIKING_DEBUG=1`. |
 | `traceRecall` | `false` | Record recall traces in memory. |
@@ -215,13 +215,13 @@ Agent Skill best practice: a skill should have precise frontmatter (`name`, trig
 | `uri` | No | Search URI. Defaults to resources plus agent skills. |
 | `limit` | No | Max results per scope, default `10`. |
 
-Use after importing resources/skills, or when the user asks to search OpenViking-managed knowledge.
+Use after importing resources/skills, or when the user asks to search Business Data Platform-managed knowledge.
 
-Important: `ov_search` returns OpenViking virtual URIs such as `viking://resources/project-docs/api.md#chunk-3`. These are not local file paths. Do not use filesystem read tools for them; call `ov_read` with the exact URI when full content is needed.
+Important: `ov_search` returns Business Data Platform virtual URIs such as `viking://resources/project-docs/api.md#chunk-3`. These are not local file paths. Do not use filesystem read tools for them; call `ov_read` with the exact URI when full content is needed.
 
 ### `ov_read`
 
-Read full content for one exact OpenViking virtual URI through `/api/v1/content/read`.
+Read full content for one exact Business Data Platform virtual URI through `/api/v1/content/read`.
 
 | Parameter | Required | Description |
 |---|---|---|
@@ -259,7 +259,7 @@ The plugin refuses to read/search a tool-result ref from another session.
 ```text
 /add-resource ./README.md --to viking://resources/openviking-readme --wait
 /add-skill ./skills/install-openviking-memory --wait --timeout=30
-/ov-search "OpenViking install" --uri viking://resources/openviking-readme --limit=5
+/ov-search "Business Data Platform install" --uri viking://resources/openviking-readme --limit=5
 /ov-recall-trace --turn latest --source auto_recall --include-content
 ```
 
@@ -272,7 +272,7 @@ Command parsers support quoted args and flags. Resource-only flags are rejected 
 | `configured=false` | Setup did not persist config | Re-run `openclaw openviking setup ... --json`; branch on JSON `error`. |
 | `slotActive=false` | Another context engine owns the slot or gateway has stale state | Inspect `plugins.slots.contextEngine`; use `--force-slot` only after user confirms. |
 | `health.ok=false` | Server unreachable or wrong `baseUrl` / key | Check `baseUrl`, network, `/health`, and auth. |
-| No long-term memory after a fresh fact | `/compact` or commit/extraction has not run, or server extraction failed | Use `memory_store` for explicit remember/save/store intents; otherwise run `/compact` or wait for threshold commit, then check OpenViking server logs. |
+| No long-term memory after a fresh fact | `/compact` or commit/extraction has not run, or server extraction failed | Use `memory_store` for explicit remember/save/store intents; otherwise run `/compact` or wait for threshold commit, then check Business Data Platform server logs. |
 | Recall misses shared documents | `resource` target is not enabled | Use `memory_recall` with `resourceTypes:["resource"]` or configure `recallTargetTypes: ["resource"]`. |
 | Summary lacks exact detail | Archive summary is too coarse | Use `ov_archive_search` with concrete keywords, then `ov_archive_expand`. |
 | Large tool output preview is insufficient | Tool result was externalized | Use `openviking_tool_result_search/read` with the ref. |

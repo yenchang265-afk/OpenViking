@@ -6,7 +6,7 @@
 
 - 页面入口 `/vikingbot`；新增管理接口集中在 `/api/v1/admin`，网页聊天继续复用原有接口。
 - IM 连接和收发时间线持久化到 Bot 数据目录的 `studio.sqlite3`，文件权限 0600。它含应用与专用用户凭证，备份需按服务端配置处理。
-- Studio 管理的 IM 会话仅开放带绑定身份的 OpenViking 查询与记忆工具；Shell、本地文件、定时任务及未显式批准的 MCP 工具默认不可用。
+- Studio 管理的 IM 会话仅开放带绑定身份的 Business Data Platform 查询与记忆工具；Shell、本地文件、定时任务及未显式批准的 MCP 工具默认不可用。
 - 首期仅服务管理员可管理渠道；按当前 account 隔离连接及 IM 历史。接入时选择同账户普通用户，由服务端绑定现有凭证；浏览器无需接收或输入用户 API Key。管理员身份不可选，仅存储哈希而无法自动绑定凭证的用户显示不可用。
 - 受管启动时自动为父子进程生成内部管理令牌，不写回配置文件。独立 Gateway 需要额外的管理部署支持。
 - 连接生命周期支持凭证更新、暂停/恢复、重启恢复连接与群内验证；具体接入方式（扫码、手动表单等）由各平台 provider 实现。
@@ -41,9 +41,9 @@
 
 浏览器管理接口共 13 个，加上复用的用户列表接口。扫码任务的重试、取消和转手动共用一个 actions 接口，连接生命周期保持独立方法。Studio 管理路由及 Gateway 内部 dispatch 均不进入 OpenAPI schema；接口仍正常注册并保留原鉴权。旧的 `PATCH {action: ...}` 和 `X-OpenViking-Studio-Account` 已移除。该变更调整当前未发布 PR 内的接口，前后端需一起更新；不为旧的临时浏览器接口保留兼容入口。
 
-网页会话创建、列表、历史、删除、Bot 聊天流式响应和健康状态继续复用既有 API。平台收发记录按连接归属并保存发送状态，不能直接替换为 OpenViking 上下文会话历史。
+网页会话创建、列表、历史、删除、Bot 聊天流式响应和健康状态继续复用既有 API。平台收发记录按连接归属并保存发送状态，不能直接替换为 Business Data Platform 上下文会话历史。
 
-`POST /bot/v1/studio/dispatch` 仅在 Bot Gateway 内部保留，用内部令牌及 loopback 限制服务端调用。浏览器不直接调用；账号和绑定用户仍在 OpenViking 服务端校验。
+`POST /bot/v1/studio/dispatch` 仅在 Bot Gateway 内部保留，用内部令牌及 loopback 限制服务端调用。浏览器不直接调用；账号和绑定用户仍在 Business Data Platform 服务端校验。
 
 ### 后续接入钉钉等平台
 
@@ -122,7 +122,7 @@ VikingBot                         Bot 运行正常
 
 - 渠道配置及密钥修改仅管理员可用；服务端逐接口鉴权，不能仅隐藏按钮。
 - 首期群历史仅对该连接所属管理范围内的管理员开放。普通 Studio 用户只查看自己的网页会话；后续另行实现 IM 成员身份绑定与按群授权。
-- 外部应用必须绑定明确的 OpenViking account/workspace 与运行身份；无绑定或无权限时拒绝启用，不回退 root 身份。
+- 外部应用必须绑定明确的 Business Data Platform account/workspace 与运行身份；无绑定或无权限时拒绝启用，不回退 root 身份。
 - 群会话不得继承管理员私人网页会话或个人记忆。群可访问资源与记忆范围使用受限的渠道身份配置。
 - 列表、搜索、详情、附件、流事件均使用同一服务端权限过滤；禁止先全量返回再由前端过滤。
 - 群历史中的文字只是消息内容，不作为 Studio 管理指令执行。
@@ -134,7 +134,7 @@ VikingBot                         Bot 运行正常
 | 能力 | 现状 | 实现工作 |
 |---|---|---|
 | 网页聊天 | Studio 已有 `useChat`、Composer、MessageList，Server 代理 Bot 流式接口 | 复用组件与请求生命周期，增加独立入口 |
-| 网页历史 | Studio 当前读取 OpenViking Session 与归档 | 复用持久历史，避免另建重复会话 |
+| 网页历史 | Studio 当前读取 Business Data Platform Session 与归档 | 复用持久历史，避免另建重复会话 |
 | Bot 历史 | Bot SessionManager 持久化并可列举；OpenAPI `/sessions` 使用运行时内存索引 | 新增持久化的统一会话索引和权限过滤 |
 | @识别 | 当前基于 `bot_name` 匹配 mention 名称 | 改为机器人稳定身份匹配，兼容已配置名称 |
 | 渠道生命周期 | 配置加载与启动已有；文档要求修改配置后重启 | 新增单渠道受控应用配置、替换、暂停、恢复与回滚 |
@@ -142,7 +142,7 @@ VikingBot                         Bot 运行正常
 
 ## 6. 建议接口与数据契约
 
-以下均为拟新增能力，不代表现有 API 已提供。Studio 统一访问 OpenViking Server，由 Server 进行鉴权并调用受管 Bot。
+以下均为拟新增能力，不代表现有 API 已提供。Studio 统一访问 Business Data Platform Server，由 Server 进行鉴权并调用受管 Bot。
 
 | 接口 | 用途 |
 |---|---|
@@ -153,7 +153,7 @@ VikingBot                         Bot 运行正常
 
 网页发送继续复用现有 chat/stream 接口；统一 conversation ID 必须能映射到原 Session ID。IM 会话不提供网页发送接口。
 
-Conversation 索引保存：权限作用域、来源、连接、原始会话引用、群/话题显示信息、最近活动时间。原始身份标识仅服务端保存。历史正文沿用现有存储，索引不复制两份消息；同一 Bot 会话关联的 OpenViking 会话必须去重映射。
+Conversation 索引保存：权限作用域、来源、连接、原始会话引用、群/话题显示信息、最近活动时间。原始身份标识仅服务端保存。历史正文沿用现有存储，索引不复制两份消息；同一 Bot 会话关联的 Business Data Platform 会话必须去重映射。
 
 历史消息区分 generated、send_failed、sent 等状态；不能把模型输出视为已发送。旧历史缺少发送证据时标注“发送状态未知”。已有会话迁移时不能推测拥有者；无法确定权限归属的记录暂不对普通用户开放。
 

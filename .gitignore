@@ -123,7 +123,7 @@ config/settings.py
 # Docker
 docker-compose.override.yml
 
-# OpenViking specific
+# Business Data Platform specific
 /data/*
 /demo_data/*
 /benchmark_data/*

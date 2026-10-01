@@ -150,7 +150,7 @@ def _run_coro_blocking(coro: Any) -> Any:
 
 
 def _dump_openviking_config(config: Any) -> Dict[str, Any]:
-    """Return a full OpenViking config dict for encryption bootstrap."""
+    """Return a full Business Data Platform config dict for encryption bootstrap."""
     if hasattr(config, "to_dict"):
         dumped = config.to_dict()
     elif hasattr(config, "model_dump"):
@@ -158,9 +158,9 @@ def _dump_openviking_config(config: Any) -> Dict[str, Any]:
     elif isinstance(config, dict):
         dumped = config
     else:
-        raise TypeError("OpenViking config must expose to_dict() or model_dump()")
+        raise TypeError("Business Data Platform config must expose to_dict() or model_dump()")
     if not isinstance(dumped, dict):
-        raise TypeError("OpenViking config dump must be a dictionary")
+        raise TypeError("Business Data Platform config dump must be a dictionary")
     return dumped
 
 
@@ -171,7 +171,7 @@ def build_runtime_ragfs_binding_config(config: Any) -> tuple[RagfsBindingConfig,
     storage = _get_config_value(config, "storage")
     agfs_config = _get_config_value(storage, "agfs") if storage is not None else None
     if agfs_config is None:
-        raise ValueError("OpenViking config storage.agfs is required")
+        raise ValueError("Business Data Platform config storage.agfs is required")
     cache_config = _get_config_value(config, "cache")
 
     log_config = _get_config_value(config, "log")

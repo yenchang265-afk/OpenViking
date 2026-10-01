@@ -1,6 +1,6 @@
 ---
 name: daily-report
-description: Compile timestamped conversation logs, agent sessions, IM messages, collaborative documents, meeting notes, task records, and similar OpenViking materials into concise, evidence-grounded daily reports. Use with ov compile when the user asks for a daily work report, end-of-day digest, 日报, or reports for one or more dates, especially when activities must be reconstructed across heterogeneous sources without treating plans or agent suggestions as completed work.
+description: Compile timestamped conversation logs, agent sessions, IM messages, collaborative documents, meeting notes, task records, and similar Business Data Platform materials into concise, evidence-grounded daily reports. Use with ov compile when the user asks for a daily work report, end-of-day digest, 日报, or reports for one or more dates, especially when activities must be reconstructed across heterogeneous sources without treating plans or agent suggestions as completed work.
 ---
 
 # Daily Report
@@ -179,4 +179,4 @@ Before finishing, verify that:
 - the report is concise, outcome-first, and free of empty or speculative sections;
 - every page has valid OKF frontmatter with non-empty `type`, `title`, `description`, and `date`;
 - valid unknown frontmatter fields and unrelated target files remain intact;
-- no OpenViking-generated semantic sidecars or duplicate operation logs are created.
+- no Business Data Platform-generated semantic sidecars or duplicate operation logs are created.

@@ -4,7 +4,7 @@
 
 [English Version README](./README.md)
 
-RAG 是一个独立的 RAG（检索增强生成）系统评估框架，完全兼容最新版本的 OpenViking。
+RAG 是一个独立的 RAG（检索增强生成）系统评估框架，完全兼容最新版本的 Business Data Platform。
 
 ### 项目结构
 
@@ -52,7 +52,7 @@ benchmark/RAG/
 #### 1. 安装依赖
 
 ```bash
-cd OpenViking
+cd Business Data Platform
 uv pip install -e ".[benchmark]"
 source .venv/bin/activate
 ```
@@ -191,11 +191,11 @@ benchmark/RAG/config/
 - **答案生成**：从检索的上下文生成答案
 - **LLM 作为评判者评估**：使用 LLM 评估生成答案的质量
 
-#### 4. 配置 OpenViking
+#### 4. 配置 Business Data Platform
 
-如果需要使用自定义 OpenViking 配置（用于数据摄取和检索），在 benchmark/RAG 目录中创建 `ov.conf` 文件。这将覆盖默认的 OpenViking 设置。
+如果需要使用自定义 Business Data Platform 配置（用于数据摄取和检索），在 benchmark/RAG 目录中创建 `ov.conf` 文件。这将覆盖默认的 Business Data Platform 设置。
 
-您可以参考 OpenViking 根目录中的 `examples/ov.conf.example` 了解配置格式。
+您可以参考 Business Data Platform 根目录中的 `examples/ov.conf.example` 了解配置格式。
 
 #### 5. 运行评估
 
@@ -290,10 +290,10 @@ RAG 使用 YAML 配置文件来控制评估过程。每个数据集在 `config/`
 评估过程包括 5 个主要阶段：
 
 1. **数据准备**
-   - 将原始数据集转换为 OpenViking 友好格式
+   - 将原始数据集转换为 Business Data Platform 友好格式
    - 处理文档以进行摄取
 2. **数据摄取**
-   - 将处理后的文档摄取到 OpenViking 向量存储中
+   - 将处理后的文档摄取到 Business Data Platform 向量存储中
    - 为文档创建嵌入
    - 存储向量索引以进行检索
 3. **答案生成**
@@ -329,8 +329,8 @@ Output/
         └── benchmark.log                 # 日志文件
 ```
 
-**OpenViking 存储：**
-Benchmark 使用 Python HTTP SDK 所配置的 OpenViking Server。内容和向量索引的存储位置由 Server 管理，而不是由 Benchmark 进程管理。
+**Business Data Platform 存储：**
+Benchmark 使用 Python HTTP SDK 所配置的 Business Data Platform Server。内容和向量索引的存储位置由 Server 管理，而不是由 Benchmark 进程管理。
 
 #### 文件描述和示例
 
@@ -629,13 +629,13 @@ FinanceBench 有 3 种问题类型：
    - `build_prompt()`：构建提示
    - `post_process_answer()`：后处理答案
 
-### 与 OpenViking 集成
+### 与 Business Data Platform 集成
 
-本项目通过以下方式与 OpenViking 集成：
+本项目通过以下方式与 Business Data Platform 集成：
 
-- 使用 OpenViking Python HTTP SDK 进行数据摄取和检索
-- 通过 `ovcli.conf` 或 SDK 环境变量配置 OpenViking 连接
-- 支持动态加载 OpenViking 的最新功能
+- 使用 Business Data Platform Python HTTP SDK 进行数据摄取和检索
+- 通过 `ovcli.conf` 或 SDK 环境变量配置 Business Data Platform 连接
+- 支持动态加载 Business Data Platform 的最新功能
 
 ### 常见问题（FAQ）
 
@@ -666,4 +666,4 @@ FinanceBench 有 3 种问题类型：
 
 ### 许可证
 
-与 OpenViking 相同的许可证。
+与 Business Data Platform 相同的许可证。

@@ -1,6 +1,6 @@
-# OpenViking Install And Package Contract
+# Business Data Platform Install And Package Contract
 
-This document records the install/package contract that the OpenViking OpenClaw plugin must keep stable.
+This document records the install/package contract that the Business Data Platform OpenClaw plugin must keep stable.
 
 It intentionally documents the current package contract instead of the unpublished TOS shell-script flow from #2613. Current main does not contain those TOS publishing scripts, so the safe contract is the npm/openclaw package shape that is actually built and installed by this repository.
 
@@ -17,7 +17,7 @@ The plugin package must include:
 | `openclaw.plugin.json` | Plugin manifest. |
 | `install-manifest.json` | Install-time file contract. |
 | `README.md`, `INSTALL.md`, `INSTALL-ZH.md` | User-facing install and usage docs. |
-| `skills/` | Packaged OpenViking skills. |
+| `skills/` | Packaged Business Data Platform skills. |
 
 Helper modules added under `plugin/` must be listed in the package `files` contract or included by a package-level directory rule.
 

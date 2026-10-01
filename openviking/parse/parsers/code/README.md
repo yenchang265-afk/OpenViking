@@ -1,6 +1,6 @@
 # 代码解析方案 (Code Parser)
 
-OpenViking 通过 **Code Parser** 模块实现对代码仓库的整体解析与理解。与普通文档的拆解式处理不同，代码解析采用了基于目录结构的整体映射策略，旨在保持代码项目的完整上下文。
+Business Data Platform 通过 **Code Parser** 模块实现对代码仓库的整体解析与理解。与普通文档的拆解式处理不同，代码解析采用了基于目录结构的整体映射策略，旨在保持代码项目的完整上下文。
 
 ## 概览
 
@@ -22,11 +22,11 @@ OpenViking 通过 **Code Parser** 模块实现对代码仓库的整体解析与�
 
 ## 上下文映射体系
 
-我们将代码仓库映射到 OpenViking 的标准分层描述体系中。
+我们将代码仓库映射到 Business Data Platform 的标准分层描述体系中。
 
 ### 1. Viking URI 映射
 
-假设用户导入了 `OpenViking` 仓库：
+假设用户导入了 `Business Data Platform` 仓库：
 
 ```python
 client.add_resource(
@@ -116,12 +116,12 @@ viking://resources/github/volcengine/OpenViking/
 client.add_resource(
     "https://github.com/volcengine/OpenViking",
     to="viking://resources/github/volcengine/OpenViking",
-    reason="引入 OpenViking 源码作为参考"
+    reason="引入 Business Data Platform 源码作为参考"
 )
 
 # 搜索代码逻辑
 results = client.find(
-    "OpenViking 和 VikingDB 的关系是什么？",
+    "Business Data Platform 和 VikingDB 的关系是什么？",
     target_uri="viking://resources/github/volcengine/OpenViking/OpenViking/docs/zh/"
 )
 ```

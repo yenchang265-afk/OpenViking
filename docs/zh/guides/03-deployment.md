@@ -1,12 +1,12 @@
 # 服务端部署
 
-OpenViking 以 HTTP 服务运行。安装服务端之前，先选择由谁运行服务：
+Business Data Platform 以 HTTP 服务运行。安装服务端之前，先选择由谁运行服务：
 
 | 服务方式 | 你需要准备什么 |
 | --- | --- |
-| [火山引擎托管 OpenViking](https://www.volcengine.com/product/openviking-service) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)获取 API Key，用独立 CLI 连接，无需本地服务端或模型配置。 |
+| [火山引擎托管 Business Data Platform](https://www.volcengine.com/product/openviking-service) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)获取 API Key，用独立 CLI 连接，无需本地服务端或模型配置。 |
 | 团队已有服务或他人部署 | 向管理员获取服务地址和 user/admin key。 |
-| 自建 OpenViking | 按下文安装、配置和运行服务端。 |
+| 自建 Business Data Platform | 按下文安装、配置和运行服务端。 |
 
 托管及已有服务用户可直接从 [CLI 快速开始](../getting-started/02-quickstart.md)进入。托管服务的可用范围、套餐和额度见[官方服务文档](https://docs.volcengine.com/docs/84313/2374478)。
 
@@ -102,7 +102,7 @@ openviking-server
 
 ## 使用 Systemd 部署服务（推荐）
 
-对于 Linux 系统，可以使用 Systemd 服务来管理 OpenViking，实现自动重启、开机自启等功能。首先，你应该已经成功安装并配置了 OpenViking 服务器，确保它可以正常运行，再进行服务化部署。
+对于 Linux 系统，可以使用 Systemd 服务来管理 Business Data Platform，实现自动重启、开机自启等功能。首先，你应该已经成功安装并配置了 Business Data Platform 服务器，确保它可以正常运行，再进行服务化部署。
 
 ### 创建 Systemd 服务文件
 
@@ -110,12 +110,12 @@ openviking-server
 
 ```ini
 [Unit]
-Description=OpenViking HTTP Server
+Description=Business Data Platform HTTP Server
 After=network.target
 
 [Service]
 Type=simple
-# 替换为运行 OpenViking 的用户
+# 替换为运行 Business Data Platform 的用户
 User=your-username
 # 替换为用户组
 Group=your-group
@@ -136,7 +136,7 @@ WantedBy=multi-user.target
 
 ### 管理服务
 
-创建好服务文件后，使用以下命令管理 OpenViking 服务：
+创建好服务文件后，使用以下命令管理 Business Data Platform 服务：
 
 ```bash
 # 重载 systemd 配置
@@ -201,7 +201,7 @@ curl http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 
 ### Docker
 
-OpenViking 提供预构建的 Docker 镜像，发布在 GitHub Container Registry。运行目录为 `/app/.openviking`，因此默认的 `storage.workspace`（`./data`）解析为 `/app/.openviking/data`。默认工作区、`ov.conf` 和 `ovcli.conf` 共用一个持久卷。若将工作区配置为此目录以外的绝对路径，需要另外挂载该路径：
+Business Data Platform 提供预构建的 Docker 镜像，发布在 GitHub Container Registry。运行目录为 `/app/.openviking`，因此默认的 `storage.workspace`（`./data`）解析为 `/app/.openviking/data`。默认工作区、`ov.conf` 和 `ovcli.conf` 共用一个持久卷。若将工作区配置为此目录以外的绝对路径，需要另外挂载该路径：
 
 ```bash
 docker run -d \
@@ -215,7 +215,7 @@ docker run -d \
 > 推荐优先使用 `ghcr.io` 镜像；如果访问有问题，可改用 `openviking-cn-beijing.cr.volces.com/volcengine/openviking:latest`。本节后续命令同理。
 
 Docker 镜像默认会同时启动：
-- OpenViking HTTP 服务，端口 `1933`（绑定 `0.0.0.0`），同时在 `/studio` 提供 Web Studio 前端
+- Business Data Platform HTTP 服务，端口 `1933`（绑定 `0.0.0.0`），同时在 `/studio` 提供 Web Studio 前端
 - `vikingbot` gateway
 
 由于容器内服务绑定 `0.0.0.0`（Docker 端口映射所必需），你**必须**在 `ov.conf` 中设置 `root_api_key`：
@@ -330,7 +330,7 @@ docker compose up -d
 
 ### 多实例部署注意事项
 
-使用本地向量后端（`local` 或 `cuvs`）时，OpenViking 默认通过操作系统文件锁独占 `storage.workspace`。`.openviking.lock` 文件会保留在磁盘上，文件存在不代表服务正在运行；正常关闭或进程终止后，操作系统会释放锁。不要手动删除运行中服务的锁文件。
+使用本地向量后端（`local` 或 `cuvs`）时，Business Data Platform 默认通过操作系统文件锁独占 `storage.workspace`。`.openviking.lock` 文件会保留在磁盘上，文件存在不代表服务正在运行；正常关闭或进程终止后，操作系统会释放锁。不要手动删除运行中服务的锁文件。
 
 远程向量后端（`http`、`volcengine`、`vikingdb`）不会获取此 workspace 锁，包括文件存放在共享 NAS 上的情况，无需设置 `storage.skip_process_lock=true`。把本地向量数据库放在 NAS 上，并不会使它支持多进程共享。
 
@@ -394,7 +394,7 @@ docker compose up -d
 
 如需公网 HTTPS 访问，请参考 [公网访问指南](12-public-access.md)。
 
-如需自行构建镜像，请显式传入 OpenViking 版本：
+如需自行构建镜像，请显式传入 Business Data Platform 版本：
 `docker build --build-arg OPENVIKING_VERSION=0.3.12 -t openviking:latest .`
 
 ### Kubernetes + Helm

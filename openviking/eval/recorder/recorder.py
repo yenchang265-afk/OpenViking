@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-IO Recorder implementation for OpenViking evaluation.
+IO Recorder implementation for Business Data Platform evaluation.
 """
 
 import json

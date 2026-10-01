@@ -1,6 +1,6 @@
 # Retrieval Mechanism
 
-OpenViking uses two-stage retrieval: intent analysis + hierarchical retrieval + rerank.
+Business Data Platform uses two-stage retrieval: intent analysis + hierarchical retrieval + rerank.
 
 ## Overview
 

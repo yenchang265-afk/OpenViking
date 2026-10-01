@@ -1,4 +1,4 @@
-# OpenViking cuVS benchmark plan
+# Business Data Platform cuVS benchmark plan
 
 相关文档：[集成计划](./openviking-cuvs-integration-plan.md)、
 [初步结果](../../benchmark/cuvs/PRELIMINARY_RESULTS.md)。
@@ -7,13 +7,13 @@
 
 本 benchmark 不追求单个“最高 QPS”数字，而是回答四个对集成决策更有用的问题：
 
-1. 在精确检索下，cuVS brute-force 相比 OpenViking native flat 的延迟和吞吐拐点在哪里？
+1. 在精确检索下，cuVS brute-force 相比 Business Data Platform native flat 的延迟和吞吐拐点在哪里？
 2. 在相同 Recall@K 下，CAGRA 能提供多少延迟、吞吐和容量收益？
 3. 标量过滤、Python 调用和记录回表后，GPU 优势还剩多少？
 4. 当前延迟重建策略对冷启动和写后首查造成多大代价？
 
 cuVS 官方建议从 build time、search quality 和 search performance 三个维度比较向量索引；
-本方案沿用这个原则，并增加 OpenViking 集成层与 mutation lifecycle 的测量。
+本方案沿用这个原则，并增加 Business Data Platform 集成层与 mutation lifecycle 的测量。
 
 参考：
 
@@ -22,14 +22,14 @@ cuVS 官方建议从 build time、search quality 和 search performance 三个�
 
 ## 被测后端
 
-| 名称 | OpenViking 配置 | 作用 |
+| 名称 | Business Data Platform 配置 | 作用 |
 | --- | --- | --- |
 | Native exact | `backend=local`, `IndexType=flat` | CPU flat 基线；精确性相对于其实际存储表示定义 |
 | cuVS exact | `backend=cuvs`, `algorithm=brute_force` | GPU 在配置的 device dtype（默认 float32，可显式选择 float16）表示上的精确检索 |
 | cuVS ANN | `backend=cuvs`, `algorithm=cagra` | 在固定 Recall@K 下比较 ANN 性能 |
 
 可以使用 `cuvs-bench` 的 HNSWlib 或其他算法作为算法级参考，但不能把它们当作
-OpenViking 端到端基线，因为它们没有经过相同的过滤、label mapping 和记录回表路径。
+Business Data Platform 端到端基线，因为它们没有经过相同的过滤、label mapping 和记录回表路径。
 
 ### Dtype 与非侵入性原则
 
@@ -53,7 +53,7 @@ rerank，不能用简单 cast 代替。
 
 ## 与 agent-memory benchmark 的关系
 
-OpenViking 仓库已经包含多类 benchmark，它们可以作为 cuVS 集成的质量与端到端 guardrail：
+Business Data Platform 仓库已经包含多类 benchmark，它们可以作为 cuVS 集成的质量与端到端 guardrail：
 
 | 仓库目录 | 主要问题 | 在 cuVS 评测中的用途 |
 | --- | --- | --- |
@@ -110,7 +110,7 @@ corpus，把总索引扩展到 100K/1M/5M/10M，同时保留原题 evidence 作�
 - Recall@10、Recall@100；
 - peak host RSS、peak GPU memory 和 index size。
 
-### L2：OpenViking collection 层
+### L2：Business Data Platform collection 层
 
 通过 `search_by_vector()` 发起查询，包含 Python adapter、filter translation、label mapping
 和记录回表，但使用预先生成的 query vectors，避免 embedding 服务掩盖检索差异。
@@ -119,7 +119,7 @@ corpus，把总索引扩展到 100K/1M/5M/10M，同时保留原题 evidence 作�
 
 ### L3：服务层
 
-通过 OpenViking server 发起请求，分别报告：
+通过 Business Data Platform server 发起请求，分别报告：
 
 - vector-ready 请求：客户端直接提供 query vector；
 - full retrieval 请求：包含 embedding 和其他业务处理。
@@ -128,7 +128,7 @@ full retrieval 只用于判断向量检索在总延迟中的占比，不用于�
 
 ## 数据集矩阵
 
-先跑能够代表 OpenViking 的 synthetic workload，再用公开 ANN 数据集交叉验证。
+先跑能够代表 Business Data Platform 的 synthetic workload，再用公开 ANN 数据集交叉验证。
 
 | 维度 | 建议取值 | 说明 |
 | --- | --- | --- |
@@ -198,7 +198,7 @@ warm fast path 直接入队，不获取 caller 侧 device gate；dirty/cold snap
 - L2/L3 应继续以单 query 请求为主，同时分别测默认关闭和 opt-in micro-batching，并记录
   实际 batch-size 分布、`batch_wait`、`gpu_gate_queue`、QPS 与 P95；
 - 下一阶段优先评估 persistent query/result buffers、allocator reuse 和 host 同步优化，再决定
-  是否支持 CAGRA micro-batching 或多个并行 batch dispatch；OpenViking 的 scheduler 与 cuVS
+  是否支持 CAGRA micro-batching 或多个并行 batch dispatch；Business Data Platform 的 scheduler 与 cuVS
   官方的 Dynamic Batching 组件不是同一实现。
 
 ## 主要图表

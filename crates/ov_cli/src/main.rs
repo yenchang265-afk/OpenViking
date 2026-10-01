@@ -137,7 +137,7 @@ impl CliContext {
 
 #[derive(Parser)]
 #[command(name = "openviking")]
-#[command(about = "OpenViking - An Agent-native context database")]
+#[command(about = "Business Data Platform - An Agent-native context database")]
 #[command(version = env!("OPENVIKING_CLI_VERSION"))]
 #[command(arg_required_else_help = true)]
 struct Cli {
@@ -334,7 +334,7 @@ enum AclCommands {
 #[derive(Subcommand)]
 enum Commands {
     // --- Data Operations ---
-    /// [Data] Add resources into OpenViking
+    /// [Data] Add resources into Business Data Platform
     AddResource {
         /// Local path or URL to import
         #[arg(
@@ -343,7 +343,7 @@ enum Commands {
             conflicts_with = "manifest"
         )]
         path: Option<String>,
-        /// Apply an OpenViking Assets manifest (openviking-assets/1): create or sync every selected
+        /// Apply a Business Data Platform Assets manifest (openviking-assets/1): create or sync every selected
         /// asset. Run options go into --args (supported keys: catalog, dry_run, skip_failed)
         #[arg(
             short = 'm',
@@ -1061,7 +1061,7 @@ enum Commands {
         #[arg(long, default_value_t = false, help_heading = "Common options")]
         include_vectors: bool,
     },
-    /// [Data] Back up public OpenViking scopes as a restore-only .ovpack
+    /// [Data] Back up public Business Data Platform scopes as a restore-only .ovpack
     Backup {
         /// Output .ovpack file path
         #[arg(value_name = "output.ovpack")]
@@ -1201,13 +1201,13 @@ enum Commands {
         #[command(subcommand)]
         cmd: SnapshotCmd,
     },
-    /// [Status] All OpenViking Server components status
+    /// [Status] All Business Data Platform Server components status
     Status {
         /// Show full component tables
         #[arg(long, help_heading = "Common options")]
         verbose: bool,
     },
-    /// [Status] Observe OpenViking Server components status
+    /// [Status] Observe Business Data Platform Server components status
     Observer {
         #[command(subcommand)]
         action: ObserverCommands,
@@ -2163,7 +2163,7 @@ enum ConfigCommands {
 
 #[derive(Subcommand)]
 enum ConfigAddTarget {
-    /// Add an OpenViking Service config
+    /// Add a Business Data Platform Service config
     OvService(ConfigAddOvServiceArgs),
     /// Add a custom config
     Custom(ConfigAddCustomArgs),
@@ -2207,7 +2207,7 @@ struct ConfigAddCustomArgs {
     /// Saved config name. Agents should pass this for idempotent retries; generated when omitted.
     #[arg(long, value_name = "name", help_heading = "Common options")]
     name: Option<String>,
-    /// OpenViking server URL
+    /// Business Data Platform server URL
     #[arg(long, value_name = "url", help_heading = "Common options")]
     url: Option<String>,
     /// Read API key from stdin
@@ -2265,7 +2265,7 @@ struct ConfigEditArgs {
     /// Rename the saved config
     #[arg(long, value_name = "name", help_heading = "Common options")]
     new_name: Option<String>,
-    /// New server URL. OpenViking Service configs use a fixed URL.
+    /// New server URL. Business Data Platform Service configs use a fixed URL.
     #[arg(long, value_name = "url", help_heading = "Common options")]
     url: Option<String>,
     /// Read replacement API key from stdin
@@ -2989,7 +2989,7 @@ fn is_bool_arg(value: &str) -> bool {
 fn language_required_message() -> String {
     format!(
         "{} {}\n{}:\n  {}\n  {}",
-        theme::brand_title("OpenViking").bold(),
+        theme::brand_title("Business Data Platform").bold(),
         theme::body("needs a display language before running commands."),
         theme::strong("Run one of"),
         theme::command("ov language en").bold(),

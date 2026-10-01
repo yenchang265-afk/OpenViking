@@ -1,6 +1,6 @@
 // GENERATED FROM examples/memory-plugin-shared/lib. DO NOT EDIT.
 /**
- * The one path from a hook to the OpenViking server.
+ * The one path from a hook to the Business Data Platform server.
  *
  * Every harness used to own its own AbortController, header block and envelope
  * parser, and they drifted: one sent the api key twice, one named the operator
@@ -18,7 +18,7 @@
 const MIN_TIMEOUT_MS = 1000;
 
 /**
- * The headers every harness puts on every OpenViking request.
+ * The headers every harness puts on every Business Data Platform request.
  *
  * `identityHeaders` overrides `cfg.sendIdentityHeaders` for the callers that
  * decide per request rather than per config — the doctor probes both ways.

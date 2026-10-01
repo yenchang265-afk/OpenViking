@@ -10,7 +10,7 @@ from .base import Hook, HookContext
 try:
     from vikingbot.hooks.builtins.openviking_hooks import hooks as _openviking_hooks
 except Exception as e:
-    logger.warning(f"OpenViking built-in hooks unavailable: {e}")
+    logger.warning(f"Business Data Platform built-in hooks unavailable: {e}")
     _openviking_hooks = {}
 
 

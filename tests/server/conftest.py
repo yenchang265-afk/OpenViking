@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 
-"""Shared fixtures for OpenViking server tests."""
+"""Shared fixtures for Business Data Platform server tests."""
 
 import asyncio
 import shutil

@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Identity and role types for OpenViking multi-tenant HTTP Server."""
+"""Identity and role types for Business Data Platform multi-tenant HTTP Server."""
 
 from __future__ import annotations
 
@@ -64,7 +64,7 @@ class Role(str):
 
 
 class AuthMode(str, Enum):
-    """Authentication modes for OpenViking server.
+    """Authentication modes for Business Data Platform server.
 
     Built-in modes. Custom modes are plain strings not in this enum.
     """

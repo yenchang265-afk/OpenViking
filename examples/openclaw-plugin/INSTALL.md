@@ -1,6 +1,6 @@
-# Install OpenViking for OpenClaw
+# Install Business Data Platform for OpenClaw
 
-OpenViking provides long-term memory, knowledge base search, semantic retrieval, and RAG-style context for OpenClaw through the `@openviking/openclaw-plugin` plugin.
+Business Data Platform provides long-term memory, knowledge base search, semantic retrieval, and RAG-style context for OpenClaw through the `@openviking/openclaw-plugin` plugin.
 
 This guide describes the current plugin install flow. It is written for both people and automation agents.
 
@@ -29,7 +29,7 @@ openclaw plugins install clawhub:@openviking/openclaw-plugin
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
 
-The plugin connects to an existing OpenViking server. It does not start the OpenViking server for you. Start OpenViking first, keep it running, then point the plugin `baseUrl` at that HTTP service. The default local URL is `http://127.0.0.1:1933`.
+The plugin connects to an existing Business Data Platform server. It does not start the Business Data Platform server for you. Start Business Data Platform first, keep it running, then point the plugin `baseUrl` at that HTTP service. The default local URL is `http://127.0.0.1:1933`.
 
 OpenClaw plugin package boundaries:
 
@@ -46,9 +46,9 @@ node -v
 openclaw --version
 ```
 
-## Start OpenViking Server
+## Start Business Data Platform Server
 
-For a local OpenViking server on the same machine as OpenClaw:
+For a local Business Data Platform server on the same machine as OpenClaw:
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -66,7 +66,7 @@ mkdir -p ~/.openviking/data/log
 nohup openviking-server > ~/.openviking/data/log/openviking.log 2>&1 &
 ```
 
-If OpenViking runs on another machine, start it on a reachable host/port, for example:
+If Business Data Platform runs on another machine, start it on a reachable host/port, for example:
 
 ```bash
 openviking-server --host 0.0.0.0 --port 1933
@@ -118,7 +118,7 @@ openclaw openviking setup --base-url http://127.0.0.1:1933 --api-key sk-xxx --js
 
 The setup command writes `plugins.entries.openviking.config` and activates `plugins.slots.contextEngine=openviking`.
 
-If the OpenViking server is temporarily unreachable but you still want to save the config:
+If the Business Data Platform server is temporarily unreachable but you still want to save the config:
 
 ```bash
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --allow-offline --json
@@ -141,13 +141,13 @@ If another context engine already owns the slot, setup will not replace it by de
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --force-slot --json
 ```
 
-Choose `--peer-role` from what the OpenViking user represents:
+Choose `--peer-role` from what the Business Data Platform user represents:
 
 | Value | Storage example | Use when |
 | --- | --- | --- |
-| `none` (default) | `viking://user/alice/memories/...` | All conversations for this OpenViking user share user-level memory. No peer-specific memory subtree is used. |
-| `assistant` | `viking://user/alice/peers/main/memories/...` | The OpenViking user is a human and assistant-attributed peer memory should be separated by OpenClaw assistant. |
-| `sender` | `viking://user/support-agent/peers/customer-42/memories/...` | The OpenViking user is an agent and sender-attributed peer memory should be separated by human sender. |
+| `none` (default) | `viking://user/alice/memories/...` | All conversations for this Business Data Platform user share user-level memory. No peer-specific memory subtree is used. |
+| `assistant` | `viking://user/alice/peers/main/memories/...` | The Business Data Platform user is a human and assistant-attributed peer memory should be separated by OpenClaw assistant. |
+| `sender` | `viking://user/support-agent/peers/customer-42/memories/...` | The Business Data Platform user is an agent and sender-attributed peer memory should be separated by human sender. |
 
 `person` is still accepted as a legacy alias for `sender`. New configuration should use `sender`.
 
@@ -163,7 +163,7 @@ Or scope peer memory by the sender talking to an agent:
 openclaw openviking setup --base-url <OPENVIKING_URL> --api-key <API_KEY> --peer-role sender --json
 ```
 
-OpenViking initializes the managed `peers/` container for every user. `none` means the plugin does not create or route into a concrete `peers/<peer_id>/memories` subtree. Actor-peer recall includes shared user memory plus the current peer memory, and changing the setting does not move existing memories.
+Business Data Platform initializes the managed `peers/` container for every user. `none` means the plugin does not create or route into a concrete `peers/<peer_id>/memories` subtree. Actor-peer recall includes shared user memory plus the current peer memory, and changing the setting does not move existing memories.
 
 #### Configure The File Directly When The CLI Is Unavailable
 
@@ -260,8 +260,8 @@ Core fields:
 | Field | Default | Description |
 | --- | --- | --- |
 | `mode` | `remote` | Legacy compatibility field. Only remote mode is supported. |
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking HTTP endpoint |
-| `apiKey` | empty | OpenViking API key |
+| `baseUrl` | `http://127.0.0.1:1933` | Business Data Platform HTTP endpoint |
+| `apiKey` | empty | Business Data Platform API key |
 | `peer_role` | `none` | Memory scope: `none` (shared `viking://user/<user_id>/memories`), `assistant` (`.../peers/<assistant_id>/memories`), or `sender` (`.../peers/<sender_id>/memories`). Legacy `person` is accepted as `sender`. Session messages use body `peer_id`; data-plane recall/search uses `X-OpenViking-Actor-Peer`. |
 | `peer_prefix` | empty | Optional prefix for assistant `peer_id` / actor peer values when `peer_role=assistant`. |
 | `accountId` | empty | Required when using a root API key |
@@ -307,7 +307,7 @@ After status passes, you can run the bundled end-to-end health check from a repo
 python examples/openclaw-plugin/health_check_tools/ov-healthcheck.py
 ```
 
-This checks the Gateway to OpenViking path by injecting a real conversation and verifying capture, commit, archive, and memory extraction. See [health_check_tools/HEALTHCHECK.md](./health_check_tools/HEALTHCHECK.md).
+This checks the Gateway to Business Data Platform path by injecting a real conversation and verifying capture, commit, archive, and memory extraction. See [health_check_tools/HEALTHCHECK.md](./health_check_tools/HEALTHCHECK.md).
 
 ## Backup Path: ov-install
 
@@ -327,8 +327,8 @@ Useful backup/source flags:
 | `--workdir PATH` | Target OpenClaw state directory |
 | `--plugin-version=REF` | Plugin version: npm version, npm dist-tag, or Git ref to install |
 | `--current-version` | Print the version tracked by the helper |
-| `--base-url URL` | OpenViking server URL (enables non-interactive mode) |
-| `--api-key KEY` | OpenViking API key |
+| `--base-url URL` | Business Data Platform server URL (enables non-interactive mode) |
+| `--api-key KEY` | Business Data Platform API key |
 | `--peer-role ROLE` | Memory scope: `none`, `assistant`, or `sender`; legacy `person` is accepted as `sender` |
 | `--peer-prefix PREFIX` | Prefix for assistant `peer_id` / actor peer values |
 | `--update` | Update an existing helper-managed install |
@@ -337,7 +337,7 @@ For user-facing installs, use `openclaw plugins install clawhub:@openviking/open
 
 ## Migrate From ov-install To openclaw plugin install
 
-If you previously installed OpenViking with `ov-install`, follow these steps before switching to the recommended `openclaw plugins install` path.
+If you previously installed Business Data Platform with `ov-install`, follow these steps before switching to the recommended `openclaw plugins install` path.
 
 ### Same Plugin ID (openviking, version >= 0.3.x)
 
@@ -368,12 +368,12 @@ openclaw config get plugins.entries.openviking.config
 
 ### Configuration Parameters
 
-The plugin connects to an existing remote OpenViking server.
+The plugin connects to an existing remote Business Data Platform server.
 
 | Parameter | Default | Meaning |
 | --- | --- | --- |
-| `baseUrl` | `http://127.0.0.1:1933` | Remote OpenViking HTTP endpoint |
-| `apiKey` | empty | Optional OpenViking API key |
+| `baseUrl` | `http://127.0.0.1:1933` | Remote Business Data Platform HTTP endpoint |
+| `apiKey` | empty | Optional Business Data Platform API key |
 | `peer_role` | `none` | Memory scope: `none`, `assistant`, or `sender`; legacy `person` is accepted as `sender`. Session messages use body `peer_id`, while data-plane recall/search uses `X-OpenViking-Actor-Peer` |
 | `peer_prefix` | empty | Optional prefix for assistant `peer_id` / actor peer values when `peer_role=assistant` |
 

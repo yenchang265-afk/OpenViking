@@ -17,7 +17,7 @@ extensions:
     strategy: semantic
 ---
 
-这是 OpenViking 相关项目的 PR 贡献规范集合。`
+这是 Business Data Platform 相关项目的 PR 贡献规范集合。`
 
 describe('parseOkfSidecarMarkdown', () => {
   it.each(['.abstract.md', '.overview.md'])(
@@ -29,7 +29,7 @@ describe('parseOkfSidecarMarkdown', () => {
           sample,
         ),
       ).toEqual({
-        body: '这是 OpenViking 相关项目的 PR 贡献规范集合。',
+        body: '这是 Business Data Platform 相关项目的 PR 贡献规范集合。',
         metadata: {
           directory: 'viking://resources/openviking-contribute/',
           freshness: {

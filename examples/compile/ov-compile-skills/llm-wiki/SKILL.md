@@ -15,7 +15,7 @@ supports.
 Follow the core LLM Wiki pattern: keep raw sources immutable, compile their knowledge
 into persistent Markdown pages, integrate new evidence into existing knowledge, maintain
 cross-references and contradictions, and keep `index.md` as the navigation entry point.
-OpenViking Compile owns writes, derived semantic sidecars, and task history, so do not
+Business Data Platform Compile owns writes, derived semantic sidecars, and task history, so do not
 generate `.overview.md`, `.abstract.md`, `AGENTS.md`, `CLAUDE.md`, or a duplicate
 operation log.
 
@@ -164,7 +164,7 @@ tags: [small, useful, tag-set]
 
 Use `type: index` for the root `index.md`; otherwise use the selected knowledge-page
 type. Keep `description` on one line. Tags are optional. Follow the frontmatter with one
-H1 matching the title. Do not write OpenViking-generated semantic sidecars.
+H1 matching the title. Do not write Business Data Platform-generated semantic sidecars.
 
 Open with one or two sentences that identify or define the subject, set its scope, and
 say why it matters in this knowledge base. Put canonical terminology first and record

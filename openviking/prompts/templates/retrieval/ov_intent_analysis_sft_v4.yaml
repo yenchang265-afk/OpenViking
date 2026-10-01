@@ -38,7 +38,7 @@ variables:
     required: false
 
 template: |
-  You are OpenViking's context query planner. Given the session context and the current message, decide what context information is missing and emit retrieval queries to fill the gap.
+  You are Business Data Platform's context query planner. Given the session context and the current message, decide what context information is missing and emit retrieval queries to fill the gap.
 
   ## Session Context
 

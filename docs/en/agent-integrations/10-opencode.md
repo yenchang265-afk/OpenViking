@@ -1,6 +1,6 @@
 # OpenCode Plugin
 
-Give [OpenCode](https://opencode.ai/) cross-project and cross-session long-term memory plus indexed repository context. Once installed, every conversation automatically recalls relevant memories and captures new content through OpenCode plugin hooks, while model-callable tools come from the same OpenViking stdio MCP proxy used by the Claude Code and Codex memory plugins.
+Give [OpenCode](https://opencode.ai/) cross-project and cross-session long-term memory plus indexed repository context. Once installed, every conversation automatically recalls relevant memories and captures new content through OpenCode plugin hooks, while model-callable tools come from the same Business Data Platform stdio MCP proxy used by the Claude Code and Codex memory plugins.
 
 Source: [examples/opencode-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)
 
@@ -10,10 +10,10 @@ Tool calls and results are captured as dedicated `tool` parts, and `tool_output`
 
 - [OpenCode](https://opencode.ai/)
 - Node.js 18+
-- An OpenViking HTTP server
-- An OpenViking API key when your server requires authentication
+- A Business Data Platform HTTP server
+- A Business Data Platform API key when your server requires authentication
 
-Start your OpenViking server first:
+Start your Business Data Platform server first:
 
 ```bash
 openviking-server --config ~/.openviking/ov.conf
@@ -29,7 +29,7 @@ curl http://localhost:1933/health
 
 ### One-line installer (recommended)
 
-OpenCode shares the unified installer with Claude Code and Codex. It asks for your language (English/中文), which harnesses to install, the download source, and your OpenViking credentials; every step is idempotent—re-running it is entirely safe.
+OpenCode shares the unified installer with Claude Code and Codex. It asks for your language (English/中文), which harnesses to install, the download source, and your Business Data Platform credentials; every step is idempotent—re-running it is entirely safe.
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness opencode
@@ -66,7 +66,7 @@ If package installation is not available in your environment:
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
-cd OpenViking
+cd Business Data Platform
 node examples/memory-plugin-shared/sync.mjs
 mkdir -p ~/.config/opencode/plugins/openviking
 cp examples/opencode-plugin/wrappers/openviking.js ~/.config/opencode/plugins/openviking.js
@@ -151,7 +151,7 @@ Restart OpenCode after installation. In an OpenCode session, the plugin should e
 - `openviking_remember`, `openviking_write`, `openviking_edit`, `openviking_add_resource`, `openviking_add_skill`
 - `openviking_list_watches`, `openviking_cancel_watch`, `openviking_forget`, `openviking_health`
 
-Ask OpenCode to search or browse OpenViking memory. Runtime state and errors are written to:
+Ask OpenCode to search or browse Business Data Platform memory. Runtime state and errors are written to:
 
 ```bash
 ~/.config/opencode/openviking/openviking-memory.log
@@ -165,8 +165,8 @@ Ask OpenCode to search or browse OpenViking memory. Runtime state and errors are
 | Plugin does not load | Confirm `~/.config/opencode/opencode.json` references `@openviking/opencode-plugin`, or that `~/.config/opencode/plugins/openviking.js` exists for source installs |
 | Load fails with a missing `lib/shared/*.mjs` module | The source copy was made without running `sync.mjs` first. Run `node examples/memory-plugin-shared/sync.mjs` from the repository root and copy `lib/` again |
 | MCP tools call the wrong server | Check `~/.openviking/ovcli.conf`, or set `OPENVIKING_*` env vars; `OPENVIKING_CLI_CONFIG_FILE` points the plugin at a different ovcli.conf |
-| 401 / 403 from OpenViking | Verify `OPENVIKING_API_KEY`; for trusted-mode deployments, also verify `OPENVIKING_ACCOUNT` and `OPENVIKING_USER` |
-| Recall is empty | Confirm the OpenViking server has indexed memories/resources and that `autoRecall` is not set to `false` |
+| 401 / 403 from Business Data Platform | Verify `OPENVIKING_API_KEY`; for trusted-mode deployments, also verify `OPENVIKING_ACCOUNT` and `OPENVIKING_USER` |
+| Recall is empty | Confirm the Business Data Platform server has indexed memories/resources and that `autoRecall` is not set to `false` |
 | Local `openviking_add_resource` fails | Pass a file path, not a directory; local directories are not uploaded automatically yet |
 
 For all available tools, configuration fields, and runtime file details, see the [plugin README](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin).

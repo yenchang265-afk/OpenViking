@@ -1,7 +1,7 @@
 """
-OpenViking Mount Manager
+Business Data Platform Mount Manager
 
-管理多个OpenViking挂载点的生命周期
+管理多个Business Data Platform挂载点的生命周期
 """
 
 from __future__ import annotations
@@ -29,7 +29,7 @@ class MountPoint:
 
 class OpenVikingMountManager:
     """
-    OpenViking挂载管理器
+    Business Data Platform挂载管理器
 
     管理多个挂载点的创建、访问和销毁
     """
@@ -64,7 +64,7 @@ class OpenVikingMountManager:
 
         Args:
             mount_id: 挂载点唯一标识
-            openviking_data_path: OpenViking数据存储路径
+            openviking_data_path: Business Data Platform数据存储路径
             scope: 挂载作用域
             session_id: 会话ID（session作用域时需要）
             read_only: 是否只读模式
@@ -185,7 +185,7 @@ class OpenVikingMountManager:
 
         Args:
             session_id: 会话ID
-            openviking_data_path: OpenViking数据路径
+            openviking_data_path: Business Data Platform数据路径
             read_only: 是否只读
 
         Returns:
@@ -211,7 +211,7 @@ class OpenVikingMountManager:
 
         Args:
             mount_id: 挂载点ID
-            openviking_data_path: OpenViking数据路径
+            openviking_data_path: Business Data Platform数据路径
             read_only: 是否只读
 
         Returns:

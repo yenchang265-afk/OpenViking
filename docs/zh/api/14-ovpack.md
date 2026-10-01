@@ -1,6 +1,6 @@
 # OVPack
 
-OVPack API 用于导入、导出、备份和恢复 OpenViking 数据。
+OVPack API 用于导入、导出、备份和恢复 Business Data Platform 数据。
 
 ## API 参考
 

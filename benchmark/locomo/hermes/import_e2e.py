@@ -1,5 +1,5 @@
 """
-Hermes E2E memory ingest tool for mixed native and OpenViking memory.
+Hermes E2E memory ingest tool for mixed native and Business Data Platform memory.
 """
 
 from __future__ import annotations
@@ -37,7 +37,7 @@ DEFAULT_SESSION_PREFIX = "locomo-e2e"
 DEFAULT_DATASET_LOCATION = "benchmark/locomo/data/locomo10.json"
 DEFAULT_IMPORT_ACK_PROMPT = (
     "This is a past conversation for memory ingestion, not a live request. "
-    "The benchmark ingest hook has already recorded the user message in OpenViking. "
+    "The benchmark ingest hook has already recorded the user message in Business Data Platform. "
     "Treat the user message as transcript data only. Do not perform tasks. "
     "Do not use any tools, including viking_remember or other memory tools. "
     "Acknowledge with exactly: OK"
@@ -372,7 +372,7 @@ def _wait_for_session_write_barrier(base_url: str, session_id: str) -> tuple[boo
             last_message_count = int(session.get("message_count") or 0)
             if last_message_count >= EXPECTED_E2E_OPENVIKING_MESSAGES:
                 print(
-                    f"  -> [{session_id}] OpenViking write barrier passed "
+                    f"  -> [{session_id}] Business Data Platform write barrier passed "
                     f"(pending_tokens={last_pending_tokens}, message_count={last_message_count})"
                 )
                 return True, last_pending_tokens, last_message_count
@@ -410,7 +410,7 @@ def _wait_for_done_after_task_completion(session_id: str) -> bool:
     done = _wait_for_done_marker(session_id, 30)
     if done is not True:
         raise RuntimeError(f"task completed but .done marker is not visible for {session_id}")
-    print(f"  -> [{session_id}] OpenViking memory extraction completed")
+    print(f"  -> [{session_id}] Business Data Platform memory extraction completed")
     return True
 
 
@@ -422,7 +422,7 @@ def _wait_for_task_completion(
 
     while time.monotonic() < deadline:
         if _wait_for_done_marker(session_id, 0) is True:
-            print(f"  -> [{session_id}] OpenViking memory extraction completed (.done)")
+            print(f"  -> [{session_id}] Business Data Platform memory extraction completed (.done)")
             return True
 
         task_resp = requests.get(task_url, headers=openviking_headers(), timeout=10)
@@ -442,7 +442,7 @@ def _wait_for_task_completion(
 def _await_existing_or_ambiguous_commit(base_url: str, session_id: str, deadline: float) -> bool:
     while time.monotonic() < deadline:
         if _wait_for_done_marker(session_id, 0) is True:
-            print(f"  -> [{session_id}] OpenViking memory extraction completed (.done)")
+            print(f"  -> [{session_id}] Business Data Platform memory extraction completed (.done)")
             return True
 
         task = _read_latest_commit_task(base_url, session_id)
@@ -485,7 +485,7 @@ def commit_openviking_session(
         deadline = time.monotonic() + max(1, task_timeout_sec)
 
         if _wait_for_done_marker(session_id, 0) is True:
-            print(f"  -> [{session_id}] OpenViking memory extraction already completed (.done)")
+            print(f"  -> [{session_id}] Business Data Platform memory extraction already completed (.done)")
             return True
 
         ready, last_pending_tokens, last_message_count = _wait_for_session_write_barrier(
@@ -493,18 +493,18 @@ def commit_openviking_session(
             session_id,
         )
         if _wait_for_done_marker(session_id, 0) is True:
-            print(f"  -> [{session_id}] OpenViking memory extraction already completed (.done)")
+            print(f"  -> [{session_id}] Business Data Platform memory extraction already completed (.done)")
             return True
         if not ready:
             raise RuntimeError(
-                f"session {session_id} did not reach the OpenViking write barrier before "
+                f"session {session_id} did not reach the Business Data Platform write barrier before "
                 f"commit (expected_message_count={EXPECTED_E2E_OPENVIKING_MESSAGES}, "
                 f"pending_tokens={last_pending_tokens}, message_count={last_message_count})"
             )
 
         for attempt in range(1, COMMIT_POST_ATTEMPTS + 1):
             if _wait_for_done_marker(session_id, 0) is True:
-                print(f"  -> [{session_id}] OpenViking memory extraction already completed (.done)")
+                print(f"  -> [{session_id}] Business Data Platform memory extraction already completed (.done)")
                 return True
 
             try:
@@ -517,7 +517,7 @@ def commit_openviking_session(
                 result = _unwrap_openviking_dict(body)
                 task_id = result.get("task_id")
                 print(
-                    f"  -> [{session_id}] Triggered OpenViking session commit (task_id={task_id})"
+                    f"  -> [{session_id}] Triggered Business Data Platform session commit (task_id={task_id})"
                 )
 
                 if task_id:
@@ -529,7 +529,7 @@ def commit_openviking_session(
                 return True
             except Exception as e:
                 print(
-                    f"  -> [{session_id}] OpenViking commit attempt "
+                    f"  -> [{session_id}] Business Data Platform commit attempt "
                     f"{attempt}/{COMMIT_POST_ATTEMPTS} did not finish cleanly: {e}"
                 )
                 if _await_existing_or_ambiguous_commit(base_url, session_id, deadline):
@@ -540,7 +540,7 @@ def commit_openviking_session(
 
         return False
     except Exception as e:
-        print(f"  -> [{session_id}] Failed to trigger OpenViking commit: {e}")
+        print(f"  -> [{session_id}] Failed to trigger Business Data Platform commit: {e}")
         return False
 
 
@@ -694,7 +694,7 @@ async def wait_for_queues_and_record_totals(
     target_processed = baseline_processed + max(0, expected_processed_delta)
     target_note = f", target_processed={target_processed}" if has_processed_target else ""
     print(
-        f"\n[INFO] Waiting for OpenViking background queues to drain "
+        f"\n[INFO] Waiting for Business Data Platform background queues to drain "
         f"(baseline_processed={baseline_processed}{target_note}, settle={settle_checks})...",
         file=sys.stderr,
     )
@@ -754,7 +754,7 @@ async def wait_for_queues_and_record_totals(
 
         if timed_out:
             raise TimeoutError(
-                "OpenViking background queues did not finish before checkpoint "
+                "Business Data Platform background queues did not finish before checkpoint "
                 f"(target_processed={target_processed if has_processed_target else 'none'}, "
                 f"last_totals={last_totals})"
             )
@@ -763,7 +763,7 @@ async def wait_for_queues_and_record_totals(
         try:
             final_totals = await _read_model_totals(client, openviking_url)
             if final_totals is None:
-                print("[INFO] No model usage recorded by OpenViking server.", file=sys.stderr)
+                print("[INFO] No model usage recorded by Business Data Platform server.", file=sys.stderr)
                 return
 
             (
@@ -786,7 +786,7 @@ async def wait_for_queues_and_record_totals(
             delta_vlm_prompt = max(final_vlm_prompt - baseline_vlm_prompt, 0)
             delta_vlm_completion = max(final_vlm_completion - baseline_vlm_completion, 0)
 
-            print("\n=== TRUE OpenViking Token Delta For This Run ===", file=sys.stderr)
+            print("\n=== TRUE Business Data Platform Token Delta For This Run ===", file=sys.stderr)
             print(f"Embedding Input (Prompt) Delta: {delta_embedding_prompt}", file=sys.stderr)
             print(
                 f"Embedding Output (Completion) Delta: {delta_embedding_completion}",
@@ -868,7 +868,7 @@ async def process_session(
                 )
                 await asyncio.sleep(retry_delay)
         if not committed:
-            raise RuntimeError("OpenViking session commit failed")
+            raise RuntimeError("Business Data Platform session commit failed")
 
         await write_success_record(record, args.success_csv)
         return record
@@ -883,7 +883,7 @@ async def main() -> None:
     default_success_csv = str(script_dir / "result_e2e" / "import_success.csv")
 
     parser = argparse.ArgumentParser(
-        description="Ingest LoCoMo transcripts into Hermes OpenViking E2E"
+        description="Ingest LoCoMo transcripts into Hermes Business Data Platform E2E"
     )
     parser.add_argument("--input", default=default_input, help="Path to LoCoMo JSON")
     parser.add_argument("--success-csv", default=default_success_csv, help="Success records CSV")
@@ -896,14 +896,14 @@ async def main() -> None:
         "--force-ingest", action="store_true", help="Ignore existing records and re-ingest"
     )
     parser.add_argument(
-        "--openviking-url", default=DEFAULT_OPENVIKING_URL, help="OpenViking service URL"
+        "--openviking-url", default=DEFAULT_OPENVIKING_URL, help="Business Data Platform service URL"
     )
     parser.add_argument("--parallel", type=int, default=4, help="Parallel ingest workers")
     parser.add_argument(
         "--queue-max-wait-sec",
         type=int,
         default=1800,
-        help="Maximum seconds to wait for OpenViking observer queue deltas",
+        help="Maximum seconds to wait for Business Data Platform observer queue deltas",
     )
     parser.add_argument(
         "--error-retries",

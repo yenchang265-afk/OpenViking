@@ -20,7 +20,7 @@
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae-cli --dist tos
    ```
 
-2. 安装器会依次询问以下信息：语言（English / 中文）、OpenViking 凭据。在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安装器会依次询问以下信息：语言（English / 中文）、Business Data Platform 凭据。在 Business Data Platform 凭据配置中，选择连接至「火山引擎 Business Data Platform 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}

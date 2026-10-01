@@ -1,6 +1,6 @@
 // GENERATED FROM examples/memory-plugin-shared/lib. DO NOT EDIT.
 /**
- * Shared stdio -> streamable-HTTP MCP proxy core for OpenViking memory plugins.
+ * Shared stdio -> streamable-HTTP MCP proxy core for Business Data Platform memory plugins.
  *
  * Harness-specific entrypoints provide credential/config loading; this module
  * owns only transport, session retry, SSE parsing, and protocol-clean stdio.
@@ -280,7 +280,7 @@ export function createOpenVikingMcpProxy({
         return errorResponse(
           id,
           -32001,
-          `OpenViking MCP authentication failed (HTTP ${err.status}). Check ~/.openviking/ovcli.conf or OPENVIKING_API_KEY, and verify the configured account/user for trusted mode.`,
+          `Business Data Platform MCP authentication failed (HTTP ${err.status}). Check ~/.openviking/ovcli.conf or OPENVIKING_API_KEY, and verify the configured account/user for trusted mode.`,
           {
             status: err.status,
             credentialSource: proxyConfig.credentialSource,
@@ -292,7 +292,7 @@ export function createOpenVikingMcpProxy({
       return errorResponse(
         id,
         -32002,
-        `OpenViking MCP upstream returned HTTP ${err.status}.`,
+        `Business Data Platform MCP upstream returned HTTP ${err.status}.`,
         {
           status: err.status,
           serverMessage: serializeBodyForError(err.bodyText) || undefined,
@@ -308,14 +308,14 @@ export function createOpenVikingMcpProxy({
       return errorResponse(
         id,
         -32004,
-        `OpenViking MCP request timed out after ${proxyConfig.timeoutMs}ms (${proxyConfig.mcpUrl}). The server may still be processing (rerank can be slow) — check /health or raise OPENVIKING_TIMEOUT_MS.`,
+        `Business Data Platform MCP request timed out after ${proxyConfig.timeoutMs}ms (${proxyConfig.mcpUrl}). The server may still be processing (rerank can be slow) — check /health or raise OPENVIKING_TIMEOUT_MS.`,
         { timeoutMs: proxyConfig.timeoutMs, mcpUrl: proxyConfig.mcpUrl, cause: msg },
       );
     }
     return errorResponse(
       id,
       -32001,
-      `OpenViking MCP request failed. Check the configured URL (${proxyConfig.mcpUrl}) and that the OpenViking server (\`openviking-server\`) is reachable.`,
+      `Business Data Platform MCP request failed. Check the configured URL (${proxyConfig.mcpUrl}) and that the Business Data Platform server (\`openviking-server\`) is reachable.`,
       { cause: msg },
     );
   }
@@ -458,7 +458,7 @@ export function createOpenVikingMcpProxy({
       const result = await send;
       if (!expectsResponse) return;
       if (result.messages.length === 0) {
-        await writeMessage(errorResponse(message.id, -32003, "OpenViking MCP upstream returned an empty response"));
+        await writeMessage(errorResponse(message.id, -32003, "Business Data Platform MCP upstream returned an empty response"));
         return;
       }
       for (const outbound of result.messages) {

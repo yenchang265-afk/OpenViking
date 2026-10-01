@@ -526,7 +526,7 @@ test("buildWindowHeader drops the archive attribute of a stale block whose archi
   assert.equal(header.includes('archive="archive_002" describes'), false);
 });
 
-test("buildWindowHeader names messages OpenViking rejected for good", () => {
+test("buildWindowHeader names messages Business Data Platform rejected for good", () => {
   const header = buildWindowHeader({
     windowId: "w2",
     previousWindowId: "w1",
@@ -535,7 +535,7 @@ test("buildWindowHeader names messages OpenViking rejected for good", () => {
     overview: "wm",
     undeliveredCount: 3,
   });
-  assert.match(header, /3 messages of this session were rejected by OpenViking and are missing from the archive/);
+  assert.match(header, /3 messages of this session were rejected by Business Data Platform and are missing from the archive/);
   assert.match(header, /so history cannot show them\./);
   const one = buildWindowHeader({
     windowId: "w2",
@@ -547,7 +547,7 @@ test("buildWindowHeader names messages OpenViking rejected for good", () => {
   });
   assert.match(
     one,
-    /1 message of this session was rejected by OpenViking and is missing from the archive, so history cannot show it\./,
+    /1 message of this session was rejected by Business Data Platform and is missing from the archive, so history cannot show it\./,
   );
   const clean = buildWindowHeader({
     windowId: "w2",
@@ -715,7 +715,7 @@ test("requestReset records sibling tool names from the issuing assistant message
   assert.ok(core.headerText.includes("Tools: read."));
 });
 
-test("requestReset refuses when OpenViking is unreachable", async () => {
+test("requestReset refuses when Business Data Platform is unreachable", async () => {
   const io = makeIo({ connectedValue: false });
   const core = makeCore(io);
   const out = await openWindow(core, io);
@@ -731,7 +731,7 @@ test("requestReset refuses when OpenViking is unreachable", async () => {
   assert.equal(io.persisted.length, 0);
 });
 
-test("requestReset refuses when there is no OpenViking session", async () => {
+test("requestReset refuses when there is no Business Data Platform session", async () => {
   const io = makeIo({ sid: null });
   const core = makeCore(io);
   const out = await openWindow(core, io);
@@ -806,7 +806,7 @@ test("requestReset refuses when commit fails and reports the trace id", async ()
   assert.ok(out.text.includes("trace trace-9"));
 });
 
-test("requestReset is a no-op when OpenViking has nothing to archive", async () => {
+test("requestReset is a no-op when Business Data Platform has nothing to archive", async () => {
   const io = makeIo({
     commit: async () => {
       io.calls.push("commit:0");
@@ -1291,7 +1291,7 @@ test("an abort-aware io.sleep that rejects still opens a degraded window", async
 });
 
 test("a post-commit failure still opens the window instead of claiming nothing changed", async () => {
-  // The commit emptied the OpenViking session (keep_recent_count 0), so a refusal
+  // The commit emptied the Business Data Platform session (keep_recent_count 0), so a refusal
   // here would leave the model carrying the old context while believing its
   // history is still live and re-readable.
   const io = makeIo({ overview: null });
@@ -1566,7 +1566,7 @@ test("a second reset carries the previous Working Memory as a stale block while 
   assert.match(core.headerText, /Working Memory for archive_003 is not ready yet/);
 });
 
-test("restore ignores a window entry written by a different OpenViking session", async () => {
+test("restore ignores a window entry written by a different Business Data Platform session", async () => {
   const io = makeIo();
   const core = makeCore(io);
   await openWindow(core, io);
@@ -2070,7 +2070,7 @@ test("an accepted commit without an archive_uri refuses instead of opening a nam
 
   assert.equal(out.ok, false);
   assert.equal(out.kind, "refused");
-  assert.match(out.text, /^Context window NOT reset: OpenViking refused the archive commit \(trace tr-9\)/);
+  assert.match(out.text, /^Context window NOT reset: Business Data Platform refused the archive commit \(trace tr-9\)/);
   assert.equal(core.windowIndex, 1);
   assert.equal(core.armed, false);
   assert.match(io.handoffs[1], /RETRACTED/);
@@ -2118,13 +2118,13 @@ test("every archive is recorded with the window it closed", async () => {
   assert.deepEqual(restored.archives, core.archives);
 });
 
-test("messages OpenViking rejected for good are named in the window header", async () => {
+test("messages Business Data Platform rejected for good are named in the window header", async () => {
   let dropped = 0;
   const io = makeIo({ droppedCount: () => dropped });
   const core = makeCore(io);
   dropped = 2;
   await openWindow(core, io);
-  assert.match(core.headerText, /2 messages of this session were rejected by OpenViking/);
+  assert.match(core.headerText, /2 messages of this session were rejected by Business Data Platform/);
   assert.equal(core.statusSnapshot().undeliveredCount, 2);
 });
 

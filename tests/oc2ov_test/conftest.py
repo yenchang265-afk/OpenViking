@@ -19,7 +19,7 @@ def get_openclaw_version():
 
 
 def get_openviking_version():
-    """获取 OpenViking 版本"""
+    """获取 Business Data Platform 版本"""
     # Method 1: Try to import openviking module directly
     try:
         import openviking
@@ -76,7 +76,7 @@ def get_openviking_version():
 
 def pytest_html_report_title(report):
     """自定义报告标题"""
-    report.title = "OpenClaw + OpenViking 端到端自动化测试报告"
+    report.title = "OpenClaw + Business Data Platform 端到端自动化测试报告"
 
 
 def pytest_html_results_summary(prefix, summary, postfix):
@@ -89,23 +89,23 @@ def pytest_html_results_summary(prefix, summary, postfix):
     prefix.extend(
         [
             '<div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 8px; margin-bottom: 20px;">',
-            '<h1 style="color: white; margin: 0; font-size: 28px;">OpenClaw + OpenViking 端到端自动化测试报告</h1>',
+            '<h1 style="color: white; margin: 0; font-size: 28px;">OpenClaw + Business Data Platform 端到端自动化测试报告</h1>',
             '<p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">验证记忆读写功能的完整性与可靠性</p>',
             "</div>",
             '<div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">',
             '<h3 style="margin-top: 0; color: #333;">📊 环境信息</h3>',
             '<table style="width: 100%; border-collapse: collapse; margin-top: 10px;">',
-            '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; width: 20%;"><strong>📋 项目名称</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">OpenClaw + OpenViking 端到端自动化测试</td></tr>',
+            '<tr><td style="padding: 8px; border-bottom: 1px solid #ddd; width: 20%;"><strong>📋 项目名称</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">OpenClaw + Business Data Platform 端到端自动化测试</td></tr>',
             f'<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>📅 测试日期</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">{test_date}</td></tr>',
             f'<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>💻 操作系统</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">{os_info}</td></tr>',
             f'<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>🦞 OpenClaw 版本</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">{openclaw_version}</td></tr>',
-            f'<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>🧠 OpenViking 版本</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">{openviking_version}</td></tr>',
+            f'<tr><td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>🧠 Business Data Platform 版本</strong></td><td style="padding: 8px; border-bottom: 1px solid #ddd;">{openviking_version}</td></tr>',
             '<tr><td style="padding: 8px;"><strong>🔗 测试方式</strong></td><td style="padding: 8px;">OpenClaw CLI (--session-id)</td></tr>',
             "</table>",
             "</div>",
             '<h2 style="color: #4a90e2; border-bottom: 2px solid #4a90e2; padding-bottom: 10px;">📖 测试说明</h2>',
             '<div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;">',
-            '<p style="margin: 0 0 10px 0; font-size: 14px;">本测试验证 OpenClaw 与 OpenViking 之间的核心交互功能，包括：</p>',
+            '<p style="margin: 0 0 10px 0; font-size: 14px;">本测试验证 OpenClaw 与 Business Data Platform 之间的核心交互功能，包括：</p>',
             '<ul style="margin: 0; padding-left: 20px; font-size: 14px;">',
             '<li style="margin: 5px 0;">✅ 记忆结构化写入验证</li>',
             '<li style="margin: 5px 0;">✅ 记忆读取/更新/删除验证</li>',

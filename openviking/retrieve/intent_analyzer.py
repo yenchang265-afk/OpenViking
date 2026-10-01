@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Intent analyzer for OpenViking retrieval.
+Intent analyzer for Business Data Platform retrieval.
 
 Analyzes session context to generate query plans.
 """

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Status report for the OpenViking memory plugin — invoked by the `/ov`
+ * Status report for the Business Data Platform memory plugin — invoked by the `/ov`
  * slash command. Prints a tight human-readable summary covering:
  *   - Server URL + /health probe
  *   - Resolved identity (account/user)
@@ -59,7 +59,7 @@ function homeShort(path) {
 
 async function main() {
   if (!isPluginEnabled()) {
-    console.log("OpenViking plugin: DISABLED (OPENVIKING_MEMORY_ENABLED=0 or no config found)");
+    console.log("Business Data Platform plugin: DISABLED (OPENVIKING_MEMORY_ENABLED=0 or no config found)");
     return;
   }
 
@@ -70,7 +70,7 @@ async function main() {
   const t0 = Date.now();
   const health = await fetchJSON("/health");
   const latency = Date.now() - t0;
-  console.log(`OpenViking — ${cfg.baseUrl}  (${health.ok ? "✓" : "✗"} /health ${latency}ms)`);
+  console.log(`Business Data Platform — ${cfg.baseUrl}  (${health.ok ? "✓" : "✗"} /health ${latency}ms)`);
   console.log(
     `Identity: account=${cfg.accountId || "(unset)"}  ` +
     `user=${cfg.userId || "(server-resolved)"}`,

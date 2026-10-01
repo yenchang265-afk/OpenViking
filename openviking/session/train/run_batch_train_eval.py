@@ -34,19 +34,19 @@ def parse_args() -> argparse.Namespace:
         "--commit-concurrency",
         type=int,
         default=200,
-        help="Concurrent OpenViking session.commit submissions during train (default: 200)",
+        help="Concurrent Business Data Platform session.commit submissions during train (default: 200)",
     )
     parser.add_argument(
         "--commit-timeout-seconds",
         type=float,
         default=None,
-        help="Max seconds to wait for each OpenViking session.commit task. Default waits indefinitely.",
+        help="Max seconds to wait for each Business Data Platform session.commit task. Default waits indefinitely.",
     )
     parser.add_argument("--config", default=None, help="ov.conf path (optional)")
-    parser.add_argument("--server-url", default=None, help="OpenViking server URL. Defaults to ov.conf/ovcli.conf")
-    parser.add_argument("--api-key", default=None, help="OpenViking API key. Defaults to ov.conf/ovcli.conf")
-    parser.add_argument("--account-id", default="default", help="OpenViking trusted account id. Default: default")
-    parser.add_argument("--user-id", default="default", help="OpenViking trusted user id. Default: default")
+    parser.add_argument("--server-url", default=None, help="Business Data Platform server URL. Defaults to ov.conf/ovcli.conf")
+    parser.add_argument("--api-key", default=None, help="Business Data Platform API key. Defaults to ov.conf/ovcli.conf")
+    parser.add_argument("--account-id", default="default", help="Business Data Platform trusted account id. Default: default")
+    parser.add_argument("--user-id", default="default", help="Business Data Platform trusted user id. Default: default")
     parser.add_argument("--output", default=None, help="JSON report output path")
     parser.add_argument(
         "--events-output",

@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Kill OpenViking Server and vikingbot processes
+# Kill Business Data Platform Server and vikingbot processes
 # Usage: ./kill_openviking_server.sh
 
 set -e
 
 echo "=========================================="
-echo "Stopping OpenViking processes"
+echo "Stopping Business Data Platform processes"
 echo "=========================================="
 
 # Kill existing vikingbot processes

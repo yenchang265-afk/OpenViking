@@ -447,7 +447,7 @@ export function createOpenVikingRecallTraceRuntime(deps: OpenVikingRecallTraceRu
 
   const formatRecallTraceText = (result: { entries: RecallTraceEntry[]; lookupLayer: string; warnings: string[] }): string => {
     if (result.entries.length === 0) {
-      return `No OpenViking recall traces found (lookupLayer=${result.lookupLayer}).`;
+      return `No Business Data Platform recall traces found (lookupLayer=${result.lookupLayer}).`;
     }
     const blocks = result.entries.map((entry, index) => {
       const selected = entry.selected.slice(0, 8)

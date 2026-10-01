@@ -1,12 +1,12 @@
 # Server Deployment
 
-OpenViking runs as an HTTP service. Choose who operates it before installing a server:
+Business Data Platform runs as an HTTP service. Choose who operates it before installing a server:
 
 | Service | What you need |
 | --- | --- |
-| [Volcano Engine managed OpenViking](https://www.volcengine.com/product/openviking-service) | Obtain an API key in the [console](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing), then connect with the independent CLI. No local server or model configuration is needed. |
+| [Volcano Engine managed Business Data Platform](https://www.volcengine.com/product/openviking-service) | Obtain an API key in the [console](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing), then connect with the independent CLI. No local server or model configuration is needed. |
 | An existing team or remote deployment | Obtain the service URL and a user/admin key from its administrator. |
-| Self-hosted OpenViking | Install and configure the server using the instructions below. |
+| Self-hosted Business Data Platform | Install and configure the server using the instructions below. |
 
 Managed and existing-service users can start with the [CLI quickstart](../getting-started/02-quickstart.md). For managed-service availability, plans, and limits, see the [official service documentation](https://docs.volcengine.com/docs/84313/2374478).
 
@@ -102,7 +102,7 @@ openviking-server
 
 ## Deploying with Systemd (Recommended)
 
-For Linux systems, you can use Systemd to manage OpenViking as a service, enabling automatic restart and startup on boot. Firstly, you should tried to install and configure openviking on your own.
+For Linux systems, you can use Systemd to manage Business Data Platform as a service, enabling automatic restart and startup on boot. Firstly, you should tried to install and configure openviking on your own.
 
 ### Create Systemd Service File
 
@@ -110,12 +110,12 @@ Create `/etc/systemd/system/openviking.service` file:
 
 ```ini
 [Unit]
-Description=OpenViking HTTP Server
+Description=Business Data Platform HTTP Server
 After=network.target
 
 [Service]
 Type=simple
-# Replace with the user and group that run OpenViking
+# Replace with the user and group that run Business Data Platform
 User=your-username
 Group=your-group
 # Replace with your working directory
@@ -135,7 +135,7 @@ Before starting, replace every placeholder. Run `command -v openviking-server` a
 
 ### Manage the Service
 
-After creating the service file, use the following commands to manage the OpenViking service:
+After creating the service file, use the following commands to manage the Business Data Platform service:
 
 ```bash
 # Reload systemd configuration
@@ -206,7 +206,7 @@ curl http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 
 ### Docker
 
-OpenViking provides pre-built Docker images published to GitHub Container Registry. The runtime working directory is `/app/.openviking`, so the default `storage.workspace` (`./data`) resolves to `/app/.openviking/data`. The default workspace, `ov.conf`, and `ovcli.conf` therefore share one persistent mount. If you configure an absolute workspace outside this directory, mount that path separately:
+Business Data Platform provides pre-built Docker images published to GitHub Container Registry. The runtime working directory is `/app/.openviking`, so the default `storage.workspace` (`./data`) resolves to `/app/.openviking/data`. The default workspace, `ov.conf`, and `ovcli.conf` therefore share one persistent mount. If you configure an absolute workspace outside this directory, mount that path separately:
 
 ```bash
 docker run -d \
@@ -220,7 +220,7 @@ docker run -d \
 > We recommend the `ghcr.io` image. If `ghcr.io` is hard to reach, use `openviking-cn-beijing.cr.volces.com/volcengine/openviking:latest` instead. The same applies to the commands below.
 
 By default, the Docker image starts:
-- OpenViking HTTP service on port `1933` (bound to `0.0.0.0`), also serving the Web Studio UI at `/studio`
+- Business Data Platform HTTP service on port `1933` (bound to `0.0.0.0`), also serving the Web Studio UI at `/studio`
 - `vikingbot` gateway
 
 Since the server binds to `0.0.0.0` inside the container (required for Docker port-mapping to work), you **must** set `root_api_key` in your `ov.conf`:
@@ -303,7 +303,7 @@ After startup, you can access:
 
 ### Deploy on Railway
 
-Click the badge below to deploy OpenViking on Railway:
+Click the badge below to deploy Business Data Platform on Railway:
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/deploy/openviking)
 
@@ -335,7 +335,7 @@ Initial bootstrap can be completed entirely within the browser:
 
 ### Multi-instance notes
 
-With an embedded vector backend (`local` or `cuvs`), OpenViking holds an exclusive OS file lock on `storage.workspace` by default. The `.openviking.lock` file remains on disk; its presence does not mean a server is running. The OS releases the lock when the server closes it or the process terminates. Do not manually delete a running server's lock file.
+With an embedded vector backend (`local` or `cuvs`), Business Data Platform holds an exclusive OS file lock on `storage.workspace` by default. The `.openviking.lock` file remains on disk; its presence does not mean a server is running. The OS releases the lock when the server closes it or the process terminates. Do not manually delete a running server's lock file.
 
 Remote vector backends (`http`, `volcengine`, `vikingdb`) do not acquire this workspace lock, including when files are stored on a shared NAS. They do not require `storage.skip_process_lock=true`. Placing an embedded vector database on NAS does not make it safe to share between processes.
 
@@ -399,7 +399,7 @@ This variant is useful when multiple instances share the same `workspace`, but Q
 
 For public HTTPS access, see the [Public Access Guide](12-public-access.md).
 
-To build the image yourself, pass an explicit OpenViking version:
+To build the image yourself, pass an explicit Business Data Platform version:
 `docker build --build-arg OPENVIKING_VERSION=0.3.12 -t openviking:latest .`
 
 ### Kubernetes + Helm

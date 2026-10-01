@@ -1,6 +1,6 @@
 apiVersion: v2
 name: openviking
-description: OpenViking - The Context Database for AI Agents
+description: Business Data Platform - The Context Database for AI Agents
 type: application
 version: 0.1.1
 keywords:
@@ -13,5 +13,5 @@ home: https://github.com/volcengine/OpenViking
 sources:
   - https://github.com/volcengine/OpenViking
 maintainers:
-  - name: OpenViking Contributors
+  - name: Business Data Platform Contributors
     url: https://github.com/volcengine/OpenViking

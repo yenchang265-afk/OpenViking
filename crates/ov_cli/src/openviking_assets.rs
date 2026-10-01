@@ -1,6 +1,6 @@
-//! OpenViking Assets manifest mode for `ov add-resource -m <manifest.yaml>`.
+//! Business Data Platform Assets manifest mode for `ov add-resource -m <manifest.yaml>`.
 //!
-//! Implements the declaration layer of the OpenViking Assets protocol
+//! Implements the declaration layer of the Business Data Platform Assets protocol
 //! (`openviking-assets/1`). Two keys carry the whole model: `catalog:` always
 //! holds asset definitions — inline in the manifest, or in a separate
 //! `catalog.yaml` shared by several manifests — and `assets:` always holds the
@@ -47,7 +47,7 @@ fn manifest_request_timeout(
         .max(configured_timeout)
 }
 
-// The server owns OpenViking Assets syntax parsing and semantic validation.
+// The server owns Business Data Platform Assets syntax parsing and semantic validation.
 // The CLI receives only the resolved execution plan.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ResolvedAsset {
@@ -651,7 +651,7 @@ pub async fn apply_manifest_core<S: Submitter>(
             "asset_id": asset_id,
             "name": orphan.name,
             "resource_uri": orphan.resource_uri,
-            "note": "no longer in manifest; OpenViking Assets never deletes resources automatically",
+            "note": "no longer in manifest; Business Data Platform Assets never deletes resources automatically",
         }));
     }
 
@@ -939,7 +939,7 @@ fn render_event(event: &Value) {
                 .unwrap_or_else(|| "unknown resource".to_string());
             eprintln!(
                 "! orphan: '{}' left the manifest but its resource remains ({uri}); \
-                 OpenViking Assets never deletes automatically",
+                 Business Data Platform Assets never deletes automatically",
                 text("name")
             );
         }

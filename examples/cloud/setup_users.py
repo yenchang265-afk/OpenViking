@@ -4,7 +4,7 @@
 
 前置条件:
     1. 按照 GUIDE.md 完成云服务开通和配置
-    2. 启动 OpenViking Server:
+    2. 启动 Business Data Platform Server:
          export OPENVIKING_CONFIG_FILE=examples/cloud/ov.conf
          openviking-server
 

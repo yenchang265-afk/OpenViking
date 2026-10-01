@@ -1,13 +1,13 @@
-# OpenViking 发版说明
+# Business Data Platform 发版说明
 
-本文说明 OpenViking 仓库的发版目标、版本与 tag 约定、主要发版流程，以及补发和验证方式。内容以仓库中已追踪的 GitHub Actions、构建配置和包配置为准。
+本文说明 Business Data Platform 仓库的发版目标、版本与 tag 约定、主要发版流程，以及补发和验证方式。内容以仓库中已追踪的 GitHub Actions、构建配置和包配置为准。
 
 ## 发版目标
 
-OpenViking 的发版目标不是单一产物，而是围绕不同使用入口发布一组相互关联的资产：
+Business Data Platform 的发版目标不是单一产物，而是围绕不同使用入口发布一组相互关联的资产：
 
 - `openviking` Python 主包：面向本地运行时、服务端、CLI 及完整功能用户。
-- Python SDK `openviking-sdk`：面向只通过 HTTP 调用已有 OpenViking 服务的轻量客户端用户。
+- Python SDK `openviking-sdk`：面向只通过 HTTP 调用已有 Business Data Platform 服务的轻量客户端用户。
 - Docker 镜像：面向容器化部署，发布到 GHCR 和 Docker Hub。
 - TOS 发布资产：面向源码包、安装脚本和稳定下载路径。
 - Rust CLI / npm 包：面向通过 npm 安装 `ov` CLI 的用户。
@@ -124,7 +124,7 @@ workflow 会把 tag 中的版本写入平台包和 wrapper 包。如果 npm 上�
 
 ## OpenClaw / ClawHub 插件发布
 
-OpenClaw 插件通过 `ClawHub release (OpenViking plugin)` workflow 手动发布。输入参数包括：
+OpenClaw 插件通过 `ClawHub release (Business Data Platform plugin)` workflow 手动发布。输入参数包括：
 
 - `version`：可选；为空时由 workflow 按日期自动生成。
 - `channel`：`auto`、`dev` 或 `latest`。

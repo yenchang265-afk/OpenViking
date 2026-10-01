@@ -1,12 +1,12 @@
-# OpenViking 指标体系设计方案
+# Business Data Platform 指标体系设计方案
 
 ## 背景
 
-本方案讨论的是 OpenViking 的“指标体系（metrics）”，目标是把 `/metrics` 做成一个可持续抓取的 Prometheus 导出端点，并与 `/api/v1/observer/*`（瞬时状态）和 `/api/v1/stats/*`（分析统计）形成清晰边界。
+本方案讨论的是 Business Data Platform 的“指标体系（metrics）”，目标是把 `/metrics` 做成一个可持续抓取的 Prometheus 导出端点，并与 `/api/v1/observer/*`（瞬时状态）和 `/api/v1/stats/*`（分析统计）形成清晰边界。
 
 ### 现状入口与实现特征
 
-OpenViking 当前已经存在三类与“观测”相关的入口：
+Business Data Platform 当前已经存在三类与“观测”相关的入口：
 
 | 入口 | 当前定位 | 当前实现特征 |
 | --- | --- | --- |
@@ -231,7 +231,7 @@ operation telemetry 已经拥有很多有价值的数据字段，如：
 - 某个领域内部维护的累计统计；
 - 某个探针执行结果。
 
-在 OpenViking 中，`MetricDataSource` 采用“统一基类 + 中间契约层 + 具体实现类”的三层结构。具体继承关系如下：
+在 Business Data Platform 中，`MetricDataSource` 采用“统一基类 + 中间契约层 + 具体实现类”的三层结构。具体继承关系如下：
 
 ```mermaid
 graph LR
@@ -664,7 +664,7 @@ sequenceDiagram
 - 对 Prometheus 多实例聚合不友好；
 - 与 Histogram 的职责边界重叠；
 - 会增加 registry 与 exporter 实现复杂度；
-- 当前 OpenViking 真实缺的是 Gauge，不是 Summary。
+- 当前 Business Data Platform 真实缺的是 Gauge，不是 Summary。
 
 ### 3.3 标签策略
 

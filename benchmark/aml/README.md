@@ -14,7 +14,7 @@ aggregation.
 
 ## Add/Search adapter
 
-For a local OpenViking server using `server.auth_mode: dev`:
+For a local Business Data Platform server using `server.auth_mode: dev`:
 
 ```bash
 export OPENVIKING_URL=http://127.0.0.1:1933
@@ -23,14 +23,14 @@ export AML_API_KEY='<memory-system key>'
 python -m benchmark.aml.server --host 127.0.0.1 --port 8088
 ```
 
-Do not set an OpenViking key or account for this local `dev` setup. The SDK
-passes each AML `user_id` directly as the OpenViking user; there is no hash or
-second identity mapping. Like other OpenViking SDK clients, it also reads an
+Do not set a Business Data Platform key or account for this local `dev` setup. The SDK
+passes each AML `user_id` directly as the Business Data Platform user; there is no hash or
+second identity mapping. Like other Business Data Platform SDK clients, it also reads an
 existing `~/.openviking/ovcli.conf`, so that file must match the server being
 used (or be disabled with `OPENVIKING_CLI_CONFIG_FILE` pointing to a missing
 file).
 
-For a remote multi-user deployment, configure the OpenViking server with
+For a remote multi-user deployment, configure the Business Data Platform server with
 `server.auth_mode: trusted`, then set the trusted-mode root key and account:
 
 ```bash
@@ -42,7 +42,7 @@ export AML_API_KEY='<memory-system key>'
 python -m benchmark.aml.server --host 0.0.0.0 --port 8088
 ```
 
-OpenViking's standard `api_key` mode cannot use one root key to switch among
+Business Data Platform's standard `api_key` mode cannot use one root key to switch among
 dynamic AML users: in that mode a request must use the key belonging to the
 target user. `AML_API_KEY` is unrelated; it only protects this adapter's
 incoming `/add` and `/search` endpoints.
@@ -53,8 +53,8 @@ The adapter provides:
 - `POST /add`
 - `POST /search`
 
-`/add` calls the OpenViking SDK's `batch_add_messages`, `commit_session`, and
-`get_task` in that order. `/search` calls OpenViking `find`, restricted to
+`/add` calls the Business Data Platform SDK's `batch_add_messages`, `commit_session`, and
+`get_task` in that order. `/search` calls Business Data Platform `find`, restricted to
 `viking://~/memories` and level 2 under the same AML user. Each dataset case is
 isolated by its `user_id`; session IDs only separate histories inside that
 user's space. Transient SDK calls are retried up to three times by
@@ -63,12 +63,12 @@ behavior. `Token`, `Bearer`, and `X-Api-Key` authentication are accepted when
 `AML_API_KEY` is set.
 
 The native `find` call uses quick retrieval without reranking, even when the
-OpenViking server has a reranker configured. The adapter returns each hit's
+Business Data Platform server has a reranker configured. The adapter returns each hit's
 `content` when present, otherwise its `abstract`, without an additional
 full-text read.
 
 Run these modules from a source checkout with the project's Python dependencies
-installed. The standard OpenViking image and installed package do not include
+installed. The standard Business Data Platform image and installed package do not include
 `benchmark/aml`.
 
 ## Local Add/Search

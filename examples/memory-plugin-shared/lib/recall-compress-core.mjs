@@ -3,7 +3,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
 export const NO_RELEVANT_MEMORY = "NO_RELEVANT_MEMORY";
-export const DIGEST_HEADER = "OpenViking memory digest:";
+export const DIGEST_HEADER = "Business Data Platform memory digest:";
 const COMPRESS_OK = "ok";
 const COMPRESS_EMPTY = "empty";
 const COMPRESS_FAILED = "failed";
@@ -19,7 +19,7 @@ Do not use any tools. Do not investigate. Only transform the given text.
 User query:
 ${query}
 
-Retrieved OpenViking context fragments:
+Retrieved Business Data Platform context fragments:
 ${rendered}
 
 Write a memory digest for a coding agent about to answer that query. Keep the

@@ -75,7 +75,7 @@ async function sendSerial(fetchJSON, sessionId, payloads, startIndex, opts, resu
  * Send add-message payloads in server-sized batches with serial fallback.
  *
  * @param {Function} fetchJSON - (path, init) => { ok, status, result?, error? }
- * @param {string} sessionId - OpenViking session id
+ * @param {string} sessionId - Business Data Platform session id
  * @param {Array<object>} payloads - sanitized add-message request bodies
  * @param {object} opts
  * @param {boolean} opts.enqueueOnRetryable - enqueue unsent payloads after a retryable failure

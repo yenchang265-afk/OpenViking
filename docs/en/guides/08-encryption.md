@@ -1,10 +1,10 @@
 # Encryption Guide
 
-This guide describes how to enable and use at-rest data encryption in OpenViking.
+This guide describes how to enable and use at-rest data encryption in Business Data Platform.
 
 ## Overview
 
-OpenViking provides transparent at-rest data encryption to ensure data security and isolation in multi-tenant environments:
+Business Data Platform provides transparent at-rest data encryption to ensure data security and isolation in multi-tenant environments:
 
 - ✅ **Transparent encryption**: No API changes, application layer unaware
 - ✅ **Multi-tenant isolation**: Different accounts use independent keys
@@ -22,7 +22,7 @@ Rules:
 - When global `encryption.enabled=true`, the primary backend must be encrypted.
 - Each backup backend may control its own encryption through `encryption.enabled`.
 - Multi-write internal metadata such as `.redirect.json` and `.sync_log.json` follows the primary backend's encryption policy.
-- OpenViking does not expose and does not need public encryption APIs for operating on these internal files.
+- Business Data Platform does not expose and does not need public encryption APIs for operating on these internal files.
 
 See the [Multi-Write Storage Guide](./13-multi-write-storage.md) for more multi-write configuration details.
 
@@ -90,7 +90,7 @@ It waits for import processing and checks retrieval; successful retrieval alone 
 
 ## API Key Hashing Configuration
 
-OpenViking provides two layers of encryption protection:
+Business Data Platform provides two layers of encryption protection:
 
 | Encryption Layer | Config | Algorithm | Reversible | Description |
 |------------------|--------|-----------|------------|-------------|
@@ -99,7 +99,7 @@ OpenViking provides two layers of encryption protection:
 
 ### ⚠️ Breaking Change Notice
 
-**Version Change**: OpenViking v0.3.12 → later versions
+**Version Change**: Business Data Platform v0.3.12 → later versions
 
 **Behavior Change**:
 - **Before**: `encryption.enabled = true` implicitly enabled API key Argon2id hashing
@@ -243,7 +243,7 @@ vault secrets enable -version=2 kv
 vault secrets enable kv
 ```
 
-3. Configure OpenViking:
+3. Configure Business Data Platform:
 
 ```json
 {
@@ -306,7 +306,7 @@ path "transit/decrypt/openviking-root" {
 3. Select "Symmetric Key", algorithm `AES_256`
 4. Record the Key ID
 
-### Configure OpenViking
+### Configure Business Data Platform
 
 ```json
 {
@@ -411,7 +411,7 @@ Enabling encryption does not rewrite existing plaintext files. They remain reada
 ov backup ./backups/before-encryption.ovpack
 ```
 
-2. Stop OpenViking. Enable encryption and point the storage configuration at a **new, empty** workspace/backend. Keep the original data and encryption key backup until verification is complete.
+2. Stop Business Data Platform. Enable encryption and point the storage configuration at a **new, empty** workspace/backend. Keep the original data and encryption key backup until verification is complete.
 3. Start the encrypted environment. In API key mode, first create the target account and a restore operator with an admin key, then point the CLI at the target using that key, as described in [Full Backup and Restore](09-ovpack.md#full-backup-and-restore). Restore writes the package content through the encrypted storage layer:
 
 Account initialization creates scope directories, so `fail` would reject this restore. Confirm that the target contains only the newly created account's initial content before using `overwrite` below. If it already contains business data, stop and follow the target-backup and conflict-review steps in the OVPack guide instead.
@@ -481,9 +481,9 @@ Error: KeyMismatchError
 
 ### Partial Read Returns Ciphertext
 
-If using encrypted files created with an older OpenViking version, partial reads may return ciphertext.
+If using encrypted files created with an older Business Data Platform version, partial reads may return ciphertext.
 
-**Solution**: Upgrade to the latest OpenViking version.
+**Solution**: Upgrade to the latest Business Data Platform version.
 
 ---
 

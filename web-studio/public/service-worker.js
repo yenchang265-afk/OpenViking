@@ -1,4 +1,4 @@
-// OpenViking Studio service worker.
+// Business Data Platform Studio service worker.
 //
 // Minimal pass-through SW whose only purpose is to satisfy the PWA
 // installability criteria (Chrome requires a registered SW with a fetch
