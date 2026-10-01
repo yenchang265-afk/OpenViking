@@ -211,7 +211,7 @@ async def test_on_resource_added_bridges_reason_through_fixed_session(request_co
     session_service = _FakeSessionService()
     service = ResourceMemoryLinkService(
         viking_fs=_FakeVikingFS(
-            {"viking://resources/images/2026/06/11/.abstract.md": "动漫角色照片合集"}
+            {"viking://resources/images/2026/06/11/.abstract.md": "動漫角色照片合集"}
         ),
         session_service=session_service,
     )
@@ -219,7 +219,7 @@ async def test_on_resource_added_bridges_reason_through_fixed_session(request_co
     result = await service.on_resource_added(
         ctx=request_context,
         resource_uri=resource_uri,
-        reason="这是越前龙马的照片",
+        reason="這是越前龍馬的照片",
         source_name="yueqian.jpeg",
     )
 
@@ -249,9 +249,9 @@ async def test_on_resource_added_bridges_reason_through_fixed_session(request_co
     assert session_service.deleted == []
     message_text = session_service.session.messages[0]["parts"][0].text
     assert resource_uri in message_text
-    assert "这是越前龙马的照片" in message_text
+    assert "這是越前龍馬的照片" in message_text
     assert "yueqian.jpeg" in message_text
-    assert "动漫角色照片合集" in message_text
+    assert "動漫角色照片合集" in message_text
 
 
 @pytest.mark.asyncio
@@ -279,7 +279,7 @@ async def test_on_resource_added_reuses_same_reason_session(request_context):
         return await service.on_resource_added(
             ctx=request_context,
             resource_uri=f"viking://resources/images/{name}.jpeg",
-            reason=f"这是{name}的照片",
+            reason=f"這是{name}的照片",
             source_name=f"{name}.jpeg",
         )
 
@@ -312,7 +312,7 @@ async def test_on_resource_added_reuses_same_reason_session(request_context):
     messages = [item["parts"][0].text for item in session_service.session.messages]
     assert len(messages) == 3
     for name in ("ryoma", "fuji", "tezuka"):
-        assert any(f"这是{name}的照片" in message for message in messages)
+        assert any(f"這是{name}的照片" in message for message in messages)
 
 
 @pytest.mark.asyncio
@@ -331,7 +331,7 @@ async def test_on_resource_added_routes_reason_to_actor_peer(request_context):
     result = await service.on_resource_added(
         ctx=peer_ctx,
         resource_uri="viking://resources/images/ryoma.jpeg",
-        reason="这是越前龙马的照片",
+        reason="這是越前龍馬的照片",
         source_name="ryoma.jpeg",
     )
 
@@ -363,7 +363,7 @@ async def test_on_resource_added_routes_peer_resource_uri_to_peer(request_contex
     await service.on_resource_added(
         ctx=request_context,
         resource_uri=resource_uri,
-        reason="这是越前龙马的照片",
+        reason="這是越前龍馬的照片",
         source_name="ryoma.jpeg",
     )
 
@@ -409,7 +409,7 @@ async def test_on_resource_deleted_bridges_through_fixed_session(request_context
 @pytest.mark.asyncio
 async def test_read_resource_directory_abstract_uses_parent_abstract(request_context):
     service = ResourceMemoryLinkService(
-        viking_fs=_FakeVikingFS({"viking://resources/images/.abstract.md": "动漫角色照片合集"})
+        viking_fs=_FakeVikingFS({"viking://resources/images/.abstract.md": "動漫角色照片合集"})
     )
 
     abstract = await service._read_resource_directory_abstract(
@@ -417,7 +417,7 @@ async def test_read_resource_directory_abstract_uses_parent_abstract(request_con
         request_context,
     )
 
-    assert abstract == "动漫角色照片合集"
+    assert abstract == "動漫角色照片合集"
 
 
 @pytest.mark.asyncio
@@ -456,13 +456,13 @@ async def test_find_referencing_memories_uses_memory_refs(request_context):
     memory_uri = "viking://user/alice/memories/entities/wang.md"
     resource_uri = "viking://resources/docs/id_card.pdf"
     raw = (
-        "王大锤资料。\n\n"
+        "王大錘資料。\n\n"
         "<!-- MEMORY_FIELDS\n"
         "{\n"
         '  "resource_refs": [\n'
         "    {\n"
         f'      "resource_uri": "{resource_uri}",\n'
-        '      "reason": "这是王大锤的身份证"\n'
+        '      "reason": "這是王大錘的身份證"\n'
         "    }\n"
         "  ]\n"
         "}\n"
@@ -490,12 +490,12 @@ async def test_find_referencing_memories_uses_grep_candidates_without_tree_scan(
     raw = MemoryFileUtils.write(
         MemoryFile(
             uri=memory_uri,
-            content="王大锤资料。",
+            content="王大錘資料。",
             extra_fields={
                 "resource_refs": [
                     {
                         "resource_uri": resource_uri,
-                        "reason": "这是王大锤的身份证",
+                        "reason": "這是王大錘的身份證",
                     }
                 ]
             },
@@ -503,8 +503,8 @@ async def test_find_referencing_memories_uses_grep_candidates_without_tree_scan(
     )
     store = {
         memory_uri: raw,
-        unrelated_uri: "不会命中的普通记忆",
-        overview_uri: f"- [王大锤]({memory_uri})",
+        unrelated_uri: "不會命中的普通記憶",
+        overview_uri: f"- [王大錘]({memory_uri})",
     }
     viking_fs = _FakeGrepVikingFS(
         store,
@@ -544,13 +544,13 @@ async def test_find_referencing_memories_scans_actor_peer_memory(request_context
     memory_uri = "viking://user/alice/peers/web-visitor-alice/memories/entities/wang.md"
     resource_uri = "viking://resources/docs/id_card.pdf"
     raw = (
-        "王大锤资料。\n\n"
+        "王大錘資料。\n\n"
         "<!-- MEMORY_FIELDS\n"
         "{\n"
         '  "resource_refs": [\n'
         "    {\n"
         f'      "resource_uri": "{resource_uri}",\n'
-        '      "reason": "这是王大锤的身份证"\n'
+        '      "reason": "這是王大錘的身份證"\n'
         "    }\n"
         "  ]\n"
         "}\n"
@@ -574,13 +574,13 @@ async def test_before_resource_delete_commits_then_unlinks_stale_refs(request_co
     memory_uri = "viking://user/alice/memories/entities/wang.md"
     resource_uri = "viking://resources/id_card.pdf"
     raw = (
-        "王大锤资料。\n\n"
+        "王大錘資料。\n\n"
         "<!-- MEMORY_FIELDS\n"
         "{\n"
         '  "resource_refs": [\n'
         "    {\n"
         f'      "resource_uri": "{resource_uri}",\n'
-        '      "reason": "这是王大锤的身份证"\n'
+        '      "reason": "這是王大錘的身份證"\n'
         "    }\n"
         "  ]\n"
         "}\n"
@@ -612,12 +612,12 @@ async def test_before_resource_delete_commits_then_unlinks_stale_refs(request_co
 
 @pytest.mark.asyncio
 async def test_unlink_memory_reference_keeps_visible_text_and_no_schema_metadata(request_context):
-    memory_uri = "viking://user/ryoma/memories/entities/动漫角色/不二周助-write-test3.md"
-    resource_uri = "viking://resources/images/2026/06/10/不二周助_jpeg"
+    memory_uri = "viking://user/ryoma/memories/entities/動漫角色/不二週助-write-test3.md"
+    resource_uri = "viking://resources/images/2026/06/10/不二週助_jpeg"
     original_raw = MemoryFileUtils.write(
         MemoryFile(
             uri=memory_uri,
-            content=f"今天是清明节。[用户保存了一张不二周助的照片]({resource_uri})",
+            content=f"今天是清明節。[使用者儲存了一張不二週助的照片]({resource_uri})",
             extra_fields={
                 "resource_refs": [
                     {
@@ -640,7 +640,7 @@ async def test_unlink_memory_reference_keeps_visible_text_and_no_schema_metadata
 
     assert result.edited_uris == [memory_uri]
     mf = MemoryFileUtils.read(store[memory_uri], uri=memory_uri)
-    assert mf.content == "今天是清明节。用户保存了一张不二周助的照片"
+    assert mf.content == "今天是清明節。使用者儲存了一張不二週助的照片"
     assert mf.extra_fields == {}
     assert mf.memory_type is None
 
@@ -649,15 +649,15 @@ async def test_unlink_memory_reference_keeps_visible_text_and_no_schema_metadata
 async def test_unlink_memory_reference_does_not_delete_event_memory(
     request_context,
 ):
-    memory_uri = "viking://user/ryoma/memories/events/2026/06/11/越前龙马.md"
+    memory_uri = "viking://user/ryoma/memories/events/2026/06/11/越前龍馬.md"
     resource_uri = "viking://resources/images/2026/06/11/yueqian_jpeg"
     original_raw = MemoryFileUtils.write(
         MemoryFile(
             uri=memory_uri,
-            content=f"[用户保存了一张越前龙马的照片]({resource_uri})",
+            content=f"[使用者儲存了一張越前龍馬的照片]({resource_uri})",
             extra_fields={
-                "category": "动漫角色",
-                "name": "越前龙马",
+                "category": "動漫角色",
+                "name": "越前龍馬",
                 "user_id": "ryoma",
                 "memory_type": "entities",
             },
@@ -678,7 +678,7 @@ async def test_unlink_memory_reference_does_not_delete_event_memory(
     assert result.edited_uris == [memory_uri]
     assert result.deleted_uris == []
     mf = MemoryFileUtils.read(store[memory_uri], uri=memory_uri)
-    assert mf.content == "用户保存了一张越前龙马的照片"
+    assert mf.content == "使用者儲存了一張越前龍馬的照片"
 
 
 @pytest.mark.asyncio
@@ -691,7 +691,7 @@ async def test_before_resource_delete_cleans_visible_uri_without_resource_refs(
         MemoryFile(
             uri=memory_uri,
             content=(
-                f"今天是清明节。\n用户昨晚查看了[越前龙马照片]({resource_uri})，之后可参考该资源。"
+                f"今天是清明節。\n使用者昨晚查看了[越前龍馬照片]({resource_uri})，之後可參考該資源。"
             ),
             extra_fields={"memory_type": "events"},
         )
@@ -707,7 +707,7 @@ async def test_before_resource_delete_cleans_visible_uri_without_resource_refs(
     assert result["status"] == "success"
     assert result["memory_uris"] == [memory_uri]
     mf = MemoryFileUtils.read(store[memory_uri], uri=memory_uri)
-    assert mf.content == "今天是清明节。\n用户昨晚查看了越前龙马照片，之后可参考该资源。"
+    assert mf.content == "今天是清明節。\n使用者昨晚查看了越前龍馬照片，之後可參考該資源。"
     assert "resource_refs" not in mf.extra_fields
 
 
@@ -722,7 +722,7 @@ async def test_before_resource_delete_exact_keeps_child_resource_refs(
         MemoryFile(
             uri=memory_uri,
             content=(
-                f"用户保存了[相册资源]({resource_uri})。\n用户保存了[相册里的子图]({child_uri})。"
+                f"使用者儲存了[相簿資源]({resource_uri})。\n使用者儲存了[相簿裡的子圖]({child_uri})。"
             ),
             extra_fields={
                 "resource_refs": [
@@ -743,9 +743,9 @@ async def test_before_resource_delete_exact_keeps_child_resource_refs(
 
     assert result["status"] == "success"
     mf = MemoryFileUtils.read(store[memory_uri], uri=memory_uri)
-    assert f"[相册资源]({resource_uri})" not in mf.content
-    assert "用户保存了相册资源。" in mf.content
-    assert f"[相册里的子图]({child_uri})" in mf.content
+    assert f"[相簿資源]({resource_uri})" not in mf.content
+    assert "使用者儲存了相簿資源。" in mf.content
+    assert f"[相簿裡的子圖]({child_uri})" in mf.content
     refs = mf.extra_fields["resource_refs"]
     assert refs == [{"resource_uri": child_uri, "source": "content.write"}]
 

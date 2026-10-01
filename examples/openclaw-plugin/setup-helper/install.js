@@ -139,7 +139,7 @@ for (let i = 0; i < argv.length; i++) {
   if (arg === "-y" || arg === "--yes") {
     err(tr(
       "-y/--yes has been removed. Use --base-url <URL> [--api-key <KEY>] for non-interactive mode.",
-      "-y/--yes 已移除。使用 --base-url <URL> [--api-key <KEY>] 进入非交互模式。",
+      "-y/--yes 已移除。使用 --base-url <URL> [--api-key <KEY>] 進入非互動模式。",
     ));
     process.exit(1);
   }
@@ -551,20 +551,20 @@ async function questionPeerRole(defaultValue = "none") {
     "Memory scope — none (default): viking://user/<user_id>/memories, shared across all conversations; "
       + "assistant: viking://user/<user_id>/peers/<assistant_id>/memories; "
       + "sender: viking://user/<user_id>/peers/<sender_id>/memories (legacy alias: person).",
-    "记忆归属 —— none（默认）：viking://user/<user_id>/memories，所有对话共享；"
+    "記憶歸屬 —— none（預設）：viking://user/<user_id>/memories，所有對話共享；"
       + "assistant：viking://user/<user_id>/peers/<assistant_id>/memories；"
-      + "sender：viking://user/<user_id>/peers/<sender_id>/memories（兼容旧值 person）。",
+      + "sender：viking://user/<user_id>/peers/<sender_id>/memories（相容舊值 person）。",
   ));
   while (true) {
     const answer = await question(
-      tr("Memory scope (none/assistant/sender)", "记忆归属（none/assistant/sender）"),
+      tr("Memory scope (none/assistant/sender)", "記憶歸屬（none/assistant/sender）"),
       defaultValue,
     );
     const role = normalizePeerRole(answer);
     if (role) return role;
     warn(tr(
       'Memory scope must be "none", "assistant", or "sender" (legacy "person" is also accepted).',
-      '记忆归属必须是 "none"、"assistant" 或 "sender"（也兼容旧值 "person"）。',
+      '記憶歸屬必須是 "none"、"assistant" 或 "sender"（也相容舊值 "person"）。',
     ));
   }
 }
@@ -572,7 +572,7 @@ async function questionPeerRole(defaultValue = "none") {
 async function questionPeerPrefix(defaultValue = "") {
   while (true) {
     const answer = (await question(
-      tr("Peer Prefix (optional)", "Peer Prefix（可选）"),
+      tr("Peer Prefix (optional)", "Peer Prefix（可選）"),
       defaultValue,
     )).trim();
     if (isValidPeerPrefixInput(answer)) {
@@ -580,7 +580,7 @@ async function questionPeerPrefix(defaultValue = "") {
     }
     warn(tr(
       "Peer Prefix may only contain letters, digits, underscores, and hyphens, or be empty.",
-      "Peer Prefix 只能包含字母、数字、下划线和连字符，或留空。",
+      "Peer Prefix 只能包含字母、數字、下劃線和連字元，或留空。",
     ));
   }
 }
@@ -611,26 +611,26 @@ async function selectWorkdir() {
   if (nonInteractive) return;
 
   console.log("");
-  bold(tr("Found multiple OpenClaw instances:", "发现多个 OpenClaw 实例："));
+  bold(tr("Found multiple OpenClaw instances:", "發現多個 OpenClaw 例項："));
   for (let i = 0; i < instances.length; i++) {
     console.log(`  ${i + 1}) ${instances[i]}`);
   }
   console.log("");
 
-  const answer = await question(tr("Select instance number", "选择实例编号"), "1");
+  const answer = await question(tr("Select instance number", "選擇例項編號"), "1");
   const index = Number.parseInt(answer, 10) - 1;
   if (index >= 0 && index < instances.length) {
     setOpenClawDir(instances[index]);
   } else {
-    warn(tr("Invalid selection, using default", "无效选择，使用默认"));
+    warn(tr("Invalid selection, using default", "無效選擇，使用預設"));
     setOpenClawDir(instances[0]);
   }
 }
 
 async function collectRemoteConfig() {
   if (nonInteractive) return;
-  remoteBaseUrl = await question(tr("OpenViking server URL", "OpenViking 服务器地址"), remoteBaseUrl);
-  remoteApiKey = await question(tr("API Key (optional)", "API Key（可选）"), remoteApiKey);
+  remoteBaseUrl = await question(tr("OpenViking server URL", "OpenViking 伺服器地址"), remoteBaseUrl);
+  remoteApiKey = await question(tr("API Key (optional)", "API Key（可選）"), remoteApiKey);
   remotePeerRole = await questionPeerRole(remotePeerRole);
   remotePeerPrefix = remotePeerRole === "assistant"
     ? await questionPeerPrefix(remotePeerPrefix)
@@ -639,20 +639,20 @@ async function collectRemoteConfig() {
 
 async function checkOpenClaw() {
   if (process.env.SKIP_OPENCLAW === "1") {
-    info(tr("Skipping OpenClaw check (SKIP_OPENCLAW=1)", "跳过 OpenClaw 校验 (SKIP_OPENCLAW=1)"));
+    info(tr("Skipping OpenClaw check (SKIP_OPENCLAW=1)", "跳過 OpenClaw 校驗 (SKIP_OPENCLAW=1)"));
     return;
   }
 
-  info(tr("Checking OpenClaw...", "正在校验 OpenClaw..."));
+  info(tr("Checking OpenClaw...", "正在校驗 OpenClaw..."));
   const result = await runCapture("openclaw", ["--version"], { shell: IS_WIN });
   if (result.code === 0) {
-    info(tr("OpenClaw detected ✓", "OpenClaw 已安装 ✓"));
+    info(tr("OpenClaw detected ✓", "OpenClaw 已安裝 ✓"));
     return;
   }
 
-  err(tr("OpenClaw not found. Install it manually, then rerun this script.", "未检测到 OpenClaw，请先手动安装后再执行本脚本"));
+  err(tr("OpenClaw not found. Install it manually, then rerun this script.", "未檢測到 OpenClaw，請先手動安裝後再執行本指令碼"));
   console.log("");
-  console.log(tr("Recommended command:", "推荐命令："));
+  console.log(tr("Recommended command:", "推薦命令："));
   console.log(`  npm install -g openclaw --registry ${NPM_REGISTRY}`);
   console.log("");
   console.log("  openclaw --version");
@@ -703,21 +703,21 @@ function applyOpenClawBuildPolicy(openClawVersion) {
   if (!openClawVersion || openClawVersion === "0.0.0") {
     warn(tr(
       "Could not determine OpenClaw version; keeping plugin source build enabled.",
-      "无法确定 OpenClaw 版本，保持插件源码构建开启。",
+      "無法確定 OpenClaw 版本，保持外掛原始碼構建開啟。",
     ));
     return;
   }
   if (openClawPolicyVersionGte(openClawVersion, resolvedNpmBuildMinOpenclawVersion)) {
     info(tr(
       `OpenClaw ${openClawVersion} requires plugin source build (>= ${resolvedNpmBuildMinOpenclawVersion})`,
-      `OpenClaw ${openClawVersion} 需要插件源码构建（>= ${resolvedNpmBuildMinOpenclawVersion}）`,
+      `OpenClaw ${openClawVersion} 需要外掛原始碼構建（>= ${resolvedNpmBuildMinOpenclawVersion}）`,
     ));
     return;
   }
   resolvedNpmBuild = false;
   info(tr(
     `OpenClaw ${openClawVersion} is below ${resolvedNpmBuildMinOpenclawVersion}; skipping plugin source build`,
-    `OpenClaw ${openClawVersion} 低于 ${resolvedNpmBuildMinOpenclawVersion}，跳过插件源码构建`,
+    `OpenClaw ${openClawVersion} 低於 ${resolvedNpmBuildMinOpenclawVersion}，跳過外掛原始碼構建`,
   ));
 }
 
@@ -992,7 +992,7 @@ async function resolveDefaultPluginVersion() {
           PLUGIN_VERSION = latestTag;
           info(tr(
             `Resolved default plugin version to latest tag: ${PLUGIN_VERSION}`,
-            `已将默认插件版本解析为最新 tag: ${PLUGIN_VERSION}`,
+            `已將預設外掛版本解析為最新 tag: ${PLUGIN_VERSION}`,
           ));
           return;
         }
@@ -1016,7 +1016,7 @@ async function resolveDefaultPluginVersion() {
       PLUGIN_VERSION = latestTag;
       info(tr(
         `Resolved default plugin version via git tags: ${PLUGIN_VERSION}`,
-        `已通过 git tag 解析默认插件版本: ${PLUGIN_VERSION}`,
+        `已通過 git tag 解析預設外掛版本: ${PLUGIN_VERSION}`,
       ));
       return;
     }
@@ -1027,11 +1027,11 @@ async function resolveDefaultPluginVersion() {
 
   err(tr(
     `Could not resolve the latest tag for ${REPO}.`,
-    `无法解析 ${REPO} 的最新 tag。`,
+    `無法解析 ${REPO} 的最新 tag。`,
   ));
   console.log(tr(
     "Please rerun with --plugin-version <tag>, or use --plugin-version main to track the branch head explicitly.",
-    "请使用 --plugin-version <tag> 重新执行；如果需要显式跟踪分支头，请使用 --plugin-version main。",
+    "請使用 --plugin-version <tag> 重新執行；如果需要顯式跟蹤分支頭，請使用 --plugin-version main。",
   ));
   if (failures.length > 0) {
     warn(failures.join(" | "));
@@ -1182,7 +1182,7 @@ async function resolvePluginConfig() {
       pluginDir = "openclaw-memory-plugin";
       info(tr("No manifest found, using fallback for openclaw-memory-plugin", "未找到 manifest，使用 openclaw-memory-plugin 回退配置"));
     } else {
-      err(tr(`Cannot find plugin directory for version: ${PLUGIN_VERSION}`, `无法找到版本 ${PLUGIN_VERSION} 的插件目录`));
+      err(tr(`Cannot find plugin directory for version: ${PLUGIN_VERSION}`, `無法找到版本 ${PLUGIN_VERSION} 的外掛目錄`));
       process.exit(1);
     }
   }
@@ -1226,13 +1226,13 @@ async function resolvePluginConfig() {
         const currentPackageNames = new Set(["@openviking/openclaw-plugin", "@openclaw/openviking"]);
         if (pkgName && !currentPackageNames.has(pkgName)) {
           fallbackKey = "legacy";
-          info(tr(`Detected legacy plugin by package name: ${pkgName}`, `通过 package.json 名称检测到旧版插件: ${pkgName}`));
+          info(tr(`Detected legacy plugin by package name: ${pkgName}`, `通過 package.json 名稱檢測到舊版外掛: ${pkgName}`));
         } else if (pkgName) {
           fallbackKey = "current";
         }
         compatVer = (pkg.engines?.openclaw || "").replace(/^>=?\s*/, "").trim();
         if (compatVer) {
-          info(tr(`Read minOpenclawVersion from package.json engines.openclaw: >=${compatVer}`, `从 package.json engines.openclaw 读取到最低版本: >=${compatVer}`));
+          info(tr(`Read minOpenclawVersion from package.json engines.openclaw: >=${compatVer}`, `從 package.json engines.openclaw 讀取到最低版本: >=${compatVer}`));
         }
       } catch {}
     }
@@ -1259,7 +1259,7 @@ async function resolvePluginConfig() {
           const m = JSON.parse(mainManifest);
           compatVer = m.compatibility?.minOpenclawVersion || "";
           if (compatVer) {
-            info(tr(`Read minOpenclawVersion from main branch manifest: >=${compatVer}`, `从 main 分支 manifest 读取到最低版本: >=${compatVer}`));
+            info(tr(`Read minOpenclawVersion from main branch manifest: >=${compatVer}`, `從 main 分支 manifest 讀取到最低版本: >=${compatVer}`));
           }
         } catch {}
       }
@@ -1282,7 +1282,7 @@ async function checkOpenClawCompatibility() {
   }
 
   const ocVersion = await detectOpenClawVersion();
-  info(tr(`Detected OpenClaw version: ${ocVersion}`, `检测到 OpenClaw 版本: ${ocVersion}`));
+  info(tr(`Detected OpenClaw version: ${ocVersion}`, `檢測到 OpenClaw 版本: ${ocVersion}`));
   applyOpenClawBuildPolicy(ocVersion);
 
   // If no minimum version required, pass
@@ -1302,12 +1302,12 @@ async function checkOpenClawCompatibility() {
       `OpenClaw ${ocVersion} 不支持此插件（需要 >= ${resolvedMinOpenclawVersion}）`
     ));
     console.log("");
-    bold(tr("Please choose one of the following options:", "请选择以下方案之一："));
+    bold(tr("Please choose one of the following options:", "請選擇以下方案之一："));
     console.log("");
-    console.log(`  ${tr("Option 1: Upgrade OpenClaw", "方案 1：升级 OpenClaw")}`);
+    console.log(`  ${tr("Option 1: Upgrade OpenClaw", "方案 1：升級 OpenClaw")}`);
     console.log(`    npm update -g openclaw --registry ${NPM_REGISTRY}`);
     console.log("");
-    console.log(`  ${tr("Option 2: Install a legacy plugin release compatible with your current OpenClaw version", "方案 2：安装与当前 OpenClaw 版本兼容的旧版插件")}`);
+    console.log(`  ${tr("Option 2: Install a legacy plugin release compatible with your current OpenClaw version", "方案 2：安裝與當前 OpenClaw 版本相容的舊版外掛")}`);
     console.log(`    ${getLegacyInstallCommandHint()}`);
     console.log("");
     process.exit(1);
@@ -1342,14 +1342,14 @@ async function printCurrentVersionInfo() {
   const pluginInstalledAt = state?.installedAt || "";
 
   console.log("");
-  bold(tr("Installed versions", "当前已安装版本"));
+  bold(tr("Installed versions", "當前已安裝版本"));
   console.log("");
   console.log(`Target: ${OPENCLAW_DIR}`);
   console.log(`Plugin: ${pluginReleaseId || pluginRequestedRef || "not installed"}`);
   if (pluginRequestedRef && pluginReleaseId && pluginRequestedRef !== pluginReleaseId) {
     console.log(`Plugin requested ref: ${pluginRequestedRef}`);
   }
-  console.log(tr("OpenViking server: not installed by this tool (use a remote URL in plugin config)", "OpenViking 服务端：本工具不安装；请在插件配置中填写远程服务地址"));
+  console.log(tr("OpenViking server: not installed by this tool (use a remote URL in plugin config)", "OpenViking 服務端：本工具不安裝；請在外掛配置中填寫遠端服務地址"));
   if (pluginInstalledAt) {
     console.log(`Installed at: ${pluginInstalledAt}`);
   }
@@ -1522,7 +1522,7 @@ async function rollbackLastUpgradeOperation() {
     err(
       tr(
         `No rollback audit file found at ${auditPath}.`,
-        `未找到回滚审计文件: ${auditPath}`,
+        `未找到回滾審計檔案: ${auditPath}`,
       ),
     );
     process.exit(1);
@@ -1532,7 +1532,7 @@ async function rollbackLastUpgradeOperation() {
     warn(
       tr(
         `The last recorded upgrade was already rolled back at ${audit.rolledBackAt}.`,
-        `最近一次升级已在 ${audit.rolledBackAt} 回滚。`,
+        `最近一次升級已在 ${audit.rolledBackAt} 回滾。`,
       ),
     );
   }
@@ -1542,7 +1542,7 @@ async function rollbackLastUpgradeOperation() {
     err(
       tr(
         `Rollback config backup is missing: ${configBackupPath}`,
-        `回滚配置备份缺失: ${configBackupPath}`,
+        `回滾配置備份缺失: ${configBackupPath}`,
       ),
     );
     process.exit(1);
@@ -1550,7 +1550,7 @@ async function rollbackLastUpgradeOperation() {
 
   const pluginBackups = Array.isArray(audit.pluginBackups) ? audit.pluginBackups : [];
   if (pluginBackups.length === 0) {
-    err(tr("Rollback audit file contains no plugin backups.", "回滚审计文件中没有插件备份信息。"));
+    err(tr("Rollback audit file contains no plugin backups.", "回滾審計檔案中沒有外掛備份資訊。"));
     process.exit(1);
   }
   for (const pluginBackup of pluginBackups) {
@@ -1558,19 +1558,19 @@ async function rollbackLastUpgradeOperation() {
       err(
         tr(
           `Rollback plugin backup is missing: ${pluginBackup?.backupDir || "<unknown>"}`,
-          `回滚插件备份缺失: ${pluginBackup?.backupDir || "<unknown>"}`,
+          `回滾外掛備份缺失: ${pluginBackup?.backupDir || "<unknown>"}`,
         ),
       );
       process.exit(1);
     }
   }
 
-  info(tr(`Rolling back last upgrade: ${audit.fromVersion || "unknown"} <- ${audit.toVersion || "unknown"}`, `开始回滚最近一次升级: ${audit.fromVersion || "unknown"} <- ${audit.toVersion || "unknown"}`));
+  info(tr(`Rolling back last upgrade: ${audit.fromVersion || "unknown"} <- ${audit.toVersion || "unknown"}`, `開始回滾最近一次升級: ${audit.fromVersion || "unknown"} <- ${audit.toVersion || "unknown"}`));
   await stopOpenClawGatewayForUpgrade();
 
   const configText = await readFile(configBackupPath, "utf8");
   await writeFile(getOpenClawConfigPath(), configText, "utf8");
-  info(tr(`Restored openclaw.json from backup: ${configBackupPath}`, `已从备份恢复 openclaw.json: ${configBackupPath}`));
+  info(tr(`Restored openclaw.json from backup: ${configBackupPath}`, `已從備份恢復 openclaw.json: ${configBackupPath}`));
 
   const extensionsDir = join(OPENCLAW_DIR, "extensions");
   await mkdir(extensionsDir, { recursive: true });
@@ -1587,14 +1587,14 @@ async function rollbackLastUpgradeOperation() {
       err(
         tr(
           `Rollback plugin backup is missing: ${pluginBackup.backupDir}`,
-          `回滚插件备份缺失: ${pluginBackup.backupDir}`,
+          `回滾外掛備份缺失: ${pluginBackup.backupDir}`,
         ),
       );
       process.exit(1);
     }
     const destDir = join(extensionsDir, pluginBackup.pluginId);
     await moveDirWithFallback(pluginBackup.backupDir, destDir);
-    info(tr(`Restored plugin directory: ${destDir}`, `已恢复插件目录: ${destDir}`));
+    info(tr(`Restored plugin directory: ${destDir}`, `已恢復外掛目錄: ${destDir}`));
   }
 
   audit.rolledBackAt = new Date().toISOString();
@@ -1602,10 +1602,10 @@ async function rollbackLastUpgradeOperation() {
   await writeUpgradeAuditFile(audit);
 
   console.log("");
-  bold(tr("Rollback complete!", "回滚完成！"));
+  bold(tr("Rollback complete!", "回滾完成！"));
   console.log("");
-  info(tr(`Rollback audit file: ${auditPath}`, `回滚审计文件: ${auditPath}`));
-  info(tr("Run `openclaw gateway` and `openclaw status` to verify the restored plugin state.", "请运行 `openclaw gateway` 和 `openclaw status` 验证恢复后的插件状态。"));
+  info(tr(`Rollback audit file: ${auditPath}`, `回滾審計檔案: ${auditPath}`));
+  info(tr("Run `openclaw gateway` and `openclaw status` to verify the restored plugin state.", "請執行 `openclaw gateway` 和 `openclaw status` 驗證恢復後的外掛狀態。"));
 }
 
 function prepareUpgradeRuntimeConfig(installedState) {
@@ -1692,7 +1692,7 @@ async function backupPluginDirectory(variant) {
     await cp(pluginDir, backupDir, { recursive: true, force: true });
     await rm(pluginDir, { recursive: true, force: true });
   }
-  info(tr(`Backed up plugin directory: ${backupDir}`, `已备份插件目录: ${backupDir}`));
+  info(tr(`Backed up plugin directory: ${backupDir}`, `已備份外掛目錄: ${backupDir}`));
   await prunePreviousUpgradeBackups(disabledDir, variant, backupDir);
   return backupDir;
 }
@@ -1703,9 +1703,9 @@ async function stopOpenClawGatewayForUpgrade() {
     shell: IS_WIN,
   });
   if (result.code === 0) {
-    info(tr("Stopped OpenClaw gateway before plugin upgrade", "升级插件前已停止 OpenClaw gateway"));
+    info(tr("Stopped OpenClaw gateway before plugin upgrade", "升級外掛前已停止 OpenClaw gateway"));
   } else {
-    warn(tr("OpenClaw gateway may not be running; continuing", "OpenClaw gateway 可能未在运行，继续执行"));
+    warn(tr("OpenClaw gateway may not be running; continuing", "OpenClaw gateway 可能未在執行，繼續執行"));
   }
 }
 
@@ -1723,7 +1723,7 @@ function shouldClaimTargetSlot(installedState) {
 
 async function cleanupInstalledPluginConfig(installedState) {
   if (!installedState.config || !installedState.config.plugins) {
-    warn(tr("openclaw.json has no plugins section; skipped targeted plugin cleanup", "openclaw.json 中没有 plugins 配置，已跳过定向插件清理"));
+    warn(tr("openclaw.json has no plugins section; skipped targeted plugin cleanup", "openclaw.json 中沒有 plugins 配置，已跳過定向外掛清理"));
     return;
   }
 
@@ -1734,12 +1734,12 @@ async function cleanupInstalledPluginConfig(installedState) {
   }
 
   if (!changed) {
-    info(tr("No OpenViking plugin config changes were required", "无需修改 OpenViking 插件配置"));
+    info(tr("No OpenViking plugin config changes were required", "無需修改 OpenViking 外掛配置"));
     return;
   }
 
   await writeFile(installedState.configPath, `${JSON.stringify(nextConfig, null, 2)}\n`, "utf8");
-  info(tr("Cleaned existing OpenViking plugin config only", "已仅清理 OpenViking 自身插件配置"));
+  info(tr("Cleaned existing OpenViking plugin config only", "已僅清理 OpenViking 自身外掛配置"));
 }
 
 async function prepareStrongPluginUpgrade() {
@@ -1748,7 +1748,7 @@ async function prepareStrongPluginUpgrade() {
     err(
       tr(
         "Plugin upgrade mode requires an existing OpenViking plugin entry in openclaw.json.",
-        "插件升级模式要求 openclaw.json 中已经存在 OpenViking 插件记录。",
+        "外掛升級模式要求 openclaw.json 中已經存在 OpenViking 外掛記錄。",
       ),
     );
     process.exit(1);
@@ -1761,7 +1761,7 @@ async function prepareStrongPluginUpgrade() {
   info(
     tr(
       `Detected installed OpenViking plugin state: ${installedState.generation}`,
-      `检测到已安装 OpenViking 插件状态: ${installedState.generation}`,
+      `檢測到已安裝 OpenViking 外掛狀態: ${installedState.generation}`,
     ),
   );
   remoteBaseUrl = upgradeRuntimeConfig.baseUrl || remoteBaseUrl;
@@ -1770,13 +1770,13 @@ async function prepareStrongPluginUpgrade() {
   remotePeerPrefix = upgradeRuntimeConfig.peer_prefix || "";
   remoteAccountId = upgradeRuntimeConfig.accountId || "";
   remoteUserId = upgradeRuntimeConfig.userId || "";
-  info(tr(`Upgrade runtime mode: ${selectedMode} (remote OpenViking server)`, `升级运行模式: ${selectedMode}（远程 OpenViking 服务）`));
+  info(tr(`Upgrade runtime mode: ${selectedMode} (remote OpenViking server)`, `升級執行模式: ${selectedMode}（遠端 OpenViking 服務）`));
 
-  info(tr(`Upgrade path: ${fromVersion} -> ${toVersion}`, `升级路径: ${fromVersion} -> ${toVersion}`));
+  info(tr(`Upgrade path: ${fromVersion} -> ${toVersion}`, `升級路徑: ${fromVersion} -> ${toVersion}`));
 
   await stopOpenClawGatewayForUpgrade();
   const configBackupPath = await backupOpenClawConfig(installedState.configPath);
-  info(tr(`Backed up openclaw.json: ${configBackupPath}`, `已备份 openclaw.json: ${configBackupPath}`));
+  info(tr(`Backed up openclaw.json: ${configBackupPath}`, `已備份 openclaw.json: ${configBackupPath}`));
   const pluginBackups = [];
   for (const detection of installedState.detections) {
     const backupDir = await backupPluginDirectory(detection.variant);
@@ -1799,10 +1799,10 @@ async function prepareStrongPluginUpgrade() {
   info(
     tr(
       "Upgrade will preserve existing plugin server connection settings where possible and re-apply minimal remote plugin config.",
-      "升级将尽可能保留已有的插件服务端连接信息，并只回填最少的远程插件配置。",
+      "升級將盡可能保留已有的外掛服務端連線資訊，並只回填最少的遠端外掛配置。",
     ),
   );
-  info(tr(`Upgrade audit file: ${getUpgradeAuditPath()}`, `升级审计文件: ${getUpgradeAuditPath()}`));
+  info(tr(`Upgrade audit file: ${getUpgradeAuditPath()}`, `升級審計檔案: ${getUpgradeAuditPath()}`));
 }
 
 async function downloadPluginFile(destDir, fileName, url, required, index, total) {
@@ -1848,7 +1848,7 @@ async function downloadPluginFile(destDir, fileName, url, required, index, total
       console.log(" OK");
       return;
     }
-    console.log(tr(" skip", " 跳过"));
+    console.log(tr(" skip", " 跳過"));
     return;
   }
 
@@ -1857,14 +1857,14 @@ async function downloadPluginFile(destDir, fileName, url, required, index, total
     err(
       tr(
         `Optional file failed after ${maxRetries} retries (HTTP ${lastStatus || "network"}): ${url}`,
-        `可选文件已重试 ${maxRetries} 次仍失败（HTTP ${lastStatus || "网络错误"}）: ${url}`,
+        `可選檔案已重試 ${maxRetries} 次仍失敗（HTTP ${lastStatus || "網路錯誤"}）: ${url}`,
       ),
     );
     process.exit(1);
   }
 
   console.log("");
-  err(tr(`Download failed after ${maxRetries} retries: ${url}`, `下载失败（已重试 ${maxRetries} 次）: ${url}`));
+  err(tr(`Download failed after ${maxRetries} retries: ${url}`, `下載失敗（已重試 ${maxRetries} 次）: ${url}`));
   process.exit(1);
 }
 
@@ -1902,14 +1902,14 @@ async function fetchGitHubDirectoryEntries(pluginDir, dirName, required) {
   if (!required) {
     err(tr(
       `Optional directory failed after ${maxRetries} retries (HTTP ${lastStatus || "network"}): ${url}`,
-      `可选目录已重试 ${maxRetries} 次仍失败（HTTP ${lastStatus || "网络错误"}）: ${url}`,
+      `可選目錄已重試 ${maxRetries} 次仍失敗（HTTP ${lastStatus || "網路錯誤"}）: ${url}`,
     ));
     process.exit(1);
   }
 
   err(tr(
     `Directory download failed after ${maxRetries} retries (HTTP ${lastStatus || "network"}): ${url}`,
-    `目录下载失败（已重试 ${maxRetries} 次，HTTP ${lastStatus || "网络错误"}）: ${url}`,
+    `目錄下載失敗（已重試 ${maxRetries} 次，HTTP ${lastStatus || "網路錯誤"}）: ${url}`,
   ));
   process.exit(1);
 }
@@ -1944,9 +1944,9 @@ async function downloadPluginDirectory(destDir, pluginDir, dirName, required, in
   process.stdout.write(`  [${index}/${total}] ${dirName} `);
   const files = await collectGitHubDirectoryFiles(pluginDir, dirName, required);
   if (files.length === 0) {
-    console.log(required ? " empty" : tr(" skip", " 跳过"));
+    console.log(required ? " empty" : tr(" skip", " 跳過"));
     if (!required) return;
-    err(tr(`Required directory is empty or unavailable: ${dirName}`, `必需目录为空或不可用: ${dirName}`));
+    err(tr(`Required directory is empty or unavailable: ${dirName}`, `必需目錄為空或不可用: ${dirName}`));
     process.exit(1);
   }
   console.log(` OK (${files.length} files)`);
@@ -2009,14 +2009,14 @@ async function assertBuiltRuntimeOutputs(destDir) {
 
   err(tr(
     `Plugin build did not create required runtime output:\n  - ${missing.join("\n  - ")}`,
-    `插件构建未生成必需的运行时产物：\n  - ${missing.join("\n  - ")}`,
+    `外掛構建未生成必需的執行時產物：\n  - ${missing.join("\n  - ")}`,
   ));
   process.exit(1);
 }
 
 async function installPluginNpmDependencies(destDir) {
   if (!resolvedNpmBuild) {
-    info(tr("Installing plugin npm dependencies...", "正在安装插件 npm 依赖..."));
+    info(tr("Installing plugin npm dependencies...", "正在安裝外掛 npm 依賴..."));
     const npmArgs = resolvedNpmOmitDev
       ? ["install", "--omit=dev", "--no-audit", "--no-fund", "--registry", NPM_REGISTRY]
       : ["install", "--no-audit", "--no-fund", "--registry", NPM_REGISTRY];
@@ -2026,7 +2026,7 @@ async function installPluginNpmDependencies(destDir) {
 
   info(tr(
     "Installing plugin npm dependencies for source build...",
-    "正在安装插件源码构建所需的 npm 依赖...",
+    "正在安裝外掛原始碼構建所需的 npm 依賴...",
   ));
   await run("npm", [
     "install",
@@ -2039,13 +2039,13 @@ async function installPluginNpmDependencies(destDir) {
 
   info(tr(
     `Building plugin runtime output with npm run ${resolvedNpmBuildScript}...`,
-    `正在执行 npm run ${resolvedNpmBuildScript} 构建插件运行时产物...`,
+    `正在執行 npm run ${resolvedNpmBuildScript} 構建外掛執行時產物...`,
   ));
   await run("npm", ["run", resolvedNpmBuildScript], { cwd: destDir, silent: false });
   await assertBuiltRuntimeOutputs(destDir);
 
   if (resolvedNpmOmitDev && resolvedNpmPruneAfterBuild) {
-    info(tr("Pruning plugin dev dependencies...", "正在裁剪插件开发依赖..."));
+    info(tr("Pruning plugin dev dependencies...", "正在裁剪外掛開發依賴..."));
     await run("npm", [
       "prune",
       "--omit=dev",
@@ -2090,7 +2090,7 @@ async function downloadPlugin(destDir) {
 
   await mkdir(destDir, { recursive: true });
 
-  info(tr(`Downloading plugin from ${REPO}@${PLUGIN_VERSION} (${total} files)...`, `正在从 ${REPO}@${PLUGIN_VERSION} 下载插件（共 ${total} 个文件）...`));
+  info(tr(`Downloading plugin from ${REPO}@${PLUGIN_VERSION} (${total} files)...`, `正在從 ${REPO}@${PLUGIN_VERSION} 下載外掛（共 ${total} 個檔案）...`));
 
   let i = 0;
   // Download required files
@@ -2238,7 +2238,7 @@ async function cleanupConflictingPluginVariants() {
   for (const variant of PLUGIN_VARIANTS) {
     if (variant.id === resolvedPluginId) continue;
     if (p.entries && Object.prototype.hasOwnProperty.call(p.entries, variant.id)) {
-      info(tr(`Removing conflicting plugin variant: ${variant.id}`, `正在移除冲突的插件变体: ${variant.id}`));
+      info(tr(`Removing conflicting plugin variant: ${variant.id}`, `正在移除衝突的外掛變體: ${variant.id}`));
       delete p.entries[variant.id];
       changed = true;
     }
@@ -2271,7 +2271,7 @@ async function cleanupConflictingPluginVariants() {
     }
     const variantDir = join(OPENCLAW_DIR, "extensions", variant.id);
     if (existsSync(variantDir)) {
-      info(tr(`Removing conflicting plugin directory: ${variantDir}`, `正在移除冲突的插件目录: ${variantDir}`));
+      info(tr(`Removing conflicting plugin directory: ${variantDir}`, `正在移除衝突的外掛目錄: ${variantDir}`));
       await rm(variantDir, { recursive: true, force: true });
     }
   }
@@ -2280,7 +2280,7 @@ async function cleanupConflictingPluginVariants() {
   const tmp = `${configPath}.ov-install-tmp.${process.pid}`;
   await writeFile(tmp, out, "utf8");
   await rename(tmp, configPath);
-  info(tr("Conflicting plugin variants cleaned up", "冲突的插件变体已清理"));
+  info(tr("Conflicting plugin variants cleaned up", "衝突的外掛變體已清理"));
 }
 
 function normalizeOpenClawLoadPath(filePath) {
@@ -2327,7 +2327,7 @@ async function ensureOpenClawPluginLoadPath() {
   const tmp = `${configPath}.ov-install-tmp.${process.pid}`;
   await writeFile(tmp, `${JSON.stringify(next, null, 2)}\n`, "utf8");
   await rename(tmp, configPath);
-  info(tr(`Added OpenClaw plugin load path: ${pluginPath}`, `已添加 OpenClaw 插件加载路径: ${pluginPath}`));
+  info(tr(`Added OpenClaw plugin load path: ${pluginPath}`, `已新增 OpenClaw 外掛載入路徑: ${pluginPath}`));
 }
 
 async function configureOpenClawPlugin({
@@ -2390,13 +2390,13 @@ async function configureOpenClawPlugin({
     try {
       await oc(["plugins", "enable", pluginId]);
     } catch (_e) {
-      info(tr("plugins enable via CLI failed, registering directly", "CLI plugins enable 失败，直接注册"));
+      info(tr("plugins enable via CLI failed, registering directly", "CLI plugins enable 失敗，直接註冊"));
       const cfg = await readCfg();
       await ensurePluginRegistered(cfg);
       await writeCfg(cfg);
     }
   } else {
-    info(tr("Using direct config write for non-default workdir", "非默认目录，使用直接配置写入"));
+    info(tr("Using direct config write for non-default workdir", "非預設目錄，使用直接配置寫入"));
     const cfg = await readCfg();
     await ensurePluginRegistered(cfg);
     await writeCfg(cfg);
@@ -2413,7 +2413,7 @@ async function configureOpenClawPlugin({
     info(
       tr(
         `Preserved existing plugin runtime config for ${pluginId}`,
-        `已保留 ${pluginId} 的现有插件运行时配置`,
+        `已保留 ${pluginId} 的現有外掛執行時配置`,
       ),
     );
     return { runtimeConfigOk: true };
@@ -2471,7 +2471,7 @@ async function configureOpenClawPlugin({
     if (!pluginConfig.baseUrl) pluginConfig.baseUrl = effectiveRuntimeConfig.baseUrl || remoteBaseUrl;
 
     await writeConfigDirect(pluginConfig, claimSlot ? pluginId : null);
-    info(tr("OpenClaw plugin configured (legacy mode, remote)", "OpenClaw 插件配置完成（旧版模式，远程连接）"));
+    info(tr("OpenClaw plugin configured (legacy mode, remote)", "OpenClaw 外掛配置完成（舊版模式，遠端連線）"));
     return { runtimeConfigOk: true };
   }
 
@@ -2536,14 +2536,14 @@ async function configureOpenClawPlugin({
   if (setupJsonSupported) {
     info(tr(
       "Delegating configuration to: openclaw openviking setup --json",
-      "委托配置给: openclaw openviking setup --json",
+      "委託配置給: openclaw openviking setup --json",
     ));
 
     ({ result: setupResult, parsed } = await runSetupJson());
   } else {
     info(tr(
       "Installed plugin does not support setup --json, using direct config write",
-      "已安装的插件不支持 setup --json，使用直接配置写入",
+      "已安裝的外掛不支援 setup --json，使用直接配置寫入",
     ));
   }
 
@@ -2577,17 +2577,17 @@ async function configureOpenClawPlugin({
 
   if (parsed) {
     if (parsed.success) {
-      info(tr("OpenClaw plugin configured via setup", "OpenClaw 插件通过 setup 配置完成"));
+      info(tr("OpenClaw plugin configured via setup", "OpenClaw 外掛通過 setup 配置完成"));
       if (parsed.health?.ok) {
         info(tr(
           `Server health: OK${parsed.health.version ? ` (version: ${parsed.health.version})` : ""}`,
-          `服务端健康: OK${parsed.health.version ? `（版本: ${parsed.health.version}）` : ""}`,
+          `服務端健康: OK${parsed.health.version ? `（版本: ${parsed.health.version}）` : ""}`,
         ));
       }
       if (parsed.health?.compatibility === "server_too_old") {
         warn(tr(
           "Server version may be too old for this plugin version",
-          "服务端版本可能低于此插件版本要求",
+          "服務端版本可能低於此外掛版本要求",
         ));
       }
       if (parsed.slot?.activated) {
@@ -2599,12 +2599,12 @@ async function configureOpenClawPlugin({
       if (parsed.action === "slot_blocked") {
         warn(tr(
           `Config saved but contextEngine slot is owned by "${parsed.slot?.previousOwner}". Use --force-slot to override.`,
-          `配置已保存，但 contextEngine slot 被 "${parsed.slot?.previousOwner}" 占用。使用 --force-slot 覆盖。`,
+          `配置已儲存，但 contextEngine slot 被 "${parsed.slot?.previousOwner}" 佔用。使用 --force-slot 覆蓋。`,
         ));
       } else {
         err(tr(
           `Setup failed: ${setupError}`,
-          `配置失败: ${setupError}`,
+          `配置失敗: ${setupError}`,
         ));
       }
       return {
@@ -2616,7 +2616,7 @@ async function configureOpenClawPlugin({
     const setupError = setupResult
       ? `openclaw openviking setup did not return JSON (exit code ${setupResult.code})`
       : "openclaw openviking setup did not run";
-    err(tr(`Setup failed: ${setupError}`, `配置失败: ${setupError}`));
+    err(tr(`Setup failed: ${setupError}`, `配置失敗: ${setupError}`));
     return {
       runtimeConfigOk: false,
       error: setupError,
@@ -2666,7 +2666,7 @@ async function configureOpenClawPlugin({
     await writeConfigDirect(pluginConfig, claimSlot ? pluginId : null);
     info(tr(
       `OpenClaw plugin configured (direct write): baseUrl=${pluginConfig.baseUrl}, apiKey=${pluginConfig.apiKey ? "***" : "(empty)"}`,
-      `OpenClaw 插件配置完成（直接写入）: baseUrl=${pluginConfig.baseUrl}, apiKey=${pluginConfig.apiKey ? "***" : "(空)"}`,
+      `OpenClaw 外掛配置完成（直接寫入）: baseUrl=${pluginConfig.baseUrl}, apiKey=${pluginConfig.apiKey ? "***" : "(空)"}`,
     ));
   }
 
@@ -2691,7 +2691,7 @@ async function writeOpenvikingEnv() {
     await writeFile(batPath, `${batLines.join("\r\n")}\r\n`, "utf8");
     await writeFile(ps1Path, `${psLines.join("\n")}\n`, "utf8");
 
-    info(tr(`Environment file generated: ${batPath}`, `已生成环境文件: ${batPath}`));
+    info(tr(`Environment file generated: ${batPath}`, `已生成環境檔案: ${batPath}`));
     return { shellPath: batPath, powershellPath: ps1Path };
   }
 
@@ -2701,7 +2701,7 @@ async function writeOpenvikingEnv() {
     `export OPENCLAW_STATE_DIR='${OPENCLAW_DIR.replace(/'/g, "'\"'\"'")}'\n`,
     "utf8",
   );
-  info(tr(`Environment file generated: ${envPath}`, `已生成环境文件: ${envPath}`));
+  info(tr(`Environment file generated: ${envPath}`, `已生成環境檔案: ${envPath}`));
   return { shellPath: envPath };
 }
 
@@ -2729,14 +2729,14 @@ function getExistingEnvFiles() {
 }
 
 async function performUninstall() {
-  info(tr("Mode: uninstall plugin", "模式: 卸载插件"));
-  info(tr(`Target: ${OPENCLAW_DIR}`, `目标实例: ${OPENCLAW_DIR}`));
+  info(tr("Mode: uninstall plugin", "模式: 解除安裝外掛"));
+  info(tr(`Target: ${OPENCLAW_DIR}`, `目標例項: ${OPENCLAW_DIR}`));
 
   const configPath = getOpenClawConfigPath();
   if (!existsSync(configPath)) {
     info(tr(
       "No openclaw.json found. Nothing to uninstall.",
-      "未找到 openclaw.json，无需卸载。",
+      "未找到 openclaw.json，無需解除安裝。",
     ));
     return;
   }
@@ -2745,19 +2745,19 @@ async function performUninstall() {
   if (installedState.generation === "none") {
     info(tr(
       "No OpenViking plugin entries found in openclaw.json. Nothing to uninstall.",
-      "openclaw.json 中未找到 OpenViking 插件配置，无需卸载。",
+      "openclaw.json 中未找到 OpenViking 外掛配置，無需解除安裝。",
     ));
     return;
   }
 
   info(tr(
     `Detected installed plugin: ${formatInstalledStateLabel(installedState)}`,
-    `检测到已安装插件: ${formatInstalledStateLabel(installedState)}`,
+    `檢測到已安裝外掛: ${formatInstalledStateLabel(installedState)}`,
   ));
 
   if (!nonInteractive) {
     const answer = await question(
-      tr("Confirm uninstall? (y/N)", "确认卸载？(y/N)"),
+      tr("Confirm uninstall? (y/N)", "確認解除安裝？(y/N)"),
       "N",
     );
     if (!isYes(answer)) {
@@ -2767,20 +2767,20 @@ async function performUninstall() {
   }
 
   // Step 1: Stop gateway
-  info(tr("Step 1: Stopping OpenClaw gateway...", "步骤 1: 停止 OpenClaw gateway..."));
+  info(tr("Step 1: Stopping OpenClaw gateway...", "步驟 1: 停止 OpenClaw gateway..."));
   await stopOpenClawGatewayForUpgrade();
 
   // Step 2: Backup config
-  info(tr("Step 2: Backing up configuration...", "步骤 2: 备份配置..."));
+  info(tr("Step 2: Backing up configuration...", "步驟 2: 備份配置..."));
   const configBackupPath = await backupOpenClawConfig(configPath);
-  info(tr(`Config backed up to: ${configBackupPath}`, `配置已备份至: ${configBackupPath}`));
+  info(tr(`Config backed up to: ${configBackupPath}`, `配置已備份至: ${configBackupPath}`));
 
   // Step 3: Clean plugin config from openclaw.json
-  info(tr("Step 3: Cleaning plugin configuration...", "步骤 3: 清理插件配置..."));
+  info(tr("Step 3: Cleaning plugin configuration...", "步驟 3: 清理外掛配置..."));
   await cleanupInstalledPluginConfig(installedState);
 
   // Step 4: Backup and remove plugin directories
-  info(tr("Step 4: Backing up plugin directories...", "步骤 4: 备份插件目录..."));
+  info(tr("Step 4: Backing up plugin directories...", "步驟 4: 備份外掛目錄..."));
   const pluginBackups = [];
   for (const detection of installedState.detections) {
     const backupDir = await backupPluginDirectory(detection.variant);
@@ -2790,7 +2790,7 @@ async function performUninstall() {
   }
 
   // Step 5: Remove env files
-  info(tr("Step 5: Removing environment files...", "步骤 5: 移除环境文件..."));
+  info(tr("Step 5: Removing environment files...", "步驟 5: 移除環境檔案..."));
   const envFilesToRemove = IS_WIN
     ? [
         join(OPENCLAW_DIR, "openviking.env.bat"),
@@ -2808,7 +2808,7 @@ async function performUninstall() {
     }
   }
   if (removedEnvCount === 0) {
-    info(tr("No environment files found.", "未找到环境文件。"));
+    info(tr("No environment files found.", "未找到環境檔案。"));
   }
 
   // Step 6: Write uninstall audit
@@ -2826,30 +2826,30 @@ async function performUninstall() {
   // Done
   console.log("");
   bold("═══════════════════════════════════════════════════════════");
-  bold(`  ${tr("Uninstall complete!", "卸载完成！")}`);
+  bold(`  ${tr("Uninstall complete!", "解除安裝完成！")}`);
   bold("═══════════════════════════════════════════════════════════");
   console.log("");
 
-  info(tr("OpenViking server/runtime is preserved (not uninstalled).", "OpenViking 服务端/运行时已保留（未卸载）。"));
+  info(tr("OpenViking server/runtime is preserved (not uninstalled).", "OpenViking 服務端/執行時已保留（未解除安裝）。"));
   console.log("");
 
-  info(tr("To restore the plugin configuration:", "如需恢复插件配置："));
+  info(tr("To restore the plugin configuration:", "如需恢復外掛配置："));
   console.log(`  1) ${tr("Stop gateway:", "停止 gateway:")} openclaw gateway stop`);
-  console.log(`  2) ${tr("Restore config:", "恢复配置:")} ${IS_WIN ? "copy" : "cp"} "${configBackupPath}" "${configPath}"`);
+  console.log(`  2) ${tr("Restore config:", "恢復配置:")} ${IS_WIN ? "copy" : "cp"} "${configBackupPath}" "${configPath}"`);
   for (const pb of pluginBackups) {
     const liveDir = join(OPENCLAW_DIR, "extensions", pb.pluginId);
-    console.log(`  3) ${tr("Restore plugin:", "恢复插件:")} ${IS_WIN ? "move" : "mv"} "${pb.backupDir}" "${liveDir}"`);
+    console.log(`  3) ${tr("Restore plugin:", "恢復外掛:")} ${IS_WIN ? "move" : "mv"} "${pb.backupDir}" "${liveDir}"`);
   }
   console.log("");
 
-  info(tr("To reinstall:", "重新安装："));
+  info(tr("To reinstall:", "重新安裝："));
   console.log("  ov-install");
   console.log("");
 }
 
 async function main() {
   console.log("");
-  bold(tr("🦣 OpenClaw OpenViking plugin installer", "🦣 OpenClaw OpenViking 插件安装"));
+  bold(tr("🦣 OpenClaw OpenViking plugin installer", "🦣 OpenClaw OpenViking 外掛安裝"));
   console.log("");
 
   await selectWorkdir();
@@ -2862,7 +2862,7 @@ async function main() {
     return;
   }
   if (rollbackLastUpgrade) {
-    info(tr("Mode: rollback last plugin upgrade", "模式: 回滚最近一次插件升级"));
+    info(tr("Mode: rollback last plugin upgrade", "模式: 回滾最近一次外掛升級"));
     if (pluginVersionExplicit) {
       warn("--plugin-version is ignored in --rollback mode.");
     }
@@ -2871,17 +2871,17 @@ async function main() {
   }
   await resolveDefaultPluginVersion();
   validateRequestedPluginVersion();
-  info(tr(`Target: ${OPENCLAW_DIR}`, `目标实例: ${OPENCLAW_DIR}`));
+  info(tr(`Target: ${OPENCLAW_DIR}`, `目標例項: ${OPENCLAW_DIR}`));
   info(tr(`Plugin source: ${pluginSource}`, `Plugin source: ${pluginSource}`));
   if (pluginSource === "npm") {
     info(tr(`Plugin package: ${pluginNpmPackage}`, `Plugin package: ${pluginNpmPackage}`));
   } else {
-    info(tr(`Repository: ${REPO}`, `仓库: ${REPO}`));
+    info(tr(`Repository: ${REPO}`, `倉庫: ${REPO}`));
   }
   info(tr(`Plugin version: ${PLUGIN_VERSION}`, `插件版本: ${PLUGIN_VERSION}`));
 
   if (upgradePluginOnly) {
-    info(tr("Mode: plugin upgrade only", "模式: 仅升级插件"));
+    info(tr("Mode: plugin upgrade only", "模式: 僅升級外掛"));
   }
   info(tr(`Mode: ${selectedMode}`, `模式: ${selectedMode}`));
 
@@ -2935,42 +2935,42 @@ async function main() {
   console.log("");
   if (runtimeConfigOk) {
     bold("═══════════════════════════════════════════════════════════");
-    bold(`  ${tr("Installation complete!", "安装完成！")}`);
+    bold(`  ${tr("Installation complete!", "安裝完成！")}`);
     bold("═══════════════════════════════════════════════════════════");
     console.log("");
 
     if (upgradeAudit) {
-      info(tr(`Upgrade path recorded: ${upgradeAudit.fromVersion} -> ${upgradeAudit.toVersion}`, `已记录升级路径: ${upgradeAudit.fromVersion} -> ${upgradeAudit.toVersion}`));
-      info(tr(`Rollback config backup: ${upgradeAudit.configBackupPath}`, `回滚配置备份: ${upgradeAudit.configBackupPath}`));
+      info(tr(`Upgrade path recorded: ${upgradeAudit.fromVersion} -> ${upgradeAudit.toVersion}`, `已記錄升級路徑: ${upgradeAudit.fromVersion} -> ${upgradeAudit.toVersion}`));
+      info(tr(`Rollback config backup: ${upgradeAudit.configBackupPath}`, `回滾配置備份: ${upgradeAudit.configBackupPath}`));
       for (const pluginBackup of upgradeAudit.pluginBackups || []) {
-        info(tr(`Rollback plugin backup: ${pluginBackup.backupDir}`, `回滚插件备份: ${pluginBackup.backupDir}`));
+        info(tr(`Rollback plugin backup: ${pluginBackup.backupDir}`, `回滾外掛備份: ${pluginBackup.backupDir}`));
       }
-      info(tr(`Rollback audit file: ${getUpgradeAuditPath()}`, `回滚审计文件: ${getUpgradeAuditPath()}`));
+      info(tr(`Rollback audit file: ${getUpgradeAuditPath()}`, `回滾審計檔案: ${getUpgradeAuditPath()}`));
       console.log("");
     }
   } else {
     bold("═══════════════════════════════════════════════════════════");
     bold(`  ${tr(
       "Plugin files installed, but runtime configuration was NOT applied",
-      "插件文件已安装，但运行时配置未生效",
+      "外掛檔案已安裝，但執行時配置未生效",
     )}`);
     bold(`  ${tr(`Reason: ${runtimeConfigError}`, `原因: ${runtimeConfigError}`)}`);
     bold(`  ${tr(
       "Re-run: openclaw openviking setup --reconfigure",
-      "重新运行: openclaw openviking setup --reconfigure",
+      "重新執行: openclaw openviking setup --reconfigure",
     )}`);
     bold("═══════════════════════════════════════════════════════════");
     console.log("");
   }
 
-  info(tr("Run these commands to start OpenClaw:", "请按以下命令启动 OpenClaw："));
+  info(tr("Run these commands to start OpenClaw:", "請按以下命令啟動 OpenClaw："));
   console.log(`  1) ${wrapCommand("openclaw --version", envFiles)}`);
   console.log(`  2) ${wrapCommand("openclaw onboard", envFiles)}`);
   console.log(`  3) ${wrapCommand("openclaw gateway", envFiles)}`);
   console.log(`  4) ${wrapCommand("openclaw status", envFiles)}`);
   console.log("");
 
-  info(tr(`OpenViking server URL (plugin): ${remoteBaseUrl}`, `OpenViking 服务地址（插件）: ${remoteBaseUrl}`));
+  info(tr(`OpenViking server URL (plugin): ${remoteBaseUrl}`, `OpenViking 服務地址（外掛）: ${remoteBaseUrl}`));
   console.log("");
 }
 

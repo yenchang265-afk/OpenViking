@@ -1276,19 +1276,19 @@ mod tests {
 
     #[test]
     fn test_key_codec_preserves_non_target_characters_including_unicode() {
-        let path = "dir//safe-_.*/@scope+pkg/客户看板 file/";
+        let path = "dir//safe-_.*/@scope+pkg/客戶看板 file/";
         let encoded = encode_path(path, "?#%+@");
 
-        assert_eq!(encoded, "dir//safe-_.*/!40scope!2Bpkg/客户看板!20file/");
+        assert_eq!(encoded, "dir//safe-_.*/!40scope!2Bpkg/客戶看板!20file/");
         assert_eq!(decode_path(&encoded, "?#%+@"), path);
     }
 
     #[test]
     fn test_key_codec_leaves_other_characters_unchanged() {
-        let path = "目录/@scope&name=1";
+        let path = "目錄/@scope&name=1";
 
-        assert_eq!(encode_path(path, "?#%+@"), "目录/!40scope&name=1");
-        assert_eq!(decode_path("目录/!40scope&name=1", "?#%+@"), path);
+        assert_eq!(encode_path(path, "?#%+@"), "目錄/!40scope&name=1");
+        assert_eq!(decode_path("目錄/!40scope&name=1", "?#%+@"), path);
     }
 
     #[test]

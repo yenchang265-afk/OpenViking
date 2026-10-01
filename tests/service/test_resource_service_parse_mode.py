@@ -344,7 +344,7 @@ async def test_no_split_treats_explicit_to_as_directory_target(
     ctx: RequestContext,
 ):
     await service.add_resource(
-        path="/test/神雕.md",
+        path="/test/神鵰.md",
         ctx=ctx,
         to="viking://resources/0803_shendiao_01",
         args={"parse_mode": "no_split"},

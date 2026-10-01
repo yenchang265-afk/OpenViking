@@ -1,56 +1,56 @@
-# Cursor 记忆集成
+# Cursor 記憶整合
 
-为 Cursor 添加跨项目、跨会话的长期记忆。安装完成后，OpenViking Hook 会在会话启动和用户提交问题时注入相关上下文，在回复结束后捕获新对话；MCP 仅用于主动搜索、读取和管理记忆。
+為 Cursor 新增跨專案、跨會話的長期記憶。安裝完成後，OpenViking Hook 會在會話啟動和使用者提交問題時注入相關上下文，在回覆結束後捕獲新對話；MCP 僅用於主動搜尋、讀取和管理記憶。
 
-## 安装
+## 安裝
 
-前置条件：macOS 或 Linux、Node.js 18+，并建议使用最新稳定版 Cursor。安装过程中会引导配置 OpenViking 连接信息。
+前置條件：macOS 或 Linux、Node.js 18+，並建議使用最新穩定版 Cursor。安裝過程中會引導配置 OpenViking 連線資訊。
 
-安装器询问连接方式时，火山引擎云服务用户请选择 **火山引擎 OpenViking 云服务** 并填写 API Key。只有本机已运行 OpenViking 服务时才选择 **自建 / 本地**。
+安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。只有本機已執行 OpenViking 服務時才選擇 **自建 / 本地**。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
   --harness cursor
 ```
 
-GitHub 访问受限时使用 TOS 镜像：
+GitHub 訪問受限時使用 TOS 映象：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
   --harness cursor --dist tos
 ```
 
-安装完成后完全退出并重新启动 Cursor。
+安裝完成後完全退出並重新啟動 Cursor。
 
-## 安装内容
+## 安裝內容
 
-- 生命周期 Hook：自动加载画像、按问题召回、捕获对话、提交会话并保护 `viking://` URI。
-- OpenViking MCP Server：提供 `search`、`read`、`remember`、`add_skill` 等工具；`search` 的 `mode="context"` 可返回组装后的上下文。
-- always-on Rule 和 `openviking-memory` Skill：告诉 Agent 如何使用已注入的上下文和记忆工具；另有 `openviking-skills` Skill，讲如何查找、使用、创建（`add_skill`）、共享和迁移存放在 OpenViking 里的 skill。
+- 生命週期 Hook：自動載入畫像、按問題召回、捕獲對話、提交會話並保護 `viking://` URI。
+- OpenViking MCP Server：提供 `search`、`read`、`remember`、`add_skill` 等工具；`search` 的 `mode="context"` 可返回組裝後的上下文。
+- always-on Rule 和 `openviking-memory` Skill：告訴 Agent 如何使用已注入的上下文和記憶工具；另有 `openviking-skills` Skill，講如何查詢、使用、建立（`add_skill`）、共享和遷移存放在 OpenViking 裡的 skill。
 
-## 验证
+## 驗證
 
-1. 重启 Cursor 并新建 Agent 会话。
-2. 打开 **Cursor Settings → Hooks**，确认 OpenViking 生命周期 Hook 执行了 `scripts/hook.mjs`，URI 保护 Hook 执行了 `scripts/uri-guard.mjs`。
-3. 查看 `beforeSubmitPrompt` 输出，确认存在 `additional_context`；这表示当前问题的召回结果已直接交给 Agent，无需先调用 MCP。
-4. 打开 **Cursor Settings → Tools & MCPs**，确认 `openviking` 已连接。
-5. 告诉 Cursor 一个临时偏好，等待本轮回复完成；新建会话后询问该偏好，确认捕获和跨会话召回均生效。
+1. 重啟 Cursor 並新建 Agent 會話。
+2. 開啟 **Cursor Settings → Hooks**，確認 OpenViking 生命週期 Hook 執行了 `scripts/hook.mjs`，URI 保護 Hook 執行了 `scripts/uri-guard.mjs`。
+3. 檢視 `beforeSubmitPrompt` 輸出，確認存在 `additional_context`；這表示當前問題的召回結果已直接交給 Agent，無需先呼叫 MCP。
+4. 開啟 **Cursor Settings → Tools & MCPs**，確認 `openviking` 已連線。
+5. 告訴 Cursor 一個臨時偏好，等待本輪迴復完成；新建會話後詢問該偏好，確認捕獲和跨會話召回均生效。
 
 ## 工作原理
 
-- `sessionStart`：加载用户画像、当前项目的记忆索引，以及 OpenViking skill 清单 `<available-skills>`。
-- `beforeSubmitPrompt`：根据当前问题召回上下文并通过 `additional_context` 注入，召回范围包括你自己的 skill 和账号内共享在 `viking://agent/skills` 下的 skill。
-- `beforeReadFile`：阻止把 `viking://` 虚拟路径当作本地文件读取，并提示改用 OpenViking MCP 工具；shell 命令不做检查。
-- `stop`：增量捕获本轮新增的用户与助手消息。
-- `preCompact` / `sessionEnd`：提交尚未处理的消息，触发记忆抽取。
+- `sessionStart`：載入使用者畫像、當前專案的記憶索引，以及 OpenViking skill 清單 `<available-skills>`。
+- `beforeSubmitPrompt`：根據當前問題召回上下文並通過 `additional_context` 注入，召回範圍包括你自己的 skill 和帳號內共享在 `viking://agent/skills` 下的 skill。
+- `beforeReadFile`：阻止把 `viking://` 虛擬路徑當作本地檔案讀取，並提示改用 OpenViking MCP 工具；shell 命令不做檢查。
+- `stop`：增量捕獲本輪新增的使用者與助手訊息。
+- `preCompact` / `sessionEnd`：提交尚未處理的訊息，觸發記憶抽取。
 
-skill 清单先列你自己的 skill，再列账号内共享的 skill；共享 skill 与你自己的 skill 重名时不列出。每条描述截到约 40 token。清单有独立的 token 预算 `skillCatalogTokenBudget`（默认 `1200`），不占用画像预算。描述放不下时只列名称，名称也列不全时末尾附 `... +N more`；连一个名称都放不下时，只写一行 skill 数量。把 `skillCatalog` 设为 `false` 或把预算设为 `0` 即可关闭，既可以写在 `~/.openviking/ovcli.conf` 的 `plugin` 或 `plugin.cursor` 段（见[插件配置](../configuration/02-client.md#插件配置)），也可以用环境变量 `OPENVIKING_SKILL_CATALOG` 和 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`。没有任何 skill，或服务端不提供 `GET /api/v1/skills` 时，不注入这份清单。
+skill 清單先列你自己的 skill，再列帳號內共享的 skill；共享 skill 與你自己的 skill 重名時不列出。每條描述截到約 40 token。清單有獨立的 token 預算 `skillCatalogTokenBudget`（預設 `1200`），不佔用畫像預算。描述放不下時只列名稱，名稱也列不全時末尾附 `... +N more`；連一個名稱都放不下時，只寫一行 skill 數量。把 `skillCatalog` 設為 `false` 或把預算設為 `0` 即可關閉，既可以寫在 `~/.openviking/ovcli.conf` 的 `plugin` 或 `plugin.cursor` 段（見[外掛配置](../configuration/02-client.md#外掛配置)），也可以用環境變數 `OPENVIKING_SKILL_CATALOG` 和 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`。沒有任何 skill，或服務端不提供 `GET /api/v1/skills` 時，不注入這份清單。
 
-项目身份优先使用 Cursor 提供的 `workspace_roots`，因此不同项目会使用不同的 workspace peer。连接信息统一读取 `~/.openviking/ovcli.conf`。
+專案身份優先使用 Cursor 提供的 `workspace_roots`，因此不同專案會使用不同的 workspace peer。連線資訊統一讀取 `~/.openviking/ovcli.conf`。
 
-## 升级与卸载
+## 升級與解除安裝
 
-重复运行对应渠道的安装命令即可升级。卸载时也应使用原安装渠道：
+重複執行對應渠道的安裝命令即可升級。解除安裝時也應使用原安裝渠道：
 
 ```bash
 # GitHub
@@ -62,20 +62,20 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
   --harness cursor --uninstall --yes
 ```
 
-卸载仅移除 OpenViking 管理的 Cursor Hook、MCP、Rule、Skill 和运行文件，保留其他配置。
+解除安裝僅移除 OpenViking 管理的 Cursor Hook、MCP、Rule、Skill 和執行檔案，保留其他配置。
 
 ## 故障排查
 
-| 现象 | 原因与处理 |
+| 現象 | 原因與處理 |
 |------|-----------|
-| Hook 没有触发 | 完全退出 Cursor 后重新启动，并新建 Agent 会话。 |
-| Hook 返回召回内容，但回答未使用 | 更新到最新稳定版 Cursor；旧版本可能不支持 `beforeSubmitPrompt.additional_context`。 |
-| 同一事件出现多个 OpenViking Hook | Cursor 可能导入了旧 Claude Code 插件。升级或移除安装器列出的旧 OpenViking plugin id，然后重启 Cursor。 |
-| MCP 未连接 | 检查 `~/.openviking/ovcli.conf` 中的 URL/API Key，并重启 Cursor。 |
-| 需要详细日志 | 设置 `OPENVIKING_DEBUG=1` 后启动 Cursor，查看 `~/.openviking/logs/cursor-hooks.log`。 |
+| Hook 沒有觸發 | 完全退出 Cursor 後重新啟動，並新建 Agent 會話。 |
+| Hook 返回召回內容，但回答未使用 | 更新到最新穩定版 Cursor；舊版本可能不支援 `beforeSubmitPrompt.additional_context`。 |
+| 同一事件出現多個 OpenViking Hook | Cursor 可能匯入了舊 Claude Code 外掛。升級或移除安裝器列出的舊 OpenViking plugin id，然後重啟 Cursor。 |
+| MCP 未連線 | 檢查 `~/.openviking/ovcli.conf` 中的 URL/API Key，並重啟 Cursor。 |
+| 需要詳細日誌 | 設定 `OPENVIKING_DEBUG=1` 後啟動 Cursor，檢視 `~/.openviking/logs/cursor-hooks.log`。 |
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
-- [鉴权](../guides/04-authentication.md)
-- [Cursor Hooks 文档](https://cursor.com/docs/hooks)
+- [整合能力參考](./16-capability-reference.md)
+- [鑑權](../guides/04-authentication.md)
+- [Cursor Hooks 文件](https://cursor.com/docs/hooks)

@@ -125,7 +125,7 @@ class ToolContext:
     request_ctx: RequestContext
     default_search_uris: List[str] = field(default_factory=list)
     transaction_handle: Optional[Any] = None
-    read_file_contents: Optional[Any] = None  # 用于记录已读取的文件内容
+    read_file_contents: Optional[Any] = None  # 用於記錄已讀取的檔案內容
     page_id_map: Optional[Any] = None  # PageIdMap for annotating read results
 
     @property

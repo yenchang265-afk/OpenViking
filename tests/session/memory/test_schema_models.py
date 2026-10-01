@@ -360,7 +360,7 @@ class TestSchemaModelGenerator:
                     {
                         "page_id": 2,
                         "content": {
-                            "blocks": [{"search": "一周学习计划", "replace": ""}]
+                            "blocks": [{"search": "一週學習計劃", "replace": ""}]
                         },
                     }
                 ],

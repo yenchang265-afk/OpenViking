@@ -119,6 +119,6 @@ def test_local_embedder_downloads_default_model_and_prefixes_query(monkeypatch, 
     assert downloaded["count"] == 1
     assert (tmp_path / "bge-small-zh-v1.5-f16.gguf").exists()
 
-    result = embedder.embed("测试问题", is_query=True)
+    result = embedder.embed("測試問題", is_query=True)
     assert len(result.dense_vector) == 512
-    assert _FakeLlama.inputs[-1] == f"{DEFAULT_BGE_ZH_QUERY_INSTRUCTION}测试问题"
+    assert _FakeLlama.inputs[-1] == f"{DEFAULT_BGE_ZH_QUERY_INSTRUCTION}測試問題"

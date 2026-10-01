@@ -1,12 +1,12 @@
-## 步骤 1 安装 OpenViking
-执行以下命令以安装 OpenViking
+## 步驟 1 安裝 OpenViking
+執行以下命令以安裝 OpenViking
 
 ```bash
 pip install openviking --upgrade --force-reinstall
 ```
 
-## 步骤 2 初始化客户端
-参考 GitHub 提供的规范写入示例，自动填入 API Key 和域名
+## 步驟 2 初始化客戶端
+參考 GitHub 提供的規範寫入示例，自動填入 API Key 和域名
 
 ```python
 from openviking_sdk import SyncHTTPClient, TextPart
@@ -23,8 +23,8 @@ client.initialize()
 ```
 
 
-## 步骤 3：写入资源
-参考 GitHub 提供的规范写入示例，自动填入 API Key 和域名
+## 步驟 3：寫入資源
+參考 GitHub 提供的規範寫入示例，自動填入 API Key 和域名
 
 ```python
 file_path = "[TODO]your-file-path"
@@ -39,8 +39,8 @@ client.add_resource(
 )
 ```
 
-## 步骤 4：写入记忆
-参考 GitHub 提供的记忆写入示例，自动填入 API Key 和域名
+## 步驟 4：寫入記憶
+參考 GitHub 提供的記憶寫入示例，自動填入 API Key 和域名
 
 ```python
 text = "[TODO]your-message-text" # e.g. I am a developer

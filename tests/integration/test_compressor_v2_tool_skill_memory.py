@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-OpenViking 记忆演示脚本 — 工具调用和Skill调用记忆测试
+OpenViking 記憶演示指令碼 — 工具呼叫和Skill呼叫記憶測試
 
-测试 assistant 调用工具和使用 skill 的记忆是否被正确提取和召回
+測試 assistant 呼叫工具和使用 skill 的記憶是否被正確提取和召回
 """
 
 import argparse
@@ -21,7 +21,7 @@ except ModuleNotFoundError:  # pytest/package import path
 
 # ── 常量 ───────────────────────────────────────────────────────────────────
 
-DISPLAY_NAME = "测试用户"
+DISPLAY_NAME = "測試使用者"
 DEFAULT_URL = "http://localhost:1934"
 PANEL_WIDTH = 78
 DEFAULT_API_KEY = None
@@ -30,15 +30,15 @@ DEFAULT_SESSION_ID = "tool-skill-memory-test"
 
 console = Console()
 
-# ── 对话数据 (工具调用 + Skill调用) ─────────────────────────────────────────
-# 模拟 assistant 调用工具（read/write_file/bash/Glob）读取 SKILL.md 等文件
-# 注意：tool_calls 需要传入真正的工具调用信息
+# ── 對話資料 (工具呼叫 + Skill呼叫) ─────────────────────────────────────────
+# 模擬 assistant 呼叫工具（read/write_file/bash/Glob）讀取 SKILL.md 等檔案
+# 注意：tool_calls 需要傳入真正的工具呼叫資訊
 
 CONVERSATION = [
-    # ===== Skill 调用：assistant 调用 read 工具读取 SKILL.md =====
+    # ===== Skill 呼叫：assistant 呼叫 read 工具讀取 SKILL.md =====
     {
-        "user": "帮我创建一个PPT演示文稿，主题是季度工作报告。",
-        "assistant": "好的，我先读取一下 ppt skill 的 SKILL.md 了解如何创建PPT。",
+        "user": "幫我建立一個PPT簡報，主題是季度工作報告。",
+        "assistant": "好的，我先讀取一下 ppt skill 的 SKILL.md 瞭解如何建立PPT。",
         "tool_calls": [
             {
                 "tool_name": "Read",
@@ -48,8 +48,8 @@ CONVERSATION = [
         ],
     },
     {
-        "user": "PPT需要包含三个部分：业绩回顾、业务分析和下季度计划。",
-        "assistant": "好的，我根据 SKILL.md 的指引来创建这三个部分的PPT。",
+        "user": "PPT需要包含三個部分：業績回顧、業務分析和下季度計劃。",
+        "assistant": "好的，我根據 SKILL.md 的指引來建立這三個部分的PPT。",
         "tool_calls": [
             {
                 "tool_name": "Read",
@@ -59,20 +59,20 @@ CONVERSATION = [
         ],
     },
     {
-        "user": "把PPT的模板换成蓝色主题。",
-        "assistant": "好的，我来修改PPT模板为蓝色主题。",
+        "user": "把PPT的模板換成藍色主題。",
+        "assistant": "好的，我來修改PPT模板為藍色主題。",
         "tool_calls": [
             {
                 "tool_name": "write_file",
                 "tool_uri": "tools:write_file",
-                "input": {"path": "template.pptx", "content": "蓝色主题模板"},
+                "input": {"path": "template.pptx", "content": "藍色主題模板"},
             }
         ],
     },
-    # ===== 工具调用：write_file =====
+    # ===== 工具呼叫：write_file =====
     {
-        "user": "帮我写一个Python函数，计算斐波那契数列。",
-        "assistant": "我来写一个计算斐波那契数列的函数并保存到文件。",
+        "user": "幫我寫一個Python函式，計算斐波那契數列。",
+        "assistant": "我來寫一個計算斐波那契數列的函式並儲存到檔案。",
         "tool_calls": [
             {
                 "tool_name": "write_file",
@@ -84,10 +84,10 @@ CONVERSATION = [
             }
         ],
     },
-    # ===== 工具调用：bash =====
+    # ===== 工具呼叫：bash =====
     {
-        "user": "执行一下这个Python文件，看看结果对不对。",
-        "assistant": "我来执行这个文件。",
+        "user": "執行一下這個Python檔案，看看結果對不對。",
+        "assistant": "我來執行這個檔案。",
         "tool_calls": [
             {
                 "tool_name": "Bash",
@@ -96,10 +96,10 @@ CONVERSATION = [
             }
         ],
     },
-    # ===== Skill 调用：PDF =====
+    # ===== Skill 呼叫：PDF =====
     {
-        "user": "帮我把这份PDF文件提取文字内容。",
-        "assistant": "好的，我先读取一下 pdf skill 的 SKILL.md。",
+        "user": "幫我把這份PDF檔案提取文字內容。",
+        "assistant": "好的，我先讀取一下 pdf skill 的 SKILL.md。",
         "tool_calls": [
             {
                 "tool_name": "Read",
@@ -109,29 +109,29 @@ CONVERSATION = [
         ],
     },
     {
-        "user": "PDF有多少页？",
-        "assistant": "这份PDF有15页。",
+        "user": "PDF有多少頁？",
+        "assistant": "這份PDF有15頁。",
     },
-    # ===== 工具调用：Glob =====
+    # ===== 工具呼叫：Glob =====
     {
-        "user": "搜索一下项目里有哪些Python文件。",
-        "assistant": "我来搜索项目里的Python文件。",
+        "user": "搜尋一下專案裡有哪些Python檔案。",
+        "assistant": "我來搜尋專案裡的Python檔案。",
         "tool_calls": [
             {"tool_name": "Glob", "tool_uri": "tools:Glob", "input": {"pattern": "**/*.py"}}
         ],
     },
-    # ===== 工具调用：Read =====
+    # ===== 工具呼叫：Read =====
     {
-        "user": "查看一下这个文件的内容。",
-        "assistant": "好的，我读取一下这个文件。",
+        "user": "檢視一下這個檔案的內容。",
+        "assistant": "好的，我讀取一下這個檔案。",
         "tool_calls": [
             {"tool_name": "Read", "tool_uri": "tools:Read", "input": {"file_path": "main.py"}}
         ],
     },
-    # ===== Skill 调用：Email =====
+    # ===== Skill 呼叫：Email =====
     {
-        "user": "帮我写一封邮件给客户，主题是项目进度汇报。",
-        "assistant": "好的，我先读取一下 email skill 的 SKILL.md 了解邮件格式。",
+        "user": "幫我寫一封郵件給客戶，主題是專案進度彙報。",
+        "assistant": "好的，我先讀取一下 email skill 的 SKILL.md 瞭解郵件格式。",
         "tool_calls": [
             {
                 "tool_name": "Read",
@@ -141,33 +141,33 @@ CONVERSATION = [
         ],
     },
     {
-        "user": "邮件内容要包含本周完成的工作和下周计划。",
-        "assistant": "好的，我来编写邮件内容。",
+        "user": "郵件內容要包含本週完成的工作和下週計劃。",
+        "assistant": "好的，我來編寫郵件內容。",
     },
 ]
 
-# ── 验证查询 ──────────────────────────────────────────────────────────────
+# ── 驗證查詢 ──────────────────────────────────────────────────────────────
 
 VERIFY_QUERIES = [
     {
-        "query": "创建了什么PPT",
-        "expected_keywords": ["PPT", "季度工作", "业绩回顾", "业务分析", "下季度计划", "蓝色主题"],
+        "query": "建立了什麼PPT",
+        "expected_keywords": ["PPT", "季度工作", "業績回顧", "業務分析", "下季度計劃", "藍色主題"],
     },
     {
-        "query": "执行了什么代码",
-        "expected_keywords": ["Python", "斐波那契", "fibonacci", "函数"],
+        "query": "執行了什麼程式碼",
+        "expected_keywords": ["Python", "斐波那契", "fibonacci", "函式"],
     },
     {
-        "query": "处理了什么PDF",
-        "expected_keywords": ["PDF", "文字", "15页"],
+        "query": "處理了什麼PDF",
+        "expected_keywords": ["PDF", "文字", "15頁"],
     },
     {
-        "query": "搜索了什么文件",
+        "query": "搜尋了什麼檔案",
         "expected_keywords": ["Python", "文件", "搜索"],
     },
     {
-        "query": "写了什么邮件",
-        "expected_keywords": ["邮件", "客户", "项目进度", "工作", "计划"],
+        "query": "寫了什麼郵件",
+        "expected_keywords": ["郵件", "客戶", "專案進度", "工作", "計劃"],
     },
     {
         "query": "使用了哪些skill",
@@ -175,17 +175,17 @@ VERIFY_QUERIES = [
     },
     {
         "query": "使用了哪些工具",
-        "expected_keywords": ["Python", "文件", "搜索", "读取"],
+        "expected_keywords": ["Python", "檔案", "搜尋", "讀取"],
     },
 ]
 
-# ── 辅助函数 ──────────────────────────────────────────────────────────────
+# ── 輔助函式 ──────────────────────────────────────────────────────────────
 
 
 def run_ingest(client: ov.SyncHTTPClient, session_id: str, wait_seconds: float):
-    """写入对话并提交"""
+    """寫入對話並提交"""
     console.print()
-    console.rule(f"[bold]Phase 1: 写入对话 — {DISPLAY_NAME} ({len(CONVERSATION)} 轮)[/bold]")
+    console.rule(f"[bold]Phase 1: 寫入對話 — {DISPLAY_NAME} ({len(CONVERSATION)} 輪)[/bold]")
 
     session = client.create_session()
     session_id = session.get("session_id")
@@ -220,17 +220,17 @@ def run_ingest(client: ov.SyncHTTPClient, session_id: str, wait_seconds: float):
         print(f"  [DEBUG] add_message result: {result}")
 
     console.print()
-    console.print(f"  共添加 [bold]{total * 2}[/bold] 条消息")
+    console.print(f"  共新增 [bold]{total * 2}[/bold] 條訊息")
 
     console.print()
-    console.print("  [yellow]提交 Session（触发记忆抽取）...[/yellow]")
+    console.print("  [yellow]提交 Session（觸發記憶抽取）...[/yellow]")
     commit_result = client.commit_session(session_id)
     task_id = commit_result.get("task_id")
-    console.print(f"  Commit 结果: {commit_result}")
+    console.print(f"  Commit 結果: {commit_result}")
 
     if task_id:
         now = time.time()
-        console.print(f"  [yellow]等待记忆提取完成 (task_id={task_id})...[/yellow]")
+        console.print(f"  [yellow]等待記憶提取完成 (task_id={task_id})...[/yellow]")
         while True:
             task = client.get_task(task_id)
             if not task or task.get("status") in ("completed", "failed"):
@@ -238,39 +238,39 @@ def run_ingest(client: ov.SyncHTTPClient, session_id: str, wait_seconds: float):
             time.sleep(1)
         elapsed = time.time() - now
         status = task.get("status", "unknown") if task else "not found"
-        console.print(f"  [green]任务 {status}，耗时 {elapsed:.2f}s[/green]")
-        console.print(f"  Task 详情: {task}")
+        console.print(f"  [green]任務 {status}，耗時 {elapsed:.2f}s[/green]")
+        console.print(f"  Task 詳情: {task}")
 
     console.print("  [yellow]等待向量化完成...[/yellow]")
     client.wait_processed()
 
     if wait_seconds > 0:
-        console.print(f"  [dim]额外等待 {wait_seconds:.0f}s...[/dim]")
+        console.print(f"  [dim]額外等待 {wait_seconds:.0f}s...[/dim]")
         time.sleep(wait_seconds)
 
     session_info = client.get_session(session_id)
-    console.print(f"  Session 详情: {session_info}")
+    console.print(f"  Session 詳情: {session_info}")
 
     return session_id
 
 
 def run_verify(client: ov.SyncHTTPClient):
-    """验证记忆召回"""
+    """驗證記憶召回"""
     console.print()
     console.rule(
-        f"[bold]Phase 2: 验证记忆召回 — {DISPLAY_NAME} ({len(VERIFY_QUERIES)} 条查询)[/bold]"
+        f"[bold]Phase 2: 驗證記憶召回 — {DISPLAY_NAME} ({len(VERIFY_QUERIES)} 條查詢)[/bold]"
     )
 
     results_table = Table(
-        title=f"记忆召回验证 — {DISPLAY_NAME}",
+        title=f"記憶召回驗證 — {DISPLAY_NAME}",
         box=box.ROUNDED,
         show_header=True,
         header_style="bold",
     )
     results_table.add_column("#", style="bold", width=4)
-    results_table.add_column("查询", style="cyan", max_width=30)
-    results_table.add_column("召回数", justify="center", width=8)
-    results_table.add_column("命中关键词", style="green")
+    results_table.add_column("查詢", style="cyan", max_width=30)
+    results_table.add_column("召回數", justify="center", width=8)
+    results_table.add_column("命中關鍵詞", style="green")
 
     total = len(VERIFY_QUERIES)
     for i, item in enumerate(VERIFY_QUERIES, 1):
@@ -278,7 +278,7 @@ def run_verify(client: ov.SyncHTTPClient):
         expected = item["expected_keywords"]
 
         console.print(f"\n  [dim][{i}/{total}][/dim] 搜索: [cyan]{query}[/cyan]")
-        console.print(f"  [dim]期望关键词: {', '.join(expected)}[/dim]")
+        console.print(f"  [dim]期望關鍵詞: {', '.join(expected)}[/dim]")
 
         try:
             results = client.find(query, limit=5)
@@ -313,7 +313,7 @@ def run_verify(client: ov.SyncHTTPClient):
 
             all_text = " ".join(recall_texts)
             hits = [kw for kw in expected if kw in all_text]
-            # 格式化关键词，命中的绿色，未命中的红色
+            # 格式化關鍵詞，命中的綠色，未命中的紅色
             formatted_keywords = []
             for kw in expected:
                 if kw in hits:
@@ -334,20 +334,20 @@ def run_verify(client: ov.SyncHTTPClient):
 
 
 def main():
-    """入口函数"""
-    parser = argparse.ArgumentParser(description="OpenViking 记忆演示 — 工具调用和Skill调用")
-    parser.add_argument("--url", default=DEFAULT_URL, help=f"Server URL (默认: {DEFAULT_URL})")
+    """入口函式"""
+    parser = argparse.ArgumentParser(description="OpenViking 記憶演示 — 工具呼叫和Skill呼叫")
+    parser.add_argument("--url", default=DEFAULT_URL, help=f"Server URL (預設: {DEFAULT_URL})")
     parser.add_argument("--api-key", default=DEFAULT_API_KEY, help=API_KEY_HELP)
     parser.add_argument(
         "--phase",
         choices=["all", "ingest", "verify"],
         default="all",
-        help="all=全部, ingest=仅写入, verify=仅验证 (默认: all)",
+        help="all=全部, ingest=僅寫入, verify=僅驗證 (預設: all)",
     )
     parser.add_argument(
-        "--session-id", default=DEFAULT_SESSION_ID, help=f"Session ID (默认: {DEFAULT_SESSION_ID})"
+        "--session-id", default=DEFAULT_SESSION_ID, help=f"Session ID (預設: {DEFAULT_SESSION_ID})"
     )
-    parser.add_argument("--wait", type=float, default=2, help="写入后等待秒数 (默认: 2)")
+    parser.add_argument("--wait", type=float, default=2, help="寫入後等待秒數 (預設: 2)")
 
     args = parser.parse_args()
 
@@ -355,7 +355,7 @@ def main():
 
     try:
         client.initialize()
-        console.print(f"  [green]已连接[/green] {args.url}")
+        console.print(f"  [green]已連線[/green] {args.url}")
 
         if args.phase in ("all", "ingest"):
             run_ingest(client, args.session_id, args.wait)

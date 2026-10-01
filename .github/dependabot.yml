@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # GitHub Actions 依赖更新
+  # GitHub Actions 依賴更新
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -9,7 +9,7 @@ updates:
       - "dependencies"
       - "github-actions"
 
-  # Python 依赖更新
+  # Python 依賴更新
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
@@ -17,7 +17,7 @@ updates:
     labels:
       - "dependencies"
       - "python"
-    # 忽略主要版本更新，避免破坏性变更
+    # 忽略主要版本更新，避免破壞性變更
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]

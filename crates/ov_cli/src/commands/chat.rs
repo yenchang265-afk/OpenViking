@@ -536,7 +536,7 @@ impl ChatCommand {
             eprintln!(
                 "{}",
                 chat_detail_line(
-                    copy(Language::current(), "Response ID", "响应 ID"),
+                    copy(Language::current(), "Response ID", "響應 ID"),
                     muted_value(&response_id),
                 )
             );
@@ -637,7 +637,7 @@ impl ChatCommand {
                         language,
                         &format!(
                             "{}: {e}",
-                            copy(language, "Failed to read input", "读取输入失败")
+                            copy(language, "Failed to read input", "讀取輸入失敗")
                         ),
                     );
                     break;
@@ -826,7 +826,7 @@ impl ChatCommand {
             eprintln!(
                 "{}",
                 chat_detail_line(
-                    copy(Language::current(), "Response ID", "响应 ID"),
+                    copy(Language::current(), "Response ID", "響應 ID"),
                     muted_value(&response_id),
                 )
             );
@@ -963,9 +963,9 @@ fn render_chat_banner(
     }
 
     lines.push(String::new());
-    lines.push(chat_section_title(copy(language, "Connection", "连接")));
+    lines.push(chat_section_title(copy(language, "Connection", "連線")));
     lines.push(chat_detail_line(
-        copy(language, "Endpoint", "端点"),
+        copy(language, "Endpoint", "端點"),
         value_text(endpoint),
     ));
     lines.push(chat_detail_line(
@@ -980,14 +980,14 @@ fn render_chat_banner(
         },
     ));
     lines.push(chat_detail_line(
-        copy(language, "Session", "会话"),
+        copy(language, "Session", "會話"),
         match session {
             Some(session) => value_text(session),
-            None => muted_value(copy(language, "new session", "新会话")),
+            None => muted_value(copy(language, "new session", "新會話")),
         },
     ));
     lines.push(chat_detail_line(
-        copy(language, "Sender", "发送者"),
+        copy(language, "Sender", "傳送者"),
         plain_value(sender),
     ));
 
@@ -995,11 +995,11 @@ fn render_chat_banner(
     lines.push(chat_section_title(copy(language, "Controls", "操作")));
     lines.push(chat_action_line(
         "exit / quit",
-        copy(language, "End the chat", "退出对话"),
+        copy(language, "End the chat", "退出對話"),
     ));
     lines.push(chat_action_line(
         "Ctrl+C",
-        copy(language, "End the chat", "退出对话"),
+        copy(language, "End the chat", "退出對話"),
     ));
 
     format!("{}\n", lines.join("\n"))
@@ -1014,8 +1014,8 @@ fn render_chat_warning(warning: ChatAuthWarning, language: Language) -> String {
 fn chat_warning_lines(warning: ChatAuthWarning, language: Language) -> Vec<String> {
     let (issue, fix) = chat_warning_copy(warning, language);
     vec![
-        chat_detail_line(copy(language, "Issue", "问题"), warning_value(issue)),
-        chat_detail_line(copy(language, "Fix", "处理"), muted_value(fix)),
+        chat_detail_line(copy(language, "Issue", "問題"), warning_value(issue)),
+        chat_detail_line(copy(language, "Fix", "處理"), muted_value(fix)),
     ]
 }
 
@@ -1025,55 +1025,55 @@ fn chat_warning_copy(warning: ChatAuthWarning, language: Language) -> (&'static 
             copy(
                 language,
                 "OpenViking server is in api_key mode and requires a User/Admin API key",
-                "OpenViking server 是 api_key 模式，需使用 User/Admin API Key 访问",
+                "OpenViking server 是 api_key 模式，需使用 User/Admin API Key 訪問",
             ),
             copy(
                 language,
                 "Set api_key in ovcli.conf, or pass --api-key.",
-                "在 ovcli.conf 配置 api_key，或传 --api-key。",
+                "在 ovcli.conf 配置 api_key，或傳 --api-key。",
             ),
         ),
         ChatAuthWarning::CannotValidateKey => (
             copy(
                 language,
                 "Configured API key could not be validated",
-                "当前 API Key 无法验证",
+                "當前 API Key 無法驗證",
             ),
             copy(
                 language,
                 "Memory and file tools may be unavailable; check the key.",
-                "memory/file tools 可能不可用，请检查 API Key。",
+                "memory/file tools 可能不可用，請檢查 API Key。",
             ),
         ),
         ChatAuthWarning::RootKey => (
             copy(
                 language,
                 "OpenViking server is in api_key mode and requires a User/Admin API key. The current request uses root_api_key, so VikingBot cannot use OpenViking features correctly.",
-                "OpenViking server 是 api_key 模式，需使用 User/Admin API Key 访问。当前请求实际使用的是 root_api_key，bot 将无法正常使用 OpenViking 功能。",
+                "OpenViking server 是 api_key 模式，需使用 User/Admin API Key 訪問。當前請求實際使用的是 root_api_key，bot 將無法正常使用 OpenViking 功能。",
             ),
             copy(
                 language,
                 "Set api_key in ovcli.conf to a User/Admin API key.",
-                "请在 ovcli.conf 中配置 api_key 为 User/Admin API Key。",
+                "請在 ovcli.conf 中配置 api_key 為 User/Admin API Key。",
             ),
         ),
         ChatAuthWarning::InvalidUserKey => (
             copy(
                 language,
                 "Configured key is not a usable User/Admin API key",
-                "当前 API Key 不是可用的 User/Admin API Key",
+                "當前 API Key 不是可用的 User/Admin API Key",
             ),
             copy(
                 language,
                 "Update api_key in ovcli.conf, or pass --api-key.",
-                "更新 ovcli.conf 的 api_key，或传 --api-key。",
+                "更新 ovcli.conf 的 api_key，或傳 --api-key。",
             ),
         ),
     }
 }
 
 fn chat_title(language: Language) -> String {
-    theme::brand_title(copy(language, "VIKINGBOT CHAT", "VIKINGBOT 对话"))
+    theme::brand_title(copy(language, "VIKINGBOT CHAT", "VIKINGBOT 對話"))
         .bold()
         .to_string()
 }
@@ -1129,7 +1129,7 @@ fn pad_to_display_width(value: &str, width: usize) -> String {
 fn print_chat_error(language: Language, message: &str) {
     eprintln!(
         "{} {}",
-        theme::error(copy(language, "Error:", "错误：")).bold(),
+        theme::error(copy(language, "Error:", "錯誤：")).bold(),
         theme::body(message)
     );
 }
@@ -1149,7 +1149,7 @@ fn print_tool_call(content: &str, language: Language) {
         println!(
             "  {} {} {}{}",
             theme::muted("├─"),
-            theme::muted(format!("{}:", copy(language, "Calling", "调用"))),
+            theme::muted(format!("{}:", copy(language, "Calling", "呼叫"))),
             theme::command(tool_name).bold(),
             theme::muted(args)
         );
@@ -1157,7 +1157,7 @@ fn print_tool_call(content: &str, language: Language) {
         println!(
             "  {} {} {}",
             theme::muted("├─"),
-            theme::muted(format!("{}:", copy(language, "Calling", "调用"))),
+            theme::muted(format!("{}:", copy(language, "Calling", "呼叫"))),
             theme::body(content)
         );
     }
@@ -1167,7 +1167,7 @@ fn print_tool_result(content: &str, language: Language) {
     println!(
         "  {} {} {}",
         theme::muted("└─"),
-        theme::muted(format!("{}:", copy(language, "Result", "结果"))),
+        theme::muted(format!("{}:", copy(language, "Result", "結果"))),
         theme::body(content)
     );
 }
@@ -1473,17 +1473,17 @@ mod tests {
         );
         let plain = strip_ansi(&rendered);
 
-        assert!(plain.contains("VIKINGBOT 对话"));
+        assert!(plain.contains("VIKINGBOT 對話"));
         assert!(plain.contains("警告"));
         assert!(plain.contains("OpenViking server 是 api_key 模式"));
-        assert!(plain.contains("连接"));
-        assert!(plain.contains("端点"));
+        assert!(plain.contains("連線"));
+        assert!(plain.contains("端點"));
         assert!(plain.contains("OpenViking"));
         assert!(plain.contains("否"));
         assert!(plain.contains("OV Server   未配置"));
-        assert!(plain.contains("新会话"));
+        assert!(plain.contains("新會話"));
         assert!(plain.contains("操作"));
-        assert!(plain.contains("退出对话"));
+        assert!(plain.contains("退出對話"));
     }
 
     #[test]
@@ -1491,12 +1491,12 @@ mod tests {
         let rendered = render_chat_warning(ChatAuthWarning::RootKey, Language::ZhCn);
         let plain = strip_ansi(&rendered);
 
-        assert!(plain.contains("问题"));
+        assert!(plain.contains("問題"));
         assert!(plain.contains("OpenViking server 是 api_key 模式"));
-        assert!(plain.contains("当前请求实际使用的是 root_api_key"));
-        assert!(plain.contains("bot 将无法正常使用 OpenViking 功能"));
-        assert!(plain.contains("处理"));
-        assert!(plain.contains("请在 ovcli.conf 中配置 api_key 为 User/Admin API Key。"));
+        assert!(plain.contains("當前請求實際使用的是 root_api_key"));
+        assert!(plain.contains("bot 將無法正常使用 OpenViking 功能"));
+        assert!(plain.contains("處理"));
+        assert!(plain.contains("請在 ovcli.conf 中配置 api_key 為 User/Admin API Key。"));
     }
 
     #[test]

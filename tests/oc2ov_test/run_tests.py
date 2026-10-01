@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-测试运行入口
+測試執行入口
 """
 
 import argparse
@@ -12,7 +12,7 @@ from utils.logger import setup_logger
 
 def get_test_suite(test_type: str = None):
     """
-    获取测试套件
+    獲取測試套件
     """
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
@@ -33,20 +33,20 @@ def get_test_suite(test_type: str = None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="OpenClaw - OpenViking 端到端自动化测试")
+    parser = argparse.ArgumentParser(description="OpenClaw - OpenViking 端到端自動化測試")
     parser.add_argument(
         "--type",
         "-t",
         choices=["all", "p0", "v2"],
         default="all",
-        help="测试类型: all(全部), p0(P0核心), v2(V2文件验证)",
+        help="測試型別: all(全部), p0(P0核心), v2(V2檔案驗證)",
     )
     parser.add_argument(
         "--test",
         "-s",
-        help="运行指定的测试用例, 例如: tests.p0.test_memory_write.TestMemoryWriteGroupA",
+        help="執行指定的測試用例, 例如: tests.p0.test_memory_write.TestMemoryWriteGroupA",
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
+    parser.add_argument("--verbose", "-v", action="store_true", help="詳細輸出")
 
     args = parser.parse_args()
 

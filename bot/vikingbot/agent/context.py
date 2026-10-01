@@ -258,7 +258,7 @@ The following local and remote Skills extend your capabilities.
             if self._is_group_chat:
                 session_context += (
                     f"\n**Group chat session.** Current user: {self._sender_name if self._sender_name else self._sender_id}\n"
-                    f"Multiple users can participate in this conversation. Each user message is prefixed with the user's name in brackets like '[张三]: 你好'. "
+                    f"Multiple users can participate in this conversation. Each user message is prefixed with the user's name in brackets like '[張三]: 你好'. "
                     f"You should pay attention to who is speaking to understand the context. "
                 )
         parts.append(session_context)

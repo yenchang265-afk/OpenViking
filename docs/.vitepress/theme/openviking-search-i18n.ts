@@ -65,42 +65,42 @@ const searchCopy: Record<SearchLocale, SearchCopy> = {
   },
   zh: {
     compactTrigger: '搜索',
-    dialogLabel: 'OpenViking 文档搜索',
+    dialogLabel: 'OpenViking 文件搜尋',
     empty: {
-      initial: '输入关键词，搜索当前语言的文档。',
+      initial: '輸入關鍵詞，搜尋當前語言的文件。',
       loading: '搜索中...',
-      noResults: '未找到相关结果。'
+      noResults: '未找到相關結果。'
     },
-    inputLabel: '搜索 OpenViking 文档',
+    inputLabel: '搜尋 OpenViking 文件',
     modeLabel: '搜索模式',
-    modeOptionsLabel: '搜索模式选项',
+    modeOptionsLabel: '搜尋模式選項',
     modes: {
       file: {
         label: '文件搜索',
-        placeholder: '按路径或文件名查找文档'
+        placeholder: '按路徑或檔名查詢文件'
       },
       keyword: {
-        label: '关键词搜索',
-        placeholder: '搜索文档中的精确词句'
+        label: '關鍵詞搜尋',
+        placeholder: '搜尋文件中的精確詞句'
       },
       semantic: {
-        label: '语义搜索',
-        placeholder: '询问文档内容'
+        label: '語義搜尋',
+        placeholder: '詢問文件內容'
       }
     },
     notice: (reason, localResultCount) => {
       const prefix =
         reason === 'rate_limited'
-          ? 'OpenViking 搜索请求过多。'
+          ? 'OpenViking 搜尋請求過多。'
           : reason === 'timeout'
-            ? 'OpenViking 搜索超时。'
-            : 'OpenViking 搜索暂不可用。'
+            ? 'OpenViking 搜尋超時。'
+            : 'OpenViking 搜尋暫不可用。'
 
       return localResultCount > 0
-        ? `${prefix}正在显示本地文档结果。`
-        : `${prefix}未找到本地结果。`
+        ? `${prefix}正在顯示本地文件結果。`
+        : `${prefix}未找到本地結果。`
     },
-    trigger: '搜索文档'
+    trigger: '搜尋文件'
   }
 }
 

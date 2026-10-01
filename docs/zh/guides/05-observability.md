@@ -1,30 +1,30 @@
-# 可观测性与排障
+# 可觀測性與排障
 
-这份指南把 OpenViking 当前和“观测”有关的入口放在一起介绍，包括：
+這份指南把 OpenViking 當前和“觀測”有關的入口放在一起介紹，包括：
 
-- 服务健康检查与组件状态
-- 请求级 `telemetry`
-- 终端侧 `ov tui`
-- Web 侧 `Web Studio`（同 OV server，路径 `/studio`）
-- `/metrics` 时序指标
+- 服務健康檢查與元件狀態
+- 請求級 `telemetry`
+- 終端側 `ov tui`
+- Web 側 `Web Studio`（同 OV server，路徑 `/studio`）
+- `/metrics` 時序指標
 
-如果你只想快速判断“该看哪里”，先看下面这张表。
+如果你只想快速判斷“該看哪裡”，先看下面這張表。
 
-## 先选哪个入口
+## 先選哪個入口
 
-| 入口 | 适合看什么 | 典型场景 |
+| 入口 | 適合看什麼 | 典型場景 |
 | --- | --- | --- |
-| `/health`、`observer/*` | 服务是否健康、队列是否堆积、VikingDB/VLM 状态 | 部署验收、值班巡检 |
-| `ov tui` | `viking://` 文件树、目录摘要、文件正文、向量记录、受支持图片文件的预览 | 开发调试、核对资源是否真正落库 |
-| `Web Studio`（`/studio`） | 同 OV server 的 Web UI：Home 看 token / 检索 / context commits 趋势，Resources 浏览 URI，Retrieval 直接发 find，Request Logs 看审计日志 | 不想手敲命令时做交互式排查 |
-| `telemetry` | 单次请求耗时、token、向量检索、资源处理阶段 | 排查一次具体调用为什么慢、为什么结果异常 |
-| `/metrics` | 请求量趋势、错误率、时延分布、队列与探针状态 | Prometheus 抓取、Grafana 看板、告警规则 |
+| `/health`、`observer/*` | 服務是否健康、佇列是否堆積、VikingDB/VLM 狀態 | 部署驗收、值班巡檢 |
+| `ov tui` | `viking://` 檔案樹、目錄摘要、檔案正文、向量記錄、受支援圖片檔案的預覽 | 開發除錯、核對資源是否真正落庫 |
+| `Web Studio`（`/studio`） | 同 OV server 的 Web UI：Home 看 token / 檢索 / context commits 趨勢，Resources 瀏覽 URI，Retrieval 直接發 find，Request Logs 看審計日誌 | 不想手敲命令時做互動式排查 |
+| `telemetry` | 單次請求耗時、token、向量檢索、資源處理階段 | 排查一次具體呼叫為什麼慢、為什麼結果異常 |
+| `/metrics` | 請求量趨勢、錯誤率、時延分佈、佇列與探針狀態 | Prometheus 抓取、Grafana 看板、告警規則 |
 
-## 服务健康与组件状态
+## 服務健康與元件狀態
 
-### 健康检查
+### 健康檢查
 
-`/health` 提供简单的存活检查，不需要认证。
+`/health` 提供簡單的存活檢查，不需要認證。
 
 ```bash
 curl http://localhost:1933/health
@@ -34,7 +34,7 @@ curl http://localhost:1933/health
 {"status": "ok"}
 ```
 
-### 整体系统状态
+### 整體系統狀態
 
 **Python HTTP SDK**
 
@@ -69,16 +69,16 @@ curl http://localhost:1933/api/v1/observer/system \
 }
 ```
 
-### 组件状态
+### 元件狀態
 
-| 端点 | 组件 | 描述 |
+| 端點 | 元件 | 描述 |
 | --- | --- | --- |
-| `GET /api/v1/observer/queue` | Queue | 处理队列状态 |
-| `GET /api/v1/observer/vikingdb` | VikingDB | 向量数据库状态 |
-| `GET /api/v1/observer/models` | Models | VLM、Embedding 和 Rerank 模型状态 |
-| `GET /api/v1/observer/lock` | Lock | 锁和事务状态 |
-| `GET /api/v1/observer/retrieval` | Retrieval | 检索质量指标 |
-| `GET /api/v1/observer/filesystem` | Filesystem | 文件系统操作指标 |
+| `GET /api/v1/observer/queue` | Queue | 處理佇列狀態 |
+| `GET /api/v1/observer/vikingdb` | VikingDB | 向量資料庫狀態 |
+| `GET /api/v1/observer/models` | Models | VLM、Embedding 和 Rerank 模型狀態 |
+| `GET /api/v1/observer/lock` | Lock | 鎖和事務狀態 |
+| `GET /api/v1/observer/retrieval` | Retrieval | 檢索質量指標 |
+| `GET /api/v1/observer/filesystem` | Filesystem | 檔案系統操作指標 |
 
 例如：
 
@@ -87,7 +87,7 @@ curl http://localhost:1933/api/v1/observer/queue \
   -H "X-API-Key: your-key"
 ```
 
-### 快速健康检查
+### 快速健康檢查
 
 **Python HTTP SDK**
 
@@ -107,9 +107,9 @@ curl http://localhost:1933/api/v1/debug/health \
 {"status": "ok", "result": {"healthy": true}}
 ```
 
-### 响应时间
+### 響應時間
 
-每个 API 响应都包含一个 `X-Process-Time` 请求头，表示服务端处理时间（单位为秒）：
+每個 API 響應都包含一個 `X-Process-Time` 請求頭，表示服務端處理時間（單位為秒）：
 
 ```bash
 curl -v http://localhost:1933/api/v1/fs/ls?uri=viking:// \
@@ -117,17 +117,17 @@ curl -v http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 # < X-Process-Time: 0.0023
 ```
 
-这部分解决的是“服务现在是不是活着、是不是堵了、哪个组件有问题”。如果你要看某一次请求内部发生了什么，请继续看 telemetry。
+這部分解決的是“服務現在是不是活著、是不是堵了、哪個元件有問題”。如果你要看某一次請求內部發生了什麼，請繼續看 telemetry。
 
-## 用 `ov tui` 看数据面
+## 用 `ov tui` 看資料面
 
-`ov` CLI 里有一个独立的 TUI 文件浏览器命令：
+`ov` CLI 裡有一個獨立的 TUI 檔案瀏覽器命令：
 
 ```bash
 ov tui /
 ```
 
-也可以从某个 scope 直接进入：
+也可以從某個 scope 直接進入：
 
 ```bash
 ov tui viking://resources
@@ -135,71 +135,71 @@ ov tui viking://resources
 
 使用前提：
 
-- OpenViking Server 已启动
+- OpenViking Server 已啟動
 - 已配置好 `ovcli.conf`
-- 当前 `X-API-Key` 有权读取对应租户数据
+- 當前 `X-API-Key` 有權讀取對應租戶資料
 
-这个 TUI 适合做两类观测：
+這個 TUI 適合做兩類觀測：
 
-- 看 `viking://resources` 和 `viking://user` 下实际落了哪些数据
-  （session 位于 `viking://user/{user_id}/sessions`）
-- 看某个 URI 对应的向量记录是否已经写入，以及数量是否符合预期
+- 看 `viking://resources` 和 `viking://user` 下實際落了哪些資料
+  （session 位於 `viking://user/{user_id}/sessions`）
+- 看某個 URI 對應的向量記錄是否已經寫入，以及數量是否符合預期
 
-常用按键：
+常用按鍵：
 
 - `q`：退出
-- `Tab`：在左侧树和右侧内容面板之间切换焦点
-- `j` / `k`：上下移动
-- `.`：展开或折叠目录
-- `g` / `G`：跳到顶部或底部
-- `v`：切换到向量记录视图
-- `n`：在向量记录视图里加载下一页
-- `c`：在向量记录视图里统计当前 URI 的向量总数
+- `Tab`：在左側樹和右側內容面板之間切換焦點
+- `j` / `k`：上下移動
+- `.`：展開或摺疊目錄
+- `g` / `G`：跳到頂部或底部
+- `v`：切換到向量記錄檢視
+- `n`：在向量記錄視圖裡載入下一頁
+- `c`：在向量記錄視圖裡統計當前 URI 的向量總數
 
-一个常见排查流程是：
+一個常見排查流程是：
 
-1. 用 `ov tui viking://resources` 找到目标文档或目录。
-2. 确认右侧能看到 `abstract` / `overview` / 正文内容（受支持的图片文件 —— `png` / `jpg` / `jpeg` / `gif` / `bmp` / `webp` / `tiff` / `tif` —— 会直接渲染预览）。
-3. 按 `v` 进入向量记录视图，确认该 URI 下是否已经有向量数据。
-4. 按 `c` 查看总量，必要时按 `n` 翻页继续核对。
+1. 用 `ov tui viking://resources` 找到目標文件或目錄。
+2. 確認右側能看到 `abstract` / `overview` / 正文內容（受支援的圖片檔案 —— `png` / `jpg` / `jpeg` / `gif` / `bmp` / `webp` / `tiff` / `tif` —— 會直接渲染預覽）。
+3. 按 `v` 進入向量記錄檢視，確認該 URI 下是否已經有向量資料。
+4. 按 `c` 檢視總量，必要時按 `n` 翻頁繼續核對。
 
-TUI 更偏“数据面排查”。它适合回答“资源到底有没有进去”“向量到底有没有写进去”，但不直接展示单次请求的 token 或阶段耗时。
+TUI 更偏“資料面排查”。它適合回答“資源到底有沒有進去”“向量到底有沒有寫進去”，但不直接展示單次請求的 token 或階段耗時。
 
-## 用 Web Studio 做 Web 观测
+## 用 Web Studio 做 Web 觀測
 
-OV server 自身在 `/studio` 提供 Web Studio 前端 —— 不需要单独进程，跟着 `openviking-server` 一起起来就行。
+OV server 自身在 `/studio` 提供 Web Studio 前端 —— 不需要單獨程序，跟著 `openviking-server` 一起起來就行。
 
 ```text
 http://127.0.0.1:1933/studio
 ```
 
-第一次使用时，在右上角 Connection 对话框里填入 `X-API-Key`，base URL 默认就是当前同源（也就是 `/studio` 来自哪个域名，API 就走那个域名）。
+第一次使用時，在右上角 Connection 對話方塊裡填入 `X-API-Key`，base URL 預設就是當前同源（也就是 `/studio` 來自哪個域名，API 就走那個域名）。
 
-当前比较适合观测的页面有：
+當前比較適合觀測的頁面有：
 
-- `Home`（`/studio`）：今日 token 消耗、检索次数、context commits 趋势、agent 访问汇总 —— 直接读 `/api/v1/console/*` BFF
-- `Request Logs`（`/studio/request-logs`）：审计日志、按 account / user / agent / route 过滤，对应 `/api/v1/console/audit`
-- `Resources`（`/studio/resources`）：浏览 URI、查看目录和文件、上传资源
-- `Retrieval`（`/studio/retrieval`）：直接发 find / search / grep 请求并查看结果
-- `Sessions`（`/studio/sessions`）：浏览 session 历史、查看 message / memory 提交流程
+- `Home`（`/studio`）：今日 token 消耗、檢索次數、context commits 趨勢、agent 訪問彙總 —— 直接讀 `/api/v1/console/*` BFF
+- `Request Logs`（`/studio/request-logs`）：審計日誌、按 account / user / agent / route 過濾，對應 `/api/v1/console/audit`
+- `Resources`（`/studio/resources`）：瀏覽 URI、檢視目錄和檔案、上傳資源
+- `Retrieval`（`/studio/retrieval`）：直接發 find / search / grep 請求並檢視結果
+- `Sessions`（`/studio/sessions`）：瀏覽 session 歷史、檢視 message / memory 提交流程
 
-写操作（`Add Resource`、`Add Memory`、租户/用户管理）通过当前已登录的 API key 鉴权，没有额外的 `--write-enabled` 开关需要打开。
+寫操作（`Add Resource`、`Add Memory`、租戶/使用者管理）通過當前已登入的 API key 鑑權，沒有額外的 `--write-enabled` 開關需要開啟。
 
-从观测角度看，Studio 的一个优点是直接调用 `/api/v1/console/*` BFF 的统计接口（dashboard summary、token series、context commits、audit logs），跟旧 console 复用同一套数据，只是 UI 换了。对于 `find`、`add-resource` 和 `session commit` 这类操作，结果面板可以展开看 `telemetry.summary`。
+從觀測角度看，Studio 的一個優點是直接呼叫 `/api/v1/console/*` BFF 的統計介面（dashboard summary、token series、context commits、audit logs），跟舊 console 複用同一套資料，只是 UI 換了。對於 `find`、`add-resource` 和 `session commit` 這類操作，結果面板可以展開看 `telemetry.summary`。
 
-Studio 更适合“边点边看”的交互式排查；如果你要把观测数据接到自己的日志系统或自动化链路，建议直接调用 HTTP API 或 SDK，并显式请求 telemetry。
+Studio 更適合“邊點邊看”的互動式排查；如果你要把觀測資料接到自己的日誌系統或自動化鏈路，建議直接呼叫 HTTP API 或 SDK，並顯式請求 telemetry。
 
-## 请求级 Telemetry
+## 請求級 Telemetry
 
-OpenViking 的请求级追踪能力对外名称是 `operation telemetry`。它会在响应里附带一份结构化摘要，用来说明这次调用里发生了什么，例如：
+OpenViking 的請求級追蹤能力對外名稱是 `operation telemetry`。它會在響應裡附帶一份結構化摘要，用來說明這次呼叫裡發生了什麼，例如：
 
-- 总耗时
+- 總耗時
 - LLM / embedding token 消耗
-- 向量检索次数、扫描量、返回量
-- 资源导入阶段耗时
-- `session.commit` 的 memory 提取统计
+- 向量檢索次數、掃描量、返回量
+- 資源匯入階段耗時
+- `session.commit` 的 memory 提取統計
 
-最常见的请求方式是在 body 里显式传：
+最常見的請求方式是在 body 裡顯式傳：
 
 ```json
 {"telemetry": true}
@@ -218,17 +218,17 @@ curl -X POST http://localhost:1933/api/v1/search/find \
   }'
 ```
 
-完整字段、支持范围和更多示例见：
+完整欄位、支援範圍和更多示例見：
 
-- [操作级 Telemetry 参考](07-operation-telemetry.md)
+- [操作級 Telemetry 參考](07-operation-telemetry.md)
 
-## 产生本地 Trace 并提交排查
+## 產生本地 Trace 並提交排查
 
-如果一次问题无法只靠响应里的 `telemetry.summary` 判断，可以让 OpenViking 把 OpenTelemetry trace 写到本地 JSONL 文件。用户把 JSONL 文件和有问题的 `trace_id` 提交给管理员/支持人员，由管理员上传到排查环境并继续分析。这个方式适合离线客户环境、无法直连 OTLP 后端的环境，或者需要把复现过程打包给支持人员分析的场景。
+如果一次問題無法只靠響應裡的 `telemetry.summary` 判斷，可以讓 OpenViking 把 OpenTelemetry trace 寫到本地 JSONL 檔案。使用者把 JSONL 檔案和有問題的 `trace_id` 提交給管理員/支援人員，由管理員上傳到排查環境並繼續分析。這個方式適合離線客戶環境、無法直連 OTLP 後端的環境，或者需要把復現過程打包給支援人員分析的場景。
 
-### 1. 开启本地 trace 文件
+### 1. 開啟本地 trace 檔案
 
-在运行 OpenViking Server 的机器上，编辑 `~/.openviking/ov.conf`（或你启动时通过 `--config` 指定的配置文件），加入或调整：
+在執行 OpenViking Server 的機器上，編輯 `~/.openviking/ov.conf`（或你啟動時通過 `--config` 指定的配置檔案），加入或調整：
 
 ```json
 {
@@ -247,13 +247,13 @@ curl -X POST http://localhost:1933/api/v1/search/find \
 }
 ```
 
-改完后需要**重启 OpenViking Server**。默认文件路径是：
+改完後需要**重啟 OpenViking Server**。預設檔案路徑是：
 
 ```text
 ~/.openviking/logs/traces.jsonl
 ```
 
-当文件达到 `local_rotation_mb` 后会轮转，例如：
+當檔案達到 `local_rotation_mb` 後會輪轉，例如：
 
 ```text
 ~/.openviking/logs/traces.jsonl.2
@@ -261,31 +261,31 @@ curl -X POST http://localhost:1933/api/v1/search/find \
 ~/.openviking/logs/traces.jsonl
 ```
 
-### 2. 复现问题并确认 trace 已产生
+### 2. 復現問題並確認 trace 已產生
 
-启动服务后，执行能复现问题的操作，例如一次 `find`、资源导入、`session commit` 或 agent 调用。操作完成后等待几秒，或优雅停止服务以便 batch exporter 刷盘，然后检查文件：
+啟動服務後，執行能復現問題的操作，例如一次 `find`、資源匯入、`session commit` 或 agent 呼叫。操作完成後等待幾秒，或優雅停止服務以便 batch exporter 刷盤，然後檢查檔案：
 
 ```bash
 ls -lh ~/.openviking/logs/traces.jsonl*
 tail -n 3 ~/.openviking/logs/traces.jsonl
 ```
 
-如果没有文件或文件为空，优先检查：
+如果沒有檔案或檔案為空，優先檢查：
 
-- Server 是否已重启并加载了新的 `ov.conf`
-- `server.observability.traces.enabled` 是否为 `true`
-- `server.observability.traces.protocol` 是否为 `"local"`
-- 当前进程是否有权限写入 `~/.openviking/logs`
+- Server 是否已重啟並載入了新的 `ov.conf`
+- `server.observability.traces.enabled` 是否為 `true`
+- `server.observability.traces.protocol` 是否為 `"local"`
+- 當前程序是否有許可權寫入 `~/.openviking/logs`
 
-### 3. 提交 trace 文件给管理员
+### 3. 提交 trace 檔案給管理員
 
-这一步通常由**用户提交材料，管理员/支持人员上传并排查**：
+這一步通常由**使用者提交材料，管理員/支援人員上傳並排查**：
 
-1. 用户不要直接上传到排查环境，只需要把本地 JSONL 文件交给管理员/支持人员。
-2. 如果已经知道有问题的 `trace_id`，请和 JSONL 一起提交。
-3. 如果不确定具体 `trace_id`，请至少提供复现时间段、操作步骤和相关请求/错误日志，方便管理员从文件中定位。
+1. 使用者不要直接上傳到排查環境，只需要把本地 JSONL 檔案交給管理員/支援人員。
+2. 如果已經知道有問題的 `trace_id`，請和 JSONL 一起提交。
+3. 如果不確定具體 `trace_id`，請至少提供復現時間段、操作步驟和相關請求/錯誤日誌，方便管理員從檔案中定位。
 
-建议提交当前文件和轮转文件：
+建議提交當前檔案和輪轉檔案：
 
 ```text
 ~/.openviking/logs/traces.jsonl
@@ -293,31 +293,31 @@ tail -n 3 ~/.openviking/logs/traces.jsonl
 ~/.openviking/logs/traces.jsonl.2
 ```
 
-也可以先打包后再提交：
+也可以先打包後再提交：
 
 ```bash
 cd ~/.openviking/logs
 tar czf /tmp/openviking-traces.tgz traces.jsonl*
 ```
 
-提交给管理员/支持人员的信息建议包括：
+提交給管理員/支援人員的資訊建議包括：
 
-- `traces.jsonl*` 文件或打包后的 `openviking-traces.tgz`
-- 有问题的 `trace_id`（如果已知）
-- 复现问题的时间段和操作步骤
-- OpenViking 版本/commit、启动命令、关键配置（去掉密钥和 token）
-- 相关错误日志或请求 id（如果有）
+- `traces.jsonl*` 檔案或打包後的 `openviking-traces.tgz`
+- 有問題的 `trace_id`（如果已知）
+- 復現問題的時間段和操作步驟
+- OpenViking 版本/commit、啟動命令、關鍵配置（去掉金鑰和 token）
+- 相關錯誤日誌或請求 id（如果有）
 
-#### 管理员上传参考
+#### 管理員上傳參考
 
-管理员在有 OpenViking 源码、且能访问远端 OTLP 排查环境的机器上，从仓库根目录运行：
+管理員在有 OpenViking 原始碼、且能訪問遠端 OTLP 排查環境的機器上，從倉庫根目錄執行：
 
 ```bash
 python tests/upload_offline_trace.py \
   --file /path/to/traces.jsonl
 ```
 
-上传脚本会读取当前环境的 `ov.conf` 作为**上传目标配置**，因此该配置里的 trace exporter 必须是远端 OTLP，例如：
+上傳指令碼會讀取當前環境的 `ov.conf` 作為**上傳目標配置**，因此該配置裡的 trace exporter 必須是遠端 OTLP，例如：
 
 ```json
 {
@@ -338,7 +338,7 @@ python tests/upload_offline_trace.py \
 }
 ```
 
-如果当前 `ov.conf` 不是上传目标配置，请准备一个单独的上传配置，并通过 `--config` 指定：
+如果當前 `ov.conf` 不是上傳目標配置，請準備一個單獨的上傳配置，並通過 `--config` 指定：
 
 ```bash
 python tests/upload_offline_trace.py \
@@ -346,7 +346,7 @@ python tests/upload_offline_trace.py \
   --config /path/to/upload-ov.conf
 ```
 
-默认会按从旧到新的顺序一并上传轮转文件（例如 `traces.jsonl.2`、`traces.jsonl.1`、`traces.jsonl`）。如果只想上传当前文件：
+預設會按從舊到新的順序一併上傳輪轉檔案（例如 `traces.jsonl.2`、`traces.jsonl.1`、`traces.jsonl`）。如果只想上傳當前檔案：
 
 ```bash
 python tests/upload_offline_trace.py \
@@ -354,7 +354,7 @@ python tests/upload_offline_trace.py \
   --no-include-rotated
 ```
 
-上传成功后，脚本会打印本次上传的 trace id 列表；管理员可结合用户提交的 `trace_id` 或复现时间段继续排查：
+上傳成功後，指令碼會列印本次上傳的 trace id 列表；管理員可結合使用者提交的 `trace_id` 或復現時間段繼續排查：
 
 ```text
 Uploaded:
@@ -365,29 +365,29 @@ Uploaded:
     ...
 ```
 
-## 用 `/metrics` 做时序观测
+## 用 `/metrics` 做時序觀測
 
-`/metrics` 是 OpenViking 面向 Prometheus 抓取模型提供的时序指标端点，适合回答这类问题：
+`/metrics` 是 OpenViking 面向 Prometheus 抓取模型提供的時序指標端點，適合回答這類問題：
 
-- 最近一段时间 HTTP 请求量是不是突然升高了
-- 某个接口或操作的错误率是不是在持续上升
-- 请求耗时分布是否变差
-- 队列是否开始堆积
-- 关键依赖、探针或模型提供方是否进入不健康状态
+- 最近一段時間 HTTP 請求量是不是突然升高了
+- 某個介面或操作的錯誤率是不是在持續上升
+- 請求耗時分佈是否變差
+- 佇列是否開始堆積
+- 關鍵依賴、探針或模型提供方是否進入不健康狀態
 
-和前面的 `observer/*` 相比，`/metrics` 更适合看**趋势、聚合和告警**；而 `observer/*` 更适合人工查看某一时刻的瞬时状态。
+和前面的 `observer/*` 相比，`/metrics` 更適合看**趨勢、聚合和告警**；而 `observer/*` 更適合人工檢視某一時刻的瞬時狀態。
 
-和前面的 `telemetry` 相比，`/metrics` 关注的是**聚合后的时间序列**；`telemetry` 关注的是**某一次请求内部到底发生了什么**。
+和前面的 `telemetry` 相比，`/metrics` 關注的是**聚合後的時間序列**；`telemetry` 關注的是**某一次請求內部到底發生了什麼**。
 
-### 快速开启 metrics
+### 快速開啟 metrics
 
-`/metrics` 默认是关闭的：当指标体系未启用时，访问会返回 `404`，并提示 `Prometheus metrics are disabled.`。
+`/metrics` 預設是關閉的：當指標體系未啟用時，訪問會返回 `404`，並提示 `Prometheus metrics are disabled.`。
 
-开启方式不需要完整配置，只需要在 `ov.conf` 的 `server` 段打开总开关即可。
+開啟方式不需要完整配置，只需要在 `ov.conf` 的 `server` 段開啟總開關即可。
 
-**最小配置（推荐）**
+**最小配置（推薦）**
 
-在 `~/.openviking/ov.conf`（或你启动时通过 `--config` 指定的路径）里加入：
+在 `~/.openviking/ov.conf`（或你啟動時通過 `--config` 指定的路徑）里加入：
 
 ```json
 {
@@ -400,17 +400,17 @@ Uploaded:
   }
 }
 ```
-改完配置后需要**重启 OpenViking Server** 才会生效。
+改完配置後需要**重啟 OpenViking Server** 才會生效。
 
-### observability 配置层级
+### observability 配置層級
 
-OpenViking 将信号级别的可观测性配置统一放在 `server.observability` 下：
+OpenViking 將訊號級別的可觀測性配置統一放在 `server.observability` 下：
 
-- `server.observability.metrics`：metrics 子系统与 exporter 配置
-- `server.observability.traces`：trace 导出配置
-- `server.observability.logs`：log 导出配置
-- `server.observability.dump_body`：把 HTTP 请求/响应 body（按 content-type 过滤、按字节截断）作为属性挂到当前 trace span 上，便于在 trace UI 中调试。默认关闭，因为 body 可能含密钥/高基数内容
-- `server.observability.usage_audit`：按请求记录用量/成本审计日志，使用 SQLite 存储。`sqlite_path` 可覆盖数据库位置（多实例部署时设为每实例独立的本地路径）；`timezone` 控制时间戳的时区本地化。默认开启
+- `server.observability.metrics`：metrics 子系統與 exporter 配置
+- `server.observability.traces`：trace 匯出配置
+- `server.observability.logs`：log 匯出配置
+- `server.observability.dump_body`：把 HTTP 請求/響應 body（按 content-type 過濾、按位元組截斷）作為屬性掛到當前 trace span 上，便於在 trace UI 中除錯。預設關閉，因為 body 可能含金鑰/高基數內容
+- `server.observability.usage_audit`：按請求記錄用量/成本審計日誌，使用 SQLite 儲存。`sqlite_path` 可覆蓋資料庫位置（多例項部署時設為每例項獨立的本地路徑）；`timezone` 控制時間戳的時區本地化。預設開啟
 
 示例：
 
@@ -471,30 +471,30 @@ OpenViking 将信号级别的可观测性配置统一放在 `server.observabilit
 }
 ```
 
-说明：
+說明：
 
-- `headers` 用于给 OTLP exporter 透传自定义请求头或 gRPC metadata。
-- 常见场景包括直连需要额外鉴权头的 OTLP 后端；请只配置 header key/value，不要把敏感值写入日志或截图中。
-- 对 `traces`、`logs` 和 `metrics.exporters.otel` 三条链路，`headers` 的配置方式保持一致。
-- 当 `protocol="grpc"` 时，`headers` 会作为 gRPC metadata 发送，key 需要使用小写形式，例如 `x-byteapm-appkey`；该限制不适用于 `protocol="http"`。
+- `headers` 用於給 OTLP exporter 透傳自定義請求頭或 gRPC metadata。
+- 常見場景包括直連需要額外鑑權頭的 OTLP 後端；請只配置 header key/value，不要把敏感值寫入日誌或截圖中。
+- 對 `traces`、`logs` 和 `metrics.exporters.otel` 三條鏈路，`headers` 的配置方式保持一致。
+- 當 `protocol="grpc"` 時，`headers` 會作為 gRPC metadata 傳送，key 需要使用小寫形式，例如 `x-byteapm-appkey`；該限制不適用於 `protocol="http"`。
 
-完整字段、支持范围和更多示例见：
+完整欄位、支援範圍和更多示例見：
 
-- [指标](../concepts/12-metrics.md) 
+- [指標](../concepts/12-metrics.md) 
 
-### 直接访问 `/metrics`
+### 直接訪問 `/metrics`
 
-当前实现中，`/metrics` 未接入 `get_request_context` 等鉴权依赖，因此从代码行为上看，它当前等价于公开抓取端点：
+當前實現中，`/metrics` 未接入 `get_request_context` 等鑑權依賴，因此從程式碼行為上看，它當前等價於公開抓取端點：
 
 ```bash
 curl http://localhost:1933/metrics
 ```
 
-如果你的部署环境通过网关、反向代理或服务发现层对 `/metrics` 做了保护，则应按部署方式附加鉴权。
+如果你的部署環境通過閘道器、反向代理或服務發現層對 `/metrics` 做了保護，則應按部署方式附加鑑權。
 
 ### Prometheus 抓取示例
 
-最常见的使用方式是让 Prometheus 定时抓取：
+最常見的使用方式是讓 Prometheus 定時抓取：
 
 ```yaml
 scrape_configs:
@@ -504,80 +504,80 @@ scrape_configs:
       - targets: ["localhost:1933"]
 ```
 
-### 在 Grafana 中导入和查看 Dashboard
+### 在 Grafana 中匯入和檢視 Dashboard
 
-如果你已经让 Prometheus 成功抓取 `/metrics`，下一步最常见的做法就是在 Grafana 中导入 OpenViking 的 demo dashboard。
+如果你已經讓 Prometheus 成功抓取 `/metrics`，下一步最常見的做法就是在 Grafana 中匯入 OpenViking 的 demo dashboard。
 
-**第 1 步：先确认 Prometheus 已经抓到 `/metrics`**
+**第 1 步：先確認 Prometheus 已經抓到 `/metrics`**
 
-在导入 Grafana dashboard 之前，先确认 Prometheus 数据源里已经能查到 OpenViking 指标。最简单的判断方式是：
+在匯入 Grafana dashboard 之前，先確認 Prometheus 資料來源裡已經能查到 OpenViking 指標。最簡單的判斷方式是：
 
-- 在 Prometheus UI 里执行 `openviking_http_requests_total`
-- 或执行 `openviking_service_readiness`
-- 如果已经能返回时间序列，说明 Grafana 后续就能正常出图
+- 在 Prometheus UI 裡執行 `openviking_http_requests_total`
+- 或執行 `openviking_service_readiness`
+- 如果已經能返回時間序列，說明 Grafana 後續就能正常出圖
 
-如果这一步没有数据，先回到上面的 Prometheus 抓取配置，确认 `targets`、`metrics_path` 和网络连通性。
+如果這一步沒有資料，先回到上面的 Prometheus 抓取配置，確認 `targets`、`metrics_path` 和網路連通性。
 
-**第 2 步：在 Grafana 导入官方 demo dashboard**
+**第 2 步：在 Grafana 匯入官方 demo dashboard**
 
-OpenViking 仓库里已经提供了可直接导入的 dashboard JSON：
+OpenViking 倉庫裡已經提供了可直接匯入的 dashboard JSON：
 
 - [openviking_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_demo_dashboard.json)
-- [openviking_token_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_token_demo_dashboard.json) （注意，该 dashboard 依赖 `tim012432-calendarheatmap-panel` grafana 插件，需要先安装才能正常工作）
+- [openviking_token_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_token_demo_dashboard.json) （注意，該 dashboard 依賴 `tim012432-calendarheatmap-panel` grafana 外掛，需要先安裝才能正常工作）
 
-导入步骤可以按下面做：
+匯入步驟可以按下面做：
 
-1. 登录你的 Grafana。
-2. 在左侧菜单进入 `Dashboards`。
-3. 点击右上角的 `New` 或 `Import`。
-4. 选择上传 JSON 文件，或把上面链接对应文件的内容粘贴进去。
-5. 在导入页面选择 Prometheus 作为数据源。
-6. 点击 `Import` 完成导入。
+1. 登入你的 Grafana。
+2. 在左側選單進入 `Dashboards`。
+3. 點選右上角的 `New` 或 `Import`。
+4. 選擇上傳 JSON 檔案，或把上面連結對應檔案的內容貼上進去。
+5. 在匯入頁面選擇 Prometheus 作為資料來源。
+6. 點選 `Import` 完成匯入。
 
-如果导入后面板为空，通常优先检查两件事：
+如果匯入後面板為空，通常優先檢查兩件事：
 
-- Grafana 绑定的数据源是不是正确的 Prometheus
-- Prometheus 里是否真的已经抓到了 `openviking_*` 指标
+- Grafana 繫結的資料來源是不是正確的 Prometheus
+- Prometheus 裡是否真的已經抓到了 `openviking_*` 指標
 
-**第 3 步：打开 dashboard 后重点看什么**
+**第 3 步：開啟 dashboard 後重點看什麼**
 
-接入之后，通常就可以在 Grafana 里重点观察这些指标族对应的面板：
+接入之後，通常就可以在 Grafana 裡重點觀察這些指標族對應的面板：
 
-- `openviking_http_*`：HTTP 请求量、耗时、inflight
-- `openviking_operation_*`：结构化操作的成功率和耗时
-- `openviking_queue_*`：队列处理量、积压和执行中数量
-- `openviking_*_readiness`：依赖与探针健康状态
+- `openviking_http_*`：HTTP 請求量、耗時、inflight
+- `openviking_operation_*`：結構化操作的成功率和耗時
+- `openviking_queue_*`：佇列處理量、積壓和執行中數量
+- `openviking_*_readiness`：依賴與探針健康狀態
 
-**第 4 步：最终效果长什么样**
+**第 4 步：最終效果長什麼樣**
 
-导入成功后，你最终会看到一个以 OpenViking 请求、队列、探针、模型调用和系统状态为主的总览 dashboard。效果示意可以参考：
+匯入成功後，你最終會看到一個以 OpenViking 請求、佇列、探針、模型呼叫和系統狀態為主的總覽 dashboard。效果示意可以參考：
 
 - [grafana-demo-dashboard.png](../../images/grafana-demo-dashboard.png)
 
-这张图可以帮助你快速确认“导入后的面板布局是不是正常”。如果你的 dashboard 基本结构和它一致，但局部面板没有数据，通常说明是对应指标当前没有产生样本，或者筛选条件与实际流量不匹配。
+這張圖可以幫助你快速確認“匯入後的面板佈局是不是正常”。如果你的 dashboard 基本結構和它一致，但區域性面板沒有資料，通常說明是對應指標當前沒有產生樣本，或者篩選條件與實際流量不匹配。
 
-### 如何理解常见标签
+### 如何理解常見標籤
 
-排查看板时，最常见的几个标签是：
+排查看板時，最常見的幾個標籤是：
 
-- `account_id`：租户维度标签。只在受控白名单指标上开启，未识别请求会被归到 `__unknown__`，超出活跃租户预算时会落到 `__overflow__`
+- `account_id`：租戶維度標籤。只在受控白名單指標上開啟，未識別請求會被歸到 `__unknown__`，超出活躍租戶預算時會落到 `__overflow__`
 - `route`：HTTP 路由模板，例如 `/api/v1/search/find`
-- `status`：请求或阶段状态，例如 `200`、`ok`、`error`
-- `valid`：当前样本是否是本次成功刷新得到的有效值；`valid="0"` 通常表示失败回退值或 stale fallback
+- `status`：請求或階段狀態，例如 `200`、`ok`、`error`
+- `valid`：當前樣本是否是本次成功重新整理得到的有效值；`valid="0"` 通常表示失敗回退值或 stale fallback
 
-### 什么时候看 `/metrics`，什么时候看别的入口
+### 什麼時候看 `/metrics`，什麼時候看別的入口
 
-- 看服务是否整体健康、哪个组件当前不通：先看 `/health` 和 `observer/*`
-- 看资源是否真的落库、向量是否真的写进去：看 `ov tui`
-- 看某一次具体请求为什么慢、token 花在哪、资源处理卡在哪个阶段：看 `telemetry`
-- 看一段时间内请求量、错误率、时延是否持续恶化：看 `/metrics`
+- 看服務是否整體健康、哪個元件當前不通：先看 `/health` 和 `observer/*`
+- 看資源是否真的落庫、向量是否真的寫進去：看 `ov tui`
+- 看某一次具體請求為什麼慢、token 花在哪、資源處理卡在哪個階段：看 `telemetry`
+- 看一段時間內請求量、錯誤率、時延是否持續惡化：看 `/metrics`
 
-## 相关文档
+## 相關文件
 
-- [使用 Prometheus 和 Grafana 查看 OpenViking 指标](11-grafana-prometheus.md) - 从 `/metrics` 到 Prometheus、Grafana dashboard 的完整操作流程
-- [使用真实问答验证 Vikingbot 指标](12-vikingbot-metrics-validation.md) - 用 `/bot/v1/chat`、`/bot/v1/feedback` 和真实 follow-up 场景校验反馈与 outcome 指标
-- [部署](03-deployment.md) - 服务器设置
-- [认证](04-authentication.md) - API Key 设置
-- [操作级 Telemetry 参考](07-operation-telemetry.md) - 请求级结构化追踪
-- [系统 API](../api/07-system.md) - 系统与 observer 接口参考
-- [指标](../concepts/12-metrics.md) - 时序指标与配置
+- [使用 Prometheus 和 Grafana 檢視 OpenViking 指標](11-grafana-prometheus.md) - 從 `/metrics` 到 Prometheus、Grafana dashboard 的完整操作流程
+- [使用真實問答驗證 Vikingbot 指標](12-vikingbot-metrics-validation.md) - 用 `/bot/v1/chat`、`/bot/v1/feedback` 和真實 follow-up 場景校驗反饋與 outcome 指標
+- [部署](03-deployment.md) - 伺服器設定
+- [認證](04-authentication.md) - API Key 設定
+- [操作級 Telemetry 參考](07-operation-telemetry.md) - 請求級結構化追蹤
+- [系統 API](../api/07-system.md) - 系統與 observer 介面參考
+- [指標](../concepts/12-metrics.md) - 時序指標與配置

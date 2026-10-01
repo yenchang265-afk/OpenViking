@@ -269,7 +269,7 @@ def _api_with_transport(monkeypatch, handler):
 async def test_prepared_file_failure_preserves_reason_and_remote_ids(
     monkeypatch, tmp_path, failure_stage
 ):
-    message = "文件解析任务失败：未生成可解析内容"
+    message = "檔案解析任務失敗：未生成可解析內容"
     requests = []
 
     def handler(request):
@@ -457,9 +457,9 @@ async def test_parse_http_failure_preserves_message_and_remote_ids(monkeypatch, 
 @pytest.mark.parametrize(
     "message",
     [
-        "文件解析任务失败。",
-        "文件解析任务失败：未生成可解析内容",
-        "文件解析任务失败：empty parse result",
+        "檔案解析任務失敗。",
+        "檔案解析任務失敗：未生成可解析內容",
+        "檔案解析任務失敗：empty parse result",
     ],
 )
 async def test_parse_failed_response_preserves_output_text(monkeypatch, tmp_path, message):

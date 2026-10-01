@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1480" height="900" viewBox="0 0 1480 900" role="img" aria-labelledby="title desc">
-  <title id="title">OpenViking session.train 训练执行细节图</title>
-  <desc id="desc">展示训练框架中的输入、并行 rollout、并行信号抽取、串行 policy update，以及 trajectories、experiences、remote service、session archive 等存储关系。</desc>
+  <title id="title">OpenViking session.train 訓練執行細節圖</title>
+  <desc id="desc">展示訓練框架中的輸入、並行 rollout、並行訊號抽取、序列 policy update，以及 trajectories、experiences、remote service、session archive 等儲存關係。</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#334155"/></marker>
     <marker id="arrowBlue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#2563eb"/></marker>
@@ -12,8 +12,8 @@
   </defs>
 
   <rect class="bg" width="1480" height="900"/>
-  <text class="title" x="40" y="44">OpenViking session.train 训练执行细节</text>
-  <text class="subtitle" x="40" y="68">Domain model 作为流程中的数据产物出现；图中标明哪些阶段并行、哪些阶段被 ExperienceSet.lock() 串行化，以及每个阶段读写哪些存储。</text>
+  <text class="title" x="40" y="44">OpenViking session.train 訓練執行細節</text>
+  <text class="subtitle" x="40" y="68">Domain model 作為流程中的資料產物出現；圖中標明哪些階段並行、哪些階段被 ExperienceSet.lock() 序列化，以及每個階段讀寫哪些儲存。</text>
 
   <!-- Input panel -->
   <rect class="panel panelInput" x="40" y="105" width="330" height="430" rx="18"/>
@@ -139,7 +139,7 @@
   <text class="text" x="640" y="655" text-anchor="middle">StreamingBatcher</text>
   <text class="small" x="640" y="674" text-anchor="middle">max gradients / max wait</text>
 
-  <text class="small" x="65" y="724">submit_rollout 会等待当前 rollout 所在 batch 完成 flush + apply 后返回；flush 后进入同一个 serialized Policy Update Transaction。</text>
+  <text class="small" x="65" y="724">submit_rollout 會等待當前 rollout 所在 batch 完成 flush + apply 後返回；flush 後進入同一個 serialized Policy Update Transaction。</text>
 
   <!-- Flow arrows -->
   <path class="edgeBlue" d="M202 234 L202 260"/>
@@ -183,5 +183,5 @@
 
   <!-- Footer -->
   <rect x="40" y="815" width="1400" height="48" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
-  <text class="small" x="65" y="840">并行边界：case rollout、rollout analysis、gradient estimation。LLM 调用：trajectory ExtractLoop、experience gradient ExtractLoop、patch merge ExtractLoop。串行边界：ExperienceSet.lock() 内的 reload → optimizer.plan → updater.apply。</text>
+  <text class="small" x="65" y="840">並行邊界：case rollout、rollout analysis、gradient estimation。LLM 呼叫：trajectory ExtractLoop、experience gradient ExtractLoop、patch merge ExtractLoop。序列邊界：ExperienceSet.lock() 內的 reload → optimizer.plan → updater.apply。</text>
 </svg>

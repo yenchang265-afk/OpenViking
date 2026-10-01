@@ -34,7 +34,7 @@ _OKF_TYPE_DECLARATION_RE = re.compile(rb"""(?m)^(?:type|["']type["'])[ \t]*:""")
 _BARE_VIKING_URI_RE = re.compile(r"""viking://[^\s<>\[\](){}"'«»，。；：！？]+""")
 _LEADING_H1_RE = re.compile(r"\A(?:[ \t]*\r?\n)*#[ \t]+[^\r\n]*(?:\r?\n|\Z)")
 _LEGACY_RELATED_PAGES_RE = re.compile(
-    r"(?mi)^##[ \t]+(?:Related pages|相关页面)[ \t]*\r?\n"
+    r"(?mi)^##[ \t]+(?:Related pages|相关页面|相關頁面)[ \t]*\r?\n"
     r"(?:[ \t]*\r?\n)*(?:[ \t]*-[^\r\n]*(?:\r?\n|\Z))+"
 )
 _RESERVED_FILENAMES = frozenset({".abstract.md", ".overview.md", ".relations.json", ".source.json"})
@@ -359,7 +359,7 @@ def _render_source_fallback(
         missing.append((label, LinkRenderer.encode_markdown_target(target)))
     if not missing:
         return body.rstrip()
-    heading = "来源" if wiki_language == "zh-CN" else "Sources"
+    heading = "來源" if wiki_language == "zh-CN" else "Sources"
     lines = [f"- [{label}]({target})" for label, target in missing]
     return body.rstrip() + f"\n\n## {heading}\n\n" + "\n".join(lines) + "\n"
 

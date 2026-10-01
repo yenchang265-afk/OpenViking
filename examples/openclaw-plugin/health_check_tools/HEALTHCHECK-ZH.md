@@ -1,20 +1,20 @@
-# OpenViking 健康检查工具
+# OpenViking 健康檢查工具
 
-`ov-healthcheck.py` 端到端验证 OpenClaw + OpenViking 插件链路。通过一次真实 Gateway 会话，再从 OpenViking 侧检查结果。
+`ov-healthcheck.py` 端到端驗證 OpenClaw + OpenViking 外掛鏈路。通過一次真實 Gateway 會話，再從 OpenViking 側檢查結果。
 
-## 快速开始
+## 快速開始
 
 ```bash
 python examples/openclaw-plugin/ov-healthcheck.py
 ```
 
-只依赖 Python 标准库。地址和 token 会从 `openclaw.json` 自动读取。
+只依賴 Python 標準庫。地址和 token 會從 `openclaw.json` 自動讀取。
 
 ## 前置要求
 
-### 必须启用 Gateway HTTP 端点
+### 必須啟用 Gateway HTTP 端點
 
-Phase 1 对话注入依赖 Gateway 的 `/v1/responses` 接口，该接口**默认关闭**，需要在 `openclaw.json` 中启用：
+Phase 1 對話注入依賴 Gateway 的 `/v1/responses` 介面，該介面**預設關閉**，需要在 `openclaw.json` 中啟用：
 
 ```json
 {
@@ -33,21 +33,21 @@ Phase 1 对话注入依赖 Gateway 的 `/v1/responses` 接口，该接口**默�
 }
 ```
 
-启用后重启 Gateway 使配置生效：
+啟用後重啟 Gateway 使配置生效：
 
 ```bash
 openclaw gateway restart
 ```
 
-若未启用，Phase 1 会失败并报错：
+若未啟用，Phase 1 會失敗並報錯：
 
 ```
 [FAIL] Chat turn 1 failed (POST http://127.0.0.1:18789/v1/responses failed with HTTP 404: Not Found)
 ```
 
-## 期望输出
+## 期望輸出
 
-正常运行结果如下：
+正常執行結果如下：
 
 ```
 OpenViking Plugin Healthcheck
@@ -92,65 +92,65 @@ PASS=20 WARN=0 FAIL=0 SKIP=0
 Healthcheck passed.
 ```
 
-Phase 3 会等待异步 commit 完成（默认最多 300 秒）。这是正常的——commit 涉及 LLM 调用来做归档和记忆抽取。
+Phase 3 會等待非同步 commit 完成（預設最多 300 秒）。這是正常的——commit 涉及 LLM 呼叫來做歸檔和記憶抽取。
 
-所有测试消息都带有 `[OPENVIKING-HEALTHCHECK]` 前缀和唯一 probe 标记，但正文会尽量写成正常的可记忆对话内容。Kafka topic、callback host 和 debug tag 也会从 probe 派生出唯一值，确保这次运行留下的 artifacts 可以被精确识别。脚本默认会在结束时删除本次运行产生的 synthetic session，以及只属于当前 run 的 probe 专属 leaf memory。像 `profile.md`、preferences、`.abstract.md` 这类共享摘要文件，即使包含了 synthetic 内容也不会删除，以避免误删混有真实用户信息的共享 memory；只有显式传入 `--keep-artifacts` 时才会保留这些现场用于排查。
+所有測試訊息都帶有 `[OPENVIKING-HEALTHCHECK]` 字首和唯一 probe 標記，但正文會盡量寫成正常的可記憶對話內容。Kafka topic、callback host 和 debug tag 也會從 probe 派生出唯一值，確保這次執行留下的 artifacts 可以被精確識別。指令碼預設會在結束時刪除本次執行產生的 synthetic session，以及只屬於當前 run 的 probe 專屬 leaf memory。像 `profile.md`、preferences、`.abstract.md` 這類共享摘要檔案，即使包含了 synthetic 內容也不會刪除，以避免誤刪混有真實使用者資訊的共享 memory；只有顯式傳入 `--keep-artifacts` 時才會保留這些現場用於排查。
 
 ## 工作原理
 
-脚本通过注入一组受控对话，再追踪其在系统中的流转来验证插件链路。
+指令碼通過注入一組受控對話，再追蹤其在系統中的流轉來驗證外掛鏈路。
 
-**Probe 标记** — 每次运行生成一个唯一随机标记（如 `probe-a1b2c3d4`），嵌入第一条消息中。后续通过这个标记在 OpenViking 中精确定位本次测试的 session，不会和用户真实对话混淆。
+**Probe 標記** — 每次執行生成一個唯一隨機標記（如 `probe-a1b2c3d4`），嵌入第一條訊息中。後續通過這個標記在 OpenViking 中精確定位本次測試的 session，不會和使用者真實對話混淆。
 
-**Phase 1：对话注入** — 脚本通过 Gateway `/v1/responses` 接口发送 4 条带 probe 标记的消息，模拟一次真实用户对话。消息中包含已知事实（技术栈、Kafka topic、服务地址等），作为后续验证的锚点。`[OPENVIKING-HEALTHCHECK]` 前缀和 probe 标记用于识别本次检查，而正文保持正常对话内容，以便真实验证记忆抽取链路。
+**Phase 1：對話注入** — 指令碼通過 Gateway `/v1/responses` 介面傳送 4 條帶 probe 標記的訊息，模擬一次真實使用者對話。訊息中包含已知事實（技術棧、Kafka topic、服務地址等），作為後續驗證的錨點。`[OPENVIKING-HEALTHCHECK]` 字首和 probe 標記用於識別本次檢查，而正文保持正常對話內容，以便真實驗證記憶抽取鏈路。
 
-**Phase 2：捕获验证** — 等待一小段时间（`--capture-wait`）后，脚本查询 OpenViking sessions API，逐个扫描 session 的 context 寻找 probe 标记。找到标记说明插件的 `afterTurn` 钩子成功将 Gateway 对话写入了 OpenViking。
+**Phase 2：捕獲驗證** — 等待一小段時間（`--capture-wait`）後，指令碼查詢 OpenViking sessions API，逐個掃描 session 的 context 尋找 probe 標記。找到標記說明外掛的 `afterTurn` 鉤子成功將 Gateway 對話寫入了 OpenViking。
 
-**Phase 3：Commit 和记忆验证** — 脚本通过 OpenViking API 触发 commit，然后轮询（最多 `--commit-wait` 秒）直到三个条件同时满足：
+**Phase 3：Commit 和記憶驗證** — 指令碼通過 OpenViking API 觸發 commit，然後輪詢（最多 `--commit-wait` 秒）直到三個條件同時滿足：
 - `commit_count > 0` — commit 已完成
-- `latest_archive_overview` 存在 — 对话已归档
-- `memories_extracted > 0` — 记忆抽取产生了结果
+- `latest_archive_overview` 存在 — 對話已歸檔
+- `memories_extracted > 0` — 記憶抽取產生了結果
 
-这确认了完整的异步流水线：对话归档、概要生成、记忆抽取。
+這確認了完整的非同步流水線：對話歸檔、概要生成、記憶抽取。
 
-**Phase 4：召回验证** — 通过 Gateway 再发两个问题：
-1. 同 session 追问，询问之前对话中的事实。检查回复是否包含关键词（`go`、`postgresql`、`redis`、`70`）。验证 session 内的上下文连续性。
-2. 新 session 追问（使用新 user ID），询问只有通过记忆召回才能获得的事实。检查回复是否包含由 probe 派生出来的本次运行专属 Kafka topic 和 callback host。验证 `autoRecall` 是否在新 session 中注入了存储的记忆。
+**Phase 4：召回驗證** — 通過 Gateway 再發兩個問題：
+1. 同 session 追問，詢問之前對話中的事實。檢查回復是否包含關鍵詞（`go`、`postgresql`、`redis`、`70`）。驗證 session 內的上下文連續性。
+2. 新 session 追問（使用新 user ID），詢問只有通過記憶召回才能獲得的事實。檢查回復是否包含由 probe 派生出來的本次執行專屬 Kafka topic 和 callback host。驗證 `autoRecall` 是否在新 session 中注入了儲存的記憶。
 
-**Phase 5：清理** — 默认情况下，脚本会删除本次运行创建的 synthetic OpenViking session，并且只在当前 user space 下、命中本次 run 的 probe 派生事实时才删除 synthetic memory。memory root 会按当前运行时 user space 解析。这样连续跑 healthcheck 时，不会把共享 memory 空间越堆越脏，也不会误删无关记忆。
+**Phase 5：清理** — 預設情況下，指令碼會刪除本次執行建立的 synthetic OpenViking session，並且只在當前 user space 下、命中本次 run 的 probe 派生事即時才刪除 synthetic memory。memory root 會按當前執行時 user space 解析。這樣連續跑 healthcheck 時，不會把共享 memory 空間越堆越髒，也不會誤刪無關記憶。
 
-**关键词匹配** — 脚本不要求精确复述。它将模型回复转为小写，检查目标关键词中是否至少命中 2 个。这容忍了模型的改写，同时能捕捉到完全的召回失败。
+**關鍵詞匹配** — 指令碼不要求精確複述。它將模型回覆轉為小寫，檢查目標關鍵詞中是否至少命中 2 個。這容忍了模型的改寫，同時能捕捉到完全的召回失敗。
 
-## 输出含义
+## 輸出含義
 
-- `PASS` — 确认正常
-- `INFO` — 补充信息，不代表异常
-- `WARN` — 主链路可用，但该项未稳定确认
-- `FAIL` — 明确故障，脚本返回非 0
+- `PASS` — 確認正常
+- `INFO` — 補充資訊，不代表異常
+- `WARN` — 主鏈路可用，但該項未穩定確認
+- `FAIL` — 明確故障，指令碼返回非 0
 
-## 参数
+## 引數
 
-| 参数 | 默认值 | 说明 |
+| 引數 | 預設值 | 說明 |
 |------|--------|------|
-| `--gateway <url>` | 自动 | Gateway 地址 |
-| `--openviking <url>` | 自动 | OpenViking 地址 |
-| `--token <token>` | 自动 | Gateway bearer token |
-| `--openviking-api-key <key>` | 自动 | OpenViking API key |
-| `--actor-peer <id>` | `main` | OpenViking 直连检查请求使用的 actor peer |
-| `--user-id <id>` | 随机 | 测试会话的 user id |
-| `--openclaw-config <path>` | 自动 | `openclaw.json` 路径 |
-| `--chat-timeout <秒>` | `120` | 每次 Gateway 聊天请求的超时 |
-| `--commit-wait <秒>` | `300` | 等待 commit、归档、记忆抽取完成的最大时间 |
-| `--capture-wait <秒>` | `4` | 聊天结束后等待 OpenViking 捕获的时间 |
-| `--delay <秒>` | `1` | 聊天轮次间隔 |
-| `--session-scan-limit <n>` | `0`（全部） | 扫描 session 的上限（0 = 扫描全部） |
-| `--insecure` | 关 | 跳过 SSL 证书验证（自签证书场景） |
-| `--keep-artifacts` | 关 | 保留本次运行产生的 synthetic session 和 memory，便于调试 |
-| `--strict-warnings` | 关 | 有 WARN 时也返回非 0 |
-| `--json-out <path>` | — | 输出 JSON 报告 |
-| `--verbose` / `-v` | 关 | 打印调试信息 |
+| `--gateway <url>` | 自動 | Gateway 地址 |
+| `--openviking <url>` | 自動 | OpenViking 地址 |
+| `--token <token>` | 自動 | Gateway bearer token |
+| `--openviking-api-key <key>` | 自動 | OpenViking API key |
+| `--actor-peer <id>` | `main` | OpenViking 直連檢查請求使用的 actor peer |
+| `--user-id <id>` | 隨機 | 測試會話的 user id |
+| `--openclaw-config <path>` | 自動 | `openclaw.json` 路徑 |
+| `--chat-timeout <秒>` | `120` | 每次 Gateway 聊天請求的超時 |
+| `--commit-wait <秒>` | `300` | 等待 commit、歸檔、記憶抽取完成的最大時間 |
+| `--capture-wait <秒>` | `4` | 聊天結束後等待 OpenViking 捕獲的時間 |
+| `--delay <秒>` | `1` | 聊天輪次間隔 |
+| `--session-scan-limit <n>` | `0`（全部） | 掃描 session 的上限（0 = 掃描全部） |
+| `--insecure` | 關 | 跳過 SSL 證書驗證（自簽證書場景） |
+| `--keep-artifacts` | 關 | 保留本次執行產生的 synthetic session 和 memory，便於除錯 |
+| `--strict-warnings` | 關 | 有 WARN 時也返回非 0 |
+| `--json-out <path>` | — | 輸出 JSON 報告 |
+| `--verbose` / `-v` | 關 | 列印除錯資訊 |
 
-## 故障处理
+## 故障處理
 
 ### `Gateway health check failed`
 
@@ -167,11 +167,11 @@ curl http://127.0.0.1:<端口>/health
 cat ~/.openviking/ov.conf
 ```
 
-检查 `storage.workspace/log/openviking.log`。
+檢查 `storage.workspace/log/openviking.log`。
 
 ### `Chat turn 1 failed (POST /v1/responses failed with HTTP 404: Not Found)`
 
-这是最常见的 Phase 1 失败原因。Gateway 的 `/v1/responses` 和 `/v1/chat/completions` 接口**默认关闭**，需要在 `openclaw.json` 的 `gateway.http.endpoints` 下启用：
+這是最常見的 Phase 1 失敗原因。Gateway 的 `/v1/responses` 和 `/v1/chat/completions` 介面**預設關閉**，需要在 `openclaw.json` 的 `gateway.http.endpoints` 下啟用：
 
 ```json
 {
@@ -186,7 +186,7 @@ cat ~/.openviking/ov.conf
 }
 ```
 
-重启 Gateway：
+重啟 Gateway：
 
 ```bash
 openclaw gateway restart
@@ -194,7 +194,7 @@ openclaw gateway restart
 
 ### `Probe session not found in OpenViking`
 
-会话已发出但插件未写入 OpenViking。
+會話已發出但外掛未寫入 OpenViking。
 
 ```bash
 openclaw config get plugins.slots.contextEngine
@@ -202,41 +202,41 @@ openclaw config get plugins.entries.openviking.config
 openclaw logs --follow
 ```
 
-常见原因：插件未加载、`autoCapture` 关闭、路由或写入失败。
+常見原因：外掛未載入、`autoCapture` 關閉、路由或寫入失敗。
 
 ### `Session commit_count is still zero after waiting`
 
-Commit 是异步的，涉及 LLM 调用。如果超时：
+Commit 是非同步的，涉及 LLM 呼叫。如果超時：
 
-1. 检查 commit 任务是否还在运行：`curl http://127.0.0.1:<端口>/api/v1/tasks`
-2. 如果还在运行，用 `--commit-wait 600` 重跑
-3. 如果卡住，检查 `storage.workspace/log/openviking.log`
-4. 确认 LLM 后端可达且正常响应
+1. 檢查 commit 任務是否還在執行：`curl http://127.0.0.1:<埠>/api/v1/tasks`
+2. 如果還在執行，用 `--commit-wait 600` 重跑
+3. 如果卡住，檢查 `storage.workspace/log/openviking.log`
+4. 確認 LLM 後端可達且正常響應
 
 ### `Context endpoint has no archive overview after waiting`
 
-归档概要在 commit 过程中生成。如果 commit 成功但概要缺失：
+歸檔概要在 commit 過程中生成。如果 commit 成功但概要缺失：
 
 ```bash
 curl "http://127.0.0.1:<端口>/api/v1/sessions/<session_id>/context?token_budget=128000"
 ```
 
-如果手动请求也为空，问题在 OpenViking 侧；如果手动正常，检查脚本是否指向了错误实例。
+如果手動請求也為空，問題在 OpenViking 側；如果手動正常，檢查指令碼是否指向了錯誤例項。
 
 ### `Fresh-session recall was inconclusive`
 
-通常不是完全故障。常见原因：`autoRecall` 关闭、记忆抽取未完成、模型本轮未命中。先重跑一次。
+通常不是完全故障。常見原因：`autoRecall` 關閉、記憶抽取未完成、模型本輪未命中。先重跑一次。
 
 ### `Direct backend memory search returned no results`
 
-这是 `INFO`，不是失败。只要 fresh-session recall 能答对，插件链路就是正常的。
+這是 `INFO`，不是失敗。只要 fresh-session recall 能答對，外掛鏈路就是正常的。
 
-## 建议排查顺序
+## 建議排查順序
 
-1. 确认已按前置要求启用 `gateway.http.endpoints`
-2. 检查 `plugins.slots.contextEngine` 是否为 `openviking`
-3. 检查 Gateway `/health`
-4. 检查 OpenViking `/health`
+1. 確認已按前置要求啟用 `gateway.http.endpoints`
+2. 檢查 `plugins.slots.contextEngine` 是否為 `openviking`
+3. 檢查 Gateway `/health`
+4. 檢查 OpenViking `/health`
 5. 看 `openclaw logs --follow`
-6. 看 OpenViking 日志
-7. 看脚本输出里失败的具体阶段
+6. 看 OpenViking 日誌
+7. 看指令碼輸出裡失敗的具體階段

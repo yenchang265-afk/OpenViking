@@ -1,51 +1,51 @@
 # OpenCode 插件
 
-为 [OpenCode](https://opencode.ai/) 提供跨项目、跨会话的长期记忆和已索引仓库上下文。安装后，每次对话都会通过 OpenCode plugin hooks 自动召回相关记忆并捕获新内容；模型可调用工具来自 Claude Code / Codex 记忆插件同款的 OpenViking stdio MCP proxy。
+為 [OpenCode](https://opencode.ai/) 提供跨專案、跨會話的長期記憶和已索引倉庫上下文。安裝後，每次對話都會通過 OpenCode plugin hooks 自動召回相關記憶並捕獲新內容；模型可呼叫工具來自 Claude Code / Codex 記憶外掛同款的 OpenViking stdio MCP proxy。
 
-源码：[examples/opencode-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)
+原始碼：[examples/opencode-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)
 
-工具调用和结果会作为独立的 `tool` part 捕获，`tool_output` 原样上报。截断由服务端负责：超过 `tool_output_externalization.threshold_chars`（默认 `20000`）的输出会写入 session 的 tool-result 存储，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通过 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 读回。
+工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
 
-## 前置条件
+## 前置條件
 
 - [OpenCode](https://opencode.ai/)
 - Node.js 18+
 - OpenViking HTTP server
-- 如果服务端启用了鉴权，需要一个可用的 OpenViking API key
+- 如果服務端啟用了鑑權，需要一個可用的 OpenViking API key
 
-先启动 OpenViking server：
+先啟動 OpenViking server：
 
 ```bash
 openviking-server --config ~/.openviking/ov.conf
 ```
 
-在另一个终端检查服务：
+在另一個終端檢查服務：
 
 ```bash
 curl http://localhost:1933/health
 ```
 
-## 安装
+## 安裝
 
-### 一键安装（推荐）
+### 一鍵安裝（推薦）
 
-OpenCode 与 Claude Code、Codex 共用同一个安装器。它会询问语言（English/中文）、要安装的 harness、下载源和 OpenViking 凭据；每一步都是幂等的，重复运行完全安全。
+OpenCode 與 Claude Code、Codex 共用同一個安裝器。它會詢問語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；每一步都是冪等的，重複執行完全安全。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness opencode
 ```
 
-在 GitHub 访问困难的地区，可从火山引擎 TOS 镜像运行同一个安装器（或在下载源选择步骤选"TOS mirror"）：
+在 GitHub 訪問困難的地區，可從火山引擎 TOS 映象運行同一個安裝器（或在下載源選擇步驟選"TOS mirror"）：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
 ```
 
-安装器会注册 npm 插件（TOS 渠道则安装本地文件插件），把 `openviking` MCP server 条目写进 `~/.config/opencode/opencode.json`，并配置 `~/.openviking/ovcli.conf`。
+安裝器會註冊 npm 外掛（TOS 渠道則安裝本地檔案外掛），把 `openviking` MCP server 條目寫進 `~/.config/opencode/opencode.json`，並配置 `~/.openviking/ovcli.conf`。
 
-### 手动 npm 安装
+### 手動 npm 安裝
 
-已发布的 npm 包是 `@openviking/opencode-plugin`。首次配置 OpenCode 时：
+已釋出的 npm 包是 `@openviking/opencode-plugin`。首次配置 OpenCode 時：
 
 ```bash
 mkdir -p ~/.config/opencode
@@ -58,11 +58,11 @@ JSON
 opencode
 ```
 
-已有 `~/.config/opencode/opencode.json` 时，不要覆盖原文件；只把 `"@openviking/opencode-plugin"` 合并到已有的 `plugin` 数组。OpenCode 启动时会自动下载这个 npm 包，插件会自动注册它的 MCP server。
+已有 `~/.config/opencode/opencode.json` 時，不要覆蓋原檔案；只把 `"@openviking/opencode-plugin"` 合併到已有的 `plugin` 陣列。OpenCode 啟動時會自動下載這個 npm 包，外掛會自動註冊它的 MCP server。
 
-### 源码安装
+### 原始碼安裝
 
-如果当前环境不能通过 package 安装：
+如果當前環境不能通過 package 安裝：
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
@@ -75,9 +75,9 @@ cp -r examples/opencode-plugin/lib ~/.config/opencode/plugins/openviking/
 cp -r examples/opencode-plugin/servers ~/.config/opencode/plugins/openviking/
 ```
 
-`sync.mjs` 会生成 `lib/shared/`，插件和 MCP 代理都从这里 import 共享模块。这个目录不在 git 里，所以复制前要先运行；之后每次 `git pull` 也要重新运行再复制。
+`sync.mjs` 會生成 `lib/shared/`，外掛和 MCP 代理都從這裡 import 共享模組。這個目錄不在 git 裡，所以複製前要先執行；之後每次 `git pull` 也要重新執行再複製。
 
-源码安装后，OpenCode 能发现的目录结构应类似：
+原始碼安裝後，OpenCode 能發現的目錄結構應類似：
 
 ```text
 ~/.config/opencode/plugins/
@@ -89,19 +89,19 @@ cp -r examples/opencode-plugin/servers ~/.config/opencode/plugins/openviking/
     └── servers/
 ```
 
-顶层 `openviking.js` 只是一个 wrapper，用来把 OpenCode 可发现的一级插件入口转发到实际安装目录。
-源码安装请使用 `.js` wrapper；OpenCode 的本地插件扫描器会发现 JavaScript/TypeScript 插件文件。
+頂層 `openviking.js` 只是一個 wrapper，用來把 OpenCode 可發現的一級外掛入口轉發到實際安裝目錄。
+原始碼安裝請使用 `.js` wrapper；OpenCode 的本地外掛掃描器會發現 JavaScript/TypeScript 外掛檔案。
 
 ## 配置
 
-凭据与 Claude Code / Codex 记忆插件共用。可以在仓库根目录运行一次 setup 向导，或使用 `OPENVIKING_*` 环境变量。向导同样 import `lib/shared/`，所以要先生成：
+憑據與 Claude Code / Codex 記憶外掛共用。可以在倉庫根目錄執行一次 setup 嚮導，或使用 `OPENVIKING_*` 環境變數。嚮導同樣 import `lib/shared/`，所以要先生成：
 
 ```bash
 node examples/memory-plugin-shared/sync.mjs
 node examples/opencode-plugin/scripts/setup.mjs
 ```
 
-行为旋钮写在 `~/.openviking/ovcli.conf` 的 `plugin` 段，与向导写入的连接字段同一个文件。共享键对所有记忆插件生效；`plugin.opencode` 下的键只对本插件生效，并覆盖共享键：
+行為旋鈕寫在 `~/.openviking/ovcli.conf` 的 `plugin` 段，與嚮導寫入的連線欄位同一個檔案。共享鍵對所有記憶外掛生效；`plugin.opencode` 下的鍵只對本外掛生效，並覆蓋共享鍵：
 
 ```json
 {
@@ -127,31 +127,31 @@ node examples/opencode-plugin/scripts/setup.mjs
 }
 ```
 
-配置项按优先级从高到低解析：`OPENVIKING_*` 环境变量、工作区的 `.openviking/config.json` 与 `config.local.json`、`plugin.opencode`、`plugin`，最后是内置默认值。`autoRecall: false` 关闭自动召回，`autoCapture: false` 让插件不再回写对话。
+配置項按優先順序從高到低解析：`OPENVIKING_*` 環境變數、工作區的 `.openviking/config.json` 與 `config.local.json`、`plugin.opencode`、`plugin`，最後是內建預設值。`autoRecall: false` 關閉自動召回，`autoCapture: false` 讓外掛不再回寫對話。
 
-每个 session 的第一条消息会带上一个隐藏的 `<openviking-context source="session-start">` 块，里面有你的 `profile.md`、`preferences/` 和 `entities/` 记忆索引，以及 `<available-skills>` skill 清单：先列你自己的 skill，再列 `viking://agent/skills` 下账号共享的 skill；共享 skill 与你自己的 skill 同名时不再列出。agent 照某个 skill 做事之前，先用 `openviking_read` 读它的 `SKILL.md`；创建或共享 skill 用 `openviking_add_skill`。`profileTokenBudget` 只管 profile 和记忆索引，skill 清单有独立的预算 `skillCatalogTokenBudget`（默认 `1200`，环境变量 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`）。放不下描述时只列 skill 名，名字也列不全时末尾注明 `... +N more`；连一个名字都放不下时，只写一行 skill 总数。设置 `skillCatalog: false`（`OPENVIKING_SKILL_CATALOG=0`）或把预算设为 `0` 即可关闭 skill 清单；没有 skill，或服务端没有 `GET /api/v1/skills` 接口时，这一块会直接省略。
+每個 session 的第一條訊息會帶上一個隱藏的 `<openviking-context source="session-start">` 塊，裡面有你的 `profile.md`、`preferences/` 和 `entities/` 記憶索引，以及 `<available-skills>` skill 清單：先列你自己的 skill，再列 `viking://agent/skills` 下帳號共享的 skill；共享 skill 與你自己的 skill 同名時不再列出。agent 照某個 skill 做事之前，先用 `openviking_read` 讀它的 `SKILL.md`；建立或共享 skill 用 `openviking_add_skill`。`profileTokenBudget` 只管 profile 和記憶索引，skill 清單有獨立的預算 `skillCatalogTokenBudget`（預設 `1200`，環境變數 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`）。放不下描述時只列 skill 名，名字也列不全時末尾註明 `... +N more`；連一個名字都放不下時，只寫一行 skill 總數。設定 `skillCatalog: false`（`OPENVIKING_SKILL_CATALOG=0`）或把預算設為 `0` 即可關閉 skill 清單；沒有 skill，或服務端沒有 `GET /api/v1/skills` 介面時，這一塊會直接省略。
 
-环境变量优先级高于 `ovcli.conf`：
+環境變數優先順序高於 `ovcli.conf`：
 
 ```bash
 export OPENVIKING_API_KEY="your-api-key-here"
-export OPENVIKING_ACCOUNT="default"   # 可选，仅 trusted-mode 部署需要
-export OPENVIKING_USER="opencode"     # 可选，仅 trusted-mode 部署需要
-export OPENVIKING_PEER_ID="opencode"  # 可选，peer 维度记忆路由需要
+export OPENVIKING_ACCOUNT="default"   # 可選，僅 trusted-mode 部署需要
+export OPENVIKING_USER="opencode"     # 可選，僅 trusted-mode 部署需要
+export OPENVIKING_PEER_ID="opencode"  # 可選，peer 維度記憶路由需要
 ```
 
-API key 会由 hooks 和 MCP proxy 作为 `Authorization: Bearer ...` 发送；`account` 和 `user` 是 trusted-mode headers；`peerId` 会作为 `X-OpenViking-Actor-Peer` 和捕获 session message 的 `peer_id` 使用。
+API key 會由 hooks 和 MCP proxy 作為 `Authorization: Bearer ...` 傳送；`account` 和 `user` 是 trusted-mode headers；`peerId` 會作為 `X-OpenViking-Actor-Peer` 和捕獲 session message 的 `peer_id` 使用。
 
-## 验证
+## 驗證
 
-安装后重启 OpenCode。进入 OpenCode session 后，插件应暴露 `openviking` MCP server，透传服务端完整 MCP 工具集（16 个工具）。OpenCode 会给 MCP 工具加 `openviking_` 前缀：
+安裝後重啟 OpenCode。進入 OpenCode session 後，外掛應暴露 `openviking` MCP server，透傳服務端完整 MCP 工具集（16 個工具）。OpenCode 會給 MCP 工具加 `openviking_` 字首：
 
 - `openviking_find`、`openviking_search`（`openviking_search` 的 `mode="context"` 替代原 recall 工具）
 - `openviking_read`、`openviking_list`、`openviking_tree`、`openviking_grep`、`openviking_glob`
 - `openviking_remember`、`openviking_write`、`openviking_edit`、`openviking_add_resource`、`openviking_add_skill`
 - `openviking_list_watches`、`openviking_cancel_watch`、`openviking_forget`、`openviking_health`
 
-可以让 OpenCode 搜索或浏览 OpenViking memory。运行时状态和错误日志会写入：
+可以讓 OpenCode 搜尋或瀏覽 OpenViking memory。執行時狀態和錯誤日誌會寫入：
 
 ```bash
 ~/.config/opencode/openviking/openviking-memory.log
@@ -160,17 +160,17 @@ API key 会由 hooks 和 MCP proxy 作为 `Authorization: Bearer ...` 发送；`
 
 ## 故障排查
 
-| 问题 | 排查方向 |
+| 問題 | 排查方向 |
 |------|----------|
-| 插件没有加载 | 确认 `~/.config/opencode/opencode.json` 引用了 `@openviking/opencode-plugin`；源码安装时确认 `~/.config/opencode/plugins/openviking.js` 存在 |
-| 加载时报找不到 `lib/shared/*.mjs` | 源码复制前没有运行 `sync.mjs`。在仓库根目录运行 `node examples/memory-plugin-shared/sync.mjs` 后重新复制 `lib/` |
-| MCP tools 连到了错误的 server | 检查 `~/.openviking/ovcli.conf`，或用 `OPENVIKING_*` 环境变量；`OPENVIKING_CLI_CONFIG_FILE` 可让插件改读另一份 ovcli.conf |
-| OpenViking 返回 401 / 403 | 检查 `OPENVIKING_API_KEY`；trusted-mode 部署还要检查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
-| recall 为空 | 确认 OpenViking server 中已有 memories/resources，且 `autoRecall` 没有被设成 `false` |
-| 本地 `openviking_add_resource` 失败 | 传入文件路径而不是目录；目前还不支持自动上传本地目录 |
+| 外掛沒有載入 | 確認 `~/.config/opencode/opencode.json` 引用了 `@openviking/opencode-plugin`；原始碼安裝時確認 `~/.config/opencode/plugins/openviking.js` 存在 |
+| 載入時報找不到 `lib/shared/*.mjs` | 原始碼複製前沒有執行 `sync.mjs`。在倉庫根目錄執行 `node examples/memory-plugin-shared/sync.mjs` 後重新複製 `lib/` |
+| MCP tools 連到了錯誤的 server | 檢查 `~/.openviking/ovcli.conf`，或用 `OPENVIKING_*` 環境變數；`OPENVIKING_CLI_CONFIG_FILE` 可讓外掛改讀另一份 ovcli.conf |
+| OpenViking 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；trusted-mode 部署還要檢查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
+| recall 為空 | 確認 OpenViking server 中已有 memories/resources，且 `autoRecall` 沒有被設成 `false` |
+| 本地 `openviking_add_resource` 失敗 | 傳入檔案路徑而不是目錄；目前還不支援自動上傳本地目錄 |
 
-完整 tools、配置字段和运行时文件说明见 [插件 README](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)。
+完整 tools、配置欄位和執行時檔案說明見 [外掛 README](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)。
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
+- [整合能力參考](./16-capability-reference.md)

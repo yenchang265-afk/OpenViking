@@ -1,47 +1,47 @@
-# 简介
+# 簡介
 
-OpenViking 是面向 AI Agent 的开源上下文数据库。它用虚拟文件系统组织资源、记忆和技能，让应用按路径浏览、检索相关上下文，并按需读取详细内容。
+OpenViking 是面向 AI Agent 的開源上下文資料庫。它用虛擬檔案系統組織資源、記憶和技能，讓應用按路徑瀏覽、檢索相關上下文，並按需讀取詳細內容。
 
-当 Agent 需要跨会话复用文档和经验时，可以用它集中组织和检索这些上下文。
+當 Agent 需要跨會話複用文件和經驗時，可以用它集中組織和檢索這些上下文。
 
-## 从你的任务开始
+## 從你的任務開始
 
-| 我想要…… | 阅读入口 |
+| 我想要…… | 閱讀入口 |
 | --- | --- |
-| 连接服务并检索第一份文档 | [快速开始](./02-quickstart.md) |
-| 接入已有 Agent 或编程工具 | [Agent 集成](../agent-integrations/01-overview.md) |
-| 在终端使用 OpenViking | [CLI 配置](./05-cli-setup.md) |
-| 部署和运维共享服务 | [部署](../guides/03-deployment.md)与[认证](../guides/04-authentication.md) |
-| 使用 SDK 或 HTTP API 开发 | [API 参考](../api/01-overview.md) |
+| 連線服務並檢索第一份文件 | [快速開始](./02-quickstart.md) |
+| 接入已有 Agent 或程式設計工具 | [Agent 整合](../agent-integrations/01-overview.md) |
+| 在終端使用 OpenViking | [CLI 配置](./05-cli-setup.md) |
+| 部署和運維共享服務 | [部署](../guides/03-deployment.md)與[認證](../guides/04-authentication.md) |
+| 使用 SDK 或 HTTP API 開發 | [API 參考](../api/01-overview.md) |
 
-## 上下文如何组织
+## 上下文如何組織
 
-每个文件或目录都有一个 `viking://` URI。已知路径时可直接列目录、读内容；不知道内容在哪里时可先检索。
+每個檔案或目錄都有一個 `viking://` URI。已知路徑時可直接列目錄、讀內容；不知道內容在哪裡時可先檢索。
 
-| 上下文 | 存放内容 | 详细说明 |
+| 上下文 | 存放內容 | 詳細說明 |
 | --- | --- | --- |
-| 资源 | 文档、代码仓库等参考资料 | [资源](../api/02-resources.md) |
-| 记忆 | 从会话提取的用户偏好、实体、事件和经验 | [记忆](../api/16-memory.md) |
-| 技能 | 可复用 Agent 工作流的指令和配套文件 | [技能](../api/04-skills.md) |
+| 資源 | 文件、程式碼倉庫等參考資料 | [資源](../api/02-resources.md) |
+| 記憶 | 從會話提取的使用者偏好、實體、事件和經驗 | [記憶](../api/16-memory.md) |
+| 技能 | 可複用 Agent 工作流的指令和配套檔案 | [技能](../api/04-skills.md) |
 
-共享资源位于 `viking://resources/`；用户上下文位于 `viking://user/{user_id}/`，其中 `peers/{peer_id}/` 存放特定 Peer 的上下文。共享技能可放在 `viking://agent/skills/`。作用域和路径规则见 [Viking URI](../concepts/04-viking-uri.md)。
+共享資源位於 `viking://resources/`；使用者上下文位於 `viking://user/{user_id}/`，其中 `peers/{peer_id}/` 存放特定 Peer 的上下文。共享技能可放在 `viking://agent/skills/`。作用域和路徑規則見 [Viking URI](../concepts/04-viking-uri.md)。
 
-## 按层读取内容
+## 按層讀取內容
 
-OpenViking 可在语义处理时生成目录摘要：
+OpenViking 可在語義處理時生成目錄摘要：
 
-| 层级 | 内容 | 默认正文上限 |
+| 層級 | 內容 | 預設正文上限 |
 | --- | --- | --- |
-| L0 | 用于快速筛选的摘要 | 256 字符 |
-| L1 | 用于导航的概览 | 4,000 字符 |
-| L2 | 按需读取的原始内容 | 无统一上限 |
+| L0 | 用於快速篩選的摘要 | 256 字元 |
+| L1 | 用於導航的概覽 | 4,000 字元 |
+| L2 | 按需讀取的原始內容 | 無統一上限 |
 
-L0 和 L1 是目录级附属文件，不会为每个文件固定生成一对摘要；是否可用取决于处理状态和配置。详见[上下文层级](../concepts/03-context-layers.md)。
+L0 和 L1 是目錄級附屬檔案，不會為每個檔案固定生成一對摘要；是否可用取決於處理狀態和配置。詳見[上下文層級](../concepts/03-context-layers.md)。
 
-[检索](../concepts/07-retrieval.md)结合语义匹配与目录遍历。不需要会话上下文时用 `find`，需要结合会话理解查询时用 `search`。[可观测性](../guides/05-observability.md)介绍如何检查处理和检索行为。
+[檢索](../concepts/07-retrieval.md)結合語義匹配與目錄遍歷。不需要會話上下文時用 `find`，需要結合會話理解查詢時用 `search`。[可觀測性](../guides/05-observability.md)介紹如何檢查處理和檢索行為。
 
-## 从会话生成记忆
+## 從會話生成記憶
 
-应用把消息写入会话，提交后触发异步记忆提取。当前记忆策略决定为用户或 Peer 创建、更新哪些记忆。集成插件可自动执行其中部分步骤，使用前需确认对应集成的支持范围。详见[会话](../concepts/08-session.md)和[记忆配置](../guides/01-configuration.md)。
+應用把訊息寫入會話，提交後觸發非同步記憶提取。當前記憶策略決定為使用者或 Peer 建立、更新哪些記憶。整合外掛可自動執行其中部分步驟，使用前需確認對應整合的支援範圍。詳見[會話](../concepts/08-session.md)和[記憶配置](../guides/01-configuration.md)。
 
-实现原理见[架构](../concepts/01-architecture.md)，各版本变更见 [GitHub Releases](https://github.com/volcengine/OpenViking/releases)。
+實現原理見[架構](../concepts/01-architecture.md)，各版本變更見 [GitHub Releases](https://github.com/volcengine/OpenViking/releases)。

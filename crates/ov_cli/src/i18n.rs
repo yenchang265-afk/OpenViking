@@ -22,14 +22,14 @@ impl Language {
     pub(crate) fn label(self) -> &'static str {
         match self {
             Self::En => "English",
-            Self::ZhCn => "简体中文",
+            Self::ZhCn => "繁體中文",
         }
     }
 
     pub(crate) fn from_code(value: &str) -> Option<Self> {
         match value.trim().to_ascii_lowercase().as_str() {
             "en" | "en-us" | "en_us" => Some(Self::En),
-            "zh" | "zh-cn" | "zh_cn" | "cn" | "chinese" | "中文" | "简体中文" => {
+            "zh" | "zh-cn" | "zh_cn" | "zh-tw" | "zh_tw" | "cn" | "chinese" | "中文" | "繁體中文" | "简体中文" => {
                 Some(Self::ZhCn)
             }
             _ => None,

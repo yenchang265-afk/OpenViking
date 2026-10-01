@@ -244,7 +244,7 @@ class _AsyncVectorAdapter:
 
 
 class _SingleAccountBackend:
-    """绑定单个 account 的后端实现（内部类）"""
+    """繫結單個 account 的後端實現（內部類）"""
 
     def __init__(
         self,
@@ -253,11 +253,11 @@ class _SingleAccountBackend:
         shared_adapter=None,
     ):
         """
-        初始化单 account 后端。
+        初始化單 account 後端。
 
         Args:
             config: VectorDB 配置
-            bound_account_id: 绑定的 account_id，None 表示 root 特权模式
+            bound_account_id: 繫結的 account_id，None 表示 root 特權模式
             shared_adapter: Optional pre-created adapter to share across backends.
                 If provided, reuses the existing adapter (and its underlying
                 PersistStore) instead of creating a new one. This avoids
@@ -681,7 +681,7 @@ class _SingleAccountBackend:
             return 0
 
     async def delete_by_filter(self, filter: FilterExpr) -> int:
-        """Root-only: 直接通过 filter 删除"""
+        """Root-only: 直接通過 filter 刪除"""
         try:
             return await self._async_adapter.call("delete", filter=filter)
         except Exception as e:
@@ -973,7 +973,7 @@ class _SingleAccountBackend:
 
 
 class VikingVectorIndexBackend:
-    """单例门面，管理 per-account 后端实例"""
+    """單例門面，管理 per-account 後端例項"""
 
     ALLOWED_CONTEXT_TYPES = {"resource", "skill", "memory"}
 
@@ -1015,15 +1015,15 @@ class VikingVectorIndexBackend:
         return self._shared_adapter.USE_CONTENT_FIELD
 
     # =========================================================================
-    # 内部辅助方法
+    # 內部輔助方法
     # =========================================================================
 
     def _get_default_backend(self) -> _SingleAccountBackend:
-        """获取默认 backend（用于 collection 管理等操作）"""
+        """獲取預設 backend（用於 collection 管理等操作）"""
         return self._get_backend_for_account("default")
 
     def _get_backend_for_account(self, account_id: str) -> _SingleAccountBackend:
-        """获取指定 account 的 backend，懒创建"""
+        """獲取指定 account 的 backend，懶建立"""
         if account_id not in self._account_backends:
             backend = _SingleAccountBackend(
                 self._config, bound_account_id=account_id, shared_adapter=self._shared_adapter
@@ -1036,11 +1036,11 @@ class VikingVectorIndexBackend:
         return self._account_backends[account_id]
 
     def _get_backend_for_context(self, ctx: RequestContext) -> _SingleAccountBackend:
-        """根据上下文获取 backend"""
+        """根據上下文獲取 backend"""
         return self._get_backend_for_account(ctx.account_id)
 
     def _get_root_backend(self) -> _SingleAccountBackend:
-        """获取 root 特权 backend"""
+        """獲取 root 特權 backend"""
         if not self._root_backend:
             self._root_backend = _SingleAccountBackend(
                 self._config, bound_account_id=None, shared_adapter=self._shared_adapter
@@ -1052,12 +1052,12 @@ class VikingVectorIndexBackend:
         return self._root_backend
 
     def _check_root_role(self, ctx: RequestContext) -> None:
-        """校验是否为 root 角色"""
+        """校驗是否為 root 角色"""
         if ctx.role != Role.ROOT:
             raise PermissionError(f"Root role required, got {ctx.role}")
 
     # =========================================================================
-    # Collection Management（委托给默认 backend）
+    # Collection Management（委託給預設 backend）
     # =========================================================================
 
     async def create_collection(self, name: str, schema: Dict[str, Any]) -> bool:
@@ -1099,7 +1099,7 @@ class VikingVectorIndexBackend:
                 await backend._refresh_meta_data_async()
 
     # =========================================================================
-    # 公开数据操作 API（强制要求 ctx）
+    # 公開資料操作 API（強制要求 ctx）
     # =========================================================================
 
     async def upsert(
@@ -1649,7 +1649,7 @@ class VikingVectorIndexBackend:
         raise NotImplementedError("Queue management requires VikingDBManager")
 
     # =========================================================================
-    # Tenant-Aware 方法（保持向后兼容）
+    # Tenant-Aware 方法（保持向後相容）
     # =========================================================================
 
     async def search_in_tenant(
@@ -2092,7 +2092,7 @@ class VikingVectorIndexBackend:
         return hydrated
 
     async def delete_account_data(self, account_id: str, *, ctx: RequestContext) -> int:
-        """删除指定 account 的所有数据（仅限，root 角色操作）"""
+        """刪除指定 account 的所有資料（僅限，root 角色操作）"""
         self._check_root_role(ctx)
         root_backend = self._get_root_backend()
         return await root_backend.delete_by_filter(Eq("account_id", account_id))

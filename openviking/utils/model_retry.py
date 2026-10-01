@@ -121,6 +121,7 @@ CONTENT_SAFETY_PATTERNS = (
     "contentfilter",
     "moderation",
     "sensitive content",
+    "內容安全",
     "内容安全",
     "敏感",
 )

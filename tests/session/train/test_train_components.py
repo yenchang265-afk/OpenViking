@@ -760,15 +760,15 @@ async def test_patch_merge_policy_optimizer_merges_all_patch_gradients_once(monk
     root = policy_set.root_uri
     gradients = [
         _patch_gradient(
-            name="重复预订处理",
-            uri=f"{root}/重复预订处理.md",
+            name="重複預訂處理",
+            uri=f"{root}/重複預訂處理.md",
             before=None,
-            after="核对订单后只取消重复订单",
+            after="核對訂單後只取消重複訂單",
             base_version=None,
             rationale="r1",
             links=[
                 StoredLink(
-                    from_uri=f"{root}/重复预订处理.md",
+                    from_uri=f"{root}/重複預訂處理.md",
                     to_uri="viking://user/u/memories/trajectories/traj1.md",
                     link_type="derived_from",
                     weight=1.0,
@@ -777,15 +777,15 @@ async def test_patch_merge_policy_optimizer_merges_all_patch_gradients_once(monk
             confidence=0.8,
         ),
         _patch_gradient(
-            name="处理酒店重复预订",
-            uri=f"{root}/处理酒店重复预订.md",
+            name="處理酒店重複預訂",
+            uri=f"{root}/處理酒店重複預訂.md",
             before=None,
-            after="识别有效订单并取消重复订单",
+            after="識別有效訂單並取消重複訂單",
             base_version=None,
             rationale="r2",
             links=[
                 StoredLink(
-                    from_uri=f"{root}/处理酒店重复预订.md",
+                    from_uri=f"{root}/處理酒店重複預訂.md",
                     to_uri="viking://user/u/memories/trajectories/traj2.md",
                     link_type="derived_from",
                     weight=1.0,
@@ -810,11 +810,11 @@ async def test_patch_merge_policy_optimizer_merges_all_patch_gradients_once(monk
                         ResolvedOperation(
                             old_memory_file_content=None,
                             memory_fields={
-                                "experience_name": "重复预订处理",
-                                "content": "合并后的重复预订处理经验",
+                                "experience_name": "重複預訂處理",
+                                "content": "合併後的重複預訂處理經驗",
                             },
                             memory_type="experiences",
-                            uris=[f"{root}/重复预订处理.md"],
+                            uris=[f"{root}/重複預訂處理.md"],
                         )
                     ],
                     delete_file_contents=[],
@@ -834,20 +834,20 @@ async def test_patch_merge_policy_optimizer_merges_all_patch_gradients_once(monk
     assert captured["constructed"] == 1
     provider = captured["context_provider"]
     assert provider.required_file_uris == [
-        f"{root}/重复预订处理.md",
-        f"{root}/处理酒店重复预订.md",
+        f"{root}/重複預訂處理.md",
+        f"{root}/處理酒店重複預訂.md",
     ]
     assert len(provider.patches) == 2
     assert captured["prefetch_messages"][-1]["content"].count("\nPatch ") == 2
     assert plan.metadata["optimizer"] == "patch_merge"
     assert plan.metadata["patch_gradient_count"] == 2
     assert len(plan.items) == 1
-    assert plan.items[0].target_name == "重复预订处理"
+    assert plan.items[0].target_name == "重複預訂處理"
     assert [link.to_uri for link in plan.items[0].links] == [
         "viking://user/u/memories/trajectories/traj1.md",
         "viking://user/u/memories/trajectories/traj2.md",
     ]
-    assert {link.from_uri for link in plan.items[0].links} == {f"{root}/重复预订处理.md"}
+    assert {link.from_uri for link in plan.items[0].links} == {f"{root}/重複預訂處理.md"}
 
 
 @pytest.mark.asyncio
@@ -861,14 +861,14 @@ async def test_patch_merge_policy_optimizer_keeps_distinct_output_source_links_s
     root = policy_set.root_uri
     gradients = [
         _patch_gradient(
-            name="取消资格核验",
-            uri=f"{root}/取消资格核验.md",
+            name="取消資格核驗",
+            uri=f"{root}/取消資格核驗.md",
             before=None,
-            after="取消前核验资格",
+            after="取消前核驗資格",
             base_version=None,
             links=[
                 StoredLink(
-                    from_uri=f"{root}/取消资格核验.md",
+                    from_uri=f"{root}/取消資格核驗.md",
                     to_uri="viking://user/u/memories/trajectories/traj_cancel.md",
                     link_type="derived_from",
                     weight=1.0,
@@ -876,14 +876,14 @@ async def test_patch_merge_policy_optimizer_keeps_distinct_output_source_links_s
             ],
         ),
         _patch_gradient(
-            name="退款总额传达",
-            uri=f"{root}/退款总额传达.md",
+            name="退款總額傳達",
+            uri=f"{root}/退款總額傳達.md",
             before=None,
-            after="多笔退款后传达总额",
+            after="多筆退款後傳達總額",
             base_version=None,
             links=[
                 StoredLink(
-                    from_uri=f"{root}/退款总额传达.md",
+                    from_uri=f"{root}/退款總額傳達.md",
                     to_uri="viking://user/u/memories/trajectories/traj_refund.md",
                     link_type="derived_from",
                     weight=1.0,
@@ -903,20 +903,20 @@ async def test_patch_merge_policy_optimizer_keeps_distinct_output_source_links_s
                         ResolvedOperation(
                             old_memory_file_content=None,
                             memory_fields={
-                                "experience_name": "取消资格核验",
-                                "content": "取消前核验资格",
+                                "experience_name": "取消資格核驗",
+                                "content": "取消前核驗資格",
                             },
                             memory_type="experiences",
-                            uris=[f"{root}/取消资格核验.md"],
+                            uris=[f"{root}/取消資格核驗.md"],
                         ),
                         ResolvedOperation(
                             old_memory_file_content=None,
                             memory_fields={
-                                "experience_name": "退款总额传达",
-                                "content": "多笔退款后传达总额",
+                                "experience_name": "退款總額傳達",
+                                "content": "多筆退款後傳達總額",
                             },
                             memory_type="experiences",
-                            uris=[f"{root}/退款总额传达.md"],
+                            uris=[f"{root}/退款總額傳達.md"],
                         ),
                     ],
                     delete_file_contents=[],
@@ -935,8 +935,8 @@ async def test_patch_merge_policy_optimizer_keeps_distinct_output_source_links_s
 
     links_by_name = {item.target_name: {link.to_uri for link in item.links} for item in plan.items}
     assert links_by_name == {
-        "取消资格核验": {"viking://user/u/memories/trajectories/traj_cancel.md"},
-        "退款总额传达": {"viking://user/u/memories/trajectories/traj_refund.md"},
+        "取消資格核驗": {"viking://user/u/memories/trajectories/traj_cancel.md"},
+        "退款總額傳達": {"viking://user/u/memories/trajectories/traj_refund.md"},
     }
 
 
@@ -951,14 +951,14 @@ async def test_patch_merge_policy_optimizer_single_canonical_output_inherits_all
     root = policy_set.root_uri
     gradients = [
         _patch_gradient(
-            name="重复预订处理",
-            uri=f"{root}/重复预订处理.md",
+            name="重複預訂處理",
+            uri=f"{root}/重複預訂處理.md",
             before=None,
-            after="核对订单后只取消重复订单",
+            after="核對訂單後只取消重複訂單",
             base_version=None,
             links=[
                 StoredLink(
-                    from_uri=f"{root}/重复预订处理.md",
+                    from_uri=f"{root}/重複預訂處理.md",
                     to_uri="viking://user/u/memories/trajectories/traj1.md",
                     link_type="derived_from",
                     weight=1.0,
@@ -966,14 +966,14 @@ async def test_patch_merge_policy_optimizer_single_canonical_output_inherits_all
             ],
         ),
         _patch_gradient(
-            name="处理酒店重复预订",
-            uri=f"{root}/处理酒店重复预订.md",
+            name="處理酒店重複預訂",
+            uri=f"{root}/處理酒店重複預訂.md",
             before=None,
-            after="识别有效订单并取消重复订单",
+            after="識別有效訂單並取消重複訂單",
             base_version=None,
             links=[
                 StoredLink(
-                    from_uri=f"{root}/处理酒店重复预订.md",
+                    from_uri=f"{root}/處理酒店重複預訂.md",
                     to_uri="viking://user/u/memories/trajectories/traj2.md",
                     link_type="derived_from",
                     weight=1.0,
@@ -993,11 +993,11 @@ async def test_patch_merge_policy_optimizer_single_canonical_output_inherits_all
                         ResolvedOperation(
                             old_memory_file_content=None,
                             memory_fields={
-                                "experience_name": "重复预订处理",
-                                "content": "合并后的重复预订处理经验",
+                                "experience_name": "重複預訂處理",
+                                "content": "合併後的重複預訂處理經驗",
                             },
                             memory_type="experiences",
-                            uris=[f"{root}/重复预订处理.md"],
+                            uris=[f"{root}/重複預訂處理.md"],
                         )
                     ],
                     delete_file_contents=[],

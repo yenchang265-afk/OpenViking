@@ -1,19 +1,19 @@
-# 路线图
+# 路線圖
 
-本页区分当前 `main` 分支的实现与后续方向，不承诺发布时间或优先级。已发布版本请查阅 [release notes](https://github.com/volcengine/OpenViking/releases)。
+本頁區分當前 `main` 分支的實現與後續方向，不承諾釋出時間或優先順序。已釋出版本請查閱 [release notes](https://github.com/volcengine/OpenViking/releases)。
 
-## main 已实现
+## main 已實現
 
-- **上下文与检索：** L0/L1/L2 分层、Viking URI、语义搜索和上下文感知检索。[概念说明](../concepts/03-context-layers.md)
-- **资源：** 文档、代码、网页和媒体导入，可重复读取来源的定时更新。音视频文件可保存；内容理解需要启用兼容的 VLM。[资源管理](../api/02-resources.md)
-- **更新与历史：** 根据 freshness 刷新父目录摘要，以及基于 Git 的快照提交、历史查询和恢复。父目录刷新可能延后；快照需显式提交，恢复的是文件内容，不含历史 ACL 或向量索引。[上下文分层](../concepts/03-context-layers.md) · [快照指南](../guides/15-snapshot.md)
-- **会话与记忆：** 对话追踪、记忆提取和会话归档。[会话说明](../concepts/08-session.md)
-- **接入与集成：** HTTP API、SDK、CLI、MCP 和 Agent 插件。[API 概览](../api/01-overview.md) · [MCP 指南](../guides/06-mcp-integration.md)
-- **运维：** JSON 配置（`ov.conf`）、多模型供应商、租户隔离、加密、可观测性和本地/S3 存储。[配置指南](../guides/01-configuration.md) · [部署指南](../guides/03-deployment.md)
+- **上下文與檢索：** L0/L1/L2 分層、Viking URI、語義搜尋和上下文感知檢索。[概念說明](../concepts/03-context-layers.md)
+- **資源：** 文件、程式碼、網頁和媒體匯入，可重複讀取來源的定時更新。音影片檔案可儲存；內容理解需要啟用相容的 VLM。[資源管理](../api/02-resources.md)
+- **更新與歷史：** 根據 freshness 重新整理父目錄摘要，以及基於 Git 的快照提交、歷史查詢和恢復。父目錄重新整理可能延後；快照需顯式提交，恢復的是檔案內容，不含歷史 ACL 或向量索引。[上下文分層](../concepts/03-context-layers.md) · [快照指南](../guides/15-snapshot.md)
+- **會話與記憶：** 對話追蹤、記憶提取和會話歸檔。[會話說明](../concepts/08-session.md)
+- **接入與整合：** HTTP API、SDK、CLI、MCP 和 Agent 外掛。[API 概覽](../api/01-overview.md) · [MCP 指南](../guides/06-mcp-integration.md)
+- **運維：** JSON 配置（`ov.conf`）、多模型供應商、租戶隔離、加密、可觀測性和本地/S3 儲存。[配置指南](../guides/01-configuration.md) · [部署指南](../guides/03-deployment.md)
 
-## 后续方向
+## 後續方向
 
-- 继续完善分布式存储。
+- 繼續完善分散式儲存。
 - 接入更多 Agent 框架。
 
-提案与范围讨论见 [GitHub issues](https://github.com/volcengine/OpenViking/issues)，参与开发见[贡献指南](https://github.com/volcengine/OpenViking/blob/main/CONTRIBUTING_CN.md)。
+提案與範圍討論見 [GitHub issues](https://github.com/volcengine/OpenViking/issues)，參與開發見[貢獻指南](https://github.com/volcengine/OpenViking/blob/main/CONTRIBUTING_CN.md)。

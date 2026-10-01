@@ -1,12 +1,12 @@
-## 步骤1：安装
+## 步驟1：安裝
 
-1. 在终端执行如下命令，启动 OpenViking 记忆配置向导：
+1. 在終端執行如下命令，啟動 OpenViking 記憶配置嚮導：
 
    ```bash
    hermes memory setup openviking
    ```
 
-2. 执行后将出现配置来源选择界面：
+2. 執行後將出現配置來源選擇介面：
 
    ```text
    OpenViking config source
@@ -15,12 +15,12 @@
       (○) Create new OpenViking profile - enter a new URL/API key
    ```
 
-   选项说明：
+   選項說明：
 
-   - 复用现有 Profile：直接读取本地已有的 `ovcli.conf` 中的 OpenViking 地址和密钥，无需重复填写。
-   - 新建 Profile：需手动输入 OpenViking 服务的访问 URL 和 API 密钥，适合首次配置或连接新实例的场景。
+   - 複用現有 Profile：直接讀取本地已有的 `ovcli.conf` 中的 OpenViking 地址和金鑰，無需重複填寫。
+   - 新建 Profile：需手動輸入 OpenViking 服務的訪問 URL 和 API 金鑰，適合首次配置或連線新例項的場景。
 
-3. 若选择「Create new OpenViking profile」，将出现连接方式选择，请选择「OpenViking Service (VolcEngine Cloud)」：
+3. 若選擇「Create new OpenViking profile」，將出現連線方式選擇，請選擇「OpenViking Service (VolcEngine Cloud)」：
 
    ```text
    OpenViking connection
@@ -36,8 +36,8 @@
    {{OPENVIKING_API_KEY}}
    ```
 
-5. 填写「Hermes peer ID in OpenViking」：该字段为 Hermes 在 OpenViking 中的 Agent 身份标识，用于区分不同 Agent 产生的记忆。可直接按 Enter 使用默认值「hermes」，也可自定义填写。
-6. 选择配置保存方式，建议选择「Mirror to OpenViking store」：
+5. 填寫「Hermes peer ID in OpenViking」：該欄位為 Hermes 在 OpenViking 中的 Agent 身份標識，用於區分不同 Agent 產生的記憶。可直接按 Enter 使用預設值「hermes」，也可自定義填寫。
+6. 選擇配置儲存方式，建議選擇「Mirror to OpenViking store」：
 
    ```text
    Save OpenViking config
@@ -46,8 +46,8 @@
     → (●) Mirror to OpenViking store - write ~/.openviking/ovcli.conf.<name> and link it
    ```
 
-7. 填写「OpenViking profile name」：Hermes 的多租户能力可隔离不同 Profile 的模型、记忆、配置及凭据。建议为每个 Hermes Profile 配置独立的 OpenViking 环境或身份，并在此填写一个便于识别的本地配置名称，以区分对应的 OpenViking 配置。该名称仅用于本地标识，不会创建新用户，也不会改变账号身份或权限。
-8. 配置完成后将显示如下确认信息：
+7. 填寫「OpenViking profile name」：Hermes 的多租戶能力可隔離不同 Profile 的模型、記憶、配置及憑據。建議為每個 Hermes Profile 配置獨立的 OpenViking 環境或身份，並在此填寫一個便於識別的本地配置名稱，以區分對應的 OpenViking 配置。該名稱僅用於本地標識，不會建立新使用者，也不會改變帳號身份或許可權。
+8. 配置完成後將顯示如下確認資訊：
 
    ```text
    OpenViking memory is ready
@@ -56,15 +56,15 @@
      Start a new Hermes session to activate.
    ```
 
-## 步骤2：验证
+## 步驟2：驗證
 
-1. 执行以下命令验证记忆插件状态：
+1. 執行以下命令驗證記憶外掛狀態：
 
    ```bash
    hermes memory status
    ```
 
-2. 返回如下结果即表示接入成功：
+2. 返回如下結果即表示接入成功：
 
    ```text
    Memory status
@@ -97,12 +97,12 @@
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
 | Provider 不是 openviking | 重跑 `hermes memory setup openviking` |
-| Status 不是 available | 检查 API Key |
+| Status 不是 available | 檢查 API Key |
 
-## 参考
+## 參考
 
-- 手动配置文档：[Hermes](https://docs.openviking.net/zh/agent-integrations/05-hermes)
-- 原理说明：[OpenViking memory provider](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers#openviking)
+- 手動配置文件：[Hermes](https://docs.openviking.net/zh/agent-integrations/05-hermes)
+- 原理說明：[OpenViking memory provider](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers#openviking)

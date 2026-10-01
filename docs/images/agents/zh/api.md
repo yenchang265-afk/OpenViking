@@ -1,6 +1,6 @@
 
-## 步骤 1： 写入资源
-参考 GitHub 提供的资源写入示例，自动填入 API Key 和域名
+## 步驟 1： 寫入資源
+參考 GitHub 提供的資源寫入示例，自動填入 API Key 和域名
 
 ```python
 import json
@@ -55,8 +55,8 @@ result = post_json(
 print(json.dumps(result, ensure_ascii=False, indent=2))
 ```
 
-## 步骤 2： 写入记忆
-参考 GitHub 提供的记忆写入示例，自动填入 API Key 和域名
+## 步驟 2： 寫入記憶
+參考 GitHub 提供的記憶寫入示例，自動填入 API Key 和域名
 
 ```python
 text = "[TODO]your-message-text" # e.g. I am a developer

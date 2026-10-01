@@ -215,7 +215,7 @@ async def test_flat_file_refresh_enqueues_incremental_parent_summary():
         ),
     ):
         result = await Summarizer(vlm_processor=None).refresh_file_parent(
-            file_uri="viking://resources/神雕.md",
+            file_uri="viking://resources/神鵰.md",
             ctx=ctx,
             skip_vectorization=False,
         )
@@ -225,7 +225,7 @@ async def test_flat_file_refresh_enqueues_incremental_parent_summary():
     msg = queue.msgs[0]
     assert msg.uri == "viking://resources"
     assert msg.recursive is False
-    assert msg.changes == {"modified": ["viking://resources/神雕.md"]}
+    assert msg.changes == {"modified": ["viking://resources/神鵰.md"]}
     assert msg.skip_vectorization is False
     assert msg.role == Role.ROOT
     assert msg.telemetry_id == "tid"
@@ -251,7 +251,7 @@ async def test_flat_file_refresh_marks_wait_failed_when_enqueue_fails():
     ):
         with pytest.raises(RuntimeError, match="queue unavailable"):
             await Summarizer(vlm_processor=None).refresh_file_parent(
-                file_uri="viking://resources/神雕.md",
+                file_uri="viking://resources/神鵰.md",
                 ctx=ctx,
             )
 

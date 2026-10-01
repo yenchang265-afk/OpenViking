@@ -56,7 +56,7 @@ Use `<Trans>` only when a sentence contains nested React elements. Keep interpol
 
 ```ts
 updatedAt: 'Updated at {{time}}'
-updatedAt: '更新于 {{time}}'
+updatedAt: '更新於 {{time}}'
 ```
 
 Do not add language branches with hard-coded phrases:

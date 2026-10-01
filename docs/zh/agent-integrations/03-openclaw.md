@@ -1,22 +1,22 @@
 # OpenClaw 插件
 
-为 [OpenClaw](https://github.com/openclaw/openclaw) 添加长效记忆。安装完成后，OpenClaw 会自动记住对话中的重要信息，并在每次回复前召回相关上下文。
+為 [OpenClaw](https://github.com/openclaw/openclaw) 新增長效記憶。安裝完成後，OpenClaw 會自動記住對話中的重要資訊，並在每次回覆前召回相關上下文。
 
-源码：[examples/openclaw-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openclaw-plugin)
+原始碼：[examples/openclaw-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openclaw-plugin)
 
-## 前置条件
+## 前置條件
 
-| 组件 | 版本要求 |
+| 元件 | 版本要求 |
 | --- | --- |
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
 
-插件需要连接到一个正在运行的 OpenViking 服务——参见 [部署指南](../guides/03-deployment.md)。
+外掛需要連線到一個正在執行的 OpenViking 服務——參見 [部署指南](../guides/03-deployment.md)。
 
 <details>
-<summary><b>从旧版 <code>memory-openviking</code> 升级？</b></summary>
+<summary><b>從舊版 <code>memory-openviking</code> 升級？</b></summary>
 
-旧插件不兼容，请先清理：
+舊外掛不相容，請先清理：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/openclaw-plugin/upgrade_scripts/cleanup-memory-openviking.sh -o cleanup-memory-openviking.sh
@@ -25,7 +25,7 @@ bash cleanup-memory-openviking.sh
 
 </details>
 
-## 安装
+## 安裝
 
 ```bash
 openclaw plugins install clawhub:@openviking/openclaw-plugin
@@ -33,131 +33,131 @@ openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --
 openclaw gateway restart
 ```
 
-`setup` 向导写入配置并激活插件。安装完成后开始对话——OpenClaw 会自动记忆和召回。
+`setup` 嚮導寫入配置並激活外掛。安裝完成後開始對話——OpenClaw 會自動記憶和召回。
 
 <details>
-<summary><b>备用方案：通过 <code>ov-install</code> 安装</b></summary>
+<summary><b>備用方案：通過 <code>ov-install</code> 安裝</b></summary>
 
-当 ClawHub 不可用时：
+當 ClawHub 不可用時：
 
 ```bash
 npm install -g openclaw-openviking-setup-helper
 ov-install --base-url http://your-server:1933
 ```
 
-常用参数：
+常用引數：
 
-| 参数 | 含义 |
+| 引數 | 含義 |
 | --- | --- |
-| `--workdir PATH` | OpenClaw 数据目录（默认 `~/.openclaw`） |
+| `--workdir PATH` | OpenClaw 資料目錄（預設 `~/.openclaw`） |
 | `--plugin-version=VER` | 插件版本：npm 版本、dist-tag 或 Git ref |
-| `--base-url URL` | OpenViking 服务地址 |
+| `--base-url URL` | OpenViking 服務地址 |
 | `--api-key KEY` | OpenViking API Key |
-| `--peer-role ROLE` | 记忆归属：`none`、`assistant` 或 `sender`（`person` 是旧别名） |
-| `--uninstall` | 卸载插件 |
+| `--peer-role ROLE` | 記憶歸屬：`none`、`assistant` 或 `sender`（`person` 是舊別名） |
+| `--uninstall` | 解除安裝外掛 |
 
-完整参数列表见 [安装指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL.md)。
+完整引數列表見 [安裝指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL.md)。
 
 </details>
 
-## 选择记忆归属
+## 選擇記憶歸屬
 
-`peer_role` 决定长期记忆是在 OpenViking user 层共享，还是归属到具体 peer：
+`peer_role` 決定長期記憶是在 OpenViking user 層共享，還是歸屬到具體 peer：
 
-| 值 | 记忆路径 | 适用场景 |
+| 值 | 記憶路徑 | 適用場景 |
 | --- | --- | --- |
-| `none`（默认） | 共享记忆位于 `viking://user/<user_id>/memories/...`；不使用具体 peer 的记忆子树 | 通用场景：该 OpenViking 用户下的所有对话共享 user-level 记忆 |
-| `assistant` | assistant 归因的 peer 记忆位于 `viking://user/<user_id>/peers/<assistant_id>/memories/...` | **人是 OpenViking user**：让 `main`、`research` 等不同助手的 peer 记忆分开 |
-| `sender` | sender 归因的 peer 记忆位于 `viking://user/<user_id>/peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：让 `customer-42`、`customer-99` 等不同发送者的 peer 记忆分开 |
+| `none`（預設） | 共享記憶位於 `viking://user/<user_id>/memories/...`；不使用具體 peer 的記憶子樹 | 通用場景：該 OpenViking 使用者下的所有對話共享 user-level 記憶 |
+| `assistant` | assistant 歸因的 peer 記憶位於 `viking://user/<user_id>/peers/<assistant_id>/memories/...` | **人是 OpenViking user**：讓 `main`、`research` 等不同助手的 peer 記憶分開 |
+| `sender` | sender 歸因的 peer 記憶位於 `viking://user/<user_id>/peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：讓 `customer-42`、`customer-99` 等不同傳送者的 peer 記憶分開 |
 
 例如：
 
 ```bash
-# Alice 是 OpenViking user；按 OpenClaw 助手分开 peer 记忆。
+# Alice 是 OpenViking user；按 OpenClaw 助手分開 peer 記憶。
 openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --peer-role assistant --json
 
-# support-agent 是 OpenViking user；按给它发消息的人分开 peer 记忆。
+# support-agent 是 OpenViking user；按給它發訊息的人分開 peer 記憶。
 openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --peer-role sender --json
 ```
 
-新配置请使用 `sender`；已有的 `peer_role=person` 配置仍兼容，并按 `sender` 处理。OpenViking 会为每个用户初始化受管的 `peers/` 容器，因此 `none` 的含义是不使用具体的 `peers/<peer_id>/memories` 子树。Actor-peer 召回同时包含用户共享记忆和当前 peer 记忆；切换 scope 不会搬迁已有记忆。
+新配置請使用 `sender`；已有的 `peer_role=person` 配置仍相容，並按 `sender` 處理。OpenViking 會為每個使用者初始化受管的 `peers/` 容器，因此 `none` 的含義是不使用具體的 `peers/<peer_id>/memories` 子樹。Actor-peer 召回同時包含使用者共享記憶和當前 peer 記憶；切換 scope 不會搬遷已有記憶。
 
-## assemble 如何组装上下文
+## assemble 如何組裝上下文
 
-插件占用 OpenClaw 的 `contextEngine` 槽位。会话历史、长期记忆召回和本轮新输入分别处理；`assemble()` 返回供本次模型请求使用的上下文，不把组装出的摘要或召回内容持久化到 OpenClaw 的 session transcript，也不通过该调用向 OV session 追加消息。宿主可以用返回的 messages 更新本轮内存状态，这与写入持久化对话记录不同。
+外掛佔用 OpenClaw 的 `contextEngine` 槽位。會話歷史、長期記憶召回和本輪新輸入分別處理；`assemble()` 返回供本次模型請求使用的上下文，不把組裝出的摘要或召回內容持久化到 OpenClaw 的 session transcript，也不通過該呼叫向 OV session 追加訊息。宿主可以用返回的 messages 更新本輪記憶體狀態，這與寫入持久化對話記錄不同。
 
-主 assemble 在每轮新输入开始执行时准备历史上下文。插件通过参数中是否包含 `prompt`、`availableTools`、`citationsMode` 中任一字段识别该调用。
+主 assemble 在每輪新輸入開始執行時準備歷史上下文。外掛通過引數中是否包含 `prompt`、`availableTools`、`citationsMode` 中任一欄位識別該呼叫。
 
-### 主 assemble：历史和当前输入分开
+### 主 assemble：歷史和當前輸入分開
 
-主分支调用 `getSessionContext(tokenBudget)`，用返回的内容构造：
+主分支呼叫 `getSessionContext(tokenBudget)`，用返回的內容構造：
 
 ```text
 summaryMessage = { role: "user", content: "[Session History Summary]\n" + latest_archive_overview }
 messages = [summaryMessage] + OV active messages
-systemPromptAddition = Session Context Guide（有归档时）+ 本轮召回结果（有命中时）
+systemPromptAddition = Session Context Guide（有歸檔時）+ 本輪召回結果（有命中時）
 ```
 
-`latest_archive_overview` 是服务端返回的摘要正文，`[Session History Summary]` 是插件加在正文前的固定文本标题。仅在 overview 非空时插入这条合成 user 消息；active messages 保留近期未压缩对话。当前 `prompt` 由宿主加入本轮；插件只用它查询记忆，不把它重复追加到返回的历史中。召回结果属于本次请求的上下文，不直接作为新对话写回 OV。
+`latest_archive_overview` 是服務端返回的摘要正文，`[Session History Summary]` 是外掛加在正文前的固定文本標題。僅在 overview 非空時插入這條合成 user 訊息；active messages 保留近期未壓縮對話。當前 `prompt` 由宿主加入本輪；外掛只用它查詢記憶，不把它重複追加到返回的歷史中。召回結果屬於本次請求的上下文，不直接作為新對話寫回 OV。
 
-overview 由 OV 服务端的工作记忆流程生成，插件读取结果。服务端先为 active messages 分配预算，剩余空间不足时不返回 overview；`pre_archive_abstracts` 当前为空数组。因此返回结果不是完整归档索引，需要原始细节时通过 `ov_archive_search` 查询归档。
+overview 由 OV 服務端的工作記憶流程生成，外掛讀取結果。服務端先為 active messages 分配預算，剩餘空間不足時不返回 overview；`pre_archive_abstracts` 當前為空陣列。因此返回結果不是完整歸檔索引，需要原始細節時通過 `ov_archive_search` 查詢歸檔。
 
-插件为模型输出预留 token 空间，扣除使用指南和摘要的实际估算量，再从 active messages 头部裁掉超预算内容，并整理工具调用/结果等 provider 消息格式。摘要不会按插件计算出的 archive 预算硬截断，因此这些预算不能当作各层的严格配额；新增召回块若使总估算量超过 `tokenBudget`，该块会被省略。
+外掛為模型輸出預留 token 空間，扣除使用指南和摘要的實際估算量，再從 active messages 頭部裁掉超預算內容，並整理工具呼叫/結果等 provider 訊息格式。摘要不會按外掛計算出的 archive 預算硬截斷，因此這些預算不能當作各層的嚴格配額；新增召回塊若使總估算量超過 `tokenBudget`，該塊會被省略。
 
-OV 无数据、无归档且消息数少于宿主输入、转换后为空或读取失败时，历史分支回退到宿主 messages。即使历史透传，只要有合法 `prompt` 且启用了 `autoRecall`，主分支仍可尝试召回。召回无命中或失败不会阻止对话。
+OV 無資料、無歸檔且訊息數少於宿主輸入、轉換後為空或讀取失敗時，歷史分支回退到宿主 messages。即使歷史透傳，只要有合法 `prompt` 且啟用了 `autoRecall`，主分支仍可嘗試召回。召回無命中或失敗不會阻止對話。
 
 ### transformContext
 
-`transformContext` 在每次 LLM 调用前执行，无论最后一条消息是 user message 还是 tool response。该 hook 在 OV 集成中的最佳使用方式暂未明确。
+`transformContext` 在每次 LLM 呼叫前執行，無論最後一條訊息是 user message 還是 tool response。該 hook 在 OV 整合中的最佳使用方式暫未明確。
 
-### 捕获和压缩
+### 捕獲和壓縮
 
-- `ingest()` / `ingestBatch()` 不写入消息。常规捕获通过 `afterTurn`；插件对 OpenClaw 2026.9.3 及之后的稳定版本支持由 `commitTurn` 接收宿主交付的已结束轮次，旧版和独立 runner 使用 `afterTurn`。无法识别版本时，`commitTurn` 拒绝确认，避免确认未捕获的数据。
-- 捕获逻辑清洗注入内容、转换文本和工具消息，再写入 OV session。达到 `pending_tokens >= tokenBudget × commitTokenThresholdRatio` 时，发起异步 session commit；默认比例为 `0.5`，默认保留最近 `10` 条消息，也可选 `turn_budget` 保留策略。`pending_tokens` 是服务端按保留策略计算的待归档消息 token 数，不是整个模型请求的 token 数。
-- `ownsCompaction: true` 表示插件负责压缩。正常 `compact()` 提交 OV session（`wait=true`、保留数为 `0`），读取 overview 作为压缩摘要；下一次主 assemble 用摘要和 active messages 重建历史。被 bypass 的会话尝试委托宿主压缩器，宿主 bridge 不可用时返回跳过。
+- `ingest()` / `ingestBatch()` 不寫入訊息。常規捕獲通過 `afterTurn`；外掛對 OpenClaw 2026.9.3 及之後的穩定版本支援由 `commitTurn` 接收宿主交付的已結束輪次，舊版和獨立 runner 使用 `afterTurn`。無法識別版本時，`commitTurn` 拒絕確認，避免確認未捕獲的資料。
+- 捕獲邏輯清洗注入內容、轉換文本和工具訊息，再寫入 OV session。達到 `pending_tokens >= tokenBudget × commitTokenThresholdRatio` 時，發起非同步 session commit；預設比例為 `0.5`，預設保留最近 `10` 條訊息，也可選 `turn_budget` 保留策略。`pending_tokens` 是服務端按保留策略計算的待歸檔訊息 token 數，不是整個模型請求的 token 數。
+- `ownsCompaction: true` 表示外掛負責壓縮。正常 `compact()` 提交 OV session（`wait=true`、保留數為 `0`），讀取 overview 作為壓縮摘要；下一次主 assemble 用摘要和 active messages 重建歷史。被 bypass 的會話嘗試委託宿主壓縮器，宿主 bridge 不可用時返回跳過。
 
-这里的 **session commit** 负责会话归档和记忆处理，与保存资源文件版本的 [snapshot commit](../guides/15-snapshot.md) 是不同操作。
+這裡的 **session commit** 負責會話歸檔和記憶處理，與儲存資源檔案版本的 [snapshot commit](../guides/15-snapshot.md) 是不同操作。
 
-## 验证
+## 驗證
 
 ```bash
 openclaw openviking status
 ```
 
-一键检查插件注册、服务端连通性和版本兼容性。追加 `--json` 获取机器可读结果。
+一鍵檢查外掛註冊、服務端連通性和版本相容性。追加 `--json` 獲取機器可讀結果。
 
 <details>
-<summary><b>手动验证</b></summary>
+<summary><b>手動驗證</b></summary>
 
-确认插件占用了 `contextEngine` 槽位：
+確認外掛佔用了 `contextEngine` 槽位：
 
 ```bash
 openclaw config get plugins.slots.contextEngine
-# 期望输出：openviking
+# 期望輸出：openviking
 ```
 
-全链路健康检查：
+全鏈路健康檢查：
 
 ```bash
 python examples/openclaw-plugin/health_check_tools/ov-healthcheck.py
 ```
 
-详见 [HEALTHCHECK.md](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/health_check_tools/HEALTHCHECK.md)。
+詳見 [HEALTHCHECK.md](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/health_check_tools/HEALTHCHECK.md)。
 
 </details>
 
 <details>
 <summary><b>配置</b></summary>
 
-插件配置位于 `plugins.entries.openviking.config`，通常 setup 已经写好。
+外掛配置位於 `plugins.entries.openviking.config`，通常 setup 已經寫好。
 
-| 参数 | 默认值 | 含义 |
+| 引數 | 預設值 | 含義 |
 | --- | --- | --- |
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking 服务端点 |
+| `baseUrl` | `http://127.0.0.1:1933` | OpenViking 服務端點 |
 | `apiKey` | 空 | OpenViking API Key |
-| `peer_role` | `none` | `none`、`assistant` 或 `sender`；旧值 `person` 作为 `sender` 的别名兼容 |
-| `peer_prefix` | 空 | `peer_role=assistant` 时 assistant peer 身份的可选前缀 |
-| `autoRecallTimeoutMs` | `5000` | 整个 auto-recall 流程的外层超时（毫秒）；本地嵌入硬件较慢时可调大（取值范围 1000–300000） |
+| `peer_role` | `none` | `none`、`assistant` 或 `sender`；舊值 `person` 作為 `sender` 的別名相容 |
+| `peer_prefix` | 空 | `peer_role=assistant` 時 assistant peer 身份的可選字首 |
+| `autoRecallTimeoutMs` | `5000` | 整個 auto-recall 流程的外層超時（毫秒）；本地嵌入硬體較慢時可調大（取值範圍 1000–300000） |
 
 ```bash
 openclaw config set plugins.entries.openviking.config.baseUrl http://your-server:1933
@@ -166,16 +166,16 @@ openclaw config set plugins.entries.openviking.config.apiKey your-api-key
 
 </details>
 
-## 卸载
+## 解除安裝
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/openclaw-plugin/upgrade_scripts/uninstall-openclaw-plugin.sh -o uninstall-openviking.sh
 bash uninstall-openviking.sh
 ```
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
-- [完整安装指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL.md) — 所有安装路径与参数
-- [插件设计说明](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/README.md) — 架构、身份与路由、hook 生命周期
-- [Agent 操作指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL-AGENT.md) — 给代用户执行安装的 agent 看
+- [整合能力參考](./16-capability-reference.md)
+- [完整安裝指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL.md) — 所有安裝路徑與引數
+- [外掛設計說明](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/README.md) — 架構、身份與路由、hook 生命週期
+- [Agent 操作指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL-AGENT.md) — 給代使用者執行安裝的 agent 看

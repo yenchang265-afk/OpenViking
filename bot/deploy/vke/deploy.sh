@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vikingbot VKE 一键部署脚本
+# Vikingbot VKE 一鍵部署指令碼
 
 set -euo pipefail
 
@@ -11,7 +11,7 @@ SKIP_PUSH=false
 SKIP_DEPLOY=false
 NO_CACHE=false
 
-# ── 颜色输出 ────────────────────────────────────────────────────────────────
+# ── 顏色輸出 ────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; NC='\033[0m'
 log_info()  { echo -e "${BLUE}$*${NC}"; }
 log_ok()    { echo -e "${GREEN}$*${NC}"; }
@@ -31,7 +31,7 @@ Options:
 EOF
 }
 
-# ── 参数解析 ─────────────────────────────────────────────────────────────────
+# ── 引數解析 ─────────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
     case $1 in
         --skip-build)  SKIP_BUILD=true;  shift ;;
@@ -48,7 +48,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ── 配置文件检查 ──────────────────────────────────────────────────────────────
+# ── 配置檔案檢查 ──────────────────────────────────────────────────────────────
 if [[ ! -f "$CONFIG_FILE" ]]; then
     log_error "Config file not found: ${CONFIG_FILE}"
     echo "Create one from the example:"
@@ -57,9 +57,9 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     exit 1
 fi
 
-# ── 安全读取 YAML 配置 ────────────────────────────────────────────────────────
-# 用 Python 解析 YAML 后以 shlex.quote 安全转义输出，再 source 到当前 shell，
-# 避免原版 eval + 未转义字符串带来的注入风险，同时正确处理整数/布尔值
+# ── 安全讀取 YAML 配置 ────────────────────────────────────────────────────────
+# 用 Python 解析 YAML 後以 shlex.quote 安全轉義輸出，再 source 到當前 shell，
+# 避免原版 eval + 未跳脫字元串帶來的注入風險，同時正確處理整數/布林值
 if ! command -v python3 &>/dev/null; then
     log_error "python3 is required to parse the config file"
     exit 1
@@ -80,7 +80,7 @@ try:
     with open(config_path) as f:
         config = yaml.safe_load(f) or {}
 except ImportError:
-    # Fallback: 无 pyyaml 时的简单解析
+    # Fallback: 無 pyyaml 時的簡單解析
     with open(config_path) as f:
         for line in f:
             line = line.strip()
@@ -107,8 +107,8 @@ PYEOF
 # shellcheck source=/dev/null
 source "$TEMP_ENV"
 
-# ── 校验必要字段 ──────────────────────────────────────────────────────────────
-# 只拒绝明确的占位符值，不误伤真实 AK（Volcengine 真实 AK 本身就以 AKLT 开头）
+# ── 校驗必要欄位 ──────────────────────────────────────────────────────────────
+# 只拒絕明確的佔位符值，不誤傷真實 AK（Volcengine 真實 AK 本身就以 AKLT 開頭）
 storage_type="${storage_type:-local}"
 PLACEHOLDERS=("AKLTxxxxxxxxxx" "xxxxxxxxxx")
 missing=()
@@ -135,7 +135,7 @@ if [[ ${#missing[@]} -gt 0 ]]; then
     exit 1
 fi
 
-# ── 默认值 ────────────────────────────────────────────────────────────────────
+# ── 預設值 ────────────────────────────────────────────────────────────────────
 image_registry="${image_registry:-vikingbot-cn-beijing.cr.volces.com}"
 image_namespace="${image_namespace:-vikingbot}"
 image_repository="${image_repository:-vikingbot}"
@@ -155,12 +155,12 @@ use_timestamp_tag="${use_timestamp_tag:-false}"
 wait_for_rollout="${wait_for_rollout:-true}"
 rollout_timeout="${rollout_timeout:-120}"
 
-# 时间戳 tag（原版有展示但未实现，此处补全）
+# 時間戳 tag（原版有展示但未實現，此處補全）
 if [[ "$use_timestamp_tag" == "true" ]]; then
     image_tag="build-$(date +%Y%m%d-%H%M%S)"
 fi
 
-# 相对路径 → 基于 PROJECT_ROOT 的绝对路径（原版未使用已定义的 PROJECT_ROOT）
+# 相對路徑 → 基於 PROJECT_ROOT 的絕對路徑（原版未使用已定義的 PROJECT_ROOT）
 _abs() { [[ "$1" == /* ]] && echo "$1" || echo "${PROJECT_ROOT}/$1"; }
 dockerfile_path=$(_abs "$dockerfile_path")
 k8s_manifest_path=$(_abs "$k8s_manifest_path")
@@ -170,7 +170,7 @@ else
     build_context=$(_abs "$build_context")
 fi
 
-# kubeconfig（原版完全未处理此配置项）
+# kubeconfig（原版完全未處理此配置項）
 if [[ -n "$kubeconfig_path" ]]; then
     export KUBECONFIG="${kubeconfig_path/#\~/$HOME}"
 fi
@@ -193,7 +193,7 @@ EOF
 echo ""
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 1：构建 Docker 镜像
+# 步驟 1：構建 Docker 映象
 # ════════════════════════════════════════════════════════════════════════
 if [[ "$SKIP_BUILD" == false ]]; then
     log_info "=== Step 1: Build Docker image ==="
@@ -217,14 +217,14 @@ else
 fi
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 2：推送镜像到仓库
+# 步驟 2：推送映象到倉庫
 # ════════════════════════════════════════════════════════════════════════
 if [[ "$SKIP_PUSH" == false ]]; then
     log_info "=== Step 2: Push image to registry ==="
 
     if [[ -n "${registry_username:-}" && -n "${registry_password:-}" ]]; then
         echo "Logging in to ${image_registry} as ${registry_username}..."
-        # --password-stdin 避免密码出现在进程列表（原版 -p 存在此安全问题）
+        # --password-stdin 避免密碼出現在程序列表（原版 -p 存在此安全問題）
         if ! printf '%s' "$registry_password" \
                 | docker login "$image_registry" -u "$registry_username" --password-stdin; then
             log_error "Registry login failed"
@@ -249,7 +249,7 @@ else
 fi
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 3：部署到 Kubernetes
+# 步驟 3：部署到 Kubernetes
 # ════════════════════════════════════════════════════════════════════════
 if [[ "$SKIP_DEPLOY" == false ]]; then
     log_info "=== Step 3: Deploy to Kubernetes ==="
@@ -265,10 +265,10 @@ if [[ "$SKIP_DEPLOY" == false ]]; then
     manifest="${manifest//__REPLICAS__/$k8s_replicas}"
     echo "Replicas → ${k8s_replicas}"
 
-    # ── 存储配置 ──────────────────────────────────────────────────────────
+    # ── 儲存配置 ──────────────────────────────────────────────────────────
     case "$storage_type" in
         tos)
-            # base64 无换行（Linux 默认换行，| tr -d '\n' 统一抹掉，兼容两端）
+            # base64 無換行（Linux 預設換行，| tr -d '\n' 統一抹掉，相容兩端）
             ak_b64=$(printf '%s' "$volcengine_access_key" | base64 | tr -d '\n')
             sk_b64=$(printf '%s' "$volcengine_secret_key" | base64 | tr -d '\n')
 

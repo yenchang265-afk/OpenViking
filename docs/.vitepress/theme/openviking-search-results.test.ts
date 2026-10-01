@@ -11,7 +11,7 @@ test('uses the localized docs index title for Chinese remote results', () => {
     [
       {
         relativePath: 'agent-integrations/08-community-plugins.md',
-        snippet: '这是一份面向 OpenViking 使用者的社区插件参考文档。',
+        snippet: '這是一份面向 OpenViking 使用者的社群外掛參考文件。',
         title: 'Community Plugins',
         url: '/zh/agent-integrations/08-community-plugins'
       }
@@ -20,15 +20,15 @@ test('uses the localized docs index title for Chinese remote results', () => {
       {
         locale: 'zh',
         path: 'zh/agent-integrations/08-community-plugins.md',
-        text: '社区插件',
-        title: '社区插件',
+        text: '社群外掛',
+        title: '社群外掛',
         url: '/zh/agent-integrations/08-community-plugins'
       }
     ],
     'zh'
   )
 
-  assert.equal(results[0].title, '社区插件')
+  assert.equal(results[0].title, '社群外掛')
 })
 
 test('keeps remote results when local title lookup fails', async () => {

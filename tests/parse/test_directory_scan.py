@@ -463,7 +463,7 @@ class TestIncludeExclude:
 
         rel_paths = [f.rel_path for f in result.processable + result.unsupported]
 
-        # ignore_dirs: drafts/ 整个目录被跳过
+        # ignore_dirs: drafts/ 整個目錄被跳過
         assert not any(p.startswith("drafts/") for p in rel_paths)
         # include: .md 仍然被保留
         assert "readme.md" in rel_paths

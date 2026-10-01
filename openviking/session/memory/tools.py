@@ -58,7 +58,7 @@ def memory_maintenance_notice(
 
 
 def optimize_search_result(result: Any, limit: int = 10) -> Any:
-    """优化搜索结果以减少 Token 消耗，并过滤掉抽象文件。"""
+    """最佳化搜尋結果以減少 Token 消耗，並過濾掉抽象檔案。"""
     if isinstance(result, dict) and "error" in result:
         return {"error": extract_error_summary(result["error"])}
     if isinstance(result, dict) and "memories" in result:
@@ -75,12 +75,12 @@ def optimize_search_result(result: Any, limit: int = 10) -> Any:
 
 
 def optimize_tool_result(tool_name: str, result: Any) -> Any:
-    """优化工具结果以减少 Token 消耗。"""
+    """最佳化工具結果以減少 Token 消耗。"""
     if isinstance(result, dict) and "error" in result:
         return {"error": extract_error_summary(result["error"])}
     if tool_name == "search" and isinstance(result, dict) and "memories" in result:
         return optimize_search_result(result)
-    # 对 read 工具返回的 dict，如果包含 content 字段，则截断 content
+    # 對 read 工具返回的 dict，如果包含 content 欄位，則截斷 content
     if tool_name == "read" and isinstance(result, dict) and "content" in result:
         result = result.copy()
         result["content"] = MemoryFileUtils.truncate_content(result["content"])
@@ -300,7 +300,7 @@ class MemorySearchTool(MemoryTool):
                 target_uri = ctx.default_search_uris
             limit = kwargs.get("limit", 10)
             request_ctx = ctx.request_ctx if ctx else None
-            # 多搜索 10 个，过滤抽象文件后再截断
+            # 多搜尋 10 個，過濾抽象檔案後再截斷
             search_result = await ctx.viking_fs.search(
                 query,
                 target_uri=target_uri,

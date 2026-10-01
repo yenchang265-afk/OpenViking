@@ -3130,13 +3130,13 @@ async fn main() {
                 ],
             ),
             i18n::Language::ZhCn => (
-                "命令错误",
+                "命令錯誤",
                 "--sudo 只支持 admin、system、reindex、task status 和 task list 命令。",
                 vec![
                     error_ui::ErrorAction::new("ov admin --help", "查看管理命令"),
-                    error_ui::ErrorAction::new("ov system --help", "查看系统命令"),
-                    error_ui::ErrorAction::new("ov reindex --help", "查看重建索引选项"),
-                    error_ui::ErrorAction::new("ov task --help", "查看任务命令"),
+                    error_ui::ErrorAction::new("ov system --help", "檢視系統命令"),
+                    error_ui::ErrorAction::new("ov reindex --help", "檢視重建索引選項"),
+                    error_ui::ErrorAction::new("ov task --help", "檢視任務命令"),
                 ],
             ),
         };
@@ -3221,11 +3221,11 @@ async fn main() {
                 ],
             ),
             i18n::Language::ZhCn => (
-                "配置错误",
+                "配置錯誤",
                 "--sudo 需要在 ~/.openviking/ovcli.conf 中配置 root_api_key。",
                 vec![
-                    error_ui::ErrorAction::new("ov config", "编辑当前配置"),
-                    error_ui::ErrorAction::new("ov config show", "显示当前配置"),
+                    error_ui::ErrorAction::new("ov config", "編輯當前配置"),
+                    error_ui::ErrorAction::new("ov config show", "顯示當前配置"),
                 ],
             ),
         };

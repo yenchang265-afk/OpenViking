@@ -133,14 +133,14 @@ class ReadlistTracker:
         unread = sorted(self._universe - self._read)
         unread_count = len(unread)
         if read_count == 0:
-            return f"源文件共 {total} 个，尚未读取任何源文件；优先去读未读文件。"
-        lines = [f"已读 {read_count}/{total} 个源文件，未读 {unread_count} 个。"]
+            return f"原始檔共 {total} 個，尚未讀取任何原始檔；優先去讀未讀檔案。"
+        lines = [f"已讀 {read_count}/{total} 個原始檔，未讀 {unread_count} 個。"]
         recent = [path for path in self._read_order if path in self._universe][-recent_limit:]
         if recent:
-            lines.append("最近已读: " + ", ".join(recent) + "。")
+            lines.append("最近已讀: " + ", ".join(recent) + "。")
         if 0 < unread_count <= _UNREAD_SAMPLE_LIMIT:
-            lines.append("未读: " + ", ".join(unread) + "。")
-        lines.append("这些已读文件的内容已进入你的上下文，不必再读；优先去读未读文件。")
+            lines.append("未讀: " + ", ".join(unread) + "。")
+        lines.append("這些已讀檔案的內容已進入你的上下文，不必再讀；優先去讀未讀檔案。")
         return "\n".join(lines)
 
 

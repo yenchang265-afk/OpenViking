@@ -1,47 +1,47 @@
 # Vikingbot VKE 部署配置
-# 复制此文件到 ~/.config/vikingbot/vke_deploy.yaml 并填入你的信息
+# 複製此檔案到 ~/.config/vikingbot/vke_deploy.yaml 並填入你的資訊
 #
-# 详细文档请参考: deploy/vke/README.md
+# 詳細文件請參考: deploy/vke/README.md
 
 # ── 火山引擎配置 ──────────────────────────────────────────────────────────────
 #
-# AK/SK 仅在 storage_type=tos 且实际执行部署时需要。获取方式：
-#   1. 登录火山引擎控制台 https://console.volcengine.com/
-#   2. 右上角头像 → API 访问密钥 → 新建密钥
+# AK/SK 僅在 storage_type=tos 且實際執行部署時需要。獲取方式：
+#   1. 登入火山引擎控制台 https://console.volcengine.com/
+#   2. 右上角頭像 → API 訪問金鑰 → 新建金鑰
 #
 volcengine_access_key: ""
 volcengine_secret_key: ""
 volcengine_region: cn-beijing
 
-# ── 镜像仓库配置 ──────────────────────────────────────────────────────────────
+# ── 映象倉庫配置 ──────────────────────────────────────────────────────────────
 #
-# 镜像仓库地址格式: {namespace}-{region}.cr.volces.com
+# 映象倉庫地址格式: {namespace}-{region}.cr.volces.com
 #
-# 前置准备：
-#   1. 进入容器镜像服务 CR → 命名空间，创建命名空间 "vikingbot"
-#   2. 进入镜像仓库，创建仓库 "vikingbot"
+# 前置準備：
+#   1. 進入容器映象服務 CR → 名稱空間，建立名稱空間 "vikingbot"
+#   2. 進入映象倉庫，建立倉庫 "vikingbot"
 #
 image_registry: vikingbot-cn-beijing.cr.volces.com
 image_namespace: vikingbot
 image_repository: vikingbot
 
-# 镜像标签配置
-# use_timestamp_tag: 是否使用时间戳标签 (true/false)
-#   - true: 自动生成时间戳标签，格式: build-YYYYMMDD-HHMMSS
-#   - false: 使用 image_tag 指定的标签
+# 映象標籤配置
+# use_timestamp_tag: 是否使用時間戳標籤 (true/false)
+#   - true: 自動生成時間戳標籤，格式: build-YYYYMMDD-HHMMSS
+#   - false: 使用 image_tag 指定的標籤
 use_timestamp_tag: false
-# image_tag: 固定标签 (仅当 use_timestamp_tag: false 时生效)
-#   - 可以设置为: latest, v1.0.0, build-123 等
+# image_tag: 固定標籤 (僅當 use_timestamp_tag: false 時生效)
+#   - 可以設定為: latest, v1.0.0, build-123 等
 image_tag: latest
 local_image_name: vikingbot-vke
 
-# 镜像仓库登录凭证（私有仓库需要）
-# 用户名通常是你的火山引擎账号（手机号/邮箱）
-# 密码是你的火山引擎登录密码
+# 映象倉庫登入憑證（私有倉庫需要）
+# 使用者名稱通常是你的火山引擎帳號（手機號/郵箱）
+# 密碼是你的火山引擎登入密碼
 registry_username: ""
 registry_password: ""
 
-# ── 构建配置 ──────────────────────────────────────────────────────────────────
+# ── 構建配置 ──────────────────────────────────────────────────────────────────
 dockerfile_path: deploy/Dockerfile
 build_context: .
 
@@ -52,27 +52,27 @@ k8s_namespace: default
 k8s_deployment_name: vikingbot
 k8s_replicas: 1
 
-# kubeconfig 路径
-# 获取方式：VKE 控制台 → 集群 → 连接 → 下载 Kubeconfig
+# kubeconfig 路徑
+# 獲取方式：VKE 控制台 → 叢集 → 連線 → 下載 Kubeconfig
 kubeconfig_path: ~/.kube/config
 
 # 部署等待配置
 wait_for_rollout: true
 rollout_timeout: 120
 
-# ── 存储配置 ──────────────────────────────────────────────────────────────────
-# 存储类型选择
-# 可选值:
-#   - local (本地存储, 默认): 使用 EBS 云盘，AccessMode=ReadWriteOnce
-#   - tos (对象存储): 使用 TOS + CSI 驱动，AccessMode=ReadWriteMany
+# ── 儲存配置 ──────────────────────────────────────────────────────────────────
+# 儲存型別選擇
+# 可選值:
+#   - local (本地儲存, 預設): 使用 EBS 雲盤，AccessMode=ReadWriteOnce
+#   - tos (物件儲存): 使用 TOS + CSI 驅動，AccessMode=ReadWriteMany
 storage_type: local
 
-# TOS 配置 (仅当 storage_type=tos 时需要)
+# TOS 配置 (僅當 storage_type=tos 時需要)
 #
-# 前置准备：
-#   1. 进入对象存储 TOS → 存储桶列表 → 创建存储桶
-#   2. 桶名称: vikingbot_data（或自定义）
-#   3. 地域选择与 VKE 集群相同的地域
+# 前置準備：
+#   1. 進入物件儲存 TOS → 儲存桶列表 → 建立儲存桶
+#   2. 桶名稱: vikingbot_data（或自定義）
+#   3. 地域選擇與 VKE 叢集相同的地域
 #
 tos_bucket: vikingbot_data
 tos_path: /.vikingbot/

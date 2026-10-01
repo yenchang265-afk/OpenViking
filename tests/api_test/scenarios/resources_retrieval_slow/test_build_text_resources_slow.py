@@ -10,13 +10,13 @@ from build_test_helpers import (
 
 
 class TestBuildTextResourcesSlow:
-    """TC-B01, B02, B14, B15 文本类资源构建测试"""
+    """TC-B01, B02, B14, B15 文本類資源構建測試"""
 
     def test_build_txt_file(self, api_client):
-        """TC-B01 纯文本文件构建：验证 .txt 文件添加后 source_format=text 且内容可检索"""
+        """TC-B01 純文本檔案構建：驗證 .txt 檔案新增後 source_format=text 且內容可檢索"""
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"txt_keyword_{random_id}"
-        content = f"纯文本测试文件 {random_id}\n包含唯一关键词：{unique_keyword}\n用于验证txt文件构建产物。"
+        content = f"純文本測試檔案 {random_id}\n包含唯一關鍵詞：{unique_keyword}\n用於驗證txt檔案構建產物。"
 
         test_file_path, temp_dir = create_test_file(content=content, suffix=".txt")
         try:
@@ -37,22 +37,22 @@ class TestBuildTextResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B01 纯文本文件构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B01 純文本檔案構建通過, root_uri: {root_uri}")
         finally:
             cleanup_temp_dir(temp_dir)
 
     def test_build_markdown_file(self, api_client):
-        """TC-B02 Markdown文件构建：验证 .md 文件添加后 heading 结构保留为子节点"""
+        """TC-B02 Markdown檔案構建：驗證 .md 檔案新增後 heading 結構保留為子節點"""
         from build_test_helpers import assert_tree_has_child_nodes
 
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"md_keyword_{random_id}"
         content = (
-            f"# Markdown测试标题 {random_id}\n\n"
-            f"包含唯一关键词：{unique_keyword}\n\n"
-            f"## 第一节\n\n第一段内容。\n\n"
-            f"## 第二节\n\n第二段内容。\n\n"
-            f"### 子节\n\n子节内容。\n"
+            f"# Markdown測試標題 {random_id}\n\n"
+            f"包含唯一關鍵詞：{unique_keyword}\n\n"
+            f"## 第一節\n\n第一段內容。\n\n"
+            f"## 第二節\n\n第二段內容。\n\n"
+            f"### 子節\n\n子節內容。\n"
         )
 
         test_file_path, temp_dir = create_test_file(content=content, suffix=".md")
@@ -76,16 +76,16 @@ class TestBuildTextResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B02 Markdown文件构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B02 Markdown檔案構建通過, root_uri: {root_uri}")
         finally:
             cleanup_temp_dir(temp_dir)
 
     def test_build_raw_content(self, api_client):
-        """TC-B14 原始内容字符串构建：验证纯文本内容写入文件后添加可检索"""
+        """TC-B14 原始內容字串構建：驗證純文本內容寫入檔案後新增可檢索"""
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"raw_keyword_{random_id}"
         raw_content = (
-            f"原始内容测试 {random_id}\n包含唯一关键词：{unique_keyword}\n用于验证字符串输入构建。"
+            f"原始內容測試 {random_id}\n包含唯一關鍵詞：{unique_keyword}\n用於驗證字串輸入構建。"
         )
 
         test_file_path, temp_dir = create_test_file(content=raw_content, suffix=".txt")
@@ -107,6 +107,6 @@ class TestBuildTextResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B14 原始内容字符串构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B14 原始內容字串構建通過, root_uri: {root_uri}")
         finally:
             cleanup_temp_dir(temp_dir)

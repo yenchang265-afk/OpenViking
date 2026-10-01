@@ -1268,7 +1268,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
             },
             HelpItem {
                 label: "ov language zh-CN",
-                description: "Switch display text to Simplified Chinese.",
+                description: "Switch display text to Traditional Chinese.",
             },
             HelpItem {
                 label: "ov lang en",
@@ -1449,7 +1449,7 @@ fn render_top_level_help_with_language_and_width(language: Language, width: usiz
     let motto = copy(
         language,
         "Context Database for AI Agents",
-        "AI Agent 上下文数据库",
+        "AI Agent 上下文資料庫",
     );
     let motto = if width >= BOX_WIDTH {
         motto.to_string()
@@ -1467,7 +1467,7 @@ fn render_top_level_help_with_language_and_width(language: Language, width: usiz
     lines.push(format!("  {}", theme::strong(usage)));
     lines.push(String::new());
     lines.push(strong_line(
-        copy(language, "Start here:", "从这里开始："),
+        copy(language, "Start here:", "從這裡開始："),
         width,
     ));
     for command in ["config", "health", "status", "tui"] {
@@ -1483,7 +1483,7 @@ fn render_top_level_help_with_language_and_width(language: Language, width: usiz
     }
 
     lines.push(strong_line(
-        copy(language, "Global options:", "全局选项："),
+        copy(language, "Global options:", "全域選項："),
         width,
     ));
     for item in top_level_global_options(&root, language) {
@@ -1493,7 +1493,7 @@ fn render_top_level_help_with_language_and_width(language: Language, width: usiz
     lines.push(strong_line(copy(language, "More:", "更多："), width));
     lines.push(start_here_line(
         "ov <command> --help",
-        copy(language, "Show command details", "查看命令详情"),
+        copy(language, "Show command details", "檢視命令詳情"),
         width,
     ));
     lines.push(start_here_line(
@@ -1556,7 +1556,7 @@ fn render_command_help_with_width(spec: &CommandHelpSpec, width: usize) -> Strin
     let argument_items = arguments_from_command(&clap_command);
     push_dynamic_section(
         &mut lines,
-        copy(language, "Arguments", "参数"),
+        copy(language, "Arguments", "引數"),
         &argument_items,
         width,
     );
@@ -1578,7 +1578,7 @@ fn render_command_help_with_width(spec: &CommandHelpSpec, width: usize) -> Strin
     let global_items = global_options_for(spec);
     push_dynamic_section(
         &mut lines,
-        copy(language, "Global options", "全局选项"),
+        copy(language, "Global options", "全域選項"),
         &global_items,
         width,
     );
@@ -1844,9 +1844,9 @@ fn command_about(command: &Command) -> String {
 
 fn localized_option_section_title(title: &str, language: Language) -> &str {
     match title {
-        "Common options" => copy(language, "Common options", "常用选项"),
-        "Advanced options" => copy(language, "Advanced options", "高级选项"),
-        "Options" => copy(language, "Options", "选项"),
+        "Common options" => copy(language, "Common options", "常用選項"),
+        "Advanced options" => copy(language, "Advanced options", "進階選項"),
+        "Options" => copy(language, "Options", "選項"),
         _ => title,
     }
 }
@@ -1911,27 +1911,27 @@ fn localized_command_purpose(spec: &CommandHelpSpec, language: Language) -> &str
         return spec.purpose;
     }
     match spec.path {
-        ["config"] => "添加、编辑、删除、显示、验证或切换 OpenViking CLI 配置。",
-        ["config", "show"] => "显示当前 CLI 配置，并隐藏敏感信息。",
-        ["config", "validate"] => "解析当前配置，并探测 OpenViking 服务器。",
-        ["config", "switch"] => "切换到已保存的 CLI 配置。",
-        ["config", "list"] => "列出已保存的 CLI 配置，并标记当前配置。",
-        ["config", "add"] => "不打开交互式向导，创建已保存的 CLI 配置。",
+        ["config"] => "新增、編輯、刪除、顯示、驗證或切換 OpenViking CLI 配置。",
+        ["config", "show"] => "顯示當前 CLI 配置，並隱藏敏感資訊。",
+        ["config", "validate"] => "解析當前配置，並探測 OpenViking 伺服器。",
+        ["config", "switch"] => "切換到已儲存的 CLI 配置。",
+        ["config", "list"] => "列出已儲存的 CLI 配置，並標記當前配置。",
+        ["config", "add"] => "不開啟互動式嚮導，建立已儲存的 CLI 配置。",
         ["config", "add", "ov-service"] => {
-            "不打开交互式向导，创建 OpenViking 服务（火山引擎云）配置。"
+            "不開啟互動式嚮導，建立 OpenViking 服務（火山引擎雲）配置。"
         }
-        ["config", "add", "custom"] => "不打开交互式向导，创建自定义配置。",
-        ["config", "edit"] => "不打开交互式向导，编辑已保存的 CLI 配置。",
-        ["config", "delete"] => "不打开交互式向导，删除已保存的 CLI 配置。",
-        ["health"] => "快速检查服务器是否可连接。",
-        ["status"] => "查看 OpenViking 服务器诊断状态。",
-        ["language"] => "选择 OpenViking CLI 显示语言。",
-        ["snapshot"] => "管理工作区快照：提交、恢复、查看、对比，以及遍历历史。",
-        ["snapshot", "commit"] => "将当前工作区状态提交为新的快照。",
-        ["snapshot", "restore"] => "通过一次前向提交，将项目目录恢复到历史快照。",
-        ["snapshot", "show"] => "查看某次提交的元数据，或指定路径下的单个文件内容。",
-        ["snapshot", "log"] => "按分支遍历提交历史，最新的在前。",
-        ["snapshot", "diff"] => "对比指定文件在两个快照中的内容差异。",
+        ["config", "add", "custom"] => "不開啟互動式嚮導，建立自定義配置。",
+        ["config", "edit"] => "不開啟互動式嚮導，編輯已儲存的 CLI 配置。",
+        ["config", "delete"] => "不開啟互動式嚮導，刪除已儲存的 CLI 配置。",
+        ["health"] => "快速檢查伺服器是否可連線。",
+        ["status"] => "檢視 OpenViking 伺服器診斷狀態。",
+        ["language"] => "選擇 OpenViking CLI 顯示語言。",
+        ["snapshot"] => "管理工作區快照：提交、恢復、檢視、對比，以及遍歷歷史。",
+        ["snapshot", "commit"] => "將當前工作區狀態提交為新的快照。",
+        ["snapshot", "restore"] => "通過一次前向提交，將專案目錄恢復到歷史快照。",
+        ["snapshot", "show"] => "檢視某次提交的後設資料，或指定路徑下的單個檔案內容。",
+        ["snapshot", "log"] => "按分支遍歷提交歷史，最新的在前。",
+        ["snapshot", "diff"] => "對比指定檔案在兩個快照中的內容差異。",
         _ => spec.purpose,
     }
 }
@@ -1945,53 +1945,53 @@ fn localized_help_item_description<'a>(
         return description;
     }
     match label {
-        "ov config" => "打开交互式配置管理。",
-        "ov config validate" => "验证当前配置。",
-        "show" => "显示当前配置，并隐藏敏感信息。",
-        "validate" => "探测当前服务器和认证配置。",
-        "switch" => "切换当前已保存配置。",
+        "ov config" => "開啟互動式配置管理。",
+        "ov config validate" => "驗證當前配置。",
+        "show" => "顯示當前配置，並隱藏敏感資訊。",
+        "validate" => "探測當前伺服器和認證配置。",
+        "switch" => "切換當前已儲存配置。",
         "list" => "列出已保存的配置。",
-        "add" => "不打开提示，添加 OpenViking 服务或自定义配置。",
-        "edit" => "不打开提示，编辑已保存配置。",
-        "delete" => "不打开提示，删除已保存配置。",
-        "ov-service" => "使用固定的 OpenViking 服务（火山引擎云）地址。",
-        "custom" => "使用本地或远程自定义地址。",
+        "add" => "不開啟提示，新增 OpenViking 服務或自定義配置。",
+        "edit" => "不開啟提示，編輯已儲存配置。",
+        "delete" => "不開啟提示，刪除已儲存配置。",
+        "ov-service" => "使用固定的 OpenViking 服務（火山引擎雲）地址。",
+        "custom" => "使用本地或遠端自定義地址。",
         "ov --help" => "查看所有命令。",
-        "ov health" => "快速健康检查。",
-        "ov status" => "查看详细后端状态。",
-        "ov config show" => "确认新的当前配置。",
-        "ov config switch" => "选择一个已保存配置并设为当前配置。",
+        "ov health" => "快速健康檢查。",
+        "ov status" => "檢視詳細後端狀態。",
+        "ov config show" => "確認新的當前配置。",
+        "ov config switch" => "選擇一個已儲存配置並設為當前配置。",
         "ov config list" => "查看已保存配置。",
-        "ov config list -o json" => "以 JSON 返回已保存配置，便于自动化。",
-        "ov config add --help" => "创建新的已保存配置。",
-        "ov config add ov-service --help" => "查看 OpenViking 服务配置专用参数。",
-        "ov config add custom --help" => "查看自定义配置专用参数。",
+        "ov config list -o json" => "以 JSON 返回已儲存配置，便於自動化。",
+        "ov config add --help" => "建立新的已儲存配置。",
+        "ov config add ov-service --help" => "檢視 OpenViking 服務配置專用引數。",
+        "ov config add custom --help" => "檢視自定義配置專用引數。",
         "ov config switch <name>" => "激活已保存的配置。",
-        "ov language" => "打开语言选择器。",
-        "ov language zh-CN" => "将显示语言切换为简体中文。",
-        "ov lang en" => "使用短别名切换为英文显示。",
-        "language" => "可选语言代码：en 或 zh-CN。",
-        "name" => "已保存的配置名称。",
-        "--name <name>" => "已保存配置名称。不提供则自动生成。",
+        "ov language" => "開啟語言選擇器。",
+        "ov language zh-CN" => "將顯示語言切換為繁體中文。",
+        "ov lang en" => "使用短別名切換為英文顯示。",
+        "language" => "可選語言程式碼：en 或 zh-CN。",
+        "name" => "已儲存的配置名稱。",
+        "--name <name>" => "已儲存配置名稱。不提供則自動生成。",
         "--new-name <name>" => "重命名已保存配置。",
-        "--url <url>" => "服务器地址。默认是 http://127.0.0.1:1933。",
-        "--api-key-stdin" => "从 stdin 读取 API Key。",
-        "--api-key-env <env>" => "从环境变量读取 API Key。",
-        "--api-key-stdin / --api-key-env <env>" => "从 stdin 或环境变量读取普通 API Key。",
-        "--api-key-stdin / --api-key-env <env> / --clear-api-key" => "替换或清除普通 API Key。",
+        "--url <url>" => "伺服器地址。預設是 http://127.0.0.1:1933。",
+        "--api-key-stdin" => "從 stdin 讀取 API Key。",
+        "--api-key-env <env>" => "從環境變數讀取 API Key。",
+        "--api-key-stdin / --api-key-env <env>" => "從 stdin 或環境變數讀取普通 API Key。",
+        "--api-key-stdin / --api-key-env <env> / --clear-api-key" => "替換或清除普通 API Key。",
         "--root-api-key-stdin / --root-api-key-env <env>" => {
-            "从 stdin 或环境变量读取 root API Key。"
+            "從 stdin 或環境變數讀取 root API Key。"
         }
         "--root-api-key-stdin / --root-api-key-env <env> / --clear-root-api-key" => {
-            "替换或清除 root API Key。"
+            "替換或清除 root API Key。"
         }
-        "--activate" => "同时写入当前 ovcli.conf。",
-        "--force" => "替换已有的已保存配置。",
-        "-o, --output <table|json>" => "选择表格输出或机器可读 JSON。",
-        "-c, --compact <bool>" => "使用紧凑的表格或 JSON 输出。",
-        "--account <account>" => "覆盖本次命令的 X-OpenViking-Account。",
-        "--user <user>" => "覆盖本次命令的 X-OpenViking-User。",
-        "--sudo" => "使用 root API Key 执行支持的管理和任务查询命令。",
+        "--activate" => "同時寫入當前 ovcli.conf。",
+        "--force" => "替換已有的已儲存配置。",
+        "-o, --output <table|json>" => "選擇表格輸出或機器可讀 JSON。",
+        "-c, --compact <bool>" => "使用緊湊的表格或 JSON 輸出。",
+        "--account <account>" => "覆蓋本次命令的 X-OpenViking-Account。",
+        "--user <user>" => "覆蓋本次命令的 X-OpenViking-User。",
+        "--sudo" => "使用 root API Key 執行支援的管理和任務查詢命令。",
         _ => description,
     }
 }
@@ -2027,11 +2027,11 @@ fn top_level_global_options(root: &Command, language: Language) -> Vec<RenderedH
 
     items.push(RenderedHelpItem {
         label: "-h, --help".to_string(),
-        description: copy(language, "Show help", "显示帮助").to_string(),
+        description: copy(language, "Show help", "顯示幫助").to_string(),
     });
     items.push(RenderedHelpItem {
         label: "-V, --version".to_string(),
-        description: copy(language, "Show version", "显示版本").to_string(),
+        description: copy(language, "Show version", "顯示版本").to_string(),
     });
 
     items
@@ -2150,7 +2150,7 @@ fn top_level_command_description(command: &Command, language: Language) -> Strin
     if !aliases.is_empty() {
         description.push_str(&format!(
             " ({}: {})",
-            copy(language, "alias", "别名"),
+            copy(language, "alias", "別名"),
             aliases.join(", ")
         ));
     }
@@ -2213,10 +2213,10 @@ fn localized_global_option_description<'a>(
     }
 
     match id {
-        "output" => "输出格式",
-        "compact" => "紧凑输出",
-        "account" => "覆盖账户",
-        "user" => "覆盖用户",
+        "output" => "輸出格式",
+        "compact" => "緊湊輸出",
+        "account" => "覆蓋帳戶",
+        "user" => "覆蓋使用者",
         "sudo" => "admin、system、reindex、task status/list 使用 root API Key",
         _ => description,
     }
@@ -2330,18 +2330,18 @@ fn localized_section_title(title: &str, language: Language) -> &str {
     }
     match title {
         "Core Workflow" => "核心流程",
-        "Filesystem" => "文件系统",
-        "Search & Context" => "搜索与上下文",
-        "Config & Status" => "配置与状态",
-        "Import, Export & Sessions" => "导入、导出与会话",
-        "Interactive & Admin" => "交互与管理",
+        "Filesystem" => "檔案系統",
+        "Search & Context" => "搜尋與上下文",
+        "Config & Status" => "配置與狀態",
+        "Import, Export & Sessions" => "匯入、匯出與會話",
+        "Interactive & Admin" => "互動與管理",
         _ => title,
     }
 }
 
 fn localized_badge(badge: &str, language: Language) -> &str {
     match (language, badge) {
-        (Language::ZhCn, "experimental") => "实验性",
+        (Language::ZhCn, "experimental") => "實驗性",
         _ => badge,
     }
 }
@@ -2355,52 +2355,52 @@ fn localized_command_description<'a>(
         return description;
     }
     match name {
-        "add-resource" => "添加文件、文件夹、URL 或仓库",
+        "add-resource" => "新增檔案、資料夾、URL 或倉庫",
         "add-skill" => "添加技能到 OpenViking",
-        "skills" => "管理已安装技能",
-        "find" => "语义检索相关上下文",
-        "read" => "读取精确资源内容",
-        "write" => "更新已有资源",
-        "add-memory" => "直接添加记忆",
-        "ls" => "列出目录内容",
-        "tree" => "查看范围内的资源树",
-        "mkdir" => "创建目录",
-        "rm" => "删除资源",
-        "mv" => "移动或重命名资源",
-        "stat" => "查看资源元数据",
-        "acl" => "管理资源访问权限",
-        "get" => "下载文件",
-        "search" => "上下文感知检索",
+        "skills" => "管理已安裝技能",
+        "find" => "語義檢索相關上下文",
+        "read" => "讀取精確資源內容",
+        "write" => "更新已有資源",
+        "add-memory" => "直接新增記憶",
+        "ls" => "列出目錄內容",
+        "tree" => "檢視範圍內的資源樹",
+        "mkdir" => "建立目錄",
+        "rm" => "刪除資源",
+        "mv" => "移動或重新命名資源",
+        "stat" => "檢視資源後設資料",
+        "acl" => "管理資源訪問許可權",
+        "get" => "下載檔案",
+        "search" => "上下文感知檢索",
         "grep" => "模式搜索",
-        "glob" => "Glob 路径搜索",
-        "overview" => "生成资源概览",
-        "abstract" => "生成资源摘要",
-        "config" => "添加、编辑、删除或切换配置",
-        "config show" => "显示当前配置",
-        "config validate" => "验证当前配置",
-        "config switch" => "切换当前配置",
+        "glob" => "Glob 路徑搜尋",
+        "overview" => "生成資源概覽",
+        "abstract" => "生成資源摘要",
+        "config" => "新增、編輯、刪除或切換配置",
+        "config show" => "顯示當前配置",
+        "config validate" => "驗證當前配置",
+        "config switch" => "切換當前配置",
         "config add" => "非交互式添加配置",
         "config list" => "列出已保存配置",
-        "config delete" => "删除已保存配置",
-        "health" => "快速检查服务器连接",
-        "status" => "查看系统状态",
-        "wait" => "等待异步任务完成",
-        "task" => "查看异步任务",
-        "observer" => "观察服务器组件",
-        "session" => "管理会话",
-        "import" => "导入 .ovpack",
-        "export" => "导出为 .ovpack",
-        "backup" => "创建仅恢复备份",
-        "restore" => "恢复备份",
-        "snapshot" => "管理工作区快照",
-        "tui" => "打开交互式浏览器",
-        "chat" => "与 VikingBot 对话",
-        "admin" => "管理账户、用户和 API Key",
-        "system" => "系统维护命令",
-        "privacy" => "管理隐私策略",
-        "reindex" => "重建语义和向量索引",
-        "version" => "显示版本信息",
-        "language" => "选择 CLI 显示语言（别名：lang）",
+        "config delete" => "刪除已儲存配置",
+        "health" => "快速檢查伺服器連線",
+        "status" => "檢視系統狀態",
+        "wait" => "等待非同步任務完成",
+        "task" => "檢視非同步任務",
+        "observer" => "觀察伺服器元件",
+        "session" => "管理會話",
+        "import" => "匯入 .ovpack",
+        "export" => "匯出為 .ovpack",
+        "backup" => "建立僅恢復備份",
+        "restore" => "恢復備份",
+        "snapshot" => "管理工作區快照",
+        "tui" => "開啟互動式瀏覽器",
+        "chat" => "與 VikingBot 對話",
+        "admin" => "管理帳戶、使用者和 API Key",
+        "system" => "系統維護命令",
+        "privacy" => "管理隱私策略",
+        "reindex" => "重建語義和向量索引",
+        "version" => "顯示版本資訊",
+        "language" => "選擇 CLI 顯示語言（別名：lang）",
         _ => description,
     }
 }

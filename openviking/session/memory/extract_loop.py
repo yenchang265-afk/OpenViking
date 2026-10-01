@@ -69,8 +69,8 @@ _EVENT_RETRYABLE_RESOLUTION_SKIP_CODES = {
 
 
 _CANNED_REFUSAL_RE = re.compile(
-    r"(抱歉|不好意思|很遗憾|sorry).{0,20}"
-    r"(无法|不能|未能|不给|没有找到|未找到|can't|cannot|unable|won't|not able)",
+    r"(抱歉|不好意思|很遺憾|很遗憾|sorry).{0,20}"
+    r"(無法|无法|不能|未能|不給|不给|沒有找到|没有找到|未找到|can't|cannot|unable|won't|not able)",
     re.IGNORECASE,
 )
 
@@ -86,6 +86,12 @@ def _looks_like_canned_refusal(content: str) -> bool:
     return any(
         phrase in text
         for phrase in (
+            "您的問題我無法回答",
+            "您的問題我無法識別",
+            "我無法回答這個問題",
+            "我無法給到相關內容",
+            "這個問題未找到相關結果",
+            "沒有找到相關的結果",
             "您的问题我无法回答",
             "您的问题我无法识别",
             "我无法回答这个问题",
@@ -139,7 +145,7 @@ class ExtractLoop:
             model: Model name to use
             max_iterations: Maximum number of ReAct iterations (default: 5)
             ctx: Request context
-            context_provider: ExtractContextProvider - 必须提供（由 provider 加载 schema）
+            context_provider: ExtractContextProvider - 必須提供（由 provider 載入 schema）
             thinking: Whether to explicitly enable model thinking for this extraction loop.
             max_output_tokens: Per-call output cap for the extraction LLM. When None, the
                 configured vlm.max_tokens is used, falling back to a value large enough for
@@ -172,7 +178,7 @@ class ExtractLoop:
         # Schema 生成器（在 run() 中初始化）
         self.schema_model_generator = None
 
-        # 预计算：避免每次迭代重复计算
+        # 預計算：避免每次迭代重複計算
         self._tool_schemas: Optional[List[Dict[str, Any]]] = None
         self._operations_model: Optional[Any] = None
         self._output_protocol: Optional[ExtractionOutputProtocol] = None
@@ -203,7 +209,7 @@ class ExtractLoop:
         resolution_repair_count = 0
         pending_resolution_repair: Optional[Tuple[ResolvedOperations, List]] = None
 
-        # 从 provider 获取 schemas（内部自动加载 registry）
+        # 從 provider 獲取 schemas（內部自動載入 registry）
         schemas = self.context_provider.get_memory_schemas(self.ctx)
 
         # 初始化 schema 生成器（使用 schemas 而非 registry）
@@ -217,7 +223,7 @@ class ExtractLoop:
         )
         self.schema_model_generator.generate_all_models()
 
-        # 预计算工具 schemas
+        # 預計算工具 schemas
         allowed_tools = self.context_provider.get_tools()
         self._tool_schemas = [
             tool.to_schema()
@@ -231,12 +237,12 @@ class ExtractLoop:
 
         self._resolve_effective_max_output_tokens(config)
 
-        # 获取 ExtractContext（整个流程复用）
+        # 獲取 ExtractContext（整個流程複用）
         self._extract_context = self.context_provider.get_extract_context()
         if self._extract_context is None:
             raise ValueError("Failed to get ExtractContext from provider")
 
-        # 预计算 operations_model
+        # 預計算 operations_model
         role_scope = self._isolation_handler.get_read_scope() if self._isolation_handler else None
 
         self._operations_model = self.schema_model_generator.create_structured_operations_model(
@@ -1220,11 +1226,11 @@ class ExtractLoop:
                     content = await self.context_provider.execute_tool(
                         ToolCall(id="", name="read", arguments={"uri": uri})
                     )
-                    # 读取出错表示文件不存在（error dict 含 "error" key）
+                    # 讀取出錯表示檔案不存在（error dict 含 "error" key）
                     if isinstance(content, Dict) and "error" in content:
                         continue
 
-                    # execute_tool(MemoryReadTool) 已经返回 parsed dict，直接使用
+                    # execute_tool(MemoryReadTool) 已經返回 parsed dict，直接使用
                     refetch_uris[uri] = content
                 except Exception as e:
                     tracer.error("read tool execute fail", e)

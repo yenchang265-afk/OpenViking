@@ -1,6 +1,6 @@
 # OpenViking Go SDK
 
-Go SDK 是面向 OpenViking Server 的 HTTP 客户端，作为独立 Go module 放在主仓库 `sdk/go` 下。
+Go SDK 是面向 OpenViking Server 的 HTTP 客戶端，作為獨立 Go module 放在主倉庫 `sdk/go` 下。
 
 ```bash
 go get github.com/volcengine/OpenViking/sdk/go
@@ -20,7 +20,7 @@ if err != nil {
 defer client.CloseIdleConnections()
 ```
 
-Go SDK 发送的身份请求头与 Python HTTP client 一致：
+Go SDK 傳送的身份請求頭與 Python HTTP client 一致：
 
 | Config 字段 | HTTP Header |
 |-------------|-------------|
@@ -29,31 +29,31 @@ Go SDK 发送的身份请求头与 Python HTTP client 一致：
 | `User` | `X-OpenViking-User` |
 | `ActorPeerID` | `X-OpenViking-Actor-Peer` |
 
-普通 `api_key` 部署下只需要设置 `APIKey`，服务端会从 API key 推导 account/user 身份。只有在 trusted 部署或网关显式透传租户身份时，才需要设置 `Account` 和 `User`。
+普通 `api_key` 部署下只需要設定 `APIKey`，服務端會從 API key 推導 account/user 身份。只有在 trusted 部署或閘道器顯式透傳租戶身份時，才需要設定 `Account` 和 `User`。
 
-Go SDK 不保留旧 `agent_id` 兼容路径。
+Go SDK 不保留舊 `agent_id` 相容路徑。
 
-## 图片检索示例
+## 圖片檢索示例
 
-`FindOptions.Image` 和 `SearchOptions.Image` 支持本地路径、`viking://`、`http(s)://` 或 `data:image` URI；本地图片会在 SDK 内转成 base64 data URI，HTTP 请求体仍发送服务端字段 `image_url`。
+`FindOptions.Image` 和 `SearchOptions.Image` 支援本地路徑、`viking://`、`http(s)://` 或 `data:image` URI；本地圖片會在 SDK 內轉成 base64 data URI，HTTP 請求體仍傳送服務端欄位 `image_url`。
 
 ```go
-// 本地图片以图搜图
+// 本地圖片以圖搜圖
 imageResults, err := client.Find(ctx, "", &openviking.FindOptions{
     TargetURI: "viking://resources/images",
     Image:     "./query.png",
     Limit:     5,
 })
 
-// 已入库图片作为查询图
+// 已入庫圖片作為查詢圖
 storedImageResults, err := client.Find(ctx, "", &openviking.FindOptions{
     TargetURI: "viking://resources/images",
     Image:     "viking://resources/images/cat.png",
     Limit:     5,
 })
 
-// 图文联合检索
-similarPosters, err := client.Search(ctx, "红色海报风格", &openviking.SearchOptions{
+// 圖文聯合檢索
+similarPosters, err := client.Search(ctx, "紅色海報風格", &openviking.SearchOptions{
     TargetURI: "viking://resources/images",
     Image:     "./poster.png",
     Limit:     5,
@@ -61,34 +61,34 @@ similarPosters, err := client.Search(ctx, "红色海报风格", &openviking.Sear
 _, _, _ = imageResults, storedImageResults, similarPosters
 ```
 
-## 已实现接口
+## 已實現介面
 
-| 模块 | Go 方法 |
+| 模組 | Go 方法 |
 |------|---------|
-| 资源和技能导入 | `AddResource`, `AddSkill`, `WaitProcessed` |
+| 資源和技能匯入 | `AddResource`, `AddSkill`, `WaitProcessed` |
 | 技能管理 | `ListSkills`, `FindSkills`, `ValidateSkill`, `GetSkill`, `UpdateSkill`, `DeleteSkill` |
 | Watch 管理 | `ListWatches`, `GetWatch`, `UpdateWatch`, `DeleteWatch`, `TriggerWatch` |
-| 文件系统和内容 | `List`, `Tree`, `Stat`, `Attrs`, `Mkdir`, `Remove`, `Move`, `Read`, `Abstract`, `Overview`, `Write`, `SetTags`, `Reindex` |
-| 检索 | `Find`, `Search`, `Grep`, `Glob` |
-| 会话和任务 | `CreateSession`, `ListSessions`, `GetSession`, `UpdateSessionConfig`, `SessionExists`, `GetSessionContext`, `GetSessionArchive`, `DeleteSession`, `AddMessage`, `BatchAddMessages`, `CommitSession`, `GetTask`, `ListTasks` |
+| 檔案系統和內容 | `List`, `Tree`, `Stat`, `Attrs`, `Mkdir`, `Remove`, `Move`, `Read`, `Abstract`, `Overview`, `Write`, `SetTags`, `Reindex` |
+| 檢索 | `Find`, `Search`, `Grep`, `Glob` |
+| 會話和任務 | `CreateSession`, `ListSessions`, `GetSession`, `UpdateSessionConfig`, `SessionExists`, `GetSessionContext`, `GetSessionArchive`, `DeleteSession`, `AddMessage`, `BatchAddMessages`, `CommitSession`, `GetTask`, `ListTasks` |
 | OVPack | `ExportOVPack`, `BackupOVPack`, `ImportOVPack`, `RestoreOVPack` |
-| 系统和 observer | `Health`, `CheckConsistency`, `GetStatus`, `IsHealthy`, `QueueStatus`, `VikingDBStatus`, `ModelsStatus` |
+| 系統和 observer | `Health`, `CheckConsistency`, `GetStatus`, `IsHealthy`, `QueueStatus`, `VikingDBStatus`, `ModelsStatus` |
 | 管理接口 | `AdminCreateAccount`, `AdminCreateAccountWithOptions`, `AdminListAccounts`, `AdminDeleteAccount`, `AdminRegisterUser`, `AdminRegisterUserWithOptions`, `AdminListUsers`, `AdminRemoveUser`, `AdminSetRole`, `AdminRegenerateKey`, `AdminRegenerateKeyWithOptions`, `AdminMigrate` |
 
-## 暂未实现接口
+## 暫未實現介面
 
-Go SDK v1 的边界是对齐当前 Python HTTP client，不覆盖所有 server 路由。
+Go SDK v1 的邊界是對齊當前 Python HTTP client，不覆蓋所有 server 路由。
 
-| 模块 | 原因 |
+| 模組 | 原因 |
 |------|------|
-| 旧 `agent_id` 兼容 | 新 SDK 只使用 `ActorPeerID`。 |
-| Privacy config 路由 | 当前属于 server-only 管理面，Python HTTP client 未公开。 |
-| Metrics endpoint | Prometheus 文本抓取端点，不是标准 JSON SDK API。 |
-| Console/debug/backend-sync/session tool-result 等端点 | 属于运维或 server-only 能力，未纳入 Python HTTP client parity。 |
+| 舊 `agent_id` 相容 | 新 SDK 只使用 `ActorPeerID`。 |
+| Privacy config 路由 | 當前屬於 server-only 管理面，Python HTTP client 未公開。 |
+| Metrics endpoint | Prometheus 文本抓取端點，不是標準 JSON SDK API。 |
+| Console/debug/backend-sync/session tool-result 等端點 | 屬於運維或 server-only 能力，未納入 Python HTTP client parity。 |
 
-## 管理用户配置
+## 管理使用者配置
 
-创建用户时如需写入初始服务端用户配置，使用 options 版本。普通 add 调用不需要 SDK 侧默认值；省略 `To` / `TargetURI`，让服务端解析用户和部署默认值。
+建立使用者時如需寫入初始服務端使用者配置，使用 options 版本。普通 add 呼叫不需要 SDK 側預設值；省略 `To` / `TargetURI`，讓服務端解析使用者和部署預設值。
 
 ```go
 seed := "alice-seed"
@@ -108,12 +108,12 @@ _, err = client.AdminRegenerateKeyWithOptions(ctx, "acme", "alice", &openviking.
 })
 ```
 
-传入 `Seed` 时，返回的 API Key 会基于 `sha256(user_id + "\0" + seed)` 生成；省略时仍使用随机生成逻辑。
-使用 `nil` 表示不传 `Seed`；传入字符串指针表示显式发送 seed，包括会被服务端拒绝的空字符串。
+傳入 `Seed` 時，返回的 API Key 會基於 `sha256(user_id + "\0" + seed)` 生成；省略時仍使用隨機生成邏輯。
+使用 `nil` 表示不傳 `Seed`；傳入字串指標表示顯式傳送 seed，包括會被服務端拒絕的空字串。
 
 ## 技能和 Watch 示例
 
-导入默认返回 `task_id`。通过 `client.GetTask(ctx, taskID)` 查询状态。
+匯入預設返回 `task_id`。通過 `client.GetTask(ctx, taskID)` 查詢狀態。
 
 ```go
 skill, err := client.AddSkill(ctx, "./skills/search-web", nil)
@@ -123,7 +123,7 @@ if err != nil {
 fmt.Println(skill["task_id"])
 ```
 
-任务为 `completed` 后再检索导入的技能：
+任務為 `completed` 後再檢索匯入的技能：
 
 ```go
 skills, err := client.ListSkills(ctx, nil)
@@ -133,7 +133,7 @@ found, err := client.FindSkills(ctx, "search the web", &openviking.FindSkillsOpt
 _, _ = skills, found
 ```
 
-`AddResource` 在 `WatchInterval > 0` 时会创建 watch；已有任务可用专用 watch 方法管理：
+`AddResource` 在 `WatchInterval > 0` 時會建立 watch；已有任務可用專用 watch 方法管理：
 
 ```go
 watches, err := client.ListWatches(ctx, &openviking.ListWatchesOptions{
@@ -150,9 +150,9 @@ triggered, err := client.TriggerWatch(ctx, openviking.WatchRef{
 _, _, _ = watches, updated, triggered
 ```
 
-## 验证脚本
+## 驗證指令碼
 
-编辑 `examples/basic_usage/main.go` 顶部常量：
+編輯 `examples/basic_usage/main.go` 頂部常量：
 
 ```go
 const (
@@ -161,16 +161,16 @@ const (
 )
 ```
 
-运行：
+執行：
 
 ```bash
 cd sdk/go
 go run ./examples/basic_usage
 ```
 
-脚本会创建一个临时 Markdown 文件，导入为 OpenViking resource，读取并更新内容，执行语义检索，验证 watch 和 skill 管理接口，然后创建多消息 session、commit、轮询记忆抽取任务，并检索用户记忆和 peer-scoped 记忆。
+指令碼會建立一個臨時 Markdown 檔案，匯入為 OpenViking resource，讀取並更新內容，執行語義檢索，驗證 watch 和 skill 管理介面，然後建立多訊息 session、commit、輪詢記憶抽取任務，並檢索使用者記憶和 peer-scoped 記憶。
 
-## 测试
+## 測試
 
 ```bash
 cd sdk/go

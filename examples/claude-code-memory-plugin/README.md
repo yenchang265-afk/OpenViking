@@ -302,7 +302,7 @@ Rules are sed-style strings applied in order to one piece of text:
 | `k/^\?ov\b/` then `s/^\?ov\s*//` | opt-in recall: only prompts starting with `?ov`, with the trigger stripped |
 | `s/\b(sk\|ghp\|xoxb)_[A-Za-z0-9_-]+/[redacted]/g` | redact tokens before they are stored |
 | `user:d/^\s*\/(clear\|compact)\b/` | never store those command turns, user role only |
-| `s/^(请\|麻烦)(你\|帮我)?//` | strip a Chinese politeness prefix |
+| `s/^(請\|麻煩)(你\|幫我)?//` | strip a Chinese politeness prefix |
 
 In `ovcli.conf` the rules are a JSON array, so backslashes are doubled:
 

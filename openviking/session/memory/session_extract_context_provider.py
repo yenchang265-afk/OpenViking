@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Session Extract Context Provider - 会话提取 Provider 实现
+Session Extract Context Provider - 會話提取 Provider 實現
 
-从会话消息中提取记忆的实现。
+從會話訊息中提取記憶的實現。
 """
 
 import re
@@ -48,12 +48,12 @@ _PREFETCH_SEARCH_TEXT_PART_MAX_CHARS = 1000
 _PREFETCH_SEARCH_ASSISTANT_TEXT_PART_MAX_CHARS = 500
 _PREFETCH_SEARCH_TOOL_FIELD_MAX_CHARS = 500
 _RESOURCE_REASON_LANGUAGE_RE = re.compile(
-    r"(?im)^\s*(?:User reason|用户说明|用户原因|用户理由)[:：]\s*(.+?)\s*$"
+    r"(?im)^\s*(?:User reason|用户说明|用户原因|用户理由|使用者說明|使用者原因|使用者理由)[:：]\s*(.+?)\s*$"
 )
 
 
 class SessionExtractContextProvider(ExtractContextProvider):
-    """会话提取 Provider - 从会话消息中提取记忆"""
+    """會話提取 Provider - 從會話訊息中提取記憶"""
 
     include_tool_parts_in_conversation: bool = False
     split_long_text_messages_for_extraction: bool = True
@@ -73,10 +73,10 @@ class SessionExtractContextProvider(ExtractContextProvider):
         self._output_language = self._detect_language()
         self._registry = memory_registry  # Lazy defaults if no account snapshot was supplied.
         self._schema_directories = None
-        self._extract_context = None  # 缓存 ExtractContext 实例
+        self._extract_context = None  # 快取 ExtractContext 例項
         self._isolation_handler = isolation_handler
         self._read_file_contents: Dict[str, MemoryFile] = {}
-        # 读取 eager_prefetch 配置
+        # 讀取 eager_prefetch 配置
         config = get_openviking_config()
         self._eager_prefetch = config.memory.eager_prefetch if config.memory else False
         self._prefetch_search_topn = config.memory.prefetch_search_topn if config.memory else 5
@@ -105,7 +105,7 @@ class SessionExtractContextProvider(ExtractContextProvider):
         self._transaction_handle = handle
 
     def get_extract_context(self) -> "ExtractContext":
-        """获取或创建 ExtractContext 实例（缓存）"""
+        """獲取或建立 ExtractContext 例項（快取）"""
         from openviking.session.memory.memory_updater import ExtractContext
 
         if self._extract_context is None:
@@ -139,7 +139,7 @@ class SessionExtractContextProvider(ExtractContextProvider):
         return self._vision_vlm
 
     def _detect_language(self) -> str:
-        """检测输出语言"""
+        """檢測輸出語言"""
         from openviking.session.memory.utils import (
             resolve_output_language,
             strip_language_detection_noise,
@@ -247,7 +247,7 @@ types when required by their schemas.
         return goal
 
     def _build_conversation_message(self) -> Dict[str, Any]:
-        """构建包含 Conversation History 的 user message"""
+        """構建包含 Conversation History 的 user message"""
         from datetime import datetime
 
         if self.messages:
@@ -265,7 +265,7 @@ types when required by their schemas.
         session_time_str = session_time.strftime("%Y-%m-%d %H:%M")
         day_of_week = session_time.strftime("%A")
 
-        # 检查是否需要显示范围
+        # 檢查是否需要顯示範圍
         if last_msg_time and last_msg_time != first_msg_time:
             last_time = parse_iso_datetime(last_msg_time)
             time_display = f"{session_time_str} - {last_time.strftime('%Y-%m-%d %H:%M')}"
@@ -472,10 +472,10 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
 
     async def prefetch(self) -> List[Dict]:
         """
-        执行 prefetch - 从会话消息中提取相关记忆上下文
+        執行 prefetch - 從會話訊息中提取相關記憶上下文
 
         Returns:
-            预取的消息列表，第一个元素是 Conversation History user message，后续是 tool call messages
+            預取的訊息列表，第一個元素是 Conversation History user message，後續是 tool call messages
         """
         messages = self.messages
 
@@ -483,11 +483,11 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
             tracer.error(f"Expected List[Message], got {type(messages)}")
             return []
 
-        # 先构建 Conversation History user message
+        # 先構建 Conversation History user message
         pre_fetch_messages = []
         pre_fetch_messages.append(self._build_conversation_message())
 
-        # 触发 registry 加载，过滤掉 agent stage 的 schema（trajectory/experience 由执行提取处理）
+        # 觸發 registry 載入，過濾掉 agent stage 的 schema（trajectory/experience 由執行提取處理）
         schemas = [
             s
             for s in self._get_registry().list_all(include_disabled=False)
@@ -506,7 +506,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
             if not schema.directory:
                 continue
 
-            # 根据 operation_mode 决定是否需要 ls 和读取其他文件
+            # 根據 operation_mode 決定是否需要 ls 和讀取其他檔案
             if schema.operation_mode == "add_only":
                 continue
 
@@ -537,13 +537,13 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
         call_id_seq = 0
         # Step 2: Execute search for each ls directory (instead of ls)
 
-        # 首先读取所有 .overview.md 文件（截断以避免窗口过大）
-        # 为 overview 读取创建一个基本的 tool_ctx
+        # 首先讀取所有 .overview.md 檔案（截斷以避免視窗過大）
+        # 為 overview 讀取建立一個基本的 tool_ctx
 
-        # 在每个之前 ls 的目录内执行 search（替换原来的 ls操作）
-        files_to_read_from_search = []  # 收集需要读取的文件（eager_prefetch 模式）
+        # 在每個之前 ls 的目錄內執行 search（替換原來的 ls操作）
+        files_to_read_from_search = []  # 收集需要讀取的檔案（eager_prefetch 模式）
 
-        # 批量 search：所有目录一次搜索
+        # 批次 search：所有目錄一次搜尋
         if ls_dirs:
             dir_list = list(ls_dirs)
             search_query = self._build_prefetch_search_query()
@@ -566,7 +566,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
             )
             call_id_seq += 1
 
-        # 读取单文件 schema 的文件（只对非 add_only 模式）
+        # 讀取單檔案 schema 的檔案（只對非 add_only 模式）
         for file_uri in read_files:
             call_id_seq = await self._append_structured_read_result(
                 messages=pre_fetch_messages,
@@ -574,7 +574,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
                 file_uri=file_uri,
             )
 
-        # eager_prefetch 模式：读取搜索结果 top-N
+        # eager_prefetch 模式：讀取搜尋結果 top-N
         if self._eager_prefetch:
             topn_files = files_to_read_from_search[: self._prefetch_search_topn]
             for file_uri in topn_files:
@@ -607,14 +607,14 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
         return result
 
     def get_tools(self) -> List[str]:
-        """获取可用的工具列表"""
+        """獲取可用的工具列表"""
         if self._eager_prefetch:
-            # eager_prefetch 模式下不提供工具，所有内容已在 prefetch 中加载
+            # eager_prefetch 模式下不提供工具，所有內容已在 prefetch 中載入
             return []
         return ["read"]
 
     def get_memory_schemas(self, ctx: RequestContext) -> List[Any]:
-        """获取需要参与的 memory schemas（内部自动加载）"""
+        """獲取需要參與的 memory schemas（內部自動載入）"""
         schemas = [
             s
             for s in self._get_registry().list_all(include_disabled=False)
@@ -625,7 +625,7 @@ After exploring, analyze the conversation and output ALL memory write/edit/delet
         return schemas
 
     def _get_registry(self) -> MemoryTypeRegistry:
-        """获取共享的默认记忆 registry。"""
+        """獲取共享的預設記憶 registry。"""
         if self._registry is None:
             self._registry = get_default_registry()
         return self._registry

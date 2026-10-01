@@ -94,15 +94,15 @@ class CollectionSchemas:
         fields = [
             {"FieldName": "id", "FieldType": "string", "IsPrimaryKey": True},
             {"FieldName": "uri", "FieldType": "path"},
-            # type 字段：当前版本未使用，保留用于未来扩展
-            # 预留用于表示资源的具体类型，如 "file", "directory", "image", "video", "repository" 等
+            # type 欄位：當前版本未使用，保留用於未來擴充
+            # 預留用於表示資源的具體型別，如 "file", "directory", "image", "video", "repository" 等
             {"FieldName": "type", "FieldType": "string"},
-            # context_type 字段：区分上下文的大类
-            # 枚举值："resource"（资源，默认）, "memory"（记忆）, "skill"（技能）
-            # 推导规则：
-            #   - URI 位于 user skills 目录下 → "skill"
+            # context_type 欄位：區分上下文的大類
+            # 列舉值："resource"（資源，預設）, "memory"（記憶）, "skill"（技能）
+            # 推導規則：
+            #   - URI 位於 user skills 目錄下 → "skill"
             #   - URI 包含 "memories" → "memory"
-            #   - 其他情况 → "resource"
+            #   - 其他情況 → "resource"
             {"FieldName": "context_type", "FieldType": "string"},
             {"FieldName": "vector", "FieldType": "vector", "Dim": vector_dim},
             {"FieldName": "sparse_vector", "FieldType": "sparse_vector"},
@@ -112,15 +112,15 @@ class CollectionSchemas:
         ]
         fields.extend(
             [
-                # level 字段：区分 L0/L1/L2 层级
-                # 枚举值：
+                # level 欄位：區分 L0/L1/L2 層級
+                # 列舉值：
                 #   - 0 = L0（abstract，摘要）
-                #   - 1 = L1（overview，概览）
-                #   - 2 = L2（detail/content，详情/内容，默认）
-                # URI 命名规则：
-                #   - level=0: {目录}/.abstract.md
-                #   - level=1: {目录}/.overview.md
-                #   - level=2: {文件路径}
+                #   - 1 = L1（overview，概覽）
+                #   - 2 = L2（detail/content，詳情/內容，預設）
+                # URI 命名規則：
+                #   - level=0: {目錄}/.abstract.md
+                #   - level=1: {目錄}/.overview.md
+                #   - level=2: {檔案路徑}
                 {"FieldName": "level", "FieldType": "int64"},
                 {"FieldName": "name", "FieldType": "string"},
                 {"FieldName": "description", "FieldType": "string"},

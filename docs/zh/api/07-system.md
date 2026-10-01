@@ -1,46 +1,46 @@
-# 系统状态
+# 系統狀態
 
-OpenViking 系统 API 提供健康检查、就绪检查、一致性检查和多写后端同步状态。组件级观测和 Prometheus 指标分别提供独立文档。
+OpenViking 系統 API 提供健康檢查、就緒檢查、一致性檢查和多寫後端同步狀態。元件級觀測和 Prometheus 指標分別提供獨立文件。
 
-## API 参考
+## API 參考
 
 ### health
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-基础健康检查端点，无需认证。返回服务版本号和健康状态。如果提供认证信息，还会返回认证模式和身份信息。
+基礎健康檢查端點，無需認證。返回服務版本號和健康狀態。如果提供認證資訊，還會返回認證模式和身份資訊。
 
-Trusted 模式下，完整的 `X-OpenViking-Account` 和 `X-OpenViking-User` 请求头会触发身份解析，
-包括省略 `root_api_key` 的 localhost 部署。配置了 Root 密钥的服务继续校验认证请求中的密钥。
-可选布尔字段 `root_api_key_required` 表示 Trusted 服务配置的密钥要求，解析得到的 `role`
-表示调用者权限。较早版本可能省略该字段。匿名健康探测返回基础存活信息。
+Trusted 模式下，完整的 `X-OpenViking-Account` 和 `X-OpenViking-User` 請求頭會觸發身份解析，
+包括省略 `root_api_key` 的 localhost 部署。配置了 Root 金鑰的服務繼續校驗認證請求中的金鑰。
+可選布林欄位 `root_api_key_required` 表示 Trusted 服務配置的金鑰要求，解析得到的 `role`
+表示呼叫者許可權。較早版本可能省略該欄位。匿名健康探測返回基礎存活資訊。
 
-**代码入口**:
+**程式碼入口**:
 - `openviking/server/routers/system.py:health_check` - HTTP 路由
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.health` - SDK 入口
 - `crates/ov_cli/src/commands/system.rs` - CLI 命令
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| profile | string | 否 | - | 传 `1`、`true`、`yes` 或 `on` 时，为本次请求开启 `cProfile`，并在 JSON 响应里追加 `profile` 字段 |
+| profile | string | 否 | - | 傳 `1`、`true`、`yes` 或 `on` 時，為本次請求開啟 `cProfile`，並在 JSON 響應裡追加 `profile` 欄位 |
 
-**profile 行为说明**:
-- `profile` 是 HTTP middleware 级能力，对任意返回 JSON 的 OpenViking 接口都生效，不限于 `/health`。
-- 仅当服务端在 `ov.conf` 中开启 `server.profile_enabled = true` 时，请求里的 `profile=1` 才会生效；否则服务端会忽略该参数。
-- `profile` 仅对当前请求生效，请求结束后自动关闭；后续请求默认不会继承这次 profile 状态。
-- 仅 JSON 响应会追加 `profile` 字段；纯文本、文件、流式响应不会被改写。
-- `profile` 的返回值是 `list[string]`，每个元素对应一行格式化后的 `pstats` 输出，便于浏览器直接查看和前端按行渲染。
-- `ov` CLI 会显示返回的 `profile`；Python HTTP client 可以通过 `ovcli.conf.profile = true` 触发服务端 profile，但大多数 SDK 方法默认只返回业务 `result`，不会把顶层 `profile` 一并暴露给调用方。
+**profile 行為說明**:
+- `profile` 是 HTTP middleware 級能力，對任意返回 JSON 的 OpenViking 介面都生效，不限於 `/health`。
+- 僅當服務端在 `ov.conf` 中開啟 `server.profile_enabled = true` 時，請求裡的 `profile=1` 才會生效；否則服務端會忽略該引數。
+- `profile` 僅對當前請求生效，請求結束後自動關閉；後續請求預設不會繼承這次 profile 狀態。
+- 僅 JSON 響應會追加 `profile` 欄位；純文本、檔案、流式響應不會被改寫。
+- `profile` 的返回值是 `list[string]`，每個元素對應一行格式化後的 `pstats` 輸出，便於瀏覽器直接檢視和前端按行渲染。
+- `ov` CLI 會顯示返回的 `profile`；Python HTTP client 可以通過 `ovcli.conf.profile = true` 觸發服務端 profile，但大多數 SDK 方法預設只返回業務 `result`，不會把頂層 `profile` 一併暴露給呼叫方。
 
-**profile 表头字段说明**:
-- `ncalls`: 调用次数。若显示为 `总调用次数/原始调用次数`，前者是总调用数，后者是 primitive calls。
-- `tottime`: 函数自身耗时，总时间，不包含其调用的子函数耗时。
-- `percall`（第一列）: `tottime / ncalls`，即函数自身平均每次调用耗时。
-- `cumtime`: 累计耗时，包含当前函数及其所有子调用耗时。
-- `percall`（第二列）: `cumtime / primitive calls`，即按原始调用计算的平均累计耗时。
-- `filename:lineno(function)`: 函数定义位置。普通 Python 代码会显示为裁剪后的模块路径；`~:0(...)` 这类条目通常表示 builtin 或 C 扩展调用。
+**profile 表頭欄位說明**:
+- `ncalls`: 呼叫次數。若顯示為 `總呼叫次數/原始呼叫次數`，前者是總呼叫數，後者是 primitive calls。
+- `tottime`: 函式自身耗時，總時間，不包含其呼叫的子函式耗時。
+- `percall`（第一列）: `tottime / ncalls`，即函式自身平均每次呼叫耗時。
+- `cumtime`: 累計耗時，包含當前函式及其所有子呼叫耗時。
+- `percall`（第二列）: `cumtime / primitive calls`，即按原始呼叫計算的平均累計耗時。
+- `filename:lineno(function)`: 函式定義位置。普通 Python 程式碼會顯示為裁剪後的模組路徑；`~:0(...)` 這類條目通常表示 builtin 或 C 擴充呼叫。
 
 #### 3. 使用示例
 
@@ -97,7 +97,7 @@ ov system health
 ov --profile health
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -108,7 +108,7 @@ ov --profile health
 }
 ```
 
-**带 profile 的响应示例**
+**帶 profile 的響應示例**
 
 ```json
 {
@@ -133,22 +133,22 @@ ov --profile health
 
 ### ready
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-部署环境使用的就绪探针。检查 AGFS、VectorDB、APIKeyManager 和 Ollama（如配置）的状态。当所有配置的子系统都准备完成时返回 200，否则返回 503。无需认证（专为 Kubernetes 探针设计）。
+部署環境使用的就緒探針。檢查 AGFS、VectorDB、APIKeyManager 和 Ollama（如配置）的狀態。當所有配置的子系統都準備完成時返回 200，否則返回 503。無需認證（專為 Kubernetes 探針設計）。
 
-**代码入口**:
+**程式碼入口**:
 - `openviking/server/routers/system.py:readiness_check` - HTTP 路由
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-无参数。
+無引數。
 
-**检查项说明**:
-- `agfs`: Viking 文件系统是否可访问
-- `vectordb`: 向量数据库是否健康
-- `api_key_manager`: API 密钥管理器是否已加载
-- `ollama`: Ollama 服务是否可达（仅当配置时）
+**檢查項說明**:
+- `agfs`: Viking 檔案系統是否可訪問
+- `vectordb`: 向量資料庫是否健康
+- `api_key_manager`: API 金鑰管理器是否已載入
+- `ollama`: Ollama 服務是否可達（僅當配置時）
 
 #### 3. 使用示例
 
@@ -162,7 +162,7 @@ GET /ready
 curl -X GET http://localhost:1933/ready
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -180,18 +180,18 @@ curl -X GET http://localhost:1933/ready
 
 ### status
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-获取系统状态，包括初始化状态和当前认证用户信息。`result.user` 是认证请求的 `user_id`（来自 API 密钥或请求头），而非进程级服务默认值，客户端可用于解析多租户路径。
+獲取系統狀態，包括初始化狀態和當前認證使用者資訊。`result.user` 是認證請求的 `user_id`（來自 API 金鑰或請求頭），而非程序級服務預設值，客戶端可用於解析多租戶路徑。
 
-**代码入口**:
+**程式碼入口**:
 - `openviking/server/routers/system.py:system_status` - HTTP 路由
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.get_status` - SDK 入口
 - `crates/ov_cli/src/commands/system.rs` - CLI 命令
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-无参数。
+無引數。
 
 #### 3. 使用示例
 
@@ -225,7 +225,7 @@ console.log(await client.getStatus());
 ov system status
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -242,22 +242,22 @@ ov system status
 
 ### consistency
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-检查指定 URI 子树的文件系统内容和向量索引是否一致，用于调试索引缺失、向量快照导出失败等问题。该能力是通用数据一致性检查，不属于 OVPack 私有接口；`ov export --include-vectors` 和 `ov backup --include-vectors` 会复用同一检查。
+檢查指定 URI 子樹的檔案系統內容和向量索引是否一致，用於除錯索引缺失、向量快照匯出失敗等問題。該能力是通用資料一致性檢查，不屬於 OVPack 私有介面；`ov export --include-vectors` 和 `ov backup --include-vectors` 會複用同一檢查。
 
-响应只返回摘要和缺失项，不返回完整 expected 列表。`missing_records` 最多返回前 20 条；如果还有更多缺失项，`missing_records_truncated` 为 `true`。
+響應只返回摘要和缺失項，不返回完整 expected 列表。`missing_records` 最多返回前 20 條；如果還有更多缺失項，`missing_records_truncated` 為 `true`。
 
-**代码入口**:
+**程式碼入口**:
 - `openviking/server/routers/system.py:check_consistency` - HTTP 路由
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.check_consistency` - SDK 入口
 - `crates/ov_cli/src/commands/system.rs:consistency` - CLI 命令
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| uri | string | 是 | - | 要检查的 Viking URI 子树 |
+| uri | string | 是 | - | 要檢查的 Viking URI 子樹 |
 
 #### 3. 使用示例
 
@@ -305,7 +305,7 @@ fmt.Println(report["ok"])
 ov system consistency viking://resources/my-project
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -331,22 +331,22 @@ ov system consistency viking://resources/my-project
 
 ### wait_processed
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-等待所有异步处理（embedding、语义生成）完成。该方法会阻塞直到所有队列中的任务处理完毕或超时。
+等待所有非同步處理（embedding、語義生成）完成。該方法會阻塞直到所有佇列中的任務處理完畢或超時。
 
-**代码入口**:
+**程式碼入口**:
 - `openviking/server/routers/system.py:wait_processed` - HTTP 路由
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.wait_processed` - SDK 入口
 - `crates/ov_cli/src/commands/system.rs` - CLI 命令
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| timeout | float | 否 | None | 超时时间（秒），None 表示无限等待 |
+| timeout | float | 否 | None | 超時時間（秒），None 表示無限等待 |
 
 #### 3. 使用示例
 
@@ -368,10 +368,10 @@ curl -X POST http://localhost:1933/api/v1/system/wait \
 **Python SDK**
 
 ```python
-# 添加资源
+# 新增資源
 client.add_resource(path="./docs/")
 
-# 等待所有处理完成
+# 等待所有處理完成
 status = client.wait_processed(timeout=60.0)
 print(f"Processing complete: {status}")
 ```
@@ -400,7 +400,7 @@ fmt.Println(status)
 ov system wait --timeout 60
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -427,7 +427,7 @@ ov system wait --timeout 60
 
 ### backend_sync_status()
 
-查询指定 Viking URI 子树在多写存储后端之间的同步状态。该接口要求 ROOT 或 ADMIN 权限。
+查詢指定 Viking URI 子樹在多寫儲存後端之間的同步狀態。該介面要求 ROOT 或 ADMIN 許可權。
 
 **HTTP API**
 
@@ -443,7 +443,7 @@ curl -X POST http://localhost:1933/api/v1/system/backend/sync-status \
   -d '{"uri":"viking://resources"}'
 ```
 
-也可以使用 URI 路径形式：
+也可以使用 URI 路徑形式：
 
 ```http
 GET /api/v1/system/sync/{sync_path}
@@ -455,7 +455,7 @@ GET /api/v1/system/sync/{sync_path}
 ov system backend sync-status viking://resources
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -467,11 +467,11 @@ ov system backend sync-status viking://resources
 }
 ```
 
-`result` 由当前文件系统后端返回；`path` 标识查询范围，`entry_count` 表示该范围内的同步记录数。具体后端可能附加待同步、失败记录等诊断字段。
+`result` 由當前檔案系統後端返回；`path` 標識查詢範圍，`entry_count` 表示該範圍內的同步記錄數。具體後端可能附加待同步、失敗記錄等診斷欄位。
 
 ### backend_sync_retry()
 
-重试指定 URI 子树中尚未完成的多写后端同步工作。该接口要求 ROOT 或 ADMIN 权限。
+重試指定 URI 子樹中尚未完成的多寫後端同步工作。該介面要求 ROOT 或 ADMIN 許可權。
 
 **HTTP API**
 
@@ -487,7 +487,7 @@ curl -X POST http://localhost:1933/api/v1/system/backend/sync-retry \
   -d '{"uri":"viking://resources"}'
 ```
 
-URI 路径形式为：
+URI 路徑形式為：
 
 ```http
 POST /api/v1/system/sync/{sync_path}/retry
@@ -499,7 +499,7 @@ POST /api/v1/system/sync/{sync_path}/retry
 ov system backend sync-retry viking://resources
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -512,18 +512,18 @@ ov system backend sync-retry viking://resources
 }
 ```
 
-`retried` 是本次重新调度的记录数，`failed` 是重试调度失败的记录数；具体后端可能附加额外诊断字段。
+`retried` 是本次重新排程的記錄數，`failed` 是重試排程失敗的記錄數；具體後端可能附加額外診斷欄位。
 
-公共 Python、TypeScript 和 Go SDK 当前没有多写后端同步方法，因此以上小节只展示 HTTP 和 CLI Tab。
+公共 Python、TypeScript 和 Go SDK 當前沒有多寫後端同步方法，因此以上小節只展示 HTTP 和 CLI Tab。
 
 ---
 
 <a id="reindex"></a><a id="observer-api"></a>
 
-## 相关文档
+## 相關文件
 
-- [Resources](02-resources.md) - 资源管理
-- [Retrieval](06-retrieval.md) - 搜索与检索
-- [Sessions](05-sessions.md) - 会话管理
-- [运行观测](18-observer.md) - 组件即时状态
-- [Metrics](09-metrics.md) - Prometheus 指标
+- [Resources](02-resources.md) - 資源管理
+- [Retrieval](06-retrieval.md) - 搜尋與檢索
+- [Sessions](05-sessions.md) - 會話管理
+- [執行觀測](18-observer.md) - 元件即時狀態
+- [Metrics](09-metrics.md) - Prometheus 指標

@@ -12,10 +12,10 @@ from build_test_helpers import (
 
 
 class TestBuildMediaResourcesSlow:
-    """TC-B13~B15 媒体类资源构建测试"""
+    """TC-B13~B15 媒體類資源構建測試"""
 
     def test_build_image_svg(self, api_client):
-        """TC-B13 图片构建(SVG)：验证 .svg 文件解析失败时错误信息合理，成功时 source_format=image 且可检索"""
+        """TC-B13 圖片構建(SVG)：驗證 .svg 檔案解析失敗時錯誤資訊合理，成功時 source_format=image 且可檢索"""
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"svg_keyword_{random_id}"
         temp_dir = tempfile.mkdtemp()
@@ -31,7 +31,7 @@ class TestBuildMediaResourcesSlow:
 
             data = response.json()
             assert data.get("status") in ("ok", "error"), (
-                f"SVG文件应返回 ok 或 error, 实际: {data.get('status')}"
+                f"SVG檔案應返回 ok 或 error, 實際: {data.get('status')}"
             )
 
             if data.get("status") == "error":
@@ -41,8 +41,8 @@ class TestBuildMediaResourcesSlow:
                     or "svg" in error_msg
                     or "parse" in error_msg
                     or "error" in error_msg
-                ), f"SVG外层错误应包含 image/svg/parse/error, 实际: {error_msg}"
-                print("✓ TC-B13 图片构建(SVG)通过(服务端返回error，SVG格式不被支持)")
+                ), f"SVG外層錯誤應包含 image/svg/parse/error, 實際: {error_msg}"
+                print("✓ TC-B13 圖片構建(SVG)通過(服務端返回error，SVG格式不被支援)")
                 return
 
             result = data.get("result", {})
@@ -54,9 +54,9 @@ class TestBuildMediaResourcesSlow:
                     or "parse" in inner_msg.lower()
                     or "identify" in inner_msg.lower()
                     or "svg" in inner_msg.lower()
-                ), f"SVG解析错误信息应包含 image/parse/identify/svg, 实际: {inner_msg}"
+                ), f"SVG解析錯誤資訊應包含 image/parse/identify/svg, 實際: {inner_msg}"
                 print(
-                    f"✓ TC-B13 图片构建(SVG)通过(服务端内层解析错误，SVG格式不被支持): {inner_msg[:80]}"
+                    f"✓ TC-B13 圖片構建(SVG)通過(服務端內層解析錯誤，SVG格式不被支援): {inner_msg[:80]}"
                 )
                 return
 
@@ -70,12 +70,12 @@ class TestBuildMediaResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B13 图片构建(SVG)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B13 圖片構建(SVG)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_audio_mp3(self, api_client):
-        """TC-B14 音频构建(MP3)：验证 .mp3 文件添加后产物路径含 /audio/ 且 source_format=audio"""
+        """TC-B14 音訊構建(MP3)：驗證 .mp3 檔案新增後產物路徑含 /audio/ 且 source_format=audio"""
         import subprocess
         import uuid
 
@@ -100,9 +100,9 @@ class TestBuildMediaResourcesSlow:
                 timeout=10,
             )
             if result.returncode != 0:
-                pytest.skip("ffmpeg 不可用，跳过MP3音频构建测试")
+                pytest.skip("ffmpeg 不可用，跳過MP3音訊構建測試")
         except (FileNotFoundError, subprocess.TimeoutExpired):
-            pytest.skip("ffmpeg 不可用，跳过MP3音频构建测试")
+            pytest.skip("ffmpeg 不可用，跳過MP3音訊構建測試")
 
         try:
             response = api_client.add_resource(path=mp3_path, wait=True)
@@ -114,19 +114,19 @@ class TestBuildMediaResourcesSlow:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/audio/" in root_uri, f"音频 root_uri 应含 /audio/, 实际: {root_uri}"
+            assert "/audio/" in root_uri, f"音訊 root_uri 應含 /audio/, 實際: {root_uri}"
 
             stat_resp = api_client.fs_stat(root_uri)
             assert stat_resp.status_code == 200
 
             assert_source_format(api_client, root_uri, "audio")
 
-            print(f"✓ TC-B14 音频构建(MP3)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B14 音訊構建(MP3)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_audio_wav(self, api_client):
-        """TC-B14 音频构建(WAV)：验证 .wav 文件添加后产物路径含 /audio/ 且 source_format=audio"""
+        """TC-B14 音訊構建(WAV)：驗證 .wav 檔案新增後產物路徑含 /audio/ 且 source_format=audio"""
         import subprocess
 
         random_id = str(uuid.uuid4())[:8]
@@ -150,9 +150,9 @@ class TestBuildMediaResourcesSlow:
                 timeout=10,
             )
             if result.returncode != 0:
-                pytest.skip("ffmpeg 不可用，跳过WAV音频构建测试")
+                pytest.skip("ffmpeg 不可用，跳過WAV音訊構建測試")
         except (FileNotFoundError, subprocess.TimeoutExpired):
-            pytest.skip("ffmpeg 不可用，跳过WAV音频构建测试")
+            pytest.skip("ffmpeg 不可用，跳過WAV音訊構建測試")
 
         try:
             response = api_client.add_resource(path=wav_path, wait=True)
@@ -164,23 +164,23 @@ class TestBuildMediaResourcesSlow:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/audio/" in root_uri, f"音频 root_uri 应含 /audio/, 实际: {root_uri}"
+            assert "/audio/" in root_uri, f"音訊 root_uri 應含 /audio/, 實際: {root_uri}"
 
             stat_resp = api_client.fs_stat(root_uri)
             assert stat_resp.status_code == 200
 
             assert_source_format(api_client, root_uri, "audio")
 
-            print(f"✓ TC-B14 音频构建(WAV)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B14 音訊構建(WAV)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_image_jpg(self, api_client):
-        """TC-B13 图片构建(JPG)：验证 .jpg 文件添加后产物路径含 /images/ 且 source_format=image"""
+        """TC-B13 圖片構建(JPG)：驗證 .jpg 檔案新增後產物路徑含 /images/ 且 source_format=image"""
         try:
             from PIL import Image
         except ImportError:
-            pytest.skip("Pillow 未安装，跳过JPG图片构建测试")
+            pytest.skip("Pillow 未安裝，跳過JPG圖片構建測試")
 
         random_id = str(uuid.uuid4())[:8]
         temp_dir = tempfile.mkdtemp()
@@ -199,20 +199,20 @@ class TestBuildMediaResourcesSlow:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/images/" in root_uri, f"图片 root_uri 应含 /images/, 实际: {root_uri}"
+            assert "/images/" in root_uri, f"圖片 root_uri 應含 /images/, 實際: {root_uri}"
 
             assert_source_format(api_client, root_uri, "image")
 
-            print(f"✓ TC-B13 图片构建(JPG)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B13 圖片構建(JPG)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_image_png(self, api_client):
-        """TC-B13 图片构建(PNG)：验证 .png 文件添加后产物路径含 /images/ 且 source_format=image"""
+        """TC-B13 圖片構建(PNG)：驗證 .png 檔案新增後產物路徑含 /images/ 且 source_format=image"""
         try:
             from PIL import Image
         except ImportError:
-            pytest.skip("Pillow 未安装，跳过PNG图片构建测试")
+            pytest.skip("Pillow 未安裝，跳過PNG圖片構建測試")
 
         random_id = str(uuid.uuid4())[:8]
         temp_dir = tempfile.mkdtemp()
@@ -231,20 +231,20 @@ class TestBuildMediaResourcesSlow:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/images/" in root_uri, f"图片 root_uri 应含 /images/, 实际: {root_uri}"
+            assert "/images/" in root_uri, f"圖片 root_uri 應含 /images/, 實際: {root_uri}"
 
             assert_source_format(api_client, root_uri, "image")
 
-            print(f"✓ TC-B13 图片构建(PNG)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B13 圖片構建(PNG)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_image_webp(self, api_client):
-        """TC-B13 图片构建(WebP)：验证 .webp 文件添加后产物路径含 /images/ 且 source_format=image"""
+        """TC-B13 圖片構建(WebP)：驗證 .webp 檔案新增後產物路徑含 /images/ 且 source_format=image"""
         try:
             from PIL import Image
         except ImportError:
-            pytest.skip("Pillow 未安装，跳过WebP图片构建测试")
+            pytest.skip("Pillow 未安裝，跳過WebP圖片構建測試")
 
         random_id = str(uuid.uuid4())[:8]
         temp_dir = tempfile.mkdtemp()
@@ -263,16 +263,16 @@ class TestBuildMediaResourcesSlow:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/images/" in root_uri, f"图片 root_uri 应含 /images/, 实际: {root_uri}"
+            assert "/images/" in root_uri, f"圖片 root_uri 應含 /images/, 實際: {root_uri}"
 
             assert_source_format(api_client, root_uri, "image")
 
-            print(f"✓ TC-B13 图片构建(WebP)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B13 圖片構建(WebP)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_video_mp4(self, api_client):
-        """TC-B15 视频构建(MP4)：验证 .mp4 文件添加后产物路径含 /video/ 且 source_format=video"""
+        """TC-B15 影片構建(MP4)：驗證 .mp4 檔案新增後產物路徑含 /video/ 且 source_format=video"""
         random_id = str(uuid.uuid4())[:8]
         temp_dir = tempfile.mkdtemp()
         mp4_path = os.path.join(temp_dir, f"test_{random_id}.mp4")
@@ -296,9 +296,9 @@ class TestBuildMediaResourcesSlow:
                 timeout=10,
             )
             if result.returncode != 0:
-                pytest.skip("ffmpeg 不可用，跳过MP4视频构建测试")
+                pytest.skip("ffmpeg 不可用，跳過MP4影片構建測試")
         except (FileNotFoundError, subprocess.TimeoutExpired):
-            pytest.skip("ffmpeg 不可用，跳过MP4视频构建测试")
+            pytest.skip("ffmpeg 不可用，跳過MP4影片構建測試")
 
         try:
             response = api_client.add_resource(path=mp4_path, wait=True)
@@ -310,13 +310,13 @@ class TestBuildMediaResourcesSlow:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/video/" in root_uri, f"视频 root_uri 应含 /video/, 实际: {root_uri}"
+            assert "/video/" in root_uri, f"影片 root_uri 應含 /video/, 實際: {root_uri}"
 
             stat_resp = api_client.fs_stat(root_uri)
             assert stat_resp.status_code == 200
 
             assert_source_format(api_client, root_uri, "video")
 
-            print(f"✓ TC-B15 视频构建(MP4)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B15 影片構建(MP4)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)

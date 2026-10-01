@@ -1,26 +1,26 @@
-# 快速开始
+# 快速開始
 
-OpenViking 以服务端运行。用独立的 `ov` CLI 连接服务，导入一份小文档，再检索其中的内容。使用托管服务或他人部署的服务时，只需安装 CLI。
+OpenViking 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一份小文件，再檢索其中的內容。使用託管服務或他人部署的服務時，只需安裝 CLI。
 
-## 1. 选择服务
+## 1. 選擇服務
 
-**已有服务地址？** 准备好 URL 和 API Key，直接跳到第 2 步。服务采用 API Key 认证时，数据访问使用 user/admin key，root key 用于管理操作。详见[认证](../guides/04-authentication.md)。
+**已有服務地址？** 準備好 URL 和 API Key，直接跳到第 2 步。服務採用 API Key 認證時，資料訪問使用 user/admin key，root key 用於管理操作。詳見[認證](../guides/04-authentication.md)。
 
-还没有服务时，选择以下一种方式：
+還沒有服務時，選擇以下一種方式：
 
-### 火山引擎托管服务
+### 火山引擎託管服務
 
-打开 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)，从**用户管理 → API Key** 获取密钥。服务地址为：
+開啟 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
 
 ```text
 https://api.vikingdb.cn-beijing.volces.com/openviking
 ```
 
-无需安装服务端，也无需在本机配置模型。[产品介绍](https://www.volcengine.com/product/openviking-service)和[服务文档](https://docs.volcengine.com/docs/84313/2374478)说明托管服务的使用方式与额度。继续第 2 步。
+無需安裝服務端，也無需在本機配置模型。[產品介紹](https://www.volcengine.com/product/openviking-service)和[服務文件](https://docs.volcengine.com/docs/84313/2374478)說明託管服務的使用方式與額度。繼續第 2 步。
 
-### 自建服务
+### 自建服務
 
-在运行服务端的机器上[安装 uv](https://docs.astral.sh/uv/getting-started/installation/)，再安装 OpenViking：
+在執行服務端的機器上[安裝 uv](https://docs.astral.sh/uv/getting-started/installation/)，再安裝 OpenViking：
 
 ```bash
 uv tool install openviking --upgrade
@@ -29,20 +29,20 @@ openviking-server doctor
 openviking-server
 ```
 
-配置向导用于设置服务端模型并写入 `~/.openviking/ov.conf`。准备好 Embedding 模型和 VLM 的访问凭据——推荐使用火山引擎（豆包）模型，购买和开通见[火山引擎购买指南](../guides/02-volcengine-purchase-guide.md)——再用 `doctor` 检查配置。保持服务运行，另开终端完成后续步骤。
+配置嚮導用於設定服務端模型並寫入 `~/.openviking/ov.conf`。準備好 Embedding 模型和 VLM 的訪問憑據——推薦使用火山引擎（豆包）模型，購買和開通見[火山引擎購買指南](../guides/02-volcengine-purchase-guide.md)——再用 `doctor` 檢查配置。保持服務執行，另開終端完成後續步驟。
 
-服务是否在运行，用一条 curl 即可确认，不依赖任何客户端：
+服務是否在執行，用一條 curl 即可確認，不依賴任何客戶端：
 
 ```bash
 curl http://127.0.0.1:1933/health
 # {"status":"ok","healthy":true,...}
 ```
 
-本地地址为 `http://127.0.0.1:1933`，默认本地配置不需要 API Key；Web Studio 位于 `/studio`。Docker、持久化存储和远程访问配置见[部署](../guides/03-deployment.md)、[模型配置](../guides/01-configuration.md)和[认证](../guides/04-authentication.md)。
+本地地址為 `http://127.0.0.1:1933`，預設本地配置不需要 API Key；Web Studio 位於 `/studio`。Docker、持久化儲存和遠端訪問配置見[部署](../guides/03-deployment.md)、[模型配置](../guides/01-configuration.md)和[認證](../guides/04-authentication.md)。
 
-## 2. 安装并连接 CLI
+## 2. 安裝並連線 CLI
 
-在客户端机器上安装好 Node.js 和 npm 后，运行：
+在客戶端機器上安裝好 Node.js 和 npm 後，執行：
 
 ```bash
 npm install -g @openviking/cli
@@ -50,55 +50,55 @@ ov language zh-CN
 ov config
 ```
 
-在交互配置中，火山托管服务选择 **OpenViking Service**，自建服务选择 **自定义（Custom）**。填写 API Key，自建服务还需填写 URL。默认本地服务的密钥留空。保存并激活配置。
+在互動配置中，火山託管服務選擇 **OpenViking Service**，自建服務選擇 **自定義（Custom）**。填寫 API Key，自建服務還需填寫 URL。預設本地服務的金鑰留空。儲存並激活配置。
 
-CLI 将当前连接保存到 `~/.openviking/ovcli.conf`，它与服务端的 `ov.conf` 是两个文件。脚本化配置和多服务切换见 [CLI 配置](05-cli-setup.md)。
+CLI 將當前連線儲存到 `~/.openviking/ovcli.conf`，它與服務端的 `ov.conf` 是兩個檔案。指令碼化配置和多服務切換見 [CLI 配置](05-cli-setup.md)。
 
-检查连接：
+檢查連線：
 
 ```bash
 ov health
 ```
 
-这一步确认服务能响应；下面的导入还会验证模型处理和数据访问。
+這一步確認服務能響應；下面的匯入還會驗證模型處理和資料訪問。
 
-## 3. 导入文档
+## 3. 匯入文件
 
-在当前目录创建 `quickstart.md`，内容如下：
+在當前目錄建立 `quickstart.md`，內容如下：
 
 ```markdown
-# Atlas 项目
+# Atlas 專案
 
-Atlas 项目每周五备份文档。
-Maya 负责备份流程，每份备份保留 30 天。
+Atlas 專案每週五備份文件。
+Maya 負責備份流程，每份備份保留 30 天。
 ```
 
-将它导入新的资源目录：
+將它匯入新的資源目錄：
 
 ```bash
 ov add-resource ./quickstart.md --to viking://resources/quickstart-demo --wait --timeout 120
 ```
 
-CLI 会自动上传本地文件。`--wait` 等待处理完成，命令成功后再继续。若省略该参数，保存返回的 `task_id`，用 `ov task status <task_id>` 查询到 `completed` 后再使用结果。详见[后台任务](../api/17-tasks.md)。
+CLI 會自動上傳本地檔案。`--wait` 等待處理完成，命令成功後再繼續。若省略該引數，儲存返回的 `task_id`，用 `ov task status <task_id>` 查詢到 `completed` 後再使用結果。詳見[後臺任務](../api/17-tasks.md)。
 
-本例使用尚未使用的目标 URI。重复运行示例时，换一个新目标，并同步替换下方命令中的 URI。
+本例使用尚未使用的目標 URI。重複執行示例時，換一個新目標，並同步替換下方命令中的 URI。
 
-## 4. 浏览与检索
+## 4. 瀏覽與檢索
 
 ```bash
 ov tree viking://resources/quickstart-demo
 ov overview viking://resources/quickstart-demo
-ov find "谁负责备份流程？" --uri viking://resources/quickstart-demo
+ov find "誰負責備份流程？" --uri viking://resources/quickstart-demo
 ```
 
-`tree` 列出导入后的结构，`overview` 读取生成的概览，`find` 返回相关上下文的 URI 和分数。读取某条命中时，把返回的 URI 传给 `ov read`：
+`tree` 列出匯入後的結構，`overview` 讀取生成的概覽，`find` 返回相關上下文的 URI 和分數。讀取某條命中時，把返回的 URI 傳給 `ov read`：
 
 ```bash
 ov read "<returned-file-uri>"
 ```
 
-将 `<returned-file-uri>` 替换为结果中的文件 URI，不保留尖括号。更多资源类型和检索参数见[资源管理](../api/02-resources.md)与[检索](../api/06-retrieval.md)。
+將 `<returned-file-uri>` 替換為結果中的檔案 URI，不保留尖括號。更多資源型別和檢索引數見[資源管理](../api/02-resources.md)與[檢索](../api/06-retrieval.md)。
 
 ## 使用 SDK
 
-OpenViking 也提供 Python、TypeScript/JavaScript 和 Go SDK，均连接同一个服务端。客户端示例见 [API 概览](../api/01-overview.md)。
+OpenViking 也提供 Python、TypeScript/JavaScript 和 Go SDK，均連線同一個服務端。客戶端示例見 [API 概覽](../api/01-overview.md)。

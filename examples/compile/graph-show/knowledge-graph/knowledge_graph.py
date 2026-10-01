@@ -18,7 +18,7 @@ its public CDN when the page opens.
 
 Example:
     python knowledge_graph.py /path/to/journal-to-the-west-knowledge-graph
-    python knowledge_graph.py /path/to/graph -o graph.html --title "西游知识图谱"
+    python knowledge_graph.py /path/to/graph -o graph.html --title "西遊知識圖譜"
 """
 
 from __future__ import annotations
@@ -61,20 +61,20 @@ _TYPE_ALIASES = {
 
 _TYPE_STYLE = {
     "person": {"label": "人物", "color": "#39f7ff", "symbol": "circle"},
-    "animal": {"label": "生灵", "color": "#6df7b1", "symbol": "triangle"},
-    "place": {"label": "地点", "color": "#ff4fd8", "symbol": "diamond"},
+    "animal": {"label": "生靈", "color": "#6df7b1", "symbol": "triangle"},
+    "place": {"label": "地點", "color": "#ff4fd8", "symbol": "diamond"},
     "artifact": {"label": "器物", "color": "#ffbd59", "symbol": "star"},
-    "document": {"label": "文书", "color": "#a88bff", "symbol": "square"},
-    "organization": {"label": "组织", "color": "#4f8cff", "symbol": "hexagon"},
-    "group": {"label": "群体", "color": "#35df83", "symbol": "hexagon"},
+    "document": {"label": "文書", "color": "#a88bff", "symbol": "square"},
+    "organization": {"label": "組織", "color": "#4f8cff", "symbol": "hexagon"},
+    "group": {"label": "群體", "color": "#35df83", "symbol": "hexagon"},
     "event": {"label": "事件", "color": "#ff6b7f", "symbol": "triangle"},
-    "product": {"label": "产品", "color": "#ff8f3d", "symbol": "square"},
-    "project": {"label": "项目", "color": "#ff8f3d", "symbol": "square"},
-    "system": {"label": "系统", "color": "#2dc8ff", "symbol": "hexagon"},
-    "service": {"label": "服务", "color": "#2dc8ff", "symbol": "hexagon"},
-    "module": {"label": "模块", "color": "#67d5b5", "symbol": "square"},
-    "dataset": {"label": "数据集", "color": "#82aaff", "symbol": "square"},
-    "standard": {"label": "标准", "color": "#c792ea", "symbol": "diamond"},
+    "product": {"label": "產品", "color": "#ff8f3d", "symbol": "square"},
+    "project": {"label": "專案", "color": "#ff8f3d", "symbol": "square"},
+    "system": {"label": "系統", "color": "#2dc8ff", "symbol": "hexagon"},
+    "service": {"label": "服務", "color": "#2dc8ff", "symbol": "hexagon"},
+    "module": {"label": "模組", "color": "#67d5b5", "symbol": "square"},
+    "dataset": {"label": "資料集", "color": "#82aaff", "symbol": "square"},
+    "standard": {"label": "標準", "color": "#c792ea", "symbol": "diamond"},
     "other": {"label": "其他", "color": "#9aa8c7", "symbol": "circle"},
 }
 
@@ -129,7 +129,7 @@ def _parse_inline_list(value: str) -> list[str]:
 def _parse_frontmatter(markdown: str, path: Path) -> tuple[dict[str, Any], str]:
     match = _FRONTMATTER_RE.match(markdown)
     if match is None:
-        raise KnowledgeGraphError(f"实体文件缺少 YAML frontmatter：{path}", exit_code=3)
+        raise KnowledgeGraphError(f"實體檔案缺少 YAML frontmatter：{path}", exit_code=3)
 
     metadata: dict[str, Any] = {}
     active_list: str | None = None
@@ -189,7 +189,7 @@ def _normalize_entity_type(value: str) -> str:
 def load_entities(root: Path) -> dict[str, Entity]:
     entities_dir = root / "entities"
     if not entities_dir.is_dir():
-        raise KnowledgeGraphError(f"缺少实体目录：{entities_dir}", exit_code=2)
+        raise KnowledgeGraphError(f"缺少實體目錄：{entities_dir}", exit_code=2)
 
     paths = sorted(
         path
@@ -197,27 +197,27 @@ def load_entities(root: Path) -> dict[str, Entity]:
         if path.is_file() and not path.name.startswith(".")
     )
     if not paths:
-        raise KnowledgeGraphError(f"实体目录中没有 Markdown 文件：{entities_dir}", exit_code=2)
+        raise KnowledgeGraphError(f"實體目錄中沒有 Markdown 檔案：{entities_dir}", exit_code=2)
 
     entities: dict[str, Entity] = {}
     for path in paths:
         try:
             markdown = path.read_text(encoding="utf-8")
         except (OSError, UnicodeError) as exc:
-            raise KnowledgeGraphError(f"无法读取实体文件 {path}：{exc}", exit_code=3) from exc
+            raise KnowledgeGraphError(f"無法讀取實體檔案 {path}：{exc}", exit_code=3) from exc
         metadata, body = _parse_frontmatter(markdown, path)
         entity_id = _as_string(metadata, "id")
         title = _as_string(metadata, "title")
         if not entity_id:
-            raise KnowledgeGraphError(f"实体缺少非空 id：{path}", exit_code=3)
+            raise KnowledgeGraphError(f"實體缺少非空 id：{path}", exit_code=3)
         if not title:
-            raise KnowledgeGraphError(f"实体缺少非空 title：{path}", exit_code=3)
+            raise KnowledgeGraphError(f"實體缺少非空 title：{path}", exit_code=3)
         if entity_id != path.stem:
             raise KnowledgeGraphError(
-                f"实体 id 与文件名不一致：{path.name} 中 id={entity_id!r}", exit_code=3
+                f"實體 id 與檔名不一致：{path.name} 中 id={entity_id!r}", exit_code=3
             )
         if entity_id in entities:
-            raise KnowledgeGraphError(f"实体 id 重复：{entity_id}", exit_code=3)
+            raise KnowledgeGraphError(f"實體 id 重複：{entity_id}", exit_code=3)
         declared_type = (
             _as_string(metadata, "entity_type")
             or _as_string(metadata, "kind")
@@ -249,14 +249,14 @@ def load_relations(root: Path, entities: Mapping[str, Entity]) -> list[Relation]
     relations_path = root / "relations.jsonl"
     if not relations_path.is_file():
         raise KnowledgeGraphError(
-            f"目录中没有 relations.jsonl：{relations_path}\n"
-            "请传入 Knowledge Graph 的产物目录，而不是 knowledge-graph 编译技能目录。",
+            f"目錄中沒有 relations.jsonl：{relations_path}\n"
+            "請傳入 Knowledge Graph 的產物目錄，而不是 knowledge-graph 編譯技能目錄。",
             exit_code=2,
         )
     try:
         lines = relations_path.read_text(encoding="utf-8").splitlines()
     except (OSError, UnicodeError) as exc:
-        raise KnowledgeGraphError(f"无法读取 {relations_path}：{exc}", exit_code=3) from exc
+        raise KnowledgeGraphError(f"無法讀取 {relations_path}：{exc}", exit_code=3) from exc
 
     relations: list[Relation] = []
     labels_by_predicate: dict[str, str] = {}
@@ -271,7 +271,7 @@ def load_relations(root: Path, entities: Mapping[str, Entity]) -> list[Relation]
             ) from exc
         if not isinstance(data, dict):
             raise KnowledgeGraphError(
-                f"relations.jsonl 第 {line_number} 行必须是 JSON 对象", exit_code=3
+                f"relations.jsonl 第 {line_number} 行必須是 JSON 物件", exit_code=3
             )
         source = _required_relation_string(data, "from", line_number)
         target = _required_relation_string(data, "to", line_number)
@@ -279,29 +279,29 @@ def load_relations(root: Path, entities: Mapping[str, Entity]) -> list[Relation]
         label = data.get("label", predicate)
         if not isinstance(label, str) or not label.strip():
             raise KnowledgeGraphError(
-                f"relations.jsonl 第 {line_number} 行的 label 必须是非空字符串",
+                f"relations.jsonl 第 {line_number} 行的 label 必須是非空字串",
                 exit_code=3,
             )
         label = label.strip()
         if not _RELATION_RE.fullmatch(predicate):
             raise KnowledgeGraphError(
-                f"relations.jsonl 第 {line_number} 行的 relation 必须是 snake_case：{predicate}",
+                f"relations.jsonl 第 {line_number} 行的 relation 必須是 snake_case：{predicate}",
                 exit_code=3,
             )
         if source not in entities:
             raise KnowledgeGraphError(
-                f"relations.jsonl 第 {line_number} 行引用了不存在的起点实体：{source}",
+                f"relations.jsonl 第 {line_number} 行引用了不存在的起點實體：{source}",
                 exit_code=3,
             )
         if target not in entities:
             raise KnowledgeGraphError(
-                f"relations.jsonl 第 {line_number} 行引用了不存在的终点实体：{target}",
+                f"relations.jsonl 第 {line_number} 行引用了不存在的終點實體：{target}",
                 exit_code=3,
             )
         evidence_value = data.get("evidence")
         if not isinstance(evidence_value, list) or not evidence_value:
             raise KnowledgeGraphError(
-                f"relations.jsonl 第 {line_number} 行的 evidence 必须是非空数组",
+                f"relations.jsonl 第 {line_number} 行的 evidence 必須是非空陣列",
                 exit_code=3,
             )
         evidence = tuple(
@@ -315,7 +315,7 @@ def load_relations(root: Path, entities: Mapping[str, Entity]) -> list[Relation]
         previous_label = labels_by_predicate.setdefault(predicate, label)
         if previous_label != label:
             raise KnowledgeGraphError(
-                f"关系 {predicate!r} 使用了不一致的 label：{previous_label!r} / {label!r}",
+                f"關係 {predicate!r} 使用了不一致的 label：{previous_label!r} / {label!r}",
                 exit_code=3,
             )
         relations.append(
@@ -323,7 +323,7 @@ def load_relations(root: Path, entities: Mapping[str, Entity]) -> list[Relation]
         )
 
     if not relations:
-        raise KnowledgeGraphError(f"{relations_path} 中没有关系记录", exit_code=3)
+        raise KnowledgeGraphError(f"{relations_path} 中沒有關係記錄", exit_code=3)
 
     merged: dict[tuple[str, str, str], Relation] = {}
     for relation in relations:
@@ -504,7 +504,7 @@ def _type_filters(graph: Mapping[str, Any]) -> str:
     ordered = sorted(counts, key=lambda key: (-counts[key], _TYPE_STYLE[key]["label"]))
     parts = [
         '<button class="type-filter active" type="button" data-type="all">'
-        f'<span class="type-dot spectrum"></span><span>全部实体</span><b>{len(graph["nodes"])}</b>'
+        f'<span class="type-dot spectrum"></span><span>全部實體</span><b>{len(graph["nodes"])}</b>'
         "</button>"
     ]
     for entity_type in ordered:
@@ -564,12 +564,12 @@ def _atomic_write(path: Path, content: str) -> None:
 def generate(input_path: Path, output_path: Path, title: str | None = None) -> Path:
     root = input_path.expanduser().resolve()
     if not root.is_dir():
-        raise KnowledgeGraphError(f"输入路径不是目录：{root}", exit_code=2)
+        raise KnowledgeGraphError(f"輸入路徑不是目錄：{root}", exit_code=2)
     relations_path = root / "relations.jsonl"
     if not relations_path.is_file():
         raise KnowledgeGraphError(
-            f"目录中没有 relations.jsonl：{relations_path}\n"
-            "请传入 Knowledge Graph 的产物目录，而不是 knowledge-graph 编译技能目录。",
+            f"目錄中沒有 relations.jsonl：{relations_path}\n"
+            "請傳入 Knowledge Graph 的產物目錄，而不是 knowledge-graph 編譯技能目錄。",
             exit_code=2,
         )
     entities = load_entities(root)
@@ -583,17 +583,17 @@ def generate(input_path: Path, output_path: Path, title: str | None = None) -> P
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="校验 OpenViking Knowledge Graph 产物并生成酷炫的交互式 HTML。"
+        description="校驗 OpenViking Knowledge Graph 產物並生成酷炫的互動式 HTML。"
     )
-    parser.add_argument("path", type=Path, help="包含 entities/ 和 relations.jsonl 的本地目录")
+    parser.add_argument("path", type=Path, help="包含 entities/ 和 relations.jsonl 的本地目錄")
     parser.add_argument(
         "-o",
         "--output",
         type=Path,
         default=Path("knowledge-graph.html"),
-        help="输出 HTML 路径（默认：./knowledge-graph.html）",
+        help="輸出 HTML 路徑（預設：./knowledge-graph.html）",
     )
-    parser.add_argument("--title", help="页面标题；默认使用输入目录名")
+    parser.add_argument("--title", help="頁面標題；預設使用輸入目錄名")
     return parser
 
 
@@ -602,13 +602,13 @@ def main(argv: Iterable[str] | None = None) -> int:
     try:
         output = generate(args.path, args.output, args.title)
     except KnowledgeGraphError as exc:
-        print(f"错误：{exc}", file=sys.stderr)
+        print(f"錯誤：{exc}", file=sys.stderr)
         return exc.exit_code
     except KeyboardInterrupt:
         print("已取消。", file=sys.stderr)
         return 130
     except Exception as exc:
-        print(f"错误：生成知识图谱失败：{exc}", file=sys.stderr)
+        print(f"錯誤：生成知識圖譜失敗：{exc}", file=sys.stderr)
         return 1
     print(f"已生成 Knowledge Graph：{output}")
     return 0
@@ -985,15 +985,15 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     </aside>
     <section class="graph-shell">
       <div class="graph-tools">
-        <label class="search-wrap"><input id="search" type="search" placeholder="扫描实体名称、别名或描述" aria-label="搜索实体"></label>
-        <button class="tool-btn" id="reset-zoom" type="button">重置视野</button>
-        <button class="tool-btn" id="focus-toggle" type="button">聚焦邻居</button>
+        <label class="search-wrap"><input id="search" type="search" placeholder="掃描實體名稱、別名或描述" aria-label="搜尋實體"></label>
+        <button class="tool-btn" id="reset-zoom" type="button">重置視野</button>
+        <button class="tool-btn" id="focus-toggle" type="button">聚焦鄰居</button>
       </div>
-      <svg id="graph" role="img" aria-label="Knowledge Graph 可视化"></svg>
-      <div class="graph-status"><span class="live-dot"></span><span id="graph-status">GRAPH ONLINE · 全图信号</span></div>
-      <div id="d3-error">无法加载 D3 图形库，请检查网络连接后重新打开 HTML。</div>
+      <svg id="graph" role="img" aria-label="Knowledge Graph 視覺化"></svg>
+      <div class="graph-status"><span class="live-dot"></span><span id="graph-status">GRAPH ONLINE · 全圖訊號</span></div>
+      <div id="d3-error">無法載入 D3 圖形庫，請檢查網路連線後重新開啟 HTML。</div>
     </section>
-    <aside class="inspector" id="inspector"><div class="panel-empty">选择图谱中的实体<br>查看属性、关系与证据链</div></aside>
+    <aside class="inspector" id="inspector"><div class="panel-empty">選擇圖譜中的實體<br>檢視屬性、關係與證據鏈</div></aside>
   </main>
 </div>
 <script>
@@ -1172,9 +1172,9 @@ if (!window.d3) {
       (endpointId(link.source) === selectedId || endpointId(link.target) === selectedId))
       .classed("ghost", link =>
         !visible.has(endpointId(link.source)) || !visible.has(endpointId(link.target)));
-    const status = neighborhood ? "聚焦 1 跳邻居" : activeType !== "all" ? "类型过滤中" : query ? "搜索扫描中" : "全图信号";
+    const status = neighborhood ? "聚焦 1 跳鄰居" : activeType !== "all" ? "型別過濾中" : query ? "搜尋掃描中" : "全圖訊號";
     document.getElementById("graph-status").textContent = "GRAPH ONLINE · " + status + " · " + visible.size + " ENTITIES";
-    document.getElementById("focus-toggle").textContent = focusMode ? "显示全图" : "聚焦邻居";
+    document.getElementById("focus-toggle").textContent = focusMode ? "顯示全圖" : "聚焦鄰居";
   }
 
   function relationCard(link, outgoing) {
@@ -1184,7 +1184,7 @@ if (!window.d3) {
     return '<div class="relation-card"><div class="relation-main"><span class="direction">' +
       (outgoing ? "→" : "←") + '</span><div class="relation-copy"><span>' + escapeHTML(link.label) +
       '</span><code>' + escapeHTML(link.relation) + '</code></div><button class="relation-target" type="button" data-node="' +
-      escapeHTML(otherId) + '">' + escapeHTML(other?.title || otherId) + '</button></div><details><summary>证据链 · ' +
+      escapeHTML(otherId) + '">' + escapeHTML(other?.title || otherId) + '</button></div><details><summary>證據鏈 · ' +
       (link.evidence || []).length + '</summary><ul class="evidence-list">' + evidence + "</ul></details></div>";
   }
 
@@ -1196,7 +1196,7 @@ if (!window.d3) {
     applyViewState();
     const related = DATA.links.filter(link => endpointId(link.source) === id || endpointId(link.target) === id);
     const relationHTML = related.length ? related.map(link => relationCard(link, endpointId(link.source) === id)).join("")
-      : '<div class="panel-empty" style="margin-top:20px">暂无结构化关系</div>';
+      : '<div class="panel-empty" style="margin-top:20px">暫無結構化關係</div>';
     const aliases = (item.aliases || []).map(alias => '<span class="alias">' + escapeHTML(alias) + "</span>").join("");
     const sources = (item.sources || []).map(source => "<li>" + escapeHTML(source) + "</li>").join("");
     document.getElementById("inspector").innerHTML =

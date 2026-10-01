@@ -220,16 +220,16 @@ class PDFParser(BaseParser):
     async def _convert_local(
         self, pdf_path: Path, storage=None, resource_name: Optional[str] = None
     ) -> tuple[str, Dict[str, Any]]:
-        # pdfplumber / pdfminer 的解析与图片/表格提取通常是 CPU/IO 密集且为同步实现，
-        # 放到线程池中执行，避免阻塞事件循环。
+        # pdfplumber / pdfminer 的解析與圖片/表格提取通常是 CPU/IO 密集且為同步實現，
+        # 放到執行緒池中執行，避免阻塞事件迴圈。
         return await asyncio.to_thread(self._convert_local_sync, pdf_path, storage, resource_name)
 
     def _convert_local_sync(
         self, pdf_path: Path, storage=None, resource_name: Optional[str] = None
     ) -> tuple[str, Dict[str, Any]]:
-        """同步版：用 pdfplumber 将 PDF 转 Markdown。
+        """同步版：用 pdfplumber 將 PDF 轉 Markdown。
 
-        该方法会在 :meth:`_convert_local` 中通过 asyncio.to_thread 调用。
+        該方法會在 :meth:`_convert_local` 中通過 asyncio.to_thread 呼叫。
         """
         pdfplumber = lazy_import("pdfplumber")
 

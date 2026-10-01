@@ -99,8 +99,8 @@ class TestLinkSatisfaction:
 
     def test_existing_link_to_target_is_already_satisfied(self):
         assert LinkRenderer.can_render_link(
-            "参见 [L2 行为标签库](./tags.md)。",
-            "行为标签库",
+            "參見 [L2 行為標籤庫](./tags.md)。",
+            "行為標籤庫",
             self.source_uri,
             self.target_uri,
         )
@@ -155,8 +155,8 @@ class TestLinkSatisfaction:
 
     def test_existing_link_to_other_target_is_not_satisfied(self):
         assert not LinkRenderer.can_render_link(
-            "参见 [行为标签库](./other.md)。",
-            "行为标签库",
+            "參見 [行為標籤庫](./other.md)。",
+            "行為標籤庫",
             self.source_uri,
             self.target_uri,
         )
@@ -177,8 +177,8 @@ class TestLinkSatisfaction:
 
     def test_link_syntax_in_code_is_not_satisfied(self):
         assert not LinkRenderer.can_render_link(
-            "`[行为标签库](./tags.md)`",
-            "行为标签库",
+            "`[行為標籤庫](./tags.md)`",
+            "行為標籤庫",
             self.source_uri,
             self.target_uri,
         )
@@ -277,7 +277,7 @@ class TestRenderLinks:
         assert result == "([car](entities/vehicles/car.md)), car."
 
     def test_ascii_boundary_matches_next_to_cjk_text(self):
-        content = "她喜欢car，也喜欢旅行。"
+        content = "她喜歡car，也喜歡旅行。"
         links = [
             {
                 "from_uri": "viking://user/Caroline/memories/profile.md",
@@ -291,7 +291,7 @@ class TestRenderLinks:
             "viking://user/Caroline/memories/profile.md",
             links,
         )
-        assert result == "她喜欢[car](entities/vehicles/car.md)，也喜欢旅行。"
+        assert result == "她喜歡[car](entities/vehicles/car.md)，也喜歡旅行。"
 
     def test_no_match_text_skipped(self):
         content = "Some content here."
@@ -397,13 +397,13 @@ class TestRenderLinks:
         assert result == content
 
     def test_chinese_match_without_word_boundaries(self):
-        content = "她喜欢角色扮演游戏，也喜欢开放世界游戏。"
+        content = "她喜歡角色扮演遊戲，也喜歡開放世界遊戲。"
         links = [
             {
                 "from_uri": "viking://user/Caroline/memories/profile.md",
                 "to_uri": "viking://user/Caroline/memories/entities/games/rpg.md",
                 "weight": 1.0,
-                "match_text": "角色扮演游戏",
+                "match_text": "角色扮演遊戲",
             }
         ]
         result = LinkRenderer.render_links(
@@ -411,7 +411,7 @@ class TestRenderLinks:
             "viking://user/Caroline/memories/profile.md",
             links,
         )
-        assert result == "她喜欢[角色扮演游戏](entities/games/rpg.md)，也喜欢开放世界游戏。"
+        assert result == "她喜歡[角色扮演遊戲](entities/games/rpg.md)，也喜歡開放世界遊戲。"
 
     def test_skip_match_inside_existing_link(self):
         content = "Worked with [Frank Ocean](../../../../entities/personal/frank.md)."
@@ -604,9 +604,9 @@ class TestStripLinks:
         assert result == content
 
     def test_strip_all_links_removes_viking_uri_targets_for_embedding(self):
-        content = "用户上传了一张[越前龙马](viking://resources/images/yueqian_jpeg)的照片。"
+        content = "使用者上傳了一張[越前龍馬](viking://resources/images/yueqian_jpeg)的照片。"
         result = LinkRenderer.strip_all_links(content)
-        assert result == "用户上传了一张越前龙马的照片。"
+        assert result == "使用者上傳了一張越前龍馬的照片。"
 
 
 class TestRoundTrip:
@@ -709,13 +709,13 @@ class TestRoundTrip:
     def test_memory_file_utils_write_renders_links_and_preserves_links_metadata(self):
         memory_file = MemoryFile(
             uri="viking://user/Caroline/memories/profile.md",
-            content="她喜欢角色扮演游戏，也喜欢开放世界游戏。",
+            content="她喜歡角色扮演遊戲，也喜歡開放世界遊戲。",
             links=[
                 {
                     "from_uri": "viking://user/Caroline/memories/profile.md",
                     "to_uri": "viking://user/Caroline/memories/entities/games/rpg.md",
                     "weight": 1.0,
-                    "match_text": "角色扮演游戏",
+                    "match_text": "角色扮演遊戲",
                 }
             ],
             extra_fields={"memory_type": "profile"},
@@ -723,8 +723,8 @@ class TestRoundTrip:
 
         written = MemoryFileUtils.write(memory_file)
 
-        assert "她喜欢[角色扮演游戏](entities/games/rpg.md)，也喜欢开放世界游戏。" in written
-        assert '"match_text": "角色扮演游戏"' in written
+        assert "她喜歡[角色扮演遊戲](entities/games/rpg.md)，也喜歡開放世界遊戲。" in written
+        assert '"match_text": "角色扮演遊戲"' in written
 
     def test_repeated_memory_file_utils_write_does_not_nest_links(self):
         memory_file = MemoryFile(
@@ -733,7 +733,7 @@ class TestRoundTrip:
             links=[
                 {
                     "from_uri": "viking://user/Gina/memories/profile.md",
-                    "to_uri": "viking://user/Gina/memories/events/2023/02/08/Gina与Jon的日常交流.md",
+                    "to_uri": "viking://user/Gina/memories/events/2023/02/08/Gina與Jon的日常交流.md",
                     "weight": 1.0,
                     "match_text": "Gina",
                 }
@@ -745,7 +745,7 @@ class TestRoundTrip:
         reparsed = MemoryFileUtils.read(first_write, uri=memory_file.uri)
         second_write = MemoryFileUtils.write(reparsed)
 
-        rendered_link = "[Gina](events/2023/02/08/Gina与Jon的日常交流.md)"
+        rendered_link = "[Gina](events/2023/02/08/Gina與Jon的日常交流.md)"
         assert first_write.count(rendered_link) == 1
         assert second_write.count(rendered_link) == 1
         assert '"memory_type": "profile"' in second_write

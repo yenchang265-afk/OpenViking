@@ -671,22 +671,22 @@ def exponential_backoff_retry(
     logger=None,
 ) -> T:
     """
-    指数退避重试函数
+    指數退避重試函式
 
     Args:
-        func: 要执行的函数
-        max_wait: 最大总等待时间（秒）
-        base_delay: 基础延迟时间（秒）
-        max_delay: 单次最大延迟时间（秒）
-        jitter: 是否添加随机抖动
-        is_retryable: 判断异常是否可重试的函数
-        logger: 日志记录器
+        func: 要執行的函式
+        max_wait: 最大總等待時間（秒）
+        base_delay: 基礎延遲時間（秒）
+        max_delay: 單次最大延遲時間（秒）
+        jitter: 是否新增隨機抖動
+        is_retryable: 判斷異常是否可重試的函式
+        logger: 日誌記錄器
 
     Returns:
-        函数执行结果
+        函式執行結果
 
     Raises:
-        最后一次尝试的异常
+        最後一次嘗試的異常
     """
     start_time = time.time()
     attempt = 0

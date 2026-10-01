@@ -155,19 +155,19 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `query` | string | 是 | 召回查询文本 |
-| `limit` | number | 否 | 最终返回条数，默认使用插件配置 |
-| `scoreThreshold` | number | 否 | 最低分数，范围 0-1 |
-| `targetUri` | string | 否 | 指定单一搜索范围，例如 `viking://user/memories` |
-| `resourceTypes` | string[] | 否 | 未指定 `targetUri` 时使用，当前支持 `resource`、`user`、`agent`；session 历史走 `ov_archive_search` / `ov_archive_expand` |
+| `query` | string | 是 | 召回查詢文本 |
+| `limit` | number | 否 | 最終返回條數，預設使用外掛配置 |
+| `scoreThreshold` | number | 否 | 最低分數，範圍 0-1 |
+| `targetUri` | string | 否 | 指定單一搜索範圍，例如 `viking://user/memories` |
+| `resourceTypes` | string[] | 否 | 未指定 `targetUri` 時使用，當前支援 `resource`、`user`、`agent`；session 歷史走 `ov_archive_search` / `ov_archive_expand` |
 
 ### `memory_store`
 
-把文本写入 OpenViking session，并立即触发记忆抽取。
+把文本寫入 OpenViking session，並立即觸發記憶抽取。
 
 ```json
 {
@@ -178,26 +178,26 @@ Recall semantic memories and resources. Current semantic recall target types are
     "name": "memory_store",
     "sessionKey": "main",
     "args": {
-      "text": "用户偏好使用 TypeScript 编写 OpenClaw 插件。",
+      "text": "使用者偏好使用 TypeScript 編寫 OpenClaw 外掛。",
       "role": "user"
     }
   }
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `text` | string | 是 | 作为记忆来源的文本 |
-| `role` | string | 否 | session 消息角色，默认 `user` |
-| `sessionId` | string | 否 | 指定已有 OpenViking session；不传则使用临时 session |
+| `text` | string | 是 | 作為記憶來源的文本 |
+| `role` | string | 否 | session 訊息角色，預設 `user` |
+| `sessionId` | string | 否 | 指定已有 OpenViking session；不傳則使用臨時 session |
 
 ### `memory_forget`
 
-删除记忆。可以传精确 URI，也可以先按 query 搜索候选。
+刪除記憶。可以傳精確 URI，也可以先按 query 搜尋候選。
 
-按 URI 删除：
+按 URI 刪除：
 
 ```json
 {
@@ -214,7 +214,7 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-按 query 查找候选：
+按 query 查詢候選：
 
 ```json
 {
@@ -225,7 +225,7 @@ Recall semantic memories and resources. Current semantic recall target types are
     "name": "memory_forget",
     "sessionKey": "main",
     "args": {
-      "query": "偏好 Python 后端",
+      "query": "偏好 Python 後端",
       "targetUri": "viking://user/memories",
       "limit": 5,
       "scoreThreshold": 0.85
@@ -234,19 +234,19 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `uri` | string | 否 | 精确记忆 URI，仅允许当前 user/peer 记忆 URI |
-| `query` | string | 否 | 未提供 `uri` 时用于搜索候选 |
-| `targetUri` | string | 否 | 搜索范围，默认使用插件配置 |
-| `limit` | number | 否 | 候选展示数量，默认 5 |
-| `scoreThreshold` | number | 否 | 候选最低分数 |
+| `uri` | string | 否 | 精確記憶 URI，僅允許當前 user/peer 記憶 URI |
+| `query` | string | 否 | 未提供 `uri` 時用於搜尋候選 |
+| `targetUri` | string | 否 | 搜尋範圍，預設使用外掛配置 |
+| `limit` | number | 否 | 候選展示數量，預設 5 |
+| `scoreThreshold` | number | 否 | 候選最低分數 |
 
 ### `add_skill`
 
-导入 Agent Skill 到当前用户/peer 的 OpenViking skill namespace。
+匯入 Agent Skill 到當前使用者/peer 的 OpenViking skill namespace。
 
 ```json
 {
@@ -265,7 +265,7 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-也可以传原始 skill 内容或 MCP tool dict：
+也可以傳原始 skill 內容或 MCP tool dict：
 
 ```json
 {
@@ -283,20 +283,20 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `source` | string | 二选一 | 本地 `SKILL.md` 文件或 skill 目录 |
-| `data` | any | 二选一 | 原始 `SKILL.md` 内容或 MCP tool dict |
-| `wait` | boolean | 否 | 是否等待服务端处理完成 |
-| `timeout` | number | 否 | `wait=true` 时的超时时间，单位秒 |
+| `source` | string | 二選一 | 本地 `SKILL.md` 檔案或 skill 目錄 |
+| `data` | any | 二選一 | 原始 `SKILL.md` 內容或 MCP tool dict |
+| `wait` | boolean | 否 | 是否等待服務端處理完成 |
+| `timeout` | number | 否 | `wait=true` 時的超時時間，單位秒 |
 
 ### `add_resource`
 
-导入文档、目录、URL 或 Git 仓库到 OpenViking resources。
+匯入文件、目錄、URL 或 Git 倉庫到 OpenViking resources。
 
-注意：该工具默认不暴露给 Agent，必须在插件配置中设置 `enableAddResourceTool=true`，并且工具策略允许它，才能通过 `tools.invoke` 调用。未启用时可使用 slash command `/add-resource`。
+注意：該工具預設不暴露給 Agent，必須在外掛配置中設定 `enableAddResourceTool=true`，並且工具策略允許它，才能通過 `tools.invoke` 呼叫。未啟用時可使用 slash command `/add-resource`。
 
 ```json
 {
@@ -309,8 +309,8 @@ Recall semantic memories and resources. Current semantic recall target types are
     "args": {
       "source": "/absolute/path/to/docs",
       "parent": "viking://resources/project-docs",
-      "reason": "导入项目文档",
-      "instruction": "保留 API 示例和配置说明",
+      "reason": "匯入專案文件",
+      "instruction": "保留 API 示例和配置說明",
       "wait": true,
       "timeout": 300
     }
@@ -318,21 +318,21 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `source` | string | 是 | 本地文件、目录、OpenClaw media path、公开 URL 或 Git URL |
-| `to` | string | 否 | 精确目标 URI，不能和 `parent` 同时使用 |
-| `parent` | string | 否 | 父级 URI，不能和 `to` 同时使用 |
-| `reason` | string | 否 | 导入原因或说明 |
-| `instruction` | string | 否 | 服务端处理指令 |
-| `wait` | boolean | 否 | 是否等待服务端处理完成 |
-| `timeout` | number | 否 | `wait=true` 时的超时时间，单位秒 |
+| `source` | string | 是 | 本地檔案、目錄、OpenClaw media path、公開 URL 或 Git URL |
+| `to` | string | 否 | 精確目標 URI，不能和 `parent` 同時使用 |
+| `parent` | string | 否 | 父級 URI，不能和 `to` 同時使用 |
+| `reason` | string | 否 | 匯入原因或說明 |
+| `instruction` | string | 否 | 服務端處理指令 |
+| `wait` | boolean | 否 | 是否等待服務端處理完成 |
+| `timeout` | number | 否 | `wait=true` 時的超時時間，單位秒 |
 
 ### `ov_archive_search`
 
-在当前 session 已归档的原始消息中做关键词 grep。
+在當前 session 已歸檔的原始訊息中做關鍵詞 grep。
 
 ```json
 {
@@ -350,16 +350,16 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `query` | string | 是 | 单个关键词或短语 |
-| `archiveId` | string | 否 | 限定某个 archive，例如 `archive_003` |
+| `query` | string | 是 | 單個關鍵詞或短語 |
+| `archiveId` | string | 否 | 限定某個 archive，例如 `archive_003` |
 
 ### `ov_archive_expand`
 
-展开某个归档，读取原始消息。
+展開某個歸檔，讀取原始訊息。
 
 ```json
 {
@@ -376,9 +376,9 @@ Recall semantic memories and resources. Current semantic recall target types are
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | `archiveId` | string | 是 | archive ID，例如 `archive_003` |
 
@@ -398,12 +398,12 @@ Inspect recall traces when `traceRecall` is enabled.
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `turn` | string | 否 | `latest` 或 `all`，默认 `latest` |
-| `traceId` | string | 否 | 精确 trace id |
+| `turn` | string | 否 | `latest` 或 `all`，預設 `latest` |
+| `traceId` | string | 否 | 精確 trace id |
 | `sessionId` | string | 否 | OpenClaw session id |
 | `sessionKey` | string | 否 | OpenClaw session key |
 | `ovSessionId` | string | 否 | OpenViking session id |
@@ -411,12 +411,12 @@ Inspect recall traces when `traceRecall` is enabled.
 | `resourceTypes` | string[] | 否 | `resource`、`user`、`agent` |
 | `since` | number | 否 | Unix timestamp 毫秒下界 |
 | `until` | number | 否 | Unix timestamp 毫秒上界 |
-| `includeContent` | boolean | 否 | 是否按需读取 URI 内容预览 |
-| `limit` | number | 否 | 最多返回 trace 数量，默认 20 |
+| `includeContent` | boolean | 否 | 是否按需讀取 URI 內容預覽 |
+| `limit` | number | 否 | 最多返回 trace 數量，預設 20 |
 
 ### `openviking_tool_result_list`
 
-列出当前 session 中被 OpenViking 外置的大工具结果。
+列出當前 session 中被 OpenViking 外接的大工具結果。
 
 ```json
 {
@@ -434,16 +434,16 @@ Inspect recall traces when `traceRecall` is enabled.
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `tool_name` | string | 否 | 按工具名过滤，也兼容 `toolName` |
-| `limit` | number | 否 | 最多返回数量，默认 50 |
+| `tool_name` | string | 否 | 按工具名過濾，也相容 `toolName` |
+| `limit` | number | 否 | 最多返回數量，預設 50 |
 
 ### `openviking_tool_result_search`
 
-在外置的大工具结果中搜索关键词。
+在外接的大工具結果中搜索關鍵詞。
 
 ```json
 {
@@ -463,18 +463,18 @@ Inspect recall traces when `traceRecall` is enabled.
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | `tool_output_ref` | string | 是 | `viking://session/.../tool-results/...` URI，也兼容 `ref` 或 `uri` |
-| `query` | string | 是 | 搜索关键词或精确文本 |
-| `limit` | number | 否 | 最多匹配数，默认 20 |
-| `context_chars` | number | 否 | 每个命中周围保留字符数，默认 300，也兼容 `contextChars` |
+| `query` | string | 是 | 搜尋關鍵詞或精確文本 |
+| `limit` | number | 否 | 最多匹配數，預設 20 |
+| `context_chars` | number | 否 | 每個命中周圍保留字元數，預設 300，也相容 `contextChars` |
 
 ### `openviking_tool_result_read`
 
-读取外置的大工具结果全文或片段。
+讀取外接的大工具結果全文或片段。
 
 ```json
 {
@@ -493,13 +493,13 @@ Inspect recall traces when `traceRecall` is enabled.
 }
 ```
 
-参数：
+引數：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | `tool_output_ref` | string | 是 | `viking://session/.../tool-results/...` URI，也兼容 `ref` 或 `uri` |
-| `offset` | number | 否 | 起始字符偏移，默认 0 |
-| `limit` | number | 否 | 最多返回字符数 |
+| `offset` | number | 否 | 起始字元偏移，預設 0 |
+| `limit` | number | 否 | 最多返回字元數 |
 
 ## Response Shape
 
@@ -555,32 +555,32 @@ If the Gateway accepted the RPC request but the tool failed, the outer `ok` can 
 - Do not use deprecated agent URI paths for memory routing. Current routing is based on OpenViking context type and actor peer identity.
 - For recall trace HTTP routes, see `openviking-recall-trace-api.md`.
 
-## 本机验证记录（2026-06-05）
+## 本機驗證記錄（2026-06-05）
 
-本节保留 #2613 中的 WebSocket RPC 实测记录和可复制命令，但按当前主线语义调整：
+本節保留 #2613 中的 WebSocket RPC 實測記錄和可複製命令，但按當前主線語義調整：
 
-- 不使用旧 `agent_prefix` / `X-OpenViking-Agent` / `viking://agent/...` 路径。
-- OpenViking 插件仍通过 OpenClaw Gateway 暴露工具，插件自身不启动 WebSocket server。
-- 语义召回目标使用 `user`、`agent`、`resource`；session 历史不作为 vector recall target，应走 `ov_archive_search` / `ov_archive_expand`。
-- 当前主线通过 OpenViking `context_type` 与 `X-OpenViking-Actor-Peer` 做检索和 actor peer 路由。
+- 不使用舊 `agent_prefix` / `X-OpenViking-Agent` / `viking://agent/...` 路徑。
+- OpenViking 外掛仍通過 OpenClaw Gateway 暴露工具，外掛自身不啟動 WebSocket server。
+- 語義召回目標使用 `user`、`agent`、`resource`；session 歷史不作為 vector recall target，應走 `ov_archive_search` / `ov_archive_expand`。
+- 當前主線通過 OpenViking `context_type` 與 `X-OpenViking-Actor-Peer` 做檢索和 actor peer 路由。
 
-验证环境：
+驗證環境：
 
 - OpenClaw：`2026.5.28`
-- Gateway 节点：`SuperOpsByteDance.local`，macOS gateway mode
+- Gateway 節點：`SuperOpsByteDance.local`，macOS gateway mode
 - CLI：`openclaw gateway call <method> --params '<json>' --json`
 
-### Gateway RPC 基础接口
+### Gateway RPC 基礎介面
 
-| ID | 方法 | 参数 | 预期 | 实测结果 | 结论 |
+| ID | 方法 | 引數 | 預期 | 實測結果 | 結論 |
 |---|---|---|---|---|---|
-| WS-RPC-01 | `health` | `{}` | Gateway 健康检查成功 | `ok=true`、`runtimeVersion=2026.5.28`、`eventLoop.degraded=false` | 通过 |
-| WS-RPC-02 | `status` | `{}` | 返回运行时和 session 状态 | `defaultAgentId=main`、`mainHeartbeatEnabled=true`、`eventLoopDegraded=false` | 通过 |
-| WS-RPC-03 | `system-presence` | `{}` | 返回当前 Gateway/CLI presence | 返回 macOS gateway 节点与 CLI probe 节点 | 通过 |
-| WS-RPC-04 | `tools.catalog` | `{"agentId":"main"}` | agent 工具目录包含 OpenViking 工具 | `group_count=14`、OpenViking 工具可见 | 通过 |
-| WS-RPC-05 | `tools.effective` | `{"sessionKey":"<真实 sessionKey>"}` | 当前 session 可用工具包含 OpenViking 工具 | `agentId=main`、`profile=full`、OpenViking 工具可见 | 通过 |
+| WS-RPC-01 | `health` | `{}` | Gateway 健康檢查成功 | `ok=true`、`runtimeVersion=2026.5.28`、`eventLoop.degraded=false` | 通過 |
+| WS-RPC-02 | `status` | `{}` | 返回執行時和 session 狀態 | `defaultAgentId=main`、`mainHeartbeatEnabled=true`、`eventLoopDegraded=false` | 通過 |
+| WS-RPC-03 | `system-presence` | `{}` | 返回當前 Gateway/CLI presence | 返回 macOS gateway 節點與 CLI probe 節點 | 通過 |
+| WS-RPC-04 | `tools.catalog` | `{"agentId":"main"}` | agent 工具目錄包含 OpenViking 工具 | `group_count=14`、OpenViking 工具可見 | 通過 |
+| WS-RPC-05 | `tools.effective` | `{"sessionKey":"<真實 sessionKey>"}` | 當前 session 可用工具包含 OpenViking 工具 | `agentId=main`、`profile=full`、OpenViking 工具可見 | 通過 |
 
-常见 OpenViking 工具包括：
+常見 OpenViking 工具包括：
 
 ```text
 add_skill, memory_forget, memory_recall, memory_store,
@@ -588,11 +588,11 @@ openviking_tool_result_list, openviking_tool_result_read, openviking_tool_result
 ov_archive_expand, ov_archive_search, ov_list, ov_multi_read, ov_read, ov_recall_trace, ov_search
 ```
 
-注意：`add_resource` 默认不是 agent-visible tool；只有配置 `enableAddResourceTool=true` 并且工具策略允许时才会出现在 agent 工具集中。手动导入仍可走 slash command `/add-resource`。
+注意：`add_resource` 預設不是 agent-visible tool；只有配置 `enableAddResourceTool=true` 並且工具策略允許時才會出現在 agent 工具集中。手動匯入仍可走 slash command `/add-resource`。
 
-### 获取真实 sessionKey
+### 獲取真實 sessionKey
 
-线上排障时不要人为构造 `sessionKey` 来代表真实会话。优先使用 OpenClaw 当前状态或调用方上下文里的真实 session key。
+線上排障時不要人為構造 `sessionKey` 來代表真實會話。優先使用 OpenClaw 當前狀態或呼叫方上下文裡的真實 session key。
 
 ```bash
 SK="$(openclaw status --json | jq -r '
@@ -604,7 +604,7 @@ SK="$(openclaw status --json | jq -r '
 ')"
 
 if [ -z "$SK" ]; then
-  echo "未从 openclaw status --json 取到 sessionKey" >&2
+  echo "未從 openclaw status --json 取到 sessionKey" >&2
   openclaw status --json | jq .
   exit 1
 fi
@@ -612,7 +612,7 @@ fi
 echo "$SK"
 ```
 
-### OpenViking 工具调用
+### OpenViking 工具呼叫
 
 #### `ov_search`
 
@@ -634,11 +634,11 @@ openclaw gateway call tools.invoke \
   --json | jq .
 ```
 
-预期：
+預期：
 
 - `payload.ok=true`
 - `toolName=ov_search`
-- 返回 `viking://resources/...`、`viking://user/skills/...` 或 memory 相关结果，取决于当前 query config / target URI
+- 返回 `viking://resources/...`、`viking://user/skills/...` 或 memory 相關結果，取決於當前 query config / target URI
 
 #### `ov_read`
 
@@ -662,7 +662,7 @@ openclaw gateway call tools.invoke \
   --json | jq .
 ```
 
-`ov_read` 只接受完整 `viking://` URI。不要传带 `...` 或 `…` 的展示截断 URI，也不要把 `viking://` URI 当成本地文件路径交给文件读取工具。
+`ov_read` 只接受完整 `viking://` URI。不要傳帶 `...` 或 `…` 的展示截斷 URI，也不要把 `viking://` URI 當成本地檔案路徑交給檔案讀取工具。
 
 #### `memory_recall`
 
@@ -685,15 +685,15 @@ openclaw gateway call tools.invoke \
   --json | jq .
 ```
 
-当前主线支持的 semantic recall target types：
+當前主線支援的 semantic recall target types：
 
-| target | 说明 |
+| target | 說明 |
 |---|---|
-| `user` | 用户/peer 相关长期记忆 |
-| `agent` | 兼容默认 memory context search 语义；当前实现不会恢复旧 `viking://agent/...` 路径 |
-| `resource` | 资源知识库内容 |
+| `user` | 使用者/peer 相關長期記憶 |
+| `agent` | 相容預設 memory context search 語義；當前實現不會恢復舊 `viking://agent/...` 路徑 |
+| `resource` | 資源知識庫內容 |
 
-`session` 不作为 semantic recall target。要查 session 历史，请使用：
+`session` 不作為 semantic recall target。要查 session 歷史，請使用：
 
 - `ov_archive_search`
 - `ov_archive_expand`
@@ -736,73 +736,73 @@ openclaw gateway call tools.invoke \
   --json | jq .
 ```
 
-### Trace RPC 专项验证
+### Trace RPC 專項驗證
 
-以下命令均通过 `tools.invoke` 调用 OpenViking 工具 `ov_recall_trace`。
+以下命令均通過 `tools.invoke` 呼叫 OpenViking 工具 `ov_recall_trace`。
 
-外层 `params.sessionKey` 是 Gateway 的执行上下文，也是默认 trace 查询身份。`args.sessionKey` 只用于“按 trace 记录里的 sessionKey 精确过滤”的场景；日常排查当前 session 时，优先只传外层 `sessionKey`。
+外層 `params.sessionKey` 是 Gateway 的執行上下文，也是預設 trace 查詢身份。`args.sessionKey` 只用於“按 trace 記錄裡的 sessionKey 精確過濾”的場景；日常排查當前 session 時，優先只傳外層 `sessionKey`。
 
 ```bash
-# 1. 查询最新 trace
+# 1. 查詢最新 trace
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{turn:"latest",limit:5}}')" \
   --json | jq .
 
-# 2. 按 source 查询 ov_search trace
+# 2. 按 source 查詢 ov_search trace
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{turn:"all",source:"ov_search",limit:10}}')" \
   --json | jq .
 
-# 3. 按 traceId 精确查询
+# 3. 按 traceId 精確查詢
 TRACE_ID="ov_search-1780635606119-h2fl11l5"
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" --arg trace "$TRACE_ID" '{name:"ov_recall_trace",sessionKey:$sk,args:{traceId:$trace,limit:1}}')" \
   --json | jq .
 
-# 4. 按 traceId 查询并展开 selected 内容预览
+# 4. 按 traceId 查詢並展開 selected 內容預覽
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" --arg trace "$TRACE_ID" '{name:"ov_recall_trace",sessionKey:$sk,args:{traceId:$trace,includeContent:true,limit:1}}')" \
   --json | jq .
 
-# 5. 按当前 sessionKey 过滤 trace
+# 5. 按當前 sessionKey 過濾 trace
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{turn:"all",sessionKey:$sk,limit:20}}')" \
   --json | jq .
 
-# 6. 查询不存在的 traceId，验证空结果边界
+# 6. 查詢不存在的 traceId，驗證空結果邊界
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{traceId:"not-exist-trace-20260605",limit:1}}')" \
   --json | jq .
 
-# 7. 查询不匹配的 sessionKey，验证空结果边界
+# 7. 查詢不匹配的 sessionKey，驗證空結果邊界
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{turn:"all",sessionKey:"agent:main:no-trace-session-20260605",limit:5}}')" \
   --json | jq .
 
-# 8. 查询不匹配的 source，验证空结果边界
+# 8. 查詢不匹配的 source，驗證空結果邊界
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{turn:"all",source:"not_a_source",limit:5}}')" \
   --json | jq .
 
-# 9. limit=0 边界验证
+# 9. limit=0 邊界驗證
 openclaw gateway call tools.invoke \
   --params "$(jq -cn --arg sk "$SK" '{name:"ov_recall_trace",sessionKey:$sk,args:{turn:"all",limit:0}}')" \
   --json | jq .
 ```
 
-| ID | 场景 | 参数摘要 | 预期 / 实测关注点 | 结论 |
+| ID | 場景 | 引數摘要 | 預期 / 實測關注點 | 結論 |
 |---|---|---|---|---|
-| WS-RPC-10 | 最新 trace | `turn=latest`、`limit=5` | 返回最近 trace；无 trace 时 `count=0` 不算失败 | 通过 |
-| WS-RPC-11 | source 过滤 | `turn=all`、`source=ov_search` | 只返回 `ov_search` trace | 通过 |
-| WS-RPC-12 | traceId 精确查询 | `traceId=<id>`、`limit=1` | 返回指定 trace 或空结果 | 通过 |
-| WS-RPC-13 | includeContent | `includeContent=true` | selected 项可包含内容预览 | 通过 |
-| WS-RPC-14 | sessionKey 过滤 | `args.sessionKey=$SK` | 返回该 session 的 trace | 通过 |
-| WS-RPC-15 | 不存在 traceId | `traceId=not-exist...` | `ok=true`、`count=0`、`entries=[]` | 通过 |
-| WS-RPC-16 | 不匹配 sessionKey | `sessionKey=no-trace...` | `ok=true`、`count=0`、`entries=[]` | 通过 |
-| WS-RPC-17 | 不匹配 source | `source=not_a_source` | `ok=true`、`count=0`、`entries=[]` | 通过 |
-| WS-RPC-18 | `limit=0` 边界 | `turn=all`、`limit=0` | Gateway 不异常；按工具默认/边界策略返回 | 通过 |
+| WS-RPC-10 | 最新 trace | `turn=latest`、`limit=5` | 返回最近 trace；無 trace 時 `count=0` 不算失敗 | 通過 |
+| WS-RPC-11 | source 過濾 | `turn=all`、`source=ov_search` | 只返回 `ov_search` trace | 通過 |
+| WS-RPC-12 | traceId 精確查詢 | `traceId=<id>`、`limit=1` | 返回指定 trace 或空結果 | 通過 |
+| WS-RPC-13 | includeContent | `includeContent=true` | selected 項可包含內容預覽 | 通過 |
+| WS-RPC-14 | sessionKey 過濾 | `args.sessionKey=$SK` | 返回該 session 的 trace | 通過 |
+| WS-RPC-15 | 不存在 traceId | `traceId=not-exist...` | `ok=true`、`count=0`、`entries=[]` | 通過 |
+| WS-RPC-16 | 不匹配 sessionKey | `sessionKey=no-trace...` | `ok=true`、`count=0`、`entries=[]` | 通過 |
+| WS-RPC-17 | 不匹配 source | `source=not_a_source` | `ok=true`、`count=0`、`entries=[]` | 通過 |
+| WS-RPC-18 | `limit=0` 邊界 | `turn=all`、`limit=0` | Gateway 不異常；按工具預設/邊界策略返回 | 通過 |
 
-`ov_recall_trace` 的 RPC 响应中，关键结构位于 `output.details`：
+`ov_recall_trace` 的 RPC 響應中，關鍵結構位於 `output.details`：
 
 ```json
 {
@@ -814,7 +814,7 @@ openclaw gateway call tools.invoke \
 }
 ```
 
-无匹配数据时不视为调用失败，而是返回：
+無匹配資料時不視為呼叫失敗，而是返回：
 
 ```json
 {
@@ -829,39 +829,39 @@ openclaw gateway call tools.invoke \
 }
 ```
 
-### 边界用例
+### 邊界用例
 
-| ID | 场景 | 参数 / 命令 | 预期 | 结论 |
+| ID | 場景 | 引數 / 命令 | 預期 | 結論 |
 |---|---|---|---|---|
-| WS-RPC-19 | 未知 RPC method | `openclaw gateway call does.not.exist --params '{}' --json` | Gateway 返回 unknown method | 通过 |
-| WS-RPC-20 | 不存在 session key | `tools.effective` + 不存在的 `sessionKey` | Gateway 返回 unknown session key | 通过 |
-| WS-RPC-21 | 不存在工具 | `tools.invoke` + `name=not_a_tool` | `payload.ok=false`、`error.code=not_found` | 通过 |
-| WS-RPC-22 | 缺少 `ov_search.query` | `tools.invoke` + `name=ov_search` + `args={"limit":2}` | 工具参数错误，RPC 不应导致 Gateway 崩溃 | 通过 |
-| WS-RPC-23 | `ov_read` 非法 URI | `tools.invoke` + `name=ov_read` + `args={"uri":"not-viking"}` | 工具返回参数错误 | 通过 |
+| WS-RPC-19 | 未知 RPC method | `openclaw gateway call does.not.exist --params '{}' --json` | Gateway 返回 unknown method | 通過 |
+| WS-RPC-20 | 不存在 session key | `tools.effective` + 不存在的 `sessionKey` | Gateway 返回 unknown session key | 通過 |
+| WS-RPC-21 | 不存在工具 | `tools.invoke` + `name=not_a_tool` | `payload.ok=false`、`error.code=not_found` | 通過 |
+| WS-RPC-22 | 缺少 `ov_search.query` | `tools.invoke` + `name=ov_search` + `args={"limit":2}` | 工具引數錯誤，RPC 不應導致 Gateway 崩潰 | 通過 |
+| WS-RPC-23 | `ov_read` 非法 URI | `tools.invoke` + `name=ov_read` + `args={"uri":"not-viking"}` | 工具返回引數錯誤 | 通過 |
 
-### 常见问题
+### 常見問題
 
 #### `tools.invoke` 返回 `Tool not available`
 
-检查：
+檢查：
 
-1. OpenViking 插件是否安装并启用。
-2. Gateway 是否已重启。
-3. `openclaw.plugin.json` 中工具 contract 是否包含该工具。
-4. 插件配置 `enabledTools` / `disabledTools` 是否过滤了该工具。
-5. Gateway 工具策略是否允许该工具。
-6. `add_resource` 是否已设置 `enableAddResourceTool=true`。
+1. OpenViking 外掛是否安裝並啟用。
+2. Gateway 是否已重啟。
+3. `openclaw.plugin.json` 中工具 contract 是否包含該工具。
+4. 外掛配置 `enabledTools` / `disabledTools` 是否過濾了該工具。
+5. Gateway 工具策略是否允許該工具。
+6. `add_resource` 是否已設定 `enableAddResourceTool=true`。
 
-#### `ov_read` 报 URI 无效
+#### `ov_read` 報 URI 無效
 
-`ov_read` 只接受完整 `viking://` URI。不要传带 `...` 或 `…` 的展示截断 URI。
+`ov_read` 只接受完整 `viking://` URI。不要傳帶 `...` 或 `…` 的展示截斷 URI。
 
-#### `ov_recall_trace` 查询为空
+#### `ov_recall_trace` 查詢為空
 
-优先确认：
+優先確認：
 
-1. 是否开启 `traceRecall`。
-2. 是否使用真实外层 `sessionKey`。
-3. 是否错误叠加了 `args.sessionKey`、`sessionId`、`ovSessionId` 等过滤条件。
-4. `traceRecallPersist` 开启时，持久化目录下是否存在对应 JSONL。
-5. 查询窗口是否被 `since`、`until`、`limit` 或 retention 配置截断。
+1. 是否開啟 `traceRecall`。
+2. 是否使用真實外層 `sessionKey`。
+3. 是否錯誤疊加了 `args.sessionKey`、`sessionId`、`ovSessionId` 等過濾條件。
+4. `traceRecallPersist` 開啟時，持久化目錄下是否存在對應 JSONL。
+5. 查詢視窗是否被 `since`、`until`、`limit` 或 retention 配置截斷。

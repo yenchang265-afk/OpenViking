@@ -179,15 +179,15 @@ class TestOpenVikingVectorDB(unittest.TestCase):
         )
 
     def test_search_skips_candidate_with_corrupted_fields(self):
-        """损坏 fields 的 candidate 应被跳过，查询不抛异常，且剩余结果 id/score/fields 对齐不错位。
+        """損壞 fields 的 candidate 應被跳過，查詢不拋異常，且剩餘結果 id/score/fields 對齊不錯位。
 
-        复现根因：search_by_vector 对每条 candidate 无条件 json.loads，单条坏数据
-        （写入路径 uint16 截断产生的不完整 JSON）会让整个查询崩溃。修复后应跳过坏项、
-        同步过滤 pk/score，保持各列表对齐。
+        復現根因：search_by_vector 對每條 candidate 無條件 json.loads，單條壞資料
+        （寫入路徑 uint16 截斷產生的不完整 JSON）會讓整個查詢崩潰。修復後應跳過壞項、
+        同步過濾 pk/score，保持各列表對齊。
         """
         collection = self._create_collection()
 
-        # 4 条数据，向量第 0 位各不相同 -> 与 query 的距离唯一 -> top-k 与 score 确定
+        # 4 條資料，向量第 0 位各不相同 -> 與 query 的距離唯一 -> top-k 與 score 確定
         docs = []
         for i in range(4):
             vec = [0.0] * 1024
@@ -215,14 +215,14 @@ class TestOpenVikingVectorDB(unittest.TestCase):
         self._create_index(collection)
 
         query = [0.0] * 1024
-        query[0] = 5.0  # l2 距离: doc_3=1, doc_2=2, doc_1=3, doc_0=4（唯一）
+        query[0] = 5.0  # l2 距離: doc_3=1, doc_2=2, doc_1=3, doc_0=4（唯一）
 
-        # 基准：未污染时的 id -> score 映射
+        # 基準：未汙染時的 id -> score 對映
         baseline = collection.search_by_vector("idx_filters", dense_vector=query, limit=10)
         baseline_scores = {item.id: item.score for item in baseline.data}
         self.assertEqual(len(baseline_scores), 4)
 
-        # 在坏数据真实入口 fetch_cands_data 处，把最近的 doc_3 的 fields 改成未闭合 JSON
+        # 在壞資料真實入口 fetch_cands_data 處，把最近的 doc_3 的 fields 改成未閉合 JSON
         inner = collection._Collection__collection
         real_fetch = inner.store_mgr.fetch_cands_data
         corrupted = {}
@@ -240,11 +240,11 @@ class TestOpenVikingVectorDB(unittest.TestCase):
         with patch.object(inner.store_mgr, "fetch_cands_data", side_effect=corrupting_fetch):
             result = collection.search_by_vector("idx_filters", dense_vector=query, limit=10)
 
-        self.assertTrue(corrupted.get("hit"), "测试未能注入损坏数据")
+        self.assertTrue(corrupted.get("hit"), "測試未能注入損壞資料")
         ids = sorted(item.id for item in result.data)
-        self.assertEqual(ids, ["doc_0", "doc_1", "doc_2"], "坏项应被跳过，其余有效项全部返回")
+        self.assertEqual(ids, ["doc_0", "doc_1", "doc_2"], "壞項應被跳過，其餘有效項全部返回")
         for item in result.data:
-            # id 与 fields 内 id 自洽、score 与基准一致 —— 任一错位都会让断言失败
+            # id 與 fields 內 id 自洽、score 與基準一致 —— 任一錯位都會讓斷言失敗
             self.assertEqual(item.id, item.fields.get("id"))
             self.assertEqual(item.score, baseline_scores[item.id])
 

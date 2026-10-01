@@ -138,7 +138,7 @@ int SorterOp::load_json_doc_load_fields(const JsonValue& json_doc,
         fields.push_back(field_val[i].GetString());
       }
       if (fields.size() <= 0) {
-        // 要求至少有一个
+        // 要求至少有一個
         SPDLOG_ERROR(
             "SorterOp::load_json_doc_load_fields parse failed: field array size not valid");
         return -102;

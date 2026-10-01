@@ -553,12 +553,12 @@ class TestCommit:
 
         session.add_message(
             "user",
-            [TextPart("我是 Alice，后续发票问题请优先邮件联系我，邮箱是 alice@example.com。")],
+            [TextPart("我是 Alice，後續發票問題請優先郵件聯絡我，郵箱是 alice@example.com。")],
             peer_id="web-visitor-alice",
         )
         session.add_message(
             "assistant",
-            [TextPart("收到，我会优先通过邮件联系你，并继续跟进发票问题。")],
+            [TextPart("收到，我會優先通過郵件聯絡你，並繼續跟進發票問題。")],
             peer_id="web-visitor-alice",
         )
 

@@ -726,7 +726,7 @@ async def test_vectorize_directory_meta_l1_abstract_truncated(monkeypatch):
     monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
     monkeypatch.setattr(embedding_utils, "get_viking_fs", lambda: DummyFS("ignored"))
 
-    oversized = "长" * 80_000
+    oversized = "長" * 80_000
     await embedding_utils.vectorize_directory_meta(
         uri="viking://user/default/resources/demo",
         abstract="demo abstract",

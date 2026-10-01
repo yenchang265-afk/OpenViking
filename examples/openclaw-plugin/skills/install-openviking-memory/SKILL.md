@@ -9,7 +9,7 @@ description: >
   no CLI knowledge — the agent runs everything and only asks for a few values. Assumes the OpenViking
   server is already running; it does NOT install the server. Trigger on: "install OpenViking",
   "set up memory", "configure memory plugin", "add long-term memory", "semantic memory", "RAG",
-  "帮我装 OpenViking", "配置记忆插件", "安装记忆功能", "接入 OpenViking".
+  "幫我裝 OpenViking", "配置記憶外掛", "安裝記憶功能", "接入 OpenViking".
 version: 2026.6.5
 metadata:
   openclaw:
@@ -81,14 +81,14 @@ openclaw --version
 
 **If `node` is missing:**
 
-> (CN) 你的系统没有安装 Node.js。OpenClaw 和 OpenViking 插件需要 Node.js >= 22。请先安装 Node.js，然后再回来找我。
+> (CN) 你的系統沒有安裝 Node.js。OpenClaw 和 OpenViking 外掛需要 Node.js >= 22。請先安裝 Node.js，然後再回來找我。
 > (EN) Node.js is not installed. OpenClaw and the OpenViking plugin require Node.js >= 22. Please install Node.js first, then come back.
 
 **Stop. Do NOT continue.**
 
 **If `openclaw` is missing:**
 
-> (CN) 你的系统没有安装 OpenClaw。请先安装 OpenClaw（>= 2026.5.27），然后再回来找我。
+> (CN) 你的系統沒有安裝 OpenClaw。請先安裝 OpenClaw（>= 2026.5.27），然後再回來找我。
 > (EN) OpenClaw is not installed. Please install OpenClaw (>= 2026.5.27) first, then come back.
 
 **Stop. Do NOT continue.**
@@ -101,14 +101,14 @@ If both exist, proceed to STEP 3 silently.
 
 Send this message:
 
-> (CN) 好，我来帮你接入 OpenViking 长期记忆。装好之后，我会自动记住对话里的重要信息，下次聊也能回忆起来。
+> (CN) 好，我來幫你接入 OpenViking 長期記憶。裝好之後，我會自動記住對話裡的重要資訊，下次聊也能回憶起來。
 >
-> 我需要 3 条信息，不知道的可以问你的管理员：
-> 1. **OpenViking 服务地址** —— 例如 `https://ov.example.com` 或 `http://192.168.1.100:1933`，本机服务可以直接说"本机"
-> 2. **API Key** —— 用来鉴权；服务没开认证可以说"没有"
-> 3. **记忆归属**（可选） —— 所有对话共用 user 记忆（默认），还是在 `peers/<assistant_id>` 或 `peers/<sender_id>` 下分开存放
+> 我需要 3 條資訊，不知道的可以問你的管理員：
+> 1. **OpenViking 服務地址** —— 例如 `https://ov.example.com` 或 `http://192.168.1.100:1933`，本機服務可以直接說"本機"
+> 2. **API Key** —— 用來鑑權；服務沒開認證可以說"沒有"
+> 3. **記憶歸屬**（可選） —— 所有對話共用 user 記憶（預設），還是在 `peers/<assistant_id>` 或 `peers/<sender_id>` 下分開存放
 >
-> 先告诉我服务地址吧？
+> 先告訴我服務地址吧？
 
 > (EN) I'll set up OpenViking long-term memory for you. Once configured, I'll automatically remember important info from our chats and recall it later.
 >
@@ -127,7 +127,7 @@ Collect 3 values through natural conversation. Be flexible: if the user gives se
 
 ### 4a. `BASE_URL` (REQUIRED)
 
-- "local" / "本机" / "localhost" → use `http://127.0.0.1:1933`.
+- "local" / "本機" / "localhost" → use `http://127.0.0.1:1933`.
 - `ov.example.com` without protocol → prepend `https://`.
 - Strip trailing `/`, `/health`, or `/api`.
 - After normalization must start with `http://` or `https://`.
@@ -135,15 +135,15 @@ Collect 3 values through natural conversation. Be flexible: if the user gives se
 
 ### 4b. `API_KEY` (OPTIONAL)
 
-> (CN) API Key 是什么？服务没开认证就直接说"没有"。
+> (CN) API Key 是什麼？服務沒開認證就直接說"沒有"。
 > (EN) What's the API Key? Say "none" if the server has no auth.
 
-- "no" / "none" / "没有" / "空" / empty → `API_KEY=""` (you will skip the flag later).
+- "no" / "none" / "沒有" / "空" / empty → `API_KEY=""` (you will skip the flag later).
 - Otherwise store as-is.
 
 ### 4c. `PEER_ROLE` (OPTIONAL)
 
-> (CN) 记忆要存在哪一层？默认共享在 `viking://user/<user_id>/memories`（`none`）。也可以按 OpenClaw 助手存到 `.../peers/<assistant_id>/memories`（`assistant`），或按发送者存到 `.../peers/<sender_id>/memories`（`sender`）。
+> (CN) 記憶要存在哪一層？預設共享在 `viking://user/<user_id>/memories`（`none`）。也可以按 OpenClaw 助手存到 `.../peers/<assistant_id>/memories`（`assistant`），或按傳送者存到 `.../peers/<sender_id>/memories`（`sender`）。
 > (EN) Where should memory live? The default is shared `viking://user/<user_id>/memories` (`none`). You can instead use `.../peers/<assistant_id>/memories` (`assistant`) or `.../peers/<sender_id>/memories` (`sender`).
 
 Default to `none`. **Never silently pick another value** — the three options mean different storage layouts and are awkward to change later:
@@ -158,16 +158,16 @@ Default to `none`. **Never silently pick another value** — the three options m
 
 OpenViking initializes the managed `peers/` container for every user. Do not tell the user that `none` removes that container: it only avoids a concrete peer memory subtree. With `assistant` or `sender`, actor-peer recall includes shared user memory plus the current peer memory; it hides other peer subtrees. Changing this setting does not move existing memories.
 
-- Empty / "default" / "默认" / "共用" → leave unset (plugin defaults to `none`).
+- Empty / "default" / "預設" / "共用" → leave unset (plugin defaults to `none`).
 - Otherwise pass `--peer-role none|assistant|sender`. Treat explicit legacy `person` as `sender`. Any other value → ask again.
 
 ### 4d. `PEER_PREFIX` (OPTIONAL, only when `PEER_ROLE=assistant`)
 
-> (CN) 想给这个 agent 一个记忆前缀吗？留空就用默认。只能用字母、数字、`_`、`-`。
+> (CN) 想給這個 agent 一個記憶字首嗎？留空就用預設。只能用字母、數字、`_`、`-`。
 > (EN) Want to set an peer prefix? Leave blank for the default. Letters, digits, `_`, `-` only.
 
 - Only meaningful when `PEER_ROLE=assistant`; skip the question otherwise.
-- Empty / "default" / "默认" → leave unset (plugin defaults to `""`).
+- Empty / "default" / "預設" → leave unset (plugin defaults to `""`).
 - Otherwise validate against `/^[A-Za-z0-9_-]+$/`. If invalid, ask again.
 
 ### 4e. (Conditional) Multi-Tenant Root-Key Fields
@@ -185,7 +185,7 @@ See **Reference: Multi-Tenant** for what these mean.
 
 Tell the user briefly:
 
-> (CN) 我先测一下能不能连上服务……
+> (CN) 我先測一下能不能連上服務……
 > (EN) Let me test the connection to your server...
 
 Run:
@@ -215,12 +215,12 @@ Replace `BASE_URL` with the actual value.
 
 This skill **does not install or operate the OpenViking server**. If the user's server is unreachable, present the situation honestly and offer two paths:
 
-> (CN) ❌ 我连不上 `BASE_URL`。可能是：
-> 1) 服务还没启动 —— 请联系你的 OpenViking 服务管理员把它起起来；如果是你自己负责，请参考 OpenViking 官方文档（`https://github.com/volcengine/OpenViking`）的 server 启动指引。
-> 2) 地址不对 —— 你可以重新告诉我正确的地址。
-> 3) 网络不通（防火墙 / VPN / 内网）—— 你确认一下网络。
+> (CN) ❌ 我連不上 `BASE_URL`。可能是：
+> 1) 服務還沒啟動 —— 請聯絡你的 OpenViking 服務管理員把它起起來；如果是你自己負責，請參考 OpenViking 官方文件（`https://github.com/volcengine/OpenViking`）的 server 啟動指引。
+> 2) 地址不對 —— 你可以重新告訴我正確的地址。
+> 3) 網路不通（防火牆 / VPN / 內網）—— 你確認一下網路。
 >
-> 也可以选择"先把配置写下来"，等服务起来就自动生效，要这么办吗？
+> 也可以選擇"先把配置寫下來"，等服務起來就自動生效，要這麼辦嗎？
 
 > (EN) ❌ Cannot reach `BASE_URL`. Likely cause:
 > 1) **Server isn't running** — please ask your OpenViking admin to start it. If you own the server, follow the OpenViking official docs (`https://github.com/volcengine/OpenViking`) to start it. **This skill does not install or run the server.**
@@ -243,7 +243,7 @@ The plugin can be installed two ways. **Always try Path A first.** Use Path B on
 
 Tell the user:
 
-> (CN) 现在开始装插件……
+> (CN) 現在開始裝外掛……
 > (EN) Installing the plugin now...
 
 Run:
@@ -274,7 +274,7 @@ If both attempts fail with one of the fallback-eligible errors above, go to Path
 
 Tell the user:
 
-> (CN) ClawHub 现在好像被限流、不可用，或者当前账号不能安装。我改用备用路径，通过 npm 下载并部署插件包。
+> (CN) ClawHub 現在好像被限流、不可用，或者當前帳號不能安裝。我改用備用路徑，通過 npm 下載並部署外掛包。
 > (EN) ClawHub looks rate-limited, unavailable, or blocked for this account. I'll use the backup path and install the plugin package from npm.
 
 Run the installer with `npx` (no global install needed):
@@ -357,7 +357,7 @@ The error text looks like:
 
 **Do NOT silently use `--force-slot`.** Ask the user:
 
-> (CN) 你的 OpenClaw 当前 contextEngine 槽被 `<other-plugin>` 占着。如果用 OpenViking 替换它，`<other-plugin>` 就不再生效。要替换吗？
+> (CN) 你的 OpenClaw 當前 contextEngine 槽被 `<other-plugin>` 佔著。如果用 OpenViking 替換它，`<other-plugin>` 就不再生效。要替換嗎？
 > (EN) Your `contextEngine` slot is currently owned by `<other-plugin>`. Activating OpenViking will disable it. Replace?
 
 If the user agrees, retry the same setup command with `--force-slot` appended. If they decline, tell them config has been saved but the slot is unchanged, and stop.
@@ -370,7 +370,7 @@ The error text looks like:
 
 Ask the user:
 
-> (CN) 你给的是 root 级 API Key，需要再补两个值才能用：账户 ID（accountId）和用户 ID（userId）。这两个一般是 OpenViking 服务管理员配的，不知道就问他们。
+> (CN) 你給的是 root 級 API Key，需要再補兩個值才能用：帳戶 ID（accountId）和使用者 ID（userId）。這兩個一般是 OpenViking 服務管理員配的，不知道就問他們。
 > (EN) Your API key is a root key, which needs two more values: `accountId` and `userId`. Both come from your OpenViking server admin — ask them if unsure.
 
 After collecting, retry the setup command with `--account-id` and `--user-id` appended.
@@ -397,7 +397,7 @@ openclaw gateway --force
 
 If both fail:
 
-> (CN) Gateway 没能自动重启。请你手动跑一下 `openclaw gateway restart`。重启完告诉我，我来验证。
+> (CN) Gateway 沒能自動重啟。請你手動跑一下 `openclaw gateway restart`。重啟完告訴我，我來驗證。
 > (EN) Gateway didn't restart cleanly. Please run `openclaw gateway restart` manually, then tell me when it's done so I can verify.
 
 Wait ~3 seconds before STEP 10.
@@ -430,15 +430,15 @@ Expected output:
 
 ### Success message
 
-> (CN) 🎉 全部搞定！OpenViking 长期记忆已经接好了。
+> (CN) 🎉 全部搞定！OpenViking 長期記憶已經接好了。
 >
 > 工作方式：
-> - **每一轮**：你的对话会被自动追加到 OpenViking session 里；自动抽取依赖阈值 commit 或 `/compact`
-> - **明确要记住时**：如果你说“记住/保存/存一下”某个长期事实，我会用 `memory_store` 立即提交到记忆管线
-> - **`/compact` 时**：待提交的 session 消息会在 OpenViking 服务端被抽取成长期记忆
-> - **后续会话**：每次回复前我都会自动搜一下相关记忆并带进上下文
+> - **每一輪**：你的對話會被自動追加到 OpenViking session 裡；自動抽取依賴閾值 commit 或 `/compact`
+> - **明確要記住時**：如果你說“記住/儲存/存一下”某個長期事實，我會用 `memory_store` 立即提交到記憶管線
+> - **`/compact` 時**：待提交的 session 訊息會在 OpenViking 服務端被抽取成長期記憶
+> - **後續會話**：每次回覆前我都會自動搜一下相關記憶並帶進上下文
 >
-> 想验证一下吗？可以直接说“记住我的邮箱是 test@example.com”，让我通过 `memory_store` 立即提交；或者先聊几句包含可记忆事实的话，再调一下 `/compact`。之后开新对话问“我的邮箱是？”，应该就能召回了。
+> 想驗證一下嗎？可以直接說“記住我的郵箱是 test@example.com”，讓我通過 `memory_store` 立即提交；或者先聊幾句包含可記憶事實的話，再調一下 `/compact`。之後開新對話問“我的郵箱是？”，應該就能召回了。
 
 > (EN) 🎉 All set! OpenViking long-term memory is connected.
 >

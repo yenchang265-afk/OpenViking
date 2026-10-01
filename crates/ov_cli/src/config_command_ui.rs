@@ -37,56 +37,56 @@ pub(crate) fn render_validate_success_with_language(
     lines.push(title(copy(
         language,
         "OPENVIKING CONFIG CHECK",
-        "OPENVIKING 配置检查",
+        "OPENVIKING 配置檢查",
     )));
     lines.push(String::new());
     lines.push(section(copy(language, "Config", "配置")));
     lines.push(detail_line(
-        copy(language, "Active", "当前配置"),
+        copy(language, "Active", "當前配置"),
         active_value(active, kind),
     ));
     lines.push(detail_line(
-        copy(language, "Server", "服务器"),
+        copy(language, "Server", "伺服器"),
         path_value(&config.url),
     ));
     lines.push(detail_line(
-        copy(language, "Config home", "配置目录"),
+        copy(language, "Config home", "配置目錄"),
         path_value(&display_config_home()),
     ));
     lines.push(String::new());
-    lines.push(section(copy(language, "Checks", "检查项")));
+    lines.push(section(copy(language, "Checks", "檢查項")));
     lines.push(detail_line(
         copy(language, "Config file", "配置文件"),
         ok_value(copy(language, "valid", "有效")),
     ));
     lines.push(detail_line(
-        copy(language, "Server", "服务器"),
-        ok_value(copy(language, "reachable", "可连接")),
+        copy(language, "Server", "伺服器"),
+        ok_value(copy(language, "reachable", "可連線")),
     ));
     lines.push(detail_line(
-        copy(language, "Auth", "认证"),
-        ok_value(copy(language, "accepted", "已通过")),
+        copy(language, "Auth", "認證"),
+        ok_value(copy(language, "accepted", "已通過")),
     ));
     lines.push(detail_line(
-        copy(language, "Health", "健康状态"),
+        copy(language, "Health", "健康狀態"),
         ok_value(copy(language, "healthy", "健康")),
     ));
     lines.push(String::new());
     lines.push(section(copy(language, "Next", "下一步")));
     lines.push(action_line(
         "ov status",
-        copy(language, "Full system diagnostics", "查看完整系统诊断"),
+        copy(language, "Full system diagnostics", "檢視完整系統診斷"),
     ));
     lines.push(action_line(
         "ov config switch",
-        copy(language, "Use another config", "切换到其他配置"),
+        copy(language, "Use another config", "切換到其他配置"),
     ));
     lines.push(action_line(
         "ov config",
         copy(
             language,
             "Add, edit, or delete configs",
-            "添加、编辑或删除配置",
+            "新增、編輯或刪除配置",
         ),
     ));
 
@@ -115,59 +115,59 @@ pub(crate) fn render_validate_failure_with_language(
     lines.push(title(copy(
         language,
         "OPENVIKING CONFIG CHECK",
-        "OPENVIKING 配置检查",
+        "OPENVIKING 配置檢查",
     )));
     lines.push(String::new());
     lines.push(section(copy(language, "Config", "配置")));
     lines.push(detail_line(
-        copy(language, "Active", "当前配置"),
+        copy(language, "Active", "當前配置"),
         active_value(active, kind),
     ));
     lines.push(detail_line(
-        copy(language, "Server", "服务器"),
+        copy(language, "Server", "伺服器"),
         path_value(&config.url),
     ));
     lines.push(detail_line(
-        copy(language, "Config home", "配置目录"),
+        copy(language, "Config home", "配置目錄"),
         path_value(&display_config_home()),
     ));
     lines.push(String::new());
-    lines.push(section(copy(language, "Checks", "检查项")));
+    lines.push(section(copy(language, "Checks", "檢查項")));
     lines.push(detail_line(
         copy(language, "Config file", "配置文件"),
         ok_value(copy(language, "valid", "有效")),
     ));
     lines.push(detail_line(
-        copy(language, "Server", "服务器"),
+        copy(language, "Server", "伺服器"),
         classification.server_check(language),
     ));
     lines.push(detail_line(
-        copy(language, "Auth", "认证"),
+        copy(language, "Auth", "認證"),
         classification.auth_check(language),
     ));
     lines.push(detail_line(
-        copy(language, "Health", "健康状态"),
+        copy(language, "Health", "健康狀態"),
         classification.health_check(language),
     ));
     lines.push(String::new());
-    lines.push(section(copy(language, "Issue", "问题")));
+    lines.push(section(copy(language, "Issue", "問題")));
     lines.push(format!(
         "  {}",
         theme::error(classification.message(language))
     ));
     lines.push(String::new());
-    lines.push(section(copy(language, "Try", "可以尝试")));
+    lines.push(section(copy(language, "Try", "可以嘗試")));
     lines.push(action_line(
         "ov health",
-        copy(language, "Quick server probe", "快速检查服务器"),
+        copy(language, "Quick server probe", "快速檢查伺服器"),
     ));
     lines.push(action_line(
         "ov config",
-        copy(language, "Edit this config", "编辑当前配置"),
+        copy(language, "Edit this config", "編輯當前配置"),
     ));
     lines.push(action_line(
         "ov config switch",
-        copy(language, "Use another config", "切换到其他配置"),
+        copy(language, "Use another config", "切換到其他配置"),
     ));
 
     format!("{}\n", lines.join("\n"))
@@ -183,19 +183,19 @@ pub(crate) fn render_switch_header(
     lines.push(title(copy(
         language,
         "OPENVIKING CONFIG SWITCH",
-        "OPENVIKING 配置切换",
+        "OPENVIKING 配置切換",
     )));
     lines.push(String::new());
     match (active_name, active_kind) {
         (Some(name), Some(kind)) => lines.push(format!(
             "{} {}",
-            theme::muted(copy(language, "Active:", "当前配置：")),
+            theme::muted(copy(language, "Active:", "當前配置：")),
             active_value(name, kind_label(kind, language))
         )),
         _ => lines.push(format!(
             "{} {}",
-            theme::muted(copy(language, "Active:", "当前配置：")),
-            unknown_value(copy(language, "none", "无"))
+            theme::muted(copy(language, "Active:", "當前配置：")),
+            unknown_value(copy(language, "none", "無"))
         )),
     }
     if let Some(warning) = invalid_saved_configs_notice(language, invalid_config_names) {
@@ -217,7 +217,7 @@ pub(crate) fn switch_labels(rows: &[SwitchConfigRow]) -> Vec<String> {
             if row.is_active {
                 format!(
                     "{name}{kind}{}",
-                    theme::error(copy(language, "[Active]", "[当前]")).bold()
+                    theme::error(copy(language, "[Active]", "[當前]")).bold()
                 )
             } else {
                 format!("{name}{kind}")
@@ -232,20 +232,20 @@ pub(crate) fn render_no_saved_configs(invalid_config_names: &[String]) -> String
     lines.push(title(copy(
         language,
         "OPENVIKING CONFIG SWITCH",
-        "OPENVIKING 配置切换",
+        "OPENVIKING 配置切換",
     )));
     lines.push(String::new());
     lines.push(section(copy(
         language,
         "No saved configs",
-        "没有已保存配置",
+        "沒有已儲存配置",
     )));
     lines.push(format!(
         "  {}",
         theme::muted(copy(
             language,
             "Run ov config to add and save a config first.",
-            "请先运行 ov config 添加并保存配置。",
+            "請先執行 ov config 新增並儲存配置。",
         ))
     ));
     if let Some(warning) = invalid_saved_configs_notice(language, invalid_config_names) {
@@ -266,7 +266,7 @@ pub(crate) fn render_switch_success(name: &str) -> String {
             theme::muted(copy(
                 language,
                 "Run ov status to inspect it.",
-                "运行 ov status 查看状态。"
+                "執行 ov status 檢視狀態。"
             ))
         )
     )
@@ -280,14 +280,14 @@ pub(crate) fn render_switch_validation_failure(name: &str, error: &Error) -> Str
         title(copy(
             language,
             "OPENVIKING CONFIG SWITCH",
-            "OPENVIKING 配置切换"
+            "OPENVIKING 配置切換"
         )),
-        section(copy(language, "Issue", "问题")),
+        section(copy(language, "Issue", "問題")),
         theme::error(copy_target_validation_failed(language, name)),
         theme::muted(classification.message(language)),
         action_line(
             "ov config",
-            copy(language, "Edit this config", "编辑这个配置")
+            copy(language, "Edit this config", "編輯這個配置")
         )
     )
 }
@@ -300,8 +300,8 @@ fn kind_label(kind: ConfigKind, language: Language) -> &'static str {
     match language {
         Language::En => kind.compact_label(),
         Language::ZhCn => match kind {
-            ConfigKind::OpenVikingService => "OpenViking 服务",
-            ConfigKind::Custom => "自定义",
+            ConfigKind::OpenVikingService => "OpenViking 服務",
+            ConfigKind::Custom => "自定義",
         },
     }
 }
@@ -309,14 +309,14 @@ fn kind_label(kind: ConfigKind, language: Language) -> &'static str {
 fn copy_switch_success(language: Language, name: &str) -> String {
     match language {
         Language::En => format!("Switched active config to '{name}'."),
-        Language::ZhCn => format!("已切换当前配置为 '{name}'。"),
+        Language::ZhCn => format!("已切換當前配置為 '{name}'。"),
     }
 }
 
 fn copy_target_validation_failed(language: Language, name: &str) -> String {
     match language {
         Language::En => format!("Target config '{name}' failed validation."),
-        Language::ZhCn => format!("目标配置 '{name}' 验证失败。"),
+        Language::ZhCn => format!("目標配置 '{name}' 驗證失敗。"),
     }
 }
 
@@ -340,7 +340,7 @@ fn invalid_saved_configs_notice(
         Language::ZhCn => format!(
             "  {}",
             theme::warning(format!(
-                "提示：以下已保存配置因 JSON 结构损坏已跳过：{names}。"
+                "提示：以下已儲存配置因 JSON 結構損壞已跳過：{names}。"
             ))
             .bold()
         ),
@@ -423,18 +423,18 @@ impl ValidationFailureKind {
 
     fn server_check(self, language: Language) -> String {
         match self {
-            Self::Network => fail_value(copy(language, "unreachable", "无法连接")),
-            Self::Timeout => fail_value(copy(language, "timed out", "超时")),
-            Self::Auth | Self::Unhealthy => ok_value(copy(language, "reachable", "可连接")),
+            Self::Network => fail_value(copy(language, "unreachable", "無法連線")),
+            Self::Timeout => fail_value(copy(language, "timed out", "超時")),
+            Self::Auth | Self::Unhealthy => ok_value(copy(language, "reachable", "可連線")),
             Self::Other => warn_value(unknown(language)),
         }
     }
 
     fn auth_check(self, language: Language) -> String {
         match self {
-            Self::Auth => fail_value(copy(language, "rejected", "被拒绝")),
-            Self::Network | Self::Timeout => warn_value(copy(language, "not checked", "未检查")),
-            Self::Unhealthy => ok_value(copy(language, "accepted", "已通过")),
+            Self::Auth => fail_value(copy(language, "rejected", "被拒絕")),
+            Self::Network | Self::Timeout => warn_value(copy(language, "not checked", "未檢查")),
+            Self::Unhealthy => ok_value(copy(language, "accepted", "已通過")),
             Self::Other => warn_value(unknown(language)),
         }
     }
@@ -443,7 +443,7 @@ impl ValidationFailureKind {
         match self {
             Self::Unhealthy => fail_value(copy(language, "unhealthy", "不健康")),
             Self::Network | Self::Timeout | Self::Auth => {
-                warn_value(copy(language, "not checked", "未检查"))
+                warn_value(copy(language, "not checked", "未檢查"))
             }
             Self::Other => warn_value(unknown(language)),
         }
@@ -461,11 +461,11 @@ impl ValidationFailureKind {
                 Self::Other => "The active config could not be validated.",
             },
             Language::ZhCn => match self {
-                Self::Network => "无法连接已配置的 OpenViking 服务器。",
-                Self::Timeout => "OpenViking 未在配置的超时时间内响应。",
-                Self::Auth => "OpenViking 拒绝了这个配置的 API Key。",
-                Self::Unhealthy => "服务器可连接，但健康状态异常。",
-                Self::Other => "当前配置验证失败。",
+                Self::Network => "無法連線已配置的 OpenViking 伺服器。",
+                Self::Timeout => "OpenViking 未在配置的超時時間內響應。",
+                Self::Auth => "OpenViking 拒絕了這個配置的 API Key。",
+                Self::Unhealthy => "伺服器可連線，但健康狀態異常。",
+                Self::Other => "當前配置驗證失敗。",
             },
         }
     }

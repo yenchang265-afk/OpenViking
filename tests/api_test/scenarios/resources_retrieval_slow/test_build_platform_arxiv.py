@@ -2,10 +2,10 @@ from build_test_helpers import assert_resource_indexed, assert_root_uri_valid, a
 
 
 class TestBuildPlatformArxiv:
-    """TC-P06~P07 arXiv 平台 URL 构建测试"""
+    """TC-P06~P07 arXiv 平臺 URL 構建測試"""
 
     def test_build_arxiv_pdf(self, api_client):
-        """TC-P06 arXiv PDF构建：验证 arxiv.org/pdf/ URL 走 DOWNLOAD_PDF 路由且 source_format=pdf"""
+        """TC-P06 arXiv PDF構建：驗證 arxiv.org/pdf/ URL 走 DOWNLOAD_PDF 路由且 source_format=pdf"""
         arxiv_pdf_url = "https://arxiv.org/pdf/2301.00234"
 
         response = api_client.add_resource(path=arxiv_pdf_url, wait=True)
@@ -20,7 +20,7 @@ class TestBuildPlatformArxiv:
 
         meta = result.get("meta", {})
         assert meta.get("url_type") in ("download_pdf", "webpage", None), (
-            f"meta.url_type 应为 download_pdf, 实际: {meta.get('url_type')}"
+            f"meta.url_type 應為 download_pdf, 實際: {meta.get('url_type')}"
         )
 
         assert_source_format(api_client, root_uri, ["pdf", "markdown"])
@@ -28,10 +28,10 @@ class TestBuildPlatformArxiv:
         stat_resp = api_client.fs_stat(root_uri)
         assert stat_resp.status_code == 200
 
-        print(f"✓ TC-P06 arXiv PDF构建通过, root_uri: {root_uri}")
+        print(f"✓ TC-P06 arXiv PDF構建通過, root_uri: {root_uri}")
 
     def test_build_arxiv_abstract_page(self, api_client):
-        """TC-P07 arXiv HTML页面构建：验证 arxiv.org/abs/ URL 走 WEBPAGE 路由且摘要可检索"""
+        """TC-P07 arXiv HTML頁面構建：驗證 arxiv.org/abs/ URL 走 WEBPAGE 路由且摘要可檢索"""
         arxiv_abs_url = "https://arxiv.org/abs/2301.00234"
 
         response = api_client.add_resource(path=arxiv_abs_url, wait=True)
@@ -46,7 +46,7 @@ class TestBuildPlatformArxiv:
 
         meta = result.get("meta", {})
         assert meta.get("url_type") in ("webpage", None), (
-            f"meta.url_type 应为 webpage, 实际: {meta.get('url_type')}"
+            f"meta.url_type 應為 webpage, 實際: {meta.get('url_type')}"
         )
 
         assert_source_format(api_client, root_uri, ["html", "markdown"])
@@ -56,4 +56,4 @@ class TestBuildPlatformArxiv:
 
         assert_resource_indexed(api_client, root_uri, "arxiv")
 
-        print(f"✓ TC-P07 arXiv HTML页面构建通过, root_uri: {root_uri}")
+        print(f"✓ TC-P07 arXiv HTML頁面構建通過, root_uri: {root_uri}")

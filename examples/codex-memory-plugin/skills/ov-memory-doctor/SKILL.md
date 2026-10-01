@@ -9,8 +9,8 @@ description: >
   missing or failing MCP memory tools, 401/403, an offline statusline, right
   after installing/updating the plugin or switching servers/keys, or when the
   user asks for the plugin's status. Triggers: "memory not working", "check
-  OpenViking", "plugin status", "记忆没生效", "插件状态", "连不上 OpenViking",
-  "recall 为空", "401".
+  OpenViking", "plugin status", "記憶沒生效", "外掛狀態", "連不上 OpenViking",
+  "recall 為空", "401".
 ---
 
 # OpenViking Memory Doctor (Codex)

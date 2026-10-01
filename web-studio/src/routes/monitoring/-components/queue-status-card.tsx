@@ -13,7 +13,7 @@ export interface ParsedQueueRow {
   total: number
 }
 
-// 将 Observer status 字符串解析为结构化队列数据
+// 將 Observer status 字串解析為結構化佇列資料
 function parseQueueStatus(status: string): ParsedQueueRow[] {
   if (!status) return []
   const blocks = parseObserverStatus(status)
@@ -42,7 +42,7 @@ function parseQueueStatus(status: string): ParsedQueueRow[] {
 
 export interface QueueStatusCardProps {
   title?: string
-  /** Observer system 返回的 queue 组件的 status 原始文本 */
+  /** Observer system 返回的 queue 元件的 status 原始文本 */
   status?: string
   isHealthy?: boolean
   customRows?: ParsedQueueRow[]
@@ -85,10 +85,10 @@ export function QueueStatusCard({ title, status = '', isHealthy = true, customRo
             : 'bg-muted/20 hover:bg-muted/40 text-foreground/90',
         )}
       >
-        {/* 队列名 */}
+        {/* 佇列名 */}
         <span className="col-span-2 font-sans font-medium truncate">{displayName}</span>
 
-        {/* 处理中 */}
+        {/* 處理中 */}
         <span
           className={cn(
             'text-right tabular-nums font-bold',
@@ -100,7 +100,7 @@ export function QueueStatusCard({ title, status = '', isHealthy = true, customRo
           {row.processing}
         </span>
 
-        {/* 待处理 */}
+        {/* 待處理 */}
         <span
           className={cn(
             'text-right tabular-nums font-bold',
@@ -124,7 +124,7 @@ export function QueueStatusCard({ title, status = '', isHealthy = true, customRo
           {row.completed.toLocaleString()}
         </span>
 
-        {/* 错误数 */}
+        {/* 錯誤數 */}
         <span
           className={cn(
             'text-right tabular-nums font-bold',
@@ -149,7 +149,7 @@ export function QueueStatusCard({ title, status = '', isHealthy = true, customRo
         </div>
       ) : (
         <div className="flex flex-1 flex-col justify-between gap-1">
-          {/* 统一顶置表头 */}
+          {/* 統一頂置表頭 */}
           <div className="grid grid-cols-6 items-center px-2 py-0.5 text-[11px] text-muted-foreground font-medium border-b border-border/50">
             <span className="col-span-2">{t('queue.queueName')}</span>
             <span className="text-right">{t('queue.processing')}</span>
@@ -158,12 +158,12 @@ export function QueueStatusCard({ title, status = '', isHealthy = true, customRo
             <span className="text-right">{t('queue.errors')}</span>
           </div>
 
-          {/* 数据列表 */}
+          {/* 資料列表 */}
           <div className="flex flex-col gap-1">
             {nonTotalRows.map((row) => renderRow(row, false))}
           </div>
 
-          {/* 底端对齐合计行 */}
+          {/* 底端對齊合計行 */}
           {totalRow ? renderRow(totalRow, true) : null}
         </div>
       )}

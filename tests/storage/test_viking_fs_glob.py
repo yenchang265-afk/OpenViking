@@ -1005,7 +1005,7 @@ async def test_glob_preserves_canonical_session_uri(monkeypatch, fs):
 
 @pytest.mark.asyncio
 async def test_glob_uses_path_to_uri_for_non_legacy_namespace(monkeypatch, fs):
-    """中文注释：非 legacy 命名空间必须回落到 _path_to_uri，避免错误沿用请求别名。"""
+    """中文註釋：非 legacy 名稱空間必須回落到 _path_to_uri，避免錯誤沿用請求別名。"""
     monkeypatch.setattr(
         fs,
         "_uri_to_path",

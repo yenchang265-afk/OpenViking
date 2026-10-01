@@ -177,10 +177,10 @@ class VikingDBManager(VikingVectorIndexBackend):
 
 class VikingDBManagerProxy:
     """
-    租户绑定的 VikingDBManager 代理。
+    租戶繫結的 VikingDBManager 代理。
 
-    使用 RequestContext 初始化后，所有方法调用自动携带 ctx，
-    无需在每次调用时显式传入。API 与 VikingDBManager 完全兼容。
+    使用 RequestContext 初始化後，所有方法呼叫自動攜帶 ctx，
+    無需在每次呼叫時顯式傳入。API 與 VikingDBManager 完全相容。
 
     示例:
         ```python
@@ -188,7 +188,7 @@ class VikingDBManagerProxy:
         manager = VikingDBManager(...)
         proxy = VikingDBManagerProxy(manager, ctx)
 
-        # 使用（无需传 ctx；仅在需要保留未显式传入字段时开启 partial_update）
+        # 使用（無需傳 ctx；僅在需要保留未顯式傳入欄位時開啟 partial_update）
         await proxy.upsert(data, options=UpsertOptions(partial_update=True))
         ```
     """
@@ -199,23 +199,23 @@ class VikingDBManagerProxy:
         ctx: RequestContext,
     ):
         """
-        初始化租户绑定的 VikingDBManager 代理。
+        初始化租戶繫結的 VikingDBManager 代理。
 
         Args:
-            manager: 底层的 VikingDBManager 实例
-            ctx: 请求上下文，包含租户信息
+            manager: 底層的 VikingDBManager 例項
+            ctx: 請求上下文，包含租戶資訊
         """
         self._manager = manager
         self._ctx = ctx
 
     @property
     def ctx(self) -> RequestContext:
-        """获取绑定的请求上下文。"""
+        """獲取繫結的請求上下文。"""
         return self._ctx
 
     @property
     def manager(self) -> VikingDBManager:
-        """获取底层的 VikingDBManager 实例。"""
+        """獲取底層的 VikingDBManager 例項。"""
         return self._manager
 
     @property
@@ -227,7 +227,7 @@ class VikingDBManagerProxy:
         return self._manager.mode
 
     # =========================================================================
-    # Queue Management Properties（透传）
+    # Queue Management Properties（透傳）
     # =========================================================================
 
     @property
@@ -250,7 +250,7 @@ class VikingDBManagerProxy:
         return self._manager.is_closing
 
     # =========================================================================
-    # Queue Operations（透传）
+    # Queue Operations（透傳）
     # =========================================================================
 
     async def enqueue_embedding_msg(self, embedding_msg: "EmbeddingMsg") -> bool:
@@ -263,7 +263,7 @@ class VikingDBManagerProxy:
         return self._manager.get_embedder()
 
     # =========================================================================
-    # Collection Management（透传）
+    # Collection Management（透傳）
     # =========================================================================
 
     async def create_collection(self, name: str, schema: Dict[str, Any]) -> bool:
@@ -288,7 +288,7 @@ class VikingDBManagerProxy:
         return await self._manager.update_collection_description(description)
 
     # =========================================================================
-    # 数据操作 API（自动携带 ctx）
+    # 資料操作 API（自動攜帶 ctx）
     # =========================================================================
 
     async def upsert(
@@ -432,7 +432,7 @@ class VikingDBManagerProxy:
         return await self._manager.get_stats()
 
     # =========================================================================
-    # Tenant-Aware 方法（自动携带 ctx）
+    # Tenant-Aware 方法（自動攜帶 ctx）
     # =========================================================================
 
     async def search_in_tenant(

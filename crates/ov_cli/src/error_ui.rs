@@ -126,11 +126,11 @@ pub(crate) fn report_for_clap_error(args: &[OsString], clap_output: &str) -> Err
 
     if is_setup_cli_command(args) {
         return ErrorReport::new(
-            copy(language, "Command Error", "命令错误"),
+            copy(language, "Command Error", "命令錯誤"),
             copy(
                 language,
                 "Use ov config to add, edit, or delete configs.",
-                "请使用 ov config 添加、编辑或删除配置。",
+                "請使用 ov config 新增、編輯或刪除配置。",
             ),
         )
         .with_command(command)
@@ -142,16 +142,16 @@ pub(crate) fn report_for_clap_error(args: &[OsString], clap_output: &str) -> Err
                 copy(
                     language,
                     "Add, edit, or delete configs",
-                    "添加、编辑或删除配置",
+                    "新增、編輯或刪除配置",
                 ),
             ),
             ErrorAction::new(
                 "ov config show",
-                copy(language, "Show the active config", "显示当前配置"),
+                copy(language, "Show the active config", "顯示當前配置"),
             ),
             ErrorAction::new(
                 "ov config validate",
-                copy(language, "Check the active config", "检查当前配置"),
+                copy(language, "Check the active config", "檢查當前配置"),
             ),
         ]);
     }
@@ -163,7 +163,7 @@ pub(crate) fn report_for_clap_error(args: &[OsString], clap_output: &str) -> Err
     if let Some(suggestion) = suggestion.as_ref() {
         actions.push(ErrorAction::new(
             suggestion,
-            copy(language, "Run the suggested command", "运行建议的命令"),
+            copy(language, "Run the suggested command", "執行建議的命令"),
         ));
     }
     let help_command = usage
@@ -173,7 +173,7 @@ pub(crate) fn report_for_clap_error(args: &[OsString], clap_output: &str) -> Err
     let help_description = if help_command == "ov --help" {
         copy(language, "Show all commands", "查看所有命令")
     } else {
-        copy(language, "Show this command's help", "查看此命令帮助")
+        copy(language, "Show this command's help", "檢視此命令幫助")
     };
     actions.push(ErrorAction::new(help_command, help_description));
 
@@ -184,7 +184,7 @@ pub(crate) fn report_for_clap_error(args: &[OsString], clap_output: &str) -> Err
         })
         .unwrap_or_else(|| first_error_line(clap_output));
 
-    let mut report = ErrorReport::new(copy(language, "Command Error", "命令错误"), message)
+    let mut report = ErrorReport::new(copy(language, "Command Error", "命令錯誤"), message)
         .with_command(command)
         .with_optional_usage(usage)
         .with_actions(actions);
@@ -212,18 +212,18 @@ pub(crate) fn report_for_plain_help_error(
     let language = Language::current();
     let help_command = help_command.into();
     ErrorReport::new(
-        copy(language, "Command Error", "命令错误"),
+        copy(language, "Command Error", "命令錯誤"),
         copy(
             language,
             "Plain help is not supported for this command. Use prefixed help instead.",
-            "此命令不支持 plain help。请改用带前缀的 help。",
+            "此命令不支援 plain help。請改用帶字首的 help。",
         ),
     )
     .with_command(command)
     .with_suggestion(help_command.clone())
     .with_actions(vec![ErrorAction::new(
         help_command,
-        copy(language, "Show this command's help", "查看此命令帮助"),
+        copy(language, "Show this command's help", "檢視此命令幫助"),
     )])
 }
 
@@ -232,62 +232,62 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
     let command = command.into();
     match error {
         Error::MissingConfig => ErrorReport::new(
-            copy(language, "Configuration Error", "配置错误"),
+            copy(language, "Configuration Error", "配置錯誤"),
             copy(
                 language,
                 "No ovcli.conf detected. Run ov config to create one before using server commands.",
-                "未检测到 ovcli.conf。请先运行 ov config 创建配置，再使用服务器命令。",
+                "未檢測到 ovcli.conf。請先執行 ov config 建立配置，再使用伺服器命令。",
             ),
         )
         .with_command(command)
         .with_actions(vec![ErrorAction::new(
             "ov config",
-            copy(language, "Create a config", "创建配置"),
+            copy(language, "Create a config", "建立配置"),
         )]),
-        Error::Config(message) => ErrorReport::new(copy(language, "Configuration Error", "配置错误"), message)
+        Error::Config(message) => ErrorReport::new(copy(language, "Configuration Error", "配置錯誤"), message)
             .with_command(command)
             .with_actions(config_error_actions(message, language)),
-        Error::Language(message) => ErrorReport::new(copy(language, "Language Error", "语言错误"), message)
+        Error::Language(message) => ErrorReport::new(copy(language, "Language Error", "語言錯誤"), message)
             .with_command(command)
             .with_actions(vec![
                 ErrorAction::new("ov language en", copy(language, "Use English", "使用英文")),
-                ErrorAction::new("ov language zh-CN", copy(language, "Use Simplified Chinese", "使用简体中文")),
+                ErrorAction::new("ov language zh-CN", copy(language, "Use Traditional Chinese", "使用繁體中文")),
             ]),
         Error::Timeout(message) => ErrorReport::new(
-            copy(language, "Request Timeout", "请求超时"),
+            copy(language, "Request Timeout", "請求超時"),
             copy(
                 language,
                 "OpenViking did not respond before the configured timeout expired.",
-                "OpenViking 未在配置的超时时间内响应。",
+                "OpenViking 未在配置的超時時間內響應。",
             ),
         )
         .with_command(command)
         .with_detail(message)
         .with_actions(vec![
-            ErrorAction::new("ov config", copy(language, "Increase the request timeout", "提高请求超时时间")),
-            ErrorAction::new("ov config show", copy(language, "Show the active config", "查看当前配置")),
+            ErrorAction::new("ov config", copy(language, "Increase the request timeout", "提高請求超時時間")),
+            ErrorAction::new("ov config show", copy(language, "Show the active config", "檢視當前配置")),
         ]),
         Error::Network(message) => ErrorReport::new(
-            copy(language, "Connection Error", "连接错误"),
+            copy(language, "Connection Error", "連線錯誤"),
             copy(
                 language,
                 "Could not reach OpenViking. The server may be offline, or this config points to the wrong URL.",
-                "无法连接 OpenViking。服务器可能未启动，或当前配置指向了错误的 URL。",
+                "無法連線 OpenViking。伺服器可能未啟動，或當前配置指向了錯誤的 URL。",
             ),
         )
         .with_command(command)
         .with_detail(message)
         .with_actions(vec![
-            ErrorAction::new("ov config validate", copy(language, "Check the active config", "检查当前配置")),
-            ErrorAction::new("ov health", copy(language, "Run a quick server health check", "快速检查服务器健康状态")),
-            ErrorAction::new("ov config switch", copy(language, "Switch to another config", "切换到其他配置")),
+            ErrorAction::new("ov config validate", copy(language, "Check the active config", "檢查當前配置")),
+            ErrorAction::new("ov health", copy(language, "Run a quick server health check", "快速檢查伺服器健康狀態")),
+            ErrorAction::new("ov config switch", copy(language, "Switch to another config", "切換到其他配置")),
         ]),
         Error::Api {
             message, details, ..
         } if error.code() == "REFRESH_FAILED" => {
             let retry_command = command.clone();
             let mut report = ErrorReport::new(
-                copy(language, "Compile Refresh Failed", "Compile 刷新失败"),
+                copy(language, "Compile Refresh Failed", "Compile 重新整理失敗"),
                 api_error_message(error.code(), message),
             )
             .with_command(command)
@@ -297,7 +297,7 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
                     copy(
                         language,
                         "Retry safely; matching files stay unchanged and refresh runs again",
-                        "安全重试；相同内容不会重复写入，并会重新执行刷新",
+                        "安全重試；相同內容不會重複寫入，並會重新執行重新整理",
                     ),
                 ),
                 ErrorAction::new(
@@ -305,7 +305,7 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
                     copy(
                         language,
                         "Check OpenViking service status",
-                        "检查 OpenViking 服务状态",
+                        "檢查 OpenViking 服務狀態",
                     ),
                 ),
             ]);
@@ -315,17 +315,17 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
             report
         }
         Error::Api { message, .. } if error.code() == "UNAUTHENTICATED" => ErrorReport::new(
-            copy(language, "Authentication Error", "认证错误"),
+            copy(language, "Authentication Error", "認證錯誤"),
             api_error_message(error.code(), message),
         )
         .with_command(command)
         .with_actions(vec![
-            ErrorAction::new("ov config", copy(language, "Edit this config", "编辑这个配置")),
+            ErrorAction::new("ov config", copy(language, "Edit this config", "編輯這個配置")),
             ErrorAction::new("ov config switch", copy(language, "Use another config", "使用其他配置")),
         ]),
         Error::Api { message, details, .. } => {
             let mut report = ErrorReport::new(
-                copy(language, "OpenViking API Error", "OpenViking API 错误"),
+                copy(language, "OpenViking API Error", "OpenViking API 錯誤"),
                 api_error_message(error.code(), message),
             )
             .with_command(command);
@@ -335,36 +335,36 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
             report
         }
         Error::Client(message) => ErrorReport::new(
-            copy(language, "Command Error", "命令错误"),
+            copy(language, "Command Error", "命令錯誤"),
             sentence_case_error(message),
         )
             .with_command(command.clone())
             .with_actions(contextual_help_actions(&command, language)),
         Error::Parse(message) => ErrorReport::new(
-            copy(language, "Parse Error", "解析错误"),
+            copy(language, "Parse Error", "解析錯誤"),
             sentence_case_error(message),
         )
             .with_command(command.clone())
             .with_actions(contextual_help_actions(&command, language)),
-        Error::Output(message) => ErrorReport::new(copy(language, "Output Error", "输出错误"), message).with_command(command),
+        Error::Output(message) => ErrorReport::new(copy(language, "Output Error", "輸出錯誤"), message).with_command(command),
         Error::InvalidPath(message) => ErrorReport::new(
-            copy(language, "Invalid Path", "路径无效"),
+            copy(language, "Invalid Path", "路徑無效"),
             sentence_case_error(message),
         )
             .with_command(command.clone())
             .with_actions(contextual_help_actions(&command, language)),
-        Error::Io(error) => ErrorReport::new(copy(language, "IO Error", "IO 错误"), copy(language, "OpenViking could not read or write a file.", "OpenViking 无法读取或写入文件。"))
+        Error::Io(error) => ErrorReport::new(copy(language, "IO Error", "IO 錯誤"), copy(language, "OpenViking could not read or write a file.", "OpenViking 無法讀取或寫入檔案。"))
             .with_command(command)
             .with_detail(error.to_string()),
         Error::Serialization(error) => {
-            ErrorReport::new(copy(language, "Serialization Error", "序列化错误"), copy(language, "OpenViking could not parse structured data.", "OpenViking 无法解析结构化数据。"))
+            ErrorReport::new(copy(language, "Serialization Error", "序列化錯誤"), copy(language, "OpenViking could not parse structured data.", "OpenViking 無法解析結構化資料。"))
                 .with_command(command)
                 .with_detail(error.to_string())
         }
-        Error::Zip(error) => ErrorReport::new(copy(language, "Archive Error", "压缩包错误"), copy(language, "OpenViking could not process the archive.", "OpenViking 无法处理压缩包。"))
+        Error::Zip(error) => ErrorReport::new(copy(language, "Archive Error", "壓縮包錯誤"), copy(language, "OpenViking could not process the archive.", "OpenViking 無法處理壓縮包。"))
             .with_command(command)
             .with_detail(error.to_string()),
-        Error::AlreadyReported => ErrorReport::new(copy(language, "Command Error", "命令错误"), copy(language, "The command failed.", "命令执行失败。"))
+        Error::AlreadyReported => ErrorReport::new(copy(language, "Command Error", "命令錯誤"), copy(language, "The command failed.", "命令執行失敗。"))
             .with_command(command),
     }
 }
@@ -376,7 +376,7 @@ fn config_error_actions(message: &str, language: Language) -> Vec<ErrorAction> {
             copy(
                 language,
                 "Repair or recreate the active config",
-                "修复或重新创建当前配置",
+                "修復或重新建立當前配置",
             ),
         )];
     }
@@ -384,11 +384,11 @@ fn config_error_actions(message: &str, language: Language) -> Vec<ErrorAction> {
     vec![
         ErrorAction::new(
             "ov config",
-            copy(language, "Add or edit a config", "添加或编辑配置"),
+            copy(language, "Add or edit a config", "新增或編輯配置"),
         ),
         ErrorAction::new(
             "ov config show",
-            copy(language, "Show the active config", "显示当前配置"),
+            copy(language, "Show the active config", "顯示當前配置"),
         ),
     ]
 }
@@ -401,7 +401,7 @@ fn is_config_file_load_error(message: &str) -> bool {
 fn contextual_help_actions(command: &str, language: Language) -> Vec<ErrorAction> {
     let help_command = contextual_help_command(command).unwrap_or_else(|| "ov --help".to_string());
     let description = if help_command.ends_with(" --help") && help_command != "ov --help" {
-        copy(language, "Show this command's help", "查看此命令帮助")
+        copy(language, "Show this command's help", "檢視此命令幫助")
     } else {
         copy(language, "Show all commands", "查看所有命令")
     };
@@ -613,7 +613,7 @@ fn render_report_with_width(report: &ErrorReport, verbose: bool, width: usize) -
             ));
             output.push_str(&format!(
                 "{} {}\n\n",
-                theme::muted(copy(language, "Try:", "可尝试：")),
+                theme::muted(copy(language, "Try:", "可嘗試：")),
                 theme::command(&try_command)
             ));
         } else {
@@ -628,7 +628,7 @@ fn render_report_with_width(report: &ErrorReport, verbose: bool, width: usize) -
             output.push_str(&format!(
                 "{}\n\n",
                 theme::muted(truncate_to_display_width(
-                    &format!("{} {try_command}", copy(language, "Try:", "可尝试：")),
+                    &format!("{} {try_command}", copy(language, "Try:", "可嘗試：")),
                     width
                 ))
             ));
@@ -750,14 +750,14 @@ fn render_action_line(action: &ErrorAction, command_width: usize, width: usize) 
 fn did_you_mean(language: Language, suggestion: &str) -> String {
     match language {
         Language::En => format!("Did you mean: {suggestion}"),
-        Language::ZhCn => format!("你是不是想运行：{suggestion}"),
+        Language::ZhCn => format!("你是不是想執行：{suggestion}"),
     }
 }
 
 fn detail_line(language: Language, detail: &str) -> String {
     match language {
         Language::En => format!("Detail: {detail}"),
-        Language::ZhCn => format!("详情：{detail}"),
+        Language::ZhCn => format!("詳情：{detail}"),
     }
 }
 
@@ -1255,7 +1255,7 @@ Usage: ov config [OPTIONS] [COMMAND]
 
     #[test]
     fn chinese_error_card_uses_display_width_for_borders() {
-        let report = ErrorReport::new("命令错误", "未知命令：con").with_suggestion("ov config");
+        let report = ErrorReport::new("命令錯誤", "未知命令：con").with_suggestion("ov config");
         let rendered = strip_ansi(&render_report(&report, false));
 
         for line in rendered

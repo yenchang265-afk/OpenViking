@@ -842,7 +842,7 @@ class ResourceProcessor:
             # ============ Phase 3.5: Source commit + resource lock ============
             root_uri = result.get("root_uri")
             temp_uri = result.get("temp_uri")  # temp_doc_uri
-            original_temp_uri = temp_uri  # 保存原始 temp_uri 用于最终输出
+            original_temp_uri = temp_uri  # 儲存原始 temp_uri 用於最終輸出
             candidate_uri = getattr(context_tree, "_candidate_uri", None) if context_tree else None
             resource_lock: Optional[Dict[str, Any]] = preacquired_lock
             target_preexisting = False
@@ -1010,7 +1010,7 @@ class ResourceProcessor:
                 if post_result.get("warnings"):
                     result.setdefault("warnings", []).extend(post_result["warnings"])
 
-            # 恢复原始 temp_uri 用于输出
+            # 恢復原始 temp_uri 用於輸出
             if original_temp_uri is not None:
                 result["temp_uri"] = original_temp_uri
 

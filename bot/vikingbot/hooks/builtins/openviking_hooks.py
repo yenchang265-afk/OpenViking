@@ -293,7 +293,7 @@ class OpenVikingPostCallHook(Hook):
         config: Any = None,
         openviking_connection: dict[str, Any] | None = None,
     ) -> str:
-        """用 skill 描述检索 experience 记忆，只检索 experiences 目录。"""
+        """用 skill 描述檢索 experience 記憶，只檢索 experiences 目錄。"""
         if not query:
             return ""
         started_at = time.perf_counter()

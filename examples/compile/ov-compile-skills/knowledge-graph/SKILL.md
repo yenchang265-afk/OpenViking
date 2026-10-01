@@ -32,11 +32,11 @@ Store each node at `entities/<entity-id>.md` with this structure:
 ```yaml
 ---
 type: entity
-id: 取经队伍
-title: 取经队伍
+id: 取經隊伍
+title: 取經隊伍
 entity_type: group
-description: 由唐三藏率领、以西行取经为目标的行动团体。
-aliases: [唐僧师徒, 师徒五众]
+description: 由唐三藏率領、以西行取經為目標的行動團體。
+aliases: [唐僧師徒, 師徒五眾]
 sources:
   - viking://resources/source.md
 ---
@@ -98,7 +98,7 @@ edges rather than turning them into standalone nodes.
 Write one directed edge per line in `relations.jsonl`:
 
 ```json
-{"from":"孙悟空","relation":"member_of","label":"属于","to":"取经队伍","evidence":["viking://resources/source.md"]}
+{"from":"孫悟空","relation":"member_of","label":"屬於","to":"取經隊伍","evidence":["viking://resources/source.md"]}
 ```
 
 Treat each line as the statement `<from> <relation> <to>`. Apply these rules:
@@ -109,8 +109,8 @@ Treat each line as the statement `<from> <relation> <to>`. Apply these rules:
   `depends_on`, `originates_from`, or `located_in`. Reuse an established predicate for
   the same semantics.
 - Set `label` to a concise human-readable rendering of the relation in the requested
-  output language. For Chinese output, use a Chinese label such as `任职于`, `属于`,
-  `持有`, or `位于`; do not expose the English predicate as the display label.
+  output language. For Chinese output, use a Chinese label such as `任職於`, `屬於`,
+  `持有`, or `位於`; do not expose the English predicate as the display label.
 - Require `relation` and `label` to express the same meaning. Do not use `works_for` for
   group membership, `belongs_to` for geographic origin, or another broad predicate merely
   because its localized label looks plausible.
@@ -151,9 +151,9 @@ Keep domain knowledge and provenance distinct:
 - Treat a source reference as support, not as an endorsement that every statement in the
   source is true. Preserve conflicts, scope, chronology, and uncertainty when sources
   disagree.
-- Never emit an unheaded `来源：...` or `Source: ...` line. The frontmatter `sources`
+- Never emit an unheaded `來源：...` or `Source: ...` line. The frontmatter `sources`
   field is the default page-level source inventory. If the task explicitly requires a
-  human-readable source list, render it once under `## 来源` or `## Sources` as Markdown
+  human-readable source list, render it once under `## 來源` or `## Sources` as Markdown
   bullets and do not repeat claim-specific links there.
 
 ## Display contract
@@ -220,5 +220,5 @@ Before finishing, verify that:
 - every material entity-to-entity relationship described in node prose is represented as
   an edge, and central multi-party relationships use an appropriate intermediate node;
 - duplicate triples have been merged and the relation lines are deterministically sorted;
-- no unheaded `来源：...` or `Source: ...` line appears in an entity file;
+- no unheaded `來源：...` or `Source: ...` line appears in an entity file;
 - the final artifact tree contains the complete entity set and `relations.jsonl`.

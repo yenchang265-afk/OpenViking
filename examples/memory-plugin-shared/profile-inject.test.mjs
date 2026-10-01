@@ -112,7 +112,7 @@ test("a description cannot close or open the context envelope", async () => {
 test("each description is capped near 40 tokens, CJK included", async () => {
   const { fetchJSON } = fakeServer({
     skills: [
-      skill(OWN, "zh-notes", "起草发布说明：汇总上个版本以来合入的变更，按模块分组，并标出破坏性变更和迁移步骤。".repeat(4)),
+      skill(OWN, "zh-notes", "起草釋出說明：彙總上個版本以來合入的變更，按模組分組，並標出破壞性變更和遷移步驟。".repeat(4)),
       skill(OWN, "en-notes", "Draft release notes from merged changes, grouped by module. ".repeat(10)),
     ],
   });
@@ -172,9 +172,9 @@ test("a budget too small for even the one-line count injects nothing", async () 
   assert.equal(result, null);
 });
 
-const HEAVY_PROFILE = Array.from({ length: 40 }, (_, i) => `- 2026-09-${String(i % 28 + 1).padStart(2, "0")} 在分支 feat/x-${i} 上完成插件重构与测试 — 涉及 recall、capture 两条路径`).join("\n");
+const HEAVY_PROFILE = Array.from({ length: 40 }, (_, i) => `- 2026-09-${String(i % 28 + 1).padStart(2, "0")} 在分支 feat/x-${i} 上完成外掛重構與測試 — 涉及 recall、capture 兩條路徑`).join("\n");
 const HEAVY_MEMORIES = Array.from({ length: 300 }, (_, i) => ({ name: `owner/pref-${i}.md`, rel_path: `owner/pref-${i}.md`, isDir: false, abstract: "" }));
-const HEAVY_SKILLS = Array.from({ length: 150 }, (_, i) => skill(i % 3 ? OWN : SHARED, `skill-${i}`, "按团队清单审查 PR — 检查测试与迁移。"));
+const HEAVY_SKILLS = Array.from({ length: 150 }, (_, i) => skill(i % 3 ? OWN : SHARED, `skill-${i}`, "按團隊清單審查 PR — 檢查測試與遷移。"));
 
 test("a byte cap keeps the whole block under it with profile, index and catalog", async () => {
   const { fetchJSON } = fakeServer({ profile: HEAVY_PROFILE, memories: HEAVY_MEMORIES, skills: HEAVY_SKILLS });
@@ -213,7 +213,7 @@ test("the two roots share no client-side cap, so shared skills survive a full pr
 });
 
 test("truncateToBytes cuts on a line boundary and marks the cut", () => {
-  const text = ["第一行", "second line", "第三行内容"].join("\n");
+  const text = ["第一行", "second line", "第三行內容"].join("\n");
   assert.equal(truncateToBytes(text, 0), text);
   assert.equal(truncateToBytes(text, 1000), text);
   const cut = truncateToBytes(text, 30);

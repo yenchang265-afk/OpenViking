@@ -135,8 +135,8 @@ async def test_flat_file_refreshes_parent_semantics_and_vectorizes_via_summary(
 
     result = await processor.finish_prepared_resource(
         {
-            "root_uri": "viking://resources/神雕_副本.md",
-            "temp_uri": "viking://resources/神雕_副本.md",
+            "root_uri": "viking://resources/神鵰_副本.md",
+            "temp_uri": "viking://resources/神鵰_副本.md",
             "source_committed": True,
             "root_is_file": True,
         },
@@ -148,10 +148,10 @@ async def test_flat_file_refreshes_parent_semantics_and_vectorizes_via_summary(
 
     assert result == {
         "status": "success",
-        "root_uri": "viking://resources/神雕_副本.md",
+        "root_uri": "viking://resources/神鵰_副本.md",
     }
     summarizer.refresh_file_parent.assert_awaited_once_with(
-        file_uri="viking://resources/神雕_副本.md",
+        file_uri="viking://resources/神鵰_副本.md",
         ctx=ctx,
         skip_vectorization=False,
         ingest_options=IngestOptions(),
@@ -202,8 +202,8 @@ async def test_flat_file_skips_all_post_processing_when_build_index_false(
 
     await processor.finish_prepared_resource(
         {
-            "root_uri": "viking://resources/神雕_副本.md",
-            "temp_uri": "viking://resources/神雕_副本.md",
+            "root_uri": "viking://resources/神鵰_副本.md",
+            "temp_uri": "viking://resources/神鵰_副本.md",
             "source_committed": True,
             "root_is_file": True,
         },
@@ -630,8 +630,8 @@ async def test_vectors_only_replaces_preexisting_flat_file_without_directory_syn
 
     result = await processor.finish_prepared_resource(
         {
-            "root_uri": "viking://resources/神雕_副本.md",
-            "temp_uri": "viking://temp/神雕_副本.md",
+            "root_uri": "viking://resources/神鵰_副本.md",
+            "temp_uri": "viking://temp/神鵰_副本.md",
             "temp_dir_path": "viking://temp/job-1",
             "source_committed": False,
             "target_preexisting": True,
@@ -645,11 +645,11 @@ async def test_vectors_only_replaces_preexisting_flat_file_without_directory_syn
 
     assert result == {
         "status": "success",
-        "root_uri": "viking://resources/神雕_副本.md",
+        "root_uri": "viking://resources/神鵰_副本.md",
     }
     viking_fs.persist_temp_tree.assert_awaited_once_with(
-        "viking://temp/神雕_副本.md",
-        "viking://resources/神雕_副本.md",
+        "viking://temp/神鵰_副本.md",
+        "viking://resources/神鵰_副本.md",
         ctx=ctx,
         lease_ref=lock,
     )

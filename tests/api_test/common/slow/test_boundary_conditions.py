@@ -21,7 +21,7 @@ class TestBoundaryConditions:
         )
 
     def test_uri_with_unicode_characters(self, api_client):
-        uri = f"viking://resources/中文目录_{uuid.uuid4().hex[:8]}"
+        uri = f"viking://resources/中文目錄_{uuid.uuid4().hex[:8]}"
         mkdir_resp = api_client.fs_mkdir(uri)
         assert mkdir_resp.status_code == 200, (
             f"mkdir with unicode URI should return valid status, got {mkdir_resp.status_code}: {mkdir_resp.text[:200]}"

@@ -19,14 +19,14 @@ def main():
 
     output_lines = []
 
-    # 统计 QA 结果
+    # 統計 QA 結果
     if os.path.exists(args.input):
         qa_stats = process_qa_results(args.input)
         output_lines.extend(qa_stats)
     else:
         output_lines.append(f"Warning: QA result file not found: {args.input}")
 
-    # 统计 Import token
+    # 統計 Import token
     if os.path.exists(args.import_csv):
         if output_lines:
             output_lines.append("")
@@ -39,7 +39,7 @@ def main():
     for line in output_lines:
         print(line)
 
-    # 写入summary.txt
+    # 寫入summary.txt
     if args.input:
         summary_path = os.path.join(os.path.dirname(args.input), "summary.txt")
     elif args.import_csv:
@@ -54,8 +54,8 @@ def main():
 
 
 def process_qa_results(input_path: str) -> list[str]:
-    """处理 QA 结果 CSV"""
-    # 统计所有题目 (排除 category=5)
+    """處理 QA 結果 CSV"""
+    # 統計所有題目 (排除 category=5)
     correct = 0
     wrong = 0
     total_no_cache_tokens = 0  # input_tokens
@@ -71,21 +71,21 @@ def process_qa_results(input_path: str) -> list[str]:
     with open(input_path, "r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            # 检查 category 是否为 5，跳过
+            # 檢查 category 是否為 5，跳過
             category = row.get("category", "")
             if category == "5":
                 continue
 
             valid_rows += 1
 
-            # 统计结果
+            # 統計結果
             result = row.get("result", "").strip().upper()
             if result == "CORRECT":
                 correct += 1
             elif result == "WRONG":
                 wrong += 1
 
-            # 统计token
+            # 統計token
             try:
                 no_cache = int(row.get("input_tokens", 0))
                 cache_read = int(row.get("cacheRead", 0))
@@ -98,7 +98,7 @@ def process_qa_results(input_path: str) -> list[str]:
             except (ValueError, TypeError):
                 pass
 
-            # 统计耗时（仅在字段存在且可解析时计入，避免缺失值按 0 拉低均值）
+            # 統計耗時（僅在欄位存在且可解析時計入，避免缺失值按 0 拉低均值）
             try:
                 elapsed_raw = row.get("elapsed_seconds")
                 if elapsed_raw is None:
@@ -158,7 +158,7 @@ def process_qa_results(input_path: str) -> list[str]:
 
 
 def process_import_csv(input_path: str) -> list[str]:
-    """处理 import_success.csv 的 token 统计"""
+    """處理 import_success.csv 的 token 統計"""
     total_embedding = 0
     total_vlm = 0
     total_total = 0

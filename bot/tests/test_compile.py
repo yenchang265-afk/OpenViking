@@ -266,12 +266,12 @@ async def test_compile_rejects_combined_output_operation_overflow():
     "instruction, provided, model_reply, expected_language, input_kind, selected_text, omitted_text",
     [
         pytest.param(
-            "请用中文输出",
+            "請用中文輸出",
             True,
             "zh-CN",
             "zh-CN",
             "user_instruction",
-            "请用中文输出",
+            "請用中文輸出",
             "source sample",
             id="explicit-language",
         ),
@@ -1440,18 +1440,18 @@ async def test_readlist_tracker_records_and_summarizes_without_duplicates():
         "compile_resources/src_1/a.md",
         "compile_resources/src_1/b.jsonl",
     }
-    assert await tracker.summary() == "源文件共 2 个，尚未读取任何源文件；优先去读未读文件。"
+    assert await tracker.summary() == "原始檔共 2 個，尚未讀取任何原始檔；優先去讀未讀檔案。"
 
     await tracker.record(["compile_resources/src_1/a.md"])
     await tracker.record(["compile_resources/src_1/a.md"])  # duplicate is a no-op
     assert tracker.read_paths == {"compile_resources/src_1/a.md"}
 
     summary = await tracker.summary()
-    assert "已读 1/2 个源文件" in summary
-    assert "未读 1 个" in summary
+    assert "已讀 1/2 個原始檔" in summary
+    assert "未讀 1 個" in summary
     assert "compile_resources/src_1/a.md" in summary
     assert "compile_resources/src_1/b.jsonl" in summary
-    assert "不必再读" in summary
+    assert "不必再讀" in summary
     # Persisted to the sandbox readlist so it survives context compaction.
     assert "compile_resources/src_1/a.md" in sandbox.files[READLIST_PATH]
 
@@ -1477,8 +1477,8 @@ async def test_readlist_tracker_reloads_externally_appended_paths():
     tracker = ReadlistTracker(sandbox=Sandbox())
     await tracker.initialize()
     summary = await tracker.summary()
-    assert "已读 1/1 个源文件" in summary
-    assert "不必再读" in summary
+    assert "已讀 1/1 個原始檔" in summary
+    assert "不必再讀" in summary
 
 
 class _ReadTrackingFake(Tool):

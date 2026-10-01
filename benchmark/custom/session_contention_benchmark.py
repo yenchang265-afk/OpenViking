@@ -1187,7 +1187,7 @@ class BenchmarkRunner:
 
     def _print_summary_path(self) -> None:
         summary_path = Path(self.config.output_dir) / "summary_zh.md"
-        print(f"\n压测报告: {summary_path}")
+        print(f"\n壓測報告: {summary_path}")
 
 
 def parse_cli_process_result(returncode: int, stdout: str, stderr: str) -> AdapterResult:
@@ -1588,27 +1588,27 @@ def render_report_zh(
     output_dir: str,
 ) -> str:
     lines: List[str] = []
-    lines.append("# OpenViking Server 压测报告")
+    lines.append("# OpenViking Server 壓測報告")
     lines.append("")
-    lines.append(f"- 运行 ID: `{run_id}`")
+    lines.append(f"- 執行 ID: `{run_id}`")
     lines.append(f"- Server: `{config.server_url}`")
-    lines.append(f"- 调用路径: `{', '.join(config.adapters)}`")
-    lines.append(f"- 测试数据根目录: `{config.data_root_uri}`")
-    lines.append(f"- 输出目录: `{output_dir}`")
+    lines.append(f"- 呼叫路徑: `{', '.join(config.adapters)}`")
+    lines.append(f"- 測試資料根目錄: `{config.data_root_uri}`")
+    lines.append(f"- 輸出目錄: `{output_dir}`")
     if notes:
         lines.append("")
-        lines.append("## 说明")
+        lines.append("## 說明")
         for note in notes:
             lines.append(f"- {note}")
     lines.append("")
-    lines.append("## 核心结论")
+    lines.append("## 核心結論")
     total_requests = sum(row["requests"] for row in summary_rows if row["scenario"] != "ALL")
     total_failures = sum(row["failures"] for row in summary_rows if row["scenario"] != "ALL")
     success_rate = (
         (total_requests - total_failures) / total_requests * 100.0 if total_requests else 0.0
     )
     lines.append(
-        f"- 本次共记录 {total_requests} 次请求，失败 {total_failures} 次，整体成功率 {success_rate:.2f}%。"
+        f"- 本次共記錄 {total_requests} 次請求，失敗 {total_failures} 次，整體成功率 {success_rate:.2f}%。"
     )
     for adapter in config.adapters:
         mixed_find = find_summary(summary_rows, adapter=adapter, scenario="mixed", operation="find")
@@ -1619,24 +1619,24 @@ def render_report_zh(
             lines.append(
                 "- "
                 f"`{adapter}` find p95: retrieval {fmt_ms(retrieval_find['p95_ms'])} -> "
-                f"mixed {fmt_ms(mixed_find['p95_ms'])}，变化 "
+                f"mixed {fmt_ms(mixed_find['p95_ms'])}，變化 "
                 f"{fmt_delta_percent(percent_change(retrieval_find['p95_ms'], mixed_find['p95_ms']))}。"
             )
     incomplete = [row for row in task_rows if row["status"] == "incomplete"]
     if incomplete:
         total_incomplete = sum(row["tasks"] for row in incomplete)
-        lines.append(f"- 后台任务存在积压：{total_incomplete} 个任务在 drain 后仍未完成。")
+        lines.append(f"- 後臺任務存在積壓：{total_incomplete} 個任務在 drain 後仍未完成。")
     if error_rows:
         top = error_rows[0]
         lines.append(
-            f"- Top 错误: `{top['adapter']}/{top['scenario']}/{top['operation']}` "
+            f"- Top 錯誤: `{top['adapter']}/{top['scenario']}/{top['operation']}` "
             f"`{top['error']}` 共 {top['count']} 次。"
         )
     lines.append("")
-    lines.append("## 阶段耗时")
+    lines.append("## 階段耗時")
     lines.append(markdown_table([phase.to_dict() for phase in phases]))
     lines.append("")
-    lines.append("## 请求汇总")
+    lines.append("## 請求彙總")
     lines.append(
         markdown_table(
             [
@@ -1661,7 +1661,7 @@ def render_report_zh(
         )
     )
     lines.append("")
-    lines.append("## SDK/CLI 对比")
+    lines.append("## SDK/CLI 對比")
     lines.append(
         markdown_table(
             [
@@ -1674,25 +1674,25 @@ def render_report_zh(
         )
     )
     lines.append("")
-    lines.append("## 后台任务")
-    lines.append(markdown_table(task_rows) if task_rows else "无后台任务记录。")
+    lines.append("## 後臺任務")
+    lines.append(markdown_table(task_rows) if task_rows else "無後臺任務記錄。")
     lines.append("")
-    lines.append("## 错误 Top")
-    lines.append(markdown_table(error_rows[:20]) if error_rows else "无请求错误。")
+    lines.append("## 錯誤 Top")
+    lines.append(markdown_table(error_rows[:20]) if error_rows else "無請求錯誤。")
     lines.append("")
-    lines.append("## 输出文件")
-    lines.append("- `run_summary.json`: 汇总数据")
-    lines.append("- `request_events.jsonl`: 每次请求明细")
-    lines.append("- `task_events.jsonl`: 后台任务明细")
-    lines.append("- `request_summary.csv`: 请求聚合")
-    lines.append("- `request_windows.csv`: 时间窗口聚合")
-    lines.append("- `adapter_comparison.csv`: SDK/CLI 对比")
+    lines.append("## 輸出檔案")
+    lines.append("- `run_summary.json`: 彙總資料")
+    lines.append("- `request_events.jsonl`: 每次請求明細")
+    lines.append("- `task_events.jsonl`: 後臺任務明細")
+    lines.append("- `request_summary.csv`: 請求聚合")
+    lines.append("- `request_windows.csv`: 時間視窗聚合")
+    lines.append("- `adapter_comparison.csv`: SDK/CLI 對比")
     return "\n".join(lines) + "\n"
 
 
 def markdown_table(rows: List[Dict[str, Any]]) -> str:
     if not rows:
-        return "_无数据_"
+        return "_無資料_"
     columns = list(rows[0].keys())
     output = [
         "| " + " | ".join(columns) + " |",

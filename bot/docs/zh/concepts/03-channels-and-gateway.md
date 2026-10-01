@@ -1,43 +1,43 @@
-# 渠道、Gateway 与运行管理
+# 渠道、Gateway 與執行管理
 
-Channels 负责把不同聊天平台适配为统一消息，Gateway 则把 Channels、AgentLoop、HTTP API、定时任务和观测能力组装为长期运行服务。
+Channels 負責把不同聊天平臺適配為統一訊息，Gateway 則把 Channels、AgentLoop、HTTP API、定時任務和觀測能力組裝為長期執行服務。
 
 ## 支持的渠道
 
-| 类型 | 连接方式 | 主要能力 |
+| 型別 | 連線方式 | 主要能力 |
 |------|----------|----------|
 | `slack` | Socket Mode | 私聊和群聊策略 |
-| `telegram` | Bot API | 文本、媒体和音频转写 |
-| `discord` | Gateway | 文本与媒体 |
-| `whatsapp` | Node.js WebSocket bridge | WhatsApp 消息转发 |
-| `dingtalk` | Stream SDK | 消息接收与回复 |
-| `qq` | QQ Bot API | 消息接收与回复 |
-| `email` | IMAP + SMTP | 轮询收件和自动回复 |
-| `mochat` | Socket.IO / Watch API | 会话监听、@ 和延迟回复 |
-| `openapi` / `bot_api` | FastAPI | HTTP Chat API 与 SSE |
+| `telegram` | Bot API | 文本、媒體和音訊轉寫 |
+| `discord` | Gateway | 文本與媒體 |
+| `whatsapp` | Node.js WebSocket bridge | WhatsApp 訊息轉發 |
+| `dingtalk` | Stream SDK | 訊息接收與回覆 |
+| `qq` | QQ Bot API | 訊息接收與回覆 |
+| `email` | IMAP + SMTP | 輪詢收件和自動回覆 |
+| `mochat` | Socket.IO / Watch API | 會話監聽、@ 和延遲迴復 |
+| `openapi` / `bot_api` | FastAPI | HTTP Chat API 與 SSE |
 
-CLI 交互使用 ChatChannel，单条命令使用 SingleTurnChannel，它们也沿用统一消息模型。
+CLI 互動使用 ChatChannel，單條命令使用 SingleTurnChannel，它們也沿用統一訊息模型。
 
-Telegram 语音转写密钥配置在对应的 `bot.channels[]` 条目的 `groq_api_key`（也支持 `groqApiKey`），未配置密钥时仍可使用 `GROQ_API_KEY` 环境变量。该密钥独立于聊天模型的 `vlm` / `bot.agents` 配置。
+Telegram 語音轉寫金鑰配置在對應的 `bot.channels[]` 條目的 `groq_api_key`（也支援 `groqApiKey`），未配置金鑰時仍可使用 `GROQ_API_KEY` 環境變數。該金鑰獨立於聊天模型的 `vlm` / `bot.agents` 配置。
 
-## Channel 的职责
+## Channel 的職責
 
-BaseChannel 和具体平台实现共同负责：
+BaseChannel 和具體平臺實現共同負責：
 
-1. 启停连接和报告运行状态；
-2. 校验 `allow_from` 等发送者策略；
-3. 提取文本、图片、附件和回复 metadata；
+1. 啟停連線和報告執行狀態；
+2. 校驗 `allow_from` 等傳送者策略；
+3. 提取文本、圖片、附件和回覆 metadata；
 4. 生成 SessionKey 和 InboundMessage；
-5. 将 OutboundMessage 转换为平台原生回复；
-6. 按平台能力展示处理中状态或 reaction。
+5. 將 OutboundMessage 轉換為平臺原生回覆；
+6. 按平臺能力展示處理中狀態或 reaction。
 
-平台差异留在具体 Channel 内，AgentLoop 不依赖 Slack 等 SDK。
+平臺差異留在具體 Channel 內，AgentLoop 不依賴 Slack 等 SDK。
 
-ChannelManager 从 `bot.channels` 创建所有启用实例，并以 `type__channel_id` 区分同类型的多个 Bot。它消费 MessageBus 出站队列，根据 SessionKey 将回复路由到原渠道。
+ChannelManager 從 `bot.channels` 建立所有啟用例項，並以 `type__channel_id` 區分同類型的多個 Bot。它消費 MessageBus 出站佇列，根據 SessionKey 將回復路由到原渠道。
 
-## Gateway 运行时
+## Gateway 執行時
 
-`vikingbot gateway` 在一个 asyncio 进程中启动：
+`vikingbot gateway` 在一個 asyncio 程序中啟動：
 
 ```text
 FastAPI / Uvicorn
@@ -49,79 +49,79 @@ FastAPI / Uvicorn
   + HeartbeatService
 ```
 
-默认监听 `127.0.0.1:18790`。当 `gateway.host` 不是 localhost 时，必须设置 `bot.gateway.token`，否则 Gateway 拒绝启动。
+預設監聽 `127.0.0.1:18790`。當 `gateway.host` 不是 localhost 時，必須設定 `bot.gateway.token`，否則 Gateway 拒絕啟動。
 
-`vikingbot status` 展示当前选择的模型配置来源（继承根级 `vlm` 或使用 `bot.agents`）、凭证配置顺序、各凭证的 Provider/模型，以及 API key 和自定义请求头是否配置。它不输出密钥或请求头内容，也不发起模型请求；未配置 API key 不代表本地模型或外部鉴权不可用。这是配置摘要，不是 Gateway 健康检查，也不代表运行中故障切换后的活跃凭证。
+`vikingbot status` 展示當前選擇的模型配置來源（繼承根級 `vlm` 或使用 `bot.agents`）、憑證配置順序、各憑證的 Provider/模型，以及 API key 和自定義請求頭是否配置。它不輸出金鑰或請求頭內容，也不發起模型請求；未配置 API key 不代表本地模型或外部鑑權不可用。這是配置摘要，不是 Gateway 健康檢查，也不代表執行中故障切換後的活躍憑證。
 
 ## Bot HTTP API
 
-Bot API 位于 `/bot/v1`：
+Bot API 位於 `/bot/v1`：
 
-| 方法 | 路径 | 作用 |
+| 方法 | 路徑 | 作用 |
 |------|------|------|
-| GET | `/bot/v1/health` | Bot 健康状态 |
+| GET | `/bot/v1/health` | Bot 健康狀態 |
 | POST | `/bot/v1/chat` | 同步聊天 |
 | POST | `/bot/v1/chat/stream` | SSE 流式聊天 |
-| POST | `/bot/v1/chat/channel` | 调用指定 Bot Channel |
-| POST | `/bot/v1/chat/channel/stream` | 流式调用指定 Bot Channel |
-| POST | `/bot/v1/feedback` | 提交用户反馈 |
-| GET/POST | `/bot/v1/sessions` | 列出或创建 API Session |
-| GET/DELETE | `/bot/v1/sessions/{id}` | 查询或删除 API Session |
+| POST | `/bot/v1/chat/channel` | 呼叫指定 Bot Channel |
+| POST | `/bot/v1/chat/channel/stream` | 流式呼叫指定 Bot Channel |
+| POST | `/bot/v1/feedback` | 提交使用者反饋 |
+| GET/POST | `/bot/v1/sessions` | 列出或建立 API Session |
+| GET/DELETE | `/bot/v1/sessions/{id}` | 查詢或刪除 API Session |
 
-ChatRequest 支持 session ID、是否回复、请求级禁用工具和渠道 ID。`context` 字段不接受非空消息；请省略该字段或传入空列表，否则 API 返回 HTTP 422。同一个 session 同时只能有一个进行中的请求；使用相同 session ID 的并发请求会返回 HTTP 409，因此客户端应串行发送同 session 请求，并在当前请求完成后重试。ChatResponse 返回 response ID、最终文本、中间事件、相关记忆和 token usage。
+ChatRequest 支援 session ID、是否回覆、請求級停用工具和渠道 ID。`context` 欄位不接受非空訊息；請省略該欄位或傳入空列表，否則 API 返回 HTTP 422。同一個 session 同時只能有一個進行中的請求；使用相同 session ID 的併發請求會返回 HTTP 409，因此客戶端應序列傳送同 session 請求，並在當前請求完成後重試。ChatResponse 返回 response ID、最終文本、中間事件、相關記憶和 token usage。
 
-SSE 会发送 reasoning、content delta、tool call、tool result、iteration 和最终 response 等事件。
+SSE 會發送 reasoning、content delta、tool call、tool result、iteration 和最終 response 等事件。
 
 ## OpenViking API 代理
 
-当配置 OpenViking Server 时，Gateway 还提供：
+當配置 OpenViking Server 時，Gateway 還提供：
 
-| 路径 | 作用 |
+| 路徑 | 作用 |
 |------|------|
-| `/health` | 汇总 Gateway 和 OpenViking upstream 状态 |
+| `/health` | 彙總 Gateway 和 OpenViking upstream 狀態 |
 | `/api/v1/{path}` | 代理 OpenViking API |
 
-代理会过滤 hop-by-hop headers，转发经过校验的身份头，并保持上游响应状态。详细连接与身份流程见 [与 OpenViking 集成](./04-openviking-integration.md)。
+代理會過濾 hop-by-hop headers，轉發經過校驗的身份頭，並保持上游響應狀態。詳細連線與身份流程見 [與 OpenViking 整合](./04-openviking-integration.md)。
 
-## 访问控制
+## 訪問控制
 
-Gateway 使用多层安全边界：
+Gateway 使用多層安全邊界：
 
-1. 非本地监听要求 `X-Gateway-Token`；
-2. loopback 请求可以使用本地开发边界；
-3. OpenViking API key 通过 upstream `/health` 验证身份和实际 auth mode；
-4. 只有可信 OpenViking Server 代理才能传入 `openviking_connection`；
-5. API Session 使用认证主体 scope 与外部 session ID 组合隔离。
+1. 非本地監聽要求 `X-Gateway-Token`；
+2. loopback 請求可以使用本地開發邊界；
+3. OpenViking API key 通過 upstream `/health` 驗證身份和實際 auth mode；
+4. 只有可信 OpenViking Server 代理才能傳入 `openviking_connection`；
+5. API Session 使用認證主體 scope 與外部 session ID 組合隔離。
 
-普通请求字段中的 `user_id`、account ID 或 connection 信息不能自行证明 OpenViking 身份。
+普通請求欄位中的 `user_id`、account ID 或 connection 資訊不能自行證明 OpenViking 身份。
 
-## 反馈与结果评估
+## 反饋與結果評估
 
-每条最终回复都生成 `response_id`。客户端可以提交 thumb up、thumb down 或数值 rating，并附带原因与文本。Gateway 会保存反馈、计算反馈延迟并发布 `feedback_submitted` 事件。
+每條最終回覆都生成 `response_id`。客戶端可以提交 thumb up、thumb down 或數值 rating，並附帶原因與文本。Gateway 會儲存反饋、計算反饋延遲併發布 `feedback_submitted` 事件。
 
-当用户继续对话时，Outcome Evaluator 还可以根据后续行为评估上一条回复，形成 `response_outcome_evaluated` 事件。`vikingbot feedback-stats` 聚合本地 Session，统计反馈覆盖率、评分、结果状态、工具使用和延迟。
+當用戶繼續對話時，Outcome Evaluator 還可以根據後續行為評估上一條回覆，形成 `response_outcome_evaluated` 事件。`vikingbot feedback-stats` 聚合本地 Session，統計反饋覆蓋率、評分、結果狀態、工具使用和延遲。
 
-## Langfuse 与日志
+## Langfuse 與日誌
 
-设置 `bot.langfuse.enabled=true` 后，模型调用、token usage、耗时、工具事件和结果 metadata 会写入 Langfuse。Langfuse 初始化失败不会阻断 Bot 主链路。
+設定 `bot.langfuse.enabled=true` 後，模型呼叫、token usage、耗時、工具事件和結果 metadata 會寫入 Langfuse。Langfuse 初始化失敗不會阻斷 Bot 主鏈路。
 
-运行日志使用 Loguru；Gateway 的 `--verbose` 可以开启更详细日志。分析专用事件与普通回复分离，不会被误发到聊天平台。
+執行日誌使用 Loguru；Gateway 的 `--verbose` 可以開啟更詳細日誌。分析專用事件與普通回覆分離，不會被誤發到聊天平臺。
 
-## 实现位置
+## 實現位置
 
-| 内容 | 路径 |
+| 內容 | 路徑 |
 |------|------|
-| 渠道基类与管理 | `vikingbot/channels/base.py`、`manager.py` |
-| 平台适配 | `vikingbot/channels/*.py` |
+| 渠道基類與管理 | `vikingbot/channels/base.py`、`manager.py` |
+| 平臺適配 | `vikingbot/channels/*.py` |
 | Gateway/OpenAPI | `vikingbot/channels/openapi.py` |
-| API 数据模型 | `vikingbot/channels/openapi_models.py` |
-| 运行时组装 | `vikingbot/cli/commands.py` |
-| 反馈与结果 | `vikingbot/observability/` |
+| API 資料模型 | `vikingbot/channels/openapi_models.py` |
+| 執行時組裝 | `vikingbot/cli/commands.py` |
+| 反饋與結果 | `vikingbot/observability/` |
 | Langfuse | `vikingbot/integrations/langfuse.py` |
 
-## 相关文档
+## 相關文件
 
-- [VikingBot 架构](./01-architecture.md)
-- [Agent 能力体系](./02-agent-capabilities.md)
-- [与 OpenViking 集成](./04-openviking-integration.md)
+- [VikingBot 架構](./01-architecture.md)
+- [Agent 能力體系](./02-agent-capabilities.md)
+- [與 OpenViking 整合](./04-openviking-integration.md)
 - [渠道配置](../../CHANNEL.md)
