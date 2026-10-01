@@ -383,7 +383,7 @@ class TestApplyStrPatch:
             ("hello world", "hello world", "updated"),
             ("hello world", "hello worle", "updated"),
             ("hello world\nhello world", "hello worle", "hello world\nupdated"),
-            ("标题：‘天气’晴朗🌞", "标题：'天气'晴朗🌞", "updated"),
+            ("標題：‘天氣’晴朗🌞", "標題：'天氣'晴朗🌞", "updated"),
             ("alpha\nbeta\nalpha\nbeta", "alpha\nbetx", "alpha\nbeta\nupdated"),
         ],
     )

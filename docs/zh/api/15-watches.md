@@ -1,64 +1,64 @@
-# 资源 Watch
+# 資源 Watch
 
-Watch API 管理资源的周期检查、暂停、恢复和手动触发。
+Watch API 管理資源的週期檢查、暫停、恢復和手動觸發。
 
-## API 参考
+## API 參考
 
-### Watch Management（监控任务管理）
+### Watch Management（監控任務管理）
 
-列出、查看、更新和触发通过 [`add_resource`](02-resources.md#add-resource) 配合 `watch_interval > 0` 创建的监控任务。控制面在 REST（`/api/v1/watches`）、`ov task watch` CLI 子命令组以及面向 Agent 的最小闭包 MCP 接口（`list_watches` / `cancel_watch`）三处镜像。
+列出、檢視、更新和觸發通過 [`add_resource`](02-resources.md#add-resource) 配合 `watch_interval > 0` 建立的監控任務。控制面在 REST（`/api/v1/watches`）、`ov task watch` CLI 子命令組以及面向 Agent 的最小閉包 MCP 介面（`list_watches` / `cancel_watch`）三處映象。
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-此控制面封装了 `WatchManager` 原语，未改动任何服务端行为。每个端点和 CLI 命令都支持通过 `task_id`（路径）或 `to_uri`（查询参数）定位目标任务，两种键可以互换；如果同时提供，二者必须指向同一任务，否则返回 400。
+此控制面封裝了 `WatchManager` 原語，未改動任何服務端行為。每個端點和 CLI 命令都支援通過 `task_id`（路徑）或 `to_uri`（查詢引數）定位目標任務，兩種鍵可以互換；如果同時提供，二者必須指向同一任務，否則返回 400。
 
 **操作**：
-- **列出**（`GET /api/v1/watches`）— 返回 `{tasks, total}`；可传 `?active_only=true` 过滤；传 `?to_uri=...` 时降级为单任务查找
-- **查看**（`GET /api/v1/watches/{task_id}`）— 查看单个任务；可选 `?to_uri=` 做跨键一致性校验
-- **更新**（`PATCH /api/v1/watches/{task_id}` 或 `PATCH /api/v1/watches?to_uri=...`）— 部分更新 `watch_interval`、`is_active`、`reason`、`instruction`。`is_active` 与 `watch_interval` 正交：翻转 `is_active` 可在不丢失配置周期的前提下暂停/恢复任务。
-- **删除**（`DELETE /api/v1/watches/{task_id}` 或 `DELETE /api/v1/watches?to_uri=...`）
-- **触发**（`POST /api/v1/watches/{task_id}/trigger` 或 `POST /api/v1/watches/trigger?to_uri=...`）— 触发即返回（fire-and-forget），重新摄取在后台异步执行
+- **列出**（`GET /api/v1/watches`）— 返回 `{tasks, total}`；可傳 `?active_only=true` 過濾；傳 `?to_uri=...` 時降級為單任務查詢
+- **檢視**（`GET /api/v1/watches/{task_id}`）— 檢視單個任務；可選 `?to_uri=` 做跨鍵一致性校驗
+- **更新**（`PATCH /api/v1/watches/{task_id}` 或 `PATCH /api/v1/watches?to_uri=...`）— 部分更新 `watch_interval`、`is_active`、`reason`、`instruction`。`is_active` 與 `watch_interval` 正交：翻轉 `is_active` 可在不丟失配置週期的前提下暫停/恢復任務。
+- **刪除**（`DELETE /api/v1/watches/{task_id}` 或 `DELETE /api/v1/watches?to_uri=...`）
+- **觸發**（`POST /api/v1/watches/{task_id}/trigger` 或 `POST /api/v1/watches/trigger?to_uri=...`）— 觸發即返回（fire-and-forget），重新攝取在後臺非同步執行
 
-**代码入口**：
+**程式碼入口**：
 - `openviking/server/routers/watches.py` — `/api/v1/watches` REST 路由
-- `crates/ov_cli/src/commands/watch.rs` — `ov task watch` CLI 子命令组
-- `openviking/server/mcp_endpoint.py` — MCP `list_watches` / `cancel_watch` 工具，以及 `add_resource` 上的 `watch_interval` / `to` 参数
-- `openviking/resource/watch_manager.py:WatchManager` — 任务持久化与调度原语
+- `crates/ov_cli/src/commands/watch.rs` — `ov task watch` CLI 子命令組
+- `openviking/server/mcp_endpoint.py` — MCP `list_watches` / `cancel_watch` 工具，以及 `add_resource` 上的 `watch_interval` / `to` 引數
+- `openviking/resource/watch_manager.py:WatchManager` — 任務持久化與排程原語
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-对每个单任务端点，路径中的 `{task_id}` 都可用查询参数 `?to_uri=` 替代。CLI 的 `<key>` 参数会自动分类：任何以 `viking://` 开头的值走 by-URI 路径，其他值视为 task_id（其它 scheme 如 `http://` 会在本地直接报错，避免静默 404）。
+對每個單任務端點，路徑中的 `{task_id}` 都可用查詢引數 `?to_uri=` 替代。CLI 的 `<key>` 引數會自動分類：任何以 `viking://` 開頭的值走 by-URI 路徑，其他值視為 task_id（其它 scheme 如 `http://` 會在本地直接報錯，避免靜默 404）。
 
-**`PATCH /watches` 请求体**（字段均可选，至少需提供一个）
+**`PATCH /watches` 請求體**（欄位均可選，至少需提供一個）
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 型別 | 說明 |
 |------|------|------|
-| watch_interval | float | 新的检查周期（分钟），必须 `> 0`；如需暂停而保留周期请改用 `is_active=false`。 |
-| is_active | bool | 切换激活状态而保留配置周期（暂停 / 恢复）。 |
-| reason | string | 更新该监控任务的记录原因。 |
-| instruction | string | 更新语义处理指令。 |
+| watch_interval | float | 新的檢查週期（分鐘），必須 `> 0`；如需暫停而保留週期請改用 `is_active=false`。 |
+| is_active | bool | 切換啟用狀態而保留配置週期（暫停 / 恢復）。 |
+| reason | string | 更新該監控任務的記錄原因。 |
+| instruction | string | 更新語義處理指令。 |
 
-未识别字段会被拒绝，并返回 HTTP `400` 和 `INVALID_ARGUMENT`（请求模型使用 `extra="forbid"`）。未传字段保留原值。
+未識別字段會被拒絕，並返回 HTTP `400` 和 `INVALID_ARGUMENT`（請求模型使用 `extra="forbid"`）。未傳欄位保留原值。
 
 #### 3. 使用示例
 
 **HTTP API**
 
 ```bash
-# 列出活跃监控任务（去掉 ?active_only 可同时包含已暂停的任务）
+# 列出活躍監控任務（去掉 ?active_only 可同時包含已暫停的任務）
 curl -s "http://localhost:1933/api/v1/watches?active_only=true" \
   -H "X-API-Key: your-key"
 
-# 暂停一个监控任务而保留其检查周期
+# 暫停一個監控任務而保留其檢查週期
 curl -X PATCH "http://localhost:1933/api/v1/watches/<task_id>" \
   -H "X-API-Key: your-key" -H "Content-Type: application/json" \
   -d '{"is_active": false}'
 
-# 触发一次立即刷新（fire-and-forget，立即返回，再次摄取在后台执行）
+# 觸發一次立即重新整理（fire-and-forget，立即返回，再次攝取在後臺執行）
 curl -X POST "http://localhost:1933/api/v1/watches/<task_id>/trigger" \
   -H "X-API-Key: your-key"
 
-# 按 URI 而非 task_id 定位任务
+# 按 URI 而非 task_id 定位任務
 curl -X DELETE "http://localhost:1933/api/v1/watches?to_uri=viking://resources/guide.md" \
   -H "X-API-Key: your-key"
 ```
@@ -108,29 +108,29 @@ _, _, _, _ = watches, updated, triggered, deleted
 以下示例使用 `ov task watch` 子命令：
 
 ```bash
-# 列出活跃监控任务（去掉 --active-only 可同时包含已暂停的任务）
+# 列出活躍監控任務（去掉 --active-only 可同時包含已暫停的任務）
 ov task watch ls --active-only
 
-# 查看单个监控任务（key 可以是 viking:// URI 或 task_id）
+# 檢視單個監控任務（key 可以是 viking:// URI 或 task_id）
 ov task watch show viking://resources/guide.md
 
-# 暂停 / 恢复，不丢失配置周期
+# 暫停 / 恢復，不丟失配置週期
 ov task watch pause viking://resources/guide.md
 ov task watch resume viking://resources/guide.md
 
-# 更新周期（或 --active / --reason / --instruction 的任意组合）
+# 更新週期（或 --active / --reason / --instruction 的任意組合）
 ov task watch update viking://resources/guide.md --interval 30
 
-# 触发一次立即刷新（fire-and-forget）
+# 觸發一次立即重新整理（fire-and-forget）
 ov task watch trigger viking://resources/guide.md
 
-# 删除监控任务
+# 刪除監控任務
 ov task watch rm viking://resources/guide.md
 ```
 
-**响应**
+**響應**
 
-列出任务时返回：
+列出任務時返回：
 
 ```json
 {
@@ -166,16 +166,16 @@ ov task watch rm viking://resources/guide.md
 }
 ```
 
-`source_type` 是可选的来源元数据。显式 Connector `add_type` 优先（例如 `tos`）；
-原生导入返回 `git`、`url` 或 `local`。历史任务或
-无法分类的任务返回 `null`。
+`source_type` 是可選的來源後設資料。顯式 Connector `add_type` 優先（例如 `tos`）；
+原生匯入返回 `git`、`url` 或 `local`。歷史任務或
+無法分類的任務返回 `null`。
 
-首次执行前，`last_task_id`、`last_status` 和 `last_error` 均为 `null`。执行后，
-`last_task_id` 指向对应的普通导入任务（预检查失败时可能为 `null`），`last_status`
-为 `completed`、`failed` 或 `cancelled`；失败时 `last_error` 返回经过凭证脱敏且最多
-500 字符的错误信息。可用 `ov task status <last_task_id>` 查看对应导入任务详情。
+首次執行前，`last_task_id`、`last_status` 和 `last_error` 均為 `null`。執行後，
+`last_task_id` 指向對應的普通匯入任務（預檢查失敗時可能為 `null`），`last_status`
+為 `completed`、`failed` 或 `cancelled`；失敗時 `last_error` 返回經過憑證脫敏且最多
+500 字元的錯誤資訊。可用 `ov task status <last_task_id>` 檢視對應匯入任務詳情。
 
-查看单个任务以及成功更新时，`result` 直接是同一结构的任务对象。删除和触发分别返回：
+檢視單個任務以及成功更新時，`result` 直接是同一結構的任務物件。刪除和觸發分別返回：
 
 ```json
 {
@@ -199,21 +199,21 @@ ov task watch rm viking://resources/guide.md
 }
 ```
 
-`scheduled=true` 只表示后台执行已调度，不表示重新摄取已经完成；应再次查看任务，直到
-`last_execution_time` 更新，并检查 `last_status` 和 `last_error`。
+`scheduled=true` 只表示後臺執行已排程，不表示重新攝取已經完成；應再次檢視任務，直到
+`last_execution_time` 更新，並檢查 `last_status` 和 `last_error`。
 
-**MCP**（Agent 控制面——仅最小闭包）
+**MCP**（Agent 控制面——僅最小閉包）
 
 ```text
-list_watches()                                            # 每个任务一行；只暴露 URI，不暴露 task_id
-cancel_watch(to_uri="viking://resources/guide.md")        # 按 URI 幂等删除
+list_watches()                                            # 每個任務一行；只暴露 URI，不暴露 task_id
+cancel_watch(to_uri="viking://resources/guide.md")        # 按 URI 冪等刪除
 ```
 
-暂停 / 恢复 / 触发 / 更新故意不通过 MCP 暴露——这些 power-user 操作放在 CLI/REST 一侧，以保持 Agent 系统提示词的紧凑。Agent 侧若需创建监控任务或调整周期，仍走 [`add_resource`](02-resources.md#add-resource) 配合 `watch_interval`；可显式传 `to`，也可让系统绑定本次导入返回的 `root_uri`。
+暫停 / 恢復 / 觸發 / 更新故意不通過 MCP 暴露——這些 power-user 操作放在 CLI/REST 一側，以保持 Agent 系統提示詞的緊湊。Agent 側若需建立監控任務或調整週期，仍走 [`add_resource`](02-resources.md#add-resource) 配合 `watch_interval`；可顯式傳 `to`，也可讓系統繫結本次匯入返回的 `root_uri`。
 
 ---
 
-## 相关文档
+## 相關文件
 
-- [资源](02-resources.md) - 创建带 watch_interval 的资源
-- [后台任务](17-tasks.md) - 查询后台处理状态
+- [資源](02-resources.md) - 建立帶 watch_interval 的資源
+- [後臺任務](17-tasks.md) - 查詢後臺處理狀態

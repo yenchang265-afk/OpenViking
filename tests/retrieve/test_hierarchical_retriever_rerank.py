@@ -304,7 +304,7 @@ async def test_rerank_scores_preserves_fallbacks_for_empty_documents(monkeypatch
 
 @pytest.mark.asyncio
 async def test_rerank_scores_does_not_truncate_by_default(monkeypatch):
-    oversized_document = "summary-start " + ("填充内容" * 600) + " relevant-tail"
+    oversized_document = "summary-start " + ("填充內容" * 600) + " relevant-tail"
     fake_client = FakeRerankClient([0.95])
     monkeypatch.setattr(
         "openviking.retrieve.hierarchical_retriever.RerankClient.from_config",
@@ -328,7 +328,7 @@ async def test_rerank_scores_does_not_truncate_by_default(monkeypatch):
     "oversized_document",
     [
         "summary-start " + ("filler " * 600) + " relevant-tail",
-        "摘要开头" + ("填充内容" * 600) + "相关结论",
+        "摘要開頭" + ("填充內容" * 600) + "相關結論",
     ],
 )
 async def test_rerank_scores_bounds_oversized_documents_and_preserves_tail(
@@ -352,8 +352,8 @@ async def test_rerank_scores_bounds_oversized_documents_and_preserves_tail(
     rerank_query, rerank_documents = fake_client.calls[0]
     bounded_document = rerank_documents[0]
     assert estimate_text_tokens(rerank_query) + estimate_text_tokens(bounded_document) <= 128
-    assert "summary-start" in bounded_document or "摘要开头" in bounded_document
-    assert "relevant-tail" in bounded_document or "相关结论" in bounded_document
+    assert "summary-start" in bounded_document or "摘要開頭" in bounded_document
+    assert "relevant-tail" in bounded_document or "相關結論" in bounded_document
     assert bounded_document != oversized_document
 
 

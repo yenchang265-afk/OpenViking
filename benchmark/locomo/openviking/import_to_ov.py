@@ -205,7 +205,7 @@ def build_openviking_message_parts(
 
 
 def load_success_csv(csv_path: str = "./result/import_success.csv") -> set:
-    """加载成功导入的CSV记录，返回已成功的键集合"""
+    """載入成功匯入的CSV記錄，返回已成功的鍵集合"""
     success_keys = set()
     if Path(csv_path).exists():
         with open(csv_path, "r", encoding="utf-8") as f:
@@ -219,7 +219,7 @@ def load_success_csv(csv_path: str = "./result/import_success.csv") -> set:
 def write_success_record(
     record: Dict[str, Any], csv_path: str = "./result/import_success.csv"
 ) -> None:
-    """写入成功记录到CSV文件"""
+    """寫入成功記錄到CSV檔案"""
     file_exists = Path(csv_path).exists()
     fieldnames = [
         "timestamp",
@@ -258,7 +258,7 @@ def write_success_record(
 def write_error_record(
     record: Dict[str, Any], error_path: str = "./result/import_errors.log"
 ) -> None:
-    """写入错误记录到日志文件"""
+    """寫入錯誤記錄到日誌檔案"""
     with open(error_path, "a", encoding="utf-8") as f:
         timestamp = record["timestamp"]
         sample_id = record["sample_id"]
@@ -316,8 +316,8 @@ def mark_ingested(
 # OpenViking import
 # ---------------------------------------------------------------------------
 def _parse_token_usage(commit_result: Dict[str, Any]) -> Dict[str, int]:
-    """解析Token使用数据（从commit返回的telemetry或task result中提取）"""
-    # 尝试从 task result 中提取（task 完成后包含完整 token_usage）
+    """解析Token使用資料（從commit返回的telemetry或task result中提取）"""
+    # 嘗試從 task result 中提取（task 完成後包含完整 token_usage）
     if "result" in commit_result:
         result = commit_result["result"]
         if "token_usage" in result:
@@ -335,7 +335,7 @@ def _parse_token_usage(commit_result: Dict[str, Any]) -> Dict[str, int]:
                 "total": tu.get("total", {}).get("total_tokens", embed_total + llm_total),
             }
 
-    # 从 commit 响应的 telemetry 中提取
+    # 從 commit 響應的 telemetry 中提取
     telemetry = commit_result.get("telemetry", {}).get("summary", {})
     tokens = telemetry.get("tokens", {})
     return {
@@ -365,7 +365,7 @@ async def viking_ingest(
         user_id: User identifier for separate userspace (e.g., "sample_26")
         agent_id: Agent identifier for separate agentspace (e.g., "sample_26")
     """
-    # 解析 session_time - 为每条消息计算递增的时间戳
+    # 解析 session_time - 為每條訊息計算遞增的時間戳
     base_datetime = None
     if session_time:
         try:
@@ -389,7 +389,7 @@ async def viking_ingest(
         for idx, msg in enumerate(messages):
             msg_created_at = None
             if base_datetime:
-                # 每条消息递增1秒，确保时间顺序
+                # 每條訊息遞增1秒，確保時間順序
                 msg_dt = base_datetime + timedelta(seconds=idx)
                 msg_created_at = msg_dt.isoformat()
 
@@ -410,11 +410,11 @@ async def viking_ingest(
         if result.get("status") not in ("committed", "accepted"):
             raise RuntimeError(f"Commit failed: {result}")
 
-        # 等待 task 完成以获取准确 token 消耗
+        # 等待 task 完成以獲取準確 token 消耗
         task_id = result.get("task_id")
         if task_id:
-            # 轮询任务状态直到完成
-            max_attempts = 1200  # 最多等待20分钟
+            # 輪詢任務狀態直到完成
+            max_attempts = 1200  # 最多等待20分鐘
             for _attempt in range(max_attempts):
                 task = await client.get_task(task_id)
                 status = task.get("status") if task else "unknown"
@@ -455,14 +455,14 @@ async def process_single_session(
     ingest_record: Dict[str, Any],
     args: argparse.Namespace,
 ) -> Dict[str, Any]:
-    """处理单个会话的导入任务"""
+    """處理單個會話的匯入任務"""
     try:
         chunks = chunk_messages(messages)
         token_usage = {"embedding": 0, "vlm": 0, "llm_input": 0, "llm_output": 0, "total": 0}
         chunk_task_ids: List[str] = []
         chunk_trace_ids: List[str] = []
 
-        # 使用 sample_id 作为 user_id 和 agent_id，实现独立的 userspace/agentspace
+        # 使用 sample_id 作為 user_id 和 agent_id，實現獨立的 userspace/agentspace
         for chunk in chunks:
             result = await viking_ingest(
                 chunk,
@@ -504,7 +504,7 @@ async def process_single_session(
             "trace_ids": chunk_trace_ids,
         }
 
-        # 写入成功CSV
+        # 寫入成功CSV
         write_success_record(result, args.success_csv)
 
         # Mark as successfully ingested
@@ -526,7 +526,7 @@ async def process_single_session(
             "error": str(e),
         }
 
-        # 写入错误日志
+        # 寫入錯誤日誌
         write_error_record(result, args.error_log)
 
         return result
@@ -535,26 +535,26 @@ async def process_single_session(
 async def run_import(args: argparse.Namespace) -> None:
     session_range = parse_session_range(args.sessions) if args.sessions else None
 
-    # 如果指定了 question-index，自动从 evidence 推断需要的 session
+    # 如果指定了 question-index，自動從 evidence 推斷需要的 session
     if args.question_index is not None and not args.sessions:
-        # 加载数据获取 question 的 evidence
+        # 載入資料獲取 question 的 evidence
         with open(args.input, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        # 获取 sample
+        # 獲取 sample
         sample_idx = args.sample if args.sample is not None else 0
         if sample_idx < 0 or sample_idx >= len(data):
             raise ValueError(f"sample index {sample_idx} out of range")
         sample = data[sample_idx]
 
-        # 获取 question 的 evidence
+        # 獲取 question 的 evidence
         qa_items = sample.get("qa", [])
         if args.question_index < 0 or args.question_index >= len(qa_items):
             raise ValueError(f"question index {args.question_index} out of range")
         qa = qa_items[args.question_index]
         evidence_list = qa.get("evidence", [])
 
-        # 从 evidence 提取 session 号 (D1:3 -> session 1)
+        # 從 evidence 提取 session 號 (D1:3 -> session 1)
         session_nums = set()
         for ev in evidence_list:
             try:
@@ -581,7 +581,7 @@ async def run_import(args: argparse.Namespace) -> None:
     else:
         ingest_record = load_ingest_record()
 
-    # 加载成功CSV记录用于去重
+    # 載入成功CSV記錄用於去重
     success_keys = set()
     if not args.force_ingest:
         success_keys = load_success_csv(args.success_csv)
@@ -603,7 +603,7 @@ async def run_import(args: argparse.Namespace) -> None:
         # LoCoMo JSON format
         samples = load_locomo_data(args.input, args.sample)
 
-        # 为每个 sample 创建独立的处理协程
+        # 為每個 sample 建立獨立的處理協程
         async def process_sample(item):
             sample_id = item["sample_id"]
             sessions = build_session_messages(item, session_range)
@@ -611,7 +611,7 @@ async def run_import(args: argparse.Namespace) -> None:
             print(f"\n=== Sample {sample_id} ===", file=sys.stderr)
             print(f"    {len(sessions)} session(s) to import", file=sys.stderr)
 
-            # 同一 sample 内串行处理所有 sessions
+            # 同一 sample 內序列處理所有 sessions
             for sess in sessions:
                 meta = sess["meta"]
                 messages = sess["messages"]
@@ -634,7 +634,7 @@ async def run_import(args: argparse.Namespace) -> None:
                 )
                 print(f"  [{label}] {preview}", file=sys.stderr)
 
-                # 串行执行（等待完成后再处理下一个 session）
+                # 序列執行（等待完成後再處理下一個 session）
                 await process_single_session(
                     messages=messages,
                     sample_id=sample_id,
@@ -645,7 +645,7 @@ async def run_import(args: argparse.Namespace) -> None:
                     args=args,
                 )
 
-        # 不同 sample 之间并行执行；可用 --parallel-samples 控制并发上限。
+        # 不同 sample 之間並行執行；可用 --parallel-samples 控制併發上限。
         if args.parallel_samples:
             semaphore = asyncio.Semaphore(args.parallel_samples)
 
@@ -686,7 +686,7 @@ async def run_import(args: argparse.Namespace) -> None:
             preview = " | ".join([f"{msg['role']}: {msg['text'][:30]}..." for msg in messages[:3]])
             print(f"  {preview}", file=sys.stderr)
 
-            # 创建异步任务
+            # 建立非同步任務
             task = asyncio.create_task(
                 process_single_session(
                     messages=messages,
@@ -700,14 +700,14 @@ async def run_import(args: argparse.Namespace) -> None:
             )
             tasks.append(task)
 
-    # 等待所有 sample 处理完成
+    # 等待所有 sample 處理完成
     print(
         f"\n[INFO] Starting import with {len(tasks)} tasks to process",
         file=sys.stderr,
     )
     await asyncio.gather(*tasks, return_exceptions=True)
 
-    # 从成功 CSV 统计结果
+    # 從成功 CSV 統計結果
     if Path(args.success_csv).exists():
         with open(args.success_csv, "r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
@@ -743,7 +743,7 @@ async def run_import(args: argparse.Namespace) -> None:
 
 
 def main():
-    # 基于脚本所在目录计算默认数据文件路径
+    # 基於指令碼所在目錄計算預設資料檔案路徑
     script_dir = Path(__file__).parent.resolve()
     default_input = str(script_dir / ".." / "data" / "locomo10.json")
 
@@ -811,7 +811,7 @@ def main():
     )
     args = parser.parse_args()
 
-    # 确保输出目录存在
+    # 確保輸出目錄存在
     Path(args.success_csv).parent.mkdir(parents=True, exist_ok=True)
     Path(args.error_log).parent.mkdir(parents=True, exist_ok=True)
 

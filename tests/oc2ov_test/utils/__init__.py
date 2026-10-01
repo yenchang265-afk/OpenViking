@@ -1,5 +1,5 @@
 """
-工具函数模块
+工具函式模組
 """
 
 from .assertions import AssertionHelper

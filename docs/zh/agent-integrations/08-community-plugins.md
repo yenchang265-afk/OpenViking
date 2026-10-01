@@ -1,116 +1,116 @@
-# 社区插件
+# 社群外掛
 
-社区维护的各运行时集成。各插件在目标平台、集成深度和维护状态上各有差异，使用前请先阅读各自的 README。
+社群維護的各執行時整合。各外掛在目標平臺、整合深度和維護狀態上各有差異，使用前請先閱讀各自的 README。
 
-## ZCode 记忆集成
+## ZCode 記憶整合
 
-源码：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
+原始碼：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
 
-ZCode 社区集成通过配置驱动的生命周期 Hook 和 OpenViking MCP 服务提供跨项目、跨会话记忆：
+ZCode 社群整合通過配置驅動的生命週期 Hook 和 OpenViking MCP 服務提供跨專案、跨會話記憶：
 
-- **SessionStart** 注入用户画像。
-- **UserPromptSubmit** 召回相关记忆。
-- **PreToolUse** 将直接读取 `viking://` 的操作引导至 MCP 工具。
-- **Stop** 在 detached worker 中捕获 rollout 里的未处理回合，并 commit OpenViking session。
+- **SessionStart** 注入使用者畫像。
+- **UserPromptSubmit** 召回相關記憶。
+- **PreToolUse** 將直接讀取 `viking://` 的操作引導至 MCP 工具。
+- **Stop** 在 detached worker 中捕獲 rollout 裡的未處理回合，並 commit OpenViking session。
 
-ZCode 不提供 `PreCompact`、`SessionEnd` 和 subagent 生命周期 Hook。因此该适配器在 `Stop` 时 commit，以 ZCode rollout 文件作为权威增量对话源，只有 rollout 文件不可用时才回退到 Hook stdin。
+ZCode 不提供 `PreCompact`、`SessionEnd` 和 subagent 生命週期 Hook。因此該介面卡在 `Stop` 時 commit，以 ZCode rollout 檔案作為權威增量對話源，只有 rollout 檔案不可用時才回退到 Hook stdin。
 
-### 安装
+### 安裝
 
-前置条件：Node.js 18+、正在运行的 OpenViking 服务，以及 ZCode。
+前置條件：Node.js 18+、正在執行的 OpenViking 服務，以及 ZCode。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
   --harness zcode
 ```
 
-GitHub 不可用的地区可使用 TOS 镜像：
+GitHub 不可用的地區可使用 TOS 映象：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
   --harness zcode --dist tos
 ```
 
-安装器通过 `~/.zcode/` 或 `zcode` 二进制检测 ZCode，将运行时安装到 `~/.openviking/agent-integrations/zcode/`，并把 Hook 与 MCP 配置合并到 `~/.zcode/cli/config.json`。
+安裝器通過 `~/.zcode/` 或 `zcode` 二進位制檢測 ZCode，將執行時安裝到 `~/.openviking/agent-integrations/zcode/`，並把 Hook 與 MCP 配置合併到 `~/.zcode/cli/config.json`。
 
-重启 ZCode 后，请确认：
+重啟 ZCode 後，請確認：
 
-- `~/.zcode/cli/config.json` 包含 `hooks.enabled: true`、`hooks.events` 下的 OpenViking 条目，以及 `mcp.servers.openviking`。
-- 设置 `OPENVIKING_DEBUG=1` 后，可在 `~/.openviking/logs/zcode-hooks.log` 查看诊断日志。
+- `~/.zcode/cli/config.json` 包含 `hooks.enabled: true`、`hooks.events` 下的 OpenViking 條目，以及 `mcp.servers.openviking`。
+- 設定 `OPENVIKING_DEBUG=1` 後，可在 `~/.openviking/logs/zcode-hooks.log` 檢視診斷日誌。
 
-| 现象 | 原因 | 处理方式 |
+| 現象 | 原因 | 處理方式 |
 |------|------|----------|
-| Hook 未执行 | Hook 配置被禁用或已过期 | 重跑安装器并重启 ZCode |
-| 召回为空 | OpenViking 不可用或记忆尚未提取 | 检查 `curl http://127.0.0.1:1933/health`，并等待提取完成 |
-| MCP 工具未出现 | MCP proxy 启动失败 | 检查 `~/.zcode/cli/config.json` 中 `mcp.servers.openviking` 的绝对路径命令 |
-| 重复捕获 | 旧安装留下了重复 Hook 条目 | 先运行 `install.sh --harness zcode --uninstall`，再重新安装 |
+| Hook 未執行 | Hook 配置被停用或已過期 | 重跑安裝器並重啟 ZCode |
+| 召回為空 | OpenViking 不可用或記憶尚未提取 | 檢查 `curl http://127.0.0.1:1933/health`，並等待提取完成 |
+| MCP 工具未出現 | MCP proxy 啟動失敗 | 檢查 `~/.zcode/cli/config.json` 中 `mcp.servers.openviking` 的絕對路徑命令 |
+| 重複捕獲 | 舊安裝留下了重複 Hook 條目 | 先執行 `install.sh --harness zcode --uninstall`，再重新安裝 |
 
-实现细节与当前已验证的 ZCode 假设见插件目录中的 [README](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin) 和 [DESIGN.md](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/DESIGN.md)。
+實現細節與當前已驗證的 ZCode 假設見外掛目錄中的 [README](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin) 和 [DESIGN.md](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/DESIGN.md)。
 
-## Kimi Code 记忆集成
+## Kimi Code 記憶整合
 
-源码：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
+原始碼：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
 
-Kimi Code 集成是原生 managed plugin。它复用 OpenViking 的共享 Hook 运行时，只在适配层保留 Kimi 特有的事件映射、wire transcript 解码、输出格式和 commit 策略：
+Kimi Code 整合是原生 managed plugin。它複用 OpenViking 的共享 Hook 執行時，只在適配層保留 Kimi 特有的事件對映、wire transcript 解碼、輸出格式和 commit 策略：
 
-- **UserPromptSubmit** 召回记忆，并输出 Kimi 可直接注入的原始文本。
-- **PreToolUse** 拒绝 Read/Glob/Grep 直接访问 `viking://` URI。
-- **Stop**、**PreCompact** 和 **SessionEnd** 增量捕获 `wire.jsonl` 回合；**Interrupt** 同步执行同一捕获流程，全部 OpenViking 请求共用 2 秒总预算。
-- 原生插件 manifest 提供 OpenViking MCP server，不修改 Kimi 的旧式配置文件。
+- **UserPromptSubmit** 召回記憶，並輸出 Kimi 可直接注入的原始文本。
+- **PreToolUse** 拒絕 Read/Glob/Grep 直接訪問 `viking://` URI。
+- **Stop**、**PreCompact** 和 **SessionEnd** 增量捕獲 `wire.jsonl` 回合；**Interrupt** 同步執行同一捕獲流程，全部 OpenViking 請求共用 2 秒總預算。
+- 原生外掛 manifest 提供 OpenViking MCP server，不修改 Kimi 的舊式配置檔案。
 
-### 安装
+### 安裝
 
-前置条件：Node.js 18+、正在运行的 OpenViking 服务，以及 Kimi Code CLI。
+前置條件：Node.js 18+、正在執行的 OpenViking 服務，以及 Kimi Code CLI。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
   --harness kimicode
 ```
 
-GitHub 不可用的地区可使用 TOS 镜像：
+GitHub 不可用的地區可使用 TOS 映象：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
   --harness kimicode --dist tos
 ```
 
-安装器会在 `$KIMI_CODE_HOME/plugins/managed/openviking-memory/`
-下组装自包含运行时（Kimi home 默认为 `~/.kimi-code/`），并且只更新
-`plugins/installed.json` 中的 `openviking-memory` 记录，不动其他插件。
-重跑同一命令可升级；加上 `--uninstall` 只卸载该插件。
+安裝器會在 `$KIMI_CODE_HOME/plugins/managed/openviking-memory/`
+下組裝自包含執行時（Kimi home 預設為 `~/.kimi-code/`），並且只更新
+`plugins/installed.json` 中的 `openviking-memory` 記錄，不動其他外掛。
+重跑同一命令可升級；加上 `--uninstall` 只解除安裝該外掛。
 
-已验证的宿主契约和版本见
+已驗證的宿主契約和版本見
 [`hosts/kimicode/DESIGN.md`](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/hosts/kimicode/DESIGN.md)。
 
 ## AstrBot 插件
 
-[AstrBot](https://github.com/AstrBotDevs/AstrBot) 是一个多平台 IM Bot 框架，支持 QQ、Telegram、Discord 等 20+ 平台。
+[AstrBot](https://github.com/AstrBotDevs/AstrBot) 是一個多平臺 IM Bot 框架，支援 QQ、Telegram、Discord 等 20+ 平臺。
 
-源码：[astrbot_plugin_openviking_memory](https://github.com/t0saki/astrbot_plugin_openviking_memory)
+原始碼：[astrbot_plugin_openviking_memory](https://github.com/t0saki/astrbot_plugin_openviking_memory)
 
-为 AstrBot 提供群聊/私聊的自动捕获、LLM 请求前的语义召回，以及可配置的 venue 记忆隔离。
+為 AstrBot 提供群聊/私聊的自動捕獲、LLM 請求前的語義召回，以及可配置的 venue 記憶隔離。
 
-**安装**：在 AstrBot WebUI → 插件市场搜索 **OpenViking Memory** 并安装；或从链接安装：`https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
+**安裝**：在 AstrBot WebUI → 外掛市場搜尋 **OpenViking Memory** 並安裝；或從連結安裝：`https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
 
 **主要特性**：
 
-- 基于 hooks 的自动召回与捕获，模型不需要主动调用工具
-- 三档隔离模式：`venue_user`（群/私聊各自独立）、`venue_user_fanout`（跨群共享）、`global_user`（全局共享）
-- 四触发器自动 commit：消息计数、token 阈值、空闲超时、进程退出 flush
-- 首次接入群聊时自动拉取平台历史消息入库
+- 基於 hooks 的自動召回與捕獲，模型不需要主動呼叫工具
+- 三檔隔離模式：`venue_user`（群/私聊各自獨立）、`venue_user_fanout`（跨群共享）、`global_user`（全域共享）
+- 四觸發器自動 commit：訊息計數、token 閾值、空閒超時、程序退出 flush
+- 首次接入群聊時自動拉取平臺歷史訊息入庫
 
 ## Open WebUI tool server
 
-[Open WebUI](https://github.com/open-webui/open-webui) 是一个自托管的 AI 聊天界面。
+[Open WebUI](https://github.com/open-webui/open-webui) 是一個自託管的 AI 聊天介面。
 
-源码：[examples/openwebui-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openwebui-plugin)
+原始碼：[examples/openwebui-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openwebui-plugin)
 
-一个独立的 FastAPI server，把 OpenViking 的一组精选端点以 OpenAPI tools 形式暴露，让 Open WebUI 作为原生工具调用。部署与端点说明见 README。
+一個獨立的 FastAPI server，把 OpenViking 的一組精選端點以 OpenAPI tools 形式暴露，讓 Open WebUI 作為原生工具呼叫。部署與端點說明見 README。
 
 ## 更多示例
 
-[examples/](https://github.com/volcengine/OpenViking/tree/main/examples) 目录下还有 Agent 插件之外的部署与集成示例——Grafana 面板、Kubernetes Helm chart、多租户配置、快照流程和 SDK 片段等。
+[examples/](https://github.com/volcengine/OpenViking/tree/main/examples) 目錄下還有 Agent 外掛之外的部署與整合示例——Grafana 面板、Kubernetes Helm chart、多租戶配置、快照流程和 SDK 片段等。
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
+- [整合能力參考](./16-capability-reference.md)

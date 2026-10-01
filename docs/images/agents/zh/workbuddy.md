@@ -1,15 +1,15 @@
-## 步骤1：配置 MCP
+## 步驟1：配置 MCP
 
-1. 打开 WorkBuddy，点击左侧导航栏的 **专家·技能·连接器**，进入 **连接器** 标签页。
-![打开 WorkBuddy 连接器](https://docs.openviking.net/agents/image/workbuddy/01-open-connectors.webp)
+1. 開啟 WorkBuddy，點選左側導航欄的 **專家·技能·連接器**，進入 **連接器** 標籤頁。
+![開啟 WorkBuddy 連接器](https://docs.openviking.net/agents/image/workbuddy/01-open-connectors.webp)
 
-2. 点击右上角的 **自定义连接器**，进入 MCP 服务管理面板。
-![打开自定义连接器](https://docs.openviking.net/agents/image/workbuddy/02-custom-connector.webp)
+2. 點選右上角的 **自定義連接器**，進入 MCP 服務管理面板。
+![開啟自定義連接器](https://docs.openviking.net/agents/image/workbuddy/02-custom-connector.webp)
 
-3. 点击 **配置 MCP**，进入 MCP 配置编辑器。
-![进入 MCP 配置编辑器](https://docs.openviking.net/agents/image/workbuddy/03-configure-mcp.webp)
+3. 點選 **配置 MCP**，進入 MCP 配置編輯器。
+![進入 MCP 配置編輯器](https://docs.openviking.net/agents/image/workbuddy/03-configure-mcp.webp)
 
-4. 在配置文件中填入以下内容：
+4. 在配置檔案中填入以下內容：
 
    ```json
    {
@@ -24,21 +24,21 @@
    }
    ```
 
-5. 点击右上角的 **保存**。顶部出现“配置保存成功”的绿色提示后，配置即已保存。
+5. 點選右上角的 **儲存**。頂部出現“配置儲存成功”的綠色提示後，配置即已儲存。
 ![保存 MCP 配置](https://docs.openviking.net/agents/image/workbuddy/04-save-config.webp)
 
-6. 返回 MCP 列表。如果系统提示“首次连接此 MCP 服务需要您的信任确认”，点击 **信任** 完成接入。
-![信任 OpenViking MCP 服务](https://docs.openviking.net/agents/image/workbuddy/05-trust-server.webp)
+6. 返回 MCP 列表。如果系統提示“首次連線此 MCP 服務需要您的信任確認”，點選 **信任** 完成接入。
+![信任 OpenViking MCP 服務](https://docs.openviking.net/agents/image/workbuddy/05-trust-server.webp)
 
-## 步骤2：验证
+## 步驟2：驗證
 
-返回 MCP 列表页，确认 `OpenViking` 出现在“我的 MCP”中、状态为开启，展开后可看到已启用工具。
+返回 MCP 列表頁，確認 `OpenViking` 出現在“我的 MCP”中、狀態為開啟，展開後可看到已啟用工具。
 
-![验证 OpenViking MCP 工具](https://docs.openviking.net/agents/image/workbuddy/06-verify-tools.webp)
+![驗證 OpenViking MCP 工具](https://docs.openviking.net/agents/image/workbuddy/06-verify-tools.webp)
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| MCP 列表中未出现 `OpenViking` | 检查 JSON 配置格式并重新保存 |
-| MCP 连接状态异常 | 刷新连接；若仍异常，检查 JSON 配置及网络连通性 |
+| MCP 列表中未出現 `OpenViking` | 檢查 JSON 配置格式並重新儲存 |
+| MCP 連線狀態異常 | 重新整理連線；若仍異常，檢查 JSON 配置及網路連通性 |

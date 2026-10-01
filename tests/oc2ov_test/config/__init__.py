@@ -1,5 +1,5 @@
 """
-配置文件模块
+配置檔案模組
 """
 
 from .settings import *  # noqa: F403

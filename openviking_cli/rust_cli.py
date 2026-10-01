@@ -1,20 +1,20 @@
-"""ov 命令的极简 Python 包装器
+"""ov 命令的極簡 Python 包裝器
 
-设计原则：
-1. 职责单一：仅负责查找二进制并 execv
-2. 无网络依赖：不实现下载功能
-3. 极简代码：尽可能减少启动开销
-4. 快速失败：找不到立即提示用户
+設計原則：
+1. 職責單一：僅負責查詢二進位制並 execv
+2. 無網路依賴：不實現下載功能
+3. 極簡程式碼：儘可能減少啟動開銷
+4. 快速失敗：找不到立即提示使用者
 
-性能说明：
-- Python 虚拟机启动 + 导入基础模块：约 30-50ms
-- 一旦 execv 执行，后续为纯 Rust 二进制，零开销
+效能說明：
+- Python 虛擬機器啟動 + 匯入基礎模組：約 30-50ms
+- 一旦 execv 執行，後續為純 Rust 二進位制，零開銷
 
-Rust CLI 独立发布能力完全保留，用户可通过以下方式获取：
-- 官方安装脚本（零开销）
-- GitHub Releases 手动下载（零开销）
-- cargo install（零开销）
-- 包管理器（未来）
+Rust CLI 獨立釋出能力完全保留，使用者可通過以下方式獲取：
+- 官方安裝指令碼（零開銷）
+- GitHub Releases 手動下載（零開銷）
+- cargo install（零開銷）
+- 包管理器（未來）
 """
 
 import os
@@ -41,20 +41,20 @@ def _exec_binary(binary: str, argv: list[str]) -> None:
 
 def main():
     """
-    极简入口点：查找 ov 二进制并执行
+    極簡入口點：查詢 ov 二進位制並執行
 
-    按优先级查找：
+    按優先順序查詢：
     0. Python-native 子命令（doctor）
-    1. ./target/release/ov（开发环境）
-    2. Wheel 自带：{package_dir}/openviking/bin/ov
-    3. PATH 查找：系统全局安装的 ov
+    1. ./target/release/ov（開發環境）
+    2. Wheel 自帶：{package_dir}/openviking/bin/ov
+    3. PATH 查詢：系統全域安裝的 ov
     """
     # 0. Python-native subcommands (no Rust binary needed)
     if len(sys.argv) > 1 and sys.argv[1] == "doctor":
         from openviking_cli.doctor import main as doctor_main
 
         sys.exit(doctor_main())
-    # 1. 检查开发环境（仅在直接运行脚本时有效）
+    # 1. 檢查開發環境（僅在直接執行指令碼時有效）
     try:
         # __file__ is openviking_cli/rust_cli.py, so parent is openviking_cli directory
         dev_binary = Path(__file__).parent.parent / "target" / "release" / "ov"
@@ -63,7 +63,7 @@ def main():
     except Exception:
         pass
 
-    # 2. 检查 Wheel 自带（不导入 openviking，避免额外开销）
+    # 2. 檢查 Wheel 自帶（不匯入 openviking，避免額外開銷）
     try:
         # __file__ is openviking_cli/rust_cli.py, so parent is openviking_cli directory
         package_dir = Path(__file__).parent.parent / "openviking"
@@ -75,7 +75,7 @@ def main():
     except Exception:
         pass
 
-    # 3. 检查 PATH，但跳过当前 Python 入口点
+    # 3. 檢查 PATH，但跳過當前 Python 入口點
     path_binary = which("ov")
     if path_binary:
         try:
@@ -90,22 +90,22 @@ def main():
             if candidate_path != current_path:
                 _exec_binary(path_binary, sys.argv[1:])
 
-    # 都找不到，提示用户
+    # 都找不到，提示使用者
     print(
-        """错误: 未找到 ov 二进制文件。
+        """錯誤: 未找到 ov 二進位制檔案。
 
-        请选择以下方式之一安装：
+        請選擇以下方式之一安裝：
 
-        1. 使用预构建 wheel（推荐）：
+        1. 使用預構建 wheel（推薦）：
    pip install openviking --upgrade --force-reinstall
 
-        2. 使用 npm 安装原生 CLI 包（零 Python 开销）：
+        2. 使用 npm 安裝原生 CLI 包（零 Python 開銷）：
    npm i -g @openviking/cli
 
-        3. 从 GitHub Releases 下载（零 Python 开销）：
+        3. 從 GitHub Releases 下載（零 Python 開銷）：
    https://github.com/volcengine/OpenViking/releases
 
-        4. 从源码构建（零 Python 开销）：
+        4. 從原始碼構建（零 Python 開銷）：
    cargo install --git https://github.com/volcengine/OpenViking ov_cli""",
         file=sys.stderr,
     )

@@ -1,5 +1,5 @@
 """
-OpenClaw 客户端封装
+OpenClaw 客戶端封裝
 """
 
 import json
@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 class OpenClawClient:
     """
-    OpenClaw HTTP 客户端
+    OpenClaw HTTP 客戶端
     """
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         """
-        初始化客户端
+        初始化客戶端
         """
         self.config = config or OPENCLAW_CONFIG
         self.url = self.config["url"]
@@ -27,7 +27,7 @@ class OpenClawClient:
 
     def _get_headers(self) -> Dict[str, str]:
         """
-        获取请求头
+        獲取請求頭
         """
         return {
             "Authorization": self.config["auth_token"],
@@ -37,7 +37,7 @@ class OpenClawClient:
 
     def send_message(self, message: str, agent_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        发送消息到 OpenClaw
+        傳送訊息到 OpenClaw
         """
         headers = self._get_headers()
         if agent_id:
@@ -47,38 +47,38 @@ class OpenClawClient:
 
         try:
             logger.info("=" * 80)
-            logger.info("📤 发送请求到 OpenClaw")
+            logger.info("📤 傳送請求到 OpenClaw")
             logger.info("=" * 80)
             logger.info(f"URL: {self.url}")
             logger.info(f"Agent ID: {headers.get('x-openclaw-agent-id')}")
-            logger.info(f"输入消息: {message}")
+            logger.info(f"輸入訊息: {message}")
             logger.info(f"完整 Payload: {json.dumps(payload, ensure_ascii=False, indent=2)}")
 
-            logger.info(f"⏳ 等待响应 (超时: {self.timeout}秒)...")
+            logger.info(f"⏳ 等待響應 (超時: {self.timeout}秒)...")
             response = requests.post(self.url, headers=headers, json=payload, timeout=self.timeout)
 
-            logger.info(f"✅ 收到响应 - HTTP 状态码: {response.status_code}")
+            logger.info(f"✅ 收到響應 - HTTP 狀態碼: {response.status_code}")
             response.raise_for_status()
 
             result = response.json()
 
             logger.info("=" * 80)
-            logger.info("📥 OpenClaw 响应内容:")
+            logger.info("📥 OpenClaw 響應內容:")
             logger.info("=" * 80)
             logger.info(json.dumps(result, ensure_ascii=False, indent=2))
             logger.info("=" * 80)
 
             return result
         except requests.exceptions.RequestException as e:
-            error_msg = f"❌ 请求失败: {str(e)}"
+            error_msg = f"❌ 請求失敗: {str(e)}"
             logger.error("=" * 80)
             logger.error(error_msg)
             logger.error("=" * 80)
             return {"error": error_msg, "success": False}
         except json.JSONDecodeError as e:
-            error_msg = f"❌ JSON 解析失败: {str(e)}"
+            error_msg = f"❌ JSON 解析失敗: {str(e)}"
             logger.error("=" * 80)
             logger.error(error_msg)
-            logger.error(f"响应文本: {response.text if 'response' in locals() else 'N/A'}")
+            logger.error(f"響應文本: {response.text if 'response' in locals() else 'N/A'}")
             logger.error("=" * 80)
             return {"error": error_msg, "success": False}

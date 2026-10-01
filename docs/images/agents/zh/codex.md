@@ -1,20 +1,20 @@
-## 步骤1：安装
+## 步驟1：安裝
 
-1. 在终端执行如下安装命令：
+1. 在終端執行如下安裝命令：
 
    ```bash
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness codex --dist tos
    ```
 
-2. 安装器会依次询问以下信息：语言（English / 中文）、OpenViking 凭据。在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安裝器會依次詢問以下資訊：語言（English / 中文）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-## 步骤2：验证
+## 步驟2：驗證
 
-1. 启动 Codex。首次启动会停在 Hook 信任确认上，选 **Trust all and continue**：
+1. 啟動 Codex。首次啟動會停在 Hook 信任確認上，選 **Trust all and continue**：
 
    ```text
    Hooks need review
@@ -26,7 +26,7 @@
      3. Continue without trusting (hooks won't run)
    ```
 
-   OpenViking 注册的 6 个 Hook 是（Codex 版本较旧时可能少几个）：
+   OpenViking 註冊的 6 個 Hook 是（Codex 版本較舊時可能少幾個）：
 
    ```text
    SessionStart
@@ -37,9 +37,9 @@
    PreCompact
    ```
 
-2. 错过这个提示，或当时选了第 3 项，Hook 就不会运行。输入 `/hooks` 补上信任并开启条目，`/plugins` 里确认 `openviking-memory` 已启用——两个开关相互独立，都要是开着的。插件更新动了 Hook 时会再要求信任一次。
+2. 錯過這個提示，或當時選了第 3 項，Hook 就不會執行。輸入 `/hooks` 補上信任並開啟條目，`/plugins` 裡確認 `openviking-memory` 已啟用——兩個開關相互獨立，都要是開著的。外掛更新動了 Hook 時會再要求信任一次。
 
-3. 验证 Profile 加载：信任完成后，提交第一条 Prompt（内容随意即可）。此时插件应自动加载 Profile——若对话开头出现记忆召回内容，则表明接入成功：
+3. 驗證 Profile 載入：信任完成後，提交第一條 Prompt（內容隨意即可）。此時外掛應自動載入 Profile——若對話開頭出現記憶召回內容，則表明接入成功：
 
    ```text
    • UserPromptSubmit hook (completed)
@@ -49,15 +49,15 @@
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| 鉴权失败 | 检查 `~/.openviking/ovcli.conf` 的 `api_key`，重启 Codex |
-| 连接失败 | `curl "$(jq -r '.url' ~/.openviking/ovcli.conf)/health"` |
-| `6 hooks need review`，或 Hook 不生效 | `/hooks` 里信任并开启，`/plugins` 里确认插件已启用 |
-| 需要日志 | `OPENVIKING_DEBUG=1`，看 `~/.openviking/logs/codex-hooks.log` |
+| 鑑權失敗 | 檢查 `~/.openviking/ovcli.conf` 的 `api_key`，重啟 Codex |
+| 連線失敗 | `curl "$(jq -r '.url' ~/.openviking/ovcli.conf)/health"` |
+| `6 hooks need review`，或 Hook 不生效 | `/hooks` 裡信任並開啟，`/plugins` 裡確認外掛已啟用 |
+| 需要日誌 | `OPENVIKING_DEBUG=1`，看 `~/.openviking/logs/codex-hooks.log` |
 
-## 参考
+## 參考
 
-- 手动配置文档：[Codex](https://docs.openviking.net/zh/agent-integrations/04-codex)
+- 手動配置文件：[Codex](https://docs.openviking.net/zh/agent-integrations/04-codex)
 - 原理博客：[OpenViking for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
-- 源码：[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin)
+- 原始碼：[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin)

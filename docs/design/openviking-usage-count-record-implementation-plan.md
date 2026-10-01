@@ -1,33 +1,33 @@
 # File Usage Event Log Implementation Plan
 
-**Goal:** 将 Usage Reporter 生成的 `UsageEvent` 转换为稳定的
-计量日志协议，供部署侧日志采集系统读取并投递到下游。
+**Goal:** 將 Usage Reporter 生成的 `UsageEvent` 轉換為穩定的
+計量日誌協議，供部署側日誌採集系統讀取並投遞到下游。
 
-**Architecture:** `MemoryUsageExtractor` 继续生成内部 `UsageEvent`。
-`FileLogUsageSink` 在写入专用日志文件前执行单向转换，每行保存一个扁平 JSON
-计量事件。`object_id` 作为稳定事件标识，供下游在 best-effort 投递发生重复时
-与 `tenant_id` 组成复合键去重。
+**Architecture:** `MemoryUsageExtractor` 繼續生成內部 `UsageEvent`。
+`FileLogUsageSink` 在寫入專用日誌檔案前執行單向轉換，每行儲存一個扁平 JSON
+計量事件。`object_id` 作為穩定事件標識，供下游在 best-effort 投遞發生重複時
+與 `tenant_id` 組成複合鍵去重。
 
-**Tech Stack:** Python 3.10+、dataclasses、标准库
+**Tech Stack:** Python 3.10+、dataclasses、標準庫
 `datetime` / `json` / `logging`、pytest、Ruff。
 
 ---
 
-## 文件结构
+## 檔案結構
 
 - `openviking/usage_reporter/file_log_sink.py`
-  - 定义 `UsageEvent -> 计量日志` 私有转换。
-  - 构造资源归属 `tenant_id`。
-  - 将记录追加到按 UTC 小时滚动的专用日志文件。
+  - 定義 `UsageEvent -> 計量日誌` 私有轉換。
+  - 構造資源歸屬 `tenant_id`。
+  - 將記錄追加到按 UTC 小時滾動的專用日誌檔案。
 - `tests/unit/usage_reporter/test_file_log_sink.py`
-  - 固定 recall/inject 字段映射、UTC 时间、租户字段和未知事件行为。
-  - 验证多 worker 共享文件时的写入和滚动行为。
+  - 固定 recall/inject 欄位對映、UTC 時間、租戶欄位和未知事件行為。
+  - 驗證多 worker 共享檔案時的寫入和滾動行為。
 - `docs/design/openviking-usage-reporter-sink-design.md`
-  - 定义 Usage Reporter、Sink 扩展点和文件日志协议。
+  - 定義 Usage Reporter、Sink 擴充點和檔案日誌協議。
 
-## 计量日志映射契约
+## 計量日誌對映契約
 
-`memory.recalled` 事件映射为：
+`memory.recalled` 事件對映為：
 
 ```json
 {
@@ -42,35 +42,35 @@
 }
 ```
 
-映射规则：
+對映規則：
 
-- `memory.recalled` 映射为 `event_name=experience.recall.count`。
-- `memory.injected` 映射为 `event_name=experience.inject.count`。
-- `count` 固定为 `1`。
-- `occurred_at` 转换为 UTC `YYYY-MM-DD HH:MM:SS`。
-- `event_id` 写入 `object_id`，为空时拒绝写入。
+- `memory.recalled` 對映為 `event_name=experience.recall.count`。
+- `memory.injected` 對映為 `event_name=experience.inject.count`。
+- `count` 固定為 `1`。
+- `occurred_at` 轉換為 UTC `YYYY-MM-DD HH:MM:SS`。
+- `event_id` 寫入 `object_id`，為空時拒絕寫入。
 - `tenant_id` 拼接部署 `resource_id`、`account_id`、`user_id` 和 `resource_uri`。
-- `resource_id` 从 `resource_id_env` 指定的环境变量读取，未配置时拒绝启动 Sink。
-- `tags.resource_type` 记录资源类型。
-- 未知 `event_type` 拒绝写入，避免产生无法解释的计量记录。
+- `resource_id` 從 `resource_id_env` 指定的環境變數讀取，未配置時拒絕啟動 Sink。
+- `tags.resource_type` 記錄資源型別。
+- 未知 `event_type` 拒絕寫入，避免產生無法解釋的計量記錄。
 
-## 文件日志协议
+## 檔案日誌協議
 
-日志行格式：
+日誌行格式：
 
 ```text
 {"event_time":"<UTC time>","tenant_id":"resource_id:<resource>;account_id:<account>;user_id:<user>;resource_uri:<uri>","event_name":"<event>","object_id":"<event_id>","count":1,"tags":{"resource_type":"experience"}}
 ```
 
-日志文件不复用 OpenViking stdout，按 UTC 小时滚动，并保留配置数量的历史
-文件。多个 server worker 写入同一路径时，文件追加和滚动通过进程间锁串行化。
+日誌檔案不復用 OpenViking stdout，按 UTC 小時滾動，並保留配置數量的歷史
+檔案。多個 server worker 寫入同一路徑時，檔案追加和滾動通過程序間鎖序列化。
 
-文件落盘及后续采集均采用 best-effort 语义。下游必须按
-`(tenant_id, object_id)` 复合键去重，不能跨 tenant 仅按 `object_id` 全局去重。
-次数查询按 `tenant_id`、`event_name` 和 `event_time` 范围过滤，并计算
+檔案落盤及後續採集均採用 best-effort 語義。下游必須按
+`(tenant_id, object_id)` 複合鍵去重，不能跨 tenant 僅按 `object_id` 全域去重。
+次數查詢按 `tenant_id`、`event_name` 和 `event_time` 範圍過濾，並計算
 `sum(count)`。
 
-## 验证
+## 驗證
 
 ```bash
 uv run pytest -q --no-cov tests/unit/usage_reporter

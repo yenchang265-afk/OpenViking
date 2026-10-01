@@ -6,37 +6,37 @@
 
 ---
 
-## 1. Executive Summary / 执行摘要
+## 1. Executive Summary / 執行摘要
 
 This document describes the integration architecture between `ov` CLI (Rust), `openviking-server` (Python/FastAPI), and `vikingbot` (Python AI agent framework). The goal is to provide a unified chat interface where the bot service shares the same port and authentication mechanism as the OpenViking server.
 
-本文档描述了 `ov` CLI（Rust）、`openviking-server`（Python/FastAPI）和 `vikingbot`（Python AI agent 框架）之间的集成架构。目标是提供一个统一的聊天界面，使 bot 服务与 OpenViking 服务器共享相同的端口和认证机制。
+本文件描述了 `ov` CLI（Rust）、`openviking-server`（Python/FastAPI）和 `vikingbot`（Python AI agent 框架）之間的整合架構。目標是提供一個統一的聊天介面，使 bot 服務與 OpenViking 伺服器共享相同的埠和認證機制。
 
 ---
 
-## 2. Architecture Overview / 架构概览
+## 2. Architecture Overview / 架構概覽
 
-### 2.1 系统整体架构 / System Architecture
+### 2.1 系統整體架構 / System Architecture
 
-**部署说明 / Deployment Note:** OpenViking Server 和 Vikingbot 部署在同一台机器上，通过本地端口通信。
+**部署說明 / Deployment Note:** OpenViking Server 和 Vikingbot 部署在同一臺機器上，通過本地埠通訊。
 
 ```mermaid
 flowchart TB
-    subgraph Client["客户端 / Client (可远程)"]
+    subgraph Client["客戶端 / Client (可遠端)"]
         CLI["ov CLI<br/>(Rust)"]
     end
 
-    subgraph SameMachine["同一台机器 / Same Machine"]
+    subgraph SameMachine["同一臺機器 / Same Machine"]
         direction TB
 
         subgraph Server["OpenViking Server<br/>(Python/FastAPI, Port 1933)"]
-            Auth["统一认证中间件<br/>Unified Auth"]
+            Auth["統一認證中介軟體<br/>Unified Auth"]
             BotAPIProxy["Bot API Proxy<br/>(--with-bot)"]
             BotRouter["/bot/v1/*<br/>Router"]
         end
 
         subgraph Vikingbot["Vikingbot (Process 2, Port 18790)"]
-            subgraph Channels["Channels (BaseChannel 实现)"]
+            subgraph Channels["Channels (BaseChannel 實現)"]
                 OC["OpenAPIChannel"]
                 DC["DiscordChannel"]
                 TC["TelegramChannel"]
@@ -61,16 +61,16 @@ flowchart TB
     TC -.->|"implements"| BaseChannel
 ```
 
-### 2.2 Channel-Bus-Agent 架构详解
+### 2.2 Channel-Bus-Agent 架構詳解
 
-展示 Channel 与 MessageBus 的关系，以及各 Channel 如何作为 BaseChannel 实现：
+展示 Channel 與 MessageBus 的關係，以及各 Channel 如何作為 BaseChannel 實現：
 
 ```mermaid
 flowchart TB
     subgraph Vikingbot["Vikingbot Core"]
         direction TB
 
-        subgraph BaseChannelImpl["BaseChannel Implementations / 通道实现"]
+        subgraph BaseChannelImpl["BaseChannel Implementations / 通道實現"]
             direction LR
 
             subgraph OC["OpenAPIChannel<br/>(HTTP API 通道)"]
@@ -85,13 +85,13 @@ flowchart TB
             end
         end
 
-        subgraph Core["Core Components / 核心组件"]
-            MB["MessageBus<br/>消息总线<br/><br/>- inbound queue<br/>- outbound queue<br/>- log store"]
-            AL["Agent Loop<br/>代理循环<br/><br/>- ContextBuilder<br/>- LLM (LiteLLM)<br/>- Tool Executor"]
+        subgraph Core["Core Components / 核心元件"]
+            MB["MessageBus<br/>訊息匯流排<br/><br/>- inbound queue<br/>- outbound queue<br/>- log store"]
+            AL["Agent Loop<br/>代理迴圈<br/><br/>- ContextBuilder<br/>- LLM (LiteLLM)<br/>- Tool Executor"]
         end
     end
 
-    subgraph External["External Clients / 外部客户端"]
+    subgraph External["External Clients / 外部客戶端"]
         CLI["ov CLI"]
         DiscordClient["Discord Client"]
     end
@@ -120,20 +120,20 @@ flowchart TB
 
 ---
 
-## 3. Key Components / 关键组件
+## 3. Key Components / 關鍵元件
 
 ### 3.1 OpenViking Server (`openviking-server`)
 
-**Role:** HTTP API Gateway with Bot API proxy / 带 Bot API 代理的 HTTP API 网关
+**Role:** HTTP API Gateway with Bot API proxy / 帶 Bot API 代理的 HTTP API 閘道器
 
 **Key Features / 主要特性：**
-- Unified authentication middleware for all endpoints / 为所有端点提供统一认证中间件
-- Bot API proxy layer (enabled via `--with-bot`) / Bot API 代理层（通过 `--with-bot` 启用）
-- Request forwarding to Vikingbot OpenAPIChannel / 请求转发到 Vikingbot OpenAPI 通道
+- Unified authentication middleware for all endpoints / 為所有端點提供統一認證中介軟體
+- Bot API proxy layer (enabled via `--with-bot`) / Bot API 代理層（通過 `--with-bot` 啟用）
+- Request forwarding to Vikingbot OpenAPIChannel / 請求轉發到 Vikingbot OpenAPI 通道
 
-**Architecture Position / 架构位置：**
-- Process 1 (Port 1933) / 进程1（端口 1933）
-- Entry point for all external clients (CLI, etc.) / 所有外部客户端的入口点
+**Architecture Position / 架構位置：**
+- Process 1 (Port 1933) / 程序1（埠 1933）
+- Entry point for all external clients (CLI, etc.) / 所有外部客戶端的入口點
 
 ---
 
@@ -142,38 +142,38 @@ flowchart TB
 **Role:** Command-line chat interface / 命令行聊天界面
 
 **Key Features / 主要特性：**
-- Interactive mode and single-message mode / 交互模式和单消息模式
-- Configurable endpoint via environment variable / 通过环境变量配置端点
-- HTTP POST with JSON request/response / 使用 JSON 请求/响应的 HTTP POST
+- Interactive mode and single-message mode / 互動模式和單訊息模式
+- Configurable endpoint via environment variable / 通過環境變數配置端點
+- HTTP POST with JSON request/response / 使用 JSON 請求/響應的 HTTP POST
 
-**Architecture Position / 架构位置：**
-- External client layer / 外部客户端层
-- Communicates with OpenViking Server (Port 1933) / 与 OpenViking 服务器通信（端口 1933）
+**Architecture Position / 架構位置：**
+- External client layer / 外部客戶端層
+- Communicates with OpenViking Server (Port 1933) / 與 OpenViking 伺服器通訊（埠 1933）
 
 ---
 
 ### 3.3 Vikingbot OpenAPIChannel
 
-**Role:** AI agent framework with HTTP API / 带 HTTP API 的 AI 代理框架
+**Role:** AI agent framework with HTTP API / 帶 HTTP API 的 AI 代理框架
 
 **Key Features / 主要特性：**
-- HTTP endpoints for chat, streaming, and health checks / 聊天、流式传输和健康检查的 HTTP 端点
-- Integration with MessageBus for message routing / 与 MessageBus 集成进行消息路由
-- Support for session management and context building / 支持会话管理和上下文构建
+- HTTP endpoints for chat, streaming, and health checks / 聊天、流式傳輸和健康檢查的 HTTP 端點
+- Integration with MessageBus for message routing / 與 MessageBus 整合進行訊息路由
+- Support for session management and context building / 支援會話管理和上下文構建
 
-**Architecture Position / 架构位置：**
-- Process 2 (Port 18790 default) / 进程2（默认端口 18790）
-- Receives proxied requests from OpenViking Server / 接收来自 OpenViking 服务器的代理请求
+**Architecture Position / 架構位置：**
+- Process 2 (Port 18790 default) / 程序2（預設埠 18790）
+- Receives proxied requests from OpenViking Server / 接收來自 OpenViking 伺服器的代理請求
 
 ---
 
-### 3.4 MessageBus and Agent Loop / 消息总线与代理循环
+### 3.4 MessageBus and Agent Loop / 訊息匯流排與代理迴圈
 
-**Role:** Core message routing and processing engine / 核心消息路由和处理引擎
+**Role:** Core message routing and processing engine / 核心訊息路由和處理引擎
 
-**Components / 组件：**
-- **MessageBus / 消息总线:** Inbound queue, Outbound queue, Log store / 入队队列、出队队列、日志存储
-- **Agent Loop / 代理循环:** ContextBuilder, LLM (LiteLLM), Tool Executor / 上下文构建器、LLM、工具执行器
+**Components / 元件：**
+- **MessageBus / 訊息匯流排:** Inbound queue, Outbound queue, Log store / 入隊佇列、出隊佇列、日誌儲存
+- **Agent Loop / 代理迴圈:** ContextBuilder, LLM (LiteLLM), Tool Executor / 上下文構建器、LLM、工具執行器
 
 **Flow / 流程：**
 ```
@@ -182,7 +182,7 @@ Channel → MessageBus.inbound → Agent Loop → MessageBus.outbound → Channe
 
 ---
 
-## 4. API Endpoints / API 端点
+## 4. API Endpoints / API 端點
 
 ### 4.1 Bot API (via OpenViking Server)
 
@@ -204,10 +204,10 @@ Channel → MessageBus.inbound → Agent Loop → MessageBus.outbound → Channe
 
 ## 5. Usage Examples / 使用示例
 
-### 5.1 Start the services / 启动服务
+### 5.1 Start the services / 啟動服務
 
 ```bash
-# 启动 OpenViking Server (带 --with-bot 会自动启动 vikingbot gateway)
+# 啟動 OpenViking Server (帶 --with-bot 會自動啟動 vikingbot gateway)
 openviking-server --with-bot
 
 # Output:
@@ -216,14 +216,14 @@ openviking-server --with-bot
 # Starting vikingbot gateway...
 ```
 
-**说明 / Note:**
-- `--with-bot`: 自动在同一机器上启动 `vikingbot gateway` 进程
-- 不加 `--with-bot`: 仅启动 OpenViking Server，不会启动 Vikingbot
+**說明 / Note:**
+- `--with-bot`: 自動在同一機器上啟動 `vikingbot gateway` 程序
+- 不加 `--with-bot`: 僅啟動 OpenViking Server，不會啟動 Vikingbot
 
-**设计意图 / Design Rationale:**
-OpenViking Server 统一代理 Vikingbot 的 CLI 请求，目的是：
-1. **共享鉴权机制** - 复用 OpenViking Server 的统一认证中间件
-2. **端口共享** - 服务端部署时可共享端口，简化网络配置
+**設計意圖 / Design Rationale:**
+OpenViking Server 統一代理 Vikingbot 的 CLI 請求，目的是：
+1. **共享鑑權機制** - 複用 OpenViking Server 的統一認證中介軟體
+2. **埠共享** - 服務端部署時可共享埠，簡化網路配置
 
 ### 5.2 Using `ov chat` CLI / 使用 `ov chat` CLI
 
@@ -267,11 +267,11 @@ curl -X POST http://localhost:1933/bot/v1/chat/stream \
 
 ## 6. Configuration / 配置
 
-### 6.1 配置共享说明 / Configuration Sharing
+### 6.1 配置共享說明 / Configuration Sharing
 
-**重要 / Important:** Vikingbot 与 OpenViking Server 共享同一个 `ov.conf` 配置文件，不再使用 `~/.vikingbot/config.json`。
+**重要 / Important:** Vikingbot 與 OpenViking Server 共享同一個 `ov.conf` 配置檔案，不再使用 `~/.vikingbot/config.json`。
 
-Vikingbot 的配置项统一放在 `ov.conf` 的 `bot` 字段下：
+Vikingbot 的配置項統一放在 `ov.conf` 的 `bot` 欄位下：
 
 ```json
 {
@@ -304,12 +304,12 @@ Vikingbot 的配置项统一放在 `ov.conf` 的 `bot` 字段下：
 }
 ```
 
-**配置说明 / Configuration Notes:**
-- `server.with_bot`: 启用时自动在同一机器上启动 Vikingbot gateway
-- `bot.agents`: Agent 配置，包括 LLM 模型、最大工具迭代次数、记忆窗口
-- `bot.gateway`: HTTP Gateway 监听地址；`host` 默认 `127.0.0.1`，当绑定到非 localhost 时必须配置 `token`（用于 `X-Gateway-Token` 鉴权），否则启动失败
+**配置說明 / Configuration Notes:**
+- `server.with_bot`: 啟用時自動在同一機器上啟動 Vikingbot gateway
+- `bot.agents`: Agent 配置，包括 LLM 模型、最大工具迭代次數、記憶視窗
+- `bot.gateway`: HTTP Gateway 監聽地址；`host` 預設 `127.0.0.1`，當繫結到非 localhost 時必須配置 `token`（用於 `X-Gateway-Token` 鑑權），否則啟動失敗
 - `bot.channels`: 渠道配置列表，支持 openapi、slack 等
-- `bot.sandbox`: 沙箱执行配置
+- `bot.sandbox`: 沙箱執行配置
 
 ### 6.2 Command-line Options
 

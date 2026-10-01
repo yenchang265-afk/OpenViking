@@ -137,7 +137,7 @@ function TasksRoute() {
         throw new Error(t('labels.missingResource'))
       }
 
-      // ── 1. task_type 精确匹配优先（不受 URI 前缀干扰）──────────────────────
+      // ── 1. task_type 精確匹配優先（不受 URI 字首干擾）──────────────────────
       if (task.task_type === 'session_commit') {
         const res = await commitSession(task.resource_id)
         if (res.status === 'skipped' || res.reason === 'no_messages') {
@@ -426,7 +426,7 @@ function TasksRoute() {
         else if (st === 'completed') map.Embedding.completed++
         else if (st === 'failed') map.Embedding.errors++
       } else {
-        // add_resource / add_skill / connector_import 包含：解析 (ExternalParse) -> 语义提炼 (Semantic) + 向量落库 (Embedding)
+        // add_resource / add_skill / connector_import 包含：解析 (ExternalParse) -> 語義提煉 (Semantic) + 向量落庫 (Embedding)
         if (st === 'running') {
           map.ExternalParse.processing++
           map.Semantic.processing++
@@ -614,7 +614,7 @@ function TasksRoute() {
         </div>
       </header>
 
-      {/* 4 大 Task 核心运行 KPI 观察行 */}
+      {/* 4 大 Task 核心執行 KPI 觀察行 */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Card className="flex flex-col gap-1 p-3 shadow-none transition-colors hover:border-primary/40">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -680,9 +680,9 @@ function TasksRoute() {
         </Card>
       </div>
 
-      {/* 任务队列 (上层) 与 工序队列 (下层) 50/50 并排观测行 */}
+      {/* 任務佇列 (上層) 與 工序佇列 (下層) 50/50 並排觀測行 */}
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
-        {/* 左侧 (50% 宽度 - 优先看上层任务): 任务队列状态 (Task Queues) */}
+        {/* 左側 (50% 寬度 - 優先看上層任務): 任務佇列狀態 (Task Queues) */}
         <div>
           <QueueStatusCard
             title={t('labels.taskQueueStatus')}
@@ -691,7 +691,7 @@ function TasksRoute() {
           />
         </div>
 
-        {/* 右侧 (50% 宽度 - 拆分出的下层工序): 工序队列状态 (Process Queues) */}
+        {/* 右側 (50% 寬度 - 拆分出的下層工序): 工序佇列狀態 (Process Queues) */}
         <div>
           <QueueStatusCard
             title={t('labels.processQueueStatus')}

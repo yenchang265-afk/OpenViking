@@ -3,7 +3,7 @@
 A standalone FastAPI server that exposes a curated subset of OpenViking
 endpoints as **OpenAPI tools** so Open WebUI can call them as native tools.
 
-[中文说明在下方 / Chinese instructions below.](#中文说明)
+[中文說明在下方 / Chinese instructions below.](#中文說明)
 
 ## What This Plugin Does
 
@@ -162,23 +162,23 @@ Likely candidates the community might want next: `ov_session_create`,
 
 ---
 
-## 中文说明
+## 中文說明
 
-这是一个独立的 FastAPI 服务，将 OpenViking 的一组核心 HTTP 端点封装为
-**OpenAPI 工具**，供 Open WebUI 自动发现并调用。
+這是一個獨立的 FastAPI 服務，將 OpenViking 的一組核心 HTTP 端點封裝為
+**OpenAPI 工具**，供 Open WebUI 自動發現並呼叫。
 
-### 它做什么
+### 它做什麼
 
-Open WebUI 支持两种工具集成方式：把 Python "Functions" 粘贴进管理后台，
-或对接外部 OpenAPI 工具服务器（自动从 `/openapi.json` 发现工具）。
-本插件实现第二种方式——纯 HTTP 转发，不重复实现任何业务逻辑。
+Open WebUI 支援兩種工具整合方式：把 Python "Functions" 貼上進管理後臺，
+或對接外部 OpenAPI 工具伺服器（自動從 `/openapi.json` 發現工具）。
+本外掛實現第二種方式——純 HTTP 轉發，不重複實現任何業務邏輯。
 
-### 暴露的 7 个工具
+### 暴露的 7 個工具
 
 `ov_search`、`ov_recall_memories`、`ov_add_memory`、`ov_list_memories`、
-`ov_read_resource`、`ov_add_resource`、`ov_session_status`。详见上方表格。
+`ov_read_resource`、`ov_add_resource`、`ov_session_status`。詳見上方表格。
 
-### 快速开始
+### 快速開始
 
 ```bash
 cd examples/openwebui-plugin
@@ -186,20 +186,20 @@ pip install -e .
 OV_API_KEY=your-key python -m openviking_openwebui
 ```
 
-默认监听 `0.0.0.0:8765`。
+預設監聽 `0.0.0.0:8765`。
 
 ### 接入 Open WebUI
 
-进入 Open WebUI 的 **设置 → 工具 → 添加工具服务器**，粘贴
-`http://localhost:8765`。Open WebUI 会自动读取 `/openapi.json`
-并把全部 7 个工具暴露给模型。
+進入 Open WebUI 的 **設定 → 工具 → 新增工具伺服器**，貼上
+`http://localhost:8765`。Open WebUI 會自動讀取 `/openapi.json`
+並把全部 7 個工具暴露給模型。
 
-### 环境变量
+### 環境變數
 
 `OV_ENDPOINT`、`OV_API_KEY`、`OV_ACCOUNT`、`OV_USER`、`OV_AGENT`、`OV_BIND`、
-`OV_TIMEOUT`。默认值与说明见上方英文表格。
+`OV_TIMEOUT`。預設值與說明見上方英文表格。
 
-### 测试
+### 測試
 
 ```bash
 pip install -e ".[test]"
@@ -208,7 +208,7 @@ pytest tests -x -q
 
 ### 添加更多工具
 
-1. 在 `openviking_openwebui/tools.py` 中添加 Pydantic 请求模型；
-2. 添加路由 handler，设置 `operation_id`；
-3. 通过 `OVClient` 转发到对应 OpenViking 端点；
-4. 在 `tests/test_tools.py` 中加 mock 测试。
+1. 在 `openviking_openwebui/tools.py` 中新增 Pydantic 請求模型；
+2. 新增路由 handler，設定 `operation_id`；
+3. 通過 `OVClient` 轉發到對應 OpenViking 端點；
+4. 在 `tests/test_tools.py` 中加 mock 測試。

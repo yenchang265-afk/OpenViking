@@ -28,7 +28,7 @@ class TestBasicEdgeCases:
         print("256-byte filename: PASS")
 
         # Test very long with CJK
-        cjk_filename = "测试文件名" * 30 + ".py"
+        cjk_filename = "測試檔名" * 30 + ".py"
         assert len(cjk_filename.encode("utf-8")) > 400
         print(f"Long CJK filename ({len(cjk_filename.encode('utf-8'))} bytes): PASS")
 
@@ -40,7 +40,7 @@ class TestBasicEdgeCases:
             "file\ttab.txt",
             "file\nnewline.txt",
             "файл.txt",  # Cyrillic
-            "档案.txt",  # Chinese
+            "檔案.txt",  # Chinese
             "ملف.txt",  # Arabic
         ]
 
@@ -93,10 +93,10 @@ class TestBasicEdgeCases:
         print("Nested JSON test: PASS")
 
         # JSON with special characters
-        special_json = {"unicode": "测试", "emoji": "😀", "null_byte": "test\x00null"}
+        special_json = {"unicode": "測試", "emoji": "😀", "null_byte": "test\x00null"}
         json_str = json.dumps(special_json)
         parsed_special = json.loads(json_str)
-        assert parsed_special["unicode"] == "测试"
+        assert parsed_special["unicode"] == "測試"
         print("Special character JSON test: PASS")
 
     def test_path_traversal_patterns(self):

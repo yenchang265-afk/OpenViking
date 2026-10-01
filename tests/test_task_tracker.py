@@ -927,7 +927,7 @@ async def test_legacy_tasks_do_not_get_invented_history():
     assert [event["kind"] for event in history["items"]] == ["status_changed"]
 
 
-@pytest.mark.parametrize("stage_prefix", ["stage", "阶段" * 64])
+@pytest.mark.parametrize("stage_prefix", ["stage", "階段" * 64])
 async def test_event_history_is_bounded_and_reports_truncation(tracker, stage_prefix):
     from openviking.service.task_events import MAX_TASK_EVENT_BYTES, MAX_TASK_EVENTS
 

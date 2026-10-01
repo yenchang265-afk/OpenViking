@@ -18,7 +18,7 @@ from tqdm import tqdm
 sys.path.append(str(Path(__file__).parent.parent))
 
 DATASET_SOURCES = {
-    # 示例配置：取消注释并根据需要修改
+    # 示例配置：取消註釋並根據需要修改
     #
     "Locomo": {
         "source_type": "url",

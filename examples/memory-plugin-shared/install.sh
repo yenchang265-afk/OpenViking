@@ -124,10 +124,10 @@ report_unexpected_error() { # report_unexpected_error <status> <line> <command>
   fi
   printf '\033[?25h' 2>/dev/null >/dev/tty || true
   printf '\n' >&2
-  err "$(t 'OpenViking installer stopped unexpectedly.' 'OpenViking 安装程序意外退出。')"
-  printf '    %s: %s\n' "$(t 'Exit status' '状态码')" "$status" >&2
-  printf '    %s: %s\n' "$(t 'Script line' '脚本行号')" "$line" >&2
-  printf '    %s: %s\n' "$(t 'Command' '失败命令')" "$command" >&2
+  err "$(t 'OpenViking installer stopped unexpectedly.' 'OpenViking 安裝程式意外退出。')"
+  printf '    %s: %s\n' "$(t 'Exit status' '狀態碼')" "$status" >&2
+  printf '    %s: %s\n' "$(t 'Script line' '指令碼行號')" "$line" >&2
+  printf '    %s: %s\n' "$(t 'Command' '失敗命令')" "$command" >&2
   return "$status"
 }
 
@@ -227,7 +227,7 @@ tui_menu() { # tui_menu <title> <default-index> <option...>  -> TUI_MENU_CHOICE
       printf '  %d) %s\n' $((i + 1)) "${opts[$i]}"
       i=$((i + 1))
     done
-    ask "[1-$n, $(t 'default' '默认') $((def + 1))]: "
+    ask "[1-$n, $(t 'default' '預設') $((def + 1))]: "
     read_tty reply
     case "$reply" in
       ''|*[!0-9]*) ;;
@@ -249,7 +249,7 @@ tui_menu() { # tui_menu <title> <default-index> <option...>  -> TUI_MENU_CHOICE
       fi
       i=$((i + 1))
     done
-    printf '\r\033[K   %s%s%s\n' "$CYAN" "$(t '↑/↓ move · 1-9 jump · enter confirm' '↑/↓ 移动 · 数字跳转 · 回车确认')" "$RESET" >/dev/tty
+    printf '\r\033[K   %s%s%s\n' "$CYAN" "$(t '↑/↓ move · 1-9 jump · enter confirm' '↑/↓ 移動 · 數字跳轉 · 回車確認')" "$RESET" >/dev/tty
     lines=$((n + 1))
     IFS= read -rsn1 key <&3 || key=""
     case "$key" in
@@ -299,7 +299,7 @@ select_language() {
   elif [ "$INTERACTIVE" -eq 1 ]; then
     def=0
     [ "$detected" = "zh" ] && def=1
-    tui_menu "Language / 语言" "$def" "English" "中文"
+    tui_menu "Language / 語言" "$def" "English" "中文"
     if [ "$TUI_MENU_CHOICE" -eq 1 ]; then UI_LANG="zh"; else UI_LANG="en"; fi
   else
     UI_LANG="$detected"
@@ -482,7 +482,7 @@ json_get() {
 
 mask_secret() {
   local s="$1"
-  if [ -z "$s" ]; then printf '%s' "$(t '(not set)' '（未设置）')"; return; fi
+  if [ -z "$s" ]; then printf '%s' "$(t '(not set)' '（未設定）')"; return; fi
   if [ "${#s}" -le 8 ]; then printf '****'; return; fi
   printf '%s…%s (%s)' "$(printf '%s' "$s" | cut -c1-4)" "$(printf '%s' "$s" | tail -c 4)" "${#s}"
 }
@@ -720,7 +720,7 @@ tui_item_line() { # tui_item_line <index> <kind> <bin>
   tui_bin_selected "$kind" "$bin" && mark="[${GREEN}x${RESET}]"
   [ "$TUI_CURSOR" -eq "$idx" ] && cur="${CYAN}>${RESET} "
   if tui_bin_detected "$kind" "$bin"; then
-    note="  ${GREEN}$(t '(detected)' '（已检测到）')${RESET}"
+    note="  ${GREEN}$(t '(detected)' '（已檢測到）')${RESET}"
   else
     note="  ${YELLOW}$(t '(not found in PATH)' '（PATH 中未找到）')${RESET}"
   fi
@@ -749,7 +749,7 @@ tui_draw() {
     fi
     idx=$((idx + 1))
   done
-  printf '\r\033[K   %s%s%s\n' "$CYAN" "$(t '↑/↓ move · space toggle · enter confirm · enter on + to add · a all' '↑/↓ 移动 · 空格勾选 · 回车确认 · 在 + 上回车新增 · a 全选')" "$RESET" >/dev/tty
+  printf '\r\033[K   %s%s%s\n' "$CYAN" "$(t '↑/↓ move · space toggle · enter confirm · enter on + to add · a all' '↑/↓ 移動 · 空格勾選 · 回車確認 · 在 + 上回車新增 · a 全選')" "$RESET" >/dev/tty
   TUI_LINES=$((total + 1))
 }
 
@@ -800,7 +800,7 @@ EOF
 tui_choose_cli_format() {
   local cursor=0 key rest lines=0
   TUI_FORMAT_CHOICE=""
-  printf '%s%s%s\n' "$BOLD" "$(t 'Choose compatible format:' '选择兼容格式：')" "$RESET" >/dev/tty
+  printf '%s%s%s\n' "$BOLD" "$(t 'Choose compatible format:' '選擇相容格式：')" "$RESET" >/dev/tty
   printf '\033[?25l' >/dev/tty
   while :; do
     [ "$lines" -gt 0 ] && printf '\033[%dA' "$lines" >/dev/tty
@@ -811,7 +811,7 @@ tui_choose_cli_format() {
       printf '\r\033[K   ( ) %s\n' "$(t 'Claude-format' 'Claude 格式')" >/dev/tty
       printf '\r\033[K %s>%s (%s•%s) %s\n' "$CYAN" "$RESET" "$GREEN" "$RESET" "$(t 'Codex-format' 'Codex 格式')" >/dev/tty
     fi
-    printf '\r\033[K   %s%s%s\n' "$CYAN" "$(t '↑/↓ move · enter confirm · q cancel' '↑/↓ 移动 · 回车确认 · q 取消')" "$RESET" >/dev/tty
+    printf '\r\033[K   %s%s%s\n' "$CYAN" "$(t '↑/↓ move · enter confirm · q cancel' '↑/↓ 移動 · 回車確認 · q 取消')" "$RESET" >/dev/tty
     lines=3
     if ! IFS= read -rsn1 key <&3; then
       continue
@@ -844,19 +844,19 @@ tui_add_compatible_cli() {
   tui_choose_cli_format
   kind="$TUI_FORMAT_CHOICE"
   if [ -z "$kind" ]; then
-    warn "$(t 'Skipped adding compatible CLI.' '已跳过新增兼容 CLI。')"
+    warn "$(t 'Skipped adding compatible CLI.' '已跳過新增相容 CLI。')"
     TUI_LINES=0
-    printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '选择要安装的 harness：')" "$RESET" >/dev/tty
+    printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '選擇要安裝的 harness：')" "$RESET" >/dev/tty
     printf '\033[?25l' >/dev/tty
     return 0
   fi
-  ask "$(t 'Command name or path: ' '命令名或路径: ')"
+  ask "$(t 'Command name or path: ' '命令名或路徑: ')"
   read_tty bin
   bin="$(printf '%s' "$bin" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
   if [ -z "$bin" ]; then
-    warn "$(t 'Skipped adding compatible CLI.' '已跳过新增兼容 CLI。')"
+    warn "$(t 'Skipped adding compatible CLI.' '已跳過新增相容 CLI。')"
     TUI_LINES=0
-    printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '选择要安装的 harness：')" "$RESET" >/dev/tty
+    printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '選擇要安裝的 harness：')" "$RESET" >/dev/tty
     printf '\033[?25l' >/dev/tty
     return 0
   fi
@@ -871,7 +871,7 @@ tui_add_compatible_cli() {
   fi
   TUI_CURSOR="$(tui_find_bin_index "$kind" "$bin")"
   TUI_LINES=0
-  printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '选择要安装的 harness：')" "$RESET" >/dev/tty
+  printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '選擇要安裝的 harness：')" "$RESET" >/dev/tty
   printf '\033[?25l' >/dev/tty
 }
 
@@ -902,7 +902,7 @@ tui_finish_selection() {
 tui_select_harnesses() {
   local key rest spec kind bin total add_idx
   tui_reset_bin_selection
-  printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '选择要安装的 harness：')" "$RESET" >/dev/tty
+  printf '%s%s%s\n' "$BOLD" "$(t 'Select the harnesses to install for:' '選擇要安裝的 harness：')" "$RESET" >/dev/tty
   printf '\033[?25l' >/dev/tty
   trap 'printf "\033[?25h" >/dev/tty' EXIT
   TUI_LINES=0
@@ -979,8 +979,8 @@ select_harnesses() {
   if [ "$INTERACTIVE" -eq 1 ] && [ -w /dev/tty ]; then
     tui_select_harnesses
   elif [ "$INTERACTIVE" -eq 1 ]; then
-    info "$(t 'Detected harnesses:' '检测到的 harness：') ${detected:-none}"
-    ask "$(t 'Install harnesses' '要安装的 harness') [${default}]: "
+    info "$(t 'Detected harnesses:' '檢測到的 harness：') ${detected:-none}"
+    ask "$(t 'Install harnesses' '要安裝的 harness') [${default}]: "
     read_tty reply
     SELECTED_HARNESSES="${reply:-$default}"
   else
@@ -997,7 +997,7 @@ select_dsh_profile() {
   fi
   DSH_PROFILE="$DSH_PROFILE_DEFAULT"
   [ "$INTERACTIVE" -eq 1 ] || return 0
-  ask "$(t 'DeepSeek Harness profile to install into' '要安装到的 DeepSeek Harness profile') [$DSH_PROFILE_DEFAULT]: "
+  ask "$(t 'DeepSeek Harness profile to install into' '要安裝到的 DeepSeek Harness profile') [$DSH_PROFILE_DEFAULT]: "
   read_tty reply
   DSH_PROFILE="${reply:-$DSH_PROFILE_DEFAULT}"
 }
@@ -1005,7 +1005,7 @@ select_dsh_profile() {
 install_dsh() {
   heading "$(t '4. DeepSeek Harness bundle' '4. DeepSeek Harness 插件')"
   if ! command -v dsh >/dev/null 2>&1; then
-    warn "$(t 'dsh CLI not found; skipping DeepSeek Harness install.' '未找到 dsh 命令，跳过 DeepSeek Harness 安装。')"
+    warn "$(t 'dsh CLI not found; skipping DeepSeek Harness install.' '未找到 dsh 命令，跳過 DeepSeek Harness 安裝。')"
     return 0
   fi
   # `@latest` rather than a bare name: pnpm keeps an already-satisfying install
@@ -1031,9 +1031,9 @@ install_dsh() {
     fi
   fi
   if dsh plugin --profile "$profile" add "$spec" >/dev/null 2>&1; then
-    info "$(t 'DeepSeek Harness bundle installed into profile:' 'DeepSeek Harness 插件已安装到 profile：') $profile ($(t 'source' '来源'): $origin)"
+    info "$(t 'DeepSeek Harness bundle installed into profile:' 'DeepSeek Harness 外掛已安裝到 profile：') $profile ($(t 'source' '來源'): $origin)"
   else
-    warn "$(t 'dsh plugin add failed; run it manually:' 'dsh plugin add 失败；请手动执行：') dsh plugin --profile $profile add $spec"
+    warn "$(t 'dsh plugin add failed; run it manually:' 'dsh plugin add 失敗；請手動執行：') dsh plugin --profile $profile add $spec"
   fi
 }
 
@@ -1072,11 +1072,11 @@ dsh_source_fingerprint() { # dsh_source_fingerprint <plugin-dir>
 dsh_pack_local() { # dsh_pack_local <plugin-dir> -> tarball path
   local dir="$1" dest="$OV_HOME/dsh-memory-plugin" name fingerprint target
   command -v npm >/dev/null 2>&1 || {
-    warn "$(t 'npm not found; installing the published dsh package instead of the local checkout.' '未找到 npm，将安装已发布的 dsh 包而非本地 checkout。')" >&2
+    warn "$(t 'npm not found; installing the published dsh package instead of the local checkout.' '未找到 npm，將安裝已釋出的 dsh 包而非本地 checkout。')" >&2
     return 1
   }
   fingerprint="$(dsh_source_fingerprint "$dir")" || {
-    warn "$(t 'no sha256 tool found; installing the published dsh package instead of the local checkout.' '未找到 sha256 工具，将安装已发布的 dsh 包而非本地 checkout。')" >&2
+    warn "$(t 'no sha256 tool found; installing the published dsh package instead of the local checkout.' '未找到 sha256 工具，將安裝已釋出的 dsh 包而非本地 checkout。')" >&2
     return 1
   }
   target="$dest/$fingerprint/openviking-dsh-memory-plugin.tgz"
@@ -1088,7 +1088,7 @@ dsh_pack_local() { # dsh_pack_local <plugin-dir> -> tarball path
   mkdir -p "$dest/$fingerprint" || return 1
   name="$( (cd "$dir" && npm pack --pack-destination "$dest/$fingerprint" 2>/dev/null) | tail -1 )"
   [ -n "$name" ] && [ -f "$dest/$fingerprint/$name" ] || {
-    warn "$(t 'npm pack failed for the local dsh checkout; installing the published package instead.' '本地 dsh checkout 打包失败，将改装已发布的包。')" >&2
+    warn "$(t 'npm pack failed for the local dsh checkout; installing the published package instead.' '本地 dsh checkout 打包失敗，將改裝已釋出的包。')" >&2
     return 1
   }
   mv "$dest/$fingerprint/$name" "$target" || return 1
@@ -1100,7 +1100,7 @@ select_compatible_bins() {
   [ "$INTERACTIVE" -eq 1 ] || return 0
   [ -w /dev/tty ] && return 0
   if contains_harness claude && [ -z "$CLAUDE_BINS_ARG" ]; then
-    ask "$(t 'Extra Claude-format CLI commands, comma-separated (e.g. seed)' '额外 Claude 格式 CLI 命令，逗号分隔（如 seed）') [$(t 'none' '无')]: "
+    ask "$(t 'Extra Claude-format CLI commands, comma-separated (e.g. seed)' '額外 Claude 格式 CLI 命令，逗號分隔（如 seed）') [$(t 'none' '無')]: "
     read_tty reply
     if [ -n "$reply" ]; then
       CLAUDE_BINS="$(append_csv_list "$CLAUDE_BINS" "$reply")"
@@ -1108,7 +1108,7 @@ select_compatible_bins() {
     fi
   fi
   if contains_harness codex && [ -z "$CODEX_BINS_ARG" ]; then
-    ask "$(t 'Extra Codex-format CLI commands, comma-separated (e.g. traex)' '额外 Codex 格式 CLI 命令，逗号分隔（如 traex）') [$(t 'none' '无')]: "
+    ask "$(t 'Extra Codex-format CLI commands, comma-separated (e.g. traex)' '額外 Codex 格式 CLI 命令，逗號分隔（如 traex）') [$(t 'none' '無')]: "
     read_tty reply
     if [ -n "$reply" ]; then
       CODEX_BINS="$(append_csv_list "$CODEX_BINS" "$reply")"
@@ -1140,7 +1140,7 @@ validate_selected_bins() {
       if command -v "$bin" >/dev/null 2>&1; then
         ok=1
       else
-        warn "$(t 'Selected Claude-format CLI not found in PATH:' '已选择的 Claude 格式 CLI 不在 PATH 中：') $bin"
+        warn "$(t 'Selected Claude-format CLI not found in PATH:' '已選擇的 Claude 格式 CLI 不在 PATH 中：') $bin"
       fi
     done <<EOF
 $CLAUDE_BINS
@@ -1152,7 +1152,7 @@ EOF
       if command -v "$bin" >/dev/null 2>&1; then
         ok=1
       else
-        warn "$(t 'Selected Codex-format CLI not found in PATH:' '已选择的 Codex 格式 CLI 不在 PATH 中：') $bin"
+        warn "$(t 'Selected Codex-format CLI not found in PATH:' '已選擇的 Codex 格式 CLI 不在 PATH 中：') $bin"
       fi
     done <<EOF
 $CODEX_BINS
@@ -1165,7 +1165,7 @@ EOF
   # before the desktop app itself, so a CLI in PATH is not required.
   if contains_harness cursor || contains_harness trae || contains_harness trae-cn || contains_harness trae-cli || contains_harness zcode || contains_harness kimicode; then ok=1; fi
   if [ "$ok" -ne 1 ]; then
-    err "$(t 'No selected compatible CLI command was found in PATH.' '未在 PATH 中找到任何已选择的兼容 CLI 命令。')"
+    err "$(t 'No selected compatible CLI command was found in PATH.' '未在 PATH 中找到任何已選擇的相容 CLI 命令。')"
     exit 2
   fi
 }
@@ -1179,19 +1179,19 @@ select_dist() {
     DIST="$DIST_ARG"
   elif [ "$INTERACTIVE" -eq 1 ] && [ -z "$SOURCE_ARG" ]; then
     if [ -n "$CHECKOUT_DIR" ]; then
-      tui_menu "$(t 'Install source' '安装源模式')" 2 \
-        "GitHub  $(t '(remote marketplace; supports remote updates)' '（远程 marketplace；支持远程更新）')" \
-        "$(t 'Volcengine TOS mirror (use when GitHub is unreachable)' '火山引擎 TOS 镜像（无法访问 GitHub 时使用）')" \
-        "$(t 'This checkout (development; edits take effect live)' '当前 checkout（开发模式；改动即时生效）')"
+      tui_menu "$(t 'Install source' '安裝源模式')" 2 \
+        "GitHub  $(t '(remote marketplace; supports remote updates)' '（遠端 marketplace；支援遠端更新）')" \
+        "$(t 'Volcengine TOS mirror (use when GitHub is unreachable)' '火山引擎 TOS 映象（無法訪問 GitHub 時使用）')" \
+        "$(t 'This checkout (development; edits take effect live)' '當前 checkout（開發模式；改動即時生效）')"
       case "$TUI_MENU_CHOICE" in
         0) DIST="github" ;;
         1) DIST="tos" ;;
         *) SOURCE_ARG="dev" ;;
       esac
     else
-      tui_menu "$(t 'Install source' '安装源模式')" 0 \
-        "GitHub  $(t '(default; supports remote updates)' '（默认；支持远程更新）')" \
-        "$(t 'Volcengine TOS mirror (use when GitHub is unreachable)' '火山引擎 TOS 镜像（无法访问 GitHub 时使用）')"
+      tui_menu "$(t 'Install source' '安裝源模式')" 0 \
+        "GitHub  $(t '(default; supports remote updates)' '（預設；支援遠端更新）')" \
+        "$(t 'Volcengine TOS mirror (use when GitHub is unreachable)' '火山引擎 TOS 映象（無法訪問 GitHub 時使用）')"
       if [ "$TUI_MENU_CHOICE" -eq 1 ]; then DIST="tos"; else DIST="github"; fi
     fi
   fi
@@ -1207,24 +1207,24 @@ select_dist() {
 
 prompt_connection() { # sets WIZ_URL / WIZ_KEY (WIZ_KEY may stay __OPENVIKING_KEEP__)
   local current_url="$1" current_key="$2" url_input reply
-  tui_menu "$(t 'Where do you connect to OpenViking?' '连接到哪个 OpenViking 服务？')" 2 \
+  tui_menu "$(t 'Where do you connect to OpenViking?' '連線到哪個 OpenViking 服務？')" 2 \
     "$(t 'Self-hosted / local' '自建 / 本地')  [http://127.0.0.1:1933]" \
-    "$(t 'Volcengine OpenViking Cloud' '火山引擎 OpenViking 云服务')  [api.vikingdb.cn-beijing.volces.com]" \
-    "$(t 'Custom URL / keep current' '自定义 URL / 保持当前')  [${current_url:-http://127.0.0.1:1933}]"
+    "$(t 'Volcengine OpenViking Cloud' '火山引擎 OpenViking 雲服務')  [api.vikingdb.cn-beijing.volces.com]" \
+    "$(t 'Custom URL / keep current' '自定義 URL / 保持當前')  [${current_url:-http://127.0.0.1:1933}]"
   case "$TUI_MENU_CHOICE" in
     0) WIZ_URL="http://127.0.0.1:1933" ;;
     1) WIZ_URL="https://api.vikingdb.cn-beijing.volces.com/openviking" ;;
     *)
-      ask "$(t 'Server URL' '服务地址') [${current_url:-http://127.0.0.1:1933}]: "
+      ask "$(t 'Server URL' '服務地址') [${current_url:-http://127.0.0.1:1933}]: "
       read_tty url_input
       WIZ_URL="${url_input:-${current_url:-http://127.0.0.1:1933}}"
       ;;
   esac
 
   if [ -n "$current_key" ]; then
-    ask "$(t "API key [enter = keep $(mask_secret "$current_key"), '-' = clear]: " "API key [回车 = 保留 $(mask_secret "$current_key")，输入 '-' 清空]: ")"
+    ask "$(t "API key [enter = keep $(mask_secret "$current_key"), '-' = clear]: " "API key [回車 = 保留 $(mask_secret "$current_key")，輸入 '-' 清空]: ")"
   else
-    ask "$(t 'API key (leave empty for unauthenticated local mode): ' 'API key（本地免鉴权模式请直接回车）: ')"
+    ask "$(t 'API key (leave empty for unauthenticated local mode): ' 'API key（本地免鑑權模式請直接回車）: ')"
   fi
   read_tty reply -s
   if [ "$reply" = "-" ]; then
@@ -1243,7 +1243,7 @@ prompt_connection() { # sets WIZ_URL / WIZ_KEY (WIZ_KEY may stay __OPENVIKING_KE
 
 configure_ovcli() {
   local current_url current_key current_account current_user url key account user reply
-  heading "$(t '2. OpenViking credentials' '2. OpenViking 凭据配置') ($OVCLI_CONF)"
+  heading "$(t '2. OpenViking credentials' '2. OpenViking 憑據配置') ($OVCLI_CONF)"
   mkdir -p "$OV_HOME"
   chmod 700 "$OV_HOME" 2>/dev/null || true
 
@@ -1264,8 +1264,8 @@ configure_ovcli() {
 
   # Show what is configured today, then offer to keep or reconfigure.
   if [ -n "$current_url" ] || [ -n "$current_key" ]; then
-    info "$(t 'Current config:' '当前配置：')"
-    info "  url:     ${current_url:-$(t '(not set)' '（未设置）')}"
+    info "$(t 'Current config:' '當前配置：')"
+    info "  url:     ${current_url:-$(t '(not set)' '（未設定）')}"
     info "  api_key: $(mask_secret "$current_key")"
     [ -n "$current_account" ] && info "  account: $current_account"
     [ -n "$current_user" ] && info "  user:    $current_user"
@@ -1275,9 +1275,9 @@ configure_ovcli() {
 
   if [ "$INTERACTIVE" -eq 1 ] && [ -z "$URL_ARG" ] && [ "$API_KEY_ARG" = "__OPENVIKING_UNSET__" ]; then
     if [ -n "$current_url" ] || [ -n "$current_key" ]; then
-      tui_menu "$(t 'Existing credentials found — what next?' '检测到已有凭据——如何处理？')" 0 \
-        "$(t 'Keep current credentials' '沿用当前凭据')" \
-        "$(t 'Reconfigure (server URL / API key)' '重新配置（服务地址 / API key）')"
+      tui_menu "$(t 'Existing credentials found — what next?' '檢測到已有憑據——如何處理？')" 0 \
+        "$(t 'Keep current credentials' '沿用當前憑據')" \
+        "$(t 'Reconfigure (server URL / API key)' '重新配置（服務地址 / API key）')"
       if [ "$TUI_MENU_CHOICE" -eq 1 ]; then
         prompt_connection "$current_url" "$current_key"
         url="$WIZ_URL"; key="$WIZ_KEY"
@@ -1299,8 +1299,8 @@ configure_ovcli() {
   if [ "$key" != "__OPENVIKING_KEEP__" ] && [ "$key" != "$current_key" ]; then
     info "$(t 'Updated:' '已更新：') api_key: $(mask_secret "$current_key") -> $(mask_secret "$key")"
   fi
-  info "$(t 'Credentials ready:' '凭据已就绪：') $OVCLI_CONF"
-  info "$(t 'Reconfigure later by re-running this installer.' '之后可重跑本安装脚本重新配置。')"
+  info "$(t 'Credentials ready:' '憑據已就緒：') $OVCLI_CONF"
+  info "$(t 'Reconfigure later by re-running this installer.' '之後可重跑本安裝指令碼重新配置。')"
 }
 
 # ---------------------------------------------------------------------------
@@ -1312,7 +1312,7 @@ fetch_archive() { # fetch_archive <url> <dest> <required-subpath>
   command -v unzip >/dev/null 2>&1 || { err 'unzip not found; required to install from an archive.'; exit 1; }
   tmp_zip=$(mktemp "${TMPDIR:-/tmp}/ov-src.XXXXXX") || { err 'mktemp failed'; exit 1; }
   tmp_dir=$(mktemp -d "${TMPDIR:-/tmp}/ov-src.XXXXXX") || { err 'mktemp failed'; rm -f "$tmp_zip"; exit 1; }
-  info "$(t 'Downloading archive' '下载归档')"
+  info "$(t 'Downloading archive' '下載歸檔')"
   info "  $url"
   curl -fsSL -o "$tmp_zip" "$url" || { rm -rf "$tmp_zip" "$tmp_dir"; return 1; }
   unzip -q "$tmp_zip" -d "$tmp_dir" || { err 'unzip failed'; rm -rf "$tmp_zip" "$tmp_dir"; exit 1; }
@@ -1367,9 +1367,9 @@ resolve_source_mode() {
     remote|archive|dev) ;;
     *) err "Invalid --source: $SOURCE_MODE (expected remote, archive, or dev)"; exit 2 ;;
   esac
-  info "$(t 'Source mode:' '安装源模式：') $SOURCE_MODE ($(t 'channel' '渠道'): $DIST)"
+  info "$(t 'Source mode:' '安裝源模式：') $SOURCE_MODE ($(t 'channel' '渠道'): $DIST)"
   if [ "$SOURCE_MODE" = "archive" ] && [ "$HAVE_CLAUDE" -eq 1 ] && contains_harness claude; then
-    warn "$(t 'TOS/archive installs cannot auto-update Claude Code (local directory marketplace); re-run this installer to update. Codex keeps remote updates via its TOS git marketplace.' 'TOS/归档方式安装的 Claude Code 插件无法自动更新（本地目录 marketplace），更新请重跑本安装脚本；Codex 走 TOS git marketplace 仍可远程更新。')"
+    warn "$(t 'TOS/archive installs cannot auto-update Claude Code (local directory marketplace); re-run this installer to update. Codex keeps remote updates via its TOS git marketplace.' 'TOS/歸檔方式安裝的 Claude Code 外掛無法自動更新（本地目錄 marketplace），更新請重跑本安裝指令碼；Codex 走 TOS git marketplace 仍可遠端更新。')"
   fi
 }
 
@@ -1379,7 +1379,7 @@ ensure_checkout() {
   [ -n "$SRC_ROOT" ] && return 0
   if [ -n "$CHECKOUT_DIR" ]; then
     SRC_ROOT="$CHECKOUT_DIR"
-    info "$(t 'Using current checkout:' '使用当前 checkout：') $SRC_ROOT"
+    info "$(t 'Using current checkout:' '使用當前 checkout：') $SRC_ROOT"
     return 0
   fi
   if [ "$SOURCE_MODE" = "archive" ] && [ -n "$MKT_DIR" ]; then
@@ -1455,7 +1455,7 @@ install_lib_dir() {
 
 require_install_lib_dir() {
   install_lib_dir && return 0
-  err "$(t 'Installer runtime not found:' '未找到安装器运行时：') memory-plugin-shared/lib/install"
+  err "$(t 'Installer runtime not found:' '未找到安裝器執行時：') memory-plugin-shared/lib/install"
   return 1
 }
 
@@ -1465,13 +1465,13 @@ prepare_marketplace_dir() {
       MKT_DIR="$CHECKOUT_DIR/examples"
       ;;
     archive)
-      heading "$(t '3. Marketplace archive' '3. Marketplace 归档')"
+      heading "$(t '3. Marketplace archive' '3. Marketplace 歸檔')"
       [ -z "$MKT_ARCHIVE_URL" ] && [ "$DIST" = "tos" ] && MKT_ARCHIVE_URL="$TOS_BASE/releases/latest/memory-plugin-marketplace.zip"
       [ -z "$REPO_ARCHIVE_URL" ] && [ "$DIST" = "tos" ] && REPO_ARCHIVE_URL="$TOS_BASE/releases/latest/openviking-source.zip"
       if [ -n "$MKT_ARCHIVE_URL" ] && fetch_archive "$MKT_ARCHIVE_URL" "$MKT_DIR_ARCHIVE" ".claude-plugin/marketplace.json"; then
         MKT_DIR="$MKT_DIR_ARCHIVE"
       elif [ -n "$REPO_ARCHIVE_URL" ]; then
-        [ -n "$MKT_ARCHIVE_URL" ] && warn "$(t 'marketplace archive unavailable; falling back to the full source archive' 'marketplace 归档不可用，回退到完整源码归档')"
+        [ -n "$MKT_ARCHIVE_URL" ] && warn "$(t 'marketplace archive unavailable; falling back to the full source archive' 'marketplace 歸檔不可用，回退到完整原始碼歸檔')"
         fetch_archive "$REPO_ARCHIVE_URL" "$REPO_DIR" "examples" || { err "source archive download failed"; exit 1; }
         SRC_ROOT="$REPO_DIR"
         MKT_DIR="$REPO_DIR/examples"
@@ -1569,7 +1569,7 @@ claude_marketplace_sync() { # claude_marketplace_sync <add-target> <expected-sou
     return 0
   fi
   if [ -n "$current" ]; then
-    info "$(t 'Marketplace points elsewhere; re-registering' 'marketplace 指向其他来源，重新注册') ($current)"
+    info "$(t 'Marketplace points elsewhere; re-registering' 'marketplace 指向其他來源，重新註冊') ($current)"
     claude_cmd plugin uninstall "$PLUGIN_ID" >/dev/null 2>&1 || true
     claude_cmd plugin marketplace remove "$MARKETPLACE_NAME" >/dev/null 2>&1 || true
   elif ! is_native_claude_bin; then
@@ -1601,7 +1601,7 @@ install_claude_modern() {
     claude_cmd plugin install "$PLUGIN_ID" || { err "$CLAUDE_BIN plugin install failed"; return 1; }
   fi
   claude_cmd plugin enable "$PLUGIN_ID" >/dev/null 2>&1 || true
-  info "$(t 'Claude-format plugin installed:' 'Claude 格式插件已安装：') $CLAUDE_BIN -> $PLUGIN_ID"
+  info "$(t 'Claude-format plugin installed:' 'Claude 格式外掛已安裝：') $CLAUDE_BIN -> $PLUGIN_ID"
 }
 
 install_claude_legacy() {
@@ -1647,14 +1647,14 @@ register_statusline() {
   local plugin_dir cmd existing reply ts
   if [ "$STATUSLINE_ARG" != "yes" ]; then
     [ "$INTERACTIVE" -eq 1 ] || return 0
-    heading "$(t 'Statusline (optional)' 'Statusline 状态栏（可选）')"
-    info "$(t 'OpenViking can show a one-line server/recall status under the input box.' 'OpenViking 可以在输入框下方显示一行服务/召回状态。')"
+    heading "$(t 'Statusline (optional)' 'Statusline 狀態列（可選）')"
+    info "$(t 'OpenViking can show a one-line server/recall status under the input box.' 'OpenViking 可以在輸入框下方顯示一行服務/召回狀態。')"
     info 'Sample: "OV ✓ │ Fable 5 · ctx 42% │ ↩ 6 mem (0.92) · 50ms │ ✎ 573/20k · 2 arch │ +3 today"'
-    tui_menu "$(t 'Enable the OpenViking statusline?' '启用 OpenViking statusline？')" 1 \
-      "$(t 'Enable' '启用')" \
-      "$(t 'Skip' '跳过')"
+    tui_menu "$(t 'Enable the OpenViking statusline?' '啟用 OpenViking statusline？')" 1 \
+      "$(t 'Enable' '啟用')" \
+      "$(t 'Skip' '跳過')"
     if [ "$TUI_MENU_CHOICE" -ne 0 ]; then
-      info "$(t 'Skipped statusline registration. Re-run the installer to enable it later.' '跳过 statusline 注册，之后重跑安装脚本可启用。')"
+      info "$(t 'Skipped statusline registration. Re-run the installer to enable it later.' '跳過 statusline 註冊，之後重跑安裝指令碼可啟用。')"
       return 0
     fi
   fi
@@ -1672,14 +1672,14 @@ register_statusline() {
     } catch {}
   ' "$CC_SETTINGS" 2>/dev/null || true)
   if [ "$existing" = "$cmd" ]; then
-    info "$(t 'Statusline already registered.' 'Statusline 已注册。')"
+    info "$(t 'Statusline already registered.' 'Statusline 已註冊。')"
     return 0
   fi
   if [ -n "$existing" ] && [ "$STATUSLINE_ARG" != "yes" ]; then
-    warn "$(t 'Existing statusline detected:' '检测到已有 statusline：') $existing"
-    tui_menu "$(t 'Replace it with the OpenViking statusline?' '替换为 OpenViking statusline？')" 1 \
-      "$(t 'Replace' '替换')" \
-      "$(t 'Keep existing' '保留现有')"
+    warn "$(t 'Existing statusline detected:' '檢測到已有 statusline：') $existing"
+    tui_menu "$(t 'Replace it with the OpenViking statusline?' '替換為 OpenViking statusline？')" 1 \
+      "$(t 'Replace' '替換')" \
+      "$(t 'Keep existing' '保留現有')"
     if [ "$TUI_MENU_CHOICE" -ne 0 ]; then
       info "$(t 'Kept the existing statusline.' '保留了已有 statusline。')"
       return 0
@@ -1701,23 +1701,23 @@ NODE
 install_claude() {
   heading "$(t '4. Claude Code plugin' '4. Claude Code 插件')"
   command -v "$CLAUDE_BIN" >/dev/null 2>&1 || {
-    warn "$(t 'Claude-format CLI not found; skipping:' '未找到 Claude 格式 CLI，跳过：') $CLAUDE_BIN"
+    warn "$(t 'Claude-format CLI not found; skipping:' '未找到 Claude 格式 CLI，跳過：') $CLAUDE_BIN"
     return 0
   }
   if has_plugin_subcommand; then
     install_claude_modern || return 1
   else
-    warn "$(t "This Claude-format CLI doesn't expose 'plugin'." '当前 Claude 格式 CLI 没有 plugin 子命令。') ($CLAUDE_BIN)"
+    warn "$(t "This Claude-format CLI doesn't expose 'plugin'." '當前 Claude 格式 CLI 沒有 plugin 子命令。') ($CLAUDE_BIN)"
     if ! is_native_claude_bin; then
-      warn "$(t 'Legacy compatibility mode is only supported for the native claude command; skipping this custom CLI.' '旧版兼容模式仅支持原生 claude 命令；跳过这个自定义 CLI。')"
+      warn "$(t 'Legacy compatibility mode is only supported for the native claude command; skipping this custom CLI.' '舊版相容模式僅支援原生 claude 命令；跳過這個自定義 CLI。')"
       return 0
     fi
     if [ "$INTERACTIVE" -eq 1 ]; then
-      tui_menu "$(t 'Use legacy compatibility mode (claude mcp add + settings.json merge)?' '使用旧版兼容模式（claude mcp add + settings.json 合并）？')" 0 \
-        "$(t 'Yes, install in legacy mode' '是，用兼容模式安装')" \
-        "$(t 'Skip Claude Code' '跳过 Claude Code')"
+      tui_menu "$(t 'Use legacy compatibility mode (claude mcp add + settings.json merge)?' '使用舊版相容模式（claude mcp add + settings.json 合併）？')" 0 \
+        "$(t 'Yes, install in legacy mode' '是，用相容模式安裝')" \
+        "$(t 'Skip Claude Code' '跳過 Claude Code')"
       if [ "$TUI_MENU_CHOICE" -eq 1 ]; then
-        info "$(t 'Skipped Claude Code install.' '跳过 Claude Code 安装。')"
+        info "$(t 'Skipped Claude Code install.' '跳過 Claude Code 安裝。')"
         return 0
       fi
     fi
@@ -1762,7 +1762,7 @@ remove_legacy_trae_cli_integration() {
     || grep -qF '[mcp_servers."openviking-memory"]' "$trae_home/traecli.toml" 2>/dev/null; then
     agent_remove_trae_cli_configs "$trae_cli_home/hooks.json" "$trae_home/traecli.toml"
     rm -rf "$OV_HOME/agent-integrations/trae-cli"
-    info "$(t 'Removed the deprecated TRAE CLI Hooks integration after installing the TraeCode CLI 2.0 plugin.' 'TraeCode CLI 2.0 插件安装成功后，已移除弃用的 TRAE CLI Hooks 集成。')"
+    info "$(t 'Removed the deprecated TRAE CLI Hooks integration after installing the TraeCode CLI 2.0 plugin.' 'TraeCode CLI 2.0 外掛安裝成功後，已移除棄用的 TRAE CLI Hooks 整合。')"
   fi
   if [ ! -d "$OV_HOME/agent-integrations/cursor" ] \
     && [ ! -d "$OV_HOME/agent-integrations/trae" ] \
@@ -1802,7 +1802,7 @@ codex_marketplace_sync() { # codex_marketplace_sync <expected-source> <add-args.
     return 0
   fi
   if [ -n "$current" ]; then
-    info "$(t 'Marketplace points elsewhere; re-registering' 'marketplace 指向其他来源，重新注册') ($current)"
+    info "$(t 'Marketplace points elsewhere; re-registering' 'marketplace 指向其他來源，重新註冊') ($current)"
     codex_cmd plugin remove "$PLUGIN_ID" >/dev/null 2>&1 || true
     codex_cmd plugin uninstall "$PLUGIN_ID" >/dev/null 2>&1 || true
     codex_cmd plugin marketplace remove "$MARKETPLACE_NAME" >/dev/null 2>&1 || true
@@ -1859,7 +1859,7 @@ install_codex() {
     heading "4. $(codex_bin_label)"
   fi
   command -v "$CODEX_BIN" >/dev/null 2>&1 || {
-    warn "$(t 'Codex-format CLI not found; skipping:' '未找到 Codex 格式 CLI，跳过：') $CODEX_BIN"
+    warn "$(t 'Codex-format CLI not found; skipping:' '未找到 Codex 格式 CLI，跳過：') $CODEX_BIN"
     return 0
   }
   case "$SOURCE_MODE" in
@@ -1902,14 +1902,14 @@ install_codex() {
     if codex_cmd plugin enable "$PLUGIN_ID" >/dev/null 2>&1; then
       remove_legacy_trae_cli_integration
     elif ! is_native_codex_bin; then
-      warn "$(t 'Plugin installed but could not be enabled; keeping the deprecated TRAE CLI Hooks integration.' '插件已安装但未能启用；保留弃用的 TRAE CLI Hooks 集成。')"
+      warn "$(t 'Plugin installed but could not be enabled; keeping the deprecated TRAE CLI Hooks integration.' '外掛已安裝但未能啟用；保留棄用的 TRAE CLI Hooks 整合。')"
     fi
   fi
   if is_native_codex_bin; then
     ensure_codex_config
-    info "$(t 'Codex plugin enabled in' 'Codex 插件已在配置中启用：') $CODEX_CONFIG"
+    info "$(t 'Codex plugin enabled in' 'Codex 外掛已在配置中啟用：') $CODEX_CONFIG"
   else
-    info "$(t 'Codex-format plugin installed:' 'Codex 格式插件已安装：') $CODEX_BIN -> $PLUGIN_ID"
+    info "$(t 'Codex-format plugin installed:' 'Codex 格式外掛已安裝：') $CODEX_BIN -> $PLUGIN_ID"
   fi
 }
 
@@ -1934,7 +1934,7 @@ install_codex_tos_git() {
     codex_cmd plugin marketplace remove "$MARKETPLACE_NAME" >/dev/null 2>&1 || true
   fi
   if ! codex_cmd plugin marketplace add "$CODEX_TOS_GIT_URL" >/dev/null 2>&1; then
-    warn "$(t 'TOS git marketplace unavailable; falling back to the archive directory.' 'TOS git marketplace 不可用，回退到归档目录方式。')"
+    warn "$(t 'TOS git marketplace unavailable; falling back to the archive directory.' 'TOS git marketplace 不可用，回退到歸檔目錄方式。')"
     return 1
   fi
 }
@@ -1948,7 +1948,7 @@ AGENT_HOOK_HOSTS="cursor trae zcode kimicode"
 copy_agent_integration() { # copy_agent_integration <host> <dest-name> [destination]
   local host="$1" dest_name="$2" explicit_dest="${3:-}" source dest tmp other
   source="$(plugin_dir_on_disk agent-hook-plugin)" || {
-    err "$(t 'Agent integration sources not found:' '未找到 Agent 接入源码：') agent-hook-plugin"
+    err "$(t 'Agent integration sources not found:' '未找到 Agent 接入原始碼：') agent-hook-plugin"
     return 1
   }
   dest="${explicit_dest:-$OV_HOME/agent-integrations/$dest_name}"
@@ -1985,7 +1985,7 @@ assemble_agent_integration() { # assemble_agent_integration <host> <dest-name> [
   fi
   root="$(copy_agent_integration "$host" "$dest_name" "$root_dest")" || return 1
   shared="$(plugin_dir_on_disk memory-plugin-shared)" || {
-    err "$(t 'Shared agent runtime not found.' '未找到共享 Agent 运行时。')"
+    err "$(t 'Shared agent runtime not found.' '未找到共享 Agent 執行時。')"
     return 1
   }
   # The closure of what the hook hosts import, written by sync.mjs and
@@ -1993,7 +1993,7 @@ assemble_agent_integration() { # assemble_agent_integration <host> <dest-name> [
   # generator finds no plugin sources in a flat marketplace archive.
   manifest="$shared/lib/MANIFEST"
   [ -s "$manifest" ] || {
-    err "$(t 'Shared runtime manifest is missing or empty:' '共享运行时清单缺失或为空：') $manifest"
+    err "$(t 'Shared runtime manifest is missing or empty:' '共享執行時清單缺失或為空：') $manifest"
     return 1
   }
   rm -rf "$shared_dest.tmp"
@@ -2027,7 +2027,7 @@ agent_remove_json_configs() { # agent_remove_json_configs <hooks> [mcp]
   # can and tell the user what it left behind; aborting here would leave both
   # the host's entries and the integration directory they point at.
   lib="$(install_lib_dir)" || {
-    warn "$(t 'Installer runtime not found; remove the OpenViking hook and MCP entries by hand from:' '未找到安装器运行时，请手动移除以下文件中的 OpenViking hook 与 MCP 条目：') $1${2:+, $2}"
+    warn "$(t 'Installer runtime not found; remove the OpenViking hook and MCP entries by hand from:' '未找到安裝器執行時，請手動移除以下檔案中的 OpenViking hook 與 MCP 條目：') $1${2:+, $2}"
     return 0
   }
   "$NODE_BIN" "$lib/host-json-config.mjs" remove "$1" "${2:-}"
@@ -2067,19 +2067,19 @@ uninstall_agent_integrations() {
   if contains_harness trae; then
     agent_remove_json_configs "$HOME/.trae/hooks.json" "$(trae_mcp_path trae)"
     rm -rf "$OV_HOME/agent-integrations/trae"
-    info "$(t 'Removed TRAE OpenViking hooks and MCP config.' '已移除 TRAE OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed TRAE OpenViking hooks and MCP config.' '已移除 TRAE OpenViking hooks 與 MCP 配置。')"
   fi
   if contains_harness trae-cn; then
     agent_remove_json_configs "$HOME/.trae-cn/hooks.json" "$(trae_mcp_path trae-cn)"
     rm -rf "$OV_HOME/agent-integrations/trae-cn"
-    info "$(t 'Removed TRAE CN OpenViking hooks and MCP config.' '已移除 TRAE CN OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed TRAE CN OpenViking hooks and MCP config.' '已移除 TRAE CN OpenViking hooks 與 MCP 配置。')"
   fi
   if contains_harness trae-cli; then
     local trae_home="${TRAE_HOME:-$HOME/.trae}"
     local trae_cli_home="${TRAECLI_HOME:-$trae_home/cli}"
     agent_remove_trae_cli_configs "$trae_cli_home/hooks.json" "$trae_home/traecli.toml"
     rm -rf "$OV_HOME/agent-integrations/trae-cli"
-    info "$(t 'Removed TRAE CLI OpenViking hooks and MCP config.' '已移除 TRAE CLI OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed TRAE CLI OpenViking hooks and MCP config.' '已移除 TRAE CLI OpenViking hooks 與 MCP 配置。')"
   fi
   if contains_harness zcode; then
     # ZCode reads hooks/MCP from config.json, not standalone files.
@@ -2122,7 +2122,7 @@ CLEAN_NODE
     # Clean up intermediate files generated by agent_write_json_configs
     rm -f "$HOME/.zcode/hooks.json" "$HOME/.zcode/mcp.json" 2>/dev/null
     rm -rf "$OV_HOME/agent-integrations/zcode"
-    info "$(t 'Removed ZCode OpenViking hooks and MCP config.' '已移除 ZCode OpenViking hooks 与 MCP 配置。')"
+    info "$(t 'Removed ZCode OpenViking hooks and MCP config.' '已移除 ZCode OpenViking hooks 與 MCP 配置。')"
   fi
   if contains_harness kimicode; then
     local kimi_home="${KIMI_CODE_HOME:-$HOME/.kimi-code}" kimicode_lib kimicode_installed
@@ -2143,12 +2143,12 @@ NODE
 )"
     [ -e "$kimi_home/plugins/managed/openviking-memory" ] && kimicode_installed="yes"
     if [ "$kimicode_installed" = "invalid" ]; then
-      err "$(t 'Kimi Code plugin registry is invalid; refusing to overwrite it.' 'Kimi Code 插件注册表无效，拒绝覆盖。')"
+      err "$(t 'Kimi Code plugin registry is invalid; refusing to overwrite it.' 'Kimi Code 外掛登錄檔無效，拒絕覆蓋。')"
       return 1
     fi
     if [ "$kimicode_installed" = "yes" ]; then
       [ -f "$kimicode_lib/kimicode-plugin.mjs" ] || {
-        err "$(t 'Kimi Code uninstall runtime is missing.' 'Kimi Code 卸载运行时缺失。')"
+        err "$(t 'Kimi Code uninstall runtime is missing.' 'Kimi Code 解除安裝執行時缺失。')"
         return 1
       }
       "$NODE_BIN" "$kimicode_lib/kimicode-plugin.mjs" remove "$kimi_home" || return 1
@@ -2213,13 +2213,13 @@ install_cursor() {
     rm -rf "$HOME/.cursor/skills/$skill"
     mv "$skill_tmp" "$HOME/.cursor/skills/$skill"
   done
-  info "$(t 'Cursor hooks installed:' 'Cursor hooks 已安装：') $hooks_path"
-  info "$(t 'Cursor MCP installed:' 'Cursor MCP 已安装：') $mcp_path"
-  info "$(t 'Cursor Rule and Skill installed under ~/.cursor.' 'Cursor Rule 与 Skill 已安装到 ~/.cursor。')"
+  info "$(t 'Cursor hooks installed:' 'Cursor hooks 已安裝：') $hooks_path"
+  info "$(t 'Cursor MCP installed:' 'Cursor MCP 已安裝：') $mcp_path"
+  info "$(t 'Cursor Rule and Skill installed under ~/.cursor.' 'Cursor Rule 與 Skill 已安裝到 ~/.cursor。')"
   legacy_plugins="$(cursor_legacy_claude_plugins)"
   if [ -n "$legacy_plugins" ]; then
-    warn "$(t 'Cursor may also import these older Claude OpenViking plugins and run duplicate Hooks:' 'Cursor 还可能导入以下旧版 Claude OpenViking 插件并重复执行 Hook：') $legacy_plugins"
-    warn "$(t 'Upgrade or remove those legacy plugin ids, then restart Cursor.' '请升级或移除这些旧插件 id，然后重启 Cursor。')"
+    warn "$(t 'Cursor may also import these older Claude OpenViking plugins and run duplicate Hooks:' 'Cursor 還可能匯入以下舊版 Claude OpenViking 外掛並重復執行 Hook：') $legacy_plugins"
+    warn "$(t 'Upgrade or remove those legacy plugin ids, then restart Cursor.' '請升級或移除這些舊外掛 id，然後重啟 Cursor。')"
   fi
 }
 
@@ -2245,9 +2245,9 @@ install_zcode() {
   # ZCode reads hooks from config.json → hooks.events, not a standalone hooks.json.
   # Merge the generated hooks.json and mcp.json into config.json so ZCode picks them up.
   zcode_merge_config "$config_path" "$hooks_path" "$mcp_path" \
-    || { warn "$(t 'Failed to merge ZCode config' 'ZCode 配置合并失败')"; return 1; }
-  info "$(t 'ZCode hooks installed:' 'ZCode hooks 已安装：') $config_path (hooks.events)"
-  info "$(t 'ZCode MCP installed:' 'ZCode MCP 已安装：') $config_path (mcp.servers)"
+    || { warn "$(t 'Failed to merge ZCode config' 'ZCode 配置合併失敗')"; return 1; }
+  info "$(t 'ZCode hooks installed:' 'ZCode hooks 已安裝：') $config_path (hooks.events)"
+  info "$(t 'ZCode MCP installed:' 'ZCode MCP 已安裝：') $config_path (mcp.servers)"
 }
 
 install_kimicode() {
@@ -2304,8 +2304,8 @@ install_kimicode() {
   }
   rm -rf "$persisted_backup"
   rm -rf "$bundle"
-  info "$(t 'Kimi Code native plugin installed:' 'Kimi Code 原生插件已安装：') openviking-memory"
-  info "$(t 'Run /reload or start a new session to activate it.' '请运行 /reload 或新建会话以启用。')"
+  info "$(t 'Kimi Code native plugin installed:' 'Kimi Code 原生外掛已安裝：') openviking-memory"
+  info "$(t 'Run /reload or start a new session to activate it.' '請執行 /reload 或新建會話以啟用。')"
 }
 
 install_trae_variant() { # install_trae_variant <trae|trae-cn>
@@ -2325,7 +2325,7 @@ install_trae_variant() { # install_trae_variant <trae|trae-cn>
 install_opencode() {
   heading "$(t '4. OpenCode plugin' '4. OpenCode 插件')"
   if ! command -v opencode >/dev/null 2>&1; then
-    warn "$(t 'opencode CLI not found; skipping OpenCode install.' '未找到 opencode 命令，跳过 OpenCode 安装。')"
+    warn "$(t 'opencode CLI not found; skipping OpenCode install.' '未找到 opencode 命令，跳過 OpenCode 安裝。')"
     return 0
   fi
   case "$SOURCE_MODE" in
@@ -2350,14 +2350,14 @@ opencode_register_npm_plugin() {
   local cfg plugin_dir proxy_root proxy
   cfg="$(opencode_config_file)"
   plugin_dir="$(plugin_dir_on_disk opencode-plugin)" || {
-    warn "$(t 'OpenCode plugin sources not found; registering npm package without MCP fallback.' '未找到 OpenCode 插件源码；仅注册 npm 包，不写 MCP fallback。')"
+    warn "$(t 'OpenCode plugin sources not found; registering npm package without MCP fallback.' '未找到 OpenCode 外掛原始碼；僅註冊 npm 包，不寫 MCP fallback。')"
     opencode_write_config "$cfg" "@openviking/opencode-plugin" ""
     return 0
   }
   proxy_root="$OV_HOME/opencode-mcp-proxy/openviking"
   proxy="$(opencode_install_mcp_proxy_snapshot "$plugin_dir" "$proxy_root")"
   opencode_write_config "$cfg" "@openviking/opencode-plugin" "$proxy"
-  info "$(t 'OpenCode plugin registered in' 'OpenCode 插件已注册到：') $cfg"
+  info "$(t 'OpenCode plugin registered in' 'OpenCode 外掛已註冊到：') $cfg"
 }
 
 opencode_install_mcp_proxy_snapshot() {
@@ -2384,7 +2384,7 @@ opencode_write_config() {
 opencode_install_file_plugin() {
   local plugin_dir dest
   plugin_dir="$(plugin_dir_on_disk opencode-plugin)" || {
-    warn "$(t 'OpenCode plugin sources not found; skipping.' '未找到 OpenCode 插件源码，跳过。')"
+    warn "$(t 'OpenCode plugin sources not found; skipping.' '未找到 OpenCode 外掛原始碼，跳過。')"
     return 0
   }
   prepare_opencode_runtime "$plugin_dir" || return 1
@@ -2405,7 +2405,7 @@ opencode_install_file_plugin() {
     printf '%s\n' 'export { OpenVikingPlugin, default } from "./openviking/index.mjs"' > "$HOME/.config/opencode/plugins/openviking.js"
   fi
   opencode_write_config "$(opencode_config_file)" "" "$dest/servers/mcp-proxy.mjs"
-  info "$(t 'OpenCode file plugin installed:' 'OpenCode 文件插件已安装：') $dest"
+  info "$(t 'OpenCode file plugin installed:' 'OpenCode 檔案外掛已安裝：') $dest"
 }
 
 # ---------------------------------------------------------------------------
@@ -2432,9 +2432,9 @@ prepare_opencode_runtime() {
 }
 
 install_pi() {
-  heading "$(t '4. pi extension' '4. pi 扩展')"
+  heading "$(t '4. pi extension' '4. pi 擴充')"
   if ! command -v pi >/dev/null 2>&1; then
-    warn "$(t 'pi CLI not found; skipping pi extension install.' '未找到 pi 命令，跳过 pi 扩展安装。')"
+    warn "$(t 'pi CLI not found; skipping pi extension install.' '未找到 pi 命令，跳過 pi 擴充安裝。')"
     return 0
   fi
   command -v npm >/dev/null 2>&1 || { err "pi: npm is required to install the MCP client"; return 1; }
@@ -2444,14 +2444,14 @@ install_pi() {
   }
   local plugin_dir dest tmp
   plugin_dir="$(plugin_dir_on_disk pi-coding-agent-extension)" || {
-    warn "$(t 'pi extension sources not found; skipping.' '未找到 pi 扩展源码，跳过。')"
+    warn "$(t 'pi extension sources not found; skipping.' '未找到 pi 擴充原始碼，跳過。')"
     return 0
   }
   sync_shared_runtime
   if [ ! -f "$plugin_dir/shared/credentials.mjs" ] \
     || [ ! -f "$plugin_dir/shared/ov-http.mjs" ] \
     || [ ! -f "$plugin_dir/shared/mcp-proxy-config.mjs" ]; then
-    warn "$(t 'pi extension shared runtime is missing; run node examples/memory-plugin-shared/sync.mjs and retry.' '未找到 pi 扩展的共享运行时；请先运行 node examples/memory-plugin-shared/sync.mjs 再重试。')"
+    warn "$(t 'pi extension shared runtime is missing; run node examples/memory-plugin-shared/sync.mjs and retry.' '未找到 pi 擴充的共享執行時；請先執行 node examples/memory-plugin-shared/sync.mjs 再重試。')"
     return 0
   fi
   dest="$HOME/.pi/agent/extensions/openviking"
@@ -2477,7 +2477,7 @@ install_pi() {
   # left by older installer versions; `pi remove` on a local path only edits
   # settings and never deletes the copied files.
   pi remove "$dest" >/dev/null 2>&1 || true
-  info "$(t 'pi extension installed (auto-discovered):' 'pi 扩展已安装（自动发现）：') $dest"
+  info "$(t 'pi extension installed (auto-discovered):' 'pi 擴充已安裝（自動發現）：') $dest"
 }
 
 # ---------------------------------------------------------------------------
@@ -2485,7 +2485,7 @@ install_pi() {
 # ---------------------------------------------------------------------------
 
 validate_install() {
-  heading "$(t '5. Validation' '5. 安装校验')"
+  heading "$(t '5. Validation' '5. 安裝校驗')"
   local ok=1 agent_fatal=0 cached list bin
   if contains_harness claude; then
     while IFS= read -r bin; do
@@ -2495,9 +2495,9 @@ validate_install() {
       if has_plugin_subcommand; then
         list="$(claude_cmd plugin list 2>/dev/null || true)"
         if str_contains "$list" "$PLUGIN_NAME"; then
-          info "$CLAUDE_BIN: $PLUGIN_NAME $(t 'visible in plugin list' '已出现在插件列表')"
+          info "$CLAUDE_BIN: $PLUGIN_NAME $(t 'visible in plugin list' '已出現在外掛列表')"
         else
-          warn "$CLAUDE_BIN: $PLUGIN_NAME $(t 'not visible in plugin list' '未出现在插件列表')"
+          warn "$CLAUDE_BIN: $PLUGIN_NAME $(t 'not visible in plugin list' '未出現在外掛列表')"
           ok=0
         fi
       fi
@@ -2512,15 +2512,15 @@ EOF
       CODEX_BIN="$bin"
       list="$(codex_cmd plugin list 2>/dev/null || true)"
       if str_contains "$list" "$PLUGIN_NAME"; then
-        info "$CODEX_BIN: $PLUGIN_NAME $(t 'visible in plugin list' '已出现在插件列表')"
+        info "$CODEX_BIN: $PLUGIN_NAME $(t 'visible in plugin list' '已出現在外掛列表')"
       else
-        warn "$CODEX_BIN: $PLUGIN_NAME $(t 'not visible in plugin list' '未出现在插件列表')"
+        warn "$CODEX_BIN: $PLUGIN_NAME $(t 'not visible in plugin list' '未出現在外掛列表')"
         ok=0
       fi
       if is_native_codex_bin; then
         cached=$(find "$HOME/.codex/plugins/cache/$MARKETPLACE_NAME/$PLUGIN_NAME" -name 'mcp-proxy.mjs' -path '*/servers/*' 2>/dev/null | sort | tail -n 1)
         if [ -n "$cached" ]; then
-          node --check "$cached" && info "codex: $(t 'cached stdio proxy parses' '缓存中的 stdio 代理语法正常') ($cached)" || ok=0
+          node --check "$cached" && info "codex: $(t 'cached stdio proxy parses' '快取中的 stdio 代理語法正常') ($cached)" || ok=0
         fi
       fi
     done <<EOF
@@ -2547,14 +2547,14 @@ EOF
         || { ok=0; agent_fatal=1; }
       if printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
         "$NODE_BIN" "$OV_HOME/agent-integrations/cursor/scripts/hook.mjs" sessionStart cursor >/dev/null; then
-        info "cursor: $(t 'installed Hook runtime passed its smoke test' '已安装的 Hook 运行时通过 smoke test')"
+        info "cursor: $(t 'installed Hook runtime passed its smoke test' '已安裝的 Hook 執行時通過 smoke test')"
       else
-        warn "cursor: $(t 'installed Hook runtime failed its smoke test' '已安装的 Hook 运行时 smoke test 失败')"
+        warn "cursor: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
         ok=0; agent_fatal=1
       fi
-      info "cursor: $(t 'integration installed (Hooks, MCP, Rule, Skill)' '集成已安装（Hook、MCP、Rule、Skill）')"
+      info "cursor: $(t 'integration installed (Hooks, MCP, Rule, Skill)' '整合已安裝（Hook、MCP、Rule、Skill）')"
     else
-      warn "cursor: $(t 'OpenViking integration installation is incomplete' 'OpenViking 集成安装不完整')"
+      warn "cursor: $(t 'OpenViking integration installation is incomplete' 'OpenViking 整合安裝不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2575,10 +2575,10 @@ EOF
         || { ok=0; agent_fatal=1; }
       if ! printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
         "$NODE_BIN" "$OV_HOME/agent-integrations/trae/scripts/hook.mjs" session-start trae >/dev/null; then
-        warn "trae: $(t 'installed Hook runtime failed its smoke test' '已安装的 Hook 运行时 smoke test 失败')"
+        warn "trae: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
         ok=0; agent_fatal=1
       fi
-      info "trae: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
+      info "trae: $(t 'hooks and MCP are configured' 'hooks 與 MCP 已配置')"
     else
       warn "trae: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
@@ -2601,10 +2601,10 @@ EOF
         || { ok=0; agent_fatal=1; }
       if ! printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
         "$NODE_BIN" "$OV_HOME/agent-integrations/trae-cn/scripts/hook.mjs" session-start trae-cn >/dev/null; then
-        warn "trae-cn: $(t 'installed Hook runtime failed its smoke test' '已安装的 Hook 运行时 smoke test 失败')"
+        warn "trae-cn: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
         ok=0; agent_fatal=1
       fi
-      info "trae-cn: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
+      info "trae-cn: $(t 'hooks and MCP are configured' 'hooks 與 MCP 已配置')"
     else
       warn "trae-cn: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
@@ -2631,10 +2631,10 @@ EOF
         || { ok=0; agent_fatal=1; }
       if ! printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
         "$NODE_BIN" "$OV_HOME/agent-integrations/trae-cli/scripts/session-start.mjs" >/dev/null; then
-        warn "trae-cli: $(t 'installed Hook runtime failed its smoke test' '已安装的 Hook 运行时 smoke test 失败')"
+        warn "trae-cli: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
         ok=0; agent_fatal=1
       fi
-      info "trae-cli: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
+      info "trae-cli: $(t 'hooks and MCP are configured' 'hooks 與 MCP 已配置')"
     else
       warn "trae-cli: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
@@ -2656,10 +2656,10 @@ EOF
         || { ok=0; agent_fatal=1; }
       if ! printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
         "$NODE_BIN" "$OV_HOME/agent-integrations/zcode/scripts/hook.mjs" session-start zcode >/dev/null; then
-        warn "zcode: $(t 'installed Hook runtime failed its smoke test' '已安装的 Hook 运行时 smoke test 失败')"
+        warn "zcode: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
         ok=0; agent_fatal=1
       fi
-      info "zcode: $(t 'hooks and MCP are configured' 'hooks 与 MCP 已配置')"
+      info "zcode: $(t 'hooks and MCP are configured' 'hooks 與 MCP 已配置')"
     else
       warn "zcode: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
       ok=0; agent_fatal=1
@@ -2680,12 +2680,12 @@ EOF
         || { ok=0; agent_fatal=1; }
       if ! printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
         "$NODE_BIN" "$kimi_root/agent-integrations/kimicode/scripts/hook.mjs" session-start kimicode >/dev/null; then
-        warn "kimicode: $(t 'installed Hook runtime failed its smoke test' '已安装的 Hook 运行时 smoke test 失败')"
+        warn "kimicode: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
         ok=0; agent_fatal=1
       fi
-      info "kimicode: $(t 'native plugin installed (Hooks + MCP)' '原生插件已安装（Hooks + MCP）')"
+      info "kimicode: $(t 'native plugin installed (Hooks + MCP)' '原生外掛已安裝（Hooks + MCP）')"
     else
-      warn "kimicode: $(t 'native plugin installation is incomplete' '原生插件安装不完整')"
+      warn "kimicode: $(t 'native plugin installation is incomplete' '原生外掛安裝不完整')"
       ok=0; agent_fatal=1
     fi
   fi
@@ -2693,9 +2693,9 @@ EOF
     local ocfg="$HOME/.config/opencode/opencode.json"
     local ocfgc="$HOME/.config/opencode/opencode.jsonc"
     if grep -q '@openviking/opencode-plugin' "$ocfg" "$ocfgc" 2>/dev/null || { [ -f "$HOME/.config/opencode/plugins/openviking.js" ] && [ -f "$HOME/.config/opencode/plugins/openviking/index.mjs" ]; }; then
-      info "opencode: $PLUGIN_NAME $(t 'appears installed' '看起来已安装')"
+      info "opencode: $PLUGIN_NAME $(t 'appears installed' '看起來已安裝')"
     else
-      warn "opencode: $PLUGIN_NAME $(t 'not found in config/plugin dir' '未在配置或插件目录中找到')"
+      warn "opencode: $PLUGIN_NAME $(t 'not found in config/plugin dir' '未在配置或外掛目錄中找到')"
       ok=0
     fi
     if [ -f "$HOME/.config/opencode/plugins/openviking.js" ]; then
@@ -2713,7 +2713,7 @@ EOF
       ok=0
     fi
     if grep -q '"openviking"' "$ocfg" "$ocfgc" 2>/dev/null && grep -q '"mcp"' "$ocfg" "$ocfgc" 2>/dev/null; then
-      info "opencode: $(t 'MCP server registered' 'MCP server 已注册')"
+      info "opencode: $(t 'MCP server registered' 'MCP server 已註冊')"
     else
       warn "opencode: $(t 'MCP server not found in config' '配置中未找到 MCP server')"
       ok=0
@@ -2721,16 +2721,16 @@ EOF
   fi
   if contains_harness pi; then
     if [ -f "$HOME/.pi/agent/extensions/openviking/index.ts" ] || [ -f "$HOME/.pi/agent/extensions/openviking/index.js" ]; then
-      info "pi: $PLUGIN_NAME $(t 'extension files present (auto-discovered)' '扩展文件已存在（自动发现）')"
+      info "pi: $PLUGIN_NAME $(t 'extension files present (auto-discovered)' '擴充檔案已存在（自動發現）')"
     else
-      warn "pi: $PLUGIN_NAME $(t 'extension files not found' '未找到扩展文件')"
+      warn "pi: $PLUGIN_NAME $(t 'extension files not found' '未找到擴充檔案')"
       ok=0
     fi
     if command -v pi >/dev/null 2>&1; then
       # The extension lives under pi's auto-discovery root, so it must NOT appear
       # as a configured "packages" entry — a stale entry there loads it twice.
       if pi list 2>/dev/null | grep -q 'extensions/openviking'; then
-        warn "pi: $PLUGIN_NAME $(t 'still registered as a package (duplicate load); run pi remove ~/.pi/agent/extensions/openviking' '仍作为 package 注册（会重复加载）；请运行 pi remove ~/.pi/agent/extensions/openviking')"
+        warn "pi: $PLUGIN_NAME $(t 'still registered as a package (duplicate load); run pi remove ~/.pi/agent/extensions/openviking' '仍作為 package 註冊（會重複載入）；請執行 pi remove ~/.pi/agent/extensions/openviking')"
         ok=0
       fi
     fi
@@ -2746,15 +2746,15 @@ EOF
   if contains_harness dsh && command -v dsh >/dev/null 2>&1; then
     local dsh_profile="${DSH_PROFILE:-$DSH_PROFILE_DEFAULT}"
     if dsh plugin --profile "$dsh_profile" ls 2>/dev/null | grep -q "$DSH_PACKAGE"; then
-      info "dsh: $DSH_PACKAGE $(t 'installed in profile' '已安装到 profile') $dsh_profile"
+      info "dsh: $DSH_PACKAGE $(t 'installed in profile' '已安裝到 profile') $dsh_profile"
     else
       warn "dsh: $DSH_PACKAGE $(t 'not found in profile' '未在 profile 中找到') $dsh_profile"
       ok=0
     fi
     if dsh --profile "$dsh_profile" --dump-config 2>/dev/null | grep -q 'openviking-memory'; then
-      info "dsh: $(t 'plugin group composed into the profile' '插件组已合入 profile')"
+      info "dsh: $(t 'plugin group composed into the profile' '外掛組已合入 profile')"
     else
-      warn "dsh: $(t 'plugin group not present in the composed profile' '合成后的 profile 中没有插件组')"
+      warn "dsh: $(t 'plugin group not present in the composed profile' '合成後的 profile 中沒有外掛組')"
       ok=0
     fi
   fi
@@ -2763,11 +2763,11 @@ EOF
       "$MKT_DIR/codex-memory-plugin/scripts/marketplace.test.mjs" || ok=0
   fi
   if [ "$agent_fatal" -ne 0 ]; then
-    err "$(t 'Installation validation failed. No success result will be reported.' '安装校验失败，不会报告安装成功。')"
+    err "$(t 'Installation validation failed. No success result will be reported.' '安裝校驗失敗，不會報告安裝成功。')"
     return 1
   fi
   if [ "$ok" -ne 1 ]; then
-    warn "$(t 'Validation reported issues — the install may still work; check the messages above.' '校验发现问题——安装可能仍然可用，请检查上方输出。')"
+    warn "$(t 'Validation reported issues — the install may still work; check the messages above.' '校驗發現問題——安裝可能仍然可用，請檢查上方輸出。')"
   fi
 }
 
@@ -2777,12 +2777,12 @@ EOF
 
 select_language
 
-heading "$(t '1. Environment check' '1. 环境检查')"
+heading "$(t '1. Environment check' '1. 環境檢查')"
 case "$(uname -s)" in
   Darwin|Linux) info "OS: $(uname -s)" ;;
   *) err "Unsupported OS: $(uname -s). Only macOS and Linux are supported."; exit 1 ;;
 esac
-command -v node >/dev/null 2>&1 || { err "$(t 'node not found. Install Node.js 18+.' '未找到 node，请先安装 Node.js 18+。')"; exit 1; }
+command -v node >/dev/null 2>&1 || { err "$(t 'node not found. Install Node.js 18+.' '未找到 node，請先安裝 Node.js 18+。')"; exit 1; }
 NODE_BIN="$(command -v node)"
 NODE_MAJOR="$("$NODE_BIN" -p 'Number(process.versions.node.split(".")[0])')"
 [ "$NODE_MAJOR" -ge 18 ] || { err "Node.js 18+ required; found $("$NODE_BIN" --version)."; exit 1; }
@@ -2794,7 +2794,7 @@ validate_selected_harnesses
 select_compatible_bins
 select_dsh_profile
 refresh_available_harnesses
-info "$(t 'Selected harnesses:' '已选择：') $(printf '%s' "${PUBLIC_SELECTED_HARNESSES:-$SELECTED_HARNESSES}" | tr ',' ' ')"
+info "$(t 'Selected harnesses:' '已選擇：') $(printf '%s' "${PUBLIC_SELECTED_HARNESSES:-$SELECTED_HARNESSES}" | tr ',' ' ')"
 if contains_harness claude; then info "$(t 'Claude-format commands:' 'Claude 格式命令：') $(list_words "$CLAUDE_BINS")"; fi
 if [ -n "$TRAECODE_CLI_BIN" ]; then info "TraeCode CLI 2.0: $TRAECODE_CLI_BIN"; fi
 if contains_harness codex && [ -z "$TRAECODE_CLI_BIN" ]; then info "$(t 'Codex-format commands:' 'Codex 格式命令：') $(list_words "$CODEX_BINS")"; fi
@@ -2837,7 +2837,7 @@ if contains_harness dsh; then install_dsh; fi
 validate_install
 
 heading "$(t 'Done' '完成')"
-info "$(t 'Credentials:' '凭据：') $OVCLI_CONF"
+info "$(t 'Credentials:' '憑據：') $OVCLI_CONF"
 case "$SOURCE_MODE" in
   remote) if contains_harness claude || contains_harness codex; then info "Marketplace: remote ($REPO_URL @ $REPO_REF)"; fi ;;
   *) if contains_harness claude || contains_harness codex; then info "Marketplace: ${MKT_DIR:-$CODEX_TOS_GIT_URL}"; fi ;;
@@ -2855,4 +2855,4 @@ if contains_harness zcode; then info "ZCode: ~/.zcode/cli/config.json (hooks + M
 if contains_harness kimicode; then info "Kimi Code: native plugin (hooks + MCP)"; fi
 if contains_harness opencode; then info "OpenCode: @openviking/opencode-plugin"; fi
 if contains_harness pi; then info "pi: ~/.pi/agent/extensions/openviking"; fi
-if contains_harness dsh; then info "DeepSeek Harness: $DSH_PACKAGE ($(t 'profile' '配置档') ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT})"; fi
+if contains_harness dsh; then info "DeepSeek Harness: $DSH_PACKAGE ($(t 'profile' '配置檔') ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT})"; fi

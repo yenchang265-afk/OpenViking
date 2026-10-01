@@ -54,9 +54,9 @@ class ToolPart:
     tool_input: Optional[dict] = None
     tool_output: str = ""
     tool_status: str = "pending"  # pending | running | completed | error
-    duration_ms: Optional[float] = None  # 执行耗时（毫秒）
-    prompt_tokens: Optional[int] = None  # 输入 Token
-    completion_tokens: Optional[int] = None  # 输出 Token
+    duration_ms: Optional[float] = None  # 執行耗時（毫秒）
+    prompt_tokens: Optional[int] = None  # 輸入 Token
+    completion_tokens: Optional[int] = None  # 輸出 Token
     tool_output_ref: str = ""
     tool_output_truncated: bool = False
     tool_output_original_chars: Optional[int] = None

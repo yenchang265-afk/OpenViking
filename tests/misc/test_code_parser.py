@@ -73,7 +73,7 @@ def test_ignore_extensions_compliance():
 
     parser = CodeRepositoryParser()
 
-    # Required formats from README.md: "除了图片以外，不要让大模型处理文本以外的其他模态内容"
+    # Required formats from README.md: "除了圖片以外，不要讓大模型處理文本以外的其他模態內容"
     # (Except for images, don't let the large model process non-text content)
 
     # Images should be included (they are explicitly mentioned as the exception)

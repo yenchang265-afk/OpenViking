@@ -41,7 +41,7 @@ def test_create_tool_context_uses_extract_context_page_id_map():
 
 
 def test_user_memory_provider_splits_but_trajectory_provider_keeps_messages_whole():
-    text = "第一句很长很长很长很长很长很长很长很长很长很长很长。" * 8
+    text = "第一句很長很長很長很長很長很長很長很長很長很長很長。" * 8
     messages = [Message(id="1", role="user", parts=[TextPart(text=text)])]
 
     user_provider = SessionExtractContextProvider(messages=messages)
@@ -57,7 +57,7 @@ def test_agent_only_schemas_are_excluded_from_peer_user_memory_extraction():
         Message(
             id="1",
             role="user",
-            parts=[TextPart(text="帮我导出 B 站投稿数据")],
+            parts=[TextPart(text="幫我匯出 B 站投稿資料")],
             peer_id="case_demo_peer",
         )
     ]

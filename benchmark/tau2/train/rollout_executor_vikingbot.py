@@ -422,7 +422,7 @@ async def _experience_search_summary(client: Any, item: Any, rank: int) -> dict[
         except Exception:
             exp_content = ""
         situation = _markdown_section(exp_content, "Situation") if exp_content else ""
-        # ponytail: cap at ~600 chars per exp to bound search-result tokens; exclusions ("不适用于"/"not apply") are preserved.
+        # ponytail: cap at ~600 chars per exp to bound search-result tokens; exclusions ("不適用於"/"not apply") are preserved.
         exp_entry["situation"] = _shorten(situation, 600)
         experiences.append(exp_entry)
     summary.update(
@@ -745,7 +745,7 @@ def _tau2_case_lookup(case: Case) -> dict[str, Any]:
     split = case_input.get("split")
     task_id = case_input.get("task_id")
     # Trial cases append a trial suffix to Case.task_signature; case memories are
-    # keyed by the stable tau2题目 identity, so use the base signature.
+    # keyed by the stable tau2題目 identity, so use the base signature.
     task_signature = (
         f"tau2:{domain}:{split}:{task_id}"
         if domain is not None and split is not None and task_id is not None
@@ -1229,20 +1229,20 @@ async def _run_agent(
         business_current_time=_tau2_policy_current_time_display(system_prompt),
     )
     user_memory = None
-    experience_reminder_text = None  # 完整的 [Experience Reminder] 消息文本（用于 messages.json）
+    experience_reminder_text = None  # 完整的 [Experience Reminder] 訊息文本（用於 messages.json）
     for msg in messages:
         content = msg.get("content", "") if isinstance(msg, dict) else ""
         if not isinstance(content, str):
             continue
-        # Experience Reminder (经验记忆) - role=user, starts with [Experience Reminder]
+        # Experience Reminder (經驗記憶) - role=user, starts with [Experience Reminder]
         if "[Experience Reminder]" in content and "## Relevant Agent Experience" in content:
             experience_reminder_text = content
             continue
-        # User memory (用户记忆) - starts with "## Current Session"
+        # User memory (使用者記憶) - starts with "## Current Session"
         if content.startswith("## Current Session"):
             user_memory = _extract_memory_content(content)
 
-    # 合并用户记忆 + 经验记忆正文，去重
+    # 合併使用者記憶 + 經驗記憶正文，去重
     exp_content = (
         _extract_experience_content(experience_reminder_text) if experience_reminder_text else None
     )
@@ -1426,7 +1426,7 @@ def _extract_memory_content(content: str) -> str | None:
 
 
 def _extract_experience_content(content: str) -> str | None:
-    """从 Experience Reminder 消息中提取经验记忆正文。"""
+    """從 Experience Reminder 訊息中提取經驗記憶正文。"""
     prefix = "[Experience Reminder]\n## Relevant Agent Experience\n"
     start = content.find(prefix)
     if start == -1:
@@ -1466,9 +1466,9 @@ def _case_memory_context_from_tools(tools_used: list[dict] | None) -> str:
 
 
 def _merge_memories(user_memory: str | None, exp_memory: str | None) -> str | None:
-    """合并用户记忆和经验记忆，去重。
+    """合併使用者記憶和經驗記憶，去重。
 
-    两者都为 None 时返回 None；只有一个时直接返回它；都有时拼接并标记类型。
+    兩者都為 None 時返回 None；只有一個時直接返回它；都有時拼接並標記型別。
     """
     parts: list[str] = []
     if user_memory and user_memory.strip():
@@ -1498,7 +1498,7 @@ def _build_rollout_messages(
             created_at=artifact_created_at,
         ),
     ]
-    # Experience Reminder 放在 system 之后、user 之前，与 agent 实际看到的顺序一致
+    # Experience Reminder 放在 system 之後、user 之前，與 agent 實際看到的順序一致
     if experience_reminder:
         messages.append(
             _message("tau2-experience", "user", experience_reminder, created_at=artifact_created_at)

@@ -9,8 +9,8 @@ description: >
   text, a Git repository, or a local folder; when a skill should work in every
   harness and on every machine; or when the user wants to move local skills
   (~/.claude/skills, ~/.agents/skills, ~/.cursor/skills) into OpenViking —
-  "upload my skills", "save this as a skill", "迁移本地 skill", "把 skill 存到
-  OpenViking", "新建一个 skill". Covers the add_skill tool, running a skill's
+  "upload my skills", "save this as a skill", "遷移本地 skill", "把 skill 存到
+  OpenViking", "新建一個 skill". Covers the add_skill tool, running a skill's
   helper files, and which local skills must stay local.
 ---
 

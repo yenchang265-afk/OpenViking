@@ -1,27 +1,27 @@
-## 💬 聊天应用
+## 💬 聊天應用
 
-通过 Telegram、Discord、WhatsApp、Mochat、钉钉、Slack、邮件或 QQ 与您的 vikingbot 对话 —— 随时随地。
+通過 Telegram、Discord、WhatsApp、Mochat、釘釘、Slack、郵件或 QQ 與您的 vikingbot 對話 —— 隨時隨地。
 
-| 渠道 | 设置难度 |
+| 渠道 | 設定難度 |
 |---------|-------|
-| **Telegram** | 简单（只需一个令牌） |
-| **Discord** | 简单（机器人令牌 + 权限） |
-| **WhatsApp** | 中等（扫描二维码） |
+| **Telegram** | 簡單（只需一個令牌） |
+| **Discord** | 簡單（機器人令牌 + 許可權） |
+| **WhatsApp** | 中等（掃描二維碼） |
 | **Mochat** | 中等（claw 令牌 + websocket） |
-| **钉钉** | 中等（应用凭证） |
-| **Slack** | 中等（机器人 + 应用令牌） |
-| **邮件** | 中等（IMAP/SMTP 凭证） |
-| **QQ** | 简单（应用凭证） |
+| **釘釘** | 中等（應用憑證） |
+| **Slack** | 中等（機器人 + 應用令牌） |
+| **郵件** | 中等（IMAP/SMTP 憑證） |
+| **QQ** | 簡單（應用憑證） |
 
-渠道配置位于 `~/.openviking/ov.conf` 的 `bot.channels`。下面的 Telegram 示例展示完整外层结构；后续片段中的 `channels` 字段都应合并到同一个 `bot` 对象中。
+渠道配置位於 `~/.openviking/ov.conf` 的 `bot.channels`。下面的 Telegram 示例展示完整外層結構；後續片段中的 `channels` 欄位都應合併到同一個 `bot` 物件中。
 
 <details>
-<summary><b>Telegram</b>（推荐）</summary>
+<summary><b>Telegram</b>（推薦）</summary>
 
-**1. 创建机器人**
-- 打开 Telegram，搜索 `@BotFather`
-- 发送 `/newbot`，按照提示操作
-- 复制令牌
+**1. 建立機器人**
+- 開啟 Telegram，搜尋 `@BotFather`
+- 傳送 `/newbot`，按照提示操作
+- 複製令牌
 
 **2. 配置**
 
@@ -40,11 +40,11 @@
 }
 ```
 
-> 您可以在 Telegram 设置中找到您的 **用户 ID**。它显示为 `@yourUserId`。
-> 复制这个值**不带 `@` 符号**并粘贴到配置文件中。
+> 您可以在 Telegram 設定中找到您的 **使用者 ID**。它顯示為 `@yourUserId`。
+> 複製這個值**不帶 `@` 符號**並貼上到配置檔案中。
 
 
-**3. 运行**
+**3. 執行**
 
 ```bash
 vikingbot gateway
@@ -55,34 +55,34 @@ vikingbot gateway
 <details>
 <summary><b>Mochat (Claw IM)</b></summary>
 
-默认使用 **Socket.IO WebSocket**，并带有 HTTP 轮询回退。
+預設使用 **Socket.IO WebSocket**，並帶有 HTTP 輪詢回退。
 
-**1. 让 vikingbot 为您设置 Mochat**
+**1. 讓 vikingbot 為您設定 Mochat**
 
-只需向 vikingbot 发送此消息（将 `xxx@xxx` 替换为您的真实邮箱）：
+只需向 vikingbot 傳送此訊息（將 `xxx@xxx` 替換為您的真實郵箱）：
 
 ```
 Read https://raw.githubusercontent.com/HKUDS/MoChat/refs/heads/main/skills/vikingbot/skill.md and register on MoChat. My Email account is xxx@xxx Bind me as your owner and DM me on MoChat.
 ```
 
-注册后，请将返回的渠道设置添加到 `~/.openviking/ov.conf` 的 `bot.channels`，然后连接 Mochat。
+註冊後，請將返回的渠道設定新增到 `~/.openviking/ov.conf` 的 `bot.channels`，然後連線 Mochat。
 
-**2. 重启网关**
+**2. 重啟閘道器**
 
 ```bash
 vikingbot gateway
 ```
 
-就这么简单 —— vikingbot 处理剩下的一切！
+就這麼簡單 —— vikingbot 處理剩下的一切！
 
 <br>
 
 <details>
-<summary>手动配置（高级）</summary>
+<summary>手動配置（進階）</summary>
 
-如果您更喜欢手动配置，请将下面的 `channels` 字段合并到 `~/.openviking/ov.conf` 的 `bot` 对象：
+如果您更喜歡手動配置，請將下面的 `channels` 欄位合併到 `~/.openviking/ov.conf` 的 `bot` 物件：
 
-> 请保密 `claw_token`。它只应在 `X-Claw-Token` 头中发送到您的 Mochat API 端点。
+> 請保密 `claw_token`。它只應在 `X-Claw-Token` 頭中傳送到您的 Mochat API 端點。
 
 ```json
 {
@@ -112,18 +112,18 @@ vikingbot gateway
 <details>
 <summary><b>Discord</b></summary>
 
-**1. 创建机器人**
-- 访问 https://discord.com/developers/applications
-- 创建应用 → 机器人 → 添加机器人
-- 复制机器人令牌
+**1. 建立機器人**
+- 訪問 https://discord.com/developers/applications
+- 建立應用 → 機器人 → 新增機器人
+- 複製機器人令牌
 
-**2. 启用意图**
-- 在机器人设置中，启用 **MESSAGE CONTENT INTENT**
-- （可选）如果您计划使用基于成员数据的允许列表，启用 **SERVER MEMBERS INTENT**
+**2. 啟用意圖**
+- 在機器人設定中，啟用 **MESSAGE CONTENT INTENT**
+- （可選）如果您計劃使用基於成員資料的允許列表，啟用 **SERVER MEMBERS INTENT**
 
-**3. 获取您的用户 ID**
-- Discord 设置 → 高级 → 启用 **开发者模式**
-- 右键点击您的头像 → **复制用户 ID**
+**3. 獲取您的使用者 ID**
+- Discord 設定 → 進階 → 啟用 **開發者模式**
+- 右鍵點選您的頭像 → **複製使用者 ID**
 
 **4. 配置**
 
@@ -140,13 +140,13 @@ vikingbot gateway
 }
 ```
 
-**5. 邀请机器人**
+**5. 邀請機器人**
 - OAuth2 → URL 生成器
-- 范围：`bot`
-- 机器人权限：`发送消息`、`读取消息历史`
-- 打开生成的邀请 URL 并将机器人添加到您的服务器
+- 範圍：`bot`
+- 機器人許可權：`傳送訊息`、`讀取訊息歷史`
+- 開啟生成的邀請 URL 並將機器人新增到您的伺服器
 
-**6. 运行**
+**6. 執行**
 
 ```bash
 vikingbot gateway
@@ -159,11 +159,11 @@ vikingbot gateway
 
 需要 **Node.js ≥18**。
 
-**1. 链接设备**
+**1. 連結裝置**
 
 ```bash
 vikingbot channels login
-# 使用 WhatsApp 扫描二维码 → 设置 → 链接设备
+# 使用 WhatsApp 掃描二維碼 → 設定 → 連結裝置
 ```
 
 **2. 配置**
@@ -180,37 +180,37 @@ vikingbot channels login
 }
 ```
 
-**3. 运行**（两个终端）
+**3. 執行**（兩個終端）
 
 ```bash
-# 终端 1
+# 終端 1
 vikingbot channels login
 
-# 终端 2
+# 終端 2
 vikingbot gateway
 ```
 
 </details>
 
 <details>
-<summary><b>QQ（QQ单聊）</b></summary>
+<summary><b>QQ（QQ單聊）</b></summary>
 
-使用 **botpy SDK** 配合 WebSocket —— 不需要公网 IP。目前仅支持 **私聊**。
+使用 **botpy SDK** 配合 WebSocket —— 不需要公網 IP。目前僅支援 **私聊**。
 
-**1. 注册并创建机器人**
-- 访问 [QQ 开放平台](https://q.qq.com) → 注册为开发者（个人或企业）
-- 创建新的机器人应用
-- 进入 **开发设置** → 复制 **AppID** 和 **AppSecret**
+**1. 註冊並建立機器人**
+- 訪問 [QQ 開放平臺](https://q.qq.com) → 註冊為開發者（個人或企業）
+- 建立新的機器人應用
+- 進入 **開發設定** → 複製 **AppID** 和 **AppSecret**
 
-**2. 设置沙箱测试环境**
-- 在机器人管理控制台中，找到 **沙箱配置**
-- 在 **在消息列表配置** 下，点击 **添加成员** 并添加您自己的 QQ 号
-- 添加完成后，用手机 QQ 扫描机器人的二维码 → 打开机器人资料卡 → 点击「发消息」开始聊天
+**2. 設定沙箱測試環境**
+- 在機器人管理控制台中，找到 **沙箱配置**
+- 在 **在訊息列表配置** 下，點選 **新增成員** 並新增您自己的 QQ 號
+- 新增完成後，用手機 QQ 掃描機器人的二維碼 → 開啟機器人資料卡 → 點選「發訊息」開始聊天
 
 **3. 配置**
 
-> - `allowFrom`：留空以供公开访问，或添加用户 openid 以限制。您可以在用户向机器人发消息时在 vikingbot 日志中找到 openid。
-> - 生产环境：在机器人控制台提交审核并发布。查看 [QQ 机器人文档](https://bot.q.qq.com/wiki/) 了解完整发布流程。
+> - `allowFrom`：留空以供公開訪問，或新增使用者 openid 以限制。您可以在使用者向機器人發訊息時在 vikingbot 日誌中找到 openid。
+> - 生產環境：在機器人控制台提交稽核併發布。檢視 [QQ 機器人文件](https://bot.q.qq.com/wiki/) 瞭解完整發布流程。
 
 ```json
 {
@@ -226,29 +226,29 @@ vikingbot gateway
 }
 ```
 
-**4. 运行**
+**4. 執行**
 
 ```bash
 vikingbot gateway
 ```
 
-现在从 QQ 向机器人发送消息 —— 它应该会回复！
+現在從 QQ 向機器人傳送訊息 —— 它應該會回覆！
 
 </details>
 
 <details>
-<summary><b>钉钉</b></summary>
+<summary><b>釘釘</b></summary>
 
-使用 **流模式** —— 不需要公网 IP。
+使用 **流模式** —— 不需要公網 IP。
 
-**1. 创建钉钉机器人**
-- 访问 [钉钉开放平台](https://open-dev.dingtalk.com/)
-- 创建新应用 -> 添加 **机器人** 功能
+**1. 建立釘釘機器人**
+- 訪問 [釘釘開放平臺](https://open-dev.dingtalk.com/)
+- 建立新應用 -> 新增 **機器人** 功能
 - **配置**：
-  - 打开 **流模式**
-- **权限**：添加发送消息所需的权限
-- 从「凭证」获取 **AppKey**（客户端 ID）和 **AppSecret**（客户端密钥）
-- 发布应用
+  - 開啟 **流模式**
+- **許可權**：添加發送訊息所需的許可權
+- 從「憑證」獲取 **AppKey**（客戶端 ID）和 **AppSecret**（客戶端金鑰）
+- 釋出應用
 
 **2. 配置**
 
@@ -266,9 +266,9 @@ vikingbot gateway
 }
 ```
 
-> `allowFrom`：留空以允许所有用户，或添加 `["staffId"]` 以限制访问。
+> `allowFrom`：留空以允許所有使用者，或新增 `["staffId"]` 以限制訪問。
 
-**3. 运行**
+**3. 執行**
 
 ```bash
 vikingbot gateway
@@ -279,18 +279,18 @@ vikingbot gateway
 <details>
 <summary><b>Slack</b></summary>
 
-使用 **Socket 模式** —— 不需要公网 URL。
+使用 **Socket 模式** —— 不需要公網 URL。
 
-**1. 创建 Slack 应用**
-- 访问 [Slack API](https://api.slack.com/apps) → **创建新应用** →「从零开始」
-- 选择名称并选择您的工作区
+**1. 建立 Slack 應用**
+- 訪問 [Slack API](https://api.slack.com/apps) → **建立新應用** →「從零開始」
+- 選擇名稱並選擇您的工作區
 
-**2. 配置应用**
-- **Socket 模式**：打开 → 生成一个具有 `connections:write` 范围的 **应用级令牌** → 复制它（`xapp-...`）
-- **OAuth 与权限**：添加机器人范围：`chat:write`、`reactions:write`、`app_mentions:read`
-- **事件订阅**：打开 → 订阅机器人事件：`message.im`、`message.channels`、`app_mention` → 保存更改
-- **应用主页**：滚动到 **显示标签页** → 启用 **消息标签页** → 勾选 **"允许用户从消息标签页发送斜杠命令和消息"**
-- **安装应用**：点击 **安装到工作区** → 授权 → 复制 **机器人令牌**（`xoxb-...`）
+**2. 配置應用**
+- **Socket 模式**：開啟 → 生成一個具有 `connections:write` 範圍的 **應用級令牌** → 複製它（`xapp-...`）
+- **OAuth 與許可權**：新增機器人範圍：`chat:write`、`reactions:write`、`app_mentions:read`
+- **事件訂閱**：開啟 → 訂閱機器人事件：`message.im`、`message.channels`、`app_mention` → 儲存更改
+- **應用主頁**：滾動到 **顯示標籤頁** → 啟用 **訊息標籤頁** → 勾選 **"允許使用者從訊息標籤頁傳送斜槓命令和訊息"**
+- **安裝應用**：點選 **安裝到工作區** → 授權 → 複製 **機器人令牌**（`xoxb-...`）
 
 **3. 配置 vikingbot**
 
@@ -308,36 +308,36 @@ vikingbot gateway
 }
 ```
 
-**4. 运行**
+**4. 執行**
 
 ```bash
 vikingbot gateway
 ```
 
-直接向机器人发送私信或在频道中 @提及它 —— 它应该会回复！
+直接向機器人傳送私信或在頻道中 @提及它 —— 它應該會回覆！
 
 > [!TIP]
-> - `groupPolicy`：`"mention"`（默认 —— 仅在 @提及時回复）、`"open"`（回复所有频道消息）或 `"allowlist"`（限制到特定频道）。
-> - 私信策略默认为开放。设置 `"dm": {"enabled": false}` 以禁用私信。
+> - `groupPolicy`：`"mention"`（預設 —— 僅在 @提及時回覆）、`"open"`（回覆所有頻道訊息）或 `"allowlist"`（限制到特定頻道）。
+> - 私信策略預設為開放。設定 `"dm": {"enabled": false}` 以停用私信。
 
 </details>
 
 <details>
-<summary><b>邮件</b></summary>
+<summary><b>郵件</b></summary>
 
-给 vikingbot 一个自己的邮箱账户。它通过 **IMAP** 轮询收件箱并通过 **SMTP** 回复 —— 就像一个个人邮件助手。
+給 vikingbot 一個自己的郵箱帳戶。它通過 **IMAP** 輪詢收件箱並通過 **SMTP** 回覆 —— 就像一個個人郵件助手。
 
-**1. 获取凭证（Gmail 示例）**
-- 为您的机器人创建一个专用的 Gmail 账户（例如 `my-vikingbot@gmail.com`）
-- 启用两步验证 → 创建 [应用密码](https://myaccount.google.com/apppasswords)
-- 将此应用密码用于 IMAP 和 SMTP
+**1. 獲取憑證（Gmail 示例）**
+- 為您的機器人建立一個專用的 Gmail 帳戶（例如 `my-vikingbot@gmail.com`）
+- 啟用兩步驗證 → 建立 [應用密碼](https://myaccount.google.com/apppasswords)
+- 將此應用密碼用於 IMAP 和 SMTP
 
 **2. 配置**
 
-> - `consentGranted` 必须为 `true` 以允许邮箱访问。这是一个安全门 —— 设置为 `false` 以完全禁用。
-> - `allowFrom`：留空以接受来自任何人的邮件，或限制到特定发件人。
-> - `smtpUseTls` 和 `smtpUseSsl` 分别默认为 `true` / `false`，这对 Gmail（端口 587 + STARTTLS）是正确的。无需显式设置它们。
-> - 如果您只想读取/分析邮件而不发送自动回复，请设置 `"autoReplyEnabled": false`。
+> - `consentGranted` 必須為 `true` 以允許郵箱訪問。這是一個安全門 —— 設定為 `false` 以完全停用。
+> - `allowFrom`：留空以接受來自任何人的郵件，或限制到特定發件人。
+> - `smtpUseTls` 和 `smtpUseSsl` 分別預設為 `true` / `false`，這對 Gmail（埠 587 + STARTTLS）是正確的。無需顯式設定它們。
+> - 如果您只想讀取/分析郵件而不傳送自動回覆，請設定 `"autoReplyEnabled": false`。
 
 ```json
 {
@@ -362,7 +362,7 @@ vikingbot gateway
 ```
 
 
-**3. 运行**
+**3. 執行**
 
 ```bash
 vikingbot gateway

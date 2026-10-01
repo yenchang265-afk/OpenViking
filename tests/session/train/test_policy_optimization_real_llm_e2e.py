@@ -108,16 +108,16 @@ class RealRubricTrajectoryAnalyzer:
         )
         learning_target = next_failed_name or "all_passed"
         trajectory_content = (
-            "# 复杂重复预订处理轨迹\n"
-            f"评估得分：{evaluation.score:.2f}\n"
-            f"评估结论：{'通过' if evaluation.passed else '未通过'}\n"
-            f"当前解锁阶段：{', '.join(evaluation_payload.get('active_criteria', []))}\n"
-            f"本轮学习目标：{learning_target}\n"
-            f"本轮反馈：{next_failed_feedback}\n\n"
-            "## 关键训练信号\n"
-            f"- 只根据本轮学习目标改进经验：{learning_target}\n"
-            f"- 修正建议：{next_failed_feedback}\n\n"
-            "## 助手输出\n"
+            "# 複雜重複預訂處理軌跡\n"
+            f"評估得分：{evaluation.score:.2f}\n"
+            f"評估結論：{'通過' if evaluation.passed else '未通過'}\n"
+            f"當前解鎖階段：{', '.join(evaluation_payload.get('active_criteria', []))}\n"
+            f"本輪學習目標：{learning_target}\n"
+            f"本輪反饋：{next_failed_feedback}\n\n"
+            "## 關鍵訓練訊號\n"
+            f"- 只根據本輪學習目標改進經驗：{learning_target}\n"
+            f"- 修正建議：{next_failed_feedback}\n\n"
+            "## 助手輸出\n"
             f"{assistant_text}\n"
         )
         self.viking_fs.files[self.trajectory_uri] = (
@@ -128,7 +128,7 @@ class RealRubricTrajectoryAnalyzer:
                     "memory_type": "trajectories",
                     "trajectory_name": "complex_duplicate_booking_case",
                     "outcome": trajectory_outcome,
-                    "retrieval_anchor": f"阶段：{learning_target}；能力：复杂重复预订处理",
+                    "retrieval_anchor": f"階段：{learning_target}；能力：複雜重複預訂處理",
                 },
                 ensure_ascii=False,
                 separators=(",", ":"),
@@ -143,7 +143,7 @@ class RealRubricTrajectoryAnalyzer:
                     uri=self.trajectory_uri,
                     content=trajectory_content.strip(),
                     outcome=trajectory_outcome,
-                    retrieval_anchor=f"阶段：{learning_target}；能力：复杂重复预订处理",
+                    retrieval_anchor=f"階段：{learning_target}；能力：複雜重複預訂處理",
                     metadata={"memory_type": "trajectories"},
                 )
             ],
@@ -160,7 +160,7 @@ def _case() -> Case:
         task_signature="complex_booking_duplicate",
         input={
             "user_request": (
-                "我好像重复订了酒店，但不确定哪一笔重复。请帮我处理，如果确实重复就取消多余的那笔。"
+                "我好像重複訂了酒店，但不確定哪一筆重複。請幫我處理，如果確實重複就取消多餘的那筆。"
             ),
             "booking_records": [
                 {
@@ -168,8 +168,8 @@ def _case() -> Case:
                     "hotel": "上海中心酒店",
                     "check_in": "2026-07-01",
                     "check_out": "2026-07-03",
-                    "room_type": "豪华大床房",
-                    "guest": "张三",
+                    "room_type": "豪華大床房",
+                    "guest": "張三",
                     "price_cny": 1800,
                     "created_at": "2026-05-01T10:00:00",
                     "cancellation_fee_cny": 0,
@@ -181,8 +181,8 @@ def _case() -> Case:
                     "hotel": "上海中心酒店",
                     "check_in": "2026-07-01",
                     "check_out": "2026-07-03",
-                    "room_type": "豪华大床房",
-                    "guest": "张三",
+                    "room_type": "豪華大床房",
+                    "guest": "張三",
                     "price_cny": 1800,
                     "created_at": "2026-05-01T10:05:00",
                     "cancellation_fee_cny": 0,
@@ -194,8 +194,8 @@ def _case() -> Case:
                     "hotel": "上海中心酒店",
                     "check_in": "2026-07-01",
                     "check_out": "2026-07-03",
-                    "room_type": "行政双床房",
-                    "guest": "张三",
+                    "room_type": "行政雙床房",
+                    "guest": "張三",
                     "price_cny": 2200,
                     "created_at": "2026-05-01T10:08:00",
                     "cancellation_fee_cny": 300,
@@ -204,19 +204,19 @@ def _case() -> Case:
                 },
             ],
             "policy_constraints": [
-                "没有用户二次确认前，不能真正执行取消动作。",
-                "如果要取消，需要先告知退款金额和取消费。",
+                "沒有使用者二次確認前，不能真正執行取消動作。",
+                "如果要取消，需要先告知退款金額和取消費。",
             ],
         },
         rubric=Rubric(
             name="complex_booking_duplicate_hidden_rubric",
-            description=("分阶段处理复杂重复预订：识别重复、选对目标、检查取消成本、请求确认。"),
+            description=("分階段處理複雜重複預訂：識別重複、選對目標、檢查取消成本、請求確認。"),
             criteria=[
                 RubricCriterion(
                     name="identify_duplicate",
                     description=(
-                        "必须核验酒店、入住/离店日期、房型、入住人、价格等关键信息，"
-                        "识别 A-100 和 A-101 是重复候选。"
+                        "必須核驗酒店、入住/離店日期、房型、入住人、價格等關鍵資訊，"
+                        "識別 A-100 和 A-101 是重複候選。"
                     ),
                     required=True,
                     weight=0.25,
@@ -224,21 +224,21 @@ def _case() -> Case:
                 RubricCriterion(
                     name="select_correct_target",
                     description=(
-                        "必须选择取消创建时间更晚的 A-101，保留 A-100，"
-                        "且不能误取消同酒店同日期但房型不同的 A-102。"
+                        "必須選擇取消建立時間更晚的 A-101，保留 A-100，"
+                        "且不能誤取消同酒店同日期但房型不同的 A-102。"
                     ),
                     required=True,
                     weight=0.25,
                 ),
                 RubricCriterion(
                     name="check_cancellation_cost",
-                    description="取消前必须说明 A-101 的退款金额和取消费，并提醒 A-102 有取消费。",
+                    description="取消前必須說明 A-101 的退款金額和取消費，並提醒 A-102 有取消費。",
                     required=True,
                     weight=0.25,
                 ),
                 RubricCriterion(
                     name="request_confirmation",
-                    description="不能直接执行取消；必须先给出建议并请求用户确认后再取消。",
+                    description="不能直接執行取消；必須先給出建議並請求使用者確認後再取消。",
                     required=True,
                     weight=0.25,
                 ),
@@ -257,10 +257,10 @@ def _strict_policy_prompt(case, policy_set, context) -> str:
         experiences = "(no experience policies available)"
     return "\n".join(
         [
-            "你正在执行一个受经验策略控制的离线案例。",
-            "必须优先遵循 Experience Policies；如果经验策略与常识冲突，也先按经验策略输出。",
-            "这里不会向你展示隐藏评分 Rubric。请只根据用户输入和经验策略完成任务。",
-            "请给出你会执行的最终处理动作，不要只复述原则。",
+            "你正在執行一個受經驗策略控制的離線案例。",
+            "必須優先遵循 Experience Policies；如果經驗策略與常識衝突，也先按經驗策略輸出。",
+            "這裡不會向你展示隱藏評分 Rubric。請只根據使用者輸入和經驗策略完成任務。",
+            "請給出你會執行的最終處理動作，不要只複述原則。",
             "",
             "# Experience Policies",
             experiences,
@@ -292,7 +292,7 @@ def _first_failed_criterion_feedback(payload: dict, case: Case) -> tuple[str | N
             if isinstance(feedback, list) and feedback:
                 return criterion.name, "; ".join(str(value) for value in feedback)
             return criterion.name, criterion.description
-    return None, "所有阶段都已通过。"
+    return None, "所有階段都已通過。"
 
 
 def _staged_score(payload: dict, case: Case) -> float:
@@ -322,9 +322,9 @@ async def _evaluate_rollout_with_real_llm(
     ]
     prompt = "\n".join(
         [
-            "你是 OpenViking 离线训练的严格评估器。",
-            "请评估助手是否真正完成了当前已解锁的 hidden Rubric。只根据助手输出评分。",
-            "不要因为 Case Input 中出现了约束就给分；必须看助手是否实际执行了该要求。",
+            "你是 OpenViking 離線訓練的嚴格評估器。",
+            "請評估助手是否真正完成了當前已解鎖的 hidden Rubric。只根據助手輸出評分。",
+            "不要因為 Case Input 中出現了約束就給分；必須看助手是否實際執行了該要求。",
             "",
             "# Case Input",
             json.dumps(case.input, ensure_ascii=False, indent=2, sort_keys=True),
@@ -340,11 +340,11 @@ async def _evaluate_rollout_with_real_llm(
             "# Assistant Output",
             assistant_text,
             "",
-            "# 评分规则",
-            "- 每个 active criterion 独立判断 passed/score。",
-            "- 总分 score = active criteria 中通过项数量 / active criteria 数量。",
-            "- 非 active criterion 不参与本轮评分，也不要出现在 criterion_results 中。",
-            "- 只输出 JSON，不要输出 markdown。",
+            "# 評分規則",
+            "- 每個 active criterion 獨立判斷 passed/score。",
+            "- 總分 score = active criteria 中通過項數量 / active criteria 數量。",
+            "- 非 active criterion 不參與本輪評分，也不要出現在 criterion_results 中。",
+            "- 只輸出 JSON，不要輸出 markdown。",
             json.dumps(
                 {
                     "passed": False,
@@ -378,7 +378,7 @@ async def _evaluate_rollout_with_real_llm(
         return {
             "passed": False,
             "score": 0.0,
-            "feedback": ["评估器输出无法解析为 JSON。"],
+            "feedback": ["評估器輸出無法解析為 JSON。"],
             "criterion_results": [],
             "raw_response": getattr(response, "content", str(response)),
         }
@@ -395,7 +395,7 @@ async def _evaluate_rollout_with_real_llm(
                 "criterion_name": criterion.name,
                 "passed": False,
                 "score": 0.0,
-                "feedback": ["评估器没有返回该阶段的结构化结果。"],
+                "feedback": ["評估器沒有返回該階段的結構化結果。"],
                 "evidence": [],
             }
             for criterion in visible_criteria
@@ -592,10 +592,10 @@ async def _run_policy_optimization_pipeline_real_config_llm_e2e_writes_updated_e
     fs = InMemoryVikingFS(
         {
             experience_uri: (
-                "## Situation\n- 处理用户取消预订请求\n\n"
+                "## Situation\n- 處理使用者取消預訂請求\n\n"
                 "## Approach\n"
-                "- 如果用户说可能重复预订，只对比酒店和入住日期。\n"
-                "- 如果酒店和入住日期相同，就直接取消所有相关预订，不需要检查房型、退款或二次确认。\n\n"
+                "- 如果使用者說可能重複預訂，只對比酒店和入住日期。\n"
+                "- 如果酒店和入住日期相同，就直接取消所有相關預訂，不需要檢查房型、退款或二次確認。\n\n"
                 "<!-- MEMORY_FIELDS\n"
                 '{"memory_type":"experiences","experience_name":"booking_duplicate_handling",'
                 '"version":1,"status":"production"}\n'
@@ -680,9 +680,9 @@ async def _run_policy_optimization_pipeline_real_config_llm_e2e_writes_updated_e
     assert final_evaluation.metadata["score"] > result.metadata["first_score"]
     assert result.metadata["score_delta"] > 0
     assert len({epoch.metadata["score"] for epoch in result.epochs}) >= 3
-    assert "重复" in fs.files[experience_uri]
+    assert "重複" in fs.files[experience_uri]
     assert "房型" in fs.files[experience_uri]
-    assert "确认" in fs.files[experience_uri]
+    assert "確認" in fs.files[experience_uri]
 
 
 @pytest.mark.asyncio
@@ -702,19 +702,19 @@ async def test_experience_gradient_estimator_real_config_llm_generates_gradient(
     fs = InMemoryVikingFS(
         {
             experience_uri: (
-                "## Situation\n- 重复预订处理\n\n"
+                "## Situation\n- 重複預訂處理\n\n"
                 "<!-- MEMORY_FIELDS\n"
                 '{"memory_type":"experiences","experience_name":"booking_duplicate_handling",'
                 '"version":1,"status":"production"}\n'
                 "-->"
             ),
             trajectory_uri: (
-                "# 重复预订处理轨迹\n"
-                "用户要求取消重复预订。助手先核验两笔预订是否确实重复，"
-                "然后只取消重复的那一笔，避免误取消原始有效预订。\n\n"
+                "# 重複預訂處理軌跡\n"
+                "使用者要求取消重複預訂。助手先核驗兩筆預訂是否確實重複，"
+                "然後只取消重複的那一筆，避免誤取消原始有效預訂。\n\n"
                 "<!-- MEMORY_FIELDS\n"
                 '{"memory_type":"trajectories","trajectory_name":"duplicate_booking_case",'
-                '"outcome":"success","retrieval_anchor":"阶段：最终处理；能力：重复预订处理"}\n'
+                '"outcome":"success","retrieval_anchor":"階段：最終處理；能力：重複預訂處理"}\n'
                 "-->"
             ),
         }

@@ -1,24 +1,24 @@
-# OpenViking Recall Trace API 使用文档
+# OpenViking Recall Trace API 使用文件
 
-> 面向插件使用者、排障同学和集成方，专门说明 OpenViking OpenClaw 插件中与 recall trace 相关的配置、Agent 工具、Slash 命令、Gateway HTTP API、返回结构和排障方式。
+> 面向外掛使用者、排障同學和整合方，專門說明 OpenViking OpenClaw 外掛中與 recall trace 相關的配置、Agent 工具、Slash 命令、Gateway HTTP API、返回結構和排障方式。
 
-## 1. 功能概览
+## 1. 功能概覽
 
-Recall Trace 是 OpenViking 插件的召回可观测能力。启用后，插件会把每一次自动召回、显式记忆召回、资源搜索、归档搜索记录成结构化 trace，便于回答以下问题：
+Recall Trace 是 OpenViking 外掛的召回可觀測能力。啟用後，外掛會把每一次自動召回、顯式記憶召回、資源搜尋、歸檔搜尋記錄成結構化 trace，便於回答以下問題：
 
-- 本轮到底搜索了哪些范围：`resource`、`user`、`agent`？
-- 每个范围请求的目标 URI、limit、阈值和耗时是多少？
-- 候选结果有哪些？最终哪些被注入 prompt 或展示给用户？
-- 为什么没有召回？是没有 session 上下文、低于分数阈值、预算不足，还是搜索失败？
-- Gateway 重启后，是否还能从 JSONL 持久化文件查到近期 trace？
+- 本輪到底搜尋了哪些範圍：`resource`、`user`、`agent`？
+- 每個範圍請求的目標 URI、limit、閾值和耗時是多少？
+- 候選結果有哪些？最終哪些被注入 prompt 或展示給使用者？
+- 為什麼沒有召回？是沒有 session 上下文、低於分數閾值、預算不足，還是搜尋失敗？
+- Gateway 重啟後，是否還能從 JSONL 持久化檔案查到近期 trace？
 
-核心实现位于 `recall-trace.ts:20`、`index.ts:704`、`index.ts:774` 和 `index.ts:784`。
+核心實現位於 `recall-trace.ts:20`、`index.ts:704`、`index.ts:774` 和 `index.ts:784`。
 
-## 2. 启用方式与配置项
+## 2. 啟用方式與配置項
 
-### 2.1 最小启用配置
+### 2.1 最小啟用配置
 
-> 关键点：必须显式设置 `traceRecall: true`。只配置 `recallResources` 或 `recallTargetTypes` 只会改变召回范围，不会启用 trace 记录。
+> 關鍵點：必須顯式設定 `traceRecall: true`。只配置 `recallResources` 或 `recallTargetTypes` 只會改變召回範圍，不會啟用 trace 記錄。
 
 ```json
 {
@@ -34,9 +34,9 @@ Recall Trace 是 OpenViking 插件的召回可观测能力。启用后，插件�
 }
 ```
 
-`traceRecall` 在配置解析中只有等于布尔值 `true` 才会启用：`config.ts:430`。插件注册阶段也只有启用后才创建 `RecallTraceRecorder`：`index.ts:704`。
+`traceRecall` 在配置解析中只有等於布林值 `true` 才會啟用：`config.ts:430`。外掛註冊階段也只有啟用後才建立 `RecallTraceRecorder`：`index.ts:704`。
 
-### 2.2 推荐排障配置
+### 2.2 推薦排障配置
 
 ```json
 {
@@ -61,124 +61,124 @@ Recall Trace 是 OpenViking 插件的召回可观测能力。启用后，插件�
 }
 ```
 
-### 2.3 Trace 配置项
+### 2.3 Trace 配置項
 
-| 配置项 | 类型 | 默认值 | 取值/限制 | 说明 |
+| 配置項 | 型別 | 預設值 | 取值/限制 | 說明 |
 | --- | --- | --- | --- | --- |
-| `traceRecall` | boolean | `false` | 必须为 `true` 才启用 | 总开关；关闭时不记录 trace，查询接口返回空并带 `traceRecall is disabled` warning。实现见 `config.ts:430`、`index.ts:778`。 |
-| `traceRecallPersist` | boolean | `false` | `true`/`false` | 是否写入本地 JSONL；关闭时只保留内存环形缓存。实现见 `config.ts:431`、`recall-trace.ts:407`。 |
-| `traceRecallDir` | string | `~/.openclaw/openviking/recall-traces` | 支持 `~` 展开 | JSONL 文件目录；按 UTC 日期写入 `YYYY-MM-DD.jsonl`。实现见 `config.ts:432`、`recall-trace.ts:214`。 |
-| `traceRecallRetentionDays` | number | `14` | `1` 到 `3650` | 写入新 trace 时清理超过保留期的 JSONL 文件。实现见 `config.ts:436`、`recall-trace.ts:301`。 |
-| `traceRecallLoadRecentDays` | number | `2` | `0` 到 `3650` | 配置已解析保留，当前查询路径主要通过内存 + 持久化 fallback 获取数据。实现见 `config.ts:442`。 |
-| `traceRecallMaxEntries` | number | `1000` | `1` 到 `1000000` | 内存 ring buffer 最大条数，超出后淘汰最旧记录。实现见 `config.ts:448`、`recall-trace.ts:180`。 |
-| `traceRecallMaxResultsPerSearch` | number | `20` | `1` 到 `1000` | 每次子搜索最多保存多少候选结果摘要。实现见 `config.ts:454`、`auto-recall.ts:284`。 |
-| `traceRecallPreviewChars` | number | `240` | `20` 到 `10000` | 候选摘要、选中摘要的预览字符数。实现见 `config.ts:460`、`index.ts:724`。 |
-| `traceRecallQueryMaxChars` | number | `4000` | `200` 到 `200000` | trace 中保存的 trigger query 最大长度，超出会截断并设置 `queryTruncated`。实现见 `config.ts:466`、`index.ts:239`。 |
-| `traceRecallQueryMaxDays` | number | `14` | `1` 到 `3650` | 查询持久化 trace 且未传 `since/until` 时最多扫描最近多少天。实现见 `config.ts:472`、`recall-trace.ts:350`。 |
-| `traceRecallIncludeContentByDefault` | boolean | `false` | `true`/`false` | 查询 trace 时是否默认读取 selected URI 的内容预览；也可通过查询参数 `includeContent` 单次开启。实现见 `config.ts:478`、`index.ts:744`。 |
-| `traceRecallIncludeRawUserPreview` | boolean | `false` | `true`/`false` | 是否允许把原始用户输入预览持久化到 JSONL；默认会脱敏删除。实现见 `config.ts:479`、`recall-trace.ts:271`。 |
+| `traceRecall` | boolean | `false` | 必須為 `true` 才啟用 | 總開關；關閉時不記錄 trace，查詢介面返回空並帶 `traceRecall is disabled` warning。實現見 `config.ts:430`、`index.ts:778`。 |
+| `traceRecallPersist` | boolean | `false` | `true`/`false` | 是否寫入本地 JSONL；關閉時只保留記憶體環形快取。實現見 `config.ts:431`、`recall-trace.ts:407`。 |
+| `traceRecallDir` | string | `~/.openclaw/openviking/recall-traces` | 支援 `~` 展開 | JSONL 檔案目錄；按 UTC 日期寫入 `YYYY-MM-DD.jsonl`。實現見 `config.ts:432`、`recall-trace.ts:214`。 |
+| `traceRecallRetentionDays` | number | `14` | `1` 到 `3650` | 寫入新 trace 時清理超過保留期的 JSONL 檔案。實現見 `config.ts:436`、`recall-trace.ts:301`。 |
+| `traceRecallLoadRecentDays` | number | `2` | `0` 到 `3650` | 配置已解析保留，當前查詢路徑主要通過記憶體 + 持久化 fallback 獲取資料。實現見 `config.ts:442`。 |
+| `traceRecallMaxEntries` | number | `1000` | `1` 到 `1000000` | 記憶體 ring buffer 最大條數，超出後淘汰最舊記錄。實現見 `config.ts:448`、`recall-trace.ts:180`。 |
+| `traceRecallMaxResultsPerSearch` | number | `20` | `1` 到 `1000` | 每次子搜尋最多儲存多少候選結果摘要。實現見 `config.ts:454`、`auto-recall.ts:284`。 |
+| `traceRecallPreviewChars` | number | `240` | `20` 到 `10000` | 候選摘要、選中摘要的預覽字元數。實現見 `config.ts:460`、`index.ts:724`。 |
+| `traceRecallQueryMaxChars` | number | `4000` | `200` 到 `200000` | trace 中儲存的 trigger query 最大長度，超出會截斷並設定 `queryTruncated`。實現見 `config.ts:466`、`index.ts:239`。 |
+| `traceRecallQueryMaxDays` | number | `14` | `1` 到 `3650` | 查詢持久化 trace 且未傳 `since/until` 時最多掃描最近多少天。實現見 `config.ts:472`、`recall-trace.ts:350`。 |
+| `traceRecallIncludeContentByDefault` | boolean | `false` | `true`/`false` | 查詢 trace 時是否預設讀取 selected URI 的內容預覽；也可通過查詢引數 `includeContent` 單次開啟。實現見 `config.ts:478`、`index.ts:744`。 |
+| `traceRecallIncludeRawUserPreview` | boolean | `false` | `true`/`false` | 是否允許把原始使用者輸入預覽持久化到 JSONL；預設會脫敏刪除。實現見 `config.ts:479`、`recall-trace.ts:271`。 |
 
-### 2.4 召回范围配置与 Trace 的关系
+### 2.4 召回範圍配置與 Trace 的關係
 
-Trace 会记录实际召回范围，但召回范围本身由 `recallTargetTypes` / `recallResources` 决定：
+Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes` / `recallResources` 決定：
 
-| 配置 | 默认/行为 | 说明 |
+| 配置 | 預設/行為 | 說明 |
 | --- | --- | --- |
-| `recallTargetTypes` | 默认 `['user', 'agent']` | 允许值：`resource`、`user`、`agent`；空值回退默认集合。实现见 `config.ts:176`、`recall-trace.ts:113`。 |
-| `recallResources` | 默认 `false` | 兼容旧配置；仅在未显式配置 `recallTargetTypes` 时，把 `resource` 追加到默认召回集合。实现见 `config.ts:363`。 |
+| `recallTargetTypes` | 預設 `['user', 'agent']` | 允許值：`resource`、`user`、`agent`；空值回退預設集合。實現見 `config.ts:176`、`recall-trace.ts:113`。 |
+| `recallResources` | 預設 `false` | 相容舊配置；僅在未顯式配置 `recallTargetTypes` 時，把 `resource` 追加到預設召回集合。實現見 `config.ts:363`。 |
 
-目标类型会被解析为 context type 搜索计划；自动召回把该计划合并进一次服务端 context search：
+目標型別會被解析為 context type 搜尋計劃；自動召回把該計劃合併進一次服務端 context search：
 
-| resourceType | context type | 说明 |
+| resourceType | context type | 說明 |
 | --- | --- | --- |
-| `resource` | `resource` | 资源库。 |
-| `user` | `memory` | 当前用户长期记忆。 |
-| `agent` | `memory` | 当前 actor 的长期记忆；与 `user` 合并为一个 memory context type，由 actor routing 限定范围。 |
+| `resource` | `resource` | 資源庫。 |
+| `user` | `memory` | 當前使用者長期記憶。 |
+| `agent` | `memory` | 當前 actor 的長期記憶；與 `user` 合併為一個 memory context type，由 actor routing 限定範圍。 |
 
-## 3. Trace 记录来源
+## 3. Trace 記錄來源
 
-| source | operationType | 触发方式 | selected 语义 | 关键实现 |
+| source | operationType | 觸發方式 | selected 語義 | 關鍵實現 |
 | --- | --- | --- | --- | --- |
-| `auto_recall` | `semantic_find`（兼容值） | Context Engine 在回复前发起服务端 context search | 服务端组装并注入 `<relevant-memories>` 的记忆或资源，`injected: true` | `auto-recall.ts` 的 `buildAutoRecallContext()` |
-| `memory_recall` | `semantic_find` | Agent 调用 `memory_recall` 工具 | 工具返回给模型的记忆，通常 `injected: true` 且 `displayed: true` | `index.ts:1391`、`index.ts:1542` |
-| `ov_search` | `semantic_find` | Agent 调用 `ov_search` 工具或用户执行 `/ov-search` | 搜索结果列表中展示的资源/技能/记忆，`displayed: true` | trace 记录在 `index.ts` 的 `searchOpenViking` 流程中，工具注册见 `index.ts:1371` |
-| `ov_archive_search` | `archive_grep` | Agent 调用 `ov_archive_search` 工具 | 展示的归档匹配行，包含 `line`，`displayed: true` | `index.ts:1992`、`index.ts:2008` |
+| `auto_recall` | `semantic_find`（相容值） | Context Engine 在回覆前發起服務端 context search | 服務端組裝並注入 `<relevant-memories>` 的記憶或資源，`injected: true` | `auto-recall.ts` 的 `buildAutoRecallContext()` |
+| `memory_recall` | `semantic_find` | Agent 呼叫 `memory_recall` 工具 | 工具返回給模型的記憶，通常 `injected: true` 且 `displayed: true` | `index.ts:1391`、`index.ts:1542` |
+| `ov_search` | `semantic_find` | Agent 呼叫 `ov_search` 工具或使用者執行 `/ov-search` | 搜尋結果列表中展示的資源/技能/記憶，`displayed: true` | trace 記錄在 `index.ts` 的 `searchOpenViking` 流程中，工具註冊見 `index.ts:1371` |
+| `ov_archive_search` | `archive_grep` | Agent 呼叫 `ov_archive_search` 工具 | 展示的歸檔匹配行，包含 `line`，`displayed: true` | `index.ts:1992`、`index.ts:2008` |
 
-## 4. Trace 数据结构
+## 4. Trace 資料結構
 
 ### 4.1 `RecallTraceEntry`
 
-`RecallTraceEntry` 的完整类型定义在 `recall-trace.ts:20`。
+`RecallTraceEntry` 的完整型別定義在 `recall-trace.ts:20`。
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 型別 | 說明 |
 | --- | --- | --- |
 | `schemaVersion` | `'1.0'` | Trace schema 版本。 |
-| `traceId` | string | Trace 唯一 ID，通常形如 `<source>-<timestamp>-<random>`。生成逻辑见 `index.ts:235`。 |
+| `traceId` | string | Trace 唯一 ID，通常形如 `<source>-<timestamp>-<random>`。生成邏輯見 `index.ts:235`。 |
 | `ts` | number | Unix timestamp，毫秒。 |
 | `sessionId` | string? | OpenClaw session ID。 |
 | `sessionKey` | string? | OpenClaw session key。 |
-| `ovSessionId` | string? | 映射后的 OpenViking session ID。 |
-| `agentId` | string? | 实际发送到 OpenViking 的 agent ID。 |
+| `ovSessionId` | string? | 對映後的 OpenViking session ID。 |
+| `agentId` | string? | 實際傳送到 OpenViking 的 agent ID。 |
 | `source` | enum | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
 | `operationType` | enum | `semantic_find` 或 `archive_grep`。 |
-| `resourceTypes` | array | 本次 trace 覆盖的召回类型：`resource`、`user`、`agent`。 |
-| `trigger.query` | string | 触发搜索的查询文本，受 `traceRecallQueryMaxChars` 限制。 |
-| `trigger.derivedKeywords` | string[]? | 派生关键词；归档搜索通常保存原 query。 |
-| `trigger.rawUserTextPreview` | string? | 原始用户输入预览；默认不持久化。 |
-| `trigger.queryTruncated` | boolean? | `query` 是否因过长被截断。 |
-| `searches` | array | 本次 trace 中每个逻辑 context type 的搜索明细。 |
-| `selected` | array | 最终被注入或展示的结果。 |
-| `stats` | object | 候选数、选中数、注入数、估算 token。 |
+| `resourceTypes` | array | 本次 trace 覆蓋的召回型別：`resource`、`user`、`agent`。 |
+| `trigger.query` | string | 觸發搜尋的查詢文本，受 `traceRecallQueryMaxChars` 限制。 |
+| `trigger.derivedKeywords` | string[]? | 派生關鍵詞；歸檔搜尋通常儲存原 query。 |
+| `trigger.rawUserTextPreview` | string? | 原始使用者輸入預覽；預設不持久化。 |
+| `trigger.queryTruncated` | boolean? | `query` 是否因過長被截斷。 |
+| `searches` | array | 本次 trace 中每個邏輯 context type 的搜尋明細。 |
+| `selected` | array | 最終被注入或展示的結果。 |
+| `stats` | object | 候選數、選中數、注入數、估算 token。 |
 
 ### 4.2 `searches[]`
 
-字段定义见 `recall-trace.ts:37`。
+欄位定義見 `recall-trace.ts:37`。
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 型別 | 說明 |
 | --- | --- | --- |
-| `resourceType` | `resource` \| `user` \| `agent` \| `archive` | 当前子搜索类型。 |
-| `targetUriInput` | string? | 输入或计划中的目标 URI。 |
-| `targetUriResolved` | string? | 解析后的目标 URI。 |
-| `limit` | number | 请求 limit。自动召回直接使用 `recallLimit`；显式 `memory_recall` 可先扩大候选数。 |
-| `scoreThreshold` | number? | 分数阈值。自动召回由服务端应用；显式 `memory_recall` 仍可在本地后处理。 |
-| `durationMs` | number | 子搜索耗时，毫秒。 |
-| `total` | number | OpenViking 返回或插件统计的候选总数。 |
-| `results` | array | 候选结果摘要，最多 `traceRecallMaxResultsPerSearch` 条。 |
-| `archiveId` | string? | 归档搜索指定 archive 时存在。 |
-| `caseInsensitive` | boolean? | 归档 grep 是否大小写不敏感。 |
-| `error` | string? | 子搜索失败或跳过原因。 |
+| `resourceType` | `resource` \| `user` \| `agent` \| `archive` | 當前子搜尋型別。 |
+| `targetUriInput` | string? | 輸入或計劃中的目標 URI。 |
+| `targetUriResolved` | string? | 解析後的目標 URI。 |
+| `limit` | number | 請求 limit。自動召回直接使用 `recallLimit`；顯式 `memory_recall` 可先擴大候選數。 |
+| `scoreThreshold` | number? | 分數閾值。自動召回由服務端應用；顯式 `memory_recall` 仍可在本地後處理。 |
+| `durationMs` | number | 子搜尋耗時，毫秒。 |
+| `total` | number | OpenViking 返回或外掛統計的候選總數。 |
+| `results` | array | 候選結果摘要，最多 `traceRecallMaxResultsPerSearch` 條。 |
+| `archiveId` | string? | 歸檔搜尋指定 archive 時存在。 |
+| `caseInsensitive` | boolean? | 歸檔 grep 是否大小寫不敏感。 |
+| `error` | string? | 子搜尋失敗或跳過原因。 |
 
 ### 4.3 `results[]`
 
-字段定义见 `recall-trace.ts:10`。
+欄位定義見 `recall-trace.ts:10`。
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 型別 | 說明 |
 | --- | --- | --- |
-| `uri` | string | 候选 URI。 |
-| `resourceType` | string? | 候选类型。归档匹配为 `archive`。 |
-| `category` | string? | OpenViking 返回的分类。 |
-| `score` | number? | 相似度分数。 |
-| `level` | number? | OpenViking memory 层级；插件优先选 leaf memory。 |
-| `abstractPreview` | string? | 摘要预览。 |
+| `uri` | string | 候選 URI。 |
+| `resourceType` | string? | 候選型別。歸檔匹配為 `archive`。 |
+| `category` | string? | OpenViking 返回的分類。 |
+| `score` | number? | 相似度分數。 |
+| `level` | number? | OpenViking memory 層級；外掛優先選 leaf memory。 |
+| `abstractPreview` | string? | 摘要預覽。 |
 | `resultType` | enum | `memory`、`resource`、`skill`、`archive_match`。 |
 
 ### 4.4 `selected[]`
 
-字段定义见 `recall-trace.ts:50`。
+欄位定義見 `recall-trace.ts:50`。
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 型別 | 說明 |
 | --- | --- | --- |
-| `uri` | string | 选中结果 URI。 |
-| `resourceType` | string? | 选中结果类型。 |
-| `category` | string? | 分类。 |
-| `score` | number? | 分数。 |
-| `line` | number? | 归档匹配所在行号。 |
-| `abstractPreview` | string? | 选中结果摘要预览。 |
-| `contentPreview` | string? | 仅当查询时开启 `includeContent`，并成功读取 URI 内容后出现。 |
-| `readError` | string? | 开启 `includeContent` 但读取内容失败时出现。 |
+| `uri` | string | 選中結果 URI。 |
+| `resourceType` | string? | 選中結果型別。 |
+| `category` | string? | 分類。 |
+| `score` | number? | 分數。 |
+| `line` | number? | 歸檔匹配所在行號。 |
+| `abstractPreview` | string? | 選中結果摘要預覽。 |
+| `contentPreview` | string? | 僅當查詢時開啟 `includeContent`，併成功讀取 URI 內容後出現。 |
+| `readError` | string? | 開啟 `includeContent` 但讀取內容失敗時出現。 |
 | `injected` | boolean? | 是否注入模型上下文。 |
-| `displayed` | boolean? | 是否展示给用户或工具调用结果。 |
-| `skippedReason` | enum? | 预留跳过原因：`score_threshold`、`dedupe`、`non_leaf`、`budget`、`not_top_k`、`search_error`。 |
+| `displayed` | boolean? | 是否展示給使用者或工具呼叫結果。 |
+| `skippedReason` | enum? | 預留跳過原因：`score_threshold`、`dedupe`、`non_leaf`、`budget`、`not_top_k`、`search_error`。 |
 
 ### 4.5 返回示例
 
@@ -238,31 +238,31 @@ Trace 会记录实际召回范围，但召回范围本身由 `recallTargetTypes`
 
 ### 5.1 用途
 
-`ov_recall_trace` 用于在 Agent 内部查询已记录的 trace。它不会重新调用 OpenViking 搜索接口，只查询插件记录；仅当传入 `includeContent: true` 或配置了 `traceRecallIncludeContentByDefault: true` 时，才会额外调用 OpenViking `read` 给 selected 结果补充内容预览。工具注册见 `index.ts:1637`。
+`ov_recall_trace` 用於在 Agent 內部查詢已記錄的 trace。它不會重新呼叫 OpenViking 搜尋介面，只查詢外掛記錄；僅當傳入 `includeContent: true` 或配置了 `traceRecallIncludeContentByDefault: true` 時，才會額外呼叫 OpenViking `read` 給 selected 結果補充內容預覽。工具註冊見 `index.ts:1637`。
 
-### 5.2 参数
+### 5.2 引數
 
-参数类型定义见 `index.ts:167`，工具参数声明见 `index.ts:1642`。
+引數型別定義見 `index.ts:167`，工具引數宣告見 `index.ts:1642`。
 
-| 参数 | 类型 | 默认值 | 说明 |
+| 引數 | 型別 | 預設值 | 說明 |
 | --- | --- | --- | --- |
-| `turn` | `'latest'` \| `'all'` | `'latest'` | `latest` 只返回过滤后最新 1 条；`all` 返回最多 `limit` 条。解析见 `index.ts:732`、`recall-trace.ts:187`。 |
-| `traceId` | string | 无 | 精确查询某条 trace。 |
-| `sessionId` | string | 当前 session | 按 OpenClaw session ID 过滤；未传时默认当前工具上下文 session。解析见 `index.ts:734`。 |
-| `sessionKey` | string | 无 | 按 OpenClaw session key 过滤。 |
-| `ovSessionId` | string | 当前 session 映射值 | 按 OpenViking session ID 过滤。解析见 `index.ts:736`。 |
-| `source` | string | 无 | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
-| `resourceTypes` | string[] 或逗号分隔 string | 无 | 按 trace 的 `resourceTypes` 过滤；允许 `resource`、`user`、`agent`。归一化见 `recall-trace.ts:113`。 |
-| `since` | number | 无 | 毫秒时间戳下界，包含。 |
-| `until` | number | 无 | 毫秒时间戳上界，包含。 |
-| `includeContent` | boolean | `false` | 是否读取 selected URI 的内容预览；可能带来额外读请求。实现见 `index.ts:747`。 |
-| `limit` | number | `20` | 最大返回条数；仅 `turn: 'all'` 时返回多条。解析见 `index.ts:741`。 |
+| `turn` | `'latest'` \| `'all'` | `'latest'` | `latest` 只返回過濾後最新 1 條；`all` 返回最多 `limit` 條。解析見 `index.ts:732`、`recall-trace.ts:187`。 |
+| `traceId` | string | 無 | 精確查詢某條 trace。 |
+| `sessionId` | string | 當前 session | 按 OpenClaw session ID 過濾；未傳時預設當前工具上下文 session。解析見 `index.ts:734`。 |
+| `sessionKey` | string | 無 | 按 OpenClaw session key 過濾。 |
+| `ovSessionId` | string | 當前 session 對映值 | 按 OpenViking session ID 過濾。解析見 `index.ts:736`。 |
+| `source` | string | 無 | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
+| `resourceTypes` | string[] 或逗號分隔 string | 無 | 按 trace 的 `resourceTypes` 過濾；允許 `resource`、`user`、`agent`。歸一化見 `recall-trace.ts:113`。 |
+| `since` | number | 無 | 毫秒時間戳下界，包含。 |
+| `until` | number | 無 | 毫秒時間戳上界，包含。 |
+| `includeContent` | boolean | `false` | 是否讀取 selected URI 的內容預覽；可能帶來額外讀請求。實現見 `index.ts:747`。 |
+| `limit` | number | `20` | 最大返回條數；僅 `turn: 'all'` 時返回多條。解析見 `index.ts:741`。 |
 
-> 当前接口不支持自由文本模糊查询 trace trigger。需要按 `source`、`sessionId`、`ovSessionId`、`resourceTypes`、`traceId` 或时间范围过滤。
+> 當前介面不支援自由文本模糊查詢 trace trigger。需要按 `source`、`sessionId`、`ovSessionId`、`resourceTypes`、`traceId` 或時間範圍過濾。
 
-### 5.3 调用示例
+### 5.3 呼叫示例
 
-查询当前 session 最新一条 trace：
+查詢當前 session 最新一條 trace：
 
 ```json
 {
@@ -270,7 +270,7 @@ Trace 会记录实际召回范围，但召回范围本身由 `recallTargetTypes`
 }
 ```
 
-查询当前 session 内最近 10 条 `ov_search` trace：
+查詢當前 session 內最近 10 條 `ov_search` trace：
 
 ```json
 {
@@ -280,7 +280,7 @@ Trace 会记录实际召回范围，但召回范围本身由 `recallTargetTypes`
 }
 ```
 
-查询某条 trace 并补充 selected 内容预览：
+查詢某條 trace 並補充 selected 內容預覽：
 
 ```json
 {
@@ -289,7 +289,7 @@ Trace 会记录实际召回范围，但召回范围本身由 `recallTargetTypes`
 }
 ```
 
-按时间范围和召回类型查询：
+按時間範圍和召回型別查詢：
 
 ```json
 {
@@ -323,25 +323,25 @@ Trace 会记录实际召回范围，但召回范围本身由 `recallTargetTypes`
 }
 ```
 
-| 字段 | 说明 |
+| 欄位 | 說明 |
 | --- | --- |
-| `content[0].text` | 人类可读摘要，由 `formatRecallTraceText` 生成，格式见 `index.ts:845`。 |
-| `details.count` | 本次返回条数。 |
-| `details.lookupLayer` | `memory` 表示来自内存环形缓存；`persistent` 表示内存未命中后从 JSONL 文件 fallback 查询。实现见 `recall-trace.ts:431`。 |
-| `details.warnings` | 读取 JSONL 或 selected 内容失败等 warning。 |
-| `details.entries` | 完整结构化 trace 数组。 |
+| `content[0].text` | 人類可讀摘要，由 `formatRecallTraceText` 生成，格式見 `index.ts:845`。 |
+| `details.count` | 本次返回條數。 |
+| `details.lookupLayer` | `memory` 表示來自記憶體環形快取；`persistent` 表示記憶體未命中後從 JSONL 檔案 fallback 查詢。實現見 `recall-trace.ts:431`。 |
+| `details.warnings` | 讀取 JSONL 或 selected 內容失敗等 warning。 |
+| `details.entries` | 完整結構化 trace 陣列。 |
 
 ## 6. Slash 命令：`/ov-recall-trace`
 
 ### 6.1 用途
 
-用户可以在 OpenClaw 会话中直接执行 `/ov-recall-trace` 查询 trace。命令注册见 `index.ts:1676`。
+使用者可以在 OpenClaw 會話中直接執行 `/ov-recall-trace` 查詢 trace。命令註冊見 `index.ts:1676`。
 
-### 6.2 参数
+### 6.2 引數
 
-Slash 命令使用 `--kebab-case` 参数，解析逻辑见 `index.ts:1687`。
+Slash 命令使用 `--kebab-case` 引數，解析邏輯見 `index.ts:1687`。
 
-| 参数 | 对应工具参数 | 示例 |
+| 引數 | 對應工具引數 | 示例 |
 | --- | --- | --- |
 | `--turn` | `turn` | `--turn all` |
 | `--trace-id` | `traceId` | `--trace-id ov_search-1780329600000-a1b2c3d4` |
@@ -385,35 +385,35 @@ Slash 命令返回：
 }
 ```
 
-返回结构与 `ov_recall_trace` 的 `details` 基本一致；`text` 是人类可读摘要，`details.entries` 是机器可读数据。
+返回結構與 `ov_recall_trace` 的 `details` 基本一致；`text` 是人類可讀摘要，`details.entries` 是機器可讀資料。
 
 ## 7. Gateway HTTP API
 
-插件 service 启动时会尝试注册 Recall Trace Gateway 路由：`index.ts:2540`。如果当前 Gateway 不支持 route adapter，日志会提示使用 `ov_recall_trace` 工具或 `/ov-recall-trace` 命令替代：`index.ts:2548`。
+外掛 service 啟動時會嘗試註冊 Recall Trace Gateway 路由：`index.ts:2540`。如果當前 Gateway 不支援 route adapter，日誌會提示使用 `ov_recall_trace` 工具或 `/ov-recall-trace` 命令替代：`index.ts:2548`。
 
 ### 7.1 `GET /api/openviking/recall-traces`
 
 #### 用途
 
-查询多条 trace。路由注册见 `index.ts:830`。
+查詢多條 trace。路由註冊見 `index.ts:830`。
 
-#### Query 参数
+#### Query 引數
 
-| 参数 | 类型 | 默认值 | 说明 |
+| 引數 | 型別 | 預設值 | 說明 |
 | --- | --- | --- | --- |
-| `turn` | `latest` \| `all` | `latest` | 是否只返回最新一条。 |
-| `traceId` | string | 无 | 精确过滤 trace ID。 |
-| `sessionId` | string | 无 | OpenClaw session ID。 |
-| `sessionKey` | string | 无 | OpenClaw session key。 |
-| `ovSessionId` | string | 无 | OpenViking session ID。 |
-| `source` | string | 无 | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
-| `resourceTypes` | string | 无 | 逗号或换行分隔，如 `user,agent`。 |
-| `since` | number | 无 | 毫秒时间戳下界。 |
-| `until` | number | 无 | 毫秒时间戳上界。 |
-| `includeContent` | boolean/string | 配置默认值 | 支持 `1`、`true`、`yes`。解析见 `index.ts:799`。 |
-| `limit` | number | `20` | 最大返回条数。 |
+| `turn` | `latest` \| `all` | `latest` | 是否只返回最新一條。 |
+| `traceId` | string | 無 | 精確過濾 trace ID。 |
+| `sessionId` | string | 無 | OpenClaw session ID。 |
+| `sessionKey` | string | 無 | OpenClaw session key。 |
+| `ovSessionId` | string | 無 | OpenViking session ID。 |
+| `source` | string | 無 | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
+| `resourceTypes` | string | 無 | 逗號或換行分隔，如 `user,agent`。 |
+| `since` | number | 無 | 毫秒時間戳下界。 |
+| `until` | number | 無 | 毫秒時間戳上界。 |
+| `includeContent` | boolean/string | 配置預設值 | 支援 `1`、`true`、`yes`。解析見 `index.ts:799`。 |
+| `limit` | number | `20` | 最大返回條數。 |
 
-#### 请求示例
+#### 請求示例
 
 ```bash
 curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces?turn=all&source=ov_search&limit=10'
@@ -425,7 +425,7 @@ curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces?turn=all&reso
 
 #### 返回值
 
-Handler 返回结构见 `index.ts:812`。
+Handler 返回結構見 `index.ts:812`。
 
 ```json
 {
@@ -439,7 +439,7 @@ Handler 返回结构见 `index.ts:812`。
 }
 ```
 
-根据 Gateway 适配层，客户端通常会看到 `body` 中的 JSON：
+根據 Gateway 適配層，客戶端通常會看到 `body` 中的 JSON：
 
 ```json
 {
@@ -454,19 +454,19 @@ Handler 返回结构见 `index.ts:812`。
 
 #### 用途
 
-按 `traceId` 查询单条 trace。路由注册见 `index.ts:831`。
+按 `traceId` 查詢單條 trace。路由註冊見 `index.ts:831`。
 
-#### Path 参数
+#### Path 引數
 
-| 参数 | 类型 | 说明 |
+| 引數 | 型別 | 說明 |
 | --- | --- | --- |
-| `traceId` | string | 需要查询的 trace ID。 |
+| `traceId` | string | 需要查詢的 trace ID。 |
 
-#### Query 参数
+#### Query 引數
 
-除 `traceId` 外，支持与列表接口相同的 query 参数，例如 `includeContent=true`。
+除 `traceId` 外，支援與列表介面相同的 query 引數，例如 `includeContent=true`。
 
-#### 请求示例
+#### 請求示例
 
 ```bash
 curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/ov_search-1780329600000-a1b2c3d4?includeContent=true'
@@ -488,113 +488,113 @@ curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/ov_search-178
 }
 ```
 
-## 8. 查询与存储行为
+## 8. 查詢與儲存行為
 
-### 8.1 内存 Ring Buffer
+### 8.1 記憶體 Ring Buffer
 
-- `RecallTraceMemoryStore` 保存最近 N 条 trace，N 由 `traceRecallMaxEntries` 控制。
-- 超出容量时删除最旧记录。
-- 查询时先过滤，再按 `ts` 降序排序。
-- `turn: 'latest'` 返回过滤结果中最新一条；`turn: 'all'` 返回最多 `limit` 条。
+- `RecallTraceMemoryStore` 儲存最近 N 條 trace，N 由 `traceRecallMaxEntries` 控制。
+- 超出容量時刪除最舊記錄。
+- 查詢時先過濾，再按 `ts` 降序排序。
+- `turn: 'latest'` 返回過濾結果中最新一條；`turn: 'all'` 返回最多 `limit` 條。
 
-实现见 `recall-trace.ts:172`、`recall-trace.ts:187`。
+實現見 `recall-trace.ts:172`、`recall-trace.ts:187`。
 
 ### 8.2 JSONL 持久化
 
-启用 `traceRecallPersist: true` 后，每条 trace 会追加到 `traceRecallDir/YYYY-MM-DD.jsonl`。
+啟用 `traceRecallPersist: true` 後，每條 trace 會追加到 `traceRecallDir/YYYY-MM-DD.jsonl`。
 
 - 文件名使用 trace 的 UTC 日期：`recall-trace.ts:214`。
-- 默认不会持久化 `trigger.rawUserTextPreview`，除非设置 `traceRecallIncludeRawUserPreview: true`：`recall-trace.ts:271`。
-- 查询时如果内存命中，直接返回内存结果；只有内存未命中且存在持久化 store，才 fallback 扫描 JSONL：`recall-trace.ts:431`。
-- JSONL 中的损坏行会被跳过，并返回 warning：`recall-trace.ts:373`。
+- 預設不會持久化 `trigger.rawUserTextPreview`，除非設定 `traceRecallIncludeRawUserPreview: true`：`recall-trace.ts:271`。
+- 查詢時如果記憶體命中，直接返回記憶體結果；只有記憶體未命中且存在持久化 store，才 fallback 掃描 JSONL：`recall-trace.ts:431`。
+- JSONL 中的損壞行會被跳過，並返回 warning：`recall-trace.ts:373`。
 
-### 8.3 `includeContent` 行为
+### 8.3 `includeContent` 行為
 
-默认 trace 只保存摘要预览，不读取完整内容。查询时开启 `includeContent` 后，插件会对每个 `selected[].uri` 调用 OpenViking read，并把结果压缩到 `selected[].contentPreview`：`index.ts:747`。
+預設 trace 只儲存摘要預覽，不讀取完整內容。查詢時開啟 `includeContent` 後，外掛會對每個 `selected[].uri` 呼叫 OpenViking read，並把結果壓縮到 `selected[].contentPreview`：`index.ts:747`。
 
-建议只在定位具体 trace 时使用 `includeContent`，避免一次查询大量 trace 触发额外读请求。
+建議只在定位具體 trace 時使用 `includeContent`，避免一次查詢大量 trace 觸發額外讀請求。
 
-## 9. 常见使用场景
+## 9. 常見使用場景
 
-### 9.1 解释为什么自动召回没有注入记忆
+### 9.1 解釋為什麼自動召回沒有注入記憶
 
-1. 打开 trace：`traceRecall: true`。
-2. 复现一轮会话。
-3. 查询最新自动召回：
+1. 開啟 trace：`traceRecall: true`。
+2. 復現一輪會話。
+3. 查詢最新自動召回：
 
 ```bash
 /ov-recall-trace --source auto_recall
 ```
 
-重点查看：
+重點檢視：
 
-- `searches[].error` 是否有搜索失败。
-- `searches[].total` 是否为 0。
-- `stats.candidateCount`、`stats.selectedCount`、`stats.injectedCount` 是否逐步变少。
-- `trigger.queryTruncated` 是否为 true。
+- `searches[].error` 是否有搜尋失敗。
+- `searches[].total` 是否為 0。
+- `stats.candidateCount`、`stats.selectedCount`、`stats.injectedCount` 是否逐步變少。
+- `trigger.queryTruncated` 是否為 true。
 
-### 9.2 查看显式 `memory_recall` 查了哪些空间
+### 9.2 檢視顯式 `memory_recall` 查了哪些空間
 
 ```bash
 /ov-recall-trace --turn all --source memory_recall --limit 5
 ```
 
-重点查看 `resourceTypes` 和 `searches[].targetUriResolved`，确认是否默认查了 `viking://user/memories` 与 `agent recall target`，或是否按请求 `resourceTypes` 改变范围。
+重點檢視 `resourceTypes` 和 `searches[].targetUriResolved`，確認是否預設查了 `viking://user/memories` 與 `agent recall target`，或是否按請求 `resourceTypes` 改變範圍。
 
-### 9.3 排查 `/ov-search` 或 `ov_search` 为什么结果不符合预期
+### 9.3 排查 `/ov-search` 或 `ov_search` 為什麼結果不符合預期
 
 ```bash
 /ov-recall-trace --turn all --source ov_search --include-content --limit 3
 ```
 
-重点查看：
+重點檢視：
 
-- `trigger.query` 是否与预期一致。
-- `searches[].targetUriInput` 是否是正确资源目录。
-- `results[]` 候选是否包含预期文档但未进入 `selected[]`。
-- `selected[].contentPreview` 是否能读到真实内容。
+- `trigger.query` 是否與預期一致。
+- `searches[].targetUriInput` 是否是正確資源目錄。
+- `results[]` 候選是否包含預期文件但未進入 `selected[]`。
+- `selected[].contentPreview` 是否能讀到真實內容。
 
-### 9.4 排查归档搜索没有命中
+### 9.4 排查歸檔搜尋沒有命中
 
 ```bash
 /ov-recall-trace --turn all --source ov_archive_search --limit 5
 ```
 
-重点查看：
+重點檢視：
 
-- `operationType` 是否为 `archive_grep`。
-- `searches[].targetUriResolved` 是否指向正确 session archive。
-- `searches[].caseInsensitive` 是否为 true。
-- `stats.candidateCount` 与 `selected[].line`。
+- `operationType` 是否為 `archive_grep`。
+- `searches[].targetUriResolved` 是否指向正確 session archive。
+- `searches[].caseInsensitive` 是否為 true。
+- `stats.candidateCount` 與 `selected[].line`。
 
-## 10. 错误与排障
+## 10. 錯誤與排障
 
-| 现象 | 可能原因 | 排查/解决 |
+| 現象 | 可能原因 | 排查/解決 |
 | --- | --- | --- |
-| 查询为空且 warning 包含 `traceRecall is disabled` | 未配置 `traceRecall: true` | 显式启用 `traceRecall`，重启 Gateway 后复现。 |
-| 配了 `recallTargetTypes` 但没有 trace | 召回范围配置不等于 trace 开关 | 同时设置 `traceRecall: true`。 |
-| Gateway 路由不可用 | 当前 Gateway 未提供 `registerRoute` adapter | 使用 Agent 工具 `ov_recall_trace` 或 Slash 命令 `/ov-recall-trace`。日志见 `index.ts:2548`。 |
-| 重启后查不到历史 trace | 未开启 `traceRecallPersist`，或超过 `traceRecallQueryMaxDays` 查询窗口 | 开启持久化，必要时传 `since/until` 或调大 `traceRecallQueryMaxDays`。 |
-| `includeContent` 后有 `readError` | selected URI 已不可读、权限不足或 OpenViking read 失败 | 查看 `warnings` 与 `selected[].readError`，再用 `ov_read` 验证 URI。 |
-| JSONL 查询有 corrupted warning | 持久化文件存在损坏行 | 插件会跳过损坏行返回有效记录；可检查对应 `YYYY-MM-DD.jsonl`。实现见 `recall-trace.ts:373`。 |
+| 查詢為空且 warning 包含 `traceRecall is disabled` | 未配置 `traceRecall: true` | 顯式啟用 `traceRecall`，重啟 Gateway 後復現。 |
+| 配了 `recallTargetTypes` 但沒有 trace | 召回範圍配置不等於 trace 開關 | 同時設定 `traceRecall: true`。 |
+| Gateway 路由不可用 | 當前 Gateway 未提供 `registerRoute` adapter | 使用 Agent 工具 `ov_recall_trace` 或 Slash 命令 `/ov-recall-trace`。日誌見 `index.ts:2548`。 |
+| 重啟後查不到歷史 trace | 未開啟 `traceRecallPersist`，或超過 `traceRecallQueryMaxDays` 查詢視窗 | 開啟持久化，必要時傳 `since/until` 或調大 `traceRecallQueryMaxDays`。 |
+| `includeContent` 後有 `readError` | selected URI 已不可讀、許可權不足或 OpenViking read 失敗 | 檢視 `warnings` 與 `selected[].readError`，再用 `ov_read` 驗證 URI。 |
+| JSONL 查詢有 corrupted warning | 持久化檔案存在損壞行 | 外掛會跳過損壞行返回有效記錄；可檢查對應 `YYYY-MM-DD.jsonl`。實現見 `recall-trace.ts:373`。 |
 
-## 11. 测试覆盖
+## 11. 測試覆蓋
 
-相关单元测试集中在：
+相關單元測試集中在：
 
-- `tests/ut/recall-trace.test.ts:56`：召回类型归一化、搜索计划、内存 ring buffer、JSONL 持久化、隐私控制。
-- `tests/ut/tools.test.ts:1021`：`ov_recall_trace` 工具、Slash 命令、Gateway 路由、`includeContent`、显式召回 trace、查询不重新触发搜索。
+- `tests/ut/recall-trace.test.ts:56`：召回型別歸一化、搜尋計劃、記憶體 ring buffer、JSONL 持久化、隱私控制。
+- `tests/ut/tools.test.ts:1021`：`ov_recall_trace` 工具、Slash 命令、Gateway 路由、`includeContent`、顯式召回 trace、查詢不重新觸發搜尋。
 
-建议修改 trace 行为后至少运行：
+建議修改 trace 行為後至少執行：
 
 ```bash
 npm run typecheck
 npm test -- tests/ut/recall-trace.test.ts tests/ut/tools.test.ts
 ```
 
-## 12. 快速参考
+## 12. 快速參考
 
-### 开启 trace
+### 開啟 trace
 
 ```json
 {
@@ -609,25 +609,25 @@ npm test -- tests/ut/recall-trace.test.ts tests/ut/tools.test.ts
 /ov-recall-trace
 ```
 
-### 查最近 10 条自动召回
+### 查最近 10 條自動召回
 
 ```bash
 /ov-recall-trace --turn all --source auto_recall --limit 10
 ```
 
-### 查指定 trace 详情
+### 查指定 trace 詳情
 
 ```bash
 /ov-recall-trace --trace-id <traceId> --include-content
 ```
 
-### HTTP 查询
+### HTTP 查詢
 
 ```bash
 curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces?turn=all&source=memory_recall&limit=10'
 ```
 
-### HTTP 查询单条
+### HTTP 查詢單條
 
 ```bash
 curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/<traceId>?includeContent=true'

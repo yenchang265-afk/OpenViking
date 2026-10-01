@@ -14,7 +14,7 @@ Examples:
     python wiki_graph.py viking://resources/my-wiki
     python wiki_graph.py \
         viking://resources/wiki-a viking://~/resources/wiki-b \
-        --output llm-wiki-graph.html --title "团队知识图谱"
+        --output llm-wiki-graph.html --title "團隊知識圖譜"
     python wiki_graph.py viking://resources/my-wiki \
         --url http://localhost:1933 --api-key "$OPENVIKING_API_KEY"
 """
@@ -63,15 +63,15 @@ _CATEGORY_ALIASES = {
 }
 
 _CATEGORY_STYLE = {
-    "index": ("导航", "#f43f5e"),
-    "entity": ("实体", "#10b981"),
+    "index": ("導航", "#f43f5e"),
+    "entity": ("實體", "#10b981"),
     "concept": ("概念", "#3b82f6"),
     "method": ("方法", "#8b5cf6"),
-    "comparison": ("比较", "#06b6d4"),
+    "comparison": ("比較", "#06b6d4"),
     "analysis": ("分析", "#f59e0b"),
     "summary": ("摘要", "#ec4899"),
-    "source": ("来源", "#64748b"),
-    "audit": ("构建审计", "#a855f7"),
+    "source": ("來源", "#64748b"),
+    "audit": ("構建審計", "#a855f7"),
     "other": ("其他", "#94a3b8"),
 }
 
@@ -108,7 +108,7 @@ def _normalize_input_uri(uri: str) -> str:
     if not value.startswith("viking://"):
         raise GraphShowError(f"不是有效的 Viking URI：{uri}", exit_code=2)
     if "#" in value or "?" in value:
-        raise GraphShowError(f"Viking URI 不能包含查询参数或锚点：{uri}", exit_code=2)
+        raise GraphShowError(f"Viking URI 不能包含查詢引數或錨點：{uri}", exit_code=2)
     if value != "viking://":
         value = value.rstrip("/")
     return value
@@ -157,26 +157,26 @@ def _checked_call(action: str, uri: str, operation: Callable[[], _T]) -> _T:
         code = str(getattr(exc, "code", "")).upper()
         if code == "UNAUTHENTICATED":
             raise GraphShowError(
-                f"身份认证失败，无法{action} {uri}。请检查 API Key。", exit_code=4
+                f"身份認證失敗，無法{action} {uri}。請檢查 API Key。", exit_code=4
             ) from exc
         if code == "PERMISSION_DENIED":
-            raise GraphShowError(f"当前用户没有权限{action} {uri}。", exit_code=4) from exc
+            raise GraphShowError(f"當前使用者沒有許可權{action} {uri}。", exit_code=4) from exc
         if code == "NOT_FOUND":
             raise GraphShowError(f"URI 不存在：{uri}", exit_code=4) from exc
         if code in {"INVALID_URI", "INVALID_ARGUMENT"}:
-            raise GraphShowError(f"无效的 Viking URI：{uri}", exit_code=2) from exc
-        raise GraphShowError(f"{action} {uri} 失败：{exc}") from exc
+            raise GraphShowError(f"無效的 Viking URI：{uri}", exit_code=2) from exc
+        raise GraphShowError(f"{action} {uri} 失敗：{exc}") from exc
 
 
 def discover_pages(client: Any, uris: Sequence[str], node_limit: int) -> list[PageSpec]:
     """Authorize every root and return its visible Markdown page specs."""
     if node_limit < 1:
-        raise GraphShowError("--node-limit 必须大于 0。", exit_code=2)
+        raise GraphShowError("--node-limit 必須大於 0。", exit_code=2)
 
     pages: dict[str, PageSpec] = {}
     for raw_uri in uris:
         root = _normalize_input_uri(raw_uri)
-        info = _checked_call("访问", root, lambda root=root: client.stat(root))
+        info = _checked_call("訪問", root, lambda root=root: client.stat(root))
         root_pages: list[PageSpec] = []
 
         if _is_directory(info):
@@ -193,8 +193,8 @@ def discover_pages(client: Any, uris: Sequence[str], node_limit: int) -> list[Pa
             )
             if len(entries) >= node_limit:
                 raise GraphShowError(
-                    f"{root} 的条目数达到 --node-limit={node_limit}，"
-                    "为避免生成不完整图谱，请提高该限制。",
+                    f"{root} 的條目數達到 --node-limit={node_limit}，"
+                    "為避免生成不完整圖譜，請提高該限制。",
                     exit_code=2,
                 )
             for entry in entries:
@@ -209,12 +209,12 @@ def discover_pages(client: Any, uris: Sequence[str], node_limit: int) -> list[Pa
                 root_pages.append(PageSpec(page_uri, root, rel_path.lstrip("/")))
         else:
             if not root.lower().endswith(".md"):
-                raise GraphShowError(f"URI 不是 Markdown Wiki 页面：{root}", exit_code=2)
+                raise GraphShowError(f"URI 不是 Markdown Wiki 頁面：{root}", exit_code=2)
             parent = _join_uri(root, "..")
             root_pages.append(PageSpec(root, parent, posixpath.basename(_uri_payload(root))))
 
         if not root_pages:
-            raise GraphShowError(f"{root} 下没有可读取的 Markdown Wiki 页面。", exit_code=5)
+            raise GraphShowError(f"{root} 下沒有可讀取的 Markdown Wiki 頁面。", exit_code=5)
         for spec in root_pages:
             pages.setdefault(spec.uri, spec)
 
@@ -261,9 +261,9 @@ def _page_category(metadata: Mapping[str, str], relative_path: str) -> str:
 def read_pages(client: Any, specs: Sequence[PageSpec]) -> list[WikiPage]:
     pages: list[WikiPage] = []
     for spec in specs:
-        content = _checked_call("读取", spec.uri, lambda spec=spec: client.read(spec.uri))
+        content = _checked_call("讀取", spec.uri, lambda spec=spec: client.read(spec.uri))
         if not isinstance(content, str):
-            raise GraphShowError(f"读取 {spec.uri} 后未得到文本内容。")
+            raise GraphShowError(f"讀取 {spec.uri} 後未得到文本內容。")
         metadata, body = _parse_frontmatter(content)
         pages.append(
             WikiPage(
@@ -545,7 +545,7 @@ def _default_title(pages: Sequence[WikiPage], root_count: int) -> str:
         index_pages = [page for page in pages if page.category == "index"]
         if index_pages:
             return index_pages[0].title
-    return "LLM Wiki 知识图谱"
+    return "LLM Wiki 知識圖譜"
 
 
 def render_html(graph: Mapping[str, Any], title: str) -> str:
@@ -608,12 +608,12 @@ def generate(args: argparse.Namespace) -> Path:
         client = ov.SyncHTTPClient(**_client_kwargs(args))
         client.initialize()
     except Exception as exc:
-        raise GraphShowError(f"无法初始化 OpenViking 客户端：{exc}", exit_code=3) from exc
+        raise GraphShowError(f"無法初始化 OpenViking 客戶端：{exc}", exit_code=3) from exc
 
     try:
         if not client.health():
             raise GraphShowError(
-                "OpenViking 服务不可用。请确认 OV 服务已启动且 --url/OPENVIKING_URL 正确。",
+                "OpenViking 服務不可用。請確認 OV 服務已啟動且 --url/OPENVIKING_URL 正確。",
                 exit_code=3,
             )
         specs = discover_pages(client, args.uris, args.node_limit)
@@ -631,37 +631,37 @@ def generate(args: argparse.Namespace) -> Path:
 def _positive_float(value: str) -> float:
     parsed = float(value)
     if parsed <= 0:
-        raise argparse.ArgumentTypeError("必须大于 0")
+        raise argparse.ArgumentTypeError("必須大於 0")
     return parsed
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="鉴权读取一个或多个 LLM Wiki URI，并生成交互式 HTML 知识图谱。"
+        description="鑑權讀取一個或多個 LLM Wiki URI，並生成互動式 HTML 知識圖譜。"
     )
-    parser.add_argument("uris", nargs="+", metavar="VIKING_URI", help="Wiki 页面或目录 URI")
+    parser.add_argument("uris", nargs="+", metavar="VIKING_URI", help="Wiki 頁面或目錄 URI")
     parser.add_argument(
         "-o",
         "--output",
         type=Path,
         default=Path("llm-wiki-graph.html"),
-        help="输出 HTML 路径（默认：./llm-wiki-graph.html）",
+        help="輸出 HTML 路徑（預設：./llm-wiki-graph.html）",
     )
-    parser.add_argument("--title", help="页面标题；默认取单个 Wiki 的 index 标题")
-    parser.add_argument("--url", help="OV 服务地址；也可通过 OPENVIKING_URL/ovcli.conf 配置")
+    parser.add_argument("--title", help="頁面標題；預設取單個 Wiki 的 index 標題")
+    parser.add_argument("--url", help="OV 服務地址；也可通過 OPENVIKING_URL/ovcli.conf 配置")
     parser.add_argument(
         "--api-key",
-        help="OV API Key；更推荐使用 OPENVIKING_API_KEY 或 ovcli.conf",
+        help="OV API Key；更推薦使用 OPENVIKING_API_KEY 或 ovcli.conf",
     )
     parser.add_argument("--account", help="trusted 模式下的 account 身份")
     parser.add_argument("--user", help="trusted 模式下的 user 身份")
-    parser.add_argument("--actor-peer-id", help="可选的 actor peer 身份")
-    parser.add_argument("--timeout", type=_positive_float, help="HTTP 超时秒数")
+    parser.add_argument("--actor-peer-id", help="可選的 actor peer 身份")
+    parser.add_argument("--timeout", type=_positive_float, help="HTTP 超時秒數")
     parser.add_argument(
         "--node-limit",
         type=int,
         default=10_000,
-        help="每个目录最多枚举的条目数（默认：10000）",
+        help="每個目錄最多列舉的條目數（預設：10000）",
     )
     return parser
 
@@ -672,15 +672,15 @@ def main(argv: Iterable[str] | None = None) -> int:
     try:
         output = generate(args)
     except GraphShowError as exc:
-        print(f"错误：{exc}", file=sys.stderr)
+        print(f"錯誤：{exc}", file=sys.stderr)
         return exc.exit_code
     except KeyboardInterrupt:
         print("已取消。", file=sys.stderr)
         return 130
     except Exception as exc:
-        print(f"错误：生成图谱失败：{exc}", file=sys.stderr)
+        print(f"錯誤：生成圖譜失敗：{exc}", file=sys.stderr)
         return 1
-    print(f"已生成 LLM Wiki 图谱：{output}")
+    print(f"已生成 LLM Wiki 圖譜：{output}")
     return 0
 
 
@@ -946,24 +946,24 @@ _HTML_TEMPLATE = r"""<!DOCTYPE html>
     </div>
   </div>
   <div class="header-meta">
-    <span class="meta">__PAGE_COUNT__ 个节点 · __LINK_COUNT__ 条关系</span>
+    <span class="meta">__PAGE_COUNT__ 個節點 · __LINK_COUNT__ 條關係</span>
     <span class="legend">__LEGEND__</span>
   </div>
 </header>
 <div id="wrap">
   <div id="graph-pane" class="surface">
     <div id="graph-toolbar">
-      <input id="node-search" type="search" placeholder="搜索 Wiki 页面" aria-label="搜索 Wiki 页面">
+      <input id="node-search" type="search" placeholder="搜尋 Wiki 頁面" aria-label="搜尋 Wiki 頁面">
       <div id="neighbor-controls">
-        <span id="neighbor-status" aria-live="polite">默认高亮 1 跳邻居</span>
+        <span id="neighbor-status" aria-live="polite">預設高亮 1 跳鄰居</span>
         <button id="expand-neighbors" type="button">拓展到 2 跳</button>
       </div>
     </div>
-    <svg id="graph" role="img" aria-label="LLM Wiki 知识图谱"></svg>
-    <div id="d3-error">无法加载 D3 图形库。请检查网络连接后重新打开此文件。</div>
+    <svg id="graph" role="img" aria-label="LLM Wiki 知識圖譜"></svg>
+    <div id="d3-error">無法載入 D3 圖形庫。請檢查網路連線後重新開啟此檔案。</div>
   </div>
   <article id="panel" class="surface">
-    <p id="hint">点击图谱节点浏览 Wiki 页面。拖动节点可调整布局，滚轮可缩放画布。</p>
+    <p id="hint">點選圖譜節點瀏覽 Wiki 頁面。拖動節點可調整佈局，滾輪可縮放畫布。</p>
   </article>
 </div>
 <script>
@@ -1013,7 +1013,7 @@ if (!window.d3) {
 
   const edge = graphLayer.append("g").selectAll("line")
     .data(DATA.links).join("line").attr("class", "edge");
-  edge.append("title").text(item => item.label || "关联");
+  edge.append("title").text(item => item.label || "關聯");
 
   const node = graphLayer.append("g").selectAll("g")
     .data(DATA.nodes).join("g")
@@ -1078,11 +1078,11 @@ if (!window.d3) {
       !highlighted.has(endpointId(item.source)) || !highlighted.has(endpointId(item.target))
     );
     document.getElementById("neighbor-status").textContent =
-      hopLimit + " 跳内高亮 · " + highlighted.size + " 个节点";
+      hopLimit + " 跳內高亮 · " + highlighted.size + " 個節點";
     const button = document.getElementById("expand-neighbors");
     const canExpand = nextHighlighted.size > highlighted.size;
     button.disabled = !canExpand;
-    button.textContent = canExpand ? "拓展到 " + (hopLimit + 1) + " 跳" : "已展示全部邻居";
+    button.textContent = canExpand ? "拓展到 " + (hopLimit + 1) + " 跳" : "已展示全部鄰居";
   }
 
   function select(id) {

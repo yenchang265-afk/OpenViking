@@ -1,56 +1,56 @@
 # 多版本管理（快照）指南
 
-本指南介绍如何启用并使用 OpenViking 的多版本管理（快照）能力。多版本管理在 VikingFS 之上提供基于 Git 的 `commit`/`log`/`show`/`restore` 原语，让你把账号下的资源树保存成一系列不可变快照，随时回溯历史、对比版本，并把工作区恢复到任意历史状态。
+本指南介紹如何啟用並使用 OpenViking 的多版本管理（快照）能力。多版本管理在 VikingFS 之上提供基於 Git 的 `commit`/`log`/`show`/`restore` 原語，讓你把帳號下的資源樹儲存成一系列不可變快照，隨時回溯歷史、對比版本，並把工作區恢復到任意歷史狀態。
 
-多版本管理由内嵌在 Rust RAGFS 层的 [gitoxide](https://github.com/Byron/gitoxide) 驱动，以 `account_id` 为粒度维护一个逻辑 Git 仓库（每个账号一个仓库），对调用方完全透明——你无需手动执行任何 `git` 命令。
+多版本管理由內嵌在 Rust RAGFS 層的 [gitoxide](https://github.com/Byron/gitoxide) 驅動，以 `account_id` 為粒度維護一個邏輯 Git 倉庫（每個帳號一個倉庫），對呼叫方完全透明——你無需手動執行任何 `git` 命令。
 
-> 关于各命令参数和响应结构的完整 API 参考，见 [多版本管理 API](../api/11-snapshot.md)。
+> 關於各命令引數和響應結構的完整 API 參考，見 [多版本管理 API](../api/11-snapshot.md)。
 
-## 何时需要 commit
+## 何時需要 commit
 
-普通 `write`、`rm` 等操作直接改变当前工作区，启用快照不代表每次写入都会自动生成版本。没有成功覆盖该路径的 snapshot commit，就不能通过快照找回它此前的内容。建议在导入完成、批量修改前后或一个业务阶段结束时提交，并保存返回的 `commit_oid`。
+普通 `write`、`rm` 等操作直接改變當前工作區，啟用快照不代表每次寫入都會自動生成版本。沒有成功覆蓋該路徑的 snapshot commit，就不能通過快照找回它此前的內容。建議在匯入完成、批次修改前後或一個業務階段結束時提交，並儲存返回的 `commit_oid`。
 
-Snapshot 保存文件树的版本，不会回滚当前 ACL，也不保存向量索引的历史。`restore` 写回文件后按需异步重建索引；它会修改工作区，执行前先用 `dry_run` 检查计划。
+Snapshot 儲存檔案樹的版本，不會回滾當前 ACL，也不儲存向量索引的歷史。`restore` 寫回檔案後按需非同步重建索引；它會修改工作區，執行前先用 `dry_run` 檢查計劃。
 
-`client.snapshot.commit()` 与会话的 `session.commit()` 职责不同：前者保存文件版本，后者归档对话并处理记忆。部分记忆流程会在更新 experience 后调用 snapshot，这不等于所有写入都自动快照。
+`client.snapshot.commit()` 與會話的 `session.commit()` 職責不同：前者儲存檔案版本，後者歸檔對話並處理記憶。部分記憶流程會在更新 experience 後呼叫 snapshot，這不等於所有寫入都自動快照。
 
-## 提交范围与并发
+## 提交範圍與併發
 
-USER / ADMIN 必须给 `commit` 和 `log` 传入 `paths`，给 `restore` 传入 `project_dir`，给 `show` 传入文件 `path`。只有本地 ROOT 可以省略这些范围参数。对自己有写权限的项目目录提交，可以避免把无关资源纳入同一次快照。
+USER / ADMIN 必須給 `commit` 和 `log` 傳入 `paths`，給 `restore` 傳入 `project_dir`，給 `show` 傳入檔案 `path`。只有本地 ROOT 可以省略這些範圍引數。對自己有寫許可權的專案目錄提交，可以避免把無關資源納入同一次快照。
 
-| `commit(paths=...)` 输入 | 含义 |
+| `commit(paths=...)` 輸入 | 含義 |
 | --- | --- |
-| 现存文件 URI | 处理该文件 |
-| 现存目录 URI | 递归处理当前文件，并记录此前快照中该子树内文件的删除 |
-| 缺失 URI | 记录此前快照中该路径及其子树的删除；此前也不存在则无改动 |
-| `[]` | 显式空范围，不产生改动 |
-| `None` / 省略 | 整棵账号树，仅限 ROOT |
+| 現存檔案 URI | 處理該檔案 |
+| 現存目錄 URI | 遞迴處理當前檔案，並記錄此前快照中該子樹內檔案的刪除 |
+| 缺失 URI | 記錄此前快照中該路徑及其子樹的刪除；此前也不存在則無改動 |
+| `[]` | 顯式空範圍，不產生改動 |
+| `None` / 省略 | 整棵帳號樹，僅限 ROOT |
 
-局部提交沿用分支上一次快照作为基础，范围外文件保留原快照版本。删除后仍要提交被删除 URI 或覆盖它的父目录；从 `paths` 中去掉该 URI 会漏记删除。路径末尾 `/` 不是文件/目录类型声明，当前接口没有逐目标的显式类型参数。
+區域性提交沿用分支上一次快照作為基礎，範圍外檔案保留原快照版本。刪除後仍要提交被刪除 URI 或覆蓋它的父目錄；從 `paths` 中去掉該 URI 會漏記刪除。路徑末尾 `/` 不是檔案/目錄型別宣告，當前介面沒有逐目標的顯式型別引數。
 
-非 ROOT 的显式路径提交先按当前状态选锁，再检查范围权限并生成快照：
+非 ROOT 的顯式路徑提交先按當前狀態選鎖，再檢查範圍許可權並生成快照：
 
-| 目标状态 | Filesystem PathLock | Cache（Redis）PathLock |
+| 目標狀態 | Filesystem PathLock | Cache（Redis）PathLock |
 | --- | --- | --- |
-| 现存文件 | Exact | Exact |
-| 现存目录 | Tree | Tree |
-| 缺失路径 | 跳过该目标的锁 | Tree |
+| 現存檔案 | Exact | Exact |
+| 現存目錄 | Tree | Tree |
+| 缺失路徑 | 跳過該目標的鎖 | Tree |
 
-Filesystem 对缺失目标跳过锁，避免锁文件创建目标目录或缺失的父目录链；该目标仍参与快照删除处理。此时并发重建同一路径可能被漏记或读到尚未写完的内容，后续提交才能记录最终状态。ROOT 不经过这段显式路径加锁流程。
+Filesystem 對缺失目標跳過鎖，避免鎖檔案建立目標目錄或缺失的父目錄鏈；該目標仍參與快照刪除處理。此時併發重建同一路徑可能被漏記或讀到尚未寫完的內容，後續提交才能記錄最終狀態。ROOT 不經過這段顯式路徑加鎖流程。
 
-快照不能视为任意并发 I/O 的全局原子视图。需要确定的业务检查点时，应先结束该范围内的写入，再提交；锁只协调参与 [PathLock 协议](../concepts/09-transaction.md) 的操作。
+快照不能視為任意併發 I/O 的全域原子檢視。需要確定的業務檢查點時，應先結束該範圍內的寫入，再提交；鎖只協調參與 [PathLock 協議](../concepts/09-transaction.md) 的操作。
 
-## 前置条件
+## 前置條件
 
 - 已有可用的 `ov.conf`。
-- 已确认资源的读写正常（多版本管理建立在文件系统资源之上）。
-- 如果选择 S3 后端存放 Git 对象，已准备好 bucket、region、endpoint 和访问凭据。
+- 已確認資源的讀寫正常（多版本管理建立在檔案系統資源之上）。
+- 如果選擇 S3 後端存放 Git 物件，已準備好 bucket、region、endpoint 和訪問憑據。
 
-## 启用多版本管理
+## 啟用多版本管理
 
-多版本管理默认**开启**（`git.enabled` 默认为 `true`）。Git 对象的存储后端可以选择 `local`（本地文件系统）或 `s3`（S3 兼容对象存储）；当不显式设置 `git.backend` 时，会**自动继承 `storage.agfs.backend`**（`storage.agfs.backend` 为 `memory` 时映射为 `local`）。如需关闭多版本管理，把 `git.enabled` 设为 `false` 即可。
+多版本管理預設**開啟**（`git.enabled` 預設為 `true`）。Git 物件的儲存後端可以選擇 `local`（本地檔案系統）或 `s3`（S3 相容物件儲存）；當不顯式設定 `git.backend` 時，會**自動繼承 `storage.agfs.backend`**（`storage.agfs.backend` 為 `memory` 時對映為 `local`）。如需關閉多版本管理，把 `git.enabled` 設為 `false` 即可。
 
-### 本地后端（推荐用于单机部署）
+### 本地後端（推薦用於單機部署）
 
 ```json
 {
@@ -70,24 +70,24 @@ Filesystem 对缺失目标跳过锁，避免锁文件创建目标目录或缺失
 }
 ```
 
-配置说明：
+配置說明：
 
-| 字段 | 默认值 | 说明 |
+| 欄位 | 預設值 | 說明 |
 |------|--------|------|
-| `git.enabled` | `true` | 是否启用多版本管理。设为 `false` 可关闭快照功能 |
-| `git.backend` | 继承 `storage.agfs.backend` | Git 对象后端：`local` 或 `s3`。不显式设置时继承 `storage.agfs.backend`（`memory` 映射为 `local`） |
-| `git.default_branch` | `main` | 未显式指定时使用的默认分支名 |
-| `git.author_name` | `viking-bot` | 调用方未传 `author_name` 时使用的默认提交者名字 |
-| `git.author_email` | `bot@viking.local` | 默认提交者邮箱 |
-| `git.local.base_dir` | `""` | Git 对象/引用的存放目录。**留空时默认使用 `{storage.workspace}/.ovgit`** |
+| `git.enabled` | `true` | 是否啟用多版本管理。設為 `false` 可關閉快照功能 |
+| `git.backend` | 繼承 `storage.agfs.backend` | Git 物件後端：`local` 或 `s3`。不顯式設定時繼承 `storage.agfs.backend`（`memory` 對映為 `local`） |
+| `git.default_branch` | `main` | 未顯式指定時使用的預設分支名 |
+| `git.author_name` | `viking-bot` | 呼叫方未傳 `author_name` 時使用的預設提交者名字 |
+| `git.author_email` | `bot@viking.local` | 預設提交者郵箱 |
+| `git.local.base_dir` | `""` | Git 物件/引用的存放目錄。**留空時預設使用 `{storage.workspace}/.ovgit`** |
 
-> 通常把 `git.local.base_dir` 留空即可，让快照数据自动落在工作区下的 `.ovgit` 目录，便于和资源数据一起备份与迁移。
+> 通常把 `git.local.base_dir` 留空即可，讓快照資料自動落在工作區下的 `.ovgit` 目錄，便於和資源資料一起備份與遷移。
 
-### S3 后端（推荐用于分布式/云端部署）
+### S3 後端（推薦用於分散式/雲端部署）
 
-把 Git 对象与引用存到 S3 兼容对象存储（如火山引擎 TOS、MinIO、AWS S3）。当 `backend` 为 `s3` 时，**必须**提供 `git.s3` 段，且 `bucket`、`region` 不能为空。
+把 Git 物件與引用存到 S3 相容物件儲存（如火山引擎 TOS、MinIO、AWS S3）。當 `backend` 為 `s3` 時，**必須**提供 `git.s3` 段，且 `bucket`、`region` 不能為空。
 
-> 提示：`git.s3` 的 `bucket`、`region`、`endpoint`、`access_key`、`secret_key` 在未显式设置时会**自动继承 `storage.agfs.s3`** 的对应字段。因此当 `storage.agfs` 已经配置为 s3 后端时，通常无需重复填写 `git.s3`——只要不显式设置 `git.backend`，多版本管理会直接复用 `storage.agfs` 的 bucket 与访问凭据。
+> 提示：`git.s3` 的 `bucket`、`region`、`endpoint`、`access_key`、`secret_key` 在未顯式設定時會**自動繼承 `storage.agfs.s3`** 的對應欄位。因此當 `storage.agfs` 已經配置為 s3 後端時，通常無需重複填寫 `git.s3`——只要不顯式設定 `git.backend`，多版本管理會直接複用 `storage.agfs` 的 bucket 與訪問憑據。
 
 ```json
 {
@@ -114,53 +114,53 @@ Filesystem 对缺失目标跳过锁，避免锁文件创建目标目录或缺失
 }
 ```
 
-配置说明：
+配置說明：
 
-| 字段 | 默认值 | 说明 |
+| 欄位 | 預設值 | 說明 |
 |------|--------|------|
-| `git.s3.bucket` | 继承 `storage.agfs.s3.bucket` | 存放 Git 对象/引用的 bucket，必填（可由 `storage.agfs.s3` 继承） |
-| `git.s3.region` | 继承 `storage.agfs.s3.region`，否则 `us-east-1` | bucket 所在区域，必填 |
-| `git.s3.prefix` | `.ovgit` | 键前缀，所有数据存放在 `{prefix}/{account}/...` 下 |
-| `git.s3.endpoint` | 继承 `storage.agfs.s3.endpoint`，否则 `""` | 自定义 S3 端点（MinIO/TOS 等）；标准 AWS S3 留空 |
-| `git.s3.access_key` / `git.s3.secret_key` | 继承 `storage.agfs.s3` 对应字段，否则 `null` | 直接读取的凭据；留空则走 SDK 默认凭据链 |
-| `git.s3.use_path_style` | `true` | `true` 用 path-style 寻址（MinIO 等）；`false` 用 virtual-host 寻址（TOS 等） |
-| `git.s3.cas_mode` | `native` | 引用 CAS 模式。`native` 使用 S3 条件写（If-Match） |
+| `git.s3.bucket` | 繼承 `storage.agfs.s3.bucket` | 存放 Git 物件/引用的 bucket，必填（可由 `storage.agfs.s3` 繼承） |
+| `git.s3.region` | 繼承 `storage.agfs.s3.region`，否則 `us-east-1` | bucket 所在區域，必填 |
+| `git.s3.prefix` | `.ovgit` | 鍵字首，所有資料存放在 `{prefix}/{account}/...` 下 |
+| `git.s3.endpoint` | 繼承 `storage.agfs.s3.endpoint`，否則 `""` | 自定義 S3 端點（MinIO/TOS 等）；標準 AWS S3 留空 |
+| `git.s3.access_key` / `git.s3.secret_key` | 繼承 `storage.agfs.s3` 對應欄位，否則 `null` | 直接讀取的憑據；留空則走 SDK 預設憑據鏈 |
+| `git.s3.use_path_style` | `true` | `true` 用 path-style 定址（MinIO 等）；`false` 用 virtual-host 定址（TOS 等） |
+| `git.s3.cas_mode` | `native` | 引用 CAS 模式。`native` 使用 S3 條件寫（If-Match） |
 
-修改配置后，重启 OpenViking 服务（或重新初始化 SDK 客户端）使其生效。
+修改配置後，重啟 OpenViking 服務（或重新初始化 SDK 客戶端）使其生效。
 
-> 仓库中提供了可直接参考的完整示例：[ov.conf.git-local.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-local.example) 与 [ov.conf.git-s3-tos.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-s3-tos.example)。
+> 倉庫中提供了可直接參考的完整示例：[ov.conf.git-local.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-local.example) 與 [ov.conf.git-s3-tos.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-s3-tos.example)。
 
-## 目录结构变化：`.ovgit` 目录
+## 目錄結構變化：`.ovgit` 目錄
 
-启用 `local` 后端且 `base_dir` 留空时，OpenViking 会在工作区下新增一个 **`.ovgit`** 目录用于存放 Git 对象和引用：
+啟用 `local` 後端且 `base_dir` 留空時，OpenViking 會在工作區下新增一個 **`.ovgit`** 目錄用於存放 Git 物件和引用：
 
 ```text
 data/                      # storage.workspace
-├── viking/                # 用户可见的资源树（viking:// 映射到这里）
+├── viking/                # 使用者可見的資源樹（viking:// 對映到這裡）
 │   └── ...
-└── .ovgit/                # 多版本管理数据（新增）
-    └── {account_id}/      # 每个账号一个逻辑 Git 仓库
-        ├── objects/       # Git 对象（commit/tree/blob），标准 fanout 布局 aa/bb...
+└── .ovgit/                # 多版本管理資料（新增）
+    └── {account_id}/      # 每個帳號一個邏輯 Git 倉庫
+        ├── objects/       # Git 物件（commit/tree/blob），標準 fanout 佈局 aa/bb...
         ├── refs/
         │   └── heads/
-        │       └── main   # 分支引用，内容为 40 位十六进制 OID
-        └── HEAD           # 当前分支指针，内容为 "ref: refs/heads/main"
+        │       └── main   # 分支引用，內容為 40 位十六進位制 OID
+        └── HEAD           # 當前分支指標，內容為 "ref: refs/heads/main"
 ```
 
-要点：
+要點：
 
-- `.ovgit` 是内部数据目录，**不会**通过 `viking://` 暴露，用户在文件系统 API（`ls`/`read` 等）中看不到也无法修改它。
-- 它与 Git 的标准对象库布局一致（内容寻址的 `objects/`、loose 引用的 `refs/`），但由 OpenViking 自动管理，**无需也不应**手动运行 `git` 命令去操作它。
-- 备份或迁移工作区时，把 `.ovgit` 一并复制即可保留完整的版本历史。
-- 选择 `s3` 后端时，不会创建本地 `.ovgit` 目录，数据改为存放在 bucket 的 `{prefix}/{account}/...` 键下。
+- `.ovgit` 是內部資料目錄，**不會**通過 `viking://` 暴露，使用者在檔案系統 API（`ls`/`read` 等）中看不到也無法修改它。
+- 它與 Git 的標準物件庫佈局一致（內容定址的 `objects/`、loose 引用的 `refs/`），但由 OpenViking 自動管理，**無需也不應**手動執行 `git` 命令去操作它。
+- 備份或遷移工作區時，把 `.ovgit` 一併複製即可保留完整的版本歷史。
+- 選擇 `s3` 後端時，不會建立本地 `.ovgit` 目錄，資料改為存放在 bucket 的 `{prefix}/{account}/...` 鍵下。
 
 ## 使用方法
 
-启用后，三种调用方式都会出现快照相关命令。下面以一个"提交 → 修改 → 恢复"的最小流程演示。
+啟用後，三種呼叫方式都會出現快照相關命令。下面以一個"提交 → 修改 → 恢復"的最小流程演示。
 
 ### Python SDK
 
-快照方法挂在 `client.snapshot.*` 命名空间下。
+快照方法掛在 `client.snapshot.*` 名稱空間下。
 
 ```python
 from openviking_sdk import SyncHTTPClient
@@ -170,7 +170,7 @@ client.initialize()
 
 root = "viking://resources/my_project"
 
-# 1. 写入初始内容并提交 v1
+# 1. 寫入初始內容並提交 v1
 client.write(
     uri=f"{root}/guide.md",
     content="# Guide\n\nv1 content\n",
@@ -179,7 +179,7 @@ client.write(
 v1 = client.snapshot.commit(message="v1 initial import", paths=[root])
 print("v1:", v1["commit_oid"])
 
-# 2. 修改后再提交 v2
+# 2. 修改後再提交 v2
 client.write(
     uri=f"{root}/guide.md",
     content="# Guide\n\nv2 content\n",
@@ -187,14 +187,14 @@ client.write(
 )
 v2 = client.snapshot.commit(message="v2 update", paths=[root])
 
-# 3. 查看历史
+# 3. 檢視歷史
 for c in client.snapshot.log(limit=10, paths=[root]):
     print(c["oid"][:8], c["message"])
 
-# 4. 读取历史文件内容
+# 4. 讀取歷史檔案內容
 print(client.snapshot.show(v1["commit_oid"], path=f"{root}/guide.md"))
 
-# 5. 把工作区恢复到 v1（会在 v2 之上生成一个新的“正向”提交）
+# 5. 把工作區恢復到 v1（會在 v2 之上生成一個新的“正向”提交）
 client.snapshot.restore(project_dir=root, source_commit=v1["commit_oid"], message="restore to v1")
 
 client.close()
@@ -202,25 +202,25 @@ client.close()
 
 ### CLI
 
-CLI 子命令位于 `ov snapshot` 下：
+CLI 子命令位於 `ov snapshot` 下：
 
 ```bash
-# 提交当前工作区状态
+# 提交當前工作區狀態
 ov snapshot commit -m "v1 initial import" --paths viking://resources/my_project -o json
 
-# 回溯历史（最新在前）
+# 回溯歷史（最新在前）
 ov snapshot log --paths viking://resources/my_project --limit 10 -o json
 
-# 读取历史文件内容
+# 讀取歷史檔案內容
 ov snapshot show <commit_oid> --path viking://resources/my_project/guide.md
 
-# 读取某个提交中的文件内容（默认输出到 stdout，可用 --out-file 写入本地文件）
+# 讀取某個提交中的檔案內容（預設輸出到 stdout，可用 --out-file 寫入本地檔案）
 ov snapshot show <commit_oid> --path viking://resources/my_project/guide.md --out-file ./guide.md
 
-# 把目录恢复到某个历史快照（位置参数依次为 <source_commit> <project_dir>）
+# 把目錄恢復到某個歷史快照（位置引數依次為 <source_commit> <project_dir>）
 ov snapshot restore <commit_oid> viking://resources/my_project -m "restore to v1" -o json
 
-# 先预演，确认会改动哪些文件
+# 先預演，確認會改動哪些檔案
 ov snapshot restore <commit_oid> viking://resources/my_project --dry-run -o json
 ```
 
@@ -233,67 +233,67 @@ curl -X POST "http://localhost:1933/api/v1/snapshot/commit" \
   -H "X-API-Key: your-key" \
   -d '{"message": "v1 initial import", "paths": ["viking://resources/my_project"]}'
 
-# 回溯历史
+# 回溯歷史
 curl -X GET "http://localhost:1933/api/v1/snapshot/log?branch=main&limit=10&paths=viking://resources/my_project" \
   -H "X-API-Key: your-key"
 
-# 读取历史文件内容
+# 讀取歷史檔案內容
 curl -X GET "http://localhost:1933/api/v1/snapshot/show?target_ref=<commit_oid>&path=viking://resources/my_project/guide.md" \
   -H "X-API-Key: your-key"
 
-# 恢复
+# 恢復
 curl -X POST "http://localhost:1933/api/v1/snapshot/restore" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
   -d '{"project_dir": "viking://resources/my_project", "source_commit": "<commit_oid>", "message": "restore to v1"}'
 ```
 
-## 重要语义：正向恢复
+## 重要語義：正向恢復
 
-`restore` 采用**正向恢复（forward-commit）**：它读取 `source_commit` 的内容，把差异写回工作区，并在**当前 HEAD 之上生成一个新的提交**。因此：
+`restore` 採用**正向恢復（forward-commit）**：它讀取 `source_commit` 的內容，把差異寫回工作區，並在**當前 HEAD 之上生成一個新的提交**。因此：
 
-- 新提交的父提交是恢复操作发生前的 HEAD，**不是** `source_commit`。
-- HEAD 始终单调向前推进，**历史永远不会被改写或丢失**——回到旧版本本身也是一次新的提交。
-- `restore` 只影响 `project_dir`（省略时为整棵账号树）范围内的文件，范围之外的文件保持不变。
+- 新提交的父提交是恢復操作發生前的 HEAD，**不是** `source_commit`。
+- HEAD 始終單調向前推進，**歷史永遠不會被改寫或丟失**——回到舊版本本身也是一次新的提交。
+- `restore` 隻影響 `project_dir`（省略時為整棵帳號樹）範圍內的檔案，範圍之外的檔案保持不變。
 
 ## 使用 `.ovgitignore` 排除文件
 
-账号根目录下的 `.ovgitignore` 是一个账号级的排除规则文件，作用类似根 `.gitignore`：匹配该规则的文件在 `commit` 时被排除出快照。它与系统内置的剪枝规则（`_system`、`tasks`、向量索引派生文件等）叠加生效。
+帳號根目錄下的 `.ovgitignore` 是一個帳號級的排除規則檔案，作用類似根 `.gitignore`：匹配該規則的檔案在 `commit` 時被排除出快照。它與系統內建的剪枝規則（`_system`、`tasks`、向量索引派生檔案等）疊加生效。
 
-要点：
+要點：
 
-- 规则文件本身**不会被 `.ovgitignore` 规则忽略**，即使规则匹配 `.ovgitignore` 也会被正常纳入快照——这样规则的变更可追溯、可恢复。
-- 规则**只影响 `commit`**；`restore`、`show`、`log` 仍以提交内容为准，不把当前 `.ovgitignore` 当作过滤器。因此恢复一个历史快照时，即便其中某些文件匹配当前规则，仍会被正常恢复。
-- 若某个文件在更早的提交中已被跟踪、之后新增规则匹配到它，下一次 `commit` 会把它从新快照中移除（工作区的文件本身不受影响）。
-- `.ovgitignore` 不会进入向量索引/检索。
+- 規則檔案本身**不會被 `.ovgitignore` 規則忽略**，即使規則匹配 `.ovgitignore` 也會被正常納入快照——這樣規則的變更可追溯、可恢復。
+- 規則**隻影響 `commit`**；`restore`、`show`、`log` 仍以提交內容為準，不把當前 `.ovgitignore` 當作過濾器。因此恢復一個歷史快照時，即便其中某些檔案匹配當前規則，仍會被正常恢復。
+- 若某個檔案在更早的提交中已被跟蹤、之後新增規則匹配到它，下一次 `commit` 會把它從新快照中移除（工作區的檔案本身不受影響）。
+- `.ovgitignore` 不會進入向量索引/檢索。
 
-### 规则语法
+### 規則語法
 
-`.ovgitignore` 为 UTF-8 文本，支持常见的 glob 子集：
+`.ovgitignore` 為 UTF-8 文本，支援常見的 glob 子集：
 
 - 空行被忽略。
-- 首个非空白字符为 `#` 的行是注释。
-- 行首/行尾空白会被裁剪。
-- **不支持** `!` 取反（出现会让 `commit` 失败并报错）。
-- **不支持** Git 风格的反斜杠转义。
+- 首個非空白字元為 `#` 的行是註釋。
+- 行首/行尾空白會被裁剪。
+- **不支援** `!` 取反（出現會讓 `commit` 失敗並報錯）。
+- **不支援** Git 風格的反斜槓轉義。
 - 文件大小上限 64 KiB。
 
-匹配路径使用账号相对的 Git 树路径（`/` 分隔），如 `resources/proj/a.log`。例如 `*.log` 匹配任意深度的 `.log` 文件，`build/` 匹配名为 `build` 的目录及其内容，`/cache/**` 仅匹配账号根下的 `cache/`。
+匹配路徑使用帳號相對的 Git 樹路徑（`/` 分隔），如 `resources/proj/a.log`。例如 `*.log` 匹配任意深度的 `.log` 檔案，`build/` 匹配名為 `build` 的目錄及其內容，`/cache/**` 僅匹配帳號根下的 `cache/`。
 
 ### Python SDK
 
 ```python
-# 写入规则
+# 寫入規則
 client.snapshot.set_gitignore(content="*.log\n")
 
-# 读取（不存在时返回空字符串）
+# 讀取（不存在時返回空字串）
 print(client.snapshot.get_gitignore())
 
-# 删除（不存在也视为成功，幂等）
+# 刪除（不存在也視為成功，冪等）
 client.snapshot.delete_gitignore()
 ```
 
-随后提交时，匹配规则的文件会被排除，响应里的 `ignored` 字段给出本次被排除的候选路径数：
+隨後提交時，匹配規則的檔案會被排除，響應裡的 `ignored` 欄位給出本次被排除的候選路徑數：
 
 ```python
 v = client.snapshot.commit(message="with ignore", paths=["viking://resources/my_project"])
@@ -303,45 +303,45 @@ print(v["result"], v.get("ignored"))  # created, 1
 ### CLI
 
 ```bash
-# 设置（用 --content 直接传内容，或用 --file 从文件读取）
+# 設定（用 --content 直接傳內容，或用 --file 從檔案讀取）
 ov snapshot ignore-set --content "*.log" -o json
 ov snapshot ignore-set --file ./my-rules -o json
 
-# 读取（-o json 返回 {"result": "<内容>"}；不加 -o json 时直接把内容打到 stdout）
+# 讀取（-o json 返回 {"result": "<內容>"}；不加 -o json 時直接把內容打到 stdout）
 ov snapshot ignore-get -o json
 
-# 删除（幂等）
+# 刪除（冪等）
 ov snapshot ignore-delete -o json
 ```
 
 ### HTTP API
 
 ```bash
-# 读取
+# 讀取
 curl -X GET "http://localhost:1933/api/v1/snapshot/ignore" \
   -H "X-API-Key: your-key"
 
-# 写入
+# 寫入
 curl -X PUT "http://localhost:1933/api/v1/snapshot/ignore" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
   -d '{"content": "*.log\n"}'
 
-# 删除
+# 刪除
 curl -X DELETE "http://localhost:1933/api/v1/snapshot/ignore" \
   -H "X-API-Key: your-key"
 ```
 
-## 注意事项
+## 注意事項
 
-- 修改 `git` 配置后必须重启服务 / 重新初始化客户端才能生效。
-- 启用 `s3` 后端时，`git.s3.bucket` 与 `git.s3.region` 为必填项，缺失会导致初始化失败。
-- 恢复操作如涉及向量副作用（写入/删除文件），响应会返回一个 `task_id`，可通过 `GET /api/v1/tasks/{task_id}` 轮询后台向量重建进度（参见 [系统指南](05-observability.md) 与 [API 概览](../api/01-overview.md)）。
-- `.ovgitignore` 内容过大（超过 64 KiB）或包含 `!` 取反、反斜杠转义等不支持语法时，`commit` 会失败并报 `invalid operation` 错误；写入时（`set_gitignore`）会预先校验大小。
-- 不要手动用外部 `git` 工具去操作 `.ovgit` 目录，它由 OpenViking 维护。
+- 修改 `git` 配置後必須重啟服務 / 重新初始化客戶端才能生效。
+- 啟用 `s3` 後端時，`git.s3.bucket` 與 `git.s3.region` 為必填項，缺失會導致初始化失敗。
+- 恢復操作如涉及向量副作用（寫入/刪除檔案），響應會返回一個 `task_id`，可通過 `GET /api/v1/tasks/{task_id}` 輪詢後臺向量重建進度（參見 [系統指南](05-observability.md) 與 [API 概覽](../api/01-overview.md)）。
+- `.ovgitignore` 內容過大（超過 64 KiB）或包含 `!` 取反、反斜槓轉義等不支援語法時，`commit` 會失敗並報 `invalid operation` 錯誤；寫入時（`set_gitignore`）會預先校驗大小。
+- 不要手動用外部 `git` 工具去操作 `.ovgit` 目錄，它由 OpenViking 維護。
 
-## 相关文档
+## 相關文件
 
-- [多版本管理 API](../api/11-snapshot.md)：命令参数与响应的完整参考
-- [配置说明](01-configuration.md)：`ov.conf` 完整配置项
-- [多写存储指南](13-multi-write-storage.md)：资源数据的多后端复制
+- [多版本管理 API](../api/11-snapshot.md)：命令引數與響應的完整參考
+- [配置說明](01-configuration.md)：`ov.conf` 完整配置項
+- [多寫儲存指南](13-multi-write-storage.md)：資源資料的多後端複製

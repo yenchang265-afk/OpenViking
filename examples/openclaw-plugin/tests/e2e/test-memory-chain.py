@@ -1,124 +1,124 @@
 #!/usr/bin/env python3
 """
-OpenClaw 记忆链路完整端到端测试
+OpenClaw 記憶鏈路完整端到端測試
 
 ================================================================================
-一、用例设计思路
+一、用例設計思路
 ================================================================================
 
-验证 OpenViking 记忆插件的完整链路，覆盖消息写入到记忆召回的每个环节:
+驗證 OpenViking 記憶外掛的完整鏈路，覆蓋訊息寫入到記憶召回的每個環節:
 
-  afterTurn → commit → assemble → sessionId 一致性 → 新用户记忆召回
+  afterTurn → commit → assemble → sessionId 一致性 → 新使用者記憶召回
 
-各环节验证目标:
-  1. afterTurn: 本轮消息无损写入 OV session，sessionId 一致
-  2. commit: 归档消息 + 提取长期记忆（cards/events/profile 等）
-  3. assemble: 同用户继续对话时，从 latest_archive_overview + active
-     messages 正确重组上下文
+各環節驗證目標:
+  1. afterTurn: 本輪訊息無損寫入 OV session，sessionId 一致
+  2. commit: 歸檔訊息 + 提取長期記憶（cards/events/profile 等）
+  3. assemble: 同用戶繼續對話時，從 latest_archive_overview + active
+     messages 正確重組上下文
   4. budget trimming: 小 token budget 下 archive overview 被合理裁剪
-  5. sessionId 一致性: 整条链路使用统一的 OV sessionId，无 sessionKey 残留
-  6. 新用户记忆召回: 不同用户发问时，auto-recall 注入相关记忆
+  5. sessionId 一致性: 整條鏈路使用統一的 OV sessionId，無 sessionKey 殘留
+  6. 新使用者記憶召回: 不同使用者發問時，auto-recall 注入相關記憶
 
-对话数据设计:
-  12 轮对话涵盖：个人背景、技术栈、项目细节、缓存方案讨论、团队信息、
-  消息队列选型、监控体系、偏好设置等，确保记忆提取能覆盖多种类别。
+對話資料設計:
+  12 輪對話涵蓋：個人背景、技術棧、專案細節、快取方案討論、團隊資訊、
+  訊息佇列選型、監控體系、偏好設定等，確保記憶提取能覆蓋多種類別。
 
-断言策略:
-  - 确定性检查 (hard): afterTurn 写入、commit_count、sessionId、overview 存在性
-  - LLM 依赖检查 (soft): Assemble/Recall 的关键词命中率 >= 50%
-
-================================================================================
-二、测试流程
-================================================================================
-
-  Phase 1: 多轮对话 (12 轮) — 写入对话数据
-  Phase 2: afterTurn 验证 — 检查 OV session 存在性和消息内容
-  Phase 3: Commit 验证 — 触发 commit, 检查归档结构和记忆提取
-  Phase 4: Assemble 验证 — 同用户继续对话, 验证上下文重组 + budget trimming
-  Phase 5: SessionId 一致性验证 — 无 sessionKey 残留
-  Phase 6: 新用户记忆召回 (3 问) — 验证 auto-recall
+斷言策略:
+  - 確定性檢查 (hard): afterTurn 寫入、commit_count、sessionId、overview 存在性
+  - LLM 依賴檢查 (soft): Assemble/Recall 的關鍵詞命中率 >= 50%
 
 ================================================================================
-三、环境前提
+二、測試流程
 ================================================================================
 
-  1. OpenViking 服务已启动
-  2. OpenClaw Gateway 已启动并配置了 OpenViking 插件
-  3. LLM 后端可达（Gateway 需要调用 LLM 生成回复）
+  Phase 1: 多輪對話 (12 輪) — 寫入對話資料
+  Phase 2: afterTurn 驗證 — 檢查 OV session 存在性和訊息內容
+  Phase 3: Commit 驗證 — 觸發 commit, 檢查歸檔結構和記憶提取
+  Phase 4: Assemble 驗證 — 同用戶繼續對話, 驗證上下文重組 + budget trimming
+  Phase 5: SessionId 一致性驗證 — 無 sessionKey 殘留
+  Phase 6: 新使用者記憶召回 (3 問) — 驗證 auto-recall
+
+================================================================================
+三、環境前提
+================================================================================
+
+  1. OpenViking 服務已啟動
+  2. OpenClaw Gateway 已啟動並配置了 OpenViking 外掛
+  3. LLM 後端可達（Gateway 需要呼叫 LLM 生成回覆）
   4. 有效的 Gateway auth token
 
-  关键 openclaw.json 配置（影响测试行为）:
-    - plugins.slots.contextEngine = "openviking"   # 使用 OV 作为 context engine
-    - plugins.slots.memory = "none"                # 不使用内置 memory-core
-    - plugins.entries.openviking.enabled = true     # 启用 OV 插件
-    - plugins.entries.openviking.config.autoCapture = true  # afterTurn 自动捕获
-    - plugins.entries.openviking.config.autoRecall = true   # 新用户自动召回记忆
+  關鍵 openclaw.json 配置（影響測試行為）:
+    - plugins.slots.contextEngine = "openviking"   # 使用 OV 作為 context engine
+    - plugins.slots.memory = "none"                # 不使用內建 memory-core
+    - plugins.entries.openviking.enabled = true     # 啟用 OV 外掛
+    - plugins.entries.openviking.config.autoCapture = true  # afterTurn 自動捕獲
+    - plugins.entries.openviking.config.autoRecall = true   # 新使用者自動召回記憶
     - plugins.entries.openviking.config.commitTokenThresholdRatio = 0
-      ↑ 此值控制 auto-commit 触发时机，按模型上下文窗口的比例计算。
-        设为 0 时每轮都 commit；若比例较大（如 0.8），测试中 auto-commit
-        不会提前发生，Phase 3 的 commit 验证行为会不同。脚本已兼容两种场景。
+      ↑ 此值控制 auto-commit 觸發時機，按模型上下文視窗的比例計算。
+        設為 0 時每輪都 commit；若比例較大（如 0.8），測試中 auto-commit
+        不會提前發生，Phase 3 的 commit 驗證行為會不同。指令碼已相容兩種場景。
 
 ================================================================================
 四、使用方法
 ================================================================================
 
-  安装依赖:
+  安裝依賴:
     pip install requests rich
 
-  完整测试:
+  完整測試:
     python test-memory-chain.py --phase all \\
         --gateway http://127.0.0.1:19789 \\
         --openviking http://127.0.0.1:2934 \\
         --token <your_gateway_token>
 
-  分阶段执行:
-    python test-memory-chain.py --phase chat        # 仅多轮对话
-    python test-memory-chain.py --phase afterTurn   # 仅 afterTurn 验证
-    python test-memory-chain.py --phase commit      # 仅 commit 验证
-    python test-memory-chain.py --phase assemble    # 仅 assemble 验证
-    python test-memory-chain.py --phase session-id  # 仅 sessionId 检查
-    python test-memory-chain.py --phase recall      # 仅记忆召回
+  分階段執行:
+    python test-memory-chain.py --phase chat        # 僅多輪對話
+    python test-memory-chain.py --phase afterTurn   # 僅 afterTurn 驗證
+    python test-memory-chain.py --phase commit      # 僅 commit 驗證
+    python test-memory-chain.py --phase assemble    # 僅 assemble 驗證
+    python test-memory-chain.py --phase session-id  # 僅 sessionId 檢查
+    python test-memory-chain.py --phase recall      # 僅記憶召回
 
-  其他选项:
-    --user-id <id>      固定用户 ID（默认随机生成）
-    --delay <seconds>    轮次间等待秒数（默认 3s）
-    --verbose / -v       详细输出
+  其他選項:
+    --user-id <id>      固定使用者 ID（預設隨機生成）
+    --delay <seconds>    輪次間等待秒數（預設 3s）
+    --verbose / -v       詳細輸出
 
   注意:
-    - 完整测试约需 8-12 分钟
-    - 首次运行前建议清理 OV 数据和 session 数据
+    - 完整測試約需 8-12 分鐘
+    - 首次執行前建議清理 OV 資料和 session 資料
 
 ================================================================================
 五、已知限制
 ================================================================================
 
-  1. LLM 回复非确定性:
-     Assemble 和 Recall 阶段的关键词命中依赖 LLM 回复内容。不同模型、不同
-     temperature 设置下可能产生不同结果。关键词命中率阈值已设为 50% 以容忍
-     表述差异，但仍可能偶发失败。
+  1. LLM 回覆非確定性:
+     Assemble 和 Recall 階段的關鍵詞命中依賴 LLM 回覆內容。不同模型、不同
+     temperature 設定下可能產生不同結果。關鍵詞命中率閾值已設為 50% 以容忍
+     表述差異，但仍可能偶發失敗。
 
-  2. auto-commit 时序:
-     Gateway 的 afterTurn 可能触发 auto-commit，导致手动 commit 时无新内容。
-     脚本已处理此场景（auto_committed=True 时条件性通过）。
+  2. auto-commit 時序:
+     Gateway 的 afterTurn 可能觸發 auto-commit，導致手動 commit 時無新內容。
+     指令碼已處理此場景（auto_committed=True 時條件性通過）。
 
-  3. 记忆提取质量:
-     不同 LLM 对同一对话提取的记忆类别和内容可能不同，影响 Recall 阶段的
-     关键词匹配。建议使用支持中文的高质量模型。
+  3. 記憶提取質量:
+     不同 LLM 對同一對話提取的記憶類別和內容可能不同，影響 Recall 階段的
+     關鍵詞匹配。建議使用支援中文的高質量模型。
 
   4. sessionId 映射:
-     Gateway 内部使用 UUID 作为 OV sessionId，不等于传入的 user_id。脚本
-     通过 OV sessions 列表接口自动发现实际 sessionId。
+     Gateway 內部使用 UUID 作為 OV sessionId，不等於傳入的 user_id。指令碼
+     通過 OV sessions 列表介面自動發現實際 sessionId。
 
 ================================================================================
-六、预期结果
+六、預期結果
 ================================================================================
 
-  29/29 断言全部通过:
-    - Phase 1: 12 轮对话全部成功
-    - Phase 2~3: afterTurn 写入正确, commit 归档正常
-    - Phase 4: Assemble Q1/Q2 关键词命中率 >= 50%
-    - Phase 5: sessionId 一致，无残留
-    - Phase 6: Recall Q1/Q2/Q3 关键词命中率 >= 50%
+  29/29 斷言全部通過:
+    - Phase 1: 12 輪對話全部成功
+    - Phase 2~3: afterTurn 寫入正確, commit 歸檔正常
+    - Phase 4: Assemble Q1/Q2 關鍵詞命中率 >= 50%
+    - Phase 5: sessionId 一致，無殘留
+    - Phase 6: Recall Q1/Q2/Q3 關鍵詞命中率 >= 50%
 """
 
 import argparse
@@ -145,20 +145,20 @@ if sys.platform == "win32":
 # ── 常量 ───────────────────────────────────────────────────────────────────
 
 USER_ID = f"test-chain-{uuid.uuid4().hex[:8]}"
-DISPLAY_NAME = "测试用户"
+DISPLAY_NAME = "測試使用者"
 DEFAULT_GATEWAY = "http://127.0.0.1:19789"
 DEFAULT_OPENVIKING = "http://127.0.0.1:2934"
 AGENT_ID = "main"
 
 console = Console(force_terminal=True)
 
-# ── 测试结果收集 ──────────────────────────────────────────────────────────
+# ── 測試結果收集 ──────────────────────────────────────────────────────────
 
 assertions: list[dict] = []
 
 
 def check(label: str, condition: bool, detail: str = ""):
-    """记录一个断言结果。"""
+    """記錄一個斷言結果。"""
     assertions.append({"label": label, "ok": condition, "detail": detail})
     icon = "[green]PASS[/green]" if condition else "[red]FAIL[/red]"
     msg = f"  {icon} {label}"
@@ -167,49 +167,49 @@ def check(label: str, condition: bool, detail: str = ""):
     console.print(msg)
 
 
-# ── 对话数据 ──────────────────────────────────────────────────────────────
+# ── 對話資料 ──────────────────────────────────────────────────────────────
 
 CHAT_MESSAGES = [
-    "你好，我是一个软件工程师，我叫张明，在一家科技公司工作。我主要负责后端服务开发，使用的技术栈是 Python 和 Go。最近我们在重构一个订单系统，遇到了不少挑战。",
-    "关于订单系统的问题，主要是性能瓶颈。我们发现在高峰期，数据库连接池经常被耗尽。目前用的是 PostgreSQL，连接池大小设置的是100，但每秒峰值请求量有5000。你有什么建议吗？",
-    "谢谢你的建议。我还想问一下，我们目前的缓存策略用的是 Redis，但缓存击穿的问题很严重。热点数据过期后，大量请求直接打到数据库。我们尝试过加互斥锁，但性能下降很多。",
-    "对了，关于代码风格，我们团队更倾向于使用函数式编程的思想，尽量避免副作用。变量命名用 snake_case，文档用中文写。代码审查很严格，每个 PR 至少需要两人 review。",
-    "说到工作流程，我们每天早上9点站会，周三下午技术分享会。我一般上午写代码，下午处理 code review 和会议。晚上如果不加班，会看看技术书籍或者写写博客。",
-    "我最近在学习分布式系统的设计，正在看《数据密集型应用系统设计》这本书。之前看完了《深入理解计算机系统》，收获很大。你有什么好的分布式系统学习资料推荐吗？",
-    "目前订单系统重构的进度大概完成了60%，还剩下支付模块和库存同步模块。支付模块比较复杂，需要对接多个支付渠道。我们打算用消息队列来解耦库存同步。",
-    "消息队列我们在 Kafka 和 RabbitMQ 之间犹豫。Kafka 吞吐量高，但运维复杂；RabbitMQ 功能丰富，但性能稍差。我们的消息量大概每天1000万条，你觉得选哪个好？",
-    "我们团队有8个人，3个后端、2个前端、1个测试、1个运维，还有1个产品经理。后端老王经验最丰富，遇到难题都找他。测试小李很细心，bug检出率很高。",
-    "对了，跟我聊天的时候注意几点：我喜欢简洁直接的回答，不要太啰嗦；技术问题最好带代码示例；如果不确定的问题要说明，不要瞎编。谢谢！",
-    "补充一下，我们的监控用的是 Prometheus + Grafana，日志用 ELK Stack。最近在考虑引入链路追踪，OpenTelemetry 看起来不错，但不知道跟现有系统集成麻不麻烦。",
-    "昨天线上出了个诡异的 bug，某个接口偶发超时，但日志里看不出什么问题。后来发现是下游服务的连接数满了，但监控指标没配好，没报警。这种问题怎么预防比较好？",
+    "你好，我是一個軟體工程師，我叫張明，在一家科技公司工作。我主要負責後端服務開發，使用的技術棧是 Python 和 Go。最近我們在重構一個訂單系統，遇到了不少挑戰。",
+    "關於訂單系統的問題，主要是效能瓶頸。我們發現在高峰期，資料庫連線池經常被耗盡。目前用的是 PostgreSQL，連線池大小設定的是100，但每秒峰值請求量有5000。你有什麼建議嗎？",
+    "謝謝你的建議。我還想問一下，我們目前的快取策略用的是 Redis，但快取擊穿的問題很嚴重。熱點資料過期後，大量請求直接打到資料庫。我們嘗試過加互斥鎖，但效能下降很多。",
+    "對了，關於程式碼風格，我們團隊更傾向於使用函數語言程式設計的思想，儘量避免副作用。變數命名用 snake_case，文件用中文寫。程式碼審查很嚴格，每個 PR 至少需要兩人 review。",
+    "說到工作流程，我們每天早上9點站會，週三下午技術分享會。我一般上午寫程式碼，下午處理 code review 和會議。晚上如果不加班，會看看技術書籍或者寫寫部落格。",
+    "我最近在學習分散式系統的設計，正在看《資料密集型應用系統設計》這本書。之前看完了《深入理解計算機系統》，收穫很大。你有什麼好的分散式系統學習資料推薦嗎？",
+    "目前訂單系統重構的進度大概完成了60%，還剩下支付模組和庫存同步模組。支付模組比較複雜，需要對接多個支付渠道。我們打算用訊息佇列來解耦庫存同步。",
+    "訊息佇列我們在 Kafka 和 RabbitMQ 之間猶豫。Kafka 吞吐量高，但運維複雜；RabbitMQ 功能豐富，但效能稍差。我們的訊息量大概每天1000萬條，你覺得選哪個好？",
+    "我們團隊有8個人，3個後端、2個前端、1個測試、1個運維，還有1個產品經理。後端老王經驗最豐富，遇到難題都找他。測試小李很細心，bug檢出率很高。",
+    "對了，跟我聊天的時候注意幾點：我喜歡簡潔直接的回答，不要太囉嗦；技術問題最好帶程式碼示例；如果不確定的問題要說明，不要瞎編。謝謝！",
+    "補充一下，我們的監控用的是 Prometheus + Grafana，日誌用 ELK Stack。最近在考慮引入鏈路追蹤，OpenTelemetry 看起來不錯，但不知道跟現有系統整合麻不麻煩。",
+    "昨天線上出了個詭異的 bug，某個介面偶發超時，但日誌裡看不出什麼問題。後來發現是下游服務的連線數滿了，但監控指標沒配好，沒報警。這種問題怎麼預防比較好？",
 ]
 
-# assemble 阶段: 同用户继续对话，用于验证 assemble 是否携带了摘要上下文
+# assemble 階段: 同用戶繼續對話，用於驗證 assemble 是否攜帶了摘要上下文
 ASSEMBLE_FOLLOWUP_MESSAGES = [
     {
-        "question": "对了，我之前提到的订单系统重构进展到哪了？支付模块开始了吗？",
-        "anchor_keywords": ["订单系统", "支付模块", "60%"],
-        "hook": "assemble — latest_archive_overview 重组",
+        "question": "對了，我之前提到的訂單系統重構進展到哪了？支付模組開始了嗎？",
+        "anchor_keywords": ["訂單系統", "支付模組", "60%"],
+        "hook": "assemble — latest_archive_overview 重組",
     },
     {
-        "question": "我之前跟你说过选消息队列的事，Kafka 和 RabbitMQ 各有什么优缺点来着？",
+        "question": "我之前跟你說過選訊息佇列的事，Kafka 和 RabbitMQ 各有什麼優缺點來著？",
         "anchor_keywords": ["Kafka", "RabbitMQ"],
-        "hook": "assemble — latest_archive_overview 重组",
+        "hook": "assemble — latest_archive_overview 重組",
     },
 ]
 
-# 新用户记忆召回
+# 新使用者記憶召回
 RECALL_QUESTIONS = [
     {
-        "question": "请根据本轮测试标记 {marker} 回答：张明是做什么工作的？用什么技术栈？请简洁回答",
-        "expected_keywords": ["张明", "软件工程师", "Python", "Go"],
+        "question": "請根據本輪測試標記 {marker} 回答：張明是做什麼工作的？用什麼技術棧？請簡潔回答",
+        "expected_keywords": ["張明", "軟體工程師", "Python", "Go"],
     },
     {
-        "question": "请根据本轮测试标记 {marker} 回答：张明最近在做什么项目？遇到了什么技术挑战？请简洁回答",
-        "expected_keywords": ["订单系统", "性能瓶颈", "缓存"],
+        "question": "請根據本輪測試標記 {marker} 回答：張明最近在做什麼專案？遇到了什麼技術挑戰？請簡潔回答",
+        "expected_keywords": ["訂單系統", "效能瓶頸", "快取"],
     },
     {
-        "question": "请根据本轮测试标记 {marker} 回答：张明团队有多少人？团队里谁经验最丰富？请简洁回答",
+        "question": "請根據本輪測試標記 {marker} 回答：張明團隊有多少人？團隊裡誰經驗最豐富？請簡潔回答",
         "expected_keywords": ["8", "老王"],
     },
 ]
@@ -221,7 +221,7 @@ def test_marker(user_id: str) -> str:
 
 def chat_message_for_turn(user_id: str, index: int, message: str) -> str:
     if index == 1:
-        return f"{message}\n\n本轮 OpenViking e2e 测试标记：{test_marker(user_id)}。"
+        return f"{message}\n\n本輪 OpenViking e2e 測試標記：{test_marker(user_id)}。"
     return message
 
 
@@ -257,13 +257,13 @@ def flatten_context_text(ctx: dict | None) -> str:
     return "\n".join(part for part in chunks if part)
 
 
-# ── Token 自动发现 ────────────────────────────────────────────────────────
+# ── Token 自動發現 ────────────────────────────────────────────────────────
 
 _gateway_token: str = ""
 
 
 def discover_gateway_token() -> str:
-    """从常见路径自动发现 gateway auth token。"""
+    """從常見路徑自動發現 gateway auth token。"""
     import pathlib
 
     candidates = [
@@ -294,7 +294,7 @@ def set_gateway_token(token: str):
 
 
 def send_message(gateway_url: str, message: str, user_id: str) -> dict:
-    """通过 OpenClaw Responses API 发送消息。"""
+    """通過 OpenClaw Responses API 傳送訊息。"""
     headers = {"Content-Type": "application/json"}
     if _gateway_token:
         headers["Authorization"] = f"Bearer {_gateway_token}"
@@ -309,17 +309,17 @@ def send_message(gateway_url: str, message: str, user_id: str) -> dict:
 
 
 def extract_reply_text(data: dict) -> str:
-    """从 Responses API 响应中提取助手回复文本。"""
+    """從 Responses API 響應中提取助手回覆文本。"""
     for item in data.get("output", []):
         if item.get("type") == "message" and item.get("role") == "assistant":
             for part in item.get("content", []):
                 if part.get("type") in ("text", "output_text"):
                     return part.get("text", "")
-    return "(无回复)"
+    return "(無回覆)"
 
 
 class OpenVikingInspector:
-    """OpenViking 内部状态检查器。"""
+    """OpenViking 內部狀態檢查器。"""
 
     def __init__(self, base_url: str, api_key: str = "", agent_id: str = AGENT_ID):
         self.base_url = base_url.rstrip("/")
@@ -342,7 +342,7 @@ class OpenVikingInspector:
                 return data.get("result", data)
             return None
         except Exception as e:
-            console.print(f"[dim]GET {path} 失败: {e}[/dim]")
+            console.print(f"[dim]GET {path} 失敗: {e}[/dim]")
             return None
 
     def _post(self, path: str, body: dict | None = None, timeout: int = 30) -> dict | None:
@@ -358,7 +358,7 @@ class OpenVikingInspector:
                 return data.get("result", data)
             return None
         except Exception as e:
-            console.print(f"[dim]POST {path} 失败: {e}[/dim]")
+            console.print(f"[dim]POST {path} 失敗: {e}[/dim]")
             return None
 
     def health_check(self) -> bool:
@@ -426,9 +426,9 @@ class OpenVikingInspector:
         return []
 
     def find_session_for_user(self, user_hint: str) -> str | None:
-        """通过遍历 OV session 列表找到与当前测试关联的 session。
-        Gateway 可能使用内部 UUID 而非 user_id 作为 OV session_id，
-        因此必须检查本轮唯一 marker，不能回退到历史 session。"""
+        """通過遍歷 OV session 列表找到與當前測試關聯的 session。
+        Gateway 可能使用內部 UUID 而非 user_id 作為 OV session_id，
+        因此必須檢查本輪唯一 marker，不能回退到歷史 session。"""
         sessions = self.list_sessions()
         real_sessions = [
             s
@@ -456,7 +456,7 @@ class OpenVikingInspector:
                 score += 100
             if user_hint in text:
                 score += 20
-            if "张明" in text:
+            if "張明" in text:
                 score += 5
             if "PostgreSQL" in text:
                 score += 5
@@ -471,7 +471,7 @@ class OpenVikingInspector:
         return result if isinstance(result, list) else []
 
     def read_fs(self, uri: str) -> str | None:
-        """读取 fs 中某个文件的内容。"""
+        """讀取 fs 中某個檔案的內容。"""
         result = self._get(f"/api/v1/content/read?uri={uri}")
         if isinstance(result, str):
             return result
@@ -480,13 +480,13 @@ class OpenVikingInspector:
         return None
 
 
-# ── 渲染函数 ──────────────────────────────────────────────────────────────
+# ── 渲染函式 ──────────────────────────────────────────────────────────────
 
 
-def render_reply(text: str, title: str = "回复"):
+def render_reply(text: str, title: str = "回覆"):
     lines = text.split("\n")
     if len(lines) > 25:
-        text = "\n".join(lines[:25]) + f"\n\n... (共 {len(lines)} 行，已截断)"
+        text = "\n".join(lines[:25]) + f"\n\n... (共 {len(lines)} 行，已截斷)"
     console.print(Panel(Markdown(text), title=f"[green]{title}[/green]", border_style="green"))
 
 
@@ -498,7 +498,7 @@ def render_json(data: Any, title: str = "JSON"):
 
 def render_session_info(info: dict, title: str = "Session 信息"):
     table = Table(title=title, show_header=True)
-    table.add_column("属性", style="cyan")
+    table.add_column("屬性", style="cyan")
     table.add_column("值", style="green")
     for key, value in info.items():
         if isinstance(value, (dict, list)):
@@ -507,14 +507,14 @@ def render_session_info(info: dict, title: str = "Session 信息"):
     console.print(table)
 
 
-# ── Phase 1: 多轮对话 ────────────────────────────────────────────────────
+# ── Phase 1: 多輪對話 ────────────────────────────────────────────────────
 
 
 def run_phase_chat(gateway_url: str, user_id: str, delay: float, verbose: bool) -> tuple[int, int]:
-    """Phase 1: 多轮对话 — 测试 afterTurn 写入。"""
+    """Phase 1: 多輪對話 — 測試 afterTurn 寫入。"""
     console.print()
-    console.rule(f"[bold]Phase 1: 多轮对话 ({len(CHAT_MESSAGES)} 轮) — afterTurn 写入[/bold]")
-    console.print(f"[yellow]用户ID:[/yellow] {user_id}")
+    console.rule(f"[bold]Phase 1: 多輪對話 ({len(CHAT_MESSAGES)} 輪) — afterTurn 寫入[/bold]")
+    console.print(f"[yellow]使用者ID:[/yellow] {user_id}")
     console.print(f"[yellow]Gateway:[/yellow] {gateway_url}")
     console.print()
 
@@ -527,7 +527,7 @@ def run_phase_chat(gateway_url: str, user_id: str, delay: float, verbose: bool) 
         console.print(
             Panel(
                 msg[:200] + ("..." if len(msg) > 200 else ""),
-                title=f"[bold cyan]用户 [{i}/{total}][/bold cyan]",
+                title=f"[bold cyan]使用者 [{i}/{total}][/bold cyan]",
                 border_style="cyan",
             )
         )
@@ -544,55 +544,55 @@ def run_phase_chat(gateway_url: str, user_id: str, delay: float, verbose: bool) 
             time.sleep(delay)
 
     console.print()
-    console.print(f"[yellow]对话完成:[/yellow] {ok} 成功, {fail} 失败")
+    console.print(f"[yellow]對話完成:[/yellow] {ok} 成功, {fail} 失敗")
 
     wait = max(delay * 2, 5)
-    console.print(f"[yellow]等待 {wait:.0f}s 让 afterTurn 处理完成...[/yellow]")
+    console.print(f"[yellow]等待 {wait:.0f}s 讓 afterTurn 處理完成...[/yellow]")
     time.sleep(wait)
 
     return ok, fail
 
 
-# ── Phase 2: afterTurn 验证 ──────────────────────────────────────────────
+# ── Phase 2: afterTurn 驗證 ──────────────────────────────────────────────
 
 
 def run_phase_after_turn(openviking_url: str, user_id: str, verbose: bool) -> tuple[bool, str]:
-    """Phase 2: afterTurn 验证 — 检查 OV session 内部状态确认消息已写入。
+    """Phase 2: afterTurn 驗證 — 檢查 OV session 內部狀態確認訊息已寫入。
     返回 (success, resolved_session_id)。"""
     console.print()
-    console.rule("[bold]Phase 2: afterTurn 验证 — 检查 OV session 消息写入[/bold]")
+    console.rule("[bold]Phase 2: afterTurn 驗證 — 檢查 OV session 訊息寫入[/bold]")
     console.print()
-    console.print("[dim]验证点:[/dim]")
-    console.print("[dim]- afterTurn 应将每轮消息写入 OV session[/dim]")
+    console.print("[dim]驗證點:[/dim]")
+    console.print("[dim]- afterTurn 應將每輪訊息寫入 OV session[/dim]")
     console.print("[dim]- session.message_count > 0[/dim]")
     console.print("[dim]- pending_tokens > 0 (消息尚未 commit)[/dim]")
     console.print()
 
     inspector = OpenVikingInspector(openviking_url)
 
-    # 2.1 健康检查
-    console.print("[bold]2.1 OpenViking 健康检查[/bold]")
+    # 2.1 健康檢查
+    console.print("[bold]2.1 OpenViking 健康檢查[/bold]")
     healthy = inspector.health_check()
-    check("OpenViking 服务可达", healthy)
+    check("OpenViking 服務可達", healthy)
     if not healthy:
         return False, user_id
 
-    # 2.2 Session 发现: Gateway 可能使用内部 UUID 而非 user_id
-    console.print("\n[bold]2.2 Session 发现 & 消息计数[/bold]")
+    # 2.2 Session 發現: Gateway 可能使用內部 UUID 而非 user_id
+    console.print("\n[bold]2.2 Session 發現 & 訊息計數[/bold]")
     resolved_id = inspector.find_session_for_user(user_id)
 
     if resolved_id and resolved_id != user_id:
-        console.print(f"  [yellow]Gateway 使用内部 session_id: {resolved_id} (非 user_id)[/yellow]")
+        console.print(f"  [yellow]Gateway 使用內部 session_id: {resolved_id} (非 user_id)[/yellow]")
 
     check("Session 存在", resolved_id is not None, f"resolved_id={resolved_id}")
 
     if not resolved_id:
-        console.print("[red]OV 中没有找到任何相关 session，无法继续验证[/red]")
+        console.print("[red]OV 中沒有找到任何相關 session，無法繼續驗證[/red]")
         return False, user_id
 
     session_info = inspector.get_session(resolved_id)
     if not session_info:
-        console.print("[red]Session 详情获取失败[/red]")
+        console.print("[red]Session 詳情獲取失敗[/red]")
         return False, resolved_id
 
     if verbose:
@@ -600,11 +600,11 @@ def run_phase_after_turn(openviking_url: str, user_id: str, verbose: bool) -> tu
 
     msg_count = session_info.get("message_count", 0)
     commit_count = session_info.get("commit_count", 0)
-    # Gateway 可能在对话过程中 auto-commit，所以 message_count 可能为 0
-    # 但 commit_count > 0 表明 afterTurn 已经处理并提交了消息
+    # Gateway 可能在對話過程中 auto-commit，所以 message_count 可能為 0
+    # 但 commit_count > 0 表明 afterTurn 已經處理並提交了訊息
     has_activity = msg_count > 0 or commit_count > 0
     check(
-        "afterTurn 已处理 (message_count > 0 或 commit_count > 0)",
+        "afterTurn 已處理 (message_count > 0 或 commit_count > 0)",
         has_activity,
         f"message_count={msg_count}, commit_count={commit_count}",
     )
@@ -612,20 +612,20 @@ def run_phase_after_turn(openviking_url: str, user_id: str, verbose: bool) -> tu
     pending = session_info.get("pending_tokens", 0)
     if commit_count == 0:
         check(
-            "pending_tokens > 0 (有待 commit 的内容)",
+            "pending_tokens > 0 (有待 commit 的內容)",
             pending > 0,
             f"pending_tokens={pending}",
         )
     else:
         console.print(
-            f"  [dim]auto-commit 已触发 (commit_count={commit_count})，"
-            f"pending_tokens={pending} 属正常[/dim]"
+            f"  [dim]auto-commit 已觸發 (commit_count={commit_count})，"
+            f"pending_tokens={pending} 屬正常[/dim]"
         )
 
     auto_committed = commit_count > 0
 
-    # 2.3 检查消息内容: 通过 context API 检查（兼容 auto-commit 场景）
-    console.print("\n[bold]2.3 消息内容抽样校验[/bold]")
+    # 2.3 檢查訊息內容: 通過 context API 檢查（相容 auto-commit 場景）
+    console.print("\n[bold]2.3 訊息內容抽樣校驗[/bold]")
     ctx = inspector.get_session_context(resolved_id)
     if ctx:
         ctx_messages = ctx.get("messages", [])
@@ -633,31 +633,31 @@ def run_phase_after_turn(openviking_url: str, user_id: str, verbose: bool) -> tu
         all_text = flatten_context_text(ctx)
 
         check(
-            "context 返回内容 (messages 或 overview)",
+            "context 返回內容 (messages 或 overview)",
             len(ctx_messages) > 0 or bool(overview),
             f"messages={len(ctx_messages)}, overview_len={len(overview)}",
         )
 
-        sample_text = "张明"
-        # 如果已 auto-commit, 信息可能在 overview 里而非 messages 中
+        sample_text = "張明"
+        # 如果已 auto-commit, 資訊可能在 overview 裡而非 messages 中
         check(
-            f"内容包含特征文本「{sample_text}」",
+            f"內容包含特徵文本「{sample_text}」",
             sample_text in all_text,
-            "验证 afterTurn 写入的内容与发送一致",
+            "驗證 afterTurn 寫入的內容與傳送一致",
         )
 
         sample_text_2 = "PostgreSQL"
         check(
-            f"内容包含特征文本「{sample_text_2}」",
+            f"內容包含特徵文本「{sample_text_2}」",
             sample_text_2 in all_text,
-            "验证多轮消息写入",
+            "驗證多輪訊息寫入",
         )
 
         marker = test_marker(user_id)
         check(
-            f"内容包含本轮唯一标记「{marker}」",
+            f"內容包含本輪唯一標記「{marker}」",
             marker in all_text,
-            "确保未误选历史 session",
+            "確保未誤選歷史 session",
         )
 
         if verbose and ctx.get("stats"):
@@ -666,14 +666,14 @@ def run_phase_after_turn(openviking_url: str, user_id: str, verbose: bool) -> tu
         # 回退到 messages API
         messages = inspector.get_session_messages(resolved_id)
         if messages is not None:
-            check("能获取到 session 消息列表", True, f"共 {len(messages)} 条消息")
+            check("能獲取到 session 訊息列表", True, f"共 {len(messages)} 條訊息")
         else:
-            check("能获取到 session 消息列表", False, "GET messages 返回 None")
+            check("能獲取到 session 訊息列表", False, "GET messages 返回 None")
 
     return True, resolved_id, auto_committed
 
 
-# ── Phase 3: Commit 验证 ─────────────────────────────────────────────────
+# ── Phase 3: Commit 驗證 ─────────────────────────────────────────────────
 
 
 def run_phase_commit(
@@ -682,49 +682,49 @@ def run_phase_commit(
     verbose: bool,
     auto_committed: bool = False,
 ) -> bool:
-    """Phase 3: Commit 验证 — 触发 commit, 检查归档结构和记忆提取。"""
+    """Phase 3: Commit 驗證 — 觸發 commit, 檢查歸檔結構和記憶提取。"""
     console.print()
-    console.rule("[bold]Phase 3: Commit 验证 — 触发 session.commit()[/bold]")
+    console.rule("[bold]Phase 3: Commit 驗證 — 觸發 session.commit()[/bold]")
     console.print()
-    console.print("[dim]验证点:[/dim]")
+    console.print("[dim]驗證點:[/dim]")
     console.print("[dim]- commit 返回 status=completed/accepted[/dim]")
-    console.print("[dim]- 消息被归档或已经归档 (auto-commit)[/dim]")
-    console.print("[dim]- 提取出记忆 (memories_extracted > 0)[/dim]")
+    console.print("[dim]- 訊息被歸檔或已經歸檔 (auto-commit)[/dim]")
+    console.print("[dim]- 提取出記憶 (memories_extracted > 0)[/dim]")
     console.print(f"[dim]- 使用 session_id: {session_id}[/dim]")
     if auto_committed:
-        console.print("[yellow]注: Gateway 已触发 auto-commit, 手动 commit 可能无新内容[/yellow]")
+        console.print("[yellow]注: Gateway 已觸發 auto-commit, 手動 commit 可能無新內容[/yellow]")
     console.print()
 
     inspector = OpenVikingInspector(openviking_url)
 
-    # 3.1 执行 commit
-    console.print("[bold]3.1 执行 session.commit()[/bold]")
-    console.print("[dim]正在等待 commit 完成 (可能需要 1-2 分钟)...[/dim]")
+    # 3.1 執行 commit
+    console.print("[bold]3.1 執行 session.commit()[/bold]")
+    console.print("[dim]正在等待 commit 完成 (可能需要 1-2 分鐘)...[/dim]")
 
     commit_result = inspector.commit_session(session_id, wait=True)
     if auto_committed and not commit_result:
         check(
-            "commit 返回结果",
+            "commit 返回結果",
             True,
-            "auto-commit 已处理, 手动 commit 无新内容属正常",
+            "auto-commit 已處理, 手動 commit 無新內容屬正常",
         )
     else:
-        check("commit 返回结果", commit_result is not None)
+        check("commit 返回結果", commit_result is not None)
 
     if not commit_result:
         if auto_committed:
-            console.print("[yellow]auto-commit 已处理, 手动 commit 无新内容属正常[/yellow]")
+            console.print("[yellow]auto-commit 已處理, 手動 commit 無新內容屬正常[/yellow]")
         else:
-            console.print("[red]Commit 失败，无法继续[/red]")
+            console.print("[red]Commit 失敗，無法繼續[/red]")
             return False
 
     if commit_result:
         if verbose:
-            render_json(commit_result, "Commit 结果")
+            render_json(commit_result, "Commit 結果")
 
         status = commit_result.get("status", "unknown")
         check(
-            "commit status 为 completed 或 accepted",
+            "commit status 為 completed 或 accepted",
             status in ("completed", "accepted"),
             f"status={status}",
         )
@@ -732,30 +732,30 @@ def run_phase_commit(
         archived = commit_result.get("archived", False)
         if auto_committed and not archived:
             check(
-                "归档状态合理 (auto-commit 已处理)",
+                "歸檔狀態合理 (auto-commit 已處理)",
                 True,
-                "auto-commit 已归档, 本次 commit 无新内容",
+                "auto-commit 已歸檔, 本次 commit 無新內容",
             )
         else:
-            check("archived=true (消息已归档)", archived is True, f"archived={archived}")
+            check("archived=true (訊息已歸檔)", archived is True, f"archived={archived}")
 
         memories = commit_result.get("memories_extracted", {})
         total_mem = sum(memories.values()) if memories else 0
         if auto_committed and total_mem == 0:
             check(
-                "记忆提取状态合理 (auto-commit 已处理)",
+                "記憶提取狀態合理 (auto-commit 已處理)",
                 True,
-                "auto-commit 已提取记忆",
+                "auto-commit 已提取記憶",
             )
         else:
             check(
-                "memories_extracted > 0 (提取出记忆)",
+                "memories_extracted > 0 (提取出記憶)",
                 total_mem > 0,
                 f"total={total_mem}, categories={memories}",
             )
 
-    # 3.2 commit 后 session 状态
-    console.print("\n[bold]3.2 Session 归档状态[/bold]")
+    # 3.2 commit 後 session 狀態
+    console.print("\n[bold]3.2 Session 歸檔狀態[/bold]")
     post_session = inspector.get_session(session_id)
     if post_session:
         commit_count = post_session.get("commit_count", 0)
@@ -768,23 +768,23 @@ def run_phase_commit(
         total_memories = post_session.get("memories_extracted", {})
         total_mem_count = sum(total_memories.values()) if isinstance(total_memories, dict) else 0
         check(
-            "累计提取记忆 > 0",
+            "累計提取記憶 > 0",
             total_mem_count > 0,
             f"total={total_mem_count}, categories={total_memories}",
         )
 
         post_pending = post_session.get("pending_tokens", 0)
-        console.print(f"  [dim]commit 后 pending_tokens={post_pending}[/dim]")
+        console.print(f"  [dim]commit 後 pending_tokens={post_pending}[/dim]")
 
-    # 3.3 检查归档目录结构
-    console.print("\n[bold]3.3 归档目录结构检查[/bold]")
+    # 3.3 檢查歸檔目錄結構
+    console.print("\n[bold]3.3 歸檔目錄結構檢查[/bold]")
     ctx_after = inspector.get_session_context(session_id)
     if ctx_after:
         has_summary_archive = bool(ctx_after.get("latest_archive_overview"))
         check(
             "context 返回 latest_archive_overview",
             has_summary_archive,
-            f"overview={'有' if has_summary_archive else '无'}",
+            f"overview={'有' if has_summary_archive else '無'}",
         )
 
         if has_summary_archive:
@@ -792,19 +792,19 @@ def run_phase_commit(
             check(
                 "latest_archive_overview 非空 (摘要已生成)",
                 len(overview) > 10,
-                f"overview 长度={len(overview)} chars",
+                f"overview 長度={len(overview)} chars",
             )
             if verbose:
                 console.print(f"  [dim]overview 前 200 字: {overview[:200]}...[/dim]")
     else:
-        check("context 可调用", False)
+        check("context 可呼叫", False)
 
-    # 3.4 检查 estimatedTokens 合理性
+    # 3.4 檢查 estimatedTokens 合理性
     if ctx_after:
         stats = ctx_after.get("stats", {})
         archive_tokens = stats.get("archiveTokens", 0)
         check(
-            "archiveTokens > 0 (归档 token 计数合理)",
+            "archiveTokens > 0 (歸檔 token 計數合理)",
             archive_tokens > 0,
             f"archiveTokens={archive_tokens}",
         )
@@ -812,7 +812,7 @@ def run_phase_commit(
     return True
 
 
-# ── Phase 4: Assemble 验证 ───────────────────────────────────────────────
+# ── Phase 4: Assemble 驗證 ───────────────────────────────────────────────
 
 
 def run_phase_assemble(
@@ -823,35 +823,35 @@ def run_phase_assemble(
     delay: float,
     verbose: bool,
 ) -> bool:
-    """Phase 4: Assemble 验证 — 同用户继续对话，验证上下文从 latest archive overview 重组。"""
+    """Phase 4: Assemble 驗證 — 同用戶繼續對話，驗證上下文從 latest archive overview 重組。"""
     console.print()
-    console.rule("[bold]Phase 4: Assemble 验证 — 同用户继续对话[/bold]")
+    console.rule("[bold]Phase 4: Assemble 驗證 — 同用戶繼續對話[/bold]")
     console.print()
-    console.print("[dim]验证点:[/dim]")
+    console.print("[dim]驗證點:[/dim]")
     console.print(
-        "[dim]- 同用户对话触发 assemble(): 从 OV latest_archive_overview + active messages 重组上下文[/dim]"
+        "[dim]- 同用戶對話觸發 assemble(): 從 OV latest_archive_overview + active messages 重組上下文[/dim]"
     )
-    console.print("[dim]- 回复应能引用 Phase 1 中已被归档的信息[/dim]")
-    console.print("[dim]- context 应返回 latest_archive_overview (证明 assemble 有数据源)[/dim]")
+    console.print("[dim]- 回覆應能引用 Phase 1 中已被歸檔的資訊[/dim]")
+    console.print("[dim]- context 應返回 latest_archive_overview (證明 assemble 有資料來源)[/dim]")
     console.print(f"[dim]- OV session_id: {session_id}[/dim]")
     console.print()
 
     inspector = OpenVikingInspector(openviking_url)
 
-    # 4.1 确认 assemble 的数据源 (latest_archive_overview) 就绪
-    console.print("[bold]4.1 确认 assemble 数据源[/bold]")
+    # 4.1 確認 assemble 的資料來源 (latest_archive_overview) 就緒
+    console.print("[bold]4.1 確認 assemble 資料來源[/bold]")
     ctx = inspector.get_session_context(session_id)
     if ctx:
         has_summary_archive = bool(ctx.get("latest_archive_overview"))
         check(
             "context 返回 latest_archive_overview",
             has_summary_archive,
-            f"latest_archive_overview={'有' if has_summary_archive else '无'}",
+            f"latest_archive_overview={'有' if has_summary_archive else '無'}",
         )
     else:
         check("context 可用", False)
 
-    # 4.2 assemble budget trimming: 用极小 budget 验证裁剪
+    # 4.2 assemble budget trimming: 用極小 budget 驗證裁剪
     console.print("\n[bold]4.2 Assemble budget trimming[/bold]")
     tiny_ctx = inspector.get_session_context(session_id, token_budget=1)
     if tiny_ctx:
@@ -860,7 +860,7 @@ def run_phase_assemble(
         included = stats.get("includedArchives", 0)
         dropped = stats.get("droppedArchives", 0)
         check(
-            "budget=1 时 latest_archive_overview 被裁剪",
+            "budget=1 時 latest_archive_overview 被裁剪",
             included == 0 or dropped > 0,
             f"total={total_archives}, included={included}, dropped={dropped}",
         )
@@ -869,11 +869,11 @@ def run_phase_assemble(
             f"  [dim]activeTokens={active_tokens}, archiveTokens={stats.get('archiveTokens', 0)}[/dim]"
         )
     else:
-        check("tiny budget context 可调用", False)
+        check("tiny budget context 可呼叫", False)
 
-    # 4.3 同用户继续对话 — assemble 应重组归档上下文
-    console.print("\n[bold]4.3 同用户继续对话 — 验证 assemble 重组归档内容[/bold]")
-    console.print(f"[yellow]用户ID:[/yellow] {user_id} (同一用户，继续对话)")
+    # 4.3 同用戶繼續對話 — assemble 應重組歸檔上下文
+    console.print("\n[bold]4.3 同用戶繼續對話 — 驗證 assemble 重組歸檔內容[/bold]")
+    console.print(f"[yellow]使用者ID:[/yellow] {user_id} (同一使用者，繼續對話)")
     console.print()
 
     total = len(ASSEMBLE_FOLLOWUP_MESSAGES)
@@ -881,10 +881,10 @@ def run_phase_assemble(
         q = item["question"].format(marker=test_marker(user_id))
         keywords = item["anchor_keywords"]
 
-        console.rule(f"[dim]Assemble 验证 {i}/{total}[/dim]", style="dim")
+        console.rule(f"[dim]Assemble 驗證 {i}/{total}[/dim]", style="dim")
         console.print(
             Panel(
-                f"{q}\n\n[dim]锚点关键词: {', '.join(keywords)}[/dim]\n[dim]Hook: {item['hook']}[/dim]",
+                f"{q}\n\n[dim]錨點關鍵詞: {', '.join(keywords)}[/dim]\n[dim]Hook: {item['hook']}[/dim]",
                 title=f"[bold cyan]Assemble Q{i}[/bold cyan]",
                 border_style="cyan",
             )
@@ -899,24 +899,24 @@ def run_phase_assemble(
             hits = [kw for kw in keywords if kw.lower() in reply_lower]
             hit_rate = len(hits) / len(keywords) if keywords else 0
             check(
-                f"Assemble Q{i}: 回复包含归档内容 (命中率 >= 50%)",
+                f"Assemble Q{i}: 回覆包含歸檔內容 (命中率 >= 50%)",
                 hit_rate >= 0.5,
                 f"命中={hits}, 未命中={[k for k in keywords if k not in hits]}, rate={hit_rate:.0%}",
             )
         except Exception as e:
-            check(f"Assemble Q{i}: 发送成功", False, str(e))
+            check(f"Assemble Q{i}: 傳送成功", False, str(e))
 
         if i < total:
             time.sleep(delay)
 
-    # 4.4 对话后验证 afterTurn 继续写入 (新消息进入 active messages)
-    console.print("\n[bold]4.4 Assemble 后 afterTurn 继续写入[/bold]")
+    # 4.4 對話後驗證 afterTurn 繼續寫入 (新訊息進入 active messages)
+    console.print("\n[bold]4.4 Assemble 後 afterTurn 繼續寫入[/bold]")
     time.sleep(3)
     post_ctx = inspector.get_session_context(session_id)
     if post_ctx:
         post_msg_count = len(post_ctx.get("messages", []))
         check(
-            "继续对话后 active messages 增加",
+            "繼續對話後 active messages 增加",
             post_msg_count > 0,
             f"active messages={post_msg_count}",
         )
@@ -924,7 +924,7 @@ def run_phase_assemble(
     return True
 
 
-# ── Phase 5: SessionId 一致性验证 ────────────────────────────────────────
+# ── Phase 5: SessionId 一致性驗證 ────────────────────────────────────────
 
 
 def run_phase_session_id(
@@ -933,14 +933,14 @@ def run_phase_session_id(
     session_id: str,
     verbose: bool,
 ) -> bool:
-    """Phase 5: SessionId 一致性验证 — 确认整条链路使用统一的 sessionId。"""
+    """Phase 5: SessionId 一致性驗證 — 確認整條鏈路使用統一的 sessionId。"""
     console.print()
-    console.rule("[bold]Phase 5: SessionId 一致性验证[/bold]")
+    console.rule("[bold]Phase 5: SessionId 一致性驗證[/bold]")
     console.print()
-    console.print("[dim]验证点:[/dim]")
-    console.print("[dim]- 整条链路使用同一个 OV session_id[/dim]")
-    console.print("[dim]- 不存在以 sessionKey 变体为 ID 的残留 session[/dim]")
-    console.print("[dim]- context 用 session_id 可查到数据[/dim]")
+    console.print("[dim]驗證點:[/dim]")
+    console.print("[dim]- 整條鏈路使用同一個 OV session_id[/dim]")
+    console.print("[dim]- 不存在以 sessionKey 變體為 ID 的殘留 session[/dim]")
+    console.print("[dim]- context 用 session_id 可查到資料[/dim]")
     console.print(f"[dim]- resolved session_id: {session_id}[/dim]")
     console.print()
 
@@ -955,8 +955,8 @@ def run_phase_session_id(
         f"user_id={user_id}",
     )
 
-    # 5.2 不存在以 sessionKey 变体为 ID 的 session
-    console.print("\n[bold]5.2 无 sessionKey 残留[/bold]")
+    # 5.2 不存在以 sessionKey 變體為 ID 的 session
+    console.print("\n[bold]5.2 無 sessionKey 殘留[/bold]")
     stale_variants = [
         f"sk:{user_id}",
         f"sessionKey:{user_id}",
@@ -966,30 +966,30 @@ def run_phase_session_id(
         stale = inspector.get_session(variant)
         is_absent = stale is None or stale.get("message_count", 0) == 0
         check(
-            f"不存在残留 session「{variant}」",
+            f"不存在殘留 session「{variant}」",
             is_absent,
-            "旧 sessionKey 映射应已移除" if is_absent else f"发现残留: {stale}",
+            "舊 sessionKey 對映應已移除" if is_absent else f"發現殘留: {stale}",
         )
 
-    # 5.3 context 用 session_id 能查到数据
-    console.print("\n[bold]5.3 同一 sessionId 查询归档[/bold]")
+    # 5.3 context 用 session_id 能查到資料
+    console.print("\n[bold]5.3 同一 sessionId 查詢歸檔[/bold]")
     ctx = inspector.get_session_context(session_id)
     if ctx:
         has_data = bool(ctx.get("latest_archive_overview")) or len(ctx.get("messages", [])) > 0
         check(
-            "context(session_id) 返回数据",
+            "context(session_id) 返回資料",
             has_data,
-            f"overview={'有' if ctx.get('latest_archive_overview') else '无'}, messages={len(ctx.get('messages', []))}",
+            f"overview={'有' if ctx.get('latest_archive_overview') else '無'}, messages={len(ctx.get('messages', []))}",
         )
     else:
-        check("context(session_id) 可调用", False)
+        check("context(session_id) 可呼叫", False)
 
-    # 5.4 验证 commit 也是用同一 sessionId (session 有 commit_count > 0)
+    # 5.4 驗證 commit 也是用同一 sessionId (session 有 commit_count > 0)
     console.print("\n[bold]5.4 Commit 使用同一 sessionId[/bold]")
     if session:
         cc = session.get("commit_count", 0)
         check(
-            "session 有 commit 记录",
+            "session 有 commit 記錄",
             cc > 0,
             f"commit_count={cc}",
         )
@@ -997,22 +997,22 @@ def run_phase_session_id(
     return True
 
 
-# ── Phase 6: 新用户记忆召回 ──────────────────────────────────────────────
+# ── Phase 6: 新使用者記憶召回 ──────────────────────────────────────────────
 
 
 def run_phase_recall(gateway_url: str, user_id: str, delay: float, verbose: bool) -> list:
-    """Phase 6: 新用户记忆召回 — 验证 before_prompt_build auto-recall。"""
+    """Phase 6: 新使用者記憶召回 — 驗證 before_prompt_build auto-recall。"""
     console.print()
-    console.rule(f"[bold]Phase 6: 新用户记忆召回 ({len(RECALL_QUESTIONS)} 轮) — auto-recall[/bold]")
+    console.rule(f"[bold]Phase 6: 新使用者記憶召回 ({len(RECALL_QUESTIONS)} 輪) — auto-recall[/bold]")
     console.print()
-    console.print("[dim]验证点:[/dim]")
-    console.print("[dim]- 新用户 (新 session) 发送问题[/dim]")
-    console.print("[dim]- before_prompt_build 通过 memory search 注入相关记忆[/dim]")
-    console.print("[dim]- 回复应包含 Phase 1 对话中的关键信息[/dim]")
+    console.print("[dim]驗證點:[/dim]")
+    console.print("[dim]- 新使用者 (新 session) 傳送問題[/dim]")
+    console.print("[dim]- before_prompt_build 通過 memory search 注入相關記憶[/dim]")
+    console.print("[dim]- 回覆應包含 Phase 1 對話中的關鍵資訊[/dim]")
     console.print()
 
     verify_user = f"{user_id}-recall-{uuid.uuid4().hex[:4]}"
-    console.print(f"[yellow]验证用户:[/yellow] {verify_user} (新 session)")
+    console.print(f"[yellow]驗證使用者:[/yellow] {verify_user} (新 session)")
     console.print()
 
     results = []
@@ -1025,7 +1025,7 @@ def run_phase_recall(gateway_url: str, user_id: str, delay: float, verbose: bool
         console.rule(f"[dim]Recall {i}/{total}[/dim]", style="dim")
         console.print(
             Panel(
-                f"{q}\n\n[dim]期望关键词: {', '.join(expected)}[/dim]",
+                f"{q}\n\n[dim]期望關鍵詞: {', '.join(expected)}[/dim]",
                 title=f"[bold cyan]Recall Q{i}[/bold cyan]",
                 border_style="cyan",
             )
@@ -1042,13 +1042,13 @@ def run_phase_recall(gateway_url: str, user_id: str, delay: float, verbose: bool
             success = hit_rate >= 0.5
 
             check(
-                f"Recall Q{i}: 关键词命中率 >= 50%",
+                f"Recall Q{i}: 關鍵詞命中率 >= 50%",
                 success,
                 f"命中={hits}, rate={hit_rate:.0%}",
             )
             results.append({"question": q, "hits": hits, "hit_rate": hit_rate, "success": success})
         except Exception as e:
-            check(f"Recall Q{i}: 发送成功", False, str(e))
+            check(f"Recall Q{i}: 傳送成功", False, str(e))
             results.append({"question": q, "hits": [], "hit_rate": 0, "success": False})
 
         if i < total:
@@ -1057,56 +1057,56 @@ def run_phase_recall(gateway_url: str, user_id: str, delay: float, verbose: bool
     return results
 
 
-# ── 完整测试 ──────────────────────────────────────────────────────────────
+# ── 完整測試 ──────────────────────────────────────────────────────────────
 
 
 def run_full_test(gateway_url: str, openviking_url: str, user_id: str, delay: float, verbose: bool):
     console.print()
     console.print(
         Panel.fit(
-            f"[bold]OpenClaw 记忆链路完整测试[/bold]\n\n"
+            f"[bold]OpenClaw 記憶鏈路完整測試[/bold]\n\n"
             f"Gateway: {gateway_url}\n"
             f"OpenViking: {openviking_url}\n"
             f"User ID: {user_id}\n"
-            f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            title="测试信息",
+            f"時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            title="測試資訊",
         )
     )
 
     # Phase 1: Chat
     chat_ok, chat_fail = run_phase_chat(gateway_url, user_id, delay, verbose)
 
-    # Phase 2: afterTurn — 返回实际的 OV session_id
+    # Phase 2: afterTurn — 返回實際的 OV session_id
     _, resolved_session_id, auto_committed = run_phase_after_turn(openviking_url, user_id, verbose)
 
     # Phase 3: Commit
     run_phase_commit(openviking_url, resolved_session_id, verbose, auto_committed)
 
-    console.print("\n[yellow]等待 10s 让记忆提取完成...[/yellow]")
+    console.print("\n[yellow]等待 10s 讓記憶提取完成...[/yellow]")
     time.sleep(10)
 
-    # Phase 4: Assemble (同用户继续)
+    # Phase 4: Assemble (同用戶繼續)
     run_phase_assemble(gateway_url, openviking_url, user_id, resolved_session_id, delay, verbose)
 
     # Phase 5: SessionId 一致性
     run_phase_session_id(openviking_url, user_id, resolved_session_id, verbose)
 
-    # Phase 6: 新用户召回
+    # Phase 6: 新使用者召回
     run_phase_recall(gateway_url, user_id, delay, verbose)
 
-    # ── 汇总报告 ──────────────────────────────────────────────────────────
+    # ── 彙總報告 ──────────────────────────────────────────────────────────
     console.print()
-    console.rule("[bold]测试报告[/bold]")
+    console.rule("[bold]測試報告[/bold]")
 
     passed = sum(1 for a in assertions if a["ok"])
     failed = sum(1 for a in assertions if not a["ok"])
     total = len(assertions)
 
-    table = Table(title=f"断言结果: {passed}/{total} 通过")
+    table = Table(title=f"斷言結果: {passed}/{total} 通過")
     table.add_column("#", style="bold", width=4)
-    table.add_column("状态", width=6)
-    table.add_column("断言", max_width=60)
-    table.add_column("详情", style="dim", max_width=50)
+    table.add_column("狀態", width=6)
+    table.add_column("斷言", max_width=60)
+    table.add_column("詳情", style="dim", max_width=50)
 
     for i, a in enumerate(assertions, 1):
         status = "[green]PASS[/green]" if a["ok"] else "[red]FAIL[/red]"
@@ -1114,22 +1114,22 @@ def run_full_test(gateway_url: str, openviking_url: str, user_id: str, delay: fl
 
     console.print(table)
 
-    # 按阶段汇总
-    tree = Tree(f"[bold]通过: {passed}/{total}, 失败: {failed}[/bold]")
-    tree.add(f"Phase 1: 多轮对话 — {chat_ok} 成功 / {chat_fail} 失败")
+    # 按階段彙總
+    tree = Tree(f"[bold]通過: {passed}/{total}, 失敗: {failed}[/bold]")
+    tree.add(f"Phase 1: 多輪對話 — {chat_ok} 成功 / {chat_fail} 失敗")
 
     fail_list = [a for a in assertions if not a["ok"]]
     if fail_list:
-        fail_branch = tree.add(f"[red]失败断言 ({len(fail_list)})[/red]")
+        fail_branch = tree.add(f"[red]失敗斷言 ({len(fail_list)})[/red]")
         for a in fail_list:
             fail_branch.add(f"[red]FAIL[/red] {a['label']}")
 
     console.print(tree)
 
     if failed == 0:
-        console.print("\n[green bold]全部通过！端到端链路验证成功。[/green bold]")
+        console.print("\n[green bold]全部通過！端到端鏈路驗證成功。[/green bold]")
     else:
-        console.print(f"\n[red bold]有 {failed} 个断言失败，请检查上方详情。[/red bold]")
+        console.print(f"\n[red bold]有 {failed} 個斷言失敗，請檢查上方詳情。[/red bold]")
 
 
 # ── 入口 ───────────────────────────────────────────────────────────────────
@@ -1138,7 +1138,7 @@ def run_full_test(gateway_url: str, openviking_url: str, user_id: str, delay: fl
 def main():
     global AGENT_ID
     parser = argparse.ArgumentParser(
-        description="OpenClaw 记忆链路完整测试",
+        description="OpenClaw 記憶鏈路完整測試",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
@@ -1153,45 +1153,45 @@ def main():
     parser.add_argument(
         "--gateway",
         default=DEFAULT_GATEWAY,
-        help=f"OpenClaw Gateway 地址 (默认: {DEFAULT_GATEWAY})",
+        help=f"OpenClaw Gateway 地址 (預設: {DEFAULT_GATEWAY})",
     )
     parser.add_argument(
         "--openviking",
         default=DEFAULT_OPENVIKING,
-        help=f"OpenViking 服务地址 (默认: {DEFAULT_OPENVIKING})",
+        help=f"OpenViking 服務地址 (預設: {DEFAULT_OPENVIKING})",
     )
     parser.add_argument(
         "--user-id",
         default=USER_ID,
-        help="测试用户ID (默认: 随机生成)",
+        help="測試使用者ID (預設: 隨機生成)",
     )
     parser.add_argument(
         "--phase",
         choices=["all", "chat", "afterTurn", "commit", "assemble", "session-id", "recall"],
         default="all",
-        help="运行阶段 (默认: all)",
+        help="執行階段 (預設: all)",
     )
     parser.add_argument(
         "--delay",
         type=float,
         default=2.0,
-        help="轮次间等待秒数 (默认: 2)",
+        help="輪次間等待秒數 (預設: 2)",
     )
     parser.add_argument(
         "--token",
         default="",
-        help="Gateway auth token (默认: 自动从 openclaw.json 发现)",
+        help="Gateway auth token (預設: 自動從 openclaw.json 發現)",
     )
     parser.add_argument(
         "--agent-id",
         default=AGENT_ID,
-        help=f"OpenViking agent ID (默认: {AGENT_ID})",
+        help=f"OpenViking agent ID (預設: {AGENT_ID})",
     )
     parser.add_argument(
         "--verbose",
         "-v",
         action="store_true",
-        help="详细输出",
+        help="詳細輸出",
     )
     args = parser.parse_args()
 
@@ -1204,7 +1204,7 @@ def main():
 
     AGENT_ID = args.agent_id
 
-    console.print("[bold]OpenClaw 记忆链路测试[/bold]")
+    console.print("[bold]OpenClaw 記憶鏈路測試[/bold]")
     console.print(f"[yellow]Gateway:[/yellow] {gateway_url}")
     console.print(f"[yellow]OpenViking:[/yellow] {openviking_url}")
     console.print(f"[yellow]User ID:[/yellow] {user_id}")
@@ -1232,16 +1232,16 @@ def main():
     elif args.phase == "recall":
         run_phase_recall(gateway_url, user_id, args.delay, args.verbose)
 
-    # 打印最终断言统计
+    # 列印最終斷言統計
     if assertions:
         passed = sum(1 for a in assertions if a["ok"])
         failed = sum(1 for a in assertions if not a["ok"])
         total = len(assertions)
-        console.print(f"\n[yellow]断言统计: {passed}/{total} 通过[/yellow]")
+        console.print(f"\n[yellow]斷言統計: {passed}/{total} 通過[/yellow]")
         if failed:
             sys.exit(1)
 
-    console.print("\n[yellow]测试结束。[/yellow]")
+    console.print("\n[yellow]測試結束。[/yellow]")
 
 
 if __name__ == "__main__":

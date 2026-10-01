@@ -1,122 +1,122 @@
-# OpenViking 本地 Embedding Llama-cpp 设计文档
+# OpenViking 本地 Embedding Llama-cpp 設計文件
 
 Date: 2026-04-11
-Status: 已批准进入实现
+Status: 已批准進入實現
 
-## 目标
+## 目標
 
-为 OpenViking 增加内置的本地 dense embedding 能力，并满足以下产品行为：
+為 OpenViking 增加內建的本地 dense embedding 能力，並滿足以下產品行為：
 
-- 当用户没有显式配置 `embedding` 时，OpenViking 默认使用本地 embedding backend
-- 默认本地模型为 `bge-small-zh-v1.5-f16`
-- 本地推理基于 `llama-cpp-python` 加载 GGUF 模型
-- 本地推理依赖不放入主依赖，而是通过 optional extra 单独分发，降低安装风险
+- 當用戶沒有顯式配置 `embedding` 時，OpenViking 預設使用本地 embedding backend
+- 預設本地模型為 `bge-small-zh-v1.5-f16`
+- 本地推理基於 `llama-cpp-python` 載入 GGUF 模型
+- 本地推理依賴不放入主依賴，而是通過 optional extra 單獨分發，降低安裝風險
 
-最终效果是：在不改变“默认走本地 embedding”这一产品目标的前提下，让方案具备可实现性和可维护性。
+最終效果是：在不改變“預設走本地 embedding”這一產品目標的前提下，讓方案具備可實現性和可維護性。
 
-## 范围
+## 範圍
 
-本次设计包含：
+本次設計包含：
 
 - 新增 `embedding.backend = "local"` backend
-- 当用户未提供 embedding 配置时，自动生成隐式本地 embedding 配置
-- 基于 `llama-cpp-python` 的 dense embedder
-- 默认模型 `bge-small-zh-v1.5-f16`
-- 模型路径解析、下载和缓存目录管理
-- query/document 双路编码语义
-- collection 元数据校验和 rebuild 规则
-- 启动期校验与错误提示
-- 测试方案和 benchmark 预留
+- 當用戶未提供 embedding 配置時，自動生成隱式本地 embedding 配置
+- 基於 `llama-cpp-python` 的 dense embedder
+- 預設模型 `bge-small-zh-v1.5-f16`
+- 模型路徑解析、下載和快取目錄管理
+- query/document 雙路編碼語義
+- collection 後設資料校驗和 rebuild 規則
+- 啟動期校驗與錯誤提示
+- 測試方案和 benchmark 預留
 
-本次设计不包含：
+本次設計不包含：
 
 - 本地 sparse embedding
 - 本地 hybrid embedding
-- 本地失败后静默回退到远程 provider
-- 运行时自动安装依赖
-- 替换现有远程 provider
+- 本地失敗後靜默回退到遠端 provider
+- 執行時自動安裝依賴
+- 替換現有遠端 provider
 
-## 决策摘要
+## 決策摘要
 
-OpenViking 采用以下组合策略：
+OpenViking 採用以下組合策略：
 
-1. 产品默认行为：如果用户没有配置 embedding，OpenViking 会隐式选择本地 embedding backend。
-2. 依赖分发策略：`llama-cpp-python` 不进入主依赖，而是通过 `openviking[local-embed]` 之类的 optional extra 分发。
-3. 默认本地模型：`bge-small-zh-v1.5-f16`。
-4. 失败策略：如果系统默认选择了本地 embedding，但本地依赖或模型不可用，则直接报错，并给出清晰恢复指引；不会静默回退到远程模型。
+1. 產品預設行為：如果使用者沒有配置 embedding，OpenViking 會隱式選擇本地 embedding backend。
+2. 依賴分發策略：`llama-cpp-python` 不進入主依賴，而是通過 `openviking[local-embed]` 之類的 optional extra 分發。
+3. 預設本地模型：`bge-small-zh-v1.5-f16`。
+4. 失敗策略：如果系統預設選擇了本地 embedding，但本地依賴或模型不可用，則直接報錯，並給出清晰恢復指引；不會靜默回退到遠端模型。
 
-这和 QMD 的做法不完全相同。QMD 是 Node CLI 产品，可以把 `node-llama-cpp` 作为主依赖；而 OpenViking 是 Python SDK 和服务组件，如果让原生依赖阻断主包安装，代价会更高。
+這和 QMD 的做法不完全相同。QMD 是 Node CLI 產品，可以把 `node-llama-cpp` 作為主依賴；而 OpenViking 是 Python SDK 和服務元件，如果讓原生依賴阻斷主包安裝，代價會更高。
 
-## 为什么这样设计
+## 為什麼這樣設計
 
-调研结论和当前代码约束基本指向同一个方向：
+調研結論和當前程式碼約束基本指向同一個方向：
 
-- QMD 证明了“默认本地 embedding”这个产品方向是成立的。
-- OpenClaw / ArkClaw 证明了基于 GGUF 的本地 memory search 有明确用户价值。
-- OpenViking 当前架构决定了 embedding 初始化失败会在启动期暴露，而不是延后到查询时。
-- 在 Python 生态里，原生依赖失败的成本通常比 QMD 所在的 npm/Node 生态更高。
+- QMD 證明了“預設本地 embedding”這個產品方向是成立的。
+- OpenClaw / ArkClaw 證明了基於 GGUF 的本地 memory search 有明確使用者價值。
+- OpenViking 當前架構決定了 embedding 初始化失敗會在啟動期暴露，而不是延後到查詢時。
+- 在 Python 生態裡，原生依賴失敗的成本通常比 QMD 所在的 npm/Node 生態更高。
 
-因此，这个设计是在保留产品目标的前提下，尽量缩小原生依赖失败的影响范围。
+因此，這個設計是在保留產品目標的前提下，儘量縮小原生依賴失敗的影響範圍。
 
-## 用户可见行为
+## 使用者可見行為
 
-### 默认行为
+### 預設行為
 
-如果配置中没有 `embedding`：
+如果配置中沒有 `embedding`：
 
-- OpenViking 自动生成一份隐式 local dense embedding 配置
-- backend 设置为 `local`
-- model 设置为 `bge-small-zh-v1.5-f16`
-- dimension 设置为该模型对应维度
+- OpenViking 自動生成一份隱式 local dense embedding 配置
+- backend 設定為 `local`
+- model 設定為 `bge-small-zh-v1.5-f16`
+- dimension 設定為該模型對應維度
 
-用户应感知到的行为是：“本地 embedding 是默认值”。
+使用者應感知到的行為是：“本地 embedding 是預設值”。
 
-### 显式行为
+### 顯式行為
 
-如果用户显式配置了 `embedding`，则始终以显式配置为准，包括：
+如果使用者顯式配置了 `embedding`，則始終以顯式配置為準，包括：
 
-- 显式 `backend: "local"`
-- 显式远程 backend，例如 `openai`、`volcengine`、`vikingdb`
-- 显式 `model_path`
-- 显式 `cache_dir`
+- 顯式 `backend: "local"`
+- 顯式遠端 backend，例如 `openai`、`volcengine`、`vikingdb`
+- 顯式 `model_path`
+- 顯式 `cache_dir`
 
-不应存在覆盖用户配置的隐式重写。
+不應存在覆蓋使用者配置的隱式重寫。
 
-### 安装体验
+### 安裝體驗
 
-基础安装：
+基礎安裝：
 
 ```bash
 pip install openviking
 ```
 
-启用本地 embedding：
+啟用本地 embedding：
 
 ```bash
 pip install "openviking[local-embed]"
 ```
 
-如果用户依赖默认本地行为，但没有安装 local extra，系统必须在启动时给出可执行的错误提示，至少包含：
+如果使用者依賴預設本地行為，但沒有安裝 local extra，系統必須在啟動時給出可執行的錯誤提示，至少包含：
 
-- 当前默认启用了本地 embedding
+- 當前預設啟用了本地 embedding
 - 缺少 `llama-cpp-python`
-- 启用本地 embedding 的安装命令
-- 如果用户想改成远程 provider，应如何显式配置
+- 啟用本地 embedding 的安裝命令
+- 如果使用者想改成遠端 provider，應如何顯式配置
 
-## 配置设计
+## 配置設計
 
-在 `EmbeddingModelConfig` 中新增 `local` 作为合法 backend。
+在 `EmbeddingModelConfig` 中新增 `local` 作為合法 backend。
 
 本地 dense backend 支持的字段：
 
 - `backend`: `"local"`
-- `model`: 逻辑模型名，默认 `bge-small-zh-v1.5-f16`
-- `model_path`: 可选，显式指定 GGUF 文件路径
-- `cache_dir`: 可选，缓存根目录，默认 `~/.cache/openviking/models/`
-- `dimension`: 可选，但通常应由内置模型注册表推导
-- `batch_size`: 预留给后续批量 embedding
+- `model`: 邏輯模型名，預設 `bge-small-zh-v1.5-f16`
+- `model_path`: 可選，顯式指定 GGUF 檔案路徑
+- `cache_dir`: 可選，快取根目錄，預設 `~/.cache/openviking/models/`
+- `dimension`: 可選，但通常應由內建模型登錄檔推導
+- `batch_size`: 預留給後續批次 embedding
 
-建议配置示例：
+建議配置示例：
 
 ```json
 {
@@ -130,7 +130,7 @@ pip install "openviking[local-embed]"
 }
 ```
 
-显式模型路径示例：
+顯式模型路徑示例：
 
 ```json
 {
@@ -144,289 +144,289 @@ pip install "openviking[local-embed]"
 }
 ```
 
-## 架构设计
+## 架構設計
 
-### 新增组件
+### 新增元件
 
-新增一个本地 dense embedder 实现，例如：
+新增一個本地 dense embedder 實現，例如：
 
 - `openviking/models/embedder/local_embedders.py`
 - `LocalDenseEmbedder`
 
-其职责包括：
+其職責包括：
 
-- 校验 `llama-cpp-python` 是否可用
-- 将逻辑模型名解析为 GGUF 模型规格
-- 解析或下载模型文件
+- 校驗 `llama-cpp-python` 是否可用
+- 將邏輯模型名解析為 GGUF 模型規格
+- 解析或下載模型檔案
 - 初始化 llama embedding context
-- 提供 query/document 双路 embedding 方法
-- 返回模型维度
-- 在 `close()` 时释放本地资源
+- 提供 query/document 雙路 embedding 方法
+- 返回模型維度
+- 在 `close()` 時釋放本地資源
 
-### Factory 与配置改造
+### Factory 與配置改造
 
 需要修改：
 
 - `EmbeddingModelConfig.validate_config()` 以接受 `backend == "local"`
 - `EmbeddingConfig._create_embedder()` 以支持 `("local", "dense")`
-- 默认配置生成逻辑，使“缺失 embedding 配置”自动变成 local dense
+- 預設配置生成邏輯，使“缺失 embedding 配置”自動變成 local dense
 
-### 模型注册表
+### 模型登錄檔
 
-新增一个内置本地模型注册表。第一版可以先做成简单映射，按逻辑模型名索引：
+新增一個內建本地模型登錄檔。第一版可以先做成簡單對映，按邏輯模型名索引：
 
-- 逻辑模型名
-- GGUF 下载 URL 或 HuggingFace 定位信息
-- 预期维度
-- 推荐 prompt 规则
-- 可选的目标文件名
+- 邏輯模型名
+- GGUF 下載 URL 或 HuggingFace 定位資訊
+- 預期維度
+- 推薦 prompt 規則
+- 可選的目標檔名
 
-首个内置模型为：
+首個內建模型為：
 
 - `bge-small-zh-v1.5-f16`
 
-## Query / Document 双路编码
+## Query / Document 雙路編碼
 
-这部分不是可选优化，而是本方案必须处理的设计点。
+這部分不是可選最佳化，而是本方案必須處理的設計點。
 
-BGE/E5 一类模型是检索导向模型，通常需要区分：
+BGE/E5 一類模型是檢索導向模型，通常需要區分：
 
-- query：用户输入的搜索词或问题
-- document：被存储和检索的文本块
+- query：使用者輸入的搜尋詞或問題
+- document：被儲存和檢索的文本塊
 
-OpenViking 当前只有 `embed(text)`，这不足以表达这种语义差异。
+OpenViking 當前只有 `embed(text)`，這不足以表達這種語義差異。
 
-设计上新增显式接口：
+設計上新增顯式介面：
 
 - `embed_query(text: str) -> EmbedResult`
 - `embed_document(text: str) -> EmbedResult`
 
-为了兼容现有代码，`embed(text)` 可以保留为一个薄封装，但内部必须带角色语义。新的检索代码应调用 `embed_query()`，新的入库代码应调用 `embed_document()`。
+為了相容現有程式碼，`embed(text)` 可以保留為一個薄封裝，但內部必須帶角色語義。新的檢索程式碼應呼叫 `embed_query()`，新的入庫程式碼應呼叫 `embed_document()`。
 
-query/document 的格式规则必须封装在本地 embedder 内部，而不是散落在业务层拼装。
+query/document 的格式規則必須封裝在本地 embedder 內部，而不是散落在業務層拼裝。
 
-## 模型解析与下载流程
+## 模型解析與下載流程
 
-### 解析顺序
+### 解析順序
 
-1. 如果配置了 `model_path`，直接使用该路径。
-2. 否则通过内置本地模型注册表解析 `model`。
-3. 如果目标文件不存在，则下载到 `cache_dir`。
-4. 用解析后的 GGUF 文件初始化 `llama-cpp-python`。
+1. 如果配置了 `model_path`，直接使用該路徑。
+2. 否則通過內建本地模型登錄檔解析 `model`。
+3. 如果目標檔案不存在，則下載到 `cache_dir`。
+4. 用解析後的 GGUF 檔案初始化 `llama-cpp-python`。
 
-### 缓存目录
+### 快取目錄
 
-默认目录：
+預設目錄：
 
 - `~/.cache/openviking/models/`
 
-行为要求：
+行為要求：
 
-- 目录不存在时自动创建
-- 下载后的 GGUF 文件保存在这里
-- 如果目标文件已存在，则不重复下载
+- 目錄不存在時自動建立
+- 下載後的 GGUF 檔案儲存在這裡
+- 如果目標檔案已存在，則不重複下載
 
-### 下载策略
+### 下載策略
 
 第一版需要支持：
 
-- 可读性好的错误输出
-- 稳定可预测的文件命名
-- 失败后可手动重试
+- 可讀性好的錯誤輸出
+- 穩定可預測的檔案命名
+- 失敗後可手動重試
 
-第一版暂不要求：
+第一版暫不要求：
 
-- 断点续传
-- 多镜像源自动切换
-- 后台异步下载器
+- 斷點續傳
+- 多映象源自動切換
+- 後臺非同步下載器
 
-## 启动时机与失败行为
+## 啟動時機與失敗行為
 
-OpenViking 当前在 client 启动时就初始化 embedder，本地方案保持这一行为。
+OpenViking 當前在 client 啟動時就初始化 embedder，本地方案保持這一行為。
 
-因此，下面这些问题都会在启动期直接暴露：
+因此，下面這些問題都會在啟動期直接暴露：
 
-- 没有安装 local extra
-- `llama-cpp-python` import 失败
-- 模型文件缺失且下载失败
-- GGUF 文件存在但加载失败
-- 当前 collection 元数据与配置模型不一致
+- 沒有安裝 local extra
+- `llama-cpp-python` import 失敗
+- 模型檔案缺失且下載失敗
+- GGUF 檔案存在但載入失敗
+- 當前 collection 後設資料與配置模型不一致
 
-### 错误处理规则
+### 錯誤處理規則
 
-缺少本地依赖：
+缺少本地依賴：
 
-- 直接抛出明确的配置/运行时错误
-- 错误信息中必须包含：缺失包名、安装命令、切换远程 provider 的方法
+- 直接丟擲明確的配置/執行時錯誤
+- 錯誤資訊中必須包含：缺失包名、安裝命令、切換遠端 provider 的方法
 
-模型下载失败：
+模型下載失敗：
 
-- 抛出包含逻辑模型名、解析 URL、缓存目录和原始异常的错误
+- 丟擲包含邏輯模型名、解析 URL、快取目錄和原始異常的錯誤
 
-模型加载失败：
+模型載入失敗：
 
-- 抛出 GGUF 不兼容、文件损坏或当前运行环境不支持的错误
+- 丟擲 GGUF 不相容、檔案損壞或當前執行環境不支援的錯誤
 
-元数据不一致：
+後設資料不一致：
 
-- 抛出“当前 embedding 设置与已有索引不兼容，需要 rebuild”的错误
+- 丟擲“當前 embedding 設定與已有索引不相容，需要 rebuild”的錯誤
 
-不允许静默回退：
+不允許靜默回退：
 
-- 本地初始化失败时，不得悄悄切换到 `openai`、`volcengine` 或 `vikingdb`
+- 本地初始化失敗時，不得悄悄切換到 `openai`、`volcengine` 或 `vikingdb`
 
-## Collection 元数据与重建规则
+## Collection 後設資料與重建規則
 
-当前系统只在写入时校验向量维度，这在本地模型成为默认值之后是不够的。
+當前系統只在寫入時校驗向量維度，這在本地模型成為預設值之後是不夠的。
 
-需要至少持久化以下元数据：
+需要至少持久化以下後設資料：
 
 - `embedding_backend`
 - `embedding_model`
 - `embedding_dimension`
 - `embedding_model_identity`
 
-其中 `embedding_model_identity` 用于区分“看起来模型名相同，但实际模型文件不同”的情况，可以采用：
+其中 `embedding_model_identity` 用於區分“看起來模型名相同，但實際模型檔案不同”的情況，可以採用：
 
-- 解析后的模型路径
-- 模型路径哈希
+- 解析後的模型路徑
+- 模型路徑雜湊
 - 文件哈希（如果成本可接受）
 
-### 重建触发条件
+### 重建觸發條件
 
-只要以下任一项发生变化：
+只要以下任一項發生變化：
 
 - backend
 - model
 - dimension
 - model identity
 
-都应判定现有向量不可兼容。系统需要：
+都應判定現有向量不可相容。系統需要：
 
-- 在启动时直接报错并提示 rebuild，或
-- 在用户显式触发时执行 rebuild 流程
+- 在啟動時直接報錯並提示 rebuild，或
+- 在使用者顯式觸發時執行 rebuild 流程
 
-第一版建议采用显式 rebuild，而不是隐式迁移。
+第一版建議採用顯式 rebuild，而不是隱式遷移。
 
-## 数据流改造
+## 資料流改造
 
-### 入库流程
+### 入庫流程
 
-当前流程：
+當前流程：
 
-- 语义处理得到文本
-- 队列消费者调用 `embed()`
+- 語義處理得到文本
+- 佇列消費者呼叫 `embed()`
 
-改造后流程：
+改造後流程：
 
-- 队列消费者调用 `embed_document()`
-- 本地 embedder 自动套用 document 侧规则
-- 向量写入时附带与当前模型一致的 collection 元数据
+- 佇列消費者呼叫 `embed_document()`
+- 本地 embedder 自動套用 document 側規則
+- 向量寫入時附帶與當前模型一致的 collection 後設資料
 
-### 检索流程
+### 檢索流程
 
-当前流程：
+當前流程：
 
-- retriever 调用 `embed()`
+- retriever 呼叫 `embed()`
 
-改造后流程：
+改造後流程：
 
-- retriever 调用 `embed_query()`
-- 本地 embedder 自动套用 query 侧规则
-- 检索时使用与 document 同体系生成的向量
+- retriever 呼叫 `embed_query()`
+- 本地 embedder 自動套用 query 側規則
+- 檢索時使用與 document 同體系生成的向量
 
-## 开发顺序
+## 開發順序
 
-1. 增加 `local` backend 的配置校验和 factory 注册。
-2. 增加“缺失 embedding 配置时默认生成 local dense 配置”的逻辑。
-3. 实现基于 `llama-cpp-python` 的 `LocalDenseEmbedder`。
-4. 增加内置本地模型注册表，并接入 `bge-small-zh-v1.5-f16`。
-5. 增加模型路径解析、缓存目录和自动下载逻辑。
-6. 增加 `embed_query()` / `embed_document()` 双路接口。
-7. 持久化 collection embedding 元数据，并补一致性检查。
-8. 增加 rebuild-required 错误流。
-9. 更新用户文档、示例配置和安装说明。
+1. 增加 `local` backend 的配置校驗和 factory 註冊。
+2. 增加“缺失 embedding 配置時預設生成 local dense 配置”的邏輯。
+3. 實現基於 `llama-cpp-python` 的 `LocalDenseEmbedder`。
+4. 增加內建本地模型登錄檔，並接入 `bge-small-zh-v1.5-f16`。
+5. 增加模型路徑解析、快取目錄和自動下載邏輯。
+6. 增加 `embed_query()` / `embed_document()` 雙路介面。
+7. 持久化 collection embedding 後設資料，並補一致性檢查。
+8. 增加 rebuild-required 錯誤流。
+9. 更新使用者文件、示例配置和安裝說明。
 
-## 测试计划
+## 測試計劃
 
-### 配置测试
+### 配置測試
 
-- 缺失 `embedding` 时自动生成隐式 local dense 配置
-- 显式远程配置时不触发默认本地逻辑
-- `model_path` 能覆盖逻辑模型解析
-- `cache_dir` 覆盖生效
+- 缺失 `embedding` 時自動生成隱式 local dense 配置
+- 顯式遠端配置時不觸發預設本地邏輯
+- `model_path` 能覆蓋邏輯模型解析
+- `cache_dir` 覆蓋生效
 
-### 依赖与初始化测试
+### 依賴與初始化測試
 
-- 缺少 `llama-cpp-python` 时，启动错误信息正确
-- 显式 local backend 且依赖已安装时可成功初始化
-- 非法 GGUF 路径会触发模型加载失败
-- 下载失败时错误信息完整可读
+- 缺少 `llama-cpp-python` 時，啟動錯誤資訊正確
+- 顯式 local backend 且依賴已安裝時可成功初始化
+- 非法 GGUF 路徑會觸發模型載入失敗
+- 下載失敗時錯誤資訊完整可讀
 
-### Embedding 行为测试
+### Embedding 行為測試
 
-- `embed_query()` 与 `embed_document()` 走不同路径
-- 返回维度与模型维度一致
+- `embed_query()` 與 `embed_document()` 走不同路徑
+- 返回維度與模型維度一致
 
-### 元数据与重建测试
+### 後設資料與重建測試
 
-- 首次启动时能生成和当前模型一致的元数据
-- 改变 model identity 时会触发需要重建
-- 改变 dimension 时会触发需要重建
+- 首次啟動時能生成和當前模型一致的後設資料
+- 改變 model identity 時會觸發需要重建
+- 改變 dimension 時會觸發需要重建
 
-### 检索回归测试
+### 檢索迴歸測試
 
-- 中文 query 能正确召回中文文档
-- query/document 双路编码不会破坏现有检索链路
-- 现有远程 provider 行为保持不变
+- 中文 query 能正確召回中文文件
+- query/document 雙路編碼不會破壞現有檢索鏈路
+- 現有遠端 provider 行為保持不變
 
-### 打包测试
+### 打包測試
 
-- `pip install openviking` 可以在不安装本地依赖的情况下成功
-- `pip install "openviking[local-embed]"` 可以启用本地 import 路径
-- 缺少 extra 且触发默认本地行为时，报错应明确，而不是模糊 import failure
+- `pip install openviking` 可以在不安裝本地依賴的情況下成功
+- `pip install "openviking[local-embed]"` 可以啟用本地 import 路徑
+- 缺少 extra 且觸發預設本地行為時，報錯應明確，而不是模糊 import failure
 
-## 基准测试
+## 基準測試
 
-至少记录以下指标：
+至少記錄以下指標：
 
-- 依赖已安装且模型已缓存时的启动耗时
-- 首次下载模型时的启动耗时
-- 单条 embedding 延迟
-- 批量 embedding 延迟
-- 在代表性中文语料上的索引构建吞吐
+- 依賴已安裝且模型已快取時的啟動耗時
+- 首次下載模型時的啟動耗時
+- 單條 embedding 延遲
+- 批次 embedding 延遲
+- 在代表性中文語料上的索引構建吞吐
 
-在 benchmark 出来之前，不应假设“默认本地 embedding”在所有环境里都同样合适。
+在 benchmark 出來之前，不應假設“預設本地 embedding”在所有環境裡都同樣合適。
 
-## 运维说明
+## 運維說明
 
-推荐安装命令：
+推薦安裝命令：
 
 ```bash
 pip install "openviking[local-embed]"
 ```
 
-如果用户想使用远程 embedding：
+如果使用者想使用遠端 embedding：
 
-- 显式配置 `embedding.dense.backend`
-- 提供相应 provider 的凭证
+- 顯式配置 `embedding.dense.backend`
+- 提供相應 provider 的憑證
 
-## 风险
+## 風險
 
-- 原生依赖安装失败
-- 预编译 wheel 覆盖不足
-- GGUF 与运行时版本不兼容
-- 用户预期“零配置”但实际缺少 local extra
-- 模型切换后索引不兼容
-- 未做批量聚合时索引吞吐偏低
+- 原生依賴安裝失敗
+- 預編譯 wheel 覆蓋不足
+- GGUF 與執行時版本不相容
+- 使用者預期“零配置”但實際缺少 local extra
+- 模型切換後索引不相容
+- 未做批次聚合時索引吞吐偏低
 
 ## 交付物
 
-- 本地 dense embedder 实现
-- local backend 配置与 factory 集成
-- 内置模型注册表
-- 启动期错误提示与安装指引
-- collection 元数据校验
-- rebuild-required 机制
-- 测试和 benchmark 脚手架
-- 用户文档更新
+- 本地 dense embedder 實現
+- local backend 配置與 factory 整合
+- 內建模型登錄檔
+- 啟動期錯誤提示與安裝指引
+- collection 後設資料校驗
+- rebuild-required 機制
+- 測試和 benchmark 腳手架
+- 使用者文件更新

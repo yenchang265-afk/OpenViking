@@ -363,7 +363,7 @@ class TestTextFieldType(unittest.TestCase):
         self.assertEqual(self.py_row.deserialize_field(cpp_bytes, "body"), data["body"])
 
     def test_binary_consistency(self):
-        legacy_data = {"label": 42, "body": "升级前的记录"}
+        legacy_data = {"label": 42, "body": "升級前的記錄"}
         readers = []
         for fields, field_type, schema, row in (
             (self.cpp_fields, engine.FieldType, engine.Schema, engine.BytesRow),

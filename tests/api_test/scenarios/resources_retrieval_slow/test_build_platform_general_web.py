@@ -2,10 +2,10 @@ from build_test_helpers import assert_resource_indexed, assert_root_uri_valid, a
 
 
 class TestBuildPlatformGeneralWeb:
-    """TC-P10 通用网页 URL 构建测试"""
+    """TC-P10 通用網頁 URL 構建測試"""
 
     def test_build_general_webpage(self, api_client):
-        """TC-P10 通用网页构建：验证任意 HTTP URL 走 WEBPAGE 路由且 source_format=html、内容可检索"""
+        """TC-P10 通用網頁構建：驗證任意 HTTP URL 走 WEBPAGE 路由且 source_format=html、內容可檢索"""
         web_url = "https://httpbin.org/html"
 
         response = api_client.add_resource(path=web_url, wait=True)
@@ -20,7 +20,7 @@ class TestBuildPlatformGeneralWeb:
 
         meta = result.get("meta", {})
         assert meta.get("url_type") in ("webpage", None), (
-            f"meta.url_type 应为 webpage, 实际: {meta.get('url_type')}"
+            f"meta.url_type 應為 webpage, 實際: {meta.get('url_type')}"
         )
 
         stat_resp = api_client.fs_stat(root_uri)
@@ -30,4 +30,4 @@ class TestBuildPlatformGeneralWeb:
 
         assert_resource_indexed(api_client, root_uri, "httpbin")
 
-        print(f"✓ TC-P10 通用网页构建通过, root_uri: {root_uri}")
+        print(f"✓ TC-P10 通用網頁構建通過, root_uri: {root_uri}")

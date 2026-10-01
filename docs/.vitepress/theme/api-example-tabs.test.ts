@@ -33,23 +33,23 @@ test('recognizes language headings with punctuation and qualifiers', () => {
 })
 
 test('recognizes transport and result response variants', () => {
-  assert.deepEqual(responseExample('HTTP API 响应 (JSON, `wait=true`)'), {
+  assert.deepEqual(responseExample('HTTP API 響應 (JSON, `wait=true`)'), {
     key: 'response-http', label: 'HTTP (wait=true)', kind: 'response'
   })
-  assert.equal(responseExample('CLI 响应 (JSON 格式，使用 -o json)')?.label, 'CLI JSON')
+  assert.equal(responseExample('CLI 響應 (JSON 格式，使用 -o json)')?.label, 'CLI JSON')
   assert.equal(responseExample('Response (Directory)')?.label, 'Directory')
-  assert.equal(responseExample('响应（Memory）')?.label, 'Memory')
-  assert.equal(responseExample('异步响应（`wait=false`）')?.key, 'response-async')
+  assert.equal(responseExample('響應（Memory）')?.label, 'Memory')
+  assert.equal(responseExample('非同步響應（`wait=false`）')?.key, 'response-async')
 })
 
 test('keeps localized response variant keys distinct', () => {
-  const file = responseExample('响应（文件）')
-  const directory = responseExample('响应（目录）')
-  const importing = responseExample('响应示例（资源导入进行中）')
-  const completed = responseExample('响应示例（完成）')
+  const file = responseExample('響應（檔案）')
+  const directory = responseExample('響應（目錄）')
+  const importing = responseExample('響應示例（資源匯入進行中）')
+  const completed = responseExample('響應示例（完成）')
 
-  assert.equal(file?.key, 'response-文件')
-  assert.equal(directory?.key, 'response-目录')
+  assert.equal(file?.key, 'response-檔案')
+  assert.equal(directory?.key, 'response-目錄')
   assert.notEqual(file?.key, directory?.key)
   assert.notEqual(importing?.key, completed?.key)
 })
@@ -69,8 +69,8 @@ test('recognizes response and note variants as shared sections', () => {
     'CLI override flags',
     'MCP (agent control plane)',
     'Notes:',
-    '返回字段说明',
-    '说明：'
+    '返回欄位說明',
+    '說明：'
   ]) {
     assert.equal(isSharedSectionLabel(label), true, label)
   }
@@ -82,8 +82,8 @@ test('recognizes response and note variants as shared sections', () => {
     'CLI (via ovcli.conf)',
     'Response (File)',
     'HTTP API Response (JSON)',
-    '响应（applied）',
-    '响应示例（完成）'
+    '響應（applied）',
+    '響應示例（完成）'
   ]) {
     assert.equal(isSharedSectionLabel(label), false, label)
   }
@@ -91,9 +91,9 @@ test('recognizes response and note variants as shared sections', () => {
     'Basic Search',
     'Image Search',
     'Search with Target URI Limitation',
-    '基础搜索',
-    '图片搜索',
-    '使用 Target URI 限定搜索范围'
+    '基礎搜尋',
+    '圖片搜尋',
+    '使用 Target URI 限定搜尋範圍'
   ]) {
     assert.equal(isSharedSectionLabel(label), false, label)
   }

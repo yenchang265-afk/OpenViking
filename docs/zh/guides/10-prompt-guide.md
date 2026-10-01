@@ -1,40 +1,40 @@
-# OpenViking Prompt 说明与自定义指南
+# OpenViking Prompt 說明與自定義指南
 
-本文介绍 OpenViking 当前的 prompt 模板体系，重点说明：
+本文介紹 OpenViking 當前的 prompt 模板體系，重點說明：
 
-- 当前有哪些 prompt
-- 它们分别用于哪个处理环节
-- 它们会影响哪些对外能力或结果
-- 模板文件的格式要求是什么
-- 如何安全地自定义 prompt
+- 當前有哪些 prompt
+- 它們分別用於哪個處理環節
+- 它們會影響哪些對外能力或結果
+- 模板檔案的格式要求是什麼
+- 如何安全地自定義 prompt
 
-本文只覆盖 `openviking/prompts/templates/` 下的模板，以及少量与模板加载有关的配置项。
+本文只覆蓋 `openviking/prompts/templates/` 下的模板，以及少量與模板載入有關的配置項。
 
-## 总览
+## 總覽
 
-OpenViking 当前的 prompt 主要分为两类：
+OpenViking 當前的 prompt 主要分為兩類：
 
 1. 普通 prompt 模板
    - 存放在 `openviking/prompts/templates/<category>/*.yaml`
-   - 用于给模型下发任务，例如做图片理解、文档总结、记忆提取、检索意图分析等
+   - 用於給模型下發任務，例如做圖片理解、文件總結、記憶提取、檢索意圖分析等
 2. memory schema 模板
    - 存放在 `openviking/prompts/templates/memory/*.yaml`
-   - 用于定义某类记忆的字段、文件名模板、内容模板和目录规则
+   - 用於定義某類記憶的欄位、檔名模板、內容模板和目錄規則
 
-从使用角度看，这些模板主要服务于以下处理环节：
+從使用角度看，這些模板主要服務於以下處理環節：
 
-| 类别 | 代表模板 | 主要作用 | 生效环节 | 影响的对外能力 |
+| 類別 | 代表模板 | 主要作用 | 生效環節 | 影響的對外能力 |
 |------|----------|----------|----------|----------------|
-| `vision` | `vision.image_understanding` | 图片、页面、表格理解 | 资源解析、扫描件理解 | 图片解析、PDF 页面理解、表格抽取结果 |
-| `parsing` | `parsing.context_generation` | 文档结构划分与节点语义生成 | 资源导入与解析 | 文档章节结构、节点摘要、图像摘要 |
-| `semantic` | `semantic.document_summary` | 文件与目录级摘要 | 语义索引构建 | 文件摘要、目录概览、后续检索质量 |
-| `retrieval` | `retrieval.intent_analysis` | 检索意图分析与查询规划 | 检索前分析 | 搜索 query 规划、上下文召回方向 |
-| `compression` | `compression.ov_wm_v2` | 工作记忆压缩与 session archive 摘要 | session commit / memory 管线 | session 压缩质量和工作记忆质量 |
-| `memory` | `profile` | 记忆类型定义 | 记忆落盘与更新 | 不同记忆类型的组织方式和最终内容 |
-| `processing` | `processing.tool_chain_analysis` | 从交互或资源背景中提炼经验 | 后处理与经验沉淀 | 策略提炼、工具链经验、交互学习结果 |
-| `indexing` | `indexing.relevance_scoring` | 评估候选内容相关性 | 检索与索引辅助 | 相关性打分质量 |
-| `skill` | `skill.overview_generation` | 提炼 Skill 信息 | Skill 资源处理 | Skill 检索摘要 |
-| `test` | `test.skill_test_generation` | 自动生成测试样例 | 测试与验证辅助 | Skill 测试样例生成 |
+| `vision` | `vision.image_understanding` | 圖片、頁面、表格理解 | 資源解析、掃描件理解 | 圖片解析、PDF 頁面理解、表格抽取結果 |
+| `parsing` | `parsing.context_generation` | 文件結構劃分與節點語義生成 | 資源匯入與解析 | 文件章節結構、節點摘要、影像摘要 |
+| `semantic` | `semantic.document_summary` | 檔案與目錄級摘要 | 語義索引構建 | 檔案摘要、目錄概覽、後續檢索質量 |
+| `retrieval` | `retrieval.intent_analysis` | 檢索意圖分析與查詢規劃 | 檢索前分析 | 搜尋 query 規劃、上下文召回方向 |
+| `compression` | `compression.ov_wm_v2` | 工作記憶壓縮與 session archive 摘要 | session commit / memory 管線 | session 壓縮質量和工作記憶質量 |
+| `memory` | `profile` | 記憶型別定義 | 記憶落盤與更新 | 不同記憶型別的組織方式和最終內容 |
+| `processing` | `processing.tool_chain_analysis` | 從互動或資源背景中提煉經驗 | 後處理與經驗沉澱 | 策略提煉、工具鏈經驗、互動學習結果 |
+| `indexing` | `indexing.relevance_scoring` | 評估候選內容相關性 | 檢索與索引輔助 | 相關性打分質量 |
+| `skill` | `skill.overview_generation` | 提煉 Skill 資訊 | Skill 資源處理 | Skill 檢索摘要 |
+| `test` | `test.skill_test_generation` | 自動生成測試樣例 | 測試與驗證輔助 | Skill 測試樣例生成 |
 
 ## Prompt 格式要求
 
@@ -67,35 +67,35 @@ llm_config:
   ...
 ```
 
-字段含义：
+欄位含義：
 
 - `metadata`
-  - 描述模板身份与分类
-  - 其中 `id` 通常与文件路径对应，例如 `semantic.document_summary`
+  - 描述模板身份與分類
+  - 其中 `id` 通常與檔案路徑對應，例如 `semantic.document_summary`
 - `variables`
-  - 定义模板可接受的输入变量
-  - 常见字段包括 `name`、`type`、`description`、`default`、`required`、`max_length`
+  - 定義模板可接受的輸入變數
+  - 常見欄位包括 `name`、`type`、`description`、`default`、`required`、`max_length`
 - `template`
-  - 真正发送给模型的 prompt 正文
-  - 使用 Jinja2 变量渲染
+  - 真正傳送給模型的 prompt 正文
+  - 使用 Jinja2 變數渲染
 - `output_schema`
-  - 可选
-  - 用于描述期望输出结构，方便调用方约束模型返回
+  - 可選
+  - 用於描述期望輸出結構，方便呼叫方約束模型返回
 - `llm_config`
-  - 可选
-  - 用于描述模型调用建议参数，不直接属于 prompt 正文
+  - 可選
+  - 用於描述模型呼叫建議引數，不直接屬於 prompt 正文
 
-编写普通 prompt 时，建议遵守以下要求：
+編寫普通 prompt 時，建議遵守以下要求：
 
-- `metadata.id` 与模板的类别和用途保持一致
-- 变量名保持稳定，避免与调用方约定不一致
-- `template` 中的占位变量应与 `variables` 定义一致
-- 如果模板要求结构化输出，应明确写清字段、格式和约束
-- 如果存在长度敏感输入，应通过 `max_length` 或上游截断控制 prompt 大小
+- `metadata.id` 與模板的類別和用途保持一致
+- 變數名保持穩定，避免與呼叫方約定不一致
+- `template` 中的佔位變數應與 `variables` 定義一致
+- 如果模板要求結構化輸出，應明確寫清欄位、格式和約束
+- 如果存在長度敏感輸入，應通過 `max_length` 或上游截斷控制 prompt 大小
 
 ### Memory Schema YAML
 
-`memory/*.yaml` 不是普通 prompt 文本模板，而是记忆类型定义。下面是一个示意结构，用来说明常见字段；实际内置模板是否包含 `content_template`、目录是否带子目录，取决于具体 memory type。
+`memory/*.yaml` 不是普通 prompt 文本模板，而是記憶型別定義。下面是一個示意結構，用來說明常見欄位；實際內建模板是否包含 `content_template`、目錄是否帶子目錄，取決於具體 memory type。
 
 ```yaml
 memory_type: "profile"
@@ -117,350 +117,350 @@ stage: "user"
 peer_enabled: true
 ```
 
-字段含义：
+欄位含義：
 
 - `memory_type`
-  - 该记忆类型的名称
+  - 該記憶型別的名稱
 - `description`
-  - 对该类记忆的定义和提取要求
+  - 對該類記憶的定義和提取要求
 - `fields`
-  - 该类记忆包含哪些字段
+  - 該類記憶包含哪些欄位
 - `filename_template`
-  - 生成文件名时使用的模板
+  - 生成檔名時使用的模板
 - `content_template`
-  - 落盘时使用的正文模板
+  - 落盤時使用的正文模板
 - `embedding_template`
-  - 用于渲染参与语义检索的向量化（embedding）文本的模板；未设置时使用默认表示
+  - 用於渲染參與語義檢索的向量化（embedding）文本的模板；未設定時使用預設表示
 - `directory`
-  - 该类记忆写入的目录
+  - 該類記憶寫入的目錄
 - `enabled`
-  - 是否启用该类记忆
+  - 是否啟用該類記憶
 - `operation_mode`
-  - 该类记忆的更新模式，例如 `upsert`
+  - 該類記憶的更新模式，例如 `upsert`
 - `stage`
-  - 抽取阶段。默认是 `user`，参与会话用户记忆抽取；`agent` 用于 trajectories、experiences 这类执行派生 schema。
+  - 抽取階段。預設是 `user`，參與會話使用者記憶抽取；`agent` 用於 trajectories、experiences 這類執行派生 schema。
 - `peer_enabled`
-  - 当 `peer_id` 或消息 ranges 指向某个 peer 时，是否将该类记忆按 peer 分目录存储。默认是 `true`；如果该类记忆必须保留在当前 user 目录下，设置为 `false`。
+  - 當 `peer_id` 或訊息 ranges 指向某個 peer 時，是否將該類記憶按 peer 分目錄儲存。預設是 `true`；如果該類記憶必須保留在當前 user 目錄下，設定為 `false`。
 
-编写 memory schema 时，建议重点关注：
+編寫 memory schema 時，建議重點關注：
 
-- 字段粒度是否稳定
-- 文件名模板是否可预测、可检索
-- 目录规则是否符合预期检索范围
-- 合并策略是否适合该类记忆
+- 欄位粒度是否穩定
+- 檔名模板是否可預測、可檢索
+- 目錄規則是否符合預期檢索範圍
+- 合併策略是否適合該類記憶
 
-## 当前 Prompt 模板说明
+## 當前 Prompt 模板說明
 
-下面按类别列出当前全部模板。每个条目都说明它用于哪个处理环节，以及主要影响哪类对外能力。
+下面按類別列出當前全部模板。每個條目都說明它用於哪個處理環節，以及主要影響哪類對外能力。
 
-阅读这一节时，可以用一个简单规则：
+閱讀這一節時，可以用一個簡單規則：
 
-- 普通 prompt 模板，重点看“作用”和“关键输入”
-- memory schema，重点看“作用”和“关键字段”
+- 普通 prompt 模板，重點看“作用”和“關鍵輸入”
+- memory schema，重點看“作用”和“關鍵欄位”
 
 ### Compression
 
-这一类 prompt 主要用于 session 压缩和 working memory 更新。长期记忆抽取使用 `memory` 类别下的 v2 schema-driven memory templates。
+這一類 prompt 主要用於 session 壓縮和 working memory 更新。長期記憶抽取使用 `memory` 類別下的 v2 schema-driven memory templates。
 
 - `compression.ov_wm_v2`
-  - 生效环节：首次 working memory 生成阶段
-  - 影响能力：session archive 概览和当前 working memory 质量
-  - 作用：为 session 创建初始结构化 working memory 文档
-  - 关键输入：`messages`
+  - 生效環節：首次 working memory 生成階段
+  - 影響能力：session archive 概覽和當前 working memory 質量
+  - 作用：為 session 建立初始結構化 working memory 文件
+  - 關鍵輸入：`messages`
 
 - `compression.ov_wm_v2_update`
-  - 生效环节：增量 working memory 更新阶段
-  - 影响能力：session archive 概览和 working memory 连续性
-  - 作用：基于 keep、update、append 操作更新已有 working memory 文档
-  - 关键输入：`previous_working_memory`、`messages`
+  - 生效環節：增量 working memory 更新階段
+  - 影響能力：session archive 概覽和 working memory 連續性
+  - 作用：基於 keep、update、append 操作更新已有 working memory 文件
+  - 關鍵輸入：`previous_working_memory`、`messages`
 
 - `compression.structured_summary`
-  - 生效环节：session archive 摘要生成阶段
-  - 影响能力：历史会话压缩摘要、后续回顾和检索效果
-  - 作用：为归档后的 session 生成结构化摘要
-  - 关键输入：`latest_archive_overview`、`messages`
+  - 生效環節：session archive 摘要生成階段
+  - 影響能力：歷史會話壓縮摘要、後續回顧和檢索效果
+  - 作用：為歸檔後的 session 生成結構化摘要
+  - 關鍵輸入：`latest_archive_overview`、`messages`
 
 ### Indexing
 
-这一类 prompt 主要用于为检索或索引辅助流程做相关性判断。
+這一類 prompt 主要用於為檢索或索引輔助流程做相關性判斷。
 
 - `indexing.relevance_scoring`
-  - 生效环节：候选内容相关性评估阶段
-  - 影响能力：检索结果排序、候选筛选质量
-  - 作用：评估候选内容与用户查询之间的相关性
-  - 关键输入：`query`、`candidate`
+  - 生效環節：候選內容相關性評估階段
+  - 影響能力：檢索結果排序、候選篩選質量
+  - 作用：評估候選內容與使用者查詢之間的相關性
+  - 關鍵輸入：`query`、`candidate`
 
 ### Memory
 
-这一类 YAML 定义不同记忆类型的结构，不是单次推理 prompt。它们共同决定当前用户或 Peer 的记忆如何落盘、如何更新、如何被后续检索使用。
+這一類 YAML 定義不同記憶型別的結構，不是單次推理 prompt。它們共同決定當前使用者或 Peer 的記憶如何落盤、如何更新、如何被後續檢索使用。
 
 - `cases`
-  - 生效环节：案例型记忆落盘与更新阶段
-  - 影响能力：可训练、可评估的任务案例沉淀
-  - 作用：定义具体任务输入、评估标准和支撑证据
-  - 关键字段：`case_name`、`task_signature`、`input`、`rubric`、`evidence`
+  - 生效環節：案例型記憶落盤與更新階段
+  - 影響能力：可訓練、可評估的任務案例沉澱
+  - 作用：定義具體任務輸入、評估標準和支撐證據
+  - 關鍵欄位：`case_name`、`task_signature`、`input`、`rubric`、`evidence`
 
 - `entities`
-  - 生效环节：实体型记忆落盘与更新阶段
-  - 影响能力：人物、项目、组织、系统等实体信息的长期保存
-  - 作用：定义命名实体及其属性信息的存储结构
-  - 关键字段：`category`、`name`、`content`
+  - 生效環節：實體型記憶落盤與更新階段
+  - 影響能力：人物、專案、組織、系統等實體資訊的長期儲存
+  - 作用：定義命名實體及其屬性資訊的儲存結構
+  - 關鍵欄位：`category`、`name`、`content`
 
 - `events`
-  - 生效环节：事件型记忆落盘与更新阶段
-  - 影响能力：事件回顾、带时间线的信息保留、对话叙事记录
-  - 作用：定义事件摘要、目标、时间范围等结构化事件记忆
-  - 关键字段：`event_name`、`goal`、`summary`、`ranges`
+  - 生效環節：事件型記憶落盤與更新階段
+  - 影響能力：事件回顧、帶時間線的資訊保留、對話敘事記錄
+  - 作用：定義事件摘要、目標、時間範圍等結構化事件記憶
+  - 關鍵欄位：`event_name`、`goal`、`summary`、`ranges`
 
 - `experiences`
-  - 生效环节：经验型记忆落盘与更新阶段
-  - 影响能力：从任务结果中沉淀可复用指导
-  - 作用：记录持久的执行经验及其替代的旧记忆
-  - 关键字段：`experience_name`、`content`、`supersedes`
+  - 生效環節：經驗型記憶落盤與更新階段
+  - 影響能力：從任務結果中沉澱可複用指導
+  - 作用：記錄持久的執行經驗及其替代的舊記憶
+  - 關鍵欄位：`experience_name`、`content`、`supersedes`
 
 - `identity`
-  - 生效环节：agent identity 记忆落盘阶段
-  - 影响能力：agent 身份设定的长期一致性
-  - 作用：定义 agent 的名字、形象、风格、自我介绍等身份字段
-  - 关键字段：`name`、`creature`、`vibe`、`emoji`、`avatar`、`introduction`
+  - 生效環節：agent identity 記憶落盤階段
+  - 影響能力：agent 身份設定的長期一致性
+  - 作用：定義 agent 的名字、形象、風格、自我介紹等身份欄位
+  - 關鍵欄位：`name`、`creature`、`vibe`、`emoji`、`avatar`、`introduction`
 
 - `preferences`
-  - 生效环节：偏好型记忆落盘与更新阶段
-  - 影响能力：用户偏好 recall 和后续个性化表现
-  - 作用：定义不同主题下的用户偏好记忆
-  - 关键字段：`user`、`topic`、`content`
+  - 生效環節：偏好型記憶落盤與更新階段
+  - 影響能力：使用者偏好 recall 和後續個性化表現
+  - 作用：定義不同主題下的使用者偏好記憶
+  - 關鍵欄位：`user`、`topic`、`content`
 
 - `profile`
-  - 生效环节：用户 profile 记忆落盘与更新阶段
-  - 影响能力：用户画像、工作背景、稳定属性的长期保存
-  - 作用：定义“用户是谁”这一类稳定信息的存储结构
-  - 关键字段：`content`
+  - 生效環節：使用者 profile 記憶落盤與更新階段
+  - 影響能力：使用者畫像、工作背景、穩定屬性的長期儲存
+  - 作用：定義“使用者是誰”這一類穩定資訊的儲存結構
+  - 關鍵欄位：`content`
 
 - `skills`
-  - 生效环节：skill 使用记忆落盘与更新阶段
-  - 影响能力：skill 使用统计、经验沉淀与推荐流程
-  - 作用：定义 skill 使用次数、成功率、适用场景等信息
-  - 关键字段：`skill_name`、`total_executions`、`success_count`、`fail_count`、`best_for`、`recommended_flow`
+  - 生效環節：skill 使用記憶落盤與更新階段
+  - 影響能力：skill 使用統計、經驗沉澱與推薦流程
+  - 作用：定義 skill 使用次數、成功率、適用場景等資訊
+  - 關鍵欄位：`skill_name`、`total_executions`、`success_count`、`fail_count`、`best_for`、`recommended_flow`
 
 - `soul`
-  - 生效环节：agent soul 记忆落盘阶段
-  - 影响能力：agent 核心边界、连续性和长期人格稳定性
-  - 作用：定义 agent 的核心真值、边界、风格和连续性
-  - 关键字段：`core_truths`、`boundaries`、`vibe`、`continuity`
+  - 生效環節：agent soul 記憶落盤階段
+  - 影響能力：agent 核心邊界、連續性和長期人格穩定性
+  - 作用：定義 agent 的核心真值、邊界、風格和連續性
+  - 關鍵欄位：`core_truths`、`boundaries`、`vibe`、`continuity`
 
 - `tools`
-  - 生效环节：工具使用记忆落盘与更新阶段
-  - 影响能力：工具使用经验、最佳参数、失败模式沉淀
-  - 作用：定义工具调用统计和工具使用经验的存储结构
-  - 关键字段：`tool_name`、`static_desc`、`call_count`、`success_time`、`when_to_use`、`optimal_params`
+  - 生效環節：工具使用記憶落盤與更新階段
+  - 影響能力：工具使用經驗、最佳引數、失敗模式沉澱
+  - 作用：定義工具呼叫統計和工具使用經驗的儲存結構
+  - 關鍵欄位：`tool_name`、`static_desc`、`call_count`、`success_time`、`when_to_use`、`optimal_params`
 
 - `trajectories`
-  - 生效环节：agent 轨迹型记忆落盘阶段（`stage: agent`，仅追加）
-  - 影响能力：agent 任务轨迹中可复用的操作契约沉淀——多步决策、工具调用、执行链路
-  - 作用：定义"任务轨迹中提炼出哪些可复用的操作/契约"这一类轨迹型记忆
-  - 关键字段：`trajectory_name`、`outcome`、`retrieval_anchor`、`content`
+  - 生效環節：agent 軌跡型記憶落盤階段（`stage: agent`，僅追加）
+  - 影響能力：agent 任務軌跡中可複用的操作契約沉澱——多步決策、工具呼叫、執行鏈路
+  - 作用：定義"任務軌跡中提煉出哪些可複用的操作/契約"這一類軌跡型記憶
+  - 關鍵欄位：`trajectory_name`、`outcome`、`retrieval_anchor`、`content`
 
 ### Parsing
 
-这一类 prompt 主要用于把原始资源内容转成适合检索和理解的结构化节点、章节、摘要或图像概述。
+這一類 prompt 主要用於把原始資源內容轉成適合檢索和理解的結構化節點、章節、摘要或影像概述。
 
 - `parsing.chapter_analysis`
-  - 生效环节：长文档章节划分阶段
-  - 影响能力：文档章节结构、页面组织效果
-  - 作用：分析文档内容并划分合理的章节结构
-  - 关键输入：`start_page`、`end_page`、`total_pages`、`content`
+  - 生效環節：長文件章節劃分階段
+  - 影響能力：文件章節結構、頁面組織效果
+  - 作用：分析文件內容並劃分合理的章節結構
+  - 關鍵輸入：`start_page`、`end_page`、`total_pages`、`content`
 
 - `parsing.context_generation`
-  - 生效环节：文档节点语义生成阶段
-  - 影响能力：节点 abstract/overview 质量、后续检索匹配效果
-  - 作用：为文本节点生成更短、更适合检索的语义标题、abstract 和 overview
-  - 关键输入：`title`、`content`、`children_info`、`instruction`、`context_type`、`is_leaf`
+  - 生效環節：文件節點語義生成階段
+  - 影響能力：節點 abstract/overview 質量、後續檢索匹配效果
+  - 作用：為文本節點生成更短、更適合檢索的語義標題、abstract 和 overview
+  - 關鍵輸入：`title`、`content`、`children_info`、`instruction`、`context_type`、`is_leaf`
 
 - `parsing.image_summary`
-  - 生效环节：图像节点摘要阶段
-  - 影响能力：图片资源的语义概述和后续检索效果
-  - 作用：为图像内容生成简洁摘要
-  - 关键输入：`context`
+  - 生效環節：影像節點摘要階段
+  - 影響能力：圖片資源的語義概述和後續檢索效果
+  - 作用：為影像內容生成簡潔摘要
+  - 關鍵輸入：`context`
 
 - `parsing.semantic_grouping`
-  - 生效环节：语义分组与切分阶段
-  - 影响能力：文档节点粒度、内容块切分质量
-  - 作用：根据语义决定内容应该合并还是拆分
-  - 关键输入：`items`、`threshold`、`mode`
+  - 生效環節：語義分組與切分階段
+  - 影響能力：文件節點粒度、內容塊切分質量
+  - 作用：根據語義決定內容應該合併還是拆分
+  - 關鍵輸入：`items`、`threshold`、`mode`
 
 ### Processing
 
-这一类 prompt 主要用于从交互记录、工具链和资源背景中提炼策略或经验，不直接面向单次用户问答，而是面向后处理和知识沉淀。
+這一類 prompt 主要用於從互動記錄、工具鏈和資源背景中提煉策略或經驗，不直接面向單次使用者問答，而是面向後處理和知識沉澱。
 
 - `processing.interaction_learning`
-  - 生效环节：交互后经验提炼阶段
-  - 影响能力：可复用交互经验、有效资源和成功 skill 的沉淀
-  - 作用：从交互记录中抽取可复用经验
-  - 关键输入：`interactions_summary`、`effective_resources`、`successful_skills`
+  - 生效環節：互動後經驗提煉階段
+  - 影響能力：可複用互動經驗、有效資源和成功 skill 的沉澱
+  - 作用：從互動記錄中抽取可複用經驗
+  - 關鍵輸入：`interactions_summary`、`effective_resources`、`successful_skills`
 
 - `processing.strategy_extraction`
-  - 生效环节：资源添加后策略提炼阶段
-  - 影响能力：资源背景意图的结构化提炼和后续复用
-  - 作用：从资源添加原因、指令和抽象信息中提炼使用策略
-  - 关键输入：`reason`、`instruction`、`abstract`
+  - 生效環節：資源新增後策略提煉階段
+  - 影響能力：資源背景意圖的結構化提煉和後續複用
+  - 作用：從資源新增原因、指令和抽象資訊中提煉使用策略
+  - 關鍵輸入：`reason`、`instruction`、`abstract`
 
 - `processing.tool_chain_analysis`
-  - 生效环节：工具链分析阶段
-  - 影响能力：工具组合模式识别、工具经验沉淀
-  - 作用：分析工具调用链并识别有价值的使用模式
-  - 关键输入：`tool_calls`
+  - 生效環節：工具鏈分析階段
+  - 影響能力：工具組合模式識別、工具經驗沉澱
+  - 作用：分析工具呼叫鏈並識別有價值的使用模式
+  - 關鍵輸入：`tool_calls`
 
 ### Retrieval
 
-这一类 prompt 主要用于检索前理解用户意图，决定 query plan 和上下文类型。
+這一類 prompt 主要用於檢索前理解使用者意圖，決定 query plan 和上下文型別。
 
 - `retrieval.intent_analysis`
-  - 生效环节：检索前意图分析阶段
-  - 影响能力：检索 query 规划、召回方向、不同 context 类型的搜索质量
-  - 作用：结合压缩摘要、最近消息和当前消息生成检索计划
-  - 关键输入：`compression_summary`、`recent_messages`、`current_message`、`context_type`、`target_abstract`
+  - 生效環節：檢索前意圖分析階段
+  - 影響能力：檢索 query 規劃、召回方向、不同 context 型別的搜尋質量
+  - 作用：結合壓縮摘要、最近訊息和當前訊息生成檢索計劃
+  - 關鍵輸入：`compression_summary`、`recent_messages`、`current_message`、`context_type`、`target_abstract`
 
 ### Semantic
 
-这一类 prompt 主要用于文件级和目录级摘要生成，是语义索引构建的重要部分。
+這一類 prompt 主要用於檔案級和目錄級摘要生成，是語義索引構建的重要部分。
 
 - `semantic.code_summary`
-  - 生效环节：代码文件摘要阶段
-  - 影响能力：代码文件语义索引、代码检索与理解结果
-  - 作用：为代码文件生成结构、函数、类和关键逻辑摘要
-  - 关键输入：`file_name`、`content`、`output_language`
+  - 生效環節：程式碼檔案摘要階段
+  - 影響能力：程式碼檔案語義索引、程式碼檢索與理解結果
+  - 作用：為程式碼檔案生成結構、函式、類和關鍵邏輯摘要
+  - 關鍵輸入：`file_name`、`content`、`output_language`
 
 - `semantic.document_summary`
-  - 生效环节：文档文件摘要阶段
-  - 影响能力：文档内容摘要、文档检索与概览效果
-  - 作用：为 Markdown、Text、RST 等文档生成内容摘要
-  - 关键输入：`file_name`、`content`、`output_language`
+  - 生效環節：文件檔案摘要階段
+  - 影響能力：文件內容摘要、文件檢索與概覽效果
+  - 作用：為 Markdown、Text、RST 等文件生成內容摘要
+  - 關鍵輸入：`file_name`、`content`、`output_language`
 
 - `semantic.file_summary`
-  - 生效环节：通用文件摘要阶段
-  - 影响能力：目录索引与通用文件检索质量
-  - 作用：为单个文件生成摘要，作为目录 abstract/overview 的上游输入
-  - 关键输入：`file_name`、`content`、`output_language`
+  - 生效環節：通用檔案摘要階段
+  - 影響能力：目錄索引與通用檔案檢索質量
+  - 作用：為單個檔案生成摘要，作為目錄 abstract/overview 的上游輸入
+  - 關鍵輸入：`file_name`、`content`、`output_language`
 
 - `semantic.overview_generation`
-  - 生效环节：目录级概览生成阶段
-  - 影响能力：目录 overview、层级检索与导航体验
-  - 作用：根据文件摘要和子目录 abstract 生成目录级 overview
-  - 关键输入：`dir_name`、`file_summaries`、`children_abstracts`、`output_language`
+  - 生效環節：目錄級概覽生成階段
+  - 影響能力：目錄 overview、層級檢索與導航體驗
+  - 作用：根據檔案摘要和子目錄 abstract 生成目錄級 overview
+  - 關鍵輸入：`dir_name`、`file_summaries`、`children_abstracts`、`output_language`
 
 ### Skill
 
-这一类 prompt 主要用于把 Skill 内容压缩成适合检索和复用的摘要。
+這一類 prompt 主要用於把 Skill 內容壓縮成適合檢索和複用的摘要。
 
 - `skill.overview_generation`
-  - 生效环节：Skill 内容处理阶段
-  - 影响能力：Skill 检索摘要、Skill 发现效果
-  - 作用：从 Skill 名称、描述和正文中抽取关键检索信息
-  - 关键输入：`skill_name`、`skill_description`、`skill_content`
+  - 生效環節：Skill 內容處理階段
+  - 影響能力：Skill 檢索摘要、Skill 發現效果
+  - 作用：從 Skill 名稱、描述和正文中抽取關鍵檢索資訊
+  - 關鍵輸入：`skill_name`、`skill_description`、`skill_content`
 
 ### Test
 
-这一类 prompt 主要用于辅助生成测试样例。
+這一類 prompt 主要用於輔助生成測試樣例。
 
 - `test.skill_test_generation`
-  - 生效环节：Skill 测试辅助阶段
-  - 影响能力：Skill 场景测试设计与验证样例生成
-  - 作用：根据多个 Skill 的名称和描述生成测试用例
-  - 关键输入：`skills_info`
+  - 生效環節：Skill 測試輔助階段
+  - 影響能力：Skill 場景測試設計與驗證樣例生成
+  - 作用：根據多個 Skill 的名稱和描述生成測試用例
+  - 關鍵輸入：`skills_info`
 
 ### Vision
 
-这一类 prompt 主要用于图片、页面、表格和多模态文档分析，直接影响图片解析和扫描件理解结果。
+這一類 prompt 主要用於圖片、頁面、表格和多模態文件分析，直接影響圖片解析和掃描件理解結果。
 
 - `vision.batch_filtering`
-  - 生效环节：多图批量筛选阶段
-  - 影响能力：多图文档理解中的图片保留与忽略策略
-  - 作用：批量判断多张图片是否值得纳入文档理解
-  - 关键输入：`document_title`、`image_count`、`images_info`
+  - 生效環節：多圖批次篩選階段
+  - 影響能力：多圖文件理解中的圖片保留與忽略策略
+  - 作用：批次判斷多張圖片是否值得納入文件理解
+  - 關鍵輸入：`document_title`、`image_count`、`images_info`
 
 - `vision.image_filtering`
-  - 生效环节：单图筛选阶段
-  - 影响能力：图片是否进入后续理解流程
-  - 作用：判断单张图片是否对文档理解有意义
-  - 关键输入：`document_title`、`context`
+  - 生效環節：單圖篩選階段
+  - 影響能力：圖片是否進入後續理解流程
+  - 作用：判斷單張圖片是否對文件理解有意義
+  - 關鍵輸入：`document_title`、`context`
 
 - `vision.image_understanding`
-  - 生效环节：图片理解阶段
-  - 影响能力：图片解析结果、图片 abstract/overview/detail_text 质量
-  - 作用：使用 VLM 对图片生成三层信息
-  - 关键输入：`instruction`、`context`
+  - 生效環節：圖片理解階段
+  - 影響能力：圖片解析結果、圖片 abstract/overview/detail_text 質量
+  - 作用：使用 VLM 對圖片生成三層資訊
+  - 關鍵輸入：`instruction`、`context`
 
 - `vision.page_understanding`
-  - 生效环节：扫描页理解阶段
-  - 影响能力：扫描 PDF 页面理解与后续语义化结果
-  - 作用：理解单页图片化文档内容
-  - 关键输入：`instruction`、`page_num`
+  - 生效環節：掃描頁理解階段
+  - 影響能力：掃描 PDF 頁面理解與後續語義化結果
+  - 作用：理解單頁圖片化文件內容
+  - 關鍵輸入：`instruction`、`page_num`
 
 - `vision.page_understanding_batch`
-  - 生效环节：多页批量理解阶段
-  - 影响能力：批量扫描页理解效率与结果一致性
-  - 作用：批量理解多页图片化文档内容
-  - 关键输入：`page_count`、`instruction`
+  - 生效環節：多頁批次理解階段
+  - 影響能力：批次掃描頁理解效率與結果一致性
+  - 作用：批次理解多頁圖片化文件內容
+  - 關鍵輸入：`page_count`、`instruction`
 
 - `vision.table_understanding`
-  - 生效环节：表格理解阶段
-  - 影响能力：图片表格解析、表格摘要和结构理解
-  - 作用：分析表格图片并生成三层信息
-  - 关键输入：`instruction`、`context`
+  - 生效環節：表格理解階段
+  - 影響能力：圖片表格解析、表格摘要和結構理解
+  - 作用：分析表格圖片並生成三層資訊
+  - 關鍵輸入：`instruction`、`context`
 
 - `vision.unified_analysis`
-  - 生效环节：多模态统一分析阶段
-  - 影响能力：包含图片、表格和章节的复杂文档解析结果
-  - 作用：批量分析文档中的图片、表格和章节信息
-  - 关键输入：`title`、`instruction`、`reason`、`content_preview`、`image_count`、`images_section`、`table_count`、`tables_section`
+  - 生效環節：多模態統一分析階段
+  - 影響能力：包含圖片、表格和章節的複雜文件解析結果
+  - 作用：批次分析文件中的圖片、表格和章節資訊
+  - 關鍵輸入：`title`、`instruction`、`reason`、`content_preview`、`image_count`、`images_section`、`table_count`、`tables_section`
 
-## 如何自定义 Prompt
+## 如何自定義 Prompt
 
-OpenViking 支持两种主要的自定义方式：
+OpenViking 支援兩種主要的自定義方式：
 
-1. 覆盖普通 prompt 模板
-2. 扩展 memory schema
+1. 覆蓋普通 prompt 模板
+2. 擴充 memory schema
 
-在进入具体方法之前，可以先用下面的边界判断改动风险：
+在進入具體方法之前，可以先用下面的邊界判斷改動風險：
 
-| 改动类型 | 风险级别 | 说明 |
+| 改動型別 | 風險級別 | 說明 |
 |----------|----------|------|
-| 改 prompt 措辞、补示例、调整语气 | 低 | 通常只影响模型表达方式，不改变调用方协议 |
-| 改输出风格、改抽取偏好、改摘要粒度 | 中 | 会影响结果分布，需要重新验证目标能力 |
-| 改变量名、改输出结构、改 memory 字段名 | 高 | 容易和调用方或解析逻辑不兼容 |
-| 改 `directory`、`filename_template`、`merge_op` | 很高 | 会直接影响记忆存储位置、组织方式和更新行为 |
+| 改 prompt 措辭、補示例、調整語氣 | 低 | 通常隻影響模型表達方式，不改變呼叫方協議 |
+| 改輸出風格、改抽取偏好、改摘要粒度 | 中 | 會影響結果分佈，需要重新驗證目標能力 |
+| 改變數名、改輸出結構、改 memory 欄位名 | 高 | 容易和呼叫方或解析邏輯不相容 |
+| 改 `directory`、`filename_template`、`merge_op` | 很高 | 會直接影響記憶儲存位置、組織方式和更新行為 |
 
-### 覆盖普通 Prompt 模板
+### 覆蓋普通 Prompt 模板
 
-适用场景：
+適用場景：
 
-- 想调整记忆提取偏好
-- 想改变摘要风格
-- 想让图片理解输出更细或更简
-- 想调整检索意图分析的规划方式
+- 想調整記憶提取偏好
+- 想改變摘要風格
+- 想讓圖片理解輸出更細或更簡
+- 想調整檢索意圖分析的規劃方式
 
 可用配置：
 
 - `prompts.templates_dir`
-- 环境变量 `OPENVIKING_PROMPT_TEMPLATES_DIR`
+- 環境變數 `OPENVIKING_PROMPT_TEMPLATES_DIR`
 
-加载优先级：
+載入優先順序：
 
-1. 显式传入的模板目录
-2. 环境变量 `OPENVIKING_PROMPT_TEMPLATES_DIR`
+1. 顯式傳入的模板目錄
+2. 環境變數 `OPENVIKING_PROMPT_TEMPLATES_DIR`
 3. `ov.conf` 中的 `prompts.templates_dir`
-4. 内置模板目录 `openviking/prompts/templates/`
+4. 內建模板目錄 `openviking/prompts/templates/`
 
-也就是说，普通 prompt 的自定义方式本质上是“优先从自定义目录查找，同路径未命中时再回退到内置模板”。
+也就是說，普通 prompt 的自定義方式本質上是“優先從自定義目錄查詢，同路徑未命中時再回退到內建模板”。
 
-推荐做法：
+推薦做法：
 
-1. 先复制内置模板目录中的目标文件
-2. 保持相同的类别目录和文件名
-3. 仅修改 prompt 正文或输出要求
-4. 尽量不要修改已被调用方依赖的变量名
+1. 先複製內建模板目錄中的目標檔案
+2. 保持相同的類別目錄和檔名
+3. 僅修改 prompt 正文或輸出要求
+4. 儘量不要修改已被呼叫方依賴的變數名
 
-示例目录：
+示例目錄：
 
 ```text
 custom-prompts/
@@ -488,37 +488,37 @@ custom-prompts/
 export OPENVIKING_PROMPT_TEMPLATES_DIR=/path/to/custom-prompts
 ```
 
-影响面示例：
+影響面示例：
 
 - 修改 `compression.ov_wm_v2`
-  - 主要影响首次 working memory 生成
-  - 最终影响 session archive 质量和后续 recall 效果
+  - 主要影響首次 working memory 生成
+  - 最終影響 session archive 質量和後續 recall 效果
 - 修改 `retrieval.intent_analysis`
-  - 主要影响检索前 query plan
-  - 最终影响搜索方向和召回效果
+  - 主要影響檢索前 query plan
+  - 最終影響搜尋方向和召回效果
 - 修改 `semantic.document_summary`
-  - 主要影响文档摘要阶段
-  - 最终影响文档索引和摘要结果
+  - 主要影響文件摘要階段
+  - 最終影響文件索引和摘要結果
 
-### 扩展 Memory Schema
+### 擴充 Memory Schema
 
-适用场景：
+適用場景：
 
-- 想新增一类业务记忆
-- 想调整某类记忆的字段结构
-- 想改变记忆落盘目录或文件模板
+- 想新增一類業務記憶
+- 想調整某類記憶的欄位結構
+- 想改變記憶落盤目錄或檔案模板
 
 可用配置：
 
 - `memory.custom_templates_dir`
 
-加载行为：
+載入行為：
 
-- 内置 memory schema 会先加载
-- 如果配置了 `memory.custom_templates_dir`，再继续加载自定义目录中的 schema
-- 因此，memory 自定义更接近“扩展和补充”，而不是完全替换整套内置模板
+- 內建 memory schema 會先載入
+- 如果配置了 `memory.custom_templates_dir`，再繼續載入自定義目錄中的 schema
+- 因此，memory 自定義更接近“擴充和補充”，而不是完全替換整套內建模板
 
-示例目录：
+示例目錄：
 
 ```text
 custom-memory/
@@ -536,97 +536,97 @@ custom-memory/
 }
 ```
 
-扩展 memory schema 时建议：
+擴充 memory schema 時建議：
 
-- 优先参考现有 `memory/*.yaml` 写法
-- 先确定该类记忆是否真的需要独立类型
-- 保持字段名清晰、可稳定更新
-- 确保 `directory` 和 `filename_template` 易于检索和维护
+- 優先參考現有 `memory/*.yaml` 寫法
+- 先確定該類記憶是否真的需要獨立型別
+- 保持欄位名清晰、可穩定更新
+- 確保 `directory` 和 `filename_template` 易於檢索和維護
 
-影响面示例：
+影響面示例：
 
 - 新增 `project_decisions`
-  - 影响记忆落盘类型和后续搜索组织方式
+  - 影響記憶落盤型別和後續搜尋組織方式
 - 修改 `preferences`
-  - 影响用户偏好类记忆的组织方式和 recall 颗粒度
+  - 影響使用者偏好類記憶的組織方式和 recall 顆粒度
 - 修改 `tools`
-  - 影响工具经验沉淀和工具使用建议结果
+  - 影響工具經驗沉澱和工具使用建議結果
 
-### 自定义时的高风险改动
+### 自定義時的高風險改動
 
-以下改动最容易破坏现有链路：
+以下改動最容易破壞現有鏈路：
 
-- 修改普通 prompt 的变量名
-- 修改 prompt 的预期输出结构，但未同步调整调用方解析逻辑
-- 修改 memory schema 的关键字段名
-- 修改 `directory` 导致检索范围变化
-- 修改 `filename_template` 导致历史文件组织方式变化
-- 修改 `merge_op` 导致已有记忆更新策略变化
+- 修改普通 prompt 的變數名
+- 修改 prompt 的預期輸出結構，但未同步調整呼叫方解析邏輯
+- 修改 memory schema 的關鍵欄位名
+- 修改 `directory` 導致檢索範圍變化
+- 修改 `filename_template` 導致歷史檔案組織方式變化
+- 修改 `merge_op` 導致已有記憶更新策略變化
 
-如果只是想优化效果，通常优先考虑这些低风险改法：
+如果只是想最佳化效果，通常優先考慮這些低風險改法：
 
-- 给 prompt 增加更明确的输出示例
-- 强化“该保留什么、该忽略什么”的规则
-- 调整摘要粒度或表达风格
-- 只改某一类 prompt，而不是同时改多类
+- 給 prompt 增加更明確的輸出示例
+- 強化“該保留什麼、該忽略什麼”的規則
+- 調整摘要粒度或表達風格
+- 只改某一類 prompt，而不是同時改多類
 
 保守做法是：
 
-1. 先复制现有模板
-2. 尽量只改指令内容和表达方式
-3. 结构字段最后再改
-4. 每次只改一类 prompt，方便定位影响范围
+1. 先複製現有模板
+2. 儘量只改指令內容和表達方式
+3. 結構欄位最後再改
+4. 每次只改一類 prompt，方便定位影響範圍
 
-## 验证与排查
+## 驗證與排查
 
-修改 prompt 之后，建议按“模板是否命中”和“能力是否变化”两层来验证。
+修改 prompt 之後，建議按“模板是否命中”和“能力是否變化”兩層來驗證。
 
-### 先验证模板是否命中
+### 先驗證模板是否命中
 
-检查项：
+檢查項：
 
-- 自定义目录是否配置正确
-- 文件路径是否与原模板保持相同相对路径
+- 自定義目錄是否配置正確
+- 檔案路徑是否與原模板保持相同相對路徑
 - YAML 格式是否有效
-- 变量名是否和原模板一致
+- 變數名是否和原模板一致
 
-如果是普通 prompt，重点确认：
+如果是普通 prompt，重點確認：
 
-- 模板是否被正确加载
-- 目标环节是否真的使用了该模板
+- 模板是否被正確載入
+- 目標環節是否真的使用了該模板
 
-如果是 memory schema，重点确认：
+如果是 memory schema，重點確認：
 
-- 新 schema 是否被成功加载
-- 目标记忆类型是否真的参与了提取和落盘
+- 新 schema 是否被成功載入
+- 目標記憶型別是否真的參與了提取和落盤
 
-### 再验证对外结果是否变化
+### 再驗證對外結果是否變化
 
-从使用者角度验证最有效：
+從使用者角度驗證最有效：
 
-- 如果改的是 `vision` 类模板，就重新解析图片、表格或扫描 PDF，看结果是否变化
-- 如果改的是 `semantic` 或 `parsing` 类模板，就重新导入文档或文件，看摘要和结构是否变化
-- 如果改的是 `retrieval` 类模板，就重新执行相关搜索，看 query 规划和召回效果是否变化
-- 如果改的是 `compression` 类模板，就重新触发 session commit 或 memory 处理流程，看记忆抽取和合并结果是否变化
-- 如果改的是 `memory` 类 schema，就检查最终落盘的记忆文件内容、目录和字段结构是否符合预期
+- 如果改的是 `vision` 類別範本，就重新解析圖片、表格或掃描 PDF，看結果是否變化
+- 如果改的是 `semantic` 或 `parsing` 類別範本，就重新匯入文件或檔案，看摘要和結構是否變化
+- 如果改的是 `retrieval` 類別範本，就重新執行相關搜尋，看 query 規劃和召回效果是否變化
+- 如果改的是 `compression` 類別範本，就重新觸發 session commit 或 memory 處理流程，看記憶抽取和合並結果是否變化
+- 如果改的是 `memory` 類 schema，就檢查最終落盤的記憶檔案內容、目錄和欄位結構是否符合預期
 
-### 常见排查思路
+### 常見排查思路
 
-现象与优先检查项：
+現象與優先檢查項：
 
-| 现象 | 优先检查 |
+| 現象 | 優先檢查 |
 |------|----------|
-| 修改后结果完全没变 | 自定义目录未生效，或文件路径不匹配 |
-| 模型报缺少变量 | 模板变量名与调用方不一致 |
-| 返回内容格式错乱 | prompt 输出格式改了，但下游解析还按旧结构处理 |
-| 新 memory 类型没有出现 | `memory.custom_templates_dir` 未生效，或 schema 未被正确加载 |
-| 检索结果变差 | `retrieval`、`semantic` 或 `compression` 类 prompt 改得过于激进 |
+| 修改後結果完全沒變 | 自定義目錄未生效，或檔案路徑不匹配 |
+| 模型報缺少變數 | 模板變數名與呼叫方不一致 |
+| 返回內容格式錯亂 | prompt 輸出格式改了，但下游解析還按舊結構處理 |
+| 新 memory 型別沒有出現 | `memory.custom_templates_dir` 未生效，或 schema 未被正確載入 |
+| 檢索結果變差 | `retrieval`、`semantic` 或 `compression` 類 prompt 改得過於激進 |
 
-## 附录
+## 附錄
 
-### 模板目录
+### 模板目錄
 
-内置 prompt 模板目录：
+內建 prompt 模板目錄：
 
 ```text
 openviking/prompts/templates/
@@ -634,38 +634,38 @@ openviking/prompts/templates/
 
 其中：
 
-- `compression/`：压缩、提取、合并
-- `indexing/`：相关性评估
-- `memory/`：记忆类型定义
-- `parsing/`：结构分析与语义节点生成
-- `processing/`：经验与策略提炼
-- `retrieval/`：检索意图分析
-- `semantic/`：文件和目录摘要
+- `compression/`：壓縮、提取、合併
+- `indexing/`：相關性評估
+- `memory/`：記憶型別定義
+- `parsing/`：結構分析與語義節點生成
+- `processing/`：經驗與策略提煉
+- `retrieval/`：檢索意圖分析
+- `semantic/`：檔案和目錄摘要
 - `skill/`：Skill 摘要
-- `test/`：测试样例生成
-- `vision/`：图片、页面、表格理解
+- `test/`：測試樣例生成
+- `vision/`：圖片、頁面、表格理解
 
-### 关键配置项
+### 關鍵配置項
 
-与 prompt 自定义相关的配置主要有：
+與 prompt 自定義相關的配置主要有：
 
-| 配置项 | 用途 |
+| 配置項 | 用途 |
 |--------|------|
-| `prompts.templates_dir` | 指定普通 prompt 模板覆盖目录 |
-| `OPENVIKING_PROMPT_TEMPLATES_DIR` | 通过环境变量指定普通 prompt 模板覆盖目录 |
-| `memory.custom_templates_dir` | 指定 custom memory schema 目录 |
+| `prompts.templates_dir` | 指定普通 prompt 模板覆蓋目錄 |
+| `OPENVIKING_PROMPT_TEMPLATES_DIR` | 通過環境變數指定普通 prompt 模板覆蓋目錄 |
+| `memory.custom_templates_dir` | 指定 custom memory schema 目錄 |
 
-### 选型建议
+### 選型建議
 
-如果你的目标是：
+如果你的目標是：
 
-- 改模型“怎么说、怎么提取、怎么总结”
-  - 优先改普通 prompt 模板
-- 改“记忆长什么样、存在哪里、怎么组织”
-  - 优先改 memory schema
+- 改模型“怎麼說、怎麼提取、怎麼總結”
+  - 優先改普通 prompt 模板
+- 改“記憶長什麼樣、存在哪裡、怎麼組織”
+  - 優先改 memory schema
 
-如果不确定该改哪一层，先问自己一句：
+如果不確定該改哪一層，先問自己一句：
 
-“我要改的是模型的指令，还是最终记忆文件的结构？”
+“我要改的是模型的指令，還是最終記憶檔案的結構？”
 
-这个问题通常足以帮助你区分应该改普通 prompt 还是 memory schema。
+這個問題通常足以幫助你區分應該改普通 prompt 還是 memory schema。

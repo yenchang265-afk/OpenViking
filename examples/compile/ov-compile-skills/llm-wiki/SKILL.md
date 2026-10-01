@@ -220,7 +220,7 @@ the sources.
 - Place an exact source URI, repository-relative path, or supplied link near the claim
   it supports. Add supplied line or section anchors when available; never invent them.
 - Put standalone page-level sources under exactly one level-2 heading in the output
-  language, such as `## 来源` or `## Sources`, and list the source links below it as
+  language, such as `## 來源` or `## Sources`, and list the source links below it as
   Markdown bullets. When updating a page, merge sources into that existing section and
   deduplicate links by normalized target; never append a second source heading.
 - Give every source link concise, human-readable link text while preserving the exact
@@ -228,7 +228,7 @@ the sources.
   derive a readable label from the decoded final path segment. For example, write
   `[Readable source title](viking://resources/collection/source-file)`.
   Do not expose a full URI or URL as visible link text when a readable title is known.
-  Never use an unheaded `来源：...` or `Source: ...` line. Keep claim-specific evidence
+  Never use an unheaded `來源：...` or `Source: ...` line. Keep claim-specific evidence
   links inline, and do not repeat the same link in both places.
 - Never invent a URI, URL, path, identifier, symbol, date, number, quotation, command,
   causal explanation, or relationship.

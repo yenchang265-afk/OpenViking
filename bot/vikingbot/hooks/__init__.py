@@ -1,5 +1,5 @@
 """
-Hook 机制 - 导出公共 API
+Hook 機制 - 匯出公共 API
 """
 
 from .base import Hook, HookContext

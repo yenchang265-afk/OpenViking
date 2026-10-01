@@ -250,7 +250,7 @@ class TestLargeScaleScenarios(unittest.TestCase):
         insert_time = time.time() - start_time
         print(f"✓ Inserted {total_records} high-dim records in {insert_time:.2f}s")
 
-        # Create index并测试搜索
+        # Create index並測試搜尋
         print("Creating index and testing search...")
         collection.create_index(
             "idx_high_dim",

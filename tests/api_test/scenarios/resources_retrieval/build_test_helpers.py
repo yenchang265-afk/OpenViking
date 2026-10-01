@@ -7,7 +7,7 @@ import uuid
 def create_test_file(content=None, suffix=".txt", filename=None):
     if content is None:
         content = (
-            f"测试文件内容 - {uuid.uuid4()}\n这是一个用于构建测试的临时文件。\n包含一些测试数据。"
+            f"測試檔案內容 - {uuid.uuid4()}\n這是一個用於構建測試的臨時檔案。\n包含一些測試資料。"
         )
 
     temp_dir = tempfile.mkdtemp()
@@ -26,13 +26,13 @@ def create_test_directory(file_count=3, nested=True):
     for i in range(file_count):
         file_path = os.path.join(temp_dir, f"file_{i}.txt")
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(f"测试文件 {i} 的内容\n一些测试数据 {uuid.uuid4()}")
+            f.write(f"測試檔案 {i} 的內容\n一些測試資料 {uuid.uuid4()}")
 
     if nested:
         subdir = os.path.join(temp_dir, "subdir")
         os.makedirs(subdir)
         with open(os.path.join(subdir, "nested_file.txt"), "w", encoding="utf-8") as f:
-            f.write("嵌套文件的内容")
+            f.write("巢狀檔案的內容")
 
     return temp_dir
 
@@ -45,9 +45,9 @@ def create_test_zip(file_count=3):
 
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for i in range(file_count):
-            content = f"压缩包内文件 {i} 的内容\n测试数据 {uuid.uuid4()}"
+            content = f"壓縮包內檔案 {i} 的內容\n測試資料 {uuid.uuid4()}"
             zf.writestr(f"file_{i}.txt", content)
-        zf.writestr("subdir/nested_file.txt", "压缩包内嵌套文件的内容")
+        zf.writestr("subdir/nested_file.txt", "壓縮包內巢狀檔案的內容")
 
     return zip_path, temp_dir
 
@@ -58,9 +58,9 @@ def cleanup_temp_dir(temp_dir):
 
 
 def assert_root_uri_valid(root_uri):
-    assert root_uri, "add_resource 必须返回 root_uri"
+    assert root_uri, "add_resource 必須返回 root_uri"
     assert root_uri.startswith("viking://resources/"), (
-        f"root_uri 应以 viking://resources/ 开头, 实际: {root_uri}"
+        f"root_uri 應以 viking://resources/ 開頭, 實際: {root_uri}"
     )
 
 
@@ -101,7 +101,7 @@ def assert_resource_findable(api_client, root_uri, keyword, timeout=90, poll_int
 
 def assert_resource_indexed(api_client, root_uri, keyword, timeout=180):
     found = assert_resource_findable(api_client, root_uri, keyword, timeout=timeout)
-    assert found, f"搜索应能检索到资源 {root_uri}, 关键词: {keyword}"
+    assert found, f"搜尋應能檢索到資源 {root_uri}, 關鍵詞: {keyword}"
     return found
 
 
@@ -122,7 +122,7 @@ def assert_source_format(api_client, root_uri, expected_format):
         expected_format = [expected_format]
 
     stat_resp = api_client.fs_stat(root_uri)
-    assert stat_resp.status_code == 200, f"fs_stat 应返回200, root_uri: {root_uri}"
+    assert stat_resp.status_code == 200, f"fs_stat 應返回200, root_uri: {root_uri}"
     stat_data = stat_resp.json()
     stat_result = stat_data.get("result")
 
@@ -130,7 +130,7 @@ def assert_source_format(api_client, root_uri, expected_format):
         actual_format = stat_result.get("source_format")
         if actual_format:
             assert actual_format in expected_format, (
-                f"source_format 应为 {expected_format}, 实际: {actual_format}"
+                f"source_format 應為 {expected_format}, 實際: {actual_format}"
             )
             return
 
@@ -142,7 +142,7 @@ def assert_source_format(api_client, root_uri, expected_format):
             actual_format = tree_result.get("source_format")
             if actual_format:
                 assert actual_format in expected_format, (
-                    f"source_format 应为 {expected_format}, 实际: {actual_format}"
+                    f"source_format 應為 {expected_format}, 實際: {actual_format}"
                 )
                 return
             children = tree_result.get("children", [])
@@ -156,7 +156,7 @@ def assert_source_format(api_client, root_uri, expected_format):
                 actual_format = child.get("source_format")
                 if actual_format:
                     assert actual_format in expected_format, (
-                        f"source_format 应为 {expected_format}, 实际: {actual_format}"
+                        f"source_format 應為 {expected_format}, 實際: {actual_format}"
                     )
                     return
 
@@ -170,7 +170,7 @@ def assert_source_format(api_client, root_uri, expected_format):
                 actual_format = item.get("source_format")
                 if actual_format:
                     assert actual_format in expected_format, (
-                        f"source_format 应为 {expected_format}, 实际: {actual_format}"
+                        f"source_format 應為 {expected_format}, 實際: {actual_format}"
                     )
                     return
 
@@ -206,14 +206,14 @@ def assert_source_format(api_client, root_uri, expected_format):
                 for ext, fmt_list in ext_format_map.items():
                     if rel_path.endswith(ext) or uri.endswith(ext):
                         assert any(f in expected_format for f in fmt_list), (
-                            f"根据扩展名 {ext} 推断 source_format 应为 {fmt_list}, 期望: {expected_format}"
+                            f"根據副檔名 {ext} 推斷 source_format 應為 {fmt_list}, 期望: {expected_format}"
                         )
                         return
 
 
 def assert_tree_has_child_nodes(api_client, root_uri, min_nodes=1):
     tree_resp = api_client.fs_tree(root_uri)
-    assert tree_resp.status_code == 200, f"fs_tree 应返回200, root_uri: {root_uri}"
+    assert tree_resp.status_code == 200, f"fs_tree 應返回200, root_uri: {root_uri}"
     tree_data = tree_resp.json()
     tree_result = tree_data.get("result")
 
@@ -225,7 +225,7 @@ def assert_tree_has_child_nodes(api_client, root_uri, min_nodes=1):
         children = []
 
     assert len(children) >= min_nodes, (
-        f"tree 应至少包含 {min_nodes} 个子节点, 实际: {len(children)}"
+        f"tree 應至少包含 {min_nodes} 個子節點, 實際: {len(children)}"
     )
 
 
@@ -238,7 +238,7 @@ def assert_content_no_html_tags(api_client, root_uri):
     matches = grep_result.get("matches", [])
     html_matches = [m for m in matches if isinstance(m, dict) and "<" in str(m.get("line", ""))]
     assert len(html_matches) == 0, (
-        f"HTML内容应被剥离, 但仍包含HTML标签: {[m.get('line', '')[:80] for m in html_matches[:3]]}"
+        f"HTML內容應被剝離, 但仍包含HTML標籤: {[m.get('line', '')[:80] for m in html_matches[:3]]}"
     )
 
 

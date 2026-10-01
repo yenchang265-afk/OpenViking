@@ -64,7 +64,7 @@ set -a
 . ~/.openclaw/ov_dream.env
 set +a
 python3 scripts/dream.py dream
-python3 scripts/dream.py recall "最近我在聊什么"
+python3 scripts/dream.py recall "最近我在聊什麼"
 ```
 
 ## Schedule Sync

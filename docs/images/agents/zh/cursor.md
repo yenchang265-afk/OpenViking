@@ -1,31 +1,31 @@
-## 步骤1：安装
+## 步驟1：安裝
 
-1. 在终端执行如下安装命令：
+1. 在終端執行如下安裝命令：
 
    ```bash
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
    ```
 
-2. 安装器会依次询问以下信息：语言（English / 中文）、OpenViking 凭据。在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安裝器會依次詢問以下資訊：語言（English / 中文）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-## 步骤2：验证
+## 步驟2：驗證
 
-1. 点击「Customize → MCPs」，确认可以看到「openviking User」和「openviking Plugin」两项。
-2. 点击「Customize → Hooks」，确认可以看到「openviking-memory」条目。
+1. 點選「Customize → MCPs」，確認可以看到「openviking User」和「openviking Plugin」兩項。
+2. 點選「Customize → Hooks」，確認可以看到「openviking-memory」條目。
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| Hook 没跑 | 完全退出 Cursor，重启，再建会话 |
-| 连接 / 鉴权失败 | 检查 `~/.openviking/ovcli.conf`，重启 Cursor |
-| 需要日志 | `OPENVIKING_DEBUG=1`，看 `~/.openviking/logs/cursor-hooks.log` |
+| Hook 沒跑 | 完全退出 Cursor，重啟，再建會話 |
+| 連線 / 鑑權失敗 | 檢查 `~/.openviking/ovcli.conf`，重啟 Cursor |
+| 需要日誌 | `OPENVIKING_DEBUG=1`，看 `~/.openviking/logs/cursor-hooks.log` |
 
-## 参考
+## 參考
 
-- 手动配置文档：[Cursor](https://docs.openviking.net/zh/agent-integrations/12-cursor)
-- 源码：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
+- 手動配置文件：[Cursor](https://docs.openviking.net/zh/agent-integrations/12-cursor)
+- 原始碼：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)

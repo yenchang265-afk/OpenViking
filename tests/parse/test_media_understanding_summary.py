@@ -331,7 +331,7 @@ async def test_provider_failure_returns_empty_summary(monkeypatch):
 def test_refusal_provider_output_is_rejected():
     for raw in (
         "Unable to analyze this media.",
-        "抱歉，我无法理解该视频内容。",
+        "抱歉，我無法理解該影片內容。",
         "# Provider response\n\nI'm unable to analyze this media.",
     ):
         assert (

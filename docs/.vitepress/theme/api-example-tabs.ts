@@ -34,7 +34,7 @@ export function shouldSynchronizeExampleTabs(kind: string | undefined): boolean 
 
 export function responseExample(label: string): ExampleLanguage | undefined {
   const normalized = label.trim().replace(/[：:]$/, '').trim()
-  const http = normalized.match(/^HTTP API (?:Response|响应)(.*)$/i)
+  const http = normalized.match(/^HTTP API (?:Response|響應)(.*)$/i)
   if (http) {
     const wait = http[1].match(/wait\s*=\s*(true|false)/i)?.[1]?.toLowerCase()
     return {
@@ -43,20 +43,20 @@ export function responseExample(label: string): ExampleLanguage | undefined {
       kind: 'response'
     }
   }
-  const cli = normalized.match(/^CLI (?:Response|响应)(.*)$/i)
+  const cli = normalized.match(/^CLI (?:Response|響應)(.*)$/i)
   if (cli) {
     const json = /json/i.test(cli[1])
     return { key: json ? 'response-cli-json' : 'response-cli', label: json ? 'CLI JSON' : 'CLI', kind: 'response' }
   }
-  const variant = normalized.match(/^(?:Response|响应)\s*[（(]([^）)]+)[）)]$/i)
+  const variant = normalized.match(/^(?:Response|響應)\s*[（(]([^）)]+)[）)]$/i)
   if (variant) return { key: responseKey(variant[1]), label: variant[1], kind: 'response' }
-  if (/^(?:Synchronous response|同步响应)/i.test(normalized)) {
+  if (/^(?:Synchronous response|同步響應)/i.test(normalized)) {
     return { key: 'response-sync', label: /同步/.test(normalized) ? '同步' : 'Synchronous', kind: 'response' }
   }
-  if (/^(?:Asynchronous response|异步响应)/i.test(normalized)) {
-    return { key: 'response-async', label: /异步/.test(normalized) ? '异步' : 'Asynchronous', kind: 'response' }
+  if (/^(?:Asynchronous response|非同步響應)/i.test(normalized)) {
+    return { key: 'response-async', label: /非同步/.test(normalized) ? '非同步' : 'Asynchronous', kind: 'response' }
   }
-  const example = normalized.match(/^(?:Response Example|响应示例)\s*[（(]([^）)]+)[）)]$/i)
+  const example = normalized.match(/^(?:Response Example|響應示例)\s*[（(]([^）)]+)[）)]$/i)
   if (example) {
     return { key: responseKey(example[1]), label: example[1], kind: 'response' }
   }
@@ -69,7 +69,7 @@ export function exampleHeading(label: string): ExampleLanguage | undefined {
 
 export function isSharedSectionLabel(label: string): boolean {
   const normalized = label.trim().replace(/[：:]$/, '').trim()
-  return exampleHeading(label) === undefined && /^(?:(?:error )?response\b|响应|result fields?\b|notes?\b|cli override flags?\b|mcp\b|返回|说明)/i.test(
+  return exampleHeading(label) === undefined && /^(?:(?:error )?response\b|響應|result fields?\b|notes?\b|cli override flags?\b|mcp\b|返回|說明)/i.test(
     normalized
   )
 }

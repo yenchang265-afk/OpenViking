@@ -1,104 +1,104 @@
-# OpenViking Working Memory v2 — 设计文档
+# OpenViking Working Memory v2 — 設計文件
 
-## 文档目标
+## 文件目標
 
-本文描述 OpenViking Working Memory v2（以下简称 WM v2）的当前实现：设计原则、数据结构、协议、流程，以及对应代码位置。
+本文描述 OpenViking Working Memory v2（以下簡稱 WM v2）的當前實現：設計原則、資料結構、協議、流程，以及對應程式碼位置。
 
 ---
 
-## 当前能力
+## 當前能力
 
-### afterTurn（每轮对话后自动归档）
+### afterTurn（每輪對話後自動歸檔）
 
-| 能力 | 说明 |
+| 能力 | 說明 |
 |---|---|
-| 自动检测归档时机 | `pending_tokens` 滑动窗口，O(1) 计算 |
-| 增量更新 WM | tool_call + JSON schema + 服务端 Guards |
-| 归档后保留最近消息 | `keep_recent_count`，保持上下文连贯 |
+| 自動檢測歸檔時機 | `pending_tokens` 滑動視窗，O(1) 計算 |
+| 增量更新 WM | tool_call + JSON schema + 服務端 Guards |
+| 歸檔後保留最近訊息 | `keep_recent_count`，保持上下文連貫 |
 
-### compact（主动上下文压缩）
+### compact（主動上下文壓縮）
 
-| 能力 | 说明 |
+| 能力 | 說明 |
 |---|---|
-| 全量重写 WM 并归档 | `keep_recent_count=0`，彻底压缩 |
+| 全量重寫 WM 並歸檔 | `keep_recent_count=0`，徹底壓縮 |
 
-### assemble（构建 LLM 上下文）
+### assemble（構建 LLM 上下文）
 
-| 能力 | 说明 |
+| 能力 | 說明 |
 |---|---|
-| WM overview 作为会话摘要 | 结构化 7 段模板 + 旧格式自动升级 |
-| 按 archive_id 展开归档原文 | `ov_archive_expand` 工具 / API 读取单个 completed archive 的原始消息 |
-| 按关键词跨 archive 回查 | `ov_archive_search` 工具，服务端 grep 命中消息 + archive 标签 |
+| WM overview 作為會話摘要 | 結構化 7 段模板 + 舊格式自動升級 |
+| 按 archive_id 展開歸檔原文 | `ov_archive_expand` 工具 / API 讀取單個 completed archive 的原始訊息 |
+| 按關鍵詞跨 archive 回查 | `ov_archive_search` 工具，服務端 grep 命中訊息 + archive 標籤 |
 
 ### 通用
 
-| 能力 | 说明 |
+| 能力 | 說明 |
 |---|---|
-| 信息保留 Guards | 5 个段级保护函数 |
+| 資訊保留 Guards | 5 個段級保護函式 |
 
 ---
 
-## 一、设计方案
+## 一、設計方案
 
-### 1.1 设计原则
+### 1.1 設計原則
 
-**原则 1：archive 本体就是 working memory，用固定的结构化模板承载**
+**原則 1：archive 本體就是 working memory，用固定的結構化模板承載**
 
-archive 的 `.overview.md` 是**固定 7 段结构化模板**（Session Title / Current State / Task & Goals / Key Facts & Decisions / Files & Context / Errors & Corrections / Open Issues）。每段有明确的职责，LLM 不能随意增删段落。
+archive 的 `.overview.md` 是**固定 7 段結構化模板**（Session Title / Current State / Task & Goals / Key Facts & Decisions / Files & Context / Errors & Corrections / Open Issues）。每段有明確的職責，LLM 不能隨意增刪段落。
 
-有结构才能做增量更新——LLM 对每个段独立发 `KEEP` / `UPDATE` / `APPEND` 操作，未变化的段发 `KEEP` 由服务端原样复制（零 token 消耗、零信息丢失），变化的段走校验后合并。
+有結構才能做增量更新——LLM 對每個段獨立發 `KEEP` / `UPDATE` / `APPEND` 操作，未變化的段發 `KEEP` 由服務端原樣複製（零 token 消耗、零資訊丟失），變化的段走校驗後合併。
 
-向后兼容性的 3 条保证：
+向後相容性的 3 條保證：
 
-- `assemble()` 消费的仍然是 `latest_archive_overview`，无新增数据通路
-- `getSessionContext()` 返回字段不变
-- 存储结构（`archive_NNN/.overview.md`）不变
+- `assemble()` 消費的仍然是 `latest_archive_overview`，無新增資料通路
+- `getSessionContext()` 返回欄位不變
+- 儲存結構（`archive_NNN/.overview.md`）不變
 
-**原则 2：信息保留是系统责任，不是 LLM 责任**
+**原則 2：資訊保留是系統責任，不是 LLM 責任**
 
-LLM 只负责「判断变了什么」，服务端 guard 函数负责「保证不丢信息」。具体机制见 §1.4。
+LLM 只負責「判斷變了什麼」，服務端 guard 函式負責「保證不丟資訊」。具體機制見 §1.4。
 
-**原则 3：向后兼容与平滑升级**
+**原則 3：向後相容與平滑升級**
 
-- 不配置新字段时行为完全不变，`keep_recent_count=0` 等价于全量归档
-- 已有旧格式 overview 的会话：服务端自动检测 overview 是否包含 WM 7 段 header。如果是 legacy 格式，走创建路径全量生成 WM，不走 tool_call 增量更新——下一次 commit 时自动完成格式升级，无需手动迁移
+- 不配置新欄位時行為完全不變，`keep_recent_count=0` 等價於全量歸檔
+- 已有舊格式 overview 的會話：服務端自動檢測 overview 是否包含 WM 7 段 header。如果是 legacy 格式，走建立路徑全量生成 WM，不走 tool_call 增量更新——下一次 commit 時自動完成格式升級，無需手動遷移
 
-### 1.2 WM 数据结构
+### 1.2 WM 資料結構
 
-WM 是一份 Markdown 文档，固定 7 个 section，顺序不变：
+WM 是一份 Markdown 文件，固定 7 個 section，順序不變：
 
 ```markdown
 # Working Memory
 
 ## Session Title
-_简短独特的 5-10 词标题，信息密集_
+_簡短獨特的 5-10 詞標題，資訊密集_
 
 ## Current State
-_当前工作状态、待完成任务、下一步_
+_當前工作狀態、待完成任務、下一步_
 
 ## Task & Goals
-_用户目标、关键设计决策、解释性上下文_
+_使用者目標、關鍵設計決策、解釋性上下文_
 
 ## Key Facts & Decisions
-_重要结论、技术选择及理由、用户偏好与约束_
+_重要結論、技術選擇及理由、使用者偏好與約束_
 
 ## Files & Context
-_重要文件 / 函数 / 模块及路径_
+_重要檔案 / 函式 / 模組及路徑_
 
 ## Errors & Corrections
-_遇到的错误及修复、用户纠正、失败方案_
+_遇到的錯誤及修復、使用者糾正、失敗方案_
 
 ## Open Issues
-_未解决问题、阻塞项、后续风险_
+_未解決問題、阻塞項、後續風險_
 ```
 
-每段上限 ~2000 tokens，总 WM 上限 ~12000 tokens（prompt 指引层面的预算约束）。服务端 guard 在单段 ≥ 25 bullets 或 ≥ 1500 tokens 时触发 consolidation 提醒。
+每段上限 ~2000 tokens，總 WM 上限 ~12000 tokens（prompt 指引層面的預算約束）。服務端 guard 在單段 ≥ 25 bullets 或 ≥ 1500 tokens 時觸發 consolidation 提醒。
 
-### 1.3 增量更新协议
+### 1.3 增量更新協議
 
-WM 更新通过 **tool_call（function calling）+ JSON schema** 实现：LLM 调用 `update_working_memory` 工具，以结构化 JSON 提交对 7 个段的逐段操作。JSON schema 强约束保证漏段、多段、格式错误在 schema 层直接拦截。
+WM 更新通過 **tool_call（function calling）+ JSON schema** 實現：LLM 呼叫 `update_working_memory` 工具，以結構化 JSON 提交對 7 個段的逐段操作。JSON schema 強約束保證漏段、多段、格式錯誤在 schema 層直接攔截。
 
-#### tool schema 定义
+#### tool schema 定義
 
 ```python
 WM_SEVEN_SECTIONS = [
@@ -129,66 +129,66 @@ WM_UPDATE_TOOL = {
 }
 ```
 
-每段的操作（`_WM_SECTION_OP_SCHEMA`）用 `oneOf` 约束为三种形状之一：
+每段的操作（`_WM_SECTION_OP_SCHEMA`）用 `oneOf` 約束為三種形狀之一：
 
-- `{"op": "KEEP"}` — 原样保留
-- `{"op": "UPDATE", "content": "..."}` — 全段替换
-- `{"op": "APPEND", "items": ["...", "..."]}` — 追加条目
+- `{"op": "KEEP"}` — 原樣保留
+- `{"op": "UPDATE", "content": "..."}` — 全段替換
+- `{"op": "APPEND", "items": ["...", "..."]}` — 追加條目
 
-`op` 字段使用 `"type": "string", "enum": ["KEEP"]` 形式，兼容更多 JSON Schema 版本。`additionalProperties: false` + `required` 把 LLM 输出严格钉在这个 schema 里。
+`op` 欄位使用 `"type": "string", "enum": ["KEEP"]` 形式，相容更多 JSON Schema 版本。`additionalProperties: false` + `required` 把 LLM 輸出嚴格釘在這個 schema 裡。
 
-#### 段级合并
+#### 段級合併
 
-服务端 `_merge_wm_sections(old_wm, ops)` 按 `WM_SEVEN_SECTIONS` 常量遍历 7 段：
+服務端 `_merge_wm_sections(old_wm, ops)` 按 `WM_SEVEN_SECTIONS` 常量遍歷 7 段：
 
-- **KEEP** → 原样复制旧内容
-- **UPDATE** → 用 LLM 提供的 content 替换（先经过该段的 guard 校验）
-- **APPEND** → 旧内容 + LLM 提供的 items（渲染为 `- item`）
+- **KEEP** → 原樣複製舊內容
+- **UPDATE** → 用 LLM 提供的 content 替換（先經過該段的 guard 校驗）
+- **APPEND** → 舊內容 + LLM 提供的 items（渲染為 `- item`）
 - 漏段 / 未知 op → 兜底 KEEP
 
-关键实现：`session.py: _merge_wm_sections()` + `_parse_wm_sections()`
+關鍵實現：`session.py: _merge_wm_sections()` + `_parse_wm_sections()`
 
-### 1.4 服务端 Guards
+### 1.4 服務端 Guards
 
-Guards 是服务端在合并 LLM 提交的操作时按段执行的语义校验函数：**即使 LLM 说 UPDATE，服务端也根据段的特性决定是否接受**。
+Guards 是服務端在合併 LLM 提交的操作時按段執行的語義校驗函式：**即使 LLM 說 UPDATE，服務端也根據段的特性決定是否接受**。
 
-7 个段的保护策略：
+7 個段的保護策略：
 
-| 段 | 数据特点 | Guard | 规则 |
+| 段 | 資料特點 | Guard | 規則 |
 |---|---|---|---|
-| Session Title | **锚定型**：会话身份标识，不应随意变更 | `_wm_enforce_title_stability` | UPDATE 与旧 title meaningful-word overlap < 1 → 回退 KEEP |
-| Current State | **易变型**：每轮反映当前状态 | 无 | LLM 可自由 UPDATE |
-| Task & Goals | **易变型**：目标随会话推进自然变化 | 无 | LLM 可自由 UPDATE |
-| Key Facts & Decisions | **累积型**：重要结论不断积累，丢失代价高 | `_wm_enforce_key_facts_consolidation` | 双阈值验证：bullet count ≥ 旧 15% 且 lexical anchor coverage ≥ 70%。被拒时提取新 items 做 APPEND |
-| Files & Context | **引用型**：文件路径一旦提及不应消失 | `_wm_enforce_files_no_regression` | UPDATE 丢失旧路径 → KEEP + APPEND 新路径 |
-| Errors & Corrections | **只增型**：错误记录只增不删 | `_wm_enforce_append_only` | UPDATE 降级为 APPEND，去重后只追加新条目 |
-| Open Issues | **跟踪型**：未解决项不应被静默丢弃 | `_wm_enforce_open_issues_resolved` | silently drop 的 item → 加 `[restored]` 标签恢复 |
+| Session Title | **錨定型**：會話身份標識，不應隨意變更 | `_wm_enforce_title_stability` | UPDATE 與舊 title meaningful-word overlap < 1 → 回退 KEEP |
+| Current State | **易變型**：每輪反映當前狀態 | 無 | LLM 可自由 UPDATE |
+| Task & Goals | **易變型**：目標隨會話推進自然變化 | 無 | LLM 可自由 UPDATE |
+| Key Facts & Decisions | **累積型**：重要結論不斷積累，丟失代價高 | `_wm_enforce_key_facts_consolidation` | 雙閾值驗證：bullet count ≥ 舊 15% 且 lexical anchor coverage ≥ 70%。被拒時提取新 items 做 APPEND |
+| Files & Context | **引用型**：檔案路徑一旦提及不應消失 | `_wm_enforce_files_no_regression` | UPDATE 丟失舊路徑 → KEEP + APPEND 新路徑 |
+| Errors & Corrections | **只增型**：錯誤記錄只增不刪 | `_wm_enforce_append_only` | UPDATE 降級為 APPEND，去重後只追加新條目 |
+| Open Issues | **跟蹤型**：未解決項不應被靜默丟棄 | `_wm_enforce_open_issues_resolved` | silently drop 的 item → 加 `[restored]` 標籤恢復 |
 
-Errors 是纯 append-only（UPDATE 总被降级为 APPEND）；Key Facts 允许「受控合并」——LLM 提交的合并 UPDATE 通过双阈值验证后可被接受。
+Errors 是純 append-only（UPDATE 總被降級為 APPEND）；Key Facts 允許「受控合併」——LLM 提交的合併 UPDATE 通過雙閾值驗證後可被接受。
 
-关键实现：`session.py: _wm_enforce_*()` 5 个函数。单元测试覆盖在 `tests/unit/session/test_wm_v2_guards.py`（共 107 用例覆盖 5 个 guard + growth + 通用 schema）。
+關鍵實現：`session.py: _wm_enforce_*()` 5 個函式。單元測試覆蓋在 `tests/unit/session/test_wm_v2_guards.py`（共 107 用例覆蓋 5 個 guard + growth + 通用 schema）。
 
-### 1.5 滑动窗口与 pending_tokens
+### 1.5 滑動視窗與 pending_tokens
 
-`SessionMeta` 维护 `pending_tokens: int` 和 `keep_recent_count: int`，持久化到 `.meta.json`。
+`SessionMeta` 維護 `pending_tokens: int` 和 `keep_recent_count: int`，持久化到 `.meta.json`。
 
-- `add_message` 时：新消息进入保留窗口尾部，窗口头部被挤出的消息 token 累加到 `pending_tokens`
-- `commit` 时 `pending_tokens` 归零
-- `GET /sessions/{id}` 直接读 meta，O(1)
+- `add_message` 時：新訊息進入保留視窗尾部，視窗頭部被擠出的訊息 token 累加到 `pending_tokens`
+- `commit` 時 `pending_tokens` 歸零
+- `GET /sessions/{id}` 直接讀 meta，O(1)
 
-服务端有防御性 clamp：`pending_tokens` 与 `keep_recent_count` 都 `max(0, ...)`。`CommitRequest.keep_recent_count` 在 router 层有 `ge=0, le=10_000` 约束。
+服務端有防禦性 clamp：`pending_tokens` 與 `keep_recent_count` 都 `max(0, ...)`。`CommitRequest.keep_recent_count` 在 router 層有 `ge=0, le=10_000` 約束。
 
-关键实现：`session.py: add_message()` + `SessionMeta`、`routers/sessions.py: CommitRequest`
+關鍵實現：`session.py: add_message()` + `SessionMeta`、`routers/sessions.py: CommitRequest`
 
 ### 1.6 保留最近消息
 
-commit 归档时不全量清空消息，保留最近 N 条维持上下文连贯。
+commit 歸檔時不全量清空訊息，保留最近 N 條維持上下文連貫。
 
-- 参数 `keep_recent_count` 由插件在 commit API body 中传入
-- `afterTurn` 路径默认 10，`compact` 路径硬编码 0
-- OV 存储模型保证 `tool_use` / `tool_result` 配对完整性（ToolPart 自包含）
+- 引數 `keep_recent_count` 由外掛在 commit API body 中傳入
+- `afterTurn` 路徑預設 10，`compact` 路徑硬編碼 0
+- OV 儲存模型保證 `tool_use` / `tool_result` 配對完整性（ToolPart 自包含）
 
-关键实现：`session.py: commit_async(keep_recent_count)`、`routers/sessions.py: CommitRequest`、`context-engine.ts`、`client.ts`
+關鍵實現：`session.py: commit_async(keep_recent_count)`、`routers/sessions.py: CommitRequest`、`context-engine.ts`、`client.ts`
 
 ---
 
@@ -196,47 +196,47 @@ commit 归档时不全量清空消息，保留最近 N 条维持上下文连贯�
 
 ### 2.1 afterTurn 流程
 
-插件端不变，commit 在服务端完成：
+外掛端不變，commit 在服務端完成：
 
 ```
 [插件] afterTurn
   ├── extractNewTurnMessages → 提取新消息
-  ├── addSessionMessage → 逐条 POST /sessions/{id}/messages
-  │     服务端: append msg + 滑动窗口更新 pending_tokens + save meta
+  ├── addSessionMessage → 逐條 POST /sessions/{id}/messages
+  │     服務端: append msg + 滑動視窗更新 pending_tokens + save meta
   ├── GET /sessions/{id} → 返回 pending_tokens（O(1)）
   └── pending_tokens >= tokenBudget * commitTokenThresholdRatio?
         │
         YES → commitSession(wait=false, keepRecentCount=cfg.commitKeepRecentCount)
               │
-              [服务端 commit_async]
+              [服務端 commit_async]
               │
               ├── Phase 1（同步，不阻塞返回）
               │    ├── split_idx = total - keep_recent_count
-              │    ├── 归档 messages[:split_idx] → archive_NNN/
+              │    ├── 歸檔 messages[:split_idx] → archive_NNN/
               │    ├── 保留 messages[split_idx:]
               │    └── pending_tokens = 0, 更新 meta
               │
-              └── Phase 2（asyncio.create_task 后台执行，包在
+              └── Phase 2（asyncio.create_task 後臺執行，包在
                   request_wait_tracker.register_request / wait_for_request /
-                  cleanup 包络内，确保所有下游 enqueue 都被等待）
-                   ├── 读旧 WM: _get_latest_completed_archive_overview()
-                   ├── 有旧 WM?
+                  cleanup 包絡內，確保所有下游 enqueue 都被等待）
+                   ├── 讀舊 WM: _get_latest_completed_archive_overview()
+                   ├── 有舊 WM?
                    │   YES → ov_wm_v2_update prompt + tool_call
-                   │          → guards 检查每段决策
-                   │          → _merge_wm_sections 段级合并
-                   │   NO  → ov_wm_v2 prompt 全量创建
-                   ├── 写入 archive_NNN/.overview.md + .abstract.md + .meta.json
-                   ├── 提取 long-term memory（SessionCompressorV3，需 archive_uri 才能写 memory_diff.json）
-                   ├── 等待 embedding / semantic 队列排空（wait_for_request）
-                   └── 写入 .done（最后写，标志该 archive 全部状态终结）
+                   │          → guards 檢查每段決策
+                   │          → _merge_wm_sections 段級合併
+                   │   NO  → ov_wm_v2 prompt 全量建立
+                   ├── 寫入 archive_NNN/.overview.md + .abstract.md + .meta.json
+                   ├── 提取 long-term memory（SessionCompressorV3，需 archive_uri 才能寫 memory_diff.json）
+                   ├── 等待 embedding / semantic 佇列排空（wait_for_request）
+                   └── 寫入 .done（最後寫，標誌該 archive 全部狀態終結）
 ```
 
-Phase 2 关键细节：
+Phase 2 關鍵細節：
 
-- **格式检测**：读取旧 overview 后，先检查是否包含 WM 7 段 header（`any(f"## {s}" in overview for s in WM_SEVEN_SECTIONS)`）。如果是 legacy 格式，走创建路径而非 tool_call 更新——保证平滑升级
-- **Section reminders**：更新路径中，`_build_wm_section_reminders()` 从旧 WM 提取每段当前状态摘要，注入到 update prompt 的 `wm_section_reminders` 变量
-- **完整回退链**：tool_call 缺失 → `_fallback_generate_wm_creation` 重跑（传入旧 WM 作为上下文）；JSON parse 失败 → 正则 recovery → 段级 guard 兜底 KEEP；VLM 不可用 → 占位 summary
-- **Phase 2 队列等待**：`register_request` + `wait_for_request(timeout=_PHASE2_QUEUE_WAIT_TIMEOUT_SECONDS=1800s)` 是必需的——否则下游 `compressor` / `memory_updater` 通过 `register_*_root` 注册的 embedding / semantic 队列无人 await，会让 `tracker.complete()` 与 `.done` 在向量化 / 语义入库**之前**就触发，导致调用方看到 commit 完成但 memory 不可检索
+- **格式檢測**：讀取舊 overview 後，先檢查是否包含 WM 7 段 header（`any(f"## {s}" in overview for s in WM_SEVEN_SECTIONS)`）。如果是 legacy 格式，走建立路徑而非 tool_call 更新——保證平滑升級
+- **Section reminders**：更新路徑中，`_build_wm_section_reminders()` 從舊 WM 提取每段當前狀態摘要，注入到 update prompt 的 `wm_section_reminders` 變數
+- **完整回退鏈**：tool_call 缺失 → `_fallback_generate_wm_creation` 重跑（傳入舊 WM 作為上下文）；JSON parse 失敗 → 正則 recovery → 段級 guard 兜底 KEEP；VLM 不可用 → 佔位 summary
+- **Phase 2 佇列等待**：`register_request` + `wait_for_request(timeout=_PHASE2_QUEUE_WAIT_TIMEOUT_SECONDS=1800s)` 是必需的——否則下游 `compressor` / `memory_updater` 通過 `register_*_root` 註冊的 embedding / semantic 佇列無人 await，會讓 `tracker.complete()` 與 `.done` 在向量化 / 語義入庫**之前**就觸發，導致呼叫方看到 commit 完成但 memory 不可檢索
 
 ### 2.2 compact 流程
 
@@ -244,21 +244,21 @@ Phase 2 关键细节：
 [插件] compact
   └── commitSession(wait=true, keepRecentCount=0)
         ├── Phase 1: 全部消息 → archive, messages.clear()
-        ├── Phase 2: 读旧 WM → 创建/更新 → 写入
-        └── 返回 → getSessionContext → 回读最新 WM
+        ├── Phase 2: 讀舊 WM → 建立/更新 → 寫入
+        └── 返回 → getSessionContext → 回讀最新 WM
 ```
 
-### 2.3 assemble（上下文组装）
+### 2.3 assemble（上下文組裝）
 
-instruction / archive / session 三分区：
+instruction / archive / session 三分割槽：
 
 ```
 ┌──────────── System Prompt ────────────────────┐
-│ systemPromptAddition（语义示意，非逐字）：       │
-│   1. [Session History Summary] 是压缩摘要      │
-│   2. Active messages 是最新未压缩上下文        │
-│   3. 二者冲突时优先 active messages            │
-│   4. 缺细节时询问用户，不要猜                   │
+│ systemPromptAddition（語義示意，非逐字）：       │
+│   1. [Session History Summary] 是壓縮摘要      │
+│   2. Active messages 是最新未壓縮上下文        │
+│   3. 二者衝突時優先 active messages            │
+│   4. 缺細節時詢問使用者，不要猜                   │
 │ + 原始 system prompt                           │
 └────────────────────────────────────────────────┘
 
@@ -275,64 +275,64 @@ instruction / archive / session 三分区：
 └────────────────────────────────────────────────┘
 
 ┌──── Layer 2: Session Context ─────────────────┐
-│  server 侧合并后的 ctx.messages:               │
+│  server 側合併後的 ctx.messages:               │
 │  - 未完成 archive 的 pending messages          │
-│  - 当前 live session messages                  │
+│  - 當前 live session messages                  │
 └────────────────────────────────────────────────┘
 
 ┌──── Layer 3: Reserved (≥20K tokens) ──────────┐
-│  LLM 回复空间                                  │
+│  LLM 回覆空間                                  │
 └────────────────────────────────────────────────┘
 ```
 
-实现要点：
+實現要點：
 
-- `pre_archive_abstracts` 字段保留在 API（向后兼容），但服务端固定返回空数组，插件侧 `buildArchiveMemory()` 只消费 `latest_archive_overview`
-- 若需要具体 archive 原文，模型走两条路径：按 `archive_id` 用 `ov_archive_expand` 展开；或用 `ov_archive_search` 按关键词跨 archive grep（见 §三）
+- `pre_archive_abstracts` 欄位保留在 API（向後相容），但服務端固定返回空陣列，外掛側 `buildArchiveMemory()` 只消費 `latest_archive_overview`
+- 若需要具體 archive 原文，模型走兩條路徑：按 `archive_id` 用 `ov_archive_expand` 展開；或用 `ov_archive_search` 按關鍵詞跨 archive grep（見 §三）
 
 ---
 
-## 三、归档对话回查工具
+## 三、歸檔對話回查工具
 
-OpenViking 在插件侧暴露两个独立的 archive 回查工具。
+OpenViking 在外掛側暴露兩個獨立的 archive 回查工具。
 
 ### 3.1 `ov_archive_expand`
 
-- **插件工具**：`ov_archive_expand`，参数 `archiveId: string`
-- **服务端 API**：`GET /api/v1/sessions/{session_id}/archives/{archive_id}`，server 返回 `{archive_id, abstract, overview, messages}`
-- **工具输出给 LLM**：archive header（`## archive_id` + `**Summary**: abstract` + `**Messages**: N`） + 全部原始 messages（faithful 文本格式）。`overview` 不重复输出（已经在主上下文 `[Session History Summary]` 里）
+- **外掛工具**：`ov_archive_expand`，引數 `archiveId: string`
+- **服務端 API**：`GET /api/v1/sessions/{session_id}/archives/{archive_id}`，server 返回 `{archive_id, abstract, overview, messages}`
+- **工具輸出給 LLM**：archive header（`## archive_id` + `**Summary**: abstract` + `**Messages**: N`） + 全部原始 messages（faithful 文本格式）。`overview` 不重複輸出（已經在主上下文 `[Session History Summary]` 裡）
 - **工具 description 文本**：`"Retrieve original messages from a compressed session archive. Use when a session summary lacks specific details such as exact commands, file paths, code snippets, or config values. Check [Archive Index] to find the right archive ID."`
 
 ### 3.2 `ov_archive_search`
 
-- **插件工具**：`ov_archive_search`，参数 `query: string` + 可选 `archiveId: string`
-- **客户端封装**：`client.grepSessionArchives(sessionId, pattern, options)`
-- **服务端 API**：`POST /api/v1/search/grep`，body `{uri, pattern, case_insensitive}`。`uri` 默认 `viking://session/{sessionId}/history`（覆盖所有 archive）；指定 `archiveId` 时收窄为 `viking://session/{sessionId}/history/{archiveId}`
-- **工具输出给 LLM**：最多 12 条命中消息，每条最多 1500 字符，附 archive 标签（如 `archive_005`）和行号
-- **行为约束**：
-  - 默认遍历所有 archive（新到旧）
-  - 默认永远不返回完整 archive 原文
-  - case-insensitive；正则元字符自动转义为字面量匹配
+- **外掛工具**：`ov_archive_search`，引數 `query: string` + 可選 `archiveId: string`
+- **客戶端封裝**：`client.grepSessionArchives(sessionId, pattern, options)`
+- **服務端 API**：`POST /api/v1/search/grep`，body `{uri, pattern, case_insensitive}`。`uri` 預設 `viking://session/{sessionId}/history`（覆蓋所有 archive）；指定 `archiveId` 時收窄為 `viking://session/{sessionId}/history/{archiveId}`
+- **工具輸出給 LLM**：最多 12 條命中訊息，每條最多 1500 字元，附 archive 標籤（如 `archive_005`）和行號
+- **行為約束**：
+  - 預設遍歷所有 archive（新到舊）
+  - 預設永遠不返回完整 archive 原文
+  - case-insensitive；正則元字元自動轉義為字面量匹配
 - **工具 description 文本**：`"Keyword-grep across all archived original conversation messages of the current session. Use this whenever the [Session History Summary] does not contain the specific detail the user is asking about. Extract 2-3 concrete entity words from the question (names, places, objects, dates) and search each separately. Only conclude information is unavailable after trying at least 2 different keyword variations."`
 
 ---
 
-## 四、关键代码索引
+## 四、關鍵程式碼索引
 
-| 主题 | 路径 |
+| 主題 | 路徑 |
 |---|---|
-| WM 7 段常量与 schema | `openviking/session/session.py: WM_SEVEN_SECTIONS / _WM_SECTION_OP_SCHEMA / WM_UPDATE_TOOL` |
-| 段级合并 | `openviking/session/session.py: _merge_wm_sections() / _parse_wm_sections()` |
-| 5 个 Guards | `openviking/session/session.py: _wm_enforce_*()` |
-| Phase 2 主循环 | `openviking/session/session.py: _run_memory_extraction()` |
-| 滑动窗口 / pending_tokens | `openviking/session/session.py: SessionMeta / add_message()` |
+| WM 7 段常量與 schema | `openviking/session/session.py: WM_SEVEN_SECTIONS / _WM_SECTION_OP_SCHEMA / WM_UPDATE_TOOL` |
+| 段級合併 | `openviking/session/session.py: _merge_wm_sections() / _parse_wm_sections()` |
+| 5 個 Guards | `openviking/session/session.py: _wm_enforce_*()` |
+| Phase 2 主迴圈 | `openviking/session/session.py: _run_memory_extraction()` |
+| 滑動視窗 / pending_tokens | `openviking/session/session.py: SessionMeta / add_message()` |
 | commit API + keep_recent_count clamp | `openviking/server/routers/sessions.py: CommitRequest` |
 | WM v2 prompt 模板 | `prompts/templates/compression/ov_wm_v2.yaml`、`ov_wm_v2_update.yaml` |
 | 插件 commit / afterTurn / compact | `examples/openclaw-plugin/context-engine.ts` |
 | 插件 ov_archive_search 工具 | `examples/openclaw-plugin/index.ts: ov_archive_search` |
 | 插件 ov_archive_expand 工具 | `examples/openclaw-plugin/index.ts: ov_archive_expand` |
-| 单元测试 | `tests/unit/session/test_wm_v2_guards.py`、`test_working_memory_growth.py`、`test_working_memory_v2.py`（共 107 用例） |
+| 單元測試 | `tests/unit/session/test_wm_v2_guards.py`、`test_working_memory_growth.py`、`test_working_memory_v2.py`（共 107 用例） |
 
 ---
 
-> **创建**：2026-05-02  
+> **建立**：2026-05-02  

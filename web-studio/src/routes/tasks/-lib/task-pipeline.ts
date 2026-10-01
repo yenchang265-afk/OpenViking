@@ -85,7 +85,7 @@ export function getTaskPipelineSteps(
     ]
   }
 
-  // Default resource ingestion pipeline: 外部解析 -> 语义处理 -> 嵌入向量
+  // Default resource ingestion pipeline: 外部解析 -> 語義處理 -> 嵌入向量
   return [
     {
       name: resolve('externalParse', t),
@@ -106,7 +106,7 @@ export function getTaskPipelineSteps(
 
 /**
  * Single Source of Truth (SSOT) for task pipeline diagram groups.
- * Used by Task Table Row column "工序队列流转".
+ * Used by Task Table Row column "工序佇列流轉".
  */
 export function getTaskPipelineGroups(
   task: TaskRecord,
@@ -154,7 +154,7 @@ export function getTaskPipelineGroups(
     ]
   }
 
-  // Default resource ingestion pipeline: 外部解析 -> (语义处理 + 嵌入向量)
+  // Default resource ingestion pipeline: 外部解析 -> (語義處理 + 嵌入向量)
   const parseState: StepState = status === 'pending' ? 'pending' : 'completed'
   const semState = inferState('Semantic', status === 'completed' ? 'completed' : status === 'running' ? 'running' : status === 'failed' ? 'failed' : 'pending', status, qStatus)
   const embState = inferState('Embedding', status === 'completed' ? 'completed' : status === 'running' ? 'running' : status === 'failed' ? 'failed' : 'pending', status, qStatus)

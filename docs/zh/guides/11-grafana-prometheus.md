@@ -1,17 +1,17 @@
-# 使用 Prometheus 和 Grafana 查看 OpenViking 指标
+# 使用 Prometheus 和 Grafana 檢視 OpenViking 指標
 
-这份文档给出一条从零开始的完整链路：
+這份文件給出一條從零開始的完整鏈路：
 
-1. 启动 OpenViking 并确认 `/metrics` 可访问
-2. 启动 Prometheus 抓取 OpenViking 指标
-3. 启动 Grafana 并连接 Prometheus 数据源
-4. 导入 OpenViking 自带 dashboard 或在 Explore 中直接查询
+1. 啟動 OpenViking 並確認 `/metrics` 可訪問
+2. 啟動 Prometheus 抓取 OpenViking 指標
+3. 啟動 Grafana 並連線 Prometheus 資料來源
+4. 匯入 OpenViking 自帶 dashboard 或在 Explore 中直接查詢
 
-如果你已经能访问 `http://<host>:<port>/metrics`，可以直接从本文的“启动 Prometheus”开始。
+如果你已經能訪問 `http://<host>:<port>/metrics`，可以直接從本文的“啟動 Prometheus”開始。
 
-## 架构关系
+## 架構關係
 
-OpenViking 不直接提供 Grafana 页面。标准链路是：
+OpenViking 不直接提供 Grafana 頁面。標準鏈路是：
 
 ```text
 OpenViking -> /metrics -> Prometheus -> Grafana
@@ -19,21 +19,21 @@ OpenViking -> /metrics -> Prometheus -> Grafana
 
 其中：
 
-- OpenViking 负责暴露 Prometheus exposition 文本
-- Prometheus 负责定时抓取 `/metrics`
-- Grafana 负责读取 Prometheus 并展示 dashboard
+- OpenViking 負責暴露 Prometheus exposition 文本
+- Prometheus 負責定時抓取 `/metrics`
+- Grafana 負責讀取 Prometheus 並展示 dashboard
 
-## 前置条件
+## 前置條件
 
-开始前请确认：
+開始前請確認：
 
-- OpenViking Server 已安装并可正常启动
-- Docker 已安装，可用于快速启动 Prometheus 和 Grafana
-- 你知道 OpenViking 当前监听的 HTTP 地址，例如 `http://localhost:30300`
+- OpenViking Server 已安裝並可正常啟動
+- Docker 已安裝，可用於快速啟動 Prometheus 和 Grafana
+- 你知道 OpenViking 當前監聽的 HTTP 地址，例如 `http://localhost:30300`
 
-## 第 1 步：确认 OpenViking 已暴露 `/metrics`
+## 第 1 步：確認 OpenViking 已暴露 `/metrics`
 
-OpenViking 需要先启用 metrics。最小配置参考：
+OpenViking 需要先啟用 metrics。最小配置參考：
 
 ```json
 {
@@ -47,22 +47,22 @@ OpenViking 需要先启用 metrics。最小配置参考：
 }
 ```
 
-配置写入 `~/.openviking/ov.conf` 后，重启 OpenViking Server。
+配置寫入 `~/.openviking/ov.conf` 後，重啟 OpenViking Server。
 
-如果你还没有启动服务，可参考：
+如果你還沒有啟動服務，可參考：
 
 ```bash
 openviking-server doctor
 openviking-server --port 30300
 ```
 
-然后验证：
+然後驗證：
 
 ```bash
 curl http://localhost:30300/metrics
 ```
 
-如果返回包含 `openviking_` 前缀的文本，说明 metrics 已经启用。例如：
+如果返回包含 `openviking_` 字首的文本，說明 metrics 已經啟用。例如：
 
 ```text
 # HELP openviking_http_requests_total Total number of HTTP requests
@@ -70,92 +70,92 @@ curl http://localhost:30300/metrics
 openviking_http_requests_total{method="GET",route="/api/v1/system/status",status="200"} 12
 ```
 
-如果返回 `Prometheus metrics are disabled.`，说明配置未生效或服务未重启。
+如果返回 `Prometheus metrics are disabled.`，說明配置未生效或服務未重啟。
 
-## 第 2 步：使用仓库自带 compose 文件部署
+## 第 2 步：使用倉庫自帶 compose 檔案部署
 
-仓库里已经提供了一套可直接启动的观测示例，文件位于：
+倉庫裡已經提供了一套可直接啟動的觀測示例，檔案位於：
 
 - `examples/grafana/docker-compose.yml`
 - `examples/grafana/prometheus.yml`
 - `examples/grafana/grafana/provisioning/datasources/prometheus.yml`
 - `examples/grafana/grafana/provisioning/dashboards/openviking.yml`
 
-另外，针对 Linux 上 OpenViking 继续监听 `127.0.0.1` / `localhost` 的场景，仓库还提供了一套 localhost 专用示例：
+另外，針對 Linux 上 OpenViking 繼續監聽 `127.0.0.1` / `localhost` 的場景，倉庫還提供了一套 localhost 專用示例：
 
 - `examples/grafana/docker-compose.localhost.yml`
 - `examples/grafana/prometheus.localhost.yml`
 - `examples/grafana/grafana/provisioning-localhost/datasources/prometheus.yml`
 - `examples/grafana/grafana/provisioning-localhost/dashboards/openviking.yml`
 
-两套方案的区别是：
+兩套方案的區別是：
 
-- `docker-compose.yml`：通用方案，Prometheus 从容器网络访问宿主机，适合 OpenViking 监听 `0.0.0.0`
-- `docker-compose.localhost.yml`：Linux localhost 方案，Prometheus 和 Grafana 直接使用宿主机网络，适合 OpenViking 继续监听 `127.0.0.1`
+- `docker-compose.yml`：通用方案，Prometheus 從容器網路訪問宿主機，適合 OpenViking 監聽 `0.0.0.0`
+- `docker-compose.localhost.yml`：Linux localhost 方案，Prometheus 和 Grafana 直接使用宿主機網路，適合 OpenViking 繼續監聽 `127.0.0.1`
 
-如果你当前不想把 OpenViking 暴露到 `0.0.0.0`，推荐优先使用 `docker-compose.localhost.yml`。
+如果你當前不想把 OpenViking 暴露到 `0.0.0.0`，推薦優先使用 `docker-compose.localhost.yml`。
 
-这套配置默认会做几件事：
+這套配置預設會做幾件事：
 
-- 启动 Prometheus，并把宿主机端口映射到 `30909`
-- 启动 Grafana，并把宿主机端口映射到 `13000`
-- 自动把 Grafana 数据源配置为 `http://127.0.0.1:30909`
-- 自动加载仓库里的 OpenViking demo dashboard
-- 自动加载 `OpenViking - Feedback Baseline`，方便直接查看 `openviking_feedback_*` 与 `openviking_feedback_channel_*` 的基线指标
+- 啟動 Prometheus，並把宿主機埠對映到 `30909`
+- 啟動 Grafana，並把宿主機埠對映到 `13000`
+- 自動把 Grafana 資料來源配置為 `http://127.0.0.1:30909`
+- 自動載入倉庫裡的 OpenViking demo dashboard
+- 自動載入 `OpenViking - Feedback Baseline`，方便直接檢視 `openviking_feedback_*` 與 `openviking_feedback_channel_*` 的基線指標
 
 ### 方案 A：通用方案
 
-直接执行：
+直接執行：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.yml up -d
 ```
 
-启动完成后可访问：
+啟動完成後可訪問：
 
 ```text
 Prometheus: http://localhost:30909
 Grafana:    http://localhost:13000
 ```
 
-Grafana 默认账号密码在这个示例里固定为：
+Grafana 預設帳號密碼在這個示例裡固定為：
 
-- 用户名：`admin`
-- 密码：`admin`
+- 使用者名稱：`admin`
+- 密碼：`admin`
 
 ### 方案 B：Linux localhost 方案
 
-如果你的 OpenViking 继续监听在 `127.0.0.1:30300`，并且你不想为了 Prometheus 抓取而把 OpenViking 改成 `0.0.0.0`，请使用下面这套 compose：
+如果你的 OpenViking 繼續監聽在 `127.0.0.1:30300`，並且你不想為了 Prometheus 抓取而把 OpenViking 改成 `0.0.0.0`，請使用下面這套 compose：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.localhost.yml up -d
 ```
 
-这套方案的特点是：
+這套方案的特點是：
 
-- Prometheus 使用宿主机网络，直接抓取 `127.0.0.1:30300/metrics`
-- Grafana 也使用宿主机网络，并直接连接 `http://127.0.0.1:30909`
+- Prometheus 使用宿主機網路，直接抓取 `127.0.0.1:30300/metrics`
+- Grafana 也使用宿主機網路，並直接連線 `http://127.0.0.1:30909`
 - 不需要把 OpenViking 改成 `0.0.0.0`
-- 不会触发“非 localhost 监听必须配置 `root_api_key`”这条安全限制
+- 不會觸發“非 localhost 監聽必須配置 `root_api_key`”這條安全限制
 
-访问地址仍然是：
+訪問地址仍然是：
 
 ```text
 Prometheus: http://localhost:30909
 Grafana:    http://localhost:13000
 ```
 
-如果宿主机上的 `30909` 或 `13000` 已经被占用：
+如果宿主機上的 `30909` 或 `13000` 已經被佔用：
 
-- Prometheus 端口改 `examples/grafana/docker-compose.localhost.yml` 里的 `--web.listen-address=0.0.0.0:30909`
-- Grafana 端口改 `examples/grafana/docker-compose.localhost.yml` 里的 `GF_SERVER_HTTP_PORT=13000`
-- 同时把 `examples/grafana/grafana/provisioning-localhost/datasources/prometheus.yml` 中的 `http://127.0.0.1:30909` 改成新端口
+- Prometheus 埠改 `examples/grafana/docker-compose.localhost.yml` 裡的 `--web.listen-address=0.0.0.0:30909`
+- Grafana 埠改 `examples/grafana/docker-compose.localhost.yml` 裡的 `GF_SERVER_HTTP_PORT=13000`
+- 同時把 `examples/grafana/grafana/provisioning-localhost/datasources/prometheus.yml` 中的 `http://127.0.0.1:30909` 改成新埠
 
-如果你只想快速部署，做到这里就可以先跳到“如何判断链路已经完全打通”。
+如果你只想快速部署，做到這裡就可以先跳到“如何判斷鏈路已經完全打通”。
 
 ## 第 3 步：理解 Prometheus 抓取配置
 
-compose 示例里使用的 `examples/grafana/prometheus.yml` 内容如下：
+compose 示例裡使用的 `examples/grafana/prometheus.yml` 內容如下：
 
 ```yaml
 global:
@@ -168,51 +168,51 @@ scrape_configs:
       - targets: ["host.docker.internal:30300"]
 ```
 
-说明：
+說明：
 
-- 如果 Prometheus 运行在 Docker 容器里，而 OpenViking 运行在宿主机，`targets` 推荐写成 `host.docker.internal:30300`
-- 如果 Prometheus 也运行在宿主机，改成 `localhost:30300`
-- 如果 `host.docker.internal` 在你的 Linux Docker 环境中不可用，就改成宿主机实际 IP，例如 `192.168.1.10:30300`
+- 如果 Prometheus 執行在 Docker 容器裡，而 OpenViking 執行在宿主機，`targets` 推薦寫成 `host.docker.internal:30300`
+- 如果 Prometheus 也執行在宿主機，改成 `localhost:30300`
+- 如果 `host.docker.internal` 在你的 Linux Docker 環境中不可用，就改成宿主機實際 IP，例如 `192.168.1.10:30300`
 
-如果你的 OpenViking 不是监听在 `30300`，就把这个文件里的目标地址改成你的实际端口，然后重新执行：
+如果你的 OpenViking 不是監聽在 `30300`，就把這個檔案裡的目標地址改成你的實際埠，然後重新執行：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.yml up -d
 ```
 
-如果你使用的是 Linux localhost 方案，对应修改的是：
+如果你使用的是 Linux localhost 方案，對應修改的是：
 
 - `examples/grafana/prometheus.localhost.yml`
 
-例如 OpenViking 实际监听 `127.0.0.1:1933`，就改成：
+例如 OpenViking 實際監聽 `127.0.0.1:1933`，就改成：
 
 ```yaml
 targets: ["127.0.0.1:1933"]
 ```
 
-然后重新执行：
+然後重新執行：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.localhost.yml up -d
 ```
 
-## 第 4 步：可选，手动部署时创建 Docker 网络
+## 第 4 步：可選，手動部署時建立 Docker 網路
 
-如果你使用的是上面的 compose 文件，这一步不需要手动执行，因为 Compose 会自动创建默认网络。
+如果你使用的是上面的 compose 檔案，這一步不需要手動執行，因為 Compose 會自動建立預設網路。
 
-只有在你坚持使用 `docker run` 分开启动 Prometheus 和 Grafana 时，才需要先创建一个独立网络：
+只有在你堅持使用 `docker run` 分開啟動 Prometheus 和 Grafana 時，才需要先建立一個獨立網路：
 
 ```bash
 docker network create openviking-observability
 ```
 
-如果提示网络已存在，可以忽略。
+如果提示網路已存在，可以忽略。
 
-## 第 5 步：可选，手动启动 Prometheus
+## 第 5 步：可選，手動啟動 Prometheus
 
-如果你已经用了 `docker compose -f examples/grafana/docker-compose.yml up -d`，这一节可以跳过。
+如果你已經用了 `docker compose -f examples/grafana/docker-compose.yml up -d`，這一節可以跳過。
 
-很多机器上 `9090` 已经被别的服务占用。为了减少冲突，这里建议把宿主机端口映射到 `30909`：
+很多機器上 `9090` 已經被別的服務佔用。為了減少衝突，這裡建議把宿主機埠對映到 `30909`：
 
 ```bash
 docker run -d \
@@ -223,13 +223,13 @@ docker run -d \
   prom/prometheus
 ```
 
-启动后，在浏览器打开：
+啟動後，在瀏覽器開啟：
 
 ```text
 http://localhost:30909
 ```
 
-进入 Prometheus UI 后，在查询框中输入：
+進入 Prometheus UI 後，在查詢框中輸入：
 
 ```promql
 openviking_http_requests_total
@@ -241,27 +241,27 @@ openviking_http_requests_total
 openviking_service_readiness
 ```
 
-如果能查到时间序列，说明 Prometheus 已经成功抓到 OpenViking 指标。
+如果能查到時間序列，說明 Prometheus 已經成功抓到 OpenViking 指標。
 
-### 如果 Prometheus 容器启动失败
+### 如果 Prometheus 容器啟動失敗
 
-常见原因：宿主机端口被占用，例如：
+常見原因：宿主機埠被佔用，例如：
 
 ```text
 Bind for 0.0.0.0:9090 failed: port is already allocated
 ```
 
-处理方式：
+處理方式：
 
-- 改宿主机端口，例如继续使用 `30909:9090`
-- 不要改容器内端口 `9090`
-- 访问时用新的宿主机端口，例如 `http://localhost:30909`
+- 改宿主機埠，例如繼續使用 `30909:9090`
+- 不要改容器內埠 `9090`
+- 訪問時用新的宿主機埠，例如 `http://localhost:30909`
 
-## 第 6 步：可选，手动启动 Grafana
+## 第 6 步：可選，手動啟動 Grafana
 
-如果你已经用了 `docker compose -f examples/grafana/docker-compose.yml up -d`，这一节可以跳过。
+如果你已經用了 `docker compose -f examples/grafana/docker-compose.yml up -d`，這一節可以跳過。
 
-同样地，很多机器上的 `3000` 也常被占用。建议把 Grafana 映射到宿主机的 `13000`：
+同樣地，很多機器上的 `3000` 也常被佔用。建議把 Grafana 對映到宿主機的 `13000`：
 
 ```bash
 docker run -d \
@@ -271,75 +271,75 @@ docker run -d \
   grafana/grafana
 ```
 
-启动后打开：
+啟動後開啟：
 
 ```text
 http://localhost:13000
 ```
 
-Grafana 默认初始账号通常是：
+Grafana 預設初始帳號通常是：
 
-- 用户名：`admin`
-- 密码：`admin`
+- 使用者名稱：`admin`
+- 密碼：`admin`
 
-如果你的环境已修改默认凭据，以实际值为准。
+如果你的環境已修改預設憑據，以實際值為準。
 
-## 第 7 步：可选，手动在 Grafana 中添加 Prometheus 数据源
+## 第 7 步：可選，手動在 Grafana 中新增 Prometheus 資料來源
 
-如果你使用的是仓库自带 compose 文件，这一步通常也可以跳过，因为数据源会自动 provision。
+如果你使用的是倉庫自帶 compose 檔案，這一步通常也可以跳過，因為資料來源會自動 provision。
 
-在 Grafana 页面中操作：
+在 Grafana 頁面中操作：
 
-1. 打开左侧 `Connections` 或 `Data sources`
-2. 点击 `Add data source`
-3. 选择 `Prometheus`
-4. 在 `URL` 中填写：`http://prometheus:9090`
-5. 点击 `Save & test`
+1. 開啟左側 `Connections` 或 `Data sources`
+2. 點選 `Add data source`
+3. 選擇 `Prometheus`
+4. 在 `URL` 中填寫：`http://prometheus:9090`
+5. 點選 `Save & test`
 
-这里填写 `http://prometheus:9090` 的原因是：
+這裡填寫 `http://prometheus:9090` 的原因是：
 
-- Grafana 和 Prometheus 运行在同一个 Docker 网络 `openviking-observability` 中
-- 两个容器可以直接通过容器名通信
+- Grafana 和 Prometheus 執行在同一個 Docker 網路 `openviking-observability` 中
+- 兩個容器可以直接通過容器名通訊
 
-如果 `Save & test` 失败，请先执行：
+如果 `Save & test` 失敗，請先執行：
 
 ```bash
 docker ps
 ```
 
-确认 `prometheus` 和 `grafana` 两个容器都在运行。
+確認 `prometheus` 和 `grafana` 兩個容器都在執行。
 
-## 第 8 步：先在 Grafana Explore 中直接查询
+## 第 8 步：先在 Grafana Explore 中直接查詢
 
-添加完数据源后，先不要急着导入 dashboard，建议先在 `Explore` 中验证基础查询。
+新增完資料來源後，先不要急著匯入 dashboard，建議先在 `Explore` 中驗證基礎查詢。
 
-推荐先试这些查询：
+推薦先試這些查詢：
 
-请求量：
+請求量：
 
 ```promql
 rate(openviking_http_requests_total[5m])
 ```
 
-按路由查看请求量与状态码：
+按路由檢視請求量與狀態碼：
 
 ```promql
 sum by (route, status) (rate(openviking_http_requests_total[5m]))
 ```
 
-P95 延迟：
+P95 延遲：
 
 ```promql
 histogram_quantile(0.95, sum by (le, route) (rate(openviking_http_request_duration_seconds_bucket[5m])))
 ```
 
-队列积压：
+佇列積壓：
 
 ```promql
 openviking_queue_pending
 ```
 
-模型调用量：
+模型呼叫量：
 
 ```promql
 rate(openviking_model_calls_total[5m])
@@ -351,116 +351,116 @@ Token 用量：
 rate(openviking_operation_tokens_total[5m])
 ```
 
-如果你还不确定有哪些指标名，可以先查：
+如果你還不確定有哪些指標名，可以先查：
 
 ```promql
 {__name__=~"openviking_.*"}
 ```
 
-## 第 9 步：导入 OpenViking 自带 Dashboard
+## 第 9 步：匯入 OpenViking 自帶 Dashboard
 
-如果你使用的是仓库自带 compose 文件，这两个 dashboard 会在 Grafana 启动后自动加载到 `OpenViking` 文件夹下。
+如果你使用的是倉庫自帶 compose 檔案，這兩個 dashboard 會在 Grafana 啟動後自動載入到 `OpenViking` 資料夾下。
 
-如果你想手动导入，继续按下面步骤操作即可。
+如果你想手動匯入，繼續按下面步驟操作即可。
 
-仓库中已经提供了可直接导入的 Grafana dashboard：
+倉庫中已經提供了可直接匯入的 Grafana dashboard：
 
 - `examples/grafana/openviking_demo_dashboard.json`
 - `examples/grafana/openviking_token_demo_dashboard.json`
 
-导入步骤：
+匯入步驟：
 
-1. 进入 Grafana 左侧 `Dashboards`
-2. 点击右上角 `New` 或 `Import`
-3. 上传 `examples/grafana/openviking_demo_dashboard.json`
-4. 在导入页面选择刚刚创建的 Prometheus 数据源
-5. 点击 `Import`
+1. 進入 Grafana 左側 `Dashboards`
+2. 點選右上角 `New` 或 `Import`
+3. 上傳 `examples/grafana/openviking_demo_dashboard.json`
+4. 在匯入頁面選擇剛剛建立的 Prometheus 資料來源
+5. 點選 `Import`
 
-说明：
+說明：
 
-- `openviking_demo_dashboard.json` 适合作为基础总览 dashboard
-- `openviking_token_demo_dashboard.json` 依赖 `tim012432-calendarheatmap-panel` 插件，未安装前部分面板可能无法正常显示
+- `openviking_demo_dashboard.json` 適合作為基礎總覽 dashboard
+- `openviking_token_demo_dashboard.json` 依賴 `tim012432-calendarheatmap-panel` 外掛，未安裝前部分面板可能無法正常顯示
 
-## 第 10 步：如何判断链路已经完全打通
+## 第 10 步：如何判斷鏈路已經完全打通
 
-你可以按下面的顺序验证：
+你可以按下面的順序驗證：
 
-1. `curl http://localhost:30300/metrics` 能返回指标文本
-2. 打开 `http://localhost:30909`，在 Prometheus 中能查到 `openviking_http_requests_total`
-3. 打开 `http://localhost:13000`，能看到 `Prometheus` 数据源已经存在，或手动 `Save & test` 成功
-4. Grafana Explore 中运行 `rate(openviking_http_requests_total[5m])` 能出图
-5. 导入 demo dashboard 后面板开始显示数据
+1. `curl http://localhost:30300/metrics` 能返回指標文本
+2. 開啟 `http://localhost:30909`，在 Prometheus 中能查到 `openviking_http_requests_total`
+3. 開啟 `http://localhost:13000`，能看到 `Prometheus` 資料來源已經存在，或手動 `Save & test` 成功
+4. Grafana Explore 中執行 `rate(openviking_http_requests_total[5m])` 能出圖
+5. 匯入 demo dashboard 後面板開始顯示資料
 
-只要这五步都通过，说明整条链路已经打通。
+只要這五步都通過，說明整條鏈路已經打通。
 
-## 常见问题
+## 常見問題
 
-### 1. `/metrics` 能访问，但 Prometheus 查不到数据
+### 1. `/metrics` 能訪問，但 Prometheus 查不到資料
 
-优先检查：
+優先檢查：
 
-- `prometheus.yml` 的 `targets` 是否写对
-- Prometheus 是否真的重新加载了新的配置
-- Docker 容器内是否能访问宿主机上的 `30300`
+- `prometheus.yml` 的 `targets` 是否寫對
+- Prometheus 是否真的重新載入了新的配置
+- Docker 容器內是否能訪問宿主機上的 `30300`
 
-如果你使用的是仓库自带 compose 文件，优先检查：
+如果你使用的是倉庫自帶 compose 檔案，優先檢查：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.yml logs prometheus
 ```
 
-如果怀疑容器访问宿主机有问题，可以把 `host.docker.internal` 改成宿主机实际 IP。
+如果懷疑容器訪問宿主機有問題，可以把 `host.docker.internal` 改成宿主機實際 IP。
 
-### 2. Prometheus 宿主机端口被占用
+### 2. Prometheus 宿主機埠被佔用
 
-报错示例：
+報錯示例：
 
 ```text
 Bind for 0.0.0.0:9090 failed: port is already allocated
 ```
 
-处理方式：改成别的宿主机端口，例如：
+處理方式：改成別的宿主機埠，例如：
 
 ```bash
   -p 30909:9090
 ```
 
-### 3. Grafana 宿主机端口被占用
+### 3. Grafana 宿主機埠被佔用
 
-处理方式：改成别的宿主机端口，例如：
+處理方式：改成別的宿主機埠，例如：
 
 ```bash
 -p 13000:3000
 ```
 
-### 4. Grafana 里没有任何 OpenViking 指标
+### 4. Grafana 裡沒有任何 OpenViking 指標
 
-优先检查：
+優先檢查：
 
-- Grafana 数据源是否真的连到 Prometheus
-- Prometheus 中是否已经有 `openviking_*` 指标
-- 时间范围是否过短，导致近期没有样本
+- Grafana 資料來源是否真的連到 Prometheus
+- Prometheus 中是否已經有 `openviking_*` 指標
+- 時間範圍是否過短，導致近期沒有樣本
 
-如果你使用的是 compose 自动导入方案，还可以先确认 dashboard 是否已经被加载：
+如果你使用的是 compose 自動匯入方案，還可以先確認 dashboard 是否已經被載入：
 
-- 左侧进入 `Dashboards`
-- 查看 `OpenViking` 文件夹是否存在
+- 左側進入 `Dashboards`
+- 檢視 `OpenViking` 資料夾是否存在
 
-### 5. Dashboard 导入成功但面板为空
+### 5. Dashboard 匯入成功但面板為空
 
-这通常不是 dashboard 文件损坏，而是：
+這通常不是 dashboard 檔案損壞，而是：
 
-- Prometheus 里还没有对应指标样本
-- 过滤条件和当前环境不匹配
-- 选择了错误的数据源
+- Prometheus 裡還沒有對應指標樣本
+- 過濾條件和當前環境不匹配
+- 選擇了錯誤的資料來源
 
-建议先回到 Explore 手动执行 PromQL，确认基础查询确实有数据。
+建議先回到 Explore 手動執行 PromQL，確認基礎查詢確實有資料。
 
-## 相关文档
+## 相關文件
 
-- [可观测性与排障](05-observability.md)
-- [使用真实问答验证 Vikingbot 指标](12-vikingbot-metrics-validation.md)
-- [指标与 Metrics](../concepts/12-metrics.md)
+- [可觀測性與排障](05-observability.md)
+- [使用真實問答驗證 Vikingbot 指標](12-vikingbot-metrics-validation.md)
+- [指標與 Metrics](../concepts/12-metrics.md)
 - [Metrics API](../api/09-metrics.md)
-- [服务端部署](03-deployment.md)
-- [快速开始](../getting-started/02-quickstart.md)
+- [服務端部署](03-deployment.md)
+- [快速開始](../getting-started/02-quickstart.md)

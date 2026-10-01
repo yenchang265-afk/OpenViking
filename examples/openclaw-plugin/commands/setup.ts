@@ -218,14 +218,14 @@ async function askPeerRole(
       "Memory scope — none (default): viking://user/<user_id>/memories, shared across all conversations; " +
         "assistant: viking://user/<user_id>/peers/<assistant_id>/memories; " +
         "sender: viking://user/<user_id>/peers/<sender_id>/memories (legacy alias: person).",
-      "记忆归属 —— none（默认）：viking://user/<user_id>/memories，所有对话共享；" +
+      "記憶歸屬 —— none（預設）：viking://user/<user_id>/memories，所有對話共享；" +
         "assistant：viking://user/<user_id>/peers/<assistant_id>/memories；" +
-        "sender：viking://user/<user_id>/peers/<sender_id>/memories（兼容旧值 person）。",
+        "sender：viking://user/<user_id>/peers/<sender_id>/memories（相容舊值 person）。",
     )}`,
   );
   while (true) {
     const value = await q(
-      tr(zh, "Memory scope (none/assistant/sender)", "记忆归属（none/assistant/sender）"),
+      tr(zh, "Memory scope (none/assistant/sender)", "記憶歸屬（none/assistant/sender）"),
       defaultValue,
     );
     const role = normalizePeerRole(value);
@@ -234,7 +234,7 @@ async function askPeerRole(
       `  ✗ ${tr(
         zh,
         'Memory scope must be "none", "assistant", or "sender" (legacy "person" is also accepted).',
-        '记忆归属必须是 "none"、"assistant" 或 "sender"（也兼容旧值 "person"）。',
+        '記憶歸屬必須是 "none"、"assistant" 或 "sender"（也相容舊值 "person"）。',
       )}`,
     );
   }
@@ -247,7 +247,7 @@ async function askPeerPrefix(
 ): Promise<string> {
   while (true) {
     const value = (await q(
-      tr(zh, "Peer Prefix (optional)", "Peer Prefix（可选）"),
+      tr(zh, "Peer Prefix (optional)", "Peer Prefix（可選）"),
       defaultValue,
     )).trim();
     if (isValidPeerPrefixInput(value)) {
@@ -257,7 +257,7 @@ async function askPeerPrefix(
       `  ✗ ${tr(
         zh,
         "Peer Prefix may only contain letters, digits, underscores, and hyphens, or be empty.",
-        "Peer Prefix 只能包含字母、数字、下划线和连字符，或留空。",
+        "Peer Prefix 只能包含字母、數字、下劃線和連字元，或留空。",
       )}`,
     );
   }
@@ -554,7 +554,7 @@ export function registerSetupCli(api: any): void {
           }
 
           console.log("");
-          console.log(`🦣 ${tr(zh, "OpenViking Plugin Setup", "OpenViking 插件配置向导")}`);
+          console.log(`🦣 ${tr(zh, "OpenViking Plugin Setup", "OpenViking 外掛配置嚮導")}`);
           console.log("");
 
           const config = readOpenClawConfig(configPath);
@@ -569,18 +569,18 @@ export function registerSetupCli(api: any): void {
                 console.log(tr(
                   zh,
                   "Existing configuration uses local mode, which is no longer supported.",
-                  "当前配置为本地模式，已不再支持。",
+                  "當前配置為本地模式，已不再支援。",
                 ));
                 console.log(tr(
                   zh,
                   "Run `openclaw openviking setup --reconfigure` to configure a remote OpenViking server.",
-                  "请运行 `openclaw openviking setup --reconfigure` 以配置远程 OpenViking 服务。",
+                  "請執行 `openclaw openviking setup --reconfigure` 以配置遠端 OpenViking 服務。",
                 ));
                 console.log("");
                 return;
               }
 
-              console.log(tr(zh, "Existing configuration found:", "已找到现有配置："));
+              console.log(tr(zh, "Existing configuration found:", "已找到現有配置："));
               console.log(`  mode:    ${existing.mode}`);
               console.log(`  baseUrl: ${existing.baseUrl ?? DEFAULT_REMOTE_URL}`);
               if (existing.apiKey) console.log(`  apiKey:  ${maskKey(String(existing.apiKey))}`);
@@ -591,10 +591,10 @@ export function registerSetupCli(api: any): void {
               console.log(tr(
                 zh,
                 "Press Enter to keep existing values, or use --reconfigure to change.",
-                "按 Enter 保留现有配置，或使用 --reconfigure 重新配置。",
+                "按 Enter 保留現有配置，或使用 --reconfigure 重新配置。",
               ));
               console.log("");
-              console.log(tr(zh, "✓ Using existing configuration", "✓ 使用现有配置"));
+              console.log(tr(zh, "✓ Using existing configuration", "✓ 使用現有配置"));
               console.log("");
 
               await runRemoteCheck(zh, existing);
@@ -604,18 +604,18 @@ export function registerSetupCli(api: any): void {
 
               console.log(tr(zh,
                 "✓ Plugin is ready. Run `openclaw gateway --force` to activate.",
-                "✓ 插件已就绪。运行 `openclaw gateway --force` 以激活。",
+                "✓ 外掛已就緒。執行 `openclaw gateway --force` 以啟用。",
               ));
               console.log("");
               return;
             }
 
             if (existing && options.reconfigure) {
-              console.log(tr(zh, "Existing configuration found:", "已找到现有配置："));
+              console.log(tr(zh, "Existing configuration found:", "已找到現有配置："));
               if (isLegacyLocalMode(existing)) {
                 console.log(tr(zh,
                   "(Previous local-mode settings will be replaced with remote settings.)",
-                  "（将用远程模式设置替换此前的本地模式配置。）",
+                  "（將用遠端模式設定替換此前的本地模式配置。）",
                 ));
               } else {
                 console.log(`  mode:    ${existing.mode}`);
@@ -628,7 +628,7 @@ export function registerSetupCli(api: any): void {
             } else {
               console.log(tr(zh,
                 "No existing configuration found. Starting setup wizard.",
-                "未找到现有配置，开始配置向导。",
+                "未找到現有配置，開始配置嚮導。",
               ));
               console.log("");
             }
@@ -669,17 +669,17 @@ function printCompatibilityWarning(zh: boolean, health: HealthResult): void {
   if (health.compatibility === "server_too_old") {
     console.log(`  ⚠ ${tr(zh,
       `Server version ${health.version} is older than recommended (${health.compatRange}). Some features may not work. Please upgrade OpenViking server.`,
-      `服务端版本 ${health.version} 低于推荐范围（${health.compatRange}）。部分功能可能不可用，请升级 OpenViking 服务端。`,
+      `服務端版本 ${health.version} 低於推薦範圍（${health.compatRange}）。部分功能可能不可用，請升級 OpenViking 服務端。`,
     )}`);
   } else if (health.compatibility === "server_too_new") {
     console.log(`  ⚠ ${tr(zh,
       `Server version ${health.version} is newer than supported (${health.compatRange}). Please upgrade the OpenViking plugin.`,
-      `服务端版本 ${health.version} 高于插件支持范围（${health.compatRange}）。请升级 OpenViking 插件。`,
+      `服務端版本 ${health.version} 高於外掛支援範圍（${health.compatRange}）。請升級 OpenViking 外掛。`,
     )}`);
   } else if (health.compatibility === "unknown" && health.ok) {
     console.log(`  ⚠ ${tr(zh,
       "Could not determine server version. Compatibility check skipped.",
-      "无法获取服务端版本，已跳过兼容性检查。",
+      "無法獲取服務端版本，已跳過相容性檢查。",
     )}`);
   }
 }
@@ -691,14 +691,14 @@ async function runRemoteCheck(
   const baseUrl = String(existing.baseUrl ?? DEFAULT_REMOTE_URL);
   const apiKey = existing.apiKey ? String(existing.apiKey) : undefined;
   const headers = nonEmptyOpenVikingRequestHeaders(existing.headers);
-  console.log(tr(zh, `Testing connectivity to ${baseUrl}...`, `正在测试连接 ${baseUrl}...`));
+  console.log(tr(zh, `Testing connectivity to ${baseUrl}...`, `正在測試連線 ${baseUrl}...`));
   const health = await setupProbes.checkServiceHealth(baseUrl, apiKey, headers);
   if (health.ok) {
     const ver = health.version ? ` (version: ${health.version})` : "";
-    console.log(`  ✓ ${tr(zh, `Connected successfully${ver}`, `连接成功${ver}`)}`);
+    console.log(`  ✓ ${tr(zh, `Connected successfully${ver}`, `連線成功${ver}`)}`);
     printCompatibilityWarning(zh, health);
   } else {
-    console.log(`  ✗ ${tr(zh, `Connection failed: ${health.error}`, `连接失败: ${health.error}`)}`);
+    console.log(`  ✗ ${tr(zh, `Connection failed: ${health.error}`, `連線失敗: ${health.error}`)}`);
   }
   console.log("");
 }
@@ -840,10 +840,10 @@ function printSetupResult(zh: boolean, result: SetupResult): void {
     console.log("");
     if (result.health?.ok) {
       const ver = result.health.version ? ` (version: ${result.health.version})` : "";
-      console.log(`  ✓ ${tr(zh, `Connected successfully${ver}`, `连接成功${ver}`)}`);
+      console.log(`  ✓ ${tr(zh, `Connected successfully${ver}`, `連線成功${ver}`)}`);
       printCompatibilityWarning(zh, result.health);
     } else if (result.health) {
-      console.log(`  ✗ ${tr(zh, `Connection failed: ${result.health.error}`, `连接失败: ${result.health.error}`)}`);
+      console.log(`  ✗ ${tr(zh, `Connection failed: ${result.health.error}`, `連線失敗: ${result.health.error}`)}`);
     }
     if (result.keyProbe) {
       printKeyProbeWarning(zh, result.keyProbe);
@@ -852,10 +852,10 @@ function printSetupResult(zh: boolean, result: SetupResult): void {
     console.log("");
     console.log(tr(zh,
       "Run `openclaw gateway --force` to activate the plugin.",
-      "运行 `openclaw gateway --force` 以激活插件。",
+      "執行 `openclaw gateway --force` 以啟用外掛。",
     ));
   } else {
-    console.log(`✗ ${tr(zh, "Setup failed", "配置失败")}: ${result.error}`);
+    console.log(`✗ ${tr(zh, "Setup failed", "配置失敗")}: ${result.error}`);
     if (result.keyProbe?.keyType === "root_key") {
       printKeyProbeWarning(zh, result.keyProbe);
     }
@@ -900,14 +900,14 @@ function printSlotResult(zh: boolean, slot: SlotActivationResult): void {
   if (slot.activated && slot.replaced) {
     console.log(`  ⚠ ${tr(zh,
       `Replaced context-engine slot: ${slot.previousOwner} → openviking`,
-      `已替换 context-engine 插槽: ${slot.previousOwner} → openviking`,
+      `已替換 context-engine 插槽: ${slot.previousOwner} → openviking`,
     )}`);
   } else if (slot.activated) {
     console.log(`  ✓ ${tr(zh, "Activated context-engine slot: openviking", "已激活 context-engine 插槽: openviking")}`);
   } else if (slot.previousOwner && slot.previousOwner !== "openviking") {
     console.log(`  ⚠ ${tr(zh,
       `Context-engine slot is owned by "${slot.previousOwner}". Run: openclaw config set plugins.slots.contextEngine openviking`,
-      `context-engine 插槽当前由 "${slot.previousOwner}" 占用。运行: openclaw config set plugins.slots.contextEngine openviking`,
+      `context-engine 插槽當前由 "${slot.previousOwner}" 佔用。執行: openclaw config set plugins.slots.contextEngine openviking`,
     )}`);
   }
 }
@@ -916,18 +916,18 @@ function printKeyProbeWarning(zh: boolean, probe: ApiKeyProbeResult): void {
   if (probe.keyType === "root_key") {
     console.log(`  ⚠ ${tr(zh,
       "Root API key detected. accountId and userId are required for this key type.",
-      "检测到 Root API Key，此类型密钥需要提供 accountId 和 userId。",
+      "檢測到 Root API Key，此型別金鑰需要提供 accountId 和 userId。",
     )}`);
     if (probe.needsAccountId) {
       console.log(`    ${tr(zh,
         "→ Missing: accountId (use --account-id or set in config)",
-        "→ 缺少: accountId（使用 --account-id 或在配置中设置）",
+        "→ 缺少: accountId（使用 --account-id 或在配置中設定）",
       )}`);
     }
     if (probe.needsUserId) {
       console.log(`    ${tr(zh,
         "→ Missing: userId (use --user-id or set in config)",
-        "→ 缺少: userId（使用 --user-id 或在配置中设置）",
+        "→ 缺少: userId（使用 --user-id 或在配置中設定）",
       )}`);
     }
   }
@@ -935,17 +935,17 @@ function printKeyProbeWarning(zh: boolean, probe: ApiKeyProbeResult): void {
 
 function printStatus(zh: boolean, result: StatusResult): void {
   console.log("");
-  console.log(`🦣 ${tr(zh, "OpenViking Plugin Status", "OpenViking 插件状态")}`);
+  console.log(`🦣 ${tr(zh, "OpenViking Plugin Status", "OpenViking 外掛狀態")}`);
   console.log("");
 
   if (!result.configured) {
-    console.log(`  ${tr(zh, "Status: Not configured", "状态: 未配置")}`);
-    console.log(`  ${tr(zh, "Run `openclaw openviking setup` to configure.", "运行 `openclaw openviking setup` 进行配置。")}`);
+    console.log(`  ${tr(zh, "Status: Not configured", "狀態: 未配置")}`);
+    console.log(`  ${tr(zh, "Run `openclaw openviking setup` to configure.", "執行 `openclaw openviking setup` 進行配置。")}`);
     console.log("");
     return;
   }
 
-  console.log(`  ${tr(zh, "Status: Configured", "状态: 已配置")}`);
+  console.log(`  ${tr(zh, "Status: Configured", "狀態: 已配置")}`);
   if (result.config) {
     console.log(`  mode:      ${result.config.mode}`);
     console.log(`  baseUrl:   ${result.config.baseUrl}`);
@@ -960,10 +960,10 @@ function printStatus(zh: boolean, result: StatusResult): void {
 
   if (result.health?.ok) {
     const ver = result.health.version ? ` (version: ${result.health.version})` : "";
-    console.log(`  ✓ ${tr(zh, `Server reachable${ver}`, `服务器可达${ver}`)}`);
+    console.log(`  ✓ ${tr(zh, `Server reachable${ver}`, `伺服器可達${ver}`)}`);
     printCompatibilityWarning(zh, result.health);
   } else if (result.health) {
-    console.log(`  ✗ ${tr(zh, `Server unreachable: ${result.health.error}`, `服务器不可达: ${result.health.error}`)}`);
+    console.log(`  ✗ ${tr(zh, `Server unreachable: ${result.health.error}`, `伺服器不可達: ${result.health.error}`)}`);
   }
 
   if (result.keyProbe) {
@@ -979,7 +979,7 @@ async function setupRemote(
   q: (prompt: string, def?: string) => Promise<string>,
 ): Promise<void> {
   console.log("");
-  console.log(tr(zh, "── Remote Mode Configuration ──", "── 远程模式配置 ──"));
+  console.log(tr(zh, "── Remote Mode Configuration ──", "── 遠端模式配置 ──"));
   console.log("");
 
   const defaultUrl = existing?.baseUrl && String(existing.baseUrl).trim()
@@ -990,24 +990,24 @@ async function setupRemote(
   const defaultPeerPrefix = resolveExistingPeerPrefix(existing);
   const headers = nonEmptyOpenVikingRequestHeaders(existing?.headers);
 
-  const baseUrl = await q(tr(zh, "OpenViking server URL", "OpenViking 服务器地址"), defaultUrl);
-  const apiKey = await q(tr(zh, "API Key (optional)", "API Key（可选）"), defaultApiKey);
+  const baseUrl = await q(tr(zh, "OpenViking server URL", "OpenViking 伺服器地址"), defaultUrl);
+  const apiKey = await q(tr(zh, "API Key (optional)", "API Key（可選）"), defaultApiKey);
 
   let accountId = existing?.accountId ? String(existing.accountId) : "";
   let userId = existing?.userId ? String(existing.userId) : "";
 
   if (apiKey) {
-    console.log(tr(zh, "  Detecting API key type...", "  正在检测 API Key 类型..."));
+    console.log(tr(zh, "  Detecting API key type...", "  正在檢測 API Key 型別..."));
     const probe = await setupProbes.probeApiKeyType(baseUrl, apiKey, headers);
     if (probe.keyType === "root_key") {
       console.log(tr(zh,
         "  ⚠ Root API key detected. accountId and userId are required.",
-        "  ⚠ 检测到 Root API Key，需要提供 accountId 和 userId。",
+        "  ⚠ 檢測到 Root API Key，需要提供 accountId 和 userId。",
       ));
       accountId = await q(tr(zh, "Account ID (required for root key)", "Account ID（root key 必填）"), accountId);
       userId = await q(tr(zh, "User ID (required for root key)", "User ID（root key 必填）"), userId);
     } else if (probe.keyType === "user_key") {
-      console.log(tr(zh, "  ✓ User key verified", "  ✓ User key 已验证"));
+      console.log(tr(zh, "  ✓ User key verified", "  ✓ User key 已驗證"));
     }
   }
 
@@ -1018,18 +1018,18 @@ async function setupRemote(
 
   console.log("");
 
-  console.log(tr(zh, `Testing connectivity to ${baseUrl}...`, `正在测试连接 ${baseUrl}...`));
+  console.log(tr(zh, `Testing connectivity to ${baseUrl}...`, `正在測試連線 ${baseUrl}...`));
   const health = await setupProbes.checkServiceHealth(baseUrl, apiKey || undefined, headers);
   if (health.ok) {
     const ver = health.version ? ` (version: ${health.version})` : "";
-    console.log(`  ✓ ${tr(zh, `Connected successfully${ver}`, `连接成功${ver}`)}`);
+    console.log(`  ✓ ${tr(zh, `Connected successfully${ver}`, `連線成功${ver}`)}`);
     printCompatibilityWarning(zh, health);
   } else {
-    console.log(`  ✗ ${tr(zh, `Connection failed: ${health.error}`, `连接失败: ${health.error}`)}`);
+    console.log(`  ✗ ${tr(zh, `Connection failed: ${health.error}`, `連線失敗: ${health.error}`)}`);
     console.log("");
     console.log(tr(zh,
       "  The configuration will still be saved. Make sure the server is reachable\n  before starting the gateway.",
-      "  配置仍会保存。请确保服务器在启动 gateway 前可达。",
+      "  配置仍會儲存。請確保伺服器在啟動 gateway 前可達。",
     ));
   }
   console.log("");
@@ -1065,7 +1065,7 @@ async function setupRemote(
   console.log("");
   console.log(tr(zh,
     "Run `openclaw gateway --force` to activate the plugin.",
-    "运行 `openclaw gateway --force` 以激活插件。",
+    "執行 `openclaw gateway --force` 以啟用外掛。",
   ));
   console.log("");
 }

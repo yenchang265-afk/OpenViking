@@ -1,75 +1,75 @@
-# 数据加密
+# 資料加密
 
-OpenViking 提供透明的静态数据加密，确保多租户环境下的数据安全与隔离。
+OpenViking 提供透明的靜態資料加密，確保多租戶環境下的資料安全與隔離。
 
 ## 概述
 
-### 为什么需要加密
+### 為什麼需要加密
 
-在多租户架构中，不同客户（账户）的资源文件、记忆和技能都存储在共享的 AGFS 实例中。加密确保：
+在多租戶架構中，不同客戶（帳戶）的資源檔案、記憶和技能都儲存在共享的 AGFS 例項中。加密確保：
 
-- 即使攻击者获得 AGFS 磁盘访问权限，也无法读取任何客户的明文数据
-- 不同账户的数据使用独立密钥加密，实现租户隔离
-- 所有加密解密操作集中在 VikingFS 层，AGFS 和外部对象存储只看到密文
+- 即使攻擊者獲得 AGFS 磁碟訪問許可權，也無法讀取任何客戶的明文資料
+- 不同帳戶的資料使用獨立金鑰加密，實現租戶隔離
+- 所有加密解密操作集中在 VikingFS 層，AGFS 和外部物件儲存只看到密文
 
-### 对谁透明
+### 對誰透明
 
-加密功能对用户和开发者完全透明：
+加密功能對使用者和開發者完全透明：
 
-- **客户端 API 无变化**：现有代码无需修改
-- **应用层无感知**：读写操作与未加密时完全相同
-- **向后兼容**：未加密的旧文件仍可正常读取
+- **客戶端 API 無變化**：現有程式碼無需修改
+- **應用層無感知**：讀寫操作與未加密時完全相同
+- **向後相容**：未加密的舊檔案仍可正常讀取
 
-## 三层密钥架构
+## 三層金鑰架構
 
-OpenViking 采用信封加密（Envelope Encryption）架构，使用三层密钥体系：
+OpenViking 採用信封加密（Envelope Encryption）架構，使用三層金鑰體系：
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 1: Root Key（根密钥）                          │
-│  • 整个 OpenViking 实例全局唯一                       │
-│  • 存储：KMS 服务 / ~/.openviking/master.key         │
-│  • 用途：派生所有账户密钥                              │
+│  Layer 1: Root Key（根金鑰）                          │
+│  • 整個 OpenViking 例項全域唯一                       │
+│  • 儲存：KMS 服務 / ~/.openviking/master.key         │
+│  • 用途：派生所有帳戶金鑰                              │
 └────────────────────┬────────────────────────────────────┘
                      │ HKDF 派生
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 2: Account Key（账户密钥，KEK）                │
-│  • 每个账户一个独立密钥                                │
-│  • 不存储，运行时派生                                  │
-│  • 用途：加密该账户下的所有文件密钥                    │
+│  Layer 2: Account Key（帳戶金鑰，KEK）                │
+│  • 每個帳戶一個獨立金鑰                                │
+│  • 不儲存，執行時派生                                  │
+│  • 用途：加密該帳戶下的所有檔案金鑰                    │
 └────────────────────┬────────────────────────────────────┘
                      │ AES-256-GCM 加密
                      ▼
 ┌─────────────────────────────────────────────────────────┐
-│  Layer 3: File Key（文件密钥，DEK）                   │
-│  • 每次写操作生成新的随机密钥                          │
-│  • 加密后存储在文件头（信封）中                        │
-│  • 用途：加密实际文件内容                              │
+│  Layer 3: File Key（檔案金鑰，DEK）                   │
+│  • 每次寫操作生成新的隨機金鑰                          │
+│  • 加密後儲存在檔案頭（信封）中                        │
+│  • 用途：加密實際檔案內容                              │
 └─────────────────────────────────────────────────────────┘
 ```
 
-### 密钥层次说明
+### 金鑰層次說明
 
-| 层级 | 名称 | 说明 | 数量 |
+| 層級 | 名稱 | 說明 | 數量 |
 |------|------|------|------|
-| **Root Key** | 根密钥 | 整个系统的主密钥，用于派生所有账户密钥 | 1 个实例 |
-| **Account Key** | 账户密钥 | 每个账户独立的密钥，从根密钥派生 | 每个账户 1 个 |
-| **File Key** | 文件密钥 | 每个文件的一次性随机密钥 | 每次写入 1 个 |
+| **Root Key** | 根金鑰 | 整個系統的主金鑰，用於派生所有帳戶金鑰 | 1 個例項 |
+| **Account Key** | 帳戶金鑰 | 每個帳戶獨立的金鑰，從根金鑰派生 | 每個帳戶 1 個 |
+| **File Key** | 檔案金鑰 | 每個檔案的一次性隨機金鑰 | 每次寫入 1 個 |
 
-## 密钥提供程序
+## 金鑰提供程式
 
-OpenViking 支持三种密钥提供程序，适应不同的部署场景：
+OpenViking 支援三種金鑰提供程式，適應不同的部署場景：
 
-| 提供程序 | 适用场景 | Root Key 存储 | 特点 |
+| 提供程式 | 適用場景 | Root Key 儲存 | 特點 |
 |---------|---------|--------------|------|
-| **Local** | 开发环境、单节点部署 | 本地文件 `~/.openviking/master.key` | 简单，无需外部服务 |
-| **Vault** | 生产环境、多云部署 | HashiCorp Vault Transit Engine | 企业级密钥管理，支持密钥版本控制 |
-| **Volcengine KMS** | 火山引擎云部署 | 火山引擎 KMS | 云原生密钥管理服务 |
+| **Local** | 開發環境、單節點部署 | 本地檔案 `~/.openviking/master.key` | 簡單，無需外部服務 |
+| **Vault** | 生產環境、多雲部署 | HashiCorp Vault Transit Engine | 企業級金鑰管理，支援金鑰版本控制 |
+| **Volcengine KMS** | 火山引擎雲部署 | 火山引擎 KMS | 雲原生金鑰管理服務 |
 
 ### Local（本地文件）
 
-适合开发环境和单节点部署：
+適合開發環境和單節點部署：
 
 ```json
 {
@@ -90,7 +90,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ### Vault（HashiCorp Vault）
 
-适合生产环境和多云部署：
+適合生產環境和多雲部署：
 
 ```json
 {
@@ -112,7 +112,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ### Volcengine KMS（火山引擎）
 
-适合火山引擎云部署：
+適合火山引擎雲部署：
 
 ```json
 {
@@ -133,10 +133,10 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ## 工作原理
 
-### 写流程
+### 寫流程
 
 ```
-客户端              VikingFS             FileEncryptor        KeyManager        AGFS
+客戶端              VikingFS             FileEncryptor        KeyManager        AGFS
   │                   │                       │                    │             │
   │  write(uri, data) │                       │                    │             │
   │──────────────────>│                       │                    │             │
@@ -147,10 +147,10 @@ ov system crypto init-key --output-file ~/.openviking/master.key
   │                   │                       │───────────────────>│             │
   │                   │                       │<───────────────────│             │
   │                   │                       │  account_key       │             │
-  │                   │  1. 生成随机 File Key                        │             │
-  │                   │  2. 用 File Key 加密内容                     │             │
+  │                   │  1. 生成隨機 File Key                        │             │
+  │                   │  2. 用 File Key 加密內容                     │             │
   │                   │  3. 用 Account Key 加密 File Key            │             │
-  │                   │  4. 构建信封格式                             │             │
+  │                   │  4. 構建信封格式                             │             │
   │                   │<──────────────────────│                    │             │
   │                   │  ciphertext           │                    │             │
   │                   │─────────────────────────────────────────────────────────>│
@@ -159,10 +159,10 @@ ov system crypto init-key --output-file ~/.openviking/master.key
   │   success         │                       │                    │             │
 ```
 
-### 读流程
+### 讀流程
 
 ```
-客户端              VikingFS             FileEncryptor          KeyManager        AGFS
+客戶端              VikingFS             FileEncryptor          KeyManager        AGFS
   │                   │                       │                     │             │
   │  read(uri)        │                       │                     │             │
   │──────────────────>│                       │                     │             │
@@ -170,7 +170,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
   │                   │                       │                     │  Read       │
   │                   │<──────────────────────────────────────────────────────────│
   │                   │  raw_bytes            │                     │             │
-  │                   │  检查魔术数 == "OVE1"?  │                     │             │
+  │                   │  檢查魔術數 == "OVE1"?  │                     │             │
   │                   │  是 → decrypt()       │                      │             │
   │                   │──────────────────────>│                     │             │
   │                   │                       │ derive_account_key()│             │
@@ -179,7 +179,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
   │                   │                       │  account_key        │             │
   │                   │  1. 解析信封格式                              │             │
   │                   │  2. 用 Account Key 解密 File Key             │             │
-  │                   │  3. 用 File Key 解密内容                      │             │
+  │                   │  3. 用 File Key 解密內容                      │             │
   │                   │<──────────────────────│                     │             │
   │                   │  plaintext            │                     │             │
   │<──────────────────│                       │                     │             │
@@ -188,33 +188,33 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ### 信封格式
 
-加密文件使用统一的信封格式，以魔术数 `OVE1`（OpenViking Encryption v1）开头：
+加密檔案使用統一的信封格式，以魔術數 `OVE1`（OpenViking Encryption v1）開頭：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  魔术数   │  版本    │  Provider   │  加密的 File Key  │  ..   │
-│  4 字节   │  1 字节  │   1 字节    │     可变长度       │  ...  │
+│  魔術數   │  版本    │  Provider   │  加密的 File Key  │  ..   │
+│  4 位元組   │  1 位元組  │   1 位元組    │     可變長度       │  ...  │
 │  "OVE1"  │   0x01  │  0x01=local │                  │  ...  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-- 如果文件不以 `OVE1` 开头，视为未加密文件，直接返回明文
-- 支持向后兼容，旧文件无需迁移
+- 如果檔案不以 `OVE1` 開頭，視為未加密檔案，直接返回明文
+- 支援向後相容，舊檔案無需遷移
 
-## 多租户隔离
+## 多租戶隔離
 
-不同账户的数据使用独立的 Account Key 加密：
+不同帳戶的資料使用獨立的 Account Key 加密：
 
-- 账户 A 的密钥无法解密账户 B 的文件
-- 即使 AGFS 被完全访问，没有对应密钥也无法读取数据
-- 租户隔离在密钥层面实现，不依赖存储层权限
+- 帳戶 A 的金鑰無法解密帳戶 B 的檔案
+- 即使 AGFS 被完全訪問，沒有對應金鑰也無法讀取資料
+- 租戶隔離在金鑰層面實現，不依賴儲存層許可權
 
 ## 配置示例
 
-详细配置说明请参考 [配置文档](../guides/01-configuration.md#encryption)。
+詳細配置說明請參考 [配置文件](../guides/01-configuration.md#encryption)。
 
-## 相关文档
+## 相關文件
 
-- [存储架构](./05-storage.md) - VikingFS 和 AGFS 架构
-- [配置指南](../guides/01-configuration.md) - 加密配置详解
-- [多租户](./11-multi-tenant.md) - 账号、用户与 Agent 的隔离模型
+- [儲存架構](./05-storage.md) - VikingFS 和 AGFS 架構
+- [配置指南](../guides/01-configuration.md) - 加密配置詳解
+- [多租戶](./11-multi-tenant.md) - 帳號、使用者與 Agent 的隔離模型

@@ -396,7 +396,7 @@ def test_async_http_client_prefers_extra_headers_over_alias(tmp_path, monkeypatc
 
     client = AsyncHTTPClient()
 
-    # extra_headers 优先
+    # extra_headers 優先
     assert client._extra_headers == {"X-Custom-Header": "from-plural"}
 
 

@@ -1,34 +1,34 @@
-# Vikingbot Docker 一键部署
+# Vikingbot Docker 一鍵部署
 
-本目录提供 Vikingbot 的 Docker 一键部署脚本，支持本地快速部署和多架构支持。
+本目錄提供 Vikingbot 的 Docker 一鍵部署指令碼，支援本地快速部署和多架構支援。
 
 ## 前置要求
 
-请先安装 Docker：
+請先安裝 Docker：
 
-- **macOS**: 下载 [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- **Windows**: 下载 [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- **Linux**: 参考 [Docker 官方文档](https://docs.docker.com/engine/install/)
+- **macOS**: 下載 [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- **Windows**: 下載 [Docker Desktop](https://www.docker.com/products/docker-desktop)
+- **Linux**: 參考 [Docker 官方文件](https://docs.docker.com/engine/install/)
 
-部署脚本还会使用 Python 3 验证现有 `ov.conf` 的 JSON 结构和 Gateway 端口。
+部署指令碼還會使用 Python 3 驗證現有 `ov.conf` 的 JSON 結構和 Gateway 埠。
 
-验证依赖：
+驗證依賴：
 ```bash
 docker --version
 python3 --version
 ```
 
-## 快速开始
+## 快速開始
 
-### 从火山引擎镜像部署（推荐）
+### 從火山引擎映象部署（推薦）
 
-如果你已经有推送到火山引擎镜像仓库的镜像，可以直接拉取并部署：
+如果你已經有推送到火山引擎映象倉庫的映象，可以直接拉取並部署：
 
 ```bash
-# 1. 创建必要的目录结构
+# 1. 建立必要的目錄結構
 mkdir -p ~/.vikingbot/
 
-# 2. 启动容器
+# 2. 啟動容器
 docker run -d \
     --name vikingbot \
     --restart unless-stopped \
@@ -38,15 +38,15 @@ docker run -d \
     vikingbot-cn-beijing.cr.volces.com/vikingbot/vikingbot:latest \
     gateway
 
-# 3. 查看日志
+# 3. 檢視日誌
 docker logs --tail 50 -f vikingbot
 ```
 
-按 `Ctrl+C` 退出日志查看，容器继续后台运行。
+按 `Ctrl+C` 退出日誌檢視，容器繼續後臺執行。
 
-### 本地代码构建镜像部署
+### 原生代碼構建映象部署
 
-如果你想从本地代码构建镜像并部署：
+如果你想從原生代碼構建映象並部署：
 
 #### 一行命令部署
 
@@ -54,170 +54,170 @@ docker logs --tail 50 -f vikingbot
 ./deploy/docker/deploy.sh
 ```
 
-脚本会自动检测本地架构（arm64/amd64）并构建适配的镜像。
+指令碼會自動檢測本地架構（arm64/amd64）並構建適配的映象。
 
 #### 分步部署
 
-##### 1. 构建镜像
+##### 1. 構建映象
 
 ```bash
 ./deploy/docker/build-image.sh
 ```
 
-##### 2. 部署服务
+##### 2. 部署服務
 
 ```bash
 ./deploy/docker/deploy.sh
 ```
 
-##### 3. 停止服务
+##### 3. 停止服務
 
 ```bash
 ./deploy/docker/stop.sh
 ```
 
-## 多架构支持
+## 多架構支援
 
-脚本自动支持多架构，无需手动配置！
+指令碼自動支援多架構，無需手動配置！
 
-### 自动检测（推荐）
+### 自動檢測（推薦）
 
-脚本会自动检测你的系统架构并使用对应镜像：
+指令碼會自動檢測你的系統架構並使用對應映象：
 
 ```bash
-# Apple Silicon (M1/M2/M3) - 自动使用 linux/arm64
+# Apple Silicon (M1/M2/M3) - 自動使用 linux/arm64
 ./deploy/docker/deploy.sh
 
-# Intel/AMD - 自动使用 linux/amd64
+# Intel/AMD - 自動使用 linux/amd64
 ./deploy/docker/deploy.sh
 ```
 
-### 手动指定架构
+### 手動指定架構
 
-如需手动指定：
+如需手動指定：
 
 ```bash
-# 构建 arm64 镜像（Apple Silicon）
+# 構建 arm64 映象（Apple Silicon）
 PLATFORM=linux/arm64 ./deploy/docker/build-image.sh
 
-# 构建 amd64 镜像（Intel/AMD）
+# 構建 amd64 映象（Intel/AMD）
 PLATFORM=linux/amd64 ./deploy/docker/build-image.sh
 
-# 同时构建两个架构（多架构镜像）
+# 同時構建兩個架構（多架構映象）
 MULTI_ARCH=true ./deploy/docker/build-image.sh
 ```
 
-### 使用指定架构部署
+### 使用指定架構部署
 
 ```bash
-# 使用 arm64 镜像部署
+# 使用 arm64 映象部署
 PLATFORM=linux/arm64 ./deploy/docker/deploy.sh
 
-# 使用 amd64 镜像部署
+# 使用 amd64 映象部署
 PLATFORM=linux/amd64 ./deploy/docker/deploy.sh
 ```
 
-## 文件说明
+## 檔案說明
 
-| 文件 | 说明 |
+| 檔案 | 說明 |
 |------|------|
-| `build-image.sh` | 一键构建 Docker 镜像（支持多架构） |
-| `deploy.sh` | 一键部署（自动构建镜像+启动容器，自动检测架构） |
-| `stop.sh` | 停止并清理容器 |
-| `image_upload.sh` | 将本地镜像上传到火山引擎镜像仓库 |
-| `image_upload.example.yaml` | 镜像上传配置文件示例 |
-| `README.md` | 本文档 |
+| `build-image.sh` | 一鍵構建 Docker 映象（支援多架構） |
+| `deploy.sh` | 一鍵部署（自動構建映象+啟動容器，自動檢測架構） |
+| `stop.sh` | 停止並清理容器 |
+| `image_upload.sh` | 將本地映象上傳到火山引擎映象倉庫 |
+| `image_upload.example.yaml` | 映象上傳配置檔案示例 |
+| `README.md` | 本文件 |
 
 ## 使用 Docker Compose
 
-项目根目录也提供了 `docker-compose.yml`：
+專案根目錄也提供了 `docker-compose.yml`：
 
 ```bash
-# 启动服务
+# 啟動服務
 docker-compose up -d
 
-# 查看日志
+# 檢視日誌
 docker-compose logs -f
 
-# 停止服务
+# 停止服務
 docker-compose down
 ```
 
-## 环境变量配置
+## 環境變數配置
 
 ### build-image.sh
 
-| 变量 | 默认值 | 说明 |
+| 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `IMAGE_NAME` | `vikingbot` | 镜像名称 |
-| `IMAGE_TAG` | `latest` | 镜像标签 |
-| `DOCKERFILE` | `deploy/Dockerfile` | Dockerfile 路径 |
-| `NO_CACHE` | `false` | 是否不使用缓存 |
-| `PLATFORM` | 自动检测 | 目标平台 (linux/amd64, linux/arm64) |
-| `MULTI_ARCH` | `false` | 是否构建多架构镜像 |
+| `IMAGE_NAME` | `vikingbot` | 映象名稱 |
+| `IMAGE_TAG` | `latest` | 映象標籤 |
+| `DOCKERFILE` | `deploy/Dockerfile` | Dockerfile 路徑 |
+| `NO_CACHE` | `false` | 是否不使用快取 |
+| `PLATFORM` | 自動檢測 | 目標平臺 (linux/amd64, linux/arm64) |
+| `MULTI_ARCH` | `false` | 是否構建多架構映象 |
 
 **示例：**
 
 ```bash
-# 构建带版本标签的镜像
+# 構建帶版本標籤的映象
 IMAGE_TAG=v1.0.0 ./deploy/docker/build-image.sh
 
-# 不使用缓存重新构建
+# 不使用快取重新構建
 NO_CACHE=true ./deploy/docker/build-image.sh
 
-# 构建 arm64 镜像
+# 構建 arm64 映象
 PLATFORM=linux/arm64 ./deploy/docker/build-image.sh
 
-# 同时构建 amd64+arm64 多架构镜像
+# 同時構建 amd64+arm64 多架構映象
 MULTI_ARCH=true ./deploy/docker/build-image.sh
 ```
 
 ### deploy.sh
 
-| 变量 | 默认值 | 说明 |
+| 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `CONTAINER_NAME` | `vikingbot` | 容器名称 |
-| `IMAGE_NAME` | `vikingbot` | 镜像名称 |
-| `IMAGE_TAG` | `latest` | 镜像标签 |
-| `HOST_PORT` | `18791` | 主机端口 |
+| `CONTAINER_NAME` | `vikingbot` | 容器名稱 |
+| `IMAGE_NAME` | `vikingbot` | 映象名稱 |
+| `IMAGE_TAG` | `latest` | 映象標籤 |
+| `HOST_PORT` | `18791` | 主機埠 |
 | `CONTAINER_PORT` | `18791` | 容器端口 |
-| `COMMAND` | `gateway` | 启动命令 |
-| `AUTO_BUILD` | `true` | 镜像不存在时自动构建 |
-| `PLATFORM` | 自动检测 | 使用的镜像平台 |
+| `COMMAND` | `gateway` | 啟動命令 |
+| `AUTO_BUILD` | `true` | 映象不存在時自動構建 |
+| `PLATFORM` | 自動檢測 | 使用的映象平臺 |
 
 **示例：**
 
 ```bash
-# 使用自定义端口
+# 使用自定義埠
 HOST_PORT=8080 ./deploy/docker/deploy.sh
 
-# 不自动构建镜像
+# 不自動構建映象
 AUTO_BUILD=false ./deploy/docker/deploy.sh
 
-# 强制使用 arm64 镜像
+# 強制使用 arm64 映象
 PLATFORM=linux/arm64 ./deploy/docker/deploy.sh
 ```
 
 ### stop.sh
 
-| 变量 | 默认值 | 说明 |
+| 變數 | 預設值 | 說明 |
 |------|--------|------|
-| `CONTAINER_NAME` | `vikingbot` | 容器名称 |
-| `REMOVE_IMAGE` | `false` | 是否同时删除镜像 |
-| `REMOVE_VOLUME` | `false` | 是否同时删除数据卷 |
+| `CONTAINER_NAME` | `vikingbot` | 容器名稱 |
+| `REMOVE_IMAGE` | `false` | 是否同時刪除映象 |
+| `REMOVE_VOLUME` | `false` | 是否同時刪除資料卷 |
 
 **示例：**
 
 ```bash
-# 完全清理（容器+镜像+数据卷）
+# 完全清理（容器+映象+資料卷）
 REMOVE_IMAGE=true REMOVE_VOLUME=true ./deploy/docker/stop.sh
 ```
 
 ## 配置文件
 
-首次部署时，脚本会自动创建配置文件：`~/.vikingbot/ov.conf`。脚本同时生成随机 Gateway Token；在非本机请求中通过 `X-Gateway-Token` 请求头传入该值。
+首次部署時，指令碼會自動建立配置檔案：`~/.vikingbot/ov.conf`。指令碼同時生成隨機 Gateway Token；在非本機請求中通過 `X-Gateway-Token` 請求頭傳入該值。
 
-编辑该文件填入你的 API keys：
+編輯該檔案填入你的 API keys：
 
 ```json
 {
@@ -230,37 +230,37 @@ REMOVE_IMAGE=true REMOVE_VOLUME=true ./deploy/docker/stop.sh
     "gateway": {
       "host": "0.0.0.0",
       "port": 18791,
-      "token": "脚本生成的随机值"
+      "token": "指令碼生成的隨機值"
     }
   }
 }
 ```
 
-**重要：** `bot.gateway.port` 必须与 `CONTAINER_PORT` 一致；脚本默认都使用 **18791**。如果现有配置不是有效 JSON、缺少 `bot.gateway`，或端口不一致，部署会在替换旧容器前停止并提示修复配置。
+**重要：** `bot.gateway.port` 必須與 `CONTAINER_PORT` 一致；指令碼預設都使用 **18791**。如果現有配置不是有效 JSON、缺少 `bot.gateway`，或埠不一致，部署會在替換舊容器前停止並提示修復配置。
 
-## 访问控制台
+## 訪問控制台
 
-部署成功后，访问：http://localhost:18791
+部署成功後，訪問：http://localhost:18791
 
 ## 常用命令
 
 ```bash
-# 查看日志
+# 檢視日誌
 docker logs -f vikingbot
 
-# 进入容器
+# 進入容器
 docker exec -it vikingbot bash
 
-# 运行 vikingbot 命令
+# 執行 vikingbot 命令
 docker exec vikingbot vikingbot status
 
-# 重启容器
+# 重啟容器
 docker restart vikingbot
 ```
 
-## 架构兼容性说明
+## 架構相容性說明
 
-| 系统 | 架构 | 自动检测 | 手动指定 |
+| 系統 | 架構 | 自動檢測 | 手動指定 |
 |------|------|----------|----------|
 | Apple Silicon (M1/M2/M3) | arm64 | ✓ | `PLATFORM=linux/arm64` |
 | Intel Mac | amd64 | ✓ | `PLATFORM=linux/amd64` |
@@ -268,45 +268,45 @@ docker restart vikingbot
 | Linux ARM Server | arm64 | ✓ | `PLATFORM=linux/arm64` |
 | Windows (WSL2) | amd64 | ✓ | `PLATFORM=linux/amd64` |
 
-## 与 VKE 部署共用 Dockerfile
+## 與 VKE 部署共用 Dockerfile
 
-注意：本地 Docker 部署和 VKE 部署**共用同一个 Dockerfile**（`deploy/Dockerfile`），确保了环境一致性。
+注意：本地 Docker 部署和 VKE 部署**共用同一個 Dockerfile**（`deploy/Dockerfile`），確保了環境一致性。
 
 - VKE 部署：使用 `deploy/vke/vke_deploy.py`
 - 本地部署：使用 `deploy/docker/deploy.sh`
-- 两者都使用：`deploy/Dockerfile`
+- 兩者都使用：`deploy/Dockerfile`
 
-Dockerfile 已移除平台硬编码，支持灵活的多架构构建！
+Dockerfile 已移除平臺硬編碼，支援靈活的多架構構建！
 
-## 跨平台镜像构建（推送到仓库）
+## 跨平臺映象構建（推送到倉庫）
 
-如果你需要构建可以在 Windows/Mac/Linux 多平台运行的镜像，可以使用 `build-multiarch.sh`：
+如果你需要構建可以在 Windows/Mac/Linux 多平臺執行的映象，可以使用 `build-multiarch.sh`：
 
-### 前置准备
+### 前置準備
 
-1. 准备一个 Docker 镜像仓库（如 Docker Hub, ACR, Harbor 等）
-2. 登录到镜像仓库
+1. 準備一個 Docker 映象倉庫（如 Docker Hub, ACR, Harbor 等）
+2. 登入到映象倉庫
 
-### 构建并推送跨平台镜像
+### 構建並推送跨平臺映象
 
 ```bash
-# 构建 linux/amd64 + linux/arm64 双架构镜像并推送
+# 構建 linux/amd64 + linux/arm64 雙架構映象並推送
 REGISTRY=your-registry.com PUSH=true ./deploy/docker/build-multiarch.sh
 ```
 
-### 环境变量配置
+### 環境變數配置
 
-| 变量 | 说明 | 示例 |
+| 變數 | 說明 | 示例 |
 |------|------|------|
-| `REGISTRY` | 镜像仓库地址 | `registry.example.com` |
-| `IMAGE_NAME` | 镜像名称 | `vikingbot` |
-| `IMAGE_TAG` | 镜像标签 | `latest` |
+| `REGISTRY` | 映象倉庫地址 | `registry.example.com` |
+| `IMAGE_NAME` | 映象名稱 | `vikingbot` |
+| `IMAGE_TAG` | 映象標籤 | `latest` |
 | `PUSH` | 是否推送 | `true` / `false` |
-| `PLATFORMS` | 目标架构 | `linux/amd64,linux/arm64` |
+| `PLATFORMS` | 目標架構 | `linux/amd64,linux/arm64` |
 
-### 使用跨平台镜像
+### 使用跨平臺映象
 
-推送成功后，在任何平台都可以直接使用：
+推送成功後，在任何平臺都可以直接使用：
 
 ```bash
 # 在 Apple Silicon Mac 上
@@ -315,13 +315,13 @@ PLATFORM=linux/arm64 ./deploy/docker/deploy.sh
 # 在 Intel/AMD Linux 上
 PLATFORM=linux/amd64 ./deploy/docker/deploy.sh
 
-# 或让脚本自动检测
+# 或讓指令碼自動檢測
 ./deploy/docker/deploy.sh
 ```
 
-### 验证镜像架构
+### 驗證映象架構
 
 ```bash
-# 查看镜像支持的架构
+# 檢視映象支援的架構
 docker manifest inspect your-registry.com/vikingbot:latest
 ```

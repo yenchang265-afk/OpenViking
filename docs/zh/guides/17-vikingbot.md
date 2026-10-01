@@ -1,20 +1,20 @@
-# VikingBot 安装与配置
+# VikingBot 安裝與配置
 
-VikingBot 是 OpenViking 内置的多渠道 AI Agent。它既可以和 OpenViking 一起启动，也可以在本地独立调试，或作为长期运行的 Gateway 接入聊天平台。
+VikingBot 是 OpenViking 內建的多渠道 AI Agent。它既可以和 OpenViking 一起啟動，也可以在本地獨立除錯，或作為長期執行的 Gateway 接入聊天平臺。
 
-本指南介绍安装方式，以及三种主要使用场景的配置和启动方法。Agent 工具、聊天渠道、架构等完整说明请参见 [VikingBot 中文文档](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md)。
+本指南介紹安裝方式，以及三種主要使用場景的配置和啟動方法。Agent 工具、聊天渠道、架構等完整說明請參見 [VikingBot 中文文件](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md)。
 
-## 安装
+## 安裝
 
-VikingBot 建议使用 Python 3.11 或更高版本。
+VikingBot 建議使用 Python 3.11 或更高版本。
 
-### 从 PyPI 安装
+### 從 PyPI 安裝
 
-选择你常用的 Python 包管理工具安装 VikingBot：
+選擇你常用的 Python 包管理工具安裝 VikingBot：
 
 ::: code-group
 
-```bash [uv（推荐）]
+```bash [uv（推薦）]
 uv tool install "openviking[bot]" --upgrade
 ```
 
@@ -23,7 +23,7 @@ pip install "openviking[bot]" --upgrade --force-reinstall
 ```
 
 ```bash [pipx]
-# 安装
+# 安裝
 pipx install "openviking[bot]"
 
 # 更新
@@ -32,13 +32,13 @@ pipx upgrade openviking
 
 :::
 
-安装后检查版本：
+安裝後檢查版本：
 
 ```bash
 vikingbot --version
 ```
 
-### 从源码安装
+### 從原始碼安裝
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
@@ -49,7 +49,7 @@ source .venv/bin/activate
 uv pip install -e ".[bot]"
 ```
 
-Windows 使用以下命令激活虚拟环境：
+Windows 使用以下命令啟用虛擬環境：
 
 ```powershell
 .venv\Scripts\activate
@@ -57,27 +57,27 @@ Windows 使用以下命令激活虚拟环境：
 
 ## 配置文件
 
-VikingBot 与 OpenViking 共用 `~/.openviking/ov.conf`。如果配置文件位于其他路径，通过环境变量指定：
+VikingBot 與 OpenViking 共用 `~/.openviking/ov.conf`。如果配置檔案位於其他路徑，通過環境變數指定：
 
 ```bash
 export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 ```
 
-修改配置后，需要重启 VikingBot 或 OpenViking Server 才会生效。
+修改配置後，需要重啟 VikingBot 或 OpenViking Server 才會生效。
 
-## 选择使用场景
+## 選擇使用場景
 
-| 场景 | 适用情况 | 启动命令 | OpenViking |
+| 場景 | 適用情況 | 啟動命令 | OpenViking |
 |------|----------|----------|------------|
-| **A. OpenViking + Bot 一体启动** | 完整体验资源、记忆和 Agent | `openviking-server --with-bot` | 使用当前启动的 Server |
-| **B. 本地调试 Agent** | 快速试用 Bot，开发 Tool 或 Skill | `vikingbot chat` | 可选 |
-| **C. Gateway 统一入口** | 长期运行、远程访问或接入聊天平台 | `vikingbot gateway` | 可连接已有 Server，也可 standalone 运行 |
+| **A. OpenViking + Bot 一體啟動** | 完整體驗資源、記憶和 Agent | `openviking-server --with-bot` | 使用當前啟動的 Server |
+| **B. 本地除錯 Agent** | 快速試用 Bot，開發 Tool 或 Skill | `vikingbot chat` | 可選 |
+| **C. Gateway 統一入口** | 長期執行、遠端訪問或接入聊天平臺 | `vikingbot gateway` | 可連線已有 Server，也可 standalone 執行 |
 
-三种场景是不同的运行入口，可以共用同一份 `ov.conf`。
+三種場景是不同的執行入口，可以共用同一份 `ov.conf`。
 
-## 场景 A：OpenViking + Bot 一体启动
+## 場景 A：OpenViking + Bot 一體啟動
 
-这是本地完整体验的推荐方式。OpenViking Server 和 VikingBot Gateway 会一起启动：
+這是本地完整體驗的推薦方式。OpenViking Server 和 VikingBot Gateway 會一起啟動：
 
 ```text
 ov chat → OpenViking Server → VikingBot Gateway → Agent
@@ -85,41 +85,41 @@ ov chat → OpenViking Server → VikingBot Gateway → Agent
 
 ### 1. 配置 OpenViking
 
-首次使用时运行初始化向导，并检查模型和存储配置：
+首次使用時執行初始化嚮導，並檢查模型和儲存配置：
 
 ```bash
 openviking-server init
 openviking-server doctor
 ```
 
-详细配置见 [OpenViking 配置指南](01-configuration.md)。VikingBot 默认继承根级 `vlm` 作为 Agent 模型，因此通常不需要重复配置 `bot.agents`。
+詳細配置見 [OpenViking 配置指南](01-configuration.md)。VikingBot 預設繼承根級 `vlm` 作為 Agent 模型，因此通常不需要重複配置 `bot.agents`。
 
-### 2. 一体启动
+### 2. 一體啟動
 
 ```bash
 openviking-server --with-bot
 ```
 
-在此模式下，Bot 固定连接当前启动的 OpenViking Server，不使用 `bot.ov_server.server_url` 指向其他服务。
+在此模式下，Bot 固定連線當前啟動的 OpenViking Server，不使用 `bot.ov_server.server_url` 指向其他服務。
 
-### 3. 配置并使用 `ov` CLI
+### 3. 配置並使用 `ov` CLI
 
 ```bash
 ov config
 ov chat
-ov chat -m "记住我更喜欢简洁的回答"
+ov chat -m "記住我更喜歡簡潔的回答"
 ov find "我的回答偏好"
 ```
 
-`ov config` 中的 URL 应指向当前 OpenViking Server，默认是 `http://127.0.0.1:1933`。如果 Server 开启了鉴权，还需要配置当前调用者的 User/Admin API Key。
+`ov config` 中的 URL 應指向當前 OpenViking Server，預設是 `http://127.0.0.1:1933`。如果 Server 開啟了鑑權，還需要配置當前呼叫者的 User/Admin API Key。
 
-## 场景 B：本地调试 Agent
+## 場景 B：本地除錯 Agent
 
-适合快速试用 VikingBot，或开发 Agent、Tool 和 Skill。`vikingbot chat` 会在当前进程中直接运行 Agent，不需要先启动 Gateway。
+適合快速試用 VikingBot，或開發 Agent、Tool 和 Skill。`vikingbot chat` 會在當前程序中直接執行 Agent，不需要先啟動 Gateway。
 
 ### 1. 配置 Agent 模型
 
-如果 `ov.conf` 已经配置根级 `vlm`，VikingBot 会直接继承。也可以使用独立的 Agent 模型：
+如果 `ov.conf` 已經配置根級 `vlm`，VikingBot 會直接繼承。也可以使用獨立的 Agent 模型：
 
 ```json
 {
@@ -134,8 +134,8 @@ ov find "我的回答偏好"
 }
 ```
 
-`bot.agents` 可以配置自己的有序 `credentials` 主备链；每项都配置 `model` 时，
-外层 `bot.agents.model` 可以省略：
+`bot.agents` 可以配置自己的有序 `credentials` 主備鏈；每項都配置 `model` 時，
+外層 `bot.agents.model` 可以省略：
 
 ```json
 {
@@ -164,36 +164,36 @@ ov find "我的回答偏好"
 }
 ```
 
-优先级是确定的：存在非空的 `bot.agents.model` 或 `bot.agents.credentials` 时，
-使用 Bot 自己的模型/credentials；两者都省略时，完整继承根级 `vlm` 的模型、
-credentials 和 failover/failback 设置。配置 Bot credentials 但省略外层 model
-时，每个 credential 都必须配置自己的 `model`。两条 credentials 链不会混用。
-`max_tokens` 是可选项：credential 自己的值优先于 `bot.agents.max_tokens`，未配置
-时继承 Agent 级值；两层都未配置时，VikingBot 不发送该请求字段，由模型服务决定
-默认输出上限。
+優先順序是確定的：存在非空的 `bot.agents.model` 或 `bot.agents.credentials` 時，
+使用 Bot 自己的模型/credentials；兩者都省略時，完整繼承根級 `vlm` 的模型、
+credentials 和 failover/failback 設定。配置 Bot credentials 但省略外層 model
+時，每個 credential 都必須配置自己的 `model`。兩條 credentials 鏈不會混用。
+`max_tokens` 是可選項：credential 自己的值優先於 `bot.agents.max_tokens`，未配置
+時繼承 Agent 級值；兩層都未配置時，VikingBot 不傳送該請求欄位，由模型服務決定
+預設輸出上限。
 
-### 2. 启动对话
+### 2. 啟動對話
 
 ```bash
-# 单次调用
-vikingbot chat -m "帮我总结当前目录的项目结构"
+# 單次呼叫
+vikingbot chat -m "幫我總結當前目錄的專案結構"
 
-# 交互式多轮对话
+# 互動式多輪對話
 vikingbot chat
 
-# 指定会话
+# 指定會話
 vikingbot chat --session my-session
 ```
 
-没有可用的 OpenViking Server 时，VikingBot 会以 standalone 方式运行。本地文件、Shell、Web 和 Skill 等能力仍可使用，但不会提供 OpenViking 资源检索和长期记忆能力。
+沒有可用的 OpenViking Server 時，VikingBot 會以 standalone 方式執行。本地檔案、Shell、Web 和 Skill 等能力仍可使用，但不會提供 OpenViking 資源檢索和長期記憶能力。
 
-## 场景 C：Gateway 统一入口
+## 場景 C：Gateway 統一入口
 
-适合长期运行、远程访问和接入 Slack、Telegram 等聊天平台。Gateway 提供 Bot HTTP API，也可以代理 OpenViking API，让 `ov` CLI 使用同一个入口。
+適合長期執行、遠端訪問和接入 Slack、Telegram 等聊天平臺。Gateway 提供 Bot HTTP API，也可以代理 OpenViking API，讓 `ov` CLI 使用同一個入口。
 
 ### 1. 配置 Gateway 和 OpenViking
 
-下面的示例让 Gateway 连接一个已有的 OpenViking Server：
+下面的示例讓 Gateway 連線一個已有的 OpenViking Server：
 
 ```json
 {
@@ -215,21 +215,21 @@ vikingbot chat --session my-session
 }
 ```
 
-Gateway 有三种 OpenViking 连接状态：
+Gateway 有三種 OpenViking 連線狀態：
 
-- 配置 `bot.ov_server.server_url`：连接指定的 OpenViking Server；连接失败时拒绝启动。
-- 未配置该 URL，但同一份 `ov.conf` 配置了 `server`：继承该 Server 地址；不可用时降级为 standalone。
-- 没有可用 Server：Chat 仍可使用，但 OpenViking 工具和 API 代理不可用。
+- 配置 `bot.ov_server.server_url`：連線指定的 OpenViking Server；連線失敗時拒絕啟動。
+- 未配置該 URL，但同一份 `ov.conf` 配置了 `server`：繼承該 Server 地址；不可用時降級為 standalone。
+- 沒有可用 Server：Chat 仍可使用，但 OpenViking 工具和 API 代理不可用。
 
-### 2. 启动 Gateway
+### 2. 啟動 Gateway
 
 ```bash
 vikingbot gateway
 ```
 
-### 3. 让 `ov` CLI 使用 Gateway
+### 3. 讓 `ov` CLI 使用 Gateway
 
-编辑 `~/.openviking/ovcli.conf`：
+編輯 `~/.openviking/ovcli.conf`：
 
 ```json
 {
@@ -239,23 +239,23 @@ vikingbot gateway
 }
 ```
 
-随后 Chat 和 OpenViking 命令都可以通过 Gateway：
+隨後 Chat 和 OpenViking 命令都可以通過 Gateway：
 
 ```bash
-ov chat -m "检索项目资料并给出结论"
+ov chat -m "檢索專案資料並給出結論"
 ov ls viking://resources/
-ov find "项目发布流程"
+ov find "專案釋出流程"
 ```
 
-Gateway 默认只监听 `127.0.0.1`。如果改为 `0.0.0.0` 或其他非 localhost 地址，必须配置 `bot.gateway.token`，并在客户端设置对应的 `gateway_token`。
+Gateway 預設只監聽 `127.0.0.1`。如果改為 `0.0.0.0` 或其他非 localhost 地址，必須配置 `bot.gateway.token`，並在客戶端設定對應的 `gateway_token`。
 
-聊天平台的凭证和权限配置见 [VikingBot 渠道配置](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/05-channel.md)。
+聊天平臺的憑證和許可權配置見 [VikingBot 渠道配置](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/05-channel.md)。
 
-## 更多文档
+## 更多文件
 
-- [VikingBot 完整使用说明](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md)
-- [VikingBot 架构](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/01-architecture.md)
-- [Agent 能力体系](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/02-agent-capabilities.md)
-- [渠道、Gateway 与运行管理](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/03-channels-and-gateway.md)
-- [VikingBot 与 OpenViking 集成](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/04-openviking-integration.md)
+- [VikingBot 完整使用說明](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md)
+- [VikingBot 架構](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/01-architecture.md)
+- [Agent 能力體系](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/02-agent-capabilities.md)
+- [渠道、Gateway 與執行管理](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/03-channels-and-gateway.md)
+- [VikingBot 與 OpenViking 整合](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/04-openviking-integration.md)
 - [聊天渠道配置](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/05-channel.md)

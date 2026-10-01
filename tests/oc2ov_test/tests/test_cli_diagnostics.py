@@ -27,7 +27,7 @@ def test_client_reports_safe_stderr_when_stdout_is_empty(run, _wait):
     result = OpenClawCLIClient().send_message("hello")
 
     assert result["success"] is False
-    assert "命令返回空输出" in result["error"]
+    assert "命令返回空輸出" in result["error"]
     assert "token=<redacted>" in result["error"]
     assert "private-value" not in result["error"]
 

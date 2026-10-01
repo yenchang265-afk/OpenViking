@@ -1,84 +1,84 @@
 # OpenViking CLI 配置指南
 
-本文介绍如何安装 OpenViking CLI、完成配置，并验证它可以连接到 OpenViking。
+本文介紹如何安裝 OpenViking CLI、完成配置，並驗證它可以連線到 OpenViking。
 
-`ov` 是客户端 CLI。它连接到已经存在的 OpenViking 服务端，或连接到 OpenViking Service（火山引擎云）。它不是服务端安装命令。如果你还没有安装或启动自定义 OpenViking 服务端，请先阅读[快速开始](02-quickstart.md)。
+`ov` 是客戶端 CLI。它連線到已經存在的 OpenViking 服務端，或連線到 OpenViking Service（火山引擎雲）。它不是服務端安裝命令。如果你還沒有安裝或啟動自定義 OpenViking 服務端，請先閱讀[快速開始](02-quickstart.md)。
 
-你可以用两种方式阅读本文：
+你可以用兩種方式閱讀本文：
 
-- 如果你自己手动配置 `ov`，请阅读[手动配置](#手动配置)。
-- 如果你让 Agent 帮你配置，请把本文发给 Agent，并让它阅读 [Agent 辅助配置](#agent-辅助配置)。
+- 如果你自己手動配置 `ov`，請閱讀[手動配置](#手動配置)。
+- 如果你讓 Agent 幫你配置，請把本文發給 Agent，並讓它閱讀 [Agent 輔助配置](#agent-輔助配置)。
 
-CLI 会持续演进。请把 `ov --help` 和 `ov <command> --help` 作为当前安装版本的命令准确信息来源。
+CLI 會持續演進。請把 `ov --help` 和 `ov <command> --help` 作為當前安裝版本的命令準確資訊來源。
 
-## 本文配置什么
+## 本文配置什麼
 
-CLI 使用 `~/.openviking/ovcli.conf` 作为 active 客户端连接配置。
+CLI 使用 `~/.openviking/ovcli.conf` 作為 active 客戶端連線配置。
 
-创建命名配置时，`ov` 会把配置保存为 `~/.openviking/ovcli.conf.<name>`。切换配置时，`ov` 会把选中的已保存配置复制到 `~/.openviking/ovcli.conf`。
+建立命名配置時，`ov` 會把配置儲存為 `~/.openviking/ovcli.conf.<name>`。切換配置時，`ov` 會把選中的已儲存配置複製到 `~/.openviking/ovcli.conf`。
 
-`ov config` 是面向人的交互式配置管理器，可以新增、编辑、删除、校验和切换配置。
+`ov config` 是面向人的互動式配置管理器，可以新增、編輯、刪除、校驗和切換配置。
 
-`ov config add`、`ov config edit`、`ov config list`、`ov config switch <name>` 和 `ov config delete` 是面向脚本和 Agent 的确定性命令。
+`ov config add`、`ov config edit`、`ov config list`、`ov config switch <name>` 和 `ov config delete` 是面向指令碼和 Agent 的確定性命令。
 
-## 选择连接目标
+## 選擇連線目標
 
-运行配置命令前，先选择要连接的 OpenViking 目标。
+執行配置命令前，先選擇要連線的 OpenViking 目標。
 
-除非用户已经明确说明，Agent 应先询问用户要连接哪种目标。已有配置、active 配置、本地文件、默认端口和正在运行的服务可以帮助 Agent 追问细节，但不代表用户同意 Agent 选择目标、切换或替换配置、探测本地服务、启动服务端，或写入数据。
+除非使用者已經明確說明，Agent 應先詢問使用者要連線哪種目標。已有配置、active 配置、本地檔案、預設埠和正在執行的服務可以幫助 Agent 追問細節，但不代表使用者同意 Agent 選擇目標、切換或替換配置、探測本地服務、啟動服務端，或寫入資料。
 
-### OpenViking Service（火山引擎云）
+### OpenViking Service（火山引擎雲）
 
-如果你希望使用火山引擎云上的 OpenViking 托管服务，选择此项。
+如果你希望使用火山引擎雲上的 OpenViking 託管服務，選擇此項。
 
-- `ov` 使用的服务端端点：`https://api.vikingdb.cn-beijing.volces.com/openviking`
-- 管理 API Key 的控制台页面：https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing
-- 在控制台进入 User Management → API Key，查看并复制你的 key。
+- `ov` 使用的服務端端點：`https://api.vikingdb.cn-beijing.volces.com/openviking`
+- 管理 API Key 的控制台頁面：https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing
+- 在控制台進入 User Management → API Key，檢視並複製你的 key。
 - API Key 必填。
-- 标准配置只需要 API Key。除非用户的管理员明确提供身份覆盖值，否则不要询问 `--account` 或 `--user`。
+- 標準配置只需要 API Key。除非使用者的管理員明確提供身份覆蓋值，否則不要詢問 `--account` 或 `--user`。
 
-### 远程自定义
+### 遠端自定義
 
-如果你要连接不在当前机器上的自定义 OpenViking 服务端，选择此项。
+如果你要連線不在當前機器上的自定義 OpenViking 服務端，選擇此項。
 
-- 服务端 URL 由用户或服务端管理员提供。
+- 服務端 URL 由使用者或服務端管理員提供。
 - 可能需要 API Key。
-- 仅用 root key 访问数据需要服务端采用 `trusted` 模式，并显式配置 `--account` 和 `--user`；`api_key` 模式的数据访问需要 user/admin key。
+- 僅用 root key 訪問資料需要服務端採用 `trusted` 模式，並顯式配置 `--account` 和 `--user`；`api_key` 模式的資料訪問需要 user/admin key。
 
-### 本地自定义
+### 本地自定義
 
-只有当用户要连接当前机器上的自定义 OpenViking 服务端时，才选择此项。
+只有當用戶要連線當前機器上的自定義 OpenViking 服務端時，才選擇此項。
 
-- 本地默认 URL：`http://127.0.0.1:1933`
-- 本地无鉴权服务通常不需要 API Key。
-- 除非用户选择本地自定义配置，否则 Agent 不应探测本地端口、curl 本地 health endpoint，或运行启动服务端的命令。
+- 本地預設 URL：`http://127.0.0.1:1933`
+- 本地無鑑權服務通常不需要 API Key。
+- 除非使用者選擇本地自定義配置，否則 Agent 不應探測本地埠、curl 本地 health endpoint，或執行啟動服務端的命令。
 
-> **注意：** 最近的 CLI 版本（v0.3.23+）要求在运行大多数命令前先保存一个显示语言。在交互式终端中，CLI 会在首次使用时提示你选择；在非交互式 shell（Agent 或 CI）中，任何非豁免命令都会以 `2` 退出，直到你运行 `ov language en` 或 `ov language zh-CN`。只有 `ov language`/`ov lang`、`ov config add|edit|delete|list` 和 `ov config switch <name>` 是豁免的，因此请在下面的 `ov config validate`、`ov health` 和 `ov status` 检查之前先运行 `ov language <code>`。
+> **注意：** 最近的 CLI 版本（v0.3.23+）要求在執行大多數命令前先儲存一個顯示語言。在互動式終端中，CLI 會在首次使用時提示你選擇；在非互動式 shell（Agent 或 CI）中，任何非豁免命令都會以 `2` 退出，直到你執行 `ov language en` 或 `ov language zh-CN`。只有 `ov language`/`ov lang`、`ov config add|edit|delete|list` 和 `ov config switch <name>` 是豁免的，因此請在下面的 `ov config validate`、`ov health` 和 `ov status` 檢查之前先執行 `ov language <code>`。
 
-## 开始前
+## 開始前
 
-你需要准备：
+你需要準備：
 
-- 一种安装 CLI 的方式：
-  - 使用 Node.js 和 npm 安装独立的 `@openviking/cli` 包，或
-  - 使用 Python 工具安装完整的 `openviking` 包。
-- 一个可访问的 OpenViking 目标：
-  - OpenViking Service（火山引擎云），或
-  - 自定义 OpenViking 服务端。
-- 如果目标需要鉴权，需要准备 API Key。
+- 一種安裝 CLI 的方式：
+  - 使用 Node.js 和 npm 安裝獨立的 `@openviking/cli` 包，或
+  - 使用 Python 工具安裝完整的 `openviking` 包。
+- 一個可訪問的 OpenViking 目標：
+  - OpenViking Service（火山引擎雲），或
+  - 自定義 OpenViking 服務端。
+- 如果目標需要鑑權，需要準備 API Key。
 
-API Key 是敏感凭证。手动配置时优先通过 `ov config` 的交互式输入框输入。只有当你明确相信当前渠道时，才把 API Key 提供给 Agent。Agent 应通过 stdin 传入 key，不能把 key 写进 shell 命令、日志、长期记忆或原始配置输出。只有当 key 已经存在于当前 shell 环境变量中时，才使用环境变量。
+API Key 是敏感憑證。手動配置時優先通過 `ov config` 的互動式輸入框輸入。只有當你明確相信當前渠道時，才把 API Key 提供給 Agent。Agent 應通過 stdin 傳入 key，不能把 key 寫進 shell 命令、日誌、長期記憶或原始配置輸出。只有當 key 已經存在於當前 shell 環境變數中時，才使用環境變數。
 
-## 安装 `ov`
+## 安裝 `ov`
 
-先检查是否已经安装：
+先檢查是否已經安裝：
 
 ```bash
 command -v ov
 ov --version
 ```
 
-如果 `ov --version` 或任何其他 `ov` 命令提示 OpenViking 需要显示语言，请先选择语言再重试：
+如果 `ov --version` 或任何其他 `ov` 命令提示 OpenViking 需要顯示語言，請先選擇語言再重試：
 
 ```bash
 ov language en
@@ -86,91 +86,91 @@ ov language en
 ov language zh-CN
 ```
 
-安装或升级 npm 包：
+安裝或升級 npm 包：
 
 ```bash
 npm i -g @openviking/cli
 ```
 
-也可以从源码构建 Rust CLI：
+也可以從原始碼構建 Rust CLI：
 
 ```bash
 cargo install --git https://github.com/volcengine/OpenViking ov_cli
 ```
 
-npm 包是最轻量的独立 CLI 安装方式。Python SDK 是独立的包——只在有 Python 代码要 import 的地方安装 `openviking-sdk`，它不提供 `ov` 命令。如果这台机器本身跑服务端（`uv tool install openviking`），该安装自带 `ov`，无需再装 CLI。
+npm 包是最輕量的獨立 CLI 安裝方式。Python SDK 是獨立的包——只在有 Python 程式碼要 import 的地方安裝 `openviking-sdk`，它不提供 `ov` 命令。如果這臺機器本身跑服務端（`uv tool install openviking`），該安裝自帶 `ov`，無需再裝 CLI。
 
-验证：
+驗證：
 
 ```bash
 ov --help
 ```
 
-如果仍然找不到 `ov`，关闭并重新打开 shell，或检查 npm 全局 prefix：
+如果仍然找不到 `ov`，關閉並重新開啟 shell，或檢查 npm 全域 prefix：
 
 ```bash
 npm prefix -g
 ```
 
-在 macOS 和 Linux 上，全局 npm binary 目录通常是 `$(npm prefix -g)/bin`。确认该目录已经加入 `PATH`。
+在 macOS 和 Linux 上，全域 npm binary 目錄通常是 `$(npm prefix -g)/bin`。確認該目錄已經加入 `PATH`。
 
-## 密钥类型
+## 金鑰型別
 
-OpenViking CLI 配置可以包含 user key、root key，或同时包含两者。
+OpenViking CLI 配置可以包含 user key、root key，或同時包含兩者。
 
-- User key：用于普通数据命令，例如 `ov add-resource`、`ov find` 和 `ov tree`。服务端会从 key 推导身份，所以通常不需要传 `--account` 或 `--user`。这是大多数用户需要的方式。
-- Root key：用于管理操作和需要 `--sudo` 的命令。`api_key` 模式下，即使传入 `--account` 和 `--user`，root key 也不能访问租户数据。只有 `trusted` 服务端接受 root key 认证的数据请求通过这些 header 指定身份。
-- User key + root key：适合一个配置同时支持日常数据操作和偶尔的管理操作。普通命令使用 user key，`--sudo` 命令使用 root key，并带上配置中的 account 和 user。
+- User key：用於普通資料命令，例如 `ov add-resource`、`ov find` 和 `ov tree`。服務端會從 key 推導身份，所以通常不需要傳 `--account` 或 `--user`。這是大多數使用者需要的方式。
+- Root key：用於管理操作和需要 `--sudo` 的命令。`api_key` 模式下，即使傳入 `--account` 和 `--user`，root key 也不能訪問租戶資料。只有 `trusted` 服務端接受 root key 認證的資料請求通過這些 header 指定身份。
+- User key + root key：適合一個配置同時支援日常資料操作和偶爾的管理操作。普通命令使用 user key，`--sudo` 命令使用 root key，並帶上配置中的 account 和 user。
 
-## 手动配置
+## 手動配置
 
-如果你正在阅读本文，并准备自己配置 `ov`，使用这个路径。
+如果你正在閱讀本文，並準備自己配置 `ov`，使用這個路徑。
 
-运行：
+執行：
 
 ```bash
 ov config
 ```
 
-然后选择：
+然後選擇：
 
 1. `Add config`
-2. `OpenViking Service（火山引擎云）` 或 `自定义`
-3. 配置名称，或留空自动生成
-4. 上面选择的目标所需的 URL 和 API Key
-5. 校验成功后保存配置
+2. `OpenViking Service（火山引擎雲）` 或 `自定義`
+3. 配置名稱，或留空自動生成
+4. 上面選擇的目標所需的 URL 和 API Key
+5. 校驗成功後儲存配置
 
-如果你维护多个 OpenViking 目标，之后可以使用：
+如果你維護多個 OpenViking 目標，之後可以使用：
 
 ```bash
 ov config switch
 ```
 
-切换 active 配置。
+切換 active 配置。
 
-配置完成后，继续阅读[验证配置](#验证配置)。
+配置完成後，繼續閱讀[驗證配置](#驗證配置)。
 
-## Agent 辅助配置
+## Agent 輔助配置
 
-如果 Agent 正在替用户配置 `ov`，使用这个路径。Agent 应该阅读整篇文档。当确定性命令不适合用户环境时，上面的手动配置流程就是回退路径。
+如果 Agent 正在替使用者配置 `ov`，使用這個路徑。Agent 應該閱讀整篇文件。當確定性命令不適合使用者環境時，上面的手動配置流程就是回退路徑。
 
-### Agent 检查清单
+### Agent 檢查清單
 
-1. 除非用户已经明确说明，先询问用户要连接哪种目标：OpenViking Service（火山引擎云）、远程自定义，还是本地自定义。
-2. 不要根据已有配置、active 配置、本地文件、默认端口或正在运行的服务推断用户想要的 setup。
-3. 切换配置、替换配置、探测本地服务、启动服务端或写入数据前，都要先询问用户。
-4. 在选择命令前，运行 `ov --help`、`ov config --help` 和相关 config 子命令的帮助。
-5. 如果你具备长期记忆能力，并且用户允许，可以记录当前 `ov --help` 命令面的简要摘要。不要记录 API Key 或其他密钥。
-6. 当必需信息明确时，使用非交互式 `ov config` 命令。
-7. Agent 配置时始终传 `--name`，这样重试会命中同一个 saved config。
-8. 如果 Agent 已经通过可信渠道拿到 API Key，使用 `--api-key-stdin` 或 `--root-api-key-stdin`，并且只把 key 内容写入 stdin。只有当环境变量已经存在时，才使用 `--api-key-env` 或 `--root-api-key-env`。不要要求用户额外打开一个 shell 只为了给 Agent export 一个 key。
-9. 使用 `-o json`，并根据 JSON 结果和进程退出码分支处理。
-10. 使用 `ov config validate` 校验 active 配置，然后运行 `ov health` 和 `ov status`。
-11. 如果非交互式配置因为信息缺失、鉴权不明确或终端输入更安全而失败，请引导用户使用 `ov config` 交互式向导。
+1. 除非使用者已經明確說明，先詢問使用者要連線哪種目標：OpenViking Service（火山引擎雲）、遠端自定義，還是本地自定義。
+2. 不要根據已有配置、active 配置、本地檔案、預設埠或正在執行的服務推斷使用者想要的 setup。
+3. 切換配置、替換配置、探測本地服務、啟動服務端或寫入資料前，都要先詢問使用者。
+4. 在選擇命令前，執行 `ov --help`、`ov config --help` 和相關 config 子命令的幫助。
+5. 如果你具備長期記憶能力，並且使用者允許，可以記錄當前 `ov --help` 命令面的簡要摘要。不要記錄 API Key 或其他金鑰。
+6. 當必需資訊明確時，使用非互動式 `ov config` 命令。
+7. Agent 配置時始終傳 `--name`，這樣重試會命中同一個 saved config。
+8. 如果 Agent 已經通過可信渠道拿到 API Key，使用 `--api-key-stdin` 或 `--root-api-key-stdin`，並且只把 key 內容寫入 stdin。只有當環境變數已經存在時，才使用 `--api-key-env` 或 `--root-api-key-env`。不要要求使用者額外開啟一個 shell 只為了給 Agent export 一個 key。
+9. 使用 `-o json`，並根據 JSON 結果和程序退出碼分支處理。
+10. 使用 `ov config validate` 校驗 active 配置，然後執行 `ov health` 和 `ov status`。
+11. 如果非互動式配置因為資訊缺失、鑑權不明確或終端輸入更安全而失敗，請引導使用者使用 `ov config` 互動式嚮導。
 
-### 查看当前安装的 CLI
+### 檢視當前安裝的 CLI
 
-运行：
+執行：
 
 ```bash
 ov --help
@@ -181,44 +181,44 @@ ov config add custom --help
 ov config edit --help
 ```
 
-以当前安装版本的 CLI 帮助为准。如果本文与本地帮助不一致，请遵循本地帮助，并告诉用户差异是什么。
+以當前安裝版本的 CLI 幫助為準。如果本文與本地幫助不一致，請遵循本地幫助，並告訴使用者差異是什麼。
 
-如果 help 命令提示 OpenViking 需要显示语言，请运行 `ov language en`；如果用户希望使用中文，则运行 `ov language zh-CN`，然后重试。`ov config add`、`ov config list`、`ov config edit`、`ov config switch <name>` 和 `ov config delete` 等非交互式 config 子命令可以在设置显示语言前运行。
+如果 help 命令提示 OpenViking 需要顯示語言，請執行 `ov language en`；如果使用者希望使用中文，則執行 `ov language zh-CN`，然後重試。`ov config add`、`ov config list`、`ov config edit`、`ov config switch <name>` 和 `ov config delete` 等非互動式 config 子命令可以在設定顯示語言前執行。
 
-### 使用稳定名称便于重试
+### 使用穩定名稱便於重試
 
-Agent 创建配置时始终传 `--name`。如果省略名称，`ov` 会随机生成名称；重试时可能创建第二个 saved config，而不是更新预期的配置。
+Agent 建立配置時始終傳 `--name`。如果省略名稱，`ov` 會隨機生成名稱；重試時可能建立第二個 saved config，而不是更新預期的配置。
 
-当传入相同 `--name` 且配置内容完全一致时，`ov config add` 可以安全重复运行。它会以 `0` 退出，`--activate` 也会再次把该 saved config 设为 active。如果同名配置已经存在但内容不同，命令会以 `3` 退出，并要求只有在确认替换时才使用 `--force`。
+當傳入相同 `--name` 且配置內容完全一致時，`ov config add` 可以安全重複執行。它會以 `0` 退出，`--activate` 也會再次把該 saved config 設為 active。如果同名配置已經存在但內容不同，命令會以 `3` 退出，並要求只有在確認替換時才使用 `--force`。
 
-下面示例中的 `<CONFIG-NAME>` 和 `<REMOTE-OPENVIKING-URL>` 等占位符需要替换成用户确认过的值再运行。运行时不要保留尖括号。
+下面示例中的 `<CONFIG-NAME>` 和 `<REMOTE-OPENVIKING-URL>` 等佔位符需要替換成使用者確認過的值再執行。執行時不要保留尖括號。
 
-### 读取结果
+### 讀取結果
 
-对非交互式 config 命令使用 `-o json` 时，成功结果会输出到 stdout：
+對非互動式 config 命令使用 `-o json` 時，成功結果會輸出到 stdout：
 
 ```json
 {"status":"ok","result":{"action":"add","name":"<CONFIG-NAME>"}}
 ```
 
-`result` 对象会随子命令变化。`add` 和 `edit` 还会包含 `kind`、`url`、`saved_path`、`active_path`、`activated` 和 `validation` 等字段，因此 Agent 不应该假设结果里只有 `action` 和 `name`。
+`result` 物件會隨子命令變化。`add` 和 `edit` 還會包含 `kind`、`url`、`saved_path`、`active_path`、`activated` 和 `validation` 等欄位，因此 Agent 不應該假設結果裡只有 `action` 和 `name`。
 
-错误结果会输出到 stderr：
+錯誤結果會輸出到 stderr：
 
 ```json
 {"status":"error","error":{"code":"bad_input","message":"..."}}
 ```
 
-Agent 应该根据进程退出码和 JSON 中的 `error.code` 分支处理，不要解析面向人的说明文字。
+Agent 應該根據程序退出碼和 JSON 中的 `error.code` 分支處理，不要解析面向人的說明文字。
 
-| 退出码 | 含义 |
+| 退出碼 | 含義 |
 |--------|------|
-| `0` | 成功，或已经处于目标状态 |
-| `2` | 输入错误、缺少参数、名称非法、无法读取密钥来源，或在非交互式 shell 中尚未选择显示语言（请先运行 `ov language <code>`） |
-| `3` | 同名配置已经存在但内容不同；只有确认要替换时才传 `--force` |
-| `4` | 服务端不可达，或配置校验失败 |
-| `5` | 鉴权或 key 角色不匹配，例如把 root key 传到了需要 user key 的位置 |
-| `6` | 操作被拒绝，例如删除 active 配置 |
+| `0` | 成功，或已經處於目標狀態 |
+| `2` | 輸入錯誤、缺少引數、名稱非法、無法讀取金鑰來源，或在非互動式 shell 中尚未選擇顯示語言（請先執行 `ov language <code>`） |
+| `3` | 同名配置已經存在但內容不同；只有確認要替換時才傳 `--force` |
+| `4` | 服務端不可達，或配置校驗失敗 |
+| `5` | 鑑權或 key 角色不匹配，例如把 root key 傳到了需要 user key 的位置 |
+| `6` | 操作被拒絕，例如刪除 active 配置 |
 
 ### 列出已有配置
 
@@ -226,25 +226,25 @@ Agent 应该根据进程退出码和 JSON 中的 `error.code` 分支处理，不
 ov config list -o json
 ```
 
-列表输出形状如下：
+列表輸出形狀如下：
 
 ```json
 {"status":"ok","result":[{"name":"<CONFIG-NAME>","kind":"OpenViking Service","url":"https://api.vikingdb.cn-beijing.volces.com/openviking","active":true}]}
 ```
 
-做存在性检查时，读取 `result[].name`。判断是否还需要切换 active config 时，读取匹配项的 `active` 标记。
+做存在性檢查時，讀取 `result[].name`。判斷是否還需要切換 active config 時，讀取匹配項的 `active` 標記。
 
-如果已经存在合适的 saved config，可以按名称激活：
+如果已經存在合適的 saved config，可以按名稱啟用：
 
 ```bash
 ov config switch <CONFIG-NAME> -o json
 ```
 
-然后运行验证命令。
+然後執行驗證命令。
 
 ### 添加 OpenViking Service
 
-如果 Agent 已经通过可信渠道拿到 API Key，运行：
+如果 Agent 已經通過可信渠道拿到 API Key，執行：
 
 ```bash
 ov config add ov-service --name <CONFIG-NAME> --api-key-stdin --activate -o json
@@ -256,33 +256,33 @@ shell pipe 形式如下：
 printf '%s' "$API_KEY" | ov config add ov-service --name <CONFIG-NAME> --api-key-stdin --activate -o json
 ```
 
-`$API_KEY` 表示可信的运行时密钥来源，不是字面量 key。Agent 能在不把 key 写进命令文本、shell history、日志或长期 export 的环境变量时提供 key，就应使用 stdin。
+`$API_KEY` 表示可信的執行時金鑰來源，不是字面量 key。Agent 能在不把 key 寫進命令文本、shell history、日誌或長期 export 的環境變數時提供 key，就應使用 stdin。
 
-只把 API Key 内容写入 stdin，不要把 key 放进 shell 命令本身。这会写入一个 OpenViking Service 配置，并使用固定端点：`https://api.vikingdb.cn-beijing.volces.com/openviking`。`ov-service` 目标不接受自定义服务端 URL。
+只把 API Key 內容寫入 stdin，不要把 key 放進 shell 命令本身。這會寫入一個 OpenViking Service 配置，並使用固定端點：`https://api.vikingdb.cn-beijing.volces.com/openviking`。`ov-service` 目標不接受自定義服務端 URL。
 
-只有当环境变量已经存在时，才使用环境变量：
+只有當環境變數已經存在時，才使用環境變數：
 
 ```bash
 ov config add ov-service --name <CONFIG-NAME> --api-key-env <API-KEY-ENV-VAR> --activate -o json
 ```
 
-标准 OpenViking Service 配置不要传 `--account` 或 `--user`。只有当用户或 OpenViking 管理员提供身份覆盖值时，才使用它们。
+標準 OpenViking Service 配置不要傳 `--account` 或 `--user`。只有當用戶或 OpenViking 管理員提供身份覆蓋值時，才使用它們。
 
-### 添加本地自定义服务
+### 新增本地自定義服務
 
-只有当用户选择本地自定义时，才使用这个路径。
+只有當用戶選擇本地自定義時，才使用這個路徑。
 
-对于本地无鉴权服务：
+對於本地無鑑權服務：
 
 ```bash
 ov config add custom --name <CONFIG-NAME> --url http://127.0.0.1:1933 --activate -o json
 ```
 
-如果本地服务没有运行，请先引导用户启动服务端。参见[部署指南](../guides/03-deployment.md)。
+如果本地服務沒有執行，請先引導使用者啟動服務端。參見[部署指南](../guides/03-deployment.md)。
 
-### 添加远程自定义服务
+### 新增遠端自定義服務
 
-对于使用普通 API Key 的远程自定义服务：
+對於使用普通 API Key 的遠端自定義服務：
 
 ```bash
 ov config add custom --name <CONFIG-NAME> --url <REMOTE-OPENVIKING-URL> --api-key-stdin --activate -o json
@@ -294,25 +294,25 @@ stdin pipe 形式如下：
 printf '%s' "$API_KEY" | ov config add custom --name <CONFIG-NAME> --url <REMOTE-OPENVIKING-URL> --api-key-stdin --activate -o json
 ```
 
-把 API Key 写入 stdin。如果 key 已经存在于当前 shell 环境变量中，可以改用 `--api-key-env <API-KEY-ENV-VAR>`。
+把 API Key 寫入 stdin。如果 key 已經存在於當前 shell 環境變數中，可以改用 `--api-key-env <API-KEY-ENV-VAR>`。
 
-对于 `trusted` 模式的自建服务，仅配置 root key 时还需提供目标 account 和 user。若服务端采用 `api_key` 模式，普通数据命令应改用 user/admin key：
+對於 `trusted` 模式的自建服務，僅配置 root key 時還需提供目標 account 和 user。若服務端採用 `api_key` 模式，普通資料命令應改用 user/admin key：
 
 ```bash
 ov config add custom --name <CONFIG-NAME> --url <REMOTE-OPENVIKING-URL> --root-api-key-stdin --account <ACCOUNT-ID> --user <USER-ID> --activate -o json
 ```
 
-把 trusted 部署的 root API key 写入 stdin；account 和 user 用于指定 trusted 数据请求的调用者身份。
+把 trusted 部署的 root API key 寫入 stdin；account 和 user 用於指定 trusted 資料請求的呼叫者身份。
 
-如果用户同时拥有 user key 和 root key，可以把两者放在同一个配置里：
+如果使用者同時擁有 user key 和 root key，可以把兩者放在同一個配置裡：
 
 ```bash
 ov config add custom --name <CONFIG-NAME> --url <REMOTE-OPENVIKING-URL> --api-key-stdin --root-api-key-env <ROOT-API-KEY-ENV-VAR> --account <ACCOUNT-ID> --user <USER-ID> --activate -o json
 ```
 
-这样普通命令使用 user key，需要 `--sudo` 的命令使用 root key。因为一个命令只有一个 stdin 流，第二个 key 必须来自已经存在的环境变量。如果两个 key 都不在环境变量中，请使用 `ov config` 并引导用户完成交互式流程。
+這樣普通命令使用 user key，需要 `--sudo` 的命令使用 root key。因為一個命令只有一個 stdin 流，第二個 key 必須來自已經存在的環境變數。如果兩個 key 都不在環境變數中，請使用 `ov config` 並引導使用者完成互動式流程。
 
-### 编辑或替换配置
+### 編輯或替換配置
 
 先列出配置：
 
@@ -320,46 +320,46 @@ ov config add custom --name <CONFIG-NAME> --url <REMOTE-OPENVIKING-URL> --api-ke
 ov config list -o json
 ```
 
-重命名并激活 saved config：
+重新命名並激活 saved config：
 
 ```bash
 ov config edit <CONFIG-NAME> --new-name <NEW-CONFIG-NAME> --activate -o json
 ```
 
-替换 API Key：
+替換 API Key：
 
 ```bash
 ov config edit <CONFIG-NAME> --api-key-stdin --activate -o json
 ```
 
-把新的 API Key 写入 stdin。
+把新的 API Key 寫入 stdin。
 
-替换自定义服务 URL：
+替換自定義服務 URL：
 
 ```bash
 ov config edit <CONFIG-NAME> --url <CUSTOM-OPENVIKING-URL> --activate -o json
 ```
 
-只有在你明确要覆盖已有 saved config 名称时，才使用 `--force`。
+只有在你明確要覆蓋已有 saved config 名稱時，才使用 `--force`。
 
-### 删除 saved config
+### 刪除 saved config
 
-只删除非 active 的 saved config：
+只刪除非 active 的 saved config：
 
 ```bash
 ov config delete <OLD-CONFIG-NAME> -o json
 ```
 
-如果该配置正处于 active 状态，先切换到另一个配置：
+如果該配置正處於 active 狀態，先切換到另一個配置：
 
 ```bash
 ov config switch <CONFIG-NAME> -o json
 ov config delete <OLD-CONFIG-NAME> -o json
 ```
 
-## 验证配置
+## 驗證配置
 
-运行：
+執行：
 
 ```bash
 ov config show
@@ -369,17 +369,17 @@ ov health
 ov status
 ```
 
-检查配置时优先使用 `ov config show`，因为它会隐藏密钥。
+檢查配置時優先使用 `ov config show`，因為它會隱藏金鑰。
 
-除非你理解配置文件可能包含密钥，否则不要打印原始配置文件。
+除非你理解配置檔案可能包含金鑰，否則不要列印原始配置檔案。
 
-如果验证命令提示 OpenViking 需要显示语言，请运行 `ov language en`；如果用户希望使用中文，则运行 `ov language zh-CN`，然后重新验证。
+如果驗證命令提示 OpenViking 需要顯示語言，請執行 `ov language en`；如果使用者希望使用中文，則執行 `ov language zh-CN`，然後重新驗證。
 
-`ov status` 包含更宽泛的服务端和数据诊断。如果 `ov config validate` 和 `ov health` 通过，`ov status` 中的 warning 不一定代表 CLI 配置失败。
+`ov status` 包含更寬泛的服務端和資料診斷。如果 `ov config validate` 和 `ov health` 通過，`ov status` 中的 warning 不一定代表 CLI 配置失敗。
 
-## 学习其他 CLI 命令
+## 學習其他 CLI 命令
 
-配置成功后，用内置帮助继续了解 `ov` 的其他能力：
+配置成功後，用內建幫助繼續瞭解 `ov` 的其他能力：
 
 ```bash
 ov --help
@@ -387,55 +387,55 @@ ov config --help
 ov add-resource --help
 ```
 
-Agent 在运行不熟悉的命令前，应该重新查看帮助。如果 Agent 为用户维护长期记忆，并且用户允许，可以记录当前命令面的简要摘要，方便之后继续工作。不要记录密钥、原始配置文件或私有服务详情，除非用户明确要求。
+Agent 在執行不熟悉的命令前，應該重新檢視幫助。如果 Agent 為使用者維護長期記憶，並且使用者允許，可以記錄當前命令面的簡要摘要，方便之後繼續工作。不要記錄金鑰、原始配置檔案或私有服務詳情，除非使用者明確要求。
 
-## 凭证安全
+## 憑證安全
 
-- API Key 可能允许访问你的 OpenViking 数据。
-- 手动配置时，优先使用 `ov config` 的交互式输入框。
-- Agent 辅助配置时，只有通过你明确相信的渠道提供 API Key。
-- Agent 应通过 stdin 传入 key。只有当环境变量已经存在于当前 shell 中时，才使用环境变量。
-- 不要把 API Key 直接写进可能被 shell history 保存的命令。
+- API Key 可能允許訪問你的 OpenViking 資料。
+- 手動配置時，優先使用 `ov config` 的互動式輸入框。
+- Agent 輔助配置時，只有通過你明確相信的渠道提供 API Key。
+- Agent 應通過 stdin 傳入 key。只有當環境變數已經存在於當前 shell 中時，才使用環境變數。
+- 不要把 API Key 直接寫進可能被 shell history 儲存的命令。
 - 不要打印原始 `~/.openviking/ovcli.conf`。
-- 不要分享包含 API Key 的截图。
-- 演示和试用建议使用临时或可撤销的 key。
+- 不要分享包含 API Key 的截圖。
+- 演示和試用建議使用臨時或可撤銷的 key。
 
-## 常见问题
+## 常見問題
 
 ### 找不到 `ov`
 
-运行：
+執行：
 
 ```bash
 npm i -g @openviking/cli
 npm prefix -g
 ```
 
-然后重新打开 shell，或把 npm 全局 binary 目录加入 `PATH`。在 macOS 和 Linux 上，该目录通常是 `$(npm prefix -g)/bin`。
+然後重新開啟 shell，或把 npm 全域 binary 目錄加入 `PATH`。在 macOS 和 Linux 上，該目錄通常是 `$(npm prefix -g)/bin`。
 
-### npm 全局安装失败
+### npm 全域安裝失敗
 
-如果 npm 报权限错误，请按你平时管理 Node.js 的方式处理。除非你本来就用 sudo 管理全局 npm 包，否则不要直接运行 `sudo npm i -g`。
+如果 npm 報許可權錯誤，請按你平時管理 Node.js 的方式處理。除非你本來就用 sudo 管理全域 npm 包，否則不要直接執行 `sudo npm i -g`。
 
-### 本地服务端没有运行
+### 本地服務端沒有執行
 
-只有当用户选择本地自定义时才使用此项。先验证服务端：
+只有當用戶選擇本地自定義時才使用此項。先驗證服務端：
 
 ```bash
 curl http://127.0.0.1:1933/health
 ```
 
-如果失败，先启动服务端再配置 `ov`。参见[部署指南](../guides/03-deployment.md)。
+如果失敗，先啟動服務端再配置 `ov`。參見[部署指南](../guides/03-deployment.md)。
 
-### API Key 校验失败
+### API Key 校驗失敗
 
-重新运行 `ov config` 并编辑配置。对于 OpenViking Service，确认 API Key 来自上面的 OpenViking 控制台地址。对于自定义服务，确认服务端是否要求鉴权。
+重新執行 `ov config` 並編輯配置。對於 OpenViking Service，確認 API Key 來自上面的 OpenViking 控制台地址。對於自定義服務，確認服務端是否要求鑑權。
 
-Agent 不应该反复重试未知 key。请让用户确认目标类型、服务端 URL、key 类型、account 和 user。
+Agent 不應該反覆重試未知 key。請讓使用者確認目標型別、服務端 URL、key 型別、account 和 user。
 
-### active 配置不对
+### active 配置不對
 
-检查并切换：
+檢查並切換：
 
 ```bash
 ov config show
@@ -444,36 +444,36 @@ ov config switch
 ov config validate
 ```
 
-Agent 可以按名称切换：
+Agent 可以按名稱切換：
 
 ```bash
 ov config list -o json
 ov config switch <CONFIG-NAME> -o json
 ```
 
-### 非交互式配置不适合当前情况
+### 非互動式配置不適合當前情況
 
-使用交互式向导：
+使用互動式嚮導：
 
 ```bash
 ov config
 ```
 
-当密钥应由用户直接在终端输入、连接目标不明确，或校验结果需要人工判断时，这是合适的回退路径。
+當金鑰應由使用者直接在終端輸入、連線目標不明確，或校驗結果需要人工判斷時，這是合適的回退路徑。
 
-### 旧配置命令
+### 舊配置命令
 
-使用 `ov config`。不要使用旧的或已移除的配置命令，例如 `ov config setup-cli`。
+使用 `ov config`。不要使用舊的或已移除的配置命令，例如 `ov config setup-cli`。
 
 ## 下一步
 
-CLI 配置完成后，使用 `ov --help` 和 `ov <command> --help` 继续了解其他命令。
+CLI 配置完成後，使用 `ov --help` 和 `ov <command> --help` 繼續瞭解其他命令。
 
-添加资源会把数据写入 active OpenViking 服务端。如果你想做一个小演示，请选择你愿意存入服务端的资源。Agent 运行这类演示命令前，必须先征得用户同意。
+新增資源會把資料寫入 active OpenViking 服務端。如果你想做一個小演示，請選擇你願意存入服務端的資源。Agent 執行這類演示命令前，必須先徵得使用者同意。
 
 ```bash
 ov add-resource https://github.com/volcengine/OpenViking
-# 使用返回的 task_id 查询状态；completed 后再检索
+# 使用返回的 task_id 查詢狀態；completed 後再檢索
 ov task status TASK_ID
 ov find "what is OpenViking"
 ov tree viking://resources/ -L 2
@@ -489,12 +489,12 @@ ov add-resource --help
 
 ## 重建索引
 
-`ov reindex <uri>` 用于重建已导入内容的索引，支持三种模式：
+`ov reindex <uri>` 用於重建已匯入內容的索引，支援三種模式：
 
 - `--mode vectors_only` —— 只刷新向量。
-- `--mode semantic_and_vectors` —— 先重新生成语义产物（`.abstract.md`、`.overview.md`），再刷新向量。
-- `--mode prune_orphans` —— 清理源文件已不存在的向量记录，加 `--dry-run` 可预览而不实际执行。
+- `--mode semantic_and_vectors` —— 先重新生成語義產物（`.abstract.md`、`.overview.md`），再重新整理向量。
+- `--mode prune_orphans` —— 清理原始檔已不存在的向量記錄，加 `--dry-run` 可預覽而不實際執行。
 
-`semantic_and_vectors` 默认递归处理整个子树。对已经具有下级摘要、只需要重新生成目标目录 `.abstract.md` / `.overview.md` 的场景，可添加 `--recursive=false`；此时仅刷新目标目录语义产物和该目录的 L0/L1 向量。
+`semantic_and_vectors` 預設遞迴處理整個子樹。對已經具有下級摘要、只需要重新生成目標目錄 `.abstract.md` / `.overview.md` 的場景，可新增 `--recursive=false`；此時僅重新整理目標目錄語義產物和該目錄的 L0/L1 向量。
 
-没有 `semantic` 或 `full` 这样的模式别名。
+沒有 `semantic` 或 `full` 這樣的模式別名。

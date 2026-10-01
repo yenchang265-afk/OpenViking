@@ -1,28 +1,28 @@
 # VikingDB FastAPI Server
 
-重构后的 VikingDB Collection Server，使用 FastAPI 替代 Flask。
+重構後的 VikingDB Collection Server，使用 FastAPI 替代 Flask。
 
-## 文件说明
+## 檔案說明
 
-- **app_models.py**: Pydantic 数据模型定义 (替代 Flask-RESTful 的 reqparse)
-- **api_fastapi.py**: FastAPI 路由和 API 端点 (替代 Flask-RESTful 的 Resource 类)
-- **server_fastapi.py**: FastAPI 主服务器文件 (替代 Flask 应用)
+- **app_models.py**: Pydantic 資料模型定義 (替代 Flask-RESTful 的 reqparse)
+- **api_fastapi.py**: FastAPI 路由和 API 端點 (替代 Flask-RESTful 的 Resource 類)
+- **server_fastapi.py**: FastAPI 主伺服器檔案 (替代 Flask 應用)
 
-## 安装依赖
+## 安裝依賴
 
 ```bash
 pip install fastapi uvicorn pydantic
 ```
 
-## 运行服务
+## 執行服務
 
-### 方式 1: 直接运行
+### 方式 1: 直接執行
 ```bash
 cd openviking/storage/vectordb/service
 python server_fastapi.py
 ```
 
-### 方式 2: 使用 uvicorn 运行
+### 方式 2: 使用 uvicorn 執行
 ```bash
 cd openviking/storage/vectordb/service
 uvicorn server_fastapi:app --host 0.0.0.0 --port 5000 --reload
@@ -30,10 +30,10 @@ uvicorn server_fastapi:app --host 0.0.0.0 --port 5000 --reload
 
 ## 配置
 
-### 环境变量
-- `VIKINGDB_PERSIST_PATH`: 数据持久化路径，默认为 `./vikingdb_data/`
-  - 设置为空字符串使用 volatile mode (内存模式)
-  - 设置为路径使用 persistent mode (持久化模式)
+### 環境變數
+- `VIKINGDB_PERSIST_PATH`: 資料持久化路徑，預設為 `./vikingdb_data/`
+  - 設定為空字串使用 volatile mode (記憶體模式)
+  - 設定為路徑使用 persistent mode (持久化模式)
 
 示例:
 ```bash
@@ -41,78 +41,78 @@ export VIKINGDB_PERSIST_PATH="./my_data_path/"
 python server_fastapi.py
 ```
 
-## API 文档
+## API 文件
 
-FastAPI 自动生成交互式 API 文档:
+FastAPI 自動生成互動式 API 文件:
 
 - **Swagger UI**: http://localhost:5000/docs
 - **ReDoc**: http://localhost:5000/redoc
 
-## API 端点
+## API 端點
 
 ### Collection APIs
-- `POST /CreateVikingdbCollection` - 创建 Collection
+- `POST /CreateVikingdbCollection` - 建立 Collection
 - `POST /UpdateVikingdbCollection` - 更新 Collection
-- `GET /GetVikingdbCollection` - 获取 Collection 信息
+- `GET /GetVikingdbCollection` - 獲取 Collection 資訊
 - `GET /ListVikingdbCollection` - 列出所有 Collections
-- `POST /DeleteVikingdbCollection` - 删除 Collection
+- `POST /DeleteVikingdbCollection` - 刪除 Collection
 
 ### Data APIs
-- `POST /api/vikingdb/data/upsert` - 写入/更新数据
-- `GET /api/vikingdb/data/fetch_in_collection` - 获取数据
-- `POST /api/vikingdb/data/delete` - 删除数据
+- `POST /api/vikingdb/data/upsert` - 寫入/更新資料
+- `GET /api/vikingdb/data/fetch_in_collection` - 獲取資料
+- `POST /api/vikingdb/data/delete` - 刪除資料
 
 ### Index APIs
-- `POST /CreateVikingdbIndex` - 创建索引
+- `POST /CreateVikingdbIndex` - 建立索引
 - `POST /UpdateVikingdbIndex` - 更新索引
-- `GET /GetVikingdbIndex` - 获取索引信息
+- `GET /GetVikingdbIndex` - 獲取索引資訊
 - `GET /ListVikingdbIndex` - 列出所有索引
-- `POST /DeleteVikingdbIndex` - 删除索引
+- `POST /DeleteVikingdbIndex` - 刪除索引
 
 ### Search APIs
 - `POST /api/vikingdb/data/search/vector` - 向量搜索
-- `POST /api/vikingdb/data/search/id` - 通过 ID 搜索
-- `POST /api/vikingdb/data/search/multi_modal` - 多模态搜索
-- `POST /api/vikingdb/data/search/scalar` - 标量字段搜索
-- `POST /api/vikingdb/data/search/random` - 随机搜索
-- `POST /api/vikingdb/data/search/keywords` - 关键词搜索
+- `POST /api/vikingdb/data/search/id` - 通過 ID 搜尋
+- `POST /api/vikingdb/data/search/multi_modal` - 多模態搜尋
+- `POST /api/vikingdb/data/search/scalar` - 標量欄位搜尋
+- `POST /api/vikingdb/data/search/random` - 隨機搜尋
+- `POST /api/vikingdb/data/search/keywords` - 關鍵詞搜尋
 
-### 健康检查
-- `GET /` - 根端点
-- `GET /health` - 健康检查端点
+### 健康檢查
+- `GET /` - 根端點
+- `GET /health` - 健康檢查端點
 
-## 主要改进
+## 主要改進
 
-### 1. 现代化框架
+### 1. 現代化框架
 - 使用 FastAPI 替代 Flask，性能更好
-- 支持异步操作
-- 自动生成 OpenAPI 文档
+- 支援非同步操作
+- 自動生成 OpenAPI 文件
 
-### 2. 类型安全
-- 使用 Pydantic 模型进行请求验证
-- 自动类型检查和数据验证
+### 2. 型別安全
+- 使用 Pydantic 模型進行請求驗證
+- 自動型別檢查和資料驗證
 - 更好的 IDE 支持
 
-### 3. 更好的开发体验
-- 自动交互式 API 文档 (Swagger UI)
-- 请求和响应的自动验证
-- 更清晰的错误消息
+### 3. 更好的開發體驗
+- 自動互動式 API 文件 (Swagger UI)
+- 請求和響應的自動驗證
+- 更清晰的錯誤訊息
 
 ### 4. 性能提升
-- FastAPI 基于 Starlette 和 Pydantic，性能优于 Flask
-- 支持异步处理
-- 更高效的请求处理
+- FastAPI 基於 Starlette 和 Pydantic，效能優於 Flask
+- 支援非同步處理
+- 更高效的請求處理
 
-## 与原 Flask 版本的兼容性
+## 與原 Flask 版本的相容性
 
-API 端点路径和请求/响应格式与原 Flask 版本完全兼容，可以无缝切换。
+API 端點路徑和請求/響應格式與原 Flask 版本完全相容，可以無縫切換。
 
-## 测试
+## 測試
 
-使用 curl 测试:
+使用 curl 測試:
 
 ```bash
-# 创建 Collection
+# 建立 Collection
 curl -X POST "http://localhost:5000/CreateVikingdbCollection" \
   -H "Content-Type: application/json" \
   -d '{
@@ -122,7 +122,7 @@ curl -X POST "http://localhost:5000/CreateVikingdbCollection" \
     "Fields": "[{\"FieldName\":\"id\",\"FieldType\":\"int64\",\"IsPrimaryKey\":true},{\"FieldName\":\"text\",\"FieldType\":\"string\"}]"
   }'
 
-# 获取健康状态
+# 獲取健康狀態
 curl "http://localhost:5000/health"
 ```
 
@@ -132,7 +132,7 @@ curl "http://localhost:5000/health"
 import requests
 import json
 
-# 创建 Collection
+# 建立 Collection
 response = requests.post(
     "http://localhost:5000/CreateVikingdbCollection",
     json={

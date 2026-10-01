@@ -17,14 +17,14 @@ async function tempPath(name) {
 test("compressed context keeps only citations to served URIs", () => {
   const served = "viking://user/u/memories/events/a.md";
   const normalized = normalizeCompressedContext([
-    `- good 来源：${served}`,
+    `- good 來源：${served}`,
     "- uncited fact",
-    "- invented 来源：viking://unrelated/fake.md",
+    "- invented 來源：viking://unrelated/fake.md",
   ].join("\n"));
 
   assert.equal(
     repairDigestUris(normalized, [served]),
-    `OpenViking memory digest:\n- good 来源：${served}`,
+    `OpenViking memory digest:\n- good 來源：${served}`,
   );
 });
 
@@ -65,7 +65,7 @@ test("compression cache is reused only for the same request", async () => {
   let calls = 0;
   const runCompressor = async () => {
     calls += 1;
-    return "- fact 来源：viking://a";
+    return "- fact 來源：viking://a";
   };
 
   await compressRecallContext({

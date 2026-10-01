@@ -1,23 +1,23 @@
-# 多写存储
+# 多寫儲存
 
-多写存储让 OpenViking 在一个统一的文件系统抽象下，同时使用一个主存储和多个备份存储。它适合数据高可用、跨区域副本、读加速、存储迁移等场景。
+多寫儲存讓 OpenViking 在一個統一的檔案系統抽象下，同時使用一個主儲存和多個備份儲存。它適合資料高可用、跨區域副本、讀加速、儲存遷移等場景。
 
-从 API 使用者视角看，`read()`、`write()`、`ls()`、`stat()` 等接口不变。多写逻辑位于 RAGFS 内部，调用方不需要关心文件最终落在哪个底层后端。
+從 API 使用者視角看，`read()`、`write()`、`ls()`、`stat()` 等介面不變。多寫邏輯位於 RAGFS 內部，呼叫方不需要關心檔案最終落在哪個底層後端。
 
 ## 核心模型
 
-多写存储由一个 primary 和多个 backup 组成：
+多寫儲存由一個 primary 和多個 backup 組成：
 
-| 角色 | 配置位置 | 说明 |
+| 角色 | 配置位置 | 說明 |
 | --- | --- | --- |
-| primary | `storage.agfs.backend` | 权威写入目标，也是读取兜底 |
-| backup | `storage.agfs.backups.items[]` | 接收复制写入，可选参与读取 |
+| primary | `storage.agfs.backend` | 權威寫入目標，也是讀取兜底 |
+| backup | `storage.agfs.backups.items[]` | 接收復制寫入，可選參與讀取 |
 
-没有配置 `backups` 时，OpenViking 继续使用原有单后端模式。
+沒有配置 `backups` 時，OpenViking 繼續使用原有單後端模式。
 
-## 写入路径
+## 寫入路徑
 
-默认情况下，写入先落到 primary，再复制到 write-enabled backup。
+預設情況下，寫入先落到 primary，再複製到 write-enabled backup。
 
 ```text
 Client
@@ -27,108 +27,108 @@ Client
   -> backup1 / backup2 / ...
 ```
 
-backup 未配置 `operations` 时默认参与写入。这样可以用最少配置得到冷备能力。
+backup 未配置 `operations` 時預設參與寫入。這樣可以用最少配置得到冷備能力。
 
 ## 同步模式
 
-多写支持两种一致性模式。
+多寫支援兩種一致性模式。
 
-| 模式 | 配置值 | 行为 | 适用场景 |
+| 模式 | 配置值 | 行為 | 適用場景 |
 | --- | --- | --- | --- |
-| 异步多写 | `async` | primary 写成功后立即返回，backup 后台同步 | 低延迟写入、最终一致 |
-| 同步多写 | `sync` | primary 写成功后等待 backup 确认 | 更强写入确认、可接受额外延迟 |
+| 非同步多寫 | `async` | primary 寫成功後立即返回，backup 後臺同步 | 低延遲寫入、最終一致 |
+| 同步多寫 | `sync` | primary 寫成功後等待 backup 確認 | 更強寫入確認、可接受額外延遲 |
 
-异步模式下，backup 可能在短时间内落后于 primary。同步模式下，可以通过 `write_ack_count` 和 `write_ack_timeout_ms` 控制需要等待多少 backup 确认，以及等待多久。
+非同步模式下，backup 可能在短時間內落後於 primary。同步模式下，可以通過 `write_ack_count` 和 `write_ack_timeout_ms` 控制需要等待多少 backup 確認，以及等待多久。
 
-即使使用同步模式，未确认或超时的 backup 仍会由后台重试修复。
+即使使用同步模式，未確認或超時的 backup 仍會由後臺重試修復。
 
-## 读取路径
+## 讀取路徑
 
-读取不会默认访问所有 backup。只有显式声明 `read` 操作的 backup 才会进入读路由。
+讀取不會預設訪問所有 backup。只有顯式宣告 `read` 操作的 backup 才會進入讀路由。
 
-读取顺序如下：
+讀取順序如下：
 
 ```text
-1. 按 priority 升序访问 read-enabled backup
+1. 按 priority 升序訪問 read-enabled backup
 2. 回退到 primary
-3. 如果文件被 redirect，则访问 redirect target
-4. 仍未命中则返回 NotFound
+3. 如果檔案被 redirect，則訪問 redirect target
+4. 仍未命中則返回 NotFound
 ```
 
-这种设计避免冷备节点默认参与读取，降低读到旧数据的风险。
+這種設計避免冷備節點預設參與讀取，降低讀到舊資料的風險。
 
 ## Redirect
 
-Redirect 表示“某些文件不写入 primary，而是写入指定 backup”。
+Redirect 表示“某些檔案不寫入 primary，而是寫入指定 backup”。
 
-常见用途：
+常見用途：
 
-- 大文件进入对象存储。
-- 特定后缀文件进入专门 backend。
-- 主存储只保存常规内容，特殊文件由其他 backend 保存。
+- 大檔案進入物件儲存。
+- 特定字尾檔案進入專門 backend。
+- 主儲存只儲存常規內容，特殊檔案由其他 backend 儲存。
 
-Redirect 策略配置在 primary 上。命中策略后，OpenViking 会把映射记录到内部元数据中。用户执行 `ls()`、`stat()`、`read()` 时仍能看到正常的文件系统视图。
+Redirect 策略配置在 primary 上。命中策略後，OpenViking 會把對映記錄到內部後設資料中。使用者執行 `ls()`、`stat()`、`read()` 時仍能看到正常的檔案系統檢視。
 
 ## Exclude
 
-Exclude 表示“某个 backup 不接收匹配的文件”。
+Exclude 表示“某個 backup 不接收匹配的檔案”。
 
-常见用途：
+常見用途：
 
-- 内存或缓存 backend 不保存大文件。
-- 某个 backup 只保存文本类资源。
-- 某个低成本 backend 排除临时或超大文件。
+- 記憶體或快取 backend 不儲存大檔案。
+- 某個 backup 只儲存文本類資源。
+- 某個低成本 backend 排除臨時或超大檔案。
 
-Exclude 策略配置在 backup 上，只影响该 backup 是否接收写入。
+Exclude 策略配置在 backup 上，隻影響該 backup 是否接收寫入。
 
-## 内部元数据
+## 內部後設資料
 
-多写使用两个内部元数据文件：
+多寫使用兩個內部後設資料檔案：
 
 | 文件 | 作用 |
 | --- | --- |
-| `.redirect.json` | 记录 redirect 文件对应的目标 backend |
-| `.sync_log.json` | 记录每个文件的同步版本和 backup 确认进度 |
+| `.redirect.json` | 記錄 redirect 檔案對應的目標 backend |
+| `.sync_log.json` | 記錄每個檔案的同步版本和 backup 確認進度 |
 
-这些文件对普通用户不可见，不会出现在常规列表结果中，也不应通过公开 API 直接读写。
+這些檔案對普通使用者不可見，不會出現在常規列表結果中，也不應通過公開 API 直接讀寫。
 
-如果 primary 开启静态数据加密，这些内部元数据也会跟随 primary 加密策略写入。
+如果 primary 開啟靜態資料加密，這些內部後設資料也會跟隨 primary 加密策略寫入。
 
-## 加密关系
+## 加密關係
 
-多写不会改变 OpenViking 的透明加密模型。
+多寫不會改變 OpenViking 的透明加密模型。
 
-规则如下：
+規則如下：
 
-- Python 层和公共 API 不感知加密实现。
-- primary 在全局加密开启时必须加密。
-- backup 可以独立决定是否加密。
-- 内部元数据必须走 primary 的加密入口。
+- Python 層和公共 API 不感知加密實現。
+- primary 在全域加密開啟時必須加密。
+- backup 可以獨立決定是否加密。
+- 內部後設資料必須走 primary 的加密入口。
 
-这意味着启用多写后，调用方式仍然不变；只需要通过配置决定每个 backend 的加密策略。
+這意味著啟用多寫後，呼叫方式仍然不變；只需要通過配置決定每個 backend 的加密策略。
 
-## 与 OVPack 的关系
+## 與 OVPack 的關係
 
-多写只负责“启用之后的新写入”。它不会自动同步启用之前已经存在于 primary 中的历史文件。
+多寫只負責“啟用之後的新寫入”。它不會自動同步啟用之前已經存在於 primary 中的歷史檔案。
 
-如果要迁移存量数据，推荐流程是：
+如果要遷移存量資料，推薦流程是：
 
-1. 使用 OVPack 或其他受控方式完成全量迁移。
-2. 校验目标 backend 数据。
-3. 启用多写配置。
-4. 后续新增和修改的数据由多写持续复制。
+1. 使用 OVPack 或其他受控方式完成全量遷移。
+2. 校驗目標 backend 資料。
+3. 啟用多寫配置。
+4. 後續新增和修改的資料由多寫持續複製。
 
 ## 限制
 
-- 异步模式下 backup 可能短暂落后。
-- 启用多写前的历史文件需要单独迁移或回填。
-- redirect 文件依赖内部元数据恢复目录视图。
-- 多进程同时写同一 primary 时，需要未来的分布式元数据锁能力。
-- 热点目录会频繁更新内部元数据，可能带来额外写放大。
+- 非同步模式下 backup 可能短暫落後。
+- 啟用多寫前的歷史檔案需要單獨遷移或回填。
+- redirect 檔案依賴內部後設資料恢復目錄檢視。
+- 多程序同時寫同一 primary 時，需要未來的分散式後設資料鎖能力。
+- 熱點目錄會頻繁更新內部後設資料，可能帶來額外寫放大。
 
-## 相关文档
+## 相關文件
 
-- [存储架构](./05-storage.md)
+- [儲存架構](./05-storage.md)
 - [配置指南](../guides/01-configuration.md)
-- [多写存储指南](../guides/13-multi-write-storage.md)
-- [OVPack 导入导出](../guides/09-ovpack.md)
+- [多寫儲存指南](../guides/13-multi-write-storage.md)
+- [OVPack 匯入匯出](../guides/09-ovpack.md)

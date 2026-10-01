@@ -51,8 +51,8 @@ export function sanitizeUserTextForCapture(text: string): string {
   if (TOOL_PLACEHOLDER_RE.test(text)) {
     return "";
   }
-  // 处理 Compactor 系统消息，提取实际用户输入
-  // 格式: "System: [时间] Compacted ... Context ... [时间] 实际内容"
+  // 處理 Compactor 系統訊息，提取實際使用者輸入
+  // 格式: "System: [時間] Compacted ... Context ... [時間] 實際內容"
   if (COMPACTED_SYSTEM_MSG_RE.test(text)) {
     const match = text.match(COMPACTED_SYSTEM_MSG_RE);
     if (match) {
@@ -305,7 +305,7 @@ function formatToolResultContent(content: unknown): string {
 }
 
 /**
- * 提取消息中的一个 part 的文本内容，并清理时间戳等噪音
+ * 提取訊息中的一個 part 的文本內容，並清理時間戳等噪音
  */
 function extractPartText(content: unknown): string {
   if (typeof content === "string") {
@@ -325,7 +325,7 @@ function extractPartText(content: unknown): string {
 }
 
 /**
- * 结构化消息类型 - 用于 afterTurn 发送到 OpenViking
+ * 結構化訊息型別 - 用於 afterTurn 傳送到 OpenViking
  */
 type ExtractedMessage = {
   role: "user" | "assistant";
@@ -343,11 +343,11 @@ type ExtractedMessage = {
 };
 
 /**
- * 提取从 startIndex 开始的新消息，返回结构化消息。
- * - 用户输入 → type: "text"
- * - 工具结果 → type: "tool"
- * - 跳过 system 消息
- * - 清理时间戳前缀（如 [Fri 2026-04-10 17:20 GMT+8]）
+ * 提取從 startIndex 開始的新訊息，返回結構化訊息。
+ * - 使用者輸入 → type: "text"
+ * - 工具結果 → type: "tool"
+ * - 跳過 system 訊息
+ * - 清理時間戳字首（如 [Fri 2026-04-10 17:20 GMT+8]）
  */
 export function extractNewTurnMessages(
   messages: unknown[],
@@ -423,7 +423,7 @@ export function extractNewTurnMessages(
     const text = extractPartText(content);
 
     if (text) {
-      // 使用 sanitizeUserTextForCapture 清理所有噪音（Sender 元数据、时间戳等）
+      // 使用 sanitizeUserTextForCapture 清理所有噪音（Sender 後設資料、時間戳等）
       const cleanedText = sanitizeUserTextForCapture(text);
       if (cleanedText) {
         // 保持原始 role，assistant 保持 assistant，user 保持 user

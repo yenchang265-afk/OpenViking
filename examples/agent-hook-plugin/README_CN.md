@@ -1,6 +1,6 @@
-# OpenViking 记忆：轻量 Hook 宿主
+# OpenViking 記憶：輕量 Hook 宿主
 
-Cursor、TRAE、TRAE CN 与 ZCode 使用宿主配置文件；Kimi Code 使用原生托管插件目录。它们共用同一个 dispatcher 和记忆运行时，安装脚本在安装时组装依赖，不在仓库里为每个宿主提交共享代码副本。
+Cursor、TRAE、TRAE CN 與 ZCode 使用宿主配置檔案；Kimi Code 使用原生託管外掛目錄。它們共用同一個 dispatcher 和記憶執行時，安裝指令碼在安裝時組裝依賴，不在倉庫裡為每個宿主提交共享程式碼副本。
 
 ```bash
 bash examples/memory-plugin-shared/install.sh --harness cursor
@@ -9,47 +9,47 @@ bash examples/memory-plugin-shared/install.sh --harness zcode
 bash examples/memory-plugin-shared/install.sh --harness kimicode
 ```
 
-> **需要支持 `viking://~` home alias 的 OpenViking 服务端。** 召回通过 `viking://~/memories` 与 `viking://~/skills` 指向调用者自己的上下文空间；不带 uid 的 `viking://user/memories` 简写会被较新的服务端拒绝。
+> **需要支援 `viking://~` home alias 的 OpenViking 服務端。** 召回通過 `viking://~/memories` 與 `viking://~/skills` 指向呼叫者自己的上下文空間；不帶 uid 的 `viking://user/memories` 簡寫會被較新的服務端拒絕。
 
-## Hook 做什么
+## Hook 做什麼
 
-- **会话开始** — 注入用户画像与偏好，外加 `<available-skills>` 清单，列出用户自己的和账号内共享的 OpenViking skill；同时重放离线会话排队的写入。Kimi 启动时只重放一个有界小批次，并在第一次成功的 prompt hook 注入画像。
-- **提交 prompt** — 搜索与 prompt 相关的记忆和 skill 并注入，按事件 id 与 500ms 窗口去重。
-- **工具调用前** — 拦截本地文件工具对 `viking://` 虚拟路径的访问，引导回 OpenViking MCP 工具。在 TRAE 上，带 `viking://` URI 的 shell 命令照常执行，并附加一条指向同一组工具的提示。
-- **Stop** — 捕获完成的回合并按宿主策略提交 OpenViking 会话。Kimi 还使用 PreCompact、SessionEnd 与同步 Interrupt 信号。
+- **會話開始** — 注入使用者畫像與偏好，外加 `<available-skills>` 清單，列出使用者自己的和帳號內共享的 OpenViking skill；同時重放離線會話排隊的寫入。Kimi 啟動時只重放一個有界小批次，並在第一次成功的 prompt hook 注入畫像。
+- **提交 prompt** — 搜尋與 prompt 相關的記憶和 skill 並注入，按事件 id 與 500ms 視窗去重。
+- **工具呼叫前** — 攔截本地檔案工具對 `viking://` 虛擬路徑的訪問，引導回 OpenViking MCP 工具。在 TRAE 上，帶 `viking://` URI 的 shell 命令照常執行，並附加一條指向同一組工具的提示。
+- **Stop** — 捕獲完成的回合並按宿主策略提交 OpenViking 會話。Kimi 還使用 PreCompact、SessionEnd 與同步 Interrupt 訊號。
 
-## 目录结构
+## 目錄結構
 
-`scripts/hook.mjs` 是所有 hook 命令的唯一入口，持有五家共用的状态机——防抖、prompt 去重、召回缓存、跨进程锁——差异部分向 `hosts/` 下的适配器索取：事件词汇、响应信封、如何从 payload 读出 prompt、如何采集完成的回合。`scripts/uri-guard.mjs` 与 `servers/mcp-proxy.mjs` 同样各只有一份，按安装器传入的 client id 选择宿主。
+`scripts/hook.mjs` 是所有 hook 命令的唯一入口，持有五家共用的狀態機——防抖、prompt 去重、召回快取、跨程序鎖——差異部分向 `hosts/` 下的介面卡索取：事件詞彙、響應信封、如何從 payload 讀出 prompt、如何採集完成的回合。`scripts/uri-guard.mjs` 與 `servers/mcp-proxy.mjs` 同樣各只有一份，按安裝器傳入的 client id 選擇宿主。
 
-根目录的 `plugin.json` 是宿主无关的包元数据，只用于版本检查和诊断。Kimi 的原生 manifest 位于 `hosts/kimicode/`，安装组装时复制到插件根目录。
+根目錄的 `plugin.json` 是宿主無關的包後設資料，只用於版本檢查和診斷。Kimi 的原生 manifest 位於 `hosts/kimicode/`，安裝組裝時複製到外掛根目錄。
 
-`hosts/<host>/` 只放宿主配置或原生 manifest；可执行适配器放在上一层。`../../memory-plugin-shared/lib` 这条相对路径在源码树、配置型安装和 Kimi 组装后的原生插件里都成立。
+`hosts/<host>/` 只放宿主配置或原生 manifest；可執行介面卡放在上一層。`../../memory-plugin-shared/lib` 這條相對路徑在原始碼樹、配置型安裝和 Kimi 組裝後的原生外掛裡都成立。
 
-记忆逻辑本身不在这里：召回、批量写入、待处理队列、凭据解析与 MCP 代理都来自 `examples/memory-plugin-shared/lib`，由安装脚本复制到 `~/.openviking/agent-integrations/memory-plugin-shared/lib`。
+記憶邏輯本身不在這裡：召回、批次寫入、待處理佇列、憑據解析與 MCP 代理都來自 `examples/memory-plugin-shared/lib`，由安裝指令碼複製到 `~/.openviking/agent-integrations/memory-plugin-shared/lib`。
 
-## 各宿主差异
+## 各宿主差異
 
-- **Cursor** — 六个事件，其中 `preCompact` 与 `sessionEnd` 是本插件里独有的。Stop 时 `capturedSinceCommit` 达到阈值才 commit，压缩前无条件 commit。会话前缀 `cu-`。见 [Cursor 接入文档](../../docs/zh/agent-integrations/12-cursor.md)。
-- **TRAE / TRAE CN** — 采集直接读 Stop 事件的 `prompt`、`text_content`、`last_assistant_message`，不解析 transcript；每次带内容的 Stop 都 commit。会话前缀 `tr-` 与 `trcn-`。见 [TRAE 接入文档](../../docs/zh/agent-integrations/13-trae.md)。
-- **ZCode** — rollout 文件是权威增量对话源：稳定的 host `turnId` 用于去重，也让后续 Stop 能补回漏掉的回合，hook stdin 只是兜底。ZCode 不支持 `PreCompact` 与 `SessionEnd`，因此每次 Stop 都 commit 来补足这两个信号。它的输出 schema 是严格的，所以放行时不写任何内容。会话前缀 `zc-`。已验证的扩展面记录在 [DESIGN.md](./DESIGN.md)。
-- **Kimi Code** — `wire.jsonl` 是权威 transcript；UserPromptSubmit 输出原始上下文文本。Stop、PreCompact、SessionEnd 可后台写入，Interrupt 保持同步并共享 2 秒的 OpenViking 请求预算。安装脚本生成自包含原生插件，不修改旧的 `config.toml` 或 `mcp.json`。会话前缀 `kc-`。
+- **Cursor** — 六個事件，其中 `preCompact` 與 `sessionEnd` 是本外掛裡獨有的。Stop 時 `capturedSinceCommit` 達到閾值才 commit，壓縮前無條件 commit。會話字首 `cu-`。見 [Cursor 接入文件](../../docs/zh/agent-integrations/12-cursor.md)。
+- **TRAE / TRAE CN** — 採集直接讀 Stop 事件的 `prompt`、`text_content`、`last_assistant_message`，不解析 transcript；每次帶內容的 Stop 都 commit。會話字首 `tr-` 與 `trcn-`。見 [TRAE 接入文件](../../docs/zh/agent-integrations/13-trae.md)。
+- **ZCode** — rollout 檔案是權威增量對話源：穩定的 host `turnId` 用於去重，也讓後續 Stop 能補回漏掉的回合，hook stdin 只是兜底。ZCode 不支援 `PreCompact` 與 `SessionEnd`，因此每次 Stop 都 commit 來補足這兩個訊號。它的輸出 schema 是嚴格的，所以放行時不寫任何內容。會話字首 `zc-`。已驗證的擴充面記錄在 [DESIGN.md](./DESIGN.md)。
+- **Kimi Code** — `wire.jsonl` 是權威 transcript；UserPromptSubmit 輸出原始上下文文本。Stop、PreCompact、SessionEnd 可後臺寫入，Interrupt 保持同步並共享 2 秒的 OpenViking 請求預算。安裝指令碼生成自包含原生外掛，不修改舊的 `config.toml` 或 `mcp.json`。會話字首 `kc-`。
 
-## 体检
+## 體檢
 
 ```bash
 node ~/.openviking/agent-integrations/<client>/scripts/ov-memory-doctor.mjs --offline
 ```
 
-Kimi 的 managed plugin 需要使用它的实际安装路径：
+Kimi 的 managed plugin 需要使用它的實際安裝路徑：
 
 ```bash
 node "${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins/managed/openviking-memory/agent-integrations/kimicode/scripts/ov-memory-doctor.mjs" kimicode --offline
 ```
 
-对于配置型安装副本，client 默认取安装时对应的宿主；传 `cursor`、`trae`、`trae-cn` 或 `zcode` 可以覆盖。去掉 `--offline` 会连带探测服务端，加 `--json` 输出机器可读报告。
+對於配置型安裝副本，client 預設取安裝時對應的宿主；傳 `cursor`、`trae`、`trae-cn` 或 `zcode` 可以覆蓋。去掉 `--offline` 會連帶探測服務端，加 `--json` 輸出機器可讀報告。
 
-## 测试
+## 測試
 
 ```bash
 node --test examples/agent-hook-plugin/tests/*.test.mjs

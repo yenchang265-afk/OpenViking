@@ -24,7 +24,7 @@ const CONTEXT_WINDOW_DEFAULTS = {
 };
 
 async function withConfigFile(body, fn, env = {}, cliConfig = null) {
-  const dir = await mkdtemp(join(tmpdir(), "ov-pi-config-用户-"));
+  const dir = await mkdtemp(join(tmpdir(), "ov-pi-config-使用者-"));
   const oldEnv = {
     OPENVIKING_URL: process.env.OPENVIKING_URL,
     OPENVIKING_API_KEY: process.env.OPENVIKING_API_KEY,

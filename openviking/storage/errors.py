@@ -17,7 +17,7 @@ class VikingDBException(Exception):
         action: str | None = None,
     ) -> None:
         super().__init__(message)
-        # 私有化下游需要结构化判定重试边界；默认值保持其他存储后端原有异常语义。
+        # 私有化下游需要結構化判定重試邊界；預設值保持其他儲存後端原有異常語義。
         self.status_code = status_code
         self.code = code
         self.error_type = error_type

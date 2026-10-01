@@ -48,22 +48,22 @@ console = Console()
 
 CONVERSATION = [
     {
-        "user": "请帮我处理酒店重复预订，只取消确认是重复的那一单，保留有效订单。",
+        "user": "請幫我處理酒店重複預訂，只取消確認是重複的那一單，保留有效訂單。",
         "assistant": (
-            "我先核对两个预订候选：订单 A 是用户主动确认保留的有效订单；订单 B 的入住日期、"
-            "房型、入住人都与 A 相同，并且系统标记为 duplicate_candidate。"
+            "我先核對兩個預訂候選：訂單 A 是使用者主動確認保留的有效訂單；訂單 B 的入住日期、"
+            "房型、入住人都與 A 相同，並且系統標記為 duplicate_candidate。"
         ),
     },
     {
-        "user": "对，只能取消重复的那个，别影响我真正要住的订单。",
+        "user": "對，只能取消重複的那個，別影響我真正要住的訂單。",
         "assistant": (
-            "已确认 B 是重复订单，A 是有效订单。我只取消订单 B，并保留订单 A。"
-            "取消后我再次检查，A 仍为 confirmed，B 已为 cancelled。"
+            "已確認 B 是重複訂單，A 是有效訂單。我只取消訂單 B，並保留訂單 A。"
+            "取消後我再次檢查，A 仍為 confirmed，B 已為 cancelled。"
         ),
     },
 ]
 
-VERIFY_KEYWORDS = ["重复", "预订", "取消", "保留", "订单"]
+VERIFY_KEYWORDS = ["重複", "預訂", "取消", "保留", "訂單"]
 CASES_DIR = "viking://user/default/memories/cases"
 
 
@@ -177,7 +177,7 @@ def run_ingest(
     wait_processed: bool = True,
     task_timeout: float = TASK_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
-    console.rule(f"[bold]Phase 1: 写入对话并提交 Session — {DISPLAY_NAME}[/bold]")
+    console.rule(f"[bold]Phase 1: 寫入對話並提交 Session — {DISPLAY_NAME}[/bold]")
 
     create_result = client.create_session(session_id=session_id)
     session_id = create_result.get("session_id", session_id)
@@ -233,7 +233,7 @@ def run_ingest(
 
 
 def run_verify(client: ov.SyncHTTPClient, archive_uri: str | None = None) -> list[tuple[str, str]]:
-    console.rule(f"[bold]Phase 2: 验证 cases 记忆写入 — {DISPLAY_NAME}[/bold]")
+    console.rule(f"[bold]Phase 2: 驗證 cases 記憶寫入 — {DISPLAY_NAME}[/bold]")
 
     diff = _read_memory_diff(client, archive_uri)
     diff_case_uris = _case_entries_from_memory_diff(diff)
@@ -241,7 +241,7 @@ def run_verify(client: ov.SyncHTTPClient, archive_uri: str | None = None) -> lis
     table = Table(title="V3 cases memories", show_header=True, header_style="bold")
     table.add_column("#", width=4)
     table.add_column("URI", style="cyan", max_width=56)
-    table.add_column("命中关键词", style="green")
+    table.add_column("命中關鍵詞", style="green")
     table.add_column("片段", max_width=80)
 
     for index, (uri, content) in enumerate(memories, 1):
@@ -255,7 +255,7 @@ def run_verify(client: ov.SyncHTTPClient, archive_uri: str | None = None) -> lis
     matching = [
         (uri, content)
         for uri, content in memories
-        if "重复" in content and "预订" in content and ("取消" in content or "保留" in content)
+        if "重複" in content and "預訂" in content and ("取消" in content or "保留" in content)
     ]
     if not matching and diff_case_uris:
         # Directory listing can lag/shape-shift across deployments; if memory_diff says
@@ -266,7 +266,7 @@ def run_verify(client: ov.SyncHTTPClient, archive_uri: str | None = None) -> lis
             except Exception as exc:
                 _log(f"case uri from memory_diff unreadable: uri={uri} error={exc}")
                 continue
-            if "重复" in content and "预订" in content and ("取消" in content or "保留" in content):
+            if "重複" in content and "預訂" in content and ("取消" in content or "保留" in content):
                 matching.append((uri, content))
 
     if not matching:

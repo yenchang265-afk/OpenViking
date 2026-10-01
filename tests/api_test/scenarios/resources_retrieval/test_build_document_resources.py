@@ -20,9 +20,9 @@ def _create_html_file():
 
     content = (
         f"<html><head><title>HTML Test {random_id}</title></head>"
-        f"<body><h1>HTML测试标题 {random_id}</h1>"
-        f"<p>包含唯一关键词：{unique_keyword}</p>"
-        f"<p>用于验证HTML文件构建产物。</p>"
+        f"<body><h1>HTML測試標題 {random_id}</h1>"
+        f"<p>包含唯一關鍵詞：{unique_keyword}</p>"
+        f"<p>用於驗證HTML檔案構建產物。</p>"
         f"</body></html>"
     )
     with open(html_path, "w", encoding="utf-8") as f:
@@ -35,7 +35,7 @@ def _create_pptx_file():
     try:
         from pptx import Presentation
     except ImportError:
-        pytest.skip("python-pptx 未安装，跳过 PPTX 构建测试")
+        pytest.skip("python-pptx 未安裝，跳過 PPTX 構建測試")
 
     random_id = str(uuid.uuid4())[:8]
     unique_keyword = f"pptx_keyword_{random_id}"
@@ -45,19 +45,19 @@ def _create_pptx_file():
     prs = Presentation()
     slide = prs.slides.add_slide(prs.slide_layouts[1])
     title = slide.shapes.title
-    title.text = f"PPT测试标题 {random_id}"
+    title.text = f"PPT測試標題 {random_id}"
     body = slide.placeholders[1]
-    body.text = f"包含唯一关键词：{unique_keyword}\n用于验证PPT文件构建产物。"
+    body.text = f"包含唯一關鍵詞：{unique_keyword}\n用於驗證PPT檔案構建產物。"
     prs.save(pptx_path)
 
     return pptx_path, temp_dir, unique_keyword
 
 
 class TestBuildDocumentResources:
-    """TC-B04, B07 文档类资源构建测试（快速用例，≤20s）"""
+    """TC-B04, B07 文件類資源構建測試（快速用例，≤20s）"""
 
     def test_build_html_file(self, api_client):
-        """TC-B04 HTML文件构建：验证 .html 文件添加后 source_format=html 且标签被剥离"""
+        """TC-B04 HTML檔案構建：驗證 .html 檔案新增後 source_format=html 且標籤被剝離"""
         html_path, temp_dir, unique_keyword = _create_html_file()
         try:
             response = api_client.add_resource(path=html_path, wait=True)
@@ -79,12 +79,12 @@ class TestBuildDocumentResources:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B04 HTML文件构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B04 HTML檔案構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_pptx_file(self, api_client):
-        """TC-B07 PowerPoint构建：验证 .pptx 文件添加后 source_format=pptx 且内容可检索"""
+        """TC-B07 PowerPoint構建：驗證 .pptx 檔案新增後 source_format=pptx 且內容可檢索"""
         pptx_path, temp_dir, unique_keyword = _create_pptx_file()
         try:
             response = api_client.add_resource(path=pptx_path, wait=True)
@@ -104,6 +104,6 @@ class TestBuildDocumentResources:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B07 PowerPoint构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B07 PowerPoint構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)

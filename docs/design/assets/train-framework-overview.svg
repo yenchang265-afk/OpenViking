@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="780" viewBox="0 0 1280 780" role="img" aria-labelledby="title desc">
-  <title id="title">OpenViking session.train 框架模块关系图</title>
-  <desc id="desc">展示 CaseLoader、RolloutExecutor、PolicyTrainer、RolloutAnalyzer、GradientEstimator、PolicyOptimizer、PolicyUpdater、ExperienceSet 和 StreamingPolicyTrainer 等模块之间的关系。</desc>
+  <title id="title">OpenViking session.train 框架模組關係圖</title>
+  <desc id="desc">展示 CaseLoader、RolloutExecutor、PolicyTrainer、RolloutAnalyzer、GradientEstimator、PolicyOptimizer、PolicyUpdater、ExperienceSet 和 StreamingPolicyTrainer 等模組之間的關係。</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
@@ -39,8 +39,8 @@
   </defs>
 
   <rect class="bg" width="1280" height="780"/>
-  <text class="title" x="40" y="44">OpenViking session.train 框架模块关系</text>
-  <text class="subtitle" x="40" y="68">离线 batch、实时 streaming、远程 session.commit 三种训练入口共享同一套 rollout → trajectory → semantic gradient → policy update 语义。</text>
+  <text class="title" x="40" y="44">OpenViking session.train 框架模組關係</text>
+  <text class="subtitle" x="40" y="68">離線 batch、即時 streaming、遠端 session.commit 三種訓練入口共享同一套 rollout → trajectory → semantic gradient → policy update 語義。</text>
 
   <!-- Domain panel -->
   <rect class="panel" x="40" y="100" width="220" height="610" rx="18"/>
@@ -184,5 +184,5 @@
 
   <!-- Legend -->
   <rect x="40" y="730" width="1200" height="34" rx="10" fill="#ffffff" stroke="#cbd5e1"/>
-  <text class="small" x="65" y="752">蓝色：rollout 执行 / eval；绿色：训练信号生成；橙色：policy plan/apply 写入；虚线：数据依赖或可选集成路径。</text>
+  <text class="small" x="65" y="752">藍色：rollout 執行 / eval；綠色：訓練訊號生成；橙色：policy plan/apply 寫入；虛線：資料依賴或可選整合路徑。</text>
 </svg>

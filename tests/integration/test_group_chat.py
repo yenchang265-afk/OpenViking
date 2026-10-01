@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-OpenViking 记忆演示脚本 — 群聊场景
-测试当前 user/peer 记忆模型：
-1. 登录 user 维护自己的记忆空间
-2. peer_id 维护同一 user 下的一对多外部参与者记忆
+OpenViking 記憶演示指令碼 — 群聊場景
+測試當前 user/peer 記憶模型：
+1. 登入 user 維護自己的記憶空間
+2. peer_id 維護同一 user 下的一對多外部參與者記憶
 
 用法：
   python test_group_chat.py
-  python test_group_chat.py --account test-user-peer  # 测试指定 account
+  python test_group_chat.py --account test-user-peer  # 測試指定 account
 """
 
 import argparse
@@ -29,68 +29,68 @@ PANEL_WIDTH = 80
 
 console = Console()
 
-# ── 测试数据 ───────────────────────────────────────────────────────────────
+# ── 測試資料 ───────────────────────────────────────────────────────────────
 
-# 多次对话，每次 commit 是一次独立的对话
-# 场景：
-# 1. alice + agent-a 对话 -> 会产生 alice 的用户记忆 + agent-a 的 soul 记忆
-# 2. alice + agent-b 对话 -> 会产生 alice 的用户记忆 + agent-b 的 soul 记忆
-# 3. bob + agent-a 对话 -> 会产生 bob 的用户记忆 + agent-a 的 soul 记忆
+# 多次對話，每次 commit 是一次獨立的對話
+# 場景：
+# 1. alice + agent-a 對話 -> 會產生 alice 的使用者記憶 + agent-a 的 soul 記憶
+# 2. alice + agent-b 對話 -> 會產生 alice 的使用者記憶 + agent-b 的 soul 記憶
+# 3. bob + agent-a 對話 -> 會產生 bob 的使用者記憶 + agent-a 的 soul 記憶
 #
-# 测试隔离：
-# - alice+agent-a 搜索应该找到 alice 和 agent-a 的记忆
-# - alice+agent-b 搜索应该找到 alice 和 agent-b 的记忆（不应看到 agent-a）
-# - bob+agent-a 搜索应该找到 bob 和 agent-a 的记忆（不应看到 alice）
+# 測試隔離：
+# - alice+agent-a 搜尋應該找到 alice 和 agent-a 的記憶
+# - alice+agent-b 搜尋應該找到 alice 和 agent-b 的記憶（不應看到 agent-a）
+# - bob+agent-a 搜尋應該找到 bob 和 agent-a 的記憶（不應看到 alice）
 
-# 对话场景说明：soul 是 agent 的身份和风格
-# 1. alice + agent-a: alice 告诉 agent-a 它叫什么、扮演什么角色、怎么说话 -> 提取 agent-a 的 soul
-# 2. alice + agent-b: alice 告诉 agent-b 它叫什么、扮演什么角色、怎么说话 -> 提取 agent-b 的 soul
-# 3. bob + agent-a: alice 告诉 agent-a 它叫什么 -> 提取 agent-a 的 soul
+# 對話場景說明：soul 是 agent 的身份和風格
+# 1. alice + agent-a: alice 告訴 agent-a 它叫什麼、扮演什麼角色、怎麼說話 -> 提取 agent-a 的 soul
+# 2. alice + agent-b: alice 告訴 agent-b 它叫什麼、扮演什麼角色、怎麼說話 -> 提取 agent-b 的 soul
+# 3. bob + agent-a: alice 告訴 agent-a 它叫什麼 -> 提取 agent-a 的 soul
 
 CONVERSATION_1 = [
-    # alice 和 agent-a 对话
-    {"peer_id": "alice", "role": "user", "content": "我的密码是123456"},
-    {"peer_id": "agent-a", "role": "assistant", "content": "好的记住了"},
-    # user 告诉 agent 它的身份和风格
-    {"peer_id": "alice", "role": "user", "content": "你叫 Agent A，是我的技术助手，说话要简洁专业"},
+    # alice 和 agent-a 對話
+    {"peer_id": "alice", "role": "user", "content": "我的密碼是123456"},
+    {"peer_id": "agent-a", "role": "assistant", "content": "好的記住了"},
+    # user 告訴 agent 它的身份和風格
+    {"peer_id": "alice", "role": "user", "content": "你叫 Agent A，是我的技術助手，說話要簡潔專業"},
     {
         "peer_id": "agent-a",
         "role": "assistant",
-        "content": "好的，我记下了，我是 Agent A，技术助手，简洁专业",
+        "content": "好的，我記下了，我是 Agent A，技術助手，簡潔專業",
     },
 ]
 
 CONVERSATION_2 = [
-    # alice 和 agent-b 对话
-    {"peer_id": "alice", "role": "user", "content": "我最爱的颜色是蓝色"},
+    # alice 和 agent-b 對話
+    {"peer_id": "alice", "role": "user", "content": "我最愛的顏色是藍色"},
     {"peer_id": "agent-b", "role": "assistant", "content": "好的"},
-    # user 告诉另一个 agent 它的身份和风格
-    {"peer_id": "alice", "role": "user", "content": "你叫 Agent B，是我的生活助手，说话要亲切详细"},
+    # user 告訴另一個 agent 它的身份和風格
+    {"peer_id": "alice", "role": "user", "content": "你叫 Agent B，是我的生活助手，說話要親切詳細"},
     {
         "peer_id": "agent-b",
         "role": "assistant",
-        "content": "好的，我记下了，我是 Agent B，生活助手，亲切详细",
+        "content": "好的，我記下了，我是 Agent B，生活助手，親切詳細",
     },
 ]
 
 CONVERSATION_3 = [
-    # alice 和 agent-a 对话（再次告诉 agent 它的身份，覆盖之前的）
-    {"peer_id": "alice", "role": "user", "content": "你叫 Agent A，是我的编程助手"},
-    {"peer_id": "agent-a", "role": "assistant", "content": "好的，我是 Agent A，编程助手"},
+    # alice 和 agent-a 對話（再次告訴 agent 它的身份，覆蓋之前的）
+    {"peer_id": "alice", "role": "user", "content": "你叫 Agent A，是我的程式設計助手"},
+    {"peer_id": "agent-a", "role": "assistant", "content": "好的，我是 Agent A，程式設計助手"},
 ]
 
 
-# ── 写入数据 ───────────────────────────────────────────────────────────────
+# ── 寫入資料 ───────────────────────────────────────────────────────────────
 
 
-# 合并所有对话用于兼容
+# 合併所有對話用於相容
 CONVERSATION = CONVERSATION_1 + CONVERSATION_2 + CONVERSATION_3
 
 
 def run_ingest(client: ov.SyncHTTPClient, session_id_prefix: str):
-    """多次 commit，每次对话独立，返回 trace_id 列表"""
+    """多次 commit，每次對話獨立，返回 trace_id 列表"""
     console.print()
-    console.rule("[bold]写入对话数据（多次 commit）[/bold]")
+    console.rule("[bold]寫入對話資料（多次 commit）[/bold]")
 
     session_time = datetime(2023, 4, 2, 14, 30)
     session_time_str = session_time.isoformat()
@@ -98,9 +98,9 @@ def run_ingest(client: ov.SyncHTTPClient, session_id_prefix: str):
     trace_ids = []
 
     all_conversations = [
-        ("对话1: alice + agent-a", CONVERSATION_1),
-        ("对话2: alice + agent-b", CONVERSATION_2),
-        ("对话3: bob + agent-a", CONVERSATION_3),
+        ("對話1: alice + agent-a", CONVERSATION_1),
+        ("對話2: alice + agent-b", CONVERSATION_2),
+        ("對話3: bob + agent-a", CONVERSATION_3),
     ]
 
     for conv_name, conv_data in all_conversations:
@@ -121,7 +121,7 @@ def run_ingest(client: ov.SyncHTTPClient, session_id_prefix: str):
                 peer_id=peer_id,
             )
 
-        console.print(f"    共 {total} 条消息，提交...")
+        console.print(f"    共 {total} 條訊息，提交...")
         commit_result = client.commit_session(session_id)
         trace_id = commit_result.get("trace_id", "N/A")
         task_id = commit_result.get("task_id")
@@ -131,29 +131,29 @@ def run_ingest(client: ov.SyncHTTPClient, session_id_prefix: str):
     return session_id_prefix, trace_ids, task_id
 
 
-# ── 验证数据隔离 ───────────────────────────────────────────────────────────
+# ── 驗證資料隔離 ───────────────────────────────────────────────────────────
 
 
 def verify_isolation(url: str, api_key: str, account: str):
-    """验证数据隔离"""
+    """驗證資料隔離"""
     console.print()
-    console.rule("[bold]验证数据隔离[/bold]")
+    console.rule("[bold]驗證資料隔離[/bold]")
 
-    # 测试用例：(query, expect_found, search_user, search_agent, description)
-    # 关键词改为对话中实际出现的内容
+    # 測試用例：(query, expect_found, search_user, search_agent, description)
+    # 關鍵詞改為對話中實際出現的內容
     test_cases = [
-        # === 用户记忆测试 ===
-        ("密码", True, "alice", "agent-a", "alice+agent-a 应该能看到密码记忆"),
-        ("密码", False, "alice", "agent-b", "alice+agent-b 不应看到密码"),
-        ("蓝色", False, "alice", "agent-a", "alice+agent-a 不应看到颜色"),
-        # === Agent Soul 记忆测试 ===
-        # agent-a 的身份是"技术助手，简洁专业"
-        ("技术助手", True, "alice", "agent-a", "alice+agent-a 应该能看到 agent-a 的 soul"),
-        ("技术助手", False, "alice", "agent-b", "alice+agent-b 不应看到 agent-a 的 soul"),
-        ("编程助手", False, "alice", "agent-b", "alice+agent-b 不应看到 agent-a 的 soul"),
-        # agent-b 的身份是"生活助手，亲切详细"
-        ("生活助手", True, "alice", "agent-b", "alice+agent-b 应该能看到 agent-b 的 soul"),
-        ("生活助手", False, "alice", "agent-a", "alice+agent-a 不应看到 agent-b 的 soul"),
+        # === 使用者記憶測試 ===
+        ("密碼", True, "alice", "agent-a", "alice+agent-a 應該能看到密碼記憶"),
+        ("密碼", False, "alice", "agent-b", "alice+agent-b 不應看到密碼"),
+        ("藍色", False, "alice", "agent-a", "alice+agent-a 不應看到顏色"),
+        # === Agent Soul 記憶測試 ===
+        # agent-a 的身份是"技術助手，簡潔專業"
+        ("技術助手", True, "alice", "agent-a", "alice+agent-a 應該能看到 agent-a 的 soul"),
+        ("技術助手", False, "alice", "agent-b", "alice+agent-b 不應看到 agent-a 的 soul"),
+        ("程式設計助手", False, "alice", "agent-b", "alice+agent-b 不應看到 agent-a 的 soul"),
+        # agent-b 的身份是"生活助手，親切詳細"
+        ("生活助手", True, "alice", "agent-b", "alice+agent-b 應該能看到 agent-b 的 soul"),
+        ("生活助手", False, "alice", "agent-a", "alice+agent-a 不應看到 agent-b 的 soul"),
     ]
 
     results_table = Table(
@@ -162,10 +162,10 @@ def verify_isolation(url: str, api_key: str, account: str):
         show_header=True,
         header_style="bold",
     )
-    results_table.add_column("查询", style="cyan", width=10)
+    results_table.add_column("查詢", style="cyan", width=10)
     results_table.add_column("期望", style="yellow", width=8)
     results_table.add_column("搜索者", style="magenta", width=14)
-    results_table.add_column("结果", style="green", width=6)
+    results_table.add_column("結果", style="green", width=6)
     results_table.add_column("描述", max_width=35)
 
     for query, expect_found, search_user, search_agent, desc in test_cases:
@@ -183,7 +183,7 @@ def verify_isolation(url: str, api_key: str, account: str):
         found = False
         if hasattr(results, "memories") and results.memories:
             for m in results.memories:
-                # 检查 content 或 uri 中是否包含关键词
+                # 檢查 content 或 uri 中是否包含關鍵詞
                 content = getattr(m, "content", "") or ""
                 uri = getattr(m, "uri", "") or ""
                 text = content or uri
@@ -205,19 +205,19 @@ def verify_isolation(url: str, api_key: str, account: str):
     console.print(results_table)
 
 
-# ── 运行单个账号测试 ──────────────────────────────────────────────────────
+# ── 執行單個帳號測試 ──────────────────────────────────────────────────────
 
 
 def run_test_for_account(account: str, url: str, root_key: str, wait: float) -> list:
     console.print(
         Panel(
-            f"[bold cyan]测试 Account: {account}[/bold cyan]",
+            f"[bold cyan]測試 Account: {account}[/bold cyan]",
             style="magenta",
             width=PANEL_WIDTH,
         )
     )
 
-    # 用 root key 创建 client
+    # 用 root key 建立 client
     client = ov.SyncHTTPClient(
         url=url,
         api_key=root_key,
@@ -227,8 +227,8 @@ def run_test_for_account(account: str, url: str, root_key: str, wait: float) -> 
     )
     client.initialize()
 
-    # 尝试创建账号
-    console.print("  [yellow]检查/创建账号...[/yellow]")
+    # 嘗試建立帳號
+    console.print("  [yellow]檢查/建立帳號...[/yellow]")
 
     try:
         with httpx.Client() as http:
@@ -241,17 +241,17 @@ def run_test_for_account(account: str, url: str, root_key: str, wait: float) -> 
                 },
             )
             if resp.status_code == 200:
-                console.print(f"    - 账号 {account} 已创建")
+                console.print(f"    - 帳號 {account} 已建立")
             elif "already exists" in resp.text:
-                console.print(f"    - 账号 {account} 已存在")
+                console.print(f"    - 帳號 {account} 已存在")
             else:
-                console.print(f"    - 账号 {account}: {resp.text[:50]}")
+                console.print(f"    - 帳號 {account}: {resp.text[:50]}")
     except Exception as e:
-        console.print(f"    - 创建账号跳过: {e}")
+        console.print(f"    - 建立帳號跳過: {e}")
 
     try:
-        # 注册测试用户 alice 和 bob（如果已存在则忽略）
-        console.print("  [yellow]注册测试用户 alice, bob...[/yellow]")
+        # 註冊測試使用者 alice 和 bob（如果已存在則忽略）
+        console.print("  [yellow]註冊測試使用者 alice, bob...[/yellow]")
         for user_id in ["alice", "bob"]:
             try:
                 client.admin_register_user(account, user_id, "user")
@@ -262,12 +262,12 @@ def run_test_for_account(account: str, url: str, root_key: str, wait: float) -> 
                 else:
                     console.print(f"    - {user_id}: {e}")
 
-        # 写入数据
+        # 寫入資料
         session_id, trace_ids, task_id = run_ingest(client, f"test-{account}")
 
-        # 轮询等待任务完成
+        # 輪詢等待任務完成
         if task_id:
-            console.print(f"\n  [yellow]等待记忆提取完成 (task_id={task_id})...[/yellow]")
+            console.print(f"\n  [yellow]等待記憶提取完成 (task_id={task_id})...[/yellow]")
             start_time = time.time()
             while True:
                 task = client.get_task(task_id)
@@ -276,13 +276,13 @@ def run_test_for_account(account: str, url: str, root_key: str, wait: float) -> 
                 time.sleep(1)
             elapsed = time.time() - start_time
             status = task.get("status", "unknown") if task else "not found"
-            console.print(f"  [green]任务 {status}，耗时 {elapsed:.2f}s[/green]")
+            console.print(f"  [green]任務 {status}，耗時 {elapsed:.2f}s[/green]")
 
         # 等待向量化完成
         console.print("  [yellow]等待向量化完成...[/yellow]")
         client.wait_processed()
 
-        # 验证隔离
+        # 驗證隔離
         verify_isolation(url, root_key, account)
 
     except Exception as e:
@@ -302,16 +302,16 @@ def run_test_for_account(account: str, url: str, root_key: str, wait: float) -> 
 
 
 def main():
-    parser = argparse.ArgumentParser(description="群聊记忆测试 - 测试 user/peer 记忆模型")
+    parser = argparse.ArgumentParser(description="群聊記憶測試 - 測試 user/peer 記憶模型")
     parser.add_argument("--url", default=DEFAULT_URL, help="Server URL")
-    parser.add_argument("--root-key", default="default", help="Root API Key (默认: default)")
-    parser.add_argument("--account", default=None, help="直接指定 account 名称")
-    parser.add_argument("--wait", type=float, default=5.0, help="提交后等待秒数")
+    parser.add_argument("--root-key", default="default", help="Root API Key (預設: default)")
+    parser.add_argument("--account", default=None, help="直接指定 account 名稱")
+    parser.add_argument("--wait", type=float, default=5.0, help="提交後等待秒數")
     args = parser.parse_args()
 
     console.print(
         Panel(
-            f"[bold]OpenViking 数据隔离测试[/bold]\nServer: {args.url}",
+            f"[bold]OpenViking 資料隔離測試[/bold]\nServer: {args.url}",
             style="magenta",
             width=PANEL_WIDTH,
         )
@@ -319,22 +319,22 @@ def main():
 
     accounts = [args.account or "test-user-peer"]
 
-    # 逐个测试
+    # 逐個測試
     all_trace_ids = {}
     for account in accounts:
         trace_ids = run_test_for_account(account, args.url, args.root_key, args.wait)
         all_trace_ids[account] = trace_ids
         console.print()
 
-    # 打印汇总
+    # 列印彙總
     trace_info = "\n".join(
         f"  {acc}: {', '.join(tids)}" for acc, tids in all_trace_ids.items() if tids
     )
     console.print(
         Panel(
-            f"[bold green]测试完成![/bold green]\n\n"
+            f"[bold green]測試完成![/bold green]\n\n"
             f"Trace IDs:\n{trace_info}\n\n"
-            "预期：当前登录 user 命中自己的记忆；peer 记忆由显式 peer memory URI 路由。",
+            "預期：當前登入 user 命中自己的記憶；peer 記憶由顯式 peer memory URI 路由。",
             style="green",
             width=PANEL_WIDTH,
         )

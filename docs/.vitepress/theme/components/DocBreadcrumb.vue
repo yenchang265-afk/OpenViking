@@ -10,8 +10,8 @@ const section = computed(() => {
 })
 </script>
 <template>
-  <nav class="doc-breadcrumb" :aria-label="locale === 'zh' ? '面包屑导航' : 'Breadcrumb'">
-    <a :href="withBase(`/${locale}/`)">{{ locale === 'zh' ? '文档首页' : 'Documentation' }}</a>
+  <nav class="doc-breadcrumb" :aria-label="locale === 'zh' ? '麵包屑導航' : 'Breadcrumb'">
+    <a :href="withBase(`/${locale}/`)">{{ locale === 'zh' ? '文件首頁' : 'Documentation' }}</a>
     <template v-if="section"><span aria-hidden="true">/</span><a :href="withBase(`/${locale}/#section-${section.id}`)">{{ section[locale] }}</a></template>
     <span aria-hidden="true">/</span><span aria-current="page">{{ page.title }}</span>
   </nav>

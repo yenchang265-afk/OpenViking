@@ -48,9 +48,9 @@ class TestTempUploadDeep:
 
     def test_upload_unicode_filename(self, api_client):
         with tempfile.TemporaryDirectory() as temp_dir:
-            test_file = os.path.join(temp_dir, f"上传测试_{uuid.uuid4().hex[:8]}.md")
+            test_file = os.path.join(temp_dir, f"上傳測試_{uuid.uuid4().hex[:8]}.md")
             with open(test_file, "w") as f:
-                f.write("# 中文文件名测试\n\nUnicode filename upload test.")
+                f.write("# 中文檔名測試\n\nUnicode filename upload test.")
             add_resp = api_client.add_resource(path=test_file, wait=True)
             assert add_resp.status_code == 200, (
                 f"upload unicode filename should succeed, got {add_resp.status_code}"

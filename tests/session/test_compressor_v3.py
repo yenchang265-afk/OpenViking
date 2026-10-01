@@ -61,12 +61,12 @@ def _messages() -> list[Message]:
         Message(
             id="m1",
             role="user",
-            parts=[TextPart("请处理重复预订，只取消确认是重复的那一单。")],
+            parts=[TextPart("請處理重複預訂，只取消確認是重複的那一單。")],
         ),
         Message(
             id="m2",
             role="assistant",
-            parts=[TextPart("已读取两个预订，确认第二个是重复记录并取消。")],
+            parts=[TextPart("已讀取兩個預訂，確認第二個是重複記錄並取消。")],
         ),
     ]
 
@@ -75,13 +75,13 @@ def _case_operation() -> ResolvedOperation:
     return ResolvedOperation(
         old_memory_file_content=None,
         memory_type="cases",
-        uris=["viking://user/u/memories/cases/重复预订处理.md"],
+        uris=["viking://user/u/memories/cases/重複預訂處理.md"],
         memory_fields={
-            "case_name": "重复预订处理",
-            "task_signature": "处理重复预订并只取消确认重复的订单",
-            "input": '{"summary":"用户要求处理重复预订","preconditions":["存在两个相似预订"]}',
-            "rubric": '{"name":"重复预订处理Rubric","description":"成功且高效处理重复预订","criteria":[{"name":"先验证重复","description":"取消前必须确认哪一单是重复订单","required":true,"weight":0.6},{"name":"只取消重复项","description":"不得影响有效订单","required":true,"weight":0.4}]}',
-            "evidence": "助手根据读取结果确认重复项并完成取消。",
+            "case_name": "重複預訂處理",
+            "task_signature": "處理重複預訂並只取消確認重複的訂單",
+            "input": '{"summary":"使用者要求處理重複預訂","preconditions":["存在兩個相似預訂"]}',
+            "rubric": '{"name":"重複預訂處理Rubric","description":"成功且高效處理重複預訂","criteria":[{"name":"先驗證重複","description":"取消前必須確認哪一單是重複訂單","required":true,"weight":0.6},{"name":"只取消重複項","description":"不得影響有效訂單","required":true,"weight":0.4}]}',
+            "evidence": "助手根據讀取結果確認重複項並完成取消。",
         },
     )
 
@@ -852,8 +852,8 @@ async def test_v3_extract_uses_patch_merge_without_directory_lock(monkeypatch):
 
     assert len(applied_operations) == 1
     assert applied_operations[0].upsert_operations[0].memory_type == "cases"
-    assert [case.name for case in trained_cases] == ["重复预订处理"]
-    assert contexts[0].uri.endswith("重复预订处理.md")
+    assert [case.name for case in trained_cases] == ["重複預訂處理"]
+    assert contexts[0].uri.endswith("重複預訂處理.md")
 
 
 @pytest.mark.asyncio

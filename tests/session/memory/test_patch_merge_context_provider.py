@@ -98,7 +98,7 @@ async def test_patch_merge_context_provider_prefetch_searches_and_reads_extra_ca
                 after_file=_memory_file(
                     name="books",
                     uri="viking://user/u/memories/experiences/books.md",
-                    content="用户喜欢阅读科幻书籍，尤其是太空歌剧。",
+                    content="使用者喜歡閱讀科幻書籍，尤其是太空歌劇。",
                 ),
             )
         ],
@@ -184,7 +184,7 @@ async def test_patch_merge_context_provider_caps_extra_candidate_reads_at_ten():
                 after_file=_memory_file(
                     name="books",
                     uri="viking://user/u/memories/experiences/books.md",
-                    content="用户喜欢阅读科幻书籍，尤其是太空歌剧。",
+                    content="使用者喜歡閱讀科幻書籍，尤其是太空歌劇。",
                 ),
             )
         ],
@@ -443,9 +443,9 @@ def test_patch_merge_context_provider_ignores_before_file_language(monkeypatch):
             PatchMergePatch(
                 before_file=MemoryFile(
                     uri="viking://user/u/memories/preferences/old.md",
-                    content="用户偏好简洁实现。",
+                    content="使用者偏好簡潔實現。",
                     memory_type="preferences",
-                    extra_fields={"memory_type": "preferences", "topic": "代码风格"},
+                    extra_fields={"memory_type": "preferences", "topic": "程式碼風格"},
                 ),
                 after_file=MemoryFile(
                     uri="viking://user/u/memories/preferences/old.md",

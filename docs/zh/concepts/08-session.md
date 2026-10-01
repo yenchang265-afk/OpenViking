@@ -1,13 +1,13 @@
-# 会话管理
+# 會話管理
 
-Session 负责管理对话消息、记录上下文使用、提取长期记忆。
+Session 負責管理對話訊息、記錄上下文使用、提取長期記憶。
 
-## 概览
+## 概覽
 
-**生命周期**：创建 → 交互 → 提交
+**生命週期**：建立 → 互動 → 提交
 
-通过 session_id 获取会话时不会创建会话。请先创建会话，再通过
-`client.session(session_id=...)` 追加消息或提交会话。
+通過 session_id 獲取會話時不會建立會話。請先建立會話，再通過
+`client.session(session_id=...)` 追加訊息或提交會話。
 
 ```python
 session_info = client.create_session(session_id="chat_001")
@@ -18,11 +18,11 @@ session.commit()
 
 ## 核心 API
 
-| 方法 | 说明 |
+| 方法 | 說明 |
 |------|------|
 | `add_message(role, content=None, parts=None, options=None, peer_id=None)` | 添加消息 |
-| `commit()` | 提交：归档（同步） + 摘要生成和记忆提取（异步后台） |
-| `get_task(task_id)` | 查询后台任务状态 |
+| `commit()` | 提交：歸檔（同步） + 摘要生成和記憶提取（非同步後臺） |
+| `get_task(task_id)` | 查詢後臺任務狀態 |
 
 ### add_message
 
@@ -66,13 +66,13 @@ result = session.commit()
 #   "archived": True
 # }
 
-# 查询后台任务进度
+# 查詢後臺任務進度
 task = client.get_task(task_id=result["task_id"])
 # task["status"]: "pending" | "running" | "completed" | "failed"
 # sum(task["result"]["memories_extracted"].values()): 3
 ```
 
-## 消息结构
+## 訊息結構
 
 ### Message
 
@@ -85,88 +85,88 @@ class Message:
     created_at: datetime
 ```
 
-### Part 类型
+### Part 型別
 
-| 类型 | 说明 |
+| 型別 | 說明 |
 |------|------|
-| `TextPart` | 文本内容 |
-| `ImagePart` | 图片 URL 内容。记忆提取时，OpenViking 可以使用已配置的 VLM 将其描述为文本。 |
+| `TextPart` | 文本內容 |
+| `ImagePart` | 圖片 URL 內容。記憶提取時，OpenViking 可以使用已配置的 VLM 將其描述為文本。 |
 | `ContextPart` | 上下文引用（URI + 摘要） |
-| `ToolPart` | 工具调用（输入 + 输出） |
+| `ToolPart` | 工具呼叫（輸入 + 輸出） |
 
-## 压缩策略
+## 壓縮策略
 
-### 归档流程
+### 歸檔流程
 
-commit() 分两阶段执行：
+commit() 分兩階段執行：
 
 **Phase 1（同步，立即完成）**：
-1. 递增 compression_index
-2. 写入消息到归档目录（`messages.jsonl`）
-3. 清空当前消息列表
+1. 遞增 compression_index
+2. 寫入訊息到歸檔目錄（`messages.jsonl`）
+3. 清空當前訊息列表
 4. 返回 `task_id`
 
-**Phase 2（异步后台）**：
-5. 生成结构化摘要（LLM）→ 写入 `.abstract.md` 和 `.overview.md`
-6. 提取长期记忆
-7. 写入 `memory_diff.json`（记忆变更审计日志）到归档目录
-8. 写入 `.done` 完成标记
+**Phase 2（非同步後臺）**：
+5. 生成結構化摘要（LLM）→ 寫入 `.abstract.md` 和 `.overview.md`
+6. 提取長期記憶
+7. 寫入 `memory_diff.json`（記憶變更審計日誌）到歸檔目錄
+8. 寫入 `.done` 完成標記
 
 ### 摘要格式
 
 ```markdown
-# 会话摘要
+# 會話摘要
 
-**一句话概述**: [主题]: [意图] | [结果] | [状态]
+**一句話概述**: [主題]: [意圖] | [結果] | [狀態]
 
 ## Analysis
-关键步骤列表
+關鍵步驟列表
 
 ## Primary Request and Intent
-用户的核心目标
+使用者的核心目標
 
 ## Key Concepts
-关键技术概念
+關鍵技術概念
 
 ## Pending Tasks
-未完成的任务
+未完成的任務
 ```
 
-## 记忆提取
+## 記憶提取
 
-### 记忆类型
+### 記憶型別
 
-提交会话后，OpenViking 会根据对话内容和当前记忆策略，提取对后续交互有价值的信息，并保存到当前用户的记忆空间。当对话涉及稳定的 Peer 时，相关记忆也可以保存到对应的 Peer 空间。
+提交會話後，OpenViking 會根據對話內容和當前記憶策略，提取對後續互動有價值的資訊，並儲存到當前使用者的記憶空間。當對話涉及穩定的 Peer 時，相關記憶也可以儲存到對應的 Peer 空間。
 
-OpenViking 内置 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories` 和 `experiences` 等记忆类型，也支持根据业务需要自定义。完整用途与路径见 [上下文类型](./02-context-types.md)。
+OpenViking 內建 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories` 和 `experiences` 等記憶型別，也支援根據業務需要自定義。完整用途與路徑見 [上下文型別](./02-context-types.md)。
 
-在 `memory_policy.memory_types` 中，`experiences` 会启用完整的 Agent Evolution 流程，并自动激活 `cases` 和 `trajectories`。如果没有 `experiences`，显式传入的 `cases` 和 `trajectories` 会被静默忽略，不会报错。
+在 `memory_policy.memory_types` 中，`experiences` 會啟用完整的 Agent Evolution 流程，並自動啟用 `cases` 和 `trajectories`。如果沒有 `experiences`，顯式傳入的 `cases` 和 `trajectories` 會被靜默忽略，不會報錯。
 
 ### 提取流程
 
 ```
-消息 → LLM 提取 → 候选记忆
+訊息 → LLM 提取 → 候選記憶
          ↓
-向量预过滤 → 找相似记忆
+向量預過濾 → 找相似記憶
          ↓
-LLM 去重决策 → candidate(skip/create/none) + item(merge/delete)
+LLM 去重決策 → candidate(skip/create/none) + item(merge/delete)
          ↓
-写入 AGFS → 向量化
+寫入 AGFS → 向量化
 ```
 
-### 去重决策
+### 去重決策
 
-| 层级 | 决策 | 说明 |
+| 層級 | 決策 | 說明 |
 |------|------|------|
-| Candidate | `skip` | 候选记忆重复，直接跳过 |
-| Candidate | `create` | 创建候选记忆；必要时先删除冲突旧记忆 |
-| Candidate | `none` | 不创建候选记忆，只处理已有记忆 |
-| Existing item | `merge` | 将候选内容合并到指定已有记忆 |
-| Existing item | `delete` | 删除冲突的已有记忆 |
+| Candidate | `skip` | 候選記憶重複，直接跳過 |
+| Candidate | `create` | 建立候選記憶；必要時先刪除衝突舊記憶 |
+| Candidate | `none` | 不建立候選記憶，只處理已有記憶 |
+| Existing item | `merge` | 將候選內容合併到指定已有記憶 |
+| Existing item | `delete` | 刪除衝突的已有記憶 |
 
-## 记忆变更记录
+## 記憶變更記錄
 
-每次 `session.commit()` 会在归档目录写入 `memory_diff.json`，记录本次提交的所有记忆变更，便于审计和回溯。
+每次 `session.commit()` 會在歸檔目錄寫入 `memory_diff.json`，記錄本次提交的所有記憶變更，便於審計和回溯。
 
 ```json
 {
@@ -177,22 +177,22 @@ LLM 去重决策 → candidate(skip/create/none) + item(merge/delete)
       {
         "uri": "memory/user/xxx/identity.md",
         "memory_type": "identity",
-        "after": "新创建的文件内容"
+        "after": "新建立的檔案內容"
       }
     ],
     "updates": [
       {
         "uri": "memory/user/xxx/context/project.md",
         "memory_type": "context",
-        "before": "修改前的文件内容",
-        "after": "修改后的文件内容"
+        "before": "修改前的檔案內容",
+        "after": "修改後的檔案內容"
       }
     ],
     "deletes": [
       {
         "uri": "memory/user/xxx/context/old.md",
         "memory_type": "context",
-        "deleted_content": "被删除的文件内容"
+        "deleted_content": "被刪除的檔案內容"
       }
     ]
   },
@@ -201,7 +201,7 @@ LLM 去重决策 → candidate(skip/create/none) + item(merge/delete)
       "memory_type": "events",
       "page_id": 101,
       "reason_code": "invalid_ranges",
-      "reason": "无法解析出有效的事件范围"
+      "reason": "無法解析出有效的事件範圍"
     }
   ],
   "summary": {
@@ -213,32 +213,32 @@ LLM 去重决策 → candidate(skip/create/none) + item(merge/delete)
 }
 ```
 
-| 字段 | 说明 |
+| 欄位 | 說明 |
 |------|------|
-| `archive_uri` | 本次提交的归档目录 URI |
-| `extracted_at` | 提取时间的 ISO 8601 格式 |
-| `operations.adds` | 新增的记忆（无 `before`） |
-| `operations.updates` | 修改的记忆（含 `before` 和 `after`） |
-| `operations.deletes` | 删除的记忆（含 `deleted_content`） |
-| `skipped_operations` | 策略性跳过的操作及稳定原因码；不代表文件变更 |
-| `summary` | 各操作类型的计数 |
+| `archive_uri` | 本次提交的歸檔目錄 URI |
+| `extracted_at` | 提取時間的 ISO 8601 格式 |
+| `operations.adds` | 新增的記憶（無 `before`） |
+| `operations.updates` | 修改的記憶（含 `before` 和 `after`） |
+| `operations.deletes` | 刪除的記憶（含 `deleted_content`） |
+| `skipped_operations` | 策略性跳過的操作及穩定原因碼；不代表檔案變更 |
+| `summary` | 各操作型別的計數 |
 
-如果没有实际变更或策略性跳过，也会写入空结构的 `memory_diff.json`（所有计数为零）。
+如果沒有實際變更或策略性跳過，也會寫入空結構的 `memory_diff.json`（所有計數為零）。
 
-## 存储结构
+## 儲存結構
 
 ```
 viking://user/{user_id}/sessions/{session_id}/
-├── messages.jsonl            # 当前消息
-├── .abstract.md              # 当前摘要
-├── .overview.md              # 当前概览
+├── messages.jsonl            # 當前訊息
+├── .abstract.md              # 當前摘要
+├── .overview.md              # 當前概覽
 ├── history/
 │   ├── archive_001/
-│   │   ├── messages.jsonl    # Phase 1 写入
-│   │   ├── .abstract.md      # Phase 2 写入（后台）
-│   │   ├── .overview.md      # Phase 2 写入（后台）
-│   │   ├── memory_diff.json  # Phase 2 写入（后台，记忆变更审计）
-│   │   └── .done             # Phase 2 完成标记
+│   │   ├── messages.jsonl    # Phase 1 寫入
+│   │   ├── .abstract.md      # Phase 2 寫入（後臺）
+│   │   ├── .overview.md      # Phase 2 寫入（後臺）
+│   │   ├── memory_diff.json  # Phase 2 寫入（後臺，記憶變更審計）
+│   │   └── .done             # Phase 2 完成標記
 │   └── archive_NNN/
 └── tools/
     └── {tool_id}/tool.json
@@ -255,15 +255,15 @@ viking://~/memories/
 └── experiences/
 ```
 
-`viking://~/sessions/{session_id}` 使用家目录别名，服务端会按认证身份将其展开为
-`viking://user/{user_id}/sessions/{session_id}`。无 uid 的写法
-`viking://user/sessions/{session_id}` 不再被接受，请求会报错并提示改用 `viking://~/...`。
-`viking://session/{session_id}` 仍会作为同一个 session 路径的向后兼容别名被接受，
-不是独立的存储根。
+`viking://~/sessions/{session_id}` 使用家目錄別名，服務端會按認證身份將其展開為
+`viking://user/{user_id}/sessions/{session_id}`。無 uid 的寫法
+`viking://user/sessions/{session_id}` 不再被接受，請求會報錯並提示改用 `viking://~/...`。
+`viking://session/{session_id}` 仍會作為同一個 session 路徑的向後相容別名被接受，
+不是獨立的儲存根。
 
-## 相关文档
+## 相關文件
 
-- [架构概述](./01-architecture.md) - 系统整体架构
-- [上下文类型](./02-context-types.md) - 三种上下文类型
+- [架構概述](./01-architecture.md) - 系統整體架構
+- [上下文型別](./02-context-types.md) - 三種上下文型別
 - [上下文提取](./06-extraction.md) - 提取流程
-- [上下文层级](./03-context-layers.md) - L0/L1/L2 模型
+- [上下文層級](./03-context-layers.md) - L0/L1/L2 模型

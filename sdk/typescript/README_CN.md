@@ -1,6 +1,6 @@
 # @openviking/sdk
 
-OpenViking 的轻量级 JavaScript/TypeScript HTTP SDK，面向 Node.js 18+，没有运行时依赖。
+OpenViking 的輕量級 JavaScript/TypeScript HTTP SDK，面向 Node.js 18+，沒有執行時依賴。
 
 ```bash
 npm install @openviking/sdk
@@ -14,17 +14,17 @@ const client = new OpenVikingClient({
   apiKey: "your-key",
 });
 
-const results = await client.search("部署文档", {
+const results = await client.search("部署文件", {
   targetUri: "viking://resources",
   limit: 10,
 });
 ```
 
-SDK 与 Python `openviking-sdk`、Go SDK 使用相同的 HTTP API、身份请求头、响应信封和错误码，覆盖资源与技能、文件系统与内容、资源关系、检索、会话、OVPack、快照、任务、Watch、Observer 状态和租户管理接口。
+SDK 與 Python `openviking-sdk`、Go SDK 使用相同的 HTTP API、身份請求頭、響應信封和錯誤碼，覆蓋資源與技能、檔案系統與內容、資源關係、檢索、會話、OVPack、快照、任務、Watch、Observer 狀態和租戶管理介面。
 
-Node.js 中存在的本地文件路径会自动上传，目录会先压缩后上传；其他字符串会作为 URL 或服务端路径发送。
+Node.js 中存在的本地檔案路徑會自動上傳，目錄會先壓縮後上傳；其他字串會作為 URL 或服務端路徑傳送。
 
-如果只希望入库并生成向量、不走 VLM 语义理解，可以给 `addResource` 传 `processingMode: "vectors_only"`。该模式会写入/同步资源树并向量化当前文件，但不会生成或刷新 `.abstract.md` / `.overview.md`。
+如果只希望入庫並生成向量、不走 VLM 語義理解，可以給 `addResource` 傳 `processingMode: "vectors_only"`。該模式會寫入/同步資源樹並向量化當前檔案，但不會生成或重新整理 `.abstract.md` / `.overview.md`。
 
 ```ts
 const task = await client.addResource("./docs/guide.md", {
@@ -34,9 +34,9 @@ const task = await client.addResource("./docs/guide.md", {
 console.log(task.task_id);
 ```
 
-通过 `client.getTask(task.task_id as string)` 查询导入状态，任务为 `completed` 后再检索导入内容。
+通過 `client.getTask(task.task_id as string)` 查詢匯入狀態，任務為 `completed` 後再檢索匯入內容。
 
-事件记忆 tags 可设置为 session 默认值、后续更新，也可在单次 commit 时覆盖。向 `commitSession` 传 `[]` 表示本次显式跳过 session 默认 tags。
+事件記憶 tags 可設定為 session 預設值、後續更新，也可在單次 commit 時覆蓋。向 `commitSession` 傳 `[]` 表示本次顯式跳過 session 預設 tags。
 
 ```ts
 await client.createSession({
@@ -60,9 +60,9 @@ await client.commitSession("s1", {
 await client.commitSession("s1", { keepRecentCount: 0, eventTags: [] });
 ```
 
-使用共享临时存储的部署可设置 `uploadMode: "shared"`；服务端也接受 `"local"`（默认值）。
+使用共享臨時儲存的部署可設定 `uploadMode: "shared"`；服務端也接受 `"local"`（預設值）。
 
-OVPack 导出和备份与 Python、Go SDK 契约一致：内容会流式写入 Node.js 本地文件，并返回最终文件路径。
+OVPack 匯出和備份與 Python、Go SDK 契約一致：內容會流式寫入 Node.js 本地檔案，並返回最終檔案路徑。
 
 ```ts
 const packPath = await client.exportOVPack(
@@ -75,6 +75,6 @@ await client.importOVPack(packPath, "viking://resources", {
 });
 ```
 
-## 发布
+## 釋出
 
-推送 `typescript-sdk@0.1.0` 格式的 tag 会自动发布对应版本，也可以从 GitHub Actions 手动触发同一 workflow。首次发布使用具备 `@openviking` scope 权限的仓库 `NPM_TOKEN`；包创建后，需要在 npm 为仓库 `volcengine/OpenViking` 和 workflow `typescript-sdk-release.yml` 配置 Trusted Publisher，后续发布即可像 `@openviking/cli` 一样使用 OIDC。
+推送 `typescript-sdk@0.1.0` 格式的 tag 會自動釋出對應版本，也可以從 GitHub Actions 手動觸發同一 workflow。首次釋出使用具備 `@openviking` scope 許可權的倉庫 `NPM_TOKEN`；包建立後，需要在 npm 為倉庫 `volcengine/OpenViking` 和 workflow `typescript-sdk-release.yml` 配置 Trusted Publisher，後續釋出即可像 `@openviking/cli` 一樣使用 OIDC。

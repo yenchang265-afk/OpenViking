@@ -1,14 +1,14 @@
-## 步骤1：安装
+## 步驟1：安裝
 
-1. 根据所使用的客户端，在终端执行对应的安装命令：
+1. 根據所使用的客戶端，在終端執行對應的安裝命令：
 
-   **Trae 国际版**
+   **Trae 國際版**
 
    ```bash
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae --dist tos
    ```
 
-   **Trae 中国版**
+   **Trae 中國版**
 
    ```bash
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae-cn --dist tos
@@ -20,17 +20,17 @@
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae-cli --dist tos
    ```
 
-2. 安装器会依次询问以下信息：语言（English / 中文）、OpenViking 凭据。在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安裝器會依次詢問以下資訊：語言（English / 中文）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-## 步骤2：验证
+## 步驟2：驗證
 
-**TRAE / TRAE CN**：在「设置 → MCP → 已配置的 MCP Servers」中确认能够看到 `openviking` 条目即表示接入成功。
+**TRAE / TRAE CN**：在「設定 → MCP → 已配置的 MCP Servers」中確認能夠看到 `openviking` 條目即表示接入成功。
 
-**TraeCode CLI 2.0**：Hook 要先信任才会运行。启动 `trae-cli`，在信任确认上选 **Trust all and continue**：
+**TraeCode CLI 2.0**：Hook 要先信任才會執行。啟動 `trae-cli`，在信任確認上選 **Trust all and continue**：
 
 ```text
 Hooks need review
@@ -42,18 +42,18 @@ Hooks can run outside the sandbox after you trust them.
   3. Continue without trusting (hooks won't run)
 ```
 
-再执行 `trae-cli plugin list`，确认 `openviking-memory` 已启用。错过这个提示，或当时选了第 3 项，Hook 就不会运行：输入 `/hooks` 补上信任并开启条目，`/plugins` 里确认插件已启用——两个开关相互独立，都要是开着的。插件更新动了 Hook 时会再要求信任一次。
+再執行 `trae-cli plugin list`，確認 `openviking-memory` 已啟用。錯過這個提示，或當時選了第 3 項，Hook 就不會執行：輸入 `/hooks` 補上信任並開啟條目，`/plugins` 裡確認外掛已啟用——兩個開關相互獨立，都要是開著的。外掛更新動了 Hook 時會再要求信任一次。
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| 没有自动召回 | 完全退出 TRAE，重启，再建会话 |
-| TraeCode CLI 2.0 装了插件但不召回 | 启动时的 Hook 信任被跳过：`/hooks` 里信任并开启，`/plugins` 里确认插件已启用 |
-| 连接 / 鉴权失败 | 检查 `~/.openviking/ovcli.conf`，重启客户端 |
-| 需要日志 | `~/.openviking/logs/trae-hooks.log`、`trae-cn-hooks.log` 或 `codex-hooks.log`（TraeCode CLI 2.0） |
+| 沒有自動召回 | 完全退出 TRAE，重啟，再建會話 |
+| TraeCode CLI 2.0 裝了外掛但不召回 | 啟動時的 Hook 信任被跳過：`/hooks` 裡信任並開啟，`/plugins` 裡確認外掛已啟用 |
+| 連線 / 鑑權失敗 | 檢查 `~/.openviking/ovcli.conf`，重啟客戶端 |
+| 需要日誌 | `~/.openviking/logs/trae-hooks.log`、`trae-cn-hooks.log` 或 `codex-hooks.log`（TraeCode CLI 2.0） |
 
-## 参考
+## 參考
 
-- 手动配置文档：[TRAE](https://docs.openviking.net/zh/agent-integrations/13-trae)
-- 源码：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)（TRAE / TRAE CN）、[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin)（TraeCode CLI 2.0）
+- 手動配置文件：[TRAE](https://docs.openviking.net/zh/agent-integrations/13-trae)
+- 原始碼：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)（TRAE / TRAE CN）、[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin)（TraeCode CLI 2.0）

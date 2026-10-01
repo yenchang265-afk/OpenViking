@@ -69,37 +69,37 @@ pub(crate) fn render_status_with_language(
     lines.push(String::new());
     lines.push(section_title(copy(language, "Config", "配置")));
     lines.push(detail_line_styled(
-        copy(language, "Active", "当前配置"),
+        copy(language, "Active", "當前配置"),
         active_config_value(active, kind),
     ));
     lines.push(detail_line_styled(
-        copy(language, "Server", "服务器"),
+        copy(language, "Server", "伺服器"),
         path_value(&config.url),
     ));
     lines.push(detail_line_styled(
-        copy(language, "Config home", "配置目录"),
+        copy(language, "Config home", "配置目錄"),
         path_value(&display_config_home()),
     ));
     lines.push(String::new());
-    lines.push(section_title(copy(language, "System", "系统")));
+    lines.push(section_title(copy(language, "System", "系統")));
     lines.push(detail_line_styled(
-        copy(language, "Status", "状态"),
+        copy(language, "Status", "狀態"),
         if system_is_healthy(payload) {
-            status_value(copy(language, "Connected (Healthy)", "已连接（健康）"))
+            status_value(copy(language, "Connected (Healthy)", "已連線（健康）"))
         } else {
-            unhealthy_value(copy(language, "Connected (Unhealthy)", "已连接（不健康）"))
+            unhealthy_value(copy(language, "Connected (Unhealthy)", "已連線（不健康）"))
         },
     ));
     lines.push(detail_line_styled(
-        copy(language, "Pending", "待处理"),
+        copy(language, "Pending", "待處理"),
         activity_count_value(queue.pending),
     ));
     lines.push(detail_line_styled(
-        copy(language, "In progress", "处理中"),
+        copy(language, "In progress", "處理中"),
         activity_count_value(queue.in_progress),
     ));
     lines.push(detail_line_styled(
-        copy(language, "Errors", "错误"),
+        copy(language, "Errors", "錯誤"),
         error_count_value(queue.errors),
     ));
     lines.push(String::new());
@@ -118,7 +118,7 @@ pub(crate) fn render_status_with_language(
         ),
     ));
     lines.push(String::new());
-    lines.push(section_title(copy(language, "Components", "组件")));
+    lines.push(section_title(copy(language, "Components", "元件")));
     lines.push(component_header_line(language));
     for component in [
         "queue",
@@ -133,18 +133,18 @@ pub(crate) fn render_status_with_language(
         ));
     }
     lines.push(String::new());
-    lines.push(section_title(copy(language, "Details", "详情")));
+    lines.push(section_title(copy(language, "Details", "詳情")));
     lines.push(action_line(
         "ov status --verbose",
-        copy(language, "Show full component tables", "显示完整组件表"),
+        copy(language, "Show full component tables", "顯示完整元件表"),
     ));
     lines.push(action_line(
         "ov observer queue",
-        copy(language, "Inspect queue details", "查看队列详情"),
+        copy(language, "Inspect queue details", "檢視佇列詳情"),
     ));
     lines.push(action_line(
         "ov observer models",
-        copy(language, "Inspect model usage", "查看模型使用情况"),
+        copy(language, "Inspect model usage", "檢視模型使用情況"),
     ));
 
     Ok(format!("{}\n", lines.join("\n")))
@@ -166,25 +166,25 @@ pub(crate) fn render_unreachable_status(
     lines.push(String::new());
     lines.push(section_title(copy(language, "Config", "配置")));
     lines.push(detail_line_styled(
-        copy(language, "Active", "当前配置"),
+        copy(language, "Active", "當前配置"),
         active_config_value(active, kind),
     ));
     lines.push(detail_line_styled(
-        copy(language, "Server", "服务器"),
+        copy(language, "Server", "伺服器"),
         path_value(&config.url),
     ));
     lines.push(detail_line_styled(
-        copy(language, "Config home", "配置目录"),
+        copy(language, "Config home", "配置目錄"),
         path_value(&display_config_home()),
     ));
     lines.push(String::new());
-    lines.push(section_title(copy(language, "System", "系统")));
+    lines.push(section_title(copy(language, "System", "系統")));
     lines.push(detail_line_styled(
-        copy(language, "Status", "状态"),
+        copy(language, "Status", "狀態"),
         error_value(failure.status_label(language)),
     ));
     lines.push(detail_line_styled(
-        copy(language, "Issue", "问题"),
+        copy(language, "Issue", "問題"),
         plain_value(failure.issue_label(language)),
     ));
     lines.push(detail_line_styled(
@@ -192,7 +192,7 @@ pub(crate) fn render_unreachable_status(
         plain_value(&saved_count.to_string()),
     ));
     lines.push(String::new());
-    lines.push(section_title(copy(language, "What to try", "可以尝试")));
+    lines.push(section_title(copy(language, "What to try", "可以嘗試")));
     for (command, description) in failure.actions(language) {
         lines.push(action_line(command, description));
     }
@@ -222,27 +222,27 @@ impl StatusFailureKind {
 
     fn status_label(self, language: Language) -> &'static str {
         match self {
-            Self::Authentication => copy(language, "Authentication failed", "认证失败"),
-            Self::Api => copy(language, "Server error", "服务器错误"),
-            Self::Timeout => copy(language, "Timed out", "请求超时"),
-            Self::Connection => copy(language, "Unreachable", "无法连接"),
+            Self::Authentication => copy(language, "Authentication failed", "認證失敗"),
+            Self::Api => copy(language, "Server error", "伺服器錯誤"),
+            Self::Timeout => copy(language, "Timed out", "請求超時"),
+            Self::Connection => copy(language, "Unreachable", "無法連線"),
         }
     }
 
     fn issue_label(self, language: Language) -> &'static str {
         match self {
-            Self::Authentication => copy(language, "API key rejected", "API Key 被拒绝"),
+            Self::Authentication => copy(language, "API key rejected", "API Key 被拒絕"),
             Self::Api => copy(
                 language,
                 "OpenViking returned an API error",
-                "OpenViking 返回 API 错误",
+                "OpenViking 返回 API 錯誤",
             ),
             Self::Timeout => copy(
                 language,
                 "Server did not respond before the configured timeout",
-                "服务器未在配置的超时时间内响应",
+                "伺服器未在配置的超時時間內響應",
             ),
-            Self::Connection => copy(language, "Cannot reach server", "无法连接服务器"),
+            Self::Connection => copy(language, "Cannot reach server", "無法連線伺服器"),
         }
     }
 
@@ -251,43 +251,43 @@ impl StatusFailureKind {
             Self::Authentication => vec![
                 (
                     "ov config",
-                    copy(language, "Edit the active API key", "编辑当前 API Key"),
+                    copy(language, "Edit the active API key", "編輯當前 API Key"),
                 ),
                 (
                     "ov config switch",
-                    copy(language, "Use another config", "切换到其他配置"),
+                    copy(language, "Use another config", "切換到其他配置"),
                 ),
                 (
                     "ov config validate",
-                    copy(language, "Validate after updating", "更新后验证"),
+                    copy(language, "Validate after updating", "更新後驗證"),
                 ),
             ],
             Self::Api => vec![
                 (
                     "ov config validate",
-                    copy(language, "Check config and auth", "检查配置和认证"),
+                    copy(language, "Check config and auth", "檢查配置和認證"),
                 ),
                 (
                     "ov status --verbose",
-                    copy(language, "Show backend error details", "显示后端错误详情"),
+                    copy(language, "Show backend error details", "顯示後端錯誤詳情"),
                 ),
                 (
                     "ov health",
-                    copy(language, "Run a quick health check", "快速健康检查"),
+                    copy(language, "Run a quick health check", "快速健康檢查"),
                 ),
             ],
             Self::Timeout => vec![
                 (
                     "ov config",
-                    copy(language, "Increase the request timeout", "提高请求超时时间"),
+                    copy(language, "Increase the request timeout", "提高請求超時時間"),
                 ),
                 (
                     "ov config show",
-                    copy(language, "Show the active config", "查看当前配置"),
+                    copy(language, "Show the active config", "檢視當前配置"),
                 ),
                 (
                     "ov health",
-                    copy(language, "Run a quick health check", "快速健康检查"),
+                    copy(language, "Run a quick health check", "快速健康檢查"),
                 ),
             ],
             Self::Connection => vec![
@@ -296,16 +296,16 @@ impl StatusFailureKind {
                     copy(
                         language,
                         "Check config, auth, and server reachability",
-                        "检查配置、认证和服务器连接",
+                        "檢查配置、認證和伺服器連線",
                     ),
                 ),
                 (
                     "ov config",
-                    copy(language, "Edit or switch config", "编辑或切换配置"),
+                    copy(language, "Edit or switch config", "編輯或切換配置"),
                 ),
                 (
                     "ov health",
-                    copy(language, "Run a quick health check", "快速健康检查"),
+                    copy(language, "Run a quick health check", "快速健康檢查"),
                 ),
             ],
         }
@@ -313,7 +313,7 @@ impl StatusFailureKind {
 }
 
 fn status_title(language: Language) -> String {
-    theme::brand_title(copy(language, "OPENVIKING STATUS", "OPENVIKING 状态"))
+    theme::brand_title(copy(language, "OPENVIKING STATUS", "OPENVIKING 狀態"))
         .bold()
         .to_string()
 }
@@ -326,8 +326,8 @@ fn kind_label(kind: ConfigKind, language: Language) -> &'static str {
     match language {
         Language::En => kind.compact_label(),
         Language::ZhCn => match kind {
-            ConfigKind::OpenVikingService => "OpenViking 服务",
-            ConfigKind::Custom => "自定义",
+            ConfigKind::OpenVikingService => "OpenViking 服務",
+            ConfigKind::Custom => "自定義",
         },
     }
 }
@@ -408,7 +408,7 @@ fn error_count_value(value: Option<u64>) -> String {
 
 fn component_header_line(language: Language) -> String {
     let component = theme::muted(pad_to_display_width(
-        copy(language, "Component", "组件"),
+        copy(language, "Component", "元件"),
         COMPONENT_WIDTH,
     ))
     .bold();
@@ -450,7 +450,7 @@ fn component_line(
 fn styled_health_cell(health: &str, language: Language) -> String {
     let translated = match health {
         "healthy" => copy(language, "healthy", "健康"),
-        "unhealthy" => copy(language, "unhealthy", "异常"),
+        "unhealthy" => copy(language, "unhealthy", "異常"),
         _ => unknown(language),
     };
     let cell = pad_to_display_width(translated, HEALTH_WIDTH);

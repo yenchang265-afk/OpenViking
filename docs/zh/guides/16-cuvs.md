@@ -1,14 +1,14 @@
-# 使用 NVIDIA cuVS 进行本地向量检索
+# 使用 NVIDIA cuVS 進行本地向量檢索
 
-OpenViking 的 `cuvs` 后端保留本地后端的记录持久化、标量索引、稀疏检索和故障恢复，只把 dense vector search 交给 NVIDIA cuVS。这样可以先验证 GPU 检索链路，而不需要重新实现一个完整的向量数据库。
+OpenViking 的 `cuvs` 後端保留本地後端的記錄持久化、標量索引、稀疏檢索和故障恢復，只把 dense vector search 交給 NVIDIA cuVS。這樣可以先驗證 GPU 檢索鏈路，而不需要重新實現一個完整的向量資料庫。
 
-## 环境要求
+## 環境要求
 
 - Linux x86_64 或 aarch64
 - 受支持的 NVIDIA GPU，以及兼容的 CUDA driver
 - Python 3.11+（cuVS 26.06 的 Python wheel 要求）
 
-按所选版本核对 [cuVS 安装要求](https://docs.nvidia.com/cuvs/installation) 和 [Python 包安装指南](https://docs.nvidia.com/cuvs/installation/python)。当前 cuVS 源码构建要求 CUDA Toolkit 12.2+ 和 Ampere 或更新架构的 GPU；安装包要求取决于所选版本。
+按所選版本核對 [cuVS 安裝要求](https://docs.nvidia.com/cuvs/installation) 和 [Python 包安裝指南](https://docs.nvidia.com/cuvs/installation/python)。當前 cuVS 原始碼構建要求 CUDA Toolkit 12.2+ 和 Ampere 或更新架構的 GPU；安裝包要求取決於所選版本。
 
 CUDA 12：
 
@@ -24,12 +24,12 @@ pip install -e .
 pip install cuvs-cu13 'cupy-cuda13x[ctk]' --extra-index-url=https://pypi.nvidia.com
 ```
 
-CuPy 的 `[ctk]` extra 会安装 cuVS Python 互操作路径所需的 CUDA toolkit
-headers；即使宿主机已有 CUDA driver、但没有完整 toolkit，也建议保留该 extra。
+CuPy 的 `[ctk]` extra 會安裝 cuVS Python 互操作路徑所需的 CUDA toolkit
+headers；即使宿主機已有 CUDA driver、但沒有完整 toolkit，也建議保留該 extra。
 
 ## 配置
 
-先用 `brute_force` 跑通精确检索：
+先用 `brute_force` 跑通精確檢索：
 
 ```json
 {
@@ -51,7 +51,7 @@ headers；即使宿主机已有 CUDA driver、但没有完整 toolkit，也建�
 }
 ```
 
-数据量增大后可以切换到 CAGRA，并直接传入 cuVS 的构建与查询参数：
+資料量增大後可以切換到 CAGRA，並直接傳入 cuVS 的構建與查詢引數：
 
 ```json
 {
@@ -75,10 +75,10 @@ headers；即使宿主机已有 CUDA driver、但没有完整 toolkit，也建�
 }
 ```
 
-### 显存感知自动模式
+### 視訊記憶體感知自動模式
 
-如果希望保留 `local` 为默认 backend、只在 GPU 有足够空闲显存时自动启用 cuVS，
-可以打开以下开关：
+如果希望保留 `local` 為預設 backend、只在 GPU 有足夠空閒視訊記憶體時自動啟用 cuVS，
+可以開啟以下開關：
 
 ```json
 {
@@ -100,52 +100,52 @@ headers；即使宿主机已有 CUDA driver、但没有完整 toolkit，也建�
 }
 ```
 
-每次 lazy build/rebuild 前，auto 模式会读取当前空闲显存，并根据配置的 `dtype`
-估算 device vector payload、CAGRA graph/intermediate graph（如适用）和
-filter-bitset cache，再乘以 `auto_memory_safety_factor`，同时保留
-`auto_memory_reserve_mb`。如果预算不足，
-或者 cuVS/GPU 不可用，本次查询继续使用未改变的 native index；cuVS index 保持
-dirty，后续查询会在显存释放后重新尝试。通过 admission 后若仍遇到 GPU allocation
-failure，也会回退 native。显式配置 `backend: "cuvs"` 时仍保持 fail-fast，不经过
-这层自动判断。
+每次 lazy build/rebuild 前，auto 模式會讀取當前空閒視訊記憶體，並根據配置的 `dtype`
+估算 device vector payload、CAGRA graph/intermediate graph（如適用）和
+filter-bitset cache，再乘以 `auto_memory_safety_factor`，同時保留
+`auto_memory_reserve_mb`。如果預算不足，
+或者 cuVS/GPU 不可用，本次查詢繼續使用未改變的 native index；cuVS index 保持
+dirty，後續查詢會在視訊記憶體釋放後重新嘗試。通過 admission 後若仍遇到 GPU allocation
+failure，也會回退 native。顯式配置 `backend: "cuvs"` 時仍保持 fail-fast，不經過
+這層自動判斷。
 
-同一进程内的 local collection 会按 GPU 协调 build 和 admission，避免两个并发
-build 都基于同一份过期 free-memory 观测通过准入。不同 GPU 彼此独立，warmed
-search 也不会被这个协调器串行化。
+同一程序內的 local collection 會按 GPU 協調 build 和 admission，避免兩個併發
+build 都基於同一份過期 free-memory 觀測通過准入。不同 GPU 彼此獨立，warmed
+search 也不會被這個協調器序列化。
 
-auto 模式还会使用 native scalar index 返回的候选数做 filtered query 延迟路由：
-候选数不超过 `auto_filter_native_threshold` 时使用 native vector recall；路径过滤
-采用更低的 `auto_path_filter_native_threshold`，因为宽 URI 子树的 Trie 遍历和
-bitmap union 本身可能占主要开销。默认阈值分别为 2,000 和 200，设为 0 可关闭
-对应路由。阈值与硬件、维度和工作负载有关。显式 `backend: "cuvs"` 对支持的
+auto 模式還會使用 native scalar index 返回的候選數做 filtered query 延遲路由：
+候選數不超過 `auto_filter_native_threshold` 時使用 native vector recall；路徑過濾
+採用更低的 `auto_path_filter_native_threshold`，因為寬 URI 子樹的 Trie 遍歷和
+bitmap union 本身可能佔主要開銷。預設閾值分別為 2,000 和 200，設為 0 可關閉
+對應路由。閾值與硬體、維度和工作負載有關。顯式 `backend: "cuvs"` 對支援的
 dense query 仍固定使用 cuVS。
 
-`auto_background_rebuild` 默认关闭。开启后，连续 mutation 会按
-`auto_rebuild_debounce_ms` 合并，worker 在不持有跨后端 mutation 锁的情况下构建
-新的 immutable GPU snapshot。默认 500 ms 用于避免普通 ingest 的中间 batch
-反复触发构建。对于边界明确、由多次调用组成的 bulk load，可把所有写入放在
-`async with backend.bulk_ingest(ctx=ctx):` scope 内：native 可见性和持久化仍按
-每次调用推进，但 derived GPU maintenance 会延迟到最外层 scope 退出后只调度一次。
-该 scope 只是 maintenance hint，不提供事务或原子性；退出 scope 只负责调度 rebuild，
-本身不等待 GPU ready。vector backend benchmark 会额外在正式计时 search 前显式等待
-最终 snapshot；无法识别 bulk 边界的调用方仍可按实际 batch 间隔调整 debounce。Auto
-仍为显式启用；未开启 Auto/background rebuild 时，该 scope 对派生维护为 no-op，不改变
-原生 CPU 检索、写入与 dtype 行为。snapshot dirty 期间查询直接使用当前 native index，
-不会把 GPU build 时间转化成请求排队时间。worker 只在 record generation 仍匹配时
-原子提交 label layout 和 GPU snapshot；过期 build 会被丢弃，并只重建最新一代。
+`auto_background_rebuild` 預設關閉。開啟後，連續 mutation 會按
+`auto_rebuild_debounce_ms` 合併，worker 在不持有跨後端 mutation 鎖的情況下構建
+新的 immutable GPU snapshot。預設 500 ms 用於避免普通 ingest 的中間 batch
+反覆觸發構建。對於邊界明確、由多次呼叫組成的 bulk load，可把所有寫入放在
+`async with backend.bulk_ingest(ctx=ctx):` scope 內：native 可見性和持久化仍按
+每次呼叫推進，但 derived GPU maintenance 會延遲到最外層 scope 退出後只調度一次。
+該 scope 只是 maintenance hint，不提供事務或原子性；退出 scope 只負責排程 rebuild，
+本身不等待 GPU ready。vector backend benchmark 會額外在正式計時 search 前顯式等待
+最終 snapshot；無法識別 bulk 邊界的呼叫方仍可按實際 batch 間隔調整 debounce。Auto
+仍為顯式啟用；未開啟 Auto/background rebuild 時，該 scope 對派生維護為 no-op，不改變
+原生 CPU 檢索、寫入與 dtype 行為。snapshot dirty 期間查詢直接使用當前 native index，
+不會把 GPU build 時間轉化成請求排隊時間。worker 只在 record generation 仍匹配時
+原子提交 label layout 和 GPU snapshot；過期 build 會被丟棄，並只重建最新一代。
 
-## GPU 显存占用
+## GPU 視訊記憶體佔用
 
-使用默认的 `dtype: "float32"` 时，brute-force 的主要常驻 device payload 为
-`N * dimension * 4` bytes。显式设置 `dtype: "float16"` 后，device payload
-降为 `N * dimension * 2` bytes。CAGRA 还需要约 `N * graph_degree * 4` bytes
-保存 graph，构建期间可能需要 `N * intermediate_graph_degree * 4` bytes 的
-intermediate graph。每个缓存 filter bitset 约占 `ceil(N / 32) * 4` bytes。
+使用預設的 `dtype: "float32"` 時，brute-force 的主要常駐 device payload 為
+`N * dimension * 4` bytes。顯式設定 `dtype: "float16"` 後，device payload
+降為 `N * dimension * 2` bytes。CAGRA 還需要約 `N * graph_degree * 4` bytes
+儲存 graph，構建期間可能需要 `N * intermediate_graph_degree * 4` bytes 的
+intermediate graph。每個快取 filter bitset 約佔 `ceil(N / 32) * 4` bytes。
 
-之前的 index-only 测试使用 `cudaMemGetInfo` 记录 build 前后的显存增量；下表每项
-均为 5 个干净进程的中位数：
+之前的 index-only 測試使用 `cudaMemGetInfo` 記錄 build 前後的視訊記憶體增量；下表每項
+均為 5 個乾淨程序的中位數：
 
-| 数据集 | cuVS 算法 | 实测 GPU 增量 |
+| 資料集 | cuVS 演算法 | 實測 GPU 增量 |
 | --- | --- | ---: |
 | 100K x 768D | brute-force | 294 MiB |
 | 1M x 768D | brute-force | 2.9 GiB |
@@ -154,48 +154,48 @@ intermediate graph。每个缓存 filter bitset 约占 `ceil(N / 32) * 4` bytes�
 | 1,183,514 x 100D | brute-force | 452 MiB |
 | 1,183,514 x 100D | CAGRA | 872 MiB |
 
-这些数值是 build 完成后的常驻增量，不是采样得到的 peak VRAM。allocator 状态、
-cuVS 版本、CAGRA 参数、query batch 和并行 GPU workload 都可能进一步提高峰值；
-它们也不包含这些进程在 build 前观测到的约 327 MiB CUDA runtime/context 基线。
-因此 auto 模式会先初始化 runtime、读取剩余空闲显存，再应用保守 safety factor
-和独立 reserve，而不会只按 vector payload 准入。
+這些數值是 build 完成後的常駐增量，不是取樣得到的 peak VRAM。allocator 狀態、
+cuVS 版本、CAGRA 引數、query batch 和並行 GPU workload 都可能進一步提高峰值；
+它們也不包含這些程序在 build 前觀測到的約 327 MiB CUDA runtime/context 基線。
+因此 auto 模式會先初始化 runtime、讀取剩餘空閒視訊記憶體，再應用保守 safety factor
+和獨立 reserve，而不會只按 vector payload 准入。
 
-距离语义与原本的 OpenViking 本地后端保持一致：cosine 会先做 L2 归一化再执行 inner product；L2 的返回分数仍为 `1 - squared_l2`，分数越大越相似。
+距離語義與原本的 OpenViking 本地後端保持一致：cosine 會先做 L2 歸一化再執行 inner product；L2 的返回分數仍為 `1 - squared_l2`，分數越大越相似。
 
-## 数据类型与原生索引行为
+## 資料型別與原生索引行為
 
-启用 cuVS 不会改变 OpenViking 的默认后端，也不会重写原生 CPU 索引。正常的
-collection metadata 仍为 `VectorIndex.Quant=int8`，因此 native fallback
-继续使用现有的、带逐向量 scale 的 int8 量化。与此同时，cuVS device dataset
-和 query 使用配置的 `dtype`：默认是 float32，也可以显式选择 float16。host
-record shadow 保存预处理后的 Python 浮点值；仅在创建 device dataset 和 query
-时将它们 cast 为配置的 dtype。cuVS Python brute-force API 支持这两种 device
+啟用 cuVS 不會改變 OpenViking 的預設後端，也不會重寫原生 CPU 索引。正常的
+collection metadata 仍為 `VectorIndex.Quant=int8`，因此 native fallback
+繼續使用現有的、帶逐向量 scale 的 int8 量化。與此同時，cuVS device dataset
+和 query 使用配置的 `dtype`：預設是 float32，也可以顯式選擇 float16。host
+record shadow 儲存預處理後的 Python 浮點值；僅在建立 device dataset 和 query
+時將它們 cast 為配置的 dtype。cuVS Python brute-force API 支援這兩種 device
 表示，但不能直接表示 OpenViking 的 scaled-int8 record 格式。
 
-所以两条 dense search 路径不是等内存、等数值语义的比较：native 是在 CPU
-量化表示上的精确检索，cuVS brute-force 是在保留的 float32 或 float16 device
-表示上的精确检索，两者可能出现少量 score 或 neighbor ordering 差异。
-Benchmark 必须同时报告两边的数据类型和 Recall@K，不能将结果描述为
+所以兩條 dense search 路徑不是等記憶體、等數值語義的比較：native 是在 CPU
+量化表示上的精確檢索，cuVS brute-force 是在保留的 float32 或 float16 device
+表示上的精確檢索，兩者可能出現少量 score 或 neighbor ordering 差異。
+Benchmark 必須同時報告兩邊的資料型別和 Recall@K，不能將結果描述為
 equal-dtype 或 equal-memory。
-这是首版 opt-in 集成的有意边界，现有 CPU 行为保持不变。auto 模式会根据 filter
-候选阈值在两种表示之间选择；要求固定数值表示的应用应使用显式 backend，或将
-native 路由阈值设为 0。
+這是首版 opt-in 整合的有意邊界，現有 CPU 行為保持不變。auto 模式會根據 filter
+候選閾值在兩種表示之間選擇；要求固定數值表示的應用應使用顯式 backend，或將
+native 路由閾值設為 0。
 
-GPU 低精度存储是显式能力，不做隐式 cast。设置 `dtype: "float16"` 会把 cuVS
-dataset 和每个 query 同时 cast 为 float16，brute-force 与 CAGRA 都不使用混合
-query/index dtype。这是存储 cast，不是逐向量量化，必须以默认 float32 为 ground
-truth 报告 Recall@K。与 native 兼容的 int8 仍需单独设计，因为 OpenViking 使用
-逐向量 scale，而 cuVS brute-force 不能直接接收这种 scaled-int8 表示。CAGRA
-int8 或 PQ compression 也应作为近似模式，单独报告 recall/latency/memory frontier。
+GPU 低精度儲存是顯式能力，不做隱式 cast。設定 `dtype: "float16"` 會把 cuVS
+dataset 和每個 query 同時 cast 為 float16，brute-force 與 CAGRA 都不使用混合
+query/index dtype。這是儲存 cast，不是逐向量量化，必須以預設 float32 為 ground
+truth 報告 Recall@K。與 native 相容的 int8 仍需單獨設計，因為 OpenViking 使用
+逐向量 scale，而 cuVS brute-force 不能直接接收這種 scaled-int8 表示。CAGRA
+int8 或 PQ compression 也應作為近似模式，單獨報告 recall/latency/memory frontier。
 
-集成使用 immutable GPU snapshot 和可复用的 cuVS resource/CUDA stream。host 侧
-filter 与 snapshot 工作可以并行，但 `max_concurrent_gpu_searches` 默认是 1：
-单 query brute-force 通常受显存带宽限制，并发 kernel 可能互相争抢带宽、反而降低
-吞吐。只有在目标 GPU 与真实 workload 上测得收益后，才建议显式调大该值。
+整合使用 immutable GPU snapshot 和可複用的 cuVS resource/CUDA stream。host 側
+filter 與 snapshot 工作可以並行，但 `max_concurrent_gpu_searches` 預設是 1：
+單 query brute-force 通常受視訊記憶體頻寬限制，併發 kernel 可能互相爭搶頻寬、反而降低
+吞吐。只有在目標 GPU 與真實 workload 上測得收益後，才建議顯式調大該值。
 
-### 可选的请求微批处理
+### 可選的請求微批處理
 
-精确 brute-force 路径可以把兼容的并发请求合并为一次 cuVS matrix-query 调用：
+精確 brute-force 路徑可以把相容的併發請求合併為一次 cuVS matrix-query 呼叫：
 
 ```json
 {
@@ -214,51 +214,51 @@ filter 与 snapshot 工作可以并行，但 `max_concurrent_gpu_searches` 默�
 }
 ```
 
-scheduler 只会合并使用同一个 immutable GPU snapshot、同一个 prepared filter、
-同一个实际 top-k 的请求；GPU 返回的每一行会映射回原请求，因此标量/路径过滤和
-结果条数语义不变。
+scheduler 只會合併使用同一個 immutable GPU snapshot、同一個 prepared filter、
+同一個實際 top-k 的請求；GPU 返回的每一行會映射回原請求，因此標量/路徑過濾和
+結果條數語義不變。
 
-当 immutable snapshot clean、属于当前 generation，且请求没有 filter 或命中已准备好的
-device filter cache 时，可走 warm admission fast path。该路径会 pin snapshot/filter，
-并在 caller 不获取 device-search gate 的情况下直接入队。dirty、cold 或 stale snapshot，
+當 immutable snapshot clean、屬於當前 generation，且請求沒有 filter 或命中已準備好的
+device filter cache 時，可走 warm admission fast path。該路徑會 pin snapshot/filter，
+並在 caller 不獲取 device-search gate 的情況下直接入隊。dirty、cold 或 stale snapshot，
 device filter cache miss/eviction、rebuild 和 device filter materialization 仍走 gated
-preparation。准备完成后，caller 先入队并释放 gate，再等待结果；只有 micro-batch worker
-会在持有 device-search gate 时执行 matrix search，所以 caller 不会持 gate 等待 worker。
+preparation。準備完成後，caller 先入隊並釋放 gate，再等待結果；只有 micro-batch worker
+會在持有 device-search gate 時執行 matrix search，所以 caller 不會持 gate 等待 worker。
 
-collection window 是延迟与吞吐的权衡。它只限制 scheduler 为收集兼容请求而主动等待的
-时间：从最早的 compatible request 起最多主动等待配置值；它不是 enqueue-to-dispatch
-latency 上限。worker 调度、前一个 GPU call 或 gated device preparation 都可能使实际
-dispatch 更晚。并发充足时，最多由配置上限数量的 query 共用一次 GPU call。
+collection window 是延遲與吞吐的權衡。它只限制 scheduler 為收集相容請求而主動等待的
+時間：從最早的 compatible request 起最多主動等待配置值；它不是 enqueue-to-dispatch
+latency 上限。worker 排程、前一個 GPU call 或 gated device preparation 都可能使實際
+dispatch 更晚。併發充足時，最多由配置上限數量的 query 共用一次 GPU call。
 
-参数约束如下：
+引數約束如下：
 
-- `micro_batching_max_batch_size` 范围为 1 到 8；
-- `micro_batching_max_wait_ms` 范围为 0 到 100 ms；设为 `0` 表示不主动等待，但仍可
-  opportunistically 合并已经同时在队列中的兼容请求；
-- micro-batching 仅支持 `algorithm: "brute_force"`，并要求
+- `micro_batching_max_batch_size` 範圍為 1 到 8；
+- `micro_batching_max_wait_ms` 範圍為 0 到 100 ms；設為 `0` 表示不主動等待，但仍可
+  opportunistically 合併已經同時在佇列中的相容請求；
+- micro-batching 僅支援 `algorithm: "brute_force"`，並要求
   `max_concurrent_gpu_searches: 1`。
 
-该能力默认关闭，是 OpenViking 自己的 micro-batcher，不等同于 cuVS 官方名为
-Dynamic Batching 的组件。首版只支持 exact brute-force；CAGRA 和并发 dispatch 多个
-batch 会在独立验证后再开放。Auto 模式也可使用这些选项，但被路由到原生 CPU 的请求
-不会进入 GPU batch queue。single-row 与 matrix-query 在近似并列分数处可能有顺序
-差异，调参时应同时验证结果集合重合度和 score。
+該能力預設關閉，是 OpenViking 自己的 micro-batcher，不等同於 cuVS 官方名為
+Dynamic Batching 的元件。首版只支援 exact brute-force；CAGRA 和併發 dispatch 多個
+batch 會在獨立驗證後再開放。Auto 模式也可使用這些選項，但被路由到原生 CPU 的請求
+不會進入 GPU batch queue。single-row 與 matrix-query 在近似並列分數處可能有順序
+差異，調參時應同時驗證結果集合重合度和 score。
 
-## 最小功能验证
+## 最小功能驗證
 
-仓库提供的 smoke test 不依赖 embedding 或 VLM 服务：
+倉庫提供的 smoke test 不依賴 embedding 或 VLM 服務：
 
 ```bash
 python examples/cuvs_smoke.py
 
-# 验证 CAGRA 图索引
+# 驗證 CAGRA 圖索引
 python examples/cuvs_smoke.py --algorithm cagra
 
-# 验证显式 float16 路径
+# 驗證顯式 float16 路徑
 python examples/cuvs_smoke.py --dtype float16
 ```
 
-核心调用方式如下：
+核心呼叫方式如下：
 
 ```python
 from openviking.storage.vectordb.collection.local_collection import (
@@ -307,13 +307,13 @@ assert [item.id for item in result.data] == ["a", "b"]
 collection.close()
 ```
 
-## 当前阶段的限制
+## 當前階段的限制
 
-- cuVS 只接管 pure dense search；sparse/hybrid query 在 `fallback_to_native=true` 时走原生本地索引。
-- local 集成通过 native scalar/path index 生成 prefilter，因此继承原生 DSL、`date_time`、`geo_point` 和 path depth 的过滤语义，而不是在 Python 重复实现。
-- 每次 GPU rebuild 会向 native engine 注册一次 cuVS label 顺序。新过滤条件直接复用 native scalar/path index 的 bitmap，再投影为 cuVS row bitset，不再用 Python 扫描所有 host-side records。
-- `filter_cache_size` 会保留最近使用的 GPU bitset 或 native 路由决策，并在数据更新时失效；auto 模式在进入 cuVS search 前预判候选数，不同的首次过滤条件可通过 native engine 的共享读路径并行计算，命中已缓存的 native 路由时则直接进入 native index。generation 校验会阻止跨 mutation 计算出的旧结果写入路由缓存。
-- GPU index 使用 immutable snapshot 和可复用的 cuVS resources/CUDA stream；默认关闭的 micro-batching 可让 compatible warm request 绕过 caller 侧 gate 入队，并由唯一持有 device-search gate 执行 matrix search 的 worker 合批。mutation 和 snapshot commit 使用跨后端写锁。
-- 默认情况下，每次 upsert/delete 后仍由下一次查询同步重建；开启 `auto_background_rebuild` 后，dirty 期间查询走 native，连续写被合并为后台重建。
-- cuVS 索引不作为权威持久化数据；进程重启时会从 OpenViking 本地 store 重建，因此不受 cuVS 跨版本序列化格式变化影响。
-- `brute_force` 适合功能对齐和 ground truth；CAGRA 的 graph/search 参数需要在后续结合召回率、QPS、延迟和显存进行调优。
+- cuVS 只接管 pure dense search；sparse/hybrid query 在 `fallback_to_native=true` 時走原生本地索引。
+- local 整合通過 native scalar/path index 生成 prefilter，因此繼承原生 DSL、`date_time`、`geo_point` 和 path depth 的過濾語義，而不是在 Python 重複實現。
+- 每次 GPU rebuild 會向 native engine 註冊一次 cuVS label 順序。新過濾條件直接複用 native scalar/path index 的 bitmap，再投影為 cuVS row bitset，不再用 Python 掃描所有 host-side records。
+- `filter_cache_size` 會保留最近使用的 GPU bitset 或 native 路由決策，並在資料更新時失效；auto 模式在進入 cuVS search 前預判候選數，不同的首次過濾條件可通過 native engine 的共享讀路徑平行計算，命中已快取的 native 路由時則直接進入 native index。generation 校驗會阻止跨 mutation 計算出的舊結果寫入路由快取。
+- GPU index 使用 immutable snapshot 和可複用的 cuVS resources/CUDA stream；預設關閉的 micro-batching 可讓 compatible warm request 繞過 caller 側 gate 入隊，並由唯一持有 device-search gate 執行 matrix search 的 worker 合批。mutation 和 snapshot commit 使用跨後端寫鎖。
+- 預設情況下，每次 upsert/delete 後仍由下一次查詢同步重建；開啟 `auto_background_rebuild` 後，dirty 期間查詢走 native，連續寫被合併為後臺重建。
+- cuVS 索引不作為權威持久化資料；程序重啟時會從 OpenViking 本地 store 重建，因此不受 cuVS 跨版本序列化格式變化影響。
+- `brute_force` 適合功能對齊和 ground truth；CAGRA 的 graph/search 引數需要在後續結合召回率、QPS、延遲和視訊記憶體進行調優。
