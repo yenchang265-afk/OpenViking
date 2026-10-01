@@ -1088,7 +1088,6 @@ class FSService:
             "level_limit": level_limit,
             "ctx": ctx,
             "tag_filter": tag_filter,
-            "include_tags": include_tags or bool(normalized_tags),
             "before_context": before_context,
             "after_context": after_context,
         }

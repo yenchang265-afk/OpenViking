@@ -15,11 +15,6 @@ from openviking.storage.acl import AclManager
 from openviking.storage.collection_schemas import CollectionSchemas
 from openviking.storage.expr import And, Contains, Eq, In, Or, PathScope, RawDSL
 from openviking.storage.vectordb import engine as vectordb_engine
-from openviking.storage.vectordb.collection.collection import Collection
-from openviking.storage.vectordb.collection.vikingdb_collection import VikingDBCollection
-from openviking.storage.vectordb_adapters.vikingdb_private_adapter import (
-    VikingDBPrivateCollectionAdapter,
-)
 from openviking.storage.viking_vector_index_backend import (
     VectorTransferRollbackError,
     VikingVectorIndexBackend,
@@ -475,159 +470,6 @@ async def test_remote_transfer_scope_avoids_unsupported_contains_filter(mode):
         assert isinstance(filter_expr, And)
         scopes = next(cond for cond in filter_expr.conds if isinstance(cond, Or)).conds
         assert all(isinstance(scope, Eq) and scope.field == "uri" for scope in scopes)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("selected_entries", [False, True], ids=["source", "target"])
-@pytest.mark.parametrize("recursive", [False, True], ids=["file", "directory"])
-@pytest.mark.parametrize("mode", ["vikingdb", "bytedviking", "custom"])
-async def test_transfer_scan_emits_supported_aggregate_request(
-    monkeypatch, selected_entries, recursive, mode
-):
-    root = "viking://resources/docs"
-    entry = f"{root}/file.md"
-    uri = root if recursive else entry
-    records = [
-        _record("file", entry),
-        _record("chunk", entry + "#chunk_0001"),
-        _record("sibling", "viking://resources/other.md"),
-    ]
-    backend = _RealAclMemoryTransferBackend(records)
-    backend.backend_mode = mode
-    adapter = VikingDBPrivateCollectionAdapter(
-        host="unused.invalid",
-        headers=None,
-        project_name="test",
-        collection_name="context",
-        index_name="default",
-    )
-    collection = VikingDBCollection(
-        host="unused.invalid",
-        meta_data={"ProjectName": "test", "CollectionName": "context"},
-    )
-    adapter._collection = Collection(collection)
-    requests = []
-
-    def validate_dsl(node):
-        # The deployed recall service accepts path-index must queries, not
-        # contains/prefix. Validate the actual adapter output at the I/O boundary.
-        assert node["op"] in {"and", "or", "must"}, node
-        if node["op"] in {"and", "or"}:
-            for child in node["conds"]:
-                validate_dsl(child)
-        elif node["field"] == "uri":
-            assert all(value.startswith("/") for value in node["conds"])
-            assert node["para"] in {"-d=0", "-d=-1"}
-
-    async def count(ctx, filter):
-        def data_post(path, data):
-            assert path == "/api/vikingdb/data/agg"
-            assert data["project"] == "test"
-            assert data["collection_name"] == "context"
-            assert data["index_name"] == "default"
-            assert data["op"] == "count"
-            validate_dsl(data["filter"])
-            requests.append(data)
-            return {"agg": {"_total": sum(_matches_filter(filter, record) for record in records)}}
-
-        monkeypatch.setattr(collection, "_data_post", data_post)
-        return adapter.count(filter)
-
-    monkeypatch.setattr(backend, "_strict_transfer_count", count)
-    found, _ = await backend._scan_uri_transfer_scope(
-        _ctx(),
-        uri,
-        recursive=recursive,
-        include_full_records=True,
-        entry_uris=[entry] if selected_entries else None,
-    )
-    assert requests
-    assert {record["id"] for record in found} == (
-        {"file", "chunk"} if recursive and not selected_entries else {"file"}
-    )
-
-
-@pytest.mark.asyncio
-async def test_legacy_transfer_reads_use_private_adapter_query_and_fetch(monkeypatch):
-    source = "viking://resources/source.md"
-    backend = _MemoryTransferBackend([])
-    adapter = VikingDBPrivateCollectionAdapter(
-        host="unused.invalid",
-        headers=None,
-        project_name="test",
-        collection_name="context",
-        index_name="default",
-    )
-    collection = VikingDBCollection(
-        host="unused.invalid", meta_data={"ProjectName": "test", "CollectionName": "context"}
-    )
-    adapter._collection = Collection(collection)
-    account_backend = _SingleAccountBackend(VectorDBBackendConfig(), "acct", shared_adapter=adapter)
-    monkeypatch.setattr(backend, "_get_backend_for_context", lambda ctx: account_backend)
-    monkeypatch.setattr(
-        backend,
-        "_strict_transfer_get",
-        VikingVectorIndexBackend._strict_transfer_get.__get__(backend),
-    )
-    monkeypatch.setattr(
-        "openviking.storage.vectordb_adapters.base.get_openviking_config",
-        lambda: SimpleNamespace(embedding=SimpleNamespace(dimension=2)),
-    )
-    paths = []
-
-    def data_post(path, data):
-        paths.append(path)
-        if path == "/api/vikingdb/data/search/vector":
-            assert data["limit"] == 100 and data["offset"] == 0
-            assert len(data["dense_vector"]) == 2
-            assert "field" not in data and "order" not in data
-            assert data["filter"] == {
-                "op": "and",
-                "conds": [
-                    {"op": "must", "field": "account_id", "conds": ["acct"]},
-                    {
-                        "op": "and",
-                        "conds": [
-                            {"op": "must", "field": "account_id", "conds": ["acct"]},
-                            {
-                                "op": "must",
-                                "field": "uri",
-                                "conds": ["/resources/source.md"],
-                                "para": "-d=0",
-                            },
-                        ],
-                    },
-                ],
-            }
-            return {
-                "data": [
-                    {"id": "file", "fields": {"uri": "/resources/source.md"}},
-                    {"id": "gone", "fields": {"uri": "/resources/source.md"}},
-                ]
-            }
-        if path == "/api/vikingdb/data/fetch_in_collection":
-            assert data["ids"] == ["file", "gone"]
-            return {
-                "fetch": [
-                    {
-                        "id": "file",
-                        "fields": {
-                            "uri": "/resources/source.md",
-                            "account_id": "acct",
-                            "vector": [0.1, 0.2],
-                        },
-                    }
-                ],
-                "ids_not_exist": ["gone"],
-            }
-        raise AssertionError(f"Legacy reads must not use aggregate or scalar search: {path}")
-
-    monkeypatch.setattr(collection, "_data_post", data_post)
-    records, _ = await backend._read_uri_transfer_entries(
-        _ctx(), [source], include_full_records=True
-    )
-    assert [(r["id"], r["uri"], r["vector"]) for r in records] == [("file", source, [0.1, 0.2])]
-    assert paths == ["/api/vikingdb/data/search/vector", "/api/vikingdb/data/fetch_in_collection"]
 
 
 @pytest.mark.asyncio
@@ -1142,7 +984,7 @@ async def test_uri_mapping_preserves_target_records_for_unaffected_entries(trans
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("transfer_method", ["copy_uri_mapping", "update_uri_mapping"])
-@pytest.mark.parametrize("backend_mode", ["local", "volcengine", "vikingdb"])
+@pytest.mark.parametrize("backend_mode", ["local", "http"])
 async def test_merge_target_scan_excludes_unrelated_subtrees(
     transfer_method, backend_mode, monkeypatch
 ):

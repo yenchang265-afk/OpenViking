@@ -337,7 +337,7 @@ Initial bootstrap can be completed entirely within the browser:
 
 With an embedded vector backend (`local` or `cuvs`), OpenViking holds an exclusive OS file lock on `storage.workspace` by default. The `.openviking.lock` file remains on disk; its presence does not mean a server is running. The OS releases the lock when the server closes it or the process terminates. Do not manually delete a running server's lock file.
 
-Remote vector backends (`http`, `volcengine`, `vikingdb`) do not acquire this workspace lock, including when files are stored on a shared NAS. They do not require `storage.skip_process_lock=true`. Placing an embedded vector database on NAS does not make it safe to share between processes.
+Remote vector backends (`http`, `opengauss`) do not acquire this workspace lock, including when files are stored on a shared NAS. They do not require `storage.skip_process_lock=true`. Placing an embedded vector database on NAS does not make it safe to share between processes.
 
 For embedded vector backends, when upgrading from a version that uses `.openviking.pid`, stop all older servers using the workspace before starting the new version. The new version does not use leftover PIDs to determine ownership; the two locking protocols cannot be mixed.
 
@@ -365,7 +365,7 @@ Example:
 }
 ```
 
-This example uses a remote HTTP vector service. Replace its URL with your deployment's vector-service address, or configure a `volcengine` or `vikingdb` backend.
+This example uses a remote HTTP vector service. Replace its URL with your deployment's vector-service address, or configure an `opengauss` backend.
 
 Example with explicit local SQLite paths for QueueFS and usage audit:
 
@@ -412,7 +412,7 @@ helm install openviking ./examples/k8s-helm \
   --set openviking.config.vlm.api_key="YOUR_API_KEY"
 ```
 
-For a detailed cloud deployment guide (including Volcengine TOS + VikingDB + Ark configuration), see the [Cloud Deployment Guide](https://github.com/volcengine/OpenViking/blob/main/examples/cloud/GUIDE.md).
+For a detailed cloud deployment guide (including Volcengine TOS + Ark configuration), see the [Cloud Deployment Guide](https://github.com/volcengine/OpenViking/blob/main/examples/cloud/GUIDE.md).
 
 ## Health Checks
 

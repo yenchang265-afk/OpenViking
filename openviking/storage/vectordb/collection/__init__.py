@@ -11,16 +11,10 @@ from openviking.storage.vectordb.collection.local_collection import (
     LocalCollection,
     get_or_create_local_collection,
 )
-from openviking.storage.vectordb.collection.volcengine_collection import (
-    VolcengineCollection,
-    get_or_create_volcengine_collection,
-)
 
 __all__ = [
     "ICollection",
     "Collection",
-    "VolcengineCollection",
-    "get_or_create_volcengine_collection",
     "HttpCollection",
     "get_or_create_http_collection",
     "LocalCollection",

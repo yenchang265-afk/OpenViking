@@ -93,14 +93,13 @@ from openviking_cli.exceptions import (
     ResourceExhaustedError,
 )
 from openviking_cli.session.user_id import UserIdentifier
-from openviking_cli.utils.config.grep_config import GrepEngine
 from openviking_cli.utils.logger import get_logger
 from openviking_cli.utils.uri import VikingURI
 
 if TYPE_CHECKING:
     from openviking.storage.acl import AclManager
     from openviking.storage.viking_vector_index_backend import VikingVectorIndexBackend
-    from openviking_cli.utils.config import GlobConfig, GrepConfig, RerankConfig, RetrievalConfig
+    from openviking_cli.utils.config import RerankConfig, RetrievalConfig
 
 
 # ========== VikingFS Main Class ==========
@@ -132,8 +131,6 @@ class VikingFS(
         vector_store: Optional["VikingVectorIndexBackend"] = None,
         acl_manager: Optional["AclManager"] = None,
         retrieval_config: Optional["RetrievalConfig"] = None,
-        grep_config: Optional["GrepConfig"] = None,
-        glob_config: Optional["GlobConfig"] = None,
         timeout: int = 10,
         encryptor: Optional[Any] = None,
     ):
@@ -144,12 +141,7 @@ class VikingFS(
         self.vector_store = vector_store
         self.acl_manager = acl_manager
         self.retrieval_config = retrieval_config
-        self.grep_config = grep_config
-        self.glob_config = glob_config
         self._encryptor = encryptor
-        self._count_cache: Dict[str, tuple] = {}  # cache_key → (count, timestamp)
-        self._count_cache_max_size = 1024
-        self._fulltext_available: Optional[bool] = None  # cached result of _collection_has_fulltext
         self._bound_ctx: contextvars.ContextVar[Optional[RequestContext]] = contextvars.ContextVar(
             "vikingfs_bound_ctx", default=None
         )

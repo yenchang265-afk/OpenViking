@@ -65,14 +65,6 @@
             "name": "context",
             "backend": "local",
             "project": "default",
-            "volcengine": {
-                "region": "cn-beijing",
-                "ak": null,
-                "sk": null,
-                "api_key": null,
-                "host": "api-vikingdb.vikingdb.cn-beijing.volces.com",
-                "session_token": null,
-            },
         },
         "agfs": {
             "backend": "local",
@@ -248,8 +240,6 @@
         "recall_intent_timeout_s": 5.0,
         "recall_rewrite_timeout_s": 30.0,
     },
-    "grep": {"engine": "auto", "switch_to_remote_threshold": 10000},
-    "glob": {"engine": "fs", "switch_to_remote_threshold": 100},
     "auto_generate_l0": true,
     "auto_generate_l1": true,
     "default_search_mode": "thinking",

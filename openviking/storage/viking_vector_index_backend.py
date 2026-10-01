@@ -315,9 +315,9 @@ class _SingleAccountBackend:
         except Exception:
             pass
 
-        # ``content`` (full text) is only meaningful for VikingDB-backed backends,
-        # which use it for server-side full-text grep. Every other backend leaves
-        # ``USE_CONTENT_FIELD=False`` and gets ``content`` dropped here, so its large
+        # ``content`` (full text) is only kept for adapters that opt in with
+        # ``USE_CONTENT_FIELD=True``. Built-in backends leave it ``False`` and get
+        # ``content`` dropped here, so its large
         # payload can't blow past the local engine's per-field byte limit. A new backend
         # that doesn't need ``content`` requires no extra code.
         if self._adapter.USE_CONTENT_FIELD:
@@ -984,7 +984,6 @@ class VikingVectorIndexBackend:
         init_cpp_logging()
 
         self._config = config
-        self._backend_type = config.backend  # expose for engine resolution
         self.vector_dim = config.dimension
         self.distance_metric = config.distance_metric
         self.sparse_weight = config.sparse_weight

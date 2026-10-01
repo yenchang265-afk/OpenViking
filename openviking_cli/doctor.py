@@ -163,7 +163,7 @@ def check_native_engine() -> tuple[bool, str, Optional[str]]:
         return (
             False,
             f"No compatible engine variant (platform: {machine}, packaged: {variants})",
-            'pip install openviking --upgrade --force-reinstall\n  Alt: Use vectordb.backend = "volcengine" instead of "local"',
+            "pip install openviking --upgrade --force-reinstall",
         )
 
     return True, f"variant={ENGINE_VARIANT}", None

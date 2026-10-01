@@ -1019,44 +1019,6 @@ Jev 适配器将 query 和候选文档作为结构化 System One `state`，并�
 
 两个 LLM 环节都是纯 opt-in：查询扩展需要传 `session_id`，重写需要传 `rewrite`。任一环节失败都优雅降级，不会阻塞召回。
 
-### grep
-
-Grep 引擎配置，用于内容模式搜索。这些设置为服务端配置，不支持请求级别覆盖。
-
-```json
-{
-  "grep": {
-    "engine": "auto",
-    "switch_to_remote_threshold": 10000
-  }
-}
-```
-
-| 参数 | 类型 | 说明 | 默认值 |
-|------|------|------|--------|
-| `engine` | str | 搜索引擎模式：`"auto"` 在可用时使用 VikingDB BM25 召回，不可用时回退到本地文件系统搜索；`"fs"` 强制仅使用本地文件系统搜索。 | `"auto"` |
-| `switch_to_remote_threshold` | int | 切换到 VikingDB BM25 召回的 L2 记录数阈值。当搜索范围内的 L2 文件数达到此阈值时，使用 VikingDB BM25 进行第一阶段召回；否则使用本地文件系统搜索。设为 `0` 表示始终使用 VikingDB BM25。必须 ≥ 0。 | `10000` |
-
-对于 VikingDB / Volcengine FullText grep，OpenViking 会写入 `content` text 字段用于 BM25 召回。源上下文中保留完整内容，仅在最终写入向量库 adapter payload 时将该字段截断到 **1 MB**，以满足后端 payload 限制。只有 VikingDB 系后端使用 `content`；其它后端（`local`、`cuvs`、`http`）不写入该字段。
-
-### glob
-
-Glob 引擎配置，用于路径模式匹配。这些设置为服务端配置，不支持请求级别覆盖。
-
-```json
-{
-  "glob": {
-    "engine": "fs",
-    "switch_to_remote_threshold": 100
-  }
-}
-```
-
-| 参数 | 类型 | 说明 | 默认值 |
-|------|------|------|--------|
-| `engine` | str | 路径匹配引擎模式：`"auto"` 在 VikingDB / Volcengine 向量库可用且搜索范围记录数达到阈值时，使用远程 `path_glob` 后处理；不可用或失败时回退到本地文件系统搜索。`"fs"` 强制仅使用本地文件系统搜索。 | `"fs"` |
-| `switch_to_remote_threshold` | int | `auto` 模式切换到远程 `path_glob` 的记录数阈值。当搜索范围内记录数达到此阈值时使用远程路径匹配。设为 `0` 表示始终使用远程路径匹配。必须 ≥ 0。 | `100` |
-
 ### storage
 
 用于存储上下文数据 ，包括文件存储（RAGFS）和向量库存储（VectorDB）。
@@ -1497,15 +1459,13 @@ RAGFS 默认使用 Rust binding 模式，通过 Rust 实现直接访问文件系
 
 | 参数 | 类型 | 说明 | 默认值 |
 |------|------|------|--------|
-| `backend` | str | VectorDB 后端类型: 'local'（基于文件）, 'http'（远程服务）, 'volcengine'（云上 VikingDB）, 'vikingdb'（私有部署）或 'cuvs'（本地存储 + GPU dense search） | "local" |
+| `backend` | str | VectorDB 后端类型: 'local'（基于文件）, 'http'（远程服务）, 'cuvs'（本地存储 + GPU dense search）或 'opengauss'（openGauss DataVec） | "local" |
 | `name` | str | VectorDB 的集合名称 | "context" |
 | `url` | str | 'http' 类型的远程服务 URL（例如 'http://localhost:5000'） | null |
 | `project_name` | str | 项目名称（别名 project） | "default" |
 | `distance_metric` | str | 向量相似度搜索的距离度量（例如 'cosine', 'l2', 'ip'） | "cosine" |
 | `dimension` | int | 向量嵌入的维度 | 0 |
 | `sparse_weight` | float | 混合向量搜索的稀疏权重，仅在使用混合索引时生效 | 0.0 |
-| `volcengine` | object | 'volcengine' 类型的 VikingDB 配置 | - |
-| `vikingdb` | object | 'vikingdb' 类型的私有部署配置 | - |
 | `cuvs` | object | NVIDIA cuVS 配置，也用于在 'local' 下显式开启显存感知自动模式，参见 [cuVS 使用指南](./16-cuvs.md) | - |
 
 默认使用本地模式
@@ -1518,28 +1478,6 @@ RAGFS 默认使用 Rust binding 模式，通过 Rust 实现直接访问文件系
   }
 }
 ```
-
-<details>
-<summary><b>volcengine vikingDB</b></summary>
-支持火山引擎云上部署的 VikingDB
-
-```json
-{
-  "storage": {
-    "vectordb": {
-      "name": "context",
-      "backend": "volcengine",
-      "project": "default",
-      "volcengine": {
-        "region": "cn-beijing",
-        "ak": "your-access-key",
-        "sk": "your-secret-key"
-      }
-    }
-  }
-}
-```
-</details>
 
 ##### ACL schema
 
@@ -1554,7 +1492,7 @@ acl_inherited_grants
 
 本地 backend 会在启动时为存量 collection 增加字段并重建标量索引。旧记录不做全量回填；缺失 ACL 字段按 `acl_mode=none` 和空列表读取。
 
-火山向量库等远端 backend 的存量 collection 需要由部署方预先添加这些字段和 scalar index，OpenViking 只校验 schema。`volcengine` API key 数据面模式还要求 context collection 和配置的 index 已存在。权限模型详见 [资源访问控制（ACL）](../concepts/15-acl.md)。
+远端 backend 的存量 collection 需要由部署方预先添加这些字段和 scalar index，OpenViking 只校验 schema。权限模型详见 [资源访问控制（ACL）](../concepts/15-acl.md)。
 
 
 
@@ -1997,7 +1935,7 @@ Task 记录文件位于所属账号的系统目录：
       "lock_expire": 300.0
     },
     "vectordb": {
-      "backend": "local|cuvs|http|volcengine|vikingdb",
+      "backend": "local|cuvs|http|opengauss",
       "url": "string",
       "project": "string"
     }

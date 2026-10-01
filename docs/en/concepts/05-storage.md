@@ -143,7 +143,8 @@ index_meta = {
 |---------|-------------|
 | `local` | Local persistence |
 | `http` | HTTP remote service |
-| `volcengine` | Volcengine VikingDB |
+| `cuvs` | Local persistence + NVIDIA cuVS dense search |
+| `opengauss` | openGauss DataVec |
 
 ## Vector Synchronization
 

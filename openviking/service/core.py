@@ -433,8 +433,6 @@ class OpenVikingService:
             vector_store=self._vikingdb_manager,
             acl_manager=self._vikingdb_manager.acl_manager,
             retrieval_config=config.retrieval,
-            grep_config=config.grep,
-            glob_config=config.glob,
             enable_recorder=enable_recorder,
             encryptor=self._encryptor,
         )

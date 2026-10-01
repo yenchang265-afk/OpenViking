@@ -9,13 +9,8 @@
     "workspace": "/app/data",
     "vectordb": {
       "name": "context",
-      "backend": "volcengine",
-      "project": "default",
-      "volcengine": {
-        "region": "cn-beijing",
-        "ak": "<your-volcengine-ak>",
-        "sk": "<your-volcengine-sk>"
-      }
+      "backend": "local",
+      "project": "default"
     },
     "agfs": {
       "backend": "s3",

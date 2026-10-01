@@ -234,8 +234,6 @@ class IOPlayback:
                 url=vectordb_config.url,
                 dimension=config.embedding.dimension,
             )
-            if vectordb_config.volcengine:
-                backend_config.volcengine = vectordb_config.volcengine
             vector_store = VikingVectorIndexBackend(config=backend_config)
 
         if self.enable_fs:

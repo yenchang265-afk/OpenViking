@@ -8,7 +8,6 @@ import logging
 from types import SimpleNamespace
 
 import pytest
-import requests
 
 from openviking.models.embedder.base import DenseEmbedderBase, EmbedResult
 from openviking.server.identity import RequestContext, Role, UserIdentifier
@@ -20,9 +19,7 @@ from openviking.storage.collection_schemas import (
     init_context_collection,
 )
 from openviking.storage.errors import (
-    ConnectionError,
     EmbeddingRebuildRequiredError,
-    VikingDBException,
 )
 from openviking.storage.expr import Eq
 from openviking.storage.index_action import IndexAction
@@ -31,12 +28,6 @@ from openviking.storage.queuefs.process_result import ProcessOutcome
 from openviking.storage.vector_ids import vector_record_id
 from openviking.storage.vectordb import engine as vectordb_engine
 from openviking.storage.vectordb.collection.result import UpdateResult, UpsertDataResult
-from openviking.storage.vectordb.collection.vikingdb_clients import VikingDBClient
-from openviking.storage.vectordb.collection.vikingdb_collection import VikingDBCollection
-from openviking.storage.vectordb.collection.volcengine_api_key_collection import (
-    VolcengineApiKeyCollection,
-)
-from openviking.storage.vectordb.collection.volcengine_collection import VolcengineCollection
 from openviking.storage.vectordb_adapters.base import (
     VIKINGDB_TEXT_FIELD_BYTE_LIMIT,
     _truncate_text_field,
@@ -49,10 +40,7 @@ from openviking.storage.viking_vector_index_backend import (
     _SingleAccountBackend,
 )
 from openviking_cli.exceptions import InternalError
-from openviking_cli.utils.config.vectordb_config import (
-    VectorDBBackendConfig,
-    VolcengineConfig,
-)
+from openviking_cli.utils.config.vectordb_config import VectorDBBackendConfig
 
 
 class _DummyEmbedder:
@@ -75,15 +63,13 @@ class _DummyConfig:
     def __init__(
         self,
         embedder: _DummyEmbedder,
-        backend: str = "volcengine",
-        volcengine_data_api_key: str | None = None,
+        backend: str = "http",
         max_input_tokens: int = 4096,
     ):
         self.storage = SimpleNamespace(
             vectordb=SimpleNamespace(
                 name="context",
                 backend=backend,
-                volcengine=SimpleNamespace(api_key=volcengine_data_api_key),
             )
         )
         self.log = SimpleNamespace(
@@ -1261,175 +1247,6 @@ def test_context_collection_signature_has_no_include_parent_uri():
     assert "include_parent_uri" not in signature.parameters
 
 
-def test_volcengine_api_key_collection_reports_trusted_openviking_schema():
-    collection = VolcengineApiKeyCollection(
-        api_key="vk-test-token",
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context", "IndexName": "default"},
-    )
-
-    meta = collection.get_meta_data()
-
-    field_names = {field["FieldName"] for field in meta["Fields"]}
-    assert "content" in field_names
-    assert "search_tags" in field_names
-    assert any(item.get("Field") == "content" for item in meta["FullText"])
-
-
-def test_volcengine_api_key_collection_ignores_unknown_fields_on_writes():
-    calls = []
-
-    class _Collection(VolcengineApiKeyCollection):
-        def _data_post(self, path, data):
-            calls.append((path, data))
-            return {"updated": 1}
-
-    collection = _Collection(
-        api_key="vk-test-token",
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context", "IndexName": "default"},
-    )
-
-    collection.upsert_data([{"id": "rec-1", "content": "hello"}])
-    collection.update_data([{"id": "rec-1", "search_tags": ["tag"]}])
-
-    assert calls[0] == (
-        "/api/vikingdb/data/upsert",
-        {
-            "project": "default",
-            "collection_name": "context",
-            "data": [{"id": "rec-1", "content": "hello"}],
-            "ttl": 0,
-            "ignore_unknown_fields": True,
-        },
-    )
-    assert calls[1] == (
-        "/api/vikingdb/data/update",
-        {
-            "project": "default",
-            "collection_name": "context",
-            "data": [{"id": "rec-1", "search_tags": ["tag"]}],
-            "ignore_unknown_fields": True,
-        },
-    )
-
-
-def test_volcengine_aksk_collection_ignores_unknown_fields_on_writes():
-    calls = []
-
-    class _Collection(VolcengineCollection):
-        def _data_post(self, path, data):
-            calls.append((path, data))
-            return {"updated": 1}
-
-    collection = _Collection(
-        ak="ak",
-        sk="sk",
-        region="cn-beijing",
-        meta_data={"ProjectName": "default", "CollectionName": "context"},
-    )
-
-    collection.upsert_data([{"id": "rec-1", "content": "hello"}])
-    collection.update_data([{"id": "rec-1", "search_tags": ["tag"]}])
-
-    assert calls[0][1]["ignore_unknown_fields"] is True
-    assert calls[1][1]["ignore_unknown_fields"] is True
-
-
-def test_private_vikingdb_collection_ignores_unknown_fields_on_writes():
-    calls = []
-
-    class _Collection(VikingDBCollection):
-        def _data_post(self, path, data):
-            calls.append((path, data))
-            return {"updated": 1}
-
-    collection = _Collection(
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context"},
-    )
-
-    collection.upsert_data([{"id": "rec-1", "content": "hello"}])
-    collection.update_data([{"id": "rec-1", "search_tags": ["tag"]}])
-
-    assert calls[0][1]["ignore_unknown_fields"] is True
-    assert calls[1][1]["ignore_unknown_fields"] is True
-
-
-def test_private_vikingdb_collection_raises_on_data_api_error(monkeypatch):
-    class _Response:
-        status_code = 403
-        text = '{"code":"AccessDenied","message":"license state Downgraded rejects data write"}'
-
-        def json(self):
-            return {
-                "code": "AccessDenied",
-                "message": "license state Downgraded rejects data write",
-            }
-
-    collection = VikingDBCollection(
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context"},
-    )
-    monkeypatch.setattr(collection.client, "do_req", lambda *args, **kwargs: _Response())
-
-    with pytest.raises(VikingDBException, match="license state Downgraded") as exc_info:
-        collection.upsert_data([{"id": "rec-1", "content": "hello"}])
-
-    assert exc_info.value.status_code == 403
-    assert exc_info.value.code == "AccessDenied"
-    assert exc_info.value.error_type == "http_client_error"
-    assert exc_info.value.retryable is False
-    assert exc_info.value.action == "/api/vikingdb/data/upsert"
-
-
-def test_private_vikingdb_collection_marks_server_error_retryable(monkeypatch):
-    class _Response:
-        status_code = 503
-        text = '{"code":"ServiceUnavailable","message":"temporarily unavailable"}'
-
-        def json(self):
-            return {
-                "code": "ServiceUnavailable",
-                "message": "temporarily unavailable",
-            }
-
-    collection = VikingDBCollection(
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context"},
-    )
-    monkeypatch.setattr(collection.client, "do_req", lambda *args, **kwargs: _Response())
-
-    with pytest.raises(VikingDBException) as exc_info:
-        collection.upsert_data([{"id": "rec-1", "content": "hello"}])
-
-    assert exc_info.value.status_code == 503
-    assert exc_info.value.code == "ServiceUnavailable"
-    assert exc_info.value.error_type == "http_server_error"
-    assert exc_info.value.retryable is True
-
-
-def test_private_vikingdb_client_wraps_connection_error(monkeypatch):
-    def _raise_connection_error(**kwargs):
-        del kwargs
-        raise requests.ConnectionError("connection refused")
-
-    client = VikingDBClient("https://vikingdb.example.com")
-    monkeypatch.setattr(client._session, "request", _raise_connection_error)
-
-    with pytest.raises(ConnectionError, match="connection refused") as exc_info:
-        client.do_req(
-            "POST",
-            "/api/vikingdb/data/upsert",
-            req_body={},
-        )
-
-    assert exc_info.value.status_code is None
-    assert exc_info.value.error_type == "connection_error"
-    assert exc_info.value.retryable is True
-    assert exc_info.value.action == "/api/vikingdb/data/upsert"
-
-
 def test_resource_service_raises_on_queue_status_errors():
     status = {
         "embedding": {"processed_count": 1, "error_count": 1, "errors": ["AccessDenied"]},
@@ -1440,82 +1257,6 @@ def test_resource_service_raises_on_queue_status_errors():
         ResourceService._raise_queue_status_errors(status)
 
     assert "AccessDenied" in str(exc_info.value)
-
-
-def _exercise_fetch_and_search_apis(collection):
-    collection.fetch_data(["rec-1"])
-    collection.search_by_vector("default", dense_vector=[0.1, 0.2])
-    collection.search_by_id("default", "rec-1")
-    collection.search_by_multimodal("default", text="hello")
-    collection.search_by_random("default")
-    collection.search_by_keywords("default", query="hello")
-    collection.search_by_scalar("default", field="updated_at")
-
-
-def test_volcengine_api_key_collection_ignores_unknown_fields_on_fetch_and_search():
-    calls = []
-
-    class _Collection(VolcengineApiKeyCollection):
-        def _data_post(self, path, data):
-            calls.append((path, data))
-            return {}
-
-    collection = _Collection(
-        api_key="vk-test-token",
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context", "IndexName": "default"},
-    )
-
-    _exercise_fetch_and_search_apis(collection)
-
-    assert [path for path, _ in calls] == [
-        "/api/vikingdb/data/fetch_in_collection",
-        "/api/vikingdb/data/search/vector",
-        "/api/vikingdb/data/search/id",
-        "/api/vikingdb/data/search/multi_modal",
-        "/api/vikingdb/data/search/random",
-        "/api/vikingdb/data/search/keywords",
-        "/api/vikingdb/data/search/scalar",
-    ]
-    assert all(data["ignore_unknown_fields"] is True for _, data in calls)
-
-
-def test_volcengine_aksk_collection_ignores_unknown_fields_on_fetch_and_search():
-    calls = []
-
-    class _Collection(VolcengineCollection):
-        def _data_post(self, path, data, **kwargs):
-            calls.append((path, data))
-            return {}
-
-    collection = _Collection(
-        ak="ak",
-        sk="sk",
-        region="cn-beijing",
-        meta_data={"ProjectName": "default", "CollectionName": "context"},
-    )
-
-    _exercise_fetch_and_search_apis(collection)
-
-    assert all(data["ignore_unknown_fields"] is True for _, data in calls)
-
-
-def test_private_vikingdb_collection_ignores_unknown_fields_on_fetch_and_search():
-    calls = []
-
-    class _Collection(VikingDBCollection):
-        def _data_post(self, path, data):
-            calls.append((path, data))
-            return {}
-
-    collection = _Collection(
-        host="https://vikingdb.example.com",
-        meta_data={"ProjectName": "default", "CollectionName": "context"},
-    )
-
-    _exercise_fetch_and_search_apis(collection)
-
-    assert all(data["ignore_unknown_fields"] is True for _, data in calls)
 
 
 @pytest.mark.asyncio
@@ -1531,7 +1272,7 @@ async def test_init_context_collection_uses_backend_specific_schema(monkeypatch)
     embedder = _DummyEmbedder()
     monkeypatch.setattr(
         "openviking_cli.utils.config.get_openviking_config",
-        lambda: _DummyConfig(embedder, backend="volcengine"),
+        lambda: _DummyConfig(embedder, backend="http"),
     )
 
     created = await init_context_collection(_Storage())
@@ -1564,39 +1305,6 @@ async def test_init_context_collection_excludes_parent_uri_for_local_backend(mon
     field_names = [field["FieldName"] for field in captured["schema"]["Fields"]]
     assert "parent_uri" not in field_names
     assert "parent_uri" not in captured["schema"]["ScalarIndex"]
-
-
-@pytest.mark.asyncio
-async def test_init_context_collection_skips_bootstrap_for_api_key_auth_mode_on_volcengine(
-    monkeypatch,
-):
-    class _Storage:
-        async def create_collection(self, name, schema):  # pragma: no cover
-            del name, schema
-            raise AssertionError("create_collection should not be called for data-plane backend")
-
-        async def get_collection_meta(self):  # pragma: no cover
-            raise AssertionError("get_collection_meta should not be called for data-plane backend")
-
-        async def update_collection_description(self, description):  # pragma: no cover
-            del description
-            raise AssertionError(
-                "update_collection_description should not be called for data-plane backend"
-            )
-
-    embedder = _DummyEmbedder()
-    monkeypatch.setattr(
-        "openviking_cli.utils.config.get_openviking_config",
-        lambda: _DummyConfig(
-            embedder,
-            backend="volcengine",
-            volcengine_data_api_key="vk-test-token",
-        ),
-    )
-
-    created = await init_context_collection(_Storage())
-
-    assert created is False
 
 
 def test_single_account_backend_filters_parent_uri_against_current_schema():
@@ -1714,7 +1422,7 @@ async def test_single_account_backend_truncates_content_only_at_vector_write():
             }
 
     class _Adapter:
-        mode = "volcengine"
+        mode = "http"
         USE_CONTENT_FIELD = True
 
         def get_collection(self):
@@ -1726,10 +1434,10 @@ async def test_single_account_backend_truncates_content_only_at_vector_write():
 
     backend = _SingleAccountBackend(
         config=VectorDBBackendConfig(
-            backend="volcengine",
+            backend="http",
+            url="http://vectordb.invalid",
             name="context",
             dimension=2,
-            volcengine=VolcengineConfig(ak="ak", sk="sk", region="cn-beijing"),
         ),
         bound_account_id="acc1",
         shared_adapter=_Adapter(),
@@ -2697,7 +2405,7 @@ def test_storage_upsert_signatures_use_options_instead_of_partial_update():
 
 
 @pytest.mark.asyncio
-async def test_volcengine_backend_upsert_partial_update_reads_then_upserts_existing_record():
+async def test_remote_backend_upsert_partial_update_reads_then_upserts_existing_record():
     calls = []
 
     class _Collection:
@@ -2712,7 +2420,7 @@ async def test_volcengine_backend_upsert_partial_update_reads_then_upserts_exist
             }
 
     class _Adapter:
-        mode = "volcengine"
+        mode = "http"
         USE_CONTENT_FIELD = True
 
         def get(self, ids):
@@ -2732,10 +2440,10 @@ async def test_volcengine_backend_upsert_partial_update_reads_then_upserts_exist
 
     backend = _SingleAccountBackend(
         config=VectorDBBackendConfig(
-            backend="volcengine",
+            backend="http",
+            url="http://vectordb.invalid",
             name="context",
             dimension=2,
-            volcengine=VolcengineConfig(ak="ak", sk="sk", region="cn-beijing"),
         ),
         bound_account_id="acc1",
         shared_adapter=_Adapter(),
@@ -2765,7 +2473,7 @@ async def test_volcengine_backend_upsert_partial_update_reads_then_upserts_exist
 
 
 @pytest.mark.asyncio
-async def test_volcengine_backend_upsert_partial_update_creates_when_record_does_not_exist():
+async def test_remote_backend_upsert_partial_update_creates_when_record_does_not_exist():
     calls = []
 
     class _Collection:
@@ -2783,7 +2491,7 @@ async def test_volcengine_backend_upsert_partial_update_creates_when_record_does
             }
 
     class _Adapter:
-        mode = "volcengine"
+        mode = "http"
         USE_CONTENT_FIELD = True
 
         def get(self, ids):
@@ -2796,10 +2504,10 @@ async def test_volcengine_backend_upsert_partial_update_creates_when_record_does
 
     backend = _SingleAccountBackend(
         config=VectorDBBackendConfig(
-            backend="volcengine",
+            backend="http",
+            url="http://vectordb.invalid",
             name="context",
             dimension=2,
-            volcengine=VolcengineConfig(ak="ak", sk="sk", region="cn-beijing"),
         ),
         bound_account_id="acc1",
         shared_adapter=_Adapter(),

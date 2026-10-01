@@ -1,6 +1,6 @@
 # OpenViking 云上部署指南（火山引擎）
 
-本文档介绍如何将 OpenViking 部署到火山引擎云上，使用 TOS（对象存储）+ VikingDB（向量数据库）+ 方舟大模型作为后端。
+本文档介绍如何将 OpenViking 部署到火山引擎云上，使用 TOS（对象存储）+ 本地向量库 + 方舟大模型作为后端。
 
 ## 概览
 
@@ -9,12 +9,12 @@
 ```
 用户请求 → OpenViking Server (1933)
                 ├── AGFS → TOS (S3 兼容协议，存储文件数据)
-                ├── VectorDB → VikingDB (向量检索)
+                ├── VectorDB → local (向量检索，持久化在 workspace)
                 ├── Embedding → 方舟 API (doubao-embedding-vision)
                 └── VLM → 方舟 API (doubao-seed)
 ```
 
-> **地域说明**：TOS 和 VikingDB 均需要选择地域（region），不同地域对应不同的服务域名。所有云服务应部署在同一地域以降低网络延迟。目前支持的地域包括 `cn-beijing`、`cn-shanghai`、`cn-guangzhou` 等，本文以 `cn-beijing` 为例。
+> **地域说明**：TOS 和方舟服务需要选择地域（region），不同地域对应不同的服务域名。所有云服务应部署在同一地域以降低网络延迟。目前支持的地域包括 `cn-beijing`、`cn-shanghai`、`cn-guangzhou` 等，本文以 `cn-beijing` 为例。
 
 ## 前置条件
 
@@ -34,7 +34,7 @@ TOS 用于持久化存储 OpenViking 的文件数据（AGFS 后端）。
 2. 进入 **对象存储 TOS** → 开通服务
 3. 创建存储桶：
    - 桶名称：如 `openvikingdata`
-   - 地域：如 `cn-beijing`（需与 VikingDB 等其他服务保持一致）
+   - 地域：如 `cn-beijing`（需与其他云服务保持一致）
    - 存储类型：标准存储
    - 访问权限：私有
 4. 记录桶名称、地域和 S3 兼容 endpoint，填入配置文件的 `storage.agfs.s3` 部分
@@ -47,32 +47,20 @@ TOS 用于持久化存储 OpenViking 的文件数据（AGFS 后端）。
 > | cn-shanghai | `https://tos-s3-cn-shanghai.volces.com` |
 > | cn-guangzhou | `https://tos-s3-cn-guangzhou.volces.com` |
 
-### 1.2 开通 VikingDB（向量数据库）
+### 1.2 申请 AK/SK（IAM 访问密钥）
 
-VikingDB 用于存储和检索向量嵌入。
-
-1. 登陆 [火山引擎控制台](https://console.volcengine.com/) →  [进入 VikingDB 下单开通界面](https://console.volcengine.com/vikingdb/region:vikingdb+cn-beijing/home) -> 选择对应的地域并开通向量数据库
-2. 开通服务（按量付费即可），选择与 TOS 相同的地域
-3. 无需手动创建 Collection，OpenViking 启动后会自动创建
-4. 在配置文件中填写 `storage.vectordb.volcengine.region`，OpenViking 会自动路由到对应地域的 VikingDB 服务
-
-### 1.3 申请 AK/SK（IAM 访问密钥）
-
-AK/SK 同时用于 TOS 和 VikingDB 的鉴权。
+AK/SK 用于 TOS 的鉴权。
 
 1. 进入 [火山引擎控制台](https://console.volcengine.com/) → **访问控制 IAM**
 2. 创建子用户（建议不使用主账号 AK/SK）
 3. 为子用户授权以下策略：
    - `TOSFullAccess`（或精确到桶级别的自定义策略）
-   - `VikingDBFullAccess`
 4. 为子用户创建 **AccessKey**，记录：
    - `Access Key ID`（即 AK）
    - `Secret Access Key`（即 SK）
-5. 将 AK/SK 填入配置文件中的以下位置：
-   - `storage.vectordb.volcengine.ak` / `sk`
-   - `storage.agfs.s3.access_key` / `secret_key`
+5. 将 AK/SK 填入配置文件的 `storage.agfs.s3.access_key` / `secret_key`
 
-### 1.4 申请方舟 API Key
+### 1.3 申请方舟 API Key
 
 方舟平台提供 Embedding 和 VLM 模型的推理服务。
 
@@ -101,7 +89,7 @@ cp examples/cloud/ov.conf.example examples/cloud/ov.conf
 | 占位符 | 替换为 | 说明 |
 |--------|--------|------|
 | `<your-root-api-key>` | 自定义强密码 | 管理员密钥，用于多租户管理 |
-| `<your-volcengine-ak>` | IAM Access Key ID | 火山引擎 AK，用于 TOS / VikingDB |
+| `<your-volcengine-ak>` | IAM Access Key ID | 火山引擎 AK，用于 TOS |
 | `<your-volcengine-sk>` | IAM Secret Access Key | 火山引擎 SK |
 | `<your-tos-bucket>` | TOS 桶名称 | 如 `openvikingdata` |
 | `<your-ark-api-key>` | 方舟 API Key | 用于 Embedding 和 VLM |
@@ -110,7 +98,6 @@ cp examples/cloud/ov.conf.example examples/cloud/ov.conf
 
 | 字段 | 说明 |
 |------|------|
-| `storage.vectordb.volcengine.region` | VikingDB 地域，如 `cn-beijing`、`cn-shanghai`、`cn-guangzhou` |
 | `storage.agfs.s3.region` | TOS 地域，需与桶所在地域一致 |
 | `storage.agfs.s3.endpoint` | TOS 的 S3 兼容 endpoint，需与地域匹配（参考第 1.1 节） |
 
@@ -122,13 +109,6 @@ cp examples/cloud/ov.conf.example examples/cloud/ov.conf
     "root_api_key": "my-strong-secret-key-2024"
   },
   "storage": {
-    "vectordb": {
-      "volcengine": {
-        "region": "cn-beijing",
-        "ak": "AKLTxxxxxxxxxxxx",
-        "sk": "T1dYxxxxxxxxxxxx"
-      }
-    },
     "agfs": {
       "s3": {
         "bucket": "openvikingdata",
@@ -314,12 +294,8 @@ openviking:
       workspace: /app/data
       vectordb:
         name: context
-        backend: volcengine
+        backend: local
         project: default
-        volcengine:
-          region: cn-beijing
-          ak: "AKLTxxxxxxxxxxxx"
-          sk: "T1dYxxxxxxxxxxxx"
       agfs:
         backend: s3
         timeout: 10
@@ -369,9 +345,7 @@ helm install openviking ./examples/k8s-helm \
   --set openviking.config.server.root_api_key="my-strong-secret-key-2024" \
   --set openviking.config.embedding.dense.api_key="YOUR_ARK_API_KEY" \
   --set openviking.config.vlm.api_key="YOUR_ARK_API_KEY" \
-  --set openviking.config.storage.vectordb.backend="volcengine" \
-  --set openviking.config.storage.vectordb.volcengine.ak="YOUR_AK" \
-  --set openviking.config.storage.vectordb.volcengine.sk="YOUR_SK" \
+  --set openviking.config.storage.vectordb.backend="local" \
   --set openviking.config.storage.agfs.backend="s3" \
   --set openviking.config.storage.agfs.s3.bucket="openvikingdata" \
   --set openviking.config.storage.agfs.s3.access_key="YOUR_AK" \
@@ -392,7 +366,7 @@ curl http://localhost:1933/health
 
 ### 4.2 就绪检查
 
-就绪接口会检测 AGFS（TOS）和 VikingDB 的连接状态，是验证凭据是否正确的关键步骤：
+就绪接口会检测 AGFS（TOS）和向量库的状态，是验证凭据是否正确的关键步骤：
 
 ```bash
 curl http://localhost:1933/ready
@@ -404,7 +378,7 @@ curl http://localhost:1933/ready
 | checks 字段 | 失败原因 | 排查方向 |
 |-------------|---------|---------|
 | `agfs` | TOS 连接失败 | 检查 bucket、endpoint、AK/SK 是否正确 |
-| `vectordb` | VikingDB 连接失败 | 检查 region、AK/SK、服务是否已开通 |
+| `vectordb` | 本地向量库不可用 | 检查 workspace 目录是否可写、磁盘空间是否充足 |
 | `api_key_manager` | root_api_key 未配置 | 检查 `server.root_api_key` 字段 |
 
 ---
@@ -548,7 +522,7 @@ docker logs -f openviking
 ### 监控
 
 - 健康检查：`GET /health`
-- 就绪检查：`GET /ready`（检测 AGFS、VikingDB、APIKeyManager 连接状态）
+- 就绪检查：`GET /ready`（检测 AGFS、向量库、APIKeyManager 状态）
 - 系统状态：`GET /api/v1/system/status`
 
 ### 数据备份
@@ -595,13 +569,6 @@ sudo systemctl start docker
 - **地域不匹配**：确认 `storage.agfs.s3.region` 和 `storage.agfs.s3.endpoint` 与桶所在地域一致
 - **bucket 不存在**：确认 TOS 控制台中桶已创建，且名称和地域与配置一致
 - **AK/SK 无权限**：确认 IAM 子用户拥有 `TOSFullAccess` 或对应桶的访问策略
-
-### VikingDB 鉴权失败（vectordb check failed）
-
-- **服务未开通**：在火山引擎控制台确认 VikingDB 已开通
-- **地域错误**：确认 `storage.vectordb.volcengine.region` 与开通服务的地域一致
-- **AK/SK 错误**：确认 `storage.vectordb.volcengine.ak/sk` 与 IAM 密钥一致
-- **权限不足**：确认 IAM 子用户拥有 `VikingDBFullAccess` 策略
 
 ### Embedding 模型调用失败
 
