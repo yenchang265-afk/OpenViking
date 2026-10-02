@@ -117,7 +117,7 @@ Recall defaults to the broad mode: global memory, the current workspace, and oth
 pi
 ```
 
-The extension shows an `[Business Data Platform]` status line on startup. The server's own MCP tools (`openviking_search`, `openviking_remember`, and the rest of whatever it exposes) are registered automatically. Memories persist across sessions — no additional setup.
+The extension shows a `[Business Data Platform]` status line on startup. The server's own MCP tools (`openviking_search`, `openviking_remember`, and the rest of whatever it exposes) are registered automatically. Memories persist across sessions — no additional setup.
 
 ## Configuration Reference
 

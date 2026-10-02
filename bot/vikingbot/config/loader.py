@@ -477,7 +477,7 @@ def _inherited_auth_mode_change_hint(actual_auth_mode: str, current_auth_mode: s
     )
     if actual_auth_mode == "api_key":
         hint += (
-            " If api_key mode is intended, also configure bot.ov_server.api_key with an "
+            " If api_key mode is intended, also configure bot.ov_server.api_key with a "
             "Business Data Platform User/Admin API key."
         )
     elif actual_auth_mode == "trusted":

@@ -575,7 +575,7 @@ def check_vikingbot() -> CheckResult:
             return (
                 "warn",
                 "bot.ov_server not configured and ovcli.conf api_key not configured",
-                "Configure bot.ov_server.api_key or ovcli.conf api_key with an "
+                "Configure bot.ov_server.api_key or ovcli.conf api_key with a "
                 "Business Data Platform User API key",
             )
         return (
