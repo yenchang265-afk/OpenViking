@@ -28,7 +28,7 @@
    提供統一查詢、寫入、刪除、計數能力。
 
 3. **Adapter 層（本目錄）**  
-   負責把統一能力對映到具體後端實現（local/cuvs/http/opengauss/thirdparty）。
+   負責把統一能力對映到具體後端實現（local/cuvs/http/opengauss/elasticsearch/thirdparty）。
 
 新增後端時，主要只改第 3 層。
 

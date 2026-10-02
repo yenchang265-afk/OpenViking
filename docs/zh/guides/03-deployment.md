@@ -332,7 +332,7 @@ docker compose up -d
 
 使用本地向量後端（`local` 或 `cuvs`）時，OpenViking 預設通過作業系統檔案鎖獨佔 `storage.workspace`。`.openviking.lock` 檔案會保留在磁碟上，檔案存在不代表服務正在執行；正常關閉或程序終止後，作業系統會釋放鎖。不要手動刪除執行中服務的鎖檔案。
 
-遠端向量後端（`http`、`opengauss`）不會獲取此 workspace 鎖，包括檔案存放在共享 NAS 上的情況，無需設定 `storage.skip_process_lock=true`。把本地向量資料庫放在 NAS 上，並不會使它支援多程序共享。
+遠端向量後端（`http`、`opengauss`、`elasticsearch`）不會獲取此 workspace 鎖，包括檔案存放在共享 NAS 上的情況，無需設定 `storage.skip_process_lock=true`。把本地向量資料庫放在 NAS 上，並不會使它支援多程序共享。
 
 使用本地向量後端從 `.openviking.pid` 舊版本升級時，必須先停止所有使用該 workspace 的舊版服務，再啟動新版。新版不再根據遺留 PID 判斷目錄是否被佔用，新舊鎖機制不支援混用。
 
@@ -360,7 +360,7 @@ docker compose up -d
 }
 ```
 
-這個示例使用遠端 HTTP 向量服務。請將 URL 替換為實際的向量服務地址，或配置 `opengauss` 後端。
+這個示例使用遠端 HTTP 向量服務。請將 URL 替換為實際的向量服務地址，或配置 `opengauss`、`elasticsearch` 後端。
 
 如果你還需要為 QueueFS 和 usage audit 顯式指定本地 SQLite 路徑，可以參考：
 

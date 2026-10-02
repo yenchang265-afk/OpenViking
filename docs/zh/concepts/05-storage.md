@@ -141,6 +141,7 @@ index_meta = {
 | `http` | HTTP 遠端服務 |
 | `cuvs` | 本地持久化 + NVIDIA cuVS dense search |
 | `opengauss` | openGauss DataVec |
+| `elasticsearch` | Elasticsearch 8.x dense_vector kNN |
 
 ## 向量同步
 

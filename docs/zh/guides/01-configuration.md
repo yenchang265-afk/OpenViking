@@ -1459,13 +1459,14 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `backend` | str | VectorDB 後端型別: 'local'（基於檔案）, 'http'（遠端服務）, 'cuvs'（本地儲存 + GPU dense search）或 'opengauss'（openGauss DataVec） | "local" |
+| `backend` | str | VectorDB 後端型別: 'local'（基於檔案）, 'http'（遠端服務）, 'cuvs'（本地儲存 + GPU dense search）、'opengauss'（openGauss DataVec）或 'elasticsearch'（Elasticsearch 8.x） | "local" |
 | `name` | str | VectorDB 的集合名稱 | "context" |
 | `url` | str | 'http' 型別的遠端服務 URL（例如 'http://localhost:5000'） | null |
 | `project_name` | str | 專案名稱（別名 project） | "default" |
 | `distance_metric` | str | 向量相似度搜索的距離度量（例如 'cosine', 'l2', 'ip'） | "cosine" |
 | `dimension` | int | 向量嵌入的維度 | 0 |
 | `sparse_weight` | float | 混合向量搜尋的稀疏權重，僅在使用混合索引時生效 | 0.0 |
+| `elasticsearch` | object | 'elasticsearch' 後端的配置，見下文 | - |
 | `cuvs` | object | NVIDIA cuVS 配置，也用於在 'local' 下顯式開啟視訊記憶體感知自動模式，參見 [cuVS 使用指南](./16-cuvs.md) | - |
 
 預設使用本地模式
@@ -1478,6 +1479,51 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
   }
 }
 ```
+
+<details>
+<summary><b>Elasticsearch</b></summary>
+使用 Elasticsearch 8.12+ 叢集的 `dense_vector` kNN 搜尋儲存向量。安裝用戶端：`pip install "openviking[elasticsearch]"`。
+
+```json
+{
+  "storage": {
+    "vectordb": {
+      "backend": "elasticsearch",
+      "name": "context",
+      "distance_metric": "cosine",
+      "elasticsearch": {
+        "hosts": ["https://es.example.com:9200"],
+        "api_key": "your-api-key",
+        "index_prefix": "openviking_"
+      }
+    }
+  }
+}
+```
+
+| 引數 | 型別 | 說明 | 預設值 |
+|------|------|------|--------|
+| `hosts` | list[str] | Elasticsearch 節點位址 | `["http://127.0.0.1:9200"]` |
+| `api_key` | str | API Key；不能與 `username`/`password` 同時設定 | null |
+| `username` / `password` | str | Basic 認證憑據，需同時設定 | null |
+| `ca_certs` | str | 用於 TLS 校驗的 CA 憑證路徑 | null |
+| `verify_certs` | bool | 是否校驗 TLS 憑證 | true |
+| `request_timeout` | float | 請求逾時（秒） | 30 |
+| `index_prefix` | str | 索引名稱字首；索引名稱為 `<index_prefix><name>`，必須為小寫 | "openviking_" |
+| `number_of_shards` | int | 每個索引的主分片數 | 1 |
+| `number_of_replicas` | int | 每個索引的副本數；未設定時使用叢集預設值（單節點叢集請設為 `0`） | null |
+| `refresh` | str | 寫入重新整理策略：`wait_for`（寫入後下一次搜尋可見）、`true` 或 `false` | "wait_for" |
+| `index_type` | str | `dense_vector` 索引型別：`hnsw`、`int8_hnsw`、`flat` 或 `int8_flat`（`flat` 型別需要 Elasticsearch 8.13+） | "hnsw" |
+| `m` / `ef_construction` | int | HNSW 建構引數 | 16 / 100 |
+| `num_candidates` | int | 每個分片的最少 kNN 候選數（會提高到請求的 k） | 100 |
+| `bulk_batch_size` | int | 每個 bulk 請求的文件數 | 500 |
+
+- `distance_metric` 對應 `dense_vector` 的 similarity：`cosine` → `cosine`、`l2` → `l2_norm`、`ip` → `max_inner_product`。該值在建立索引時固定，修改需要新建 collection。
+- 不支援稀疏/混合檢索（`sparse_weight > 0`）和多模態檢索。
+- 使用 `cosine` 時，embedding 全為 0 的記錄（部分 embedder 對空文字會傳回全 0 向量）儲存時不帶向量：可被過濾查詢到，但不會出現在向量檢索結果中。
+- 單次向量檢索最多傳回 10000 筆（`limit + offset`）；過濾和排序查詢透過 `search_after` 翻頁，不受此限制。
+- OpenViking 以嚴格 mapping 建立索引，並將中繼資料儲存在 mapping 的 `_meta` 中；不會接管非 OpenViking 建立的既有索引。
+</details>
 
 ##### ACL schema
 
@@ -1935,7 +1981,7 @@ Task 記錄檔案位於所屬帳號的系統目錄：
       "lock_expire": 300.0
     },
     "vectordb": {
-      "backend": "local|cuvs|http|opengauss",
+      "backend": "local|cuvs|http|opengauss|elasticsearch",
       "url": "string",
       "project": "string"
     }

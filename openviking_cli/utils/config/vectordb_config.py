@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-from typing import Any, Dict, Literal, Optional
+import re
+from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field, StrictInt, model_validator
 
@@ -358,6 +359,84 @@ class CuVSConfig(BaseModel):
         return self
 
 
+_ELASTICSEARCH_DISTANCE_METRICS = frozenset({"cosine", "l2", "ip"})
+# Elasticsearch index names: lowercase, no reserved characters, no leading -_+.
+_ELASTICSEARCH_INDEX_PREFIX_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
+
+
+class ElasticsearchConfig(BaseModel):
+    """Configuration for the Elasticsearch 8.x dense-vector backend."""
+
+    hosts: List[str] = Field(
+        default_factory=lambda: ["http://127.0.0.1:9200"],
+        description="Elasticsearch node URLs",
+    )
+    api_key: Optional[str] = Field(default=None, description="Elasticsearch API key")
+    username: Optional[str] = Field(default=None, description="Basic auth user")
+    password: Optional[str] = Field(default=None, description="Basic auth password")
+    ca_certs: Optional[str] = Field(
+        default=None, description="Path to a CA bundle for TLS verification"
+    )
+    verify_certs: bool = Field(default=True, description="Verify TLS certificates")
+    request_timeout: float = Field(default=30.0, gt=0, description="Request timeout in seconds")
+    index_prefix: str = Field(
+        default="openviking_",
+        description="Prefix added to the collection name to form the Elasticsearch index name",
+    )
+    number_of_shards: int = Field(default=1, ge=1, description="Primary shards per index")
+    number_of_replicas: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Replicas per index; unset uses the cluster default",
+    )
+    refresh: Literal["wait_for", "true", "false"] = Field(
+        default="wait_for",
+        description=(
+            "Refresh policy for writes. 'wait_for' makes writes visible to the next "
+            "search, matching the other backends."
+        ),
+    )
+    index_type: Literal["hnsw", "int8_hnsw", "flat", "int8_flat"] = Field(
+        default="hnsw", description="dense_vector index_options type"
+    )
+    m: int = Field(default=16, ge=2, description="HNSW graph connections per node")
+    ef_construction: int = Field(
+        default=100, ge=2, description="HNSW candidate list size during indexing"
+    )
+    num_candidates: int = Field(
+        default=100,
+        ge=1,
+        le=10000,
+        description="Minimum kNN candidates per shard; raised to the requested k when larger",
+    )
+    bulk_batch_size: int = Field(
+        default=500, ge=1, le=10000, description="Documents per bulk request"
+    )
+
+    model_config = {"extra": "forbid"}
+
+    @model_validator(mode="after")
+    def validate_elasticsearch(self):
+        if not self.hosts or any(not str(host).strip() for host in self.hosts):
+            raise ValueError("elasticsearch.hosts must contain at least one non-empty URL")
+        if (self.username is None) != (self.password is None):
+            raise ValueError(
+                "elasticsearch.username and elasticsearch.password must be set together"
+            )
+        if self.api_key and self.username is not None:
+            raise ValueError(
+                "elasticsearch: configure either api_key or username/password, not both"
+            )
+        if self.index_prefix and not _ELASTICSEARCH_INDEX_PREFIX_PATTERN.match(self.index_prefix):
+            raise ValueError(
+                "elasticsearch.index_prefix must be lowercase and start with a letter or digit; "
+                "allowed characters are a-z, 0-9, '_', '-', '.'"
+            )
+        if self.ef_construction < self.m:
+            raise ValueError("elasticsearch.ef_construction must be >= elasticsearch.m")
+        return self
+
+
 class VectorDBBackendConfig(BaseModel):
     """
     Configuration for VectorDB backend.
@@ -368,7 +447,9 @@ class VectorDBBackendConfig(BaseModel):
 
     backend: str = Field(
         default="local",
-        description="VectorDB backend type: 'local', 'cuvs', 'http', or 'opengauss'",
+        description=(
+            "VectorDB backend type: 'local', 'cuvs', 'http', 'opengauss', or 'elasticsearch'"
+        ),
     )
 
     name: Optional[str] = Field(default=COLLECTION_NAME, description="Collection name for VectorDB")
@@ -420,6 +501,11 @@ class VectorDBBackendConfig(BaseModel):
         description="openGauss DataVec configuration for the 'opengauss' backend",
     )
 
+    elasticsearch: Optional[ElasticsearchConfig] = Field(
+        default_factory=ElasticsearchConfig,
+        description="Elasticsearch 8.x configuration for the 'elasticsearch' backend",
+    )
+
     custom_params: Dict[str, Any] = Field(
         default_factory=dict,
         description="Custom parameters for custom backend adapters",
@@ -433,6 +519,7 @@ class VectorDBBackendConfig(BaseModel):
             "cuvs",
             "http",
             "opengauss",
+            "elasticsearch",
         ]
 
         # Allow custom backend classes (containing dot) without standard validation
@@ -470,6 +557,21 @@ class VectorDBBackendConfig(BaseModel):
             self.opengauss.validate_capabilities(
                 distributed=self.opengauss.is_distributed, distance=distance
             )
+
+        elif self.backend == "elasticsearch":
+            if not self.elasticsearch:
+                raise ValueError("VectorDB elasticsearch backend requires 'elasticsearch' config")
+            if self.sparse_weight > 0.0:
+                raise ValueError(
+                    "VectorDB elasticsearch backend does not support sparse_weight > 0"
+                )
+            distance = (self.distance_metric or "cosine").lower()
+            if distance not in _ELASTICSEARCH_DISTANCE_METRICS:
+                raise ValueError(
+                    "VectorDB elasticsearch backend supports distance_metric values: "
+                    + ", ".join(sorted(_ELASTICSEARCH_DISTANCE_METRICS))
+                )
+            self.distance_metric = distance
 
         return self
 
