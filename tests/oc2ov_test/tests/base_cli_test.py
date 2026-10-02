@@ -1,6 +1,6 @@
 """
-测试基类 - 使用 OpenClaw CLI
-增强版：支持 Session ID 自动管理、智能等待、重试机制、测试数据管理
+測試基類 - 使用 OpenClaw CLI
+增強版：支援 Session ID 自動管理、智慧等待、重試機制、測試資料管理
 """
 
 import logging
@@ -24,13 +24,13 @@ MIN_SYNC_WAIT_SECONDS = 5
 
 class BaseOpenClawCLITest(unittest.TestCase):
     """
-    OpenClaw CLI 测试基类（增强版）
+    OpenClaw CLI 測試基類（增強版）
 
     新增功能：
-    - Session ID 自动管理：每个测试类使用唯一的 session_id
-    - 智能等待策略：替代固定等待，支持轮询检查
-    - 重试机制：失败时自动重试
-    - 测试数据管理：支持数据驱动测试
+    - Session ID 自動管理：每個測試類使用唯一的 session_id
+    - 智慧等待策略：替代固定等待，支援輪詢檢查
+    - 重試機制：失敗時自動重試
+    - 測試資料管理：支援資料驅動測試
     """
 
     session_manager: SessionIdManager = SessionIdManager()
@@ -39,7 +39,7 @@ class BaseOpenClawCLITest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """
-        测试类初始化
+        測試類初始化
         """
         cls._class_session_id = SessionIdManager.generate_test_class_session_id(cls.__name__)
         cls.client = OpenClawCLIClient(session_id=cls._class_session_id)
@@ -61,24 +61,24 @@ class BaseOpenClawCLITest(unittest.TestCase):
         )
 
         cls.logger.info("=" * 60)
-        cls.logger.info(f"测试类 {cls.__name__} 开始")
+        cls.logger.info(f"測試類 {cls.__name__} 開始")
         cls.logger.info(f"Class Session ID: {cls._class_session_id}")
         cls.logger.info("=" * 60)
 
     def setUp(self):
         """
-        每个测试用例开始前
+        每個測試用例開始前
         """
         self.logger.info("\n" + "-" * 60)
-        self.logger.info(f"开始测试: {self._testMethodName}")
+        self.logger.info(f"開始測試: {self._testMethodName}")
 
     @property
     def current_session_id(self) -> str:
         """
-        获取当前测试类的 session_id
+        獲取當前測試類的 session_id
 
         Returns:
-            str: 当前 session_id
+            str: 當前 session_id
         """
         return self._class_session_id
 
@@ -87,7 +87,7 @@ class BaseOpenClawCLITest(unittest.TestCase):
         生成唯一的 session_id
 
         Args:
-            prefix: session_id 前缀
+            prefix: session_id 字首
 
         Returns:
             str: 唯一的 session_id
@@ -96,21 +96,21 @@ class BaseOpenClawCLITest(unittest.TestCase):
 
     def wait_for_sync(self, seconds: int = None, session_id: str = None):
         """
-        等待记忆同步（锁释放 + 最小等待）
+        等待記憶同步（鎖釋放 + 最小等待）
 
         Args:
-            seconds: 等待秒数，默认使用配置的 wait_time，最小 MIN_SYNC_WAIT_SECONDS
-            session_id: 等待的 session ID，默认使用当前测试类的 session_id
+            seconds: 等待秒數，預設使用配置的 wait_time，最小 MIN_SYNC_WAIT_SECONDS
+            session_id: 等待的 session ID，預設使用當前測試類的 session_id
         """
         target_session_id = session_id or self.current_session_id
         wait_seconds = max(seconds or self.wait_time, MIN_SYNC_WAIT_SECONDS)
         self.logger.info(
-            f"等待记忆同步 (锁释放 + {wait_seconds}秒)... [session={target_session_id}]"
+            f"等待記憶同步 (鎖釋放 + {wait_seconds}秒)... [session={target_session_id}]"
         )
 
         lock_ok = _wait_for_session_lock_release(target_session_id)
         if not lock_ok:
-            self.logger.warning("Session lock 未释放，额外等待 5 秒...")
+            self.logger.warning("Session lock 未釋放，額外等待 5 秒...")
             time.sleep(5)
 
         time.sleep(wait_seconds)
@@ -124,14 +124,14 @@ class BaseOpenClawCLITest(unittest.TestCase):
         session_id: str = None,
     ) -> bool:
         """
-        智能等待记忆同步（锁释放 + 轮询检查）
+        智慧等待記憶同步（鎖釋放 + 輪詢檢查）
 
         Args:
-            check_message: 用于检查的消息（如不提供则使用固定等待）
-            keywords: 期望响应中包含的关键词
-            timeout: 超时时间（秒）
-            poll_interval: 轮询间隔（秒），最小 3.0
-            session_id: 等待和检查的 session ID，默认使用当前测试类的 session_id
+            check_message: 用於檢查的訊息（如不提供則使用固定等待）
+            keywords: 期望響應中包含的關鍵詞
+            timeout: 超時時間（秒）
+            poll_interval: 輪詢間隔（秒），最小 3.0
+            session_id: 等待和檢查的 session ID，預設使用當前測試類的 session_id
 
         Returns:
             bool: 是否成功同步
@@ -147,7 +147,7 @@ class BaseOpenClawCLITest(unittest.TestCase):
 
         lock_ok = _wait_for_session_lock_release(target_session_id)
         if not lock_ok:
-            self.logger.warning("Session lock 未释放，额外等待 5 秒...")
+            self.logger.warning("Session lock 未釋放，額外等待 5 秒...")
             time.sleep(5)
 
         def check_response() -> bool:
@@ -169,7 +169,7 @@ class BaseOpenClawCLITest(unittest.TestCase):
                 or text == "}]"
             )
             if unstable:
-                self.logger.warning("LLM 不稳定，跳过 smart_wait 关键词检查")
+                self.logger.warning("LLM 不穩定，跳過 smart_wait 關鍵詞檢查")
                 return True
             return self.assertion.assert_keywords_in_response(
                 response, keywords, require_all=True, case_sensitive=False
@@ -179,7 +179,7 @@ class BaseOpenClawCLITest(unittest.TestCase):
             check_response,
             timeout=timeout,
             poll_interval=poll_interval,
-            message=f"等待记忆同步 (关键词: {keywords}) [session={target_session_id}]",
+            message=f"等待記憶同步 (關鍵詞: {keywords}) [session={target_session_id}]",
         )
 
     def send_and_log(
@@ -191,24 +191,24 @@ class BaseOpenClawCLITest(unittest.TestCase):
         timeout: int = None,
     ):
         """
-        发送消息并记录日志
+        傳送訊息並記錄日誌
 
         Args:
-            message: 消息内容
-            session_id: session ID（默认使用当前测试类的 session_id）
+            message: 訊息內容
+            session_id: session ID（預設使用當前測試類的 session_id）
             agent_id: agent ID
-            retry_on_failure: 是否在失败时重试
-            timeout: 命令超时时间（秒），默认使用客户端配置
+            retry_on_failure: 是否在失敗時重試
+            timeout: 命令超時時間（秒），預設使用客戶端配置
 
         Returns:
-            dict: 响应结果
+            dict: 響應結果
         """
         target_session_id = session_id or self.current_session_id
 
         self.logger.info("\n" + "▸" * 40)
-        self.logger.info("📨 测试步骤 - 发送消息")
+        self.logger.info("📨 測試步驟 - 傳送訊息")
         self.logger.info("▸" * 40)
-        self.logger.info(f"消息内容: {message}")
+        self.logger.info(f"訊息內容: {message}")
         self.logger.info(f"Session ID: {target_session_id}")
         if agent_id:
             self.logger.info(f"Agent ID: {agent_id}")
@@ -228,11 +228,11 @@ class BaseOpenClawCLITest(unittest.TestCase):
             )
 
         self.logger.info("\n" + "◂" * 40)
-        self.logger.info("📩 测试步骤 - 响应接收")
+        self.logger.info("📩 測試步驟 - 響應接收")
         self.logger.info("◂" * 40)
 
         response_text = self.assertion.extract_response_text(response)
-        self.logger.info(f"响应文本: {response_text}")
+        self.logger.info(f"響應文本: {response_text}")
 
         self.logger.info("◂" * 40 + "\n")
         return response
@@ -247,11 +247,11 @@ class BaseOpenClawCLITest(unittest.TestCase):
             "couldn't generate a response",
             "couldn't generate",
             "please try again",
-            "命令执行超时",
+            "命令執行超時",
         ]
         if any(ind.lower() in text.lower() for ind in timeout_indicators):
             return True
-        if isinstance(response, dict) and response.get("error", "").startswith("命令执行超时"):
+        if isinstance(response, dict) and response.get("error", "").startswith("命令執行超時"):
             return True
         return False
 
@@ -316,9 +316,9 @@ class BaseOpenClawCLITest(unittest.TestCase):
             if is_timeout:
                 is_subprocess_timeout = isinstance(response, dict) and response.get(
                     "error", ""
-                ).startswith("命令执行超时")
+                ).startswith("命令執行超時")
                 if is_subprocess_timeout:
-                    self.logger.warning("subprocess 超时，不再重试 (auto-recall 上下文可能过大)")
+                    self.logger.warning("subprocess 超時，不再重試 (auto-recall 上下文可能過大)")
                     return response
                 reason = "LLM idle timeout"
             elif is_empty:
@@ -343,16 +343,16 @@ class BaseOpenClawCLITest(unittest.TestCase):
         max_retries: int = 3,
     ):
         """
-        发送消息并在失败时重试
+        傳送訊息並在失敗時重試
 
         Args:
-            message: 消息内容
+            message: 訊息內容
             session_id: session ID
             agent_id: agent ID
-            max_retries: 最大重试次数
+            max_retries: 最大重試次數
 
         Returns:
-            dict: 响应结果
+            dict: 響應結果
         """
         retry_manager = RetryManager(max_retries=max_retries)
 
@@ -372,11 +372,11 @@ class BaseOpenClawCLITest(unittest.TestCase):
             "couldn't generate a response",
             "please try again",
             "NO_REPLY",
-            "命令执行超时",
+            "命令執行超時",
         ]
         if any(ind.lower() in text.lower() for ind in unstable_indicators):
             return True
-        if isinstance(response, dict) and response.get("error", "").startswith("命令执行超时"):
+        if isinstance(response, dict) and response.get("error", "").startswith("命令執行超時"):
             return True
         if text.startswith('[{"name"') and len(text) < 300:
             return True
@@ -388,59 +388,59 @@ class BaseOpenClawCLITest(unittest.TestCase):
         self, response, keywords, require_all=True, case_sensitive=False, msg=None
     ):
         if self._is_llm_unstable_response(response):
-            self.logger.warning(f"LLM 不稳定，跳过关键词断言: {keywords}")
+            self.logger.warning(f"LLM 不穩定，跳過關鍵詞斷言: {keywords}")
             return
         success = self.assertion.assert_keywords_in_response(
             response, keywords, require_all, case_sensitive
         )
-        self.assertTrue(success, msg or f"关键词断言失败，期望关键词: {keywords}")
+        self.assertTrue(success, msg or f"關鍵詞斷言失敗，期望關鍵詞: {keywords}")
 
     def assertSimilarity(self, response, expected_text, min_similarity=0.6, msg=None):
         if self._is_llm_unstable_response(response):
-            self.logger.warning("LLM 不稳定，跳过相似度断言")
+            self.logger.warning("LLM 不穩定，跳過相似度斷言")
             return
         success = self.assertion.assert_similarity(response, expected_text, min_similarity)
-        self.assertTrue(success, msg or f"相似度断言失败，期望相似度 >= {min_similarity:.0%}")
+        self.assertTrue(success, msg or f"相似度斷言失敗，期望相似度 >= {min_similarity:.0%}")
 
     def assertAnyKeywordInResponse(self, response, keyword_groups, case_sensitive=False, msg=None):
         if self._is_llm_unstable_response(response):
-            self.logger.warning(f"LLM 不稳定，跳过关键词组断言: {keyword_groups}")
+            self.logger.warning(f"LLM 不穩定，跳過關鍵片語斷言: {keyword_groups}")
             return
         success = self.assertion.assert_any_keyword_in_response(
             response, keyword_groups, case_sensitive
         )
-        self.assertTrue(success, msg or "未在任何关键词组中找到匹配")
+        self.assertTrue(success, msg or "未在任何關鍵片語中找到匹配")
 
     def get_test_data(self, name: str) -> TestData:
         """
-        获取测试数据
+        獲取測試資料
 
         Args:
-            name: 数据名称
+            name: 資料名稱
 
         Returns:
-            TestData: 测试数据
+            TestData: 測試資料
         """
         return self.data_manager.get_data(name)
 
     def run_with_test_data(self, data_name: str, query_message: str = None):
         """
-        使用测试数据运行测试
+        使用測試資料執行測試
 
         Args:
-            data_name: 测试数据名称
-            query_message: 查询消息（可选）
+            data_name: 測試資料名稱
+            query_message: 查詢訊息（可選）
 
         Returns:
-            tuple: (写入响应, 查询响应)
+            tuple: (寫入響應, 查詢響應)
         """
         data = self.get_test_data(data_name)
         if not data:
-            self.fail(f"测试数据不存在: {data_name}")
+            self.fail(f"測試資料不存在: {data_name}")
 
         message = data.input_data.get("message", "")
         if not message:
-            self.fail(f"测试数据 {data_name} 没有消息内容")
+            self.fail(f"測試資料 {data_name} 沒有訊息內容")
 
         response1 = self.send_and_log(message)
         self.wait_for_sync()
@@ -457,16 +457,16 @@ class BaseOpenClawCLITest(unittest.TestCase):
 
     def tearDown(self):
         """
-        每个测试用例结束后
+        每個測試用例結束後
         """
-        self.logger.info(f"测试完成: {self._testMethodName}")
+        self.logger.info(f"測試完成: {self._testMethodName}")
 
     @classmethod
     def tearDownClass(cls):
         """
-        测试类结束
+        測試類結束
         """
         cls.session_manager.cleanup_session(cls._class_session_id)
         cls.logger.info("\n" + "=" * 60)
-        cls.logger.info(f"测试类 {cls.__name__} 结束")
+        cls.logger.info(f"測試類 {cls.__name__} 結束")
         cls.logger.info("=" * 60)

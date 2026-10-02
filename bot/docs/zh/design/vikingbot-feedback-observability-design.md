@@ -1,4 +1,4 @@
-# Vikingbot 问答效果反馈观测方案设计
+# Vikingbot 問答效果反饋觀測方案設計
 
 **Author:** OpenViking Team
 **Status:** Revised Draft
@@ -8,265 +8,265 @@
 
 ## 1. 背景
 
-基于当前代码复核，vikingbot 现状更准确地说是“过程可观测”，而不是“结果可观测”。
+基於當前程式碼複核，vikingbot 現狀更準確地說是“過程可觀測”，而不是“結果可觀測”。
 
-当前已经存在的能力包括：
+當前已經存在的能力包括：
 
-- `AgentLoop` 最终返回的 `OutboundMessage` 已携带 `time_cost`、`token_usage`、`iteration`、`tools_used_names`
-- bus 已支持 `REASONING`、`TOOL_CALL`、`TOOL_RESULT`、`ITERATION`、`NO_REPLY` 等过程事件
-- Langfuse 已接入 `session_id` / `user_id` 透传、LLM generation、tool span
-- session 以 JSONL 持久化历史消息，assistant 消息可保存 `token_usage` 与 `tools_used`
+- `AgentLoop` 最終返回的 `OutboundMessage` 已攜帶 `time_cost`、`token_usage`、`iteration`、`tools_used_names`
+- bus 已支援 `REASONING`、`TOOL_CALL`、`TOOL_RESULT`、`ITERATION`、`NO_REPLY` 等過程事件
+- Langfuse 已接入 `session_id` / `user_id` 透傳、LLM generation、tool span
+- session 以 JSONL 持久化歷史訊息，assistant 訊息可儲存 `token_usage` 與 `tools_used`
 
-但原方案的若干前提与当前实现已经有偏差，主要体现在：
+但原方案的若干前提與當前實現已經有偏差，主要體現在：
 
-- Phase 1 已经补齐 `response_id`，并打通到 `OutboundMessage`、session JSONL、OpenAPI 返回体与 Langfuse metadata
-- Phase 2 当前工作树已经补齐显式反馈入口，OpenAPI 提供 `POST /bot/v1/feedback`
-- `response_completed` 与 `feedback_submitted` 已经进入实现范围；`response_outcome_evaluated` 仍然属于 Phase 3，但当前工作树已经落地最小规则版实现
-- session JSONL 的 assistant message 仍然不是完整的响应事实表，但当前已经把标准化 `response_completed` 以 `session.metadata["response_facts"][response_id]` 的形式持久化到 metadata 首行
-- OpenAPI 当前只透出 `response`、`reasoning`、`tool_call`、`tool_result`，并未把 `ITERATION` 等过程事件完整暴露出来
-- Langfuse 当前写入的 generation metadata 已覆盖 `response_id`；`query_category`、`prompt_version`、`bot_version` 仍未稳定覆盖；Phase 3 outcome 当前通过 trace event 与 observation score 记录，而不是事后回写已结束 generation metadata
-- 代码中还没有稳定的 `query_category`、`prompt_version`、`bot_version` 字段来源，因此原方案里大量切片分析暂时没有数据基础
+- Phase 1 已經補齊 `response_id`，並打通到 `OutboundMessage`、session JSONL、OpenAPI 返回體與 Langfuse metadata
+- Phase 2 當前工作樹已經補齊顯式反饋入口，OpenAPI 提供 `POST /bot/v1/feedback`
+- `response_completed` 與 `feedback_submitted` 已經進入實現範圍；`response_outcome_evaluated` 仍然屬於 Phase 3，但當前工作樹已經落地最小規則版實現
+- session JSONL 的 assistant message 仍然不是完整的響應事實表，但當前已經把標準化 `response_completed` 以 `session.metadata["response_facts"][response_id]` 的形式持久化到 metadata 首行
+- OpenAPI 當前只透出 `response`、`reasoning`、`tool_call`、`tool_result`，並未把 `ITERATION` 等過程事件完整暴露出來
+- Langfuse 當前寫入的 generation metadata 已覆蓋 `response_id`；`query_category`、`prompt_version`、`bot_version` 仍未穩定覆蓋；Phase 3 outcome 當前通過 trace event 與 observation score 記錄，而不是事後回寫已結束 generation metadata
+- 程式碼中還沒有穩定的 `query_category`、`prompt_version`、`bot_version` 欄位來源，因此原方案裡大量切片分析暫時沒有資料基礎
 
-### 1.1 截至 2026-04-30 的实现状态更新
+### 1.1 截至 2026-04-30 的實現狀態更新
 
-为避免后续讨论继续把“设计目标”误写成“当前能力”，这里先明确当前代码状态：
+為避免後續討論繼續把“設計目標”誤寫成“當前能力”，這裡先明確當前程式碼狀態：
 
-1. Phase 1 已完成并已单独提交，`response_id` 已经贯通最终回答链路。
-2. Phase 2 当前实现已经包含 `POST /bot/v1/feedback`、`FeedbackRequest` / `FeedbackResponse`、`OutboundEventType.FEEDBACK_SUBMITTED`。
-3. 显式反馈当前采用最小化落地：反馈事件追加写入 session JSONL 的 `session.metadata["feedback_events"]`，而不是新建独立事实表。
-4. `feedback_submitted` 属于 analytics-only 事件，用户侧 channel 明确忽略该事件，避免把分析事件误发到用户可见通道。
-5. `response_outcome_evaluated` 仍然是 Phase 3 能力，但当前仅实现 analytics-only 的最小规则版，不应误写成完整离线评测体系。
+1. Phase 1 已完成並已單獨提交，`response_id` 已經貫通最終回答鏈路。
+2. Phase 2 當前實現已經包含 `POST /bot/v1/feedback`、`FeedbackRequest` / `FeedbackResponse`、`OutboundEventType.FEEDBACK_SUBMITTED`。
+3. 顯式反饋當前採用最小化落地：反饋事件追加寫入 session JSONL 的 `session.metadata["feedback_events"]`，而不是新建獨立事實表。
+4. `feedback_submitted` 屬於 analytics-only 事件，使用者側 channel 明確忽略該事件，避免把分析事件誤發到使用者可見通道。
+5. `response_outcome_evaluated` 仍然是 Phase 3 能力，但當前僅實現 analytics-only 的最小規則版，不應誤寫成完整離線評測體系。
 
-因此，这份方案需要从“直接建设完整反馈归因体系”调整为“三步走”：
+因此，這份方案需要從“直接建設完整反饋歸因體系”調整為“三步走”：
 
-1. 先把一次回答变成可识别、可关联、可沉淀的结构化对象。
-2. 再补显式反馈闭环。
-3. 最后再做隐式结果判断、问题分类和版本归因。
+1. 先把一次回答變成可識別、可關聯、可沉澱的結構化物件。
+2. 再補顯式反饋閉環。
+3. 最後再做隱式結果判斷、問題分類和版本歸因。
 
-在这个调整后的前提下，现有信息仍然足以回答“系统有没有运行”“模型和工具有没有被调用”，但还不足以回答更关键的问题：
+在這個調整後的前提下，現有資訊仍然足以回答“系統有沒有執行”“模型和工具有沒有被呼叫”，但還不足以回答更關鍵的問題：
 
-1. 用户是否觉得这次回答有效。
-2. 回答是否真正解决了用户问题。
-3. 哪类问题效果差。
-4. 效果差是因为模型、工具、时延，还是对话策略。
-5. 改 prompt、改模型、改工具后，效果是否提升。
+1. 使用者是否覺得這次回答有效。
+2. 回答是否真正解決了使用者問題。
+3. 哪類問題效果差。
+4. 效果差是因為模型、工具、時延，還是對話策略。
+5. 改 prompt、改模型、改工具後，效果是否提升。
 
-本方案的目标是为 vikingbot 建立一套面向“问答效果反馈”的观测体系，形成从回答生成到用户反馈、再到问题归因的完整闭环，并且保证每一阶段都建立在当前代码已具备的事实基础上。
-
----
-
-## 2. 设计目标
-
-### 2.1 目标
-
-本方案希望建立一套可持续使用的指标体系，用于衡量 vikingbot 的问答质量和用户体验。
-
-设计目标如下：
-
-1. 能稳定衡量单条回答和单个会话的效果。
-2. 能区分“模型回答差”“工具调用差”“执行太慢”等不同失败模式。
-3. 能支持按模型、渠道、问题类型、版本进行切片分析。
-4. 能与 Langfuse trace 关联，支持从坏样本回溯到具体执行链路。
-5. 能渐进式落地，先最小可用，再逐步增强。
-
-### 2.2 非目标
-
-本方案当前不追求以下目标：
-
-1. 不试图用单一指标替代所有人工判断。
-2. 不要求第一版就接入复杂的离线评测平台。
-3. 不要求所有指标都进入 Prometheus；部分更适合保存在业务事件或分析仓库中。
-4. 不要求完全依赖 Langfuse 完成所有聚合分析；Langfuse 更适合作为 trace 容器和样本诊断入口。
+本方案的目標是為 vikingbot 建立一套面向“問答效果反饋”的觀測體系，形成從回答生成到使用者反饋、再到問題歸因的完整閉環，並且保證每一階段都建立在當前程式碼已具備的事實基礎上。
 
 ---
 
-## 3. 核心问题与总体思路
+## 2. 設計目標
 
-### 3.1 需要回答的核心问题
+### 2.1 目標
 
-该体系主要服务于以下五类问题：
+本方案希望建立一套可持續使用的指標體系，用於衡量 vikingbot 的問答質量和使用者體驗。
 
-1. 用户觉得这次回答好不好。
-2. 这次回答是否一次性解决问题。
-3. 哪些问题类型和使用场景效果最差。
-4. 坏结果主要集中在哪个执行环节。
-5. 系统改动前后，效果是上升、持平还是回退。
+設計目標如下：
 
-### 3.2 总体思路
+1. 能穩定衡量單條回答和單個會話的效果。
+2. 能區分“模型回答差”“工具呼叫差”“執行太慢”等不同失敗模式。
+3. 能支援按模型、渠道、問題型別、版本進行切片分析。
+4. 能與 Langfuse trace 關聯，支援從壞樣本回溯到具體執行鏈路。
+5. 能漸進式落地，先最小可用，再逐步增強。
 
-观测体系分为四层：
+### 2.2 非目標
 
-1. 用户反馈层：看用户主观评价。
-2. 会话结果层：看问题是否被解决。
-3. 执行质量层：看耗时、工具、LLM 调用质量。
-4. 归因分析层：按模型、渠道、问题类型、版本等维度切片。
+本方案當前不追求以下目標：
 
-核心链路如下：
-
-`一次回答 -> 用户反馈 -> 会话结果 -> trace 归因`
-
-换句话说，系统不能只采“过程”，也必须采“结果”。
-
-### 3.3 现状约束下的方案调整
-
-为了避免方案设计继续偏离当前实现，整体落地顺序调整为以下三层依赖：
-
-1. `response identity`：先给每次最终回答分配稳定的 `response_id`，并把它同时写入 `OutboundMessage`、session message、OpenAPI 返回体和 Langfuse metadata。
-2. `response facts`：再沉淀一条结构化 `response_completed` 事件，把当前已经能拿到的字段先稳定保存下来，并以 `session.metadata["response_facts"][response_id]` 的形式落盘，例如 `session_id`、`user_id`、`time_cost_ms`、`prompt_tokens`、`completion_tokens`、`total_tokens`、`iteration_count`、`tool_count`、`tools_used_names`、`response_length`、`created_at`。
-3. `feedback & outcome`：最后在 `response_id` 基础上补反馈事件与隐式结果判断，否则后续指标会缺少关联主键。
-
-这意味着：
-
-- 原方案中依赖 `query_category`、`prompt_version`、`bot_version` 的切片分析，需要从 MVP 下调到增强阶段
-- `good_answer_rate`、`one_turn_resolution_rate`、`reask_rate` 等结果指标，不适合作为第一批必须落地的线上指标
-- 第一阶段更应聚焦“把已有过程指标可靠地沉淀为响应事实”，而不是急于定义复杂的结果分数
+1. 不試圖用單一指標替代所有人工判斷。
+2. 不要求第一版就接入複雜的離線評測平臺。
+3. 不要求所有指標都進入 Prometheus；部分更適合儲存在業務事件或分析倉庫中。
+4. 不要求完全依賴 Langfuse 完成所有聚合分析；Langfuse 更適合作為 trace 容器和樣本診斷入口。
 
 ---
 
-## 4. 指标分层设计
+## 3. 核心問題與總體思路
 
-## 4.1 用户反馈层
+### 3.1 需要回答的核心問題
 
-这层是问答效果评估的长期核心，但不应被当成 Phase 1 的落地前提。
+該體系主要服務於以下五類問題：
 
-### 4.1.1 显式满意度指标
+1. 使用者覺得這次回答好不好。
+2. 這次回答是否一次性解決問題。
+3. 哪些問題型別和使用場景效果最差。
+4. 壞結果主要集中在哪個執行環節。
+5. 系統改動前後，效果是上升、持平還是回退。
 
-建议定义以下指标：
+### 3.2 總體思路
 
-| 指标名 | 定义 | 说明 |
+觀測體系分為四層：
+
+1. 使用者反饋層：看使用者主觀評價。
+2. 會話結果層：看問題是否被解決。
+3. 執行質量層：看耗時、工具、LLM 呼叫質量。
+4. 歸因分析層：按模型、渠道、問題型別、版本等維度切片。
+
+核心鏈路如下：
+
+`一次回答 -> 使用者反饋 -> 會話結果 -> trace 歸因`
+
+換句話說，系統不能只採“過程”，也必須採“結果”。
+
+### 3.3 現狀約束下的方案調整
+
+為了避免方案設計繼續偏離當前實現，整體落地順序調整為以下三層依賴：
+
+1. `response identity`：先給每次最終回答分配穩定的 `response_id`，並把它同時寫入 `OutboundMessage`、session message、OpenAPI 返回體和 Langfuse metadata。
+2. `response facts`：再沉澱一條結構化 `response_completed` 事件，把當前已經能拿到的欄位先穩定儲存下來，並以 `session.metadata["response_facts"][response_id]` 的形式落盤，例如 `session_id`、`user_id`、`time_cost_ms`、`prompt_tokens`、`completion_tokens`、`total_tokens`、`iteration_count`、`tool_count`、`tools_used_names`、`response_length`、`created_at`。
+3. `feedback & outcome`：最後在 `response_id` 基礎上補反饋事件與隱式結果判斷，否則後續指標會缺少關聯主鍵。
+
+這意味著：
+
+- 原方案中依賴 `query_category`、`prompt_version`、`bot_version` 的切片分析，需要從 MVP 下調到增強階段
+- `good_answer_rate`、`one_turn_resolution_rate`、`reask_rate` 等結果指標，不適合作為第一批必須落地的線上指標
+- 第一階段更應聚焦“把已有過程指標可靠地沉澱為響應事實”，而不是急於定義複雜的結果分數
+
+---
+
+## 4. 指標分層設計
+
+## 4.1 使用者反饋層
+
+這層是問答效果評估的長期核心，但不應被當成 Phase 1 的落地前提。
+
+### 4.1.1 顯式滿意度指標
+
+建議定義以下指標：
+
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `feedback_coverage` | 有反馈回答数 / 总回答数 | 衡量样本覆盖率，避免只看好评率 |
-| `thumbs_up_rate` | 点赞回答数 / 有反馈回答数 | 基础正反馈指标 |
-| `thumbs_down_rate` | 点踩回答数 / 有反馈回答数 | 基础负反馈指标 |
-| `csat_score` | 用户评分均值 | 适用于 5 分制或 10 分制满意度 |
-| `dissatisfaction_reason_distribution` | 各类差评原因占比 | 用于定位主要失败模式 |
+| `feedback_coverage` | 有反饋回答數 / 總回答數 | 衡量樣本覆蓋率，避免只看好評率 |
+| `thumbs_up_rate` | 點贊回答數 / 有反饋回答數 | 基礎正反饋指標 |
+| `thumbs_down_rate` | 點踩回答數 / 有反饋回答數 | 基礎負反饋指標 |
+| `csat_score` | 使用者評分均值 | 適用於 5 分制或 10 分制滿意度 |
+| `dissatisfaction_reason_distribution` | 各類差評原因佔比 | 用於定位主要失敗模式 |
 
-当前实现口径补充：
+當前實現口徑補充：
 
-- `responses_total` 以 session JSONL 中所有 `role == "assistant"` 且带 `response_id` 的最终回答为准。
-- `feedback_coverage` 的分母是 `responses_total`，分子是出现过显式 feedback 的去重 `response_id` 数量。
-- `thumbs_up_rate` / `thumbs_down_rate` 当前仍以 `feedback_total` 为分母，用于衡量显式反馈内部的正负分布。
-- `positive_feedback_rate` / `negative_feedback_rate` / `reask_rate` / `one_turn_resolution_rate` 当前统一以 `responses_total` 为分母，用于衡量全部最终回答上的结果占比。
+- `responses_total` 以 session JSONL 中所有 `role == "assistant"` 且帶 `response_id` 的最終回答為準。
+- `feedback_coverage` 的分母是 `responses_total`，分子是出現過顯式 feedback 的去重 `response_id` 數量。
+- `thumbs_up_rate` / `thumbs_down_rate` 當前仍以 `feedback_total` 為分母，用於衡量顯式反饋內部的正負分佈。
+- `positive_feedback_rate` / `negative_feedback_rate` / `reask_rate` / `one_turn_resolution_rate` 當前統一以 `responses_total` 為分母，用於衡量全部最終回答上的結果佔比。
 
-差评原因建议最少支持以下标签：
+差評原因建議最少支援以下標籤：
 
-- `irrelevant`: 答非所问
-- `incorrect`: 信息错误
-- `incomplete`: 不够完整
+- `irrelevant`: 答非所問
+- `incorrect`: 資訊錯誤
+- `incomplete`: 不夠完整
 - `too_slow`: 太慢
-- `tool_failed`: 工具执行失败
-- `too_verbose`: 重复或啰嗦
-- `not_actionable`: 无法操作
+- `tool_failed`: 工具執行失敗
+- `too_verbose`: 重複或囉嗦
+- `not_actionable`: 無法操作
 - `bad_format`: 格式不好
 
-### 4.1.2 反馈强度指标
+### 4.1.2 反饋強度指標
 
-二元点赞不足以表达问题严重程度，因此建议增加：
+二元點贊不足以表達問題嚴重程度，因此建議增加：
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `strong_negative_rate` | 强负反馈数 / 有反馈回答数 | 例如“错误”或“无法完成任务”类差评 |
-| `recover_after_negative_rate` | 差评后被修复的比例 | 衡量 bot 的纠错与恢复能力 |
+| `strong_negative_rate` | 強負反饋數 / 有反饋回答數 | 例如“錯誤”或“無法完成任務”類差評 |
+| `recover_after_negative_rate` | 差評後被修復的比例 | 衡量 bot 的糾錯與恢復能力 |
 
 ---
 
-## 4.2 会话结果层
+## 4.2 會話結果層
 
-这层用于回答“即便用户没点反馈，这次回答到底算不算成功”。
+這層用於回答“即便使用者沒點反饋，這次回答到底算不算成功”。
 
-### 4.2.1 单轮解决率
+### 4.2.1 單輪解決率
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `one_turn_resolution_rate` | 单轮解决回答数 / 总回答数 | 用户一次提问后 bot 第一次正式回答即解决问题 |
+| `one_turn_resolution_rate` | 單輪解決回答數 / 總回答數 | 使用者一次提問後 bot 第一次正式回答即解決問題 |
 
-可先使用以下代理信号：
+可先使用以下代理訊號：
 
-1. 用户显式好评。
-2. 回答后短时间内无追问且会话结束。
-3. 用户后续切换到新话题，而不是继续纠错或重问。
+1. 使用者顯式好評。
+2. 回答後短時間內無追問且會話結束。
+3. 使用者後續切換到新話題，而不是繼續糾錯或重問。
 
-### 4.2.2 重问率
+### 4.2.2 重問率
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `reask_rate` | 回答后短时间内同主题再次提问的比例 | 是最重要的隐式失败信号之一 |
+| `reask_rate` | 回答後短時間內同主題再次提問的比例 | 是最重要的隱式失敗訊號之一 |
 
-重问信号可包括：
+重問訊號可包括：
 
-- “不是这个意思”
-- “你没回答我的问题”
+- “不是這個意思”
+- “你沒回答我的問題”
 - “重新回答”
-- “还是不对”
-- 同主题关键词在短时间内重复出现
+- “還是不對”
+- 同主題關鍵詞在短時間內重複出現
 
-### 4.2.3 澄清和解决轮次
+### 4.2.3 澄清和解決輪次
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `clarification_turn_rate` | 需要多轮澄清的会话占比 | 衡量首答命中程度 |
-| `avg_turns_to_resolution` | 从首次提问到解决的平均轮次 | 衡量整体问答效率 |
+| `clarification_turn_rate` | 需要多輪澄清的會話佔比 | 衡量首答命中程度 |
+| `avg_turns_to_resolution` | 從首次提問到解決的平均輪次 | 衡量整體問答效率 |
 
-### 4.2.4 放弃和无回复
+### 4.2.4 放棄和無回覆
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `no_reply_rate` | `NO_REPLY` 回答占比 | 衡量系统未回复情况 |
-| `abandonment_after_answer_rate` | 回答后用户直接离开的比例 | 用于识别体验断点 |
+| `no_reply_rate` | `NO_REPLY` 回答佔比 | 衡量系統未回覆情況 |
+| `abandonment_after_answer_rate` | 回答後用戶直接離開的比例 | 用於識別體驗斷點 |
 
 ---
 
-## 4.3 执行质量层
+## 4.3 執行質量層
 
-这层用于回答“效果差的根因是什么”。
+這層用於回答“效果差的根因是什麼”。
 
-### 4.3.1 响应效率指标
+### 4.3.1 響應效率指標
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `response_latency_ms_p50/p95/p99` | 端到端回答耗时分位数 | 核心体验指标 |
-| `first_tool_latency_ms` | 首次工具调用前耗时 | 用于识别前置 LLM 慢或工具规划慢 |
-| `end_to_end_time_cost` | 单条回答总耗时 | 可直接复用现有 `time_cost` |
-| `iteration_count_avg` | 平均迭代次数 | 反映 agent 复杂度和稳定性 |
-| `tool_count_avg` | 平均工具调用数 | 反映问题依赖工具程度 |
+| `response_latency_ms_p50/p95/p99` | 端到端回答耗時分位數 | 核心體驗指標 |
+| `first_tool_latency_ms` | 首次工具呼叫前耗時 | 用於識別前置 LLM 慢或工具規劃慢 |
+| `end_to_end_time_cost` | 單條回答總耗時 | 可直接複用現有 `time_cost` |
+| `iteration_count_avg` | 平均迭代次數 | 反映 agent 複雜度和穩定性 |
+| `tool_count_avg` | 平均工具呼叫數 | 反映問題依賴工具程度 |
 
-### 4.3.2 LLM 质量代理指标
+### 4.3.2 LLM 質量代理指標
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `answer_length_avg` | 平均回答长度 | 用于识别过短或过长 |
-| `reasoning_present_rate` | 含 reasoning 的回答占比 | 适用于支持 reasoning 的模型 |
-| `tool_call_rate` | 触发工具调用的回答占比 | 看问题类型与工具依赖 |
-| `multi_iteration_rate` | `iteration > 1` 的回答占比 | 迭代过多通常意味着策略不稳 |
-| `max_iteration_hit_rate` | 达到最大迭代限制的比例 | 是重要失败信号 |
+| `answer_length_avg` | 平均回答長度 | 用於識別過短或過長 |
+| `reasoning_present_rate` | 含 reasoning 的回答佔比 | 適用於支援 reasoning 的模型 |
+| `tool_call_rate` | 觸發工具呼叫的回答佔比 | 看問題型別與工具依賴 |
+| `multi_iteration_rate` | `iteration > 1` 的回答佔比 | 迭代過多通常意味著策略不穩 |
+| `max_iteration_hit_rate` | 達到最大迭代限制的比例 | 是重要失敗訊號 |
 
-### 4.3.3 工具执行质量指标
+### 4.3.3 工具執行質量指標
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `tool_success_rate` | 成功工具调用数 / 总工具调用数 | 总体工具稳定性 |
-| `tool_error_rate_by_name` | 按工具名统计的错误率 | 识别问题工具 |
-| `tool_timeout_rate_by_name` | 按工具名统计超时率 | 识别慢工具 |
-| `tool_result_used_rate` | 工具结果最终促成有效回答的比例 | 衡量工具有效性 |
-| `tool_waste_rate` | 工具被调用但对结果无帮助的比例 | 衡量无效执行 |
+| `tool_success_rate` | 成功工具呼叫數 / 總工具呼叫數 | 總體工具穩定性 |
+| `tool_error_rate_by_name` | 按工具名統計的錯誤率 | 識別問題工具 |
+| `tool_timeout_rate_by_name` | 按工具名統計超時率 | 識別慢工具 |
+| `tool_result_used_rate` | 工具結果最終促成有效回答的比例 | 衡量工具有效性 |
+| `tool_waste_rate` | 工具被呼叫但對結果無幫助的比例 | 衡量無效執行 |
 
-### 4.3.4 成本质量比指标
+### 4.3.4 成本質量比指標
 
-| 指标名 | 定义 | 说明 |
+| 指標名 | 定義 | 說明 |
 | --- | --- | --- |
-| `tokens_per_positive_answer` | 总 token / 正反馈回答数 | 评估成本效率 |
-| `latency_per_positive_answer` | 总耗时 / 正反馈回答数 | 评估体验效率 |
-| `tool_calls_per_positive_answer` | 总工具数 / 正反馈回答数 | 看质量提升是否依赖复杂调用 |
+| `tokens_per_positive_answer` | 總 token / 正反饋回答數 | 評估成本效率 |
+| `latency_per_positive_answer` | 總耗時 / 正反饋回答數 | 評估體驗效率 |
+| `tool_calls_per_positive_answer` | 總工具數 / 正反饋回答數 | 看質量提升是否依賴複雜呼叫 |
 
 ---
 
-## 4.4 归因分析层
+## 4.4 歸因分析層
 
-该层不是单独的一组指标，而是要求前面所有指标都支持按关键维度切片。
+該層不是單獨的一組指標，而是要求前面所有指標都支援按關鍵維度切片。
 
-建议将切片维度分成“当前阶段可稳定支持的”与“后续增强补齐的”。
+建議將切片維度分成“當前階段可穩定支援的”與“後續增強補齊的”。
 
-当前阶段优先支持：
+當前階段優先支援：
 
 - `channel`
 - `chat_type`
@@ -279,25 +279,25 @@
 - `user_segment`
 - `time_bucket`
 
-后续增强再补：
+後續增強再補：
 
 - `query_category`
 - `prompt_version`
 - `bot_version`
 
-如果不支持这些维度切片，最终只能看到“整体效果一般”，但无法定位具体问题来源。这里尤其要避免把 `query_category`、`prompt_version`、`bot_version` 误写成当前已经稳定存在的字段来源。
+如果不支援這些維度切片，最終只能看到“整體效果一般”，但無法定位具體問題來源。這裡尤其要避免把 `query_category`、`prompt_version`、`bot_version` 誤寫成當前已經穩定存在的欄位來源。
 
 ---
 
-## 5. 北极星指标与结果分级
+## 5. 北極星指標與結果分級
 
-## 5.1 北极星指标
+## 5.1 北極星指標
 
-考虑到当前实现尚无反馈入口、也无隐式 outcome 计算链路，北极星指标需要分阶段定义。
+考慮到當前實現尚無反饋入口、也無隱式 outcome 計算鏈路，北極星指標需要分階段定義。
 
-### Phase 1 北极星指标
+### Phase 1 北極星指標
 
-如果第一阶段只能盯少量核心指标，建议优先使用以下五个：
+如果第一階段只能盯少量核心指標，建議優先使用以下五個：
 
 1. `response_completed_count`
 2. `response_latency_p95`
@@ -305,11 +305,11 @@
 4. `max_iteration_hit_rate`
 5. `no_reply_rate`
 
-这五个指标都可以建立在当前代码已存在或只需极小补充的数据之上，能先回答“系统有没有稳定产出答案”。
+這五個指標都可以建立在當前程式碼已存在或只需極小補充的資料之上，能先回答“系統有沒有穩定產出答案”。
 
-### Phase 2 北极星指标
+### Phase 2 北極星指標
 
-在 `response_id` 和反馈入口稳定后，再升级为以下五个：
+在 `response_id` 和反饋入口穩定後，再升級為以下五個：
 
 1. `good_answer_rate`
 2. `one_turn_resolution_rate`
@@ -317,26 +317,26 @@
 4. `thumbs_down_rate`
 5. `response_latency_p95`
 
-其中 `good_answer_rate` 建议作为 Phase 2 之后的综合指标，定义如下：
+其中 `good_answer_rate` 建議作為 Phase 2 之後的綜合指標，定義如下：
 
 ```text
 good_answer_rate =
-(显式正反馈回答数 + 隐式成功回答数) / 总回答数
+(顯式正反饋回答數 + 隱式成功回答數) / 總回答數
 ```
 
-隐式成功回答数可先使用以下判定：
+隱式成功回答數可先使用以下判定：
 
 - 非 `NO_REPLY`
-- 非错误结束
-- 非最大迭代耗尽
-- 无短时间内重问
-- 无显式负反馈
+- 非錯誤結束
+- 非最大迭代耗盡
+- 無短時間內重問
+- 無顯式負反饋
 
-## 5.2 回答结果分级
+## 5.2 回答結果分級
 
-建议为每条最终回答打一个离散标签 `outcome_label`，而不是只做散乱的数值统计。
+建議為每條最終回答打一個離散標籤 `outcome_label`，而不是隻做散亂的數值統計。
 
-建议标签如下：
+建議標籤如下：
 
 - `excellent`
 - `good`
@@ -344,29 +344,29 @@ good_answer_rate =
 - `bad`
 - `failed`
 
-建议规则：
+建議規則：
 
-| 标签 | 规则 |
+| 標籤 | 規則 |
 | --- | --- |
-| `excellent` | 有显式好评，且无后续重问 |
-| `good` | 无显式反馈，但单轮结束，无重问 |
-| `neutral` | 有继续追问，但最终解决 |
-| `bad` | 有差评，或短时间内重问/纠错 |
-| `failed` | 工具失败、LLM error、无回答、达到最大迭代仍未完成 |
+| `excellent` | 有顯式好評，且無後續重問 |
+| `good` | 無顯式反饋，但單輪結束，無重問 |
+| `neutral` | 有繼續追問，但最終解決 |
+| `bad` | 有差評，或短時間內重問/糾錯 |
+| `failed` | 工具失敗、LLM error、無回答、達到最大迭代仍未完成 |
 
-这样所有统计都可以统一以 `outcome_label` 为基础聚合。
+這樣所有統計都可以統一以 `outcome_label` 為基礎聚合。
 
 ---
 
-## 6. 事件模型设计
+## 6. 事件模型設計
 
-为了支撑上述指标，需要补充结构化事件。当前 vikingbot 已经有过程事件，但还缺少结果与反馈事件。
+為了支撐上述指標，需要補充結構化事件。當前 vikingbot 已經有過程事件，但還缺少結果與反饋事件。
 
-这里建议把事件模型拆成“必须先落地”和“后续增强”两层，而不是一次性并列设计。
+這裡建議把事件模型拆成“必須先落地”和“後續增強”兩層，而不是一次性並列設計。
 
-### 6.0 当前已存在的过程事件
+### 6.0 當前已存在的過程事件
 
-当前代码里已经存在但尚未沉淀为分析事实表的过程事件包括：
+當前程式碼裡已經存在但尚未沉澱為分析事實表的過程事件包括：
 
 - `REASONING`
 - `TOOL_CALL`
@@ -374,55 +374,55 @@ good_answer_rate =
 - `ITERATION`
 - `NO_REPLY`
 
-这些事件更适合用于在线流式展示和单次问题排查，不适合作为最终分析主表。后续新增事件应围绕“最终回答”来建立主键和关联关系。
+這些事件更適合用於線上流式展示和單次問題排查，不適合作為最終分析主表。後續新增事件應圍繞“最終回答”來建立主鍵和關聯關係。
 
-### 6.0.1 分阶段事件落地状态
+### 6.0.1 分階段事件落地狀態
 
-截至当前代码状态：
+截至當前程式碼狀態：
 
-1. Phase 1 已经落地 `response_completed` 相关主链路。
-2. Phase 2 当前工作树已经落地 `feedback_submitted` 与 `/bot/v1/feedback`。
-3. `response_outcome_evaluated` 已进入第三阶段实现，当前版本仅覆盖 session 历史加显式反馈的最小规则推导。
+1. Phase 1 已經落地 `response_completed` 相關主鏈路。
+2. Phase 2 當前工作樹已經落地 `feedback_submitted` 與 `/bot/v1/feedback`。
+3. `response_outcome_evaluated` 已進入第三階段實現，當前版本僅覆蓋 session 歷史加顯式反饋的最小規則推導。
 
 ## 6.1 `response_completed`
 
-该事件在最终回答产生时记录，是整套分析的主事实表。
+該事件在最終回答產生時記錄，是整套分析的主事實表。
 
-当前实现状态补充：
+當前實現狀態補充：
 
-1. `response_completed` 当前已经在 `AgentLoop` 中标准化构建。
-2. 同一份 payload 会写入 `session.metadata["response_facts"][response_id]`，并随 session save 持久化到 JSONL metadata 首行。
-3. 同一份 payload 也会写入 Langfuse generation metadata。
-4. 该事件仍然是 analytics-only，不会暴露到 OpenAPI 对外返回或用户可见 channel。
+1. `response_completed` 當前已經在 `AgentLoop` 中標準化構建。
+2. 同一份 payload 會寫入 `session.metadata["response_facts"][response_id]`，並隨 session save 持久化到 JSONL metadata 首行。
+3. 同一份 payload 也會寫入 Langfuse generation metadata。
+4. 該事件仍然是 analytics-only，不會暴露到 OpenAPI 對外返回或使用者可見 channel。
 
-建议字段：
+建議欄位：
 
-| 字段名 | 说明 |
+| 欄位名 | 說明 |
 | --- | --- |
 | `response_id` | 回答唯一 ID |
-| `trace_id` | 对应 Langfuse trace ID，如当前阶段难以稳定获取可先留空 |
-| `session_id` | 会话 ID |
-| `user_id` | 用户 ID |
+| `trace_id` | 對應 Langfuse trace ID，如當前階段難以穩定獲取可先留空 |
+| `session_id` | 會話 ID |
+| `user_id` | 使用者 ID |
 | `channel` | 渠道 |
-| `chat_type` | 单聊/群聊等，如当前阶段无统一来源可先从 channel metadata 推断 |
+| `chat_type` | 單聊/群聊等，如當前階段無統一來源可先從 channel metadata 推斷 |
 | `model` | 模型名 |
-| `provider` | provider 名，如当前阶段无稳定字段可由 provider 配置推导 |
-| `message_id` | 原始消息 ID，如 channel 无该概念可为空 |
-| `time_cost_ms` | 端到端耗时 |
-| `prompt_tokens` | 输入 token |
-| `completion_tokens` | 输出 token |
-| `total_tokens` | 总 token |
-| `iteration_count` | 迭代次数 |
-| `tool_count` | 工具调用数 |
+| `provider` | provider 名，如當前階段無穩定欄位可由 provider 配置推導 |
+| `message_id` | 原始訊息 ID，如 channel 無該概念可為空 |
+| `time_cost_ms` | 端到端耗時 |
+| `prompt_tokens` | 輸入 token |
+| `completion_tokens` | 輸出 token |
+| `total_tokens` | 總 token |
+| `iteration_count` | 迭代次數 |
+| `tool_count` | 工具呼叫數 |
 | `tools_used_names` | 工具名列表 |
-| `finish_reason` | LLM 结束原因，如当前未显式透出则可先根据 provider 返回补齐 |
-| `has_reasoning` | 是否有 reasoning 内容；当前阶段也可先退化为“是否产生过 reasoning 事件” |
-| `response_length` | 回答长度 |
-| `query_category` | 问题分类，第二阶段再补 |
-| `prompt_version` | prompt 版本，第二阶段再补 |
-| `bot_version` | bot 版本，第二阶段再补 |
+| `finish_reason` | LLM 結束原因，如當前未顯式透出則可先根據 provider 返回補齊 |
+| `has_reasoning` | 是否有 reasoning 內容；當前階段也可先退化為“是否產生過 reasoning 事件” |
+| `response_length` | 回答長度 |
+| `query_category` | 問題分類，第二階段再補 |
+| `prompt_version` | prompt 版本，第二階段再補 |
+| `bot_version` | bot 版本，第二階段再補 |
 
-其中当前阶段最低要求字段应收敛为：
+其中當前階段最低要求欄位應收斂為：
 
 - `response_id`
 - `session_id`
@@ -440,70 +440,70 @@ good_answer_rate =
 
 ## 6.2 `feedback_submitted`
 
-该事件在用户提交点赞、点踩、评分或文字反馈时记录。
+該事件在使用者提交點贊、點踩、評分或文字反饋時記錄。
 
-该事件不应作为 MVP 前提。只有在 `response_id` 已经能从客户端拿到并可靠回传后，才值得接入。
+該事件不應作為 MVP 前提。只有在 `response_id` 已經能從客戶端拿到並可靠回傳後，才值得接入。
 
-当前实现状态补充：
+當前實現狀態補充：
 
 1. OpenAPI 已提供 `POST /bot/v1/feedback`。
-2. 反馈按 `response_id` 回查 assistant message；找不到时返回 `404 Response not found`。
-3. 反馈会追加写入 session JSONL metadata 下的 `feedback_events`。
-4. 反馈会发布 `feedback_submitted` analytics 事件，但不会向用户侧 channel 透出。
+2. 反饋按 `response_id` 回查 assistant message；找不到時返回 `404 Response not found`。
+3. 反饋會追加寫入 session JSONL metadata 下的 `feedback_events`。
+4. 反饋會發布 `feedback_submitted` analytics 事件，但不會向用戶側 channel 透出。
 
-建议字段：
+建議欄位：
 
-| 字段名 | 说明 |
+| 欄位名 | 說明 |
 | --- | --- |
-| `response_id` | 关联的回答 ID |
-| `session_id` | 会话 ID |
-| `user_id` | 用户 ID |
+| `response_id` | 關聯的回答 ID |
+| `session_id` | 會話 ID |
+| `user_id` | 使用者 ID |
 | `feedback_type` | `thumb_up` / `thumb_down` / `rating` |
-| `feedback_score` | 数值评分 |
-| `feedback_reason` | 差评原因标签 |
-| `feedback_text` | 用户补充说明 |
-| `feedback_delay_sec` | 回答到反馈的间隔 |
+| `feedback_score` | 數值評分 |
+| `feedback_reason` | 差評原因標籤 |
+| `feedback_text` | 使用者補充說明 |
+| `feedback_delay_sec` | 回答到反饋的間隔 |
 
 ## 6.3 `response_outcome_evaluated`
 
-该事件由系统后处理产生，用于沉淀隐式结果判断。
+該事件由系統後處理產生，用於沉澱隱式結果判斷。
 
-当前实现状态补充：
+當前實現狀態補充：
 
-1. 该事件已经以 analytics-only 方式落地，不会透传到用户可见 channel。
-2. 当前在两个时机触发：显式反馈写入时，以及新一轮 user turn 到来前对上一条 assistant response 做隐式评估时。
-3. 评估结果当前写入 session JSONL metadata 下的 `response_outcomes[response_id]`。
-4. 当前规则版优先使用显式 `thumb_up` / `thumb_down`，否则结合 10 分钟内 follow-up、后续 user turn 数和是否缺少反馈来推导 outcome。
-5. 当前实现是 Phase 3 的最小可用版本，不等同于完整离线 judge 或评审模型。
+1. 該事件已經以 analytics-only 方式落地，不會透傳到使用者可見 channel。
+2. 當前在兩個時機觸發：顯式反饋寫入時，以及新一輪 user turn 到來前對上一條 assistant response 做隱式評估時。
+3. 評估結果當前寫入 session JSONL metadata 下的 `response_outcomes[response_id]`。
+4. 當前規則版優先使用顯式 `thumb_up` / `thumb_down`，否則結合 10 分鐘內 follow-up、後續 user turn 數和是否缺少反饋來推導 outcome。
+5. 當前實現是 Phase 3 的最小可用版本，不等同於完整離線 judge 或評審模型。
 
-补充说明：`response_outcomes` 当前只覆盖“已经被显式反馈或被后处理规则评估过”的回答，不能等价替代总回答事实表。因此 summary / channel 聚合中的 `responses_total` 不能从 `response_outcomes` 推导，而应从 assistant `response_id` 记录统计。
+補充說明：`response_outcomes` 當前只覆蓋“已經被顯式反饋或被後處理規則評估過”的回答，不能等價替代總回答事實表。因此 summary / channel 聚合中的 `responses_total` 不能從 `response_outcomes` 推導，而應從 assistant `response_id` 記錄統計。
 
-该事件建议放在第三阶段持续增强，因为它依赖：
+該事件建議放在第三階段持續增強，因為它依賴：
 
-- session 历史中能稳定关联 user / assistant 消息
-- `response_id` 已经绑定到 assistant 最终回答
-- 对“重问/纠错/切换话题/放弃”已有稳定规则
+- session 歷史中能穩定關聯 user / assistant 訊息
+- `response_id` 已經繫結到 assistant 最終回答
+- 對“重問/糾錯/切換話題/放棄”已有穩定規則
 
-建议字段：
+建議欄位：
 
-| 字段名 | 说明 |
+| 欄位名 | 說明 |
 | --- | --- |
 | `response_id` | 回答 ID |
-| `resolved_in_one_turn` | 是否单轮解决 |
-| `reask_within_10m` | 10 分钟内是否重问 |
-| `clarification_turns` | 后续澄清轮次 |
-| `follow_up_without_feedback` | 是否出现 follow-up 且无显式反馈 |
-| `outcome_label` | 最终结果标签 |
+| `resolved_in_one_turn` | 是否單輪解決 |
+| `reask_within_10m` | 10 分鐘內是否重問 |
+| `clarification_turns` | 後續澄清輪次 |
+| `follow_up_without_feedback` | 是否出現 follow-up 且無顯式反饋 |
+| `outcome_label` | 最終結果標籤 |
 
 ---
 
-## 7. Query 分类设计
+## 7. Query 分類設計
 
-问答效果不能只看总体平均值，必须按问题类型分层。
+問答效果不能只看總體平均值，必須按問題型別分層。
 
-但结合当前实现，`query_category` 不应作为 Phase 1 前提，而应放到 Phase 2 之后补齐。
+但結合當前實現，`query_category` 不應作為 Phase 1 前提，而應放到 Phase 2 之後補齊。
 
-第二阶段建议至少支持以下分类：
+第二階段建議至少支援以下分類：
 
 - `general_qa`
 - `code_explanation`
@@ -514,7 +514,7 @@ good_answer_rate =
 - `workflow_task`
 - `memory_or_profile`
 
-后续可以进一步扩展成更稳定的分类：
+後續可以進一步擴充成更穩定的分類：
 
 - `factual`
 - `reasoning`
@@ -523,35 +523,35 @@ good_answer_rate =
 - `multi_step`
 - `social_chitchat`
 
-分类来源可以按阶段逐步演进：
+分類來源可以按階段逐步演進：
 
-1. 先使用规则或关键字分类，并明确这是增强能力而非现状能力。
-2. 再引入离线模型分类。
-3. 最终沉淀为稳定的业务问题 taxonomy。
+1. 先使用規則或關鍵字分類，並明確這是增強能力而非現狀能力。
+2. 再引入離線模型分類。
+3. 最終沉澱為穩定的業務問題 taxonomy。
 
 ---
 
-## 8. 与 Langfuse 的集成设计
+## 8. 與 Langfuse 的整合設計
 
-Langfuse 适合作为 trace 容器、坏样本入口和链路诊断工具，但不建议把全部业务分析都压在 Langfuse 查询上。
+Langfuse 適合作為 trace 容器、壞樣本入口和鏈路診斷工具，但不建議把全部業務分析都壓在 Langfuse 查詢上。
 
-结合当前实现，需要先明确“已经有的”和“还没有的”。
+結合當前實現，需要先明確“已經有的”和“還沒有的”。
 
-当前已经有：
+當前已經有：
 
-- `trace` 装饰器会透传 `session_id`、`user_id`
-- provider 会写入 LLM generation
-- tool registry 会写入 tool span，并附带 `success`、`duration_ms`
+- `trace` 裝飾器會透傳 `session_id`、`user_id`
+- provider 會寫入 LLM generation
+- tool registry 會寫入 tool span，並附帶 `success`、`duration_ms`
 
-当前还没有：
+當前還沒有：
 
-- 统一写入 generation / trace 的 `query_category`
-- 统一写入 generation / trace 的 `prompt_version`、`bot_version`
-- 统一且完善的 outcome 聚合视图；当前已落地的是 trace event `response_outcome_evaluated` 与 observation score `response_outcome_label`
+- 統一寫入 generation / trace 的 `query_category`
+- 統一寫入 generation / trace 的 `prompt_version`、`bot_version`
+- 統一且完善的 outcome 聚合檢視；當前已落地的是 trace event `response_outcome_evaluated` 與 observation score `response_outcome_label`
 
-## 8.1 Langfuse 中应承载的内容
+## 8.1 Langfuse 中應承載的內容
 
-建议按三类承载信息，而不是把所有字段都塞进 generation metadata：
+建議按三類承載資訊，而不是把所有欄位都塞進 generation metadata：
 
 1. trace / generation metadata：
 - `response_id`
@@ -571,18 +571,18 @@ Langfuse 适合作为 trace 容器、坏样本入口和链路诊断工具，但�
 3. outcome score：
 - `response_outcome_label`
 
-对于 Phase 3 当前实现，需要明确避免一种不准确表述：不要写成“在显式 feedback 之后把 `final_outcome_label` 回写到已结束 generation metadata”。真实落地方式是把 outcome 写到原 trace 下的 event，并把离散标签写到对应 observation score。
+對於 Phase 3 當前實現，需要明確避免一種不準確表述：不要寫成“在顯式 feedback 之後把 `final_outcome_label` 回寫到已結束 generation metadata”。真實落地方式是把 outcome 寫到原 trace 下的 event，並把離散標籤寫到對應 observation score。
 
-其中建议的接入优先级是：
+其中建議的接入優先順序是：
 
-1. 先补 `response_id`、`iteration_count`、`tool_count`、`tool_names`
-2. 再补 `query_category`
-3. Phase 3 outcome 统一使用 `response_outcome_evaluated` event + `response_outcome_label` score
-4. 最后再补 `prompt_version`、`bot_version`
+1. 先補 `response_id`、`iteration_count`、`tool_count`、`tool_names`
+2. 再補 `query_category`
+3. Phase 3 outcome 統一使用 `response_outcome_evaluated` event + `response_outcome_label` score
+4. 最後再補 `prompt_version`、`bot_version`
 
-## 8.2 Langfuse score 建议
+## 8.2 Langfuse score 建議
 
-建议将关键结果写入 Langfuse score，方便直接筛 trace：
+建議將關鍵結果寫入 Langfuse score，方便直接篩 trace：
 
 - `response_outcome_label`
 - `user_feedback_score`
@@ -593,112 +593,112 @@ Langfuse 适合作为 trace 容器、坏样本入口和链路诊断工具，但�
 
 其中：
 
-- `response_outcome_label` 适合使用离散枚举值，例如 `positive_feedback`、`negative_feedback`、`reasked`、`resolved`
+- `response_outcome_label` 適合使用離散列舉值，例如 `positive_feedback`、`negative_feedback`、`reasked`、`resolved`
 - `user_feedback_score` 可取 `1 / 0 / -1`
 - `implicit_resolution_score` 可取 `1 / 0`
-- `response_quality_score` 可为综合分
+- `response_quality_score` 可為綜合分
 
-## 8.3 Langfuse 与分析仓库的关系
+## 8.3 Langfuse 與分析倉庫的關係
 
-建议职责分工如下：
+建議職責分工如下：
 
-| 系统 | 职责 |
+| 系統 | 職責 |
 | --- | --- |
-| Langfuse | trace 展示、样本回溯、执行链路诊断、坏案例筛选 |
-| 业务事件仓库 | 指标聚合、趋势分析、A/B 对比、报表与告警 |
+| Langfuse | trace 展示、樣本回溯、執行鏈路診斷、壞案例篩選 |
+| 業務事件倉庫 | 指標聚合、趨勢分析、A/B 對比、報表與告警 |
 
-换句话说，Langfuse 用来回答“这条坏样本具体发生了什么”，而聚合分析系统用来回答“最近哪类问题整体变差了”。
+換句話說，Langfuse 用來回答“這條壞樣本具體發生了什麼”，而聚合分析系統用來回答“最近哪類問題整體變差了”。
 
 ---
 
-## 9. Dashboard 与告警设计
+## 9. Dashboard 與告警設計
 
-## 9.1 建议的三个 Dashboard
+## 9.1 建議的三個 Dashboard
 
-Dashboard 同样需要分阶段理解：
+Dashboard 同樣需要分階段理解：
 
-- Phase 1 先做“运行稳定性看板”和“执行诊断看板”
-- Phase 2 之后再补“业务效果看板”和“差评分析看板”
+- Phase 1 先做“執行穩定性看板”和“執行診斷看板”
+- Phase 2 之後再補“業務效果看板”和“差評分析看板”
 
-### 9.1.1 业务效果看板
+### 9.1.1 業務效果看板
 
-该看板属于 Phase 2 及之后。
+該看板屬於 Phase 2 及之後。
 
-建议展示：
+建議展示：
 
 - `good_answer_rate`
 - `one_turn_resolution_rate`
 - `thumbs_down_rate`
 - `reask_rate`
 
-支持按以下维度切片：
+支援按以下維度切片：
 
-- 时间
+- 時間
 - 模型
 - channel
 - query_category
 
-### 9.1.2 执行诊断看板
+### 9.1.2 執行診斷看板
 
-建议展示：
+建議展示：
 
 - `response_latency_p95`
 - `tool_error_rate_by_name`
 - `max_iteration_hit_rate`
 - `response_completed_count`
 
-支持按以下维度切片：
+支援按以下維度切片：
 
 - provider
 - tool_name
 
-`prompt_version` 相关切片应放到后续增强阶段，前提是代码中已经有稳定字段来源。
+`prompt_version` 相關切片應放到後續增強階段，前提是程式碼中已經有穩定欄位來源。
 
-### 9.1.3 差评分析看板
+### 9.1.3 差評分析看板
 
-该看板同样属于 Phase 2 及之后。
+該看板同樣屬於 Phase 2 及之後。
 
-建议展示：
+建議展示：
 
-- 差评原因分布
-- 差评样本 Top N
-- 差评 trace 中常见工具链
-- 差评 query_category 排名
+- 差評原因分佈
+- 差評樣本 Top N
+- 差評 trace 中常見工具鏈
+- 差評 query_category 排名
 
-## 9.2 告警建议
+## 9.2 告警建議
 
-建议优先配置以下五类告警：
+建議優先配置以下五類告警：
 
-1. `response_latency_p95` 超阈值
+1. `response_latency_p95` 超閾值
 2. `tool_success_rate` 突降
 3. `max_iteration_hit_rate` 突增
 4. `no_reply_rate` 突增
-5. `response_completed_count` 异常下降
+5. `response_completed_count` 異常下降
 
-在 Phase 2 接入反馈后，再补：
+在 Phase 2 接入反饋後，再補：
 
 1. `thumbs_down_rate` 突增
 2. `good_answer_rate` 突降
 
-这些告警比单纯盯错误日志更接近真实用户体验变化。
+這些告警比單純盯錯誤日誌更接近真實使用者體驗變化。
 
 ---
 
-## 10. 分阶段落地计划
+## 10. 分階段落地計劃
 
 ## 10.1 Phase 1: MVP
 
-第一阶段先做最小可用版本，目标是快速建立结构化响应事实闭环。
+第一階段先做最小可用版本，目標是快速建立結構化響應事實閉環。
 
-建议优先落地：
+建議優先落地：
 
-1. `response_id` 机制
+1. `response_id` 機制
 2. `response_completed` 事件
-3. 在 `OutboundMessage`、session message、OpenAPI 响应中透出 `response_id`
-4. Langfuse trace / generation metadata 关联 `response_id`
-5. 最小指标集
+3. 在 `OutboundMessage`、session message、OpenAPI 響應中透出 `response_id`
+4. Langfuse trace / generation metadata 關聯 `response_id`
+5. 最小指標集
 
-MVP 指标集建议为：
+MVP 指標集建議為：
 
 1. `response_completed_count`
 2. `response_latency_p95`
@@ -709,34 +709,34 @@ MVP 指标集建议为：
 7. `avg_iteration_count`
 8. `avg_tool_count`
 
-说明：原始 Phase 1 规划里，这些结果指标并不属于必须项；但截至当前工作树，`feedback_coverage`、`thumbs_up_rate`、`thumbs_down_rate`、`one_turn_resolution_rate`、`reask_rate` 已经具备最小可用的数据入口与离线聚合能力。当前需要强调的不是“是否存在”，而是“口径是否统一”，尤其是 `responses_total` 必须基于所有 assistant `response_id`，而不是 `response_outcomes`。
+說明：原始 Phase 1 規劃裡，這些結果指標並不屬於必須項；但截至當前工作樹，`feedback_coverage`、`thumbs_up_rate`、`thumbs_down_rate`、`one_turn_resolution_rate`、`reask_rate` 已經具備最小可用的資料入口與離線聚合能力。當前需要強調的不是“是否存在”，而是“口徑是否統一”，尤其是 `responses_total` 必須基於所有 assistant `response_id`，而不是 `response_outcomes`。
 
-## 10.2 Phase 2: 增强归因能力
+## 10.2 Phase 2: 增強歸因能力
 
-第二阶段重点提升分析和归因能力。
+第二階段重點提升分析和歸因能力。
 
-截至当前工作树，以下第 1、2 项已经进入实现状态，并且已经通过 `openviking-server --with-bot` 完成真实代理路径验证；后续重点应放在补充更系统的验证沉淀与指标消费，而不是把尚未完成的 Phase 3 能力提前写成已实现。
+截至當前工作樹，以下第 1、2 項已經進入實現狀態，並且已經通過 `openviking-server --with-bot` 完成真實代理路徑驗證；後續重點應放在補充更系統的驗證沉澱與指標消費，而不是把尚未完成的 Phase 3 能力提前寫成已實現。
 
-建议增加：
+建議增加：
 
-1. 点赞/点踩反馈入口与 `feedback_submitted` 事件
-2. OpenAPI 反馈接口或统一 feedback webhook
-3. query 分类
+1. 點贊/點踩反饋入口與 `feedback_submitted` 事件
+2. OpenAPI 反饋介面或統一 feedback webhook
+3. query 分類
 4. `feedback_coverage`
 5. `thumbs_up_rate`
 6. `thumbs_down_rate`
 7. `negative_rate_by_query_category`
 8. `model_comparison_by_query_category`
 
-## 10.3 Phase 3: 离线评测与评审模型
+## 10.3 Phase 3: 離線評測與評審模型
 
-第三阶段再考虑引入隐式 outcome 判断与离线质量评审能力。
+第三階段再考慮引入隱式 outcome 判斷與離線質量評審能力。
 
-截至当前工作树，`response_outcome_evaluated` 的最小规则版已经落地；后续重点从“是否实现”转为“规则是否足够稳健、指标如何消费、是否接入 judge”。
+截至當前工作樹，`response_outcome_evaluated` 的最小規則版已經落地；後續重點從“是否實現”轉為“規則是否足夠穩健、指標如何消費、是否接入 judge”。
 
-建议先补：
+建議先補：
 
-1. 增强 `response_outcome_evaluated` 后处理
+1. 增強 `response_outcome_evaluated` 後處理
 2. `one_turn_resolution_rate`
 3. `reask_rate`
 4. `good_answer_rate`
@@ -746,7 +746,7 @@ MVP 指标集建议为：
 8. `tokens_per_positive_answer`
 9. `latency_vs_feedback_correlation`
 
-建议引入 LLM-as-a-Judge，为每条回答提供辅助分数：
+建議引入 LLM-as-a-Judge，為每條回答提供輔助分數：
 
 - `relevance_score`
 - `correctness_score`
@@ -754,101 +754,101 @@ MVP 指标集建议为：
 - `actionability_score`
 - `tone_score`
 
-这一层只能作为辅助，不应替代真实用户反馈。
+這一層只能作為輔助，不應替代真實使用者反饋。
 
 ---
 
-## 11. 与当前 vikingbot 架构的对应关系
+## 11. 與當前 vikingbot 架構的對應關係
 
-结合当前代码结构，建议的最小落点如下：
+結合當前程式碼結構，建議的最小落點如下：
 
 1. 在 `vikingbot.bus.events.OutboundMessage` 增加 `response_id` 字段。
-2. 在 `AgentLoop._process_message` 生成最终 `OutboundMessage` 前创建 `response_id`。
-3. 在 `session.add_message("assistant", ...)` 时把 `response_id` 一并写入 JSONL 消息。
-4. 在 OpenAPI `ChatResponse` 与流式最终事件中返回 `response_id`，让客户端具备回传反馈的主键。
-5. 在 agent loop 中构建标准化 `response_completed`，并随 session save 将其写入 `session.metadata["response_facts"]`，同时继续以 analytics-only 事件形式发布。
-6. 在 Langfuse generation / tool span metadata 中写入 `response_id`、`iteration_count`、`tool_count`、`tool_names`。
+2. 在 `AgentLoop._process_message` 生成最終 `OutboundMessage` 前建立 `response_id`。
+3. 在 `session.add_message("assistant", ...)` 時把 `response_id` 一併寫入 JSONL 訊息。
+4. 在 OpenAPI `ChatResponse` 與流式最終事件中返回 `response_id`，讓客戶端具備回傳反饋的主鍵。
+5. 在 agent loop 中構建標準化 `response_completed`，並隨 session save 將其寫入 `session.metadata["response_facts"]`，同時繼續以 analytics-only 事件形式釋出。
+6. 在 Langfuse generation / tool span metadata 中寫入 `response_id`、`iteration_count`、`tool_count`、`tool_names`。
 
-第二阶段再补：
+第二階段再補：
 
-1. OpenAPI 反馈接口。
-2. channel 侧反馈事件接入。
+1. OpenAPI 反饋介面。
+2. channel 側反饋事件接入。
 3. `feedback_submitted` 事件。
-4. `query_category`、`prompt_version`、`bot_version` 的字段来源。
+4. `query_category`、`prompt_version`、`bot_version` 的欄位來源。
 
-第三阶段再补：
+第三階段再補：
 
-1. 基于 session 历史的 `response_outcome_evaluated` 后处理。
-2. 更稳健的 `outcome_label` 规则。
-3. 单轮解决、重问、放弃等隐式结果指标消费。
+1. 基於 session 歷史的 `response_outcome_evaluated` 後處理。
+2. 更穩健的 `outcome_label` 規則。
+3. 單輪解決、重問、放棄等隱式結果指標消費。
 
-因此，第一阶段无需大改 agent 主循环，但也不只是把“最终回答”和“后续反馈”关联起来，而是要先把“最终回答本身”沉淀成结构化、可关联、可复盘的响应事实。
-
----
-
-## 12. 风险与注意事项
-
-### 12.1 反馈覆盖率不足
-
-如果用户反馈入口不明显，最终会导致显式反馈覆盖率过低。因此不能只依赖点赞/点踩，必须同时建设隐式成功指标。
-
-### 12.2 不能让高基数字段污染通用指标系统
-
-像 `session_id`、`user_id`、完整错误文本、完整问题文本，不适合直接进入高频指标标签。它们更适合存到事件系统或 trace metadata。
-
-### 12.3 LLM Judge 不能替代真实用户
-
-离线模型评分可以帮助排序和筛样本，但不能当成用户体验的真实代表。
-
-### 12.4 反馈体系要支持版本对比
-
-若没有 `prompt_version`、`bot_version`、`model` 等字段，后续几乎无法评估优化是否有效。
-
-### 12.5 不要把“设想中的字段”误当成“现有能力”
-
-本次复核发现，设计文档最容易偏离现状的地方，不在于指标定义本身，而在于把“应该有的字段”写成了“已经稳定存在的字段”。
-
-后续继续推进时需要遵守两个原则：
-
-1. 文档中的“当前已有能力”必须只写代码里已经稳定产出的字段和事件。
-2. 文档中的“建议字段”必须明确区分为 MVP 必需、第二阶段补齐、第三阶段增强，避免把实现顺序倒置。
+因此，第一階段無需大改 agent 主迴圈，但也不只是把“最終回答”和“後續反饋”關聯起來，而是要先把“最終回答本身”沉澱成結構化、可關聯、可復盤的響應事實。
 
 ---
 
-## 13. 结论
+## 12. 風險與注意事項
 
-vikingbot 的问答效果反馈观测，不能只停留在 token、trace 和工具调用层面，必须建立从“执行过程”到“最终结果”的完整链路。
+### 12.1 反饋覆蓋率不足
 
-本方案建议的主线是：
+如果使用者反饋入口不明顯，最終會導致顯式反饋覆蓋率過低。因此不能只依賴點贊/點踩，必須同時建設隱式成功指標。
 
-1. 以 `response_completed` 为核心事实事件。
-2. 先建立响应事实，再叠加显式反馈和隐式结果。
-3. Phase 1 先用 `response_completed_count`、`response_latency_p95`、`tool_success_rate`、`max_iteration_hit_rate`、`no_reply_rate` 保障系统稳定性；Phase 2 之后再升级为效果类北极星指标组合。
-4. 通过 Langfuse trace + 业务事件聚合实现从趋势发现到坏样本回溯的闭环。
+### 12.2 不能讓高基數字段汙染通用指標系統
 
-最终目标不是“记录更多日志”，而是让团队能够明确回答：
+像 `session_id`、`user_id`、完整錯誤文本、完整問題文本，不適合直接進入高頻指標標籤。它們更適合存到事件系統或 trace metadata。
+
+### 12.3 LLM Judge 不能替代真實使用者
+
+離線模型評分可以幫助排序和篩樣本，但不能當成使用者體驗的真實代表。
+
+### 12.4 反饋體系要支援版本對比
+
+若沒有 `prompt_version`、`bot_version`、`model` 等欄位，後續幾乎無法評估最佳化是否有效。
+
+### 12.5 不要把“設想中的欄位”誤當成“現有能力”
+
+本次複核發現，設計文件最容易偏離現狀的地方，不在於指標定義本身，而在於把“應該有的欄位”寫成了“已經穩定存在的欄位”。
+
+後續繼續推進時需要遵守兩個原則：
+
+1. 文件中的“當前已有能力”必須只寫程式碼裡已經穩定產出的欄位和事件。
+2. 文件中的“建議欄位”必須明確區分為 MVP 必需、第二階段補齊、第三階段增強，避免把實現順序倒置。
+
+---
+
+## 13. 結論
+
+vikingbot 的問答效果反饋觀測，不能只停留在 token、trace 和工具呼叫層面，必須建立從“執行過程”到“最終結果”的完整鏈路。
+
+本方案建議的主線是：
+
+1. 以 `response_completed` 為核心事實事件。
+2. 先建立響應事實，再疊加顯式反饋和隱式結果。
+3. Phase 1 先用 `response_completed_count`、`response_latency_p95`、`tool_success_rate`、`max_iteration_hit_rate`、`no_reply_rate` 保障系統穩定性；Phase 2 之後再升級為效果類北極星指標組合。
+4. 通過 Langfuse trace + 業務事件聚合實現從趨勢發現到壞樣本回溯的閉環。
+
+最終目標不是“記錄更多日誌”，而是讓團隊能夠明確回答：
 
 - 哪些回答真的好。
-- 哪些回答正在变差。
-- 为什么变差。
-- 改完以后是否真的变好。
+- 哪些回答正在變差。
+- 為什麼變差。
+- 改完以後是否真的變好。
 
 ---
 
 ## 14. Verification
 
-如需对当前最小实现做 targeted 验证，推荐使用 `uv` 执行以下回归集：
+如需對當前最小實現做 targeted 驗證，推薦使用 `uv` 執行以下回歸集：
 
 ```bash
 uv run --extra test --extra bot -m pytest bot/tests/test_feedback_stats.py bot/tests/test_openapi_auth.py bot/tests/test_outcome_evaluator.py bot/tests/test_agent_loop_outcome.py tests/metrics/collectors/test_feedback_collector.py tests/server/test_prometheus_metrics.py
 ```
 
-预期结果：
+預期結果：
 
-1. feedback stats、OpenAPI feedback、outcome evaluator、agent loop `response_facts` 持久化相关用例全部通过
-2. feedback collector 与 `/metrics` 暴露相关用例全部通过
+1. feedback stats、OpenAPI feedback、outcome evaluator、agent loop `response_facts` 持久化相關用例全部通過
+2. feedback collector 與 `/metrics` 暴露相關用例全部通過
 
 ## 15. Related Docs
 
-- [OpenViking Metrics 概念文档](../../docs/zh/concepts/12-metrics.md) - feedback 指标族、PromQL 示例与 `/metrics` 暴露说明
-- [OpenViking Metrics API 文档](../../docs/zh/api/09-metrics.md) - `/metrics` 端点行为与抓取方式
+- [OpenViking Metrics 概念文件](../../docs/zh/concepts/12-metrics.md) - feedback 指標族、PromQL 示例與 `/metrics` 暴露說明
+- [OpenViking Metrics API 文件](../../docs/zh/api/09-metrics.md) - `/metrics` 端點行為與抓取方式

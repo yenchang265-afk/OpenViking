@@ -1,135 +1,135 @@
-# Claude Code 记忆插件
+# Claude Code 記憶外掛
 
-为 [Claude Code](https://docs.claude.com/zh-CN/docs/claude-code/overview) 添加跨项目、跨会话（session）的长期记忆功能。安装完成后，每轮对话均会自动召回相关记忆并捕获新内容，无需模型主动调用任何工具。
+為 [Claude Code](https://docs.claude.com/zh-CN/docs/claude-code/overview) 新增跨專案、跨會話（session）的長期記憶功能。安裝完成後，每輪對話均會自動召回相關記憶並捕獲新內容，無需模型主動呼叫任何工具。
 
-源码：[examples/claude-code-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/claude-code-memory-plugin) | [博客：动机与效果展示](https://blog.openviking.ai/post/openviking-coding-agent/)
+原始碼：[examples/claude-code-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/claude-code-memory-plugin) | [部落格：動機與效果展示](https://blog.openviking.ai/post/openviking-coding-agent/)
 
-## 安装
+## 安裝
 
-Claude Code 和 Codex 共用同一个安装脚本。它会依次询问界面语言（English/中文）、要安装的 harness、下载源和 OpenViking 凭据；所有步骤幂等，重复运行安全。
+Claude Code 和 Codex 共用同一個安裝指令碼。它會依次詢問介面語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；所有步驟冪等，重複執行安全。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
 ```
 
-GitHub 访问受限的地区，从火山引擎 TOS 镜像运行同一个安装脚本（或在下载源提问时选择「TOS 镜像」）：
+GitHub 訪問受限的地區，從火山引擎 TOS 映象運行同一個安裝指令碼（或在下載源提問時選擇「TOS 映象」）：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
 ```
 
-> **Claude Code 走 TOS 的注意事项**：TOS 渠道注册的是本地目录 marketplace，**无法自动更新**——更新请重跑安装脚本。（Codex 走 TOS 时安装自 TOS 托管的 git 仓库，保留远程更新能力。）
+> **Claude Code 走 TOS 的注意事項**：TOS 渠道註冊的是本地目錄 marketplace，**無法自動更新**——更新請重跑安裝指令碼。（Codex 走 TOS 時安裝自 TOS 託管的 git 倉庫，保留遠端更新能力。）
 
-现在不再需要任何 shell wrapper：插件自带的 stdio MCP 代理会在运行时读取 `~/.openviking/ovcli.conf`（或 `OPENVIKING_*` 环境变量），与 hooks 使用同一套配置链。
+現在不再需要任何 shell wrapper：外掛自帶的 stdio MCP 代理會在執行時讀取 `~/.openviking/ovcli.conf`（或 `OPENVIKING_*` 環境變數），與 hooks 使用同一套配置鏈。
 
-使用一段时间后，即便在全新的对话中提及过往的话题，Claude Code 也能准确回忆起来。
+使用一段時間後，即便在全新的對話中提及過往的話題，Claude Code 也能準確回憶起來。
 
 <details>
-<summary><b>手动安装</b></summary>
+<summary><b>手動安裝</b></summary>
 
-如果您倾向于手动安装：
+如果您傾向於手動安裝：
 
-1. **配置连接** — 手写 `~/.openviking/ovcli.conf`（`url`、`api_key`，可选 `account`/`user`），或装完后运行插件自带向导 `node <插件目录>/scripts/setup.mjs`。
+1. **配置連線** — 手寫 `~/.openviking/ovcli.conf`（`url`、`api_key`，可選 `account`/`user`），或裝完後執行外掛自帶嚮導 `node <外掛目錄>/scripts/setup.mjs`。
 
-2. **从远程 marketplace 安装插件**（无需 clone 仓库）：
+2. **從遠端 marketplace 安裝外掛**（無需 clone 倉庫）：
 
    ```bash
    claude plugin marketplace add https://raw.githubusercontent.com/volcengine/OpenViking/main/.claude-plugin/marketplace.json
    claude plugin install openviking-memory@openviking
    ```
 
-   开发场景也可注册本地 checkout：`claude plugin marketplace add "<仓库路径>/examples"`，插件 id 相同。
+   開發場景也可註冊本地 checkout：`claude plugin marketplace add "<倉庫路徑>/examples"`，外掛 id 相同。
 
-3. **启动 Claude Code** — 运行后输入 `/mcp` 命令，确认 OpenViking 条目已连接。
+3. **啟動 Claude Code** — 執行後輸入 `/mcp` 命令，確認 OpenViking 條目已連線。
 
-> 尚未创建 `ovcli.conf`？请先按照 [部署指南 → CLI](../guides/03-deployment.md#cli) 的说明进行配置。
+> 尚未建立 `ovcli.conf`？請先按照 [部署指南 → CLI](../guides/03-deployment.md#cli) 的說明進行配置。
 >
-> 使用纯本地模式（`http://127.0.0.1:1933`，无鉴权）？您可以跳过第 1 步，插件将直接使用本地默认值。
+> 使用純本地模式（`http://127.0.0.1:1933`，無鑑權）？您可以跳過第 1 步，外掛將直接使用本地預設值。
 >
-> 使用 Claude Code < 2.0 版本？安装脚本会自动识别并回退到 `claude mcp add` + hooks 合并；详见 [插件 README 的兼容模式章节](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README_CN.md#兼容模式claude-code--20)。
+> 使用 Claude Code < 2.0 版本？安裝指令碼會自動識別並回退到 `claude mcp add` + hooks 合併；詳見 [外掛 README 的相容模式章節](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README_CN.md#相容模式claude-code--20)。
 
 </details>
 
-## 验证
+## 驗證
 
-启动 `claude`，随后：
+啟動 `claude`，隨後：
 
-- 输入 `/plugins` → 在 Installed 列表中应能找到 **openviking-memory**（其子项 **openviking** MCP 应显示为已连接状态）。
-- 输入 `/mcp` → OpenViking 对应的条目应显示您的服务器 URL 及有效的认证信息。
-- 输入 `/openviking-memory:ov` → 查看服务器状态、身份信息、召回/注入的统计数据以及功能开关状态。
+- 輸入 `/plugins` → 在 Installed 列表中應能找到 **openviking-memory**（其子項 **openviking** MCP 應顯示為已連線狀態）。
+- 輸入 `/mcp` → OpenViking 對應的條目應顯示您的伺服器 URL 及有效的認證資訊。
+- 輸入 `/openviking-memory:ov` → 檢視伺服器狀態、身份資訊、召回/注入的統計資料以及功能開關狀態。
 
-若插件未正常工作，可设置环境变量 `OPENVIKING_DEBUG=1`，并查看日志文件 `~/.openviking/logs/cc-hooks.log` 以排查问题。
+若外掛未正常工作，可設定環境變數 `OPENVIKING_DEBUG=1`，並檢視日誌檔案 `~/.openviking/logs/cc-hooks.log` 以排查問題。
 
 ## 工作原理
 
-插件通过挂载到 Claude Code 的不同生命周期节点来发挥作用：
+外掛通過掛載到 Claude Code 的不同生命週期節點來發揮作用：
 
-- **每次用户输入前** — 搜索 OpenViking 数据库并注入相关记忆。
-- **每轮回复后** — 自动捕获并存储新的对话内容。
-- **会话（session）启动时** — 注入用户画像、记忆索引和 skill 清单。
-- **上下文压缩（compact）前及会话结束时** — 提交所有待处理的消息记录。
-- **启动子代理（subagent）时** — 为其分配相互隔离的记忆会话。
-- **原生文件工具访问 `viking://` 路径前** — 拦截该调用，并提示改用对应的 OpenViking MCP 工具；对 skill 路径的 `Write` 或 `Edit` 会被引导到 `add_skill`。
+- **每次使用者輸入前** — 搜尋 OpenViking 資料庫並注入相關記憶。
+- **每輪迴復後** — 自動捕獲並存儲新的對話內容。
+- **會話（session）啟動時** — 注入使用者畫像、記憶索引和 skill 清單。
+- **上下文壓縮（compact）前及會話結束時** — 提交所有待處理的訊息記錄。
+- **啟動子代理（subagent）時** — 為其分配相互隔離的記憶會話。
+- **原生檔案工具訪問 `viking://` 路徑前** — 攔截該呼叫，並提示改用對應的 OpenViking MCP 工具；對 skill 路徑的 `Write` 或 `Edit` 會被引導到 `add_skill`。
 
-所有数据写入操作均为异步执行，不会阻塞当前的对话进程。
+所有資料寫入操作均為非同步執行，不會阻塞當前的對話程序。
 
-skill 清单就是 `<available-skills>` 块，列出存放在 OpenViking 中的 skill：先列你自己在 `viking://~/skills` 下的，再列账号内共享在 `viking://agent/skills` 下的，每个附一句简短描述。要照清单里的 skill 执行前，Claude 会先用 OpenViking 的 `read` 工具读取它的 `SKILL.md`。清单有独立的 Token 预算：放不下描述时只列名称，连一个名称都放不下时缩成一行总数。插件自带的 `openviking-skills` skill 告诉 Claude 如何查找和使用 OpenViking 中的 skill，如何用 `add_skill` MCP 工具创建、安装和共享 skill，如何删除 skill，以及在你要求时如何把 `~/.claude/skills` 等本地 skill 迁入 OpenViking。
+skill 清單就是 `<available-skills>` 塊，列出存放在 OpenViking 中的 skill：先列你自己在 `viking://~/skills` 下的，再列帳號內共享在 `viking://agent/skills` 下的，每個附一句簡短描述。要照清單裡的 skill 執行前，Claude 會先用 OpenViking 的 `read` 工具讀取它的 `SKILL.md`。清單有獨立的 Token 預算：放不下描述時只列名稱，連一個名稱都放不下時縮成一行總數。外掛自帶的 `openviking-skills` skill 告訴 Claude 如何查詢和使用 OpenViking 中的 skill，如何用 `add_skill` MCP 工具建立、安裝和共享 skill，如何刪除 skill，以及在你要求時如何把 `~/.claude/skills` 等本地 skill 遷入 OpenViking。
 
-工具调用和结果会作为独立的 `tool` part 捕获，`tool_output` 原样上报。截断由服务端负责：超过 `tool_output_externalization.threshold_chars`（默认 `20000`）的输出会写入 session 的 tool-result 存储，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通过 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 读回。
+工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
 
 <details>
 <summary><b>配置</b></summary>
 
-配置项的读取优先级为：环境变量 > `ovcli.conf` > `ov.conf` > 内置默认值（`http://127.0.0.1:1933`，无鉴权）。
+配置項的讀取優先順序為：環境變數 > `ovcli.conf` > `ov.conf` > 內建預設值（`http://127.0.0.1:1933`，無鑑權）。
 
-| 环境变量 | 默认值 | 说明 |
+| 環境變數 | 預設值 | 說明 |
 |---------|--------|------|
-| `OPENVIKING_AUTO_RECALL` | `true` | 每次用户输入前自动触发记忆召回 |
-| `OPENVIKING_RECALL_LIMIT` | `10` | 遗留宽度覆盖，会转换为各分类 coding 配额 |
-| `OPENVIKING_RECALL_TOKEN_BUDGET` | `2000` | 最终 raw-find fallback 的内联 Token 预算 |
-| `OPENVIKING_AUTO_CAPTURE` | `true` | 每轮对话结束后自动捕获新记忆 |
-| `OPENVIKING_SKILL_CATALOG` | `true` | 会话启动时注入 `<available-skills>` skill 清单 |
-| `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET` | `1200` | `<available-skills>` 的 Token 预算，与用户画像的预算相互独立；设为 `0` 即关闭清单 |
-| `OPENVIKING_SESSION_START_MAX_BYTES` | `9500` | SessionStart 注入的总字节上限，保证整块低于 Claude Code 的 10,000 字符限制、直接进入上下文而不是被存成文件；resume 或 compact 时会话归档最多占一半。设为 `0` 取消上限 |
-| `OPENVIKING_BYPASS_SESSION` | `false` | 禁用当前会话的所有 Hook |
-| `OPENVIKING_BYPASS_SESSION_PATTERNS` | `""` | 通过 CSV 格式的 glob 模式匹配并自动跳过特定会话 |
-| `OPENVIKING_RECALL_QUERY_FILTERS` | `""` | CSV 格式的 sed 风格正则规则，在 prompt 变成检索 query 前生效（[语法与示例](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md#input-filters)） |
-| `OPENVIKING_CAPTURE_FILTERS` | `""` | CSV 格式的 sed 风格正则规则，作用于每个被捕获的回合（同一套语法） |
-| `OPENVIKING_MEMORY_ENABLED` | (auto) | 强制开启或关闭插件 |
-| `OPENVIKING_DEBUG` | `false` | 将调试日志输出至 `~/.openviking/logs/cc-hooks.log` |
+| `OPENVIKING_AUTO_RECALL` | `true` | 每次使用者輸入前自動觸發記憶召回 |
+| `OPENVIKING_RECALL_LIMIT` | `10` | 遺留寬度覆蓋，會轉換為各分類 coding 配額 |
+| `OPENVIKING_RECALL_TOKEN_BUDGET` | `2000` | 最終 raw-find fallback 的內聯 Token 預算 |
+| `OPENVIKING_AUTO_CAPTURE` | `true` | 每輪對話結束後自動捕獲新記憶 |
+| `OPENVIKING_SKILL_CATALOG` | `true` | 會話啟動時注入 `<available-skills>` skill 清單 |
+| `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET` | `1200` | `<available-skills>` 的 Token 預算，與使用者畫像的預算相互獨立；設為 `0` 即關閉清單 |
+| `OPENVIKING_SESSION_START_MAX_BYTES` | `9500` | SessionStart 注入的總位元組上限，保證整塊低於 Claude Code 的 10,000 字元限制、直接進入上下文而不是被存成檔案；resume 或 compact 時會話歸檔最多佔一半。設為 `0` 取消上限 |
+| `OPENVIKING_BYPASS_SESSION` | `false` | 停用當前會話的所有 Hook |
+| `OPENVIKING_BYPASS_SESSION_PATTERNS` | `""` | 通過 CSV 格式的 glob 模式匹配並自動跳過特定會話 |
+| `OPENVIKING_RECALL_QUERY_FILTERS` | `""` | CSV 格式的 sed 風格正則規則，在 prompt 變成檢索 query 前生效（[語法與示例](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md#input-filters)） |
+| `OPENVIKING_CAPTURE_FILTERS` | `""` | CSV 格式的 sed 風格正則規則，作用於每個被捕獲的回合（同一套語法） |
+| `OPENVIKING_MEMORY_ENABLED` | (auto) | 強制開啟或關閉外掛 |
+| `OPENVIKING_DEBUG` | `false` | 將除錯日誌輸出至 `~/.openviking/logs/cc-hooks.log` |
 
-这些旋钮大多也可以写在 `ovcli.conf` 的 `plugin` 段下——见[插件配置](../configuration/02-client.md#插件配置)。两个过滤器 knob 尤其建议写在那里，用 JSON 数组，因为环境变量形式会按逗号切分。
+這些旋鈕大多也可以寫在 `ovcli.conf` 的 `plugin` 段下——見[外掛配置](../configuration/02-client.md#外掛配置)。兩個過濾器 knob 尤其建議寫在那裡，用 JSON 陣列，因為環境變數形式會按逗號切分。
 
-如果更看重召回响应速度，请参阅[低延迟召回](./01-overview.md#低延迟召回)，其中说明了如何通过环境变量或 `ovcli.conf` 关闭查询扩展与结果压缩。
+如果更看重召回響應速度，請參閱[低延遲召回](./01-overview.md#低延遲召回)，其中說明了如何通過環境變數或 `ovcli.conf` 關閉查詢擴充與結果壓縮。
 
-在多租户场景下，请额外配置 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER`。完整的环境变量列表请参阅 [插件 README](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md#configuration)。
+在多租戶場景下，請額外配置 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER`。完整的環境變數列表請參閱 [外掛 README](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md#configuration)。
 
 </details>
 
-## 工作区 peer
+## 工作區 peer
 
-记忆按你所在仓库派生出的 peer 归档，因此同一个项目在不同 clone、worktree 和子目录下共用同一份记忆。默认的 `peer.source: "git"` 取仓库归一化后的 `origin` URL——`origin` 为 `git@github.com:volcengine/OpenViking.git` 时，peer 就是 `github.com-volcengine-openviking`——其次是仓库根路径；不在仓库中则完全不发送 peer，在那里记下的内容进入用户级空间 `viking://user/<you>/memories`。fork 的 `origin` 不同，因此默认是独立的 peer。
+記憶按你所在倉庫派生出的 peer 歸檔，因此同一個專案在不同 clone、worktree 和子目錄下共用同一份記憶。預設的 `peer.source: "git"` 取倉庫歸一化後的 `origin` URL——`origin` 為 `git@github.com:volcengine/OpenViking.git` 時，peer 就是 `github.com-volcengine-openviking`——其次是倉庫根路徑；不在倉庫中則完全不傳送 peer，在那裡記下的內容進入使用者級空間 `viking://user/<you>/memories`。fork 的 `origin` 不同，因此預設是獨立的 peer。
 
-可通过 `OPENVIKING_PEER_SOURCE`、`ovcli.conf` 中的 `plugin.peerSource`，或工作区 `.openviking/config.json`（`"version": 1` 的配置文件，可提交给团队共用）中的 `peer.source` 修改：`"cwd"` 恢复此前的行为——把工作目录路径中的非字母数字字符全部替换成 `-`；`"none"` 表示不发送 peer；也可以用 `"team-{dir}"` 这样的模板自定义。要[让一个不是仓库的目录拥有独立记忆](../configuration/02-client.md#让一个目录拥有独立记忆)，在该目录下创建 `.openviking/config.json`，内容为 `{"version": 1, "peer": {"id": "my-project"}}`。此前按工作目录派生的 peer 下写入的记忆仍能被召回，无需迁移。分层优先级和工作区配置文件的完整 schema 见[客户端配置 → 工作区配置](../configuration/02-client.md#工作区配置)。
+可通過 `OPENVIKING_PEER_SOURCE`、`ovcli.conf` 中的 `plugin.peerSource`，或工作區 `.openviking/config.json`（`"version": 1` 的配置檔案，可提交給團隊共用）中的 `peer.source` 修改：`"cwd"` 恢復此前的行為——把工作目錄路徑中的非字母數字字元全部替換成 `-`；`"none"` 表示不傳送 peer；也可以用 `"team-{dir}"` 這樣的模板自定義。要[讓一個不是倉庫的目錄擁有獨立記憶](../configuration/02-client.md#讓一個目錄擁有獨立記憶)，在該目錄下建立 `.openviking/config.json`，內容為 `{"version": 1, "peer": {"id": "my-project"}}`。此前按工作目錄派生的 peer 下寫入的記憶仍能被召回，無需遷移。分層優先順序和工作區配置檔案的完整 schema 見[客戶端配置 → 工作區配置](../configuration/02-client.md#工作區配置)。
 
-## 状态行
+## 狀態行
 
-插件会在 Claude Code 的输入框下方显示一行 OpenViking 状态栏，用于指示：连接状态、召回条数、捕获进度以及当前会话状态。关于状态栏各部分的详细含义与自定义配置方法，请参阅 [STATUSLINE.md](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/STATUSLINE.md)。
+外掛會在 Claude Code 的輸入框下方顯示一行 OpenViking 狀態列，用於指示：連線狀態、召回條數、捕獲進度以及當前會話狀態。關於狀態列各部分的詳細含義與自定義配置方法，請參閱 [STATUSLINE.md](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/STATUSLINE.md)。
 
 ## 故障排查
 
-| 现象 | 原因 | 修复 |
+| 現象 | 原因 | 修復 |
 |------|------|------|
-| 插件未激活 | 未找到 `ov.conf` 或 `ovcli.conf` 配置文件 | 运行 [安装脚本](#安装)，或手动设置 `OPENVIKING_MEMORY_ENABLED=1` 配合 URL/API_KEY 使用。 |
-| Hook 已触发但召回结果为空 | 服务器未启动或 URL 配置错误 | 执行命令测试连通性：`curl "$(jq -r '.url' ~/.openviking/ovcli.conf)/health"` |
-| MCP 工具连接到了 `127.0.0.1` 而非远程服务器 | `~/.openviking/ovcli.conf` 中没有 `url`（代理回退到本地默认值） | 修正 `ovcli.conf`（或运行 `node <插件目录>/scripts/setup.mjs`）后重启 Claude Code |
-| MCP 工具调用报认证错误 | 当前 ovcli 配置没有 authenticated server 所需的有效 `api_key` | 更新 `ovcli.conf` 中的 `api_key`；stdio 代理在认证失败后会重新读取配置 |
-| 远程认证失败 (401 / 403) | API Key 错误或缺少租户 Header | 检查 `OPENVIKING_API_KEY` 是否正确；多租户环境下还需核对 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
+| 外掛未啟用 | 未找到 `ov.conf` 或 `ovcli.conf` 配置檔案 | 執行 [安裝指令碼](#安裝)，或手動設定 `OPENVIKING_MEMORY_ENABLED=1` 配合 URL/API_KEY 使用。 |
+| Hook 已觸發但召回結果為空 | 伺服器未啟動或 URL 配置錯誤 | 執行命令測試連通性：`curl "$(jq -r '.url' ~/.openviking/ovcli.conf)/health"` |
+| MCP 工具連線到了 `127.0.0.1` 而非遠端伺服器 | `~/.openviking/ovcli.conf` 中沒有 `url`（代理回退到本地預設值） | 修正 `ovcli.conf`（或執行 `node <外掛目錄>/scripts/setup.mjs`）後重啟 Claude Code |
+| MCP 工具呼叫報認證錯誤 | 當前 ovcli 配置沒有 authenticated server 所需的有效 `api_key` | 更新 `ovcli.conf` 中的 `api_key`；stdio 代理在認證失敗後會重新讀取配置 |
+| 遠端認證失敗 (401 / 403) | API Key 錯誤或缺少租戶 Header | 檢查 `OPENVIKING_API_KEY` 是否正確；多租戶環境下還需核對 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
-- [博客：在 Claude Code / Codex 中接入 OpenViking](https://blog.openviking.ai/post/openviking-coding-agent/) — 探讨为 Coding Agent 添加长期记忆的动机与实际效果。
-- [插件 README](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md) — 查看完整的环境变量列表、Hook 运行细节及系统架构图。
-- [MCP 客户端](./06-mcp-clients.md) — 了解 MCP 工具参数及其他客户端集成指南。
-- [部署指南 → CLI](../guides/03-deployment.md#cli) — 学习 `ovcli.conf` 的具体配置方法。
+- [整合能力參考](./16-capability-reference.md)
+- [部落格：在 Claude Code / Codex 中接入 OpenViking](https://blog.openviking.ai/post/openviking-coding-agent/) — 探討為 Coding Agent 新增長期記憶的動機與實際效果。
+- [外掛 README](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md) — 檢視完整的環境變數列表、Hook 執行細節及系統架構圖。
+- [MCP 客戶端](./06-mcp-clients.md) — 瞭解 MCP 工具引數及其他客戶端整合指南。
+- [部署指南 → CLI](../guides/03-deployment.md#cli) — 學習 `ovcli.conf` 的具體配置方法。

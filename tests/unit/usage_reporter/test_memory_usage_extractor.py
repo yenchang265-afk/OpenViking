@@ -28,12 +28,12 @@ async def test_memory_usage_extractor_emits_recall_and_injection_events():
             id="msg-1",
             role="user",
             parts=[
-                TextPart("我要处理无订单号换货"),
+                TextPart("我要處理無訂單號換貨"),
                 ToolPart(
                     tool_id="call-search",
                     tool_name="find",
                     tool_status="completed",
-                    tool_input={"query": "无订单号换货"},
+                    tool_input={"query": "無訂單號換貨"},
                     tool_output={"results": [{"uri": experience_uri}, {"uri": "viking://other"}]},
                 ),
             ],
@@ -47,7 +47,7 @@ async def test_memory_usage_extractor_emits_recall_and_injection_events():
                     tool_name="read",
                     tool_status="completed",
                     tool_input={"uri": experience_uri},
-                    tool_output="## Situation\n用户未提供订单号但要求换货。",
+                    tool_output="## Situation\n使用者未提供訂單號但要求換貨。",
                 )
             ],
         ),

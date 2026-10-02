@@ -1,139 +1,139 @@
-# VikingBot 接入 OpenViking 会话压缩改造方案
+# VikingBot 接入 OpenViking 會話壓縮改造方案
 
-## 结论
+## 結論
 
-该方案可行，但不能直接沿用当前 VikingBot 的 OpenViking 接入方式。
+該方案可行，但不能直接沿用當前 VikingBot 的 OpenViking 接入方式。
 
-当前 OpenViking 服务端已经具备以下关键能力：
+當前 OpenViking 服務端已經具備以下關鍵能力：
 
-- 稳定 session 的消息追加
-- `pending_tokens` 累积
+- 穩定 session 的訊息追加
+- `pending_tokens` 累積
 - `commit(keep_recent_count=...)`
-- `get_session_context()` 返回 `latest_archive_overview` 与 live messages
+- `get_session_context()` 返回 `latest_archive_overview` 與 live messages
 
-真正需要改造的是 VikingBot 侧的写路径、读路径、配置与旧压缩链路的退场策略。
+真正需要改造的是 VikingBot 側的寫路徑、讀路徑、配置與舊壓縮鏈路的退場策略。
 
-## 目标
+## 目標
 
-把 VikingBot 的长对话压缩链路改为：
+把 VikingBot 的長對話壓縮鏈路改為：
 
-1. 同一个 bot session 持续写入同一个 OpenViking session。
-2. 每轮仅增量同步本轮新增消息，不重复全量重传。
-3. 当 OpenViking session 的 `pending_tokens` 达到阈值时触发 `commit`。
-4. 下一轮模型调用前，从 OpenViking 读取已压缩上下文。
-5. 本地 session 在未压缩前保留原始消息日志；OpenViking commit 成功后清空本地 JSONL，由 OpenViking 负责长上下文压缩与回放。
+1. 同一個 bot session 持續寫入同一個 OpenViking session。
+2. 每輪僅增量同步本輪新增訊息，不重複全量重傳。
+3. 當 OpenViking session 的 `pending_tokens` 達到閾值時觸發 `commit`。
+4. 下一輪模型呼叫前，從 OpenViking 讀取已壓縮上下文。
+5. 本地 session 在未壓縮前保留原始訊息日誌；OpenViking commit 成功後清空本地 JSONL，由 OpenViking 負責長上下文壓縮與回放。
 
-## 非目标
+## 非目標
 
 第一版不做以下事情：
 
-- 不让 OpenViking 完全替代本地 session 存储。
-- 不把全部 tool trace / reasoning 直接纳入 OpenViking 压缩主链路。
-- 不依赖 memory extraction 完成后才能继续下一轮对话。
-- 不同时保留两套自动压缩主链路并行工作。
+- 不讓 OpenViking 完全替代本地 session 儲存。
+- 不把全部 tool trace / reasoning 直接納入 OpenViking 壓縮主鏈路。
+- 不依賴 memory extraction 完成後才能繼續下一輪對話。
+- 不同時保留兩套自動壓縮主鏈路並行工作。
 
-## 当前实现与方案的关键差异
+## 當前實現與方案的關鍵差異
 
-### 1. 当前 `ov_server.py` 不是稳定 session 模式
+### 1. 當前 `ov_server.py` 不是穩定 session 模式
 
-当前 `bot/vikingbot/openviking_mount/ov_server.py` 的 `commit(...)` 会在每次提交时重新创建 session，再把整段消息写入并立刻 commit。
+當前 `bot/vikingbot/openviking_mount/ov_server.py` 的 `commit(...)` 會在每次提交時重新建立 session，再把整段訊息寫入並立刻 commit。
 
-这与目标方案冲突，因为它会导致：
+這與目標方案衝突，因為它會導致：
 
-- `pending_tokens` 无法持续累积
-- 下一轮无法从同一个 session 取回压缩结果
-- 无法做真正的增量同步
+- `pending_tokens` 無法持續累積
+- 下一輪無法從同一個 session 取回壓縮結果
+- 無法做真正的增量同步
 
-因此，这个文件必须从“一次性提交器”改造成“稳定 session 访问层”。
+因此，這個檔案必須從“一次性提交器”改造成“穩定 session 訪問層”。
 
-### 2. 当前 `loop.py` 仍以本地 history 为主
+### 2. 當前 `loop.py` 仍以本地 history 為主
 
-当前 `bot/vikingbot/agent/loop.py` 仍然使用：
+當前 `bot/vikingbot/agent/loop.py` 仍然使用：
 
-- `session.get_history(...)` 作为模型 history
-- `len(session.messages) > self.memory_window` 作为本地自动压缩触发条件
+- `session.get_history(...)` 作為模型 history
+- `len(session.messages) > self.memory_window` 作為本地自動壓縮觸發條件
 
-这意味着现有主链路仍是“本地 session 驱动”，而不是“OpenViking session 驱动”。
+這意味著現有主鏈路仍是“本地 session 驅動”，而不是“OpenViking session 驅動”。
 
-### 3. 当前 `context.py` 只会拼本地 history
+### 3. 當前 `context.py` 只會拼本地 history
 
-当前 `bot/vikingbot/agent/context.py` 的 prompt 组装仍是：
+當前 `bot/vikingbot/agent/context.py` 的 prompt 組裝仍是：
 
 1. system prompt
 2. 本地 history
 3. memory/context 注入
-4. 当前 user message
+4. 當前 user message
 
-如果要接入 OpenViking 压缩上下文，必须显式扩展 prompt assembly。
+如果要接入 OpenViking 壓縮上下文，必須顯式擴充 prompt assembly。
 
-### 4. 现有旧 compact hook 会与新链路冲突
+### 4. 現有舊 compact hook 會與新鏈路衝突
 
-当前 `bot/vikingbot/hooks/builtins/openviking_hooks.py` 里仍有旧的 `message.compact` 逻辑：
+當前 `bot/vikingbot/hooks/builtins/openviking_hooks.py` 裡仍有舊的 `message.compact` 邏輯：
 
-- 有的模式下会把 session 拆成 admin session + per-user session
-- 这与新方案的“一个房间对应一个稳定 OV session”冲突
+- 有的模式下會把 session 拆成 admin session + per-user session
+- 這與新方案的“一個房間對應一個穩定 OV session”衝突
 
-因此新链路启用后，旧 compact hook 必须被禁用、绕过或显式降级为非主路径。
+因此新鏈路啟用後，舊 compact hook 必須被停用、繞過或顯式降級為非主路徑。
 
-## 设计原则
+## 設計原則
 
-### 1. OpenViking 负责长上下文压缩，本地 session 负责压缩前原始日志
+### 1. OpenViking 負責長上下文壓縮，本地 session 負責壓縮前原始日誌
 
-第一版不建议让 OpenViking 直接替代本地 session 的短期落盘能力。
+第一版不建議讓 OpenViking 直接替代本地 session 的短期落盤能力。
 
-推荐职责划分：
+推薦職責劃分：
 
-- 本地 session：在压缩前保存原始消息，兼容现有 provider-specific 字段
-- OpenViking session：保存用于长对话压缩和回放的核心消息链路
+- 本地 session：在壓縮前儲存原始訊息，相容現有 provider-specific 欄位
+- OpenViking session：儲存用於長對話壓縮和回放的核心訊息鏈路
 
-达到 token/window 阈值并成功 commit 后，本地 session JSONL 会被清空，下一轮通过 OpenViking context 回放已压缩历史。
+達到 token/window 閾值併成功 commit 後，本地 session JSONL 會被清空，下一輪通過 OpenViking context 回放已壓縮歷史。
 
-### 2. OpenViking session 必须稳定
+### 2. OpenViking session 必須穩定
 
-一个 `SessionKey.safe_name()` 对应一个稳定的 `ov_session_id`。
+一個 `SessionKey.safe_name()` 對應一個穩定的 `ov_session_id`。
 
-第一版建议直接使用：
+第一版建議直接使用：
 
 - `ov_session_id = SessionKey.safe_name()`
 
-不再在每次 commit 时重新 `create_session()`。
+不再在每次 commit 時重新 `create_session()`。
 
-### 3. OpenViking 读路径优先，本地只补 unsynced delta
+### 3. OpenViking 讀路徑優先，本地只補 unsynced delta
 
-OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
+OpenViking 的 `get_session_context()` 返回的不是純摘要，而是：
 
 - `latest_archive_overview`
 - pending archive messages
-- 当前 live messages
+- 當前 live messages
 
-因此，VikingBot 读路径不能再把本地 history 整段拼进去。
+因此，VikingBot 讀路徑不能再把本地 history 整段拼進去。
 
-正确规则应为：
+正確規則應為：
 
-- 以 OpenViking 返回内容作为主 history
-- 本地仅补“尚未成功写入 OpenViking 的尾部 delta”
+- 以 OpenViking 返回內容作為主 history
+- 本地僅補“尚未成功寫入 OpenViking 的尾部 delta”
 
-否则会产生重复上下文。
+否則會產生重複上下文。
 
-### 4. 请求身份与消息说话人分离
+### 4. 請求身份與訊息說話人分離
 
-群聊场景中要区分两层身份：
+群聊場景中要區分兩層身份：
 
-- OpenViking request identity：谁在发起这次 API 调用
-- message speaker identity：这条消息是谁说的
+- OpenViking request identity：誰在發起這次 API 呼叫
+- message speaker identity：這條訊息是誰說的
 
-第一版建议：
+第一版建議：
 
-- 请求继续使用当前合法的 bot/account/user 身份
-- 每条消息的真实说话人通过 `peer_id` 记录
+- 請求繼續使用當前合法的 bot/account/user 身份
+- 每條訊息的真實說話人通過 `peer_id` 記錄
 
-不要把“当前 `sender_id`”直接等同于每次请求的 OpenViking user 身份，否则会和现有权限/命名空间语义冲突。
+不要把“當前 `sender_id`”直接等同於每次請求的 OpenViking user 身份，否則會和現有許可權/名稱空間語義衝突。
 
 ## 核心方案
 
-## 1. 稳定的 OpenViking Session 绑定
+## 1. 穩定的 OpenViking Session 繫結
 
-在本地 session metadata 中维护：
+在本地 session metadata 中維護：
 
 ```json
 {
@@ -149,143 +149,143 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 }
 ```
 
-字段说明：
+欄位說明：
 
-- `session_id`: 稳定的 OpenViking session id
-- `last_synced_local_index`: 已成功同步到 OpenViking 的本地消息下标上界
-- `last_commit_at`: 最近一次 commit 时间
-- `last_pending_tokens`: 最近一次观测到的 `pending_tokens`
-- `last_context_read_at`: 最近一次读 context 时间
+- `session_id`: 穩定的 OpenViking session id
+- `last_synced_local_index`: 已成功同步到 OpenViking 的本地訊息下標上界
+- `last_commit_at`: 最近一次 commit 時間
+- `last_pending_tokens`: 最近一次觀測到的 `pending_tokens`
+- `last_context_read_at`: 最近一次讀 context 時間
 - `last_sync_status`: `idle` / `syncing` / `error`
 
-其中最关键的是 `last_synced_local_index`，它决定增量同步与去重是否正确。
+其中最關鍵的是 `last_synced_local_index`，它決定增量同步與去重是否正確。
 
-## 2. 写路径：每轮结束后增量同步到 OpenViking
+## 2. 寫路徑：每輪結束後增量同步到 OpenViking
 
-写路径触发点位于 `bot/vikingbot/agent/loop.py` 当前一轮完成、本地 `session.add_message(...)` + `save(...)` 之后。
+寫路徑觸發點位於 `bot/vikingbot/agent/loop.py` 當前一輪完成、本地 `session.add_message(...)` + `save(...)` 之後。
 
-### 同步内容
+### 同步內容
 
-第一版只同步核心对话消息：
+第一版只同步核心對話訊息：
 
 - user message
 - assistant final content
 
-第一版不建议写入：
+第一版不建議寫入：
 
 - 全量 tool trace
 - `reasoning_content`
-- 大体积工具输出
+- 大體積工具輸出
 
 原因：
 
-- 这些内容会显著放大压缩噪声
-- 当前 provider replay 仍主要依赖本地 session
-- 第一版目标是先打通稳定会话压缩闭环，而不是完整镜像全部调试信息
+- 這些內容會顯著放大壓縮噪聲
+- 當前 provider replay 仍主要依賴本地 session
+- 第一版目標是先打通穩定會話壓縮閉環，而不是完整映象全部除錯資訊
 
 ### 同步流程
 
 ```text
-1. 读取 session.metadata.openviking
-2. 若不存在 session_id，则创建/确保稳定 session
-3. 根据 last_synced_local_index 找出新增消息
-4. 将新增消息转换为 OV message parts
-5. 调用 append_messages / batch_add_messages 写入 OV
-6. 读取 session meta，获取 pending_tokens
-7. 若 pending_tokens >= commit_token_threshold 或消息数达到 memory_window，则触发 commit_session(keep_recent_count=N)
-8. 更新本地 metadata 中的同步游标与快照
-9. 如果本次实际执行了 commit，则清空本地 session JSONL，并重置本地同步游标但保留稳定 session_id
+1. 讀取 session.metadata.openviking
+2. 若不存在 session_id，則建立/確保穩定 session
+3. 根據 last_synced_local_index 找出新增訊息
+4. 將新增訊息轉換為 OV message parts
+5. 呼叫 append_messages / batch_add_messages 寫入 OV
+6. 讀取 session meta，獲取 pending_tokens
+7. 若 pending_tokens >= commit_token_threshold 或訊息數達到 memory_window，則觸發 commit_session(keep_recent_count=N)
+8. 更新本地 metadata 中的同步游標與快照
+9. 如果本次實際執行了 commit，則清空本地 session JSONL，並重置本地同步游標但保留穩定 session_id
 ```
 
-### 写路径要求
+### 寫路徑要求
 
-- 只在“成功写入 OV”后推进 `last_synced_local_index`
-- commit 失败不应回滚已成功写入的消息游标
-- commit 成功代表本轮压缩完成，应清空本地 session JSONL；后续 prompt 由 OpenViking context + 新的本地未同步 tail 组成
-- commit 与 extract 异步执行时，下一轮仍可继续读取 session context
+- 只在“成功寫入 OV”後推進 `last_synced_local_index`
+- commit 失敗不應回滾已成功寫入的訊息游標
+- commit 成功代表本輪壓縮完成，應清空本地 session JSONL；後續 prompt 由 OpenViking context + 新的本地未同步 tail 組成
+- commit 與 extract 非同步執行時，下一輪仍可繼續讀取 session context
 
-## 3. 读路径：模型调用前优先从 OpenViking 组装 history
+## 3. 讀路徑：模型呼叫前優先從 OpenViking 組裝 history
 
-读路径触发点位于 `bot/vikingbot/agent/loop.py` 当前构建 `messages = await message_context.build_messages(...)` 之前。
+讀路徑觸發點位於 `bot/vikingbot/agent/loop.py` 當前構建 `messages = await message_context.build_messages(...)` 之前。
 
-### 读取流程
+### 讀取流程
 
 ```text
-1. 读取本地 metadata.openviking
-2. 若未启用或尚未建立稳定 session，则退化为本地 history 模式
-3. 调用 get_session_context(session_id, token_budget)
+1. 讀取本地 metadata.openviking
+2. 若未啟用或尚未建立穩定 session，則退化為本地 history 模式
+3. 呼叫 get_session_context(session_id, token_budget)
 4. 取回 latest_archive_overview + messages
-5. 根据 last_synced_local_index，仅补本地未同步 delta
-6. 将组装后的 history 传给 ContextBuilder.build_messages(...)
+5. 根據 last_synced_local_index，僅補本地未同步 delta
+6. 將組裝後的 history 傳給 ContextBuilder.build_messages(...)
 ```
 
-### 推荐上下文顺序
+### 推薦上下文順序
 
 1. system prompt
 2. OpenViking `latest_archive_overview`
 3. OpenViking `messages`
 4. 本地 unsynced delta history
-5. 当前 user message
+5. 當前 user message
 
-### 去重规则
+### 去重規則
 
-这是第一版最关键的边界条件：
+這是第一版最關鍵的邊界條件：
 
-- 不能再把本地 `session.get_history(...)` 全量拼到 OpenViking context 后面
-- 本地只允许补尚未成功同步到 OpenViking 的消息
-- 一旦消息已确认 append 成功，就不应再出现在 local delta 中
+- 不能再把本地 `session.get_history(...)` 全量拼到 OpenViking context 後面
+- 本地只允許補尚未成功同步到 OpenViking 的訊息
+- 一旦訊息已確認 append 成功，就不應再出現在 local delta 中
 
-否则很容易出现重复轮次，导致模型重复理解、工具误触发或 token 浪费。
+否則很容易出現重複輪次，導致模型重複理解、工具誤觸發或 token 浪費。
 
 ## 4. token budget 的使用方式
 
-`session_context_token_budget` 不能被视为最终 prompt 的硬上限。
+`session_context_token_budget` 不能被視為最終 prompt 的硬上限。
 
-第一版应采用两层预算：
+第一版應採用兩層預算：
 
-### 第一层：OpenViking context budget
+### 第一層：OpenViking context budget
 
-用于控制调用 `get_session_context(session_id, token_budget=...)` 的预算目标。
+用於控制呼叫 `get_session_context(session_id, token_budget=...)` 的預算目標。
 
-### 第二层：VikingBot 最终 prompt trim
+### 第二層：VikingBot 最終 prompt trim
 
-在组装出：
+在組裝出：
 
 - OV overview
 - OV messages
 - local unsynced delta
 - current user message
 
-之后，仍需在 VikingBot 侧做一次最终裁剪，确保不会超过 provider 的上下文限制。
+之後，仍需在 VikingBot 側做一次最終裁剪，確保不會超過 provider 的上下文限制。
 
-否则在大群聊或消息内容较长时，仍可能超出模型窗口。
+否則在大群聊或訊息內容較長時，仍可能超出模型視窗。
 
-## 5. 群聊语义
+## 5. 群聊語義
 
-群聊推荐语义如下：
+群聊推薦語義如下：
 
-- 一个聊天房间对应一个稳定 `ov_session_id`
-- OpenViking request identity 继续按当前 bot/account 配置走
-- 每条 user/assistant message 的实际说话者写入 `peer_id`
+- 一個聊天房間對應一個穩定 `ov_session_id`
+- OpenViking request identity 繼續按當前 bot/account 配置走
+- 每條 user/assistant message 的實際說話者寫入 `peer_id`
 
-建议映射：
+建議對映：
 
-- user message: `role="user"`, `peer_id=<真实 sender_id>`
-- assistant message: `role="assistant"`, `peer_id=<bot/agent id 或默认 assistant 标识>`
+- user message: `role="user"`, `peer_id=<真實 sender_id>`
+- assistant message: `role="assistant"`, `peer_id=<bot/agent id 或預設 assistant 標識>`
 
-这样可以同时满足：
+這樣可以同時滿足：
 
-- 会话不被拆碎
-- 群聊参与者身份可保留
-- 不破坏当前 OpenViking 的身份回退逻辑
+- 會話不被拆碎
+- 群聊參與者身份可保留
+- 不破壞當前 OpenViking 的身份回退邏輯
 
-## 需要改动的文件
+## 需要改動的檔案
 
 ### 1. `bot/vikingbot/openviking_mount/ov_server.py`
 
-把现有一次性 `commit(...)` 改造成稳定 session 访问层。
+把現有一次性 `commit(...)` 改造成穩定 session 訪問層。
 
-建议新增或重构为以下接口：
+建議新增或重構為以下介面：
 
 - `ensure_session(session_id: str) -> dict`
 - `append_messages(session_id: str, messages: list[dict], peer_id_resolver=...) -> dict`
@@ -295,45 +295,45 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 要求：
 
-- 不再每次重新创建 session
-- 允许批量追加消息
+- 不再每次重新建立 session
+- 允許批次追加訊息
 - 能返回最新 `pending_tokens`
-- commit 时能传 `keep_recent_count`
+- commit 時能傳 `keep_recent_count`
 
 ### 2. `bot/vikingbot/agent/loop.py`
 
-需要新增两段逻辑：
+需要新增兩段邏輯：
 
-- 模型调用前：读取 OV context 并构造 history
-- 一轮结束后：把本轮新增消息增量同步到 OV，并按阈值决定是否 commit
+- 模型呼叫前：讀取 OV context 並構造 history
+- 一輪結束後：把本輪新增訊息增量同步到 OV，並按閾值決定是否 commit
 
-同时需要关闭或门控当前本地自动 compact 主链路：
+同時需要關閉或門控當前本地自動 compact 主鏈路：
 
-- 当 `session_context_enabled=true` 时，不再使用 `len(session.messages) > self.memory_window` 触发旧压缩主链路
-- `/compact` 可保留为显式命令，但行为要重新定义，避免与新链路重复
+- 當 `session_context_enabled=true` 時，不再使用 `len(session.messages) > self.memory_window` 觸發舊壓縮主鏈路
+- `/compact` 可保留為顯式命令，但行為要重新定義，避免與新鏈路重複
 
 ### 3. `bot/vikingbot/agent/context.py`
 
-需要让 `build_messages(...)` 支持接收“外部已组装好的 history”。
+需要讓 `build_messages(...)` 支援接收“外部已組裝好的 history”。
 
-推荐方式：
+推薦方式：
 
-- `loop.py` 先准备好 `history`
-- `context.py` 只负责拼：system prompt、memory、当前 user message
+- `loop.py` 先準備好 `history`
+- `context.py` 只負責拼：system prompt、memory、當前 user message
 
-这样可以避免把 OpenViking 逻辑硬塞进 `ContextBuilder` 内部。
+這樣可以避免把 OpenViking 邏輯硬塞進 `ContextBuilder` 內部。
 
 ### 4. `bot/vikingbot/session/manager.py`
 
-当前 metadata merge 已支持嵌套字典，可直接用于持久化：
+當前 metadata merge 已支援巢狀字典，可直接用於持久化：
 
 - `metadata["openviking"][...]`
 
-这里只需要补充新字段的读写约定，不需要重新设计存储格式。
+這裡只需要補充新欄位的讀寫約定，不需要重新設計儲存格式。
 
 ### 5. `bot/vikingbot/config/schema.py`
 
-在 `AgentsConfig` 中增加配置项：
+在 `AgentsConfig` 中增加配置項：
 
 - `session_context_enabled: bool = False`
 - `session_context_token_budget: int = 12000`
@@ -342,116 +342,116 @@ OpenViking 的 `get_session_context()` 返回的不是纯摘要，而是：
 
 其中：
 
-- `session_context_enabled`：总开关
-- `session_context_token_budget`：OV context 读取预算
-- `commit_token_threshold`：触发 commit 的阈值
-- `commit_keep_recent_count`：commit 后保留的 recent live messages 数量
+- `session_context_enabled`：總開關
+- `session_context_token_budget`：OV context 讀取預算
+- `commit_token_threshold`：觸發 commit 的閾值
+- `commit_keep_recent_count`：commit 後保留的 recent live messages 數量
 
-## OpenViking Python HTTP SDK 需要补的能力
+## OpenViking Python HTTP SDK 需要補的能力
 
-OpenViking 服务端和 Python HTTP SDK 需要完整透出以下调用能力：
+OpenViking 服務端和 Python HTTP SDK 需要完整透出以下呼叫能力：
 
 - `commit_session(session_id, keep_recent_count=0, telemetry=False)`
 - `Session.commit(keep_recent_count=0, telemetry=False)`
 - `Session.commit_async(keep_recent_count=0, telemetry=False)`
 
-对应实现位于 `sdk/python/openviking_sdk/client.py`，VikingBot 通过 HTTP 服务调用这些接口。
+對應實現位於 `sdk/python/openviking_sdk/client.py`，VikingBot 通過 HTTP 服務呼叫這些介面。
 
-## 与旧链路的共存策略
+## 與舊鏈路的共存策略
 
-### 必须处理的冲突点
+### 必須處理的衝突點
 
-以下旧链路会与新方案冲突：
+以下舊鏈路會與新方案衝突：
 
 - `bot/vikingbot/hooks/builtins/openviking_hooks.py`
-- `bot/vikingbot/agent/loop.py` 中基于 `memory_window` 的自动 compact
-- 任何仍按“全量 session -> 一次性 commit”的旧调用点
+- `bot/vikingbot/agent/loop.py` 中基於 `memory_window` 的自動 compact
+- 任何仍按“全量 session -> 一次性 commit”的舊呼叫點
 
-### 推荐策略
+### 推薦策略
 
-当 `session_context_enabled=true` 时：
+當 `session_context_enabled=true` 時：
 
-1. 禁用旧的 `message.compact` OpenViking hook 主路径
-2. 禁用 `len(session.messages) > self.memory_window` 的旧自动压缩
-3. 保留 `/compact` 作为显式运维命令，但它应调用新的 stable-session commit 逻辑，而不是旧 fanout 逻辑
+1. 停用舊的 `message.compact` OpenViking hook 主路徑
+2. 停用 `len(session.messages) > self.memory_window` 的舊自動壓縮
+3. 保留 `/compact` 作為顯式運維命令，但它應呼叫新的 stable-session commit 邏輯，而不是舊 fanout 邏輯
 
-## 分阶段实施
+## 分階段實施
 
-## 第一阶段：打通最小闭环
+## 第一階段：打通最小閉環
 
-目标：不动 provider 行为的前提下，让 OpenViking 真正接管长对话压缩。
+目標：不動 provider 行為的前提下，讓 OpenViking 真正接管長對話壓縮。
 
-实施项：
+實施項：
 
-1. 重构 `ov_server.py` 为稳定 session 访问层
+1. 重構 `ov_server.py` 為穩定 session 訪問層
 2. 在 `loop.py` 中接入 after-turn 增量同步
-3. 在 `loop.py` 中接入 before-call OV context 读取
-4. 在本地 metadata 中保存 `openviking` 同步状态
-5. 启用去重规则：本地仅补 unsynced delta
+3. 在 `loop.py` 中接入 before-call OV context 讀取
+4. 在本地 metadata 中儲存 `openviking` 同步狀態
+5. 啟用去重規則：本地僅補 unsynced delta
 
-验收标准：
+驗收標準：
 
-- 同一 session 多轮对话使用同一个 `ov_session_id`
-- `pending_tokens` 可持续增长
-- 达到阈值后能成功 commit
-- 下一轮能读到 `latest_archive_overview` 和 live messages
-- prompt 中无重复历史片段
+- 同一 session 多輪對話使用同一個 `ov_session_id`
+- `pending_tokens` 可持續增長
+- 達到閾值後能成功 commit
+- 下一輪能讀到 `latest_archive_overview` 和 live messages
+- prompt 中無重複歷史片段
 
-## 第二阶段：补齐 keep_recent_count 与预算控制
+## 第二階段：補齊 keep_recent_count 與預算控制
 
-实施项：
+實施項：
 
 1. 修改 OpenViking Python client wrapper
-2. 让 `commit_keep_recent_count` 配置生效
-3. 在 VikingBot 侧增加最终 prompt trim
+2. 讓 `commit_keep_recent_count` 配置生效
+3. 在 VikingBot 側增加最終 prompt trim
 
-验收标准：
+驗收標準：
 
-- commit 后最近 N 条消息仍保留在 live session 中
-- 长会话下 prompt 大小可控
-- 不因 context 过长导致 provider 调用失败
+- commit 後最近 N 條訊息仍保留在 live session 中
+- 長會話下 prompt 大小可控
+- 不因 context 過長導致 provider 呼叫失敗
 
-## 第三阶段：清理旧链路
+## 第三階段：清理舊鏈路
 
-实施项：
+實施項：
 
-1. 门控旧 `message.compact` hook
-2. 门控旧 `memory_window` 自动 compact
-3. 明确 `/compact` 与新方案的关系
-4. 检查其他工具或工厂函数是否仍依赖旧一次性 commit 逻辑
+1. 門控舊 `message.compact` hook
+2. 門控舊 `memory_window` 自動 compact
+3. 明確 `/compact` 與新方案的關係
+4. 檢查其他工具或工廠函式是否仍依賴舊一次性 commit 邏輯
 
-验收标准：
+驗收標準：
 
-- 新旧链路不会同时对同一 session 生效
-- 群聊不会被拆成多个 OV session
-- 回归测试中 history 组装路径唯一且可解释
+- 新舊鏈路不會同時對同一 session 生效
+- 群聊不會被拆成多個 OV session
+- 迴歸測試中 history 組裝路徑唯一且可解釋
 
-## 风险与注意事项
+## 風險與注意事項
 
-### 1. 重复上下文风险
+### 1. 重複上下文風險
 
-如果本地 delta 计算不准确，最容易出现消息重复拼接。
+如果本地 delta 計算不準確，最容易出現訊息重複拼接。
 
-这是第一版必须优先规避的问题。
+這是第一版必須優先規避的問題。
 
-### 2. provider-specific 字段丢失风险
+### 2. provider-specific 欄位丟失風險
 
-当前本地 session 会保留部分 provider 特有字段，例如 `reasoning_content`。
+當前本地 session 會保留部分 provider 特有欄位，例如 `reasoning_content`。
 
-因此第一版推荐保留“本地原始日志 + OV 压缩层”的双层职责，而不是直接完全切换到 OV history。
+因此第一版推薦保留“本地原始日誌 + OV 壓縮層”的雙層職責，而不是直接完全切換到 OV history。
 
-### 3. 群聊身份映射风险
+### 3. 群聊身份對映風險
 
-如果直接把 `sender_id` 当作每次 OV 请求 user 身份，容易与当前 account/user/peer 权限语义冲突。
+如果直接把 `sender_id` 當作每次 OV 請求 user 身份，容易與當前 account/user/peer 許可權語義衝突。
 
-应优先通过 `peer_id` 保留真实说话人。
+應優先通過 `peer_id` 保留真實說話人。
 
-### 4. 提取异步性的认知风险
+### 4. 提取非同步性的認知風險
 
-commit 之后的 memory extraction 是后台过程。
+commit 之後的 memory extraction 是後臺過程。
 
-下一轮对话可依赖 session context，但不要把“新 memory 必然已可检索”当成同步保证。
+下一輪對話可依賴 session context，但不要把“新 memory 必然已可檢索”當成同步保證。
 
-## 一句话总结
+## 一句話總結
 
-把 VikingBot 改成“本地原始日志 + OpenViking 长上下文压缩层”的双层结构：每轮增量写入稳定 OV session，达到 `pending_tokens` 阈值就 commit，下一轮优先读取 `latest_archive_overview + live messages`，本地只补尚未同步的 delta，并在启用新链路后退场旧的 compact/fanout 逻辑。
+把 VikingBot 改成“本地原始日誌 + OpenViking 長上下文壓縮層”的雙層結構：每輪增量寫入穩定 OV session，達到 `pending_tokens` 閾值就 commit，下一輪優先讀取 `latest_archive_overview + live messages`，本地只補尚未同步的 delta，並在啟用新鏈路後退場舊的 compact/fanout 邏輯。

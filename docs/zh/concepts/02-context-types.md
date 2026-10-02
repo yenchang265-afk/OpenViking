@@ -1,181 +1,181 @@
-# 上下文类型
+# 上下文型別
 
-基于对人类认知模式的简化映射与工程化思考，OpenViking 将上下文抽象为 **资源、记忆、能力三种**基本类型，每种类型在 Agent 中有不同的用途。
+基於對人類認知模式的簡化對映與工程化思考，OpenViking 將上下文抽象為 **資源、記憶、能力三種**基本型別，每種型別在 Agent 中有不同的用途。
 
-## 概览
+## 概覽
 
-| 类型 | 用途 | 生命周期 | 主动性 |
+| 型別 | 用途 | 生命週期 | 主動性 |
 |------|------|----------|--------|
-| **Resource** | 知识和规则 | 长期，相对静态 | 用户添加 |
-| **Memory** | Agent 的认知 | 长期，动态更新 | Agent 记录 |
-| **Skill** | 可声明的 agent 能动性配置（AgentDefinedContextType） | 长期，静态 | 用户或系统添加 |
+| **Resource** | 知識和規則 | 長期，相對靜態 | 使用者新增 |
+| **Memory** | Agent 的認知 | 長期，動態更新 | Agent 記錄 |
+| **Skill** | 可宣告的 agent 能動性配置（AgentDefinedContextType） | 長期，靜態 | 使用者或系統新增 |
 
-## Resource（资源）
+## Resource（資源）
 
-资源是 Agent 可以引用的外部知识。
+資源是 Agent 可以引用的外部知識。
 
-### 特点
+### 特點
 
-- **用户主动**：由用户主动添加的资源类信息，用于补充大模型的知识，比如产品手册、代码仓库
-- **静态内容**：添加后内容很少发生变化，通常为用户主动修改
-- **结构化存储**：将按照项目或主题以目录层级组织，并提取出多层信息。
+- **使用者主動**：由使用者主動新增的資源類資訊，用於補充大模型的知識，比如產品手冊、程式碼倉庫
+- **靜態內容**：新增後內容很少發生變化，通常為使用者主動修改
+- **結構化儲存**：將按照專案或主題以目錄層級組織，並提取出多層資訊。
 
 ### 示例
 
-- API 文档、产品手册
-- FAQ 数据库、代码仓库
-- 研究论文、技术规范
+- API 文件、產品手冊
+- FAQ 資料庫、程式碼倉庫
+- 研究論文、技術規範
 
 ### 使用
 
 ```python
-# 添加资源
+# 新增資源
 client.add_resource(
     path="https://docs.example.com/api.pdf",
-    options={"reason": "API 文档"},
+    options={"reason": "API 文件"},
 )
 
-# 搜索资源
+# 搜尋資源
 results = client.find(
-    query="认证方法",
+    query="認證方法",
     target_uri="viking://resources/",
 )
 ```
 
-## Memory（记忆）
+## Memory（記憶）
 
-记忆是 Agent 从交互和任务执行中学到的持久化知识。记忆存储在当前用户或 Peer 命名空间，不使用独立的 `viking://agent/memories` 目录。
+記憶是 Agent 從互動和任務執行中學到的持久化知識。記憶儲存在當前使用者或 Peer 名稱空間，不使用獨立的 `viking://agent/memories` 目錄。
 
-### 特点
+### 特點
 
-- **Agent 主动：**由 Agent 主动提取和记录的记忆信息
-- **动态更新：**由 Agent 从交互中持续更新
-- **个性化：**针对特定用户和稳定 peer 学习记录
+- **Agent 主動：**由 Agent 主動提取和記錄的記憶資訊
+- **動態更新：**由 Agent 從互動中持續更新
+- **個性化：**針對特定使用者和穩定 peer 學習記錄
 
-### 内置记忆类型
+### 內建記憶型別
 
-| 类型 | 默认位置 | 说明 |
+| 型別 | 預設位置 | 說明 |
 |------|----------|------|
-| **profile** | `~/memories/profile.md` | 用户基本信息 |
-| **preferences** | `~/memories/preferences/` | 按主题组织的用户偏好 |
-| **entities** | `~/memories/entities/` | 人物、项目、组织等实体知识 |
-| **events** | `~/memories/events/` | 决策、里程碑等事件记录 |
-| **identity** | `~/memories/identity.md` | 助手的名称、形象、气质和自我介绍 |
-| **soul** | `~/memories/soul.md` | 助手的核心原则、边界、风格和连续性 |
-| **cases** | `~/memories/cases/` | 用于训练和评估的任务案例 |
-| **trajectories** | `~/memories/trajectories/` | 可复用的任务执行轨迹 |
-| **experiences** | `~/memories/experiences/` | 从执行结果中提炼的可复用经验 |
+| **profile** | `~/memories/profile.md` | 使用者基本資訊 |
+| **preferences** | `~/memories/preferences/` | 按主題組織的使用者偏好 |
+| **entities** | `~/memories/entities/` | 人物、專案、組織等實體知識 |
+| **events** | `~/memories/events/` | 決策、里程碑等事件記錄 |
+| **identity** | `~/memories/identity.md` | 助手的名稱、形象、氣質和自我介紹 |
+| **soul** | `~/memories/soul.md` | 助手的核心原則、邊界、風格和連續性 |
+| **cases** | `~/memories/cases/` | 用於訓練和評估的任務案例 |
+| **trajectories** | `~/memories/trajectories/` | 可複用的任務執行軌跡 |
+| **experiences** | `~/memories/experiences/` | 從執行結果中提煉的可複用經驗 |
 
-表中的 `~/...` 使用家目录别名 `viking://~`，服务端会按认证身份将其展开为 `viking://user/{user_id}/...`。当记忆策略允许 Peer 记忆时，支持 Peer 的类型会写入 `viking://user/{user_id}/peers/{peer_id}/memories/...`。记忆类型可通过自定义模板扩展或调整。
+表中的 `~/...` 使用家目錄別名 `viking://~`，服務端會按認證身份將其展開為 `viking://user/{user_id}/...`。當記憶策略允許 Peer 記憶時，支援 Peer 的型別會寫入 `viking://user/{user_id}/peers/{peer_id}/memories/...`。記憶型別可通過自定義模板擴充或調整。
 
-Schema 定义的 `memories/tools/` 和 `memories/skills/` 类型已禁用。它们与存放在 `viking://user/{user_id}/skills/{skill_name}/SKILL.md` 下的独立 Skill 不同，后者仍然保留并受支持。
+Schema 定義的 `memories/tools/` 和 `memories/skills/` 型別已停用。它們與存放在 `viking://user/{user_id}/skills/{skill_name}/SKILL.md` 下的獨立 Skill 不同，後者仍然保留並受支援。
 
 ### 使用
 
 ```python
 from openviking_sdk import TextPart
 
-# 记忆从会话中自动提取
+# 記憶從會話中自動提取
 session_info = await client.create_session()
 session = client.session(session_id=session_info["session_id"])
 await session.add_message(
     role="user",
-    parts=[TextPart(text="我喜欢深色模式")],
+    parts=[TextPart(text="我喜歡深色模式")],
 )
-commit = await session.commit()  # 启动后台记忆提取
-task = await client.get_task(task_id=commit["task_id"])  # 轮询直到 task["status"] == "completed"
+commit = await session.commit()  # 啟動後臺記憶提取
+task = await client.get_task(task_id=commit["task_id"])  # 輪詢直到 task["status"] == "completed"
 
-# 搜索记忆
+# 搜尋記憶
 results = await client.find(
-    query="用户界面偏好",
+    query="使用者介面偏好",
     target_uri="viking://~/memories/"
 )
 ```
 
 ## Skill（技能 / AgentDefinedContextType）
 
-技能（Skill）是 Agent 可以调用的能力，属于 AgentDefinedContextType 范畴。包括传统工作流定义、通信端点、工具配置和支付能力等。它们的共同特征是：**定义了 agent 如何与外部系统交互**，运行时定义相对静态，但调用经验会在 Memory 中更新。
+技能（Skill）是 Agent 可以呼叫的能力，屬於 AgentDefinedContextType 範疇。包括傳統工作流定義、通訊端點、工具配置和支付能力等。它們的共同特徵是：**定義了 agent 如何與外部系統互動**，執行時定義相對靜態，但呼叫經驗會在 Memory 中更新。
 
-### 特点
+### 特點
 
-- **定义的能力：**用于完成某项工作的工具定义
-- **相对静态：**运行时技能定义不变，但和工具相关的使用记忆会在记忆中更新
-- **可调用：**Agent 决定何时使用哪种技能
+- **定義的能力：**用於完成某項工作的工具定義
+- **相對靜態：**執行時技能定義不變，但和工具相關的使用記憶會在記憶中更新
+- **可呼叫：**Agent 決定何時使用哪種技能
 
-### 存储位置
+### 儲存位置
 
 ```
-viking://~/skills/{skill-name}/  # 默认存储路径
-├── .abstract.md          # L0: 简短描述
-├── .overview.md          # L1: 目录概览（生成后）
-├── SKILL.md              # L2: 技能定义
-└── scripts               # L2: 附加实现
+viking://~/skills/{skill-name}/  # 預設儲存路徑
+├── .abstract.md          # L0: 簡短描述
+├── .overview.md          # L1: 目錄概覽（生成後）
+├── SKILL.md              # L2: 技能定義
+└── scripts               # L2: 附加實現
 
-viking://agent/skills/{skill-name}/  # 通过 --uri 覆盖，公开共享（account 全局）
-├── .abstract.md          # L0: 简短描述
-├── .overview.md          # L1: 目录概览（生成后）
-├── SKILL.md              # L2: 技能定义
-└── scripts               # L2: 附加实现
+viking://agent/skills/{skill-name}/  # 通過 --uri 覆蓋，公開共享（account 全域）
+├── .abstract.md          # L0: 簡短描述
+├── .overview.md          # L1: 目錄概覽（生成後）
+├── SKILL.md              # L2: 技能定義
+└── scripts               # L2: 附加實現
 ```
 
-### AgentDefinedContextType 子类型
+### AgentDefinedContextType 子型別
 
-AgentDefinedContextType 包含以下子类型，均存储于 `viking://agent/` 作用域：
+AgentDefinedContextType 包含以下子型別，均儲存於 `viking://agent/` 作用域：
 
-| 子类型 | 位置 | 说明 |
+| 子型別 | 位置 | 說明 |
 |--------|------|------|
-| **Skill** | `agent/skills/` | 传统工作流定义，如搜索、代码生成 |
-| **Endpoint** | `agent/endpoints/` | 通信端点配置（a2a, anp 等）（规划中） |
-| **Tool** | `agent/tools/` | 工具配置（mcp 等）（规划中） |
-| **Payment** | `agent/payments/` | 支付能力配置（ap2 等）（规划中） |
+| **Skill** | `agent/skills/` | 傳統工作流定義，如搜尋、程式碼生成 |
+| **Endpoint** | `agent/endpoints/` | 通訊端點配置（a2a, anp 等）（規劃中） |
+| **Tool** | `agent/tools/` | 工具配置（mcp 等）（規劃中） |
+| **Payment** | `agent/payments/` | 支付能力配置（ap2 等）（規劃中） |
 
 ### 使用
 
 ```python
-# 添加技能（默认写入 viking://~/skills/）
+# 新增技能（預設寫入 viking://~/skills/）
 await client.add_skill(
     data={
         "name": "search-web",
-        "description": "搜索网络获取信息",
+        "description": "搜尋網路獲取資訊",
         "content": "# search-web\n...",
     },
 )
 
-# 通过 -p 指定写入全局 agent 技能根（公开共享）
+# 通過 -p 指定寫入全域 agent 技能根（公開共享）
 ov skills add search-web -p viking://agent/skills
 
-# 搜索用户技能
+# 搜尋使用者技能
 results = await client.find(
-    query="网络搜索",
+    query="網路搜尋",
     target_uri="viking://~/skills/"
 )
 
 # 搜索全局 agent 技能
 results = await client.find(
-    query="网络搜索",
+    query="網路搜尋",
     target_uri="viking://agent/skills/",
 )
 ```
 
-## 统一检索
+## 統一檢索
 
-根据Agent的需求需求，支持对三种上下文类型统一搜索，提供全面信息：
+根據Agent的需求需求，支援對三種上下文型別統一搜索，提供全面資訊：
 
 ```python
-# 跨所有上下文类型搜索
-results = await client.find(query="用户认证")
+# 跨所有上下文型別搜尋
+results = await client.find(query="使用者認證")
 
 for context in results.get("memories", []):
-    print(f"记忆: {context['uri']}")
+    print(f"記憶: {context['uri']}")
 for context in results.get("resources", []):
-    print(f"资源: {context['uri']}")
+    print(f"資源: {context['uri']}")
 for context in results.get("skills", []):
     print(f"技能: {context['uri']}")
 ```
 
-## 相关文档
+## 相關文件
 
-- [架构概述](./01-architecture.md) - 系统整体架构
-- [上下文层级](./03-context-layers.md) - L0/L1/L2 模型
-- [Viking URI](./04-viking-uri.md) - URI 规范
-- [会话管理](./08-session.md) - 记忆提取机制
+- [架構概述](./01-architecture.md) - 系統整體架構
+- [上下文層級](./03-context-layers.md) - L0/L1/L2 模型
+- [Viking URI](./04-viking-uri.md) - URI 規範
+- [會話管理](./08-session.md) - 記憶提取機制

@@ -21,7 +21,7 @@ def test_message_estimated_tokens_is_cjk_aware():
 
 
 def test_truncate_text_to_token_budget_preserves_head_and_tail():
-    text = "summary-start " + ("填充内容" * 100) + " relevant-tail"
+    text = "summary-start " + ("填充內容" * 100) + " relevant-tail"
 
     truncated = truncate_text_to_token_budget(text, 32)
 

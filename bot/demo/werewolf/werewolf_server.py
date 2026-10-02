@@ -205,10 +205,10 @@ def is_waiting_like_reply(content: str) -> bool:
     waiting_markers = [
         "初始化完成",
         "初始化已完成",
-        "等待开始",
+        "等待開始",
         "等待指令",
-        "等待继续",
-        '等待"开始"指令',
+        "等待繼續",
+        '等待"開始"指令',
     ]
     return any(marker in text for marker in waiting_markers)
 
@@ -219,8 +219,8 @@ def parse_game_record(game_record_path: Path) -> Dict[str, Any]:
 
     Returns:
         Dict with keys:
-        - game_status: "进行中", "游戏结束", or "等待开始"
-        - game_result: "狼人胜利", "平民胜利", or None
+        - game_status: "進行中", "遊戲結束", or "等待開始"
+        - game_result: "狼人勝利", "平民勝利", or None
         - game_time: "白天", "黑夜", or None
         - players: list of dicts with "id", "role", "status"
     """
@@ -233,17 +233,17 @@ def parse_game_record(game_record_path: Path) -> Dict[str, Any]:
     try:
         content = game_record_path.read_text(encoding="utf-8")
 
-        status_match = re.search(r"游戏状态[:：]\s*\[?([^\]/\n]+)\]?", content)
+        status_match = re.search(r"遊戲狀態[:：]\s*\[?([^\]/\n]+)\]?", content)
         if status_match:
             result["game_status"] = status_match.group(1).strip()
 
-        result_match = re.search(r"游戏结果[:：]\s*\[?([^\]/\n]+?)\]?\s*$", content, re.MULTILINE)
+        result_match = re.search(r"遊戲結果[:：]\s*\[?([^\]/\n]+?)\]?\s*$", content, re.MULTILINE)
         if result_match:
             result_str = result_match.group(1).strip()
             if result_str and not result_str.startswith("##"):
                 result["game_result"] = result_str
 
-        time_match = re.search(r"游戏时间[:：]\s*\[?([^\]/\n]+)\]?", content)
+        time_match = re.search(r"遊戲時間[:：]\s*\[?([^\]/\n]+)\]?", content)
         if time_match:
             result["game_time"] = time_match.group(1).strip()
 
@@ -274,11 +274,11 @@ def is_game_ended_from_record(game_record_path: Path) -> tuple[bool, str]:
     Check if game has ended by parsing GAME_RECORD.md.
 
     Returns:
-        (is_ended, result) where result is "狼人胜利", "平民胜利", or None
+        (is_ended, result) where result is "狼人勝利", "平民勝利", or None
     """
     record = parse_game_record(game_record_path)
 
-    if record["game_status"] == "游戏结束":
+    if record["game_status"] == "遊戲結束":
         return True, record["game_result"]
 
     return False, None
@@ -288,10 +288,10 @@ def normalize_leaderboard_game_result(game_result: Any) -> str:
     result = str(game_result or "").strip()
     if not result:
         return ""
-    if "狼人胜利" in result:
-        return "狼人胜利"
-    if "好人胜利" in result or "平民胜利" in result or ("狼人" in result and "死亡" in result):
-        return "好人胜利"
+    if "狼人勝利" in result:
+        return "狼人勝利"
+    if "好人勝利" in result or "平民勝利" in result or ("狼人" in result and "死亡" in result):
+        return "好人勝利"
     return result
 
 
@@ -322,8 +322,8 @@ def build_leaderboard_game_from_record(
     for player in parsed_record.get("players", []):
         role = player.get("role", "")
         dead = is_dead_status_for_leaderboard(player.get("status", ""))
-        won = (winner == "狼人胜利" and is_wolf_role_for_leaderboard(role)) or (
-            winner == "好人胜利" and not is_wolf_role_for_leaderboard(role)
+        won = (winner == "狼人勝利" and is_wolf_role_for_leaderboard(role)) or (
+            winner == "好人勝利" and not is_wolf_role_for_leaderboard(role)
         )
         score = (2 if won else 0) + (1 if not dead else 0)
         players.append(
@@ -383,7 +383,7 @@ def save_game_to_leaderboard_from_record(
 
     god_record_path = storage_path / "bot" / "workspace" / "bot_api__god" / "GAME_RECORD.md"
     parsed_record = parse_game_record(god_record_path)
-    if parsed_record.get("game_status") != "游戏结束":
+    if parsed_record.get("game_status") != "遊戲結束":
         return {"success": False, "error": "game_record_not_finished"}
 
     game_data = build_leaderboard_game_from_record(
@@ -459,7 +459,7 @@ def save_conversation_to_file(storage_path: Path, session_id: str, messages: Lis
 
     file_path = bot_workspace / f"CONVERSATION_{session_id}.md"
 
-    lines = [f"# 狼人杀对话记录 - {session_id}\n"]
+    lines = [f"# 狼人殺對話記錄 - {session_id}\n"]
 
     for msg in messages:
         speaker = msg.channel_id
@@ -567,7 +567,7 @@ def build_replay_base_info(
     winner = str(parsed_record.get("game_result") or "")
     is_night = "黑夜" in game_time
     phase = "night" if is_night else "day"
-    round_match = re.search(r"第\s*(\d+)\s*[轮天]", game_record_text)
+    round_match = re.search(r"第\s*(\d+)\s*[輪天]", game_record_text)
     round_value = int(round_match.group(1)) if round_match else None
     return {
         "dead": dead,
@@ -624,21 +624,21 @@ def build_restart_message(state: GameState) -> str:
             game_md_path = get_player_game_md_path(
                 state.storage_path, ch, state.human_player_channel
             )
-            player_list.append(f"{player_idx}号: {ch}，GAME.md地址：{game_md_path}")
+            player_list.append(f"{player_idx}號: {ch}，GAME.md地址：{game_md_path}")
             player_idx += 1
 
     bot_workspace = state.storage_path / "bot" / "workspace"
 
-    return f"""重新开始游戏
+    return f"""重新開始遊戲
 
-游戏配置：
-- 玩家数: {len(player_list)}
+遊戲配置：
+- 玩家數: {len(player_list)}
 - 玩家列表:
 {chr(10).join(f"  - {p}" for p in player_list)}
 - GAME_RECORD.md 位置：{bot_workspace}/bot_api__god/GAME_RECORD.md
-- 对话记录位置：{bot_workspace}/werewolf/CONVERSATION_{state.session_id}.md
+- 對話記錄位置：{bot_workspace}/werewolf/CONVERSATION_{state.session_id}.md
 
-请初始化游戏文件，然后等待\"开始\"指令。"""
+請初始化遊戲檔案，然後等待\"開始\"指令。"""
 
 
 def ensure_human_workspace(storage_path: Path, human_channel: str = "human") -> Path:
@@ -648,7 +648,7 @@ def ensure_human_workspace(storage_path: Path, human_channel: str = "human") -> 
     human_game_md = human_workspace / "GAME.md"
     if not human_game_md.exists():
         human_game_md.write_text(
-            "# 真实玩家游戏文件\n\n请编辑此文件来设置你的角色和状态。\n", encoding="utf-8"
+            "# 真實玩家遊戲檔案\n\n請編輯此檔案來設定你的角色和狀態。\n", encoding="utf-8"
         )
     return human_game_md
 
@@ -797,14 +797,14 @@ async def start_current_game(state: GameState) -> None:
     """Send the standard start command for the current session."""
     await stop_router_task(state)
     cancel_auto_start_task(state)
-    await begin_game_loop(state, "开始", reset_game_flags=True)
+    await begin_game_loop(state, "開始", reset_game_flags=True)
 
 
 async def continue_current_game(state: GameState) -> None:
     """Continue the current paused game."""
     await stop_router_task(state)
     cancel_auto_start_task(state)
-    await begin_game_loop(state, "继续本局游戏")
+    await begin_game_loop(state, "繼續本局遊戲")
 
 
 def schedule_next_game(state: GameState, delay_seconds: float = 1.5):
@@ -993,7 +993,7 @@ async def broadcast_to_players(
         sender_prefix = "god："
     else:
         sender_seat = player_seat_map.get(sender_id, sender_id)
-        sender_prefix = f"{sender_seat}号："
+        sender_prefix = f"{sender_seat}號："
 
     # Check if human player is mentioned
     if state.has_human_player and state.human_player_channel in mentioned_players:
@@ -1120,7 +1120,7 @@ async def broadcast_message_to_players(
         sender_prefix = "god："
     else:
         sender_seat = player_seat_map.get(sender_id, sender_id)
-        sender_prefix = f"{sender_seat}号："
+        sender_prefix = f"{sender_seat}號："
 
     # Collect all player channels except excluded
     tasks = []
@@ -1150,7 +1150,7 @@ async def broadcast_message_to_players(
 def build_message_for_god(player_replies: List[Dict[str, Any]], all_channels: List[str]) -> str:
     """Build a message for god from player replies."""
     if not player_replies:
-        return "没有玩家回复"
+        return "沒有玩家回覆"
 
     # Build seat number map first
     player_seat_map = {}
@@ -1169,7 +1169,7 @@ def build_message_for_god(player_replies: List[Dict[str, Any]], all_channels: Li
             parts.append(f"god：{content}")
         else:
             seat_num = player_seat_map.get(channel_id, channel_id)
-            parts.append(f"{seat_num}号：{content}")
+            parts.append(f"{seat_num}號：{content}")
 
     return "\n".join(parts)
 
@@ -1182,7 +1182,7 @@ def build_message_for_god(player_replies: List[Dict[str, Any]], all_channels: Li
 async def message_router_loop(
     state: GameState,
     initial_channel: str = "god",
-    initial_message: str = "开始",
+    initial_message: str = "開始",
     is_admin_initiated: bool = True,
 ):
     """
@@ -1384,7 +1384,7 @@ async def message_router_loop(
 
                 state.god_no_mention_retry_count += 1
                 current_channel = "god"
-                current_message = "你上个回复没有@任何玩家，检查下如果游戏结束，更新GAME_RECORD.md信息后，再回复结束信息；如果游戏没结束，继续@一个玩家进行"
+                current_message = "你上個回覆沒有@任何玩家，檢查下如果遊戲結束，更新GAME_RECORD.md資訊後，再回復結束資訊；如果遊戲沒結束，繼續@一個玩家進行"
                 current_sender_id = "admin_fallback_no_mention"
                 logger.warning(
                     f"God reply missing valid player mention while game not ended; sending admin fallback retry #{state.god_no_mention_retry_count}"
@@ -1393,11 +1393,11 @@ async def message_router_loop(
                 continue
 
             if not mentions:
-                # 如果没有 @ 提及，可能是游戏初始化完成，等待继续
+                # 如果沒有 @ 提及，可能是遊戲初始化完成，等待繼續
                 if waiting_like_reply:
                     logger.info("Game initialized, waiting for start command...")
                     state.god_no_mention_retry_count = 0
-                    break  # 退出循环，等待下次调用
+                    break  # 退出迴圈，等待下次呼叫
                 else:
                     logger.info("No mentions in response, waiting for next command")
                     break
@@ -1636,7 +1636,7 @@ def create_fastapi_app(state: GameState) -> FastAPI:
         human_game_md = state.storage_path / "bot" / "workspace" / "human" / "GAME.md"
         if not human_game_md.exists():
             return JSONResponse(
-                content={"content": "# 真实玩家游戏文件\n\n请编辑此文件来设置你的角色和状态。\n"}
+                content={"content": "# 真實玩家遊戲檔案\n\n請編輯此檔案來設定你的角色和狀態。\n"}
             )
 
         return JSONResponse(content={"content": human_game_md.read_text(encoding="utf-8")})
@@ -1983,9 +1983,9 @@ def create_fastapi_app(state: GameState) -> FastAPI:
                     try:
                         data = json.loads(line)
                         if data.get("_type") == "metadata":
-                            formatted_lines.append("# 会话元数据\n")
-                            formatted_lines.append(f"- 创建时间: {data.get('created_at', '')}")
-                            formatted_lines.append(f"- 更新时间: {data.get('updated_at', '')}")
+                            formatted_lines.append("# 會話後設資料\n")
+                            formatted_lines.append(f"- 建立時間: {data.get('created_at', '')}")
+                            formatted_lines.append(f"- 更新時間: {data.get('updated_at', '')}")
                             formatted_lines.append("")
                         else:
                             role = data.get("role", "")

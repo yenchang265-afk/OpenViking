@@ -1,75 +1,75 @@
-# 队列状态与完成语义
+# 佇列狀態與完成語義
 
-## 问题
+## 問題
 
-当前队列完成状态由两个相互独立的数据源推断：
+當前佇列完成狀態由兩個相互獨立的資料來源推斷：
 
-- QueueFS `/size`：返回仍可被 dequeue 的 pending 消息数。
-- Python `NamedQueue._in_progress`：返回当前进程观察到的执行中任务数。
+- QueueFS `/size`：返回仍可被 dequeue 的 pending 訊息數。
+- Python `NamedQueue._in_progress`：返回當前程序觀察到的執行中任務數。
 
-这两个值无法原子读取或更新。QueueFS 将消息从 `pending` 移到
-`processing` 后，另一个线程、event loop 或进程可能同时观察到 `size == 0`，
-且其读取到的 `_in_progress == 0`，从而在消息 ACK 前错误地判断队列已经完成。
+這兩個值無法原子讀取或更新。QueueFS 將訊息從 `pending` 移到
+`processing` 後，另一個執行緒、event loop 或程序可能同時觀察到 `size == 0`，
+且其讀取到的 `_in_progress == 0`，從而在訊息 ACK 前錯誤地判斷佇列已經完成。
 
-将本地计数放到 task 创建之前或之后，只能缩小部分时序窗口。它无法让 backend
-状态迁移与本地计数更新成为同一个原子操作，因此无法严格解决跨线程、跨 event loop
-或跨进程的并发判断问题。
+將本地計數放到 task 建立之前或之後，只能縮小部分時序視窗。它無法讓 backend
+狀態遷移與本地計數更新成為同一個原子操作，因此無法嚴格解決跨執行緒、跨 event loop
+或跨程序的併發判斷問題。
 
-## 改动前的后端行为
+## 改動前的後端行為
 
-SQLite 和缓存后端实现了 ACK 生命周期：
+SQLite 和快取後端實現了 ACK 生命週期：
 
 ```text
 enqueue -> pending -> dequeue -> processing -> ack -> removed
 ```
 
-改动前，MemoryBackend 没有实现相同的生命周期。它的 `dequeue` 会直接从唯一的
-队列中删除消息。虽然接口上存在 `ack` 方法，但被 dequeue 的消息已经不再保存，
-后续 ACK 通常找不到可删除的消息。因此，MemoryBackend 实际上没有有效的
-`processing` 状态和 ACK 生命周期。
+改動前，MemoryBackend 沒有實現相同的生命週期。它的 `dequeue` 會直接從唯一的
+佇列中刪除訊息。雖然介面上存在 `ack` 方法，但被 dequeue 的訊息已經不再儲存，
+後續 ACK 通常找不到可刪除的訊息。因此，MemoryBackend 實際上沒有有效的
+`processing` 狀態和 ACK 生命週期。
 
-## 状态模型
+## 狀態模型
 
-队列长度不是单一数字。QueueFS 必须维护以下当前状态指标：
+佇列長度不是單一數字。QueueFS 必須維護以下當前狀態指標：
 
-| 字段 | 含义 |
+| 欄位 | 含義 |
 | --- | --- |
-| `pending` | 尚未 dequeue、可被 worker 获取的消息数 |
-| `processing` | 已 dequeue、尚未 ACK 的消息数 |
+| `pending` | 尚未 dequeue、可被 worker 獲取的訊息數 |
+| `processing` | 已 dequeue、尚未 ACK 的訊息數 |
 | `unacked` | `pending + processing` |
 
-队列完成条件必须是：
+佇列完成條件必須是：
 
 ```text
 pending == 0 && processing == 0
 ```
 
-等价于 `unacked == 0`。
+等價於 `unacked == 0`。
 
-当 handler 失败、ACK 失败或 worker 退出时，只要消息仍未 ACK，就不能视为完成。
-消息只能通过恢复流程重新进入 pending，或通过成功 ACK 离开队列。
+當 handler 失敗、ACK 失敗或 worker 退出時，只要訊息仍未 ACK，就不能視為完成。
+訊息只能通過恢復流程重新進入 pending，或通過成功 ACK 離開佇列。
 
-## 状态归属
+## 狀態歸屬
 
-QueueFS 是队列生命周期状态的 Owner。各 backend 必须在 enqueue、dequeue、ACK、
-clear 和 recovery 操作中维护 `pending` 与 `processing`。
+QueueFS 是佇列生命週期狀態的 Owner。各 backend 必須在 enqueue、dequeue、ACK、
+clear 和 recovery 操作中維護 `pending` 與 `processing`。
 
-Python 不应再组合 backend 的 `pending` 和进程内计数来判断完成。本地 worker
-计数仍可作为运行时观测指标，但它不属于队列长度，也不是完成状态的权威来源。
+Python 不應再組合 backend 的 `pending` 和程序內計數來判斷完成。本地 worker
+計數仍可作為執行時觀測指標，但它不屬於佇列長度，也不是完成狀態的權威來源。
 
-以下累计计数同样不属于队列长度：
+以下累計計數同樣不屬於佇列長度：
 
 - `processed`
 - `requeue_count`
 - `error_count`
 
-它们描述的是处理结果，而不是当前队列占用。本次修复中可以继续由处理层或指标层
-维护。如果需要将它们下沉到 QueueFS，必须先定义显式的处理结果协议，因为 backend
-无法仅根据 dequeue 或 ACK 推断 handler 的处理结果。
+它們描述的是處理結果，而不是當前佇列佔用。本次修復中可以繼續由處理層或指標層
+維護。如果需要將它們下沉到 QueueFS，必須先定義顯式的處理結果協議，因為 backend
+無法僅根據 dequeue 或 ACK 推斷 handler 的處理結果。
 
-## Backend 契约
+## Backend 契約
 
-QueueFS 应提供一个原子状态操作：
+QueueFS 應提供一個原子狀態操作：
 
 ```json
 {
@@ -78,18 +78,18 @@ QueueFS 应提供一个原子状态操作：
 }
 ```
 
-`unacked` 由 `pending + processing` 派生。为保持兼容和 worker 调度语义，现有
-`/size` 可以继续表示 `pending`。
-QueueFS 控制文件名属于保留路径段，队列名不能以 `enqueue`、`dequeue`、`peek`、
-`size`、`status`、`messages`、`clear` 或 `ack` 结尾。
+`unacked` 由 `pending + processing` 派生。為保持相容和 worker 排程語義，現有
+`/size` 可以繼續表示 `pending`。
+QueueFS 控制檔名屬於保留路徑段，佇列名不能以 `enqueue`、`dequeue`、`peek`、
+`size`、`status`、`messages`、`clear` 或 `ack` 結尾。
 
-各后端要求：
+各後端要求：
 
-- **SQLite：** 在同一个数据库快照中读取两个计数。
-- **Cache：** 通过一个 Lua 脚本返回 `LLEN(pending)` 和
+- **SQLite：** 在同一個資料庫快照中讀取兩個計數。
+- **Cache：** 通過一個 Lua 指令碼返回 `LLEN(pending)` 和
   `ZCARD(processing)`。
-- **Memory：** 增加 processing 集合；dequeue 将消息移入该集合，ACK 从该集合
-  删除消息。
+- **Memory：** 增加 processing 集合；dequeue 將訊息移入該集合，ACK 從該集合
+  刪除訊息。
 
-`NamedQueue.get_status()` 只消费 backend 返回的状态快照。`wait_complete()` 和
-`is_all_complete()` 只使用 backend 维护的 `pending` 与 `processing` 判断完成。
+`NamedQueue.get_status()` 只消費 backend 返回的狀態快照。`wait_complete()` 和
+`is_all_complete()` 只使用 backend 維護的 `pending` 與 `processing` 判斷完成。

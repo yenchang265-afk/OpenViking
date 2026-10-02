@@ -18,7 +18,7 @@ class FakeUsageEvent:
         event_id: str = "ue_recall",
         event_type: str = "memory.recalled",
         session_id: str = "session-1",
-        resource_uri: str = ("viking://user/default/memories/experiences/生成请假邮件通用模版.md"),
+        resource_uri: str = ("viking://user/default/memories/experiences/生成請假郵件通用模版.md"),
     ) -> None:
         self._record = {
             "schema_version": "v1",
@@ -69,7 +69,7 @@ async def test_file_log_sink_writes_usage_event_record(tmp_path):
         "event_time": "2026-08-05 11:30:00",
         "tenant_id": (
             "resource_id:ov-test;account_id:default;user_id:default;resource_uri:"
-            "viking://user/default/memories/experiences/生成请假邮件通用模版.md"
+            "viking://user/default/memories/experiences/生成請假郵件通用模版.md"
         ),
         "event_name": "experience.recall.count",
         "object_id": "ue_recall",

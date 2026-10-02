@@ -1,69 +1,69 @@
 ---
 name: github-proxy
-description: GitHub 国内访问加速 skill，使用 githubproxy.cc 代理加速 GitHub 仓库克隆、文件下载、Raw 文件访问等操作。使用场景：(1) 需要 git clone GitHub 仓库时加速，(2) 下载 GitHub Release 文件、Raw 文件、Archive 压缩包时加速，(3) 任何需要访问 GitHub 资源但速度慢的场景
+description: GitHub 國內訪問加速 skill，使用 githubproxy.cc 代理加速 GitHub 倉庫克隆、檔案下載、Raw 檔案訪問等操作。使用場景：(1) 需要 git clone GitHub 倉庫時加速，(2) 下載 GitHub Release 檔案、Raw 檔案、Archive 壓縮包時加速，(3) 任何需要訪問 GitHub 資源但速度慢的場景
 ---
 
-# GitHub 国内代理加速 Skill
+# GitHub 國內代理加速 Skill
 
-使用 githubproxy.cc 代理服务，为国内访问 GitHub 提供加速支持。
+使用 githubproxy.cc 代理服務，為國內訪問 GitHub 提供加速支援。
 
-## 代理服务
+## 代理服務
 
-当前使用的代理服务：
-- **主要服务**: githubproxy.cc (测试有效，加速约 3 倍)
-- **备用服务**: ghfast.top
+當前使用的代理服務：
+- **主要服務**: githubproxy.cc (測試有效，加速約 3 倍)
+- **備用服務**: ghfast.top
 
 ## 使用方法
 
 ### 1. Git Clone 加速
 
-将 GitHub 仓库链接前加上 `https://githubproxy.cc/` 前缀：
+將 GitHub 倉庫連結前加上 `https://githubproxy.cc/` 字首：
 
 ```bash
-# 原始链接
+# 原始連結
 git clone https://github.com/username/repo.git
 
-# 加速链接
+# 加速連結
 git clone https://githubproxy.cc/https://github.com/username/repo.git
 ```
 
-### 2. 文件下载加速
+### 2. 檔案下載加速
 
-支持以下类型的 GitHub 资源加速：
+支援以下型別的 GitHub 資源加速：
 
 - **Raw 文件**: `https://raw.githubusercontent.com/...`
-- **Release 文件**: 项目发布的附件
-- **Archive 压缩包**: 仓库打包下载
+- **Release 檔案**: 專案釋出的附件
+- **Archive 壓縮包**: 倉庫打包下載
 - **Gist 文件**: `gist.github.com` 或 `gist.githubusercontent.com`
 
 ```bash
-# 原始链接
+# 原始連結
 wget https://raw.githubusercontent.com/username/repo/main/file.txt
 
-# 加速链接
+# 加速連結
 wget https://githubproxy.cc/https://raw.githubusercontent.com/username/repo/main/file.txt
 ```
 
-### 3. 使用辅助脚本
+### 3. 使用輔助指令碼
 
-使用 `scripts/convert_url.py` 自动转换 GitHub 链接：
+使用 `scripts/convert_url.py` 自動轉換 GitHub 連結：
 
 ```bash
 python scripts/convert_url.py "https://github.com/username/repo.git"
 ```
 
-## 链接转换规则
+## 連結轉換規則
 
-| 原始链接格式 | 转换后格式 |
+| 原始連結格式 | 轉換後格式 |
 |-------------|-----------|
 | `https://github.com/username/repo.git` | `https://githubproxy.cc/https://github.com/username/repo.git` |
 | `https://raw.githubusercontent.com/...` | `https://githubproxy.cc/https://raw.githubusercontent.com/...` |
 | `https://github.com/.../releases/download/...` | `https://githubproxy.cc/https://github.com/.../releases/download/...` |
 | `https://github.com/.../archive/...` | `https://githubproxy.cc/https://github.com/.../archive/...` |
 
-## 注意事项
+## 注意事項
 
-- 本服务仅供学习研究使用，请勿滥用
-- 如果 githubproxy.cc 不可用，请尝试备用服务 ghfast.top
+- 本服務僅供學習研究使用，請勿濫用
+- 如果 githubproxy.cc 不可用，請嘗試備用服務 ghfast.top
 - 不支持 SSH Key 方式的 git clone
-- Push、PR、Issue 等操作建议直接使用官方 GitHub 地址
+- Push、PR、Issue 等操作建議直接使用官方 GitHub 地址

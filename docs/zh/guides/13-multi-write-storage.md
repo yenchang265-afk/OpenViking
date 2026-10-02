@@ -1,19 +1,19 @@
-# 多写存储指南
+# 多寫儲存指南
 
-本指南介绍如何配置 OpenViking 的多写存储能力。多写存储允许一个 primary 后端同时复制写入多个 backup 后端，用于高可用、跨区域副本、读加速和存储迁移。
+本指南介紹如何配置 OpenViking 的多寫儲存能力。多寫儲存允許一個 primary 後端同時複製寫入多個 backup 後端，用於高可用、跨區域副本、讀加速和儲存遷移。
 
-多写能力位于 RAGFS 内部。OpenViking 的 Python SDK、HTTP API 和 CLI 使用方式保持不变。
+多寫能力位於 RAGFS 內部。OpenViking 的 Python SDK、HTTP API 和 CLI 使用方式保持不變。
 
-## 前置条件
+## 前置條件
 
 - 已有可用的 `ov.conf`。
-- 已确认 primary backend 可以正常读写。
-- 如果要接入 S3 兼容存储，已准备好 bucket、endpoint 和访问凭据。
-- 如需迁移已有数据，请遵循 [OVPack 多写迁移流程](./09-ovpack.md#与多写存储配合)；仅启用 backups 不会复制历史文件。
+- 已確認 primary backend 可以正常讀寫。
+- 如果要接入 S3 相容儲存，已準備好 bucket、endpoint 和訪問憑據。
+- 如需遷移已有資料，請遵循 [OVPack 多寫遷移流程](./09-ovpack.md#與多寫儲存配合)；僅啟用 backups 不會複製歷史檔案。
 
 ## 最小配置
 
-下面示例使用本地目录作为 primary，并把写入复制到另一个本地目录。
+下面示例使用本地目錄作為 primary，並把寫入複製到另一個本地目錄。
 
 ```json
 {
@@ -38,17 +38,17 @@
 }
 ```
 
-说明：
+說明：
 
-- 顶层 `backend` 是 primary。
+- 頂層 `backend` 是 primary。
 - `backups.items[]` 是 backup 列表。
-- `name` 是 backup 的稳定身份，后续同步元数据会引用它。
-- `backend = "local"` 的 backup 使用 `local.workspace` 指定本地目录。
-- `sync_type` 不配置时默认按异步模式理解。
+- `name` 是 backup 的穩定身份，後續同步後設資料會引用它。
+- `backend = "local"` 的 backup 使用 `local.workspace` 指定本地目錄。
+- `sync_type` 不配置時預設按非同步模式理解。
 
 ## 多 Backup 配置
 
-可以配置多个 backup。下面示例同时写入本地副本和 S3 兼容对象存储。
+可以配置多個 backup。下面示例同時寫入本地副本和 S3 相容物件儲存。
 
 ```json
 {
@@ -86,23 +86,23 @@
 }
 ```
 
-建议：
+建議：
 
-- `name` 不要使用会频繁变化的机器名或临时编号。
-- backup 的底层路径或 bucket 应避免与 primary 指向同一物理位置。
-- 修改 backup `name` 会影响历史同步元数据的识别，生产环境应谨慎变更。
+- `name` 不要使用會頻繁變化的機器名或臨時編號。
+- backup 的底層路徑或 bucket 應避免與 primary 指向同一物理位置。
+- 修改 backup `name` 會影響歷史同步後設資料的識別，生產環境應謹慎變更。
 
-### S3 兼容存储注意事项
+### S3 相容儲存注意事項
 
-使用 S3 兼容服务（MinIO、RustFS、Ceph 等）时，`s3` 段需要额外配置以下字段：
+使用 S3 相容服務（MinIO、RustFS、Ceph 等）時，`s3` 段需要額外配置以下欄位：
 
-| 字段 | 是否必填 | 说明 |
+| 欄位 | 是否必填 | 說明 |
 | --- | --- | --- |
-| `use_path_style` | 大多数 S3 兼容服务必填 | 设置为 `true` 使用路径风格 URL（`http://host/bucket/key`）。大多数 S3 兼容服务需要此配置。 |
-| `directory_marker_mode` | S3 兼容服务必填 | **必须显式设置为 `"none"`**。如果不配置，RAGFS Rust binding 启动时会报 `AGFSConfigError: invalid directory_marker_mode: null` 并静默崩溃。 |
-| `use_ssl` | 可选 | HTTP 端点（如 `http://localhost:9000`）需要设置为 `false`。 |
+| `use_path_style` | 大多數 S3 相容服務必填 | 設定為 `true` 使用路徑風格 URL（`http://host/bucket/key`）。大多數 S3 相容服務需要此配置。 |
+| `directory_marker_mode` | S3 相容服務必填 | **必須顯式設定為 `"none"`**。如果不配置，RAGFS Rust binding 啟動時會報 `AGFSConfigError: invalid directory_marker_mode: null` 並靜默崩潰。 |
+| `use_ssl` | 可選 | HTTP 端點（如 `http://localhost:9000`）需要設定為 `false`。 |
 
-**S3 兼容存储最小示例（RustFS/MinIO）：**
+**S3 相容儲存最小示例（RustFS/MinIO）：**
 
 ```json
 {
@@ -121,24 +121,24 @@
 }
 ```
 
-> **为什么需要 `directory_marker_mode`？**
+> **為什麼需要 `directory_marker_mode`？**
 >
-> S3 兼容存储服务对"目录"的处理方式与 AWS S3 不同。RAGFS Rust binding 必须知道创建目录时是否需要写入目录标记对象。合法取值为 `"none"`、`"empty"` 和 `"nonempty"`。对于不使用目录标记的 S3 兼容服务（RustFS、MinIO、Ceph 等），设置为 `"none"`。如果省略，Rust binding 默认值为 `null`（不合法），导致服务端在启动时静默崩溃，报错 `AGFSConfigError: invalid directory_marker_mode: null`。
+> S3 相容儲存服務對"目錄"的處理方式與 AWS S3 不同。RAGFS Rust binding 必須知道建立目錄時是否需要寫入目錄標記物件。合法取值為 `"none"`、`"empty"` 和 `"nonempty"`。對於不使用目錄標記的 S3 相容服務（RustFS、MinIO、Ceph 等），設定為 `"none"`。如果省略，Rust binding 預設值為 `null`（不合法），導致服務端在啟動時靜默崩潰，報錯 `AGFSConfigError: invalid directory_marker_mode: null`。
 
-### Docker 网络配置
+### Docker 網路配置
 
-在 Docker 中运行 OpenViking 并配置同主机的 S3 备份时，需要注意：
+在 Docker 中執行 OpenViking 並配置同主機的 S3 備份時，需要注意：
 
-- **Linux Docker**：使用 `--network host` 或宿主机局域网 IP。Docker bridge 网络可通过网关 IP（如 `172.17.0.1:9000`）访问宿主机局域网。
-- **macOS/Windows Docker Desktop**：`--network host` **不支持**。S3 端点使用 `host.docker.internal`（映射为宿主机的 localhost），或使用宿主机局域网 IP。
+- **Linux Docker**：使用 `--network host` 或宿主機區域網 IP。Docker bridge 網路可通過閘道器 IP（如 `172.17.0.1:9000`）訪問宿主機區域網。
+- **macOS/Windows Docker Desktop**：`--network host` **不支援**。S3 端點使用 `host.docker.internal`（對映為宿主機的 localhost），或使用宿主機區域網 IP。
 
-如果启用 S3 备份后服务静默崩溃，请优先排查 Docker 网络。RAGFS Rust binding 在容器内无法访问 S3 端点时会报 `dispatch failure` 错误。
+如果啟用 S3 備份後服務靜默崩潰，請優先排查 Docker 網路。RAGFS Rust binding 在容器內無法訪問 S3 端點時會報 `dispatch failure` 錯誤。
 
-## 同步模式选择
+## 同步模式選擇
 
-### 异步模式
+### 非同步模式
 
-异步模式适合大多数场景。
+非同步模式適合大多數場景。
 
 ```json
 {
@@ -149,22 +149,22 @@
 }
 ```
 
-特点：
+特點：
 
-- primary 写入成功后立即返回。
-- backup 写入在后台执行。
-- 写入延迟低。
-- backup 可能短暂落后。
+- primary 寫入成功後立即返回。
+- backup 寫入在後臺執行。
+- 寫入延遲低。
+- backup 可能短暫落後。
 
-适合：
+適合：
 
-- 写入吞吐优先。
-- backup 主要用于灾备。
-- 可以接受最终一致性。
+- 寫入吞吐優先。
+- backup 主要用於災備。
+- 可以接受最終一致性。
 
 ### 同步模式
 
-同步模式会等待 backup 确认。
+同步模式會等待 backup 確認。
 
 ```json
 {
@@ -177,29 +177,29 @@
 }
 ```
 
-参数说明：
+引數說明：
 
-| 参数 | 说明 |
+| 引數 | 說明 |
 | --- | --- |
-| `write_ack_count` | 写入返回前至少需要多少个 backup 确认 |
-| `write_ack_timeout_ms` | 等待 backup 确认的超时时间，单位毫秒 |
+| `write_ack_count` | 寫入返回前至少需要多少個 backup 確認 |
+| `write_ack_timeout_ms` | 等待 backup 確認的超時時間，單位毫秒 |
 
-特点：
+特點：
 
-- 写入确认更强。
-- 写入延迟受 backup 影响。
-- 未确认的 backup 会继续由后台重试修复。
-- primary 已写成功但 backup 未达确认数时，客户端可能收到错误；此时 primary 中可能已经存在数据。
+- 寫入確認更強。
+- 寫入延遲受 backup 影響。
+- 未確認的 backup 會繼續由後臺重試修復。
+- primary 已寫成功但 backup 未達確認數時，客戶端可能收到錯誤；此時 primary 中可能已經存在資料。
 
-适合：
+適合：
 
-- 希望尽量减少 primary 与 backup 的确认窗口。
-- backup 延迟可控。
-- 调用方能接受同步写入带来的额外延迟。
+- 希望儘量減少 primary 與 backup 的確認視窗。
+- backup 延遲可控。
+- 呼叫方能接受同步寫入帶來的額外延遲。
 
-## 配置读加速
+## 配置讀加速
 
-backup 默认不参与读取。要让 backup 服务读取，需要显式配置 `operations`。
+backup 預設不參與讀取。要讓 backup 服務讀取，需要顯式配置 `operations`。
 
 ```json
 {
@@ -214,20 +214,20 @@ backup 默认不参与读取。要让 backup 服务读取，需要显式配置 `
 }
 ```
 
-读取优先级规则：
+讀取優先順序規則：
 
-- `priority` 越小越优先。
-- 只有声明 `read` 的 backup 才参与读取。
-- primary 始终作为最终兜底。
-- 冷备 backup 不建议配置读能力。
+- `priority` 越小越優先。
+- 只有宣告 `read` 的 backup 才參與讀取。
+- primary 始終作為最終兜底。
+- 冷備 backup 不建議配置讀能力。
 
-如果一个 backup 只配置了 `read`，没有配置 `write`，它不会接收普通多写复制。只有在你明确知道该 backend 的数据来源时，才应使用这种配置。
+如果一個 backup 只配置了 `read`，沒有配置 `write`，它不會接收普通多寫複製。只有在你明確知道該 backend 的資料來源時，才應使用這種配置。
 
 ## Redirect 配置
 
-Redirect 用于把匹配的文件写入指定 backup，而不是写入 primary。
+Redirect 用於把匹配的檔案寫入指定 backup，而不是寫入 primary。
 
-按扩展名重定向：
+按副檔名重定向：
 
 ```json
 {
@@ -270,13 +270,13 @@ Redirect 用于把匹配的文件写入指定 backup，而不是写入 primary�
 
 注意：
 
-- `target` 必须引用已有 backup 的 `name`。
-- redirect 文件仍会通过普通 API 呈现为可读、可列举、可查询状态。
-- redirect 映射保存在 primary 的内部元数据中。
+- `target` 必須引用已有 backup 的 `name`。
+- redirect 檔案仍會通過普通 API 呈現為可讀、可列舉、可查詢狀態。
+- redirect 對映儲存在 primary 的內部後設資料中。
 
 ## Exclude 配置
 
-Exclude 用于让某个 backup 跳过匹配文件。
+Exclude 用於讓某個 backup 跳過匹配檔案。
 
 ```json
 {
@@ -295,19 +295,19 @@ Exclude 用于让某个 backup 跳过匹配文件。
 }
 ```
 
-常见用法：
+常見用法：
 
-- 缓存 backend 排除大文件。
-- 低成本备份排除无需保存的文件类型。
-- 某个 backup 只保存文本或配置类资源。
+- 快取 backend 排除大檔案。
+- 低成本備份排除無需儲存的檔案型別。
+- 某個 backup 只儲存文本或配置類資源。
 
-如果 redirect 的目标 backup 同时 exclude 了该文件，说明配置互相冲突。请优先修正配置，不要依赖系统自动猜测其他目标。
+如果 redirect 的目標 backup 同時 exclude 了該檔案，說明配置互相沖突。請優先修正配置，不要依賴系統自動猜測其他目標。
 
 ## 加密配置
 
-多写存储复用 OpenViking 的透明静态加密能力。
+多寫儲存複用 OpenViking 的透明靜態加密能力。
 
-全局加密开启示例：
+全域加密開啟示例：
 
 ```json
 {
@@ -348,28 +348,28 @@ Exclude 用于让某个 backup 跳过匹配文件。
 }
 ```
 
-规则：
+規則：
 
-- 全局 `encryption.enabled=true` 时，primary 必须加密。
-- backup 可以通过 `encryption.enabled` 单独控制是否加密。
-- Python SDK、HTTP API 和 CLI 不需要处理加解密。
-- `.redirect.json` 和 `.sync_log.json` 等内部元数据会跟随 primary 加密策略。
+- 全域 `encryption.enabled=true` 時，primary 必須加密。
+- backup 可以通過 `encryption.enabled` 單獨控制是否加密。
+- Python SDK、HTTP API 和 CLI 不需要處理加解密。
+- `.redirect.json` 和 `.sync_log.json` 等內部後設資料會跟隨 primary 加密策略。
 
-## 存量数据迁移
+## 存量資料遷移
 
-多写只复制启用之后的新写入，不会自动复制历史文件。
+多寫只複製啟用之後的新寫入，不會自動複製歷史檔案。
 
-使用 OVPack 迁移时，请遵循 [与多写存储配合](./09-ovpack.md#与多写存储配合)：先在干净目标配置多写，再通过该服务恢复，验证各副本后恢复业务写入。目标 account 初始化和恢复冲突处理也在该流程中说明。
+使用 OVPack 遷移時，請遵循 [與多寫儲存配合](./09-ovpack.md#與多寫儲存配合)：先在乾淨目標配置多寫，再通過該服務恢復，驗證各副本後恢復業務寫入。目標 account 初始化和恢復衝突處理也在該流程中說明。
 
-## 验证配置
+## 驗證配置
 
-启动前建议运行：
+啟動前建議執行：
 
 ```bash
 openviking-server doctor
 ```
 
-启动后可以用普通文件 API 验证：
+啟動後可以用普通檔案 API 驗證：
 
 ```bash
 openviking write viking://resources/multiwrite-check.txt \
@@ -378,13 +378,13 @@ openviking write viking://resources/multiwrite-check.txt \
 openviking read viking://resources/multiwrite-check.txt
 ```
 
-如果使用本地 backup，可以直接检查 backup 目录中是否出现对应文件。生产环境更推荐使用系统健康检查和同步状态命令。
+如果使用本地 backup，可以直接檢查 backup 目錄中是否出現對應檔案。生產環境更推薦使用系統健康檢查和同步狀態命令。
 
-## 常见问题
+## 常見問題
 
-### 为什么 backup 没有参与读取？
+### 為什麼 backup 沒有參與讀取？
 
-backup 默认只参与写入，不参与读取。需要在 backup 上显式配置：
+backup 預設只參與寫入，不參與讀取。需要在 backup 上顯式配置：
 
 ```json
 {
@@ -397,26 +397,26 @@ backup 默认只参与写入，不参与读取。需要在 backup 上显式配�
 }
 ```
 
-### 为什么启用多写后历史文件没有出现在 backup？
+### 為什麼啟用多寫後歷史檔案沒有出現在 backup？
 
-多写只处理启用后的新写入。历史文件请按 [OVPack 迁移流程](./09-ovpack.md#与多写存储配合) 处理；启用 backups 不会自动补齐。
+多寫只處理啟用後的新寫入。歷史檔案請按 [OVPack 遷移流程](./09-ovpack.md#與多寫儲存配合) 處理；啟用 backups 不會自動補齊。
 
-### 异步模式下能否保证立即读到 backup 的最新数据？
+### 非同步模式下能否保證立即讀到 backup 的最新資料？
 
-不能。异步模式只保证最终一致。需要强读一致时，应让读取回退到 primary，或避免让可能滞后的 backup 参与读路由。
+不能。非同步模式只保證最終一致。需要強讀一致時，應讓讀取回退到 primary，或避免讓可能滯後的 backup 參與讀路由。
 
-### 内部元数据文件会出现在用户列表里吗？
+### 內部後設資料檔案會出現在使用者列表裡嗎？
 
-不会。`.redirect.json` 和 `.sync_log.json` 是内部文件，会被普通目录列表隐藏。
+不會。`.redirect.json` 和 `.sync_log.json` 是內部檔案，會被普通目錄列表隱藏。
 
-### sync 模式返回失败是否表示 primary 一定没写入？
+### sync 模式返回失敗是否表示 primary 一定沒寫入？
 
-不是。primary 写成功但 backup 未达到确认数时，客户端可能收到失败。此时 primary 数据可能已经存在，落后的 backup 会由后台重试修复。
+不是。primary 寫成功但 backup 未達到確認數時，客戶端可能收到失敗。此時 primary 資料可能已經存在，落後的 backup 會由後臺重試修復。
 
-## 相关文档
+## 相關文件
 
-- [多写存储](../concepts/14-multi-write-storage.md)
-- [存储架构](../concepts/05-storage.md)
+- [多寫儲存](../concepts/14-multi-write-storage.md)
+- [儲存架構](../concepts/05-storage.md)
 - [配置指南](./01-configuration.md)
 - [加密指南](./08-encryption.md)
-- [OVPack 导入导出](./09-ovpack.md)
+- [OVPack 匯入匯出](./09-ovpack.md)

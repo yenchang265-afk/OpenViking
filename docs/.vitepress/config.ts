@@ -38,12 +38,12 @@ const navLabels = {
     about: 'About'
   },
   zh: {
-    start: '开始使用',
+    start: '開始使用',
     concepts: '核心概念',
     guide: '指南',
-    api: 'API 参考',
-    faq: '常见问题',
-    about: '关于'
+    api: 'API 參考',
+    faq: '常見問題',
+    about: '關於'
   }
 }
 
@@ -313,11 +313,11 @@ export default defineConfig({
       }
     },
     zh: {
-      label: '简体中文',
-      lang: 'zh-CN',
+      label: '繁體中文',
+      lang: 'zh-TW',
       link: '/zh/',
       title: 'OpenViking',
-      description: '面向 AI Agent 的开源上下文数据库',
+      description: '面向 AI Agent 的開源上下文資料庫',
       themeConfig: {
         logoLink: '/zh/',
         nav: zhNav,
@@ -330,21 +330,21 @@ export default defineConfig({
           '/zh/context-compilation/': localizedGroupedSidebarItems('zh', ['guides', 'migration']),
           '/zh/migration/': localizedGroupedSidebarItems('zh', ['guides', 'migration']),
           '/zh/api/': localizedReferenceSidebarItems('zh'),
-          '/zh/faq/': [sidebarSection('zh/faq', '常见问题', false)],
+          '/zh/faq/': [sidebarSection('zh/faq', '常見問題', false)],
           '/zh/about/': localizedAboutSidebarItems('zh')
         },
         outline: {
-          label: '页面导航',
+          label: '頁面導航',
           level: [2, 3]
         },
         docFooter: {
-          prev: '上一页',
-          next: '下一页'
+          prev: '上一頁',
+          next: '下一頁'
         },
-        darkModeSwitchLabel: '外观',
-        sidebarMenuLabel: '菜单',
-        returnToTopLabel: '返回顶部',
-        langMenuLabel: '切换语言'
+        darkModeSwitchLabel: '外觀',
+        sidebarMenuLabel: '選單',
+        returnToTopLabel: '返回頂部',
+        langMenuLabel: '切換語言'
       }
     }
   }

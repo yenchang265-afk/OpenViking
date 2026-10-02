@@ -37,7 +37,7 @@ def main():
         print(f"Error: File not found: {args.input}")
         exit(1)
 
-    # 统计所有题目 (排除 category=5)
+    # 統計所有題目 (排除 category=5)
     correct = 0
     wrong = 0
     total_time = 0.0
@@ -52,7 +52,7 @@ def main():
         lambda: {"CORRECT": 0, "WRONG": 0, "OTHER": 0}
     )
 
-    # 统计 is_valid=True 的题目 (排除 category=5)
+    # 統計 is_valid=True 的題目 (排除 category=5)
     valid_only_correct = 0
     valid_only_wrong = 0
     valid_only_total_time = 0.0
@@ -67,18 +67,18 @@ def main():
     with open(args.input, "r", encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
-            # 检查 category 是否为 5，跳过
+            # 檢查 category 是否為 5，跳過
             category = row.get("category", "")
             if category == "5":
                 continue
 
             valid_rows += 1
 
-            # 检查是否是无效题目
+            # 檢查是否是無效題目
             is_invalid = row.get("is_invalid", "").lower() == "true"
             is_valid = not is_invalid
 
-            # 统计结果
+            # 統計結果
             result = row.get("result", "").strip().upper()
             category_key = category_label(category)
             if result == "CORRECT":
@@ -98,7 +98,7 @@ def main():
             if is_valid:
                 valid_only_total_iteration += int(row.get("iteration", "0"))
 
-            # 统计耗时
+            # 統計耗時
             time_cost = row.get("time_cost", "")
             if time_cost:
                 try:
@@ -109,7 +109,7 @@ def main():
                 except (ValueError, TypeError):
                     pass
 
-            # 统计token
+            # 統計token
             token_usage = row.get("token_usage", "")
             if token_usage and token_usage.strip():
                 try:
@@ -138,7 +138,7 @@ def main():
     accuracy = correct / total_graded if total_graded > 0 else 0.0
     avg_time = total_time / valid_rows if valid_rows > 0 else 0.0
 
-    # is_valid=True 题目的统计 (排除 category=5)
+    # is_valid=True 題目的統計 (排除 category=5)
     valid_only_total_graded = valid_only_correct + valid_only_wrong
     valid_only_accuracy = (
         valid_only_correct / valid_only_total_graded if valid_only_total_graded > 0 else 0.0
@@ -248,7 +248,7 @@ def main():
     for line in output_lines:
         print(line)
 
-    # 写入summary.txt
+    # 寫入summary.txt
     summary_path = os.path.join(os.path.dirname(args.input), "summary.txt")
     with open(summary_path, "w", encoding="utf-8") as f:
         f.write("\n".join(output_lines) + "\n")

@@ -1,16 +1,16 @@
 # ACL API
 
-ACL 通过独立的 `/api/v1/acl` 接口查询和修改，只适用于 `viking://resources/...` 共享资源。权限模型见[资源访问控制](../concepts/15-acl.md)。
+ACL 通過獨立的 `/api/v1/acl` 介面查詢和修改，只適用於 `viking://resources/...` 共享資源。許可權模型見[資源訪問控制](../concepts/15-acl.md)。
 
 ## 接口
 
-| 方法 | 路径 | 行为 |
+| 方法 | 路徑 | 行為 |
 |---|---|---|
-| GET | `/api/v1/acl?uri={uri}` | 查询直接、继承和有效权限 |
-| PUT | `/api/v1/acl` | 设置直接授权、继承模式 |
-| POST | `/api/v1/acl/grant` | 设置单个 principal 的直接权限 |
-| POST | `/api/v1/acl/revoke` | 删除单个 principal 的直接授权 |
-| DELETE | `/api/v1/acl?uri={uri}` | 清空直接授权并恢复 inherit |
+| GET | `/api/v1/acl?uri={uri}` | 查詢直接、繼承和有效許可權 |
+| PUT | `/api/v1/acl` | 設定直接授權、繼承模式 |
+| POST | `/api/v1/acl/grant` | 設定單個 principal 的直接許可權 |
+| POST | `/api/v1/acl/revoke` | 刪除單個 principal 的直接授權 |
+| DELETE | `/api/v1/acl?uri={uri}` | 清空直接授權並恢復 inherit |
 
 **HTTP**
 
@@ -22,9 +22,9 @@ POST /api/v1/acl/grant
 POST /api/v1/acl/revoke
 ```
 
-以上操作均要求 `manage`，无权限时返回 403。账号 ADMIN 隐式拥有 manage。
+以上操作均要求 `manage`，無許可權時返回 403。帳號 ADMIN 隱式擁有 manage。
 
-查询响应中的 `result`：
+查詢響應中的 `result`：
 
 ```json
 {
@@ -36,7 +36,7 @@ POST /api/v1/acl/revoke
 }
 ```
 
-修改接口直接返回 ACL report。`set_acl` 请求：
+修改介面直接返回 ACL report。`set_acl` 請求：
 
 ```json
 {
@@ -46,15 +46,15 @@ POST /api/v1/acl/revoke
 }
 ```
 
-- `entries`：完整替换直接授权；省略则保留；`[]` 清空。
-- `acl_mode`：`inherit` 合并直接与继承授权，`restricted` 仅使用直接授权；省略则保留。
-- 两个字段至少传一个。继承和有效权限是只读字段。
-- principal 支持 `user:{id}`、`group:{id}`、`user:*`，level 支持 `read`、`write`、`manage`。重复 principal 保留最高 level。
-- `grant_acl` 请求为 `{uri, principal, level}`；`revoke_acl` 为 `{uri, principal}`；重置使用 `DELETE /api/v1/acl?uri={uri}`。增删单个条目由服务端在锁内完成。
+- `entries`：完整替換直接授權；省略則保留；`[]` 清空。
+- `acl_mode`：`inherit` 合併直接與繼承授權，`restricted` 僅使用直接授權；省略則保留。
+- 兩個欄位至少傳一個。繼承和有效許可權是隻讀欄位。
+- principal 支援 `user:{id}`、`group:{id}`、`user:*`，level 支援 `read`、`write`、`manage`。重複 principal 保留最高 level。
+- `grant_acl` 請求為 `{uri, principal, level}`；`revoke_acl` 為 `{uri, principal}`；重置使用 `DELETE /api/v1/acl?uri={uri}`。增刪單個條目由服務端在鎖內完成。
 
-## 创建和写入时设置
+## 建立和寫入時設定
 
-`POST /api/v1/resources`、`POST /api/v1/fs/mkdir`、`POST /api/v1/content/write` 都接受顶层 `acl` 字段；支持 tags 的接口中，`acl` 与 `tags`、`tag_mode` 并列：
+`POST /api/v1/resources`、`POST /api/v1/fs/mkdir`、`POST /api/v1/content/write` 都接受頂層 `acl` 欄位；支援 tags 的介面中，`acl` 與 `tags`、`tag_mode` 並列：
 
 ```json
 {
@@ -65,13 +65,13 @@ POST /api/v1/acl/revoke
 }
 ```
 
-不传 ACL：新节点直接授权为空并继承父目录，已有节点保留原权限。显式传 ACL：新节点要求调用者从父目录继承 manage，已有节点要求自身 manage；在内容修改前校验，write 权限不能用来提权。没有创建者额外权限。
+不傳 ACL：新節點直接授權為空並繼承父目錄，已有節點保留原許可權。顯式傳 ACL：新節點要求呼叫者從父目錄繼承 manage，已有節點要求自身 manage；在內容修改前校驗，write 許可權不能用來提權。沒有建立者額外許可權。
 
-导入只把直接 ACL 设置到最终导入根节点，子节点继承；自动创建的中间父目录不接收该授权。相同内容重新导入也会更新显式传入的 ACL。
+匯入只把直接 ACL 設定到最終匯入根節點，子節點繼承；自動建立的中間父目錄不接收該授權。相同內容重新匯入也會更新顯式傳入的 ACL。
 
-账号 `acl.enabled` 默认 false，关闭时按原 namespace 规则访问，ACL 不参与鉴权；开启后共享根目录固定 `user:* = manage` 且不可修改。传入 ACL 不会自动开启账号开关，也不会自动切换 restricted。
+帳號 `acl.enabled` 預設 false，關閉時按原 namespace 規則訪問，ACL 不參與鑑權；開啟後共享根目錄固定 `user:* = manage` 且不可修改。傳入 ACL 不會自動開啟帳號開關，也不會自動切換 restricted。
 
-ACL 仍保存在 context 索引内，允许短暂不一致，按现有异步任务和 wait 语义生效。独立修改 ACL 要求目标已有 context 记录；本次不增加无向量记录或空文件支持。
+ACL 仍儲存在 context 索引內，允許短暫不一致，按現有非同步任務和 wait 語義生效。獨立修改 ACL 要求目標已有 context 記錄；本次不增加無向量記錄或空檔案支援。
 
 **CLI**
 
@@ -101,4 +101,4 @@ client.acl_revoke(uri, "user:bob")
 client.acl_delete(uri)
 ```
 
-异步 Python 使用相同方法名。TypeScript 对应 `aclGet(uri)`、`aclSet`、`aclGrant`、`aclRevoke`、`aclDelete`；创建接口的 options 支持 `acl`，mkdir 使用第三个参数。Go 对应 `ACL(ctx, uri)`、`SetACL`、`SetACLMode`、`GrantACL`、`RevokeACL`、`DeleteACL`，通过 `ACLSpec` 设置创建权限。
+非同步 Python 使用相同方法名。TypeScript 對應 `aclGet(uri)`、`aclSet`、`aclGrant`、`aclRevoke`、`aclDelete`；建立介面的 options 支援 `acl`，mkdir 使用第三個引數。Go 對應 `ACL(ctx, uri)`、`SetACL`、`SetACLMode`、`GrantACL`、`RevokeACL`、`DeleteACL`，通過 `ACLSpec` 設定建立許可權。

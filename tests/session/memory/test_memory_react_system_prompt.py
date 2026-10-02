@@ -76,7 +76,7 @@ class TestProviderInstruction:
 
     def test_instruction_omits_resource_uri_handling_without_resource_uri(self):
         provider = SessionExtractContextProvider(
-            messages=[Message(id="m1", role="user", parts=[TextPart("我喜欢越前龙马。")])]
+            messages=[Message(id="m1", role="user", parts=[TextPart("我喜歡越前龍馬。")])]
         )
 
         instruction = provider.instruction()
@@ -92,7 +92,7 @@ class TestProviderInstruction:
                     role="user",
                     parts=[
                         TextPart(
-                            "这张图是越前龙马："
+                            "這張圖是越前龍馬："
                             "viking://user/ryoma/peers/fuji/resources/images/yueqian_jpeg"
                         )
                     ],
@@ -227,7 +227,7 @@ class TestSessionConversationToolFiltering:
                         tool_name="read",
                         tool_uri="viking://session/test/tools/tool_1",
                         tool_input={"file_path": "README.md"},
-                        tool_output="这是中文工具输出",
+                        tool_output="這是中文工具輸出",
                         tool_status="completed",
                     )
                 ],
@@ -243,7 +243,7 @@ class TestSessionConversationToolFiltering:
             Message(
                 id="m1",
                 role="user",
-                parts=[TextPart("请把记忆保持为中文，继续优化。")],
+                parts=[TextPart("請把記憶保持為中文，繼續最佳化。")],
             ),
             Message(
                 id="m2",

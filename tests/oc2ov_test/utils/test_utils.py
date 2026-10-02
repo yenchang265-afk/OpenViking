@@ -1,6 +1,6 @@
 """
-测试工具模块
-提供 Session ID 管理、智能等待、重试机制、测试数据管理等功能
+測試工具模組
+提供 Session ID 管理、智慧等待、重試機制、測試資料管理等功能
 """
 
 import functools
@@ -16,21 +16,21 @@ logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
 
-# 固定的 Session ID，用于 CI 环境避免 session 爆满
-# 使用 UUID 格式，确保 OpenClaw 直接使用，不做 SHA256 转换
+# 固定的 Session ID，用於 CI 環境避免 session 爆滿
+# 使用 UUID 格式，確保 OpenClaw 直接使用，不做 SHA256 轉換
 FIXED_SESSION_ID = "00000000-0000-0000-0000-000000000001"
 
-# CI 环境下基于名称生成确定性 UUID 的命名空间
+# CI 環境下基於名稱生成確定性 UUID 的名稱空間
 _CI_SESSION_NAMESPACE = uuid.UUID("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
 
 
 def _ci_deterministic_uuid(name: str) -> str:
-    """基于名称生成确定性 UUID，CI 环境下同一名称始终返回同一 UUID。"""
+    """基於名稱生成確定性 UUID，CI 環境下同一名稱始終返回同一 UUID。"""
     return str(uuid.uuid5(_CI_SESSION_NAMESPACE, name))
 
 
 def _is_ci_environment() -> bool:
-    """检测是否在 CI 环境中运行"""
+    """檢測是否在 CI 環境中執行"""
     return bool(
         os.environ.get("CI")
         or os.environ.get("GITHUB_ACTIONS")
@@ -44,8 +44,8 @@ def _is_ci_environment() -> bool:
 class SessionIdManager:
     """
     Session ID 管理器
-    自动生成唯一的 session_id，支持前缀和后缀
-    在 CI 环境中使用固定的 session ID，避免 session 爆满
+    自動生成唯一的 session_id，支援字首和字尾
+    在 CI 環境中使用固定的 session ID，避免 session 爆滿
     """
 
     _instance = None
@@ -65,21 +65,21 @@ class SessionIdManager:
         """
         生成唯一的 session_id (UUID 格式)
 
-        OpenClaw 会将非 UUID 格式的 session ID 转换为 SHA256 哈希，
-        使用 UUID 格式可以确保 OpenClaw 直接使用，不做转换。
+        OpenClaw 會將非 UUID 格式的 session ID 轉換為 SHA256 雜湊，
+        使用 UUID 格式可以確保 OpenClaw 直接使用，不做轉換。
 
         Args:
-            prefix: session_id 前缀 (仅用于日志，不影响 UUID 格式)
-            include_timestamp: 是否包含时间戳 (已忽略，保持接口兼容)
-            include_uuid: 是否包含 UUID (已忽略，始终使用 UUID)
+            prefix: session_id 字首 (僅用於日誌，不影響 UUID 格式)
+            include_timestamp: 是否包含時間戳 (已忽略，保持介面相容)
+            include_uuid: 是否包含 UUID (已忽略，始終使用 UUID)
 
         Returns:
             str: UUID 格式的 session_id
         """
-        # 在 CI 环境中使用基于前缀的确定性 session ID，避免不同测试互相干扰
+        # 在 CI 環境中使用基於字首的確定性 session ID，避免不同測試互相干擾
         if _is_ci_environment():
             session_id = _ci_deterministic_uuid(f"session:{prefix}")
-            logger.info(f"CI 环境检测到，使用确定性 Session ID: {session_id} (prefix: {prefix})")
+            logger.info(f"CI 環境檢測到，使用確定性 Session ID: {session_id} (prefix: {prefix})")
             return session_id
 
         # 生成 UUID 格式的 session ID
@@ -90,19 +90,19 @@ class SessionIdManager:
     @staticmethod
     def generate_test_class_session_id(test_class_name: str) -> str:
         """
-        为测试类生成 session_id
+        為測試類生成 session_id
 
         Args:
-            test_class_name: 测试类名称
+            test_class_name: 測試類名稱
 
         Returns:
             str: 唯一的 session_id
         """
-        # 在 CI 环境中使用基于类名的确定性 session ID，避免不同测试类互相干扰
+        # 在 CI 環境中使用基於類名的確定性 session ID，避免不同測試類互相干擾
         if _is_ci_environment():
             session_id = _ci_deterministic_uuid(f"class:{test_class_name}")
             logger.info(
-                f"CI 环境检测到，使用确定性 Session ID: {session_id} (class: {test_class_name})"
+                f"CI 環境檢測到，使用確定性 Session ID: {session_id} (class: {test_class_name})"
             )
             return session_id
 
@@ -111,20 +111,20 @@ class SessionIdManager:
     @staticmethod
     def generate_test_method_session_id(test_class_name: str, test_method_name: str) -> str:
         """
-        为测试方法生成 session_id
+        為測試方法生成 session_id
 
         Args:
-            test_class_name: 测试类名称
-            test_method_name: 测试方法名称
+            test_class_name: 測試類名稱
+            test_method_name: 測試方法名稱
 
         Returns:
             str: 唯一的 session_id
         """
-        # 在 CI 环境中使用基于类名+方法名的确定性 session ID
+        # 在 CI 環境中使用基於類名+方法名的確定性 session ID
         if _is_ci_environment():
             session_id = _ci_deterministic_uuid(f"method:{test_class_name}:{test_method_name}")
             logger.info(
-                f"CI 环境检测到，使用确定性 Session ID: {session_id} "
+                f"CI 環境檢測到，使用確定性 Session ID: {session_id} "
                 f"(class: {test_class_name}, method: {test_method_name})"
             )
             return session_id
@@ -137,21 +137,21 @@ class SessionIdManager:
         metadata: Optional[Dict[str, Any]] = None,
     ) -> None:
         """
-        注册 session
+        註冊 session
 
         Args:
             session_id: session ID
-            metadata: session 元数据
+            metadata: session 後設資料
         """
         self._session_registry[session_id] = {
             "created_at": datetime.now().isoformat(),
             "metadata": metadata or {},
         }
-        logger.info(f"注册 session: {session_id}")
+        logger.info(f"註冊 session: {session_id}")
 
     def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
         """
-        获取 session 信息
+        獲取 session 資訊
 
         Args:
             session_id: session ID
@@ -174,7 +174,7 @@ class SessionIdManager:
 
     def get_all_sessions(self) -> Dict[str, Dict[str, Any]]:
         """
-        获取所有 session
+        獲取所有 session
 
         Returns:
             Dict[str, Dict[str, Any]]: 所有 session
@@ -185,7 +185,7 @@ class SessionIdManager:
 class SmartWaiter:
     """
     智能等待策略
-    支持轮询检查、超时控制、指数退避
+    支援輪詢檢查、超時控制、指數退避
     """
 
     def __init__(
@@ -200,10 +200,10 @@ class SmartWaiter:
         初始化智能等待器
 
         Args:
-            default_timeout: 默认超时时间（秒）
-            default_poll_interval: 默认轮询间隔（秒）
-            max_poll_interval: 最大轮询间隔（秒）
-            exponential_backoff: 是否使用指数退避
+            default_timeout: 預設超時時間（秒）
+            default_poll_interval: 預設輪詢間隔（秒）
+            max_poll_interval: 最大輪詢間隔（秒）
+            exponential_backoff: 是否使用指數退避
             backoff_factor: 退避因子
         """
         self.default_timeout = default_timeout
@@ -217,19 +217,19 @@ class SmartWaiter:
         condition: Callable[[], bool],
         timeout: Optional[float] = None,
         poll_interval: Optional[float] = None,
-        message: str = "等待条件满足",
+        message: str = "等待條件滿足",
     ) -> bool:
         """
-        等待条件满足
+        等待條件滿足
 
         Args:
-            condition: 条件函数，返回 True 表示条件满足
-            timeout: 超时时间（秒）
-            poll_interval: 轮询间隔（秒）
+            condition: 條件函式，返回 True 表示條件滿足
+            timeout: 超時時間（秒）
+            poll_interval: 輪詢間隔（秒）
             message: 等待消息
 
         Returns:
-            bool: 条件是否在超时前满足
+            bool: 條件是否在超時前滿足
         """
         timeout = timeout or self.default_timeout
         poll_interval = poll_interval or self.default_poll_interval
@@ -238,7 +238,7 @@ class SmartWaiter:
         current_interval = poll_interval
         attempt = 0
 
-        logger.info(f"开始等待: {message} (超时: {timeout}秒)")
+        logger.info(f"開始等待: {message} (超時: {timeout}秒)")
 
         while time.time() - start_time < timeout:
             attempt += 1
@@ -247,11 +247,11 @@ class SmartWaiter:
                 if condition():
                     elapsed = time.time() - start_time
                     logger.info(
-                        f"✅ 条件满足: {message} (耗时: {elapsed:.2f}秒, 尝试次数: {attempt})"
+                        f"✅ 條件滿足: {message} (耗時: {elapsed:.2f}秒, 嘗試次數: {attempt})"
                     )
                     return True
             except Exception as e:
-                logger.warning(f"条件检查异常 (尝试 {attempt}): {e}")
+                logger.warning(f"條件檢查異常 (嘗試 {attempt}): {e}")
 
             if self.exponential_backoff:
                 current_interval = min(
@@ -262,7 +262,7 @@ class SmartWaiter:
             time.sleep(current_interval)
 
         elapsed = time.time() - start_time
-        logger.warning(f"❌ 等待超时: {message} (耗时: {elapsed:.2f}秒, 尝试次数: {attempt})")
+        logger.warning(f"❌ 等待超時: {message} (耗時: {elapsed:.2f}秒, 嘗試次數: {attempt})")
         return False
 
     def wait_for_response_keywords(
@@ -275,18 +275,18 @@ class SmartWaiter:
         case_sensitive: bool = False,
     ) -> bool:
         """
-        等待响应中包含指定关键词
+        等待響應中包含指定關鍵詞
 
         Args:
-            get_response: 获取响应的函数
-            keywords: 关键词列表
-            timeout: 超时时间（秒）
-            poll_interval: 轮询间隔（秒）
-            require_all: 是否要求所有关键词都出现
-            case_sensitive: 是否区分大小写
+            get_response: 獲取響應的函式
+            keywords: 關鍵詞列表
+            timeout: 超時時間（秒）
+            poll_interval: 輪詢間隔（秒）
+            require_all: 是否要求所有關鍵詞都出現
+            case_sensitive: 是否區分大小寫
 
         Returns:
-            bool: 是否在超时前找到关键词
+            bool: 是否在超時前找到關鍵詞
         """
         from utils.assertions import AssertionHelper
 
@@ -300,7 +300,7 @@ class SmartWaiter:
             check_keywords,
             timeout=timeout,
             poll_interval=poll_interval,
-            message=f"等待响应包含关键词: {keywords}",
+            message=f"等待響應包含關鍵詞: {keywords}",
         )
 
     def smart_wait(
@@ -310,15 +310,15 @@ class SmartWaiter:
         adaptive: bool = True,
     ) -> float:
         """
-        智能等待，根据历史响应时间调整等待时间
+        智慧等待，根據歷史響應時間調整等待時間
 
         Args:
-            base_wait: 基础等待时间（秒）
-            max_wait: 最大等待时间（秒）
-            adaptive: 是否自适应调整
+            base_wait: 基礎等待時間（秒）
+            max_wait: 最大等待時間（秒）
+            adaptive: 是否自適應調整
 
         Returns:
-            float: 实际等待时间
+            float: 實際等待時間
         """
         wait_time = base_wait
 
@@ -332,8 +332,8 @@ class SmartWaiter:
 
 class RetryManager:
     """
-    重试机制
-    支持自定义重试条件、指数退避、最大重试次数
+    重試機制
+    支援自定義重試條件、指數退避、最大重試次數
     """
 
     def __init__(
@@ -345,13 +345,13 @@ class RetryManager:
         backoff_factor: float = 2.0,
     ):
         """
-        初始化重试管理器
+        初始化重試管理器
 
         Args:
-            max_retries: 最大重试次数
-            base_delay: 基础延迟（秒）
-            max_delay: 最大延迟（秒）
-            exponential_backoff: 是否使用指数退避
+            max_retries: 最大重試次數
+            base_delay: 基礎延遲（秒）
+            max_delay: 最大延遲（秒）
+            exponential_backoff: 是否使用指數退避
             backoff_factor: 退避因子
         """
         self.max_retries = max_retries
@@ -366,14 +366,14 @@ class RetryManager:
         on_retry: Optional[Callable[[int, Exception], None]] = None,
     ) -> Callable:
         """
-        装饰器：在指定异常时重试
+        裝飾器：在指定異常時重試
 
         Args:
-            exceptions: 要捕获的异常类型
-            on_retry: 重试时的回调函数
+            exceptions: 要捕獲的異常型別
+            on_retry: 重試時的回呼函式
 
         Returns:
-            Callable: 装饰器函数
+            Callable: 裝飾器函式
         """
 
         def decorator(func: Callable[..., T]) -> Callable[..., T]:
@@ -393,14 +393,14 @@ class RetryManager:
                                 on_retry(attempt + 1, e)
 
                             logger.warning(
-                                f"重试 {attempt + 1}/{self.max_retries}: {func.__name__} - {e}"
+                                f"重試 {attempt + 1}/{self.max_retries}: {func.__name__} - {e}"
                             )
                             time.sleep(delay)
 
                             if self.exponential_backoff:
                                 delay = min(delay * self.backoff_factor, self.max_delay)
                         else:
-                            logger.error(f"重试次数耗尽: {func.__name__} - {e}")
+                            logger.error(f"重試次數耗盡: {func.__name__} - {e}")
                             raise
 
                 raise last_exception
@@ -415,14 +415,14 @@ class RetryManager:
         max_retries: Optional[int] = None,
     ) -> Callable:
         """
-        装饰器：在结果满足条件时重试
+        裝飾器：在結果滿足條件時重試
 
         Args:
-            condition: 条件函数，返回 True 表示需要重试
-            max_retries: 最大重试次数（覆盖默认值）
+            condition: 條件函式，返回 True 表示需要重試
+            max_retries: 最大重試次數（覆蓋預設值）
 
         Returns:
-            Callable: 装饰器函数
+            Callable: 裝飾器函式
         """
         retries = max_retries or self.max_retries
 
@@ -441,14 +441,14 @@ class RetryManager:
 
                     if attempt < retries:
                         logger.warning(
-                            f"结果不满足条件，重试 {attempt + 1}/{retries}: {func.__name__}"
+                            f"結果不滿足條件，重試 {attempt + 1}/{retries}: {func.__name__}"
                         )
                         time.sleep(delay)
 
                         if self.exponential_backoff:
                             delay = min(delay * self.backoff_factor, self.max_delay)
                     else:
-                        logger.warning(f"重试次数耗尽，返回最后结果: {func.__name__}")
+                        logger.warning(f"重試次數耗盡，返回最後結果: {func.__name__}")
 
                 return last_result
 
@@ -464,16 +464,16 @@ class RetryManager:
         **kwargs,
     ) -> T:
         """
-        执行函数并在异常时重试
+        執行函式並在異常時重試
 
         Args:
-            func: 要执行的函数
-            *args: 函数参数
-            exceptions: 要捕获的异常类型
-            **kwargs: 函数关键字参数
+            func: 要執行的函式
+            *args: 函式引數
+            exceptions: 要捕獲的異常型別
+            **kwargs: 函式關鍵字引數
 
         Returns:
-            T: 函数返回值
+            T: 函式返回值
         """
 
         @self.retry_on_exception(exceptions)
@@ -486,8 +486,8 @@ class RetryManager:
 @dataclass
 class TestData:
     """
-    测试数据类
-    用于管理测试数据
+    測試資料類
+    用於管理測試資料
     """
 
     name: str
@@ -502,8 +502,8 @@ class TestData:
 
 class TestDataManager:
     """
-    测试数据管理器
-    支持从配置文件加载、数据验证、数据驱动测试
+    測試資料管理器
+    支援從配置檔案載入、資料驗證、資料驅動測試
     """
 
     def __init__(self):
@@ -511,63 +511,63 @@ class TestDataManager:
 
     def register_data(self, data: TestData) -> None:
         """
-        注册测试数据
+        註冊測試資料
 
         Args:
-            data: 测试数据
+            data: 測試資料
         """
         self._data_registry[data.name] = data
-        logger.info(f"注册测试数据: {data.name}")
+        logger.info(f"註冊測試資料: {data.name}")
 
     def get_data(self, name: str) -> Optional[TestData]:
         """
-        获取测试数据
+        獲取測試資料
 
         Args:
-            name: 数据名称
+            name: 資料名稱
 
         Returns:
-            Optional[TestData]: 测试数据
+            Optional[TestData]: 測試資料
         """
         return self._data_registry.get(name)
 
     def get_all_data(self) -> Dict[str, TestData]:
         """
-        获取所有测试数据
+        獲取所有測試資料
 
         Returns:
-            Dict[str, TestData]: 所有测试数据
+            Dict[str, TestData]: 所有測試資料
         """
         return self._data_registry.copy()
 
     def get_data_by_tag(self, tag: str) -> List[TestData]:
         """
-        根据标签获取测试数据
+        根據標籤獲取測試資料
 
         Args:
-            tag: 标签
+            tag: 標籤
 
         Returns:
-            List[TestData]: 匹配的测试数据列表
+            List[TestData]: 匹配的測試資料列表
         """
         return [data for data in self._data_registry.values() if tag in data.tags]
 
     def validate_data(self, data: TestData) -> bool:
         """
-        验证测试数据
+        驗證測試資料
 
         Args:
-            data: 测试数据
+            data: 測試資料
 
         Returns:
             bool: 是否有效
         """
         if not data.name:
-            logger.error("测试数据名称不能为空")
+            logger.error("測試資料名稱不能為空")
             return False
 
         if not data.input_data:
-            logger.warning(f"测试数据 {data.name} 没有输入数据")
+            logger.warning(f"測試資料 {data.name} 沒有輸入資料")
 
         return True
 
@@ -575,39 +575,39 @@ class TestDataManager:
 DEFAULT_TEST_DATA = {
     "user_xiaoming": TestData(
         name="user_xiaoming",
-        description="测试用户小明",
+        description="測試使用者小明",
         input_data={
-            "message": "我叫小明，今年30岁，住在华东区，职业是测试开发",
+            "message": "我叫小明，今年30歲，住在華東區，職業是測試開發",
         },
         expected_keywords=[
-            ["小明", "测试开发", "30岁", "华东"],
+            ["小明", "測試開發", "30歲", "華東"],
         ],
         tags=["user", "basic"],
     ),
     "user_xiaohong": TestData(
         name="user_xiaohong",
-        description="测试用户小红",
+        description="測試使用者小紅",
         input_data={
             "message": (
-                "我叫小红，今年25岁，住在华北区北京市朝阳区，职业是产品经理，"
-                "喜欢美食和旅游，不喜欢加班，我的生日是1999年8月15日"
+                "我叫小紅，今年25歲，住在華北區北京市朝陽區，職業是產品經理，"
+                "喜歡美食和旅遊，不喜歡加班，我的生日是1999年8月15日"
             ),
         },
         expected_keywords=[
-            ["产品经理"],
+            ["產品經理"],
             ["1999", "8月", "8/15"],
-            ["美食", "旅游"],
+            ["美食", "旅遊"],
         ],
         tags=["user", "rich"],
     ),
     "fruit_cherry": TestData(
         name="fruit_cherry",
-        description="水果偏好 - 樱桃",
+        description="水果偏好 - 櫻桃",
         input_data={
-            "message": "我喜欢吃樱桃，日常喜欢喝美式咖啡",
+            "message": "我喜歡吃櫻桃，日常喜歡喝美式咖啡",
         },
         expected_keywords=[
-            ["樱桃"],
+            ["櫻桃"],
             ["美式", "咖啡"],
         ],
         tags=["fruit", "drink"],
@@ -616,11 +616,11 @@ DEFAULT_TEST_DATA = {
         name="fruit_mango",
         description="水果偏好 - 芒果",
         input_data={
-            "message": "我喜欢吃芒果，日常喜欢喝拿铁咖啡",
+            "message": "我喜歡吃芒果，日常喜歡喝拿鐵咖啡",
         },
         expected_keywords=[
             ["芒果"],
-            ["拿铁", "咖啡"],
+            ["拿鐵", "咖啡"],
         ],
         tags=["fruit", "drink"],
     ),
@@ -628,11 +628,11 @@ DEFAULT_TEST_DATA = {
         name="fruit_strawberry",
         description="水果偏好 - 草莓",
         input_data={
-            "message": "我喜欢吃草莓，日常喜欢喝抹茶拿铁",
+            "message": "我喜歡吃草莓，日常喜歡喝抹茶拿鐵",
         },
         expected_keywords=[
             ["草莓"],
-            ["抹茶", "拿铁"],
+            ["抹茶", "拿鐵"],
         ],
         tags=["fruit", "drink"],
     ),
@@ -641,10 +641,10 @@ DEFAULT_TEST_DATA = {
 
 def get_default_data_manager() -> TestDataManager:
     """
-    获取默认的测试数据管理器
+    獲取預設的測試資料管理器
 
     Returns:
-        TestDataManager: 测试数据管理器
+        TestDataManager: 測試資料管理器
     """
     manager = TestDataManager()
     for data in DEFAULT_TEST_DATA.values():

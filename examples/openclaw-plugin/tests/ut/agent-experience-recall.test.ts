@@ -5,14 +5,14 @@ import { shouldRecallAgentExperience } from "../../auto-recall.js";
 describe("shouldRecallAgentExperience", () => {
   it("skips ordinary knowledge questions", () => {
     const result = shouldRecallAgentExperience({
-      latestUserText: "preflight assemble 和 transformcontext assemble是什么区别",
+      latestUserText: "preflight assemble 和 transformcontext assemble是什麼區別",
     });
     expect(result.recall).toBe(false);
   });
 
   it("recalls for execution tasks", () => {
     const result = shouldRecallAgentExperience({
-      latestUserText: "修一下 OpenClaw 插件里 afterTurn 写入 tool result 的问题",
+      latestUserText: "修一下 OpenClaw 外掛裡 afterTurn 寫入 tool result 的問題",
     });
     expect(result.recall).toBe(true);
     expect(result.reason).toBe("task_execution");
@@ -20,7 +20,7 @@ describe("shouldRecallAgentExperience", () => {
 
   it("forces recall for cron sessions", () => {
     const result = shouldRecallAgentExperience({
-      latestUserText: "每天同步 benchmark 结果并生成报告",
+      latestUserText: "每天同步 benchmark 結果並生成報告",
       sessionKey: "agent:main:cron:nightly:run:1",
       triggerHint: "cron_start",
     });

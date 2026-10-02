@@ -13,7 +13,7 @@ dist-ssr
 __unconfig*
 todos.json
 
-# 根目录的 gitignore 有一些不合理的规则，在这里覆盖掉
+# 根目錄的 gitignore 有一些不合理的規則，在這裡覆蓋掉
 !src/lib/
 !src/lib/**
 

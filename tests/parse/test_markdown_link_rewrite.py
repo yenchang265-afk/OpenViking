@@ -17,21 +17,21 @@ class TestRewriteRelativeLinks:
         return MarkdownParser()
 
     def _make_tree(self, tmp_path: Path) -> Path:
-        """构造与真实 knowledge 同形的小目录，返回入库根 (knowledge/)。"""
+        """構造與真實 knowledge 同形的小目錄，返回入庫根 (knowledge/)。"""
         kb = tmp_path / "knowledge"
-        tgt = kb / "目录甲" / "目录乙" / "目录丙"
+        tgt = kb / "目錄甲" / "目錄乙" / "目錄丙"
         tgt.mkdir(parents=True)
-        (tgt / "文档.md").write_text("# 目标\n\n内容", encoding="utf-8")
+        (tgt / "文件.md").write_text("# 目標\n\n內容", encoding="utf-8")
         (kb / "img").mkdir()
         (kb / "img" / "a.png").write_bytes(b"\x89PNG\r\n\x1a\n")
-        (kb / "文档.md").write_text("placeholder", encoding="utf-8")
+        (kb / "文件.md").write_text("placeholder", encoding="utf-8")
         return kb
 
     async def _rewrite(self, parser, kb, content, section_subpath=""):
         rewrite_ctx = _RewriteContext(
-            source_path=str(kb / "文档.md"),
-            doc_name="文档",
-            root_dir="viking://temp/test/文档",
+            source_path=str(kb / "文件.md"),
+            doc_name="文件",
+            root_dir="viking://temp/test/文件",
             import_root=str(kb),
             base_dir=kb,
             allowed_media_dirs=None,
@@ -50,19 +50,19 @@ class TestRewriteRelativeLinks:
         out = await self._rewrite(
             self._parser(),
             kb,
-            "见 [x](./目录甲/目录乙/目录丙/文档.md)",
+            "見 [x](./目錄甲/目錄乙/目錄丙/文件.md)",
         )
-        assert out == "见 [x](../目录甲/目录乙/目录丙/文档/)"
+        assert out == "見 [x](../目錄甲/目錄乙/目錄丙/文件/)"
 
     async def test_nonempty_subpath_adds_one_more_parent(self, tmp_path: Path):
         kb = self._make_tree(tmp_path)
         out = await self._rewrite(
             self._parser(),
             kb,
-            "[x](./目录甲/目录乙/目录丙/文档.md)",
-            section_subpath="二、示例小节",
+            "[x](./目錄甲/目錄乙/目錄丙/文件.md)",
+            section_subpath="二、示例小節",
         )
-        assert out == "[x](../../目录甲/目录乙/目录丙/文档/)"
+        assert out == "[x](../../目錄甲/目錄乙/目錄丙/文件/)"
 
     async def test_image_not_ingestable_depth_adjusted(self, tmp_path: Path):
         # img/a.png is a stub (no decodable pixels) so #2429's _ingest_local_images
@@ -102,9 +102,9 @@ class TestRewriteRelativeLinks:
         out = await self._rewrite(
             self._parser(),
             kb,
-            "[x](目录甲/目录乙/目录丙/文档.md)",
+            "[x](目錄甲/目錄乙/目錄丙/文件.md)",
         )
-        assert out == "[x](../目录甲/目录乙/目录丙/文档/)"
+        assert out == "[x](../目錄甲/目錄乙/目錄丙/文件/)"
 
     async def test_target_outside_import_root_unchanged(self, tmp_path: Path):
         kb = self._make_tree(tmp_path)
@@ -119,85 +119,85 @@ class TestRewriteRelativeLinks:
         out = await self._rewrite(
             self._parser(),
             kb,
-            "[x](./目录甲/目录乙/目录丙/文档.md#流程)",
+            "[x](./目錄甲/目錄乙/目錄丙/文件.md#流程)",
         )
-        assert out == "[x](../目录甲/目录乙/目录丙/文档/文档.md#流程)"
+        assert out == "[x](../目錄甲/目錄乙/目錄丙/文件/文件.md#流程)"
 
     async def test_query_suffix_kept_for_small_file(self, tmp_path: Path):
         kb = self._make_tree(tmp_path)
         out = await self._rewrite(
             self._parser(),
             kb,
-            "[x](./目录甲/目录乙/目录丙/文档.md?v=1)",
+            "[x](./目錄甲/目錄乙/目錄丙/文件.md?v=1)",
         )
-        assert out == "[x](../目录甲/目录乙/目录丙/文档/文档.md?v=1)"
+        assert out == "[x](../目錄甲/目錄乙/目錄丙/文件/文件.md?v=1)"
 
     async def test_large_file_anchor_located(self, tmp_path: Path):
         # Large target is split into section files; the anchor is located via an
         # in-memory parse → link points at the specific section file + keeps anchor.
         kb = self._make_tree(tmp_path)
-        big = kb / "目录甲" / "目录乙" / "目录丙" / "big.md"
+        big = kb / "目錄甲" / "目錄乙" / "目錄丙" / "big.md"
         body = "".join(
-            f"## 第{i}章 {name}\n\n" + ("正文内容。" * 400) + "\n\n"
-            for i, name in [(1, "部署"), (2, "监控"), (3, "排查")]
+            f"## 第{i}章 {name}\n\n" + ("正文內容。" * 400) + "\n\n"
+            for i, name in [(1, "部署"), (2, "監控"), (3, "排查")]
         )
         big.write_text(body, encoding="utf-8")
         out = await self._rewrite(
             self._parser(),
             kb,
-            "[x](./目录甲/目录乙/目录丙/big.md#第3章-排查)",
+            "[x](./目錄甲/目錄乙/目錄丙/big.md#第3章-排查)",
         )
-        assert out.startswith("[x](../目录甲/目录乙/目录丙/big/")
+        assert out.startswith("[x](../目錄甲/目錄乙/目錄丙/big/")
         assert out.endswith(".md#第3章-排查)")  # points at a file, anchor kept
 
     async def test_large_file_unlocatable_anchor_falls_back_to_dir(self, tmp_path: Path):
         # Anchor matches no heading in the (large) target → drop suffix, point at dir.
         kb = self._make_tree(tmp_path)
-        big = kb / "目录甲" / "目录乙" / "目录丙" / "big.md"
-        big.write_text("# 大文档\n\n" + ("这是一段较长的正文内容。" * 1200), encoding="utf-8")
+        big = kb / "目錄甲" / "目錄乙" / "目錄丙" / "big.md"
+        big.write_text("# 大文件\n\n" + ("這是一段較長的正文內容。" * 1200), encoding="utf-8")
         out = await self._rewrite(
             self._parser(),
             kb,
-            "[x](./目录甲/目录乙/目录丙/big.md#不存在的章节)",
+            "[x](./目錄甲/目錄乙/目錄丙/big.md#不存在的章節)",
         )
-        assert out == "[x](../目录甲/目录乙/目录丙/big/)"
+        assert out == "[x](../目錄甲/目錄乙/目錄丙/big/)"
 
     async def test_multiple_links_on_one_line(self, tmp_path: Path):
         kb = self._make_tree(tmp_path)
         out = await self._rewrite(
             self._parser(),
             kb,
-            "a [1](./目录甲/目录乙/目录丙/文档.md) b ![p](./img/a.png)",
+            "a [1](./目錄甲/目錄乙/目錄丙/文件.md) b ![p](./img/a.png)",
         )
         assert out == (
-            "a [1](../目录甲/目录乙/目录丙/文档/) "
+            "a [1](../目錄甲/目錄乙/目錄丙/文件/) "
             "b ![p](../img/a.png)"  # stub image: not ingestable -> depth-adjusted
         )
 
     async def test_future_bare_file_layout_points_at_file(self, tmp_path: Path):
-        """前瞻：若 MarkdownParser 改为小 .md 不再拆成目录（in-memory parse 得到裸
-        文件 layout），重写自动指向文件而非目录——落点完全由 layout 决定、无目录化假设。
-        无需改 _rewrite_single_link，只要 parse_content 的产物变了就自动跟随。"""
+        """前瞻：若 MarkdownParser 改為小 .md 不再拆成目錄（in-memory parse 得到裸
+        檔案 layout），重寫自動指向檔案而非目錄——落點完全由 layout 決定、無目錄化假設。
+        無需改 _rewrite_single_link，只要 parse_content 的產物變了就自動跟隨。"""
         kb = self._make_tree(tmp_path)
         p = self._parser()
 
         async def fake_bare_layout(_path, _context):
-            # 模拟未来：目标入库为单个裸文件，无 <dir>/ 包裹
-            return {"文档.md": "# 目标\n\n内容"}
+            # 模擬未來：目標入庫為單個裸檔案，無 <dir>/ 包裹
+            return {"文件.md": "# 目標\n\n內容"}
 
         p._target_split_files = fake_bare_layout  # type: ignore[method-assign]
-        base = "./目录甲/目录乙/目录丙/文档.md"
-        # 无 suffix → 文件本身（无尾斜杠），而非 文档/ 目录
-        assert await self._rewrite(p, kb, f"[x]({base})") == "[x](../目录甲/目录乙/目录丙/文档.md)"
-        # ?query → 文件 + 保留查询串
+        base = "./目錄甲/目錄乙/目錄丙/文件.md"
+        # 無 suffix → 檔案本身（無尾斜槓），而非 文件/ 目錄
+        assert await self._rewrite(p, kb, f"[x]({base})") == "[x](../目錄甲/目錄乙/目錄丙/文件.md)"
+        # ?query → 檔案 + 保留查詢串
         assert (
             await self._rewrite(p, kb, f"[x]({base}?v=1)")
-            == "[x](../目录甲/目录乙/目录丙/文档.md?v=1)"
+            == "[x](../目錄甲/目錄乙/目錄丙/文件.md?v=1)"
         )
-        # #anchor → 文件 + 保留锚点（裸单文件内任意锚点仍有效）
+        # #anchor → 檔案 + 保留錨點（裸單檔案內任意錨點仍有效）
         assert (
             await self._rewrite(p, kb, f"[x]({base}#任意)")
-            == "[x](../目录甲/目录乙/目录丙/文档.md#任意)"
+            == "[x](../目錄甲/目錄乙/目錄丙/文件.md#任意)"
         )
 
 
@@ -206,16 +206,16 @@ class TestSectionSubpath:
         return MarkdownParser()
 
     def test_file_directly_under_root_is_empty(self):
-        root = "viking://temp/x/文档"
-        assert self._parser()._section_subpath(f"{root}/文档.md", root) == ""
+        root = "viking://temp/x/文件"
+        assert self._parser()._section_subpath(f"{root}/文件.md", root) == ""
 
     def test_file_in_subdir(self):
-        root = "viking://temp/x/文档"
-        uri = f"{root}/二、示例小节/sec_1.md"
-        assert self._parser()._section_subpath(uri, root) == "二、示例小节"
+        root = "viking://temp/x/文件"
+        uri = f"{root}/二、示例小節/sec_1.md"
+        assert self._parser()._section_subpath(uri, root) == "二、示例小節"
 
     def test_file_in_nested_subdir(self):
-        root = "viking://temp/x/文档"
+        root = "viking://temp/x/文件"
         uri = f"{root}/a/b/sec.md"
         assert self._parser()._section_subpath(uri, root) == "a/b"
 
@@ -327,7 +327,7 @@ class TestComputeLayoutPurity:
     async def test_compute_layout_plans_sections_without_touching_vikingfs(self, tmp_path: Path):
         # A multi-section document large enough to split into several section files.
         src = tmp_path / "big.md"
-        body = "".join(f"## 第{i}章\n\n" + ("正文内容。" * 400) + "\n\n" for i in range(1, 4))
+        body = "".join(f"## 第{i}章\n\n" + ("正文內容。" * 400) + "\n\n" for i in range(1, 4))
         src.write_text(body, encoding="utf-8")
 
         fake = FakeVikingFS()
@@ -355,11 +355,11 @@ class TestParseContentRewiring:
         kb.mkdir()
         manual = kb / "manual.md"
         manual.write_text(
-            "# 安装\n\n" + ("这是一段足够长的安装说明。" * 1200),
+            "# 安裝\n\n" + ("這是一段足夠長的安裝說明。" * 1200),
             encoding="utf-8",
         )
         index = kb / "index.md"
-        index.write_text("[安装说明](manual.md#安装)", encoding="utf-8")
+        index.write_text("[安裝說明](manual.md#安裝)", encoding="utf-8")
 
         fake = FakeVikingFS()
         with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
@@ -371,15 +371,15 @@ class TestParseContentRewiring:
             )
 
         written = [_decode(value) for uri, value in fake.files.items() if uri.endswith(".md")]
-        assert written == ["[安装说明](../manual/manual.md#安装)"]
+        assert written == ["[安裝說明](../manual/manual.md#安裝)"]
 
     async def test_parse_content_rewrites_link_when_enabled(self, tmp_path: Path):
         kb = tmp_path / "knowledge"
-        tgt = kb / "目录甲" / "目录乙" / "目录丙"
+        tgt = kb / "目錄甲" / "目錄乙" / "目錄丙"
         tgt.mkdir(parents=True)
-        (tgt / "文档.md").write_text("# 目标\n\n内容", encoding="utf-8")
-        src = kb / "文档.md"
-        src.write_text("见 [x](./目录甲/目录乙/目录丙/文档.md)", encoding="utf-8")
+        (tgt / "文件.md").write_text("# 目標\n\n內容", encoding="utf-8")
+        src = kb / "文件.md"
+        src.write_text("見 [x](./目錄甲/目錄乙/目錄丙/文件.md)", encoding="utf-8")
 
         fake = FakeVikingFS()
         with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
@@ -387,52 +387,52 @@ class TestParseContentRewiring:
                 str(src), enable_link_rewrite=True, link_rewrite_root=str(kb)
             )
 
-        written = [_decode(c) for u, c in fake.files.items() if "见" in _decode(c)]
+        written = [_decode(c) for u, c in fake.files.items() if "見" in _decode(c)]
         assert written, fake.files
-        assert "../目录甲/目录乙/目录丙/文档/" in written[0]
+        assert "../目錄甲/目錄乙/目錄丙/文件/" in written[0]
 
     async def test_parse_content_no_rewrite_when_disabled(self, tmp_path: Path):
         kb = tmp_path / "knowledge"
-        tgt = kb / "目录甲" / "目录乙" / "目录丙"
+        tgt = kb / "目錄甲" / "目錄乙" / "目錄丙"
         tgt.mkdir(parents=True)
-        (tgt / "文档.md").write_text("# 目标\n\n内容", encoding="utf-8")
-        src = kb / "文档.md"
-        src.write_text("见 [x](./目录甲/目录乙/目录丙/文档.md)", encoding="utf-8")
+        (tgt / "文件.md").write_text("# 目標\n\n內容", encoding="utf-8")
+        src = kb / "文件.md"
+        src.write_text("見 [x](./目錄甲/目錄乙/目錄丙/文件.md)", encoding="utf-8")
 
         fake = FakeVikingFS()
         with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
             await MarkdownParser().parse(str(src))  # rewrite disabled by default
 
-        written = [_decode(c) for u, c in fake.files.items() if "见" in _decode(c)]
+        written = [_decode(c) for u, c in fake.files.items() if "見" in _decode(c)]
         assert written, fake.files
-        assert "./目录甲/目录乙/目录丙/文档.md" in written[0]
+        assert "./目錄甲/目錄乙/目錄丙/文件.md" in written[0]
 
     async def test_no_rewrite_without_import_root(self, tmp_path: Path):
         # enable_link_rewrite=True but no link_rewrite_root (the single-file path):
         # without an ingest root there is nothing to bound against, so do NOT rewrite.
         kb = tmp_path / "knowledge"
-        tgt = kb / "目录甲" / "目录乙" / "目录丙"
+        tgt = kb / "目錄甲" / "目錄乙" / "目錄丙"
         tgt.mkdir(parents=True)
-        (tgt / "文档.md").write_text("# 目标\n\n内容", encoding="utf-8")
-        src = kb / "文档.md"
-        src.write_text("见 [x](./目录甲/目录乙/目录丙/文档.md)", encoding="utf-8")
+        (tgt / "文件.md").write_text("# 目標\n\n內容", encoding="utf-8")
+        src = kb / "文件.md"
+        src.write_text("見 [x](./目錄甲/目錄乙/目錄丙/文件.md)", encoding="utf-8")
 
         fake = FakeVikingFS()
         with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
             await MarkdownParser().parse(str(src), enable_link_rewrite=True)
 
-        written = [_decode(c) for u, c in fake.files.items() if "见" in _decode(c)]
+        written = [_decode(c) for u, c in fake.files.items() if "見" in _decode(c)]
         assert written, fake.files
-        assert "./目录甲/目录乙/目录丙/文档.md" in written[0]
+        assert "./目錄甲/目錄乙/目錄丙/文件.md" in written[0]
 
 
 class TestDirectoryEndToEnd:
     async def test_no_split_flat_markdown_keeps_cross_file_link_valid(self, tmp_path: Path):
         kb = tmp_path / "knowledge"
         kb.mkdir()
-        (kb / "target.md").write_text("# 目标\n\n内容", encoding="utf-8")
+        (kb / "target.md").write_text("# 目標\n\n內容", encoding="utf-8")
         (kb / "source.md").write_text(
-            "见 [目标](target.md#目标)",
+            "見 [目標](target.md#目標)",
             encoding="utf-8",
         )
 
@@ -441,16 +441,16 @@ class TestDirectoryEndToEnd:
             result = await DirectoryParser().parse(str(kb), split_content=False)
 
         root = f"{result.temp_dir_path}/{kb.name}"
-        assert _decode(fake.files[f"{root}/source.md"]) == "见 [目标](target.md#目标)"
-        assert _decode(fake.files[f"{root}/target.md"]) == "# 目标\n\n内容"
+        assert _decode(fake.files[f"{root}/source.md"]) == "見 [目標](target.md#目標)"
+        assert _decode(fake.files[f"{root}/target.md"]) == "# 目標\n\n內容"
 
     async def test_no_split_wrapped_source_links_to_flat_target(self, tmp_path: Path):
         kb = tmp_path / "knowledge"
         kb.mkdir()
         _write_valid_png(kb / "cover.png")
-        (kb / "target.md").write_text("# 目标\n\n内容", encoding="utf-8")
+        (kb / "target.md").write_text("# 目標\n\n內容", encoding="utf-8")
         (kb / "source.md").write_text(
-            "![封面](cover.png)\n\n见 [目标](target.md#目标)",
+            "![封面](cover.png)\n\n見 [目標](target.md#目標)",
             encoding="utf-8",
         )
 
@@ -460,7 +460,7 @@ class TestDirectoryEndToEnd:
 
         root = f"{result.temp_dir_path}/{kb.name}"
         source = _decode(fake.files[f"{root}/source/source.md"])
-        assert "见 [目标](../target.md#目标)" in source
+        assert "見 [目標](../target.md#目標)" in source
         assert f"{root}/target.md" in fake.files
 
     async def test_no_split_flat_source_links_to_wrapped_target(self, tmp_path: Path):
@@ -468,11 +468,11 @@ class TestDirectoryEndToEnd:
         kb.mkdir()
         _write_valid_png(kb / "cover.png")
         (kb / "target.md").write_text(
-            "# 目标\n\n![封面](cover.png)",
+            "# 目標\n\n![封面](cover.png)",
             encoding="utf-8",
         )
         (kb / "source.md").write_text(
-            "见 [目标](target.md#目标)",
+            "見 [目標](target.md#目標)",
             encoding="utf-8",
         )
 
@@ -482,37 +482,37 @@ class TestDirectoryEndToEnd:
 
         root = f"{result.temp_dir_path}/{kb.name}"
         source = _decode(fake.files[f"{root}/source.md"])
-        assert source == "见 [目标](target/target.md#目标)"
+        assert source == "見 [目標](target/target.md#目標)"
         assert f"{root}/target/cover.png" in fake.files
 
     async def test_directory_ingest_rewrites_cross_file_link(self, tmp_path: Path):
         kb = tmp_path / "knowledge"
-        tgt = kb / "目录甲" / "目录乙" / "目录丙"
+        tgt = kb / "目錄甲" / "目錄乙" / "目錄丙"
         tgt.mkdir(parents=True)
-        (tgt / "文档.md").write_text("# 目标\n\n内容", encoding="utf-8")
-        (kb / "文档.md").write_text("见 [x](./目录甲/目录乙/目录丙/文档.md)", encoding="utf-8")
+        (tgt / "文件.md").write_text("# 目標\n\n內容", encoding="utf-8")
+        (kb / "文件.md").write_text("見 [x](./目錄甲/目錄乙/目錄丙/文件.md)", encoding="utf-8")
 
         fake = FakeVikingFS()
         with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
             await DirectoryParser().parse(str(kb))
 
-        written = [_decode(c) for c in fake.files.values() if "见" in _decode(c)]
+        written = [_decode(c) for c in fake.files.values() if "見" in _decode(c)]
         assert written, fake.files
-        assert "../目录甲/目录乙/目录丙/文档/" in written[0]
+        assert "../目錄甲/目錄乙/目錄丙/文件/" in written[0]
 
     async def test_directory_flat_mode_does_not_rewrite(self, tmp_path: Path):
         # preserve_structure=False -> rewrite disabled -> links left untouched.
         kb = tmp_path / "knowledge"
         sub = kb / "sub"
         sub.mkdir(parents=True)
-        (sub / "target.md").write_text("# 目标\n\n内容", encoding="utf-8")
-        (kb / "root.md").write_text("见 [x](./sub/target.md)", encoding="utf-8")
+        (sub / "target.md").write_text("# 目標\n\n內容", encoding="utf-8")
+        (kb / "root.md").write_text("見 [x](./sub/target.md)", encoding="utf-8")
 
         fake = FakeVikingFS()
         with patch.object(BaseParser, "_get_viking_fs", return_value=fake):
             await DirectoryParser().parse(str(kb), preserve_structure=False)
 
-        written = [_decode(c) for c in fake.files.values() if "见" in _decode(c)]
+        written = [_decode(c) for c in fake.files.values() if "見" in _decode(c)]
         assert written, fake.files
         assert "./sub/target.md" in written[0]
 
@@ -732,10 +732,10 @@ class TestRewriteImageUris:
         root = "viking://resources/res"
         fake = FakeVikingFS()
         fake.files = {
-            f"{root}/big/标题/章一/部分_1.md": "![p](./assets/d.jpg)".encode(),
-            f"{root}/big/标题/章一/d.jpg": b"img",
+            f"{root}/big/標題/章一/部分_1.md": "![p](./assets/d.jpg)".encode(),
+            f"{root}/big/標題/章一/d.jpg": b"img",
             f"{root}/big/.image_mappings.json": (
-                '{"标题/章一/部分_1.md": {"./assets/d.jpg": "d.jpg"}}'.encode()
+                '{"標題/章一/部分_1.md": {"./assets/d.jpg": "d.jpg"}}'.encode()
             ),
         }
 
@@ -743,8 +743,8 @@ class TestRewriteImageUris:
             stats = await rewrite_image_uris(root, lease_ref=None)
 
         assert stats == {"files_processed": 1, "references_rewritten": 1}
-        assert _decode(fake.files[f"{root}/big/标题/章一/部分_1.md"]) == (
-            f"![p]({root}/big/标题/章一/d.jpg)"
+        assert _decode(fake.files[f"{root}/big/標題/章一/部分_1.md"]) == (
+            f"![p]({root}/big/標題/章一/d.jpg)"
         )
         assert f"{root}/big/.image_mappings.json" not in fake.files
 

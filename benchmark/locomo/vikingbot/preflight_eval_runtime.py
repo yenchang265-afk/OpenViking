@@ -84,16 +84,16 @@ def _prompt_secret(prompt: str) -> str:
     try:
         return getpass.getpass(f"    {_color('>', '32')} ").strip()
     except Exception:
-        return _prompt_text("请输入密钥").strip()
+        return _prompt_text("請輸入金鑰").strip()
 
 
 def _prompt_api_key() -> str:
-    return _prompt_secret("请输入 OpenViking User API key（输入内容不会显示）")
+    return _prompt_secret("請輸入 OpenViking User API key（輸入內容不會顯示）")
 
 
 def _prompt_root_api_key() -> str:
     return _prompt_secret(
-        "请输入 OpenViking Root API key，用于自动创建 default User key（输入内容不会显示）"
+        "請輸入 OpenViking Root API key，用於自動建立 default User key（輸入內容不會顯示）"
     )
 
 
@@ -163,13 +163,13 @@ def _resolve_openviking_url() -> str:
 def _load_ov_conf() -> dict:
     ov_conf_path = resolve_config_path(None, OPENVIKING_CONFIG_ENV, DEFAULT_OV_CONF)
     if ov_conf_path is None:
-        _error("未找到 ov.conf，无法读取 OpenViking User API key。")
+        _error("未找到 ov.conf，無法讀取 OpenViking User API key。")
         raise SystemExit(1)
 
     try:
         return _load_json(Path(ov_conf_path))
     except Exception as exc:
-        _error(f"读取 ov.conf 失败: {exc}")
+        _error(f"讀取 ov.conf 失敗: {exc}")
         raise SystemExit(1)
 
 
@@ -282,7 +282,7 @@ def _request_health(
     except urllib.error.HTTPError as e:
         detail = _read_http_error(e)
         raise UserKeyValidationError(
-            f"OpenViking server 检查失败（HTTP {e.code}）: {detail}"
+            f"OpenViking server 檢查失敗（HTTP {e.code}）: {detail}"
         ) from e
     except Exception as exc:
         raise UserKeyValidationError(f"OpenViking server 不可用: {exc}") from exc
@@ -304,7 +304,7 @@ def _parse_health_identity_payload(payload: dict) -> tuple[str, str, str]:
     role = str(payload.get("role") or "").strip().lower()
     if not account_id or not user_id or not role:
         raise UserKeyValidationError(
-            f"API key 未解析出有效身份，请检查 key 是否正确。/health 返回: {payload}"
+            f"API key 未解析出有效身份，請檢查 key 是否正確。/health 返回: {payload}"
         )
     return account_id, user_id, role
 
@@ -346,16 +346,16 @@ def _admin_request(
             raw = resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as exc:
         detail = _read_http_error(exc)
-        raise UserKeyValidationError(f"Admin API 请求失败（HTTP {exc.code}）: {detail}") from exc
+        raise UserKeyValidationError(f"Admin API 請求失敗（HTTP {exc.code}）: {detail}") from exc
     except Exception as exc:
-        raise UserKeyValidationError(f"Admin API 请求失败: {exc}") from exc
+        raise UserKeyValidationError(f"Admin API 請求失敗: {exc}") from exc
 
     try:
         parsed = json.loads(raw)
     except Exception as exc:
         raise UserKeyValidationError(f"Admin API 返回非 JSON: {raw}") from exc
     if parsed.get("status") != "ok":
-        raise UserKeyValidationError(f"Admin API 返回失败: {parsed}")
+        raise UserKeyValidationError(f"Admin API 返回失敗: {parsed}")
     result = parsed.get("result")
     return result if isinstance(result, dict) else {"items": result}
 
@@ -372,7 +372,7 @@ def _ensure_default_user_key(url: str, root_api_key: str) -> tuple[str, str, str
         item.get("account_id") == account_id for item in accounts if isinstance(item, dict)
     )
     if not account_exists:
-        _warn("default account 不存在，将使用 Root key 创建 account=default。")
+        _warn("default account 不存在，將使用 Root key 建立 account=default。")
         _admin_request(
             url,
             root_api_key,
@@ -395,7 +395,7 @@ def _ensure_default_user_key(url: str, root_api_key: str) -> tuple[str, str, str
         None,
     )
     if default_user is None:
-        _warn("default User 不存在，将注册 account=default, user=default, role=user。")
+        _warn("default User 不存在，將註冊 account=default, user=default, role=user。")
         created = _admin_request(
             url,
             root_api_key,
@@ -407,7 +407,7 @@ def _ensure_default_user_key(url: str, root_api_key: str) -> tuple[str, str, str
     else:
         role = str(default_user.get("role") or "").strip().lower()
         if role != "user":
-            _warn(f"default User 当前 role={role or 'unknown'}，将调整为 role=user。")
+            _warn(f"default User 當前 role={role or 'unknown'}，將調整為 role=user。")
             _admin_request(
                 url,
                 root_api_key,
@@ -425,7 +425,7 @@ def _ensure_default_user_key(url: str, root_api_key: str) -> tuple[str, str, str
         user_key = str(regenerated.get("user_key") or "").strip()
 
     if not user_key:
-        raise UserKeyValidationError("Admin API 未返回 user_key，无法继续评测。")
+        raise UserKeyValidationError("Admin API 未返回 user_key，無法繼續評測。")
     return account_id, user_id, user_key
 
 
@@ -435,13 +435,13 @@ def _ensure_server_and_user_key_ready(
     payload = _request_health(url, api_key)
     account_id, user_id, role = _parse_health_identity_payload(payload)
     if role != "user":
-        raise UserKeyValidationError(f"当前 API key 解析为 role={role}。评测需要普通 User key。")
+        raise UserKeyValidationError(f"當前 API key 解析為 role={role}。評測需要普通 User key。")
 
     if selected_account and selected_account != "default" and selected_account != account_id:
         _warn(
             f"ovcli.conf.account={selected_account} "
-            f"与 API key 归属 account={account_id} 不一致；"
-            "本次评测使用 API key 归属 account。"
+            f"與 API key 歸屬 account={account_id} 不一致；"
+            "本次評測使用 API key 歸屬 account。"
         )
 
     _ok(
@@ -458,7 +458,7 @@ def _ensure_trusted_server_ready(
     health_account, health_user, role = _parse_health_identity_payload(payload)
     if role != "user":
         raise UserKeyValidationError(
-            f"当前 trusted 身份解析为 role={role}。评测需要普通 User 身份。"
+            f"當前 trusted 身份解析為 role={role}。評測需要普通 User 身份。"
         )
 
     _ok(
@@ -484,7 +484,7 @@ def _resolve_ready_user_identity(
 
         auth_mode = _health_auth_mode(probe)
         if auth_mode == "trusted":
-            _log(f"使用 {key_source} 校验 OpenViking trusted key")
+            _log(f"使用 {key_source} 校驗 OpenViking trusted key")
             try:
                 account, user_id = _ensure_trusted_server_ready(
                     openviking_url, selected_account, selected_user, api_key
@@ -494,7 +494,7 @@ def _resolve_ready_user_identity(
                 raise SystemExit(1) from exc
             return account, user_id, api_key, "trusted"
 
-        _log(f"使用 {key_source} 校验 OpenViking User key")
+        _log(f"使用 {key_source} 校驗 OpenViking User key")
         try:
             account, user_id = _ensure_server_and_user_key_ready(
                 openviking_url, selected_account, api_key
@@ -502,25 +502,25 @@ def _resolve_ready_user_identity(
             return account, user_id, api_key, "api_key"
         except UserKeyValidationError as exc:
             _error(str(exc))
-            prompt = "当前 User key 不可用，是否使用 Root key 自动生成 default User API key"
+            prompt = "當前 User key 不可用，是否使用 Root key 自動生成 default User API key"
     else:
         _error("未配置 OpenViking API key。")
-        prompt = "是否使用 Root key 自动生成 default User API key"
+        prompt = "是否使用 Root key 自動生成 default User API key"
 
     if not _prompt_yes_no(prompt, default=False):
-        _error("请配置可用的 bot.ov_server.api_key 或 ovcli.conf.api_key 后重试。")
+        _error("請配置可用的 bot.ov_server.api_key 或 ovcli.conf.api_key 後重試。")
         raise SystemExit(1)
 
     root_api_key, root_key_source = _resolve_root_api_key()
     if not root_api_key:
         _error(
-            "未配置 OpenViking Root API key，无法自动生成 User key。"
-            "请设置 server.root_api_key 后重试。"
+            "未配置 OpenViking Root API key，無法自動生成 User key。"
+            "請設定 server.root_api_key 後重試。"
         )
         raise SystemExit(1)
 
     try:
-        _log(f"使用 {root_key_source} 自动生成/刷新 default User key。")
+        _log(f"使用 {root_key_source} 自動生成/重新整理 default User key。")
         account, user_id, user_key = _ensure_default_user_key(openviking_url, root_api_key)
         checked_account, checked_user_id = _ensure_server_and_user_key_ready(
             openviking_url, selected_account, user_key
@@ -558,7 +558,7 @@ def main() -> int:
     openviking_url = _resolve_openviking_url()
     api_key, key_source = _resolve_openviking_api_key()
 
-    _fact(f"本次导入使用 OpenViking URL: {openviking_url}")
+    _fact(f"本次匯入使用 OpenViking URL: {openviking_url}")
 
     account, user_id, api_key, auth_mode = _resolve_ready_user_identity(
         openviking_url, selected_account, selected_user, api_key, key_source

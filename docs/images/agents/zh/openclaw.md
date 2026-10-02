@@ -1,38 +1,38 @@
-## 步骤1：安装
+## 步驟1：安裝
 
-1. 安装 OpenViking 插件：
+1. 安裝 OpenViking 外掛：
 
    ```bash
    openclaw plugins install clawhub:@openviking/openclaw-plugin
    ```
 
-2. 将 OpenClaw 连接至火山引擎托管的 OpenViking 服务：
+2. 將 OpenClaw 連線至火山引擎託管的 OpenViking 服務：
 
    ```bash
    openclaw openviking setup --base-url https://api.vikingdb.cn-beijing.volces.com/openviking --api-key <$OPENVIKING_API_KEY>
    ```
 
-3. 配置 `peer_role`：`peer_role` 用于标识对话参与者的类型，并非权限角色。其中，`assistant` 表示不同的 Agent、工具或模型，`person` 表示不同的人类参与者。完成上述配置后，`peer_role` 默认为 `none`。如需调整 `peer_role`，可执行以下命令：
+3. 配置 `peer_role`：`peer_role` 用於標識對話參與者的型別，並非許可權角色。其中，`assistant` 表示不同的 Agent、工具或模型，`person` 表示不同的人類參與者。完成上述配置後，`peer_role` 預設為 `none`。如需調整 `peer_role`，可執行以下命令：
 
    ```bash
    openclaw openviking setup --reconfigure
    ```
 
-4. 重启 Gateway 使配置生效：
+4. 重啟 Gateway 使配置生效：
 
    ```bash
    openclaw gateway restart
    ```
 
-## 步骤2：验证
+## 步驟2：驗證
 
-1. 在终端执行如下命令检查接入状态：
+1. 在終端執行如下命令檢查接入狀態：
 
    ```bash
    openclaw openviking status
    ```
 
-2. 返回如下结果即表示接入成功：
+2. 返回如下結果即表示接入成功：
 
    ```text
    🦣 OpenViking Plugin Status
@@ -51,12 +51,12 @@
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| 插件未生效 | 重跑安装，再执行 `openclaw gateway restart` |
-| 401 / 403 | 检查鉴权凭据 |
+| 外掛未生效 | 重跑安裝，再執行 `openclaw gateway restart` |
+| 401 / 403 | 檢查鑑權憑據 |
 
-## 参考
+## 參考
 
-- 手动配置文档：[OpenClaw](https://docs.openviking.net/zh/agent-integrations/03-openclaw)
-- 源码：[examples/openclaw-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openclaw-plugin)
+- 手動配置文件：[OpenClaw](https://docs.openviking.net/zh/agent-integrations/03-openclaw)
+- 原始碼：[examples/openclaw-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/openclaw-plugin)

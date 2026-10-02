@@ -807,7 +807,7 @@ async def test_resource_rm_enqueues_parent_delete_refresh_and_waits(request_cont
     service._enqueue_delete_refresh = AsyncMock()
     service._wait_for_refresh = AsyncMock(return_value={"Semantic": {"pending_count": 0}})
 
-    uri = "viking://resources/images/2026/06/10/不二周助_jpeg"
+    uri = "viking://resources/images/2026/06/10/不二週助_jpeg"
     result = await service.rm(
         uri,
         ctx=request_context,
@@ -848,7 +848,7 @@ async def test_resource_rm_reports_failed_semantic_status_when_wait_queue_has_er
     )
 
     result = await service.rm(
-        "viking://resources/images/2026/06/10/不二周助_jpeg",
+        "viking://resources/images/2026/06/10/不二週助_jpeg",
         ctx=request_context,
         recursive=True,
         wait=True,
@@ -879,7 +879,7 @@ async def test_resource_rm_without_wait_only_queues_refresh(request_context):
     service._enqueue_delete_refresh = AsyncMock()
     service._wait_for_refresh = AsyncMock()
 
-    uri = "viking://resources/images/2026/06/10/不二周助_jpeg"
+    uri = "viking://resources/images/2026/06/10/不二週助_jpeg"
     result = await service.rm(uri, ctx=request_context, recursive=True)
 
     service._enqueue_delete_refresh.assert_awaited_once()
@@ -1382,7 +1382,7 @@ async def test_resource_rm_wait_registers_request_before_semantic_root(
     )
 
     result = await service.rm(
-        "viking://resources/images/2026/06/10/不二周助_jpeg",
+        "viking://resources/images/2026/06/10/不二週助_jpeg",
         ctx=request_context,
         recursive=True,
         wait=True,
@@ -1404,7 +1404,7 @@ async def test_resource_rm_does_not_cleanup_memory_if_resource_delete_fails(requ
     viking_fs = _FakeVikingFS(rm_error=delete_error)
     cleanup = {
         "status": "success",
-        "memory_uris": ["viking://user/ryoma/memories/entities/动漫角色/越前龙马.md"],
+        "memory_uris": ["viking://user/ryoma/memories/entities/動漫角色/越前龍馬.md"],
     }
     link_service = _FakeResourceMemoryLinkService(cleanup)
     service = FSService(
@@ -1429,9 +1429,9 @@ async def test_resource_rm_refreshes_memory_overview_for_cleaned_memories(
 ):
     cleanup = {
         "status": "success",
-        "memory_uris": ["viking://user/ryoma/memories/entities/动漫角色/不二周助-write-test.md"],
+        "memory_uris": ["viking://user/ryoma/memories/entities/動漫角色/不二週助-write-test.md"],
         "deleted_memory_uris": [
-            "viking://user/ryoma/memories/entities/动漫角色/不二周助-link-test2.md"
+            "viking://user/ryoma/memories/entities/動漫角色/不二週助-link-test2.md"
         ],
     }
     viking_fs = _FakeVikingFS()
@@ -1452,14 +1452,14 @@ async def test_resource_rm_refreshes_memory_overview_for_cleaned_memories(
         fake_refresh_schema_overview,
     )
 
-    uri = "viking://resources/images/2026/06/11/不二周助_jpeg"
+    uri = "viking://resources/images/2026/06/11/不二週助_jpeg"
     result = await service.rm(uri, ctx=request_context, recursive=True)
 
     assert link_service.calls == [{"ctx": request_context, "resource_uri": uri, "recursive": True}]
     assert refreshed == [
         {
             "viking_fs": viking_fs,
-            "directory_uri": "viking://user/ryoma/memories/entities/动漫角色",
+            "directory_uri": "viking://user/ryoma/memories/entities/動漫角色",
             "ctx": request_context,
         }
     ]

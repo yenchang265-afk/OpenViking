@@ -36,7 +36,7 @@ class _FakeVikingFS:
 
 
 def test_build_artifact_image_mappings_uses_existing_sibling_images(tmp_path: Path):
-    chapter = tmp_path / "章节"
+    chapter = tmp_path / "章節"
     chapter.mkdir()
     (chapter / "正文_img1.png").write_bytes(b"png")
     (chapter / "正文_img2.jpg").write_bytes(b"jpg")
@@ -56,7 +56,7 @@ def test_build_artifact_image_mappings_uses_existing_sibling_images(tmp_path: Pa
     )
 
     assert build_artifact_image_mappings(tmp_path) == {
-        "章节/正文.md": {
+        "章節/正文.md": {
             "正文_img1.png": "正文_img1.png",
             "./正文_img2.jpg": "正文_img2.jpg",
         }
@@ -67,8 +67,8 @@ def test_build_artifact_image_mappings_uses_existing_sibling_images(tmp_path: Pa
 async def test_unpack_artifact_writes_image_mapping_sidecar(tmp_path: Path):
     zip_path = tmp_path / "artifact.zip"
     with zipfile.ZipFile(zip_path, "w") as archive:
-        archive.writestr("artifact/Ov测试_1.md", "![image](Ov测试_1_img1.png)\n")
-        archive.writestr("artifact/Ov测试_1_img1.png", b"png")
+        archive.writestr("artifact/Ov測試_1.md", "![image](Ov測試_1_img1.png)\n")
+        archive.writestr("artifact/Ov測試_1_img1.png", b"png")
         archive.writestr(
             f"artifact/{IMAGE_MAPPINGS_FILENAME}",
             '{"untrusted.md":{"bad.png":"bad.png"}}',
@@ -83,9 +83,9 @@ async def test_unpack_artifact_writes_image_mapping_sidecar(tmp_path: Path):
     assert artifact_ref.resource_rel == "resource"
     sidecar_uri = f"{artifact_ref.root}/resource/{IMAGE_MAPPINGS_FILENAME}"
     assert json.loads(fake_fs.files[sidecar_uri]) == {
-        "Ov测试_1.md": {"Ov测试_1_img1.png": "Ov测试_1_img1.png"}
+        "Ov測試_1.md": {"Ov測試_1_img1.png": "Ov測試_1_img1.png"}
     }
-    assert fake_fs.files[f"{artifact_ref.root}/resource/Ov测试_1_img1.png"] == b"png"
+    assert fake_fs.files[f"{artifact_ref.root}/resource/Ov測試_1_img1.png"] == b"png"
 
 
 @pytest.mark.asyncio

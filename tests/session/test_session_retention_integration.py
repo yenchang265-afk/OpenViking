@@ -768,7 +768,7 @@ async def test_wm_creation_passes_configured_output_language_to_prompt(client, m
     )
 
     result = await session._generate_archive_summary_async(
-        [_text_message("zh-user", "user", "请总结当前部署状态")]
+        [_text_message("zh-user", "user", "請總結當前部署狀態")]
     )
 
     assert result == "# Working Memory"
@@ -801,8 +801,8 @@ async def test_wm_creation_detects_language_from_multiline_user_message(client, 
                 "multiline-user",
                 "user",
                 "Task details:\n"
-                "当前生产环境已经完成部署。\n"
-                "请用中文总结当前状态和后续风险。",
+                "當前生產環境已經完成部署。\n"
+                "請用中文總結當前狀態和後續風險。",
             )
         ]
     )

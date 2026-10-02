@@ -97,12 +97,12 @@ def test_autonomous_suite_contains_the_three_core_cases():
         "same_type_split",
     ]
     assert cases[0].messages[0].parts[0].text == (
-        "你还记得 Atlas 项目的发布方式、回滚流程和日常运维信息吗？"
+        "你還記得 Atlas 專案的釋出方式、回滾流程和日常運維資訊嗎？"
     )
     assert cases[1].messages[0].parts[0].text == (
-        "你还记得我的基本情况，以及我在工作、饮食、旅行和游戏方面的偏好吗？"
+        "你還記得我的基本情況，以及我在工作、飲食、旅行和遊戲方面的偏好嗎？"
     )
-    assert all(case.messages[0].parts[0].text != "请继续。" for case in cases)
+    assert all(case.messages[0].parts[0].text != "請繼續。" for case in cases)
 
 
 def test_parallel_jobs_are_unique_and_counterbalanced():
@@ -321,11 +321,11 @@ def test_autonomous_directory_grader_accepts_case_normalization():
         {
             target: (
                 "entities",
-                "# Atlas\nAtlas 是一个软件服务。\n\n## 事实\n"
-                "- [F01] 使用分阶段发布。\n"
-                "- [F02] 有明确记录的回滚流程。\n"
-                "- [F03] 由平台团队负责。\n"
-                "- [F04] 提供健康检查接口。",
+                "# Atlas\nAtlas 是一個軟體服務。\n\n## 事實\n"
+                "- [F01] 使用分階段釋出。\n"
+                "- [F02] 有明確記錄的回滾流程。\n"
+                "- [F03] 由平臺團隊負責。\n"
+                "- [F04] 提供健康檢查介面。",
             )
         },
         {source: target},
@@ -337,11 +337,11 @@ def test_autonomous_directory_grader_accepts_case_normalization():
         {
             target: (
                 "entities",
-                "# Atlas\nAtlas 是一个软件服务。\n\n## 事实\n"
-                "- [F01] 使用分阶段发布。\n"
-                "- [F02] 有明确记录的回滚流程。\n"
-                "- [F03] 由平台团队负责。\n"
-                "- [F04] 提供健康检查接口。",
+                "# Atlas\nAtlas 是一個軟體服務。\n\n## 事實\n"
+                "- [F01] 使用分階段釋出。\n"
+                "- [F02] 有明確記錄的回滾流程。\n"
+                "- [F03] 由平臺團隊負責。\n"
+                "- [F04] 提供健康檢查介面。",
             )
         },
         {source: target},
@@ -370,11 +370,11 @@ def test_profile_move_action_is_independent_of_information_integrity():
     files = {
         "viking://user/default/memories/profile.md": (
             "profile",
-            "# 安德鲁\n- 是一名后端工程师 (as of 2026-08-01)",
+            "# 安德魯\n- 是一名後端工程師 (as of 2026-08-01)",
         ),
-        "viking://user/default/memories/preferences/安德鲁/food.md": (
+        "viking://user/default/memories/preferences/安德魯/food.md": (
             "preferences",
-            "- 喜欢吃辣味面条 (as of 2026-08-01)",
+            "- 喜歡吃辣味麵條 (as of 2026-08-01)",
         ),
     }
 
@@ -452,8 +452,8 @@ def test_autonomous_report_exposes_only_two_primary_quality_metrics():
         "actual_files": {
             target: {
                 "memory_type": "entities",
-                "content": "- [F01] 使用分阶段发布。\n- [F02] 有明确记录的回滚流程。\n"
-                "- [F03] 由平台团队负责。\n- [F04] 提供健康检查接口。",
+                "content": "- [F01] 使用分階段釋出。\n- [F02] 有明確記錄的回滾流程。\n"
+                "- [F03] 由平臺團隊負責。\n- [F04] 提供健康檢查介面。",
             }
         },
         "actual_replacements": {source: target},

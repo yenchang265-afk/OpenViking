@@ -1745,15 +1745,15 @@ def write_suite_outputs(output_dir: Path, runs: list[tuple[BenchOptions, RunResu
         },
     )
     lines = [
-        "# OpenViking Vector Backend 真实数据汇总",
+        "# OpenViking Vector Backend 真實資料彙總",
         "",
-        "本次 `dir-vector` 真实数据 benchmark 覆盖 `wiki` 和 `arxiv` 两个数据集。",
+        "本次 `dir-vector` 真實資料 benchmark 覆蓋 `wiki` 和 `arxiv` 兩個資料集。",
         "",
         markdown_table(rows),
         "",
     ]
     for run_options, result in runs:
-        lines.extend(["", f"## {run_options.dataset} 明细", ""])
+        lines.extend(["", f"## {run_options.dataset} 明細", ""])
         detail = (
             build_markdown_report(result, run_summaries[run_options.dataset], run_options)
             .strip()
@@ -1838,33 +1838,33 @@ def build_markdown_report(
     result: RunResult, summary_rows: list[dict[str, Any]], options: BenchOptions
 ) -> str:
     lines = [
-        "# OpenViking Vector Backend 性能验收报告",
+        "# OpenViking Vector Backend 效能驗收報告",
         "",
         f"- Run ID: `{result.run_id}`",
         f"- Workload: `{options.workload}`",
         f"- Mode: `{options.mode}`",
         f"- Collection: `{result.collection_name}`",
-        f"- 功能错误: `{len(result.validation_errors)}`",
+        f"- 功能錯誤: `{len(result.validation_errors)}`",
         f"- Collection 保留: `{result.kept_collection}`",
         "",
-        "## 结论",
+        "## 結論",
         "",
     ]
     if result.validation_errors:
-        lines.append("功能验收未通过。性能慢只记录，以下功能错误会导致非零退出码：")
+        lines.append("功能驗收未通過。效能慢只記錄，以下功能錯誤會導致非零退出碼：")
         for error in result.validation_errors[:20]:
             lines.append(f"- {error}")
     else:
-        lines.append("功能验收通过。")
+        lines.append("功能驗收通過。")
 
     lines.extend(
         [
             "",
-            "## 数据规模",
+            "## 資料規模",
             "",
             markdown_table(workload_rows(result, summary_rows)),
             "",
-            "## Directory path 口径",
+            "## Directory path 口徑",
             "",
             f"- Corpus path source: `{result.workload.get('path_diagnostics', {}).get('corpus_path_source', 'generated')}`",
             f"- Query scope source: `{result.workload.get('path_diagnostics', {}).get('query_scope_source', 'generated')}`",
@@ -1872,23 +1872,23 @@ def build_markdown_report(
             f"- Unique directory scopes: `{result.workload.get('path_diagnostics', {}).get('unique_directory_scopes', '-')}`",
             f"- Root-derived scopes omitted: `{result.workload.get('path_diagnostics', {}).get('root_derived_scopes_omitted', 0)}`",
             "",
-            "## 召回与 QPS",
+            "## 召回與 QPS",
             "",
             markdown_table(recall_qps_rows(result, summary_rows, options)),
             "",
-            "gt_recall@K 按 query 的 ground truth 命中率统计；`sampled_subset` 只用于 smoke sanity，不代表官方全量 recall。`derived_gt_lca_v1` 使用 ground truth 派生目录，只是诊断 workload，也不代表发布数据集的官方 query constraint。",
+            "gt_recall@K 按 query 的 ground truth 命中率統計；`sampled_subset` 只用於 smoke sanity，不代表官方全量 recall。`derived_gt_lca_v1` 使用 ground truth 派生目錄，只是診斷 workload，也不代表釋出資料集的官方 query constraint。",
             "",
-            "## 性能汇总",
+            "## 效能彙總",
             "",
             markdown_table(summary_rows),
             "",
-            "## 环境说明",
+            "## 環境說明",
             "",
             f"- Platform: `{result.environment.get('platform')}`",
             f"- CPU count: `{result.environment.get('cpu_count')}`",
             f"- Memory bytes: `{result.environment.get('memory_bytes')}`",
             f"- GPU: `{result.environment.get('gpu') or 'not detected'}`",
-            "- 远端/GPU 服务资源未由本 runner 验证；报告只记录 runner 本机观测信息。",
+            "- 遠端/GPU 服務資源未由本 runner 驗證；報告只記錄 runner 本機觀測資訊。",
             "",
             "## 清理",
             "",
@@ -1896,21 +1896,21 @@ def build_markdown_report(
     )
     if result.kept_collection:
         lines.append(
-            "默认保留测试 collection。需要清理时，用相同配置连接后删除 "
+            "預設保留測試 collection。需要清理時，用相同配置連線後刪除 "
             f"`{result.collection_name}`。"
         )
     else:
-        lines.append("本次运行已尝试删除测试 collection。")
+        lines.append("本次執行已嘗試刪除測試 collection。")
 
     lines.extend(
         [
             "",
-            "## 输出文件",
+            "## 輸出檔案",
             "",
-            "- `run_summary.json`: 汇总数据",
-            "- `events.jsonl`: 每次操作明细",
-            "- `phase_summary.csv`: 阶段聚合",
-            "- `environment.json`: 本机环境观测",
+            "- `run_summary.json`: 彙總資料",
+            "- `events.jsonl`: 每次操作明細",
+            "- `phase_summary.csv`: 階段聚合",
+            "- `environment.json`: 本機環境觀測",
         ]
     )
     return "\n".join(lines) + "\n"
@@ -1918,7 +1918,7 @@ def build_markdown_report(
 
 def markdown_table(rows: list[dict[str, Any]]) -> str:
     if not rows:
-        return "无数据。"
+        return "無資料。"
     headers = list(rows[0].keys())
     lines = [
         "| " + " | ".join(headers) + " |",

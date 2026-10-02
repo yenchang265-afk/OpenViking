@@ -83,15 +83,15 @@ async def test_long_markdown_no_split_plans_one_complete_file(
     layout = await parser._compute_layout(
         content,
         "viking://temp/test",
-        source_path="/tmp/社交网络中英文剧本.pdf",
-        resource_name="社交网络中英文剧本",
+        source_path="/tmp/社交網路中英文劇本.pdf",
+        resource_name="社交網路中英文劇本",
         split_content=False,
     )
 
     writes = [op for op in layout.ops if op.kind == "write"]
     assert [(op.uri, op.content) for op in writes] == [
         (
-            "viking://temp/test/社交网络中英文剧本/社交网络中英文剧本.md",
+            "viking://temp/test/社交網路中英文劇本/社交網路中英文劇本.md",
             content,
         )
     ]
@@ -105,8 +105,8 @@ async def test_long_markdown_default_mode_still_splits() -> None:
     layout = await parser._compute_layout(
         content,
         "viking://temp/test",
-        source_path="/tmp/社交网络中英文剧本.pdf",
-        resource_name="社交网络中英文剧本",
+        source_path="/tmp/社交網路中英文劇本.pdf",
+        resource_name="社交網路中英文劇本",
     )
 
     writes = [op for op in layout.ops if op.kind == "write"]
@@ -118,7 +118,7 @@ async def test_pdf_no_split_converts_to_one_complete_markdown(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    source = tmp_path / "社交网络中英文剧本.pdf"
+    source = tmp_path / "社交網路中英文劇本.pdf"
     source.write_bytes(b"%PDF-fixture")
     content = _long_markdown(with_headings=True)
     fake_fs = _FakeVikingFS()
@@ -137,13 +137,13 @@ async def test_pdf_no_split_converts_to_one_complete_markdown(
 
     result = await parser.parse(
         source,
-        resource_name="社交网络中英文剧本",
+        resource_name="社交網路中英文劇本",
         split_content=False,
     )
 
     assert result.parser_name == "PDFParser"
     assert (
-        fake_fs.files["viking://temp/pdf-no-split/社交网络中英文剧本/社交网络中英文剧本.md"]
+        fake_fs.files["viking://temp/pdf-no-split/社交網路中英文劇本/社交網路中英文劇本.md"]
         == content
     )
     assert not any(uri.endswith(".pdf") for uri in fake_fs.files)

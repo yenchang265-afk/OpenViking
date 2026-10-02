@@ -297,8 +297,8 @@ def test_render_graph_html_keeps_node_label_plain_text_while_rendering_body_link
             "label": "Caroline profile",
             "memory_type": "profile",
             "category": "",
-            "content_preview": "她喜欢[角色扮演游戏](entities/games/rpg.md)，也喜欢开放世界游戏。",
-            "content_full": "她喜欢[角色扮演游戏](entities/games/rpg.md)，也喜欢开放世界游戏。",
+            "content_preview": "她喜歡[角色扮演遊戲](entities/games/rpg.md)，也喜歡開放世界遊戲。",
+            "content_full": "她喜歡[角色扮演遊戲](entities/games/rpg.md)，也喜歡開放世界遊戲。",
             "content_truncated": False,
         }
     ]
@@ -307,10 +307,10 @@ def test_render_graph_html_keeps_node_label_plain_text_while_rendering_body_link
 
     assert '"label": "Caroline profile"' in html
     assert (
-        '"content_full": "她喜欢[角色扮演游戏](entities/games/rpg.md)，也喜欢开放世界游戏。"'
+        '"content_full": "她喜歡[角色扮演遊戲](entities/games/rpg.md)，也喜歡開放世界遊戲。"'
         in html
     )
     assert (
-        '"content_preview": "她喜欢[角色扮演游戏](entities/games/rpg.md)，也喜欢开放世界游戏。"'
+        '"content_preview": "她喜歡[角色扮演遊戲](entities/games/rpg.md)，也喜歡開放世界遊戲。"'
         in html
     )

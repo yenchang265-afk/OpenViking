@@ -1,8 +1,8 @@
 # OpenViking Multi-Tenant 示例
 
-演示 OpenViking 多租户管理功能：账户创建、用户注册、角色管理、Key 管理、数据访问。
+演示 OpenViking 多租戶管理功能：帳戶建立、使用者註冊、角色管理、Key 管理、資料訪問。
 
-## 架构
+## 架構
 
 ```
                         Admin API (ROOT key)
@@ -23,31 +23,31 @@
 └──────────┘
 ```
 
-## 认证体系
+## 認證體系
 
-| Key 类型 | 创建方式 | 角色 | 能力 |
+| Key 型別 | 建立方式 | 角色 | 能力 |
 |----------|---------|------|------|
 | Root Key | `ov.conf` 中配置 | ROOT | 全部操作 + Admin API |
-| User Key | Admin API 创建 | ADMIN 或 USER | 按 account 访问 |
+| User Key | Admin API 建立 | ADMIN 或 USER | 按 account 訪問 |
 
 | 角色 | 作用域 | 能力 |
 |------|--------|------|
-| ROOT | 全局 | 全部操作 + 创建/删除 account、管理用户 |
-| ADMIN | 所属 account | 常规操作 + 管理本 account 的用户 |
-| USER | 所属 account | 常规操作（ls、read、find、sessions 等） |
+| ROOT | 全域 | 全部操作 + 建立/刪除 account、管理使用者 |
+| ADMIN | 所屬 account | 常規操作 + 管理本 account 的使用者 |
+| USER | 所屬 account | 常規操作（ls、read、find、sessions 等） |
 
 ## Quick Start
 
 ### 1. 配置 Server
 
-复制配置文件并填入你的模型 API Key：
+複製配置檔案並填入你的模型 API Key：
 
 ```bash
 cp ov.conf.example ov.conf
-# 编辑 ov.conf，填入 embedding 和 vlm 的 api_key
+# 編輯 ov.conf，填入 embedding 和 vlm 的 api_key
 ```
 
-关键配置项——`root_api_key` 启用多租户认证：
+關鍵配置項——`root_api_key` 啟用多租戶認證：
 
 ```json
 {
@@ -57,68 +57,68 @@ cp ov.conf.example ov.conf
 }
 ```
 
-不配置 `root_api_key` 时，认证禁用，所有请求以 ROOT 身份访问（开发模式）。
+不配置 `root_api_key` 時，認證停用，所有請求以 ROOT 身份訪問（開發模式）。
 
-### 2. 启动 Server
+### 2. 啟動 Server
 
 ```bash
 # 方式一：指定配置文件
 openviking-server --config ./ov.conf
 
-# 方式二：放到默认路径
+# 方式二：放到預設路徑
 cp ov.conf ~/.openviking/ov.conf
 openviking-server
 
-# 验证
+# 驗證
 curl http://localhost:1933/health
 # {"status": "ok"}
 ```
 
-### 3. 运行示例
+### 3. 執行示例
 
 **Python SDK：**
 
 ```bash
-# 安装依赖
+# 安裝依賴
 uv sync
 
-# 运行（使用默认参数）
+# 執行（使用預設引數）
 uv run admin_workflow.py
 
-# 自定义参数
+# 自定義引數
 uv run admin_workflow.py --url http://localhost:1933 --root-key my-root-key
 ```
 
 **CLI：**
 
 ```bash
-# 运行（使用默认参数）
+# 執行（使用預設引數）
 bash admin_workflow.sh
 
-# 自定义参数
+# 自定義引數
 ROOT_KEY=my-root-key SERVER=http://localhost:1933 bash admin_workflow.sh
 ```
 
 ## 示例流程
 
-两个示例（Python SDK 和 CLI）覆盖完全相同的流程：
+兩個示例（Python SDK 和 CLI）覆蓋完全相同的流程：
 
 ```
- 1. Health Check              无需认证，验证服务可用
- 2. Create Account            ROOT 创建 account "acme"，同时创建首个 admin "alice"
- 3. Register User (ROOT)      ROOT 在 "acme" 下注册普通用户 "bob"
- 4. Register User (ADMIN)     alice (ADMIN) 在 "acme" 下注册用户 "charlie"
+ 1. Health Check              無需認證，驗證服務可用
+ 2. Create Account            ROOT 建立 account "acme"，同時建立首個 admin "alice"
+ 3. Register User (ROOT)      ROOT 在 "acme" 下注冊普通使用者 "bob"
+ 4. Register User (ADMIN)     alice (ADMIN) 在 "acme" 下注冊使用者 "charlie"
  5. List Accounts             ROOT 列出所有 account
- 6. List Users                列出 "acme" 下所有用户及角色
- 7. Change Role               ROOT 将 bob 提升为 ADMIN
- 8. Regenerate Key            为 charlie 重新生成 key，旧 key 立即失效
- 9. Access Data               bob 使用 user key 访问数据
-10. Error Tests               非法 key、权限不足、重复创建、旧 key 等负面用例
-11. Remove User               删除 charlie，验证其 key 失效
-12. Delete Account            删除 account "acme"，验证 alice 的 key 也失效
+ 6. List Users                列出 "acme" 下所有使用者及角色
+ 7. Change Role               ROOT 將 bob 提升為 ADMIN
+ 8. Regenerate Key            為 charlie 重新生成 key，舊 key 立即失效
+ 9. Access Data               bob 使用 user key 訪問資料
+10. Error Tests               非法 key、許可權不足、重複建立、舊 key 等負面用例
+11. Remove User               刪除 charlie，驗證其 key 失效
+12. Delete Account            刪除 account "acme"，驗證 alice 的 key 也失效
 ```
 
-## CLI 命令参考
+## CLI 命令參考
 
 ```bash
 # Account 管理
@@ -134,32 +134,32 @@ openviking admin set-role <account_id> <user_id> <role>
 openviking admin regenerate-key <account_id> <user_id>
 ```
 
-## 文件说明
+## 檔案說明
 
 ```
-admin_workflow.py    Python SDK 示例（httpx 调用 Admin API + SyncHTTPClient 访问数据）
+admin_workflow.py    Python SDK 示例（httpx 呼叫 Admin API + SyncHTTPClient 訪問資料）
 admin_workflow.sh    CLI 示例（openviking admin 命令，同等流程）
 ov.conf.example      Server 配置文件模板（含 root_api_key）
-pyproject.toml       项目依赖
+pyproject.toml       專案依賴
 README.md            本文件
 ```
 
-## Admin API 参考
+## Admin API 參考
 
-| 方法 | 端点 | 所需角色 | 说明 |
+| 方法 | 端點 | 所需角色 | 說明 |
 |------|------|---------|------|
-| POST | `/api/v1/admin/accounts` | ROOT | 创建 account + 首个 admin |
+| POST | `/api/v1/admin/accounts` | ROOT | 建立 account + 首個 admin |
 | GET | `/api/v1/admin/accounts` | ROOT | 列出所有 account |
-| DELETE | `/api/v1/admin/accounts/{id}` | ROOT | 删除 account |
-| POST | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN | 注册用户 |
-| GET | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN | 列出用户 |
-| DELETE | `/api/v1/admin/accounts/{id}/users/{uid}` | ROOT, ADMIN | 移除用户 |
-| PUT | `/api/v1/admin/accounts/{id}/users/{uid}/role` | ROOT | 修改用户角色 |
+| DELETE | `/api/v1/admin/accounts/{id}` | ROOT | 刪除 account |
+| POST | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN | 註冊使用者 |
+| GET | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN | 列出使用者 |
+| DELETE | `/api/v1/admin/accounts/{id}/users/{uid}` | ROOT, ADMIN | 移除使用者 |
+| PUT | `/api/v1/admin/accounts/{id}/users/{uid}/role` | ROOT | 修改使用者角色 |
 | POST | `/api/v1/admin/accounts/{id}/users/{uid}/key` | ROOT, ADMIN | 重新生成 user key |
 
-## 相关文档
+## 相關文件
 
-- [认证指南](../../docs/zh/guides/04-authentication.md) - 完整认证说明
-- [配置指南](../../docs/zh/guides/01-configuration.md) - 配置文件参考
-- [API 概览](../../docs/zh/api/01-overview.md) - 完整 API 参考
-- [服务端模式快速开始](../../docs/zh/getting-started/03-quickstart-server.md) - 基础 HTTP 服务接入方式
+- [認證指南](../../docs/zh/guides/04-authentication.md) - 完整認證說明
+- [配置指南](../../docs/zh/guides/01-configuration.md) - 配置檔案參考
+- [API 概覽](../../docs/zh/api/01-overview.md) - 完整 API 參考
+- [服務端模式快速開始](../../docs/zh/getting-started/03-quickstart-server.md) - 基礎 HTTP 服務接入方式

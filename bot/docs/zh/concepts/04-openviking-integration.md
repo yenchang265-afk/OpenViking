@@ -1,37 +1,37 @@
-# VikingBot 与 OpenViking 集成
+# VikingBot 與 OpenViking 整合
 
-OpenViking 是 VikingBot 的长期上下文层。VikingBot 自己负责实时对话、模型推理和工具执行；OpenViking 负责统一保存和检索 Resource、Memory、Skill，以及从会话中沉淀可跨任务复用的记忆与经验。
+OpenViking 是 VikingBot 的長期上下文層。VikingBot 自己負責即時對話、模型推理和工具執行；OpenViking 負責統一儲存和檢索 Resource、Memory、Skill，以及從會話中沉澱可跨任務複用的記憶與經驗。
 
-## 集成目标
+## 整合目標
 
 ```text
 OpenViking → VikingBot
-  Resource：为任务提供知识与文件上下文
-  Skill：提供可检索的任务指令与配套资源
-  Memory：提供当前用户/Peer 的 Profile、偏好、实体和事件
-  Experience：提供 Agent 过去完成类似任务的方法
-  Session：提供压缩历史和会话归档
+  Resource：為任務提供知識與檔案上下文
+  Skill：提供可檢索的任務指令與配套資源
+  Memory：提供當前使用者/Peer 的 Profile、偏好、實體和事件
+  Experience：提供 Agent 過去完成類似任務的方法
+  Session：提供壓縮歷史和會話歸檔
 
 VikingBot → OpenViking
   添加 Resource
-  记录会话消息和使用过的上下文
-  提交 Session，触发摘要、记忆和经验提取
-  显式提交用户要求长期记住的信息
+  記錄會話訊息和使用過的上下文
+  提交 Session，觸發摘要、記憶和經驗提取
+  顯式提交使用者要求長期記住的資訊
 ```
 
-两者共同形成“召回 → 执行 → 反馈 → 沉淀 → 再召回”的上下文闭环。
+兩者共同形成“召回 → 執行 → 反饋 → 沉澱 → 再召回”的上下文閉環。
 
-## 连接模式
+## 連線模式
 
-VikingBot 从同一个 `ov.conf` 解析 OpenViking 连接，支持三种拓扑：
+VikingBot 從同一個 `ov.conf` 解析 OpenViking 連線，支援三種拓撲：
 
-| 模式 | 配置来源 | 行为 |
+| 模式 | 配置來源 | 行為 |
 |------|----------|------|
-| **Inherited** | 继承根级 `server` | Bot 与当前 OpenViking Server 配套运行 |
-| **Explicit** | `bot.ov_server.server_url` | Bot 连接另一个 OpenViking Server |
-| **Standalone** | 没有可用 Server URL | 基础对话可运行，OpenViking 能力降级 |
+| **Inherited** | 繼承根級 `server` | Bot 與當前 OpenViking Server 配套執行 |
+| **Explicit** | `bot.ov_server.server_url` | Bot 連線另一個 OpenViking Server |
+| **Standalone** | 沒有可用 Server URL | 基礎對話可執行，OpenViking 能力降級 |
 
-`openviking-server --with-bot` 对应 **Inherited** 模式：Server 启动受管的 VikingBot Gateway，并把当前 Server 的连接信息传给 Bot。下面的配置示例同样属于 Inherited 模式，根级 `server` 定义当前 OpenViking Server，`bot.ov_server` 只提供 Bot 访问该 Server 的凭证，没有配置 `server_url`。如果要使用 **Explicit** 模式连接另一套 OpenViking Server，应在 `bot.ov_server` 中同时配置目标 URL 和对应凭证。
+`openviking-server --with-bot` 對應 **Inherited** 模式：Server 啟動受管的 VikingBot Gateway，並把當前 Server 的連線資訊傳給 Bot。下面的配置示例同樣屬於 Inherited 模式，根級 `server` 定義當前 OpenViking Server，`bot.ov_server` 只提供 Bot 訪問該 Server 的憑證，沒有配置 `server_url`。如果要使用 **Explicit** 模式連線另一套 OpenViking Server，應在 `bot.ov_server` 中同時配置目標 URL 和對應憑證。
 
 示例：
 
@@ -51,161 +51,161 @@ VikingBot 从同一个 `ov.conf` 解析 OpenViking 连接，支持三种拓扑�
 }
 ```
 
-## 认证与身份模型
+## 認證與身份模型
 
-OpenViking 连接支持 User key 和 Root key：
+OpenViking 連線支援 User key 和 Root key：
 
-| `api_key_type` | 典型场景 | 含义 |
+| `api_key_type` | 典型場景 | 含義 |
 |----------------|----------|------|
-| `user` | `api_key` / `dev` auth mode | 以 OpenViking User 身份访问 |
-| `root` | `trusted` auth mode | Gateway 使用 Root key，并转发可信身份头 |
+| `user` | `api_key` / `dev` auth mode | 以 OpenViking User 身份訪問 |
+| `root` | `trusted` auth mode | Gateway 使用 Root key，並轉發可信身份頭 |
 
-没有显式配置 `api_key_type` 时，VikingBot 根据同一 `ov.conf` 中 OpenViking Server 的有效 auth mode 推导默认值。
+沒有顯式配置 `api_key_type` 時，VikingBot 根據同一 `ov.conf` 中 OpenViking Server 的有效 auth mode 推導預設值。
 
-在当前 User/Peer 模型中：
+在當前 User/Peer 模型中：
 
-- Bot 的 API key 所属主体是 User；
-- 当前消息发送者表示为该 User 下的 Peer；
-- `actor_peer_id` 是当前发送者的可信 Peer 标识；
-- Peer Profile 和长期记忆围绕 `actor_peer_id` 召回。
+- Bot 的 API key 所屬主體是 User；
+- 當前訊息傳送者表示為該 User 下的 Peer；
+- `actor_peer_id` 是當前傳送者的可信 Peer 標識；
+- Peer Profile 和長期記憶圍繞 `actor_peer_id` 召回。
 
-Gateway 请求中可能携带 request-scoped `openviking_connection`，其中包含 account、user、agent、actor peer、role 和 namespace policy。该字段只接受可信 Server 代理传入，不能由普通客户端请求体自证。
+Gateway 請求中可能攜帶 request-scoped `openviking_connection`，其中包含 account、user、agent、actor peer、role 和 namespace policy。該欄位只接受可信 Server 代理傳入，不能由普通客戶端請求體自證。
 
-## 客户端选择
+## 客戶端選擇
 
-OpenViking 访问主要通过 `VikingClient` 完成：
+OpenViking 訪問主要通過 `VikingClient` 完成：
 
 ```text
 有 request-scoped openviking_connection
-  → 为当前请求创建临时 VikingClient
-  → 使用该请求已认证的身份
-  → 调用完成后关闭
+  → 為當前請求建立臨時 VikingClient
+  → 使用該請求已認證的身份
+  → 呼叫完成後關閉
 
-没有 request-scoped connection
+沒有 request-scoped connection
   → 使用 bot.ov_server 全局配置
-  → 按 workspace 和 event loop 复用客户端
+  → 按 workspace 和 event loop 複用客戶端
 ```
 
-请求级连接优先，避免多用户 Gateway 错用 Bot 的全局身份。全局客户端还会按 asyncio event loop 隔离，避免在训练或多线程运行中复用绑定到其他 loop 的连接对象。
+請求級連線優先，避免多使用者 Gateway 錯用 Bot 的全域身份。全域客戶端還會按 asyncio event loop 隔離，避免在訓練或多執行緒執行中複用繫結到其他 loop 的連線物件。
 
 ## Workspace 映射
 
-VikingBot 使用 SandboxManager 计算 workspace ID：
+VikingBot 使用 SandboxManager 計算 workspace ID：
 
 | Sandbox mode | OpenViking workspace ID |
 |--------------|-------------------------|
 | `shared` | `shared` |
-| `per-session` | SessionKey 的安全名称 |
+| `per-session` | SessionKey 的安全名稱 |
 | `per-channel` | `type__channel_id` |
 
-该 ID 用于区分 Bot 工作区相关的 OpenViking 客户端、Session 和经验上下文。身份隔离仍由 OpenViking account/user/agent/peer 规则负责，workspace ID 不能替代认证。
+該 ID 用於區分 Bot 工作區相關的 OpenViking 客戶端、Session 和經驗上下文。身份隔離仍由 OpenViking account/user/agent/peer 規則負責，workspace ID 不能替代認證。
 
-## 自动上下文召回
+## 自動上下文召回
 
-ContextBuilder 在处理每条用户消息、首次调用模型前构建 OpenViking 上下文。本轮后续工具迭代复用这份基础上下文，并可在写工具或 Skill Hook 触发时追加 Experience。
+ContextBuilder 在處理每條使用者訊息、首次呼叫模型前構建 OpenViking 上下文。本輪後續工具迭代複用這份基礎上下文，並可在寫工具或 Skill Hook 觸發時追加 Experience。
 
 ### Peer Profile
 
-首先读取当前 `actor_peer_id` 的 Profile，并作为“当前发送者信息”注入系统提示。渠道配置的 `memory_peer` 或请求 metadata 可以增加需要召回的其他 Peer。
+首先讀取當前 `actor_peer_id` 的 Profile，並作為“當前傳送者資訊”注入系統提示。渠道配置的 `memory_peer` 或請求 metadata 可以增加需要召回的其他 Peer。
 
-旧字段 `memory_user` 只保留 owner-user 查询兼容用途，新配置应使用 `memory_peer`。
+舊欄位 `memory_user` 只保留 owner-user 查詢相容用途，新配置應使用 `memory_peer`。
 
-### 用户与 Peer 记忆
+### 使用者與 Peer 記憶
 
-默认按类型配额检索：
+預設按型別配額檢索：
 
-| 类型 | 默认条数 | 内容 |
+| 型別 | 預設條數 | 內容 |
 |------|----------|------|
-| `events` | 10 | 与当前任务相关的历史事件和决策 |
-| `entities` | 10 | 人、项目、组织等实体信息 |
-| `preferences` | 3 | 用户偏好和约束 |
+| `events` | 10 | 與當前任務相關的歷史事件和決策 |
+| `entities` | 10 | 人、專案、組織等實體資訊 |
+| `preferences` | 3 | 使用者偏好和約束 |
 
-Profile 使用独立读取路径，不占用搜索候选。`memory_recall_max_chars` 控制注入的总字符预算。结果会去重、排序，并按完整内容、摘要或 URI 逐级降级，避免因预算不足完全丢弃相关记忆。
+Profile 使用獨立讀取路徑，不佔用搜索候選。`memory_recall_max_chars` 控制注入的總字元預算。結果會去重、排序，並按完整內容、摘要或 URI 逐級降級，避免因預算不足完全丟棄相關記憶。
 
 ### Experience
 
-Experience 保存 Agent 过去完成任务时形成的可复用方法。VikingBot 支持两个召回时机：
+Experience 儲存 Agent 過去完成任務時形成的可複用方法。VikingBot 支援兩個召回時機：
 
-1. 根据当前任务直接检索 Experience；
-2. Agent 读取某个 Skill 后，`tool.post_call` Hook 使用 Skill 名称或描述检索相关 Experience，并追加到 Skill 内容。
+1. 根據當前任務直接檢索 Experience；
+2. Agent 讀取某個 Skill 後，`tool.post_call` Hook 使用 Skill 名稱或描述檢索相關 Experience，並追加到 Skill 內容。
 
-`exp_recall_limit` 控制召回条数，`exp_recall_max_chars` 控制注入预算。`recall_exp_first_round_only=true` 时只在会话第一轮注入，适合一次性任务或评测，不适合长对话。
+`exp_recall_limit` 控制召回條數，`exp_recall_max_chars` 控制注入預算。`recall_exp_first_round_only=true` 時只在會話第一輪注入，適合一次性任務或評測，不適合長對話。
 
-### 写操作前的经验提醒
+### 寫操作前的經驗提醒
 
-`exp_write_tools` 指定哪些工具调用前需要补充检索经验，默认是 `write_file` 和 `edit_file`。AgentLoop 会基于最近几条用户消息检索 Experience，并在真正写入前把结果加入当前上下文。
+`exp_write_tools` 指定哪些工具呼叫前需要補充檢索經驗，預設是 `write_file` 和 `edit_file`。AgentLoop 會基於最近幾條使用者訊息檢索 Experience，並在真正寫入前把結果加入當前上下文。
 
-该配置只控制 Bot 侧的召回时机；OpenViking 是否生成 Experience 由 Session 的 memory policy 决定。
+該配置只控制 Bot 側的召回時機；OpenViking 是否生成 Experience 由 Session 的 memory policy 決定。
 
 ## OpenViking 工具
 
-当渠道启用 `ov_tools_enable` 时，Agent 可以使用：
+當渠道啟用 `ov_tools_enable` 時，Agent 可以使用：
 
 | 工具 | 能力 |
 |------|------|
-| `openviking_list` | 浏览 Viking URI 目录 |
-| `openviking_search` | 对资源、记忆和 Skill 做语义检索 |
-| `openviking_grep` | 在 OpenViking 内容中做正则搜索 |
-| `openviking_glob` | 按 URI 路径模式搜索 |
-| `openviking_multi_read` | 并发读取多个 URI 的完整内容 |
-| `openviking_add_resource` | 添加 URL、本地文件或代码资源 |
-| `openviking_memory_commit` | 显式提交当前会话中的长期记忆 |
+| `openviking_list` | 瀏覽 Viking URI 目錄 |
+| `openviking_search` | 對資源、記憶和 Skill 做語義檢索 |
+| `openviking_grep` | 在 OpenViking 內容中做正則搜尋 |
+| `openviking_glob` | 按 URI 路徑模式搜尋 |
+| `openviking_multi_read` | 併發讀取多個 URI 的完整內容 |
+| `openviking_add_resource` | 新增 URL、本地檔案或程式碼資源 |
+| `openviking_memory_commit` | 顯式提交當前會話中的長期記憶 |
 
-OpenViking 工具通过 ToolContext 获得当前 actor peer 和 request-scoped connection。检索默认覆盖当前身份允许访问的资源、Peer 记忆和 Skill 路径。
+OpenViking 工具通過 ToolContext 獲得當前 actor peer 和 request-scoped connection。檢索預設覆蓋當前身份允許訪問的資源、Peer 記憶和 Skill 路徑。
 
-`openviking_add_resource` 是异步资源处理操作；`readonly` 模式不注册该工具。`openviking_memory_commit` 适用于用户明确要求“记住”某项信息的场景。
+`openviking_add_resource` 是非同步資源處理操作；`readonly` 模式不註冊該工具。`openviking_memory_commit` 適用於使用者明確要求“記住”某項資訊的場景。
 
-## 使用远程 Skill
+## 使用遠端 Skill
 
-先用 `ov add-skill ./skills/<name>/` 将 Skill 包上传到 Bot 所连接的 OpenViking 服务，并确认 Bot 当前身份有读取权限。当前渠道启用 `ov_tools_enable`、连接可用且 `openviking_multi_read` 未被禁用时，Bot 会根据用户问题检索远程 Skill 摘要。
+先用 `ov add-skill ./skills/<name>/` 將 Skill 包上傳到 Bot 所連線的 OpenViking 服務，並確認 Bot 當前身份有讀取許可權。當前渠道啟用 `ov_tools_enable`、連線可用且 `openviking_multi_read` 未被停用時，Bot 會根據使用者問題檢索遠端 Skill 摘要。
 
-模型用 `openviking_multi_read` 读取选中的 `SKILL.md` URI 后，运行时自动校验并激活 Skill；也可以直接向 Bot 提供服务返回的 canonical `SKILL.md` URI。文本引用继续远程读取，脚本或工具需要本地文件时才下载包并改写路径。每条用户消息独立激活，执行副本在本 Turn 结束时清理。
+模型用 `openviking_multi_read` 讀取選中的 `SKILL.md` URI 後，執行時自動校驗並激活 Skill；也可以直接向 Bot 提供服務返回的 canonical `SKILL.md` URI。文本引用繼續遠端讀取，指令碼或工具需要本地檔案時才下載包並改寫路徑。每條使用者訊息獨立啟用，執行副本在本 Turn 結束時清理。
 
-无需额外的 Remote Skill 开关或手工下载步骤。本地/远程使用示例、frontmatter 字段、工具权限和 `bot.remote_skills` 配置见 [Skills](./06-skills.md)。
+無需額外的 Remote Skill 開關或手工下載步驟。本地/遠端使用示例、frontmatter 欄位、工具許可權和 `bot.remote_skills` 配置見 [Skills](./06-skills.md)。
 
-## 本地 Session 与 OpenViking Session
+## 本地 Session 與 OpenViking Session
 
-两类 Session 不应混淆：
+兩類 Session 不應混淆：
 
-| Session | 存储 | 职责 |
+| Session | 儲存 | 職責 |
 |---------|------|------|
-| VikingBot Session | 本地 JSONL | 运行历史、渠道状态、工具事件、回复与反馈 |
-| OpenViking Session | OpenViking Server | 消息归档、压缩摘要、记忆和经验提取 |
+| VikingBot Session | 本地 JSONL | 執行歷史、渠道狀態、工具事件、回覆與反饋 |
+| OpenViking Session | OpenViking Server | 訊息歸檔、壓縮摘要、記憶和經驗提取 |
 
-VikingBot Session metadata 记录 OpenViking 同步状态：
+VikingBot Session metadata 記錄 OpenViking 同步狀態：
 
 - OpenViking session ID；
-- 最后同步的本地消息下标；
-- 最后 commit 的消息下标；
-- 当前 pending token 数；
-- 最近同步状态和错误。
+- 最後同步的本地訊息下標；
+- 最後 commit 的訊息下標；
+- 當前 pending token 數；
+- 最近同步狀態和錯誤。
 
-## 增量同步和自动提交
+## 增量同步和自動提交
 
 ```text
-读取本地 Session 中未同步的消息
+讀取本地 Session 中未同步的訊息
   → append_messages 到 OpenViking Session
   → 更新 last_synced_local_index
-  → 查询 pending_tokens
-  → 达到 token/消息阈值或强制提交
+  → 查詢 pending_tokens
+  → 達到 token/訊息閾值或強制提交
   → commit_session
   → 更新 last_commit_local_index
 ```
 
-`message.compact` Hook 执行上述同步。主要配置包括：
+`message.compact` Hook 執行上述同步。主要配置包括：
 
 | 配置 | 作用 |
 |------|------|
-| `agents.commit_token_threshold` | pending token 达到该值后 commit |
-| `agents.commit_keep_recent_turn_count` | commit 后最多保留的最近逻辑 Turn 数；默认 `3` |
-| `agents.commit_retained_message_token_budget` | commit 后 retained messages 与 checkpoint 的 token 预算；默认 `6000` |
-| `agents.commit_min_raw_tail_steps` | 最新 Turn 超出预算时，至少原样保留的末尾 assistant Step 数；默认 `1` |
-| `agents.commit_keep_recent_count` | 已废弃的物理消息数配置，仅为兼容旧配置文件而保留 |
-| `agents.memory_window` | 本地历史窗口，也可触发消息数阈值提交 |
+| `agents.commit_token_threshold` | pending token 達到該值後 commit |
+| `agents.commit_keep_recent_turn_count` | commit 後最多保留的最近邏輯 Turn 數；預設 `3` |
+| `agents.commit_retained_message_token_budget` | commit 後 retained messages 與 checkpoint 的 token 預算；預設 `6000` |
+| `agents.commit_min_raw_tail_steps` | 最新 Turn 超出預算時，至少原樣保留的末尾 assistant Step 數；預設 `1` |
+| `agents.commit_keep_recent_count` | 已廢棄的物理訊息數配置，僅為相容舊配置檔案而保留 |
+| `agents.memory_window` | 本地歷史視窗，也可觸發訊息數閾值提交 |
 
-一个逻辑 Turn 从真实 user query 开始，包含下一条真实 user query 之前的全部 assistant Step；每个 Step 会将 assistant 文本、工具调用和对应工具结果作为不可拆分的整体处理。系统先按 `commit_keep_recent_turn_count` 选择最近 Turn，再用 `commit_retained_message_token_budget` 约束 retained 内容。如果最新 Turn 本身超出预算，则保留 user query 和至少 `commit_min_raw_tail_steps` 个最新 Step，较早 Step 进入同一次归档生成的 checkpoint。
+一個邏輯 Turn 從真實 user query 開始，包含下一條真實 user query 之前的全部 assistant Step；每個 Step 會將 assistant 文本、工具呼叫和對應工具結果作為不可拆分的整體處理。系統先按 `commit_keep_recent_turn_count` 選擇最近 Turn，再用 `commit_retained_message_token_budget` 約束 retained 內容。如果最新 Turn 本身超出預算，則保留 user query 和至少 `commit_min_raw_tail_steps` 個最新 Step，較早 Step 進入同一次歸檔生成的 checkpoint。
 
-迁移旧配置时，`commit_keep_recent_count` 不会自动换算为 Turn 数，当前 VikingBot 的 Turn-aware commit 也不再读取它。该字段仍被配置模型接受，因此已有 `ov.conf` 不会因未知字段而加载失败。如果只保留旧字段，系统会使用三个新字段的默认值；需要保持自定义保留策略时，应显式配置新字段，例如：
+遷移舊配置時，`commit_keep_recent_count` 不會自動換算為 Turn 數，當前 VikingBot 的 Turn-aware commit 也不再讀取它。該欄位仍被配置模型接受，因此已有 `ov.conf` 不會因未知欄位而載入失敗。如果只保留舊欄位，系統會使用三個新欄位的預設值；需要保持自定義保留策略時，應顯式配置新欄位，例如：
 
 ```yaml
 agents:
@@ -214,90 +214,90 @@ agents:
   commit_min_raw_tail_steps: 1
 ```
 
-消息使用本地索引增量同步，避免每轮重复 append。同步失败会写入 metadata 并记录日志，但不会让可选记忆能力阻断基础对话。
+訊息使用本地索引增量同步，避免每輪重複 append。同步失敗會寫入 metadata 並記錄日誌，但不會讓可選記憶能力阻斷基礎對話。
 
-## 压缩会话上下文
+## 壓縮會話上下文
 
-默认模型历史来自本地 Session 最近 `memory_window` 条消息。设置 `agents.session_context_enabled=true` 后，VikingBot 可以从 OpenViking Session 获取压缩后的历史，并使用 `session_context_token_budget` 控制预算。
+預設模型歷史來自本地 Session 最近 `memory_window` 條訊息。設定 `agents.session_context_enabled=true` 後，VikingBot 可以從 OpenViking Session 獲取壓縮後的歷史，並使用 `session_context_token_budget` 控制預算。
 
-在新一轮开始前，如果历史达到阈值，AgentLoop 会先同步和 commit OpenViking Session，再构建新的提示上下文，从而避免超长对话持续膨胀。
+在新一輪開始前，如果歷史達到閾值，AgentLoop 會先同步和 commit OpenViking Session，再構建新的提示上下文，從而避免超長對話持續膨脹。
 
-## 显式记忆提交
+## 顯式記憶提交
 
-用户明确要求长期记住信息时，Agent 调用 `openviking_memory_commit`：
+使用者明確要求長期記住資訊時，Agent 呼叫 `openviking_memory_commit`：
 
 ```text
-当前 Bot Session 消息
+當前 Bot Session 訊息
   → 追加到 OpenViking Session
   → commit
-  → 等待或查询后台任务
-  → 返回新增/更新/删除的 Memory URI
+  → 等待或查詢後臺任務
+  → 返回新增/更新/刪除的 Memory URI
 ```
 
-在 `readonly` 模式或渠道关闭 OpenViking 工具时，不会执行主动记忆固化。
+在 `readonly` 模式或渠道關閉 OpenViking 工具時，不會執行主動記憶固化。
 
-## 经验闭环
+## 經驗閉環
 
-完整闭环如下：
+完整閉環如下：
 
 ```text
-当前任务
-  → 检索 Resource / Peer Memory / Experience
-  → Agent 使用 Skill 和工具执行任务
-  → 本地 Session 记录消息、工具和结果
-  → 增量同步并 commit OpenViking Session
-  → OpenViking 提取记忆和经验
-  → 后续任务再次召回
+當前任務
+  → 檢索 Resource / Peer Memory / Experience
+  → Agent 使用 Skill 和工具執行任務
+  → 本地 Session 記錄訊息、工具和結果
+  → 增量同步並 commit OpenViking Session
+  → OpenViking 提取記憶和經驗
+  → 後續任務再次召回
 ```
 
-资源提供外部知识，Peer Memory 提供“关于当前用户的信息”，Experience 提供“Agent 过去如何做成类似任务”。三类上下文职责不同，但通过 Viking URI 和 OpenViking 检索接口统一访问。
+資源提供外部知識，Peer Memory 提供“關於當前使用者的資訊”，Experience 提供“Agent 過去如何做成類似任務”。三類上下文職責不同，但通過 Viking URI 和 OpenViking 檢索介面統一訪問。
 
 ## Gateway 代理
 
-配置 OpenViking Server 后，VikingBot Gateway 将 `/api/v1/{path}` 代理到 upstream。代理会：
+配置 OpenViking Server 後，VikingBot Gateway 將 `/api/v1/{path}` 代理到 upstream。代理會：
 
-1. 验证 Gateway token 或本地请求边界；
-2. 调用 upstream `/health` 确认实际 auth mode；
+1. 驗證 Gateway token 或本地請求邊界；
+2. 呼叫 upstream `/health` 確認實際 auth mode；
 3. 解析 User key 或 trusted identity；
-4. 过滤 hop-by-hop headers；
-5. 转发认证头并保持响应状态。
+4. 過濾 hop-by-hop headers；
+5. 轉發認證頭並保持響應狀態。
 
-Bot Chat 与 OpenViking API 因而可以通过同一个 Gateway 地址访问，但身份仍由 OpenViking Server 最终验证。
+Bot Chat 與 OpenViking API 因而可以通過同一個 Gateway 地址訪問，但身份仍由 OpenViking Server 最終驗證。
 
-## 降级与错误边界
+## 降級與錯誤邊界
 
-| 情况 | 行为 |
+| 情況 | 行為 |
 |------|------|
-| 未配置 OpenViking Server | Bot 基础聊天继续运行，OpenViking 召回和工具不可用或跳过 |
-| 自动记忆召回失败 | 记录日志，继续模型调用 |
-| Session 同步失败 | 记录同步错误，保留本地 Session |
-| request-scoped 身份不可信 | Gateway 拒绝请求 |
-| upstream auth mode 与配置不一致 | Gateway 拒绝代理或聊天请求 |
-| `ov_tools_enable=false` | 不注入 OpenViking 记忆，也不暴露 OpenViking 工具 |
+| 未配置 OpenViking Server | Bot 基礎聊天繼續執行，OpenViking 召回和工具不可用或跳過 |
+| 自動記憶召回失敗 | 記錄日誌，繼續模型呼叫 |
+| Session 同步失敗 | 記錄同步錯誤，保留本地 Session |
+| request-scoped 身份不可信 | Gateway 拒絕請求 |
+| upstream auth mode 與配置不一致 | Gateway 拒絕代理或聊天請求 |
+| `ov_tools_enable=false` | 不注入 OpenViking 記憶，也不暴露 OpenViking 工具 |
 
-## 可选 FUSE 挂载
+## 可選 FUSE 掛載
 
-`openviking_mount` 还提供可选的 FUSE 挂载能力，可将 OpenViking 内容映射为本地目录，并按 Session 创建或回收挂载点。它不在默认 AgentLoop 主链路中；默认 Bot 通过 VikingClient 和 `openviking_*` 工具访问 OpenViking。
+`openviking_mount` 還提供可選的 FUSE 掛載能力，可將 OpenViking 內容對映為本地目錄，並按 Session 建立或回收掛載點。它不在預設 AgentLoop 主鏈路中；預設 Bot 通過 VikingClient 和 `openviking_*` 工具訪問 OpenViking。
 
-## 实现位置
+## 實現位置
 
-| 内容 | 路径 |
+| 內容 | 路徑 |
 |------|------|
-| 连接配置与合并 | `vikingbot/config/loader.py`、`schema.py` |
-| VikingClient 适配 | `vikingbot/openviking_mount/ov_server.py` |
-| 自动召回 | `vikingbot/agent/memory.py`、`context.py` |
+| 連線配置與合併 | `vikingbot/config/loader.py`、`schema.py` |
+| VikingClient 適配 | `vikingbot/openviking_mount/ov_server.py` |
+| 自動召回 | `vikingbot/agent/memory.py`、`context.py` |
 | OpenViking 工具 | `vikingbot/agent/tools/ov_file.py` |
-| Session 同步状态 | `vikingbot/openviking_mount/session_state.py` |
-| Compact 与 Experience Hook | `vikingbot/hooks/builtins/openviking_hooks.py` |
+| Session 同步狀態 | `vikingbot/openviking_mount/session_state.py` |
+| Compact 與 Experience Hook | `vikingbot/hooks/builtins/openviking_hooks.py` |
 | Gateway 代理和身份解析 | `vikingbot/channels/openapi.py` |
-| 可选挂载 | `vikingbot/openviking_mount/manager.py`、`session_integration.py` |
+| 可選掛載 | `vikingbot/openviking_mount/manager.py`、`session_integration.py` |
 
-## 相关文档
+## 相關文件
 
-- [VikingBot 架构](./01-architecture.md)
-- [Agent 能力体系](./02-agent-capabilities.md)
+- [VikingBot 架構](./01-architecture.md)
+- [Agent 能力體系](./02-agent-capabilities.md)
 - [Skills](./06-skills.md)
-- [渠道、Gateway 与运行管理](./03-channels-and-gateway.md)
-- [OpenViking 架构](../../../../docs/zh/concepts/01-architecture.md)
-- [OpenViking 上下文类型](../../../../docs/zh/concepts/02-context-types.md)
-- [OpenViking 会话管理](../../../../docs/zh/concepts/08-session.md)
+- [渠道、Gateway 與執行管理](./03-channels-and-gateway.md)
+- [OpenViking 架構](../../../../docs/zh/concepts/01-architecture.md)
+- [OpenViking 上下文型別](../../../../docs/zh/concepts/02-context-types.md)
+- [OpenViking 會話管理](../../../../docs/zh/concepts/08-session.md)

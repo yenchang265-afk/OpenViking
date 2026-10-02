@@ -7,19 +7,19 @@ from conftest import create_test_file
 
 
 class TestConcurrentWrite:
-    """TC-ER02 并发写入冲突验证"""
+    """TC-ER02 併發寫入衝突驗證"""
 
     def test_concurrent_write_conflict(self, api_client):
-        """并发写入冲突验证：并发调用 add_resource (Same URI)"""
+        """併發寫入衝突驗證：併發呼叫 add_resource (Same URI)"""
         random_id = str(uuid.uuid4())[:8]
 
-        # 1. 创建临时测试文件
+        # 1. 建立臨時測試檔案
         test_file_path, temp_dir = create_test_file(
-            content=f"测试文件 {random_id}\n这是一个用于并发写入测试的文件。\n包含关键词：test、并发、写入。"
+            content=f"測試檔案 {random_id}\n這是一個用於併發寫入測試的檔案。\n包含關鍵詞：test、併發、寫入。"
         )
 
         try:
-            # 2. 定义并发任务函数
+            # 2. 定義併發任務函式
             def add_resource_task():
                 try:
                     response = api_client.add_resource(path=test_file_path, wait=True)
@@ -27,7 +27,7 @@ class TestConcurrentWrite:
                 except Exception as e:
                     return 500, {"error": str(e)}
 
-            # 3. 并发执行多个任务
+            # 3. 併發執行多個任務
             num_tasks = 3
             results = []
 
@@ -36,11 +36,11 @@ class TestConcurrentWrite:
                 for future in concurrent.futures.as_completed(futures):
                     results.append(future.result())
 
-            # 4. 验证所有请求都返回合理的响应
+            # 4. 驗證所有請求都返回合理的響應
             assert len(results) == num_tasks
 
             for status_code, response_data in results:
-                # 要么成功（200），要么返回合理的错误（429或其他）
+                # 要麼成功（200），要麼返回合理的錯誤（429或其他）
                 assert status_code in [200, 429, 500], f"Unexpected status code: {status_code}"
 
                 if status_code == 200:
@@ -48,6 +48,6 @@ class TestConcurrentWrite:
                         "Response should have valid status"
                     )
         finally:
-            # 清理临时文件
+            # 清理臨時檔案
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)

@@ -202,6 +202,6 @@ test("the documented examples parse and behave as documented", () => {
   assert.equal(apply([skipCommandTurns], "/compact please", { role: "user" }).dropped, true)
   assert.equal(apply([skipCommandTurns], "/compact please", { role: "assistant" }).dropped, false)
 
-  const politeness = String.raw`s/^(请|麻烦)(你|帮我)?//`
-  assert.equal(apply([politeness], "请帮我看看这个报错").text, "看看这个报错")
+  const politeness = String.raw`s/^(請|麻煩)(你|幫我)?//`
+  assert.equal(apply([politeness], "請幫我看看這個報錯").text, "看看這個報錯")
 })

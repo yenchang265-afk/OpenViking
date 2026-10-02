@@ -1,34 +1,34 @@
 #!/bin/bash
-# VikingBot Gateway 启动脚本
+# VikingBot Gateway 啟動指令碼
 
-# 获取脚本所在目录
+# 獲取指令碼所在目錄
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT"
-# 激活虚拟环境
+# 啟用虛擬環境
 echo "Uv sync..."
 uv sync
 
-# 激活虚拟环境
+# 啟用虛擬環境
 echo "Activating virtual environment..."
 source "$PROJECT_ROOT/.venv/bin/activate"
 
-# 确保日志目录存在
+# 確保日誌目錄存在
 LOG_DIR="$HOME/logs"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/output.log"
 
-# 查找并 kill vikingbot gateway 进程
+# 查詢並 kill vikingbot gateway 程序
 echo "Killing existing vikingbot gateway processes..."
 pkill -f "vikingbot gateway" || true
 pkill -f "uvicorn" || true
 pkill -f "agfs" || true
 
-# 等待进程结束
+# 等待程序結束
 sleep 1
 
-# 启动 vikingbot gateway
+# 啟動 vikingbot gateway
 echo "Starting vikingbot gateway..."
 nohup vikingbot gateway > "$LOG_FILE" 2>&1 &
 PID=$!
@@ -39,5 +39,5 @@ echo ""
 echo "Tailing log file (Ctrl+C to exit)..."
 echo "========================================"
 
-# tail 日志文件
+# tail 日誌檔案
 tail -f "$LOG_FILE"

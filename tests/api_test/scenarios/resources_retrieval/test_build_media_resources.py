@@ -13,7 +13,7 @@ def _create_image_file(ext=".png"):
     try:
         from PIL import Image
     except ImportError:
-        pytest.skip("Pillow 未安装，跳过图片构建测试")
+        pytest.skip("Pillow 未安裝，跳過圖片構建測試")
 
     random_id = str(uuid.uuid4())[:8]
     temp_dir = tempfile.mkdtemp()
@@ -44,10 +44,10 @@ def _create_audio_file(ext=".wav"):
 
 
 class TestBuildMediaResources:
-    """TC-B13(PNG), B14(WAV) 媒体类资源构建测试（快速用例，≤20s）"""
+    """TC-B13(PNG), B14(WAV) 媒體類資源構建測試（快速用例，≤20s）"""
 
     def test_build_image_png(self, api_client):
-        """TC-B13 图片构建(PNG)：验证 .png 文件添加后产物路径含 /images/ 且 source_format=image"""
+        """TC-B13 圖片構建(PNG)：驗證 .png 檔案新增後產物路徑含 /images/ 且 source_format=image"""
         img_path, temp_dir, random_id = _create_image_file(".png")
         try:
             response = api_client.add_resource(path=img_path, wait=True)
@@ -59,19 +59,19 @@ class TestBuildMediaResources:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/images/" in root_uri, f"图片 root_uri 应含 /images/, 实际: {root_uri}"
+            assert "/images/" in root_uri, f"圖片 root_uri 應含 /images/, 實際: {root_uri}"
 
             stat_resp = api_client.fs_stat(root_uri)
             assert stat_resp.status_code == 200
 
             assert_source_format(api_client, root_uri, "image")
 
-            print(f"✓ TC-B13 图片构建(PNG)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B13 圖片構建(PNG)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_audio_wav(self, api_client):
-        """TC-B14 音频构建(WAV)：验证 .wav 文件添加后产物路径含 /audio/ 且 source_format=audio"""
+        """TC-B14 音訊構建(WAV)：驗證 .wav 檔案新增後產物路徑含 /audio/ 且 source_format=audio"""
         audio_path, temp_dir, random_id = _create_audio_file(".wav")
         try:
             response = api_client.add_resource(path=audio_path, wait=True)
@@ -83,13 +83,13 @@ class TestBuildMediaResources:
             result = data.get("result", {})
             root_uri = result.get("root_uri")
             assert_root_uri_valid(root_uri)
-            assert "/audio/" in root_uri, f"音频 root_uri 应含 /audio/, 实际: {root_uri}"
+            assert "/audio/" in root_uri, f"音訊 root_uri 應含 /audio/, 實際: {root_uri}"
 
             stat_resp = api_client.fs_stat(root_uri)
             assert stat_resp.status_code == 200
 
             assert_source_format(api_client, root_uri, "audio")
 
-            print(f"✓ TC-B14 音频构建(WAV)通过, root_uri: {root_uri}")
+            print(f"✓ TC-B14 音訊構建(WAV)通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)

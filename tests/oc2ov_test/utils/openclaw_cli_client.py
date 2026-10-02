@@ -1,5 +1,5 @@
 """
-OpenClaw CLI 客户端封装 - 使用 openclaw agent 命令
+OpenClaw CLI 客戶端封裝 - 使用 openclaw agent 命令
 """
 
 import glob
@@ -49,12 +49,12 @@ def _wait_for_session_lock_release(session_id: str, timeout: float = SESSION_LOC
 
 class OpenClawCLIClient:
     """
-    OpenClaw CLI 客户端
+    OpenClaw CLI 客戶端
     """
 
     def __init__(self, session_id: Optional[str] = None):
         """
-        初始化客户端
+        初始化客戶端
         """
         self.session_id = session_id or "test_session_default"
         self.timeout = 180
@@ -67,7 +67,7 @@ class OpenClawCLIClient:
         timeout: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        使用 openclaw agent 命令发送消息
+        使用 openclaw agent 命令傳送訊息
         """
         target_session_id = session_id or self.session_id
         cmd_timeout = timeout or self.timeout
@@ -88,28 +88,28 @@ class OpenClawCLIClient:
 
         try:
             logger.info("=" * 80)
-            logger.info("📤 使用 CLI 发送请求到 OpenClaw")
+            logger.info("📤 使用 CLI 傳送請求到 OpenClaw")
             logger.info("=" * 80)
             logger.info(f"Session ID: {target_session_id}")
             logger.info(f"Agent ID: {agent_id or 'default'}")
-            logger.info(f"输入消息: {message}")
+            logger.info(f"輸入訊息: {message}")
             logger.info(f"完整命令: {' '.join(cmd)}")
 
             lock_released = _wait_for_session_lock_release(target_session_id)
             if not lock_released:
                 logger.warning("Session lock not released, request may fail with lock timeout")
 
-            logger.info(f"⏳ 等待响应 (超时: {cmd_timeout}秒)...")
+            logger.info(f"⏳ 等待響應 (超時: {cmd_timeout}秒)...")
 
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=cmd_timeout)
 
-            logger.info(f"✅ 命令执行完成 - 返回码: {result.returncode}")
+            logger.info(f"✅ 命令執行完成 - 返回碼: {result.returncode}")
 
             _wait_for_session_lock_release(target_session_id)
 
             if result.returncode != 0:
                 error_msg = format_openclaw_cli_failure(
-                    "命令执行失败", result.stderr, result.returncode
+                    "命令執行失敗", result.stderr, result.returncode
                 )
                 logger.error("=" * 80)
                 logger.error(error_msg)
@@ -118,7 +118,7 @@ class OpenClawCLIClient:
 
             if not result.stdout.strip():
                 error_msg = format_openclaw_cli_failure(
-                    "命令返回空输出", result.stderr, result.returncode
+                    "命令返回空輸出", result.stderr, result.returncode
                 )
                 logger.error("=" * 80)
                 logger.error(error_msg)
@@ -132,7 +132,7 @@ class OpenClawCLIClient:
                 response_data = {"output": response_text, "success": True}
 
             logger.info("=" * 80)
-            logger.info("📥 OpenClaw 响应内容:")
+            logger.info("📥 OpenClaw 響應內容:")
             logger.info("=" * 80)
 
             if isinstance(response_data, dict):
@@ -145,13 +145,13 @@ class OpenClawCLIClient:
             return response_data
 
         except subprocess.TimeoutExpired:
-            error_msg = f"命令执行超时 (超时: {cmd_timeout}秒)"
+            error_msg = f"命令執行超時 (超時: {cmd_timeout}秒)"
             logger.error("=" * 80)
             logger.error(error_msg)
             logger.error("=" * 80)
             return {"error": error_msg, "success": False}
         except Exception as e:
-            error_msg = f"执行命令异常: {str(e)}"
+            error_msg = f"執行命令異常: {str(e)}"
             logger.error("=" * 80)
             logger.error(error_msg)
             logger.error("=" * 80)

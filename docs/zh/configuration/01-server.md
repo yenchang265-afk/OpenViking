@@ -1,23 +1,23 @@
-# 服务端配置
+# 服務端配置
 
-首次配置建议使用 `openviking-server init`，保存后运行 `openviking-server doctor`。
+首次配置建議使用 `openviking-server init`，儲存後執行 `openviking-server doctor`。
 
-OpenViking 服务端读取 `ov.conf`。默认路径是：
+OpenViking 服務端讀取 `ov.conf`。預設路徑是：
 
 ```text
 ~/.openviking/ov.conf
 ```
 
-也可以通过环境变量或启动参数指定其他文件：
+也可以通過環境變數或啟動引數指定其他檔案：
 
 ```bash
 export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 openviking-server --config /path/to/ov.conf
 ```
 
-服务端启动时读取配置。修改模型、检索、存储或 `server` 配置后，需要重启服务；重启后建议运行 `openviking-server doctor`。
+服務端啟動時讀取配置。修改模型、檢索、儲存或 `server` 配置後，需要重啟服務；重啟後建議執行 `openviking-server doctor`。
 
-## 配置结构
+## 配置結構
 
 ```json
 {
@@ -36,43 +36,43 @@ openviking-server --config /path/to/ov.conf
 }
 ```
 
-未配置的可选模块使用默认值。`ov.conf` 及账户配置会忽略未知字段，兼容旧版本遗留配置；已知字段仍校验类型和取值。字段名拼写错误也会被忽略，但服务端会输出 WARNING，逐项列出未被采用的字段。
+未配置的可選模組使用預設值。`ov.conf` 及帳戶配置會忽略未知欄位，相容舊版本遺留配置；已知欄位仍校驗型別和取值。欄位名拼寫錯誤也會被忽略，但服務端會輸出 WARNING，逐項列出未被採用的欄位。
 
-## 顶层配置
+## 頂層配置
 
-| 配置项 | 类型 / 可选值 | 默认值 | 作用 |
+| 配置項 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `default_account` | string | `"default"` | Service context 使用的默认账号 |
-| `default_user` | string | `"default"` | Service context 使用的默认用户 |
-| `embedding` | object | 内置本地 Dense 模型 | 向量化模型和稀疏/混合检索配置；默认使用 `local` / `bge-small-zh-v1.5-f16` |
-| `vlm` | object | 空配置 | 内容理解、摘要和记忆抽取使用的模型；使用相关能力前需要配置可用模型 |
-| `query_planner` | object / `null` | `null` | 检索意图分析模型；未配置时回退到 `vlm` |
-| `rerank` | object | disabled | 检索结果重排模型 |
-| `retrieval` | object | 见下表 | 检索排序和意图分析策略 |
-| `storage` | object | 本地存储 | 工作目录、文件系统和向量数据库 |
-| `queue_workers` | object | 见下表 | QueueFS 消费 worker 的运行时并发配置 |
-| `server` | object | 本地开发模式 | HTTP 服务、鉴权、上传和可观测性 |
-| `memory` | object | 见下表 | 会话提交后的记忆与技能抽取 |
-| `parsers` | object | 各解析器默认值 | PDF、代码、图片、音视频等解析行为 |
-| `semantic` | object | 内置默认值 | abstract 和 overview 的生成限制 |
+| `default_account` | string | `"default"` | Service context 使用的預設帳號 |
+| `default_user` | string | `"default"` | Service context 使用的預設使用者 |
+| `embedding` | object | 內建本地 Dense 模型 | 向量化模型和稀疏/混合檢索配置；預設使用 `local` / `bge-small-zh-v1.5-f16` |
+| `vlm` | object | 空配置 | 內容理解、摘要和記憶抽取使用的模型；使用相關能力前需要配置可用模型 |
+| `query_planner` | object / `null` | `null` | 檢索意圖分析模型；未配置時回退到 `vlm` |
+| `rerank` | object | disabled | 檢索結果重排模型 |
+| `retrieval` | object | 見下表 | 檢索排序和意圖分析策略 |
+| `storage` | object | 本地儲存 | 工作目錄、檔案系統和向量資料庫 |
+| `queue_workers` | object | 見下表 | QueueFS 消費 worker 的執行時併發配置 |
+| `server` | object | 本地開發模式 | HTTP 服務、鑑權、上傳和可觀測性 |
+| `memory` | object | 見下表 | 會話提交後的記憶與技能抽取 |
+| `parsers` | object | 各解析器預設值 | PDF、程式碼、圖片、音影片等解析行為 |
+| `semantic` | object | 內建預設值 | abstract 和 overview 的生成限制 |
 | `parser_api` | object | disabled | 第三方文件解析 API |
-| `compile_api` | object | disabled | 外部 Compile 任务 API |
-| `connector` | object | disabled | 外部 Connector 数据导入服务 |
+| `compile_api` | object | disabled | 外部 Compile 任務 API |
+| `connector` | object | disabled | 外部 Connector 資料匯入服務 |
 | `encryption` | object | disabled | 文件和敏感字段加密 |
-| `git` | object | local | 版本管理后端，可使用 `local` 或 `s3` |
-| `log` | object | 控制台日志 | 日志级别、格式和文件输出 |
-| `telemetry` | object | disabled | OpenTelemetry trace 上报 |
+| `git` | object | local | 版本管理後端，可使用 `local` 或 `s3` |
+| `log` | object | 控制台日誌 | 日誌級別、格式和檔案輸出 |
+| `telemetry` | object | disabled | OpenTelemetry trace 上報 |
 | `oauth` | object | disabled | MCP OAuth 2.1 配置 |
-| `prompts` | object | 内置模板 | 自定义 Prompt 模板目录 |
-| `ingest` | object | 内置默认值 | 会话日志导入配置 |
-| `output_language_override` | string | `""` | 强制摘要和记忆输出语言；空值表示自动识别 |
-| `allow_private_networks` | boolean | `false` | 是否允许抓取内网或私有地址资源 |
+| `prompts` | object | 內建模板 | 自定義 Prompt 模板目錄 |
+| `ingest` | object | 內建預設值 | 會話日誌匯入配置 |
+| `output_language_override` | string | `""` | 強制摘要和記憶輸出語言；空值表示自動識別 |
+| `allow_private_networks` | boolean | `false` | 是否允許抓取內網或私有地址資源 |
 
-`auto_generate_l0`、`auto_generate_l1`、`default_search_mode` 和 `default_search_limit` 是已弃用的兼容字段。旧配置文件仍可加载这些字段，但它们不会影响运行时行为。
+`auto_generate_l0`、`auto_generate_l1`、`default_search_mode` 和 `default_search_limit` 是已棄用的相容欄位。舊配置檔案仍可載入這些欄位，但它們不會影響執行時行為。
 
 ## 模型配置
 
-API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置会复用部分字段名，但各模块使用独立 schema。请只使用下表中对应模块支持的字段。
+API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置會複用部分欄位名，但各模組使用獨立 schema。請只使用下表中對應模組支援的欄位。
 
 ```json
 {
@@ -115,42 +115,42 @@ API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置会复用部分
 }
 ```
 
-| 字段 / 路径 | 适用模块 | 作用 |
+| 欄位 / 路徑 | 適用模組 | 作用 |
 |---|---|---|
-| `provider`、`model`、`api_base`、`api_key` | Embedding、VLM、Query Planner、Rerank | 模型服务、地址和凭证 |
-| `api_version` | Embedding、VLM、Query Planner | Azure 等服务的 API 版本 |
-| `extra_headers` | Embedding、VLM、Query Planner、Rerank | 附加请求头 |
-| `extra_request_body` | VLM、Query Planner | 附加的 Completion 请求参数 |
-| `extra_body` | `embedding.dense` / `sparse` / `hybrid` | 附加的 Embedding 请求参数 |
-| `timeout` | VLM、Query Planner、Rerank | 单次请求超时，单位为秒 |
-| `embedding.max_retries`、`vlm.max_retries`、`query_planner.max_retries` | Embedding、VLM、Query Planner | 请求失败重试次数；Rerank 没有 `max_retries` 字段 |
+| `provider`、`model`、`api_base`、`api_key` | Embedding、VLM、Query Planner、Rerank | 模型服務、地址和憑證 |
+| `api_version` | Embedding、VLM、Query Planner | Azure 等服務的 API 版本 |
+| `extra_headers` | Embedding、VLM、Query Planner、Rerank | 附加請求頭 |
+| `extra_request_body` | VLM、Query Planner | 附加的 Completion 請求引數 |
+| `extra_body` | `embedding.dense` / `sparse` / `hybrid` | 附加的 Embedding 請求引數 |
+| `timeout` | VLM、Query Planner、Rerank | 單次請求超時，單位為秒 |
+| `embedding.max_retries`、`vlm.max_retries`、`query_planner.max_retries` | Embedding、VLM、Query Planner | 請求失敗重試次數；Rerank 沒有 `max_retries` 欄位 |
 
 ### `embedding.dense`
 
-| 字段 | 类型 / 可选值 | 作用 |
+| 欄位 | 型別 / 可選值 | 作用 |
 |---|---|---|
-| `provider` | `openai`、`volcengine`、`azure`、`ollama`、`local` 等 | Dense Embedding 服务 |
-| `dimension` | integer，`> 0` | 向量维度，必须与模型输出及已有集合一致 |
-| `input` | `"text"` / `"multimodal"` | 输入类型 |
-| `encoding_format` | `"float"` / `"base64"` | OpenAI 兼容接口的向量编码格式 |
+| `provider` | `openai`、`volcengine`、`azure`、`ollama`、`local` 等 | Dense Embedding 服務 |
+| `dimension` | integer，`> 0` | 向量維度，必須與模型輸出及已有集合一致 |
+| `input` | `"text"` / `"multimodal"` | 輸入型別 |
+| `encoding_format` | `"float"` / `"base64"` | OpenAI 相容介面的向量編碼格式 |
 
-更换模型或 `dimension` 可能与已有向量集合不兼容，需要迁移或重建索引。
+更換模型或 `dimension` 可能與已有向量集合不相容，需要遷移或重建索引。
 
 ### `rerank`
 
-| 字段 | 类型 / 可选值 | 默认值 | 作用 |
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `provider` | `vikingdb`、`cohere`、`openai`、`litellm`、`jev` / `null` | `null` | Rerank 服务类型；省略时根据凭证字段推断 |
+| `provider` | `vikingdb`、`cohere`、`openai`、`litellm`、`jev` / `null` | `null` | Rerank 服務型別；省略時根據憑證欄位推斷 |
 | `model` | string / `null` | `null` | OpenAI 兼容、LiteLLM 或 Jev Rerank 模型 |
-| `threshold` | number | `0.1` | 判定结果相关的最低分数 |
-| `max_input_tokens` | integer；`0` 或 `>= 128` | `0` | 每个 query-document pair 的最大估算 token；`0` 表示不截断 |
-| `log_payloads` | boolean | `false` | 记录完整 rerank 请求和响应；日志可能包含 query 和文档内容 |
+| `threshold` | number | `0.1` | 判定結果相關的最低分數 |
+| `max_input_tokens` | integer；`0` 或 `>= 128` | `0` | 每個 query-document pair 的最大估算 token；`0` 表示不截斷 |
+| `log_payloads` | boolean | `false` | 記錄完整 rerank 請求和響應；日誌可能包含 query 和文件內容 |
 
-Rerank 没有单独的 `enabled` 字段；配置了对应 provider 所需的凭证后才会启用。
+Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑證後才會啟用。
 
-`jev` 通过现有 `api_base` 和 `model` 字段同时支持 TypeSafe 直连（`https://api.typesafe.ai`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 兼容端点（`https://ai-gateway.vercel.sh/typesafe`，模型 `typesafe-ai/jev`），两者协议相同。它将 query 和候选文档作为结构化 `state`，为每个候选提出一个独立的相关性问题，并将各自的 yes 概率作为 rerank 分数。显式指定 `provider` 时必须提供该 provider 所需的凭证：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。凭证不全的配置在加载时即被拒绝。
+`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe`，模型 `typesafe-ai/jev`），兩者協議相同。它將 query 和候選文件作為結構化 `state`，為每個候選提出一個獨立的相關性問題，並將各自的 yes 機率作為 rerank 分數。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
 
-## 检索配置
+## 檢索配置
 
 ```json
 {
@@ -164,15 +164,15 @@ Rerank 没有单独的 `enabled` 字段；配置了对应 provider 所需的凭�
 
 ### `retrieval`
 
-| 字段 | 类型 / 可选值 | 默认值 | 作用 |
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `hotness_alpha` | number，`0`–`1` | `0` | 热度分数权重；`0` 表示关闭热度加权 |
-| `score_propagation_alpha` | number，`0`–`1` | `1` | 层级检索时子结果自身分数的权重 |
-| `enable_intent` | boolean | `true` | 有 `session_id` 时是否进行意图分析和查询规划 |
+| `hotness_alpha` | number，`0`–`1` | `0` | 熱度分數權重；`0` 表示關閉熱度加權 |
+| `score_propagation_alpha` | number，`0`–`1` | `1` | 層級檢索時子結果自身分數的權重 |
+| `enable_intent` | boolean | `true` | 有 `session_id` 時是否進行意圖分析和查詢規劃 |
 
-Search 和 Find 请求的默认 `limit` 为 `10`，可以在每次 API 或 SDK 请求中覆盖。`retrieval.enable_intent` 控制带 Session 的 Search 是否执行 LLM 查询规划；只有配置了可用的 `rerank` provider 时才会执行结果重排。
+Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK 請求中覆蓋。`retrieval.enable_intent` 控制帶 Session 的 Search 是否執行 LLM 查詢規劃；只有配置了可用的 `rerank` provider 時才會執行結果重排。
 
-## 存储配置
+## 儲存配置
 
 ```json
 {
@@ -194,74 +194,74 @@ Search 和 Find 请求的默认 `limit` 为 `10`，可以在每次 API 或 SDK �
 
 ### `storage`
 
-| 字段 | 类型 / 常用值 | 默认值 | 作用 |
+| 欄位 | 型別 / 常用值 | 預設值 | 作用 |
 |---|---|---|---|
-| `workspace` | path | `"./data"` | OpenViking 工作目录 |
-| `agfs.backend` | `local`、`memory`、`s3` | `local` | 文件与元数据存储后端 |
-| `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss`、`elasticsearch` | `local` | 向量数据库后端 |
-| `vectordb.dimension` | integer | 跟随 Embedding | 向量集合维度 |
-| `parse_output.mode` | `agfs`、`local` | `agfs` | parser 中间产物的存储后端 |
-| `parse_output.local_root` | 路径或 `null` | 系统临时目录 | local parser artifact 的根目录 |
-| `skip_process_lock` | boolean | `false` | 是否跳过 workspace 进程锁；仅在明确接受并发写风险时启用 |
+| `workspace` | path | `"./data"` | OpenViking 工作目錄 |
+| `agfs.backend` | `local`、`memory`、`s3` | `local` | 檔案與後設資料儲存後端 |
+| `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss`、`elasticsearch` | `local` | 向量資料庫後端 |
+| `vectordb.dimension` | integer | 跟隨 Embedding | 向量集合維度 |
+| `parse_output.mode` | `agfs`、`local` | `agfs` | parser 中間產物的儲存後端 |
+| `parse_output.local_root` | 路徑或 `null` | 系統臨時目錄 | local parser artifact 的根目錄 |
+| `skip_process_lock` | boolean | `false` | 是否跳過 workspace 程序鎖；僅在明確接受併發寫風險時啟用 |
 
-远程存储后端还需要配置 endpoint、bucket/collection、鉴权和超时等字段。完整后端示例见[配置指南](../guides/01-configuration.md#storage)。
+遠端儲存後端還需要配置 endpoint、bucket/collection、鑑權和超時等欄位。完整後端示例見[配置指南](../guides/01-configuration.md#storage)。
 
-`parse_output.mode=local` 可避免把 parser 中间产物写入共享 AGFS。当前 worker
-必须在下游任务入队前把所需字节提交到正式资源树。产物会在内容提交后清理；
-请为 `local_root` 预留足够空间以容纳并发导入。
+`parse_output.mode=local` 可避免把 parser 中間產物寫入共享 AGFS。當前 worker
+必須在下游任務入隊前把所需位元組提交到正式資源樹。產物會在內容提交後清理；
+請為 `local_root` 預留足夠空間以容納併發匯入。
 
-## 队列 Worker 配置
+## 佇列 Worker 配置
 
 ### `queue_workers.external_parse`
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `max_concurrent` | integer | `4` | 同时消费的完整 ExternalParse 作业数，必须大于 `0`；修改后需重启服务 |
+| `max_concurrent` | integer | `4` | 同時消費的完整 ExternalParse 作業數，必須大於 `0`；修改後需重啟服務 |
 
-该配置控制队列作业并发，不等同于 `vlm.media.max_concurrent` 的音视频 VLM 调用并发，也不限制 Understanding API 的单独 HTTP 请求数。
+該配置控制佇列作業併發，不等同於 `vlm.media.max_concurrent` 的音影片 VLM 呼叫併發，也不限制 Understanding API 的單獨 HTTP 請求數。
 
 ### `queue_workers.add_resource`
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `max_concurrent` | integer | `4` | 同时消费的完整 AddResource 作业数，必须大于 `0`；修改后需重启服务 |
-| `file_operation_concurrency` | integer | `16` | 单个 AddResource 作业内文件级提交和 fallback 比较操作的最大并发数，必须大于 `0`；修改后需重启服务 |
-| `file_vectorization_concurrency` | integer | `8` | 当目录 AddResource 使用 `processing_mode="vectors_only"` 时，单个作业内并发读取、准备并入队的文件数，必须大于 `0`；超过内部安全上限 `64` 的值会被截断；修改后需重启服务 |
+| `max_concurrent` | integer | `4` | 同時消費的完整 AddResource 作業數，必須大於 `0`；修改後需重啟服務 |
+| `file_operation_concurrency` | integer | `16` | 單個 AddResource 作業內檔案級提交和 fallback 比較操作的最大併發數，必須大於 `0`；修改後需重啟服務 |
+| `file_vectorization_concurrency` | integer | `8` | 當目錄 AddResource 使用 `processing_mode="vectors_only"` 時，單個作業內併發讀取、準備併入隊的檔案數，必須大於 `0`；超過內部安全上限 `64` 的值會被截斷；修改後需重啟服務 |
 
-`max_concurrent` 控制相互独立的 AddResource 作业并发，`file_operation_concurrency` 控制单个 AddResource 作业内文件提交和 fallback 比较操作的并发，`file_vectorization_concurrency` 控制单个 vectors-only 目录作业内的文件并发。
+`max_concurrent` 控制相互獨立的 AddResource 作業併發，`file_operation_concurrency` 控制單個 AddResource 作業內檔案提交和 fallback 比較操作的併發，`file_vectorization_concurrency` 控制單個 vectors-only 目錄作業內的檔案併發。
 
 ### `queue_workers.session_commit`
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `max_concurrent` | integer | `8` | 同时消费的 SessionCommit 作业数，必须大于 `0`；修改后需重启服务 |
+| `max_concurrent` | integer | `8` | 同時消費的 SessionCommit 作業數，必須大於 `0`；修改後需重啟服務 |
 
 ### `queue_workers.external_task`
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `max_concurrent` | integer | `10` | 同时消费的外部异步任务数，必须大于 `0`；修改后需重启服务 |
+| `max_concurrent` | integer | `10` | 同時消費的外部非同步任務數，必須大於 `0`；修改後需重啟服務 |
 
 ## Compile API 配置
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `base_url` | string | `""` | 外部服务地址，必须包含 `http://` 或 `https://`；非空即启用外部 Compile |
-| `gateway_token` | string | `""` | OV 调用 Compile Gateway 使用的可选服务凭证 |
-| `http_timeout_seconds` | number | `10` | 单次 HTTP 请求超时 |
-| `poll_interval_ms` | integer | `30000` | 外部任务状态轮询间隔 |
+| `base_url` | string | `""` | 外部服務地址，必須包含 `http://` 或 `https://`；非空即啟用外部 Compile |
+| `gateway_token` | string | `""` | OV 呼叫 Compile Gateway 使用的可選服務憑證 |
+| `http_timeout_seconds` | number | `10` | 單次 HTTP 請求超時 |
+| `poll_interval_ms` | integer | `30000` | 外部任務狀態輪詢間隔 |
 
-配置 `base_url` 后，OV 通过 `X-API-Key` 传递当前用户的 OV API Key；仅在配置 `gateway_token` 时发送 `X-Gateway-Token`。
+配置 `base_url` 後，OV 通過 `X-API-Key` 傳遞當前使用者的 OV API Key；僅在配置 `gateway_token` 時傳送 `X-Gateway-Token`。
 
 ## Reindex 配置
 
 ### `reindex`
 
-| 字段 | 类型 | 默认值 | 说明 |
+| 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `file_vectorization_concurrency` | integer | `8` | 单个 `vectors_only` reindex 任务内并发读取、准备并入队的文件数，必须大于 `0`；超过内部安全上限 `64` 的值会被截断；修改后需重启服务 |
+| `file_vectorization_concurrency` | integer | `8` | 單個 `vectors_only` reindex 任務內併發讀取、準備併入隊的檔案數，必須大於 `0`；超過內部安全上限 `64` 的值會被截斷；修改後需重啟服務 |
 
-## HTTP 服务配置
+## HTTP 服務配置
 
 ```json
 {
@@ -282,26 +282,26 @@ Search 和 Find 请求的默认 `limit` 为 `10`，可以在每次 API 或 SDK �
 
 ### `server`
 
-| 字段 | 类型 / 可选值 | 默认值 | 作用 |
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `host` | IP / hostname | `"127.0.0.1"` | HTTP 监听地址 |
-| `port` | integer | `1933` | HTTP 监听端口 |
-| `workers` | integer | `1` | 服务进程数量 |
-| `executor_threads` | 非负整数 | `0` | 每个服务进程的 asyncio 默认 executor 最大线程数；`0` 表示沿用 Python 默认策略 |
-| `timeout_keep_alive` | integer（秒） | `5` | 空闲 HTTP keep-alive 超时；应调大到超过上游空闲连接寿命 |
-| `auth_mode` | `dev`、`api_key`、`trusted` / `null` | `null` | 鉴权模式；空值根据 `root_api_key` 自动判断 |
-| `root_api_key` | string / `null` | `null` | Root API Key；配置后默认启用 `api_key` 模式 |
-| `cors_origins` | string[] | `["*"]` | 允许的跨域来源 |
-| `profile_enabled` | boolean | `false` | 是否允许请求返回性能 profile |
-| `with_bot` | boolean | `false` | 是否启用 VikingBot API 代理 |
+| `host` | IP / hostname | `"127.0.0.1"` | HTTP 監聽地址 |
+| `port` | integer | `1933` | HTTP 監聽埠 |
+| `workers` | integer | `1` | 服務程序數量 |
+| `executor_threads` | 非負整數 | `0` | 每個服務程序的 asyncio 預設 executor 最大執行緒數；`0` 表示沿用 Python 預設策略 |
+| `timeout_keep_alive` | integer（秒） | `5` | 空閒 HTTP keep-alive 超時；應調大到超過上游空閒連線壽命 |
+| `auth_mode` | `dev`、`api_key`、`trusted` / `null` | `null` | 鑑權模式；空值根據 `root_api_key` 自動判斷 |
+| `root_api_key` | string / `null` | `null` | Root API Key；配置後預設啟用 `api_key` 模式 |
+| `cors_origins` | string[] | `["*"]` | 允許的跨域來源 |
+| `profile_enabled` | boolean | `false` | 是否允許請求返回效能 profile |
+| `with_bot` | boolean | `false` | 是否啟用 VikingBot API 代理 |
 | `bot_api_url` | URL | `http://localhost:18790` | VikingBot OpenAPI 地址 |
-| `public_base_url` | URL / `null` | `null` | 外部访问使用的服务基准地址 |
-| `upload_signed_ttl_seconds` | integer | `600` | 签名上传 URL 有效期 |
-| `temp_upload.default_mode` | `"local"` / `"shared"` | `"local"` | 临时上传存储模式 |
+| `public_base_url` | URL / `null` | `null` | 外部訪問使用的服務基準地址 |
+| `upload_signed_ttl_seconds` | integer | `600` | 簽名上傳 URL 有效期 |
+| `temp_upload.default_mode` | `"local"` / `"shared"` | `"local"` | 臨時上傳儲存模式 |
 
-### 文件加密与 API Key 哈希
+### 檔案加密與 API Key 雜湊
 
-文件加密和 API Key 哈希在顶层 `encryption` 中配置，不属于 `server`：
+檔案加密和 API Key 雜湊在頂層 `encryption` 中配置，不屬於 `server`：
 
 ```json
 {
@@ -314,22 +314,22 @@ Search 和 Find 请求的默认 `limit` 为 `10`，可以在每次 API 或 SDK �
 }
 ```
 
-| 字段 | 类型 / 可选值 | 默认值 | 作用 |
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `encryption.enabled` | boolean | `false` | 是否启用文件级 AES 加密 |
+| `encryption.enabled` | boolean | `false` | 是否啟用檔案級 AES 加密 |
 | `encryption.api_key_hashing.enabled` | boolean | `false` | 是否使用 Argon2id 保存 API Key |
 
-Provider 和密钥管理配置见[加密指南](../guides/08-encryption.md)。
+Provider 和金鑰管理配置見[加密指南](../guides/08-encryption.md)。
 
-### 鉴权模式
+### 鑑權模式
 
-| 值 | 使用场景 |
+| 值 | 使用場景 |
 |---|---|
-| `dev` | 仅监听本机地址的开发环境，不要求 API Key |
-| `api_key` | 服务端校验 root/user/admin key |
-| `trusted` | 由受信任网关注入 account/user 身份 |
+| `dev` | 僅監聽本機地址的開發環境，不要求 API Key |
+| `api_key` | 服務端校驗 root/user/admin key |
+| `trusted` | 由受信任網關注入 account/user 身份 |
 
-## 记忆配置
+## 記憶配置
 
 ```json
 {
@@ -347,15 +347,15 @@ Provider 和密钥管理配置见[加密指南](../guides/08-encryption.md)。
 
 ### `memory`
 
-| 字段 | 类型 / 可选值 | 默认值 | 作用 |
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `custom_templates_dir` | path | `""` | 附加的自定义记忆模板目录 |
-| `experimental_memory_switch` | boolean | `false` | 是否启用实验性记忆模板 |
-| `eager_prefetch` | boolean | `true` | 是否在抽取前预取并读取记忆内容 |
-| `prefetch_search_topn` | integer，`>= 1` | `5` | 预取时读取的检索结果数量 |
-| `extraction_enabled` | boolean | `true` | session commit 时是否抽取长期记忆 |
-| `session_skill_extraction_enabled` | boolean | `false` | 是否同时抽取可复用 Skill |
-| `link_enabled` | boolean | `false` | 是否生成和解析记忆链接 |
+| `custom_templates_dir` | path | `""` | 附加的自定義記憶模板目錄 |
+| `experimental_memory_switch` | boolean | `false` | 是否啟用實驗性記憶模板 |
+| `eager_prefetch` | boolean | `true` | 是否在抽取前預取並讀取記憶內容 |
+| `prefetch_search_topn` | integer，`>= 1` | `5` | 預取時讀取的檢索結果數量 |
+| `extraction_enabled` | boolean | `true` | session commit 時是否抽取長期記憶 |
+| `session_skill_extraction_enabled` | boolean | `false` | 是否同時抽取可複用 Skill |
+| `link_enabled` | boolean | `false` | 是否生成和解析記憶連結 |
 
 ## 解析器配置
 
@@ -391,34 +391,34 @@ Provider 和密钥管理配置见[加密指南](../guides/08-encryption.md)。
 }
 ```
 
-`parsers.directory.max_files` 默认是 `null`，表示不限文件数；
-设为正整数可限制单次目录导入的文件数。
+`parsers.directory.max_files` 預設是 `null`，表示不限檔案數；
+設為正整數可限制單次目錄匯入的檔案數。
 
-`parsers.directory.max_concurrent` 由服务事件循环中的所有目录导入共享。默认值为
-`4` 时，单个目录可以并发执行 4 个 Understanding 任务；多个目录同时导入时，合计仍最多
-执行 4 个。
+`parsers.directory.max_concurrent` 由服務事件迴圈中的所有目錄匯入共享。預設值為
+`4` 時，單個目錄可以併發執行 4 個 Understanding 任務；多個目錄同時匯入時，合計仍最多
+執行 4 個。
 
-启用 Understanding 目录路由时，`max_files` 和 `max_depth` 才约束目录导入。每次
-`DirectoryParser` 扫描会在提交该层 Understanding 请求前独立应用限制；嵌套 ZIP 会启动
-新的目录扫描，不与外层共享文件数量和深度预算。关闭 Understanding 时，OpenViking
-原生目录解析不应用这两个限制。
+啟用 Understanding 目錄路由時，`max_files` 和 `max_depth` 才約束目錄匯入。每次
+`DirectoryParser` 掃描會在提交該層 Understanding 請求前獨立應用限制；巢狀 ZIP 會啟動
+新的目錄掃描，不與外層共享檔案數量和深度預算。關閉 Understanding 時，OpenViking
+原生目錄解析不應用這兩個限制。
 
-客户端导入本地目录时，完整目录 ZIP 受 `/resources/temp_upload` 上传大小限制。ZIP
-解压后，`DirectoryParser` 不再设置统一的单文件字节限制；每个入选文件遵循对应内置
-Parser 或 Understanding API 后端自身的限制和上传行为。
+客戶端匯入本地目錄時，完整目錄 ZIP 受 `/resources/temp_upload` 上傳大小限制。ZIP
+解壓後，`DirectoryParser` 不再設定統一的單檔案位元組限制；每個入選檔案遵循對應內建
+Parser 或 Understanding API 後端自身的限制和上傳行為。
 
-| 配置项 | 作用 |
+| 配置項 | 作用 |
 |---|---|
-| `pdf` | PDF 文本、图片和版面解析 |
-| `code` | 代码仓库文件类型、忽略规则和安全限制 |
-| `image` | 图片理解和 OCR |
-| `audio`、`video` | 音视频内容解析 |
-| `markdown`、`html`、`text` | 文本文档分段 |
-| `anydoc` | Office 和 EPUB 转换；`enabled=false` 时拒绝这些格式 |
-| `directory` | 目录扫描和忽略规则 |
-| `webfeed` | Sitemap、RSS 和 Atom 导入 |
+| `pdf` | PDF 文本、圖片和版面解析 |
+| `code` | 程式碼倉庫檔案型別、忽略規則和安全限制 |
+| `image` | 圖片理解和 OCR |
+| `audio`、`video` | 音影片內容解析 |
+| `markdown`、`html`、`text` | 文本文件分段 |
+| `anydoc` | Office 和 EPUB 轉換；`enabled=false` 時拒絕這些格式 |
+| `directory` | 目錄掃描和忽略規則 |
+| `webfeed` | Sitemap、RSS 和 Atom 匯入 |
 
-各模型 provider、解析器、存储后端和加密后端包含较多专用字段，完整字段表和配置示例见[配置指南](../guides/01-configuration.md)。
+各模型 provider、解析器、儲存後端和加密後端包含較多專用欄位，完整欄位表和配置示例見[配置指南](../guides/01-configuration.md)。
 
 ## 最小示例
 

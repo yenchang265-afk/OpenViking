@@ -1,24 +1,24 @@
 # 示例：Knowledge Graph
 
-把一批来源编译成一个**证据可溯、可直接可视化**的知识图谱：语义分类的实体节点、语句级出处、带类型的有向关系边。产物是这样一棵工件树：
+把一批來源編譯成一個**證據可溯、可直接視覺化**的知識圖譜：語義分類的實體節點、語句級出處、帶型別的有向關係邊。產物是這樣一棵工件樹：
 
 ```text
 entities/
-  <entity-id>.md      # 每个节点一个文件，frontmatter 里有 type/id/title/entity_type/description/sources
-relations.jsonl       # 每行一条有向边
+  <entity-id>.md      # 每個節點一個檔案，frontmatter 裡有 type/id/title/entity_type/description/sources
+relations.jsonl       # 每行一條有向邊
 ```
 
-每条边是一行紧凑 JSON，可读成 `<from> <relation> <to>` 这样一句话：
+每條邊是一行緊湊 JSON，可讀成 `<from> <relation> <to>` 這樣一句話：
 
 ```json
-{"from":"孙悟空","relation":"member_of","label":"属于","to":"取经队伍","evidence":["viking://resources/source.md"]}
+{"from":"孫悟空","relation":"member_of","label":"屬於","to":"取經隊伍","evidence":["viking://resources/source.md"]}
 ```
 
-`relation` 是稳定、语言无关的机器谓词（`member_of`、`leads`、`located_in`……），`label` 是对应的本地化显示名（`属于`、`率领`、`位于`……），`entity_type` 用于可视化时的节点颜色、形状和过滤。图谱可以增量刷新：已有节点和边会被保留、合并证据，新知识追加进来。
+`relation` 是穩定、語言無關的機器謂詞（`member_of`、`leads`、`located_in`……），`label` 是對應的本地化顯示名（`屬於`、`率領`、`位於`……），`entity_type` 用於視覺化時的節點顏色、形狀和過濾。圖譜可以增量重新整理：已有節點和邊會被保留、合併證據，新知識追加進來。
 
-Skill 源码：[examples/compile/ov-compile-skills/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-graph) · 可视化脚本：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
+Skill 原始碼：[examples/compile/ov-compile-skills/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-graph) · 視覺化指令碼：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
 
-## 第一步：准备来源
+## 第一步：準備來源
 
 ```bash
 ov add-resource ./journal-to-the-west --to viking://resources/journal
@@ -33,43 +33,43 @@ ov skills list
 # → viking://agent/skills/knowledge-graph
 ```
 
-## 第三步：执行编译
+## 第三步：執行編譯
 
 ```bash
 ov compile \
   --from viking://resources/journal \
   --to viking://resources/journal-kg \
   --skill viking://agent/skills/knowledge-graph \
-  --instruction "抽取人物、地点、法宝及其关系，构建可遍历的知识图谱"
+  --instruction "抽取人物、地點、法寶及其關係，構建可遍歷的知識圖譜"
 ```
 
-命令会立刻返回 `task_id`，之后：
+命令會立刻返回 `task_id`，之後：
 
 ```bash
-ov task status cmp_01abc      # 查看进度与最终结果
-ov task cancel cmp_01abc      # 协作式取消
+ov task status cmp_01abc      # 檢視進度與最終結果
+ov task cancel cmp_01abc      # 協作式取消
 ```
 
-## 第四步：看看产物
+## 第四步：看看產物
 
 ```bash
 ov tree viking://resources/journal-kg
 ov read viking://resources/journal-kg/relations.jsonl
-ov read viking://resources/journal-kg/entities/孙悟空.md
+ov read viking://resources/journal-kg/entities/孫悟空.md
 ```
 
-## 第五步：可视化成交互式图谱
+## 第五步：視覺化成互動式圖譜
 
-与 LLM Wiki 的脚本不同，`knowledge_graph.py` 读取的是**本地目录**（需要 `entities/` 和 `relations.jsonl` 都在本地）。所以先把产物拉到本地，再生成 HTML。
+與 LLM Wiki 的指令碼不同，`knowledge_graph.py` 讀取的是**本地目錄**（需要 `entities/` 和 `relations.jsonl` 都在本地）。所以先把產物拉到本地，再生成 HTML。
 
-先把整棵工件树下载下来。`ov get` 一次下载一个文件，配合 `ov ls -r -s` 列出全部路径即可批量拉取：
+先把整棵工件樹下載下來。`ov get` 一次下載一個檔案，配合 `ov ls -r -s` 列出全部路徑即可批次拉取：
 
 ```bash
 SRC="viking://resources/journal-kg"
 DST="./journal-kg"
 mkdir -p "$DST"
 ov ls -r -s "$SRC" | while read -r uri; do
-  # 只下载文件（entities/*.md 和 relations.jsonl），跳过目录
+  # 只下載檔案（entities/*.md 和 relations.jsonl），跳過目錄
   case "$uri" in
     */entities|"$SRC") continue ;;
   esac
@@ -79,12 +79,12 @@ ov ls -r -s "$SRC" | while read -r uri; do
 done
 ```
 
-> `ov get` 要求本地目标路径尚不存在，所以重新下载前先清掉旧目录（`rm -rf ./journal-kg`）。
+> `ov get` 要求本地目標路徑尚不存在，所以重新下載前先清掉舊目錄（`rm -rf ./journal-kg`）。
 
-确认本地目录结构正确：
+確認本地目錄結構正確：
 
 ```bash
-find ./journal-kg          # 应能看到 entities/*.md 和 relations.jsonl
+find ./journal-kg          # 應能看到 entities/*.md 和 relations.jsonl
 ```
 
 生成交互式 HTML：
@@ -93,13 +93,13 @@ find ./journal-kg          # 应能看到 entities/*.md 和 relations.jsonl
 python examples/compile/graph-show/knowledge-graph/knowledge_graph.py \
   ./journal-kg \
   -o journal-kg.html \
-  --title "西游知识图谱"
+  --title "西遊知識圖譜"
 ```
 
-用浏览器打开 `journal-kg.html`。脚本会先做校验——`relations.jsonl` 必须是合法 JSON、每个实体文件都要有稳定的 `id` 和 `title`、每条边的两端都要能对上某个实体节点——校验不通过会直接报错并指出问题行，所以它同时也是产物质量的检查器。节点按 `entity_type` 分色分形，边显示本地化 `label`，点节点能看到该实体的正文、别名和出处。
+用瀏覽器開啟 `journal-kg.html`。指令碼會先做校驗——`relations.jsonl` 必須是合法 JSON、每個實體檔案都要有穩定的 `id` 和 `title`、每條邊的兩端都要能對上某個實體節點——校驗不通過會直接報錯並指出問題行，所以它同時也是產物質量的檢查器。節點按 `entity_type` 分色分形，邊顯示本地化 `label`，點節點能看到該實體的正文、別名和出處。
 
-## 相关文档
+## 相關文件
 
-- [上下文编译概览](./01-overview.md)
+- [上下文編譯概覽](./01-overview.md)
 - [LLM Wiki 示例](./02-llm-wiki.md)
 - [Agent Runtime API](../api/23-agent-runtime.md)

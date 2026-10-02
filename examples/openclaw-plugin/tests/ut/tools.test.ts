@@ -1179,7 +1179,7 @@ describe("Tool: ov_search (behavioral)", () => {
   });
 
   it("prints full URIs in ov_search rows so ov_read does not receive display-truncated paths", async () => {
-    const longUri = "viking://resources/harness-paper/2._OpenCompass司南_面向大模型时代的罗盘全面开放与分布式的评测体系/2.3_解决思路.md";
+    const longUri = "viking://resources/harness-paper/2._OpenCompass司南_面向大模型時代的羅盤全面開放與分散式的評測體系/2.3_解決思路.md";
     const openVikingTransport = vi.fn(async (url: string, init?: RequestInit) => {
       if (url.endsWith("/api/v1/system/status")) {
         return okResponse({ user: "default" });
@@ -1220,7 +1220,7 @@ describe("Tool: ov_search (behavioral)", () => {
     const result = await search.execute("tc-long-uri", { query: "OpenCompass" }) as ToolResult;
 
     expect(result.content[0]!.text).toContain(longUri);
-    expect(result.content[0]!.text).not.toContain("viking://resources/harness-paper/2._OpenCompass司南_面向大模型时代的罗盘全面开放与分布式...");
+    expect(result.content[0]!.text).not.toContain("viking://resources/harness-paper/2._OpenCompass司南_面向大模型時代的羅盤全面開放與分散式...");
   });
 
   it("uses runtime ovSearchLimit and targetUri as ov_search defaults", async () => {
@@ -1285,7 +1285,7 @@ describe("Tool: ov_search (behavioral)", () => {
     const read = tools.get("ov_read")!;
 
     await expect(read.execute("tc-truncated-uri", {
-      uri: "viking://resources/harness-paper/2._OpenCompass司南_面向大模型时代的罗盘全面开放与分布式的评测体系/2.3_解决思...",
+      uri: "viking://resources/harness-paper/2._OpenCompass司南_面向大模型時代的羅盤全面開放與分散式的評測體系/2.3_解決思...",
     })).rejects.toThrow("truncated display URI");
     expect(readMock).not.toHaveBeenCalled();
   });

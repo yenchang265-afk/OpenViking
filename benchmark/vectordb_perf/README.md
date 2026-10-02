@@ -1,55 +1,55 @@
 # OpenViking Vector Backend 性能 Benchmark
 
-这个 benchmark 用来快速验收新的 VectorDB storage backend 在 OpenViking 场景下的表现。
-它不直接调用 `CollectionAdapter`，而是走 `VikingVectorIndexBackend`：
+這個 benchmark 用來快速驗收新的 VectorDB storage backend 在 OpenViking 場景下的表現。
+它不直接呼叫 `CollectionAdapter`，而是走 `VikingVectorIndexBackend`：
 
 - 建表使用 `CollectionSchemas.context_collection`
-- 写入使用 `VikingVectorIndexBackend.upsert_many(..., ctx=...)`
-- 查询使用 `VikingVectorIndexBackend.search_in_tenant(...)`
-- 目录范围使用 `target_directories`，内部会编译成 `PathScope("uri", ..., depth=-1)`
+- 寫入使用 `VikingVectorIndexBackend.upsert_many(..., ctx=...)`
+- 查詢使用 `VikingVectorIndexBackend.search_in_tenant(...)`
+- 目錄範圍使用 `target_directories`，內部會編譯成 `PathScope("uri", ..., depth=-1)`
 
-它仍然不经过 OpenViking Server、AGFS、embedding 服务和 rerank；向量直接来自模拟数据或
+它仍然不經過 OpenViking Server、AGFS、embedding 服務和 rerank；向量直接來自模擬資料或
 dir-vector-dataset 的 `.fvecs` 文件。
 
-## 先选模式
+## 先選模式
 
-| 模式 | 参数 | 数据来源 | 适合场景 |
+| 模式 | 引數 | 資料來源 | 適合場景 |
 | --- | --- | --- | --- |
-| 模拟数据 | `--workload synthetic` | runner 生成向量和目录路径 | 新 storage backend 首次接入、稳定复现、CI smoke |
-| 真实数据 | `--workload dir-vector` | dir-vector-dataset 的 metadata、fvecs、ground truth | 目录过滤 + 向量检索的真实 workload 验收 |
+| 模擬資料 | `--workload synthetic` | runner 生成向量和目錄路徑 | 新 storage backend 首次接入、穩定復現、CI smoke |
+| 真實資料 | `--workload dir-vector` | dir-vector-dataset 的 metadata、fvecs、ground truth | 目錄過濾 + 向量檢索的真實 workload 驗收 |
 
-默认是 `synthetic`。
+預設是 `synthetic`。
 
-## 再选规模
+## 再選規模
 
-| 规模 | 参数 | synthetic 行为 | dir-vector 行为 |
+| 規模 | 引數 | synthetic 行為 | dir-vector 行為 |
 | --- | --- | --- | --- |
-| 少量 smoke | `--profile smoke` | 生成 128 行、8 个 query | 抽样前 128 行、前 8 个 query |
-| 常规 standard | `--profile standard` | 生成 10000 行、100 个 query | 抽样前 10000 行、前 100 个 query |
-| 压力 stress | `--profile stress` | 生成 100000 行、500 个 query | 抽样前 100000 行、前 500 个 query |
-| 全量真实数据 | `--workload dir-vector --full` | 不适用 | 读取 dataset 全量 corpus 和 query |
+| 少量 smoke | `--profile smoke` | 生成 128 行、8 個 query | 抽樣前 128 行、前 8 個 query |
+| 常規 standard | `--profile standard` | 生成 10000 行、100 個 query | 抽樣前 10000 行、前 100 個 query |
+| 壓力 stress | `--profile stress` | 生成 100000 行、500 個 query | 抽樣前 100000 行、前 500 個 query |
+| 全量真實資料 | `--workload dir-vector --full` | 不適用 | 讀取 dataset 全量 corpus 和 query |
 
-`--rows`、`--queries`、`--batch-size`、`--concurrency`、`--top-k` 可以覆盖 profile 默认值。
-`--full` 只对 `dir-vector` 生效；真实数据的向量维度从 `.fvecs` 读取，`--dim` 只影响 synthetic。
+`--rows`、`--queries`、`--batch-size`、`--concurrency`、`--top-k` 可以覆蓋 profile 預設值。
+`--full` 只對 `dir-vector` 生效；真實資料的向量維度從 `.fvecs` 讀取，`--dim` 隻影響 synthetic。
 
-## 再选读写阶段
+## 再選讀寫階段
 
-| 阶段模式 | 参数 | 行为 |
+| 階段模式 | 引數 | 行為 |
 | --- | --- | --- |
-| 读写一体 | `--mode read-write` | 默认模式；创建 collection、写入 OV context row，然后跑 count/get/search |
-| 只写不读 | `--mode write-only` | 创建 collection 并 upsert；不跑 count、get、向量检索、过滤检索 |
-| 只读不写 | `--mode read-only` | 不创建 collection、不 upsert；直接连接同名 collection 跑 count/get/search |
+| 讀寫一體 | `--mode read-write` | 預設模式；建立 collection、寫入 OV context row，然後跑 count/get/search |
+| 只寫不讀 | `--mode write-only` | 建立 collection 並 upsert；不跑 count、get、向量檢索、過濾檢索 |
+| 只讀不寫 | `--mode read-only` | 不建立 collection、不 upsert；直接連線同名 collection 跑 count/get/search |
 
-`read-only` 用于压测一个已经准备好的 collection。它必须和写入阶段使用相同的 `--config`、
-配置里的 `vectordb.name`、`--run-id`、`--workload`、`--dataset` / `--full` / 抽样参数和
-`--distance`，否则 runner 可能连到不同 collection，或用不同 query/ground truth 口径算报告。
+`read-only` 用於壓測一個已經準備好的 collection。它必須和寫入階段使用相同的 `--config`、
+配置裡的 `vectordb.name`、`--run-id`、`--workload`、`--dataset` / `--full` / 抽樣引數和
+`--distance`，否則 runner 可能連到不同 collection，或用不同 query/ground truth 口徑算報告。
 
-`read-only` 不允许 `--drop-at-end`。如果想先准备数据再反复测读性能，先固定 `--run-id` 跑一次
-`write-only`，后续用同一个 `--run-id` 跑 `read-only`。
+`read-only` 不允許 `--drop-at-end`。如果想先準備資料再反覆測讀效能，先固定 `--run-id` 跑一次
+`write-only`，後續用同一個 `--run-id` 跑 `read-only`。
 
-## 快速开始
+## 快速開始
 
-先准备一个 `ov.conf`，最小本地配置如下：
+先準備一個 `ov.conf`，最小本地配置如下：
 
 ```json
 {
@@ -66,7 +66,7 @@ dir-vector-dataset 的 `.fvecs` 文件。
 }
 ```
 
-模拟数据少量 smoke：
+模擬資料少量 smoke：
 
 ```bash
 .venv/bin/python -m benchmark.vectordb_perf.run \
@@ -75,7 +75,7 @@ dir-vector-dataset 的 `.fvecs` 文件。
   --profile smoke
 ```
 
-模拟数据常规 benchmark：
+模擬資料常規 benchmark：
 
 ```bash
 .venv/bin/python -m benchmark.vectordb_perf.run \
@@ -84,24 +84,24 @@ dir-vector-dataset 的 `.fvecs` 文件。
   --profile standard
 ```
 
-真实数据必须先下载。`--workload dir-vector` 默认会跑 `wiki` 和 `arxiv` 两个真实数据集，
-runner 不会自动下载数据，也不会从 GitHub clone 后直接生成 `.fvecs`。先到
-dir-vector-dataset 仓库 README 的 File Download 链接下载这两组数据文件：
+真實資料必須先下載。`--workload dir-vector` 預設會跑 `wiki` 和 `arxiv` 兩個真實資料集，
+runner 不會自動下載資料，也不會從 GitHub clone 後直接生成 `.fvecs`。先到
+dir-vector-dataset 倉庫 README 的 File Download 連結下載這兩組資料檔案：
 
 https://github.com/KurtPatrickHere/dir-vector-dataset
 
-下载后把文件解压或移动到同一个本地目录，例如：
+下載後把檔案解壓或移動到同一個本地目錄，例如：
 
 ```bash
 mkdir -p benchmark/data/dir-vector-dataset-files
-# 把下载得到的 corpus/query/vector/ground-truth 文件放进这个目录
+# 把下載得到的 corpus/query/vector/ground-truth 檔案放進這個目錄
 ```
 
-`--dataset-root` 必须指向“直接包含数据文件”的目录，不是 GitHub repo 目录，也不是一个空目录。
-runner 会先校验 `wiki` 和 `arxiv` 所需文件；缺文件时会直接列出 missing files 和下载地址。
-调试时可以用 `--dataset wiki` 或 `--dataset arxiv` 只跑单个数据集。各 dataset 对应文件见下方“真实数据文件”。
+`--dataset-root` 必須指向“直接包含資料檔案”的目錄，不是 GitHub repo 目錄，也不是一個空目錄。
+runner 會先校驗 `wiki` 和 `arxiv` 所需檔案；缺檔案時會直接列出 missing files 和下載地址。
+除錯時可以用 `--dataset wiki` 或 `--dataset arxiv` 只跑單個數據集。各 dataset 對應檔案見下方“真實資料檔案”。
 
-真实数据少量抽样（Wiki 公开文件）：
+真實資料少量抽樣（Wiki 公開檔案）：
 
 ```bash
 .venv/bin/python -m benchmark.vectordb_perf.run \
@@ -113,18 +113,18 @@ runner 会先校验 `wiki` 和 `arxiv` 所需文件；缺文件时会直接列�
   --profile smoke
 ```
 
-WIKI-Dir 的 corpus 目录来自单独发布的 `dbpedia_dir_2m_corpus_paths.json`，runner 会按
-`id` 将它与 corpus metadata 和 fvecs 逐行对齐，并在错位或缺行时直接报错。这个文件约
-600 MB，runner 使用流式解析，不会把全部 mapping 一次性加载到内存。
+WIKI-Dir 的 corpus 目錄來自單獨釋出的 `dbpedia_dir_2m_corpus_paths.json`，runner 會按
+`id` 將它與 corpus metadata 和 fvecs 逐行對齊，並在錯位或缺行時直接報錯。這個檔案約
+600 MB，runner 使用流式解析，不會把全部 mapping 一次性載入到記憶體。
 
-当前公开的 Wiki query metadata 没有包含目录 constraint，因此默认的 `dataset` 口径会拒绝
-把所有 query 静默当成根目录查询。若要对公开文件做目录过滤的诊断性测试，可以显式使用
-`derived_gt_lca_v1`：对每个 query 的最高 relevance ground-truth 文档取目录最长公共前缀，
-并跳过只能得到根目录的 query。这个口径使用了 ground truth，不代表发布数据集的官方 query
-分布，也不能用来声明官方 Directory recall。该选项只改变 Wiki；在 `--dataset all` 中，
-其他 dataset 保持现有 loader 行为。
+當前公開的 Wiki query metadata 沒有包含目錄 constraint，因此預設的 `dataset` 口徑會拒絕
+把所有 query 靜默當成根目錄查詢。若要對公開檔案做目錄過濾的診斷性測試，可以顯式使用
+`derived_gt_lca_v1`：對每個 query 的最高 relevance ground-truth 文件取目錄最長公共字首，
+並跳過只能得到根目錄的 query。這個口徑使用了 ground truth，不代表釋出資料集的官方 query
+分佈，也不能用來宣告官方 Directory recall。該選項只改變 Wiki；在 `--dataset all` 中，
+其他 dataset 保持現有 loader 行為。
 
-真实数据全量（公开 Wiki 文件的诊断性目录口径）：
+真實資料全量（公開 Wiki 檔案的診斷性目錄口徑）：
 
 ```bash
 .venv/bin/python -m benchmark.vectordb_perf.run \
@@ -136,15 +136,15 @@ WIKI-Dir 的 corpus 目录来自单独发布的 `dbpedia_dir_2m_corpus_paths.jso
   --full
 ```
 
-默认保留测试 collection，方便复查。需要运行后清理：
+預設保留測試 collection，方便複查。需要執行後清理：
 
 ```bash
 --drop-at-end
 ```
 
-runner 会把配置里的 `name` 改成 `<name>_bench_<run-id>`，避免覆盖正式 collection。
+runner 會把配置裡的 `name` 改成 `<name>_bench_<run-id>`，避免覆蓋正式 collection。
 
-分离写入和读取时要固定 `--run-id`。例如先写入：
+分離寫入和讀取時要固定 `--run-id`。例如先寫入：
 
 ```bash
 .venv/bin/python -m benchmark.vectordb_perf.run \
@@ -158,7 +158,7 @@ runner 会把配置里的 `name` 改成 `<name>_bench_<run-id>`，避免覆盖�
   --mode write-only
 ```
 
-再只跑读取和检索：
+再只跑讀取和檢索：
 
 ```bash
 .venv/bin/python -m benchmark.vectordb_perf.run \
@@ -173,64 +173,64 @@ runner 会把配置里的 `name` 改成 `<name>_bench_<run-id>`，避免覆盖�
   --output-dir benchmark/results/vectordb_perf/ovbench_full_001_read
 ```
 
-## 写入数据结构
+## 寫入資料結構
 
-两种 workload 最终都会转换成 OV context row，写入字段如下：
+兩種 workload 最終都會轉換成 OV context row，寫入欄位如下：
 
-| 字段 | 示例 | 说明 |
+| 欄位 | 示例 | 說明 |
 | --- | --- | --- |
-| `id` | `syn-1` | 主键；真实数据使用原始 doc id |
-| `uri` | `viking://resources/bench/synthetic/d0_1/d1_0/syn-1` | OV URI；目录过滤只看这个字段 |
-| `type` | `file` | OV context type 内的资源类型 |
-| `context_type` | `resource` | 固定按资源检索 |
-| `vector` | `[0.1, ...]` | dense vector；synthetic 生成，dir-vector 读取 `.fvecs` |
-| `created_at` / `updated_at` | `2026-01-01T00:00:01Z` | 确定性时间戳 |
-| `active_count` | `0` | OV 访问计数 |
-| `level` | `2` | L2 detail/content 层；查询也限制 `level=[2]` |
+| `id` | `syn-1` | 主鍵；真實資料使用原始 doc id |
+| `uri` | `viking://resources/bench/synthetic/d0_1/d1_0/syn-1` | OV URI；目錄過濾只看這個欄位 |
+| `type` | `file` | OV context type 內的資源型別 |
+| `context_type` | `resource` | 固定按資源檢索 |
+| `vector` | `[0.1, ...]` | dense vector；synthetic 生成，dir-vector 讀取 `.fvecs` |
+| `created_at` / `updated_at` | `2026-01-01T00:00:01Z` | 確定性時間戳 |
+| `active_count` | `0` | OV 訪問計數 |
+| `level` | `2` | L2 detail/content 層；查詢也限制 `level=[2]` |
 | `name` | `syn-1` | 展示名 |
-| `description` / `tags` / `search_tags` | `cat_1` | 标量字段 |
-| `abstract` | `source_id:syn-1 category:cat_1` | 检索返回字段，也用于 ground truth 轻量匹配 |
-| `content` | `benchmark content ...` | text 字段，匹配真实 OV schema |
-| `account_id` | `bench_account` | 用于 backend tenant filter |
+| `description` / `tags` / `search_tags` | `cat_1` | 標量欄位 |
+| `abstract` | `source_id:syn-1 category:cat_1` | 檢索返回欄位，也用於 ground truth 輕量匹配 |
+| `content` | `benchmark content ...` | text 欄位，匹配真實 OV schema |
+| `account_id` | `bench_account` | 用於 backend tenant filter |
 | `owner_user_id` | `bench_user` | OV owner 字段 |
 
-所以这个 benchmark 不是“普通向量库 row + filter”，而是 OV 的 context collection row。
+所以這個 benchmark 不是“普通向量庫 row + filter”，而是 OV 的 context collection row。
 
-## 测试阶段
+## 測試階段
 
-每次运行会创建一个带 run id 后缀的测试 collection，然后执行：
+每次執行會建立一個帶 run id 字尾的測試 collection，然後執行：
 
-| 阶段 | 内容 |
+| 階段 | 內容 |
 | --- | --- |
-| `setup` | 创建 collection 和索引 schema |
-| `ingest` | 通过 backend upsert OV context row |
-| `prepare` | Auto background 模式等待最终 derived GPU index ready；不计入 search QPS |
-| `validate` | count、get、过滤 count |
-| `vector_search` | `search_in_tenant`，无指定目录 |
-| `filtered_vector_search` | `search_in_tenant`，带 `target_directories` |
-| `cleanup` | 仅在传 `--drop-at-end` 时删除测试 collection |
+| `setup` | 建立 collection 和索引 schema |
+| `ingest` | 通過 backend upsert OV context row |
+| `prepare` | Auto background 模式等待最終 derived GPU index ready；不計入 search QPS |
+| `validate` | count、get、過濾 count |
+| `vector_search` | `search_in_tenant`，無指定目錄 |
+| `filtered_vector_search` | `search_in_tenant`，帶 `target_directories` |
+| `cleanup` | 僅在傳 `--drop-at-end` 時刪除測試 collection |
 
-功能错误会导致非零退出码；性能慢只记录到报告里。
+功能錯誤會導致非零退出碼；效能慢只記錄到報告裡。
 
-`ingest` 会把每个 `--batch-size` 分组通过一次 backend `upsert_many` 调用写入，
-而不是逐行调用 `upsert`。对本地后端，这会把每批记录合并到一次 store 持久化操作；
-store 与 vector index 之间不提供跨组件事务。远端 adapter 还可根据请求上限进一步拆批，
-因此一次 `upsert_many` 也不代表一个远端请求或跨子批事务。批量接口只提供完整记录
-upsert；需要保留未提供字段的 partial update 仍使用单条 `upsert`。runner 会在整个多批
-ingest 外层使用 `bulk_ingest` maintenance scope：native index 和数据持久化仍逐批更新，
-但 Auto background cuVS rebuild 会延迟到最外层 scope 退出后再合并触发一次。这个 scope
-不是事务或原子性边界，退出时只调度 rebuild，本身不等待 GPU ready。正式计时 search 前，
-runner 还会显式等待该最终 GPU snapshot ready；
-readiness wait 单独记录为 `prepare/wait_for_auto_derived_index`，失败时不会继续产出可能混合
-CPU fallback 的 search QPS。当前 runner 是这些批量接口在仓库内的首个调用方；本改动不
-自动改变现有 embedding、migration 或 ovpack 写入流程。
+`ingest` 會把每個 `--batch-size` 分組通過一次 backend `upsert_many` 呼叫寫入，
+而不是逐行呼叫 `upsert`。對本地後端，這會把每批記錄合併到一次 store 持久化操作；
+store 與 vector index 之間不提供跨元件事務。遠端 adapter 還可根據請求上限進一步拆批，
+因此一次 `upsert_many` 也不代表一個遠端請求或跨子批事務。批次介面只提供完整記錄
+upsert；需要保留未提供欄位的 partial update 仍使用單條 `upsert`。runner 會在整個多批
+ingest 外層使用 `bulk_ingest` maintenance scope：native index 和資料持久化仍逐批更新，
+但 Auto background cuVS rebuild 會延遲到最外層 scope 退出後再合併觸發一次。這個 scope
+不是事務或原子性邊界，退出時只調度 rebuild，本身不等待 GPU ready。正式計時 search 前，
+runner 還會顯式等待該最終 GPU snapshot ready；
+readiness wait 單獨記錄為 `prepare/wait_for_auto_derived_index`，失敗時不會繼續產出可能混合
+CPU fallback 的 search QPS。當前 runner 是這些批次介面在倉庫內的首個呼叫方；本改動不
+自動改變現有 embedding、migration 或 ovpack 寫入流程。
 
-`--mode write-only` 只会出现 `setup` / `ingest` / 可选 `cleanup` 阶段。
-`--mode read-only` 不执行 `setup` / `ingest`；Auto background 配置下会先出现 `prepare`，
-随后执行 `validate` / `vector_search` / `filtered_vector_search`。
-运行中会向 stderr 输出进度，包括当前 collection、写入条数、查询条数和速率。
+`--mode write-only` 只會出現 `setup` / `ingest` / 可選 `cleanup` 階段。
+`--mode read-only` 不執行 `setup` / `ingest`；Auto background 配置下會先出現 `prepare`，
+隨後執行 `validate` / `vector_search` / `filtered_vector_search`。
+執行中會向 stderr 輸出進度，包括當前 collection、寫入條數、查詢條數和速率。
 
-进度输出示例：
+進度輸出示例：
 
 ```text
 [vectordb_perf] start run_id=ovbench_full_001 workload=dir-vector:wiki mode=write-only records=1941679 base_queries=456 directory_queries=217 dim=1024
@@ -242,24 +242,24 @@ CPU fallback 的 search QPS。当前 runner 是这些批量接口在仓库内的
 [vectordb_perf] ingest: 240000/1941679 (12.4%), 4021.7/s
 ```
 
-## 真实数据文件
+## 真實資料檔案
 
 `--workload dir-vector` 使用
 [KurtPatrickHere/dir-vector-dataset](https://github.com/KurtPatrickHere/dir-vector-dataset)
-发布的数据文件。需要先手动下载；下载入口在该仓库 README 的 File Download / Google Drive
-链接里。
+釋出的資料檔案。需要先手動下載；下載入口在該倉庫 README 的 File Download / Google Drive
+連結裡。
 
-默认真实数据 benchmark 会跑 `wiki` 和 `arxiv` 两行。`arxiv_category` 不在默认两数据集里，
-需要时显式传 `--dataset arxiv_category`。
+預設真實資料 benchmark 會跑 `wiki` 和 `arxiv` 兩行。`arxiv_category` 不在預設兩資料集裡，
+需要時顯式傳 `--dataset arxiv_category`。
 
-默认两个真实数据集的全量规模如下，行数按 `.fvecs` 文件统计，也是 runner 的实际读取口径：
+預設兩個真實資料集的全量規模如下，行數按 `.fvecs` 檔案統計，也是 runner 的實際讀取口徑：
 
-| `--dataset` | corpus 向量条数 | query 条数 | 向量维度 |
+| `--dataset` | corpus 向量條數 | query 條數 | 向量維度 |
 | --- | ---: | ---: | ---: |
 | `wiki` | 1,941,679 | 456 | 1024 |
 | `arxiv` | 2,763,543 | 1,000 | 1024 |
 
-`--dataset all --full` 会依次跑这两组数据，合计 4,705,222 条 corpus 向量和 1,456 个 query。
+`--dataset all --full` 會依次跑這兩組資料，合計 4,705,222 條 corpus 向量和 1,456 個 query。
 
 | `--dataset` | 期望文件 |
 | --- | --- |
@@ -267,11 +267,11 @@ CPU fallback 的 search QPS。当前 runner 是这些批量接口在仓库内的
 | `arxiv` | `arxiv_corpus_metadata.json`、`arxiv_corpus_vectors.fvecs`、`arxiv_query_constraint.json`、`arxiv_query_vectors.fvecs`、`arxiv_ground_truth.txt` |
 | `arxiv_category` | `arxiv_corpus_metadata.json`、`arxiv_corpus_vectors.fvecs`、`arxiv_category_query_constraint.json`、`arxiv_category_query_vectors.fvecs`、`arxiv_category_ground_truth.txt` |
 
-把这些文件放到同一个目录，然后用 `--dataset-root` 指向该目录。
+把這些檔案放到同一個目錄，然後用 `--dataset-root` 指向該目錄。
 
 ## 其他 ov.conf 示例
 
-自定义 adapter 类：
+自定義 adapter 類：
 
 ```json
 {
@@ -290,58 +290,58 @@ CPU fallback 的 search QPS。当前 runner 是这些批量接口在仓库内的
 }
 ```
 
-## 常用参数
+## 常用引數
 
-| 参数 | 说明 |
+| 引數 | 說明 |
 | --- | --- |
-| `--config` | OpenViking 配置文件路径 |
-| `--output-dir` | 报告输出目录；默认在 `benchmark/results/vectordb_perf/<run-id>/` |
-| `--run-id` | 本次运行标识；会进入 collection 名和报告 |
+| `--config` | OpenViking 配置檔案路徑 |
+| `--output-dir` | 報告輸出目錄；預設在 `benchmark/results/vectordb_perf/<run-id>/` |
+| `--run-id` | 本次執行標識；會進入 collection 名和報告 |
 | `--profile` | `smoke`、`standard`、`stress` |
-| `--mode` | `read-write`、`write-only`、`read-only`；默认 `read-write` |
+| `--mode` | `read-write`、`write-only`、`read-only`；預設 `read-write` |
 | `--workload` | `synthetic` 或 `dir-vector` |
-| `--dataset-root` | dir-vector 数据目录 |
-| `--dataset` | `all`、`wiki`、`arxiv`、`arxiv_category`；默认 `all`，即依次跑 `wiki` 和 `arxiv` |
-| `--full` | dir-vector 全量读取 corpus 和 query；不加时按 `--rows` / `--queries` 抽样 |
-| `--rows` | synthetic 行数；dir-vector 抽样行数 |
-| `--queries` | 查询数 |
-| `--dim` | synthetic 向量维度 |
-| `--batch-size` | 每次 backend `upsert_many` 调用的记录数；远端 adapter 可按请求上限再拆分 |
-| `--concurrency` | 查询并发 |
-| `--top-k` | 检索返回条数 |
-| `--dir-vector-query-scope` | dir-vector 目录 query 来源；默认 `dataset`，Wiki 公开文件可显式使用诊断口径 `derived_gt_lca_v1` |
+| `--dataset-root` | dir-vector 資料目錄 |
+| `--dataset` | `all`、`wiki`、`arxiv`、`arxiv_category`；預設 `all`，即依次跑 `wiki` 和 `arxiv` |
+| `--full` | dir-vector 全量讀取 corpus 和 query；不加時按 `--rows` / `--queries` 抽樣 |
+| `--rows` | synthetic 行數；dir-vector 抽樣行數 |
+| `--queries` | 查詢數 |
+| `--dim` | synthetic 向量維度 |
+| `--batch-size` | 每次 backend `upsert_many` 呼叫的記錄數；遠端 adapter 可按請求上限再拆分 |
+| `--concurrency` | 查詢併發 |
+| `--top-k` | 檢索返回條數 |
+| `--dir-vector-query-scope` | dir-vector 目錄 query 來源；預設 `dataset`，Wiki 公開檔案可顯式使用診斷口徑 `derived_gt_lca_v1` |
 | `--distance` | `ip`、`l2`、`cosine` |
-| `--drop-at-end` | 运行结束后删除测试 collection |
+| `--drop-at-end` | 執行結束後刪除測試 collection |
 
-## 报告输出
+## 報告輸出
 
-主要输出文件：
+主要輸出檔案：
 
-| 文件 | 内容 |
+| 檔案 | 內容 |
 | --- | --- |
-| `summary_zh.md` | 中文摘要，优先看这个；包含数据规模、Recall@K、QPS、延迟和环境 |
-| `run_summary.json` | 汇总结果，适合自动化读取；包含 `workload`、`quality`、`phase_summary` |
-| `events.jsonl` | 每次操作的延迟、成功状态和错误 |
-| `phase_summary.csv` | 按阶段聚合的吞吐和延迟 |
-| `environment.json` | runner 本机环境观测 |
-| `run_config.json` | 本次运行参数 |
+| `summary_zh.md` | 中文摘要，優先看這個；包含資料規模、Recall@K、QPS、延遲和環境 |
+| `run_summary.json` | 彙總結果，適合自動化讀取；包含 `workload`、`quality`、`phase_summary` |
+| `events.jsonl` | 每次操作的延遲、成功狀態和錯誤 |
+| `phase_summary.csv` | 按階段聚合的吞吐和延遲 |
+| `environment.json` | runner 本機環境觀測 |
+| `run_config.json` | 本次執行引數 |
 
-`summary_zh.md` 里重点看两张表：
+`summary_zh.md` 裡重點看兩張表：
 
-| 表 | 内容 |
+| 表 | 內容 |
 | --- | --- |
-| 数据规模 | `records` 是本次计划读取的数据条数，`inserted` 是实际写入 backend 的条数，`queries` 是实际查询数 |
-| 召回与 QPS | `vector_search` 和 `filtered_vector_search` 的 QPS、平均延迟、P95 延迟、gt_recall@K |
+| 資料規模 | `records` 是本次計劃讀取的資料條數，`inserted` 是實際寫入 backend 的條數，`queries` 是實際查詢數 |
+| 召回與 QPS | `vector_search` 和 `filtered_vector_search` 的 QPS、平均延遲、P95 延遲、gt_recall@K |
 
-gt_recall@K 按 query 的 ground truth 命中率统计。全量 Wiki 的无过滤 `vector_search` 保留
-`official_full` 标记；其 `filtered_vector_search` 在诊断模式下标为 `derived_gt_lca_v1`。
-非 `--full` 会标成 `sampled_subset`。派生目录和抽样口径只用于诊断，不代表官方 Directory
+gt_recall@K 按 query 的 ground truth 命中率統計。全量 Wiki 的無過濾 `vector_search` 保留
+`official_full` 標記；其 `filtered_vector_search` 在診斷模式下標為 `derived_gt_lca_v1`。
+非 `--full` 會標成 `sampled_subset`。派生目錄和抽樣口徑只用於診斷，不代表官方 Directory
 recall。
 
-## 资源限制口径
+## 資源限制口徑
 
-runner 会记录本机 CPU、内存、平台、GPU 探测和 cgroup 信息，但不主动限制资源。
-如果 backend 连接的是远端服务，远端实例规格需要人工记录或用部署系统控制。
+runner 會記錄本機 CPU、記憶體、平臺、GPU 探測和 cgroup 資訊，但不主動限制資源。
+如果 backend 連線的是遠端服務，遠端例項規格需要人工記錄或用部署系統控制。
 
-本地要控制资源，建议在 Docker、cgroup 或 CI runner 层限制 CPU/内存，然后把报告里的
-`environment.json` 和部署规格一起归档。
+本地要控制資源，建議在 Docker、cgroup 或 CI runner 層限制 CPU/記憶體，然後把報告裡的
+`environment.json` 和部署規格一起歸檔。

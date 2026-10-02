@@ -37,7 +37,7 @@ class OpenVikingAPIClient:
         self.last_response = None
 
     def _filter_sensitive_headers(self, headers: Dict[str, str]) -> Dict[str, str]:
-        """过滤敏感头信息"""
+        """過濾敏感頭資訊"""
         filtered = {}
         sensitive_headers_lower = {"authorization"}
         for key, value in headers.items():
@@ -48,7 +48,7 @@ class OpenVikingAPIClient:
         return filtered
 
     def _filter_sensitive_data(self, data: Any) -> Any:
-        """过滤敏感数据"""
+        """過濾敏感資料"""
         if isinstance(data, dict):
             filtered = {}
             for key, value in data.items():

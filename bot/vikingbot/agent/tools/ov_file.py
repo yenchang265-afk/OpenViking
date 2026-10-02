@@ -992,7 +992,7 @@ class VikingMultiReadTool(OVFileTool):
         limit: int = -1,
         **kwargs: Any,
     ) -> str | MultimodalToolResult:
-        level = "read"  # 默认获取完整内容
+        level = "read"  # 預設獲取完整內容
         client = None
         try:
             if not uris:
@@ -1141,7 +1141,7 @@ class VikingMultiReadTool(OVFileTool):
                             "media_kind": self._media_kind(uri),
                         }
 
-            # 并发读取所有URI
+            # 併發讀取所有URI
             read_tasks = [read_single_uri(index, uri) for index, uri in enumerate(uris)]
             results = await asyncio.gather(*read_tasks)
 
@@ -1161,7 +1161,7 @@ class VikingMultiReadTool(OVFileTool):
                     continue
                 inline_media_bytes += media_bytes
 
-            # 构建结果
+            # 構建結果
             range_note = (
                 ""
                 if limit == -1

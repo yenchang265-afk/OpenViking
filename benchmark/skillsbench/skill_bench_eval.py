@@ -254,16 +254,16 @@ def run_verification(task_dir: Path, work_dir: Path, storage_workspace: Path) ->
             expected_paths = set()
             all_test_files = []
 
-            # 收集所有测试文件内容和路径
+            # 收集所有測試檔案內容和路徑
             for test_py in test_py_files:
                 with open(test_py, "r", encoding="utf-8") as f:
                     test_content = f.read()
                     all_test_files.append((test_py, test_content))
-                # 累积所有路径
+                # 累積所有路徑
                 expected_paths.update(re.findall(r"""['"](/root/[^'"]+)['"]""", test_content))
                 expected_paths.update(re.findall(r"""['"](/app/[^'"]+)['"]""", test_content))
 
-            # 处理所有需要复制的路径
+            # 處理所有需要複製的路徑
             for full_path in sorted(expected_paths):
                 if full_path.endswith("/"):
                     continue
@@ -362,7 +362,7 @@ def run_verification(task_dir: Path, work_dir: Path, storage_workspace: Path) ->
                     except Exception:
                         pass
 
-                # 处理每个测试文件
+                # 處理每個測試檔案
                 for test_py, test_content in all_test_files:
                     rewritten_content = rewrite_test_text(test_content)
                     local_test_py = work_dir / test_py.name

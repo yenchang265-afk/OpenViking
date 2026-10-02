@@ -1,270 +1,270 @@
-# 路径锁与崩溃恢复
+# 路徑鎖與崩潰恢復
 
-OpenViking 通过**路径锁**和**持久化队列恢复**两个简单原语保护核心写操作（`rm`、`mv`、`add_resource`、`session.commit`）的一致性，协调并发写入，并在进程重启后继续处理已入队的会话任务。路径锁和队列恢复不构成跨 VikingFS、VectorDB、QueueManager 的原子事务。
+OpenViking 通過**路徑鎖**和**持久化佇列恢復**兩個簡單原語保護核心寫操作（`rm`、`mv`、`add_resource`、`session.commit`）的一致性，協調併發寫入，並在程序重啟後繼續處理已入隊的會話任務。路徑鎖和佇列恢復不構成跨 VikingFS、VectorDB、QueueManager 的原子事務。
 
-## 设计哲学
+## 設計哲學
 
-OpenViking 是上下文数据库，FS 是源数据，VectorDB 是派生索引。索引丢了可从源数据重建，源数据丢失不可恢复。因此：
+OpenViking 是上下文資料庫，FS 是源資料，VectorDB 是派生索引。索引丟了可從源資料重建，源資料丟失不可恢復。因此：
 
-> **宁可搜不到，不要搜到坏结果。**
+> **寧可搜不到，不要搜到壞結果。**
 
-## 设计原则
+## 設計原則
 
-1. **写互斥**：参与锁协议的不同 owner 不能同时取得冲突路径的锁
-2. **默认生效**：受保护的写操作默认加锁；普通读取和底层 mkdir 不自动加锁
-3. **锁即保护**：进入 LockContext 时加锁，退出时释放，没有 undo/journal/commit 语义
-4. **仅 session_memory 需要崩溃恢复**：通过持久化 `session_commit` 队列在进程崩溃后恢复 Phase 2
-5. **Queue 操作在锁外执行**：SemanticQueue/EmbeddingQueue 的 enqueue 是幂等的，失败可重试
+1. **寫互斥**：參與鎖協議的不同 owner 不能同時取得衝突路徑的鎖
+2. **預設生效**：受保護的寫操作預設加鎖；普通讀取和底層 mkdir 不自動加鎖
+3. **鎖即保護**：進入 LockContext 時加鎖，退出時釋放，沒有 undo/journal/commit 語義
+4. **僅 session_memory 需要崩潰恢復**：通過持久化 `session_commit` 佇列在程序崩潰後恢復 Phase 2
+5. **Queue 操作在鎖外執行**：SemanticQueue/EmbeddingQueue 的 enqueue 是冪等的，失敗可重試
 
-## 架构
+## 架構
 
 ```
 Service Layer (rm / mv / add_resource / session.commit)
     |
     v
-+--[LockContext 异步上下文管理器]-------+
++--[LockContext 非同步上下文管理器]-------+
 |                                       |
-|  1. 创建 LockHandle                  |
-|  2. 获取路径锁（轮询 + 超时）        |
-|  3. 执行操作（FS + VectorDB）        |
-|  4. 释放锁                           |
+|  1. 建立 LockHandle                  |
+|  2. 獲取路徑鎖（輪詢 + 超時）        |
+|  3. 執行操作（FS + VectorDB）        |
+|  4. 釋放鎖                           |
 |                                       |
-|  异常时：自动释放锁，异常原样传播    |
+|  異常時：自動釋放鎖，異常原樣傳播    |
 +---------------------------------------+
     |
     v
 Storage Layer (VikingFS, VectorDB, QueueManager)
 ```
 
-## 两个核心组件
+## 兩個核心元件
 
-### 组件 1：PathLockEngine + LockManager + LockContext（路径锁系统）
+### 元件 1：PathLockEngine + LockManager + LockContext（路徑鎖系統）
 
-**PathLockEngine** 实现基于 Provider 的分布式锁，支持 EXACT 和 TREE 两种锁类型，使用归属 token 防止 TOCTOU 竞争，并自动检测和清理过期锁。默认 Provider 在 AGFS 中保存锁文件；Cache Provider 在 Redis 中保存 token。
+**PathLockEngine** 實現基於 Provider 的分散式鎖，支援 EXACT 和 TREE 兩種鎖型別，使用歸屬 token 防止 TOCTOU 競爭，並自動檢測和清理過期鎖。預設 Provider 在 AGFS 中儲存鎖檔案；Cache Provider 在 Redis 中儲存 token。
 
-**LockHandle** 是轻量的锁持有者令牌：
+**LockHandle** 是輕量的鎖持有者令牌：
 
 ```python
 @dataclass
 class LockHandle:
-    id: str          # 唯一标识，用于生成 fencing token
-    locks: list[str] # Provider handle：锁文件路径或逻辑路径
-    created_at: float # handle 创建时间
-    last_active_at: float # 最近一次成功 acquire/refresh 的时间
+    id: str          # 唯一標識，用於生成 fencing token
+    locks: list[str] # Provider handle：鎖檔案路徑或邏輯路徑
+    created_at: float # handle 建立時間
+    last_active_at: float # 最近一次成功 acquire/refresh 的時間
 ```
 
-**LockManager** 是全局单例，管理锁生命周期：
-- 创建/释放 LockHandle
-- 后台清理泄漏的锁（进程内安全网）
-- 启动后由 QueueManager 恢复持久化的 `session_commit` Phase 2 任务
+**LockManager** 是全域單例，管理鎖生命週期：
+- 建立/釋放 LockHandle
+- 後臺清理洩漏的鎖（程序內安全網）
+- 啟動後由 QueueManager 恢復持久化的 `session_commit` Phase 2 任務
 
-**LockContext** 是异步上下文管理器，封装加锁/解锁生命周期：
+**LockContext** 是非同步上下文管理器，封裝加鎖/解鎖生命週期：
 
 ```python
 # Conceptual example: production path locks are acquired inside the Rust ragfs layer.
 async with LockContext(lock_manager, [path], lock_mode="exact") as handle:
-    # 在锁保护下执行操作
+    # 在鎖保護下執行操作
     ...
-# 退出时自动释放锁（包括异常情况）
+# 退出時自動釋放鎖（包括異常情況）
 ```
 
-### 组件 2：持久化 `session_commit` 队列（崩溃恢复）
+### 元件 2：持久化 `session_commit` 佇列（崩潰恢復）
 
-`session.commit` 的 Phase 2 不再使用独立 RedoLog。Phase 1 会先把 archive 元数据持久化，再把
-`SessionCommitMsg` 写入持久化队列；进程重启后，QueueManager 会继续消费遗留的 `session_commit`
-任务并恢复 Phase 2。
+`session.commit` 的 Phase 2 不再使用獨立 RedoLog。Phase 1 會先把 archive 後設資料持久化，再把
+`SessionCommitMsg` 寫入持久化佇列；程序重啟後，QueueManager 會繼續消費遺留的 `session_commit`
+任務並恢復 Phase 2。
 
-Memory 提取是幂等的，从同一个 archive 重新提取会得到相同结果。
+Memory 提取是冪等的，從同一個 archive 重新提取會得到相同結果。
 
-## 一致性问题与解决方案
+## 一致性問題與解決方案
 
 ### rm(uri)
 
-| 问题 | 方案 |
+| 問題 | 方案 |
 |------|------|
-| 先删文件再删索引 -> 文件已删但索引残留 -> 搜索返回不存在的文件 | **调换顺序**：先删索引再删文件。索引删除失败 -> 源文件仍在，重试可完成可能只执行了一部分的索引清理 |
+| 先刪檔案再刪索引 -> 檔案已刪但索引殘留 -> 搜尋返回不存在的檔案 | **調換順序**：先刪索引再刪檔案。索引刪除失敗 -> 原始檔仍在，重試可完成可能只執行了一部分的索引清理 |
 
-**加锁策略**（根据目标类型区分）：
-- 删除**目录**：`lock_mode="tree"`，锁目录自身及其整棵子树
-- 删除**文件**：`lock_mode="exact"`，锁文件路径本身
+**加鎖策略**（根據目標型別區分）：
+- 刪除**目錄**：`lock_mode="tree"`，鎖目錄自身及其整棵子樹
+- 刪除**檔案**：`lock_mode="exact"`，鎖檔案路徑本身
 
 操作流程：
 
 ```
-1. 检查目标是目录还是文件，选择锁模式
-2. 获取锁
-3. 删除 VectorDB 索引 -> 搜索立刻不可见
-4. 删除 FS 文件
-5. 释放锁
+1. 檢查目標是目錄還是檔案，選擇鎖模式
+2. 獲取鎖
+3. 刪除 VectorDB 索引 -> 搜尋立刻不可見
+4. 刪除 FS 檔案
+5. 釋放鎖
 ```
 
-索引 URI 收集或 VectorDB 删除失败 -> 直接抛异常，锁自动释放，源文件仍在。多记录删除在部分
-后端可能已经执行了一部分，但重试可以安全补完清理。FS 删除失败 -> VectorDB 已删但文件还在，
-重试同样安全。
+索引 URI 收集或 VectorDB 刪除失敗 -> 直接拋異常，鎖自動釋放，原始檔仍在。多記錄刪除在部分
+後端可能已經執行了一部分，但重試可以安全補完清理。FS 刪除失敗 -> VectorDB 已刪但檔案還在，
+重試同樣安全。
 
 ### mv(old_uri, new_uri)
 
-| 问题 | 方案 |
+| 問題 | 方案 |
 |------|------|
-| 文件移到新路径但索引指向旧路径 -> 搜索返回旧路径（不存在） | 先 copy 再更新索引，失败时清理副本 |
+| 檔案移到新路徑但索引指向舊路徑 -> 搜尋返回舊路徑（不存在） | 先 copy 再更新索引，失敗時清理副本 |
 
-**加锁策略**（通过 `lock_mode="mv"` 自动处理）：
-- 移动**目录**：源路径加 TreeLock，目标路径加 ExactPathLock
-- 移动**文件**：源路径和目标路径各加 EXACT 锁
+**加鎖策略**（通過 `lock_mode="mv"` 自動處理）：
+- 移動**目錄**：源路徑加 TreeLock，目標路徑加 ExactPathLock
+- 移動**檔案**：源路徑和目標路徑各加 EXACT 鎖
 
 操作流程：
 
 ```
-1. 检查源是目录还是文件，确定 src_is_dir
-2. 获取 mv 锁（内部根据 src_is_dir 选择 TreeLock 或 ExactPathLock）
-3. Copy 到新位置（源还在，安全）
-4. 如果是目录，删除副本中被 cp 带过去的锁文件
+1. 檢查源是目錄還是檔案，確定 src_is_dir
+2. 獲取 mv 鎖（內部根據 src_is_dir 選擇 TreeLock 或 ExactPathLock）
+3. Copy 到新位置（源還在，安全）
+4. 如果是目錄，刪除副本中被 cp 帶過去的鎖檔案
 5. 更新 VectorDB 中的 URI
-   - 失败 -> 清理副本，源和旧索引都在，一致状态
-6. 删除源
-7. 释放锁
+   - 失敗 -> 清理副本，源和舊索引都在，一致狀態
+6. 刪除源
+7. 釋放鎖
 ```
 
 ### add_resource
 
-| 问题 | 方案 |
+| 問題 | 方案 |
 |------|------|
-| 文件从临时目录移到正式目录后崩溃 -> 文件存在但永远搜不到 | 首次添加与增量更新分离为两条独立路径 |
-| 资源已落盘但语义处理/向量化还在跑时被 rm 删除 -> 处理白跑 | 生命周期 TreeLock，从落盘持续到处理完成 |
+| 檔案從臨時目錄移到正式目錄後崩潰 -> 檔案存在但永遠搜不到 | 首次新增與增量更新分離為兩條獨立路徑 |
+| 資源已落盤但語義處理/向量化還在跑時被 rm 刪除 -> 處理白跑 | 生命週期 TreeLock，從落盤持續到處理完成 |
 
-**首次添加和增量更新**使用同一条计划提交路径：
+**首次新增和增量更新**使用同一條計劃提交路徑：
 
 ```
-1. 获取 final_uri 的资源锁。
-2. 持锁构建 R/N/F/V 快照：
-   - R：归一化后的请求意图
-   - N：解析产物清单
-   - F：当前正式资源树
-   - V：当前向量记录；build_index=false 时跳过
-3. 编译 ContextUpdatePlan。
-4. 同步把计划中的内容动作提交到 final_uri。
+1. 獲取 final_uri 的資源鎖。
+2. 持鎖構建 R/N/F/V 快照：
+   - R：歸一化後的請求意圖
+   - N：解析產物清單
+   - F：當前正式資源樹
+   - V：當前向量記錄；build_index=false 時跳過
+3. 編譯 ContextUpdatePlan。
+4. 同步把計劃中的內容動作提交到 final_uri。
 5. 清理 parser artifact。
-6. 入队直接索引动作；需要语义处理时，再入队携带剩余 SemanticPlan 的 SemanticMsg。
-7. 将资源锁交接给语义处理；没有语义任务时直接释放。
+6. 入隊直接索引動作；需要語義處理時，再入隊攜帶剩餘 SemanticPlan 的 SemanticMsg。
+7. 將資源鎖交接給語義處理；沒有語義任務時直接釋放。
 ```
 
-因此正式内容树会先于 semantic 和 embedding 工作更新。内容提交成功后，
-派生摘要和向量可能短暂落后，并由队列任务补齐；队列不再负责把 parser
-临时树复制到正式树。
+因此正式內容樹會先於 semantic 和 embedding 工作更新。內容提交成功後，
+派生摘要和向量可能短暫落後，並由佇列任務補齊；佇列不再負責把 parser
+臨時樹複製到正式樹。
 
-此期间 `rm` 尝试获取同路径 TreeLock 会失败，抛出 `ResourceBusyError`。
+此期間 `rm` 嘗試獲取同路徑 TreeLock 會失敗，丟擲 `ResourceBusyError`。
 
-自动命名由资源层处理，不属于锁服务：`ResourceProcessor` 先用 `exists(candidate_uri)`
-判断候选目录是否已占用；已存在则尝试 `_1`、`_2` 后缀。候选目录不存在时才尝试
-获取该目录的 `TreeLock`，且不等待；如果同名正在被并发请求处理，就直接尝试下一个后缀。
+自動命名由資源層處理，不屬於鎖服務：`ResourceProcessor` 先用 `exists(candidate_uri)`
+判斷候選目錄是否已佔用；已存在則嘗試 `_1`、`_2` 字尾。候選目錄不存在時才嘗試
+獲取該目錄的 `TreeLock`，且不等待；如果同名正在被併發請求處理，就直接嘗試下一個字尾。
 
-**服务重启恢复**：`SemanticMsg` 及其中的 `SemanticPlan` 持久化在 QueueFS
-中。重启后 `SemanticProcessor` 发现 `lifecycle_lock_handle_id` 对应的 handle
-不在内存中，会重新获取 TreeLock 后继续派生处理。
+**服務重啟恢復**：`SemanticMsg` 及其中的 `SemanticPlan` 持久化在 QueueFS
+中。重啟後 `SemanticProcessor` 發現 `lifecycle_lock_handle_id` 對應的 handle
+不在記憶體中，會重新獲取 TreeLock 後繼續派生處理。
 
-### 派生语义文件（.abstract.md / .overview.md）
+### 派生語義檔案（.abstract.md / .overview.md）
 
-`.abstract.md` 和 `.overview.md` 是后台生成的派生文件，不作为普通用户源文件写入。它们的并发保护分两层：
+`.abstract.md` 和 `.overview.md` 是後臺生成的派生檔案，不作為普通使用者原始檔寫入。它們的併發保護分兩層：
 
-| 问题 | 方案 |
+| 問題 | 方案 |
 |------|------|
-| 多个后台任务同时刷新同一个目录摘要，旧结果覆盖新结果 | 相同 dirty key 使用 `coalesce_version`，只有最新版本允许写回 |
-| 最新任务写回派生文件时与另一个写回交错 | 写 `.abstract.md`、`.overview.md` 前获取各自的 ExactPathLock |
+| 多個後臺任務同時重新整理同一個目錄摘要，舊結果覆蓋新結果 | 相同 dirty key 使用 `coalesce_version`，只有最新版本允許寫回 |
+| 最新任務寫回派生檔案時與另一個寫回交錯 | 寫 `.abstract.md`、`.overview.md` 前獲取各自的 ExactPathLock |
 
-例子：同一目录下并发写入 `a.md`、`b.md`、`c.md` 时，前台写入分别持有 `ExactPathLock(a.md)`、`ExactPathLock(b.md)`、`ExactPathLock(c.md)`，互不阻塞。后台可能产生多个 `docs/` 摘要刷新任务，但只有最新 version 能写回 `docs/.overview.md` 和 `docs/.abstract.md`；旧任务在写回前发现自己过期后直接丢弃结果。
+例子：同一目錄下併發寫入 `a.md`、`b.md`、`c.md` 時，前臺寫入分別持有 `ExactPathLock(a.md)`、`ExactPathLock(b.md)`、`ExactPathLock(c.md)`，互不阻塞。後臺可能產生多個 `docs/` 摘要重新整理任務，但只有最新 version 能寫回 `docs/.overview.md` 和 `docs/.abstract.md`；舊任務在寫回前發現自己過期後直接丟棄結果。
 
-memory 目录摘要使用同一规则。比如并发更新：
+memory 目錄摘要使用同一規則。比如併發更新：
 
 ```text
 viking://user/default/memories/preferences/theme.md
 viking://user/default/memories/preferences/editor.md
 ```
 
-两个文件写入各自持有 ExactPathLock；`preferences/.overview.md` 和 `preferences/.abstract.md` 的后台刷新不再持有长时间 TreeLock，而是通过 `coalesce_version` 淘汰旧任务，并在最终写派生文件时短暂获取 ExactPathLock。
+兩個檔案寫入各自持有 ExactPathLock；`preferences/.overview.md` 和 `preferences/.abstract.md` 的後臺重新整理不再持有長時間 TreeLock，而是通過 `coalesce_version` 淘汰舊任務，並在最終寫派生檔案時短暫獲取 ExactPathLock。
 
 ### session.commit()
 
-| 问题 | 方案 |
+| 問題 | 方案 |
 |------|------|
-| 消息已清空但 archive 未写入 -> 对话数据丢失 | Phase 1 无锁（archive 不完整无副作用）+ Phase 2 持久化 `session_commit` 队列 |
+| 訊息已清空但 archive 未寫入 -> 對話資料丟失 | Phase 1 無鎖（archive 不完整無副作用）+ Phase 2 持久化 `session_commit` 佇列 |
 
-LLM 调用耗时不可控（5s~60s+），不能放在持锁操作内。设计拆为两个阶段：
+LLM 呼叫耗時不可控（5s~60s+），不能放在持鎖操作內。設計拆為兩個階段：
 
 ```
-Phase 1 — 归档（无锁）：
-  1. 生成归档摘要（LLM）
-  2. 写 archive（history/archive_N/messages.jsonl + 摘要）
+Phase 1 — 歸檔（無鎖）：
+  1. 生成歸檔摘要（LLM）
+  2. 寫 archive（history/archive_N/messages.jsonl + 摘要）
   3. 清空 messages.jsonl
-  4. 清空内存中的消息列表
+  4. 清空記憶體中的訊息列表
 
-Phase 2 — 记忆提取 + 写入（持久化 `session_commit` 队列）：
-  1. 持久化 archive 元数据并 enqueue `SessionCommitMsg`
-  2. 从归档消息提取 memories（LLM）
-  3. 写当前消息状态
+Phase 2 — 記憶提取 + 寫入（持久化 `session_commit` 佇列）：
+  1. 持久化 archive 後設資料並 enqueue `SessionCommitMsg`
+  2. 從歸檔訊息提取 memories（LLM）
+  3. 寫當前訊息狀態
   4. 直接 enqueue SemanticQueue
 ```
 
-**崩溃恢复分析**：
+**崩潰恢復分析**：
 
-| 崩溃时间点 | 状态 | 恢复动作 |
+| 崩潰時間點 | 狀態 | 恢復動作 |
 |-----------|------|---------|
-| Phase 1 写 archive 中途 | 队列未发布 | archive 不完整，下次 commit 从 history/ 扫描 index，不受影响 |
-| Phase 1 archive 完成但 messages 未清空 | 队列未发布 | archive 完整 + messages 仍在 = 数据冗余但安全 |
-| Phase 2 记忆提取/写入中途 | `session_commit` 任务仍在持久化队列中 | 重启后继续消费该任务，从 archive 恢复 Phase 2 |
-| Phase 2 完成 | archive 标记为完成 | 无需恢复 |
+| Phase 1 寫 archive 中途 | 佇列未釋出 | archive 不完整，下次 commit 從 history/ 掃描 index，不受影響 |
+| Phase 1 archive 完成但 messages 未清空 | 佇列未釋出 | archive 完整 + messages 仍在 = 資料冗餘但安全 |
+| Phase 2 記憶提取/寫入中途 | `session_commit` 任務仍在持久化佇列中 | 重啟後繼續消費該任務，從 archive 恢復 Phase 2 |
+| Phase 2 完成 | archive 標記為完成 | 無需恢復 |
 
 ## LockContext
 
-`LockContext` 是**异步**上下文管理器，封装锁的获取和释放：
+`LockContext` 是**非同步**上下文管理器，封裝鎖的獲取和釋放：
 
 ```python
 # Conceptual example: production path locks are acquired inside the Rust ragfs layer.
 
-# Exact 锁（写操作、语义处理）
+# Exact 鎖（寫操作、語義處理）
 async with LockContext(lock_manager, [path], lock_mode="exact"):
-    # 执行操作...
+    # 執行操作...
     pass
 
-# Tree 锁（删除目录、目录生命周期保护）
+# Tree 鎖（刪除目錄、目錄生命週期保護）
 async with LockContext(lock_manager, [path], lock_mode="tree"):
-    # 执行操作...
+    # 執行操作...
     pass
 
-# MV 锁（移动操作）
+# MV 鎖（移動操作）
 async with LockContext(lock_manager, [src], lock_mode="mv", mv_dst_path=dst):
-    # 执行操作...
+    # 執行操作...
     pass
 ```
 
-**锁模式**：
+**鎖模式**：
 
-| lock_mode | 用途 | 行为 |
+| lock_mode | 用途 | 行為 |
 |-----------|------|------|
-| `exact` | 文件写入、单文件删除、派生文件写回 | 锁定指定路径；与同路径锁和祖先目录 TreeLock 冲突 |
-| `tree` | 删除目录、资源生命周期、目录级保护 | 锁定子树根节点；与同路径锁、后代锁和祖先 TreeLock 冲突 |
-| `mv` | 移动操作 | 目录移动：源路径 TreeLock + 目标路径 ExactPathLock；文件移动：源路径和目标路径均 ExactPathLock（通过 `src_is_dir` 控制） |
+| `exact` | 檔案寫入、單檔案刪除、派生檔案寫回 | 鎖定指定路徑；與同路徑鎖和祖先目錄 TreeLock 衝突 |
+| `tree` | 刪除目錄、資源生命週期、目錄級保護 | 鎖定子樹根節點；與同路徑鎖、後代鎖和祖先 TreeLock 衝突 |
+| `mv` | 移動操作 | 目錄移動：源路徑 TreeLock + 目標路徑 ExactPathLock；檔案移動：源路徑和目標路徑均 ExactPathLock（通過 `src_is_dir` 控制） |
 
-**异常处理**：`__aexit__` 总是释放锁，不吞异常。获取锁失败时抛出 `LockAcquisitionError`。
+**異常處理**：`__aexit__` 總是釋放鎖，不吞異常。獲取鎖失敗時丟擲 `LockAcquisitionError`。
 
-## 锁类型（EXACT vs TREE）
+## 鎖型別（EXACT vs TREE）
 
-锁机制使用两种锁类型来处理不同的冲突场景：
+鎖機制使用兩種鎖型別來處理不同的衝突場景：
 
-| | 同路径 EXACT | 同路径 TREE | 后代 EXACT | 祖先 TREE |
+| | 同路徑 EXACT | 同路徑 TREE | 後代 EXACT | 祖先 TREE |
 |---|---|---|---|---|
-| **EXACT** | 冲突 | 冲突 | — | 冲突 |
-| **TREE** | 冲突 | 冲突 | 冲突 | 冲突 |
+| **EXACT** | 衝突 | 衝突 | — | 衝突 |
+| **TREE** | 衝突 | 衝突 | 衝突 | 衝突 |
 
-- **EXACT (E)**：锁定一个具体路径本身。文件、目录名、尚未创建的目标路径都可以使用；若祖先目录持有 TreeLock 则阻塞。
-- **TREE (T)**：用于删除目录、移动目录、资源生命周期保护等。逻辑上覆盖整棵子树，但只为根路径保存一个 Provider token。冲突检查覆盖 Provider scope 内的后代和持有 Tree 锁的祖先。Filesystem Provider 可能为了写锁文件而创建尚不存在的目标目录。
+- **EXACT (E)**：鎖定一個具體路徑本身。檔案、目錄名、尚未建立的目標路徑都可以使用；若祖先目錄持有 TreeLock 則阻塞。
+- **TREE (T)**：用於刪除目錄、移動目錄、資源生命週期保護等。邏輯上覆蓋整棵子樹，但只為根路徑儲存一個 Provider token。衝突檢查覆蓋 Provider scope 內的後代和持有 Tree 鎖的祖先。Filesystem Provider 可能為了寫鎖檔案而建立尚不存在的目標目錄。
 
-### 路径范围与目标类型
+### 路徑範圍與目標型別
 
-Exact 和 Tree 表达操作范围，文件、目录或缺失路径表达目标的当前状态，两者独立。锁保护路径名字，目标不存在也可以申请锁。
+Exact 和 Tree 表達操作範圍，檔案、目錄或缺失路徑表達目標的當前狀態，兩者獨立。鎖保護路徑名字，目標不存在也可以申請鎖。
 
-以下冲突关系限定为不同 owner、同一 Provider scope 内的请求：
+以下衝突關係限定為不同 owner、同一 Provider scope 內的請求：
 
-| 已持有 | 新请求 | 冲突 |
+| 已持有 | 新請求 | 衝突 |
 | --- | --- | --- |
 | Exact(`/docs/a.md`) | Exact 或 Tree(`/docs/a.md`) | 是 |
 | Exact(`/docs`) | Exact(`/docs/a.md`) | 否 |
@@ -272,45 +272,45 @@ Exact 和 Tree 表达操作范围，文件、目录或缺失路径表达目标�
 | Exact(`/docs/a.md`) | Tree(`/docs`) | 是 |
 | Tree(`/docs/a.md`) | Exact(`/docs/b.md`) | 否 |
 
-`Tree(/docs/a.md)` 不会扩大为 `Tree(/docs)`。反过来，目录自身的 Exact 也不能保护子树，递归删除需要 Tree。
+`Tree(/docs/a.md)` 不會擴大為 `Tree(/docs)`。反過來，目錄自身的 Exact 也不能保護子樹，遞迴刪除需要 Tree。
 
-锁只协调参与协议的操作。底层 `PathLockWrappedFS` 对 create、write、truncate、非递归 remove 使用 Exact，对 remove_all 使用 Tree；文件 rename 锁源和目标的 Exact，目录 rename 锁源 Tree 和目标 Exact。read、stat、列目录和 mkdir 直接转发，上层可另行持锁。绕过协议的 I/O 不会被操作系统自动阻断。
+鎖只協調參與協議的操作。底層 `PathLockWrappedFS` 對 create、write、truncate、非遞迴 remove 使用 Exact，對 remove_all 使用 Tree；檔案 rename 鎖源和目標的 Exact，目錄 rename 鎖源 Tree 和目標 Exact。read、stat、列目錄和 mkdir 直接轉發，上層可另行持鎖。繞過協議的 I/O 不會被作業系統自動阻斷。
 
-## 锁机制
+## 鎖機制
 
-### Filesystem Provider 锁协议
+### Filesystem Provider 鎖協議
 
-锁类型由调用者选择，Resolver 根据目标状态决定 token 位置：
+鎖型別由呼叫者選擇，Resolver 根據目標狀態決定 token 位置：
 
-| 目标状态 | Exact token | Tree token |
+| 目標狀態 | Exact token | Tree token |
 | --- | --- | --- |
-| 现存文件 `/docs/a` | `/docs/.exact.ovlock.a.<hash>`，内容为 E | 同一 sidecar，内容为 T |
-| 现存目录 `/docs/a` | `/docs/a/.path.ovlock`，内容为 E | 同一目录内文件，内容为 T |
-| 缺失路径 `/docs/a` | 父目录 sidecar，内容为 E | 创建目标目录后写内部 `.path.ovlock`，内容为 T |
+| 現存檔案 `/docs/a` | `/docs/.exact.ovlock.a.<hash>`，內容為 E | 同一 sidecar，內容為 T |
+| 現存目錄 `/docs/a` | `/docs/a/.path.ovlock`，內容為 E | 同一目錄內檔案，內容為 T |
+| 缺失路徑 `/docs/a` | 父目錄 sidecar，內容為 E | 建立目標目錄後寫內部 `.path.ovlock`，內容為 T |
 
-sidecar 位于目标旁边，但只代表该目标，不会锁住整个父目录。`<hash>` 来自完整后端路径的 SHA-1 前缀，与业务文件内容无关。
+sidecar 位於目標旁邊，但只代表該目標，不會鎖住整個父目錄。`<hash>` 來自完整後端路徑的 SHA-1 字首，與業務檔案內容無關。
 
-`.exact.ovlock.*` 可以存 Tree token，`.path.ovlock` 也可以存 Exact token。文件名是存储协议的一部分，不能单凭名字判断逻辑锁类型。token 内容为：
+`.exact.ovlock.*` 可以存 Tree token，`.path.ovlock` 也可以存 Exact token。檔名是儲存協議的一部分，不能單憑名字判斷邏輯鎖型別。token 內容為：
 
 ```text
 {owner_id}:{time_ns}:{lock_type}
 ```
 
-`lock_type` 为 `E` 或 `T`。该归属 token 用于竞争检查、续期和条件释放，不代表所有业务写入都有存储端 fencing 校验。
+`lock_type` 為 `E` 或 `T`。該歸屬 token 用於競爭檢查、續期和條件釋放，不代表所有業務寫入都有儲存端 fencing 校驗。
 
-lease 将逻辑范围 `covered_paths` 与 token 位置 `lock_paths` 分开记录。Owned lease 控制续期、释放和交接；Borrowed lease 仅提供已有锁的覆盖证明，不能释放外层锁。
+lease 將邏輯範圍 `covered_paths` 與 token 位置 `lock_paths` 分開記錄。Owned lease 控制續期、釋放和交接；Borrowed lease 僅提供已有鎖的覆蓋證明，不能釋放外層鎖。
 
-### Cache Provider 锁协议
+### Cache Provider 鎖協議
 
-Cache Provider 将相同 token 格式存入 Redis HASH field，并通过 Lua
-原子完成整批冲突检查和写入：
+Cache Provider 將相同 token 格式存入 Redis HASH field，並通過 Lua
+原子完成整批衝突檢查和寫入：
 
 ```text
 field = logical_path
 value = owner_id:time_ns:lock_type
 ```
 
-HASH key 按路径 scope 隔离：
+HASH key 按路徑 scope 隔離：
 
 ```text
 ov:pathlock:{namespace}:global:tokens
@@ -318,128 +318,128 @@ ov:pathlock:{namespace}:scope:_system:tokens
 ov:pathlock:{namespace}:scope:account:{account}:tokens
 ```
 
-所有 key 都使用 `{namespace}` 作为 Redis Cluster hash tag。Exact 获取使用
-`HMGET` 读取目标和祖先；Tree 获取只对所属 scope 的 HASH 执行
-`HGETALL`。`/` 和 `/local` 的 global 锁不会扫描 account 或 `_system`
-HASH。跨 scope batch 会被拒绝。
+所有 key 都使用 `{namespace}` 作為 Redis Cluster hash tag。Exact 獲取使用
+`HMGET` 讀取目標和祖先；Tree 獲取只對所屬 scope 的 HASH 執行
+`HGETALL`。`/` 和 `/local` 的 global 鎖不會掃描 account 或 `_system`
+HASH。跨 scope batch 會被拒絕。
 
-### Filesystem 获取锁流程（EXACT 模式）
+### Filesystem 獲取鎖流程（EXACT 模式）
 
 ```
-循环直到超时（轮询间隔：200ms）：
-    1. 检查目标路径是否被其他操作锁定
-       - 陈旧锁？ -> 移除后重试
-       - 活跃锁？ -> 等待
-    2. 检查所有祖先目录是否有 TREE 锁
-       - 陈旧锁？ -> 移除后重试
-       - 活跃锁？ -> 等待
-    3. 确保锁文件所在父目录存在；如果不存在则创建目录
-    4. 写入 EXACT (E) 锁文件
-    5. TOCTOU 双重检查：重新扫描目标路径和祖先目录的 TREE 锁
-       - 发现冲突：比较 (timestamp, handle_id)
-       - 后到者（更大的 timestamp/handle_id）主动让步（删除自己的锁），防止活锁
-       - 等待后重试
-    6. 验证锁文件归属（fencing token 匹配）
+迴圈直到超時（輪詢間隔：200ms）：
+    1. 檢查目標路徑是否被其他操作鎖定
+       - 陳舊鎖？ -> 移除後重試
+       - 活躍鎖？ -> 等待
+    2. 檢查所有祖先目錄是否有 TREE 鎖
+       - 陳舊鎖？ -> 移除後重試
+       - 活躍鎖？ -> 等待
+    3. 確保鎖檔案所在父目錄存在；如果不存在則建立目錄
+    4. 寫入 EXACT (E) 鎖檔案
+    5. TOCTOU 雙重檢查：重新掃描目標路徑和祖先目錄的 TREE 鎖
+       - 發現衝突：比較 (timestamp, handle_id)
+       - 後到者（更大的 timestamp/handle_id）主動讓步（刪除自己的鎖），防止活鎖
+       - 等待後重試
+    6. 驗證鎖檔案歸屬（fencing token 匹配）
     7. 成功
 
-超时（默认 0 = 不等待）抛出 LockAcquisitionError
+超時（預設 0 = 不等待）丟擲 LockAcquisitionError
 ```
 
-### Filesystem 获取锁流程（TREE 模式）
+### Filesystem 獲取鎖流程（TREE 模式）
 
 ```
-循环直到超时（轮询间隔：200ms）：
-    1. 检查目标路径是否被其他操作锁定
-       - 陈旧锁？ -> 移除后重试
-       - 活跃锁？ -> 等待
-    2. 检查所有祖先目录是否有 TREE 锁
-       - 陈旧锁？ -> 移除后重试
-       - 活跃锁？ -> 等待
-    3. 扫描所有后代目录，检查是否有其他操作持有的锁
-       - 目标目录不存在？ -> 视为无后代锁
-       - 陈旧锁？ -> 移除后重试
-       - 活跃锁？ -> 等待
-    4. 确保 Resolver 选定的 token 父目录存在；缺失目标会因此被创建成目录
-    5. 写入 TREE (T) token（现存文件用 sidecar，其余用内部 .path.ovlock）
-    6. TOCTOU 双重检查：重新扫描后代目录和祖先目录
-       - 发现冲突：比较 (timestamp, handle_id)
-       - 后到者（更大的 timestamp/handle_id）主动让步（删除自己的锁），防止活锁
-       - 等待后重试
-    7. 验证锁文件归属（fencing token 匹配）
+迴圈直到超時（輪詢間隔：200ms）：
+    1. 檢查目標路徑是否被其他操作鎖定
+       - 陳舊鎖？ -> 移除後重試
+       - 活躍鎖？ -> 等待
+    2. 檢查所有祖先目錄是否有 TREE 鎖
+       - 陳舊鎖？ -> 移除後重試
+       - 活躍鎖？ -> 等待
+    3. 掃描所有後代目錄，檢查是否有其他操作持有的鎖
+       - 目標目錄不存在？ -> 視為無後代鎖
+       - 陳舊鎖？ -> 移除後重試
+       - 活躍鎖？ -> 等待
+    4. 確保 Resolver 選定的 token 父目錄存在；缺失目標會因此被建立成目錄
+    5. 寫入 TREE (T) token（現存檔案用 sidecar，其餘用內部 .path.ovlock）
+    6. TOCTOU 雙重檢查：重新掃描後代目錄和祖先目錄
+       - 發現衝突：比較 (timestamp, handle_id)
+       - 後到者（更大的 timestamp/handle_id）主動讓步（刪除自己的鎖），防止活鎖
+       - 等待後重試
+    7. 驗證鎖檔案歸屬（fencing token 匹配）
     8. 成功
 
-超时（默认 0 = 不等待）抛出 LockAcquisitionError
+超時（預設 0 = 不等待）丟擲 LockAcquisitionError
 ```
 
-### 缺失目录创建规则
+### 缺失目錄建立規則
 
-锁系统允许为了放置锁文件而创建目录，但创建前必须先检查冲突：
+鎖系統允許為了放置鎖檔案而建立目錄，但建立前必須先檢查衝突：
 
 ```
-1. 发现祖先 TreeLock / 同路径锁 / 后代锁冲突 -> 不创建目录，直接失败或等待
-2. 当前无冲突 -> 可以创建目录并写锁
-3. 写锁后再次检查时发现新冲突 -> 删除自己的锁并失败或重试
-4. 第 3 步不会回滚刚创建的空目录
+1. 發現祖先 TreeLock / 同路徑鎖 / 後代鎖衝突 -> 不建立目錄，直接失敗或等待
+2. 當前無衝突 -> 可以建立目錄並寫鎖
+3. 寫鎖後再次檢查時發現新衝突 -> 刪除自己的鎖並失敗或重試
+4. 第 3 步不會回滾剛建立的空目錄
 ```
 
 例子：
 
 ```text
-请求 A 正在删除 viking://resources/books
+請求 A 正在刪除 viking://resources/books
 => A 持有 TreeLock(/resources/books)
 
-请求 B 想添加 viking://resources/books/java-guide
-=> B 在创建 java-guide 目录前发现祖先 TreeLock
-=> B 不创建目录，返回 busy
+請求 B 想新增 viking://resources/books/java-guide
+=> B 在建立 java-guide 目錄前發現祖先 TreeLock
+=> B 不建立目錄，返回 busy
 ```
 
-如果两个请求同时创建 `java-guide`，两边都可能先看到“当前无冲突”，但最终只有
-fencing token 校验通过的一方成功持有 `TreeLock(java-guide)`；失败方会删除自己的锁，
-已创建出来的空目录可以保留。
+如果兩個請求同時建立 `java-guide`，兩邊都可能先看到“當前無衝突”，但最終只有
+fencing token 校驗通過的一方成功持有 `TreeLock(java-guide)`；失敗方會刪除自己的鎖，
+已創建出來的空目錄可以保留。
 
-获取失败的回滚和正常释放只清理 token，不保证删除为存放 token 创建的目录。Exact sidecar 也可能创建缺失的父目录链。Snapshot 对缺失目标采用单独的策略，见 [快照的范围与并发](../guides/15-snapshot.md#提交范围与并发)。
+獲取失敗的回滾和正常釋放只清理 token，不保證刪除為存放 token 建立的目錄。Exact sidecar 也可能建立缺失的父目錄鏈。Snapshot 對缺失目標採用單獨的策略，見 [快照的範圍與併發](../guides/15-snapshot.md#提交範圍與併發)。
 
-### 锁过期清理
+### 鎖過期清理
 
-**自动续期**：Rust PathLockManager 每隔 `lock_expire / 3` 刷新活跃 lease；默认过期时间为 30 秒，不是业务操作的最长运行时间。进程退出后续期停止。
+**自動續期**：Rust PathLockManager 每隔 `lock_expire / 3` 重新整理活躍 lease；預設過期時間為 30 秒，不是業務操作的最長執行時間。程序退出後續期停止。
 
-**陈旧锁检测**：PathLockEngine 检查归属 token 中的时间戳。超过 `lock_expire`（默认 30s）的锁被视为陈旧锁，在加锁过程中自动移除。
+**陳舊鎖檢測**：PathLockEngine 檢查歸屬 token 中的時間戳。超過 `lock_expire`（預設 30s）的鎖被視為陳舊鎖，在加鎖過程中自動移除。
 
-**进程内清理**：Rust PathLockManager 在续期循环中检查长期未成功续期的 lease，以 `2 × lock_expire` 为阈值尝试清理，并校验归属后释放 token。
+**程序內清理**：Rust PathLockManager 在續期迴圈中檢查長期未成功續期的 lease，以 `2 × lock_expire` 為閾值嘗試清理，並校驗歸屬後釋放 token。
 
-**孤儿锁**：进程崩溃后遗留的 Provider token，在后续 acquire 检查同一路径或 scope 时通过 stale lock 检测自动移除。
+**孤兒鎖**：程序崩潰後遺留的 Provider token，在後續 acquire 檢查同一路徑或 scope 時通過 stale lock 檢測自動移除。
 
-## 崩溃恢复
+## 崩潰恢復
 
-服务启动后，QueueManager 会继续消费持久化的 `session_commit` 任务：
+服務啟動後，QueueManager 會繼續消費持久化的 `session_commit` 任務：
 
-| 场景 | 恢复方式 |
+| 場景 | 恢復方式 |
 |------|---------|
-| session_memory 提取中途崩溃 | 从 archive 恢复 Phase 2 并继续消费 `session_commit` 任务 |
-| 锁持有期间崩溃 | Provider token 保留，后续匹配的 acquire 通过 stale 检测自动清理（默认 30s 过期）|
-| enqueue 后 worker 处理前崩溃 | QueueFS SQLite 持久化，worker 重启后自动拉取 |
-| 孤儿索引 | L2 按需加载时清理 |
+| session_memory 提取中途崩潰 | 從 archive 恢復 Phase 2 並繼續消費 `session_commit` 任務 |
+| 鎖持有期間崩潰 | Provider token 保留，後續匹配的 acquire 通過 stale 檢測自動清理（預設 30s 過期）|
+| enqueue 後 worker 處理前崩潰 | QueueFS SQLite 持久化，worker 重啟後自動拉取 |
+| 孤兒索引 | L2 按需載入時清理 |
 
-### 防线总结
+### 防線總結
 
-| 异常场景 | 防线 | 恢复时机 |
+| 異常場景 | 防線 | 恢復時機 |
 |---------|------|---------|
-| 操作中途崩溃 | 锁自动过期 + stale 检测 | 下次获取同路径锁时 |
-| add_resource 语义处理中途崩溃 | 生命周期锁过期 + SemanticProcessor 重启时重新获取 | worker 重启后 |
-| session.commit Phase 2 崩溃 | 持久化 `session_commit` 队列 + 重试消费 | 重启时 |
-| enqueue 后 worker 处理前崩溃 | QueueFS SQLite 持久化 | worker 重启后 |
-| 孤儿索引 | L2 按需加载时清理 | 用户访问时 |
+| 操作中途崩潰 | 鎖自動過期 + stale 檢測 | 下次獲取同路徑鎖時 |
+| add_resource 語義處理中途崩潰 | 生命週期鎖過期 + SemanticProcessor 重啟時重新獲取 | worker 重啟後 |
+| session.commit Phase 2 崩潰 | 持久化 `session_commit` 佇列 + 重試消費 | 重啟時 |
+| enqueue 後 worker 處理前崩潰 | QueueFS SQLite 持久化 | worker 重啟後 |
+| 孤兒索引 | L2 按需載入時清理 | 使用者訪問時 |
 
 ## 配置
 
-路径锁默认启用，并使用 `filesystem` Provider。多进程通过 Redis 协调时，
-设置 `storage.agfs.pathlock.provider=cache`。Cache PathLock 要求配置顶层
-Redis Cache Provider 和非空 PathLock namespace。运行时等待超时固定为
-`0.0` 秒。`storage.transaction` 仅保留为兼容旧配置：`lock_timeout`
-已废弃且会被忽略，`lock_expire` 会在未显式配置新字段时自动映射，
-`redo_recovery_enabled` 已废弃且会被忽略。
+路徑鎖預設啟用，並使用 `filesystem` Provider。多程序通過 Redis 協調時，
+設定 `storage.agfs.pathlock.provider=cache`。Cache PathLock 要求配置頂層
+Redis Cache Provider 和非空 PathLock namespace。執行時等待超時固定為
+`0.0` 秒。`storage.transaction` 僅保留為相容舊配置：`lock_timeout`
+已廢棄且會被忽略，`lock_expire` 會在未顯式配置新欄位時自動對映，
+`redo_recovery_enabled` 已廢棄且會被忽略。
 
-推荐写法：
+推薦寫法：
 
 ```json
 {
@@ -477,13 +477,13 @@ Redis 配置：
 }
 ```
 
-| 参数 | 类型 | 说明 | 默认值 |
+| 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory` 或 `cache` | `filesystem` |
-| `namespace` | str 或 null | `provider=cache` 时必填，用于标识一个 OpenViking 部署 | `null` |
-| `lock_expire_secs` | float | 未刷新的锁进入 stale 状态前的秒数 | `30.0` |
+| `namespace` | str 或 null | `provider=cache` 時必填，用於標識一個 OpenViking 部署 | `null` |
+| `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數 | `30.0` |
 
-兼容旧写法：
+相容舊寫法：
 
 ```json
 {
@@ -495,18 +495,18 @@ Redis 配置：
 }
 ```
 
-| 参数 | 类型 | 说明 | 默认值 |
+| 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `lock_timeout` | float | 已废弃且忽略。运行时等待超时固定为 `0.0`。 | `0.0` |
-| `lock_expire` | float | 已废弃。改用 `storage.agfs.pathlock.lock_expire_secs`。 | `30.0` |
+| `lock_timeout` | float | 已廢棄且忽略。執行時等待超時固定為 `0.0`。 | `0.0` |
+| `lock_expire` | float | 已廢棄。改用 `storage.agfs.pathlock.lock_expire_secs`。 | `30.0` |
 
 ### QueueFS 持久化
 
-路径锁机制依赖 QueueFS 使用 SQLite 后端，确保 enqueue 的任务在进程重启后可恢复。这是默认配置，无需手动设置。
+路徑鎖機制依賴 QueueFS 使用 SQLite 後端，確保 enqueue 的任務在程序重啟後可恢復。這是預設配置，無需手動設定。
 
-## 相关文档
+## 相關文件
 
-- [架构概述](./01-architecture.md) - 系统整体架构
-- [存储架构](./05-storage.md) - AGFS 和向量库
-- [会话管理](./08-session.md) - 会话和记忆管理
-- [配置](../guides/01-configuration.md) - 配置文件说明
+- [架構概述](./01-architecture.md) - 系統整體架構
+- [儲存架構](./05-storage.md) - AGFS 和向量庫
+- [會話管理](./08-session.md) - 會話和記憶管理
+- [配置](../guides/01-configuration.md) - 配置檔案說明

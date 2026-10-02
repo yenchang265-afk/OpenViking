@@ -1,8 +1,8 @@
 """
 OpenViking Filesystem Mount Module - Core Implementation
 
-这个模块将OpenViking的虚拟文件系统挂载到本地文件系统路径，
-让用户可以像操作普通文件一样操作OpenViking上的数据。
+這個模組將OpenViking的虛擬檔案系統掛載到本地檔案系統路徑，
+讓使用者可以像操作普通檔案一樣操作OpenViking上的資料。
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ import openviking as ov
 
 
 class MountScope(Enum):
-    """OpenViking挂载作用域"""
+    """OpenViking掛載作用域"""
 
     RESOURCES = "resources"
     SESSION = "session"
@@ -28,15 +28,15 @@ class MountScope(Enum):
 
 @dataclass
 class MountConfig:
-    """挂载配置"""
+    """掛載配置"""
 
-    mount_point: Path  # 挂载点路径
-    openviking_data_path: Path  # FUSE 本地缓存路径
-    session_id: Optional[str] = None  # 会话ID（如果是session作用域）
-    scope: MountScope = MountScope.RESOURCES  # 挂载作用域
-    auto_init: bool = True  # 是否自动初始化
-    read_only: bool = False  # 是否只读模式
-    async_add_resource: bool = False  # 是否异步执行add_resource
+    mount_point: Path  # 掛載點路徑
+    openviking_data_path: Path  # FUSE 本地快取路徑
+    session_id: Optional[str] = None  # 會話ID（如果是session作用域）
+    scope: MountScope = MountScope.RESOURCES  # 掛載作用域
+    auto_init: bool = True  # 是否自動初始化
+    read_only: bool = False  # 是否只讀模式
+    async_add_resource: bool = False  # 是否非同步執行add_resource
 
 
 @dataclass
@@ -45,44 +45,44 @@ class FileInfo:
 
     uri: str  # OpenViking URI
     name: str  # 文件名
-    is_dir: bool  # 是否是目录
+    is_dir: bool  # 是否是目錄
     size: int = 0  # 文件大小
-    modified_at: float = 0.0  # 修改时间
+    modified_at: float = 0.0  # 修改時間
     abstract: Optional[str] = None  # L0摘要（如果有）
-    overview: Optional[str] = None  # L1概览（如果有）
+    overview: Optional[str] = None  # L1概覽（如果有）
 
 
 class OpenVikingMount:
     """
-    OpenViking文件系统挂载类
+    OpenViking檔案系統掛載類
 
-    将OpenViking的虚拟文件系统映射到本地文件系统操作
+    將OpenViking的虛擬檔案系統對映到本地檔案系統操作
     """
 
     def __init__(self, config: MountConfig):
         """
-        初始化OpenViking挂载
+        初始化OpenViking掛載
 
         Args:
-            config: 挂载配置
+            config: 掛載配置
         """
         self.config = config
         self._client: Optional[ov.SyncHTTPClient] = None
         self._initialized = False
         self._mount_point_created = False
 
-        # 确保挂载点存在
+        # 確保掛載點存在
         self._ensure_mount_point()
 
     def _ensure_mount_point(self) -> None:
-        """确保挂载点目录存在"""
+        """確保掛載點目錄存在"""
         if not self.config.mount_point.exists():
             self.config.mount_point.mkdir(parents=True, exist_ok=True)
             self._mount_point_created = True
             logger.info(f"Created mount point: {self.config.mount_point}")
 
     def initialize(self) -> None:
-        """初始化OpenViking客户端"""
+        """初始化OpenViking客戶端"""
         if self._initialized:
             return
 
@@ -98,7 +98,7 @@ class OpenVikingMount:
         logger.info("OpenViking initialized successfully")
 
     def _ensure_client(self) -> None:
-        """确保客户端已初始化"""
+        """確保客戶端已初始化"""
         if not self._initialized:
             if self.config.auto_init:
                 self.initialize()
@@ -107,73 +107,73 @@ class OpenVikingMount:
 
     @property
     def client(self) -> Optional[ov.SyncHTTPClient]:
-        """获取底层OpenViking客户端"""
+        """獲取底層OpenViking客戶端"""
         return self._client
 
     def _uri_to_path(self, uri: str) -> Path:
         """
-        将OpenViking URI转换为本地文件路径
+        將OpenViking URI轉換為本地檔案路徑
 
         Args:
             uri: OpenViking URI (e.g., viking://resources/path/to/file)
 
         Returns:
-            本地文件路径
+            本地檔案路徑
         """
         # 解析URI
         if uri.startswith("viking://"):
             uri = uri[len("viking://") :]
 
-        # 处理作用域
+        # 處理作用域
         parts = uri.split("/", 1)
         if len(parts) == 2:
             scope, rest = parts
         else:
             scope, rest = parts[0], ""
 
-        # 根据配置的作用域过滤
+        # 根據配置的作用域過濾
         if self.config.scope != MountScope.ALL:
             if scope != self.config.scope.value:
-                # 如果不是目标作用域，可能需要调整路径
+                # 如果不是目標作用域，可能需要調整路徑
                 pass
 
-        # 构建本地路径
+        # 構建本地路徑
         return self.config.mount_point / scope / rest
 
     def _path_to_uri(self, path: Union[str, Path]) -> str:
         """
-        将本地文件路径转换为OpenViking URI
+        將本地檔案路徑轉換為OpenViking URI
 
         Args:
-            path: 本地文件路径
+            path: 本地檔案路徑
 
         Returns:
             OpenViking URI
         """
         path = Path(path)
 
-        # 获取相对于挂载点的路径
+        # 獲取相對於掛載點的路徑
         try:
             rel_path = path.relative_to(self.config.mount_point)
         except ValueError:
-            # 如果不在挂载点下，假设是相对于挂载点的路径
+            # 如果不在掛載點下，假設是相對於掛載點的路徑
             rel_path = path
 
-        # 构建URI
+        # 構建URI
         return f"viking://{rel_path}"
 
     def _get_scope_root_uri(self) -> str:
-        """获取当前作用域的根URI"""
+        """獲取當前作用域的根URI"""
         if self.config.scope == MountScope.ALL:
             return "viking://"
         return f"viking://{self.config.scope.value}"
 
     def list_dir(self, path: Union[str, Path]) -> List[FileInfo]:
         """
-        列出目录内容
+        列出目錄內容
 
         Args:
-            path: 本地目录路径
+            path: 本地目錄路徑
 
         Returns:
             文件信息列表
@@ -191,14 +191,14 @@ class OpenVikingMount:
 
         file_infos = []
         for item in items:
-            # 解析ls返回的项目
-            # 假设返回格式是字典或对象，需要根据实际API调整
+            # 解析ls返回的專案
+            # 假設返回格式是字典或物件，需要根據實際API調整
             if isinstance(item, dict):
                 name = item.get("name", "")
                 is_dir = item.get("is_dir", False)
                 item_uri = item.get("uri", "")
             else:
-                # 简单处理
+                # 簡單處理
                 name = str(item)
                 is_dir = False
                 item_uri = f"{uri.rstrip('/')}/{name}"
@@ -210,13 +210,13 @@ class OpenVikingMount:
 
     def read_file(self, path: Union[str, Path]) -> str:
         """
-        读取文件内容
+        讀取檔案內容
 
         Args:
-            path: 本地文件路径
+            path: 本地檔案路徑
 
         Returns:
-            文件内容
+            檔案內容
         """
         self._ensure_client()
 
@@ -231,35 +231,35 @@ class OpenVikingMount:
 
     def write_file(self, path: Union[str, Path], content: str) -> None:
         """
-        写入文件内容
+        寫入檔案內容
 
         Args:
-            path: 本地文件路径
-            content: 文件内容
+            path: 本地檔案路徑
+            content: 檔案內容
         """
         if self.config.read_only:
             raise PermissionError("Mount is read-only")
 
         self._ensure_client()
 
-        # 注意：OpenViking的add_resource主要用于添加外部资源
-        # 对于直接写入，可能需要不同的方法
-        # 这里我们先实现一个简化版本
+        # 注意：OpenViking的add_resource主要用於新增外部資源
+        # 對於直接寫入，可能需要不同的方法
+        # 這裡我們先實現一個簡化版本
         logger.warning("Direct file write is limited in OpenViking. Using add_resource approach.")
 
         uri = self._path_to_uri(path)
         logger.debug(f"Writing file: {uri}")
 
-        # 这种情况下，我们可能需要先写入临时文件，然后add_resource
+        # 這種情況下，我們可能需要先寫入臨時檔案，然後add_resource
         # 或者使用其他方法
         raise NotImplementedError("Direct file write requires special handling in OpenViking")
 
     def mkdir(self, path: Union[str, Path]) -> None:
         """
-        创建目录
+        建立目錄
 
         Args:
-            path: 本地目录路径
+            path: 本地目錄路徑
         """
         if self.config.read_only:
             raise PermissionError("Mount is read-only")
@@ -277,11 +277,11 @@ class OpenVikingMount:
 
     def delete(self, path: Union[str, Path], recursive: bool = False) -> None:
         """
-        删除文件或目录
+        刪除檔案或目錄
 
         Args:
-            path: 本地文件路径
-            recursive: 是否递归删除
+            path: 本地檔案路徑
+            recursive: 是否遞迴刪除
         """
         if self.config.read_only:
             raise PermissionError("Mount is read-only")
@@ -299,14 +299,14 @@ class OpenVikingMount:
 
     def search(self, query: str, target_path: Optional[Union[str, Path]] = None) -> List[FileInfo]:
         """
-        语义搜索
+        語義搜尋
 
         Args:
-            query: 搜索查询
-            target_path: 搜索目标路径
+            query: 搜尋查詢
+            target_path: 搜尋目標路徑
 
         Returns:
-            搜索结果文件信息列表
+            搜尋結果檔案資訊列表
         """
         self._ensure_client()
 
@@ -325,7 +325,7 @@ class OpenVikingMount:
                 file_info = FileInfo(
                     uri=uri,
                     name=Path(uri).name,
-                    is_dir=False,  # 需要根据实际结果判断
+                    is_dir=False,  # 需要根據實際結果判斷
                 )
                 score = r.get("score") if isinstance(r, dict) else getattr(r, "score", None)
                 if score is not None:
@@ -344,12 +344,12 @@ class OpenVikingMount:
         wait: bool = True,
     ) -> str:
         """
-        添加资源到OpenViking
+        新增資源到OpenViking
 
         Args:
-            source_path: 源文件/目录路径
-            target_path: 目标路径（在OpenViking中）
-            wait: 是否等待语义提取和向量化完成
+            source_path: 原始檔/目錄路徑
+            target_path: 目標路徑（在OpenViking中）
+            wait: 是否等待語義提取和向量化完成
 
         Returns:
             根URI
@@ -374,13 +374,13 @@ class OpenVikingMount:
 
     def sync_to_disk(self, path: Optional[Union[str, Path]] = None) -> None:
         """
-        将OpenViking内容同步到磁盘
+        將OpenViking內容同步到磁碟
 
-        注意：这是一个简化的实现，用于演示目的
-        实际生产环境可能需要更复杂的同步机制
+        注意：這是一個簡化的實現，用於演示目的
+        實際生產環境可能需要更復雜的同步機制
 
         Args:
-            path: 要同步的路径，None表示同步全部
+            path: 要同步的路徑，None表示同步全部
         """
         self._ensure_client()
 
@@ -390,16 +390,16 @@ class OpenVikingMount:
 
         logger.info(f"Syncing {root_uri} to disk...")
 
-        # 这里实现一个简单的递归同步
+        # 這裡實現一個簡單的遞迴同步
         self._sync_recursive(root_uri, self.config.mount_point)
 
     def _sync_recursive(self, uri: str, local_path: Path) -> None:
-        """递归同步"""
+        """遞迴同步"""
         try:
-            # 列出目录内容
+            # 列出目錄內容
             items = self._client.ls(uri)
 
-            # 确保本地目录存在
+            # 確保本地目錄存在
             local_path.mkdir(parents=True, exist_ok=True)
 
             for item in items:
@@ -415,10 +415,10 @@ class OpenVikingMount:
                 item_local_path = local_path / name
 
                 if is_dir:
-                    # 递归处理子目录
+                    # 遞迴處理子目錄
                     self._sync_recursive(item_uri, item_local_path)
                 else:
-                    # 读取并写入文件
+                    # 讀取並寫入檔案
                     try:
                         content = self._client.read(item_uri)
                         item_local_path.write_text(content)
@@ -430,7 +430,7 @@ class OpenVikingMount:
             logger.warning(f"Failed to sync {uri}: {e}")
 
     def close(self) -> None:
-        """关闭挂载并释放资源"""
+        """關閉掛載並釋放資源"""
         if self._client and self._initialized:
             try:
                 self._client.close()

@@ -202,9 +202,9 @@ def build_session_messages(
 
 
 def parse_locomo_datetime(date_str: str) -> datetime | None:
-    """解析 LoCoMo 时间格式，如 '1:56 pm on 8 May, 2023'"""
+    """解析 LoCoMo 時間格式，如 '1:56 pm on 8 May, 2023'"""
     try:
-        # 移除时间部分，只保留日期 "8 May, 2023"
+        # 移除時間部分，只保留日期 "8 May, 2023"
         if " on " in date_str:
             date_part = date_str.split(" on ")[-1]
             return datetime.strptime(date_part.strip(), "%d %B, %Y")
@@ -214,7 +214,7 @@ def parse_locomo_datetime(date_str: str) -> datetime | None:
 
 
 def get_sample_question_time(sample: dict) -> str | None:
-    """从 sample 的 conversation 中提取最后一个有内容 session 的时间，返回 ISO 格式日期"""
+    """從 sample 的 conversation 中提取最後一個有內容 session 的時間，返回 ISO 格式日期"""
     conversation = sample.get("conversation", {})
 
     # 找所有 session_N 字段（非 date_time）
@@ -224,7 +224,7 @@ def get_sample_question_time(sample: dict) -> str | None:
     if not session_keys:
         return None
 
-    # 按 session 编号排序，找到最后一个有内容的
+    # 按 session 編號排序，找到最後一個有內容的
     def get_session_num(key):
         try:
             return int(key.replace("session_", ""))
@@ -234,8 +234,8 @@ def get_sample_question_time(sample: dict) -> str | None:
     session_keys.sort(key=get_session_num, reverse=True)
 
     for session_key in session_keys:
-        if conversation.get(session_key):  # 有内容
-            # 找到对应的 date_time
+        if conversation.get(session_key):  # 有內容
+            # 找到對應的 date_time
             session_num = get_session_num(session_key)
             dt_key = f"session_{session_num}_date_time"
             date_str = conversation.get(dt_key)
@@ -1176,8 +1176,8 @@ def save_record_to_csv(csv_path: str, record: dict) -> None:
     flat_record["total_tokens"] = usage.get("total_tokens", 0)
     flat_record["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
     flat_record["jsonl_filename"] = flat_record.get("jsonl_filename", "")
-    flat_record["result"] = ""  # 默认为空，由 judge.py 填充
-    flat_record["reasoning"] = ""  # 默认为空，由 judge.py 填充
+    flat_record["result"] = ""  # 預設為空，由 judge.py 填充
+    flat_record["reasoning"] = ""  # 預設為空，由 judge.py 填充
 
     try:
         with open(csv_path, "a", encoding="utf-8", newline="") as f:
@@ -1209,7 +1209,7 @@ def run_qa(
 
     # Load already executed records from CSV
     csv_path = f"{args.output}.csv" if args.output else args.default_csv_path
-    # 确保输出目录存在
+    # 確保輸出目錄存在
     os.makedirs(os.path.dirname(csv_path), exist_ok=True)
     executed_records = load_executed_records(csv_path)
     print(
@@ -1296,7 +1296,7 @@ def parse_session_range(s: str) -> tuple[int, int]:
 
 
 def main():
-    # 基于脚本所在目录计算默认 CSV 路径
+    # 基於指令碼所在目錄計算預設 CSV 路徑
     script_dir = Path(__file__).parent.resolve()
     default_csv_path = str(script_dir / "result" / "qa_results.csv")
 
@@ -1380,7 +1380,7 @@ def main():
         help="Clear all existing ingest records before running",
     )
     args = parser.parse_args()
-    # 添加默认 CSV 路径到 args
+    # 新增預設 CSV 路徑到 args
     args.default_csv_path = default_csv_path
 
     if not args.token:

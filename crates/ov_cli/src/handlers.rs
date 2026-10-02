@@ -1000,7 +1000,7 @@ pub async fn handle_language(value: Option<String>) -> Result<()> {
             println!("{}", language_title(current));
             println!(
                 "{} {}",
-                theme::muted(language_label("Current:", "当前语言：", current)),
+                theme::muted(language_label("Current:", "當前語言：", current)),
                 theme::command(current.label()).bold()
             );
             println!();
@@ -1030,7 +1030,7 @@ pub async fn handle_language(value: Option<String>) -> Result<()> {
 fn language_title(language: Language) -> String {
     theme::brand_title(match language {
         Language::En => "OPENVIKING LANGUAGE".to_string(),
-        Language::ZhCn => "OPENVIKING 语言设置".to_string(),
+        Language::ZhCn => "OPENVIKING 語言設定".to_string(),
     })
     .bold()
     .to_string()
@@ -1039,7 +1039,7 @@ fn language_title(language: Language) -> String {
 fn language_prompt(language: Language) -> &'static str {
     match language {
         Language::En => "Choose language",
-        Language::ZhCn => "选择语言",
+        Language::ZhCn => "選擇語言",
     }
 }
 
@@ -1053,14 +1053,14 @@ fn language_label<'a>(en: &'a str, zh: &'a str, language: Language) -> &'a str {
 fn language_saved(language: Language) -> &'static str {
     match language {
         Language::En => "Language set to English.",
-        Language::ZhCn => "语言已切换为简体中文。",
+        Language::ZhCn => "語言已切換為繁體中文。",
     }
 }
 
 fn language_no_change(language: Language) -> &'static str {
     match language {
         Language::En => "Language was not changed.",
-        Language::ZhCn => "语言未更改。",
+        Language::ZhCn => "語言未更改。",
     }
 }
 
@@ -1105,7 +1105,7 @@ async fn handle_config_switch() -> Result<()> {
         let labels = config_command_ui::switch_labels(&rows);
         let language = Language::current();
         let index = match prompt_select(
-            config_switch_prompt(language, "Choose config", "选择配置"),
+            config_switch_prompt(language, "Choose config", "選擇配置"),
             &labels,
             0,
         )? {
@@ -1339,7 +1339,7 @@ fn contains_ansi_escape(value: &str) -> bool {
 fn select_hint(language: Language) -> &'static str {
     match language {
         Language::En => "↑/↓ choose · Enter select · Esc back · Ctrl+C exit",
-        Language::ZhCn => "↑/↓ 选择 · Enter 确认 · Esc 返回 · Ctrl+C 退出",
+        Language::ZhCn => "↑/↓ 選擇 · Enter 確認 · Esc 返回 · Ctrl+C 退出",
     }
 }
 
@@ -1350,7 +1350,7 @@ fn config_switch_prompt<'a>(language: Language, en: &'a str, zh: &'a str) -> &'a
 fn config_switch_confirm_prompt(language: Language, name: &str) -> String {
     match language {
         Language::En => format!("Switch active config to {name}?"),
-        Language::ZhCn => format!("切换当前配置为 {name}？"),
+        Language::ZhCn => format!("切換當前配置為 {name}？"),
     }
 }
 
@@ -1364,14 +1364,14 @@ fn config_not_changed(language: Language) -> &'static str {
 fn config_already_active(language: Language, name: &str) -> String {
     match language {
         Language::En => format!("Config '{name}' is already active."),
-        Language::ZhCn => format!("配置 '{name}' 已是当前配置。"),
+        Language::ZhCn => format!("配置 '{name}' 已是當前配置。"),
     }
 }
 
 fn validating_target_config(language: Language) -> &'static str {
     match language {
         Language::En => "Validating target config...",
-        Language::ZhCn => "正在验证目标配置...",
+        Language::ZhCn => "正在驗證目標配置...",
     }
 }
 

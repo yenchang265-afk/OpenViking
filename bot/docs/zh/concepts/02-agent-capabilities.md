@@ -1,166 +1,166 @@
-# Agent 能力体系
+# Agent 能力體系
 
-VikingBot 的 Agent 能力由上下文、Skill、工具、沙箱和自动化共同组成。上下文告诉模型“当前是谁、知道什么、应该怎么做”，工具和沙箱决定它“实际能做什么”。
+VikingBot 的 Agent 能力由上下文、Skill、工具、沙箱和自動化共同組成。上下文告訴模型“當前是誰、知道什麼、應該怎麼做”，工具和沙箱決定它“實際能做什麼”。
 
-## 上下文构建
+## 上下文構建
 
-ContextBuilder 按以下顺序组织模型输入：
+ContextBuilder 按以下順序組織模型輸入：
 
 ```text
 Bot 身份
-  + 沙箱环境说明
-  + 工作区启动文件
-  + Always Skill 完整内容
+  + 沙箱環境說明
+  + 工作區啟動檔案
+  + Always Skill 完整內容
   + 可用 Skill 摘要
-  + OpenViking Profile、记忆和经验
-  + 本地或压缩后的会话历史
-  + 本轮文本与媒体
+  + OpenViking Profile、記憶和經驗
+  + 本地或壓縮後的會話歷史
+  + 本輪文本與媒體
 ```
 
-工作区启动文件提供稳定身份和运行规则。图片等媒体会转换为 Provider 支持的多模态内容块。
+工作區啟動檔案提供穩定身份和執行規則。圖片等媒體會轉換為 Provider 支援的多模態內容塊。
 
-## Skill 与工具
+## Skill 與工具
 
 | 概念 | 作用 | 形式 |
 |------|------|------|
-| **Skill** | 告诉 Agent 如何完成一类任务 | `SKILL.md` 指令和资源 |
-| **Tool** | 让 Agent执行具体操作 | 注册给模型的 JSON Schema 函数 |
+| **Skill** | 告訴 Agent 如何完成一類任務 | `SKILL.md` 指令和資源 |
+| **Tool** | 讓 Agent執行具體操作 | 註冊給模型的 JSON Schema 函式 |
 
-Skill 采用渐进式加载：本地 Always Skill 每轮注入完整内容，其他本地 Skill 只注入摘要，需要时用 `read_file` 读取；启用 OpenViking 工具后，远程 Skill 按用户问题召回摘要，再用 `openviking_multi_read` 读取并激活。本地依赖用于过滤摘要，远程依赖在执行沙箱检查。完整用法和元数据字段见 [Skills](./06-skills.md)。
+Skill 採用漸進式載入：本地 Always Skill 每輪注入完整內容，其他本地 Skill 只注入摘要，需要時用 `read_file` 讀取；啟用 OpenViking 工具後，遠端 Skill 按使用者問題召回摘要，再用 `openviking_multi_read` 讀取並激活。本地依賴用於過濾摘要，遠端依賴在執行沙箱檢查。完整用法和後設資料欄位見 [Skills](./06-skills.md)。
 
-Skill 可以编排多个工具，但不会自动获得额外权限。工具是否可见仍由运行模式、渠道设置、请求参数和沙箱决定。
+Skill 可以編排多個工具，但不會自動獲得額外許可權。工具是否可見仍由執行模式、渠道設定、請求引數和沙箱決定。
 
-## 默认工具
+## 預設工具
 
-| 类别 | 工具 | 作用 |
+| 類別 | 工具 | 作用 |
 |------|------|------|
-| 文件 | `read_file`、`write_file`、`edit_file`、`list_dir` | 操作工作区文件 |
-| 命令 | `exec` | 在沙箱后端执行 shell 命令 |
-| 网络 | `web_search`、`web_fetch` | 搜索和读取网页 |
-| OpenViking | `openviking_list/search/grep/glob/multi_read` | 浏览、检索和读取上下文 |
-| OpenViking | `openviking_add_resource`、`openviking_memory_commit` | 添加资源和提交记忆 |
-| 对外操作 | `message`、`generate_image` | 主动发送消息或生成图片 |
-| 自动化 | `cron` | 管理定时 Agent 任务，默认关闭 |
-| 并行任务 | `spawn` | 启动后台子 Agent |
+| 檔案 | `read_file`、`write_file`、`edit_file`、`list_dir` | 操作工作區檔案 |
+| 命令 | `exec` | 在沙箱後端執行 shell 命令 |
+| 網路 | `web_search`、`web_fetch` | 搜尋和讀取網頁 |
+| OpenViking | `openviking_list/search/grep/glob/multi_read` | 瀏覽、檢索和讀取上下文 |
+| OpenViking | `openviking_add_resource`、`openviking_memory_commit` | 新增資源和提交記憶 |
+| 對外操作 | `message`、`generate_image` | 主動傳送訊息或生成圖片 |
+| 自動化 | `cron` | 管理定時 Agent 任務，預設關閉 |
+| 並行任務 | `spawn` | 啟動後臺子 Agent |
 
-ToolRegistry 负责注册、参数校验、执行和 Hook。ToolContext 为每次调用提供当前 SessionKey、发送者身份、渠道 metadata、沙箱和已认证的 OpenViking 连接。
+ToolRegistry 負責註冊、引數校驗、執行和 Hook。ToolContext 為每次呼叫提供當前 SessionKey、傳送者身份、渠道 metadata、沙箱和已認證的 OpenViking 連線。
 
-OpenAPI 的 `disabled_tools` 可以按请求隐藏工具；渠道的 `ov_tools_enable=false` 会隐藏 OpenViking 工具并关闭自动记忆上下文；`readonly` 模式不注册资源写入工具。
+OpenAPI 的 `disabled_tools` 可以按請求隱藏工具；渠道的 `ov_tools_enable=false` 會隱藏 OpenViking 工具並關閉自動記憶上下文；`readonly` 模式不註冊資源寫入工具。
 
-## MCP 扩展
+## MCP 擴充
 
-`bot.tools.mcp_servers` 可以连接外部 MCP Server，支持 `stdio`、`sse` 和 `streamableHttp`。远端工具会包装为普通 VikingBot Tool，并以 `mcp_<server>_<tool>` 名称注册。
+`bot.tools.mcp_servers` 可以連線外部 MCP Server，支援 `stdio`、`sse` 和 `streamableHttp`。遠端工具會包裝為普通 VikingBot Tool，並以 `mcp_<server>_<tool>` 名稱註冊。
 
-每个 MCP Server 可以配置：
+每個 MCP Server 可以配置：
 
-- 启动命令或远端 URL；
-- 环境变量和请求头；
-- `enabled_tools` 工具白名单；
-- `tool_timeout` 单次调用超时。
+- 啟動命令或遠端 URL；
+- 環境變數和請求頭；
+- `enabled_tools` 工具白名單；
+- `tool_timeout` 單次呼叫超時。
 
-MCP 参数 Schema 会先做兼容转换，再交给模型和 ToolRegistry。
+MCP 引數 Schema 會先做相容轉換，再交給模型和 ToolRegistry。
 
 ## 子 Agent
 
-主 Agent 使用 `spawn` 把独立任务交给 SubagentManager。子 Agent 共享模型和对应工作区，但使用受限工具集：
+主 Agent 使用 `spawn` 把獨立任務交給 SubagentManager。子 Agent 共享模型和對應工作區，但使用受限工具集：
 
 - 保留文件、命令和 Web 工具；
-- 不提供 `message`，避免直接对外发送；
-- 不提供 `spawn`，避免递归创建子 Agent；
-- 不提供 Cron、图片生成和 OpenViking 工具。
+- 不提供 `message`，避免直接對外發送；
+- 不提供 `spawn`，避免遞迴建立子 Agent；
+- 不提供 Cron、圖片生成和 OpenViking 工具。
 
-子 Agent 完成后把结果通知主会话，由主 Agent 负责身份相关操作和最终交付。
+子 Agent 完成後把結果通知主會話，由主 Agent 負責身份相關操作和最終交付。
 
-## Workspace 与 Agent 定制
+## Workspace 與 Agent 定製
 
-Workspace 同时承担两个职责：一是保存构成 Agent 系统提示的启动文件和 Skill，二是作为文件与命令工具的本地工作目录。它与通过 `openviking_*` 工具访问的 OpenViking Workspace 相互独立。
+Workspace 同時承擔兩個職責：一是儲存構成 Agent 系統提示的啟動檔案和 Skill，二是作為檔案與命令工具的本地工作目錄。它與通過 `openviking_*` 工具訪問的 OpenViking Workspace 相互獨立。
 
-### 路径与隔离范围
+### 路徑與隔離範圍
 
-Workspace 根目录是 `<storage.workspace>/bot/workspace`；未配置 `storage.workspace` 时，默认为 `~/.openviking/data/bot/workspace`。`vikingbot status` 会显示解析后的根目录。
+Workspace 根目錄是 `<storage.workspace>/bot/workspace`；未配置 `storage.workspace` 時，預設為 `~/.openviking/data/bot/workspace`。`vikingbot status` 會顯示解析後的根目錄。
 
-ContextBuilder 实际读取按 `sandbox.mode` 选择的活动 Workspace：
+ContextBuilder 實際讀取按 `sandbox.mode` 選擇的活動 Workspace：
 
-| 模式 | 活动目录 |
+| 模式 | 活動目錄 |
 |------|----------|
 | `shared` | `<workspace>/shared` |
 | `per-session` | `<workspace>/<session-key>` |
 | `per-channel` | `<workspace>/<channel-key>` |
 
-因此，默认 `shared` 模式下，应定制 `<workspace>/shared` 中的文件，而不是直接修改 Workspace 根目录。
+因此，預設 `shared` 模式下，應定製 `<workspace>/shared` 中的檔案，而不是直接修改 Workspace 根目錄。
 
-### 启动文件
+### 啟動檔案
 
-ContextBuilder 在每轮构建系统提示时，按 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md` 的顺序读取存在且非空的文件：
+ContextBuilder 在每輪構建系統提示時，按 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md` 的順序讀取存在且非空的檔案：
 
-| 文件 | 适合定义的内容 |
+| 檔案 | 適合定義的內容 |
 |------|----------------|
-| `AGENTS.md` | 全局工作方式、任务流程、输出约束和必须遵守的项目规则 |
-| `SOUL.md` | 人格、价值观、语气、回答风格和默认行为偏好 |
-| `TOOLS.md` | 工具选择原则、调用顺序、副作用确认和安全边界 |
-| `IDENTITY.md` | Agent 名称、角色、职责范围和身份背景 |
+| `AGENTS.md` | 全域工作方式、任務流程、輸出約束和必須遵守的專案規則 |
+| `SOUL.md` | 人格、價值觀、語氣、回答風格和預設行為偏好 |
+| `TOOLS.md` | 工具選擇原則、呼叫順序、副作用確認和安全邊界 |
+| `IDENTITY.md` | Agent 名稱、角色、職責範圍和身份背景 |
 
-这些文件补充 VikingBot 内置身份和运行环境提示，不会改变真实工具 Schema、Channel 鉴权或 Sandbox 权限。例如，在 `SOUL.md` 中要求“始终执行 Shell”并不能让不可见的 `exec` 工具出现，也不能绕过沙箱策略。
+這些檔案補充 VikingBot 內建身份和執行環境提示，不會改變真實工具 Schema、Channel 鑑權或 Sandbox 許可權。例如，在 `SOUL.md` 中要求“始終執行 Shell”並不能讓不可見的 `exec` 工具出現，也不能繞過沙箱策略。
 
-初始模板中还包含 `USER.md`，但当前 ContextBuilder 不会把它自动加入系统提示。长期用户资料应优先保存在 OpenViking Peer Profile 和 Memory 中；需要静态行为规则时，应写入 `AGENTS.md` 或 `SOUL.md`。
+初始模板中還包含 `USER.md`，但當前 ContextBuilder 不會把它自動加入系統提示。長期使用者資料應優先儲存在 OpenViking Peer Profile 和 Memory 中；需要靜態行為規則時，應寫入 `AGENTS.md` 或 `SOUL.md`。
 
-### Skill、Heartbeat 与本地记忆
+### Skill、Heartbeat 與本地記憶
 
-- `skills/<name>/SKILL.md` 定义某类任务的流程。Workspace Skill 优先于同名内置 Skill，并采用摘要注入、按需读取全文的渐进加载方式。
-- `HEARTBEAT.md` 不属于普通系统提示，只由 HeartbeatService 周期读取。
-- `memory/MEMORY.md` 和 `memory/HISTORY.md` 是本地记忆文件；只有启用 `bot.use_local_memory` 时，旧会话整理结果才会写回本地文件。默认长期上下文由 OpenViking 管理。
+- `skills/<name>/SKILL.md` 定義某類任務的流程。Workspace Skill 優先於同名內建 Skill，並採用摘要注入、按需讀取全文的漸進載入方式。
+- `HEARTBEAT.md` 不屬於普通系統提示，只由 HeartbeatService 週期讀取。
+- `memory/MEMORY.md` 和 `memory/HISTORY.md` 是本地記憶檔案；只有啟用 `bot.use_local_memory` 時，舊會話整理結果才會寫回本地檔案。預設長期上下文由 OpenViking 管理。
 
-### 初始化与生效时机
+### 初始化與生效時機
 
-首次使用活动 Workspace 时，VikingBot 从安装包中的 `bot/workspace` 复制启动文件、内置 Skill 模板和辅助目录。模板初始化不会覆盖已有的启动文件定制。
+首次使用活動 Workspace 時，VikingBot 從安裝包中的 `bot/workspace` 複製啟動檔案、內建 Skill 模板和輔助目錄。模板初始化不會覆蓋已有的啟動檔案定製。
 
-应直接修改活动 Workspace。ContextBuilder 每轮重新读取启动文件，因此保存 `SOUL.md`、`AGENTS.md`、`TOOLS.md` 或 `IDENTITY.md` 后，通常下一轮对话即可生效，无需重启 Gateway。修改安装包或仓库中的 `bot/workspace` 只影响以后创建的新 Workspace。
+應直接修改活動 Workspace。ContextBuilder 每輪重新讀取啟動檔案，因此儲存 `SOUL.md`、`AGENTS.md`、`TOOLS.md` 或 `IDENTITY.md` 後，通常下一輪對話即可生效，無需重啟 Gateway。修改安裝包或倉庫中的 `bot/workspace` 隻影響以後建立的新 Workspace。
 
-启动文件等同于系统级提示的一部分，应限制写权限，并且不要存放 API Key、Token 或其他秘密。
+啟動檔案等同於系統級提示的一部分，應限制寫許可權，並且不要存放 API Key、Token 或其他秘密。
 
-## 沙箱与 Workspace 隔离
+## 沙箱與 Workspace 隔離
 
-SandboxManager 根据 SessionKey 和 `sandbox.mode` 选择工作区：
+SandboxManager 根據 SessionKey 和 `sandbox.mode` 選擇工作區：
 
-| 模式 | 工作区粒度 |
+| 模式 | 工作區粒度 |
 |------|------------|
-| `shared` | 所有会话共享 `workspace/shared` |
-| `per-session` | 每个会话独立目录 |
-| `per-channel` | 同一渠道实例共享目录 |
+| `shared` | 所有會話共享 `workspace/shared` |
+| `per-session` | 每個會話獨立目錄 |
+| `per-channel` | 同一渠道例項共享目錄 |
 
-当前实现提供以下执行后端：
+當前實現提供以下執行後端：
 
-| 后端 | 特点 |
+| 後端 | 特點 |
 |------|------|
-| `direct` | 直接在 Bot 宿主机执行，默认不是强隔离环境 |
-| `srt` | 支持文件和网络允许/拒绝策略 |
-| `opensandbox` | 通过 OpenSandbox Server 创建隔离环境 |
-| `aiosandbox` | 通过 AIO Sandbox 服务执行命令和文件操作 |
+| `direct` | 直接在 Bot 宿主機執行，預設不是強隔離環境 |
+| `srt` | 支援檔案和網路允許/拒絕策略 |
+| `opensandbox` | 通過 OpenSandbox Server 建立隔離環境 |
+| `aiosandbox` | 通過 AIO Sandbox 服務執行命令和檔案操作 |
 
-Direct 模式的 `restrict_to_workspace=false` 时，文件和命令可能访问工作区外内容。面向不可信用户开放服务时，应选择隔离后端并显式设置网络与文件策略。
+Direct 模式的 `restrict_to_workspace=false` 時，檔案和命令可能訪問工作區外內容。面向不可信使用者開放服務時，應選擇隔離後端並顯式設定網路與檔案策略。
 
-## 多模态
+## 多模態
 
-VikingBot 支持三类多模态能力：
+VikingBot 支援三類多模態能力：
 
-- 渠道图片输入转换为模型视觉内容块；
-- `generate_image` 使用 `agents.gen_image_model` 完成文生图或支持模型上的图生图；
-- Telegram 音频可以通过 GroqTranscriptionProvider 转换为文本。
+- 渠道圖片輸入轉換為模型視覺內容塊；
+- `generate_image` 使用 `agents.gen_image_model` 完成文生圖或支援模型上的圖生圖；
+- Telegram 音訊可以通過 GroqTranscriptionProvider 轉換為文本。
 
-生成图片可以通过消息回调直接交付到原渠道。模型是否理解图片取决于所选 Provider 和模型能力。
+生成圖片可以通過訊息回呼直接交付到原渠道。模型是否理解圖片取決於所選 Provider 和模型能力。
 
-## Cron 与 Heartbeat
+## Cron 與 Heartbeat
 
-两类主动执行能力最终都调用 AgentLoop：
+兩類主動執行能力最終都呼叫 AgentLoop：
 
-| 能力 | 触发方式 | 适用场景 |
+| 能力 | 觸發方式 | 適用場景 |
 |------|----------|----------|
-| Cron | `at`、`every` 或 cron 表达式 | 指定时间提醒、固定周期任务 |
-| Heartbeat | 周期读取工作区 `HEARTBEAT.md` | 持续检查一组可能变化的事项 |
+| Cron | `at`、`every` 或 cron 表示式 | 指定時間提醒、固定週期任務 |
+| Heartbeat | 週期讀取工作區 `HEARTBEAT.md` | 持續檢查一組可能變化的事項 |
 
-Cron 通过 `cron` 工具提供新增、查看和删除定时任务的能力。例如，用户说“每天上午 9 点提醒我看日报”，Agent 可以创建相应任务，由调度服务到期后调用 Agent 执行。支持指定时间执行一次、固定间隔执行和 cron 表达式调度。
+Cron 通過 `cron` 工具提供新增、檢視和刪除定時任務的能力。例如，使用者說“每天上午 9 點提醒我看日報”，Agent 可以建立相應任務，由排程服務到期後呼叫 Agent 執行。支援指定時間執行一次、固定間隔執行和 cron 表示式排程。
 
-**定时任务默认关闭**。在 `ov.conf` 中配置以下内容并重启 Bot，即可开启 `cron` 工具和调度服务，适用于 Gateway 和本地 Chat：
+**定時任務預設關閉**。在 `ov.conf` 中配置以下內容並重啟 Bot，即可開啟 `cron` 工具和排程服務，適用於 Gateway 和本地 Chat：
 
 ```json
 {
@@ -174,34 +174,34 @@ Cron 通过 `cron` 工具提供新增、查看和删除定时任务的能力。�
 }
 ```
 
-设为 `false` 或省略此配置时，不注册 `cron` 工具，也不启动调度服务。Cron 任务持久化在 `cron/jobs.json`，关闭后仍保留，但不会自动执行。任务保存原 SessionKey 和渠道 metadata；`deliver=true` 时将执行结果发回原渠道。
+設為 `false` 或省略此配置時，不註冊 `cron` 工具，也不啟動排程服務。Cron 任務持久化在 `cron/jobs.json`，關閉後仍保留，但不會自動執行。任務儲存原 SessionKey 和渠道 metadata；`deliver=true` 時將執行結果發回原渠道。
 
-Heartbeat 跳过空文件、明确禁用心跳的 Session 和长期不活跃 Session。Agent 无需处理任务时返回 `HEARTBEAT_OK`。
+Heartbeat 跳過空檔案、明確停用心跳的 Session 和長期不活躍 Session。Agent 無需處理任務時返回 `HEARTBEAT_OK`。
 
 ## Hook
 
-HookManager 提供运行时扩展点。当前内置 Hook 主要用于：
+HookManager 提供執行時擴充點。當前內建 Hook 主要用於：
 
-- `message.compact`：增量同步并按阈值提交 OpenViking Session；
-- `tool.post_call`：读取 Skill 后检索并追加相关 Experience。
+- `message.compact`：增量同步並按閾值提交 OpenViking Session；
+- `tool.post_call`：讀取 Skill 後檢索並追加相關 Experience。
 
-自定义 Hook 可以通过 `bot.hooks` 配置加载。
+自定義 Hook 可以通過 `bot.hooks` 配置載入。
 
-## 实现位置
+## 實現位置
 
-| 内容 | 路径 |
+| 內容 | 路徑 |
 |------|------|
 | Workspace 模板 | `bot/workspace/` |
-| 上下文与 Skill | `vikingbot/agent/context.py`、`skills.py` |
-| 工具系统 | `vikingbot/agent/tools/` |
+| 上下文與 Skill | `vikingbot/agent/context.py`、`skills.py` |
+| 工具系統 | `vikingbot/agent/tools/` |
 | 子 Agent | `vikingbot/agent/subagent.py` |
 | 沙箱 | `vikingbot/sandbox/` |
-| 自动化 | `vikingbot/cron/`、`vikingbot/heartbeat/` |
+| 自動化 | `vikingbot/cron/`、`vikingbot/heartbeat/` |
 | Hook | `vikingbot/hooks/` |
 
-## 相关文档
+## 相關文件
 
-- [VikingBot 架构](./01-architecture.md)
-- [渠道、Gateway 与运行管理](./03-channels-and-gateway.md)
-- [与 OpenViking 集成](./04-openviking-integration.md)
+- [VikingBot 架構](./01-architecture.md)
+- [渠道、Gateway 與執行管理](./03-channels-and-gateway.md)
+- [與 OpenViking 整合](./04-openviking-integration.md)
 - [Skills](./06-skills.md)

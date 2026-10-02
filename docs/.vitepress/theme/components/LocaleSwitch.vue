@@ -19,9 +19,9 @@ function switchLocale(next: 'en' | 'zh') {
 </script>
 
 <template>
-  <div class="ov-locale-switch" role="group" :aria-label="locale === 'zh' ? '语言' : 'Language'">
+  <div class="ov-locale-switch" role="group" :aria-label="locale === 'zh' ? '語言' : 'Language'">
     <button type="button" lang="en" :aria-pressed="locale === 'en'" aria-label="English" @click="switchLocale('en')">EN</button>
-    <button type="button" lang="zh-CN" :aria-pressed="locale === 'zh'" aria-label="简体中文" @click="switchLocale('zh')">中</button>
+    <button type="button" lang="zh-TW" :aria-pressed="locale === 'zh'" aria-label="繁體中文" @click="switchLocale('zh')">中</button>
   </div>
 </template>
 

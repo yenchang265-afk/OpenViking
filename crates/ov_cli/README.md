@@ -4,7 +4,7 @@ Command-line interface for [OpenViking](https://github.com/volcengine/OpenViking
 
 This package builds the native `ov` binary. Use it to configure an OpenViking endpoint, import resources, browse `viking://` paths, retrieve context, inspect server status, manage sessions, and run administrative workflows.
 
-中文文档见 [README_CN.md](README_CN.md).
+中文文件見 [README_CN.md](README_CN.md).
 
 ## Installation
 

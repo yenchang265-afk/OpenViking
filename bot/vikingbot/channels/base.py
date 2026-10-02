@@ -89,14 +89,14 @@ class BaseChannel(ABC):
         Returns:
             True if the message was handled by base logic, False if needs subclass handling
         """
-        # 处理添加表情的通用动作
+        # 處理新增表情的通用動作
         if msg.metadata and msg.metadata.get("action") == "add_reaction":
             message_id = msg.metadata.get("message_id")
             emoji = msg.metadata.get("emoji")
             if message_id and emoji:
                 await self.send_processing_reaction(message_id, emoji)
                 return True
-        # 处理处理中tick事件
+        # 處理處理中tick事件
         if msg.metadata and msg.metadata.get("action") == "processing_tick":
             message_id = msg.metadata.get("message_id")
             tick_count = msg.metadata.get("tick_count", 0)

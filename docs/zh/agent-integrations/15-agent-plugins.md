@@ -1,52 +1,52 @@
 # Agent Plugins 1.0 插件包
 
-[Agent Plugins 1.0](https://agent-plugins.org/specification) 是一套与厂商无关的 AI 编码 Agent 插件打包规范。一个插件就是一个普通目录：`plugin.json` 清单、`skills/` 下自动发现的 Agent Skills，以及可选的 `mcp.json` MCP 服务声明。所有符合规范的客户端都以同样的方式加载它 —— 不再需要为每个客户端各写一套接入。
+[Agent Plugins 1.0](https://agent-plugins.org/specification) 是一套與廠商無關的 AI 編碼 Agent 外掛打包規範。一個外掛就是一個普通目錄：`plugin.json` 清單、`skills/` 下自動發現的 Agent Skills，以及可選的 `mcp.json` MCP 服務宣告。所有符合規範的客戶端都以同樣的方式載入它 —— 不再需要為每個客戶端各寫一套接入。
 
-OpenViking 的这个插件包位于仓库的 [`agent-plugins/`](https://github.com/volcengine/OpenViking/tree/main/agent-plugins) 目录。
+OpenViking 的這個外掛包位於倉庫的 [`agent-plugins/`](https://github.com/volcengine/OpenViking/tree/main/agent-plugins) 目錄。
 
-## 目录结构
+## 目錄結構
 
 ```
 agent-plugins/
-├── plugin.json                          # Agent Plugins 1.0 清单（name: openviking）
-├── mcp.json                             # 一个 stdio MCP server："openviking"
+├── plugin.json                          # Agent Plugins 1.0 清單（name: openviking）
+├── mcp.json                             # 一個 stdio MCP server："openviking"
 ├── servers/
-│   ├── mcp-proxy.mjs                    # stdio -> streamable-HTTP 代理，转发到服务端 /mcp
+│   ├── mcp-proxy.mjs                    # stdio -> streamable-HTTP 代理，轉發到服務端 /mcp
 │   └── shared/                          # 由 examples/memory-plugin-shared/lib 生成
-├── skills/openviking-memory/SKILL.md    # 教模型完成「召回 + 沉淀」闭环
-├── skills/ov-experience-memory/SKILL.md # 检索并应用以往任务的 Experience
-├── skills/ov-memory-troubleshoot/SKILL.md # 追溯记忆问题的会话依据
-├── skills/openviking-skills/SKILL.md    # 查找、使用、创建和共享 OpenViking 中的 skill
-└── plugin.test.mjs                      # node --test 规范一致性校验
+├── skills/openviking-memory/SKILL.md    # 教模型完成「召回 + 沉澱」閉環
+├── skills/ov-experience-memory/SKILL.md # 檢索並應用以往任務的 Experience
+├── skills/ov-memory-troubleshoot/SKILL.md # 追溯記憶問題的會話依據
+├── skills/openviking-skills/SKILL.md    # 查詢、使用、建立和共享 OpenViking 中的 skill
+└── plugin.test.mjs                      # node --test 規範一致性校驗
 ```
 
-零 npm 依赖 —— 代理和测试只用 Node.js 标准库（需要 Node 18+ 以获得全局 `fetch`）。
+零 npm 依賴 —— 代理和測試只用 Node.js 標準庫（需要 Node 18+ 以獲得全域 `fetch`）。
 
-## 安装
+## 安裝
 
-1. 准备一个可访问的 OpenViking 服务。还没有的话，先按 [快速开始](../getting-started/02-quickstart.md) 部署；本地默认端点是 `http://127.0.0.1:1933`。
-2. 让你的 Agent Plugins 客户端指向 `agent-plugins/` 目录。各客户端的安装命令或插件目录不同，请查阅其文档。加载时客户端会：
-   - 按 `mcp.json` 注册名为 `openviking` 的 MCP server，以 stdio 方式运行 `node <plugin>/servers/mcp-proxy.mjs`；
-   - 从 `skills/` 发现 `openviking-memory`、`ov-experience-memory`、`ov-memory-troubleshoot` 和 `openviking-skills` 技能。
-3. 配置凭据（见下节）后开始会话。模型即可使用 `find` / `search` / `read` / `list` / `grep` / `glob` / `remember` / `add_resource` / `forget` / `health`，较新的服务端还提供 `tree` / `write` / `edit` / `add_skill`。
+1. 準備一個可訪問的 OpenViking 服務。還沒有的話，先按 [快速開始](../getting-started/02-quickstart.md) 部署；本地預設端點是 `http://127.0.0.1:1933`。
+2. 讓你的 Agent Plugins 客戶端指向 `agent-plugins/` 目錄。各客戶端的安裝命令或外掛目錄不同，請查閱其文件。載入時客戶端會：
+   - 按 `mcp.json` 註冊名為 `openviking` 的 MCP server，以 stdio 方式執行 `node <plugin>/servers/mcp-proxy.mjs`；
+   - 從 `skills/` 發現 `openviking-memory`、`ov-experience-memory`、`ov-memory-troubleshoot` 和 `openviking-skills` 技能。
+3. 配置憑據（見下節）後開始會話。模型即可使用 `find` / `search` / `read` / `list` / `grep` / `glob` / `remember` / `add_resource` / `forget` / `health`，較新的服務端還提供 `tree` / `write` / `edit` / `add_skill`。
 
-## 为什么用 stdio 代理，而不是 `streamable-http`
+## 為什麼用 stdio 代理，而不是 `streamable-http`
 
-OpenViking 服务端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 里直接写 `streamable-http` 条目无法做到可移植：服务地址因部署而异（有人是 localhost，有人是远端），而规范禁止把凭据写进静态 `headers`。stdio 代理同时解决这两点 —— 它在运行时从与 `ov` CLI 相同的本地来源解析 URL 和 API Key，逐请求注入，再把 JSON-RPC 原样通过 streamable HTTP 转发。
+OpenViking 服務端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 裡直接寫 `streamable-http` 條目無法做到可移植：服務地址因部署而異（有人是 localhost，有人是遠端），而規範禁止把憑據寫進靜態 `headers`。stdio 代理同時解決這兩點 —— 它在執行時從與 `ov` CLI 相同的本地來源解析 URL 和 API Key，逐請求注入，再把 JSON-RPC 原樣通過 streamable HTTP 轉發。
 
-## 凭据解析顺序
+## 憑據解析順序
 
-从高到低 —— 与 `ov` CLI 及其他 OpenViking 插件完全一致：
+從高到低 —— 與 `ov` CLI 及其他 OpenViking 外掛完全一致：
 
-1. 环境变量：`OPENVIKING_URL`（或 `OPENVIKING_BASE_URL`）、`OPENVIKING_MCP_URL`、`OPENVIKING_API_KEY`（或 `OPENVIKING_BEARER_TOKEN`）、`OPENVIKING_ACCOUNT`、`OPENVIKING_USER`、`OPENVIKING_PEER_ID`、`OPENVIKING_AUTH_MODE`
-2. `~/.openviking/ovcli.conf`（`url`、`api_key`、`account` / `account_id`、`user` / `user_id`、`actor_peer_id` / `peer_id`），其后是它的 `plugin.agent_plugins` 与共享 `plugin` 键（`apiKey`、`accountId`、`userId`、`authMode`）—— 可用 `OPENVIKING_CLI_CONFIG_FILE` 覆盖路径
-3. `~/.openviking/ov.conf` 的 `agent_plugins` 段（`apiKey`、`accountId`、`userId`、`peerId`、`authMode`）—— 可用 `OPENVIKING_CONFIG_FILE` 覆盖路径
+1. 環境變數：`OPENVIKING_URL`（或 `OPENVIKING_BASE_URL`）、`OPENVIKING_MCP_URL`、`OPENVIKING_API_KEY`（或 `OPENVIKING_BEARER_TOKEN`）、`OPENVIKING_ACCOUNT`、`OPENVIKING_USER`、`OPENVIKING_PEER_ID`、`OPENVIKING_AUTH_MODE`
+2. `~/.openviking/ovcli.conf`（`url`、`api_key`、`account` / `account_id`、`user` / `user_id`、`actor_peer_id` / `peer_id`），其後是它的 `plugin.agent_plugins` 與共享 `plugin` 鍵（`apiKey`、`accountId`、`userId`、`authMode`）—— 可用 `OPENVIKING_CLI_CONFIG_FILE` 覆蓋路徑
+3. `~/.openviking/ov.conf` 的 `agent_plugins` 段（`apiKey`、`accountId`、`userId`、`peerId`、`authMode`）—— 可用 `OPENVIKING_CONFIG_FILE` 覆蓋路徑
 4. `~/.openviking/ov.conf` 的 `server` 段（`url`，或 `host` / `port`，以及 `root_api_key`）
-5. 默认值：`http://127.0.0.1:1933`，不鉴权（本地模式）
+5. 預設值：`http://127.0.0.1:1933`，不鑑權（本地模式）
 
-`OPENVIKING_MCP_URL` 覆盖的是推导出的 `<url>/mcp` 端点，而不是 base URL。
+`OPENVIKING_MCP_URL` 覆蓋的是推匯出的 `<url>/mcp` 端點，而不是 base URL。
 
-`OPENVIKING_CREDENTIAL_SOURCE`（或 `OPENVIKING_CREDENTIALS_SOURCE`）把整条链钉在某一端：`env` 只认环境变量，`cli`（同义写法还有 `ovcli` / `file` / `config`）只认 ovcli.conf。默认的 `auto` 在 ovcli.conf 带凭据、且上面这些环境变量一个都没设时钉向 ovcli.conf，否则按整条链解析。钉在 ovcli.conf 时，环境变量里的凭据和 `OPENVIKING_MCP_URL` 会被跳过。key 仍依次回落到 `plugin` 键、`agent_plugins` 段，最后是 `server.root_api_key`，所以只写了 `url` 的旧安装仍能用原来的 key；account 和 user 只回落到 `plugin` 键。`env` 模式两个文件都不读。
+`OPENVIKING_CREDENTIAL_SOURCE`（或 `OPENVIKING_CREDENTIALS_SOURCE`）把整條鏈釘在某一端：`env` 只認環境變數，`cli`（同義寫法還有 `ovcli` / `file` / `config`）只認 ovcli.conf。預設的 `auto` 在 ovcli.conf 帶憑據、且上面這些環境變數一個都沒設時釘向 ovcli.conf，否則按整條鏈解析。釘在 ovcli.conf 時，環境變數裡的憑據和 `OPENVIKING_MCP_URL` 會被跳過。key 仍依次回落到 `plugin` 鍵、`agent_plugins` 段，最後是 `server.root_api_key`，所以只寫了 `url` 的舊安裝仍能用原來的 key；account 和 user 只回落到 `plugin` 鍵。`env` 模式兩個檔案都不讀。
 
 `~/.openviking/ovcli.conf`:
 
@@ -57,57 +57,57 @@ OpenViking 服务端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 
 }
 ```
 
-配置文件的改动会被运行中的代理自动读取，无需重启。
+配置檔案的改動會被執行中的代理自動讀取，無需重啟。
 
-调试：设置 `OPENVIKING_DEBUG=1`，日志以 JSON Lines 写入 `~/.openviking/logs/agent-plugins.log`（路径可用 `OPENVIKING_DEBUG_LOG` 覆盖）。`OPENVIKING_TIMEOUT_MS` 可调整默认 15s 的单请求超时。
+除錯：設定 `OPENVIKING_DEBUG=1`，日誌以 JSON Lines 寫入 `~/.openviking/logs/agent-plugins.log`（路徑可用 `OPENVIKING_DEBUG_LOG` 覆蓋）。`OPENVIKING_TIMEOUT_MS` 可調整預設 15s 的單請求超時。
 
-## 能力边界：规范不含 hooks
+## 能力邊界：規範不含 hooks
 
-Agent Plugins 1.0 只覆盖 skills 和 MCP servers；hooks、commands、agents 被有意排除在本版本之外，因为它们在各客户端之间语义差异太大。因此这个包提供的是**可移植的召回 + 写入能力面**，由模型驱动而非生命周期事件驱动：**自动会话捕获和 prompt 前自动召回不在此范围内**。
+Agent Plugins 1.0 只覆蓋 skills 和 MCP servers；hooks、commands、agents 被有意排除在本版本之外，因為它們在各客戶端之間語義差異太大。因此這個包提供的是**可移植的召回 + 寫入能力面**，由模型驅動而非生命週期事件驅動：**自動會話捕獲和 prompt 前自動召回不在此範圍內**。
 
-作为补偿，内置的 `openviking-memory` 技能直接把这套闭环教给模型 —— 任务开始时用 `find` / `search` + `read` 召回（需要组装上下文时使用 `search` 的 `mode="context"`），过程中和结束后用 `remember` / `write` / `edit` 沉淀，并给出使用召回内容时的优先级与安全规则。
+作為補償，內建的 `openviking-memory` 技能直接把這套閉環教給模型 —— 任務開始時用 `find` / `search` + `read` 召回（需要組裝上下文時使用 `search` 的 `mode="context"`），過程中和結束後用 `remember` / `write` / `edit` 沉澱，並給出使用召回內容時的優先順序與安全規則。
 
-内置的 `ov-experience-memory` 技能让模型在执行类任务前检索 `viking://~/memories/experiences`，并读取适用的 Experience 文件。在这个包里它只做检索：没有会话捕获，这些读取不会关联回所用的 Experience，也不会产生新的轨迹。它检索到的 Experience 来自会捕获会话的 harness。
+內建的 `ov-experience-memory` 技能讓模型在執行類任務前檢索 `viking://~/memories/experiences`，並讀取適用的 Experience 檔案。在這個包裡它只做檢索：沒有會話捕獲，這些讀取不會關聯回所用的 Experience，也不會產生新的軌跡。它檢索到的 Experience 來自會捕獲會話的 harness。
 
-内置的 `openviking-skills` 技能覆盖存放在 OpenViking 里的 skill 本身：用 `find(context_type="skill")` 查找、读取并按 `SKILL.md` 执行、用 `add_skill` 新建或替换、从 Git 或本地文件夹安装、共享给整个账号，以及把本地 skill 目录迁入 OpenViking。这里没有会话启动 hook，也就没有 `<available-skills>` 清单，所以该技能让模型自己检索 skill，而不是从清单里读。
+內建的 `openviking-skills` 技能覆蓋存放在 OpenViking 裡的 skill 本身：用 `find(context_type="skill")` 查詢、讀取並按 `SKILL.md` 執行、用 `add_skill` 新建或替換、從 Git 或本地資料夾安裝、共享給整個帳號，以及把本地 skill 目錄遷入 OpenViking。這裡沒有會話啟動 hook，也就沒有 `<available-skills>` 清單，所以該技能讓模型自己檢索 skill，而不是從清單裡讀。
 
-**如果你的 harness 支持 hooks 机制，推荐使用专属插件。** hook 驱动的召回与捕获不需要模型花费工具调用、也不依赖模型「想起来要记」，比技能驱动的闭环更省 token、也更可靠。本 Agent Plugins 包适用于没有 hooks 的 harness，或你希望用同一个包覆盖多个客户端的场景。
+**如果你的 harness 支援 hooks 機制，推薦使用專屬外掛。** hook 驅動的召回與捕獲不需要模型花費工具呼叫、也不依賴模型「想起來要記」，比技能驅動的閉環更省 token、也更可靠。本 Agent Plugins 包適用於沒有 hooks 的 harness，或你希望用同一個包覆蓋多個客戶端的場景。
 
-Claude Code、Codex、Cursor、TRAE / TRAE CN、ZCode、OpenCode、pi 共用同一个安装脚本。它会依次询问界面语言、要安装的 harness、下载源和 OpenViking 凭据，所有步骤幂等，重复运行安全：
+Claude Code、Codex、Cursor、TRAE / TRAE CN、ZCode、OpenCode、pi 共用同一個安裝指令碼。它會依次詢問介面語言、要安裝的 harness、下載源和 OpenViking 憑據，所有步驟冪等，重複執行安全：
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
 ```
 
-GitHub 访问受限的地区，从火山引擎 TOS 镜像运行同一个脚本：
+GitHub 訪問受限的地區，從火山引擎 TOS 映象運行同一個指令碼：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
 ```
 
-| Harness | 专属集成 |
+| Harness | 專屬整合 |
 |---------|----------|
-| Claude Code | [Claude Code 记忆插件](./02-claude-code.md) |
-| Codex | [Codex 记忆插件](./04-codex.md) |
+| Claude Code | [Claude Code 記憶外掛](./02-claude-code.md) |
+| Codex | [Codex 記憶外掛](./04-codex.md) |
 | OpenCode | [OpenCode 插件](./10-opencode.md) |
-| Cursor | [Cursor 记忆集成](./12-cursor.md) |
-| TRAE / TRAE CN | [TRAE 记忆集成](./13-trae.md) |
-| pi | [pi Coding Agent 扩展](./11-pi.md) — 使用官方 MCP 客户端，把服务端工具注册为原生工具 |
-| OpenClaw | [OpenClaw 插件](./03-openclaw.md) — 独立安装流程 |
-| ZCode | [社区集成](./08-community-plugins.md) |
+| Cursor | [Cursor 記憶整合](./12-cursor.md) |
+| TRAE / TRAE CN | [TRAE 記憶整合](./13-trae.md) |
+| pi | [pi Coding Agent 擴充](./11-pi.md) — 使用官方 MCP 客戶端，把服務端工具註冊為原生工具 |
+| OpenClaw | [OpenClaw 外掛](./03-openclaw.md) — 獨立安裝流程 |
+| ZCode | [社群整合](./08-community-plugins.md) |
 
-按规范，客户端专属的集成后续也可以放进同一个包里 —— 使用反向域名命名的目录（如 `com.example.client/`）或清单的 `extensions` 字段 —— 且不会影响其他客户端。
+按規範，客戶端專屬的整合後續也可以放進同一個包裡 —— 使用反向域名命名的目錄（如 `com.example.client/`）或清單的 `extensions` 欄位 —— 且不會影響其他客戶端。
 
-## 开发
+## 開發
 
 ```bash
 node --test agent-plugins/plugin.test.mjs
 ```
 
-`plugin.test.mjs` 会校验：清单的 schema URL 及两个清单的规范版本一致、插件 name 规则、清单根字段闭集、semver、每个 `skills/*` 子目录都有带 `name` + `description` frontmatter 且 `name` 与目录同名的 `SKILL.md`、`mcp.json` 引用的文件存在且不逃逸插件根目录，以及包内所有 `.mjs` 都能通过 `node --check`。
+`plugin.test.mjs` 會校驗：清單的 schema URL 及兩個清單的規範版本一致、外掛 name 規則、清單根欄位閉集、semver、每個 `skills/*` 子目錄都有帶 `name` + `description` frontmatter 且 `name` 與目錄同名的 `SKILL.md`、`mcp.json` 引用的檔案存在且不逃逸外掛根目錄，以及包內所有 `.mjs` 都能通過 `node --check`。
 
-`servers/shared/*.mjs` 是 `examples/memory-plugin-shared/lib` 的生成副本 —— 请改共享库后重新执行 `node examples/memory-plugin-shared/sync.mjs`；一旦漂移，`examples/memory-plugin-shared/sync.test.mjs` 会失败。两个测试文件都已接入 CI。
+`servers/shared/*.mjs` 是 `examples/memory-plugin-shared/lib` 的生成副本 —— 請改共享庫後重新執行 `node examples/memory-plugin-shared/sync.mjs`；一旦漂移，`examples/memory-plugin-shared/sync.test.mjs` 會失敗。兩個測試檔案都已接入 CI。
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
+- [整合能力參考](./16-capability-reference.md)

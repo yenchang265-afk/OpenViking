@@ -288,9 +288,9 @@ def get_skills_path(workspace: Path | None = None) -> Path:
 def cal_str_tokens(text: str, text_type: str = "mixed") -> int:
     char_length = len(text)
     if text_type == "en":
-        token_count = char_length / 4.5  # 1 token ≈ 4.5个英文字符
+        token_count = char_length / 4.5  # 1 token ≈ 4.5個英文字元
     elif text_type == "zh":
-        token_count = char_length / 1.1  # 1 token ≈ 1.1个中文字符
+        token_count = char_length / 1.1  # 1 token ≈ 1.1箇中文字元
     else:  # mixed
         token_count = char_length / 2.5  # 混合文本折中值
     return int(token_count) + 1

@@ -22,10 +22,10 @@ from openviking.session.memory.utils.language import (
 
 
 class TestLanguageDetection:
-    """语言检测功能测试。"""
+    """語言檢測功能測試。"""
 
     def test_detect_language_chinese(self):
-        text = "这是一个中文文档，用于测试语言检测功能"
+        text = "這是一箇中文文件，用於測試語言檢測功能"
         language = _detect_language_from_text(text, fallback_language="en")
         assert language == "zh-CN"
 
@@ -103,17 +103,17 @@ class TestLanguageDetection:
         assert language == "en"
 
     def test_detect_language_mixed_chinese_english(self):
-        text = "这是一个 mixed 文档"
+        text = "這是一個 mixed 文件"
         language = _detect_language_from_text(text, fallback_language="en")
         assert language == "zh-CN"
 
     def test_detect_language_chinese_with_single_korean_char(self):
-        text = "这是中文需求，继续优化记忆。한"
+        text = "這是中文需求，繼續最佳化記憶。한"
         language = _detect_language_from_text(text, fallback_language="en")
         assert language == "zh-CN"
 
     def test_detect_language_chinese_with_single_cyrillic_char(self):
-        text = "这是中文需求，继续优化记忆。Д"
+        text = "這是中文需求，繼續最佳化記憶。Д"
         language = _detect_language_from_text(text, fallback_language="en")
         assert language == "zh-CN"
 
@@ -157,12 +157,12 @@ class TestLanguageDetection:
 
 
 class TestLanguageFlow:
-    """语言检测 + 模板渲染流程测试。"""
+    """語言檢測 + 模板渲染流程測試。"""
 
     @pytest.mark.parametrize(
         "lang,content,file_name",
         [
-            ("zh-CN", "这是一个中文Python文件，包含测试代码", "chinese_code.py"),
+            ("zh-CN", "這是一箇中文Python檔案，包含測試程式碼", "chinese_code.py"),
             ("en", "This is an English Python file for testing", "english_code.py"),
             ("ja", "これは日本語のPythonコードテストファイルです", "japanese_code.py"),
             ("ko", "이것은 한국어 Python 코드 테스트 파일입니다", "korean_code.py"),
@@ -171,7 +171,7 @@ class TestLanguageFlow:
         ],
     )
     def test_language_detection_to_template_flow(self, lang, content, file_name):
-        """语言检测 -> output_language 注入模板 -> prompt 包含语言指令"""
+        """語言檢測 -> output_language 注入模板 -> prompt 包含語言指令"""
         detected_lang = _detect_language_from_text(content, fallback_language=lang)
         assert detected_lang == lang, f"Expected {lang}, got {detected_lang}"
 
@@ -183,14 +183,14 @@ class TestLanguageFlow:
 
 
 class TestOverviewGenerationFlow:
-    """目录概述生成流程测试。"""
+    """目錄概述生成流程測試。"""
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         "description,override,expected_language",
         [
             ("", "", "en"),
-            ("这是用于查询任务状态和统计运行时间的客户端代码。", "", "zh-CN"),
+            ("這是用於查詢任務狀態和統計執行時間的客戶端程式碼。", "", "zh-CN"),
             (
                 "Este documento descreve as preferências do usuário e o projeto para completar.",
                 "",
@@ -229,13 +229,13 @@ class TestOverviewGenerationFlow:
     @pytest.mark.parametrize(
         "lang,file_summaries",
         [
-            ("zh-CN", "[1] file1.py: 这是一个Python文件\n[2] file2.py: 这是另一个文件"),
+            ("zh-CN", "[1] file1.py: 這是一個Python檔案\n[2] file2.py: 這是另一個檔案"),
             ("en", "[1] file1.py: This is a Python file\n[2] file2.py: Another file"),
             ("ja", "[1] file1.py: それはPythonファイルです\n[2] file2.py: これもPython"),
         ],
     )
     def test_overview_generation_language_flow(self, lang, file_summaries):
-        """目录摘要 -> 语言检测 -> overview 模板"""
+        """目錄摘要 -> 語言檢測 -> overview 模板"""
         detected_lang = _detect_language_from_text(file_summaries, fallback_language=lang)
         assert detected_lang == lang
 
@@ -250,7 +250,7 @@ class TestOverviewGenerationFlow:
         )
         assert f"Output Language: {lang}" in prompt
         assert "Output in Markdown format" in prompt
-        expected_brief_heading = "简要描述" if lang == "zh-CN" else "Brief Description"
+        expected_brief_heading = "簡要描述" if lang == "zh-CN" else "Brief Description"
         assert expected_brief_heading in prompt
         assert "abstract_max_chars" not in prompt
 
@@ -292,29 +292,29 @@ class TestOverviewGenerationFlow:
         prompt = render_prompt(
             "semantic.overview_generation",
             {
-                "dir_name": "测试",
-                "file_summaries": "[1] test.md: 测试文档",
+                "dir_name": "測試",
+                "file_summaries": "[1] test.md: 測試文件",
                 "children_abstracts": "",
                 "output_language": "zh-CN",
             },
         )
 
-        assert "**快速导航** (H2)" in prompt
-        assert "**详细说明** (H2)" in prompt
-        assert "**目录覆盖** (H2)" in prompt
+        assert "**快速導航** (H2)" in prompt
+        assert "**詳細說明** (H2)" in prompt
+        assert "**目錄覆蓋** (H2)" in prompt
         assert "**Directory Coverage** (H2)" not in prompt
         assert "**Quick Navigation** (H2)" not in prompt
         assert "**Detailed Description** (H2)" not in prompt
 
 
 class LanguageAwareMockVLM:
-    """语言感知的 MockVLM，根据 prompt 中的 Output Language 返回对应语言的响应。"""
+    """語言感知的 MockVLM，根據 prompt 中的 Output Language 返回對應語言的響應。"""
 
     def __init__(self):
         self.is_available = MagicMock(return_value=True)
         self.prompts_received = []
         self.language_responses = {
-            "zh-CN": "中文摘要：这是一个测试函数",
+            "zh-CN": "中文摘要：這是一個測試函式",
             "en": "English summary: This is a test function",
             "ja": "日本語要約：これはテスト関数です",
             "ko": "한국어 요약: 이것은 테스트 함수입니다",
@@ -331,7 +331,7 @@ class LanguageAwareMockVLM:
 
 
 def _verify_content_language(text: str, expected_lang: str) -> bool:
-    """验证文本内容语言是否符合预期。"""
+    """驗證文本內容語言是否符合預期。"""
     chinese_chars = sum(1 for c in text if "\u4e00" <= c <= "\u9fff")
     japanese_chars = sum(1 for c in text if "\u3040" <= c <= "\u309f" or "\u30a0" <= c <= "\u30ff")
     korean_chars = sum(1 for c in text if "\uac00" <= c <= "\ud7af")
@@ -350,7 +350,7 @@ def _verify_content_language(text: str, expected_lang: str) -> bool:
 
 
 class TestGenerateTextSummaryOutputLanguage:
-    """端到端测试：验证 _generate_text_summary 生成的内容语言是否符合预期。"""
+    """端到端測試：驗證 _generate_text_summary 生成的內容語言是否符合預期。"""
 
     _LANGUAGE_LOCALE = {
         "zh-CN": "zh_CN.UTF-8",
@@ -363,7 +363,7 @@ class TestGenerateTextSummaryOutputLanguage:
 
     @pytest.fixture
     def temp_multilang_files(self):
-        """创建包含多种语言内容的临时测试文件。"""
+        """建立包含多種語言內容的臨時測試檔案。"""
         with tempfile.TemporaryDirectory() as tmpdir:
             tmppath = Path(tmpdir)
             files = {}
@@ -387,7 +387,7 @@ class TestGenerateTextSummaryOutputLanguage:
             )
 
             files["chinese_md"] = tmppath / "chinese_doc.md"
-            files["chinese_md"].write_text("# 中文文档\n\n这是一个测试文档，包含中文技术内容。\n")
+            files["chinese_md"].write_text("# 中文文件\n\n這是一個測試文件，包含中文技術內容。\n")
 
             files["english_md"] = tmppath / "english_doc.md"
             files["english_md"].write_text(
@@ -420,7 +420,7 @@ class TestGenerateTextSummaryOutputLanguage:
     async def test_e2e_code_output_language(
         self, temp_multilang_files, file_key, file_name, expected_lang
     ):
-        """端到端测试：文件 -> 语言检测 -> 生成对应语言摘要"""
+        """端到端測試：檔案 -> 語言檢測 -> 生成對應語言摘要"""
         from openviking.storage.queuefs.semantic_processor import SemanticProcessor
 
         content = Path(temp_multilang_files[file_key]).read_text()
@@ -470,7 +470,7 @@ class TestGenerateTextSummaryOutputLanguage:
         ],
     )
     async def test_e2e_russian_arabic_output_language(self, content, file_name, expected_lang):
-        """端到端测试：俄文和阿拉伯文内容"""
+        """端到端測試：俄文和阿拉伯文內容"""
         from openviking.storage.queuefs.semantic_processor import SemanticProcessor
 
         mock_vlm = LanguageAwareMockVLM()
@@ -687,6 +687,6 @@ class TestOutputLanguageOverride:
 
     def test_indexed_conversation_detects_user_content(self):
         config = self._make_config(override="")
-        conversation = "[0][user][alice]: 请使用中文\n[1][assistant][bot]: 한국어 응답"
+        conversation = "[0][user][alice]: 請使用中文\n[1][assistant][bot]: 한국어 응답"
         result = resolve_output_language_from_conversation(conversation, config=config)
         assert result == "zh-CN"

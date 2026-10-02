@@ -1,9 +1,9 @@
-# Vikingbot 本地部署专用 Dockerfile
-# 固定 linux/amd64（openviking 无 linux/aarch64 wheel）
+# Vikingbot 本地部署專用 Dockerfile
+# 固定 linux/amd64（openviking 無 linux/aarch64 wheel）
 
 FROM python:3.13-slim-bookworm
 
-# Install system dependencies + Node.js 20 via NodeSource (npm/npx 自带，无需多阶段复制)
+# Install system dependencies + Node.js 20 via NodeSource (npm/npx 自帶，無需多階段複製)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends curl ca-certificates git bubblewrap socat libfuse2 build-essential gnupg && \
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \

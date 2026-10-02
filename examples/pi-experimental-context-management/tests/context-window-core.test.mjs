@@ -463,9 +463,9 @@ test("buildWindowHeader truncates Chinese notes, pending request and overview to
     windowId: "w2",
     previousWindowId: "w1",
     archiveId: "archive_001",
-    notes: "笔".repeat(4000),
-    pendingRequest: "请".repeat(4000),
-    overview: "忆".repeat(9000),
+    notes: "筆".repeat(4000),
+    pendingRequest: "請".repeat(4000),
+    overview: "憶".repeat(9000),
     overviewState: "ready",
     config: { notesBudget: 100, pendingRequestBudget: 100, overviewBudget: 100 },
   });
@@ -1679,11 +1679,11 @@ test("an image-only user message is not mistaken for something this extension in
 });
 
 test("Chinese notes, pending request and overview survive the merge into a kept user message", async () => {
-  const io = makeIo({ overview: "工作记忆".repeat(400) });
+  const io = makeIo({ overview: "工作記憶".repeat(400) });
   const core = makeCore(io, { notesBudget: 100, pendingRequestBudget: 30, overviewBudget: 120 });
   await openWindow(core, io, {
-    notes: "目标：把解析器切到流式实现；下一步：补齐测试".repeat(40),
-    branch: [{ id: "e1", message: user("把解析器改成流式的，注意兼容旧配置".repeat(10), 3) }],
+    notes: "目標：把解析器切到流式實現；下一步：補齊測試".repeat(40),
+    branch: [{ id: "e1", message: user("把解析器改成流式的，注意相容舊配置".repeat(10), 3) }],
   });
 
   assert.ok(core.headerText.includes("...(truncated)"));
@@ -1692,11 +1692,11 @@ test("Chinese notes, pending request and overview survive the merge into a kept 
   const out = core.transformContext([
     assistantCalls([{ id: "call-1", name: "new_context" }]),
     toolResult("call-1", "new_context"),
-    user("继续", 9),
+    user("繼續", 9),
   ]);
   assert.equal(out.length, 1);
   assert.ok(out[0].content.startsWith(WINDOW_HEADER_OPEN));
-  assert.ok(out[0].content.endsWith("继续"));
+  assert.ok(out[0].content.endsWith("繼續"));
   assert.deepEqual(lastUserTimestamps(out), [9]);
 });
 
@@ -1975,7 +1975,7 @@ test("a pending window keeps its stale Working Memory block across a persist/res
 });
 
 test("the persisted previousOverview is capped at overviewBudget", async () => {
-  const io = makeIo({ overview: "记忆".repeat(5000) });
+  const io = makeIo({ overview: "記憶".repeat(5000) });
   const core = makeCore(io, { overviewBudget: 100 });
   await openWindow(core, io, { toolCallId: "call-1" });
   io.overview = null;

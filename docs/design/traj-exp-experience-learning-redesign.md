@@ -1,16 +1,16 @@
-# Trajectory / Experience 经验学习框架重构
+# Trajectory / Experience 經驗學習框架重構
 >
-> 目标：把真实或离线环境中的 agent rollout 转换为 trajectory，再从 trajectory 估计 experience 更新信号，最终通过可审查、可合并、可并发安全的 policy update 机制更新 `experiences` 目录。
+> 目標：把真實或離線環境中的 agent rollout 轉換為 trajectory，再從 trajectory 估計 experience 更新訊號，最終通過可審查、可合併、可併發安全的 policy update 機制更新 `experiences` 目錄。
 
-## 1. 总体定位
+## 1. 總體定位
 
-当前框架把 `experiences` 目录视为一个可优化的 **Experience Policy Set**：
+當前框架把 `experiences` 目錄視為一個可最佳化的 **Experience Policy Set**：
 
 ```text
 viking://user/<user>/memories/experiences/
 ```
 
-目录中的每个 experience 文件是一个 `Experience`，整个目录共同构成 agent 的经验策略。训练框架不直接绑定某个 agent loop；它只约束以下抽象链路：
+目錄中的每個 experience 檔案是一個 `Experience`，整個目錄共同構成 agent 的經驗策略。訓練框架不直接繫結某個 agent loop；它只約束以下抽象鏈路：
 
 ```text
 CaseLoader
@@ -22,34 +22,34 @@ CaseLoader
        -> PolicyUpdater
 ```
 
-其中 `PolicyTrainer` 是训练入口。默认本地实现会在进程内执行 `analyze -> estimate -> plan -> apply`；远程实现可以把 rollout 通过 `session.commit` 提交给 OpenViking 服务端，由服务端完成分析和训练。
+其中 `PolicyTrainer` 是訓練入口。預設本地實現會在程序內執行 `analyze -> estimate -> plan -> apply`；遠端實現可以把 rollout 通過 `session.commit` 提交給 OpenViking 服務端，由服務端完成分析和訓練。
 
-### 1.1 训练执行细节图
+### 1.1 訓練執行細節圖
 
-<img src="https://gist.githubusercontent.com/chenjw/c2de3083d0e1dac3a192c74f98c020c7/raw/502e01c5e207ce8b2b4076a6cd84b8fe9dc06543/train-execution-details.svg" alt="OpenViking session.train 训练执行细节" width="100%">
+<img src="https://gist.githubusercontent.com/chenjw/c2de3083d0e1dac3a192c74f98c020c7/raw/502e01c5e207ce8b2b4076a6cd84b8fe9dc06543/train-execution-details.svg" alt="OpenViking session.train 訓練執行細節" width="100%">
 
-这张图强调三个实现边界：
+這張圖強調三個實現邊界：
 
-- **并行边界**：case rollout、rollout analysis、gradient estimation 可以并行。
-- **串行边界**：`ExperienceSet.lock()` 内的 `reload -> PolicyOptimizer.plan -> PolicyUpdater.apply` 必须串行。
-- **存储边界**：trajectory 写入发生在 `RolloutAnalyzer`；experience 读取/合并/写入发生在 optimizer/updater；session archive 和 `memory_diff.json` 只出现在 `session.commit` 路径。
-- **LLM 边界**：红色特殊框表示该模块会调用 LLM / `ExtractLoop`，包括 trajectory 抽取、experience gradient 估计和 patch merge。
+- **並行邊界**：case rollout、rollout analysis、gradient estimation 可以並行。
+- **序列邊界**：`ExperienceSet.lock()` 內的 `reload -> PolicyOptimizer.plan -> PolicyUpdater.apply` 必須序列。
+- **儲存邊界**：trajectory 寫入發生在 `RolloutAnalyzer`；experience 讀取/合併/寫入發生在 optimizer/updater；session archive 和 `memory_diff.json` 只出現在 `session.commit` 路徑。
+- **LLM 邊界**：紅色特殊框表示該模組會呼叫 LLM / `ExtractLoop`，包括 trajectory 抽取、experience gradient 估計和 patch merge。
 
 
-## 2. 代码结构
+## 2. 程式碼結構
 
-当前模块结构：
+當前模組結構：
 
 ```text
 openviking/session/train/
   context.py          # PipelineContext / ExecutionContext
   domain.py           # domain dataclass
-  engine.py           # PolicyTrainingEngine：共享 analyze/estimate/plan/apply 内核
+  engine.py           # PolicyTrainingEngine：共享 analyze/estimate/plan/apply 核心
   gradients.py        # PatchSemanticGradient
   interfaces.py       # Protocol 接口
   pipeline.py         # OfflinePolicyOptimizationPipeline
 
-  components/         # 可替换组件实现
+  components/         # 可替換元件實現
     case_loader.py
     gradient_estimator.py
     memory_store.py
@@ -63,17 +63,17 @@ openviking/session/train/
     trajectory_analyzer.py
 ```
 
-设计边界：
+設計邊界：
 
-- 根目录保留框架内核、domain、接口和编排。
-- `components/` 放所有具体实现。
-- `openviking.session.train` 顶层继续导出常用类，便于外部使用。
+- 根目錄保留框架核心、domain、介面和編排。
+- `components/` 放所有具體實現。
+- `openviking.session.train` 頂層繼續匯出常用類，便於外部使用。
 
 ## 3. 核心 Domain Model
 
 ### 3.1 Experience / ExperienceSet
 
-`Experience` 对应 experiences 目录下的一个 experience 文件。
+`Experience` 對應 experiences 目錄下的一個 experience 檔案。
 
 ```python
 @dataclass(slots=True)
@@ -88,7 +88,7 @@ class Experience:
     backlinks: list[dict[str, Any]] = field(default_factory=list)
 ```
 
-`ExperienceSet` 是某个 experiences 根目录的快照：
+`ExperienceSet` 是某個 experiences 根目錄的快照：
 
 ```python
 @dataclass(slots=True)
@@ -100,24 +100,24 @@ class ExperienceSet:
     request_context: Any | None = field(default=None, repr=False, compare=False)
 ```
 
-当前实现中，`ExperienceSet` 还负责提供并发安全能力：
+當前實現中，`ExperienceSet` 還負責提供併發安全能力：
 
 ```python
 async with policy_set.lock():
     latest_policy_set = await policy_set.reload()
 ```
 
-约定：
+約定：
 
-- `root_uri` 是 experiences 目录 URI。
-- `links/backlinks` 对应 memory file 中的 `MEMORY_FIELDS.links/backlinks`，用于在 train 域快照内保留 v2 link 协议数据。
-- `policies` 是当前目录下所有 experience 文件解析后的快照。
-- `viking_fs` / `request_context` 是运行时依赖，用于 `lock()` 和 `reload()`，不参与 equality/repr。
-- `PolicyTrainingEngine.plan_and_apply(...)` 会先加 policy tree lock，再 reload 最新 policy set，然后 plan/apply。
+- `root_uri` 是 experiences 目錄 URI。
+- `links/backlinks` 對應 memory file 中的 `MEMORY_FIELDS.links/backlinks`，用於在 train 域快照內保留 v2 link 協議資料。
+- `policies` 是當前目錄下所有 experience 檔案解析後的快照。
+- `viking_fs` / `request_context` 是執行時依賴，用於 `lock()` 和 `reload()`，不參與 equality/repr。
+- `PolicyTrainingEngine.plan_and_apply(...)` 會先加 policy tree lock，再 reload 最新 policy set，然後 plan/apply。
 
 ### 3.2 Trajectory
 
-`Trajectory` 是从 rollout 中抽取并持久化的可训练轨迹样本，对应 trajectories 目录下的 memory 文件。
+`Trajectory` 是從 rollout 中抽取並持久化的可訓練軌跡樣本，對應 trajectories 目錄下的 memory 檔案。
 
 ```python
 @dataclass(slots=True)
@@ -130,15 +130,15 @@ class Trajectory:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-约定：
+約定：
 
-- `Rollout` 是原始执行记录。
-- `Trajectory` 是从 rollout messages 中抽取出的训练样本。
-- trajectory 文件由 `TrajectoryRolloutAnalyzer` 通过 `ExtractLoop + MemoryUpdater` 写入 `memories/trajectories`。
+- `Rollout` 是原始執行記錄。
+- `Trajectory` 是從 rollout messages 中抽取出的訓練樣本。
+- trajectory 檔案由 `TrajectoryRolloutAnalyzer` 通過 `ExtractLoop + MemoryUpdater` 寫入 `memories/trajectories`。
 
 ### 3.3 Case / Rubric
 
-`Case` 是可执行、可复现、可评估的训练/评测样例。
+`Case` 是可執行、可復現、可評估的訓練/評測樣例。
 
 ```python
 @dataclass(slots=True)
@@ -150,7 +150,7 @@ class Case:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-`Rubric` 定义“什么叫做好”和“怎么检查”。当前不再保留独立 `Outcome` 概念。
+`Rubric` 定義“什麼叫做好”和“怎麼檢查”。當前不再保留獨立 `Outcome` 概念。
 
 ```python
 @dataclass(slots=True)
@@ -171,7 +171,7 @@ class RubricCriterion:
 
 ### 3.4 Rollout
 
-`Rollout` 是某个 policy snapshot 在某个 case 上执行后的记录。
+`Rollout` 是某個 policy snapshot 在某個 case 上執行後的記錄。
 
 ```python
 @dataclass(slots=True)
@@ -183,11 +183,11 @@ class Rollout:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-当前关键变化：`Rollout.evaluation` 是一等可选字段。
+當前關鍵變化：`Rollout.evaluation` 是一等可選欄位。
 
-- 如果环境本身能给 reward / evaluation，`RolloutExecutor` 应直接填入 `rollout.evaluation`。
-- 训练时 `TrajectoryRolloutAnalyzer` 优先沿用 `rollout.evaluation`；没有时才通过注入的 `RolloutEvaluator` 评估；再没有时用“是否抽取到 trajectory”作为 fallback evaluation。
-- `pipeline.eval(...)` 不再调用 `RolloutAnalyzer`，只依赖 `RolloutExecutor` 返回的 `rollout.evaluation`；如果 eval rollout 缺 evaluation，会直接报错。
+- 如果環境本身能給 reward / evaluation，`RolloutExecutor` 應直接填入 `rollout.evaluation`。
+- 訓練時 `TrajectoryRolloutAnalyzer` 優先沿用 `rollout.evaluation`；沒有時才通過注入的 `RolloutEvaluator` 評估；再沒有時用“是否抽取到 trajectory”作為 fallback evaluation。
+- `pipeline.eval(...)` 不再呼叫 `RolloutAnalyzer`，只依賴 `RolloutExecutor` 返回的 `rollout.evaluation`；如果 eval rollout 缺 evaluation，會直接報錯。
 
 ### 3.5 RubricEvaluation
 
@@ -214,11 +214,11 @@ class CriterionResult:
 
 - `passed = reward >= 1.0`
 - `score = reward`
-- report 展示以 `accuracy = passed_count / case_count` 为主，`average_reward` 为辅助指标。
+- report 展示以 `accuracy = passed_count / case_count` 為主，`average_reward` 為輔助指標。
 
 ## 4. SemanticGradient
 
-`SemanticGradient` 是针对一个目标 experience 的语义更新信号。当前接口以 `MemoryFile` before/after 表达，而不是文本 patch 对象。
+`SemanticGradient` 是針對一個目標 experience 的語義更新訊號。當前介面以 `MemoryFile` before/after 表達，而不是文本 patch 物件。
 
 ```python
 class SemanticGradient(Protocol):
@@ -244,7 +244,7 @@ class SemanticGradient(Protocol):
     def metadata(self) -> dict[str, Any]: ...
 ```
 
-当前具体实现：
+當前具體實現：
 
 ```python
 @dataclass(slots=True)
@@ -258,16 +258,16 @@ class PatchSemanticGradient:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-约定：
+約定：
 
-- `before_file is None` 表示建议新建。
-- `after_file` 是建议的目标 memory file 状态。
-- `links` 承载 exp→traj 的 provenance，沿用 v2 `MEMORY_FIELDS.links/backlinks` 协议；来源轨迹关系使用 `StoredLink(from_uri=exp_uri, to_uri=traj_uri, link_type="derived_from", weight=1.0)`，不再引入单独的轨迹 URI 列表字段。
-- patch 文本不是 gradient 自身字段，而是由 `PatchMergeContextProvider` 在 merge 阶段把 before/after memory file 渲染为字段级 unified diff。
+- `before_file is None` 表示建議新建。
+- `after_file` 是建議的目標 memory file 狀態。
+- `links` 承載 exp→traj 的 provenance，沿用 v2 `MEMORY_FIELDS.links/backlinks` 協議；來源軌跡關係使用 `StoredLink(from_uri=exp_uri, to_uri=traj_uri, link_type="derived_from", weight=1.0)`，不再引入單獨的軌跡 URI 列表欄位。
+- patch 文本不是 gradient 自身欄位，而是由 `PatchMergeContextProvider` 在 merge 階段把 before/after memory file 渲染為欄位級 unified diff。
 
 ## 5. PolicyUpdatePlan / PolicyUpdater
 
-`PolicyOptimizer.plan(...)` 输出 `PolicyUpdatePlan`，`PolicyUpdater.apply(...)` 负责真正写文件。
+`PolicyOptimizer.plan(...)` 輸出 `PolicyUpdatePlan`，`PolicyUpdater.apply(...)` 負責真正寫檔案。
 
 ```python
 PolicyPlanItemKind = Literal["upsert_experience", "delete_experience"]
@@ -298,13 +298,13 @@ class PolicyApplyResult:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-当前 `MemoryFilePolicyUpdater` 支持：
+當前 `MemoryFilePolicyUpdater` 支援：
 
 - `upsert_experience`
 - `delete_experience`
-- 基于 `before_content` 的轻量 base-content guard，避免覆盖已发散内容。
+- 基於 `before_content` 的輕量 base-content guard，避免覆蓋已發散內容。
 
-## 6. 接口定义
+## 6. 介面定義
 
 ### 6.1 CaseLoader
 
@@ -313,10 +313,10 @@ class CaseLoader(Protocol):
     async def batches(self, context: Any) -> AsyncIterator[list[Case]]: ...
 ```
 
-实现：
+實現：
 
 - `ListCaseLoader`
-- `RemoteCaseLoader`：通过 HTTP 服务拉取 cases。
+- `RemoteCaseLoader`：通過 HTTP 服務拉取 cases。
 
 ### 6.2 RolloutExecutor
 
@@ -330,11 +330,11 @@ class RolloutExecutor(Protocol):
     ) -> list[Rollout]: ...
 ```
 
-实现：
+實現：
 
 - `SingleTurnLLMRolloutExecutor`
 - `RemoteRolloutExecutor`
-- `Tau2RolloutExecutor`（benchmark/tau2 内部实现，通过 tau2 service 暴露给训练流程）
+- `Tau2RolloutExecutor`（benchmark/tau2 內部實現，通過 tau2 service 暴露給訓練流程）
 
 ### 6.3 RolloutEvaluator
 
@@ -343,7 +343,7 @@ class RolloutEvaluator(Protocol):
     async def evaluate(self, rollout: Rollout, context: Any) -> RubricEvaluation: ...
 ```
 
-用途：环境不能直接提供 `rollout.evaluation` 时，`RolloutAnalyzer` 可注入 evaluator 进行评估。
+用途：環境不能直接提供 `rollout.evaluation` 時，`RolloutAnalyzer` 可注入 evaluator 進行評估。
 
 ### 6.4 RolloutAnalyzer
 
@@ -352,18 +352,18 @@ class RolloutAnalyzer(Protocol):
     async def analyze(self, rollout: Rollout, context: Any) -> RolloutAnalysis: ...
 ```
 
-当前实现：`TrajectoryRolloutAnalyzer`。
+當前實現：`TrajectoryRolloutAnalyzer`。
 
-职责：
+職責：
 
-1. 确定 rollout evaluation：
-   - 优先使用 `rollout.evaluation`
-   - 否则使用注入的 `RolloutEvaluator`
-   - 否则基于是否抽取到 trajectory 生成默认 evaluation
-2. 将 evaluation feedback 追加到 trajectory extraction messages。
-3. 通过 `AgentTrajectoryContextProvider + ExtractLoop` 只抽取 `trajectories` memory type。
-4. 通过 `MemoryUpdater.apply_operations(...)` 写入 trajectory memory。
-5. 读取写入的 trajectory 文件并返回 `RolloutAnalysis`。
+1. 確定 rollout evaluation：
+   - 優先使用 `rollout.evaluation`
+   - 否則使用注入的 `RolloutEvaluator`
+   - 否則基於是否抽取到 trajectory 生成預設 evaluation
+2. 將 evaluation feedback 追加到 trajectory extraction messages。
+3. 通過 `AgentTrajectoryContextProvider + ExtractLoop` 只抽取 `trajectories` memory type。
+4. 通過 `MemoryUpdater.apply_operations(...)` 寫入 trajectory memory。
+5. 讀取寫入的 trajectory 檔案並返回 `RolloutAnalysis`。
 
 ### 6.5 GradientEstimator
 
@@ -377,15 +377,15 @@ class GradientEstimator(Protocol):
     ) -> list[SemanticGradient]: ...
 ```
 
-当前实现：`ExperienceGradientEstimator`。
+當前實現：`ExperienceGradientEstimator`。
 
-它复用：
+它複用：
 
 - `AgentExperienceContextProvider`
 - `ExtractLoop`
 - `MemoryIsolationHandler(allowed_memory_types={"experiences"})`
 
-但不调用 `MemoryUpdater.apply_operations(...)`。它把 ExtractLoop 产生的 upsert operations 转成 `PatchSemanticGradient`。
+但不呼叫 `MemoryUpdater.apply_operations(...)`。它把 ExtractLoop 產生的 upsert operations 轉成 `PatchSemanticGradient`。
 
 ### 6.6 PolicyOptimizer
 
@@ -399,14 +399,14 @@ class PolicyOptimizer(Protocol):
     ) -> PolicyUpdatePlan: ...
 ```
 
-当前实现：`PatchMergePolicyOptimizer`。
+當前實現：`PatchMergePolicyOptimizer`。
 
-它不按 target 分组限制输出，而是把一批 gradients 一次性交给 `PatchMergeContextProvider + ExtractLoop` 进行全局 merge。LLM 可以：
+它不按 target 分組限制輸出，而是把一批 gradients 一次性交給 `PatchMergeContextProvider + ExtractLoop` 進行全域 merge。LLM 可以：
 
-- 合并多个 patch 到一个 experience。
-- 把一个臃肿 patch 拆成多个 experience。
-- 合并相似新文件。
-- 主动输出删除操作。
+- 合併多個 patch 到一個 experience。
+- 把一個臃腫 patch 拆成多個 experience。
+- 合併相似新檔案。
+- 主動輸出刪除操作。
 
 ### 6.7 PolicyUpdater
 
@@ -420,7 +420,7 @@ class PolicyUpdater(Protocol):
     ) -> PolicyApplyResult: ...
 ```
 
-实现：
+實現：
 
 - `DryRunPolicyUpdater`
 - `MemoryFilePolicyUpdater`
@@ -438,11 +438,11 @@ class PolicyTrainer(Protocol):
     ) -> RolloutTrainingResult: ...
 ```
 
-实现：
+實現：
 
-- `BatchPolicyTrainer`：显式 batch，本地执行 analyze/estimate/plan/apply。
-- `StreamingPolicyTrainer`：实时 rollout 输入，先 analyze/estimate，再按梯度数量和时间窗口攒批，批量 plan/apply。
-- `SessionCommitPolicyTrainer`：把 rollout 写入远端 OpenViking session，通过 `session.commit` 让服务端完成训练。
+- `BatchPolicyTrainer`：顯式 batch，本地執行 analyze/estimate/plan/apply。
+- `StreamingPolicyTrainer`：即時 rollout 輸入，先 analyze/estimate，再按梯度數量和時間視窗攢批，批次 plan/apply。
+- `SessionCommitPolicyTrainer`：把 rollout 寫入遠端 OpenViking session，通過 `session.commit` 讓服務端完成訓練。
 
 ### 6.9 PolicyOptimizationPipeline
 
@@ -453,7 +453,7 @@ class PolicyOptimizationPipeline(Protocol):
     async def train_from_rollouts(...) -> RolloutTrainingResult: ...
 ```
 
-当前实现：`OfflinePolicyOptimizationPipeline`。
+當前實現：`OfflinePolicyOptimizationPipeline`。
 
 ## 7. PipelineContext / ExecutionContext
 
@@ -475,9 +475,9 @@ class ExecutionContext:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-`max_epochs` 是训练迭代次数。之前文档中的 `max_iterations` 已改为 epoch 概念。
+`max_epochs` 是訓練迭代次數。之前文件中的 `max_iterations` 已改為 epoch 概念。
 
-## 8. 训练流程
+## 8. 訓練流程
 
 ### 8.1 OfflinePolicyOptimizationPipeline.train
 
@@ -490,7 +490,7 @@ for epoch in range(ctx.max_epochs):
     policy_set = training_result.apply_result.updated_policy_set
 ```
 
-默认 `policy_trainer` 是 `BatchPolicyTrainer`，因此本地训练链路为：
+預設 `policy_trainer` 是 `BatchPolicyTrainer`，因此本地訓練鏈路為：
 
 ```text
 Rollout[]
@@ -509,23 +509,23 @@ Rollout[]
 CaseLoader -> RolloutExecutor -> Rollout.evaluation -> PipelineEvaluationResult
 ```
 
-eval 阶段不会调用 `RolloutAnalyzer`，不会抽 trajectory，也不会写 policy。它要求 `RolloutExecutor` 返回带 `evaluation` 的 rollout。
+eval 階段不會呼叫 `RolloutAnalyzer`，不會抽 trajectory，也不會寫 policy。它要求 `RolloutExecutor` 返回帶 `evaluation` 的 rollout。
 
 ### 8.3 train_from_rollouts
 
-实时场景或外部系统已经产生 rollout 时，可以绕过 `CaseLoader / PolicySnapshotter / RolloutExecutor`：
+即時場景或外部系統已經產生 rollout 時，可以繞過 `CaseLoader / PolicySnapshotter / RolloutExecutor`：
 
 ```text
 Rollout[] -> policy_trainer.train_rollouts(...)
 ```
 
-约束：每个 rollout 必须包含 `case`。
+約束：每個 rollout 必須包含 `case`。
 
-## 9. Batch 与 Streaming
+## 9. Batch 與 Streaming
 
 ### 9.1 BatchPolicyTrainer
 
-适合离线训练，输入一批 rollout 后直接完成一次：
+適合離線訓練，輸入一批 rollout 後直接完成一次：
 
 ```text
 analyze -> estimate -> plan -> apply
@@ -533,7 +533,7 @@ analyze -> estimate -> plan -> apply
 
 ### 9.2 StreamingPolicyTrainer
 
-适合实时 commit / 并发 rollout 场景。
+適合即時 commit / 併發 rollout 場景。
 
 流程：
 
@@ -542,16 +542,16 @@ submit_rollout(rollout)
   -> analyze rollout
   -> estimate gradients
   -> submit gradients to StreamingBatcher
-  -> 等待该 rollout 所在 batch 被 flush 并 apply
+  -> 等待該 rollout 所在 batch 被 flush 並 apply
 ```
 
-flush 触发条件：
+flush 觸發條件：
 
-- `max_gradients_per_update` 达到阈值
-- 最老 gradient 等待超过 `max_wait_seconds`
-- `close()` 时 flush 剩余内容
+- `max_gradients_per_update` 達到閾值
+- 最老 gradient 等待超過 `max_wait_seconds`
+- `close()` 時 flush 剩餘內容
 
-默认配置：
+預設配置：
 
 ```python
 @dataclass(slots=True)
@@ -562,20 +562,20 @@ class StreamingPolicyTrainerConfig:
     trace_console: bool = False
 ```
 
-进程内全局共享：
+程序內全域共享：
 
 ```python
 get_streaming_policy_trainer(...)
 make_streaming_policy_trainer_key(policy_root_uri, request_context)
 ```
 
-并发安全由 `PolicyTrainingEngine.plan_and_apply(...)` 中的 `ExperienceSet.lock()` 保证。
+併發安全由 `PolicyTrainingEngine.plan_and_apply(...)` 中的 `ExperienceSet.lock()` 保證。
 
-## 10. Patch Merge 机制
+## 10. Patch Merge 機制
 
 ### 10.1 PatchSemanticGradient 到 PatchMergePatch
 
-`PatchMergePolicyOptimizer` 会把每个 `SemanticGradient` 转为：
+`PatchMergePolicyOptimizer` 會把每個 `SemanticGradient` 轉為：
 
 ```python
 @dataclass(slots=True)
@@ -589,28 +589,28 @@ class PatchMergePatch:
 
 位置：`openviking/session/memory/patch_merge_context_provider.py`
 
-职责：
+職責：
 
-- 给 LLM 提供待合并 patch 相关的原始 memory 文件。
-- 将 `MemoryFile` before/after 渲染为字段级 unified diff。
-- 用 embedding 检索额外候选文件，帮助发现相似/重复 memory。
-- 暴露指定 memory type 的 schema，让 ExtractLoop 输出合法 memory operations。
+- 給 LLM 提供待合併 patch 相關的原始 memory 檔案。
+- 將 `MemoryFile` before/after 渲染為欄位級 unified diff。
+- 用 embedding 檢索額外候選檔案，幫助發現相似/重複 memory。
+- 暴露指定 memory type 的 schema，讓 ExtractLoop 輸出合法 memory operations。
 
-输入文件选择：
+輸入檔案選擇：
 
 ```text
 required_file_uris = patch target uri / superseded policy uri
-extra_candidate_files = embedding search 当前 memory_type 下的相似文件
+extra_candidate_files = embedding search 當前 memory_type 下的相似檔案
 max_extra_candidate_files = max(5, len(required_file_uris))
 search_limit = max_extra_candidate_files * 2
 ```
 
-字段 diff 规则：
+欄位 diff 規則：
 
-- 只展示发生变化的字段。
+- 只展示發生變化的欄位。
 - 字符串按行 diff。
 - dict/list 先 JSON 格式化再 diff。
-- `content` 已在 `Field Diff: content` 中展示，因此不会额外在 metadata 中重复塞完整 content。
+- `content` 已在 `Field Diff: content` 中展示，因此不會額外在 metadata 中重複塞完整 content。
 
 ### 10.3 PatchMergePolicyOptimizer
 
@@ -622,27 +622,27 @@ SemanticGradient[]
   -> PolicyPlanItem[]
 ```
 
-输出支持：
+輸出支援：
 
 - upsert experience
 - delete experience
 
-merge 输入/输出日志通过 `tracer.info(..., console=False)` 记录，避免默认污染 console。
+merge 輸入/輸出日誌通過 `tracer.info(..., console=False)` 記錄，避免預設汙染 console。
 
-## 11. session.commit 实时训练接入
+## 11. session.commit 即時訓練接入
 
-`SessionCompressorV3` 已把用户记忆抽取和实时训练接起来。
+`SessionCompressorV3` 已把使用者記憶抽取和即時訓練接起來。
 
-### 11.1 用户记忆抽取
+### 11.1 使用者記憶抽取
 
 `SessionCompressorV3._extract_user_memories(...)`：
 
-1. 通过原用户记忆 `ExtractLoop` 抽取用户记忆。
-2. case 不再额外单独调用 LLM，而是作为一种普通 memory type：`cases`。
-3. 抽取结果交给 `StreamingMemoryUpdater` 做 patch merge 写入用户记忆。
-4. 如有 `archive_uri`，写入 `memory_diff.json`，其中包含顶层 `trace_id`。
+1. 通過原使用者記憶 `ExtractLoop` 抽取使用者記憶。
+2. case 不再額外單獨呼叫 LLM，而是作為一種普通 memory type：`cases`。
+3. 抽取結果交給 `StreamingMemoryUpdater` 做 patch merge 寫入使用者記憶。
+4. 如有 `archive_uri`，寫入 `memory_diff.json`，其中包含頂層 `trace_id`。
 
-`memory_diff.json` 顶层结构包含：
+`memory_diff.json` 頂層結構包含：
 
 ```json
 {
@@ -655,7 +655,7 @@ merge 输入/输出日志通过 `tracer.info(..., console=False)` 记录，避�
 }
 ```
 
-### 11.2 从 cases 触发 streaming train
+### 11.2 從 cases 觸發 streaming train
 
 `SessionCompressorV3.train_from_extracted_cases(...)`：
 
@@ -665,13 +665,13 @@ extracted Case[] + original commit messages
   -> StreamingPolicyTrainer.submit_rollout(...)
 ```
 
-即真实 session.commit 产生的对话可以被转为 rollout 输入训练框架。
+即真實 session.commit 產生的對話可以被轉為 rollout 輸入訓練框架。
 
-## 12. SessionCommitPolicyTrainer：远程服务端训练
+## 12. SessionCommitPolicyTrainer：遠端服務端訓練
 
-`SessionCommitPolicyTrainer` 是一个 `PolicyTrainer` 实现，用于“训练框架在外部，OpenViking 服务端负责训练”的场景。
+`SessionCommitPolicyTrainer` 是一個 `PolicyTrainer` 實現，用於“訓練框架在外部，OpenViking 服務端負責訓練”的場景。
 
-它会把 rollout 写成一个临时 session：
+它會把 rollout 寫成一個臨時 session：
 
 ```text
 [CaseSpec message]
@@ -681,11 +681,11 @@ extracted Case[] + original commit messages
 
 其中：
 
-- `CaseSpec` 放在开头，只含 case/rubric/task context，不含 evaluation。
-- `OutcomeEvaluation` 放在最后，只含 evaluation，作为训练信号。
-- rollout 的工具结果会通过 `ToolPart` 的 `tool_output` 上传，而不是普通 text。
+- `CaseSpec` 放在開頭，只含 case/rubric/task context，不含 evaluation。
+- `OutcomeEvaluation` 放在最後，只含 evaluation，作為訓練訊號。
+- rollout 的工具結果會通過 `ToolPart` 的 `tool_output` 上傳，而不是普通 text。
 
-然后执行：
+然後執行：
 
 ```text
 client.create_session(...)
@@ -694,22 +694,22 @@ client.commit_session(...)
 client.get_task(...) until completed/failed/timeout
 ```
 
-CaseSpec 会做精简，避免传入巨大或重复字段：
+CaseSpec 會做精簡，避免傳入巨大或重複欄位：
 
-- 不传 `policy`
-- 不传 `data_root`
-- 不传 `rollout_metadata`
-- 不传 `policy_snapshot_id`
+- 不傳 `policy`
+- 不傳 `data_root`
+- 不傳 `rollout_metadata`
+- 不傳 `policy_snapshot_id`
 - 保留 `domain/split/data_split/task_id/task_no/user_query/ground_truth/rubric`
 
-## 13. Remote HTTP 组件
+## 13. Remote HTTP 元件
 
-`components/remote.py` 提供通用 HTTP 组件：
+`components/remote.py` 提供通用 HTTP 元件：
 
 - `RemoteCaseLoader`
 - `RemoteRolloutExecutor`
 
-它们面向一个环境/benchmark service：
+它們面向一個環境/benchmark service：
 
 ```text
 POST /v1/cases/query
@@ -717,29 +717,29 @@ POST /v1/rollouts/execute
 GET  /v1/rollouts/executions/{execution_id}
 ```
 
-其中 `/v1/rollouts/execute` 只负责提交单个 case 的 rollout execution，返回
-`execution_id`；`RemoteRolloutExecutor` 会并发提交多个 case，并通过
-`/v1/rollouts/executions/{execution_id}` 轮询状态。这样长耗时 rollout 不会占用
-一个超长 HTTP request，也便于未来 benchmark service 做多机部署和负载均衡。
+其中 `/v1/rollouts/execute` 只負責提交單個 case 的 rollout execution，返回
+`execution_id`；`RemoteRolloutExecutor` 會併發提交多個 case，並通過
+`/v1/rollouts/executions/{execution_id}` 輪詢狀態。這樣長耗時 rollout 不會佔用
+一個超長 HTTP request，也便於未來 benchmark service 做多機部署和負載均衡。
 
-这样训练框架不需要直接依赖 tau2 或其他 benchmark 的代码，只依赖通用
-Case/Rollout JSON 协议。
+這樣訓練框架不需要直接依賴 tau2 或其他 benchmark 的程式碼，只依賴通用
+Case/Rollout JSON 協議。
 
 ## 14. tau2 集成
 
-### 14.1 架构
+### 14.1 架構
 
-当前 tau2 训练分为两个进程：
+當前 tau2 訓練分為兩個程序：
 
 ```text
 tau2 service
-  - 依赖 tau2 / vikingbot
+  - 依賴 tau2 / vikingbot
   - 暴露 case query 和 rollout execute HTTP API
 
 train/eval runner
   - 使用 RemoteCaseLoader / RemoteRolloutExecutor
   - 使用 SessionCommitPolicyTrainer 提交 OpenViking session.commit
-  - 本身不直接依赖 tau2 runtime
+  - 本身不直接依賴 tau2 runtime
 ```
 
 ### 14.2 tau2 service
@@ -751,7 +751,7 @@ benchmark/tau2/train/service_app.py
 benchmark/tau2/train/run_service.sh
 ```
 
-启动：
+啟動：
 
 ```bash
 benchmark/tau2/train/run_service.sh \
@@ -769,7 +769,7 @@ openviking/session/train/run_batch_train_eval.py
 openviking/session/train/batch_runner.py
 ```
 
-预先只跑 test 分数（不训练）：
+預先只跑 test 分數（不訓練）：
 
 ```bash
 benchmark/tau2/train/run_batch_train_eval.sh \
@@ -778,7 +778,7 @@ benchmark/tau2/train/run_batch_train_eval.sh \
   --trials 8
 ```
 
-训练前先跑一次 test baseline，再训练并跑最终 test：
+訓練前先跑一次 test baseline，再訓練並跑最終 test：
 
 ```bash
 benchmark/tau2/train/run_batch_train_eval.sh \
@@ -787,7 +787,7 @@ benchmark/tau2/train/run_batch_train_eval.sh \
   --trials 8
 ```
 
-输出以 accuracy 为主，阶段日志由 session/train lifecycle hooks 统一输出：
+輸出以 accuracy 為主，階段日誌由 session/train lifecycle hooks 統一輸出：
 
 ```text
 [baseline_rollout] epoch=-1 trials=8 cases_per_trial=25 total_rollouts=200 accuracy=... ± ... avg_reward=... ± ...
@@ -799,7 +799,7 @@ benchmark/tau2/train/run_batch_train_eval.sh \
 
 ### 14.4 tau2 rollout messages
 
-`Tau2RolloutExecutor` 会把工具结果转成真正的 `ToolPart`：
+`Tau2RolloutExecutor` 會把工具結果轉成真正的 `ToolPart`：
 
 ```json
 {
@@ -812,38 +812,38 @@ benchmark/tau2/train/run_batch_train_eval.sh \
 }
 ```
 
-这样上传到 `session.commit` 后，服务端可以复用已有 tool output 外部化和 memory extraction 逻辑。
+這樣上傳到 `session.commit` 後，服務端可以複用已有 tool output 外部化和 memory extraction 邏輯。
 
 
-## 15. tau2 接入新评测框架示意图
+## 15. tau2 接入新評測框架示意圖
 
-tau2 的接入方式体现了推荐的 benchmark 集成模式：benchmark runtime 独立成 HTTP service，训练框架只通过通用 `RemoteCaseLoader` / `RemoteRolloutExecutor` 接入。
+tau2 的接入方式體現了推薦的 benchmark 整合模式：benchmark runtime 獨立成 HTTP service，訓練框架只通過通用 `RemoteCaseLoader` / `RemoteRolloutExecutor` 接入。
 
-<img src="https://gist.githubusercontent.com/chenjw/5c8f05a10f2c3f1913eb6c9d4293f0a4/raw/d9151bc8bbceccf3e56486897061c76a5d6f0cfa/tau2-train-eval-architecture.svg" alt="tau2 接入 OpenViking 新训练评测框架" width="100%">
+<img src="https://gist.githubusercontent.com/chenjw/5c8f05a10f2c3f1913eb6c9d4293f0a4/raw/d9151bc8bbceccf3e56486897061c76a5d6f0cfa/tau2-train-eval-architecture.svg" alt="tau2 接入 OpenViking 新訓練評測框架" width="100%">
 
 
-图中需要特别注意：tau2 runtime service 虽然不负责训练写入，但它执行 rollout 时会通过 VikingBot / OpenViking tools 读取当前 OpenViking memories。因此 final_eval 能看到 train epoch 后写入的最新 experiences。
+圖中需要特別注意：tau2 runtime service 雖然不負責訓練寫入，但它執行 rollout 時會通過 VikingBot / OpenViking tools 讀取當前 OpenViking memories。因此 final_eval 能看到 train epoch 後寫入的最新 experiences。
 
-### 15.1 接入分层
+### 15.1 接入分層
 
 ```text
 tau2 service
-  - 依赖 tau2 / vikingbot
-  - 负责 case 查询、rollout 执行、环境 reward 评估
-  - 输出通用 Case / Rollout / RubricEvaluation JSON
+  - 依賴 tau2 / vikingbot
+  - 負責 case 查詢、rollout 執行、環境 reward 評估
+  - 輸出通用 Case / Rollout / RubricEvaluation JSON
 
 train/eval runner
-  - 不直接依赖 tau2 runtime
-  - 使用 RemoteCaseLoader 查询 case
-  - 使用 RemoteRolloutExecutor 执行 rollout
-  - 使用 SessionCommitPolicyTrainer 把训练 rollout 提交给 OpenViking 服务端
+  - 不直接依賴 tau2 runtime
+  - 使用 RemoteCaseLoader 查詢 case
+  - 使用 RemoteRolloutExecutor 執行 rollout
+  - 使用 SessionCommitPolicyTrainer 把訓練 rollout 提交給 OpenViking 服務端
 
 OpenViking server
-  - 通过 session.commit 接收 rollout messages
-  - 服务端内部执行 trajectory extraction / gradient estimation / patch merge / policy update
+  - 通過 session.commit 接收 rollout messages
+  - 服務端內部執行 trajectory extraction / gradient estimation / patch merge / policy update
 ```
 
-### 15.2 train/eval 时序
+### 15.2 train/eval 時序
 
 ```text
 baseline_eval:
@@ -871,9 +871,9 @@ final_eval:
     -> accuracy delta report
 ```
 
-### 15.3 为什么 eval 不走 RolloutAnalyzer
+### 15.3 為什麼 eval 不走 RolloutAnalyzer
 
-在 tau2 场景中，环境执行完 rollout 后可以直接给出 reward，因此 `Tau2RolloutExecutor` 会返回：
+在 tau2 場景中，環境執行完 rollout 後可以直接給出 reward，因此 `Tau2RolloutExecutor` 會返回：
 
 ```python
 Rollout(
@@ -884,18 +884,18 @@ Rollout(
 )
 ```
 
-所以 `OfflinePolicyOptimizationPipeline.eval(...)` 只统计 `rollout.evaluation`：
+所以 `OfflinePolicyOptimizationPipeline.eval(...)` 只統計 `rollout.evaluation`：
 
 ```text
 accuracy = passed_count / case_count
 average_reward = mean(evaluation.score)
 ```
 
-eval 不抽 trajectory、不估计 gradient、不写 experience。
+eval 不抽 trajectory、不估計 gradient、不寫 experience。
 
-### 15.4 训练如何通过 session.commit 进入服务端
+### 15.4 訓練如何通過 session.commit 進入服務端
 
-`SessionCommitPolicyTrainer` 会把 rollout 转成临时 session messages：
+`SessionCommitPolicyTrainer` 會把 rollout 轉成臨時 session messages：
 
 ```text
 [OpenViking Training CaseSpec]
@@ -905,13 +905,13 @@ eval 不抽 trajectory、不估计 gradient、不写 experience。
 
 其中：
 
-- `CaseSpec` 放在开头，只描述任务和 rubric，不包含 evaluation。
-- `OutcomeEvaluation` 放在最后，作为训练信号。
-- tau2 工具结果使用 `ToolPart.tool_output` 上传，服务端可以复用已有 tool output 外部化和 memory extraction 逻辑。
+- `CaseSpec` 放在開頭，只描述任務和 rubric，不包含 evaluation。
+- `OutcomeEvaluation` 放在最後，作為訓練訊號。
+- tau2 工具結果使用 `ToolPart.tool_output` 上傳，服務端可以複用已有 tool output 外部化和 memory extraction 邏輯。
 
-### 15.5 指标展示
+### 15.5 指標展示
 
-tau2 runner 的报告以正确率为主：
+tau2 runner 的報告以正確率為主：
 
 ```text
 [baseline_eval] epoch=-1 cases=10 accuracy=20.00% passed=2/10 avg_reward=0.200000
@@ -923,22 +923,22 @@ final accuracy: 30.00% (3/10)
 accuracy delta: +10.00pp
 ```
 
-`average_reward` 保留为辅助指标；主指标是 `accuracy`。
+`average_reward` 保留為輔助指標；主指標是 `accuracy`。
 
-### 15.6 以 tau2 为例：新场景接入需要实现的接口
+### 15.6 以 tau2 為例：新場景接入需要實現的介面
 
-一个新的 benchmark / domain / environment 接入训练评测框架时，推荐复用 tau2
-的分层方式：把场景 runtime 独立成一个 HTTP service，训练进程继续使用通用
-`RemoteCaseLoader` / `RemoteRolloutExecutor`。训练框架不关心场景内部怎么启动
-agent、怎么调用工具、怎么计算 reward，只要求 service 实现下面这些协议。
+一個新的 benchmark / domain / environment 接入訓練評測框架時，推薦複用 tau2
+的分層方式：把場景 runtime 獨立成一個 HTTP service，訓練程序繼續使用通用
+`RemoteCaseLoader` / `RemoteRolloutExecutor`。訓練框架不關心場景內部怎麼啟動
+agent、怎麼呼叫工具、怎麼計算 reward，只要求 service 實現下面這些協議。
 
-#### 15.6.1 Case 查询接口
+#### 15.6.1 Case 查詢介面
 
 ```text
 POST /v1/cases/query
 ```
 
-请求：
+請求：
 
 ```json
 {
@@ -951,7 +951,7 @@ POST /v1/cases/query
 }
 ```
 
-响应：
+響應：
 
 ```json
 {
@@ -995,15 +995,15 @@ POST /v1/cases/query
 
 接入要求：
 
-- `dataset/domain/split` 用于定位数据集切片。
-- `cursor/limit` 用于分页；没有下一页时 `next_cursor = null`。
-- `Case.input` 只放 rollout 必需的任务输入和场景元信息，不要塞训练框架已经能从
-  上下文拿到的内容，例如完整 system prompt、完整 rollout metadata、evaluation
-  结果或 policy snapshot。
-- `Case.rubric` 必须能描述评测目标；如果环境能直接给 reward，也仍然要提供
-  rubric，便于训练侧把 reward 转成统一的 `RubricEvaluation`。
+- `dataset/domain/split` 用於定位資料集切片。
+- `cursor/limit` 用於分頁；沒有下一頁時 `next_cursor = null`。
+- `Case.input` 只放 rollout 必需的任務輸入和場景元資訊，不要塞訓練框架已經能從
+  上下文拿到的內容，例如完整 system prompt、完整 rollout metadata、evaluation
+  結果或 policy snapshot。
+- `Case.rubric` 必須能描述評測目標；如果環境能直接給 reward，也仍然要提供
+  rubric，便於訓練側把 reward 轉成統一的 `RubricEvaluation`。
 
-tau2 中对应实现是：
+tau2 中對應實現是：
 
 ```text
 benchmark/tau2/train/service_app.py::query_cases
@@ -1016,7 +1016,7 @@ benchmark/tau2/train/case_loader.py::Tau2CaseLoader
 POST /v1/rollouts/execute
 ```
 
-请求：
+請求：
 
 ```json
 {
@@ -1042,7 +1042,7 @@ POST /v1/rollouts/execute
 }
 ```
 
-响应：
+響應：
 
 ```json
 {
@@ -1057,15 +1057,15 @@ POST /v1/rollouts/execute
 
 接入要求：
 
-- 该接口只提交一个 case 的 rollout execution，不需要同步等待 rollout 完成。
-- 客户端会对多个 case 发起多个请求，service 端可以自行排队、限流、调度到不同
-  worker 或机器。
-- `policy_set.root_uri` 告诉 runtime 当前 experiences 根目录；tau2 rollout 期间
-  VikingBot 会通过 OpenViking recall 读取这里的最新经验。
-- `execution_context.policy_snapshot_id` 必须原样写入返回的 `Rollout.policy_snapshot_id`，
-  用于追踪这次 rollout 使用的是哪次 policy snapshot。
+- 該介面只提交一個 case 的 rollout execution，不需要同步等待 rollout 完成。
+- 客戶端會對多個 case 發起多個請求，service 端可以自行排隊、限流、排程到不同
+  worker 或機器。
+- `policy_set.root_uri` 告訴 runtime 當前 experiences 根目錄；tau2 rollout 期間
+  VikingBot 會通過 OpenViking recall 讀取這裡的最新經驗。
+- `execution_context.policy_snapshot_id` 必須原樣寫入返回的 `Rollout.policy_snapshot_id`，
+  用於追蹤這次 rollout 使用的是哪次 policy snapshot。
 
-tau2 中对应实现是：
+tau2 中對應實現是：
 
 ```text
 benchmark/tau2/train/service_app.py::execute_rollout
@@ -1073,13 +1073,13 @@ benchmark/tau2/train/service_app.py::_run_rollout_execution
 benchmark/tau2/train/rollout_executor.py::Tau2RolloutExecutor
 ```
 
-#### 15.6.3 Rollout 状态轮询接口
+#### 15.6.3 Rollout 狀態輪詢介面
 
 ```text
 GET /v1/rollouts/executions/{execution_id}
 ```
 
-运行中响应：
+執行中響應：
 
 ```json
 {
@@ -1092,7 +1092,7 @@ GET /v1/rollouts/executions/{execution_id}
 }
 ```
 
-完成响应：
+完成響應：
 
 ```json
 {
@@ -1157,7 +1157,7 @@ GET /v1/rollouts/executions/{execution_id}
 }
 ```
 
-失败响应：
+失敗響應：
 
 ```json
 {
@@ -1173,22 +1173,22 @@ GET /v1/rollouts/executions/{execution_id}
 接入要求：
 
 - `status` 至少支持 `running/completed/failed`。
-- `completed` 时必须返回完整 `rollout`。
-- `failed` 时必须返回可读 `error`，训练侧会把它归入该 case 的 rollout 失败。
-- `Rollout.messages` 应使用 OpenViking `Message` / `Part` 结构；工具调用和工具结果
-  用 `ToolPart`，不要把 `tool-call:\nname: ...` 塞进普通 text content。
-- `Rollout.evaluation` 在 eval 阶段是必需字段；如果没有 evaluation，
-  `OfflinePolicyOptimizationPipeline.eval(...)` 会失败。
+- `completed` 時必須返回完整 `rollout`。
+- `failed` 時必須返回可讀 `error`，訓練側會把它歸入該 case 的 rollout 失敗。
+- `Rollout.messages` 應使用 OpenViking `Message` / `Part` 結構；工具呼叫和工具結果
+  用 `ToolPart`，不要把 `tool-call:\nname: ...` 塞進普通 text content。
+- `Rollout.evaluation` 在 eval 階段是必需欄位；如果沒有 evaluation，
+  `OfflinePolicyOptimizationPipeline.eval(...)` 會失敗。
 
-#### 15.6.4 RolloutExecutor 内部职责
+#### 15.6.4 RolloutExecutor 內部職責
 
-新场景自己的 rollout executor 需要完成这些事情：
+新場景自己的 rollout executor 需要完成這些事情：
 
-1. 根据 `Case.input` 初始化环境和用户模拟器。
-2. 根据 `policy_set.root_uri` / OpenViking 配置让 agent 读取当前 experiences。
-3. 执行 agent loop，记录 user/assistant/tool messages。
-4. 把环境 reward 或 judge 结果转成 `RubricEvaluation`。
-5. 返回统一 `Rollout`：
+1. 根據 `Case.input` 初始化環境和使用者模擬器。
+2. 根據 `policy_set.root_uri` / OpenViking 配置讓 agent 讀取當前 experiences。
+3. 執行 agent loop，記錄 user/assistant/tool messages。
+4. 把環境 reward 或 judge 結果轉成 `RubricEvaluation`。
+5. 返回統一 `Rollout`：
 
 ```python
 Rollout(
@@ -1204,48 +1204,48 @@ Rollout(
 )
 ```
 
-tau2 的 `Tau2RolloutExecutor` 就是这个适配层：它一侧依赖 tau2/VikingBot runtime，
-另一侧只输出训练框架理解的 `Rollout`。
+tau2 的 `Tau2RolloutExecutor` 就是這個適配層：它一側依賴 tau2/VikingBot runtime，
+另一側只輸出訓練框架理解的 `Rollout`。
 
-#### 15.6.5 最小接入清单
+#### 15.6.5 最小接入清單
 
-接入一个新场景，最少需要实现：
+接入一個新場景，最少需要實現：
 
-| 接口/组件 | 必需 | 作用 |
+| 介面/元件 | 必需 | 作用 |
 |---|---:|---|
-| `POST /v1/cases/query` | 是 | 分页返回 `Case[]` |
-| `POST /v1/rollouts/execute` | 是 | 提交单个 rollout execution |
-| `GET /v1/rollouts/executions/{execution_id}` | 是 | 轮询 rollout 状态并取回 `Rollout` |
-| `RubricEvaluation` 转换 | eval 必需 | 把场景 reward/judge 结果转成统一 evaluation |
-| `Message` / `ToolPart` 转换 | 训练必需 | 保留 agent 行为和工具证据，供 session.commit 抽取 trajectory/experience |
-| `GET /health` | 建议 | 方便 runner 或部署系统做 preflight |
+| `POST /v1/cases/query` | 是 | 分頁返回 `Case[]` |
+| `POST /v1/rollouts/execute` | 是 | 提交單個 rollout execution |
+| `GET /v1/rollouts/executions/{execution_id}` | 是 | 輪詢 rollout 狀態並取回 `Rollout` |
+| `RubricEvaluation` 轉換 | eval 必需 | 把場景 reward/judge 結果轉成統一 evaluation |
+| `Message` / `ToolPart` 轉換 | 訓練必需 | 保留 agent 行為和工具證據，供 session.commit 抽取 trajectory/experience |
+| `GET /health` | 建議 | 方便 runner 或部署系統做 preflight |
 
-如果新场景不想提供 HTTP service，也可以在同进程内直接实现
-`CaseLoader` / `RolloutExecutor` Protocol；但跨进程、多机或重 runtime 依赖的场景，
-推荐采用 tau2 这种 service 方式。
+如果新場景不想提供 HTTP service，也可以在同進程內直接實現
+`CaseLoader` / `RolloutExecutor` Protocol；但跨程序、多機或重 runtime 依賴的場景，
+推薦採用 tau2 這種 service 方式。
 
-## 16. 当前主要组件清单
+## 16. 當前主要元件清單
 
-| 组件 | 文件 | 说明 |
+| 元件 | 檔案 | 說明 |
 |---|---|---|
-| `OfflinePolicyOptimizationPipeline` | `pipeline.py` | 离线 train/eval 编排 |
-| `PolicyTrainingEngine` | `engine.py` | 共享 analyze/estimate/plan/apply 内核 |
-| `ListCaseLoader` | `components/case_loader.py` | 内存 case loader |
+| `OfflinePolicyOptimizationPipeline` | `pipeline.py` | 離線 train/eval 編排 |
+| `PolicyTrainingEngine` | `engine.py` | 共享 analyze/estimate/plan/apply 核心 |
+| `ListCaseLoader` | `components/case_loader.py` | 記憶體 case loader |
 | `RemoteCaseLoader` | `components/remote.py` | HTTP case loader |
 | `RemoteRolloutExecutor` | `components/remote.py` | HTTP rollout executor |
-| `SingleTurnLLMRolloutExecutor` | `components/rollout_executor.py` | 简单单轮 LLM rollout |
+| `SingleTurnLLMRolloutExecutor` | `components/rollout_executor.py` | 簡單單輪 LLM rollout |
 | `TrajectoryRolloutAnalyzer` | `components/trajectory_analyzer.py` | 抽取 trajectory memory |
 | `ExperienceGradientEstimator` | `components/gradient_estimator.py` | trajectory -> PatchSemanticGradient |
 | `PatchMergePolicyOptimizer` | `components/policy_optimizer.py` | 多 gradient 全局 merge |
 | `DryRunPolicyUpdater` | `components/policy_updater.py` | dry-run apply |
-| `MemoryFilePolicyUpdater` | `components/policy_updater.py` | VikingFS 写回 experiences |
-| `BatchPolicyTrainer` | `components/policy_trainer.py` | batch rollout 训练 |
-| `StreamingPolicyTrainer` | `components/policy_trainer.py` | 实时攒批训练 |
-| `SessionCommitPolicyTrainer` | `components/session_commit.py` | 通过 session.commit 远程训练 |
-| `ContentHashPolicySnapshotter` | `components/snapshotter.py` | 内容 hash snapshot id |
-| `ExperienceSetLoader` | `components/memory_store.py` | 从 experiences 目录加载 policy set |
+| `MemoryFilePolicyUpdater` | `components/policy_updater.py` | VikingFS 寫回 experiences |
+| `BatchPolicyTrainer` | `components/policy_trainer.py` | batch rollout 訓練 |
+| `StreamingPolicyTrainer` | `components/policy_trainer.py` | 即時攢批訓練 |
+| `SessionCommitPolicyTrainer` | `components/session_commit.py` | 通過 session.commit 遠端訓練 |
+| `ContentHashPolicySnapshotter` | `components/snapshotter.py` | 內容 hash snapshot id |
+| `ExperienceSetLoader` | `components/memory_store.py` | 從 experiences 目錄載入 policy set |
 
-## 17. 端到端本地训练伪代码
+## 17. 端到端本地訓練虛擬碼
 
 ```python
 policy_set = await ExperienceSetLoader(viking_fs).load(
@@ -1280,13 +1280,13 @@ result = await pipeline.train(
 )
 ```
 
-## 18. 设计原则
+## 18. 設計原則
 
-- `Case` 是训练/评测样本，不再使用 `Outcome` 概念。
-- `Rubric` 定义验收标准；`RubricEvaluation` 是一次 rollout 的评估结果。
-- `Rollout` 保留原始执行消息和可选 evaluation；`Trajectory` 是从 rollout 中抽取的可训练样本。
-- `SemanticGradient` 是 memory-file before/after 级别的语义更新信号。
-- `PolicyOptimizer` 只规划，不写文件；`PolicyUpdater` 才是写入边界。
-- batch 和 streaming 共用同一个 `PolicyTrainingEngine`。
-- 并发写入通过 `ExperienceSet.lock() + reload()` 串行化 optimizer/apply 阶段。
-- 远程 benchmark 集成应走 `RemoteCaseLoader / RemoteRolloutExecutor`，不要让训练框架直接依赖 benchmark runtime。
+- `Case` 是訓練/評測樣本，不再使用 `Outcome` 概念。
+- `Rubric` 定義驗收標準；`RubricEvaluation` 是一次 rollout 的評估結果。
+- `Rollout` 保留原始執行訊息和可選 evaluation；`Trajectory` 是從 rollout 中抽取的可訓練樣本。
+- `SemanticGradient` 是 memory-file before/after 級別的語義更新訊號。
+- `PolicyOptimizer` 只規劃，不寫檔案；`PolicyUpdater` 才是寫入邊界。
+- batch 和 streaming 共用同一個 `PolicyTrainingEngine`。
+- 併發寫入通過 `ExperienceSet.lock() + reload()` 序列化 optimizer/apply 階段。
+- 遠端 benchmark 整合應走 `RemoteCaseLoader / RemoteRolloutExecutor`，不要讓訓練框架直接依賴 benchmark runtime。

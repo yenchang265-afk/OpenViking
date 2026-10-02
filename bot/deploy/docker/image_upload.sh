@@ -1,8 +1,8 @@
 #!/bin/bash
-# Vikingbot 镜像上传到火山引擎脚本
-# 将 deploy/docker/deploy.sh 产生的本地镜像上传到火山引擎镜像仓库
+# Vikingbot 映象上傳到火山引擎指令碼
+# 將 deploy/docker/deploy.sh 產生的本地映象上傳到火山引擎映象倉庫
 # 用法: ./deploy/docker/image_upload.sh
-# 变量: IMAGE_NAME, IMAGE_TAG, CONFIG_FILE
+# 變數: IMAGE_NAME, IMAGE_TAG, CONFIG_FILE
 
 set -euo pipefail
 
@@ -10,7 +10,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 CONFIG_FILE="${CONFIG_FILE:-${HOME}/.config/vikingbot/image_upload.yaml}"
 
-# ── 颜色输出 ────────────────────────────────────────────────────────────────
+# ── 顏色輸出 ────────────────────────────────────────────────────────────────
 RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; YELLOW='\033[1;33m'; NC='\033[0m'
 log_info()  { echo -e "${BLUE}$*${NC}"; }
 log_ok()    { echo -e "${GREEN}$*${NC}"; }
@@ -31,8 +31,8 @@ Options:
 EOF
 }
 
-# ── 参数解析 ─────────────────────────────────────────────────────────────────
-# 先从配置文件读取默认值，然后命令行参数覆盖
+# ── 引數解析 ─────────────────────────────────────────────────────────────────
+# 先從配置檔案讀取預設值，然後命令列引數覆蓋
 IMAGE_NAME=""
 IMAGE_TAG=""
 
@@ -50,7 +50,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# ── 配置文件检查 ──────────────────────────────────────────────────────────────
+# ── 配置檔案檢查 ──────────────────────────────────────────────────────────────
 if [[ ! -f "$CONFIG_FILE" ]]; then
     log_error "Config file not found: ${CONFIG_FILE}"
     echo ""
@@ -60,7 +60,7 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
     exit 1
 fi
 
-# ── 安全读取 YAML 配置 ────────────────────────────────────────────────────────
+# ── 安全讀取 YAML 配置 ────────────────────────────────────────────────────────
 if ! command -v python3 &>/dev/null; then
     log_error "python3 is required to parse the config file"
     exit 1
@@ -80,7 +80,7 @@ try:
     with open(config_path) as f:
         config = yaml.safe_load(f) or {}
 except ImportError:
-    # Fallback: 无 pyyaml 时的简单解析
+    # Fallback: 無 pyyaml 時的簡單解析
     with open(config_path) as f:
         for line in f:
             line = line.strip()
@@ -107,14 +107,14 @@ PYEOF
 # shellcheck source=/dev/null
 source "$TEMP_ENV"
 
-# ── 默认值和参数覆盖 ──────────────────────────────────────────────────────────
-# 从配置文件读取默认值，命令行参数优先
+# ── 預設值和引數覆蓋 ──────────────────────────────────────────────────────────
+# 從配置檔案讀取預設值，命令列引數優先
 image_registry="${image_registry:-vikingbot-cn-beijing.cr.volces.com}"
 image_namespace="${image_namespace:-vikingbot}"
 image_repository="${image_repository:-vikingbot}"
 use_timestamp_tag="${use_timestamp_tag:-false}"
 
-# 本地镜像：命令行参数 > 配置文件 > 默认值
+# 本地映象：命令列引數 > 配置檔案 > 預設值
 if [[ -z "$IMAGE_NAME" ]]; then
     IMAGE_NAME="${local_image_name:-vikingbot}"
 fi
@@ -122,7 +122,7 @@ if [[ -z "$IMAGE_TAG" ]]; then
     IMAGE_TAG="${local_image_tag:-latest}"
 fi
 
-# 远程镜像标签
+# 遠端映象標籤
 if [[ "$use_timestamp_tag" == "true" ]]; then
     REMOTE_IMAGE_TAG="build-$(date +%Y%m%d-%H%M%S)"
 else
@@ -145,7 +145,7 @@ EOF
 echo ""
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 1：检查本地镜像是否存在
+# 步驟 1：檢查本地映象是否存在
 # ════════════════════════════════════════════════════════════════════════
 log_info "=== Step 1: Check local image ==="
 if ! docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${LOCAL_IMAGE}$"; then
@@ -160,7 +160,7 @@ fi
 log_ok "Local image found: ${LOCAL_IMAGE}"
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 2：登录到火山引擎镜像仓库
+# 步驟 2：登入到火山引擎映象倉庫
 # ════════════════════════════════════════════════════════════════════════
 log_info "=== Step 2: Login to registry ==="
 if [[ -n "${registry_username:-}" && -n "${registry_password:-}" ]]; then
@@ -177,7 +177,7 @@ else
 fi
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 3：标记镜像
+# 步驟 3：標記映象
 # ════════════════════════════════════════════════════════════════════════
 log_info "=== Step 3: Tag image ==="
 echo "Tagging: ${LOCAL_IMAGE} → ${FULL_REMOTE_IMAGE}"
@@ -188,7 +188,7 @@ fi
 log_ok "Tag success"
 
 # ════════════════════════════════════════════════════════════════════════
-# 步骤 4：推送镜像
+# 步驟 4：推送映象
 # ════════════════════════════════════════════════════════════════════════
 log_info "=== Step 4: Push image ==="
 echo "Pushing: ${FULL_REMOTE_IMAGE}"

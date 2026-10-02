@@ -1,38 +1,38 @@
-# 后台任务
+# 後臺任務
 
-任务 API 用于跟踪资源导入、会话提交、索引维护和快照恢复等异步操作。
+任務 API 用於跟蹤資源匯入、會話提交、索引維護和快照恢復等非同步操作。
 
-推荐先提交操作、保存返回的 `task_id`，再通过独立请求查询状态。收到任务 ID 只表示任务已提交；状态为 `completed` 才表示处理成功。`pending`、`running`、`cancelling` 都不是终态。停止轮询不会取消后台任务。
+推薦先提交操作、儲存返回的 `task_id`，再通過獨立請求查詢狀態。收到任務 ID 只表示任務已提交；狀態為 `completed` 才表示處理成功。`pending`、`running`、`cancelling` 都不是終態。停止輪詢不會取消後臺任務。
 
-## API 参考
+## API 參考
 
 ### get_task()
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-查询返回 `task_id` 的后台任务状态，例如 session commit、`add_resource` 和 admin reindex。
+查詢返回 `task_id` 的後臺任務狀態，例如 session commit、`add_resource` 和 admin reindex。
 
-**任务状态**：
-- `pending`: 任务等待执行
-- `running`: 任务执行中
-- `cancelling`: 已请求取消，正在等待该任务的持久化队列消息和进程内工作结束
-- `completed`: 任务成功完成
-- `failed`: 任务失败
-- `cancelled`: 任务已取消
+**任務狀態**：
+- `pending`: 任務等待執行
+- `running`: 任務執行中
+- `cancelling`: 已請求取消，正在等待該任務的持久化佇列訊息和程序內工作結束
+- `completed`: 任務成功完成
+- `failed`: 任務失敗
+- `cancelled`: 任務已取消
 
-**代码入口**：
+**程式碼入口**：
 - `openviking/server/routers/tasks.py:get_task()` - HTTP 路由
 
-任务记录会持久化到 AGFS，服务重启后仍可查询，但仍受任务保留清理策略影响。
+任務記錄會持久化到 AGFS，服務重啟後仍可查詢，但仍受任務保留清理策略影響。
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| task_id | str | 是 | - | 后台 API 返回的任务 ID |
-| include_events | bool | 否 | false | 在 HTTP 响应中包含持久化的执行事件 |
+| task_id | str | 是 | - | 後臺 API 返回的任務 ID |
+| include_events | bool | 否 | false | 在 HTTP 響應中包含持久化的執行事件 |
 
 #### 3. 使用示例
 
@@ -99,7 +99,7 @@ if task != nil {
 ov task status uuid-xxx
 ```
 
-**响应示例（资源导入进行中）**
+**響應示例（資源匯入進行中）**
 
 ```json
 {
@@ -114,11 +114,11 @@ ov task status uuid-xxx
 }
 ```
 
-`stage` 可以为 `null`。Git 仓库资源导入任务可能报告 `queued`、`fetching`、`parsing`、`finalizing`、`processing_queue`；其他任务类型可能将其留空。实时队列计数不会出现在任务状态中；需要实时数量时使用 observer queue，任务完成后可读取 `result.queue_status`。
+`stage` 可以為 `null`。Git 倉庫資源匯入任務可能報告 `queued`、`fetching`、`parsing`、`finalizing`、`processing_queue`；其他任務型別可能將其留空。即時佇列計數不會出現在任務狀態中；需要即時數量時使用 observer queue，任務完成後可讀取 `result.queue_status`。
 
-**执行事件记录（HTTP）**
+**執行事件記錄（HTTP）**
 
-请求 `GET /api/v1/tasks/{task_id}?include_events=true`，即可获得额外的 `result.execution_events` 字段。默认详情响应和任务列表不包含此字段。事件沿用任务记录的权限和保留策略。
+請求 `GET /api/v1/tasks/{task_id}?include_events=true`，即可獲得額外的 `result.execution_events` 欄位。預設詳情響應和任務列表不包含此欄位。事件沿用任務記錄的許可權和保留策略。
 
 ```json
 {
@@ -138,23 +138,23 @@ ov task status uuid-xxx
 }
 ```
 
-| 事件类型 | 记录的事实 |
+| 事件型別 | 記錄的事實 |
 |----------|------------|
-| `created` | TaskTracker 创建了任务记录 |
-| `status_changed` | TaskTracker 接受了新的任务状态，包括取消过程和终态 |
-| `stage_changed` | 执行路径在任务活跃期间上报了不同的阶段 |
-| `error_recorded` | TaskTracker 接受了任务的首个脱敏错误 |
-| `waiting_for_descendants` | 等待路径发现任务仍有未结束的队列工作，已排除自身 work ID |
+| `created` | TaskTracker 建立了任務記錄 |
+| `status_changed` | TaskTracker 接受了新的任務狀態，包括取消過程和終態 |
+| `stage_changed` | 執行路徑在任務活躍期間上報了不同的階段 |
+| `error_recorded` | TaskTracker 接受了任務的首個脫敏錯誤 |
+| `waiting_for_descendants` | 等待路徑發現任務仍有未結束的佇列工作，已排除自身 work ID |
 
-`recorded_at` 是 TaskTracker 记录事件的 UTC 时间，不是浏览器轮询时间，也不一定是底层异常发生的时间。事件与任务状态在同一次写入成功后才对外发布。`seq` 确定任务内的事件顺序，即使多个事件时间相同也不会混淆。`stage` 表示任务最后上报的阶段；并行工作可能在其他阶段产生错误。`operation` 存在时标识上报事件的工作项。错误沿用现有脱敏和长度限制；这里不包含完整组件日志或 Python 堆栈。
+`recorded_at` 是 TaskTracker 記錄事件的 UTC 時間，不是瀏覽器輪詢時間，也不一定是底層異常發生的時間。事件與任務狀態在同一次寫入成功後才對外發布。`seq` 確定任務內的事件順序，即使多個事件時間相同也不會混淆。`stage` 表示任務最後上報的階段；並行工作可能在其他階段產生錯誤。`operation` 存在時標識上報事件的工作項。錯誤沿用現有脫敏和長度限制；這裡不包含完整元件日誌或 Python 堆疊。
 
-每个任务最多保留 64 条事件，序列化事件数据不超过 32 KiB。超限时优先删除较早事件，`dropped_count` 记录删除数量，保留事件的序号不重置。事件随任务过期清理。旧任务返回 `execution_events: null`；若旧的活跃任务后来产生事件，则 `started_mid_task` 为 true，不会重建此前的历史。旧版本服务即使收到参数也可能不返回该字段。Studio 会说明这些情况，并保留任务元数据、结果和错误展示。
+每個任務最多保留 64 條事件，序列化事件資料不超過 32 KiB。超限時優先刪除較早事件，`dropped_count` 記錄刪除數量，保留事件的序號不重置。事件隨任務過期清理。舊任務返回 `execution_events: null`；若舊的活躍任務後來產生事件，則 `started_mid_task` 為 true，不會重建此前的歷史。舊版本服務即使收到引數也可能不返回該欄位。Studio 會說明這些情況，並保留任務後設資料、結果和錯誤展示。
 
-扩展执行事件时，在 `openviking/service/task_events.py` 注册事件类型、补充 Studio 翻译，然后在实际执行点调用 `await tracker.record_event(task_id, kind, account_id=..., user_id=..., operation=...)`。这个内部接口不修改任务状态或阶段，只接受有长度限制的操作标识，不接受任意日志内容。现有生命周期方法会自动记录它们接受的状态变化。
+擴充執行事件時，在 `openviking/service/task_events.py` 註冊事件型別、補充 Studio 翻譯，然後在實際執行點呼叫 `await tracker.record_event(task_id, kind, account_id=..., user_id=..., operation=...)`。這個內部介面不修改任務狀態或階段，只接受有長度限制的操作標識，不接受任意日誌內容。現有生命週期方法會自動記錄它們接受的狀態變化。
 
-持久化任务文件新增 `execution_events` 字段。回滚目标需要具备未知任务字段的保留能力（提交 `a5166386` 或之后的版本）；更早的读取实现可能拒绝这些文件。回滚期间也会停止上报事件，因此跨降级执行的任务历史可能不完整。
+持久化任務檔案新增 `execution_events` 欄位。回滾目標需要具備未知任務欄位的保留能力（提交 `a5166386` 或之後的版本）；更早的讀取實現可能拒絕這些檔案。回滾期間也會停止上報事件，因此跨降級執行的任務歷史可能不完整。
 
-**响应示例（完成）**
+**響應示例（完成）**
 
 ```json
 {
@@ -195,30 +195,30 @@ ov task status uuid-xxx
 
 ### cancel_task()
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-请求协作式取消后台任务。接口会立即阻止该任务产生新的 QueueFS work，并取消仍在运行的进程内工作；已经完成的写入不会回滚。当任务仍有待处理的持久化消息或进程内工作时，接口先返回 `cancelling`，全部收敛后任务才进入 `cancelled`。
+請求協作式取消後臺任務。介面會立即阻止該任務產生新的 QueueFS work，並取消仍在執行的程序內工作；已經完成的寫入不會回滾。當任務仍有待處理的持久化訊息或程序內工作時，介面先返回 `cancelling`，全部收斂後任務才進入 `cancelled`。
 
-重复取消处于 `cancelling` 或 `cancelled` 状态的任务是幂等的。
+重複取消處於 `cancelling` 或 `cancelled` 狀態的任務是冪等的。
 
-**支持的任务类型**：
+**支援的任務型別**：
 - `add_resource`
 - `session_commit`
 - `admin_reindex`
 - `snapshot_restore_reindex`
 
-**代码入口**：
+**程式碼入口**：
 - `openviking/server/routers/tasks.py:cancel_task()` - HTTP 路由
-- `openviking/service/task_tracker.py:TaskTracker.cancel()` - 任务生命周期
+- `openviking/service/task_tracker.py:TaskTracker.cancel()` - 任務生命週期
 - `crates/ov_cli/src/commands/task.rs:cancel()` - CLI 命令
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| task_id | str | 是 | - | 要取消的后台任务 ID |
+| task_id | str | 是 | - | 要取消的後臺任務 ID |
 
-只有任务所属的当前用户可以取消任务。ROOT 身份不能执行取消操作。
+只有任務所屬的當前使用者可以取消任務。ROOT 身份不能執行取消操作。
 
 #### 3. 使用示例
 
@@ -263,7 +263,7 @@ curl -X POST http://localhost:1933/api/v1/tasks/uuid-xxx/cancel \
 ov task cancel uuid-xxx
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -280,38 +280,38 @@ ov task cancel uuid-xxx
 }
 ```
 
-如果任务没有剩余 work，响应中的状态可以直接为 `cancelled`。否则继续通过 `get_task()` 查询，直到状态变为 `cancelled`。
+如果任務沒有剩餘 work，響應中的狀態可以直接為 `cancelled`。否則繼續通過 `get_task()` 查詢，直到狀態變為 `cancelled`。
 
-**错误处理**：
-- `NOT_FOUND`（404）：任务不存在、已过期或不属于当前用户
-- `PERMISSION_DENIED`（403）：ROOT 身份请求取消任务
-- `FAILED_PRECONDITION`（412）：任务类型不支持取消，或任务已经 `completed`/`failed`
+**錯誤處理**：
+- `NOT_FOUND`（404）：任務不存在、已過期或不屬於當前使用者
+- `PERMISSION_DENIED`（403）：ROOT 身份請求取消任務
+- `FAILED_PRECONDITION`（412）：任務型別不支援取消，或任務已經 `completed`/`failed`
 
 ---
 
 ### list_tasks()
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-列出当前调用方可见的后台任务，支持按类型、状态、资源过滤。
+列出當前呼叫方可見的後臺任務，支援按型別、狀態、資源過濾。
 
-**代码入口**：
+**程式碼入口**：
 - `openviking/server/routers/tasks.py:list_tasks()` - HTTP 路由
 - `sdk/python/openviking_sdk/client.py:AsyncHTTPClient.list_tasks()` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| task_type | str | 否 | None | 按任务类型过滤，例如 `session_commit` |
-| status | str | 否 | None | 按任务状态过滤：`pending`、`running`、`cancelling`、`completed`、`failed`、`cancelled` |
-| resource_id | str | 否 | None | 按资源 ID 过滤，例如会话 ID |
-| include_internal | bool | 否 | false | 是否包含 Connector 导入产生的内部子任务 |
-| limit | int | 否 | 50 | 最多返回的任务条数 |
+| task_type | str | 否 | None | 按任務型別過濾，例如 `session_commit` |
+| status | str | 否 | None | 按任務狀態過濾：`pending`、`running`、`cancelling`、`completed`、`failed`、`cancelled` |
+| resource_id | str | 否 | None | 按資源 ID 過濾，例如會話 ID |
+| include_internal | bool | 否 | false | 是否包含 Connector 匯入產生的內部子任務 |
+| limit | int | 否 | 50 | 最多返回的任務條數 |
 
-默认仅返回用户可见任务；排查 Connector 导入时可传 `include_internal=true` 查看其内部 `add_resource` 子任务。
+預設僅返回使用者可見任務；排查 Connector 匯入時可傳 `include_internal=true` 檢視其內部 `add_resource` 子任務。
 
 #### 3. 使用示例
 
@@ -369,14 +369,14 @@ for _, task := range tasks {
 **CLI**
 
 ```bash
-# 列出任务
+# 列出任務
 ov task list
 
-# 按任务类型和状态过滤
+# 按任務型別和狀態過濾
 ov task list --task-type session_commit --status running
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -399,8 +399,8 @@ ov task list --task-type session_commit --status running
 
 ---
 
-## 相关文档
+## 相關文件
 
-- [会话](05-sessions.md) - 会话提交任务
-- [资源](02-resources.md) - 资源导入任务
-- [内容](12-content.md) - 异步 reindex 任务
+- [會話](05-sessions.md) - 會話提交任務
+- [資源](02-resources.md) - 資源匯入任務
+- [內容](12-content.md) - 非同步 reindex 任務

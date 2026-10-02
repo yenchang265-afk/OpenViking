@@ -75,7 +75,7 @@ class TestMemoryUpdater:
         assert page_id == 1
 
     def test_extract_context_can_disable_long_text_message_split(self):
-        text = "第一句很长很长很长很长很长很长很长很长很长很长很长。" * 8
+        text = "第一句很長很長很長很長很長很長很長很長很長很長很長。" * 8
         messages = [Message(id="1", role="user", parts=[TextPart(text=text)])]
 
         split_context = ExtractContext(messages)
@@ -101,7 +101,7 @@ class TestMemoryUpdater:
                                 "Source name: yueqian.jpeg\n"
                                 "Added at: 2026-06-12T03:43:36.343325+00:00\n"
                                 "Resource abstract: This directory contains an anime illustration.\n"
-                                "User reason: 这是越前龙马的照片"
+                                "User reason: 這是越前龍馬的照片"
                             )
                         )
                     ],
@@ -112,11 +112,11 @@ class TestMemoryUpdater:
 
         content = extract_context.get_resource_event_content(
             "0",
-            f"2026-06-12，用户保存了粉丝创作的越前龙马动漫插画资源，资源URI为{resource_uri}。",
+            f"2026-06-12，使用者儲存了粉絲創作的越前龍馬動漫插畫資源，資源URI為{resource_uri}。",
         )
 
         assert (
-            content == f"2026-06-12，[用户保存了粉丝创作的越前龙马动漫插画资源]({resource_uri})。"
+            content == f"2026-06-12，[使用者儲存了粉絲創作的越前龍馬動漫插畫資源]({resource_uri})。"
         )
         assert "Resource URI" not in content
         assert "Added at" not in content
@@ -133,8 +133,8 @@ class TestMemoryUpdater:
                     "event_name": "resource_saved",
                     "goal": "save resource",
                     "summary": (
-                        "2026-06-12，用户保存了粉丝创作的越前龙马动漫插画资源，"
-                        f"资源URI为{resource_uri}。"
+                        "2026-06-12，使用者儲存了粉絲創作的越前龍馬動漫插畫資源，"
+                        f"資源URI為{resource_uri}。"
                     ),
                     "ranges": "0",
                 }
@@ -294,16 +294,16 @@ class TestMemoryUpdater:
 
         await updater.generate_overview(
             "entities",
-            "viking://user/alice/memories/entities/动漫角色",
+            "viking://user/alice/memories/entities/動漫角色",
             ctx,
         )
 
         assert viking_fs.rm_calls == [
             (
-                "viking://user/alice/memories/entities/动漫角色/.overview.md",
+                "viking://user/alice/memories/entities/動漫角色/.overview.md",
                 False,
             ),
-            ("viking://user/alice/memories/entities/动漫角色", True),
+            ("viking://user/alice/memories/entities/動漫角色", True),
         ]
 
     @pytest.mark.asyncio
@@ -336,7 +336,7 @@ class TestMemoryUpdater:
 
         await updater.generate_overview(
             "entities",
-            "viking://user/alice/memories/entities/动漫角色",
+            "viking://user/alice/memories/entities/動漫角色",
             ctx,
         )
 
@@ -450,8 +450,8 @@ class TestMemoryUpdater:
         registry.load_from_yaml("openviking/prompts/templates/memory/entities.yaml")
         registry.load_from_yaml("openviking/prompts/templates/memory/preferences.yaml")
 
-        entity_dir = "viking://user/alice/memories/entities/动漫角色"
-        entity_uri = f"{entity_dir}/越前龙马.md"
+        entity_dir = "viking://user/alice/memories/entities/動漫角色"
+        entity_uri = f"{entity_dir}/越前龍馬.md"
         entity_overview_uri = f"{entity_dir}/.overview.md"
         preference_dir = "viking://user/alice/memories/preferences/alice"
         preference_uri = f"{preference_dir}/workflow.md"
@@ -466,7 +466,7 @@ class TestMemoryUpdater:
 
             async def ls(self, uri, show_all_hidden=False, ctx=None):
                 if uri == entity_dir:
-                    return [{"name": "越前龙马.md", "isDir": False}]
+                    return [{"name": "越前龍馬.md", "isDir": False}]
                 if uri == preference_dir:
                     return [{"name": "workflow.md", "isDir": False}]
                 return []
@@ -493,8 +493,8 @@ class TestMemoryUpdater:
 
         assert vectorize_directory_meta.await_count == 2
 
-        assert "**Category:** 动漫角色" in viking_fs.store[entity_overview_uri]
-        assert "- [越前龙马.md](./越前龙马.md)" in viking_fs.store[entity_overview_uri]
+        assert "**Category:** 動漫角色" in viking_fs.store[entity_overview_uri]
+        assert "- [越前龍馬.md](./越前龍馬.md)" in viking_fs.store[entity_overview_uri]
         assert "**User:** alice" in viking_fs.store[preference_overview_uri]
         assert "**Topic:** workflow.md" in viking_fs.store[preference_overview_uri]
         assert "- [workflow.md](./workflow.md)" in viking_fs.store[preference_overview_uri]
@@ -1132,8 +1132,8 @@ class TestMemoryUpdater:
             upsert_operations=[
                 ResolvedOperation(
                     memory_fields={
-                        "name": "王大锤",
-                        "content": "王大锤的身份证资料见资源。",
+                        "name": "王大錘",
+                        "content": "王大錘的身份證資料見資源。",
                     },
                     memory_type="entities",
                     uris=[memory_uri],
@@ -1147,7 +1147,7 @@ class TestMemoryUpdater:
                     from_uri=memory_uri,
                     to_uri=resource_uri,
                     link_type="references_resource",
-                    match_text="资源",
+                    match_text="資源",
                 )
             ],
         )
@@ -1203,8 +1203,8 @@ class TestMemoryUpdater:
             upsert_operations=[
                 ResolvedOperation(
                     memory_fields={
-                        "name": "不二周助",
-                        "content": f"用户保存了一张[不二周助]({resource_uri})的照片",
+                        "name": "不二週助",
+                        "content": f"使用者儲存了一張[不二週助]({resource_uri})的照片",
                     },
                     memory_type="entities",
                     uris=[memory_uri],
@@ -1219,14 +1219,14 @@ class TestMemoryUpdater:
         await updater.apply_operations(operations=operations, ctx=ctx)
 
         mf = MemoryFileUtils.read(store[memory_uri], uri=memory_uri)
-        assert mf.content == f"用户保存了一张[不二周助]({resource_uri})的照片"
+        assert mf.content == f"使用者儲存了一張[不二週助]({resource_uri})的照片"
         assert mf.links == []
         assert mf.extra_fields["resource_refs"] == [
             {
                 "resource_uri": resource_uri,
                 "source": "session.commit",
                 "created_at": mf.extra_fields["resource_refs"][0]["created_at"],
-                "match_text": "不二周助",
+                "match_text": "不二週助",
             }
         ]
 
@@ -1267,8 +1267,8 @@ class TestMemoryUpdater:
             upsert_operations=[
                 ResolvedOperation(
                     memory_fields={
-                        "name": "不二周助",
-                        "content": f"今天是清明节。用户保存了一张不二周助的照片 {resource_uri}",
+                        "name": "不二週助",
+                        "content": f"今天是清明節。使用者儲存了一張不二週助的照片 {resource_uri}",
                     },
                     memory_type="entities",
                     uris=[memory_uri],
@@ -1283,10 +1283,10 @@ class TestMemoryUpdater:
         await updater.apply_operations(operations=operations, ctx=ctx)
 
         mf = MemoryFileUtils.read(store[memory_uri], uri=memory_uri)
-        assert mf.content == f"今天是清明节。[用户保存了一张不二周助的照片]({resource_uri})"
+        assert mf.content == f"今天是清明節。[使用者儲存了一張不二週助的照片]({resource_uri})"
         assert mf.extra_fields["resource_refs"][0]["resource_uri"] == resource_uri
         assert mf.extra_fields["resource_refs"][0]["source"] == "session.commit"
-        assert mf.extra_fields["resource_refs"][0]["match_text"] == "用户保存了一张不二周助的照片"
+        assert mf.extra_fields["resource_refs"][0]["match_text"] == "使用者儲存了一張不二週助的照片"
 
 
 # The TestApplyWriteWithContentInFields tests are outdated because WriteOp no longer exists
@@ -1447,11 +1447,11 @@ Goodbye"""
         uri = "viking://test/test.md"
         original_full_content = (
             "# [John](entities/fitness/beginner-yoga.md)\n"
-            "- [爱好](entities/hobbies/reading.md)：游戏开发、音乐演奏、公益活动\n\n"
+            "- [愛好](entities/hobbies/reading.md)：遊戲開發、音樂演奏、公益活動\n\n"
             "<!-- MEMORY_FIELDS\n"
             '{"memory_type": "test", "name": "test", "links": ['
             '{"from_uri": "viking://test/test.md", "to_uri": "viking://test/entities/fitness/beginner-yoga.md", "match_text": "John"}, '
-            '{"from_uri": "viking://test/test.md", "to_uri": "viking://test/entities/hobbies/reading.md", "match_text": "爱好"}'
+            '{"from_uri": "viking://test/test.md", "to_uri": "viking://test/entities/hobbies/reading.md", "match_text": "愛好"}'
             "]}\n"
             "-->"
         )
@@ -1470,8 +1470,8 @@ Goodbye"""
         patch = StrPatch(
             blocks=[
                 SearchReplaceBlock(
-                    search="# John\n- 爱好：游戏开发、音乐演奏、公益活动",
-                    replace="# John\n- 爱好：游戏开发、音乐演奏、公益活动\n- 近期动态：加入志愿者队伍",
+                    search="# John\n- 愛好：遊戲開發、音樂演奏、公益活動",
+                    replace="# John\n- 愛好：遊戲開發、音樂演奏、公益活動\n- 近期動態：加入志願者隊伍",
                 )
             ]
         )
@@ -1487,7 +1487,7 @@ Goodbye"""
 
         assert written_content is not None
         result = MemoryFileUtils.read(written_content)
-        assert "近期动态：加入志愿者队伍" in result.plain_content()
+        assert "近期動態：加入志願者隊伍" in result.plain_content()
 
 
 class TestConsecutivePatchesSameURI:

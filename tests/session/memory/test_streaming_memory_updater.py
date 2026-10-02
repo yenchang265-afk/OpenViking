@@ -425,28 +425,28 @@ async def test_streaming_memory_updater_submit_applies_fast_path(monkeypatch):
     result = await updater.submit(
         MemoryUpdateRequest(
             operations=ResolvedOperations(
-                upsert_operations=[_case_op("重复预订处理")],
+                upsert_operations=[_case_op("重複預訂處理")],
                 delete_file_contents=[],
                 errors=[],
             ),
-            messages=[Message(id="m1", role="user", parts=[TextPart("处理重复预订")])],
+            messages=[Message(id="m1", role="user", parts=[TextPart("處理重複預訂")])],
             ctx=_ctx(),
         )
     )
 
     assert result.request_count == 1
     assert result.operations.upsert_operations[0].memory_type == "cases"
-    written_uri = "viking://user/u/memories/cases/重复预订处理.md"
+    written_uri = "viking://user/u/memories/cases/重複預訂處理.md"
     assert result.apply_result.written_uris == [written_uri]
     assert fs.writes
     _, written_content, _ = fs.writes[0]
-    assert "重复预订处理" in written_content
+    assert "重複預訂處理" in written_content
     lease = {"lease_ref": "memory-batch-lease"}
     assert fs.events[0] == (
         "acquire",
         (
             "/user/u/memories/cases/.overview.md",
-            "/user/u/memories/cases/重复预订处理.md",
+            "/user/u/memories/cases/重複預訂處理.md",
         ),
         300.0,
     )
@@ -563,13 +563,13 @@ async def test_streaming_memory_updater_fast_path_filters_links(monkeypatch):
             timer_check_interval_seconds=0.01,
         ),
     )
-    op1 = _case_op("并发案例A")
+    op1 = _case_op("併發案例A")
     link = StoredLink(
         from_uri=op1.uris[0],
         to_uri="viking://user/u/memories/events/existing.md",
         link_type="related_to",
         weight=0.8,
-        match_text="并发",
+        match_text="併發",
         description="valid link",
     )
     duplicate_link = link.model_copy(update={"weight": 0.6, "description": "short"})
@@ -590,7 +590,7 @@ async def test_streaming_memory_updater_fast_path_filters_links(monkeypatch):
                 errors=[],
                 resolved_links=[link, duplicate_link, missing_link],
             ),
-            messages=[Message(id="m1", role="user", parts=[TextPart("并发A")])],
+            messages=[Message(id="m1", role="user", parts=[TextPart("併發A")])],
             ctx=_ctx(),
         )
     )
@@ -1819,7 +1819,7 @@ async def test_patch_merge_uses_original_messages_for_output_language(monkeypatc
     await merge_one_memory_type_operations(
         memory_type="notes",
         operations=[existing_op, new_op],
-        messages=[Message(id="m1", role="user", parts=[TextPart("请保持中文记忆")])],
+        messages=[Message(id="m1", role="user", parts=[TextPart("請保持中文記憶")])],
         ctx=_ctx(),
         registry=_registry(),
     )

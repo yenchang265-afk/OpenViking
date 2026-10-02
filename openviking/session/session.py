@@ -3075,7 +3075,7 @@ class Session:
                 len(budgeted.truncated_message_ids),
             )
 
-        # 精简日志：只打印关键信息
+        # 精簡日誌：只打印關鍵資訊
         logger.info(
             f"[get_session_context] session_id={self.session_id}, "
             f"messages={len(merged_messages)}, tokens={message_tokens}"
@@ -3091,7 +3091,7 @@ class Session:
         if include_latest_overview:
             remaining_budget -= latest_archive_tokens
 
-        # pre_archive_abstracts: 保留字段返回空数组，保持 API 向下兼容
+        # pre_archive_abstracts: 保留欄位返回空陣列，保持 API 向下相容
         included_pre_archive_abstracts: List[Dict[str, str]] = []
         pre_archive_tokens = 0
 
@@ -3105,7 +3105,7 @@ class Session:
             "latest_archive_overview": (
                 latest_archive["overview"] if include_latest_overview else ""
             ),
-            "pre_archive_abstracts": [],  # 保持 API 向后兼容，返回空数组
+            "pre_archive_abstracts": [],  # 保持 API 向後相容，返回空陣列
             "messages": [m.to_dict() for m in merged_messages],
             "estimatedTokens": message_tokens + archive_tokens,
             "stats": {

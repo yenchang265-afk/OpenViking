@@ -28,7 +28,7 @@ def convert_url(url: str, proxy: str = DEFAULT_PROXY) -> str:
         return url
 
     if not is_github_url(url):
-        print(f"警告: 链接 {url} 看起来不是 GitHub 链接", file=sys.stderr)
+        print(f"警告: 連結 {url} 看起來不是 GitHub 連結", file=sys.stderr)
         return url
 
     return f"{proxy}/{url}"

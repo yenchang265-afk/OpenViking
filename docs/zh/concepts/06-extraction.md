@@ -1,42 +1,42 @@
 # 上下文提取
 
-OpenViking 采用三层异步架构处理文档解析和上下文提取。
+OpenViking 採用三層非同步架構處理文件解析和上下文提取。
 
-## 概览
+## 概覽
 
 ```
-输入文件 → Parser → TreeBuilder → SemanticQueue → 向量库
+輸入檔案 → Parser → TreeBuilder → SemanticQueue → 向量庫
            ↓           ↓              ↓
-        解析转换    文件移动     L0/L1 生成
-        (无 LLM)   入队语义      (LLM 异步)
+        解析轉換    檔案移動     L0/L1 生成
+        (無 LLM)   入隊語義      (LLM 非同步)
 ```
 
-**设计原则**：解析与语义分离，Parser 不调用 LLM，语义生成异步进行。
+**設計原則**：解析與語義分離，Parser 不呼叫 LLM，語義生成非同步進行。
 
 ## Parser（解析器）
 
-Parser 负责文档格式转换和结构化，在临时目录创建文件结构。
+Parser 負責文件格式轉換和結構化，在臨時目錄建立檔案結構。
 
 ### 支持格式
 
-| 格式 | 解析器 | 扩展名 | 支持情况 |
+| 格式 | 解析器 | 副檔名 | 支援情況 |
 |------|--------|--------|------|
 | Markdown | MarkdownParser | .md, .markdown | 已支持 |
-| 纯文本 | TextParser | .txt | 已支持 |
+| 純文本 | TextParser | .txt | 已支援 |
 | PDF | PDFParser | .pdf | 已支持 |
 | HTML | HTMLParser | .html, .htm | 已支持 |
-| 代码 | CodeRepositoryParser | github 代码仓库等 | 遵循 `.gitignore` 并忽略常见非代码目录 |
-| 图片 | ImageParser | .png, .jpg 等 |  |
-| 视频 | VideoParser | .mp4, .avi, .mov, .mkv, .webm, .flv, .wmv |  |
-| 音频 | AudioParser | .mp3, .wav, .ogg, .flac, .aac, .m4a, .opus |  |
+| 程式碼 | CodeRepositoryParser | github 程式碼倉庫等 | 遵循 `.gitignore` 並忽略常見非程式碼目錄 |
+| 圖片 | ImageParser | .png, .jpg 等 |  |
+| 影片 | VideoParser | .mp4, .avi, .mov, .mkv, .webm, .flv, .wmv |  |
+| 音訊 | AudioParser | .mp3, .wav, .ogg, .flac, .aac, .m4a, .opus |  |
 
-### 核心流程 (以文档为例)
+### 核心流程 (以文件為例)
 
 ```python
 # 1. 解析文件
 parse_result = registry.parse("/path/to/doc.md")
 
-# 2. 返回临时目录 URI
+# 2. 返回臨時目錄 URI
 parse_result.temp_dir_path  # viking://temp/abc123
 ```
 
@@ -44,28 +44,28 @@ parse_result.temp_dir_path  # viking://temp/abc123
 
 ```
 如果 document_tokens <= 1024:
-    → 保存为单文件
-否则:
-    → 按标题分割
-    → 小节 < 512 tokens → 合并
-    → 大节 > 1024 tokens → 创建子目录
+    → 儲存為單檔案
+否則:
+    → 按標題分割
+    → 小節 < 512 tokens → 合併
+    → 大節 > 1024 tokens → 建立子目錄
 ```
 
-### 返回结果
+### 返回結果
 
 ```python
 ParseResult(
-    temp_dir_path: str,    # 临时目录 URI
+    temp_dir_path: str,    # 臨時目錄 URI
     source_format: str,    # pdf/markdown/html
-    parser_name: str,      # 解析器名称
-    parse_time: float,     # 耗时（秒）
-    meta: Dict,            # 元数据
+    parser_name: str,      # 解析器名稱
+    parse_time: float,     # 耗時（秒）
+    meta: Dict,            # 後設資料
 )
 ```
 
-## TreeBuilder（树构建器）
+## TreeBuilder（樹構建器）
 
-TreeBuilder 负责将临时目录移动到 AGFS，并入队语义处理。
+TreeBuilder 負責將臨時目錄移動到 AGFS，併入隊語義處理。
 
 ### 核心流程
 
@@ -76,106 +76,106 @@ building_tree = tree_builder.finalize_from_temp(
 )
 ```
 
-### 5 阶段处理
+### 5 階段處理
 
-1. **查找文档根目录**：确保临时目录下恰好 1 个子目录
-2. **确定目标 URI**：根据 scope 映射基础 URI
-3. **递归移动目录树**：复制所有文件到 AGFS
-4. **清理临时目录**：删除临时文件
-5. **入队语义生成**：提交 SemanticMsg 到队列
+1. **查詢文件根目錄**：確保臨時目錄下恰好 1 個子目錄
+2. **確定目標 URI**：根據 scope 對映基礎 URI
+3. **遞迴移動目錄樹**：複製所有檔案到 AGFS
+4. **清理臨時目錄**：刪除臨時檔案
+5. **入隊語義生成**：提交 SemanticMsg 到佇列
 
 ### URI 映射
 
-| scope | 基础 URI |
+| scope | 基礎 URI |
 |-------|----------|
 | resources | `viking://resources` |
 | user | `viking://user` |
 
-## SemanticQueue（语义队列）
+## SemanticQueue（語義佇列）
 
-SemanticQueue 异步处理 L0/L1 生成和向量化。
+SemanticQueue 非同步處理 L0/L1 生成和向量化。
 
-### 消息结构
+### 訊息結構
 
 ```python
 SemanticMsg(
     id: str,           # UUID
-    uri: str,          # 目录 URI
+    uri: str,          # 目錄 URI
     context_type: str, # resource/memory/skill
     status: str,       # pending/processing/completed
 )
 ```
 
-### 处理流程（自底向上）
+### 處理流程（自底向上）
 
 ```
-叶子目录 → 父目录 → 根目录
+葉子目錄 → 父目錄 → 根目錄
 ```
 
-### 单目录处理步骤
+### 單目錄處理步驟
 
-1. **并发生成文件摘要**：限制并发数 10
-2. **收集子目录摘要**：读取已生成的 .abstract.md
-3. **生成 .overview.md**：LLM 生成 L1 概览
-4. **提取 .abstract.md**：从 overview 提取 L0 摘要
-5. **写入文件**：以 OKF Markdown 保存正文和受保护元数据
-6. **向量化**：创建 Context 并入队 EmbeddingQueue
+1. **併發生成檔案摘要**：限制併發數 10
+2. **收集子目錄摘要**：讀取已生成的 .abstract.md
+3. **生成 .overview.md**：LLM 生成 L1 概覽
+4. **提取 .abstract.md**：從 overview 提取 L0 摘要
+5. **寫入檔案**：以 OKF Markdown 儲存正文和受保護後設資料
+6. **向量化**：建立 Context 併入隊 EmbeddingQueue
 
-L0/L1 是目录级 sidecar，不是 per-file sidecar。生成父目录摘要时只使用子目录 L0 的正文，OKF frontmatter 不进入 prompt。Embedding 使用正文和白名单中的 `directory`；`source`、`generated_by`、`freshness` 不进入向量输入。
+L0/L1 是目錄級 sidecar，不是 per-file sidecar。生成父目錄摘要時只使用子目錄 L0 的正文，OKF frontmatter 不進入 prompt。Embedding 使用正文和白名單中的 `directory`；`source`、`generated_by`、`freshness` 不進入向量輸入。
 
-### Freshness、采样与父级刷新
+### Freshness、取樣與父級重新整理
 
-每次生成都会记录直接子项覆盖情况，超过 `semantic.overview_sample_limit`（默认 32）时使用稳定采样。resource/skill 的父级刷新取决于子目录 L0 正文变化和 freshness 阈值，L0 正文不变时不向上传播。`pending_child_changes` 统计等待刷新的变化事件，同一子项重复变化也会分别计数。阈值、手动刷新和延后更新的规则见[上下文层级](03-context-layers.md)。
+每次生成都會記錄直接子項覆蓋情況，超過 `semantic.overview_sample_limit`（預設 32）時使用穩定取樣。resource/skill 的父級重新整理取決於子目錄 L0 正文變化和 freshness 閾值，L0 正文不變時不向上傳播。`pending_child_changes` 統計等待重新整理的變化事件，同一子項重複變化也會分別計數。閾值、手動重新整理和延後更新的規則見[上下文層級](03-context-layers.md)。
 
-### 处理限制
+### 處理限制
 
-| 参数 | 默认值 | 说明 |
+| 引數 | 預設值 | 說明 |
 |------|--------|------|
-| `max_concurrent_llm` | 10 | 并发 LLM 调用数 |
-| `max_images_per_call` | 10 | 单次 VLM 最大图片数 |
-| `max_sections_per_call` | 20 | 单次 VLM 最大章节数 |
-| `overview_sample_limit` | 32 | 单个目录摘要使用的直接子项样本上限 |
+| `max_concurrent_llm` | 10 | 併發 LLM 呼叫數 |
+| `max_images_per_call` | 10 | 單次 VLM 最大圖片數 |
+| `max_sections_per_call` | 20 | 單次 VLM 最大章節數 |
+| `overview_sample_limit` | 32 | 單個目錄摘要使用的直接子項樣本上限 |
 
-## 代码骨架提取
+## 程式碼骨架提取
 
-对于代码文件，OpenViking 使用固定的代码骨架提取路线。该路线内置在代码摘要流程中，不再通过逐语言解析参数选择或调节。
+對於程式碼檔案，OpenViking 使用固定的程式碼骨架提取路線。該路線內建在程式碼摘要流程中，不再通過逐語言解析引數選擇或調節。
 
-### 代码骨架内容
+### 程式碼骨架內容
 
-骨架可包含 import、类、方法、函数及其他语言级符号。具体输出取决于该语言维护中的 query 或通用解析结果，但提取路线本身是固定的。
+骨架可包含 import、類、方法、函式及其他語言級符號。具體輸出取決於該語言維護中的 query 或通用解析結果，但提取路線本身是固定的。
 
-### 提取路线
+### 提取路線
 
-代码骨架提取按以下固定顺序执行：
+程式碼骨架提取按以下固定順序執行：
 
-1. 语言存在维护中的 `tags.scm` 时，优先使用 tags query。
-2. 不存在对应的 `tags.scm` 时，使用 `tree-sitter-language-pack.process()`。
-3. 两种提取方式都无可用结果时，才将 `semantic.code_summary` 作为兜底处理。
+1. 語言存在維護中的 `tags.scm` 時，優先使用 tags query。
+2. 不存在對應的 `tags.scm` 時，使用 `tree-sitter-language-pack.process()`。
+3. 兩種提取方式都無可用結果時，才將 `semantic.code_summary` 作為兜底處理。
 
-第 1、2 步需要 `tree-sitter-language-pack` 中对应语言的解析器，该解析器会在首次使用时从 GitHub 下载。当解析器未缓存且无法下载时（例如处于防火墙之后），OpenViking 改用随 pip 依赖安装的语法包：Python、JavaScript、TypeScript/TSX、Java、C/C++、Rust、Go、C#、PHP 和 Lua，此时骨架会列出每个定义所在的源码行。其他语言则使用 `semantic.code_summary` 兜底。
+第 1、2 步需要 `tree-sitter-language-pack` 中對應語言的解析器，該解析器會在首次使用時從 GitHub 下載。當解析器未快取且無法下載時（例如處於防火牆之後），OpenViking 改用隨 pip 依賴安裝的語法包：Python、JavaScript、TypeScript/TSX、Java、C/C++、Rust、Go、C#、PHP 和 Lua，此時骨架會列出每個定義所在的原始碼行。其他語言則使用 `semantic.code_summary` 兜底。
 
-manifest 查询与下载共用 15 秒超时。首次失败后，当前进程不再尝试下载，只使用已缓存的解析器，因此静默丢包的防火墙最多只会拖慢一个文件。
+manifest 查詢與下載共用 15 秒超時。首次失敗後，當前程序不再嘗試下載，只使用已快取的解析器，因此靜默丟包的防火牆最多隻會拖慢一個檔案。
 
-长短代码文件都遵循同一路由。
+長短程式碼檔案都遵循同一路由。
 
-## 三种上下文提取
+## 三種上下文提取
 
-### 流程对比
+### 流程對比
 
-| 环节 | Resource | Memory | Skill |
+| 環節 | Resource | Memory | Skill |
 |------|----------|--------|-------|
 | **Parser** | 通用流程 | 通用流程 | 通用流程 |
-| **基础 URI** | `viking://resources` | `viking://~/memories` | `viking://~/skills` |
+| **基礎 URI** | `viking://resources` | `viking://~/memories` | `viking://~/skills` |
 | **TreeBuilder scope** | resources | user | user |
 | **SemanticMsg type** | resource | memory | skill |
 
-### 资源提取
+### 資源提取
 
 ```python
-# 添加资源
+# 新增資源
 await client.add_resource(
     path="/path/to/doc.pdf",
-    options={"reason": "API 文档"},
+    options={"reason": "API 文件"},
 )
 
 # 流程: Parser → TreeBuilder(scope=resources) → SemanticQueue
@@ -192,25 +192,25 @@ await client.add_skill(
     },
 )
 
-# 流程: 直接写入 viking://~/skills/{name}/ → SemanticQueue
+# 流程: 直接寫入 viking://~/skills/{name}/ → SemanticQueue
 ```
 
-### 记忆提取
+### 記憶提取
 
 ```python
-# 记忆从会话自动提取
+# 記憶從會話自動提取
 await session.commit()
 
 # 流程: SessionCompressorV3 → ExtractLoop → MemoryUpdater → SemanticQueue
 ```
 
-V3 只提供一个提取入口。它先提取启用的用户记忆 schema（包括 `cases`）；
-只有本次提取实际产生至少一个 case，才会继续训练 trajectory、experience，
-以及可选的可执行 session skill。没有 case 的会话不会生成这些执行派生记忆。
+V3 只提供一個提取入口。它先提取啟用的使用者記憶 schema（包括 `cases`）；
+只有本次提取實際產生至少一個 case，才會繼續訓練 trajectory、experience，
+以及可選的可執行 session skill。沒有 case 的會話不會生成這些執行派生記憶。
 
-## 相关文档
+## 相關文件
 
-- [架构概述](./01-architecture.md) - 系统整体架构
-- [上下文层级](./03-context-layers.md) - L0/L1/L2 模型
-- [存储架构](./05-storage.md) - AGFS 和向量库
-- [会话管理](./08-session.md) - 记忆提取详解
+- [架構概述](./01-architecture.md) - 系統整體架構
+- [上下文層級](./03-context-layers.md) - L0/L1/L2 模型
+- [儲存架構](./05-storage.md) - AGFS 和向量庫
+- [會話管理](./08-session.md) - 記憶提取詳解

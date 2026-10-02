@@ -1,28 +1,28 @@
-## 步骤1：安装连接器
+## 步驟1：安裝連接器
 
-1. 打开豆包工作，点击左侧导航栏的 **技能·连接器·伙伴**，搜索“OpenViking Context”，点击右侧的 <strong>+</strong>。
-![添加 OpenViking Context 连接器](https://docs.openviking.net/agents/image/doubao-work/01-add-connector.png)
+1. 開啟豆包工作，點選左側導航欄的 **技能·連接器·夥伴**，搜尋“OpenViking Context”，點選右側的 <strong>+</strong>。
+![新增 OpenViking Context 連接器](https://docs.openviking.net/agents/image/doubao-work/01-add-connector.png)
 
-2. 在“授权配置”窗口中填写 OpenViking USER API Key：
+2. 在“授權配置”視窗中填寫 OpenViking USER API Key：
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-3. 点击 **保存并连接**。页面顶部出现“连接器已安装”提示，且“OpenViking Context”右侧由 <strong>+</strong> 变为已添加状态，即表示接入完成。
-![保存并连接 OpenViking Context](https://docs.openviking.net/agents/image/doubao-work/02-save-and-connect.png)
+3. 點選 **儲存並連線**。頁面頂部出現“連接器已安裝”提示，且“OpenViking Context”右側由 <strong>+</strong> 變為已新增狀態，即表示接入完成。
+![儲存並連線 OpenViking Context](https://docs.openviking.net/agents/image/doubao-work/02-save-and-connect.png)
 
-## 步骤2：验证
+## 步驟2：驗證
 
-1. 返回豆包主对话，点击对话框下方的 **连接器**，确认能够找到“OpenViking Context”。
-![验证 OpenViking Context 连接器](https://docs.openviking.net/agents/image/doubao-work/03-verify-connector.png)
+1. 返回豆包主對話，點選對話方塊下方的 **連接器**，確認能夠找到“OpenViking Context”。
+![驗證 OpenViking Context 連接器](https://docs.openviking.net/agents/image/doubao-work/03-verify-connector.png)
 
-2. 点击对话框下方的 **更多技能**，确认能够找到“OpenViking 上下文数据库”，并让豆包调用 OpenViking 返回相关内容。
-![验证 OpenViking 上下文数据库技能](https://docs.openviking.net/agents/image/doubao-work/04-verify-skill.png)
+2. 點選對話方塊下方的 **更多技能**，確認能夠找到“OpenViking 上下文資料庫”，並讓豆包呼叫 OpenViking 返回相關內容。
+![驗證 OpenViking 上下文資料庫技能](https://docs.openviking.net/agents/image/doubao-work/04-verify-skill.png)
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| 搜索不到“OpenViking Context” | 确认使用的是豆包工作；清除搜索条件后重新搜索；若仍未出现，请联系企业管理员确认连接器是否已对当前组织开放 |
-| 提示连接失败 | 检查 OpenViking USER API Key 是否正确 |
+| 搜尋不到“OpenViking Context” | 確認使用的是豆包工作；清除搜尋條件後重新搜尋；若仍未出現，請聯絡企業管理員確認連接器是否已對當前組織開放 |
+| 提示連線失敗 | 檢查 OpenViking USER API Key 是否正確 |

@@ -34,7 +34,7 @@ use super::store::{
 const OPENVIKING_SERVICE_API_KEY_URL: &str =
     "https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing";
 const HEADER_TAGLINE: &str = "Context Database for AI Agents";
-const HEADER_TAGLINE_ZH: &str = "AI Agent 上下文数据库";
+const HEADER_TAGLINE_ZH: &str = "AI Agent 上下文資料庫";
 const STATUS_BOX_PROBE_TIMEOUT_SECS: f64 = 3.0;
 const TEXT_INPUT_PROMPT: &str = "  > ";
 
@@ -102,9 +102,9 @@ async fn run_config_wizard_with_store(store: ConfigStore) -> Result<()> {
             copy(
                 language,
                 "What would you like to configure?",
-                "你想配置什么？",
+                "你想配置什麼？",
             ),
-            copy(language, "Choose action", "选择操作"),
+            copy(language, "Choose action", "選擇操作"),
             &main_action_labels_for_language(language),
             0,
             &[],
@@ -148,11 +148,11 @@ fn ensure_language_selected(ui: &mut LiveRegion) -> Result<bool> {
         return Ok(true);
     }
 
-    let choices = ["English", "简体中文"];
+    let choices = ["English", "繁體中文"];
     match prompt_select(
         ui,
-        "Language / 语言",
-        "Choose display language / 选择显示语言",
+        "Language / 語言",
+        "Choose display language / 選擇顯示語言",
         &choices,
         0,
         &[format!(
@@ -230,7 +230,7 @@ fn status_box_title(mode: StatusBoxMode) -> &'static str {
         StatusBoxMode::Compact => copy(
             Language::current(),
             "OpenViking | Context Database for AI Agents",
-            "OpenViking | AI Agent 上下文数据库",
+            "OpenViking | AI Agent 上下文資料庫",
         ),
     }
 }
@@ -277,7 +277,7 @@ fn nav_hint() -> &'static str {
     copy(
         Language::current(),
         "↑/↓ choose · Enter select · Esc back · Ctrl+C exit",
-        "↑/↓ 选择 · Enter 确认 · Esc 返回 · Ctrl+C 退出",
+        "↑/↓ 選擇 · Enter 確認 · Esc 返回 · Ctrl+C 退出",
     )
 }
 
@@ -285,7 +285,7 @@ fn input_hint() -> &'static str {
     copy(
         Language::current(),
         "Enter continue · Esc back · Ctrl+C exit",
-        "Enter 继续 · Esc 返回 · Ctrl+C 退出",
+        "Enter 繼續 · Esc 返回 · Ctrl+C 退出",
     )
 }
 
@@ -293,7 +293,7 @@ fn section_add() -> &'static str {
     copy(
         Language::current(),
         "Create a new OpenViking config.",
-        "创建新的 OpenViking 配置。",
+        "建立新的 OpenViking 配置。",
     )
 }
 
@@ -309,7 +309,7 @@ fn section_switch() -> &'static str {
     copy(
         Language::current(),
         "Switch to a saved config.",
-        "切换到已保存的配置。",
+        "切換到已儲存的配置。",
     )
 }
 
@@ -317,7 +317,7 @@ fn section_delete() -> &'static str {
     copy(
         Language::current(),
         "Delete a saved config.",
-        "删除已保存的配置。",
+        "刪除已儲存的配置。",
     )
 }
 
@@ -325,7 +325,7 @@ fn section_user_management() -> &'static str {
     copy(
         Language::current(),
         "Manage account and user credentials.",
-        "管理账户和用户凭证。",
+        "管理帳戶和使用者憑證。",
     )
 }
 
@@ -333,8 +333,8 @@ fn compact_kind_label(kind: ConfigKind) -> &'static str {
     match Language::current() {
         Language::En => kind.compact_label(),
         Language::ZhCn => match kind {
-            ConfigKind::OpenVikingService => "OpenViking 服务",
-            ConfigKind::Custom => "自定义",
+            ConfigKind::OpenVikingService => "OpenViking 服務",
+            ConfigKind::Custom => "自定義",
         },
     }
 }
@@ -342,7 +342,7 @@ fn compact_kind_label(kind: ConfigKind) -> &'static str {
 fn provider_labels(language: Language) -> [&'static str; 2] {
     match language {
         Language::En => [ConfigKind::OpenVikingService.label(), "Custom"],
-        Language::ZhCn => ["OpenViking 服务（火山引擎云）", "自定义"],
+        Language::ZhCn => ["OpenViking 服務（火山引擎雲）", "自定義"],
     }
 }
 
@@ -350,7 +350,7 @@ fn api_key_label(optional: bool) -> &'static str {
     match (Language::current(), optional) {
         (Language::En, true) => "API key (optional)",
         (Language::En, false) => "API key",
-        (Language::ZhCn, true) => "API Key（可选）",
+        (Language::ZhCn, true) => "API Key（可選）",
         (Language::ZhCn, false) => "API Key",
     }
 }
@@ -375,9 +375,9 @@ fn custom_api_key_input_helper_lines(mode: CustomKeyMode) -> Vec<String> {
         (Language::En, CustomKeyMode::NoKey) => {
             "Optional for local servers. Add one if auth is enabled."
         }
-        (Language::ZhCn, CustomKeyMode::RootKey) => "用于自定义管理初始化和 --sudo 命令。",
-        (Language::ZhCn, CustomKeyMode::UserKey) => "用于常规 OpenViking 命令。",
-        (Language::ZhCn, CustomKeyMode::NoKey) => "本地服务可不填；如果启用了认证，请填写。",
+        (Language::ZhCn, CustomKeyMode::RootKey) => "用於自定義管理初始化和 --sudo 命令。",
+        (Language::ZhCn, CustomKeyMode::UserKey) => "用於常規 OpenViking 命令。",
+        (Language::ZhCn, CustomKeyMode::NoKey) => "本地服務可不填；如果啟用了認證，請填寫。",
     };
     vec![theme::muted(copy).to_string()]
 }
@@ -391,7 +391,7 @@ fn custom_key_mode_labels_for_language(allow_empty: bool, language: Language) ->
     match (allow_empty, language) {
         (true, Language::En) => vec!["No key / local dev", "User API key", "Root API key"],
         (false, Language::En) => vec!["User API key", "Root API key"],
-        (true, Language::ZhCn) => vec!["无密钥 / 本地开发", "User API Key", "Root API Key"],
+        (true, Language::ZhCn) => vec!["無金鑰 / 本地開發", "User API Key", "Root API Key"],
         (false, Language::ZhCn) => vec!["User API Key", "Root API Key"],
     }
 }
@@ -449,10 +449,10 @@ fn custom_edit_key_action_label(action: CustomEditKeyAction) -> &'static str {
         (Language::En, CustomEditKeyAction::UseRootForNormal) => "Use root key for normal commands",
         (Language::En, CustomEditKeyAction::ClearRootKey) => "Clear root API key",
         (Language::En, CustomEditKeyAction::ClearAllKeys) => "Clear all API keys",
-        (Language::ZhCn, CustomEditKeyAction::Keep) => "保留现有 API Key",
-        (Language::ZhCn, CustomEditKeyAction::SetUserKey) => "设置普通用户 API Key",
-        (Language::ZhCn, CustomEditKeyAction::SetRootKey) => "设置 Root API Key",
-        (Language::ZhCn, CustomEditKeyAction::UseRootForNormal) => "使用 Root Key 执行常规命令",
+        (Language::ZhCn, CustomEditKeyAction::Keep) => "保留現有 API Key",
+        (Language::ZhCn, CustomEditKeyAction::SetUserKey) => "設定普通使用者 API Key",
+        (Language::ZhCn, CustomEditKeyAction::SetRootKey) => "設定 Root API Key",
+        (Language::ZhCn, CustomEditKeyAction::UseRootForNormal) => "使用 Root Key 執行常規命令",
         (Language::ZhCn, CustomEditKeyAction::ClearRootKey) => "清除 Root API Key",
         (Language::ZhCn, CustomEditKeyAction::ClearAllKeys) => "清除所有 API Key",
     }
@@ -461,7 +461,7 @@ fn custom_edit_key_action_label(action: CustomEditKeyAction) -> &'static str {
 fn root_key_redirect_labels() -> [&'static str; 3] {
     match Language::current() {
         Language::En => ["Continue as root key", "Re-enter user key", "Cancel"],
-        Language::ZhCn => ["作为 Root Key 继续", "重新输入用户 Key", "取消"],
+        Language::ZhCn => ["作為 Root Key 繼續", "重新輸入使用者 Key", "取消"],
     }
 }
 
@@ -470,7 +470,7 @@ fn root_key_redirect_helper_lines() -> Vec<String> {
         theme::warning(copy(
             Language::current(),
             "This key has root access. Root keys are for admin and --sudo commands.",
-            "此 Key 拥有 Root 权限。Root Key 用于管理和 --sudo 命令。",
+            "此 Key 擁有 Root 許可權。Root Key 用於管理和 --sudo 命令。",
         ))
         .to_string(),
     ]
@@ -479,7 +479,7 @@ fn root_key_redirect_helper_lines() -> Vec<String> {
 fn user_key_redirect_labels() -> [&'static str; 3] {
     match Language::current() {
         Language::En => ["Continue as user key", "Re-enter root key", "Cancel"],
-        Language::ZhCn => ["作为用户 Key 继续", "重新输入 Root Key", "取消"],
+        Language::ZhCn => ["作為使用者 Key 繼續", "重新輸入 Root Key", "取消"],
     }
 }
 
@@ -488,7 +488,7 @@ fn user_key_redirect_helper_lines() -> Vec<String> {
         theme::warning(copy(
             Language::current(),
             "This key does not have root access. User keys are for normal commands.",
-            "此 Key 没有 Root 权限。用户 Key 用于常规命令。",
+            "此 Key 沒有 Root 許可權。使用者 Key 用於常規命令。",
         ))
         .to_string(),
     ]
@@ -540,7 +540,7 @@ pub(crate) fn main_action_labels() -> [&'static str; 5] {
 fn main_action_labels_for_language(language: Language) -> [&'static str; 5] {
     match language {
         Language::En => main_action_labels(),
-        Language::ZhCn => ["添加配置", "切换配置", "编辑配置", "删除配置", "用户管理"],
+        Language::ZhCn => ["新增配置", "切換配置", "編輯配置", "刪除配置", "使用者管理"],
     }
 }
 
@@ -553,7 +553,7 @@ fn openviking_service_validation_failure_choices_for_language(
 ) -> [&'static str; 2] {
     match language {
         Language::En => openviking_service_validation_failure_choices(),
-        Language::ZhCn => ["重新输入 API Key", "取消"],
+        Language::ZhCn => ["重新輸入 API Key", "取消"],
     }
 }
 
@@ -564,7 +564,7 @@ pub(crate) fn custom_validation_failure_choices() -> [&'static str; 3] {
 fn custom_validation_failure_choices_for_language(language: Language) -> [&'static str; 3] {
     match language {
         Language::En => custom_validation_failure_choices(),
-        Language::ZhCn => ["修改服务器 URL", "修改 API Key", "取消"],
+        Language::ZhCn => ["修改伺服器 URL", "修改 API Key", "取消"],
     }
 }
 
@@ -598,8 +598,8 @@ fn edit_api_key_choice_labels_for_language(
     }
 
     match kind {
-        ConfigKind::OpenVikingService => vec!["保留现有 API Key", "替换 API Key"],
-        ConfigKind::Custom => vec!["保留现有 API Key", "替换 API Key", "清除 API Key"],
+        ConfigKind::OpenVikingService => vec!["保留現有 API Key", "替換 API Key"],
+        ConfigKind::Custom => vec!["保留現有 API Key", "替換 API Key", "清除 API Key"],
     }
 }
 
@@ -1171,11 +1171,11 @@ impl RuntimeConnectionStatus {
                 Self::Unknown => "Unknown",
             },
             Language::ZhCn => match self {
-                Self::Checking => "检查中...",
+                Self::Checking => "檢查中...",
                 Self::NotConfigured => "未配置",
-                Self::ConnectedHealthy => "已连接（健康）",
-                Self::ConnectedUnhealthy => "已连接（不健康）",
-                Self::Unreachable => "无法连接",
+                Self::ConnectedHealthy => "已連線（健康）",
+                Self::ConnectedUnhealthy => "已連線（不健康）",
+                Self::Unreachable => "無法連線",
                 #[cfg(test)]
                 Self::Unknown => "未知",
             },
@@ -1269,10 +1269,10 @@ impl StatusBoxDetail {
 
 fn status_label(label: &'static str) -> &'static str {
     match (Language::current(), label) {
-        (Language::ZhCn, "Active:") => "当前配置：",
-        (Language::ZhCn, "Status:") => "状态：",
+        (Language::ZhCn, "Active:") => "當前配置：",
+        (Language::ZhCn, "Status:") => "狀態：",
         (Language::ZhCn, "Saved configs:") => "已保存配置：",
-        (Language::ZhCn, "Config home:") => "配置目录：",
+        (Language::ZhCn, "Config home:") => "配置目錄：",
         _ => label,
     }
 }
@@ -1331,7 +1331,7 @@ fn status_box_details(
 
 fn model_placeholder(connection: RuntimeConnectionStatus) -> String {
     if connection == RuntimeConnectionStatus::Checking {
-        copy(Language::current(), "Checking...", "检查中...").to_string()
+        copy(Language::current(), "Checking...", "檢查中...").to_string()
     } else {
         unknown_copy().to_string()
     }
@@ -1785,7 +1785,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                 copy(
                     Language::current(),
                     "Where should this CLI connect?",
-                    "CLI 要连接到哪里？",
+                    "CLI 要連線到哪裡？",
                 ),
                 &provider_labels(Language::current()),
                 0,
@@ -1852,7 +1852,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
             Stage::Url => match prompt_text(
                 ui,
                 section_add(),
-                copy(Language::current(), "Server URL", "服务器 URL"),
+                copy(Language::current(), "Server URL", "伺服器 URL"),
                 Some(&url),
                 Some(InputValueLabel::Default),
                 false,
@@ -1876,7 +1876,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                 match prompt_select(
                     ui,
                     section_add(),
-                    copy(Language::current(), "API key type", "API Key 类型"),
+                    copy(Language::current(), "API key type", "API Key 型別"),
                     &labels,
                     0,
                     &custom_api_key_helper_lines(allow_empty_api_key),
@@ -1960,7 +1960,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                 match prompt_identity_value(
                     ui,
                     section_add(),
-                    copy(Language::current(), "Account ID", "账户 ID"),
+                    copy(Language::current(), "Account ID", "帳戶 ID"),
                     IdentityField::Account,
                     mode,
                 )? {
@@ -1987,7 +1987,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                 match prompt_identity_value(
                     ui,
                     section_add(),
-                    copy(Language::current(), "User ID", "用户 ID"),
+                    copy(Language::current(), "User ID", "使用者 ID"),
                     IdentityField::User,
                     mode,
                 )? {
@@ -2061,7 +2061,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                                 copy(
                                     Language::current(),
                                     "This key has root access. Configure as root key?",
-                                    "此 Key 拥有 Root 权限。配置为 Root Key？",
+                                    "此 Key 擁有 Root 許可權。配置為 Root Key？",
                                 ),
                                 &root_key_redirect_labels(),
                                 0,
@@ -2098,7 +2098,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                                 copy(
                                     Language::current(),
                                     "This key is a user API key. Configure as user key?",
-                                    "此 Key 是用户 API Key。配置为用户 Key？",
+                                    "此 Key 是使用者 API Key。配置為使用者 Key？",
                                 ),
                                 &user_key_redirect_labels(),
                                 0,
@@ -2215,7 +2215,7 @@ async fn run_add_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool
                             copy(
                                 Language::current(),
                                 "Validation failed. What next?",
-                                "验证失败，下一步？",
+                                "驗證失敗，下一步？",
                             ),
                             &choices,
                             0,
@@ -2282,14 +2282,14 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
             theme::warning(copy(
                 Language::current(),
                 "No saved configs to edit.",
-                "没有可编辑的配置。",
+                "沒有可編輯的配置。",
             ))
             .to_string(),
         ];
         let _ = prompt_select(
             ui,
             section_edit(),
-            copy(Language::current(), "Nothing to edit.", "没有可编辑项。"),
+            copy(Language::current(), "Nothing to edit.", "沒有可編輯項。"),
             &[copy(Language::current(), "Back", "返回")],
             0,
             &helper_lines,
@@ -2316,7 +2316,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
             Stage::Select => match prompt_config_select(
                 ui,
                 section_edit(),
-                copy(Language::current(), "Config to edit", "要编辑的配置"),
+                copy(Language::current(), "Config to edit", "要編輯的配置"),
                 &configs,
             )? {
                 PromptResult::Value(index) => {
@@ -2355,7 +2355,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                 match prompt_config_name(
                     ui,
                     section_edit(),
-                    copy(Language::current(), "Config name", "配置名称"),
+                    copy(Language::current(), "Config name", "配置名稱"),
                     Some(&name),
                     |value| validate_config_name_change(store, &original_name, value),
                 )? {
@@ -2377,7 +2377,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
             Stage::Url => match prompt_text(
                 ui,
                 section_edit(),
-                copy(Language::current(), "Server URL", "服务器 URL"),
+                copy(Language::current(), "Server URL", "伺服器 URL"),
                 Some(&url),
                 Some(InputValueLabel::Current),
                 false,
@@ -2555,7 +2555,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                 match prompt_select(
                     ui,
                     section_edit(),
-                    copy(Language::current(), "API key type", "API Key 类型"),
+                    copy(Language::current(), "API key type", "API Key 型別"),
                     &labels,
                     0,
                     &custom_api_key_helper_lines(allow_empty_api_key),
@@ -2663,7 +2663,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                 match prompt_identity_value(
                     ui,
                     section_edit(),
-                    copy(Language::current(), "Account ID", "账户 ID"),
+                    copy(Language::current(), "Account ID", "帳戶 ID"),
                     IdentityField::Account,
                     mode,
                 )? {
@@ -2690,7 +2690,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                 match prompt_identity_value(
                     ui,
                     section_edit(),
-                    copy(Language::current(), "User ID", "用户 ID"),
+                    copy(Language::current(), "User ID", "使用者 ID"),
                     IdentityField::User,
                     mode,
                 )? {
@@ -2761,7 +2761,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                                 copy(
                                     Language::current(),
                                     "This key has root access. Configure as root key?",
-                                    "此 Key 拥有 Root 权限。配置为 Root Key？",
+                                    "此 Key 擁有 Root 許可權。配置為 Root Key？",
                                 ),
                                 &root_key_redirect_labels(),
                                 0,
@@ -2799,7 +2799,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                                 copy(
                                     Language::current(),
                                     "This key is a user API key. Configure as user key?",
-                                    "此 Key 是用户 API Key。配置为用户 Key？",
+                                    "此 Key 是使用者 API Key。配置為使用者 Key？",
                                 ),
                                 &user_key_redirect_labels(),
                                 0,
@@ -2862,7 +2862,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                                 copy(
                                     Language::current(),
                                     "Save changes to active config?",
-                                    "保存当前配置的更改？",
+                                    "儲存當前配置的更改？",
                                 )
                             } else {
                                 copy(Language::current(), "Save changes?", "保存更改？")
@@ -2932,7 +2932,7 @@ async fn run_edit_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<boo
                             copy(
                                 Language::current(),
                                 "Validation failed. What next?",
-                                "验证失败，下一步？",
+                                "驗證失敗，下一步？",
                             ),
                             &choices,
                             0,
@@ -2986,14 +2986,14 @@ fn run_delete_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool> {
             theme::warning(copy(
                 Language::current(),
                 "No saved configs to delete.",
-                "没有可删除的配置。",
+                "沒有可刪除的配置。",
             ))
             .to_string(),
         ];
         let _ = prompt_select(
             ui,
             section_delete(),
-            copy(Language::current(), "Nothing to delete.", "没有可删除项。"),
+            copy(Language::current(), "Nothing to delete.", "沒有可刪除項。"),
             &[copy(Language::current(), "Back", "返回")],
             0,
             &helper_lines,
@@ -3009,7 +3009,7 @@ fn run_delete_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool> {
             Stage::Select => match prompt_config_select(
                 ui,
                 section_delete(),
-                copy(Language::current(), "Config to delete", "要删除的配置"),
+                copy(Language::current(), "Config to delete", "要刪除的配置"),
                 &configs,
             )? {
                 PromptResult::Value(index) => {
@@ -3022,7 +3022,7 @@ fn run_delete_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool> {
                             copy(
                                 Language::current(),
                                 "Active config cannot be deleted.",
-                                "不能删除当前配置。",
+                                "不能刪除當前配置。",
                             ),
                             &[copy(Language::current(), "Back", "返回")],
                             0,
@@ -3052,7 +3052,7 @@ fn run_delete_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<bool> {
                         );
                         println!(
                             "{} {}",
-                            theme::muted(copy(Language::current(), "Removed:", "已删除：")),
+                            theme::muted(copy(Language::current(), "Removed:", "已刪除：")),
                             store
                                 .saved_config_path(name)?
                                 .display()
@@ -3093,14 +3093,14 @@ async fn run_switch_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<b
             theme::warning(copy(
                 Language::current(),
                 "No saved configs to switch.",
-                "没有可切换的配置。",
+                "沒有可切換的配置。",
             ))
             .to_string(),
         ];
         let _ = prompt_select(
             ui,
             section_switch(),
-            copy(Language::current(), "Nothing to switch.", "没有可切换项。"),
+            copy(Language::current(), "Nothing to switch.", "沒有可切換項。"),
             &[copy(Language::current(), "Back", "返回")],
             0,
             &helper_lines,
@@ -3116,7 +3116,7 @@ async fn run_switch_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<b
             Stage::Select => match prompt_config_select(
                 ui,
                 section_switch(),
-                copy(Language::current(), "Config to switch to", "要切换到的配置"),
+                copy(Language::current(), "Config to switch to", "要切換到的配置"),
                 &configs,
             )? {
                 PromptResult::Value(index) => {
@@ -3132,7 +3132,7 @@ async fn run_switch_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<b
                             copy(
                                 Language::current(),
                                 "Config already active.",
-                                "配置已是当前配置。",
+                                "配置已是當前配置。",
                             ),
                             &[copy(Language::current(), "Back", "返回")],
                             0,
@@ -3162,7 +3162,7 @@ async fn run_switch_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<b
                             copy(
                                 Language::current(),
                                 "Validating target config...",
-                                "正在验证目标配置...",
+                                "正在驗證目標配置...",
                             ),
                         ))?;
                         if let Err(error) = validate_config(&selected_config.config).await {
@@ -3189,7 +3189,7 @@ async fn run_switch_config(store: &ConfigStore, ui: &mut LiveRegion) -> Result<b
                             theme::body(copy(
                                 Language::current(),
                                 "Run ov status to inspect it.",
-                                "运行 ov status 查看状态。",
+                                "執行 ov status 檢視狀態。",
                             ))
                         );
                         return Ok(true);
@@ -3293,7 +3293,7 @@ fn prompt_user_management_config_name(
         copy(
             Language::current(),
             "Save managed config name",
-            "保存管理配置名称",
+            "儲存管理配置名稱",
         ),
         &labels,
         0,
@@ -3329,7 +3329,7 @@ fn ensure_add_config_save_name(
         copy(
             Language::current(),
             "Save local config name",
-            "保存本地配置名称",
+            "儲存本地配置名稱",
         ),
         generated_name,
         &add_generated_config_name_helper_lines(),
@@ -3378,7 +3378,7 @@ fn prompt_unique_config_name(
         match prompt_text(
             ui,
             section,
-            copy(Language::current(), "Saved config name", "保存配置名称"),
+            copy(Language::current(), "Saved config name", "儲存配置名稱"),
             Some(default),
             Some(InputValueLabel::Default),
             false,
@@ -3450,7 +3450,7 @@ fn prompt_user_management_server_url(
         match prompt_text(
             ui,
             section_user_management(),
-            copy(Language::current(), "Server URL", "服务器 URL"),
+            copy(Language::current(), "Server URL", "伺服器 URL"),
             Some(&default),
             Some(InputValueLabel::Default),
             false,
@@ -3499,7 +3499,7 @@ async fn run_user_management_menu(
             copy(
                 Language::current(),
                 "Loading accounts...",
-                "正在加载账户...",
+                "正在載入帳戶...",
             ),
         ))?;
         let accounts = list_root_accounts(&client).await?;
@@ -3517,7 +3517,7 @@ async fn run_user_management_menu(
             copy(
                 Language::current(),
                 "Select account or action",
-                "选择账户或操作",
+                "選擇帳戶或操作",
             ),
             &labels,
             0,
@@ -3588,7 +3588,7 @@ async fn run_account_management_menu(
         let client = root_admin_client(config, root_api_key);
         ui.render(&status_live_lines(
             section_user_management(),
-            copy(Language::current(), "Loading users...", "正在加载用户..."),
+            copy(Language::current(), "Loading users...", "正在載入使用者..."),
         ))?;
         let users = list_root_users(&client, &account.account_id).await?;
 
@@ -3679,7 +3679,7 @@ async fn run_account_management_menu(
                         copy(
                             Language::current(),
                             "Deleting account...",
-                            "正在删除账户...",
+                            "正在刪除帳戶...",
                         ),
                     ))?;
                     let task = delete_root_account(&client, &account.account_id).await?;
@@ -3777,7 +3777,7 @@ async fn run_user_action_menu(
                     copy(
                         Language::current(),
                         "Generating user API key...",
-                        "正在生成用户 API Key...",
+                        "正在生成使用者 API Key...",
                     ),
                 ))?;
                 let response = regenerate_user_key(&client, account_id, &user.user_id).await?;
@@ -3798,7 +3798,7 @@ async fn run_user_action_menu(
                     let client = root_admin_client(config, root_api_key);
                     ui.render(&status_live_lines(
                         section_user_management(),
-                        copy(Language::current(), "Deleting user...", "正在删除用户..."),
+                        copy(Language::current(), "Deleting user...", "正在刪除使用者..."),
                     ))?;
                     delete_root_user(&client, account_id, &user.user_id).await?;
                     if clear_config_user_selection(config, root_api_key, account_id, &user.user_id)
@@ -3853,7 +3853,7 @@ async fn save_selected_user_to_config(
         copy(
             Language::current(),
             "Validating selected user...",
-            "正在验证所选用户...",
+            "正在驗證所選使用者...",
         ),
     ))?;
     validate_config(config).await?;
@@ -3867,7 +3867,7 @@ async fn save_selected_user_to_config(
         copy(
             Language::current(),
             "Saving user selection...",
-            "正在保存用户选择...",
+            "正在儲存使用者選擇...",
         ),
     ))?;
     store.save_and_activate(&config_name, config)?;
@@ -3946,7 +3946,7 @@ fn user_management_menu_helper_lines(
         theme::muted(copy(
             Language::current(),
             "Select an account to manage its users.",
-            "选择账户以管理其用户。",
+            "選擇帳戶以管理其使用者。",
         ))
         .to_string(),
     );
@@ -3964,7 +3964,7 @@ fn account_management_menu_helper_lines(
     push_config_context_helper_lines(&mut lines, config_name, config);
     lines.push(format!(
         "{} {}",
-        theme::muted(copy(Language::current(), "Account:", "账户：")),
+        theme::muted(copy(Language::current(), "Account:", "帳戶：")),
         theme::value(account_id).bold()
     ));
     lines
@@ -3980,7 +3980,7 @@ fn user_action_menu_helper_lines(
     push_config_context_helper_lines(&mut lines, config_name, config);
     lines.push(format!(
         "{} {}",
-        theme::muted(copy(Language::current(), "User:", "用户：")),
+        theme::muted(copy(Language::current(), "User:", "使用者：")),
         theme::value(format!("{account_id}/{}", user.user_id)).bold()
     ));
     if let Some(prefix) = user.key_prefix.as_deref().and_then(non_empty_string) {
@@ -3989,7 +3989,7 @@ fn user_action_menu_helper_lines(
             theme::muted(copy(
                 Language::current(),
                 "Current key prefix:",
-                "当前 Key 前缀："
+                "當前 Key 字首："
             )),
             theme::value(prefix).bold()
         ));
@@ -3998,7 +3998,7 @@ fn user_action_menu_helper_lines(
         theme::warning(copy(
             Language::current(),
             "Regenerating a user key invalidates the old key immediately.",
-            "重新生成用户 Key 会立即使旧 Key 失效。",
+            "重新生成使用者 Key 會立即使舊 Key 失效。",
         ))
         .to_string(),
     );
@@ -4030,7 +4030,7 @@ fn push_config_context_helper_lines(
     ));
     lines.push(format!(
         "{} {}",
-        theme::muted(copy(Language::current(), "Server:", "服务端：")),
+        theme::muted(copy(Language::current(), "Server:", "服務端：")),
         theme::value(config.url.as_str()).bold()
     ));
     if let (Some(account), Some(user)) = (
@@ -4039,7 +4039,7 @@ fn push_config_context_helper_lines(
     ) {
         lines.push(format!(
             "{} {}",
-            theme::muted(copy(Language::current(), "Selected user:", "已选用户：")),
+            theme::muted(copy(Language::current(), "Selected user:", "已選使用者：")),
             theme::value(format!("{account}/{user}")).bold()
         ));
     }
@@ -4049,7 +4049,7 @@ fn unnamed_active_config_label() -> &'static str {
     copy(
         Language::current(),
         "unnamed active config",
-        "未命名当前配置",
+        "未命名當前配置",
     )
 }
 
@@ -4061,7 +4061,7 @@ fn created_identity_notice(config: &Config) -> Option<String> {
             format!("Created {account}/{user}. Choose that user and use it to save CLI config.")
         }
         Language::ZhCn => {
-            format!("已创建 {account}/{user}。选择该用户并使用它，才会保存 CLI 配置。")
+            format!("已建立 {account}/{user}。選擇該使用者並使用它，才會儲存 CLI 配置。")
         }
     })
 }
@@ -4088,10 +4088,10 @@ fn selected_user_notice(
             format!("Regenerated key for {account}/{user}; saved new key to {target}.")
         }
         (Language::ZhCn, UserKeySaveAction::Selected) => {
-            format!("已选择 {account}/{user}；用户 Key 已保存到 {target}。")
+            format!("已選擇 {account}/{user}；使用者 Key 已儲存到 {target}。")
         }
         (Language::ZhCn, UserKeySaveAction::Regenerated) => {
-            format!("已为 {account}/{user} 重新生成 Key；新 Key 已保存到 {target}。")
+            format!("已為 {account}/{user} 重新生成 Key；新 Key 已儲存到 {target}。")
         }
     })
 }
@@ -4106,21 +4106,21 @@ fn user_management_save_target(config_name: &str) -> String {
 fn account_deletion_notice(account_id: &str, task_id: &str) -> String {
     match Language::current() {
         Language::En => format!("Account {account_id}/ disabled. Cleanup task: {task_id}"),
-        Language::ZhCn => format!("账户 {account_id}/ 已停用，后台清理任务：{task_id}"),
+        Language::ZhCn => format!("帳戶 {account_id}/ 已停用，後臺清理任務：{task_id}"),
     }
 }
 
 fn deleted_user_notice(account_id: &str, user_id: &str) -> String {
     match Language::current() {
         Language::En => format!("Deleted user {account_id}/{user_id}."),
-        Language::ZhCn => format!("已删除用户 {account_id}/{user_id}。"),
+        Language::ZhCn => format!("已刪除使用者 {account_id}/{user_id}。"),
     }
 }
 
 fn add_account_label() -> String {
     match Language::current() {
         Language::En => "+ Add account",
-        Language::ZhCn => "+ 添加账户",
+        Language::ZhCn => "+ 新增帳戶",
     }
     .to_string()
 }
@@ -4128,7 +4128,7 @@ fn add_account_label() -> String {
 fn add_user_label(account_id: &str) -> String {
     match Language::current() {
         Language::En => format!("+ Add user in {account_id}/"),
-        Language::ZhCn => format!("+ 在 {account_id}/ 下添加用户"),
+        Language::ZhCn => format!("+ 在 {account_id}/ 下新增使用者"),
     }
 }
 
@@ -4140,8 +4140,8 @@ fn local_config_name_choice_labels(generated_name: &str) -> Vec<String> {
             "Back".to_string(),
         ],
         Language::ZhCn => vec![
-            "设置自定义本地名称".to_string(),
-            format!("使用生成名称（{generated_name}）"),
+            "設定自定義本地名稱".to_string(),
+            format!("使用生成名稱（{generated_name}）"),
             "返回".to_string(),
         ],
     }
@@ -4159,8 +4159,8 @@ fn user_management_config_name_choice_labels(
                 "Back".to_string(),
             ],
             Language::ZhCn => vec![
-                "设置自定义本地名称".to_string(),
-                format!("使用当前名称（{name}）"),
+                "設定自定義本地名稱".to_string(),
+                format!("使用當前名稱（{name}）"),
                 "返回".to_string(),
             ],
         };
@@ -4175,7 +4175,7 @@ fn user_management_config_name_helper_lines(current_name: Option<&str>) -> Vec<S
             theme::warning(copy(
                 Language::current(),
                 "The active config needs a saved profile name.",
-                "当前配置需要一个保存配置名称。",
+                "當前配置需要一個儲存配置名稱。",
             ))
             .to_string(),
         );
@@ -4184,7 +4184,7 @@ fn user_management_config_name_helper_lines(current_name: Option<&str>) -> Vec<S
         theme::muted(copy(
             Language::current(),
             "User Management saves both ovcli.conf and ovcli.conf.<name>; 'active' is reserved.",
-            "用户管理会同时保存 ovcli.conf 和 ovcli.conf.<name>；'active' 已保留。",
+            "使用者管理會同時儲存 ovcli.conf 和 ovcli.conf.<name>；'active' 已保留。",
         ))
         .to_string(),
     );
@@ -4196,7 +4196,7 @@ fn unique_config_name_helper_lines() -> Vec<String> {
         theme::muted(copy(
             Language::current(),
             "Press Enter to use the default name, or type a custom one.",
-            "按 Enter 使用默认名称，或输入自定义名称。",
+            "按 Enter 使用預設名稱，或輸入自定義名稱。",
         ))
         .to_string(),
     ]
@@ -4207,13 +4207,13 @@ fn add_generated_config_name_helper_lines() -> Vec<String> {
         theme::muted(copy(
             Language::current(),
             "Choose how to name this local CLI config.",
-            "选择这个本地 CLI 配置的名称。",
+            "選擇這個本地 CLI 配置的名稱。",
         ))
         .to_string(),
         theme::muted(copy(
             Language::current(),
             "Saved as ovcli.conf.<name>; the active config is ovcli.conf.",
-            "保存为 ovcli.conf.<name>；当前配置为 ovcli.conf。",
+            "儲存為 ovcli.conf.<name>；當前配置為 ovcli.conf。",
         ))
         .to_string(),
     ]
@@ -4222,14 +4222,14 @@ fn add_generated_config_name_helper_lines() -> Vec<String> {
 fn config_name_exists_error(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Config '{name}' already exists. Enter another name."),
-        Language::ZhCn => format!("配置 '{name}' 已存在。请输入另一个名称。"),
+        Language::ZhCn => format!("配置 '{name}' 已存在。請輸入另一個名稱。"),
     }
 }
 
 fn reserved_user_management_config_name_error(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Config name '{name}' is reserved. Enter another name."),
-        Language::ZhCn => format!("配置名称 '{name}' 已保留。请输入另一个名称。"),
+        Language::ZhCn => format!("配置名稱 '{name}' 已保留。請輸入另一個名稱。"),
     }
 }
 
@@ -4240,21 +4240,21 @@ fn is_legacy_user_management_config_name(name: &str) -> bool {
 fn delete_account_label(account_id: &str) -> String {
     match Language::current() {
         Language::En => format!("- Delete {account_id}/"),
-        Language::ZhCn => format!("- 删除 {account_id}/"),
+        Language::ZhCn => format!("- 刪除 {account_id}/"),
     }
 }
 
 fn delete_user_label(account_id: &str, user_id: &str) -> String {
     match Language::current() {
         Language::En => format!("- Delete {account_id}/{user_id}"),
-        Language::ZhCn => format!("- 删除 {account_id}/{user_id}"),
+        Language::ZhCn => format!("- 刪除 {account_id}/{user_id}"),
     }
 }
 
 fn use_user_label() -> String {
     match Language::current() {
         Language::En => "Use this user",
-        Language::ZhCn => "使用该用户",
+        Language::ZhCn => "使用該使用者",
     }
     .to_string()
 }
@@ -4262,7 +4262,7 @@ fn use_user_label() -> String {
 fn regenerate_and_use_user_label() -> String {
     match Language::current() {
         Language::En => "Regenerate key and use this user",
-        Language::ZhCn => "重新生成 Key 并使用该用户",
+        Language::ZhCn => "重新生成 Key 並使用該使用者",
     }
     .to_string()
 }
@@ -4292,14 +4292,14 @@ fn manage_user_prompt(account_id: &str, user_id: &str) -> String {
 fn delete_account_prompt(account_id: &str) -> String {
     match Language::current() {
         Language::En => format!("Delete account {account_id}/ and all of its users?"),
-        Language::ZhCn => format!("删除账户 {account_id}/ 及其所有用户？"),
+        Language::ZhCn => format!("刪除帳戶 {account_id}/ 及其所有使用者？"),
     }
 }
 
 fn delete_user_prompt(account_id: &str, user_id: &str) -> String {
     match Language::current() {
         Language::En => format!("Delete user {account_id}/{user_id}?"),
-        Language::ZhCn => format!("删除用户 {account_id}/{user_id}？"),
+        Language::ZhCn => format!("刪除使用者 {account_id}/{user_id}？"),
     }
 }
 
@@ -4331,7 +4331,7 @@ async fn select_user_with_root_key(
             copy(
                 Language::current(),
                 "Loading accounts...",
-                "正在加载账户...",
+                "正在載入帳戶...",
             ),
         ))?;
         let accounts = list_root_accounts(&client).await?;
@@ -4343,7 +4343,7 @@ async fn select_user_with_root_key(
                 copy(
                     Language::current(),
                     "No accounts found. Create an account and first user?",
-                    "未找到任何账户。是否创建账户和首个用户？",
+                    "未找到任何帳戶。是否建立帳戶和首個使用者？",
                 ),
                 true,
             )? {
@@ -4360,7 +4360,7 @@ async fn select_user_with_root_key(
         let account_index = match prompt_select(
             ui,
             section,
-            copy(Language::current(), "Choose account", "选择账户"),
+            copy(Language::current(), "Choose account", "選擇帳戶"),
             &labels,
             0,
             &account_select_helper_lines(),
@@ -4394,7 +4394,7 @@ async fn select_user_in_account(
     loop {
         ui.render(&status_live_lines(
             section,
-            copy(Language::current(), "Loading users...", "正在加载用户..."),
+            copy(Language::current(), "Loading users...", "正在載入使用者..."),
         ))?;
         let users = list_root_users(client, &account.account_id).await?;
 
@@ -4460,7 +4460,7 @@ async fn select_user_in_account(
                         theme::muted(copy(
                             Language::current(),
                             "Current key prefix:",
-                            "当前 Key 前缀："
+                            "當前 Key 字首："
                         )),
                         theme::value(prefix).bold()
                     ));
@@ -4479,7 +4479,7 @@ async fn select_user_in_account(
                             copy(
                                 Language::current(),
                                 "Generating user API key...",
-                                "正在生成用户 API Key...",
+                                "正在生成使用者 API Key...",
                             ),
                         ))?;
                         let response =
@@ -4517,7 +4517,7 @@ async fn create_account_and_user(
     let account_id = match prompt_identity_value(
         ui,
         section,
-        copy(Language::current(), "New account ID", "新账户 ID"),
+        copy(Language::current(), "New account ID", "新帳戶 ID"),
         IdentityField::Account,
         IdentityMode::RootKey,
     )? {
@@ -4531,7 +4531,7 @@ async fn create_account_and_user(
         copy(
             Language::current(),
             "First admin user ID",
-            "首个管理员用户 ID",
+            "首個管理員使用者 ID",
         ),
         IdentityField::User,
         IdentityMode::RootKey,
@@ -4546,7 +4546,7 @@ async fn create_account_and_user(
         copy(
             Language::current(),
             "Creating account and user...",
-            "正在创建账户和用户...",
+            "正在建立帳戶和使用者...",
         ),
     ))?;
     let response = create_root_account(client, &account_id, &user_id).await?;
@@ -4574,7 +4574,7 @@ async fn create_user_in_account(
     let user_id = match prompt_new_user_id(
         ui,
         section,
-        copy(Language::current(), "New user ID", "新用户 ID"),
+        copy(Language::current(), "New user ID", "新使用者 ID"),
         existing_users,
     )? {
         PromptResult::Value(value) => value,
@@ -4584,7 +4584,7 @@ async fn create_user_in_account(
 
     ui.render(&status_live_lines(
         section,
-        copy(Language::current(), "Creating user...", "正在创建用户..."),
+        copy(Language::current(), "Creating user...", "正在建立使用者..."),
     ))?;
     let response = create_root_user(client, account_id, &user_id).await?;
     let user_key = user_key_from_response(&response).ok_or_else(|| {
@@ -4792,14 +4792,14 @@ fn user_count_label(count: u64) -> String {
     match (Language::current(), count) {
         (Language::En, 1) => "1 user".to_string(),
         (Language::En, _) => format!("{count} users"),
-        (Language::ZhCn, _) => format!("{count} 个用户"),
+        (Language::ZhCn, _) => format!("{count} 個使用者"),
     }
 }
 
 fn create_account_label() -> String {
     match Language::current() {
         Language::En => "+ Create new account",
-        Language::ZhCn => "+ 创建新账户",
+        Language::ZhCn => "+ 建立新帳戶",
     }
     .to_string()
 }
@@ -4807,7 +4807,7 @@ fn create_account_label() -> String {
 fn create_user_label(account_id: &str) -> String {
     match Language::current() {
         Language::En => format!("+ Create new user in {account_id}/"),
-        Language::ZhCn => format!("+ 在 {account_id}/ 下创建新用户"),
+        Language::ZhCn => format!("+ 在 {account_id}/ 下建立新使用者"),
     }
 }
 
@@ -4815,13 +4815,13 @@ fn root_api_key_helper_lines(server_url: &str) -> Vec<String> {
     vec![
         format!(
             "{} {}",
-            theme::muted(copy(Language::current(), "Server URL:", "服务器 URL：")),
+            theme::muted(copy(Language::current(), "Server URL:", "伺服器 URL：")),
             theme::value(server_url).bold()
         ),
         theme::muted(copy(
             Language::current(),
             "Used only to list or create accounts/users and store a normal user key.",
-            "仅用于列出或创建账户/用户，并保存普通用户 Key。",
+            "僅用於列出或建立帳戶/使用者，並儲存普通使用者 Key。",
         ))
         .to_string(),
     ]
@@ -4832,13 +4832,13 @@ fn user_management_server_url_helper_lines() -> Vec<String> {
         theme::muted(copy(
             Language::current(),
             "User Management only needs the server URL and a Root API key.",
-            "用户管理只需要服务器 URL 和 Root API Key。",
+            "使用者管理只需要伺服器 URL 和 Root API Key。",
         ))
         .to_string(),
         theme::muted(copy(
             Language::current(),
             "Press Enter to use the local server default.",
-            "按 Enter 使用本地服务默认地址。",
+            "按 Enter 使用本地服務預設地址。",
         ))
         .to_string(),
     ]
@@ -4849,7 +4849,7 @@ fn account_select_helper_lines() -> Vec<String> {
         theme::muted(copy(
             Language::current(),
             "Accounts are shown like directories.",
-            "账户以类似目录的方式展示。",
+            "帳戶以類似目錄的方式展示。",
         ))
         .to_string(),
     ]
@@ -4860,7 +4860,7 @@ fn user_select_helper_lines() -> Vec<String> {
         theme::muted(copy(
             Language::current(),
             "Pick the user normal commands should run as.",
-            "选择常规命令要使用的用户身份。",
+            "選擇常規命令要使用的使用者身份。",
         ))
         .to_string(),
     ]
@@ -4869,7 +4869,7 @@ fn user_select_helper_lines() -> Vec<String> {
 fn regenerate_user_key_labels() -> [&'static str; 2] {
     match Language::current() {
         Language::En => ["Regenerate and use this user", "Back"],
-        Language::ZhCn => ["重新生成并使用该用户", "返回"],
+        Language::ZhCn => ["重新生成並使用該使用者", "返回"],
     }
 }
 
@@ -4878,7 +4878,7 @@ fn regenerate_user_key_helper_lines() -> Vec<String> {
         theme::warning(copy(
             Language::current(),
             "This server does not expose the existing user key. Regenerating invalidates the old key immediately.",
-            "服务端未返回现有用户 Key。重新生成会立即使旧 Key 失效。",
+            "服務端未返回現有使用者 Key。重新生成會立即使舊 Key 失效。",
         ))
         .to_string(),
     ]
@@ -4887,21 +4887,21 @@ fn regenerate_user_key_helper_lines() -> Vec<String> {
 fn choose_user_prompt(account_id: &str) -> String {
     match Language::current() {
         Language::En => format!("Choose user in {account_id}/"),
-        Language::ZhCn => format!("选择 {account_id}/ 下的用户"),
+        Language::ZhCn => format!("選擇 {account_id}/ 下的使用者"),
     }
 }
 
 fn empty_account_create_user_prompt(account_id: &str) -> String {
     match Language::current() {
         Language::En => format!("No users in {account_id}/. Create one?"),
-        Language::ZhCn => format!("{account_id}/ 下没有用户。是否创建？"),
+        Language::ZhCn => format!("{account_id}/ 下沒有使用者。是否建立？"),
     }
 }
 
 fn regenerate_user_key_prompt(account_id: &str, user_id: &str) -> String {
     match Language::current() {
         Language::En => format!("Use {account_id}/{user_id} by generating a new user key?"),
-        Language::ZhCn => format!("为 {account_id}/{user_id} 生成新用户 Key 并使用？"),
+        Language::ZhCn => format!("為 {account_id}/{user_id} 生成新使用者 Key 並使用？"),
     }
 }
 
@@ -4924,7 +4924,7 @@ async fn validate_draft(
         copy(
             Language::current(),
             "Validating connection...",
-            "正在验证连接...",
+            "正在驗證連線...",
         ),
     ))?;
     let mut root_api_key_role = None;
@@ -5046,14 +5046,14 @@ fn print_saved(
         SaveOutcome::Activated | SaveOutcome::UpdatedActive => {
             println!(
                 "{} {}",
-                theme::muted(copy(Language::current(), "Active config:", "当前配置：")),
+                theme::muted(copy(Language::current(), "Active config:", "當前配置：")),
                 store.active_path().display().to_string().magenta()
             );
         }
         SaveOutcome::SavedOnly => {
             println!(
                 "{} {}",
-                theme::muted(copy(Language::current(), "Activate later:", "稍后启用：")),
+                theme::muted(copy(Language::current(), "Activate later:", "稍後啟用：")),
                 theme::command("ov config switch")
             );
         }
@@ -5107,11 +5107,11 @@ fn normal_commands_root_key_notice() -> String {
         ),
         Language::ZhCn => format!(
             "{}{}{}{}{}",
-            theme::body("在设置"),
-            theme::warning("单独的用户 API Key").bold(),
+            theme::body("在設定"),
+            theme::warning("單獨的使用者 API Key").bold(),
             theme::body("前，"),
-            theme::strong("常规命令"),
-            theme::body("会使用此 Key。"),
+            theme::strong("常規命令"),
+            theme::body("會使用此 Key。"),
         ),
     }
 }
@@ -5132,7 +5132,7 @@ fn least_privilege_user_key_notice() -> String {
         ),
         Language::ZhCn => format!(
             "{}{}{}{}{}{}{}",
-            theme::body("为遵循最小权限原则，请运行 "),
+            theme::body("為遵循最小許可權原則，請執行 "),
             theme::command("ov config").bold(),
             theme::body(" -> "),
             theme::strong("Edit Config"),
@@ -5168,7 +5168,7 @@ fn next_step_copy() -> String {
         ),
         Language::ZhCn => format!(
             "{}{}{}",
-            theme::body("运行 "),
+            theme::body("執行 "),
             theme::command("ov --help").bold(),
             theme::body(" 查看可用命令。")
         ),
@@ -5178,7 +5178,7 @@ fn next_step_copy() -> String {
 fn saved_message_activated(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Saved config '{name}' and made it active."),
-        Language::ZhCn => format!("已保存配置 '{name}'，并设为当前配置。"),
+        Language::ZhCn => format!("已儲存配置 '{name}'，並設為當前配置。"),
     }
 }
 
@@ -5192,7 +5192,7 @@ fn saved_message_only(name: &str) -> String {
 fn saved_message_updated_active(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Saved active config '{name}'."),
-        Language::ZhCn => format!("已保存当前配置 '{name}'。"),
+        Language::ZhCn => format!("已儲存當前配置 '{name}'。"),
     }
 }
 
@@ -5200,7 +5200,7 @@ pub(crate) fn add_config_name_label() -> &'static str {
     copy(
         Language::current(),
         "Config name (optional)",
-        "配置名称（可选）",
+        "配置名稱（可選）",
     )
 }
 
@@ -5209,7 +5209,7 @@ fn add_config_name_helper_lines() -> Vec<String> {
         theme::muted(copy(
             Language::current(),
             "Leave empty to generate one.",
-            "留空将自动生成名称。",
+            "留空將自動生成名稱。",
         ))
         .to_string(),
     ]
@@ -5220,13 +5220,13 @@ pub(crate) fn openviking_service_api_key_helper_lines() -> Vec<String> {
     vec![
         format!(
             "{} {}",
-            theme::muted(copy(language, "Get your API key:", "获取 API Key：")),
+            theme::muted(copy(language, "Get your API key:", "獲取 API Key：")),
             OPENVIKING_SERVICE_API_KEY_URL
         ),
         theme::muted(copy(
             language,
             "Go to User Management → API Key to view and copy your key.",
-            "进入用户管理 → API Key 查看并复制。",
+            "進入使用者管理 → API Key 檢視並複製。",
         ))
         .to_string(),
     ]
@@ -5237,13 +5237,13 @@ pub(crate) fn custom_api_key_helper_lines(allow_empty: bool) -> Vec<String> {
         copy(
             Language::current(),
             "Optional for local servers. Add one if auth is enabled.",
-            "本地服务可不填；如果启用了认证，请填写。",
+            "本地服務可不填；如果啟用了認證，請填寫。",
         )
     } else {
         copy(
             Language::current(),
             "Required for remote custom servers.",
-            "远程自定义服务需要 API Key。",
+            "遠端自定義服務需要 API Key。",
         )
     };
     vec![theme::muted(copy).to_string()]
@@ -5400,7 +5400,7 @@ fn validate_new_user_id(value: &str, existing_users: &[RootUserSummary]) -> Resu
 fn duplicate_user_id_error(user_id: &str) -> String {
     match Language::current() {
         Language::En => format!("User '{user_id}' already exists. Enter another user ID."),
-        Language::ZhCn => format!("用户 '{user_id}' 已存在。请输入另一个用户 ID。"),
+        Language::ZhCn => format!("使用者 '{user_id}' 已存在。請輸入另一個使用者 ID。"),
     }
 }
 
@@ -5415,7 +5415,7 @@ fn identity_prompt_parts(
                 theme::muted(copy(
                     Language::current(),
                     "Local no-key identity.",
-                    "本地无密钥身份。",
+                    "本地無金鑰身份。",
                 ))
                 .to_string(),
             ],
@@ -5427,7 +5427,7 @@ fn identity_prompt_parts(
                 theme::muted(copy(
                     Language::current(),
                     "Root API keys require an explicit account and user.",
-                    "Root API Key 需要明确的账户和用户。",
+                    "Root API Key 需要明確的帳戶和使用者。",
                 ))
                 .to_string(),
             ],
@@ -5467,7 +5467,7 @@ fn current_server_url_default(store: &ConfigStore) -> Result<String> {
 }
 
 fn active_badge() -> &'static str {
-    copy(Language::current(), "[Active]", "[当前]")
+    copy(Language::current(), "[Active]", "[當前]")
 }
 
 fn active_delete_block_helper_lines() -> Vec<String> {
@@ -5482,12 +5482,12 @@ fn active_delete_block_helper_lines() -> Vec<String> {
             ),
         ],
         Language::ZhCn => vec![
-            theme::error("不能删除当前配置。").to_string(),
+            theme::error("不能刪除當前配置。").to_string(),
             format!(
                 "{} {} {}",
-                theme::muted("请先运行"),
+                theme::muted("請先執行"),
                 theme::command("ov config switch").bold(),
-                theme::muted("切换到其他配置，然后再删除。")
+                theme::muted("切換到其他配置，然後再刪除。")
             ),
         ],
     }
@@ -5496,14 +5496,14 @@ fn active_delete_block_helper_lines() -> Vec<String> {
 fn delete_confirm_prompt(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Delete config '{name}'?"),
-        Language::ZhCn => format!("删除配置 '{name}'？"),
+        Language::ZhCn => format!("刪除配置 '{name}'？"),
     }
 }
 
 fn switch_confirm_prompt(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Switch active config to '{name}'?"),
-        Language::ZhCn => format!("切换当前配置为 '{name}'？"),
+        Language::ZhCn => format!("切換當前配置為 '{name}'？"),
     }
 }
 
@@ -5517,21 +5517,21 @@ fn localized_validation_error(kind: ConfigKind, error: &Error) -> String {
 fn deleted_config_message(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Deleted config '{name}'."),
-        Language::ZhCn => format!("已删除配置 '{name}'。"),
+        Language::ZhCn => format!("已刪除配置 '{name}'。"),
     }
 }
 
 fn switched_config_message(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Switched active config to '{name}'."),
-        Language::ZhCn => format!("已切换当前配置为 '{name}'。"),
+        Language::ZhCn => format!("已切換當前配置為 '{name}'。"),
     }
 }
 
 fn config_already_active_message(name: &str) -> String {
     match Language::current() {
         Language::En => format!("Config '{name}' is already active."),
-        Language::ZhCn => format!("配置 '{name}' 已是当前配置。"),
+        Language::ZhCn => format!("配置 '{name}' 已是當前配置。"),
     }
 }
 
@@ -5543,7 +5543,7 @@ fn switch_validation_error_lines(name: &str, kind: ConfigKind, error: &Error) ->
             theme::error("✗"),
             theme::error(match Language::current() {
                 Language::En => format!("Target config '{name}' failed validation."),
-                Language::ZhCn => format!("目标配置 '{name}' 验证失败。"),
+                Language::ZhCn => format!("目標配置 '{name}' 驗證失敗。"),
             })
         ),
         format!(
@@ -5556,7 +5556,7 @@ fn switch_validation_error_lines(name: &str, kind: ConfigKind, error: &Error) ->
             theme::body(copy(
                 Language::current(),
                 "Run ov config and edit this config before switching.",
-                "请运行 ov config 编辑该配置后再切换。",
+                "請執行 ov config 編輯該配置後再切換。",
             ))
         ),
     ]
@@ -5591,12 +5591,12 @@ impl SaveActionSet {
     fn labels(self, language: Language) -> Vec<&'static str> {
         match (self, language) {
             (Self::Add, Language::En) => add_save_action_labels(),
-            (Self::Add, Language::ZhCn) => vec!["保存并设为当前配置", "仅保存", "取消"],
+            (Self::Add, Language::ZhCn) => vec!["儲存並設為當前配置", "僅儲存", "取消"],
             (Self::EditActive, Language::En) => edit_save_action_labels(true),
             (Self::EditActive, Language::ZhCn) => vec!["保存更改", "取消"],
             (Self::EditInactive, Language::En) => edit_save_action_labels(false),
             (Self::EditInactive, Language::ZhCn) => {
-                vec!["仅保存", "保存并设为当前配置", "取消"]
+                vec!["僅儲存", "儲存並設為當前配置", "取消"]
             }
         }
     }
@@ -5746,7 +5746,7 @@ fn prompt_text(
                                 copy(
                                     Language::current(),
                                     "Value cannot be empty.",
-                                    "内容不能为空。",
+                                    "內容不能為空。",
                                 )
                                 .to_string(),
                             );
@@ -5876,9 +5876,9 @@ impl InputValueLabel {
     fn text(self) -> &'static str {
         match (self, Language::current()) {
             (Self::Default, Language::En) => "Default:",
-            (Self::Default, Language::ZhCn) => "默认值：",
+            (Self::Default, Language::ZhCn) => "預設值：",
             (Self::Current, Language::En) => "Current:",
-            (Self::Current, Language::ZhCn) => "当前值：",
+            (Self::Current, Language::ZhCn) => "當前值：",
         }
     }
 }
@@ -6167,7 +6167,7 @@ fn print_cancelled(ui: &mut LiveRegion) -> Result<()> {
         theme::warning(copy(
             Language::current(),
             "Cancelled. No partial configuration was written.",
-            "已取消。未写入任何未完成配置。",
+            "已取消。未寫入任何未完成配置。",
         ))
     );
     Ok(())
@@ -6497,10 +6497,10 @@ mod tests {
     #[test]
     fn status_box_cjk_lines_align_to_display_width() {
         let width = status_box_width();
-        let title = box_title_line("AI Agent 上下文数据库", width);
+        let title = box_title_line("AI Agent 上下文資料庫", width);
         let content = box_content_line(
             "",
-            "当前配置： VPS_ROOT (自定义)",
+            "當前配置： VPS_ROOT (自定義)",
             width,
             StatusBoxMode::Full,
         );

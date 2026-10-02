@@ -1,8 +1,8 @@
 """
-OpenViking FUSE 文件系统
+OpenViking FUSE 檔案系統
 
-实现真正的 FUSE 文件系统挂载，允许使用标准文件系统 API（os、pathlib 等）
-直接操作 OpenViking 数据。
+實現真正的 FUSE 檔案系統掛載，允許使用標準檔案系統 API（os、pathlib 等）
+直接操作 OpenViking 資料。
 """
 
 from __future__ import annotations
@@ -11,27 +11,27 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-# 添加OpenViking项目到路径
+# 新增OpenViking專案到路徑
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from loguru import logger
 
 from .mount import MountConfig, OpenVikingMount
 
-# 尝试导入fusepy
+# 嘗試匯入fusepy
 try:
     from fuse import FUSE, FuseOSError, Operations
 
     FUSE_AVAILABLE = True
 except (ImportError, OSError):
     FUSE_AVAILABLE = False
-    # 创建占位符
+    # 建立佔位符
     Operations = object
     FUSE = None
     FuseOSError = Exception
 
 
-# 只有当 FUSE 可用时才定义完整的实现
+# 只有當 FUSE 可用時才定義完整的實現
 if FUSE_AVAILABLE:
     import errno
     import os
@@ -40,10 +40,10 @@ if FUSE_AVAILABLE:
 
     class OpenVikingFUSE(Operations):
         """
-        OpenViking FUSE 操作类
+        OpenViking FUSE 操作類
 
-        实现 FUSE 文件系统操作，将 OpenViking 的虚拟文件系统
-        暴露为标准的 POSIX 文件系统。
+        實現 FUSE 檔案系統操作，將 OpenViking 的虛擬檔案系統
+        暴露為標準的 POSIX 檔案系統。
         """
 
         def __init__(self, mount: OpenVikingMount):
@@ -51,7 +51,7 @@ if FUSE_AVAILABLE:
             初始化 FUSE 操作
 
             Args:
-                mount: OpenVikingMount 实例
+                mount: OpenVikingMount 例項
             """
             self.mount = mount
             self._fd = 0
@@ -63,10 +63,10 @@ if FUSE_AVAILABLE:
 
         def _path_to_uri(self, path: str) -> str:
             """
-            将 FUSE 路径转换为 OpenViking URI
+            將 FUSE 路徑轉換為 OpenViking URI
 
             Args:
-                path: FUSE 路径 (如 /resources/foo)
+                path: FUSE 路徑 (如 /resources/foo)
 
             Returns:
                 OpenViking URI
@@ -83,14 +83,14 @@ if FUSE_AVAILABLE:
 
         def getattr(self, path: str, fh: int = None) -> Dict[str, Any]:
             """
-            获取文件/目录属性
+            獲取檔案/目錄屬性
 
             Args:
-                path: 文件路径
+                path: 檔案路徑
                 fh: 文件描述符
 
             Returns:
-                属性字典
+                屬性字典
             """
             logger.debug(f"getattr: {path}")
 
@@ -153,14 +153,14 @@ if FUSE_AVAILABLE:
 
         def readdir(self, path: str, fh: int) -> list:
             """
-            读取目录内容
+            讀取目錄內容
 
             Args:
-                path: 目录路径
+                path: 目錄路徑
                 fh: 文件描述符
 
             Returns:
-                目录项列表
+                目錄項列表
             """
             logger.debug(f"readdir: {path}")
 
@@ -187,11 +187,11 @@ if FUSE_AVAILABLE:
 
         def open(self, path: str, flags: int) -> int:
             """
-            打开文件
+            開啟檔案
 
             Args:
-                path: 文件路径
-                flags: 打开标志
+                path: 檔案路徑
+                flags: 開啟標誌
 
             Returns:
                 文件描述符
@@ -219,16 +219,16 @@ if FUSE_AVAILABLE:
 
         def read(self, path: str, size: int, offset: int, fh: int) -> bytes:
             """
-            读取文件内容
+            讀取檔案內容
 
             Args:
-                path: 文件路径
-                size: 读取大小
+                path: 檔案路徑
+                size: 讀取大小
                 offset: 偏移量
                 fh: 文件描述符
 
             Returns:
-                读取的字节
+                讀取的位元組
             """
             logger.debug(f"read: {path} (size={size}, offset={offset})")
 
@@ -252,16 +252,16 @@ if FUSE_AVAILABLE:
 
         def write(self, path: str, data: bytes, offset: int, fh: int) -> int:
             """
-            写入文件内容
+            寫入檔案內容
 
             Args:
-                path: 文件路径
-                data: 要写入的数据
+                path: 檔案路徑
+                data: 要寫入的資料
                 offset: 偏移量
                 fh: 文件描述符
 
             Returns:
-                写入的字节数
+                寫入的位元組數
             """
             logger.debug(f"write: {path} (size={len(data)}, offset={offset})")
 
@@ -285,10 +285,10 @@ if FUSE_AVAILABLE:
 
         def release(self, path: str, fh: int) -> None:
             """
-            关闭文件
+            關閉檔案
 
             Args:
-                path: 文件路径
+                path: 檔案路徑
                 fh: 文件描述符
             """
             logger.debug(f"release: {path}")
@@ -300,11 +300,11 @@ if FUSE_AVAILABLE:
 
         def mkdir(self, path: str, mode: int) -> None:
             """
-            创建目录
+            建立目錄
 
             Args:
-                path: 目录路径
-                mode: 权限模式
+                path: 目錄路徑
+                mode: 許可權模式
             """
             logger.debug(f"mkdir: {path}")
 
@@ -319,10 +319,10 @@ if FUSE_AVAILABLE:
 
         def rmdir(self, path: str) -> None:
             """
-            删除目录
+            刪除目錄
 
             Args:
-                path: 目录路径
+                path: 目錄路徑
             """
             logger.debug(f"rmdir: {path}")
 
@@ -337,10 +337,10 @@ if FUSE_AVAILABLE:
 
         def unlink(self, path: str) -> None:
             """
-            删除文件
+            刪除檔案
 
             Args:
-                path: 文件路径
+                path: 檔案路徑
             """
             logger.debug(f"unlink: {path}")
 
@@ -355,11 +355,11 @@ if FUSE_AVAILABLE:
 
         def truncate(self, path: str, length: int, fh: int = None) -> None:
             """
-            截断文件
+            截斷檔案
 
             Args:
-                path: 文件路径
-                length: 截断长度
+                path: 檔案路徑
+                length: 截斷長度
                 fh: 文件描述符
             """
             logger.debug(f"truncate: {path} (length={length})")
@@ -376,11 +376,11 @@ if FUSE_AVAILABLE:
 
         def utimens(self, path: str, times: tuple = None) -> None:
             """
-            更新文件时间戳
+            更新檔案時間戳
 
             Args:
-                path: 文件路径
-                times: (atime, mtime) 元组
+                path: 檔案路徑
+                times: (atime, mtime) 元組
             """
             logger.debug(f"utimens: {path}")
 
@@ -388,12 +388,12 @@ if FUSE_AVAILABLE:
         config: MountConfig, foreground: bool = False, allow_other: bool = False
     ) -> None:
         """
-        挂载 OpenViking FUSE 文件系统
+        掛載 OpenViking FUSE 檔案系統
 
         Args:
-            config: 挂载配置
-            foreground: 是否在前台运行
-            allow_other: 是否允许其他用户访问
+            config: 掛載配置
+            foreground: 是否在前臺執行
+            allow_other: 是否允許其他使用者訪問
         """
         mount = OpenVikingMount(config)
         operations = OpenVikingFUSE(mount)
@@ -423,9 +423,9 @@ if FUSE_AVAILABLE:
 
     class FUSEMountManager:
         """
-        FUSE 挂载管理器
+        FUSE 掛載管理器
 
-        管理 FUSE 挂载进程的生命周期
+        管理 FUSE 掛載程序的生命週期
         """
 
         def __init__(self):
@@ -433,12 +433,12 @@ if FUSE_AVAILABLE:
 
         def mount(self, mount_id: str, config: MountConfig, background: bool = True) -> None:
             """
-            挂载 FUSE 文件系统
+            掛載 FUSE 檔案系統
 
             Args:
-                mount_id: 挂载 ID
-                config: 挂载配置
-                background: 是否在后台运行
+                mount_id: 掛載 ID
+                config: 掛載配置
+                background: 是否在後臺執行
             """
             if background:
                 import multiprocessing
@@ -455,10 +455,10 @@ if FUSE_AVAILABLE:
 
         def unmount(self, mount_id: str) -> None:
             """
-            卸载 FUSE 文件系统
+            解除安裝 FUSE 檔案系統
 
             Args:
-                mount_id: 挂载 ID
+                mount_id: 掛載 ID
             """
             if mount_id in self._mounts:
                 process = self._mounts.pop(mount_id)
@@ -467,12 +467,12 @@ if FUSE_AVAILABLE:
                 logger.info(f"Unmounted {mount_id}")
 
         def unmount_all(self) -> None:
-            """卸载所有 FUSE 文件系统"""
+            """解除安裝所有 FUSE 檔案系統"""
             for mount_id in list(self._mounts.keys()):
                 self.unmount(mount_id)
 
 else:
-    # FUSE 不可用时的占位符
+    # FUSE 不可用時的佔位符
     OpenVikingFUSE = None
 
     def mount_fuse(*args, **kwargs):
@@ -481,7 +481,7 @@ else:
         )
 
     class FUSEMountManager:
-        """FUSE 挂载管理器（占位符）"""
+        """FUSE 掛載管理器（佔位符）"""
 
         def __init__(self):
             self._mounts: Dict[str, Any] = {}

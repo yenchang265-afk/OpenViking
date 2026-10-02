@@ -335,7 +335,7 @@ def test_directory_parse_failures_include_failed_source_access_items():
 def test_empty_directory_error_keeps_120_character_limit(length):
     from openviking.utils.resource_processor import ResourceProcessor
 
-    reason = "错误原因" * (length // 4) + "错" * (length % 4)
+    reason = "錯誤原因" * (length // 4) + "錯" * (length % 4)
     meta = {
         "total_processable": 1,
         "failed_files": [
@@ -361,7 +361,7 @@ def test_empty_directory_error_keeps_120_character_limit(length):
     ids=["native", "no_ids", "file_id_only", "response_id"],
 )
 @pytest.mark.parametrize(
-    "reason", ["文件解析任务失败：empty parse result", "错误原因" * 50], ids=["short", "long"]
+    "reason", ["檔案解析任務失敗：empty parse result", "錯誤原因" * 50], ids=["short", "long"]
 )
 async def test_resource_processor_preserves_single_file_reason_and_response_id(
     monkeypatch, meta, reason
@@ -539,18 +539,18 @@ async def test_resource_processor_allows_flat_root_only_for_single_no_split_sour
     rp._get_media_processor.return_value.process = AsyncMock(
         return_value=SimpleNamespace(
             temp_dir_path="viking://temp/tmpdir",
-            source_path="神雕_副本.md",
+            source_path="神鵰_副本.md",
             source_format="markdown",
             meta={},
             warnings=[],
         )
     )
-    root_uri = "viking://resources/神雕_副本.md"
+    root_uri = "viking://resources/神鵰_副本.md"
     rp.tree_builder.finalize_from_temp = AsyncMock(
         return_value=SimpleNamespace(
             root=SimpleNamespace(
                 uri=root_uri,
-                temp_uri="viking://temp/tmpdir/神雕_副本/神雕_副本.md",
+                temp_uri="viking://temp/tmpdir/神鵰_副本/神鵰_副本.md",
             ),
             _root_is_file=True,
             _candidate_uri=root_uri if auto_candidate else None,
@@ -567,7 +567,7 @@ async def test_resource_processor_allows_flat_root_only_for_single_no_split_sour
     )
 
     result = await rp.process_resource(
-        path="神雕_副本.md",
+        path="神鵰_副本.md",
         ctx=object(),
         build_index=True,
         parse_mode="no_split",
@@ -575,7 +575,7 @@ async def test_resource_processor_allows_flat_root_only_for_single_no_split_sour
 
     assert result["status"] == "success"
     assert result["root_uri"] == root_uri
-    assert fake_fs._async_agfs.exact_attempts == [("/mock/resources/神雕_副本.md", 0.0)]
+    assert fake_fs._async_agfs.exact_attempts == [("/mock/resources/神鵰_副本.md", 0.0)]
     assert fake_fs._async_agfs.tree_attempts == []
     assert rp.tree_builder.finalize_from_temp.await_args.kwargs["flatten_single_file"] is True
 
@@ -596,7 +596,7 @@ async def test_resource_processor_keeps_wrapper_for_directory_to_no_split(monkey
     rp._get_media_processor.return_value.process = AsyncMock(
         return_value=SimpleNamespace(
             temp_dir_path="viking://temp/tmpdir",
-            source_path="神雕.md",
+            source_path="神鵰.md",
             source_format="markdown",
             meta={},
             warnings=[],
@@ -606,7 +606,7 @@ async def test_resource_processor_keeps_wrapper_for_directory_to_no_split(monkey
         return_value=SimpleNamespace(
             root=SimpleNamespace(
                 uri="viking://resources/0803_shendiao_01",
-                temp_uri="viking://temp/tmpdir/神雕",
+                temp_uri="viking://temp/tmpdir/神鵰",
             ),
             _root_is_file=False,
         )
@@ -617,7 +617,7 @@ async def test_resource_processor_keeps_wrapper_for_directory_to_no_split(monkey
     rp._summarizer = SimpleNamespace(summarize=AsyncMock(return_value={"status": "success"}))
 
     result = await rp.process_resource(
-        path="神雕.md",
+        path="神鵰.md",
         ctx=object(),
         to="viking://resources/0803_shendiao_01",
         to_is_directory=True,

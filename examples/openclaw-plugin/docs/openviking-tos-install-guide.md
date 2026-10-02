@@ -1,12 +1,12 @@
-# OpenViking TOS 安装包发布与安装说明
+# OpenViking TOS 安裝包釋出與安裝說明
 
-> 更新时间：2026-06-03
-> 发布目录：`latest`（默认）与可指定日期目录（示例：`2026.6.3`）
-> 发布内容：`install.sh`、`openviking.tgz`、`manifest.json`
+> 更新時間：2026-06-03
+> 釋出目錄：`latest`（預設）與可指定日期目錄（示例：`2026.6.3`）
+> 釋出內容：`install.sh`、`openviking.tgz`、`manifest.json`
 
-## 1. 本次发布结论
+## 1. 本次釋出結論
 
-当前发布协议只发布三个文件：一个兼容多区域的 `install.sh`，一个插件压缩包 `openviking.tgz`，一个描述文件 `manifest.json`。三个文件会覆盖上传到 4 个 TOS bucket，并设置对象 ACL 为公开读（public-read）。每个 bucket 都先上传日期目录；日期目录可用 `--release-dir <yyyy.m.d>` 指定，未指定时按运行当天动态生成，不能固定死某个日期。`latest` 目录只有在组件稳定后显式指定 `--publish-latest` 才上传：
+當前釋出協議只發布三個檔案：一個相容多區域的 `install.sh`，一個外掛壓縮包 `openviking.tgz`，一個描述檔案 `manifest.json`。三個檔案會覆蓋上傳到 4 個 TOS bucket，並設定物件 ACL 為公開讀（public-read）。每個 bucket 都先上傳日期目錄；日期目錄可用 `--release-dir <yyyy.m.d>` 指定，未指定時按運行當天動態生成，不能固定死某個日期。`latest` 目錄只有在元件穩定後顯式指定 `--publish-latest` 才上傳：
 
 - `latest/install.sh`
 - `latest/openviking.tgz`
@@ -15,31 +15,31 @@
 - `2026.6.3/openviking.tgz`
 - `2026.6.3/manifest.json`
 
-安装脚本默认安装 `latest/openviking.tgz`；如需安装固定日期版本，可添加 `--date 2026.6.3`。
+安裝指令碼預設安裝 `latest/openviking.tgz`；如需安裝固定日期版本，可新增 `--date 2026.6.3`。
 
-如果目标 bucket 不存在，上传脚本会先自动创建 bucket，再上传对象。本文中的验证命令均使用 dry-run 或本地语法/单测校验，不执行真实 TOS 上传。
+如果目標 bucket 不存在，上傳指令碼會先自動建立 bucket，再上傳物件。本文中的驗證命令均使用 dry-run 或本地語法/單測校驗，不執行真實 TOS 上傳。
 
-## 2. 域名规则
+## 2. 域名規則
 
-`install.sh` 默认使用内部域名，适用于内部网络环境：
+`install.sh` 預設使用內部域名，適用於內部網路環境：
 
 ```text
 ivolces.com
 ```
 
-公网测试或公网安装时，需要显式添加：
+公網測試或公網安裝時，需要顯式新增：
 
 ```bash
 --external
 ```
 
-此时脚本会使用公网域名：
+此時指令碼會使用公網域名：
 
 ```text
 volces.com
 ```
 
-## 3. 已发布的公网下载地址
+## 3. 已釋出的公網下載地址
 
 ### 3.1 arkclaw-ov-cn-beijing
 
@@ -85,142 +85,142 @@ https://arkclaw-ov.tos-cn-beijing.volces.com/2026.6.3/openviking.tgz
 https://arkclaw-ov.tos-cn-beijing.volces.com/2026.6.3/manifest.json
 ```
 
-## 4. 推荐安装方式
+## 4. 推薦安裝方式
 
-### 4.1 内部网络安装 latest（默认）
+### 4.1 內部網路安裝 latest（預設）
 
-在内部网络环境中，直接下载对应区域的 `install.sh` 并执行即可。脚本默认使用内部域名并安装 `latest/openviking.tgz`。
+在內部網路環境中，直接下載對應區域的 `install.sh` 並執行即可。指令碼預設使用內部域名並安裝 `latest/openviking.tgz`。
 
-以广州区域为例：
+以廣州區域為例：
 
 ```bash
 wget https://arkclaw-ov-cn-guangzhou.tos-cn-guangzhou.ivolces.com/latest/install.sh -O install.sh
 bash install.sh --region cn-guangzhou
 ```
 
-### 4.2 公网安装 latest
+### 4.2 公網安裝 latest
 
-公网环境需要使用公网下载地址，并在执行脚本时加 `--external`。
+公網環境需要使用公網下載地址，並在執行指令碼時加 `--external`。
 
-以广州区域为例：
+以廣州區域為例：
 
 ```bash
 wget https://arkclaw-ov-cn-guangzhou.tos-cn-guangzhou.volces.com/latest/install.sh -O install.sh
 bash install.sh --external --region cn-guangzhou
 ```
 
-### 4.3 安装固定日期版本
+### 4.3 安裝固定日期版本
 
-如需安装 `2026.6.3` 固定版本：
+如需安裝 `2026.6.3` 固定版本：
 
 ```bash
 wget https://arkclaw-ov-cn-guangzhou.tos-cn-guangzhou.volces.com/2026.6.3/install.sh -O install.sh
 bash install.sh --external --region cn-guangzhou --date 2026.6.3
 ```
 
-### 4.4 指定 bucket 安装
+### 4.4 指定 bucket 安裝
 
-如果使用默认 bucket `arkclaw-ov`，可指定 bucket：
+如果使用預設 bucket `arkclaw-ov`，可指定 bucket：
 
 ```bash
 wget https://arkclaw-ov.tos-cn-beijing.volces.com/latest/install.sh -O install.sh
 bash install.sh --external --region cn-beijing --bucket arkclaw-ov
 ```
 
-### 4.5 自定义 TOS Base URL
+### 4.5 自定義 TOS Base URL
 
-如果希望完全指定下载根路径，可使用 `--tos-base-url`：
+如果希望完全指定下載根路徑，可使用 `--tos-base-url`：
 
 ```bash
 bash install.sh --tos-base-url https://arkclaw-ov.tos-cn-beijing.volces.com
 ```
 
-默认下载：
+預設下載：
 
 ```text
 https://arkclaw-ov.tos-cn-beijing.volces.com/latest/openviking.tgz
 ```
 
-如果需要日期目录：
+如果需要日期目錄：
 
 ```bash
 bash install.sh --tos-base-url https://arkclaw-ov.tos-cn-beijing.volces.com --date 2026.6.3
 ```
 
-对应下载：
+對應下載：
 
 ```text
 https://arkclaw-ov.tos-cn-beijing.volces.com/2026.6.3/openviking.tgz
 ```
 
-## 5. install.sh 参数速查
+## 5. install.sh 引數速查
 
-| 参数 | 说明 | 默认值 |
+| 引數 | 說明 | 預設值 |
 | --- | --- | --- |
-| `--internal` | 使用内部域名 `ivolces.com` | 默认开启 |
-| `--external` | 使用公网域名 `volces.com` | 关闭 |
-| `--latest` | 安装 `latest/openviking.tgz` | 默认开启 |
-| `--date <date>` | 安装日期目录版本，如 `2026.6.3/openviking.tgz` | 无 |
-| `--release-path <path>` | 安装自定义目录下的 `openviking.tgz` | `latest` |
-| `--region <region>` | 指定区域，如 `cn-beijing` / `cn-guangzhou` / `cn-shanghai` | 自动识别，失败时为 `cn-beijing` |
-| `--bucket <bucket>` | 指定 bucket 名称 | `arkclaw-ov` |
-| `--tos-base-url <url>` | 完整指定 TOS 根 URL | 自动按 bucket/region/domain 生成 |
-| `--manifest-url <url>` | 完整指定 manifest URL | 自动按 bucket/region/domain/release-path 生成 |
-| `--source local` | 从 `install.sh` 同目录安装本地 `openviking.tgz` | 远端下载 |
-| `--tarball <path>` | 从指定本地 tgz 安装 | 无 |
-| `--verify-only` | 仅下载/校验，不安装 | 关闭 |
-| `--dry-run` | 打印动作，不执行下载/安装 | 关闭 |
-| `--no-restart` | 安装后不重启 OpenClaw gateway | 默认会重启 |
+| `--internal` | 使用內部域名 `ivolces.com` | 預設開啟 |
+| `--external` | 使用公網域名 `volces.com` | 關閉 |
+| `--latest` | 安裝 `latest/openviking.tgz` | 預設開啟 |
+| `--date <date>` | 安裝日期目錄版本，如 `2026.6.3/openviking.tgz` | 無 |
+| `--release-path <path>` | 安裝自定義目錄下的 `openviking.tgz` | `latest` |
+| `--region <region>` | 指定區域，如 `cn-beijing` / `cn-guangzhou` / `cn-shanghai` | 自動識別，失敗時為 `cn-beijing` |
+| `--bucket <bucket>` | 指定 bucket 名稱 | `arkclaw-ov` |
+| `--tos-base-url <url>` | 完整指定 TOS 根 URL | 自動按 bucket/region/domain 生成 |
+| `--manifest-url <url>` | 完整指定 manifest URL | 自動按 bucket/region/domain/release-path 生成 |
+| `--source local` | 從 `install.sh` 同目錄安裝本地 `openviking.tgz` | 遠端下載 |
+| `--tarball <path>` | 從指定本地 tgz 安裝 | 無 |
+| `--verify-only` | 僅下載/校驗，不安裝 | 關閉 |
+| `--dry-run` | 列印動作，不執行下載/安裝 | 關閉 |
+| `--no-restart` | 安裝後不重啟 OpenClaw gateway | 預設會重啟 |
 
-## 6. 上传脚本说明
+## 6. 上傳指令碼說明
 
-上传脚本路径：
+上傳指令碼路徑：
 
 ```text
 scripts/upload_tos.py
 ```
 
-执行上传（真实上传，需要 `TEAM_TEST_AK` / `TEAM_TEST_SK`）：
+執行上傳（真實上傳，需要 `TEAM_TEST_AK` / `TEAM_TEST_SK`）：
 
 ```bash
 python3 scripts/upload_tos.py --release-dir 2026.6.3
 ```
 
-只验证脚本路径、对象 key、bucket 与 latest 策略，不真实上传 TOS：
+只驗證指令碼路徑、物件 key、bucket 與 latest 策略，不真實上傳 TOS：
 
 ```bash
 python3 scripts/upload_tos.py --release-dir 2026.6.3 --dry-run
 ```
 
-不指定 `--release-dir` 时，脚本默认使用运行当天的 `yyyy.m.d` 作为日期目录。
+不指定 `--release-dir` 時，指令碼預設使用運行當天的 `yyyy.m.d` 作為日期目錄。
 
-组件稳定后再发布 latest：
+元件穩定後再發布 latest：
 
 ```bash
 python3 scripts/upload_tos.py --release-dir 2026.6.3 --publish-latest
 ```
 
-完整发布入口会先构建三文件产物，再调用上传脚本：
+完整發布入口會先構建三檔案產物，再呼叫上傳指令碼：
 
 ```bash
 TEAM_TEST_AK=... TEAM_TEST_SK=... scripts/release-to-tos.sh --release-dir 2026.6.3
 TEAM_TEST_AK=... TEAM_TEST_SK=... scripts/release-to-tos.sh --release-dir 2026.6.3 --publish-latest
 ```
 
-仅做发布脚本正确性验证、不上传 TOS：
+僅做釋出指令碼正確性驗證、不上傳 TOS：
 
 ```bash
 scripts/release-to-tos.sh --release-dir 2026.6.3 --dry-run
 ```
 
-上传脚本会读取环境变量：
+上傳指令碼會讀取環境變數：
 
 ```text
 TEAM_TEST_AK
 TEAM_TEST_SK
 ```
 
-上传对象：
+上傳物件：
 
 ```text
 install.sh
@@ -228,18 +228,18 @@ openviking.tgz
 manifest.json
 ```
 
-上传路径：
+上傳路徑：
 
 ```text
 2026.6.3/install.sh
 2026.6.3/openviking.tgz
 2026.6.3/manifest.json
-latest/install.sh       # 仅 --publish-latest 时上传
-latest/openviking.tgz   # 仅 --publish-latest 时上传
-latest/manifest.json    # 仅 --publish-latest 时上传
+latest/install.sh       # 僅 --publish-latest 時上傳
+latest/openviking.tgz   # 僅 --publish-latest 時上傳
+latest/manifest.json    # 僅 --publish-latest 時上傳
 ```
 
-上传目标 bucket：
+上傳目標 bucket：
 
 ```text
 arkclaw-ov-cn-beijing
@@ -248,19 +248,19 @@ arkclaw-ov-cn-shanghai
 arkclaw-ov
 ```
 
-如果 bucket 不存在，上传脚本会自动创建对应 bucket。
+如果 bucket 不存在，上傳指令碼會自動建立對應 bucket。
 
-上传时已设置对象 ACL：
+上傳時已設定物件 ACL：
 
 ```text
 public-read
 ```
 
-## 7. 本次验证结果
+## 7. 本次驗證結果
 
-### 7.1 本地脚本测试
+### 7.1 本地指令碼測試
 
-本地只验证脚本正确性，不做真实 TOS 上传。已通过以下测试：
+本地只驗證指令碼正確性，不做真實 TOS 上傳。已通過以下測試：
 
 ```bash
 npx vitest run tests/ut/tos-release-contract.test.ts
@@ -271,28 +271,28 @@ node --check scripts/generate-release-manifest.mjs
 node --check scripts/tos-release-client.mjs
 ```
 
-测试覆盖：
+測試覆蓋：
 
-- 默认使用 `latest/openviking.tgz`
-- `--date 2026.6.3` 使用日期目录
-- 默认内部域名为 `ivolces.com`
-- `--external` 使用公网域名 `volces.com`
-- 上传脚本默认只上传指定日期目录，`--publish-latest` 时才上传 `latest`
-- 不指定 `--release-dir` 时动态使用当天日期目录
-- bucket 不存在时自动创建 bucket
-- 上传对象使用 `public-read` ACL
+- 預設使用 `latest/openviking.tgz`
+- `--date 2026.6.3` 使用日期目錄
+- 預設內部域名為 `ivolces.com`
+- `--external` 使用公網域名 `volces.com`
+- 上傳指令碼預設只上傳指定日期目錄，`--publish-latest` 時才上傳 `latest`
+- 不指定 `--release-dir` 時動態使用當天日期目錄
+- bucket 不存在時自動建立 bucket
+- 上傳物件使用 `public-read` ACL
 
-## 8. 常见问题
+## 8. 常見問題
 
-### 8.1 为什么公网测试必须加 --external？
+### 8.1 為什麼公網測試必須加 --external？
 
-因为 `ivolces.com` 是内部域名，在当前公网测试环境无法连通。加 `--external` 后，脚本会改用 `volces.com` 公网域名。
+因為 `ivolces.com` 是內部域名，在當前公網測試環境無法連通。加 `--external` 後，指令碼會改用 `volces.com` 公網域名。
 
-### 8.2 默认不指定日期时安装哪个版本？
+### 8.2 預設不指定日期時安裝哪個版本？
 
-默认安装 `latest/openviking.tgz`。
+預設安裝 `latest/openviking.tgz`。
 
-### 8.3 如何回滚到固定日期目录？
+### 8.3 如何回滾到固定日期目錄？
 
 使用 `--date`：
 
@@ -300,12 +300,12 @@ node --check scripts/tos-release-client.mjs
 bash install.sh --date 2026.6.3
 ```
 
-公网环境：
+公網環境：
 
 ```bash
 bash install.sh --external --date 2026.6.3
 ```
 
-### 8.4 覆盖上传是否安全？
+### 8.4 覆蓋上傳是否安全？
 
-本次需求明确要求同路径已有文件直接覆盖。上传脚本未开启禁止覆盖，并在每次上传时设置 public-read ACL。
+本次需求明確要求同路徑已有檔案直接覆蓋。上傳指令碼未開啟禁止覆蓋，並在每次上傳時設定 public-read ACL。

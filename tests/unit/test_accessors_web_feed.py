@@ -197,7 +197,7 @@ class TestRelpath:
         )
 
     def test_entry_title_cjk(self):
-        assert _entry_to_relpath(FeedEntry(url="https://h/x", title="台湾游记")) == "台湾游记.html"
+        assert _entry_to_relpath(FeedEntry(url="https://h/x", title="臺灣遊記")) == "臺灣遊記.html"
 
     def test_entry_no_title_falls_back_to_url(self):
         assert _entry_to_relpath(FeedEntry(url="https://h/post/bar/")) == "post/bar.html"
