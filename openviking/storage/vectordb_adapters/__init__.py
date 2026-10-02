@@ -3,6 +3,7 @@
 """VectorDB backend collection adapter package."""
 
 from .base import CollectionAdapter
+from .elasticsearch_adapter import ElasticsearchCollectionAdapter
 from .factory import create_collection_adapter
 from .http_adapter import HttpCollectionAdapter
 from .local_adapter import CuVSCollectionAdapter, LocalCollectionAdapter
@@ -14,5 +15,6 @@ __all__ = [
     "CuVSCollectionAdapter",
     "HttpCollectionAdapter",
     "OpenGaussCollectionAdapter",
+    "ElasticsearchCollectionAdapter",
     "create_collection_adapter",
 ]

@@ -1486,13 +1486,14 @@ Vector database storage configuration
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `backend` | str | VectorDB backend type: 'local' (file-based), 'http' (remote service), 'cuvs' (local storage + GPU dense search), or 'opengauss' (openGauss DataVec) | "local" |
+| `backend` | str | VectorDB backend type: 'local' (file-based), 'http' (remote service), 'cuvs' (local storage + GPU dense search), 'opengauss' (openGauss DataVec), or 'elasticsearch' (Elasticsearch 8.x) | "local" |
 | `name` | str | VectorDB collection name | "context" |
 | `url` | str | Remote service URL for 'http' type (e.g., 'http://localhost:5000') | null |
 | `project_name` | str | Project name (alias project) | "default" |
 | `distance_metric` | str | Distance metric for vector similarity search (e.g., 'cosine', 'l2', 'ip') | "cosine" |
 | `dimension` | int | Vector embedding dimension | 0 |
 | `sparse_weight` | float | Sparse weight for hybrid vector search, only effective when using hybrid index | 0.0 |
+| `elasticsearch` | object | Elasticsearch configuration for the 'elasticsearch' backend; see below | - |
 | `cuvs` | object | NVIDIA cuVS configuration for the 'cuvs' backend and the opt-in memory-aware auto mode on 'local'; see the [cuVS guide](./16-cuvs.md) | - |
 
 Default local mode
@@ -1505,6 +1506,51 @@ Default local mode
   }
 }
 ```
+
+<details>
+<summary><b>Elasticsearch</b></summary>
+Stores vectors in an Elasticsearch 8.12+ cluster using `dense_vector` kNN search. Install the client with `pip install "openviking[elasticsearch]"`.
+
+```json
+{
+  "storage": {
+    "vectordb": {
+      "backend": "elasticsearch",
+      "name": "context",
+      "distance_metric": "cosine",
+      "elasticsearch": {
+        "hosts": ["https://es.example.com:9200"],
+        "api_key": "your-api-key",
+        "index_prefix": "openviking_"
+      }
+    }
+  }
+}
+```
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `hosts` | list[str] | Elasticsearch node URLs | `["http://127.0.0.1:9200"]` |
+| `api_key` | str | API key; mutually exclusive with `username`/`password` | null |
+| `username` / `password` | str | Basic auth credentials; set both or neither | null |
+| `ca_certs` | str | CA bundle path for TLS verification | null |
+| `verify_certs` | bool | Verify TLS certificates | true |
+| `request_timeout` | float | Request timeout in seconds | 30 |
+| `index_prefix` | str | Prefix for the index name; the index is `<index_prefix><name>` and must be lowercase | "openviking_" |
+| `number_of_shards` | int | Primary shards per index | 1 |
+| `number_of_replicas` | int | Replicas per index; unset uses the cluster default (set `0` on a single-node cluster) | null |
+| `refresh` | str | Write refresh policy: `wait_for` (writes visible to the next search), `true`, or `false` | "wait_for" |
+| `index_type` | str | `dense_vector` index type: `hnsw`, `int8_hnsw`, `flat`, or `int8_flat` (`flat` types need Elasticsearch 8.13+) | "hnsw" |
+| `m` / `ef_construction` | int | HNSW build parameters | 16 / 100 |
+| `num_candidates` | int | Minimum kNN candidates per shard (raised to the requested k) | 100 |
+| `bulk_batch_size` | int | Documents per bulk request | 500 |
+
+- `distance_metric` maps to the `dense_vector` similarity: `cosine` → `cosine`, `l2` → `l2_norm`, `ip` → `max_inner_product`. It is fixed when the index is created; changing it requires a new collection.
+- Sparse and hybrid search (`sparse_weight > 0`) and multimodal search are not supported.
+- With `cosine`, a record whose embedding is all zeros (some embedders return this for empty text) is stored without a vector: it can be filtered but is never returned by vector search.
+- One vector search returns at most 10000 results (`limit + offset`). Filter and sort queries page past that with `search_after`.
+- OpenViking creates the index with a strict mapping and keeps its metadata in the mapping `_meta`. It refuses to adopt an existing index it did not create.
+</details>
 
 ##### ACL schema
 
@@ -1966,7 +2012,7 @@ For detailed encryption explanations, see [Data Encryption](../concepts/10-encry
       "lock_expire": 300.0
     },
     "vectordb": {
-      "backend": "local|cuvs|http|opengauss",
+      "backend": "local|cuvs|http|opengauss|elasticsearch",
       "url": "string",
       "project": "string"
     }

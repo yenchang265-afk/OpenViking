@@ -120,6 +120,37 @@ services:
       "
     restart: "no"
 
+  # Optional Elasticsearch vector store (storage.vectordb.backend = "elasticsearch").
+  # Start with: docker compose --profile elasticsearch up -d
+  # Security is disabled and the port is bound to localhost: local testing only.
+  # Matching ov.conf snippet:
+  #   "vectordb": {"backend": "elasticsearch", "elasticsearch": {
+  #     "hosts": ["http://elasticsearch:9200"], "number_of_replicas": 0}}
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.3
+    container_name: openviking-elasticsearch
+    profiles: ["elasticsearch"]
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: ${ES_JAVA_OPTS:--Xms1g -Xmx1g}
+    ports:
+      - "127.0.0.1:9200:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+    networks:
+      default:
+      # Reachable as `elasticsearch` from a separately run OpenViking container
+      # on the same external network (see the seaweedfs service above).
+      ov-app:
+        aliases: [elasticsearch]
+    restart: unless-stopped
+
 networks:
   ov-app:
     external: true
@@ -127,6 +158,7 @@ networks:
 
 volumes:
   seaweedfs_data:
+  elasticsearch_data:
   # Uncomment for public HTTPS:
   # caddy_data:
   # caddy_config:

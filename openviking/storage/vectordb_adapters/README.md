@@ -28,7 +28,7 @@
    提供统一查询、写入、删除、计数能力。
 
 3. **Adapter 层（本目录）**  
-   负责把统一能力映射到具体后端实现（local/cuvs/http/opengauss/thirdparty）。
+   负责把统一能力映射到具体后端实现（local/cuvs/http/opengauss/elasticsearch/thirdparty）。
 
 新增后端时，主要只改第 3 层。
 

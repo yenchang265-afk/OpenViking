@@ -198,7 +198,7 @@ Search 和 Find 请求的默认 `limit` 为 `10`，可以在每次 API 或 SDK �
 |---|---|---|---|
 | `workspace` | path | `"./data"` | OpenViking 工作目录 |
 | `agfs.backend` | `local`、`memory`、`s3` | `local` | 文件与元数据存储后端 |
-| `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss` | `local` | 向量数据库后端 |
+| `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss`、`elasticsearch` | `local` | 向量数据库后端 |
 | `vectordb.dimension` | integer | 跟随 Embedding | 向量集合维度 |
 | `parse_output.mode` | `agfs`、`local` | `agfs` | parser 中间产物的存储后端 |
 | `parse_output.local_root` | 路径或 `null` | 系统临时目录 | local parser artifact 的根目录 |

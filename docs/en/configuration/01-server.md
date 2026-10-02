@@ -198,7 +198,7 @@ Search and Find requests default to `limit: 10`; override the limit on each API 
 |---|---|---|---|
 | `workspace` | path | `"./data"` | OpenViking workspace |
 | `agfs.backend` | `local`, `memory`, `s3` | `local` | File and metadata backend |
-| `vectordb.backend` | `local`, `cuvs`, `http`, `opengauss` | `local` | Vector database backend |
+| `vectordb.backend` | `local`, `cuvs`, `http`, `opengauss`, `elasticsearch` | `local` | Vector database backend |
 | `vectordb.dimension` | integer | follows Embedding | Vector collection dimension |
 | `parse_output.mode` | `agfs`, `local` | `agfs` | Backend for intermediate parser artifacts |
 | `parse_output.local_root` | path or `null` | system temp directory | Root directory used by local parser artifacts |

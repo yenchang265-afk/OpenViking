@@ -7,6 +7,7 @@ from __future__ import annotations
 import importlib
 
 from .base import CollectionAdapter
+from .elasticsearch_adapter import ElasticsearchCollectionAdapter
 from .http_adapter import HttpCollectionAdapter
 from .local_adapter import CuVSCollectionAdapter, LocalCollectionAdapter
 from .opengauss_adapter import OpenGaussCollectionAdapter
@@ -16,6 +17,7 @@ _ADAPTER_REGISTRY: dict[str, type[CollectionAdapter]] = {
     "cuvs": CuVSCollectionAdapter,
     "http": HttpCollectionAdapter,
     "opengauss": OpenGaussCollectionAdapter,
+    "elasticsearch": ElasticsearchCollectionAdapter,
 }
 
 
