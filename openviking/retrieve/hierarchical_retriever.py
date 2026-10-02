@@ -130,7 +130,7 @@ class HierarchicalRetriever:
             if level is None:
                 level = [2]
 
-        # 创建 proxy 包装器，绑定当前 ctx
+        # 建立 proxy 包裝器，綁定當前 ctx
         vector_proxy = VikingDBManagerProxy(self.vector_store, ctx)
 
         target_dirs = [d for d in (query.target_directories or []) if d]

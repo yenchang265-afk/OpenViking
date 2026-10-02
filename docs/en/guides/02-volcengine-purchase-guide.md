@@ -22,7 +22,7 @@ OpenViking requires the following model services:
 
 Visit the [Volcengine Official Website](https://www.volcengine.com/):
 
-1. Click "Login/Register" (登录/注册) in the top right corner.
+1. Click "Login/Register" (登入/註冊) in the top right corner.
 2. Select a registration method (Phone/Email).
 3. Complete verification and set a password.
 4. Perform real-name authentication.
@@ -36,7 +36,7 @@ Volcano Ark is Volcengine's AI model service platform.
 1. After logging in, enter the [Console](https://console.volcengine.com/).
 2. Search for "Volcano Ark" (火山方舟).
 3. Click to enter the [Volcano Ark Console](https://console.volcengine.com/ark/region:ark+cn-beijing/model).
-4. For first-time use, you need to click "Activate Service" (开通服务) and agree to the agreement.
+4. For first-time use, you need to click "Activate Service" (開通服務) and agree to the agreement.
 
 ### 3. Create API Key
 
@@ -45,7 +45,7 @@ Visit: [API Key Management Page](https://console.volcengine.com/ark/region:ark+c
 All model calls require an API Key.
 
 1. Select **"API Key Management"** (API Key 管理) in the left navigation bar of Volcano Ark.
-2. Click **"Create API Key"** (创建 API Key).
+2. Click **"Create API Key"** (建立 API Key).
 3. Copy and save the API Key for subsequent configuration.
 
 <div align="center">
@@ -56,10 +56,10 @@ All model calls require an API Key.
 
 Visit: [Model Management Page](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
 
-1. Select **"Provisioning Management"** (开通管理) in the left navigation bar.
-2. Select the **"Language Model"** (语言模型) column.
+1. Select **"Provisioning Management"** (開通管理) in the left navigation bar.
+2. Select the **"Language Model"** (語言模型) column.
 3. Find the **Doubao-Seed-2.0** model.
-4. Click the "Activate" (开通) button.
+4. Click the "Activate" (開通) button.
 5. Confirm the payment method.
 
 <div align="center">
@@ -72,10 +72,10 @@ After activation, you can use the model ID directly: `doubao-seed-2-0-lite-26042
 
 Visit: [Model Management Page](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
 
-1. Select **"Provisioning Management"** (开通管理) in the left navigation bar.
+1. Select **"Provisioning Management"** (開通管理) in the left navigation bar.
 2. Select the **"Vector Model"** (向量模型) column.
 3. Find the **Doubao-Embedding-Vision** model.
-4. Click "Activate" (开通).
+4. Click "Activate" (開通).
 5. Confirm the payment method.
 
 <div align="center">
@@ -194,9 +194,9 @@ asyncio.run(test())
 
 In the Volcano Ark Console:
 
-1. Visit the **"Overview"** (概览) page.
+1. Visit the **"Overview"** (概覽) page.
 2. View **Token Consumption Statistics**.
-3. Check billing details in **"Billing Center"** (费用中心).
+3. Check billing details in **"Billing Center"** (費用中心).
 
 ## Billing Information
 

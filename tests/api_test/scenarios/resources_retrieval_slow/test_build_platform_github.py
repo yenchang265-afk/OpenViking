@@ -20,10 +20,10 @@ def _add_resource_with_retry(api_client, path, max_retries=3, delay=10):
 
 
 class TestBuildPlatformGithub:
-    """TC-P01~P04 GitHub 平台 URL 构建测试"""
+    """TC-P01~P04 GitHub 平臺 URL 構建測試"""
 
     def test_build_github_raw_file(self, api_client):
-        """TC-P03 GitHub原始文件下载：验证 raw.githubusercontent.com URL 走 download_markdown 路由且内容可检索"""
+        """TC-P03 GitHub原始檔案下載：驗證 raw.githubusercontent.com URL 走 download_markdown 路由且內容可檢索"""
         raw_url = "https://raw.githubusercontent.com/volcengine/OpenViking/main/README.md"
 
         response = _add_resource_with_retry(api_client, raw_url)
@@ -44,7 +44,7 @@ class TestBuildPlatformGithub:
             "webpage",
             None,
         ), (
-            f"meta.url_type 应为 download_md/download_markdown/download_txt/webpage, 实际: {meta.get('url_type')}"
+            f"meta.url_type 應為 download_md/download_markdown/download_txt/webpage, 實際: {meta.get('url_type')}"
         )
 
         stat_resp = api_client.fs_stat(root_uri)
@@ -52,10 +52,10 @@ class TestBuildPlatformGithub:
 
         assert_resource_indexed(api_client, root_uri, "OpenViking")
 
-        print(f"✓ TC-P03 GitHub原始文件下载通过, root_uri: {root_uri}")
+        print(f"✓ TC-P03 GitHub原始檔案下載通過, root_uri: {root_uri}")
 
     def test_build_github_blob_page(self, api_client):
-        """TC-P04 GitHub Blob页面构建：验证 github.com/org/repo/blob/branch/file 被转为 raw URL 下载且内容可检索"""
+        """TC-P04 GitHub Blob頁面構建：驗證 github.com/org/repo/blob/branch/file 被轉為 raw URL 下載且內容可檢索"""
         blob_url = "https://github.com/volcengine/OpenViking/blob/main/README.md"
 
         response = _add_resource_with_retry(api_client, blob_url)
@@ -76,11 +76,11 @@ class TestBuildPlatformGithub:
             "download_html",
             "webpage",
             None,
-        ), f"meta.url_type 应为 download 类, 实际: {meta.get('url_type')}"
+        ), f"meta.url_type 應為 download 類, 實際: {meta.get('url_type')}"
 
         stat_resp = api_client.fs_stat(root_uri)
         assert stat_resp.status_code == 200
 
         assert_resource_indexed(api_client, root_uri, "OpenViking")
 
-        print(f"✓ TC-P04 GitHub Blob页面构建通过, root_uri: {root_uri}")
+        print(f"✓ TC-P04 GitHub Blob頁面構建通過, root_uri: {root_uri}")

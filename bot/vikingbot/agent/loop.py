@@ -278,8 +278,8 @@ class AgentIterationLimitExceeded(RuntimeError):
 
 
 _BUDGET_REMINDER_CONSEQUENCE = (
-    "若在轮次耗尽前未成功调用 submit_wiki_bundle，系统会把工作区所有文件"
-    "（含中间临时文件）原样写入目标目录，且不经校验。"
+    "若在輪次耗盡前未成功呼叫 submit_wiki_bundle，系統會把工作區所有檔案"
+    "（含中間臨時檔案）原樣寫入目標目錄，且不經校驗。"
 )
 
 
@@ -297,16 +297,16 @@ def render_budget_reminder(
     heads_up, warn, critical = thresholds
     remaining = max(0, remaining)
     if remaining <= critical:
-        action = f"还剩 {remaining} 轮。立即提交当前最好结果，禁止再开启新的探索/读取。"
+        action = f"還剩 {remaining} 輪。立即提交當前最好結果，禁止再開啟新的探索/讀取。"
     elif remaining <= warn:
         action = (
-            f"还剩 {remaining} 轮。必须开始提交：把当前最好结果通过 submit_wiki_bundle "
-            "提交；不足的部分明确记为“未覆盖/待确认”，不要追求完美。"
+            f"還剩 {remaining} 輪。必須開始提交：把當前最好結果通過 submit_wiki_bundle "
+            "提交；不足的部分明確記為“未覆蓋/待確認”，不要追求完美。"
         )
     elif remaining <= heads_up:
         action = (
-            f"还剩 {remaining} 轮。请停止对已读文件的全量重扫，开始把已有发现收敛成最终产物，"
-            "并准备调用 submit_wiki_bundle。"
+            f"還剩 {remaining} 輪。請停止對已讀檔案的全量重掃，開始把已有發現收斂成最終產物，"
+            "並準備呼叫 submit_wiki_bundle。"
         )
     else:
         return None
@@ -1984,11 +1984,11 @@ class AgentLoop:
         start_time = time.time()
         long_running_notified = False
 
-        # 监控处理时长，每50秒发送处理中提示事件
+        # 監控處理時長，每50秒傳送處理中提示事件
         async def check_long_running():
             nonlocal long_running_notified
             tick_count = 0
-            # 最多发送7次提示
+            # 最多傳送7次提示
             max_ticks = 7
 
             while not long_running_notified and tick_count < max_ticks:
@@ -1999,7 +1999,7 @@ class AgentLoop:
                     message_id = msg.metadata.get("message_id")
                     if message_id:
                         try:
-                            # 发送处理中tick事件，对应channel会自行处理展示逻辑
+                            # 傳送處理中tick事件，對應channel會自行處理展示邏輯
                             await self.bus.publish_outbound(
                                 OutboundMessage(
                                     session_key=msg.session_key,

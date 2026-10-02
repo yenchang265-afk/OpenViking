@@ -1,8 +1,8 @@
 """
 OpenViking Filesystem Mount Module
 
-这个模块将OpenViking的虚拟文件系统挂载到本地文件系统路径，
-让用户可以像操作普通文件一样操作OpenViking上的数据。
+這個模組將OpenViking的虛擬檔案系統掛載到本地檔案系統路徑，
+讓使用者可以像操作普通檔案一樣操作OpenViking上的資料。
 """
 
 from typing import TYPE_CHECKING

@@ -52,7 +52,7 @@ try:
     # print(f'sessions={sessions}')
     v_sessions = []
     for session in sessions:
-        # 去掉超过一天没变化的
+        # 去掉超過一天沒變化的
         if time.time() - session.get("updated") / 1000 > 24 * 3600:
             continue
         v_session = ViewSession(

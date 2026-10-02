@@ -777,7 +777,7 @@ async def test_session_load_recovers_message_count_from_live_messages(service):
     await service.initialize_user_directories(ctx)
 
     session = await service.sessions.create(ctx)
-    session.add_message("user", [TextPart("我爱吃西瓜")])
+    session.add_message("user", [TextPart("我愛吃西瓜")])
 
     session = await service.sessions.get(session.session_id, ctx, auto_create=False)
     session.meta.message_count = 0

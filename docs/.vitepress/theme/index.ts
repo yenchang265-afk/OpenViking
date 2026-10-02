@@ -314,7 +314,7 @@ export default {
         h(LlmsTxtLink),
         h(CopyMarkdownButton)
       ])],
-      'sidebar-nav-before': () => h('a', { class: 'sidebar-home-link', href: withBase(zh ? '/zh/' : '/en/') }, zh ? '← 文档首页' : '← Documentation home'),
+      'sidebar-nav-before': () => h('a', { class: 'sidebar-home-link', href: withBase(zh ? '/zh/' : '/en/') }, zh ? '← 文件首頁' : '← Documentation home'),
       'doc-after': () => h(ApiExampleTabsEnhancer),
       'nav-bar-content-before': () => h(OpenVikingSearch),
       'nav-bar-content-after': () => h(LocaleSwitch)

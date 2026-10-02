@@ -214,7 +214,7 @@ def main() -> int:
     naive_chars_div_4 = math.ceil(len(cjk_text) / 4)
     message = (
         f"{marker}\n"
-        "请只回复 OK。下面这段中文只用于 OpenViking token 估算端到端回归测试：\n"
+        "請只回復 OK。下面這段中文只用於 OpenViking token 估算端到端迴歸測試：\n"
         f"{cjk_text}"
     )
 

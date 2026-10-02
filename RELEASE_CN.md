@@ -1,96 +1,96 @@
-# OpenViking 发版说明
+# OpenViking 發版說明
 
-本文说明 OpenViking 仓库的发版目标、版本与 tag 约定、主要发版流程，以及补发和验证方式。内容以仓库中已追踪的 GitHub Actions、构建配置和包配置为准。
+本文說明 OpenViking 倉庫的發版目標、版本與 tag 約定、主要發版流程，以及補發和驗證方式。內容以倉庫中已追蹤的 GitHub Actions、構建配置和包配置為準。
 
-## 发版目标
+## 發版目標
 
-OpenViking 的发版目标不是单一产物，而是围绕不同使用入口发布一组相互关联的资产：
+OpenViking 的發版目標不是單一產物，而是圍繞不同使用入口釋出一組相互關聯的資產：
 
-- `openviking` Python 主包：面向本地运行时、服务端、CLI 及完整功能用户。
-- Python SDK `openviking-sdk`：面向只通过 HTTP 调用已有 OpenViking 服务的轻量客户端用户。
-- Docker 镜像：面向容器化部署，发布到 GHCR 和 Docker Hub。
-- TOS 发布资产：面向源码包、安装脚本和稳定下载路径。
-- Rust CLI / npm 包：面向通过 npm 安装 `ov` CLI 的用户。
-- OpenClaw / ClawHub 插件：面向 OpenClaw 插件分发渠道。
-- VikingBot：当前随 `openviking[bot]` 和官方 Docker 镜像分发；历史独立发版入口单独说明，避免误用。
+- `openviking` Python 主包：面向本地執行時、服務端、CLI 及完整功能使用者。
+- Python SDK `openviking-sdk`：面向只通過 HTTP 呼叫已有 OpenViking 服務的輕量客戶端使用者。
+- Docker 映象：面向容器化部署，釋出到 GHCR 和 Docker Hub。
+- TOS 釋出資產：面向原始碼包、安裝指令碼和穩定下載路徑。
+- Rust CLI / npm 包：面向通過 npm 安裝 `ov` CLI 的使用者。
+- OpenClaw / ClawHub 外掛：面向 OpenClaw 外掛分發渠道。
+- VikingBot：當前隨 `openviking[bot]` 和官方 Docker 映象分發；歷史獨立發版入口單獨說明，避免誤用。
 
-一次正式主版本发版应确保 Python 包、Docker 镜像和 TOS 资产使用同一个主版本 tag；SDK、CLI、ClawHub 插件则使用各自独立的 tag 或 version 命名空间。
+一次正式主版本發版應確保 Python 包、Docker 映象和 TOS 資產使用同一個主版本 tag；SDK、CLI、ClawHub 外掛則使用各自獨立的 tag 或 version 名稱空間。
 
-## 版本与 tag 约定
+## 版本與 tag 約定
 
-推荐使用以下 tag 约定：
+推薦使用以下 tag 約定：
 
-| 产物 | 推荐 tag / version | 说明 |
+| 產物 | 推薦 tag / version | 說明 |
 | --- | --- | --- |
 | `openviking` 主包 | `vX.Y.Z` | 主 release tag，例如 `v0.3.26`。 |
-| `openviking-sdk` | `python-sdk@X.Y.Z` | SDK 专用 tag，例如 `python-sdk@0.1.3`。 |
-| Rust CLI / npm CLI | `cli@X.Y.Z` | CLI 专用 tag，例如 `cli@0.2.0`。 |
-| ClawHub 插件 latest | `YYYY.M.D` 或 `YYYY.M.D-N` | 由 workflow 自动生成或手动指定。 |
+| `openviking-sdk` | `python-sdk@X.Y.Z` | SDK 專用 tag，例如 `python-sdk@0.1.3`。 |
+| Rust CLI / npm CLI | `cli@X.Y.Z` | CLI 專用 tag，例如 `cli@0.2.0`。 |
+| ClawHub 外掛 latest | `YYYY.M.D` 或 `YYYY.M.D-N` | 由 workflow 自動生成或手動指定。 |
 | ClawHub 插件 dev | `YYYY.M.D-dev.N` | dev channel 使用。 |
 
-主包版本通过 `setuptools_scm` 从 Git tag 解析；正式主发版建议统一使用 `vX.Y.Z`。SDK 版本同样通过 `setuptools_scm` 解析，但只匹配 `python-sdk@*` tag，以避免和主包 tag 混淆。
+主包版本通過 `setuptools_scm` 從 Git tag 解析；正式主發版建議統一使用 `vX.Y.Z`。SDK 版本同樣通過 `setuptools_scm` 解析，但只匹配 `python-sdk@*` tag，以避免和主包 tag 混淆。
 
-## 正式主包发版流程
+## 正式主包發版流程
 
-主包正式发版走根目录 GitHub Release：
+主包正式發版走根目錄 GitHub Release：
 
-1. 确认待发布改动已合入目标分支，且 PR / main 分支检查通过。
-2. 创建主包 tag，例如 `v0.3.26`。
-3. 在 GitHub 上基于该 tag 发布 Release。
-4. `03. Release` workflow 会在 Release published 时触发。
-5. workflow 复用 `_Build Distribution` 构建 sdist 和多平台 wheel。
-6. workflow 将构建产物发布到 PyPI。
-7. workflow 构建并推送多架构 Docker 镜像。
-8. `Release TOS Upload` workflow 会上传源码 zip 和安装脚本到 TOS。
+1. 確認待發布改動已合入目標分支，且 PR / main 分支檢查通過。
+2. 建立主包 tag，例如 `v0.3.26`。
+3. 在 GitHub 上基於該 tag 釋出 Release。
+4. `03. Release` workflow 會在 Release published 時觸發。
+5. workflow 複用 `_Build Distribution` 構建 sdist 和多平臺 wheel。
+6. workflow 將構建產物釋出到 PyPI。
+7. workflow 構建並推送多架構 Docker 映象。
+8. `Release TOS Upload` workflow 會上傳原始碼 zip 和安裝指令碼到 TOS。
 
-正式主发版的发布目标包括：
+正式主發版的釋出目標包括：
 
 - PyPI：`openviking`
 - GHCR：`ghcr.io/<owner>/<repo>`
 - Docker Hub：`<dockerhub-user>/openviking`
-- TOS：版本化 release 路径和可选 `latest` 稳定路径
+- TOS：版本化 release 路徑和可選 `latest` 穩定路徑
 
-## 主包手动构建、测试发布与补发
+## 主包手動構建、測試釋出與補發
 
-根目录 release workflow 也支持手动触发，可选择发布目标：
+根目錄 release workflow 也支援手動觸發，可選擇釋出目標：
 
-- `none`：只构建，不发布。
-- `testpypi`：发布到 TestPyPI。
-- `pypi`：发布到 PyPI。
-- `both`：同时发布 TestPyPI 和 PyPI。
+- `none`：只構建，不釋出。
+- `testpypi`：釋出到 TestPyPI。
+- `pypi`：釋出到 PyPI。
+- `both`：同時釋出 TestPyPI 和 PyPI。
 
-如需基于已有构建产物补发 Python 包，可使用 `_Publish Distribution` workflow，并传入对应的 build run id。该流程适合发布失败后的补发，不建议作为正常主发版入口。
+如需基於已有構建產物補發 Python 包，可使用 `_Publish Distribution` workflow，並傳入對應的 build run id。該流程適合釋出失敗後的補發，不建議作為正常主發版入口。
 
-## Docker 镜像发布与补发
+## Docker 映象釋出與補發
 
-正式主发版时，Docker 镜像由主 release workflow 自动构建并发布。镜像会推送到 GHCR 和 Docker Hub，并在正式 release 下写入版本 tag 与 `latest` tag。
+正式主發版時，Docker 映象由主 release workflow 自動構建併發布。映象會推送到 GHCR 和 Docker Hub，並在正式 release 下寫入版本 tag 與 `latest` tag。
 
-仓库还提供独立的 `Build and Push Docker Image` workflow，适用于：
+倉庫還提供獨立的 `Build and Push Docker Image` workflow，適用於：
 
-- 手动指定版本重建镜像。
-- `main` 分支镜像构建。
-- tag 触发后的镜像补发。
+- 手動指定版本重建映象。
+- `main` 分支映象構建。
+- tag 觸發後的映象補發。
 
-注意：独立 Docker workflow 当前也会在 `v*.*.*` tag push 时自动触发。正式 GitHub Release 的发布口径仍以 `03. Release` workflow 为准；独立 Docker workflow 应视为镜像专用构建或补发路径，避免与正式 release 产物口径混淆。
+注意：獨立 Docker workflow 當前也會在 `v*.*.*` tag push 時自動觸發。正式 GitHub Release 的釋出口徑仍以 `03. Release` workflow 為準；獨立 Docker workflow 應視為映象專用構建或補發路徑，避免與正式 release 產物口徑混淆。
 
-为避免重复发布，正式版本优先使用主 release workflow；只有镜像补发或特殊验证时才使用独立 Docker workflow。
+為避免重複釋出，正式版本優先使用主 release workflow；只有映象補發或特殊驗證時才使用獨立 Docker workflow。
 
-## TOS 发布资产
+## TOS 釋出資產
 
-TOS 发布流程会生成源码 zip，并上传以下类型资产：
+TOS 釋出流程會生成原始碼 zip，並上傳以下型別資產：
 
 - `releases/<tag>/openviking-<tag>-source.zip`
-- Claude Code memory plugin 安装脚本
-- Codex memory plugin 安装脚本
-- 对应 TOS install 脚本
+- Claude Code memory plugin 安裝指令碼
+- Codex memory plugin 安裝指令碼
+- 對應 TOS install 指令碼
 
-正式 GitHub Release 会自动触发 TOS 上传。手动补发时可指定 tag，并通过 `update_latest` 决定是否覆盖稳定路径。
+正式 GitHub Release 會自動觸發 TOS 上傳。手動補發時可指定 tag，並通過 `update_latest` 決定是否覆蓋穩定路徑。
 
-如果 TOS 相关 secrets 未配置完整，workflow 会跳过上传并在 step summary 中说明，不会使整个流程失败。
+如果 TOS 相關 secrets 未配置完整，workflow 會跳過上傳並在 step summary 中說明，不會使整個流程失敗。
 
-## Python SDK 发版流程
+## Python SDK 發版流程
 
-Python SDK 位于 `sdk/python`，PyPI 包名为 `openviking-sdk`。SDK 使用独立 tag 命名空间：
+Python SDK 位於 `sdk/python`，PyPI 包名為 `openviking-sdk`。SDK 使用獨立 tag 名稱空間：
 
 ```text
 python-sdk@X.Y.Z
@@ -98,86 +98,86 @@ python-sdk@X.Y.Z
 
 典型流程：
 
-1. 合入 SDK 相关改动。
-2. 创建并推送 tag，例如 `python-sdk@0.1.3`。
-3. `Python SDK Release` workflow 被 tag 触发。
+1. 合入 SDK 相關改動。
+2. 建立並推送 tag，例如 `python-sdk@0.1.3`。
+3. `Python SDK Release` workflow 被 tag 觸發。
 4. workflow 使用 `setuptools_scm` 解析 SDK 版本。
-5. workflow 校验当前 tag 是否等于 `python-sdk@<resolved-version>`。
-6. workflow 构建 `sdk/python` 并发布到 PyPI。
+5. workflow 校驗當前 tag 是否等於 `python-sdk@<resolved-version>`。
+6. workflow 構建 `sdk/python` 併發布到 PyPI。
 
-SDK workflow 也支持手动触发，并可选择 `testpypi`、`pypi` 或 `both`。手动触发适合验证和补发；正式 SDK 发版建议使用 `python-sdk@X.Y.Z` tag。
+SDK workflow 也支援手動觸發，並可選擇 `testpypi`、`pypi` 或 `both`。手動觸發適合驗證和補發；正式 SDK 發版建議使用 `python-sdk@X.Y.Z` tag。
 
-## Rust CLI / npm 发版流程
+## Rust CLI / npm 發版流程
 
-Rust CLI 的 tag 格式为：
+Rust CLI 的 tag 格式為：
 
 ```text
 cli@X.Y.Z
 ```
 
-推送 `cli@*` tag 后，`Rust CLI Build` workflow 会为多个平台构建 `ov` 二进制，并发布 npm 包：
+推送 `cli@*` tag 後，`Rust CLI Build` workflow 會為多個平臺構建 `ov` 二進位制，併發布 npm 包：
 
-- 平台包：`@openviking/cli-linux-x64`、`@openviking/cli-linux-arm64`、`@openviking/cli-darwin-x64`、`@openviking/cli-darwin-arm64`、`@openviking/cli-win32-x64`
+- 平臺包：`@openviking/cli-linux-x64`、`@openviking/cli-linux-arm64`、`@openviking/cli-darwin-x64`、`@openviking/cli-darwin-arm64`、`@openviking/cli-win32-x64`
 - wrapper 包：`@openviking/cli`
 
-workflow 会把 tag 中的版本写入平台包和 wrapper 包。如果 npm 上已存在同版本包，workflow 会跳过已发布版本。
+workflow 會把 tag 中的版本寫入平臺包和 wrapper 包。如果 npm 上已存在同版本包，workflow 會跳過已釋出版本。
 
-## OpenClaw / ClawHub 插件发布
+## OpenClaw / ClawHub 外掛釋出
 
-OpenClaw 插件通过 `ClawHub release (OpenViking plugin)` workflow 手动发布。输入参数包括：
+OpenClaw 外掛通過 `ClawHub release (OpenViking plugin)` workflow 手動釋出。輸入引數包括：
 
-- `version`：可选；为空时由 workflow 按日期自动生成。
+- `version`：可選；為空時由 workflow 按日期自動生成。
 - `channel`：`auto`、`dev` 或 `latest`。
-- `changelog`：本次插件发布说明。
+- `changelog`：本次外掛釋出說明。
 
-workflow 会先解析 channel 和 version，再打包 `examples/openclaw-plugin`，推送生成的 package branch，最后调用 ClawHub 官方 trusted publishing workflow 发布。
+workflow 會先解析 channel 和 version，再打包 `examples/openclaw-plugin`，推送生成的 package branch，最後呼叫 ClawHub 官方 trusted publishing workflow 釋出。
 
-推荐做法：
+推薦做法：
 
 - 正式渠道使用 `latest` 或 `auto`。
-- 开发验证使用 `dev`。
-- 手动指定 version 时，确保符合对应 channel 的格式要求。
+- 開發驗證使用 `dev`。
+- 手動指定 version 時，確保符合對應 channel 的格式要求。
 
-## VikingBot 发布说明
+## VikingBot 釋出說明
 
-VikingBot 当前不再作为推荐的独立 PyPI 包发版路径维护。现行分发方式是随主包发布：
+VikingBot 當前不再作為推薦的獨立 PyPI 包發版路徑維護。現行分發方式是隨主包釋出：
 
-- Python 安装入口：`pip install "openviking[bot]"`。
-- 源码开发入口：`uv pip install -e ".[bot]"`。
-- 官方 Docker 镜像默认已包含 VikingBot，可通过 `--without-bot` 或 `OPENVIKING_WITH_BOT=0` 关闭。
+- Python 安裝入口：`pip install "openviking[bot]"`。
+- 原始碼開發入口：`uv pip install -e ".[bot]"`。
+- 官方 Docker 映象預設已包含 VikingBot，可通過 `--without-bot` 或 `OPENVIKING_WITH_BOT=0` 關閉。
 
-根仓库原有的 `First Release to PyPI` workflow 已删除。当前 `bot/` 目录没有独立的 `pyproject.toml`、`setup.py` 或 `setup.cfg`，因此不能从这个仓库作为独立 Python 包发布。
+根倉庫原有的 `First Release to PyPI` workflow 已刪除。當前 `bot/` 目錄沒有獨立的 `pyproject.toml`、`setup.py` 或 `setup.cfg`，因此不能從這個倉庫作為獨立 Python 包釋出。
 
-同时，`bot/.github/workflows/release.yml` 位于 `bot` 子目录，它应视为历史上的 bot 子项目或拆分仓库发布参考，不应当作根仓库当前可直接触发的 GitHub Actions workflow。如需恢复独立 `vikingbot` 包，需要先补齐 `bot/` 下独立 Python 包配置、版本策略和发布凭证策略。
+同時，`bot/.github/workflows/release.yml` 位於 `bot` 子目錄，它應視為歷史上的 bot 子專案或拆分倉庫釋出參考，不應當作根倉庫當前可直接觸發的 GitHub Actions workflow。如需恢復獨立 `vikingbot` 包，需要先補齊 `bot/` 下獨立 Python 包配置、版本策略和釋出憑證策略。
 
-## 发版前检查清单
+## 發版前檢查清單
 
-发版前建议逐项确认：
+發版前建議逐項確認：
 
-- 待发布改动已合入目标分支。
-- CI / PR 检查已通过。
-- 版本号未在 PyPI、npm 或 Docker registry 中发布过。
-- tag 命名符合对应产物约定。
-- Python 包依赖、构建配置和 README 已同步更新。
-- Docker Hub、PyPI/TestPyPI、TOS、npm、ClawHub 等发布所需 secrets 或 trusted publishing 配置可用。
-- Release notes 已准备好，且说明破坏性变更、迁移步骤和重要修复。
+- 待發布改動已合入目標分支。
+- CI / PR 檢查已通過。
+- 版本號未在 PyPI、npm 或 Docker registry 中釋出過。
+- tag 命名符合對應產物約定。
+- Python 包依賴、構建配置和 README 已同步更新。
+- Docker Hub、PyPI/TestPyPI、TOS、npm、ClawHub 等釋出所需 secrets 或 trusted publishing 配置可用。
+- Release notes 已準備好，且說明破壞性變更、遷移步驟和重要修復。
 
-## 发版后验证清单
+## 發版後驗證清單
 
-发版后建议验证：
+發版後建議驗證：
 
-- PyPI / TestPyPI 上的包版本与 tag 一致。
-- `pip install openviking==<version>` 或 `pip install openviking-sdk==<version>` 可成功安装。
-- Docker registry 中存在版本 tag 和预期的 `latest` / `main` tag。
-- 多架构 Docker manifest 可正常拉取。
-- TOS 版本化路径和稳定路径可访问。
-- npm 上存在对应 CLI 平台包和 wrapper 包。
-- ClawHub 插件 channel 和 version 符合预期。
+- PyPI / TestPyPI 上的包版本與 tag 一致。
+- `pip install openviking==<version>` 或 `pip install openviking-sdk==<version>` 可成功安裝。
+- Docker registry 中存在版本 tag 和預期的 `latest` / `main` tag。
+- 多架構 Docker manifest 可正常拉取。
+- TOS 版本化路徑和穩定路徑可訪問。
+- npm 上存在對應 CLI 平臺包和 wrapper 包。
+- ClawHub 外掛 channel 和 version 符合預期。
 
-## 故障处理与补发原则
+## 故障處理與補發原則
 
-- PyPI 和 npm 已发布版本通常不可覆盖；如包内容有误，应发布新版本。
-- Docker 的 `latest`、`main` 和手动指定 tag 可通过镜像补发 workflow 重建，但应保留已发布版本 tag 的可追溯性。
-- TOS 的版本化路径应视为不可变资产；稳定路径可通过手动 workflow 覆盖。
-- 如果构建成功但发布失败，优先使用补发 workflow 或手动 dispatch，避免重新创建不同内容的同名 tag。
-- 如 tag 命名错误，优先删除错误 tag 并重新创建正确 tag，前提是该 tag 尚未触发不可逆发布。
+- PyPI 和 npm 已釋出版本通常不可覆蓋；如包內容有誤，應釋出新版本。
+- Docker 的 `latest`、`main` 和手動指定 tag 可通過映象補發 workflow 重建，但應保留已釋出版本 tag 的可追溯性。
+- TOS 的版本化路徑應視為不可變資產；穩定路徑可通過手動 workflow 覆蓋。
+- 如果構建成功但釋出失敗，優先使用補發 workflow 或手動 dispatch，避免重新建立不同內容的同名 tag。
+- 如 tag 命名錯誤，優先刪除錯誤 tag 並重新建立正確 tag，前提是該 tag 尚未觸發不可逆釋出。

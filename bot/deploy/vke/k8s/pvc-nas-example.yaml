@@ -1,5 +1,5 @@
-# NAS静态PV示例
-# 使用前请先创建NAS实例，并替换下面的配置
+# NAS靜態PV示例
+# 使用前請先建立NAS例項，並替換下面的配置
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -14,8 +14,8 @@ spec:
     driver: nas.csi.volcengine.com
     volumeHandle: vikingbot-nas-pv
     volumeAttributes:
-      server: your-nas-server-address  # 替换为你的NAS服务器地址
-      path: /your/nas/path             # 替换为你的NAS路径
+      server: your-nas-server-address  # 替換為你的NAS伺服器地址
+      path: /your/nas/path             # 替換為你的NAS路徑
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

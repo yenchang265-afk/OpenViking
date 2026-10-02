@@ -670,7 +670,7 @@ class MemoryStore:
         openviking_connection: dict[str, Any] | None = None,
         case_lookup: dict[str, Any] | None = None,
     ) -> str:
-        """用当前任务 query 检索 experience 记忆，注入到 system prompt。"""
+        """用當前任務 query 檢索 experience 記憶，注入到 system prompt。"""
         content, _ = await self.get_viking_experience_reminder(
             query=query,
             workspace_id=workspace_id,
@@ -688,11 +688,11 @@ class MemoryStore:
         openviking_connection: dict[str, Any] | None = None,
         case_lookup: dict[str, Any] | None = None,
     ) -> tuple[str, list[str]]:
-        """检索 experience 记忆并排除已召回过的 URI。
+        """檢索 experience 記憶並排除已召回過的 URI。
 
         Returns:
-            (formatted_content, recalled_uris) — 格式化后的记忆块和实际命中的 URI 列表。
-            无命中时返回 ("", [])。
+            (formatted_content, recalled_uris) — 格式化後的記憶塊和實際命中的 URI 列表。
+            無命中時返回 ("", [])。
         """
         if case_lookup:
             return await self._get_linked_case_experience_content(
@@ -755,7 +755,7 @@ class MemoryStore:
             if not experiences:
                 return "", []
 
-            # 过滤掉已召回过的 URI。case 只作为路由入口，不注入上下文。
+            # 過濾掉已召回過的 URI。case 只作為路由入口，不注入上下文。
             if exclude_uris:
                 exclude_set = set(exclude_uris)
                 experiences = [exp for exp in experiences if self._get_uri(exp) not in exclude_set]

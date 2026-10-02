@@ -178,7 +178,7 @@ class LocalJsonlSpanExporter(_SpanExporterBase):
 
 
 class TraceIdLoggingFilter(logging.Filter):
-    """日志过滤器：注入 TraceID"""
+    """日誌過濾器：注入 TraceID"""
 
     def filter(self, record):
         trace_id = get_trace_id()
@@ -516,11 +516,11 @@ class tracer:
             ignore_args: Whether to ignore function arguments, or list of arg names to include
             is_new_trace: Whether to create a new trace (vs continue existing)
         """
-        # 忽略结果
+        # 忽略結果
         self.ignore_result = ignore_result
         self.ignore_args = ignore_args
 
-        # 需要忽略的参数
+        # 需要忽略的引數
         if ignore_args is True:
             self.arg_trace_checker = lambda name: False
         elif ignore_args is False:
@@ -545,7 +545,7 @@ class tracer:
                 span_name = self.name or f"{func.__module__}.{func.__name__}"
                 with self.start_as_current_span(name=span_name, context=context) as span:
                     try:
-                        # 记录输入参数
+                        # 記錄輸入引數
                         if not self.ignore_args and args:
                             self.set("func_args", str(args))
                         func_kwargs = {k: v for k, v in kwargs.items() if self.arg_trace_checker(k)}
@@ -575,7 +575,7 @@ class tracer:
                 span_name = self.name or f"{func.__module__}.{func.__name__}"
                 with self.start_as_current_span(name=span_name, context=context) as span:
                     try:
-                        # 记录输入参数
+                        # 記錄輸入引數
                         if not self.ignore_args and args:
                             self.set("func_args", str(args))
                         func_kwargs = {k: v for k, v in kwargs.items() if self.arg_trace_checker(k)}
@@ -635,9 +635,9 @@ class tracer:
         try:
             current_span = otel_trace.get_current_span()
             if current_span:
-                # 检查 span 是否已结束
+                # 檢查 span 是否已結束
                 if hasattr(current_span, "end_time") and current_span.end_time:
-                    return  # span 已结束，不设置 attribute
+                    return  # span 已結束，不設定 attribute
                 current_span.set_attribute(key, str(value))
         except Exception:
             _log_trace_internal_failure(f"[TRACER] failed to set span attribute key={key}")
@@ -653,9 +653,9 @@ class tracer:
         try:
             current_span = otel_trace.get_current_span()
             if current_span:
-                # 检查 span 是否已结束
+                # 檢查 span 是否已結束
                 if hasattr(current_span, "end_time") and current_span.end_time:
-                    return  # span 已结束，不添加 event
+                    return  # span 已結束，不新增 event
                 current_span.add_event(line)
         except Exception:
             import traceback
@@ -686,9 +686,9 @@ class tracer:
         try:
             current_span = otel_trace.get_current_span()
             if current_span:
-                # 检查 span 是否已结束
+                # 檢查 span 是否已結束
                 if hasattr(current_span, "end_time") and current_span.end_time:
-                    return  # span 已结束，不记录 error
+                    return  # span 已結束，不記錄 error
                 if e is not None:
                     current_span.set_status(Status(StatusCode.ERROR))
                     current_span.record_exception(exception=e, attributes={"error": line})

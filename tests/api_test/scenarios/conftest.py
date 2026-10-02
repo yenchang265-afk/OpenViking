@@ -6,7 +6,7 @@ import uuid
 def create_test_file(content=None, suffix=".txt"):
     if content is None:
         content = (
-            f"测试文件内容 - {uuid.uuid4()}\n这是一个用于API测试的临时文件。\n包含一些测试数据。"
+            f"測試檔案內容 - {uuid.uuid4()}\n這是一個用於API測試的臨時檔案。\n包含一些測試資料。"
         )
 
     temp_dir = tempfile.mkdtemp()
@@ -24,11 +24,11 @@ def create_test_directory():
     for i in range(3):
         file_path = os.path.join(temp_dir, f"file_{i}.txt")
         with open(file_path, "w", encoding="utf-8") as f:
-            f.write(f"测试文件 {i} 的内容\n一些测试数据 {uuid.uuid4()}")
+            f.write(f"測試檔案 {i} 的內容\n一些測試資料 {uuid.uuid4()}")
 
     subdir = os.path.join(temp_dir, "subdir")
     os.makedirs(subdir)
     with open(os.path.join(subdir, "nested_file.txt"), "w", encoding="utf-8") as f:
-        f.write("嵌套文件的内容")
+        f.write("巢狀檔案的內容")
 
     return temp_dir

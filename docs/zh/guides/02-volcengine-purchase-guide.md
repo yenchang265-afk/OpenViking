@@ -1,96 +1,96 @@
-# 火山引擎模型购买指南
+# 火山引擎模型購買指南
 
-本指南介绍如何在火山引擎购买和配置 OpenViking 所需的模型服务。
+本指南介紹如何在火山引擎購買和配置 OpenViking 所需的模型服務。
 
 ## 概述
 
-OpenViking 需要以下模型服务：
+OpenViking 需要以下模型服務：
 
-| 模型类型 | 用途 | 推荐模型 |
+| 模型型別 | 用途 | 推薦模型 |
 |---------|------|---------|
-| VLM（视觉语言模型） | 内容理解、语义生成 | `doubao-seed-2-0-lite-260428` |
-| Embedding | 向量化、语义检索 | `doubao-embedding-vision-251215` |
+| VLM（視覺語言模型） | 內容理解、語義生成 | `doubao-seed-2-0-lite-260428` |
+| Embedding | 向量化、語義檢索 | `doubao-embedding-vision-251215` |
 
-## 前置条件
+## 前置條件
 
-- 有效的手机号或邮箱
-- 完成实名认证（个人或企业）
+- 有效的手機號或郵箱
+- 完成實名認證（個人或企業）
 
-## 购买流程
+## 購買流程
 
-### 1. 注册账号
+### 1. 註冊帳號
 
-访问 [火山引擎官网](https://www.volcengine.com/)：
+訪問 [火山引擎官網](https://www.volcengine.com/)：
 
-1. 点击右上角"登录/注册"
-2. 选择注册方式（手机号/邮箱）
-3. 完成验证并设置密码
-4. 进行实名认证
+1. 點選右上角"登入/註冊"
+2. 選擇註冊方式（手機號/郵箱）
+3. 完成驗證並設定密碼
+4. 進行實名認證
 
 
-### 2. 开通火山方舟
+### 2. 開通火山方舟
 
-火山方舟是火山引擎的 AI 模型服务平台。
+火山方舟是火山引擎的 AI 模型服務平臺。
 
-#### 访问控制台
+#### 訪問控制台
 
-1. 登录后进入[控制台](https://console.volcengine.com/)
+1. 登入後進入[控制台](https://console.volcengine.com/)
 2. 搜索"火山方舟"
-3. 点击进入[火山方舟控制台](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
-4. 首次使用需要点击"开通服务"并同意协议
+3. 點選進入[火山方舟控制台](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
+4. 首次使用需要點選"開通服務"並同意協議
 
-### 3. 创建 API Key
+### 3. 建立 API Key
 
-访问：[API Key 管理页面](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey)
+訪問：[API Key 管理頁面](https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey)
 
-所有模型调用都需要 API Key。
+所有模型呼叫都需要 API Key。
 
-1. 在火山方舟左侧导航栏选择 **"API Key 管理"**
-2. 点击 **"创建 API Key"**
-3. 复制保存API Key以用于后续配置
+1. 在火山方舟左側導航欄選擇 **"API Key 管理"**
+2. 點選 **"建立 API Key"**
+3. 複製儲存API Key以用於後續配置
 
 <div align="center">
 <img src="../../images/create_api_key.gif" width="80%">
 </div>
 
 
-### 4. 开通 VLM 模型
+### 4. 開通 VLM 模型
 
-访问：[模型管理页面](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
+訪問：[模型管理頁面](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
 
-1. 在左侧导航栏选择 **"开通管理"**
-2. 选择 **"语言模型"** 一列
+1. 在左側導航欄選擇 **"開通管理"**
+2. 選擇 **"語言模型"** 一列
 3. 找到 **Doubao-Seed-2.0** 模型
-4. 点击"开通"按钮
-5. 确认付费方式
+4. 點選"開通"按鈕
+5. 確認付費方式
 
 <div align="center">
 <img src="../../images/activate_vlm_model.gif" width="80%">
 </div>
 
-开通后可直接使用模型 ID：`doubao-seed-2-0-lite-260428`
+開通後可直接使用模型 ID：`doubao-seed-2-0-lite-260428`
 
-### 5. 开通 Embedding 模型
+### 5. 開通 Embedding 模型
 
-访问：[模型管理页面](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
+訪問：[模型管理頁面](https://console.volcengine.com/ark/region:ark+cn-beijing/model)
 
-1. 在左侧导航栏选择 **"开通管理"**
-2. 选择 **"向量模型"** 一列
+1. 在左側導航欄選擇 **"開通管理"**
+2. 選擇 **"向量模型"** 一列
 3. 找到 **Doubao-Embedding-Vision** 模型
-4. 点击"开通"
-5. 确认付费方式
+4. 點選"開通"
+5. 確認付費方式
 
 <div align="center">
 <img src="../../images/activate_emb_model.gif" width="80%">
 </div>
 
-开通后使用模型 ID：`doubao-embedding-vision-251215`
+開通後使用模型 ID：`doubao-embedding-vision-251215`
 
 ## 配置 OpenViking
 
 ### 配置模板
 
-创建 `~/.openviking/ov.conf` 文件，使用以下模板：
+建立 `~/.openviking/ov.conf` 檔案，使用以下模板：
 
 ```json
 {
@@ -115,33 +115,33 @@ OpenViking 需要以下模型服务：
 }
 ```
 
-### 配置字段说明
+### 配置欄位說明
 
 #### VLM 配置字段
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `provider` | string | 是 | 模型服务提供商，火山引擎填 `"volcengine"` |
+| `provider` | string | 是 | 模型服務提供商，火山引擎填 `"volcengine"` |
 | `api_key` | string | 是 | 火山方舟 API Key |
 | `model` | string | 是 | 模型 ID，如 `doubao-seed-2-0-lite-260428` |
-| `api_base` | string | 否 | API 端点地址，默认为北京区域端点，具体可见附录-区域端点 |
-| `temperature` | float | 否 | 生成温度，控制输出随机性，范围 0-1，推荐 0.1 |
-| `max_retries` | int | 否 | 请求失败时的重试次数，推荐 3 |
+| `api_base` | string | 否 | API 端點地址，預設為北京區域端點，具體可見附錄-區域端點 |
+| `temperature` | float | 否 | 生成溫度，控制輸出隨機性，範圍 0-1，推薦 0.1 |
+| `max_retries` | int | 否 | 請求失敗時的重試次數，推薦 3 |
 
 #### Embedding 配置字段
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `provider` | string | 是 | 模型服务提供商，火山引擎填 `"volcengine"` |
+| `provider` | string | 是 | 模型服務提供商，火山引擎填 `"volcengine"` |
 | `api_key` | string | 是 | 火山方舟 API Key |
 | `model` | string | 是 | 模型 ID，如 `doubao-embedding-vision-251215` |
-| `api_base` | string | 否 | API 端点地址，默认为北京区域端点，具体可见附录-区域端点 |
-| `dimension` | int | 是 | 向量维度，取决于模型（通常为 1024 或 768） |
-| `input` | string | 否 | 输入类型：`"multimodal"`（多模态）或 `"text"`（纯文本），默认`"multimodal"` |
+| `api_base` | string | 否 | API 端點地址，預設為北京區域端點，具體可見附錄-區域端點 |
+| `dimension` | int | 是 | 向量維度，取決於模型（通常為 1024 或 768） |
+| `input` | string | 否 | 輸入型別：`"multimodal"`（多模態）或 `"text"`（純文本），預設`"multimodal"` |
 
 ### 配置示例
 
-将以下内容保存为 `~/.openviking/ov.conf`：
+將以下內容儲存為 `~/.openviking/ov.conf`：
 
 ```json
 {
@@ -166,11 +166,11 @@ OpenViking 需要以下模型服务：
 }
 ```
 
-> ⚠️ **注意**：请将示例中的 `api_key` 替换为你在第 3 步获取的真实 API Key！
+> ⚠️ **注意**：請將示例中的 `api_key` 替換為你在第 3 步獲取的真實 API Key！
 
-## 验证配置
+## 驗證配置
 
-### 测试连接
+### 測試連線
 
 ```python
 import asyncio
@@ -180,10 +180,10 @@ async def test():
     client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
     await client.initialize()
 
-    # 添加简单资源测试
+    # 新增簡單資源測試
     result = await client.add_resource(
         path="https://example.com",
-        options={"reason": "测试连接"},
+        options={"reason": "測試連線"},
     )
     print(f"✓ 配置成功: {result['root_uri']}")
 
@@ -192,94 +192,94 @@ async def test():
 asyncio.run(test())
 ```
 
-### 查看使用情况
+### 檢視使用情況
 
 在火山方舟控制台：
 
-1. 访问 **"概览"** 页面
-2. 查看 **Token 消耗统计**
-3. 在 **"费用中心"** 查看账单明细
+1. 訪問 **"概覽"** 頁面
+2. 檢視 **Token 消耗統計**
+3. 在 **"費用中心"** 檢視帳單明細
 
-## 费用说明
+## 費用說明
 
-### 计费方式
+### 計費方式
 
-| 模型类型 | 计费单位 |
+| 模型型別 | 計費單位 |
 |---------|---------|
-| VLM | 按输入/输出 Token 计费 |
-| Embedding | 按文本长度计费 |
+| VLM | 按輸入/輸出 Token 計費 |
+| Embedding | 按文本長度計費 |
 
-### 免费额度
+### 免費額度
 
-火山引擎为新用户提供免费额度：
+火山引擎為新使用者提供免費額度：
 
-- 首次开通赠送 Token
-- 足够完成 OpenViking 的试用体验
-- 详见：[火山方舟定价说明](https://www.volcengine.com/docs/82379/1399514)
+- 首次開通贈送 Token
+- 足夠完成 OpenViking 的試用體驗
+- 詳見：[火山方舟定價說明](https://www.volcengine.com/docs/82379/1399514)
 
 ## 故障排除
 
-### 常见错误
+### 常見錯誤
 
-#### API Key 无效
+#### API Key 無效
 
 ```
 Error: Invalid API Key
 ```
 
-**解决方法**：
-1. 检查 API Key 是否正确复制（完整的 `sk-` 开头字符串）
-2. 确认 API Key 未被删除或过期
-3. 重新创建 API Key
+**解決方法**：
+1. 檢查 API Key 是否正確複製（完整的 `sk-` 開頭字串）
+2. 確認 API Key 未被刪除或過期
+3. 重新建立 API Key
 
-#### 模型未开通
+#### 模型未開通
 
 ```
 Error: Model not activated
 ```
 
-**解决方法**：
-1. 在火山方舟控制台检查模型状态
-2. 确认模型处于"运行中"状态
-3. 检查账户余额是否充足
+**解決方法**：
+1. 在火山方舟控制台檢查模型狀態
+2. 確認模型處於"執行中"狀態
+3. 檢查帳戶餘額是否充足
 
-#### 网络连接问题
+#### 網路連線問題
 
 ```
 Error: Connection timeout
 ```
 
-**解决方法**：
-1. 检查网络连接
-2. 确认 `api_base` 配置正确
-3. 如在海外，确认可访问火山引擎服务
-4. 增加配置中的超时时间
+**解決方法**：
+1. 檢查網路連線
+2. 確認 `api_base` 配置正確
+3. 如在海外，確認可訪問火山引擎服務
+4. 增加配置中的超時時間
 
-### 获取帮助
+### 獲取幫助
 
-- [火山引擎文档中心](https://www.volcengine.com/docs)
-- [火山方舟 API 文档](https://www.volcengine.com/docs/82379)
+- [火山引擎文件中心](https://www.volcengine.com/docs)
+- [火山方舟 API 文件](https://www.volcengine.com/docs/82379)
 - [OpenViking GitHub Issues](https://github.com/volcengine/OpenViking/issues)
 
-## 相关文档
+## 相關文件
 
-- [配置指南](./01-configuration.md) - 完整配置参考
-- [快速开始](../getting-started/02-quickstart.md) - 开始使用 OpenViking
+- [配置指南](./01-configuration.md) - 完整配置參考
+- [快速開始](../getting-started/02-quickstart.md) - 開始使用 OpenViking
 
-## 附录
+## 附錄
 
-### 区域端点
+### 區域端點
 
-| 区域 | API Base |
+| 區域 | API Base |
 |------|----------|
 | 北京 | `https://ark.cn-beijing.volces.com/api/v3` |
 | 上海 | `https://ark.cn-shanghai.volces.com/api/v3` |
 
-### 模型版本对照
+### 模型版本對照
 
-| 模型名称 | 当前版本 | 发布日期 |
+| 模型名稱 | 當前版本 | 釋出日期 |
 |---------|---------|---------|
 | Doubao-Seed-2.0 | `doubao-seed-2-0-lite-260428` | 2025-12-28 |
 | Doubao-Embedding-Vision | `doubao-embedding-vision-251215` | 2025-06-15 |
 
-> 注：模型版本可能更新，请以火山方舟控制台显示为准。
+> 注：模型版本可能更新，請以火山方舟控制台顯示為準。

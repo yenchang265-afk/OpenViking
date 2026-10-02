@@ -1,131 +1,131 @@
 #!/usr/bin/env python3
 """
-ov_archive_expand 归档展开端到端测试 — 用户: 小杰（后端开发新人）
+ov_archive_expand 歸檔展開端到端測試 — 使用者: 小杰（後端開發新人）
 
 ================================================================================
-一、用例设计思路
+一、用例設計思路
 ================================================================================
 
-核心验证点:
-  当对话累积到一定量后，早期内容会被压缩归档（archive），归档摘要只保留概要
-  信息，精确的参数值（IP、端口、命令、hash 等）会在压缩中丢失。当用户追问这些
-  精确细节时，LLM 需要通过调用 ov_archive_expand 工具展开归档，从原始对话中
-  恢复精确数据，才能给出正确回答。
+核心驗證點:
+  當對話累積到一定量後，早期內容會被壓縮歸檔（archive），歸檔摘要只保留概要
+  資訊，精確的引數值（IP、埠、命令、hash 等）會在壓縮中丟失。當用戶追問這些
+  精確細節時，LLM 需要通過呼叫 ov_archive_expand 工具展開歸檔，從原始對話中
+  恢復精確資料，才能給出正確回答。
 
-  本用例通过以下策略验证该能力:
-    1. 注入大量包含精确参数的对话（pod 名、kubectl 命令、PR 编号、行号、
-       benchmark 结果、commit hash、incident report 编号等）
-    2. 4 批对话 × 8 轮 = 32 轮对话，迫使系统产生多个归档
-    3. 追问精确细节，验证 LLM 是否调用 ov_archive_expand 并返回精确数据
-    4. 对比：概要级问题无需展开即可回答（验证展开的必要性）
+  本用例通過以下策略驗證該能力:
+    1. 注入大量包含精確引數的對話（pod 名、kubectl 命令、PR 編號、行號、
+       benchmark 結果、commit hash、incident report 編號等）
+    2. 4 批對話 × 8 輪 = 32 輪對話，迫使系統產生多個歸檔
+    3. 追問精確細節，驗證 LLM 是否呼叫 ov_archive_expand 並返回精確資料
+    4. 對比：概要級問題無需展開即可回答（驗證展開的必要性）
 
-对话数据设计:
-  - CHAT_BATCH_1 (8轮): 项目技术细节 — Kafka config、JWT 参数、ClickHouse 表名、
-    部署脚本、告警规则、代码规范、bug 修复等
-  - CHAT_BATCH_2 (8轮): 线上排障过程 — 具体 pod 名、kubectl 命令、IP 地址、
-    tcpdump 命令、配置参数、curl 测试结果、incident report
-  - CHAT_BATCH_3 (8轮): 代码评审讨论 — PR 编号、具体文件行号、review comment、
-    benchmark ns/op、覆盖率百分比、commit hash、hotfix PR
-  - CHAT_BATCH_4 (8轮): 架构设计讨论 — Redis 配置、gRPC proto、缓存 key 格式、
-    HPA 参数、Confluence 页面 ID
+對話資料設計:
+  - CHAT_BATCH_1 (8輪): 專案技術細節 — Kafka config、JWT 引數、ClickHouse 表名、
+    部署指令碼、告警規則、程式碼規範、bug 修復等
+  - CHAT_BATCH_2 (8輪): 線上排障過程 — 具體 pod 名、kubectl 命令、IP 地址、
+    tcpdump 命令、配置引數、curl 測試結果、incident report
+  - CHAT_BATCH_3 (8輪): 程式碼評審討論 — PR 編號、具體檔案行號、review comment、
+    benchmark ns/op、覆蓋率百分比、commit hash、hotfix PR
+  - CHAT_BATCH_4 (8輪): 架構設計討論 — Redis 配置、gRPC proto、快取 key 格式、
+    HPA 引數、Confluence 頁面 ID
 
-  这些数据包含大量"精确值"（数字、命令、ID），是摘要压缩时最容易丢失的信息，
-  也是 ov_archive_expand 最核心的价值场景。
+  這些資料包含大量"精確值"（數字、命令、ID），是摘要壓縮時最容易丟失的資訊，
+  也是 ov_archive_expand 最核心的價值場景。
 
-验证查询设计:
-  - EXPAND_QUESTIONS (4题): 追问精确参数 — 预期触发 ov_archive_expand
-    每题设置 expected_keywords 和 target_archive，用关键词命中率 >= 50% 判定
-  - NO_EXPAND_QUESTIONS (1题): 概要级问题 — 预期从摘要即可回答，无需展开
+驗證查詢設計:
+  - EXPAND_QUESTIONS (4題): 追問精確引數 — 預期觸發 ov_archive_expand
+    每題設定 expected_keywords 和 target_archive，用關鍵詞命中率 >= 50% 判定
+  - NO_EXPAND_QUESTIONS (1題): 概要級問題 — 預期從摘要即可回答，無需展開
 
-断言策略:
-  - 关键词命中率 >= 50% 即判定通过（允许 LLM 回复的表述差异）
-  - 通过 openclaw.log 中的 "ov_archive_expand invoked/expanded" 日志验证
-    工具是否真正被调用
-
-================================================================================
-二、测试流程
-================================================================================
-
-  Phase 1:   第一段对话 (8 轮) — 项目技术细节 → afterTurn + auto-commit
-  Phase 2a:  第二段对话 (8 轮) — 线上排障过程 → afterTurn + auto-commit
-  Phase 2b:  第三段对话 (8 轮) — 代码评审讨论 → afterTurn + auto-commit
-  Phase 2c:  第四段对话 (8 轮) — 架构设计讨论 → afterTurn + auto-commit
-  Phase 3:   验证 Archive Index — 检查 commit_count、记忆数、归档数
-  Phase 4:   追问精确细节 (4 问) — 触发 ov_archive_expand，验证关键词命中
-  Phase 5:   概要级问题 (1 问) — 验证无需展开即可回答
-
-  可选: 在 Phase 4 前通过 --gateway-restart-cmd 重启 Gateway 清除工作记忆，
-  迫使 LLM 完全依赖归档获取信息（更严格的验证）。
+斷言策略:
+  - 關鍵詞命中率 >= 50% 即判定通過（允許 LLM 回覆的表述差異）
+  - 通過 openclaw.log 中的 "ov_archive_expand invoked/expanded" 日誌驗證
+    工具是否真正被呼叫
 
 ================================================================================
-三、环境前提
+二、測試流程
 ================================================================================
 
-  1. OpenViking 服务已启动（提供归档存储和展开能力）
-  2. OpenClaw Gateway 已启动并配置了 OpenViking 插件
-  3. LLM 后端可达（Gateway 需要调用 LLM 生成回复和触发工具调用）
-  4. 有效的 Gateway auth token（通过 --token 传入或自动发现）
+  Phase 1:   第一段對話 (8 輪) — 專案技術細節 → afterTurn + auto-commit
+  Phase 2a:  第二段對話 (8 輪) — 線上排障過程 → afterTurn + auto-commit
+  Phase 2b:  第三段對話 (8 輪) — 程式碼評審討論 → afterTurn + auto-commit
+  Phase 2c:  第四段對話 (8 輪) — 架構設計討論 → afterTurn + auto-commit
+  Phase 3:   驗證 Archive Index — 檢查 commit_count、記憶數、歸檔數
+  Phase 4:   追問精確細節 (4 問) — 觸發 ov_archive_expand，驗證關鍵詞命中
+  Phase 5:   概要級問題 (1 問) — 驗證無需展開即可回答
 
-  关键 openclaw.json 配置:
+  可選: 在 Phase 4 前通過 --gateway-restart-cmd 重啟 Gateway 清除工作記憶，
+  迫使 LLM 完全依賴歸檔獲取資訊（更嚴格的驗證）。
+
+================================================================================
+三、環境前提
+================================================================================
+
+  1. OpenViking 服務已啟動（提供歸檔儲存和展開能力）
+  2. OpenClaw Gateway 已啟動並配置了 OpenViking 外掛
+  3. LLM 後端可達（Gateway 需要呼叫 LLM 生成回覆和觸發工具呼叫）
+  4. 有效的 Gateway auth token（通過 --token 傳入或自動發現）
+
+  關鍵 openclaw.json 配置:
     - plugins.slots.contextEngine = "openviking"
     - plugins.entries.openviking.enabled = true
     - plugins.entries.openviking.config.autoCapture = true
     - plugins.entries.openviking.config.commitTokenThresholdRatio = 0.02
-      ↑ 此值控制 auto-commit 时机，按模型上下文窗口的比例计算（0.02 = 2%）。
-        32 轮对话需要多次 auto-commit 产生归档，比例越小归档越多；
-        设为 0 表示每轮都 commit。
+      ↑ 此值控制 auto-commit 時機，按模型上下文視窗的比例計算（0.02 = 2%）。
+        32 輪對話需要多次 auto-commit 產生歸檔，比例越小歸檔越多；
+        設為 0 表示每輪都 commit。
     - agents.defaults.alsoAllow = ["ov_archive_expand"]
-      ↑ 必须显式允许 ov_archive_expand 工具，否则 LLM 无法调用
+      ↑ 必須顯式允許 ov_archive_expand 工具，否則 LLM 無法呼叫
 
-  服务部署参考:
-    - OpenViking: openviking-server（HTTP 默认 2934，AGFS 默认 2833）
-    - Gateway: openclaw gateway（HTTP 默认 19789）
+  服務部署參考:
+    - OpenViking: openviking-server（HTTP 預設 2934，AGFS 預設 2833）
+    - Gateway: openclaw gateway（HTTP 預設 19789）
 
 ================================================================================
 四、使用方法
 ================================================================================
 
-  安装依赖:
+  安裝依賴:
     pip install requests rich
 
-  完整测试 (推荐):
+  完整測試 (推薦):
     python test-archive-expand.py --phase all \\
         --gateway http://127.0.0.1:19789 \\
         --openviking http://127.0.0.1:2934 \\
         --token <your_gateway_token>
 
-  分阶段执行:
-    python test-archive-expand.py --phase chat1       # 仅第一批对话
-    python test-archive-expand.py --phase chat2       # 仅第二批对话
-    python test-archive-expand.py --phase verify-index # 仅验证归档索引
-    python test-archive-expand.py --phase expand       # 仅追问精确细节
-    python test-archive-expand.py --phase no-expand    # 仅概要级问题
+  分階段執行:
+    python test-archive-expand.py --phase chat1       # 僅第一批對話
+    python test-archive-expand.py --phase chat2       # 僅第二批對話
+    python test-archive-expand.py --phase verify-index # 僅驗證歸檔索引
+    python test-archive-expand.py --phase expand       # 僅追問精確細節
+    python test-archive-expand.py --phase no-expand    # 僅概要級問題
 
-  其他选项:
-    --user-id <id>      固定用户 ID（默认随机生成）
-    --delay <seconds>    轮次间等待秒数（默认 3s）
-    --verbose / -v       详细输出（显示完整 JSON 响应）
-    --gateway-restart-cmd <cmd>  Phase 4 前重启 Gateway 的命令
-    --log-path <path>    Gateway 日志路径，测试后自动扫描 ov_archive_expand 调用记录
+  其他選項:
+    --user-id <id>      固定使用者 ID（預設隨機生成）
+    --delay <seconds>    輪次間等待秒數（預設 3s）
+    --verbose / -v       詳細輸出（顯示完整 JSON 響應）
+    --gateway-restart-cmd <cmd>  Phase 4 前重啟 Gateway 的命令
+    --log-path <path>    Gateway 日誌路徑，測試後自動掃描 ov_archive_expand 呼叫記錄
 
   注意:
-    - 完整测试约需 10-15 分钟（32 轮对话 + 验证 + 追问）
-    - 首次运行前建议清理 OV 数据和 session 数据，避免干扰
+    - 完整測試約需 10-15 分鐘（32 輪對話 + 驗證 + 追問）
+    - 首次執行前建議清理 OV 資料和 session 資料，避免干擾
 
 ================================================================================
-五、验证工具调用（日志检查）
+五、驗證工具呼叫（日誌檢查）
 ================================================================================
 
-  本脚本通过关键词命中率间接验证 ov_archive_expand 是否生效。如需直接确认
-  工具是否被调用，可通过以下方式检查 Gateway 日志:
+  本指令碼通過關鍵詞命中率間接驗證 ov_archive_expand 是否生效。如需直接確認
+  工具是否被呼叫，可通過以下方式檢查 Gateway 日誌:
 
-  方式 1 — 自动检查（推荐）:
-    传入 --log-path 参数，脚本结束后自动扫描并打印工具调用记录:
+  方式 1 — 自動檢查（推薦）:
+    傳入 --log-path 引數，指令碼結束後自動掃描並列印工具呼叫記錄:
 
     python test-archive-expand.py --phase all \\
         --log-path config/.openclaw/logs/openclaw.log
 
-  方式 2 — 手动检查:
+  方式 2 — 手動檢查:
     # Linux / macOS
     grep "ov_archive_expand" config/.openclaw/logs/openclaw.log
 
@@ -133,50 +133,50 @@ ov_archive_expand 归档展开端到端测试 — 用户: 小杰（后端开发�
     Select-String -Path "config\\.openclaw\\logs\\openclaw.log" \\
         -Pattern "ov_archive_expand"
 
-  预期日志（每次展开会产生一对 invoked + expanded 日志）:
+  預期日誌（每次展開會產生一對 invoked + expanded 日誌）:
 
     openviking: ov_archive_expand invoked (archiveId=archive_001, sessionId=...)
     openviking: ov_archive_expand expanded archive_001, messages=17, chars=82675, ...
 
-  如果 Phase 4 通过但日志中没有 ov_archive_expand 记录，说明 LLM 可能是
-  从工作记忆（而非归档展开）中获取的信息。此时可通过 --gateway-restart-cmd
-  在 Phase 4 前重启 Gateway 清除工作记忆，强制走归档展开路径。
+  如果 Phase 4 通過但日誌中沒有 ov_archive_expand 記錄，說明 LLM 可能是
+  從工作記憶（而非歸檔展開）中獲取的資訊。此時可通過 --gateway-restart-cmd
+  在 Phase 4 前重啟 Gateway 清除工作記憶，強制走歸檔展開路徑。
 
 ================================================================================
 六、已知限制
 ================================================================================
 
-  1. LLM 是否调用 ov_archive_expand:
-     不同模型对工具调用的倾向性不同。如果模型直接从 archive overview 摘要
-     中推测答案而不展开归档，关键词可能命中（摘要恰好包含）也可能不命中。
-     使用 --gateway-restart-cmd 可强制清除工作记忆，迫使走归档展开路径。
+  1. LLM 是否呼叫 ov_archive_expand:
+     不同模型對工具呼叫的傾向性不同。如果模型直接從 archive overview 摘要
+     中推測答案而不展開歸檔，關鍵詞可能命中（摘要恰好包含）也可能不命中。
+     使用 --gateway-restart-cmd 可強制清除工作記憶，迫使走歸檔展開路徑。
 
-  2. 关键词精确匹配:
-     数字格式差异可能导致匹配失败（如 "12000" vs "12,000" vs "1.2万"）。
-     Q4 的 "12000" 在实际测试中因 LLM 输出 "12,000" 而未命中，但整体命中率
-     仍达 67% 超过 50% 阈值。
+  2. 關鍵詞精確匹配:
+     數字格式差異可能導致匹配失敗（如 "12000" vs "12,000" vs "1.2萬"）。
+     Q4 的 "12000" 在實際測試中因 LLM 輸出 "12,000" 而未命中，但整體命中率
+     仍達 67% 超過 50% 閾值。
 
-  3. 测试耗时:
-     完整测试需要 32 轮对话 + 验证 + 追问，约 10-15 分钟。如需快速验证，可
-     使用 --phase expand 单独跑追问阶段（前提是已有归档数据）。
+  3. 測試耗時:
+     完整測試需要 32 輪對話 + 驗證 + 追問，約 10-15 分鐘。如需快速驗證，可
+     使用 --phase expand 單獨跑追問階段（前提是已有歸檔資料）。
 
-  4. 对话顺序依赖:
-     4 批对话必须按顺序执行（Phase 1 → 2a → 2b → 2c），因为后续批次的归档
-     编号依赖前序批次。不能单独跑 chat2 而跳过 chat1。
+  4. 對話順序依賴:
+     4 批對話必須按順序執行（Phase 1 → 2a → 2b → 2c），因為後續批次的歸檔
+     編號依賴前序批次。不能單獨跑 chat2 而跳過 chat1。
 
-  5. 环境要求:
-     Gateway 必须配置 OpenViking 插件且启用 ov_archive_expand 工具定义，
-     否则 LLM 无法调用归档展开。
+  5. 環境要求:
+     Gateway 必須配置 OpenViking 外掛且啟用 ov_archive_expand 工具定義，
+     否則 LLM 無法呼叫歸檔展開。
 
 ================================================================================
-七、预期结果
+七、預期結果
 ================================================================================
 
-  15/15 断言全部通过:
-    - Phase 1~2c: 32 轮对话全部成功
-    - Phase 3: commit_count >= 3, 归档数 >= 3, 记忆提取数 > 0
-    - Phase 4: 4 个追问全部命中关键词 (>= 50%)
-    - Phase 5: 概要回答正确
+  15/15 斷言全部通過:
+    - Phase 1~2c: 32 輪對話全部成功
+    - Phase 3: commit_count >= 3, 歸檔數 >= 3, 記憶提取數 > 0
+    - Phase 4: 4 個追問全部命中關鍵詞 (>= 50%)
+    - Phase 5: 概要回答正確
 """
 
 import argparse
@@ -210,7 +210,7 @@ AGENT_ID = "main"
 
 console = Console(force_terminal=True)
 
-# ── 测试结果收集 ──────────────────────────────────────────────────────────
+# ── 測試結果收集 ──────────────────────────────────────────────────────────
 
 assertions: list[dict] = []
 
@@ -224,103 +224,103 @@ def check(label: str, condition: bool, detail: str = ""):
     console.print(msg)
 
 
-# ── 第一批对话: 项目技术细节 (8 轮) ──────────────────────────────────────
+# ── 第一批對話: 專案技術細節 (8 輪) ──────────────────────────────────────
 
 CHAT_BATCH_1 = [
-    "嗨！我叫小杰，刚入职三个月，在做一个用户画像系统。后端用 Go，框架是 Gin，数据库用 ClickHouse。我想跟你聊聊项目的技术细节，你帮我记一下。",
-    "我们的 API 认证用的是自己写的 JWT 中间件，token 过期时间设的 7200 秒，刷新 token 有效期 30 天，密钥存在环境变量 AUTH_JWT_SECRET 里。",
-    "数据采集这块，我写了个 Kafka consumer，group id 是 user-profile-sync-v2，消费的 topic 是 user_behavior_events，每批最多拉 500 条消息。",
-    "画像数据的 ClickHouse 表叫 user_profiles_v3，主键是 (user_id, event_date)，用了 MergeTree 引擎，TTL 设的 180 天。",
-    "部署脚本在 deploy/scripts/rollout.sh，里面有个关键的金丝雀发布逻辑，先把 10% 流量切到新版本，观察 5 分钟没报警再全量。",
-    "我们的 Prometheus 告警规则在 monitoring/alerts/backend.yml，有一条关键的：当 P99 延迟超过 500ms 持续 3 分钟就会触发 page 告警。",
-    "代码规范方面，Go 项目用 golangci-lint，配置文件在 .golangci.yml，禁用了 gocyclo，开启了 govet、errcheck、staticcheck。",
-    "上周修了个严重 bug：当 ClickHouse 连接超时时，consumer 没有正确回退 offset，导致消息丢失。我写了个 RetryableConsumer wrapper 来修复，重试间隔是指数退避，基础间隔 200ms，最大重试 5 次。",
+    "嗨！我叫小杰，剛入職三個月，在做一個使用者畫像系統。後端用 Go，框架是 Gin，資料庫用 ClickHouse。我想跟你聊聊專案的技術細節，你幫我記一下。",
+    "我們的 API 認證用的是自己寫的 JWT 中介軟體，token 過期時間設的 7200 秒，重新整理 token 有效期 30 天，金鑰存在環境變數 AUTH_JWT_SECRET 裡。",
+    "資料採集這塊，我寫了個 Kafka consumer，group id 是 user-profile-sync-v2，消費的 topic 是 user_behavior_events，每批最多拉 500 條訊息。",
+    "畫像資料的 ClickHouse 表叫 user_profiles_v3，主鍵是 (user_id, event_date)，用了 MergeTree 引擎，TTL 設的 180 天。",
+    "部署指令碼在 deploy/scripts/rollout.sh，裡面有個關鍵的金絲雀釋出邏輯，先把 10% 流量切到新版本，觀察 5 分鐘沒報警再全量。",
+    "我們的 Prometheus 告警規則在 monitoring/alerts/backend.yml，有一條關鍵的：當 P99 延遲超過 500ms 持續 3 分鐘就會觸發 page 告警。",
+    "程式碼規範方面，Go 專案用 golangci-lint，配置檔案在 .golangci.yml，停用了 gocyclo，開啟了 govet、errcheck、staticcheck。",
+    "上週修了個嚴重 bug：當 ClickHouse 連線超時時，consumer 沒有正確回退 offset，導致訊息丟失。我寫了個 RetryableConsumer wrapper 來修復，重試間隔是指數退避，基礎間隔 200ms，最大重試 5 次。",
 ]
 
-# ── 第二批对话: 某次线上排障过程 (8 轮) ──────────────────────────────────
-# 嵌入大量过程性细节（具体命令、错误信息、临时端口），这些不太会被摘要保留
+# ── 第二批對話: 某次線上排障過程 (8 輪) ──────────────────────────────────
+# 嵌入大量過程性細節（具體命令、錯誤資訊、臨時埠），這些不太會被摘要保留
 
 CHAT_BATCH_2 = [
-    "紧急情况！线上推荐接口大面积超时，错误日志里出现了一条：failed to connect to reco-model-svc:8091: dial tcp 10.0.3.17:8091: i/o timeout。我先帮你记录下排障过程。",
-    "我先跑了 kubectl get pods -n reco-prod，发现 reco-model-svc-7b9f4d6c8-x2k9p 这个 pod 的 RESTARTS 是 47 次，状态是 CrashLoopBackOff。kubectl logs 看到 OOM Killed，内存限制是 512Mi 但模型加载需要 800Mi。",
-    "临时解决方案：kubectl edit deployment reco-model-svc -n reco-prod，把 resources.limits.memory 从 512Mi 改成 1Gi，然后 kubectl rollout restart deployment reco-model-svc -n reco-prod。等了 3 分钟 pod 恢复正常。",
-    "但还有个隐患：我用 tcpdump -i eth0 port 8091 -w /tmp/reco-debug-20260315.pcap 抓了 5 分钟的包，发现有个上游服务 gateway-proxy (IP 10.0.2.33) 的连接没有正确关闭，导致连接泄漏。",
-    "连接泄漏的根因：gateway-proxy 用了一个自定义的 HTTP client，pool_maxsize 设成了 200，但 idle_timeout 是 0（永不超时）。我在 gateway-proxy 的 config/http-pool.yaml 里改成了 idle_timeout: 30s，pool_maxsize: 50。",
-    "修完之后跑了个回归测试：curl -w '@curl-format.txt' -o /dev/null -s 'http://10.0.3.17:8091/predict?user_id=test_user_42&features=age,gender,region' 返回 time_total: 0.023s，比之前的 2.1s 快了 100 倍。",
-    "事后我写了个 incident report，编号是 INC-2026-0315-RECO-OOM，根因分类是 Resource Misconfiguration，影响时长 47 分钟，影响用户数约 12000。",
-    "老王看完报告说，以后所有服务的 memory limit 至少设置为实际用量的 1.5 倍，并且要在 Grafana 上加一个 container_memory_working_set_bytes / container_spec_memory_limit_bytes > 0.8 的告警。",
+    "緊急情況！線上推薦介面大面積超時，錯誤日誌裡出現了一條：failed to connect to reco-model-svc:8091: dial tcp 10.0.3.17:8091: i/o timeout。我先幫你記錄下排障過程。",
+    "我先跑了 kubectl get pods -n reco-prod，發現 reco-model-svc-7b9f4d6c8-x2k9p 這個 pod 的 RESTARTS 是 47 次，狀態是 CrashLoopBackOff。kubectl logs 看到 OOM Killed，記憶體限制是 512Mi 但模型載入需要 800Mi。",
+    "臨時解決方案：kubectl edit deployment reco-model-svc -n reco-prod，把 resources.limits.memory 從 512Mi 改成 1Gi，然後 kubectl rollout restart deployment reco-model-svc -n reco-prod。等了 3 分鐘 pod 恢復正常。",
+    "但還有個隱患：我用 tcpdump -i eth0 port 8091 -w /tmp/reco-debug-20260315.pcap 抓了 5 分鐘的包，發現有個上游服務 gateway-proxy (IP 10.0.2.33) 的連線沒有正確關閉，導致連線洩漏。",
+    "連線洩漏的根因：gateway-proxy 用了一個自定義的 HTTP client，pool_maxsize 設成了 200，但 idle_timeout 是 0（永不超時）。我在 gateway-proxy 的 config/http-pool.yaml 裡改成了 idle_timeout: 30s，pool_maxsize: 50。",
+    "修完之後跑了個迴歸測試：curl -w '@curl-format.txt' -o /dev/null -s 'http://10.0.3.17:8091/predict?user_id=test_user_42&features=age,gender,region' 返回 time_total: 0.023s，比之前的 2.1s 快了 100 倍。",
+    "事後我寫了個 incident report，編號是 INC-2026-0315-RECO-OOM，根因分類是 Resource Misconfiguration，影響時長 47 分鐘，影響使用者數約 12000。",
+    "老王看完報告說，以後所有服務的 memory limit 至少設定為實際用量的 1.5 倍，並且要在 Grafana 上加一個 container_memory_working_set_bytes / container_spec_memory_limit_bytes > 0.8 的告警。",
 ]
 
-# ── 第三批对话: 代码评审中的具体讨论 (8 轮) ────────────────────────────
-# 嵌入代码审查中的具体 review comment 和代码片段
+# ── 第三批對話: 程式碼評審中的具體討論 (8 輪) ────────────────────────────
+# 嵌入程式碼審查中的具體 review comment 和程式碼片段
 
 CHAT_BATCH_3 = [
-    "今天代码评审了我的推荐接口 PR，PR 编号是 #1847。老王给了 3 个重要 comment，我一个个跟你说。",
-    "第一个 comment 在 internal/handler/recommend.go 的第 73 行：老王说我的错误处理不对，原来写的是 if err != nil { return nil, err }，但应该包装一下上下文：return nil, fmt.Errorf('recommend handler: fetch features for user %s: %w', userID, err)。",
-    "第二个 comment 在 internal/cache/feature_cache.go 第 142 行：我用了 sync.Map 来缓存用户特征，但老王建议改用分段锁 map，因为 sync.Map 在写多读少的场景下性能不好。他推荐用 github.com/orcaman/concurrent-map/v2 这个库。",
-    "第三个 comment 是关于测试覆盖率的：当前 recommend 包的覆盖率只有 38%，老王要求至少到 70%。他特别指出 internal/handler/recommend_test.go 缺少对 context.Canceled 和 context.DeadlineExceeded 的边界测试。",
-    "我按老王的建议改了代码。feature_cache.go 的改动最大，从 sync.Map 迁移到 cmap.ConcurrentMap[string, *UserFeatures]。benchmark 跑下来：BenchmarkFeatureCacheGet-8 从 834 ns/op 降到了 412 ns/op，快了差不多一倍。",
-    "测试也补了，加了 TestRecommendHandler_ContextCanceled 和 TestRecommendHandler_DeadlineExceeded 两个用例。覆盖率从 38% 提升到了 74%。go test -cover ./internal/handler/ 输出：coverage: 74.2% of statements。",
-    "PR 最终在周三下午 3:42 合并，commit hash 是 a3f7b2d。合并前跑了 CI，全部 green：lint 42s, test 1m18s, build 2m03s。",
-    "对了，合并后我发现有个小问题：feature_cache.go 里有一行 import 多余了，_ 'net/http/pprof' 是调试时加的忘了删。我又开了个 hotfix PR #1852 修掉了。",
+    "今天程式碼評審了我的推薦介面 PR，PR 編號是 #1847。老王給了 3 個重要 comment，我一個個跟你說。",
+    "第一個 comment 在 internal/handler/recommend.go 的第 73 行：老王說我的錯誤處理不對，原來寫的是 if err != nil { return nil, err }，但應該包裝一下上下文：return nil, fmt.Errorf('recommend handler: fetch features for user %s: %w', userID, err)。",
+    "第二個 comment 在 internal/cache/feature_cache.go 第 142 行：我用了 sync.Map 來快取使用者特徵，但老王建議改用分段鎖 map，因為 sync.Map 在寫多讀少的場景下效能不好。他推薦用 github.com/orcaman/concurrent-map/v2 這個庫。",
+    "第三個 comment 是關於測試覆蓋率的：當前 recommend 包的覆蓋率只有 38%，老王要求至少到 70%。他特別指出 internal/handler/recommend_test.go 缺少對 context.Canceled 和 context.DeadlineExceeded 的邊界測試。",
+    "我按老王的建議改了程式碼。feature_cache.go 的改動最大，從 sync.Map 遷移到 cmap.ConcurrentMap[string, *UserFeatures]。benchmark 跑下來：BenchmarkFeatureCacheGet-8 從 834 ns/op 降到了 412 ns/op，快了差不多一倍。",
+    "測試也補了，加了 TestRecommendHandler_ContextCanceled 和 TestRecommendHandler_DeadlineExceeded 兩個用例。覆蓋率從 38% 提升到了 74%。go test -cover ./internal/handler/ 輸出：coverage: 74.2% of statements。",
+    "PR 最終在週三下午 3:42 合併，commit hash 是 a3f7b2d。合併前跑了 CI，全部 green：lint 42s, test 1m18s, build 2m03s。",
+    "對了，合併後我發現有個小問題：feature_cache.go 裡有一行 import 多餘了，_ 'net/http/pprof' 是除錯時加的忘了刪。我又開了個 hotfix PR #1852 修掉了。",
 ]
 
-# ── 第四批对话: 架构设计讨论 (8 轮) ─────────────────────────────────────
+# ── 第四批對話: 架構設計討論 (8 輪) ─────────────────────────────────────
 
 CHAT_BATCH_4 = [
-    "最近团队在讨论要不要把推荐服务拆成微服务。我画了一个架构图，核心是 3 个服务：feature-store (负责用户特征存储), model-server (负责模型推理), ranking-api (负责排序和过滤)。",
-    "feature-store 的设计：用 Redis Cluster 做热数据缓存，冷数据存 ClickHouse。Redis 集群是 3 主 3 从，每个节点 maxmemory 8GB，eviction 策略用 allkeys-lru。",
-    "model-server 计划用 gRPC 通信，proto 文件在 api/proto/model_service.proto。核心 RPC 是 Predict(PredictRequest) returns (PredictResponse)，PredictRequest 里有 user_id (string), features (map<string, float>), model_version (string, 默认 'v3.2.1')。",
-    "ranking-api 是面向外部的 REST 接口。我设计了一个两层缓存：L1 是本地 LRU cache (github.com/hashicorp/golang-lru/v2, 容量 10000), L2 是 Redis。缓存 key 的格式是 reco:{user_id}:{model_version}:{timestamp_bucket}，timestamp_bucket 每 5 分钟一个。",
-    "团队讨论的争议点：老王认为 feature-store 和 model-server 可以合并，因为两者耦合度高。但我觉得拆开更好，因为 feature-store 的扩展需求（加新特征）和 model-server 的扩展需求（换模型）是独立的。",
-    "最终架构评审的结论：先按 3 服务拆分，但 feature-store 和 model-server 共享一个 K8s namespace (reco-services)。服务间通信走 Istio service mesh，mTLS 加密。",
-    "部署策略：feature-store 3 副本（HPA min=3, max=10, CPU 阈值 70%），model-server 2 副本（HPA min=2, max=6, CPU 阈值 60%），ranking-api 4 副本（HPA min=4, max=20, CPU 阈值 65%）。",
-    "对了，架构评审文档存在 Confluence 上，页面 ID 是 ARCH-2026-RECO-MS，最后更新时间是 3 月 20 号。评审参与人：我、老王、测试小李、运维老赵。",
+    "最近團隊在討論要不要把推薦服務拆成微服務。我畫了一個架構圖，核心是 3 個服務：feature-store (負責使用者特徵儲存), model-server (負責模型推理), ranking-api (負責排序和過濾)。",
+    "feature-store 的設計：用 Redis Cluster 做熱資料快取，冷資料存 ClickHouse。Redis 叢集是 3 主 3 從，每個節點 maxmemory 8GB，eviction 策略用 allkeys-lru。",
+    "model-server 計劃用 gRPC 通訊，proto 檔案在 api/proto/model_service.proto。核心 RPC 是 Predict(PredictRequest) returns (PredictResponse)，PredictRequest 裡有 user_id (string), features (map<string, float>), model_version (string, 預設 'v3.2.1')。",
+    "ranking-api 是面向外部的 REST 介面。我設計了一個兩層快取：L1 是本地 LRU cache (github.com/hashicorp/golang-lru/v2, 容量 10000), L2 是 Redis。快取 key 的格式是 reco:{user_id}:{model_version}:{timestamp_bucket}，timestamp_bucket 每 5 分鐘一個。",
+    "團隊討論的爭議點：老王認為 feature-store 和 model-server 可以合併，因為兩者耦合度高。但我覺得拆開更好，因為 feature-store 的擴充需求（加新特徵）和 model-server 的擴充需求（換模型）是獨立的。",
+    "最終架構評審的結論：先按 3 服務拆分，但 feature-store 和 model-server 共享一個 K8s namespace (reco-services)。服務間通訊走 Istio service mesh，mTLS 加密。",
+    "部署策略：feature-store 3 副本（HPA min=3, max=10, CPU 閾值 70%），model-server 2 副本（HPA min=2, max=6, CPU 閾值 60%），ranking-api 4 副本（HPA min=4, max=20, CPU 閾值 65%）。",
+    "對了，架構評審文件存在 Confluence 上，頁面 ID 是 ARCH-2026-RECO-MS，最後更新時間是 3 月 20 號。評審參與人：我、老王、測試小李、運維老趙。",
 ]
 
-# ── 追问精确细节 (触发 archive expand) ──────────────────────────────────
-# 问的都是过程性细节：具体命令、IP 地址、错误信息、commit hash 等
-# 这些内容在摘要中通常会被压缩掉
+# ── 追問精確細節 (觸發 archive expand) ──────────────────────────────────
+# 問的都是過程性細節：具體命令、IP 地址、錯誤資訊、commit hash 等
+# 這些內容在摘要中通常會被壓縮掉
 
 EXPAND_QUESTIONS = [
     {
-        "question": "之前那次线上推荐接口故障，出问题的 pod 名字是什么？kubectl logs 看到的错误是什么？最终怎么临时修的？请给我精确的命令。",
+        "question": "之前那次線上推薦介面故障，出問題的 pod 名字是什麼？kubectl logs 看到的錯誤是什麼？最終怎麼臨時修的？請給我精確的命令。",
         "expected_keywords": ["7b9f4d6c8-x2k9p", "OOM", "512Mi", "1Gi"],
         "target_archive": "archive_002",
-        "description": "追问排障过程中的 pod 名和命令",
+        "description": "追問排障過程中的 pod 名和命令",
     },
     {
-        "question": "我之前代码评审那个 PR 编号是多少？老王在哪个文件的第几行给了 comment？关于错误处理他具体建议怎么改？",
+        "question": "我之前程式碼評審那個 PR 編號是多少？老王在哪個檔案的第幾行給了 comment？關於錯誤處理他具體建議怎麼改？",
         "expected_keywords": ["1847", "recommend.go", "73"],
         "target_archive": "archive_003",
-        "description": "追问代码评审的精确 PR 和行号",
+        "description": "追問程式碼評審的精確 PR 和行號",
     },
     {
-        "question": "feature_cache.go 迁移后的 benchmark 结果是多少 ns/op？测试覆盖率从多少提升到了多少？PR 合并的 commit hash 是什么？",
+        "question": "feature_cache.go 遷移後的 benchmark 結果是多少 ns/op？測試覆蓋率從多少提升到了多少？PR 合併的 commit hash 是什麼？",
         "expected_keywords": ["412", "38%", "74", "a3f7b2d"],
         "target_archive": "archive_003",
-        "description": "追问 benchmark 和覆盖率精确数据",
+        "description": "追問 benchmark 和覆蓋率精確資料",
     },
     {
-        "question": "那次故障的 incident report 编号是什么？影响了多少用户？连接泄漏的根因是什么配置导致的？",
+        "question": "那次故障的 incident report 編號是什麼？影響了多少使用者？連線洩漏的根因是什麼配置導致的？",
         "expected_keywords": ["INC-2026-0315", "12000", "idle_timeout"],
         "target_archive": "archive_002",
-        "description": "追问故障报告和根因",
+        "description": "追問故障報告和根因",
     },
 ]
 
-# ── 不需要展开的问题 ────────────────────────────────────────────────────
+# ── 不需要展開的問題 ────────────────────────────────────────────────────
 
 NO_EXPAND_QUESTIONS = [
     {
-        "question": "我做什么项目的？用什么技术栈？请简洁回答。",
-        "expected_keywords": ["用户画像", "Go"],
-        "description": "概要信息，不需要展开归档",
+        "question": "我做什麼專案的？用什麼技術棧？請簡潔回答。",
+        "expected_keywords": ["使用者畫像", "Go"],
+        "description": "概要資訊，不需要展開歸檔",
     },
 ]
 
 
-# ── Token 自动发现 ────────────────────────────────────────────────────────
+# ── Token 自動發現 ────────────────────────────────────────────────────────
 
 _gateway_token: str = ""
 
@@ -375,7 +375,7 @@ def extract_reply_text(data: dict) -> str:
             for part in item.get("content", []):
                 if part.get("type") in ("text", "output_text"):
                     return part.get("text", "")
-    return "(无回复)"
+    return "(無回覆)"
 
 
 class OVInspector:
@@ -482,13 +482,13 @@ class OVInspector:
         return best_id or (real[-1].get("session_id") if real else None)
 
 
-# ── 渲染函数 ─────────────────────────────────────────────────────────────
+# ── 渲染函式 ─────────────────────────────────────────────────────────────
 
 
-def render_reply(text: str, title: str = "回复"):
+def render_reply(text: str, title: str = "回覆"):
     lines = text.split("\n")
     if len(lines) > 25:
-        text = "\n".join(lines[:25]) + f"\n\n... (共 {len(lines)} 行，已截断)"
+        text = "\n".join(lines[:25]) + f"\n\n... (共 {len(lines)} 行，已截斷)"
     console.print(Panel(Markdown(text), title=f"[green]{title}[/green]", border_style="green"))
 
 
@@ -498,7 +498,7 @@ def render_json(data: Any, title: str = "JSON"):
     )
 
 
-# ── Phase 1: 第一批对话 ──────────────────────────────────────────────────
+# ── Phase 1: 第一批對話 ──────────────────────────────────────────────────
 
 
 def run_phase_chat(
@@ -511,9 +511,9 @@ def run_phase_chat(
 ) -> tuple[int, int]:
     console.print()
     console.rule(
-        f"[bold]{batch_label}: {DISPLAY_NAME} 对话 ({len(messages)} 轮)[/bold]",
+        f"[bold]{batch_label}: {DISPLAY_NAME} 對話 ({len(messages)} 輪)[/bold]",
     )
-    console.print(f"[yellow]用户ID:[/yellow] {user_id}")
+    console.print(f"[yellow]使用者ID:[/yellow] {user_id}")
     console.print()
 
     total = len(messages)
@@ -542,27 +542,27 @@ def run_phase_chat(
             time.sleep(delay)
 
     console.print()
-    console.print(f"[yellow]对话完成:[/yellow] {ok} 成功, {fail} 失败")
+    console.print(f"[yellow]對話完成:[/yellow] {ok} 成功, {fail} 失敗")
 
     wait = max(delay * 2, 8)
-    console.print(f"[yellow]等待 {wait:.0f}s 让 afterTurn + auto-commit 处理...[/yellow]")
+    console.print(f"[yellow]等待 {wait:.0f}s 讓 afterTurn + auto-commit 處理...[/yellow]")
     time.sleep(wait)
 
     return ok, fail
 
 
-# ── Phase 3: 验证 Archive Index 存在 ────────────────────────────────────
+# ── Phase 3: 驗證 Archive Index 存在 ────────────────────────────────────
 
 
 def run_phase_verify_index(openviking_url: str, verbose: bool) -> str:
     console.print()
-    console.rule("[bold]Phase 3: 验证 Archive Index 存在[/bold]")
+    console.rule("[bold]Phase 3: 驗證 Archive Index 存在[/bold]")
     console.print()
 
     inspector = OVInspector(openviking_url)
 
     healthy = inspector.health_check()
-    check("OpenViking 服务可达", healthy)
+    check("OpenViking 服務可達", healthy)
     if not healthy:
         return ""
 
@@ -575,17 +575,17 @@ def run_phase_verify_index(openviking_url: str, verbose: bool) -> str:
     if session_info:
         commit_count = session_info.get("commit_count", 0)
         check(
-            "commit_count >= 3 (至少 3 个 archive)",
+            "commit_count >= 3 (至少 3 個 archive)",
             commit_count >= 3,
             f"commit_count={commit_count}",
         )
 
         memories = session_info.get("memories_extracted", {})
         total_mem = sum(memories.values()) if isinstance(memories, dict) else 0
-        check("累计提取记忆 > 0", total_mem > 0, f"total={total_mem}")
+        check("累計提取記憶 > 0", total_mem > 0, f"total={total_mem}")
 
         if verbose:
-            render_json(session_info, "Session 详情")
+            render_json(session_info, "Session 詳情")
 
     ctx = inspector.get_session_context(session_id)
     if ctx:
@@ -594,14 +594,14 @@ def run_phase_verify_index(openviking_url: str, verbose: bool) -> str:
         stats = ctx.get("stats", {})
 
         check(
-            "context 返回数据",
+            "context 返回資料",
             bool(overview) or len(messages) > 0,
             f"overview_len={len(overview)}, messages={len(messages)}",
         )
 
         total_archives = stats.get("totalArchives", 0)
         check(
-            "归档数 >= 3",
+            "歸檔數 >= 3",
             total_archives >= 3,
             f"totalArchives={total_archives}",
         )
@@ -609,12 +609,12 @@ def run_phase_verify_index(openviking_url: str, verbose: bool) -> str:
         if verbose and overview:
             console.print(f"  [dim]overview 前 300 字: {overview[:300]}...[/dim]")
     else:
-        check("context 可调用", False)
+        check("context 可呼叫", False)
 
     return session_id or ""
 
 
-# ── Phase 4: 追问精确细节 — 触发 ov_archive_expand ──────────────────────
+# ── Phase 4: 追問精確細節 — 觸發 ov_archive_expand ──────────────────────
 
 
 def run_phase_expand(
@@ -625,13 +625,13 @@ def run_phase_expand(
 ) -> list:
     console.print()
     console.rule(
-        f"[bold]Phase 4: 追问精确细节 — 触发 ov_archive_expand ({len(EXPAND_QUESTIONS)} 轮)[/bold]",
+        f"[bold]Phase 4: 追問精確細節 — 觸發 ov_archive_expand ({len(EXPAND_QUESTIONS)} 輪)[/bold]",
     )
     console.print()
-    console.print("[dim]验证点:[/dim]")
-    console.print("[dim]- 追问归档中的精确参数值[/dim]")
-    console.print("[dim]- LLM 应通过 ov_archive_expand 展开归档[/dim]")
-    console.print("[dim]- 回复包含原始对话中的精确数据（非泛化摘要）[/dim]")
+    console.print("[dim]驗證點:[/dim]")
+    console.print("[dim]- 追問歸檔中的精確引數值[/dim]")
+    console.print("[dim]- LLM 應通過 ov_archive_expand 展開歸檔[/dim]")
+    console.print("[dim]- 回覆包含原始對話中的精確資料（非泛化摘要）[/dim]")
     console.print()
 
     results = []
@@ -645,8 +645,8 @@ def run_phase_expand(
         console.rule(f"[dim]Expand Q{i}/{total}: {desc}[/dim]", style="dim")
         console.print(
             Panel(
-                f"{q}\n\n[dim]期望关键词: {', '.join(keywords)}[/dim]\n"
-                f"[dim]目标归档: {item['target_archive']}[/dim]",
+                f"{q}\n\n[dim]期望關鍵詞: {', '.join(keywords)}[/dim]\n"
+                f"[dim]目標歸檔: {item['target_archive']}[/dim]",
                 title=f"[bold cyan]Expand Q{i}[/bold cyan]",
                 border_style="cyan",
             ),
@@ -663,14 +663,14 @@ def run_phase_expand(
             success = hit_rate >= 0.5
 
             check(
-                f"Expand Q{i} ({desc}): 关键词命中率 >= 50%",
+                f"Expand Q{i} ({desc}): 關鍵詞命中率 >= 50%",
                 success,
                 f"命中={hits}, 未命中={[k for k in keywords if k not in hits]}, rate={hit_rate:.0%}",
             )
 
             if verbose:
                 console.print(
-                    f"  [dim]完整输出: {json.dumps(data.get('output', []), ensure_ascii=False)[:500]}[/dim]"
+                    f"  [dim]完整輸出: {json.dumps(data.get('output', []), ensure_ascii=False)[:500]}[/dim]"
                 )
 
             results.append(
@@ -683,7 +683,7 @@ def run_phase_expand(
                 }
             )
         except Exception as e:
-            check(f"Expand Q{i}: 发送成功", False, str(e))
+            check(f"Expand Q{i}: 傳送成功", False, str(e))
             results.append(
                 {
                     "question": q,
@@ -700,7 +700,7 @@ def run_phase_expand(
     return results
 
 
-# ── Phase 5: 不需要展开的问题 ───────────────────────────────────────────
+# ── Phase 5: 不需要展開的問題 ───────────────────────────────────────────
 
 
 def run_phase_no_expand(
@@ -711,9 +711,9 @@ def run_phase_no_expand(
 ) -> list:
     console.print()
     console.rule(
-        f"[bold]Phase 5: 不需要展开的问题 ({len(NO_EXPAND_QUESTIONS)} 轮)[/bold]",
+        f"[bold]Phase 5: 不需要展開的問題 ({len(NO_EXPAND_QUESTIONS)} 輪)[/bold]",
     )
-    console.print("[dim]验证: 概要级问题从摘要即可回答，无需展开[/dim]")
+    console.print("[dim]驗證: 概要級問題從摘要即可回答，無需展開[/dim]")
     console.print()
 
     results = []
@@ -726,7 +726,7 @@ def run_phase_no_expand(
         console.rule(f"[dim]NoExpand Q{i}/{total}[/dim]", style="dim")
         console.print(
             Panel(
-                f"{q}\n\n[dim]期望关键词: {', '.join(keywords)}[/dim]",
+                f"{q}\n\n[dim]期望關鍵詞: {', '.join(keywords)}[/dim]",
                 title=f"[bold cyan]NoExpand Q{i}[/bold cyan]",
                 border_style="cyan",
             ),
@@ -742,7 +742,7 @@ def run_phase_no_expand(
             hit_rate = len(hits) / len(keywords) if keywords else 0
 
             check(
-                f"NoExpand Q{i}: 概要回答正确 (命中率 >= 50%)",
+                f"NoExpand Q{i}: 概要回答正確 (命中率 >= 50%)",
                 hit_rate >= 0.5,
                 f"命中={hits}, rate={hit_rate:.0%}",
             )
@@ -750,7 +750,7 @@ def run_phase_no_expand(
                 {"question": q, "hits": hits, "hit_rate": hit_rate, "success": hit_rate >= 0.5}
             )
         except Exception as e:
-            check(f"NoExpand Q{i}: 发送成功", False, str(e))
+            check(f"NoExpand Q{i}: 傳送成功", False, str(e))
             results.append({"question": q, "hits": [], "hit_rate": 0, "success": False})
 
         if i < total:
@@ -759,7 +759,7 @@ def run_phase_no_expand(
     return results
 
 
-# ── 完整测试 ──────────────────────────────────────────────────────────────
+# ── 完整測試 ──────────────────────────────────────────────────────────────
 
 
 def run_full_test(
@@ -773,69 +773,69 @@ def run_full_test(
     console.print()
     console.print(
         Panel.fit(
-            f"[bold]ov_archive_expand 归档展开测试 — {DISPLAY_NAME}[/bold]\n\n"
+            f"[bold]ov_archive_expand 歸檔展開測試 — {DISPLAY_NAME}[/bold]\n\n"
             f"Gateway: {gateway_url}\n"
             f"OpenViking: {openviking_url}\n"
             f"User ID: {user_id}\n"
-            f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            title="测试信息",
+            f"時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            title="測試資訊",
         ),
     )
 
-    # Phase 1: 第一批对话 — 项目技术细节
+    # Phase 1: 第一批對話 — 專案技術細節
     ok1, fail1 = run_phase_chat(
         gateway_url,
         user_id,
         CHAT_BATCH_1,
-        "Phase 1: 第一段对话 — 项目技术细节",
+        "Phase 1: 第一段對話 — 專案技術細節",
         delay,
         verbose,
     )
-    check(f"Phase 1: {ok1}/{len(CHAT_BATCH_1)} 轮成功", fail1 == 0, f"ok={ok1}, fail={fail1}")
+    check(f"Phase 1: {ok1}/{len(CHAT_BATCH_1)} 輪成功", fail1 == 0, f"ok={ok1}, fail={fail1}")
 
-    # Phase 2a: 第二批对话 — 排障过程
+    # Phase 2a: 第二批對話 — 排障過程
     ok2, fail2 = run_phase_chat(
         gateway_url,
         user_id,
         CHAT_BATCH_2,
-        "Phase 2a: 第二段对话 — 线上排障过程",
+        "Phase 2a: 第二段對話 — 線上排障過程",
         delay,
         verbose,
     )
-    check(f"Phase 2a: {ok2}/{len(CHAT_BATCH_2)} 轮成功", fail2 == 0, f"ok={ok2}, fail={fail2}")
+    check(f"Phase 2a: {ok2}/{len(CHAT_BATCH_2)} 輪成功", fail2 == 0, f"ok={ok2}, fail={fail2}")
 
-    # Phase 2b: 第三批对话 — 代码评审讨论
+    # Phase 2b: 第三批對話 — 程式碼評審討論
     ok3, fail3 = run_phase_chat(
         gateway_url,
         user_id,
         CHAT_BATCH_3,
-        "Phase 2b: 第三段对话 — 代码评审讨论",
+        "Phase 2b: 第三段對話 — 程式碼評審討論",
         delay,
         verbose,
     )
-    check(f"Phase 2b: {ok3}/{len(CHAT_BATCH_3)} 轮成功", fail3 == 0, f"ok={ok3}, fail={fail3}")
+    check(f"Phase 2b: {ok3}/{len(CHAT_BATCH_3)} 輪成功", fail3 == 0, f"ok={ok3}, fail={fail3}")
 
-    # Phase 2c: 第四批对话 — 架构设计讨论
+    # Phase 2c: 第四批對話 — 架構設計討論
     ok4, fail4 = run_phase_chat(
         gateway_url,
         user_id,
         CHAT_BATCH_4,
-        "Phase 2c: 第四段对话 — 架构设计讨论",
+        "Phase 2c: 第四段對話 — 架構設計討論",
         delay,
         verbose,
     )
-    check(f"Phase 2c: {ok4}/{len(CHAT_BATCH_4)} 轮成功", fail4 == 0, f"ok={ok4}, fail={fail4}")
+    check(f"Phase 2c: {ok4}/{len(CHAT_BATCH_4)} 輪成功", fail4 == 0, f"ok={ok4}, fail={fail4}")
 
-    # Phase 3: 验证 Archive Index
+    # Phase 3: 驗證 Archive Index
     run_phase_verify_index(openviking_url, verbose)
 
-    # Gateway 重启 — 清除工作记忆，迫使 LLM 从归档获取信息
+    # Gateway 重啟 — 清除工作記憶，迫使 LLM 從歸檔獲取資訊
     if gateway_restart_cmd:
         console.print()
-        console.rule("[bold yellow]重启 Gateway — 清除工作记忆[/bold yellow]")
-        console.print("[yellow]重启前等待 10s 让后台 commit 完成...[/yellow]")
+        console.rule("[bold yellow]重啟 Gateway — 清除工作記憶[/bold yellow]")
+        console.print("[yellow]重啟前等待 10s 讓後臺 commit 完成...[/yellow]")
         time.sleep(10)
-        console.print(f"[yellow]执行: {gateway_restart_cmd}[/yellow]")
+        console.print(f"[yellow]執行: {gateway_restart_cmd}[/yellow]")
         import subprocess
 
         try:
@@ -846,42 +846,42 @@ def run_full_test(
                 text=True,
                 timeout=60,
             )
-            console.print(f"[yellow]Gateway 重启完成: {result.stdout.strip()}[/yellow]")
+            console.print(f"[yellow]Gateway 重啟完成: {result.stdout.strip()}[/yellow]")
         except subprocess.TimeoutExpired:
-            console.print("[yellow]Gateway 重启命令超时，检查健康状态...[/yellow]")
-        # 等待 Gateway 恢复
+            console.print("[yellow]Gateway 重啟命令超時，檢查健康狀態...[/yellow]")
+        # 等待 Gateway 恢復
         for _attempt in range(15):
             time.sleep(2)
             try:
                 r = requests.get(f"{gateway_url}/health", timeout=3)
                 if r.status_code == 200:
-                    console.print("[green]Gateway 健康检查通过[/green]")
+                    console.print("[green]Gateway 健康檢查通過[/green]")
                     break
             except Exception:
                 pass
         else:
-            console.print("[red]Gateway 重启后健康检查未通过[/red]")
+            console.print("[red]Gateway 重啟後健康檢查未通過[/red]")
 
-    # Phase 4: 追问精确细节 — 触发 expand
+    # Phase 4: 追問精確細節 — 觸發 expand
     expand_results = run_phase_expand(gateway_url, user_id, delay, verbose)
 
-    # Phase 5: 不需要展开的问题
+    # Phase 5: 不需要展開的問題
     no_expand_results = run_phase_no_expand(gateway_url, user_id, delay, verbose)
 
-    # ── 汇总报告 ──────────────────────────────────────────────────────────
+    # ── 彙總報告 ──────────────────────────────────────────────────────────
 
     console.print()
-    console.rule("[bold]测试报告[/bold]")
+    console.rule("[bold]測試報告[/bold]")
 
     passed = sum(1 for a in assertions if a["ok"])
     failed = sum(1 for a in assertions if not a["ok"])
     total = len(assertions)
 
-    table = Table(title=f"断言结果: {passed}/{total} 通过")
+    table = Table(title=f"斷言結果: {passed}/{total} 通過")
     table.add_column("#", style="bold", width=4)
-    table.add_column("状态", width=6)
-    table.add_column("断言", max_width=55)
-    table.add_column("详情", style="dim", max_width=55)
+    table.add_column("狀態", width=6)
+    table.add_column("斷言", max_width=55)
+    table.add_column("詳情", style="dim", max_width=55)
 
     for i, a in enumerate(assertions, 1):
         status = "[green]PASS[/green]" if a["ok"] else "[red]FAIL[/red]"
@@ -889,49 +889,49 @@ def run_full_test(
 
     console.print(table)
 
-    tree = Tree(f"[bold]通过: {passed}/{total}, 失败: {failed}[/bold]")
-    tree.add(f"Phase 1: 项目技术细节 — {ok1}/{len(CHAT_BATCH_1)}")
-    tree.add(f"Phase 2a: 线上排障 — {ok2}/{len(CHAT_BATCH_2)}")
-    tree.add(f"Phase 2b: 代码评审 — {ok3}/{len(CHAT_BATCH_3)}")
-    tree.add(f"Phase 2c: 架构设计 — {ok4}/{len(CHAT_BATCH_4)}")
-    tree.add("Phase 3: Archive Index 验证")
+    tree = Tree(f"[bold]通過: {passed}/{total}, 失敗: {failed}[/bold]")
+    tree.add(f"Phase 1: 專案技術細節 — {ok1}/{len(CHAT_BATCH_1)}")
+    tree.add(f"Phase 2a: 線上排障 — {ok2}/{len(CHAT_BATCH_2)}")
+    tree.add(f"Phase 2b: 程式碼評審 — {ok3}/{len(CHAT_BATCH_3)}")
+    tree.add(f"Phase 2c: 架構設計 — {ok4}/{len(CHAT_BATCH_4)}")
+    tree.add("Phase 3: Archive Index 驗證")
 
     expand_ok = sum(1 for r in expand_results if r["success"])
-    tree.add(f"Phase 4: 归档展开 — {expand_ok}/{len(expand_results)} 问题回答正确")
+    tree.add(f"Phase 4: 歸檔展開 — {expand_ok}/{len(expand_results)} 問題回答正確")
 
     no_expand_ok = sum(1 for r in no_expand_results if r["success"])
-    tree.add(f"Phase 5: 无需展开 — {no_expand_ok}/{len(no_expand_results)} 问题回答正确")
+    tree.add(f"Phase 5: 無需展開 — {no_expand_ok}/{len(no_expand_results)} 問題回答正確")
 
     fail_list = [a for a in assertions if not a["ok"]]
     if fail_list:
-        fail_branch = tree.add(f"[red]失败断言 ({len(fail_list)})[/red]")
+        fail_branch = tree.add(f"[red]失敗斷言 ({len(fail_list)})[/red]")
         for a in fail_list:
             fail_branch.add(f"[red]FAIL[/red] {a['label']}")
 
     console.print(tree)
 
     if failed == 0:
-        console.print("\n[green bold]全部通过! ov_archive_expand 归档展开验证成功。[/green bold]")
+        console.print("\n[green bold]全部通過! ov_archive_expand 歸檔展開驗證成功。[/green bold]")
     else:
-        console.print(f"\n[red bold]有 {failed} 个断言失败。[/red bold]")
+        console.print(f"\n[red bold]有 {failed} 個斷言失敗。[/red bold]")
 
 
-# ── 日志扫描: 验证 ov_archive_expand 工具调用 ────────────────────────────
+# ── 日誌掃描: 驗證 ov_archive_expand 工具呼叫 ────────────────────────────
 
 
 def scan_expand_log(log_path: str):
-    """扫描 Gateway 日志，提取 ov_archive_expand 调用记录。"""
+    """掃描 Gateway 日誌，提取 ov_archive_expand 呼叫記錄。"""
     import pathlib
 
     p = pathlib.Path(log_path)
     if not p.exists():
-        console.print(f"\n[yellow]日志文件不存在: {log_path}[/yellow]")
-        console.print("[dim]跳过工具调用日志验证[/dim]")
+        console.print(f"\n[yellow]日誌檔案不存在: {log_path}[/yellow]")
+        console.print("[dim]跳過工具呼叫日誌驗證[/dim]")
         return
 
     console.print()
-    console.rule("[bold]ov_archive_expand 工具调用日志验证[/bold]")
-    console.print(f"[dim]日志文件: {log_path}[/dim]")
+    console.rule("[bold]ov_archive_expand 工具呼叫日誌驗證[/bold]")
+    console.print(f"[dim]日誌檔案: {log_path}[/dim]")
     console.print()
 
     invoked_lines = []
@@ -945,22 +945,22 @@ def scan_expand_log(log_path: str):
                 elif "ov_archive_expand expanded" in line:
                     expanded_lines.append(line.strip())
     except Exception as e:
-        console.print(f"[red]读取日志失败: {e}[/red]")
+        console.print(f"[red]讀取日誌失敗: {e}[/red]")
         return
 
     if not invoked_lines and not expanded_lines:
-        console.print("[red]未找到 ov_archive_expand 调用记录！[/red]")
+        console.print("[red]未找到 ov_archive_expand 呼叫記錄！[/red]")
         console.print(
-            "[dim]可能原因: LLM 从工作记忆（而非归档展开）获取了信息。"
-            "尝试使用 --gateway-restart-cmd 在 Phase 4 前重启 Gateway。[/dim]",
+            "[dim]可能原因: LLM 從工作記憶（而非歸檔展開）獲取了資訊。"
+            "嘗試使用 --gateway-restart-cmd 在 Phase 4 前重啟 Gateway。[/dim]",
         )
         return
 
-    log_table = Table(title="ov_archive_expand 调用记录", show_lines=True)
+    log_table = Table(title="ov_archive_expand 呼叫記錄", show_lines=True)
     log_table.add_column("#", style="bold", width=4)
     log_table.add_column("操作", width=10)
-    log_table.add_column("归档 ID", style="cyan", width=14)
-    log_table.add_column("详情", style="dim")
+    log_table.add_column("歸檔 ID", style="cyan", width=14)
+    log_table.add_column("詳情", style="dim")
 
     import re
 
@@ -969,7 +969,7 @@ def scan_expand_log(log_path: str):
         row_idx += 1
         m = re.search(r"archiveId=(\w+)", line)
         archive_id = m.group(1) if m else "?"
-        log_table.add_row(str(row_idx), "invoked", archive_id, "调用展开")
+        log_table.add_row(str(row_idx), "invoked", archive_id, "呼叫展開")
 
     for line in expanded_lines:
         row_idx += 1
@@ -983,7 +983,7 @@ def scan_expand_log(log_path: str):
             str(row_idx),
             "expanded",
             archive_id,
-            f"恢复 {msgs} 条消息, {chars} 字符",
+            f"恢復 {msgs} 條訊息, {chars} 字元",
         )
 
     console.print(log_table)
@@ -1000,10 +1000,10 @@ def scan_expand_log(log_path: str):
         f"[green]共 {len(invoked_lines)} 次 invoked, {len(expanded_lines)} 次 expanded[/green]"
     )
     for aid, cnt in sorted(archive_counts.items()):
-        console.print(f"  {aid}: {cnt} 次调用")
+        console.print(f"  {aid}: {cnt} 次呼叫")
 
     check(
-        "日志中存在 ov_archive_expand 调用记录",
+        "日誌中存在 ov_archive_expand 呼叫記錄",
         len(invoked_lines) > 0,
         f"invoked={len(invoked_lines)}, expanded={len(expanded_lines)}",
     )
@@ -1014,37 +1014,37 @@ def scan_expand_log(log_path: str):
 
 def main():
     parser = argparse.ArgumentParser(
-        description=f"ov_archive_expand 归档展开测试 — {DISPLAY_NAME}",
+        description=f"ov_archive_expand 歸檔展開測試 — {DISPLAY_NAME}",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        "--gateway", default=DEFAULT_GATEWAY, help=f"Gateway 地址 (默认: {DEFAULT_GATEWAY})"
+        "--gateway", default=DEFAULT_GATEWAY, help=f"Gateway 地址 (預設: {DEFAULT_GATEWAY})"
     )
     parser.add_argument(
         "--openviking",
         default=DEFAULT_OPENVIKING,
-        help=f"OpenViking 地址 (默认: {DEFAULT_OPENVIKING})",
+        help=f"OpenViking 地址 (預設: {DEFAULT_OPENVIKING})",
     )
-    parser.add_argument("--user-id", default=USER_ID, help="测试用户 ID (默认: 随机)")
+    parser.add_argument("--user-id", default=USER_ID, help="測試使用者 ID (預設: 隨機)")
     parser.add_argument(
         "--phase",
         choices=["all", "chat1", "chat2", "verify-index", "expand", "no-expand"],
         default="all",
-        help="运行阶段 (默认: all)",
+        help="執行階段 (預設: all)",
     )
-    parser.add_argument("--delay", type=float, default=3.0, help="轮次间等待秒数 (默认: 3)")
-    parser.add_argument("--token", default="", help="Gateway auth token (默认: 自动发现)")
-    parser.add_argument("--agent-id", default=AGENT_ID, help=f"Agent ID (默认: {AGENT_ID})")
+    parser.add_argument("--delay", type=float, default=3.0, help="輪次間等待秒數 (預設: 3)")
+    parser.add_argument("--token", default="", help="Gateway auth token (預設: 自動發現)")
+    parser.add_argument("--agent-id", default=AGENT_ID, help=f"Agent ID (預設: {AGENT_ID})")
     parser.add_argument(
         "--gateway-restart-cmd",
         default="",
-        help="Gateway 重启命令 (在 Phase 4 前执行，清除工作记忆以迫使 archive expand)",
+        help="Gateway 重啟命令 (在 Phase 4 前執行，清除工作記憶以迫使 archive expand)",
     )
-    parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
+    parser.add_argument("--verbose", "-v", action="store_true", help="詳細輸出")
     parser.add_argument(
         "--log-path",
         default="",
-        help="Gateway 日志路径 (如 config/.openclaw/logs/openclaw.log)，测试后自动扫描 ov_archive_expand 调用",
+        help="Gateway 日誌路徑 (如 config/.openclaw/logs/openclaw.log)，測試後自動掃描 ov_archive_expand 呼叫",
     )
     args = parser.parse_args()
 
@@ -1055,7 +1055,7 @@ def main():
     token = args.token or discover_gateway_token()
     set_gateway_token(token)
 
-    console.print(f"[bold]ov_archive_expand 归档展开测试 — {DISPLAY_NAME}[/bold]")
+    console.print(f"[bold]ov_archive_expand 歸檔展開測試 — {DISPLAY_NAME}[/bold]")
     console.print(f"[yellow]Gateway:[/yellow] {gateway_url}")
     console.print(f"[yellow]OpenViking:[/yellow] {openviking_url}")
     console.print(f"[yellow]User ID:[/yellow] {user_id}")
@@ -1086,9 +1086,9 @@ def main():
     if assertions:
         passed = sum(1 for a in assertions if a["ok"])
         total_a = len(assertions)
-        console.print(f"\n[yellow]断言统计: {passed}/{total_a} 通过[/yellow]")
+        console.print(f"\n[yellow]斷言統計: {passed}/{total_a} 通過[/yellow]")
 
-    console.print("\n[yellow]测试结束。[/yellow]")
+    console.print("\n[yellow]測試結束。[/yellow]")
 
 
 if __name__ == "__main__":

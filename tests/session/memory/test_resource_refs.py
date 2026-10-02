@@ -42,15 +42,15 @@ def test_resource_refs_preserve_literal_filenames(name, encoded, bare):
 def test_extract_resource_uris_stops_at_common_sentence_delimiters():
     cases = [
         (
-            "看了 viking://resources/images/foo.jpeg，觉得不错",
+            "看了 viking://resources/images/foo.jpeg，覺得不錯",
             "viking://resources/images/foo.jpeg",
         ),
         (
-            "看了 viking://resources/images/foo.jpeg。还看了别的",
+            "看了 viking://resources/images/foo.jpeg。還看了別的",
             "viking://resources/images/foo.jpeg",
         ),
         (
-            "看了 viking://resources/images/foo.jpeg；然后记录",
+            "看了 viking://resources/images/foo.jpeg；然後記錄",
             "viking://resources/images/foo.jpeg",
         ),
         (
@@ -62,11 +62,11 @@ def test_extract_resource_uris_stops_at_common_sentence_delimiters():
             "viking://resources/images/foo.jpeg",
         ),
         (
-            "看了 viking://resources/images/foo.jpeg、还有别的",
+            "看了 viking://resources/images/foo.jpeg、還有別的",
             "viking://resources/images/foo.jpeg",
         ),
         (
-            "看了 viking://resources/images/foo.jpeg）然后记录",
+            "看了 viking://resources/images/foo.jpeg）然後記錄",
             "viking://resources/images/foo.jpeg",
         ),
         (
@@ -98,8 +98,8 @@ def test_sync_memory_resource_refs_keeps_bare_uri_clean_before_chinese_punctuati
     resource_uri = "viking://resources/images/2026/06/12/yueqian_jpeg"
     mf = MemoryFile(
         content=(
-            f"昨天晚上我看了 {resource_uri}，这张图是越前龙马的照片。"
-            "以后提到越前龙马照片，可以参考这个资源。"
+            f"昨天晚上我看了 {resource_uri}，這張圖是越前龍馬的照片。"
+            "以後提到越前龍馬照片，可以參考這個資源。"
         ),
         extra_fields={},
     )
@@ -107,7 +107,7 @@ def test_sync_memory_resource_refs_keeps_bare_uri_clean_before_chinese_punctuati
     changed = sync_memory_resource_refs(mf, source="session.commit")
 
     assert changed is True
-    assert f"]({resource_uri})，这张图是越前龙马的照片。" in mf.content
+    assert f"]({resource_uri})，這張圖是越前龍馬的照片。" in mf.content
     refs = mf.extra_fields["resource_refs"]
     assert refs == [
         {
@@ -123,7 +123,7 @@ def test_unlink_resource_references_preserves_visible_markdown_text():
     resource_uri = "viking://resources/images/2026/06/12/yueqian_jpeg"
     child_uri = f"{resource_uri}/child.jpeg"
     mf = MemoryFile(
-        content=(f"用户保存了[越前龙马照片]({resource_uri})。\n用户也保存了[子图]({child_uri})。"),
+        content=(f"使用者儲存了[越前龍馬照片]({resource_uri})。\n使用者也儲存了[子圖]({child_uri})。"),
         extra_fields={
             "resource_refs": [
                 {"resource_uri": resource_uri, "source": "content.write"},
@@ -135,7 +135,7 @@ def test_unlink_resource_references_preserves_visible_markdown_text():
     changed = unlink_resource_references_from_memory(mf, resource_uri, recursive=False)
 
     assert changed is True
-    assert mf.content == f"用户保存了越前龙马照片。\n用户也保存了[子图]({child_uri})。"
+    assert mf.content == f"使用者儲存了越前龍馬照片。\n使用者也儲存了[子圖]({child_uri})。"
     assert mf.extra_fields["resource_refs"] == [
         {"resource_uri": child_uri, "source": "content.write"}
     ]
@@ -144,12 +144,12 @@ def test_unlink_resource_references_preserves_visible_markdown_text():
 def test_unlink_resource_references_removes_bare_uri_but_keeps_sentence():
     resource_uri = "viking://resources/images/2026/06/12/yueqian_jpeg"
     mf = MemoryFile(
-        content=f"用户保存了越前龙马照片 {resource_uri}。",
+        content=f"使用者儲存了越前龍馬照片 {resource_uri}。",
         extra_fields={"resource_refs": [{"resource_uri": resource_uri}]},
     )
 
     changed = unlink_resource_references_from_memory(mf, resource_uri)
 
     assert changed is True
-    assert mf.content == "用户保存了越前龙马照片。"
+    assert mf.content == "使用者儲存了越前龍馬照片。"
     assert "resource_refs" not in mf.extra_fields

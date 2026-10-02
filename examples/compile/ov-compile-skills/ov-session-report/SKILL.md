@@ -140,10 +140,10 @@ When one identity has multiple display-name candidates, review frequency, tempor
 Masking rules:
 
 - One character: display `*`.
-- Two characters: preserve the first character, for example `张三 -> 张*`.
-- Three or more characters: preserve the first and last characters and replace every middle character with `*`, for example `秦浩杰 -> 秦*杰`.
+- Two characters: preserve the first character, for example `張三 -> 張*`.
+- Three or more characters: preserve the first and last characters and replace every middle character with `*`, for example `秦浩傑 -> 秦*傑`.
 - Apply the same character-based rule to Latin, numeric, and mixed aliases, for example `darren -> d****n` and `Lin101 -> L****1`.
-- User-declared sensitive names override the general rule and preserve only the first character, for example `胡江涛 -> 胡**`.
+- User-declared sensitive names override the general rule and preserve only the first character, for example `胡江濤 -> 胡**`.
 - In Markdown prose, escape masking asterisks when they appear inside emphasis, for example `Q\*n`; keep the raw value as `Q*n` in structured JSON.
 
 The final Markdown and structured JSON must not contain complete human names, email addresses, phone numbers, raw identity keys, Authorization values, API keys, root keys, tenant keys, or long credential-like strings.
@@ -226,7 +226,7 @@ Immediately follow each issue with its own `Human Feedback Excerpt`. Include hum
 > **08-31 21:16 | O\*\*\*r**
 > Session Commit has failed repeatedly...
 >
-> **08-31 21:19 | 秦\*杰**
+> **08-31 21:19 | 秦\*傑**
 > The current fix direction is still incorrect and needs another revision.
 ```
 

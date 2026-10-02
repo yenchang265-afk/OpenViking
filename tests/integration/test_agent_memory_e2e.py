@@ -64,32 +64,32 @@ def _flush_tracer_provider() -> None:
 # Round 1: Flight booking hits a duplicate; user chooses to replace the old one.
 # Expectation: Phase 2 should CREATE a new experience for booking-conflict handling.
 CONV_A_FLIGHT_DUPLICATE: List[Tuple[str, str]] = [
-    ("user", "帮我订一张下周三北京到上海的机票，上午出发"),
+    ("user", "幫我訂一張下週三北京到上海的機票，上午出發"),
     (
         "assistant",
-        "好的，我先用 search_flights 工具查询下周三（2026-04-22）北京到上海上午的航班。",
+        "好的，我先用 search_flights 工具查詢下週三（2026-04-22）北京到上海上午的航班。",
     ),
     (
         "assistant",
         "[tool_call: search_flights(from=PEK, to=SHA, date=2026-04-22, time=morning)]"
-        " 返回了 3 个候选航班：CA1501 07:30、MU5101 08:00、HU7603 09:45。",
+        " 返回了 3 個候選航班：CA1501 07:30、MU5101 08:00、HU7603 09:45。",
     ),
-    ("user", "那就订 MU5101 吧"),
+    ("user", "那就訂 MU5101 吧"),
     (
         "assistant",
         "[tool_call: book_flight(flight=MU5101, passenger=user_123)]"
-        " 订票失败：该用户已存在一张相同日期的预订 (CA1501)。",
+        " 訂票失敗：該使用者已存在一張相同日期的預訂 (CA1501)。",
     ),
     (
         "assistant",
-        "检测到重复预订，我先询问你的偏好。你是想取消已有的 CA1501 换成 MU5101，还是保留现有预订？",
+        "檢測到重複預訂，我先詢問你的偏好。你是想取消已有的 CA1501 換成 MU5101，還是保留現有預訂？",
     ),
-    ("user", "那就取消 CA1501，改订 MU5101"),
-    ("assistant", "[tool_call: cancel_booking(booking_id=CA1501-xyz)] 已取消原预订。"),
+    ("user", "那就取消 CA1501，改訂 MU5101"),
+    ("assistant", "[tool_call: cancel_booking(booking_id=CA1501-xyz)] 已取消原預訂。"),
     (
         "assistant",
-        "[tool_call: book_flight(flight=MU5101, passenger=user_123)] 预订成功，"
-        "票号 MU5101-abc。已将新票号发送到你的邮箱。",
+        "[tool_call: book_flight(flight=MU5101, passenger=user_123)] 預訂成功，"
+        "票號 MU5101-abc。已將新票號傳送到你的郵箱。",
     ),
 ]
 
@@ -99,46 +99,46 @@ CONV_A_FLIGHT_DUPLICATE: List[Tuple[str, str]] = [
 # Expectation: Phase 2 should EDIT the existing experience and append this
 # trajectory to source_trajectories.
 CONV_B_FLIGHT_DUPLICATE_EXTRA: List[Tuple[str, str]] = [
-    ("user", "帮我订 4 月 28 日北京到广州的机票，下午的"),
+    ("user", "幫我訂 4 月 28 日北京到廣州的機票，下午的"),
     (
         "assistant",
         "[tool_call: search_flights(from=PEK, to=CAN, date=2026-04-28, time=afternoon)]"
         " 找到了 CZ3101 14:00、CA1315 15:30、MF8023 16:20。",
     ),
-    ("user", "订 CA1315"),
+    ("user", "訂 CA1315"),
     (
         "assistant",
         "[tool_call: book_flight(flight=CA1315, passenger=user_123)]"
-        " 订票失败：同一日期已有一张预订 (CZ3101)。",
+        " 訂票失敗：同一日期已有一張預訂 (CZ3101)。",
     ),
     (
         "assistant",
-        "检测到重复预订。这次你想取消 CZ3101 改订 CA1315，还是这两张都要保留？",
+        "檢測到重複預訂。這次你想取消 CZ3101 改訂 CA1315，還是這兩張都要保留？",
     ),
-    ("user", "这两张都要，是不同行程"),
+    ("user", "這兩張都要，是不同行程"),
     (
         "assistant",
         "[tool_call: check_multi_booking_policy(date=2026-04-28)]"
-        " 确认：同一天多个预订是允许的，系统不强制合并。",
+        " 確認：同一天多個預訂是允許的，系統不強制合併。",
     ),
     (
         "assistant",
         "[tool_call: book_flight(flight=CA1315, passenger=user_123, override_duplicate=true)]"
-        " 预订成功，票号 CA1315-xyz。两张机票均已生效。",
+        " 預訂成功，票號 CA1315-xyz。兩張機票均已生效。",
     ),
-    ("user", "好的，另外我想取消上周订的 MF7801"),
+    ("user", "好的，另外我想取消上週訂的 MF7801"),
     (
         "assistant",
         "[tool_call: cancel_booking(booking_id=MF7801-001)]"
-        " 取消失败：距出发时间不足 24 小时，航空公司不允许免费取消。",
+        " 取消失敗：距出發時間不足 24 小時，航空公司不允許免費取消。",
     ),
     (
         "assistant",
-        "MF7801 的出发时间距现在不足 24 小时，按航空公司政策无法免费取消。"
-        "有两个选择：1) 支付改签费改期；2) 放弃该票（退款仅限税费）。请问你想怎么处理？",
+        "MF7801 的出發時間距現在不足 24 小時，按航空公司政策無法免費取消。"
+        "有兩個選擇：1) 支付改簽費改期；2) 放棄該票（退款僅限稅費）。請問你想怎麼處理？",
     ),
     ("user", "算了，就不管了"),
-    ("assistant", "好的，MF7801 保持原状，CA1315 新预订已生效。"),
+    ("assistant", "好的，MF7801 保持原狀，CA1315 新預訂已生效。"),
 ]
 
 

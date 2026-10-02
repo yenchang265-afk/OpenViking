@@ -1,14 +1,14 @@
-DeerFlow 支持通过 MemoryManager 接入 OpenViking 作为长期记忆后端。接入后，DeerFlow 会将对话消息写入 OpenViking，并在模型调用前通过 OpenViking 进行记忆召回，再注入到上下文中。
+DeerFlow 支援通過 MemoryManager 接入 OpenViking 作為長期記憶後端。接入後，DeerFlow 會將對話訊息寫入 OpenViking，並在模型呼叫前通過 OpenViking 進行記憶召回，再注入到上下文中。
 
-## 步骤 1：配置 OpenViking 鉴权信息
+## 步驟 1：配置 OpenViking 鑑權資訊
 
-在 DeerFlow 项目根目录下编辑 `.env` 文件，把 API Key 填进去：
+在 DeerFlow 專案根目錄下編輯 `.env` 檔案，把 API Key 填進去：
 
 {{OPENVIKING_API_KEY_BLOCK}}
 
-## 步骤 2：修改 DeerFlow 的 memory 配置
+## 步驟 2：修改 DeerFlow 的 memory 配置
 
-打开项目根目录下的 `config.yaml`，找到 `memory:` 配置段，将默认的 DeerMem 配置替换为 OpenViking 配置：
+開啟專案根目錄下的 `config.yaml`，找到 `memory:` 配置段，將預設的 DeerMem 配置替換為 OpenViking 配置：
 
 ```yaml
 memory:
@@ -35,38 +35,38 @@ memory:
         constraints and prior decisions
 ```
 
-## 步骤 3：重启 DeerFlow
+## 步驟 3：重啟 DeerFlow
 
-保存 `.env` 和 `config.yaml` 后，重新启动 DeerFlow：
+儲存 `.env` 和 `config.yaml` 後，重新啟動 DeerFlow：
 
 ```bash
 make dev
 ```
 
-## 步骤 4：验证 OpenViking 是否接入成功
+## 步驟 4：驗證 OpenViking 是否接入成功
 
-在项目根目录下查看 Gateway 日志：
+在專案根目錄下檢視 Gateway 日誌：
 
 ```bash
 grep -i "memory manager resolved\|openviking\|deermem" logs/gateway.log
 ```
 
-成功日志示例：
+成功日誌示例：
 
 ```text
 Memory manager resolved: OpenVikingMemoryManager (manager_class='openviking')
 HTTP Request: GET {{OPENVIKING_BASE_URL}}/health "HTTP/1.1 200 OK"
 ```
 
-## 步骤 5：验证写入与召回
+## 步驟 5：驗證寫入與召回
 
-可通过以下日志确认写入和召回是否正常：
+可通過以下日誌確認寫入和召回是否正常：
 
 ```bash
 grep -Ei "messages/batch|commit|search/find|has_memory" logs/gateway.log | tail -100
 ```
 
-成功日志示例：
+成功日誌示例：
 
 ```text
 /messages/batch "HTTP/1.1 200 OK"
@@ -77,12 +77,12 @@ has_memory=True
 
 ## 故障排查
 
-| 现象 | 原因 | 修复 |
+| 現象 | 原因 | 修復 |
 |------|------|------|
-| DeerFlow 启动失败，提示 OpenViking 配置错误 | `config.yaml` 中 OpenViking 配置不完整或格式错误 | 检查 `config.yaml` 中是否已配置 `manager_class: openviking`，并确认 `base_url`、`api_key_env` 等字段正确 |
-| DeerFlow 未接入 OpenViking | `memory.manager_class` 未改为 `openviking`，或修改配置后未重启服务 | 保存配置后重新启动 DeerFlow，并确认日志中出现 `OpenVikingMemoryManager` |
-| 远程认证失败，返回 401 或 403 | OpenViking API Key 缺失、错误或无权限 | 检查 `.env` 中的 `OPENVIKING_API_KEY` 是否正确 |
-| 检索失败，但 DeerFlow 仍继续回复 | 当前配置采用 `read: fail_open`，属于预期行为 | OpenViking 检索失败时不会注入记忆，但不会影响主 Agent 正常回复 |
-| 回复已生成，但记忆写入失败 | 当前配置采用 `write: log_and_drop`，写入失败会被记录到日志中 | 检查并修复 OpenViking 服务、网络和鉴权配置，后续新消息可继续写入 |
-| 已写入消息，但页面未立即看到记忆 | OpenViking 的摘要和记忆提取是异步完成的 | 等待后台任务完成后再查看 |
-| 服务关闭时仍有记忆操作未完成 | 系统会在 `shutdown_flush_timeout_seconds` 配置的时间内等待其完成 | 若等待超时，或 OpenViking 在关闭期间不可用，部分记忆写入可能无法完成。可适当调大该配置，并检查关闭期间 OpenViking 的网络和服务状态 |
+| DeerFlow 啟動失敗，提示 OpenViking 配置錯誤 | `config.yaml` 中 OpenViking 配置不完整或格式錯誤 | 檢查 `config.yaml` 中是否已配置 `manager_class: openviking`，並確認 `base_url`、`api_key_env` 等欄位正確 |
+| DeerFlow 未接入 OpenViking | `memory.manager_class` 未改為 `openviking`，或修改配置後未重啟服務 | 儲存配置後重新啟動 DeerFlow，並確認日誌中出現 `OpenVikingMemoryManager` |
+| 遠端認證失敗，返回 401 或 403 | OpenViking API Key 缺失、錯誤或無許可權 | 檢查 `.env` 中的 `OPENVIKING_API_KEY` 是否正確 |
+| 檢索失敗，但 DeerFlow 仍繼續回覆 | 當前配置採用 `read: fail_open`，屬於預期行為 | OpenViking 檢索失敗時不會注入記憶，但不會影響主 Agent 正常回復 |
+| 回覆已生成，但記憶寫入失敗 | 當前配置採用 `write: log_and_drop`，寫入失敗會被記錄到日誌中 | 檢查並修復 OpenViking 服務、網路和鑑權配置，後續新訊息可繼續寫入 |
+| 已寫入訊息，但頁面未立即看到記憶 | OpenViking 的摘要和記憶提取是非同步完成的 | 等待後臺任務完成後再檢視 |
+| 服務關閉時仍有記憶操作未完成 | 系統會在 `shutdown_flush_timeout_seconds` 配置的時間內等待其完成 | 若等待超時，或 OpenViking 在關閉期間不可用，部分記憶寫入可能無法完成。可適當調大該配置，並檢查關閉期間 OpenViking 的網路和服務狀態 |

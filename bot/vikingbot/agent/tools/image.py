@@ -294,7 +294,7 @@ class ImageGenerationTool(Tool):
 
             images_dir = get_data_path() / "images"
             images_dir.mkdir(exist_ok=True)
-            saved_paths = ["生成图片："]
+            saved_paths = ["生成圖片："]
             saved_filenames = []
 
             for img in images:
@@ -324,7 +324,7 @@ class ImageGenerationTool(Tool):
 
             result = "\n".join(saved_paths)
             if sent_to_user:
-                result += "\n（已发送给用户）"
+                result += "\n（已傳送給使用者）"
 
             return result
 

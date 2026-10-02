@@ -185,7 +185,7 @@ def test_collect_read_experience_uris_ignores_removed_dedicated_tool():
     "uri",
     [
         "viking://user/alice/memories/experiences/cfg_streaming.md",
-        "viking://user/alice/memories/experiences/无订单号换货处理.md",
+        "viking://user/alice/memories/experiences/無訂單號換貨處理.md",
         "viking://user/alice/memories/experiences/vikingdb_fe_repo_workflows.md",
         "viking://user/alice/memories/experiences/" + "nested/" * 40 + "workflow.md",
     ],

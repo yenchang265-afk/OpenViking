@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""共享的数据模型定义。"""
+"""共享的資料模型定義。"""
 
 from dataclasses import dataclass, field
 from typing import Dict
@@ -23,7 +23,7 @@ def validate_account_user_role(role: str) -> Role:
 
 @dataclass
 class UserKeyEntry:
-    """内存中的用户密钥索引条目。"""
+    """記憶體中的使用者金鑰索引條目。"""
 
     account_id: str
     user_id: str
@@ -34,7 +34,7 @@ class UserKeyEntry:
 
 @dataclass
 class AccountInfo:
-    """内存中的账户信息。"""
+    """記憶體中的帳戶資訊。"""
 
     created_at: str
     users: Dict[str, dict] = field(default_factory=dict)

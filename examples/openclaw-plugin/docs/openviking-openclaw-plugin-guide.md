@@ -1,403 +1,403 @@
-# OpenViking OpenClaw 插件帮助文档
+# OpenViking OpenClaw 外掛幫助文件
 
-> 本文档面向插件使用者、集成方、排障同学和后续维护者，系统梳理 `@openviking/openclaw-plugin` 的实现原理、执行流程、核心功能、安装配置、构建测试、Debug、发布上线与验证方式，以及它与火山 OpenViking 的联动机制。
+> 本文件面向外掛使用者、整合方、排障同學和後續維護者，系統梳理 `@openviking/openclaw-plugin` 的實現原理、執行流程、核心功能、安裝配置、構建測試、Debug、釋出上線與驗證方式，以及它與火山 OpenViking 的聯動機制。
 
-## 1. 一句话结论
+## 1. 一句話結論
 
-`@openviking/openclaw-plugin` 是一个 OpenClaw `context-engine` 插件。它把 OpenClaw 的会话生命周期、上下文组装、记忆召回、会话归档、工具结果回读、资源/技能导入等能力，通过 HTTP API 接到远端 OpenViking 服务上，让 Agent 拥有长期记忆、工作记忆、历史压缩、语义检索和 RAG 能力。
+`@openviking/openclaw-plugin` 是一個 OpenClaw `context-engine` 外掛。它把 OpenClaw 的會話生命週期、上下文組裝、記憶召回、會話歸檔、工具結果回讀、資源/技能匯入等能力，通過 HTTP API 接到遠端 OpenViking 服務上，讓 Agent 擁有長期記憶、工作記憶、歷史壓縮、語義檢索和 RAG 能力。
 
-它不负责启动本地 OpenViking Server，也不替代 OpenClaw Runtime；OpenClaw 仍负责 Agent 执行、prompt 编排和工具调用，OpenViking 负责上下文数据库、长期记忆、session/archive、resource/skill 检索与服务端抽取。
+它不負責啟動本地 OpenViking Server，也不替代 OpenClaw Runtime；OpenClaw 仍負責 Agent 執行、prompt 編排和工具呼叫，OpenViking 負責上下文資料庫、長期記憶、session/archive、resource/skill 檢索與服務端抽取。
 
 ---
 
-## 2. 插件解决的问题
+## 2. 外掛解決的問題
 
-| 问题 | 没有插件时的表现 | 插件提供的能力 |
+| 問題 | 沒有外掛時的表現 | 外掛提供的能力 |
 | --- | --- | --- |
-| 长对话上下文膨胀 | 会话越来越长，token 成本和模型输入风险持续上升 | 通过 OpenViking session/archive 把长历史压缩为工作记忆，并在 `assemble` 时重建可控上下文 |
-| 过去偏好/事实容易遗忘 | Agent 需要用户反复提醒 | `autoRecall` 自动搜索长期记忆并注入当前 user message |
-| 会话历史压缩后细节丢失 | summary 不含原命令、路径、配置值时难以追溯 | `ov_archive_search` / `ov_archive_expand` 回查归档原文 |
-| 大工具结果污染上下文 | 大量工具输出挤占模型窗口 | OpenViking 支持 tool result 外置存储，插件提供读/搜/列工具 |
-| 文档、仓库、URL 无法沉淀为知识库 | Agent 临时读取，跨会话不可复用 | 手动 `/add-resource` 导入 resource，`ov_search` / `ov_read` 检索消费；Agent 可见 `add_resource` 默认禁用 |
-| Skill 难以沉淀和语义发现 | 技能依赖本地或手工注入 | `add_skill` 导入到 OpenViking agent skill 空间 |
-| 多租户/多 Agent 记忆串用 | 不同 session/agent 可能共用错误上下文 | 插件按 `sessionId/sessionKey/agentId/peer_prefix` 解析 `X-OpenViking-Actor-Peer`，并支持 account/user header 与 peer identity routing |
+| 長對話上下文膨脹 | 會話越來越長，token 成本和模型輸入風險持續上升 | 通過 OpenViking session/archive 把長曆史壓縮為工作記憶，並在 `assemble` 時重建可控上下文 |
+| 過去偏好/事實容易遺忘 | Agent 需要使用者反覆提醒 | `autoRecall` 自動搜尋長期記憶並注入當前 user message |
+| 會話歷史壓縮後細節丟失 | summary 不含原命令、路徑、配置值時難以追溯 | `ov_archive_search` / `ov_archive_expand` 回查歸檔原文 |
+| 大工具結果汙染上下文 | 大量工具輸出擠佔模型視窗 | OpenViking 支援 tool result 外接儲存，外掛提供讀/搜/列工具 |
+| 文件、倉庫、URL 無法沉澱為知識庫 | Agent 臨時讀取，跨會話不可複用 | 手動 `/add-resource` 匯入 resource，`ov_search` / `ov_read` 檢索消費；Agent 可見 `add_resource` 預設停用 |
+| Skill 難以沉澱和語義發現 | 技能依賴本地或手工注入 | `add_skill` 匯入到 OpenViking agent skill 空間 |
+| 多租戶/多 Agent 記憶串用 | 不同 session/agent 可能共用錯誤上下文 | 外掛按 `sessionId/sessionKey/agentId/peer_prefix` 解析 `X-OpenViking-Actor-Peer`，並支援 account/user header 與 peer identity routing |
 
 ---
 
-## 3. 架构定位
+## 3. 架構定位
 
-### 3.1 插件在 OpenClaw 中的形态
+### 3.1 外掛在 OpenClaw 中的形態
 
-插件清单声明了它是 `context-engine` 插件，并在启动时激活 hook/tool 能力：`openclaw.plugin.json:2`、`openclaw.plugin.json:4`、`openclaw.plugin.json:6`。
+外掛清單聲明瞭它是 `context-engine` 外掛，並在啟動時啟用 hook/tool 能力：`openclaw.plugin.json:2`、`openclaw.plugin.json:4`、`openclaw.plugin.json:6`。
 
-包元信息中，插件通过 OpenClaw 扩展入口加载 `./dist/index.js`，并提供 setup CLI 入口 `./dist/commands/setup.js`：`package.json:57`。
+包元資訊中，外掛通過 OpenClaw 擴充入口載入 `./dist/index.js`，並提供 setup CLI 入口 `./dist/commands/setup.js`：`package.json:57`。
 
-插件在运行时主要承担四个角色：
+外掛在執行時主要承擔四個角色：
 
-1. **Context Engine**：实现 `assemble`、`afterTurn`、`compact`，并声明自己拥有 compaction。
-2. **Hook 集成层**：监听 `session_start`、`session_end`、`before_reset` 等事件。
-3. **Tool Provider**：注册 memory、archive、resource、skill、tool-result 相关工具。
-4. **Runtime/Setup 管理层**：提供 `openclaw openviking setup/status`，并在服务启动时做 health check。
+1. **Context Engine**：實現 `assemble`、`afterTurn`、`compact`，並宣告自己擁有 compaction。
+2. **Hook 整合層**：監聽 `session_start`、`session_end`、`before_reset` 等事件。
+3. **Tool Provider**：註冊 memory、archive、resource、skill、tool-result 相關工具。
+4. **Runtime/Setup 管理層**：提供 `openclaw openviking setup/status`，並在服務啟動時做 health check。
 
-### 3.2 核心文件职责
+### 3.2 核心檔案職責
 
-| 文件 | 主要职责 |
+| 檔案 | 主要職責 |
 | --- | --- |
-| `index.ts` | 插件注册入口；解析配置；注册工具、命令、hook、context engine 和 service |
-| `context-engine.ts` | 实现 ContextEngine：`assemble`、`afterTurn`、`compact`、session ID 映射、消息转换、工作记忆组装 |
-| `client.ts` | OpenViking HTTP Client；统一添加认证/租户/agent header；封装 session、search、resource、skill、tool-result API |
-| `config.ts` | 插件配置 schema、默认值、环境变量解析、peer identity routing 配置 |
-| `auto-recall.ts` | 自动召回查询清洗、召回超时控制、记忆块构建与注入 |
-| `memory-ranking.ts` | 显式 `memory_recall` 的结果去重、阈值过滤和本地重排；自动召回由服务端组装 |
-| `text-utils.ts` | 会话文本清洗、metadata/心跳/命令过滤、增量 turn 消息提取、bypass session pattern |
-| `commands/setup.ts` | setup/status CLI，配置写入、health check、root/user key 探测、slot 激活 |
-| `session-transcript-repair.ts` | 修复 toolCall/toolResult 配对、去重、孤儿 tool result 等 transcript 结构问题 |
+| `index.ts` | 外掛註冊入口；解析配置；註冊工具、命令、hook、context engine 和 service |
+| `context-engine.ts` | 實現 ContextEngine：`assemble`、`afterTurn`、`compact`、session ID 對映、訊息轉換、工作記憶組裝 |
+| `client.ts` | OpenViking HTTP Client；統一新增認證/租戶/agent header；封裝 session、search、resource、skill、tool-result API |
+| `config.ts` | 外掛配置 schema、預設值、環境變數解析、peer identity routing 配置 |
+| `auto-recall.ts` | 自動召回查詢清洗、召回超時控制、記憶塊構建與注入 |
+| `memory-ranking.ts` | 顯式 `memory_recall` 的結果去重、閾值過濾和本地重排；自動召回由服務端組裝 |
+| `text-utils.ts` | 會話文本清洗、metadata/心跳/命令過濾、增量 turn 訊息提取、bypass session pattern |
+| `commands/setup.ts` | setup/status CLI，配置寫入、health check、root/user key 探測、slot 啟用 |
+| `session-transcript-repair.ts` | 修復 toolCall/toolResult 配對、去重、孤兒 tool result 等 transcript 結構問題 |
 
 ---
 
-## 4. 执行流程总览
+## 4. 執行流程總覽
 
-### 4.1 插件加载流程
+### 4.1 外掛載入流程
 
-1. OpenClaw 根据插件入口加载 `index.ts` 的默认导出。
-2. `register(api)` 读取 `api.pluginConfig`，用 `memoryOpenVikingConfigSchema.parse` 解析配置；解析失败时只注册 setup CLI，提示用户运行 setup：`index.ts:558`、`index.ts:576`。
-3. 创建 `OpenVikingClient`，注入 `baseUrl`、`apiKey`、`peer_prefix`、超时、租户与 peer policy：`index.ts:625`。
-4. 注册工具、slash command、hook、context engine 与 service：`index.ts:872`、`index.ts:962`、`index.ts:1913`、`index.ts:1945`、`index.ts:1970`。
-5. Service 启动时调用 `/health` 做一次非阻塞 health check，并输出初始化日志：`index.ts:1970`。
+1. OpenClaw 根據外掛入口載入 `index.ts` 的預設匯出。
+2. `register(api)` 讀取 `api.pluginConfig`，用 `memoryOpenVikingConfigSchema.parse` 解析配置；解析失敗時只註冊 setup CLI，提示使用者執行 setup：`index.ts:558`、`index.ts:576`。
+3. 建立 `OpenVikingClient`，注入 `baseUrl`、`apiKey`、`peer_prefix`、超時、租戶與 peer policy：`index.ts:625`。
+4. 註冊工具、slash command、hook、context engine 與 service：`index.ts:872`、`index.ts:962`、`index.ts:1913`、`index.ts:1945`、`index.ts:1970`。
+5. Service 啟動時呼叫 `/health` 做一次非阻塞 health check，並輸出初始化日誌：`index.ts:1970`。
 
-### 4.2 会话 ID 与 Agent 路由流程
+### 4.2 會話 ID 與 Agent 路由流程
 
-OpenClaw 的 `sessionId/sessionKey` 不能总是直接作为 OpenViking 存储路径。插件用 `openClawSessionToOvStorageId` 生成安全稳定的 OpenViking session id：
+OpenClaw 的 `sessionId/sessionKey` 不能總是直接作為 OpenViking 儲存路徑。外掛用 `openClawSessionToOvStorageId` 生成安全穩定的 OpenViking session id：
 
-- 如果 `sessionId` 是 UUID，直接小写复用。
-- 如果有 `sessionKey`，用 SHA-256 生成稳定 id。
-- 如果非 UUID 的 `sessionId` 包含 Windows 路径不安全字符，也用 SHA-256。
-- 否则使用原 `sessionId`。
+- 如果 `sessionId` 是 UUID，直接小寫複用。
+- 如果有 `sessionKey`，用 SHA-256 生成穩定 id。
+- 如果非 UUID 的 `sessionId` 包含 Windows 路徑不安全字元，也用 SHA-256。
+- 否則使用原 `sessionId`。
 
-实现位置：`context-engine.ts:342`。
+實現位置：`context-engine.ts:342`。
 
-Agent 路由由 `createSessionAgentResolver` 维护，优先从 session context 解析/记忆 agent，然后根据 `peer_prefix` 生成 `X-OpenViking-Actor-Peer`：`index.ts:470`。字符会经过 `sanitizeOpenVikingAgentIdHeader` 清洗，保证只包含 `[a-zA-Z0-9_-]`：`index.ts:226`。
+Agent 路由由 `createSessionAgentResolver` 維護，優先從 session context 解析/記憶 agent，然後根據 `peer_prefix` 生成 `X-OpenViking-Actor-Peer`：`index.ts:470`。字元會經過 `sanitizeOpenVikingAgentIdHeader` 清洗，保證只包含 `[a-zA-Z0-9_-]`：`index.ts:226`。
 
-### 4.3 `assemble`：回复前组装上下文
+### 4.3 `assemble`：回覆前組裝上下文
 
-OpenClaw 会在 context engine 上调用 `assemble`。当前实现把 assemble 分成两类：
+OpenClaw 會在 context engine 上呼叫 `assemble`。當前實現把 assemble 分成兩類：
 
-| 调用形态 | 判断方式 | 插件行为 |
+| 呼叫形態 | 判斷方式 | 外掛行為 |
 | --- | --- | --- |
-| 主 assemble / preflight | 参数带 `prompt`、`availableTools` 或 `citationsMode` | 从 OpenViking 获取 session context，回放 archive summary + active messages |
-| transformContext assemble | 不带上述字段，通常最后一条已经是当前 user | 执行 auto recall，把长期记忆块 prepend 到最新 user message |
+| 主 assemble / preflight | 引數帶 `prompt`、`availableTools` 或 `citationsMode` | 從 OpenViking 獲取 session context，回放 archive summary + active messages |
+| transformContext assemble | 不帶上述欄位，通常最後一條已經是當前 user | 執行 auto recall，把長期記憶塊 prepend 到最新 user message |
 
-判断逻辑在 `context-engine.ts:1097`。
+判斷邏輯在 `context-engine.ts:1097`。
 
 主 assemble 流程：
 
-1. 解析 session 身份，计算 token budget，记录诊断日志。
-2. 调用 `GET /api/v1/sessions/{sessionId}/context?token_budget=...`：`context-engine.ts:1193`、`client.ts:873`。
-3. 如果 OpenViking 没有可用 archive/session 数据，直接 passthrough，不影响主链路。
-4. 将 `latest_archive_overview` 转成 `[Session History Summary]`。
-5. 将 OpenViking parts 消息转换为 OpenClaw `AgentMessage`，包括 tool part → `toolCall` + `toolResult`。
-6. 修复 transcript：合并连续 user/assistant、修复 toolCall/toolResult 配对，必要时插入占位 user 以满足 provider 交替约束。
-7. 返回组装后的 messages 和可选 `systemPromptAddition`。
+1. 解析 session 身份，計算 token budget，記錄診斷日誌。
+2. 呼叫 `GET /api/v1/sessions/{sessionId}/context?token_budget=...`：`context-engine.ts:1193`、`client.ts:873`。
+3. 如果 OpenViking 沒有可用 archive/session 資料，直接 passthrough，不影響主鏈路。
+4. 將 `latest_archive_overview` 轉成 `[Session History Summary]`。
+5. 將 OpenViking parts 訊息轉換為 OpenClaw `AgentMessage`，包括 tool part → `toolCall` + `toolResult`。
+6. 修復 transcript：合併連續 user/assistant、修復 toolCall/toolResult 配對，必要時插入佔位 user 以滿足 provider 交替約束。
+7. 返回組裝後的 messages 和可選 `systemPromptAddition`。
 
 transformContext auto recall 流程：
 
-1. 从最新 user message 提取查询文本。
-2. 清洗 metadata、心跳、已注入记忆块等噪音。
-3. 快速 precheck，OpenViking 不可用时跳过召回，避免拖慢模型请求。
-4. 向 `POST /api/v1/search/search` 发送一次 `mode="context"` 请求，并把映射后的 OpenViking session ID、Actor Peer 和 `recallTargetTypes` 一并传入。
-5. 服务端结合 session 历史扩展查询，完成阈值过滤、排序、5 轮跨轮去重和内容层级选择。
-6. `recallMaxInjectedChars` 按 4 字符/token 转成服务端 `max_tokens`，由服务端在预算内生成 `rendered` 上下文。
-7. 插件只保留 `<relevant-memories>` 外层标记并 prepend 到最新 user message，不再逐条 `read` 或本地重排。
+1. 從最新 user message 提取查詢文本。
+2. 清洗 metadata、心跳、已注入記憶塊等噪音。
+3. 快速 precheck，OpenViking 不可用時跳過召回，避免拖慢模型請求。
+4. 向 `POST /api/v1/search/search` 傳送一次 `mode="context"` 請求，並把對映後的 OpenViking session ID、Actor Peer 和 `recallTargetTypes` 一併傳入。
+5. 服務端結合 session 歷史擴充查詢，完成閾值過濾、排序、5 輪跨輪去重和內容層級選擇。
+6. `recallMaxInjectedChars` 按 4 字元/token 轉成服務端 `max_tokens`，由服務端在預算內生成 `rendered` 上下文。
+7. 外掛只保留 `<relevant-memories>` 外層標記並 prepend 到最新 user message，不再逐條 `read` 或本地重排。
 
-自动召回实现入口：`services/context-lifecycle-service.ts` 的 transformContext assemble 路径，以及 `auto-recall.ts` 的 `buildAutoRecallContext()`。
+自動召回實現入口：`services/context-lifecycle-service.ts` 的 transformContext assemble 路徑，以及 `auto-recall.ts` 的 `buildAutoRecallContext()`。
 
-### 4.4 `afterTurn`：每轮对话后自动捕获
+### 4.4 `afterTurn`：每輪對話後自動捕獲
 
-`afterTurn` 负责把本轮新增消息写入 OpenViking session，并在 `pending_tokens` 超过阈值时异步 commit。
+`afterTurn` 負責把本輪新增訊息寫入 OpenViking session，並在 `pending_tokens` 超過閾值時非同步 commit。
 
 流程：
 
-1. 若 `autoCapture=false`、heartbeat 或 session 被 bypass，直接跳过。
-2. 根据 `prePromptMessageCount` 只提取本轮新增消息，不重写全量 transcript。
-3. `extractNewTurnMessages` 将 user/assistant 文本和 toolResult 转成 OpenViking parts：`text-utils.ts:342`。
-4. 清理 `<relevant-memories>`、metadata、时间戳、心跳等噪音。
-5. 逐条调用 `POST /api/v1/sessions/{sessionId}/messages`：`context-engine.ts:1378`、`client.ts:703`。
-6. 调 `GET /api/v1/sessions/{sessionId}` 读取 `pending_tokens`：`context-engine.ts:1389`、`client.ts:770`。
-7. 若 `pending_tokens < tokenBudget × commitTokenThresholdRatio`，本轮结束。
-8. 否则调用 `commitSession(wait=false, keepRecentCount=cfg.commitKeepRecentCount)`；服务端 Phase 2 记忆抽取异步继续执行：`context-engine.ts:1403`。
-9. 开启 `logFindRequests` 时，插件轮询 task 结果并打印 Phase 2 抽取状态：`context-engine.ts:1424`。
+1. 若 `autoCapture=false`、heartbeat 或 session 被 bypass，直接跳過。
+2. 根據 `prePromptMessageCount` 只提取本輪新增訊息，不重寫全量 transcript。
+3. `extractNewTurnMessages` 將 user/assistant 文本和 toolResult 轉成 OpenViking parts：`text-utils.ts:342`。
+4. 清理 `<relevant-memories>`、metadata、時間戳、心跳等噪音。
+5. 逐條呼叫 `POST /api/v1/sessions/{sessionId}/messages`：`context-engine.ts:1378`、`client.ts:703`。
+6. 調 `GET /api/v1/sessions/{sessionId}` 讀取 `pending_tokens`：`context-engine.ts:1389`、`client.ts:770`。
+7. 若 `pending_tokens < tokenBudget × commitTokenThresholdRatio`，本輪結束。
+8. 否則呼叫 `commitSession(wait=false, keepRecentCount=cfg.commitKeepRecentCount)`；服務端 Phase 2 記憶抽取非同步繼續執行：`context-engine.ts:1403`。
+9. 開啟 `logFindRequests` 時，外掛輪詢 task 結果並列印 Phase 2 抽取狀態：`context-engine.ts:1424`。
 
-### 4.5 `compact`：主动压缩边界
+### 4.5 `compact`：主動壓縮邊界
 
-`compact` 是同步边界，用于 `/compact` 或 OpenClaw 触发压缩时阻塞等待服务端 commit 完成。
+`compact` 是同步邊界，用於 `/compact` 或 OpenClaw 觸發壓縮時阻塞等待服務端 commit 完成。
 
 流程：
 
 1. 解析 OpenViking session id。
-2. 调用 `commitSession(wait=true, keepRecentCount=0)`，要求服务端归档所有当前消息：`context-engine.ts:1500`。
-3. 如果 Phase 2 failed/timeout，返回失败原因。
-4. 如果没有生成 archive，返回 `commit_no_archive`。
-5. 如果归档成功，再回读 `getSessionContext`，获取最新 `latest_archive_overview` 作为 summary：`context-engine.ts:1605`。
+2. 呼叫 `commitSession(wait=true, keepRecentCount=0)`，要求服務端歸檔所有當前訊息：`context-engine.ts:1500`。
+3. 如果 Phase 2 failed/timeout，返回失敗原因。
+4. 如果沒有生成 archive，返回 `commit_no_archive`。
+5. 如果歸檔成功，再回讀 `getSessionContext`，獲取最新 `latest_archive_overview` 作為 summary：`context-engine.ts:1605`。
 6. 返回 tokensBefore/tokensAfter、latest archive id 和 summary。
 
-### 4.6 `before_reset`：重置前保护性提交
+### 4.6 `before_reset`：重置前保護性提交
 
-插件监听 `before_reset`，在 reset 前尽量 commit 当前 OpenViking session，避免对话被重置时未归档内容丢失：`index.ts:1919`。
+外掛監聽 `before_reset`，在 reset 前儘量 commit 當前 OpenViking session，避免對話被重置時未歸檔內容丟失：`index.ts:1919`。
 
 ---
 
 ## 5. 核心功能
 
-### 5.1 长期记忆自动召回
+### 5.1 長期記憶自動召回
 
-默认开启 `autoRecall`。模型回复前，插件会根据当前用户问题搜索长期记忆，并注入相关上下文。
+預設開啟 `autoRecall`。模型回覆前，外掛會根據當前使用者問題搜尋長期記憶，並注入相關上下文。
 
-关键配置：
+關鍵配置：
 
-| 配置 | 默认值 | 说明 |
+| 配置 | 預設值 | 說明 |
 | --- | --- | --- |
-| `autoRecall` | `true` | 是否启用自动召回 |
-| `recallLimit` | `6` | 最终注入记忆条数上限 |
-| `recallScoreThreshold` | `0.15` | 候选过滤阈值 |
-| `recallMaxInjectedChars` | `4000` | 注入总字符上限；单条记忆不截断，不完整则跳过 |
-| `recallPreferAbstract` | `false` | 是否优先使用 abstract，而非读取 leaf 记忆全文 |
-| `recallTargetTypes` | `["user","agent"]` | 自动召回和默认显式召回目标类型；可选 `resource`、`user`、`agent` |
-| `recallResources` | `false` | 旧兼容开关；仅在未显式配置 `recallTargetTypes` 时把 `resource` 追加到默认 `user` + `agent` |
+| `autoRecall` | `true` | 是否啟用自動召回 |
+| `recallLimit` | `6` | 最終注入記憶條數上限 |
+| `recallScoreThreshold` | `0.15` | 候選過濾閾值 |
+| `recallMaxInjectedChars` | `4000` | 注入總字元上限；單條記憶不截斷，不完整則跳過 |
+| `recallPreferAbstract` | `false` | 是否優先使用 abstract，而非讀取 leaf 記憶全文 |
+| `recallTargetTypes` | `["user","agent"]` | 自動召回和預設顯式召回目標型別；可選 `resource`、`user`、`agent` |
+| `recallResources` | `false` | 舊相容開關；僅在未顯式配置 `recallTargetTypes` 時把 `resource` 追加到預設 `user` + `agent` |
 
-配置默认值在 `config.ts:58`。
+配置預設值在 `config.ts:58`。
 
-### 5.2 会话归档与 Working Memory
+### 5.2 會話歸檔與 Working Memory
 
-插件把 OpenClaw turn 持续写入 OpenViking session，由服务端维护 `pending_tokens` 与 archive。超过阈值时：
+外掛把 OpenClaw turn 持續寫入 OpenViking session，由服務端維護 `pending_tokens` 與 archive。超過閾值時：
 
-- `afterTurn` 路径：`wait=false`，异步 Phase 2，默认保留最近 10 条消息。
-- `compact` 路径：`wait=true`，同步等待 Phase 2，`keepRecentCount=0`，形成明确压缩边界。
+- `afterTurn` 路徑：`wait=false`，非同步 Phase 2，預設保留最近 10 條訊息。
+- `compact` 路徑：`wait=true`，同步等待 Phase 2，`keepRecentCount=0`，形成明確壓縮邊界。
 
-`commitKeepRecentCount` 默认 10，`commitTokenThresholdRatio` 默认 0.5（模型上下文窗口的 50%）：`config.ts`。
+`commitKeepRecentCount` 預設 10，`commitTokenThresholdRatio` 預設 0.5（模型上下文視窗的 50%）：`config.ts`。
 
-### 5.3 显式记忆工具
+### 5.3 顯式記憶工具
 
-插件注册了三个长期记忆工具：
+外掛註冊了三個長期記憶工具：
 
-| 工具 | 用途 | 典型场景 |
+| 工具 | 用途 | 典型場景 |
 | --- | --- | --- |
-| `memory_recall` | 显式搜索长期记忆 | 用户问“你还记得我之前说过什么吗” |
-| `memory_store` | 把文本立即写入 session 并同步 commit | 用户明确说“记住…” |
-| `memory_forget` | 按 URI 删除，或搜索唯一高置信候选后删除 | 用户要求忘记某条信息 |
+| `memory_recall` | 顯式搜尋長期記憶 | 使用者問“你還記得我之前說過什麼嗎” |
+| `memory_store` | 把文本立即寫入 session 並同步 commit | 使用者明確說“記住…” |
+| `memory_forget` | 按 URI 刪除，或搜尋唯一高置信候選後刪除 | 使用者要求忘記某條資訊 |
 
-注册位置：`index.ts:1022`、`index.ts:1190`、`index.ts:1309`。
+註冊位置：`index.ts:1022`、`index.ts:1190`、`index.ts:1309`。
 
 ### 5.4 Archive 回查工具
 
-| 工具 | 用途 | 注意事项 |
+| 工具 | 用途 | 注意事項 |
 | --- | --- | --- |
-| `ov_archive_search` | 在当前 session 的 archive 原始消息中关键词 grep | 用于 summary 没有具体细节时；建议尝试 2-3 个关键词 |
-| `ov_archive_expand` | 展开某个 archive 的原始消息 | 需要 archive id，例如 `archive_005` |
+| `ov_archive_search` | 在當前 session 的 archive 原始訊息中關鍵詞 grep | 用於 summary 沒有具體細節時；建議嘗試 2-3 個關鍵詞 |
+| `ov_archive_expand` | 展開某個 archive 的原始訊息 | 需要 archive id，例如 `archive_005` |
 
-注册位置：`index.ts:1421`、`index.ts:1522`。
+註冊位置：`index.ts:1421`、`index.ts:1522`。
 
-### 5.5 Resource / Skill 导入与检索
+### 5.5 Resource / Skill 匯入與檢索
 
-| 工具/命令 | 用途 | 落点 |
+| 工具/命令 | 用途 | 落點 |
 | --- | --- | --- |
-| `/add-resource`（手动）/ `add_resource`（opt-in） | 导入本地文件、目录、URL、Git 仓库、媒体附件；`add_resource` 默认不注册，需 `enableAddResourceTool=true` | `viking://resources/...` |
-| `add_skill` / `/add-skill` | 导入 `SKILL.md` 或 skill 目录 | `viking://user/skills/...` |
-| `ov_search` / `/ov-search` | 搜索 resources 和 skills | 默认同时搜 resources + agent skills |
-| `ov_read` | 读取 `ov_search` / trace 命中的完整内容 | 只接受精确 `viking://...` OpenViking 虚拟 URI |
+| `/add-resource`（手動）/ `add_resource`（opt-in） | 匯入本地檔案、目錄、URL、Git 倉庫、媒體附件；`add_resource` 預設不註冊，需 `enableAddResourceTool=true` | `viking://resources/...` |
+| `add_skill` / `/add-skill` | 匯入 `SKILL.md` 或 skill 目錄 | `viking://user/skills/...` |
+| `ov_search` / `/ov-search` | 搜尋 resources 和 skills | 默認同時搜 resources + agent skills |
+| `ov_read` | 讀取 `ov_search` / trace 命中的完整內容 | 只接受精確 `viking://...` OpenViking 虛擬 URI |
 
-本地文件/目录不会把原路径直接传给服务端，而是先 temp upload；目录会用纯 JS zip 打包后上传：`client.ts:609`、`client.ts:552`。
+本地檔案/目錄不會把原路徑直接傳給服務端，而是先 temp upload；目錄會用純 JS zip 打包後上傳：`client.ts:609`、`client.ts:552`。
 
-### 5.6 外置 Tool Result 回读
+### 5.6 外接 Tool Result 回讀
 
-当 OpenViking 服务端将大工具结果外置为 `viking://session/.../tool-results/...` 时，插件提供：
+當 OpenViking 服務端將大工具結果外接為 `viking://session/.../tool-results/...` 時，外掛提供：
 
 | 工具 | 用途 |
 | --- | --- |
-| `openviking_tool_result_list` | 列出当前 session 已外置的 tool result |
-| `openviking_tool_result_search` | 在某个外置 tool result 内关键词搜索，返回 offset 和上下文片段 |
-| `openviking_tool_result_read` | 按 offset/limit 读取完整或分页内容 |
+| `openviking_tool_result_list` | 列出當前 session 已外接的 tool result |
+| `openviking_tool_result_search` | 在某個外接 tool result 內關鍵詞搜尋，返回 offset 和上下文片段 |
+| `openviking_tool_result_read` | 按 offset/limit 讀取完整或分頁內容 |
 
-注册位置：`index.ts:1601`、`index.ts:1698`、`index.ts:1802`。插件会拒绝跨 session 读取 tool result，避免越权或串会话：`index.ts:1639`、`index.ts:1735`。
+註冊位置：`index.ts:1601`、`index.ts:1698`、`index.ts:1802`。外掛會拒絕跨 session 讀取 tool result，避免越權或串會話：`index.ts:1639`、`index.ts:1735`。
 
 ---
 
-## 6. 与火山 OpenViking 的联动方式
+## 6. 與火山 OpenViking 的聯動方式
 
-### 6.1 HTTP Client 与认证头
+### 6.1 HTTP Client 與認證頭
 
-插件是 OpenViking 的纯 HTTP Client。所有请求统一走 `OpenVikingClient.request`：`client.ts:313`。
+外掛是 OpenViking 的純 HTTP Client。所有請求統一走 `OpenVikingClient.request`：`client.ts:313`。
 
-请求头逻辑：
+請求頭邏輯：
 
-| Header | 来源 | 说明 |
+| Header | 來源 | 說明 |
 | --- | --- | --- |
 | `X-API-Key` | `apiKey` / `OPENVIKING_API_KEY` | OpenViking API Key |
-| `X-OpenViking-Account` | `accountId` / `OPENVIKING_ACCOUNT_ID` | Root key 或 trusted 部署需要的租户 account |
-| `X-OpenViking-User` | `userId` / `OPENVIKING_USER_ID` | Root key 或 trusted 部署需要的用户 |
-| `X-OpenViking-Actor-Peer` | 当前 session 解析出的 agentId | 用于 peer scope 隔离 |
+| `X-OpenViking-Account` | `accountId` / `OPENVIKING_ACCOUNT_ID` | Root key 或 trusted 部署需要的租戶 account |
+| `X-OpenViking-User` | `userId` / `OPENVIKING_USER_ID` | Root key 或 trusted 部署需要的使用者 |
+| `X-OpenViking-Actor-Peer` | 當前 session 解析出的 agentId | 用於 peer scope 隔離 |
 
-注意：配置说明中历史文档可能提到 `X-OpenViking-Key`，当前代码实际发送的是 `X-API-Key`：`client.ts:325`。
+注意：配置說明中歷史文件可能提到 `X-OpenViking-Key`，當前程式碼實際傳送的是 `X-API-Key`：`client.ts:325`。
 
-### 6.2 OpenViking 官方 API 完整清单与插件映射
+### 6.2 OpenViking 官方 API 完整清單與外掛對映
 
-官方 HTTP API 统一前缀为 `/api/v1/`，成功响应一般为 `{ "status": "ok", "result": ..., "time": ... }`，错误响应为 `{ "status": "error", "error": { "code", "message" }, "time" }`。插件只做 HTTP Client，不嵌入 OpenViking SDK；统一封装点是 `OpenVikingClient.request`：`client.ts:313`。
+官方 HTTP API 統一字首為 `/api/v1/`，成功響應一般為 `{ "status": "ok", "result": ..., "time": ... }`，錯誤響應為 `{ "status": "error", "error": { "code", "message" }, "time" }`。外掛只做 HTTP Client，不嵌入 OpenViking SDK；統一封裝點是 `OpenVikingClient.request`：`client.ts:313`。
 
 #### 6.2.1 System / Observer
 
-| API | 官方用途 | 当前插件映射 | 说明 |
+| API | 官方用途 | 當前外掛對映 | 說明 |
 | --- | --- | --- | --- |
-| `GET /health` | 无认证健康检查 | `healthCheck`、`openclaw openviking status` | 用于判断服务是否可达：`client.ts:365` |
-| `GET /ready` | 无认证 readiness probe | 暂未直接封装 | K8s/负载均衡可用；会检查 AGFS、VectorDB、API key manager |
-| `GET /api/v1/system/status` | 获取初始化状态和当前 user | `getRuntimeIdentity` | 插件用返回的 `user` 参与 canonical URI 展开：`client.ts:369` |
-| `POST /api/v1/system/wait` | 等待 semantic/vector 队列处理完成 | 暂未单独封装；`/add-resource`、opt-in `add_resource`、`add_skill` 可用 `wait=true` | 导入后马上检索时建议等待 |
-| `GET /api/v1/observer/queue` | 队列指标 | 暂未封装 | 排查资源/skill 处理积压 |
-| `GET /api/v1/observer/vikingdb` | VikingDB collection/vector 状态 | 暂未封装 | 排查向量库连接和索引数量 |
-| `GET /api/v1/observer/models` | 模型状态 | 暂未封装 | 观测 VLM、Embedding 和 Rerank 模型状态 |
-| `GET /api/v1/observer/system` | 汇总 observer 状态 | 暂未封装 | 生产监控推荐项 |
-| `GET /api/v1/debug/health` | 认证版健康检查 | 暂未封装 | 返回 `{ healthy: true/false }` |
+| `GET /health` | 無認證健康檢查 | `healthCheck`、`openclaw openviking status` | 用於判斷服務是否可達：`client.ts:365` |
+| `GET /ready` | 無認證 readiness probe | 暫未直接封裝 | K8s/負載均衡可用；會檢查 AGFS、VectorDB、API key manager |
+| `GET /api/v1/system/status` | 獲取初始化狀態和當前 user | `getRuntimeIdentity` | 外掛用返回的 `user` 參與 canonical URI 展開：`client.ts:369` |
+| `POST /api/v1/system/wait` | 等待 semantic/vector 佇列處理完成 | 暫未單獨封裝；`/add-resource`、opt-in `add_resource`、`add_skill` 可用 `wait=true` | 匯入後馬上檢索時建議等待 |
+| `GET /api/v1/observer/queue` | 佇列指標 | 暫未封裝 | 排查資源/skill 處理積壓 |
+| `GET /api/v1/observer/vikingdb` | VikingDB collection/vector 狀態 | 暫未封裝 | 排查向量庫連線和索引數量 |
+| `GET /api/v1/observer/models` | 模型狀態 | 暫未封裝 | 觀測 VLM、Embedding 和 Rerank 模型狀態 |
+| `GET /api/v1/observer/system` | 彙總 observer 狀態 | 暫未封裝 | 生產監控推薦項 |
+| `GET /api/v1/debug/health` | 認證版健康檢查 | 暫未封裝 | 返回 `{ healthy: true/false }` |
 
 #### 6.2.2 Retrieval / Search
 
-| API | 官方用途 | 当前插件映射 | 关键参数 / 返回 |
+| API | 官方用途 | 當前外掛對映 | 關鍵引數 / 返回 |
 | --- | --- | --- | --- |
-| `POST /api/v1/search/find` | 快速语义检索，不依赖 session context | 自动召回、`memory_recall`、`ov_search`、`memory_forget` | body: `query`、`target_uri`、`limit`、`score_threshold`；返回 `memories[]`、`resources[]`、`skills[]`，每项含 `uri`、`level`、`abstract`、`score`、`category`：`client.ts:428` |
-| `POST /api/v1/search/search` | 带 session context 和 intent analysis 的检索 | 暂未使用 | body 可带 `session_id`；返回 `query_plan` / `query_results`。当前插件为了稳定和低延迟统一用 `find()`，session context 由插件自己组装 |
-| `POST /api/v1/search/grep` | 正则/关键词内容搜索 | `ov_archive_search` | body: `uri`、`pattern`、`case_insensitive`、`node_limit`；插件限定在 `viking://session/{id}/history` 内搜 archive：`client.ts:897` |
-| `POST /api/v1/search/glob` | glob 文件匹配 | 暂未封装 | body: `pattern`、`uri`、`node_limit`；适合按 `**/*.md`、`src/**/*.ts` 找资源路径 |
+| `POST /api/v1/search/find` | 快速語義檢索，不依賴 session context | 自動召回、`memory_recall`、`ov_search`、`memory_forget` | body: `query`、`target_uri`、`limit`、`score_threshold`；返回 `memories[]`、`resources[]`、`skills[]`，每項含 `uri`、`level`、`abstract`、`score`、`category`：`client.ts:428` |
+| `POST /api/v1/search/search` | 帶 session context 和 intent analysis 的檢索 | 暫未使用 | body 可帶 `session_id`；返回 `query_plan` / `query_results`。當前外掛為了穩定和低延遲統一用 `find()`，session context 由外掛自己組裝 |
+| `POST /api/v1/search/grep` | 正則/關鍵詞內容搜尋 | `ov_archive_search` | body: `uri`、`pattern`、`case_insensitive`、`node_limit`；外掛限定在 `viking://session/{id}/history` 內搜 archive：`client.ts:897` |
+| `POST /api/v1/search/glob` | glob 檔案匹配 | 暫未封裝 | body: `pattern`、`uri`、`node_limit`；適合按 `**/*.md`、`src/**/*.ts` 找資源路徑 |
 
 #### 6.2.3 Filesystem / Content
 
-| API | 官方用途 | 当前插件映射 | 关键参数 / 返回 |
+| API | 官方用途 | 當前外掛對映 | 關鍵引數 / 返回 |
 | --- | --- | --- | --- |
-| `GET /api/v1/fs/ls?uri=...` | 列目录 | skill 列表官方页本质也复用该 API；插件暂未通用封装 | 支持 `simple`、`recursive`、`output=agent/original`、`abs_limit`、`show_all_hidden`、`node_limit` |
-| `GET /api/v1/fs/tree?uri=...` | 递归树 | 暂未封装 | 支持 `level_limit`、`node_limit`，返回 flat array + `rel_path` |
-| `GET /api/v1/fs/stat?uri=...` | 查元信息/是否存在 | 暂未封装 | 返回 `name`、`size`、`mode`、`isDir`、`uri`、`mtime`、`ctime` |
-| `POST /api/v1/fs/mkdir` | 创建目录 | 暂未封装 | body: `uri`，父目录自动创建 |
-| `POST /api/v1/fs/mv` | 移动/重命名 | 暂未封装 | body: `from_uri`、`to_uri`，会保留元数据 |
-| `DELETE /api/v1/fs?uri=...&recursive=...` | 删除资源/目录 | `memory_forget`、`deleteUri` | 插件默认 `recursive=false`，用于删除具体 memory URI：`client.ts:934` |
-| `GET /api/v1/content/abstract?uri=...` | 读取 L0 abstract | 暂未封装 | 约 100 token 摘要，适合快速判断目录/文件主题 |
-| `GET /api/v1/content/overview?uri=...` | 读取 L1 overview | 暂未封装 | 目录级结构化概览，适合介于 abstract 和 full content 之间的排查 |
-| `GET /api/v1/content/read?uri=...&offset=...&limit=...` | 读取 L2 full content | 显式 `memory_recall`、`ov_read` | 自动召回的分层读取已由服务端 context search 完成；`ov_read` 暴露 `uri` 参数，未暴露 `offset/limit`。 |
+| `GET /api/v1/fs/ls?uri=...` | 列目錄 | skill 列表官方頁本質也複用該 API；外掛暫未通用封裝 | 支援 `simple`、`recursive`、`output=agent/original`、`abs_limit`、`show_all_hidden`、`node_limit` |
+| `GET /api/v1/fs/tree?uri=...` | 遞迴樹 | 暫未封裝 | 支援 `level_limit`、`node_limit`，返回 flat array + `rel_path` |
+| `GET /api/v1/fs/stat?uri=...` | 查元資訊/是否存在 | 暫未封裝 | 返回 `name`、`size`、`mode`、`isDir`、`uri`、`mtime`、`ctime` |
+| `POST /api/v1/fs/mkdir` | 建立目錄 | 暫未封裝 | body: `uri`，父目錄自動建立 |
+| `POST /api/v1/fs/mv` | 移動/重新命名 | 暫未封裝 | body: `from_uri`、`to_uri`，會保留後設資料 |
+| `DELETE /api/v1/fs?uri=...&recursive=...` | 刪除資源/目錄 | `memory_forget`、`deleteUri` | 外掛預設 `recursive=false`，用於刪除具體 memory URI：`client.ts:934` |
+| `GET /api/v1/content/abstract?uri=...` | 讀取 L0 abstract | 暫未封裝 | 約 100 token 摘要，適合快速判斷目錄/檔案主題 |
+| `GET /api/v1/content/overview?uri=...` | 讀取 L1 overview | 暫未封裝 | 目錄級結構化概覽，適合介於 abstract 和 full content 之間的排查 |
+| `GET /api/v1/content/read?uri=...&offset=...&limit=...` | 讀取 L2 full content | 顯式 `memory_recall`、`ov_read` | 自動召回的分層讀取已由服務端 context search 完成；`ov_read` 暴露 `uri` 引數，未暴露 `offset/limit`。 |
 
 #### 6.2.4 Resources / Skills Import
 
-| API | 官方用途 | 当前插件映射 | 关键参数 / 返回 |
+| API | 官方用途 | 當前外掛對映 | 關鍵引數 / 返回 |
 | --- | --- | --- | --- |
-| `POST /api/v1/resources/temp_upload` | 临时上传本地文件 | `/add-resource`、opt-in `add_resource`、`add_skill` 的本地文件/目录路径 | 插件本地目录会先 zip，再上传，服务端返回 `temp_file_id`：`client.ts:533`、`client.ts:552` |
-| `POST /api/v1/resources` | 导入文件、目录、URL、Git 仓库等 resource | `/add-resource` 命令；`add_resource` 工具仅在 `enableAddResourceTool=true` 时注册 | body 官方字段包括 `path`/`temp_file_id`、`target`/插件兼容 `to`、`parent`、`reason`、`instruction`、`wait`、`timeout`、`strict`、`ignore_dirs`、`include`、`exclude`；返回 `root_uri`、`source_path`、`errors`、`queue_status`：`client.ts:609` |
-| `POST /api/v1/skills` | 导入 skill，支持 dict、MCP tool、SKILL.md 字符串、文件/目录 | `add_skill` 工具、`/add-skill` 命令 | body: `data` 或 `temp_file_id`、`wait`、`timeout`；返回 `uri`/`skill_uri`、`name`、`auxiliary_files`、`queue_status`：`client.ts:663` |
-| `POST /api/v1/pack/export` | 导出 `.ovpack` | 暂未封装 | 官方 API Overview 有列出；当前插件没有 pack 管理工具 |
-| `POST /api/v1/pack/import` | 导入 `.ovpack` | 暂未封装 | 官方 API Overview 有列出；当前插件没有 pack 管理工具 |
+| `POST /api/v1/resources/temp_upload` | 臨時上傳本地檔案 | `/add-resource`、opt-in `add_resource`、`add_skill` 的本地檔案/目錄路徑 | 外掛本地目錄會先 zip，再上傳，服務端返回 `temp_file_id`：`client.ts:533`、`client.ts:552` |
+| `POST /api/v1/resources` | 匯入檔案、目錄、URL、Git 倉庫等 resource | `/add-resource` 命令；`add_resource` 工具僅在 `enableAddResourceTool=true` 時註冊 | body 官方欄位包括 `path`/`temp_file_id`、`target`/外掛相容 `to`、`parent`、`reason`、`instruction`、`wait`、`timeout`、`strict`、`ignore_dirs`、`include`、`exclude`；返回 `root_uri`、`source_path`、`errors`、`queue_status`：`client.ts:609` |
+| `POST /api/v1/skills` | 匯入 skill，支援 dict、MCP tool、SKILL.md 字串、檔案/目錄 | `add_skill` 工具、`/add-skill` 命令 | body: `data` 或 `temp_file_id`、`wait`、`timeout`；返回 `uri`/`skill_uri`、`name`、`auxiliary_files`、`queue_status`：`client.ts:663` |
+| `POST /api/v1/pack/export` | 匯出 `.ovpack` | 暫未封裝 | 官方 API Overview 有列出；當前外掛沒有 pack 管理工具 |
+| `POST /api/v1/pack/import` | 匯入 `.ovpack` | 暫未封裝 | 官方 API Overview 有列出；當前外掛沒有 pack 管理工具 |
 
 #### 6.2.5 Sessions / Working Memory
 
-| API | 官方用途 | 当前插件映射 | 关键参数 / 返回 |
+| API | 官方用途 | 當前外掛對映 | 關鍵引數 / 返回 |
 | --- | --- | --- | --- |
-| `POST /api/v1/sessions` | 创建新 session | 暂未显式调用 | 官方创建后返回 `session_id`；当前插件用 OpenClaw session id 映射成 OpenViking storage id，服务端 `GET`/写消息可自动创建 |
-| `GET /api/v1/sessions` | 列出当前用户 session | 暂未封装 | 返回 `session_id`、`uri`、`is_dir` |
-| `GET /api/v1/sessions/{sessionId}` | 获取 session 元信息 | `afterTurn` 元信息检查 | 返回 `message_count`，插件兼容读取 `commit_count`、`pending_tokens`、`llm_token_usage`：`client.ts:770` |
-| `DELETE /api/v1/sessions/{sessionId}` | 删除 session | `deleteSession`（内部能力，未暴露普通用户工具） | 删除 active messages、archives、tools、元数据；不删除已抽取 memories：`client.ts:931` |
-| `POST /api/v1/sessions/{sessionId}/messages` | 追加 user/assistant 消息 | `afterTurn` 增量提交 | body 支持 `role`、`content` 或 `parts`；插件使用 `parts` 保存 text/tool/context，另扩展 tool result 外置字段：`client.ts:703` |
-| `POST /api/v1/sessions/{sessionId}/commit` | 归档消息、抽取长期记忆、清空/保留 active buffer | `afterTurn` 异步 commit、`compact` 同步 wait | 插件会传 `keep_recent_count`；若服务端返回 `task_id`，插件可轮询 Phase 2：`client.ts:798` |
-| `GET /api/v1/tasks/{taskId}` | 查询异步任务 | commit Phase 2 轮询 | 官方导航未单列，但插件依赖该端点判断 memory extraction 完成/失败：`client.ts:864` |
-| `GET /api/v1/sessions/{sessionId}/context?token_budget=...` | 获取 session working memory 上下文 | `assemble` / `compact` | 返回 latest archive overview、pre archive abstracts、active messages 和 token 估算：`client.ts:873` |
-| `GET /api/v1/sessions/{sessionId}/archives/{archiveId}` | 展开 archive 原文 | `ov_archive_expand` | 用于从有损 summary 回查原始消息：`client.ts:885` |
-| `GET /api/v1/sessions/{sessionId}/tool-results` | 列外置工具结果 | `openviking_tool_result_list` | 支持 `tool_name`、`limit`：`client.ts:517` |
-| `GET /api/v1/sessions/{sessionId}/tool-results/{toolResultId}` | 分页读取外置工具结果 | `openviking_tool_result_read` | 支持 `offset`、`limit`、`include_metadata`：`client.ts:478` |
-| `GET /api/v1/sessions/{sessionId}/tool-results/{toolResultId}/search?q=...` | 搜索外置工具结果 | `openviking_tool_result_search` | 支持 `limit`、`context_chars`：`client.ts:498` |
+| `POST /api/v1/sessions` | 建立新 session | 暫未顯式呼叫 | 官方建立後返回 `session_id`；當前外掛用 OpenClaw session id 對映成 OpenViking storage id，服務端 `GET`/寫訊息可自動建立 |
+| `GET /api/v1/sessions` | 列出當前使用者 session | 暫未封裝 | 返回 `session_id`、`uri`、`is_dir` |
+| `GET /api/v1/sessions/{sessionId}` | 獲取 session 元資訊 | `afterTurn` 元資訊檢查 | 返回 `message_count`，外掛相容讀取 `commit_count`、`pending_tokens`、`llm_token_usage`：`client.ts:770` |
+| `DELETE /api/v1/sessions/{sessionId}` | 刪除 session | `deleteSession`（內部能力，未暴露普通使用者工具） | 刪除 active messages、archives、tools、後設資料；不刪除已抽取 memories：`client.ts:931` |
+| `POST /api/v1/sessions/{sessionId}/messages` | 追加 user/assistant 訊息 | `afterTurn` 增量提交 | body 支援 `role`、`content` 或 `parts`；外掛使用 `parts` 儲存 text/tool/context，另擴充 tool result 外接欄位：`client.ts:703` |
+| `POST /api/v1/sessions/{sessionId}/commit` | 歸檔訊息、抽取長期記憶、清空/保留 active buffer | `afterTurn` 非同步 commit、`compact` 同步 wait | 外掛會傳 `keep_recent_count`；若服務端返回 `task_id`，外掛可輪詢 Phase 2：`client.ts:798` |
+| `GET /api/v1/tasks/{taskId}` | 查詢非同步任務 | commit Phase 2 輪詢 | 官方導航未單列，但外掛依賴該端點判斷 memory extraction 完成/失敗：`client.ts:864` |
+| `GET /api/v1/sessions/{sessionId}/context?token_budget=...` | 獲取 session working memory 上下文 | `assemble` / `compact` | 返回 latest archive overview、pre archive abstracts、active messages 和 token 估算：`client.ts:873` |
+| `GET /api/v1/sessions/{sessionId}/archives/{archiveId}` | 展開 archive 原文 | `ov_archive_expand` | 用於從有損 summary 回查原始訊息：`client.ts:885` |
+| `GET /api/v1/sessions/{sessionId}/tool-results` | 列外接工具結果 | `openviking_tool_result_list` | 支援 `tool_name`、`limit`：`client.ts:517` |
+| `GET /api/v1/sessions/{sessionId}/tool-results/{toolResultId}` | 分頁讀取外接工具結果 | `openviking_tool_result_read` | 支援 `offset`、`limit`、`include_metadata`：`client.ts:478` |
+| `GET /api/v1/sessions/{sessionId}/tool-results/{toolResultId}/search?q=...` | 搜尋外接工具結果 | `openviking_tool_result_search` | 支援 `limit`、`context_chars`：`client.ts:498` |
 
 #### 6.2.6 Skills Runtime
 
-| API | 官方用途 | 当前插件映射 | 说明 |
+| API | 官方用途 | 當前外掛對映 | 說明 |
 | --- | --- | --- | --- |
-| `GET /api/v1/fs/ls?uri=viking://user/skills/` | 列 skill | `ov_search` 默认会搜 skills；未单独 list | 官方 `List Skills` 页面本质复用 `fs/ls` |
-| `POST /api/v1/skills` | Add Skill / MCP tool conversion | `add_skill` | 与资源导入章节相同 |
-| 读取 `viking://user/skills/{name}/SKILL.md` | 读 skill 全文 | `ov_read` 或 `content/read` 手工读取 | 官方建议按 L0/L1/L2 逐级读取 |
-| `call-skill` 页面 | 官方导航存在但当前内容实际为 Add Skill | 插件不通过 OpenViking 执行 skill | OpenClaw 自己负责工具执行，OpenViking 主要存储/检索 skill 文档 |
+| `GET /api/v1/fs/ls?uri=viking://user/skills/` | 列 skill | `ov_search` 預設會搜 skills；未單獨 list | 官方 `List Skills` 頁面本質複用 `fs/ls` |
+| `POST /api/v1/skills` | Add Skill / MCP tool conversion | `add_skill` | 與資源匯入章節相同 |
+| 讀取 `viking://user/skills/{name}/SKILL.md` | 讀 skill 全文 | `ov_read` 或 `content/read` 手工讀取 | 官方建議按 L0/L1/L2 逐級讀取 |
+| `call-skill` 頁面 | 官方導航存在但當前內容實際為 Add Skill | 外掛不通過 OpenViking 執行 skill | OpenClaw 自己負責工具執行，OpenViking 主要儲存/檢索 skill 文件 |
 
 #### 6.2.7 Admin / Authentication
 
-| API | 角色 | 官方用途 | 插件关系 |
+| API | 角色 | 官方用途 | 外掛關係 |
 | --- | --- | --- | --- |
-| `POST /api/v1/admin/accounts` | ROOT | 创建 workspace/account 和首个 admin | 部署初始化时使用；插件运行期不调用 |
-| `GET /api/v1/admin/accounts` | ROOT | 列出 workspaces | 运维使用 |
-| `DELETE /api/v1/admin/accounts/{account_id}` | ROOT | 删除 workspace 及全部数据 | 高风险运维操作，插件不调用 |
-| `POST /api/v1/admin/accounts/{account_id}/users` | ROOT/ADMIN | 注册用户并生成 user key | 为 OpenClaw agent 预置 API key 时使用 |
-| `GET /api/v1/admin/accounts/{account_id}/users` | ROOT/ADMIN | 列用户 | 运维排查租户/用户 |
-| `DELETE /api/v1/admin/accounts/{account_id}/users/{user_id}` | ROOT/ADMIN | 移除用户并吊销 key | 运维使用 |
-| `PUT /api/v1/admin/accounts/{account_id}/users/{user_id}/role` | ROOT | 修改角色 | 运维使用 |
-| `POST /api/v1/admin/accounts/{account_id}/users/{user_id}/key` | ROOT/ADMIN | 重置用户 API key | key 泄露/轮换时使用 |
+| `POST /api/v1/admin/accounts` | ROOT | 建立 workspace/account 和首個 admin | 部署初始化時使用；外掛執行期不呼叫 |
+| `GET /api/v1/admin/accounts` | ROOT | 列出 workspaces | 運維使用 |
+| `DELETE /api/v1/admin/accounts/{account_id}` | ROOT | 刪除 workspace 及全部資料 | 高風險運維操作，外掛不呼叫 |
+| `POST /api/v1/admin/accounts/{account_id}/users` | ROOT/ADMIN | 註冊使用者並生成 user key | 為 OpenClaw agent 預置 API key 時使用 |
+| `GET /api/v1/admin/accounts/{account_id}/users` | ROOT/ADMIN | 列使用者 | 運維排查租戶/使用者 |
+| `DELETE /api/v1/admin/accounts/{account_id}/users/{user_id}` | ROOT/ADMIN | 移除使用者並吊銷 key | 運維使用 |
+| `PUT /api/v1/admin/accounts/{account_id}/users/{user_id}/role` | ROOT | 修改角色 | 運維使用 |
+| `POST /api/v1/admin/accounts/{account_id}/users/{user_id}/key` | ROOT/ADMIN | 重置使用者 API key | key 洩露/輪換時使用 |
 
-认证方式：OpenViking HTTP 支持 `X-API-Key: <key>` 和 `Authorization: Bearer <key>`；插件固定使用 `X-API-Key`。如果服务端启用了多租户且当前 key 需要显式租户上下文，插件还会附加 `X-OpenViking-Account`、`X-OpenViking-User`、`X-OpenViking-Actor-Peer`。
+認證方式：OpenViking HTTP 支援 `X-API-Key: <key>` 和 `Authorization: Bearer <key>`；外掛固定使用 `X-API-Key`。如果服務端啟用了多租戶且當前 key 需要顯式租戶上下文，外掛還會附加 `X-OpenViking-Account`、`X-OpenViking-User`、`X-OpenViking-Actor-Peer`。
 
-### 6.3 URI 与命名空间
+### 6.3 URI 與名稱空間
 
-插件使用 OpenViking 的 filesystem paradigm，常见 URI：
+外掛使用 OpenViking 的 filesystem paradigm，常見 URI：
 
-| URI | 含义 |
+| URI | 含義 |
 | --- | --- |
-| `viking://user/memories` | 当前用户长期记忆别名 |
-| `viking://resources` | account/resource 知识库 |
-| `viking://user/skills` | 当前 agent skill 空间 |
-| `viking://session/{sessionId}/history` | session archive 历史 |
-| `viking://session/{sessionId}/tool-results/{id}` | 外置工具结果 |
+| `viking://user/memories` | 當前使用者長期記憶別名 |
+| `viking://resources` | account/resource 知識庫 |
+| `viking://user/skills` | 當前 agent skill 空間 |
+| `viking://session/{sessionId}/history` | session archive 歷史 |
+| `viking://session/{sessionId}/tool-results/{id}` | 外接工具結果 |
 
-插件通过 `viking://user/...` 写入和检索 user-scoped memory；OpenViking 会根据请求里的租户身份和 actor peer context 解析这个别名。agent 维度通过 `peer_id` / `X-OpenViking-Actor-Peer` 表达，不再使用旧 agent URI namespace。
+外掛通過 `viking://user/...` 寫入和檢索 user-scoped memory；OpenViking 會根據請求裡的租戶身份和 actor peer context 解析這個別名。agent 維度通過 `peer_id` / `X-OpenViking-Actor-Peer` 表達，不再使用舊 agent URI namespace。
 
 ---
 
-## 7. 安装与使用
+## 7. 安裝與使用
 
-### 7.0 五分钟快速路径
+### 7.0 五分鐘快速路徑
 
-如果你只想先把插件跑起来，按这 4 步执行：
+如果你只想先把外掛跑起來，按這 4 步執行：
 
 ```bash
-# 1. 确认 OpenViking Server 已启动
+# 1. 確認 OpenViking Server 已啟動
 curl http://127.0.0.1:1933/health
 
-# 2. 安装插件
+# 2. 安裝外掛
 openclaw plugins install clawhub:@openviking/openclaw-plugin
 
-# 3. 写入 OpenViking 连接配置并激活 contextEngine slot
+# 3. 寫入 OpenViking 連線配置並激活 contextEngine slot
 openclaw openviking setup --base-url http://127.0.0.1:1933 --api-key <OPENVIKING_API_KEY> --json
 
-# 4. 重启并验证
+# 4. 重啟並驗證
 openclaw gateway restart
 openclaw openviking status --json
 openclaw config get plugins.slots.contextEngine
 ```
 
-期望结果：`status` 中 `configured=true`、`slotActive=true`、`health.ok=true`，并且 `plugins.slots.contextEngine` 输出 `openviking`。
+期望結果：`status` 中 `configured=true`、`slotActive=true`、`health.ok=true`，並且 `plugins.slots.contextEngine` 輸出 `openviking`。
 
-如果你安装的是 TOS release 包，而不是 ClawHub 包，使用一键安装脚本：
+如果你安裝的是 TOS release 包，而不是 ClawHub 包，使用一鍵安裝指令碼：
 
 ```bash
-# 安装 prod 最新版本
+# 安裝 prod 最新版本
 curl -fsSL https://arkclaw-openviking.tos-cn-beijing.volces.com/prod/latest.json
 bash install.sh --source tos --channel prod --latest \
   --openviking-base-url http://127.0.0.1:1933 \
   --openviking-api-key <OPENVIKING_API_KEY>
 
-# 安装指定版本 / 回滚到指定版本
+# 安裝指定版本 / 回滾到指定版本
 bash install.sh --source tos --channel prod --version 2026.6.2
 ```
 
-`scripts/install.sh` 会下载 `latest.json` / `manifest.json`、校验 `openviking.tgz` SHA256、展开插件到 `~/.openclaw/extensions/openviking`、部署随包 skills、更新 `~/.openclaw/openclaw.json`，然后自动尝试 `openclaw gateway restart` 和 `openclaw openviking status --json`：`scripts/install.sh:300`、`scripts/install.sh:175`、`scripts/install.sh:468`。
+`scripts/install.sh` 會下載 `latest.json` / `manifest.json`、校驗 `openviking.tgz` SHA256、展開外掛到 `~/.openclaw/extensions/openviking`、部署隨包 skills、更新 `~/.openclaw/openclaw.json`，然後自動嘗試 `openclaw gateway restart` 和 `openclaw openviking status --json`：`scripts/install.sh:300`、`scripts/install.sh:175`、`scripts/install.sh:468`。
 
 ### 7.1 前置要求
 
-| 组件 | 要求 |
+| 元件 | 要求 |
 | --- | --- |
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
 | OpenViking Server | >= 0.4.1 |
 
-兼容性声明在 `install-manifest.json` 的 `compatibility` 字段。
+相容性宣告在 `install-manifest.json` 的 `compatibility` 欄位。
 
-### 7.2 启动 OpenViking Server
+### 7.2 啟動 OpenViking Server
 
-插件只连接远端 OpenViking，不启动服务端。先启动服务端：
+外掛只連線遠端 OpenViking，不啟動服務端。先啟動服務端：
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -406,39 +406,39 @@ openviking-server doctor
 openviking-server --host 0.0.0.0 --port 1933
 ```
 
-`openviking-server init` 会生成 OpenViking 服务端配置；`openviking-server doctor` 会检查模型 provider、embedding provider、workspace 权限等基础依赖；`openviking-server` 才是真正启动 HTTP API 的进程。OpenClaw 使用插件期间，这个服务进程需要一直运行。
+`openviking-server init` 會生成 OpenViking 服務端配置；`openviking-server doctor` 會檢查模型 provider、embedding provider、workspace 許可權等基礎依賴；`openviking-server` 才是真正啟動 HTTP API 的程序。OpenClaw 使用外掛期間，這個服務程序需要一直執行。
 
-验证服务：
+驗證服務：
 
 ```bash
 curl http://127.0.0.1:1933/health
 ```
 
-后台启动可以用：
+後臺啟動可以用：
 
 ```bash
 mkdir -p ~/.openviking/data/log
 nohup openviking-server > ~/.openviking/data/log/openviking.log 2>&1 &
 ```
 
-如果 OpenViking 跑在另一台机器或容器中，需要监听可访问地址：
+如果 OpenViking 跑在另一臺機器或容器中，需要監聽可訪問地址：
 
 ```bash
 openviking-server --host 0.0.0.0 --port 1933
 ```
 
-此时 OpenClaw 插件的 `baseUrl` 要配置为调用方可访问的地址，例如 `http://your-server:1933`，而不是服务端本机视角的 `127.0.0.1`。
+此時 OpenClaw 外掛的 `baseUrl` 要配置為呼叫方可訪問的地址，例如 `http://your-server:1933`，而不是服務端本機視角的 `127.0.0.1`。
 
-### 7.3 OpenViking 服务端配置文件
+### 7.3 OpenViking 服務端配置檔案
 
-OpenViking 服务端配置与 OpenClaw 插件配置是两层配置，位置不同、作用也不同：
+OpenViking 服務端配置與 OpenClaw 外掛配置是兩層配置，位置不同、作用也不同：
 
-| 配置层 | 默认位置 | 作用 | 常见写入方式 |
+| 配置層 | 預設位置 | 作用 | 常見寫入方式 |
 | --- | --- | --- | --- |
-| OpenViking 服务端 | `~/.openviking/ov.conf` | 配置服务端 workspace、日志、embedding、VLM/model provider | `openviking-server init` 交互生成；也可提前创建文件 |
-| OpenViking 服务端自定义路径 | `OV_CONFIG=/path/to/ov.conf` | 指定非默认配置文件 | 启动 `openviking-server` 前导出环境变量 |
-| OpenClaw 插件层 | `~/.openclaw/openclaw.json` | 配置插件连接哪个 OpenViking HTTP 服务、API key、account/user、召回/捕获策略 | `openclaw openviking setup` 或 `openclaw config set` |
-| 一键安装脚本环境文件 | `~/.openclaw/openviking.env` | 保存一键安装脚本使用过的 OpenViking 连接参数，便于排查/复用 | `scripts/volcengine-openviking-install.sh` |
+| OpenViking 服務端 | `~/.openviking/ov.conf` | 配置服務端 workspace、日誌、embedding、VLM/model provider | `openviking-server init` 互動生成；也可提前建立檔案 |
+| OpenViking 服務端自定義路徑 | `OV_CONFIG=/path/to/ov.conf` | 指定非預設配置檔案 | 啟動 `openviking-server` 前匯出環境變數 |
+| OpenClaw 外掛層 | `~/.openclaw/openclaw.json` | 配置外掛連線哪個 OpenViking HTTP 服務、API key、account/user、召回/捕獲策略 | `openclaw openviking setup` 或 `openclaw config set` |
+| 一鍵安裝指令碼環境檔案 | `~/.openclaw/openviking.env` | 儲存一鍵安裝指令碼使用過的 OpenViking 連線引數，便於排查/複用 | `scripts/volcengine-openviking-install.sh` |
 
 最小 `~/.openviking/ov.conf` 示例：
 
@@ -496,13 +496,13 @@ OpenViking 服务端配置与 OpenClaw 插件配置是两层配置，位置不�
 }
 ```
 
-提前设置方式：
+提前設定方式：
 
 ```bash
 mkdir -p ~/.openviking
 $EDITOR ~/.openviking/ov.conf
 
-# 不建议把真实 key 写进文档或命令历史；优先通过环境变量注入
+# 不建議把真實 key 寫進文件或命令歷史；優先通過環境變數注入
 export ARK_API_KEY=<your-ark-key>
 # 或 OpenAI provider：export OPENAI_API_KEY=<your-openai-key>
 
@@ -510,7 +510,7 @@ openviking-server doctor
 openviking-server --host 127.0.0.1 --port 1933
 ```
 
-如果要使用自定义配置文件：
+如果要使用自定義配置檔案：
 
 ```bash
 export OV_CONFIG=/path/to/ov.conf
@@ -518,41 +518,41 @@ openviking-server doctor
 openviking-server --host 127.0.0.1 --port 1933
 ```
 
-注意事项：
+注意事項：
 
-- `ov.conf` 是服务端模型与存储配置，决定服务端如何做 embedding、VLM 抽取、resource 解析和 session archive；插件不会读取或修改这个文件。
-- `api_key` 字段建议写成 `$ARK_API_KEY`、`$OPENAI_API_KEY` 这类环境变量占位，并在启动服务前导出真实 key，避免密钥落盘或进入 Git。
-- 切换 embedding 模型或 `dimension` 后，历史向量索引可能不兼容；本地测试环境可清理 workspace 后重建，生产环境需要按服务端迁移/重建索引方案处理。
-- `workspace` 要放在服务端进程有读写权限且磁盘容量足够的位置，长期记忆、资源索引、归档和日志都会持续增长。
+- `ov.conf` 是服務端模型與儲存配置，決定服務端如何做 embedding、VLM 抽取、resource 解析和 session archive；外掛不會讀取或修改這個檔案。
+- `api_key` 欄位建議寫成 `$ARK_API_KEY`、`$OPENAI_API_KEY` 這類環境變數佔位，並在啟動服務前匯出真實 key，避免金鑰落盤或進入 Git。
+- 切換 embedding 模型或 `dimension` 後，歷史向量索引可能不相容；本地測試環境可清理 workspace 後重建，生產環境需要按服務端遷移/重建索引方案處理。
+- `workspace` 要放在服務端程序有讀寫許可權且磁碟容量足夠的位置，長期記憶、資源索引、歸檔和日誌都會持續增長。
 
-### 7.4 本机拉起单机版测试
+### 7.4 本機拉起單機版測試
 
-本机单机版适合开发、调试和端到端验证。推荐最小链路如下：
+本機單機版適合開發、除錯和端到端驗證。推薦最小鏈路如下：
 
 ```bash
-# 1. 安装 OpenViking Python 包
+# 1. 安裝 OpenViking Python 包
 python3 -m pip install openviking --upgrade --force-reinstall
 
-# 2. 初始化服务端配置
+# 2. 初始化服務端配置
 openviking-server init
 
-# 3. 导出模型 provider key，或提前写入自定义 ov.conf
+# 3. 匯出模型 provider key，或提前寫入自定義 ov.conf
 export ARK_API_KEY=<your-ark-key>
 
-# 4. 检查服务端配置和 provider 可用性
+# 4. 檢查服務端配置和 provider 可用性
 openviking-server doctor
 
-# 5. 启动本地 HTTP 服务
+# 5. 啟動本地 HTTP 服務
 openviking-server --host 127.0.0.1 --port 1933
 ```
 
-另开一个终端验证：
+另開一個終端驗證：
 
 ```bash
 curl http://127.0.0.1:1933/health
 ```
 
-然后配置 OpenClaw 插件连接本机服务：
+然後配置 OpenClaw 外掛連線本機服務：
 
 ```bash
 openclaw openviking setup \
@@ -564,23 +564,23 @@ openclaw gateway restart
 openclaw openviking status --json
 ```
 
-如果本机 OpenViking 服务没有开启 API key 校验，可按服务端实际策略传空 key 或测试 key；如果使用火山 OpenViking Service / root key / trusted server 流程，则按服务端要求补充 `--account-id` 和 `--user-id`。
+如果本機 OpenViking 服務沒有開啟 API key 校驗，可按服務端實際策略傳空 key 或測試 key；如果使用火山 OpenViking Service / root key / trusted server 流程，則按服務端要求補充 `--account-id` 和 `--user-id`。
 
-单机版联调检查点：
+單機版聯調檢查點：
 
 1. `curl /health` 返回正常。
 2. `openclaw openviking status --json` 中 `configured=true`、`health.ok=true`。
-3. `openclaw config get plugins.slots.contextEngine` 输出 `openviking`。
-4. 与 Agent 对话一轮后，服务端日志 `~/.openviking/data/log/openviking.log` 或前台输出能看到 session/message/commit 相关请求。
-5. 触发 `/compact` 或等待 `pending_tokens` 超过阈值后，在 OpenViking Console/TUI 或插件工具中能检索到 archive/memory。
+3. `openclaw config get plugins.slots.contextEngine` 輸出 `openviking`。
+4. 與 Agent 對話一輪後，服務端日誌 `~/.openviking/data/log/openviking.log` 或前臺輸出能看到 session/message/commit 相關請求。
+5. 觸發 `/compact` 或等待 `pending_tokens` 超過閾值後，在 OpenViking Console/TUI 或外掛工具中能檢索到 archive/memory。
 
-### 7.5 安装插件
+### 7.5 安裝外掛
 
 ```bash
 openclaw plugins install clawhub:@openviking/openclaw-plugin
 ```
 
-不要使用 `clawhub install openviking` 安装本插件；那是另一个 AgentSkill，不是 OpenClaw 插件。
+不要使用 `clawhub install openviking` 安裝本外掛；那是另一個 AgentSkill，不是 OpenClaw 外掛。
 
 ### 7.6 配置插件
 
@@ -610,13 +610,13 @@ openclaw openviking setup \
   --json
 ```
 
-如果已有别的 context engine 占用 slot，确认要替换时才加：
+如果已有別的 context engine 佔用 slot，確認要替換時才加：
 
 ```bash
 openclaw openviking setup --base-url <URL> --api-key <KEY> --force-slot --json
 ```
 
-### 7.7 重启与验证
+### 7.7 重啟與驗證
 
 ```bash
 openclaw gateway restart
@@ -629,39 +629,39 @@ openclaw config get plugins.slots.contextEngine
 - `configured=true`
 - `slotActive=true`
 - `health.ok=true`
-- `plugins.slots.contextEngine` 输出 `openviking`
+- `plugins.slots.contextEngine` 輸出 `openviking`
 
-### 7.8 TOS release 安装脚本用法
+### 7.8 TOS release 安裝指令碼用法
 
-`scripts/install.sh` 支持四种来源，适合正式安装、灰度、回滚、本地包验证：
+`scripts/install.sh` 支援四種來源，適合正式安裝、灰度、回滾、本地包驗證：
 
-| 来源 | 命令 | 适用场景 |
+| 來源 | 命令 | 適用場景 |
 | --- | --- | --- |
-| `tos` | `bash install.sh --source tos --channel prod --latest` | 从 TOS 安装某环境最新 release |
-| `tos + version` | `bash install.sh --source tos --channel prod --version 2026.6.2` | 安装或回滚到指定版本 |
-| `tarball` | `bash install.sh --tarball ./output/openviking.tgz` | 安装本地构建产物 |
-| `local` | `bash install.sh --source local --tarball ./output/openviking.tgz` | 本地包调试，等价 tarball 路径 |
-| `existing` | `bash install.sh --source existing --openviking-base-url ... --openviking-api-key ...` | 不覆盖插件文件，只写配置并重启验证 |
+| `tos` | `bash install.sh --source tos --channel prod --latest` | 從 TOS 安裝某環境最新 release |
+| `tos + version` | `bash install.sh --source tos --channel prod --version 2026.6.2` | 安裝或回滾到指定版本 |
+| `tarball` | `bash install.sh --tarball ./output/openviking.tgz` | 安裝本地構建產物 |
+| `local` | `bash install.sh --source local --tarball ./output/openviking.tgz` | 本地包除錯，等價 tarball 路徑 |
+| `existing` | `bash install.sh --source existing --openviking-base-url ... --openviking-api-key ...` | 不覆蓋外掛檔案，只寫配置並重啟驗證 |
 
-常用参数：
+常用引數：
 
-| 参数 | 说明 |
+| 引數 | 說明 |
 | --- | --- |
-| `--channel stg|ppe|prod` | 选择 release 环境 / TOS 前缀，默认 `prod` |
-| `--latest` | 使用 `<channel>/latest.json` 指向的版本，默认行为 |
+| `--channel stg|ppe|prod` | 選擇 release 環境 / TOS 字首，預設 `prod` |
+| `--latest` | 使用 `<channel>/latest.json` 指向的版本，預設行為 |
 | `--version <version>` / `--rollback-to <version>` | 使用 `<channel>/releases/<version>/manifest.json` |
-| `--manifest-url <url>` | 直接指定 manifest 地址，用于临时验证 |
-| `--verify-only` | 只下载并校验，不部署、不重启 |
-| `--dry-run` | 打印将执行的命令，不真实执行 setup/restart |
-| `--openviking-base-url` / `--openviking-api-key` | 安装后直接执行非交互 setup |
-| `--recall-target-types resource` | 安装时把默认召回切到 resource-only |
-| `--force-slot` | 已有其他 context engine 时强制切换到 `openviking` |
+| `--manifest-url <url>` | 直接指定 manifest 地址，用於臨時驗證 |
+| `--verify-only` | 只下載並校驗，不部署、不重啟 |
+| `--dry-run` | 列印將執行的命令，不真實執行 setup/restart |
+| `--openviking-base-url` / `--openviking-api-key` | 安裝後直接執行非互動 setup |
+| `--recall-target-types resource` | 安裝時把預設召回切到 resource-only |
+| `--force-slot` | 已有其他 context engine 時強制切換到 `openviking` |
 
-安装脚本会强校验包内运行时依赖 `node_modules/@sinclair/typebox`，避免 OpenClaw 加载插件时报缺失依赖：`scripts/install.sh:187`、`scripts/install.sh:193`。
+安裝指令碼會強校驗包內執行時依賴 `node_modules/@sinclair/typebox`，避免 OpenClaw 載入外掛時報缺失依賴：`scripts/install.sh:187`、`scripts/install.sh:193`。
 
 ---
 
-## 8. 常用命令与工具用法
+## 8. 常用命令與工具用法
 
 ### 8.1 插件命令
 
@@ -672,7 +672,7 @@ openclaw openviking setup
 # 非交互配置
 openclaw openviking setup --base-url http://127.0.0.1:1933 --api-key sk-xxx --json
 
-# 状态检查
+# 狀態檢查
 openclaw openviking status --json
 
 # 查看配置
@@ -690,157 +690,157 @@ openclaw config get plugins.slots.contextEngine
 /ov-search "memory install skill" --uri viking://user/skills
 ```
 
-### 8.3 Agent 工具触发场景
+### 8.3 Agent 工具觸發場景
 
-| 用户意图 | 推荐工具 |
+| 使用者意圖 | 推薦工具 |
 | --- | --- |
-| “记住这条偏好/事实” | `memory_store` |
-| “你还记得我之前说过什么吗” | `memory_recall` |
-| “忘掉那条记忆” | `memory_forget` |
-| “把这个文档/目录/URL/仓库加入知识库” | 手动 `/add-resource`；只有显式开启 `enableAddResourceTool=true` 时才使用 `add_resource` |
-| “把这个 skill 导入 OpenViking” | `add_skill` |
-| “在 OpenViking 里搜一下资源/技能” | `ov_search` |
-| “读取这个 OpenViking 命中 URI 的完整内容” | `ov_read` |
-| “summary 里没有细节，回查历史” | `ov_archive_search` / `ov_archive_expand` |
-| “这个 tool result 被截断了，读取完整内容” | `openviking_tool_result_read` / `search` / `list` |
+| “記住這條偏好/事實” | `memory_store` |
+| “你還記得我之前說過什麼嗎” | `memory_recall` |
+| “忘掉那條記憶” | `memory_forget` |
+| “把這個文件/目錄/URL/倉庫加入知識庫” | 手動 `/add-resource`；只有顯式開啟 `enableAddResourceTool=true` 時才使用 `add_resource` |
+| “把這個 skill 匯入 OpenViking” | `add_skill` |
+| “在 OpenViking 裡搜一下資源/技能” | `ov_search` |
+| “讀取這個 OpenViking 命中 URI 的完整內容” | `ov_read` |
+| “summary 裡沒有細節，回查歷史” | `ov_archive_search` / `ov_archive_expand` |
+| “這個 tool result 被截斷了，讀取完整內容” | `openviking_tool_result_read` / `search` / `list` |
 
 ---
 
-## 9. 配置参数说明
+## 9. 配置引數說明
 
-| 参数 | 默认值 | 说明 |
+| 引數 | 預設值 | 說明 |
 | --- | --- | --- |
-| `mode` | `remote` | 兼容字段；当前仅支持 remote |
+| `mode` | `remote` | 相容欄位；當前僅支援 remote |
 | `baseUrl` | `http://127.0.0.1:1933` | OpenViking HTTP 地址 |
-| `apiKey` | 环境变量或空 | OpenViking API Key |
+| `apiKey` | 環境變數或空 | OpenViking API Key |
 | `accountId` | 空 | Root key/trusted 部署需要 |
 | `userId` | 空 | Root key/trusted 部署需要 |
-| `peer_role` | `none` | 记忆归属：`none`、`assistant` 或 `sender`；旧值 `person` 作为 `sender` 的别名兼容 |
-| `peer_prefix` | 空 | Peer 路由前缀；非空时形成 `<prefix>_<ctx.agentId>` |
-| `targetUri` | `viking://user/memories` | 默认 memory search 目标 |
-| `timeoutMs` | `15000` | HTTP 请求超时 |
-| `autoCapture` | `true` | 是否每轮后写入 OpenViking session |
-| `captureMode` | `semantic` | `semantic` 全量候选；`keyword` 先过触发词 |
-| `captureMaxLength` | `24000` | 自动捕获文本最大长度 |
-| `autoRecall` | `true` | 是否回复前自动召回 |
-| `autoRecallTimeoutMs` | `15000` | 服务端组装自动召回的总超时；为 session query expansion 和检索留出预算 |
-| `recallTargetTypes` | `["user","agent"]` | 自动召回和默认显式召回目标类型；可选 `resource`、`user`、`agent` |
-| `recallResources` | `false` | 旧兼容开关；仅在未显式配置 `recallTargetTypes` 时追加 `resource` |
-| `recallLimit` | `6` | 召回条数 |
-| `recallScoreThreshold` | `0.15` | 召回阈值 |
-| `recallMaxInjectedChars` | `4000` | 注入字符预算 |
-| `commitTokenThresholdRatio` | `0.5` | `pending_tokens` 达到「模型上下文窗口 × 该比例」触发 afterTurn commit（0-1，例 0.5=50%）；设 0 可每轮 commit |
-| `commitKeepRecentCount` | `10` | afterTurn commit 后保留最近消息数；compact 固定 0 |
-| `bypassSessionPatterns` | `[]` | 匹配 sessionKey/sessionId 时完全绕过 OpenViking |
-| `emitStandardDiagnostics` | `false` | 输出 `openviking: diag {...}` 结构化诊断日志 |
-| `logFindRequests` | `false` | 输出 routing/search/session 写入日志；也可用 `OPENVIKING_LOG_ROUTING=1` 或 `OPENVIKING_DEBUG=1` |
-| `traceRecall` | `false` | Recall trace 总开关；不开启时不记录、不建目录、查询只返回未启用提示 |
-| `traceRecallPersist` | `false` | 是否把 trace 按日期追加写入 JSONL |
-| `traceRecallDir` | `~/.openclaw/openviking/recall-traces` | trace JSONL 保存目录 |
-| `traceRecallRetentionDays` | `14` | trace 文件保留天数 |
-| `traceRecallLoadRecentDays` | `2` | gateway 启动时预加载最近多少天 trace |
-| `traceRecallMaxEntries` | `1000` | 内存 ring buffer 最大 trace 条数 |
-| `traceRecallMaxResultsPerSearch` | `20` | 每个 search 保存的候选结果上限 |
-| `traceRecallPreviewChars` | `240` | trace 摘要 preview 截断长度 |
-| `traceRecallQueryMaxChars` | `4000` | trace 中保存 query 的最大长度 |
-| `traceRecallQueryMaxDays` | `14` | 查询持久化 trace 时默认最多扫描多少天 |
-| `traceRecallIncludeContentByDefault` | `false` | 查询 trace 时是否默认读取完整内容 |
-| `traceRecallIncludeRawUserPreview` | `false` | 是否把原始用户消息 preview 写入持久化层 |
+| `peer_role` | `none` | 記憶歸屬：`none`、`assistant` 或 `sender`；舊值 `person` 作為 `sender` 的別名相容 |
+| `peer_prefix` | 空 | Peer 路由字首；非空時形成 `<prefix>_<ctx.agentId>` |
+| `targetUri` | `viking://user/memories` | 預設 memory search 目標 |
+| `timeoutMs` | `15000` | HTTP 請求超時 |
+| `autoCapture` | `true` | 是否每輪後寫入 OpenViking session |
+| `captureMode` | `semantic` | `semantic` 全量候選；`keyword` 先過觸發詞 |
+| `captureMaxLength` | `24000` | 自動捕獲文本最大長度 |
+| `autoRecall` | `true` | 是否回覆前自動召回 |
+| `autoRecallTimeoutMs` | `15000` | 服務端組裝自動召回的總超時；為 session query expansion 和檢索留出預算 |
+| `recallTargetTypes` | `["user","agent"]` | 自動召回和預設顯式召回目標型別；可選 `resource`、`user`、`agent` |
+| `recallResources` | `false` | 舊相容開關；僅在未顯式配置 `recallTargetTypes` 時追加 `resource` |
+| `recallLimit` | `6` | 召回條數 |
+| `recallScoreThreshold` | `0.15` | 召回閾值 |
+| `recallMaxInjectedChars` | `4000` | 注入字元預算 |
+| `commitTokenThresholdRatio` | `0.5` | `pending_tokens` 達到「模型上下文視窗 × 該比例」觸發 afterTurn commit（0-1，例 0.5=50%）；設 0 可每輪 commit |
+| `commitKeepRecentCount` | `10` | afterTurn commit 後保留最近訊息數；compact 固定 0 |
+| `bypassSessionPatterns` | `[]` | 匹配 sessionKey/sessionId 時完全繞過 OpenViking |
+| `emitStandardDiagnostics` | `false` | 輸出 `openviking: diag {...}` 結構化診斷日誌 |
+| `logFindRequests` | `false` | 輸出 routing/search/session 寫入日誌；也可用 `OPENVIKING_LOG_ROUTING=1` 或 `OPENVIKING_DEBUG=1` |
+| `traceRecall` | `false` | Recall trace 總開關；不開啟時不記錄、不建目錄、查詢只返回未啟用提示 |
+| `traceRecallPersist` | `false` | 是否把 trace 按日期追加寫入 JSONL |
+| `traceRecallDir` | `~/.openclaw/openviking/recall-traces` | trace JSONL 儲存目錄 |
+| `traceRecallRetentionDays` | `14` | trace 檔案保留天數 |
+| `traceRecallLoadRecentDays` | `2` | gateway 啟動時預載入最近多少天 trace |
+| `traceRecallMaxEntries` | `1000` | 記憶體 ring buffer 最大 trace 條數 |
+| `traceRecallMaxResultsPerSearch` | `20` | 每個 search 儲存的候選結果上限 |
+| `traceRecallPreviewChars` | `240` | trace 摘要 preview 截斷長度 |
+| `traceRecallQueryMaxChars` | `4000` | trace 中儲存 query 的最大長度 |
+| `traceRecallQueryMaxDays` | `14` | 查詢持久化 trace 時預設最多掃描多少天 |
+| `traceRecallIncludeContentByDefault` | `false` | 查詢 trace 時是否預設讀取完整內容 |
+| `traceRecallIncludeRawUserPreview` | `false` | 是否把原始使用者訊息 preview 寫入持久化層 |
 
-环境变量解析逻辑在 `config.ts:139`、`config.ts:147`。
+環境變數解析邏輯在 `config.ts:139`、`config.ts:147`。
 
-`peer_role` 决定 `viking://user/<user_id>` 下是否按交互对象建立 peer 记忆：
+`peer_role` 決定 `viking://user/<user_id>` 下是否按互動物件建立 peer 記憶：
 
-| 值 | 归因与路径 | 案例 |
+| 值 | 歸因與路徑 | 案例 |
 | --- | --- | --- |
-| `none`（默认） | user / assistant message 都不写 `peer_id`；新增长期记忆位于 `viking://user/<user_id>/memories/...` | 通用场景，所有对话共享 user-level 记忆 |
-| `assistant` | assistant message 写入 `peer_id=<assistant_id>`；助手归因记忆位于 `.../peers/<assistant_id>/memories/...` | **人是 OpenViking user**：Alice 使用 `main` 和 `research` 两个助手，分别使用 `.../peers/main/...` 和 `.../peers/research/...` |
-| `sender` | user message 写入 `peer_id=<sender_id>`；发送者归因记忆位于 `.../peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：`support-agent` 面向 `customer-42` 和 `customer-99`，将两人的 peer 记忆分开 |
+| `none`（預設） | user / assistant message 都不寫 `peer_id`；新增長期記憶位於 `viking://user/<user_id>/memories/...` | 通用場景，所有對話共享 user-level 記憶 |
+| `assistant` | assistant message 寫入 `peer_id=<assistant_id>`；助手歸因記憶位於 `.../peers/<assistant_id>/memories/...` | **人是 OpenViking user**：Alice 使用 `main` 和 `research` 兩個助手，分別使用 `.../peers/main/...` 和 `.../peers/research/...` |
+| `sender` | user message 寫入 `peer_id=<sender_id>`；傳送者歸因記憶位於 `.../peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：`support-agent` 面向 `customer-42` 和 `customer-99`，將兩人的 peer 記憶分開 |
 
-`person` 是 `sender` 的旧别名；新配置统一使用 `sender`。OpenViking 会为每个用户初始化受管的 `peers/` 容器，`none` 只表示不使用具体的 `peers/<peer_id>/memories` 子树。在 peer 模式下，共享／自身记忆仍位于用户根记忆目录，召回范围是共享记忆 + 当前 peer 记忆，不包含其他 peer。切换 scope 不会搬迁已有记忆。Session 路径不受影响，始终位于 `viking://user/<user_id>/sessions/<session_id>`。
+`person` 是 `sender` 的舊別名；新配置統一使用 `sender`。OpenViking 會為每個使用者初始化受管的 `peers/` 容器，`none` 只表示不使用具體的 `peers/<peer_id>/memories` 子樹。在 peer 模式下，共享／自身記憶仍位於使用者根記憶目錄，召回範圍是共享記憶 + 當前 peer 記憶，不包含其他 peer。切換 scope 不會搬遷已有記憶。Session 路徑不受影響，始終位於 `viking://user/<user_id>/sessions/<session_id>`。
 
-### 9.1 搜索 / 召回相关配置总表
+### 9.1 搜尋 / 召回相關配置總表
 
-如果你关注的是“插件里的搜索能力可以怎么从外部设定”，可以按下面这张表看。这里的“搜索”包括三类：
+如果你關注的是“外掛裡的搜尋能力可以怎麼從外部設定”，可以按下面這張表看。這裡的“搜尋”包括三類：
 
-- 自动召回：回复前自动查长期记忆 / resources 并注入 `<relevant-memories>`
-- 显式检索：`memory_recall`、`ov_search`、`ov_archive_search`
-- 搜索诊断：打开 routing / find 日志，排查“为什么没搜到 / 搜到了但没注入”
+- 自動召回：回覆前自動查長期記憶 / resources 並注入 `<relevant-memories>`
+- 顯式檢索：`memory_recall`、`ov_search`、`ov_archive_search`
+- 搜尋診斷：開啟 routing / find 日誌，排查“為什麼沒搜到 / 搜到了但沒注入”
 
-| 配置项 | 作用范围 | 默认值 | 可否写入插件配置文件 | 可否用环境变量 | 环境变量名 | 说明 |
+| 配置項 | 作用範圍 | 預設值 | 可否寫入外掛配置檔案 | 可否用環境變數 | 環境變數名 | 說明 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `baseUrl` | 所有搜索/召回请求 | `http://127.0.0.1:1933` | 是 | 是 | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | OpenViking 服务地址；所有 context search、`find/read/grep/session` 都依赖它：`config.ts:139` |
-| `apiKey` | 所有搜索/召回请求 | 空 | 是 | 是 | `OPENVIKING_API_KEY` | HTTP 认证 key；不配通常只能访问关闭认证的本地服务：`config.ts:202` |
-| `accountId` | 多租户搜索路由 | 空 | 是 | 是 | `OPENVIKING_ACCOUNT_ID` | Root key / trusted 部署下显式指定 account，影响搜索命中空间：`config.ts:212` |
-| `userId` | 多租户搜索路由 | 空 | 是 | 是 | `OPENVIKING_USER_ID` | Root key / trusted 部署下显式指定 user，影响 user memory 检索范围：`config.ts:216` |
-| `peer_role` | session peer 归因和 actor-peer 路由 | `none` | 是 | 安装脚本/setup 参数支持 | `OPENVIKING_PEER_ROLE`（安装脚本写入 setup 参数） | `none` 使用共享 user memory（默认）；`assistant` 用 runtime agent 归因到 `peers/<assistant_id>`；`sender` 用 sender 身份归因到 `peers/<sender_id>`；旧值 `person` 等价于 `sender` |
-| `peer_prefix` | assistant peer 前缀 | 空 | 是 | 间接支持 | 可通过配置值写 `${ENV}` | 非空时拼成 `<prefix>_<ctx.agentId>`，用于 assistant `peer_id` 与 `X-OpenViking-Actor-Peer` |
-| `targetUri` | `memory_recall` / `memory_forget` 默认搜索范围 | `viking://user/memories` | 是 | 否 | — | 未显式传 `targetUri` 时的默认 memory 搜索位置：`config.ts:275`、`index.ts:1366` |
-| `timeoutMs` | 所有搜索/读取请求超时 | `15000` | 是 | 否 | — | 控制 context search、`find/read/grep/session` 等 HTTP 请求超时：`config.ts:276` |
-| `autoRecall` | 自动召回总开关 | `true` | 是 | 否 | — | 关闭后插件不再在 `assemble()` 阶段自动发起 recall：`config.ts:283`、`context-engine.ts:1132` |
-| `autoRecallTimeoutMs` | 自动召回总超时 | `15000` | 是 | 否 | — | 覆盖单次服务端 context search；默认值为最长 5 秒的 session query expansion 及后续检索保留余量。显式配置的值仍会按 `1000..300000` ms 限制。 |
-| `recallTargetTypes` | 自动召回 + 默认 `memory_recall` 资源类型集合 | `["user","agent"]` | 是 | 安装脚本/setup 参数支持 | `OPENVIKING_RECALL_TARGET_TYPES`（安装脚本写入 setup 参数） | 当前默认只查 `user` + `agent` 记忆。设置为 `["resource"]` 才会切成 resource-only；可组合 `resource,user,agent`：`config.ts:174`、`config.ts:360` |
-| `recallResources` | 自动召回 + 默认 `memory_recall` resources 兼容开关 | `false` | 是 | 是 | `OPENVIKING_RECALL_RESOURCES` | 旧兼容字段；只有未显式配置 `recallTargetTypes` 时才把 `resource` 追加到默认 `user` + `agent`，不会覆盖显式 resource-only：`config.ts:360` |
-| `recallLimit` | 自动召回 / `memory_recall` 返回条数 | `6` | 是 | 否 | — | 自动召回按共享 context-search 契约映射为 coding quotas；显式 `memory_recall` 仍按该值做最终选择。 |
-| `recallScoreThreshold` | 自动召回 / `memory_recall` 过滤阈值 | `0.15` | 是 | 否 | — | 自动召回交给服务端过滤；显式 `memory_recall` 保留本地后处理。 |
-| `recallMaxInjectedChars` | 自动召回 / `memory_recall` 注入预算 | `4000` | 是 | 否 | — | 自动召回按 4 字符/token 换算为服务端 `max_tokens`；显式 `memory_recall` 仍使用字符预算。 |
-| `recallPreferAbstract` | 自动召回读取策略 | `false` | 是 | 否 | — | 为 `true` 时把服务端 detail 固定为 `abstract`；否则由服务端按类别选择默认层级。 |
-| `recallTokenBudget` | 自动召回预算旧别名 | 跟随 `recallMaxInjectedChars` | 是 | 否 | — | 已废弃，仅兼容旧配置；解析时会折叠为 `recallMaxInjectedChars`：`config.ts:257`、`config.ts:299` |
-| `recallMaxContentChars` | 旧版单条截断兼容项 | `5000` | 是 | 否 | — | 已废弃；当前自动召回不再裁剪单条 memory 内容：`config.ts:290` |
-| `captureMode` | 间接影响可搜索记忆的入库方式 | `semantic` | 是 | 否 | — | 虽然不是“搜索参数”，但它决定哪些用户内容会先被写入 session 并进入后续可检索空间：`config.ts:203`、`config.ts:278` |
-| `captureMaxLength` | 间接影响可搜索记忆来源长度 | `24000` | 是 | 否 | — | 超过该长度的用户文本不会完整进入自动捕获链路：`config.ts:279` |
-| `bypassSessionPatterns` | 绕过搜索/召回 | `[]` | 是 | 否 | — | 命中指定 sessionId / sessionKey 时，插件整条 OpenViking 链路直接跳过，包括 recall、store、archive search：`config.ts:311` |
-| `logFindRequests` | 搜索调试日志 | `false` | 是 | 是 | `OPENVIKING_LOG_ROUTING` / `OPENVIKING_DEBUG` | 打开后会记录 context search、`find`、session 写入和 commit 路由信息，便于排查检索空间错误。 |
-| `enabledTools` | Agent 可见工具白名单 | `default` 工具组 | 是 | 否 | — | 支持工具名或分组：`default`、`all`、`memory`、`resource_query`、`import`、`recall_trace`、`archive`、`tool_result`。例如只保留资源查询：`["resource_query"]`。`add_resource` 即使被选中仍需 `enableAddResourceTool=true`：`config.ts:119`、`index.ts:688` |
-| `disabledTools` | Agent 可见工具黑名单 | `[]`（`add_resource` 默认仍禁用） | 是 | 否 | — | 在 `enabledTools` 之后应用，支持同样的工具名或分组。例如保留默认工具但隐藏记忆相关工具：`["memory"]`，会禁用 `memory_recall` / `memory_store` / `memory_forget`：`config.ts:136`、`config.ts:268` |
+| `baseUrl` | 所有搜尋/召回請求 | `http://127.0.0.1:1933` | 是 | 是 | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | OpenViking 服務地址；所有 context search、`find/read/grep/session` 都依賴它：`config.ts:139` |
+| `apiKey` | 所有搜尋/召回請求 | 空 | 是 | 是 | `OPENVIKING_API_KEY` | HTTP 認證 key；不配通常只能訪問關閉認證的本地服務：`config.ts:202` |
+| `accountId` | 多租戶搜尋路由 | 空 | 是 | 是 | `OPENVIKING_ACCOUNT_ID` | Root key / trusted 部署下顯式指定 account，影響搜尋命中空間：`config.ts:212` |
+| `userId` | 多租戶搜尋路由 | 空 | 是 | 是 | `OPENVIKING_USER_ID` | Root key / trusted 部署下顯式指定 user，影響 user memory 檢索範圍：`config.ts:216` |
+| `peer_role` | session peer 歸因和 actor-peer 路由 | `none` | 是 | 安裝指令碼/setup 引數支援 | `OPENVIKING_PEER_ROLE`（安裝指令碼寫入 setup 引數） | `none` 使用共享 user memory（預設）；`assistant` 用 runtime agent 歸因到 `peers/<assistant_id>`；`sender` 用 sender 身份歸因到 `peers/<sender_id>`；舊值 `person` 等價於 `sender` |
+| `peer_prefix` | assistant peer 字首 | 空 | 是 | 間接支援 | 可通過配置值寫 `${ENV}` | 非空時拼成 `<prefix>_<ctx.agentId>`，用於 assistant `peer_id` 與 `X-OpenViking-Actor-Peer` |
+| `targetUri` | `memory_recall` / `memory_forget` 預設搜尋範圍 | `viking://user/memories` | 是 | 否 | — | 未顯式傳 `targetUri` 時的預設 memory 搜尋位置：`config.ts:275`、`index.ts:1366` |
+| `timeoutMs` | 所有搜尋/讀取請求超時 | `15000` | 是 | 否 | — | 控制 context search、`find/read/grep/session` 等 HTTP 請求超時：`config.ts:276` |
+| `autoRecall` | 自動召回總開關 | `true` | 是 | 否 | — | 關閉後外掛不再在 `assemble()` 階段自動發起 recall：`config.ts:283`、`context-engine.ts:1132` |
+| `autoRecallTimeoutMs` | 自動召回總超時 | `15000` | 是 | 否 | — | 覆蓋單次服務端 context search；預設值為最長 5 秒的 session query expansion 及後續檢索保留餘量。顯式配置的值仍會按 `1000..300000` ms 限制。 |
+| `recallTargetTypes` | 自動召回 + 預設 `memory_recall` 資源型別集合 | `["user","agent"]` | 是 | 安裝指令碼/setup 引數支援 | `OPENVIKING_RECALL_TARGET_TYPES`（安裝指令碼寫入 setup 引數） | 當前預設只查 `user` + `agent` 記憶。設定為 `["resource"]` 才會切成 resource-only；可組合 `resource,user,agent`：`config.ts:174`、`config.ts:360` |
+| `recallResources` | 自動召回 + 預設 `memory_recall` resources 相容開關 | `false` | 是 | 是 | `OPENVIKING_RECALL_RESOURCES` | 舊相容欄位；只有未顯式配置 `recallTargetTypes` 時才把 `resource` 追加到預設 `user` + `agent`，不會覆蓋顯式 resource-only：`config.ts:360` |
+| `recallLimit` | 自動召回 / `memory_recall` 返回條數 | `6` | 是 | 否 | — | 自動召回按共享 context-search 契約對映為 coding quotas；顯式 `memory_recall` 仍按該值做最終選擇。 |
+| `recallScoreThreshold` | 自動召回 / `memory_recall` 過濾閾值 | `0.15` | 是 | 否 | — | 自動召回交給服務端過濾；顯式 `memory_recall` 保留本地後處理。 |
+| `recallMaxInjectedChars` | 自動召回 / `memory_recall` 注入預算 | `4000` | 是 | 否 | — | 自動召回按 4 字元/token 換算為服務端 `max_tokens`；顯式 `memory_recall` 仍使用字元預算。 |
+| `recallPreferAbstract` | 自動召回讀取策略 | `false` | 是 | 否 | — | 為 `true` 時把服務端 detail 固定為 `abstract`；否則由服務端按類別選擇預設層級。 |
+| `recallTokenBudget` | 自動召回預算舊別名 | 跟隨 `recallMaxInjectedChars` | 是 | 否 | — | 已廢棄，僅相容舊配置；解析時會摺疊為 `recallMaxInjectedChars`：`config.ts:257`、`config.ts:299` |
+| `recallMaxContentChars` | 舊版單條截斷相容項 | `5000` | 是 | 否 | — | 已廢棄；當前自動召回不再裁剪單條 memory 內容：`config.ts:290` |
+| `captureMode` | 間接影響可搜尋記憶的入庫方式 | `semantic` | 是 | 否 | — | 雖然不是“搜尋引數”，但它決定哪些使用者內容會先被寫入 session 並進入後續可檢索空間：`config.ts:203`、`config.ts:278` |
+| `captureMaxLength` | 間接影響可搜尋記憶來源長度 | `24000` | 是 | 否 | — | 超過該長度的使用者文本不會完整進入自動捕獲鏈路：`config.ts:279` |
+| `bypassSessionPatterns` | 繞過搜尋/召回 | `[]` | 是 | 否 | — | 命中指定 sessionId / sessionKey 時，外掛整條 OpenViking 鏈路直接跳過，包括 recall、store、archive search：`config.ts:311` |
+| `logFindRequests` | 搜尋除錯日誌 | `false` | 是 | 是 | `OPENVIKING_LOG_ROUTING` / `OPENVIKING_DEBUG` | 開啟後會記錄 context search、`find`、session 寫入和 commit 路由資訊，便於排查檢索空間錯誤。 |
+| `enabledTools` | Agent 可見工具白名單 | `default` 工具組 | 是 | 否 | — | 支援工具名或分組：`default`、`all`、`memory`、`resource_query`、`import`、`recall_trace`、`archive`、`tool_result`。例如只保留資源查詢：`["resource_query"]`。`add_resource` 即使被選中仍需 `enableAddResourceTool=true`：`config.ts:119`、`index.ts:688` |
+| `disabledTools` | Agent 可見工具黑名單 | `[]`（`add_resource` 預設仍停用） | 是 | 否 | — | 在 `enabledTools` 之後應用，支援同樣的工具名或分組。例如保留預設工具但隱藏記憶相關工具：`["memory"]`，會停用 `memory_recall` / `memory_store` / `memory_forget`：`config.ts:136`、`config.ts:268` |
 
-### 9.2 哪些配置只能走配置文件，哪些可以直接走环境变量
+### 9.2 哪些配置只能走配置檔案，哪些可以直接走環境變數
 
-#### 9.2.1 可直接通过环境变量生效的搜索相关项
+#### 9.2.1 可直接通過環境變數生效的搜尋相關項
 
-| 环境变量 | 对应配置项 | 作用 |
+| 環境變數 | 對應配置項 | 作用 |
 | --- | --- | --- |
-| `OPENVIKING_BASE_URL` | `baseUrl` | 指定 OpenViking 服务地址 |
-| `OPENVIKING_URL` | `baseUrl` | `baseUrl` 的兼容别名 |
+| `OPENVIKING_BASE_URL` | `baseUrl` | 指定 OpenViking 服務地址 |
+| `OPENVIKING_URL` | `baseUrl` | `baseUrl` 的相容別名 |
 | `OPENVIKING_API_KEY` | `apiKey` | 指定 OpenViking API key |
-| `OPENVIKING_ACCOUNT_ID` | `accountId` | 指定租户 account |
-| `OPENVIKING_USER_ID` | `userId` | 指定租户 user |
-| `OPENVIKING_PEER_ROLE` | `peer_role` | 安装脚本/setup 写入的记忆归属（`none` / `assistant` / `sender`；兼容旧值 `person`） |
-| `OPENVIKING_PEER_PREFIX` | `peer_prefix` | 安装脚本/setup 写入的 assistant peer 前缀 |
-| `OPENVIKING_RECALL_RESOURCES` | `recallResources` | 是否把 resources 纳入自动召回和默认 memory_recall |
-| `OPENVIKING_LOG_ROUTING` | `logFindRequests` | 打开检索/路由日志 |
-| `OPENVIKING_DEBUG` | `logFindRequests` | 同时作为调试总开关，当前也会打开 routing/find 日志 |
+| `OPENVIKING_ACCOUNT_ID` | `accountId` | 指定租戶 account |
+| `OPENVIKING_USER_ID` | `userId` | 指定租戶 user |
+| `OPENVIKING_PEER_ROLE` | `peer_role` | 安裝指令碼/setup 寫入的記憶歸屬（`none` / `assistant` / `sender`；相容舊值 `person`） |
+| `OPENVIKING_PEER_PREFIX` | `peer_prefix` | 安裝指令碼/setup 寫入的 assistant peer 字首 |
+| `OPENVIKING_RECALL_RESOURCES` | `recallResources` | 是否把 resources 納入自動召回和預設 memory_recall |
+| `OPENVIKING_LOG_ROUTING` | `logFindRequests` | 開啟檢索/路由日誌 |
+| `OPENVIKING_DEBUG` | `logFindRequests` | 同時作為除錯總開關，當前也會開啟 routing/find 日誌 |
 
-#### 9.2.2 只能通过插件配置文件设定的搜索行为项
+#### 9.2.2 只能通過外掛配置檔案設定的搜尋行為項
 
-这些项当前**没有独立环境变量**，需要写到 `~/.openclaw/openclaw.json` 里的 `plugins.entries.openviking.config`：
+這些項當前**沒有獨立環境變數**，需要寫到 `~/.openclaw/openclaw.json` 裡的 `plugins.entries.openviking.config`：
 
 - `targetUri`
 - `timeoutMs`
 - `autoRecall`
-- `recallTargetTypes`（可通过安装脚本 `--recall-target-types` 或 setup CLI 参数写入配置，但运行时不是直接读环境变量）
+- `recallTargetTypes`（可通過安裝指令碼 `--recall-target-types` 或 setup CLI 引數寫入配置，但執行時不是直接讀環境變數）
 - `recallLimit`
 - `recallScoreThreshold`
 - `recallMaxInjectedChars`
 - `recallPreferAbstract`
-- `recallTokenBudget`（废弃兼容）
-- `recallMaxContentChars`（废弃兼容）
+- `recallTokenBudget`（廢棄相容）
+- `recallMaxContentChars`（廢棄相容）
 - `captureMode`
 - `captureMaxLength`
 - `bypassSessionPatterns`
 
-### 9.3 推荐配置示例
+### 9.3 推薦配置示例
 
 #### 9.3.1 Resource-only 召回配置
 
-当前默认召回目标是用户记忆 + Agent 记忆：`["user","agent"]`。如果你的场景主要是“导入文档 / 知识库问答”，并希望默认召回只查 `viking://resources`，需要显式配置 `recallTargetTypes`：
+當前預設召回目標是使用者記憶 + Agent 記憶：`["user","agent"]`。如果你的場景主要是“匯入文件 / 知識庫問答”，並希望預設召回只查 `viking://resources`，需要顯式配置 `recallTargetTypes`：
 
 ```bash
 openclaw config set plugins.entries.openviking.config.recallTargetTypes '["resource"]'
 openclaw gateway restart
 ```
 
-安装时也可以直接写入：
+安裝時也可以直接寫入：
 
 ```bash
 bash install.sh --source tos --channel prod --latest \
@@ -849,9 +849,9 @@ bash install.sh --source tos --channel prod --latest \
   --recall-target-types resource
 ```
 
-注意：`recallResources=true` 是旧兼容加法开关，只会在未显式配置 `recallTargetTypes` 时把 `resource` 追加到默认 `user` + `agent`，不会把默认召回改成 resource-only。
+注意：`recallResources=true` 是舊相容加法開關，只會在未顯式配置 `recallTargetTypes` 時把 `resource` 追加到預設 `user` + `agent`，不會把預設召回改成 resource-only。
 
-#### 9.3.2 仅通过环境变量快速打开“额外可搜 resources 的自动召回”
+#### 9.3.2 僅通過環境變數快速開啟“額外可搜 resources 的自動召回”
 
 ```bash
 export OPENVIKING_BASE_URL="http://127.0.0.1:1933"
@@ -859,9 +859,9 @@ export OPENVIKING_API_KEY="<YOUR_KEY>"
 export OPENVIKING_RECALL_RESOURCES=1
 ```
 
-适合：你已经有稳定的 `openclaw.json`，只想临时把 `viking://resources` 追加到自动召回和默认 `memory_recall`，同时保留默认 `user` + `agent` 记忆召回。
+適合：你已經有穩定的 `openclaw.json`，只想臨時把 `viking://resources` 追加到自動召回和預設 `memory_recall`，同時保留預設 `user` + `agent` 記憶召回。
 
-#### 9.3.3 通过插件配置文件精细控制召回和 trace
+#### 9.3.3 通過外掛配置檔案精細控制召回和 trace
 
 ```json
 {
@@ -888,37 +888,37 @@ export OPENVIKING_RECALL_RESOURCES=1
 }
 ```
 
-这里有两个关键点：
+這裡有兩個關鍵點：
 
-- `baseUrl` / `apiKey` 支持在配置文件里写 `${ENV}` 占位，加载时会做环境变量替换：`config.ts:82`
-- 但 `recallTargetTypes` / `recallLimit` / `recallScoreThreshold` / `autoRecall` / `traceRecall` 这类行为项不会从环境变量自动读取，仍以配置文件为准。
-- 开启 recall trace 必须显式设置 `traceRecall=true`；只设置 `recallTargetTypes` 或 `recallResources` 不会启用 trace。
+- `baseUrl` / `apiKey` 支援在配置檔案裡寫 `${ENV}` 佔位，載入時會做環境變數替換：`config.ts:82`
+- 但 `recallTargetTypes` / `recallLimit` / `recallScoreThreshold` / `autoRecall` / `traceRecall` 這類行為項不會從環境變數自動讀取，仍以配置檔案為準。
+- 開啟 recall trace 必須顯式設定 `traceRecall=true`；只設置 `recallTargetTypes` 或 `recallResources` 不會啟用 trace。
 
-### 9.4 外部配置生效顺序
+### 9.4 外部配置生效順序
 
-搜索相关配置的实际生效顺序可以概括为：
+搜尋相關配置的實際生效順序可以概括為：
 
-1. **显式工具参数优先**：例如 `memory_recall(limit=3, scoreThreshold=0.4, targetUri=...)`、`/ov-search --limit 20 --uri ...` 会优先覆盖默认配置：`index.ts:1046`、`index.ts:1050`、`index.ts:1054`、`index.ts:824`、`index.ts:408`
+1. **顯式工具引數優先**：例如 `memory_recall(limit=3, scoreThreshold=0.4, targetUri=...)`、`/ov-search --limit 20 --uri ...` 會優先覆蓋預設配置：`index.ts:1046`、`index.ts:1050`、`index.ts:1054`、`index.ts:824`、`index.ts:408`
 2. **插件配置文件其次**：`plugins.entries.openviking.config.*`
-3. **环境变量补默认值**：只对少数支持 env 的项生效，如 `OPENVIKING_BASE_URL`、`OPENVIKING_API_KEY`、`OPENVIKING_RECALL_RESOURCES`：`config.ts:139`、`config.ts:202`、`config.ts:284`
-4. **代码默认值兜底**：例如 `recallLimit=6`、`recallScoreThreshold=0.15`、`recallMaxInjectedChars=4000`：`config.ts:63`、`config.ts:64`、`config.ts:67`
+3. **環境變數補預設值**：只對少數支援 env 的項生效，如 `OPENVIKING_BASE_URL`、`OPENVIKING_API_KEY`、`OPENVIKING_RECALL_RESOURCES`：`config.ts:139`、`config.ts:202`、`config.ts:284`
+4. **程式碼預設值兜底**：例如 `recallLimit=6`、`recallScoreThreshold=0.15`、`recallMaxInjectedChars=4000`：`config.ts:63`、`config.ts:64`、`config.ts:67`
 
-### 9.5 搜索相关配置的排查建议
+### 9.5 搜尋相關配置的排查建議
 
-| 现象 | 优先看哪些配置 | 典型原因 |
+| 現象 | 優先看哪些配置 | 典型原因 |
 | --- | --- | --- |
-| `memory_recall` 能搜到 memory，但自动回复前没有注入 | `autoRecall`、`recallScoreThreshold`、`recallMaxInjectedChars` | recall 命中了，但因阈值或预算被过滤掉 |
-| `memory_recall` 默认搜不到 resources | `recallResources` | 默认是 `false`，不会自动查 `viking://resources` |
-| 同样的 query 在不同 agent / user 命中不一致 | `accountId`、`userId`、`peer_role`、`peer_prefix` | actor peer 或租户身份不一致 |
-| `/ov-search` 查不到刚导入的内容 | `baseUrl`、`apiKey`、服务端队列状态 | 导入后语义/向量处理还没完成，或连到了错误服务 |
-| 明明命中结果很多，但注入数量少 | `recallLimit`、`recallMaxInjectedChars`、`recallPreferAbstract` | limit 太小或预算太紧，必要时改成 abstract 优先 |
-| 不知道插件自动召回使用了哪些范围 | `logFindRequests` | 开启后查看插件日志中的 context search routing；显式检索仍记录 `find POST` |
+| `memory_recall` 能搜到 memory，但自動回覆前沒有注入 | `autoRecall`、`recallScoreThreshold`、`recallMaxInjectedChars` | recall 命中了，但因閾值或預算被過濾掉 |
+| `memory_recall` 預設搜不到 resources | `recallResources` | 預設是 `false`，不會自動查 `viking://resources` |
+| 同樣的 query 在不同 agent / user 命中不一致 | `accountId`、`userId`、`peer_role`、`peer_prefix` | actor peer 或租戶身份不一致 |
+| `/ov-search` 查不到剛匯入的內容 | `baseUrl`、`apiKey`、服務端佇列狀態 | 匯入後語義/向量處理還沒完成，或連到了錯誤服務 |
+| 明明命中結果很多，但注入數量少 | `recallLimit`、`recallMaxInjectedChars`、`recallPreferAbstract` | limit 太小或預算太緊，必要時改成 abstract 優先 |
+| 不知道外掛自動召回使用了哪些範圍 | `logFindRequests` | 開啟後檢視外掛日誌中的 context search routing；顯式檢索仍記錄 `find POST` |
 
 ---
 
-## 10. Debug 与排障
+## 10. Debug 與排障
 
-### 10.1 快速状态检查
+### 10.1 快速狀態檢查
 
 ```bash
 openclaw openviking status --json
@@ -928,7 +928,7 @@ openclaw config get plugins.slots.contextEngine
 curl http://127.0.0.1:1933/health
 ```
 
-### 10.2 打开插件侧路由日志
+### 10.2 開啟外掛側路由日誌
 
 配置方式：
 
@@ -937,22 +937,22 @@ openclaw config set plugins.entries.openviking.config.logFindRequests true
 openclaw gateway restart
 ```
 
-或临时环境变量：
+或臨時環境變數：
 
 ```bash
 OPENVIKING_LOG_ROUTING=1 openclaw gateway restart
 ```
 
-日志会打印 `X-OpenViking-Actor-Peer`、account/user header 是否设置、target_uri、query preview、session commit 等信息，但不会打印 apiKey。
+日誌會列印 `X-OpenViking-Actor-Peer`、account/user header 是否設定、target_uri、query preview、session commit 等資訊，但不會列印 apiKey。
 
-### 10.3 打开标准诊断日志
+### 10.3 開啟標準診斷日誌
 
 ```bash
 openclaw config set plugins.entries.openviking.config.emitStandardDiagnostics true
 openclaw gateway restart
 ```
 
-然后在日志中搜索：
+然後在日誌中搜索：
 
 ```text
 openviking: diag {"stage":"assemble_entry"...}
@@ -962,55 +962,55 @@ openviking: diag {"stage":"afterTurn_commit"...}
 openviking: diag {"stage":"compact_result"...}
 ```
 
-### 10.4 对话时观测召回与文档命中
+### 10.4 對話時觀測召回與文件命中
 
-如果需要在与 OpenClaw 对话时确认“本轮到底从 OpenViking 召回了哪些数据、用了哪些文档、对应路径是什么”，推荐按以下顺序排查。
+如果需要在與 OpenClaw 對話時確認“本輪到底從 OpenViking 召回了哪些資料、用了哪些文件、對應路徑是什麼”，推薦按以下順序排查。
 
-#### 10.4.0 启用 recall trace
+#### 10.4.0 啟用 recall trace
 
-Recall trace 是独立的可观测能力，必须打开 `traceRecall=true` 才会记录；只设置 `recallResources` 或 `recallTargetTypes` 只会改变召回范围，不会自动启用 trace。
+Recall trace 是獨立的可觀測能力，必須開啟 `traceRecall=true` 才會記錄；只設置 `recallResources` 或 `recallTargetTypes` 只會改變召回範圍，不會自動啟用 trace。
 
 ```bash
-# 只保留当前 gateway 进程内的内存 trace
+# 只保留當前 gateway 程序內的記憶體 trace
 openclaw config set plugins.entries.openviking.config.traceRecall true
 
-# 如需 gateway 重启后还能查历史 trace，再打开持久化
+# 如需 gateway 重啟後還能查歷史 trace，再開啟持久化
 openclaw config set plugins.entries.openviking.config.traceRecallPersist true
 openclaw config set plugins.entries.openviking.config.traceRecallDir ~/.openclaw/openviking/recall-traces
 
 openclaw gateway restart
 ```
 
-查询方式：
+查詢方式：
 
 ```text
 # Agent tool
-ov_recall_trace(query="用户问题关键词", limit=10)
+ov_recall_trace(query="使用者問題關鍵詞", limit=10)
 
 # Slash command
-/ov-recall-trace --query "用户问题关键词" --limit 10
+/ov-recall-trace --query "使用者問題關鍵詞" --limit 10
 
-# Gateway route adapter 可用时
+# Gateway route adapter 可用時
 GET /api/openviking/recall-traces
 GET /api/openviking/recall-traces/<traceId>
 ```
 
-排查边界：
+排查邊界：
 
-| 配置状态 | 行为 |
+| 配置狀態 | 行為 |
 | --- | --- |
-| `traceRecall=false` | 不记录 trace，不创建 trace 目录；查询工具返回 trace 未启用提示 |
-| `traceRecall=true && traceRecallPersist=false` | 只查当前 gateway 进程内的 ring buffer；重启后丢失 |
-| `traceRecall=true && traceRecallPersist=true` | trace 追加写入按日期分片的 JSONL；重启后按配置预加载最近记录，并可查询 retention 范围内文件 |
+| `traceRecall=false` | 不記錄 trace，不建立 trace 目錄；查詢工具返回 trace 未啟用提示 |
+| `traceRecall=true && traceRecallPersist=false` | 只查當前 gateway 程序內的 ring buffer；重啟後丟失 |
+| `traceRecall=true && traceRecallPersist=true` | trace 追加寫入按日期分片的 JSONL；重啟後按配置預載入最近記錄，並可查詢 retention 範圍內檔案 |
 
-#### 10.4.0.1 安装后验证真实 session 的 trace 查询
+#### 10.4.0.1 安裝後驗證真實 session 的 trace 查詢
 
-安装或升级后，建议用 OpenClaw 当前真实 `sessionKey` 验证 `ov_recall_trace`，不要用日期或时间戳人为拼一个 session key 代替线上会话。真实 web session 的 trace 通常同时保存：
+安裝或升級後，建議用 OpenClaw 當前真實 `sessionKey` 驗證 `ov_recall_trace`，不要用日期或時間戳人為拼一個 session key 代替線上會話。真實 web session 的 trace 通常同時儲存：
 
-- `entry.sessionKey`：OpenClaw 会话 key，例如 `agent:main:web-...`。
-- `entry.sessionId` / `entry.ovSessionId`：OpenClaw 会话 UUID。
+- `entry.sessionKey`：OpenClaw 會話 key，例如 `agent:main:web-...`。
+- `entry.sessionId` / `entry.ovSessionId`：OpenClaw 會話 UUID。
 
-验证命令：
+驗證命令：
 
 ```bash
 SK="$(openclaw status --json | jq -r '
@@ -1022,7 +1022,7 @@ SK="$(openclaw status --json | jq -r '
 ')"
 
 if [ -z "$SK" ]; then
-  echo "未从 openclaw status --json 取到 sessionKey" >&2
+  echo "未從 openclaw status --json 取到 sessionKey" >&2
   openclaw status --json | jq .
   exit 1
 fi
@@ -1048,14 +1048,14 @@ echo "$TRACE_RESULT" | jq .
 COUNT="$(echo "$TRACE_RESULT" | jq -r '.output.details.count // 0')"
 
 if [ "$COUNT" -gt 0 ]; then
-  echo "trace 查询验证成功，count=$COUNT"
+  echo "trace 查詢驗證成功，count=$COUNT"
 else
-  echo "trace 查询验证失败，count=$COUNT" >&2
+  echo "trace 查詢驗證失敗，count=$COUNT" >&2
   exit 1
 fi
 ```
 
-如果升级前线上仍是旧版本，可临时把业务过滤参数也显式带上，绕过旧版本没有默认使用外层 `params.sessionKey` 的问题：
+如果升級前線上仍是舊版本，可臨時把業務過濾引數也顯式帶上，繞過舊版本沒有預設使用外層 `params.sessionKey` 的問題：
 
 ```json
 {
@@ -1069,30 +1069,30 @@ fi
 }
 ```
 
-当前版本默认使用外层 `params.sessionKey` 查询当前 session trace；如果未命中且调用方没有显式设置 `args.sessionKey/sessionId/ovSessionId/traceId`，会继续 fallback 到当前 session 的 `sessionId/ovSessionId`，以兼容已落盘的历史 JSONL。
+當前版本預設使用外層 `params.sessionKey` 查詢當前 session trace；如果未命中且呼叫方沒有顯式設定 `args.sessionKey/sessionId/ovSessionId/traceId`，會繼續 fallback 到當前 session 的 `sessionId/ovSessionId`，以相容已落盤的歷史 JSONL。
 
-#### 10.4.1 先打开插件侧可观测配置
+#### 10.4.1 先開啟外掛側可觀測配置
 
 ```bash
 # 打印 OpenViking search/session 路由、target_uri、query、agent/account/user header 等
 openclaw config set plugins.entries.openviking.config.logFindRequests true
 
-# 打印 assemble/afterTurn/compact 标准诊断
+# 列印 assemble/afterTurn/compact 標準診斷
 openclaw config set plugins.entries.openviking.config.emitStandardDiagnostics true
 
-# 如果希望自动召回只查导入的文档/URL/目录资源，设置 resource-only
+# 如果希望自動召回只查匯入的文件/URL/目錄資源，設定 resource-only
 openclaw config set plugins.entries.openviking.config.recallTargetTypes '["resource"]'
 
-# 如果希望保留默认 user/agent 记忆，同时额外查 resources，也可使用旧兼容加法开关
+# 如果希望保留預設 user/agent 記憶，同時額外查 resources，也可使用舊相容加法開關
 openclaw config set plugins.entries.openviking.config.recallResources true
 
-# 如果希望记录本轮召回详情，必须显式打开 trace
+# 如果希望記錄本輪召回詳情，必須顯式開啟 trace
 openclaw config set plugins.entries.openviking.config.traceRecall true
 
 openclaw gateway restart
 ```
 
-也可以临时用环境变量打开路由日志：
+也可以臨時用環境變數開啟路由日誌：
 
 ```bash
 OPENVIKING_LOG_ROUTING=1 openclaw gateway restart
@@ -1100,60 +1100,60 @@ OPENVIKING_LOG_ROUTING=1 openclaw gateway restart
 OPENVIKING_DEBUG=1 openclaw gateway restart
 ```
 
-#### 10.4.2 看日志中的关键字段
+#### 10.4.2 看日誌中的關鍵欄位
 
-一次自动召回通常会产生三类可观测信息：
+一次自動召回通常會產生三類可觀測資訊：
 
-| 日志/字段 | 含义 | 关键路径 |
+| 日誌/欄位 | 含義 | 關鍵路徑 |
 | --- | --- | --- |
-| `openviking: context search POST .../api/v1/search/search {...}` | 自动召回向 OpenViking 发起服务端组装检索 | `purpose` / `quotas` / `session_id` / `context_type` / `query_expansion` / `max_tokens` / `peer_scope` / actor 与租户路由 |
-| `openviking: find POST .../api/v1/search/find {...}` | 显式 recall/search 工具发起底层语义检索 | `target_uri` / `target_uri_input` / `query` / `X_OpenViking_Agent` |
-| `openviking: injecting N memories ...` | 插件决定向本轮 prompt 注入 N 条召回内容 | `N`、注入字符数、估算 token |
-| `openviking: inject-detail {...}` | 本轮实际注入模型的服务端组装条目摘要 | `entries[].uri`、`category`、`score`、`detail` |
-| `openviking: diag {"stage":"assemble_result"...}` | assemble 阶段是否发生自动召回 | `phase=transform_context`、`autoRecallMemoryCount` |
+| `openviking: context search POST .../api/v1/search/search {...}` | 自動召回向 OpenViking 發起服務端組裝檢索 | `purpose` / `quotas` / `session_id` / `context_type` / `query_expansion` / `max_tokens` / `peer_scope` / actor 與租戶路由 |
+| `openviking: find POST .../api/v1/search/find {...}` | 顯式 recall/search 工具發起底層語義檢索 | `target_uri` / `target_uri_input` / `query` / `X_OpenViking_Agent` |
+| `openviking: injecting N memories ...` | 外掛決定向本輪 prompt 注入 N 條召回內容 | `N`、注入字元數、估算 token |
+| `openviking: inject-detail {...}` | 本輪實際注入模型的服務端組裝條目摘要 | `entries[].uri`、`category`、`score`、`detail` |
+| `openviking: diag {"stage":"assemble_result"...}` | assemble 階段是否發生自動召回 | `phase=transform_context`、`autoRecallMemoryCount` |
 
-其中 `inject-detail` 是排查“本轮模型实际看到了哪些 OpenViking 召回内容”的首选入口。它会列出每条被注入内容的 `uri`，例如：
+其中 `inject-detail` 是排查“本輪模型實際看到了哪些 OpenViking 召回內容”的首選入口。它會列出每條被注入內容的 `uri`，例如：
 
 ```text
 openviking: inject-detail {"count":2,"memories":[{"uri":"viking://user/default/memories/preferences/...","category":"preferences","abstract":"...","score":0.82,"is_leaf":true},{"uri":"viking://resources/project-docs/api.md#chunk-3","category":"resource","abstract":"...","score":0.71,"is_leaf":true}]}
 ```
 
-注意：自动注入到模型输入里的 `<relevant-memories>` 块默认只包含类别和内容，不直接暴露 URI；URI/路径主要从插件日志、`memory_recall` / `ov_search` 工具 `details`、或 OpenViking API 返回中获取。
+注意：自動注入到模型輸入裡的 `<relevant-memories>` 塊預設只包含類別和內容，不直接暴露 URI；URI/路徑主要從外掛日誌、`memory_recall` / `ov_search` 工具 `details`、或 OpenViking API 返回中獲取。
 
-#### 10.4.3 用 OpenClaw 工具显式复现召回
+#### 10.4.3 用 OpenClaw 工具顯式復現召回
 
-如果想把“命中的路径”直接展示给 Agent 或用户，可以让 Agent 显式调用工具：
+如果想把“命中的路徑”直接展示給 Agent 或使用者，可以讓 Agent 顯式呼叫工具：
 
 ```text
-# 查长期记忆，默认查 user/agent memories；recallTargetTypes 可切换默认范围
-memory_recall(query="用户问题关键词", limit=10)
+# 查長期記憶，預設查 user/agent memories；recallTargetTypes 可切換預設範圍
+memory_recall(query="使用者問題關鍵詞", limit=10)
 
-# 查导入的文档、URL、目录、仓库资源
-ov_search(query="用户问题关键词", uri="viking://resources", limit=10)
+# 查匯入的文件、URL、目錄、倉庫資源
+ov_search(query="使用者問題關鍵詞", uri="viking://resources", limit=10)
 
 # 查 agent skills
-ov_search(query="用户问题关键词", uri="viking://user/skills", limit=10)
+ov_search(query="使用者問題關鍵詞", uri="viking://user/skills", limit=10)
 ```
 
-`ov_search` 的文本结果会显示 `type`、`uri`、`level`、`score` 和摘要；工具 `details` 里也会保留原始 `resources[]` / `skills[]` / `memories[]` 数组。
+`ov_search` 的文本結果會顯示 `type`、`uri`、`level`、`score` 和摘要；工具 `details` 裡也會保留原始 `resources[]` / `skills[]` / `memories[]` 陣列。
 
-注意：这些 `uri` 是 OpenViking 虚拟 URI，不是本地文件路径。需要完整内容时，让 Agent 调用 `ov_read(uri="viking://...")`，不要把 `viking://...` 或历史兼容展示里的 `openviking://...` 当作本地路径交给文件读取工具。
+注意：這些 `uri` 是 OpenViking 虛擬 URI，不是本地檔案路徑。需要完整內容時，讓 Agent 呼叫 `ov_read(uri="viking://...")`，不要把 `viking://...` 或歷史相容展示裡的 `openviking://...` 當作本地路徑交給檔案讀取工具。
 
-#### 10.4.4 直接调用 OpenViking API 获取路径和内容
+#### 10.4.4 直接呼叫 OpenViking API 獲取路徑和內容
 
-插件调用 OpenViking 时统一携带认证和路由 header。手工排查时也要保持一致：
+外掛呼叫 OpenViking 時統一攜帶認證和路由 header。手工排查時也要保持一致：
 
 ```bash
 export OPENVIKING_BASE_URL="http://127.0.0.1:1933"
 export OPENVIKING_API_KEY="<your-api-key>"
 export OPENVIKING_AGENT="<X-OpenViking-Actor-Peer-from-log>"
 
-# root key / trusted server 场景按需补充
+# root key / trusted server 場景按需補充
 export OPENVIKING_ACCOUNT_ID="<account-id>"
 export OPENVIKING_USER_ID="<user-id>"
 ```
 
-语义检索并获取命中 URI：
+語義檢索並獲取命中 URI：
 
 ```bash
 headers=(
@@ -1172,14 +1172,14 @@ fi
 curl -sS "$OPENVIKING_BASE_URL/api/v1/search/find" \
   "${headers[@]}" \
   -d '{
-    "query": "用户问题关键词",
+    "query": "使用者問題關鍵詞",
     "target_uri": "viking://resources",
     "limit": 10,
     "score_threshold": 0.15
   }'
 ```
 
-典型返回中需要关注：
+典型返回中需要關注：
 
 ```json
 {
@@ -1198,7 +1198,7 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/search/find" \
 }
 ```
 
-拿到 `uri` 后读取完整内容：
+拿到 `uri` 後讀取完整內容：
 
 ```bash
 curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urllib.parse,sys; print(urllib.parse.quote(sys.argv[1], safe=""))' 'viking://resources/project-docs/api.md#chunk-3')" \
@@ -1207,57 +1207,57 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
 
 #### 10.4.5 OpenViking API 速查表
 
-完整官方 API 清单、参数说明和插件映射见 [6.2 OpenViking 官方 API 完整清单与插件映射](#62-openviking-官方-api-完整清单与插件映射)。本节只保留排查“召回了哪些数据 / 用了哪些文档”时最常用的调用。
+完整官方 API 清單、引數說明和外掛對映見 [6.2 OpenViking 官方 API 完整清單與外掛對映](#62-openviking-官方-api-完整清單與外掛對映)。本節只保留排查“召回了哪些資料 / 用了哪些文件”時最常用的呼叫。
 
-| 目标 | API | 插件入口 | 用途 |
+| 目標 | API | 外掛入口 | 用途 |
 | --- | --- | --- | --- |
-| 健康检查 | `GET /health` | `openclaw openviking status` | 判断服务是否可达 |
-| 身份/用户探测 | `GET /api/v1/system/status` | `client.getRuntimeIdentity` | 解析服务端当前 user，辅助 canonical URI 展开 |
-| 服务端上下文组装 | `POST /api/v1/search/search` + `mode="context"` | auto recall | 结合 session 历史返回 `entries`、`rendered` 和预算/去重统计 |
-| 语义检索 | `POST /api/v1/search/find` | `memory_recall` / `ov_search` | 返回 `memories[]`、`resources[]`、`skills[]`，每项含 `uri`、`score`、`abstract`、`level` |
-| 内容读取 | `GET /api/v1/content/read?uri=...` | `memory_recall` / `ov_read` / 手工排查 | 根据命中的 `viking://...` URI 读取完整内容 |
-| 写入 session 消息 | `POST /api/v1/sessions/{sessionId}/messages` | `afterTurn` | 保存 OpenClaw 本轮 user/assistant/tool 片段 |
-| 获取 session 元信息 | `GET /api/v1/sessions/{sessionId}` | `afterTurn` | 查看 `pending_tokens`、message count、commit count |
-| 获取组装上下文 | `GET /api/v1/sessions/{sessionId}/context?token_budget=...` | 主 assemble / compact | 获取 archive summary + active messages |
-| session commit | `POST /api/v1/sessions/{sessionId}/commit` | `afterTurn` / `compact` | 归档会话并触发 Phase 2 记忆抽取 |
-| 查询异步任务 | `GET /api/v1/tasks/{taskId}` | Phase 2 轮询 | 查看 memory extraction 是否完成、失败或超时 |
-| 展开 archive | `GET /api/v1/sessions/{sessionId}/archives/{archiveId}` | `ov_archive_expand` | 回看某个 archive 的原始消息 |
-| archive grep | `POST /api/v1/search/grep` | `ov_archive_search` | 在 session archive 原文中关键词搜索 |
-| 上传本地资源 | `POST /api/v1/resources/temp_upload` | `/add-resource`；`add_resource` 仅 opt-in | 本地文件/目录先临时上传，目录会先 zip |
-| 导入 resource | `POST /api/v1/resources` | `/add-resource`；`add_resource` 仅 opt-in | 将文档、URL、目录、仓库导入 `viking://resources` |
-| 导入 skill | `POST /api/v1/skills` | `add_skill` / `/add-skill` | 将 skill 写入 `viking://user/skills` |
-| 外置工具结果列表 | `GET /api/v1/sessions/{sessionId}/tool-results` | `openviking_tool_result_list` | 查看当前 session 外置工具输出 |
-| 外置工具结果搜索 | `GET /api/v1/sessions/{sessionId}/tool-results/{id}/search?q=...` | `openviking_tool_result_search` | 在大工具结果里关键词搜索 |
-| 外置工具结果读取 | `GET /api/v1/sessions/{sessionId}/tool-results/{id}` | `openviking_tool_result_read` | 分页读取完整工具输出 |
+| 健康檢查 | `GET /health` | `openclaw openviking status` | 判斷服務是否可達 |
+| 身份/使用者探測 | `GET /api/v1/system/status` | `client.getRuntimeIdentity` | 解析服務端當前 user，輔助 canonical URI 展開 |
+| 服務端上下文組裝 | `POST /api/v1/search/search` + `mode="context"` | auto recall | 結合 session 歷史返回 `entries`、`rendered` 和預算/去重統計 |
+| 語義檢索 | `POST /api/v1/search/find` | `memory_recall` / `ov_search` | 返回 `memories[]`、`resources[]`、`skills[]`，每項含 `uri`、`score`、`abstract`、`level` |
+| 內容讀取 | `GET /api/v1/content/read?uri=...` | `memory_recall` / `ov_read` / 手工排查 | 根據命中的 `viking://...` URI 讀取完整內容 |
+| 寫入 session 訊息 | `POST /api/v1/sessions/{sessionId}/messages` | `afterTurn` | 儲存 OpenClaw 本輪 user/assistant/tool 片段 |
+| 獲取 session 元資訊 | `GET /api/v1/sessions/{sessionId}` | `afterTurn` | 檢視 `pending_tokens`、message count、commit count |
+| 獲取組裝上下文 | `GET /api/v1/sessions/{sessionId}/context?token_budget=...` | 主 assemble / compact | 獲取 archive summary + active messages |
+| session commit | `POST /api/v1/sessions/{sessionId}/commit` | `afterTurn` / `compact` | 歸檔會話並觸發 Phase 2 記憶抽取 |
+| 查詢非同步任務 | `GET /api/v1/tasks/{taskId}` | Phase 2 輪詢 | 檢視 memory extraction 是否完成、失敗或超時 |
+| 展開 archive | `GET /api/v1/sessions/{sessionId}/archives/{archiveId}` | `ov_archive_expand` | 回看某個 archive 的原始訊息 |
+| archive grep | `POST /api/v1/search/grep` | `ov_archive_search` | 在 session archive 原文中關鍵詞搜尋 |
+| 上傳本地資源 | `POST /api/v1/resources/temp_upload` | `/add-resource`；`add_resource` 僅 opt-in | 本地檔案/目錄先臨時上傳，目錄會先 zip |
+| 匯入 resource | `POST /api/v1/resources` | `/add-resource`；`add_resource` 僅 opt-in | 將文件、URL、目錄、倉庫匯入 `viking://resources` |
+| 匯入 skill | `POST /api/v1/skills` | `add_skill` / `/add-skill` | 將 skill 寫入 `viking://user/skills` |
+| 外接工具結果列表 | `GET /api/v1/sessions/{sessionId}/tool-results` | `openviking_tool_result_list` | 檢視當前 session 外接工具輸出 |
+| 外接工具結果搜尋 | `GET /api/v1/sessions/{sessionId}/tool-results/{id}/search?q=...` | `openviking_tool_result_search` | 在大工具結果裡關鍵詞搜尋 |
+| 外接工具結果讀取 | `GET /api/v1/sessions/{sessionId}/tool-results/{id}` | `openviking_tool_result_read` | 分頁讀取完整工具輸出 |
 
-#### 10.4.6 判断“用了哪些文档”的边界
+#### 10.4.6 判斷“用了哪些文件”的邊界
 
-- 如果文档是通过 **auto recall** 进入模型上下文：看 `inject-detail` 中 `category=resource` 或 `uri` 以 `viking://resources` 开头的条目。
-- 如果文档是通过 **显式工具** 进入模型上下文：看 `ov_search` 工具结果里的 `uri` 和工具 `details.resources[]`。
-- 如果自动召回只看到了 `context search POST` 但没有 `injecting` / `inject-detail`：说明请求已发出，但服务端可能没有返回可注入内容，或发生了超时/检索错误；结合 warning、trace 和返回 stats 排查。
-- 如果未显式配置 `recallTargetTypes`，自动召回默认只查当前用户及 actor scope 内的 memory，不会把 `viking://resources` 文档自动注入；resource-only 用 `recallTargetTypes=["resource"]`，默认记忆 + resources 用 `recallResources=true` 或 `recallTargetTypes=["user","agent","resource"]`。
-- 如果没查到 recall trace，先检查 `traceRecall=true` 是否已配置并重启 Gateway；`recallTargetTypes` / `recallResources` 不负责启用 trace。
-- 当前插件没有单独生成“模型最终引用/采纳哪些文档”的 citation 文件；最可靠的依据是本轮注入内容、工具调用结果、OpenViking API 返回和模型回复本身。
+- 如果文件是通過 **auto recall** 進入模型上下文：看 `inject-detail` 中 `category=resource` 或 `uri` 以 `viking://resources` 開頭的條目。
+- 如果文件是通過 **顯式工具** 進入模型上下文：看 `ov_search` 工具結果裡的 `uri` 和工具 `details.resources[]`。
+- 如果自動召回只看到了 `context search POST` 但沒有 `injecting` / `inject-detail`：說明請求已發出，但服務端可能沒有返回可注入內容，或發生了超時/檢索錯誤；結合 warning、trace 和返回 stats 排查。
+- 如果未顯式配置 `recallTargetTypes`，自動召回預設只查當前使用者及 actor scope 內的 memory，不會把 `viking://resources` 文件自動注入；resource-only 用 `recallTargetTypes=["resource"]`，預設記憶 + resources 用 `recallResources=true` 或 `recallTargetTypes=["user","agent","resource"]`。
+- 如果沒查到 recall trace，先檢查 `traceRecall=true` 是否已配置並重啟 Gateway；`recallTargetTypes` / `recallResources` 不負責啟用 trace。
+- 當前外掛沒有單獨生成“模型最終引用/採納哪些文件”的 citation 檔案；最可靠的依據是本輪注入內容、工具呼叫結果、OpenViking API 返回和模型回覆本身。
 
-### 10.5 常见问题定位
+### 10.5 常見問題定位
 
-| 现象 | 优先检查 | 可能原因 |
+| 現象 | 優先檢查 | 可能原因 |
 | --- | --- | --- |
-| 插件未生效 | `plugins.slots.contextEngine` | slot 没有指向 `openviking` 或被其他插件覆盖 |
-| `setup` 成功但 gateway 中没调用插件 | `openclaw gateway restart` | Gateway 未重启，仍用旧插件状态 |
-| `status` 服务不可达 | `baseUrl`、`curl /health` | OpenViking 未启动、端口/网络错误 |
-| Root key 报 tenant 错误 | `accountId/userId` | Root key 需要显式租户上下文 |
-| 不同 peer 记忆串用 | `logFindRequests` 中的 `X-OpenViking-Actor-Peer` | `peer_prefix` 或 session agent 解析不符合预期 |
-| 搜不到刚保存的记忆 | 服务端 task 状态和日志 | afterTurn commit 是异步 Phase 2，记忆抽取可能还未完成或服务端失败 |
-| summary 有但细节没有 | `ov_archive_search` / `ov_archive_expand` | Working Memory 是有损摘要，需要 archive 回查 |
-| auto recall 没注入 | `autoRecall`、precheck、阈值、预算 | OpenViking 不可达、query 太短、阈值太高、记忆超预算 |
-| 工具结果缺完整内容 | tool result ref | 用 `openviking_tool_result_read`，不要反复读截断 preview |
-| 本地目录导入失败 | 路径、权限、zip 打包日志 | 目录会先 zip 再 temp upload，需本地可读 |
+| 外掛未生效 | `plugins.slots.contextEngine` | slot 沒有指向 `openviking` 或被其他外掛覆蓋 |
+| `setup` 成功但 gateway 中沒呼叫外掛 | `openclaw gateway restart` | Gateway 未重啟，仍用舊外掛狀態 |
+| `status` 服務不可達 | `baseUrl`、`curl /health` | OpenViking 未啟動、埠/網路錯誤 |
+| Root key 報 tenant 錯誤 | `accountId/userId` | Root key 需要顯式租戶上下文 |
+| 不同 peer 記憶串用 | `logFindRequests` 中的 `X-OpenViking-Actor-Peer` | `peer_prefix` 或 session agent 解析不符合預期 |
+| 搜不到剛儲存的記憶 | 服務端 task 狀態和日誌 | afterTurn commit 是非同步 Phase 2，記憶抽取可能還未完成或服務端失敗 |
+| summary 有但細節沒有 | `ov_archive_search` / `ov_archive_expand` | Working Memory 是有損摘要，需要 archive 回查 |
+| auto recall 沒注入 | `autoRecall`、precheck、閾值、預算 | OpenViking 不可達、query 太短、閾值太高、記憶超預算 |
+| 工具結果缺完整內容 | tool result ref | 用 `openviking_tool_result_read`，不要反覆讀截斷 preview |
+| 本地目錄匯入失敗 | 路徑、許可權、zip 打包日誌 | 目錄會先 zip 再 temp upload，需本地可讀 |
 
-### 10.6 OpenViking 服务侧排查
+### 10.6 OpenViking 服務側排查
 
 ```bash
-# 服务端日志，路径以实际部署为准
+# 服務端日誌，路徑以實際部署為準
 tail -f ~/.openviking/data/log/openviking.log
 
 # Web Console
@@ -1272,9 +1272,9 @@ ov tui
 
 ---
 
-## 11. 验证与测试
+## 11. 驗證與測試
 
-### 11.1 仓库本地验证
+### 11.1 倉庫本地驗證
 
 ```bash
 npm install
@@ -1283,104 +1283,104 @@ npm test
 npm run build
 ```
 
-当前 `package.json` 中提供的脚本：`build`、`test`、`typecheck`：`package.json:36`。
+當前 `package.json` 中提供的指令碼：`build`、`test`、`typecheck`：`package.json:36`。
 
-### 11.2 关键单测覆盖方向
+### 11.2 關鍵單測覆蓋方向
 
-| 测试文件 | 覆盖重点 |
+| 測試檔案 | 覆蓋重點 |
 | --- | --- |
-| `tests/ut/config.test.ts` | 配置默认值、环境变量、peer policy |
-| `tests/ut/setup-command.test.ts` / `setup-cli.test.ts` | setup/status、slot 激活、root key 探测 |
-| `tests/ut/context-engine-*.test.ts` | assemble/afterTurn/compact、消息合并、预算、工具配对 |
-| `tests/ut/memory-ranking.test.ts` | 召回排序、去重、阈值 |
-| `tests/ut/tools.test.ts` | 工具注册、memory/resource/skill/tool-result 行为 |
-| `tests/ut/tool-round-trip.test.ts` | toolCall/toolResult 往返与外置 ref 保留 |
+| `tests/ut/config.test.ts` | 配置預設值、環境變數、peer policy |
+| `tests/ut/setup-command.test.ts` / `setup-cli.test.ts` | setup/status、slot 啟用、root key 探測 |
+| `tests/ut/context-engine-*.test.ts` | assemble/afterTurn/compact、訊息合併、預算、工具配對 |
+| `tests/ut/memory-ranking.test.ts` | 召回排序、去重、閾值 |
+| `tests/ut/tools.test.ts` | 工具註冊、memory/resource/skill/tool-result 行為 |
+| `tests/ut/tool-round-trip.test.ts` | toolCall/toolResult 往返與外接 ref 保留 |
 | `tests/ut/manifest-contracts.test.ts` | manifest/package contract |
-| `tests/ut/package-install-contract.test.ts` | 包安装契约 |
+| `tests/ut/package-install-contract.test.ts` | 包安裝契約 |
 
-### 11.3 插件链路验证
+### 11.3 外掛鏈路驗證
 
 ```bash
 openclaw openviking status --json
 openclaw config get plugins.slots.contextEngine
 ```
 
-如果需要完整链路验证，可以运行健康检查脚本：
+如果需要完整鏈路驗證，可以執行健康檢查指令碼：
 
 ```bash
 python health_check_tools/ov-healthcheck.py
 ```
 
-该脚本用于注入真实对话，并在 OpenViking 侧验证会话捕获、提交、归档和记忆抽取。说明见 `health_check_tools/HEALTHCHECK-ZH.md`。
+該指令碼用於注入真實對話，並在 OpenViking 側驗證會話捕獲、提交、歸檔和記憶抽取。說明見 `health_check_tools/HEALTHCHECK-ZH.md`。
 
-### 11.4 手工端到端验证建议
+### 11.4 手工端到端驗證建議
 
-1. 安装并配置插件。
-2. 打开 `logFindRequests` 和 `emitStandardDiagnostics`。
-3. 与 Agent 对话输入一条明确偏好，例如“记住：我喜欢用中文回复技术文档”。
-4. 等待 afterTurn 或手动触发 `/compact`。
-5. 新开一轮问“我之前偏好什么语言回复技术文档？”。
-6. 观察最新 user message 是否注入 `<relevant-memories>`，或用 `memory_recall` 显式查。
-7. 用 OpenViking Console/TUI 检查 `viking://user/.../memories` 是否产生 leaf memory。
-8. 对长工具输出场景，确认 preview 中有 `viking://session/.../tool-results/...`，再用 tool-result 工具读取完整内容。
-
----
-
-## 12. 注意事项
-
-1. **插件只支持 remote 模式**：旧 local mode 会被迁移提示，不会启动本地 OpenViking 进程。
-2. **必须重启 Gateway**：安装或配置后要 `openclaw gateway restart` 才能生效。
-3. **不要装错包**：`@openviking/openclaw-plugin` 是插件；`clawhub install openviking` 是 AgentSkill。
-4. **API Key 不进日志**：插件路由日志不会打印 key，但仍应避免把 key 写入公开文档或命令历史。
-5. **Root Key 需要租户上下文**：若服务端要求 account/user header，必须配置 `accountId` 和 `userId`。
-6. **peer 配置要一致**：确认 `peer_role` / `peer_prefix` 与期望的 OpenClaw 会话身份一致，否则写入和召回会落在不同 actor peer 视角。
-7. **afterTurn commit 是异步抽取**：立即返回不代表长期记忆已可检索；看 task 或服务端日志。
-8. **compact 是同步边界**：需要明确压缩和抽取完成时用 compact，但它会阻塞等待服务端 Phase 2。
-9. **记忆注入有预算**：`recallMaxInjectedChars` 会跳过放不下的完整记忆，而不是截断。
-10. **bypassSessionPatterns 会完全绕过 OpenViking**：匹配后自动捕获、召回、工具都会跳过。
-11. **tool result 工具限制当前 session**：插件拒绝读取其他 session 的外置结果。
-12. **本地资源导入先上传**：本地文件/目录通过 temp upload，不把本地路径直接交给服务端；目录会 zip，注意权限与体积。
+1. 安裝並配置外掛。
+2. 開啟 `logFindRequests` 和 `emitStandardDiagnostics`。
+3. 與 Agent 對話輸入一條明確偏好，例如“記住：我喜歡用中文回覆技術文件”。
+4. 等待 afterTurn 或手動觸發 `/compact`。
+5. 新開一輪問“我之前偏好什麼語言回覆技術文件？”。
+6. 觀察最新 user message 是否注入 `<relevant-memories>`，或用 `memory_recall` 顯式查。
+7. 用 OpenViking Console/TUI 檢查 `viking://user/.../memories` 是否產生 leaf memory。
+8. 對長工具輸出場景，確認 preview 中有 `viking://session/.../tool-results/...`，再用 tool-result 工具讀取完整內容。
 
 ---
 
-## 13. 维护者代码阅读路线
+## 12. 注意事項
 
-建议按以下顺序阅读：
+1. **外掛只支援 remote 模式**：舊 local mode 會被遷移提示，不會啟動本地 OpenViking 程序。
+2. **必須重啟 Gateway**：安裝或配置後要 `openclaw gateway restart` 才能生效。
+3. **不要裝錯包**：`@openviking/openclaw-plugin` 是外掛；`clawhub install openviking` 是 AgentSkill。
+4. **API Key 不進日誌**：外掛路由日誌不會列印 key，但仍應避免把 key 寫入公開文件或命令歷史。
+5. **Root Key 需要租戶上下文**：若服務端要求 account/user header，必須配置 `accountId` 和 `userId`。
+6. **peer 配置要一致**：確認 `peer_role` / `peer_prefix` 與期望的 OpenClaw 會話身份一致，否則寫入和召回會落在不同 actor peer 視角。
+7. **afterTurn commit 是非同步抽取**：立即返回不代表長期記憶已可檢索；看 task 或服務端日誌。
+8. **compact 是同步邊界**：需要明確壓縮和抽取完成時用 compact，但它會阻塞等待服務端 Phase 2。
+9. **記憶注入有預算**：`recallMaxInjectedChars` 會跳過放不下的完整記憶，而不是截斷。
+10. **bypassSessionPatterns 會完全繞過 OpenViking**：匹配後自動捕獲、召回、工具都會跳過。
+11. **tool result 工具限制當前 session**：外掛拒絕讀取其他 session 的外接結果。
+12. **本地資源匯入先上傳**：本地檔案/目錄通過 temp upload，不把本地路徑直接交給服務端；目錄會 zip，注意許可權與體積。
 
-1. `openclaw.plugin.json`：了解插件声明、工具 contract、配置 schema。
-2. `package.json`：了解构建、OpenClaw 入口、兼容版本。
-3. `commands/setup.ts`：了解用户安装配置如何写入 OpenClaw config。
-4. `index.ts`：了解插件注册、工具、hook 和 service。
-5. `client.ts`：了解 OpenViking API 封装和 header/URI 处理。
-6. `context-engine.ts`：理解 assemble/afterTurn/compact 主链路。
+---
+
+## 13. 維護者程式碼閱讀路線
+
+建議按以下順序閱讀：
+
+1. `openclaw.plugin.json`：瞭解外掛宣告、工具 contract、配置 schema。
+2. `package.json`：瞭解構建、OpenClaw 入口、相容版本。
+3. `commands/setup.ts`：瞭解使用者安裝配置如何寫入 OpenClaw config。
+4. `index.ts`：瞭解外掛註冊、工具、hook 和 service。
+5. `client.ts`：瞭解 OpenViking API 封裝和 header/URI 處理。
+6. `context-engine.ts`：理解 assemble/afterTurn/compact 主鏈路。
 7. `auto-recall.ts` + `memory-ranking.ts`：理解召回注入和排序。
-8. `text-utils.ts` + `session-transcript-repair.ts`：理解消息清洗与 transcript 结构修复。
-9. `tests/ut/*`：用测试反向确认 contract。
+8. `text-utils.ts` + `session-transcript-repair.ts`：理解訊息清洗與 transcript 結構修復。
+9. `tests/ut/*`：用測試反向確認 contract。
 
 ---
 
 ## 14. 快速排障 Checklist
 
-- [ ] OpenViking Server `GET /health` 可达。
+- [ ] OpenViking Server `GET /health` 可達。
 - [ ] `openclaw openviking status --json` 中 `configured=true`。
 - [ ] `slotActive=true`。
-- [ ] Gateway 已重启。
-- [ ] `plugins.entries.openviking.config.baseUrl` 指向正确服务。
-- [ ] root key 场景已配置 `accountId/userId`。
-- [ ] `X-OpenViking-Actor-Peer` 与预期 agent/session 一致。
-- [ ] `autoCapture/autoRecall` 未被关闭。
-- [ ] 当前 session 没有命中 `bypassSessionPatterns`。
-- [ ] `pending_tokens` 是否达到 `tokenBudget × commitTokenThresholdRatio`。
+- [ ] Gateway 已重啟。
+- [ ] `plugins.entries.openviking.config.baseUrl` 指向正確服務。
+- [ ] root key 場景已配置 `accountId/userId`。
+- [ ] `X-OpenViking-Actor-Peer` 與預期 agent/session 一致。
+- [ ] `autoCapture/autoRecall` 未被關閉。
+- [ ] 當前 session 沒有命中 `bypassSessionPatterns`。
+- [ ] `pending_tokens` 是否達到 `tokenBudget × commitTokenThresholdRatio`。
 - [ ] Phase 2 task 是否 completed。
-- [ ] 需要细节时是否使用 archive 工具回查。
+- [ ] 需要細節時是否使用 archive 工具回查。
 
 ---
 
-## 15. 构建、测试、发布、上线全流程
+## 15. 構建、測試、釋出、上線全流程
 
-本章面向维护者和发布同学，按“改代码 → 本地验证 → 打包 → 发布到 TOS → 安装/灰度 → 上线验证 → 回滚”的顺序给出最短路径。
+本章面向維護者和釋出同學，按“改程式碼 → 本地驗證 → 打包 → 釋出到 TOS → 安裝/灰度 → 上線驗證 → 回滾”的順序給出最短路徑。
 
-### 15.1 本地开发准备
+### 15.1 本地開發準備
 
 ```bash
 git clone <repo-url>
@@ -1389,18 +1389,18 @@ node -v        # 需要 Node.js >= 22
 npm install
 ```
 
-核心脚本来自 `package.json`：
+核心指令碼來自 `package.json`：
 
 | 命令 | 作用 |
 | --- | --- |
-| `npm run typecheck` | 使用 `tsconfig.json` 做类型检查 |
-| `npm test` | 运行 Vitest 单测 |
+| `npm run typecheck` | 使用 `tsconfig.json` 做型別檢查 |
+| `npm test` | 執行 Vitest 單測 |
 | `npm run build` | 使用 `tsconfig.build.json` 生成 `dist/` |
-| `bash build.sh` | 完整发布包构建：安装依赖、类型检查、单测、编译、打 tgz、生成安装脚本 |
+| `bash build.sh` | 完整發布包構建：安裝依賴、型別檢查、單測、編譯、打 tgz、生成安裝指令碼 |
 
-### 15.2 本地测试
+### 15.2 本地測試
 
-最小代码质量检查：
+最小程式碼質量檢查：
 
 ```bash
 npm run typecheck
@@ -1408,25 +1408,25 @@ npm test
 npm run build
 ```
 
-完整发布前检查：
+完整發布前檢查：
 
 ```bash
 bash build.sh
 ```
 
-`build.sh` 会依次执行 `npm install`、`npm run typecheck`、`npm test`、`npm run build`，并要求存在 `dist/index.js`、`dist/commands/setup.js`、`openclaw.plugin.json`、`install-manifest.json`、`skills/` 和安装脚本：`build.sh:76`、`build.sh:82`、`build.sh:87`。
+`build.sh` 會依次執行 `npm install`、`npm run typecheck`、`npm test`、`npm run build`，並要求存在 `dist/index.js`、`dist/commands/setup.js`、`openclaw.plugin.json`、`install-manifest.json`、`skills/` 和安裝指令碼：`build.sh:76`、`build.sh:82`、`build.sh:87`。
 
-打包产物：
+打包產物：
 
-| 文件 | 说明 |
+| 檔案 | 說明 |
 | --- | --- |
-| `output/openviking.tgz` | 插件独立安装包 |
-| `output/install.sh` | TOS / tarball / local 安装脚本 |
-| `output/volcengine-install.sh` | 火山一键安装脚本 |
+| `output/openviking.tgz` | 外掛獨立安裝包 |
+| `output/install.sh` | TOS / tarball / local 安裝指令碼 |
+| `output/volcengine-install.sh` | 火山一鍵安裝指令碼 |
 
-重要契约：构建包会在 staging package 中安装生产依赖，并强校验 `node_modules/@sinclair/typebox` 存在，避免 OpenClaw 运行时加载插件失败：`build.sh:114`、`build.sh:116`。
+重要契約：構建包會在 staging package 中安裝生產依賴，並強校驗 `node_modules/@sinclair/typebox` 存在，避免 OpenClaw 執行時載入外掛失敗：`build.sh:114`、`build.sh:116`。
 
-### 15.3 用本地包安装验证
+### 15.3 用本地包安裝驗證
 
 ```bash
 bash build.sh
@@ -1437,13 +1437,13 @@ bash output/install.sh --source tarball --tarball output/openviking.tgz \
   --json
 ```
 
-只想校验包是否完整，不安装：
+只想校驗包是否完整，不安裝：
 
 ```bash
 bash output/install.sh --source tarball --tarball output/openviking.tgz --verify-only
 ```
 
-安装后检查：
+安裝後檢查：
 
 ```bash
 openclaw gateway restart
@@ -1452,84 +1452,84 @@ openclaw config get plugins.entries.openviking.config
 openclaw config get plugins.slots.contextEngine
 ```
 
-### 15.4 Release 版本规则
+### 15.4 Release 版本規則
 
-发布脚本入口是 `scripts/release-to-tos.sh`。版本解析逻辑由 `scripts/resolve-release-version.mjs` 控制：
+釋出指令碼入口是 `scripts/release-to-tos.sh`。版本解析邏輯由 `scripts/resolve-release-version.mjs` 控制：
 
-| 场景 | 版本结果 |
+| 場景 | 版本結果 |
 | --- | --- |
-| 默认 beta 发布 | 从 `package.json` 取基础版本，例如 `2026.6.2`，在目标环境已有版本基础上生成下一个 `2026.6.2-beta.N` |
-| `--stable` | 发布基础版本本身，例如 `2026.6.2` |
-| `--version <version>` | 完全使用显式版本 |
-| `--tag <tag>` | 显式指定 Git tag；默认是 `v<resolved-version>` |
+| 預設 beta 釋出 | 從 `package.json` 取基礎版本，例如 `2026.6.2`，在目標環境已有版本基礎上生成下一個 `2026.6.2-beta.N` |
+| `--stable` | 釋出基礎版本本身，例如 `2026.6.2` |
+| `--version <version>` | 完全使用顯式版本 |
+| `--tag <tag>` | 顯式指定 Git tag；預設是 `v<resolved-version>` |
 
-解析规则见 `scripts/resolve-release-version.mjs:28`、`scripts/resolve-release-version.mjs:38`、`scripts/resolve-release-version.mjs:56`。
+解析規則見 `scripts/resolve-release-version.mjs:28`、`scripts/resolve-release-version.mjs:38`、`scripts/resolve-release-version.mjs:56`。
 
-### 15.5 Dry-run 发布检查
+### 15.5 Dry-run 釋出檢查
 
-发布前先 dry-run，确认版本、manifest、checksum、latest 指针内容：
+釋出前先 dry-run，確認版本、manifest、checksum、latest 指標內容：
 
 ```bash
 scripts/release-to-tos.sh --env stg --dry-run
 
-# 稳定版本 dry-run
+# 穩定版本 dry-run
 scripts/release-to-tos.sh --env prod --stable --dry-run
 ```
 
-dry-run 会真实执行 `build.sh` 并生成：
+dry-run 會真實執行 `build.sh` 並生成：
 
-| 文件 | 说明 |
+| 檔案 | 說明 |
 | --- | --- |
-| `output/manifest.json` | release 元数据，包含环境、版本、Git hash、artifact 路径和 SHA256 |
-| `output/checksums.sha256` | artifact 校验和 |
-| `output/latest.json` | 当前环境 latest 指针候选内容 |
-| `output/release-notes.md` | 未传 `--notes` 时自动生成的 release notes |
+| `output/manifest.json` | release 後設資料，包含環境、版本、Git hash、artifact 路徑和 SHA256 |
+| `output/checksums.sha256` | artifact 校驗和 |
+| `output/latest.json` | 當前環境 latest 指標候選內容 |
+| `output/release-notes.md` | 未傳 `--notes` 時自動生成的 release notes |
 
-dry-run 不上传 TOS：`scripts/release-to-tos.sh:178`。
+dry-run 不上傳 TOS：`scripts/release-to-tos.sh:178`。
 
-### 15.6 发布到 TOS
+### 15.6 釋出到 TOS
 
-非 dry-run 需要 TOS 凭证：
+非 dry-run 需要 TOS 憑證：
 
 ```bash
 export TOS_ACCESS_KEY=<tos-access-key>
 export TOS_SECRET_KEY=<tos-secret-key>
 
-# 可选，默认如下
+# 可選，預設如下
 export TOS_BUCKET=arkclaw-openviking
 export TOS_REGION=cn-beijing
 export TOS_ENDPOINT=tos-cn-beijing.volces.com
 ```
 
-发布 beta 到 stg / ppe：
+釋出 beta 到 stg / ppe：
 
 ```bash
 scripts/release-to-tos.sh --env stg --notes ./release-notes.md
 scripts/release-to-tos.sh --env ppe --notes ./release-notes.md
 ```
 
-发布稳定版本到 prod：
+釋出穩定版本到 prod：
 
 ```bash
 scripts/release-to-tos.sh --env prod --stable --notes ./release-notes.md
 ```
 
-脚本会完成以下动作：
+指令碼會完成以下動作：
 
-1. 校验环境只能是 `stg|ppe|prod`。
-2. prod 发布要求 Git 工作区干净，防止脏代码上线：`scripts/release-to-tos.sh:106`。
+1. 校驗環境只能是 `stg|ppe|prod`。
+2. prod 釋出要求 Git 工作區乾淨，防止髒程式碼上線：`scripts/release-to-tos.sh:106`。
 3. 解析版本和 tag。
-4. 用 `BUILD_VERSION=<version> bash build.sh` 构建包。
+4. 用 `BUILD_VERSION=<version> bash build.sh` 構建包。
 5. 生成 manifest / checksums / latest。
-6. 上传 `openviking.tgz`、`install.sh`、`manifest.json`、`checksums.sha256`、`release-notes.md`。
-7. 下载远端对象并校验 SHA256。
-8. 默认更新 `<env>/latest.json`；如传 `--no-latest` 则只上传不可变 release 对象，不切 latest。
+6. 上傳 `openviking.tgz`、`install.sh`、`manifest.json`、`checksums.sha256`、`release-notes.md`。
+7. 下載遠端物件並校驗 SHA256。
+8. 預設更新 `<env>/latest.json`；如傳 `--no-latest` 則只上傳不可變 release 物件，不切 latest。
 
-TOS 对象不可变策略：release artifact、manifest、checksums、release notes 默认拒绝覆盖；只有 `<env>/latest.json` 是可变指针：`scripts/tos-release-client.mjs:49`、`scripts/tos-release-client.mjs:65`、`scripts/tos-release-client.mjs:80`。
+TOS 物件不可變策略：release artifact、manifest、checksums、release notes 預設拒絕覆蓋；只有 `<env>/latest.json` 是可變指標：`scripts/tos-release-client.mjs:49`、`scripts/tos-release-client.mjs:65`、`scripts/tos-release-client.mjs:80`。
 
-### 15.7 TOS 产物结构
+### 15.7 TOS 產物結構
 
-发布成功后，TOS 中的结构如下：
+釋出成功後，TOS 中的結構如下：
 
 ```text
 <env>/latest.json
@@ -1540,38 +1540,38 @@ TOS 对象不可变策略：release artifact、manifest、checksums、release no
 <env>/releases/<version>/release-notes.md
 ```
 
-`manifest.json` 中每个 artifact 都包含 `path`、`size`、`sha256`；安装脚本会读取 manifest 中 `openviking.tgz` 的路径和 SHA256 后下载校验：`scripts/generate-release-manifest.mjs:73`、`scripts/install.sh:315`、`scripts/install.sh:318`。
+`manifest.json` 中每個 artifact 都包含 `path`、`size`、`sha256`；安裝指令碼會讀取 manifest 中 `openviking.tgz` 的路徑和 SHA256 後下載校驗：`scripts/generate-release-manifest.mjs:73`、`scripts/install.sh:315`、`scripts/install.sh:318`。
 
-### 15.8 灰度、上线与回滚
+### 15.8 灰度、上線與回滾
 
-推荐发布流：
+推薦釋出流：
 
-1. **stg**：`scripts/release-to-tos.sh --env stg --dry-run`，确认产物；再去掉 `--dry-run` 发布。
-2. **stg 安装验证**：`bash install.sh --source tos --channel stg --latest --verify-only`，再真实安装到测试 OpenClaw。
-3. **ppe**：复用相同 release notes 发布到 ppe，验证安装、setup、gateway、status、一次真实召回。
-4. **prod dry-run**：确认 prod 稳定版本、manifest 和最新 Git hash。
-5. **prod 发布**：工作区干净后执行 `scripts/release-to-tos.sh --env prod --stable --notes ./release-notes.md`。
-6. **线上验证**：安装 prod latest 或指定版本，检查 `openclaw openviking status --json`、slot、OpenViking `/health`、一次 `memory_recall` 或 `ov_search`。
+1. **stg**：`scripts/release-to-tos.sh --env stg --dry-run`，確認產物；再去掉 `--dry-run` 釋出。
+2. **stg 安裝驗證**：`bash install.sh --source tos --channel stg --latest --verify-only`，再真實安裝到測試 OpenClaw。
+3. **ppe**：複用相同 release notes 釋出到 ppe，驗證安裝、setup、gateway、status、一次真實召回。
+4. **prod dry-run**：確認 prod 穩定版本、manifest 和最新 Git hash。
+5. **prod 釋出**：工作區乾淨後執行 `scripts/release-to-tos.sh --env prod --stable --notes ./release-notes.md`。
+6. **線上驗證**：安裝 prod latest 或指定版本，檢查 `openclaw openviking status --json`、slot、OpenViking `/health`、一次 `memory_recall` 或 `ov_search`。
 
-回滚方式：
+回滾方式：
 
 ```bash
-# 客户端回滚安装指定版本
+# 客戶端回滾安裝指定版本
 bash install.sh --source tos --channel prod --version <previous-version>
 
-# 或使用别名
+# 或使用別名
 bash install.sh --source tos --channel prod --rollback-to <previous-version>
 ```
 
-如果只想发布某版本但不更新 latest 指针：
+如果只想釋出某版本但不更新 latest 指標：
 
 ```bash
 scripts/release-to-tos.sh --env prod --stable --no-latest --notes ./release-notes.md
 ```
 
-这种方式适合先上传不可变产物，待外部审批通过后再单独更新 latest 指针。
+這種方式適合先上傳不可變產物，待外部審批通過後再單獨更新 latest 指標。
 
-### 15.9 上线后 Debug Checklist
+### 15.9 上線後 Debug Checklist
 
 ```bash
 openclaw openviking status --json
@@ -1580,7 +1580,7 @@ openclaw config get plugins.slots.contextEngine
 curl <OPENVIKING_BASE_URL>/health
 ```
 
-建议临时打开：
+建議臨時開啟：
 
 ```bash
 openclaw config set plugins.entries.openviking.config.logFindRequests true
@@ -1588,7 +1588,7 @@ openclaw config set plugins.entries.openviking.config.emitStandardDiagnostics tr
 openclaw gateway restart
 ```
 
-如果排查“召回到底用了哪些结果”，再打开 trace：
+如果排查“召回到底用了哪些結果”，再開啟 trace：
 
 ```bash
 openclaw config set plugins.entries.openviking.config.traceRecall true
@@ -1596,25 +1596,25 @@ openclaw config set plugins.entries.openviking.config.traceRecallPersist true
 openclaw gateway restart
 ```
 
-然后使用 `ov_recall_trace` / `/ov-recall-trace` 查询。注意：`traceRecall=true` 是 trace 总开关，配置召回范围（如 `recallTargetTypes=["resource"]`）不会自动打开 trace。
+然後使用 `ov_recall_trace` / `/ov-recall-trace` 查詢。注意：`traceRecall=true` 是 trace 總開關，配置召回範圍（如 `recallTargetTypes=["resource"]`）不會自動開啟 trace。
 
-### 15.10 发布失败常见原因
+### 15.10 釋出失敗常見原因
 
-| 现象 | 原因 | 处理 |
+| 現象 | 原因 | 處理 |
 | --- | --- | --- |
-| prod 发布被拒绝 | Git 工作区不干净 | 提交或还原本地修改后重试 |
-| 非 dry-run 提示 TOS 凭证缺失 | 没有设置 `TOS_ACCESS_KEY` / `TOS_SECRET_KEY` | 导出凭证后重试 |
-| TOS 上传拒绝覆盖 | 同版本 release 对象已存在且不可变 | 换新版本；不要覆盖已发布对象 |
-| 安装包校验失败 | 下载的 `openviking.tgz` SHA256 与 manifest 不一致 | 停止安装，检查 TOS 对象和 CDN/代理缓存 |
-| OpenClaw 加载失败并提示缺依赖 | 包内缺运行时依赖 | 重新运行当前 `build.sh`，确认包内有 `node_modules/@sinclair/typebox` |
-| status 不健康 | OpenViking Server 不可达或 key/租户错误 | 检查 `baseUrl`、`apiKey`、`accountId`、`userId`、服务端 `/health` |
+| prod 釋出被拒絕 | Git 工作區不乾淨 | 提交或還原本地修改後重試 |
+| 非 dry-run 提示 TOS 憑證缺失 | 沒有設定 `TOS_ACCESS_KEY` / `TOS_SECRET_KEY` | 匯出憑證後重試 |
+| TOS 上傳拒絕覆蓋 | 同版本 release 物件已存在且不可變 | 換新版本；不要覆蓋已釋出物件 |
+| 安裝包校驗失敗 | 下載的 `openviking.tgz` SHA256 與 manifest 不一致 | 停止安裝，檢查 TOS 物件和 CDN/代理快取 |
+| OpenClaw 載入失敗並提示缺依賴 | 包內缺執行時依賴 | 重新運行當前 `build.sh`，確認包內有 `node_modules/@sinclair/typebox` |
+| status 不健康 | OpenViking Server 不可達或 key/租戶錯誤 | 檢查 `baseUrl`、`apiKey`、`accountId`、`userId`、服務端 `/health` |
 
 ---
 
-## 16. 参考文档
+## 16. 參考文件
 
-- `README_CN.md`：项目中文快速说明。
-- `INSTALL-ZH.md`：安装、升级、卸载指南。
-- `INSTALL-AGENT.md`：Agent 自动安装说明。
-- `docs/workmemory-v2-design.md`：Working Memory v2 设计。
-- `health_check_tools/HEALTHCHECK-ZH.md`：健康检查脚本说明。
+- `README_CN.md`：專案中文快速說明。
+- `INSTALL-ZH.md`：安裝、升級、解除安裝指南。
+- `INSTALL-AGENT.md`：Agent 自動安裝說明。
+- `docs/workmemory-v2-design.md`：Working Memory v2 設計。
+- `health_check_tools/HEALTHCHECK-ZH.md`：健康檢查指令碼說明。

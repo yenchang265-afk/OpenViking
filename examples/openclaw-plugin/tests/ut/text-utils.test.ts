@@ -63,24 +63,24 @@ describe("sanitizeUserTextForCapture", () => {
 
 describe("getCaptureDecision", () => {
   it("semantic mode: normal text → shouldCapture=true", () => {
-    const result = getCaptureDecision("我喜欢用 Python 写代码，平时也用 Go", "semantic", 24000);
+    const result = getCaptureDecision("我喜歡用 Python 寫程式碼，平時也用 Go", "semantic", 24000);
     expect(result.shouldCapture).toBe(true);
     expect(result.reason).toContain("semantic");
   });
 
   it("keyword mode: no trigger word → shouldCapture=false", () => {
-    const result = getCaptureDecision("今天天气不错啊，适合出去走走散步放松一下心情", "keyword", 24000);
+    const result = getCaptureDecision("今天天氣不錯啊，適合出去走走散步放鬆一下心情", "keyword", 24000);
     expect(result.shouldCapture).toBe(false);
   });
 
-  it("keyword mode: '记住' trigger → shouldCapture=true", () => {
-    const result = getCaptureDecision("记住我的名字叫张三，我是工程师", "keyword", 24000);
+  it("keyword mode: '記住' trigger → shouldCapture=true", () => {
+    const result = getCaptureDecision("記住我的名字叫張三，我是工程師", "keyword", 24000);
     expect(result.shouldCapture).toBe(true);
     expect(result.reason).toContain("matched_trigger");
   });
 
   it("question-only text → shouldCapture=false", () => {
-    const result = getCaptureDecision("这是什么？", "semantic", 24000);
+    const result = getCaptureDecision("這是什麼？", "semantic", 24000);
     expect(result.shouldCapture).toBe(false);
     expect(result.reason).toBe("question_text");
   });
@@ -417,7 +417,7 @@ describe("looksLikeQuestionOnlyText", () => {
   });
 
   it("question with memory intent → false", () => {
-    expect(looksLikeQuestionOnlyText("记住这个重要的事情，好吗？")).toBe(false);
+    expect(looksLikeQuestionOnlyText("記住這個重要的事情，好嗎？")).toBe(false);
   });
 
   it("long text with question mark → false (exceeds 280 chars)", () => {

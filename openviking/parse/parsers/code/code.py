@@ -55,9 +55,9 @@ class CodeRepositoryParser(BaseParser):
     - Direct mapping to VikingFS temp directory
     - Preserves directory structure without chunking
 
-    代码仓库入库处理流程
+    程式碼倉庫入庫處理流程
 
-    输入: https://github.com/markwhen/gogetxueqiu
+    輸入: https://github.com/markwhen/gogetxueqiu
         ↓
     [GitAccessor] → LocalResource
                     - path: /tmp/.../extracted/repo
@@ -65,18 +65,18 @@ class CodeRepositoryParser(BaseParser):
                     - original_source: "https://github.com/markwhen/gogetxueqiu"
                     - meta: {repo_name: "markwhen/gogetxueqiu", ...}
         ↓
-    [media_processor] → 所有目录都用 DirectoryParser！← 简化了！
+    [media_processor] → 所有目錄都用 DirectoryParser！← 簡化了！
         ↓
     [DirectoryParser.parse()]
-        ├─→ 检测到 (path/.git).exists() ← 新增！
-        ├─→ 收集 git 元数据
-        └─→ 委托给 CodeRepositoryParser.parse()
+        ├─→ 檢測到 (path/.git).exists() ← 新增！
+        ├─→ 收集 git 後設資料
+        └─→ 委託給 CodeRepositoryParser.parse()
         ↓
     [CodeRepositoryParser.parse()]
         - source_path = original_source (https://github.com/...)
         ↓
     [TreeBuilder.finalize_from_temp()]
-        - 从 source_path 解析出 "markwhen/gogetxueqiu"
+        - 從 source_path 解析出 "markwhen/gogetxueqiu"
         - root_uri = "viking://resources/markwhen/gogetxueqiu"
     """
 

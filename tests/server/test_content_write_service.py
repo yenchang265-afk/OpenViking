@@ -318,7 +318,7 @@ async def test_memory_write_adds_resource_refs_for_markdown_resource_link(servic
     ctx = RequestContext(user=service.user, role=Role.USER)
     memory_uri = f"viking://user/{ctx.user.user_space_name()}/memories/entities/ryoma.md"
     resource_uri = "viking://resources/images/2026/06/10/yueqian_jpeg_1"
-    content = f"用户上传了一张[越前龙马]({resource_uri})的照片"
+    content = f"使用者上傳了一張[越前龍馬]({resource_uri})的照片"
     await service.viking_fs.write_file(memory_uri, "Original", ctx=ctx)
 
     await service.fs.write(memory_uri, content=content, ctx=ctx, mode="replace")
@@ -329,7 +329,7 @@ async def test_memory_write_adds_resource_refs_for_markdown_resource_link(servic
     assert mf.content == content
     assert refs[0]["resource_uri"] == resource_uri
     assert refs[0]["source"] == "content.write"
-    assert refs[0]["match_text"] == "越前龙马"
+    assert refs[0]["match_text"] == "越前龍馬"
     assert mf.links == []
 
 
@@ -347,7 +347,7 @@ async def test_memory_write_adds_resource_refs_for_user_scoped_resource_links(
 ):
     ctx = RequestContext(user=service.user, role=Role.USER)
     memory_uri = f"viking://user/{ctx.user.user_space_name()}/memories/entities/ryoma.md"
-    content = f"用户上传了一张[越前龙马]({resource_uri})的照片"
+    content = f"使用者上傳了一張[越前龍馬]({resource_uri})的照片"
     await service.viking_fs.write_file(memory_uri, "Original", ctx=ctx)
 
     await service.fs.write(memory_uri, content=content, ctx=ctx, mode="replace")
@@ -358,7 +358,7 @@ async def test_memory_write_adds_resource_refs_for_user_scoped_resource_links(
     assert mf.content == content
     assert refs[0]["resource_uri"] == resource_uri
     assert refs[0]["source"] == "content.write"
-    assert refs[0]["match_text"] == "越前龙马"
+    assert refs[0]["match_text"] == "越前龍馬"
 
 
 @pytest.mark.asyncio
@@ -370,18 +370,18 @@ async def test_memory_write_linkifies_bare_resource_uri_previous_sentence(servic
 
     await service.fs.write(
         memory_uri,
-        content=f"用户上传了一张越前龙马的照片 {resource_uri}",
+        content=f"使用者上傳了一張越前龍馬的照片 {resource_uri}",
         ctx=ctx,
         mode="replace",
     )
 
     stored = await service.viking_fs.read_file(memory_uri, ctx=ctx)
     mf = MemoryFileUtils.read(stored, uri=memory_uri)
-    assert mf.content == f"[用户上传了一张越前龙马的照片]({resource_uri})"
+    assert mf.content == f"[使用者上傳了一張越前龍馬的照片]({resource_uri})"
     refs = mf.extra_fields["resource_refs"]
     assert refs[0]["resource_uri"] == resource_uri
     assert refs[0]["source"] == "content.write"
-    assert refs[0]["match_text"] == "用户上传了一张越前龙马的照片"
+    assert refs[0]["match_text"] == "使用者上傳了一張越前龍馬的照片"
     assert mf.links == []
 
 
@@ -394,7 +394,7 @@ async def test_memory_write_linkifies_resource_uri_marker_with_readable_anchor(s
 
     await service.fs.write(
         memory_uri,
-        content=f"2026-06-12，用户保存了粉丝创作的越前龙马动漫插画资源，资源URI为{resource_uri}。",
+        content=f"2026-06-12，使用者儲存了粉絲創作的越前龍馬動漫插畫資源，資源URI為{resource_uri}。",
         ctx=ctx,
         mode="replace",
     )
@@ -403,13 +403,13 @@ async def test_memory_write_linkifies_resource_uri_marker_with_readable_anchor(s
     mf = MemoryFileUtils.read(stored, uri=memory_uri)
     assert (
         mf.content
-        == f"[2026-06-12，用户保存了粉丝创作的越前龙马动漫插画资源，资源URI为]({resource_uri})。"
+        == f"[2026-06-12，使用者儲存了粉絲創作的越前龍馬動漫插畫資源，資源URI為]({resource_uri})。"
     )
     refs = mf.extra_fields["resource_refs"]
     assert refs[0]["resource_uri"] == resource_uri
     assert refs[0]["source"] == "content.write"
     assert (
-        refs[0]["match_text"] == "2026-06-12，用户保存了粉丝创作的越前龙马动漫插画资源，资源URI为"
+        refs[0]["match_text"] == "2026-06-12，使用者儲存了粉絲創作的越前龍馬動漫插畫資源，資源URI為"
     )
     assert mf.links == []
 
@@ -419,7 +419,7 @@ async def test_memory_write_ignores_resource_uri_in_inline_code(service):
     ctx = RequestContext(user=service.user, role=Role.USER)
     memory_uri = f"viking://user/{ctx.user.user_space_name()}/memories/entities/ryoma.md"
     resource_uri = "viking://resources/images/2026/06/10/yueqian_jpeg_1"
-    content = f"调试示例：`{resource_uri}`"
+    content = f"除錯示例：`{resource_uri}`"
     await service.viking_fs.write_file(memory_uri, "Original", ctx=ctx)
 
     await service.fs.write(memory_uri, content=content, ctx=ctx, mode="replace")
@@ -435,8 +435,8 @@ async def test_memory_write_ignores_resource_uri_in_inline_code(service):
 async def test_memory_create_refreshes_nested_schema_overview(service):
     ctx = RequestContext(user=service.user, role=Role.USER)
     memory_type_dir = f"viking://user/{ctx.user.user_space_name()}/memories/entities"
-    memory_dir = f"viking://user/{ctx.user.user_space_name()}/memories/entities/动漫角色"
-    memory_uri = f"{memory_dir}/不二周助-link-test.md"
+    memory_dir = f"viking://user/{ctx.user.user_space_name()}/memories/entities/動漫角色"
+    memory_uri = f"{memory_dir}/不二週助-link-test.md"
 
     # Reproduce writes after the memory type root already exists. Previously this
     # collapsed the refresh root to memories/entities and skipped the category overview.
@@ -449,10 +449,10 @@ async def test_memory_create_refreshes_nested_schema_overview(service):
                 uri=memory_uri,
                 memory_type="entities",
                 content=(
-                    "用户保存了一张[不二周助]"
-                    "(viking://resources/images/2026/06/10/不二周助_jpeg)的照片"
+                    "使用者儲存了一張[不二週助]"
+                    "(viking://resources/images/2026/06/10/不二週助_jpeg)的照片"
                 ),
-                extra_fields={"category": "动漫角色", "name": "不二周助-link-test"},
+                extra_fields={"category": "動漫角色", "name": "不二週助-link-test"},
             )
         ),
         ctx=ctx,
@@ -462,39 +462,39 @@ async def test_memory_create_refreshes_nested_schema_overview(service):
 
     overview = await service.viking_fs.read_file(f"{memory_dir}/.overview.md", ctx=ctx)
     assert result["root_uri"] == memory_dir
-    assert "[不二周助-link-test.md](./不二周助-link-test.md)" in overview
+    assert "[不二週助-link-test.md](./不二週助-link-test.md)" in overview
 
 
 @pytest.mark.asyncio
 async def test_memory_rm_refreshes_nested_schema_overview(service):
     ctx = RequestContext(user=service.user, role=Role.USER)
-    memory_dir = f"viking://user/{ctx.user.user_space_name()}/memories/entities/动漫角色"
-    deleted_uri = f"{memory_dir}/不二周助-delete-test.md"
-    kept_uri = f"{memory_dir}/越前龙马-keep-test.md"
+    memory_dir = f"viking://user/{ctx.user.user_space_name()}/memories/entities/動漫角色"
+    deleted_uri = f"{memory_dir}/不二週助-delete-test.md"
+    kept_uri = f"{memory_dir}/越前龍馬-keep-test.md"
 
     await service.fs.write(
         deleted_uri,
-        content="用户保存了一张不二周助的照片",
+        content="使用者儲存了一張不二週助的照片",
         ctx=ctx,
         mode="create",
         wait=True,
     )
     await service.fs.write(
         kept_uri,
-        content="用户保存了一张越前龙马的照片",
+        content="使用者儲存了一張越前龍馬的照片",
         ctx=ctx,
         mode="create",
         wait=True,
     )
 
     before = await service.viking_fs.read_file(f"{memory_dir}/.overview.md", ctx=ctx)
-    assert "[不二周助-delete-test.md](./不二周助-delete-test.md)" in before
+    assert "[不二週助-delete-test.md](./不二週助-delete-test.md)" in before
 
     await service.fs.rm(deleted_uri, ctx=ctx, wait=True)
 
     after = await service.viking_fs.read_file(f"{memory_dir}/.overview.md", ctx=ctx)
-    assert "不二周助-delete-test" not in after
-    assert "[越前龙马-keep-test.md](./越前龙马-keep-test.md)" in after
+    assert "不二週助-delete-test" not in after
+    assert "[越前龍馬-keep-test.md](./越前龍馬-keep-test.md)" in after
 
 
 class _FakePathLock:

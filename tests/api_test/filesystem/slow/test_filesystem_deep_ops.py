@@ -86,7 +86,7 @@ class TestFilesystemDeep:
     def test_mkdir_special_chars_in_description(self, api_client):
         dir_uri = f"viking://resources/mkdir_special_{uuid.uuid4().hex[:8]}"
         try:
-            mkdir_resp = api_client.fs_mkdir(dir_uri, description="目录 with 中文 and symbols !@#")
+            mkdir_resp = api_client.fs_mkdir(dir_uri, description="目錄 with 中文 and symbols !@#")
             assert mkdir_resp.status_code == 200, (
                 f"mkdir with special chars should work, got {mkdir_resp.status_code}"
             )

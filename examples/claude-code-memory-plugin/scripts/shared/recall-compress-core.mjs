@@ -31,7 +31,7 @@ Format rules:
 - Group related facts by topic, one bullet per topic, at most ${maxBullets} bullets.
 - Start every bullet with "- ".
 - End every bullet with its source, copied verbatim from the fragments above:
-  "来源：viking://..." or "source: viking://...". Never edit, shorten, or invent a URI.
+  "來源：viking://..." or "source: viking://...". Never edit, shorten, or invent a URI.
 - Output the digest body only. No preamble, no closing remark.
 
 If nothing above is relevant to the query, output exactly: ${NO_RELEVANT_MEMORY}`;

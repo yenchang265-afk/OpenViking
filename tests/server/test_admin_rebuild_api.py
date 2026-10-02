@@ -2819,7 +2819,7 @@ async def test_reindex_memory_l2_strips_memory_fields_from_abstract(monkeypatch)
     seen = {}
     raw_body = (
         "User has a preference for watermelon, as mentioned in the conversation: "
-        '\'我爱吃西瓜\'. <!-- MEMORY_FIELDS { "user": "user", "topic": "food_preference" } -->'
+        '\'我愛吃西瓜\'. <!-- MEMORY_FIELDS { "user": "user", "topic": "food_preference" } -->'
     )
 
     async def fake_read_memory_body(self, uri, *, ctx):
@@ -2855,7 +2855,7 @@ async def test_reindex_memory_l2_strips_memory_fields_from_abstract(monkeypatch)
 
     assert (
         seen["viking://user/default/memories/preferences/food_preference.md"]["abstract"]
-        == "User has a preference for watermelon, as mentioned in the conversation: '我爱吃西瓜'."
+        == "User has a preference for watermelon, as mentioned in the conversation: '我愛吃西瓜'."
     )
     assert (
         seen["viking://user/default/memories/preferences/food_preference.md"]["vector_text"]

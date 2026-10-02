@@ -1,26 +1,26 @@
-# 指标与 Metrics
+# 指標與 Metrics
 
-OpenViking 提供 `/metrics` 端点，用于向 Prometheus、Grafana Agent 等监控系统导出运行时指标。
+OpenViking 提供 `/metrics` 端點，用於向 Prometheus、Grafana Agent 等監控系統匯出執行時指標。
 
-与 `/api/v1/observer/*` 不同，`/metrics` 的定位是：
+與 `/api/v1/observer/*` 不同，`/metrics` 的定位是：
 
-- 面向机器抓取，而不是面向人工阅读
-- 返回 Prometheus exposition 文本，而不是统一 JSON 包装
-- 偏系统运行态与服务运行质量，不承担业务分析接口职责
+- 面向機器抓取，而不是面向人工閱讀
+- 返回 Prometheus exposition 文本，而不是統一 JSON 包裝
+- 偏系統執行態與服務執行質量，不承擔業務分析介面職責
 
-## API 参考
+## API 參考
 
 ### metrics()
 
-导出当前进程内的 Prometheus 指标文本。
+匯出當前程序內的 Prometheus 指標文本。
 
-该端点通常被 Prometheus 定时抓取，也可以用于本地调试或手工排查。
+該端點通常被 Prometheus 定時抓取，也可以用於本地除錯或手工排查。
 
-**认证**
+**認證**
 
-- 当前实现中，`/metrics` 未接入 `get_request_context` 等鉴权依赖，因此可直接访问。
-- 也就是说，从代码实现角度看，`/metrics` 当前等价于公开抓取端点。
-- 如果后续通过网关、反向代理或服务端策略收紧访问控制，应以实际部署配置为准。
+- 當前實現中，`/metrics` 未接入 `get_request_context` 等鑑權依賴，因此可直接訪問。
+- 也就是說，從程式碼實現角度看，`/metrics` 當前等價於公開抓取端點。
+- 如果後續通過閘道器、反向代理或服務端策略收緊訪問控制，應以實際部署配置為準。
 
 **HTTP API**
 
@@ -32,16 +32,16 @@ GET /metrics
 curl -X GET http://localhost:1933/metrics
 ```
 
-如果你的部署环境在网关或代理层要求鉴权，可以按网关要求附加请求头，例如：
+如果你的部署環境在閘道器或代理層要求鑑權，可以按閘道器要求附加請求頭，例如：
 
 ```bash
 curl -X GET http://localhost:1933/metrics \
   -H "Authorization: Bearer your-key"
 ```
 
-**响应格式**
+**響應格式**
 
-成功时返回 `text/plain; version=0.0.4; charset=utf-8`，内容为 Prometheus exposition 格式文本，例如：
+成功時返回 `text/plain; version=0.0.4; charset=utf-8`，內容為 Prometheus exposition 格式文本，例如：
 
 ```text
 # HELP openviking_http_requests_total Total number of HTTP requests
@@ -53,10 +53,10 @@ openviking_http_requests_total{method="GET",route="/api/v1/system/status",status
 openviking_http_inflight_requests{route="/api/v1/system/status"} 0
 ```
 
-当指标系统未启用时，返回：
+當指標系統未啟用時，返回：
 
-- HTTP 状态码：`404`
-- 响应体：
+- HTTP 狀態碼：`404`
+- 響應體：
 
 ```text
 Prometheus metrics are disabled.
@@ -72,18 +72,18 @@ scrape_configs:
       - targets: ["localhost:1933"]
 ```
 
-如果你的部署环境对 `/metrics` 做了网关鉴权，可以通过反向代理、service discovery，或 Prometheus 支持的鉴权方式为该抓取任务配置请求头。
+如果你的部署環境對 `/metrics` 做了閘道器鑑權，可以通過反向代理、service discovery，或 Prometheus 支援的鑑權方式為該抓取任務配置請求頭。
 
-**注意事项**
+**注意事項**
 
-- `/metrics` 适合高频抓取，因此其中的指标应保持低基数、低成本。
-- `/metrics` 返回的是 Prometheus 文本，不是标准 OpenViking API 的 `{status, result, time}` JSON 结构。
-- 人工查看组件瞬时状态更适合使用 `/api/v1/observer/*`。
-- `/metrics` 现在也包含 VikingBot feedback observability 指标，这些指标来自对持久化 session 数据的 scrape-time 聚合；具体指标族与示例可参见 Metrics 概念文档中的 feedback 章节。
+- `/metrics` 適合高頻抓取，因此其中的指標應保持低基數、低成本。
+- `/metrics` 返回的是 Prometheus 文本，不是標準 OpenViking API 的 `{status, result, time}` JSON 結構。
+- 人工檢視元件瞬時狀態更適合使用 `/api/v1/observer/*`。
+- `/metrics` 現在也包含 VikingBot feedback observability 指標，這些指標來自對持久化 session 資料的 scrape-time 聚合；具體指標族與示例可參見 Metrics 概念文件中的 feedback 章節。
 
-## 相关文档
+## 相關文件
 
-- [指标与 Metrics](../concepts/12-metrics.md) - 指标族、标签、feedback 指标与 PromQL 示例
-- [VikingBot 问答效果反馈观测方案设计](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/design/vikingbot-feedback-observability-design.md) - feedback 指标与阶段性落地背景
-- [系统与监控](07-system.md) - 健康检查、系统状态与 Observer API
-- [API 概览](01-overview.md) - 所有 API 端点共享约定
+- [指標與 Metrics](../concepts/12-metrics.md) - 指標族、標籤、feedback 指標與 PromQL 示例
+- [VikingBot 問答效果反饋觀測方案設計](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/design/vikingbot-feedback-observability-design.md) - feedback 指標與階段性落地背景
+- [系統與監控](07-system.md) - 健康檢查、系統狀態與 Observer API
+- [API 概覽](01-overview.md) - 所有 API 端點共享約定

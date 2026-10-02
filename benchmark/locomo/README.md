@@ -1,40 +1,40 @@
-# LoCoMo 评测脚本使用指南
+# LoCoMo 評測指令碼使用指南
 
-本目录包含 LoCoMo（Long-Term Conversation Memory）评测脚本，用于评估对话记忆系统的性能。
+本目錄包含 LoCoMo（Long-Term Conversation Memory）評測指令碼，用於評估對話記憶系統的效能。
 
-## 目录结构
+## 目錄結構
 
 ```
 benchmark/locomo/
-├── vikingbot/          # VikingBot 评测脚本
-│   ├── run_eval.py     # 运行 QA 评估
+├── vikingbot/          # VikingBot 評測指令碼
+│   ├── run_eval.py     # 執行 QA 評估
 │   ├── judge.py        # LLM 裁判打分
-│   ├── import_to_ov.py # 导入数据到 OpenViking
-│   ├── import_and_eval_one.sh  # 单题/批量测试脚本
-│   ├── stat_judge_result.py    # 统计评分结果
-│   ├── run_full_eval.sh        # 一键运行完整评测流程
-│   ├── data/           # 测试数据目录
-│   └── result/         # 评测结果目录
-├── openclaw/           # OpenClaw 评测脚本
-│   ├── import_to_ov.py # 导入数据到 OpenViking
-│   ├── eval.py         # OpenClaw 评估脚本 (ingest/qa)
-│   ├── judge.py        # LLM 裁判打分（适配 OpenClaw）
-│   ├── stat_judge_result.py    # 统计评分结果和 token 使用
-│   ├── run_full_eval.sh        # 一键运行完整评测流程
-│   ├── data/           # 测试数据目录
-│   └── result/         # 评测结果目录
-├── mem0/               # mem0 评测脚本（详见 mem0/README.md）
-├── supermemory/        # Supermemory 评测脚本（详见 supermemory/README.md）
-├── claudecode/         # Claude Code 评测脚本（详见 claudecode/README.md）
-└── hermes/             # Hermes Agent 评测脚本（详见 hermes/README.md）
+│   ├── import_to_ov.py # 匯入資料到 OpenViking
+│   ├── import_and_eval_one.sh  # 單題/批次測試指令碼
+│   ├── stat_judge_result.py    # 統計評分結果
+│   ├── run_full_eval.sh        # 一鍵執行完整評測流程
+│   ├── data/           # 測試資料目錄
+│   └── result/         # 評測結果目錄
+├── openclaw/           # OpenClaw 評測指令碼
+│   ├── import_to_ov.py # 匯入資料到 OpenViking
+│   ├── eval.py         # OpenClaw 評估指令碼 (ingest/qa)
+│   ├── judge.py        # LLM 裁判打分（適配 OpenClaw）
+│   ├── stat_judge_result.py    # 統計評分結果和 token 使用
+│   ├── run_full_eval.sh        # 一鍵執行完整評測流程
+│   ├── data/           # 測試資料目錄
+│   └── result/         # 評測結果目錄
+├── mem0/               # mem0 評測指令碼（詳見 mem0/README.md）
+├── supermemory/        # Supermemory 評測指令碼（詳見 supermemory/README.md）
+├── claudecode/         # Claude Code 評測指令碼（詳見 claudecode/README.md）
+└── hermes/             # Hermes Agent 評測指令碼（詳見 hermes/README.md）
 ```
 
 ---
 
-## VikingBot 评测流程
+## VikingBot 評測流程
 
-### 前置配置说明
-- vikingbot评测须确保 OpenViking 服务端已配置 root_api_key，即开启多租户模式。每个sample数据都会使用sample_id如`conv-26`作为user_id，存储在OpenViking中。
+### 前置配置說明
+- vikingbot評測須確保 OpenViking 服務端已配置 root_api_key，即開啟多租戶模式。每個sample資料都會使用sample_id如`conv-26`作為user_id，儲存在OpenViking中。
 ```json
 {
   "server": {
@@ -42,274 +42,274 @@ benchmark/locomo/
   }
 }
 ```
-- OpenViking数据导入account会优先使用`ovcli.conf`中的account值，若未配置默认使用`default`；
-- vikingbot必须配置OpenViking 的root级别API KEY，默认使用上述的server.root_api_key，也可单独配置；
-- vikingbot查询数据account默认为`default`，如更改必须与导入OpenViking的account一致，即`ovcli.conf`中的account值，可通过`ov.conf`如下配置：
+- OpenViking資料匯入account會優先使用`ovcli.conf`中的account值，若未配置預設使用`default`；
+- vikingbot必須配置OpenViking 的root級別API KEY，預設使用上述的server.root_api_key，也可單獨配置；
+- vikingbot查詢資料account預設為`default`，如更改必須與匯入OpenViking的account一致，即`ovcli.conf`中的account值，可通過`ov.conf`如下配置：
 ```json
 {
   "bot": {
     "ov_server": {
       "root_api_key": "your-root-key",
-      "account_id": "默认default，必须和ovcli.conf中的account_id一致"
+      "account_id": "預設default，必須和ovcli.conf中的account_id一致"
     }
   }
 }
 ```
 
-### 完整一键评测
+### 完整一鍵評測
 
-使用 `run_full_eval.sh` 可以一键运行完整评测流程：
+使用 `run_full_eval.sh` 可以一鍵執行完整評測流程：
 
 ```bash
 cd benchmark/locomo/vikingbot
 bash run_full_eval.sh        # 完整流程
-bash run_full_eval.sh --skip-import  # 跳过导入，仅评测
+bash run_full_eval.sh --skip-import  # 跳過匯入，僅評測
 ```
 
-### 单题/批量测试
+### 單題/批次測試
 
-使用 `import_and_eval_one.sh` 可以快速测试单个问题或批量测试某个 sample：
+使用 `import_and_eval_one.sh` 可以快速測試單個問題或批次測試某個 sample：
 
 ```bash
 cd benchmark/locomo/vikingbot
 ```
 
-**单题测试：**
+**單題測試：**
 ```bash
 ./import_and_eval_one.sh 0 2          # sample 索引 0, question 2
 ./import_and_eval_one.sh conv-26 2    # sample_id conv-26, question 2
-./import_and_eval_one.sh conv-26 2 --skip-import  # 跳过导入
+./import_and_eval_one.sh conv-26 2 --skip-import  # 跳過匯入
 ```
 
-**批量测试单个 sample：**
+**批次測試單個 sample：**
 ```bash
-./import_and_eval_one.sh conv-26       # conv-26 所有问题
+./import_and_eval_one.sh conv-26       # conv-26 所有問題
 ./import_and_eval_one.sh conv-26 --skip-import
 ```
 
-### 分步使用说明
+### 分步使用說明
 
-#### 步骤 1: 导入对话数据
+#### 步驟 1: 匯入對話資料
 
-使用 `import_to_ov.py` 将 LoCoMo 数据集导入到 OpenViking：
+使用 `import_to_ov.py` 將 LoCoMo 資料集匯入到 OpenViking：
 
 ```bash
-python import_to_ov.py --input <数据文件路径> [选项]
+python import_to_ov.py --input <資料檔案路徑> [選項]
 ```
 
-**参数说明：**
-- `--input`: 输入文件路径（JSON 或 TXT 格式），默认 `./data/locomo10.json`
-- `--sample`: 指定样本索引（0-based），默认处理所有样本
-- `--sessions`: 指定会话范围，例如 `1-4` 或 `3`，默认所有会话
-- `--parallel`: 并发导入数，默认 5
-- `--force-ingest`: 强制重新导入，即使已导入过
-- `--clear-ingest-record`: 清除所有导入记录
-- `--openviking-url`: OpenViking 服务地址，默认 `http://localhost:1933`
-- `--account`: 导入时使用的 account，默认 `default`
+**引數說明：**
+- `--input`: 輸入檔案路徑（JSON 或 TXT 格式），預設 `./data/locomo10.json`
+- `--sample`: 指定樣本索引（0-based），預設處理所有樣本
+- `--sessions`: 指定會話範圍，例如 `1-4` 或 `3`，預設所有會話
+- `--parallel`: 併發匯入數，預設 5
+- `--force-ingest`: 強制重新匯入，即使已匯入過
+- `--clear-ingest-record`: 清除所有匯入記錄
+- `--openviking-url`: OpenViking 服務地址，預設 `http://localhost:1933`
+- `--account`: 匯入時使用的 account，預設 `default`
 
 **示例：**
 ```bash
-# 导入第一个样本的 1-4 会话
+# 匯入第一個樣本的 1-4 會話
 python import_to_ov.py --input ./data/locomo10.json --sample 0 --sessions 1-4
 
-# 强制重新导入所有数据
+# 強制重新匯入所有資料
 python import_to_ov.py --input ./data/locomo10.json --force-ingest
 ```
 
-#### 步骤 2: 运行 QA 评估
+#### 步驟 2: 執行 QA 評估
 
-使用 `run_eval.py` 运行问答评估：
+使用 `run_eval.py` 執行問答評估：
 
 ```bash
-python run_eval.py <输入数据> [选项]
+python run_eval.py <輸入資料> [選項]
 ```
 
-**参数说明：**
-- `input`: 输入 JSON/CSV 文件路径，默认 `./data/locomo10.json`
-- `--output`: 输出 CSV 文件路径，默认 `./result/locomo_qa_result.csv`
-- `--sample`: 指定样本索引
-- `--count`: 运行的 QA 问题数量，默认全部
-- `--threads`: 并发线程数，默认 5
+**引數說明：**
+- `input`: 輸入 JSON/CSV 檔案路徑，預設 `./data/locomo10.json`
+- `--output`: 輸出 CSV 檔案路徑，預設 `./result/locomo_qa_result.csv`
+- `--sample`: 指定樣本索引
+- `--count`: 執行的 QA 問題數量，預設全部
+- `--threads`: 併發執行緒數，預設 5
 
 **示例：**
 ```bash
-# 使用默认参数运行
+# 使用預設引數執行
 python run_eval.py
 
-# 指定输入输出文件，使用 20 线程
+# 指定輸入輸出檔案，使用 20 執行緒
 python run_eval.py ./data/locomo_qa_1528.csv --output ./result/my_result.csv --threads 20
 ```
 
-#### 步骤 3: LLM 裁判打分
+#### 步驟 3: LLM 裁判打分
 
-使用 `judge.py` 对评估结果进行打分：
+使用 `judge.py` 對評估結果進行打分：
 
 ```bash
-python judge.py [选项]
+python judge.py [選項]
 ```
 
-**参数说明：**
-- `--input`: QA 结果 CSV 文件路径，默认 `./result/locomo_qa_result.csv`
-- `--token`: API Token（也可通过 `ARK_API_KEY` 或 `OPENAI_API_KEY` 环境变量设置）
-- `--base-url`: API 基础 URL，默认 `https://ark.cn-beijing.volces.com/api/v3`
-- `--model`: 裁判模型名称，默认 `doubao-seed-2-0-pro-260215`
-- `--parallel`: 并发请求数，默认 5
+**引數說明：**
+- `--input`: QA 結果 CSV 檔案路徑，預設 `./result/locomo_qa_result.csv`
+- `--token`: API Token（也可通過 `ARK_API_KEY` 或 `OPENAI_API_KEY` 環境變數設定）
+- `--base-url`: API 基礎 URL，預設 `https://ark.cn-beijing.volces.com/api/v3`
+- `--model`: 裁判模型名稱，預設 `doubao-seed-2-0-pro-260215`
+- `--parallel`: 併發請求數，預設 5
 
 **示例：**
 ```bash
 python judge.py --input ./result/locomo_qa_result.csv --token <your_token> --parallel 10
 ```
 
-#### 步骤 4: 统计结果
+#### 步驟 4: 統計結果
 
-使用 `stat_judge_result.py` 统计评分结果：
+使用 `stat_judge_result.py` 統計評分結果：
 
 ```bash
-python stat_judge_result.py --input <评分结果文件>
+python stat_judge_result.py --input <評分結果檔案>
 ```
 
-**参数说明：**
-- `--input`: 评分结果 CSV 文件路径
+**引數說明：**
+- `--input`: 評分結果 CSV 檔案路徑
 
-**输出统计信息包括：**
-- 正确率（Accuracy）
-- 平均耗时
-- 平均迭代次数
-- Token 使用情况
+**輸出統計資訊包括：**
+- 正確率（Accuracy）
+- 平均耗時
+- 平均迭代次數
+- Token 使用情況
 
 ---
 
-## OpenClaw 评测流程
+## OpenClaw 評測流程
 
-### 完整一键评测
+### 完整一鍵評測
 
-使用 `openclaw/run_full_eval.sh` 可以一键运行完整评测流程：
+使用 `openclaw/run_full_eval.sh` 可以一鍵執行完整評測流程：
 
 ```bash
 cd benchmark/locomo/openclaw
-bash run_full_eval.sh                      # 只导入 OpenViking（跳过已导入的）
-bash run_full_eval.sh --with-claw-import   # 同时导入 OpenViking 和 OpenClaw（并行执行）
-bash run_full_eval.sh --skip-import        # 跳过导入步骤，直接运行 QA 评估
-bash run_full_eval.sh --force-ingest       # 强制重新导入所有数据
-bash run_full_eval.sh --sample 0           # 只处理第 0 个 sample
+bash run_full_eval.sh                      # 只匯入 OpenViking（跳過已匯入的）
+bash run_full_eval.sh --with-claw-import   # 同時匯入 OpenViking 和 OpenClaw（並行執行）
+bash run_full_eval.sh --skip-import        # 跳過匯入步驟，直接執行 QA 評估
+bash run_full_eval.sh --force-ingest       # 強制重新匯入所有資料
+bash run_full_eval.sh --sample 0           # 只處理第 0 個 sample
 ```
 
-**脚本参数说明：**
+**指令碼引數說明：**
 
-| 参数 | 说明 |
+| 引數 | 說明 |
 |------|------|
-| `--skip-import` | 跳过导入步骤，直接运行 QA 评估 |
-| `--with-claw-import` | 同时导入 OpenViking 和 OpenClaw（并行执行） |
-| `--force-ingest` | 强制重新导入所有数据（忽略已导入记录） |
-| `--sample <index>` | 只处理指定的 sample（0-based） |
+| `--skip-import` | 跳過匯入步驟，直接執行 QA 評估 |
+| `--with-claw-import` | 同時匯入 OpenViking 和 OpenClaw（並行執行） |
+| `--force-ingest` | 強制重新匯入所有資料（忽略已匯入記錄） |
+| `--sample <index>` | 只處理指定的 sample（0-based） |
 
-**脚本执行流程：**
-1. 导入数据到 OpenViking（可选同时导入 OpenClaw）
-2. 等待 60 秒确保数据导入完成
-3. 运行 QA 评估（`eval.py qa`，输出到 `result/qa_results.csv`）
-4. 裁判打分（`judge.py`，并行度 40）
-5. 统计结果（`stat_judge_result.py`，同时统计 QA 和 Import 的 token 使用）
+**指令碼執行流程：**
+1. 匯入資料到 OpenViking（可選同時匯入 OpenClaw）
+2. 等待 60 秒確保資料匯入完成
+3. 執行 QA 評估（`eval.py qa`，輸出到 `result/qa_results.csv`）
+4. 裁判打分（`judge.py`，並行度 40）
+5. 統計結果（`stat_judge_result.py`，同時統計 QA 和 Import 的 token 使用）
 
-**脚本内部配置参数：**
+**指令碼內部配置引數：**
 
-在 `run_full_eval.sh` 脚本顶部可以修改以下配置：
+在 `run_full_eval.sh` 指令碼頂部可以修改以下配置：
 
-| 变量 | 说明 | 默认值                       |
+| 變數 | 說明 | 預設值                       |
 |------|------|---------------------------|
-| `INPUT_FILE` | 输入数据文件路径 | `../data/locomo10.json`   |
-| `RESULT_DIR` | 结果输出目录 | `./result`                |
-| `GATEWAY_TOKEN` | OpenClaw Gateway Token | 需要设置为实际 openclaw 网关 token |
+| `INPUT_FILE` | 輸入資料檔案路徑 | `../data/locomo10.json`   |
+| `RESULT_DIR` | 結果輸出目錄 | `./result`                |
+| `GATEWAY_TOKEN` | OpenClaw Gateway Token | 需要設定為實際 openclaw 閘道器 token |
 
-### 分步使用说明
+### 分步使用說明
 
-OpenClaw 评测包含以下脚本：
-- `import_to_ov.py`: 导入数据到 OpenViking
-- `eval.py`: OpenClaw 评估脚本（ingest/qa 两种模式）
+OpenClaw 評測包含以下指令碼：
+- `import_to_ov.py`: 匯入資料到 OpenViking
+- `eval.py`: OpenClaw 評估指令碼（ingest/qa 兩種模式）
 - `judge.py`: LLM 裁判打分
-- `stat_judge_result.py`: 统计评分结果和 token 使用
+- `stat_judge_result.py`: 統計評分結果和 token 使用
 
 ---
 
-#### import_to_ov.py - 导入对话数据到 OpenViking
+#### import_to_ov.py - 匯入對話資料到 OpenViking
 
 ```bash
-python import_to_ov.py [选项]
+python import_to_ov.py [選項]
 ```
 
-**参数说明：**
-- `--input`: 输入文件路径（JSON 或 TXT），默认 `../data/locomo10.json`
-- `--sample`: 指定样本索引（0-based）
-- `--sessions`: 指定会话范围，如 `1-4`
-- `--question-index`: 根据 question 的 evidence 自动推断需要的 session
-- `--force-ingest`: 强制重新导入
-- `--no-user-id`: 不传入 user_id 给 OpenViking 客户端
-- `--openviking-url`: OpenViking 服务地址，默认 `http://localhost:1933`
-- `--success-csv`: 成功记录 CSV 路径，默认 `./result/import_success.csv`
-- `--error-log`: 错误日志路径，默认 `./result/import_errors.log`
+**引數說明：**
+- `--input`: 輸入檔案路徑（JSON 或 TXT），預設 `../data/locomo10.json`
+- `--sample`: 指定樣本索引（0-based）
+- `--sessions`: 指定會話範圍，如 `1-4`
+- `--question-index`: 根據 question 的 evidence 自動推斷需要的 session
+- `--force-ingest`: 強制重新匯入
+- `--no-user-id`: 不傳入 user_id 給 OpenViking 客戶端
+- `--openviking-url`: OpenViking 服務地址，預設 `http://localhost:1933`
+- `--success-csv`: 成功記錄 CSV 路徑，預設 `./result/import_success.csv`
+- `--error-log`: 錯誤日誌路徑，預設 `./result/import_errors.log`
 
 **示例：**
 ```bash
-# 导入所有数据（跳过已导入的）
+# 匯入所有資料（跳過已匯入的）
 python import_to_ov.py
 
-# 强制重新导入，不使用 user id
+# 強制重新匯入，不使用 user id
 python import_to_ov.py --force-ingest --no-user-id
 
-# 只导入第 0 个 sample
+# 只匯入第 0 個 sample
 python import_to_ov.py --sample 0
 ```
 
 ---
 
-#### eval.py - OpenClaw 评估脚本
+#### eval.py - OpenClaw 評估指令碼
 
-该脚本有两种模式：
+該指令碼有兩種模式：
 
-##### 模式 1: ingest - 导入对话数据到 OpenClaw
+##### 模式 1: ingest - 匯入對話資料到 OpenClaw
 
 ```bash
-python eval.py ingest <输入文件> [选项]
+python eval.py ingest <輸入檔案> [選項]
 ```
 
-**参数说明：**
-- `--sample`: 指定样本索引
-- `--sessions`: 指定会话范围，如 `1-4`
-- `--force-ingest`: 强制重新导入
-- `--agent-id`: Agent ID，默认 `locomo-eval`
+**引數說明：**
+- `--sample`: 指定樣本索引
+- `--sessions`: 指定會話範圍，如 `1-4`
+- `--force-ingest`: 強制重新匯入
+- `--agent-id`: Agent ID，預設 `locomo-eval`
 - `--token`: OpenClaw Gateway Token
 
 **示例：**
 ```bash
-# 导入第一个样本的 1-4 会话到 OpenClaw
+# 匯入第一個樣本的 1-4 會話到 OpenClaw
 python eval.py ingest locomo10.json --sample 0 --sessions 1-4 --token <token>
 ```
 
-##### 模式 2: qa - 运行 QA 评估
+##### 模式 2: qa - 執行 QA 評估
 
-- 该评测指定了 `X-OpenClaw-Session-Key`，确保每次 OpenClaw 使用相同的 session_id
-- Token 计算统计 `session.jsonl` 文件中的所有 assistant 轮次的 Token 消耗
-- 每道题目执行完后会归档 session 文件
-- 支持并发运行（`--parallel` 参数）
-- 问题会自动添加时间上下文（从最后一个 session 提取）
+- 該評測指定了 `X-OpenClaw-Session-Key`，確保每次 OpenClaw 使用相同的 session_id
+- Token 計算統計 `session.jsonl` 檔案中的所有 assistant 輪次的 Token 消耗
+- 每道題目執行完後會歸檔 session 檔案
+- 支援併發執行（`--parallel` 引數）
+- 問題會自動新增時間上下文（從最後一個 session 提取）
 
 ```bash
-python eval.py qa <输入文件> [选项]
+python eval.py qa <輸入檔案> [選項]
 ```
 
-**参数说明：**
-- `--output`: 输出文件路径（不含 .csv 后缀）
-- `--sample`: 指定样本索引
-- `--count`: 运行的 QA 问题数量
-- `--user`: 用户 ID，默认 `eval-1`
-- `--parallel`: 并发数，默认 10，最大 40
-- `--token`: OpenClaw Gateway Token（或设置 `OPENCLAW_GATEWAY_TOKEN` 环境变量）
+**引數說明：**
+- `--output`: 輸出檔案路徑（不含 .csv 字尾）
+- `--sample`: 指定樣本索引
+- `--count`: 執行的 QA 問題數量
+- `--user`: 使用者 ID，預設 `eval-1`
+- `--parallel`: 併發數，預設 10，最大 40
+- `--token`: OpenClaw Gateway Token（或設定 `OPENCLAW_GATEWAY_TOKEN` 環境變數）
 
 **示例：**
 ```bash
-# 运行所有 sample 的 QA 评估
+# 執行所有 sample 的 QA 評估
 python eval.py qa locomo10.json --token <token> --parallel 15
 
-# 只运行第 0 个 sample
+# 只執行第 0 個 sample
 python eval.py qa locomo10.json --sample 0 --output qa_results_sample0
 ```
 
@@ -318,12 +318,12 @@ python eval.py qa locomo10.json --sample 0 --output qa_results_sample0
 #### judge.py - LLM 裁判打分
 
 ```bash
-python judge.py [选项]
+python judge.py [選項]
 ```
 
-**参数说明：**
-- `--input`: QA 结果 CSV 文件路径
-- `--parallel`: 并发请求数，默认 40
+**引數說明：**
+- `--input`: QA 結果 CSV 檔案路徑
+- `--parallel`: 併發請求數，預設 40
 
 **示例：**
 ```bash
@@ -332,21 +332,21 @@ python judge.py --input ./result/qa_results.csv --parallel 40
 
 ---
 
-#### stat_judge_result.py - 统计结果
+#### stat_judge_result.py - 統計結果
 
-同时统计 QA 结果和 OpenViking Import 的 token 使用：
+同時統計 QA 結果和 OpenViking Import 的 token 使用：
 
 ```bash
-python stat_judge_result.py [选项]
+python stat_judge_result.py [選項]
 ```
 
-**参数说明：**
-- `--input`: QA 结果 CSV 文件路径，默认 `./result/qa_results_sample0.csv`
-- `--import-csv`: Import 成功 CSV 文件路径，默认 `./result/import_success.csv`
+**引數說明：**
+- `--input`: QA 結果 CSV 檔案路徑，預設 `./result/qa_results_sample0.csv`
+- `--import-csv`: Import 成功 CSV 檔案路徑，預設 `./result/import_success.csv`
 
-**输出统计包括：**
-- QA 结果统计：正确率、token 使用（no-cache、cacheRead、output）
-- OpenViking Import 统计：embedding_tokens、vlm_tokens、total_tokens
+**輸出統計包括：**
+- QA 結果統計：正確率、token 使用（no-cache、cacheRead、output）
+- OpenViking Import 統計：embedding_tokens、vlm_tokens、total_tokens
 
 **示例：**
 ```bash
@@ -355,7 +355,7 @@ python stat_judge_result.py --input ./result/qa_results_sample0.csv --import-csv
 
 ---
 
-## 测试数据格式
+## 測試資料格式
 
 ### LoCoMo JSON 格式
 
@@ -378,7 +378,7 @@ python stat_judge_result.py --input ./result/qa_results_sample0.csv --import-csv
     },
     "qa": [
       {
-        "question": "Alice 叫什么名字？",
+        "question": "Alice 叫什麼名字？",
         "answer": "Alice",
         "category": "1",
         "evidence": []
@@ -388,128 +388,128 @@ python stat_judge_result.py --input ./result/qa_results_sample0.csv --import-csv
 ]
 ```
 
-### CSV 格式（QA 数据）
+### CSV 格式（QA 資料）
 
-必须包含字段：
-- `sample_id`: 样本 ID
-- `question`: 问题
-- `answer`: 标准答案
+必須包含欄位：
+- `sample_id`: 樣本 ID
+- `question`: 問題
+- `answer`: 標準答案
 
 ---
 
-## 输出文件说明
+## 輸出檔案說明
 
-| 文件 | 说明 |
+| 檔案 | 說明 |
 |------|------|
-| `result/locomo_qa_result.csv` | QA 评估原始结果 |
-| `result/judge_result.csv` | 包含裁判打分的结果 |
-| `result/summary.txt` | 统计摘要 |
-| `result/import_success.csv` | 导入成功记录 |
-| `result/import_errors.log` | 导入错误日志 |
+| `result/locomo_qa_result.csv` | QA 評估原始結果 |
+| `result/judge_result.csv` | 包含裁判打分的結果 |
+| `result/summary.txt` | 統計摘要 |
+| `result/import_success.csv` | 匯入成功記錄 |
+| `result/import_errors.log` | 匯入錯誤日誌 |
 
 ---
 
-## 环境变量
+## 環境變數
 
-| 变量名 | 说明 |
+| 變數名 | 說明 |
 |--------|------|
-| `ARK_API_KEY` | 火山引擎 API Key（用于 judge.py） |
-| `OPENAI_API_KEY` | OpenAI API Key（备选） |
+| `ARK_API_KEY` | 火山引擎 API Key（用於 judge.py） |
+| `OPENAI_API_KEY` | OpenAI API Key（備選） |
 | `OPENCLAW_GATEWAY_TOKEN` | OpenClaw Gateway Token |
 
 ---
 
-## 常见问题
+## 常見問題
 
-### Q: 如何中断后继续评测？
-A: 所有脚本都支持断点续传，重新运行相同命令会自动跳过已处理的项目。
+### Q: 如何中斷後繼續評測？
+A: 所有指令碼都支援斷點續傳，重新執行相同命令會自動跳過已處理的專案。
 
-### Q: 如何强制重新运行？
-A: 使用 `--force-ingest`（导入）或删除结果 CSV 文件。
+### Q: 如何強制重新執行？
+A: 使用 `--force-ingest`（匯入）或刪除結果 CSV 檔案。
 
-### Q: 评测速度慢怎么办？
-A: 增加 `--threads`（run_eval.py）或 `--parallel`（其他脚本）参数值。
+### Q: 評測速度慢怎麼辦？
+A: 增加 `--threads`（run_eval.py）或 `--parallel`（其他指令碼）引數值。
 
-### Q: 评测效果低，怎么排查 OpenViking 导入与评测查询的 account/user 是否一致？
-A: 先核对三处是否对齐：`ovcli.conf.account`（导入 account）、`ov.conf.bot.ov_server.account_id`（Vikingbot 查询 account）、评测脚本使用的 user（Vikingbot 按 `sample_id`，OpenClaw 默认 `eval-1`）。这几项不一致时，常见现象是“导入看起来成功，但评测回答质量明显下降或查不到上下文”。
+### Q: 評測效果低，怎麼排查 OpenViking 匯入與評測查詢的 account/user 是否一致？
+A: 先核對三處是否對齊：`ovcli.conf.account`（匯入 account）、`ov.conf.bot.ov_server.account_id`（Vikingbot 查詢 account）、評測指令碼使用的 user（Vikingbot 按 `sample_id`，OpenClaw 預設 `eval-1`）。這幾項不一致時，常見現象是“匯入看起來成功，但評測回答質量明顯下降或查不到上下文”。
 
 ---
 
-## 常见问题排查
+## 常見問題排查
 
-### 1. 检查 OpenViking 数据导入是否成功
+### 1. 檢查 OpenViking 資料匯入是否成功
 
-导入完成后，查看 `import_success.csv`：
+匯入完成後，檢視 `import_success.csv`：
 
 ```bash
 cd benchmark/locomo/openclaw
 wc -l result/import_success.csv
 ```
 
-- **预期结果**：总共约 270+ session（包含表头）
-- **如果数量不符**：
-  - 检查 `result/import_errors.log` 查看错误日志
-  - 使用 `--force-ingest` 重新导入
+- **預期結果**：總共約 270+ session（包含表頭）
+- **如果數量不符**：
+  - 檢查 `result/import_errors.log` 檢視錯誤日誌
+  - 使用 `--force-ingest` 重新匯入
 
-### 2. 检查 QA 回答是否正常
+### 2. 檢查 QA 回答是否正常
 
 查看 `qa_results.csv` 的 `response` 列：
 
 ```bash
 cd benchmark/locomo/openclaw
-# 查看前几行
+# 檢視前幾行
 head -n 5 result/qa_results.csv
 
 # 查看是否有 ERROR
 grep -i "error" result/qa_results.csv
 ```
 
-**检查内容：**
-- `response` 列不应为空或报错信息
-- `result` 列（judge 后）应有 `CORRECT` 或 `WRONG`
+**檢查內容：**
+- `response` 列不應為空或報錯資訊
+- `result` 列（judge 後）應有 `CORRECT` 或 `WRONG`
 
-### 3. 验证 OpenViking 记忆是否被正确加载
+### 3. 驗證 OpenViking 記憶是否被正確載入
 
-如果 QA 回答不正常，可以检查 session 文件确认记忆是否被加载：
+如果 QA 回答不正常，可以檢查 session 檔案確認記憶是否被載入：
 
-1. 从 `qa_results.csv` 的 `jsonl_filename` 列获取 session 文件名：
+1. 從 `qa_results.csv` 的 `jsonl_filename` 列獲取 session 檔名：
    ```
    jsonl_filename
    5d497c96-9fb6-480c-be06-0c0849e193e9.jsonl.20260408_181433
    ```
 
-2. 在 OpenClaw 工作目录查看对应的 session 文件：
+2. 在 OpenClaw 工作目錄檢視對應的 session 檔案：
    ```bash
    ls ~/.openclaw/agents/locomo-eval/sessions/
    ```
 
-3. 查看 session 文件内容，确认 query 前是否有记忆内容：
+3. 檢視 session 檔案內容，確認 query 前是否有記憶內容：
    ```bash
    cat ~/.openclaw/agents/locomo-eval/sessions/<jsonl_filename> | grep -A 20 "type.*message"
    ```
 
-**预期结果**：在用户提问（query）之前，应该有从 OpenViking 加载的记忆内容。
+**預期結果**：在使用者提問（query）之前，應該有從 OpenViking 載入的記憶內容。
 
-### 4. 评测效果低时，先口语化排查 account/user
+### 4. 評測效果低時，先口語化排查 account/user
 
-如果你感觉“明明导入了，回答还是不对劲”，先按这个顺序看：
+如果你感覺“明明匯入了，回答還是不對勁”，先按這個順序看：
 
-1. 打开 `~/.openviking/ovcli.conf`，看 `account` 是不是你这次要用的账号。
-2. 打开 `~/.openviking/ov.conf`，重点看：
+1. 開啟 `~/.openviking/ovcli.conf`，看 `account` 是不是你這次要用的帳號。
+2. 開啟 `~/.openviking/ov.conf`，重點看：
    - `bot.ov_server.account_id`
    - `server.host` / `server.port`
-3. 跑 Vikingbot 脚本时留意 preflight 日志里打印的 `account` 和 `OpenViking URL`，确认和你配置里看到的一致。
-4. 记住查询侧是谁在查：
-   - Vikingbot 评测默认用 `sample_id` 当 user。
-   - OpenClaw QA 默认是 `--user eval-1 --agent-id locomo-eval`。
-   - 你如果改过 OpenClaw 的 `--user` 或 `--agent-id`，要保证 ingest 和 qa 两边用的是同一套值。
+3. 跑 Vikingbot 指令碼時留意 preflight 日誌裡列印的 `account` 和 `OpenViking URL`，確認和你配置裡看到的一致。
+4. 記住查詢側是誰在查：
+   - Vikingbot 評測預設用 `sample_id` 當 user。
+   - OpenClaw QA 預設是 `--user eval-1 --agent-id locomo-eval`。
+   - 你如果改過 OpenClaw 的 `--user` 或 `--agent-id`，要保證 ingest 和 qa 兩邊用的是同一套值。
 
-一句话：导入时的 account/user、评测时的 account/user、以及连接的服务地址，这三件事只要有一个没对齐，就很容易出现效果低或“查不到上下文”。
+一句話：匯入時的 account/user、評測時的 account/user、以及連線的服務地址，這三件事只要有一個沒對齊，就很容易出現效果低或“查不到上下文”。
 
-### 5. Token 统计异常
+### 5. Token 統計異常
 
-如果 `stat_judge_result.py` 输出的 token 数量异常：
+如果 `stat_judge_result.py` 輸出的 token 數量異常：
 
-- **Import token 为 0**：检查 `import_success.csv` 是否存在且有数据
-- **QA token 为 0**：检查 `qa_results.csv` 的 `input_tokens`/`output_tokens` 列
-- **CacheRead 很高**：说明多次运行相同问题，命中了缓存
+- **Import token 為 0**：檢查 `import_success.csv` 是否存在且有資料
+- **QA token 為 0**：檢查 `qa_results.csv` 的 `input_tokens`/`output_tokens` 列
+- **CacheRead 很高**：說明多次執行相同問題，命中了快取

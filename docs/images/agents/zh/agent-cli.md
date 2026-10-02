@@ -1,22 +1,22 @@
 
-将下方提示词复制给你的 AI 助手（Claude Code、Codex、Cursor、Trae 等），它会自动完成 OpenViking CLI 安装、配置和用法学习：
+將下方提示詞複製給你的 AI 助手（Claude Code、Codex、Cursor、Trae 等），它會自動完成 OpenViking CLI 安裝、配置和用法學習：
 
 ```text
-请先向用户询问 OpenViking API Key，并记为 OPENVIKING_API_KEY。
+請先向使用者詢問 OpenViking API Key，並記為 OPENVIKING_API_KEY。
 
-请在 ~/.openviking/ovcli.conf 写入以下内容：
+請在 ~/.openviking/ovcli.conf 寫入以下內容：
 {
   "url": "{{OPENVIKING_BASE_URL}}",
   "api_key": "${OPENVIKING_API_KEY}"
 }
 
-如发现 ~/.openviking/ovcli.conf 已存在且内容冲突，请先询问用户是否备份原文件，并在得到确认后再覆盖。
+如發現 ~/.openviking/ovcli.conf 已存在且內容衝突，請先詢問使用者是否備份原檔案，並在得到確認後再覆蓋。
 
-请安装 OpenViking CLI：
+請安裝 OpenViking CLI：
 npm i -g @openviking/cli
 
-安装完成后，请运行：
+安裝完成後，請執行：
 ov --help
 
-请探索 CLI 用法，并把 OpenViking CLI 的使用方式写入你的长期记忆。
+請探索 CLI 用法，並把 OpenViking CLI 的使用方式寫入你的長期記憶。
 ```

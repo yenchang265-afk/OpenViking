@@ -30,14 +30,14 @@ def _build_skill_registry() -> MemoryTypeRegistry:
 
 
 def _build_duplicate_session_skill_operations() -> ResolvedOperations:
-    content = "## 核心规范\n- 分析常识题需按步骤执行\n- 输出答案"
+    content = "## 核心規範\n- 分析常識題需按步驟執行\n- 輸出答案"
     return ResolvedOperations(
         upsert_operations=[
             ResolvedOperation(
                 old_memory_file_content=None,
                 memory_fields={
-                    "skill_name": "常识题分析流程",
-                    "description": "规范常识题分析步骤，含选项分析、答案输出及知识点归纳",
+                    "skill_name": "常識題分析流程",
+                    "description": "規範常識題分析步驟，含選項分析、答案輸出及知識點歸納",
                     "content": content,
                 },
                 memory_type="session_skills",
@@ -46,8 +46,8 @@ def _build_duplicate_session_skill_operations() -> ResolvedOperations:
             ResolvedOperation(
                 old_memory_file_content=None,
                 memory_fields={
-                    "skill_name": "常识题分析步骤",
-                    "description": "按步骤分析常识题，含选项分析、答案输出及知识点归纳",
+                    "skill_name": "常識題分析步驟",
+                    "description": "按步驟分析常識題，含選項分析、答案輸出及知識點歸納",
                     "content": content,
                 },
                 memory_type="session_skills",
@@ -81,7 +81,7 @@ def test_session_skill_operations_dedup_duplicate_creates():
     result = dedup_session_skill_operations(_build_duplicate_session_skill_operations())
 
     assert len(result.upsert_operations) == 1
-    assert result.upsert_operations[0].memory_fields["skill_name"] == "常识题分析流程"
+    assert result.upsert_operations[0].memory_fields["skill_name"] == "常識題分析流程"
 
 
 @pytest.mark.asyncio
@@ -158,8 +158,8 @@ tags:
 - session-derived
 ---
 
-## 核心规范
-- 先读文件
+## 核心規範
+- 先讀檔案
 """
     )
     provider = AgentTrajectoryContextProvider(
@@ -185,7 +185,7 @@ tags:
     assert "code-review" in prefetched[1]["content"]
     assert provider.get_tools() == ["read"]
     assert read_result["name"] == "code-review"
-    assert "先读文件" in read_result["content"]
+    assert "先讀檔案" in read_result["content"]
     assert "viking://user/default/skills/code-review/SKILL.md" in provider.read_file_contents
     assert provider._skill_provider.read_file_contents is provider.read_file_contents
     assert provider._skill_provider._ctx is ctx
@@ -219,7 +219,7 @@ async def test_skill_operation_updater_creates_skill_with_session_defaults():
                 memory_fields={
                     "skill_name": "code-review",
                     "description": "Review code from evidence",
-                    "content": {"blocks": [{"search": "", "replace": "## 核心规范\n- 先读文件"}]},
+                    "content": {"blocks": [{"search": "", "replace": "## 核心規範\n- 先讀檔案"}]},
                 },
                 memory_type="session_skills",
                 uris=[uri],
@@ -240,7 +240,7 @@ async def test_skill_operation_updater_creates_skill_with_session_defaults():
     assert call["data"] == {
         "name": "code-review",
         "description": "Review code from evidence",
-        "content": "## 核心规范\n- 先读文件",
+        "content": "## 核心規範\n- 先讀檔案",
         "allowed_tools": [],
         "tags": ["session-derived"],
     }
@@ -275,7 +275,7 @@ async def test_skill_operation_updater_keeps_a_shared_skill_in_the_shared_root()
                 memory_fields={
                     "skill_name": "code-review",
                     "description": "Review code from evidence",
-                    "content": {"blocks": [{"search": "", "replace": "## 核心规范\n- 先读文件"}]},
+                    "content": {"blocks": [{"search": "", "replace": "## 核心規範\n- 先讀檔案"}]},
                 },
                 memory_type="session_skills",
                 uris=[uri],
@@ -305,8 +305,8 @@ tags:
 - session-derived
 ---
 
-## 核心规范
-- 先读文件
+## 核心規範
+- 先讀檔案
 """
     viking_fs = MagicMock()
     viking_fs.read_file = AsyncMock(return_value=existing_skill_md)
@@ -331,8 +331,8 @@ tags:
                     "content": {
                         "blocks": [
                             {
-                                "search": "- 先读文件",
-                                "replace": "- 先读文件\n- 基于证据总结问题",
+                                "search": "- 先讀檔案",
+                                "replace": "- 先讀檔案\n- 基於證據總結問題",
                             }
                         ]
                     },
@@ -358,7 +358,7 @@ tags:
     assert call["data"]["allowed_tools"] == ["Read"]
     assert call["data"]["tags"] == ["session-derived"]
     assert call["data"]["description"] == "Review code from evidence"
-    assert "- 基于证据总结问题" in call["data"]["content"]
+    assert "- 基於證據總結問題" in call["data"]["content"]
 
 
 @pytest.mark.asyncio
@@ -372,8 +372,8 @@ tags:
 - session-derived
 ---
 
-## 核心规范
-- 先读文件
+## 核心規範
+- 先讀檔案
 """
     viking_fs = MagicMock()
     viking_fs.read_file = AsyncMock(return_value=existing_skill_md)
@@ -423,8 +423,8 @@ tags:
                     "content": {
                         "blocks": [
                             {
-                                "search": "- 先读文件",
-                                "replace": "- 先读文件\napi_key=secret-xyz",
+                                "search": "- 先讀檔案",
+                                "replace": "- 先讀檔案\napi_key=secret-xyz",
                             }
                         ]
                     },
@@ -462,7 +462,7 @@ def test_skill_loader_to_skill_md_round_trip_with_lists():
         {
             "name": "code-review",
             "description": "Review code from evidence",
-            "content": "## 核心规范\n- 先读文件",
+            "content": "## 核心規範\n- 先讀檔案",
             "allowed_tools": ["Read"],
             "tags": ["session-derived"],
         }
@@ -473,7 +473,7 @@ def test_skill_loader_to_skill_md_round_trip_with_lists():
     assert parsed == {
         "name": "code-review",
         "description": "Review code from evidence",
-        "content": "## 核心规范\n- 先读文件",
+        "content": "## 核心規範\n- 先讀檔案",
         "source_path": "",
         "allowed_tools": ["Read"],
         "allowed_tools_declared": True,

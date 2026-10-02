@@ -541,7 +541,7 @@ int RangeOp::load_json_doc(const JsonValue& json_doc) {
     if (center_val.IsArray()) {
       center_.resize(center_val.Size());
       if (center_.size() <= 0UL) {
-        // 要求至少有一个
+        // 要求至少有一個
         // not valid");
         return -3;
       }

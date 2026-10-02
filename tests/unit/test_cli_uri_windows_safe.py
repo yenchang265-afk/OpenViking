@@ -45,4 +45,4 @@ def test_sanitize_segment_preserves_normal_names():
     assert VikingURI.sanitize_segment("my_resource") == "my_resource"
     # CJK characters are preserved by the existing sanitizer and must not be
     # touched by the reserved-name guard.
-    assert VikingURI.sanitize_segment("报告") == "报告"
+    assert VikingURI.sanitize_segment("報告") == "報告"

@@ -7,26 +7,26 @@ class TestAddResource:
     def test_add_resource_simple(self, api_client):
         try:
             print("\n" + "=" * 80)
-            print("测试步骤 1: 创建临时测试文件")
+            print("測試步驟 1: 建立臨時測試檔案")
             print("=" * 80)
 
             with tempfile.TemporaryDirectory() as temp_dir:
                 test_file_path = os.path.join(temp_dir, "test_file.txt")
-                test_content = "这是一个测试文件的内容，用于验证 add_resource API。\n"
-                test_content += "包含一些中文内容，测试场景化验证。"
+                test_content = "這是一個測試檔案的內容，用於驗證 add_resource API。\n"
+                test_content += "包含一些中文內容，測試場景化驗證。"
 
                 with open(test_file_path, "w", encoding="utf-8") as f:
                     f.write(test_content)
 
-                print(f"✓ 临时文件创建成功: {test_file_path}")
-                print(f"✓ 文件内容: {test_content}")
+                print(f"✓ 臨時檔案建立成功: {test_file_path}")
+                print(f"✓ 檔案內容: {test_content}")
 
                 print("\n" + "=" * 80)
-                print("测试步骤 2: 调用 add_resource API 导入本地文件")
+                print("測試步驟 2: 呼叫 add_resource API 匯入本地檔案")
                 print("=" * 80)
 
                 response = api_client.add_resource(
-                    path=test_file_path, reason="测试 add_resource API 功能", wait=True
+                    path=test_file_path, reason="測試 add_resource API 功能", wait=True
                 )
                 print(f"\nAdd resource API status code: {response.status_code}")
 
@@ -52,10 +52,10 @@ class TestAddResource:
                     f"URI should start with 'viking://', got {imported_uri}"
                 )
 
-                print(f"✓ 文件成功导入，URI: {imported_uri}")
+                print(f"✓ 檔案成功匯入，URI: {imported_uri}")
 
                 print("\n" + "=" * 80)
-                print("测试步骤 3: 验证导入的文件")
+                print("測試步驟 3: 驗證匯入的檔案")
                 print("=" * 80)
 
                 response = api_client.fs_ls(imported_uri)
@@ -64,9 +64,9 @@ class TestAddResource:
                 data = response.json()
                 assert data.get("status") == "ok", f"Expected status 'ok', got {data.get('status')}"
 
-                print("✓ 导入的文件验证成功！")
+                print("✓ 匯入的檔案驗證成功！")
                 print("\n" + "=" * 80)
-                print("所有测试步骤完成 ✓")
+                print("所有測試步驟完成 ✓")
                 print("=" * 80)
 
         except Exception as e:

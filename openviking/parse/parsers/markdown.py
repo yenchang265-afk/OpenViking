@@ -1114,14 +1114,14 @@ class MarkdownParser(BaseParser):
 
     @staticmethod
     def _doc_landing(layout: Dict[str, str]) -> Tuple[str, bool]:
-        """目标 .md 入库后的落点（相对其磁盘父目录），完全由真实 layout 推断，不对
-        parser 是否目录化做任何假设：
+        """目標 .md 入庫後的落點（相對其磁碟父目錄），完全由真實 layout 推斷，不對
+        parser 是否目錄化做任何假設：
 
-        - 所有 section 收拢在同一公共目录下 → (该目录, True)，链接指向目录；
-        - 否则即单个裸文件（如未来小 .md 不再拆成目录）→ (该文件, False)，指向文件。
+        - 所有 section 收攏在同一公共目錄下 → (該目錄, True)，連結指向目錄；
+        - 否則即單個裸檔案（如未來小 .md 不再拆成目錄）→ (該檔案, False)，指向檔案。
 
-        落点是文件还是目录、叫什么，全部由 in-memory parse 出来的 layout 结构决定；
-        parse_content 怎么改，这里自动跟随。
+        落點是檔案還是目錄、叫什麼，全部由 in-memory parse 出來的 layout 結構決定；
+        parse_content 怎麼改，這裡自動跟隨。
         """
         keys = list(layout)
         first_segs = {k.split("/", 1)[0] for k in keys}

@@ -255,7 +255,7 @@ class VolcEngineVLM(OpenAIVLM):
             kwargs["tools"] = tools
             kwargs["tool_choice"] = tool_choice or "auto"
 
-        # 用 tracer.info 打印请求（人类可读格式）
+        # 用 tracer.info 列印請求（人類可讀格式）
         tracer.info(
             "llm_input_messages=" + format_messages(redact_image_data_urls(kwargs_messages))
         )

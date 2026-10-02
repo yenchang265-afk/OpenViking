@@ -10,7 +10,9 @@ from benchmark.memory_organization.models import fact_lines
 _AS_OF_RE = re.compile(r"\s*\(as of \d{4}-\d{2}-\d{2}\)\s*$", re.IGNORECASE)
 _MATCHED_SIZE_NOTE_RE = re.compile(
     r"\s*(?:"
+    r"（長期穩定）|"
     r"（长期稳定）|"
+    r"（長期穩定且持續指導未來工作協作）|"
     r"（长期稳定且持续指导未来工作协作）|"
     r"\(a stable long-term preference that guides future work and collaboration\)|"
     r"\(a stable long-term preference that consistently guides future work, collaboration, "

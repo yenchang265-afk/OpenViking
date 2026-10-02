@@ -83,7 +83,7 @@ def test_text_embedding_dimension(dashscope_text_embedder):
 
 def test_multimodal_text_only(dashscope_multimodal_embedder):
     """Multimodal API with text-only input returns correct dimension vector."""
-    r = dashscope_multimodal_embedder.embed("这是一段测试文本")
+    r = dashscope_multimodal_embedder.embed("這是一段測試文本")
     assert r.dense_vector and len(r.dense_vector) == DASHSCOPE_MULTIMODAL_DIM
     assert 0.99 < l2_norm(r.dense_vector) < 1.01
 
@@ -111,7 +111,7 @@ def test_multimodal_with_image_url(dashscope_multimodal_embedder):
     """Multimodal API with text + image URL returns correct dimension vector."""
     r = dashscope_multimodal_embedder.embed_content(
         [
-            {"text": "一只可爱的猫咪"},
+            {"text": "一隻可愛的貓咪"},
             {"image": IMAGE_URL},
         ]
     )
@@ -142,7 +142,7 @@ def test_multimodal_with_fusion(dashscope_multimodal_embedder):
     try:
         r = e.embed_content(
             [
-                {"text": "描述这张图片的内容"},
+                {"text": "描述這張圖片的內容"},
                 {"image": IMAGE_URL},
             ]
         )

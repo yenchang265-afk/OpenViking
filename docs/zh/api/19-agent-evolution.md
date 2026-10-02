@@ -1,27 +1,27 @@
-# Agent 进化
+# Agent 進化
 
-Agent Evolution API 用于查询某条 Experience 被实际应用后的 Trajectory 记录及结果分布。当前仅提供 HTTP API。
+Agent Evolution API 用於查詢某條 Experience 被實際應用後的 Trajectory 記錄及結果分佈。當前僅提供 HTTP API。
 
-## API 参考
+## API 參考
 
-### 查询 Experience 应用轨迹
+### 查詢 Experience 應用軌跡
 
-分页返回成功读取过指定 Experience 的 Trajectory。查询仅匹配当前调用用户空间内的 Experience 和 Trajectory。
+分頁返回成功讀取過指定 Experience 的 Trajectory。查詢僅匹配當前呼叫使用者空間內的 Experience 和 Trajectory。
 
-**代码入口**：
+**程式碼入口**：
 
 - `openviking/server/routers/agent_evolution.py:list_experience_trajectories` - HTTP 路由
-- `openviking/service/agent_evolution_service.py:AgentEvolutionService.list_trajectories_by_experience` - 核心实现
+- `openviking/service/agent_evolution_service.py:AgentEvolutionService.list_trajectories_by_experience` - 核心實現
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| experience_uri | string | 是 | - | 当前用户空间内的 Experience 文件 URI |
-| limit | integer | 否 | 50 | 单页数量，范围为 1～1000 |
-| offset | integer | 否 | 0 | 从零开始的结果偏移量 |
-| start_date | string | 否 | - | Trajectory 创建日期下界（包含），UTC `YYYY-MM-DD` |
-| end_date | string | 否 | - | Trajectory 创建日期上界（包含），UTC `YYYY-MM-DD` |
+| experience_uri | string | 是 | - | 當前使用者空間內的 Experience 檔案 URI |
+| limit | integer | 否 | 50 | 單頁數量，範圍為 1～1000 |
+| offset | integer | 否 | 0 | 從零開始的結果偏移量 |
+| start_date | string | 否 | - | Trajectory 建立日期下界（包含），UTC `YYYY-MM-DD` |
+| end_date | string | 否 | - | Trajectory 建立日期上界（包含），UTC `YYYY-MM-DD` |
 
 **HTTP API**
 
@@ -34,7 +34,7 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/trajectori
   -H "X-API-Key: your-key"
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -45,7 +45,7 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/trajectori
       {
         "uri": "viking://user/default/memories/trajectories/exchange_20260805020000.md",
         "name": "exchange_20260805020000.md",
-        "description": "处理换货请求",
+        "description": "處理換貨請求",
         "created_at": "2026-08-05T02:00:00Z",
         "updated_at": "2026-08-05T02:00:00Z"
       }
@@ -59,26 +59,26 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/trajectori
 }
 ```
 
-`items` 中仅返回索引记录实际存在的 `uri`、`name`、`description`、`created_at` 和 `updated_at` 字段。
+`items` 中僅返回索引記錄實際存在的 `uri`、`name`、`description`、`created_at` 和 `updated_at` 欄位。
 
 ---
 
-### 查询 Experience 应用结果分布
+### 查詢 Experience 應用結果分佈
 
-统计应用过指定 Experience 的 Trajectory 在五种结果状态下的数量。该查询使用精确标量标签聚合，不读取全部 Trajectory 文件。
+統計應用過指定 Experience 的 Trajectory 在五種結果狀態下的數量。該查詢使用精確標量標籤聚合，不讀取全部 Trajectory 檔案。
 
-**代码入口**：
+**程式碼入口**：
 
 - `openviking/server/routers/agent_evolution.py:get_experience_outcome_distribution` - HTTP 路由
-- `openviking/service/agent_evolution_service.py:AgentEvolutionService.get_experience_outcome_distribution` - 核心实现
+- `openviking/service/agent_evolution_service.py:AgentEvolutionService.get_experience_outcome_distribution` - 核心實現
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| experience_uri | string | 是 | - | 当前用户空间内的 Experience 文件 URI |
-| start_date | string | 否 | - | Trajectory 创建日期下界（包含），UTC `YYYY-MM-DD` |
-| end_date | string | 否 | - | Trajectory 创建日期上界（包含），UTC `YYYY-MM-DD` |
+| experience_uri | string | 是 | - | 當前使用者空間內的 Experience 檔案 URI |
+| start_date | string | 否 | - | Trajectory 建立日期下界（包含），UTC `YYYY-MM-DD` |
+| end_date | string | 否 | - | Trajectory 建立日期上界（包含），UTC `YYYY-MM-DD` |
 
 **HTTP API**
 
@@ -91,7 +91,7 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/outcomes?e
   -H "X-API-Key: your-key"
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -110,9 +110,9 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/outcomes?e
 }
 ```
 
-结果固定包含 `success`、`failure`、`partial`、`unknown` 和 `unfinished`。旧版创建且尚未重新索引的 Trajectory 没有 outcome 标签，因此不会计入分布。
+結果固定包含 `success`、`failure`、`partial`、`unknown` 和 `unfinished`。舊版建立且尚未重新索引的 Trajectory 沒有 outcome 標籤，因此不會計入分佈。
 
-## 相关文档
+## 相關文件
 
-- [会话](05-sessions.md) - 提交会话并生成 Agent Evolution 记忆
-- [记忆](16-memory.md) - 记忆读取与召回
+- [會話](05-sessions.md) - 提交會話並生成 Agent Evolution 記憶
+- [記憶](16-memory.md) - 記憶讀取與召回

@@ -154,7 +154,7 @@ test("buildRecallBlock prefers a cited server digest", async () => {
     ok: true,
     result: {
       rendered: '<memory uri="viking://a">body</memory>',
-      digest: "OpenViking memory digest:\n- fact 来源：viking://a",
+      digest: "OpenViking memory digest:\n- fact 來源：viking://a",
       entries: [{ uri: "viking://a" }],
       stats: { rewrite: "ok" },
     },
@@ -193,7 +193,7 @@ test("buildRecallBlock uses local compression when configured", async () => {
   }), { recallRewrite: "client" }, "hello", {
     legacyCachePath,
     digestCachePath,
-    runCompressor: async () => "- local fact 来源：viking://a",
+    runCompressor: async () => "- local fact 來源：viking://a",
   });
 
   assert.match(block, /OpenViking memory digest:/);

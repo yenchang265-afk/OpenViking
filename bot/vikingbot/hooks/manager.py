@@ -23,14 +23,14 @@ class HookManager:
         try:
             module = importlib.import_module(module_path)
         except ModuleNotFoundError as e:
-            logger.exception(f"模块 {module_path} 导入失败：{e}")
+            logger.exception(f"模組 {module_path} 匯入失敗：{e}")
             return None
         try:
-            # 核心：获取模块内的 hooks 属性
+            # 核心：獲取模組內的 hooks 屬性
             hooks_attr = getattr(module, attr_name)
             return hooks_attr
         except AttributeError as e:
-            logger.exception(f"模块 {module_path} 中不存在 {attr_name} 属性：{e}")
+            logger.exception(f"模組 {module_path} 中不存在 {attr_name} 屬性：{e}")
             return None
 
     def register_path(self, hook_path_list) -> None:

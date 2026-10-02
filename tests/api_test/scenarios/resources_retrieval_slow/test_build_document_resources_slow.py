@@ -15,7 +15,7 @@ def _create_pdf_file():
     try:
         from fpdf import FPDF
     except ImportError:
-        pytest.skip("fpdf 未安装，跳过 PDF 构建测试")
+        pytest.skip("fpdf 未安裝，跳過 PDF 構建測試")
 
     random_id = str(uuid.uuid4())[:8]
     unique_keyword = f"pdf_keyword_{random_id}"
@@ -39,7 +39,7 @@ def _create_docx_file():
     try:
         from docx import Document
     except ImportError:
-        pytest.skip("python-docx 未安装，跳过 DOCX 构建测试")
+        pytest.skip("python-docx 未安裝，跳過 DOCX 構建測試")
 
     random_id = str(uuid.uuid4())[:8]
     unique_keyword = f"docx_keyword_{random_id}"
@@ -47,9 +47,9 @@ def _create_docx_file():
     docx_path = os.path.join(temp_dir, f"test_{random_id}.docx")
 
     doc = Document()
-    doc.add_heading(f"Word测试标题 {random_id}", level=1)
-    doc.add_paragraph(f"包含唯一关键词：{unique_keyword}")
-    doc.add_paragraph("用于验证Word文档构建产物。")
+    doc.add_heading(f"Word測試標題 {random_id}", level=1)
+    doc.add_paragraph(f"包含唯一關鍵詞：{unique_keyword}")
+    doc.add_paragraph("用於驗證Word文件構建產物。")
     doc.save(docx_path)
 
     return docx_path, temp_dir, unique_keyword
@@ -59,7 +59,7 @@ def _create_xlsx_file():
     try:
         from openpyxl import Workbook
     except ImportError:
-        pytest.skip("openpyxl 未安装，跳过 XLSX 构建测试")
+        pytest.skip("openpyxl 未安裝，跳過 XLSX 構建測試")
 
     random_id = str(uuid.uuid4())[:8]
     unique_keyword = f"xlsx_keyword_{random_id}"
@@ -70,18 +70,18 @@ def _create_xlsx_file():
     ws = wb.active
     ws.title = "TestSheet"
     ws.append(["Column A", "Column B", "Column C"])
-    ws.append([f"数据1 {random_id}", unique_keyword, "数据3"])
-    ws.append(["数据4", "数据5", "数据6"])
+    ws.append([f"資料1 {random_id}", unique_keyword, "資料3"])
+    ws.append(["資料4", "資料5", "資料6"])
     wb.save(xlsx_path)
 
     return xlsx_path, temp_dir, unique_keyword
 
 
 class TestBuildDocumentResourcesSlow:
-    """TC-B03~B09 文档类资源构建测试"""
+    """TC-B03~B09 文件類資源構建測試"""
 
     def test_build_pdf_file(self, api_client):
-        """TC-B03 PDF文件构建：验证 .pdf 文件添加后 source_format=pdf 且内容可检索"""
+        """TC-B03 PDF檔案構建：驗證 .pdf 檔案新增後 source_format=pdf 且內容可檢索"""
         pdf_path, temp_dir, unique_keyword = _create_pdf_file()
         try:
             response = api_client.add_resource(path=pdf_path, wait=True)
@@ -101,12 +101,12 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B03 PDF文件构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B03 PDF檔案構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_docx_file(self, api_client):
-        """TC-B05 Word文档构建：验证 .docx 文件添加后 source_format=docx 且内容可检索"""
+        """TC-B05 Word文件構建：驗證 .docx 檔案新增後 source_format=docx 且內容可檢索"""
         docx_path, temp_dir, unique_keyword = _create_docx_file()
         try:
             response = api_client.add_resource(path=docx_path, wait=True)
@@ -126,12 +126,12 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B05 Word文档构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B05 Word文件構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_xlsx_file(self, api_client):
-        """TC-B08 Excel构建：验证 .xlsx 文件添加后 source_format=xlsx 且表格数据可检索"""
+        """TC-B08 Excel構建：驗證 .xlsx 檔案新增後 source_format=xlsx 且表格資料可檢索"""
         xlsx_path, temp_dir, unique_keyword = _create_xlsx_file()
         try:
             response = api_client.add_resource(path=xlsx_path, wait=True)
@@ -151,12 +151,12 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B08 Excel构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B08 Excel構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_html_file(self, api_client):
-        """TC-B04 HTML文件构建：验证 .html 文件添加后 source_format=html 且标签被剥离"""
+        """TC-B04 HTML檔案構建：驗證 .html 檔案新增後 source_format=html 且標籤被剝離"""
         from build_test_helpers import assert_content_no_html_tags
 
         random_id = str(uuid.uuid4())[:8]
@@ -166,9 +166,9 @@ class TestBuildDocumentResourcesSlow:
 
         content = (
             f"<html><head><title>HTML Test {random_id}</title></head>"
-            f"<body><h1>HTML测试标题 {random_id}</h1>"
-            f"<p>包含唯一关键词：{unique_keyword}</p>"
-            f"<p>用于验证HTML文件构建产物。</p>"
+            f"<body><h1>HTML測試標題 {random_id}</h1>"
+            f"<p>包含唯一關鍵詞：{unique_keyword}</p>"
+            f"<p>用於驗證HTML檔案構建產物。</p>"
             f"</body></html>"
         )
         with open(html_path, "w", encoding="utf-8") as f:
@@ -194,12 +194,12 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B04 HTML文件构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B04 HTML檔案構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_legacy_doc_file(self, api_client):
-        """TC-B06 旧版Word(.doc)构建：验证 .doc 文件添加后 source_format=doc 且内容可检索"""
+        """TC-B06 舊版Word(.doc)構建：驗證 .doc 檔案新增後 source_format=doc 且內容可檢索"""
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"doc_keyword_{random_id}"
         temp_dir = tempfile.mkdtemp()
@@ -209,11 +209,11 @@ class TestBuildDocumentResourcesSlow:
             from docx import Document
 
             doc = Document()
-            doc.add_heading(f"旧版Word测试标题 {random_id}", level=1)
-            doc.add_paragraph(f"包含唯一关键词：{unique_keyword}")
+            doc.add_heading(f"舊版Word測試標題 {random_id}", level=1)
+            doc.add_paragraph(f"包含唯一關鍵詞：{unique_keyword}")
             doc.save(doc_path)
         except ImportError:
-            pytest.skip("python-docx 未安装，跳过旧版Word构建测试")
+            pytest.skip("python-docx 未安裝，跳過舊版Word構建測試")
 
         try:
             response = api_client.add_resource(path=doc_path, wait=True)
@@ -233,16 +233,16 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B06 旧版Word(.doc)构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B06 舊版Word(.doc)構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_pptx_file(self, api_client):
-        """TC-B07 PowerPoint构建：验证 .pptx 文件添加后 source_format=pptx 且内容可检索"""
+        """TC-B07 PowerPoint構建：驗證 .pptx 檔案新增後 source_format=pptx 且內容可檢索"""
         try:
             from pptx import Presentation
         except ImportError:
-            pytest.skip("python-pptx 未安装，跳过 PPTX 构建测试")
+            pytest.skip("python-pptx 未安裝，跳過 PPTX 構建測試")
 
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"pptx_keyword_{random_id}"
@@ -252,9 +252,9 @@ class TestBuildDocumentResourcesSlow:
         prs = Presentation()
         slide = prs.slides.add_slide(prs.slide_layouts[1])
         title = slide.shapes.title
-        title.text = f"PPT测试标题 {random_id}"
+        title.text = f"PPT測試標題 {random_id}"
         body = slide.placeholders[1]
-        body.text = f"包含唯一关键词：{unique_keyword}\n用于验证PPT文件构建产物。"
+        body.text = f"包含唯一關鍵詞：{unique_keyword}\n用於驗證PPT檔案構建產物。"
         prs.save(pptx_path)
 
         try:
@@ -275,16 +275,16 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B07 PowerPoint构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B07 PowerPoint構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
     def test_build_epub_file(self, api_client):
-        """TC-B09 EPUB构建：验证 .epub 文件添加后 source_format=epub 且内容可检索"""
+        """TC-B09 EPUB構建：驗證 .epub 檔案新增後 source_format=epub 且內容可檢索"""
         try:
             from ebooklib import epub
         except ImportError:
-            pytest.skip("ebooklib 未安装，跳过 EPUB 构建测试")
+            pytest.skip("ebooklib 未安裝，跳過 EPUB 構建測試")
 
         random_id = str(uuid.uuid4())[:8]
         unique_keyword = f"epub_keyword_{random_id}"
@@ -293,14 +293,14 @@ class TestBuildDocumentResourcesSlow:
 
         book = epub.EpubBook()
         book.set_identifier(f"test-epub-{random_id}")
-        book.set_title(f"EPUB测试 {random_id}")
+        book.set_title(f"EPUB測試 {random_id}")
         book.set_language("zh")
 
         chapter = epub.EpubHtml(title="Chapter 1", file_name="chap_01.xhtml", lang="zh")
         chapter.content = (
-            f"<html><body><h1>EPUB测试章节 {random_id}</h1>"
-            f"<p>包含唯一关键词：{unique_keyword}</p>"
-            f"<p>用于验证EPUB文件构建产物。</p>"
+            f"<html><body><h1>EPUB測試章節 {random_id}</h1>"
+            f"<p>包含唯一關鍵詞：{unique_keyword}</p>"
+            f"<p>用於驗證EPUB檔案構建產物。</p>"
             f"</body></html>"
         )
         book.add_item(chapter)
@@ -327,6 +327,6 @@ class TestBuildDocumentResourcesSlow:
 
             assert_resource_indexed(api_client, root_uri, unique_keyword)
 
-            print(f"✓ TC-B09 EPUB构建通过, root_uri: {root_uri}")
+            print(f"✓ TC-B09 EPUB構建通過, root_uri: {root_uri}")
         finally:
             shutil.rmtree(temp_dir, ignore_errors=True)

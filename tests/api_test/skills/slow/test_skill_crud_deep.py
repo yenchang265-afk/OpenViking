@@ -92,9 +92,9 @@ class TestSkillCrudDeep:
     def test_add_skill_unicode_content(self, api_client):
         skill_data = {
             "name": f"unicode_skill_{uuid.uuid4().hex[:8]}",
-            "description": "这是一个中文描述的技能 🚀",
-            "content": "# unicode_skill\n\n这是一个中文描述的技能 🚀",
-            "category": "国际化测试",
+            "description": "這是一箇中文描述的技能 🚀",
+            "content": "# unicode_skill\n\n這是一箇中文描述的技能 🚀",
+            "category": "國際化測試",
         }
         add_resp = api_client.add_skill(data=skill_data, wait=True)
         assert add_resp.status_code == 200, (

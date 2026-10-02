@@ -1,89 +1,89 @@
-# OpenViking API 自动化测试
+# OpenViking API 自動化測試
 
-本目录包含 OpenViking 的 API 集成测试套件。
+本目錄包含 OpenViking 的 API 整合測試套件。
 
-## 目录结构
+## 目錄結構
 
 ```
 tests/api_test/
-├── admin/              # 管理 API 测试
-├── api/                # API 客户端实现
+├── admin/              # 管理 API 測試
+├── api/                # API 客戶端實現
 ├── conftest.py         # pytest fixtures 和配置
-├── filesystem/         # 文件系统 API 测试
-├── health_check/       # 健康检查测试
+├── filesystem/         # 檔案系統 API 測試
+├── health_check/       # 健康檢查測試
 ├── pytest.ini          # pytest 配置
-├── requirements.txt    # 测试依赖
-├── resources/          # 资源管理 API 测试
-├── retrieval/          # 检索 API 测试
-├── scenarios/          # 场景级集成测试
-├── services/           # 服务管理模块
-├── sessions/           # 会话 API 测试
-├── system/             # 系统 API 测试
-└── tools/              # 工具模块
+├── requirements.txt    # 測試依賴
+├── resources/          # 資源管理 API 測試
+├── retrieval/          # 檢索 API 測試
+├── scenarios/          # 場景級整合測試
+├── services/           # 服務管理模組
+├── sessions/           # 會話 API 測試
+├── system/             # 系統 API 測試
+└── tools/              # 工具模組
 ```
 
-## 本地运行测试
+## 本地執行測試
 
-### 前置条件
+### 前置條件
 
 1. Python 3.10+
-2. OpenViking Server 已启动（默认端口 1933）
+2. OpenViking Server 已啟動（預設埠 1933）
 
-### 安装依赖
+### 安裝依賴
 
 ```bash
 cd tests/api_test
 pip install -r requirements.txt
 ```
 
-### 运行测试
+### 執行測試
 
-#### 一键本地测试（推荐）
+#### 一鍵本地測試（推薦）
 
-使用提供的脚本模拟完整的 CI 流水线流程：
+使用提供的指令碼模擬完整的 CI 流水線流程：
 
 ```bash
 cd tests/api_test
 ./local-test.sh
 ```
 
-这个脚本会自动：
-1. 检查 Python 版本
-2. 安装 OpenViking
-3. 安装测试依赖
-4. 启动 OpenViking Server（自动找可用端口）
-5. 运行所有 API 测试
-6. 停止服务并清理
+這個指令碼會自動：
+1. 檢查 Python 版本
+2. 安裝 OpenViking
+3. 安裝測試依賴
+4. 啟動 OpenViking Server（自動找可用埠）
+5. 執行所有 API 測試
+6. 停止服務並清理
 
-#### 手动运行测试
+#### 手動執行測試
 
 ```bash
-# 运行所有测试
+# 執行所有測試
 python -m pytest . -v
 
-# 运行特定模块测试
+# 執行特定模組測試
 python -m pytest admin/ -v
 python -m pytest filesystem/ -v
 python -m pytest sessions/ -v
 
-# 运行特定测试文件
+# 執行特定測試檔案
 python -m pytest health_check/test_server_health_check.py -v
 
-# 生成 HTML 报告
+# 生成 HTML 報告
 python -m pytest . -v --html=api-test-report.html --self-contained-html
 ```
 
-### 环境变量配置
+### 環境變數配置
 
-测试通过环境变量配置，无需修改代码：
+測試通過環境變數配置，無需修改程式碼：
 
-| 环境变量 | 说明 | 默认值 |
+| 環境變數 | 說明 | 預設值 |
 |---------|------|--------|
-| `SERVER_HOST` | OpenViking Server 主机 | 127.0.0.1 |
+| `SERVER_HOST` | OpenViking Server 主機 | 127.0.0.1 |
 | `SERVER_PORT` | OpenViking Server 端口 | 1933 |
-| `OPENVIKING_API_KEY` | API 密钥 | test-root-api-key |
-| `VLM_API_KEY` | VLM 模型密钥（可选） | - |
-| `EMBEDDING_API_KEY` | Embedding 模型密钥（可选） | - |
+| `OPENVIKING_API_KEY` | API 金鑰 | test-root-api-key |
+| `VLM_API_KEY` | VLM 模型金鑰（可選） | - |
+| `EMBEDDING_API_KEY` | Embedding 模型金鑰（可選） | - |
 
 示例：
 
@@ -94,53 +94,53 @@ export EMBEDDING_API_KEY=your-embedding-key
 python -m pytest retrieval/ -v
 ```
 
-## CI/CD 流水线
+## CI/CD 流水線
 
 ### 工作流文件
 
-`.github/workflows/api_test.yml` - API 集成测试流水线
+`.github/workflows/api_test.yml` - API 整合測試流水線
 
-### 流水线特性
+### 流水線特性
 
-- ✅ 智能构建复用：只在依赖变更时重新构建
-- ✅ 并发安全：同一 PR 自动取消旧的运行
-- ✅ 动态端口：自动查找可用端口避免冲突
-- ✅ Secrets 支持：安全传递 API 密钥
+- ✅ 智慧構建複用：只在依賴變更時重新構建
+- ✅ 併發安全：同一 PR 自動取消舊的執行
+- ✅ 動態埠：自動查詢可用埠避免衝突
+- ✅ Secrets 支援：安全傳遞 API 金鑰
 
 ### 配置 GitHub Secrets
 
-为了运行完整的检索测试，需要在仓库中配置以下 Secrets：
+為了執行完整的檢索測試，需要在倉庫中配置以下 Secrets：
 
-1. 进入仓库 **Settings** → **Secrets and variables** → **Actions**
-2. 点击 **New repository secret**
+1. 進入倉庫 **Settings** → **Secrets and variables** → **Actions**
+2. 點選 **New repository secret**
 3. 添加以下 Secrets：
 
-| Secret 名称 | 说明 |
+| Secret 名稱 | 說明 |
 |------------|------|
-| `VLM_API_KEY` | VLM 模型 API 密钥 |
-| `EMBEDDING_API_KEY` | Embedding 模型 API 密钥 |
+| `VLM_API_KEY` | VLM 模型 API 金鑰 |
+| `EMBEDDING_API_KEY` | Embedding 模型 API 金鑰 |
 
-## 测试覆盖范围
+## 測試覆蓋範圍
 
-### 接口测试
+### 介面測試
 
-| 模块 | 测试用例数 | 说明 |
+| 模組 | 測試用例數 | 說明 |
 |------|----------|------|
-| admin | 6 | 账户、用户、角色、密钥管理 |
-| filesystem | 10 | 文件系统操作 |
-| health_check | 1 | 服务健康检查 |
-| resources | 3 | 资源管理 |
-| retrieval | 4 | 搜索和检索 |
-| sessions | 6 | 会话管理 |
-| system | 4 | 系统管理 |
+| admin | 6 | 帳戶、使用者、角色、金鑰管理 |
+| filesystem | 10 | 檔案系統操作 |
+| health_check | 1 | 服務健康檢查 |
+| resources | 3 | 資源管理 |
+| retrieval | 4 | 搜尋和檢索 |
+| sessions | 6 | 會話管理 |
+| system | 4 | 系統管理 |
 
-## 注意事项
+## 注意事項
 
 1. **不要提交敏感信息**：`.env` 和 `ov.conf` 已在 `.gitignore` 中
-2. **检索测试需要密钥**：`retrieval/` 和部分 `scenarios/` 测试需要 VLM 和 Embedding API 密钥
-3. **CI 与本地一致**：CI 流水线使用与本地相同的测试框架和配置
+2. **檢索測試需要金鑰**：`retrieval/` 和部分 `scenarios/` 測試需要 VLM 和 Embedding API 金鑰
+3. **CI 與本地一致**：CI 流水線使用與本地相同的測試框架和配置
 
-## 相关文档
+## 相關文件
 
-- OpenViking API 文档：`docs/zh/api/`
+- OpenViking API 文件：`docs/zh/api/`
 - CI/CD 配置：`.github/workflows/api_test.yml`

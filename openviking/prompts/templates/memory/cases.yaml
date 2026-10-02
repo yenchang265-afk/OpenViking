@@ -76,7 +76,7 @@ fields:
       Compact JSON object string describing the executable case input.
       JSON keys must remain stable English identifiers; generated string values should use {{ language }} while preserving exact source literals needed for task matching.
       Include the user request summary and any stable preconditions needed to reproduce/evaluate the task.
-      Example: {"summary":"用户要求处理重复预订并保留有效订单","preconditions":["存在两个相似订单候选"]}
+      Example: {"summary":"使用者要求處理重複預訂並保留有效訂單","preconditions":["存在兩個相似訂單候選"]}
     merge_op: immutable
 
   - name: rubric

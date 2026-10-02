@@ -76,12 +76,12 @@ def test_message_range_accepts_extended_fractional_seconds():
 
 def test_extraction_context_chunks_long_text_and_preserves_decimal_numbers(stub_provider_config):
     text = (
-        "周一 "
-        + "需求沟通。" * 20
-        + "上下文用量out：21.9K、in：110.2k、缓存读取501.0k，先简单记录下来。 "
-        + "周二 面试三个新员工：王军优势是agent算法，田伟优势是分布式后端架构，"
-        + "金然优势是Agent架构全栈，缺点是缺乏CPU服务器底层调优经验 "
-        + "周三 query-builder的输出直接进行判断会触发错误，原因不明。"
+        "週一 "
+        + "需求溝通。" * 20
+        + "上下文用量out：21.9K、in：110.2k、快取讀取501.0k，先簡單記錄下來。 "
+        + "週二 面試三個新員工：王軍優勢是agent演算法，田偉優勢是分散式後端架構，"
+        + "金然優勢是Agent架構全棧，缺點是缺乏CPU伺服器底層調優經驗 "
+        + "週三 query-builder的輸出直接進行判斷會觸發錯誤，原因不明。"
     )
     extract_context = ExtractContext(
         [

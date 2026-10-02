@@ -7,7 +7,7 @@ from openai import AsyncOpenAI
 from dotenv import load_dotenv
 from pathlib import Path
 
-# 加载本地环境变量文件
+# 載入本地環境變數檔案
 env_file = Path.home() / ".openviking_benchmark_env"
 load_dotenv(env_file)
 
@@ -56,7 +56,7 @@ async def grade_answer(
             timeout=60,
         )
         content = resp.choices[0].message.content.strip()
-        # 提取JSON内容
+        # 提取JSON內容
         start_idx = content.find("{")
         end_idx = content.rfind("}")
         if start_idx != -1 and end_idx != -1:
@@ -71,7 +71,7 @@ async def grade_answer(
 
 
 def load_answers(input_path: str) -> tuple[list[dict], list[str]]:
-    """加载待评分的回答，返回所有行和表头"""
+    """載入待評分的回答，返回所有行和表頭"""
     if not os.path.exists(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
@@ -116,17 +116,17 @@ async def main():
 
     if not args.token:
         print("Error: API token is required")
-        print("\n请通过以下方式设置 API key:")
-        print("  1. 创建 ~/.openviking_benchmark_env 文件，内容如下:")
+        print("\n請通過以下方式設定 API key:")
+        print("  1. 建立 ~/.openviking_benchmark_env 檔案，內容如下:")
         print("     ARK_API_KEY=你的key")
-        print("  2. 或者通过 --token 参数传入")
-        print("  3. 或者设置环境变量: export ARK_API_KEY=你的key")
+        print("  2. 或者通過 --token 引數傳入")
+        print("  3. 或者設定環境變數: export ARK_API_KEY=你的key")
         exit(1)
 
-    # 加载数据
+    # 載入資料
     rows, fieldnames = load_answers(args.input)
 
-    # 筛选掉 category=5 的行，只处理未评分的行
+    # 篩選掉 category=5 的行，只處理未評分的行
     valid_rows = []
     ungraded = []
     for i, row in enumerate(rows):
@@ -145,15 +145,15 @@ async def main():
         print("All valid answers already graded, exit")
         return
 
-    # 初始化OpenAI客户端
+    # 初始化OpenAI客戶端
     client = AsyncOpenAI(base_url=args.base_url, api_key=args.token)
 
-    # 并发处理
+    # 併發處理
     semaphore = asyncio.Semaphore(args.parallel)
-    file_lock = asyncio.Lock()  # 用于同步文件写入
+    file_lock = asyncio.Lock()  # 用於同步檔案寫入
 
     async def save_results():
-        """保存当前所有结果到CSV文件，使用临时文件+原子替换避免文件损坏"""
+        """儲存當前所有結果到CSV檔案，使用臨時檔案+原子替換避免檔案損壞"""
         async with file_lock:
             temp_file = f"{args.input}.tmp"
             with open(temp_file, "w", encoding="utf-8", newline="") as f:
@@ -166,7 +166,7 @@ async def main():
         async with semaphore:
             row = rows[idx]
             question = row["question"]
-            # 兼容两种列名: expected (eval.py) 或 answer (vikingbot)
+            # 相容兩種列名: expected (eval.py) 或 answer (vikingbot)
             gold = row.get("expected") or row.get("answer")
             response = row["response"]
             print(f"Grading {idx + 1}/{total}: {question[:60]}...")
@@ -174,7 +174,7 @@ async def main():
             row["result"] = "CORRECT" if is_correct else "WRONG"
             row["reasoning"] = reasoning
 
-            # 处理完一条就立即保存结果
+            # 處理完一條就立即儲存結果
             await save_results()
             print(f"Saved result for {idx + 1}/{total}: {row['result']}")
 
@@ -183,7 +183,7 @@ async def main():
     tasks = [process_row(idx) for idx in ungraded]
     await asyncio.gather(*tasks)
 
-    # 统计结果
+    # 統計結果
     correct = 0
     total_graded = 0
     for row in rows:

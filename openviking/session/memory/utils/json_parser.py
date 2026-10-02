@@ -50,7 +50,7 @@ __all__ = [
 class PydanticEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, BaseModel):
-            # 保存类名和属性值
+            # 儲存類名和屬性值
             return {**obj.model_dump(mode="python")}
         elif is_dataclass(obj):
             return asdict(obj)

@@ -772,8 +772,8 @@ test("captures generic OpenViking MCP calls as standard tool parts", () => {
   const results = {
     results: [
       {
-        uri: "viking://user/test/memories/experiences/无订单号换货处理.md",
-        title: "无订单号换货处理",
+        uri: "viking://user/test/memories/experiences/無訂單號換貨處理.md",
+        title: "無訂單號換貨處理",
       },
     ],
   };
@@ -788,7 +788,7 @@ test("captures generic OpenViking MCP calls as standard tool parts", () => {
             server: "openviking-memory",
             tool: "find",
             arguments: {
-              query: "无订单号换货",
+              query: "無訂單號換貨",
               target_uri: "viking://user/test/memories/experiences/",
             },
           },
@@ -806,7 +806,7 @@ test("captures generic OpenViking MCP calls as standard tool parts", () => {
   assert.deepEqual(turns, [
     {
       role: "assistant",
-      text: "[tool-call find] {\"query\":\"无订单号换货\",\"target_uri\":\"viking://user/test/memories/experiences/\"}",
+      text: "[tool-call find] {\"query\":\"無訂單號換貨\",\"target_uri\":\"viking://user/test/memories/experiences/\"}",
       parts: [
         {
           type: "tool",
@@ -814,7 +814,7 @@ test("captures generic OpenViking MCP calls as standard tool parts", () => {
           tool_name: "find",
           tool_status: "running",
           tool_input: {
-            query: "无订单号换货",
+            query: "無訂單號換貨",
             target_uri: "viking://user/test/memories/experiences/",
           },
         },
@@ -944,7 +944,7 @@ test("keeps search Experience results parseable when snippets are long", () => {
           invocation: {
             server: "openviking-memory",
             tool: "find",
-            arguments: { query: "换货" },
+            arguments: { query: "換貨" },
           },
           result: {
             Ok: {
@@ -952,7 +952,7 @@ test("keeps search Experience results parseable when snippets are long", () => {
                 {
                   type: "text",
                   text: JSON.stringify({
-                    results: [{ uri, title: "换货经验", snippet: "x".repeat(3000) }],
+                    results: [{ uri, title: "換貨經驗", snippet: "x".repeat(3000) }],
                   }),
                 },
               ],
@@ -968,7 +968,7 @@ test("keeps search Experience results parseable when snippets are long", () => {
     .flatMap((turn) => turn.parts)
     .find((part) => part.tool_status === "completed");
   assert.deepEqual(JSON.parse(completed.tool_output), {
-    results: [{ uri, title: "换货经验", snippet: "x".repeat(3000) }],
+    results: [{ uri, title: "換貨經驗", snippet: "x".repeat(3000) }],
   });
 });
 

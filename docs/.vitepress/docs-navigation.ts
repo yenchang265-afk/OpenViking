@@ -19,17 +19,17 @@ const sectionNames: Record<string, string> = {
 }
 
 const zhSectionNames: Record<string, string> = {
-  'getting-started': '开始使用',
+  'getting-started': '開始使用',
   configuration: '配置',
   concepts: '核心概念',
   guides: '指南',
   'agent-integrations': 'Agent 集成',
-  'context-compilation': '上下文编译',
-  migration: '迁移指南',
-  api: 'API 参考',
-  faq: '常见问题',
-  about: '关于',
-  design: '设计文档'
+  'context-compilation': '上下文編譯',
+  migration: '遷移指南',
+  api: 'API 參考',
+  faq: '常見問題',
+  about: '關於',
+  design: '設計文件'
 }
 
 export function titleFromMarkdown(filePath: string): string {
@@ -69,9 +69,9 @@ const gettingStartedSidebar = {
     ['05-cli-setup.md', 'OpenViking CLI']
   ],
   zh: [
-    ['01-introduction.md', '简介'],
-    ['02-quickstart.md', '快速开始'],
-    ['04-setup-for-agent.md', '服务端安装（Agent 版）'],
+    ['01-introduction.md', '簡介'],
+    ['02-quickstart.md', '快速開始'],
+    ['04-setup-for-agent.md', '服務端安裝（Agent 版）'],
     ['05-cli-setup.md', 'OpenViking CLI']
   ]
 } as const
@@ -117,14 +117,14 @@ const agentIntegrationSidebar = {
     ]
   },
   zh: {
-    overview: '集成概览',
+    overview: '整合概覽',
     topItems: [
-      ['16-capability-reference.md', '集成能力参考'],
-      ['18-plugin-development.md', '插件开发与维护']
+      ['16-capability-reference.md', '整合能力參考'],
+      ['18-plugin-development.md', '外掛開發與維護']
     ],
     groups: [
       {
-        text: '开发工具',
+        text: '開發工具',
         items: [
           ['02-claude-code.md', 'Claude Code'],
           ['04-codex.md', 'Codex'],
@@ -135,7 +135,7 @@ const agentIntegrationSidebar = {
         ]
       },
       {
-        text: 'Agent 与框架',
+        text: 'Agent 與框架',
         items: [
           ['03-openclaw.md', 'OpenClaw'],
           ['05-hermes.md', 'Hermes'],
@@ -148,9 +148,9 @@ const agentIntegrationSidebar = {
         items: [
           ['14-openviking-helper.md', 'OpenViking Helper'],
           ['15-agent-plugins.md', 'Agent Plugins 1.0'],
-          ['06-mcp-clients.md', 'MCP 客户端'],
-          ['09-log-ingestion.md', '本地日志导入'],
-          ['08-community-plugins.md', '社区集成']
+          ['06-mcp-clients.md', 'MCP 客戶端'],
+          ['09-log-ingestion.md', '本地日誌匯入'],
+          ['08-community-plugins.md', '社群整合']
         ]
       }
     ]
@@ -217,50 +217,50 @@ const apiReferenceSidebar = {
     ]
   },
   zh: {
-    overview: '概览',
+    overview: '概覽',
     groups: [
       {
-        text: '核心数据',
+        text: '核心資料',
         items: [
-          ['02-resources.md', '资源'],
-          ['12-content.md', '内容'],
-          ['03-filesystem.md', '文件系统'],
+          ['02-resources.md', '資源'],
+          ['12-content.md', '內容'],
+          ['03-filesystem.md', '檔案系統'],
           ['04-skills.md', '技能'],
-          ['05-sessions.md', '会话'],
-          ['16-memory.md', '记忆'],
-          ['19-agent-evolution.md', 'Agent 进化']
+          ['05-sessions.md', '會話'],
+          ['16-memory.md', '記憶'],
+          ['19-agent-evolution.md', 'Agent 進化']
         ]
       },
       {
-        text: '检索',
-        items: [['06-retrieval.md', '检索']]
+        text: '檢索',
+        items: [['06-retrieval.md', '檢索']]
       },
       {
-        text: '数据生命周期',
+        text: '資料生命週期',
         items: [
-          ['15-watches.md', '资源 Watch'],
+          ['15-watches.md', '資源 Watch'],
           ['11-snapshot.md', '快照'],
           ['14-ovpack.md', 'OVPack']
         ]
       },
       {
-        text: '运维与观测',
+        text: '運維與觀測',
         items: [
-          ['07-system.md', '系统状态'],
-          ['17-tasks.md', '后台任务'],
-          ['18-observer.md', '运行观测'],
-          ['09-metrics.md', '监控指标']
+          ['07-system.md', '系統狀態'],
+          ['17-tasks.md', '後臺任務'],
+          ['18-observer.md', '執行觀測'],
+          ['09-metrics.md', '監控指標']
         ]
       },
       {
-        text: '身份与治理',
+        text: '身份與治理',
         items: [
-          ['08-admin.md', '多租户'],
-          ['10-privacy.md', '隐私配置']
+          ['08-admin.md', '多租戶'],
+          ['10-privacy.md', '隱私配置']
         ]
       },
       {
-        text: '协议与扩展',
+        text: '協議與擴充',
         items: [
           ['22-openviking-assets.md', 'OpenViking Assets'],
           ['20-webdav.md', 'WebDAV'],
@@ -269,8 +269,8 @@ const apiReferenceSidebar = {
         ]
       },
       {
-        text: '文档维护',
-        items: [['99-api-doc-writing-guide.md', 'API 文档规范']]
+        text: '文件維護',
+        items: [['99-api-doc-writing-guide.md', 'API 文件規範']]
       }
     ]
   }
@@ -316,39 +316,39 @@ const conceptsSidebar = {
     ]
   },
   zh: {
-    overview: '概览',
+    overview: '概覽',
     groups: [
       {
         text: '核心模型',
         items: [
-          ['02-context-types.md', '上下文类型'],
-          ['03-context-layers.md', '上下文层级'],
+          ['02-context-types.md', '上下文型別'],
+          ['03-context-layers.md', '上下文層級'],
           ['04-viking-uri.md', 'Viking URI']
         ]
       },
       {
-        text: '存储与处理',
+        text: '儲存與處理',
         items: [
-          ['05-storage.md', '存储架构'],
+          ['05-storage.md', '儲存架構'],
           ['06-extraction.md', '上下文提取'],
-          ['07-retrieval.md', '检索机制'],
-          ['08-session.md', '会话管理']
+          ['07-retrieval.md', '檢索機制'],
+          ['08-session.md', '會話管理']
         ]
       },
       {
-        text: '可靠性与治理',
+        text: '可靠性與治理',
         items: [
-          ['09-transaction.md', '事务与恢复'],
-          ['10-encryption.md', '数据加密'],
-          ['11-multi-tenant.md', '多租户'],
-          ['12-metrics.md', '监控指标'],
-          ['13-privacy.md', '隐私配置'],
-          ['14-multi-write-storage.md', '多写存储'],
-          ['16-queue-lifecycle.md', '队列状态与完成语义']
+          ['09-transaction.md', '事務與恢復'],
+          ['10-encryption.md', '資料加密'],
+          ['11-multi-tenant.md', '多租戶'],
+          ['12-metrics.md', '監控指標'],
+          ['13-privacy.md', '隱私配置'],
+          ['14-multi-write-storage.md', '多寫儲存'],
+          ['16-queue-lifecycle.md', '佇列狀態與完成語義']
         ]
       },
       {
-        text: '应用案例',
+        text: '應用案例',
         items: [['15-vikingbot.md', 'VikingBot']]
       }
     ]
@@ -403,43 +403,43 @@ const guidesSidebar = {
   zh: {
     groups: [
       {
-        text: '配置与部署',
+        text: '配置與部署',
         items: [
-          ['01-configuration.md', '基础配置'],
-          ['02-volcengine-purchase-guide.md', '模型购买'],
-          ['03-deployment.md', '服务端部署'],
-          ['04-authentication.md', '身份认证'],
-          ['08-encryption.md', '数据加密'],
+          ['01-configuration.md', '基礎配置'],
+          ['02-volcengine-purchase-guide.md', '模型購買'],
+          ['03-deployment.md', '服務端部署'],
+          ['04-authentication.md', '身份認證'],
+          ['08-encryption.md', '資料加密'],
           ['11-oauth.md', 'OAuth 2.1'],
-          ['12-public-access.md', '公网访问']
+          ['12-public-access.md', '公網訪問']
         ]
       },
       {
-        text: '集成与扩展',
+        text: '整合與擴充',
         items: [
           ['06-mcp-integration.md', 'MCP 集成'],
           ['09-ovpack.md', 'OVPack'],
           ['18-openviking-assets.md', 'OpenViking Assets'],
-          ['10-prompt-guide.md', 'Prompt 自定义'],
+          ['10-prompt-guide.md', 'Prompt 自定義'],
           ['17-vikingbot.md', 'VikingBot']
         ]
       },
       {
-        text: '可观测性',
+        text: '可觀測性',
         items: [
-          ['05-observability.md', '可观测性与排障'],
-          ['07-operation-telemetry.md', '操作遥测'],
+          ['05-observability.md', '可觀測性與排障'],
+          ['07-operation-telemetry.md', '操作遙測'],
           ['11-grafana-prometheus.md', 'Prometheus / Grafana'],
-          ['12-vikingbot-metrics-validation.md', 'VikingBot 指标验证']
+          ['12-vikingbot-metrics-validation.md', 'VikingBot 指標驗證']
         ]
       },
       {
-        text: '存储与性能',
+        text: '儲存與效能',
         items: [
-          ['13-multi-write-storage.md', '多写存储'],
-          ['14-ragfs-cache.md', 'RAGFS 缓存'],
+          ['13-multi-write-storage.md', '多寫儲存'],
+          ['14-ragfs-cache.md', 'RAGFS 快取'],
           ['15-snapshot.md', '快照管理'],
-          ['16-cuvs.md', 'cuVS 向量检索']
+          ['16-cuvs.md', 'cuVS 向量檢索']
         ]
       }
     ]
@@ -571,7 +571,7 @@ function guidesSection(
 ): DefaultTheme.SidebarItem {
   const section = groupedSidebarSection(locale, 'guides', title, guidesSidebar[locale], collapsed)
   // Nest the Context Compilation pages under the "Integration & Extension" group.
-  const integrationGroupTitle = locale === 'zh' ? '集成与扩展' : 'Integration & Extension'
+  const integrationGroupTitle = locale === 'zh' ? '整合與擴充' : 'Integration & Extension'
   const integrationGroup = section.items?.find((item) => item.text === integrationGroupTitle)
   if (integrationGroup?.items) {
     const labels = locale === 'zh' ? zhSectionNames : sectionNames

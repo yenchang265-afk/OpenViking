@@ -4,5 +4,5 @@ sample_0,139,"What kind of painting did Caroline share with Melanie on October 1
 sunset-inspired painting
 2. An abstract painting with peaceful blue streaks
 
-There is no record in the available memories of Caroline sharing a painting with Melanie on that specific date.",Gold本身有问题，实际上是 Melanie 给 Caroline 看的（D17:14 speaker=Melanie）。记忆正确，Bot也成功找出和回答
-sample_0,95,What is Melanie's hand-painted bowl a reminder of?,art and self-expression,4,2023-10-22,"[""D4:5""]","[""Caroline: Yep, Melanie! I've got some other stuff with sentimental value, like my hand-painted bowl. A friend made it for my 18th birthday ten years ago. The pattern and colors are awesome-- it reminds me of art and self-expression.""]","That bowl is Caroline's, not Melanie's. It reminds Caroline of art and self-expression.",实际上手画碗是 Caroline 的（D4:5），bot 正确识别了这一点，gold 错了
+There is no record in the available memories of Caroline sharing a painting with Melanie on that specific date.",Gold本身有問題，實際上是 Melanie 給 Caroline 看的（D17:14 speaker=Melanie）。記憶正確，Bot也成功找出和回答
+sample_0,95,What is Melanie's hand-painted bowl a reminder of?,art and self-expression,4,2023-10-22,"[""D4:5""]","[""Caroline: Yep, Melanie! I've got some other stuff with sentimental value, like my hand-painted bowl. A friend made it for my 18th birthday ten years ago. The pattern and colors are awesome-- it reminds me of art and self-expression.""]","That bowl is Caroline's, not Melanie's. It reminds Caroline of art and self-expression.",實際上手畫碗是 Caroline 的（D4:5），bot 正確識別了這一點，gold 錯了

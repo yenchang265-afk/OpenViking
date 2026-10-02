@@ -1,93 +1,93 @@
 #!/usr/bin/env python3
 """
-extractNewTurnTexts 工具调用捕获端到端测试
+extractNewTurnTexts 工具呼叫捕獲端到端測試
 
 ================================================================================
-一、用例设计思路
+一、用例設計思路
 ================================================================================
 
-核心验证点:
-  当模型在回复中调用工具（如 code_execution、native_tool 等）时，Gateway 的
-  extractNewTurnTexts 需要将 toolUse（工具调用）和 toolResult（工具结果）的
-  内容正确捕获并写入 OV session，确保后续归档和记忆提取不会丢失工具调用信息。
+核心驗證點:
+  當模型在回覆中呼叫工具（如 code_execution、native_tool 等）時，Gateway 的
+  extractNewTurnTexts 需要將 toolUse（工具呼叫）和 toolResult（工具結果）的
+  內容正確捕獲並寫入 OV session，確保後續歸檔和記憶提取不會丟失工具呼叫資訊。
 
-测试策略:
-  1. 发送消息触发模型使用工具（如计算阶乘、写代码等）
+測試策略:
+  1. 傳送訊息觸發模型使用工具（如計算階乘、寫程式碼等）
   2. 等待 afterTurn 完成
-  3. 从 OV session 中读取已存储的消息
-  4. 断言存储的消息中包含 [toolUse:] 和 [toolResult:] 标记
-  5. 验证关键词可在 Gateway 响应和 OV 存储中追溯
+  3. 從 OV session 中讀取已儲存的訊息
+  4. 斷言儲存的訊息中包含 [toolUse:] 和 [toolResult:] 標記
+  5. 驗證關鍵詞可在 Gateway 響應和 OV 儲存中追溯
 
 ================================================================================
-二、测试流程
+二、測試流程
 ================================================================================
 
-  Phase 1: 发送 3 条消息，设计为触发工具调用
-  Phase 2: 检查 OV session 存在且有内容
-  Phase 3: 验证 toolUse/toolResult 标记和关键词可追溯
-  Phase 4: 验证改动前后对比（tool 相关行数 > 0）
+  Phase 1: 傳送 3 條訊息，設計為觸發工具呼叫
+  Phase 2: 檢查 OV session 存在且有內容
+  Phase 3: 驗證 toolUse/toolResult 標記和關鍵詞可追溯
+  Phase 4: 驗證改動前後對比（tool 相關行數 > 0）
 
 ================================================================================
-三、环境前提
+三、環境前提
 ================================================================================
 
-  1. OpenViking 服务已启动
-  2. OpenClaw Gateway 已启动并配置了 OpenViking 插件
-  3. LLM 后端可达且支持工具调用（function calling / tool use）
+  1. OpenViking 服務已啟動
+  2. OpenClaw Gateway 已啟動並配置了 OpenViking 外掛
+  3. LLM 後端可達且支援工具呼叫（function calling / tool use）
   4. 有效的 Gateway auth token
 
-  关键 openclaw.json 配置:
+  關鍵 openclaw.json 配置:
     - plugins.slots.contextEngine = "openviking"
     - plugins.entries.openviking.enabled = true
-    - plugins.entries.openviking.config.autoCapture = true  # afterTurn 自动捕获
+    - plugins.entries.openviking.config.autoCapture = true  # afterTurn 自動捕獲
 
 ================================================================================
 四、使用方法
 ================================================================================
 
-  安装依赖:
+  安裝依賴:
     pip install requests rich
 
-  运行测试:
+  執行測試:
     python test-tool-capture.py \\
         --gateway http://127.0.0.1:19789 \\
         --openviking http://127.0.0.1:2934 \\
         --token <your_gateway_token>
 
-  其他选项:
-    --verbose / -v   详细输出（显示完整 JSON 响应）
-    --delay <sec>    消息间等待秒数（默认 5s）
+  其他選項:
+    --verbose / -v   詳細輸出（顯示完整 JSON 響應）
+    --delay <sec>    訊息間等待秒數（預設 5s）
 
   注意:
-    - 测试约需 2-3 分钟
-    - 首次运行前建议清理 OV 数据和 session 数据
+    - 測試約需 2-3 分鐘
+    - 首次執行前建議清理 OV 資料和 session 資料
 
 ================================================================================
 五、已知限制
 ================================================================================
 
-  1. 模型工具调用行为不确定:
-     不同 LLM 模型对同一输入是否调用工具的行为不同。有些模型可能选择直接
-     回答而不调用工具。脚本对 [toolUse:] 标记做了条件性检查（模型未调用工具
-     时跳过强断言）。
+  1. 模型工具呼叫行為不確定:
+     不同 LLM 模型對同一輸入是否呼叫工具的行為不同。有些模型可能選擇直接
+     回答而不呼叫工具。指令碼對 [toolUse:] 標記做了條件性檢查（模型未呼叫工具
+     時跳過強斷言）。
 
-  2. 工具调用格式差异:
-     不同 LLM provider 的 tool_use/tool_result 输出格式可能不同（如 Anthropic
-     vs OpenAI），extractNewTurnTexts 需要正确处理各种格式。
+  2. 工具呼叫格式差異:
+     不同 LLM provider 的 tool_use/tool_result 輸出格式可能不同（如 Anthropic
+     vs OpenAI），extractNewTurnTexts 需要正確處理各種格式。
 
-  3. 关键词追溯:
-     脚本通过关键词（如"5040"、"factorial"、"斐波那契"）验证工具结果是否被
-     正确存储。如果模型未执行预期的计算，关键词可能无法匹配。
+  3. 關鍵詞追溯:
+     指令碼通過關鍵詞（如"5040"、"factorial"、"斐波那契"）驗證工具結果是否被
+     正確儲存。如果模型未執行預期的計算，關鍵詞可能無法匹配。
 
 ================================================================================
-六、预期结果
+六、預期結果
 ================================================================================
 
-  15/15 断言全部通过:
-    - Phase 1: 3 条消息发送成功
-    - Phase 2: OV session 存在且有内容
-    - Phase 3: toolResult 标记存在, 关键词可追溯
-    - Phase 4: tool 相关行数 > 0
+  15/15 斷言全部通過:
+    - Phase 1: 3 條訊息傳送成功
+    - Phase 2: OV session 存在且有內容
+    - Phase 3: toolResult 標記存在, 關鍵詞可追溯
+    - Phase 4: tool 相關行數 > 0
 """
 
 import argparse
@@ -128,7 +128,7 @@ def check(label: str, condition: bool, detail: str = ""):
 
 
 def load_gateway_token() -> str:
-    """从常见路径自动发现 gateway auth token。"""
+    """從常見路徑自動發現 gateway auth token。"""
     import os
     import pathlib
 
@@ -155,7 +155,7 @@ def load_gateway_token() -> str:
 
 
 def send_message(gateway_url: str, message: str, user_id: str, token: str) -> dict:
-    """通过 OpenClaw Responses API 发送消息。"""
+    """通過 OpenClaw Responses API 傳送訊息。"""
     headers = {"Content-Type": "application/json"}
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -175,11 +175,11 @@ def extract_reply_text(data: dict) -> str:
             for part in item.get("content", []):
                 if part.get("type") in ("text", "output_text"):
                     return part.get("text", "")
-    return "(无回复)"
+    return "(無回覆)"
 
 
 def has_tool_use_in_output(data: dict) -> bool:
-    """检查 Responses API 返回中是否有 tool_use / function_call。"""
+    """檢查 Responses API 返回中是否有 tool_use / function_call。"""
     for item in data.get("output", []):
         item_type = item.get("type", "")
         if item_type in ("function_call", "tool_use", "computer_call"):
@@ -210,7 +210,7 @@ class OVInspector:
                 return data.get("result", data)
             return None
         except Exception as e:
-            console.print(f"[dim]GET {path} 失败: {e}[/dim]")
+            console.print(f"[dim]GET {path} 失敗: {e}[/dim]")
             return None
 
     def list_sessions(self) -> list:
@@ -226,8 +226,8 @@ class OVInspector:
         return self._get(f"/api/v1/sessions/{session_id}/context?token_budget={token_budget}")
 
     def find_latest_session(self) -> str | None:
-        """找到最近更新的 session ID（gateway 内部使用 UUID，非 user_id）。
-        通过检查每个 session 的 updated_at 来找到最新的。"""
+        """找到最近更新的 session ID（gateway 內部使用 UUID，非 user_id）。
+        通過檢查每個 session 的 updated_at 來找到最新的。"""
         sessions = self.list_sessions()
         real_sessions = [
             s
@@ -254,23 +254,23 @@ class OVInspector:
         return best_id or real_sessions[-1].get("session_id")
 
 
-# ── 核心测试 ──────────────────────────────────────────────────────────────
+# ── 核心測試 ──────────────────────────────────────────────────────────────
 
 
 TOOL_TRIGGER_MESSAGES = [
     {
-        "input": "请帮我计算 factorial(7) 的结果，用代码算一下",
-        "description": "触发代码执行工具",
+        "input": "請幫我計算 factorial(7) 的結果，用程式碼算一下",
+        "description": "觸發程式碼執行工具",
         "expect_keywords": ["5040", "factorial"],
     },
     {
-        "input": "我叫李明，记住我是一名数据工程师，擅长 Spark 和 Flink，偏好用 Scala 写代码。请同时告诉我今天星期几。",
-        "description": "信息存储 + 可能触发工具",
-        "expect_keywords": ["李明", "数据工程师"],
+        "input": "我叫李明，記住我是一名資料工程師，擅長 Spark 和 Flink，偏好用 Scala 寫程式碼。請同時告訴我今天星期幾。",
+        "description": "資訊儲存 + 可能觸發工具",
+        "expect_keywords": ["李明", "資料工程師"],
     },
     {
-        "input": "帮我写一段 Python 代码计算斐波那契数列前10个数，并运行它告诉我结果",
-        "description": "触发代码执行并返回结果",
+        "input": "幫我寫一段 Python 程式碼計算斐波那契數列前10個數，並執行它告訴我結果",
+        "description": "觸發程式碼執行並返回結果",
         "expect_keywords": ["斐波那契"],
     },
 ]
@@ -291,18 +291,18 @@ def run_test(
 
     console.print(
         Panel(
-            f"[bold]Tool Capture 测试[/bold]\n\n"
+            f"[bold]Tool Capture 測試[/bold]\n\n"
             f"Gateway: {gateway_url}\n"
             f"OpenViking: {openviking_url}\n"
             f"User ID: {user_id}\n"
-            f"时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
-            title="测试信息",
+            f"時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
+            title="測試資訊",
         )
     )
 
-    # ── Phase 1: 发送消息 ────────────────────────────────────────────────
+    # ── Phase 1: 傳送訊息 ────────────────────────────────────────────────
 
-    console.rule("[bold]Phase 1: 发送消息触发 afterTurn[/bold]")
+    console.rule("[bold]Phase 1: 傳送訊息觸發 afterTurn[/bold]")
 
     gateway_responses = []
     for i, msg_cfg in enumerate(TOOL_TRIGGER_MESSAGES):
@@ -316,13 +316,13 @@ def run_test(
             reply = extract_reply_text(data)
             has_tool = has_tool_use_in_output(data)
 
-            console.print(f"  [green]回复:[/green] {reply[:120]}...")
+            console.print(f"  [green]回覆:[/green] {reply[:120]}...")
             if has_tool:
-                console.print("  [yellow]检测到 tool_use 在响应中[/yellow]")
+                console.print("  [yellow]檢測到 tool_use 在響應中[/yellow]")
 
             if verbose:
                 console.print(
-                    f"  [dim]完整响应: {json.dumps(data, ensure_ascii=False)[:500]}[/dim]"
+                    f"  [dim]完整響應: {json.dumps(data, ensure_ascii=False)[:500]}[/dim]"
                 )
 
             gateway_responses.append(
@@ -336,27 +336,27 @@ def run_test(
             )
 
             check(
-                f"消息 {i + 1} 发送成功",
+                f"訊息 {i + 1} 傳送成功",
                 True,
                 f"reply_len={len(reply)}",
             )
         except Exception as e:
-            console.print(f"  [red]发送失败: {e}[/red]")
-            check(f"消息 {i + 1} 发送成功", False, str(e))
+            console.print(f"  [red]傳送失敗: {e}[/red]")
+            check(f"訊息 {i + 1} 傳送成功", False, str(e))
 
         if i < len(TOOL_TRIGGER_MESSAGES) - 1:
             time.sleep(delay)
 
-    # ── Phase 2: 等待 afterTurn 写入 ───────────────────────────────────
+    # ── Phase 2: 等待 afterTurn 寫入 ───────────────────────────────────
 
-    console.rule("[bold]Phase 2: 检查 OV session 中的存储内容[/bold]")
-    console.print("[yellow]等待 afterTurn 写入 OV session...[/yellow]")
+    console.rule("[bold]Phase 2: 檢查 OV session 中的儲存內容[/bold]")
+    console.print("[yellow]等待 afterTurn 寫入 OV session...[/yellow]")
     time.sleep(8)
 
-    # Gateway 使用内部 UUID 作为 session ID，需要从 OV 列表中找到最新的
+    # Gateway 使用內部 UUID 作為 session ID，需要從 OV 列表中找到最新的
     ov_session_id = inspector.find_latest_session()
     if not ov_session_id:
-        console.print("[red]  OV 中没有找到任何 session[/red]")
+        console.print("[red]  OV 中沒有找到任何 session[/red]")
         check("OV session 存在", False, "no sessions found")
         print_summary()
         return
@@ -369,16 +369,16 @@ def run_test(
         console.print(f"  Session found: message_count={msg_count}")
         check("OV session 存在", True, f"id={ov_session_id[:16]}...")
     else:
-        console.print("[red]  OV session 详情获取失败[/red]")
+        console.print("[red]  OV session 詳情獲取失敗[/red]")
         check("OV session 存在", False, "session detail failed")
         print_summary()
         return
 
-    # 通过 context API 获取全量上下文（活跃消息 + 归档摘要）
+    # 通過 context API 獲取全量上下文（活躍訊息 + 歸檔摘要）
     ctx = inspector.get_session_context(ov_session_id)
     messages = ctx.get("messages", []) if ctx else []
 
-    # 同时获取归档概要文本（低 commit 阈值下消息可能已归档）
+    # 同時獲取歸檔概要文本（低 commit 閾值下訊息可能已歸檔）
     archive_overview = ""
     if ctx:
         for msg in messages:
@@ -388,21 +388,21 @@ def run_test(
                         archive_overview += (part.get("text", "") or "") + "\n"
 
     if not messages and not archive_overview:
-        console.print("[red]  OV session 消息为空[/red]")
+        console.print("[red]  OV session 訊息為空[/red]")
         check("OV session 有消息", False, "context messages empty")
         print_summary()
         return
 
-    console.print(f"  [green]OV session context 消息数: {len(messages)}[/green]")
+    console.print(f"  [green]OV session context 訊息數: {len(messages)}[/green]")
     check(
-        "OV session 有内容",
+        "OV session 有內容",
         len(messages) > 0 or bool(archive_overview),
         f"messages={len(messages)}",
     )
 
-    # ── Phase 3: 分析存储的内容是否包含 tool 信息 ──────────────────────
+    # ── Phase 3: 分析儲存的內容是否包含 tool 資訊 ──────────────────────
 
-    console.rule("[bold]Phase 3: 验证 toolUse/toolResult 内容被捕获[/bold]")
+    console.rule("[bold]Phase 3: 驗證 toolUse/toolResult 內容被捕獲[/bold]")
 
     all_stored_text = ""
     for msg in messages:
@@ -417,52 +417,52 @@ def run_test(
         console.print(
             Panel(
                 all_stored_text[:3000] + ("..." if len(all_stored_text) > 3000 else ""),
-                title="OV 存储的全部文本",
+                title="OV 儲存的全部文本",
             )
         )
 
     any_tool_in_gateway = any(r.get("has_tool") for r in gateway_responses)
 
-    # 检查 toolUse 标记（仅在 gateway 响应确实含 tool_use 时才必须）
+    # 檢查 toolUse 標記（僅在 gateway 響應確實含 tool_use 時才必須）
     has_tool_use_marker = bool(re.search(r"\[toolUse:", all_stored_text, re.IGNORECASE))
     if any_tool_in_gateway:
         check(
-            "存储文本包含 [toolUse:] 标记",
+            "儲存文本包含 [toolUse:] 標記",
             has_tool_use_marker,
             f"found={has_tool_use_marker}",
         )
     else:
         check(
-            "[toolUse:] 标记（模型未调用工具，跳过强断言）",
+            "[toolUse:] 標記（模型未呼叫工具，跳過強斷言）",
             True,
             f"no tool_use in gateway response, marker={has_tool_use_marker}",
         )
 
-    # 检查 toolResult 标记
+    # 檢查 toolResult 標記
     has_tool_result_marker = bool(re.search(r"result\]:", all_stored_text, re.IGNORECASE))
     check(
-        "存储文本包含 tool result 标记",
+        "儲存文本包含 tool result 標記",
         has_tool_result_marker or not any_tool_in_gateway,
         f"found={has_tool_result_marker} tool_in_gateway={any_tool_in_gateway}",
     )
 
-    # 检查 assistant 标记
+    # 檢查 assistant 標記
     has_assistant = bool(re.search(r"\[assistant\]:", all_stored_text, re.IGNORECASE))
     check(
-        "存储文本包含 [assistant] 标记",
+        "儲存文本包含 [assistant] 標記",
         has_assistant,
         f"found={has_assistant}",
     )
 
-    # 检查 user 标记
+    # 檢查 user 標記
     has_user = bool(re.search(r"\[user\]:", all_stored_text, re.IGNORECASE))
     check(
-        "存储文本包含 [user] 标记",
+        "儲存文本包含 [user] 標記",
         has_user,
         f"found={has_user}",
     )
 
-    # 检查关键内容是否保留（检查活跃上下文 + 归档摘要 + gateway 响应）
+    # 檢查關鍵內容是否保留（檢查活躍上下文 + 歸檔摘要 + gateway 響應）
     all_gateway_text = "\n".join(r.get("reply", "") for r in gateway_responses)
 
     for msg_cfg in TOOL_TRIGGER_MESSAGES:
@@ -471,17 +471,17 @@ def run_test(
             in_gateway = kw.lower() in all_gateway_text.lower()
             detail = f"keyword='{kw}' stored={in_stored} gateway={in_gateway}"
             check(
-                f"关键词 {kw} 可追溯",
+                f"關鍵詞 {kw} 可追溯",
                 in_stored or in_gateway,
                 detail,
             )
 
-    # ── Phase 4: 对比改动前后的行为 ──────────────────────────────────────
+    # ── Phase 4: 對比改動前後的行為 ──────────────────────────────────────
 
-    console.rule("[bold]Phase 4: 改动前后对比分析[/bold]")
+    console.rule("[bold]Phase 4: 改動前後對比分析[/bold]")
 
-    # 旧版本：只有 [user] 和 [assistant] 的文本
-    # 新版本：应该额外包含 [toolUse: xxx] 和 [xxx result] 的内容
+    # 舊版本：只有 [user] 和 [assistant] 的文本
+    # 新版本：應該額外包含 [toolUse: xxx] 和 [xxx result] 的內容
     tool_related_lines = []
     for line in all_stored_text.split("\n"):
         stripped = line.strip()
@@ -491,37 +491,37 @@ def run_test(
             tool_related_lines.append(("toolResult", stripped[:150]))
 
     if tool_related_lines:
-        table = Table(title="捕获到的 Tool 相关内容")
-        table.add_column("类型", style="cyan", width=12)
-        table.add_column("内容预览", max_width=120)
+        table = Table(title="捕獲到的 Tool 相關內容")
+        table.add_column("型別", style="cyan", width=12)
+        table.add_column("內容預覽", max_width=120)
         for kind, preview in tool_related_lines:
             table.add_row(kind, preview)
         console.print(table)
 
     check(
-        "tool 相关行数 > 0（新逻辑生效）",
+        "tool 相關行數 > 0（新邏輯生效）",
         len(tool_related_lines) > 0,
         f"tool_lines={len(tool_related_lines)}",
     )
 
-    # ── 汇总 ─────────────────────────────────────────────────────────────
+    # ── 彙總 ─────────────────────────────────────────────────────────────
 
     print_summary()
 
 
 def print_summary():
     console.print()
-    console.rule("[bold]测试汇总[/bold]")
+    console.rule("[bold]測試彙總[/bold]")
 
     passed = sum(1 for a in assertions if a["ok"])
     failed = sum(1 for a in assertions if not a["ok"])
     total = len(assertions)
 
-    table = Table(title=f"断言结果: {passed}/{total} 通过")
+    table = Table(title=f"斷言結果: {passed}/{total} 通過")
     table.add_column("#", style="bold", width=4)
-    table.add_column("状态", width=6)
-    table.add_column("断言", max_width=60)
-    table.add_column("详情", style="dim", max_width=50)
+    table.add_column("狀態", width=6)
+    table.add_column("斷言", max_width=60)
+    table.add_column("詳情", style="dim", max_width=50)
 
     for i, a in enumerate(assertions, 1):
         status = "[green]PASS[/green]" if a["ok"] else "[red]FAIL[/red]"
@@ -530,28 +530,28 @@ def print_summary():
     console.print(table)
 
     if failed == 0:
-        console.print("\n[green bold]全部通过！toolUse/toolResult 捕获验证成功。[/green bold]")
+        console.print("\n[green bold]全部通過！toolUse/toolResult 捕獲驗證成功。[/green bold]")
     else:
-        console.print(f"\n[red bold]有 {failed} 个断言失败。[/red bold]")
+        console.print(f"\n[red bold]有 {failed} 個斷言失敗。[/red bold]")
         console.print(
-            "[yellow]注: 如果模型没有调用工具，toolUse/toolResult 标记可能不存在 — 这不代表代码有 bug。[/yellow]"
+            "[yellow]注: 如果模型沒有呼叫工具，toolUse/toolResult 標記可能不存在 — 這不代表程式碼有 bug。[/yellow]"
         )
-        console.print("[yellow]可以在 gateway 日志中确认 afterTurn 的存储内容。[/yellow]")
+        console.print("[yellow]可以在 gateway 日誌中確認 afterTurn 的儲存內容。[/yellow]")
 
 
 # ── 入口 ──────────────────────────────────────────────────────────────────
 
 
 def main():
-    parser = argparse.ArgumentParser(description="测试 toolUse/toolResult 捕获")
+    parser = argparse.ArgumentParser(description="測試 toolUse/toolResult 捕獲")
     parser.add_argument("--gateway", default=GATEWAY_URL, help="Gateway 地址")
     parser.add_argument("--openviking", default=OPENVIKING_URL, help="OpenViking 地址")
-    parser.add_argument("--token", default="", help="Gateway auth token (默认: 自动发现)")
+    parser.add_argument("--token", default="", help="Gateway auth token (預設: 自動發現)")
     parser.add_argument(
-        "--agent-id", default=AGENT_ID, help=f"OpenViking agent ID (默认: {AGENT_ID})"
+        "--agent-id", default=AGENT_ID, help=f"OpenViking agent ID (預設: {AGENT_ID})"
     )
-    parser.add_argument("--delay", type=float, default=3.0, help="消息间延迟秒数")
-    parser.add_argument("--verbose", "-v", action="store_true", help="详细输出")
+    parser.add_argument("--delay", type=float, default=3.0, help="訊息間延遲秒數")
+    parser.add_argument("--verbose", "-v", action="store_true", help="詳細輸出")
     args = parser.parse_args()
 
     user_id = f"test-tool-{uuid.uuid4().hex[:8]}"

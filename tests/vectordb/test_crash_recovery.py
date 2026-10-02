@@ -15,7 +15,7 @@ from openviking.storage.vectordb.store.data import CandidateData, DeltaRecord
 
 DB_PATH_CRASH = "./test_data/test_db_crash_recovery"
 DB_PATH_ROBUST = "./test_data/test_db_robust_crash"
-LARGE_TEXT = "旧数据升级后的长文本" * 4000
+LARGE_TEXT = "舊資料升級後的長文本" * 4000
 
 
 def worker_write_and_crash(path, start_id, count, event_ready):

@@ -19,79 +19,79 @@ def execute_cmd(cmd):
             text=True,
             encoding="utf-8",
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,  # 捕获错误输出
-            check=True,  # 等价于check_output的行为，命令失败会抛异常
+            stderr=subprocess.PIPE,  # 捕獲錯誤輸出
+            check=True,  # 等價於check_output的行為，命令失敗會拋異常
         )
-        stdout = result.stdout.strip()  # 去除空白符（换行/空格）
+        stdout = result.stdout.strip()  # 去除空白符（換行/空格）
         return stdout
     except subprocess.CalledProcessError as e:
-        # 捕获命令执行失败的异常（返回码非0）
-        print(f"命令执行失败：{e}")
+        # 捕獲命令執行失敗的異常（返回碼非0）
+        print(f"命令執行失敗：{e}")
         return None
     except Exception as e:
-        # 捕获其他异常（如命令不存在、超时等）
-        print(f"执行异常：{str(e)}")
+        # 捕獲其他異常（如命令不存在、超時等）
+        print(f"執行異常：{str(e)}")
         return None
 
 
 def start_opencode():
-    """子进程函数：启动opencode serve并完全脱离子进程控制"""
+    """子程序函式：啟動opencode serve並完全脫離子程序控制"""
     pid = None
     try:
         if sys.platform == "win32":
-            # Windows：使用CREATE_NEW_PROCESS_GROUP创建独立进程组，detach脱离父进程
+            # Windows：使用CREATE_NEW_PROCESS_GROUP建立獨立程序組，detach脫離父程序
             creationflags = subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS
             proc = subprocess.Popen(
                 ["opencode", "serve"],
                 shell=False,
                 creationflags=creationflags,
-                stdout=subprocess.DEVNULL,  # 重定向输出避免控制台关联
+                stdout=subprocess.DEVNULL,  # 重定向輸出避免控制台關聯
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,
             )
             pid = proc.pid
         else:
-            # Linux/macOS：使用os.setsid创建新会话，完全脱离控制终端
-            # 先fork一次，再启动进程，确保脱离所有父进程关联
+            # Linux/macOS：使用os.setsid建立新會話，完全脫離控制終端
+            # 先fork一次，再啟動程序，確保脫離所有父程序關聯
             cmd = ["opencode", "serve"]
-            # 创建新会话 + 重定向所有输出
+            # 建立新會話 + 重定向所有輸出
             with open("opencode.log", "a", encoding="utf-8") as log_file:
                 proc = subprocess.Popen(
                     cmd,
-                    preexec_fn=os.setsid,  # 关键：创建新的会话ID
+                    preexec_fn=os.setsid,  # 關鍵：建立新的會話ID
                     stdout=log_file,
                     stderr=subprocess.STDOUT,
                     stdin=subprocess.DEVNULL,
                 )
                 pid = proc.pid
 
-        print(f"opencode serve已启动，PID: {pid}")
-        # 短暂等待确保进程启动成功
+        print(f"opencode serve已啟動，PID: {pid}")
+        # 短暫等待確保程序啟動成功
         time.sleep(2)
         return pid
     except Exception as e:
-        print(f"启动opencode失败: {e}")
+        print(f"啟動opencode失敗: {e}")
         traceback.print_exc()
         return None
 
 
 def check_serve_status():
-    """测试opencode连接，失败则启动服务并重试"""
+    """測試opencode連線，失敗則啟動服務並重試"""
     try:
         client = Opencode(base_url="http://127.0.0.1:4096")
         client.app.modes()
     except Exception as e:
-        print(f"连接opencode失败，错误: {e}")
-        # 启动服务
+        print(f"連線opencode失敗，錯誤: {e}")
+        # 啟動服務
         pid = start_opencode()
         if pid:
-            # 启动后重试连接
+            # 啟動後重試連線
             time.sleep(3)
 
 
 def read_new_messages(client, session_id, last_ts):
     """
-    读取上一次之后的消息， 通过client.session.messages实现，注意
+    讀取上一次之後的訊息， 通過client.session.messages實現，注意
     """
     messages = client.session.messages(id=session_id, extra_query={"limit": 10})
     next_ts = last_ts
@@ -125,17 +125,17 @@ file_path = "status.json"
 
 
 def read_status():
-    # 检查文件是否存在
+    # 檢查檔案是否存在
     if not os.path.exists(file_path):
         return {}
-    # 读取并解析JSON文件
+    # 讀取並解析JSON檔案
     try:
         with open(file_path, "r", encoding="utf-8") as f:
             data = json.load(f)
             return data
     except Exception as e:
-        # 捕获其他未知异常
-        print(f"读取 {file_path} 时发生错误：{e}")
+        # 捕獲其他未知異常
+        print(f"讀取 {file_path} 時發生錯誤：{e}")
         return {}
 
 
@@ -144,8 +144,8 @@ def write_status(status):
         with open(file_path, "w", encoding="utf-8") as f:
             f.write(json.dumps(status))
     except Exception as e:
-        # 捕获其他未知异常
-        print(f"写入 {file_path} 时发生错误：{e}")
+        # 捕獲其他未知異常
+        print(f"寫入 {file_path} 時發生錯誤：{e}")
 
 
 def list_project(client):

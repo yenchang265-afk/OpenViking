@@ -1,41 +1,41 @@
-# 狼人杀 Demo（中文版）
+# 狼人殺 Demo（中文版）
 
-本目录提供一个狼人杀演示服务，包含：
+本目錄提供一個狼人殺演示服務，包含：
 - OpenViking + bot 通道初始化
-- Web UI（默认端口 `1995`）
-- 对局记录、排行榜、回放查看
+- Web UI（預設埠 `1995`）
+- 對局記錄、排行榜、回放檢視
 
-## 1. 启动前准备
+## 1. 啟動前準備
 
-请先确认以下命令可用：
-- `python`（建议 3.10+）
+請先確認以下命令可用：
+- `python`（建議 3.10+）
 - `openviking-server`
 
-并准备好配置文件（默认）：
+並準備好配置檔案（預設）：
 - `~/.openviking/ov.conf`
 
-## 2. 推荐启动方式（一键启动）
+## 2. 推薦啟動方式（一鍵啟動）
 
-在本目录执行：
+在本目錄執行：
 
 ```bash
 python start_werewolf_demo.py --config ~/.openviking/ov.conf
 ```
 
-默认行为：
-- 自动补齐狼人杀所需 channel（`god`、`player_1`...`player_6`）
-- 自动准备工作目录与 SOUL 文件
-- 启动 OpenViking 服务
-- 等待 bot 健康检查通过后启动 UI 服务
+預設行為：
+- 自動補齊狼人殺所需 channel（`god`、`player_1`...`player_6`）
+- 自動準備工作目錄與 SOUL 檔案
+- 啟動 OpenViking 服務
+- 等待 bot 健康檢查通過後啟動 UI 服務
 
-默认参数：
+預設引數：
 - UI 端口：`1995`
 - OpenViking host：`127.0.0.1`
 - OpenViking port：`1933`
 - Vikingbot URL：`http://localhost:18790`
 - game mode：`all_agents`
 
-常见可选参数：
+常見可選引數：
 
 ```bash
 python start_werewolf_demo.py \
@@ -45,15 +45,15 @@ python start_werewolf_demo.py \
   --smart-buttons
 ```
 
-说明：
-- `--game-mode` 可选：`all_agents` / `human_player`
-- `--smart-buttons`：启用前端“智能按钮显示”逻辑（根据游戏状态动态隐藏/显示按钮）
+說明：
+- `--game-mode` 可選：`all_agents` / `human_player`
+- `--smart-buttons`：啟用前端“智慧按鈕顯示”邏輯（根據遊戲狀態動態隱藏/顯示按鈕）
 
-## 3. 手动启动方式（调试用）
+## 3. 手動啟動方式（除錯用）
 
-如果你要分开调试服务，可以手动启动：
+如果你要分開除錯服務，可以手動啟動：
 
-### 3.1 启动 OpenViking
+### 3.1 啟動 OpenViking
 
 ```bash
 openviking-server \
@@ -64,7 +64,7 @@ openviking-server \
   --bot-port 18790
 ```
 
-### 3.2 启动狼人杀 UI 服务
+### 3.2 啟動狼人殺 UI 服務
 
 ```bash
 python werewolf_server.py \
@@ -73,81 +73,81 @@ python werewolf_server.py \
   --game-mode all_agents
 ```
 
-## 4. 访问地址
+## 4. 訪問地址
 
-启动后打开：
+啟動後開啟：
 
-- 主页面：`http://localhost:1995/`
-- 测试页：`http://localhost:1995/test`
-- 调试页：`http://localhost:1995/debug`
+- 主頁面：`http://localhost:1995/`
+- 測試頁：`http://localhost:1995/test`
+- 除錯頁：`http://localhost:1995/debug`
 
-## 5. 页面按钮如何控制
+## 5. 頁面按鈕如何控制
 
-## 5.1 顶部导航
+## 5.1 頂部導航
 
-- **游戏**：主对局页
-- **记忆**：查看 OpenViking memory 目录
-- **排行榜**：查看累计战绩与胜率曲线
-- **回放**：按历史会话回放对局
+- **遊戲**：主對局頁
+- **記憶**：檢視 OpenViking memory 目錄
+- **排行榜**：檢視累計戰績與勝率曲線
+- **回放**：按歷史會話回放對局
 
-## 5.2 顶部控制按钮（游戏页）
+## 5.2 頂部控制按鈕（遊戲頁）
 
-这些按钮由前端调用后端 API 控制：
+這些按鈕由前端呼叫後端 API 控制：
 
-- **开始游戏**
-  - 调用：`POST /api/start`
-  - 作用：发送“开始”指令，进入当前局流程
+- **開始遊戲**
+  - 呼叫：`POST /api/start`
+  - 作用：傳送“開始”指令，進入當前局流程
 
-- **继续**
-  - 调用：`POST /api/continue`
-  - 作用：在暂停态下催促 god 继续本局
+- **繼續**
+  - 呼叫：`POST /api/continue`
+  - 作用：在暫停態下催促 god 繼續本局
 
-- **自动N局**（旁边输入框填局数）
-  - 调用：`POST /api/auto-run`
-  - 作用：开启/关闭连续自动跑局
-  - 例如输入 `3` 后点击，可自动连续完成 3 局
+- **自動N局**（旁邊輸入框填局數）
+  - 呼叫：`POST /api/auto-run`
+  - 作用：開啟/關閉連續自動跑局
+  - 例如輸入 `3` 後點擊，可自動連續完成 3 局
 
-- **停止游戏**
-  - 调用：`POST /api/stop`
-  - 作用：停止当前路由流程并关闭自动连跑
+- **停止遊戲**
+  - 呼叫：`POST /api/stop`
+  - 作用：停止當前路由流程並關閉自動連跑
 
-- **初始化游戏 / 重新开始**
-  - 调用：`POST /api/restart`
-  - 作用：强制新建 session 并重新初始化新局
+- **初始化遊戲 / 重新開始**
+  - 呼叫：`POST /api/restart`
+  - 作用：強制新建 session 並重新初始化新局
 
-## 5.3 模式选择（全AI / 真人参与）
+## 5.3 模式選擇（全AI / 真人參與）
 
-顶部“模式”下拉框会影响 `start/restart` 请求中的 `game_mode`：
+頂部“模式”下拉框會影響 `start/restart` 請求中的 `game_mode`：
 - `all_agents`：全 AI 玩家
-- `human_player`：保留一个真人席位（human）
+- `human_player`：保留一個真人席位（human）
 
-## 5.4 真人参与模式下的按钮
+## 5.4 真人參與模式下的按鈕
 
-当模式为 `human_player` 时，会显示“真实玩家”区域：
+當模式為 `human_player` 時，會顯示“真實玩家”區域：
 
-- **只发给 god**
-  - 调用：`POST /api/human/send`，`target=god`
-- **发给全员**
-  - 调用：`POST /api/human/send`，`target=all`
+- **只發給 god**
+  - 呼叫：`POST /api/human/send`，`target=god`
+- **發給全員**
+  - 呼叫：`POST /api/human/send`，`target=all`
 - **查看 GAME.md**
-  - 调用：`GET /api/human/game-md`
+  - 呼叫：`GET /api/human/game-md`
 
-按钮是否可点，取决于后端状态 `waiting_for_human`。
+按鈕是否可點，取決於後端狀態 `waiting_for_human`。
 
-## 5.5 智能按钮显示（smart buttons）
+## 5.5 智慧按鈕顯示（smart buttons）
 
-当以 `--smart-buttons` 启动时，前端会根据 `GET /api/status` 返回的状态动态调整按钮可见性，例如：
-- 游戏进行中隐藏“开始/继续”
-- 游戏结束后显示“重新开始”
+當以 `--smart-buttons` 啟動時，前端會根據 `GET /api/status` 返回的狀態動態調整按鈕可見性，例如：
+- 遊戲進行中隱藏“開始/繼續”
+- 遊戲結束後顯示“重新開始”
 
-## 6. 常见问题
+## 6. 常見問題
 
-- **点击开始/继续没反应**
-  - 先检查后端是否在线：`/api/status`
-  - 再检查 `vikingbot_url` 是否可访问 `/bot/v1/health`
+- **點選開始/繼續沒反應**
+  - 先檢查後端是否線上：`/api/status`
+  - 再檢查 `vikingbot_url` 是否可訪問 `/bot/v1/health`
 
-- **真人模式看不到输入区**
-  - 确认模式选择为 `human_player`，并用该模式执行了开始或重启
+- **真人模式看不到輸入區**
+  - 確認模式選擇為 `human_player`，並用該模式執行了開始或重啟
 
-- **回放内容不完整**
-  - 回放依赖会话记录与归档状态文件，建议让一局正常结束后再查看
+- **回放內容不完整**
+  - 回放依賴會話記錄與歸檔狀態檔案，建議讓一局正常結束後再檢視

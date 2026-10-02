@@ -115,7 +115,7 @@ class TestLongFilenames:
     def test_very_long_filename_with_cjk(self):
         """Test extremely long filename with CJK characters (3 bytes per char in UTF-8)."""
         # Each CJK character is 3 bytes in UTF-8
-        cjk_chars = "测试文件名" * 30  # ~450 bytes
+        cjk_chars = "測試檔名" * 30  # ~450 bytes
         filename = f"{cjk_chars}.py"
 
         assert len(filename.encode("utf-8")) > 400

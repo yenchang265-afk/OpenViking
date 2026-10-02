@@ -1,14 +1,14 @@
 """
-Memory V2 全面端到端测试套件
-覆盖所有记忆文件类型：
-- preferences (偏好设置) - User scope
-- entities (实体信息) - User scope
-- events (事件记录) - User scope
-- profile (用户画像) - User scope, 单文件
+Memory V2 全面端到端測試套件
+覆蓋所有記憶檔案型別：
+- preferences (偏好設定) - User scope
+- entities (實體資訊) - User scope
+- events (事件記錄) - User scope
+- profile (使用者畫像) - User scope, 單檔案
 - skills (技能) - User scope
 
-测试方式：通过 OpenClaw agent 进行对话，然后通过 OV API commit session 触发记忆提取。
-OpenClaw Gateway 会自动分配 OV session ID，需要通过对比 sessions 列表来定位。
+測試方式：通過 OpenClaw agent 進行對話，然後通過 OV API commit session 觸發記憶提取。
+OpenClaw Gateway 會自動分配 OV session ID，需要通過對比 sessions 列表來定位。
 """
 
 import json
@@ -76,7 +76,7 @@ def _get_api_headers() -> Dict[str, str]:
 
 
 def get_viking_data_dir() -> Path:
-    """动态获取 viking 数据目录路径（user scope memories）"""
+    """動態獲取 viking 資料目錄路徑（user scope memories）"""
     if os.environ.get("VIKING_DATA_DIR"):
         return (
             Path(os.environ["VIKING_DATA_DIR"])
@@ -122,7 +122,7 @@ def get_viking_data_dir() -> Path:
 
 
 class OpenVikingAPIClient:
-    """OV API 客户端"""
+    """OV API 客戶端"""
 
     def __init__(self, server_url: str = SERVER_URL, api_key: str = OPENVIKING_API_KEY):
         self.server_url = server_url
@@ -130,7 +130,7 @@ class OpenVikingAPIClient:
         self.headers = _get_api_headers()
 
     def list_session_ids(self) -> Set[str]:
-        """获取当前所有 OV session ID 集合"""
+        """獲取當前所有 OV session ID 集合"""
         try:
             resp = requests.get(
                 f"{self.server_url}/api/v1/sessions",
@@ -145,7 +145,7 @@ class OpenVikingAPIClient:
             return set()
 
     def find_new_session_id(self, before_ids: Set[str]) -> Optional[str]:
-        """对比前后 session 列表，找到新创建的 session ID"""
+        """對比前後 session 列表，找到新建立的 session ID"""
         after_ids = self.list_session_ids()
         new_ids = after_ids - before_ids
         if new_ids:
@@ -153,7 +153,7 @@ class OpenVikingAPIClient:
         return None
 
     def find_session_by_id(self, session_id: str) -> Optional[str]:
-        """直接通过 session ID 查找是否存在于 OV 中"""
+        """直接通過 session ID 查詢是否存在於 OV 中"""
         try:
             resp = requests.get(
                 f"{self.server_url}/api/v1/sessions/{session_id}",
@@ -169,7 +169,7 @@ class OpenVikingAPIClient:
     def find_session_with_most_messages(
         self, candidate_ids: Optional[Set[str]] = None
     ) -> Optional[str]:
-        """在候选 session 中找到消息数最多的 session"""
+        """在候選 session 中找到訊息數最多的 session"""
         try:
             resp = requests.get(
                 f"{self.server_url}/api/v1/sessions",
@@ -283,7 +283,7 @@ class OpenVikingAPIClient:
             return []
 
     def read_memory_file(self, uri: str) -> Optional[str]:
-        """读取远端记忆文件内容"""
+        """讀取遠端記憶檔案內容"""
         try:
             resp = requests.get(
                 f"{self.server_url}/api/v1/content/read",
@@ -300,15 +300,15 @@ class OpenVikingAPIClient:
                     return result
                 return ""
             else:
-                print(f"  ⚠ read_memory_file({uri}) 状态码: {resp.status_code}")
+                print(f"  ⚠ read_memory_file({uri}) 狀態碼: {resp.status_code}")
                 return None
         except Exception as e:
-            print(f"  ⚠ read_memory_file 异常: {e}")
+            print(f"  ⚠ read_memory_file 異常: {e}")
             return None
 
 
 class MemoryV2TestSuite:
-    """Memory V2 全面测试套件 - OpenClaw 对话 + OV API commit"""
+    """Memory V2 全面測試套件 - OpenClaw 對話 + OV API commit"""
 
     def __init__(self):
         self.test_scenarios = self._create_test_scenarios()
@@ -319,26 +319,26 @@ class MemoryV2TestSuite:
         return [
             {
                 "name": "preferences",
-                "description": "测试偏好设置记忆",
-                "test_message": "我喜欢用Python编程，偏好使用VS Code编辑器，喜欢喝咖啡，特别是美式咖啡",
+                "description": "測試偏好設定記憶",
+                "test_message": "我喜歡用Python程式設計，偏好使用VS Code編輯器，喜歡喝咖啡，特別是美式咖啡",
                 "memory_type": "preferences",
             },
             {
                 "name": "entities",
-                "description": "测试实体信息记忆",
-                "test_message": "我叫李明，今年28岁，是一名软件工程师，在字节跳动工作，住在北京海淀区",
+                "description": "測試實體資訊記憶",
+                "test_message": "我叫李明，今年28歲，是一名軟體工程師，在字節跳動工作，住在北京海淀區",
                 "memory_type": "entities",
             },
             {
                 "name": "profile",
-                "description": "测试用户画像记忆",
-                "test_message": "我是一名技术负责人，有10年开发经验，专注于后端架构设计，喜欢用Python和Go语言",
+                "description": "測試使用者畫像記憶",
+                "test_message": "我是一名技術負責人，有10年開發經驗，專注於後端架構設計，喜歡用Python和Go語言",
                 "memory_type": "profile",
             },
             {
                 "name": "skills",
-                "description": "测试技能记忆",
-                "test_message": "我总结了一个代码审查的技能流程：先通读代码理解意图，再检查逻辑错误和边界条件，然后评估代码风格和可维护性，最后给出改进建议。请记住这个技能流程",
+                "description": "測試技能記憶",
+                "test_message": "我總結了一個程式碼審查的技能流程：先通讀程式碼理解意圖，再檢查邏輯錯誤和邊界條件，然後評估程式碼風格和可維護性，最後給出改進建議。請記住這個技能流程",
                 "memory_type": "skills",
             },
         ]
@@ -346,7 +346,7 @@ class MemoryV2TestSuite:
     def run_openclaw_command(
         self, message: str, session_id: str, max_retries: int = 2
     ) -> Dict[str, Any]:
-        """执行 openclaw agent 命令，超时时自动重试"""
+        """執行 openclaw agent 命令，超時時自動重試"""
         _wait_for_session_lock_release(session_id)
 
         cmd = [
@@ -367,7 +367,7 @@ class MemoryV2TestSuite:
                 last_error = e
                 if attempt < max_retries:
                     print(
-                        f"  ⚠ OpenClaw 命令超时 (attempt {attempt + 1}/{max_retries + 1})，重试中..."
+                        f"  ⚠ OpenClaw 命令超時 (attempt {attempt + 1}/{max_retries + 1})，重試中..."
                     )
                     time.sleep(5)
                     continue
@@ -397,7 +397,7 @@ class MemoryV2TestSuite:
             return {"raw_output": result.stdout}
 
     def _snapshot_all_memory_files(self) -> Dict[str, float]:
-        """记录所有记忆目录的文件快照（路径 → mtime）"""
+        """記錄所有記憶目錄的檔案快照（路徑 → mtime）"""
         files: Dict[str, float] = {}
 
         user_root = self.viking_data_dir.parent
@@ -409,7 +409,7 @@ class MemoryV2TestSuite:
     def check_memory_files(
         self, memory_type: str, before_files: Dict[str, float]
     ) -> Dict[str, Any]:
-        """检查 commit 后是否有新增或修改的记忆文件（全目录扫描）"""
+        """檢查 commit 後是否有新增或修改的記憶檔案（全目錄掃描）"""
         result = {
             "memory_type": memory_type,
             "found": False,
@@ -430,7 +430,7 @@ class MemoryV2TestSuite:
             result["found"] = True
             return result
 
-        print(f"  ⚠ {memory_type} 目录无直接变化，扫描全目录...")
+        print(f"  ⚠ {memory_type} 目錄無直接變化，掃描全目錄...")
         after_files = self._snapshot_all_memory_files()
 
         for file_str, new_mtime in after_files.items():
@@ -438,23 +438,23 @@ class MemoryV2TestSuite:
                 result["found"] = True
                 result["new_files"].append(file_str)
                 rel_path = self._relative_display(file_str)
-                print(f"  ✓ 其他目录新增文件: {rel_path}")
+                print(f"  ✓ 其他目錄新增檔案: {rel_path}")
             else:
                 old_mtime = before_files[file_str]
                 if new_mtime > old_mtime:
                     result["found"] = True
                     result["modified_files"].append(file_str)
                     rel_path = self._relative_display(file_str)
-                    print(f"  ✓ 其他目录文件已更新: {rel_path}")
+                    print(f"  ✓ 其他目錄檔案已更新: {rel_path}")
 
         if not result["found"]:
-            print("  ✗ 全目录扫描均无新增或修改的记忆文件")
+            print("  ✗ 全目錄掃描均無新增或修改的記憶檔案")
         return result
 
     def _check_memory_files_remote(
         self, memory_type: str, before_files: Dict[str, float]
     ) -> Dict[str, Any]:
-        """远端模式：通过 OV API 验证记忆是否写入成功"""
+        """遠端模式：通過 OV API 驗證記憶是否寫入成功"""
         result = {
             "memory_type": memory_type,
             "found": False,
@@ -463,7 +463,7 @@ class MemoryV2TestSuite:
             "all_files": [],
         }
 
-        print("  [远端模式] 通过 OV API 验证记忆...")
+        print("  [遠端模式] 通過 OV API 驗證記憶...")
 
         before_uris = set(before_files.get("_remote_uris", []))
         before_count = before_files.get("_remote_category_count", 0)
@@ -477,11 +477,11 @@ class MemoryV2TestSuite:
                 if not before_profile_content:
                     result["found"] = True
                     result["new_files"].append(profile_uri)
-                    print("  ✓ profile.md 新增 (之前无内容)")
+                    print("  ✓ profile.md 新增 (之前無內容)")
                 elif content != before_profile_content:
                     result["found"] = True
                     result["modified_files"].append(profile_uri)
-                    print("  ✓ profile.md 内容已更新")
+                    print("  ✓ profile.md 內容已更新")
                     before_lines = set(before_profile_content.strip().splitlines())
                     after_lines = set(content.strip().splitlines())
                     added = after_lines - before_lines
@@ -489,9 +489,9 @@ class MemoryV2TestSuite:
                         for line in sorted(added)[:5]:
                             print(f"    + {line[:80]}")
                 else:
-                    print("  ⚠ profile.md 内容未变化")
+                    print("  ⚠ profile.md 內容未變化")
             else:
-                print("  ✗ profile.md 读取失败或不存在")
+                print("  ✗ profile.md 讀取失敗或不存在")
 
             if not result["found"]:
                 scenario = next(
@@ -503,7 +503,7 @@ class MemoryV2TestSuite:
                     if memories:
                         result["found"] = True
                         result["new_files"] = [m.get("uri", "") for m in memories]
-                        print(f"  ✓ 通过 search/find 找到 {len(memories)} 条相关记忆")
+                        print(f"  ✓ 通過 search/find 找到 {len(memories)} 條相關記憶")
                         for m in memories[:3]:
                             uri = m.get("uri", "")
                             score = m.get("score", 0)
@@ -511,7 +511,7 @@ class MemoryV2TestSuite:
                             print(f"    - {uri} (score={score:.3f}) {abstract}...")
 
             if not result["found"]:
-                print("  ✗ 远端验证失败：profile 无新增或修改的记忆")
+                print("  ✗ 遠端驗證失敗：profile 無新增或修改的記憶")
             return result
 
         after_files_list = self.api.list_memory_files(memory_type)
@@ -533,13 +533,13 @@ class MemoryV2TestSuite:
         if new_uris:
             result["found"] = True
             result["new_files"] = list(new_uris)
-            print(f"  ✓ {memory_type} 目录新增 {len(new_uris)} 个文件")
+            print(f"  ✓ {memory_type} 目錄新增 {len(new_uris)} 個檔案")
             for uri in list(new_uris)[:3]:
                 print(f"    + {uri}")
 
         if stats_available and count_diff > 0:
             result["found"] = True
-            print(f"  ✓ {memory_type} 类别计数增加 {count_diff} 条")
+            print(f"  ✓ {memory_type} 類別計數增加 {count_diff} 條")
 
         if not result["found"] and memory_type == "skills":
             alt_type = "patterns"
@@ -559,10 +559,10 @@ class MemoryV2TestSuite:
             if alt_new_uris:
                 result["found"] = True
                 result["new_files"].extend(list(alt_new_uris))
-                print(f"  ✓ {alt_type} 目录新增 {len(alt_new_uris)} 个文件 (skills/patterns 互认)")
+                print(f"  ✓ {alt_type} 目錄新增 {len(alt_new_uris)} 個檔案 (skills/patterns 互認)")
             if alt_count_diff > 0:
                 result["found"] = True
-                print(f"  ✓ {alt_type} 类别计数增加 {alt_count_diff} 条 (skills/patterns 互认)")
+                print(f"  ✓ {alt_type} 類別計數增加 {alt_count_diff} 條 (skills/patterns 互認)")
 
         if not result["found"]:
             scenario = next(
@@ -574,7 +574,7 @@ class MemoryV2TestSuite:
                 if memories:
                     result["found"] = True
                     result["new_files"] = [m.get("uri", "") for m in memories]
-                    print(f"  ✓ 通过 search/find 找到 {len(memories)} 条相关记忆")
+                    print(f"  ✓ 通過 search/find 找到 {len(memories)} 條相關記憶")
                     for m in memories[:3]:
                         uri = m.get("uri", "")
                         score = m.get("score", 0)
@@ -582,11 +582,11 @@ class MemoryV2TestSuite:
                         print(f"    - {uri} (score={score:.3f}) {abstract}...")
 
         if not result["found"]:
-            print(f"  ✗ 远端验证失败：{memory_type} 无新增记忆 (计数无变化且无新文件)")
+            print(f"  ✗ 遠端驗證失敗：{memory_type} 無新增記憶 (計數無變化且無新檔案)")
         return result
 
     def _relative_display(self, file_str: str) -> str:
-        """生成相对路径用于显示"""
+        """生成相對路徑用於顯示"""
         try:
             base = self.viking_data_dir.parent.parent.parent
             return str(Path(file_str).relative_to(base))
@@ -596,7 +596,7 @@ class MemoryV2TestSuite:
     def _check_target_type(
         self, memory_type: str, before_files: Dict[str, float]
     ) -> Dict[str, Any]:
-        """检查目标 memory_type 目录的文件变化"""
+        """檢查目標 memory_type 目錄的檔案變化"""
         result: Dict[str, Any] = {
             "found": False,
             "new_files": [],
@@ -619,9 +619,9 @@ class MemoryV2TestSuite:
                     if new_mtime > old_mtime:
                         result["found"] = True
                         result["modified_files"].append(file_str)
-                        print("  ✓ profile 文件已更新 (mtime 变化)")
+                        print("  ✓ profile 檔案已更新 (mtime 變化)")
                     else:
-                        print(f"  ⚠ profile 文件未变化: {profile_file}")
+                        print(f"  ⚠ profile 檔案未變化: {profile_file}")
             else:
                 print(f"  ✗ profile 文件不存在: {profile_file}")
             return result
@@ -629,7 +629,7 @@ class MemoryV2TestSuite:
         if memory_type == "skills":
             skills_dir = self.viking_data_dir.parent / "skills"
             if not skills_dir.exists():
-                print(f"  ✗ skills 目录不存在: {skills_dir}")
+                print(f"  ✗ skills 目錄不存在: {skills_dir}")
                 return result
 
             for md_file in sorted(skills_dir.rglob("*.md")):
@@ -640,26 +640,26 @@ class MemoryV2TestSuite:
                 if file_str not in before_files:
                     result["found"] = True
                     result["new_files"].append(file_str)
-                    print(f"  ✓ 新增技能文件: {md_file.name} (在 user/skills 目录下)")
+                    print(f"  ✓ 新增技能檔案: {md_file.name} (在 user/skills 目錄下)")
                 else:
                     old_mtime = before_files[file_str]
                     new_mtime = md_file.stat().st_mtime
                     if new_mtime > old_mtime:
                         result["found"] = True
                         result["modified_files"].append(file_str)
-                        print(f"  ✓ 技能文件已更新: {md_file.name} (在 user/skills 目录下)")
+                        print(f"  ✓ 技能檔案已更新: {md_file.name} (在 user/skills 目錄下)")
 
             if not result["found"]:
                 if result["all_files"]:
-                    print(f"  ⚠ {memory_type} 目录有文件但均无变化")
+                    print(f"  ⚠ {memory_type} 目錄有檔案但均無變化")
                 else:
-                    print(f"  ✗ 未找到 {memory_type} 相关记忆文件")
+                    print(f"  ✗ 未找到 {memory_type} 相關記憶檔案")
             return result
 
         # user scope: preferences, entities, events
         memory_dir = self.viking_data_dir / memory_type
         if not memory_dir.exists():
-            print(f"  ✗ 记忆目录不存在: {memory_dir}")
+            print(f"  ✗ 記憶目錄不存在: {memory_dir}")
             return result
 
         for md_file in sorted(memory_dir.rglob("*.md")):
@@ -669,7 +669,7 @@ class MemoryV2TestSuite:
                 result["found"] = True
                 result["new_files"].append(file_str)
                 rel = md_file.relative_to(memory_dir)
-                print(f"  ✓ 新增记忆文件: {rel}")
+                print(f"  ✓ 新增記憶檔案: {rel}")
             else:
                 old_mtime = before_files[file_str]
                 new_mtime = md_file.stat().st_mtime
@@ -677,19 +677,19 @@ class MemoryV2TestSuite:
                     result["found"] = True
                     result["modified_files"].append(file_str)
                     rel = md_file.relative_to(memory_dir)
-                    print(f"  ✓ 记忆文件已更新: {rel}")
+                    print(f"  ✓ 記憶檔案已更新: {rel}")
 
         if not result["found"]:
             if result["all_files"]:
-                print(f"  ⚠ {memory_type} 目录有文件但均无变化")
+                print(f"  ⚠ {memory_type} 目錄有檔案但均無變化")
             else:
-                print(f"  ✗ 未找到 {memory_type} 记忆文件")
+                print(f"  ✗ 未找到 {memory_type} 記憶檔案")
         return result
 
     def test_single_scenario(self, scenario: Dict[str, Any]) -> Tuple[bool, Dict[str, Any]]:
-        """测试单个场景：OpenClaw 对话 → OV API commit → 轮询任务 → 检查记忆文件"""
+        """測試單個場景：OpenClaw 對話 → OV API commit → 輪詢任務 → 檢查記憶檔案"""
         print(f"\n{'=' * 60}")
-        print(f"测试场景: {scenario['name']} - {scenario['description']}")
+        print(f"測試場景: {scenario['name']} - {scenario['description']}")
         print(f"{'=' * 60}")
 
         result = {
@@ -700,13 +700,13 @@ class MemoryV2TestSuite:
         }
 
         try:
-            # 每个场景使用独立的 session ID，确保 OpenClaw 创建新的 OV session
+            # 每個場景使用獨立的 session ID，確保 OpenClaw 建立新的 OV session
             scenario_session_id = SessionIdManager.generate_session_id(
                 prefix=f"memv2_{scenario['name']}"
             )
 
-            # 步骤 1: 记录当前 OV sessions 快照和全目录记忆文件快照
-            print("\n[步骤 1/5] 记录快照")
+            # 步驟 1: 記錄當前 OV sessions 快照和全目錄記憶檔案快照
+            print("\n[步驟 1/5] 記錄快照")
             before_session_ids = self.api.list_session_ids()
             if _is_remote_mode():
                 before_stats = self.api.get_memory_stats()
@@ -726,44 +726,44 @@ class MemoryV2TestSuite:
                     before_alt_count = before_stats.get("by_category", {}).get("patterns", 0)
                     before_memory_files["_remote_alt_uris"] = before_alt_uris
                     before_memory_files["_remote_alt_category_count"] = before_alt_count
-                print(f"  当前 session 数量: {len(before_session_ids)}")
-                print(f"  [远端模式] 记忆统计: {before_stats.get('by_category', {})}")
+                print(f"  當前 session 數量: {len(before_session_ids)}")
+                print(f"  [遠端模式] 記憶統計: {before_stats.get('by_category', {})}")
                 print(
-                    f"  [远端模式] {scenario['memory_type']} 文件数: {len(before_uris)}, 计数: {before_count}"
+                    f"  [遠端模式] {scenario['memory_type']} 檔案數: {len(before_uris)}, 計數: {before_count}"
                 )
             else:
                 before_memory_files = self._snapshot_all_memory_files()
-                print(f"  当前 session 数量: {len(before_session_ids)}")
-                print(f"  当前全目录记忆文件数量: {len(before_memory_files)}")
-            print(f"  场景 session ID: {scenario_session_id}")
+                print(f"  當前 session 數量: {len(before_session_ids)}")
+                print(f"  當前全目錄記憶檔案數量: {len(before_memory_files)}")
+            print(f"  場景 session ID: {scenario_session_id}")
             result["steps"]["snapshot"] = "success"
 
-            # 步骤 2: 通过 OpenClaw 发送消息
-            print("\n[步骤 2/5] 通过 OpenClaw 发送消息")
+            # 步驟 2: 通過 OpenClaw 傳送訊息
+            print("\n[步驟 2/5] 通過 OpenClaw 傳送訊息")
             print(f"  消息: {scenario['test_message'][:50]}...")
             self.run_openclaw_command(scenario["test_message"], scenario_session_id)
-            print("✓ OpenClaw 对话完成")
+            print("✓ OpenClaw 對話完成")
             result["steps"]["openclaw_chat"] = "success"
             time.sleep(8)
 
-            # 步骤 3: 找到 OV session 并 commit
-            print("\n[步骤 3/5] 查找 OV session 并 commit")
+            # 步驟 3: 找到 OV session 並 commit
+            print("\n[步驟 3/5] 查詢 OV session 並 commit")
             ov_session_id = self.api.find_new_session_id(before_session_ids)
 
             if not ov_session_id:
                 ov_session_id = self.api.find_session_by_id(scenario_session_id)
                 if ov_session_id:
-                    print(f"  ✓ 通过 scenario_session_id 找到 session: {ov_session_id[:8]}...")
+                    print(f"  ✓ 通過 scenario_session_id 找到 session: {ov_session_id[:8]}...")
 
             if not ov_session_id:
-                print("  ⚠ 未找到新 session，等待 OV auto-capture 创建 session...")
+                print("  ⚠ 未找到新 session，等待 OV auto-capture 建立 session...")
                 for retry in range(5):
                     time.sleep(5)
                     ov_session_id = self.api.find_new_session_id(before_session_ids)
                     if not ov_session_id:
                         ov_session_id = self.api.find_session_by_id(scenario_session_id)
                     if ov_session_id:
-                        print(f"  ✓ 第 {retry + 1} 次重试找到新 session")
+                        print(f"  ✓ 第 {retry + 1} 次重試找到新 session")
                         break
                 all_session_ids = self.api.list_session_ids()
                 committed_any = False
@@ -781,11 +781,11 @@ class MemoryV2TestSuite:
                     except Exception:
                         continue
                 if not committed_any:
-                    print("  ⚠ 所有 session commit 均无 task_id，跳过 commit，直接检查记忆文件")
+                    print("  ⚠ 所有 session commit 均無 task_id，跳過 commit，直接檢查記憶檔案")
                     result["steps"]["commit"] = "skipped"
                     result["ov_session_id"] = None
-                    print("\n[步骤 4/5] 跳过 (无有效 commit)")
-                    print("\n[步骤 5/5] 验证记忆文件变化")
+                    print("\n[步驟 4/5] 跳過 (無有效 commit)")
+                    print("\n[步驟 5/5] 驗證記憶檔案變化")
                     memory_files_result = self.check_memory_files(
                         scenario["memory_type"], before_memory_files
                     )
@@ -797,7 +797,7 @@ class MemoryV2TestSuite:
                     else:
                         result["steps"]["memory_files"] = "failed"
                         result["status"] = "failed"
-                        result["error"] = f"{scenario['memory_type']}: 无有效 commit 且无新增记忆"
+                        result["error"] = f"{scenario['memory_type']}: 無有效 commit 且無新增記憶"
                         return False, result
 
             print(f"  OV session ID: {ov_session_id}")
@@ -807,11 +807,11 @@ class MemoryV2TestSuite:
             task_id = commit_result.get("task_id")
 
             if commit_resp.get("status_code") == 404:
-                print("  ⚠ OV session 不存在 (404)，跳过 commit，直接检查记忆文件")
+                print("  ⚠ OV session 不存在 (404)，跳過 commit，直接檢查記憶檔案")
                 result["steps"]["commit"] = "skipped_404"
                 result["ov_session_id"] = None
-                print("\n[步骤 4/5] 跳过 (session 不存在)")
-                print("\n[步骤 5/5] 验证记忆文件变化")
+                print("\n[步驟 4/5] 跳過 (session 不存在)")
+                print("\n[步驟 5/5] 驗證記憶檔案變化")
                 memory_files_result = self.check_memory_files(
                     scenario["memory_type"], before_memory_files
                 )
@@ -823,14 +823,14 @@ class MemoryV2TestSuite:
                 else:
                     result["steps"]["memory_files"] = "failed"
                     result["status"] = "failed"
-                    result["error"] = f"{scenario['memory_type']}: OV session 404 且无新增记忆"
+                    result["error"] = f"{scenario['memory_type']}: OV session 404 且無新增記憶"
                     return False, result
 
             if not task_id and commit_result.get("status") == "accepted":
-                print("  ⚠ Commit 返回 accepted 但无 task_id，补充对话后重试...")
+                print("  ⚠ Commit 返回 accepted 但無 task_id，補充對話後重試...")
                 follow_ups = [
-                    "请详细总结一下我刚才告诉你的所有信息，逐条列出。",
-                    "你能复述一下我的个人情况吗？越详细越好。",
+                    "請詳細總結一下我剛才告訴你的所有資訊，逐條列出。",
+                    "你能複述一下我的個人情況嗎？越詳細越好。",
                 ]
                 for follow_up in follow_ups:
                     try:
@@ -847,7 +847,7 @@ class MemoryV2TestSuite:
 
                 # If still no task_id, try waiting longer and retrying
                 if not task_id:
-                    print("  ⚠ 重试后仍无 task_id，等待更长时间后再次尝试...")
+                    print("  ⚠ 重試後仍無 task_id，等待更長時間後再次嘗試...")
                     time.sleep(10)
                     commit_resp = self.api.commit_session(ov_session_id)
                     commit_data = commit_resp.get("data") or {}
@@ -860,12 +860,12 @@ class MemoryV2TestSuite:
                 result["ov_session_id"] = ov_session_id
                 result["task_id"] = task_id
             elif commit_resp.get("status_code") == 200 and not task_id:
-                print("  ⚠ Commit 返回 task_id=None，跳过记忆提取步骤")
+                print("  ⚠ Commit 返回 task_id=None，跳過記憶提取步驟")
                 result["steps"]["commit"] = "accepted_no_task"
                 result["ov_session_id"] = ov_session_id
                 result["steps"]["memory_extraction"] = "skipped"
-                print("\n[步骤 4/5] 跳过 (无 task_id)")
-                print("\n[步骤 5/5] 验证记忆文件变化")
+                print("\n[步驟 4/5] 跳過 (無 task_id)")
+                print("\n[步驟 5/5] 驗證記憶檔案變化")
                 memory_files_result = self.check_memory_files(
                     scenario["memory_type"], before_memory_files
                 )
@@ -877,24 +877,24 @@ class MemoryV2TestSuite:
                 else:
                     result["steps"]["memory_files"] = "failed"
                     result["status"] = "failed"
-                    result["error"] = f"{scenario['memory_type']}: Commit 无 task_id 且无新增记忆"
+                    result["error"] = f"{scenario['memory_type']}: Commit 無 task_id 且無新增記憶"
                     return False, result
             else:
-                print(f"✗ Commit 失败: {commit_resp}")
+                print(f"✗ Commit 失敗: {commit_resp}")
                 result["steps"]["commit"] = "failed"
                 result["status"] = "failed"
-                result["error"] = f"Commit 失败: {commit_resp}"
+                result["error"] = f"Commit 失敗: {commit_resp}"
                 return False, result
 
-            # 步骤 4: 轮询任务直到完成
-            print(f"\n[步骤 4/5] 等待记忆提取完成 (轮询 task_id: {task_id})")
+            # 步驟 4: 輪詢任務直到完成
+            print(f"\n[步驟 4/5] 等待記憶提取完成 (輪詢 task_id: {task_id})")
             task_result = self.api.poll_task_until_done(task_id)
             task_status = task_result.get("status", "unknown")
             memories_extracted = task_result.get("result", {}).get("memories_extracted", {})
             token_usage = task_result.get("result", {}).get("token_usage", {})
 
-            print(f"  任务状态: {task_status}")
-            print(f"  提取的记忆: {memories_extracted}")
+            print(f"  任務狀態: {task_status}")
+            print(f"  提取的記憶: {memories_extracted}")
             if token_usage:
                 llm_tokens = token_usage.get("llm", {}).get("total_tokens", 0)
                 print(f"  LLM token 用量: {llm_tokens}")
@@ -906,23 +906,23 @@ class MemoryV2TestSuite:
                     else 0
                 )
                 if total_extracted > 0:
-                    print(f"✓ 记忆提取成功，共提取 {total_extracted} 条记忆")
+                    print(f"✓ 記憶提取成功，共提取 {total_extracted} 條記憶")
                     result["steps"]["memory_extraction"] = "success"
                 else:
-                    print("⚠ 记忆提取完成但结果为空 (VLM 可能返回了无效 JSON)")
+                    print("⚠ 記憶提取完成但結果為空 (VLM 可能返回了無效 JSON)")
                     result["steps"]["memory_extraction"] = "empty"
             elif task_status == "failed":
                 error_msg = task_result.get("error", "unknown error")
-                print(f"✗ 记忆提取失败: {error_msg}")
+                print(f"✗ 記憶提取失敗: {error_msg}")
                 result["steps"]["memory_extraction"] = "failed"
             else:
-                print("✗ 记忆提取超时")
+                print("✗ 記憶提取超時")
                 result["steps"]["memory_extraction"] = "timeout"
 
             result["task_result"] = task_result
 
-            # 步骤 5: 验证记忆文件变化（硬性断言）
-            print("\n[步骤 5/5] 验证记忆文件变化")
+            # 步驟 5: 驗證記憶檔案變化（硬性斷言）
+            print("\n[步驟 5/5] 驗證記憶檔案變化")
             memory_files_result = self.check_memory_files(
                 scenario["memory_type"], before_memory_files
             )
@@ -931,47 +931,47 @@ class MemoryV2TestSuite:
             if memory_files_result["found"]:
                 new_count = len(memory_files_result["new_files"])
                 mod_count = len(memory_files_result["modified_files"])
-                print(f"✓ 记忆文件有变化，新增 {new_count} 个，更新 {mod_count} 个")
+                print(f"✓ 記憶檔案有變化，新增 {new_count} 個，更新 {mod_count} 個")
                 result["steps"]["memory_files"] = "success"
             else:
-                print("✗ 记忆文件验证失败（全目录无新增或修改的文件）")
+                print("✗ 記憶檔案驗證失敗（全目錄無新增或修改的檔案）")
                 result["steps"]["memory_files"] = "failed"
 
-            # 综合判断：记忆提取成功 + 文件有变化 = 通过
+            # 綜合判斷：記憶提取成功 + 檔案有變化 = 通過
             extraction_ok = result["steps"].get("memory_extraction") == "success"
             files_ok = result["steps"].get("memory_files") == "success"
 
             if files_ok:
                 result["status"] = "passed"
                 if not extraction_ok:
-                    print("⚠ 记忆提取轮询超时，但文件验证成功，判定通过")
+                    print("⚠ 記憶提取輪詢超時，但檔案驗證成功，判定通過")
                 return True, result
             else:
                 reasons = []
                 if not extraction_ok:
-                    reasons.append("记忆提取失败或为空")
+                    reasons.append("記憶提取失敗或為空")
                 if not files_ok:
-                    reasons.append("无新增或修改的记忆文件")
+                    reasons.append("無新增或修改的記憶檔案")
                 result["status"] = "failed"
                 result["error"] = f"{scenario['memory_type']}: {', '.join(reasons)}"
                 return False, result
 
         except Exception as e:
-            print(f"\n✗ 场景测试执行失败: {e}")
+            print(f"\n✗ 場景測試執行失敗: {e}")
             result["status"] = "error"
             result["error"] = str(e)
             return False, result
 
     def run_full_test_suite(self) -> Dict[str, Any]:
-        """运行完整的测试套件"""
+        """執行完整的測試套件"""
         print("\n" + "=" * 60)
-        print("Memory V2 全面端到端测试套件")
-        print("  对话方式: OpenClaw agent")
+        print("Memory V2 全面端到端測試套件")
+        print("  對話方式: OpenClaw agent")
         print("  Commit 方式: OV API")
         print("=" * 60)
-        print(f"\n测试场景数量: {len(self.test_scenarios)}")
-        print(f"记忆类型覆盖: {', '.join([s['memory_type'] for s in self.test_scenarios])}")
-        print(f"数据目录: {self.viking_data_dir}")
+        print(f"\n測試場景數量: {len(self.test_scenarios)}")
+        print(f"記憶型別覆蓋: {', '.join([s['memory_type'] for s in self.test_scenarios])}")
+        print(f"資料目錄: {self.viking_data_dir}")
         print(f"OV Server: {SERVER_URL}")
 
         results = {
@@ -992,20 +992,20 @@ class MemoryV2TestSuite:
                 results["summary"]["error"] += 1
 
         print("\n" + "=" * 60)
-        print("测试总结")
+        print("測試總結")
         print("=" * 60)
-        print(f"总场景数: {results['total_scenarios']}")
-        print(f"通过: {results['summary']['passed']}")
-        print(f"失败: {results['summary']['failed']}")
-        print(f"错误: {results['summary']['error']}")
+        print(f"總場景數: {results['total_scenarios']}")
+        print(f"通過: {results['summary']['passed']}")
+        print(f"失敗: {results['summary']['failed']}")
+        print(f"錯誤: {results['summary']['error']}")
 
         pass_rate = results["summary"]["passed"] / results["total_scenarios"]
-        print(f"\n通过率: {pass_rate * 100:.1f}%")
+        print(f"\n通過率: {pass_rate * 100:.1f}%")
 
         if pass_rate >= 0.7:
-            print("\n✓ Memory V2 测试套件通过！")
+            print("\n✓ Memory V2 測試套件通過！")
         else:
-            print("\n✗ Memory V2 测试套件未通过")
+            print("\n✗ Memory V2 測試套件未通過")
 
         return results
 
@@ -1013,26 +1013,26 @@ class MemoryV2TestSuite:
 SCENARIO_MAP = {
     "preferences": {
         "name": "preferences",
-        "description": "测试偏好设置记忆",
-        "test_message": "我喜欢用Python编程，偏好使用VS Code编辑器，喜欢喝咖啡，特别是美式咖啡",
+        "description": "測試偏好設定記憶",
+        "test_message": "我喜歡用Python程式設計，偏好使用VS Code編輯器，喜歡喝咖啡，特別是美式咖啡",
         "memory_type": "preferences",
     },
     "entities": {
         "name": "entities",
-        "description": "测试实体信息记忆",
-        "test_message": "我叫李明，今年28岁，是一名软件工程师，在字节跳动工作，住在北京海淀区",
+        "description": "測試實體資訊記憶",
+        "test_message": "我叫李明，今年28歲，是一名軟體工程師，在字節跳動工作，住在北京海淀區",
         "memory_type": "entities",
     },
     "profile": {
         "name": "profile",
-        "description": "测试用户画像记忆",
-        "test_message": "我是一名技术负责人，有10年开发经验，专注于后端架构设计，喜欢用Python和Go语言",
+        "description": "測試使用者畫像記憶",
+        "test_message": "我是一名技術負責人，有10年開發經驗，專注於後端架構設計，喜歡用Python和Go語言",
         "memory_type": "profile",
     },
     "skills": {
         "name": "skills",
-        "description": "测试技能记忆",
-        "test_message": "我总结了一个代码审查的技能流程：先通读代码理解意图，再检查逻辑错误和边界条件，然后评估代码风格和可维护性，最后给出改进建议。请记住这个技能流程",
+        "description": "測試技能記憶",
+        "test_message": "我總結了一個程式碼審查的技能流程：先通讀程式碼理解意圖，再檢查邏輯錯誤和邊界條件，然後評估程式碼風格和可維護性，最後給出改進建議。請記住這個技能流程",
         "memory_type": "skills",
     },
 }
@@ -1042,7 +1042,7 @@ def _run_single_memory_test(scenario_key: str):
     tester = MemoryV2TestSuite()
     scenario = SCENARIO_MAP[scenario_key]
     passed, result = tester.test_single_scenario(scenario)
-    assert passed, f"{scenario['name']} 测试失败: {result.get('error', '未知错误')}"
+    assert passed, f"{scenario['name']} 測試失敗: {result.get('error', '未知錯誤')}"
 
 
 def test_memory_v2_preferences():
@@ -1062,12 +1062,12 @@ def test_memory_v2_skills():
 
 
 if __name__ == "__main__":
-    """直接运行测试"""
+    """直接執行測試"""
     tester = MemoryV2TestSuite()
     results = tester.run_full_test_suite()
 
     print("\n" + "=" * 60)
-    print("详细测试报告")
+    print("詳細測試報告")
     print("=" * 60)
 
     for scenario in results["scenarios"]:
@@ -1080,6 +1080,6 @@ if __name__ == "__main__":
             )
             print(f"  {step_icon} {step_name}: {step_status}")
         if scenario.get("error"):
-            print(f"  错误: {scenario['error']}")
+            print(f"  錯誤: {scenario['error']}")
 
     exit(0 if results["summary"]["passed"] >= results["total_scenarios"] * 0.7 else 1)

@@ -62,7 +62,7 @@ _RESOURCE_ADDITION_FIELD_RE = re.compile(
     re.MULTILINE,
 )
 _RESOURCE_URI_MARKER_RE = re.compile(
-    r"[，,；;：:\s]*(?:资源\s*URI\s*为|资源\s*URI|Resource\s+URI)\s*[:：为]?\s*",
+    r"[，,；;：:\s]*(?:資源\s*URI\s*為|资源\s*URI\s*为|資源\s*URI|资源\s*URI|Resource\s+URI)\s*[:：為为]?\s*",
     re.IGNORECASE,
 )
 
@@ -320,21 +320,21 @@ class ExtractContext:
         return units or [text]
 
     def get_first_message_time_from_ranges(self, ranges_str: str) -> str | None:
-        """根据 ranges 字符串获取第一条消息的时间（YAML 日期格式）"""
+        """根據 ranges 字串獲取第一條訊息的時間（YAML 日期格式）"""
         if not ranges_str:
             return None
         msg_range = self.read_message_ranges(ranges_str)
         return msg_range._first_message_time()
 
     def get_first_message_time_with_weekday_from_ranges(self, ranges_str: str) -> str | None:
-        """根据 ranges 字符串获取第一条消息的时间，带周几"""
+        """根據 ranges 字串獲取第一條訊息的時間，帶周幾"""
         if not ranges_str:
             return None
         msg_range = self.read_message_ranges(ranges_str)
         return msg_range._first_message_time_with_weekday()
 
     def get_year(self, ranges_str: str) -> str:
-        """根据 ranges 字符串获取第一条消息的年份，fallback 到当前年份"""
+        """根據 ranges 字串獲取第一條訊息的年份，fallback 到當前年份"""
         from datetime import datetime
 
         if not ranges_str:
@@ -346,7 +346,7 @@ class ExtractContext:
         return str(datetime.now().year)
 
     def get_month(self, ranges_str: str) -> str:
-        """根据 ranges 字符串获取第一条消息的月份，fallback 到当前月份"""
+        """根據 ranges 字串獲取第一條訊息的月份，fallback 到當前月份"""
         from datetime import datetime
 
         if not ranges_str:
@@ -358,7 +358,7 @@ class ExtractContext:
         return f"{datetime.now().month:02d}"
 
     def get_day(self, ranges_str: str) -> str:
-        """根据 ranges 字符串获取第一条消息的日期，fallback 到当前日期"""
+        """根據 ranges 字串獲取第一條訊息的日期，fallback 到當前日期"""
         from datetime import datetime
 
         if not ranges_str:
@@ -370,9 +370,9 @@ class ExtractContext:
         return f"{datetime.now().day:02d}"
 
     def get_timestamp_from_ranges(self, ranges_str: str) -> str:
-        """根据 ranges 获取第一条消息的紧凑时间戳（YYYYMMDDHHMMSS），用于文件名去重。
+        """根據 ranges 獲取第一條訊息的緊湊時間戳（YYYYMMDDHHMMSS），用於檔名去重。
 
-        Fallback 到 datetime.now() 以保证总是返回非空字符串。
+        Fallback 到 datetime.now() 以保證總是返回非空字串。
         """
         from datetime import datetime
 
@@ -390,9 +390,9 @@ class ExtractContext:
         return datetime.now().strftime("%Y%m%d%H%M%S")
 
     def get_session_timestamp(self) -> str:
-        """取对话第一条消息的时间戳（YYYYMMDDHHMMSS），用于文件名唯一化。
+        """取對話第一條訊息的時間戳（YYYYMMDDHHMMSS），用於檔名唯一化。
 
-        Fallback 到 datetime.now() 以保证总是返回非空字符串。
+        Fallback 到 datetime.now() 以保證總是返回非空字串。
         """
         from datetime import datetime
 
@@ -408,7 +408,7 @@ class ExtractContext:
     def get_event_content(
         self, ranges_str: str, summary: str | None, ratio_threshold: float = 0.2
     ) -> str:
-        """根据原始消息与 summary 的字符数比例，决定返回原始消息还是摘要。"""
+        """根據原始訊息與 summary 的字元數比例，決定返回原始訊息還是摘要。"""
         if not ranges_str:
             return summary or ""
         msg_range = self.read_message_ranges(ranges_str)
@@ -473,7 +473,7 @@ class ExtractContext:
         if resource_uri in text:
             return cls._replace_bare_resource_uri(text, resource_uri, addition)
         label = cls._resource_label_from_addition(addition)
-        return cls._finish_sentence(f"{text.rstrip('。.!')}，关联资源为[{label}]({resource_uri})")
+        return cls._finish_sentence(f"{text.rstrip('。.!')}，關聯資源為[{label}]({resource_uri})")
 
     @classmethod
     def _replace_bare_resource_uri(
@@ -511,7 +511,9 @@ class ExtractContext:
     @classmethod
     def _resource_label_from_addition(cls, addition: Dict[str, str]) -> str:
         reason = addition.get("User reason", "").strip()
-        for prefix in ("这是一张", "这是一个", "该资源是", "这个是", "这是"):
+        for prefix in (
+            "這是一張", "这是一张", "這是一個", "这是一个", "該資源是", "该资源是", "這個是", "这个是", "這是", "这是"
+        ):
             if reason.startswith(prefix):
                 reason = reason[len(prefix) :].strip()
                 break
@@ -519,7 +521,7 @@ class ExtractContext:
         if reason:
             return reason[:80]
         source_name = addition.get("Source name", "").strip()
-        return source_name or "相关资源"
+        return source_name or "相關資源"
 
     @classmethod
     def _resource_addition_fallback_sentence(
@@ -528,7 +530,7 @@ class ExtractContext:
         addition: Dict[str, str],
     ) -> str:
         label = cls._resource_label_from_addition(addition)
-        return f"用户保存了[{label}]({resource_uri})。"
+        return f"使用者儲存了[{label}]({resource_uri})。"
 
     @staticmethod
     def _finish_sentence(text: str) -> str:
@@ -549,7 +551,7 @@ class ExtractContext:
         if not ranges_str:
             return MessageRange([])
 
-        # 解析所有范围/索引
+        # 解析所有範圍/索引
         ranges = []
         for part in ranges_str.split(","):
             part = part.strip()
@@ -559,7 +561,7 @@ class ExtractContext:
                 start, end = part.split("-")
                 ranges.append((int(start), int(end)))
             else:
-                # 单个索引转为相同起止范围
+                # 單個索引轉為相同起止範圍
                 idx = int(part)
                 ranges.append((idx, idx))
 
@@ -569,7 +571,7 @@ class ExtractContext:
         # 按 start 排序
         ranges.sort(key=lambda x: x[0])
 
-        # 合并连续/重叠的范围
+        # 合併連續/重疊的範圍
         merged = [ranges[0]]
         for start, end in ranges[1:]:
             prev_start, prev_end = merged[-1]
@@ -578,10 +580,10 @@ class ExtractContext:
             else:
                 merged.append((start, end))
 
-        # elements 是 List[List[Message]] - 每段连续消息是一个列表
+        # elements 是 List[List[Message]] - 每段連續訊息是一個列表
         elements: List[List[Message]] = []
         for start, end in merged:
-            # 兼容 LLM 提取的 range 越界情况
+            # 相容 LLM 提取的 range 越界情況
             if start < 0:
                 start = 0
             if end >= len(self.messages):
@@ -681,7 +683,7 @@ class MessageRange:
         return self.chunk_meta.get(id(message))
 
     def _first_message_time(self) -> str | None:
-        """获取第一条消息的时间（内部方法）"""
+        """獲取第一條訊息的時間（內部方法）"""
         for msg_group in self.elements:
             for msg in msg_group:
                 if hasattr(msg, "created_at") and msg.created_at:
@@ -690,7 +692,7 @@ class MessageRange:
         return None
 
     def _first_message_time_with_weekday(self) -> str | None:
-        """获取第一条消息的时间，带周几"""
+        """獲取第一條訊息的時間，帶周幾"""
         weekday_en = [
             "Monday",
             "Tuesday",

@@ -1,10 +1,10 @@
-# 示例：知识蒸馏
+# 示例：知識蒸餾
 
-把一个或多个知识库、文档集合**蒸馏**成按主题组织、有出处的高层次知识：跨来源的发现、趋势、变化、驱动因素、对比、影响和不确定性。
+把一個或多個知識庫、文件集合**蒸餾**成按主題組織、有出處的高層次知識：跨來源的發現、趨勢、變化、驅動因素、對比、影響和不確定性。
 
-典型用途：蒸馏一个知识库、对比多个集合，如从一叠财报里推导出「跨报告期的变化」这类高阶洞察。
+典型用途：蒸餾一個知識庫、對比多個集合，如從一疊財報裡推匯出「跨報告期的變化」這類高階洞察。
 
-产物是一棵按主题组织的浅层工件树，每个主题目录是一个持久的语义领域，每一页是一条独立有用的高层次结论：
+產物是一棵按主題組織的淺層工件樹，每個主題目錄是一個持久的語義領域，每一頁是一條獨立有用的高層次結論：
 
 ```text
 revenue-quality/
@@ -16,11 +16,11 @@ risk/
   customer-concentration-increased.md
 ```
 
-> 上面只是形态示例——真实的主题和结论由你给的领域决定。
+> 上面只是形態示例——真實的主題和結論由你給的領域決定。
 
-Skill 源码：[examples/compile/ov-compile-skills/knowledge-distillation](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-distillation)
+Skill 原始碼：[examples/compile/ov-compile-skills/knowledge-distillation](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-distillation)
 
-## 第一步：准备来源
+## 第一步：準備來源
 
 ```bash
 ov add-resource ./finance-reports --to viking://resources/finance-reports
@@ -35,46 +35,46 @@ ov skills list
 # → viking://agent/skills/knowledge-distillation  （或 viking://user/<user_name>/skills/knowledge-distillation）
 ```
 
-## 第三步：执行编译
+## 第三步：執行編譯
 
-在 `--instruction` 里说清**分析问题、对比维度、基线和范围**——这直接决定蒸馏的方向：
+在 `--instruction` 裡說清**分析問題、對比維度、基線和範圍**——這直接決定蒸餾的方向：
 
 ```bash
 ov compile \
   --from viking://resources/finance-reports \
   --to viking://resources/finance-insights \
   --skill viking://agent/skills/knowledge-distillation \
-  --instruction "对比近三年财报，找到营收质量、盈利能力和风险的变化及驱动因素"
+  --instruction "對比近三年財報，找到營收質量、盈利能力和風險的變化及驅動因素"
 ```
 
-`--from` 可以传多个来源，用于跨知识库对比：
+`--from` 可以傳多個來源，用於跨知識庫對比：
 
 ```bash
 ov compile \
   --from viking://resources/finance-2024,viking://resources/finance-2025 \
   --to viking://resources/finance-insights \
   --skill viking://agent/skills/knowledge-distillation \
-  --instruction "对比两个年度知识库，找出关键指标的变化与结构性差异"
+  --instruction "對比兩個年度知識庫，找出關鍵指標的變化與結構性差異"
 ```
 
-命令会立刻返回 `task_id`：
+命令會立刻返回 `task_id`：
 
 ```bash
-ov task status cmp_01abc      # 查看进度与最终结果
-ov task cancel cmp_01abc      # 协作式取消
+ov task status cmp_01abc      # 檢視進度與最終結果
+ov task cancel cmp_01abc      # 協作式取消
 ```
 
-## 第四步：看看产物
+## 第四步：看看產物
 
-先看主题树，再钻进具体结论页：
+先看主題樹，再鑽進具體結論頁：
 
 ```bash
 ov tree viking://resources/finance-insights
 ov read viking://resources/finance-insights/revenue-quality/growth-shifted-from-volume-to-pricing.md
 ```
 
-## 相关文档
+## 相關文件
 
-- [上下文编译概览](./01-overview.md)
-- [日报示例](./04-daily-report.md)
+- [上下文編譯概覽](./01-overview.md)
+- [日報示例](./04-daily-report.md)
 - [Agent Runtime API](../api/23-agent-runtime.md)

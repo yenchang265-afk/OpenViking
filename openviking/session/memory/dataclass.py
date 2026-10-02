@@ -369,22 +369,22 @@ class ResolvedOperations(BaseModel):
 
 
 # ============================================================================
-# Fault Tolerant Base Model (参考 vikingdb BaseModelCompat)
+# Fault Tolerant Base Model (參考 vikingdb BaseModelCompat)
 # ============================================================================
 
 
 class FaultTolerantBaseModel(BaseModel):
     """
-    支持验证前自动容错的 BaseModel，类似 vikingdb 的 BaseModelCompat。
+    支援驗證前自動容錯的 BaseModel，類似 vikingdb 的 BaseModelCompat。
 
-    在 model_validator(mode='before') 中对所有字段做类型容错处理，
-    使得模型可以接受 LLM 输出的不标准格式数据。
+    在 model_validator(mode='before') 中對所有欄位做型別容錯處理，
+    使得模型可以接受 LLM 輸出的不標準格式資料。
     """
 
     @model_validator(mode="before")
     @classmethod
     def values_fault_tolerance(cls, data: Dict[str, Any]) -> Dict[str, Any]:
-        """在验证前对所有字段做容错处理"""
+        """在驗證前對所有欄位做容錯處理"""
         if isinstance(data, dict):
             field_types = get_type_hints(cls)
             for field_name, value in data.items():
@@ -395,7 +395,7 @@ class FaultTolerantBaseModel(BaseModel):
 
     @classmethod
     def get_origin_type(cls, annotation) -> type:
-        """从 Optional 或 Union 类型中提取基础类型"""
+        """從 Optional 或 Union 型別中提取基礎型別"""
         origin = get_origin(annotation)
         if origin is Union:
             args = get_args(annotation)
@@ -407,7 +407,7 @@ class FaultTolerantBaseModel(BaseModel):
 
     @classmethod
     def get_arg_type(cls, annotation) -> type:
-        """从 List annotation 中提取元素类型"""
+        """從 List annotation 中提取元素型別"""
         origin = get_origin(annotation)
         if origin is Union:
             args = get_args(annotation)
@@ -421,7 +421,7 @@ class FaultTolerantBaseModel(BaseModel):
 
     @classmethod
     def any_to_str(cls, value) -> str:
-        """将任意值转换为字符串"""
+        """將任意值轉換為字串"""
         if value is None:
             return ""
         if isinstance(value, list):
@@ -435,17 +435,17 @@ class FaultTolerantBaseModel(BaseModel):
     @classmethod
     def value_fault_tolerance(cls, field_type, value):
         """
-        字段级别的容错处理：
-        - 'None' -> None (非 str 类型)
-        - list/dict/number -> str (目标是 str)
-        - str -> int/float (目标是数字)
-        - str/dict -> list (目标是 list)
-        - list 元素类型容错
+        欄位級別的容錯處理：
+        - 'None' -> None (非 str 型別)
+        - list/dict/number -> str (目標是 str)
+        - str -> int/float (目標是數字)
+        - str/dict -> list (目標是 list)
+        - list 元素型別容錯
         - 非法 LinkType -> related_to
         """
         origin_type = cls.get_origin_type(field_type)
 
-        # json_repair 会把 None 转换成 'None'
+        # json_repair 會把 None 轉換成 'None'
         if value == "None" and origin_type is not str:
             return None
 

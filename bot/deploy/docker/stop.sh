@@ -1,7 +1,7 @@
 #!/bin/bash
-# Vikingbot 停止脚本
+# Vikingbot 停止指令碼
 # 用法: ./deploy/docker/stop.sh
-# 变量: CONTAINER_NAME, REMOVE_IMAGE, IMAGE_NAME, IMAGE_TAG
+# 變數: CONTAINER_NAME, REMOVE_IMAGE, IMAGE_NAME, IMAGE_TAG
 
 set -e
 
@@ -19,15 +19,15 @@ echo -e "${YELLOW}停止 Vikingbot...${NC}"
 
 if docker ps -aq -f "name=^/${CONTAINER_NAME}$" | grep -q .; then
     docker rm -f "${CONTAINER_NAME}" > /dev/null
-    echo -e "${GREEN}✓ 容器 ${CONTAINER_NAME} 已停止并删除${NC}"
+    echo -e "${GREEN}✓ 容器 ${CONTAINER_NAME} 已停止並刪除${NC}"
 else
-    echo -e "  容器 ${CONTAINER_NAME} 不存在，跳过"
+    echo -e "  容器 ${CONTAINER_NAME} 不存在，跳過"
 fi
 
 if [ "$REMOVE_IMAGE" = "true" ]; then
     if docker images --format "{{.Repository}}:{{.Tag}}" | grep -q "^${IMAGE_NAME}:${IMAGE_TAG}$"; then
         docker rmi "${IMAGE_NAME}:${IMAGE_TAG}"
-        echo -e "${GREEN}✓ 镜像 ${IMAGE_NAME}:${IMAGE_TAG} 已删除${NC}"
+        echo -e "${GREEN}✓ 映象 ${IMAGE_NAME}:${IMAGE_TAG} 已刪除${NC}"
     fi
 fi
 

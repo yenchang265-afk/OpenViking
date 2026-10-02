@@ -22,32 +22,32 @@ pub(crate) fn render_health_with_language(
     lines.push(String::new());
     lines.push(section(match language {
         Language::En => "Connection",
-        Language::ZhCn => "连接",
+        Language::ZhCn => "連線",
     }));
     lines.push(detail_line(
         match language {
             Language::En => "Status",
-            Language::ZhCn => "状态",
+            Language::ZhCn => "狀態",
         },
         match payload.get("healthy").and_then(Value::as_bool) {
             Some(true) => healthy_value(match language {
                 Language::En => "Connected (Healthy)",
-                Language::ZhCn => "已连接（健康）",
+                Language::ZhCn => "已連線（健康）",
             }),
             Some(false) => warning_value(match language {
                 Language::En => "Connected (Unhealthy)",
-                Language::ZhCn => "已连接（不健康）",
+                Language::ZhCn => "已連線（不健康）",
             }),
             None => unknown_value(match language {
                 Language::En => "Connected (Unknown)",
-                Language::ZhCn => "已连接（未知）",
+                Language::ZhCn => "已連線（未知）",
             }),
         },
     ));
     lines.push(detail_line(
         match language {
             Language::En => "Server",
-            Language::ZhCn => "服务器",
+            Language::ZhCn => "伺服器",
         },
         server_status_value(string_field(payload, "status"), language),
     ));
@@ -61,7 +61,7 @@ pub(crate) fn render_health_with_language(
     lines.push(detail_line(
         match language {
             Language::En => "Auth",
-            Language::ZhCn => "认证",
+            Language::ZhCn => "認證",
         },
         plain_value(&format_auth_mode(
             string_field(payload, "auth_mode"),
@@ -76,7 +76,7 @@ pub(crate) fn render_health_with_language(
     lines.push(detail_line(
         match language {
             Language::En => "Account",
-            Language::ZhCn => "账户",
+            Language::ZhCn => "帳戶",
         },
         plain_or_unknown(
             identity_field(
@@ -90,7 +90,7 @@ pub(crate) fn render_health_with_language(
     lines.push(detail_line(
         match language {
             Language::En => "User",
-            Language::ZhCn => "用户",
+            Language::ZhCn => "使用者",
         },
         plain_or_unknown(
             identity_field(payload, "user_id", config.and_then(|c| c.user.as_deref())),
@@ -107,20 +107,20 @@ pub(crate) fn render_health_with_language(
     lines.push(String::new());
     lines.push(section(match language {
         Language::En => "Details",
-        Language::ZhCn => "详情",
+        Language::ZhCn => "詳情",
     }));
     lines.push(action_line(
         "ov status",
         match language {
             Language::En => "Full system diagnostics",
-            Language::ZhCn => "查看完整系统诊断",
+            Language::ZhCn => "檢視完整系統診斷",
         },
     ));
     lines.push(action_line(
         "ov config validate",
         match language {
             Language::En => "Validate active config",
-            Language::ZhCn => "验证当前配置",
+            Language::ZhCn => "驗證當前配置",
         },
     ));
 
@@ -130,7 +130,7 @@ pub(crate) fn render_health_with_language(
 fn title(language: Language) -> String {
     theme::brand_title(match language {
         Language::En => "OPENVIKING HEALTH",
-        Language::ZhCn => "OPENVIKING 健康检查",
+        Language::ZhCn => "OPENVIKING 健康檢查",
     })
     .bold()
     .to_string()
@@ -178,11 +178,11 @@ fn format_auth_mode(value: Option<&str>, language: Language) -> String {
         Some("trusted") => "Trusted".to_string(),
         Some("dev") => match language {
             Language::En => "Dev".to_string(),
-            Language::ZhCn => "开发模式".to_string(),
+            Language::ZhCn => "開發模式".to_string(),
         },
         Some("none") => match language {
             Language::En => "None".to_string(),
-            Language::ZhCn => "无".to_string(),
+            Language::ZhCn => "無".to_string(),
         },
         Some(value) => value.replace('_', " "),
         None => match language {
@@ -299,12 +299,12 @@ mod tests {
         let rendered = super::render_health_with_language(&payload, None, Language::ZhCn);
         let plain = strip_ansi(&rendered);
 
-        assert!(plain.contains("OPENVIKING 健康检查"));
-        assert!(plain.contains("连接"));
-        assert!(plain.contains("状态"));
-        assert!(plain.contains("已连接（健康）"));
+        assert!(plain.contains("OPENVIKING 健康檢查"));
+        assert!(plain.contains("連線"));
+        assert!(plain.contains("狀態"));
+        assert!(plain.contains("已連線（健康）"));
         assert!(plain.contains("身份"));
-        assert!(plain.contains("详情"));
+        assert!(plain.contains("詳情"));
     }
 
     #[test]

@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="760" viewBox="0 0 1280 760" role="img" aria-labelledby="title desc">
-  <title id="title">tau2 接入 OpenViking 新训练评测框架架构图</title>
-  <desc id="desc">展示 tau2 runtime service、batch train/eval runner 和 OpenViking server 之间的 case 查询、rollout 执行、session.commit 训练写入和当前 memories 读取关系。</desc>
+  <title id="title">tau2 接入 OpenViking 新訓練評測框架架構圖</title>
+  <desc id="desc">展示 tau2 runtime service、batch train/eval runner 和 OpenViking server 之間的 case 查詢、rollout 執行、session.commit 訓練寫入和當前 memories 讀取關係。</desc>
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
       <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
@@ -40,17 +40,17 @@
   </defs>
 
   <rect class="bg" x="0" y="0" width="1280" height="760"/>
-  <text class="title" x="40" y="46">tau2 接入 OpenViking 新训练评测框架</text>
-  <text class="small" x="40" y="70">baseline_eval → train epoch(s) → final_eval；tau2 service 执行 rollout 时读取 OV memories，训练写入通过 session.commit 回到 OV。</text>
+  <text class="title" x="40" y="46">tau2 接入 OpenViking 新訓練評測框架</text>
+  <text class="small" x="40" y="70">baseline_eval → train epoch(s) → final_eval；tau2 service 執行 rollout 時讀取 OV memories，訓練寫入通過 session.commit 回到 OV。</text>
 
   <!-- Panels -->
   <rect class="panel tau2" x="40" y="105" width="360" height="540" rx="18"/>
   <text class="panelTitle" x="65" y="138">Tau2 Runtime Service :1944</text>
-  <text class="small" x="65" y="160">依赖 tau2 / VikingBot / 环境工具</text>
+  <text class="small" x="65" y="160">依賴 tau2 / VikingBot / 環境工具</text>
 
   <rect class="panel runner" x="460" y="105" width="360" height="540" rx="18"/>
   <text class="panelTitle" x="485" y="138">Batch Train/Eval Runner</text>
-  <text class="small" x="485" y="160">通用训练评测编排，不直接依赖 tau2 runtime</text>
+  <text class="small" x="485" y="160">通用訓練評測編排，不直接依賴 tau2 runtime</text>
 
   <rect class="panel ov" x="880" y="105" width="360" height="540" rx="18"/>
   <text class="panelTitle" x="905" y="138">OpenViking Server :1933</text>
@@ -67,7 +67,7 @@
 
   <rect class="box boxBlue" x="80" y="375" width="280" height="58" rx="10"/>
   <text class="text" x="220" y="400" text-anchor="middle">POST /v1/rollouts/execute</text>
-  <text class="small" x="220" y="419" text-anchor="middle">执行 case batch</text>
+  <text class="small" x="220" y="419" text-anchor="middle">執行 case batch</text>
 
   <rect class="box boxBlue" x="80" y="465" width="280" height="70" rx="10"/>
   <text class="text" x="220" y="492" text-anchor="middle">Tau2RolloutExecutor</text>
@@ -89,7 +89,7 @@
 
   <rect class="box boxGreen" x="500" y="375" width="280" height="58" rx="10"/>
   <text class="text" x="640" y="400" text-anchor="middle">RemoteRolloutExecutor</text>
-  <text class="small" x="640" y="419" text-anchor="middle">HTTP 调用 tau2 rollout service</text>
+  <text class="small" x="640" y="419" text-anchor="middle">HTTP 呼叫 tau2 rollout service</text>
 
   <rect class="box boxGreen" x="500" y="475" width="280" height="58" rx="10"/>
   <text class="text" x="640" y="500" text-anchor="middle">SessionCommitPolicyTrainer</text>
@@ -102,11 +102,11 @@
   <!-- OV boxes -->
   <rect class="box boxOrange" x="920" y="190" width="280" height="56" rx="10"/>
   <text class="text" x="1060" y="215" text-anchor="middle">session.commit</text>
-  <text class="small" x="1060" y="234" text-anchor="middle">接收训练 rollout</text>
+  <text class="small" x="1060" y="234" text-anchor="middle">接收訓練 rollout</text>
 
   <rect class="box boxOrange" x="920" y="270" width="280" height="56" rx="10"/>
   <text class="text" x="1060" y="295" text-anchor="middle">SessionCompressorV3</text>
-  <text class="small" x="1060" y="314" text-anchor="middle">commit 后台抽取与训练入口</text>
+  <text class="small" x="1060" y="314" text-anchor="middle">commit 後臺抽取與訓練入口</text>
 
   <rect class="box boxOrange" x="920" y="350" width="280" height="56" rx="10"/>
   <text class="text" x="1060" y="375" text-anchor="middle">TrajectoryRolloutAnalyzer</text>
@@ -161,9 +161,9 @@
   <!-- Legend -->
   <rect x="40" y="685" width="1200" height="44" rx="12" fill="#ffffff" stroke="#cbd5e1"/>
   <line x1="70" y1="707" x2="120" y2="707" class="edgeGreen"/>
-  <text class="legendText" x="132" y="711">runner 编排调用</text>
+  <text class="legendText" x="132" y="711">runner 編排呼叫</text>
   <line x1="270" y1="707" x2="320" y2="707" class="edgeOrange"/>
-  <text class="legendText" x="332" y="711">训练写入链路</text>
+  <text class="legendText" x="332" y="711">訓練寫入鏈路</text>
   <line x1="470" y1="707" x2="520" y2="707" class="edgeDashed"/>
-  <text class="legendText" x="532" y="711">rollout 执行时读取当前 OpenViking memories</text>
+  <text class="legendText" x="532" y="711">rollout 執行時讀取當前 OpenViking memories</text>
 </svg>

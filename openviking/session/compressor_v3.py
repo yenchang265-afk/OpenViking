@@ -725,7 +725,7 @@ class SessionCompressorV3:
             return _V3ExtractionResult()
 
         # Attach caller-provided custom scalar tags to event memories so they
-        # ride the same first write into the vector index (人填标量).
+        # ride the same first write into the vector index (人填標量).
         _apply_event_search_tags(operations, event_search_tags)
 
         extraction_id = uuid4().hex

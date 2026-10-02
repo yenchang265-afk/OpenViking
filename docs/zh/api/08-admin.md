@@ -1,34 +1,34 @@
-# 管理员（多租户）
+# 管理員（多租戶）
 
-Admin API 用于多租户环境下的账户、用户和用户组管理。包括工作区（account）的创建与删除、用户注册与移除、用户组成员、角色变更、API Key 重新生成。
+Admin API 用於多租戶環境下的帳戶、使用者和使用者組管理。包括工作區（account）的建立與刪除、使用者註冊與移除、使用者組成員、角色變更、API Key 重新生成。
 
-该 API 适用于 `api_key` 和 `trusted` 两种模式下的管理链路：
-- 在 `api_key` 模式下，角色始终从 API Key 推导。
-- 在 `trusted` 模式下，普通请求仍然不依赖 user key 注册流程；当请求 `/api/v1/admin/*` 并携带已配置的 `root_api_key` 时，受信上游会按 ROOT 授权。
+該 API 適用於 `api_key` 和 `trusted` 兩種模式下的管理鏈路：
+- 在 `api_key` 模式下，角色始終從 API Key 推導。
+- 在 `trusted` 模式下，普通請求仍然不依賴 user key 註冊流程；當請求 `/api/v1/admin/*` 並攜帶已配置的 `root_api_key` 時，受信上游會按 ROOT 授權。
 
-对于 `/api/v1/admin/*`，`trusted` 模式允许不携带显式身份头；也允许携带与 URL 中 account/user 匹配的目标身份头。只要部署级 `root_api_key` 校验通过，这类请求都会按 ROOT 处理。普通 trusted 数据 API 的身份和角色仍然来自 `X-OpenViking-Account` + `X-OpenViking-User`。
+對於 `/api/v1/admin/*`，`trusted` 模式允許不攜帶顯式身份頭；也允許攜帶與 URL 中 account/user 匹配的目標身份頭。只要部署級 `root_api_key` 校驗通過，這類請求都會按 ROOT 處理。普通 trusted 資料 API 的身份和角色仍然來自 `X-OpenViking-Account` + `X-OpenViking-User`。
 
-## 角色与权限
+## 角色與許可權
 
-| 角色 | 说明 |
+| 角色 | 說明 |
 |------|------|
-| ROOT | 系统管理员，拥有全部权限 |
-| ADMIN | 工作区管理员，管理本 account 内的用户 |
-| USER | 普通用户 |
+| ROOT | 系統管理員，擁有全部許可權 |
+| ADMIN | 工作區管理員，管理本 account 內的使用者 |
+| USER | 普通使用者 |
 
 | 操作 | ROOT | ADMIN | USER |
 |------|------|-------|------|
-| 创建/删除工作区 | Y | N | N |
-| 列出工作区 | Y | N | N |
-| 注册/移除用户 | Y | Y（本 account） | N |
-| 管理用户组和成员 | Y | Y（本 account） | N |
-| 列出 agents（已废弃，返回空列表） | Y | Y（本 account） | N |
+| 建立/刪除工作區 | Y | N | N |
+| 列出工作區 | Y | N | N |
+| 註冊/移除使用者 | Y | Y（本 account） | N |
+| 管理使用者組和成員 | Y | Y（本 account） | N |
+| 列出 agents（已廢棄，返回空列表） | Y | Y（本 account） | N |
 | 重新生成 User Key | Y | Y（本 account） | N |
-| 将用户提升为 ADMIN | Y | Y（本 account） | N |
+| 將使用者提升為 ADMIN | Y | Y（本 account） | N |
 
-## CLI `--sudo` 选项
+## CLI `--sudo` 選項
 
-使用 `ov` CLI 执行需要 ROOT 权限的管理操作时，可以使用 `--sudo` 选项。该选项会使用配置文件 `~/.openviking/ovcli.conf` 中的 `root_api_key` 而非普通 `api_key`。
+使用 `ov` CLI 執行需要 ROOT 許可權的管理操作時，可以使用 `--sudo` 選項。該選項會使用配置檔案 `~/.openviking/ovcli.conf` 中的 `root_api_key` 而非普通 `api_key`。
 
 ### 配置要求
 
@@ -45,31 +45,31 @@ Admin API 用于多租户环境下的账户、用户和用户组管理。包括�
 
 ### 支持 `--sudo` 的命令
 
-- `ov --sudo admin` - 账户和用户管理
-- `ov --sudo system` - 系统工具命令
+- `ov --sudo admin` - 帳戶和使用者管理
+- `ov --sudo system` - 系統工具命令
 - `ov --sudo reindex` - 重建索引
-- `ov --sudo admin migrate` - legacy agent/session 迁移和 cleanup
-- `ov --sudo task status/list` - 查询 root/system 后台任务，例如迁移任务
+- `ov --sudo admin migrate` - legacy agent/session 遷移和 cleanup
+- `ov --sudo task status/list` - 查詢 root/system 後臺任務，例如遷移任務
 
 ### 使用限制
 
-- `--sudo` 仅适用于上面的命令，用于普通数据命令会报错
-- 必须配置 `root_api_key` 才能使用 `--sudo`
+- `--sudo` 僅適用於上面的命令，用於普通資料命令會報錯
+- 必須配置 `root_api_key` 才能使用 `--sudo`
 
-## 用户组
+## 使用者組
 
-用户组属于单个 account，用于通过一个 ACL principal 授权多个用户。`group_id` 由调用者创建时指定，使用与 `user_id` 相同的标识符规则，是 account 内唯一且稳定的标识；不存在单独的组名。组内只能加入当前 account 已存在的用户，不支持嵌套组。
+使用者組屬於單個 account，用於通過一個 ACL principal 授權多個使用者。`group_id` 由呼叫者建立時指定，使用與 `user_id` 相同的識別符號規則，是 account 內唯一且穩定的標識；不存在單獨的組名。組內只能加入當前 account 已存在的使用者，不支援巢狀組。
 
-成员关系由服务端加入每次请求的 `RequestContext.group_ids`。添加或移除成员从下一次请求开始生效，不重写资源 ACL 或 context 记录。用户被删除时会自动退出所有组；用户组必须为空才能删除。
+成員關係由服務端加入每次請求的 `RequestContext.group_ids`。新增或移除成員從下一次請求開始生效，不重寫資源 ACL 或 context 記錄。使用者被刪除時會自動退出所有組；使用者組必須為空才能刪除。
 
-| 方法 | 路径 | 说明 |
+| 方法 | 路徑 | 說明 |
 |------|------|------|
-| POST | `/api/v1/admin/accounts/{account_id}/groups` | 创建空组，请求体为 `{"group_id":"engineering"}` |
-| GET | `/api/v1/admin/accounts/{account_id}/groups` | 列出组 |
-| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}` | 删除空组 |
-| GET | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 列出成员 |
-| PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 幂等添加成员；重复调用返回 `added=true` |
-| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除成员；重复调用返回 `removed=false` |
+| POST | `/api/v1/admin/accounts/{account_id}/groups` | 建立空組，請求體為 `{"group_id":"engineering"}` |
+| GET | `/api/v1/admin/accounts/{account_id}/groups` | 列出組 |
+| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}` | 刪除空組 |
+| GET | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 列出成員 |
+| PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 冪等新增成員；重複呼叫返回 `added=true` |
+| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除成員；重複呼叫返回 `removed=false` |
 
 ```bash
 ov --sudo admin create-group acme engineering
@@ -80,14 +80,14 @@ ov --sudo admin remove-group-member acme engineering alice
 ov --sudo admin delete-group acme engineering
 ```
 
-Python SDK 提供对应的 `admin_create_group`、`admin_list_groups`、`admin_list_group_members`、`admin_add_group_member`、`admin_remove_group_member` 和 `admin_delete_group`；Go SDK 使用相同名称的 PascalCase 方法。
+Python SDK 提供對應的 `admin_create_group`、`admin_list_groups`、`admin_list_group_members`、`admin_add_group_member`、`admin_remove_group_member` 和 `admin_delete_group`；Go SDK 使用相同名稱的 PascalCase 方法。
 
-## API 参考
+## API 參考
 
 ### get_agent_evolution_status
 
-返回调用方所属 account 的 Agent 进化实时状态。ROOT 操作已配置的默认
-account，ADMIN 仅操作自己所属的 account。
+返回呼叫方所屬 account 的 Agent 進化即時狀態。ROOT 操作已配置的預設
+account，ADMIN 僅操作自己所屬的 account。
 
 **HTTP API**
 
@@ -100,7 +100,7 @@ curl http://localhost:1933/api/v1/admin/agent-evolution \
   -H "X-API-Key: <root-key>"
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -113,10 +113,10 @@ curl http://localhost:1933/api/v1/admin/agent-evolution \
 }
 ```
 
-`enabled` 依次解析 Account 运行时覆盖、Cluster 运行时覆盖，以及
-`server.agent_evolution.enabled` 提供的启动值。
+`enabled` 依次解析 Account 執行時覆蓋、Cluster 執行時覆蓋，以及
+`server.agent_evolution.enabled` 提供的啟動值。
 
-现有接口作为 deprecated 兼容适配器保留：
+現有介面作為 deprecated 相容介面卡保留：
 
 ```http
 PUT /api/v1/admin/agent-evolution
@@ -127,8 +127,8 @@ Content-Type: application/json
 
 ### account_settings
 
-该接口已 deprecated。ROOT 可管理任意 account，ADMIN 仅可管理自己所属的 account。
-接口保留原有 ACL 与 Agent Evolution 请求和响应语义：
+該介面已 deprecated。ROOT 可管理任意 account，ADMIN 僅可管理自己所屬的 account。
+介面保留原有 ACL 與 Agent Evolution 請求和響應語義：
 
 ```http
 GET /api/v1/admin/accounts/{account_id}/settings
@@ -141,87 +141,87 @@ Content-Type: application/json
 }
 ```
 
-字段缺失或为 `null` 都表示不修改；传入对象则整体设置对应存量配置段，
-空 ACL 对象表示 `enabled=false`。新接入方应使用下述 configuration 接口。
+欄位缺失或為 `null` 都表示不修改；傳入物件則整體設定對應存量配置段，
+空 ACL 物件表示 `enabled=false`。新接入方應使用下述 configuration 介面。
 
-`acl.enabled` 默认为 `false`。关闭时，共享资源按原有规则完全共享，不执行 ACL
-鉴权。开启后，账号内新增共享资源会写入 ACL，并对带 ACL 的共享资源执行鉴权；
-已有且未设置 ACL 的内容不会迁移或改权。重新关闭后，已有 ACL 也不再参与访问判断。
+`acl.enabled` 預設為 `false`。關閉時，共享資源按原有規則完全共享，不執行 ACL
+鑑權。開啟後，帳號內新增共享資源會寫入 ACL，並對帶 ACL 的共享資源執行鑑權；
+已有且未設定 ACL 的內容不會遷移或改權。重新關閉後，已有 ACL 也不再參與訪問判斷。
 
 ```bash
 ov --sudo admin set-account-settings acme --acl-enabled true
 ```
 
-覆盖已有配置前，内核会先备份到
+覆蓋已有配置前，核心會先備份到
 `/local/{account_id}/_system/setting.backup.json`。
 
 ### account_memory_templates
 
-ROOT 可管理任意 Account；ADMIN 仅可管理自己 Account 的模板；普通 User 无权调用。
-权限按管理员角色判断，不按 User 是否叫 `default` 判断。
+ROOT 可管理任意 Account；ADMIN 僅可管理自己 Account 的模板；普通 User 無權呼叫。
+許可權按管理員角色判斷，不按 User 是否叫 `default` 判斷。
 
-| 方法 | 路径 | 用途 |
+| 方法 | 路徑 | 用途 |
 |------|------|------|
-| GET | `/api/v1/admin/accounts/{account_id}/memory-templates` | 列出六类开放模板、完整默认值及生效值 |
-| GET | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 查询单个模板 |
-| PUT | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 补齐并发布单个模板 |
-| DELETE | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 删除该模板覆盖，恢复部署默认值 |
+| GET | `/api/v1/admin/accounts/{account_id}/memory-templates` | 列出六類開放模板、完整預設值及生效值 |
+| GET | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 查詢單個模板 |
+| PUT | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 補齊併發布單個模板 |
+| DELETE | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 刪除該模板覆蓋，恢復部署預設值 |
 
-内核接收原有 Memory YAML 结构对应的 JSON 对象，并在接口层强制校验以下白名单。
-仅开放下列六类模板；Experience、Cases、Trajectories 等其他类型不开放查询或编辑，
-不支持通过接口新增、删除或重命名 Memory Type。DELETE 仅移除自定义覆盖，不删除模板类型。
+核心接收原有 Memory YAML 結構對應的 JSON 物件，並在介面層強制校驗以下白名單。
+僅開放下列六類別範本；Experience、Cases、Trajectories 等其他型別不開放查詢或編輯，
+不支援通過介面新增、刪除或重新命名 Memory Type。DELETE 僅移除自定義覆蓋，不刪除模板型別。
 
-| 模板 | 可编辑项 | 用途 |
+| 模板 | 可編輯項 | 用途 |
 |------|----------|------|
-| `profile` | `description`；`fields.content.description` | 稳定身份、背景和工作方式的抽取说明；正文内容、语言、Markdown 结构、长度和更新时间要求 |
-| `events` | `description`；`fields.event_name.description`、`fields.summary.description`；`content_template` | 事件范围、原子性与排除项；名称语言、粒度和格式；摘要事实、日期和语言；Summary、时间、ChatLog 的标题、顺序和展示方式 |
-| `preferences` | `description`；`fields.topic.description`、`fields.content.description` | 偏好、习惯、反感及与 Profile/Event 的边界；主题粒度、语言和命名；正文语义、条目和 Markdown 要求 |
-| `entities` | `description`；`fields.category.description`、`fields.name.description`、`fields.content.description` | 实体与关系范围；分类法、语言和粒度；实体命名；卡片事实、章节、语言和长度 |
-| `soul` | `description`；`fields.core_truths.description`、`fields.boundaries.description`、`fields.vibe.description`、`fields.continuity.description`；`content_template` | 核心原则、边界、气质和连续性的抽取表达；四个字段的标题、顺序和固定文案 |
-| `identity` | `description`；`fields.creature.description`、`fields.name.description`、`fields.vibe.description`、`fields.avatar.description`、`fields.emoji.description`、`fields.introduction.description`；`content_template` | 身份信息范围；身份、名称、气质、头像、Emoji、自我介绍的字段要求；正文标签、顺序和固定文案 |
+| `profile` | `description`；`fields.content.description` | 穩定身份、背景和工作方式的抽取說明；正文內容、語言、Markdown 結構、長度和更新時間要求 |
+| `events` | `description`；`fields.event_name.description`、`fields.summary.description`；`content_template` | 事件範圍、原子性與排除項；名稱語言、粒度和格式；摘要事實、日期和語言；Summary、時間、ChatLog 的標題、順序和展示方式 |
+| `preferences` | `description`；`fields.topic.description`、`fields.content.description` | 偏好、習慣、反感及與 Profile/Event 的邊界；主題粒度、語言和命名；正文語義、條目和 Markdown 要求 |
+| `entities` | `description`；`fields.category.description`、`fields.name.description`、`fields.content.description` | 實體與關係範圍；分類法、語言和粒度；實體命名；卡片事實、章節、語言和長度 |
+| `soul` | `description`；`fields.core_truths.description`、`fields.boundaries.description`、`fields.vibe.description`、`fields.continuity.description`；`content_template` | 核心原則、邊界、氣質和連續性的抽取表達；四個欄位的標題、順序和固定文案 |
+| `identity` | `description`；`fields.creature.description`、`fields.name.description`、`fields.vibe.description`、`fields.avatar.description`、`fields.emoji.description`、`fields.introduction.description`；`content_template` | 身份資訊範圍；身份、名稱、氣質、頭像、Emoji、自我介紹的欄位要求；正文標籤、順序和固定文案 |
 
-表中 `fields.<name>.description` 表示在 `fields` 数组中按 `name` 定位并修改
-`description`，不是替换整个字段。JSON 属性名统一小写（`description`，不是
-`Description`）。Profile 的 `fields.content` 仅开放其 description，不开放字段本身。
+表中 `fields.<name>.description` 表示在 `fields` 陣列中按 `name` 定位並修改
+`description`，不是替換整個欄位。JSON 屬性名統一小寫（`description`，不是
+`Description`）。Profile 的 `fields.content` 僅開放其 description，不開放欄位本身。
 
-除白名单说明文字和三个正文模板外，所有配置均锁定为部署默认值，包括：
+除白名單說明文字和三個正文模板外，所有配置均鎖定為部署預設值，包括：
 `memory_type`、`enabled`、`operation_mode`、`stage`、`peer_enabled`、
-`directory`、`filename_template`、所有字段的名称/类型/`merge_op`/`init_value`、
-`embedding_template` 和 `overview_template`，以及未开放的字段说明。
+`directory`、`filename_template`、所有欄位的名稱/型別/`merge_op`/`init_value`、
+`embedding_template` 和 `overview_template`，以及未開放的欄位說明。
 例如 Profile 保留 `profile.md` 和 content 的 `merge_op=patch`；Events 保留
-`add_only` 以及 `goal/ranges` 的说明；Identity 的 Name immutable 规则不变。
-Profile、Preferences、Entities 不开放 `content_template`。
-改写 topic/category/name/event_name 的生成说明仍可能间接影响未来的目录或文件名，
-但不允许修改目录/文件名模板本身。
+`add_only` 以及 `goal/ranges` 的說明；Identity 的 Name immutable 規則不變。
+Profile、Preferences、Entities 不開放 `content_template`。
+改寫 topic/category/name/event_name 的生成說明仍可能間接影響未來的目錄或檔名，
+但不允許修改目錄/檔名模板本身。
 
-例如，仅修改类型说明：
+例如，僅修改型別說明：
 
 ```bash
 curl -X PUT "$OV_ENDPOINT/api/v1/admin/accounts/acme/memory-templates/profile" \
   -H "X-API-Key: $OV_ADMIN_API_KEY" \
   -H 'Content-Type: application/json' \
-  -d '{"description":"只记住业务相关事实，用简洁的中文描述。"}'
+  -d '{"description":"只記住業務相關事實，用簡潔的中文描述。"}'
 ```
 
-PUT 从**部署默认模板**补齐未传入的配置，不从上一次 Account 自定义值补齐，最终保存
-**完整 YAML 模板**。`fields` 按已有字段名合并，只覆盖白名单允许的说明文字，
-未传入的字段和属性全部保留默认值；不能新增、删除或重命名字段，提交空列表不会删除字段。
-完整 GET `effective` 对象可以回传：锁定字段值与默认值相同则接受，任何锁定值变更、
-未知配置项、未知字段或重复字段名均返回 `INVALID_ARGUMENT`，当前生效文件不变。
-若仅调整一个 description 且需保留其他自定义内容，应先 GET，修改 `effective` 对象后
-整体 PUT。补齐并校验后的完整配置若与部署默认值完全一致（不含发布时间元数据），
-PUT 会移除该类型的自定义覆盖，返回 `status=system_default`、`updated_at=null`。
-这包括提交空对象、原样提交默认表单，以及在编辑页逐项恢复默认后保存；只要还有任意配置
-不同，就继续返回 `custom`。比较不忽略说明或正文中的空格、换行等内容差异。
-移除覆盖后，后续抽取跟随部署默认模板；此前已取得的抽取快照不变。
-DELETE 始终移除该类型的覆盖；重复 PUT 默认配置或 DELETE 都是幂等的。
+PUT 從**部署預設模板**補齊未傳入的配置，不從上一次 Account 自定義值補齊，最終儲存
+**完整 YAML 模板**。`fields` 按已有欄位名合併，只覆蓋白名單允許的說明文字，
+未傳入的欄位和屬性全部保留預設值；不能新增、刪除或重新命名欄位，提交空列表不會刪除欄位。
+完整 GET `effective` 物件可以回傳：鎖定欄位值與預設值相同則接受，任何鎖定值變更、
+未知配置項、未知欄位或重複欄位名均返回 `INVALID_ARGUMENT`，當前生效檔案不變。
+若僅調整一個 description 且需保留其他自定義內容，應先 GET，修改 `effective` 物件後
+整體 PUT。補齊並校驗後的完整配置若與部署預設值完全一致（不含釋出時間後設資料），
+PUT 會移除該型別的自定義覆蓋，返回 `status=system_default`、`updated_at=null`。
+這包括提交空物件、原樣提交預設表單，以及在編輯頁逐項恢復預設後儲存；只要還有任意配置
+不同，就繼續返回 `custom`。比較不忽略說明或正文中的空格、換行等內容差異。
+移除覆蓋後，後續抽取跟隨部署預設模板；此前已取得的抽取快照不變。
+DELETE 始終移除該型別的覆蓋；重複 PUT 預設配置或 DELETE 都是冪等的。
 
 返回包含 `memory_type`、`status`（`system_default` / `custom`）、
-`updated_at`（UTC 发布时间，默认状态为 null），以及完整的 `defaults` / `effective`。
-对象使用 YAML 字段名，例如 `fields[].type`。列表接口返回 `result.account_id` 和
-`result.templates`；单模板操作返回 `result.account_id` 及上述模板结果。
+`updated_at`（UTC 釋出時間，預設狀態為 null），以及完整的 `defaults` / `effective`。
+物件使用 YAML 欄位名，例如 `fields[].type`。列表介面返回 `result.account_id` 和
+`result.templates`；單模板操作返回 `result.account_id` 及上述模板結果。
 
-按 Account、按模板独立存储：
+按 Account、按模板獨立儲存：
 
 ```text
 /local/{account_id}/_system/memory_templates/
@@ -231,121 +231,121 @@ DELETE 始终移除该类型的覆盖；重复 PUT 默认配置或 DELETE 都是
   ...
 ```
 
-仅发布自定义时创建对应文件。文件包含完整 Schema 和内部 `_updated_at` 时间戳，
-不再使用集中式 `memory_templates.json`。更新前备份至 `{type}.yaml.backup`。
-读写经过 AGFS，沿用当前部署的加密和存储配置，不能直接编辑加密后的底层文件。
+僅釋出自定義時建立對應檔案。檔案包含完整 Schema 和內部 `_updated_at` 時間戳，
+不再使用集中式 `memory_templates.json`。更新前備份至 `{type}.yaml.backup`。
+讀寫經過 AGFS，沿用當前部署的加密和儲存配置，不能直接編輯加密後的底層檔案。
 不修改 Account 的 `setting.json` 或 User 的 `user_config.json`。
-个人版使用默认 Account；企业版使用指定 Account，内核不区分两套文件结构。
+個人版使用預設 Account；企業版使用指定 Account，核心不區分兩套檔案結構。
 
-模板读取不加锁。发布先在同目录写完唯一临时文件，再通过 AGFS 切换到正式路径：
-LocalFS 使用文件重命名，S3 使用完整对象复制替换目标后再删除临时对象，不先删除目标。
-读者允许看到完整旧版或新版；首次发布之前、恢复默认之后读取部署默认值，不读取临时文件。
-这是单文件发布语义，不保证一次列表/Registry 读取中的所有模板来自同一发布时刻。
-发布与 DELETE 仍使用跨进程写锁；发布锁同时覆盖正式路径和临时路径。锁冲突采用零等待尝试和
-协程退避，最多等待 10 秒，避免锁等待占满执行后续 I/O 的默认线程池。
-临时写入失败不修改当前文件；切换后清理失败只记警告，不覆盖回滚已发布版本。
-若切换返回错误，会核验目标内容：确认已发布则保留新版本；无法确认则返回错误且不盲目回滚，调用方可 GET 确认状态。
-取消等待锁的请求会停止重试；已下发的 native 操作不能强行中断，会完成收尾并释放锁后再传播取消。
-因此取消已开始发布的请求不保证撤销发布。进程异常退出或清理失败可能留下 `.tmp` 文件，但读取不会使用它们。
+模板讀取不加鎖。釋出先在同目錄寫完唯一臨時檔案，再通過 AGFS 切換到正式路徑：
+LocalFS 使用檔案重新命名，S3 使用完整物件複製替換目標後再刪除臨時物件，不先刪除目標。
+讀者允許看到完整舊版或新版；首次釋出之前、恢復預設之後讀取部署預設值，不讀取臨時檔案。
+這是單檔案釋出語義，不保證一次列表/Registry 讀取中的所有模板來自同一釋出時刻。
+釋出與 DELETE 仍使用跨程序寫鎖；釋出鎖同時覆蓋正式路徑和臨時路徑。鎖衝突採用零等待嘗試和
+協程退避，最多等待 10 秒，避免鎖等待佔滿執行後續 I/O 的預設執行緒池。
+臨時寫入失敗不修改當前檔案；切換後清理失敗只記警告，不覆蓋回滾已釋出版本。
+若切換返回錯誤，會核驗目標內容：確認已釋出則保留新版本；無法確認則返回錯誤且不盲目回滾，呼叫方可 GET 確認狀態。
+取消等待鎖的請求會停止重試；已下發的 native 操作不能強行中斷，會完成收尾並釋放鎖後再傳播取消。
+因此取消已開始釋出的請求不保證撤銷釋出。程序異常退出或清理失敗可能留下 `.tmp` 檔案，但讀取不會使用它們。
 
-普通 Session 记忆抽取在筛选 Schema 和初始化记忆文件之前读取 Account 模板。
-同一份 Registry 快照贯穿模型抽取、补丁合并和记忆文件更新；发布新模板不改变已开始
-抽取的快照。流式更新直接比较当前记忆类型的 Schema 值（含渲染模式），不比较整个
-Registry；无关类型变更不会触发拆批。不同 Schema 分开合并、渲染；若这些组在补丁
-合并前或合并后指向同一文件，会在应用该合并批次的任何记忆操作前抛出冲突。
-此时需按当前模板和文件内容重新抽取后再重试，不能直接重放旧 patch。
-这是冲突提前报错，不是自动 rebase，也不是整个 Commit 的原子事务；其他记忆类型
-或 append-only 路径可能已经完成写入。排队任务按**抽取开始时**取值，
-不是按 HTTP Commit 受理时间取值。同一 Account 下符合记忆策略的 User/Peer 共用模板，
-不同 Account 不串用，也不修改共享的部署 Registry。发布或恢复默认不会主动重写历史
-记忆，后续 Commit 可按生效规则更新已有记忆。
+普通 Session 記憶抽取在篩選 Schema 和初始化記憶檔案之前讀取 Account 模板。
+同一份 Registry 快照貫穿模型抽取、補丁合併和記憶檔案更新；釋出新模板不改變已開始
+抽取的快照。流式更新直接比較當前記憶型別的 Schema 值（含渲染模式），不比較整個
+Registry；無關型別變更不會觸發拆批。不同 Schema 分開合併、渲染；若這些組在補丁
+合併前或合併後指向同一檔案，會在應用該合併批次的任何記憶操作前丟擲衝突。
+此時需按當前模板和檔案內容重新抽取後再重試，不能直接重放舊 patch。
+這是衝突提前報錯，不是自動 rebase，也不是整個 Commit 的原子事務；其他記憶型別
+或 append-only 路徑可能已經完成寫入。排隊任務按**抽取開始時**取值，
+不是按 HTTP Commit 受理時間取值。同一 Account 下符合記憶策略的 User/Peer 共用模板，
+不同 Account 不串用，也不修改共享的部署 Registry。釋出或恢復預設不會主動重寫歷史
+記憶，後續 Commit 可按生效規則更新已有記憶。
 
-白名单内提交的说明和正文模板必须是非空字符串；单文件序列化后不超过 1 MiB。
-`description`（类型说明及 `fields[].description`）统一支持受限 Jinja，不因来自部署默认值或账户覆盖而改变规则，不再记录或检查说明来源标志。
-仅开放已有上下文中的 `language`，不开放正文变量、`extract_context` 或任意对象。语法复用下节受限正文的条件、局部变量、有界字面量循环、安全字符串方法、白名单字符串过滤器及测试；不支持任意调用。
-例如已有 Schema 渲染上下文提供 `language=en` 时，<code v-pre>请使用 {{ language.upper() }}。</code> 会展开为 `请使用 EN。`，用户修改文字不会让变量停止展开。
-本次不新增语言传递链路，Python 协议原有的静态字段说明展示路径保持不变。缺失语言时保留原来的 undefined/空字符串行为，可用 `language or '中文'` 提供回退；上下文值中的 Jinja 不会被递归执行。
-越界的自定义表达式在保存前拒绝，已保存说明在抽取加载时重新校验；部署说明渲染也受同样限制，已有部署若使用白名单外语法，需要调整，不能凭来源绕过限制。
-每条说明最多 2048 个 AST 节点，渲染结果最多 1 MiB。正文 `content_template` 的变量、源码大小及默认正文兼容规则仍按下节处理。
-每个可编辑 `description` 最多 50,000 个 Unicode 码点，按提交的原文计数，包含空格、换行和模板样式的文字，不按 UTF-8 字节或渲染后的长度计数。各说明独立计数，不合并计算；整个配置仍受 1 MiB 上限约束。超过上限返回 400，不修改当前配置。
-发布不调用 LLM。存储错误或文件损坏明确报错，不伪装成系统默认。本次不增加公共文件浏览目录、SDK/CLI 命令、草稿或历史版本 UI。
+白名單內提交的說明和正文模板必須是非空字串；單檔案序列化後不超過 1 MiB。
+`description`（型別說明及 `fields[].description`）統一支援受限 Jinja，不因來自部署預設值或帳戶覆蓋而改變規則，不再記錄或檢查說明來源標誌。
+僅開放已有上下文中的 `language`，不開放正文變數、`extract_context` 或任意物件。語法複用下節受限正文的條件、區域性變數、有界字面量迴圈、安全字串方法、白名單字串過濾器及測試；不支援任意呼叫。
+例如已有 Schema 渲染上下文提供 `language=en` 時，<code v-pre>請使用 {{ language.upper() }}。</code> 會展開為 `請使用 EN。`，使用者修改文字不會讓變數停止展開。
+本次不新增語言傳遞鏈路，Python 協議原有的靜態欄位說明展示路徑保持不變。缺失語言時保留原來的 undefined/空字串行為，可用 `language or '中文'` 提供回退；上下文值中的 Jinja 不會被遞迴執行。
+越界的自定義表示式在儲存前拒絕，已儲存說明在抽取載入時重新校驗；部署說明渲染也受同樣限制，已有部署若使用白名單外語法，需要調整，不能憑來源繞過限制。
+每條說明最多 2048 個 AST 節點，渲染結果最多 1 MiB。正文 `content_template` 的變數、原始碼大小及預設正文相容規則仍按下節處理。
+每個可編輯 `description` 最多 50,000 個 Unicode 碼點，按提交的原文計數，包含空格、換行和模板樣式的文字，不按 UTF-8 位元組或渲染後的長度計數。各說明獨立計數，不合並計算；整個配置仍受 1 MiB 上限約束。超過上限返回 400，不修改當前配置。
+釋出不呼叫 LLM。儲存錯誤或檔案損壞明確報錯，不偽裝成系統預設。本次不增加公共檔案瀏覽目錄、SDK/CLI 命令、草稿或歷史版本 UI。
 
-#### content_template 的编辑与执行边界
+#### content_template 的編輯與執行邊界
 
-以下受限规则仅用于与当前部署默认正文不同的账户自定义正文。发布和抽取加载时，
-服务器将完整 `content_template` 字符串与自己加载的部署默认值比较；完全相同时，
-沿用原部署渲染器及其过滤器、helper，不采信客户端或持久化文件中的“可信”标记。
-因此，仅改 description、空 PUT、正文未变的 GET `effective` → PUT 都不要求迁移默认正文。
-账户覆盖仍可显示 `status=custom`，但正文走继承路径。内置 Events YAML 及其原有日期表达式不变。
+以下受限規則僅用於與當前部署預設正文不同的帳戶自定義正文。釋出和抽取載入時，
+伺服器將完整 `content_template` 字串與自己載入的部署預設值比較；完全相同時，
+沿用原部署渲染器及其過濾器、helper，不採信客戶端或持久化檔案中的“可信”標記。
+因此，僅改 description、空 PUT、正文未變的 GET `effective` → PUT 都不要求遷移預設正文。
+帳戶覆蓋仍可顯示 `status=custom`，但正文走繼承路徑。內建 Events YAML 及其原有日期表示式不變。
 
-比较是精确字符串比较，包含空白字符；修改过的正文即使以默认模板为基础，也必须通过受限校验。
-部署默认值后续变更时，下次抽取加载会重新比较，旧账户文件不会永久保留信任。
-不再匹配且超出白名单的正文需重新发布或恢复默认后才能参与提取；已开始的提取仍保留原快照。
+比較是精確字串比較，包含空白字元；修改過的正文即使以預設模板為基礎，也必須通過受限校驗。
+部署預設值後續變更時，下次抽取載入會重新比較，舊帳戶檔案不會永久保留信任。
+不再匹配且超出白名單的正文需重新發布或恢復預設後才能參與提取；已開始的提取仍保留原快照。
 
-正文模板用于将已抽取/合并的字段组织为 Markdown，不是抽取 Prompt。
-允许修改标题、顺序、固定文案，按条件显示/隐藏字段。不要求保留默认标题或输出全部字段；
-但隐藏字段不等于停止抽取/删除该字段，也不会删除原始 Session 或系统保存的字段元数据。
-Events 的默认 embedding 模板引用正文，因此正文变化也可能影响后续检索输入。
-路径、文件名、字段定义、merge_op（包括 Identity name 的 immutable）仍锁定。
+正文模板用於將已抽取/合併的欄位組織為 Markdown，不是抽取 Prompt。
+允許修改標題、順序、固定文案，按條件顯示/隱藏欄位。不要求保留預設標題或輸出全部欄位；
+但隱藏欄位不等於停止抽取/刪除該欄位，也不會刪除原始 Session 或系統儲存的欄位後設資料。
+Events 的預設 embedding 模板引用正文，因此正文變化也可能影響後續檢索輸入。
+路徑、檔名、欄位定義、merge_op（包括 Identity name 的 immutable）仍鎖定。
 
-| 类型 | 正文中可引用的字段 |
+| 型別 | 正文中可引用的欄位 |
 | --- | --- |
 | events | event_name、goal、summary、ranges |
 | soul | core_truths、boundaries、vibe、continuity |
 | identity | name、creature、vibe、emoji、avatar、introduction |
 
-`language` 属于说明模板的变量，不属于上述正文变量。
-正文不要引用其他 Account/User、请求上下文或任意 Python 对象。
-仅 Events 可调用以下 `extract_context` 只读方法（位置参数）：
+`language` 屬於說明模板的變數，不屬於上述正文變數。
+正文不要引用其他 Account/User、請求上下文或任意 Python 物件。
+僅 Events 可呼叫以下 `extract_context` 只讀方法（位置引數）：
 
-- `get_resource_event_content(ranges, summary)`：资源添加事件正文；非资源事件为空。
-- `get_first_message_time_from_ranges(ranges)`：第一条来源消息日期。
+- `get_resource_event_content(ranges, summary)`：資源新增事件正文；非資源事件為空。
+- `get_first_message_time_from_ranges(ranges)`：第一條來源訊息日期。
 - `get_first_message_time_with_weekday_from_ranges(ranges)`：日期及星期。
-- `get_event_content(ranges, summary[, ratio_threshold])`：按已有逻辑选择 ChatLog/摘要；省略阈值为 0.2，显式 0 表示存在原文时优先原文。
-- `get_year(ranges)`、`get_month(ranges)`、`get_day(ranges)`：来源日期分量。
+- `get_event_content(ranges, summary[, ratio_threshold])`：按已有邏輯選擇 ChatLog/摘要；省略閾值為 0.2，顯式 0 表示存在原文時優先原文。
+- `get_year(ranges)`、`get_month(ranges)`、`get_day(ranges)`：來源日期分量。
 
-首个参数可使用统一语法白名单内的表达式，包括局部变量、条件表达式及允许的过滤器链。
-每次实际调用方法前，参数求值结果必须是普通字符串，且与当前记忆原始 `ranges` 完全相等，或为空字符串（不读取来源消息）。
-例如 `ranges | default('') | trim` 在结果未改变时可用；也可先 `{% set selected = ranges %}`，再调用 `get_year(selected)`。
-比较范围时不做归一化；缺失字段本来就会传入空字符串。发布时仅校验语法，不执行方法；改变范围或传入非字符串会在实际渲染时返回 `content_template: invalid_ranges`，在方法读取消息前拒绝，并停止该次记忆文件写入。
-阈值只能为 0～1 的数字字面量。
-允许去掉 ChatLog 或资源事件分支，但去掉后不再自动展示这些正文/资源链接；原始 Session 仍保留。
+首個引數可使用統一語法白名單內的表示式，包括區域性變數、條件表示式及允許的過濾器鏈。
+每次實際呼叫方法前，引數求值結果必須是普通字串，且與當前記憶原始 `ranges` 完全相等，或為空字串（不讀取來源訊息）。
+例如 `ranges | default('') | trim` 在結果未改變時可用；也可先 `{% set selected = ranges %}`，再呼叫 `get_year(selected)`。
+比較範圍時不做歸一化；缺失欄位本來就會傳入空字串。釋出時僅校驗語法，不執行方法；改變範圍或傳入非字串會在實際渲染時返回 `content_template: invalid_ranges`，在方法讀取訊息前拒絕，並停止該次記憶檔案寫入。
+閾值只能為 0～1 的數字字面量。
+允許去掉 ChatLog 或資源事件分支，但去掉後不再自動展示這些正文/資源連結；原始 Session 仍保留。
 
 支持的 Jinja 子集：
 
-- `if/elif/else`、比较/布尔条件、`set` 局部变量（不能覆盖内置字段、extract_context、loop）。
-- `for` 遍历模板中显式写出的列表/元组，最多 32 项；支持标题/字段二元组和 `loop.index/index0/first/last/length`。不支持嵌套/递归循环、range() 或遍历消息/长字符串。
-- 字符串方法：`.upper()`、`.lower()`、`.strip()`，均不接受位置参数或关键字参数。可用于字符串字段、局部变量、字面量、Events 白名单方法返回的字符串，并支持链式调用，例如 `summary.strip().upper()`。
-- 方法语法与部署模板一致，但账户正文只开放上述少数方法；读取属性前先检查接收者必须是普通字符串，其他对象（包括字符串子类）的同名方法/属性不能借此被调用。也不允许只取出方法引用、保存后再调用。
-- 字符串过滤器：`| upper`、`| lower`、`| trim`，分别等价于 `.upper()`、`.lower()`、`.strip()`。同样只接受普通字符串，不接受位置参数或关键字参数。支持链式调用及与方法混用，例如 `summary | trim | upper` 或 `summary.strip() | upper`。
-- `default` 过滤器：支持无参数或一个字符串字面量，例如 `| default` / `| default()` / `| default('N/A')`。只替换未定义值，不替换空字符串或 `None`，与内置 Events 模板保持一致。接收者仅允许普通字符串、`None` 或未定义值，不转换任意对象；不支持第二个布尔参数、关键字参数或展开／动态参数。空值回退使用 `summary or '待补充'` 或条件表达式。
-- 其他过滤器仍不支持，包括 `| length`、`| d(...)`、`| attr(...)`。
-- 测试：`defined`、`undefined`、`none`、`string`。
-- 不支持模板导入/继承、宏、任意函数/对象属性访问、下标访问、算术或字符串倍增/拼接。不能注入系统保留的 `<!-- MEMORY_FIELDS ... -->` 元数据。
+- `if/elif/else`、比較/布林條件、`set` 區域性變數（不能覆蓋內建欄位、extract_context、loop）。
+- `for` 遍歷模板中顯式寫出的列表/元組，最多 32 項；支援標題/欄位二元組和 `loop.index/index0/first/last/length`。不支援巢狀/遞迴迴圈、range() 或遍歷訊息/長字串。
+- 字串方法：`.upper()`、`.lower()`、`.strip()`，均不接受位置引數或關鍵字引數。可用於字串欄位、區域性變數、字面量、Events 白名單方法返回的字串，並支援鏈式呼叫，例如 `summary.strip().upper()`。
+- 方法語法與部署模板一致，但帳戶正文只開放上述少數方法；讀取屬性前先檢查接收者必須是普通字串，其他物件（包括字串子類）的同名方法/屬性不能借此被呼叫。也不允許只取出方法引用、儲存後再呼叫。
+- 字串過濾器：`| upper`、`| lower`、`| trim`，分別等價於 `.upper()`、`.lower()`、`.strip()`。同樣只接受普通字串，不接受位置引數或關鍵字引數。支援鏈式呼叫及與方法混用，例如 `summary | trim | upper` 或 `summary.strip() | upper`。
+- `default` 過濾器：支援無引數或一個字串字面量，例如 `| default` / `| default()` / `| default('N/A')`。只替換未定義值，不替換空字串或 `None`，與內建 Events 模板保持一致。接收者僅允許普通字串、`None` 或未定義值，不轉換任意物件；不支援第二個布林引數、關鍵字引數或展開／動態引數。空值回退使用 `summary or '待補充'` 或條件表示式。
+- 其他過濾器仍不支援，包括 `| length`、`| d(...)`、`| attr(...)`。
+- 測試：`defined`、`undefined`、`none`、`string`。
+- 不支援模板匯入/繼承、宏、任意函式/物件屬性訪問、下標訪問、算術或字串倍增/拼接。不能注入系統保留的 `<!-- MEMORY_FIELDS ... -->` 後設資料。
 
-模板 UTF-8 大小 ≤ 64 KiB，AST 节点 ≤ 2048，渲染正文 ≤ 1 MiB（不含系统追加元数据）。
-与部署默认值不同的 Account 正文在发布时和抽取加载时验证，运行时使用受限 Jinja 环境，只提供白名单字段/方法。
-内置 Events、Soul、Identity 正文也满足受限语法；仅修改标题、末尾换行或 CRLF 换行后仍可校验发布。这些改动不会绕过校验，也不会被标记为部署原样正文。
-受限路径渲染失败会报告错误并停止该次文件写入，不走旧的空正文 fallback。
-原样继承的正文继续使用部署渲染器，包括原有错误/fallback 语义，不受上述受限渲染器的源码、AST、正文输出上限约束；
-完整账户 YAML 仍受 1 MiB 上限约束。
-这些保护不代替 Worker 的 CPU/内存配额，也不评估记忆效果或做前端 Markdown/HTML 安全过滤。
-说明与受限正文复用语法沙箱，但可用变量及源码大小限制不同。
+模板 UTF-8 大小 ≤ 64 KiB，AST 節點 ≤ 2048，渲染正文 ≤ 1 MiB（不含系統追加後設資料）。
+與部署預設值不同的 Account 正文在釋出時和抽取載入時驗證，執行時使用受限 Jinja 環境，只提供白名單欄位/方法。
+內建 Events、Soul、Identity 正文也滿足受限語法；僅修改標題、末尾換行或 CRLF 換行後仍可校驗釋出。這些改動不會繞過校驗，也不會被標記為部署原樣正文。
+受限路徑渲染失敗會報告錯誤並停止該次檔案寫入，不走舊的空正文 fallback。
+原樣繼承的正文繼續使用部署渲染器，包括原有錯誤/fallback 語義，不受上述受限渲染器的原始碼、AST、正文輸出上限約束；
+完整帳戶 YAML 仍受 1 MiB 上限約束。
+這些保護不代替 Worker 的 CPU/記憶體配額，也不評估記憶效果或做前端 Markdown/HTML 安全過濾。
+說明與受限正文複用語法沙箱，但可用變數及原始碼大小限制不同。
 
-校验失败返回 `INVALID_ARGUMENT`，`error.details` 含 `field=description`、`fields.<name>.description` 或 `content_template`、受控 `reason` 和可用时的 `line`。
-失败不修改当前发布配置。此前保存的、结构有效但使用不支持 Jinja 的模板仍可读取、重新发布或恢复默认；
-不会绕过新规则继续执行，抽取加载时提示修复。损坏 YAML 仍明确报错。
+校驗失敗返回 `INVALID_ARGUMENT`，`error.details` 含 `field=description`、`fields.<name>.description` 或 `content_template`、受控 `reason` 和可用時的 `line`。
+失敗不修改當前釋出配置。此前儲存的、結構有效但使用不支援 Jinja 的模板仍可讀取、重新發布或恢復預設；
+不會繞過新規則繼續執行，抽取載入時提示修復。損壞 YAML 仍明確報錯。
 
-示例：只展示事件名称和摘要，不输出 ChatLog：
+示例：只展示事件名稱和摘要，不輸出 ChatLog：
 
 ```json
-{"content_template": "# {{ event_name.strip() }}\n\n## 事件摘要\n{{ summary.strip() or '待补充' }}"}
+{"content_template": "# {{ event_name.strip() }}\n\n## 事件摘要\n{{ summary.strip() or '待補充' }}"}
 ```
 
-示例：Soul 的分节展示：
+示例：Soul 的分節展示：
 
 ```jinja
-{% for title, text in [('核心价值', core_truths), ('边界', boundaries), ('气质', vibe), ('连续性', continuity)] %}
+{% for title, text in [('核心價值', core_truths), ('邊界', boundaries), ('氣質', vibe), ('連續性', continuity)] %}
 {% if text.strip() %}
 ## {{ title }}
 {{ text.strip() }}
@@ -355,7 +355,7 @@ Events 的默认 embedding 模板引用正文，因此正文变化也可能影�
 
 ### Runtime Configuration
 
-ROOT 可管理 Cluster 配置和任意 Account 配置；ADMIN 只能管理所属账号的 Account 层。
+ROOT 可管理 Cluster 配置和任意 Account 配置；ADMIN 只能管理所屬帳號的 Account 層。
 
 ```http
 GET /api/v1/admin/configuration
@@ -368,32 +368,32 @@ Content-Type: application/json
 {"settings": {"agent_evolution": {"enabled": true}}}
 ```
 
-`settings` 始终表示目标层的显式设置值。PATCH 为三态语义：字段缺失表示不修改，
-`null` 表示删除当前层配置，具体值表示更新。
+`settings` 始終表示目標層的顯式設定值。PATCH 為三態語義：欄位缺失表示不修改，
+`null` 表示刪除當前層配置，具體值表示更新。
 
-当前 Cluster 运行时配置面仅包含 `agent_evolution`。Account 配置面包含
-`agent_evolution`、`github` 和 `acl`，且均为动态字段。Account 的
-`vlm`、`memory`、`embedding` 和 `vectordb` 不在当前 API 范围内，即使创建
-Account 时提交也会被拒绝。Cluster 的 `embedding`、`vlm`、`query_planner`、
-`memory`、存储、解析器和检索配置没有声明为运行时字段，因此仍然只能
-在启动配置中修改。
+當前 Cluster 執行時配置面僅包含 `agent_evolution`。Account 配置麵包含
+`agent_evolution`、`github` 和 `acl`，且均為動態欄位。Account 的
+`vlm`、`memory`、`embedding` 和 `vectordb` 不在當前 API 範圍內，即使建立
+Account 時提交也會被拒絕。Cluster 的 `embedding`、`vlm`、`query_planner`、
+`memory`、儲存、解析器和檢索配置沒有宣告為執行時欄位，因此仍然只能
+在啟動配置中修改。
 
-Account Agent Evolution 未设置时整段回落到 Cluster 配置。GitHub 和 ACL 没有
+Account Agent Evolution 未設定時整段回落到 Cluster 配置。GitHub 和 ACL 沒有
 Cluster fallback。
 
-PATCH 会先做结构校验，再构造合并后的配置：未知路径和运行时配置面之外的字段会被拒绝。
-对象递归合并，数组整体替换；嵌套 null 只删除对应叶子。删除整个对象覆盖需要在父路径
-传 null，传空对象仍表示显式空对象。
+PATCH 會先做結構校驗，再構造合併後的配置：未知路徑和執行時配置面之外的欄位會被拒絕。
+物件遞迴合併，陣列整體替換；巢狀 null 只刪除對應葉子。刪除整個物件覆蓋需要在父路徑
+傳 null，傳空物件仍表示顯式空物件。
 
-两个 GET 接口只返回目标层持久化的显式值，不展开 fallback。配置持久化后会发布新配置并等待
-匹配的进程内 Consumer；Consumer 失败会记录日志但不会回滚已持久化的覆盖，因此接口成功只表示
-配置层更新成功，不保证所有派生客户端都已完成切换。当前业务接入状态见[运行时配置设计](../../design/runtime-configuration-design.md)。
+兩個 GET 介面只返回目標層持久化的顯式值，不展開 fallback。配置持久化後會釋出新配置並等待
+匹配的程序內 Consumer；Consumer 失敗會記錄日誌但不會回滾已持久化的覆蓋，因此介面成功只表示
+配置層更新成功，不保證所有派生客戶端都已完成切換。當前業務接入狀態見[執行時配置設計](../../design/runtime-configuration-design.md)。
 
 ### user_settings
 
-ROOT 可管理任意 User，ADMIN 仅可管理所属 account 内的 User。User 配置接口当前
-仅允许修改 `memory_policy`。顶层统一的 `memory_types` 控制允许抽取的记忆类型。
-用户记忆根据每条 Message 的 `peer_id` 自动写入 Self 或 Peer；Agent 记忆始终只写入
+ROOT 可管理任意 User，ADMIN 僅可管理所屬 account 內的 User。User 配置介面當前
+僅允許修改 `memory_policy`。頂層統一的 `memory_types` 控制允許抽取的記憶型別。
+使用者記憶根據每條 Message 的 `peer_id` 自動寫入 Self 或 Peer；Agent 記憶始終只寫入
 Self。
 
 ```http
@@ -408,54 +408,54 @@ Content-Type: application/json
 }
 ```
 
-响应直接返回 User 级 `memory_policy`，并展开默认记忆类型和 Agent 记忆依赖；配置
-`experiences` 时会展开为 `cases`、`trajectories`、`experiences`；
-该结果不受 account 级 Agent 进化开关影响，Account 开关由独立接口管理。
-更新前会备份到该 User 的 `settings/user_config.backup.json`。未显式配置策略的
-Session 在 commit 时读取该 User 最新策略；User 未覆盖时，依次回退到
-`server.user_config_defaults.memory_policy` 和内核默认策略。若要清除已持久化的
-User override 并重新继承上述默认值，请 PATCH `{"memory_policy": null}`。
-`{"memory_policy": {}}` 表示显式策略，不会清除 override。
+響應直接返回 User 級 `memory_policy`，並展開預設記憶型別和 Agent 記憶依賴；配置
+`experiences` 時會展開為 `cases`、`trajectories`、`experiences`；
+該結果不受 account 級 Agent 進化開關影響，Account 開關由獨立介面管理。
+更新前會備份到該 User 的 `settings/user_config.backup.json`。未顯式配置策略的
+Session 在 commit 時讀取該 User 最新策略；User 未覆蓋時，依次回退到
+`server.user_config_defaults.memory_policy` 和核心預設策略。若要清除已持久化的
+User override 並重新繼承上述預設值，請 PATCH `{"memory_policy": null}`。
+`{"memory_policy": {}}` 表示顯式策略，不會清除 override。
 
 ---
 
 ### create_account
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-创建新工作区及其首个管理员用户。
+建立新工作區及其首個管理員使用者。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限
-2. 使用 API Key Manager 创建账户和初始管理员用户
-3. 初始化账户级目录结构
-4. 初始化管理员用户的个人目录
-5. 写入可选的初始管理员用户配置
-6. 返回账户信息和用户密钥（非 trusted 模式下）
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權
+2. 使用 API Key Manager 建立帳戶和初始管理員使用者
+3. 初始化帳戶級目錄結構
+4. 初始化管理員使用者的個人目錄
+5. 寫入可選的初始管理員使用者配置
+6. 返回帳戶資訊和使用者金鑰（非 trusted 模式下）
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:create_account` - HTTP 路由
-- `openviking/server/api_keys/new.py:APIKeyManager.create_account` - 核心实现
+- `openviking/server/api_keys/new.py:APIKeyManager.create_account` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_create_account` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作区 ID |
-| admin_user_id | str | 是 | - | 首个管理员用户 ID |
-| seed | str | 否 | `null` | 可选的确定性 API Key seed。传入后，key secret 为 `sha256(user_id + "\0" + seed)` |
-| user_config | object | 否 | `null` | 首个管理员用户的初始配置。支持 `add_targets.resource_uri`、`add_targets.skill_uri` 和 `memory_policy` |
+| account_id | str | 是 | - | 工作區 ID |
+| admin_user_id | str | 是 | - | 首個管理員使用者 ID |
+| seed | str | 否 | `null` | 可選的確定性 API Key seed。傳入後，key secret 為 `sha256(user_id + "\0" + seed)` |
+| user_config | object | 否 | `null` | 首個管理員使用者的初始配置。支援 `add_targets.resource_uri`、`add_targets.skill_uri` 和 `memory_policy` |
 
-**说明：**
-- 在 `trusted` 模式下，响应中不会包含 `user_key` 字段
-- 省略 `seed` 时使用默认随机 API Key。seed 应视为密钥材料；过短的 seed 会让 key 更容易被猜测。
-- 不再支持 account 级 namespace 隔离配置。用户记忆使用 user-scoped namespace，一对多外部参与者通过 `peer_id` 表达。
-- `user_config.add_targets.resource_uri` 必须是可写资源目录 URI：`viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://user/{user_id}/resources` 或 `viking://user/{user_id}/resources/...`、`viking://user/{user_id}/peers/{peer_id}/resources` 或 `viking://user/{user_id}/peers/{peer_id}/resources/...`。
-- `user_config.add_targets.skill_uri` 只能是 `viking://~/skills` 或 `viking://agent/skills`。v1 不支持显式写成 `viking://user/{user_id}/skills`。
-- 旧写法兼容：`viking://user/resources[/...]` 和 `viking://user/skills` 在这里仍会被接受，并归一化为 `viking://~/...` 形式（服务端会打印一条 info 日志）。在其他位置，无 uid 的写法会在请求入口被拒绝——新配置请直接写 `viking://~/...`。
+**說明：**
+- 在 `trusted` 模式下，響應中不會包含 `user_key` 欄位
+- 省略 `seed` 時使用預設隨機 API Key。seed 應視為金鑰材料；過短的 seed 會讓 key 更容易被猜測。
+- 不再支援 account 級 namespace 隔離配置。使用者記憶使用 user-scoped namespace，一對多外部參與者通過 `peer_id` 表達。
+- `user_config.add_targets.resource_uri` 必須是可寫資源目錄 URI：`viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://user/{user_id}/resources` 或 `viking://user/{user_id}/resources/...`、`viking://user/{user_id}/peers/{peer_id}/resources` 或 `viking://user/{user_id}/peers/{peer_id}/resources/...`。
+- `user_config.add_targets.skill_uri` 只能是 `viking://~/skills` 或 `viking://agent/skills`。v1 不支援顯式寫成 `viking://user/{user_id}/skills`。
+- 舊寫法相容：`viking://user/resources[/...]` 和 `viking://user/skills` 在這裡仍會被接受，並歸一化為 `viking://~/...` 形式（服務端會列印一條 info 日誌）。在其他位置，無 uid 的寫法會在請求入口被拒絕——新配置請直接寫 `viking://~/...`。
 
 #### 3. 使用示例
 
@@ -479,7 +479,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 `trusted` 模式示例：
 
 ```bash
-# 首先，在 api_key 模式下注册网关管理员用户
+# 首先，在 api_key 模式下注冊閘道器管理員使用者
 curl -X POST http://localhost:1933/api/v1/admin/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <root-key>" \
@@ -488,7 +488,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
     "admin_user_id": "gateway-admin"
   }'
 
-# 然后在 trusted 模式下使用；管理权限来自 root_api_key
+# 然後在 trusted 模式下使用；管理許可權來自 root_api_key
 curl -X POST http://localhost:1933/api/v1/admin/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <root-key>" \
@@ -500,7 +500,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
   }'
 ```
 
-`trusted` 模式也支持"不带身份头"的 ROOT 回退写法：
+`trusted` 模式也支援"不帶身份頭"的 ROOT 回退寫法：
 
 ```bash
 curl -X POST http://localhost:1933/api/v1/admin/accounts \
@@ -571,7 +571,7 @@ result, err = client.AdminCreateAccountWithOptions(ctx, "acme-private", "alice",
 **CLI**
 
 ```bash
-# 需要 ROOT 权限，使用 --sudo
+# 需要 ROOT 許可權，使用 --sudo
 ov --sudo admin create-account acme --admin alice
 ov --sudo admin create-account acme --admin alice --seed alice-seed
 
@@ -579,7 +579,7 @@ ov --sudo admin create-account acme-private --admin alice \
   --user-config-json '{"add_targets":{"resource_uri":"viking://~/resources","skill_uri":"viking://~/skills"}}'
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -597,32 +597,32 @@ ov --sudo admin create-account acme-private --admin alice \
 
 ### list_accounts
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-列出所有工作区（仅 ROOT）。
+列出所有工作區（僅 ROOT）。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限
-2. 调用 API Key Manager 获取所有账户列表（按创建顺序排列）
-3. 应用可选的 `name` 过滤
-4. 应用可选的 `limit`/`page` 分页
-5. 返回包含账户 ID、创建时间和用户数量的列表
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權
+2. 呼叫 API Key Manager 獲取所有帳戶列表（按建立順序排列）
+3. 應用可選的 `name` 過濾
+4. 應用可選的 `limit`/`page` 分頁
+5. 返回包含帳戶 ID、建立時間和使用者數量的列表
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:list_accounts` - HTTP 路由
-- `openviking/server/api_keys/new.py:APIKeyManager.get_accounts` - 核心实现
+- `openviking/server/api_keys/new.py:APIKeyManager.get_accounts` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_list_accounts` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| name | str | 否 | null | 按账户 ID 过滤（通配符 `*` 和 `?` 匹配） |
-| limit | int | 否 | null | 每页数量（≥1）。省略则返回所有匹配项 |
-| page | int | 否 | 1 | 从 1 开始的页码；仅在设置了 `limit` 时生效 |
-| query | str | 否 | null | 对账户 ID 做不区分大小写的子串匹配 |
+| name | str | 否 | null | 按帳戶 ID 過濾（萬用字元 `*` 和 `?` 匹配） |
+| limit | int | 否 | null | 每頁數量（≥1）。省略則返回所有匹配項 |
+| page | int | 否 | 1 | 從 1 開始的頁碼；僅在設定了 `limit` 時生效 |
+| query | str | 否 | null | 對帳戶 ID 做不區分大小寫的子串匹配 |
 
-结果按创建顺序返回。
+結果按建立順序返回。
 
 #### 3. 使用示例
 
@@ -633,19 +633,19 @@ GET /api/v1/admin/accounts
 ```
 
 ```bash
-# 列出所有账户
+# 列出所有帳戶
 curl -X GET http://localhost:1933/api/v1/admin/accounts \
   -H "X-API-Key: <root-key>"
 
-# 带过滤条件（通配符 name 匹配）
+# 帶過濾條件（萬用字元 name 匹配）
 curl -X GET "http://localhost:1933/api/v1/admin/accounts?name=*acme*" \
   -H "X-API-Key: <root-key>"
 
-# 不区分大小写的子串搜索
+# 不區分大小寫的子串搜尋
 curl -X GET "http://localhost:1933/api/v1/admin/accounts?query=acme" \
   -H "X-API-Key: <root-key>"
 
-# 分页（每页 50，取第 2 页）
+# 分頁（每頁 50，取第 2 頁）
 curl -X GET "http://localhost:1933/api/v1/admin/accounts?limit=50&page=2" \
   -H "X-API-Key: <root-key>"
 ```
@@ -682,17 +682,17 @@ fmt.Println(accounts)
 **CLI**
 
 ```bash
-# 需要 ROOT 权限，使用 --sudo
+# 需要 ROOT 許可權，使用 --sudo
 ov --sudo admin list-accounts
 
-# 按通配符 name 过滤
+# 按萬用字元 name 過濾
 ov --sudo admin list-accounts --name '*acme*'
 
-# 分页
+# 分頁
 ov --sudo admin list-accounts --limit 50 --page 2
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -709,39 +709,39 @@ ov --sudo admin list-accounts --limit 50 --page 2
 
 ### delete_account
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-异步删除工作区及其所有关联用户和数据（仅 ROOT）。接口返回 HTTP `202` 和 `task_id`，不等待数据清理完成。
+非同步刪除工作區及其所有關聯使用者和資料（僅 ROOT）。介面返回 HTTP `202` 和 `task_id`，不等待資料清理完成。
 
-**处理流程：**
-1. 验证 ROOT 权限，持久化账号删除标记，立即拒绝账号密钥和普通请求；创建系统作用域的 `account_delete` Task 并持久化入队，返回 `status=deleting` 和 `task_id`
-2. 后台停止该账号的 Watch 和业务任务，清理向量、OAuth 授权、用量审计数据和整个账号 AGFS 目录（包含账号内的任务记录）
-3. 清理成功后移除账号注册记录，将 Task 标记为 `completed`
+**處理流程：**
+1. 驗證 ROOT 許可權，持久化帳號刪除標記，立即拒絕帳號金鑰和普通請求；建立系統作用域的 `account_delete` Task 並持久化入隊，返回 `status=deleting` 和 `task_id`
+2. 後臺停止該帳號的 Watch 和業務任務，清理向量、OAuth 授權、用量審計資料和整個帳號 AGFS 目錄（包含帳號內的任務記錄）
+3. 清理成功後移除帳號註冊記錄，將 Task 標記為 `completed`
 
-账号和用户清理共用一个串行消费的数据清理队列。账号任务直接清理整个账号。后续用户清理任务发现目标已删除时，完成并跳过；旧任务也不会清理重建的同名账号或用户。归属该账号的任务记录一并删除，后续消息不会重建这些记录；系统作用域的清理 Task 仍可查询。
+帳號和使用者清理共用一個序列消費的資料清理佇列。帳號任務直接清理整個帳號。後續使用者清理任務發現目標已刪除時，完成並跳過；舊任務也不會清理重建的同名帳號或使用者。歸屬該帳號的任務記錄一併刪除，後續訊息不會重建這些記錄；系統作用域的清理 Task 仍可查詢。
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:delete_account` - HTTP 路由
-- `openviking/service/deletion.py:DeletionService.delete` - 核心实现
+- `openviking/service/deletion.py:DeletionService.delete` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_delete_account` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 要删除的工作区 ID |
+| account_id | str | 是 | - | 要刪除的工作區 ID |
 
-**说明：**
-- 删除操作是不可逆的，会级联删除该账户下的所有数据
-- 清理失败时，Task 标记为 `failed` 并记录错误原因；账号保持 `deleting`
-- 正在删除时重复请求返回同一个 Task；失败后再次请求会创建重试 Task，处理剩余数据
-- 服务重启后恢复未完成任务；删除期间不能重建同名账号，也不能恢复账号使用
-- 向量先按账号条件分页枚举 ID，再分批提交删除，每次删除请求最多 100 条，不受原来的单次 10 万条总量上限限制
-- 向量删除以删除接口成功为准，不要求即时 Count 归零或回读为空；即使 Task 已完成，远程索引仍可能因同步延迟短暂返回旧数据
-- 账号列表中的 `status` 为 `active` 或 `deleting`；删除中的账号同时返回 `task_id`
-- 使用 ROOT 调用 `GET /api/v1/tasks/{task_id}` 查看状态和错误；清理任务只使用 `pending`、`running`、`completed`、`failed` 状态，不细分清理阶段，只有 `completed` 表示清理完成
+**說明：**
+- 刪除操作是不可逆的，會級聯刪除該帳戶下的所有資料
+- 清理失敗時，Task 標記為 `failed` 並記錄錯誤原因；帳號保持 `deleting`
+- 正在刪除時重複請求返回同一個 Task；失敗後再次請求會建立重試 Task，處理剩餘資料
+- 服務重啟後恢復未完成任務；刪除期間不能重建同名帳號，也不能恢復帳號使用
+- 向量先按帳號條件分頁列舉 ID，再分批提交刪除，每次刪除請求最多 100 條，不受原來的單次 10 萬條總量上限限制
+- 向量刪除以刪除介面成功為準，不要求即時 Count 歸零或回讀為空；即使 Task 已完成，遠端索引仍可能因同步延遲短暫返回舊資料
+- 帳號列表中的 `status` 為 `active` 或 `deleting`；刪除中的帳號同時返回 `task_id`
+- 使用 ROOT 呼叫 `GET /api/v1/tasks/{task_id}` 檢視狀態和錯誤；清理任務只使用 `pending`、`running`、`completed`、`failed` 狀態，不細分清理階段，只有 `completed` 表示清理完成
 
 #### 3. 使用示例
 
@@ -787,12 +787,12 @@ fmt.Println(result["task_id"])
 **CLI**
 
 ```bash
-# 需要 ROOT 权限，使用 --sudo
+# 需要 ROOT 許可權，使用 --sudo
 ov --sudo admin delete-account acme
 ov --sudo task status <task_id>
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -810,42 +810,42 @@ ov --sudo task status <task_id>
 
 ### register_user
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-在工作区中注册新用户。
+在工作區中註冊新使用者。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限，或为本账户的 ADMIN
-2. 调用 API Key Manager 注册新用户
-3. 初始化新用户的个人目录
-4. 写入可选的初始用户配置
-5. 返回用户信息和用户密钥（非 trusted 模式下）
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權，或為本帳戶的 ADMIN
+2. 呼叫 API Key Manager 註冊新使用者
+3. 初始化新使用者的個人目錄
+4. 寫入可選的初始使用者配置
+5. 返回使用者資訊和使用者金鑰（非 trusted 模式下）
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:register_user` - HTTP 路由
-- `openviking/server/api_keys/new.py:APIKeyManager.register_user` - 核心实现
+- `openviking/server/api_keys/new.py:APIKeyManager.register_user` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_register_user` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作区 ID |
-| user_id | str | 是 | - | 用户 ID |
-| role | str | 否 | "user" | 要分配的角色。`ROOT` 和同 account 的 `ADMIN` 可直接注册 `"user"` 或 `"admin"`。ROOT 身份只来自 `server.root_api_key`。 |
-| seed | str | 否 | `null` | 可选的确定性 API Key seed。传入后，key secret 为 `sha256(user_id + "\0" + seed)` |
-| user_config | object | 否 | `null` | 新用户的初始配置。支持 `add_targets.resource_uri`、`add_targets.skill_uri` 和 `memory_policy` |
+| account_id | str | 是 | - | 工作區 ID |
+| user_id | str | 是 | - | 使用者 ID |
+| role | str | 否 | "user" | 要分配的角色。`ROOT` 和同 account 的 `ADMIN` 可直接註冊 `"user"` 或 `"admin"`。ROOT 身份只來自 `server.root_api_key`。 |
+| seed | str | 否 | `null` | 可選的確定性 API Key seed。傳入後，key secret 為 `sha256(user_id + "\0" + seed)` |
+| user_config | object | 否 | `null` | 新使用者的初始配置。支援 `add_targets.resource_uri`、`add_targets.skill_uri` 和 `memory_policy` |
 
-**说明：**
-- 在 `trusted` 模式下，响应中不会包含 `user_key` 字段
-- 省略 `seed` 时使用默认随机 API Key。seed 应视为密钥材料；过短的 seed 会让 key 更容易被猜测。
-- ADMIN 只能在自己所属的 account 中注册用户
-- 无法通过用户注册接口直接创建 `"root"` 角色
-- `user_config.add_targets.resource_uri` 必须是可写资源目录 URI：`viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://user/{user_id}/resources` 或 `viking://user/{user_id}/resources/...`、`viking://user/{user_id}/peers/{peer_id}/resources` 或 `viking://user/{user_id}/peers/{peer_id}/resources/...`。
-- `user_config.add_targets.skill_uri` 只能是 `viking://~/skills` 或 `viking://agent/skills`。v1 不支持显式写成 `viking://user/{user_id}/skills`。
-- 旧写法兼容：`viking://user/resources[/...]` 和 `viking://user/skills` 在这里仍会被接受，并归一化为 `viking://~/...` 形式（服务端会打印一条 info 日志）。在其他位置，无 uid 的写法会在请求入口被拒绝——新配置请直接写 `viking://~/...`。
+**說明：**
+- 在 `trusted` 模式下，響應中不會包含 `user_key` 欄位
+- 省略 `seed` 時使用預設隨機 API Key。seed 應視為金鑰材料；過短的 seed 會讓 key 更容易被猜測。
+- ADMIN 只能在自己所屬的 account 中註冊使用者
+- 無法通過使用者註冊介面直接建立 `"root"` 角色
+- `user_config.add_targets.resource_uri` 必須是可寫資源目錄 URI：`viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://user/{user_id}/resources` 或 `viking://user/{user_id}/resources/...`、`viking://user/{user_id}/peers/{peer_id}/resources` 或 `viking://user/{user_id}/peers/{peer_id}/resources/...`。
+- `user_config.add_targets.skill_uri` 只能是 `viking://~/skills` 或 `viking://agent/skills`。v1 不支援顯式寫成 `viking://user/{user_id}/skills`。
+- 舊寫法相容：`viking://user/resources[/...]` 和 `viking://user/skills` 在這裡仍會被接受，並歸一化為 `viking://~/...` 形式（服務端會列印一條 info 日誌）。在其他位置，無 uid 的寫法會在請求入口被拒絕——新配置請直接寫 `viking://~/...`。
 
 #### 3. 使用示例
 
@@ -918,8 +918,8 @@ result, err = client.AdminRegisterUserWithOptions(ctx, "acme", "bob-private", "u
 **CLI**
 
 ```bash
-# ROOT 或本账户的 ADMIN 都可以执行
-# 如果使用普通用户的 api_key 但该用户是 acme 的 ADMIN：
+# ROOT 或本帳戶的 ADMIN 都可以執行
+# 如果使用普通使用者的 api_key 但該使用者是 acme 的 ADMIN：
 ov admin register-user acme bob --role user
 ov admin register-user acme bob --role user --seed bob-seed
 # 如果使用 root_api_key（--sudo）：
@@ -929,7 +929,7 @@ ov admin register-user acme bob-private --role user \
   --user-config-json '{"add_targets":{"resource_uri":"viking://~/resources/project-a"}}'
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -947,44 +947,44 @@ ov admin register-user acme bob-private --role user \
 
 ### list_users
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-列出工作区中的活跃用户。正在删除中的用户不会返回。
+列出工作區中的活躍使用者。正在刪除中的使用者不會返回。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限，或为本账户的 ADMIN
-2. 调用 API Key Manager 获取活跃用户列表（按创建顺序排列）
-3. 应用可选的过滤条件（name、role）
-4. 应用可选的 `limit`/`page` 分页
-5. 返回用户列表（trusted 模式下不包含 user_key）
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權，或為本帳戶的 ADMIN
+2. 呼叫 API Key Manager 獲取活躍使用者列表（按建立順序排列）
+3. 應用可選的過濾條件（name、role）
+4. 應用可選的 `limit`/`page` 分頁
+5. 返回使用者列表（trusted 模式下不包含 user_key）
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:list_users` - HTTP 路由
-- `openviking/server/api_keys/new.py:APIKeyManager.get_users` - 核心实现
+- `openviking/server/api_keys/new.py:APIKeyManager.get_users` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_list_users` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作区 ID |
-| name | str | 否 | null | 按用户 ID 过滤（通配符 `*` 和 `?` 匹配） |
-| role | str | 否 | null | 按角色过滤 |
-| include_credentials | bool | 否 | true | 仅 HTTP。设为 false 时仅返回 `user_id`、`role` 和 `api_key_available`，不返回密钥或前缀；默认保持现有按鉴权模式返回字段的行为。 |
-| limit | int | 否 | null | 每页数量（≥1）。省略则返回所有匹配项 |
-| page | int | 否 | 1 | 从 1 开始的页码；仅在设置了 `limit` 时生效 |
+| account_id | str | 是 | - | 工作區 ID |
+| name | str | 否 | null | 按使用者 ID 過濾（萬用字元 `*` 和 `?` 匹配） |
+| role | str | 否 | null | 按角色過濾 |
+| include_credentials | bool | 否 | true | 僅 HTTP。設為 false 時僅返回 `user_id`、`role` 和 `api_key_available`，不返回金鑰或字首；預設保持現有按鑑權模式返回欄位的行為。 |
+| limit | int | 否 | null | 每頁數量（≥1）。省略則返回所有匹配項 |
+| page | int | 否 | 1 | 從 1 開始的頁碼；僅在設定了 `limit` 時生效 |
 
-**说明：**
-- 结果按创建顺序返回
-- ADMIN 只能列出自己所属的 account 中的用户
-- 在 `trusted` 模式下，响应中不会包含 `user_key` 字段
-- 用户删除开始后，不再出现在该列表中
+**說明：**
+- 結果按建立順序返回
+- ADMIN 只能列出自己所屬的 account 中的使用者
+- 在 `trusted` 模式下，響應中不會包含 `user_key` 欄位
+- 使用者刪除開始後，不再出現在該列表中
 
-**带统计的响应（HTTP）：** 设置 `include_summary=true` 后，`result` 返回对象：`users` 为当前页，`total` 为匹配人数，`account_total` 为账号总人数，`manager_count` 为 admin/root 人数，`key_count` 为具有可见密钥或前缀的用户数。账号统计不受搜索和角色过滤影响，并排除正在删除的用户；禁用密钥展示时 `key_count` 为零。默认仍返回用户数组，兼容现有调用。
+**帶統計的響應（HTTP）：** 設定 `include_summary=true` 後，`result` 返回物件：`users` 為當前頁，`total` 為匹配人數，`account_total` 為帳號總人數，`manager_count` 為 admin/root 人數，`key_count` 為具有可見金鑰或字首的使用者數。帳號統計不受搜尋和角色過濾影響，並排除正在刪除的使用者；停用金鑰展示時 `key_count` 為零。預設仍返回使用者陣列，相容現有呼叫。
 
-`query` 对用户 ID 做去除首尾空格、不区分大小写的字面包含匹配，可与已有的 `name` 通配符、`role` 过滤组合。例如：
+`query` 對使用者 ID 做去除首尾空格、不區分大小寫的字面包含匹配，可與已有的 `name` 萬用字元、`role` 過濾組合。例如：
 
 ```text
 GET /api/v1/admin/accounts/acme/users?limit=20&page=1&query=alice&include_summary=true
@@ -999,15 +999,15 @@ GET /api/v1/admin/accounts/{account_id}/users
 ```
 
 ```bash
-# 列出所有用户
+# 列出所有使用者
 curl -X GET http://localhost:1933/api/v1/admin/accounts/acme/users \
   -H "X-API-Key: <root-or-admin-key>"
 
-# 带过滤条件（通配符 name 匹配）
+# 帶過濾條件（萬用字元 name 匹配）
 curl -X GET "http://localhost:1933/api/v1/admin/accounts/acme/users?name=*ali*&role=admin" \
   -H "X-API-Key: <root-or-admin-key>"
 
-# 分页（每页 50，取第 2 页）
+# 分頁（每頁 50，取第 2 頁）
 curl -X GET "http://localhost:1933/api/v1/admin/accounts/acme/users?limit=50&page=2" \
   -H "X-API-Key: <root-or-admin-key>"
 ```
@@ -1044,18 +1044,18 @@ fmt.Println(users)
 **CLI**
 
 ```bash
-# ROOT 或本账户的 ADMIN 都可以执行
-# 如果使用普通用户的 api_key 但该用户是 acme 的 ADMIN：
+# ROOT 或本帳戶的 ADMIN 都可以執行
+# 如果使用普通使用者的 api_key 但該使用者是 acme 的 ADMIN：
 ov admin list-users acme
 # 如果使用 root_api_key（--sudo）：
 ov --sudo admin list-users acme
-# 按通配符 name 过滤
+# 按萬用字元 name 過濾
 ov admin list-users acme --name '*ali*'
-# 分页
+# 分頁
 ov admin list-users acme --limit 50 --page 2
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -1072,35 +1072,35 @@ ov admin list-users acme --limit 50 --page 2
 
 ### remove_user
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-从工作区中移除用户。用户 API Key 会立即失效，其拥有的数据清理异步执行。
+從工作區中移除使用者。使用者 API Key 會立即失效，其擁有的資料清理非同步執行。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限，或为本账户的 ADMIN
-2. 写入删除 fence，并使用户 API Key 失效
-3. 提交一个持久化清理任务，删除该用户拥有的数据
-4. 返回删除任务 ID
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權，或為本帳戶的 ADMIN
+2. 寫入刪除 fence，並使使用者 API Key 失效
+3. 提交一個持久化清理任務，刪除該使用者擁有的資料
+4. 返回刪除任務 ID
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:remove_user` - HTTP 路由
-- `openviking/service/deletion.py:DeletionService.delete` - 核心实现
+- `openviking/service/deletion.py:DeletionService.delete` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_remove_user` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作区 ID |
-| user_id | str | 是 | - | 要移除的用户 ID |
+| account_id | str | 是 | - | 工作區 ID |
+| user_id | str | 是 | - | 要移除的使用者 ID |
 
-**说明：**
-- ADMIN 只能移除自己所属的 account 中的用户
-- 不能删除账户的最后一个 admin 用户
-- 删除开始后，用户 key 立即失效，list_users 不再返回该用户
-- 向量删除以删除接口成功为准，不等待远程索引同步；Task 完成后，Count 或查询结果仍可能短暂滞后
+**說明：**
+- ADMIN 只能移除自己所屬的 account 中的使用者
+- 不能刪除帳戶的最後一個 admin 使用者
+- 刪除開始後，使用者 key 立即失效，list_users 不再返回該使用者
+- 向量刪除以刪除介面成功為準，不等待遠端索引同步；Task 完成後，Count 或查詢結果仍可能短暫滯後
 
 #### 3. 使用示例
 
@@ -1146,14 +1146,14 @@ fmt.Println(result["task_id"])
 **CLI**
 
 ```bash
-# ROOT 或本账户的 ADMIN 都可以执行
-# 如果使用普通用户的 api_key 但该用户是 acme 的 ADMIN：
+# ROOT 或本帳戶的 ADMIN 都可以執行
+# 如果使用普通使用者的 api_key 但該使用者是 acme 的 ADMIN：
 ov admin remove-user acme bob
 # 如果使用 root_api_key（--sudo）：
 ov --sudo admin remove-user acme bob
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -1172,33 +1172,33 @@ ov --sudo admin remove-user acme bob
 
 ### set_role
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-将账户用户提升为 ADMIN。ROOT 可以操作任意账户；ADMIN 只能操作自己的账户。
+將帳戶使用者提升為 ADMIN。ROOT 可以操作任意帳戶；ADMIN 只能操作自己的帳戶。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 或 ADMIN 权限，并限制 ADMIN 只能操作自己的账户
-2. 调用 API Key Manager 更新用户角色
-3. 返回更新后的用户信息
+**處理流程：**
+1. 驗證請求者具有 ROOT 或 ADMIN 許可權，並限制 ADMIN 只能操作自己的帳戶
+2. 呼叫 API Key Manager 更新使用者角色
+3. 返回更新後的使用者資訊
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:set_user_role` - HTTP 路由
-- `openviking/server/api_keys/new.py:APIKeyManager.set_role` - 核心实现
+- `openviking/server/api_keys/new.py:APIKeyManager.set_role` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_set_role` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作区 ID |
-| user_id | str | 是 | - | 用户 ID |
-| role | str | 是 | - | 固定为 "admin" |
+| account_id | str | 是 | - | 工作區 ID |
+| user_id | str | 是 | - | 使用者 ID |
+| role | str | 是 | - | 固定為 "admin" |
 
-**说明：**
-- ROOT 和 ADMIN 可以将用户提升为 ADMIN；ADMIN 只能操作自己的账户
-- 该接口不支持设置 "user" 或 "root"；ROOT 身份只来自 `server.root_api_key`
+**說明：**
+- ROOT 和 ADMIN 可以將使用者提升為 ADMIN；ADMIN 只能操作自己的帳戶
+- 該介面不支援設定 "user" 或 "root"；ROOT 身份只來自 `server.root_api_key`
 
 #### 3. 使用示例
 
@@ -1246,11 +1246,11 @@ fmt.Println(result["role"])
 **CLI**
 
 ```bash
-# 需要 ROOT 权限，使用 --sudo
+# 需要 ROOT 許可權，使用 --sudo
 ov --sudo admin set-role acme bob admin
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -1268,35 +1268,35 @@ ov --sudo admin set-role acme bob admin
 
 ### regenerate_key
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-重新生成用户的 API Key，旧 Key 立即失效。
+重新生成使用者的 API Key，舊 Key 立即失效。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限，或为本账户的 ADMIN
-2. 调用 API Key Manager 重新生成用户密钥
-3. 旧密钥立即失效
-4. 返回新的用户密钥
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權，或為本帳戶的 ADMIN
+2. 呼叫 API Key Manager 重新生成使用者金鑰
+3. 舊金鑰立即失效
+4. 返回新的使用者金鑰
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:regenerate_key` - HTTP 路由
-- `openviking/server/api_keys/new.py:APIKeyManager.regenerate_key` - 核心实现
+- `openviking/server/api_keys/new.py:APIKeyManager.regenerate_key` - 核心實現
 - `openviking_cli/client/sync_http.py:SyncHTTPClient.admin_regenerate_key` - Python SDK
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作区 ID |
-| user_id | str | 是 | - | 用户 ID |
-| seed | str | 否 | `null` | JSON request body 中可选的确定性 API Key seed。传入后，key secret 为 `sha256(user_id + "\0" + seed)` |
+| account_id | str | 是 | - | 工作區 ID |
+| user_id | str | 是 | - | 使用者 ID |
+| seed | str | 否 | `null` | JSON request body 中可選的確定性 API Key seed。傳入後，key secret 為 `sha256(user_id + "\0" + seed)` |
 
-**说明：**
-- ADMIN 只能为自己所属的 account 中的用户重新生成密钥
-- 旧密钥会立即失效，需要更新使用该密钥的客户端
-- 省略 `seed` 时使用默认随机重新生成逻辑。
+**說明：**
+- ADMIN 只能為自己所屬的 account 中的使用者重新生成金鑰
+- 舊金鑰會立即失效，需要更新使用該金鑰的客戶端
+- 省略 `seed` 時使用預設隨機重新生成邏輯。
 
 #### 3. 使用示例
 
@@ -1353,15 +1353,15 @@ result, err = client.AdminRegenerateKeyWithOptions(ctx, "acme", "bob", &openviki
 **CLI**
 
 ```bash
-# ROOT 或本账户的 ADMIN 都可以执行
-# 如果使用普通用户的 api_key 但该用户是 acme 的 ADMIN：
+# ROOT 或本帳戶的 ADMIN 都可以執行
+# 如果使用普通使用者的 api_key 但該使用者是 acme 的 ADMIN：
 ov admin regenerate-key acme bob
 ov admin regenerate-key acme bob --seed bob-new-seed
 # 如果使用 root_api_key（--sudo）：
 ov --sudo admin regenerate-key acme bob
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -1377,23 +1377,23 @@ ov --sudo admin regenerate-key acme bob
 
 ### migrate_legacy_data
 
-#### 1. API 实现介绍
+#### 1. API 實現介紹
 
-将旧 `viking://session/...` 数据迁移到 `viking://user/<user_id>/sessions/...`，或在确认迁移结果后清理旧 Session 目录。该接口仅 ROOT 可调用，并以后台 task 执行。`agent` 是账号内公共目录，不参与迁移或 cleanup。
+將舊 `viking://session/...` 資料遷移到 `viking://user/<user_id>/sessions/...`，或在確認遷移結果後清理舊 Session 目錄。該介面僅 ROOT 可呼叫，並以後臺 task 執行。`agent` 是帳號內公共目錄，不參與遷移或 cleanup。
 
-**处理流程：**
-1. 验证请求者具有 ROOT 权限
-2. `action=migrate` 时执行 preflight，检查 account registry、session owner 等前置条件
-3. 创建 root 级后台 task
-4. 迁移时复制 Session 文件；cleanup 时先删除旧 Session 向量记录，再删除旧 Session AGFS 目录
+**處理流程：**
+1. 驗證請求者具有 ROOT 許可權
+2. `action=migrate` 時執行 preflight，檢查 account registry、session owner 等前置條件
+3. 建立 root 級後臺 task
+4. 遷移時複製 Session 檔案；cleanup 時先刪除舊 Session 向量記錄，再刪除舊 Session AGFS 目錄
 
-迁移保留目标路径中已有的文件。cleanup 不删除 `agent` 公共目录或已迁移的用户数据。
+遷移保留目標路徑中已有的檔案。cleanup 不刪除 `agent` 公共目錄或已遷移的使用者資料。
 
-**代码入口：**
+**程式碼入口：**
 - `openviking/server/routers/admin.py:migrate_legacy_data` - HTTP 路由
-- `openviking/service/legacy_migration.py:LegacyDataMigration` - 迁移实现
+- `openviking/service/legacy_migration.py:LegacyDataMigration` - 遷移實現
 
-#### 2. 接口和参数说明
+#### 2. 介面和引數說明
 
 **HTTP API**
 
@@ -1401,41 +1401,41 @@ ov --sudo admin regenerate-key acme bob
 POST /api/v1/admin/migrate
 ```
 
-**参数**
+**引數**
 
-| 参数 | 类型 | 必填 | 默认值 | 说明 |
+| 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| action | str | 否 | migrate | `migrate` 执行迁移；`cleanup` 清理旧 namespace |
+| action | str | 否 | migrate | `migrate` 執行遷移；`cleanup` 清理舊 namespace |
 
-**迁移结果字段**
+**遷移結果欄位**
 
-| 字段 | 说明 |
+| 欄位 | 說明 |
 |------|------|
-| migrated.files / migrated.directories | 复制的文件和目录数量 |
-| migrated.operations | Session 迁移操作数量（`sessions`） |
-| skipped / created_users | 跳过的文件、自动创建的用户 |
+| migrated.files / migrated.directories | 複製的檔案和目錄數量 |
+| migrated.operations | Session 遷移運算元量（`sessions`） |
+| skipped / created_users | 跳過的檔案、自動建立的使用者 |
 
-**Cleanup 结果字段**
+**Cleanup 結果欄位**
 
-| 字段 | 说明 |
+| 欄位 | 說明 |
 |------|------|
-| cleanup.directories | 删除的 legacy 目录数量 |
-| cleanup.vector_records | 删除的旧向量记录数量 |
+| cleanup.directories | 刪除的 legacy 目錄數量 |
+| cleanup.vector_records | 刪除的舊向量記錄數量 |
 | cleanup.targets | 已清理的 legacy scope |
-| skipped / warnings | 跳过项和告警 |
+| skipped / warnings | 跳過項和告警 |
 
 #### 3. 使用示例
 
 **HTTP API**
 
 ```bash
-# 执行迁移
+# 執行遷移
 curl -X POST http://localhost:1933/api/v1/admin/migrate \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <root-key>" \
   -d '{"action": "migrate"}'
 
-# 清理旧 namespace
+# 清理舊 namespace
 curl -X POST http://localhost:1933/api/v1/admin/migrate \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <root-key>" \
@@ -1473,7 +1473,7 @@ ov --sudo admin migrate --output json
 ov --sudo admin migrate --cleanup --output json
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -1483,83 +1483,83 @@ ov --sudo admin migrate --cleanup --output json
 
 ---
 
-<a id="用户添加位置设置"></a>
+<a id="使用者新增位置設定"></a>
 
 ## 完整示例
 
 ### 典型管理流程
 
 ```bash
-# 步骤 1：ROOT 创建工作区，指定 alice 为首个 admin（需要 --sudo）
+# 步驟 1：ROOT 建立工作區，指定 alice 為首個 admin（需要 --sudo）
 ov --sudo admin create-account acme --admin alice
 # 返回 alice 的 user_key
 
-# 步骤 2：alice（admin）注册普通用户 bob
-# 配置文件中的 api_key 设为 alice 的 user_key，不需要 --sudo
+# 步驟 2：alice（admin）註冊普通使用者 bob
+# 配置檔案中的 api_key 設為 alice 的 user_key，不需要 --sudo
 ov admin register-user acme bob --role user
 # 返回 bob 的 user_key
 
-# 步骤 3：查看账户下所有用户
+# 步驟 3：檢視帳戶下所有使用者
 ov admin list-users acme
 
-# 步骤 4：ROOT 将 bob 提升为 admin（需要 --sudo）
+# 步驟 4：ROOT 將 bob 提升為 admin（需要 --sudo）
 ov --sudo admin set-role acme bob admin
 
-# 步骤 5：bob 丢失 key，重新生成（旧 key 立即失效）
-# alice 作为 admin 可以执行，不需要 --sudo
+# 步驟 5：bob 丟失 key，重新生成（舊 key 立即失效）
+# alice 作為 admin 可以執行，不需要 --sudo
 ov admin regenerate-key acme bob
 
-# 步骤 6：移除用户
+# 步驟 6：移除使用者
 ov admin remove-user acme bob
 
-# 步骤 7：删除整个工作区（需要 --sudo）
+# 步驟 7：刪除整個工作區（需要 --sudo）
 ov --sudo admin delete-account acme
 ```
 
 ### HTTP API 等效流程
 
 ```bash
-# 步骤 1：创建工作区
+# 步驟 1：建立工作區
 curl -X POST http://localhost:1933/api/v1/admin/accounts \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <root-key>" \
   -d '{"account_id": "acme", "admin_user_id": "alice"}'
 
-# 步骤 2：注册用户（使用 alice 的 admin key）
+# 步驟 2：註冊使用者（使用 alice 的 admin key）
 curl -X POST http://localhost:1933/api/v1/admin/accounts/acme/users \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <alice-key>" \
   -d '{"user_id": "bob", "role": "user"}'
 
-# 步骤 3：列出用户
+# 步驟 3：列出使用者
 curl -X GET http://localhost:1933/api/v1/admin/accounts/acme/users \
   -H "X-API-Key: <alice-key>"
 
-# 步骤 4：将用户提升为 admin
+# 步驟 4：將使用者提升為 admin
 curl -X PUT http://localhost:1933/api/v1/admin/accounts/acme/users/bob/role \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <alice-key>" \
   -d '{"role": "admin"}'
 
-# 步骤 5：重新生成 key
+# 步驟 5：重新生成 key
 curl -X POST http://localhost:1933/api/v1/admin/accounts/acme/users/bob/key \
   -H "Content-Type: application/json" \
   -H "X-API-Key: <alice-key>"
 
-# 步骤 6：移除用户
+# 步驟 6：移除使用者
 curl -X DELETE http://localhost:1933/api/v1/admin/accounts/acme/users/bob \
   -H "X-API-Key: <alice-key>"
 
-# 步骤 7：删除工作区
+# 步驟 7：刪除工作區
 curl -X DELETE http://localhost:1933/api/v1/admin/accounts/acme \
   -H "X-API-Key: <root-key>"
 ```
 
 ---
 
-## 相关文档
+## 相關文件
 
-- [多租户](../concepts/11-multi-tenant.md) - 多租户模型、角色和共享边界
-- [API 概览](01-overview.md) - 认证与响应格式
-- [会话管理](05-sessions.md) - 会话管理
-- [系统](07-system.md) - 系统和监控 API
+- [多租戶](../concepts/11-multi-tenant.md) - 多租戶模型、角色和共享邊界
+- [API 概覽](01-overview.md) - 認證與響應格式
+- [會話管理](05-sessions.md) - 會話管理
+- [系統](07-system.md) - 系統和監控 API

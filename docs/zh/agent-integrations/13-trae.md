@@ -1,12 +1,12 @@
-# TRAE、TRAE CN 与 TraeCode CLI 2.0 记忆集成
+# TRAE、TRAE CN 與 TraeCode CLI 2.0 記憶整合
 
-为 TRAE、TRAE CN 和 TraeCode CLI 2.0 添加跨项目、跨会话的长期记忆。安装后，OpenViking Hook 会自动加载相关上下文、捕获每轮对话并提交给记忆抽取器；MCP 用于主动搜索、读取和管理记忆。
+為 TRAE、TRAE CN 和 TraeCode CLI 2.0 新增跨專案、跨會話的長期記憶。安裝後，OpenViking Hook 會自動載入相關上下文、捕獲每輪對話並提交給記憶抽取器；MCP 用於主動搜尋、讀取和管理記憶。
 
-## 安装
+## 安裝
 
-前置条件：macOS 或 Linux、Node.js 18+，以及支持 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`Stop` Hook 的 TRAE/TRAE CN 版本。TraeCode CLI 2.0 直接使用兼容 Codex 的插件格式。安装过程中会引导配置 OpenViking 连接信息。
+前置條件：macOS 或 Linux、Node.js 18+，以及支援 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`Stop` Hook 的 TRAE/TRAE CN 版本。TraeCode CLI 2.0 直接使用相容 Codex 的外掛格式。安裝過程中會引導配置 OpenViking 連線資訊。
 
-安装器询问连接方式时，火山引擎云服务用户请选择 **火山引擎 OpenViking 云服务** 并填写 API Key。只有本机已运行 OpenViking 服务时才选择 **自建 / 本地**。
+安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。只有本機已執行 OpenViking 服務時才選擇 **自建 / 本地**。
 
 ```bash
 # TRAE
@@ -17,7 +17,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/e
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
   --harness trae-cn
 
-# 同时安装
+# 同時安裝
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
   --harness trae,trae-cn
 
@@ -26,7 +26,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/e
   --harness trae-cli
 ```
 
-GitHub 访问受限时使用 TOS 镜像：
+GitHub 訪問受限時使用 TOS 映象：
 
 ```bash
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
@@ -37,11 +37,11 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
   --harness trae-cli --dist tos
 ```
 
-安装后完全退出并重启对应客户端。
+安裝後完全退出並重啟對應客戶端。
 
-### TraeCode CLI 2.0：首次启动信任 hooks
+### TraeCode CLI 2.0：首次啟動信任 hooks
 
-TraeCode CLI 2.0 的 hooks 要先信任才会运行。启动 `trae-cli` 时会停在这个确认上，选 **Trust all and continue**；想先看一眼 hook 命令就选 Review hooks：
+TraeCode CLI 2.0 的 hooks 要先信任才會執行。啟動 `trae-cli` 時會停在這個確認上，選 **Trust all and continue**；想先看一眼 hook 命令就選 Review hooks：
 
 ```text
 Hooks need review
@@ -53,66 +53,66 @@ Hooks can run outside the sandbox after you trust them.
   3. Continue without trusting (hooks won't run)
 ```
 
-全新安装会一次列出插件注册的全部 6 个 hook。之后每次插件更新只要动了 hook，启动时都会再拦一次，数字是这次新增或改动的条数（比如只改了一个就是 `1 hook is new or changed`），同样选 Trust all and continue。
+全新安裝會一次列出外掛註冊的全部 6 個 hook。之後每次外掛更新只要動了 hook，啟動時都會再攔一次，數字是這次新增或改動的條數（比如只改了一個就是 `1 hook is new or changed`），同樣選 Trust all and continue。
 
-选第 3 项或错过这一步，hooks 就不会运行：MCP 工具仍能调用，但自动召回和捕获全部停摆。要恢复，得让两个彼此独立的开关都处于开启状态：
+選第 3 項或錯過這一步，hooks 就不會執行：MCP 工具仍能呼叫，但自動召回和捕獲全部停擺。要恢復，得讓兩個彼此獨立的開關都處於開啟狀態：
 
-- `/hooks` — hook 的信任与开关，把标着 *New hook - review required* 或 *Modified since last trusted* 的条目信任并打开。
-- `/plugins` — 插件本身的启用状态，确认 `openviking-memory` 是 enabled。
+- `/hooks` — hook 的信任與開關，把標著 *New hook - review required* 或 *Modified since last trusted* 的條目信任並開啟。
+- `/plugins` — 外掛本身的啟用狀態，確認 `openviking-memory` 是 enabled。
 
-TRAE 和 TRAE CN 走 `hooks.json`，重启客户端后直接生效，没有这一步。
+TRAE 和 TRAE CN 走 `hooks.json`，重啟客戶端後直接生效，沒有這一步。
 
-## 安装内容
+## 安裝內容
 
-- `SessionStart`：加载用户画像、当前项目记忆，以及 OpenViking skill 清单 `<available-skills>`。
-- `UserPromptSubmit`：根据当前问题召回并注入相关内容，召回范围包括你自己的 skill 和账号内共享在 `viking://agent/skills` 下的 skill。
-- `PreToolUse`：在 TRAE 和 TRAE CN 上，`Read`、`Glob`、`Grep` 的路径是 `viking://` URI 时拒绝调用，并提示改用 OpenViking MCP 工具；`Bash` 或 `RunCommand` 命令带 `viking://` URI 时照常执行，同时附加改用建议。TraeCode CLI 2.0 使用 Codex 插件，它的 `PreToolUse` 只匹配 `Bash`，只附加同样的提示，不拒绝调用。
-- `Stop`：捕获本轮消息并立即提交，使短会话也能进入记忆抽取流程。
-- OpenViking MCP Server：透传服务端完整 MCP 工具集（16 个工具）：`find`、`search`、`read`、`list`、`tree`、`remember`、`write`、`edit`、`add_resource`、`add_skill`、`list_watches`、`cancel_watch`、`grep`、`glob`、`forget`、`health`。其中 `search` 的 `mode="context"` 可返回组装后的上下文。
-skill 清单先列你自己的 skill，再列账号内共享的 skill，每条描述截到约 40 token。清单的预算 `skillCatalogTokenBudget`（默认 `1200` token）独立于画像预算；描述放不下时只列名称。把 `skillCatalog` 设为 `false` 或把预算设为 `0` 即可关闭，既可以写在 `~/.openviking/ovcli.conf` 的 `plugin` 段（见[插件配置](../configuration/02-client.md#插件配置)），也可以用环境变量 `OPENVIKING_SKILL_CATALOG` 和 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`。
+- `SessionStart`：載入使用者畫像、當前專案記憶，以及 OpenViking skill 清單 `<available-skills>`。
+- `UserPromptSubmit`：根據當前問題召回並注入相關內容，召回範圍包括你自己的 skill 和帳號內共享在 `viking://agent/skills` 下的 skill。
+- `PreToolUse`：在 TRAE 和 TRAE CN 上，`Read`、`Glob`、`Grep` 的路徑是 `viking://` URI 時拒絕呼叫，並提示改用 OpenViking MCP 工具；`Bash` 或 `RunCommand` 命令帶 `viking://` URI 時照常執行，同時附加改用建議。TraeCode CLI 2.0 使用 Codex 外掛，它的 `PreToolUse` 只匹配 `Bash`，只附加同樣的提示，不拒絕呼叫。
+- `Stop`：捕獲本輪訊息並立即提交，使短會話也能進入記憶抽取流程。
+- OpenViking MCP Server：透傳服務端完整 MCP 工具集（16 個工具）：`find`、`search`、`read`、`list`、`tree`、`remember`、`write`、`edit`、`add_resource`、`add_skill`、`list_watches`、`cancel_watch`、`grep`、`glob`、`forget`、`health`。其中 `search` 的 `mode="context"` 可返回組裝後的上下文。
+skill 清單先列你自己的 skill，再列帳號內共享的 skill，每條描述截到約 40 token。清單的預算 `skillCatalogTokenBudget`（預設 `1200` token）獨立於畫像預算；描述放不下時只列名稱。把 `skillCatalog` 設為 `false` 或把預算設為 `0` 即可關閉，既可以寫在 `~/.openviking/ovcli.conf` 的 `plugin` 段（見[外掛配置](../configuration/02-client.md#外掛配置)），也可以用環境變數 `OPENVIKING_SKILL_CATALOG` 和 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`。
 
-## 验证
+## 驗證
 
-1. 重启 TRAE、TRAE CN 或 TraeCode CLI 2.0，并新建 Agent 会话。
-2. 在客户端的 MCP 设置中确认 `openviking` 已连接。
-3. 提问一个与已有项目或个人偏好相关的问题，确认回答使用了已有记忆。
-4. 告诉 Agent 一个临时偏好，等待回复完成；新建会话后再次询问，确认捕获、提交和跨会话召回均生效。
-5. 对 TraeCode CLI 2.0，运行 `trae-cli plugin list` 确认 `openviking-memory` 已启用，并在会话里输入 `/hooks`，确认 OpenViking 的条目已信任且处于开启状态。
+1. 重啟 TRAE、TRAE CN 或 TraeCode CLI 2.0，並新建 Agent 會話。
+2. 在客戶端的 MCP 設定中確認 `openviking` 已連線。
+3. 提問一個與已有專案或個人偏好相關的問題，確認回答使用了已有記憶。
+4. 告訴 Agent 一個臨時偏好，等待回覆完成；新建會話後再次詢問，確認捕獲、提交和跨會話召回均生效。
+5. 對 TraeCode CLI 2.0，執行 `trae-cli plugin list` 確認 `openviking-memory` 已啟用，並在會話裡輸入 `/hooks`，確認 OpenViking 的條目已信任且處於開啟狀態。
 
-需要排查 Hook 时，设置 `OPENVIKING_DEBUG=1` 后启动客户端，并查看：
+需要排查 Hook 時，設定 `OPENVIKING_DEBUG=1` 後啟動客戶端，並檢視：
 
 - TRAE：`~/.openviking/logs/trae-hooks.log`
 - TRAE CN：`~/.openviking/logs/trae-cn-hooks.log`
 - TraeCode CLI 2.0：`~/.openviking/logs/codex-hooks.log`
 
-## 升级与卸载
+## 升級與解除安裝
 
-重复运行对应安装命令即可升级。卸载时也应使用原安装渠道：
+重複執行對應安裝命令即可升級。解除安裝時也應使用原安裝渠道：
 
 ```bash
-# GitHub，以 TRAE CN 为例
+# GitHub，以 TRAE CN 為例
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
   --harness trae-cn --uninstall --yes
 
-# TOS，以 TRAE CN 为例
+# TOS，以 TRAE CN 為例
 bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
   --harness trae-cn --uninstall --yes
 ```
 
-将 `trae-cn` 替换为 `trae` 可管理 TRAE 集成。TraeCode CLI 2.0 请执行 `trae-cli plugin uninstall openviking-memory@openviking`。安装器的 `--harness trae-cli --uninstall` 只用于移除旧安装中已弃用的独立 Hooks 集成。
+將 `trae-cn` 替換為 `trae` 可管理 TRAE 整合。TraeCode CLI 2.0 請執行 `trae-cli plugin uninstall openviking-memory@openviking`。安裝器的 `--harness trae-cli --uninstall` 只用於移除舊安裝中已棄用的獨立 Hooks 整合。
 
 ## 故障排查
 
-| 现象 | 原因与处理 |
+| 現象 | 原因與處理 |
 |------|-----------|
-| 安装后没有自动召回 | 完全退出客户端后重新启动，并新建 Agent 会话。 |
-| TraeCode CLI 2.0 插件已装，但召回和捕获都不发生 | 启动时的 hook 信任确认被跳过，或当时选了 *Continue without trusting*；插件更新动了 hook 后也会重新要求信任。`/hooks` 里信任并开启 OpenViking 的条目，`/plugins` 里确认 `openviking-memory` 已启用——两个开关相互独立，都要是开着的。 |
-| MCP 未连接 | 检查 `~/.openviking/ovcli.conf` 中的 URL/API Key，然后重启客户端。 |
-| 新会话无法回忆上一轮内容 | 查看 Hook 日志，确认 `Stop` 已执行且 `/commit` 没有连接或鉴权错误。 |
-| 同一内容被捕获多次 | 检查用户级与项目级 Hook 中是否仍有旧版 `trae-auto-recall.mjs` 或 `trae-auto-capture.mjs`；重跑安装器会移除由 OpenViking 管理的旧条目。 |
-| TraeCode CLI 2.0 未列出插件 | 运行 `trae-cli plugin list`；若没有 `openviking-memory`，使用 `--harness trae-cli` 重跑安装器。 |
+| 安裝後沒有自動召回 | 完全退出客戶端後重新啟動，並新建 Agent 會話。 |
+| TraeCode CLI 2.0 外掛已裝，但召回和捕獲都不發生 | 啟動時的 hook 信任確認被跳過，或當時選了 *Continue without trusting*；外掛更新動了 hook 後也會重新要求信任。`/hooks` 裡信任並開啟 OpenViking 的條目，`/plugins` 裡確認 `openviking-memory` 已啟用——兩個開關相互獨立，都要是開著的。 |
+| MCP 未連線 | 檢查 `~/.openviking/ovcli.conf` 中的 URL/API Key，然後重啟客戶端。 |
+| 新會話無法回憶上一輪內容 | 檢視 Hook 日誌，確認 `Stop` 已執行且 `/commit` 沒有連線或鑑權錯誤。 |
+| 同一內容被捕獲多次 | 檢查使用者級與專案級 Hook 中是否仍有舊版 `trae-auto-recall.mjs` 或 `trae-auto-capture.mjs`；重跑安裝器會移除由 OpenViking 管理的舊條目。 |
+| TraeCode CLI 2.0 未列出外掛 | 執行 `trae-cli plugin list`；若沒有 `openviking-memory`，使用 `--harness trae-cli` 重跑安裝器。 |
 
-## 参见
+## 參見
 
-- [集成能力参考](./16-capability-reference.md)
-- [鉴权](../guides/04-authentication.md)
+- [整合能力參考](./16-capability-reference.md)
+- [鑑權](../guides/04-authentication.md)

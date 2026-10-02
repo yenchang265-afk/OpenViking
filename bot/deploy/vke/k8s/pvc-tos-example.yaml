@@ -1,5 +1,5 @@
-# TOS静态PV示例
-# 使用前请先创建TOS桶，并替换下面的配置
+# TOS靜態PV示例
+# 使用前請先建立TOS桶，並替換下面的配置
 apiVersion: v1
 kind: PersistentVolume
 metadata:
@@ -14,9 +14,9 @@ spec:
     driver: tos.csi.volcengine.com
     volumeHandle: vikingbot-tos-pv
     volumeAttributes:
-      bucket: your-tos-bucket-name  # 替换为你的TOS桶名
-      region: cn-beijing            # 替换为你的TOS桶所在区域
-      path: /vikingbot              # 可选，桶内路径
+      bucket: your-tos-bucket-name  # 替換為你的TOS桶名
+      region: cn-beijing            # 替換為你的TOS桶所在區域
+      path: /vikingbot              # 可選，桶內路徑
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim

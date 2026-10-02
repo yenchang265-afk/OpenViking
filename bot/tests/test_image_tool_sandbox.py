@@ -113,7 +113,7 @@ async def test_edit_mode_reads_base_image_and_mask_from_sandbox(monkeypatch, tmp
         base64.b64decode(captured_kwargs["image"].split(",", 1)[1]) == b"SANDBOX_BASE_IMAGE_BYTES"
     )
     assert base64.b64decode(captured_kwargs["mask"].split(",", 1)[1]) == b"SANDBOX_MASK_IMAGE_BYTES"
-    assert result.startswith("生成图片：")
+    assert result.startswith("生成圖片：")
 
 
 @pytest.mark.asyncio

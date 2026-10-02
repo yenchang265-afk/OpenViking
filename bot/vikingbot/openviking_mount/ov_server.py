@@ -217,7 +217,7 @@ class VikingClient:
         return instance
 
     def _matched_context_to_dict(self, matched_context: Any) -> Dict[str, Any]:
-        """将 MatchedContext 对象或 dict 结果转换为字典。"""
+        """將 MatchedContext 物件或 dict 結果轉換為字典。"""
         if isinstance(matched_context, dict):
             return {
                 "uri": str(matched_context.get("uri", "") or ""),
@@ -502,7 +502,7 @@ class VikingClient:
         filter: Optional[Dict[str, Any]] = None,
         limit: int = 10,
     ):
-        """搜索资源"""
+        """搜尋資源"""
         # The SDK find/search sync moved context_type/filter out of top-level
         # find() kwargs into FindOptions. Adapt here so callers keep the stable
         # VikingClient.find(context_type=..., filter=...) interface.
@@ -524,7 +524,7 @@ class VikingClient:
         desc: str,
         to: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
-        """添加资源到 Viking"""
+        """新增資源到 Viking"""
         result = await self.client.add_resource(
             path=local_path,
             to=to,
@@ -538,7 +538,7 @@ class VikingClient:
         recursive: bool = False,
         node_limit: int = 1000,
     ) -> List[Dict[str, Any]]:
-        """列出资源"""
+        """列出資源"""
         if path is None or path == "":
             path = viking_resource_prefix
         entries = await self.client.ls(path, recursive=recursive, node_limit=node_limit)
@@ -670,11 +670,11 @@ class VikingClient:
         offset: int = 0,
         limit: int = -1,
     ) -> str:
-        """读取内容
+        """讀取內容
 
         Args:
             uri: Viking URI
-            level: 读取级别 ("abstract" - L0摘要, "overview" - L1概览, "read" - L2完整内容)
+            level: 讀取級別 ("abstract" - L0摘要, "overview" - L1概覽, "read" - L2完整內容)
             offset: Starting line number (0-indexed); only used for level="read"
             limit: Number of lines to read, -1 means read to end; only used for level="read"
         """
@@ -713,7 +713,7 @@ class VikingClient:
                 await client.close()
 
     async def read_user_profile(self, user_id: str) -> str:
-        """读取用户 profile。"""
+        """讀取使用者 profile。"""
         effective_user_id = self._effective_user_id(user_id)
         if not effective_user_id:
             return await self.read_content(uri="viking://~/memories/profile.md", level="read")
@@ -723,7 +723,7 @@ class VikingClient:
         return result
 
     async def read_peer_profile(self, peer_id: str) -> str:
-        """读取当前 User 下指定 peer 的 profile。"""
+        """讀取當前 User 下指定 peer 的 profile。"""
         try:
             uri = self._current_peer_profile_uri(peer_id)
         except ValueError:
@@ -758,7 +758,7 @@ class VikingClient:
             if should_close:
                 await client.close()
 
-        # 将 FindResult 对象或已序列化的 JSON map 统一转换为 JSON map
+        # 將 FindResult 物件或已序列化的 JSON map 統一轉換為 JSON map
         memories = self._matched_context_group_to_dicts(result, "memories")
         resources = self._matched_context_group_to_dicts(result, "resources")
         skills = self._matched_context_group_to_dicts(result, "skills")
@@ -812,7 +812,7 @@ class VikingClient:
         owner_user_id: Optional[str] = None,
         peer_ids: Optional[list[str]] = None,
     ) -> list[Any] | dict[str, list[Any]]:
-        """通过上下文消息检索用户 memory。"""
+        """通過上下文訊息檢索使用者 memory。"""
 
         def _extract_memories(result: Any) -> list[Any]:
             if not result:
@@ -881,7 +881,7 @@ class VikingClient:
         return all_user_memories
 
     async def search_experiences(self, query: str, limit: int = 5) -> list[Any]:
-        """用 query 检索 vikingbot experience 记忆。"""
+        """用 query 檢索 vikingbot experience 記憶。"""
         exp_uri = f"{self._memory_target_uri(self.admin_user_id)}experiences/"
         result = await self.client.find(query=query, target_uri=exp_uri, limit=limit)
         return self._matched_context_group_to_dicts(result, "memories")
@@ -895,7 +895,7 @@ class VikingClient:
         exclude_uri: Optional[str] = None,
         user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        """通过模式（正则表达式）搜索内容"""
+        """通過模式（正規表示式）搜尋內容"""
         client = self.client
         should_close = False
         if user_id:
@@ -916,7 +916,7 @@ class VikingClient:
     async def glob(
         self, pattern: str, uri: Optional[str] = None, user_id: Optional[str] = None
     ) -> Dict[str, Any]:
-        """通过 glob 模式匹配文件"""
+        """通過 glob 模式匹配檔案"""
         client = self.client
         should_close = False
         if user_id:
@@ -1284,7 +1284,7 @@ class VikingClient:
         }
 
     async def close(self):
-        """关闭客户端"""
+        """關閉客戶端"""
         await self.client.close()
         if self.admin_user_client:
             await self.admin_user_client.close()

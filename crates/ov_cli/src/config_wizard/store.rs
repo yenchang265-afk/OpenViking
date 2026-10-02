@@ -718,23 +718,23 @@ pub(crate) fn validation_error_copy(kind: ConfigKind, error: &Error) -> String {
 pub(crate) fn validation_error_copy_zh(kind: ConfigKind, error: &Error) -> String {
     match error {
         Error::Network(msg) if msg.contains("unhealthy") => {
-            "服务器可连接，但健康状态异常。请检查服务器日志。".to_string()
+            "伺服器可連線，但健康狀態異常。請檢查伺服器日誌。".to_string()
         }
         Error::Network(_) => match kind {
             ConfigKind::OpenVikingService => {
-                "无法连接 OpenViking 服务。请检查网络连接。".to_string()
+                "無法連線 OpenViking 服務。請檢查網路連線。".to_string()
             }
-            ConfigKind::Custom => "无法连接服务器。请检查 URL 和网络连接。".to_string(),
+            ConfigKind::Custom => "無法連線伺服器。請檢查 URL 和網路連線。".to_string(),
         },
-        Error::Timeout(_) => "连接超时。请提高请求超时时间或检查服务器状态。".to_string(),
+        Error::Timeout(_) => "連線超時。請提高請求超時時間或檢查伺服器狀態。".to_string(),
         error @ Error::Api { .. } if error.code() == "UNAUTHENTICATED" => {
-            "API Key 被拒绝。请检查 API Key。".to_string()
+            "API Key 被拒絕。請檢查 API Key。".to_string()
         }
         Error::Api { message, .. } => message.clone(),
         Error::Config(msg) => msg.clone(),
         _ => match kind {
-            ConfigKind::OpenVikingService => "验证失败。请检查 API Key 后重试。".to_string(),
-            ConfigKind::Custom => "验证失败。请检查服务器 URL，以及是否需要 API Key。".to_string(),
+            ConfigKind::OpenVikingService => "驗證失敗。請檢查 API Key 後重試。".to_string(),
+            ConfigKind::Custom => "驗證失敗。請檢查伺服器 URL，以及是否需要 API Key。".to_string(),
         },
     }
 }
