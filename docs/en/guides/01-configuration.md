@@ -1053,44 +1053,6 @@ The `mode="context"` assembly face on `/search` uses two timeout fuses:
 
 Both LLM steps are strictly opt-in: expansion needs a `session_id`, the rewrite needs `rewrite`. Either one failing degrades gracefully and never blocks recall.
 
-### grep
-
-Grep engine configuration for content pattern search. These settings are server-side only and cannot be overridden per-request.
-
-```json
-{
-  "grep": {
-    "engine": "auto",
-    "switch_to_remote_threshold": 10000
-  }
-}
-```
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `engine` | str | Search engine mode: `"auto"` uses VikingDB BM25 recall when available and falls back to local filesystem search; `"fs"` forces local filesystem search only. | `"auto"` |
-| `switch_to_remote_threshold` | int | L2 record count threshold to switch to VikingDB BM25 recall. When the number of L2 files under the search scope reaches this threshold, VikingDB BM25 is used for phase-1 recall; otherwise local filesystem search is used. Set to `0` to always use VikingDB BM25. Must be ≥ 0. | `10000` |
-
-For VikingDB / Volcengine FullText grep, OpenViking writes a `content` text field for BM25 recall. The source context keeps the full content, while the vector-store write payload truncates this field to **1 MB** at the final adapter boundary to stay within backend payload limits. Only VikingDB-backed backends use `content`; on all other backends (`local`, `cuvs`, `http`) the field is not written.
-
-### glob
-
-Glob engine configuration for path pattern matching. These settings are server-side only and cannot be overridden per request.
-
-```json
-{
-  "glob": {
-    "engine": "fs",
-    "switch_to_remote_threshold": 100
-  }
-}
-```
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `engine` | str | Path matching engine mode: `"auto"` uses remote `path_glob` processing when a VikingDB / Volcengine vector store is available and the search-scope record count reaches the threshold; otherwise it falls back to local filesystem search. `"fs"` forces local filesystem search only. | `"fs"` |
-| `switch_to_remote_threshold` | int | Record-count threshold at which `auto` mode switches to remote `path_glob`. Set to `0` to always use remote path matching. Must be ≥ 0. | `100` |
-
 ### storage
 
 Storage configuration for context data, including file storage (RAGFS) and vector database storage (VectorDB).
@@ -1524,15 +1486,13 @@ Vector database storage configuration
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `backend` | str | VectorDB backend type: 'local' (file-based), 'http' (remote service), 'volcengine' (cloud VikingDB), 'vikingdb' (private deployment), or 'cuvs' (local storage + GPU dense search) | "local" |
+| `backend` | str | VectorDB backend type: 'local' (file-based), 'http' (remote service), 'cuvs' (local storage + GPU dense search), or 'opengauss' (openGauss DataVec) | "local" |
 | `name` | str | VectorDB collection name | "context" |
 | `url` | str | Remote service URL for 'http' type (e.g., 'http://localhost:5000') | null |
 | `project_name` | str | Project name (alias project) | "default" |
 | `distance_metric` | str | Distance metric for vector similarity search (e.g., 'cosine', 'l2', 'ip') | "cosine" |
 | `dimension` | int | Vector embedding dimension | 0 |
 | `sparse_weight` | float | Sparse weight for hybrid vector search, only effective when using hybrid index | 0.0 |
-| `volcengine` | object | 'volcengine' type VikingDB configuration | - |
-| `vikingdb` | object | 'vikingdb' type private deployment configuration | - |
 | `cuvs` | object | NVIDIA cuVS configuration for the 'cuvs' backend and the opt-in memory-aware auto mode on 'local'; see the [cuVS guide](./16-cuvs.md) | - |
 
 Default local mode
@@ -1545,28 +1505,6 @@ Default local mode
   }
 }
 ```
-
-<details>
-<summary><b>volcengine vikingDB</b></summary>
-Supports cloud-deployed VikingDB on Volcengine
-
-```json
-{
-  "storage": {
-    "vectordb": {
-      "name": "context",
-      "backend": "volcengine",
-      "project": "default",
-      "volcengine": {
-        "region": "cn-beijing",
-        "ak": "your-access-key",
-        "sk": "your-secret-key"
-      }
-    }
-  }
-}
-```
-</details>
 
 ##### ACL schema
 
@@ -1581,7 +1519,7 @@ Each element uses `{mask}:{principal}`: `1` means `read`, `3` means `write`, and
 
 Local backends add the fields to an existing collection and rebuild the scalar index during startup. Existing records are not rewritten; missing ACL fields read as `acl_mode=none` and empty lists.
 
-For existing remote collections, including Volcengine VikingDB, provision these fields and scalar indexes before startup; OpenViking validates but does not alter the remote schema. Volcengine API-key data-plane mode also requires the context collection and configured index to exist. See [Resource Access Control (ACL)](../concepts/15-acl.md) for permission semantics.
+For existing remote collections, provision these fields and scalar indexes before startup; OpenViking validates but does not alter the remote schema. See [Resource Access Control (ACL)](../concepts/15-acl.md) for permission semantics.
 
 
 ## Config Files
@@ -2028,7 +1966,7 @@ For detailed encryption explanations, see [Data Encryption](../concepts/10-encry
       "lock_expire": 300.0
     },
     "vectordb": {
-      "backend": "local|cuvs|http|volcengine|vikingdb",
+      "backend": "local|cuvs|http|opengauss",
       "url": "string",
       "project": "string"
     }

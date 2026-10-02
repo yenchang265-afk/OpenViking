@@ -137,11 +137,17 @@ def test_runtime_concurrency_uses_scope_specific_defaults():
     assert config.reindex.file_vectorization_concurrency == 8
 
 
-def test_glob_uses_safe_defaults():
-    config = OpenVikingConfig.from_dict({})
+def test_openviking_config_ignores_retired_grep_and_glob_sections():
+    config = OpenVikingConfig.from_dict(
+        {
+            "grep": {"engine": "auto", "switch_to_remote_threshold": 10000},
+            "glob": {"engine": "fs", "switch_to_remote_threshold": 100},
+        }
+    )
 
-    assert config.glob.engine == "fs"
-    assert config.glob.switch_to_remote_threshold == 100
+    dumped = config.to_dict()
+    assert "grep" not in dumped
+    assert "glob" not in dumped
 
 
 def test_runtime_concurrency_accepts_separate_values():
@@ -318,7 +324,6 @@ def test_openviking_config_ignores_unknown_fields(monkeypatch, caplog):
         {
             "retired_section": {"api_key": "test-secret"},
             "default_user": "alice",
-            "glob": {"retired_field": True, "engine": "fs"},
             "memory": {"unknown_memory_field": "value", "session_skill_extraction_enabled": True},
             "storage": {"agfs": {"cache": {"enabled": True}}},
             "parsers": {
@@ -332,14 +337,12 @@ def test_openviking_config_ignores_unknown_fields(monkeypatch, caplog):
     )
 
     assert config.default_user == "alice"
-    assert config.glob.engine == "fs"
     assert config.memory.session_skill_extraction_enabled is True
     assert config.markdown.max_heading_depth == 4
     assert config.code.max_line_length == 120
     assert config.anydoc.max_table_rows == 20
     dumped = config.to_dict()
     assert "retired_section" not in dumped
-    assert "retired_field" not in dumped["glob"]
     assert "unknown_memory_field" not in dumped["memory"]
     assert "cache" not in dumped["storage"]["agfs"]
     assert "Ignoring unknown config field 'storage.agfs.cache'" in caplog.text

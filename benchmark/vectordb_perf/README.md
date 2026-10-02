@@ -271,27 +271,6 @@ CPU fallback 的 search QPS。當前 runner 是這些批次介面在倉庫內的
 
 ## 其他 ov.conf 示例
 
-Volcengine VikingDB：
-
-```json
-{
-  "storage": {
-    "vectordb": {
-      "backend": "volcengine",
-      "name": "vectordb_perf",
-      "project": "default",
-      "index_name": "default",
-      "distance_metric": "cosine",
-      "volcengine": {
-        "region": "cn-beijing",
-        "ak": "YOUR_AK",
-        "sk": "YOUR_SK"
-      }
-    }
-  }
-}
-```
-
 自定義 adapter 類：
 
 ```json

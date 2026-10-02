@@ -19,7 +19,7 @@ from openviking_cli.utils.config.cache_config import CacheConfig
 from openviking_cli.utils.config.consts import OPENVIKING_CONFIG_ENV
 from openviking_cli.utils.config.embedding_config import EmbeddingConfig, EmbeddingModelConfig
 from openviking_cli.utils.config.open_viking_config import OpenVikingConfig
-from openviking_cli.utils.config.vectordb_config import VectorDBBackendConfig, VolcengineConfig
+from openviking_cli.utils.config.vectordb_config import VectorDBBackendConfig
 from openviking_cli.utils.config.vlm_config import VLMConfig
 
 
@@ -833,78 +833,15 @@ def test_vectordb_validation():
     except ValueError as e:
         print(f"   Correctly raised exception: {e}")
 
-    # Test 3: volcengine backend complete config
-    print("\n3. Test volcengine backend complete config...")
-    try:
-        _ = VectorDBBackendConfig(
-            backend="volcengine",
-            volcengine=VolcengineConfig(ak="test_ak", sk="test_sk", region="cn-beijing"),
-        )
-        print("   Pass")
-    except ValueError as e:
-        print(f"   Fail: {e}")
 
-    # Test 4: volcengine backend with api_key complete config
-    print("\n4. Test volcengine backend with api_key complete config...")
-    try:
-        _ = VectorDBBackendConfig(
-            backend="volcengine",
-            volcengine=VolcengineConfig(
-                api_key="vk-test-token",
-                host="api-vikingdb.vikingdb.cn-beijing.volces.com",
-            ),
-        )
-        print("   Pass")
-    except ValueError as e:
-        print(f"   Fail: {e}")
-
-
-def test_vectordb_volcengine_validation_accepts_api_key_without_ak_sk():
-    config = VectorDBBackendConfig(
-        backend="volcengine",
-        volcengine=VolcengineConfig(
-            api_key="vk-test-token",
-            host="api-vikingdb.vikingdb.cn-beijing.volces.com",
-        ),
-    )
-
-    assert config.backend == "volcengine"
-    assert config.volcengine is not None
-    assert config.volcengine.api_key == "vk-test-token"
-    assert config.volcengine.host == "api-vikingdb.vikingdb.cn-beijing.volces.com"
-
-
-def test_vectordb_volcengine_without_api_key_still_requires_ak_sk():
-    try:
-        VectorDBBackendConfig(
-            backend="volcengine",
-            volcengine=VolcengineConfig(host="api-vikingdb.vikingdb.cn-beijing.volces.com"),
-        )
-        raise AssertionError("Expected ValueError for missing ak/sk")
-    except ValueError as e:
-        assert "ak" in str(e)
-
-
-def test_removed_volcengine_api_key_backend_name_is_rejected():
-    try:
-        VectorDBBackendConfig(
-            backend="volcengine_api_key",
-        )
-        raise AssertionError("Expected ValueError for removed backend name")
-    except ValueError as e:
-        assert "volcengine_api_key" in str(e)
-
-
-@pytest.mark.parametrize("backend", ["qdrant"])
-def test_removed_third_party_vectordb_backends_are_rejected(backend):
+@pytest.mark.parametrize("backend", ["qdrant", "volcengine", "volcengine_api_key", "vikingdb"])
+def test_removed_vectordb_backends_are_rejected(backend):
     with pytest.raises(ValueError) as exc_info:
         VectorDBBackendConfig(backend=backend)
 
     message = str(exc_info.value)
-    assert backend in message
-    assert "local" in message
-    assert "volcengine" in message
-    assert "vikingdb" in message
+    assert f"'{backend}'" in message
+    assert "Must be one of: ['local', 'cuvs', 'http', 'opengauss']" in message
 
 
 def test_opengauss_backend_is_accepted_with_defaults():
@@ -932,17 +869,6 @@ def test_opengauss_l1_requires_hnsw():
             distance_metric="l1",
             opengauss=OpenGaussConfig(index_type="ivfflat", build_params={"lists": 100}),
         )
-
-
-def test_vectordb_volcengine_api_key_auth_requires_host_or_region():
-    try:
-        VectorDBBackendConfig(
-            backend="volcengine",
-            volcengine=VolcengineConfig(api_key="vk-test-token"),
-        )
-        raise AssertionError("Expected ValueError for missing host/region in api_key mode")
-    except ValueError as e:
-        assert "host' or 'region" in str(e)
 
 
 def test_vectordb_index_name_defaults_and_overrides():

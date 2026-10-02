@@ -109,16 +109,14 @@ class CollectionAdapter(ABC):
     _TRUNCATABLE_STRING_FIELDS: tuple[str, ...] = ("abstract",)
     _TRUNCATABLE_TEXT_FIELDS: tuple[str, ...] = ("content",)
 
-    # Per-backend byte limits. ``None`` means no truncation. VikingDB-backed
-    # adapters set both limits; local adapters keep the complete values.
+    # Per-backend byte limits. ``None`` means no truncation. Adapters for
+    # byte-limited stores set both limits; local adapters keep the complete values.
     _STRING_FIELD_BYTE_LIMIT: int | None = None
     _TEXT_FIELD_BYTE_LIMIT: int | None = None
 
     # Whether this backend actually stores the ``content`` (full text) field.
-    # Only VikingDB-backed adapters use ``content`` (for server-side full-text grep).
-    # All other backends leave this ``False`` so that ``content`` is silently dropped
+    # Built-in backends leave this ``False`` so that ``content`` is silently dropped
     # on write -- a new backend that does not need ``content`` requires no extra code.
-    # See ``viking_fs._resolve_grep_engine`` which must stay consistent with this flag.
     USE_CONTENT_FIELD: bool = False
 
     def __init__(self, collection_name: str, index_name: str = DEFAULT_INDEX_NAME):

@@ -49,8 +49,6 @@ openviking-server --config /path/to/ov.conf
 | `query_planner` | object / `null` | `null` | 檢索意圖分析模型；未配置時回退到 `vlm` |
 | `rerank` | object | disabled | 檢索結果重排模型 |
 | `retrieval` | object | 見下表 | 檢索排序和意圖分析策略 |
-| `grep` | object | 內建預設值 | 文本搜尋引擎配置 |
-| `glob` | object | 內建預設值 | 路徑模式匹配引擎配置 |
 | `storage` | object | 本地儲存 | 工作目錄、檔案系統和向量資料庫 |
 | `queue_workers` | object | 見下表 | QueueFS 消費 worker 的執行時併發配置 |
 | `server` | object | 本地開發模式 | HTTP 服務、鑑權、上傳和可觀測性 |
@@ -200,7 +198,7 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 |---|---|---|---|
 | `workspace` | path | `"./data"` | OpenViking 工作目錄 |
 | `agfs.backend` | `local`、`memory`、`s3` | `local` | 檔案與後設資料儲存後端 |
-| `vectordb.backend` | `local`、`cuvs`、`http`、`volcengine`、`vikingdb` | `local` | 向量資料庫後端 |
+| `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss` | `local` | 向量資料庫後端 |
 | `vectordb.dimension` | integer | 跟隨 Embedding | 向量集合維度 |
 | `parse_output.mode` | `agfs`、`local` | `agfs` | parser 中間產物的儲存後端 |
 | `parse_output.local_root` | 路徑或 `null` | 系統臨時目錄 | local parser artifact 的根目錄 |

@@ -21,7 +21,6 @@ def _make_viking_fs() -> VikingFS:
     fs._async_agfs = fs.agfs
     fs.query_embedder = None
     fs.rerank_config = None
-    fs.grep_config = None
     fs.vector_store = None
     fs.acl_manager = None
     fs._encryptor = None

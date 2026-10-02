@@ -14,7 +14,7 @@ from openviking_cli.utils.logger import get_logger
 if TYPE_CHECKING:
     from openviking.storage.acl import AclManager
     from openviking.storage.viking_vector_index_backend import VikingVectorIndexBackend
-    from openviking_cli.utils.config import GlobConfig, GrepConfig, RerankConfig, RetrievalConfig
+    from openviking_cli.utils.config import RerankConfig, RetrievalConfig
 
 logger = get_logger(__name__)
 
@@ -199,8 +199,6 @@ def init_viking_fs(
     vector_store: Optional["VikingVectorIndexBackend"] = None,
     acl_manager: Optional["AclManager"] = None,
     retrieval_config: Optional["RetrievalConfig"] = None,
-    grep_config: Optional["GrepConfig"] = None,
-    glob_config: Optional["GlobConfig"] = None,
     timeout: int = 10,
     enable_recorder: bool = False,
     encryptor: Optional[Any] = None,
@@ -212,8 +210,6 @@ def init_viking_fs(
         query_embedder: Embedder instance
         rerank_config: Rerank configuration
         retrieval_config: Retrieval ranking configuration
-        grep_config: Grep engine configuration
-        glob_config: Glob engine configuration
         vector_store: Vector store instance
         enable_recorder: Whether to enable IO recording
         encryptor: FileEncryptor instance for encryption/decryption
@@ -229,8 +225,6 @@ def init_viking_fs(
         vector_store=vector_store,
         acl_manager=acl_manager,
         retrieval_config=retrieval_config,
-        grep_config=grep_config,
-        glob_config=glob_config,
         encryptor=encryptor,
     )
 

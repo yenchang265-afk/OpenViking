@@ -248,23 +248,6 @@ def _embedding_metadata_compatible(
     )
 
 
-def _collection_has_content_fulltext(meta: Dict[str, Any]) -> bool:
-    fields = meta.get("Fields", [])
-    has_content = any(
-        f.get("FieldName") == "content" and f.get("FieldType") == "text" for f in fields
-    )
-    fulltext = meta.get("FullText") or []
-    if isinstance(fulltext, str):
-        try:
-            fulltext = json.loads(fulltext)
-        except json.JSONDecodeError:
-            fulltext = []
-    has_content_fulltext = any(
-        isinstance(ft, dict) and ft.get("Field") == "content" for ft in fulltext
-    )
-    return has_content and has_content_fulltext
-
-
 def _encode_collection_description(
     base_description: str,
     embedding_meta: Dict[str, Any],
@@ -310,16 +293,6 @@ async def init_context_collection(storage) -> bool:
     collection_name = name
     embedding_meta = _build_embedding_metadata(config)
     vectordb_cfg = config.storage.vectordb
-    uses_volcengine_data_plane = bool(
-        vectordb_cfg.backend == "volcengine"
-        and getattr(getattr(vectordb_cfg, "volcengine", None), "api_key", None)
-    )
-    if uses_volcengine_data_plane:
-        logger.info(
-            "Skip collection bootstrap for volcengine data-plane backend; "
-            "collection/index/schema must be pre-created out of band"
-        )
-        return False
     schema = CollectionSchemas.context_collection(
         collection_name,
         vector_dim,
@@ -359,19 +332,6 @@ async def init_context_collection(storage) -> bool:
     base_description, existing_embedding_meta = _decode_collection_description(
         existing_meta.get("Description")
     )
-
-    # Schema compatibility check: actual collection schema controls whether
-    # VikingDB full-text grep can be used. Missing content/FullText should only
-    # disable the vikingdb grep path, not block server startup.
-    if (
-        "Fields" in existing_meta or "FullText" in existing_meta
-    ) and not _collection_has_content_fulltext(existing_meta):
-        logger.warning(
-            "Collection schema does not support VikingDB full-text grep "
-            "Missing 'content' field or FullText config. "
-            "grep engine=auto will fall back to fs. "
-            "Recreate the collection to enable vikingdb-based grep."
-        )
 
     if _embedding_metadata_compatible(existing_embedding_meta, embedding_meta):
         await _update_local_schema()

@@ -12,40 +12,6 @@ DEFAULT_INDEX_NAME = "default"
 logger = get_logger(__name__)
 
 
-class VolcengineConfig(BaseModel):
-    """Configuration for Volcengine VikingDB."""
-
-    ak: Optional[str] = Field(default=None, description="Volcengine Access Key")
-    sk: Optional[str] = Field(default=None, description="Volcengine Secret Key")
-    api_key: Optional[str] = Field(
-        default=None,
-        description="Optional VikingDB Data API key for data-plane-only access",
-    )
-    session_token: Optional[str] = Field(
-        default=None,
-        description="Optional Volcengine STS security token for temporary credentials",
-    )
-    region: Optional[str] = Field(
-        default=None, description="Volcengine region (e.g., 'cn-beijing')"
-    )
-    host: Optional[str] = Field(
-        default=None,
-        description=(
-            "Optional VikingDB data API host. "
-            "Used together with `api_key` for data-plane-only access."
-        ),
-    )
-
-
-class VikingDBConfig(BaseModel):
-    """Configuration for VikingDB private deployment."""
-
-    host: Optional[str] = Field(default=None, description="VikingDB service host")
-    headers: Optional[Dict[str, str]] = Field(
-        default_factory=dict, description="Custom headers for requests"
-    )
-
-
 _OPENGAUSS_MODES = frozenset({"standalone", "distributed"})
 # Distance metrics with a DataVec operator class; l1 is plain-HNSW only.
 _OPENGAUSS_DISTANCE_METRICS = frozenset({"cosine", "l2", "ip", "l1"})
@@ -402,11 +368,7 @@ class VectorDBBackendConfig(BaseModel):
 
     backend: str = Field(
         default="local",
-        description=(
-            "VectorDB backend type: 'local', 'cuvs', 'http', "
-            "'volcengine' (AK/SK signed or API key data-plane only), "
-            "'vikingdb' (private deployment), or 'opengauss'"
-        ),
+        description="VectorDB backend type: 'local', 'cuvs', 'http', or 'opengauss'",
     )
 
     name: Optional[str] = Field(default=COLLECTION_NAME, description="Collection name for VectorDB")
@@ -448,17 +410,6 @@ class VectorDBBackendConfig(BaseModel):
         ),
     )
 
-    volcengine: Optional[VolcengineConfig] = Field(
-        default_factory=VolcengineConfig,
-        description="Volcengine VikingDB configuration for 'volcengine' type",
-    )
-
-    # VikingDB private deployment mode
-    vikingdb: Optional[VikingDBConfig] = Field(
-        default_factory=VikingDBConfig,
-        description="VikingDB private deployment configuration for 'vikingdb' type",
-    )
-
     cuvs: Optional[CuVSConfig] = Field(
         default_factory=CuVSConfig,
         description="NVIDIA cuVS dense-vector search configuration for the 'cuvs' backend",
@@ -481,8 +432,6 @@ class VectorDBBackendConfig(BaseModel):
             "local",
             "cuvs",
             "http",
-            "volcengine",
-            "vikingdb",
             "opengauss",
         ]
 
@@ -503,35 +452,6 @@ class VectorDBBackendConfig(BaseModel):
         elif self.backend == "http":
             if not self.url:
                 raise ValueError("VectorDB http backend requires 'url' to be set")
-
-        elif self.backend == "volcengine":
-            if self.volcengine and self.volcengine.host:
-                self.volcengine.host = self.volcengine.host.strip().rstrip("/")
-
-            uses_api_key = bool(self.volcengine and self.volcengine.api_key)
-            if uses_api_key:
-                if not self.volcengine or not (self.volcengine.host or self.volcengine.region):
-                    raise ValueError(
-                        "VectorDB volcengine backend with 'api_key' requires 'host' or 'region' to be set"
-                    )
-            else:
-                if not self.volcengine or not self.volcengine.ak or not self.volcengine.sk:
-                    raise ValueError(
-                        "VectorDB volcengine backend requires 'ak' and 'sk' to be set "
-                        "when 'api_key' is not configured"
-                    )
-                if not self.volcengine.region:
-                    raise ValueError("VectorDB volcengine backend requires 'region' to be set")
-            if self.volcengine and self.volcengine.host and not uses_api_key:
-                logger.warning(
-                    "VectorDB volcengine backend: 'volcengine.host' is ignored in AK/SK mode. "
-                    "Using region-based console/data hosts for region='%s'.",
-                    self.volcengine.region or "",
-                )
-
-        elif self.backend == "vikingdb":
-            if not self.vikingdb or not self.vikingdb.host:
-                raise ValueError("VectorDB vikingdb backend requires 'host' to be set")
 
         elif self.backend == "opengauss":
             if not self.opengauss:

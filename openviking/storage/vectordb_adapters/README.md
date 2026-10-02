@@ -28,7 +28,7 @@
    提供統一查詢、寫入、刪除、計數能力。
 
 3. **Adapter 層（本目錄）**  
-   負責把統一能力對映到具體後端實現（local/http/volcengine/vikingdb/thirdparty）。
+   負責把統一能力對映到具體後端實現（local/cuvs/http/opengauss/thirdparty）。
 
 新增後端時，主要只改第 3 層。
 
@@ -90,11 +90,11 @@
 - `_sanitize_scalar_index_fields(...)`
 - `_build_default_index_meta(...)`
 
-若後端支援服務端全文檢索（BM25 grep）並需要寫入 `content` 全文欄位，設定類屬性：
+若後端需要寫入 `content` 全文欄位，設定類屬性：
 
 - `USE_CONTENT_FIELD = True`（預設為 `False`）
 
-預設 `False` 時，寫入時會自動跳過 `content` 欄位（該欄位僅 VikingDB 系後端使用），新增後端無需額外程式碼。
+預設 `False` 時，寫入時會自動跳過 `content` 欄位，新增後端無需額外程式碼。
 
 目的：把後端特性差異收斂在 adapter 內。
 
