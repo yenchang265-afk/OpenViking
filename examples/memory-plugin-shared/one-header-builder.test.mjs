@@ -1,5 +1,5 @@
 /**
- * One module writes the OpenViking request headers.
+ * One module writes the Business Data Platform request headers.
  *
  * Every harness used to spell the header block out for itself, and they
  * drifted: one named the operator to every proxy on the path whether or not the
@@ -57,7 +57,7 @@ function sourceFiles(dir, out = []) {
   return out;
 }
 
-test("only the shared HTTP module writes the OpenViking request headers", () => {
+test("only the shared HTTP module writes the Business Data Platform request headers", () => {
   const files = ROOTS.flatMap((dir) => sourceFiles(dir));
   assert.ok(files.length > 100, `expected the plugin family's sources, found ${files.length}`);
 

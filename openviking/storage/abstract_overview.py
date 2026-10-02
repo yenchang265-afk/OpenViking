@@ -93,7 +93,7 @@ def _normalize_metadata(metadata: Mapping[str, Any]) -> Dict[str, Any]:
     """Validate known fields and silently discard fields outside the schema.
 
     Ignoring unknown fields keeps readers forward-compatible with metadata
-    written by newer OpenViking versions.  Known fields remain strict so a
+    written by newer Business Data Platform versions.  Known fields remain strict so a
     malformed value cannot leak into previews, embeddings, or writeback.
     """
 

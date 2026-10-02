@@ -116,9 +116,9 @@ export function registerOpenVikingToolResultTools({
   registerTool(
     (ctx: OpenVikingToolResultToolContext): OpenVikingToolResultToolDefinition => ({
       name: "openviking_tool_result_read",
-      label: "Tool Result Read (OpenViking)",
+      label: "Tool Result Read (Business Data Platform)",
       description:
-        "Restore the full original content of a tool result that was externalized by OpenViking. " +
+        "Restore the full original content of a tool result that was externalized by Business Data Platform. " +
         "Use when a previous tool result was externalized and only a preview is visible — " +
         "the preview contains a [tool-result-ref] or viking://session/.../tool-results/... URI. " +
         "\"Read\" tool returns the same truncated preview; this tool returns the complete content. " +
@@ -212,7 +212,7 @@ export function registerOpenVikingToolResultTools({
   registerTool(
     (ctx: OpenVikingToolResultToolContext): OpenVikingToolResultToolDefinition => ({
       name: "openviking_tool_result_search",
-      label: "Tool Result Search (OpenViking)",
+      label: "Tool Result Search (Business Data Platform)",
       description:
         "Search inside an externalized tool result for a keyword. " +
         "Use when you need to find specific content in a large externalized result, " +
@@ -315,7 +315,7 @@ export function registerOpenVikingToolResultTools({
   registerTool(
     (ctx: OpenVikingToolResultToolContext): OpenVikingToolResultToolDefinition => ({
       name: "openviking_tool_result_list",
-      label: "Tool Result List (OpenViking)",
+      label: "Tool Result List (Business Data Platform)",
       description:
         "List externalized tool results for the current session. " +
         "Use to discover available refs before calling openviking_tool_result_read. " +

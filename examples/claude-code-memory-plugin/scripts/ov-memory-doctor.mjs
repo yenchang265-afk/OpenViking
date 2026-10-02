@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Client-side diagnostics for the OpenViking Claude Code memory plugin.
+ * Client-side diagnostics for the Business Data Platform Claude Code memory plugin.
  *
  * Covers the three things that go wrong on a user's machine — the plugin
  * install (marketplace / enablement / hooks / MCP wiring), the client config

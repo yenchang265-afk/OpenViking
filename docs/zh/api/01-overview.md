@@ -1,19 +1,19 @@
 # API 概覽
 
-本頁介紹如何連線 OpenViking 以及所有 API 端點共享的約定。
+本頁介紹如何連線 Business Data Platform 以及所有 API 端點共享的約定。
 
 ## 連線模式
 
-OpenViking 客戶端通過 HTTP 連線 OpenViking Server。
+Business Data Platform 客戶端通過 HTTP 連線 Business Data Platform Server。
 
 | 模式 | 適用場景 | 說明 |
 |------|----------|------|
-| **HTTP** | 連線 OpenViking 伺服器 | 通過 HTTP API 連線遠端伺服器 |
+| **HTTP** | 連線 Business Data Platform 伺服器 | 通過 HTTP API 連線遠端伺服器 |
 | **CLI** | Shell 指令碼、Agent 工具使用 | 通過 CLI 命令連線伺服器 |
 
 ### Client-Server 模式
 
-Client-Server 模式通過 HTTP API 連線 OpenViking 伺服器，支援多租戶、遠端訪問等特性。OpenViking 的伺服器啟動方式請參見相關部署文件。
+Client-Server 模式通過 HTTP API 連線 Business Data Platform 伺服器，支援多租戶、遠端訪問等特性。Business Data Platform 的伺服器啟動方式請參見相關部署文件。
 
 #### Python SDK 客戶端
 
@@ -161,7 +161,7 @@ curl http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 
 #### CLI 模式
 
-OpenViking CLI 的命令是 `ov`（通過 `npm install -g @openviking/cli` 安裝），連線到 OpenViking 服務端，將所有操作暴露為 Shell 命令。CLI 同樣從 `ovcli.conf` 讀取連線資訊（與 HTTP 客戶端共享）。
+Business Data Platform CLI 的命令是 `ov`（通過 `npm install -g @openviking/cli` 安裝），連線到 Business Data Platform 服務端，將所有操作暴露為 Shell 命令。CLI 同樣從 `ovcli.conf` 讀取連線資訊（與 HTTP 客戶端共享）。
 
 基本用法：
 
@@ -530,7 +530,7 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | 寫入並激活新版本 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
 
-### [OpenViking Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Agent Runtime API](23-agent-runtime.md) 與 [VikingBot API](24-vikingbot.md)
+### [Business Data Platform Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Agent Runtime API](23-agent-runtime.md) 與 [VikingBot API](24-vikingbot.md)
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
@@ -567,4 +567,4 @@ JSON 輸出 - 錯誤：
 | 資料生命週期 | Watch、快照、OVPack |
 | 運維與觀測 | 系統、任務、Observer、Metrics |
 | 身份與治理 | 管理員、ACL、隱私配置 |
-| 協議與擴充 | OpenViking Assets、WebDAV、Agent Runtime API、VikingBot API |
+| 協議與擴充 | Business Data Platform Assets、WebDAV、Agent Runtime API、VikingBot API |

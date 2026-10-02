@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""LangChain tool factory for OpenViking primitives."""
+"""LangChain tool factory for Business Data Platform primitives."""
 
 from __future__ import annotations
 
@@ -61,10 +61,10 @@ def create_openviking_tools(
     tool_names: Iterable[str] | None = None,
     allow_forget: bool = False,
 ) -> list[StructuredTool]:
-    """Create LangChain tools exposing OpenViking's common agent primitives.
+    """Create LangChain tools exposing Business Data Platform's common agent primitives.
 
     Tool names intentionally use the ``viking_*`` prefix so models see the same
-    conceptual operations that OpenViking users know from plugins and MCP:
+    conceptual operations that Business Data Platform users know from plugins and MCP:
     find/search, browse/read, grep, store, add_resource, add_skill, and health.
     """
 
@@ -93,7 +93,7 @@ def create_openviking_tools(
         query: Annotated[str, Field(description="Natural-language query to match semantically.")],
         target_uri: Annotated[
             str,
-            Field(description="Optional OpenViking URI scope to search within."),
+            Field(description="Optional Business Data Platform URI scope to search within."),
         ] = "",
         limit: Annotated[int, Field(description="Maximum number of matches to return.")] = 8,
         min_score: Annotated[
@@ -101,7 +101,7 @@ def create_openviking_tools(
             Field(description="Optional backend relevance threshold."),
         ] = None,
     ) -> str:
-        """Run stateless semantic retrieval over OpenViking targets."""
+        """Run stateless semantic retrieval over Business Data Platform targets."""
 
         result = call_openviking(
             get_client(),
@@ -117,11 +117,11 @@ def create_openviking_tools(
         query: Annotated[str, Field(description="Natural-language query to match semantically.")],
         target_uri: Annotated[
             str,
-            Field(description="Optional OpenViking URI scope to search within."),
+            Field(description="Optional Business Data Platform URI scope to search within."),
         ] = "",
         session_id: Annotated[
             str | None,
-            Field(description="Optional OpenViking session id for session-aware retrieval."),
+            Field(description="Optional Business Data Platform session id for session-aware retrieval."),
         ] = None,
         limit: Annotated[int, Field(description="Maximum number of matches to return.")] = 8,
         min_score: Annotated[
@@ -129,7 +129,7 @@ def create_openviking_tools(
             Field(description="Optional backend relevance threshold."),
         ] = None,
     ) -> str:
-        """Run session-aware semantic retrieval over OpenViking targets."""
+        """Run session-aware semantic retrieval over Business Data Platform targets."""
 
         result = call_openviking(
             get_client(),
@@ -145,7 +145,7 @@ def create_openviking_tools(
     def viking_browse(
         uri: Annotated[
             str,
-            Field(description="OpenViking namespace or directory URI to list."),
+            Field(description="Business Data Platform namespace or directory URI to list."),
         ] = "viking://",
         recursive: Annotated[
             bool,
@@ -153,10 +153,10 @@ def create_openviking_tools(
         ] = False,
         pattern: Annotated[
             str | None,
-            Field(description="Optional glob pattern for discovering matching OpenViking URIs."),
+            Field(description="Optional glob pattern for discovering matching Business Data Platform URIs."),
         ] = None,
     ) -> str:
-        """List child entries under an OpenViking namespace or directory URI.
+        """List child entries under a Business Data Platform namespace or directory URI.
 
         Use this to inspect structure and discover file/document URIs. When
         pattern is set, the tool returns glob matches instead of a direct
@@ -173,7 +173,7 @@ def create_openviking_tools(
     def viking_read(
         uris: Annotated[
             str | list[str],
-            Field(description="One or more file/document OpenViking URIs to read."),
+            Field(description="One or more file/document Business Data Platform URIs to read."),
         ],
         max_chars: Annotated[
             int,
@@ -186,7 +186,7 @@ def create_openviking_tools(
             ),
         ] = "read",
     ) -> str:
-        """Read file/document OpenViking URIs.
+        """Read file/document Business Data Platform URIs.
 
         Directory URIs are not readable; call viking_browse on directories to
         list children, then call viking_read on returned file/document URIs.
@@ -226,7 +226,7 @@ def create_openviking_tools(
     def viking_grep(
         uri: Annotated[
             str,
-            Field(description="File/document OpenViking URI whose content should be searched."),
+            Field(description="File/document Business Data Platform URI whose content should be searched."),
         ],
         pattern: Annotated[
             str,
@@ -241,7 +241,7 @@ def create_openviking_tools(
             Field(description="Maximum number of matching content nodes to return."),
         ] = 20,
     ) -> str:
-        """Search OpenViking file content with a grep-style pattern."""
+        """Search Business Data Platform file content with a grep-style pattern."""
 
         result = call_openviking(
             get_client(),
@@ -260,14 +260,14 @@ def create_openviking_tools(
         ],
         session_id: Annotated[
             str | None,
-            Field(description="OpenViking session id. A new session is created when omitted."),
+            Field(description="Business Data Platform session id. A new session is created when omitted."),
         ] = None,
         commit: Annotated[
             bool,
             Field(description="Whether to commit the appended session messages immediately."),
         ] = True,
     ) -> str:
-        """Append explicit durable memories or conversation messages to an OpenViking session.
+        """Append explicit durable memories or conversation messages to a Business Data Platform session.
 
         This is a write operation. User-facing hosts should expose it only for
         confirmed "remember/save this" workflows because normal conversation
@@ -304,7 +304,7 @@ def create_openviking_tools(
     def viking_archive_search(
         session_id: Annotated[
             str,
-            Field(description="OpenViking session id whose committed archive context to search."),
+            Field(description="Business Data Platform session id whose committed archive context to search."),
         ],
         query: Annotated[
             str,
@@ -323,7 +323,7 @@ def create_openviking_tools(
             Field(description="Maximum number of archive matches to return."),
         ] = 8,
     ) -> str:
-        """Search committed OpenViking session archive context."""
+        """Search committed Business Data Platform session archive context."""
 
         active_client = get_client()
         if archive_id:
@@ -355,7 +355,7 @@ def create_openviking_tools(
     def viking_archive_expand(
         session_id: Annotated[
             str,
-            Field(description="OpenViking session id that owns the archive."),
+            Field(description="Business Data Platform session id that owns the archive."),
         ],
         archive_id: Annotated[
             str,
@@ -366,7 +366,7 @@ def create_openviking_tools(
             Field(description="Maximum characters to include in the expanded archive result."),
         ] = 20_000,
     ) -> str:
-        """Expand one OpenViking session archive by archive ID."""
+        """Expand one Business Data Platform session archive by archive ID."""
 
         archive = call_openviking(
             get_client(),
@@ -388,11 +388,11 @@ def create_openviking_tools(
         ],
         to: Annotated[
             str | None,
-            Field(description="Optional destination OpenViking URI for the imported resource."),
+            Field(description="Optional destination Business Data Platform URI for the imported resource."),
         ] = None,
         parent: Annotated[
             str | None,
-            Field(description="Optional parent OpenViking URI under which to place the resource."),
+            Field(description="Optional parent Business Data Platform URI under which to place the resource."),
         ] = None,
         reason: Annotated[
             str,
@@ -411,7 +411,7 @@ def create_openviking_tools(
             Field(description="Optional wait timeout in seconds for resource ingestion."),
         ] = None,
     ) -> str:
-        """Import an explicit resource into OpenViking.
+        """Import an explicit resource into Business Data Platform.
 
         This is a resource-management operation for user-approved URLs,
         repositories, uploaded files, or local paths available to the client. It
@@ -441,7 +441,7 @@ def create_openviking_tools(
                         "error": "local_paths_not_supported_for_http_server",
                         "path": path,
                         "message": (
-                            "The OpenViking HTTP client could not upload this local path. "
+                            "The Business Data Platform HTTP client could not upload this local path. "
                             "Provide an existing local file/directory or a remote URL/repository."
                         ),
                     }
@@ -463,7 +463,7 @@ def create_openviking_tools(
             Field(description="Optional wait timeout in seconds for skill registration."),
         ] = None,
     ) -> str:
-        """Register a reusable OpenViking skill for trusted admin workflows."""
+        """Register a reusable Business Data Platform skill for trusted admin workflows."""
 
         result = call_openviking(
             get_client(),
@@ -475,7 +475,7 @@ def create_openviking_tools(
         return stringify(result, max_chars=8_000)
 
     def viking_health() -> str:
-        """Check OpenViking health/status for diagnostics."""
+        """Check Business Data Platform health/status for diagnostics."""
 
         active_client = get_client()
         if hasattr(active_client, "get_status"):
@@ -490,14 +490,14 @@ def create_openviking_tools(
     def viking_forget(
         uri: Annotated[
             str,
-            Field(description="OpenViking URI to remove."),
+            Field(description="Business Data Platform URI to remove."),
         ],
         recursive: Annotated[
             bool,
             Field(description="Whether to remove descendants recursively."),
         ] = False,
     ) -> str:
-        """Remove a URI from OpenViking. Only expose this to trusted agents."""
+        """Remove a URI from Business Data Platform. Only expose this to trusted agents."""
 
         call_openviking(get_client(), "rm", uri=uri, recursive=recursive)
         return compact_json({"removed": uri, "recursive": recursive})
@@ -622,10 +622,10 @@ def _resolve_resource_source(value: str) -> str | dict[str, str]:
 def _format_openviking_health(status: Any) -> dict[str, Any]:
     state = _infer_health_state(status)
     return {
-        "backend": "OpenViking",
+        "backend": "Business Data Platform",
         "healthy": state == "healthy",
         "state": state,
-        "note": "OpenViking is the context memory backend; VikingDB is internal vector/index storage.",
+        "note": "Business Data Platform is the context memory backend; VikingDB is internal vector/index storage.",
         "summary": _safe_status_summary(status),
     }
 
@@ -723,7 +723,7 @@ def _format_retrieval_result(result: Any) -> str:
         score_text = "" if score is None else f" score={score}"
         lines.append(f"[{index}] {context_type}{score_text} {uri}\n{abstract}".strip())
     if not lines:
-        return "No OpenViking contexts matched."
+        return "No Business Data Platform contexts matched."
     return "\n\n".join(lines)
 
 
@@ -767,7 +767,7 @@ def _grep_session_history(
             node_limit=None,
         )
     except Exception:
-        logger.debug("OpenViking archive history grep failed", exc_info=True)
+        logger.debug("Business Data Platform archive history grep failed", exc_info=True)
         return {"matches": [], "count": 0, "source": history_uri}
     return _filter_grep_result(result, tokens=tokens, max_matches=max_matches, source=history_uri)
 

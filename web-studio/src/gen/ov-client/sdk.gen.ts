@@ -207,7 +207,7 @@ export const postResourcesTempUpload = <ThrowOnError extends boolean = false>(op
 /**
  * Add Resource
  *
- * Add resource to OpenViking.
+ * Add resource to Business Data Platform.
  */
 export const postResources = <ThrowOnError extends boolean = false>(options: Options<PostResourcesData, ThrowOnError>) => (options.client ?? client).post<PostResourcesResponses, PostResourcesErrors, ThrowOnError>({
     responseType: 'json',
@@ -222,7 +222,7 @@ export const postResources = <ThrowOnError extends boolean = false>(options: Opt
 /**
  * Add Skill
  *
- * Add skill to OpenViking.
+ * Add skill to Business Data Platform.
  */
 export const postSkills = <ThrowOnError extends boolean = false>(options: Options<PostSkillsData, ThrowOnError>) => (options.client ?? client).post<PostSkillsResponses, PostSkillsErrors, ThrowOnError>({
     responseType: 'json',
@@ -731,7 +731,7 @@ export const postPackExport = <ThrowOnError extends boolean = false>(options: Op
 /**
  * Backup Ovpack
  *
- * Back up all public OpenViking scopes as a restore-only .ovpack file.
+ * Back up all public Business Data Platform scopes as a restore-only .ovpack file.
  */
 export const postPackBackup = <ThrowOnError extends boolean = false>(options?: Options<PostPackBackupData, ThrowOnError>) => (options?.client ?? client).post<PostPackBackupResponses, PostPackBackupErrors, ThrowOnError>({
     responseType: 'json',

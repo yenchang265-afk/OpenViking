@@ -62,15 +62,15 @@ export function registerOpenVikingRecallTraceTools(
   deps.registerTool(
     (ctx: OpenVikingRecallTraceToolContext) => ({
       name: "ov_recall_trace",
-      label: "Recall Trace (OpenViking)",
+      label: "Recall Trace (Business Data Platform)",
       description:
-        "Query OpenViking recall trace records captured by auto-recall and explicit recall/search tools.",
+        "Query Business Data Platform recall trace records captured by auto-recall and explicit recall/search tools.",
       parameters: Type.Object({
         turn: Type.Optional(Type.String({ description: "latest or all (default: latest)" })),
         traceId: Type.Optional(Type.String({ description: "Exact trace id" })),
         sessionId: Type.Optional(Type.String({ description: "OpenClaw session id" })),
         sessionKey: Type.Optional(Type.String({ description: "OpenClaw session key" })),
-        ovSessionId: Type.Optional(Type.String({ description: "OpenViking session id" })),
+        ovSessionId: Type.Optional(Type.String({ description: "Business Data Platform session id" })),
         source: Type.Optional(Type.String({ description: "auto_recall, memory_recall, ov_search, or ov_archive_search" })),
         resourceTypes: Type.Optional(Type.Array(Type.String({ description: "resource, user, or agent" }))),
         since: Type.Optional(Type.Number({ description: "Unix timestamp lower bound in milliseconds" })),

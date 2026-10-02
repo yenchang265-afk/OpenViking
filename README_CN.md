@@ -2,11 +2,11 @@
 
 <a href="https://openviking.ai/" target="_blank">
   <picture>
-    <img alt="OpenViking" src="docs/images/ov-logo.png" width="200px" height="auto">
+    <img alt="Business Data Platform" src="docs/images/ov-logo.png" width="200px" height="auto">
   </picture>
 </a>
 
-### OpenViking：AI 智慧體的上下文資料庫
+### Business Data Platform：AI 智慧體的上下文資料庫
 
 [English](README.md) / 中文 / [日本語](README_JA.md)
 
@@ -37,22 +37,22 @@
 
 ***
 
-## OpenViking 是什麼
+## Business Data Platform 是什麼
 
-OpenViking 是面向 AI 智慧體的開源上下文資料庫——用一個檔案系統裝下 Agent 所知道的一切：知識、記憶和技能。
+Business Data Platform 是面向 AI 智慧體的開源上下文資料庫——用一個檔案系統裝下 Agent 所知道的一切：知識、記憶和技能。
 
-大多數 Agent 記憶是個黑盒：文本進去，向量出來，沒人看得到裡面到底存了什麼。OpenViking 換一種做法，把上下文組織成 `viking://` 虛擬檔案系統。Agent 像操作檔案一樣用 `ls`、`tree`、`read`、`write`、`grep` 瀏覽和修改；你也可以隨時開啟目錄，檢視和編輯 Agent 記住的內容。每個目錄都帶有自動生成的摘要，Agent 先掃摘要，再決定讀哪些內容。
+大多數 Agent 記憶是個黑盒：文本進去，向量出來，沒人看得到裡面到底存了什麼。Business Data Platform 換一種做法，把上下文組織成 `viking://` 虛擬檔案系統。Agent 像操作檔案一樣用 `ls`、`tree`、`read`、`write`、`grep` 瀏覽和修改；你也可以隨時開啟目錄，檢視和編輯 Agent 記住的內容。每個目錄都帶有自動生成的摘要，Agent 先掃摘要，再決定讀哪些內容。
 
 <a href="https://openviking.ai/studio" target="_blank" rel="noopener noreferrer">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/studio-playground-dark.png">
-    <img src="docs/images/studio-playground.png" alt="OpenViking Studio：瀏覽上下文，體驗語義檢索">
+    <img src="docs/images/studio-playground.png" alt="Business Data Platform Studio：瀏覽上下文，體驗語義檢索">
   </picture>
 </a>
 
-[線上體驗 OpenViking Studio](https://openviking.ai/studio)，無需安裝。 [自行部署 Web Studio](web-studio/README_CN.md)。
+[線上體驗 Business Data Platform Studio](https://openviking.ai/studio)，無需安裝。 [自行部署 Web Studio](web-studio/README_CN.md)。
 
-## 為什麼用 OpenViking
+## 為什麼用 Business Data Platform
 
 - **一個檔案系統，裝下知識、記憶和技能。** 資源存放文件和程式碼，記憶保留使用者偏好與經驗，技能定義任務的執行方式——不只是抽取出來的"記憶條目"，而是完整上下文，每一項都有 `viking://` URI 供瀏覽和檢索。→ [Viking URI](https://docs.openviking.ai/zh/concepts/04-viking-uri) · [上下文型別](https://docs.openviking.ai/zh/concepts/02-context-types)
 - **在目錄裡檢索，而不是在整個索引裡撈。** 把語義檢索限定在某個專案或記憶子樹內，而不是掃描一個扁平的向量池。`find` 直接執行查詢，`search` 結合會話上下文規劃檢索。→ [檢索機制](https://docs.openviking.ai/zh/concepts/07-retrieval)
@@ -106,16 +106,16 @@ viking://resources/my_project/
 
 ## 評測結果
 
-OpenViking 0.3.22 的評測覆蓋長對話使用者記憶（LoCoMo）和多輪智慧體任務（tau2-bench）。完整結果和實驗設定（含知識庫問答）見[評測報告](https://blog.openviking.ai/post/openviking-benchmark-results/)，復現指令碼在 [./benchmark](./benchmark)。
+Business Data Platform 0.3.22 的評測覆蓋長對話使用者記憶（LoCoMo）和多輪智慧體任務（tau2-bench）。完整結果和實驗設定（含知識庫問答）見[評測報告](https://blog.openviking.ai/post/openviking-benchmark-results/)，復現指令碼在 [./benchmark](./benchmark)。
 
 記憶評測使用 [Doubao 2.0 Pro](https://console.volcengine.com/ark/region:cn-beijing/model/detail?Id=doubao-seed-2-0-pro) 作為 VLM，使用 [Doubao-embedding-vision-251215](https://console.volcengine.com/ark/region:cn-beijing/model/detail?Id=doubao-embedding-vision) 作為 Embedding 模型。
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/benchmark-dark.svg">
-  <img alt="Benchmark results. LoCoMo accuracy: OpenClaw 24.20% native vs 82.08% with OpenViking; Hermes 33.38% vs 82.86%; Claude Code 57.21% vs 80.32%. tau2-bench task success: Retail 70.94% vs 77.81%; Airline 54.38% vs 66.25%." src="docs/images/benchmark-light.svg">
+  <img alt="Benchmark results. LoCoMo accuracy: OpenClaw 24.20% native vs 82.08% with Business Data Platform; Hermes 33.38% vs 82.86%; Claude Code 57.21% vs 80.32%. tau2-bench task success: Retail 70.94% vs 77.81%; Airline 54.38% vs 66.25%." src="docs/images/benchmark-light.svg">
 </picture>
 
-- **使用者記憶（LoCoMo）**：接入 OpenViking 後，三種 Agent 整合的準確率都到 80–83%，原生記憶只有 24–57%；同時輸入 token 減少 34.3%–91.0%，查詢時延降低 58.45%–66.10%。
+- **使用者記憶（LoCoMo）**：接入 Business Data Platform 後，三種 Agent 整合的準確率都到 80–83%，原生記憶只有 24–57%；同時輸入 token 減少 34.3%–91.0%，查詢時延降低 58.45%–66.10%。
 - **智慧體經驗（tau2-bench）**：經驗記憶讓任務成功率在 Retail 提升 6.87pp、Airline 提升 11.87pp（對比同一 LLM 無記憶）。
 
 ## 快速開始
@@ -150,7 +150,7 @@ ov grep "openviking" --uri viking://resources/volcengine/OpenViking/docs/zh
 
 ## 接入你的 Agent
 
-將 Agent 接入 OpenViking，跨會話保留記憶。原生整合支援自動召回與會話採集；也可通過 MCP 提供記憶和上下文工具。
+將 Agent 接入 Business Data Platform，跨會話保留記憶。原生整合支援自動召回與會話採集；也可通過 MCP 提供記憶和上下文工具。
 
 <table>
 <tbody>
@@ -228,7 +228,7 @@ ov grep "openviking" --uri viking://resources/volcengine/OpenViking/docs/zh
 
 ## 桌面客戶端（Beta）
 
-桌面客戶端是面向 macOS 和 Windows x64 的控制台（Beta），用於配置支援的本地 Agent 接入、檢視會話中的召回與捕獲事件，並將本地記憶和技能同步到 OpenViking。
+桌面客戶端是面向 macOS 和 Windows x64 的控制台（Beta），用於配置支援的本地 Agent 接入、檢視會話中的召回與捕獲事件，並將本地記憶和技能同步到 Business Data Platform。
 
 下載：
 
@@ -238,7 +238,7 @@ ov grep "openviking" --uri viking://resources/volcengine/OpenViking/docs/zh
 
 ## VikingBot
 
-VikingBot 是構建在 OpenViking 之上的 AI 智慧體框架：
+VikingBot 是構建在 Business Data Platform 之上的 AI 智慧體框架：
 
 ```bash
 pip install "openviking[bot]"
@@ -279,21 +279,21 @@ ov chat   # 在另一個終端執行
 
 ## 研究
 
-**讓 Agent 的記憶隨互動演化。** VikingMem 以事件驅動長期記憶的提取、更新與整合，讓有狀態 Agent 在持續互動中積累可複用的經驗。OpenViking 開源了其中的部分核心能力。
+**讓 Agent 的記憶隨互動演化。** VikingMem 以事件驅動長期記憶的提取、更新與整合，讓有狀態 Agent 在持續互動中積累可複用的經驗。Business Data Platform 開源了其中的部分核心能力。
 
 > **VikingMem: A Memory Base Management System for Stateful LLM-based Applications**<br>
 > Jiajie Fu, Junwen Chen, Mengzhao Wang, Aoxiang He, Maojia Sheng, Xiangyu Ke, Yifan Zhu, and Yunjun Gao.<br>
 > arXiv:2605.29640, 2026。已於 2026 年 9 月在 VLDB 2026 完成演講。<br>
 > 📄 [在 arXiv 閱讀論文](https://arxiv.org/abs/2605.29640) · [閱讀 PDF](https://arxiv.org/pdf/2605.29640)
 
-**讓目錄結構成為檢索上下文。** 這篇論文為 OpenViking 的目錄語義檢索提供形式化基礎、索引設計與實驗驗證。論文定義了目錄範圍查詢與結構維護操作，並提出 TrieHI，OpenViking 已將其整合，用於在向量排序前確定目錄檢索範圍。檔案系統範式由此貫穿組織與檢索：Agent 可以在專案或記憶子樹內查詢證據、保留周邊上下文，並隨知識演化調整目錄結構。
+**讓目錄結構成為檢索上下文。** 這篇論文為 Business Data Platform 的目錄語義檢索提供形式化基礎、索引設計與實驗驗證。論文定義了目錄範圍查詢與結構維護操作，並提出 TrieHI，Business Data Platform 已將其整合，用於在向量排序前確定目錄檢索範圍。檔案系統範式由此貫穿組織與檢索：Agent 可以在專案或記憶子樹內查詢證據、保留周邊上下文，並隨知識演化調整目錄結構。
 
 > **Directory-Aware Query and Maintenance in Vector Databases**<br>
 > Mengzhao Wang, Zheng Gong, Jingpei Hu, Jiajie Fu, Maojia Sheng, Junwen Chen, and Yifan Zhu.<br>
 > arXiv:2606.16903, 2026。已被 ICDE 接收。<br>
 > 📄 [在 arXiv 閱讀論文](https://arxiv.org/abs/2606.16903) · [閱讀 PDF](https://arxiv.org/pdf/2606.16903)
 
-**用更少的 Token 找齊回答所需的證據。** VikingRAG 將語義檢索與文件結構結合，按證據缺口展開相關目錄片段，核心機制已整合到 OpenViking。論文進一步研究檢索軌跡複用與按需升級多輪檢索，在保持回答質量的同時減少重複探索。
+**用更少的 Token 找齊回答所需的證據。** VikingRAG 將語義檢索與文件結構結合，按證據缺口展開相關目錄片段，核心機制已整合到 Business Data Platform。論文進一步研究檢索軌跡複用與按需升級多輪檢索，在保持回答質量的同時減少重複探索。
 
 > **VikingRAG: Accurate and Token-efficient Retrieval-augmented Generation over Structured Documents**<br>
 > Peiyuan Gao, Gaoyuan Zhang, Haojie Qin, Yahui Sun, Qianyi Zhang, Yunhao Zhang, Zeyu Wang, and Wei Lu.<br>
@@ -318,7 +318,7 @@ ov chat   # 在另一個終端執行
 - **貢獻**：修 bug、加新功能都歡迎——見 [CONTRIBUTING_CN.md](CONTRIBUTING_CN.md)
 
 <a href="https://github.com/volcengine/OpenViking/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=volcengine/OpenViking&amp;columns=15&amp;max=120" alt="OpenViking contributors" />
+  <img src="https://contrib.rocks/image?repo=volcengine/OpenViking&amp;columns=15&amp;max=120" alt="Business Data Platform contributors" />
 </a>
 
 ## 安全與隱私
@@ -327,7 +327,7 @@ ov chat   # 在另一個終端執行
 
 ## 許可證
 
-OpenViking 各元件採用不同的許可證：
+Business Data Platform 各元件採用不同的許可證：
 
 - **主專案**：AGPLv3——詳見 [LICENSE](./LICENSE)
 - **crates/ov\_cli**：Apache 2.0——詳見 [LICENSE](./crates/LICENSE)

@@ -1,4 +1,4 @@
-# pi × OpenViking — experimental context management
+# pi × Business Data Platform — experimental context management
 
 > **EXPERIMENTAL.** A demo extension, not a supported product. It changes what
 > the model sees on every provider request. Do not point it at a session you
@@ -11,7 +11,7 @@ in which takeover mode is replaced by **agent-managed context windows** — a
 pi-side take on Codex's `features.context_management.experimental_mode`.
 
 The model decides when the current window is done and calls `new_context`. The
-extension archives the conversation to OpenViking, waits for the server to write
+extension archives the conversation to Business Data Platform, waits for the server to write
 a Working Memory of it, and then cuts everything up to that tool call out of the
 next provider request, putting a frozen window header in front: the model's own
 handoff notes, the reason it gave, the user's last request and the Working
@@ -31,7 +31,7 @@ pi install /abs/path/to/examples/pi-experimental-context-management
 ```
 
 **Disable the `openviking` extension first.** Both register the same `viking_*`
-tools and both sync the same OpenViking session, so loading them together
+tools and both sync the same Business Data Platform session, so loading them together
 duplicates every tool and gives one session two writers. Set
 `"enabled": false` in `~/.pi/agent/extensions/openviking/config.json`, or drop
 it from `settings.json`'s `packages`. As a backstop, this extension looks for a
@@ -81,15 +81,15 @@ The full table, with ranges and clamping rules, is in
 
 | Tool | Parameters | What it does |
 | --- | --- | --- |
-| `new_context` | `reason`, `notes`, `next_steps?` | Archives the current window to OpenViking and opens a fresh one. Blocks until the archive exists. Call it alone |
+| `new_context` | `reason`, `notes`, `next_steps?` | Archives the current window to Business Data Platform and opens a fresh one. Blocks until the archive exists. Call it alone |
 | `history` | `action`, `window?`, `item?`, `query?`, `offset?`, `limit?` | Reads closed windows: `list_windows`, `list_items`, `read_item`, `search_contents` |
 | `get_context_remaining` | — | Tokens left, window age, turns, idle gaps, archive readiness, one advice line |
-| `viking_search` | `query`, `scope?`, `limit?` | Semantic search over the OpenViking knowledge base |
+| `viking_search` | `query`, `scope?`, `limit?` | Semantic search over the Business Data Platform knowledge base |
 | `viking_read` | `uri`, `level` | Read a `viking://` URI at `abstract` / `overview` / `full` detail |
 | `viking_browse` | `action`, `uri?` | `list` or `stat` the store like a filesystem |
 | `viking_remember` | `content`, `category?` | Store a fact in the session for memory extraction |
 | `viking_forget` | `uri?`, `query?` | Delete a memory by URI or strongest match |
-| `viking_add_resource` | `url` | Ingest an HTTP URL into OpenViking |
+| `viking_add_resource` | `url` | Ingest an HTTP URL into Business Data Platform |
 
 `viking_archive_expand` is gone — it read `viking://session/{id}`, a namespace
 the server does not serve, and `history` replaces it.
@@ -113,7 +113,7 @@ the server does not serve, and `history` replaces it.
   is also what keeps it away from the frozen window header.
 - **`sync.flushForTakeover()` is now `sync.flushBarrier({budgetMs})`**, so a
   reset can cap how long it waits for the pending queue to drain. The sync
-  manager also counts messages OpenViking rejected for good; a window opened
+  manager also counts messages Business Data Platform rejected for good; a window opened
   while that count is non-zero says so in its header, because those messages are
   missing from the archive that `history` reads.
 
@@ -122,7 +122,7 @@ the server does not serve, and `history` replaces it.
 | Path | What it is |
 | --- | --- |
 | `index.ts` | Extension entry: event handlers, coexistence guard, static guidance, `/viking` command |
-| `client.ts` | OpenViking HTTP client, including the archive read/list/grep helpers |
+| `client.ts` | Business Data Platform HTTP client, including the archive read/list/grep helpers |
 | `sync.ts` | Session sync, disk pending queue, `flushBarrier`, `commit` |
 | `recall.ts` | Per-prompt recall search and injection |
 | `config.ts`, `config.json` | Config, the `contextWindow` block, credential resolution |
@@ -130,12 +130,12 @@ the server does not serve, and `history` replaces it.
 | `context-window.ts` | Adapter binding the core to pi, the client and the sync manager |
 | `lib/context-window-core.mjs` | Pure, harness-agnostic window state machine |
 | `lib/text-budget.mjs` | Token estimation / truncation helpers |
-| `lib/capture-adapter.mjs` | Branch entries → OpenViking message payloads |
+| `lib/capture-adapter.mjs` | Branch entries → Business Data Platform message payloads |
 | `lib/uri-guard-adapter.mjs` | Blocks builtin file tools on `viking://` URIs |
 | `lib/pi-settings.mjs` | Reads pi's `compaction.reserveTokens` |
 | `shared/` | Copied from `examples/memory-plugin-shared/lib` — do not edit (see "Not wired into the repo" below) |
 | `scripts/` | The manual e2e gate (`e2e-window.mjs` with the `e2e-window.sh` wrapper), the `e2e-probe.ts` payload recorder and the setup wizard |
-| `demo-evidence/` | A redacted snapshot of two real runs: transcripts, provider payloads either side of each reset, and the OpenViking archives pulled back off the server |
+| `demo-evidence/` | A redacted snapshot of two real runs: transcripts, provider payloads either side of each reset, and the Business Data Platform archives pulled back off the server |
 
 ## Tests
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Rerank models for OpenViking.
+Rerank models for Business Data Platform.
 
 Provides rerank functionality for hierarchical retrieval with multiple provider support:
 - vikingdb: VikingDB's native rerank service

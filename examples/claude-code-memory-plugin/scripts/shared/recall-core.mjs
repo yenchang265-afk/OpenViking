@@ -480,7 +480,7 @@ function wrapContext(body) {
     .replace(/<\/?openviking-context\b[^>]*>/gi, "openviking context marker");
   return [
     "<openviking-context>",
-    "Relevant memory from OpenViking. Use the search/read MCP tools to expand URIs.",
+    "Relevant memory from Business Data Platform. Use the search/read MCP tools to expand URIs.",
     text,
     "</openviking-context>",
   ].join("\n");

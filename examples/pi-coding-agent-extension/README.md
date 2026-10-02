@@ -1,12 +1,12 @@
-# OpenViking Memory Extension for Pi Coding Agent
+# Business Data Platform Memory Extension for Pi Coding Agent
 
-Long-term semantic memory and context takeover for [pi](https://github.com/earendil-works/pi) sessions, powered by [OpenViking](https://github.com/volcengine/OpenViking). Recall happens automatically before every prompt, capture happens after every turn, and OpenViking can own long-term context by replacing committed history with an archive overview in pi's `context` hook.
+Long-term semantic memory and context takeover for [pi](https://github.com/earendil-works/pi) sessions, powered by [Business Data Platform](https://github.com/volcengine/OpenViking). Recall happens automatically before every prompt, capture happens after every turn, and Business Data Platform can own long-term context by replacing committed history with an archive overview in pi's `context` hook.
 
-> **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the
+> **Requires a Business Data Platform server with `viking://~` home-alias support.** Recall targets the
 > caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less
 > `viking://user/memories` shorthand is rejected by newer servers.
 
-> Design informed by lessons from all three OpenViking agent plugins: synchronous recall from OpenClaw, production-hardened capture/ranking from Claude Code, and anti-patterns dodged from Hermes's stale prefetch approach. See [DESIGN.md](./DESIGN.md) for the module-by-module design, including the context-takeover layer.
+> Design informed by lessons from all three Business Data Platform agent plugins: synchronous recall from OpenClaw, production-hardened capture/ranking from Claude Code, and anti-patterns dodged from Hermes's stale prefetch approach. See [DESIGN.md](./DESIGN.md) for the module-by-module design, including the context-takeover layer.
 
 ## Quick Start
 
@@ -14,9 +14,9 @@ Long-term semantic memory and context takeover for [pi](https://github.com/earen
 
 - **pi coding agent** installed (`npm i -g @earendil-works/pi-coding-agent`)
 - **Node.js 22.19.0+** and **npm**
-- **An OpenViking server** reachable — local or remote
+- **A Business Data Platform server** reachable — local or remote
 
-### 1. Have an OpenViking server reachable
+### 1. Have a Business Data Platform server reachable
 
 Either run one locally or point at a remote one. The [quickstart guide](../../docs/en/getting-started/02-quickstart.md) walks through both options. Default port is `1933`; local mode runs without authentication.
 
@@ -92,7 +92,7 @@ Credential environment variables:
 
 | Env Var | Meaning |
 |---------|---------|
-| `OPENVIKING_URL` | OpenViking server URL |
+| `OPENVIKING_URL` | Business Data Platform server URL |
 | `OPENVIKING_API_KEY` / `OPENVIKING_BEARER_TOKEN` | Bearer token |
 | `OPENVIKING_ACCOUNT` | Trusted-mode account |
 | `OPENVIKING_USER` | Trusted-mode user |
@@ -117,7 +117,7 @@ Recall defaults to the broad mode: global memory, the current workspace, and oth
 pi
 ```
 
-The extension shows an `[OpenViking]` status line on startup. The server's own MCP tools (`openviking_search`, `openviking_remember`, and the rest of whatever it exposes) are registered automatically. Memories persist across sessions — no additional setup.
+The extension shows an `[Business Data Platform]` status line on startup. The server's own MCP tools (`openviking_search`, `openviking_remember`, and the rest of whatever it exposes) are registered automatically. Memories persist across sessions — no additional setup.
 
 ## Configuration Reference
 
@@ -185,14 +185,14 @@ integrations should configure category `quotas` when they need exact ceilings.
 
 ### Context takeover
 
-Takeover is enabled by default. OpenViking commits archived history, polls the
+Takeover is enabled by default. Business Data Platform commits archived history, polls the
 session overview, then the `context` hook replaces covered conversation turns
-with a synthetic `[OpenViking Session Context]` user message while keeping the
+with a synthetic `[Business Data Platform Session Context]` user message while keeping the
 recent live tail.
 
 | Field                    | Default    | Description                                                              |
 |--------------------------|------------|--------------------------------------------------------------------------|
-| `takeoverEnabled`        | `true`     | Let OpenViking own long-term context through the `context` hook. Env: `OPENVIKING_TAKEOVER` |
+| `takeoverEnabled`        | `true`     | Let Business Data Platform own long-term context through the `context` hook. Env: `OPENVIKING_TAKEOVER` |
 | `takeoverTokenThreshold` | `30000`    | Synced-token pressure that triggers commit and boundary advance           |
 | `takeoverKeepRecentTurns`| `3`        | Recent user turns retained in full fidelity                              |
 | `takeoverOverviewBudget` | `3000`     | Token budget for the injected archive overview                           |
@@ -214,11 +214,11 @@ The profile block is built at session start and added to pi's system prompt on e
 
 | Field                    | Default    | Description                                                              |
 |--------------------------|------------|--------------------------------------------------------------------------|
-| `bypassSessionPatterns`  | `[]`       | Glob patterns matched against the cwd; a hit skips all OpenViking work for the session. `bypassPatterns` is the older name and still works. Env: `OPENVIKING_BYPASS_SESSION_PATTERNS` (CSV), `OPENVIKING_BYPASS_SESSION=1` |
+| `bypassSessionPatterns`  | `[]`       | Glob patterns matched against the cwd; a hit skips all Business Data Platform work for the session. `bypassPatterns` is the older name and still works. Env: `OPENVIKING_BYPASS_SESSION_PATTERNS` (CSV), `OPENVIKING_BYPASS_SESSION=1` |
 | `logLevel`               | `"error"`  | `"silent"`, `"error"`, or `"info"`                                      |
 | `debugLogPath`           | `""`       | Write JSON Lines debug records to this path; empty disables the log      |
 
-Bypass now runs through the same matcher every other OpenViking harness uses, so the patterns are real globs: `*` stops at a path separator and `**` crosses them. A bare path used to match its subdirectories as a prefix, and no longer does — write `"/tmp/scratch**"` where `"/tmp/scratch"` used to be enough.
+Bypass now runs through the same matcher every other Business Data Platform harness uses, so the patterns are real globs: `*` stops at a path separator and `**` crosses them. A bare path used to match its subdirectories as a prefix, and no longer does — write `"/tmp/scratch**"` where `"/tmp/scratch"` used to be enough.
 
 ## Architecture
 
@@ -231,13 +231,13 @@ Bypass now runs through the same matcher every other OpenViking harness uses, so
 └────────┬──────────────────┬───────────┬──────────────┘
          │                  │           │
          │  ┌───────────────▼───────────▼────────┐
-         │  │   extension modules (.ts)           │        OpenViking
+         │  │   extension modules (.ts)           │        Business Data Platform
          │  │   client / sync / recall / takeover │──────►  REST API
          │  └─────────────────────────────────────┘        (recall, session
          │                                                  sync, takeover,
          │                                                  health)
          │  ┌──────────────────────────────────────┐
-         └──►  tools.ts + lib/mcp-bridge.mjs       │──────►  OpenViking
+         └──►  tools.ts + lib/mcp-bridge.mjs       │──────►  Business Data Platform
             │  the server's own tools/list,        │         /mcp endpoint
             │  prefixed openviking_                │         (model tools)
             └──────────────────────────────────────┘
@@ -262,7 +262,7 @@ Arguments are checked against the server's original schema before pi's own valid
 
 ### Recall: Synchronous, Not Stale
 
-Unlike Hermes's stale prefetch (recall from previous turn's query, injected one turn late), this extension searches OpenViking with the **current** user prompt via pi's `context` event. Pi renders the submitted user message before this hook, so recall latency does not hold the message off-screen. Results are still injected into the same model turn as `<openviking-context>` blocks. This means:
+Unlike Hermes's stale prefetch (recall from previous turn's query, injected one turn late), this extension searches Business Data Platform with the **current** user prompt via pi's `context` event. Pi renders the submitted user message before this hook, so recall latency does not hold the message off-screen. Results are still injected into the same model turn as `<openviking-context>` blocks. This means:
 
 - **First turn** of a session gets relevant context immediately
 - **Topic switches** within a session get correct recall
@@ -270,11 +270,11 @@ Unlike Hermes's stale prefetch (recall from previous turn's query, injected one 
 
 ### Memory Pollution Prevention
 
-Before pushing turns to OpenViking, shared capture sanitization strips injected context blocks such as `<openviking-context>` to prevent a self-referential pollution loop where recall context is captured back as user messages.
+Before pushing turns to Business Data Platform, shared capture sanitization strips injected context blocks such as `<openviking-context>` to prevent a self-referential pollution loop where recall context is captured back as user messages.
 
 In takeover mode the adapter uses faithful capture: acknowledgments and short
 turns are retained because they may later be represented only through the OV
-archive overview. Empty text, slash commands, and OpenViking status messages
+archive overview. Empty text, slash commands, and Business Data Platform status messages
 remain filtered.
 
 ### Tool Use Preservation
@@ -303,7 +303,7 @@ Against a current server, that is these 15:
 | `openviking_grep`           | Regex search inside `viking://` files                                   |
 | `openviking_glob`           | Find `viking://` files matching a glob pattern                          |
 | `openviking_forget`         | Permanently delete a `viking://` URI                                    |
-| `openviking_health`         | Check that the OpenViking server is healthy                             |
+| `openviking_health`         | Check that the Business Data Platform server is healthy                             |
 
 That table is a snapshot of one server, not a contract; `/viking` reports how many tools registered against your own.
 
@@ -321,15 +321,15 @@ The canonical `/viking` command (type `/viking` in pi's chat) displays connectio
 - **`add_resource` and local files.** For a filesystem path the server answers with a one-time upload URL, and the model has to POST the file there with `bash`. Remote URLs still ingest directly. This is how every other MCP harness behaves.
 - **A ROOT api key now leaves the session with no tools.** Root keys are refused on `/mcp` with 403. Before, the REST tools registered and every call came back empty; now nothing registers, the status line shows `tools ✗`, and `/viking` names the 403. Create a user or admin key and put that in `ovcli.conf`.
 - **`mcpEnabled: false` now applies to pi.** The shared key in `ovcli.conf`'s `plugin` section already turned the MCP surface off for other harnesses. Set for pi it means no handshake and no tools — and that is not reported as a failure; recall, capture and takeover carry on.
-- **Already running pi-mcp-adapter?** Do not also point it at OpenViking. The same tools would then appear twice in one session under two different names.
+- **Already running pi-mcp-adapter?** Do not also point it at Business Data Platform. The same tools would then appear twice in one session under two different names.
 
-A failed handshake never fails startup: recall, session sync and takeover keep working, the session simply has no OpenViking tools. The bridge retries on a later turn, so a server started after pi is picked up without restarting pi.
+A failed handshake never fails startup: recall, session sync and takeover keep working, the session simply has no Business Data Platform tools. The bridge retries on a later turn, so a server started after pi is picked up without restarting pi.
 
 ## Compared to Pi's Built-in Memory
 
 Pi has a built-in `MEMORY.md` file system. This extension **complements** it:
 
-| Feature      | Built-in `MEMORY.md`              | OpenViking extension                              |
+| Feature      | Built-in `MEMORY.md`              | Business Data Platform extension                              |
 |--------------|-----------------------------------|---------------------------------------------------|
 | Storage      | Flat markdown                     | Vector DB + structured extraction                 |
 | Search       | Loaded into context wholesale     | Semantic similarity + ranking + token budget      |
@@ -354,12 +354,12 @@ Both plugins share the same core design (informed by each other):
 
 ## Extension Structure
 
-See [DESIGN.md](./DESIGN.md) for what each module is responsible for, how the modules meet pi's events, and the design ancestry shared with the other OpenViking plugins.
+See [DESIGN.md](./DESIGN.md) for what each module is responsible for, how the modules meet pi's events, and the design ancestry shared with the other Business Data Platform plugins.
 
 ```
 pi-coding-agent-extension/
 ├── config.ts            # Config loader (shared schema + ovcli.conf layers)
-├── client.ts            # OpenViking HTTP client (fetch + response envelope)
+├── client.ts            # Business Data Platform HTTP client (fetch + response envelope)
 ├── sync.ts              # Turn capture, write queue, session lifecycle
 ├── recall.ts            # Synchronous recall with ranking + budget
 ├── takeover.ts          # Thin pi binding around lib/takeover-core.mjs
@@ -381,7 +381,7 @@ TypeScript is loaded directly by pi's jiti transpiler. The official MCP client i
 | Symptom                                 | Cause                                                | Fix                                                         |
 |-----------------------------------------|------------------------------------------------------|-------------------------------------------------------------|
 | Extension not loading                   | `enabled: false` in `ovcli.conf`'s `plugin` section  | Set `"enabled": true`                                       |
-| No recall on first prompt               | OpenViking server not running or wrong URL           | `curl http://localhost:1933/health`                         |
+| No recall on first prompt               | Business Data Platform server not running or wrong URL           | `curl http://localhost:1933/health`                         |
 | Tools not showing after `pi -c` resume  | Known pi issue (tools not re-registered on resume)   | Workaround built in — tools register in `before_agent_start`|
 | Extension crashes on load               | Wrong OV server URL or network issue                 | Check `logLevel` and server accessibility                   |
 | No memories extracted                   | Wrong embedding/extraction model in OV config        | Check OV's `embedding` / `vlm` configuration                |
@@ -389,4 +389,4 @@ TypeScript is loaded directly by pi's jiti transpiler. The official MCP client i
 
 ## License
 
-Apache-2.0 — same as [OpenViking](https://github.com/volcengine/OpenViking).
+Apache-2.0 — same as [Business Data Platform](https://github.com/volcengine/OpenViking).

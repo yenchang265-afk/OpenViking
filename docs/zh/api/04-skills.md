@@ -1,12 +1,12 @@
 # 技能
 
-技能是供智慧體讀取的任務指令與配套資源。OpenViking 負責儲存、檢索和管理技能；讀取後的啟用、工具許可權與執行由使用它的 Agent/Harness 負責。本文以當前倉庫的 HTTP API、SDK 和 `ov` CLI 實現為準。
+技能是供智慧體讀取的任務指令與配套資源。Business Data Platform 負責儲存、檢索和管理技能；讀取後的啟用、工具許可權與執行由使用它的 Agent/Harness 負責。本文以當前倉庫的 HTTP API、SDK 和 `ov` CLI 實現為準。
 
 ## 核心概念
 
 ### 技能型別
 
-OpenViking 支援多種技能定義格式：
+Business Data Platform 支援多種技能定義格式：
 
 1. **結構化技能資料**：包含 name、description、content 等欄位的字典
 2. **SKILL.md 檔案**：帶有 YAML frontmatter 的 Markdown 檔案
@@ -86,13 +86,13 @@ Concrete examples of skill invocation.
 |------|------|------|
 | allowed-tools | str / List[str] | 空格分隔的工具宣告，也相容字串列表；括號內可含空格，由消費方解釋和執行策略 |
 | tags | List[str] | 用於分類的標籤 |
-| metadata | object | 原樣保留的擴充欄位，如 `metadata.vikingbot.requires`；OpenViking 不自動安裝這些依賴 |
+| metadata | object | 原樣保留的擴充欄位，如 `metadata.vikingbot.requires`；Business Data Platform 不自動安裝這些依賴 |
 
 `SKILL.md` 使用帶連字元的 **`allowed-tools`**，解析後的結構化資料和 API 摘要使用 **`allowed_tools`**。不要在 frontmatter 中用下劃線拼寫替代它。未宣告和顯式空宣告可能在 Harness 中有不同許可權含義，摘要裡的 `allowed_tools: []` 不能區分二者；執行前應讀取完整 `SKILL.md`。正文與擴充欄位的消費方式見 [VikingBot Skills](../../../bot/docs/zh/concepts/06-skills.md)。
 
 ### MCP 格式自動轉換
 
-OpenViking 會自動檢測並將 MCP Tool 定義轉換為技能格式。
+Business Data Platform 會自動檢測並將 MCP Tool 定義轉換為技能格式。
 
 **檢測規則**：如果字典包含 `inputSchema` 欄位，則被視為 MCP 格式。
 
@@ -232,7 +232,7 @@ This tool wraps the MCP tool `search-web`. Call this when the user needs functio
 HTTP 欄位和 SDK 引數並非同名同層級：Python `add_skill(data, wait=False, timeout=None, options=None)` / `update_skill(skill_name, data, ...)` 將 `target_uri`、`telemetry` 放在 `options` 中；`skills`、`list_only`、`source_metadata`（新增）及 `from_source`（更新）等欄位放在 `options["extra"]` 中。TypeScript 使用 `targetUri` 和 `extra`，Go 使用 `TargetURI` 和 `Extra`。TypeScript 的本地路徑自動上傳僅適用於 Node.js。
 
 ```python
-# 預覽本地集合；不寫入 OpenViking
+# 預覽本地集合；不寫入 Business Data Platform
 listing = client.add_skill(
     "./skills",
     options={"extra": {"list_only": True}},
@@ -460,8 +460,8 @@ task_id         uuid-xxx
 | 欄位 | 型別 | 說明 |
 |------|------|------|
 | `status` | string | 成功匯入結果為 `success`；同步失敗使用 HTTP 錯誤響應 |
-| `root_uri` | string | 技能在 OpenViking 中的 canonical 最終 URI（同 `uri`）|
-| `uri` | string | 技能在 OpenViking 中的 canonical 最終 URI（同 `root_uri`）|
+| `root_uri` | string | 技能在 Business Data Platform 中的 canonical 最終 URI（同 `uri`）|
+| `uri` | string | 技能在 Business Data Platform 中的 canonical 最終 URI（同 `root_uri`）|
 | `name` | string | 技能名稱 |
 | `auxiliary_files` | number | 技能附帶的輔助檔案數量 |
 | `task_id` | string | 預設非同步模式下返回的後臺處理任務 ID；通過任務 API 查詢最終狀態 |

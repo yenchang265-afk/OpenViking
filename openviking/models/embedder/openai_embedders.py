@@ -109,7 +109,7 @@ class OpenAIDenseEmbedder(DenseEmbedderBase):
             config: Additional configuration dict
             extra_headers: Extra HTTP headers to include in API requests (e.g., for OpenRouter:
                           {'HTTP-Referer': 'https://your-site.com', 'X-Title': 'Your App'})
-            input_type: OpenViking embedding input mode ('text' or 'multimodal'). This controls
+            input_type: Business Data Platform embedding input mode ('text' or 'multimodal'). This controls
                         whether content parts are passed through, and is distinct from
                         query_param/document_param values sent as extra_body.input_type.
             encoding_format: Wire format for embedding values. ``None`` (default) lets the

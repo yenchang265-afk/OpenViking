@@ -1,4 +1,4 @@
-# Makefile for OpenViking
+# Makefile for Business Data Platform
 
 # Variables
 PYTHON ?= python3

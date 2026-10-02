@@ -1,7 +1,7 @@
 # 快速開始已合併
 
 <a id="快速開始-服務端模式"></a>
-OpenViking 以 HTTP 服務執行。服務搭建與客戶端驗證已合併到[快速開始](02-quickstart.md)，以獨立 CLI 為入口，覆蓋託管、已有服務和自建服務。
+Business Data Platform 以 HTTP 服務執行。服務搭建與客戶端驗證已合併到[快速開始](02-quickstart.md)，以獨立 CLI 為入口，覆蓋託管、已有服務和自建服務。
 
 <a id="前置要求"></a>
 <a id="啟動服務"></a>

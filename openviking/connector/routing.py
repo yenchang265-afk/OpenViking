@@ -31,7 +31,7 @@ CONNECTOR_SUPPORTED_ARGS: Dict[str, FrozenSet[str]] = {
 # the Basic-Auth password, username defaults to "oauth2" plugin-side). They
 # are stripped out of args and transported in the top-level ``auth_config``
 # request field -- never ``param_config`` -- so Connector and plugin logs
-# redact them while logging param_config verbatim. The incoming OpenViking
+# redact them while logging param_config verbatim. The incoming Business Data Platform
 # HTTP body may still be captured when the explicitly unsafe observability
 # body dump is enabled. These flat fields belong only to Connector requests:
 # they are never persisted and cannot fall back to the standard Git pipeline.
@@ -44,7 +44,7 @@ CONNECTOR_CREDENTIAL_ARGS: Dict[str, FrozenSet[str]] = {
 
 
 # Reserved ``args`` key for source credentials of declared add_types outside
-# the registries above (e.g. a plugin-defined add_type). OpenViking cannot know each
+# the registries above (e.g. a plugin-defined add_type). Business Data Platform cannot know each
 # plugin's credential fields, so the caller supplies them as a mapping under
 # this key; it is lifted verbatim into the top-level ``auth_config`` request
 # field and never merged into param_config. All other args keys travel to the

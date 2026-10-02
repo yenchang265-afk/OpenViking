@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Minimal Agent Memory Leaderboard bridge for OpenViking."""
+"""Minimal Agent Memory Leaderboard bridge for Business Data Platform."""
 
 from __future__ import annotations
 
@@ -195,7 +195,7 @@ class OpenVikingBackend:
                     exc.code in RETRYABLE_OPENVIKING_CODES
                 )
                 if not retryable or attempt + 1 == self.settings.retry_attempts:
-                    raise OpenVikingBackendError(f"OpenViking {operation} failed: {exc}") from exc
+                    raise OpenVikingBackendError(f"Business Data Platform {operation} failed: {exc}") from exc
                 await asyncio.sleep(self.settings.retry_delay_seconds * (2**attempt))
         raise AssertionError("retry loop exited unexpectedly")
 
@@ -215,35 +215,35 @@ class OpenVikingBackend:
                 lambda: client.batch_add_messages(session_id, messages),
             )
             if not isinstance(result, dict) or result.get("added") != len(messages):
-                raise OpenVikingBackendError("OpenViking did not add every message")
+                raise OpenVikingBackendError("Business Data Platform did not add every message")
 
             commit = await self._retry(
                 "commit",
                 lambda: client.commit_session(session_id, keep_recent_count=0),
             )
             if not isinstance(commit, dict):
-                raise OpenVikingBackendError("OpenViking did not accept the commit")
+                raise OpenVikingBackendError("Business Data Platform did not accept the commit")
             task_id = commit.get("task_id")
             if commit.get("status") != "accepted" or not isinstance(task_id, str) or not task_id:
-                raise OpenVikingBackendError("OpenViking did not accept the commit")
+                raise OpenVikingBackendError("Business Data Platform did not accept the commit")
 
             deadline = time.monotonic() + self.settings.extraction_timeout_seconds
             while True:
                 task = await self._retry("task poll", lambda: client.get_task(task_id))
                 if not isinstance(task, dict):
-                    raise OpenVikingBackendError("OpenViking returned an invalid commit task")
+                    raise OpenVikingBackendError("Business Data Platform returned an invalid commit task")
                 task_status = task.get("status")
                 if task_status == "completed":
                     return
                 if task_status in {"failed", "cancelled"}:
                     raise OpenVikingBackendError(
-                        f"OpenViking commit {task_status}: {task.get('error') or 'unknown error'}"
+                        f"Business Data Platform commit {task_status}: {task.get('error') or 'unknown error'}"
                     )
                 if task_status not in {"pending", "running", "cancelling"}:
-                    raise OpenVikingBackendError("OpenViking returned an unknown commit status")
+                    raise OpenVikingBackendError("Business Data Platform returned an unknown commit status")
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
-                    raise OpenVikingBackendError("OpenViking commit timed out")
+                    raise OpenVikingBackendError("Business Data Platform commit timed out")
                 await asyncio.sleep(min(self.settings.task_poll_seconds, remaining))
 
     async def find(self, *, user_id: str, query: str, limit: int) -> list[dict[str, Any]]:
@@ -262,7 +262,7 @@ class OpenVikingBackend:
             )
         memories = result.get("memories") if isinstance(result, dict) else None
         if not isinstance(memories, list) or any(not isinstance(hit, dict) for hit in memories):
-            raise OpenVikingBackendError("OpenViking returned an invalid find result")
+            raise OpenVikingBackendError("Business Data Platform returned an invalid find result")
         return memories
 
 
@@ -357,7 +357,7 @@ def create_app(
     resolved_settings = settings or AMLSettings.from_env()
     resolved_backend = backend or OpenVikingBackend(resolved_settings)
     adapter = AMLAdapter(resolved_settings, resolved_backend)
-    application = FastAPI(title="OpenViking AML Adapter", version="0.1.0")
+    application = FastAPI(title="Business Data Platform AML Adapter", version="0.1.0")
 
     async def require_key(request: Request) -> None:
         adapter.authorize(request)
@@ -367,7 +367,7 @@ def create_app(
         if not await resolved_backend.ready():
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="OpenViking is not ready",
+                detail="Business Data Platform is not ready",
             )
         return {"status": "ok"}
 
@@ -387,7 +387,7 @@ app = create_app()
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Start the OpenViking AML adapter")
+    parser = argparse.ArgumentParser(description="Start the Business Data Platform AML adapter")
     parser.add_argument("--host", default=os.getenv("AML_HOST", DEFAULT_HOST))
     parser.add_argument("--port", type=int, default=int(os.getenv("AML_PORT", str(DEFAULT_PORT))))
     parser.add_argument("--log-level", default=os.getenv("AML_LOG_LEVEL", "info"))

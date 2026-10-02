@@ -3,7 +3,7 @@
 
 """Shared fixtures for integration tests.
 
-Automatically starts an OpenViking server in a background thread so that
+Automatically starts a Business Data Platform server in a background thread so that
 AsyncHTTPClient integration tests can run without a manually started server process.
 """
 

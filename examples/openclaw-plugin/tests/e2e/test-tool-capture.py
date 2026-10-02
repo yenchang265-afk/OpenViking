@@ -31,8 +31,8 @@ extractNewTurnTexts 工具呼叫捕獲端到端測試
 三、環境前提
 ================================================================================
 
-  1. OpenViking 服務已啟動
-  2. OpenClaw Gateway 已啟動並配置了 OpenViking 外掛
+  1. Business Data Platform 服務已啟動
+  2. OpenClaw Gateway 已啟動並配置了 Business Data Platform 外掛
   3. LLM 後端可達且支援工具呼叫（function calling / tool use）
   4. 有效的 Gateway auth token
 
@@ -293,7 +293,7 @@ def run_test(
         Panel(
             f"[bold]Tool Capture 測試[/bold]\n\n"
             f"Gateway: {gateway_url}\n"
-            f"OpenViking: {openviking_url}\n"
+            f"Business Data Platform: {openviking_url}\n"
             f"User ID: {user_id}\n"
             f"時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             title="測試資訊",
@@ -545,10 +545,10 @@ def print_summary():
 def main():
     parser = argparse.ArgumentParser(description="測試 toolUse/toolResult 捕獲")
     parser.add_argument("--gateway", default=GATEWAY_URL, help="Gateway 地址")
-    parser.add_argument("--openviking", default=OPENVIKING_URL, help="OpenViking 地址")
+    parser.add_argument("--openviking", default=OPENVIKING_URL, help="Business Data Platform 地址")
     parser.add_argument("--token", default="", help="Gateway auth token (預設: 自動發現)")
     parser.add_argument(
-        "--agent-id", default=AGENT_ID, help=f"OpenViking agent ID (預設: {AGENT_ID})"
+        "--agent-id", default=AGENT_ID, help=f"Business Data Platform agent ID (預設: {AGENT_ID})"
     )
     parser.add_argument("--delay", type=float, default=3.0, help="訊息間延遲秒數")
     parser.add_argument("--verbose", "-v", action="store_true", help="詳細輸出")

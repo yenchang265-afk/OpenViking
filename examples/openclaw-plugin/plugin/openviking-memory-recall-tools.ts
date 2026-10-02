@@ -119,9 +119,9 @@ export function registerOpenVikingMemoryRecallTools(
   deps.registerTool(
     (ctx: OpenVikingMemoryRecallToolContext) => ({
       name: "memory_recall",
-      label: "Memory Recall (OpenViking)",
+      label: "Memory Recall (Business Data Platform)",
       description:
-        "Search long-term memories from OpenViking. Use when you need past user preferences, facts, or decisions.",
+        "Search long-term memories from Business Data Platform. Use when you need past user preferences, facts, or decisions.",
       parameters: Type.Object({
         query: Type.String({ description: "Search query" }),
         limit: Type.Optional(
@@ -315,7 +315,7 @@ export function registerOpenVikingMemoryRecallTools(
         if (memories.length === 0) {
           await recordMemoryRecallTrace(new Set());
           return {
-            content: [{ type: "text", text: "No relevant OpenViking memories found." }],
+            content: [{ type: "text", text: "No relevant Business Data Platform memories found." }],
             details: { count: 0, total: result.total ?? 0, scoreThreshold },
           };
         }
@@ -333,7 +333,7 @@ export function registerOpenVikingMemoryRecallTools(
             content: [
               {
                 type: "text",
-                text: `No complete OpenViking memories fit recallMaxInjectedChars=${queryConfig.maxInjectedChars}.`,
+                text: `No complete Business Data Platform memories fit recallMaxInjectedChars=${queryConfig.maxInjectedChars}.`,
               },
             ],
             details: {

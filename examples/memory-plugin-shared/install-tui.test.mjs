@@ -53,7 +53,7 @@ installer_test_failure
 `);
 
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /OpenViking installer stopped unexpectedly\./);
+  assert.match(result.stderr, /Business Data Platform installer stopped unexpectedly\./);
   assert.match(result.stderr, /Exit status: 1/);
   assert.match(result.stderr, /Script line: [0-9]+/);
   assert.match(result.stderr, /Command: false/);

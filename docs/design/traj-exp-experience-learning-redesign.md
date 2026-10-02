@@ -22,11 +22,11 @@ CaseLoader
        -> PolicyUpdater
 ```
 
-其中 `PolicyTrainer` 是訓練入口。預設本地實現會在程序內執行 `analyze -> estimate -> plan -> apply`；遠端實現可以把 rollout 通過 `session.commit` 提交給 OpenViking 服務端，由服務端完成分析和訓練。
+其中 `PolicyTrainer` 是訓練入口。預設本地實現會在程序內執行 `analyze -> estimate -> plan -> apply`；遠端實現可以把 rollout 通過 `session.commit` 提交給 Business Data Platform 服務端，由服務端完成分析和訓練。
 
 ### 1.1 訓練執行細節圖
 
-<img src="https://gist.githubusercontent.com/chenjw/c2de3083d0e1dac3a192c74f98c020c7/raw/502e01c5e207ce8b2b4076a6cd84b8fe9dc06543/train-execution-details.svg" alt="OpenViking session.train 訓練執行細節" width="100%">
+<img src="https://gist.githubusercontent.com/chenjw/c2de3083d0e1dac3a192c74f98c020c7/raw/502e01c5e207ce8b2b4076a6cd84b8fe9dc06543/train-execution-details.svg" alt="Business Data Platform session.train 訓練執行細節" width="100%">
 
 這張圖強調三個實現邊界：
 
@@ -442,7 +442,7 @@ class PolicyTrainer(Protocol):
 
 - `BatchPolicyTrainer`：顯式 batch，本地執行 analyze/estimate/plan/apply。
 - `StreamingPolicyTrainer`：即時 rollout 輸入，先 analyze/estimate，再按梯度數量和時間視窗攢批，批次 plan/apply。
-- `SessionCommitPolicyTrainer`：把 rollout 寫入遠端 OpenViking session，通過 `session.commit` 讓服務端完成訓練。
+- `SessionCommitPolicyTrainer`：把 rollout 寫入遠端 Business Data Platform session，通過 `session.commit` 讓服務端完成訓練。
 
 ### 6.9 PolicyOptimizationPipeline
 
@@ -669,7 +669,7 @@ extracted Case[] + original commit messages
 
 ## 12. SessionCommitPolicyTrainer：遠端服務端訓練
 
-`SessionCommitPolicyTrainer` 是一個 `PolicyTrainer` 實現，用於“訓練框架在外部，OpenViking 服務端負責訓練”的場景。
+`SessionCommitPolicyTrainer` 是一個 `PolicyTrainer` 實現，用於“訓練框架在外部，Business Data Platform 服務端負責訓練”的場景。
 
 它會把 rollout 寫成一個臨時 session：
 
@@ -738,7 +738,7 @@ tau2 service
 
 train/eval runner
   - 使用 RemoteCaseLoader / RemoteRolloutExecutor
-  - 使用 SessionCommitPolicyTrainer 提交 OpenViking session.commit
+  - 使用 SessionCommitPolicyTrainer 提交 Business Data Platform session.commit
   - 本身不直接依賴 tau2 runtime
 ```
 
@@ -819,10 +819,10 @@ benchmark/tau2/train/run_batch_train_eval.sh \
 
 tau2 的接入方式體現了推薦的 benchmark 整合模式：benchmark runtime 獨立成 HTTP service，訓練框架只通過通用 `RemoteCaseLoader` / `RemoteRolloutExecutor` 接入。
 
-<img src="https://gist.githubusercontent.com/chenjw/5c8f05a10f2c3f1913eb6c9d4293f0a4/raw/d9151bc8bbceccf3e56486897061c76a5d6f0cfa/tau2-train-eval-architecture.svg" alt="tau2 接入 OpenViking 新訓練評測框架" width="100%">
+<img src="https://gist.githubusercontent.com/chenjw/5c8f05a10f2c3f1913eb6c9d4293f0a4/raw/d9151bc8bbceccf3e56486897061c76a5d6f0cfa/tau2-train-eval-architecture.svg" alt="tau2 接入 Business Data Platform 新訓練評測框架" width="100%">
 
 
-圖中需要特別注意：tau2 runtime service 雖然不負責訓練寫入，但它執行 rollout 時會通過 VikingBot / OpenViking tools 讀取當前 OpenViking memories。因此 final_eval 能看到 train epoch 後寫入的最新 experiences。
+圖中需要特別注意：tau2 runtime service 雖然不負責訓練寫入，但它執行 rollout 時會通過 VikingBot / Business Data Platform tools 讀取當前 Business Data Platform memories。因此 final_eval 能看到 train epoch 後寫入的最新 experiences。
 
 ### 15.1 接入分層
 
@@ -836,9 +836,9 @@ train/eval runner
   - 不直接依賴 tau2 runtime
   - 使用 RemoteCaseLoader 查詢 case
   - 使用 RemoteRolloutExecutor 執行 rollout
-  - 使用 SessionCommitPolicyTrainer 把訓練 rollout 提交給 OpenViking 服務端
+  - 使用 SessionCommitPolicyTrainer 把訓練 rollout 提交給 Business Data Platform 服務端
 
-OpenViking server
+Business Data Platform server
   - 通過 session.commit 接收 rollout messages
   - 服務端內部執行 trajectory extraction / gradient estimation / patch merge / policy update
 ```
@@ -866,7 +866,7 @@ train epoch:
 final_eval:
   RemoteCaseLoader(test)
     -> RemoteRolloutExecutor
-    -> Tau2RolloutExecutor reads latest OpenViking experiences
+    -> Tau2RolloutExecutor reads latest Business Data Platform experiences
     -> rollout.evaluation
     -> accuracy delta report
 ```
@@ -898,9 +898,9 @@ eval 不抽 trajectory、不估計 gradient、不寫 experience。
 `SessionCommitPolicyTrainer` 會把 rollout 轉成臨時 session messages：
 
 ```text
-[OpenViking Training CaseSpec]
+[Business Data Platform Training CaseSpec]
 [Rollout messages: user / assistant / ToolPart]
-[OpenViking OutcomeEvaluation]
+[Business Data Platform OutcomeEvaluation]
 ```
 
 其中：
@@ -1061,7 +1061,7 @@ POST /v1/rollouts/execute
 - 客戶端會對多個 case 發起多個請求，service 端可以自行排隊、限流、排程到不同
   worker 或機器。
 - `policy_set.root_uri` 告訴 runtime 當前 experiences 根目錄；tau2 rollout 期間
-  VikingBot 會通過 OpenViking recall 讀取這裡的最新經驗。
+  VikingBot 會通過 Business Data Platform recall 讀取這裡的最新經驗。
 - `execution_context.policy_snapshot_id` 必須原樣寫入返回的 `Rollout.policy_snapshot_id`，
   用於追蹤這次 rollout 使用的是哪次 policy snapshot。
 
@@ -1175,7 +1175,7 @@ GET /v1/rollouts/executions/{execution_id}
 - `status` 至少支持 `running/completed/failed`。
 - `completed` 時必須返回完整 `rollout`。
 - `failed` 時必須返回可讀 `error`，訓練側會把它歸入該 case 的 rollout 失敗。
-- `Rollout.messages` 應使用 OpenViking `Message` / `Part` 結構；工具呼叫和工具結果
+- `Rollout.messages` 應使用 Business Data Platform `Message` / `Part` 結構；工具呼叫和工具結果
   用 `ToolPart`，不要把 `tool-call:\nname: ...` 塞進普通 text content。
 - `Rollout.evaluation` 在 eval 階段是必需欄位；如果沒有 evaluation，
   `OfflinePolicyOptimizationPipeline.eval(...)` 會失敗。
@@ -1185,7 +1185,7 @@ GET /v1/rollouts/executions/{execution_id}
 新場景自己的 rollout executor 需要完成這些事情：
 
 1. 根據 `Case.input` 初始化環境和使用者模擬器。
-2. 根據 `policy_set.root_uri` / OpenViking 配置讓 agent 讀取當前 experiences。
+2. 根據 `policy_set.root_uri` / Business Data Platform 配置讓 agent 讀取當前 experiences。
 3. 執行 agent loop，記錄 user/assistant/tool messages。
 4. 把環境 reward 或 judge 結果轉成 `RubricEvaluation`。
 5. 返回統一 `Rollout`：

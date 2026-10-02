@@ -8,11 +8,11 @@ Chat → persisted bot session → feedback / follow-up → /metrics → Prometh
 
 ## Prerequisites
 
-- Start OpenViking with `server.observability.metrics.enabled=true` and `openviking-server --with-bot --port 30300`.
+- Start Business Data Platform with `server.observability.metrics.enabled=true` and `openviking-server --with-bot --port 30300`.
 - Confirm `/bot/v1/health` returns HTTP 200 and `/metrics` returns Prometheus exposition text.
-- Confirm Prometheus scrapes OpenViking and Grafana uses that Prometheus data source.
+- Confirm Prometheus scrapes Business Data Platform and Grafana uses that Prometheus data source.
 
-The localhost setup in the previous guide uses OpenViking at `http://127.0.0.1:30300`, Prometheus at `http://127.0.0.1:30909`, and Grafana at `http://127.0.0.1:13000`. If authentication is enabled, include the credentials required by your deployment in each request; see [Authentication](04-authentication.md).
+The localhost setup in the previous guide uses Business Data Platform at `http://127.0.0.1:30300`, Prometheus at `http://127.0.0.1:30909`, and Grafana at `http://127.0.0.1:13000`. If authentication is enabled, include the credentials required by your deployment in each request; see [Authentication](04-authentication.md).
 
 ## How to interpret the metrics
 
@@ -50,7 +50,7 @@ curl -sS -X POST "http://127.0.0.1:30300/bot/v1/chat" \
   -d '{
     "session_id": "realcase-01-chat",
     "user_id": "metrics-validation-user",
-    "message": "Describe OpenViking in one sentence."
+    "message": "Describe Business Data Platform in one sentence."
   }'
 ```
 
@@ -152,7 +152,7 @@ curl -sS -X POST "http://127.0.0.1:30300/bot/v1/chat/channel" \
     "session_id": "realcase-07-channel-demo",
     "user_id": "metrics-validation-user",
     "channel_id": "demo",
-    "message": "Describe OpenViking briefly."
+    "message": "Describe Business Data Platform briefly."
   }'
 ```
 

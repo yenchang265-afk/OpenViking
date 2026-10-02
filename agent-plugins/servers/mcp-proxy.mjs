@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
 /**
- * stdio -> streamable-HTTP MCP proxy for the OpenViking Agent Plugins 1.0 package.
+ * stdio -> streamable-HTTP MCP proxy for the Business Data Platform Agent Plugins 1.0 package.
  *
  * A conforming Agent Plugins client starts this process as a local stdio MCP
- * server (see ../mcp.json). The proxy reads the same OpenViking credential
+ * server (see ../mcp.json). The proxy reads the same Business Data Platform credential
  * sources as the ov CLI (OPENVIKING_* env → ~/.openviking/ovcli.conf →
  * ~/.openviking/ov.conf), forwards JSON-RPC requests to the server's /mcp
  * endpoint, and keeps stdout protocol-clean.

@@ -14,7 +14,7 @@
       "id": "cli",
       "name": "CLI 接入",
       "icon": "terminal",
-      "summary": "面向開發者在終端直接安裝、配置和使用 OpenViking CLI",
+      "summary": "面向開發者在終端直接安裝、配置和使用 Business Data Platform CLI",
       "detailPath": "https://docs.openviking.net/agents/zh/cli.md"
     },
     {
@@ -101,7 +101,7 @@
       "name": "Hermes Agent",
       "tags": ["Provider"],
       "logo": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_sth/ljhwZthlaukjlkulzlp/agent_logo/Hermes-Agent.png",
-      "summary": "Hermes 官方內建 OpenViking。跑 hermes memory setup openviking，預設選火山雲，再貼上 API Key 即可",
+      "summary": "Hermes 官方內建 Business Data Platform。跑 hermes memory setup openviking，預設選火山雲，再貼上 API Key 即可",
       "detailPath": "https://docs.openviking.net/agents/zh/hermes.md"
     },
     {
@@ -117,7 +117,7 @@
       "name": "DeepSeek Harness",
       "tags": ["Plugin"],
       "logo": "https://docs.openviking.net/agents/image/deepseek-harness/logo.png",
-      "summary": "為 DeepSeek Harness 提供跨專案、跨會話的長期記憶；安裝後可自動召回相關記憶、捕獲新內容，並直接使用 OpenViking 工具與 openviking-memory 技能，無需額外配置。",
+      "summary": "為 DeepSeek Harness 提供跨專案、跨會話的長期記憶；安裝後可自動召回相關記憶、捕獲新內容，並直接使用 Business Data Platform 工具與 openviking-memory 技能，無需額外配置。",
       "detailPath": "https://docs.openviking.net/agents/zh/deepseek-harness.md"
     },
     {

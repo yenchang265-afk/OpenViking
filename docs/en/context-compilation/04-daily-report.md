@@ -6,7 +6,7 @@ Skill source: [examples/compile/ov-compile-skills/daily-report](https://github.c
 
 ## Step 1: Prepare the sources
 
-Daily-report sources are usually sessions, messages, or documents already in OpenViking. To import a batch of records from local:
+Daily-report sources are usually sessions, messages, or documents already in Business Data Platform. To import a batch of records from local:
 
 ```bash
 ov add-resource ./work-logs --to viking://resources/work-logs

@@ -26,13 +26,13 @@ type SearchCopy = {
 const searchCopy: Record<SearchLocale, SearchCopy> = {
   en: {
     compactTrigger: 'Search',
-    dialogLabel: 'OpenViking docs search',
+    dialogLabel: 'Business Data Platform docs search',
     empty: {
       initial: 'Type a query to search the current language docs.',
       loading: 'Searching...',
       noResults: 'No results found.'
     },
-    inputLabel: 'Search OpenViking docs',
+    inputLabel: 'Search Business Data Platform docs',
     modeLabel: 'Search mode',
     modeOptionsLabel: 'Search mode options',
     modes: {
@@ -52,10 +52,10 @@ const searchCopy: Record<SearchLocale, SearchCopy> = {
     notice: (reason, localResultCount) => {
       const prefix =
         reason === 'rate_limited'
-          ? 'OpenViking search is rate limited.'
+          ? 'Business Data Platform search is rate limited.'
           : reason === 'timeout'
-            ? 'OpenViking search timed out.'
-            : 'OpenViking search is unavailable.'
+            ? 'Business Data Platform search timed out.'
+            : 'Business Data Platform search is unavailable.'
 
       return localResultCount > 0
         ? `${prefix} Showing local docs results.`
@@ -65,13 +65,13 @@ const searchCopy: Record<SearchLocale, SearchCopy> = {
   },
   zh: {
     compactTrigger: '搜索',
-    dialogLabel: 'OpenViking 文件搜尋',
+    dialogLabel: 'Business Data Platform 文件搜尋',
     empty: {
       initial: '輸入關鍵詞，搜尋當前語言的文件。',
       loading: '搜索中...',
       noResults: '未找到相關結果。'
     },
-    inputLabel: '搜尋 OpenViking 文件',
+    inputLabel: '搜尋 Business Data Platform 文件',
     modeLabel: '搜索模式',
     modeOptionsLabel: '搜尋模式選項',
     modes: {
@@ -91,10 +91,10 @@ const searchCopy: Record<SearchLocale, SearchCopy> = {
     notice: (reason, localResultCount) => {
       const prefix =
         reason === 'rate_limited'
-          ? 'OpenViking 搜尋請求過多。'
+          ? 'Business Data Platform 搜尋請求過多。'
           : reason === 'timeout'
-            ? 'OpenViking 搜尋超時。'
-            : 'OpenViking 搜尋暫不可用。'
+            ? 'Business Data Platform 搜尋超時。'
+            : 'Business Data Platform 搜尋暫不可用。'
 
       return localResultCount > 0
         ? `${prefix}正在顯示本地文件結果。`

@@ -6,7 +6,7 @@
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
    ```
 
-2. 安裝器會依次詢問以下資訊：語言（English / 中文）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
+2. 安裝器會依次詢問以下資訊：語言（English / 中文）、Business Data Platform 憑據。在 Business Data Platform 憑據配置中，選擇連線至「火山引擎 Business Data Platform 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}

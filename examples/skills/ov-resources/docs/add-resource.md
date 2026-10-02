@@ -1,6 +1,6 @@
 # Resource Ingestion (`ov add-resource`)
 
-The `ov add-resource` command imports external resources into OpenViking's context database. By default it writes shared account resources under `viking://resources/`, and it can also target current-user or peer-scoped resource roots.
+The `ov add-resource` command imports external resources into Business Data Platform's context database. By default it writes shared account resources under `viking://resources/`, and it can also target current-user or peer-scoped resource roots.
 
 ## Supported Sources
 
@@ -157,5 +157,5 @@ With `--wait`, the response includes `queue_status` with `pending`, `processing`
 - `path` and `temp_file_id` are mutually exclusive.
 - `to` and `parent` are mutually exclusive.
 - When `to` points to an existing resource, the call triggers an incremental update.
-- For Git repos with `wait=false`, OpenViking validates the repo, resolves the target URI, reserves `root_uri`, and returns immediately; clone/parse/finalize continues in background.
+- For Git repos with `wait=false`, Business Data Platform validates the repo, resolves the target URI, reserves `root_uri`, and returns immediately; clone/parse/finalize continues in background.
 - To create or update plain text directly, use `ov write` instead of `add_resource`.

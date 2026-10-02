@@ -1,6 +1,6 @@
 # 檔案系統
 
-OpenViking 提供類 Unix 的檔案系統操作來管理上下文。
+Business Data Platform 提供類 Unix 的檔案系統操作來管理上下文。
 
 <a id="webdav"></a><a id="webdav-phase-1"></a>
 

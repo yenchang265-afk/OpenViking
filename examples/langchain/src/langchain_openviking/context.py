@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""High-level OpenViking context lifecycle helpers for LangChain."""
+"""High-level Business Data Platform context lifecycle helpers for LangChain."""
 
 from __future__ import annotations
 
@@ -189,7 +189,7 @@ class OpenVikingSessionContextAssembler:
         include_session_context: bool = True,
         include_active_messages: bool = True,
         include_recall: bool = True,
-        recall_header: str = "Relevant OpenViking context:",
+        recall_header: str = "Relevant Business Data Platform context:",
     ):
         self._connection = OpenVikingConnection(
             client=client,
@@ -373,14 +373,14 @@ class OpenVikingSessionContextAssembler:
         try:
             call_openviking(client, "create_session", session_id=session_id)
         except Exception:
-            logger.debug("OpenViking session ensure failed", exc_info=True)
+            logger.debug("Business Data Platform session ensure failed", exc_info=True)
             pass
 
     async def _aensure_session(self, client: Any, session_id: str) -> None:
         try:
             await acall_openviking(client, "create_session", session_id=session_id)
         except Exception:
-            logger.debug("OpenViking session ensure failed", exc_info=True)
+            logger.debug("Business Data Platform session ensure failed", exc_info=True)
 
     def _get_session_context(self, client: Any, session_id: str) -> dict[str, Any]:
         if not self.include_session_context:
@@ -401,7 +401,7 @@ class OpenVikingSessionContextAssembler:
                 # context read because the newly created session has no context yet.
                 self._ensure_session(client, session_id)
                 return {}
-            logger.debug("OpenViking session context assembly failed", exc_info=True)
+            logger.debug("Business Data Platform session context assembly failed", exc_info=True)
             return {}
 
     async def _aget_session_context(
@@ -427,7 +427,7 @@ class OpenVikingSessionContextAssembler:
                 # context read because the newly created session has no context yet.
                 await self._aensure_session(client, session_id)
                 return {}
-            logger.debug("OpenViking session context assembly failed", exc_info=True)
+            logger.debug("Business Data Platform session context assembly failed", exc_info=True)
             return {}
 
     def _get_recall_documents(
@@ -445,7 +445,7 @@ class OpenVikingSessionContextAssembler:
                 ).invoke(query)
             )
         except Exception:
-            logger.debug("OpenViking recall retrieval failed", exc_info=True)
+            logger.debug("Business Data Platform recall retrieval failed", exc_info=True)
             return []
 
     async def _aget_recall_documents(
@@ -463,7 +463,7 @@ class OpenVikingSessionContextAssembler:
                 ).ainvoke(query)
             )
         except Exception:
-            logger.debug("OpenViking recall retrieval failed", exc_info=True)
+            logger.debug("Business Data Platform recall retrieval failed", exc_info=True)
             return []
 
     def _format_context_block(
@@ -564,7 +564,7 @@ class _OpenVikingContextResources:
 
 
 class OpenVikingContextRunnable(RunnableWithMessageHistory):
-    """LangChain history wrapper with deterministic OpenViking cleanup."""
+    """LangChain history wrapper with deterministic Business Data Platform cleanup."""
 
     _resources: _OpenVikingContextResources = PrivateAttr()
 
@@ -715,7 +715,7 @@ def with_openviking_context(
                 id=session_id_config_key,
                 annotation=str,
                 name="Session ID",
-                description=("Required OpenViking session ID for dynamic chat history and recall."),
+                description=("Required Business Data Platform session ID for dynamic chat history and recall."),
                 default="",
                 is_shared=True,
             )
@@ -789,7 +789,7 @@ def with_openviking_context(
             history = _invocation_history_from_config(config)
         except Exception:
             logger.debug(
-                "OpenViking pending context cleanup could not resolve invocation history",
+                "Business Data Platform pending context cleanup could not resolve invocation history",
                 exc_info=True,
             )
             return
@@ -833,7 +833,7 @@ def _validate_session_id(value: Any, *, key: str) -> str:
     session_id = str(value or "").strip()
     if not session_id:
         raise ValueError(
-            "OpenViking dynamic sessions require "
+            "Business Data Platform dynamic sessions require "
             f"config={{'configurable': {{'{key}': '<session-id>'}}}}. "
             "Pass session_id='...' to with_openviking_context for no-config usage."
         )
@@ -846,7 +846,7 @@ def _invocation_history_from_config(
     configurable = (config or {}).get("configurable") or {}
     history = configurable.get("message_history")
     if not isinstance(history, _InvocationOpenVikingChatMessageHistory):
-        raise RuntimeError("OpenViking runnable invocation history is unavailable")
+        raise RuntimeError("Business Data Platform runnable invocation history is unavailable")
     return history
 
 

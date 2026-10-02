@@ -225,7 +225,7 @@ def test_similarity_from_score_inverts_elasticsearch_rescaling():
     # cosine: es = (1 + cos) / 2
     assert similarity_from_score("cosine", 1.0) == pytest.approx(1.0)
     assert similarity_from_score("cosine", 0.5) == pytest.approx(0.0)
-    # l2_norm: es = 1 / (1 + d^2); OpenViking reports 1 / (1 + d)
+    # l2_norm: es = 1 / (1 + d^2); Business Data Platform reports 1 / (1 + d)
     assert similarity_from_score("l2", 1.0 / (1.0 + 4.0)) == pytest.approx(1.0 / 3.0)
     # max_inner_product: dot >= 0 -> dot + 1; dot < 0 -> 1 / (1 - dot)
     assert similarity_from_score("ip", 3.5) == pytest.approx(2.5)

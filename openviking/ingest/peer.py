@@ -8,7 +8,7 @@
       session cwd repo, falling back to the configured OV user;
     * group-chat harnesses (hermes/openclaw) -> the original username from the log.
 
-peer_id must match OpenViking's identifier rules (``[a-zA-Z0-9_.@-]+``). Safe ASCII
+peer_id must match Business Data Platform's identifier rules (``[a-zA-Z0-9_.@-]+``). Safe ASCII
 values stay human-readable except for the reserved ``ext-`` namespace; non-ASCII and
 reserved-prefix values are base64-encoded as ``ext-…``.
 """

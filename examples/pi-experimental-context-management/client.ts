@@ -312,7 +312,7 @@ export class OVClient {
   //
   // Every method in this section is failure-tolerant by contract: it returns
   // null (single value) or [] (list) instead of throwing, so callers can treat
-  // "OpenViking did not answer" the same as "nothing there".
+  // "Business Data Platform did not answer" the same as "nothing there".
 
   /**
    * Session root URI, e.g. `viking://user/default/sessions/pi-abc`.

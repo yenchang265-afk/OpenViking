@@ -126,7 +126,7 @@ class ToolRegistry:
         suitable for use with OpenAI's function calling API.
 
         Args:
-            ov_tools_enable: Whether to include OpenViking tools. If False,
+            ov_tools_enable: Whether to include Business Data Platform tools. If False,
                 tools with names starting with "openviking_" will be excluded.
             disabled_tools: Tool names to hide from the model for this request.
 
@@ -180,12 +180,12 @@ class ToolRegistry:
             session_key: Session key for the current session.
             sandbox_manager: Sandbox manager for file/shell operations.
             sender_id: Sender id for the current session.
-            actor_peer_id: Authenticated OpenViking peer id for tool requests.
+            actor_peer_id: Authenticated Business Data Platform peer id for tool requests.
             memory_peer_ids: List of peer IDs for memory retrieval.
-            memory_owner_user_ids: List of explicit OpenViking user IDs for
+            memory_owner_user_ids: List of explicit Business Data Platform user IDs for
                 trusted-mode owner-user memory lookup.
             memory_user_ids: Deprecated alias for memory_owner_user_ids.
-            openviking_connection: Request-scoped OpenViking identity.
+            openviking_connection: Request-scoped Business Data Platform identity.
             channel_metadata: Channel-specific metadata from the inbound message.
 
         Returns:

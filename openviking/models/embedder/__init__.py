@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-OpenViking Embedder Module
+Business Data Platform Embedder Module
 
 Provides three embedder abstractions:
 - DenseEmbedderBase: Returns dense vectors

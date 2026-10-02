@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-OpenViking is an open-source context database initiated and maintained by ByteDance’s Volcano Engine Viking team, dedicated to building robust context engineering infrastructure for the AI Agent ecosystem. As a new-generation context database, OpenViking provides a unified data abstraction layer, an intelligent semantic parsing engine, and a high-performance hybrid retrieval system to deliver reliable backend support for all kinds of AI applications.
+Business Data Platform is an open-source context database initiated and maintained by ByteDance’s Volcano Engine Viking team, dedicated to building robust context engineering infrastructure for the AI Agent ecosystem. As a new-generation context database, Business Data Platform provides a unified data abstraction layer, an intelligent semantic parsing engine, and a high-performance hybrid retrieval system to deliver reliable backend support for all kinds of AI applications.
 
 ## Team Introduction
 
@@ -29,21 +29,21 @@ The Viking team belongs to ByteDance’s Volcano Engine and focuses on unstructu
 
 ### Development History and Technical Evolution
 
-The Viking team’s exploration in context engineering reflects our commitment to continuous innovation and industry impact. As AI Agent applications rapidly evolve, we plan to use OpenViking as a public verification platform for new concepts and approaches, building in the open together with the community to create a responsible AI application stack.
+The Viking team’s exploration in context engineering reflects our commitment to continuous innovation and industry impact. As AI Agent applications rapidly evolve, we plan to use Business Data Platform as a public verification platform for new concepts and approaches, building in the open together with the community to create a responsible AI application stack.
 
 | Time Period | Milestone | Technical Breakthroughs and Industry Impact |
 |-------------|-----------|---------------------------------------------|
 | **2019–2023** | VikingDB vector database widely adopted inside ByteDance | Powered multiple core products’ unstructured information retrieval; accumulated engineering experience in large-scale vector retrieval; validated the technical value of vector databases in real-world business scenarios |
 | **2024** | Released developer-facing product matrix: VikingDB, Viking Knowledge Base, Viking Memory Base | Officially provided on Volcano Engine public cloud; successfully supported thousands of enterprise customers building AI-native applications; marked the successful transition from internal tooling to commercial products |
 | **2025** | Expanded to upper-layer applications such as AI Search and Knowledge Assistants | Built a complete product matrix from infrastructure to application layer; further validated business value across scenarios; formed a full loop from technology to product |
-| **Late 2025** | Open-sourced [MineContext](https://github.com/volcengine/MineContext) project | Explored proactive AI application patterns; validated personal context engineering ideas; accumulated community operation experience for OpenViking |
-| **Early 2026** | Open-sourced OpenViking project | Released a newly designed context database architecture for the global AI Agent ecosystem; marked the strategic shift from commercial product provider to open-source contributor |
+| **Late 2025** | Open-sourced [MineContext](https://github.com/volcengine/MineContext) project | Explored proactive AI application patterns; validated personal context engineering ideas; accumulated community operation experience for Business Data Platform |
+| **Early 2026** | Open-sourced Business Data Platform project | Released a newly designed context database architecture for the global AI Agent ecosystem; marked the strategic shift from commercial product provider to open-source contributor |
 
 ### Academic Collaboration and Industry–Academia Integration
 
-Since its inception, OpenViking has established deep academic collaborations with top universities and research institutes worldwide to jointly explore context database design paradigms and best engineering practices for the AI era. This industry–academia collaboration ensures technological advancement while staying closely aligned with real application needs.
+Since its inception, Business Data Platform has established deep academic collaborations with top universities and research institutes worldwide to jointly explore context database design paradigms and best engineering practices for the AI era. This industry–academia collaboration ensures technological advancement while staying closely aligned with real application needs.
 
-We sincerely thank the following scholars for their contributions and guidance in launching OpenViking:
+We sincerely thank the following scholars for their contributions and guidance in launching Business Data Platform:
 
 - Associate Professor Sun Yahui, School of Information, Renmin University of China
 - Professor Gao Yunjun, School of Software, Zhejiang University; Researchers Zhu Yifan and Ge Congcong
@@ -59,7 +59,7 @@ Our collaboration models include:
 
 ### Project Development Stages
 
-OpenViking is currently in its early development stage. We divide development into three key phases:
+Business Data Platform is currently in its early development stage. We divide development into three key phases:
 
 - Phase 1: Foundation building
 Focus on constructing solid technical foundations after open-sourcing, including core protocols, interfaces, AI Agent facilities, and providing a reliable minimal implementation.
@@ -75,7 +75,7 @@ Establish industry technical standards and best practices, build certification s
 Based on the project’s long-term roadmap, we are establishing a layered governance structure:
 
 #### Open-Source Governance Committee
-OpenViking is guided by a professional governance committee responsible for overall strategic planning and technical decisions. The committee consists of core contributors and domain experts, with responsibilities including:
+Business Data Platform is guided by a professional governance committee responsible for overall strategic planning and technical decisions. The committee consists of core contributors and domain experts, with responsibilities including:
 
 **Strategic Planning**
 - Define the long-term technical roadmap and vision
@@ -107,13 +107,13 @@ To ensure openness and diversity, we welcome eligible community contributors to 
 
 ### Join the Community
 
-We warmly invite developers worldwide to join the OpenViking community and co-build next-generation context engineering infrastructure. You can participate in the following ways:
+We warmly invite developers worldwide to join the Business Data Platform community and co-build next-generation context engineering infrastructure. You can participate in the following ways:
 
 #### Instant Messaging
 
 ##### WeChat Group
 
-Scan the QR code below to add the assistant on WeChat, mention "OpenViking" and you will be invited to the WeChat group:
+Scan the QR code below to add the assistant on WeChat, mention "Business Data Platform" and you will be invited to the WeChat group:
 
 ![Join via WeChat QR](../../images/wechat-group-qrcode.png)
 
@@ -142,7 +142,7 @@ We provide multiple participation channels to meet different collaboration needs
 #### 3. Community Support
 - **Technical sharing**: share experiences and technical insights
 - **Q&A**: help other developers solve usage problems
-- **Ecosystem building**: promote integration of OpenViking with other open-source projects
+- **Ecosystem building**: promote integration of Business Data Platform with other open-source projects
 
 #### 4. Ecosystem Expansion
 - **Plugin development**: develop third-party plugins or feature extensions
@@ -187,7 +187,7 @@ We aim to achieve the following goals through the open-source community:
 
 ### Open Collaboration
 
-OpenViking welcomes collaboration from developers, research institutions, and companies. We look forward to:
+Business Data Platform welcomes collaboration from developers, research institutions, and companies. We look forward to:
 
 - **Technical collaboration**: deep technical cooperation with academia and industry
 - **Ecosystem integration**: establish integrations with related open-source projects and commercial products

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""OpenViking vector backend performance benchmark.
+"""Business Data Platform vector backend performance benchmark.
 
-This benchmark targets OpenViking's VikingVectorIndexBackend boundary. It uses
+This benchmark targets Business Data Platform's VikingVectorIndexBackend boundary. It uses
 the real OV context schema, URI scope filters, tenant context, and backend calls
 while still accepting precomputed vectors from synthetic or dir-vector data.
 """
@@ -1745,7 +1745,7 @@ def write_suite_outputs(output_dir: Path, runs: list[tuple[BenchOptions, RunResu
         },
     )
     lines = [
-        "# OpenViking Vector Backend 真實資料彙總",
+        "# Business Data Platform Vector Backend 真實資料彙總",
         "",
         "本次 `dir-vector` 真實資料 benchmark 覆蓋 `wiki` 和 `arxiv` 兩個資料集。",
         "",
@@ -1838,7 +1838,7 @@ def build_markdown_report(
     result: RunResult, summary_rows: list[dict[str, Any]], options: BenchOptions
 ) -> str:
     lines = [
-        "# OpenViking Vector Backend 效能驗收報告",
+        "# Business Data Platform Vector Backend 效能驗收報告",
         "",
         f"- Run ID: `{result.run_id}`",
         f"- Workload: `{options.workload}`",
@@ -1955,9 +1955,9 @@ def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
 
 def parse_args(argv: Optional[Sequence[str]] = None) -> BenchOptions:
     parser = argparse.ArgumentParser(
-        description="Run OpenViking vector backend performance benchmark"
+        description="Run Business Data Platform vector backend performance benchmark"
     )
-    parser.add_argument("--config", help="Path to ov.conf. Defaults to OpenViking config lookup.")
+    parser.add_argument("--config", help="Path to ov.conf. Defaults to Business Data Platform config lookup.")
     parser.add_argument("--output-dir", type=Path)
     parser.add_argument("--run-id")
     parser.add_argument("--profile", choices=sorted(PROFILE_DEFAULTS), default="smoke")

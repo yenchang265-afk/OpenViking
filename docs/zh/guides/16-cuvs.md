@@ -1,6 +1,6 @@
 # 使用 NVIDIA cuVS 進行本地向量檢索
 
-OpenViking 的 `cuvs` 後端保留本地後端的記錄持久化、標量索引、稀疏檢索和故障恢復，只把 dense vector search 交給 NVIDIA cuVS。這樣可以先驗證 GPU 檢索鏈路，而不需要重新實現一個完整的向量資料庫。
+Business Data Platform 的 `cuvs` 後端保留本地後端的記錄持久化、標量索引、稀疏檢索和故障恢復，只把 dense vector search 交給 NVIDIA cuVS。這樣可以先驗證 GPU 檢索鏈路，而不需要重新實現一個完整的向量資料庫。
 
 ## 環境要求
 
@@ -160,17 +160,17 @@ cuVS 版本、CAGRA 引數、query batch 和並行 GPU workload 都可能進一�
 因此 auto 模式會先初始化 runtime、讀取剩餘空閒視訊記憶體，再應用保守 safety factor
 和獨立 reserve，而不會只按 vector payload 准入。
 
-距離語義與原本的 OpenViking 本地後端保持一致：cosine 會先做 L2 歸一化再執行 inner product；L2 的返回分數仍為 `1 - squared_l2`，分數越大越相似。
+距離語義與原本的 Business Data Platform 本地後端保持一致：cosine 會先做 L2 歸一化再執行 inner product；L2 的返回分數仍為 `1 - squared_l2`，分數越大越相似。
 
 ## 資料型別與原生索引行為
 
-啟用 cuVS 不會改變 OpenViking 的預設後端，也不會重寫原生 CPU 索引。正常的
+啟用 cuVS 不會改變 Business Data Platform 的預設後端，也不會重寫原生 CPU 索引。正常的
 collection metadata 仍為 `VectorIndex.Quant=int8`，因此 native fallback
 繼續使用現有的、帶逐向量 scale 的 int8 量化。與此同時，cuVS device dataset
 和 query 使用配置的 `dtype`：預設是 float32，也可以顯式選擇 float16。host
 record shadow 儲存預處理後的 Python 浮點值；僅在建立 device dataset 和 query
 時將它們 cast 為配置的 dtype。cuVS Python brute-force API 支援這兩種 device
-表示，但不能直接表示 OpenViking 的 scaled-int8 record 格式。
+表示，但不能直接表示 Business Data Platform 的 scaled-int8 record 格式。
 
 所以兩條 dense search 路徑不是等記憶體、等數值語義的比較：native 是在 CPU
 量化表示上的精確檢索，cuVS brute-force 是在保留的 float32 或 float16 device
@@ -184,7 +184,7 @@ native 路由閾值設為 0。
 GPU 低精度儲存是顯式能力，不做隱式 cast。設定 `dtype: "float16"` 會把 cuVS
 dataset 和每個 query 同時 cast 為 float16，brute-force 與 CAGRA 都不使用混合
 query/index dtype。這是儲存 cast，不是逐向量量化，必須以預設 float32 為 ground
-truth 報告 Recall@K。與 native 相容的 int8 仍需單獨設計，因為 OpenViking 使用
+truth 報告 Recall@K。與 native 相容的 int8 仍需單獨設計，因為 Business Data Platform 使用
 逐向量 scale，而 cuVS brute-force 不能直接接收這種 scaled-int8 表示。CAGRA
 int8 或 PQ compression 也應作為近似模式，單獨報告 recall/latency/memory frontier。
 
@@ -238,7 +238,7 @@ dispatch 更晚。併發充足時，最多由配置上限數量的 query 共用�
 - micro-batching 僅支援 `algorithm: "brute_force"`，並要求
   `max_concurrent_gpu_searches: 1`。
 
-該能力預設關閉，是 OpenViking 自己的 micro-batcher，不等同於 cuVS 官方名為
+該能力預設關閉，是 Business Data Platform 自己的 micro-batcher，不等同於 cuVS 官方名為
 Dynamic Batching 的元件。首版只支援 exact brute-force；CAGRA 和併發 dispatch 多個
 batch 會在獨立驗證後再開放。Auto 模式也可使用這些選項，但被路由到原生 CPU 的請求
 不會進入 GPU batch queue。single-row 與 matrix-query 在近似並列分數處可能有順序
@@ -315,5 +315,5 @@ collection.close()
 - `filter_cache_size` 會保留最近使用的 GPU bitset 或 native 路由決策，並在資料更新時失效；auto 模式在進入 cuVS search 前預判候選數，不同的首次過濾條件可通過 native engine 的共享讀路徑平行計算，命中已快取的 native 路由時則直接進入 native index。generation 校驗會阻止跨 mutation 計算出的舊結果寫入路由快取。
 - GPU index 使用 immutable snapshot 和可複用的 cuVS resources/CUDA stream；預設關閉的 micro-batching 可讓 compatible warm request 繞過 caller 側 gate 入隊，並由唯一持有 device-search gate 執行 matrix search 的 worker 合批。mutation 和 snapshot commit 使用跨後端寫鎖。
 - 預設情況下，每次 upsert/delete 後仍由下一次查詢同步重建；開啟 `auto_background_rebuild` 後，dirty 期間查詢走 native，連續寫被合併為後臺重建。
-- cuVS 索引不作為權威持久化資料；程序重啟時會從 OpenViking 本地 store 重建，因此不受 cuVS 跨版本序列化格式變化影響。
+- cuVS 索引不作為權威持久化資料；程序重啟時會從 Business Data Platform 本地 store 重建，因此不受 cuVS 跨版本序列化格式變化影響。
 - `brute_force` 適合功能對齊和 ground truth；CAGRA 的 graph/search 引數需要在後續結合召回率、QPS、延遲和視訊記憶體進行調優。

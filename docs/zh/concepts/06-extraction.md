@@ -1,6 +1,6 @@
 # 上下文提取
 
-OpenViking 採用三層非同步架構處理文件解析和上下文提取。
+Business Data Platform 採用三層非同步架構處理文件解析和上下文提取。
 
 ## 概覽
 
@@ -138,7 +138,7 @@ L0/L1 是目錄級 sidecar，不是 per-file sidecar。生成父目錄摘要時�
 
 ## 程式碼骨架提取
 
-對於程式碼檔案，OpenViking 使用固定的程式碼骨架提取路線。該路線內建在程式碼摘要流程中，不再通過逐語言解析引數選擇或調節。
+對於程式碼檔案，Business Data Platform 使用固定的程式碼骨架提取路線。該路線內建在程式碼摘要流程中，不再通過逐語言解析引數選擇或調節。
 
 ### 程式碼骨架內容
 
@@ -152,7 +152,7 @@ L0/L1 是目錄級 sidecar，不是 per-file sidecar。生成父目錄摘要時�
 2. 不存在對應的 `tags.scm` 時，使用 `tree-sitter-language-pack.process()`。
 3. 兩種提取方式都無可用結果時，才將 `semantic.code_summary` 作為兜底處理。
 
-第 1、2 步需要 `tree-sitter-language-pack` 中對應語言的解析器，該解析器會在首次使用時從 GitHub 下載。當解析器未快取且無法下載時（例如處於防火牆之後），OpenViking 改用隨 pip 依賴安裝的語法包：Python、JavaScript、TypeScript/TSX、Java、C/C++、Rust、Go、C#、PHP 和 Lua，此時骨架會列出每個定義所在的原始碼行。其他語言則使用 `semantic.code_summary` 兜底。
+第 1、2 步需要 `tree-sitter-language-pack` 中對應語言的解析器，該解析器會在首次使用時從 GitHub 下載。當解析器未快取且無法下載時（例如處於防火牆之後），Business Data Platform 改用隨 pip 依賴安裝的語法包：Python、JavaScript、TypeScript/TSX、Java、C/C++、Rust、Go、C#、PHP 和 Lua，此時骨架會列出每個定義所在的原始碼行。其他語言則使用 `semantic.code_summary` 兜底。
 
 manifest 查詢與下載共用 15 秒超時。首次失敗後，當前程序不再嘗試下載，只使用已快取的解析器，因此靜默丟包的防火牆最多隻會拖慢一個檔案。
 

@@ -79,7 +79,7 @@ const agents = [
           </div>
         </div>
         <div class="context-workspace">
-          <div class="workspace-top"><span>OpenViking</span><span class="workspace-caption">{{ t('CONTEXT MODEL', '上下文結構示意') }}</span></div>
+          <div class="workspace-top"><span>Business Data Platform</span><span class="workspace-caption">{{ t('CONTEXT MODEL', '上下文結構示意') }}</span></div>
           <div class="workspace-body">
             <div class="context-folders" :aria-label="t('Context types', '上下文型別')">
               <span class="tree-root">viking://</span>

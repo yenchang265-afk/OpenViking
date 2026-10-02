@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RAG Pipeline - Retrieval-Augmented Generation using OpenViking + LLM
+RAG Pipeline - Retrieval-Augmented Generation using Business Data Platform + LLM
 Focused on querying and answer generation, not resource management
 """
 
@@ -17,7 +17,7 @@ class Recipe:
     Recipe (Boring name is RAG Pipeline)
 
     Combines semantic search with LLM generation:
-    1. Search OpenViking database for relevant context
+    1. Search Business Data Platform database for relevant context
     2. Send context + query to LLM
     3. Return generated answer with sources
     """
@@ -32,7 +32,7 @@ class Recipe:
 
         Args:
             config_path: Path to config file with LLM settings
-            server_url: OpenViking HTTP server URL
+            server_url: Business Data Platform HTTP server URL
         """
         # Load configuration
         with open(config_path, "r") as f:
@@ -44,7 +44,7 @@ class Recipe:
         self.api_key = self.vlm_config.get("api_key")
         self.model = self.vlm_config.get("model")
 
-        # Initialize OpenViking client
+        # Initialize Business Data Platform client
         self.client = SyncHTTPClient(url=server_url)
         self.client.initialize()
 

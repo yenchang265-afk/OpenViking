@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-// ResolveOpenVikingAssets parses and validates an OpenViking Assets manifest.
+// ResolveOpenVikingAssets parses and validates a Business Data Platform Assets manifest.
 func (c *Client) ResolveOpenVikingAssets(
 	ctx context.Context,
 	manifestYAML string,

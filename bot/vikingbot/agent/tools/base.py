@@ -35,13 +35,13 @@ class ToolContext:
             and session_key. This determines the sandbox directory for the session.
         sender_id: Optional identifier for the message sender, used for tracking
             and permission checks.
-        actor_peer_id: Authenticated OpenViking peer identity for memory and file tools.
+        actor_peer_id: Authenticated Business Data Platform peer identity for memory and file tools.
         memory_peer_ids: Optional list of peer IDs for memory retrieval inside
-            the current OpenViking user scope.
-        memory_owner_user_ids: Optional list of explicit OpenViking user IDs
+            the current Business Data Platform user scope.
+        memory_owner_user_ids: Optional list of explicit Business Data Platform user IDs
             for trusted-mode owner-user memory lookup.
-        openviking_connection: Optional request-scoped OpenViking identity. Studio
-            requests use this so tools call OpenViking with the same connection
+        openviking_connection: Optional request-scoped Business Data Platform identity. Studio
+            requests use this so tools call Business Data Platform with the same connection
             selected in the browser.
         channel_metadata: Channel-specific metadata from the inbound message. Tools
             that publish outbound messages can reuse this to preserve delivery context.

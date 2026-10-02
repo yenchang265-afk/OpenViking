@@ -45,7 +45,7 @@ test("viking uri notice fills empty shell output", async () => {
 
   await notice({ tool: "bash", args: { command: "ov read viking://resources/project/file.md" } }, output)
 
-  assert.match(output.output, /^\[OpenViking memory plugin\] URI guard/)
+  assert.match(output.output, /^\[Business Data Platform memory plugin\] URI guard/)
   assert.match(output.output, /ignore this notice/)
 })
 

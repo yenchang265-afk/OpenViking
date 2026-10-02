@@ -1,7 +1,7 @@
 """
-OpenViking FUSE 會話整合
+Business Data Platform FUSE 會話整合
 
-提供與會話管理器的整合，自動在配置的 workspace/{session}/ 掛載 OpenViking
+提供與會話管理器的整合，自動在配置的 workspace/{session}/ 掛載 Business Data Platform
 每個session直接在自己的workspace下管理內容
 """
 
@@ -24,9 +24,9 @@ from .viking_fuse import mount_fuse, FUSEMountManager, FUSE_AVAILABLE
 
 class SessionOpenVikingManager:
     """
-    會話 OpenViking 管理器
+    會話 Business Data Platform 管理器
 
-    管理每個會話的 OpenViking 掛載，每個session直接在自己的workspace下管理
+    管理每個會話的 Business Data Platform 掛載，每個session直接在自己的workspace下管理
     """
 
     def __init__(self, base_workspace: Optional[Path] = None):
@@ -67,7 +67,7 @@ class SessionOpenVikingManager:
 
     def get_session_ov_data_path(self, session_key: str) -> Path:
         """
-        獲取會話的 OpenViking 資料儲存路徑（在workspace內部）
+        獲取會話的 Business Data Platform 資料儲存路徑（在workspace內部）
 
         Args:
             session_key: 會話鍵
@@ -81,7 +81,7 @@ class SessionOpenVikingManager:
         self, session_key: str, use_fuse: bool = True, background: bool = True
     ) -> bool:
         """
-        為會話掛載 OpenViking
+        為會話掛載 Business Data Platform
 
         Args:
             session_key: 會話鍵
@@ -114,7 +114,7 @@ class SessionOpenVikingManager:
         try:
             if use_fuse and FUSE_AVAILABLE and self._fuse_manager:
                 # 使用 FUSE 掛載
-                logger.info(f"Mounting OpenViking via FUSE for session {session_key}")
+                logger.info(f"Mounting Business Data Platform via FUSE for session {session_key}")
                 logger.info(f"  Mount path: {session_workspace}")
 
                 config = MountConfig(
@@ -140,7 +140,7 @@ class SessionOpenVikingManager:
 
             else:
                 # 使用 API 層掛載 - mount_point就是workspace本身
-                logger.info(f"Mounting OpenViking via API for session {session_key}")
+                logger.info(f"Mounting Business Data Platform via API for session {session_key}")
                 logger.info(f"  Session workspace: {session_workspace}")
 
                 config = MountConfig(
@@ -198,7 +198,7 @@ class SessionOpenVikingManager:
 
     def unmount_for_session(self, session_key: str) -> bool:
         """
-        為會話解除安裝 OpenViking
+        為會話解除安裝 Business Data Platform
 
         Args:
             session_key: 會話鍵
@@ -328,7 +328,7 @@ _global_ov_session_manager: Optional[SessionOpenVikingManager] = None
 
 def get_session_ov_manager(base_workspace: Optional[Path] = None) -> SessionOpenVikingManager:
     """
-    獲取全域會話 OpenViking 管理器
+    獲取全域會話 Business Data Platform 管理器
 
     Args:
         base_workspace: 基礎工作區路徑（僅首次呼叫有效）

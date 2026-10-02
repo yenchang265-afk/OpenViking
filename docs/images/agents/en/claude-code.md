@@ -8,14 +8,14 @@ Because Claude Code may block installation scripts from unknown sources, automat
    bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness claude --dist tos
    ```
 
-2. The installer will ask for language (English / Chinese), OpenViking credentials, and whether to enable the Statusline.
-3. In the OpenViking credential step, choose **VolcEngine OpenViking Cloud Service [api.vikingdb.cn-beijing.volces.com]** and enter the API KEY:
+2. The installer will ask for language (English / Chinese), Business Data Platform credentials, and whether to enable the Statusline.
+3. In the Business Data Platform credential step, choose **VolcEngine Business Data Platform Cloud Service [api.vikingdb.cn-beijing.volces.com]** and enter the API KEY:
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-4. OpenViking StatusLine is the status strip under the input box. It shows the memory plugin runtime status in real time. Enable or skip it based on your preference. Example:
+4. Business Data Platform StatusLine is the status strip under the input box. It shows the memory plugin runtime status in real time. Enable or skip it based on your preference. Example:
 
    ```text
    OV ✓ │ Fable 5 · ctx 42% │ ↪ 6 mem (0.92) · 50ms │ ✎ 573/20k · 2 arch
@@ -42,8 +42,8 @@ Because Claude Code may block installation scripts from unknown sources, automat
 4. Run `/openviking-memory:ov` and confirm the service status is healthy:
 
    ```text
-   OpenViking Memory Status
-     ✅ Status: OpenViking server is healthy and running
+   Business Data Platform Memory Status
+     ✅ Status: Business Data Platform server is healthy and running
    ```
 
 ## Troubleshoot
@@ -58,5 +58,5 @@ Because Claude Code may block installation scripts from unknown sources, automat
 ## Reference
 
 - Docs on Manual Settings: [Claude Code](https://docs.openviking.net/en/agent-integrations/02-claude-code)
-- Blog about how it works: [OpenViking for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
+- Blog about how it works: [Business Data Platform for coding agents](https://blog.openviking.ai/post/openviking-coding-agent/)
 - Code: [examples/claude-code-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/claude-code-memory-plugin)

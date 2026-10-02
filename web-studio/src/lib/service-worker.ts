@@ -27,7 +27,7 @@ export async function registerServiceWorker(
   try {
     return await serviceWorker.register(scriptUrl, { scope })
   } catch (error) {
-    console.warn('OpenViking Studio service worker registration failed', error)
+    console.warn('Business Data Platform Studio service worker registration failed', error)
     return undefined
   }
 }

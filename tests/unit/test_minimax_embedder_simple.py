@@ -31,7 +31,7 @@ class TestMinimaxRealCall(unittest.TestCase):
             document_param="db",
         )
 
-        text = "OpenViking integration test for MiniMax."
+        text = "Business Data Platform integration test for MiniMax."
 
         try:
             result = embedder.embed(text)

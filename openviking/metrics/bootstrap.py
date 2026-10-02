@@ -77,7 +77,7 @@ def create_default_collector_manager(*, app=None, service=None, config=None) -> 
             several collectors and datasources.
 
     Returns:
-        A `CollectorManager` with the standard OpenViking collector set registered in the order
+        A `CollectorManager` with the standard Business Data Platform collector set registered in the order
         expected by the metrics bootstrap path.
     """
     manager = CollectorManager()

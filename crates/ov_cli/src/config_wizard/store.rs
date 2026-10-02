@@ -24,14 +24,14 @@ pub enum ConfigKind {
 impl ConfigKind {
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::OpenVikingService => "OpenViking Service (VolcEngine Cloud)",
+            Self::OpenVikingService => "Business Data Platform Service (VolcEngine Cloud)",
             Self::Custom => "Custom",
         }
     }
 
     pub(crate) fn compact_label(self) -> &'static str {
         match self {
-            Self::OpenVikingService => "OpenViking Service",
+            Self::OpenVikingService => "Business Data Platform Service",
             Self::Custom => "Custom",
         }
     }
@@ -150,7 +150,7 @@ impl ConfigStore {
         let report = self.list_configs_report()?;
         for invalid in &report.invalid_configs {
             eprintln!(
-                "Warning: skipped invalid OpenViking config '{}'",
+                "Warning: skipped invalid Business Data Platform config '{}'",
                 invalid.path.display()
             );
         }
@@ -345,7 +345,7 @@ impl ConfigStore {
 
             let Ok(config) = Config::from_file(&path.to_string_lossy()) else {
                 eprintln!(
-                    "Warning: skipped invalid OpenViking config '{}'",
+                    "Warning: skipped invalid Business Data Platform config '{}'",
                     path.display()
                 );
                 continue;
@@ -463,7 +463,7 @@ pub fn build_config(draft: &ConfigDraft) -> Result<Config> {
         ConfigKind::OpenVikingService => {
             let api_key = non_empty_option(draft.api_key.as_deref()).ok_or_else(|| {
                 Error::Config(
-                    "OpenViking Service (VolcEngine Cloud) configs require an API key".to_string(),
+                    "Business Data Platform Service (VolcEngine Cloud) configs require an API key".to_string(),
                 )
             })?;
             config.url = OPENVIKING_SERVICE_URL.to_string();
@@ -690,7 +690,7 @@ pub(crate) fn validation_error_copy(kind: ConfigKind, error: &Error) -> String {
         }
         Error::Network(_) => match kind {
             ConfigKind::OpenVikingService => {
-                "Cannot reach OpenViking Service. Check your network connection.".to_string()
+                "Cannot reach Business Data Platform Service. Check your network connection.".to_string()
             }
             ConfigKind::Custom => {
                 "Cannot reach the server. Check the URL and your network connection.".to_string()
@@ -722,7 +722,7 @@ pub(crate) fn validation_error_copy_zh(kind: ConfigKind, error: &Error) -> Strin
         }
         Error::Network(_) => match kind {
             ConfigKind::OpenVikingService => {
-                "無法連線 OpenViking 服務。請檢查網路連線。".to_string()
+                "無法連線 Business Data Platform 服務。請檢查網路連線。".to_string()
             }
             ConfigKind::Custom => "無法連線伺服器。請檢查 URL 和網路連線。".to_string(),
         },
@@ -973,11 +973,11 @@ mod tests {
     fn openviking_service_provider_label_uses_product_casing() {
         assert_eq!(
             ConfigKind::OpenVikingService.label(),
-            "OpenViking Service (VolcEngine Cloud)"
+            "Business Data Platform Service (VolcEngine Cloud)"
         );
         assert_eq!(
             ConfigKind::OpenVikingService.compact_label(),
-            "OpenViking Service"
+            "Business Data Platform Service"
         );
     }
 

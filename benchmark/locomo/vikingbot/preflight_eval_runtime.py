@@ -54,7 +54,7 @@ def _error(message: str) -> None:
 
 
 class UserKeyValidationError(RuntimeError):
-    """Raised when the configured OpenViking key is not usable for this auth mode."""
+    """Raised when the configured Business Data Platform key is not usable for this auth mode."""
 
 
 def _load_json(path: Path) -> dict:
@@ -88,12 +88,12 @@ def _prompt_secret(prompt: str) -> str:
 
 
 def _prompt_api_key() -> str:
-    return _prompt_secret("請輸入 OpenViking User API key（輸入內容不會顯示）")
+    return _prompt_secret("請輸入 Business Data Platform User API key（輸入內容不會顯示）")
 
 
 def _prompt_root_api_key() -> str:
     return _prompt_secret(
-        "請輸入 OpenViking Root API key，用於自動建立 default User key（輸入內容不會顯示）"
+        "請輸入 Business Data Platform Root API key，用於自動建立 default User key（輸入內容不會顯示）"
     )
 
 
@@ -163,7 +163,7 @@ def _resolve_openviking_url() -> str:
 def _load_ov_conf() -> dict:
     ov_conf_path = resolve_config_path(None, OPENVIKING_CONFIG_ENV, DEFAULT_OV_CONF)
     if ov_conf_path is None:
-        _error("未找到 ov.conf，無法讀取 OpenViking User API key。")
+        _error("未找到 ov.conf，無法讀取 Business Data Platform User API key。")
         raise SystemExit(1)
 
     try:
@@ -282,10 +282,10 @@ def _request_health(
     except urllib.error.HTTPError as e:
         detail = _read_http_error(e)
         raise UserKeyValidationError(
-            f"OpenViking server 檢查失敗（HTTP {e.code}）: {detail}"
+            f"Business Data Platform server 檢查失敗（HTTP {e.code}）: {detail}"
         ) from e
     except Exception as exc:
-        raise UserKeyValidationError(f"OpenViking server 不可用: {exc}") from exc
+        raise UserKeyValidationError(f"Business Data Platform server 不可用: {exc}") from exc
 
     try:
         payload = json.loads(body)
@@ -445,7 +445,7 @@ def _ensure_server_and_user_key_ready(
         )
 
     _ok(
-        "OpenViking server 可用，User key 身份: "
+        "Business Data Platform server 可用，User key 身份: "
         f"account={account_id}, user={user_id}, role={role}。"
     )
     return account_id, user_id
@@ -462,7 +462,7 @@ def _ensure_trusted_server_ready(
         )
 
     _ok(
-        "OpenViking server 可用，trusted 身份: "
+        "Business Data Platform server 可用，trusted 身份: "
         f"account={health_account}, user={health_user}, role={role}。"
     )
     return health_account, health_user
@@ -484,7 +484,7 @@ def _resolve_ready_user_identity(
 
         auth_mode = _health_auth_mode(probe)
         if auth_mode == "trusted":
-            _log(f"使用 {key_source} 校驗 OpenViking trusted key")
+            _log(f"使用 {key_source} 校驗 Business Data Platform trusted key")
             try:
                 account, user_id = _ensure_trusted_server_ready(
                     openviking_url, selected_account, selected_user, api_key
@@ -494,7 +494,7 @@ def _resolve_ready_user_identity(
                 raise SystemExit(1) from exc
             return account, user_id, api_key, "trusted"
 
-        _log(f"使用 {key_source} 校驗 OpenViking User key")
+        _log(f"使用 {key_source} 校驗 Business Data Platform User key")
         try:
             account, user_id = _ensure_server_and_user_key_ready(
                 openviking_url, selected_account, api_key
@@ -504,7 +504,7 @@ def _resolve_ready_user_identity(
             _error(str(exc))
             prompt = "當前 User key 不可用，是否使用 Root key 自動生成 default User API key"
     else:
-        _error("未配置 OpenViking API key。")
+        _error("未配置 Business Data Platform API key。")
         prompt = "是否使用 Root key 自動生成 default User API key"
 
     if not _prompt_yes_no(prompt, default=False):
@@ -514,7 +514,7 @@ def _resolve_ready_user_identity(
     root_api_key, root_key_source = _resolve_root_api_key()
     if not root_api_key:
         _error(
-            "未配置 OpenViking Root API key，無法自動生成 User key。"
+            "未配置 Business Data Platform Root API key，無法自動生成 User key。"
             "請設定 server.root_api_key 後重試。"
         )
         raise SystemExit(1)
@@ -545,7 +545,7 @@ def _write_env_file(
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Resolve runtime eval account/url and validate OpenViking readiness"
+        description="Resolve runtime eval account/url and validate Business Data Platform readiness"
     )
     parser.add_argument(
         "--output-env-file",
@@ -558,7 +558,7 @@ def main() -> int:
     openviking_url = _resolve_openviking_url()
     api_key, key_source = _resolve_openviking_api_key()
 
-    _fact(f"本次匯入使用 OpenViking URL: {openviking_url}")
+    _fact(f"本次匯入使用 Business Data Platform URL: {openviking_url}")
 
     account, user_id, api_key, auth_mode = _resolve_ready_user_identity(
         openviking_url, selected_account, selected_user, api_key, key_source

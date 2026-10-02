@@ -1,6 +1,6 @@
 # File System
 
-OpenViking provides Unix-like file system operations for managing context.
+Business Data Platform provides Unix-like file system operations for managing context.
 
 <a id="webdav"></a><a id="webdav-phase-1"></a>
 

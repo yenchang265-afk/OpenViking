@@ -269,7 +269,7 @@ class OpenVikingCompactHook(Hook):
                 state = get_openviking_state(vikingbot_session)
                 state["last_sync_status"] = "error"
                 state["last_sync_error"] = str(e)
-            logger.exception(f"Failed to add message to OpenViking: {e}")
+            logger.exception(f"Failed to add message to Business Data Platform: {e}")
             return {"success": False, "error": str(e)}
         finally:
             if "should_close_client" in locals() and should_close_client:
@@ -385,7 +385,7 @@ class OpenVikingPostCallHook(Hook):
             return "\n\n---\n".join(parts) if parts else ""
         except Exception as e:
             # Skill experience injection is best-effort. Under high-parallel evals,
-            # OpenViking search may time out; log a compact line instead of a full
+            # Business Data Platform search may time out; log a compact line instead of a full
             # traceback so rollout logs are not dominated by optional retrieval.
             logger.warning(
                 "[SKILL_EXP]: skipped experience search workspace_id={} "

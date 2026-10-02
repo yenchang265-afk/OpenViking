@@ -1,6 +1,6 @@
 # Configuration
 
-OpenViking uses a JSON configuration file (`~/.openviking/ov.conf`) for settings.
+Business Data Platform uses a JSON configuration file (`~/.openviking/ov.conf`) for settings.
 
 For a first-time setup, the recommended flow is:
 
@@ -49,7 +49,7 @@ For `provider: "openai-codex"`, `vlm.api_key` is optional when Codex OAuth is al
 
 ## Configuration Scope and Update Lifecycle
 
-OpenViking configuration has two layers:
+Business Data Platform configuration has two layers:
 
 - **Startup configuration** is read from `ov.conf`. It defines the process baseline and the runtime configuration source. Changing it requires a service restart; the runtime configuration API never rewrites `ov.conf`.
 - **Runtime overrides** are sparse values stored by the configured runtime configuration source. They can be read and updated through the Admin API at Cluster or Account scope.
@@ -166,7 +166,7 @@ Use `openviking-server init` to complete the Codex login/import step, then run `
 }
 ```
 
-OpenAI [retired `gpt-5.4` from Codex with ChatGPT sign-in](https://learn.chatgpt.com/docs/models#deprecated-codex-models) on August 31, 2026. For an existing setup, change `vlm.model` in `ov.conf` to `gpt-5.6-terra` and restart the server; upgrading OpenViking does not rewrite saved model settings. This retirement does not affect `provider: "openai"` with an API key.
+OpenAI [retired `gpt-5.4` from Codex with ChatGPT sign-in](https://learn.chatgpt.com/docs/models#deprecated-codex-models) on August 31, 2026. For an existing setup, change `vlm.model` in `ov.conf` to `gpt-5.6-terra` and restart the server; upgrading Business Data Platform does not rewrite saved model settings. This retirement does not affect `provider: "openai"` with an API key.
 
 </details>
 
@@ -220,7 +220,7 @@ OpenAI [retired `gpt-5.4` from Codex with ChatGPT sign-in](https://learn.chatgpt
 }
 ```
 
-Use a vision-capable GLM model such as `glm-4.6v` or `glm-5v-turbo` when OpenViking needs image understanding.
+Use a vision-capable GLM model such as `glm-4.6v` or `glm-5v-turbo` when Business Data Platform needs image understanding.
 
 </details>
 
@@ -271,7 +271,7 @@ Embedding model configuration for vector search, supporting dense, sparse, and h
 
 #### Embedding Circuit Breaker
 
-When the embedding provider experiences consecutive transient failures (e.g. `429`, `5xx`), OpenViking opens a circuit breaker to temporarily stop calling the provider and re-enqueue embedding tasks. After the base `reset_timeout`, it allows a probe request (HALF_OPEN). If the probe fails, the next `reset_timeout` is doubled (capped by `max_reset_timeout`).
+When the embedding provider experiences consecutive transient failures (e.g. `429`, `5xx`), Business Data Platform opens a circuit breaker to temporarily stop calling the provider and re-enqueue embedding tasks. After the base `reset_timeout`, it allows a probe request (HALF_OPEN). If the probe fails, the next `reset_timeout` is doubled (capped by `max_reset_timeout`).
 
 ```json
 {
@@ -298,7 +298,7 @@ When the embedding provider experiences consecutive transient failures (e.g. `42
 | `doubao-embedding-vision-251215` | 1024 | multimodal | Recommended |
 | `doubao-embedding-250615` | 1024 | text | Text only |
 
-With `input: "multimodal"`, OpenViking can embed text, images (PNG, JPG, etc.), and mixed content. Image-to-image search requires this mode; text-only embedding models continue to index image summaries but cannot accept image queries.
+With `input: "multimodal"`, Business Data Platform can embed text, images (PNG, JPG, etc.), and mixed content. Image-to-image search requires this mode; text-only embedding models continue to index image summaries but cannot accept image queries.
 
 **Supported providers:**
 - `openai`: OpenAI Embedding API
@@ -463,9 +463,9 @@ Supported Voyage text embedding models include:
 - `voyage-finance-2`
 - `voyage-law-2`
 
-If `dimension` is omitted, OpenViking uses the model's default output dimension when creating the vector schema.
+If `dimension` is omitted, Business Data Platform uses the model's default output dimension when creating the vector schema.
 
-OpenViking also expects dense float vectors throughout storage and retrieval, so Voyage quantized output dtypes are not exposed in config.
+Business Data Platform also expects dense float vectors throughout storage and retrieval, so Voyage quantized output dtypes are not exposed in config.
 
 **Local deployment (GGUF/MLX):** Jina embedding models are open-weight and available in GGUF and MLX formats on [Hugging Face](https://huggingface.co/jinaai). You can run them locally with any OpenAI-compatible server (e.g. llama.cpp, MLX, vLLM) and point the `api_base` to your local endpoint:
 
@@ -552,7 +552,7 @@ Get your API key at https://aistudio.google.com/apikey
 | China | `https://dashscope.aliyuncs.com` (default) | Recommended for users in mainland China |
 | International | `https://dashscope-intl.aliyuncs.com` | For users outside China |
 
-For a custom gateway, set `api_base` to the gateway's base URL. OpenViking
+For a custom gateway, set `api_base` to the gateway's base URL. Business Data Platform
 appends the mode-specific endpoint path automatically, so do not include
 `/compatible-mode/v1` (text mode) or
 `/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding`
@@ -596,18 +596,18 @@ Supported task types: `RETRIEVAL_QUERY`, `RETRIEVAL_DOCUMENT`, `SEMANTIC_SIMILAR
 ```
 
 Sparse output is a provider capability, not an endpoint inferred from
-`storage.vectordb.sparse_weight`. OpenViking currently implements `sparse` and
+`storage.vectordb.sparse_weight`. Business Data Platform currently implements `sparse` and
 `hybrid` embedding providers for `volcengine` and `vikingdb`. The
 OpenAI-compatible, Ollama, and built-in `local` providers are dense-only; a
 self-hosted `/v1/embeddings` endpoint is therefore not treated as a sparse
-endpoint, and OpenViking does not probe a separate
+endpoint, and Business Data Platform does not probe a separate
 `/v1/embeddings/sparse` route.
 
 There is no automatic BM25 or other sparse-vector fallback when the configured
 embedder returns only dense vectors. To use hybrid retrieval, configure a
 supported sparse/hybrid provider and set `storage.vectordb.sparse_weight > 0`.
 Model memory requirements are provider/model-specific and are not controlled by
-OpenViking; size self-hosted models against their provider documentation before
+Business Data Platform; size self-hosted models against their provider documentation before
 enabling them in production.
 
 #### Hybrid Embedding
@@ -676,7 +676,7 @@ Vision Language Model for semantic extraction (L0/L1 generation).
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `api_key` | str | API key. Optional for `openai-codex` when Codex OAuth is available, and optional for `litellm` routes that use provider-native credentials |
-| `forward_api_key` | bool | LiteLLM only. Overrides whether `api_key` is forwarded to LiteLLM. By default, OpenViking does not forward placeholder keys for native AWS/GCP routes such as `bedrock/`, `sagemaker/`, and `vertex_ai/`; set to `true` when intentionally using a LiteLLM API-key route such as Bedrock bearer-token auth |
+| `forward_api_key` | bool | LiteLLM only. Overrides whether `api_key` is forwarded to LiteLLM. By default, Business Data Platform does not forward placeholder keys for native AWS/GCP routes such as `bedrock/`, `sagemaker/`, and `vertex_ai/`; set to `true` when intentionally using a LiteLLM API-key route such as Bedrock bearer-token auth |
 | `model` | str | Model name |
 | `api_base` | str | API endpoint (optional) |
 | `thinking` | bool | Enable thinking mode for VolcEngine models (default: `false`) |
@@ -757,7 +757,7 @@ Common use cases:
 
 **Custom Request Body**
 
-For OpenAI-compatible providers that accept provider-specific JSON body fields, add them via `extra_request_body`. OpenViking merges these fields into the `extra_body` sent by the OpenAI SDK or LiteLLM:
+For OpenAI-compatible providers that accept provider-specific JSON body fields, add them via `extra_request_body`. Business Data Platform merges these fields into the `extra_body` sent by the OpenAI SDK or LiteLLM:
 
 ```json
 {
@@ -800,7 +800,7 @@ Audio and video understanding is an optional capability of the configured VLM. I
 
 The VLM `model` value is the corresponding Ark model endpoint ID. `video_fps` applies only to video and controls the frame sampling rate sent to Ark.
 
-The recommended starting models for audio and video understanding are `doubao-seed-2-0-lite-260428` and `doubao-seed-2-0-mini-260428`. These are recommended examples, not an exhaustive compatibility list; Ark continues to update its models and input capabilities. See Ark's official [video input capability list](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#ff5ef604) and [audio input capability list](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#9619c0ba) for other supported models. If `model` is an `ep-*` inference endpoint ID, verify that its underlying foundation model supports the corresponding media input. OpenViking does not validate audio or video model capabilities while loading configuration.
+The recommended starting models for audio and video understanding are `doubao-seed-2-0-lite-260428` and `doubao-seed-2-0-mini-260428`. These are recommended examples, not an exhaustive compatibility list; Ark continues to update its models and input capabilities. See Ark's official [video input capability list](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#ff5ef604) and [audio input capability list](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#9619c0ba) for other supported models. If `model` is an `ep-*` inference endpoint ID, verify that its underlying foundation model supports the corresponding media input. Business Data Platform does not validate audio or video model capabilities while loading configuration.
 
 **Ingestible and understandable formats**
 
@@ -809,9 +809,9 @@ The recommended starting models for audio and video understanding are `doubao-se
 | Audio | MP3, WAV, OGG, FLAC, AAC, M4A, OPUS, AC3 | MP3, WAV, AAC, M4A |
 | Video | MP4, AVI, MOV, MKV, WEBM, FLV, WMV, TS | MP4, AVI, MOV |
 
-Formats outside the understanding column continue to follow the existing parser and storage behavior; OpenViking does not transcode them or send them to the understanding model. When such a file is recognized as an audio or video leaf, an empty media summary is indexed using its filename.
+Formats outside the understanding column continue to follow the existing parser and storage behavior; Business Data Platform does not transcode them or send them to the understanding model. When such a file is recognized as an audio or video leaf, an empty media summary is indexed using its filename.
 
-For a supported file, OpenViking uploads the media to the Ark Files API without explicitly setting `expire_at`, so file retention follows Ark's default policy. After processing completes, OpenViking references the file's `file_id` from the Responses API with response storage disabled, then attempts to delete the Ark file under a short cleanup deadline. Remote deletion is best-effort and does not replace an otherwise successful result if cleanup fails; a file whose deletion fails or times out continues to follow Ark's default retention policy. Local temporary files are removed independently even when remote cleanup fails or is cancelled.
+For a supported file, Business Data Platform uploads the media to the Ark Files API without explicitly setting `expire_at`, so file retention follows Ark's default policy. After processing completes, Business Data Platform references the file's `file_id` from the Responses API with response storage disabled, then attempts to delete the Ark file under a short cleanup deadline. Remote deletion is best-effort and does not replace an otherwise successful result if cleanup fails; a file whose deletion fails or times out continues to follow Ark's default retention policy. Local temporary files are removed independently even when remote cleanup fails or is cancelled.
 
 - A successful summary for a directory containing exactly one audio or video file becomes that directory's L1 directly, with L0 derived through the existing semantic path. No second generic VLM summarization is performed.
 - Media in a mixed directory contributes its summary to the existing generic VLM aggregation.
@@ -821,7 +821,7 @@ Media processing sends file content to the configured external provider. Disable
 
 ### query_planner
 
-Optional lightweight model for retrieval intent analysis and query planning. It uses the same configuration shape as `vlm`, but only affects `search()` intent analysis and query expansion. If `query_planner` is omitted or empty, OpenViking falls back to `vlm` for backward compatibility.
+Optional lightweight model for retrieval intent analysis and query planning. It uses the same configuration shape as `vlm`, but only affects `search()` intent analysis and query expansion. If `query_planner` is omitted or empty, Business Data Platform falls back to `vlm` for backward compatibility.
 
 > In `openviking-server init` you can optionally enable a local lightweight query planner; the wizard pulls the Ollama model and writes the `query_planner` config for you. For recognized query-planner models, `search()` selects the matching bundled prompt at runtime. Models not in the mapping keep using `retrieval.intent_analysis`.
 
@@ -833,7 +833,7 @@ Pull the model first and make sure the Ollama service is reachable:
 ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 ```
 
-Then add the following to your OpenViking configuration:
+Then add the following to your Business Data Platform configuration:
 
 ```json
 {
@@ -850,19 +850,19 @@ Then add the following to your OpenViking configuration:
 }
 ```
 
-For `ollama/guoxuter/ov_intent_analysis_sft:v7_q8` (and `v4_q8`), OpenViking automatically uses the matching bundled prompt during search (`retrieval.ov_intent_analysis_sft_v7` and `retrieval.ov_intent_analysis_sft_v4` respectively). No prompt file replacement or `prompts.templates_dir` override is required. If you use an unmapped model, OpenViking keeps the default `retrieval.intent_analysis` prompt.
+For `ollama/guoxuter/ov_intent_analysis_sft:v7_q8` (and `v4_q8`), Business Data Platform automatically uses the matching bundled prompt during search (`retrieval.ov_intent_analysis_sft_v7` and `retrieval.ov_intent_analysis_sft_v4` respectively). No prompt file replacement or `prompts.templates_dir` override is required. If you use an unmapped model, Business Data Platform keeps the default `retrieval.intent_analysis` prompt.
 
 This lets a small model handle retrieval planning with lower latency, while keeping a stronger `vlm` for semantic extraction, memory extraction, and multimodal processing.
 
 ### code
 
-Code skeleton extraction is built into the code summary pipeline and has no parser-level configuration. OpenViking first uses maintained `tags.scm` queries when one exists for the language; if no corresponding `tags.scm` exists, it uses `tree-sitter-language-pack.process()`; when the current extraction route produces no useful skeleton, it invokes `semantic.code_summary` as fallback. If `tree-sitter-language-pack` cannot download a parser (for example behind a firewall), bundled grammars are used for common languages; no configuration is needed.
+Code skeleton extraction is built into the code summary pipeline and has no parser-level configuration. Business Data Platform first uses maintained `tags.scm` queries when one exists for the language; if no corresponding `tags.scm` exists, it uses `tree-sitter-language-pack.process()`; when the current extraction route produces no useful skeleton, it invokes `semantic.code_summary` as fallback. If `tree-sitter-language-pack` cannot download a parser (for example behind a firewall), bundled grammars are used for common languages; no configuration is needed.
 
 The remaining `code` configuration fields are for remote code resource network guards and code-hosting allowlists. See [Code Skeleton Extraction](../concepts/06-extraction.md#code-skeleton-extraction) for the extraction route.
 
 #### Remote resource network guard
 
-When ingesting a resource from a URL, OpenViking rejects loopback, link-local, private, and other non-public destinations, plus any host not on the code-hosting allowlist, raising `PermissionDeniedError`. To ingest code from self-hosted GitHub Enterprise / GitLab / Azure DevOps, add the host to the matching allowlist under `code`:
+When ingesting a resource from a URL, Business Data Platform rejects loopback, link-local, private, and other non-public destinations, plus any host not on the code-hosting allowlist, raising `PermissionDeniedError`. To ingest code from self-hosted GitHub Enterprise / GitLab / Azure DevOps, add the host to the matching allowlist under `code`:
 
 | Field | Type | Description | Default |
 |-------|------|-------------|---------|
@@ -1099,11 +1099,11 @@ Storage configuration for context data, including file storage (RAGFS) and vecto
 RAGFS uses Rust binding mode by default, directly accessing the file system through the Rust implementation.
 
 > [!WARNING]
-> `storage.agfs` no longer supports the AGFS HTTP client mode, and the old HTTP client entry should not be configured anymore. AGFS / RAGFS filesystem access now happens only through the in-process Rust binding (`RAGFSBindingClient`). This does not affect the OpenViking server HTTP API, the `ov` CLI, or `AsyncHTTPClient` / `SyncHTTPClient` when they connect to an OpenViking server.
+> `storage.agfs` no longer supports the AGFS HTTP client mode, and the old HTTP client entry should not be configured anymore. AGFS / RAGFS filesystem access now happens only through the in-process Rust binding (`RAGFSBindingClient`). This does not affect the Business Data Platform server HTTP API, the `ov` CLI, or `AsyncHTTPClient` / `SyncHTTPClient` when they connect to a Business Data Platform server.
 
 ##### Multi-Write Storage Configuration
 
-`storage.agfs.backups` enables multi-write storage. If it is not configured, OpenViking stays in single-backend mode.
+`storage.agfs.backups` enables multi-write storage. If it is not configured, Business Data Platform stays in single-backend mode.
 
 ```json
 {
@@ -1201,7 +1201,7 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `provider` | str | `filesystem`, `memory`, or `cache`; `cache` uses the shared Redis CacheRuntime | `filesystem` |
-| `namespace` | str (optional) | OpenViking instance name used in Redis PathLock keys; required when `provider=cache` | `null` |
+| `namespace` | str (optional) | Business Data Platform instance name used in Redis PathLock keys; required when `provider=cache` | `null` |
 | `lock_expire_secs` | float | Seconds before an unrefreshed lock becomes stale; must be at least `1.0` | `30.0` |
 | `lock_timeout_secs` | float | Deprecated and ignored; runtime wait timeout remains `0.0` | `0.0` |
 
@@ -1549,7 +1549,7 @@ Stores vectors in an Elasticsearch 8.12+ cluster using `dense_vector` kNN search
 - Sparse and hybrid search (`sparse_weight > 0`) and multimodal search are not supported.
 - With `cosine`, a record whose embedding is all zeros (some embedders return this for empty text) is stored without a vector: it can be filtered but is never returned by vector search.
 - One vector search returns at most 10000 results (`limit + offset`). Filter and sort queries page past that with `search_after`.
-- OpenViking creates the index with a strict mapping and keeps its metadata in the mapping `_meta`. It refuses to adopt an existing index it did not create.
+- Business Data Platform creates the index with a strict mapping and keeps its metadata in the mapping `_meta`. It refuses to adopt an existing index it did not create.
 </details>
 
 ##### ACL schema
@@ -1565,19 +1565,19 @@ Each element uses `{mask}:{principal}`: `1` means `read`, `3` means `write`, and
 
 Local backends add the fields to an existing collection and rebuild the scalar index during startup. Existing records are not rewritten; missing ACL fields read as `acl_mode=none` and empty lists.
 
-For existing remote collections, provision these fields and scalar indexes before startup; OpenViking validates but does not alter the remote schema. See [Resource Access Control (ACL)](../concepts/15-acl.md) for permission semantics.
+For existing remote collections, provision these fields and scalar indexes before startup; Business Data Platform validates but does not alter the remote schema. See [Resource Access Control (ACL)](../concepts/15-acl.md) for permission semantics.
 
 
 ## Config Files
 
-OpenViking uses two config files:
+Business Data Platform uses two config files:
 
 | File | Purpose | Default Path |
 |------|---------|-------------|
-| `ov.conf` | OpenViking Server configuration | `~/.openviking/ov.conf` |
+| `ov.conf` | Business Data Platform Server configuration | `~/.openviking/ov.conf` |
 | `ovcli.conf` | HTTP client and CLI connection to remote server | `~/.openviking/ovcli.conf` |
 
-When config files are at the default path, OpenViking loads them automatically — no additional setup needed.
+When config files are at the default path, Business Data Platform loads them automatically — no additional setup needed.
 
 > **Root-key two-file rule:** `server.root_api_key` in `ov.conf` is the
 > credential accepted by the server. `root_api_key` in `ovcli.conf` is the
@@ -1589,7 +1589,7 @@ When config files are at the default path, OpenViking loads them automatically �
 
 The server reads `ov.conf` during process startup and does not watch the file
 for changes. Editing `embedding`, `vlm`, `rerank`, `retrieval`, `storage`, or
-`server` settings requires restarting the OpenViking server. Queue work that is
+`server` settings requires restarting the Business Data Platform server. Queue work that is
 already running is not migrated to the new configuration, so use the normal
 service-manager restart procedure and verify with `openviking-server doctor`
 after the process comes back.
@@ -1626,7 +1626,7 @@ For memory-related settings, add a `memory` section in `ov.conf`:
 
 | Field | Description | Default |
 |-------|-------------|---------|
-| `version` | Deprecated and ignored. OpenViking always uses the v3 memory extraction pipeline; existing configs that set this field still load without error. | `"v3"` |
+| `version` | Deprecated and ignored. Business Data Platform always uses the v3 memory extraction pipeline; existing configs that set this field still load without error. | `"v3"` |
 | `custom_templates_dir` | Custom memory templates directory. If set, templates from this directory are loaded in addition to built-in templates. | `""` |
 | `extraction_enabled` | Whether session commit runs long-term memory extraction. | `true` |
 | `session_skill_extraction_enabled` | Whether session commit also extracts reusable skills into the current user's skill directory. | `false` |
@@ -1637,7 +1637,7 @@ For memory-related settings, add a `memory` section in `ov.conf`:
 
 You can edit this file by hand, or generate it interactively with `ov config`. If you maintain configurations for multiple servers, switch between them with `ov config switch`.
 
-For the guided CLI setup flow, see [OpenViking CLI Setup](../getting-started/05-cli-setup.md).
+For the guided CLI setup flow, see [Business Data Platform CLI Setup](../getting-started/05-cli-setup.md).
 
 Config file for the HTTP client (`SyncHTTPClient` / `AsyncHTTPClient`) and CLI to connect to a remote server:
 
@@ -1687,7 +1687,7 @@ See [Deployment](./03-deployment.md) for details.
 
 ## server Section
 
-When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
+When running Business Data Platform as an HTTP service, add a `server` section to `ov.conf`:
 
 ```json
 {
@@ -1777,7 +1777,7 @@ using `"type": "http"` must migrate to `file_log` and collect the dedicated
 log files, or configure a `custom` sink that implements their delivery
 contract.
 
-Set the environment variable named by `resource_id_env` before starting the server. Its value identifies the deployed OpenViking resource and isolates otherwise identical account, user, and URI combinations. The sink creates the parent directory, appends events immediately, rotates the active file every UTC hour, and retains `backup_count` rotated files. It does not write to the default OpenViking stdout log.
+Set the environment variable named by `resource_id_env` before starting the server. Its value identifies the deployed Business Data Platform resource and isolates otherwise identical account, user, and URI combinations. The sink creates the parent directory, appends events immediately, rotates the active file every UTC hour, and retains `backup_count` rotated files. It does not write to the default Business Data Platform stdout log.
 
 Each line has the following form:
 
@@ -1797,7 +1797,7 @@ For startup and deployment details see [Deployment](./03-deployment.md), for aut
 
 ## storage.transaction Section
 
-`storage.transaction` is deprecated and kept only for legacy compatibility. Use `storage.agfs.pathlock` for the active PathLock provider, namespace, and expiry configuration. When legacy fields are still present, OpenViking logs a warning at runtime; `lock_timeout` is deprecated and ignored, `lock_expire` is automatically mapped when the new field is unset, and `redo_recovery_enabled` is ignored.
+`storage.transaction` is deprecated and kept only for legacy compatibility. Use `storage.agfs.pathlock` for the active PathLock provider, namespace, and expiry configuration. When legacy fields are still present, Business Data Platform logs a warning at runtime; `lock_timeout` is deprecated and ignored, `lock_expire` is automatically mapped when the new field is unset, and `redo_recovery_enabled` is ignored.
 
 Recommended configuration:
 
@@ -1838,7 +1838,7 @@ For details on the lock mechanism, see [Path Locks and Crash Recovery](../concep
 
 The task tracker records async task state for endpoints that return a `task_id` (task types include `session_commit`, `add_resource`, `add_skill`, and `admin_reindex`). Task records are always persisted in AGFS, so a `task_id` returned by one instance can be looked up from another instance and task history survives a restart.
 
-No `storage.task_tracker` configuration is required. If an older configuration still includes `storage.task_tracker`, OpenViking logs a warning and ignores it.
+No `storage.task_tracker` configuration is required. If an older configuration still includes `storage.task_tracker`, Business Data Platform logs a warning and ignores it.
 
 Task record files are stored under the owning account's system directory:
 

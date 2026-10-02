@@ -213,7 +213,7 @@ export function buildRecallContextBlock(memoryLines: string[]): string {
   return [
     "<relevant-memories>",
     AUTO_RECALL_SOURCE_MARKER,
-    "The following OpenViking memories may be relevant:",
+    "The following Business Data Platform memories may be relevant:",
     ...memoryLines,
     "</relevant-memories>",
   ].join("\n");

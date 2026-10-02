@@ -1,4 +1,4 @@
-# OpenViking TOS 安裝包釋出與安裝說明
+# Business Data Platform TOS 安裝包釋出與安裝說明
 
 > 更新時間：2026-06-03
 > 釋出目錄：`latest`（預設）與可指定日期目錄（示例：`2026.6.3`）

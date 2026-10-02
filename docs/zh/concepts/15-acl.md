@@ -1,6 +1,6 @@
 # 資源訪問控制（ACL）
 
-OpenViking ACL 用於在同一個 account 內，把共享資源目錄或檔案授權給使用者或使用者組。ACL 不改變 account 隔離：任何授權都只在當前 account 內生效。
+Business Data Platform ACL 用於在同一個 account 內，把共享資源目錄或檔案授權給使用者或使用者組。ACL 不改變 account 隔離：任何授權都只在當前 account 內生效。
 
 ACL 採用協作文件式的繼承模型。目錄授權預設持續作用於所有後代，子目錄和檔案可以繼續增加直接授權，也可以用 restricted 模式在某個節點切斷繼承許可權。
 

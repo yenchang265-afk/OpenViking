@@ -1,8 +1,8 @@
 # LangChain 和 LangGraph
 
-把 OpenViking 接入你的 LangChain 或 LangGraph Agent 作為上下文後端。獨立整合包提供
+把 Business Data Platform 接入你的 LangChain 或 LangGraph Agent 作為上下文後端。獨立整合包提供
 retriever、chat history、context wrapper、agent tools、LangGraph store 和 middleware，
-統一連線 OpenViking HTTP 服務。
+統一連線 Business Data Platform HTTP 服務。
 
 ## 安裝
 
@@ -11,7 +11,7 @@ pip install langchain-openviking                 # LangChain 介面卡
 pip install "langchain-openviking[langgraph]"    # LangGraph middleware
 ```
 
-該整合獨立於 OpenViking server 釋出。為相容現有應用，完整包仍會把舊的
+該整合獨立於 Business Data Platform server 釋出。為相容現有應用，完整包仍會把舊的
 `openviking.integrations.langchain` 匯入路徑轉發到 `langchain-openviking`。
 
 ## 連線
@@ -26,13 +26,13 @@ tools = create_openviking_tools(
 )
 ```
 
-省略 `url` 時，介面卡會使用 OpenViking CLI 配置中的 HTTP 連線資訊。Embedding 和 VLM
-在 OpenViking 側配置，不在你的應用中。
+省略 `url` 時，介面卡會使用 Business Data Platform CLI 配置中的 HTTP 連線資訊。Embedding 和 VLM
+在 Business Data Platform 側配置，不在你的應用中。
 
 ### 非同步應用
 
 Retriever、context wrapper、chat history、session recorder 和 LangGraph
-middleware 都支援原生非同步路徑。通過 URL 配置時，介面卡會自動建立非同步 OpenViking HTTP
+middleware 都支援原生非同步路徑。通過 URL 配置時，介面卡會自動建立非同步 Business Data Platform HTTP
 client：
 
 ```python
@@ -112,7 +112,7 @@ async with with_openviking_context(runnable, url="http://localhost:1933") as cha
 同步呼叫使用 `with ...`，也可以顯式呼叫 `close()` 或 `await aclose()`。不要在正在執行的
 event loop 中呼叫 `close()`，此時應使用 `aclose()`。注入的 client 仍由呼叫方管理。
 
-LCEL 組合會返回普通的 `RunnableSequence`，不會暴露 OpenViking 的 close 方法。應保留
+LCEL 組合會返回普通的 `RunnableSequence`，不會暴露 Business Data Platform 的 close 方法。應保留
 託管 wrapper，並在其生命週期內完成組合：
 
 ```python
@@ -168,14 +168,14 @@ middleware = OpenVikingContextMiddleware(
 )
 ```
 
-解析出的 actor peer 會作用於召回和捕獲期間發出的 OpenViking HTTP 請求。併發執行
+解析出的 actor peer 會作用於召回和捕獲期間發出的 Business Data Platform HTTP 請求。併發執行
 互相隔離，middleware 的捕獲進度也會按 actor peer、session 和 message peer 共同
-隔離。OpenViking 的 Session 介面仍然以 user 為作用域，不會使用 actor-peer header
+隔離。Business Data Platform 的 Session 介面仍然以 user 為作用域，不會使用 actor-peer header
 標記訊息歸屬；如果捕獲的訊息也需要歸屬於同一個邏輯 peer，應同時設定
 `peer_id_resolver`。擁有獨立歷史的不同 peer 也應解析為不同的 session ID。未傳入
 `actor_peer_resolver` 時，現有固定 client 行為保持不變。
 
-該 resolver 不能改變 OpenViking account 或 user；這些身份繼續由 API Key 或 OAuth
+該 resolver 不能改變 Business Data Platform account 或 user；這些身份繼續由 API Key 或 OAuth
 憑證決定。因此，多使用者應用必須先選擇繫結對應使用者憑證的 client，再呼叫 middleware。
 Actor peer 只能從已經認證、由服務端控制的 runtime 欄位中解析；不要信任 model state
 或客戶端可控的 configurable 值。執行時 actor-peer 解析僅支援 HTTP-backed
@@ -192,7 +192,7 @@ middleware。注入的自定義 client 必須設定
 | 給 agent 暴露顯式記憶工具 | `create_openviking_tools()` |
 | 儲存跨執行緒的持久化狀態 | `OpenVikingStore` |
 | 在 LangGraph 中以 middleware 注入上下文 | `OpenVikingContextMiddleware` |
-| 用 OpenViking 儲存 LangChain 聊天記錄 | `OpenVikingChatMessageHistory` |
+| 用 Business Data Platform 儲存 LangChain 聊天記錄 | `OpenVikingChatMessageHistory` |
 | 在自定義生命週期中記錄呼叫方選定的 LangChain 訊息 | `OpenVikingSessionRecorder` |
 
 ## 快速示例
@@ -255,7 +255,7 @@ middleware = OpenVikingContextMiddleware(
 
 ### Session recorder
 
-當應用已經自行管理會話生命週期，只需要複用 OpenViking 持久化能力時，可使用 recorder：
+當應用已經自行管理會話生命週期，只需要複用 Business Data Platform 持久化能力時，可使用 recorder：
 
 ```python
 from langchain_openviking import (
@@ -299,7 +299,7 @@ uv run --project examples/langchain --extra langgraph python examples/langchain-
 uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langgraph/middleware/quick_app.py
 ```
 
-連線真實 OpenViking 服務和 OpenAI 相容模型的示例見 [live LangGraph app](https://github.com/volcengine/OpenViking/blob/main/examples/langchain-langgraph/langgraph/agent/live_app.py)。
+連線真實 Business Data Platform 服務和 OpenAI 相容模型的示例見 [live LangGraph app](https://github.com/volcengine/OpenViking/blob/main/examples/langchain-langgraph/langgraph/agent/live_app.py)。
 
 ## 參見
 

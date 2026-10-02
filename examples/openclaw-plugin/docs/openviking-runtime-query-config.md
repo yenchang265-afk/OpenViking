@@ -1,8 +1,8 @@
-# OpenViking Runtime Query Config
+# Business Data Platform Runtime Query Config
 
 Runtime query config lets operators tune recall and search behavior without restarting OpenClaw. It is intended for live debugging and rollout control around recall limit, candidate count, score threshold, target resource types, and ranking weights.
 
-This document describes the runtime query config capability ported from the broader #2613 work into the split OpenViking plugin PR series.
+This document describes the runtime query config capability ported from the broader #2613 work into the split Business Data Platform plugin PR series.
 
 ## Configuration Layers
 

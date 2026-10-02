@@ -99,7 +99,7 @@ describe("plugin normal flow with healthy backend", () => {
                 id: "msg_1",
                 role: "assistant",
                 created_at: "2026-04-01T00:00:00Z",
-                parts: [{ type: "text", text: "Stored answer from OpenViking." }],
+                parts: [{ type: "text", text: "Stored answer from Business Data Platform." }],
               },
             ],
             estimatedTokens: 64,
@@ -238,7 +238,7 @@ describe("plugin normal flow with healthy backend", () => {
     });
     expect(assembled.messages[1]).toEqual({
       role: "assistant",
-      content: [{ type: "text", text: "Stored answer from OpenViking." }],
+      content: [{ type: "text", text: "Stored answer from Business Data Platform." }],
     });
 
     const transformed = await contextEngine.assemble({

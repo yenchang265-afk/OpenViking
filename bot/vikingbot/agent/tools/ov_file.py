@@ -1,4 +1,4 @@
-"""OpenViking file system tools: read, write, list, search resources."""
+"""Business Data Platform file system tools: read, write, list, search resources."""
 
 import asyncio
 import base64
@@ -187,7 +187,7 @@ class VikingListTool(OVFileTool):
 
     @property
     def description(self) -> str:
-        return "List resources in a OpenViking folder path."
+        return "List resources in a Business Data Platform folder path."
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -196,7 +196,7 @@ class VikingListTool(OVFileTool):
             "properties": {
                 "uri": {
                     "type": "string",
-                    "description": "Optional parent Viking URI to list. Defaults to all visible OpenViking roots plus current peer memory.",
+                    "description": "Optional parent Viking URI to list. Defaults to all visible Business Data Platform roots plus current peer memory.",
                     "default": "viking://",
                 },
                 "recursive": {
@@ -233,7 +233,7 @@ class VikingListTool(OVFileTool):
                 except Exception as exc:
                     if len(target_uris) == 1:
                         raise
-                    logger.debug(f"Skip OpenViking list target {target_uri}: {exc}")
+                    logger.debug(f"Skip Business Data Platform list target {target_uri}: {exc}")
                     continue
 
             if not entries:
@@ -266,7 +266,7 @@ class VikingSearchTool(OVFileTool):
     @property
     def description(self) -> str:
         return (
-            "Using query to search for resources (knowledge, code, files, workflow, etc.) in OpenViking. "
+            "Using query to search for resources (knowledge, code, files, workflow, etc.) in Business Data Platform. "
             "Result: Only URIs and summaries are included here. To view the full content, use openviking_multi_read tool. "
             "This operation performs semantic retrieval, not full character matching. "
             "Avoid duplicate calls with the same intent in the same turn, but do search again for a new user question or a follow-up that asks for a different remembered fact. "
@@ -525,7 +525,7 @@ class VikingAddResourceTool(OVFileTool):
 
     @property
     def description(self) -> str:
-        return "Add a resource (url like pic, git code or local file path) to OpenViking.This is a asynchronous operation."
+        return "Add a resource (url like pic, git code or local file path) to Business Data Platform.This is a asynchronous operation."
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -536,7 +536,7 @@ class VikingAddResourceTool(OVFileTool):
                 "description": {"type": "string", "description": "Description of the resource"},
                 "to": {
                     "type": "string",
-                    "description": "Optional exact target URI under viking://resources/. When omitted, OpenViking chooses the resource URI.",
+                    "description": "Optional exact target URI under viking://resources/. When omitted, Business Data Platform chooses the resource URI.",
                 },
             },
             "required": ["path", "description"],
@@ -620,7 +620,7 @@ class VikingGrepTool(OVFileTool):
             "properties": {
                 "uri": {
                     "type": "string",
-                    "description": "Optional Viking URI to search within. Defaults to all visible OpenViking roots plus current peer memory.",
+                    "description": "Optional Viking URI to search within. Defaults to all visible Business Data Platform roots plus current peer memory.",
                     "default": "viking://",
                 },
                 "pattern": {
@@ -659,7 +659,7 @@ class VikingGrepTool(OVFileTool):
                 except Exception as exc:
                     if len(target_uris) == 1:
                         raise
-                    logger.debug(f"Skip OpenViking grep target {target_uri}: {exc}")
+                    logger.debug(f"Skip Business Data Platform grep target {target_uri}: {exc}")
                     continue
                 if isinstance(result, dict):
                     matches.extend(result.get("matches", []))
@@ -750,7 +750,7 @@ class VikingGlobTool(OVFileTool):
                 except Exception as exc:
                     if len(target_uris) == 1:
                         raise
-                    logger.debug(f"Skip OpenViking glob target {target_uri}: {exc}")
+                    logger.debug(f"Skip Business Data Platform glob target {target_uri}: {exc}")
                     continue
 
                 if isinstance(result, dict):
@@ -779,7 +779,7 @@ class VikingGlobTool(OVFileTool):
 
 
 class VikingMemoryCommitTool(OVFileTool):
-    """Tool to commit messages to OpenViking session."""
+    """Tool to commit messages to Business Data Platform session."""
 
     async def _get_commit_task_result(
         self,
@@ -836,7 +836,7 @@ class VikingMemoryCommitTool(OVFileTool):
 
     @property
     def description(self) -> str:
-        return "When user has personal information needs to be remembered, Commit messages to OpenViking."
+        return "When user has personal information needs to be remembered, Commit messages to Business Data Platform."
 
     @property
     def parameters(self) -> dict[str, Any]:
@@ -870,7 +870,7 @@ class VikingMemoryCommitTool(OVFileTool):
             client = await self._get_client(tool_context)
             actor_peer_id = self._actor_peer_id(tool_context)
             if not actor_peer_id:
-                return "Error: peer id is required for OpenViking memory commit."
+                return "Error: peer id is required for Business Data Platform memory commit."
             source_session_id = tool_context.session_key.safe_name()
             commit_seq = next(self._memory_commit_counter)
             timestamp = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
@@ -954,7 +954,7 @@ class VikingMultiReadTool(OVFileTool):
     @property
     def description(self) -> str:
         return (
-            "Read content from multiple OpenViking resources concurrently. By default returns "
+            "Read content from multiple Business Data Platform resources concurrently. By default returns "
             "complete content. Large files (over 512 KB) are not returned in full: first use "
             "openviking_grep to locate relevant lines, then read a bounded window with offset "
             "and limit (line numbers, 0-indexed)."
@@ -1087,7 +1087,7 @@ class VikingMultiReadTool(OVFileTool):
                                 return {
                                     "uri": uri,
                                     "content": (
-                                        "No OpenViking textual overview is available for this "
+                                        "No Business Data Platform textual overview is available for this "
                                         f"{media_kind} resource."
                                     ),
                                     "success": False,
@@ -1218,7 +1218,7 @@ class VikingMultiReadTool(OVFileTool):
 class VikingExportTool(OVFileTool):
     """Materialize viking:// files into the task sandbox so shell tools can process them.
 
-    The OpenViking ``exec``/``write_file`` tools operate on the task sandbox filesystem,
+    The Business Data Platform ``exec``/``write_file`` tools operate on the task sandbox filesystem,
     which does not contain viking:// source files by default. This tool downloads a
     viking:// file or directory into the sandbox workspace (under ``compile_resources/``
     by default), so the agent can then run arbitrary shell commands on them with ``exec``

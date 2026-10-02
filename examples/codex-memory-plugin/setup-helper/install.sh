@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# OpenViking Memory Plugin for Codex — interactive installer.
+# Business Data Platform Memory Plugin for Codex — interactive installer.
 #
 # One-liner:
 #   bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/codex-memory-plugin/setup-helper/install.sh)

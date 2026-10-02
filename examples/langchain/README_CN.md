@@ -1,10 +1,10 @@
 # langchain-openviking
 
-`langchain-openviking` 是 OpenViking 官方維護的 LangChain 和 LangGraph
-整合包。框架適配邏輯不再依賴 OpenViking 服務端實現，遠端訪問統一通過輕量的
+`langchain-openviking` 是 Business Data Platform 官方維護的 LangChain 和 LangGraph
+整合包。框架適配邏輯不再依賴 Business Data Platform 服務端實現，遠端訪問統一通過輕量的
 `openviking-sdk` 完成。
 
-> **OpenViking Server 要求**：文件中的示例使用 `viking://~` Home 別名（例如 `viking://~/memories`），Server 會將其展開為當前呼叫方自己的使用者空間，因此需要一個支援 `viking://~` 的 Server。不帶 uid 的 `viking://user/memories` 舊寫法會被新版 Server 拒絕；要訪問其他使用者請顯式傳入 `viking://user/<uid>/...`。
+> **Business Data Platform Server 要求**：文件中的示例使用 `viking://~` Home 別名（例如 `viking://~/memories`），Server 會將其展開為當前呼叫方自己的使用者空間，因此需要一個支援 `viking://~` 的 Server。不帶 uid 的 `viking://user/memories` 舊寫法會被新版 Server 拒絕；要訪問其他使用者請顯式傳入 `viking://user/<uid>/...`。
 
 ## 安裝
 

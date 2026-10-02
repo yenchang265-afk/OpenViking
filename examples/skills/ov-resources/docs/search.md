@@ -1,6 +1,6 @@
 # Semantic Search (`ov find` / `ov search`)
 
-OpenViking provides two semantic search commands for retrieving context from resources, memories, and skills.
+Business Data Platform provides two semantic search commands for retrieving context from resources, memories, and skills.
 
 ## `ov find` — Pure Vector Similarity Search
 

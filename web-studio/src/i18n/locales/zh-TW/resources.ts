@@ -238,7 +238,7 @@ const resources = {
         endpoints:
           '在 ov.conf 中設定 connector.enable=true；connector.connector 填寫完整的 doc/add 介面 URL，connector.tracker 填寫完整的 task/info 介面 URL。',
         allow: '將 tos 加入 connector.allowed_add_types。',
-        restart: '重啟 OpenViking 服務後，再使用 tos://bucket/path 匯入。',
+        restart: '重啟 Business Data Platform 服務後，再使用 tos://bucket/path 匯入。',
         noDocumentation:
           'Connector 服務地址由部署方提供，Studio 不會自動填寫；當前暫無獨立的 TOS Connector 部署文件。',
       },
@@ -544,7 +544,7 @@ const resources = {
       title: '檢索失敗',
       fallback: '請求未能完成，請稍後重試。',
       network:
-        '請求未能到達 OpenViking 服務，請檢查連線地址、服務狀態或跨域配置。',
+        '請求未能到達 Business Data Platform 服務，請檢查連線地址、服務狀態或跨域配置。',
       code: '錯誤碼',
       status: 'HTTP 狀態',
       requestId: '請求 ID',

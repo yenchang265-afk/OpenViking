@@ -1,6 +1,6 @@
 # Vikingbot Langfuse Local Setup
 
-**Author:** OpenViking Team
+**Author:** Business Data Platform Team
 **Status:** Draft
 **Date:** 2026-04-29
 
@@ -31,7 +31,7 @@ Before starting, make sure:
 
 1. Docker is installed and the daemon is running
 2. `docker compose` is available, or `docker-compose` is installed
-3. Your local OpenViking environment can start with `openviking-server --with-bot`
+3. Your local Business Data Platform environment can start with `openviking-server --with-bot`
 4. Your bot already has a usable model configuration in `ov.conf`
 
 If Docker image pulls fail in your environment, fix Docker daemon network access or proxy settings before continuing.
@@ -110,7 +110,7 @@ For local repository deployment, keep `base_url` as `http://localhost:3000`.
 
 ---
 
-## 7. Restart OpenViking With Bot
+## 7. Restart Business Data Platform With Bot
 
 After updating `ov.conf`, restart the service path you actually use for validation:
 
@@ -120,7 +120,7 @@ openviking-server --with-bot
 
 Expected startup behavior:
 
-1. OpenViking HTTP server listens on `127.0.0.1:1933`
+1. Business Data Platform HTTP server listens on `127.0.0.1:1933`
 2. Bot API proxy is exposed at `/bot/v1`
 3. Internal `vikingbot gateway` starts automatically
 

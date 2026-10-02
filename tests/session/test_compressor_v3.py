@@ -1125,7 +1125,7 @@ def test_training_case_spec_message_uses_fast_path_protocol():
     assert isinstance(part, TextPart)
     text = part.text
 
-    assert text.startswith("# OpenViking Batch Training CaseSpec v1")
+    assert text.startswith("# Business Data Platform Batch Training CaseSpec v1")
     assert "openviking.batch_train.case_spec.v1" in text
     assert "duplicate_booking_rubric" in text
 

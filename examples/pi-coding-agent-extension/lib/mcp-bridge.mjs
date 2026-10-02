@@ -24,7 +24,7 @@ export function createMcpBridge({ readConfig, clientInfo = { name: "openviking-p
   let connection = null;
 
   function open(cfg, budgetMs) {
-    if (state.closed) throw new Error("OpenViking MCP client is closed");
+    if (state.closed) throw new Error("Business Data Platform MCP client is closed");
     const headers = buildOvHeaders(cfg, { actorPeerId: cfg.peerId, extraHeaders: cfg.extraHeaders });
     const key = JSON.stringify([cfg.mcpUrl, headers]);
     if (connection?.key === key) return connection;
@@ -47,7 +47,7 @@ export function createMcpBridge({ readConfig, clientInfo = { name: "openviking-p
     current.ready = waitFor((async () => {
       await client.connect(transport, { signal, timeout: budgetMs });
       const listed = await client.listTools({}, { signal, timeout: budgetMs });
-      if (connection !== current || state.closed) throw new Error("OpenViking MCP connection closed during startup");
+      if (connection !== current || state.closed) throw new Error("Business Data Platform MCP connection closed during startup");
       state.tools = listed.tools;
       state.connected = true;
       state.error = null;

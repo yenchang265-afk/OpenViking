@@ -52,13 +52,13 @@ def select_profile(profile, route, menus, setup):
     def select(title, options, **kwargs):
         menus.append((title, options, kwargs))
         return {
-            "  OpenViking usage profile": 0 if profile == "personal" else 1,
+            "  Business Data Platform usage profile": 0 if profile == "personal" else 1,
             "  Confirm Shared Agent": 0,
-            "  OpenViking config source": 0,
-            "  OpenViking profile": 0,
-            "  OpenViking connection": 1,
-            "  OpenViking credential": 2,
-            "  Save OpenViking config": 1 if route == "mirror" else 0,
+            "  Business Data Platform config source": 0,
+            "  Business Data Platform profile": 0,
+            "  Business Data Platform connection": 1,
+            "  Business Data Platform credential": 2,
+            "  Save Business Data Platform config": 1 if route == "mirror" else 0,
         }.get(title, setup._CANCELLED)
 
     return select

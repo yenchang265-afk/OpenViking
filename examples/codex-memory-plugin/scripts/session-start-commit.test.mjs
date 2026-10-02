@@ -88,7 +88,7 @@ function profileHandler(requests, { archiveOverview = "" } = {}) {
     if (req.method === "GET" && url.pathname === "/api/v1/content/read") {
       writeJson(res, {
         status: "ok",
-        result: "# Zeus\nWorks on OpenViking integrations.\nPrefers concise implementation notes.",
+        result: "# Zeus\nWorks on Business Data Platform integrations.\nPrefers concise implementation notes.",
       });
       return;
     }
@@ -119,7 +119,7 @@ function profileHandler(requests, { archiveOverview = "" } = {}) {
           result: [{
             name: "openviking.md",
             rel_path: "software/openviking.md",
-            abstract: "OpenViking memory and context platform.",
+            abstract: "Business Data Platform memory and context platform.",
             isDir: false,
           }],
         });
@@ -189,7 +189,7 @@ test("startup injects the shared profile block with workspace peer routing", asy
       assert.equal(output.hookSpecificOutput.hookEventName, "SessionStart");
       assert.match(output.hookSpecificOutput.additionalContext, /source="session-start"/);
       assert.match(output.hookSpecificOutput.additionalContext, /<user-profile uri="viking:\/\/user\/zeus\/memories\/profile\.md">/);
-      assert.match(output.hookSpecificOutput.additionalContext, /Works on OpenViking integrations/);
+      assert.match(output.hookSpecificOutput.additionalContext, /Works on Business Data Platform integrations/);
       assert.match(output.hookSpecificOutput.additionalContext, /zeus\/workflow\.md/);
       assert.match(output.hookSpecificOutput.additionalContext, /software\/openviking\.md/);
       assert.match(
@@ -218,10 +218,10 @@ test("resume skips a profile block identical to the one this thread already got"
       const env = baseEnv(baseUrl, stateDir);
       const input = { session_id: "resume-dedup", cwd: "/tmp/codex-resume-dedup", hook_event_name: "SessionStart" };
       const first = await runSessionStart({ ...input, source: "startup" }, env);
-      assert.match(first.output.hookSpecificOutput.additionalContext, /Works on OpenViking integrations/);
+      assert.match(first.output.hookSpecificOutput.additionalContext, /Works on Business Data Platform integrations/);
 
       const resumed = await runSessionStart({ ...input, source: "resume" }, env);
-      assert.doesNotMatch(resumed.output.hookSpecificOutput?.additionalContext || "", /Works on OpenViking integrations/);
+      assert.doesNotMatch(resumed.output.hookSpecificOutput?.additionalContext || "", /Works on Business Data Platform integrations/);
     });
   } finally {
     await rm(stateDir, { recursive: true, force: true });
@@ -243,7 +243,7 @@ test("OPENVIKING_SKILL_CATALOG=false leaves the skill catalog out of the startup
         { ...baseEnv(baseUrl, stateDir), OPENVIKING_SKILL_CATALOG: "false" },
       );
 
-      assert.match(output.hookSpecificOutput.additionalContext, /Works on OpenViking integrations/);
+      assert.match(output.hookSpecificOutput.additionalContext, /Works on Business Data Platform integrations/);
       assert.doesNotMatch(output.hookSpecificOutput.additionalContext, /available-skills/);
     });
     assert.ok(!requests.some((request) => request.path === "/api/v1/skills"));
@@ -282,10 +282,10 @@ test("startup commits a session whose SessionEnd marker is still present", async
         baseEnv(baseUrl, stateDir),
       );
 
-      assert.match(output.hookSpecificOutput.additionalContext, /Works on OpenViking integrations/);
+      assert.match(output.hookSpecificOutput.additionalContext, /Works on Business Data Platform integrations/);
       assert.equal(
         output.systemMessage,
-        "OpenViking session cx-old-session is committed (trace_id=trace-session-start)",
+        "Business Data Platform session cx-old-session is committed (trace_id=trace-session-start)",
       );
     });
 

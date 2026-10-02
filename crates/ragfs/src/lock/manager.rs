@@ -30,7 +30,7 @@ use super::types::{
 pub struct PathLockConfig {
     /// Built-in provider name: `filesystem`, `memory`, or `cache`.
     pub provider: String,
-    /// OpenViking instance name used by the cache-backed provider.
+    /// Business Data Platform instance name used by the cache-backed provider.
     pub namespace: Option<String>,
     /// Default wait timeout for auto-acquired locks.
     pub lock_timeout_secs: f64,

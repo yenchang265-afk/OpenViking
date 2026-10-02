@@ -1,10 +1,10 @@
-# OpenViking Recall Trace API 使用文件
+# Business Data Platform Recall Trace API 使用文件
 
-> 面向外掛使用者、排障同學和整合方，專門說明 OpenViking OpenClaw 外掛中與 recall trace 相關的配置、Agent 工具、Slash 命令、Gateway HTTP API、返回結構和排障方式。
+> 面向外掛使用者、排障同學和整合方，專門說明 Business Data Platform OpenClaw 外掛中與 recall trace 相關的配置、Agent 工具、Slash 命令、Gateway HTTP API、返回結構和排障方式。
 
 ## 1. 功能概覽
 
-Recall Trace 是 OpenViking 外掛的召回可觀測能力。啟用後，外掛會把每一次自動召回、顯式記憶召回、資源搜尋、歸檔搜尋記錄成結構化 trace，便於回答以下問題：
+Recall Trace 是 Business Data Platform 外掛的召回可觀測能力。啟用後，外掛會把每一次自動召回、顯式記憶召回、資源搜尋、歸檔搜尋記錄成結構化 trace，便於回答以下問題：
 
 - 本輪到底搜尋了哪些範圍：`resource`、`user`、`agent`？
 - 每個範圍請求的目標 URI、limit、閾值和耗時是多少？
@@ -117,8 +117,8 @@ Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes`
 | `ts` | number | Unix timestamp，毫秒。 |
 | `sessionId` | string? | OpenClaw session ID。 |
 | `sessionKey` | string? | OpenClaw session key。 |
-| `ovSessionId` | string? | 對映後的 OpenViking session ID。 |
-| `agentId` | string? | 實際傳送到 OpenViking 的 agent ID。 |
+| `ovSessionId` | string? | 對映後的 Business Data Platform session ID。 |
+| `agentId` | string? | 實際傳送到 Business Data Platform 的 agent ID。 |
 | `source` | enum | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
 | `operationType` | enum | `semantic_find` 或 `archive_grep`。 |
 | `resourceTypes` | array | 本次 trace 覆蓋的召回型別：`resource`、`user`、`agent`。 |
@@ -142,7 +142,7 @@ Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes`
 | `limit` | number | 請求 limit。自動召回直接使用 `recallLimit`；顯式 `memory_recall` 可先擴大候選數。 |
 | `scoreThreshold` | number? | 分數閾值。自動召回由服務端應用；顯式 `memory_recall` 仍可在本地後處理。 |
 | `durationMs` | number | 子搜尋耗時，毫秒。 |
-| `total` | number | OpenViking 返回或外掛統計的候選總數。 |
+| `total` | number | Business Data Platform 返回或外掛統計的候選總數。 |
 | `results` | array | 候選結果摘要，最多 `traceRecallMaxResultsPerSearch` 條。 |
 | `archiveId` | string? | 歸檔搜尋指定 archive 時存在。 |
 | `caseInsensitive` | boolean? | 歸檔 grep 是否大小寫不敏感。 |
@@ -156,9 +156,9 @@ Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes`
 | --- | --- | --- |
 | `uri` | string | 候選 URI。 |
 | `resourceType` | string? | 候選型別。歸檔匹配為 `archive`。 |
-| `category` | string? | OpenViking 返回的分類。 |
+| `category` | string? | Business Data Platform 返回的分類。 |
 | `score` | number? | 相似度分數。 |
-| `level` | number? | OpenViking memory 層級；外掛優先選 leaf memory。 |
+| `level` | number? | Business Data Platform memory 層級；外掛優先選 leaf memory。 |
 | `abstractPreview` | string? | 摘要預覽。 |
 | `resultType` | enum | `memory`、`resource`、`skill`、`archive_match`。 |
 
@@ -195,7 +195,7 @@ Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes`
   "operationType": "semantic_find",
   "resourceTypes": ["resource"],
   "trigger": {
-    "query": "OpenViking trace API"
+    "query": "Business Data Platform trace API"
   },
   "searches": [
     {
@@ -238,7 +238,7 @@ Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes`
 
 ### 5.1 用途
 
-`ov_recall_trace` 用於在 Agent 內部查詢已記錄的 trace。它不會重新呼叫 OpenViking 搜尋介面，只查詢外掛記錄；僅當傳入 `includeContent: true` 或配置了 `traceRecallIncludeContentByDefault: true` 時，才會額外呼叫 OpenViking `read` 給 selected 結果補充內容預覽。工具註冊見 `index.ts:1637`。
+`ov_recall_trace` 用於在 Agent 內部查詢已記錄的 trace。它不會重新呼叫 Business Data Platform 搜尋介面，只查詢外掛記錄；僅當傳入 `includeContent: true` 或配置了 `traceRecallIncludeContentByDefault: true` 時，才會額外呼叫 Business Data Platform `read` 給 selected 結果補充內容預覽。工具註冊見 `index.ts:1637`。
 
 ### 5.2 引數
 
@@ -250,7 +250,7 @@ Trace 會記錄實際召回範圍，但召回範圍本身由 `recallTargetTypes`
 | `traceId` | string | 無 | 精確查詢某條 trace。 |
 | `sessionId` | string | 當前 session | 按 OpenClaw session ID 過濾；未傳時預設當前工具上下文 session。解析見 `index.ts:734`。 |
 | `sessionKey` | string | 無 | 按 OpenClaw session key 過濾。 |
-| `ovSessionId` | string | 當前 session 對映值 | 按 OpenViking session ID 過濾。解析見 `index.ts:736`。 |
+| `ovSessionId` | string | 當前 session 對映值 | 按 Business Data Platform session ID 過濾。解析見 `index.ts:736`。 |
 | `source` | string | 無 | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
 | `resourceTypes` | string[] 或逗號分隔 string | 無 | 按 trace 的 `resourceTypes` 過濾；允許 `resource`、`user`、`agent`。歸一化見 `recall-trace.ts:113`。 |
 | `since` | number | 無 | 毫秒時間戳下界，包含。 |
@@ -405,7 +405,7 @@ Slash 命令返回：
 | `traceId` | string | 無 | 精確過濾 trace ID。 |
 | `sessionId` | string | 無 | OpenClaw session ID。 |
 | `sessionKey` | string | 無 | OpenClaw session key。 |
-| `ovSessionId` | string | 無 | OpenViking session ID。 |
+| `ovSessionId` | string | 無 | Business Data Platform session ID。 |
 | `source` | string | 無 | `auto_recall`、`memory_recall`、`ov_search`、`ov_archive_search`。 |
 | `resourceTypes` | string | 無 | 逗號或換行分隔，如 `user,agent`。 |
 | `since` | number | 無 | 毫秒時間戳下界。 |
@@ -510,7 +510,7 @@ curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/ov_search-178
 
 ### 8.3 `includeContent` 行為
 
-預設 trace 只儲存摘要預覽，不讀取完整內容。查詢時開啟 `includeContent` 後，外掛會對每個 `selected[].uri` 呼叫 OpenViking read，並把結果壓縮到 `selected[].contentPreview`：`index.ts:747`。
+預設 trace 只儲存摘要預覽，不讀取完整內容。查詢時開啟 `includeContent` 後，外掛會對每個 `selected[].uri` 呼叫 Business Data Platform read，並把結果壓縮到 `selected[].contentPreview`：`index.ts:747`。
 
 建議只在定位具體 trace 時使用 `includeContent`，避免一次查詢大量 trace 觸發額外讀請求。
 
@@ -575,7 +575,7 @@ curl 'http://127.0.0.1:<gateway-port>/api/openviking/recall-traces/ov_search-178
 | 配了 `recallTargetTypes` 但沒有 trace | 召回範圍配置不等於 trace 開關 | 同時設定 `traceRecall: true`。 |
 | Gateway 路由不可用 | 當前 Gateway 未提供 `registerRoute` adapter | 使用 Agent 工具 `ov_recall_trace` 或 Slash 命令 `/ov-recall-trace`。日誌見 `index.ts:2548`。 |
 | 重啟後查不到歷史 trace | 未開啟 `traceRecallPersist`，或超過 `traceRecallQueryMaxDays` 查詢視窗 | 開啟持久化，必要時傳 `since/until` 或調大 `traceRecallQueryMaxDays`。 |
-| `includeContent` 後有 `readError` | selected URI 已不可讀、許可權不足或 OpenViking read 失敗 | 檢視 `warnings` 與 `selected[].readError`，再用 `ov_read` 驗證 URI。 |
+| `includeContent` 後有 `readError` | selected URI 已不可讀、許可權不足或 Business Data Platform read 失敗 | 檢視 `warnings` 與 `selected[].readError`，再用 `ov_read` 驗證 URI。 |
 | JSONL 查詢有 corrupted warning | 持久化檔案存在損壞行 | 外掛會跳過損壞行返回有效記錄；可檢查對應 `YYYY-MM-DD.jsonl`。實現見 `recall-trace.ts:373`。 |
 
 ## 11. 測試覆蓋

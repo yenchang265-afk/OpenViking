@@ -79,7 +79,7 @@ def _skill_workspace_read_hint(uri: str) -> str | None:
 
 
 class CompileScopedTool(Tool):
-    """Guard an existing OpenViking read tool without changing its implementation."""
+    """Guard an existing Business Data Platform read tool without changing its implementation."""
 
     def __init__(
         self,
@@ -354,7 +354,7 @@ class SubmitWikiBundleTool(Tool):
         )
         if self._is_skill_target:
             return (
-                "Submit one complete OpenViking Skill package. Include every file under "
+                "Submit one complete Business Data Platform Skill package. Include every file under "
                 "<skill-name>/ and include <skill-name>/SKILL.md."
                 f"{workspace_notice}"
             )

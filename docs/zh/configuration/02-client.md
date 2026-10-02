@@ -67,7 +67,7 @@ export OPENVIKING_CLI_CONFIG_FILE=/path/to/ovcli.conf
 
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `url` | HTTP(S) URL | `http://127.0.0.1:1933` | OpenViking 服務端地址 |
+| `url` | HTTP(S) URL | `http://127.0.0.1:1933` | Business Data Platform 服務端地址 |
 | `api_key` | string / `null` | `null` | 普通資料操作使用的 user/admin key |
 | `root_api_key` | string / `null` | `null` | `ov --sudo` 管理操作使用的 root key |
 | `account` | string / `null` | `null` | trusted 部署使用的帳號身份 |
@@ -356,4 +356,4 @@ ov config show
 
 `ov config switch <name>` 會把命名配置複製為預設 Active 檔案。如果仍設定了 `OPENVIKING_CLI_CONFIG_FILE`，普通 `ov` 命令會繼續讀取環境變數指定的檔案；需要取消該變數後才會使用剛切換的預設配置。新的 `ov` 命令會重新讀取實際配置檔案；已經執行的 Agent 客戶端需要重啟後才會讀取變更。
 
-互動式配置和 Agent 輔助配置步驟見[OpenViking CLI 配置指南](../getting-started/05-cli-setup.md)。
+互動式配置和 Agent 輔助配置步驟見[Business Data Platform CLI 配置指南](../getting-started/05-cli-setup.md)。

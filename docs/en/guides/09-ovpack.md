@@ -1,6 +1,6 @@
 # OVPack Import and Export
 
-OVPack is OpenViking's recoverable content package format for migrating or
+OVPack is Business Data Platform's recoverable content package format for migrating or
 backing up public content trees under `viking://`. It stores file content,
 semantic sidecar files, portable index scalar fields, and optional dense vector
 snapshots.
@@ -116,7 +116,7 @@ vector snapshots currently support pure dense indexes only. If the underlying
 importing into a hybrid-index environment, `auto` recomputes vectors and
 `require` fails.
 
-Before exporting a dense vector snapshot, OpenViking runs a data consistency
+Before exporting a dense vector snapshot, Business Data Platform runs a data consistency
 check. It verifies that content expected to be in the vector index already has
 matching index records. Missing records fail the export so the package does not
 carry an incomplete index snapshot.
@@ -384,7 +384,7 @@ my-project/_ovpack/dense.f32                # only with --include-vectors and ex
 my-project/_ovpack/manifest.json
 ```
 
-`files/` stores user content with the same relative paths used by OpenViking.
+`files/` stores user content with the same relative paths used by Business Data Platform.
 Dotfiles are no longer escaped with `_._`. `_ovpack/` stores OVPack internal
 metadata and is not imported as user content.
 
@@ -574,15 +574,15 @@ viking://user/alice/sessions/sess_123
 ## Old Packages and Future Versions
 
 The current implementation only accepts OVPack v3. Legacy packages without a
-manifest do not provide a file set, directory set, or checksums, so OpenViking
+manifest do not provide a file set, directory set, or checksums, so Business Data Platform
 cannot tell whether content was removed, modified, or mixed in. They are
 rejected by default. To migrate a legacy package, import it in a trusted old
 environment first, then re-export it with OVPack v3.
 
-OVPack v2 packages are also rejected by current OpenViking. Re-export old
+OVPack v2 packages are also rejected by current Business Data Platform. Re-export old
 packages with a current server before importing them here.
 
-Future package versions are not silently accepted either. Upgrade OpenViking or
+Future package versions are not silently accepted either. Upgrade Business Data Platform or
 re-export from an environment that can read that version.
 
 ## Common Errors
@@ -590,7 +590,7 @@ re-export from an environment that can read that version.
 | Error | Common cause | Fix |
 | --- | --- | --- |
 | `Missing ovpack manifest` | Legacy package without a manifest | Re-export as v3 in a trusted environment. |
-| `Unsupported ovpack format_version` | Package format version is not currently supported | Upgrade OpenViking or re-export. |
+| `Unsupported ovpack format_version` | Package format version is not currently supported | Upgrade Business Data Platform or re-export. |
 | `sha256 does not match manifest` | File or internal index content was changed | Discard the package or re-export from a trusted source. |
 | `ovpack entries do not match manifest` | ZIP content is missing files/directories or includes extra files/directories | Discard the package or re-export. |
 | `source scope does not match target scope` | Cross-scope import, such as user into resources | Import into a parent directory in the same scope. |
@@ -598,7 +598,7 @@ re-export from an environment that can read that version.
 | `Top-level scope ovpack packages must be imported to viking://` | A top-level scope package was imported to a non-root parent | Import to `viking://`. |
 | `Backup ovpack packages must be restored` | A backup package was imported with regular import | Use `ov restore`. |
 | `Resource already exists` | Target root already exists | Use `--on-conflict overwrite` or `--on-conflict skip`. |
-| `incomplete OpenViking vector index snapshot` | `--include-vectors` found missing index records in the export range | Run `ov system consistency <uri>` to locate the issue, then wait for processing or reindex. |
+| `incomplete Business Data Platform vector index snapshot` | `--include-vectors` found missing index records in the export range | Run `ov system consistency <uri>` to locate the issue, then wait for processing or reindex. |
 | `dense vector snapshot is incompatible` | Package embedding metadata does not match current config | Use `--vector-mode recompute`, or switch to a compatible config. |
 
 ## FAQ

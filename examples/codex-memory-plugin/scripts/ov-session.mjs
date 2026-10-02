@@ -1,5 +1,5 @@
 /**
- * Shared OpenViking HTTP + transcript helpers for the Codex capture hooks.
+ * Shared Business Data Platform HTTP + transcript helpers for the Codex capture hooks.
  *
  * Stop (auto-capture), PreCompact and SessionEnd all do the same three things:
  * talk to the OV session API with the plugin's headers, parse the JSONL

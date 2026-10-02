@@ -27,7 +27,7 @@ template: |
   User query:
   {{ query }}
 
-  Retrieved OpenViking context fragments:
+  Retrieved Business Data Platform context fragments:
   {{ rendered }}
 
   Write a memory digest for a coding agent about to answer that query. Keep the

@@ -1,10 +1,10 @@
 # Path Locks and Crash Recovery
 
-OpenViking uses two simple primitives — **path locks** and **persistent queue recovery** — to protect the consistency of core write operations (`rm`, `mv`, `add_resource`, `session.commit`), coordinating concurrent writes and resuming queued session work after a process restart. These primitives do not form an atomic transaction across VikingFS, VectorDB, and QueueManager.
+Business Data Platform uses two simple primitives — **path locks** and **persistent queue recovery** — to protect the consistency of core write operations (`rm`, `mv`, `add_resource`, `session.commit`), coordinating concurrent writes and resuming queued session work after a process restart. These primitives do not form an atomic transaction across VikingFS, VectorDB, and QueueManager.
 
 ## Design Philosophy
 
-OpenViking is a context database where FS is the source of truth and VectorDB is a derived index. A lost index can be rebuilt from source data, but lost source data is unrecoverable. Therefore:
+Business Data Platform is a context database where FS is the source of truth and VectorDB is a derived index. A lost index can be rebuilt from source data, but lost source data is unrecoverable. Therefore:
 
 > **Better to miss a search result than to return a bad one.**
 
@@ -473,7 +473,7 @@ Redis-backed configuration:
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `provider` | str | `filesystem`, `memory`, or `cache` | `filesystem` |
-| `namespace` | str or null | Required when `provider=cache`; identifies one OpenViking deployment | `null` |
+| `namespace` | str or null | Required when `provider=cache`; identifies one Business Data Platform deployment | `null` |
 | `lock_expire_secs` | float | Seconds before an unrefreshed lock becomes stale | `30.0` |
 
 Legacy compatibility form:

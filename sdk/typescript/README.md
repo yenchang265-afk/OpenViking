@@ -1,6 +1,6 @@
 # @openviking/sdk
 
-Lightweight JavaScript and TypeScript HTTP client for an existing OpenViking server. It targets Node.js 18+ and has no runtime dependencies.
+Lightweight JavaScript and TypeScript HTTP client for an existing Business Data Platform server. It targets Node.js 18+ and has no runtime dependencies.
 
 ```bash
 npm install @openviking/sdk

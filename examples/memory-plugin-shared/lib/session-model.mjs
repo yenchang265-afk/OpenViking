@@ -1,5 +1,5 @@
 /**
- * Shared OpenViking session-id helpers for memory plugin harnesses.
+ * Shared Business Data Platform session-id helpers for memory plugin harnesses.
  */
 
 /**

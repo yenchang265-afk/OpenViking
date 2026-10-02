@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# LoCoMo evaluation: Claude Code Prompted (vanilla auto-memory, no OpenViking).
+# LoCoMo evaluation: Claude Code Prompted (vanilla auto-memory, no Business Data Platform).
 #
 # Floor reference: ingest each LoCoMo session via `claude -p`; CC writes notes
 # into MEMORY.md inside per-sample project dirs. QA reads MEMORY.md back to

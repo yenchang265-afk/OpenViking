@@ -66,7 +66,7 @@ class TestBuildErrorHandlingSlow:
         result = data.get("result", {})
         root_uri = result.get("root_uri")
         assert_root_uri_valid(root_uri)
-        assert "volcengine" in root_uri and "OpenViking" in root_uri, (
+        assert "volcengine" in root_uri and "Business Data Platform" in root_uri, (
             f"跳轉後 root_uri 應含 volcengine/OpenViking, 實際: {root_uri}"
         )
 

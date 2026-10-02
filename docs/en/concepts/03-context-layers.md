@@ -1,6 +1,6 @@
 # Context Layers (L0/L1/L2)
 
-OpenViking uses a three-layer information model to balance retrieval efficiency, navigation, and full-content fidelity.
+Business Data Platform uses a three-layer information model to balance retrieval efficiency, navigation, and full-content fidelity.
 
 ## Overview
 
@@ -10,7 +10,7 @@ OpenViking uses a three-layer information model to balance retrieval efficiency,
 | **L1** | Overview | `.overview.md` in a directory | 4000 characters | Rerank, content navigation |
 | **L2** | Detail | Original files and subdirectories | No uniform limit | Full content, on-demand loading |
 
-L0 and L1 are **directory-level semantic sidecars**. They describe a directory; OpenViking does not create a matching L0/L1 sidecar for every ordinary file. File summaries are inputs aggregated into the containing directory's L1.
+L0 and L1 are **directory-level semantic sidecars**. They describe a directory; Business Data Platform does not create a matching L0/L1 sidecar for every ordinary file. File summaries are inputs aggregated into the containing directory's L1.
 
 L0 and L1 are normally generated together, but either one may exist independently. For example, `mkdir()` initially creates only L0: it uses the directory name as the default body when `description` is omitted, or the provided description otherwise. A directory with `.abstract.md` but no `.overview.md` is therefore valid. Reads and vector rebuilds process only the levels that actually exist.
 
@@ -146,7 +146,7 @@ API authentication guide covering OAuth 2.0, JWT tokens, and API keys.
 - `unsampled_entries`: direct entries not sampled, with `sampled + unsampled = total`.
 - `pending_child_changes`: direct-child change events not yet reflected in the current body (repeated changes to one child count separately).
 
-When the direct-entry count exceeds `semantic.overview_sample_limit` (32 by default), OpenViking uses deterministic, order-preserving stable sampling. Repeated refreshes of an unchanged tree choose the same sample, avoiding noisy body rewrites and Git diffs.
+When the direct-entry count exceeds `semantic.overview_sample_limit` (32 by default), Business Data Platform uses deterministic, order-preserving stable sampling. Repeated refreshes of an unchanged tree choose the same sample, avoiding noisy body rewrites and Git diffs.
 
 `pending_child_changes > 0` means the body is still readable but is known to lag behind lower-level changes. A successful parent refresh resets the value to 0 as part of the new coverage metadata.
 
@@ -171,7 +171,7 @@ SemanticProcessor processes directories bottom-up:
 file summaries → leaf L1 → leaf L0 → parent directories → namespace boundary
 ```
 
-Child-directory L0 bodies are aggregated into the parent L1. Memory directories use the same SemanticProcessor entry point, although the current parent-bubbling path applies only to resource/skill. Multimodal files first produce text summaries, which contribute to the containing directory's L0/L1 like other file summaries; OpenViking does not create per-file L0/L1 sidecars for each image, audio file, or video.
+Child-directory L0 bodies are aggregated into the parent L1. Memory directories use the same SemanticProcessor entry point, although the current parent-bubbling path applies only to resource/skill. Multimodal files first produce text summaries, which contribute to the containing directory's L0/L1 like other file summaries; Business Data Platform does not create per-file L0/L1 sidecars for each image, audio file, or video.
 
 ## Best Practices
 

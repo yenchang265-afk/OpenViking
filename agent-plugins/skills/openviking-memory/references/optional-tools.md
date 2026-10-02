@@ -1,4 +1,4 @@
-# Optional OpenViking MCP tools
+# Optional Business Data Platform MCP tools
 
 Tools listed here are not part of the core set: whether they exist depends on
 the server version and hosting mode. Only read the sections for tools that

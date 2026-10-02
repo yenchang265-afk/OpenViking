@@ -1,4 +1,4 @@
-"""Live LangGraph app using OpenViking middleware and an OpenAI-compatible LLM.
+"""Live LangGraph app using Business Data Platform middleware and an OpenAI-compatible LLM.
 
 Required:
   ARK_API_KEY
@@ -49,7 +49,7 @@ def seed_context(client, session_id: str, code: str) -> None:
             {
                 "type": "text",
                 "text": (
-                    f"Remember this OpenViking LangGraph live e2e exact code: {code}. "
+                    f"Remember this Business Data Platform LangGraph live e2e exact code: {code}. "
                     "This is durable session context for the next agent turn."
                 ),
             }
@@ -61,7 +61,7 @@ def seed_context(client, session_id: str, code: str) -> None:
         parts=[
             {
                 "type": "text",
-                "text": f"Stored the OpenViking LangGraph live e2e exact code: {code}.",
+                "text": f"Stored the Business Data Platform LangGraph live e2e exact code: {code}.",
             }
         ],
     )
@@ -125,7 +125,7 @@ def call_llm(messages: list[BaseMessage]) -> str:
         {
             "role": "system",
             "content": (
-                "You are validating OpenViking as LangGraph middleware. "
+                "You are validating Business Data Platform as LangGraph middleware. "
                 "Return only the exact lg_live_* code if one appears in the context "
                 "or conversation."
             ),
@@ -166,7 +166,7 @@ def main() -> str:
                 "messages": [
                     HumanMessage(
                         content=(
-                            "What is the OpenViking LangGraph live e2e exact code? "
+                            "What is the Business Data Platform LangGraph live e2e exact code? "
                             "Answer only the exact code."
                         )
                     )
@@ -189,7 +189,7 @@ def main() -> str:
 
 def wait_for_commit_task(client, commit: dict[str, object]) -> None:
     if commit.get("archived") is not True or not commit.get("task_id"):
-        raise RuntimeError(f"OpenViking commit did not start extraction: {commit}")
+        raise RuntimeError(f"Business Data Platform commit did not start extraction: {commit}")
     timeout = float(os.environ.get("OPENVIKING_LIVE_COMMIT_TIMEOUT", "180"))
     deadline = time.monotonic() + timeout
     last_task = None
@@ -199,10 +199,10 @@ def wait_for_commit_task(client, commit: dict[str, object]) -> None:
         if task and task.get("status") == "completed":
             return
         if task and task.get("status") == "failed":
-            raise RuntimeError(f"OpenViking commit task failed: {task}")
+            raise RuntimeError(f"Business Data Platform commit task failed: {task}")
         time.sleep(0.5)
     raise RuntimeError(
-        f"OpenViking commit task did not complete: {commit['task_id']}; last_task={last_task}"
+        f"Business Data Platform commit task did not complete: {commit['task_id']}; last_task={last_task}"
     )
 
 

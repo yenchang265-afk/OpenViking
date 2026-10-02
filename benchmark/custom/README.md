@@ -1,12 +1,12 @@
-# OpenViking Server 壓測指令碼使用指南
+# Business Data Platform Server 壓測指令碼使用指南
 
-本目錄包含面向 OpenViking 本地 Server 的自定義壓測指令碼。當前主要指令碼是：
+本目錄包含面向 Business Data Platform 本地 Server 的自定義壓測指令碼。當前主要指令碼是：
 
 - `session_contention_benchmark.py`：通用 Server 壓測框架，覆蓋 SDK、CLI HTTP 封裝和真實 `ov` 子程序三種呼叫路徑。
 
 ## 壓測目標
 
-`session_contention_benchmark.py` 用來請求已經啟動的 OpenViking Server，驗證多類介面在併發和混合負載下的吞吐、延遲、失敗率和後臺任務積壓情況。
+`session_contention_benchmark.py` 用來請求已經啟動的 Business Data Platform Server，驗證多類介面在併發和混合負載下的吞吐、延遲、失敗率和後臺任務積壓情況。
 
 指令碼不會啟動或停止 Server，只負責：
 
@@ -17,7 +17,7 @@
 
 ## 前置條件
 
-先在另一個終端啟動 OpenViking Server：
+先在另一個終端啟動 Business Data Platform Server：
 
 ```bash
 openviking-server
@@ -95,7 +95,7 @@ ov health
 | `session_commit` | 併發 commit 不同 session，並輪詢後臺任務 |
 | `mixed` | 混合資源新增、檢索、session 寫入、commit、觀測介面和任務輪詢 |
 
-這些階段不是隻壓單個介面，目的是觀察 OpenViking 在真實組合負載下的退化情況。
+這些階段不是隻壓單個介面，目的是觀察 Business Data Platform 在真實組合負載下的退化情況。
 
 ## 資料清理策略
 
@@ -123,7 +123,7 @@ ov health
 
 | 引數 | 預設值 | 說明 |
 | --- | --- | --- |
-| `--server-url` | `http://127.0.0.1:1935` | OpenViking Server 地址 |
+| `--server-url` | `http://127.0.0.1:1935` | Business Data Platform Server 地址 |
 | `--api-key` | `test-root-api-key` | 請求使用的 API Key |
 | `--account` | `default` | 請求使用的 account |
 | `--user` | `default` | 請求使用的 user |

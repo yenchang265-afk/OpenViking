@@ -37,7 +37,7 @@ export function createMemoryRecall({ config, sessionManager }) {
     if (!block) return
 
     if (prependSyntheticRecallPart(input, output, block)) {
-      log("INFO", "recall", "Injected OpenViking context")
+      log("INFO", "recall", "Injected Business Data Platform context")
     }
   }
 

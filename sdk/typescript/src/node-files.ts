@@ -87,7 +87,7 @@ export async function nodePathToBlob(
   if (!stat.isDirectory()) return undefined;
   if (options.allowDirectory === false)
     throw new TypeError(
-      `OpenViking: ${path} is a directory, expected an OVPack file`,
+      `Business Data Platform: ${path} is a directory, expected an OVPack file`,
     );
   const files: Record<string, Uint8Array> = {};
   const walk = async (directory: string, prefix = ""): Promise<void> => {

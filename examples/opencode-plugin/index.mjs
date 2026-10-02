@@ -19,7 +19,7 @@ export async function OpenVikingPlugin({ client, directory }) {
   initLogger(dataDir)
 
   if (!config.enabled) {
-    log("INFO", "plugin", "OpenViking plugin is disabled in configuration")
+    log("INFO", "plugin", "Business Data Platform plugin is disabled in configuration")
     return {}
   }
 
@@ -44,9 +44,9 @@ export async function OpenVikingPlugin({ client, directory }) {
       log(
         injected || hookOnly ? "INFO" : "WARN",
         "mcp",
-        injected ? "Registered OpenViking MCP server" :
+        injected ? "Registered Business Data Platform MCP server" :
           hookOnly ? "Skipped bundled MCP registration in hook-only mode" :
-            "OpenViking MCP server was not registered",
+            "Business Data Platform MCP server was not registered",
       )
     },
 
@@ -87,7 +87,7 @@ export async function OpenVikingPlugin({ client, directory }) {
 
     dispose: async () => {
       await sessionManager.flushAll({ commit: true })
-      log("INFO", "plugin", "OpenViking plugin disposed")
+      log("INFO", "plugin", "Business Data Platform plugin disposed")
     },
   }
 }

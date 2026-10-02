@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Data types for OpenViking evaluation module.
+Data types for Business Data Platform evaluation module.
 """
 
 from typing import Any, Dict, List, Optional

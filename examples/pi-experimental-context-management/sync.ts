@@ -61,7 +61,7 @@ export class SyncManager {
 
   get sessionId(): string | null { return this.ovSessionId; }
   get syncedCount(): number { return this.syncedEntryCount; }
-  /** Messages OpenViking will never receive; they are missing from the archive. */
+  /** Messages Business Data Platform will never receive; they are missing from the archive. */
   get droppedCount(): number { return this.droppedForever; }
   get commitTraceId(): string { return this.lastCommitTrace; }
 
@@ -170,7 +170,7 @@ export class SyncManager {
       // drops them once the retry budget is exhausted.
       for (const { filename, entry } of claimed.slice(delivered)) {
         // false: the retry budget is spent and the entry was deleted, so that
-        // message never reaches OpenViking.
+        // message never reaches Business Data Platform.
         if ((await incrementRetry(filename, entry)) === false) this.droppedForever += 1;
       }
       this.logger.log("drain", {

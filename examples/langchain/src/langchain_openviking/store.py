@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""LangGraph Store implementation backed by OpenViking."""
+"""LangGraph Store implementation backed by Business Data Platform."""
 
 from __future__ import annotations
 
@@ -54,16 +54,16 @@ logger = logging.getLogger(__name__)
 
 
 class OpenVikingStore(BaseStore):
-    """LangGraph ``BaseStore`` persisted and indexed through OpenViking.
+    """LangGraph ``BaseStore`` persisted and indexed through Business Data Platform.
 
     Values are stored as JSON records under ``<root_uri>/data``. A separate
-    markdown projection under ``<root_uri>/index`` gives OpenViking semantic
+    markdown projection under ``<root_uri>/index`` gives Business Data Platform semantic
     retrieval a compact document to index for query-based ``search`` calls.
 
     Args:
         root_uri: Base URI for the store. Defaults to the ``viking://~`` home alias,
             which the server expands to the authenticated caller's own user space, so
-            this requires an OpenViking server with ``viking://~`` support. Pass an
+            this requires a Business Data Platform server with ``viking://~`` support. Pass an
             explicit ``viking://user/<uid>/...`` URI to target a specific user.
     """
 
@@ -168,7 +168,7 @@ class OpenVikingStore(BaseStore):
         if ttl is not None:
             raise NotImplementedError(
                 "TTL is not supported by OpenVikingStore. "
-                "OpenViking stores LangGraph values as durable content records."
+                "Business Data Platform stores LangGraph values as durable content records."
             )
         namespace = tuple(namespace)
         now = datetime.now(timezone.utc)

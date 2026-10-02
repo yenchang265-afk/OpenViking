@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to OpenViking will be documented in this file.
+All notable changes to Business Data Platform will be documented in this file.
 This changelog is automatically generated from [GitHub Releases](https://github.com/volcengine/OpenViking/releases).
 
 ## Unreleased
@@ -34,7 +34,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 - **Agent workspace isolation**: Codex, Claude Code, OpenCode, and Pi integrations gain workspace-derived peer identity for per-project memory, together with broader shared installer and hybrid MCP support.
 - **Retrieval and memory correctness**: image search is supported, agent-only and peer-only memory scopes are respected, and nested rendered memory links are avoided.
 - **Storage and security hardening**: local collection loading is serialized, VikingDB content writes are backend-aware, and Git submodule ingestion blocks SSRF targets.
-- **VikingBot and platform fixes**: unified gateway routing and OpenViking authentication were added, with fixes for channel sender metadata, VLM-only configurations, Windows vector backends, and benchmark concurrency.
+- **VikingBot and platform fixes**: unified gateway routing and Business Data Platform authentication were added, with fixes for channel sender metadata, VLM-only configurations, Windows vector backends, and benchmark concurrency.
 
 [Full Changelog](https://github.com/volcengine/OpenViking/compare/v0.4.8...v0.4.9)
 
@@ -80,7 +80,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 ### Highlights
 
-- **Auth role serialization and trusted mode**: request identity roles are now serialized consistently as string roles across storage, resource, session, queue, watch, summarizer, and semantic-processing paths, and OpenViking-backed VikingBot flows gain trusted `auth_mode` support.
+- **Auth role serialization and trusted mode**: request identity roles are now serialized consistently as string roles across storage, resource, session, queue, watch, summarizer, and semantic-processing paths, and Business Data Platform-backed VikingBot flows gain trusted `auth_mode` support.
 - **CLI, Web Studio, and bot setup reliability**: user-management setup in the CLI config wizard is clearer, Web Studio account selection is more stable, VikingBot auth handling is simplified, and failed session archives can now be skipped.
 - **Agent integration recall and OpenCode docs**: Codex and OpenCode integrations now include session-aware recall, while the OpenCode plugin docs are consolidated around the single maintained plugin.
 - **Storage and session hardening**: QueueFS semantic processing handles non-directory memory URIs, glob URI schemes are preserved, event summaries fall back more safely, memory abstracts are truncated defensively, and path-lock progress logging is improved.
@@ -111,7 +111,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 - **RAGFS cache and migration reliability**: CachedFileSystem was added with Redis, Mooncake, and Yuanrong cache providers, while legacy shape probing skips zero-byte files and path locks, S3 head-object handling is clearer, and encrypted reads gain a plaintext fallback for migration.
 - **Go SDK and code navigation**: the Go HTTP SDK is supported and documented, and new code navigation endpoints were added for the OpenCode plugin.
-- **Docs search and localization**: OpenViking-powered documentation search was added, localized, and refreshed alongside SDK and Hermes wording updates.
+- **Docs search and localization**: Business Data Platform-powered documentation search was added, localized, and refreshed alongside SDK and Hermes wording updates.
 - **Parser, session, and task fixes**: session ID encoding, Feishu URL host matching, task tracker encryption binding, and event overview refresh behavior were fixed.
 - **Security dependency updates**: `python-multipart` and `cryptography` floors were raised to address high-severity advisories, and UnderstandingAPI zip downloads now use safe extraction to close Zip Slip risk.
 - **Plugin and memory follow-ups**: memory plugin recall/auth handling, OpenClaw plugin release metadata, session skill YAML rules, and tag-setting support were updated.
@@ -131,7 +131,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 ### Highlights
 
-- **User / Peer identity model**: OpenViking now separates data ownership (`user`) from interaction counterparts (`peer`), with legacy `agent_id` mapped as a transition setting.
+- **User / Peer identity model**: Business Data Platform now separates data ownership (`user`) from interaction counterparts (`peer`), with legacy `agent_id` mapped as a transition setting.
 - **0.3.x legacy migration path**: legacy `viking://agent/...` and `viking://session/...` data can be read compatibly, migrated to the new `viking://user/...` layout, verified, and cleaned up after rollback is no longer needed.
 - **Multimodal ingestion expansion**: sessions and resources now cover image messages, Markdown image rewrites, Feishu user tokens, external parser routing, and richer image/vectorization flows.
 - **OpenClaw and retrieval diagnostics**: retrieval supports `context_type`, while OpenClaw adds Recall Trace, runtime query config, feature gates, and actor peer scope wiring.
@@ -190,7 +190,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 - **Configurable retrieval query planner**: Added a lightweight query-planner config so the intent-analysis model used during retrieval can be selected and tuned.
 - **Legacy Memory V1 removed**: The deprecated memory v1 path was removed, and the memory `version` field now rejects `v1` payloads.
-- **LangChain reliability**: Stale OpenViking clients are now recovered automatically, and LangChain integrations can perform local batch message writes.
+- **LangChain reliability**: Stale Business Data Platform clients are now recovered automatically, and LangChain integrations can perform local batch message writes.
 - **VikingDB robustness**: Vector search now skips candidates with corrupted JSON fields, and `ap-southeast-1` region host mappings were added for VikingDB.
 - **CLI and server polish**: The `ov` CLI reports a missing CLI config before issuing server requests, server-mode terminology was clarified from `dev-implicit` to `dev`, and embedding input truncation was unified.
 
@@ -207,7 +207,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 - **More retrievable trajectory memory**: The trajectory schema now has `retrieval_anchor` and an `embedding_template`, so vector indexing uses `trajectory_name + retrieval_anchor` instead of the full operation contract. Experiences and trajectories are connected with system-managed `derived_from` `StoredLink` records (forward `links` + reverse `backlinks`), replacing fragile `source_trajectories` metadata.
 - **Batch session message ingestion**: Added `POST /api/v1/sessions/{session_id}/messages/batch` and `ov session add-messages` to add multiple messages in one call (useful for history import and memory extraction); `ov add-memory` now uses the same stricter JSON message parser.
-- **OpenClaw search is now `ov_search`**: The OpenViking OpenClaw plugin no longer registers `memory_search`, avoiding collisions with OpenClaw built-ins. Use `ov_search` or `/ov-search` after importing resources or skills.
+- **OpenClaw search is now `ov_search`**: The Business Data Platform OpenClaw plugin no longer registers `memory_search`, avoiding collisions with OpenClaw built-ins. Use `ov_search` or `/ov-search` after importing resources or skills.
 - **Stronger URL and document parsing**: HTTP import detection now recognizes image, audio, video, Office, EPUB, and zip downloads, and re-checks headers after `GET` when `HEAD` is unreliable. Local Word/PowerPoint/Excel/EPUB/legacy-doc conversions now run in worker threads so they no longer block the event loop.
 - **Web Studio ships with Python installs**: `setup`/`build` now builds and bundles the Web Studio static assets, so `/studio` works from pip/pipx installs without Docker.
 - **NVIDIA NIM through LiteLLM VLM**: Model names containing `nvidia_nim` or `nemotron` now route through the NVIDIA NIM LiteLLM prefix and `NVIDIA_NIM_API_KEY`.
@@ -248,7 +248,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 - **Usage/Audit UTC persistence**: Token, retrieval, context-commit, agent-activity, and audit rollups now persist UTC `date_utc`, `hour_utc`, and `created_at` values, with read-time re-bucketing through `zoneinfo` for DST and half-hour timezone support.
 - **Local Usage/Audit schema reset**: The SQLite store tracks schema version v3 and resets incompatible local Usage/Audit tables on upgrade, avoiding mixed local/UTC rows and partial daily/hourly migrations for short-retention pre-GA data.
 - **Web Studio heatmap alignment**: Web Studio injects the browser timezone into Console BFF requests and the heatmap now uses server-returned bucket dates directly, fixing the UTC+ viewer double-shift that could push today's commits into tomorrow.
-- **Adjacent updates**: Added session skill extraction behind `memory.session_skill_extraction_enabled`, Hermes OpenViking LoCoMo benchmark scripts, an OAuth docs correction for the new Studio OAuth setup entry, and a LiteLLM dependency refresh.
+- **Adjacent updates**: Added session skill extraction behind `memory.session_skill_extraction_enabled`, Hermes Business Data Platform LoCoMo benchmark scripts, an OAuth docs correction for the new Studio OAuth setup entry, and a LiteLLM dependency refresh.
 
 ### Upgrade Notes
 
@@ -266,7 +266,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 - **Web Studio as the default console**: Added the `web-studio` console workspace, shipped it in Docker and pip distributions, served it at `/studio`, moved OAuth authorize UI into it, and retired the legacy console while keeping favicon compatibility routes.
 - **MCP, API, and CLI automation**: Added Watch Management across REST, `ov`, and MCP; added progressive single-entrypoint local-file upload; added `code_outline`, `code_search`, and `code_expand`; and tightened upload-only and zip `--ignore-dirs` handling.
-- **Agent and OpenClaw ecosystem**: OpenClaw setup helper now supports npm plugin installs, plugin docs align with ClawHub package metadata, `ov_dream` was added as an OpenClaw skill, and oversized OpenClaw tool results can be externalized to OpenViking.
+- **Agent and OpenClaw ecosystem**: OpenClaw setup helper now supports npm plugin installs, plugin docs align with ClawHub package metadata, `ov_dream` was added as an OpenClaw skill, and oversized OpenClaw tool results can be externalized to Business Data Platform.
 - **Memory and retrieval**: Upgraded trajectory extraction, added memory link support, added switchable Vaka memory templates, fixed missing tool-call counts and missing message-peer retrieval, and parallelized hierarchical child search.
 - **Storage, VectorDB, and model reliability**: Async storage locks/IO and loop-isolated async clients reduce contention; fixes cover semantic lock ownership, false `mv not found`, URI remapping, S3 grep performance, VectorDB Unicode recovery, oversized byte rows, embedding error surfacing, and VLM LiteLLM native routes.
 - **Observability, docs, and deployment polish**: Added VikingBot feedback observability, centralized the metric registry, moved usage audit SQLite into system data, refreshed Helm chart defaults, updated brand assets and QR code, and documented public base URL, signed upload TTLs, Watch APIs, MCP code tools, readiness probes, and the `/studio` migration.
@@ -316,7 +316,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 - OTLP backends requiring extra auth can now use `headers` across all three exporter types (gRPC metadata in gRPC mode, HTTP headers in HTTP mode).
 - Local directory uploads will now filter files per `.gitignore` by default — previously imported temp/generated files may be excluded after upgrade.
-- OpenClaw plugin runtime identity now maps through `peer_prefix` peer metadata instead of an OpenViking agent namespace.
+- OpenClaw plugin runtime identity now maps through `peer_prefix` peer metadata instead of a Business Data Platform agent namespace.
 
 [Full Changelog](https://github.com/volcengine/OpenViking/compare/v0.3.13...v0.3.14)
 
@@ -386,7 +386,7 @@ This changelog is automatically generated from [GitHub Releases](https://github.
 
 - **Memory**: Shipped Memory V2 as the new default, including a full test suite, session row migration, and a fix for file lock conflicts in concurrent scenarios.
 - **OpenClaw**: Refactored context partitioning into Instruction/Archive/Session layers, unified `ov_import` and `ov_search` in the plugin, and extended Phase 2 commit wait timeout.
-- **Bot & MCP**: Ported MCP client support from HKUDS/nanobot v0.1.5, added per-channel OpenViking config disable, and fixed heartbeat reliability.
+- **Bot & MCP**: Ported MCP client support from HKUDS/nanobot v0.1.5, added per-channel Business Data Platform config disable, and fixed heartbeat reliability.
 - **Search & Retrieval**: Optimized large-directory search by skipping redundant scope checks, fixed sparse embedder async initialization, and added rerank extra-headers support.
 - **Setup & Onboarding**: Introduced an interactive `openviking-server init` wizard for local Ollama deployment and added a default file/dir ignore config for `ovcli.conf`.
 - **Infrastructure**: Added a metric system, updated the default Doubao embedding model, raised the Rust toolchain for RAGFS Docker builds, and split the parser layer into accessor and parser sublayers.
@@ -453,7 +453,7 @@ Memory V2 is now the default memory pipeline, featuring a redesigned format, ref
 ### Highlights
 
 - RAG benchmark evaluation framework added; OpenClaw LoCoMo eval scripts; content write API.
-- OpenClaw plugin: architecture docs, installer no longer overwrites `gateway.mode`, e2e healthcheck tool, bypass session patterns, fault isolation from OpenViking.
+- OpenClaw plugin: architecture docs, installer no longer overwrites `gateway.mode`, e2e healthcheck tool, bypass session patterns, fault isolation from Business Data Platform.
 - Test coverage: OpenClaw plugin unit tests, e2e tests, oc2ov integration tests and CI.
 - Session creation now supports specifying `session_id`; CLI chat endpoint priority and `grep --exclude-uri/-x` enhanced.
 - Security: task API ownership leak fix, unified stale lock handling, ZIP encoding fix, embedder dimension passthrough.
@@ -590,7 +590,7 @@ This release focuses on stability and developer experience improvements. Key fix
 
 - CLI UX: `ov chat` with `rustyline` line editing, Markdown rendering, chat history.
 - Async capabilities: session commit with `wait` parameter, configurable worker count.
-- New OpenViking Console web UI for debugging and API exploration.
+- New Business Data Platform Console web UI for debugging and API exploration.
 - Bot enhancements: eval support, `add-resource` tool, Feishu progress notifications.
 - OpenClaw memory plugin major upgrade: npm install, consolidated installer, stability fixes.
 - Platform: Linux ARM support, Windows UTF-8 BOM fix, CI runner OS pinning.
@@ -626,7 +626,7 @@ This release delivers CLI optimizations including `glob -n` flag support and `cm
 
 Before upgrading, stop the VikingDB Server and clear your workspace directory. Indexes from prior versions are not forward-compatible with this release.
 
-This release adds C# AST extractor support for code parsing, fixes multi-tenant filtering, normalizes OpenViking memory target paths, and improves git repository detection with `git@` SSH URL support. The `agfs` dependency libraries and binaries are now pre-compiled, eliminating the need for a build step at install time. Documentation adds Qwen model usage instructions.
+This release adds C# AST extractor support for code parsing, fixes multi-tenant filtering, normalizes Business Data Platform memory target paths, and improves git repository detection with `git@` SSH URL support. The `agfs` dependency libraries and binaries are now pre-compiled, eliminating the need for a build step at install time. Documentation adds Qwen model usage instructions.
 
 [Full Changelog](https://github.com/volcengine/OpenViking/compare/v0.2.1...v0.2.2)
 
@@ -650,7 +650,7 @@ Updated CLI binary release with cross-platform support for macOS and Linux, alig
 
 ## v0.1.18 (2026-02-23)
 
-This release brings major new capabilities to OpenViking. A high-performance Rust CLI is introduced alongside a terminal UI for filesystem navigation. File parsing is significantly expanded with support for Word, PowerPoint, Excel, EPub, and ZIP formats. Multi-provider support is added for embedding and VLM backends. Memory handling is redesigned with conflict-aware deduplication and a new extraction flow.
+This release brings major new capabilities to Business Data Platform. A high-performance Rust CLI is introduced alongside a terminal UI for filesystem navigation. File parsing is significantly expanded with support for Word, PowerPoint, Excel, EPub, and ZIP formats. Multi-provider support is added for embedding and VLM backends. Memory handling is redesigned with conflict-aware deduplication and a new extraction flow.
 
 ### Highlights
 
@@ -666,7 +666,7 @@ This release brings major new capabilities to OpenViking. A high-performance Rus
 
 ## cli@0.1.0 (2026-02-14)
 
-Initial CLI binary release with cross-platform support for macOS and Linux, providing a standalone distributable for OpenViking server management and resource operations.
+Initial CLI binary release with cross-platform support for macOS and Linux, providing a standalone distributable for Business Data Platform server management and resource operations.
 
 [Full Changelog](https://github.com/volcengine/OpenViking/releases/tag/cli%400.1.0)
 
@@ -698,12 +698,12 @@ This release focuses on architectural refactoring and reliability improvements. 
 
 ## v0.1.14 (2026-02-12)
 
-A major infrastructure release. An HTTP server and Python HTTP client are introduced, enabling remote access to OpenViking services. The OpenClaw skill adds MCP integration support. Directory pre-scan validation, DAG-triggered embedding, and parallel resource addition improve performance and reliability.
+A major infrastructure release. An HTTP server and Python HTTP client are introduced, enabling remote access to Business Data Platform services. The OpenClaw skill adds MCP integration support. Directory pre-scan validation, DAG-triggered embedding, and parallel resource addition improve performance and reliability.
 
 ### Highlights
 
 - **HTTP Server**: New server mode with Python HTTP client for remote access.
-- **OpenClaw Skill**: MCP integration for OpenViking.
+- **OpenClaw Skill**: MCP integration for Business Data Platform.
 - **CLI**: Full Bash CLI framework with comprehensive command implementation.
 - **Embedding**: DAG-triggered embedding and parallel add support.
 - **Directory Scan**: Pre-scan validation module added.
@@ -727,7 +727,7 @@ This release improves search quality, storage reliability, and code maintainabil
 
 ## v0.1.11 (2026-02-05)
 
-Adds support for ingesting small GitHub code repositories, enabling OpenViking to index and search public codebases directly.
+Adds support for ingesting small GitHub code repositories, enabling Business Data Platform to index and search public codebases directly.
 
 [Full Changelog](https://github.com/volcengine/OpenViking/compare/v0.1.10...v0.1.11)
 
@@ -739,11 +739,11 @@ Patch release fixing a compilation error and resolving a Windows binary release 
 
 ## v0.1.9 (2026-02-05)
 
-The initial public release of OpenViking. This release establishes the core project structure with cross-platform support including Linux and Intel Mac. It introduces the service layer architecture, separating embedding and VLM backends into configurable providers. Memory deduplication is improved and retrieval recursion bugs are fixed. Python 3.13 compatibility, S3FS support, and usage examples for chat and memory workflows are included.
+The initial public release of Business Data Platform. This release establishes the core project structure with cross-platform support including Linux and Intel Mac. It introduces the service layer architecture, separating embedding and VLM backends into configurable providers. Memory deduplication is improved and retrieval recursion bugs are fixed. Python 3.13 compatibility, S3FS support, and usage examples for chat and memory workflows are included.
 
 ### Highlights
 
-- **Initial Release**: Core OpenViking server, client, and CLI foundation.
+- **Initial Release**: Core Business Data Platform server, client, and CLI foundation.
 - **Providers**: Configurable embedding and VLM backends with provider abstraction.
 - **Architecture**: Service layer extracted from async client; ObserverService separated from DebugService.
 - **Platform**: Linux compile support, Intel Mac compatibility, Python 3.13 support.

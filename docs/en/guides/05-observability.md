@@ -1,6 +1,6 @@
 # Observability & Diagnostics
 
-This guide collects the current OpenViking observability entry points in one place, including:
+This guide collects the current Business Data Platform observability entry points in one place, including:
 
 - service health and component status
 - request-level `telemetry`
@@ -135,7 +135,7 @@ ov tui viking://resources
 
 Prerequisites:
 
-- OpenViking Server is running
+- Business Data Platform Server is running
 - `ovcli.conf` is configured
 - the current `X-API-Key` can read the target tenant data
 
@@ -191,7 +191,7 @@ Studio is best for interactive click-through debugging. If you need to feed obse
 
 ## Request-level telemetry
 
-The public request-tracing feature in OpenViking is called `operation telemetry`. It attaches a structured summary to a response so you can inspect things like:
+The public request-tracing feature in Business Data Platform is called `operation telemetry`. It attaches a structured summary to a response so you can inspect things like:
 
 - total duration
 - LLM and embedding token usage
@@ -224,11 +224,11 @@ For the full field reference, supported operations, and more examples, see:
 
 ## Generate a local trace and submit it for troubleshooting
 
-If `telemetry.summary` in the response is not enough to diagnose a problem, you can ask OpenViking to write OpenTelemetry traces to a local JSONL file. The user submits the JSONL file and the problematic `trace_id` to an administrator/support engineer, and the administrator uploads it to the troubleshooting environment for analysis. This is useful for offline customer environments, environments that cannot directly reach an OTLP backend, or cases where support needs the exact reproduction trace.
+If `telemetry.summary` in the response is not enough to diagnose a problem, you can ask Business Data Platform to write OpenTelemetry traces to a local JSONL file. The user submits the JSONL file and the problematic `trace_id` to an administrator/support engineer, and the administrator uploads it to the troubleshooting environment for analysis. This is useful for offline customer environments, environments that cannot directly reach an OTLP backend, or cases where support needs the exact reproduction trace.
 
 ### 1. Enable local trace output
 
-On the machine running OpenViking Server, edit `~/.openviking/ov.conf` (or the config file passed with `--config`) and add or adjust:
+On the machine running Business Data Platform Server, edit `~/.openviking/ov.conf` (or the config file passed with `--config`) and add or adjust:
 
 ```json
 {
@@ -247,7 +247,7 @@ On the machine running OpenViking Server, edit `~/.openviking/ov.conf` (or the c
 }
 ```
 
-Restart OpenViking Server after editing the config. The default local trace file is:
+Restart Business Data Platform Server after editing the config. The default local trace file is:
 
 ```text
 ~/.openviking/logs/traces.jsonl
@@ -305,12 +305,12 @@ Include the following for the administrator/support engineer:
 - the `traces.jsonl*` files, or the packaged `openviking-traces.tgz`
 - the problematic `trace_id`, if known
 - the time window and steps used to reproduce the issue
-- OpenViking version/commit, startup command, and relevant config with secrets removed
+- Business Data Platform version/commit, startup command, and relevant config with secrets removed
 - related error logs or request IDs, if available
 
 #### Administrator upload reference
 
-From the repository root on a machine with the OpenViking source checkout and access to the remote OTLP troubleshooting environment, the administrator runs:
+From the repository root on a machine with the Business Data Platform source checkout and access to the remote OTLP troubleshooting environment, the administrator runs:
 
 ```bash
 python tests/upload_offline_trace.py \
@@ -367,7 +367,7 @@ Uploaded:
 
 ## Use `/metrics` for time-series observability
 
-`/metrics` is OpenViking's time-series metrics endpoint for the Prometheus scraping model. It is well suited for questions like:
+`/metrics` is Business Data Platform's time-series metrics endpoint for the Prometheus scraping model. It is well suited for questions like:
 
 - Has HTTP traffic increased abnormally over the last few minutes?
 - Is the error rate for a route or operation continuing to rise?
@@ -401,11 +401,11 @@ Add the following to `~/.openviking/ov.conf` (or the path passed via `--config`)
 }
 ```
 
-Restart OpenViking Server after editing the config.
+Restart Business Data Platform Server after editing the config.
 
 ### Observability config hierarchy
 
-OpenViking groups signal-level observability configuration under `server.observability`:
+Business Data Platform groups signal-level observability configuration under `server.observability`:
 
 - `server.observability.metrics`: metrics subsystem and exporters
 - `server.observability.traces`: trace export configuration
@@ -507,11 +507,11 @@ scrape_configs:
 
 ### Import and view the dashboard in Grafana
 
-Once Prometheus is successfully scraping `/metrics`, the next common step is to import the OpenViking demo dashboard into Grafana.
+Once Prometheus is successfully scraping `/metrics`, the next common step is to import the Business Data Platform demo dashboard into Grafana.
 
 **Step 1: Confirm that Prometheus is already scraping `/metrics`**
 
-Before importing the dashboard, make sure the Prometheus data source can already query OpenViking metrics. The quickest checks are:
+Before importing the dashboard, make sure the Prometheus data source can already query Business Data Platform metrics. The quickest checks are:
 
 - run `openviking_http_requests_total` in the Prometheus UI
 - or run `openviking_service_readiness`
@@ -521,7 +521,7 @@ If there is no data yet, go back to the Prometheus scrape configuration above an
 
 **Step 2: Import the official demo dashboard into Grafana**
 
-The OpenViking repository already includes ready-to-import dashboard JSON:
+The Business Data Platform repository already includes ready-to-import dashboard JSON:
 
 - [openviking_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_demo_dashboard.json)
 - [openviking_token_demo_dashboard.json](https://github.com/volcengine/OpenViking/blob/main/examples/grafana/openviking_token_demo_dashboard.json) (Note: this dashboard depends on the `tim012432-calendarheatmap-panel` Grafana plugin. Install it before importing to ensure panels render correctly.)
@@ -558,7 +558,7 @@ A beginner-friendly viewing order is:
 
 **Step 4: What the final result looks like**
 
-After a successful import, you should see a dashboard centered on OpenViking requests, queues, probes, model calls, and overall system state. For a visual reference, see:
+After a successful import, you should see a dashboard centered on Business Data Platform requests, queues, probes, model calls, and overall system state. For a visual reference, see:
 
 - [grafana-demo-dashboard.png](../../images/grafana-demo-dashboard.png)
 

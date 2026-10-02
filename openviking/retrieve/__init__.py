@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Retrieval module for OpenViking.
+Retrieval module for Business Data Platform.
 
 Provides intent-driven hierarchical context retrieval.
 """

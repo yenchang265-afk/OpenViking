@@ -138,7 +138,7 @@ async def test_run_ragas_evaluation_with_file():
 
     This test requires LLM configuration via:
     - Environment variables: RAGAS_LLM_API_KEY, RAGAS_LLM_API_BASE, RAGAS_LLM_MODEL
-    - Or OpenViking VLM config in ~/.openviking/ov.conf
+    - Or Business Data Platform VLM config in ~/.openviking/ov.conf
     """
     results = load_eval_results()
 

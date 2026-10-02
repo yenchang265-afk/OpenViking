@@ -62,7 +62,7 @@ test("initialization queues capture only when the failure is retryable", async (
   }
 });
 
-test("existing OpenViking sessions are reusable on DSH resume", async () => {
+test("existing Business Data Platform sessions are reusable on DSH resume", async () => {
   const pendingDir = await mkdtemp(join(tmpdir(), "dsh-memory-resume-"));
   tempDirs.push(pendingDir);
   process.env.OPENVIKING_PENDING_DIR = pendingDir;

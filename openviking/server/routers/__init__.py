@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""OpenViking HTTP Server routers."""
+"""Business Data Platform HTTP Server routers."""
 
 from openviking.server.routers.acl import router as acl_router
 from openviking.server.routers.admin import router as admin_router

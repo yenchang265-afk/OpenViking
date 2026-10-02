@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenViking 記憶演示指令碼 — 群聊場景
+Business Data Platform 記憶演示指令碼 — 群聊場景
 測試當前 user/peer 記憶模型：
 1. 登入 user 維護自己的記憶空間
 2. peer_id 維護同一 user 下的一對多外部參與者記憶
@@ -311,7 +311,7 @@ def main():
 
     console.print(
         Panel(
-            f"[bold]OpenViking 資料隔離測試[/bold]\nServer: {args.url}",
+            f"[bold]Business Data Platform 資料隔離測試[/bold]\nServer: {args.url}",
             style="magenta",
             width=PANEL_WIDTH,
         )

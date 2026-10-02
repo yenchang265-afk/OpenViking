@@ -2,21 +2,21 @@
 name: openviking-skills
 description: >
   Find, use, create, install, share, update, and migrate agent skills stored in
-  OpenViking (viking://~/skills and viking://agent/skills). Use it when a
+  Business Data Platform (viking://~/skills and viking://agent/skills). Use it when a
   search result, or the session's <available-skills> list where the harness
   injects one, names a skill that fits the task; when a task looks like one a
   stored skill would cover; when the user asks to write, save, install, or share a skill from
   text, a Git repository, or a local folder; when a skill should work in every
   harness and on every machine; or when the user wants to move local skills
-  (~/.claude/skills, ~/.agents/skills, ~/.cursor/skills) into OpenViking —
+  (~/.claude/skills, ~/.agents/skills, ~/.cursor/skills) into Business Data Platform —
   "upload my skills", "save this as a skill", "遷移本地 skill", "把 skill 存到
-  OpenViking", "新建一個 skill". Covers the add_skill tool, running a skill's
+  Business Data Platform", "新建一個 skill". Covers the add_skill tool, running a skill's
   helper files, and which local skills must stay local.
 ---
 
-# OpenViking Skills
+# Business Data Platform Skills
 
-OpenViking stores skills as data, the same way it stores memories, so a skill
+Business Data Platform stores skills as data, the same way it stores memories, so a skill
 saved there reaches every harness and machine connected to the same account.
 Each skill is a directory holding `SKILL.md` plus optional helper files
 (`scripts/`, `references/`, ...):
@@ -129,7 +129,7 @@ user asks for a team- or account-wide skill: everyone on the account sees it.
 
 ## Delete a skill
 
-Prefer `ov skills remove <name>` or OpenViking Studio; both also drop the
+Prefer `ov skills remove <name>` or Business Data Platform Studio; both also drop the
 skill's stored privacy values. `forget(uri="<skill uri>", recursive=true)`
 removes the directory but leaves those values behind, so use it only after the
 user confirms the exact URI.
@@ -138,7 +138,7 @@ To rename a skill, install it under the new name with `add_skill` and remove
 the old one. Moving or copying the directory does not rename it: the skill's
 own metadata still carries the old name.
 
-## Move local skills into OpenViking
+## Move local skills into Business Data Platform
 
 Run this only when the user asks. Nothing is uploaded without their approval
 of that skill.
@@ -165,7 +165,7 @@ of that skill.
    files, internal hostnames, or personal absolute paths. Also flag
    frontmatter keys other than `name`, `description`, `allowed-tools`,
    `tags` and `metadata` (for example `disable-model-invocation`,
-   `user-invocable`, `context`, `model`): OpenViking drops them, which can
+   `user-invocable`, `context`, `model`): Business Data Platform drops them, which can
    change how the skill behaves. The rest are portable.
 3. **Confirm.** Show a table of name, path, verdict, one-line reason, and
    target (`viking://~/skills` unless the user wants sharing). The user may
@@ -173,7 +173,7 @@ of that skill.
 4. **Upload.** A skill that is only a SKILL.md goes through
    `add_skill(data=...)`; a folder with helper files goes through the zip
    upload above, or `ov skills add <dir>` when the CLI is installed
-   (`ov skills validate <dir>` first catches format errors). OpenViking
+   (`ov skills validate <dir>` first catches format errors). Business Data Platform
    requires `name` and `description` in the frontmatter; when a local skill
    lacks them, fix a copy in a temporary folder (the name is the folder
    name), never the user's own file.
@@ -191,7 +191,7 @@ of that skill.
 - Never put credentials in a SKILL.md; the shared root is visible to the whole
   account.
 - Memory search and writing are covered by the `openviking-memory` skill.
-- If the server has no `add_skill` tool (an older OpenViking), use
+- If the server has no `add_skill` tool (an older Business Data Platform), use
   `ov skills add` when the CLI is installed; otherwise tell the user the server
   needs an upgrade. Do not fall back to `write`, `edit`, or `add_resource`:
   under the user's own root they are refused, and under `viking://agent/skills`

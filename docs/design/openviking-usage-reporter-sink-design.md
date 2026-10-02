@@ -1,10 +1,10 @@
-# OpenViking Usage Reporter / Sink 技術方案
+# Business Data Platform Usage Reporter / Sink 技術方案
 
 ## 1. 背景
 
-OpenViking 在 session commit 時會收到完整的 session messages。Agent runtime 呼叫 tool 後，會在 session messages 中留下 tool parts。部分 tool parts 可以表達某個記憶檔案被檢索、讀取、注入等行為。
+Business Data Platform 在 session commit 時會收到完整的 session messages。Agent runtime 呼叫 tool 後，會在 session messages 中留下 tool parts。部分 tool parts 可以表達某個記憶檔案被檢索、讀取、注入等行為。
 
-OpenViking 需要從 session 中解析出這些使用行為，並將結構化事件交給可擴充的下游。核心不繫結具體訊息佇列、Webhook、日誌系統或資料庫，而是提供通用的 Usage Reporter / Sink 擴充機制。
+Business Data Platform 需要從 session 中解析出這些使用行為，並將結構化事件交給可擴充的下游。核心不繫結具體訊息佇列、Webhook、日誌系統或資料庫，而是提供通用的 Usage Reporter / Sink 擴充機制。
 
 ## 2. 業界做法
 
@@ -22,13 +22,13 @@ Fluent Bit 使用 Outputs 概念。官方定義裡，Outputs 用來定義資料�
 
 參考：https://docs.fluentbit.io/manual/data-pipeline/outputs
 
-所以 OpenViking 採用“核心定義事件 + 外掛式 Sink 輸出”是合理的。它的核心價值是把“事件產生”和“事件去哪”解耦。
+所以 Business Data Platform 採用“核心定義事件 + 外掛式 Sink 輸出”是合理的。它的核心價值是把“事件產生”和“事件去哪”解耦。
 
 ## 3. 設計目標
 
-- OpenViking 核心只定義 UsageEvent 標準結構。
-- OpenViking 核心負責從 session commit 中解析 UsageEvent。
-- OpenViking 核心不繫結具體下游及其依賴。
+- Business Data Platform 核心只定義 UsageEvent 標準結構。
+- Business Data Platform 核心負責從 session commit 中解析 UsageEvent。
+- Business Data Platform 核心不繫結具體下游及其依賴。
 - 部署方可以通過自定義 Sink 接入目標系統。
 - Sink 失敗預設不影響 session commit。
 - 預設不上報完整 session，只上報結構化事件，並保留定位原始 session ToolPart 所需的證據資訊。
@@ -41,7 +41,7 @@ Fluent Bit 使用 Outputs 概念。官方定義裡，Outputs 用來定義資料�
 Agent runtime 呼叫 tool
 -> session message 留下 tool part
 -> client 上傳 session 並 commit
--> OpenViking archive session
+-> Business Data Platform archive session
 -> UsageExtractor 從 session messages 解析 UsageEvent
 -> UsageReporter 分發 UsageEvent
 -> UsageSink 寫入目標系統
@@ -58,7 +58,7 @@ UsageSink：負責寫入不同下游
 
 ## 5. UsageEvent
 
-UsageEvent 是 OpenViking 核心和外部 Sink 之間的穩定協議。
+UsageEvent 是 Business Data Platform 核心和外部 Sink 之間的穩定協議。
 
 示例：
 
@@ -92,7 +92,7 @@ UsageEvent 是可獨立傳輸和消費的完整事件。`UsageContext` 只用於
 
 ### 5.1 Experience 使用事件識別
 
-外掛使用 OpenViking 原生通用工具消費 Experience，不額外註冊 Experience 專用工具：
+外掛使用 Business Data Platform 原生通用工具消費 Experience，不額外註冊 Experience 專用工具：
 
 - 成功的 `find`、`search`、`list` 呼叫結果中出現 Experience URI，產生 `memory.recalled`。
 - 成功的 `read`、`multi_read` 呼叫實際讀取 Experience URI，產生 `memory.injected`。
@@ -103,7 +103,7 @@ UsageEvent 是可獨立傳輸和消費的完整事件。`UsageContext` 只用於
 
 ## 6. UsageSink 機制
 
-OpenViking 開源包定義統一的 Sink 抽象：
+Business Data Platform 開源包定義統一的 Sink 抽象：
 
 ```python
 class UsageSink:
@@ -126,7 +126,7 @@ server:
           endpoint: https://usage.example.com/events
 ```
 
-OpenViking 用 `importlib` 動態載入：
+Business Data Platform 用 `importlib` 動態載入：
 
 ```python
 import importlib
@@ -137,7 +137,7 @@ def load_class(class_path: str):
     return getattr(module, class_name)
 ```
 
-只有配置了該 Sink 時才 import 對應模組。OpenViking 核心不 import 或安裝具體下游依賴。
+只有配置了該 Sink 時才 import 對應模組。Business Data Platform 核心不 import 或安裝具體下游依賴。
 
 每個 Sink 的 `write()` 呼叫最多等待 5 秒。超時或異常只記錄日誌，不影響其他 Sink。Reporter 在應用生命週期內只建立一次，應用退出時呼叫 Sink 可選的 `close()` 方法。同步和非同步 `close()` 均受同一超時限制；同步 hook 在獨立 daemon 執行緒中執行，超時後不會阻塞事件迴圈、後續 Sink 清理或程序退出。
 
@@ -149,7 +149,7 @@ HTTP 請求。日誌檔案使用 UTC 小時滾動，預設保留 168 個小時�
 
 ### 6.1 檔案日誌計量協議
 
-`UsageEvent` 繼續作為 OpenViking 內部抽取結果和自定義 Sink 的穩定協議。內建
+`UsageEvent` 繼續作為 Business Data Platform 內部抽取結果和自定義 Sink 的穩定協議。內建
 檔案日誌 Sink 將 `UsageEvent` 轉換為計量接收端使用的扁平 JSON。每個事件寫成
 一行：
 
@@ -215,9 +215,9 @@ server:
 ```
 
 部署時必須設定 `resource_id_env` 指定的環境變數。Sink 使用其值構造
-`tenant_id`，保證不同 OpenViking resource 的資料相互隔離。
+`tenant_id`，保證不同 Business Data Platform resource 的資料相互隔離。
 
-## 8. 對 OpenViking 的侵入
+## 8. 對 Business Data Platform 的侵入
 
 侵入點控制在 4 個地方。
 

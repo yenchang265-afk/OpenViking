@@ -7,7 +7,7 @@ export default {
     unauthenticated: '請檢查連線憑據後重試。',
     conflict: '本次提交與已有請求衝突。',
     network: '無法連線伺服器，請檢查網路後重試。',
-    upgrade: '請升級 OpenViking 後使用任務歷史分頁。',
+    upgrade: '請升級 Business Data Platform 後使用任務歷史分頁。',
     details: '技術詳情',
   },
   commandErrors: {

@@ -322,7 +322,7 @@ async def _evaluate_rollout_with_real_llm(
     ]
     prompt = "\n".join(
         [
-            "你是 OpenViking 離線訓練的嚴格評估器。",
+            "你是 Business Data Platform 離線訓練的嚴格評估器。",
             "請評估助手是否真正完成了當前已解鎖的 hidden Rubric。只根據助手輸出評分。",
             "不要因為 Case Input 中出現了約束就給分；必須看助手是否實際執行了該要求。",
             "",

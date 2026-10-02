@@ -49,7 +49,7 @@ DEFAULT_OPENVIKING_AGENT_ID = "web-playground"
 OPENVIKING_AUTH_TIMEOUT_SECONDS = 5.0
 OPENVIKING_PROXY_TIMEOUT_SECONDS = 300.0
 OPENVIKING_UPSTREAM_NOT_CONFIGURED_DETAIL = (
-    "VikingBot gateway proxy is active, but no available OpenViking server is configured"
+    "VikingBot gateway proxy is active, but no available Business Data Platform server is configured"
 )
 HOP_BY_HOP_HEADERS = {
     "connection",
@@ -361,7 +361,7 @@ class OpenAPIChannel(BaseChannel):
             http_request: Request,
             x_gateway_token: Optional[str] = Header(None, alias="X-Gateway-Token"),
         ) -> GatewayRequestAuth:
-            """Verify gateway access and resolve caller OpenViking identity when needed."""
+            """Verify gateway access and resolve caller Business Data Platform identity when needed."""
             return await channel._verify_gateway_request(http_request, x_gateway_token)
 
         if getattr(channel, "_studio_service", None) is not None:
@@ -571,7 +571,7 @@ class OpenAPIChannel(BaseChannel):
         return router
 
     def _create_gateway_router(self) -> APIRouter:
-        """Create root-level gateway routes for health and OpenViking proxy."""
+        """Create root-level gateway routes for health and Business Data Platform proxy."""
         router = APIRouter()
         channel = self
 
@@ -749,27 +749,27 @@ class OpenAPIChannel(BaseChannel):
         except httpx.HTTPError as exc:
             raise HTTPException(
                 status_code=502,
-                detail=f"OpenViking upstream health check failed: {exc.__class__.__name__}",
+                detail=f"Business Data Platform upstream health check failed: {exc.__class__.__name__}",
             ) from exc
 
         if response.status_code in {401, 403}:
-            raise HTTPException(status_code=401, detail="Invalid OpenViking credentials")
+            raise HTTPException(status_code=401, detail="Invalid Business Data Platform credentials")
         if not 200 <= response.status_code < 300:
             raise HTTPException(
                 status_code=502,
-                detail=f"OpenViking upstream health check failed: HTTP {response.status_code}",
+                detail=f"Business Data Platform upstream health check failed: HTTP {response.status_code}",
             )
         try:
             data = response.json()
         except ValueError as exc:
             raise HTTPException(
                 status_code=502,
-                detail="OpenViking upstream health check returned non-JSON response",
+                detail="Business Data Platform upstream health check returned non-JSON response",
             ) from exc
         if not isinstance(data, dict):
             raise HTTPException(
                 status_code=502,
-                detail="OpenViking upstream health check returned invalid response",
+                detail="Business Data Platform upstream health check returned invalid response",
             )
         return data
 
@@ -824,22 +824,22 @@ class OpenAPIChannel(BaseChannel):
         if not actual_auth_mode:
             raise HTTPException(
                 status_code=503,
-                detail="OpenViking upstream health response did not include auth_mode",
+                detail="Business Data Platform upstream health response did not include auth_mode",
             )
 
         if actual_auth_mode == "dev" and not self._is_safe_dev_boundary():
             raise HTTPException(
                 status_code=403,
                 detail=(
-                    "OpenViking server auth_mode changed to dev, but dev auth can only "
-                    "be used when gateway and OpenViking server are localhost"
+                    "Business Data Platform server auth_mode changed to dev, but dev auth can only "
+                    "be used when gateway and Business Data Platform server are localhost"
                 ),
             )
         if actual_auth_mode != expected_auth_mode:
             raise HTTPException(
                 status_code=503,
                 detail=(
-                    "OpenViking server auth_mode changed after gateway startup: "
+                    "Business Data Platform server auth_mode changed after gateway startup: "
                     f"gateway expects {expected_auth_mode}, server reports {actual_auth_mode}. "
                     "Restart VikingBot gateway or update ov.conf."
                 ),
@@ -890,7 +890,7 @@ class OpenAPIChannel(BaseChannel):
                     raise HTTPException(
                         status_code=401,
                         detail=(
-                            "OpenViking credentials did not resolve to a usable "
+                            "Business Data Platform credentials did not resolve to a usable "
                             "User/Admin identity"
                         ),
                     )
@@ -899,7 +899,7 @@ class OpenAPIChannel(BaseChannel):
                 if not account_id or not user_id:
                     raise HTTPException(
                         status_code=401,
-                        detail="Invalid OpenViking credentials",
+                        detail="Invalid Business Data Platform credentials",
                     )
                 api_key_type = "root" if auth_mode == "trusted" else "user"
                 role = role or str(values.get("role") or "user").strip().lower() or "user"
@@ -922,7 +922,7 @@ class OpenAPIChannel(BaseChannel):
             raise HTTPException(
                 status_code=401,
                 detail=(
-                    "OpenViking API key required on forwarded connection "
+                    "Business Data Platform API key required on forwarded connection "
                     f"when upstream auth_mode is {auth_mode or 'unknown'}"
                 ),
             )
@@ -972,7 +972,7 @@ class OpenAPIChannel(BaseChannel):
         if role not in {"user", "admin"} or not account_id or not user_id:
             raise HTTPException(
                 status_code=401,
-                detail="OpenViking credentials did not resolve to a usable User/Admin identity",
+                detail="Business Data Platform credentials did not resolve to a usable User/Admin identity",
             )
         return self._build_openviking_connection(
             api_key=self._extract_api_key(request),
@@ -991,7 +991,7 @@ class OpenAPIChannel(BaseChannel):
             getattr(getattr(self._global_config, "ov_server", None), "api_key", "") or ""
         ).strip()
         if not api_key and configured_api_key:
-            raise HTTPException(status_code=401, detail="OpenViking API key header required")
+            raise HTTPException(status_code=401, detail="Business Data Platform API key header required")
         account_id = str(request.headers.get("X-OpenViking-Account") or "").strip()
         user_id = str(request.headers.get("X-OpenViking-User") or "").strip()
         if not account_id or not user_id:
@@ -1003,7 +1003,7 @@ class OpenAPIChannel(BaseChannel):
             raise HTTPException(
                 status_code=401,
                 detail=(
-                    "Trusted OpenViking chat requires "
+                    "Trusted Business Data Platform chat requires "
                     + " and ".join(missing)
                     + ". Configure account/user in ovcli.conf or pass the headers."
                 ),
@@ -1019,7 +1019,7 @@ class OpenAPIChannel(BaseChannel):
             or resolved_account_id != account_id
             or resolved_user_id != user_id
         ):
-            raise HTTPException(status_code=401, detail="Invalid OpenViking credentials")
+            raise HTTPException(status_code=401, detail="Invalid Business Data Platform credentials")
         return self._build_openviking_connection(
             api_key=api_key,
             account_id=account_id,
@@ -1170,13 +1170,13 @@ class OpenAPIChannel(BaseChannel):
             if not self._is_safe_dev_boundary():
                 raise HTTPException(
                     status_code=403,
-                    detail="OpenViking dev auth can only be used when gateway and OpenViking server are localhost",
+                    detail="Business Data Platform dev auth can only be used when gateway and Business Data Platform server are localhost",
                 )
             await self._assert_runtime_upstream_auth_mode({})
             return None, self._principal_scope("dev")
         if auth_mode == "api_key":
             if not self._has_openviking_auth_headers(http_request):
-                raise HTTPException(status_code=401, detail="OpenViking API key header required")
+                raise HTTPException(status_code=401, detail="Business Data Platform API key header required")
             health = await self._request_upstream_health(http_request)
             self._assert_runtime_health_mode(health)
             connection = self._resolve_api_key_connection(http_request, health)
@@ -1185,10 +1185,10 @@ class OpenAPIChannel(BaseChannel):
         else:
             raise HTTPException(
                 status_code=503,
-                detail=f"Unsupported OpenViking auth mode for gateway: {auth_mode}",
+                detail=f"Unsupported Business Data Platform auth mode for gateway: {auth_mode}",
             )
         if connection is None and auth_mode == "api_key":
-            raise HTTPException(status_code=401, detail="OpenViking API key header required")
+            raise HTTPException(status_code=401, detail="Business Data Platform API key header required")
 
         return connection, self._connection_principal_scope(connection)
 
@@ -1216,7 +1216,7 @@ class OpenAPIChannel(BaseChannel):
         if not account_id or not user_id:
             raise HTTPException(
                 status_code=401,
-                detail="OpenViking identity did not include account_id and user_id",
+                detail="Business Data Platform identity did not include account_id and user_id",
             )
         return self._principal_scope(f"openviking:{account_id}:{user_id}")
 
@@ -1301,7 +1301,7 @@ class OpenAPIChannel(BaseChannel):
         return payload
 
     def _proxy_request_headers(self, request: Request) -> dict[str, str]:
-        # OpenViking credentials and identity are request-scoped. The gateway must
+        # Business Data Platform credentials and identity are request-scoped. The gateway must
         # never fill them from bot.ov_server while proxying a client request.
         headers: dict[str, str] = {}
         for key, value in request.headers.items():
@@ -1353,7 +1353,7 @@ class OpenAPIChannel(BaseChannel):
             await client.aclose()
             raise HTTPException(
                 status_code=502,
-                detail=f"OpenViking upstream proxy request failed: {exc.__class__.__name__}",
+                detail=f"Business Data Platform upstream proxy request failed: {exc.__class__.__name__}",
             ) from exc
         except BaseException:
             await client.aclose()

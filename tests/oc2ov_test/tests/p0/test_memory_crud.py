@@ -122,7 +122,7 @@ class TestMemoryDelete(BaseOpenClawCLITest):
 class TestMemoryUpdateOverwrite(BaseOpenClawCLITest):
     """
     記憶更新覆蓋驗證
-    測試目標：驗證使用者更新資訊後，OpenViking自動覆蓋舊記憶，不產生冗餘資料
+    測試目標：驗證使用者更新資訊後，Business Data Platform自動覆蓋舊記憶，不產生冗餘資料
     測試場景：先寫入初始資訊，再更新資訊，驗證只保留新資訊
     注意：group_b/group_c 已移至 p1，僅保留 group_a 作為核心驗證
     """

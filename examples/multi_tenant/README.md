@@ -1,6 +1,6 @@
-# OpenViking Multi-Tenant 示例
+# Business Data Platform Multi-Tenant 示例
 
-演示 OpenViking 多租戶管理功能：帳戶建立、使用者註冊、角色管理、Key 管理、資料訪問。
+演示 Business Data Platform 多租戶管理功能：帳戶建立、使用者註冊、角色管理、Key 管理、資料訪問。
 
 ## 架構
 
@@ -14,7 +14,7 @@
                                 │
                                 ▼
 ┌──────────┐  User Key   ┌──────────────────┐  Root Key   ┌──────────┐
-│  Alice   │ ──────────► │  OpenViking      │ ◄────────── │  Admin   │
+│  Alice   │ ──────────► │  Business Data Platform      │ ◄────────── │  Admin   │
 │  (ADMIN) │             │  Server          │             │  (ROOT)  │
 └──────────┘             │                  │             └──────────┘
 ┌──────────┐  User Key   │  ov.conf:        │

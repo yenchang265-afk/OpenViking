@@ -1,10 +1,10 @@
-# OpenViking Helm Chart
+# Business Data Platform Helm Chart
 
-此 Helm Chart 用於在 Kubernetes 上部署 OpenViking，提供可擴充、生產就緒的 RAG（檢索增強生成）和語義搜尋服務。
+此 Helm Chart 用於在 Kubernetes 上部署 Business Data Platform，提供可擴充、生產就緒的 RAG（檢索增強生成）和語義搜尋服務。
 
 ## 概述
 
-[OpenViking](https://github.com/volcengine/OpenViking) 是一個開源的 RAG 和語義搜尋引擎，作為上下文資料庫 MCP（Model Context Protocol）伺服器執行。此 Helm Chart 支援在 Kubernetes 叢集上輕鬆部署，相容主流雲服務商。
+[Business Data Platform](https://github.com/volcengine/OpenViking) 是一個開源的 RAG 和語義搜尋引擎，作為上下文資料庫 MCP（Model Context Protocol）伺服器執行。此 Helm Chart 支援在 Kubernetes 叢集上輕鬆部署，相容主流雲服務商。
 
 ## 前置條件
 
@@ -74,9 +74,9 @@ helm install openviking ./openviking \
 | `openviking.config.server.api_key` | 認證 API Key | `null` |
 | `openviking.config.embedding.dense.api_key` | 火山引擎 API Key | `null` |
 
-### OpenViking 配置
+### Business Data Platform 配置
 
-`ov.conf` 中的所有 OpenViking 配置選項都在 `openviking.config` 下可用。完整預設配置請參見 `values.yaml`。
+`ov.conf` 中的所有 Business Data Platform 配置選項都在 `openviking.config` 下可用。完整預設配置請參見 `values.yaml`。
 
 ### Embedding 配置
 
@@ -130,7 +130,7 @@ openviking:
 
 ### API Key 認證
 
-啟用 API Key 認證以保護 OpenViking 伺服器：
+啟用 API Key 認證以保護 Business Data Platform 伺服器：
 
 ```yaml
 openviking:
@@ -265,8 +265,8 @@ kubectl delete pvc openviking-data
 
 ## 貢獻
 
-歡迎貢獻！請參見 [OpenViking 倉庫](https://github.com/volcengine/OpenViking) 的貢獻指南。
+歡迎貢獻！請參見 [Business Data Platform 倉庫](https://github.com/volcengine/OpenViking) 的貢獻指南。
 
 ## 許可證
 
-此 Helm Chart 採用 Apache License 2.0 許可證，與 OpenViking 專案許可證一致。
+此 Helm Chart 採用 Apache License 2.0 許可證，與 Business Data Platform 專案許可證一致。

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * OpenViking statusline for Claude Code.
+ * Business Data Platform statusline for Claude Code.
  *
  * Wired into ~/.claude/settings.json `.statusLine` by the plugin installer.
  * CC invokes this command on each conversation update, fresh process, with

@@ -1,14 +1,14 @@
-# OpenViking WebSocket RPC Guide
+# Business Data Platform WebSocket RPC Guide
 
-This document explains how to call the OpenViking OpenClaw plugin through the OpenClaw Gateway WebSocket RPC surface.
+This document explains how to call the Business Data Platform OpenClaw plugin through the OpenClaw Gateway WebSocket RPC surface.
 
-The plugin does not start its own WebSocket server. OpenViking tools are registered through the OpenClaw plugin API, and the Gateway exposes them through standard tool RPC methods.
+The plugin does not start its own WebSocket server. Business Data Platform tools are registered through the OpenClaw plugin API, and the Gateway exposes them through standard tool RPC methods.
 
 ## Supported Flow
 
 1. Connect to the OpenClaw Gateway WebSocket endpoint.
 2. Call `tools.effective` for a real `sessionKey` to inspect tools available in the current session.
-3. Call `tools.invoke` with an OpenViking tool name and JSON arguments.
+3. Call `tools.invoke` with a Business Data Platform tool name and JSON arguments.
 
 Typical endpoint:
 
@@ -64,11 +64,11 @@ Use the current OpenClaw session key. Do not invent a synthetic session key for 
 }
 ```
 
-OpenViking plugin tools are entries with `source="plugin"` and `pluginId="openviking"`.
+Business Data Platform plugin tools are entries with `source="plugin"` and `pluginId="openviking"`.
 
 ## Invoke Tools
 
-All OpenViking tools use `tools.invoke`.
+All Business Data Platform tools use `tools.invoke`.
 
 ```json
 {
@@ -79,7 +79,7 @@ All OpenViking tools use `tools.invoke`.
     "name": "ov_search",
     "sessionKey": "main",
     "args": {
-      "query": "OpenViking installation",
+      "query": "Business Data Platform installation",
       "limit": 5
     }
   }
@@ -88,13 +88,13 @@ All OpenViking tools use `tools.invoke`.
 
 `params.sessionKey` is the Gateway/session routing field. It tells OpenClaw which session context the tool call belongs to.
 
-`params.args.sessionKey` is a tool argument only when a specific OpenViking tool defines it. For example, `ov_recall_trace` can use it as an explicit trace filter. For the current session's trace, pass only the outer `params.sessionKey` unless you intentionally want a different filter.
+`params.args.sessionKey` is a tool argument only when a specific Business Data Platform tool defines it. For example, `ov_recall_trace` can use it as an explicit trace filter. For the current session's trace, pass only the outer `params.sessionKey` unless you intentionally want a different filter.
 
 ## Common Tools
 
 ### `ov_search`
 
-Search OpenViking resources, skills, and memories.
+Search Business Data Platform resources, skills, and memories.
 
 ```json
 {
@@ -167,7 +167,7 @@ Recall semantic memories and resources. Current semantic recall target types are
 
 ### `memory_store`
 
-把文本寫入 OpenViking session，並立即觸發記憶抽取。
+把文本寫入 Business Data Platform session，並立即觸發記憶抽取。
 
 ```json
 {
@@ -191,7 +191,7 @@ Recall semantic memories and resources. Current semantic recall target types are
 |------|------|------|------|
 | `text` | string | 是 | 作為記憶來源的文本 |
 | `role` | string | 否 | session 訊息角色，預設 `user` |
-| `sessionId` | string | 否 | 指定已有 OpenViking session；不傳則使用臨時 session |
+| `sessionId` | string | 否 | 指定已有 Business Data Platform session；不傳則使用臨時 session |
 
 ### `memory_forget`
 
@@ -246,7 +246,7 @@ Recall semantic memories and resources. Current semantic recall target types are
 
 ### `add_skill`
 
-匯入 Agent Skill 到當前使用者/peer 的 OpenViking skill namespace。
+匯入 Agent Skill 到當前使用者/peer 的 Business Data Platform skill namespace。
 
 ```json
 {
@@ -294,7 +294,7 @@ Recall semantic memories and resources. Current semantic recall target types are
 
 ### `add_resource`
 
-匯入文件、目錄、URL 或 Git 倉庫到 OpenViking resources。
+匯入文件、目錄、URL 或 Git 倉庫到 Business Data Platform resources。
 
 注意：該工具預設不暴露給 Agent，必須在外掛配置中設定 `enableAddResourceTool=true`，並且工具策略允許它，才能通過 `tools.invoke` 呼叫。未啟用時可使用 slash command `/add-resource`。
 
@@ -406,7 +406,7 @@ Inspect recall traces when `traceRecall` is enabled.
 | `traceId` | string | 否 | 精確 trace id |
 | `sessionId` | string | 否 | OpenClaw session id |
 | `sessionKey` | string | 否 | OpenClaw session key |
-| `ovSessionId` | string | 否 | OpenViking session id |
+| `ovSessionId` | string | 否 | Business Data Platform session id |
 | `source` | string | 否 | `auto_recall`、`memory_recall`、`ov_search` 或 `ov_archive_search` |
 | `resourceTypes` | string[] | 否 | `resource`、`user`、`agent` |
 | `since` | number | 否 | Unix timestamp 毫秒下界 |
@@ -416,7 +416,7 @@ Inspect recall traces when `traceRecall` is enabled.
 
 ### `openviking_tool_result_list`
 
-列出當前 session 中被 OpenViking 外接的大工具結果。
+列出當前 session 中被 Business Data Platform 外接的大工具結果。
 
 ```json
 {
@@ -518,7 +518,7 @@ Successful tool invocation usually returns a Gateway response whose payload cont
       "content": [
         {
           "type": "text",
-          "text": "Found 2 OpenViking results ..."
+          "text": "Found 2 Business Data Platform results ..."
         }
       ],
       "details": {
@@ -552,7 +552,7 @@ If the Gateway accepted the RPC request but the tool failed, the outer `ok` can 
 
 - Use `tools.effective` before invoking a tool in a live session.
 - Use exact `viking://` URIs with `ov_read` and `ov_multi_read`.
-- Do not use deprecated agent URI paths for memory routing. Current routing is based on OpenViking context type and actor peer identity.
+- Do not use deprecated agent URI paths for memory routing. Current routing is based on Business Data Platform context type and actor peer identity.
 - For recall trace HTTP routes, see `openviking-recall-trace-api.md`.
 
 ## 本機驗證記錄（2026-06-05）
@@ -560,9 +560,9 @@ If the Gateway accepted the RPC request but the tool failed, the outer `ok` can 
 本節保留 #2613 中的 WebSocket RPC 實測記錄和可複製命令，但按當前主線語義調整：
 
 - 不使用舊 `agent_prefix` / `X-OpenViking-Agent` / `viking://agent/...` 路徑。
-- OpenViking 外掛仍通過 OpenClaw Gateway 暴露工具，外掛自身不啟動 WebSocket server。
+- Business Data Platform 外掛仍通過 OpenClaw Gateway 暴露工具，外掛自身不啟動 WebSocket server。
 - 語義召回目標使用 `user`、`agent`、`resource`；session 歷史不作為 vector recall target，應走 `ov_archive_search` / `ov_archive_expand`。
-- 當前主線通過 OpenViking `context_type` 與 `X-OpenViking-Actor-Peer` 做檢索和 actor peer 路由。
+- 當前主線通過 Business Data Platform `context_type` 與 `X-OpenViking-Actor-Peer` 做檢索和 actor peer 路由。
 
 驗證環境：
 
@@ -577,10 +577,10 @@ If the Gateway accepted the RPC request but the tool failed, the outer `ok` can 
 | WS-RPC-01 | `health` | `{}` | Gateway 健康檢查成功 | `ok=true`、`runtimeVersion=2026.5.28`、`eventLoop.degraded=false` | 通過 |
 | WS-RPC-02 | `status` | `{}` | 返回執行時和 session 狀態 | `defaultAgentId=main`、`mainHeartbeatEnabled=true`、`eventLoopDegraded=false` | 通過 |
 | WS-RPC-03 | `system-presence` | `{}` | 返回當前 Gateway/CLI presence | 返回 macOS gateway 節點與 CLI probe 節點 | 通過 |
-| WS-RPC-04 | `tools.catalog` | `{"agentId":"main"}` | agent 工具目錄包含 OpenViking 工具 | `group_count=14`、OpenViking 工具可見 | 通過 |
-| WS-RPC-05 | `tools.effective` | `{"sessionKey":"<真實 sessionKey>"}` | 當前 session 可用工具包含 OpenViking 工具 | `agentId=main`、`profile=full`、OpenViking 工具可見 | 通過 |
+| WS-RPC-04 | `tools.catalog` | `{"agentId":"main"}` | agent 工具目錄包含 Business Data Platform 工具 | `group_count=14`、Business Data Platform 工具可見 | 通過 |
+| WS-RPC-05 | `tools.effective` | `{"sessionKey":"<真實 sessionKey>"}` | 當前 session 可用工具包含 Business Data Platform 工具 | `agentId=main`、`profile=full`、Business Data Platform 工具可見 | 通過 |
 
-常見 OpenViking 工具包括：
+常見 Business Data Platform 工具包括：
 
 ```text
 add_skill, memory_forget, memory_recall, memory_store,
@@ -612,7 +612,7 @@ fi
 echo "$SK"
 ```
 
-### OpenViking 工具呼叫
+### Business Data Platform 工具呼叫
 
 #### `ov_search`
 
@@ -738,7 +738,7 @@ openclaw gateway call tools.invoke \
 
 ### Trace RPC 專項驗證
 
-以下命令均通過 `tools.invoke` 呼叫 OpenViking 工具 `ov_recall_trace`。
+以下命令均通過 `tools.invoke` 呼叫 Business Data Platform 工具 `ov_recall_trace`。
 
 外層 `params.sessionKey` 是 Gateway 的執行上下文，也是預設 trace 查詢身份。`args.sessionKey` 只用於“按 trace 記錄裡的 sessionKey 精確過濾”的場景；日常排查當前 session 時，優先只傳外層 `sessionKey`。
 
@@ -845,7 +845,7 @@ openclaw gateway call tools.invoke \
 
 檢查：
 
-1. OpenViking 外掛是否安裝並啟用。
+1. Business Data Platform 外掛是否安裝並啟用。
 2. Gateway 是否已重啟。
 3. `openclaw.plugin.json` 中工具 contract 是否包含該工具。
 4. 外掛配置 `enabledTools` / `disabledTools` 是否過濾了該工具。

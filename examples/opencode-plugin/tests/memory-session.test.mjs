@@ -253,7 +253,7 @@ test("OpenCode tool parts preserve completed and error state fields", async () =
             state: {
               status: "error",
               input: { uris: uri },
-              error: "OpenViking request failed",
+              error: "Business Data Platform request failed",
             },
           },
         ],
@@ -296,7 +296,7 @@ test("OpenCode tool parts preserve completed and error state fields", async () =
               tool_name: "openviking_read",
               tool_status: "error",
               tool_input: { uris: uri },
-              tool_output: "OpenViking request failed",
+              tool_output: "Business Data Platform request failed",
             },
           ],
         },

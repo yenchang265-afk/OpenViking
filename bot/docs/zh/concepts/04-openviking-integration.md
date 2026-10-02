@@ -1,18 +1,18 @@
-# VikingBot 與 OpenViking 整合
+# VikingBot 與 Business Data Platform 整合
 
-OpenViking 是 VikingBot 的長期上下文層。VikingBot 自己負責即時對話、模型推理和工具執行；OpenViking 負責統一儲存和檢索 Resource、Memory、Skill，以及從會話中沉澱可跨任務複用的記憶與經驗。
+Business Data Platform 是 VikingBot 的長期上下文層。VikingBot 自己負責即時對話、模型推理和工具執行；Business Data Platform 負責統一儲存和檢索 Resource、Memory、Skill，以及從會話中沉澱可跨任務複用的記憶與經驗。
 
 ## 整合目標
 
 ```text
-OpenViking → VikingBot
+Business Data Platform → VikingBot
   Resource：為任務提供知識與檔案上下文
   Skill：提供可檢索的任務指令與配套資源
   Memory：提供當前使用者/Peer 的 Profile、偏好、實體和事件
   Experience：提供 Agent 過去完成類似任務的方法
   Session：提供壓縮歷史和會話歸檔
 
-VikingBot → OpenViking
+VikingBot → Business Data Platform
   添加 Resource
   記錄會話訊息和使用過的上下文
   提交 Session，觸發摘要、記憶和經驗提取
@@ -23,15 +23,15 @@ VikingBot → OpenViking
 
 ## 連線模式
 
-VikingBot 從同一個 `ov.conf` 解析 OpenViking 連線，支援三種拓撲：
+VikingBot 從同一個 `ov.conf` 解析 Business Data Platform 連線，支援三種拓撲：
 
 | 模式 | 配置來源 | 行為 |
 |------|----------|------|
-| **Inherited** | 繼承根級 `server` | Bot 與當前 OpenViking Server 配套執行 |
-| **Explicit** | `bot.ov_server.server_url` | Bot 連線另一個 OpenViking Server |
-| **Standalone** | 沒有可用 Server URL | 基礎對話可執行，OpenViking 能力降級 |
+| **Inherited** | 繼承根級 `server` | Bot 與當前 Business Data Platform Server 配套執行 |
+| **Explicit** | `bot.ov_server.server_url` | Bot 連線另一個 Business Data Platform Server |
+| **Standalone** | 沒有可用 Server URL | 基礎對話可執行，Business Data Platform 能力降級 |
 
-`openviking-server --with-bot` 對應 **Inherited** 模式：Server 啟動受管的 VikingBot Gateway，並把當前 Server 的連線資訊傳給 Bot。下面的配置示例同樣屬於 Inherited 模式，根級 `server` 定義當前 OpenViking Server，`bot.ov_server` 只提供 Bot 訪問該 Server 的憑證，沒有配置 `server_url`。如果要使用 **Explicit** 模式連線另一套 OpenViking Server，應在 `bot.ov_server` 中同時配置目標 URL 和對應憑證。
+`openviking-server --with-bot` 對應 **Inherited** 模式：Server 啟動受管的 VikingBot Gateway，並把當前 Server 的連線資訊傳給 Bot。下面的配置示例同樣屬於 Inherited 模式，根級 `server` 定義當前 Business Data Platform Server，`bot.ov_server` 只提供 Bot 訪問該 Server 的憑證，沒有配置 `server_url`。如果要使用 **Explicit** 模式連線另一套 Business Data Platform Server，應在 `bot.ov_server` 中同時配置目標 URL 和對應憑證。
 
 示例：
 
@@ -53,14 +53,14 @@ VikingBot 從同一個 `ov.conf` 解析 OpenViking 連線，支援三種拓撲�
 
 ## 認證與身份模型
 
-OpenViking 連線支援 User key 和 Root key：
+Business Data Platform 連線支援 User key 和 Root key：
 
 | `api_key_type` | 典型場景 | 含義 |
 |----------------|----------|------|
-| `user` | `api_key` / `dev` auth mode | 以 OpenViking User 身份訪問 |
+| `user` | `api_key` / `dev` auth mode | 以 Business Data Platform User 身份訪問 |
 | `root` | `trusted` auth mode | Gateway 使用 Root key，並轉發可信身份頭 |
 
-沒有顯式配置 `api_key_type` 時，VikingBot 根據同一 `ov.conf` 中 OpenViking Server 的有效 auth mode 推導預設值。
+沒有顯式配置 `api_key_type` 時，VikingBot 根據同一 `ov.conf` 中 Business Data Platform Server 的有效 auth mode 推導預設值。
 
 在當前 User/Peer 模型中：
 
@@ -73,7 +73,7 @@ Gateway 請求中可能攜帶 request-scoped `openviking_connection`，其中包
 
 ## 客戶端選擇
 
-OpenViking 訪問主要通過 `VikingClient` 完成：
+Business Data Platform 訪問主要通過 `VikingClient` 完成：
 
 ```text
 有 request-scoped openviking_connection
@@ -92,17 +92,17 @@ OpenViking 訪問主要通過 `VikingClient` 完成：
 
 VikingBot 使用 SandboxManager 計算 workspace ID：
 
-| Sandbox mode | OpenViking workspace ID |
+| Sandbox mode | Business Data Platform workspace ID |
 |--------------|-------------------------|
 | `shared` | `shared` |
 | `per-session` | SessionKey 的安全名稱 |
 | `per-channel` | `type__channel_id` |
 
-該 ID 用於區分 Bot 工作區相關的 OpenViking 客戶端、Session 和經驗上下文。身份隔離仍由 OpenViking account/user/agent/peer 規則負責，workspace ID 不能替代認證。
+該 ID 用於區分 Bot 工作區相關的 Business Data Platform 客戶端、Session 和經驗上下文。身份隔離仍由 Business Data Platform account/user/agent/peer 規則負責，workspace ID 不能替代認證。
 
 ## 自動上下文召回
 
-ContextBuilder 在處理每條使用者訊息、首次呼叫模型前構建 OpenViking 上下文。本輪後續工具迭代複用這份基礎上下文，並可在寫工具或 Skill Hook 觸發時追加 Experience。
+ContextBuilder 在處理每條使用者訊息、首次呼叫模型前構建 Business Data Platform 上下文。本輪後續工具迭代複用這份基礎上下文，並可在寫工具或 Skill Hook 觸發時追加 Experience。
 
 ### Peer Profile
 
@@ -135,9 +135,9 @@ Experience 儲存 Agent 過去完成任務時形成的可複用方法。VikingBo
 
 `exp_write_tools` 指定哪些工具呼叫前需要補充檢索經驗，預設是 `write_file` 和 `edit_file`。AgentLoop 會基於最近幾條使用者訊息檢索 Experience，並在真正寫入前把結果加入當前上下文。
 
-該配置只控制 Bot 側的召回時機；OpenViking 是否生成 Experience 由 Session 的 memory policy 決定。
+該配置只控制 Bot 側的召回時機；Business Data Platform 是否生成 Experience 由 Session 的 memory policy 決定。
 
-## OpenViking 工具
+## Business Data Platform 工具
 
 當渠道啟用 `ov_tools_enable` 時，Agent 可以使用：
 
@@ -145,36 +145,36 @@ Experience 儲存 Agent 過去完成任務時形成的可複用方法。VikingBo
 |------|------|
 | `openviking_list` | 瀏覽 Viking URI 目錄 |
 | `openviking_search` | 對資源、記憶和 Skill 做語義檢索 |
-| `openviking_grep` | 在 OpenViking 內容中做正則搜尋 |
+| `openviking_grep` | 在 Business Data Platform 內容中做正則搜尋 |
 | `openviking_glob` | 按 URI 路徑模式搜尋 |
 | `openviking_multi_read` | 併發讀取多個 URI 的完整內容 |
 | `openviking_add_resource` | 新增 URL、本地檔案或程式碼資源 |
 | `openviking_memory_commit` | 顯式提交當前會話中的長期記憶 |
 
-OpenViking 工具通過 ToolContext 獲得當前 actor peer 和 request-scoped connection。檢索預設覆蓋當前身份允許訪問的資源、Peer 記憶和 Skill 路徑。
+Business Data Platform 工具通過 ToolContext 獲得當前 actor peer 和 request-scoped connection。檢索預設覆蓋當前身份允許訪問的資源、Peer 記憶和 Skill 路徑。
 
 `openviking_add_resource` 是非同步資源處理操作；`readonly` 模式不註冊該工具。`openviking_memory_commit` 適用於使用者明確要求“記住”某項資訊的場景。
 
 ## 使用遠端 Skill
 
-先用 `ov add-skill ./skills/<name>/` 將 Skill 包上傳到 Bot 所連線的 OpenViking 服務，並確認 Bot 當前身份有讀取許可權。當前渠道啟用 `ov_tools_enable`、連線可用且 `openviking_multi_read` 未被停用時，Bot 會根據使用者問題檢索遠端 Skill 摘要。
+先用 `ov add-skill ./skills/<name>/` 將 Skill 包上傳到 Bot 所連線的 Business Data Platform 服務，並確認 Bot 當前身份有讀取許可權。當前渠道啟用 `ov_tools_enable`、連線可用且 `openviking_multi_read` 未被停用時，Bot 會根據使用者問題檢索遠端 Skill 摘要。
 
 模型用 `openviking_multi_read` 讀取選中的 `SKILL.md` URI 後，執行時自動校驗並激活 Skill；也可以直接向 Bot 提供服務返回的 canonical `SKILL.md` URI。文本引用繼續遠端讀取，指令碼或工具需要本地檔案時才下載包並改寫路徑。每條使用者訊息獨立啟用，執行副本在本 Turn 結束時清理。
 
 無需額外的 Remote Skill 開關或手工下載步驟。本地/遠端使用示例、frontmatter 欄位、工具許可權和 `bot.remote_skills` 配置見 [Skills](./06-skills.md)。
 
-## 本地 Session 與 OpenViking Session
+## 本地 Session 與 Business Data Platform Session
 
 兩類 Session 不應混淆：
 
 | Session | 儲存 | 職責 |
 |---------|------|------|
 | VikingBot Session | 本地 JSONL | 執行歷史、渠道狀態、工具事件、回覆與反饋 |
-| OpenViking Session | OpenViking Server | 訊息歸檔、壓縮摘要、記憶和經驗提取 |
+| Business Data Platform Session | Business Data Platform Server | 訊息歸檔、壓縮摘要、記憶和經驗提取 |
 
-VikingBot Session metadata 記錄 OpenViking 同步狀態：
+VikingBot Session metadata 記錄 Business Data Platform 同步狀態：
 
-- OpenViking session ID；
+- Business Data Platform session ID；
 - 最後同步的本地訊息下標；
 - 最後 commit 的訊息下標；
 - 當前 pending token 數；
@@ -184,7 +184,7 @@ VikingBot Session metadata 記錄 OpenViking 同步狀態：
 
 ```text
 讀取本地 Session 中未同步的訊息
-  → append_messages 到 OpenViking Session
+  → append_messages 到 Business Data Platform Session
   → 更新 last_synced_local_index
   → 查詢 pending_tokens
   → 達到 token/訊息閾值或強制提交
@@ -218,9 +218,9 @@ agents:
 
 ## 壓縮會話上下文
 
-預設模型歷史來自本地 Session 最近 `memory_window` 條訊息。設定 `agents.session_context_enabled=true` 後，VikingBot 可以從 OpenViking Session 獲取壓縮後的歷史，並使用 `session_context_token_budget` 控制預算。
+預設模型歷史來自本地 Session 最近 `memory_window` 條訊息。設定 `agents.session_context_enabled=true` 後，VikingBot 可以從 Business Data Platform Session 獲取壓縮後的歷史，並使用 `session_context_token_budget` 控制預算。
 
-在新一輪開始前，如果歷史達到閾值，AgentLoop 會先同步和 commit OpenViking Session，再構建新的提示上下文，從而避免超長對話持續膨脹。
+在新一輪開始前，如果歷史達到閾值，AgentLoop 會先同步和 commit Business Data Platform Session，再構建新的提示上下文，從而避免超長對話持續膨脹。
 
 ## 顯式記憶提交
 
@@ -228,13 +228,13 @@ agents:
 
 ```text
 當前 Bot Session 訊息
-  → 追加到 OpenViking Session
+  → 追加到 Business Data Platform Session
   → commit
   → 等待或查詢後臺任務
   → 返回新增/更新/刪除的 Memory URI
 ```
 
-在 `readonly` 模式或渠道關閉 OpenViking 工具時，不會執行主動記憶固化。
+在 `readonly` 模式或渠道關閉 Business Data Platform 工具時，不會執行主動記憶固化。
 
 ## 經驗閉環
 
@@ -245,16 +245,16 @@ agents:
   → 檢索 Resource / Peer Memory / Experience
   → Agent 使用 Skill 和工具執行任務
   → 本地 Session 記錄訊息、工具和結果
-  → 增量同步並 commit OpenViking Session
-  → OpenViking 提取記憶和經驗
+  → 增量同步並 commit Business Data Platform Session
+  → Business Data Platform 提取記憶和經驗
   → 後續任務再次召回
 ```
 
-資源提供外部知識，Peer Memory 提供“關於當前使用者的資訊”，Experience 提供“Agent 過去如何做成類似任務”。三類上下文職責不同，但通過 Viking URI 和 OpenViking 檢索介面統一訪問。
+資源提供外部知識，Peer Memory 提供“關於當前使用者的資訊”，Experience 提供“Agent 過去如何做成類似任務”。三類上下文職責不同，但通過 Viking URI 和 Business Data Platform 檢索介面統一訪問。
 
 ## Gateway 代理
 
-配置 OpenViking Server 後，VikingBot Gateway 將 `/api/v1/{path}` 代理到 upstream。代理會：
+配置 Business Data Platform Server 後，VikingBot Gateway 將 `/api/v1/{path}` 代理到 upstream。代理會：
 
 1. 驗證 Gateway token 或本地請求邊界；
 2. 呼叫 upstream `/health` 確認實際 auth mode；
@@ -262,22 +262,22 @@ agents:
 4. 過濾 hop-by-hop headers；
 5. 轉發認證頭並保持響應狀態。
 
-Bot Chat 與 OpenViking API 因而可以通過同一個 Gateway 地址訪問，但身份仍由 OpenViking Server 最終驗證。
+Bot Chat 與 Business Data Platform API 因而可以通過同一個 Gateway 地址訪問，但身份仍由 Business Data Platform Server 最終驗證。
 
 ## 降級與錯誤邊界
 
 | 情況 | 行為 |
 |------|------|
-| 未配置 OpenViking Server | Bot 基礎聊天繼續執行，OpenViking 召回和工具不可用或跳過 |
+| 未配置 Business Data Platform Server | Bot 基礎聊天繼續執行，Business Data Platform 召回和工具不可用或跳過 |
 | 自動記憶召回失敗 | 記錄日誌，繼續模型呼叫 |
 | Session 同步失敗 | 記錄同步錯誤，保留本地 Session |
 | request-scoped 身份不可信 | Gateway 拒絕請求 |
 | upstream auth mode 與配置不一致 | Gateway 拒絕代理或聊天請求 |
-| `ov_tools_enable=false` | 不注入 OpenViking 記憶，也不暴露 OpenViking 工具 |
+| `ov_tools_enable=false` | 不注入 Business Data Platform 記憶，也不暴露 Business Data Platform 工具 |
 
 ## 可選 FUSE 掛載
 
-`openviking_mount` 還提供可選的 FUSE 掛載能力，可將 OpenViking 內容對映為本地目錄，並按 Session 建立或回收掛載點。它不在預設 AgentLoop 主鏈路中；預設 Bot 通過 VikingClient 和 `openviking_*` 工具訪問 OpenViking。
+`openviking_mount` 還提供可選的 FUSE 掛載能力，可將 Business Data Platform 內容對映為本地目錄，並按 Session 建立或回收掛載點。它不在預設 AgentLoop 主鏈路中；預設 Bot 通過 VikingClient 和 `openviking_*` 工具訪問 Business Data Platform。
 
 ## 實現位置
 
@@ -286,7 +286,7 @@ Bot Chat 與 OpenViking API 因而可以通過同一個 Gateway 地址訪問，�
 | 連線配置與合併 | `vikingbot/config/loader.py`、`schema.py` |
 | VikingClient 適配 | `vikingbot/openviking_mount/ov_server.py` |
 | 自動召回 | `vikingbot/agent/memory.py`、`context.py` |
-| OpenViking 工具 | `vikingbot/agent/tools/ov_file.py` |
+| Business Data Platform 工具 | `vikingbot/agent/tools/ov_file.py` |
 | Session 同步狀態 | `vikingbot/openviking_mount/session_state.py` |
 | Compact 與 Experience Hook | `vikingbot/hooks/builtins/openviking_hooks.py` |
 | Gateway 代理和身份解析 | `vikingbot/channels/openapi.py` |
@@ -298,6 +298,6 @@ Bot Chat 與 OpenViking API 因而可以通過同一個 Gateway 地址訪問，�
 - [Agent 能力體系](./02-agent-capabilities.md)
 - [Skills](./06-skills.md)
 - [渠道、Gateway 與執行管理](./03-channels-and-gateway.md)
-- [OpenViking 架構](../../../../docs/zh/concepts/01-architecture.md)
-- [OpenViking 上下文型別](../../../../docs/zh/concepts/02-context-types.md)
-- [OpenViking 會話管理](../../../../docs/zh/concepts/08-session.md)
+- [Business Data Platform 架構](../../../../docs/zh/concepts/01-architecture.md)
+- [Business Data Platform 上下文型別](../../../../docs/zh/concepts/02-context-types.md)
+- [Business Data Platform 會話管理](../../../../docs/zh/concepts/08-session.md)

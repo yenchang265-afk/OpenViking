@@ -38,7 +38,7 @@ async def test_context_mode_returns_flat_entries_within_budget(
         return _FakeFindResult(
             [
                 _memory("viking://user/test_user/memories/events/launch.md", 0.71, "Launch"),
-                _memory("viking://user/test_user/memories/entities/ov.md", 0.55, "OpenViking"),
+                _memory("viking://user/test_user/memories/entities/ov.md", 0.55, "Business Data Platform"),
             ]
         )
 

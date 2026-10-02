@@ -1,14 +1,14 @@
 
-按步驟複製以下命令到你的終端，執行即可完成安裝、配置和使用 OpenViking CLI：
+按步驟複製以下命令到你的終端，執行即可完成安裝、配置和使用 Business Data Platform CLI：
 
-### 步驟1：安裝 OpenViking CLI，並進入配置流程：
+### 步驟1：安裝 Business Data Platform CLI，並進入配置流程：
 
 ```bash
 npm i -g @openviking/cli && ov config
 ```
 
 
-### 步驟2：按提示填寫 OpenViking Base URL 和 API Key
+### 步驟2：按提示填寫 Business Data Platform Base URL 和 API Key
 
 - Base URL: 複製以下 Base URL 到你的終端
 ```text

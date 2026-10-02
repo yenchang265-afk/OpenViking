@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""``openviking-server ingest`` CLI: replay local agent-harness logs into OpenViking.
+"""``openviking-server ingest`` CLI: replay local agent-harness logs into Business Data Platform.
 
 Commands:
   list-sources  show registered harnesses and their config
@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 
 app = typer.Typer(
     add_completion=False,
-    help="Replay local agent-harness conversation logs into OpenViking.",
+    help="Replay local agent-harness conversation logs into Business Data Platform.",
 )
 
 

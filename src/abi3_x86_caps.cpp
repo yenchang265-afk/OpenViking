@@ -140,7 +140,7 @@ PyMethodDef kMethods[] = {
 PyModuleDef kModuleDef = {
     PyModuleDef_HEAD_INIT,
     "_x86_caps",
-    "OpenViking abi3 x86 capability probe.",
+    "Business Data Platform abi3 x86 capability probe.",
     -1,
     kMethods,
 };

@@ -1,8 +1,8 @@
 # openviking-sdk
 
-Lightweight Python HTTP SDK for OpenViking.
+Lightweight Python HTTP SDK for Business Data Platform.
 
-`openviking-sdk` is the small package for users who only need to call an existing OpenViking server over HTTP. It avoids the heavier local-runtime, server, and CLI dependencies from the main `openviking` package.
+`openviking-sdk` is the small package for users who only need to call an existing Business Data Platform server over HTTP. It avoids the heavier local-runtime, server, and CLI dependencies from the main `openviking` package.
 
 ## Installation
 
@@ -13,7 +13,7 @@ pip install openviking-sdk
 Requirements:
 
 - Python 3.8+
-- A reachable OpenViking HTTP server, for example `http://127.0.0.1:1933`
+- A reachable Business Data Platform HTTP server, for example `http://127.0.0.1:1933`
 
 ## Package Name vs Import Name
 
@@ -40,7 +40,7 @@ Most deployments use API key authentication.
 
 Common client fields:
 
-- `url`: OpenViking server base URL
+- `url`: Business Data Platform server base URL
 - `api_key`: root key or user key
 - `account`: optional account override, usually only needed with a root key
 - `user`: optional user override, usually only needed with a root key
@@ -105,7 +105,7 @@ other. Nested scopes restore the previous actor peer automatically.
 
 This scope does not change authentication or tenant ownership. Account and user
 identity remain bound to the API key or OAuth credential. Use a separate
-credential-bound client for each OpenViking user, and derive actor peer values
+credential-bound client for each Business Data Platform user, and derive actor peer values
 only from authenticated application state. The server applies the actor peer
 only to endpoints that accept an actor-peer view; session APIs remain
 user-scoped.

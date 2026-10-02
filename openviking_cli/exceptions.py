@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Unified exception classes for OpenViking.
+Unified exception classes for Business Data Platform.
 
 Based on gRPC standard status codes for consistency across service boundaries.
 """
@@ -10,7 +10,7 @@ from typing import Optional
 
 
 class OpenVikingError(Exception):
-    """Base exception for all OpenViking errors."""
+    """Base exception for all Business Data Platform errors."""
 
     def __init__(self, message: str, code: str = "UNKNOWN", details: Optional[dict] = None):
         super().__init__(message)

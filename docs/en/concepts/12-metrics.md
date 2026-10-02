@@ -1,6 +1,6 @@
 # Metrics
 
-OpenViking provides a machine-oriented metrics system for exposing runtime health, request quality, model usage, resource processing throughput, and probe health states.
+Business Data Platform provides a machine-oriented metrics system for exposing runtime health, request quality, model usage, resource processing throughput, and probe health states.
 
 Unlike the human-facing `/api/v1/observer/*` endpoints and the analytics-oriented `/api/v1/stats/*` endpoints, Metrics are designed for:
 
@@ -42,7 +42,7 @@ The boundary is:
 
 ## Metrics Architecture
 
-The current metrics stack in OpenViking has four layers:
+The current metrics stack in Business Data Platform has four layers:
 
 ```text
 Business logic / HTTP requests / background tasks
@@ -490,7 +490,7 @@ Recommended mental model:
 
 ### Exporters
 
-By default, OpenViking exports metrics via Prometheus exposition format at `/metrics`.
+By default, Business Data Platform exports metrics via Prometheus exposition format at `/metrics`.
 You can also enable additional exporters under `server.observability.metrics.exporters`.
 
 Key fields:
@@ -545,7 +545,7 @@ Example:
 
 ## Related Documentation
 
-- [Architecture Overview](./01-architecture.md) - overall OpenViking architecture
+- [Architecture Overview](./01-architecture.md) - overall Business Data Platform architecture
 - [Multi-Tenant](./11-multi-tenant.md) - `account/user/peer` isolation model
 - [Data Encryption](./10-encryption.md) - storage-layer encryption and isolation
 - [Metrics API](../api/09-metrics.md) - `/metrics` endpoint usage

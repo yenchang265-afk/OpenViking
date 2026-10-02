@@ -1,8 +1,8 @@
-# OpenViking CLI
+# Business Data Platform CLI
 
-[OpenViking](https://github.com/volcengine/OpenViking) 的命令列客戶端。OpenViking 是面向 Agent 的上下文資料庫。
+[Business Data Platform](https://github.com/volcengine/OpenViking) 的命令列客戶端。Business Data Platform 是面向 Agent 的上下文資料庫。
 
-本目錄構建原生 `ov` 二進位制。你可以用它配置 OpenViking 連線、匯入資源、瀏覽 `viking://` 路徑、檢索上下文、檢視服務狀態、管理 session，以及執行管理員操作。
+本目錄構建原生 `ov` 二進位制。你可以用它配置 Business Data Platform 連線、匯入資源、瀏覽 `viking://` 路徑、檢索上下文、檢視服務狀態、管理 session，以及執行管理員操作。
 
 English documentation: [README.md](README.md).
 
@@ -19,7 +19,7 @@ npm 包會安裝適配 macOS、Linux 或 Windows 的平臺二進位制。
 ### 從原始碼安裝
 
 ```bash
-# OpenViking 要求 Rust >= 1.91.1。
+# Business Data Platform 要求 Rust >= 1.91.1。
 cargo install --path crates/ov_cli
 ```
 
@@ -51,7 +51,7 @@ ov language zh-CN
 指令碼和 Agent 場景建議使用確定性的配置命令，並通過 stdin 或已有環境變數傳遞金鑰：
 
 ```bash
-# OpenViking Service
+# Business Data Platform Service
 printf '%s' "$OPENVIKING_API_KEY" | \
   ov config add ov-service --name prod --api-key-stdin --activate -o json
 
@@ -122,7 +122,7 @@ ov grep "openviking" --uri viking://resources
 - `add-skill` - 從目錄、`SKILL.md` 或原始內容新增 skill。
 - `skills` - 列出、檢索、檢視、更新、刪除和校驗已安裝 skills。
 - `export` / `import` - 以 `.ovpack` 格式匯出或匯入上下文。
-- `backup` / `restore` - 把公共 OpenViking scope 備份或恢復為 restore-only `.ovpack`。
+- `backup` / `restore` - 把公共 Business Data Platform scope 備份或恢復為 restore-only `.ovpack`。
 
 ### 檔案系統
 

@@ -599,7 +599,7 @@ def pytest_html_results_table_row(report, cells):
 
 @pytest.hookimpl(optionalhook=True)
 def pytest_html_report_title(report):
-    report.title = "OpenViking API測試報告"
+    report.title = "Business Data Platform API測試報告"
 
 
 @pytest.hookimpl(optionalhook=True)
@@ -607,7 +607,7 @@ def pytest_html_results_summary(prefix, summary, postfix):
     prefix.extend(
         [
             """
-    <p><strong>OpenViking Version:</strong> 0.2.9</p>
+    <p><strong>Business Data Platform Version:</strong> 0.2.9</p>
     """
         ]
     )

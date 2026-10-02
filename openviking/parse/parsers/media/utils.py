@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Media-related utilities for OpenViking."""
+"""Media-related utilities for Business Data Platform."""
 
 import asyncio
 import re

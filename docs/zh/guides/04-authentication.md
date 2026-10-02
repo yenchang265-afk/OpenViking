@@ -6,7 +6,7 @@
 
 | 認證模式 | 是什麼？ | 適合誰？ | **推薦度** |
 |---------|----------|---------|------------|
-| **API Key** (預設) | OpenViking 自己管理使用者和金鑰 | 小團隊、獨立部署 | ⭐⭐⭐⭐⭐ |
+| **API Key** (預設) | Business Data Platform 自己管理使用者和金鑰 | 小團隊、獨立部署 | ⭐⭐⭐⭐⭐ |
 | **OIDC** | 對接企業單點登入（Okta/Auth0/Keycloak/Azure AD 等） | 企業 SSO 整合 | ⭐⭐⭐⭐ |
 | **LDAP** | 對接企業使用者目錄（Windows AD/OpenLDAP） | 已有企業目錄服務 | ⭐⭐⭐⭐ |
 | **Trusted** | 上游閘道器/反向代理斷言身份 | 部署在受信任內網/閘道器後 | ⭐⭐⭐ |
@@ -142,10 +142,10 @@ LDAP (Lightweight Directory Access Protocol) 是企業使用者目錄的標準�
 
 ### Identity Mapping 是什麼？
 
-簡單說：**把外部身份源的欄位對映到 OpenViking 的身份上。**
+簡單說：**把外部身份源的欄位對映到 Business Data Platform 的身份上。**
 
 ```
-外部身份源       →       Mapping 規則       →       OpenViking 身份
+外部身份源       →       Mapping 規則       →       Business Data Platform 身份
 ─────────────────────────────────────────────────────────────────────
 OIDC Claims: {
   "sub": "user123",          →      claim="sub"        →  user_id = "user123"
@@ -505,7 +505,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 
 ## 客戶端使用
 
-OpenViking 支援兩種方式傳遞 API Key：
+Business Data Platform 支援兩種方式傳遞 API Key：
 
 **X-API-Key 請求頭**
 
@@ -636,7 +636,7 @@ Trusted 模式不會查詢 user key，而是直接信任每個請求顯式攜帶
 
 ## CLI 配置 LDAP 認證
 
-OpenViking CLI (`ov`) 支援通過 LDAP 進行認證。配置完成後，所有 CLI 命令會自動使用 LDAP 憑據。
+Business Data Platform CLI (`ov`) 支援通過 LDAP 進行認證。配置完成後，所有 CLI 命令會自動使用 LDAP 憑據。
 
 ### 配置方式
 
@@ -658,11 +658,11 @@ OpenViking CLI (`ov`) 支援通過 LDAP 進行認證。配置完成後，所有 
 
 | 配置項 | 必需 | 說明 |
 |--------|------|------|
-| `url` | 是 | OpenViking 伺服器地址 |
+| `url` | 是 | Business Data Platform 伺服器地址 |
 | `auth_mode` | 是 | 認證模式，設定為 `"ldap"` 啟用 LDAP |
 | `ldap_username` | 是 | LDAP 使用者名稱（UID） |
 | `ldap_password` | 否 | LDAP 密碼（不提供時 CLI 不傳送密碼） |
-| `account` | 否 | OpenViking 帳戶 ID（預設為 `"default"`） |
+| `account` | 否 | Business Data Platform 帳戶 ID（預設為 `"default"`） |
 
 #### 2. 混合配置
 
@@ -716,7 +716,7 @@ make build-cli
 - 檢視伺服器端日誌獲取詳細錯誤資訊
 
 **"Permission denied" 錯誤：**
-- 確認使用者 LDAP 組是否對映到正確的 OpenViking 角色
+- 確認使用者 LDAP 組是否對映到正確的 Business Data Platform 角色
 - 檢查操作是否需要管理員許可權
 - 聯絡系統管理員確認許可權配置
 

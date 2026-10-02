@@ -1,6 +1,6 @@
-DeerFlow 支援通過 MemoryManager 接入 OpenViking 作為長期記憶後端。接入後，DeerFlow 會將對話訊息寫入 OpenViking，並在模型呼叫前通過 OpenViking 進行記憶召回，再注入到上下文中。
+DeerFlow 支援通過 MemoryManager 接入 Business Data Platform 作為長期記憶後端。接入後，DeerFlow 會將對話訊息寫入 Business Data Platform，並在模型呼叫前通過 Business Data Platform 進行記憶召回，再注入到上下文中。
 
-## 步驟 1：配置 OpenViking 鑑權資訊
+## 步驟 1：配置 Business Data Platform 鑑權資訊
 
 在 DeerFlow 專案根目錄下編輯 `.env` 檔案，把 API Key 填進去：
 
@@ -8,7 +8,7 @@ DeerFlow 支援通過 MemoryManager 接入 OpenViking 作為長期記憶後端�
 
 ## 步驟 2：修改 DeerFlow 的 memory 配置
 
-開啟專案根目錄下的 `config.yaml`，找到 `memory:` 配置段，將預設的 DeerMem 配置替換為 OpenViking 配置：
+開啟專案根目錄下的 `config.yaml`，找到 `memory:` 配置段，將預設的 DeerMem 配置替換為 Business Data Platform 配置：
 
 ```yaml
 memory:
@@ -43,7 +43,7 @@ memory:
 make dev
 ```
 
-## 步驟 4：驗證 OpenViking 是否接入成功
+## 步驟 4：驗證 Business Data Platform 是否接入成功
 
 在專案根目錄下檢視 Gateway 日誌：
 
@@ -79,10 +79,10 @@ has_memory=True
 
 | 現象 | 原因 | 修復 |
 |------|------|------|
-| DeerFlow 啟動失敗，提示 OpenViking 配置錯誤 | `config.yaml` 中 OpenViking 配置不完整或格式錯誤 | 檢查 `config.yaml` 中是否已配置 `manager_class: openviking`，並確認 `base_url`、`api_key_env` 等欄位正確 |
-| DeerFlow 未接入 OpenViking | `memory.manager_class` 未改為 `openviking`，或修改配置後未重啟服務 | 儲存配置後重新啟動 DeerFlow，並確認日誌中出現 `OpenVikingMemoryManager` |
-| 遠端認證失敗，返回 401 或 403 | OpenViking API Key 缺失、錯誤或無許可權 | 檢查 `.env` 中的 `OPENVIKING_API_KEY` 是否正確 |
-| 檢索失敗，但 DeerFlow 仍繼續回覆 | 當前配置採用 `read: fail_open`，屬於預期行為 | OpenViking 檢索失敗時不會注入記憶，但不會影響主 Agent 正常回復 |
-| 回覆已生成，但記憶寫入失敗 | 當前配置採用 `write: log_and_drop`，寫入失敗會被記錄到日誌中 | 檢查並修復 OpenViking 服務、網路和鑑權配置，後續新訊息可繼續寫入 |
-| 已寫入訊息，但頁面未立即看到記憶 | OpenViking 的摘要和記憶提取是非同步完成的 | 等待後臺任務完成後再檢視 |
-| 服務關閉時仍有記憶操作未完成 | 系統會在 `shutdown_flush_timeout_seconds` 配置的時間內等待其完成 | 若等待超時，或 OpenViking 在關閉期間不可用，部分記憶寫入可能無法完成。可適當調大該配置，並檢查關閉期間 OpenViking 的網路和服務狀態 |
+| DeerFlow 啟動失敗，提示 Business Data Platform 配置錯誤 | `config.yaml` 中 Business Data Platform 配置不完整或格式錯誤 | 檢查 `config.yaml` 中是否已配置 `manager_class: openviking`，並確認 `base_url`、`api_key_env` 等欄位正確 |
+| DeerFlow 未接入 Business Data Platform | `memory.manager_class` 未改為 `openviking`，或修改配置後未重啟服務 | 儲存配置後重新啟動 DeerFlow，並確認日誌中出現 `OpenVikingMemoryManager` |
+| 遠端認證失敗，返回 401 或 403 | Business Data Platform API Key 缺失、錯誤或無許可權 | 檢查 `.env` 中的 `OPENVIKING_API_KEY` 是否正確 |
+| 檢索失敗，但 DeerFlow 仍繼續回覆 | 當前配置採用 `read: fail_open`，屬於預期行為 | Business Data Platform 檢索失敗時不會注入記憶，但不會影響主 Agent 正常回復 |
+| 回覆已生成，但記憶寫入失敗 | 當前配置採用 `write: log_and_drop`，寫入失敗會被記錄到日誌中 | 檢查並修復 Business Data Platform 服務、網路和鑑權配置，後續新訊息可繼續寫入 |
+| 已寫入訊息，但頁面未立即看到記憶 | Business Data Platform 的摘要和記憶提取是非同步完成的 | 等待後臺任務完成後再檢視 |
+| 服務關閉時仍有記憶操作未完成 | 系統會在 `shutdown_flush_timeout_seconds` 配置的時間內等待其完成 | 若等待超時，或 Business Data Platform 在關閉期間不可用，部分記憶寫入可能無法完成。可適當調大該配置，並檢查關閉期間 Business Data Platform 的網路和服務狀態 |

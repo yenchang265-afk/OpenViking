@@ -2,18 +2,18 @@
 
 This folder runs the **full VikingBot agent** (`bot/vikingbot` `AgentLoop`) end-to-end
 on [tau2-bench](https://github.com/sierra-research/tau2-bench) tasks, then commits the
-resulting trajectories back into OpenViking memory so the agent can **self-improve across
+resulting trajectories back into Business Data Platform memory so the agent can **self-improve across
 epochs** (cold start → memory-augmented runs).
 
 > **Memory is extracted only from the `train` split.** Each epoch runs both splits, but only
-> `train` trajectories are committed to OpenViking memory. The `test` split is **held out** and
+> `train` trajectories are committed to Business Data Platform memory. The `test` split is **held out** and
 > used purely to measure the task-success improvement once that (train-derived) memory is injected
 > — so the reported gains reflect learning transferred from train to test, with no test-set leakage.
 
 It is a sibling to the harness in [`../llm/`](../llm/README.md). Both are multi-turn and exercise
-OpenViking memory extraction + retrieval; they differ in *which agent* drives the tasks:
+Business Data Platform memory extraction + retrieval; they differ in *which agent* drives the tasks:
 
-- **[`../llm/`](../llm/README.md)** uses tau2-bench's **native ReAct agent**, wired to OpenViking
+- **[`../llm/`](../llm/README.md)** uses tau2-bench's **native ReAct agent**, wired to Business Data Platform
   memory, to measure the effect of that memory on task performance.
 - **`vikingbot/`** (this folder) is an **end-to-end, self-improving agent** evaluation: it runs the
   full VikingBot agent loop on the tasks and commits trajectories back into memory so the agent
@@ -32,7 +32,7 @@ The pipeline is: **run tasks → evaluate reward → commit train trajectories t
 > sourcing — `python3.13 -m venv .venv` — otherwise the tau2-bench install step fails with
 > `ERROR: Package 'tau2' requires a different Python`.
 
-One step sets up everything. `setup_env.sh` creates a `.venv` at the OpenViking repo root
+One step sets up everything. `setup_env.sh` creates a `.venv` at the Business Data Platform repo root
 (if one isn't already present), clones tau2-bench into `./tau2-bench` (external dependency,
 gitignored), installs openviking + vikingbot with the **`[bot]` extra**
 (`pip install -e .[bot]`, which also runs the Cargo build) plus tau2-bench (`[gym]` extra) and
@@ -64,7 +64,7 @@ model is configured in [`../common/tau2_env/tau2_environment.py`](../common/tau2
 > with a confirmation-aware user-simulator prompt (sierra-research/tau2-bench#297). Set
 > `TAU2_BENCH_REF` to a comparable checkout if you want results aligned with that protocol.
 
-Then start the OpenViking server with the bot enabled:
+Then start the Business Data Platform server with the bot enabled:
 
 ```bash
 openviking-server --config "${OPENVIKING_CONFIG_FILE}" --with-bot
@@ -90,7 +90,7 @@ The generated config stores the returned user key in `bot.ov_server.root_api_key
 runtime it is a user key, not a root key. The provision key is not written into the runtime config.
 
 Use a different generated config for each isolated benchmark user. If all domains run with the
-same user-key config, they intentionally share the same OpenViking user memory.
+same user-key config, they intentionally share the same Business Data Platform user memory.
 
 ---
 
@@ -181,9 +181,9 @@ python scripts/commit_trajectory_to_memory.py \
 Adaptation happens in two places:
 
 1. **Runner-level** (this folder only) — swap the agent's tool set over to the tau2 environment
-   tools, gate OpenViking memory by epoch (cold start vs. memory-augmented), and commit train
+   tools, gate Business Data Platform memory by epoch (cold start vs. memory-augmented), and commit train
    trajectories between epochs. Detailed below.
-2. **`ov.conf` flags** — three OpenViking config flags switch VikingBot core into the
+2. **`ov.conf` flags** — three Business Data Platform config flags switch VikingBot core into the
    experience-memory recall mode tau2 needs. **No core code edits required.** See
    [Required `ov.conf` flags for tau2](#required-ovconf-flags-for-tau2) below.
 
@@ -198,25 +198,25 @@ provisioning a separate user-key config before the run.
   (plus `communicate_with_user` and `done`). `openviking_memory_commit` is **always** unregistered
   here — that is the mechanism that disables VikingBot's per-task auto-commit (see step 3 above).
   - **`--keep-default-tools` controls memory availability, tied to the epoch.** The flag decides
-    whether VikingBot's built-in memory tools — **OpenViking memory tools** — stay
+    whether VikingBot's built-in memory tools — **Business Data Platform memory tools** — stay
     registered, and whether agent-experience memory is retrieved into the system prompt
     (`ov_tools_enable`). `run_full_test.sh` sets it by epoch: **epoch 0 omits the flag**, so all
     built-in memory tools are unregistered (only tau2 tools remain) and no memory is injected — a clean
     **cold-start / no-memory** run; **epoch > 0 passes the flag**, so the memory tools and retrieved
     experiences are available (memory-augmented).
 - **Epoch-based memory commit** — `commit_trajectory_to_memory.py` writes train trajectories
-  (optionally only failed ones, via `--only-wrong`) into OpenViking memory between epochs.
+  (optionally only failed ones, via `--only-wrong`) into Business Data Platform memory between epochs.
 
 ### Identity model
 
 The benchmark does not pass identity through VikingBot. A provisioned user-key config determines
-the OpenViking runtime identity:
+the Business Data Platform runtime identity:
 
 ```
 provision_openviking_user.py  ->  .generated/tau2_airline_v0.ov.conf
 run_full_test.sh --config .generated/tau2_airline_v0.ov.conf
   -> VikingBot uses that user key
-  -> OpenViking resolves user=tau2_airline_v0
+  -> Business Data Platform resolves user=tau2_airline_v0
   -> memory is stored under viking://user/tau2_airline_v0/memories/
 ```
 
@@ -228,7 +228,7 @@ Admin API, then leaves the runtime path.
 Two VikingBot behaviours need to change for tau2 self-improvement:
 
 1. **Per-domain workspace isolation** — each tau2 domain (airline, retail, …) must read and
-   write its own OpenViking namespace so experiences learned on one domain don't leak into
+   write its own Business Data Platform namespace so experiences learned on one domain don't leak into
    another.
 2. **Recall experience memory once per task** — by default VikingBot pulls user memory into every
    turn. For tau2 we want accumulated **experience** memory pulled once per task, with a larger
@@ -273,4 +273,4 @@ runtime identity, so each domain reads and writes `viking://user/<domain_user>/.
   - `vikingbot_tau2_runner.py` — runs a single tau2 task through the VikingBot agent loop
   - `run_tau2_domain.sh` — runs all tasks in a `{domain}_{split}` slice with bounded concurrency
   - `run_eval_reward.sh` — average reward over a result folder
-  - `commit_trajectory_to_memory.py` — commit trajectories into OpenViking memory
+  - `commit_trajectory_to_memory.py` — commit trajectories into Business Data Platform memory

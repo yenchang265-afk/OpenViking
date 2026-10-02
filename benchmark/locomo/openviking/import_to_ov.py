@@ -1,7 +1,7 @@
 """
-OpenViking data import tool.
+Business Data Platform data import tool.
 
-Import conversations from LoCoMo JSON or plain text files into OpenViking memory.
+Import conversations from LoCoMo JSON or plain text files into Business Data Platform memory.
 
 Usage:
     # Import LoCoMo JSON conversations
@@ -176,7 +176,7 @@ def build_openviking_message_parts(
     *,
     use_image_url: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Build OpenViking message parts from a LoCoMo message."""
+    """Build Business Data Platform message parts from a LoCoMo message."""
     parts: List[Dict[str, Any]] = [{"type": "text", "text": msg["text"]}]
     caption = str(msg.get("blip_caption", "") or "")
 
@@ -313,7 +313,7 @@ def mark_ingested(
 
 
 # ---------------------------------------------------------------------------
-# OpenViking import
+# Business Data Platform import
 # ---------------------------------------------------------------------------
 def _parse_token_usage(commit_result: Dict[str, Any]) -> Dict[str, int]:
     """解析Token使用資料（從commit返回的telemetry或task result中提取）"""
@@ -355,12 +355,12 @@ async def viking_ingest(
     agent_id: Optional[str] = None,
     use_image_url: bool = False,
 ) -> Dict[str, int]:
-    """Save messages to OpenViking via OpenViking SDK client.
+    """Save messages to Business Data Platform via Business Data Platform SDK client.
     Returns token usage dict with embedding and vlm token counts.
 
     Args:
         messages: List of message dicts with role and text
-        openviking_url: OpenViking service URL
+        openviking_url: Business Data Platform service URL
         session_time: Session time string (e.g., "9:36 am on 2 April, 2023")
         user_id: User identifier for separate userspace (e.g., "sample_26")
         agent_id: Agent identifier for separate agentspace (e.g., "sample_26")
@@ -747,7 +747,7 @@ def main():
     script_dir = Path(__file__).parent.resolve()
     default_input = str(script_dir / ".." / "data" / "locomo10.json")
 
-    parser = argparse.ArgumentParser(description="Import conversations into OpenViking")
+    parser = argparse.ArgumentParser(description="Import conversations into Business Data Platform")
     parser.add_argument(
         "--input",
         default=default_input,
@@ -766,7 +766,7 @@ def main():
     parser.add_argument(
         "--openviking-url",
         default="http://localhost:1933",
-        help="OpenViking service URL (default: http://localhost:1933)",
+        help="Business Data Platform service URL (default: http://localhost:1933)",
     )
     parser.add_argument(
         "--sample",

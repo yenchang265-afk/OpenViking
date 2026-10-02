@@ -1,7 +1,7 @@
-"""Pending health server for the OpenViking Docker entrypoint.
+"""Pending health server for the Business Data Platform Docker entrypoint.
 
 While the container is waiting for ``ov.conf`` to appear, the entrypoint
-runs this tiny HTTP server on the same port the real OpenViking server
+runs this tiny HTTP server on the same port the real Business Data Platform server
 will bind. It answers *every* request — `/`, `/health`, anything — with
 the same 503 JSON payload describing what's wrong and how to fix it, so
 operators and agents probing the container can self-discover the issue
@@ -32,7 +32,7 @@ def build_payload(config_file: str) -> dict:
     """Return the JSON body served on every route."""
     return {
         "status": "pending_initialization",
-        "error": "OpenViking config file not found",
+        "error": "Business Data Platform config file not found",
         "config_file": config_file,
         "fix": [
             "mount ~/.openviking on the host to /app/.openviking",

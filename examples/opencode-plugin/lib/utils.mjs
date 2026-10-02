@@ -51,14 +51,14 @@ export function log(level, toolName, message, data) {
   try {
     fs.appendFileSync(logFilePath, `${JSON.stringify(entry)}\n`, "utf8")
   } catch (error) {
-    console.error("Failed to write OpenViking plugin log:", error)
+    console.error("Failed to write Business Data Platform plugin log:", error)
   }
 }
 
 export function makeToast(client) {
   return (message, variant = "warning") =>
     client?.tui?.showToast?.({
-      body: { title: "OpenViking", message, variant, duration: 8000 },
+      body: { title: "Business Data Platform", message, variant, duration: 8000 },
     }).catch(() => {})
 }
 
@@ -105,7 +105,7 @@ export async function makeRequest(config, options) {
       throw new Error(`Request timeout after ${timeoutMs}ms`)
     }
     if (message.includes("fetch failed") || message.includes("ECONNREFUSED")) {
-      throw new Error(`OpenViking service unavailable at ${config.endpoint}. Start it with: openviking-server --config ~/.openviking/ov.conf`)
+      throw new Error(`Business Data Platform service unavailable at ${config.endpoint}. Start it with: openviking-server --config ~/.openviking/ov.conf`)
     }
     throw new Error(message)
   }
@@ -116,7 +116,7 @@ export async function makeRequest(config, options) {
 }
 
 export function getResponseErrorMessage(error) {
-  if (!error) return "Unknown OpenViking error"
+  if (!error) return "Unknown Business Data Platform error"
   if (typeof error === "string") return error
-  return error.message || error.code || "Unknown OpenViking error"
+  return error.message || error.code || "Unknown Business Data Platform error"
 }

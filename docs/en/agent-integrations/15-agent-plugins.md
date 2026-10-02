@@ -2,7 +2,7 @@
 
 [Agent Plugins 1.0](https://agent-plugins.org/specification) is a vendor-neutral packaging format for extending AI coding agents. A plugin is a plain directory with a `plugin.json` manifest, Agent Skills auto-discovered under `skills/`, and optional MCP server declarations in `mcp.json` — one package that every conforming client loads the same way, instead of one bespoke integration per client.
 
-OpenViking ships that package at [`agent-plugins/`](https://github.com/volcengine/OpenViking/tree/main/agent-plugins) in the repository.
+Business Data Platform ships that package at [`agent-plugins/`](https://github.com/volcengine/OpenViking/tree/main/agent-plugins) in the repository.
 
 ## What's inside
 
@@ -16,7 +16,7 @@ agent-plugins/
 ├── skills/openviking-memory/SKILL.md    # teaches the model the recall + persist loop
 ├── skills/ov-experience-memory/SKILL.md # retrieve and apply prior task Experience
 ├── skills/ov-memory-troubleshoot/SKILL.md # trace memory issues to session evidence
-├── skills/openviking-skills/SKILL.md    # find, use, create, and share OpenViking skills
+├── skills/openviking-skills/SKILL.md    # find, use, create, and share Business Data Platform skills
 └── plugin.test.mjs                      # node --test conformance checks
 ```
 
@@ -24,7 +24,7 @@ Zero npm dependencies — the proxy and the tests run on the Node.js standard li
 
 ## Install
 
-1. Have an OpenViking server reachable. If you don't, follow the [Quickstart](../getting-started/02-quickstart.md); the default local endpoint is `http://127.0.0.1:1933`.
+1. Have a Business Data Platform server reachable. If you don't, follow the [Quickstart](../getting-started/02-quickstart.md); the default local endpoint is `http://127.0.0.1:1933`.
 2. Point your Agent-Plugins-conforming client at the `agent-plugins/` directory. Each client has its own install command or plugin directory — consult its docs. On load the client will:
    - register the `openviking` MCP server from `mcp.json`, running `node <plugin>/servers/mcp-proxy.mjs` over stdio;
    - discover the `openviking-memory`, `ov-experience-memory`, `ov-memory-troubleshoot`, and `openviking-skills` skills from `skills/`.
@@ -32,11 +32,11 @@ Zero npm dependencies — the proxy and the tests run on the Node.js standard li
 
 ## Why a stdio proxy instead of a `streamable-http` entry
 
-OpenViking already speaks streamable HTTP at `/mcp`, but a `streamable-http` entry in `mcp.json` cannot work portably: the server URL is per-deployment (localhost for one user, a remote endpoint for another), and the spec forbids credentials in the static `headers` map. The stdio proxy resolves both at runtime — it reads the URL and API key from the same local sources as the `ov` CLI, injects them per request, and forwards JSON-RPC over streamable HTTP unchanged.
+Business Data Platform already speaks streamable HTTP at `/mcp`, but a `streamable-http` entry in `mcp.json` cannot work portably: the server URL is per-deployment (localhost for one user, a remote endpoint for another), and the spec forbids credentials in the static `headers` map. The stdio proxy resolves both at runtime — it reads the URL and API key from the same local sources as the `ov` CLI, injects them per request, and forwards JSON-RPC over streamable HTTP unchanged.
 
 ## Credential resolution
 
-Highest to lowest priority — the same chain as the `ov` CLI and the other OpenViking plugins:
+Highest to lowest priority — the same chain as the `ov` CLI and the other Business Data Platform plugins:
 
 1. Environment variables: `OPENVIKING_URL` (or `OPENVIKING_BASE_URL`), `OPENVIKING_MCP_URL`, `OPENVIKING_API_KEY` (or `OPENVIKING_BEARER_TOKEN`), `OPENVIKING_ACCOUNT`, `OPENVIKING_USER`, `OPENVIKING_PEER_ID`, `OPENVIKING_AUTH_MODE`
 2. `~/.openviking/ovcli.conf` (`url`, `api_key`, `account` / `account_id`, `user` / `user_id`, `actor_peer_id` / `peer_id`), then its `plugin.agent_plugins` and shared `plugin` keys (`apiKey`, `accountId`, `userId`, `authMode`) — override the path with `OPENVIKING_CLI_CONFIG_FILE`
@@ -69,11 +69,11 @@ The bundled `openviking-memory` skill compensates by teaching the model the full
 
 The bundled `ov-experience-memory` skill has the model search `viking://~/memories/experiences` before executable work and read the Experience files that apply. Here it is retrieval-only: with no session capture, its reads are not linked back to the Experience they used and produce no new trajectories. The Experience it finds comes from harnesses that do capture sessions.
 
-The bundled `openviking-skills` skill covers the skills stored in OpenViking itself: finding one with `find(context_type="skill")`, reading and following its `SKILL.md`, creating or replacing one with `add_skill`, installing one from Git or a local folder, sharing one with the account, and moving local skill folders into OpenViking. Without a session-start hook there is no `<available-skills>` catalog here, so the skill has the model search for a skill rather than read it off a list.
+The bundled `openviking-skills` skill covers the skills stored in Business Data Platform itself: finding one with `find(context_type="skill")`, reading and following its `SKILL.md`, creating or replacing one with `add_skill`, installing one from Git or a local folder, sharing one with the account, and moving local skill folders into Business Data Platform. Without a session-start hook there is no `<available-skills>` catalog here, so the skill has the model search for a skill rather than read it off a list.
 
 **If your harness has its own hook system, prefer the dedicated plugin.** Hook-driven recall and capture happen without the model spending tool calls or deciding to remember, which is both cheaper and more reliable than the skill-driven loop. Use this Agent Plugins package for harnesses that have no hooks, or when you want one package that works across many clients.
 
-One installer covers Claude Code, Codex, Cursor, TRAE / TRAE CN, ZCode, OpenCode, and pi. It asks for your language, which harnesses to install, the download source, and your OpenViking credentials, and every step is idempotent:
+One installer covers Claude Code, Codex, Cursor, TRAE / TRAE CN, ZCode, OpenCode, and pi. It asks for your language, which harnesses to install, the download source, and your Business Data Platform credentials, and every step is idempotent:
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)

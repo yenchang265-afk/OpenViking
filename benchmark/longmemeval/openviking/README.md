@@ -1,15 +1,15 @@
-# LongMemEval OpenViking Benchmark
+# LongMemEval Business Data Platform Benchmark
 
-This directory contains the OpenViking evaluation flow for LongMemEval:
+This directory contains the Business Data Platform evaluation flow for LongMemEval:
 
-1. import each user's haystack sessions into OpenViking;
+1. import each user's haystack sessions into Business Data Platform;
 2. run one retrieval call per question;
 3. optionally rerank the retrieved memories;
 4. answer from the selected memory context;
 5. judge and summarize the result CSV.
 
-The benchmark expects an OpenViking server to already be running. The commands
-below use the default local OpenViking client configuration. If you need a
+The benchmark expects a Business Data Platform server to already be running. The commands
+below use the default local Business Data Platform client configuration. If you need a
 different endpoint, pass `--openviking-url` to both import and eval.
 
 ## Data

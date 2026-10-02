@@ -1,6 +1,6 @@
 """
 Bot provider metadata used for history formatting and configuration helpers.
-Model backend registration and request routing are owned by OpenViking VLM.
+Model backend registration and request routing are owned by Business Data Platform VLM.
 
 Order matters — it controls match priority and fallback. Gateways first.
 Every entry writes out all fields so you can copy-paste as a template.

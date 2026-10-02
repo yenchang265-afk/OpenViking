@@ -10,7 +10,7 @@ test("pi URI guard blocks builtin file tools on viking URIs", () => {
   })
 
   assert.equal(decision?.block, true)
-  assert.match(decision?.reason ?? "", /viking:\/\/ URIs are OpenViking virtual paths/)
+  assert.match(decision?.reason ?? "", /viking:\/\/ URIs are Business Data Platform virtual paths/)
   assert.match(decision?.reason ?? "", /Use viking_read instead/)
 })
 
@@ -25,7 +25,7 @@ test("pi URI guard blocks bash commands containing viking URI", () => {
   assert.match(decision?.reason ?? "", /Use viking_read or viking_search instead/)
 })
 
-test("pi URI guard allows normal local paths and OpenViking native tools", () => {
+test("pi URI guard allows normal local paths and Business Data Platform native tools", () => {
   assert.equal(guardVikingUriToolCall({ toolName: "read", input: { path: "/tmp/file.md" } }), null)
   assert.equal(guardVikingUriToolCall({ toolName: "viking_read", input: { uri: "viking://resources/file.md" } }), null)
 })

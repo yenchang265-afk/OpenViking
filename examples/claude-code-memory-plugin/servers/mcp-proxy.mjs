@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * stdio -> streamable-HTTP MCP proxy for the OpenViking Claude Code plugin.
+ * stdio -> streamable-HTTP MCP proxy for the Business Data Platform Claude Code plugin.
  *
  * Claude Code starts this process as a local stdio MCP server. The proxy
  * resolves its connection through the hooks' own `loadConfig()`, forwards

@@ -7,7 +7,7 @@ set -eu
 if [ -n "${OPENVIKING_SOURCE_DIR:-}" ]; then
     engine_dir="${OPENVIKING_SOURCE_DIR}/openviking/storage/vectordb/engine"
     if [ ! -d "${engine_dir}" ]; then
-        echo "OPENVIKING_SOURCE_DIR is not an OpenViking worktree: ${OPENVIKING_SOURCE_DIR}" >&2
+        echo "OPENVIKING_SOURCE_DIR is not a Business Data Platform worktree: ${OPENVIKING_SOURCE_DIR}" >&2
         exit 2
     fi
     cp -a /opt/openviking-native-engine/. "${engine_dir}/"

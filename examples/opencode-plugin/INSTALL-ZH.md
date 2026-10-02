@@ -1,8 +1,8 @@
-# 安裝 OpenViking OpenCode 統一外掛
+# 安裝 Business Data Platform OpenCode 統一外掛
 
-這個外掛新增了一個面向 OpenCode 的統一 OpenViking 外掛：
+這個外掛新增了一個面向 OpenCode 的統一 Business Data Platform 外掛：
 
-- 面向 memory、resources 和 code context 的 OpenViking MCP 工具
+- 面向 memory、resources 和 code context 的 Business Data Platform MCP 工具
 - 長期記憶、session 同步、生命週期邊界 commit、自動 recall
 
 這是倉庫中唯一繼續維護的 OpenCode 外掛示例。這個外掛不再安裝 `skills/openviking/SKILL.md`，也不要求 agent 使用 `ov` 命令。模型工具由 Claude Code 和 Codex 記憶外掛同款的 stdio MCP proxy 提供。
@@ -12,11 +12,11 @@
 需要先準備：
 
 - OpenCode
-- OpenViking HTTP Server
+- Business Data Platform HTTP Server
 - Node.js 18+
-- 如果服務端啟用了認證，需要可用的 OpenViking API Key
+- 如果服務端啟用了認證，需要可用的 Business Data Platform API Key
 
-建議先啟動 OpenViking：
+建議先啟動 Business Data Platform：
 
 ```bash
 openviking-server --config ~/.openviking/ov.conf
@@ -147,7 +147,7 @@ API key 會從環境變數或 `~/.openviking/ovcli.conf` 讀取，並由 hooks �
 
 ### 僅 Hooks 模式
 
-如果其他 MCP server 已經提供 OpenViking，可以關閉本外掛附帶的 MCP 註冊，同時保留生命週期 hooks：
+如果其他 MCP server 已經提供 Business Data Platform，可以關閉本外掛附帶的 MCP 註冊，同時保留生命週期 hooks：
 
 ```json
 {
@@ -162,9 +162,9 @@ OpenCode 的 `mcp.openviking` 配置。
 
 ## 驗證
 
-修改外掛或 OpenViking 配置後，需要重啟 OpenCode。
+修改外掛或 Business Data Platform 配置後，需要重啟 OpenCode。
 
-進入新的 OpenCode session 後，可以讓 agent 瀏覽 OpenViking memory，或搜尋一個已索引的資源。外掛應暴露 OpenViking MCP server，OpenCode 中的工具名會帶 `openviking_` 字首：
+進入新的 OpenCode session 後，可以讓 agent 瀏覽 Business Data Platform memory，或搜尋一個已索引的資源。外掛應暴露 Business Data Platform MCP server，OpenCode 中的工具名會帶 `openviking_` 字首：
 
 - `openviking_search`、`openviking_find`
 - `openviking_read`、`openviking_list`、`openviking_tree`、`openviking_grep`、`openviking_glob`
@@ -178,7 +178,7 @@ ls ~/.config/opencode/openviking/
 tail -n 100 ~/.config/opencode/openviking/openviking-memory.log
 ```
 
-如果使用本地 server，也確認 OpenViking 可訪問：
+如果使用本地 server，也確認 Business Data Platform 可訪問：
 
 ```bash
 curl http://localhost:1933/health
@@ -186,7 +186,7 @@ curl http://localhost:1933/health
 
 ## 可用 MCP 工具
 
-外掛會通過 OpenCode config 註冊 OpenViking stdio MCP proxy。服務端實際返回的 `tools/list` 是最終工具清單；當前 OpenViking server 暴露：
+外掛會通過 OpenCode config 註冊 Business Data Platform stdio MCP proxy。服務端實際返回的 `tools/list` 是最終工具清單；當前 Business Data Platform server 暴露：
 
 - `openviking_search`：跨 memories/resources/skills 的深度語義檢索；使用 `mode="context"` 獲取面向當前任務、可直接注入的平衡上下文
 - `openviking_find`：快速語義檢索
@@ -202,7 +202,7 @@ curl http://localhost:1933/health
 - `openviking_add_skill`：用完整的 `SKILL.md` 文本（`data`）建立或替換 skill，或從 Git URL、本地 `SKILL.md`、skill 目錄或 `.zip`（`path`）安裝；傳 `target_uri="viking://agent/skills"` 則共享給整個帳號
 - `openviking_forget`：在使用者明確確認後刪除 `viking://` URI
 - `openviking_list_watches` / `openviking_cancel_watch`：檢視或取消資源 watch
-- `openviking_health`：檢查 OpenViking server 健康狀態
+- `openviking_health`：檢查 Business Data Platform server 健康狀態
 
 使用建議：
 
@@ -258,6 +258,6 @@ openviking_add_resource(path="file:///home/alice/project/notes.md", description=
 | 外掛沒有載入 | package 安裝檢查 `~/.config/opencode/opencode.json` 是否包含 `@openviking/opencode-plugin`；原始碼安裝檢查 `~/.config/opencode/plugins/openviking.js` 是否存在 |
 | 載入時報找不到 `lib/shared/*.mjs` | 原始碼複製前沒有執行 `sync.mjs`。在倉庫根目錄執行 `node examples/memory-plugin-shared/sync.mjs` 後重新複製 `lib/` |
 | MCP tools 連到了錯誤的 server | 檢查 `~/.openviking/ovcli.conf`，或用 `OPENVIKING_*` 環境變數 / `OPENVIKING_CLI_CONFIG_FILE` 指向正確配置 |
-| OpenViking 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；trusted-mode 部署還要檢查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
-| recall 為空 | 確認 OpenViking 中已有 memories/resources，並且 `autoRecall` 為 `true` |
+| Business Data Platform 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；trusted-mode 部署還要檢查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |
+| recall 為空 | 確認 Business Data Platform 中已有 memories/resources，並且 `autoRecall` 為 `true` |
 | 本地 `openviking_add_resource` 失敗 | 傳入檔案路徑而不是目錄；目前還不支援自動上傳本地目錄 |

@@ -11,7 +11,7 @@ _IDENTIFIER_PATTERN = re.compile(r"^[a-zA-Z0-9_.@-]+$")
 
 
 def normalize_peer_id(peer_id: str | None) -> str | None:
-    """Normalize a peer identifier using OpenViking's public wire constraints."""
+    """Normalize a peer identifier using Business Data Platform's public wire constraints."""
 
     if peer_id is None:
         return None

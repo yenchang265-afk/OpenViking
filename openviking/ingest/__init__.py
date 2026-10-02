@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Conversation-log ingest: replay local agent-harness logs into OpenViking sessions.
+"""Conversation-log ingest: replay local agent-harness logs into Business Data Platform sessions.
 
 Parses each harness's local conversation logs (Claude Code, Codex, OpenCode, Hermes,
 OpenClaw, Cursor) into normalized messages and replays them through OV's existing

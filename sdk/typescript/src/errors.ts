@@ -23,7 +23,7 @@ export class OpenVikingError extends Error {
   }
 }
 
-/** Test whether an unknown value is an OpenViking error with an optional code. */
+/** Test whether an unknown value is a Business Data Platform error with an optional code. */
 export const isOpenVikingError = (
   error: unknown,
   code?: string,

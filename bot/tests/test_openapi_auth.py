@@ -1063,7 +1063,7 @@ class TestOpenAPIAuth:
         )
 
         async def fake_handle_chat(_request):
-            raise AssertionError("chat handler should not run without an OpenViking API key")
+            raise AssertionError("chat handler should not run without a Business Data Platform API key")
 
         monkeypatch.setattr(channel, "_handle_chat", fake_handle_chat)
         client = _make_client(channel)
@@ -1075,7 +1075,7 @@ class TestOpenAPIAuth:
         )
 
         assert response.status_code == 401
-        assert response.json()["detail"] == "OpenViking API key header required"
+        assert response.json()["detail"] == "Business Data Platform API key header required"
 
     def test_chat_rejects_trusted_upstream_without_identity(
         self, message_bus, temp_workspace, monkeypatch
@@ -1129,7 +1129,7 @@ class TestOpenAPIAuth:
         )
 
         assert response.status_code == 401
-        assert "Trusted OpenViking chat requires" in response.json()["detail"]
+        assert "Trusted Business Data Platform chat requires" in response.json()["detail"]
         assert "X-OpenViking-Account" in response.json()["detail"]
         assert "X-OpenViking-User" in response.json()["detail"]
 
@@ -1263,7 +1263,7 @@ class TestOpenAPIAuth:
         )
 
         assert response.status_code == 401
-        assert response.json()["detail"] == "OpenViking API key header required"
+        assert response.json()["detail"] == "Business Data Platform API key header required"
 
     def test_compile_status_accepts_trusted_identity_when_no_root_key_is_configured(
         self, message_bus, temp_workspace, monkeypatch
@@ -1394,7 +1394,7 @@ class TestOpenAPIAuth:
         assert response.status_code == 503
         assert (
             response.json()["detail"]
-            == "VikingBot gateway proxy is active, but no available OpenViking server is configured"
+            == "VikingBot gateway proxy is active, but no available Business Data Platform server is configured"
         )
 
     def test_chat_rejects_runtime_upstream_dev_on_public_gateway(
@@ -1448,7 +1448,7 @@ class TestOpenAPIAuth:
         assert response.status_code == 403
         assert (
             response.json()["detail"]
-            == "OpenViking server auth_mode changed to dev, but dev auth can only be used when gateway and OpenViking server are localhost"
+            == "Business Data Platform server auth_mode changed to dev, but dev auth can only be used when gateway and Business Data Platform server are localhost"
         )
 
     def test_gateway_proxy_forwards_openviking_request_without_gateway_token(
@@ -1665,7 +1665,7 @@ class TestOpenAPIAuth:
         assert response.status_code == 403
         assert (
             response.json()["detail"]
-            == "OpenViking server auth_mode changed to dev, but dev auth can only be used when gateway and OpenViking server are localhost"
+            == "Business Data Platform server auth_mode changed to dev, but dev auth can only be used when gateway and Business Data Platform server are localhost"
         )
 
     def test_bot_channel_accepts_requests_without_channel_api_key(

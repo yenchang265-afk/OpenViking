@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Post-commit image URI rewriting for OpenViking.
+"""Post-commit image URI rewriting for Business Data Platform.
 
 Scans markdown files in VikingFS after source commit and rewrites local
 image references to viking:// URIs, driven by the ``.image_mappings.json``

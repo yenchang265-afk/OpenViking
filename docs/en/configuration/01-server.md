@@ -2,7 +2,7 @@
 
 For initial setup, run `openviking-server init`, then run `openviking-server doctor` after saving the configuration.
 
-The OpenViking server reads `ov.conf`. The default path is:
+The Business Data Platform server reads `ov.conf`. The default path is:
 
 ```text
 ~/.openviking/ov.conf
@@ -196,7 +196,7 @@ Search and Find requests default to `limit: 10`; override the limit on each API 
 
 | Field | Type / common values | Default | Purpose |
 |---|---|---|---|
-| `workspace` | path | `"./data"` | OpenViking workspace |
+| `workspace` | path | `"./data"` | Business Data Platform workspace |
 | `agfs.backend` | `local`, `memory`, `s3` | `local` | File and metadata backend |
 | `vectordb.backend` | `local`, `cuvs`, `http`, `opengauss`, `elasticsearch` | `local` | Vector database backend |
 | `vectordb.dimension` | integer | follows Embedding | Vector collection dimension |
@@ -404,7 +404,7 @@ run at most four in total.
 Each `DirectoryParser` scan applies these limits independently before submitting its
 own Understanding requests. A nested ZIP starts a new directory scan and does not
 share the outer scan's file-count or depth budget.
-When Understanding is disabled, native OpenViking directory parsing does not apply
+When Understanding is disabled, native Business Data Platform directory parsing does not apply
 these two limits.
 
 When a local directory is added through the client, the complete directory ZIP is

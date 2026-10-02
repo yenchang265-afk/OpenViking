@@ -432,9 +432,9 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state-root", default=str(Path.home() / ".openclaw" / "memory"))
 
     subparsers = parser.add_subparsers(dest="command", required=True)
-    subparsers.add_parser("dream", help="Sync the active OpenClaw session to OpenViking.")
+    subparsers.add_parser("dream", help="Sync the active OpenClaw session to Business Data Platform.")
 
-    recall = subparsers.add_parser("recall", help="Recall memories from OpenViking.")
+    recall = subparsers.add_parser("recall", help="Recall memories from Business Data Platform.")
     recall.add_argument("query")
     recall.add_argument("--limit", type=int, default=5)
 

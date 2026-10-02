@@ -1,6 +1,6 @@
 # Resource Access Control (ACL)
 
-OpenViking ACL shares directories or files from the shared resource scope with users or groups inside one account. ACL never changes the account boundary: every grant is limited to the current account.
+Business Data Platform ACL shares directories or files from the shared resource scope with users or groups inside one account. ACL never changes the account boundary: every grant is limited to the current account.
 
 ACL uses a collaborative-document inheritance model. A directory grant applies to descendants by default. Child directories and files can add direct grants or establish a restricted boundary that ignores inherited permissions.
 

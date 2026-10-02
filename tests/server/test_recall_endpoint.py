@@ -109,7 +109,7 @@ async def test_recall_endpoint_assembles_context_and_signals_deprecation(
                     _memory(
                         "viking://user/default/memories/entities/openviking.md",
                         0.82,
-                        "OpenViking project",
+                        "Business Data Platform project",
                     )
                 ]
             )
@@ -119,7 +119,7 @@ async def test_recall_endpoint_assembles_context_and_signals_deprecation(
         del kwargs
         if uri.endswith("/launch.md"):
             return "# Summary\nShip stdio MCP proxy.\n\n# ChatLog:\n" + "x" * 2000
-        return "OpenViking is the target project."
+        return "Business Data Platform is the target project."
 
     monkeypatch.setattr(service.search, "find", fake_find)
     monkeypatch.setattr(service.fs, "read", fake_read)

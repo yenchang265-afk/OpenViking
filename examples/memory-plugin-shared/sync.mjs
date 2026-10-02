@@ -107,7 +107,7 @@ export const SKILL_TARGETS = [
   },
   // The harnesses that bundle skills. agent-plugins has no hooks, so no
   // session-start catalog: there the skill is the only way the model learns
-  // that the skills in OpenViking exist.
+  // that the skills in Business Data Platform exist.
   {
     skill: "openviking-skills",
     dir: join(ROOT, "examples", "codex-memory-plugin", "skills"),

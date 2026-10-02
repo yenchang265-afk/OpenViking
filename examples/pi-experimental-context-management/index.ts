@@ -1,13 +1,13 @@
 /**
- * Pi OpenViking Extension — EXPERIMENTAL context management
+ * Pi Business Data Platform Extension — EXPERIMENTAL context management
  *
  * A fork of examples/pi-coding-agent-extension whose takeover mode is replaced
  * by agent-driven context windows: the model decides when a window ends, calls
- * `new_context`, and the extension archives the conversation to OpenViking and
+ * `new_context`, and the extension archives the conversation to Business Data Platform and
  * cuts it out of the next provider request, leaving a frozen window header with
  * the Working Memory and the model's own handoff notes. `history` reads the
  * archived windows back, `get_context_remaining` reports the pressure. Turns
- * still sync to an OpenViking session and recall is still injected into the
+ * still sync to a Business Data Platform session and recall is still injected into the
  * newest user message.
  *
  * Do not load this together with the openviking extension — they would both
@@ -62,10 +62,10 @@ const PEER_GLOBAL_MARKER = "__OPENVIKING_PI_EXTENSION__";
  * the demo is supposed to be visible.
  */
 const CONTEXT_WINDOW_GUIDANCE = `<context-window-management>
-You manage your own context window in this session. When the conversation grows it is not summarized behind your back: you decide when the current window ends, and OpenViking archives it so you can read it back afterwards.
+You manage your own context window in this session. When the conversation grows it is not summarized behind your back: you decide when the current window ends, and Business Data Platform archives it so you can read it back afterwards.
 
 Three tools do this:
-- new_context — archive the current window and continue in a fresh one. OpenViking generates a Working Memory of the archived window, and your next window opens with that Working Memory, your handoff notes and the user's most recent request.
+- new_context — archive the current window and continue in a fresh one. Business Data Platform generates a Working Memory of the archived window, and your next window opens with that Working Memory, your handoff notes and the user's most recent request.
 - history — read windows that were already archived: list_windows, list_items, read_item, search_contents. Closing a window loses nothing; it only stops being in front of you.
 - get_context_remaining — how much room is left, how long this window has been open, and how long it has been since the user's last message.
 
@@ -88,7 +88,7 @@ In a new window, read the <openviking-context source="context-window"> block fir
 </context-window-management>`;
 
 const TOOL_LIST_LINE =
-  "OpenViking tools: viking_search, viking_read, viking_browse, viking_remember, viking_forget, viking_add_resource. " +
+  "Business Data Platform tools: viking_search, viking_read, viking_browse, viking_remember, viking_forget, viking_add_resource. " +
   "Context window tools: new_context, history, get_context_remaining.";
 
 export default async function (pi: ExtensionAPI) {
@@ -206,7 +206,7 @@ export default async function (pi: ExtensionAPI) {
   let peerWarned = false;
 
   /**
-   * Stand down when the other OpenViking extension turns up. Two writers on one
+   * Stand down when the other Business Data Platform extension turns up. Two writers on one
    * OV session double every captured message and race on the archive boundary.
    *
    * Only safe while nothing irreversible has happened: once a window is open,
@@ -221,7 +221,7 @@ export default async function (pi: ExtensionAPI) {
       if (!peerWarned) {
         peerWarned = true;
         ctx?.ui?.notify?.(
-          "OpenViking: another OpenViking extension is active and both are writing this session — disable one",
+          "Business Data Platform: another Business Data Platform extension is active and both are writing this session — disable one",
           "warning",
         );
         logger.log("coexistence", { standDown: false, reason: "window already open" });
@@ -234,7 +234,7 @@ export default async function (pi: ExtensionAPI) {
     if (!peerWarned) {
       peerWarned = true;
       ctx?.ui?.notify?.(
-        "OpenViking experimental extension disabled: another OpenViking extension is already active",
+        "Business Data Platform experimental extension disabled: another Business Data Platform extension is already active",
         "warning",
       );
     }
@@ -290,7 +290,7 @@ export default async function (pi: ExtensionAPI) {
       connected = await client.health();
       if (!connected) {
         if (config.logLevel === "info") {
-          ctx.ui.notify("OpenViking: server not reachable", "warning");
+          ctx.ui.notify("Business Data Platform: server not reachable", "warning");
         }
         return;
       }
@@ -304,7 +304,7 @@ export default async function (pi: ExtensionAPI) {
 
       started = true;
       if (config.logLevel === "info") {
-        ctx.ui.notify(`OpenViking connected (${piSessionId.slice(0, 8)}...)`, "info");
+        ctx.ui.notify(`Business Data Platform connected (${piSessionId.slice(0, 8)}...)`, "info");
       }
     })().finally(() => {
       startPromise = null;
@@ -481,13 +481,13 @@ export default async function (pi: ExtensionAPI) {
   // --- session_before_compact ---
   pi.on("session_before_compact", async (event, ctx) => {
     if (bypassed) return;
-    // Called even with OpenViking down: the core's recent-reset guard needs no
+    // Called even with Business Data Platform down: the core's recent-reset guard needs no
     // network, and it is what stops a stale usage estimate right after a reset
     // from compacting a window that just opened. The core refuses to commit on
     // its own when `io.connected()` is false, so an offline pi still falls back
     // to its own summarizer.
     //
-    // Takes over pi's compaction: archive to OpenViking and hand pi our window
+    // Takes over pi's compaction: archive to Business Data Platform and hand pi our window
     // header as the summary. Returns undefined on any failure, which leaves
     // pi's own summarizer in charge.
     return await windows.handleBeforeCompact({
@@ -527,7 +527,7 @@ export default async function (pi: ExtensionAPI) {
 
   pi.registerCommand("viking", {
     description:
-      "OpenViking status and manual operations: 'commit' to force a sync, 'window' for the context window status.",
+      "Business Data Platform status and manual operations: 'commit' to force a sync, 'window' for the context window status.",
     handler: async (args, ctx) => {
       const command = args?.trim() ?? "";
 
@@ -558,7 +558,7 @@ export default async function (pi: ExtensionAPI) {
       }
 
       if (!connected) {
-        ctx.ui.notify("OpenViking: not connected", "warning");
+        ctx.ui.notify("Business Data Platform: not connected", "warning");
         return;
       }
 
@@ -567,12 +567,12 @@ export default async function (pi: ExtensionAPI) {
         const commitResult = await sync.commit();
         if (commitResult !== null) {
           ctx.ui.notify(
-            "OpenViking: committed successfully" +
+            "Business Data Platform: committed successfully" +
               (commitResult?.trace_id ? ` (trace_id=${commitResult.trace_id})` : ""),
             "info",
           );
         } else {
-          ctx.ui.notify("OpenViking: commit failed", "error");
+          ctx.ui.notify("Business Data Platform: commit failed", "error");
         }
         return;
       }
@@ -580,7 +580,7 @@ export default async function (pi: ExtensionAPI) {
       // Status
       const sid = sync.sessionId ?? "none";
       ctx.ui.notify(
-        `OpenViking: ${connected ? "connected" : "disconnected"} | session: ${sid.slice(0, 12)}... | window: ${windows.windowId}`,
+        `Business Data Platform: ${connected ? "connected" : "disconnected"} | session: ${sid.slice(0, 12)}... | window: ${windows.windowId}`,
         "info",
       );
     },

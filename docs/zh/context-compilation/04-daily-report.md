@@ -6,7 +6,7 @@ Skill 原始碼：[examples/compile/ov-compile-skills/daily-report](https://gith
 
 ## 第一步：準備來源
 
-日報的來源通常是已經在 OpenViking 裡的會話、訊息或文件。如果要從本地匯入一批記錄：
+日報的來源通常是已經在 Business Data Platform 裡的會話、訊息或文件。如果要從本地匯入一批記錄：
 
 ```bash
 ov add-resource ./work-logs --to viking://resources/work-logs

@@ -1,6 +1,6 @@
 # OVPack
 
-The OVPack API imports, exports, backs up, and restores OpenViking data.
+The OVPack API imports, exports, backs up, and restores Business Data Platform data.
 
 ## API Reference
 

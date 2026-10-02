@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Resource Service for OpenViking.
+Resource Service for Business Data Platform.
 
 Provides resource management operations: add_resource, add_skill, wait_processed.
 """
@@ -2188,7 +2188,7 @@ class ResourceService:
         task_id: Optional[str] = None,
         owner_lease_ref: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """Add skill to OpenViking.
+        """Add skill to Business Data Platform.
 
         Args:
             data: Skill data (directory path, file path, string, or dict)

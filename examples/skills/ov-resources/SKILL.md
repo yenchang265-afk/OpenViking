@@ -1,12 +1,12 @@
 ---
 name: ov-resources
-description: Load when an agent needs to add, manage, browse, search, modify, or remove resources in OpenViking. Trigger on explicit user requests about resource management or context search, when the user mentions `ov add-resource`, `ov task watch`, `ov export`, `ov import`, `ov backup`, `ov restore`, `ov ls`, `ov tree`, `ov read`, `ov write`, `ov mkdir`, `ov rm`, `ov mv`, `ov find`, `ov search`, `ov grep`, `ov glob`, or when an agent needs to inspect, search, or organize the `viking://resources/` namespace.
-compatibility: OpenViking CLI configured at `~/.openviking/ovcli.conf`
+description: Load when an agent needs to add, manage, browse, search, modify, or remove resources in Business Data Platform. Trigger on explicit user requests about resource management or context search, when the user mentions `ov add-resource`, `ov task watch`, `ov export`, `ov import`, `ov backup`, `ov restore`, `ov ls`, `ov tree`, `ov read`, `ov write`, `ov mkdir`, `ov rm`, `ov mv`, `ov find`, `ov search`, `ov grep`, `ov glob`, or when an agent needs to inspect, search, or organize the `viking://resources/` namespace.
+compatibility: Business Data Platform CLI configured at `~/.openviking/ovcli.conf`
 version: 1.0.0
 last_updated: 2026-06-08
 ---
 
-# OpenViking (OV) Resource Management
+# Business Data Platform (OV) Resource Management
 
 The `ov` command group for resources covers adding external knowledge, filesystem operations, scheduled refresh (watch tasks), and ovpack import/export/backup/restore.
 

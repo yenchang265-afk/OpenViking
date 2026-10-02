@@ -1,5 +1,5 @@
 /**
- * Adapter: binds the pure `ContextWindowCore` to pi, the OpenViking client and
+ * Adapter: binds the pure `ContextWindowCore` to pi, the Business Data Platform client and
  * the sync manager. The core owns every decision; everything with an effect —
  * network, disk, pi APIs, the clock — arrives through this io object, which is
  * what makes the state machine testable without either side.

@@ -66,13 +66,13 @@ const gettingStartedSidebar = {
     ['01-introduction.md', 'Introduction'],
     ['02-quickstart.md', 'Quick Start'],
     ['04-setup-for-agent.md', 'Server Setup for Agent'],
-    ['05-cli-setup.md', 'OpenViking CLI']
+    ['05-cli-setup.md', 'Business Data Platform CLI']
   ],
   zh: [
     ['01-introduction.md', '簡介'],
     ['02-quickstart.md', '快速開始'],
     ['04-setup-for-agent.md', '服務端安裝（Agent 版）'],
-    ['05-cli-setup.md', 'OpenViking CLI']
+    ['05-cli-setup.md', 'Business Data Platform CLI']
   ]
 } as const
 
@@ -107,7 +107,7 @@ const agentIntegrationSidebar = {
       {
         text: 'General Integration',
         items: [
-          ['14-openviking-helper.md', 'OpenViking Helper'],
+          ['14-openviking-helper.md', 'Business Data Platform Helper'],
           ['15-agent-plugins.md', 'Agent Plugins 1.0'],
           ['06-mcp-clients.md', 'MCP Clients'],
           ['09-log-ingestion.md', 'Local Log Import'],
@@ -146,7 +146,7 @@ const agentIntegrationSidebar = {
       {
         text: '通用接入',
         items: [
-          ['14-openviking-helper.md', 'OpenViking Helper'],
+          ['14-openviking-helper.md', 'Business Data Platform Helper'],
           ['15-agent-plugins.md', 'Agent Plugins 1.0'],
           ['06-mcp-clients.md', 'MCP 客戶端'],
           ['09-log-ingestion.md', '本地日誌匯入'],
@@ -204,7 +204,7 @@ const apiReferenceSidebar = {
       {
         text: 'Protocols & Extensions',
         items: [
-          ['22-openviking-assets.md', 'OpenViking Assets'],
+          ['22-openviking-assets.md', 'Business Data Platform Assets'],
           ['20-webdav.md', 'WebDAV'],
           ['23-agent-runtime.md', 'Agent Runtime API'],
           ['24-vikingbot.md', 'VikingBot API']
@@ -262,7 +262,7 @@ const apiReferenceSidebar = {
       {
         text: '協議與擴充',
         items: [
-          ['22-openviking-assets.md', 'OpenViking Assets'],
+          ['22-openviking-assets.md', 'Business Data Platform Assets'],
           ['20-webdav.md', 'WebDAV'],
           ['23-agent-runtime.md', 'Agent Runtime API'],
           ['24-vikingbot.md', 'VikingBot API']
@@ -375,7 +375,7 @@ const guidesSidebar = {
         items: [
           ['06-mcp-integration.md', 'MCP Integration'],
           ['09-ovpack.md', 'OVPack'],
-          ['18-openviking-assets.md', 'OpenViking Assets'],
+          ['18-openviking-assets.md', 'Business Data Platform Assets'],
           ['10-prompt-guide.md', 'Prompt Customization'],
           ['17-vikingbot.md', 'VikingBot']
         ]
@@ -419,7 +419,7 @@ const guidesSidebar = {
         items: [
           ['06-mcp-integration.md', 'MCP 集成'],
           ['09-ovpack.md', 'OVPack'],
-          ['18-openviking-assets.md', 'OpenViking Assets'],
+          ['18-openviking-assets.md', 'Business Data Platform Assets'],
           ['10-prompt-guide.md', 'Prompt 自定義'],
           ['17-vikingbot.md', 'VikingBot']
         ]

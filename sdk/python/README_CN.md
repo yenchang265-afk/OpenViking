@@ -1,8 +1,8 @@
 # openviking-sdk
 
-OpenViking 的輕量級 Python HTTP SDK。
+Business Data Platform 的輕量級 Python HTTP SDK。
 
-`openviking-sdk` 面向只需要通過 HTTP 呼叫現有 OpenViking 服務的使用者。它避免了主包 `openviking` 中較重的本地執行時、服務端和 CLI 依賴。
+`openviking-sdk` 面向只需要通過 HTTP 呼叫現有 Business Data Platform 服務的使用者。它避免了主包 `openviking` 中較重的本地執行時、服務端和 CLI 依賴。
 
 ## 安裝
 
@@ -13,7 +13,7 @@ pip install openviking-sdk
 要求：
 
 - Python 3.8+
-- 一個可訪問的 OpenViking HTTP 服務，例如 `http://127.0.0.1:1933`
+- 一個可訪問的 Business Data Platform HTTP 服務，例如 `http://127.0.0.1:1933`
 
 ## 包名與匯入名
 
@@ -40,7 +40,7 @@ SDK 支援三種配置方式，優先順序從高到低如下：
 
 常見客戶端欄位：
 
-- `url`：OpenViking 服務的基礎 URL
+- `url`：Business Data Platform 服務的基礎 URL
 - `api_key`：root key 或 user key
 - `account`：可選的 account 覆蓋，通常只在使用 root key 時需要
 - `user`：可選的 user 覆蓋，通常只在使用 root key 時需要
@@ -103,7 +103,7 @@ with use_actor_peer("assistant-a"):
 執行的同步呼叫不會互相覆蓋。巢狀作用域會自動恢復之前的 actor peer。
 
 該作用域不會改變認證或租戶歸屬。Account 和 user 身份仍然由 API Key 或 OAuth
-憑證決定。每個 OpenViking user 應使用各自繫結憑證的 client，actor peer 只能從應用
+憑證決定。每個 Business Data Platform user 應使用各自繫結憑證的 client，actor peer 只能從應用
 已經認證的狀態中解析。服務端只會在支援 actor-peer view 的介面上應用該值；Session
 介面仍然以 user 為作用域。
 

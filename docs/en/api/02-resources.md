@@ -6,7 +6,7 @@ Resources are external knowledge that agents can reference. This module provides
 
 ### Resource Types
 
-OpenViking supports various resource types, categorized by functionality:
+Business Data Platform supports various resource types, categorized by functionality:
 
 **Documents**
 
@@ -97,7 +97,7 @@ Source Input -> Parse -> Resource Tree Build -> Persistence -> Semantic Processi
 - Processed asynchronously via `SemanticQueue`; use the returned `task_id` to check completion
 
 #### Non-Wait Git Repository Imports
-- For Git repository sources with `wait=false`, OpenViking validates the repository, resolves the target URI, reserves the final `root_uri`, and returns before clone/parse/finalize completes.
+- For Git repository sources with `wait=false`, Business Data Platform validates the repository, resolves the target URI, reserves the final `root_uri`, and returns before clone/parse/finalize completes.
 - The immediate response contains `status`, `root_uri`, and `task_id`; fetching, parsing, finalizing, and queue waiting continue in a persistent background task.
 - Poll `GET /api/v1/tasks/{task_id}` to inspect task state. Git resource import tasks use stages such as `queued`, `fetching`, `parsing`, `finalizing`, and `processing_queue`.
 - Other resource sources with `wait=false` finish fetching/parsing/finalizing before the response; their returned `task_id` tracks semantic and embedding queue completion only.
@@ -169,7 +169,7 @@ This endpoint is the core entry point for resource management. It supports vario
 | to | string | No | - | Final location for this import. If the target already exists, it is refreshed. Mutually exclusive with `parent` |
 | parent | string | No | - | Parent Viking URI (resource placed under this directory). Mutually exclusive with `to` |
 | create_parent | bool | No | False | Automatically create parent directory if it does not exist (server-side flag) |
-| reason | string | No | "" | Reason for adding the resource. When non-empty, OpenViking runs it through the normal session memory extraction pipeline with the resource URI and records resource references in the resulting memory |
+| reason | string | No | "" | Reason for adding the resource. When non-empty, Business Data Platform runs it through the normal session memory extraction pipeline with the resource URI and records resource references in the resulting memory |
 | instruction | string | No | "" | Processing instructions for semantic extraction (experimental feature) |
 | wait | bool | No | False | Whether to wait for semantic processing and vectorization to complete before returning |
 | timeout | float | No | None | Timeout in seconds, only effective when `wait=True` |
@@ -197,11 +197,11 @@ This endpoint is the core entry point for resource management. It supports vario
 - `user_id` and `peer_id` path segments must be safe single-segment identifiers, for example `alice` or `web-visitor-alice`. Values with path separators, `.`, `..`, `:`, or `+` are rejected.
 - `path` and `temp_file_id` cannot be specified together
 - Raw HTTP calls for local files require first uploading via [temp_upload](#temp-upload) to obtain `temp_file_id`
-- Only Git repository sources use full background import when `wait=false`; OpenViking performs repository preflight and target planning before returning the `task_id`.
-- Native HTTPS Git credentials in `args.auth_config` remain request-local when `watch_interval <= 0`. When `watch_interval > 0`, OpenViking stores the repository-bound username/token in private watch state and restores it only for later Git fetches. The credentials are excluded from ordinary queue payloads and watch API/MCP/CLI responses. Git PATs have no generic refresh flow; rotate an expired or revoked token by recreating the watch. Legacy URL-embedded credentials such as `https://user:token@host/repo.git` remain accepted and are passed through unchanged; because that URL is also the source identifier, it may be recorded in process arguments, logs, queues, resource metadata, and watch state. Prefer `args.auth_config` for new integrations. Plaintext HTTP authentication and authenticated redirects for `args.auth_config` remain rejected.
+- Only Git repository sources use full background import when `wait=false`; Business Data Platform performs repository preflight and target planning before returning the `task_id`.
+- Native HTTPS Git credentials in `args.auth_config` remain request-local when `watch_interval <= 0`. When `watch_interval > 0`, Business Data Platform stores the repository-bound username/token in private watch state and restores it only for later Git fetches. The credentials are excluded from ordinary queue payloads and watch API/MCP/CLI responses. Git PATs have no generic refresh flow; rotate an expired or revoked token by recreating the watch. Legacy URL-embedded credentials such as `https://user:token@host/repo.git` remain accepted and are passed through unchanged; because that URL is also the source identifier, it may be recorded in process arguments, logs, queues, resource metadata, and watch state. Prefer `args.auth_config` for new integrations. Plaintext HTTP authentication and authenticated redirects for `args.auth_config` remain rejected.
 - The token travels in the HTTPS request body. Keep diagnostic request-body dumping disabled in production because explicitly enabling it can record secrets.
-- Memory generated from `reason` is extracted through the same pipeline as `session.commit`. It uses `reason`, the resource URI, available source name, and available directory abstract; it does not inspect or expand the full resource content. OpenViking writes to existing memory types such as `entities`, `events`, or `preferences`, not a dedicated resource memory directory.
-- When deleting a resource, OpenViking scans the self or peer memories targeted by the current context before deletion, removes the matching resource URI and content introduced by that `reason`, and refreshes the semantic index for the affected memories.
+- Memory generated from `reason` is extracted through the same pipeline as `session.commit`. It uses `reason`, the resource URI, available source name, and available directory abstract; it does not inspect or expand the full resource content. Business Data Platform writes to existing memory types such as `entities`, `events`, or `preferences`, not a dedicated resource memory directory.
+- When deleting a resource, Business Data Platform scans the self or peer memories targeted by the current context before deletion, removes the matching resource URI and content introduced by that `reason`, and refreshes the semantic index for the affected memories.
 - Other sources with `wait=false` finish source parsing, target resolution, and AGFS writes before returning. Only semantic and embedding queues continue asynchronously.
 - `processing_mode=vectors_only` does not call the VLM semantic-understanding stage and does not generate or refresh `.abstract.md` / `.overview.md`. For existing targets, it preserves existing semantic artifacts and existing semantic vectors. It still updates the resource tree, vectorizes current non-hidden files when `build_index=true`, and removes detail vectors for files deleted during refresh.
 - `processing_mode` belongs to `add_resource`. The admin `reindex` API/CLI continues to use `mode` (`vectors_only`, `semantic_and_vectors`, `prune_orphans`) for maintenance operations on already-ingested data.
@@ -494,7 +494,7 @@ task_id      uuid-xxx
 | Field | Type | Description |
 |-------|------|-------------|
 | `status` | string | Processing status: `accepted` means queued, `success` means completed successfully, and `error` means failed. |
-| `root_uri` | string | Final URI of the resource in OpenViking |
+| `root_uri` | string | Final URI of the resource in Business Data Platform |
 | `task_id` | string | (Optional, only when `wait=false`) Task ID for polling `/api/v1/tasks/{task_id}`. Non-Git imports use it for queue tracking; Git repository imports use it for full background import tracking. |
 | `temp_uri` | string | Temporary URI produced during import |
 | `source_path` | string | Original source file path or URL |
@@ -645,4 +645,4 @@ Possible shared response:
 - [Skills](04-skills.md) - Skill management APIs
 - [Retrieval](06-retrieval.md) - Search and context acquisition
 - [ovpack Guide](../guides/09-ovpack.md) - Detailed ovpack import/export documentation
-- [OpenViking Assets](../guides/18-openviking-assets.md) - Declarative resource-set protocol and usage guide
+- [Business Data Platform Assets](../guides/18-openviking-assets.md) - Declarative resource-set protocol and usage guide

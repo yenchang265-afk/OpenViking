@@ -78,14 +78,14 @@ describe('pattern retrieval', () => {
       }),
     )
 
-    const result = await fetchFindAllTypes('OpenViking', { limit: 10 })
+    const result = await fetchFindAllTypes('Business Data Platform', { limit: 10 })
 
     expect(postSearchFindMock).toHaveBeenCalledTimes(1)
     expect(postSearchFindMock).toHaveBeenCalledWith({
       body: {
         filter: undefined,
         limit: 10,
-        query: 'OpenViking',
+        query: 'Business Data Platform',
         score_threshold: undefined,
         target_uri: undefined,
       },
@@ -104,7 +104,7 @@ describe('pattern retrieval', () => {
         count: 1,
         matches: [
           {
-            content: 'OpenViking authentication',
+            content: 'Business Data Platform authentication',
             line: 15,
             uri: 'viking://resources/docs/auth.md',
           },
@@ -127,7 +127,7 @@ describe('pattern retrieval', () => {
       },
     })
     expect(result.resources[0]).toMatchObject({
-      abstract: 'OpenViking authentication',
+      abstract: 'Business Data Platform authentication',
       line: 15,
       result_kind: 'grep',
       uri: 'viking://resources/docs/auth.md',

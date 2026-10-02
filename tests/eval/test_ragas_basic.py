@@ -96,7 +96,7 @@ def test_pipeline_query_consumes_http_result_and_generates_answer():
 
 def test_question_loader():
     with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
-        f.write('{"question": "What is OpenViking?"}\n')
+        f.write('{"question": "What is Business Data Platform?"}\n')
         f.write('{"question": "How does memory work?", "ground_truth": "Hierarchical"}\n')
         f.write("\n")
         f.write('{"invalid": "no question field"}\n')
@@ -117,7 +117,7 @@ def test_question_loader():
                     pass
 
         assert len(questions) == 2
-        assert questions[0]["question"] == "What is OpenViking?"
+        assert questions[0]["question"] == "What is Business Data Platform?"
         assert questions[1]["ground_truth"] == "Hierarchical"
     finally:
         Path(temp_path).unlink()

@@ -836,8 +836,8 @@ function jsonlContentToText(value: unknown): string {
 /**
  * Classify one content entry by its structural `type` field, never by a
  * rendered string prefix. Covers the Anthropic transcript shape
- * (`text` / `tool_use` / `tool_result`) and the OpenViking parts shape
- * (`text` / `tool`, see openviking/message/part.py). An OpenViking `tool`
+ * (`text` / `tool_use` / `tool_result`) and the Business Data Platform parts shape
+ * (`text` / `tool`, see openviking/message/part.py). A Business Data Platform `tool`
  * part carries both the call and its output, so it expands to two entries.
  */
 function toJsonlParts(part: unknown): JsonlPart[] {

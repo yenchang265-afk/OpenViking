@@ -35,7 +35,7 @@ describe("openviking query formatters", () => {
 
   it("formats search text and empty search text", () => {
     expect(formatOVSearchText("query", "viking://resources", { total: 0 })).toBe(
-      'No OpenViking resource or skill results found for "query" under viking://resources.',
+      'No Business Data Platform resource or skill results found for "query" under viking://resources.',
     );
 
     const text = formatOVSearchText("query", undefined, {
@@ -43,7 +43,7 @@ describe("openviking query formatters", () => {
       total: 1,
     });
 
-    expect(text).toContain('Found 1 OpenViking results for "query"');
+    expect(text).toContain('Found 1 Business Data Platform results for "query"');
     expect(text).toContain("Use ov_read on exact hit URIs");
     expect(text).toContain("viking://resources/doc");
   });
@@ -55,19 +55,19 @@ describe("openviking query formatters", () => {
     );
     expect(formatOVListText("viking://resources", [
       { uri: "viking://resources/doc", isDir: false, abstract: "  short\nsummary  " },
-    ])).toBe("Listed 1 OpenViking entry under viking://resources\n\n[file] viking://resources/doc - short summary");
+    ])).toBe("Listed 1 Business Data Platform entry under viking://resources\n\n[file] viking://resources/doc - short summary");
   });
 
   it("formats read and multi-read output", () => {
     expect(formatOVReadText("viking://resources/doc", "")).toBe(
-      "--- START OF viking://resources/doc ---\n(empty OpenViking content)\n--- END OF viking://resources/doc ---",
+      "--- START OF viking://resources/doc ---\n(empty Business Data Platform content)\n--- END OF viking://resources/doc ---",
     );
 
     expect(formatOVMultiReadText([
       { uri: "viking://resources/a", content: "content", success: true },
       { uri: "viking://resources/b", content: "boom", success: false },
     ])).toBe(
-      "Multi-read results for 2 OpenViking resources:\n\n--- START OF viking://resources/a ---\ncontent\n--- END OF viking://resources/a ---\n\n--- START OF viking://resources/b ---\nERROR: boom\n--- END OF viking://resources/b ---",
+      "Multi-read results for 2 Business Data Platform resources:\n\n--- START OF viking://resources/a ---\ncontent\n--- END OF viking://resources/a ---\n\n--- START OF viking://resources/b ---\nERROR: boom\n--- END OF viking://resources/b ---",
     );
   });
 });

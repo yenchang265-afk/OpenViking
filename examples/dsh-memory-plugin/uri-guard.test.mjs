@@ -28,18 +28,18 @@ test("uri guard blocks every DSH filesystem tool that accepts paths", async () =
 
     assert.equal(delegated, false, name);
     assert.equal(decision.kind, "deny", name);
-    assert.match(decision.reason, /viking:\/\/ URIs are OpenViking virtual paths/, name);
+    assert.match(decision.reason, /viking:\/\/ URIs are Business Data Platform virtual paths/, name);
     assert.match(decision.reason, /mcp__openviking__/, name);
   }
 });
 
-test("uri guard delegates the bridged OpenViking tools and ordinary filesystem paths", async () => {
+test("uri guard delegates the bridged Business Data Platform tools and ordinary filesystem paths", async () => {
   const next = async () => ({ kind: "allow", marker: true });
   assert.deepEqual(
     await guardVikingUri({ name: "read", arguments: { file_path: "/tmp/a" } }, next),
     { kind: "allow", marker: true },
   );
-  // The bridge publishes every OpenViking tool under an `mcp__openviking__`
+  // The bridge publishes every Business Data Platform tool under an `mcp__openviking__`
   // name, so the guard's bare `read` / `grep` / `write` keys never shadow them.
   for (const name of ["read", "grep", "glob", "write", "edit"]) {
     assert.deepEqual(
@@ -171,8 +171,8 @@ test("the notice leaves file tools, plain shell commands, and denied reads alone
   const cases = [
     [{ name: "read", arguments: { file_path: "viking://user/default/memories/p.md" } }, {
       isError: true,
-      error: { message: "viking:// URIs are OpenViking virtual paths" },
-      content: [{ type: "text", text: "Error: viking:// URIs are OpenViking virtual paths" }],
+      error: { message: "viking:// URIs are Business Data Platform virtual paths" },
+      content: [{ type: "text", text: "Error: viking:// URIs are Business Data Platform virtual paths" }],
     }],
     [{ name: "write", arguments: { file_path: "/tmp/a.md", content: "viking://user/default/" } }, okResult()],
     [{ name: "bash", arguments: { command: "ls /tmp" } }, okResult()],

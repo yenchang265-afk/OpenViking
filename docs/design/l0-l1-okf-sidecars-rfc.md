@@ -4,7 +4,7 @@ Status: Draft
 
 ## Summary
 
-OpenViking today stores built-in context-layer summaries as directory-level Markdown sidecars:
+Business Data Platform today stores built-in context-layer summaries as directory-level Markdown sidecars:
 
 - `.abstract.md` for L0
 - `.overview.md` for L1
@@ -15,7 +15,7 @@ The change makes L0/L1 sidecars more self-describing without changing the public
 
 ## Background
 
-OpenViking uses a three-layer context model:
+Business Data Platform uses a three-layer context model:
 
 | Layer | Current file | Role |
 | --- | --- | --- |

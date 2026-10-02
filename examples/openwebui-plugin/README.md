@@ -1,6 +1,6 @@
-# OpenViking Tool Server for Open WebUI
+# Business Data Platform Tool Server for Open WebUI
 
-A standalone FastAPI server that exposes a curated subset of OpenViking
+A standalone FastAPI server that exposes a curated subset of Business Data Platform
 endpoints as **OpenAPI tools** so Open WebUI can call them as native tools.
 
 [中文說明在下方 / Chinese instructions below.](#中文說明)
@@ -12,15 +12,15 @@ its admin UI, and **external OpenAPI tool servers** auto-discovered from
 `/openapi.json`. This plugin implements the second mechanism.
 
 It is a **thin translation layer**: every tool route forwards a request to the
-corresponding OpenViking HTTP endpoint, attaches tenant headers, and returns
-the response. There is no business logic here — see the OpenViking server for
+corresponding Business Data Platform HTTP endpoint, attaches tenant headers, and returns
+the response. There is no business logic here — see the Business Data Platform server for
 that.
 
 ## Tools Exposed
 
 Seven curated tools, all auto-discovered by Open WebUI:
 
-| Tool | OpenViking endpoint | Purpose |
+| Tool | Business Data Platform endpoint | Purpose |
 | --- | --- | --- |
 | `ov_search` | `POST /api/v1/search/find` | Semantic search across memories, resources, skills |
 | `ov_recall_memories` | `POST /api/v1/search/find` (scoped to `viking://~/memories/`) | Recall personal memories for the current query |
@@ -69,13 +69,13 @@ All configuration is via environment variables:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `OV_ENDPOINT` | `http://localhost:1933` | OpenViking server base URL |
+| `OV_ENDPOINT` | `http://localhost:1933` | Business Data Platform server base URL |
 | `OV_API_KEY` | _(empty)_ | Bearer token sent as `Authorization: Bearer …` |
 | `OV_ACCOUNT` | `default` | Tenant — sent as `X-OpenViking-Account` |
 | `OV_USER` | `default` | User — sent as `X-OpenViking-User` |
 | `OV_AGENT` | `default` | Actor peer ID — sent as `X-OpenViking-Actor-Peer` |
 | `OV_BIND` | `0.0.0.0:8765` | Host:port the tool server binds to |
-| `OV_TIMEOUT` | `30` | HTTP timeout in seconds when calling OpenViking |
+| `OV_TIMEOUT` | `30` | HTTP timeout in seconds when calling Business Data Platform |
 
 There is no config file. This is intentional — make the deployment unit one
 binary and one set of env vars.
@@ -94,7 +94,7 @@ remember about me re: X?".
 
 ### `ov_add_memory`
 Persists a memory. Takes `{name, content, mode?, wait?}` and writes
-`viking://~/memories/<name>` via OpenViking's content write API. `mode` is
+`viking://~/memories/<name>` via Business Data Platform's content write API. `mode` is
 one of `replace | append | create`.
 
 ### `ov_list_memories`
@@ -105,7 +105,7 @@ Lists entries directly under `viking://~/memories/`. Takes
 Reads any `viking://` URI's text content. Takes `{uri, offset?, limit?}`.
 
 ### `ov_add_resource`
-Triggers OpenViking ingestion of a remote URL or path the OV server can reach.
+Triggers Business Data Platform ingestion of a remote URL or path the OV server can reach.
 Takes `{path, to?, parent?, reason?, instruction?, wait?}`. Pure HTTP forward —
 the OV server validates the source.
 
@@ -121,7 +121,7 @@ pip install -e ".[test]"
 pytest tests -x -q
 ```
 
-The test suite uses `respx` to mock the OpenViking HTTP layer, and asserts
+The test suite uses `respx` to mock the Business Data Platform HTTP layer, and asserts
 each tool calls the correct upstream method/path/body and forwards tenant
 headers verbatim.
 
@@ -145,7 +145,7 @@ Adding a new tool is roughly:
 
 1. Add a Pydantic request model in `openviking_openwebui/tools.py`.
 2. Add a route handler decorated with `@router.post("/tools/<name>", operation_id="<name>")`.
-3. Forward to the OpenViking endpoint via `OVClient`.
+3. Forward to the Business Data Platform endpoint via `OVClient`.
 4. Add a test in `tests/test_tools.py` mocking the upstream call.
 
 Likely candidates the community might want next: `ov_session_create`,
@@ -158,13 +158,13 @@ Likely candidates the community might want next: `ov_session_create`,
   network, or front it with a proxy that enforces auth.
 - Tenant identity is server-side trust: anyone with `OV_API_KEY` and the
   right `X-OpenViking-Account/User` headers can read that tenant's data. This
-  matches OpenViking's standard trust model.
+  matches Business Data Platform's standard trust model.
 
 ---
 
 ## 中文說明
 
-這是一個獨立的 FastAPI 服務，將 OpenViking 的一組核心 HTTP 端點封裝為
+這是一個獨立的 FastAPI 服務，將 Business Data Platform 的一組核心 HTTP 端點封裝為
 **OpenAPI 工具**，供 Open WebUI 自動發現並呼叫。
 
 ### 它做什麼
@@ -210,5 +210,5 @@ pytest tests -x -q
 
 1. 在 `openviking_openwebui/tools.py` 中新增 Pydantic 請求模型；
 2. 新增路由 handler，設定 `operation_id`；
-3. 通過 `OVClient` 轉發到對應 OpenViking 端點；
+3. 通過 `OVClient` 轉發到對應 Business Data Platform 端點；
 4. 在 `tests/test_tools.py` 中加 mock 測試。

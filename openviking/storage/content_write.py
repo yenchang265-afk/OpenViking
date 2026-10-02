@@ -84,7 +84,7 @@ _BATCH_MAX_OPERATIONS = 256
 _BATCH_MAX_FILE_BYTES = 8 * 1024 * 1024
 _BATCH_MAX_TOTAL_BYTES = 16 * 1024 * 1024
 
-# Subtrees directly under a user root that OpenViking manages itself; only
+# Subtrees directly under a user root that Business Data Platform manages itself; only
 # memories/, resources/, and plain files may be written under a user root.
 _USER_MANAGED_SUBTREES = frozenset({"skills", "peers", "privacy", "sessions"})
 
@@ -1093,7 +1093,7 @@ class ContentWriteCoordinator:
             raise InvalidArgumentError(f"cannot write watch task control file directly: {uri}")
 
     def _is_not_found(self, exc: Exception) -> bool:
-        """Check if an exception indicates a not-found error (OpenViking or AGFS)."""
+        """Check if an exception indicates a not-found error (Business Data Platform or AGFS)."""
         if isinstance(exc, NotFoundError):
             return True
         # AGFS raises its own AGFSNotFoundError which is unrelated to our NotFoundError

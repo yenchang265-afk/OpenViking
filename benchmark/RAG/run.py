@@ -17,7 +17,7 @@ PROJECT_ROOT = SCRIPT_DIR
 ov_config_path = os.path.join(SCRIPT_DIR, "ov.conf")
 if os.path.exists(ov_config_path):
     os.environ["OPENVIKING_CONFIG_FILE"] = ov_config_path
-    print(f"[Init] Auto-detected OpenViking config: {ov_config_path}")
+    print(f"[Init] Auto-detected Business Data Platform config: {ov_config_path}")
 
 try:
     from src.pipeline import BenchmarkPipeline 

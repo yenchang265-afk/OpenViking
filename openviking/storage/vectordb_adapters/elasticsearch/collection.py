@@ -75,7 +75,7 @@ def _refresh_param(policy: str) -> Any:
 
 
 class ElasticsearchCollection(ICollection):
-    """OpenViking collection stored as one Elasticsearch index.
+    """Business Data Platform collection stored as one Elasticsearch index.
 
     Collection and logical index metadata are persisted in the mapping
     ``_meta`` so a restarted process can recover them without a side table.

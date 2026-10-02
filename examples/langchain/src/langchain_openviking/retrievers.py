@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""LangChain retriever backed by OpenViking retrieval."""
+"""LangChain retriever backed by Business Data Platform retrieval."""
 
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ class _SharedSyncClientCache:
 
 
 class OpenVikingRetriever(BaseRetriever):
-    """Retrieve LangChain ``Document`` objects from OpenViking contexts."""
+    """Retrieve LangChain ``Document`` objects from Business Data Platform contexts."""
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 

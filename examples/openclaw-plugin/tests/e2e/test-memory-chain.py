@@ -6,7 +6,7 @@ OpenClaw 記憶鏈路完整端到端測試
 一、用例設計思路
 ================================================================================
 
-驗證 OpenViking 記憶外掛的完整鏈路，覆蓋訊息寫入到記憶召回的每個環節:
+驗證 Business Data Platform 記憶外掛的完整鏈路，覆蓋訊息寫入到記憶召回的每個環節:
 
   afterTurn → commit → assemble → sessionId 一致性 → 新使用者記憶召回
 
@@ -42,8 +42,8 @@ OpenClaw 記憶鏈路完整端到端測試
 三、環境前提
 ================================================================================
 
-  1. OpenViking 服務已啟動
-  2. OpenClaw Gateway 已啟動並配置了 OpenViking 外掛
+  1. Business Data Platform 服務已啟動
+  2. OpenClaw Gateway 已啟動並配置了 Business Data Platform 外掛
   3. LLM 後端可達（Gateway 需要呼叫 LLM 生成回覆）
   4. 有效的 Gateway auth token
 
@@ -221,7 +221,7 @@ def test_marker(user_id: str) -> str:
 
 def chat_message_for_turn(user_id: str, index: int, message: str) -> str:
     if index == 1:
-        return f"{message}\n\n本輪 OpenViking e2e 測試標記：{test_marker(user_id)}。"
+        return f"{message}\n\n本輪 Business Data Platform e2e 測試標記：{test_marker(user_id)}。"
     return message
 
 
@@ -290,7 +290,7 @@ def set_gateway_token(token: str):
     _gateway_token = token
 
 
-# ── Gateway / OpenViking API ─────────────────────────────────────────────
+# ── Gateway / Business Data Platform API ─────────────────────────────────────────────
 
 
 def send_message(gateway_url: str, message: str, user_id: str) -> dict:
@@ -319,7 +319,7 @@ def extract_reply_text(data: dict) -> str:
 
 
 class OpenVikingInspector:
-    """OpenViking 內部狀態檢查器。"""
+    """Business Data Platform 內部狀態檢查器。"""
 
     def __init__(self, base_url: str, api_key: str = "", agent_id: str = AGENT_ID):
         self.base_url = base_url.rstrip("/")
@@ -571,9 +571,9 @@ def run_phase_after_turn(openviking_url: str, user_id: str, verbose: bool) -> tu
     inspector = OpenVikingInspector(openviking_url)
 
     # 2.1 健康檢查
-    console.print("[bold]2.1 OpenViking 健康檢查[/bold]")
+    console.print("[bold]2.1 Business Data Platform 健康檢查[/bold]")
     healthy = inspector.health_check()
-    check("OpenViking 服務可達", healthy)
+    check("Business Data Platform 服務可達", healthy)
     if not healthy:
         return False, user_id
 
@@ -1066,7 +1066,7 @@ def run_full_test(gateway_url: str, openviking_url: str, user_id: str, delay: fl
         Panel.fit(
             f"[bold]OpenClaw 記憶鏈路完整測試[/bold]\n\n"
             f"Gateway: {gateway_url}\n"
-            f"OpenViking: {openviking_url}\n"
+            f"Business Data Platform: {openviking_url}\n"
             f"User ID: {user_id}\n"
             f"時間: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}",
             title="測試資訊",
@@ -1158,7 +1158,7 @@ def main():
     parser.add_argument(
         "--openviking",
         default=DEFAULT_OPENVIKING,
-        help=f"OpenViking 服務地址 (預設: {DEFAULT_OPENVIKING})",
+        help=f"Business Data Platform 服務地址 (預設: {DEFAULT_OPENVIKING})",
     )
     parser.add_argument(
         "--user-id",
@@ -1185,7 +1185,7 @@ def main():
     parser.add_argument(
         "--agent-id",
         default=AGENT_ID,
-        help=f"OpenViking agent ID (預設: {AGENT_ID})",
+        help=f"Business Data Platform agent ID (預設: {AGENT_ID})",
     )
     parser.add_argument(
         "--verbose",
@@ -1206,7 +1206,7 @@ def main():
 
     console.print("[bold]OpenClaw 記憶鏈路測試[/bold]")
     console.print(f"[yellow]Gateway:[/yellow] {gateway_url}")
-    console.print(f"[yellow]OpenViking:[/yellow] {openviking_url}")
+    console.print(f"[yellow]Business Data Platform:[/yellow] {openviking_url}")
     console.print(f"[yellow]User ID:[/yellow] {user_id}")
 
     if args.phase == "all":

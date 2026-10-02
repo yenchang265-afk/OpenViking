@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Elasticsearch 8.x vector database adapter.
 
-Each OpenViking collection maps to one Elasticsearch index named
+Each Business Data Platform collection maps to one Elasticsearch index named
 ``<index_prefix><collection name>`` with a ``dense_vector`` field for kNN
 search. Requires ``pip install "openviking[elasticsearch]"``.
 """
@@ -54,7 +54,7 @@ def es_index_name(prefix: str, collection_name: str) -> str:
 
 
 class ElasticsearchCollectionAdapter(CollectionAdapter):
-    """OpenViking CollectionAdapter backed by an Elasticsearch 8.x index."""
+    """Business Data Platform CollectionAdapter backed by an Elasticsearch 8.x index."""
 
     mode = "elasticsearch"
     USE_CONTENT_FIELD = False
@@ -129,7 +129,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         if stored is None:
             raise RuntimeError(
                 f"Elasticsearch index {self._es_index!r} exists but was not created by "
-                "OpenViking; refusing to adopt it"
+                "Business Data Platform; refusing to adopt it"
             )
         stored_distance = stored.get(DISTANCE_KEY)
         if stored_distance and stored_distance != self._distance:
@@ -155,7 +155,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
             if not is_already_exists(error):
                 raise
             # Another process created the index between our existence check and
-            # create call; adopt it only if it carries OpenViking metadata.
+            # create call; adopt it only if it carries Business Data Platform metadata.
             logger.info("elasticsearch_adapter: index %s created concurrently", self._es_index)
             self._load_existing_collection_if_needed()
             if self._collection is None:

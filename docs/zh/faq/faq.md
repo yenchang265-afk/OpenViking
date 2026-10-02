@@ -2,20 +2,20 @@
 
 ## 基礎概念
 
-### OpenViking 是什麼？解決什麼問題？
+### Business Data Platform 是什麼？解決什麼問題？
 
-OpenViking 是一個專為 AI Agent 設計的開源上下文資料庫。它解決了構建 AI Agent 時的核心痛點：
+Business Data Platform 是一個專為 AI Agent 設計的開源上下文資料庫。它解決了構建 AI Agent 時的核心痛點：
 
 - **上下文碎片化**：記憶、資源、技能散落各處，難以統一管理
 - **檢索效果不佳**：傳統 RAG 平鋪式儲存缺乏全域視野，難以理解完整語境
 - **上下文不可觀測**：隱式檢索鏈路如同黑箱，出錯時難以除錯
 - **記憶迭代有限**：缺乏 Agent 相關的任務記憶和自我進化能力
 
-OpenViking 通過檔案系統範式統一管理所有上下文，實現分層供給與自我迭代。
+Business Data Platform 通過檔案系統範式統一管理所有上下文，實現分層供給與自我迭代。
 
-### OpenViking 和傳統向量資料庫有什麼本質區別？
+### Business Data Platform 和傳統向量資料庫有什麼本質區別？
 
-| 維度 | 傳統向量資料庫 | OpenViking |
+| 維度 | 傳統向量資料庫 | Business Data Platform |
 |------|---------------|------------|
 | **儲存模型** | 扁平化向量儲存 | 層級化檔案系統（AGFS） |
 | **檢索方式** | 單一向量相似度搜索 | 目錄遞迴檢索 + 意圖分析 + Rerank |
@@ -26,7 +26,7 @@ OpenViking 通過檔案系統範式統一管理所有上下文，實現分層供
 
 ### 什麼是 L0/L1/L2 分層模型？為什麼需要它？
 
-L0/L1/L2 是 OpenViking 的漸進式內容載入機制，解決了"海量上下文一次性塞入提示詞"的問題：
+L0/L1/L2 是 Business Data Platform 的漸進式內容載入機制，解決了"海量上下文一次性塞入提示詞"的問題：
 
 | 層級 | 名稱 | Token 限制 | 用途 |
 |------|------|-----------|------|
@@ -38,7 +38,7 @@ L0/L1/L2 是 OpenViking 的漸進式內容載入機制，解決了"海量上下�
 
 ### Viking URI 是什麼？有什麼作用？
 
-Viking URI 是 OpenViking 的統一資源識別符號，格式為 `viking://{scope}/{path}`。它讓系統能精準定位任何上下文：
+Viking URI 是 Business Data Platform 的統一資源識別符號，格式為 `viking://{scope}/{path}`。它讓系統能精準定位任何上下文：
 
 ```
 viking://
@@ -68,24 +68,24 @@ viking://
   - VLM（視覺語言模型）：用於多模態內容處理和語義提取
   - Rerank 模型：用於提升檢索精度
 
-### OpenViking 是如何訪問 AGFS 檔案系統的？
+### Business Data Platform 是如何訪問 AGFS 檔案系統的？
 
-OpenViking 通過 Rust 繫結（`ragfs_python` / `RAGFSBindingClient`）在 Python 程序內直接執行 RAGFS 檔案系統邏輯。優點是效能極高、無網路延遲；前提是本地需要有編譯好的 RAGFS 共享庫（預編譯 Wheel 包內建，或從原始碼編譯）。
+Business Data Platform 通過 Rust 繫結（`ragfs_python` / `RAGFSBindingClient`）在 Python 程序內直接執行 RAGFS 檔案系統邏輯。優點是效能極高、無網路延遲；前提是本地需要有編譯好的 RAGFS 共享庫（預編譯 Wheel 包內建，或從原始碼編譯）。
 
 > [!WARNING]
-> OpenViking 已不再支援 AGFS HTTP client 模式。當前 AGFS / RAGFS 檔案系統訪問僅通過 Rust binding（`RAGFSBindingClient`）在程序內完成。這不影響 OpenViking server 的 HTTP API、`ov` CLI，或 `AsyncHTTPClient` / `SyncHTTPClient` 訪問 OpenViking 服務端的能力。
+> Business Data Platform 已不再支援 AGFS HTTP client 模式。當前 AGFS / RAGFS 檔案系統訪問僅通過 Rust binding（`RAGFSBindingClient`）在程序內完成。這不影響 Business Data Platform server 的 HTTP API、`ov` CLI，或 `AsyncHTTPClient` / `SyncHTTPClient` 訪問 Business Data Platform 服務端的能力。
 
 ### 遇到 "AGFS binding library not found" 錯誤怎麼辦？
 
 這通常是因為本地沒有可用的 RAGFS 共享庫。在專案根目錄執行 `pip install -e . --force-reinstall` 重新編譯安裝即可（需要 Rust 工具鏈）。
 
-### 如何安裝 OpenViking？
+### 如何安裝 Business Data Platform？
 
 ```bash
 pip install openviking --upgrade --force-reinstall
 ```
 
-### 如何配置 OpenViking？
+### 如何配置 Business Data Platform？
 
 在專案目錄建立 `~/.openviking/ov.conf` 配置檔案：
 
@@ -144,7 +144,7 @@ client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
 await client.initialize()
 ```
 
-Embedding、VLM、儲存等服務配置由 OpenViking Server 通過 `ov.conf` 管理。
+Embedding、VLM、儲存等服務配置由 Business Data Platform Server 通過 `ov.conf` 管理。
 
 ### 支持哪些文件格式？
 
@@ -229,7 +229,7 @@ results = await client.search(
 
 ### 如何使用會話管理？
 
-會話管理是 OpenViking 的核心能力，支援對話追蹤和記憶提取：
+會話管理是 Business Data Platform 的核心能力，支援對話追蹤和記憶提取：
 
 ```python
 from openviking_sdk import TextPart
@@ -252,9 +252,9 @@ await session.add_message(
 await session.commit()
 ```
 
-### OpenViking 支援哪些記憶型別？
+### Business Data Platform 支援哪些記憶型別？
 
-OpenViking 內建 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories`、`experiences`、`tools` 和 `skills` 等記憶型別。提交會話後，系統會按當前記憶策略提取適用內容；也可以根據業務需要擴充或調整記憶型別。
+Business Data Platform 內建 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories`、`experiences`、`tools` 和 `skills` 等記憶型別。提交會話後，系統會按當前記憶策略提取適用內容；也可以根據業務需要擴充或調整記憶型別。
 
 記憶儲存在當前使用者或 Peer 名稱空間，不存在當前可寫的 `viking://agent/memories` 目錄。完整型別與路徑見 [上下文型別](../concepts/02-context-types.md)。
 
@@ -286,7 +286,7 @@ overview = await client.overview(uri="viking://resources")
 
 ### 檢索結果的分數是如何計算的？
 
-OpenViking 使用分數傳播機制：
+Business Data Platform 使用分數傳播機制：
 
 ```
 最終分數 = 0.5 × Embedding 相似度 + 0.5 × 父目錄分數
@@ -296,7 +296,7 @@ OpenViking 使用分數傳播機制：
 
 ### 什麼是目錄遞迴檢索？
 
-目錄遞迴檢索是 OpenViking 的創新檢索策略：
+目錄遞迴檢索是 Business Data Platform 的創新檢索策略：
 
 1. **意圖分析**：分析查詢生成多個檢索條件
 2. **初始定位**：向量檢索定位高分目錄
@@ -392,13 +392,13 @@ OpenViking 使用分數傳播機制：
 
 ## 部署相關
 
-### OpenViking 是開源的嗎？
+### Business Data Platform 是開源的嗎？
 
-是的，OpenViking 完全開源，主體採用 AGPLv3 許可證，詳見 README.md 說明。
+是的，Business Data Platform 完全開源，主體採用 AGPLv3 許可證，詳見 README.md 說明。
 
 ## 相關文件
 
-- [簡介](../getting-started/01-introduction.md) - 瞭解 OpenViking 的設計理念
+- [簡介](../getting-started/01-introduction.md) - 瞭解 Business Data Platform 的設計理念
 - [快速開始](../getting-started/02-quickstart.md) - 5 分鐘上手教程
 - [架構概述](../concepts/01-architecture.md) - 深入理解系統設計
 - [檢索機制](../concepts/07-retrieval.md) - 檢索流程詳解

@@ -11,7 +11,7 @@ def check_endpoints():
     client = OpenVikingAPIClient()
 
     print("=" * 80)
-    print("Checking OpenViking API Endpoints")
+    print("Checking Business Data Platform API Endpoints")
     print("=" * 80)
 
     # Check health first

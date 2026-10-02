@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Pack Service for OpenViking.
+Pack Service for Business Data Platform.
 
 Provides ovpack export/import and backup/restore operations.
 """
@@ -88,7 +88,7 @@ class PackService:
         ctx: RequestContext,
         include_vectors: bool = False,
     ) -> str:
-        """Back up all public OpenViking scopes as a restore-only .ovpack file."""
+        """Back up all public Business Data Platform scopes as a restore-only .ovpack file."""
         viking_fs = self._ensure_initialized()
         maintenance_ctx = self._account_maintenance_ctx(ctx)
         return await local_backup_ovpack(

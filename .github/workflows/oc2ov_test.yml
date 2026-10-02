@@ -87,9 +87,9 @@ jobs:
           cd examples/openclaw-plugin
           npm install --production 2>&1 || npm install 2>&1 || true
 
-      - name: Upgrade OpenViking to latest main
+      - name: Upgrade Business Data Platform to latest main
         run: |
-          echo "🔄 Upgrading OpenViking to latest main branch..."
+          echo "🔄 Upgrading Business Data Platform to latest main branch..."
           
           # Make upgrade script executable
           chmod +x tests/oc2ov_test/upgrade_openviking.sh
@@ -97,7 +97,7 @@ jobs:
           # Run upgrade script
           bash tests/oc2ov_test/upgrade_openviking.sh
           
-          echo "✅ OpenViking upgrade completed"
+          echo "✅ Business Data Platform upgrade completed"
           
           # Wait for services to be fully ready
           echo "⏳ Waiting for services to be ready..."
@@ -106,13 +106,13 @@ jobs:
           # Health check
           echo "🏥 Performing health check..."
           
-          echo "Checking OpenViking server (port 1933)..."
+          echo "Checking Business Data Platform server (port 1933)..."
           for i in {1..10}; do
             if curl -sf http://127.0.0.1:1933/health 2>/dev/null | grep -q "healthy"; then
-              echo "✅ OpenViking server is healthy"
+              echo "✅ Business Data Platform server is healthy"
               break
             else
-              echo "⏳ Attempt $i/10: OpenViking not ready, waiting..."
+              echo "⏳ Attempt $i/10: Business Data Platform not ready, waiting..."
               sleep 5
             fi
           done

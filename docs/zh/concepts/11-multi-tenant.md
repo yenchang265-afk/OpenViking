@@ -1,17 +1,17 @@
 # 多租戶
 
-OpenViking 的多租戶不是“為每個團隊部署一套獨立服務”，而是在同一個 OpenViking Server 內，用 `account` 和 `user` 兩層身份邊界來隔離和共享資料。
+Business Data Platform 的多租戶不是“為每個團隊部署一套獨立服務”，而是在同一個 Business Data Platform Server 內，用 `account` 和 `user` 兩層身份邊界來隔離和共享資料。
 
 它適合兩類典型場景：
 
-- 多個團隊或客戶共享一套 OpenViking 服務，但資料必須隔離
+- 多個團隊或客戶共享一套 Business Data Platform 服務，但資料必須隔離
 - 一個團隊內的多個使用者需要共享資源、隔離記憶
 
 ## 能做什麼
 
 啟用多租戶後，你可以：
 
-- 用一個 OpenViking Server 服務多個團隊、客戶或應用
+- 用一個 Business Data Platform Server 服務多個團隊、客戶或應用
 - 用 `account` 隔離不同團隊的資料
 - 在同一個 `account` 內共享 `resources`，並用 ACL 對目錄或檔案細化授權
 - 用 `user` 隔離使用者級記憶和會話
@@ -46,7 +46,7 @@ OpenViking 的多租戶不是“為每個團隊部署一套獨立服務”，而
 
 ## 認證模式
 
-OpenViking Server 支援兩種多租戶相關認證模式：
+Business Data Platform Server 支援兩種多租戶相關認證模式：
 
 | 模式 | 配置 | 身份來源 | 適用場景 |
 |------|------|----------|----------|
@@ -57,7 +57,7 @@ OpenViking Server 支援兩種多租戶相關認證模式：
 
 ### `root_api_key` 的作用
 
-配置 `server.root_api_key` 後，OpenViking 才進入正式多租戶模式：
+配置 `server.root_api_key` 後，Business Data Platform 才進入正式多租戶模式：
 
 - Root key 用於管理 account 和 user
 - User key 由 Admin API 生成，用於普通業務讀寫
@@ -221,7 +221,7 @@ openclaw config set plugins.entries.openviking.config.peer_prefix "<peer-prefix>
 這種模式的特點：
 
 - 接入簡單，外掛不需要管理 account/user 生命週期
-- 最適合“一個 OpenClaw 例項對應一個 OpenViking 使用者”的場景
+- 最適合“一個 OpenClaw 例項對應一個 Business Data Platform 使用者”的場景
 - `peer_prefix` 用於區分 OpenClaw 執行時身份，參與 peer/session 後設資料
 - 同一 account 內的 `resources` 預設共享，也可以通過 ACL 限制到指定使用者；memory 按 user scope 隔離
 
@@ -240,7 +240,7 @@ openclaw config set plugins.entries.openviking.config.peer_prefix "<peer-prefix>
 
 Vikingbot 當前的實踐與 OpenClaw 外掛不同，它更接近“平臺代理多個終端使用者”：
 
-- bot 連線 OpenViking 時持有 root key
+- bot 連線 Business Data Platform 時持有 root key
 - bot 配置固定的 `account_id`
 - bot 會在該 account 下自動註冊使用者
 - bot 會快取每個 user 的 user key，並儘量用對應 user key 去提交/檢索 memory

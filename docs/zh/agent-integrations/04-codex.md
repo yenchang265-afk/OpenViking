@@ -1,12 +1,12 @@
 # Codex 記憶外掛
 
-本外掛旨在為 [Codex](https://developers.openai.com/codex) 提供持久化的跨會話（session）記憶功能。只需安裝一次，即可實現：在會話開始時載入 OpenViking profile、記憶索引和 skill 清單，在每次使用者輸入前自動召回相關記憶，在每輪對話結束後進行增量捕獲，並在上下文壓縮（compaction）前將完整記錄提交給記憶抽取器。同時，該外掛將 Codex 連線至 OpenViking 的 `/mcp` 端點，使模型能夠直接呼叫 `find`、`search`、`read`、`remember` 等工具來主動管理記憶。
+本外掛旨在為 [Codex](https://developers.openai.com/codex) 提供持久化的跨會話（session）記憶功能。只需安裝一次，即可實現：在會話開始時載入 Business Data Platform profile、記憶索引和 skill 清單，在每次使用者輸入前自動召回相關記憶，在每輪對話結束後進行增量捕獲，並在上下文壓縮（compaction）前將完整記錄提交給記憶抽取器。同時，該外掛將 Codex 連線至 Business Data Platform 的 `/mcp` 端點，使模型能夠直接呼叫 `find`、`search`、`read`、`remember` 等工具來主動管理記憶。
 
 原始碼：[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin) | [部落格：動機與效果展示](https://blog.openviking.ai/post/openviking-coding-agent/)
 
 ## 安裝
 
-Claude Code 和 Codex 共用同一個安裝指令碼。它會依次詢問介面語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；所有步驟冪等，可安全地重複執行。
+Claude Code 和 Codex 共用同一個安裝指令碼。它會依次詢問介面語言（English/中文）、要安裝的 harness、下載源和 Business Data Platform 憑據；所有步驟冪等，可安全地重複執行。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
@@ -79,11 +79,11 @@ TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` �
 
 ## 工作原理
 
-本外掛深度掛載於 Codex 的生命週期之中：在 `SessionStart`（`startup`、`clear` 或 `resume`）階段，它會複用其他 coding-agent 整合共用的 CJK-aware profile 構建邏輯，注入 `profile.md`、`preferences/` 與 `entities/` 的 URI 和摘要索引，以及列出你的 OpenViking skill 的 `<available-skills>` 清單；在每次使用者輸入前，它會搜尋 OpenViking 並注入相關的記憶（觸發 `UserPromptSubmit`）；在每輪對話結束後，會將新的對話追加至當前會話（觸發 `Stop`）；在上下文壓縮前，補齊並提交（commit）完整的對話記錄（觸發 `PreCompact`）；線上程正常退出時提交整段會話（觸發 `SessionEnd`），以確保記憶抽取器能夠在完整的上下文環境中執行。shell 命令執行前（`Bash` 上的 `PreToolUse`），外掛會檢查命令裡是否帶 `viking://` URI：命令照常執行，模型會收到一條提示，建議改用 OpenViking MCP 工具；如果該 URI 是有意傳入的資料（例如 `ov` 命令引數），模型可以忽略這條提示。此外，在啟動新會話時，外掛還會清掃前次執行遺留的孤兒會話（orphan session）。恢復已有會話時，固定 profile 背景還會與最新的 archive digest 合併注入。
+本外掛深度掛載於 Codex 的生命週期之中：在 `SessionStart`（`startup`、`clear` 或 `resume`）階段，它會複用其他 coding-agent 整合共用的 CJK-aware profile 構建邏輯，注入 `profile.md`、`preferences/` 與 `entities/` 的 URI 和摘要索引，以及列出你的 Business Data Platform skill 的 `<available-skills>` 清單；在每次使用者輸入前，它會搜尋 Business Data Platform 並注入相關的記憶（觸發 `UserPromptSubmit`）；在每輪對話結束後，會將新的對話追加至當前會話（觸發 `Stop`）；在上下文壓縮前，補齊並提交（commit）完整的對話記錄（觸發 `PreCompact`）；線上程正常退出時提交整段會話（觸發 `SessionEnd`），以確保記憶抽取器能夠在完整的上下文環境中執行。shell 命令執行前（`Bash` 上的 `PreToolUse`），外掛會檢查命令裡是否帶 `viking://` URI：命令照常執行，模型會收到一條提示，建議改用 Business Data Platform MCP 工具；如果該 URI 是有意傳入的資料（例如 `ov` 命令引數），模型可以忽略這條提示。此外，在啟動新會話時，外掛還會清掃前次執行遺留的孤兒會話（orphan session）。恢復已有會話時，固定 profile 背景還會與最新的 archive digest 合併注入。
 
 > **已知侷限**：`SessionEnd` 需要 Codex 0.145 及以上版本，且只在正常退出時觸發（`/quit`、`/exit`、連按兩次 `Ctrl-C`、EOF、`codex exec` 執行結束）。`SIGTERM`、直接關閉終端、`kill -9` 或崩潰都不會觸發；當 TUI 掛在 `codex app-server` 守護程序上時，該事件會被延後。這些會話——以及 Codex 低於 0.145 的所有會話（以及沒有該事件的 TraeCode CLI 版本）——由下一次 `SessionStart` 的閒置 TTL（生存時間，預設為 30 分鐘）清掃回收。
 
-`<available-skills>` 清單先列你自己的 skill，再列 `viking://agent/skills` 下共享給整個帳號的 skill；共享 skill 與你自己的某個 skill 同名時不再列出。清單有獨立的 token 預算，不佔 profile 預算：放不下描述時只列名稱，連一個名稱都放不下時縮成一行總數。清單第一行提示模型：按某個 skill 操作前，先用 OpenViking `read` 工具讀取它的 `SKILL.md`。外掛在 `openviking-memory`、`ov-experience-memory` 之外還自帶 `openviking-skills` skill，告訴模型如何查詢 skill、用 MCP `add_skill` 工具新建或替換 skill、從 Git 或本地資料夾安裝 skill、把 skill 共享給整個帳號，以及在你要求時把本地 skill 遷移到 OpenViking。
+`<available-skills>` 清單先列你自己的 skill，再列 `viking://agent/skills` 下共享給整個帳號的 skill；共享 skill 與你自己的某個 skill 同名時不再列出。清單有獨立的 token 預算，不佔 profile 預算：放不下描述時只列名稱，連一個名稱都放不下時縮成一行總數。清單第一行提示模型：按某個 skill 操作前，先用 Business Data Platform `read` 工具讀取它的 `SKILL.md`。外掛在 `openviking-memory`、`ov-experience-memory` 之外還自帶 `openviking-skills` skill，告訴模型如何查詢 skill、用 MCP `add_skill` 工具新建或替換 skill、從 Git 或本地資料夾安裝 skill、把 skill 共享給整個帳號，以及在你要求時把本地 skill 遷移到 Business Data Platform。
 
 工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
 
@@ -137,7 +137,7 @@ TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` �
 ## 參見
 
 - [整合能力參考](./16-capability-reference.md)
-- [部落格：在 Claude Code / Codex 中接入 OpenViking](https://blog.openviking.ai/post/openviking-coding-agent/) — 為什麼以及如何給你的 Coding Agent 加上長期記憶
+- [部落格：在 Claude Code / Codex 中接入 Business Data Platform](https://blog.openviking.ai/post/openviking-coding-agent/) — 為什麼以及如何給你的 Coding Agent 加上長期記憶
 - [外掛 README](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/README.md) — 完整的環境變數說明與架構圖
 - [DESIGN.md](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/DESIGN.md) — 提交（commit）決策樹
 - [MCP 客戶端](./06-mcp-clients.md) — MCP 協議、工具列表及其他客戶端
@@ -145,6 +145,6 @@ TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` �
 
 ### 召回壓縮
 
-設定 `OPENVIKING_RECALL_COMPRESS=server` 可讓 OpenViking 服務端壓縮召回內容，Codex 不啟動本地壓縮排程。`client` 僅用本地壓縮，`auto`（預設）在本地壓縮器不可用時走服務端，`off` 關閉壓縮。服務端已有摘要時直接使用；明確返回無相關記憶時不注入。
+設定 `OPENVIKING_RECALL_COMPRESS=server` 可讓 Business Data Platform 服務端壓縮召回內容，Codex 不啟動本地壓縮排程。`client` 僅用本地壓縮，`auto`（預設）在本地壓縮器不可用時走服務端，`off` 關閉壓縮。服務端已有摘要時直接使用；明確返回無相關記憶時不注入。
 
 Codex 通過共享 `buildRecallBlockDetailed()` 執行召回、排序、預算和舊服務端回退，僅保留會話對映、模型呼叫與 hook 輸出適配。本地壓縮失敗保留預算內的檢索結果；原始檢索回退在不使用本地壓縮時遵循 `recallPreferAbstract`，不再固定讀取所有葉子全文。預算包含正文、URI 和包裝文本。配置詳見 [共享外掛說明](https://github.com/volcengine/OpenViking/blob/main/examples/memory-plugin-shared/README.md#cloud-recall-compression)。

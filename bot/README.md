@@ -1,19 +1,19 @@
 # VikingBot
 
-VikingBot is the multi-channel AI agent built into OpenViking. You can use it directly from the command line or run it as a long-lived Gateway connected to Slack, Telegram, and other platforms. When connected to OpenViking, it also gains resource retrieval, user memory, experience memory, and session consolidation.
+VikingBot is the multi-channel AI agent built into Business Data Platform. You can use it directly from the command line or run it as a long-lived Gateway connected to Slack, Telegram, and other platforms. When connected to Business Data Platform, it also gains resource retrieval, user memory, experience memory, and session consolidation.
 
 ## Key Capabilities
 
 - **Multiple chat entry points**: `vikingbot chat`, `ov chat`, HTTP APIs, and multiple chat platforms.
-- **Agent tools**: built-in file, shell, web, image generation, scheduled task, and OpenViking tools.
+- **Agent tools**: built-in file, shell, web, image generation, scheduled task, and Business Data Platform tools.
 - **Skills and subagents**: load Skills on demand and delegate independent work to background subagents.
-- **Long-term context**: recall Resources, Peer Memories, and Experiences from OpenViking, and commit sessions automatically.
+- **Long-term context**: recall Resources, Peer Memories, and Experiences from Business Data Platform, and commit sessions automatically.
 - **Safer execution**: Direct, SRT, OpenSandbox, and AIO Sandbox backends.
-- **Service deployment**: the Gateway provides synchronous chat, SSE streaming, feedback, and an OpenViking API proxy.
+- **Service deployment**: the Gateway provides synchronous chat, SSE streaming, feedback, and a Business Data Platform API proxy.
 
 ## Installation
 
-> **OpenViking Server requirement**: VikingBot addresses the caller's own context space through the
+> **Business Data Platform Server requirement**: VikingBot addresses the caller's own context space through the
 > `viking://~` home alias (for example `viking://~/memories/`), so it requires a server with
 > `viking://~` support. The uid-less shorthand `viking://user/memories` is no longer emitted and is
 > rejected by newer servers.
@@ -30,7 +30,7 @@ Python 3.11 or later is required. We recommend using [uv](https://github.com/ast
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
-cd OpenViking
+cd Business Data Platform
 uv venv --python 3.11
 source .venv/bin/activate
 uv pip install -e ".[bot]"
@@ -46,25 +46,25 @@ On Windows, activate the virtual environment with:
 
 VikingBot supports three primary usage scenarios. They are different entry points for different needs rather than mutually exclusive modes.
 
-| Scenario | Best for | Start command | OpenViking |
+| Scenario | Best for | Start command | Business Data Platform |
 |----------|----------|---------------|------------|
-| **A. OpenViking + Bot together** | A complete local experience with resources, memory, and the Agent | `openviking-server --with-bot` | The Bot uses the OpenViking Server started by this command |
-| **B. Debug the Agent locally** | Quickly testing the Bot or developing Tools and Skills | `vikingbot chat` | Optional; without it, the Bot cannot use OpenViking features |
-| **C. Unified Gateway entry point** | Starting the Bot separately and connecting it to an existing OpenViking Server | `vikingbot gateway` | May be configured explicitly or omitted |
+| **A. Business Data Platform + Bot together** | A complete local experience with resources, memory, and the Agent | `openviking-server --with-bot` | The Bot uses the Business Data Platform Server started by this command |
+| **B. Debug the Agent locally** | Quickly testing the Bot or developing Tools and Skills | `vikingbot chat` | Optional; without it, the Bot cannot use Business Data Platform features |
+| **C. Unified Gateway entry point** | Starting the Bot separately and connecting it to an existing Business Data Platform Server | `vikingbot gateway` | May be configured explicitly or omitted |
 
-### Scenario A: Start OpenViking and the Bot Together
+### Scenario A: Start Business Data Platform and the Bot Together
 
-Use this for the complete local experience. OpenViking Server and VikingBot Gateway start together. `ov chat` first calls OpenViking Server, whose `/bot/v1` route forwards the request to VikingBot.
+Use this for the complete local experience. Business Data Platform Server and VikingBot Gateway start together. `ov chat` first calls Business Data Platform Server, whose `/bot/v1` route forwards the request to VikingBot.
 
 ```text
-ov chat → OpenViking Server → VikingBot Gateway → Agent
+ov chat → Business Data Platform Server → VikingBot Gateway → Agent
 ```
 
 #### 1. Prepare the configuration
 
-Follow the [OpenViking quickstart](../docs/en/getting-started/03-quickstart-server.md) to configure the models and storage required by OpenViking. By default, the Bot inherits the root-level `vlm` configuration as its Agent model. Configure `bot.agents` only if the Bot should use a separate model.
+Follow the [Business Data Platform quickstart](../docs/en/getting-started/03-quickstart-server.md) to configure the models and storage required by Business Data Platform. By default, the Bot inherits the root-level `vlm` configuration as its Agent model. Configure `bot.agents` only if the Bot should use a separate model.
 
-In this combined mode, the Bot always uses the OpenViking Server started by the same command. `bot.ov_server.server_url` is ignored, while an explicit `bot.ov_server.api_key` and other Bot OpenViking settings are preserved. In `api_key` mode, that key must be a User/Admin key. OpenViking Server injects an authenticated request-scoped identity into every Chat request sent to the Bot.
+In this combined mode, the Bot always uses the Business Data Platform Server started by the same command. `bot.ov_server.server_url` is ignored, while an explicit `bot.ov_server.api_key` and other Bot Business Data Platform settings are preserved. In `api_key` mode, that key must be a User/Admin key. Business Data Platform Server injects an authenticated request-scoped identity into every Chat request sent to the Bot.
 
 #### 2. Start both services
 
@@ -72,7 +72,7 @@ In this combined mode, the Bot always uses the OpenViking Server started by the 
 openviking-server --with-bot
 ```
 
-This command starts the current OpenViking Server and a managed VikingBot Gateway. The Bot uses this Server and does not connect to the service named by `bot.ov_server.server_url`.
+This command starts the current Business Data Platform Server and a managed VikingBot Gateway. The Bot uses this Server and does not connect to the service named by `bot.ov_server.server_url`.
 
 #### 3. Configure and use the `ov` CLI
 
@@ -82,7 +82,7 @@ Run the interactive configuration manager:
 ov config
 ```
 
-Point the active CLI configuration to OpenViking Server, for example `http://127.0.0.1:1933`. If the Server requires authentication, also enter the caller's User/Admin API Key. Then run:
+Point the active CLI configuration to Business Data Platform Server, for example `http://127.0.0.1:1933`. If the Server requires authentication, also enter the caller's User/Admin API Key. Then run:
 
 ```bash
 ov chat
@@ -93,7 +93,7 @@ ov find "my response preferences"
 The identity flow is:
 
 - `ovcli.conf.api_key` represents the current caller.
-- OpenViking Server validates the identity and passes a request-scoped connection to the Bot.
+- Business Data Platform Server validates the identity and passes a request-scoped connection to the Bot.
 - The request identity takes priority over any process-level default identity, preventing multiple callers from sharing one Bot user.
 
 ### Scenario B: Debug the Agent Locally
@@ -132,9 +132,9 @@ vikingbot chat
 vikingbot chat --session my-session
 ```
 
-If no OpenViking Server is available, VikingBot runs in standalone mode. File, shell, web, and Skill capabilities remain available, but OpenViking memory and file tools are disabled.
+If no Business Data Platform Server is available, VikingBot runs in standalone mode. File, shell, web, and Skill capabilities remain available, but Business Data Platform memory and file tools are disabled.
 
-To connect local debugging to OpenViking, configure `server` in the same `ov.conf`, or set `bot.ov_server.server_url` explicitly. See [Connect to OpenViking](#connect-to-openviking).
+To connect local debugging to Business Data Platform, configure `server` in the same `ov.conf`, or set `bot.ov_server.server_url` explicitly. See [Connect to Business Data Platform](#connect-to-openviking).
 
 ### Scenario C: Use the Gateway as the Unified Entry Point
 
@@ -142,20 +142,20 @@ Use this for long-running deployments, remote access, and multiple chat channels
 
 ```text
 ov chat                  → Gateway /bot/v1/chat
-ov ls/find/session/...   → Gateway /api/v1/* → OpenViking Server
+ov ls/find/session/...   → Gateway /api/v1/* → Business Data Platform Server
 ```
 
-The Gateway has three OpenViking connection states:
+The Gateway has three Business Data Platform connection states:
 
 | State | Condition | Behavior |
 |-------|-----------|----------|
-| **Explicit** | `bot.ov_server.server_url` is configured | Connects to the specified OpenViking service; startup fails if it is unreachable |
-| **Inherited** | No explicit URL, but the same `ov.conf` contains `server` | Connects to that OpenViking service; falls back to standalone if it is unreachable |
-| **Standalone** | No OpenViking service is available | Chat works; OpenViking tools are disabled and `/api/v1/*` returns 503 |
+| **Explicit** | `bot.ov_server.server_url` is configured | Connects to the specified Business Data Platform service; startup fails if it is unreachable |
+| **Inherited** | No explicit URL, but the same `ov.conf` contains `server` | Connects to that Business Data Platform service; falls back to standalone if it is unreachable |
+| **Standalone** | No Business Data Platform service is available | Chat works; Business Data Platform tools are disabled and `/api/v1/*` returns 503 |
 
-#### 1. Configure the Gateway and OpenViking
+#### 1. Configure the Gateway and Business Data Platform
 
-The following example connects explicitly to a remote OpenViking service:
+The following example connects explicitly to a remote Business Data Platform service:
 
 ```json
 {
@@ -177,7 +177,7 @@ The following example connects explicitly to a remote OpenViking service:
 }
 ```
 
-If the remote OpenViking service uses `trusted` mode, set `api_key_type` to `"root"` and provide the Root Key in `api_key`.
+If the remote Business Data Platform service uses `trusted` mode, set `api_key_type` to `"root"` and provide the Root Key in `api_key`.
 
 #### 2. Start the Gateway
 
@@ -199,7 +199,7 @@ Use `ov config`, or edit `~/.openviking/ovcli.conf`:
 }
 ```
 
-Chat and other OpenViking commands now use the same entry point:
+Chat and other Business Data Platform commands now use the same entry point:
 
 ```bash
 ov chat -m "Search the project resources and give me a conclusion"
@@ -234,7 +234,7 @@ Add the token to `ovcli.conf` on the client:
 }
 ```
 
-The Gateway Token protects only the Gateway entry point. The OpenViking API Key represents the caller identity. They cannot replace one another, and the Gateway Token is never forwarded to OpenViking.
+The Gateway Token protects only the Gateway entry point. The Business Data Platform API Key represents the caller identity. They cannot replace one another, and the Gateway Token is never forwarded to Business Data Platform.
 
 ## Connect Chat Platforms
 
@@ -266,9 +266,9 @@ vikingbot channels status
 
 You can configure multiple instances of the same channel type. VikingBot uses `type + channel_id + chat_id` to isolate sessions and route replies. See [Channel Configuration](docs/en/concepts/05-channel.md) for credentials, event subscriptions, and permissions for each platform.
 
-## Connect to OpenViking
+## Connect to Business Data Platform
 
-VikingBot and OpenViking share `~/.openviking/ov.conf`. Connections are resolved as follows:
+VikingBot and Business Data Platform share `~/.openviking/ov.conf`. Connections are resolved as follows:
 
 1. A managed Bot started by `openviking-server --with-bot` uses the current Server.
 2. A normal `vikingbot gateway/chat` process first uses an explicit `bot.ov_server.server_url`.
@@ -277,15 +277,15 @@ VikingBot and OpenViking share `~/.openviking/ov.conf`. Connections are resolved
 
 Authentication requirements:
 
-| OpenViking `auth_mode` | Bot credential | Gateway request |
+| Business Data Platform `auth_mode` | Bot credential | Gateway request |
 |------------------------|----------------|-----------------|
 | `dev` | Local use | The Gateway must listen on localhost |
 | `api_key` | `bot.ov_server.api_key` must be a User/Admin Key | The Chat caller must also provide a valid User/Admin Key; Root Keys cannot access data APIs |
 | `trusted` | Explicit connections use a Root Key; inherited connections may read `server.root_api_key` | Non-local entry points must also pass the Gateway Token first |
 
-The Gateway validates the upstream service and Bot credential at startup, then checks the current OpenViking authentication mode on every request. If the mode changes at runtime, it fails closed and asks you to fix the configuration or restart the Gateway.
+The Gateway validates the upstream service and Bot credential at startup, then checks the current Business Data Platform authentication mode on every request. If the mode changes at runtime, it fails closed and asks you to fix the configuration or restart the Gateway.
 
-VikingBot uses OpenViking to:
+VikingBot uses Business Data Platform to:
 
 - read the current Peer Profile;
 - recall events, entities, and preferences by type;
@@ -293,7 +293,7 @@ VikingBot uses OpenViking to:
 - browse, search, and read Resources;
 - incrementally synchronize and commit Sessions to extract long-term memories and experiences.
 
-See [VikingBot and OpenViking Integration](docs/en/concepts/04-openviking-integration.md) for the complete call flow. The Gateway entry points and authentication boundaries follow [RFC #3042](https://github.com/volcengine/OpenViking/discussions/3042).
+See [VikingBot and Business Data Platform Integration](docs/en/concepts/04-openviking-integration.md) for the complete call flow. The Gateway entry points and authentication boundaries follow [RFC #3042](https://github.com/volcengine/OpenViking/discussions/3042).
 
 ## Configuration
 
@@ -325,7 +325,7 @@ Restart `vikingbot gateway` after changing the configuration.
 | `bot.heartbeat.interval_seconds` | `600` | Heartbeat interval |
 | `bot.mode` | `normal` | One of `normal`, `readonly`, or `debug` |
 
-### OpenViking Recall Settings
+### Business Data Platform Recall Settings
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -339,7 +339,7 @@ Restart `vikingbot gateway` after changing the configuration.
 
 ## Workspace and Agent Customization
 
-The Workspace is VikingBot's local working directory. It contains Agent bootstrap instructions, Skills, Heartbeat tasks, and files used by file and Shell tools. The OpenViking workspace is accessed through `openviking_*` tools for Resources, Memories, and Skills; it is not the same local directory.
+The Workspace is VikingBot's local working directory. It contains Agent bootstrap instructions, Skills, Heartbeat tasks, and files used by file and Shell tools. The Business Data Platform workspace is accessed through `openviking_*` tools for Resources, Memories, and Skills; it is not the same local directory.
 
 ### Find the Active Workspace
 
@@ -409,10 +409,10 @@ For the complete loading order, file responsibilities, and customization boundar
 |----------|-------|
 | Files and commands | `read_file`, `write_file`, `edit_file`, `list_dir`, `exec` |
 | Web | `web_search`, `web_fetch` |
-| OpenViking | `openviking_list`, `openviking_search`, `openviking_grep`, `openviking_glob`, `openviking_multi_read`, `openviking_add_resource`, `openviking_memory_commit` |
+| Business Data Platform | `openviking_list`, `openviking_search`, `openviking_grep`, `openviking_glob`, `openviking_multi_read`, `openviking_add_resource`, `openviking_memory_commit` |
 | Other | `message`, `generate_image`, `cron`, `spawn` |
 
-`readonly` mode does not register `openviking_add_resource`. When a channel sets `ov_tools_enable: false`, it does not expose OpenViking tools or inject Profiles, Memories, and Experiences.
+`readonly` mode does not register `openviking_add_resource`. When a channel sets `ov_tools_enable: false`, it does not expose Business Data Platform tools or inject Profiles, Memories, and Experiences.
 
 ### Scheduled Task Configuration
 
@@ -501,7 +501,7 @@ install and start Docker (Docker Desktop on macOS; Docker Desktop with WSL2 inte
 then set `bot.sandbox.backend` to `opensandbox` and optionally `bot.sandbox.mode` to `per-session`
 in the `ov.conf` used by Gateway.
 
-Both `vikingbot gateway --config /path/to/ov.conf` and OpenViking `--with-bot` check dependencies,
+Both `vikingbot gateway --config /path/to/ov.conf` and Business Data Platform `--with-bot` check dependencies,
 prepare images, generate a private Server configuration and API key, start OpenSandbox, and verify
 command execution plus file round trips **before accepting requests**. Failure aborts startup;
 there is no fallback to Direct. `--with-bot` waits for readiness rather than process existence.
@@ -582,7 +582,7 @@ The Gateway Bot API uses the `/bot/v1` prefix:
 | GET/POST | `/bot/v1/sessions` | List or create API Sessions |
 | GET/DELETE | `/bot/v1/sessions/{id}` | Retrieve or delete a Session |
 
-When an OpenViking upstream is configured, `/api/v1/*` is proxied to OpenViking Server.
+When a Business Data Platform upstream is configured, `/api/v1/*` is proxied to Business Data Platform Server.
 
 ## Operations Commands
 
@@ -615,9 +615,9 @@ The repository includes `deploy/docker/deploy_langfuse.sh` for local deployment.
 
 ## Security Notes
 
-- Never commit model API Keys, OpenViking API Keys, or Gateway Tokens to the repository.
+- Never commit model API Keys, Business Data Platform API Keys, or Gateway Tokens to the repository.
 - A non-localhost Gateway requires a strong random Token and should be protected with HTTPS at the network layer.
-- `X-Gateway-Token` protects only the Gateway; it does not replace an OpenViking user identity.
+- `X-Gateway-Token` protects only the Gateway; it does not replace a Business Data Platform user identity.
 - `allow_from: []` allows every sender. Configure an explicit allowlist for public deployments.
 - The `direct` backend executes files and shell commands with the Bot process user's permissions and is not suitable for untrusted callers.
 - `openviking_connection` may come only from a trusted Server proxy or a trusted local path. Do not accept identity claims directly from a public request body.
@@ -627,6 +627,6 @@ The repository includes `deploy/docker/deploy_langfuse.sh` for local deployment.
 - [VikingBot Architecture](docs/en/concepts/01-architecture.md)
 - [Agent Capabilities](docs/en/concepts/02-agent-capabilities.md)
 - [Channels, Gateway, and Operations](docs/en/concepts/03-channels-and-gateway.md)
-- [VikingBot and OpenViking Integration](docs/en/concepts/04-openviking-integration.md)
+- [VikingBot and Business Data Platform Integration](docs/en/concepts/04-openviking-integration.md)
 - [Channel Configuration](docs/en/concepts/05-channel.md)
 - [Skills: Local and Remote](docs/en/concepts/06-skills.md)

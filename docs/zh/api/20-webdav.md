@@ -6,7 +6,7 @@ WebDAV 為 `resources` 名稱空間提供檔案協議訪問。
 
 ## WebDAV（Phase 1）
 
-OpenViking Server 也提供了一個面向資源檔案的精簡 WebDAV 適配層：
+Business Data Platform Server 也提供了一個面向資源檔案的精簡 WebDAV 適配層：
 
 ```text
 /webdav/resources
@@ -21,7 +21,7 @@ Phase 1 有意把範圍控制得比較小：
 
 行為說明：
 
-- 通過 WebDAV 新建檔案時，會對該檔案路徑觸發 OpenViking 的語義生成。
+- 通過 WebDAV 新建檔案時，會對該檔案路徑觸發 Business Data Platform 的語義生成。
 - 通過 WebDAV 覆蓋已有檔案時，會像 `write()` 一樣重新整理相關語義和向量。
 - `PUT` 不會自動建立父目錄。缺失的目錄需要先用 `MKCOL` 建立。
 - 使用者自己建立的點目錄或點檔案仍然可見，只有上面列出的保留內部檔名會被隱藏。
@@ -39,11 +39,11 @@ Phase 1 有意把範圍控制得比較小：
 | `MKCOL` | `/webdav/resources`、`/webdav/resources/{resource_path}` | 建立目錄 |
 | `MOVE` | `/webdav/resources`、`/webdav/resources/{resource_path}` | 移動或重新命名檔案/目錄 |
 
-除 `OPTIONS` 外，WebDAV 請求使用與其他 OpenViking API 相同的認證頭。路徑必須位於 `resources` 下，不能通過 `..`、反斜槓或其他形式逃逸名稱空間。
+除 `OPTIONS` 外，WebDAV 請求使用與其他 Business Data Platform API 相同的認證頭。路徑必須位於 `resources` 下，不能通過 `..`、反斜槓或其他形式逃逸名稱空間。
 
 | 請求頭 | 使用方法 | 必填 | 說明 |
 |--------|----------|------|------|
-| `X-API-Key` | 除 `OPTIONS` 外 | 是 | OpenViking API Key |
+| `X-API-Key` | 除 `OPTIONS` 外 | 是 | Business Data Platform API Key |
 | `Depth` | `PROPFIND` | 否 | `0` 僅返回目標；其他值按一級深度處理 |
 | `Destination` | `MOVE` | 是 | `/webdav/resources` 下的目標路徑 |
 | `Overwrite` | `MOVE` | 否 | 預設 `T`；設為 `F` 時不覆蓋已有目標 |
@@ -129,7 +129,7 @@ curl -X DELETE http://localhost:1933/webdav/resources/archive \
 | `MOVE` | `201` 新目標；`204` 覆蓋 | `400` 缺少目標；`409` 目標父目錄不存在；`412` 禁止覆蓋 |
 | `DELETE` | `204` | `404` 不存在；`405` 嘗試刪除根目錄 |
 
-WebDAV 是協議入口，不對應 OpenViking SDK 或 `ov` CLI 方法，因此本頁只展示 HTTP Tab。需要 SDK/CLI 檔案操作時使用[檔案系統](03-filesystem.md)。
+WebDAV 是協議入口，不對應 Business Data Platform SDK 或 `ov` CLI 方法，因此本頁只展示 HTTP Tab。需要 SDK/CLI 檔案操作時使用[檔案系統](03-filesystem.md)。
 
 ## 相關文件
 

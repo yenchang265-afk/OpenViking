@@ -143,7 +143,7 @@ test("marketplace package ships the canonical Experience skill", () => {
   );
 });
 
-test("marketplace package ships the canonical OpenViking skills skill", () => {
+test("marketplace package ships the canonical Business Data Platform skills skill", () => {
   assert.equal(
     readFileSync(join(pluginDir, "skills", "openviking-skills", "SKILL.md"), "utf-8"),
     readFileSync(join(repoRoot, "examples", "skills", "openviking-skills", "SKILL.md"), "utf-8"),
@@ -224,7 +224,7 @@ test(".mcp.json forwards every env var that changes what the MCP proxy sends", (
   }
 });
 
-test("Codex MCP entrypoint forwards only native OpenViking tools", () => {
+test("Codex MCP entrypoint forwards only native Business Data Platform tools", () => {
   const entrypoint = readFileSync(join(pluginDir, "servers", "mcp-proxy.mjs"), "utf-8");
   assert.doesNotMatch(entrypoint, /createExperienceToolProvider/);
   assert.doesNotMatch(entrypoint, /localToolProvider/);

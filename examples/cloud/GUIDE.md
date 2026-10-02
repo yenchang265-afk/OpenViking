@@ -1,13 +1,13 @@
-# OpenViking 雲上部署指南（火山引擎）
+# Business Data Platform 雲上部署指南（火山引擎）
 
-本文件介紹如何將 OpenViking 部署到火山引擎雲上，使用 TOS（物件儲存）+ 本地向量庫 + 方舟大模型作為後端。
+本文件介紹如何將 Business Data Platform 部署到火山引擎雲上，使用 TOS（物件儲存）+ 本地向量庫 + 方舟大模型作為後端。
 
 ## 概覽
 
 雲上部署架構：
 
 ```
-使用者請求 → OpenViking Server (1933)
+使用者請求 → Business Data Platform Server (1933)
                 ├── AGFS → TOS (S3 相容協議，儲存檔案資料)
                 ├── VectorDB → local (向量檢索，持久化在 workspace)
                 ├── Embedding → 方舟 API (doubao-embedding-vision)
@@ -19,7 +19,7 @@
 ## 前置條件
 
 - 火山引擎帳號（[註冊地址](https://console.volcengine.com/)）
-- 已安裝 OpenViking（`pip install openviking --upgrade --force-reinstall` 或從原始碼安裝）
+- 已安裝 Business Data Platform（`pip install openviking --upgrade --force-reinstall` 或從原始碼安裝）
 - Python 3.11+
 
 ---
@@ -28,7 +28,7 @@
 
 ### 1.1 開通 TOS（物件儲存）
 
-TOS 用於持久化儲存 OpenViking 的檔案資料（AGFS 後端）。
+TOS 用於持久化儲存 Business Data Platform 的檔案資料（AGFS 後端）。
 
 1. 登入 [火山引擎控制台](https://console.volcengine.com/)
 2. 進入 **物件儲存 TOS** → 開通服務
@@ -158,7 +158,7 @@ cp examples/cloud/ov.conf.example examples/cloud/ov.conf
 
 適合在 VM 上以系統服務方式長期執行。
 
-1. 安裝 OpenViking：
+1. 安裝 Business Data Platform：
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -177,7 +177,7 @@ sudo chmod 600 /etc/openviking/ov.conf
 ```bash
 sudo tee /etc/systemd/system/openviking.service > /dev/null << 'EOF'
 [Unit]
-Description=OpenViking Server
+Description=Business Data Platform Server
 After=network.target
 
 [Service]
@@ -385,7 +385,7 @@ curl http://localhost:1933/ready
 
 ## 5. 多租戶管理
 
-OpenViking 支援多租戶隔離。配置了 `root_api_key` 後自動啟用多租戶模式。
+Business Data Platform 支援多租戶隔離。配置了 `root_api_key` 後自動啟用多租戶模式。
 
 ### 5.1 建立租戶（Account）
 
@@ -536,7 +536,7 @@ docker logs -f openviking
 
 ### systemd 啟動失敗（status=203/EXEC）
 
-`status=203/EXEC` 表示 systemd 找不到 `ExecStart` 指定的執行檔。常見於使用 venv / conda 環境安裝 OpenViking 的情況，`openviking-server` 不在 `/usr/local/bin/` 下。
+`status=203/EXEC` 表示 systemd 找不到 `ExecStart` 指定的執行檔。常見於使用 venv / conda 環境安裝 Business Data Platform 的情況，`openviking-server` 不在 `/usr/local/bin/` 下。
 
 排查步驟：
 
@@ -620,7 +620,7 @@ kubectl get nodes
 Error: INSTALLATION FAILED: path "./examples/k8s-helm" not found
 ```
 
-需要在 OpenViking 專案根目錄下執行 `helm install` 命令：
+需要在 Business Data Platform 專案根目錄下執行 `helm install` 命令：
 
 ```bash
 cd /path/to/OpenViking

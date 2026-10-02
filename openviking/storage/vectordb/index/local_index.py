@@ -963,7 +963,7 @@ class LocalIndex(IIndex):
                         if cuvs_telemetry is not None:
                             cuvs_telemetry.route_reason = "unsupported_sparse_hybrid"
                         raise ValueError(
-                            "cuVS dense search does not support OpenViking sparse/hybrid queries"
+                            "cuVS dense search does not support Business Data Platform sparse/hybrid queries"
                         )
                     else:
                         if cuvs_telemetry is not None:

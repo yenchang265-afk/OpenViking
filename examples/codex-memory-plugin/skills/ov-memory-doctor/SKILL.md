@@ -1,21 +1,21 @@
 ---
 name: ov-memory-doctor
 description: >
-  Diagnose and fix the OpenViking memory plugin for Codex on this machine: the plugin
+  Diagnose and fix the Business Data Platform memory plugin for Codex on this machine: the plugin
   install (enablement, hooks, MCP server), the client configuration
   (ovcli.conf / ov.conf / OPENVIKING_* env) and the connection to the
-  OpenViking server (reachability, 401/403, /mcp). Use whenever memory "isn't
+  Business Data Platform server (reachability, 401/403, /mcp). Use whenever memory "isn't
   working": no <openviking-context> block, empty recall, captures not landing,
   missing or failing MCP memory tools, 401/403, an offline statusline, right
   after installing/updating the plugin or switching servers/keys, or when the
   user asks for the plugin's status. Triggers: "memory not working", "check
-  OpenViking", "plugin status", "記憶沒生效", "外掛狀態", "連不上 OpenViking",
+  Business Data Platform", "plugin status", "記憶沒生效", "外掛狀態", "連不上 Business Data Platform",
   "recall 為空", "401".
 ---
 
-# OpenViking Memory Doctor (Codex)
+# Business Data Platform Memory Doctor (Codex)
 
-Troubleshooting for the OpenViking memory plugin. Three things go
+Troubleshooting for the Business Data Platform memory plugin. Three things go
 wrong on a user's machine, each silently:
 
 - **Install** — marketplace registration, `[plugins."openviking-memory@openviking"]`
@@ -28,7 +28,7 @@ wrong on a user's machine, each silently:
   stray env var silently overrides the file.
 - **Connection** — on a self-hosted server `/health` answers 200 even with a
   bad key, so everything can look reachable while every real request 401s. On
-  OpenViking Cloud the gateway authenticates `/health` and `/ready` too, so
+  Business Data Platform Cloud the gateway authenticates `/health` and `/ready` too, so
   the same probe answers 401 without a key and says nothing about the url.
 
 When the resolved url is loopback, the server runs on this machine and the
@@ -93,7 +93,7 @@ Work top-down; fix the first ✗ and rerun before chasing the next.
 | `OPENVIKING_MEMORY_ENABLED has no effect` | That switch is Claude Code only | `OPENVIKING_AUTO_RECALL=0` / `OPENVIKING_AUTO_CAPTURE=0`, or `codex plugin remove`. |
 | `server unreachable` (refused / dns / timeout / tls) | Wrong url/port, server down, DNS/VPN, private CA | Compare with `curl -sS <url>/health`; curl OK + doctor fails ⇒ proxy or CA issue (Step 3). |
 | `base URL ends with /api/v1` or `/mcp`, no scheme, `GET /health → 404` | url shape wrong; Cloud needs the `/openviking` prefix | Fix `url` to the API root. |
-| `/health is authenticated at this deployment` (info) / `api key rejected on /health → 401` | OpenViking Cloud gates `/health` and `/ready` at the gateway, so the probe without a key 401s and says nothing about the url | The info line needs no fix — the report reads /health with the key instead. The ✗ means the gateway rejected this key: use one issued for that deployment (Cloud keys come from the Volcengine console). |
+| `/health is authenticated at this deployment` (info) / `api key rejected on /health → 401` | Business Data Platform Cloud gates `/health` and `/ready` at the gateway, so the probe without a key 401s and says nothing about the url | The info line needs no fix — the report reads /health with the key instead. The ✗ means the gateway rejected this key: use one issued for that deployment (Cloud keys come from the Volcengine console). |
 | `api key rejected` then `system/status → 401 Invalid API Key` | Key invalid/revoked/for another deployment | Get the key re-issued; check nothing overrides ovcli.conf ("← env"). |
 | `using the ROOT api key` / `403 ROOT API keys cannot access tenant-scoped data APIs` | `api_key` fell through to `ov.conf server.root_api_key`, or the root key was pasted | Use a user/admin key. |
 | `plugin auth mode 'trusted' differs from the server's 'api_key'` | account/user set in ovcli.conf ⇒ the plugin sends identity headers, which an `api_key` server ignores; data lands under the key's identity | Remove account/user (or set `OPENVIKING_AUTH_MODE=api_key`), or use a key for that identity. |
@@ -182,7 +182,7 @@ ask before stopping or restarting it.
 
 - Source and issues: <https://github.com/volcengine/OpenViking> — plugin code lives under `examples/`, the shared installer under `examples/memory-plugin-shared/`.
 - Documentation index (LLM-friendly): <https://docs.openviking.ai/llms.txt>; the harness integration pages under it cover install paths, configuration keys and known limitations.
-- `https://api.vikingdb.cn-beijing.volces.com/openviking` is the Volcengine-hosted OpenViking Service (OpenViking Cloud): the path prefix is part of the base url, it accepts `Authorization: Bearer` only, and its keys are issued from the Volcengine console rather than by a self-hosted admin.
+- `https://api.vikingdb.cn-beijing.volces.com/openviking` is the Volcengine-hosted Business Data Platform Service (Business Data Platform Cloud): the path prefix is part of the base url, it accepts `Authorization: Bearer` only, and its keys are issued from the Volcengine console rather than by a self-hosted admin.
 
 ## Rules
 

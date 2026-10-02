@@ -65,7 +65,7 @@ class QasperAdapter(BaseAdapter):
     
     def data_prepare(self, doc_dir: str) -> List[StandardDoc]:
         """
-        Load raw data and convert to OpenViking-friendly format.
+        Load raw data and convert to Business Data Platform-friendly format.
         
         Converts each paper to Markdown document, preserving:
         - Title (# Title)

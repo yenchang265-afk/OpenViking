@@ -12,7 +12,7 @@ Bot identity
   + Workspace bootstrap files
   + Full content of Always Skills
   + Summaries of available Skills
-  + OpenViking Profile, Memories, and Experiences
+  + Business Data Platform Profile, Memories, and Experiences
   + Local or compressed conversation history
   + Text and media for the current turn
 ```
@@ -26,7 +26,7 @@ Workspace bootstrap files provide a stable identity and operating rules. Images 
 | **Skill** | Tells the Agent how to complete a class of tasks | `SKILL.md` instructions and resources |
 | **Tool** | Lets the Agent perform a concrete operation | A JSON Schema function registered with the model |
 
-Skills use progressive loading. Local Always Skills inject complete instructions each turn; other local Skills provide summaries and load through `read_file` when needed. With OpenViking tools enabled, remote Skills are retrieved for the user query and read and activated through `openviking_multi_read`. Local requirements filter summaries; remote requirements are checked in the execution sandbox. See [Skills](./06-skills.md) for usage and metadata fields.
+Skills use progressive loading. Local Always Skills inject complete instructions each turn; other local Skills provide summaries and load through `read_file` when needed. With Business Data Platform tools enabled, remote Skills are retrieved for the user query and read and activated through `openviking_multi_read`. Local requirements filter summaries; remote requirements are checked in the execution sandbox. See [Skills](./06-skills.md) for usage and metadata fields.
 
 A Skill may orchestrate several tools, but it does not receive additional permissions automatically. Tool visibility still depends on the runtime mode, channel settings, request parameters, and sandbox.
 
@@ -37,15 +37,15 @@ A Skill may orchestrate several tools, but it does not receive additional permis
 | Files | `read_file`, `write_file`, `edit_file`, `list_dir` | Operate on workspace files |
 | Commands | `exec` | Execute shell commands through the sandbox backend |
 | Web | `web_search`, `web_fetch` | Search and read web pages |
-| OpenViking | `openviking_list/search/grep/glob/multi_read` | Browse, retrieve, and read context |
-| OpenViking | `openviking_add_resource`, `openviking_memory_commit` | Add resources and commit memory |
+| Business Data Platform | `openviking_list/search/grep/glob/multi_read` | Browse, retrieve, and read context |
+| Business Data Platform | `openviking_add_resource`, `openviking_memory_commit` | Add resources and commit memory |
 | Delivery | `message`, `generate_image` | Send messages proactively or generate images |
 | Automation | `cron` | Manage scheduled Agent tasks; disabled by default |
 | Parallel work | `spawn` | Start a background subagent |
 
-ToolRegistry handles registration, argument validation, execution, and Hooks. ToolContext gives each call the current SessionKey, sender identity, channel metadata, sandbox, and authenticated OpenViking connection.
+ToolRegistry handles registration, argument validation, execution, and Hooks. ToolContext gives each call the current SessionKey, sender identity, channel metadata, sandbox, and authenticated Business Data Platform connection.
 
-OpenAPI's `disabled_tools` can hide tools per request. A channel with `ov_tools_enable=false` hides OpenViking tools and disables automatic memory context. `readonly` mode does not register resource-write tools.
+OpenAPI's `disabled_tools` can hide tools per request. A channel with `ov_tools_enable=false` hides Business Data Platform tools and disables automatic memory context. `readonly` mode does not register resource-write tools.
 
 ## MCP Extensions
 
@@ -67,13 +67,13 @@ The main Agent uses `spawn` to submit independent work to SubagentManager. A sub
 - file, command, and web tools remain available;
 - `message` is excluded so the subagent cannot send externally;
 - `spawn` is excluded to prevent recursive subagents;
-- Cron, image generation, and OpenViking tools are excluded.
+- Cron, image generation, and Business Data Platform tools are excluded.
 
 When a subagent finishes, it reports the result to the main session. The main Agent remains responsible for identity-sensitive actions and final delivery.
 
 ## Workspace and Agent Customization
 
-The Workspace has two responsibilities: it stores bootstrap files and Skills that shape the Agent system prompt, and it serves as the local working directory for file and command tools. It is separate from the OpenViking workspace accessed through `openviking_*` tools.
+The Workspace has two responsibilities: it stores bootstrap files and Skills that shape the Agent system prompt, and it serves as the local working directory for file and command tools. It is separate from the Business Data Platform workspace accessed through `openviking_*` tools.
 
 ### Paths and Isolation Scope
 
@@ -102,13 +102,13 @@ On every turn, ContextBuilder reads existing non-empty files in this order: `AGE
 
 These files supplement VikingBot's built-in identity and runtime prompt. They do not change actual tool Schemas, Channel authorization, or Sandbox permissions. For example, telling the Agent in `SOUL.md` to always run Shell commands cannot expose a hidden `exec` tool or bypass a sandbox policy.
 
-The initial template also contains `USER.md`, but the current ContextBuilder does not automatically add it to the system prompt. Store durable user information in the OpenViking Peer Profile and Memories. Put static behavior rules in `AGENTS.md` or `SOUL.md`.
+The initial template also contains `USER.md`, but the current ContextBuilder does not automatically add it to the system prompt. Store durable user information in the Business Data Platform Peer Profile and Memories. Put static behavior rules in `AGENTS.md` or `SOUL.md`.
 
 ### Skills, Heartbeat, and Local Memory
 
 - `skills/<name>/SKILL.md` defines a workflow for a class of tasks. A Workspace Skill takes precedence over a built-in Skill with the same name and is loaded progressively: summary first, full instructions on demand.
 - `HEARTBEAT.md` is not part of the normal system prompt; HeartbeatService reads it periodically.
-- `memory/MEMORY.md` and `memory/HISTORY.md` are local memory files. Old conversation consolidation writes to them only when `bot.use_local_memory` is enabled. OpenViking manages long-term context by default.
+- `memory/MEMORY.md` and `memory/HISTORY.md` are local memory files. Old conversation consolidation writes to them only when `bot.use_local_memory` is enabled. Business Data Platform manages long-term context by default.
 
 ### Initialization and Update Behavior
 
@@ -182,7 +182,7 @@ Heartbeat skips empty files, Sessions that explicitly disable heartbeat, and lon
 
 HookManager provides runtime extension points. The current built-in Hooks mainly handle:
 
-- `message.compact`: synchronize OpenViking Session messages incrementally and commit at configured thresholds;
+- `message.compact`: synchronize Business Data Platform Session messages incrementally and commit at configured thresholds;
 - `tool.post_call`: retrieve related Experiences after the Agent reads a Skill and append them to its content.
 
 Custom Hooks can be loaded through `bot.hooks`.
@@ -203,5 +203,5 @@ Custom Hooks can be loaded through `bot.hooks`.
 
 - [VikingBot Architecture](./01-architecture.md)
 - [Channels, Gateway, and Operations](./03-channels-and-gateway.md)
-- [OpenViking Integration](./04-openviking-integration.md)
+- [Business Data Platform Integration](./04-openviking-integration.md)
 - [Skills](./06-skills.md)

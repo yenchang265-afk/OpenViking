@@ -2,13 +2,13 @@
 
 Skill 用 `SKILL.md` 描述一類任務的觸發條件、操作步驟和配套資源。模型讀取這些指令，再呼叫 VikingBot 已註冊的工具完成任務。Skill 本身不註冊工具，也不提供新的執行後端。
 
-VikingBot 支援活動 Workspace 中的本地 Skill，以及儲存在 OpenViking 中的遠端 Skill。本文按當前程式碼說明行為；遠端方案的設計背景見 [RFC #3656](https://github.com/volcengine/OpenViking/discussions/3656)。
+VikingBot 支援活動 Workspace 中的本地 Skill，以及儲存在 Business Data Platform 中的遠端 Skill。本文按當前程式碼說明行為；遠端方案的設計背景見 [RFC #3656](https://github.com/volcengine/OpenViking/discussions/3656)。
 
 ## 本地與遠端
 
-| 專案 | 本地 Skill | OpenViking 遠端 Skill |
+| 專案 | 本地 Skill | Business Data Platform 遠端 Skill |
 |------|------------|----------------------|
-| 儲存 | `<active-workspace>/skills/<name>/` | OpenViking 返回的 canonical Skill URI |
+| 儲存 | `<active-workspace>/skills/<name>/` | Business Data Platform 返回的 canonical Skill URI |
 | 發現 | 掃描工作區 Skill 目錄 | 按當前使用者問題呼叫 `find_skills`，只召回 L0 摘要 |
 | 預設上下文 | 名稱、描述、本地路徑 | 名稱、描述、`SKILL.md` URI、讀取工具 |
 | 讀取正文 | `read_file` | `openviking_multi_read`；讀取定義後啟用 |
@@ -18,7 +18,7 @@ VikingBot 支援活動 Workspace 中的本地 Skill，以及儲存在 OpenViking
 | 配套資源 | 已在工作區內 | 文本按 URI 讀取；工具需要本地路徑時下載整個包 |
 | 生命週期 | 檔案持續保留，每輪重新構建上下文 | 每條使用者訊息獨立啟用；Turn 結束清理執行副本 |
 
-兩種 Skill 都受 Bot、渠道、請求的工具可見性和沙箱策略約束。關閉 OpenViking 工具不影響本地 Skill 載入。
+兩種 Skill 都受 Bot、渠道、請求的工具可見性和沙箱策略約束。關閉 Business Data Platform 工具不影響本地 Skill 載入。
 
 ## 使用本地 Skill
 
@@ -45,14 +45,14 @@ VikingBot 支援活動 Workspace 中的本地 Skill，以及儲存在 OpenViking
 
 ### 準備與啟用
 
-1. 按 [OpenViking 整合](./04-openviking-integration.md#連線模式) 配置可用連線，並確保 Bot 當前身份有權讀取目標 Skill。
-2. 將 Skill 上傳到同一 OpenViking 服務。有輔助檔案時上傳目錄，保留整個包：
+1. 按 [Business Data Platform 整合](./04-openviking-integration.md#連線模式) 配置可用連線，並確保 Bot 當前身份有權讀取目標 Skill。
+2. 將 Skill 上傳到同一 Business Data Platform 服務。有輔助檔案時上傳目錄，保留整個包：
 
    ```bash
    ov add-skill ./skills/report-summary/
    ```
 
-   CLI 應連線目標服務並使用具有相應許可權的身份。儲存返回的 URI；若返回後臺 `task_id`，可用 `ov task status TASK_ID` 檢查處理進度。完整匯入方式見 [OpenViking Skills API](../../../../docs/zh/api/04-skills.md)。
+   CLI 應連線目標服務並使用具有相應許可權的身份。儲存返回的 URI；若返回後臺 `task_id`，可用 `ov task status TASK_ID` 檢查處理進度。完整匯入方式見 [Business Data Platform Skills API](../../../../docs/zh/api/04-skills.md)。
 3. 當前渠道保持 `ov_tools_enable: true`，並且 `openviking_multi_read` 已註冊、未被 `disabled_tools` 停用。
 4. 向 Bot 描述任務，讓它從遠端摘要中選擇 Skill；也可以明確要求讀取某個 `SKILL.md` 的 canonical URI。
 
@@ -69,7 +69,7 @@ VikingBot 支援活動 Workspace 中的本地 Skill，以及儲存在 OpenViking
   → 儲存結果和使用記錄 → 關閉執行時、清理請求副本
 ```
 
-同名候選優先順序是本地工作區、OpenViking 使用者 Skill、OpenViking 共享 Skill（`viking://agent/skills/`）。本地目錄即使因缺少依賴未出現在摘要中，也會遮蔽同名遠端候選。顯式 URI 不走名稱選擇，應使用服務實際返回的 canonical URI；不要把名稱當作跨使用者唯一標識。
+同名候選優先順序是本地工作區、Business Data Platform 使用者 Skill、Business Data Platform 共享 Skill（`viking://agent/skills/`）。本地目錄即使因缺少依賴未出現在摘要中，也會遮蔽同名遠端候選。顯式 URI 不走名稱選擇，應使用服務實際返回的 canonical URI；不要把名稱當作跨使用者唯一標識。
 
 例如，對服務返回的使用者 Skill URI 發起工具呼叫：
 
@@ -118,7 +118,7 @@ Run python3 scripts/summarize.py and summarize its output.
 | `name` | 字串；遠端必填 | 遠端啟用時必須與 URI 中的 Skill 名稱一致；本地仍以目錄名標識 Skill，建議兩者一致 |
 | `description` | 字串；遠端必填 | 描述適用任務，供模型選擇；本地未提供時摘要回退到目錄名 |
 | `allowed-tools` | 空格分隔字串，也相容字串列表；預設未宣告 | 遠端工具策略，詳見下一節；本地載入器不執行該策略 |
-| `tags` | 字串列表；預設 `[]` | OpenViking 保留的分類資訊，不改變 Bot 工具許可權或觸發方式 |
+| `tags` | 字串列表；預設 `[]` | Business Data Platform 保留的分類資訊，不改變 Bot 工具許可權或觸發方式 |
 | `metadata` | YAML 物件，也相容 JSON 字串 | 擴充後設資料容器 |
 | `metadata.vikingbot` | 物件 | VikingBot 識別的擴充作用域；存在時從此物件讀取擴充欄位 |
 | `metadata.vikingbot.always` | 布林值；預設 `false` | 僅本地：依賴滿足時，每輪注入完整正文 |
@@ -130,7 +130,7 @@ Run python3 scripts/summarize.py and summarize its output.
 | `metadata.vikingbot.install` | 物件列表；可選 | 部分模板中的安裝說明，常含 `id`、`kind`、`bins`、`label`、`formula` 或 `package`；當前 Bot 不自動執行 |
 | 其他 metadata，如 `author`、`version` | 自定義 | 可作說明資訊，當前 Bot 不據此控制執行或快取版本 |
 
-frontmatter 的許可權欄位必須是 **`allowed-tools`**。`allowed_tools` 是 OpenViking 解析後的結構化資料欄位，不能替代 `SKILL.md` 中帶連字元的欄位。用真正的 YAML 布林值 `true` / `false`，不要寫字串 `"false"`。
+frontmatter 的許可權欄位必須是 **`allowed-tools`**。`allowed_tools` 是 Business Data Platform 解析後的結構化資料欄位，不能替代 `SKILL.md` 中帶連字元的欄位。用真正的 YAML 布林值 `true` / `false`，不要寫字串 `"false"`。
 
 以下兩種舊 metadata 寫法也受支援；新 Skill 建議採用上面的作用域形式，避免其他系統的擴充欄位與 Bot 混在一起：
 
@@ -209,7 +209,7 @@ metadata: '{"vikingbot":{"requires":{"bins":["python3"]}}}'
 | Bot 主機快取 | `<bot-data>/remote_skill_cache/` | 按許可權域、canonical 根 URI 和服務端 revision 隔離，TTL/LRU 淘汰 |
 | 工具執行副本 | `<sandbox>/.remote-skill/<request-id>/<root-uri-sha256>/<skill-name>/` | 當前 Turn 內複用，結束時清理；不會直接執行主快取檔案 |
 
-這裡的 `.remote-skill/` 是當前程式碼路徑。快取命中仍需當前身份成功讀取、啟用並複查 manifest；隨後逐檔案校驗大小和 SHA-256，複製到請求沙箱。版本變化或檔案校驗失敗時拒絕繼續使用該快照。快取減少重複下載，不跳過 OpenViking ACL，也不以 `metadata.version` 作為快取版本。
+這裡的 `.remote-skill/` 是當前程式碼路徑。快取命中仍需當前身份成功讀取、啟用並複查 manifest；隨後逐檔案校驗大小和 SHA-256，複製到請求沙箱。版本變化或檔案校驗失敗時拒絕繼續使用該快照。快取減少重複下載，不跳過 Business Data Platform ACL，也不以 `metadata.version` 作為快取版本。
 
 以下欄位位於 `ov.conf` 的 **`bot.remote_skills`** 物件中，都是部署配置，不是 frontmatter：
 
@@ -229,7 +229,7 @@ metadata: '{"vikingbot":{"requires":{"bins":["python3"]}}}'
 
 ## 子 Agent 與常見問題
 
-子 Agent 使用工作區本地 Skill 摘要和 Always 內容。當前子 Agent 不註冊 OpenViking 工具，因此不發現、啟用或繼承主 Agent 的遠端 Skill 執行時與快照。
+子 Agent 使用工作區本地 Skill 摘要和 Always 內容。當前子 Agent 不註冊 Business Data Platform 工具，因此不發現、啟用或繼承主 Agent 的遠端 Skill 執行時與快照。
 
 | 現象或錯誤 | 檢查方式 |
 |------------|----------|
@@ -253,10 +253,10 @@ metadata: '{"vikingbot":{"requires":{"bins":["python3"]}}}'
 | 工具批次、Schema 與呼叫處理 | `vikingbot/agent/loop.py`、`vikingbot/agent/tools/registry.py` |
 | 遠端讀取與 Experience Hook | `vikingbot/agent/tools/ov_file.py`、`vikingbot/hooks/builtins/openviking_hooks.py` |
 | 配置預設值 | `vikingbot/config/schema.py` |
-| OpenViking frontmatter 解析 | 倉庫根目錄 `openviking/core/skill_loader.py` |
+| Business Data Platform frontmatter 解析 | 倉庫根目錄 `openviking/core/skill_loader.py` |
 
 ## 相關文件
 
 - [Agent 能力體系](./02-agent-capabilities.md)
-- [VikingBot 與 OpenViking 整合](./04-openviking-integration.md)
-- [OpenViking Skills API](../../../../docs/zh/api/04-skills.md)
+- [VikingBot 與 Business Data Platform 整合](./04-openviking-integration.md)
+- [Business Data Platform Skills API](../../../../docs/zh/api/04-skills.md)

@@ -1,4 +1,4 @@
-"""Deterministic LangChain RAG smoke app using OpenViking as retriever."""
+"""Deterministic LangChain RAG smoke app using Business Data Platform as retriever."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
                 "The user prefers azure as the deployment color for LangChain examples."
             ),
             "viking://resources/runbooks/langchain.md": (
-                "LangChain RAG apps should pass OpenViking recall into the prompt context."
+                "LangChain RAG apps should pass Business Data Platform recall into the prompt context."
             ),
         }
     )
@@ -29,13 +29,13 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
     )
     prompt = ChatPromptTemplate.from_messages(
         [
-            ("system", "Answer from the supplied OpenViking context.\n\n{context}"),
+            ("system", "Answer from the supplied Business Data Platform context.\n\n{context}"),
             ("human", "{question}"),
         ]
     )
     model = FakeListChatModel(
         responses=[
-            "OpenViking recall says the deployment color is azure.",
+            "Business Data Platform recall says the deployment color is azure.",
         ]
     )
     return (

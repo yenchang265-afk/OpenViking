@@ -6,7 +6,7 @@
 
 ## 安裝
 
-Claude Code 和 Codex 共用同一個安裝指令碼。它會依次詢問介面語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；所有步驟冪等，重複執行安全。
+Claude Code 和 Codex 共用同一個安裝指令碼。它會依次詢問介面語言（English/中文）、要安裝的 harness、下載源和 Business Data Platform 憑據；所有步驟冪等，重複執行安全。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
@@ -40,7 +40,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
    開發場景也可註冊本地 checkout：`claude plugin marketplace add "<倉庫路徑>/examples"`，外掛 id 相同。
 
-3. **啟動 Claude Code** — 執行後輸入 `/mcp` 命令，確認 OpenViking 條目已連線。
+3. **啟動 Claude Code** — 執行後輸入 `/mcp` 命令，確認 Business Data Platform 條目已連線。
 
 > 尚未建立 `ovcli.conf`？請先按照 [部署指南 → CLI](../guides/03-deployment.md#cli) 的說明進行配置。
 >
@@ -55,7 +55,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 啟動 `claude`，隨後：
 
 - 輸入 `/plugins` → 在 Installed 列表中應能找到 **openviking-memory**（其子項 **openviking** MCP 應顯示為已連線狀態）。
-- 輸入 `/mcp` → OpenViking 對應的條目應顯示您的伺服器 URL 及有效的認證資訊。
+- 輸入 `/mcp` → Business Data Platform 對應的條目應顯示您的伺服器 URL 及有效的認證資訊。
 - 輸入 `/openviking-memory:ov` → 檢視伺服器狀態、身份資訊、召回/注入的統計資料以及功能開關狀態。
 
 若外掛未正常工作，可設定環境變數 `OPENVIKING_DEBUG=1`，並檢視日誌檔案 `~/.openviking/logs/cc-hooks.log` 以排查問題。
@@ -64,16 +64,16 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 外掛通過掛載到 Claude Code 的不同生命週期節點來發揮作用：
 
-- **每次使用者輸入前** — 搜尋 OpenViking 資料庫並注入相關記憶。
+- **每次使用者輸入前** — 搜尋 Business Data Platform 資料庫並注入相關記憶。
 - **每輪迴復後** — 自動捕獲並存儲新的對話內容。
 - **會話（session）啟動時** — 注入使用者畫像、記憶索引和 skill 清單。
 - **上下文壓縮（compact）前及會話結束時** — 提交所有待處理的訊息記錄。
 - **啟動子代理（subagent）時** — 為其分配相互隔離的記憶會話。
-- **原生檔案工具訪問 `viking://` 路徑前** — 攔截該呼叫，並提示改用對應的 OpenViking MCP 工具；對 skill 路徑的 `Write` 或 `Edit` 會被引導到 `add_skill`。
+- **原生檔案工具訪問 `viking://` 路徑前** — 攔截該呼叫，並提示改用對應的 Business Data Platform MCP 工具；對 skill 路徑的 `Write` 或 `Edit` 會被引導到 `add_skill`。
 
 所有資料寫入操作均為非同步執行，不會阻塞當前的對話程序。
 
-skill 清單就是 `<available-skills>` 塊，列出存放在 OpenViking 中的 skill：先列你自己在 `viking://~/skills` 下的，再列帳號內共享在 `viking://agent/skills` 下的，每個附一句簡短描述。要照清單裡的 skill 執行前，Claude 會先用 OpenViking 的 `read` 工具讀取它的 `SKILL.md`。清單有獨立的 Token 預算：放不下描述時只列名稱，連一個名稱都放不下時縮成一行總數。外掛自帶的 `openviking-skills` skill 告訴 Claude 如何查詢和使用 OpenViking 中的 skill，如何用 `add_skill` MCP 工具建立、安裝和共享 skill，如何刪除 skill，以及在你要求時如何把 `~/.claude/skills` 等本地 skill 遷入 OpenViking。
+skill 清單就是 `<available-skills>` 塊，列出存放在 Business Data Platform 中的 skill：先列你自己在 `viking://~/skills` 下的，再列帳號內共享在 `viking://agent/skills` 下的，每個附一句簡短描述。要照清單裡的 skill 執行前，Claude 會先用 Business Data Platform 的 `read` 工具讀取它的 `SKILL.md`。清單有獨立的 Token 預算：放不下描述時只列名稱，連一個名稱都放不下時縮成一行總數。外掛自帶的 `openviking-skills` skill 告訴 Claude 如何查詢和使用 Business Data Platform 中的 skill，如何用 `add_skill` MCP 工具建立、安裝和共享 skill，如何刪除 skill，以及在你要求時如何把 `~/.claude/skills` 等本地 skill 遷入 Business Data Platform。
 
 工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
 
@@ -114,7 +114,7 @@ skill 清單就是 `<available-skills>` 塊，列出存放在 OpenViking 中的 
 
 ## 狀態行
 
-外掛會在 Claude Code 的輸入框下方顯示一行 OpenViking 狀態列，用於指示：連線狀態、召回條數、捕獲進度以及當前會話狀態。關於狀態列各部分的詳細含義與自定義配置方法，請參閱 [STATUSLINE.md](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/STATUSLINE.md)。
+外掛會在 Claude Code 的輸入框下方顯示一行 Business Data Platform 狀態列，用於指示：連線狀態、召回條數、捕獲進度以及當前會話狀態。關於狀態列各部分的詳細含義與自定義配置方法，請參閱 [STATUSLINE.md](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/STATUSLINE.md)。
 
 ## 故障排查
 
@@ -129,7 +129,7 @@ skill 清單就是 `<available-skills>` 塊，列出存放在 OpenViking 中的 
 ## 參見
 
 - [整合能力參考](./16-capability-reference.md)
-- [部落格：在 Claude Code / Codex 中接入 OpenViking](https://blog.openviking.ai/post/openviking-coding-agent/) — 探討為 Coding Agent 新增長期記憶的動機與實際效果。
+- [部落格：在 Claude Code / Codex 中接入 Business Data Platform](https://blog.openviking.ai/post/openviking-coding-agent/) — 探討為 Coding Agent 新增長期記憶的動機與實際效果。
 - [外掛 README](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md) — 檢視完整的環境變數列表、Hook 執行細節及系統架構圖。
 - [MCP 客戶端](./06-mcp-clients.md) — 瞭解 MCP 工具引數及其他客戶端整合指南。
 - [部署指南 → CLI](../guides/03-deployment.md#cli) — 學習 `ovcli.conf` 的具體配置方法。

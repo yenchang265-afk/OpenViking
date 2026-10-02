@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Reusable OpenViking session recording for LangChain messages."""
+"""Reusable Business Data Platform session recording for LangChain messages."""
 
 from __future__ import annotations
 
@@ -65,7 +65,7 @@ class OpenVikingPartialWriteError(RuntimeError):
         else:
             detail = "before the commit policy failed"
         super().__init__(
-            f"OpenViking recorded {result.messages_written} messages for session "
+            f"Business Data Platform recorded {result.messages_written} messages for session "
             f"{session_id!r} {detail}: {cause}"
         )
         self.session_id = session_id
@@ -184,7 +184,7 @@ class _PreparedBatch:
 
 
 class OpenVikingSessionRecorder:
-    """Persist caller-selected LangChain messages to OpenViking sessions.
+    """Persist caller-selected LangChain messages to Business Data Platform sessions.
 
     The recorder intentionally does not decide which messages form a turn or
     deduplicate transcript snapshots. Callers own that policy and pass only the
@@ -266,7 +266,7 @@ class OpenVikingSessionRecorder:
 
     @property
     def client(self) -> Any:
-        """Return the lazily initialized OpenViking client used by this recorder."""
+        """Return the lazily initialized Business Data Platform client used by this recorder."""
 
         self._raise_if_closed()
         if self._client_cache is None:
@@ -654,7 +654,7 @@ def _prepare_batches(
         payload_count = len(message.payloads)
         if payload_count > batch_size:
             raise ValueError(
-                "one LangChain message produced more OpenViking payloads "
+                "one LangChain message produced more Business Data Platform payloads "
                 f"({payload_count}) than batch_size ({batch_size})"
             )
         if payloads and len(payloads) + payload_count > batch_size:

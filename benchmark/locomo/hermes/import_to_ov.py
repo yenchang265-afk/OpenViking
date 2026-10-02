@@ -1,5 +1,5 @@
 """
-OpenViking data import tool for LoCoMo benchmark.
+Business Data Platform data import tool for LoCoMo benchmark.
 """
 
 from __future__ import annotations
@@ -570,7 +570,7 @@ async def wait_for_queues_and_record_totals(
     target_processed = baseline_processed + max(0, expected_processed_delta)
     target_note = f", target_processed={target_processed}" if has_processed_target else ""
     print(
-        f"\n[INFO] Waiting for OpenViking background queues to drain "
+        f"\n[INFO] Waiting for Business Data Platform background queues to drain "
         f"(baseline_processed={baseline_processed}{target_note}, settle={settle_checks})...",
         file=sys.stderr,
     )
@@ -629,7 +629,7 @@ async def wait_for_queues_and_record_totals(
 
         if timed_out:
             raise TimeoutError(
-                "OpenViking background queues did not finish before checkpoint "
+                "Business Data Platform background queues did not finish before checkpoint "
                 f"(target_processed={target_processed if has_processed_target else 'none'}, "
                 f"last_totals={last_totals})"
             )
@@ -638,7 +638,7 @@ async def wait_for_queues_and_record_totals(
         try:
             final_totals = await _read_model_totals(client, openviking_url)
             if final_totals is None:
-                print("[INFO] No model usage recorded by OpenViking server.", file=sys.stderr)
+                print("[INFO] No model usage recorded by Business Data Platform server.", file=sys.stderr)
                 return
 
             (
@@ -661,7 +661,7 @@ async def wait_for_queues_and_record_totals(
             delta_vlm_prompt = max(final_vlm_prompt - baseline_vlm_prompt, 0)
             delta_vlm_completion = max(final_vlm_completion - baseline_vlm_completion, 0)
 
-            print("\n=== TRUE OpenViking Token Delta For This Run ===", file=sys.stderr)
+            print("\n=== TRUE Business Data Platform Token Delta For This Run ===", file=sys.stderr)
             print(f"Embedding Input (Prompt) Delta: {delta_embedding_prompt}", file=sys.stderr)
             print(
                 f"Embedding Output (Completion) Delta: {delta_embedding_completion}",
@@ -796,20 +796,20 @@ def main():
     default_success_csv = str(script_dir / "result_preingest" / "import_success.csv")
     default_error_log = str(script_dir / "result_preingest" / "import_errors.log")
 
-    parser = argparse.ArgumentParser(description="Import LoCoMo conversations into OpenViking")
+    parser = argparse.ArgumentParser(description="Import LoCoMo conversations into Business Data Platform")
     parser.add_argument("--input", default=default_input, help="Path to LoCoMo .json")
     parser.add_argument(
         "--success-csv", default=default_success_csv, help="Success records CSV path"
     )
     parser.add_argument("--error-log", default=default_error_log, help="Error log path")
     parser.add_argument(
-        "--openviking-url", default=DEFAULT_OPENVIKING_URL, help="OpenViking service URL"
+        "--openviking-url", default=DEFAULT_OPENVIKING_URL, help="Business Data Platform service URL"
     )
     parser.add_argument(
-        "--account", default=DEFAULT_OPENVIKING_ACCOUNT, help="OpenViking account namespace"
+        "--account", default=DEFAULT_OPENVIKING_ACCOUNT, help="Business Data Platform account namespace"
     )
-    parser.add_argument("--user", default=DEFAULT_OPENVIKING_USER, help="OpenViking user namespace")
-    parser.add_argument("--api-key", default=DEFAULT_OPENVIKING_API_KEY, help="OpenViking API key")
+    parser.add_argument("--user", default=DEFAULT_OPENVIKING_USER, help="Business Data Platform user namespace")
+    parser.add_argument("--api-key", default=DEFAULT_OPENVIKING_API_KEY, help="Business Data Platform API key")
     parser.add_argument("--sample", type=int, default=None, help="Sample index (0-based)")
     parser.add_argument(
         "--force-ingest", action="store_true", default=False, help="Force re-import"
@@ -819,7 +819,7 @@ def main():
         "--queue-max-wait-sec",
         type=int,
         default=1800,
-        help="Maximum seconds to wait for OpenViking observer queue deltas",
+        help="Maximum seconds to wait for Business Data Platform observer queue deltas",
     )
     parser.add_argument(
         "--error-retries",

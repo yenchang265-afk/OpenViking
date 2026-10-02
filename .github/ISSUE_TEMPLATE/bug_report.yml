@@ -73,8 +73,8 @@ body:
   - type: input
     id: version
     attributes:
-      label: OpenViking Version
-      description: What version of OpenViking are you using?
+      label: Business Data Platform Version
+      description: What version of Business Data Platform are you using?
       placeholder: e.g., 0.1.0
     validations:
       required: true

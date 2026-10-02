@@ -1,4 +1,4 @@
-# OpenViking Assets catalog — the team-wide inventory of ingestable sources.
+# Business Data Platform Assets catalog — the team-wide inventory of ingestable sources.
 # Credentials never appear here; `auth_ref` aliases resolve on each
 # consumer's machine (~/.openviking/openviking_assets_credentials.yaml).
 protocol: openviking-assets/1
@@ -10,7 +10,7 @@ defaults:
 catalog:
   - name: openviking
     connector: git
-    description: OpenViking main repository — server, CLI and SDKs
+    description: Business Data Platform main repository — server, CLI and SDKs
     to: viking://resources/repos/openviking
     params:
       repo_url: https://github.com/volcengine/OpenViking

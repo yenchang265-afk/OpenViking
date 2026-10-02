@@ -14,7 +14,7 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # Keep Python and accelerator dependencies independent from the source layers.
-# Python-only OpenViking changes therefore reuse this relatively expensive
+# Python-only Business Data Platform changes therefore reuse this relatively expensive
 # cuVS/CuPy installation.
 RUN --mount=type=cache,target=/root/.cache/pip \
     python -m pip install --upgrade pip setuptools wheel \

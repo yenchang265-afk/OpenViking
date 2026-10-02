@@ -534,7 +534,7 @@ class ConnectorDelegate:
 
         # Credentials are separated into the dedicated auth_config field before
         # forwarding: Connector and plugin logs redact auth_config while logging
-        # param_config verbatim. The incoming OpenViking HTTP body may still be
+        # param_config verbatim. The incoming Business Data Platform HTTP body may still be
         # captured when the explicitly unsafe observability body dump is enabled.
         if add_type in CONNECTOR_SUPPORTED_ARGS:
             forwarded_args = {

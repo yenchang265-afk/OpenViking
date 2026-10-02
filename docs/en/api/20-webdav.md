@@ -6,7 +6,7 @@ WebDAV provides file-protocol access to the `resources` namespace.
 
 ## WebDAV (Phase 1)
 
-OpenViking Server also exposes a minimal WebDAV adapter for resource files:
+Business Data Platform Server also exposes a minimal WebDAV adapter for resource files:
 
 ```text
 /webdav/resources
@@ -21,7 +21,7 @@ Phase 1 intentionally keeps the scope narrow:
 
 Behavior notes:
 
-- Creating a new file through WebDAV triggers OpenViking semantic generation for that file path.
+- Creating a new file through WebDAV triggers Business Data Platform semantic generation for that file path.
 - Replacing an existing file through WebDAV refreshes related semantics and vectors, same as `write()`.
 - `PUT` does not create parent collections automatically. Create missing directories with `MKCOL` first.
 - User-created dot-directories and dot-files remain visible unless they match one of the reserved internal filenames above.
@@ -39,11 +39,11 @@ Behavior notes:
 | `MKCOL` | `/webdav/resources`, `/webdav/resources/{resource_path}` | Create a directory |
 | `MOVE` | `/webdav/resources`, `/webdav/resources/{resource_path}` | Move or rename a file or directory |
 
-Except for `OPTIONS`, WebDAV requests use the same authentication headers as other OpenViking APIs. Paths must remain under `resources` and cannot escape through `..`, backslashes, or equivalent forms.
+Except for `OPTIONS`, WebDAV requests use the same authentication headers as other Business Data Platform APIs. Paths must remain under `resources` and cannot escape through `..`, backslashes, or equivalent forms.
 
 | Header | Methods | Required | Description |
 |--------|---------|----------|-------------|
-| `X-API-Key` | All except `OPTIONS` | Yes | OpenViking API key |
+| `X-API-Key` | All except `OPTIONS` | Yes | Business Data Platform API key |
 | `Depth` | `PROPFIND` | No | `0` returns only the target; other values use one level |
 | `Destination` | `MOVE` | Yes | Target path below `/webdav/resources` |
 | `Overwrite` | `MOVE` | No | Defaults to `T`; set `F` to preserve an existing target |
@@ -129,7 +129,7 @@ curl -X DELETE http://localhost:1933/webdav/resources/archive \
 | `MOVE` | `201` new target; `204` overwrite | `400` destination missing; `409` destination parent missing; `412` overwrite disabled |
 | `DELETE` | `204` | `404` missing; `405` resources root cannot be deleted |
 
-WebDAV is a protocol entry point rather than an OpenViking SDK or `ov` CLI surface, so this page shows only the HTTP tab. Use [File System](03-filesystem.md) for SDK and CLI file operations.
+WebDAV is a protocol entry point rather than a Business Data Platform SDK or `ov` CLI surface, so this page shows only the HTTP tab. Use [File System](03-filesystem.md) for SDK and CLI file operations.
 
 ## Related Documentation
 

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Path Variable System for OpenViking.
+Path Variable System for Business Data Platform.
 
 Provides URI template resolution with support for variables like {calendar:today}.
 """

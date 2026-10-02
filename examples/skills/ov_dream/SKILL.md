@@ -1,11 +1,11 @@
 ---
 name: ov_dream
-description: Use when the user explicitly types `ov dream` or `ov recall <query>` and the request should be routed to the OpenViking sync/recall CLI instead of handled as normal chat.
+description: Use when the user explicitly types `ov dream` or `ov recall <query>` and the request should be routed to the Business Data Platform sync/recall CLI instead of handled as normal chat.
 ---
 
 # OV Dream
 
-Use this skill for manual OpenViking sync and recall without occupying the OpenClaw `contextEngine` slot.
+Use this skill for manual Business Data Platform sync and recall without occupying the OpenClaw `contextEngine` slot.
 
 ## When To Use
 
@@ -19,10 +19,10 @@ Do not treat those messages as normal conversation. They are explicit operator c
 ## Commands
 
 - `ov dream`
-  Manual sync. Read OpenClaw's `sessions.json`, sync eligible chat transcripts to OpenViking, then commit each session when new messages exist.
+  Manual sync. Read OpenClaw's `sessions.json`, sync eligible chat transcripts to Business Data Platform, then commit each session when new messages exist.
 
 - `ov recall <query>`
-  Manual recall. Search OpenViking under the default user root URI, `viking://user/default`.
+  Manual recall. Search Business Data Platform under the default user root URI, `viking://user/default`.
 
 ## Sync Behavior
 
@@ -80,6 +80,6 @@ Rules:
 
 - This skill is manual-only in the first version.
 - It does not auto-inject recall into prompts.
-- It does not replace the OpenViking context-engine plugin.
+- It does not replace the Business Data Platform context-engine plugin.
 - Disk-based sync is for recently recorded chat transcripts. It is not a precise "currently running sessions" detector.
-- For OpenViking serverless, configure `OPENVIKING_BASE_URL`, `OPENVIKING_API_KEY`, and optionally `OPENVIKING_AUTH_MODE=serverless`. The CLI will use Bearer auth and the serverless session message format automatically.
+- For Business Data Platform serverless, configure `OPENVIKING_BASE_URL`, `OPENVIKING_API_KEY`, and optionally `OPENVIKING_AUTH_MODE=serverless`. The CLI will use Bearer auth and the serverless session message format automatically.

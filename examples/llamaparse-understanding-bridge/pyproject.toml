@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openviking-llamaparse-bridge"
 version = "0.1.0"
-description = "LlamaParse v2 adapter for the OpenViking Understanding API"
+description = "LlamaParse v2 adapter for the Business Data Platform Understanding API"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"

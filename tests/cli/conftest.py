@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""CLI fixtures that run against a real OpenViking server process."""
+"""CLI fixtures that run against a real Business Data Platform server process."""
 
 import json
 import os
@@ -39,7 +39,7 @@ def _wait_for_health(url: str, timeout_s: float = 20.0) -> None:
         except Exception as exc:  # noqa: BLE001
             last_error = exc
         time.sleep(0.25)
-    raise RuntimeError(f"OpenViking server failed to start: {last_error}")
+    raise RuntimeError(f"Business Data Platform server failed to start: {last_error}")
 
 
 @pytest.fixture(scope="session")
@@ -99,7 +99,7 @@ def openviking_server(tmp_path_factory: pytest.TempPathFactory) -> Generator[str
             proc.terminate()
             stdout, stderr = proc.communicate(timeout=10)
         raise RuntimeError(
-            f"OpenViking server failed to start.\nstdout:\n{stdout}\nstderr:\n{stderr}"
+            f"Business Data Platform server failed to start.\nstdout:\n{stdout}\nstderr:\n{stderr}"
         )
     finally:
         if proc.poll() is None:

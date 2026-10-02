@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark OpenViking native flat search against cuVS indexes.
+"""Benchmark Business Data Platform native flat search against cuVS indexes.
 
 This is an index-level benchmark: it deliberately excludes embedding, HTTP,
 record lookup, and LLM work. Datasets are generated as NumPy memory maps so a

@@ -1,6 +1,6 @@
 # MCP Clients
 
-Any [MCP](https://modelcontextprotocol.io/)-compatible client can connect to OpenViking's built-in `/mcp` endpoint — no plugin installation or extra processes needed. This covers Cursor, Trae, Manus, Claude Desktop, ChatGPT, and others.
+Any [MCP](https://modelcontextprotocol.io/)-compatible client can connect to Business Data Platform's built-in `/mcp` endpoint — no plugin installation or extra processes needed. This covers Cursor, Trae, Manus, Claude Desktop, ChatGPT, and others.
 
 ## Quick setup
 
@@ -67,15 +67,15 @@ Use OpenCode's native `mcp` config in `~/.config/opencode/opencode.json`:
 
 ### Claude Desktop / Claude.ai (OAuth)
 
-These clients require OAuth 2.1 — API keys cannot be passed directly. OpenViking ships a native OAuth 2.1 implementation, so no external proxy is needed.
+These clients require OAuth 2.1 — API keys cannot be passed directly. Business Data Platform ships a native OAuth 2.1 implementation, so no external proxy is needed.
 
-If you already have HTTPS configured for your OpenViking server, just connect to `https://your-server.com/mcp` — the client will walk you through the OAuth authorization flow automatically.
+If you already have HTTPS configured for your Business Data Platform server, just connect to `https://your-server.com/mcp` — the client will walk you through the OAuth authorization flow automatically.
 
 See the [OAuth 2.1 Guide](../guides/11-oauth.md) and [Public Access Guide](../guides/12-public-access.md) for HTTPS setup, deployment templates, and the full authorization flow.
 
 ## Available tools
 
-Once connected, OpenViking exposes retrieval, memory, resource, watch, filesystem, and code-navigation tools. See the [MCP Integration Guide](../guides/06-mcp-integration.md#available-mcp-tools) for the canonical tool list, parameters, progressive file upload, and advanced configuration.
+Once connected, Business Data Platform exposes retrieval, memory, resource, watch, filesystem, and code-navigation tools. See the [MCP Integration Guide](../guides/06-mcp-integration.md#available-mcp-tools) for the canonical tool list, parameters, progressive file upload, and advanced configuration.
 
 ## Troubleshooting
 

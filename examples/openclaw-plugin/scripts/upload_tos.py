@@ -234,7 +234,7 @@ def upload_files(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Upload OpenViking install.sh, openviking.tgz, and manifest.json to all TOS buckets."
+        description="Upload Business Data Platform install.sh, openviking.tgz, and manifest.json to all TOS buckets."
     )
     parser.add_argument("--install-sh", type=pathlib.Path, default=DEFAULT_INSTALL_SH)
     parser.add_argument("--tgz", type=pathlib.Path, default=DEFAULT_TGZ)

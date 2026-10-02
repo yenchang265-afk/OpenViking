@@ -70,7 +70,7 @@ Omit fields you do not need. A local server in `dev` mode usually needs only `ur
 
 | Field | Type / Values | Default | Purpose |
 |---|---|---|---|
-| `url` | HTTP(S) URL | `http://127.0.0.1:1933` | OpenViking server endpoint |
+| `url` | HTTP(S) URL | `http://127.0.0.1:1933` | Business Data Platform server endpoint |
 | `api_key` | string / `null` | `null` | User/admin key for normal data operations |
 | `root_api_key` | string / `null` | `null` | Root key for `ov --sudo` administrative operations |
 | `account` | string / `null` | `null` | Account identity for trusted deployments |
@@ -359,4 +359,4 @@ ov config show
 
 `ov config switch <name>` copies the named configuration to the default active file. If `OPENVIKING_CLI_CONFIG_FILE` remains set, normal `ov` commands continue to use the environment-selected file; unset it to use the switched default. New `ov` commands reread the effective file, while already-running Agent clients must restart before reading changes.
 
-See [OpenViking CLI Setup](../getting-started/05-cli-setup.md) for interactive and agent-assisted configuration workflows.
+See [Business Data Platform CLI Setup](../getting-started/05-cli-setup.md) for interactive and agent-assisted configuration workflows.

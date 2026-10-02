@@ -1,6 +1,6 @@
 # VikingVectorIndex
 
-OpenViking 專案的高效能向量資料庫模組，專為 AI Agent 場景設計，提供向量儲存、檢索和聚合分析能力。
+Business Data Platform 專案的高效能向量資料庫模組，專為 AI Agent 場景設計，提供向量儲存、檢索和聚合分析能力。
 
 ## 特性
 
@@ -962,4 +962,4 @@ result = collection.search_by_vector(
 
 ## 許可證
 
-本專案遵循 OpenViking 專案的許可證協議。
+本專案遵循 Business Data Platform 專案的許可證協議。

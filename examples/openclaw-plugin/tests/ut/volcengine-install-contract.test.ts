@@ -8,7 +8,7 @@ function readText(path: string): string {
   return readFileSync(join(rootDir, path), "utf8");
 }
 
-describe("Volcengine OpenViking one-click install contract", () => {
+describe("Volcengine Business Data Platform one-click install contract", () => {
   it("keeps the Volcengine install script as a compatibility wrapper", () => {
     const script = readText("scripts/volcengine-openviking-install.sh");
 

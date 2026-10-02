@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Response models and error codes for OpenViking HTTP Server."""
+"""Response models and error codes for Business Data Platform HTTP Server."""
 
 from typing import Any, Dict, Optional
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# OpenViking Multi-Tenant Admin Workflow (CLI)
+# Business Data Platform Multi-Tenant Admin Workflow (CLI)
 #
 # This script demonstrates account and user management through the CLI.
 # It walks through a full lifecycle: create account → register users →
@@ -69,7 +69,7 @@ jq_field() {
   python3 -c "import sys,json; print(json.load(sys.stdin)['result']['$1'])"
 }
 
-printf '\033[1m=== OpenViking Multi-Tenant Admin Workflow (CLI) ===\033[0m\n'
+printf '\033[1m=== Business Data Platform Multi-Tenant Admin Workflow (CLI) ===\033[0m\n'
 info "Server:   $SERVER"
 info "Root Key: ${ROOT_KEY:0:8}..."
 

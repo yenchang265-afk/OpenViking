@@ -1,6 +1,6 @@
-# OpenViking Memory Plugin for Claude Code
+# Business Data Platform Memory Plugin for Claude Code
 
-為 Claude Code 提供長期語義記憶，由 [OpenViking](https://github.com/volcengine/OpenViking) 驅動。每次使用者輸入前自動召回相關記憶，每輪對話結束後自動捕獲上下文——模型不需要主動呼叫任何 MCP 工具。
+為 Claude Code 提供長期語義記憶，由 [Business Data Platform](https://github.com/volcengine/OpenViking) 驅動。每次使用者輸入前自動召回相關記憶，每輪對話結束後自動捕獲上下文——模型不需要主動呼叫任何 MCP 工具。
 
 > 外掛可直接從倉庫自帶的 marketplace catalog 安裝，無需單獨的分發倉庫。兩條命令的遠端安裝方式見下文[手動安裝](#手動安裝)。
 
@@ -12,13 +12,13 @@
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness claude
 ```
 
-僅支援 macOS 和 Linux。Claude Code 和 Codex 共用這一個安裝指令碼（去掉 `--harness claude` 可互動勾選）：它會依次詢問介面語言（English/中文）、下載源（GitHub，或 GitHub 受限地區用 TOS 映象——傳 `--dist tos`）和 OpenViking 憑據，然後從遠端 marketplace 安裝 `openviking-memory`。stdio MCP 代理執行時讀取 `ovcli.conf`，不再需要 shell wrapper 或 `.mcp.json` 渲染。重複執行安全。
+僅支援 macOS 和 Linux。Claude Code 和 Codex 共用這一個安裝指令碼（去掉 `--harness claude` 可互動勾選）：它會依次詢問介面語言（English/中文）、下載源（GitHub，或 GitHub 受限地區用 TOS 映象——傳 `--dist tos`）和 Business Data Platform 憑據，然後從遠端 marketplace 安裝 `openviking-memory`。stdio MCP 代理執行時讀取 `ovcli.conf`，不再需要 shell wrapper 或 `.mcp.json` 渲染。重複執行安全。
 
 如果你更喜歡手動操作，按下面四步走。
 
 ### 手動安裝
 
-#### 1. 準備一個可用的 OpenViking 伺服器
+#### 1. 準備一個可用的 Business Data Platform 伺服器
 
 本地起一個或者指向遠端：[快速開始指南](../../docs/zh/getting-started/02-quickstart.md) 涵蓋兩種模式，也講了遠端使用時怎麼簽發 API key。預設埠 `1933`；本地模式無需鑑權。
 
@@ -58,7 +58,7 @@ claude plugin install openviking-memory@openviking
 
 如果跳過了第 2 步，裝完後再配置連線：手寫 `~/.openviking/ovcli.conf`、執行外掛自帶的交互向導 `node <外掛目錄>/scripts/setup.mjs`，或直接跑一行安裝指令碼。
 
-**本地目錄（開發用）** —— 註冊當前 checkout，`scripts/`、`hooks/` 的修改下次 hook 觸發即生效、無需重灌。在 OpenViking 倉庫根目錄：
+**本地目錄（開發用）** —— 註冊當前 checkout，`scripts/`、`hooks/` 的修改下次 hook 觸發即生效、無需重灌。在 Business Data Platform 倉庫根目錄：
 
 ```bash
 claude plugin marketplace add "$(pwd)/examples"
@@ -102,9 +102,9 @@ claude
 
 ## 配置 MCP
 
-外掛的 hook 和 MCP 條目現在使用同一條配置鏈。倉庫裡的 `.mcp.json` 會把 `servers/mcp-proxy.mjs` 作為本地 stdio MCP server 啟動；這個代理讀取 `OPENVIKING_*`、`~/.openviking/ovcli.conf` 和 `~/.openviking/ov.conf`，再把 JSON-RPC 轉發到 OpenViking 服務端原生 `/mcp` endpoint，並補齊認證與身份頭。
+外掛的 hook 和 MCP 條目現在使用同一條配置鏈。倉庫裡的 `.mcp.json` 會把 `servers/mcp-proxy.mjs` 作為本地 stdio MCP server 啟動；這個代理讀取 `OPENVIKING_*`、`~/.openviking/ovcli.conf` 和 `~/.openviking/ov.conf`，再把 JSON-RPC 轉發到 Business Data Platform 服務端原生 `/mcp` endpoint，並補齊認證與身份頭。
 
-正常外掛安裝不需要額外 export，也不需要渲染 `.mcp.json`。更新 `ovcli.conf` 或相關 `OPENVIKING_*` 環境變數後重啟 Claude Code，代理會和 hook 指令碼命中同一個 OpenViking 目標。
+正常外掛安裝不需要額外 export，也不需要渲染 `.mcp.json`。更新 `ovcli.conf` 或相關 `OPENVIKING_*` 環境變數後重啟 Claude Code，代理會和 hook 指令碼命中同一個 Business Data Platform 目標。
 
 代理要求 Node.js 18+。只有在 `OPENVIKING_DEBUG=1` 或 `claude_code.debug=true` 時才寫 debug log；stdout 嚴格保留給 MCP 協議輸出。
 
@@ -182,14 +182,14 @@ claude
 
 在 `ovcli.conf` 裡，這幾項對應 `plugin` 或 `plugin.claude_code` 下的 `noAutoInject`、`profileTokenBudget`、`skillCatalog` 和 `skillCatalogTokenBudget`。
 
-每次 `SessionStart`（`startup`、`clear`、`resume`、`compact`）都會注入一個 `<openviking-context>` 塊，依次包含 `<user-profile>`、`<available-memories>` 和 `<available-skills>`；`resume`/`compact` 時後面還會接上最新的 archive overview。skill 清單來自一次 `GET /api/v1/skills?node_limit=200` 呼叫：先列你自己的 skill，再列帳號內共享在 `viking://agent/skills` 下的 skill，與你自己某個 skill 同名的共享 skill 不再列出。每條描述截到約 40 個 token，描述裡出現的 `<openviking-context>` 等注入塊標籤會被轉義。完整清單超出預算時只列名稱，名稱也放不全時以 `... +N more, search OpenViking skills to find the rest` 收尾；連一個名稱都放不下時，整塊縮成一行 `<available-skills>N OpenViking skills; search OpenViking skills to find them.</available-skills>`。沒有任何 skill，或服務端不支援 `GET /api/v1/skills` 時，不注入清單。
+每次 `SessionStart`（`startup`、`clear`、`resume`、`compact`）都會注入一個 `<openviking-context>` 塊，依次包含 `<user-profile>`、`<available-memories>` 和 `<available-skills>`；`resume`/`compact` 時後面還會接上最新的 archive overview。skill 清單來自一次 `GET /api/v1/skills?node_limit=200` 呼叫：先列你自己的 skill，再列帳號內共享在 `viking://agent/skills` 下的 skill，與你自己某個 skill 同名的共享 skill 不再列出。每條描述截到約 40 個 token，描述裡出現的 `<openviking-context>` 等注入塊標籤會被轉義。完整清單超出預算時只列名稱，名稱也放不全時以 `... +N more, search Business Data Platform skills to find the rest` 收尾；連一個名稱都放不下時，整塊縮成一行 `<available-skills>N Business Data Platform skills; search Business Data Platform skills to find them.</available-skills>`。沒有任何 skill，或服務端不支援 `GET /api/v1/skills` 時，不注入清單。
 
 ```text
 <openviking-context source="startup">
 <user-profile uri="viking://user/default/memories/profile.md">...</user-profile>
 <available-memories>...</available-memories>
 <available-skills>
-  OpenViking skills (stored in OpenViking, not local files). Before following one, read <dir>/<name>/SKILL.md with the OpenViking read tool.
+  Business Data Platform skills (stored in Business Data Platform, not local files). Before following one, read <dir>/<name>/SKILL.md with the Business Data Platform read tool.
   viking://user/default/skills/
     - pr-review — Review a pull request against the team checklist.
   viking://agent/skills/
@@ -198,7 +198,7 @@ claude
 </openviking-context>
 ```
 
-外掛自帶的 `openviking-skills` skill 告訴 Claude 拿到清單後怎麼做：查詢和使用 skill，用 MCP `add_skill` 工具建立、安裝或共享 skill，刪除 skill，以及在你要求時把 `~/.claude/skills` 或 `<repo>/.claude/skills` 下的本地 skill 遷入 OpenViking。依賴本機環境的 skill（由外掛分發、由 CLI 安裝器軟連結進來，或需要本地二進位制）留在本地，每個 skill 都要經你確認後才會上傳。
+外掛自帶的 `openviking-skills` skill 告訴 Claude 拿到清單後怎麼做：查詢和使用 skill，用 MCP `add_skill` 工具建立、安裝或共享 skill，刪除 skill，以及在你要求時把 `~/.claude/skills` 或 `<repo>/.claude/skills` 下的本地 skill 遷入 Business Data Platform。依賴本機環境的 skill（由外掛分發、由 CLI 安裝器軟連結進來，或需要本地二進位制）留在本地，每個 skill 都要經你確認後才會上傳。
 
 #### 生命週期 / 行為 / 雜項
 
@@ -245,7 +245,7 @@ export OPENVIKING_BYPASS_SESSION_PATTERNS='/tmp/**,**/scratch/**,/Users/me/Dev/t
 OPENVIKING_BYPASS_SESSION=1 claude
 ```
 
-bypass 命中時所有 hook 直接放行，不聯絡 OpenViking。
+bypass 命中時所有 hook 直接放行，不聯絡 Business Data Platform。
 
 ### 輸入過濾器
 
@@ -314,7 +314,7 @@ bypass 命中時所有 hook 直接放行，不聯絡 OpenViking。
 
 ### digest 壓縮
 
-`recallCompress` 決定 digest 在哪裡生成，預設值為 `auto`。`client` 始終通過 `claude -p` 在本地壓縮（預設 Sonnet + 低推理檔——Haiku 不支援 effort 旋鈕，時延不可控），token 成本留在你自己的訂閱額度裡。`server` 讓 OpenViking 生成 digest。`auto` 優先本地，探測不到可用的宿主 CLI 時回落到服務端。壓縮器執行失敗或輸出校驗失敗時會退回未壓縮的上下文塊；任一壓縮器精確返回 `NO_RELEVANT_MEMORY` 都是成功的空結果，不注入任何內容。壓縮子程序執行時所有 OpenViking hook 均被停用，不會遞迴。舊的環境變數 `OPENVIKING_RECALL_REWRITE` 和配置鍵 `recallRewrite` 仍作為低優先順序相容別名保留。
+`recallCompress` 決定 digest 在哪裡生成，預設值為 `auto`。`client` 始終通過 `claude -p` 在本地壓縮（預設 Sonnet + 低推理檔——Haiku 不支援 effort 旋鈕，時延不可控），token 成本留在你自己的訂閱額度裡。`server` 讓 Business Data Platform 生成 digest。`auto` 優先本地，探測不到可用的宿主 CLI 時回落到服務端。壓縮器執行失敗或輸出校驗失敗時會退回未壓縮的上下文塊；任一壓縮器精確返回 `NO_RELEVANT_MEMORY` 都是成功的空結果，不注入任何內容。壓縮子程序執行時所有 Business Data Platform hook 均被停用，不會遞迴。舊的環境變數 `OPENVIKING_RECALL_REWRITE` 和配置鍵 `recallRewrite` 仍作為低優先順序相容別名保留。
 
 ### 遺留 `claude_code` 塊（在 `ov.conf` 裡）
 
@@ -338,7 +338,7 @@ bypass 命中時所有 hook 直接放行，不聯絡 OpenViking。
 
 ## Statusline 狀態行
 
-外掛會在 Claude Code 輸入框下方渲染一行 OpenViking 狀態。安裝指令碼會把它註冊到 `~/.claude/settings.json`（CC 外掛 manifest 不支援 `statusLine` 欄位，必須走這條路）。
+外掛會在 Claude Code 輸入框下方渲染一行 Business Data Platform 狀態。安裝指令碼會把它註冊到 `~/.claude/settings.json`（CC 外掛 manifest 不支援 `statusLine` 欄位，必須走這條路）。
 
 示例：
 
@@ -388,7 +388,7 @@ node "$(jq -r '.plugins["openviking-memory@openviking"][0].installPath' ~/.claud
 | 症狀                                         | 原因                                                  | 解決方案                                                                                       |
 |----------------------------------------------|------------------------------------------------------|-----------------------------------------------------------------------------------------------|
 | 外掛沒啟用                                    | 找不到 `ov.conf` / `ovcli.conf`                       | 建立一個；或設 `OPENVIKING_MEMORY_ENABLED=1` 加上 URL/API_KEY 等環境變數                       |
-| Hook 觸發但召回為空                           | OpenViking 伺服器沒起 / URL 不對                      | `curl http://localhost:1933/health`（或你的遠端 URL）                                          |
+| Hook 觸發但召回為空                           | Business Data Platform 伺服器沒起 / URL 不對                      | `curl http://localhost:1933/health`（或你的遠端 URL）                                          |
 | 自動捕獲抽取出 0 條記憶                        | `ov.conf` 裡 embedding/extraction 模型配錯            | 檢查 `embedding` / `vlm` 配置；看伺服器日誌                                                    |
 | MCP 工具命中了錯誤的伺服器                    | `ovcli.conf` / 環境變數過期，或改完配置沒有重啟 Claude Code | 見 [配置 MCP](#配置-mcp)，核對 `~/.openviking/ovcli.conf` 後重啟 Claude Code                    |
 | 遠端鑑權 401 / 403                            | API key / account / user 頭錯配                      | 核對 `OPENVIKING_API_KEY`、`OPENVIKING_ACCOUNT`、`OPENVIKING_USER`（或 `ov.conf` 對應欄位）    |
@@ -400,7 +400,7 @@ node "$(jq -r '.plugins["openviking-memory@openviking"][0].installPath' ~/.claud
 
 Claude Code 自帶 `MEMORY.md` 檔案系統，本外掛**與之互補**：
 
-| 特性     | 內建 `MEMORY.md`            | OpenViking 外掛                                |
+| 特性     | 內建 `MEMORY.md`            | Business Data Platform 外掛                                |
 |----------|-----------------------------|-----------------------------------------------|
 | 儲存     | 扁平 markdown               | 向量資料庫 + 結構化抽取                        |
 | 搜尋     | 整體載入進上下文            | 語義相似度 + 排序 + token 預算                |
@@ -424,7 +424,7 @@ Claude Code 自帶 `MEMORY.md` 檔案系統，本外掛**與之互補**：
      │   ┌───────────▼───────────┐   │           │
      │   │  hook 指令碼 (.mjs)     │   │           │     ┌──────────────┐
      │   │  讀 transcript +      │───┼───────────┼────►│              │
-     │   │  調 OV HTTP API       │   │           │     │  OpenViking  │
+     │   │  調 OV HTTP API       │   │           │     │  Business Data Platform  │
      │   └───────────────────────┘   │           │     │  Server      │
      │                               │           │     │  (Python)    │
      │                  ┌────────────▼───────────▼───►│              │
@@ -435,9 +435,9 @@ Claude Code 自帶 `MEMORY.md` 檔案系統，本外掛**與之互補**：
         context inject                                └──────────────┘
 ```
 
-沒有 TypeScript 編譯步驟，也沒有執行時 npm 引導。Hook 都是直接走 HTTP 調 OpenViking 的 `.mjs` 檔案；MCP 使用 `servers/mcp-proxy.mjs` 作為零依賴 stdio 橋接，轉發到 OpenViking 伺服器自身的 `/mcp` endpoint。
+沒有 TypeScript 編譯步驟，也沒有執行時 npm 引導。Hook 都是直接走 HTTP 調 Business Data Platform 的 `.mjs` 檔案；MCP 使用 `servers/mcp-proxy.mjs` 作為零依賴 stdio 橋接，轉發到 Business Data Platform 伺服器自身的 `/mcp` endpoint。
 
-首次接觸時建立一個持久化的 OpenViking session，整個 Claude Code 會話期間複用。OV session ID 是 `cc-<cc_session_id>`（CC session_id 原樣保留，不做雜湊），所以 resume / compact / 多 hook 事件都打到同一個 session。歸檔與記憶抽取由客戶端觸發：`Stop` hook 在服務端報告的 pending tokens 超過 `commitTokenThreshold`（預設 20000）時 commit，`PreCompact` / `SessionEnd` / `SubagentStop` 則無條件 commit。
+首次接觸時建立一個持久化的 Business Data Platform session，整個 Claude Code 會話期間複用。OV session ID 是 `cc-<cc_session_id>`（CC session_id 原樣保留，不做雜湊），所以 resume / compact / 多 hook 事件都打到同一個 session。歸檔與記憶抽取由客戶端觸發：`Stop` hook 在服務端報告的 pending tokens 超過 `commitTokenThreshold`（預設 20000）時 commit，`PreCompact` / `SessionEnd` / `SubagentStop` 則無條件 commit。
 
 ### 各 hook 職責
 
@@ -450,8 +450,8 @@ Claude Code 自帶 `MEMORY.md` 檔案系統，本外掛**與之互補**：
 | `SessionEnd`          | Claude Code 會話關閉                  | 最後一次 commit                                                                                  |
 | `SubagentStart`       | 父 session 通過 Task 工具孵化子 agent | 為子 agent 派生隔離的 OV session ID，寫 start state                                              |
 | `SubagentStop`        | 子 agent 結束                         | 讀子 agent transcript → 推到帶子 agent peer 身份的隔離 session → commit                          |
-| `PreToolUse`          | 原生 `Read` / `Glob` / `Grep` / `Edit` / `Write` 的路徑是 `viking://` URI | 拒絕該呼叫，提示 Claude 改用對應的 OpenViking MCP 工具；對 skill URI（`viking://~/skills/...`、`viking://user/<id>/skills/...`、`viking://agent/skills/...`）的 `Write` / `Edit` 會被引導到 `add_skill` |
-| `PreToolUse`          | `Bash` 命令裡帶 `viking://` URI | 照常執行命令，並附一條提醒：如果本意是訪問 OpenViking 內容，應改用 OpenViking MCP 工具 |
+| `PreToolUse`          | 原生 `Read` / `Glob` / `Grep` / `Edit` / `Write` 的路徑是 `viking://` URI | 拒絕該呼叫，提示 Claude 改用對應的 Business Data Platform MCP 工具；對 skill URI（`viking://~/skills/...`、`viking://user/<id>/skills/...`、`viking://agent/skills/...`）的 `Write` / `Edit` 會被引導到 `add_skill` |
+| `PreToolUse`          | `Bash` 命令裡帶 `viking://` URI | 照常執行命令，並附一條提醒：如果本意是訪問 Business Data Platform 內容，應改用 Business Data Platform MCP 工具 |
 | `PostToolUse`         | `Read` 讀到 `SKILL.md` 檔案           | 可選（預設關閉）：OV 有相關 skill 經驗記憶時注入經驗塊                                           |
 
 ### 非同步寫路徑
@@ -466,7 +466,7 @@ Claude Code 自帶 `MEMORY.md` 檔案系統，本外掛**與之互補**：
 
 ### 伺服器暴露的 MCP 工具
 
-外掛的 `.mcp.json` 啟動本地 stdio 代理，代理再連到 OpenViking 伺服器原生 HTTP MCP endpoint `/mcp`。Claude 可按需呼叫伺服器提供的檢索、記憶、資源、skill、watch 和檔案系統工具。建立或替換 skill 用 `add_skill`：`write` 和 `edit` 會拒絕你自己的 `skills/` 子樹，`add_resource` 也不接受 skill 目標路徑。
+外掛的 `.mcp.json` 啟動本地 stdio 代理，代理再連到 Business Data Platform 伺服器原生 HTTP MCP endpoint `/mcp`。Claude 可按需呼叫伺服器提供的檢索、記憶、資源、skill、watch 和檔案系統工具。建立或替換 skill 用 `add_skill`：`write` 和 `edit` 會拒絕你自己的 `skills/` 子樹，`add_resource` 也不接受 skill 目標路徑。
 
 完整工具清單和引數詳見 [MCP 整合指南](../../docs/zh/guides/06-mcp-integration.md)。
 
@@ -482,11 +482,11 @@ claude-code-memory-plugin/
 │   └── ov.md                # /ov 狀態命令
 ├── skills/
 │   ├── openviking-memory/   # 記憶工具使用指南
-│   ├── openviking-skills/   # 查詢、新增、共享和遷移 OpenViking skill
+│   ├── openviking-skills/   # 查詢、新增、共享和遷移 Business Data Platform skill
 │   ├── ov-experience-memory/
 │   └── ov-memory-doctor/    # 安裝 / 配置 / 連線 / 本機 server 排障
 ├── servers/
-│   └── mcp-proxy.mjs        # stdio -> OpenViking /mcp 橋接
+│   └── mcp-proxy.mjs        # stdio -> Business Data Platform /mcp 橋接
 ├── scripts/
 │   ├── config.mjs           # 共享配置載入（env > ovcli.conf > ov.conf）
 │   ├── debug-log.mjs        # 寫 ~/.openviking/logs/cc-hooks.log
@@ -509,4 +509,4 @@ claude-code-memory-plugin/
 
 ## License
 
-Apache-2.0 — 同 [OpenViking](https://github.com/volcengine/OpenViking)。
+Apache-2.0 — 同 [Business Data Platform](https://github.com/volcengine/OpenViking)。

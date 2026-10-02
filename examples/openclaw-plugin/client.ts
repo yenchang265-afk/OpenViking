@@ -389,7 +389,7 @@ export class OpenVikingClient {
         const message = payload.error?.message ?? `HTTP ${response.status}`;
         const traceId = payload.error?.trace_id;
         throw new Error(
-          `OpenViking request failed${code}: ${message}` +
+          `Business Data Platform request failed${code}: ${message}` +
             (traceId ? ` (trace_id=${traceId})` : ""),
         );
       }
@@ -650,7 +650,7 @@ export class OpenVikingClient {
       actorPeerId,
     );
     if (!result.temp_file_id) {
-      throw new Error("OpenViking temp upload did not return temp_file_id");
+      throw new Error("Business Data Platform temp upload did not return temp_file_id");
     }
     return result.temp_file_id;
   }
@@ -887,7 +887,7 @@ export class OpenVikingClient {
     );
 
     if (options?.resetContext && result.reset_context !== true) {
-      throw new Error("OpenViking server did not confirm reset_context; upgrade the server with the plugin.");
+      throw new Error("Business Data Platform server did not confirm reset_context; upgrade the server with the plugin.");
     }
 
     if (!options?.wait || !result.task_id) {

@@ -1,6 +1,6 @@
 // GENERATED FROM examples/memory-plugin-shared/lib. DO NOT EDIT.
 /**
- * Interactive ovcli.conf setup wizard shared by the OpenViking memory plugins.
+ * Interactive ovcli.conf setup wizard shared by the Business Data Platform memory plugins.
  *
  * Lets a pure-marketplace install (no installer script) configure the server
  * URL and API key that both the lifecycle hooks and the stdio MCP proxy read:
@@ -48,7 +48,7 @@ export async function runSetupWizard({
   const say = (line = "") => output.write(`${line}\n`);
 
   try {
-    say("OpenViking memory plugin setup");
+    say("Business Data Platform memory plugin setup");
     say(`Config file: ${targetPath}`);
     say("");
     say("Current values:");
@@ -59,9 +59,9 @@ export async function runSetupWizard({
     say("");
 
     const defaultUrl = current.url || LOCAL_URL;
-    say("Where do you connect to OpenViking?");
+    say("Where do you connect to Business Data Platform?");
     say(`  1) Self-hosted / local        [${LOCAL_URL}]`);
-    say(`  2) Volcengine OpenViking Cloud [${CLOUD_URL}]`);
+    say(`  2) Volcengine Business Data Platform Cloud [${CLOUD_URL}]`);
     say(`  3) Custom URL / keep current   [${defaultUrl}]`);
     const mode = (await rl.question("Choice [1/2/3, default 3]: ")).trim();
     let url = defaultUrl;

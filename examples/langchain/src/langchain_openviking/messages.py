@@ -28,7 +28,7 @@ LANGCHAIN_SUMMARIZATION_SOURCE = "summarization"
 
 
 def is_recordable_langchain_message(message: BaseMessage) -> bool:
-    """Return whether a framework message belongs in OpenViking session history."""
+    """Return whether a framework message belongs in Business Data Platform session history."""
 
     if isinstance(message, SystemMessage):
         return False
@@ -58,7 +58,7 @@ def langchain_message_to_openviking(
     *,
     persist_system_messages: bool = False,
 ) -> list[dict[str, Any]]:
-    """Convert a LangChain message into one or more OpenViking message payloads."""
+    """Convert a LangChain message into one or more Business Data Platform message payloads."""
 
     del persist_system_messages  # Retained for compatibility; system policy is never persisted.
 
@@ -107,7 +107,7 @@ def langchain_message_to_openviking(
 
 
 def openviking_message_to_langchain(message: dict[str, Any]) -> list[BaseMessage]:
-    """Convert one OpenViking session message into LangChain messages."""
+    """Convert one Business Data Platform session message into LangChain messages."""
 
     role = str(message.get("role") or "")
     parts = list(message.get("parts") or [])
@@ -155,7 +155,7 @@ def openviking_message_to_langchain(message: dict[str, Any]) -> list[BaseMessage
 
 
 def restore_openviking_messages(messages: Sequence[dict[str, Any]]) -> list[BaseMessage]:
-    """Restore a valid LangChain message sequence from OpenViking session messages."""
+    """Restore a valid LangChain message sequence from Business Data Platform session messages."""
 
     restored: list[BaseMessage] = []
     active_tool_call_ids: set[str] = set()

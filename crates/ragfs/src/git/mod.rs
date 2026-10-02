@@ -1,6 +1,6 @@
 //! Git version control module
 //!
-//! This module provides Git-based version control capabilities for OpenViking,
+//! This module provides Git-based version control capabilities for Business Data Platform,
 //! allowing users to commit snapshots, checkout previous versions, and view
 //! history.
 //!

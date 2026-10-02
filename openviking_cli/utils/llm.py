@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-LLM utilities for OpenViking.
+LLM utilities for Business Data Platform.
 
 Provides unified structured output handling with response_format support.
 """

@@ -1,7 +1,7 @@
 """
-OpenViking data import tool for LongMemEval.
+Business Data Platform data import tool for LongMemEval.
 
-Import haystack sessions from LongMemEval JSON into OpenViking memory.
+Import haystack sessions from LongMemEval JSON into Business Data Platform memory.
 """
 
 import argparse
@@ -634,7 +634,7 @@ async def run_import(args: argparse.Namespace) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Import LongMemEval conversations into OpenViking")
+    parser = argparse.ArgumentParser(description="Import LongMemEval conversations into Business Data Platform")
     parser.add_argument(
         "--input",
         default="data/longmemeval_s_cleaned.json",
@@ -653,7 +653,7 @@ def main():
     parser.add_argument(
         "--openviking-url",
         default="http://localhost:1933",
-        help="OpenViking service URL",
+        help="Business Data Platform service URL",
     )
     parser.add_argument(
         "--parallel",

@@ -1,6 +1,6 @@
 # @openviking/cli
 
-Native CLI for [OpenViking](https://github.com/volcengine/openviking) — an agent-native context database for AI workflows.
+Native CLI for [Business Data Platform](https://github.com/volcengine/openviking) — an agent-native context database for AI workflows.
 
 Store, search, and retrieve context (memories, resources, embeddings) across conversations and agents.
 
@@ -48,7 +48,7 @@ ov grep "TODO"
 
 | Command | Description |
 |---------|-------------|
-| `add-resource` | Add files or URLs into OpenViking |
+| `add-resource` | Add files or URLs into Business Data Platform |
 | `add-memory` | Store a memory in one shot |
 | `add-skill` | Add a skill from a directory or SKILL.md |
 | `ls` | List directory contents |

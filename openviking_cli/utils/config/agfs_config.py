@@ -314,7 +314,7 @@ class AGFSPathLockConfig(BaseModel):
     )
     namespace: Optional[str] = Field(
         default=None,
-        description="OpenViking instance name used by cache-backed PathLock.",
+        description="Business Data Platform instance name used by cache-backed PathLock.",
     )
     lock_timeout_secs: float = Field(
         default=0.0,

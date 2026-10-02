@@ -29,7 +29,7 @@ def parse_local_index(value: Any, default: int = -1) -> int:
 
 
 def make_openviking_storage_session_id(logical_session_id: str) -> str:
-    """Map a logical Bot session ID to a stable OpenViking storage ID."""
+    """Map a logical Bot session ID to a stable Business Data Platform storage ID."""
     return portable_path_component(logical_session_id)
 
 

@@ -59,11 +59,11 @@ describe('retrieval search state', () => {
         maxChars: 6500,
         mode: 'recall',
         peerScope: 'all',
-        q: 'OpenViking',
+        q: 'Business Data Platform',
         recallQuotas: 'events:10',
         render: false,
       }),
-    ).toEqual({ q: 'OpenViking' })
+    ).toEqual({ q: 'Business Data Platform' })
   })
 
   it('derives memory type labels without leaking file extensions', () => {

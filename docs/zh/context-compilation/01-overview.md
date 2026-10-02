@@ -1,6 +1,6 @@
 # 上下文編譯概覽
 
-`ov compile` 把散落在 OpenViking 裡的原始材料——文件、筆記、網頁、訪談記錄、研究資料、程式碼倉庫——**編譯**成結構化、可檢索、方便人和 Agent 反覆使用的知識產物。
+`ov compile` 把散落在 Business Data Platform 裡的原始材料——文件、筆記、網頁、訪談記錄、研究資料、程式碼倉庫——**編譯**成結構化、可檢索、方便人和 Agent 反覆使用的知識產物。
 
 ## 它是怎麼工作的
 
@@ -12,7 +12,7 @@
 
 再加上一個可選的 **`--instruction`**：給這次編譯的補充指令，比如範圍、受眾、語言、側重點。Skill 定義了「編譯成什麼形態」，`--instruction` 則在此之上告訴 Agent「這一次具體要什麼」。
 
-剩下的交給 OpenViking。Compile 依賴 [VikingBot](../concepts/15-vikingbot.md)：任務被接受後，VikingBot 會載入你指定的 Skill，以你的身份讀取來源，在一個獨立的 **Agent Loop** 裡自主地閱讀、歸納、組織、寫頁面——就像你僱了一個人，把一堆資料整理成一份乾淨的知識庫，然後把成品交回給你。整個過程是非同步的，你可以等它跑完，也可以拿到 `task_id` 之後去做別的事。
+剩下的交給 Business Data Platform。Compile 依賴 [VikingBot](../concepts/15-vikingbot.md)：任務被接受後，VikingBot 會載入你指定的 Skill，以你的身份讀取來源，在一個獨立的 **Agent Loop** 裡自主地閱讀、歸納、組織、寫頁面——就像你僱了一個人，把一堆資料整理成一份乾淨的知識庫，然後把成品交回給你。整個過程是非同步的，你可以等它跑完，也可以拿到 `task_id` 之後去做別的事。
 
 換句話說：**你負責給材料和目標，Agent 負責真正把知識整理出來。** 
 
@@ -43,7 +43,7 @@ Compile 本身不規定「編譯成什麼」——那由 Skill 決定。同一�
 
 ## 前置條件
 
-- 一個正在執行、且啟用了 Bot（`--with-bot`）的 OpenViking 服務。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。
+- 一個正在執行、且啟用了 Bot（`--with-bot`）的 Business Data Platform 服務。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。
 - `ov` CLI 已配置好連線（`~/.openviking/ovcli.conf` 或 `OPENVIKING_*` 環境變數）。
 - 視覺化指令碼需要 Python 3；LLM Wiki 的指令碼還會用到 `openviking` Python 包來直接讀取服務裡的 Wiki 頁面。
 

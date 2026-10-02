@@ -1,6 +1,6 @@
-# OpenClaw - OpenViking 端到端自動化測試
+# OpenClaw - Business Data Platform 端到端自動化測試
 
-OpenClaw 和 OpenViking 端到端自動化測試框架，用於驗證記憶讀寫、增刪改查等場景。
+OpenClaw 和 Business Data Platform 端到端自動化測試框架，用於驗證記憶讀寫、增刪改查等場景。
 
 ## 📋 前置條件
 
@@ -15,9 +15,9 @@ OpenClaw 和 OpenViking 端到端自動化測試框架，用於驗證記憶讀�
 openclaw --version
 ```
 
-### 2. 安裝 OpenViking 外掛
+### 2. 安裝 Business Data Platform 外掛
 
-確保已安裝 OpenViking 外掛並正確配置：
+確保已安裝 Business Data Platform 外掛並正確配置：
 
 ```bash
 # 檢查已安裝的外掛
@@ -214,7 +214,7 @@ start reports/test_report_cli.html
 ```
 
 報告包含：
-- 📊 環境資訊（OpenClaw 版本、OpenViking 狀態等）
+- 📊 環境資訊（OpenClaw 版本、Business Data Platform 狀態等）
 - 📝 詳細的中文測試描述
 - 📈 測試執行結果和日誌
 - ✅ 通過/失敗的測試用例統計

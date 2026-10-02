@@ -130,7 +130,7 @@ def main():
         print(f"  Session: {session.session_id}")
 
         messages = [
-            ("user", "我剛入職，需要了解 OpenViking 的貢獻流程"),
+            ("user", "我剛入職，需要了解 Business Data Platform 的貢獻流程"),
             (
                 "assistant",
                 "歡迎！貢獻流程主要是：1) Fork 倉庫 2) 建立 feature branch "

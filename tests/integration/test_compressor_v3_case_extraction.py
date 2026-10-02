@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-OpenViking V3 cases memory live integration test.
+Business Data Platform V3 cases memory live integration test.
 
-It connects to a running local OpenViking HTTP service, writes dialogue via
+It connects to a running local Business Data Platform HTTP service, writes dialogue via
 add_message, commits the session, and verifies that V3 extracts a trainable
 ``cases`` memory.
 
 Prerequisites for a full pass:
-- OpenViking server is running locally (default: http://localhost:1933)
+- Business Data Platform server is running locally (default: http://localhost:1933)
 - Server has a usable VLM/embedding configuration for memory extraction
 """
 
@@ -292,7 +292,7 @@ def run_verify(client: ov.SyncHTTPClient, archive_uri: str | None = None) -> lis
 @pytest.mark.integration
 @pytest.mark.skipif(
     not _local_server_available(DEFAULT_URL),
-    reason=f"OpenViking local server is not running at {DEFAULT_URL}",
+    reason=f"Business Data Platform local server is not running at {DEFAULT_URL}",
 )
 def test_local_service_add_dialogue_commit_triggers_v3_case_extraction():
     client = ov.SyncHTTPClient(url=DEFAULT_URL, api_key=resolve_api_key(), timeout=300)
@@ -309,7 +309,7 @@ def test_local_service_add_dialogue_commit_triggers_v3_case_extraction():
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description=f"OpenViking V3 cases live test — {DISPLAY_NAME}")
+    parser = argparse.ArgumentParser(description=f"Business Data Platform V3 cases live test — {DISPLAY_NAME}")
     parser.add_argument("--url", default=DEFAULT_URL, help=f"Server URL (default: {DEFAULT_URL})")
     parser.add_argument(
         "--api-key",
@@ -328,7 +328,7 @@ def main() -> None:
 
     console.print(
         Panel(
-            f"[bold]OpenViking V3 cases live test — {DISPLAY_NAME}[/bold]\n"
+            f"[bold]Business Data Platform V3 cases live test — {DISPLAY_NAME}[/bold]\n"
             f"Server: {args.url} | Phase: {args.phase}",
             style="magenta",
             width=PANEL_WIDTH,

@@ -447,7 +447,7 @@ def render_tool_result_stub(
     preview_chars: int,
 ) -> str:
     header = [
-        "[OpenViking tool result externalized]",
+        "[Business Data Platform tool result externalized]",
         f"tool_name: {tool_name or 'tool'}",
         f"kind: {synopsis.kind}",
         f"original_chars: {original_chars}",

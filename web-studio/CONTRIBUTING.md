@@ -129,4 +129,4 @@ Run `npm test` and `npm run build` when the change affects shared localization c
 
 ## Related Documentation
 
-- [Contributing to OpenViking](../CONTRIBUTING.md) - contribution workflow and repository-wide requirements.
+- [Contributing to Business Data Platform](../CONTRIBUTING.md) - contribution workflow and repository-wide requirements.

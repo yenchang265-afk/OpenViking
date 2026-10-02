@@ -584,7 +584,7 @@ async def wait_for_queues_and_record_totals(
     poll_interval: float = 2.0,
 ) -> None:
     print(
-        f"\n[INFO] Waiting for OpenViking background queues to drain "
+        f"\n[INFO] Waiting for Business Data Platform background queues to drain "
         f"(baseline_processed={baseline_processed}, settle={settle_checks})...",
         file=sys.stderr,
     )
@@ -633,7 +633,7 @@ async def wait_for_queues_and_record_totals(
         try:
             final_totals = await _read_model_totals(client, openviking_url)
             if final_totals is None:
-                print("[INFO] No model usage recorded by OpenViking server.", file=sys.stderr)
+                print("[INFO] No model usage recorded by Business Data Platform server.", file=sys.stderr)
                 return
 
             (
@@ -656,7 +656,7 @@ async def wait_for_queues_and_record_totals(
             delta_vlm_prompt = max(final_vlm_prompt - baseline_vlm_prompt, 0)
             delta_vlm_completion = max(final_vlm_completion - baseline_vlm_completion, 0)
 
-            print("\n=== TRUE OpenViking Token Delta For This Run ===", file=sys.stderr)
+            print("\n=== TRUE Business Data Platform Token Delta For This Run ===", file=sys.stderr)
             print(f"Embedding Input (Prompt) Delta: {delta_embedding_prompt}", file=sys.stderr)
             print(
                 f"Embedding Output (Completion) Delta: {delta_embedding_completion}",
@@ -813,7 +813,7 @@ def main() -> None:
         help="Retry rows whose response starts with [ERROR] this many times",
     )
     parser.add_argument(
-        "--openviking-url", default=DEFAULT_OPENVIKING_URL, help="OpenViking service URL"
+        "--openviking-url", default=DEFAULT_OPENVIKING_URL, help="Business Data Platform service URL"
     )
     args = parser.parse_args()
 

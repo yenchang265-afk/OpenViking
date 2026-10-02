@@ -1,6 +1,6 @@
 # Viking URI
 
-Viking URI 是 OpenViking 中所有內容的統一資源識別符號。
+Viking URI 是 Business Data Platform 中所有內容的統一資源識別符號。
 
 ## 格式
 
@@ -125,7 +125,7 @@ viking://user/{user_id}/peers/{peer_id}/memories/
 viking://user/{user_id}/peers/{peer_id}/resources/
 ```
 
-家目錄別名 `viking://~/...` 會按當前請求身份解析。OpenViking 會在儲存和檢索前將它
+家目錄別名 `viking://~/...` 會按當前請求身份解析。Business Data Platform 會在儲存和檢索前將它
 展開為顯式名稱空間路徑 `viking://user/{user_id}/...`，響應中始終回顯展開後的形式。
 
 舊的無 uid 寫法——`viking://user/memories/...` 以及 `resources`、`skills`、`peers`、

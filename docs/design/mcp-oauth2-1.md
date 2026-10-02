@@ -1,7 +1,7 @@
-# OpenViking 原生 OAuth 2.1（MCP 客戶端授權）實施方案
+# Business Data Platform 原生 OAuth 2.1（MCP 客戶端授權）實施方案
 
 > **更新（Studio 遷移）**：本文件保留 Phase 1 的設計與術語作為歷史記錄。當前
-> 預設授權 UI 已經從獨立的 `/console` (埠 8020) 遷移到主服務上的 OpenViking
+> 預設授權 UI 已經從獨立的 `/console` (埠 8020) 遷移到主服務上的 Business Data Platform
 > Studio（同源、掛載在 `/studio`）。要點：
 >
 > - `provider.authorize()` 預設 redirect 到 `/studio/oauth/consent?pending=<id>`
@@ -32,18 +32,18 @@
 
 ## Context
 
-**問題**：Claude.ai / Claude Desktop / ChatGPT 等只接受 OAuth 2.1 的 MCP 客戶端，必須經由社群專案 [MCP-Key2OAuth](https://github.com/t0saki/MCP-Key2OAuth) 的 Cloudflare Workers 代理才能連線 OpenViking 的 `/mcp`。痛點：
+**問題**：Claude.ai / Claude Desktop / ChatGPT 等只接受 OAuth 2.1 的 MCP 客戶端，必須經由社群專案 [MCP-Key2OAuth](https://github.com/t0saki/MCP-Key2OAuth) 的 Cloudflare Workers 代理才能連線 Business Data Platform 的 `/mcp`。痛點：
 
 1. **額外部署單元** — 自建 CF Worker + 2 個 KV namespace，運維成本高
 2. **生態繫結** — `@cloudflare/workers-oauth-provider` + KV 強繫結 CF Workers，無法脫離 CF 生態
 3. **體驗差與信任風險** — 使用者在瀏覽器手動貼上 API Key，且 Worker 部署方有解密 Key 的能力
 
-**目標**：在 OpenViking 服務端原生實現 OAuth 2.1（MCP 子集），消除中間代理；保留 API Key 認證向後相容；提供順手的瀏覽器授權 UX。
+**目標**：在 Business Data Platform 服務端原生實現 OAuth 2.1（MCP 子集），消除中間代理；保留 API Key 認證向後相容；提供順手的瀏覽器授權 UX。
 
 **最終決策（與設計早期不同）**：
 
 - **協議層用 `mcp.server.auth` SDK**（已在依賴中）。SDK 提供完整的 RFC 6749 / 7591 / 8414 實現：DCR、authorize 解析、token endpoint、metadata、PKCE S256 校驗、redirect_uri 校驗、錯誤碼格式化。
-- **Token 用 opaque + SQLite，不用 JWT**。Access / refresh / auth_code / OTP 全部是 `secrets.token_urlsafe()` 隨機串，按 SHA-256 雜湊存表，每次校驗做一次 SQLite 查詢。**OpenViking 側零密碼學程式碼**。
+- **Token 用 opaque + SQLite，不用 JWT**。Access / refresh / auth_code / OTP 全部是 `secrets.token_urlsafe()` 隨機串，按 SHA-256 雜湊存表，每次校驗做一次 SQLite 查詢。**Business Data Platform 側零密碼學程式碼**。
 - **不做 redirect_uri 白名單**，但 SDK 會強制 strict-equal 校驗防 code injection。
 - **Phase 1 用 device-flow 風格的 OTP 流程**：authorize page **顯示** 6 字元碼，使用者在 console（已登入環境）**輸入** 該碼確認授權。比早期的"console 取碼、page 輸入"流程少一次 tab 切換，且符合 RFC 8628 的心理模型。
 
@@ -53,7 +53,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    OpenViking 1933                              │
+│                    Business Data Platform 1933                              │
 │                                                                 │
 │  ┌────────────────────┐   ┌──────────────────────────┐          │
 │  │ mcp.server.auth    │   │ openviking.server.oauth  │          │
@@ -84,7 +84,7 @@
 └─────────────────────────────────────────────────────────────────┘
                                 ↑ verify (Bearer)
 ┌─────────────────────────────────────────────────────────────────┐
-│                    OpenViking Console 8020                      │
+│                    Business Data Platform Console 8020                      │
 │  Settings → "Authorize an MCP client" 表單                      │
 │   - 輸入 6 字元 display_code → 調 /console/api/v1/ov/auth/      │
 │     oauth-verify (proxy → 1933 /api/v1/auth/oauth-verify)       │
@@ -216,14 +216,14 @@ URL 走 §4 的 4 級回退。RFC 9728 客戶端發現入口。
 | 端點 | 方法 | 由誰實現 | 鑑權 | 說明 |
 |---|---|---|---|---|
 | `/.well-known/oauth-authorization-server` | GET | SDK | 無 | RFC 8414 |
-| `/.well-known/oauth-protected-resource` | GET | OpenViking | 無 | RFC 9728，列出 issuer 和 bearer_methods |
+| `/.well-known/oauth-protected-resource` | GET | Business Data Platform | 無 | RFC 9728，列出 issuer 和 bearer_methods |
 | `/register` | POST | SDK | 無 | DCR (RFC 7591)，SDK 生成 client_id/secret，調 `provider.register_client()` |
 | `/authorize` | GET/POST | SDK → provider.authorize() | 無 | SDK 校驗 client + redirect_uri + PKCE，調 `provider.authorize()` 生成 display_code + pending_id；返回 302 → `/oauth/authorize/page?pending=...` |
-| `/oauth/authorize/page` | GET | OpenViking | 無 | 顯示 display_code + console 連結 + 同源 quick-authorize 面板（如檢測到 sessionStorage 中的 API key）；JS 輪詢 status |
-| `/oauth/authorize/page/status` | GET | OpenViking | 無 | 返回 `{status: pending\|approved\|expired, redirect_url?}`；status=approved 時原子簽發 auth_code 並刪除 pending |
+| `/oauth/authorize/page` | GET | Business Data Platform | 無 | 顯示 display_code + console 連結 + 同源 quick-authorize 面板（如檢測到 sessionStorage 中的 API key）；JS 輪詢 status |
+| `/oauth/authorize/page/status` | GET | Business Data Platform | 無 | 返回 `{status: pending\|approved\|expired, redirect_url?}`；status=approved 時原子簽發 auth_code 並刪除 pending |
 | `/token` | POST | SDK | client auth | SDK 驗 PKCE / redirect_uri / client，調 `provider.exchange_authorization_code()` 或 `exchange_refresh_token()` |
 | `/revoke` | POST | SDK | client auth | SDK 調 `provider.revoke_token()` |
-| `POST /api/v1/auth/oauth-verify` | POST | OpenViking | 現有 API Key（`Depends(get_request_context)`） | 接受 `{pending_id 或 code, decision: approve\|deny}`；approve 時把 caller 身份寫入 pending；deny 時刪除 pending |
+| `POST /api/v1/auth/oauth-verify` | POST | Business Data Platform | 現有 API Key（`Depends(get_request_context)`） | 接受 `{pending_id 或 code, decision: approve\|deny}`；approve 時把 caller 身份寫入 pending；deny 時刪除 pending |
 
 ---
 

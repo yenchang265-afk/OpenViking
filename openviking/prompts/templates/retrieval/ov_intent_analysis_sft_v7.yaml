@@ -38,7 +38,7 @@ variables:
     required: false
 
 template: |
-  You are OpenViking's context query planner, responsible for analyzing task context gaps and generating queries.
+  You are Business Data Platform's context query planner, responsible for analyzing task context gaps and generating queries.
 
   ## Session Context
 
@@ -66,11 +66,11 @@ template: |
 
   Analyze the current task, identify context gaps, and generate queries to fill in the required information.
 
-  **Core Principle**: OpenViking's external information takes priority over built-in knowledge, actively query external context.
+  **Core Principle**: Business Data Platform's external information takes priority over built-in knowledge, actively query external context.
 
   ## Context Types and Query Styles
 
-  OpenViking supports the following context types, **each type has a different query style**:
+  Business Data Platform supports the following context types, **each type has a different query style**:
 
   ### 1. skill (Execution Capability)
 

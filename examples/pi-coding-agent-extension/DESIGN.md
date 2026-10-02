@@ -1,12 +1,12 @@
-# Pi OpenViking Extension — Design
+# Pi Business Data Platform Extension — Design
 
-The extension gives a pi session long-term memory and lets OpenViking own committed history when takeover is enabled. TypeScript loads directly through pi's jiti transpiler. Recall, session capture, commits, context takeover and health checks use REST; model-facing tools use the official MCP client SDK over Streamable HTTP.
+The extension gives a pi session long-term memory and lets Business Data Platform own committed history when takeover is enabled. TypeScript loads directly through pi's jiti transpiler. Recall, session capture, commits, context takeover and health checks use REST; model-facing tools use the official MCP client SDK over Streamable HTTP.
 
 README.md is the operator's document — installation, every configuration knob, the tool surface. This one is the maintainer's: what each module is responsible for, how the pieces meet at pi's event boundaries, and the reasons behind the choices that the code cannot state for itself.
 
 ## Design ancestry
 
-Three earlier OpenViking integrations shaped this one. OpenClaw contributed synchronous recall against the current turn and threshold-triggered commits. The Claude Code plugin, the most production-hardened of the three, contributed the capture pipeline — sanitize injected blocks before capture, keep tool inputs, drop raw tool output — along with score-thresholded ranking, the pre-compact commit and session-resume rehydration. Hermes contributed the anti-pattern: it prefetched recall for the *previous* turn's query, so the first turn of a session got nothing and a topic switch got the wrong memories.
+Three earlier Business Data Platform integrations shaped this one. OpenClaw contributed synchronous recall against the current turn and threshold-triggered commits. The Claude Code plugin, the most production-hardened of the three, contributed the capture pipeline — sanitize injected blocks before capture, keep tool inputs, drop raw tool output — along with score-thresholded ranking, the pre-compact commit and session-resume rehydration. Hermes contributed the anti-pattern: it prefetched recall for the *previous* turn's query, so the first turn of a session got nothing and a topic switch got the wrong memories.
 
 | Concern | Hermes | OpenClaw | Claude Code | This extension |
 |---|---|---|---|---|
@@ -23,7 +23,7 @@ What the Claude Code plugin proved is no longer copied here — it is imported. 
 ```
 pi-coding-agent-extension/
 ├── config.ts     # settings, credentials, peer resolution
-├── client.ts     # HTTP client for the OpenViking REST API
+├── client.ts     # HTTP client for the Business Data Platform REST API
 ├── recall.ts     # per-prompt recall search and injection
 ├── sync.ts       # capture, delivery, pending queue, commit
 ├── takeover.ts   # binds the takeover state machine to pi
@@ -78,7 +78,7 @@ Injection is two-pass, and that is the interesting part. Historical user message
 
 The OV session id is `pi-<pi session id>`, derived locally by the shared `deriveHarnessSessionId`. Nothing round-trips to open a session: the id is deterministic, so the first write can carry it.
 
-**Capture.** `turn_end` hands the whole branch to `extractBranchCapturePayloads` (`lib/capture-adapter.mjs`), which takes the entries past `syncedEntryCount`, normalizes roles, renders tool parts with bounded input and output, and decides entry by entry whether to capture. There are two decision modes. Normally it is the shared `shouldCaptureText` heuristic. Under takeover it is a faithful mode that drops only empty text, slash commands and OpenViking's own status messages: once the boundary advances, a short acknowledgement may be represented to the model *only* through the archive overview, so discarding it as low-signal would lose it outright. A branch shorter than the watermark means pi navigated to a different branch, so the watermark resets to zero and the branch is re-extracted from the start.
+**Capture.** `turn_end` hands the whole branch to `extractBranchCapturePayloads` (`lib/capture-adapter.mjs`), which takes the entries past `syncedEntryCount`, normalizes roles, renders tool parts with bounded input and output, and decides entry by entry whether to capture. There are two decision modes. Normally it is the shared `shouldCaptureText` heuristic. Under takeover it is a faithful mode that drops only empty text, slash commands and Business Data Platform's own status messages: once the boundary advances, a short acknowledgement may be represented to the model *only* through the archive overview, so discarding it as low-signal would lose it outright. A branch shorter than the watermark means pi navigated to a different branch, so the watermark resets to zero and the branch is re-extracted from the start.
 
 **Delivery.** Payloads leave in one batched request through the shared `sendSessionMessages`. Retryable failures are written to the shared disk pending queue and replayed later. A non-retryable rejection counts as accepted, so the watermark advances past payloads the server will never take rather than re-sending them every turn. The watermark only moves when the whole extraction was accepted.
 
@@ -90,7 +90,7 @@ The OV session id is `pi-<pi session id>`, derived locally by the shared `derive
 
 A binding, not a mechanism. The state machine lives in `lib/takeover-core.mjs`, which is pure and unit-tested; `takeover.ts` supplies its I/O: flush and commit go to `SyncManager`, the archive overview comes from the session context endpoint, state is persisted through `pi.appendEntry`, and the watermark is read back from sync.
 
-Context takeover makes OpenViking the authoritative long-term store for a pi session. Pi still keeps recent turns locally; committed history is represented to the model by OpenViking's archive overview through pi's `context` hook.
+Context takeover makes Business Data Platform the authoritative long-term store for a pi session. Pi still keeps recent turns locally; committed history is represented to the model by Business Data Platform's archive overview through pi's `context` hook.
 
 #### Model
 
@@ -109,17 +109,17 @@ State is persisted as a pi custom entry:
 pi.appendEntry("ov-takeover", state)
 ```
 
-At startup the extension scans the branch from the end for the newest such entry and restores both the boundary and `SyncManager`'s watermark, so a `pi -c` continuation does not resend branch entries OpenViking already has.
+At startup the extension scans the branch from the end for the newest such entry and restores both the boundary and `SyncManager`'s watermark, so a `pi -c` continuation does not resend branch entries Business Data Platform already has.
 
 #### Runtime flow
 
-1. `turn_end` captures new branch entries into the OpenViking session, falling back to the disk pending queue when the server is unreachable.
+1. `turn_end` captures new branch entries into the Business Data Platform session, falling back to the disk pending queue when the server is unreachable.
 2. When `pendingTokens` reaches `takeoverTokenThreshold`, and there are more user turns than `takeoverKeepRecentTurns`, takeover tries to advance.
 3. Advancing requires the flush barrier: every `addMessage` entry queued for *this* session must be delivered. Queued `commitSession` entries and entries belonging to other sessions do not hold it closed.
 4. The commit runs with `queueOnFailure: false`.
 5. The session context endpoint is polled until `latest_archive_overview` is available — `takeoverOverviewPollMax` attempts, `takeoverOverviewPollMs` apart. An empty overview is never injected; the boundary stays where it is and the token pressure resets so the next threshold crossing retries instead of re-committing every turn.
 6. On success the boundary advances to `lastSeenUserTurns - takeoverKeepRecentTurns`.
-7. The `context` hook then replaces every covered message with one synthetic user message beginning `[OpenViking Session Context]`, keeps the recent tail verbatim, and recall is injected into the newest kept user turn as usual.
+7. The `context` hook then replaces every covered message with one synthetic user message beginning `[Business Data Platform Session Context]`, keeps the recent tail verbatim, and recall is injected into the newest kept user turn as usual.
 
 The overview message's timestamp is derived from the first kept message, so the provider payload stays byte-stable between commits and can benefit from prompt caching.
 
@@ -130,7 +130,7 @@ When pi emits `session_before_compact`, takeover runs the same flush → commit 
 ```ts
 {
   compaction: {
-    summary: "[OpenViking Session Context]\n...",
+    summary: "[Business Data Platform Session Context]\n...",
     firstKeptEntryId,
     tokensBefore,
     details: { source: "openviking" },
@@ -153,7 +153,7 @@ If any step fails the handler returns nothing and pi's default compaction runs. 
 
 #### Live gate
 
-`scripts/e2e-live.sh` drives a real pi binary, a real OpenViking server and a real LLM endpoint (its required and optional environment variables are documented at the top of `scripts/e2e-live.mjs`). It runs three `pi -p` / `pi -c` turns with a tiny takeover threshold and asserts that the third provider payload carries `[OpenViking Session Context]` while the padding from the first turn is gone from the raw conversation history. Nothing in the unit suites covers that end to end, so it stays a manual gate.
+`scripts/e2e-live.sh` drives a real pi binary, a real Business Data Platform server and a real LLM endpoint (its required and optional environment variables are documented at the top of `scripts/e2e-live.mjs`). It runs three `pi -p` / `pi -c` turns with a tiny takeover threshold and asserts that the third provider payload carries `[Business Data Platform Session Context]` while the padding from the first turn is gone from the raw conversation history. Nothing in the unit suites covers that end to end, so it stays a manual gate.
 
 ### MCP tools
 
@@ -163,7 +163,7 @@ The official `@modelcontextprotocol/client` SDK handles Streamable HTTP, initial
 
 The bridge reuses shared configuration resolution and `buildOvHeaders`, including the same actor peer as REST recall. It reads configuration before connecting or calling a tool. Changes to the endpoint or request headers replace the connection. A failed transport is discarded for the next call; the failed call is never replayed. Protocol and tool errors do not cause reconnects. Tool registrations remain fixed until the next pi session.
 
-Initialization, the initialized notification and tool discovery share a 5-second deadline. Calls share their configured `timeoutMs` budget with any necessary connection attempt. Cancellation stops local waiting; it does not guarantee that a server-side write was cancelled. Closing the client releases the transport. OpenViking's MCP endpoint is stateless, so no remote session cleanup protocol is needed.
+Initialization, the initialized notification and tool discovery share a 5-second deadline. Calls share their configured `timeoutMs` budget with any necessary connection attempt. Cancellation stops local waiting; it does not guarantee that a server-side write was cancelled. Closing the client releases the transport. Business Data Platform's MCP endpoint is stateless, so no remote session cleanup protocol is needed.
 
 `mcp-result.mjs` maps MCP content to pi's text/image blocks, avoids duplicate structured text and limits all result text together to 50 KiB / 2000 lines. MCP errors are reported as failed tools. No `promptSnippet` or `promptGuidelines` is added: tools discovered during `before_agent_start` would otherwise change pi's cached prompt prefix on the following turn. The existing prompt line names the registered tools immediately.
 
@@ -187,11 +187,11 @@ The entry point. It loads the config, returns immediately when disabled, constru
 | `session_shutdown` | Close the MCP bridge, then persist takeover state or commit one last time |
 | `agent_end` | Invalidate the recall cache |
 
-**Two guards.** The bypass check runs the shared `isBypassed` against the cwd, so a scratch directory never pollutes long-term memory; the pattern syntax is the shared one, identical across harnesses. The health check runs once — if the server is unreachable the extension stays disconnected for the whole session, every handler returns early and no tools are registered. No retries, no repeated warnings. A bypassed directory never opens the bridge at all: bypass means this directory does not touch OpenViking.
+**Two guards.** The bypass check runs the shared `isBypassed` against the cwd, so a scratch directory never pollutes long-term memory; the pattern syntax is the shared one, identical across harnesses. The health check runs once — if the server is unreachable the extension stays disconnected for the whole session, every handler returns early and no tools are registered. No retries, no repeated warnings. A bypassed directory never opens the bridge at all: bypass means this directory does not touch Business Data Platform.
 
 **Startup is memoized, not awaited.** The startup chain — health check, session derivation, pending replay, profile build, takeover restore, tool registration — costs a couple of seconds against a remote server, and `session_start` does not await it, because that delay would land on every pi launch. `before_agent_start` awaits the same in-flight promise, so the first turn still gets its profile and recall. That is also the only startup path a `pi -c` continuation has: pi does not fire `session_start` for one. The MCP handshake is started right after the health check so it runs alongside the pending replay, the profile build and takeover recovery, and is joined at the end of the chain; when it failed, a separate branch in `before_agent_start` retries it once per turn until the session has tools. The list is never refreshed after that: pi has no `unregisterTool`, and adding or removing a tool mid-session rewrites the prompt's tool section and invalidates the provider's cached prefix. With the shared `mcpEnabled` key set to `false` there is no bridge at all, and the status line does not report that as a failure — it is what was asked for.
 
-**System prompt.** `before_agent_start` appends the profile block built by the shared `profile-inject.mjs` and capped at `profileTokenBudget`; outside takeover, the archive overview cached at resume or after a pre-compact commit; and one line naming the OpenViking tools. That line is generated from the names that actually registered, so it can never promise a tool the server does not have, and it is omitted entirely when the handshake produced none. Under takeover the overview reaches the model through the `context` hook instead, so it is not appended twice.
+**System prompt.** `before_agent_start` appends the profile block built by the shared `profile-inject.mjs` and capped at `profileTokenBudget`; outside takeover, the archive overview cached at resume or after a pre-compact commit; and one line naming the Business Data Platform tools. That line is generated from the names that actually registered, so it can never promise a tool the server does not have, and it is omitted entirely when the handshake produced none. Under takeover the overview reaches the model through the `context` hook instead, so it is not appended twice.
 
 **Tool guard.** `guardVikingUriToolCall` (`lib/uri-guard-adapter.mjs`) watches for a `viking://` URI handed as a path to a host file tool that cannot read one — `read`, `grep`, `find`, `ls`, `write`, `edit` — and blocks the call with the equivalent `openviking_*` invocation spelled out, written to be valid against the server's own schemas. Without it the model burns turns on a file path that does not exist on disk. A grep `pattern` is search text, not a path, so grepping a local tree for `viking://` is not blocked. `edit` is handed only its `path`: pi carries the replacement text in `edits[].oldText/newText`, which are not in the shared guard's content-key allowlist, so the generic sweep would read them as locations and block any edit whose new text merely mentions a `viking://` URI — which fires the moment somebody edits this repository's own docs. `bash` is not blocked either: a URI in a command is as often data (an `ov` argument, an HTTP payload, a search pattern) as a path the model hoped to open. The command runs, and on `tool_result` `noticeVikingUriToolResult` appends a text block to its output that names `openviking_read` / `openviking_search` and tells the model to ignore the notice when the URI was intentional. A tool absent from the hint table is never guarded, which is why the `openviking_*` tools themselves need no allowlist.
 

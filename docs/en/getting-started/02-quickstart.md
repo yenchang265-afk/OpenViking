@@ -1,6 +1,6 @@
 # Quick Start
 
-OpenViking runs as a server. Connect to it with the standalone `ov` CLI, import a small document, and retrieve its content. If you use a managed service or someone else's deployment, you only need the CLI.
+Business Data Platform runs as a server. Connect to it with the standalone `ov` CLI, import a small document, and retrieve its content. If you use a managed service or someone else's deployment, you only need the CLI.
 
 ## 1. Choose a service
 
@@ -10,7 +10,7 @@ Otherwise, choose one:
 
 ### Managed service on Volcengine
 
-Open the [OpenViking console](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing) and obtain your key from **User Management → API Key**. The service endpoint is:
+Open the [Business Data Platform console](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing) and obtain your key from **User Management → API Key**. The service endpoint is:
 
 ```text
 https://api.vikingdb.cn-beijing.volces.com/openviking
@@ -20,7 +20,7 @@ No server installation or local model configuration is needed. See the [product 
 
 ### Self-host a server
 
-[Install uv](https://docs.astral.sh/uv/getting-started/installation/) on the server machine, then install OpenViking:
+[Install uv](https://docs.astral.sh/uv/getting-started/installation/) on the server machine, then install Business Data Platform:
 
 ```bash
 uv tool install openviking --upgrade
@@ -50,7 +50,7 @@ ov language en
 ov config
 ```
 
-In the interactive configuration, choose **OpenViking Service** for Volcengine or **Custom** for a self-hosted endpoint. Enter the API key and, for a custom service, its URL. Leave the key empty for the default local server. Save and activate the configuration.
+In the interactive configuration, choose **Business Data Platform Service** for Volcengine or **Custom** for a self-hosted endpoint. Enter the API key and, for a custom service, its URL. Leave the key empty for the default local server. Save and activate the configuration.
 
 The CLI stores the active connection in `~/.openviking/ovcli.conf`. This is separate from the server's `ov.conf`. For scripted setup or multiple endpoints, see [CLI Setup](05-cli-setup.md).
 
@@ -101,4 +101,4 @@ Replace `<returned-file-uri>` with a file URI from the results, without the angl
 
 ## Use an SDK
 
-OpenViking also provides Python, TypeScript/JavaScript, and Go SDKs that connect to the same server. See the [API Overview](../api/01-overview.md) for client examples.
+Business Data Platform also provides Python, TypeScript/JavaScript, and Go SDKs that connect to the same server. See the [API Overview](../api/01-overview.md) for client examples.

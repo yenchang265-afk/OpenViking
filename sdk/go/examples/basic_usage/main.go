@@ -13,7 +13,7 @@ import (
 
 const (
 	baseURL = "http://localhost:1940"
-	apiKey  = "" // Set this when your OpenViking server requires authentication.
+	apiKey  = "" // Set this when your Business Data Platform server requires authentication.
 )
 
 func main() {
@@ -164,12 +164,12 @@ func main() {
 
 	fmt.Println("7. Skill management")
 	skillName := fmt.Sprintf("go-sdk-smoke-%d", time.Now().Unix())
-	skillDir := createDemoSkill(skillName, "Validate the OpenViking Go SDK smoke flow.")
+	skillDir := createDemoSkill(skillName, "Validate the Business Data Platform Go SDK smoke flow.")
 	defer os.RemoveAll(skillDir)
 
 	validation, err := client.ValidateSkill(ctx, map[string]any{
 		"name":        skillName,
-		"description": "Validate the OpenViking Go SDK smoke flow.",
+		"description": "Validate the Business Data Platform Go SDK smoke flow.",
 		"content":     "# " + skillName + "\n\nUse this skill to validate the Go SDK smoke flow.",
 	}, &openviking.ValidateSkillOptions{
 		Strict:       true,
@@ -256,13 +256,13 @@ func main() {
 		{
 			Role: "user",
 			Content: openviking.String(
-				"My OpenViking Go SDK preference is that examples should exercise resources, watches, skills, session commits, and memory retrieval without requiring Account or User constants.",
+				"My Business Data Platform Go SDK preference is that examples should exercise resources, watches, skills, session commits, and memory retrieval without requiring Account or User constants.",
 			),
 		},
 		{
 			Role: "assistant",
 			Content: openviking.String(
-				"I will treat that as a durable preference for the OpenViking Go SDK example workflow.",
+				"I will treat that as a durable preference for the Business Data Platform Go SDK example workflow.",
 			),
 		},
 		{
@@ -370,7 +370,7 @@ func createDemoFile() string {
 		log.Fatal(err)
 	}
 	path := filepath.Join(dir, "demo.md")
-	content := `# OpenViking Go SDK Smoke Test
+	content := `# Business Data Platform Go SDK Smoke Test
 
 This file was created by sdk/go/examples/basic_usage.
 
@@ -403,7 +403,7 @@ description: %s
 
 # %s
 
-Use this temporary skill to validate OpenViking Go SDK skill management.
+Use this temporary skill to validate Business Data Platform Go SDK skill management.
 
 ## When To Use
 

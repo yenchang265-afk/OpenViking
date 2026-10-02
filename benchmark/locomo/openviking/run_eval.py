@@ -731,7 +731,7 @@ def main():
     parser.add_argument(
         "--openviking-url",
         default=None,
-        help="OpenViking server URL, e.g. http://127.0.0.1:1934. Defaults to ovcli.conf.",
+        help="Business Data Platform server URL, e.g. http://127.0.0.1:1934. Defaults to ovcli.conf.",
     )
     parser.add_argument(
         "--single-search-context-limit",

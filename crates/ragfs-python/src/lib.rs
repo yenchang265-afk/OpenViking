@@ -75,7 +75,7 @@ fn replace_tracing_log_file(shared: &Arc<Mutex<std::fs::File>>, path: &Path) -> 
     Ok(())
 }
 
-/// Parse the configured OpenViking log level into a Rust tracing level.
+/// Parse the configured Business Data Platform log level into a Rust tracing level.
 fn parse_tracing_level(log_level: &str) -> Result<Level, String> {
     match log_level.to_ascii_uppercase().as_str() {
         "TRACE" => Ok(Level::TRACE),
@@ -88,7 +88,7 @@ fn parse_tracing_level(log_level: &str) -> Result<Level, String> {
     }
 }
 
-/// Build the tracing writer from the configured OpenViking log output target.
+/// Build the tracing writer from the configured Business Data Platform log output target.
 fn build_tracing_writer(log_output: &str) -> Result<(BoxMakeWriter, WorkerGuard), String> {
     match log_output {
         "stdout" => {
@@ -428,12 +428,12 @@ impl RagfsCacheConfig {
     }
 }
 
-/// Load PathLock configuration from one canonical OpenViking config file.
+/// Load PathLock configuration from one canonical Business Data Platform config file.
 fn pathlock_config_from_ov_conf(path: &str) -> Result<PathLockConfig, String> {
     let raw = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read OpenViking config {path}: {error}"))?;
+        .map_err(|error| format!("failed to read Business Data Platform config {path}: {error}"))?;
     let json: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|error| format!("failed to parse OpenViking config {path}: {error}"))?;
+        .map_err(|error| format!("failed to parse Business Data Platform config {path}: {error}"))?;
     pathlock_config_from_canonical_ov_conf(&json)
 }
 
@@ -510,9 +510,9 @@ fn pathlock_config_from_value(value: &serde_json::Value) -> Result<PathLockConfi
 
 fn cache_config_from_ov_conf(path: &str) -> Result<RagfsCacheConfig, String> {
     let raw = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read OpenViking config {path}: {error}"))?;
+        .map_err(|error| format!("failed to read Business Data Platform config {path}: {error}"))?;
     let json: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|error| format!("failed to parse OpenViking config {path}: {error}"))?;
+        .map_err(|error| format!("failed to parse Business Data Platform config {path}: {error}"))?;
     cache_config_from_canonical_ov_conf(&json)
 }
 
@@ -522,9 +522,9 @@ fn cache_config_from_ov_conf_with_runtime(
     force_runtime: bool,
 ) -> Result<RagfsCacheConfig, String> {
     let raw = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read OpenViking config {path}: {error}"))?;
+        .map_err(|error| format!("failed to read Business Data Platform config {path}: {error}"))?;
     let json: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|error| format!("failed to parse OpenViking config {path}: {error}"))?;
+        .map_err(|error| format!("failed to parse Business Data Platform config {path}: {error}"))?;
     cache_config_from_canonical_ov_conf_with_runtime(&json, force_runtime)
 }
 
@@ -1470,7 +1470,7 @@ struct RAGFSBindingClient {
     rt: tokio::runtime::Runtime,
     git_service: Option<Arc<ragfs::git::GitService>>,
     git_backend: Option<String>,
-    /// PathLock manager. OpenViking always builds ragfs with PathLock enabled.
+    /// PathLock manager. Business Data Platform always builds ragfs with PathLock enabled.
     pathlock_manager: Arc<PathLockManager>,
     /// Shared cache runtime. Closed only after mounted QueueFS instances shut down.
     cache_runtime: Option<Arc<CacheRuntime>>,

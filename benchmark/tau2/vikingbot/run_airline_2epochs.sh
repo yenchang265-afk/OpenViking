@@ -29,7 +29,7 @@ bash "${SCRIPT_DIR}/run_full_test.sh" \
   ${CONFIG_FLAG}
 log ">>> Epoch 0 done"
 
-# Wait for OpenViking server to finish async memory processing
+# Wait for Business Data Platform server to finish async memory processing
 WAIT_SECS=9000
 log ">>> Waiting ${WAIT_SECS}s for server async memory commit to finish..."
 sleep "${WAIT_SECS}"

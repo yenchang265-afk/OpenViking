@@ -5,7 +5,7 @@ import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { fetchJSON, initLogger, log, makeRequest } from "../lib/utils.mjs"
 
-test("initLogger creates the OpenViking log file path and log writes JSONL", async () => {
+test("initLogger creates the Business Data Platform log file path and log writes JSONL", async () => {
   const dir = await mkdtemp(join(tmpdir(), "ov-oc-log-"))
   try {
     initLogger(dir)

@@ -10,7 +10,7 @@ test("Claude URI guard denies filesystem Read on viking URI", () => {
 
   assert.equal(out.hookSpecificOutput?.hookEventName, "PreToolUse");
   assert.equal(out.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(out.hookSpecificOutput?.permissionDecisionReason ?? "", /OpenViking MCP read/);
+  assert.match(out.hookSpecificOutput?.permissionDecisionReason ?? "", /Business Data Platform MCP read/);
 });
 
 test("Claude URI guard denies Write to a viking URI path", () => {
@@ -20,7 +20,7 @@ test("Claude URI guard denies Write to a viking URI path", () => {
   });
 
   assert.equal(out.hookSpecificOutput?.permissionDecision, "deny");
-  assert.match(out.hookSpecificOutput?.permissionDecisionReason ?? "", /OpenViking MCP write/);
+  assert.match(out.hookSpecificOutput?.permissionDecisionReason ?? "", /Business Data Platform MCP write/);
 });
 
 test("Claude URI guard lets Bash carrying a viking URI run with a notice", () => {

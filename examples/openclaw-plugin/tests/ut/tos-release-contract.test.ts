@@ -240,7 +240,7 @@ describe("TOS release and single installer contract", () => {
     expect(installScript).toContain("openclaw openviking setup");
   });
 
-  it("does not run OpenViking setup during verify-only mode", () => {
+  it("does not run Business Data Platform setup during verify-only mode", () => {
     execFileSync("bash", [join(rootDir, "scripts/install.sh"), "--source", "existing", "--verify-only"], {
       env: {
         ...process.env,

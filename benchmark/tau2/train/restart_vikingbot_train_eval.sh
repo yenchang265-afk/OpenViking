@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Restart the OpenViking bot server and tau2 rollout service, wait until both
+# Restart the Business Data Platform bot server and tau2 rollout service, wait until both
 # are healthy, then start tau2 vikingbot batch train/eval.
 #
 # Default training args match the common vikingbot run:
@@ -10,7 +10,7 @@ set -euo pipefail
 #
 # Launcher-only options:
 #   --slot N   Run an isolated slot. Slot 0 is the default legacy setup. Slot N>0
-#              uses separate ports, OpenViking config/data, logs, and result dir.
+#              uses separate ports, Business Data Platform config/data, logs, and result dir.
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TAU2_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -280,13 +280,13 @@ start_openviking_server() {
   prepare_slot_config
   log "slot=${SLOT} result_dir=result/tau2/${RESULT_DIR_NAME}"
   log "slot root: ${SLOT_ROOT}"
-  log "OpenViking config: ${OPENVIKING_CONFIG_FILE}"
-  log "OpenViking data: ${OPENVIKING_DATA_DIR}"
-  log "restarting OpenViking server on port ${OPENVIKING_PORT}, bot port ${OPENVIKING_BOT_PORT}"
-  log "OpenViking log: ${OPENVIKING_LOG}"
+  log "Business Data Platform config: ${OPENVIKING_CONFIG_FILE}"
+  log "Business Data Platform data: ${OPENVIKING_DATA_DIR}"
+  log "restarting Business Data Platform server on port ${OPENVIKING_PORT}, bot port ${OPENVIKING_BOT_PORT}"
+  log "Business Data Platform log: ${OPENVIKING_LOG}"
   : > "${OPENVIKING_LOG}"
-  stop_existing_listener "OpenViking server" "${OPENVIKING_PORT}"
-  stop_existing_listener "OpenViking bot" "${OPENVIKING_BOT_PORT}"
+  stop_existing_listener "Business Data Platform server" "${OPENVIKING_PORT}"
+  stop_existing_listener "Business Data Platform bot" "${OPENVIKING_BOT_PORT}"
 
   (
     cd "${REPO_ROOT}"
@@ -300,10 +300,10 @@ start_openviking_server() {
   ) >"${OPENVIKING_LOG}" 2>&1 &
 
   echo "$!" > "${LOG_DIR}/openviking-server.pid"
-  log "OpenViking restart wrapper pid: $(cat "${LOG_DIR}/openviking-server.pid")"
+  log "Business Data Platform restart wrapper pid: $(cat "${LOG_DIR}/openviking-server.pid")"
 
   wait_for_http_json_ok \
-    "OpenViking bot API" \
+    "Business Data Platform bot API" \
     "http://127.0.0.1:${OPENVIKING_PORT}/bot/v1/health" \
     '"status":"healthy"' \
     "${OPENVIKING_LOG}"

@@ -1,12 +1,12 @@
-# OpenViking OpenClaw 外掛幫助文件
+# Business Data Platform OpenClaw 外掛幫助文件
 
-> 本文件面向外掛使用者、整合方、排障同學和後續維護者，系統梳理 `@openviking/openclaw-plugin` 的實現原理、執行流程、核心功能、安裝配置、構建測試、Debug、釋出上線與驗證方式，以及它與火山 OpenViking 的聯動機制。
+> 本文件面向外掛使用者、整合方、排障同學和後續維護者，系統梳理 `@openviking/openclaw-plugin` 的實現原理、執行流程、核心功能、安裝配置、構建測試、Debug、釋出上線與驗證方式，以及它與火山 Business Data Platform 的聯動機制。
 
 ## 1. 一句話結論
 
-`@openviking/openclaw-plugin` 是一個 OpenClaw `context-engine` 外掛。它把 OpenClaw 的會話生命週期、上下文組裝、記憶召回、會話歸檔、工具結果回讀、資源/技能匯入等能力，通過 HTTP API 接到遠端 OpenViking 服務上，讓 Agent 擁有長期記憶、工作記憶、歷史壓縮、語義檢索和 RAG 能力。
+`@openviking/openclaw-plugin` 是一個 OpenClaw `context-engine` 外掛。它把 OpenClaw 的會話生命週期、上下文組裝、記憶召回、會話歸檔、工具結果回讀、資源/技能匯入等能力，通過 HTTP API 接到遠端 Business Data Platform 服務上，讓 Agent 擁有長期記憶、工作記憶、歷史壓縮、語義檢索和 RAG 能力。
 
-它不負責啟動本地 OpenViking Server，也不替代 OpenClaw Runtime；OpenClaw 仍負責 Agent 執行、prompt 編排和工具呼叫，OpenViking 負責上下文資料庫、長期記憶、session/archive、resource/skill 檢索與服務端抽取。
+它不負責啟動本地 Business Data Platform Server，也不替代 OpenClaw Runtime；OpenClaw 仍負責 Agent 執行、prompt 編排和工具呼叫，Business Data Platform 負責上下文資料庫、長期記憶、session/archive、resource/skill 檢索與服務端抽取。
 
 ---
 
@@ -14,12 +14,12 @@
 
 | 問題 | 沒有外掛時的表現 | 外掛提供的能力 |
 | --- | --- | --- |
-| 長對話上下文膨脹 | 會話越來越長，token 成本和模型輸入風險持續上升 | 通過 OpenViking session/archive 把長曆史壓縮為工作記憶，並在 `assemble` 時重建可控上下文 |
+| 長對話上下文膨脹 | 會話越來越長，token 成本和模型輸入風險持續上升 | 通過 Business Data Platform session/archive 把長曆史壓縮為工作記憶，並在 `assemble` 時重建可控上下文 |
 | 過去偏好/事實容易遺忘 | Agent 需要使用者反覆提醒 | `autoRecall` 自動搜尋長期記憶並注入當前 user message |
 | 會話歷史壓縮後細節丟失 | summary 不含原命令、路徑、配置值時難以追溯 | `ov_archive_search` / `ov_archive_expand` 回查歸檔原文 |
-| 大工具結果汙染上下文 | 大量工具輸出擠佔模型視窗 | OpenViking 支援 tool result 外接儲存，外掛提供讀/搜/列工具 |
+| 大工具結果汙染上下文 | 大量工具輸出擠佔模型視窗 | Business Data Platform 支援 tool result 外接儲存，外掛提供讀/搜/列工具 |
 | 文件、倉庫、URL 無法沉澱為知識庫 | Agent 臨時讀取，跨會話不可複用 | 手動 `/add-resource` 匯入 resource，`ov_search` / `ov_read` 檢索消費；Agent 可見 `add_resource` 預設停用 |
-| Skill 難以沉澱和語義發現 | 技能依賴本地或手工注入 | `add_skill` 匯入到 OpenViking agent skill 空間 |
+| Skill 難以沉澱和語義發現 | 技能依賴本地或手工注入 | `add_skill` 匯入到 Business Data Platform agent skill 空間 |
 | 多租戶/多 Agent 記憶串用 | 不同 session/agent 可能共用錯誤上下文 | 外掛按 `sessionId/sessionKey/agentId/peer_prefix` 解析 `X-OpenViking-Actor-Peer`，並支援 account/user header 與 peer identity routing |
 
 ---
@@ -45,7 +45,7 @@
 | --- | --- |
 | `index.ts` | 外掛註冊入口；解析配置；註冊工具、命令、hook、context engine 和 service |
 | `context-engine.ts` | 實現 ContextEngine：`assemble`、`afterTurn`、`compact`、session ID 對映、訊息轉換、工作記憶組裝 |
-| `client.ts` | OpenViking HTTP Client；統一新增認證/租戶/agent header；封裝 session、search、resource、skill、tool-result API |
+| `client.ts` | Business Data Platform HTTP Client；統一新增認證/租戶/agent header；封裝 session、search、resource、skill、tool-result API |
 | `config.ts` | 外掛配置 schema、預設值、環境變數解析、peer identity routing 配置 |
 | `auto-recall.ts` | 自動召回查詢清洗、召回超時控制、記憶塊構建與注入 |
 | `memory-ranking.ts` | 顯式 `memory_recall` 的結果去重、閾值過濾和本地重排；自動召回由服務端組裝 |
@@ -67,7 +67,7 @@
 
 ### 4.2 會話 ID 與 Agent 路由流程
 
-OpenClaw 的 `sessionId/sessionKey` 不能總是直接作為 OpenViking 儲存路徑。外掛用 `openClawSessionToOvStorageId` 生成安全穩定的 OpenViking session id：
+OpenClaw 的 `sessionId/sessionKey` 不能總是直接作為 Business Data Platform 儲存路徑。外掛用 `openClawSessionToOvStorageId` 生成安全穩定的 Business Data Platform session id：
 
 - 如果 `sessionId` 是 UUID，直接小寫複用。
 - 如果有 `sessionKey`，用 SHA-256 生成穩定 id。
@@ -84,7 +84,7 @@ OpenClaw 會在 context engine 上呼叫 `assemble`。當前實現把 assemble �
 
 | 呼叫形態 | 判斷方式 | 外掛行為 |
 | --- | --- | --- |
-| 主 assemble / preflight | 引數帶 `prompt`、`availableTools` 或 `citationsMode` | 從 OpenViking 獲取 session context，回放 archive summary + active messages |
+| 主 assemble / preflight | 引數帶 `prompt`、`availableTools` 或 `citationsMode` | 從 Business Data Platform 獲取 session context，回放 archive summary + active messages |
 | transformContext assemble | 不帶上述欄位，通常最後一條已經是當前 user | 執行 auto recall，把長期記憶塊 prepend 到最新 user message |
 
 判斷邏輯在 `context-engine.ts:1097`。
@@ -93,9 +93,9 @@ OpenClaw 會在 context engine 上呼叫 `assemble`。當前實現把 assemble �
 
 1. 解析 session 身份，計算 token budget，記錄診斷日誌。
 2. 呼叫 `GET /api/v1/sessions/{sessionId}/context?token_budget=...`：`context-engine.ts:1193`、`client.ts:873`。
-3. 如果 OpenViking 沒有可用 archive/session 資料，直接 passthrough，不影響主鏈路。
+3. 如果 Business Data Platform 沒有可用 archive/session 資料，直接 passthrough，不影響主鏈路。
 4. 將 `latest_archive_overview` 轉成 `[Session History Summary]`。
-5. 將 OpenViking parts 訊息轉換為 OpenClaw `AgentMessage`，包括 tool part → `toolCall` + `toolResult`。
+5. 將 Business Data Platform parts 訊息轉換為 OpenClaw `AgentMessage`，包括 tool part → `toolCall` + `toolResult`。
 6. 修復 transcript：合併連續 user/assistant、修復 toolCall/toolResult 配對，必要時插入佔位 user 以滿足 provider 交替約束。
 7. 返回組裝後的 messages 和可選 `systemPromptAddition`。
 
@@ -103,8 +103,8 @@ transformContext auto recall 流程：
 
 1. 從最新 user message 提取查詢文本。
 2. 清洗 metadata、心跳、已注入記憶塊等噪音。
-3. 快速 precheck，OpenViking 不可用時跳過召回，避免拖慢模型請求。
-4. 向 `POST /api/v1/search/search` 傳送一次 `mode="context"` 請求，並把對映後的 OpenViking session ID、Actor Peer 和 `recallTargetTypes` 一併傳入。
+3. 快速 precheck，Business Data Platform 不可用時跳過召回，避免拖慢模型請求。
+4. 向 `POST /api/v1/search/search` 傳送一次 `mode="context"` 請求，並把對映後的 Business Data Platform session ID、Actor Peer 和 `recallTargetTypes` 一併傳入。
 5. 服務端結合 session 歷史擴充查詢，完成閾值過濾、排序、5 輪跨輪去重和內容層級選擇。
 6. `recallMaxInjectedChars` 按 4 字元/token 轉成服務端 `max_tokens`，由服務端在預算內生成 `rendered` 上下文。
 7. 外掛只保留 `<relevant-memories>` 外層標記並 prepend 到最新 user message，不再逐條 `read` 或本地重排。
@@ -113,13 +113,13 @@ transformContext auto recall 流程：
 
 ### 4.4 `afterTurn`：每輪對話後自動捕獲
 
-`afterTurn` 負責把本輪新增訊息寫入 OpenViking session，並在 `pending_tokens` 超過閾值時非同步 commit。
+`afterTurn` 負責把本輪新增訊息寫入 Business Data Platform session，並在 `pending_tokens` 超過閾值時非同步 commit。
 
 流程：
 
 1. 若 `autoCapture=false`、heartbeat 或 session 被 bypass，直接跳過。
 2. 根據 `prePromptMessageCount` 只提取本輪新增訊息，不重寫全量 transcript。
-3. `extractNewTurnMessages` 將 user/assistant 文本和 toolResult 轉成 OpenViking parts：`text-utils.ts:342`。
+3. `extractNewTurnMessages` 將 user/assistant 文本和 toolResult 轉成 Business Data Platform parts：`text-utils.ts:342`。
 4. 清理 `<relevant-memories>`、metadata、時間戳、心跳等噪音。
 5. 逐條呼叫 `POST /api/v1/sessions/{sessionId}/messages`：`context-engine.ts:1378`、`client.ts:703`。
 6. 調 `GET /api/v1/sessions/{sessionId}` 讀取 `pending_tokens`：`context-engine.ts:1389`、`client.ts:770`。
@@ -133,7 +133,7 @@ transformContext auto recall 流程：
 
 流程：
 
-1. 解析 OpenViking session id。
+1. 解析 Business Data Platform session id。
 2. 呼叫 `commitSession(wait=true, keepRecentCount=0)`，要求服務端歸檔所有當前訊息：`context-engine.ts:1500`。
 3. 如果 Phase 2 failed/timeout，返回失敗原因。
 4. 如果沒有生成 archive，返回 `commit_no_archive`。
@@ -142,7 +142,7 @@ transformContext auto recall 流程：
 
 ### 4.6 `before_reset`：重置前保護性提交
 
-外掛監聽 `before_reset`，在 reset 前儘量 commit 當前 OpenViking session，避免對話被重置時未歸檔內容丟失：`index.ts:1919`。
+外掛監聽 `before_reset`，在 reset 前儘量 commit 當前 Business Data Platform session，避免對話被重置時未歸檔內容丟失：`index.ts:1919`。
 
 ---
 
@@ -168,7 +168,7 @@ transformContext auto recall 流程：
 
 ### 5.2 會話歸檔與 Working Memory
 
-外掛把 OpenClaw turn 持續寫入 OpenViking session，由服務端維護 `pending_tokens` 與 archive。超過閾值時：
+外掛把 OpenClaw turn 持續寫入 Business Data Platform session，由服務端維護 `pending_tokens` 與 archive。超過閾值時：
 
 - `afterTurn` 路徑：`wait=false`，非同步 Phase 2，預設保留最近 10 條訊息。
 - `compact` 路徑：`wait=true`，同步等待 Phase 2，`keepRecentCount=0`，形成明確壓縮邊界。
@@ -203,13 +203,13 @@ transformContext auto recall 流程：
 | `/add-resource`（手動）/ `add_resource`（opt-in） | 匯入本地檔案、目錄、URL、Git 倉庫、媒體附件；`add_resource` 預設不註冊，需 `enableAddResourceTool=true` | `viking://resources/...` |
 | `add_skill` / `/add-skill` | 匯入 `SKILL.md` 或 skill 目錄 | `viking://user/skills/...` |
 | `ov_search` / `/ov-search` | 搜尋 resources 和 skills | 默認同時搜 resources + agent skills |
-| `ov_read` | 讀取 `ov_search` / trace 命中的完整內容 | 只接受精確 `viking://...` OpenViking 虛擬 URI |
+| `ov_read` | 讀取 `ov_search` / trace 命中的完整內容 | 只接受精確 `viking://...` Business Data Platform 虛擬 URI |
 
 本地檔案/目錄不會把原路徑直接傳給服務端，而是先 temp upload；目錄會用純 JS zip 打包後上傳：`client.ts:609`、`client.ts:552`。
 
 ### 5.6 外接 Tool Result 回讀
 
-當 OpenViking 服務端將大工具結果外接為 `viking://session/.../tool-results/...` 時，外掛提供：
+當 Business Data Platform 服務端將大工具結果外接為 `viking://session/.../tool-results/...` 時，外掛提供：
 
 | 工具 | 用途 |
 | --- | --- |
@@ -221,26 +221,26 @@ transformContext auto recall 流程：
 
 ---
 
-## 6. 與火山 OpenViking 的聯動方式
+## 6. 與火山 Business Data Platform 的聯動方式
 
 ### 6.1 HTTP Client 與認證頭
 
-外掛是 OpenViking 的純 HTTP Client。所有請求統一走 `OpenVikingClient.request`：`client.ts:313`。
+外掛是 Business Data Platform 的純 HTTP Client。所有請求統一走 `OpenVikingClient.request`：`client.ts:313`。
 
 請求頭邏輯：
 
 | Header | 來源 | 說明 |
 | --- | --- | --- |
-| `X-API-Key` | `apiKey` / `OPENVIKING_API_KEY` | OpenViking API Key |
+| `X-API-Key` | `apiKey` / `OPENVIKING_API_KEY` | Business Data Platform API Key |
 | `X-OpenViking-Account` | `accountId` / `OPENVIKING_ACCOUNT_ID` | Root key 或 trusted 部署需要的租戶 account |
 | `X-OpenViking-User` | `userId` / `OPENVIKING_USER_ID` | Root key 或 trusted 部署需要的使用者 |
 | `X-OpenViking-Actor-Peer` | 當前 session 解析出的 agentId | 用於 peer scope 隔離 |
 
 注意：配置說明中歷史文件可能提到 `X-OpenViking-Key`，當前程式碼實際傳送的是 `X-API-Key`：`client.ts:325`。
 
-### 6.2 OpenViking 官方 API 完整清單與外掛對映
+### 6.2 Business Data Platform 官方 API 完整清單與外掛對映
 
-官方 HTTP API 統一字首為 `/api/v1/`，成功響應一般為 `{ "status": "ok", "result": ..., "time": ... }`，錯誤響應為 `{ "status": "error", "error": { "code", "message" }, "time" }`。外掛只做 HTTP Client，不嵌入 OpenViking SDK；統一封裝點是 `OpenVikingClient.request`：`client.ts:313`。
+官方 HTTP API 統一字首為 `/api/v1/`，成功響應一般為 `{ "status": "ok", "result": ..., "time": ... }`，錯誤響應為 `{ "status": "error", "error": { "code", "message" }, "time" }`。外掛只做 HTTP Client，不嵌入 Business Data Platform SDK；統一封裝點是 `OpenVikingClient.request`：`client.ts:313`。
 
 #### 6.2.1 System / Observer
 
@@ -293,7 +293,7 @@ transformContext auto recall 流程：
 
 | API | 官方用途 | 當前外掛對映 | 關鍵引數 / 返回 |
 | --- | --- | --- | --- |
-| `POST /api/v1/sessions` | 建立新 session | 暫未顯式呼叫 | 官方建立後返回 `session_id`；當前外掛用 OpenClaw session id 對映成 OpenViking storage id，服務端 `GET`/寫訊息可自動建立 |
+| `POST /api/v1/sessions` | 建立新 session | 暫未顯式呼叫 | 官方建立後返回 `session_id`；當前外掛用 OpenClaw session id 對映成 Business Data Platform storage id，服務端 `GET`/寫訊息可自動建立 |
 | `GET /api/v1/sessions` | 列出當前使用者 session | 暫未封裝 | 返回 `session_id`、`uri`、`is_dir` |
 | `GET /api/v1/sessions/{sessionId}` | 獲取 session 元資訊 | `afterTurn` 元資訊檢查 | 返回 `message_count`，外掛相容讀取 `commit_count`、`pending_tokens`、`llm_token_usage`：`client.ts:770` |
 | `DELETE /api/v1/sessions/{sessionId}` | 刪除 session | `deleteSession`（內部能力，未暴露普通使用者工具） | 刪除 active messages、archives、tools、後設資料；不刪除已抽取 memories：`client.ts:931` |
@@ -313,7 +313,7 @@ transformContext auto recall 流程：
 | `GET /api/v1/fs/ls?uri=viking://user/skills/` | 列 skill | `ov_search` 預設會搜 skills；未單獨 list | 官方 `List Skills` 頁面本質複用 `fs/ls` |
 | `POST /api/v1/skills` | Add Skill / MCP tool conversion | `add_skill` | 與資源匯入章節相同 |
 | 讀取 `viking://user/skills/{name}/SKILL.md` | 讀 skill 全文 | `ov_read` 或 `content/read` 手工讀取 | 官方建議按 L0/L1/L2 逐級讀取 |
-| `call-skill` 頁面 | 官方導航存在但當前內容實際為 Add Skill | 外掛不通過 OpenViking 執行 skill | OpenClaw 自己負責工具執行，OpenViking 主要儲存/檢索 skill 文件 |
+| `call-skill` 頁面 | 官方導航存在但當前內容實際為 Add Skill | 外掛不通過 Business Data Platform 執行 skill | OpenClaw 自己負責工具執行，Business Data Platform 主要儲存/檢索 skill 文件 |
 
 #### 6.2.7 Admin / Authentication
 
@@ -328,11 +328,11 @@ transformContext auto recall 流程：
 | `PUT /api/v1/admin/accounts/{account_id}/users/{user_id}/role` | ROOT | 修改角色 | 運維使用 |
 | `POST /api/v1/admin/accounts/{account_id}/users/{user_id}/key` | ROOT/ADMIN | 重置使用者 API key | key 洩露/輪換時使用 |
 
-認證方式：OpenViking HTTP 支援 `X-API-Key: <key>` 和 `Authorization: Bearer <key>`；外掛固定使用 `X-API-Key`。如果服務端啟用了多租戶且當前 key 需要顯式租戶上下文，外掛還會附加 `X-OpenViking-Account`、`X-OpenViking-User`、`X-OpenViking-Actor-Peer`。
+認證方式：Business Data Platform HTTP 支援 `X-API-Key: <key>` 和 `Authorization: Bearer <key>`；外掛固定使用 `X-API-Key`。如果服務端啟用了多租戶且當前 key 需要顯式租戶上下文，外掛還會附加 `X-OpenViking-Account`、`X-OpenViking-User`、`X-OpenViking-Actor-Peer`。
 
 ### 6.3 URI 與名稱空間
 
-外掛使用 OpenViking 的 filesystem paradigm，常見 URI：
+外掛使用 Business Data Platform 的 filesystem paradigm，常見 URI：
 
 | URI | 含義 |
 | --- | --- |
@@ -342,7 +342,7 @@ transformContext auto recall 流程：
 | `viking://session/{sessionId}/history` | session archive 歷史 |
 | `viking://session/{sessionId}/tool-results/{id}` | 外接工具結果 |
 
-外掛通過 `viking://user/...` 寫入和檢索 user-scoped memory；OpenViking 會根據請求裡的租戶身份和 actor peer context 解析這個別名。agent 維度通過 `peer_id` / `X-OpenViking-Actor-Peer` 表達，不再使用舊 agent URI namespace。
+外掛通過 `viking://user/...` 寫入和檢索 user-scoped memory；Business Data Platform 會根據請求裡的租戶身份和 actor peer context 解析這個別名。agent 維度通過 `peer_id` / `X-OpenViking-Actor-Peer` 表達，不再使用舊 agent URI namespace。
 
 ---
 
@@ -353,13 +353,13 @@ transformContext auto recall 流程：
 如果你只想先把外掛跑起來，按這 4 步執行：
 
 ```bash
-# 1. 確認 OpenViking Server 已啟動
+# 1. 確認 Business Data Platform Server 已啟動
 curl http://127.0.0.1:1933/health
 
 # 2. 安裝外掛
 openclaw plugins install clawhub:@openviking/openclaw-plugin
 
-# 3. 寫入 OpenViking 連線配置並激活 contextEngine slot
+# 3. 寫入 Business Data Platform 連線配置並激活 contextEngine slot
 openclaw openviking setup --base-url http://127.0.0.1:1933 --api-key <OPENVIKING_API_KEY> --json
 
 # 4. 重啟並驗證
@@ -391,13 +391,13 @@ bash install.sh --source tos --channel prod --version 2026.6.2
 | --- | --- |
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
-| OpenViking Server | >= 0.4.1 |
+| Business Data Platform Server | >= 0.4.1 |
 
 相容性宣告在 `install-manifest.json` 的 `compatibility` 欄位。
 
-### 7.2 啟動 OpenViking Server
+### 7.2 啟動 Business Data Platform Server
 
-外掛只連線遠端 OpenViking，不啟動服務端。先啟動服務端：
+外掛只連線遠端 Business Data Platform，不啟動服務端。先啟動服務端：
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -406,7 +406,7 @@ openviking-server doctor
 openviking-server --host 0.0.0.0 --port 1933
 ```
 
-`openviking-server init` 會生成 OpenViking 服務端配置；`openviking-server doctor` 會檢查模型 provider、embedding provider、workspace 許可權等基礎依賴；`openviking-server` 才是真正啟動 HTTP API 的程序。OpenClaw 使用外掛期間，這個服務程序需要一直執行。
+`openviking-server init` 會生成 Business Data Platform 服務端配置；`openviking-server doctor` 會檢查模型 provider、embedding provider、workspace 許可權等基礎依賴；`openviking-server` 才是真正啟動 HTTP API 的程序。OpenClaw 使用外掛期間，這個服務程序需要一直執行。
 
 驗證服務：
 
@@ -421,7 +421,7 @@ mkdir -p ~/.openviking/data/log
 nohup openviking-server > ~/.openviking/data/log/openviking.log 2>&1 &
 ```
 
-如果 OpenViking 跑在另一臺機器或容器中，需要監聽可訪問地址：
+如果 Business Data Platform 跑在另一臺機器或容器中，需要監聽可訪問地址：
 
 ```bash
 openviking-server --host 0.0.0.0 --port 1933
@@ -429,16 +429,16 @@ openviking-server --host 0.0.0.0 --port 1933
 
 此時 OpenClaw 外掛的 `baseUrl` 要配置為呼叫方可訪問的地址，例如 `http://your-server:1933`，而不是服務端本機視角的 `127.0.0.1`。
 
-### 7.3 OpenViking 服務端配置檔案
+### 7.3 Business Data Platform 服務端配置檔案
 
-OpenViking 服務端配置與 OpenClaw 外掛配置是兩層配置，位置不同、作用也不同：
+Business Data Platform 服務端配置與 OpenClaw 外掛配置是兩層配置，位置不同、作用也不同：
 
 | 配置層 | 預設位置 | 作用 | 常見寫入方式 |
 | --- | --- | --- | --- |
-| OpenViking 服務端 | `~/.openviking/ov.conf` | 配置服務端 workspace、日誌、embedding、VLM/model provider | `openviking-server init` 互動生成；也可提前建立檔案 |
-| OpenViking 服務端自定義路徑 | `OV_CONFIG=/path/to/ov.conf` | 指定非預設配置檔案 | 啟動 `openviking-server` 前匯出環境變數 |
-| OpenClaw 外掛層 | `~/.openclaw/openclaw.json` | 配置外掛連線哪個 OpenViking HTTP 服務、API key、account/user、召回/捕獲策略 | `openclaw openviking setup` 或 `openclaw config set` |
-| 一鍵安裝指令碼環境檔案 | `~/.openclaw/openviking.env` | 儲存一鍵安裝指令碼使用過的 OpenViking 連線引數，便於排查/複用 | `scripts/volcengine-openviking-install.sh` |
+| Business Data Platform 服務端 | `~/.openviking/ov.conf` | 配置服務端 workspace、日誌、embedding、VLM/model provider | `openviking-server init` 互動生成；也可提前建立檔案 |
+| Business Data Platform 服務端自定義路徑 | `OV_CONFIG=/path/to/ov.conf` | 指定非預設配置檔案 | 啟動 `openviking-server` 前匯出環境變數 |
+| OpenClaw 外掛層 | `~/.openclaw/openclaw.json` | 配置外掛連線哪個 Business Data Platform HTTP 服務、API key、account/user、召回/捕獲策略 | `openclaw openviking setup` 或 `openclaw config set` |
+| 一鍵安裝指令碼環境檔案 | `~/.openclaw/openviking.env` | 儲存一鍵安裝指令碼使用過的 Business Data Platform 連線引數，便於排查/複用 | `scripts/volcengine-openviking-install.sh` |
 
 最小 `~/.openviking/ov.conf` 示例：
 
@@ -530,7 +530,7 @@ openviking-server --host 127.0.0.1 --port 1933
 本機單機版適合開發、除錯和端到端驗證。推薦最小鏈路如下：
 
 ```bash
-# 1. 安裝 OpenViking Python 包
+# 1. 安裝 Business Data Platform Python 包
 python3 -m pip install openviking --upgrade --force-reinstall
 
 # 2. 初始化服務端配置
@@ -564,7 +564,7 @@ openclaw gateway restart
 openclaw openviking status --json
 ```
 
-如果本機 OpenViking 服務沒有開啟 API key 校驗，可按服務端實際策略傳空 key 或測試 key；如果使用火山 OpenViking Service / root key / trusted server 流程，則按服務端要求補充 `--account-id` 和 `--user-id`。
+如果本機 Business Data Platform 服務沒有開啟 API key 校驗，可按服務端實際策略傳空 key 或測試 key；如果使用火山 Business Data Platform Service / root key / trusted server 流程，則按服務端要求補充 `--account-id` 和 `--user-id`。
 
 單機版聯調檢查點：
 
@@ -572,7 +572,7 @@ openclaw openviking status --json
 2. `openclaw openviking status --json` 中 `configured=true`、`health.ok=true`。
 3. `openclaw config get plugins.slots.contextEngine` 輸出 `openviking`。
 4. 與 Agent 對話一輪後，服務端日誌 `~/.openviking/data/log/openviking.log` 或前臺輸出能看到 session/message/commit 相關請求。
-5. 觸發 `/compact` 或等待 `pending_tokens` 超過閾值後，在 OpenViking Console/TUI 或外掛工具中能檢索到 archive/memory。
+5. 觸發 `/compact` 或等待 `pending_tokens` 超過閾值後，在 Business Data Platform Console/TUI 或外掛工具中能檢索到 archive/memory。
 
 ### 7.5 安裝外掛
 
@@ -686,7 +686,7 @@ openclaw config get plugins.slots.contextEngine
 /add-resource ./README.md --to viking://resources/openviking-readme --wait
 /add-resource https://example.com/spec.html --parent viking://resources/project-docs --wait
 /add-skill ./skills/install-openviking-memory --wait
-/ov-search "OpenViking install" --uri viking://resources/openviking-readme
+/ov-search "Business Data Platform install" --uri viking://resources/openviking-readme
 /ov-search "memory install skill" --uri viking://user/skills
 ```
 
@@ -698,9 +698,9 @@ openclaw config get plugins.slots.contextEngine
 | “你還記得我之前說過什麼嗎” | `memory_recall` |
 | “忘掉那條記憶” | `memory_forget` |
 | “把這個文件/目錄/URL/倉庫加入知識庫” | 手動 `/add-resource`；只有顯式開啟 `enableAddResourceTool=true` 時才使用 `add_resource` |
-| “把這個 skill 匯入 OpenViking” | `add_skill` |
-| “在 OpenViking 裡搜一下資源/技能” | `ov_search` |
-| “讀取這個 OpenViking 命中 URI 的完整內容” | `ov_read` |
+| “把這個 skill 匯入 Business Data Platform” | `add_skill` |
+| “在 Business Data Platform 裡搜一下資源/技能” | `ov_search` |
+| “讀取這個 Business Data Platform 命中 URI 的完整內容” | `ov_read` |
 | “summary 裡沒有細節，回查歷史” | `ov_archive_search` / `ov_archive_expand` |
 | “這個 tool result 被截斷了，讀取完整內容” | `openviking_tool_result_read` / `search` / `list` |
 
@@ -711,15 +711,15 @@ openclaw config get plugins.slots.contextEngine
 | 引數 | 預設值 | 說明 |
 | --- | --- | --- |
 | `mode` | `remote` | 相容欄位；當前僅支援 remote |
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking HTTP 地址 |
-| `apiKey` | 環境變數或空 | OpenViking API Key |
+| `baseUrl` | `http://127.0.0.1:1933` | Business Data Platform HTTP 地址 |
+| `apiKey` | 環境變數或空 | Business Data Platform API Key |
 | `accountId` | 空 | Root key/trusted 部署需要 |
 | `userId` | 空 | Root key/trusted 部署需要 |
 | `peer_role` | `none` | 記憶歸屬：`none`、`assistant` 或 `sender`；舊值 `person` 作為 `sender` 的別名相容 |
 | `peer_prefix` | 空 | Peer 路由字首；非空時形成 `<prefix>_<ctx.agentId>` |
 | `targetUri` | `viking://user/memories` | 預設 memory search 目標 |
 | `timeoutMs` | `15000` | HTTP 請求超時 |
-| `autoCapture` | `true` | 是否每輪後寫入 OpenViking session |
+| `autoCapture` | `true` | 是否每輪後寫入 Business Data Platform session |
 | `captureMode` | `semantic` | `semantic` 全量候選；`keyword` 先過觸發詞 |
 | `captureMaxLength` | `24000` | 自動捕獲文本最大長度 |
 | `autoRecall` | `true` | 是否回覆前自動召回 |
@@ -731,7 +731,7 @@ openclaw config get plugins.slots.contextEngine
 | `recallMaxInjectedChars` | `4000` | 注入字元預算 |
 | `commitTokenThresholdRatio` | `0.5` | `pending_tokens` 達到「模型上下文視窗 × 該比例」觸發 afterTurn commit（0-1，例 0.5=50%）；設 0 可每輪 commit |
 | `commitKeepRecentCount` | `10` | afterTurn commit 後保留最近訊息數；compact 固定 0 |
-| `bypassSessionPatterns` | `[]` | 匹配 sessionKey/sessionId 時完全繞過 OpenViking |
+| `bypassSessionPatterns` | `[]` | 匹配 sessionKey/sessionId 時完全繞過 Business Data Platform |
 | `emitStandardDiagnostics` | `false` | 輸出 `openviking: diag {...}` 結構化診斷日誌 |
 | `logFindRequests` | `false` | 輸出 routing/search/session 寫入日誌；也可用 `OPENVIKING_LOG_ROUTING=1` 或 `OPENVIKING_DEBUG=1` |
 | `traceRecall` | `false` | Recall trace 總開關；不開啟時不記錄、不建目錄、查詢只返回未啟用提示 |
@@ -754,10 +754,10 @@ openclaw config get plugins.slots.contextEngine
 | 值 | 歸因與路徑 | 案例 |
 | --- | --- | --- |
 | `none`（預設） | user / assistant message 都不寫 `peer_id`；新增長期記憶位於 `viking://user/<user_id>/memories/...` | 通用場景，所有對話共享 user-level 記憶 |
-| `assistant` | assistant message 寫入 `peer_id=<assistant_id>`；助手歸因記憶位於 `.../peers/<assistant_id>/memories/...` | **人是 OpenViking user**：Alice 使用 `main` 和 `research` 兩個助手，分別使用 `.../peers/main/...` 和 `.../peers/research/...` |
-| `sender` | user message 寫入 `peer_id=<sender_id>`；傳送者歸因記憶位於 `.../peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：`support-agent` 面向 `customer-42` 和 `customer-99`，將兩人的 peer 記憶分開 |
+| `assistant` | assistant message 寫入 `peer_id=<assistant_id>`；助手歸因記憶位於 `.../peers/<assistant_id>/memories/...` | **人是 Business Data Platform user**：Alice 使用 `main` 和 `research` 兩個助手，分別使用 `.../peers/main/...` 和 `.../peers/research/...` |
+| `sender` | user message 寫入 `peer_id=<sender_id>`；傳送者歸因記憶位於 `.../peers/<sender_id>/memories/...` | **Agent 是 Business Data Platform user**：`support-agent` 面向 `customer-42` 和 `customer-99`，將兩人的 peer 記憶分開 |
 
-`person` 是 `sender` 的舊別名；新配置統一使用 `sender`。OpenViking 會為每個使用者初始化受管的 `peers/` 容器，`none` 只表示不使用具體的 `peers/<peer_id>/memories` 子樹。在 peer 模式下，共享／自身記憶仍位於使用者根記憶目錄，召回範圍是共享記憶 + 當前 peer 記憶，不包含其他 peer。切換 scope 不會搬遷已有記憶。Session 路徑不受影響，始終位於 `viking://user/<user_id>/sessions/<session_id>`。
+`person` 是 `sender` 的舊別名；新配置統一使用 `sender`。Business Data Platform 會為每個使用者初始化受管的 `peers/` 容器，`none` 只表示不使用具體的 `peers/<peer_id>/memories` 子樹。在 peer 模式下，共享／自身記憶仍位於使用者根記憶目錄，召回範圍是共享記憶 + 當前 peer 記憶，不包含其他 peer。切換 scope 不會搬遷已有記憶。Session 路徑不受影響，始終位於 `viking://user/<user_id>/sessions/<session_id>`。
 
 ### 9.1 搜尋 / 召回相關配置總表
 
@@ -769,7 +769,7 @@ openclaw config get plugins.slots.contextEngine
 
 | 配置項 | 作用範圍 | 預設值 | 可否寫入外掛配置檔案 | 可否用環境變數 | 環境變數名 | 說明 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `baseUrl` | 所有搜尋/召回請求 | `http://127.0.0.1:1933` | 是 | 是 | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | OpenViking 服務地址；所有 context search、`find/read/grep/session` 都依賴它：`config.ts:139` |
+| `baseUrl` | 所有搜尋/召回請求 | `http://127.0.0.1:1933` | 是 | 是 | `OPENVIKING_BASE_URL` / `OPENVIKING_URL` | Business Data Platform 服務地址；所有 context search、`find/read/grep/session` 都依賴它：`config.ts:139` |
 | `apiKey` | 所有搜尋/召回請求 | 空 | 是 | 是 | `OPENVIKING_API_KEY` | HTTP 認證 key；不配通常只能訪問關閉認證的本地服務：`config.ts:202` |
 | `accountId` | 多租戶搜尋路由 | 空 | 是 | 是 | `OPENVIKING_ACCOUNT_ID` | Root key / trusted 部署下顯式指定 account，影響搜尋命中空間：`config.ts:212` |
 | `userId` | 多租戶搜尋路由 | 空 | 是 | 是 | `OPENVIKING_USER_ID` | Root key / trusted 部署下顯式指定 user，影響 user memory 檢索範圍：`config.ts:216` |
@@ -789,7 +789,7 @@ openclaw config get plugins.slots.contextEngine
 | `recallMaxContentChars` | 舊版單條截斷相容項 | `5000` | 是 | 否 | — | 已廢棄；當前自動召回不再裁剪單條 memory 內容：`config.ts:290` |
 | `captureMode` | 間接影響可搜尋記憶的入庫方式 | `semantic` | 是 | 否 | — | 雖然不是“搜尋引數”，但它決定哪些使用者內容會先被寫入 session 並進入後續可檢索空間：`config.ts:203`、`config.ts:278` |
 | `captureMaxLength` | 間接影響可搜尋記憶來源長度 | `24000` | 是 | 否 | — | 超過該長度的使用者文本不會完整進入自動捕獲鏈路：`config.ts:279` |
-| `bypassSessionPatterns` | 繞過搜尋/召回 | `[]` | 是 | 否 | — | 命中指定 sessionId / sessionKey 時，外掛整條 OpenViking 鏈路直接跳過，包括 recall、store、archive search：`config.ts:311` |
+| `bypassSessionPatterns` | 繞過搜尋/召回 | `[]` | 是 | 否 | — | 命中指定 sessionId / sessionKey 時，外掛整條 Business Data Platform 鏈路直接跳過，包括 recall、store、archive search：`config.ts:311` |
 | `logFindRequests` | 搜尋除錯日誌 | `false` | 是 | 是 | `OPENVIKING_LOG_ROUTING` / `OPENVIKING_DEBUG` | 開啟後會記錄 context search、`find`、session 寫入和 commit 路由資訊，便於排查檢索空間錯誤。 |
 | `enabledTools` | Agent 可見工具白名單 | `default` 工具組 | 是 | 否 | — | 支援工具名或分組：`default`、`all`、`memory`、`resource_query`、`import`、`recall_trace`、`archive`、`tool_result`。例如只保留資源查詢：`["resource_query"]`。`add_resource` 即使被選中仍需 `enableAddResourceTool=true`：`config.ts:119`、`index.ts:688` |
 | `disabledTools` | Agent 可見工具黑名單 | `[]`（`add_resource` 預設仍停用） | 是 | 否 | — | 在 `enabledTools` 之後應用，支援同樣的工具名或分組。例如保留預設工具但隱藏記憶相關工具：`["memory"]`，會停用 `memory_recall` / `memory_store` / `memory_forget`：`config.ts:136`、`config.ts:268` |
@@ -800,9 +800,9 @@ openclaw config get plugins.slots.contextEngine
 
 | 環境變數 | 對應配置項 | 作用 |
 | --- | --- | --- |
-| `OPENVIKING_BASE_URL` | `baseUrl` | 指定 OpenViking 服務地址 |
+| `OPENVIKING_BASE_URL` | `baseUrl` | 指定 Business Data Platform 服務地址 |
 | `OPENVIKING_URL` | `baseUrl` | `baseUrl` 的相容別名 |
-| `OPENVIKING_API_KEY` | `apiKey` | 指定 OpenViking API key |
+| `OPENVIKING_API_KEY` | `apiKey` | 指定 Business Data Platform API key |
 | `OPENVIKING_ACCOUNT_ID` | `accountId` | 指定租戶 account |
 | `OPENVIKING_USER_ID` | `userId` | 指定租戶 user |
 | `OPENVIKING_PEER_ROLE` | `peer_role` | 安裝指令碼/setup 寫入的記憶歸屬（`none` / `assistant` / `sender`；相容舊值 `person`） |
@@ -964,7 +964,7 @@ openviking: diag {"stage":"compact_result"...}
 
 ### 10.4 對話時觀測召回與文件命中
 
-如果需要在與 OpenClaw 對話時確認“本輪到底從 OpenViking 召回了哪些資料、用了哪些文件、對應路徑是什麼”，推薦按以下順序排查。
+如果需要在與 OpenClaw 對話時確認“本輪到底從 Business Data Platform 召回了哪些資料、用了哪些文件、對應路徑是什麼”，推薦按以下順序排查。
 
 #### 10.4.0 啟用 recall trace
 
@@ -1074,7 +1074,7 @@ fi
 #### 10.4.1 先開啟外掛側可觀測配置
 
 ```bash
-# 打印 OpenViking search/session 路由、target_uri、query、agent/account/user header 等
+# 打印 Business Data Platform search/session 路由、target_uri、query、agent/account/user header 等
 openclaw config set plugins.entries.openviking.config.logFindRequests true
 
 # 列印 assemble/afterTurn/compact 標準診斷
@@ -1106,19 +1106,19 @@ OPENVIKING_DEBUG=1 openclaw gateway restart
 
 | 日誌/欄位 | 含義 | 關鍵路徑 |
 | --- | --- | --- |
-| `openviking: context search POST .../api/v1/search/search {...}` | 自動召回向 OpenViking 發起服務端組裝檢索 | `purpose` / `quotas` / `session_id` / `context_type` / `query_expansion` / `max_tokens` / `peer_scope` / actor 與租戶路由 |
+| `openviking: context search POST .../api/v1/search/search {...}` | 自動召回向 Business Data Platform 發起服務端組裝檢索 | `purpose` / `quotas` / `session_id` / `context_type` / `query_expansion` / `max_tokens` / `peer_scope` / actor 與租戶路由 |
 | `openviking: find POST .../api/v1/search/find {...}` | 顯式 recall/search 工具發起底層語義檢索 | `target_uri` / `target_uri_input` / `query` / `X_OpenViking_Agent` |
 | `openviking: injecting N memories ...` | 外掛決定向本輪 prompt 注入 N 條召回內容 | `N`、注入字元數、估算 token |
 | `openviking: inject-detail {...}` | 本輪實際注入模型的服務端組裝條目摘要 | `entries[].uri`、`category`、`score`、`detail` |
 | `openviking: diag {"stage":"assemble_result"...}` | assemble 階段是否發生自動召回 | `phase=transform_context`、`autoRecallMemoryCount` |
 
-其中 `inject-detail` 是排查“本輪模型實際看到了哪些 OpenViking 召回內容”的首選入口。它會列出每條被注入內容的 `uri`，例如：
+其中 `inject-detail` 是排查“本輪模型實際看到了哪些 Business Data Platform 召回內容”的首選入口。它會列出每條被注入內容的 `uri`，例如：
 
 ```text
 openviking: inject-detail {"count":2,"memories":[{"uri":"viking://user/default/memories/preferences/...","category":"preferences","abstract":"...","score":0.82,"is_leaf":true},{"uri":"viking://resources/project-docs/api.md#chunk-3","category":"resource","abstract":"...","score":0.71,"is_leaf":true}]}
 ```
 
-注意：自動注入到模型輸入裡的 `<relevant-memories>` 塊預設只包含類別和內容，不直接暴露 URI；URI/路徑主要從外掛日誌、`memory_recall` / `ov_search` 工具 `details`、或 OpenViking API 返回中獲取。
+注意：自動注入到模型輸入裡的 `<relevant-memories>` 塊預設只包含類別和內容，不直接暴露 URI；URI/路徑主要從外掛日誌、`memory_recall` / `ov_search` 工具 `details`、或 Business Data Platform API 返回中獲取。
 
 #### 10.4.3 用 OpenClaw 工具顯式復現召回
 
@@ -1137,11 +1137,11 @@ ov_search(query="使用者問題關鍵詞", uri="viking://user/skills", limit=10
 
 `ov_search` 的文本結果會顯示 `type`、`uri`、`level`、`score` 和摘要；工具 `details` 裡也會保留原始 `resources[]` / `skills[]` / `memories[]` 陣列。
 
-注意：這些 `uri` 是 OpenViking 虛擬 URI，不是本地檔案路徑。需要完整內容時，讓 Agent 呼叫 `ov_read(uri="viking://...")`，不要把 `viking://...` 或歷史相容展示裡的 `openviking://...` 當作本地路徑交給檔案讀取工具。
+注意：這些 `uri` 是 Business Data Platform 虛擬 URI，不是本地檔案路徑。需要完整內容時，讓 Agent 呼叫 `ov_read(uri="viking://...")`，不要把 `viking://...` 或歷史相容展示裡的 `openviking://...` 當作本地路徑交給檔案讀取工具。
 
-#### 10.4.4 直接呼叫 OpenViking API 獲取路徑和內容
+#### 10.4.4 直接呼叫 Business Data Platform API 獲取路徑和內容
 
-外掛呼叫 OpenViking 時統一攜帶認證和路由 header。手工排查時也要保持一致：
+外掛呼叫 Business Data Platform 時統一攜帶認證和路由 header。手工排查時也要保持一致：
 
 ```bash
 export OPENVIKING_BASE_URL="http://127.0.0.1:1933"
@@ -1205,9 +1205,9 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
   "${headers[@]}"
 ```
 
-#### 10.4.5 OpenViking API 速查表
+#### 10.4.5 Business Data Platform API 速查表
 
-完整官方 API 清單、引數說明和外掛對映見 [6.2 OpenViking 官方 API 完整清單與外掛對映](#62-openviking-官方-api-完整清單與外掛對映)。本節只保留排查“召回了哪些資料 / 用了哪些文件”時最常用的呼叫。
+完整官方 API 清單、引數說明和外掛對映見 [6.2 Business Data Platform 官方 API 完整清單與外掛對映](#62-openviking-官方-api-完整清單與外掛對映)。本節只保留排查“召回了哪些資料 / 用了哪些文件”時最常用的呼叫。
 
 | 目標 | API | 外掛入口 | 用途 |
 | --- | --- | --- | --- |
@@ -1237,7 +1237,7 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
 - 如果自動召回只看到了 `context search POST` 但沒有 `injecting` / `inject-detail`：說明請求已發出，但服務端可能沒有返回可注入內容，或發生了超時/檢索錯誤；結合 warning、trace 和返回 stats 排查。
 - 如果未顯式配置 `recallTargetTypes`，自動召回預設只查當前使用者及 actor scope 內的 memory，不會把 `viking://resources` 文件自動注入；resource-only 用 `recallTargetTypes=["resource"]`，預設記憶 + resources 用 `recallResources=true` 或 `recallTargetTypes=["user","agent","resource"]`。
 - 如果沒查到 recall trace，先檢查 `traceRecall=true` 是否已配置並重啟 Gateway；`recallTargetTypes` / `recallResources` 不負責啟用 trace。
-- 當前外掛沒有單獨生成“模型最終引用/採納哪些文件”的 citation 檔案；最可靠的依據是本輪注入內容、工具呼叫結果、OpenViking API 返回和模型回覆本身。
+- 當前外掛沒有單獨生成“模型最終引用/採納哪些文件”的 citation 檔案；最可靠的依據是本輪注入內容、工具呼叫結果、Business Data Platform API 返回和模型回覆本身。
 
 ### 10.5 常見問題定位
 
@@ -1245,16 +1245,16 @@ curl -sS "$OPENVIKING_BASE_URL/api/v1/content/read?uri=$(python3 -c 'import urll
 | --- | --- | --- |
 | 外掛未生效 | `plugins.slots.contextEngine` | slot 沒有指向 `openviking` 或被其他外掛覆蓋 |
 | `setup` 成功但 gateway 中沒呼叫外掛 | `openclaw gateway restart` | Gateway 未重啟，仍用舊外掛狀態 |
-| `status` 服務不可達 | `baseUrl`、`curl /health` | OpenViking 未啟動、埠/網路錯誤 |
+| `status` 服務不可達 | `baseUrl`、`curl /health` | Business Data Platform 未啟動、埠/網路錯誤 |
 | Root key 報 tenant 錯誤 | `accountId/userId` | Root key 需要顯式租戶上下文 |
 | 不同 peer 記憶串用 | `logFindRequests` 中的 `X-OpenViking-Actor-Peer` | `peer_prefix` 或 session agent 解析不符合預期 |
 | 搜不到剛儲存的記憶 | 服務端 task 狀態和日誌 | afterTurn commit 是非同步 Phase 2，記憶抽取可能還未完成或服務端失敗 |
 | summary 有但細節沒有 | `ov_archive_search` / `ov_archive_expand` | Working Memory 是有損摘要，需要 archive 回查 |
-| auto recall 沒注入 | `autoRecall`、precheck、閾值、預算 | OpenViking 不可達、query 太短、閾值太高、記憶超預算 |
+| auto recall 沒注入 | `autoRecall`、precheck、閾值、預算 | Business Data Platform 不可達、query 太短、閾值太高、記憶超預算 |
 | 工具結果缺完整內容 | tool result ref | 用 `openviking_tool_result_read`，不要反覆讀截斷 preview |
 | 本地目錄匯入失敗 | 路徑、許可權、zip 打包日誌 | 目錄會先 zip 再 temp upload，需本地可讀 |
 
-### 10.6 OpenViking 服務側排查
+### 10.6 Business Data Platform 服務側排查
 
 ```bash
 # 服務端日誌，路徑以實際部署為準
@@ -1311,7 +1311,7 @@ openclaw config get plugins.slots.contextEngine
 python health_check_tools/ov-healthcheck.py
 ```
 
-該指令碼用於注入真實對話，並在 OpenViking 側驗證會話捕獲、提交、歸檔和記憶抽取。說明見 `health_check_tools/HEALTHCHECK-ZH.md`。
+該指令碼用於注入真實對話，並在 Business Data Platform 側驗證會話捕獲、提交、歸檔和記憶抽取。說明見 `health_check_tools/HEALTHCHECK-ZH.md`。
 
 ### 11.4 手工端到端驗證建議
 
@@ -1321,14 +1321,14 @@ python health_check_tools/ov-healthcheck.py
 4. 等待 afterTurn 或手動觸發 `/compact`。
 5. 新開一輪問“我之前偏好什麼語言回覆技術文件？”。
 6. 觀察最新 user message 是否注入 `<relevant-memories>`，或用 `memory_recall` 顯式查。
-7. 用 OpenViking Console/TUI 檢查 `viking://user/.../memories` 是否產生 leaf memory。
+7. 用 Business Data Platform Console/TUI 檢查 `viking://user/.../memories` 是否產生 leaf memory。
 8. 對長工具輸出場景，確認 preview 中有 `viking://session/.../tool-results/...`，再用 tool-result 工具讀取完整內容。
 
 ---
 
 ## 12. 注意事項
 
-1. **外掛只支援 remote 模式**：舊 local mode 會被遷移提示，不會啟動本地 OpenViking 程序。
+1. **外掛只支援 remote 模式**：舊 local mode 會被遷移提示，不會啟動本地 Business Data Platform 程序。
 2. **必須重啟 Gateway**：安裝或配置後要 `openclaw gateway restart` 才能生效。
 3. **不要裝錯包**：`@openviking/openclaw-plugin` 是外掛；`clawhub install openviking` 是 AgentSkill。
 4. **API Key 不進日誌**：外掛路由日誌不會列印 key，但仍應避免把 key 寫入公開文件或命令歷史。
@@ -1337,7 +1337,7 @@ python health_check_tools/ov-healthcheck.py
 7. **afterTurn commit 是非同步抽取**：立即返回不代表長期記憶已可檢索；看 task 或服務端日誌。
 8. **compact 是同步邊界**：需要明確壓縮和抽取完成時用 compact，但它會阻塞等待服務端 Phase 2。
 9. **記憶注入有預算**：`recallMaxInjectedChars` 會跳過放不下的完整記憶，而不是截斷。
-10. **bypassSessionPatterns 會完全繞過 OpenViking**：匹配後自動捕獲、召回、工具都會跳過。
+10. **bypassSessionPatterns 會完全繞過 Business Data Platform**：匹配後自動捕獲、召回、工具都會跳過。
 11. **tool result 工具限制當前 session**：外掛拒絕讀取其他 session 的外接結果。
 12. **本地資源匯入先上傳**：本地檔案/目錄通過 temp upload，不把本地路徑直接交給服務端；目錄會 zip，注意許可權與體積。
 
@@ -1351,7 +1351,7 @@ python health_check_tools/ov-healthcheck.py
 2. `package.json`：瞭解構建、OpenClaw 入口、相容版本。
 3. `commands/setup.ts`：瞭解使用者安裝配置如何寫入 OpenClaw config。
 4. `index.ts`：瞭解外掛註冊、工具、hook 和 service。
-5. `client.ts`：瞭解 OpenViking API 封裝和 header/URI 處理。
+5. `client.ts`：瞭解 Business Data Platform API 封裝和 header/URI 處理。
 6. `context-engine.ts`：理解 assemble/afterTurn/compact 主鏈路。
 7. `auto-recall.ts` + `memory-ranking.ts`：理解召回注入和排序。
 8. `text-utils.ts` + `session-transcript-repair.ts`：理解訊息清洗與 transcript 結構修復。
@@ -1361,7 +1361,7 @@ python health_check_tools/ov-healthcheck.py
 
 ## 14. 快速排障 Checklist
 
-- [ ] OpenViking Server `GET /health` 可達。
+- [ ] Business Data Platform Server `GET /health` 可達。
 - [ ] `openclaw openviking status --json` 中 `configured=true`。
 - [ ] `slotActive=true`。
 - [ ] Gateway 已重啟。
@@ -1551,7 +1551,7 @@ TOS 物件不可變策略：release artifact、manifest、checksums、release no
 3. **ppe**：複用相同 release notes 釋出到 ppe，驗證安裝、setup、gateway、status、一次真實召回。
 4. **prod dry-run**：確認 prod 穩定版本、manifest 和最新 Git hash。
 5. **prod 釋出**：工作區乾淨後執行 `scripts/release-to-tos.sh --env prod --stable --notes ./release-notes.md`。
-6. **線上驗證**：安裝 prod latest 或指定版本，檢查 `openclaw openviking status --json`、slot、OpenViking `/health`、一次 `memory_recall` 或 `ov_search`。
+6. **線上驗證**：安裝 prod latest 或指定版本，檢查 `openclaw openviking status --json`、slot、Business Data Platform `/health`、一次 `memory_recall` 或 `ov_search`。
 
 回滾方式：
 
@@ -1607,7 +1607,7 @@ openclaw gateway restart
 | TOS 上傳拒絕覆蓋 | 同版本 release 物件已存在且不可變 | 換新版本；不要覆蓋已釋出物件 |
 | 安裝包校驗失敗 | 下載的 `openviking.tgz` SHA256 與 manifest 不一致 | 停止安裝，檢查 TOS 物件和 CDN/代理快取 |
 | OpenClaw 載入失敗並提示缺依賴 | 包內缺執行時依賴 | 重新運行當前 `build.sh`，確認包內有 `node_modules/@sinclair/typebox` |
-| status 不健康 | OpenViking Server 不可達或 key/租戶錯誤 | 檢查 `baseUrl`、`apiKey`、`accountId`、`userId`、服務端 `/health` |
+| status 不健康 | Business Data Platform Server 不可達或 key/租戶錯誤 | 檢查 `baseUrl`、`apiKey`、`accountId`、`userId`、服務端 `/health` |
 
 ---
 

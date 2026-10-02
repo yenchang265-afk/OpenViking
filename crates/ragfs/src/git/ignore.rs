@@ -1,6 +1,6 @@
 //! Account-level `.ovgitignore` parsing and matching.
 //!
-//! The syntax is a documented OpenViking subset of root `.gitignore` rules.
+//! The syntax is a documented Business Data Platform subset of root `.gitignore` rules.
 //! It intentionally rejects negation so callers do not assume full Git index
 //! semantics.
 

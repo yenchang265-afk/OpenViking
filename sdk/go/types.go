@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Config configures an HTTP OpenViking client.
+// Config configures an HTTP Business Data Platform client.
 type Config struct {
 	BaseURL     string
 	APIKey      string
@@ -437,7 +437,7 @@ type ExperienceOutcomeOptions struct {
 	EndDate   string
 }
 
-// ResolveAssetsOptions controls OpenViking Assets manifest resolution.
+// ResolveAssetsOptions controls Business Data Platform Assets manifest resolution.
 type ResolveAssetsOptions struct {
 	CatalogYAML   string
 	ManifestLabel string

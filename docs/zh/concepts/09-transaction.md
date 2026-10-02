@@ -1,10 +1,10 @@
 # 路徑鎖與崩潰恢復
 
-OpenViking 通過**路徑鎖**和**持久化佇列恢復**兩個簡單原語保護核心寫操作（`rm`、`mv`、`add_resource`、`session.commit`）的一致性，協調併發寫入，並在程序重啟後繼續處理已入隊的會話任務。路徑鎖和佇列恢復不構成跨 VikingFS、VectorDB、QueueManager 的原子事務。
+Business Data Platform 通過**路徑鎖**和**持久化佇列恢復**兩個簡單原語保護核心寫操作（`rm`、`mv`、`add_resource`、`session.commit`）的一致性，協調併發寫入，並在程序重啟後繼續處理已入隊的會話任務。路徑鎖和佇列恢復不構成跨 VikingFS、VectorDB、QueueManager 的原子事務。
 
 ## 設計哲學
 
-OpenViking 是上下文資料庫，FS 是源資料，VectorDB 是派生索引。索引丟了可從源資料重建，源資料丟失不可恢復。因此：
+Business Data Platform 是上下文資料庫，FS 是源資料，VectorDB 是派生索引。索引丟了可從源資料重建，源資料丟失不可恢復。因此：
 
 > **寧可搜不到，不要搜到壞結果。**
 
@@ -480,7 +480,7 @@ Redis 配置：
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory` 或 `cache` | `filesystem` |
-| `namespace` | str 或 null | `provider=cache` 時必填，用於標識一個 OpenViking 部署 | `null` |
+| `namespace` | str 或 null | `provider=cache` 時必填，用於標識一個 Business Data Platform 部署 | `null` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數 | `30.0` |
 
 相容舊寫法：

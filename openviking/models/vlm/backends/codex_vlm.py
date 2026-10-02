@@ -10,7 +10,7 @@ subscription-based endpoints process multimodal (vision/VLM) requests primarily 
 the auxiliary Responses API (`client.responses`).
 
 The complexity in this file arises from the need to shim/adapt standard Chat Completions
-requests (used by OpenViking) into Responses API requests. This involves:
+requests (used by Business Data Platform) into Responses API requests. This involves:
 1. Converting `text` and `image_url` parts into `input_text` and `input_image`.
 2. Adapting tool calls and schemas.
 3. Translating raw `client.responses.create(stream=True)` events back into a

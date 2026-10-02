@@ -61,18 +61,18 @@ const mergeExtra = (
   const protectedFields = new Set(protectedKeys);
   for (const [key, value] of Object.entries(extra ?? {})) {
     if (key in body || protectedFields.has(key))
-      throw new TypeError(`OpenViking: extra cannot override ${key}`);
+      throw new TypeError(`Business Data Platform: extra cannot override ${key}`);
     if (value !== undefined && value !== null) body[key] = value;
   }
   return body;
 };
 const pathPart = (value: string): string => encodeURIComponent(value);
 
-/** Normalize a short OpenViking URI to the canonical `viking://` form. */
+/** Normalize a short Business Data Platform URI to the canonical `viking://` form. */
 export const normalizeURI = (uri: string): string =>
   uri.startsWith("viking://") ? uri : `viking://${uri.replace(/^\/+/, "")}`;
 
-/** HTTP client for an existing OpenViking server. */
+/** HTTP client for an existing Business Data Platform server. */
 export class OpenVikingClient {
   readonly baseUrl: string;
   private readonly transport: OpenVikingTransport;
@@ -136,7 +136,7 @@ export class OpenVikingClient {
     options: AddResourceOptions = {},
   ): Promise<JsonObject> {
     if (options.to && options.parent)
-      throw new TypeError("OpenViking: cannot specify both to and parent");
+      throw new TypeError("Business Data Platform: cannot specify both to and parent");
     const body: JsonObject = compact({
       to: options.to,
       parent: options.parent,
@@ -319,7 +319,7 @@ export class OpenVikingClient {
     changes: UpdateWatchOptions,
   ): Promise<JsonObject> {
     if (!ref.taskId && !ref.toUri) {
-      throw new TypeError("OpenViking: watch reference is required");
+      throw new TypeError("Business Data Platform: watch reference is required");
     }
     return this.request(
       "PATCH",
@@ -340,7 +340,7 @@ export class OpenVikingClient {
   /** Delete a watch. */
   deleteWatch(ref: { taskId?: string; toUri?: string }): Promise<JsonObject> {
     if (!ref.taskId && !ref.toUri)
-      throw new TypeError("OpenViking: watch reference is required");
+      throw new TypeError("Business Data Platform: watch reference is required");
     return this.request(
       "DELETE",
       ref.taskId
@@ -352,7 +352,7 @@ export class OpenVikingClient {
   /** Trigger a watch immediately. */
   triggerWatch(ref: { taskId?: string; toUri?: string }): Promise<JsonObject> {
     if (!ref.taskId && !ref.toUri)
-      throw new TypeError("OpenViking: watch reference is required");
+      throw new TypeError("Business Data Platform: watch reference is required");
     return this.request(
       "POST",
       ref.taskId
@@ -793,7 +793,7 @@ export class OpenVikingClient {
   /** Append one message to a session. */
   addMessage(sessionId: string, message: Message): Promise<JsonObject> {
     if (message.content === undefined && !message.parts?.length) {
-      throw new TypeError("OpenViking: message requires content or parts");
+      throw new TypeError("Business Data Platform: message requires content or parts");
     }
     const content = message.parts?.length ? undefined : message.content;
     return this.request(
@@ -840,7 +840,7 @@ export class OpenVikingClient {
             messages: messages.map((message) => {
               if (message.content === undefined && !message.parts?.length) {
                 throw new TypeError(
-                  "OpenViking: each message requires content or parts",
+                  "Business Data Platform: each message requires content or parts",
                 );
               }
               const parts = message.parts?.length ? message.parts : undefined;
@@ -943,7 +943,7 @@ export class OpenVikingClient {
     const local = await nodePathToBlob(source, { allowDirectory: false });
     if (!local)
       throw new TypeError(
-        "OpenViking: importOVPack requires an existing Node.js local file",
+        "Business Data Platform: importOVPack requires an existing Node.js local file",
       );
     const result = await this.request<{ uri: string }>(
       "POST",
@@ -967,7 +967,7 @@ export class OpenVikingClient {
     const local = await nodePathToBlob(source, { allowDirectory: false });
     if (!local)
       throw new TypeError(
-        "OpenViking: restoreOVPack requires an existing Node.js local file",
+        "Business Data Platform: restoreOVPack requires an existing Node.js local file",
       );
     const result = await this.request<{ uri: string }>(
       "POST",
@@ -1347,7 +1347,7 @@ export class OpenVikingClient {
       },
     });
   }
-  /** Parse and validate an OpenViking Assets manifest. */
+  /** Parse and validate a Business Data Platform Assets manifest. */
   resolveOpenVikingAssets(
     manifestYaml: string,
     options: ResolveAssetsOptions = {},

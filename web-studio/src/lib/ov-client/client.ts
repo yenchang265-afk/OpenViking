@@ -214,7 +214,7 @@ export function createOvClient(options: OvClientOptions = {}): OvClientAdapter {
 
       if (isEnvelopeError(response.data)) {
         const { error } = response.data
-        const message = error.message || 'OpenViking request failed'
+        const message = error.message || 'Business Data Platform request failed'
 
         throw new OvClientError({
           code: error.code || 'ERROR',

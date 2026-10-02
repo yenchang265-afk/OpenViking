@@ -1,6 +1,6 @@
 # VikingBot Installation and Configuration
 
-VikingBot is the multi-channel AI Agent built into OpenViking. It can start together with OpenViking, run independently for local debugging, or operate as a long-running Gateway connected to chat platforms.
+VikingBot is the multi-channel AI Agent built into Business Data Platform. It can start together with Business Data Platform, run independently for local debugging, or operate as a long-running Gateway connected to chat platforms.
 
 This guide covers installation and configuration for the three main usage scenarios. For complete documentation about Agent tools, chat channels, and architecture, see the [VikingBot documentation](https://github.com/volcengine/OpenViking/blob/main/bot/README.md).
 
@@ -42,7 +42,7 @@ vikingbot --version
 
 ```bash
 git clone https://github.com/volcengine/OpenViking.git
-cd OpenViking
+cd Business Data Platform
 
 uv venv --python 3.11
 source .venv/bin/activate
@@ -57,33 +57,33 @@ On Windows, activate the virtual environment with:
 
 ## Configuration File
 
-VikingBot and OpenViking share `~/.openviking/ov.conf`. If the file is stored elsewhere, set:
+VikingBot and Business Data Platform share `~/.openviking/ov.conf`. If the file is stored elsewhere, set:
 
 ```bash
 export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 ```
 
-Restart VikingBot or OpenViking Server after changing the configuration.
+Restart VikingBot or Business Data Platform Server after changing the configuration.
 
 ## Choose a Usage Scenario
 
-| Scenario | Best for | Start command | OpenViking |
+| Scenario | Best for | Start command | Business Data Platform |
 |----------|----------|---------------|------------|
-| **A. Start OpenViking and the Bot together** | Full experience with resources, memory, and the Agent | `openviking-server --with-bot` | Uses the Server being started |
+| **A. Start Business Data Platform and the Bot together** | Full experience with resources, memory, and the Agent | `openviking-server --with-bot` | Uses the Server being started |
 | **B. Debug the Agent locally** | Trying the Bot or developing Tools and Skills | `vikingbot chat` | Optional |
 | **C. Use the Gateway as a unified entry point** | Long-running service, remote access, or chat platforms | `vikingbot gateway` | Connects to an existing Server or runs standalone |
 
 The three scenarios are different runtime entry points and can share the same `ov.conf`.
 
-## Scenario A: Start OpenViking and the Bot Together
+## Scenario A: Start Business Data Platform and the Bot Together
 
-This is the recommended option for a complete local experience. OpenViking Server and VikingBot Gateway start together:
+This is the recommended option for a complete local experience. Business Data Platform Server and VikingBot Gateway start together:
 
 ```text
-ov chat → OpenViking Server → VikingBot Gateway → Agent
+ov chat → Business Data Platform Server → VikingBot Gateway → Agent
 ```
 
-### 1. Configure OpenViking
+### 1. Configure Business Data Platform
 
 Run the initialization wizard, then validate the model and storage configuration:
 
@@ -92,7 +92,7 @@ openviking-server init
 openviking-server doctor
 ```
 
-See the [OpenViking Configuration Guide](01-configuration.md) for details. VikingBot inherits the root-level `vlm` as its Agent model by default, so you normally do not need to configure `bot.agents` again.
+See the [Business Data Platform Configuration Guide](01-configuration.md) for details. VikingBot inherits the root-level `vlm` as its Agent model by default, so you normally do not need to configure `bot.agents` again.
 
 ### 2. Start Both Services
 
@@ -100,7 +100,7 @@ See the [OpenViking Configuration Guide](01-configuration.md) for details. Vikin
 openviking-server --with-bot
 ```
 
-In this mode, the Bot always connects to the OpenViking Server being started and does not use `bot.ov_server.server_url` to connect to another service.
+In this mode, the Bot always connects to the Business Data Platform Server being started and does not use `bot.ov_server.server_url` to connect to another service.
 
 ### 3. Configure and Use the `ov` CLI
 
@@ -111,7 +111,7 @@ ov chat -m "Remember that I prefer concise answers"
 ov find "my response preference"
 ```
 
-The URL configured by `ov config` should point to the current OpenViking Server, which defaults to `http://127.0.0.1:1933`. If authentication is enabled, also configure the current caller's User/Admin API Key.
+The URL configured by `ov config` should point to the current Business Data Platform Server, which defaults to `http://127.0.0.1:1933`. If authentication is enabled, also configure the current caller's User/Admin API Key.
 
 ## Scenario B: Debug the Agent Locally
 
@@ -186,15 +186,15 @@ vikingbot chat
 vikingbot chat --session my-session
 ```
 
-When no OpenViking Server is available, VikingBot runs in standalone mode. Local files, Shell, Web, and Skills remain available, but OpenViking resource retrieval and long-term memory are disabled.
+When no Business Data Platform Server is available, VikingBot runs in standalone mode. Local files, Shell, Web, and Skills remain available, but Business Data Platform resource retrieval and long-term memory are disabled.
 
 ## Scenario C: Use the Gateway as a Unified Entry Point
 
-Use this scenario for a long-running service, remote access, or chat platforms such as Slack and Telegram. The Gateway exposes the Bot HTTP API and can proxy OpenViking APIs, allowing the `ov` CLI to use one entry point.
+Use this scenario for a long-running service, remote access, or chat platforms such as Slack and Telegram. The Gateway exposes the Bot HTTP API and can proxy Business Data Platform APIs, allowing the `ov` CLI to use one entry point.
 
-### 1. Configure the Gateway and OpenViking
+### 1. Configure the Gateway and Business Data Platform
 
-The following example connects the Gateway to an existing OpenViking Server:
+The following example connects the Gateway to an existing Business Data Platform Server:
 
 ```json
 {
@@ -216,11 +216,11 @@ The following example connects the Gateway to an existing OpenViking Server:
 }
 ```
 
-The Gateway has three OpenViking connection states:
+The Gateway has three Business Data Platform connection states:
 
 - When `bot.ov_server.server_url` is configured, it connects to that Server and refuses to start if the connection fails.
 - When that URL is omitted but the same `ov.conf` contains `server`, the Gateway inherits that Server address and falls back to standalone mode if it is unavailable.
-- When no Server is available, Chat still works, but OpenViking tools and API proxying are disabled.
+- When no Server is available, Chat still works, but Business Data Platform tools and API proxying are disabled.
 
 ### 2. Start the Gateway
 
@@ -240,7 +240,7 @@ Edit `~/.openviking/ovcli.conf`:
 }
 ```
 
-Chat and OpenViking commands can then use the same Gateway:
+Chat and Business Data Platform commands can then use the same Gateway:
 
 ```bash
 ov chat -m "Retrieve the project information and give me a conclusion"
@@ -258,5 +258,5 @@ For credentials and permissions required by each chat platform, see [VikingBot C
 - [VikingBot Architecture](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/01-architecture.md)
 - [Agent Capabilities](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/02-agent-capabilities.md)
 - [Channels, Gateway, and Operations](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/03-channels-and-gateway.md)
-- [VikingBot and OpenViking Integration](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/04-openviking-integration.md)
+- [VikingBot and Business Data Platform Integration](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/04-openviking-integration.md)
 - [Chat Channel Configuration](https://github.com/volcengine/OpenViking/blob/main/bot/docs/en/concepts/05-channel.md)

@@ -188,7 +188,7 @@ Examples:
         "--config_file",
         type=str,
         default=None,
-        help="Path to OpenViking config file (ov.conf)",
+        help="Path to Business Data Platform config file (ov.conf)",
     )
     parser.add_argument(
         "--stats-only",

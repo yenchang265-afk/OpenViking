@@ -1818,7 +1818,7 @@ def create_fastapi_app(state: GameState) -> FastAPI:
 
     @fastapi_app.get("/api/openviking/tree")
     async def get_openviking_tree():
-        """Get OpenViking memory directory tree structure.
+        """Get Business Data Platform memory directory tree structure.
 
         Returns the tree structure of:
         - {viking_path}/default/agent/
@@ -1846,7 +1846,7 @@ def create_fastapi_app(state: GameState) -> FastAPI:
 
     @fastapi_app.get("/api/openviking/file")
     async def get_openviking_file(path: str):
-        """Get a specific file from OpenViking memory.
+        """Get a specific file from Business Data Platform memory.
 
         Path format: "agent/subpath/file.md" or "user/subpath/file.md"
         """
@@ -1869,7 +1869,7 @@ def create_fastapi_app(state: GameState) -> FastAPI:
             content = file_path.read_text(encoding="utf-8")
             return JSONResponse(content={"path": path, "content": content, "name": file_path.name})
         except Exception:
-            logger.exception("Failed to read OpenViking file")
+            logger.exception("Failed to read Business Data Platform file")
             return _internal_error_response("Failed to read file")
 
     @fastapi_app.get("/api/conversations")

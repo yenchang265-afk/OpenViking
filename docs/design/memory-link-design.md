@@ -1151,7 +1151,7 @@ GBrain 已實現 backlink boost——搜尋排序時被更多頁面連結的實�
 **9. ExtractLoop 統一提取 vs 多步編譯管線（from OpenKB 啟發）**
 OpenKB 的編譯管線是精心設計的多步 LLM 呼叫鏈：摘要 → 概念規劃 → 併發概念生成 → 程式碼級回鏈 → 索引更新，每步有明確的輸入/輸出契約，且通過 prompt 快取複用上下文降低成本。但每次新文件匯入都獨立走完整管線，概念頁的"update"路徑依賴 LLM 全文重寫（非增量），隨著頁面增多成本線性增長。OV 的 ExtractLoop 在單次 LLM 呼叫中統一輸出記憶操作 + links，由 merge_op 體系處理增量合併（`upsert` PATCH / `add_only` SUM），更輕量且天然支援增量更新。
 
-## 3. OpenViking 連結設計
+## 3. Business Data Platform 連結設計
 
 ### 3.1 設計總覽
 
@@ -1911,7 +1911,7 @@ PPR 傳播（多種子疊加，按 3.2.7.4 配置表）:
 
 ## 4. 競品對比總結
 
-| 維度 | GBrain | OpenClaw | nashsu_llm_wiki | OpenViking（目標） |
+| 維度 | GBrain | OpenClaw | nashsu_llm_wiki | Business Data Platform（目標） |
 |------|--------|----------|-----------------|-------------------|
 | 輸入源 | 對話 + Git 資源 | 對話 | 資源 | 對話 + 資源（待建） |
 | 頁面寫入 | LLM 直接寫入 | 攢批提取（memory-core）+ 工具呼叫寫入（memory-wiki） | 攢批提取（兩步 LLM） | hook 攢批提取（session.commit）+ 資源目錄提取（add-resource） |
@@ -1927,7 +1927,7 @@ PPR 傳播（多種子疊加，按 3.2.7.4 配置表）:
 | 連結參與檢索 | Backlink boost（簡單排序加分，非圖傳播） | 編譯產物參與搜尋 | 4 訊號圖擴充參與排序 | PPR 圖增強，連結直接參與檢索排序 |
 | 知識可信度 | 無 | Claims + 矛盾檢測 + 新鮮度評估 | Lint 檢查（結構+語義） | links 已覆蓋矛盾/演變/權重/溯源，不引入獨立 claims 層 |
 
-**OpenViking 的差異化：**
+**Business Data Platform 的差異化：**
 - 唯一支援連結權重（weight），支援更精細的關聯強度
 - 唯一支援行號級連結精度（target_ranges），檢索時可只讀目標行範圍，減少 token 消耗
 - 唯一支援 hook 攢批提取 + 資源目錄提取雙模式線上寫入
@@ -1937,7 +1937,7 @@ PPR 傳播（多種子疊加，按 3.2.7.4 配置表）:
 
 **核心差異：**
 
-| | GBrain | OpenClaw | nashsu_llm_wiki | OpenViking |
+| | GBrain | OpenClaw | nashsu_llm_wiki | Business Data Platform |
 |---|---|---|---|---|
 | 線上寫入 | put_page + auto-link post-hook（零 LLM） + LLM 調 add_link | 攢批提取 + 工具呼叫寫入，編譯器全量計算關係 | 攢批提取（兩步 LLM），連結寫正文 | hook 攢批提取（session.commit）+ 資源目錄提取（add-resource），LLM 統一輸出記憶 + links |
 | 離線整理 | Dream Cycle（cron + skills）6階段維護管道 | Dreaming 三階段提升 + 關鍵詞頻率標記主題 | 無 | 外部 Bot T+1 觸發主題整合，從已有記憶生成 report |

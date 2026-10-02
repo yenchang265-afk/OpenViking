@@ -1,4 +1,4 @@
-// Bridge to OpenClaw's built-in compactor for sessions that bypass OpenViking.
+// Bridge to OpenClaw's built-in compactor for sessions that bypass Business Data Platform.
 // The host exports `delegateCompactionToRuntime` from `openclaw/plugin-sdk/core`
 // (present since the earliest supported host); it is resolved lazily because the
 // plugin builds without the host SDK installed.

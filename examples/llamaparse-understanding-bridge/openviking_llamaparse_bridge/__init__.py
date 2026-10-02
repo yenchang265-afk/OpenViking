@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: Apache-2.0
-"""LlamaParse v2 adapter for the OpenViking Understanding API."""
+"""LlamaParse v2 adapter for the Business Data Platform Understanding API."""
 
 from .bridge import create_app
 

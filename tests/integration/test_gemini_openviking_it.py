@@ -110,7 +110,7 @@ async def test_retrieval_routing_workflow(query_param, doc_param, tmp_path):
         doc = sample_markdown(
             tmp_path,
             "routing_doc",
-            "# Retrieval Test\n\nOpenViking provides memory management for AI agents.",
+            "# Retrieval Test\n\nBusiness Data Platform provides memory management for AI agents.",
         )
         result = await service.resources.add_resource(
             path=str(doc),

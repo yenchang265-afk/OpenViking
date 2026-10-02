@@ -405,7 +405,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--url",
         default="http://127.0.0.1:1933",
-        help="OpenViking server base URL",
+        help="Business Data Platform server base URL",
     )
     parser.add_argument(
         "--timeout",

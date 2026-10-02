@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Privacy config utilities for OpenViking."""
+"""Privacy config utilities for Business Data Platform."""
 
 from openviking.privacy.models import UserPrivacyConfigMeta, UserPrivacyConfigVersion
 from openviking.privacy.service import UserPrivacyConfigService

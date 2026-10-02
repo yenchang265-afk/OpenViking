@@ -62,7 +62,7 @@
 {"event_time":"<UTC time>","tenant_id":"resource_id:<resource>;account_id:<account>;user_id:<user>;resource_uri:<uri>","event_name":"<event>","object_id":"<event_id>","count":1,"tags":{"resource_type":"experience"}}
 ```
 
-日誌檔案不復用 OpenViking stdout，按 UTC 小時滾動，並保留配置數量的歷史
+日誌檔案不復用 Business Data Platform stdout，按 UTC 小時滾動，並保留配置數量的歷史
 檔案。多個 server worker 寫入同一路徑時，檔案追加和滾動通過程序間鎖序列化。
 
 檔案落盤及後續採集均採用 best-effort 語義。下游必須按

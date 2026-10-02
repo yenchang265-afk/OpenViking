@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Unified parser configuration management for OpenViking.
+Unified parser configuration management for Business Data Platform.
 
 This module consolidates all parser configuration classes that were previously
 scattered across different modules. All configurations inherit from ParserConfig

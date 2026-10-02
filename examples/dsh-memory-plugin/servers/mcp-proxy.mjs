@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * stdio -> streamable-HTTP MCP proxy for the OpenViking DSH bundle.
+ * stdio -> streamable-HTTP MCP proxy for the Business Data Platform DSH bundle.
  *
  * DSH's MCP bridge starts this process as a local stdio MCP server. The proxy
  * resolves its connection through the same `resolveConfig()` as the in-process

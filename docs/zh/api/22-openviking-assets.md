@@ -1,6 +1,6 @@
-# OpenViking Assets Resolver
+# Business Data Platform Assets Resolver
 
-OpenViking Assets Resolver 用於解析並校驗
+Business Data Platform Assets Resolver 用於解析並校驗
 [`openviking-assets/1`](../guides/18-openviking-assets.md) Manifest——既支持在
 `catalog` 欄位中直接定義資產的單檔案 Manifest，也支援搭配單獨 Catalog 檔案的
 Manifest——並返回可供客戶端執行的標準化資產計劃。它不會克隆倉庫、建立資源或啟動
@@ -17,7 +17,7 @@ POST /api/v1/openviking-assets/resolve
 
 ### 鑑權
 
-介面沿用 OpenViking Server 的標準鑑權方式。啟用 API Key 時，請在請求中傳入：
+介面沿用 Business Data Platform Server 的標準鑑權方式。啟用 API Key 時，請在請求中傳入：
 
 ```http
 X-API-Key: <your-api-key>
@@ -104,7 +104,7 @@ Manifest 按名稱選擇資產時，把 Catalog YAML 放入 `catalog_yaml`，來
 POST /api/v1/openviking-assets/preflight
 ```
 
-該介面在 OpenViking Server 的實際執行環境執行只讀 `git ls-remote`，校驗倉庫和可選 ref
+該介面在 Business Data Platform Server 的實際執行環境執行只讀 `git ls-remote`，校驗倉庫和可選 ref
 是否可讀。它不會克隆倉庫、建立資源或啟動任務。Manifest 模式在 dry-run 和正式提交之前
 都會呼叫該介面。
 
@@ -164,5 +164,5 @@ curl -X POST "${OPENVIKING_BASE_URL}/api/v1/openviking-assets/preflight" \
 
 ## 相關文件
 
-- [OpenViking Assets 協議與執行指南](../guides/18-openviking-assets.md)
+- [Business Data Platform Assets 協議與執行指南](../guides/18-openviking-assets.md)
 - [資源管理 API](02-resources.md)

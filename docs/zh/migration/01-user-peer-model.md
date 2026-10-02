@@ -1,8 +1,8 @@
-# OpenViking 0.3.x 到 0.4.0 升級指南
+# Business Data Platform 0.3.x 到 0.4.0 升級指南
 
 > **版本範圍：** 本頁記錄 0.3.x 到 0.4.0 的歷史遷移流程，不適用於當前版本的 Agent 目錄。當前 `viking://agent/...` 統一表示帳號內公共目錄，已移除 Agent ID 路徑相容及其遷移、cleanup。當前 `admin migrate` 只處理舊 Session 資料。
 
-本文面向已經執行 OpenViking 0.3.x 的使用者，說明升級到 0.4.0 前後需要做什麼、哪些舊用法仍然相容、資料遷移如何執行，以及業務程式碼如何逐步遷移到新模型。
+本文面向已經執行 Business Data Platform 0.3.x 的使用者，說明升級到 0.4.0 前後需要做什麼、哪些舊用法仍然相容、資料遷移如何執行，以及業務程式碼如何逐步遷移到新模型。
 
 ## 是否需要升級
 
@@ -184,7 +184,7 @@ viking://agent/<agent_id>/instructions
 
 - 物理儲存中存在 legacy 資料，但對應 account 不在 API key user registry 中。
 - 多使用者 account 下存在無法識別 owner 的 legacy session。
-- session owner 存在，但不是合法的 OpenViking user id。
+- session owner 存在，但不是合法的 Business Data Platform user id。
 
 以下問題會記錄為 warning 或 skipped，並繼續遷移：
 

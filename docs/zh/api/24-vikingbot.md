@@ -1,10 +1,10 @@
 # VikingBot API
 
-OpenViking Server 啟用 `--with-bot` 後，會在 `/bot/v1` 下代理 VikingBot 的核心互動介面。未啟用 Bot 時，這些端點返回 `503`。
+Business Data Platform Server 啟用 `--with-bot` 後，會在 `/bot/v1` 下代理 VikingBot 的核心互動介面。未啟用 Bot 時，這些端點返回 `503`。
 
 **程式碼入口**：
 
-- `openviking/server/routers/bot.py` - OpenViking Server 代理與身份轉發
+- `openviking/server/routers/bot.py` - Business Data Platform Server 代理與身份轉發
 - `bot/vikingbot/channels/openapi.py` - VikingBot Gateway 路由實現
 - `bot/vikingbot/channels/openapi_models.py` - 請求、響應和 SSE 事件模型
 
@@ -176,7 +176,7 @@ curl -X POST http://localhost:1933/bot/v1/feedback \
 
 ## 客戶端範圍
 
-標準 OpenViking Python、TypeScript 和 Go SDK 當前不封裝 Bot 代理介面；Chat 可通過 `ov` CLI 與 HTTP 使用。VikingBot Gateway 自身還提供 Session 和 Channel API，詳見 [VikingBot 文件](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md#http-api)。
+標準 Business Data Platform Python、TypeScript 和 Go SDK 當前不封裝 Bot 代理介面；Chat 可通過 `ov` CLI 與 HTTP 使用。VikingBot Gateway 自身還提供 Session 和 Channel API，詳見 [VikingBot 文件](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md#http-api)。
 
 ## 相關文件
 

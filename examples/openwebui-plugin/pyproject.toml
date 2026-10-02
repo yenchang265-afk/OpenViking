@@ -5,11 +5,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "openviking-openwebui"
 version = "0.1.0"
-description = "OpenAPI tool server that exposes a curated set of OpenViking endpoints to Open WebUI."
+description = "OpenAPI tool server that exposes a curated set of Business Data Platform endpoints to Open WebUI."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "AGPL-3.0" }
-authors = [{ name = "OpenViking Contributors" }]
+authors = [{ name = "Business Data Platform Contributors" }]
 keywords = ["openviking", "open-webui", "openwebui", "openapi", "tools", "memory"]
 dependencies = [
   "fastapi>=0.110",

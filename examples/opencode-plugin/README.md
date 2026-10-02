@@ -1,22 +1,22 @@
-# OpenViking OpenCode Plugin
+# Business Data Platform OpenCode Plugin
 
-A unified OpenCode plugin for OpenViking repository retrieval and long-term memory.
+A unified OpenCode plugin for Business Data Platform repository retrieval and long-term memory.
 
-> **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the
+> **Requires a Business Data Platform server with `viking://~` home-alias support.** Recall targets the
 > caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less
 > `viking://user/memories` shorthand is rejected by newer servers.
 
 This is the only OpenCode plugin example maintained in this repository. It supersedes the former split examples for indexed repository prompt injection and long-term memory.
 
-The plugin uses OpenCode hooks for lifecycle behavior and registers OpenViking's standard stdio MCP proxy for model tools. It does not install or require an OpenCode skill, and agents do not need to run `ov` shell commands.
+The plugin uses OpenCode hooks for lifecycle behavior and registers Business Data Platform's standard stdio MCP proxy for model tools. It does not install or require an OpenCode skill, and agents do not need to run `ov` shell commands.
 
 ## What It Does
 
 - Injects indexed `viking://resources/` repositories into the system prompt.
-- On the first message of each session, injects your profile, memory indexes, and an `<available-skills>` catalog of your own and account-shared OpenViking skills.
-- Exposes the same OpenViking MCP tools used by the Claude Code and Codex memory plugins.
-- Maps each OpenCode session to an OpenViking session.
-- Captures user and assistant text messages into OpenViking.
+- On the first message of each session, injects your profile, memory indexes, and an `<available-skills>` catalog of your own and account-shared Business Data Platform skills.
+- Exposes the same Business Data Platform MCP tools used by the Claude Code and Codex memory plugins.
+- Maps each OpenCode session to a Business Data Platform session.
+- Captures user and assistant text messages into Business Data Platform.
 - Commits sessions at lifecycle boundaries for memory extraction.
 - Automatically recalls relevant memories and injects them as hidden synthetic context for the current user message.
 - Blocks accidental local filesystem reads of `viking://` URIs and points the agent back to `openviking_read`, `openviking_glob`, or `openviking_search`. Shell commands that carry a `viking://` URI still run, with a notice appended to their output.
@@ -46,16 +46,16 @@ examples/opencode-plugin/
     └── openviking.js
 ```
 
-There is intentionally no `skills/openviking/SKILL.md`. The tool surface comes from OpenViking's MCP endpoint.
+There is intentionally no `skills/openviking/SKILL.md`. The tool surface comes from Business Data Platform's MCP endpoint.
 
 ## Requirements
 
 - OpenCode
-- OpenViking HTTP server
+- Business Data Platform HTTP server
 - Node.js 18+
-- An OpenViking API key if your server requires authentication
+- A Business Data Platform API key if your server requires authentication
 
-Start OpenViking first:
+Start Business Data Platform first:
 
 ```bash
 openviking-server --config ~/.openviking/ov.conf
@@ -181,7 +181,7 @@ specific answer, and this is the order every memory plugin follows.
 
 ### Hook-only mode
 
-When OpenViking is already exposed through another MCP server, retain the lifecycle hooks while
+When Business Data Platform is already exposed through another MCP server, retain the lifecycle hooks while
 skipping this plugin's bundled MCP registration:
 
 ```json
@@ -197,14 +197,14 @@ It does not add or overwrite OpenCode's `mcp.openviking` entry.
 
 OpenCode's local `read`, `glob`, and `grep` tools cannot read `viking://` URIs.
 When the agent accidentally tries that, the plugin blocks the filesystem tool
-call and points it to the OpenViking MCP tools. A `bash` command that contains a
+call and points it to the Business Data Platform MCP tools. A `bash` command that contains a
 `viking://` URI is not blocked, because the URI is often data (an `ov` argument,
 an HTTP payload); the command runs and the plugin appends a notice naming the
 MCP tools to its output.
 
 ## MCP Tools
 
-OpenCode sees the OpenViking MCP server as `openviking`, so tool names are namespaced with `openviking_`.
+OpenCode sees the Business Data Platform MCP server as `openviking`, so tool names are namespaced with `openviking_`.
 
 - `openviking_search`: deep semantic retrieval across memories, resources, and skills; use `mode="context"` for balanced, injection-ready context.
 - `openviking_find`: fast semantic retrieval.
@@ -220,7 +220,7 @@ OpenCode sees the OpenViking MCP server as `openviking`, so tool names are names
 - `openviking_add_skill`: create or replace a skill from its full `SKILL.md` text (`data`), or install one from a Git URL or a local `SKILL.md`, skill directory, or `.zip` (`path`); `target_uri="viking://agent/skills"` shares it with the account.
 - `openviking_forget`: delete a `viking://` URI after explicit user confirmation.
 - `openviking_list_watches` / `openviking_cancel_watch`: inspect or cancel resource watches.
-- `openviking_health`: check OpenViking server health.
+- `openviking_health`: check Business Data Platform server health.
 
 The proxy forwards the server's real `tools/list` response; the plugin does not maintain a separate native tool list.
 

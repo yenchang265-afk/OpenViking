@@ -69,10 +69,10 @@ class ConnectorClient:
     ) -> Dict[str, Any]:
         """Submit a document import job via the configured doc/add endpoint.
 
-        ``to`` is the exact OpenViking file or directory target. Source-specific
+        ``to`` is the exact Business Data Platform file or directory target. Source-specific
         settings stay inside ``param_config``; source credentials stay inside
         ``auth_config``, which Connector and plugin request logs redact, and
-        must never be merged into ``param_config``. The incoming OpenViking
+        must never be merged into ``param_config``. The incoming Business Data Platform
         HTTP body may still be captured when unsafe body dumping is enabled.
 
         Returns the Connector response dict (contains task key / id on success).

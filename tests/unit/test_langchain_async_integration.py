@@ -804,7 +804,7 @@ async def test_async_client_retries_safe_read_with_fresh_client(monkeypatch):
 
         async def find(self, **_kwargs: Any) -> dict[str, Any]:
             if self.index == 0:
-                raise ConnectionError("OpenViking server was not ready")
+                raise ConnectionError("Business Data Platform server was not ready")
             return {"memories": [], "resources": [], "skills": []}
 
     import openviking_sdk as client_module
@@ -835,7 +835,7 @@ async def test_async_client_evicts_without_replaying_mutating_call(monkeypatch):
             self.closed = True
 
         async def batch_add_messages(self, **_kwargs: Any) -> dict[str, Any]:
-            raise ConnectionError("OpenViking connection dropped during write")
+            raise ConnectionError("Business Data Platform connection dropped during write")
 
     import openviking_sdk as client_module
 

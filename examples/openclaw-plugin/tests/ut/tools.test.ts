@@ -376,7 +376,7 @@ describe("Tool: memory_recall (registration)", () => {
       ...ctx,
       args: "set --scope session --recallLimit 2 --scoreThreshold 0.4",
     });
-    expect(setResult.text).toContain("Updated OpenViking query config");
+    expect(setResult.text).toContain("Updated Business Data Platform query config");
     expect((setResult.details?.effective as any).recallLimit).toBe(2);
     expect((setResult.details?.effective as any).scoreThreshold).toBe(0.4);
 
@@ -385,12 +385,12 @@ describe("Tool: memory_recall (registration)", () => {
     expect((getResult.details?.effective as any).scoreThreshold).toBe(0.4);
 
     const unsetResult = await command!.handler({ ...ctx, args: "unset recallLimit --scope session" });
-    expect(unsetResult.text).toContain("Unset OpenViking query config fields");
+    expect(unsetResult.text).toContain("Unset Business Data Platform query config fields");
     expect((unsetResult.details?.effective as any).recallLimit).toBe(6);
     expect((unsetResult.details?.effective as any).scoreThreshold).toBe(0.4);
 
     const resetResult = await command!.handler({ ...ctx, args: "reset --scope session" });
-    expect(resetResult.text).toContain("Reset OpenViking query config");
+    expect(resetResult.text).toContain("Reset Business Data Platform query config");
     expect((resetResult.details?.effective as any).recallLimit).toBe(6);
     expect((resetResult.details?.effective as any).scoreThreshold).toBe(0.15);
   });
@@ -642,7 +642,7 @@ describe("Tool: ov_archive_expand (behavioral)", () => {
   });
 });
 
-describe("Tool: OpenViking tool result access", () => {
+describe("Tool: Business Data Platform tool result access", () => {
   it("registers read, search, and list tools", () => {
     const { tools, api } = setupPlugin();
     contextEnginePlugin.register(api as any);
@@ -807,7 +807,7 @@ describe("Tool: add_resource, add_skill, and ov_search (registration)", () => {
     expect(tool).toBeDefined();
     expect(tool!.description).toContain("explicitly asks");
     expect(tool!.description).toContain("[media attached: /path");
-    expect(tool!.description).toContain("Do not invent OpenViking upload REST endpoints");
+    expect(tool!.description).toContain("Do not invent Business Data Platform upload REST endpoints");
     const props = (tool!.parameters as any).properties;
     expect(props).toHaveProperty("source");
     expect(props.source.description).toContain("OpenClaw media attachment path");
@@ -824,7 +824,7 @@ describe("Tool: add_resource, add_skill, and ov_search (registration)", () => {
     const tool = tools.get("add_skill");
     expect(tool).toBeDefined();
     expect(tool!.description).toContain("explicitly asks");
-    expect(tool!.description).toContain("into OpenViking");
+    expect(tool!.description).toContain("into Business Data Platform");
     expect(tool!.description).toContain("SKILL.md");
     expect(tool!.description).toContain("MCP tool dict");
     const props = (tool!.parameters as any).properties;
@@ -843,7 +843,7 @@ describe("Tool: add_resource, add_skill, and ov_search (registration)", () => {
     expect(tool).toBeDefined();
     // Avoid colliding with OpenClaw's built-in memory_search tool.
     expect(tools.get("memory_search")).toBeUndefined();
-    expect(tool!.description).toContain("Search OpenViking resources and skills");
+    expect(tool!.description).toContain("Search Business Data Platform resources and skills");
     expect(tool!.description).toContain("Use after importing");
     expect(tool!.description).toContain("call ov_read");
     expect(tool!.description).toContain("call ov_list on the parent URI");
@@ -853,7 +853,7 @@ describe("Tool: add_resource, add_skill, and ov_search (registration)", () => {
     expect(props).toHaveProperty("limit");
   });
 
-  it("registers ov_read and ov_multi_read tools with OpenViking URI guidance", () => {
+  it("registers ov_read and ov_multi_read tools with Business Data Platform URI guidance", () => {
     const { tools, api } = setupPlugin();
     contextEnginePlugin.register(api as any);
     const tool = tools.get("ov_read");
@@ -866,7 +866,7 @@ describe("Tool: add_resource, add_skill, and ov_search (registration)", () => {
 
     const multiRead = tools.get("ov_multi_read");
     expect(multiRead).toBeDefined();
-    expect(multiRead!.description).toContain("multiple exact OpenViking URIs");
+    expect(multiRead!.description).toContain("multiple exact Business Data Platform URIs");
     expect(multiRead!.description).toContain("sibling chunks");
     expect((multiRead!.parameters as any).properties).toHaveProperty("uris");
   });
@@ -909,7 +909,7 @@ describe("Tool: ov_search (behavioral)", () => {
                 score: 0.82,
                 category: "",
                 match_reason: "",
-                abstract: "OpenViking install guide",
+                abstract: "Business Data Platform install guide",
                 overview: null,
               },
             ],
@@ -928,7 +928,7 @@ describe("Tool: ov_search (behavioral)", () => {
               score: 0.7,
               category: "",
               match_reason: "",
-              abstract: "Install OpenViking memory integration",
+              abstract: "Install Business Data Platform memory integration",
               overview: null,
             },
           ],
@@ -942,7 +942,7 @@ describe("Tool: ov_search (behavioral)", () => {
     (api as any).openVikingTransport = openVikingTransport;
     contextEnginePlugin.register(api as any);
     const search = tools.get("ov_search")!;
-    const result = await search.execute("tc1", { query: "OpenViking install" }) as ToolResult;
+    const result = await search.execute("tc1", { query: "Business Data Platform install" }) as ToolResult;
 
     expect(result.content[0]!.text).toContain("no");
     expect(result.content[0]!.text).toContain("type");
@@ -982,7 +982,7 @@ describe("Tool: ov_search (behavioral)", () => {
                 score: 0.82,
                 category: "",
                 match_reason: "",
-                abstract: "OpenViking install guide",
+                abstract: "Business Data Platform install guide",
                 overview: null,
               },
             ],
@@ -999,7 +999,7 @@ describe("Tool: ov_search (behavioral)", () => {
     (api as any).openVikingTransport = openVikingTransport;
     contextEnginePlugin.register(api as any);
     const search = tools.get("ov_search")!;
-    const result = await search.execute("tc1", { query: "OpenViking install" }) as ToolResult;
+    const result = await search.execute("tc1", { query: "Business Data Platform install" }) as ToolResult;
 
     expect(result.details.resources).toHaveLength(1);
     expect(result.details.skills).toHaveLength(0);
@@ -1044,11 +1044,11 @@ describe("Tool: ov_search (behavioral)", () => {
     expect(result.content[0]!.text).toContain("User prefers dark theme");
   });
 
-  it("reads an OpenViking URI through ov_read instead of filesystem semantics", async () => {
+  it("reads a Business Data Platform URI through ov_read instead of filesystem semantics", async () => {
     const openVikingTransport = vi.fn(async (url: string) => {
       if (url.includes("/api/v1/content/read")) {
         expect(url).toContain(encodeURIComponent("viking://resources/openviking-readme/README.md#chunk-1"));
-        return okResponse("# README\nOpenViking install guide");
+        return okResponse("# README\nBusiness Data Platform install guide");
       }
       return okResponse({});
     });
@@ -1068,7 +1068,7 @@ describe("Tool: ov_search (behavioral)", () => {
     expect(result.details.uri).toBe("viking://resources/openviking-readme/README.md#chunk-1");
   });
 
-  it("reads multiple OpenViking URIs and preserves per-URI failures", async () => {
+  it("reads multiple Business Data Platform URIs and preserves per-URI failures", async () => {
     const openVikingTransport = vi.fn(async (url: string) => {
       const requestUrl = new URL(url);
       if (requestUrl.pathname === "/api/v1/content/read") {
@@ -1095,7 +1095,7 @@ describe("Tool: ov_search (behavioral)", () => {
       ],
     }) as ToolResult;
 
-    expect(result.content[0]!.text).toContain("Multi-read results for 2 OpenViking resources");
+    expect(result.content[0]!.text).toContain("Multi-read results for 2 Business Data Platform resources");
     expect(result.content[0]!.text).toContain("--- START OF viking://resources/guide/.overview.md ---");
     expect(result.content[0]!.text).toContain("content for viking://resources/guide/.overview.md");
     expect(result.content[0]!.text).toContain("--- START OF viking://resources/guide/missing.md ---");
@@ -1107,7 +1107,7 @@ describe("Tool: ov_search (behavioral)", () => {
     });
   });
 
-  it("lists an OpenViking directory through the fs ls endpoint", async () => {
+  it("lists a Business Data Platform directory through the fs ls endpoint", async () => {
     const openVikingTransport = vi.fn(async (url: string) => {
       const requestUrl = new URL(url);
       if (requestUrl.pathname === "/api/v1/fs/ls") {
@@ -1143,7 +1143,7 @@ describe("Tool: ov_search (behavioral)", () => {
       limit: 5,
     }) as ToolResult;
 
-    expect(result.content[0]!.text).toContain("Listed 2 OpenViking entries");
+    expect(result.content[0]!.text).toContain("Listed 2 Business Data Platform entries");
     expect(result.content[0]!.text).toContain("viking://resources/guide/.overview.md");
     expect(result.content[0]!.text).toContain("Second step");
     expect(result.details).toMatchObject({
@@ -1155,7 +1155,7 @@ describe("Tool: ov_search (behavioral)", () => {
     });
   });
 
-  it("passes simple list mode through to OpenViking", async () => {
+  it("passes simple list mode through to Business Data Platform", async () => {
     const openVikingTransport = vi.fn(async (url: string) => {
       const requestUrl = new URL(url);
       if (requestUrl.pathname === "/api/v1/fs/ls") {
@@ -1278,7 +1278,7 @@ describe("Tool: ov_search (behavioral)", () => {
     expect(body.limit).toBe(3);
   });
 
-  it("rejects display-truncated ov_read URIs before calling OpenViking", async () => {
+  it("rejects display-truncated ov_read URIs before calling Business Data Platform", async () => {
     const readMock = vi.fn().mockResolvedValue("content");
     const { tools, api } = setupPlugin({ read: readMock });
     contextEnginePlugin.register(api as any);
@@ -1291,7 +1291,7 @@ describe("Tool: ov_search (behavioral)", () => {
   });
 });
 
-describe("OpenViking import command parsing", () => {
+describe("Business Data Platform import command parsing", () => {
   it("tokenizes quoted args", () => {
     expect(tokenizeCommandArgs(`./README.md --reason "project docs" --wait`)).toEqual([
       "./README.md",
@@ -1356,18 +1356,18 @@ describe("OpenViking import command parsing", () => {
   });
 });
 
-describe("OpenViking ov_search command parsing", () => {
+describe("Business Data Platform ov_search command parsing", () => {
   it("parses ov_search query and flags", () => {
-    expect(parseOVSearchCommandArgs(`"OpenViking install" --uri viking://resources --limit=3`)).toMatchObject({
-      query: "OpenViking install",
+    expect(parseOVSearchCommandArgs(`"Business Data Platform install" --uri viking://resources --limit=3`)).toMatchObject({
+      query: "Business Data Platform install",
       uri: "viking://resources",
       limit: 3,
     });
   });
 
   it("keeps multi-word unquoted slash-command queries intact", () => {
-    expect(parseOVSearchCommandArgs(`OpenViking install --uri viking://resources`)).toMatchObject({
-      query: "OpenViking install",
+    expect(parseOVSearchCommandArgs(`Business Data Platform install --uri viking://resources`)).toMatchObject({
+      query: "Business Data Platform install",
       uri: "viking://resources",
     });
   });
@@ -1783,7 +1783,7 @@ describe("Tool: ov_recall_trace", () => {
     expect((result.details.entries as any[])[0].sessionKey).toBeUndefined();
   });
 
-  it("queries recorded traces from memory without calling OpenViking find", async () => {
+  it("queries recorded traces from memory without calling Business Data Platform find", async () => {
     const openVikingTransport = vi.fn(async (url: string, init?: RequestInit) => {
       const requestUrl = new URL(url);
       if (requestUrl.pathname === "/api/v1/search/find") {
@@ -2058,15 +2058,15 @@ describe("Plugin registration", () => {
     contextEnginePlugin.register(api as any);
     expect(commands.get("add-resource")).toMatchObject({
       acceptsArgs: true,
-      description: "Add a resource into OpenViking.",
+      description: "Add a resource into Business Data Platform.",
     });
     expect(commands.get("add-skill")).toMatchObject({
       acceptsArgs: true,
-      description: "Add a skill into OpenViking.",
+      description: "Add a skill into Business Data Platform.",
     });
     expect(commands.get("ov-search")).toMatchObject({
       acceptsArgs: true,
-      description: "Search OpenViking resources and skills.",
+      description: "Search Business Data Platform resources and skills.",
     });
   });
 
@@ -2220,7 +2220,7 @@ describe("Plugin registration", () => {
         wait: true,
       }) as ToolResult;
 
-      expect(result.content[0]!.text).toContain("Imported OpenViking resource");
+      expect(result.content[0]!.text).toContain("Imported Business Data Platform resource");
       expect(openVikingTransport.mock.calls[0]![0]).toBe("http://127.0.0.1:1933/api/v1/resources/temp_upload");
       expect(openVikingTransport.mock.calls[1]![0]).toBe("http://127.0.0.1:1933/api/v1/resources");
       const body = JSON.parse(String(openVikingTransport.mock.calls[1]![1]!.body));
@@ -2249,7 +2249,7 @@ describe("Plugin registration", () => {
       timeout: 30,
     }) as ToolResult;
 
-    expect(result.content[0]!.text).toContain("Imported OpenViking skill");
+    expect(result.content[0]!.text).toContain("Imported Business Data Platform skill");
     const [url, init] = openVikingTransport.mock.calls.find((call) => String(call[0]).endsWith("/api/v1/skills")) as [string, RequestInit];
     expect(url).toBe("http://127.0.0.1:1933/api/v1/skills");
     const body = JSON.parse(String(init.body));
@@ -2313,7 +2313,7 @@ describe("Plugin registration", () => {
   it("plugin has correct metadata", () => {
     expect(contextEnginePlugin.id).toBe("openviking");
     expect(contextEnginePlugin.kind).toBe("context-engine");
-    expect(contextEnginePlugin.name).toContain("OpenViking");
+    expect(contextEnginePlugin.name).toContain("Business Data Platform");
   });
 });
 

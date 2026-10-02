@@ -1,13 +1,13 @@
 # Tau2 Train/Eval Pipeline
 
-Tau2 training/evaluation uses the generic OpenViking session/train batch
+Tau2 training/evaluation uses the generic Business Data Platform session/train batch
 pipeline. In day-to-day runs, use
 `benchmark/tau2/train/restart_vikingbot_train_eval.sh` as the main entrypoint:
 it restarts the required services, points them at the same slot/config, waits for
 health checks, and then launches the batch runner.
 
 `benchmark/tau2/train/run_batch_train_eval.sh` is only the lower-level Tau2
-wrapper. Use it when you have already started OpenViking and the Tau2 rollout
+wrapper. Use it when you have already started Business Data Platform and the Tau2 rollout
 service yourself.
 
 ## 1. Main entrypoint: restart VikingBot train/eval
@@ -18,8 +18,8 @@ bash benchmark/tau2/train/restart_vikingbot_train_eval.sh
 
 What the launcher does:
 
-1. prepares the OpenViking config/data directory for the selected slot;
-2. restarts OpenViking and the VikingBot API;
+1. prepares the Business Data Platform config/data directory for the selected slot;
+2. restarts Business Data Platform and the VikingBot API;
 3. waits for `http://127.0.0.1:<ov-port>/bot/v1/health`;
 4. restarts the Tau2 rollout service with `--rollout-backend vikingbot`;
 5. waits for `http://127.0.0.1:<tau2-port>/health`;
@@ -123,10 +123,10 @@ Tau2 because per-epoch eval is already enabled.
 
 The restart launcher accepts a launcher-only `--slot N` before the normal
 train/eval arguments. Slot `0` is the default legacy setup. Slot `N > 0` uses
-independent ports, OpenViking config/data, logs, and result directory so multiple
+independent ports, Business Data Platform config/data, logs, and result directory so multiple
 experiments can run at the same time:
 
-| Slot value | OpenViking port | VikingBot port | Tau2 service port | OpenViking root | Result directory |
+| Slot value | Business Data Platform port | VikingBot port | Tau2 service port | Business Data Platform root | Result directory |
 |------------|-----------------|----------------|-------------------|-----------------|------------------|
 | `0` | `1933` | `18790` | `1944` | `~/.openviking` | `result/tau2/train` |
 | `1` | `1934` | `18791` | `1945` | `~/.openviking_1` | `result/tau2/train_1` |
@@ -195,10 +195,10 @@ result/tau2/<result-dir-name>/service_logs/
 | `--result-dir-name` | `train`; slots use `train_N` | Result subdirectory under `result/<dataset>/` |
 | `--benchmark-service-url` | set by restart launcher | Benchmark runtime service URL |
 | `--config` | set by restart launcher | ov.conf path |
-| `--server-url` | set by restart launcher | OpenViking server URL |
-| `--api-key` | from config | OpenViking API key |
-| `--account-id` | `default` | OpenViking trusted account id |
-| `--user-id` | `default` | OpenViking trusted user id |
+| `--server-url` | set by restart launcher | Business Data Platform server URL |
+| `--api-key` | from config | Business Data Platform API key |
+| `--account-id` | `default` | Business Data Platform trusted account id |
+| `--user-id` | `default` | Business Data Platform trusted user id |
 
 ## 5. Manual service mode
 
@@ -218,7 +218,7 @@ Service options:
 | `--host` | `127.0.0.1` | Service listen address |
 | `--port` | `1944` | Service listen port |
 | `--data-root` | auto-detect / `$TAU2_DATA_ROOT` | Path to `tau2-bench/data/tau2` |
-| `--config` | `~/.openviking/ov.conf` | ov.conf for VikingBot / OpenViking access |
+| `--config` | `~/.openviking/ov.conf` | ov.conf for VikingBot / Business Data Platform access |
 | `--rollout-language` | `default` | Rollout response language. Use `zh` for Chinese user-facing replies. |
 | `--rollout-backend` | `vikingbot` | Rollout implementation backend. `native` for fast Python executor, `vikingbot` for full VikingBot AgentLoop. |
 | `--native-thread-workers` | `128` | Thread pool size for native rollout executor. |

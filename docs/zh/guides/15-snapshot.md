@@ -1,6 +1,6 @@
 # 多版本管理（快照）指南
 
-本指南介紹如何啟用並使用 OpenViking 的多版本管理（快照）能力。多版本管理在 VikingFS 之上提供基於 Git 的 `commit`/`log`/`show`/`restore` 原語，讓你把帳號下的資源樹儲存成一系列不可變快照，隨時回溯歷史、對比版本，並把工作區恢復到任意歷史狀態。
+本指南介紹如何啟用並使用 Business Data Platform 的多版本管理（快照）能力。多版本管理在 VikingFS 之上提供基於 Git 的 `commit`/`log`/`show`/`restore` 原語，讓你把帳號下的資源樹儲存成一系列不可變快照，隨時回溯歷史、對比版本，並把工作區恢復到任意歷史狀態。
 
 多版本管理由內嵌在 Rust RAGFS 層的 [gitoxide](https://github.com/Byron/gitoxide) 驅動，以 `account_id` 為粒度維護一個邏輯 Git 倉庫（每個帳號一個倉庫），對呼叫方完全透明——你無需手動執行任何 `git` 命令。
 
@@ -126,13 +126,13 @@ Filesystem 對缺失目標跳過鎖，避免鎖檔案建立目標目錄或缺失
 | `git.s3.use_path_style` | `true` | `true` 用 path-style 定址（MinIO 等）；`false` 用 virtual-host 定址（TOS 等） |
 | `git.s3.cas_mode` | `native` | 引用 CAS 模式。`native` 使用 S3 條件寫（If-Match） |
 
-修改配置後，重啟 OpenViking 服務（或重新初始化 SDK 客戶端）使其生效。
+修改配置後，重啟 Business Data Platform 服務（或重新初始化 SDK 客戶端）使其生效。
 
 > 倉庫中提供了可直接參考的完整示例：[ov.conf.git-local.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-local.example) 與 [ov.conf.git-s3-tos.example](https://github.com/volcengine/OpenViking/blob/main/examples/snapshot/ov.conf.git-s3-tos.example)。
 
 ## 目錄結構變化：`.ovgit` 目錄
 
-啟用 `local` 後端且 `base_dir` 留空時，OpenViking 會在工作區下新增一個 **`.ovgit`** 目錄用於存放 Git 物件和引用：
+啟用 `local` 後端且 `base_dir` 留空時，Business Data Platform 會在工作區下新增一個 **`.ovgit`** 目錄用於存放 Git 物件和引用：
 
 ```text
 data/                      # storage.workspace
@@ -150,7 +150,7 @@ data/                      # storage.workspace
 要點：
 
 - `.ovgit` 是內部資料目錄，**不會**通過 `viking://` 暴露，使用者在檔案系統 API（`ls`/`read` 等）中看不到也無法修改它。
-- 它與 Git 的標準物件庫佈局一致（內容定址的 `objects/`、loose 引用的 `refs/`），但由 OpenViking 自動管理，**無需也不應**手動執行 `git` 命令去操作它。
+- 它與 Git 的標準物件庫佈局一致（內容定址的 `objects/`、loose 引用的 `refs/`），但由 Business Data Platform 自動管理，**無需也不應**手動執行 `git` 命令去操作它。
 - 備份或遷移工作區時，把 `.ovgit` 一併複製即可保留完整的版本歷史。
 - 選擇 `s3` 後端時，不會建立本地 `.ovgit` 目錄，資料改為存放在 bucket 的 `{prefix}/{account}/...` 鍵下。
 
@@ -338,7 +338,7 @@ curl -X DELETE "http://localhost:1933/api/v1/snapshot/ignore" \
 - 啟用 `s3` 後端時，`git.s3.bucket` 與 `git.s3.region` 為必填項，缺失會導致初始化失敗。
 - 恢復操作如涉及向量副作用（寫入/刪除檔案），響應會返回一個 `task_id`，可通過 `GET /api/v1/tasks/{task_id}` 輪詢後臺向量重建進度（參見 [系統指南](05-observability.md) 與 [API 概覽](../api/01-overview.md)）。
 - `.ovgitignore` 內容過大（超過 64 KiB）或包含 `!` 取反、反斜槓轉義等不支援語法時，`commit` 會失敗並報 `invalid operation` 錯誤；寫入時（`set_gitignore`）會預先校驗大小。
-- 不要手動用外部 `git` 工具去操作 `.ovgit` 目錄，它由 OpenViking 維護。
+- 不要手動用外部 `git` 工具去操作 `.ovgit` 目錄，它由 Business Data Platform 維護。
 
 ## 相關文件
 

@@ -5,9 +5,9 @@ exercising a different way of giving Claude Code long-term memory.
 
 | Mode | Ingest path | OV namespace | Entry point |
 |---|---|---|---|
-| **Prompted** | `claude -p` per session, CC writes `MEMORY.md` | — (no OpenViking) | `run_prompted.sh` |
-| **SDK iso** | OpenViking Python SDK direct import | per-sample user | `run_sdk_iso.sh` |
-| **SDK no-iso** | OpenViking Python SDK direct import | shared (default) | `run_sdk_noiso.sh` |
+| **Prompted** | `claude -p` per session, CC writes `MEMORY.md` | — (no Business Data Platform) | `run_prompted.sh` |
+| **SDK iso** | Business Data Platform Python SDK direct import | per-sample user | `run_sdk_iso.sh` |
+| **SDK no-iso** | Business Data Platform Python SDK direct import | shared (default) | `run_sdk_noiso.sh` |
 | **e2e** | `claude -p` stream-json multi-turn, auto-capture into OV | shared | `run_e2e.sh` |
 
 All four use the same QA / judge / stats pipeline (`eval.py` → `judge.py` →
@@ -29,7 +29,7 @@ All four use the same QA / judge / stats pipeline (`eval.py` → `judge.py` →
    export ANTHROPIC_BASE_URL=https://ark.cn-beijing.volces.com/api/compatible
    export ANTHROPIC_MODEL=doubao-seed-2-0-code-preview-260215
    ```
-5. **OpenViking server + plugin** (only for SDK iso / SDK no-iso / e2e modes):
+5. **Business Data Platform server + plugin** (only for SDK iso / SDK no-iso / e2e modes):
    - Start `openviking-server` (defaults to `127.0.0.1:1933`). The e2e mode
      wants it running inside a tmux session so the runner can restart it
      across snapshots — set `OPENVIKING_SERVER_TMUX=<session>` (default
@@ -74,7 +74,7 @@ and saved to `.tmp/result-<mode>/summary.txt`. Per-question CSVs land in
 
 - `ingest.py` — feeds each LoCoMo session as a `claude -p` invocation;
   CC's vanilla auto-memory writes `MEMORY.md` inside the project dir.
-- `import_to_ov.py` — uses the OpenViking Python SDK to push LoCoMo
+- `import_to_ov.py` — uses the Business Data Platform Python SDK to push LoCoMo
   conversations directly into OV. Per-sample user namespace by default; pass
   `--no-user-id` for shared namespace.
 - `ingest_e2e.py` — opens one `claude -p` per LoCoMo session in

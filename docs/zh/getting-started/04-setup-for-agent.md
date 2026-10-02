@@ -1,10 +1,10 @@
-# OpenViking 安裝 SOP（For Agent）
+# Business Data Platform 安裝 SOP（For Agent）
 
 ## 目標
 
-幫助使用者以最小路徑完成 OpenViking 安裝、配置、自檢和啟動。
+幫助使用者以最小路徑完成 Business Data Platform 安裝、配置、自檢和啟動。
 
-本文面向 OpenViking 服務端安裝。如果只需要配置客戶端 CLI，請使用 [OpenViking CLI 配置指南](05-cli-setup.md)。
+本文面向 Business Data Platform 服務端安裝。如果只需要配置客戶端 CLI，請使用 [Business Data Platform CLI 配置指南](05-cli-setup.md)。
 
 ## 總原則
 
@@ -22,7 +22,7 @@
 #### A. 普通最小安裝
 滿足任一情況即可進入：
 - 使用者只是想安裝並跑起來
-- 使用者只是想體驗或接入 OpenViking
+- 使用者只是想體驗或接入 Business Data Platform
 - 使用者沒有要求原始碼開發
 - 使用者沒有要求修改底層原生元件
 
@@ -426,4 +426,4 @@ pip install openviking --upgrade --force-reinstall
 - 使用者想用 `openai-codex`，提醒它主要解決 VLM，embedding 仍需單獨確認
 
 ## 其他詳細參考
-- [OpenViking 官方GitHub 倉庫](https://github.com/volcengine/OpenViking)
+- [Business Data Platform 官方GitHub 倉庫](https://github.com/volcengine/OpenViking)

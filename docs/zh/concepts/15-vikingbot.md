@@ -1,14 +1,14 @@
-# VikingBot：基於 OpenViking 的多渠道 AI Agent
+# VikingBot：基於 Business Data Platform 的多渠道 AI Agent
 
-VikingBot 是 OpenViking 提供的多渠道 AI Agent。OpenViking 負責統一管理 Resource、Memory 和 Skill 等長期上下文；VikingBot 負責接收使用者訊息、組織上下文、呼叫模型和工具，並把任務結果交付回命令列、聊天平臺或 HTTP 客戶端。
+VikingBot 是 Business Data Platform 提供的多渠道 AI Agent。Business Data Platform 負責統一管理 Resource、Memory 和 Skill 等長期上下文；VikingBot 負責接收使用者訊息、組織上下文、呼叫模型和工具，並把任務結果交付回命令列、聊天平臺或 HTTP 客戶端。
 
 兩者組合後，Agent 不僅能完成當前任務，還能持續積累使用者記憶、會話摘要和任務經驗，在後續任務中再次使用。
 
-## VikingBot 與 OpenViking 的分工
+## VikingBot 與 Business Data Platform 的分工
 
 | 元件 | 主要職責 | 典型能力 |
 |------|----------|----------|
-| **OpenViking** | 上下文儲存、組織和檢索 | Resource、Memory、Skill、Session、語義檢索、記憶與經驗提取 |
+| **Business Data Platform** | 上下文儲存、組織和檢索 | Resource、Memory、Skill、Session、語義檢索、記憶與經驗提取 |
 | **VikingBot** | Agent 執行和互動 | 多渠道訊息、模型推理、工具呼叫、Skill 執行、沙箱、自動化、結果交付 |
 
 ## 系統概覽
@@ -25,7 +25,7 @@ CLI / Slack / Telegram / Discord / Email / HTTP API
                     │                   │
           ┌─────────┴─────────┐         ▼
           ▼                   ▼       回覆與事件
-  OpenViking Context     Tools / Skills
+  Business Data Platform Context     Tools / Skills
   Resource / Memory      Files / Shell / Web
   Experience / Session   MCP / Cron / Subagent
           │                   │
@@ -52,17 +52,17 @@ VikingBot 支援三類入口：
 
 AgentLoop 是 VikingBot 的執行核心。每輪訊息會經過：
 
-1. 載入身份、工作區規則、Skill、會話歷史和 OpenViking 上下文；
+1. 載入身份、工作區規則、Skill、會話歷史和 Business Data Platform 上下文；
 2. 呼叫配置的模型；
 3. 如果模型返回工具呼叫，由 ToolRegistry 校驗引數並執行；
 4. 將工具結果加入上下文，再次呼叫模型；
 5. 生成最終回覆，儲存 Session，並投遞迴原渠道。
 
-模型 Provider 層統一處理文本、reasoning、流式增量、工具呼叫和 token usage。Bot 預設繼承 OpenViking 根級 `vlm`，也可以通過 `bot.agents` 使用獨立模型。
+模型 Provider 層統一處理文本、reasoning、流式增量、工具呼叫和 token usage。Bot 預設繼承 Business Data Platform 根級 `vlm`，也可以通過 `bot.agents` 使用獨立模型。
 
 ### 工具、Skill 與子 Agent
 
-VikingBot 內建檔案、Shell、Web、圖片、定時任務和 OpenViking 工具，也可以連線外部 MCP Server。
+VikingBot 內建檔案、Shell、Web、圖片、定時任務和 Business Data Platform 工具，也可以連線外部 MCP Server。
 
 | 能力 | 作用 |
 |------|------|
@@ -95,12 +95,12 @@ VikingBot 提供兩種主動執行機制：
 - 已配置的聊天 Channels；
 - Bot HTTP API 和 SSE 流式事件；
 - AgentLoop、Session、Cron 和 Heartbeat；
-- OpenViking API 代理；
+- Business Data Platform API 代理；
 - 使用者反饋、結果評估、日誌和可選 Langfuse 觀測。
 
-配置 OpenViking upstream 後，Bot Chat 和 `/api/v1/*` 可以使用同一個 Gateway 地址，但 Gateway Token 與 OpenViking 使用者身份仍是兩個獨立安全邊界。
+配置 Business Data Platform upstream 後，Bot Chat 和 `/api/v1/*` 可以使用同一個 Gateway 地址，但 Gateway Token 與 Business Data Platform 使用者身份仍是兩個獨立安全邊界。
 
-## OpenViking 如何增強 VikingBot
+## Business Data Platform 如何增強 VikingBot
 
 ### Resource：任務知識
 
@@ -122,14 +122,14 @@ Experience 儲存 Agent 過去完成類似任務的方法。VikingBot 可以在�
 
 ### Session：從對話到長期上下文
 
-VikingBot 本地 Session 儲存執行歷史和渠道狀態；OpenViking Session 負責訊息歸檔、壓縮摘要、記憶和經驗提取。
+VikingBot 本地 Session 儲存執行歷史和渠道狀態；Business Data Platform Session 負責訊息歸檔、壓縮摘要、記憶和經驗提取。
 
 ```text
 當前任務
   → 召回 Resource / Memory / Experience
   → Agent 使用 Skill 和工具執行
   → 保存本地 Session
-  → 增量同步並提交 OpenViking Session
+  → 增量同步並提交 Business Data Platform Session
   → 提取新的 Memory 和 Experience
   → 後續任務再次召回
 ```
@@ -138,9 +138,9 @@ VikingBot 本地 Session 儲存執行歷史和渠道狀態；OpenViking Session 
 
 ## 三種執行入口
 
-| 入口 | 適用場景 | OpenViking 連線 |
+| 入口 | 適用場景 | Business Data Platform 連線 |
 |------|----------|----------------|
-| `openviking-server --with-bot` | 本地完整體驗 | 使用當前啟動的 OpenViking Server |
+| `openviking-server --with-bot` | 本地完整體驗 | 使用當前啟動的 Business Data Platform Server |
 | `vikingbot chat` | 快速試用和 Agent 開發 | 可選；不可用時 standalone 執行 |
 | `vikingbot gateway` | 長期服務、遠端訪問和聊天平臺 | 可連線指定或同配置中的 Server，也可 standalone 執行 |
 
@@ -152,18 +152,18 @@ VikingBot 的訪問控制分為多層：
 
 - Channel 使用 `allow_from` 等策略限制訊息傳送者；
 - 非 localhost Gateway 必須配置 Gateway Token；
-- OpenViking Server 驗證 User/Admin API Key 或 trusted 身份；
-- request-scoped OpenViking 連線只接受可信 Server 代理注入；
+- Business Data Platform Server 驗證 User/Admin API Key 或 trusted 身份；
+- request-scoped Business Data Platform 連線只接受可信 Server 代理注入；
 - Sandbox 控制檔案、命令和網路訪問邊界。
 
-Gateway Token 只保護 Gateway 入口，不能代替 OpenViking 使用者身份。對於公網或多使用者部署，不應使用 `direct` 後端處理不可信請求。
+Gateway Token 只保護 Gateway 入口，不能代替 Business Data Platform 使用者身份。對於公網或多使用者部署，不應使用 `direct` 後端處理不可信請求。
 
 ## 適用場景
 
 - 帶長期記憶的個人或團隊助手；
 - 接入企業聊天平臺的知識與任務 Bot；
 - 需要文件、Shell、Web、MCP 和 Skill 的通用 Agent；
-- 通過統一 Gateway 暴露 Chat 與 OpenViking API；
+- 通過統一 Gateway 暴露 Chat 與 Business Data Platform API；
 - 需要記錄反饋、結果和任務經驗的持續學習型 Agent。
 
 ## 相關文件
@@ -173,6 +173,6 @@ Gateway Token 只保護 Gateway 入口，不能代替 OpenViking 使用者身份
 - [VikingBot 架構詳解](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/01-architecture.md)
 - [Agent 能力體系](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/02-agent-capabilities.md)
 - [渠道、Gateway 與執行管理](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/03-channels-and-gateway.md)
-- [VikingBot 與 OpenViking 整合](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/04-openviking-integration.md)
-- [OpenViking 上下文型別](./02-context-types.md)
-- [OpenViking 會話管理](./08-session.md)
+- [VikingBot 與 Business Data Platform 整合](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/04-openviking-integration.md)
+- [Business Data Platform 上下文型別](./02-context-types.md)
+- [Business Data Platform 會話管理](./08-session.md)

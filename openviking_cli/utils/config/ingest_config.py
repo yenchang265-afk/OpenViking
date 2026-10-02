@@ -3,7 +3,7 @@
 """Configuration for the conversation-log ingest subsystem (``openviking-server ingest``).
 
 Ingest parses local agent-harness conversation logs (Claude Code, Codex, OpenCode,
-Hermes, OpenClaw, Cursor) and "replays" them through OpenViking's session pipeline.
+Hermes, OpenClaw, Cursor) and "replays" them through Business Data Platform's session pipeline.
 See ``openviking/ingest/`` for the runtime.
 """
 

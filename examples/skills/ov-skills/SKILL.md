@@ -1,14 +1,14 @@
 ---
 name: ov-skills
-description: Load when an agent needs to manage, install, update, remove, or validate OpenViking skills via the `ov skills` CLI. Trigger on explicit user requests about skill management, when the user mentions `ov skills`, `install skill`, `update skill`, `delete skill`, `validate skill`, or when an agent needs to discover what skills are available on the OpenViking server.
-compatibility: OpenViking CLI configured at `~/.openviking/ovcli.conf`
+description: Load when an agent needs to manage, install, update, remove, or validate Business Data Platform skills via the `ov skills` CLI. Trigger on explicit user requests about skill management, when the user mentions `ov skills`, `install skill`, `update skill`, `delete skill`, `validate skill`, or when an agent needs to discover what skills are available on the Business Data Platform server.
+compatibility: Business Data Platform CLI configured at `~/.openviking/ovcli.conf`
 version: 1.1.0
 last_updated: 2026-09-18
 ---
 
-# OpenViking (OV) Skills Management
+# Business Data Platform (OV) Skills Management
 
-The `ov skills` command group manages agent skills on OpenViking — including installation from local directories, Git repositories, GitHub URLs, or raw content; listing, searching, inspecting, updating, and removing skills; and validating skill format locally. `ov add-skill` is the same command as `ov skills add` and takes the same flags.
+The `ov skills` command group manages agent skills on Business Data Platform — including installation from local directories, Git repositories, GitHub URLs, or raw content; listing, searching, inspecting, updating, and removing skills; and validating skill format locally. `ov add-skill` is the same command as `ov skills add` and takes the same flags.
 
 ## Goal
 

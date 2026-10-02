@@ -1,6 +1,6 @@
 # 更新日誌
 
-OpenViking 的所有重要變更都將記錄在此檔案中。
+Business Data Platform 的所有重要變更都將記錄在此檔案中。
 此更新日誌從 [GitHub Releases](https://github.com/volcengine/OpenViking/releases) 自動生成。
 
 ## 未釋出
@@ -29,7 +29,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 - **Agent 工作區隔離**：Codex、Claude Code、OpenCode 和 Pi 整合支援從工作區派生 peer identity，實現專案級記憶隔離，並擴充共享安裝器與混合 MCP 支援。
 - **檢索與記憶正確性**：新增圖片搜尋，正確處理 agent-only / peer-only 記憶範圍，並避免生成巢狀的記憶連結。
 - **儲存與安全加固**：序列化本地 collection 懶載入，按後端約束 VikingDB content 寫入，並阻止 Git submodule SSRF。
-- **VikingBot 與平臺修復**：新增統一 gateway 路由和 OpenViking 鑑權，並修復渠道 sender metadata、僅 VLM 配置、Windows 向量後端和 benchmark 併發問題。
+- **VikingBot 與平臺修復**：新增統一 gateway 路由和 Business Data Platform 鑑權，並修復渠道 sender metadata、僅 VLM 配置、Windows 向量後端和 benchmark 併發問題。
 
 [完整變更記錄](https://github.com/volcengine/OpenViking/compare/v0.4.8...v0.4.9)
 
@@ -75,7 +75,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 ### 重點更新
 
-- **認證角色序列化與 trusted 模式**：請求身份中的角色現在會在 storage、resource、session、queue、watch、summarizer 和語義處理路徑中統一序列化為字串角色；OpenViking 後端的 VikingBot 流程也補充了 trusted `auth_mode` 支援。
+- **認證角色序列化與 trusted 模式**：請求身份中的角色現在會在 storage、resource、session、queue、watch、summarizer 和語義處理路徑中統一序列化為字串角色；Business Data Platform 後端的 VikingBot 流程也補充了 trusted `auth_mode` 支援。
 - **CLI、Web Studio 與 Bot 配置可靠性**：CLI 配置嚮導中的使用者管理設定更清晰，Web Studio 帳號選擇更穩定，VikingBot 認證處理更簡單，失敗的 session archive 現在可以跳過。
 - **Agent 整合召回與 OpenCode 文件**：Codex / OpenCode 整合新增 session-aware recall，OpenCode 外掛文件收斂到單一維護中的外掛。
 - **儲存與 Session 穩定性加固**：QueueFS 語義處理支援非目錄 memory URI，glob URI scheme 會被保留，event summary fallback、memory abstract 截斷和 path-lock 進度日誌更加穩健。
@@ -106,7 +106,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 - **RAGFS 快取與遷移可靠性**：新增 CachedFileSystem，並支援 Redis、Mooncake、Yuanrong cache providers；legacy shape probe 會跳過 zero-byte 檔案和 path locks，S3 head-object 錯誤返回更清晰，加密讀取遷移路徑增加 plaintext fallback。
 - **Go SDK 與程式碼導航**：支援 Go HTTP SDK 並補充檔案系統示例文件，同時為 OpenCode 外掛新增 code navigation endpoints。
-- **文件搜尋與本地化**：新增 OpenViking-powered 文件搜尋，並補齊本地化、SDK 和 Hermes wording 更新。
+- **文件搜尋與本地化**：新增 Business Data Platform-powered 文件搜尋，並補齊本地化、SDK 和 Hermes wording 更新。
 - **Parser、Session 與 Task 修復**：修復 session ID encode、飛書 URL host 匹配、task tracker 加密繫結和 event overview refresh 等問題。
 - **安全依賴更新**：提升 `python-multipart` 和 `cryptography` 版本下限以修復高危公告，並讓 UnderstandingAPI zip 下載使用 safe extraction 規避 Zip Slip 風險。
 - **外掛與 Memory 後續修復**：更新 memory plugin recall/auth handling、OpenClaw 外掛 release metadata、session skill YAML 規則和 tag-setting 支援。
@@ -126,7 +126,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 ### 重點更新
 
-- **User / Peer 身份模型**：OpenViking 將資料 owner (`user`) 與互動物件 (`peer`) 分離，`agent_id` 僅作為 legacy 過渡配置對映到請求級 `actor_peer_id`。
+- **User / Peer 身份模型**：Business Data Platform 將資料 owner (`user`) 與互動物件 (`peer`) 分離，`agent_id` 僅作為 legacy 過渡配置對映到請求級 `actor_peer_id`。
 - **0.3.x legacy 遷移路徑**：舊的 `viking://agent/...` 與 `viking://session/...` 資料可以相容讀取、遷移到新的 `viking://user/...` 佈局、驗證，並在確認不需要回滾後清理。
 - **多模態入庫擴充**：會話與資源入庫支援圖片訊息、Markdown 圖片 URI 改寫、飛書使用者 token、外部 ParserRouter，以及更完整的圖片向量化鏈路。
 - **OpenClaw 與檢索診斷**：檢索支援 `context_type`，OpenClaw 增加 Recall Trace、runtime query config、feature gates 和 actor peer scope wiring。
@@ -168,7 +168,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 - **Web Studio Playground 與身份管理**：Studio 側邊欄新增 Playground，可檢視上下文樹、執行 Terminal 操作並與 Agent 面板互動；Connection & Identity 頁面支援儲存連線、選擇 account/user 身份、建立 account/user、複製或重新生成 API key。
 - **VikingBot 經驗召回配置化**：新增 `bot.ov_server.exp_recall_limit`、`exp_recall_max_chars`，用於調整 agent experience 召回；本地與遠端模式都按傳入 `agent_id` 做經驗名稱空間隔離。
 - **資源 Watch 更易用**：`add_resource` 設定 `watch_interval > 0` 時不再強制要求顯式 `to`；如果匯入結果返回穩定 `root_uri`，watch task 會自動繫結到該 URI，CLI/MCP/文件示例同步更新。
-- **外掛結構化工具結果與 CJK token 估算**：Claude Code / OpenClaw 外掛改為向 OpenViking 寫入結構化 tool parts，工具呼叫與結果不再只能內聯到文本；CJK-aware token 估算覆蓋 Python 與外掛側，降低中文、日文、韓文會話的預算低估風險。
+- **外掛結構化工具結果與 CJK token 估算**：Claude Code / OpenClaw 外掛改為向 Business Data Platform 寫入結構化 tool parts，工具呼叫與結果不再只能內聯到文本；CJK-aware token 估算覆蓋 Python 與外掛側，降低中文、日文、韓文會話的預算低估風險。
 
 ### 升級說明
 
@@ -185,7 +185,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 - **檢索 query planner 可配置**：新增輕量 query planner 配置，可選擇並調整檢索階段意圖分析所用的模型。
 - **移除 legacy Memory V1**：刪除已廢棄的 memory v1 路徑，memory `version` 欄位現在會拒絕 `v1` 負載。
-- **LangChain 可靠性**：自動恢復失效的 OpenViking client，並支援 LangChain 整合的本地批次訊息寫入。
+- **LangChain 可靠性**：自動恢復失效的 Business Data Platform client，並支援 LangChain 整合的本地批次訊息寫入。
 - **VikingDB 健壯性**：向量檢索會跳過 fields 損壞的候選，併為 VikingDB 增加 `ap-southeast-1` region host 對映。
 - **CLI 與 server 打磨**：`ov` CLI 在向 server 發請求前先報告缺失的 CLI 配置，server mode 術語從 `dev-implicit` 統一為 `dev`，並統一 embedding 輸入截斷邏輯。
 
@@ -202,7 +202,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 - **Trajectory 記憶更適合檢索與復盤**：trajectory schema 新增 `retrieval_anchor` 和 `embedding_template`，索引文本從完整內容收斂為 `trajectory_name + retrieval_anchor`；experience 與 trajectory 之間改為系統維護的 `derived_from` `StoredLink`，寫入正向 `links` 與反向 `backlinks`，替代易丟失的 `source_trajectories` 後設資料。
 - **會話訊息支援批次寫入**：REST API 新增 `POST /api/v1/sessions/{session_id}/messages/batch`，CLI 新增 `ov session add-messages`，適合匯入歷史對話或一次寫入多輪訊息；`ov add-memory` 也複用同一套嚴格 JSON 訊息解析。
-- **OpenClaw 搜尋工具改名為 `ov_search`**：OpenViking OpenClaw 外掛不再註冊 `memory_search`，避免與 OpenClaw 內建工具衝突；匯入 resource/skill 後統一使用 `ov_search` 和 `/ov-search`。
+- **OpenClaw 搜尋工具改名為 `ov_search`**：Business Data Platform OpenClaw 外掛不再註冊 `memory_search`，避免與 OpenClaw 內建工具衝突；匯入 resource/skill 後統一使用 `ov_search` 和 `/ov-search`。
 - **資源解析與二進位制 URL 判斷增強**：HTTP accessor 擴充圖片、音訊、影片和 Office/EPUB/zip 文件型別識別；當 `HEAD` 不可靠時會在 `GET` 後用響應頭重新判斷。Word、PowerPoint、Excel、EPUB、legacy doc 等本地轉換路徑改為執行緒中執行，不再阻塞事件迴圈。
 - **Web Studio 隨 Python 安裝包分發**：`setup`/`build` 會構建並打包 Web Studio 靜態資源，pip/pipx 安裝後 `/studio` 可直接使用，無需 Docker。
 - **LiteLLM VLM 增加 NVIDIA NIM 路由**：模型名中包含 `nvidia_nim` 或 `nemotron` 時可自動走 NVIDIA NIM 的 LiteLLM 字首和 `NVIDIA_NIM_API_KEY` 環境變數。
@@ -243,7 +243,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 - **Usage/Audit 統一按 UTC 寫入**：Token、檢索、上下文提交、Agent 活躍和請求審計 rollup 現在寫入 UTC `date_utc`、`hour_utc`、`created_at`，查詢時再通過 `zoneinfo` 按使用者時區重分桶，覆蓋 DST 和半小時時區場景。
 - **本地 Usage/Audit schema reset**：SQLite store 新增 schema version v3，升級時會重置不相容的本地 Usage/Audit 表，避免短保留、pre-GA 資料裡混入 local/UTC 欄位或半遷移的日/小時表。
 - **Web Studio heatmap 對齊新語義**：Web Studio 會把瀏覽器時區傳給 Console BFF，heatmap 直接使用服務端返回的 bucket date，修復 UTC+ 使用者下“今天”被二次平移到“明天”的問題。
-- **相鄰更新**：新增通過 `memory.session_skill_extraction_enabled` 控制的 session skill 提取鏈路，補充 Hermes OpenViking LoCoMo benchmark scripts，修正 Studio OAuth setup 入口文件，並重新整理 LiteLLM 依賴範圍。
+- **相鄰更新**：新增通過 `memory.session_skill_extraction_enabled` 控制的 session skill 提取鏈路，補充 Hermes Business Data Platform LoCoMo benchmark scripts，修正 Studio OAuth setup 入口文件，並重新整理 LiteLLM 依賴範圍。
 
 ### 升級說明
 
@@ -261,7 +261,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 - **Web Studio 成為預設 Console**：新增 `web-studio` 前端 console workspace，隨 Docker 與 pip 分發並通過 `/studio` 提供服務；OAuth authorize UI 遷入 Web Studio，legacy console 下線，同時保留 favicon 相容路由。
 - **MCP / API / CLI 自動化能力**：Watch Management 覆蓋 REST、`ov` CLI 與 MCP；新增本地檔案 progressive single-entrypoint upload；增加 `code_outline`、`code_search`、`code_expand` 程式碼導航工具，並修正 upload-only 與 zip `--ignore-dirs` 的作用域處理。
-- **Agent 與 OpenClaw 生態**：OpenClaw setup helper 支援 npm 外掛安裝，外掛文件對齊 ClawHub package metadata，新增 `ov_dream` OpenClaw skill，並支援將過大的 OpenClaw tool result externalize 到 OpenViking。
+- **Agent 與 OpenClaw 生態**：OpenClaw setup helper 支援 npm 外掛安裝，外掛文件對齊 ClawHub package metadata，新增 `ov_dream` OpenClaw skill，並支援將過大的 OpenClaw tool result externalize 到 Business Data Platform。
 - **Memory 與檢索**：升級 trajectory extraction，新增 memory link 能力，支援通過開關啟用 Vaka memory templates，修復缺失 tool-call 計數和訊息 peer 檢索缺失問題，並行化 hierarchical child search。
 - **Storage、VectorDB 與模型鏈路穩定性**：儲存鎖與 IO 非同步化，非同步客戶端按 event loop 隔離；修復 semantic lock ownership、`mv not found` 誤報、URI remapping、S3 grep 效能、VectorDB Unicode recovery、超大 bytes row、embedding 錯誤透出和 VLM LiteLLM native routes 等問題。
 - **可觀測性、文件與部署打磨**：新增 VikingBot feedback observability，集中化 metric registry，usage audit SQLite 遷入 system data，重新整理 Helm chart 預設配置，更新品牌資產與二維碼，並補齊 public base URL、signed upload TTL、Watch API、MCP code tools、ready 探針和 `/studio` 遷移文件。
@@ -280,7 +280,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 ### 重點更新
 
-- **Agent 整合**：新增 LangChain 與 LangGraph 整合 `openviking.integrations.langchain`（`OpenVikingRetriever`、`with_openviking_context()`、`OpenVikingChatMessageHistory`、`OpenVikingContextMiddleware`、`OpenVikingStore`（LangGraph store）、`create_openviking_tools()`）；Codex / OpenCode 外掛改造為通過生命週期 hooks 做自動召回、逐輪捕獲和 PreCompact 前提交，並直接連線 OpenViking 原生 `/mcp` 端點。
+- **Agent 整合**：新增 LangChain 與 LangGraph 整合 `openviking.integrations.langchain`（`OpenVikingRetriever`、`with_openviking_context()`、`OpenVikingChatMessageHistory`、`OpenVikingContextMiddleware`、`OpenVikingStore`（LangGraph store）、`create_openviking_tools()`）；Codex / OpenCode 外掛改造為通過生命週期 hooks 做自動召回、逐輪捕獲和 PreCompact 前提交，並直接連線 Business Data Platform 原生 `/mcp` 端點。
 - **OVPack v2 與完整備份恢復**：`ov export` / `ov import` 支援 v2 manifest、檔案校驗、portable index scalar、可選 dense vector snapshot 和衝突策略；新增 `ov backup` / `ov restore` 用於公共 scope 的完整遷移。
 - **原生 CLI 分發**：新增 `@openviking/cli` npm 包，可通過 `npm i -g @openviking/cli` 使用 `ov`；Rust CLI 釋出流水線擴充 Linux musl 構建、npm trusted publishing 和 CLI 整合測試。
 - **檢索與檔案系統能力**：`find` / `search` 新增 `level` 過濾，可限定 L0 abstract、L1 overview 或 L2 檔案命中；資源檔案增加 Phase 1 WebDAV 適配；`observer.filesystem` 暴露檔案系統觀測入口。
@@ -311,7 +311,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 - OTLP 後端接入可通過 `headers` 統一配置鑑權資訊（gRPC 模式為 metadata，HTTP 模式為請求頭）。
 - 本地目錄上傳預設遵循 `.gitignore` 規則，此前被匯入的臨時/生成檔案升級後可能被自動過濾。
-- OpenClaw 外掛執行時身份通過 `peer_prefix` peer metadata 表達，不再對應 OpenViking agent namespace。
+- OpenClaw 外掛執行時身份通過 `peer_prefix` peer metadata 表達，不再對應 Business Data Platform agent namespace。
 
 [完整變更記錄](https://github.com/volcengine/OpenViking/compare/v0.3.13...v0.3.14)
 
@@ -381,7 +381,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 - **Memory**：Memory V2 設為預設，包含完整測試套件、session 行遷移，修復併發場景下的檔案鎖衝突。
 - **OpenClaw**：上下文分割槽重構為 Instruction/Archive/Session 層，外掛統一 `ov_import` 和 `ov_search`，延長 Phase 2 commit 等待超時。
-- **Bot & MCP**：從 HKUDS/nanobot v0.1.5 移植 MCP client 支援，新增單 channel 停用 OpenViking 配置，修復心跳可靠性。
+- **Bot & MCP**：從 HKUDS/nanobot v0.1.5 移植 MCP client 支援，新增單 channel 停用 Business Data Platform 配置，修復心跳可靠性。
 - **檢索與搜尋**：通過跳過冗餘 scope 檢查最佳化大目錄搜尋效能，修復 sparse embedder 非同步初始化，新增 rerank extra-headers 支援。
 - **部署與上手**：新增互動式 `openviking-server init` 嚮導支援本地 Ollama 部署，`ovcli.conf` 新增預設檔案/目錄忽略配置。
 - **基礎設施**：新增度量系統，更新預設 Doubao embedding 模型，提升 RAGFS Docker 構建的 Rust toolchain，解析器拆分為 accessor 和 parser 兩層。
@@ -448,7 +448,7 @@ Memory V2 現在作為預設記憶管線，採用全新格式、重構的抽取�
 ### 重點更新
 
 - 新增 RAG benchmark 評測框架、OpenClaw LoCoMo eval 指令碼、內容寫入介面。
-- OpenClaw 外掛：架構文件補充、安裝器不再覆蓋 `gateway.mode`、端到端 healthcheck 工具、bypass session patterns、OpenViking 故障隔離。
+- OpenClaw 外掛：架構文件補充、安裝器不再覆蓋 `gateway.mode`、端到端 healthcheck 工具、bypass session patterns、Business Data Platform 故障隔離。
 - 測試覆蓋：OpenClaw 外掛單測、e2e 測試、oc2ov 整合測試與 CI。
 - Session 支援指定 `session_id` 建立；CLI 聊天端點優先順序與 `grep --exclude-uri/-x` 增強。
 - 安全：任務 API ownership 洩露修復、stale lock 統一處理、ZIP 編碼修復、embedder 維度透傳。
@@ -585,7 +585,7 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 - CLI 體驗：`ov chat` 基於 `rustyline` 行編輯、Markdown 渲染、聊天曆史。
 - 非同步能力：session commit `wait` 引數、可配置 worker count。
-- 新增 OpenViking Console Web 控制台，方便除錯和 API 探索。
+- 新增 Business Data Platform Console Web 控制台，方便除錯和 API 探索。
 - Bot 增強：eval 能力、`add-resource` 工具、飛書進度通知。
 - OpenClaw memory plugin 大幅升級：npm 安裝、統一安裝器、穩定性修復。
 - 平臺支援：Linux ARM、Windows UTF-8 BOM 修復、CI runner OS 固定。
@@ -621,7 +621,7 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 升級前請先停止 VikingDB Server 並清除 workspace 目錄。舊版本的索引與此版本不向前相容。
 
-此版本新增 C# AST 提取器支援程式碼解析，修復多租戶過濾，規範 OpenViking memory target paths，改進 `git@` SSH URL 的 git 倉庫檢測。`agfs` 依賴的 lib/bin 現在預編譯提供，安裝時無需構建步驟。文件新增千問模型使用說明。
+此版本新增 C# AST 提取器支援程式碼解析，修復多租戶過濾，規範 Business Data Platform memory target paths，改進 `git@` SSH URL 的 git 倉庫檢測。`agfs` 依賴的 lib/bin 現在預編譯提供，安裝時無需構建步驟。文件新增千問模型使用說明。
 
 [完整變更記錄](https://github.com/volcengine/OpenViking/compare/v0.2.1...v0.2.2)
 
@@ -645,7 +645,7 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 ## v0.1.18 (2026-02-23)
 
-此版本為 OpenViking 帶來重大新能力。引入高效能 Rust CLI 和終端檔案系統瀏覽器 UI。檔案解析大幅擴充，支援 Word、PowerPoint、Excel、EPub 和 ZIP 格式。新增多 provider 支援用於 embedding 和 VLM 後端。Memory 處理重新設計為具有衝突感知的去重和新抽取流程。
+此版本為 Business Data Platform 帶來重大新能力。引入高效能 Rust CLI 和終端檔案系統瀏覽器 UI。檔案解析大幅擴充，支援 Word、PowerPoint、Excel、EPub 和 ZIP 格式。新增多 provider 支援用於 embedding 和 VLM 後端。Memory 處理重新設計為具有衝突感知的去重和新抽取流程。
 
 ### 重點更新
 
@@ -661,7 +661,7 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 ## cli@0.1.0 (2026-02-14)
 
-初始 CLI 二進位制釋出，跨平臺支援 macOS 和 Linux，提供獨立的 OpenViking 服務管理和資源操作執行檔。
+初始 CLI 二進位制釋出，跨平臺支援 macOS 和 Linux，提供獨立的 Business Data Platform 服務管理和資源操作執行檔。
 
 [完整變更記錄](https://github.com/volcengine/OpenViking/releases/tag/cli%400.1.0)
 
@@ -693,12 +693,12 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 ## v0.1.14 (2026-02-12)
 
-重大基礎設施版本。引入 HTTP Server 和 Python HTTP Client，實現 OpenViking 服務的遠端訪問。OpenClaw skill 新增 MCP 整合支援。目錄預掃描校驗、DAG 觸發 embedding 和並行資源新增提升了效能和可靠性。
+重大基礎設施版本。引入 HTTP Server 和 Python HTTP Client，實現 Business Data Platform 服務的遠端訪問。OpenClaw skill 新增 MCP 整合支援。目錄預掃描校驗、DAG 觸發 embedding 和並行資源新增提升了效能和可靠性。
 
 ### 重點更新
 
 - **HTTP Server**：新的服務模式，提供 Python HTTP Client 用於遠端訪問。
-- **OpenClaw Skill**：OpenViking 的 MCP 集成。
+- **OpenClaw Skill**：Business Data Platform 的 MCP 集成。
 - **CLI**：完整的 Bash CLI 框架和全面的命令實現。
 - **Embedding**：DAG 觸發 embedding 和並行 add 支援。
 - **目錄掃描**：新增預掃描校驗模組。
@@ -722,7 +722,7 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 ## v0.1.11 (2026-02-05)
 
-新增對小型 GitHub 程式碼倉庫的匯入支援，使 OpenViking 能夠直接索引和搜尋公開程式碼庫。
+新增對小型 GitHub 程式碼倉庫的匯入支援，使 Business Data Platform 能夠直接索引和搜尋公開程式碼庫。
 
 [完整變更記錄](https://github.com/volcengine/OpenViking/compare/v0.1.10...v0.1.11)
 
@@ -734,11 +734,11 @@ LiteLLM 相關能力會暫時不可用，直到上游給出可信的修復版本
 
 ## v0.1.9 (2026-02-05)
 
-OpenViking 的初始公開發布。此版本建立了核心專案結構，支援 Linux 和 Intel Mac 跨平臺。引入服務層架構，將 embedding 和 VLM 後端分離為可配置的 provider。改進了 Memory 去重並修復了檢索遞迴 bug。包含 Python 3.13 相容性、S3FS 支援以及 chat 和 memory 工作流的使用示例。
+Business Data Platform 的初始公開發布。此版本建立了核心專案結構，支援 Linux 和 Intel Mac 跨平臺。引入服務層架構，將 embedding 和 VLM 後端分離為可配置的 provider。改進了 Memory 去重並修復了檢索遞迴 bug。包含 Python 3.13 相容性、S3FS 支援以及 chat 和 memory 工作流的使用示例。
 
 ### 重點更新
 
-- **初始釋出**：核心 OpenViking server、client 和 CLI 基礎。
+- **初始釋出**：核心 Business Data Platform server、client 和 CLI 基礎。
 - **Provider**：可配置的 embedding 和 VLM 後端，provider 抽象層。
 - **架構**：從 async client 中提取 Service 層；ObserverService 從 DebugService 分離。
 - **平臺**：Linux 編譯支援、Intel Mac 相容性、Python 3.13 支援。

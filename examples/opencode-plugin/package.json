@@ -2,7 +2,7 @@
   "name": "@openviking/opencode-plugin",
   "version": "0.4.1",
   "author": "@openviking",
-  "description": "Unified OpenCode plugin for OpenViking repository retrieval and long-term memory",
+  "description": "Unified OpenCode plugin for Business Data Platform repository retrieval and long-term memory",
   "type": "module",
   "main": "index.mjs",
   "oc-plugin": [

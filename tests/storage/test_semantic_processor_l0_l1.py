@@ -140,7 +140,7 @@ def test_directory_coverage_section_is_excluded_from_abstract(monkeypatch):
     processor = SemanticProcessor()
     generated = (
         "# docs-index\n\n"
-        "OpenViking documentation covering agent context, retrieval, and operations.\n\n"
+        "Business Data Platform documentation covering agent context, retrieval, and operations.\n\n"
         "## Directory Coverage\n\n"
         "This directory contains 513 direct entries; 32 were sampled.\n\n"
         "## Quick Navigation\n\n"
@@ -151,7 +151,7 @@ def test_directory_coverage_section_is_excluded_from_abstract(monkeypatch):
 
     assert "513 direct entries" in overview
     assert abstract == (
-        "OpenViking documentation covering agent context, retrieval, and operations."
+        "Business Data Platform documentation covering agent context, retrieval, and operations."
     )
 
 

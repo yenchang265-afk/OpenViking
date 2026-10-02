@@ -5,7 +5,7 @@ export type TargetURI = string | string[];
 /** Header values accepted without requiring the DOM-only `HeadersInit` alias. */
 export type ClientHeaders =
   Headers | Record<string, string> | [string, string][];
-/** Temporary upload storage mode supported by the OpenViking server. */
+/** Temporary upload storage mode supported by the Business Data Platform server. */
 export type UploadMode = "local" | "shared";
 /** Resource post-ingest processing modes accepted by addResource. */
 export type ProcessingMode = "semantic_and_vectors" | "vectors_only";
@@ -374,13 +374,13 @@ export interface SearchContextResult {
   digest?: string;
   stats?: JsonObject;
 }
-/** Error payload returned by OpenViking. */
+/** Error payload returned by Business Data Platform. */
 export interface APIErrorInfo {
   code?: string;
   message?: string;
   details?: JsonObject;
 }
-/** Standard OpenViking HTTP response envelope. */
+/** Standard Business Data Platform HTTP response envelope. */
 export interface ResponseEnvelope<T> {
   status?: string;
   result?: T;

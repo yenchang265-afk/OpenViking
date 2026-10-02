@@ -1,5 +1,5 @@
 /**
- * Conformance checks for the OpenViking Agent Plugins 1.0 package.
+ * Conformance checks for the Business Data Platform Agent Plugins 1.0 package.
  *
  * Zero-dependency, runs with `node --test agent-plugins/plugin.test.mjs`.
  * Validates the manifests against the Agent Plugins 1.0 spec

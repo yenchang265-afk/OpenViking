@@ -74,7 +74,7 @@ export function registerOpenVikingArchiveTools(deps: OpenVikingArchiveToolsDeps)
   deps.registerTool(
     (ctx: OpenVikingArchiveToolContext) => ({
       name: "ov_archive_search",
-      label: "Archive Search (OpenViking)",
+      label: "Archive Search (Business Data Platform)",
       description:
         "Keyword-grep across all archived original conversation messages of the current session. " +
         "Use this whenever the [Session History Summary] does not contain the specific detail " +
@@ -220,7 +220,7 @@ export function registerOpenVikingArchiveTools(deps: OpenVikingArchiveToolsDeps)
 
   deps.registerTool((ctx: OpenVikingArchiveToolContext) => ({
     name: "ov_archive_expand",
-    label: "Archive Expand (OpenViking)",
+    label: "Archive Expand (Business Data Platform)",
     description:
       "Retrieve original messages from a compressed session archive. " +
       "Use when a session summary lacks specific details " +

@@ -1,7 +1,7 @@
 /**
- * Pi OpenViking Extension
+ * Pi Business Data Platform Extension
  *
- * Integrates pi with an OpenViking context database for persistent,
+ * Integrates pi with a Business Data Platform context database for persistent,
  * cross-session memory. Syncs conversation turns to OV, recalls
  * relevant memories on each prompt, and commits sessions for long-term
  * memory extraction.
@@ -113,7 +113,7 @@ export default async function (pi: ExtensionAPI) {
     toolFailureNotified = true;
     if (config.logLevel === "silent") return;
     ctx?.ui?.notify?.(
-      `OpenViking: no tools this session — ${state.error || "handshake failed"}${rootKeyHint(state.error)}`,
+      `Business Data Platform: no tools this session — ${state.error || "handshake failed"}${rootKeyHint(state.error)}`,
       "warning",
     );
   };
@@ -148,14 +148,14 @@ export default async function (pi: ExtensionAPI) {
       if (closed) return;
       if (!connected) {
         if (config.logLevel === "info") {
-          ctx.ui.notify("OpenViking: server not reachable", "warning");
+          ctx.ui.notify("Business Data Platform: server not reachable", "warning");
         }
         return;
       }
 
       // What the experimental fork probes to stand down. Set as soon as the
       // session is live, independently of any tool: a /mcp 401/403 leaves this
-      // extension with zero tools while it still writes the OpenViking session,
+      // extension with zero tools while it still writes the Business Data Platform session,
       // and that is exactly the case the fork must not join.
       (globalThis as any).__OPENVIKING_PI_EXTENSION__ = marker;
 
@@ -168,7 +168,7 @@ export default async function (pi: ExtensionAPI) {
       const ok = await sync.ensureSession(piSessionId);
       if (!ok) {
         if (config.logLevel !== "silent") {
-          ctx.ui.notify("OpenViking: failed to create session", "error");
+          ctx.ui.notify("Business Data Platform: failed to create session", "error");
         }
         return;
       }
@@ -196,7 +196,7 @@ export default async function (pi: ExtensionAPI) {
 
       started = true;
       if (config.logLevel === "info") {
-        ctx.ui.notify(`OpenViking connected (${piSessionId.slice(0, 8)}...)`, "info");
+        ctx.ui.notify(`Business Data Platform connected (${piSessionId.slice(0, 8)}...)`, "info");
       }
     })().finally(() => {
       startPromise = null;
@@ -236,7 +236,7 @@ export default async function (pi: ExtensionAPI) {
     // started after pi, or a credential fixed mid-session. `bridge` is null
     // exactly when `mcpEnabled` is false, and a bypassed directory or a failed
     // health check never gets here: bypass means this directory does not touch
-    // OpenViking at all. `connect()` re-handshakes only after a failure; after
+    // Business Data Platform at all. `connect()` re-handshakes only after a failure; after
     // a success it hands back the state it already has.
     if (bridge && wasStarted && connected && !bypassed && !closed && !toolsRegistered) {
       adoptBridgeTools(ctx, await bridge.connect(DEFAULT_HANDSHAKE_BUDGET_MS));
@@ -259,7 +259,7 @@ export default async function (pi: ExtensionAPI) {
     // server does not have. Omitted entirely when the handshake produced none,
     // which keeps the prefix free of a promise nothing can keep.
     if (toolNames.length) {
-      parts.push(`OpenViking tools (use these for viking:// URIs): ${toolNames.join(", ")}.`);
+      parts.push(`Business Data Platform tools (use these for viking:// URIs): ${toolNames.join(", ")}.`);
     }
 
     const additions = parts.join("\n\n");
@@ -404,10 +404,10 @@ export default async function (pi: ExtensionAPI) {
   // ================================================================
 
   pi.registerCommand("viking", {
-    description: "OpenViking status and manual operations. Use 'commit' to force a sync.",
+    description: "Business Data Platform status and manual operations. Use 'commit' to force a sync.",
     handler: async (args, ctx) => {
       if (!connected) {
-        ctx.ui.notify("OpenViking: not connected", "warning");
+        ctx.ui.notify("Business Data Platform: not connected", "warning");
         return;
       }
 
@@ -419,12 +419,12 @@ export default async function (pi: ExtensionAPI) {
           : commitResult !== null;
         if (ok) {
           ctx.ui.notify(
-            "OpenViking: committed successfully" +
+            "Business Data Platform: committed successfully" +
               (commitResult?.trace_id ? ` (trace_id=${commitResult.trace_id})` : ""),
             "info",
           );
         } else {
-          ctx.ui.notify("OpenViking: commit failed", "error");
+          ctx.ui.notify("Business Data Platform: commit failed", "error");
         }
         return;
       }
@@ -436,7 +436,7 @@ export default async function (pi: ExtensionAPI) {
         ? ` | takeover: ${t.coveredUserTurns}/${t.lastSeenUserTurns} turns archived, ~${t.pendingTokens} tokens pending`
         : "";
       ctx.ui.notify(
-        `OpenViking: ${connected ? "connected" : "disconnected"} | session: ${sid.slice(0, 12)}...`
+        `Business Data Platform: ${connected ? "connected" : "disconnected"} | session: ${sid.slice(0, 12)}...`
           + `${takeoverInfo} | ${toolsStatusLine()}`,
         "info",
       );
@@ -521,7 +521,7 @@ function updateStatus(
     ? ` · ctx ${takeoverState.coveredUserTurns ?? 0} · ~${takeoverState.pendingTokens ?? 0}/${threshold}`
     : ` · ✎ ${threshold}`;
   // Only worth a segment when tools were expected and are missing: `OV ✓` with
-  // no tools is a working session whose OpenViking tools failed, and
+  // no tools is a working session whose Business Data Platform tools failed, and
   // `mcpEnabled: false` asked for that and is not a fault.
   const tools = connected && (config as any).mcpEnabled !== false && !toolsReady
     ? " · tools ✗"

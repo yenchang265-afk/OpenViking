@@ -244,9 +244,9 @@ const AGENT_SKILLS_ROOT = "viking://agent/skills";
 // can return twice this many; the token budget below decides what fits.
 const SKILL_CATALOG_NODE_LIMIT = 200;
 const SKILL_DESCRIPTION_TOKENS = 40;
-const SKILL_MORE_HINT = "search OpenViking skills to find the rest";
+const SKILL_MORE_HINT = "search Business Data Platform skills to find the rest";
 const SKILL_USAGE_LINE =
-  "  OpenViking skills (stored in OpenViking, not local files). Before following one, read <dir>/<name>/SKILL.md with the OpenViking read tool.";
+  "  Business Data Platform skills (stored in Business Data Platform, not local files). Before following one, read <dir>/<name>/SKILL.md with the Business Data Platform read tool.";
 // Skill descriptions are user-written, and the shared root is account-wide:
 // never let one close or open the envelope the catalog sits in.
 const ENVELOPE_TAG_RE = /<\/?(?:openviking-context|available-skills|available-memories|user-profile|memory)\b[^>]*>/gi;
@@ -333,7 +333,7 @@ function formatSkillCatalog(groups, budgetTokens) {
   let body = renderSkillGroups(groups, listingBudget, true);
   if (body.dropped > 0) body = renderSkillGroups(groups, listingBudget, false);
   if (body.dropped >= count) {
-    const stub = `${open}${count} OpenViking skills; search OpenViking skills to find them.${close}`;
+    const stub = `${open}${count} Business Data Platform skills; search Business Data Platform skills to find them.${close}`;
     if (estimateTokens(stub) > budgetTokens) return { lines: [], used: 0, dropped: count, count };
     return { lines: [stub], used: estimateTokens(stub), dropped: count, count };
   }

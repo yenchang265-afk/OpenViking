@@ -300,7 +300,7 @@ fn kind_label(kind: ConfigKind, language: Language) -> &'static str {
     match language {
         Language::En => kind.compact_label(),
         Language::ZhCn => match kind {
-            ConfigKind::OpenVikingService => "OpenViking 服務",
+            ConfigKind::OpenVikingService => "Business Data Platform 服務",
             ConfigKind::Custom => "自定義",
         },
     }
@@ -452,18 +452,18 @@ impl ValidationFailureKind {
     fn message(self, language: Language) -> &'static str {
         match language {
             Language::En => match self {
-                Self::Network => "Could not reach the configured OpenViking server.",
+                Self::Network => "Could not reach the configured Business Data Platform server.",
                 Self::Timeout => {
-                    "OpenViking did not respond before the configured timeout expired."
+                    "Business Data Platform did not respond before the configured timeout expired."
                 }
-                Self::Auth => "OpenViking rejected the API key for this config.",
-                Self::Unhealthy => "OpenViking is reachable but reported an unhealthy state.",
+                Self::Auth => "Business Data Platform rejected the API key for this config.",
+                Self::Unhealthy => "Business Data Platform is reachable but reported an unhealthy state.",
                 Self::Other => "The active config could not be validated.",
             },
             Language::ZhCn => match self {
-                Self::Network => "無法連線已配置的 OpenViking 伺服器。",
-                Self::Timeout => "OpenViking 未在配置的超時時間內響應。",
-                Self::Auth => "OpenViking 拒絕了這個配置的 API Key。",
+                Self::Network => "無法連線已配置的 Business Data Platform 伺服器。",
+                Self::Timeout => "Business Data Platform 未在配置的超時時間內響應。",
+                Self::Auth => "Business Data Platform 拒絕了這個配置的 API Key。",
                 Self::Unhealthy => "伺服器可連線，但健康狀態異常。",
                 Self::Other => "當前配置驗證失敗。",
             },
@@ -508,7 +508,7 @@ mod tests {
         assert!(plain.contains("OPENVIKING CONFIG CHECK"));
         assert!(plain.contains("Server        unreachable"));
         assert!(plain.contains("Auth          not checked"));
-        assert!(plain.contains("Could not reach the configured OpenViking server."));
+        assert!(plain.contains("Could not reach the configured Business Data Platform server."));
         assert!(plain.contains("ov health                 Quick server probe"));
         assert!(!plain.contains("connection refused"));
     }
@@ -533,7 +533,7 @@ mod tests {
             && line.contains("Custom")
             && line.contains("[Active]")));
         assert!(plain.lines().any(|line| line.contains("ov-service-799f84")
-            && line.contains("OpenViking Service")
+            && line.contains("Business Data Platform Service")
             && !line.contains("VolcEngine Cloud")
             && !line.contains("[Active]")));
         assert_eq!(plain.matches("[Active]").count(), 1);

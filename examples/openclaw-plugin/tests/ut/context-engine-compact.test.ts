@@ -468,7 +468,7 @@ describe("context-engine compact()", () => {
 
   it("returns compacted=false when commit reports the OV session does not exist", async () => {
     const { engine, client, logger } = makeEngine(null, {
-      throwError: new Error("OpenViking request failed [NOT_FOUND]: Session not found: s-missing"),
+      throwError: new Error("Business Data Platform request failed [NOT_FOUND]: Session not found: s-missing"),
     });
 
     const result = await engine.compact({

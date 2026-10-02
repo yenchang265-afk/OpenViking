@@ -1,4 +1,4 @@
-"""Minimal GPU smoke test for OpenViking's cuVS dense-search backend."""
+"""Minimal GPU smoke test for Business Data Platform's cuVS dense-search backend."""
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor

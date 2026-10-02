@@ -2,11 +2,11 @@
 
 <a href="https://openviking.ai/" target="_blank">
   <picture>
-    <img alt="OpenViking" src="docs/images/ov-logo.png" width="200px" height="auto">
+    <img alt="Business Data Platform" src="docs/images/ov-logo.png" width="200px" height="auto">
   </picture>
 </a>
 
-### OpenViking: The Context Database for AI Agents
+### Business Data Platform: The Context Database for AI Agents
 
 English / [中文](README_CN.md) / [日本語](README_JA.md)
 
@@ -37,22 +37,22 @@ English / [中文](README_CN.md) / [日本語](README_JA.md)
 
 ***
 
-## What is OpenViking
+## What is Business Data Platform
 
-OpenViking is an open-source context database for AI agents — one filesystem for everything an agent knows: knowledge, memory, and skills.
+Business Data Platform is an open-source context database for AI agents — one filesystem for everything an agent knows: knowledge, memory, and skills.
 
-Most agent memory is a black box: text goes in, embeddings come out, and nobody can see what was actually stored. OpenViking organizes context as a virtual filesystem under `viking://` instead. Agents navigate it like files — `ls`, `tree`, `read`, `write`, `grep` — and you can open any directory to inspect and edit what your agent knows. Every directory carries a generated summary, so agents can scan summaries first and decide what to read.
+Most agent memory is a black box: text goes in, embeddings come out, and nobody can see what was actually stored. Business Data Platform organizes context as a virtual filesystem under `viking://` instead. Agents navigate it like files — `ls`, `tree`, `read`, `write`, `grep` — and you can open any directory to inspect and edit what your agent knows. Every directory carries a generated summary, so agents can scan summaries first and decide what to read.
 
 <a href="https://openviking.ai/studio" target="_blank" rel="noopener noreferrer">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/images/studio-playground-dark.png">
-    <img src="docs/images/studio-playground.png" alt="OpenViking Studio: browse context and try semantic search">
+    <img src="docs/images/studio-playground.png" alt="Business Data Platform Studio: browse context and try semantic search">
   </picture>
 </a>
 
-[Try OpenViking Studio](https://openviking.ai/studio) in your browser, no installation required. [Self-host Web Studio](web-studio/README.md).
+[Try Business Data Platform Studio](https://openviking.ai/studio) in your browser, no installation required. [Self-host Web Studio](web-studio/README.md).
 
-## Why OpenViking
+## Why Business Data Platform
 
 - **One filesystem for knowledge, memory, and skills.** Resources hold documents and code; memories retain user preferences and experience; skills define how to perform tasks — not just extracted facts, but the full context, each with a `viking://` URI for browsing and retrieval. → [Viking URI](https://docs.openviking.ai/en/concepts/04-viking-uri) · [Context types](https://docs.openviking.ai/en/concepts/02-context-types)
 - **Search a directory, not the whole index.** Scope semantic search to a project or memory subtree instead of scanning a flat vector pool. `find` runs a query directly; `search` plans retrieval from session context. → [Retrieval](https://docs.openviking.ai/en/concepts/07-retrieval)
@@ -106,16 +106,16 @@ viking://resources/my_project/
 
 ## Proof it works
 
-OpenViking 0.3.22 has been evaluated on long-conversation user memory (LoCoMo) and multi-turn agent tasks (tau2-bench). Full results and setup details, including knowledge-base QA, are in the [benchmark report](https://blog.openviking.ai/post/openviking-benchmark-results/); reproduction scripts live in [./benchmark](./benchmark).
+Business Data Platform 0.3.22 has been evaluated on long-conversation user memory (LoCoMo) and multi-turn agent tasks (tau2-bench). Full results and setup details, including knowledge-base QA, are in the [benchmark report](https://blog.openviking.ai/post/openviking-benchmark-results/); reproduction scripts live in [./benchmark](./benchmark).
 
 The memory evaluation used [Doubao 2.0 Pro](https://console.volcengine.com/ark/region:cn-beijing/model/detail?Id=doubao-seed-2-0-pro) as the VLM and [Doubao-embedding-vision-251215](https://console.volcengine.com/ark/region:cn-beijing/model/detail?Id=doubao-embedding-vision) as the embedding model.
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/benchmark-dark.svg">
-  <img alt="Benchmark results. LoCoMo accuracy: OpenClaw 24.20% native vs 82.08% with OpenViking; Hermes 33.38% vs 82.86%; Claude Code 57.21% vs 80.32%. tau2-bench task success: Retail 70.94% vs 77.81%; Airline 54.38% vs 66.25%." src="docs/images/benchmark-light.svg">
+  <img alt="Benchmark results. LoCoMo accuracy: OpenClaw 24.20% native vs 82.08% with Business Data Platform; Hermes 33.38% vs 82.86%; Claude Code 57.21% vs 80.32%. tau2-bench task success: Retail 70.94% vs 77.81%; Airline 54.38% vs 66.25%." src="docs/images/benchmark-light.svg">
 </picture>
 
-- **User memory (LoCoMo)**: with OpenViking, all three agent integrations land at 80–83% accuracy — up from 24–57% on their native memory — while input tokens drop by 34.3–91.0% and query latency by 58.45–66.10%.
+- **User memory (LoCoMo)**: with Business Data Platform, all three agent integrations land at 80–83% accuracy — up from 24–57% on their native memory — while input tokens drop by 34.3–91.0% and query latency by 58.45–66.10%.
 - **Agent experience (tau2-bench)**: experience memory lifts task success by +6.87pp (retail) and +11.87pp (airline) over the same LLM without memory.
 
 ## Quick start
@@ -150,7 +150,7 @@ Build your own integration with the [Python](sdk/python/README.md), [Go](sdk/go/
 
 ## Use it with your agent
 
-Connect your agent to OpenViking for cross-session memory. Choose a native integration for automatic recall and session capture, or use MCP to give your agent memory and context tools.
+Connect your agent to Business Data Platform for cross-session memory. Choose a native integration for automatic recall and session capture, or use MCP to give your agent memory and context tools.
 
 <table>
 <tbody>
@@ -228,7 +228,7 @@ For setup instructions and integration details, see [Integrations](https://openv
 
 ## Desktop App (Beta)
 
-The desktop app is a console for macOS and Windows x64 (beta). It configures supported local agent integrations, inspects recall and capture events in sessions, and syncs local memories and skills to OpenViking.
+The desktop app is a console for macOS and Windows x64 (beta). It configures supported local agent integrations, inspects recall and capture events in sessions, and syncs local memories and skills to Business Data Platform.
 
 Download:
 
@@ -238,7 +238,7 @@ Download:
 
 ## VikingBot
 
-VikingBot is an AI agent framework built on top of OpenViking:
+VikingBot is an AI agent framework built on top of Business Data Platform:
 
 ```bash
 pip install "openviking[bot]"
@@ -263,7 +263,7 @@ The server supports [accounts and user isolation](https://docs.openviking.ai/en/
 <img src="docs/images/commercial-saas.png" alt="Managed SaaS" width="100%" />
 
 <h3>☁️ Managed SaaS</h3>
-<p><a href="https://www.volcengine.com/product/openviking-service">Volcano Engine</a> hosts and operates OpenViking. Personal and Enterprise plans cover individual and team use, with migration tooling for open-source deployments. See the <a href="https://docs.volcengine.com/docs/84313/2374478">service documentation</a> for plans and limits. Hosting outside China is planned on <a href="https://www.byteplus.com">BytePlus</a>.</p>
+<p><a href="https://www.volcengine.com/product/openviking-service">Volcano Engine</a> hosts and operates Business Data Platform. Personal and Enterprise plans cover individual and team use, with migration tooling for open-source deployments. See the <a href="https://docs.volcengine.com/docs/84313/2374478">service documentation</a> for plans and limits. Hosting outside China is planned on <a href="https://www.byteplus.com">BytePlus</a>.</p>
 
 </td>
 <td width="50%" valign="top">
@@ -279,21 +279,21 @@ The server supports [accounts and user isolation](https://docs.openviking.ai/en/
 
 ## Research
 
-**Memory that evolves with your agent.** VikingMem develops an event-driven approach to extracting, updating, and consolidating long-term memory, giving stateful agents a way to retain useful experience as interactions accumulate. OpenViking open-sources a subset of these core capabilities.
+**Memory that evolves with your agent.** VikingMem develops an event-driven approach to extracting, updating, and consolidating long-term memory, giving stateful agents a way to retain useful experience as interactions accumulate. Business Data Platform open-sources a subset of these core capabilities.
 
 > **VikingMem: A Memory Base Management System for Stateful LLM-based Applications**<br>
 > Jiajie Fu, Junwen Chen, Mengzhao Wang, Aoxiang He, Maojia Sheng, Xiangyu Ke, Yifan Zhu, and Yunjun Gao.<br>
 > arXiv:2605.29640, 2026. Presented at VLDB 2026 in September.<br>
 > 📄 [Read the paper on arXiv](https://arxiv.org/abs/2605.29640) · [Read PDF](https://arxiv.org/pdf/2605.29640)
 
-**Directory structure as retrieval context.** This paper provides the formal foundations, index design, and experimental evidence behind OpenViking’s directory-aware retrieval. It defines directory-scoped query and maintenance operations and introduces TrieHI, which OpenViking integrates to resolve directory scopes before vector ranking. This connects the filesystem paradigm to retrieval: agents can search a project or memory subtree, retain its surrounding context, and reorganize it as knowledge evolves.
+**Directory structure as retrieval context.** This paper provides the formal foundations, index design, and experimental evidence behind Business Data Platform’s directory-aware retrieval. It defines directory-scoped query and maintenance operations and introduces TrieHI, which Business Data Platform integrates to resolve directory scopes before vector ranking. This connects the filesystem paradigm to retrieval: agents can search a project or memory subtree, retain its surrounding context, and reorganize it as knowledge evolves.
 
 > **Directory-Aware Query and Maintenance in Vector Databases**<br>
 > Mengzhao Wang, Zheng Gong, Jingpei Hu, Jiajie Fu, Maojia Sheng, Junwen Chen, and Yifan Zhu.<br>
 > arXiv:2606.16903, 2026. Accepted by ICDE.<br>
 > 📄 [Read the paper on arXiv](https://arxiv.org/abs/2606.16903) · [Read PDF](https://arxiv.org/pdf/2606.16903)
 
-**Retrieve the evidence you need with fewer tokens.** VikingRAG combines semantic search with document structure, exposing relevant directory segments as evidence gaps arise. Its core mechanisms are integrated into OpenViking. The paper further explores reusing retrieval traces and escalating to multi-round retrieval only when needed, reducing repeated exploration while preserving answer quality.
+**Retrieve the evidence you need with fewer tokens.** VikingRAG combines semantic search with document structure, exposing relevant directory segments as evidence gaps arise. Its core mechanisms are integrated into Business Data Platform. The paper further explores reusing retrieval traces and escalating to multi-round retrieval only when needed, reducing repeated exploration while preserving answer quality.
 
 > **VikingRAG: Accurate and Token-efficient Retrieval-augmented Generation over Structured Documents**<br>
 > Peiyuan Gao, Gaoyuan Zhang, Haojie Qin, Yahui Sun, Qianyi Zhang, Yunhao Zhang, Zeyu Wang, and Wei Lu.<br>
@@ -318,7 +318,7 @@ To propose a partnership, [open an issue](https://github.com/volcengine/OpenViki
 - **Contribute**: bug fixes and new features are both welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
 
 <a href="https://github.com/volcengine/OpenViking/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=volcengine/OpenViking&amp;columns=15&amp;max=120" alt="OpenViking contributors" />
+  <img src="https://contrib.rocks/image?repo=volcengine/OpenViking&amp;columns=15&amp;max=120" alt="Business Data Platform contributors" />
 </a>
 
 ## Security and privacy
@@ -327,7 +327,7 @@ For vulnerability reporting and supported versions, see [SECURITY.md](SECURITY.m
 
 ## License
 
-The OpenViking project uses different licenses for different components:
+The Business Data Platform project uses different licenses for different components:
 
 - **Main Project**: AGPLv3 - see the [LICENSE](./LICENSE) file for details
 - **crates/ov\_cli**: Apache 2.0 - see the [LICENSE](./crates/LICENSE) for details

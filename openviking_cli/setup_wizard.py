@@ -1,4 +1,4 @@
-"""openviking-server init - interactive setup wizard for OpenViking.
+"""openviking-server init - interactive setup wizard for Business Data Platform.
 
 Guides users through model selection and configuration, with a focus on
 local deployment via Ollama for macOS / Apple Silicon beginners.
@@ -430,14 +430,14 @@ def _print_banner() -> None:
         _console.print()
         _console.print(
             _RichPanel.fit(
-                "[bold cyan]OpenViking[/bold cyan] [bold]Setup[/bold]\n"
+                "[bold cyan]Business Data Platform[/bold cyan] [bold]Setup[/bold]\n"
                 "[dim]Context database for AI agents — data in, context out[/dim]",
                 border_style="cyan",
                 padding=(0, 2),
             )
         )
     else:
-        print(f"\n  {_bold('OpenViking Setup')}")
+        print(f"\n  {_bold('Business Data Platform Setup')}")
         print(f"  {'=' * 16}")
 
 

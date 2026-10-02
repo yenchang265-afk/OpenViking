@@ -11,7 +11,7 @@
 | Node.js | >= 22 |
 | OpenClaw | >= 2026.5.27 |
 
-外掛需要連線到一個正在執行的 OpenViking 服務——參見 [部署指南](../guides/03-deployment.md)。
+外掛需要連線到一個正在執行的 Business Data Platform 服務——參見 [部署指南](../guides/03-deployment.md)。
 
 <details>
 <summary><b>從舊版 <code>memory-openviking</code> 升級？</b></summary>
@@ -51,8 +51,8 @@ ov-install --base-url http://your-server:1933
 | --- | --- |
 | `--workdir PATH` | OpenClaw 資料目錄（預設 `~/.openclaw`） |
 | `--plugin-version=VER` | 插件版本：npm 版本、dist-tag 或 Git ref |
-| `--base-url URL` | OpenViking 服務地址 |
-| `--api-key KEY` | OpenViking API Key |
+| `--base-url URL` | Business Data Platform 服務地址 |
+| `--api-key KEY` | Business Data Platform API Key |
 | `--peer-role ROLE` | 記憶歸屬：`none`、`assistant` 或 `sender`（`person` 是舊別名） |
 | `--uninstall` | 解除安裝外掛 |
 
@@ -62,25 +62,25 @@ ov-install --base-url http://your-server:1933
 
 ## 選擇記憶歸屬
 
-`peer_role` 決定長期記憶是在 OpenViking user 層共享，還是歸屬到具體 peer：
+`peer_role` 決定長期記憶是在 Business Data Platform user 層共享，還是歸屬到具體 peer：
 
 | 值 | 記憶路徑 | 適用場景 |
 | --- | --- | --- |
-| `none`（預設） | 共享記憶位於 `viking://user/<user_id>/memories/...`；不使用具體 peer 的記憶子樹 | 通用場景：該 OpenViking 使用者下的所有對話共享 user-level 記憶 |
-| `assistant` | assistant 歸因的 peer 記憶位於 `viking://user/<user_id>/peers/<assistant_id>/memories/...` | **人是 OpenViking user**：讓 `main`、`research` 等不同助手的 peer 記憶分開 |
-| `sender` | sender 歸因的 peer 記憶位於 `viking://user/<user_id>/peers/<sender_id>/memories/...` | **Agent 是 OpenViking user**：讓 `customer-42`、`customer-99` 等不同傳送者的 peer 記憶分開 |
+| `none`（預設） | 共享記憶位於 `viking://user/<user_id>/memories/...`；不使用具體 peer 的記憶子樹 | 通用場景：該 Business Data Platform 使用者下的所有對話共享 user-level 記憶 |
+| `assistant` | assistant 歸因的 peer 記憶位於 `viking://user/<user_id>/peers/<assistant_id>/memories/...` | **人是 Business Data Platform user**：讓 `main`、`research` 等不同助手的 peer 記憶分開 |
+| `sender` | sender 歸因的 peer 記憶位於 `viking://user/<user_id>/peers/<sender_id>/memories/...` | **Agent 是 Business Data Platform user**：讓 `customer-42`、`customer-99` 等不同傳送者的 peer 記憶分開 |
 
 例如：
 
 ```bash
-# Alice 是 OpenViking user；按 OpenClaw 助手分開 peer 記憶。
+# Alice 是 Business Data Platform user；按 OpenClaw 助手分開 peer 記憶。
 openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --peer-role assistant --json
 
-# support-agent 是 OpenViking user；按給它發訊息的人分開 peer 記憶。
+# support-agent 是 Business Data Platform user；按給它發訊息的人分開 peer 記憶。
 openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --peer-role sender --json
 ```
 
-新配置請使用 `sender`；已有的 `peer_role=person` 配置仍相容，並按 `sender` 處理。OpenViking 會為每個使用者初始化受管的 `peers/` 容器，因此 `none` 的含義是不使用具體的 `peers/<peer_id>/memories` 子樹。Actor-peer 召回同時包含使用者共享記憶和當前 peer 記憶；切換 scope 不會搬遷已有記憶。
+新配置請使用 `sender`；已有的 `peer_role=person` 配置仍相容，並按 `sender` 處理。Business Data Platform 會為每個使用者初始化受管的 `peers/` 容器，因此 `none` 的含義是不使用具體的 `peers/<peer_id>/memories` 子樹。Actor-peer 召回同時包含使用者共享記憶和當前 peer 記憶；切換 scope 不會搬遷已有記憶。
 
 ## assemble 如何組裝上下文
 
@@ -153,8 +153,8 @@ python examples/openclaw-plugin/health_check_tools/ov-healthcheck.py
 
 | 引數 | 預設值 | 含義 |
 | --- | --- | --- |
-| `baseUrl` | `http://127.0.0.1:1933` | OpenViking 服務端點 |
-| `apiKey` | 空 | OpenViking API Key |
+| `baseUrl` | `http://127.0.0.1:1933` | Business Data Platform 服務端點 |
+| `apiKey` | 空 | Business Data Platform API Key |
 | `peer_role` | `none` | `none`、`assistant` 或 `sender`；舊值 `person` 作為 `sender` 的別名相容 |
 | `peer_prefix` | 空 | `peer_role=assistant` 時 assistant peer 身份的可選字首 |
 | `autoRecallTimeoutMs` | `5000` | 整個 auto-recall 流程的外層超時（毫秒）；本地嵌入硬體較慢時可調大（取值範圍 1000–300000） |

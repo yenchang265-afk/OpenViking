@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Tests for server-side OpenViking Assets configuration resolution."""
+"""Tests for server-side Business Data Platform Assets configuration resolution."""
 
 import asyncio
 import hashlib

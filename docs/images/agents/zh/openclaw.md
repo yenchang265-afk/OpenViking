@@ -1,12 +1,12 @@
 ## 步驟1：安裝
 
-1. 安裝 OpenViking 外掛：
+1. 安裝 Business Data Platform 外掛：
 
    ```bash
    openclaw plugins install clawhub:@openviking/openclaw-plugin
    ```
 
-2. 將 OpenClaw 連線至火山引擎託管的 OpenViking 服務：
+2. 將 OpenClaw 連線至火山引擎託管的 Business Data Platform 服務：
 
    ```bash
    openclaw openviking setup --base-url https://api.vikingdb.cn-beijing.volces.com/openviking --api-key <$OPENVIKING_API_KEY>
@@ -35,7 +35,7 @@
 2. 返回如下結果即表示接入成功：
 
    ```text
-   🦣 OpenViking Plugin Status
+   🦣 Business Data Platform Plugin Status
 
      Status: Configured
      mode:      remote

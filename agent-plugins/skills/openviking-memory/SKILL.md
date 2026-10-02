@@ -1,11 +1,11 @@
 ---
 name: openviking-memory
-description: Recall and persist long-term memory through the OpenViking MCP tools. Use at the start of any substantive task (coding, configuration, debugging, multi-step or tool-based work) to retrieve relevant prior knowledge with find/search/read, and during or after work to persist durable facts, preferences, decisions, and lessons with remember. Do not use for casual chat or simple factual questions the model can answer directly.
+description: Recall and persist long-term memory through the Business Data Platform MCP tools. Use at the start of any substantive task (coding, configuration, debugging, multi-step or tool-based work) to retrieve relevant prior knowledge with find/search/read, and during or after work to persist durable facts, preferences, decisions, and lessons with remember. Do not use for casual chat or simple factual questions the model can answer directly.
 ---
 
-# OpenViking Memory
+# Business Data Platform Memory
 
-OpenViking is a long-term semantic memory store addressed by `viking://` URIs.
+Business Data Platform is a long-term semantic memory store addressed by `viking://` URIs.
 This client has no lifecycle hooks, so nothing is recalled or captured
 automatically — you drive both halves of the loop with the `openviking` MCP
 tools.
@@ -22,7 +22,7 @@ on the server version and hosting mode (the managed cloud service trims some
 of them). Check the session's registered tool list; if any optional tool is
 present, read [references/optional-tools.md](references/optional-tools.md)
 before using it. Never call a tool that is not registered, and do not fall
-back to raw HTTP. If no OpenViking tools are registered at all, continue
+back to raw HTTP. If no Business Data Platform tools are registered at all, continue
 without memory.
 
 ## Recall: at task start

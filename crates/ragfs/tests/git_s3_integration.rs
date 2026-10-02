@@ -3,7 +3,7 @@
 //! These tests exercise [`S3ObjectStore`] / [`S3RefStore`] against a *real*
 //! S3-compatible backend (TOS / MinIO / LocalStack). They are gated behind the
 //! `s3` feature **and** the presence of a usable `[git]` + `[git.s3]` section in
-//! the OpenViking config file (`ov.conf`), mirroring the skip strategy used by
+//! the Business Data Platform config file (`ov.conf`), mirroring the skip strategy used by
 //! the Python `test_fs_binding_s3.py` suite.
 //!
 //! Config resolution (first hit wins):

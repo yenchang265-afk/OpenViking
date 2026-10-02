@@ -48,7 +48,7 @@ class BenchmarkPipeline:
             doc_dir = os.path.join(self.output_dir, "docs")
 
         if skip_ingestion:
-            self.logger.info("Skipping ingestion. Reusing the configured OpenViking Server")
+            self.logger.info("Skipping ingestion. Reusing the configured Business Data Platform Server")
             self.metrics_summary["insertion"] = {"time": 0, "input_tokens": 0, "output_tokens": 0, "embedding_tokens": 0}
         else:
             try:

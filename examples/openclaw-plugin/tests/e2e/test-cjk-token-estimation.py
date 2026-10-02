@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """OpenClaw plugin E2E for CJK-aware token estimation.
 
-This test drives the real OpenClaw Gateway, then verifies the OpenViking plugin's
+This test drives the real OpenClaw Gateway, then verifies the Business Data Platform plugin's
 own assemble diagnostics. It intentionally checks the plugin-side token estimate,
 not only the OV REST session counters.
 """
@@ -214,7 +214,7 @@ def main() -> int:
     naive_chars_div_4 = math.ceil(len(cjk_text) / 4)
     message = (
         f"{marker}\n"
-        "請只回復 OK。下面這段中文只用於 OpenViking token 估算端到端迴歸測試：\n"
+        "請只回復 OK。下面這段中文只用於 Business Data Platform token 估算端到端迴歸測試：\n"
         f"{cjk_text}"
     )
 
@@ -222,7 +222,7 @@ def main() -> int:
     token = discover_gateway_token()
 
     print(f"Gateway: {args.gateway}")
-    print(f"OpenViking: {args.openviking}")
+    print(f"Business Data Platform: {args.openviking}")
     print(f"Gateway log: {args.gateway_log}")
     print(f"Marker: {marker}")
     print(

@@ -98,7 +98,7 @@ jobs:
           cp -R /tmp/memory-plugin-marketplace "${SRC}"
           git -C "${SRC}" init -q -b main
           git -C "${SRC}" add -A
-          git -C "${SRC}" -c user.email=release@openviking.org -c user.name="OpenViking Release" \
+          git -C "${SRC}" -c user.email=release@openviking.org -c user.name="Business Data Platform Release" \
             commit -qm "release ${RELEASE_TAG}"
           git clone -q --bare "${SRC}" /tmp/memory-plugins.git
           git -C /tmp/memory-plugins.git repack -adq

@@ -86,7 +86,7 @@ def _warn_deprecated_memory_user(memory_user: list[str] | None) -> None:
         return
     typer.secho(
         "Warning: --memory-user is deprecated and only kept for explicit owner-user lookup. "
-        "Use --memory-peer for the current OpenViking User/Peer model.",
+        "Use --memory-peer for the current Business Data Platform User/Peer model.",
         fg=typer.colors.YELLOW,
         err=True,
     )
@@ -877,7 +877,7 @@ def chat(
     memory_user: list[str] = typer.Option(
         None,
         "--memory-user",
-        help="Deprecated legacy OpenViking user ID for root-key memory fanout",
+        help="Deprecated legacy Business Data Platform user ID for root-key memory fanout",
     ),
 ):
     """Interact with the agent directly."""

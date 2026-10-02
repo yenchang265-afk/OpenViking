@@ -330,7 +330,7 @@ def create_dataset_service_app(
     if rollout_thread_workers is not None and rollout_thread_workers <= 0:
         raise ValueError("rollout_thread_workers must be > 0")
 
-    app = FastAPI(title=f"OpenViking {service_name} Dataset Service")
+    app = FastAPI(title=f"Business Data Platform {service_name} Dataset Service")
     app.state.service_name = service_name
     app.state.make_case_loader = make_case_loader
     app.state.make_rollout_executor = make_rollout_executor
@@ -651,7 +651,7 @@ def rollout_from_dict(data: dict[str, Any]) -> Rollout:
 
 
 def _message_dict_with_defaults(data: dict[str, Any], index: int) -> dict[str, Any]:
-    """Accept lightweight remote message payloads that omit OpenViking-only ids."""
+    """Accept lightweight remote message payloads that omit Business Data Platform-only ids."""
     item = dict(data)
     item.setdefault("id", f"remote_message_{index}")
     return item

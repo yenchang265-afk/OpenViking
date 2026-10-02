@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-PDF parser for OpenViking.
+PDF parser for Business Data Platform.
 
 Unified parser that converts PDF to Markdown then parses the result.
 Supports dual strategy:

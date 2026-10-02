@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 
-"""Request ID handling for the OpenViking HTTP server."""
+"""Request ID handling for the Business Data Platform HTTP server."""
 
 from __future__ import annotations
 

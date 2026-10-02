@@ -1,12 +1,12 @@
 # DeepSeek Harness 記憶外掛
 
-為 [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）接入跨專案、跨會話的長期記憶。安裝後每次對話都會自動召回相關記憶並捕獲新內容，模型也會直接拿到 OpenViking 工具以及 `openviking-memory`、`openviking-skills` 兩個技能，無需額外配置。
+為 [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）接入跨專案、跨會話的長期記憶。安裝後每次對話都會自動召回相關記憶並捕獲新內容，模型也會直接拿到 Business Data Platform 工具以及 `openviking-memory`、`openviking-skills` 兩個技能，無需額外配置。
 
 原始碼：[examples/dsh-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/dsh-memory-plugin)
 
 ## 安裝
 
-DSH 與其他記憶外掛共用同一個安裝器。它會依次詢問語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；每一步都是冪等的，重複執行完全安全。
+DSH 與其他記憶外掛共用同一個安裝器。它會依次詢問語言（English/中文）、要安裝的 harness、下載源和 Business Data Platform 憑據；每一步都是冪等的，重複執行完全安全。
 
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
@@ -51,19 +51,19 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 ## 驗證
 
-啟動 `dsh --profile web` 開啟一個會話，會話開頭應該能看到一條 OpenViking 上下文注入，模型也應該具備 `mcp__openviking__*` 工具。問一句更早會話裡聊過的事，確認召回生效。
+啟動 `dsh --profile web` 開啟一個會話，會話開頭應該能看到一條 Business Data Platform 上下文注入，模型也應該具備 `mcp__openviking__*` 工具。問一句更早會話裡聊過的事，確認召回生效。
 
 如果什麼都沒有，設定 `OV_DEBUG_LOG=/tmp/ov-dsh.log` 後檢視該檔案。
 
 ## 工作方式
 
-外掛以 Cordis 外掛的形式跑在 DSH 程序內，而不是外掛 hook，因此能貼著會話走。會話開始時注入 OpenViking 畫像塊、可用記憶索引和 OpenViking 技能清單 `<available-skills>`；每個模型步驟前用當前輸入做語義檢索，把結果作為持久訊息追加到同一步驟——因此注入會隨會話重放，也對壓縮可見。它直接從 DSH 的事件流捕獲 user、assistant 以及（可選的）工具結果訊息，待同步 token 超過閾值即 commit，並保留最近十條訊息在本地上下文中。寫入失敗會進入待寫佇列，在下次會話開始時重放。
+外掛以 Cordis 外掛的形式跑在 DSH 程序內，而不是外掛 hook，因此能貼著會話走。會話開始時注入 Business Data Platform 畫像塊、可用記憶索引和 Business Data Platform 技能清單 `<available-skills>`；每個模型步驟前用當前輸入做語義檢索，把結果作為持久訊息追加到同一步驟——因此注入會隨會話重放，也對壓縮可見。它直接從 DSH 的事件流捕獲 user、assistant 以及（可選的）工具結果訊息，待同步 token 超過閾值即 commit，並保留最近十條訊息在本地上下文中。寫入失敗會進入待寫佇列，在下次會話開始時重放。
 
-每個 DSH 會話對映為 OpenViking 中的 `dsh-<session-id>`，子 agent 各自擁有獨立會話。
+每個 DSH 會話對映為 Business Data Platform 中的 `dsh-<session-id>`，子 agent 各自擁有獨立會話。
 
-模型看到的工具面就是 OpenViking 的 MCP 工具集，經由與其他記憶整合相同的 stdio 代理接入，以 `mcp__openviking__` 字首釋出。由於該代理每個 profile 只起一個程序，`mcp__openviking__remember` 寫入的是服務端一個短生命週期的會話而不是當前會話（對話本身仍由自動捕獲記錄），工具呼叫帶的也是啟動時解析的 actor peer。若一個程序要服務多個工作區且需要精確歸屬工具呼叫，請顯式設定 `OPENVIKING_PEER_ID`。外掛同時附帶兩個共享技能：`openviking-memory` 讓模型知道何時該檢索、讀取和寫入，`openviking-skills` 講如何查詢、使用、建立、共享和遷移存放在 OpenViking 裡的技能。
+模型看到的工具面就是 Business Data Platform 的 MCP 工具集，經由與其他記憶整合相同的 stdio 代理接入，以 `mcp__openviking__` 字首釋出。由於該代理每個 profile 只起一個程序，`mcp__openviking__remember` 寫入的是服務端一個短生命週期的會話而不是當前會話（對話本身仍由自動捕獲記錄），工具呼叫帶的也是啟動時解析的 actor peer。若一個程序要服務多個工作區且需要精確歸屬工具呼叫，請顯式設定 `OPENVIKING_PEER_ID`。外掛同時附帶兩個共享技能：`openviking-memory` 讓模型知道何時該檢索、讀取和寫入，`openviking-skills` 講如何查詢、使用、建立、共享和遷移存放在 Business Data Platform 裡的技能。
 
-檔案工具誤把 `viking://` URI 當本地路徑時，呼叫會被攔截，並提示改用對應的 OpenViking 工具；寫入或編輯的若是 `viking://~/skills/<name>/` 這類技能目錄，提示的工具是 `mcp__openviking__add_skill`，它用完整的 `SKILL.md` 文本建立或替換整個技能。shell 命令帶 `viking://` URI 時照常執行，模型會收到一條改用 OpenViking 工具的提示，URI 是有意傳入的資料時可以忽略。
+檔案工具誤把 `viking://` URI 當本地路徑時，呼叫會被攔截，並提示改用對應的 Business Data Platform 工具；寫入或編輯的若是 `viking://~/skills/<name>/` 這類技能目錄，提示的工具是 `mcp__openviking__add_skill`，它用完整的 `SKILL.md` 文本建立或替換整個技能。shell 命令帶 `viking://` URI 時照常執行，模型會收到一條改用 Business Data Platform 工具的提示，URI 是有意傳入的資料時可以忽略。
 
 <details>
 <summary><b>配置</b></summary>
@@ -113,12 +113,12 @@ patch 中寫的憑證優先於環境變數。行為旋鈕按優先順序從高�
 
 | 現象 | 排查方向 |
 |------|----------|
-| 沒有注入，也沒有 OpenViking 工具 | `dsh --profile web --dump-config` 裡應能看到 `openviking-memory`；重新執行安裝器或 `dsh plugin --profile web add …` |
+| 沒有注入，也沒有 Business Data Platform 工具 | `dsh --profile web --dump-config` 裡應能看到 `openviking-memory`；重新執行安裝器或 `dsh plugin --profile web add …` |
 | 裝到了錯誤的 profile | 安裝器預設 `web`；用 `--dsh-profile <name>` 重新執行 |
 | 安裝時報 `ERESOLVE` | `@deepseek-ai/dsh-*` 各包預釋出 tag 不同步；請精確安裝 `@deepseek-ai/dsh@0.1.0-rc.6` |
 | 安裝時報包「不在 npm registry 中」 | pnpm 預設拒絕釋出不滿 24 小時的版本（`minimumReleaseAge`）。等一等，或把該精確版本加進 profile 的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` |
 | 召不回任何內容 | `curl http://localhost:1933/health`；檢查端點配置，以及 prompt 是否長於最小查詢長度（3 個字元） |
-| OpenViking 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；可信模式部署還要檢查 `OPENVIKING_ACCOUNT` 與 `OPENVIKING_USER` |
+| Business Data Platform 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；可信模式部署還要檢查 `OPENVIKING_ACCOUNT` 與 `OPENVIKING_USER` |
 | 串入了其他專案的記憶 | 設定 `OPENVIKING_RECALL_PEER_SCOPE=actor` |
 | 崩潰後沒有 commit | commit 由 token 閾值和 teardown 觸發；排隊的寫入會在下次會話開始時重放 |
 

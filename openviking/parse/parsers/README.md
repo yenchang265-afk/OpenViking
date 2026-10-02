@@ -1,6 +1,6 @@
 # Built-in parsers
 
-OpenViking only routes resources to built-in parsers. Applications add resources through
+Business Data Platform only routes resources to built-in parsers. Applications add resources through
 `add_resource`; parser registries are internal implementation details.
 
 For the complete Accessor, Parser, Understanding, Connector, and asynchronous execution

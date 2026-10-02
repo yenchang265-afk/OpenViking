@@ -1,6 +1,6 @@
 # 快速開始
 
-OpenViking 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一份小文件，再檢索其中的內容。使用託管服務或他人部署的服務時，只需安裝 CLI。
+Business Data Platform 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一份小文件，再檢索其中的內容。使用託管服務或他人部署的服務時，只需安裝 CLI。
 
 ## 1. 選擇服務
 
@@ -10,7 +10,7 @@ OpenViking 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一�
 
 ### 火山引擎託管服務
 
-開啟 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
+開啟 [Business Data Platform 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
 
 ```text
 https://api.vikingdb.cn-beijing.volces.com/openviking
@@ -20,7 +20,7 @@ https://api.vikingdb.cn-beijing.volces.com/openviking
 
 ### 自建服務
 
-在執行服務端的機器上[安裝 uv](https://docs.astral.sh/uv/getting-started/installation/)，再安裝 OpenViking：
+在執行服務端的機器上[安裝 uv](https://docs.astral.sh/uv/getting-started/installation/)，再安裝 Business Data Platform：
 
 ```bash
 uv tool install openviking --upgrade
@@ -50,7 +50,7 @@ ov language zh-CN
 ov config
 ```
 
-在互動配置中，火山託管服務選擇 **OpenViking Service**，自建服務選擇 **自定義（Custom）**。填寫 API Key，自建服務還需填寫 URL。預設本地服務的金鑰留空。儲存並激活配置。
+在互動配置中，火山託管服務選擇 **Business Data Platform Service**，自建服務選擇 **自定義（Custom）**。填寫 API Key，自建服務還需填寫 URL。預設本地服務的金鑰留空。儲存並激活配置。
 
 CLI 將當前連線儲存到 `~/.openviking/ovcli.conf`，它與服務端的 `ov.conf` 是兩個檔案。指令碼化配置和多服務切換見 [CLI 配置](05-cli-setup.md)。
 
@@ -101,4 +101,4 @@ ov read "<returned-file-uri>"
 
 ## 使用 SDK
 
-OpenViking 也提供 Python、TypeScript/JavaScript 和 Go SDK，均連線同一個服務端。客戶端示例見 [API 概覽](../api/01-overview.md)。
+Business Data Platform 也提供 Python、TypeScript/JavaScript 和 Go SDK，均連線同一個服務端。客戶端示例見 [API 概覽](../api/01-overview.md)。

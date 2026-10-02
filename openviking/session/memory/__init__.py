@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Memory Templating System for OpenViking.
+Memory Templating System for Business Data Platform.
 
 This module provides a YAML-configurable memory templating system with
 ReAct (Reasoning + Action) pattern for memory updates.

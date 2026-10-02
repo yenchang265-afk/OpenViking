@@ -1,4 +1,4 @@
-# OpenViking reverse proxy — legacy fallback
+# Business Data Platform reverse proxy — legacy fallback
 #
 # Port 1934 is retained only as a legacy entrypoint for existing deployments
 # that already reference it. Its primary remaining purpose is as the upstream

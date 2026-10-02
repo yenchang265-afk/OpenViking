@@ -95,7 +95,7 @@ class LocalCollectionAdapter(CollectionAdapter):
 
 
 class CuVSCollectionAdapter(LocalCollectionAdapter):
-    """Embedded OpenViking storage with dense search executed by NVIDIA cuVS."""
+    """Embedded Business Data Platform storage with dense search executed by NVIDIA cuVS."""
 
     def __init__(
         self,

@@ -19,7 +19,7 @@ Skill source: [examples/compile/ov-compile-skills/llm-wiki](https://github.com/v
 
 ## Step 1: Prepare the sources
 
-If the material is not in OpenViking yet, import it. Use `ov add-resource` for directories, `ov write` for a single file:
+If the material is not in Business Data Platform yet, import it. Use `ov add-resource` for directories, `ov write` for a single file:
 
 ```bash
 # Import a directory as a source
@@ -94,7 +94,7 @@ research-wiki/
 
 ## Step 5: Visualize it as an interactive graph
 
-`wiki_graph.py` connects **directly to the OpenViking service** to read the Wiki pages (no local download needed), colors pages by type, links them by their cross-references, and produces a standalone interactive HTML:
+`wiki_graph.py` connects **directly to the Business Data Platform service** to read the Wiki pages (no local download needed), colors pages by type, links them by their cross-references, and produces a standalone interactive HTML:
 
 ```bash
 python examples/compile/graph-show/llm-wiki/wiki_graph.py \

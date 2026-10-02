@@ -1,6 +1,6 @@
-# Basic Usage Example: OpenViking Python SDK
+# Basic Usage Example: Business Data Platform Python SDK
 
-This example is the shortest path to understanding OpenViking's core Python SDK workflow:
+This example is the shortest path to understanding Business Data Platform's core Python SDK workflow:
 initialize a client, ingest a resource, browse the `viking://` filesystem, retrieve context,
 and create a session that can later be committed into long-term memory.
 
@@ -17,7 +17,7 @@ integration, use this example as the foundation and then move to the server and 
 
 ## Choose the Right Mode
 
-OpenViking has two common integration paths:
+Business Data Platform has two common integration paths:
 
 | Mode | Best for | Recommended? |
 |------|----------|--------------|
@@ -29,13 +29,13 @@ For MCP specifically, follow the dedicated [MCP Integration Guide](../../docs/en
 ## Prerequisites
 
 1. Python 3.10+
-2. OpenViking installed:
+2. Business Data Platform installed:
 
 ```bash
 pip install openviking-sdk --upgrade
 ```
 
-3. A running OpenViking server
+3. A running Business Data Platform server
 
 ## Quick Start
 
@@ -47,7 +47,7 @@ cd OpenViking/examples/basic-usage
 python basic_usage.py
 ```
 
-The script connects to a local OpenViking server:
+The script connects to a local Business Data Platform server:
 
 ```python
 from openviking_sdk import SyncHTTPClient
@@ -75,7 +75,7 @@ See the dedicated [Server Mode Quick Start](../../docs/en/getting-started/03-qui
 
 ### Initialization
 
-Use the HTTP client when OpenViking runs as a separate service:
+Use the HTTP client when Business Data Platform runs as a separate service:
 
 ```python
 from openviking_sdk import SyncHTTPClient
@@ -118,7 +118,7 @@ Imports return a `task_id` by default. Query `client.get_task(result["task_id"])
 
 ### Filesystem Access
 
-OpenViking organizes context as a virtual filesystem:
+Business Data Platform organizes context as a virtual filesystem:
 
 ```python
 files = client.ls(uri="viking://resources/")
@@ -236,10 +236,10 @@ You can also use Volcengine or Azure OpenAI. For current provider-specific examp
 
 - [Configuration Guide](../../docs/en/guides/01-configuration.md): review the current config model before moving to shared deployments.
 - [Server Mode Quick Start](../../docs/en/getting-started/03-quickstart-server.md): set up `openviking-server` properly.
-- [MCP Integration Guide](../../docs/en/guides/06-mcp-integration.md): connect OpenViking to Claude Code, Cursor, Claude Desktop, or OpenClaw.
-- [Claude Code Memory Plugin](../claude-code-memory-plugin/README.md): use OpenViking as long-term memory inside Claude Code.
-- [OpenCode Plugin](../opencode-plugin/README.md): use OpenViking repository context and memory tools inside OpenCode.
-- [OpenClaw Plugin](../openclaw-plugin/README.md): integrate OpenViking with OpenClaw.
+- [MCP Integration Guide](../../docs/en/guides/06-mcp-integration.md): connect Business Data Platform to Claude Code, Cursor, Claude Desktop, or OpenClaw.
+- [Claude Code Memory Plugin](../claude-code-memory-plugin/README.md): use Business Data Platform as long-term memory inside Claude Code.
+- [OpenCode Plugin](../opencode-plugin/README.md): use Business Data Platform repository context and memory tools inside OpenCode.
+- [OpenClaw Plugin](../openclaw-plugin/README.md): integrate Business Data Platform with OpenClaw.
 
 ## Troubleshooting
 

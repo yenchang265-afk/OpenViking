@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""HTTP client compatibility exports for the main OpenViking package."""
+"""HTTP client compatibility exports for the main Business Data Platform package."""
 
 from __future__ import annotations
 

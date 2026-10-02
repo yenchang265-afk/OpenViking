@@ -1,9 +1,9 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Tree Builder for OpenViking.
+Tree Builder for Business Data Platform.
 
-Converts parsed document trees into OpenViking context objects with proper
+Converts parsed document trees into Business Data Platform context objects with proper
 L0/L1/L2 content and URI structure.
 
 v5.0 Architecture:
@@ -38,7 +38,7 @@ logger = get_logger(__name__)
 
 class TreeBuilder:
     """
-    Builds OpenViking context tree from parsed documents (v5.0).
+    Builds Business Data Platform context tree from parsed documents (v5.0).
 
     New v5.0 Architecture:
     - Parser creates directory structure in temp VikingFS (no LLM calls)

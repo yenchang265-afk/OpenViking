@@ -1,12 +1,12 @@
 ## Step 1: Install
 
-1. Install the OpenViking plugin:
+1. Install the Business Data Platform plugin:
 
    ```bash
    openclaw plugins install clawhub:@openviking/openclaw-plugin
    ```
 
-2. Connect OpenClaw to the VolcEngine-hosted OpenViking service:
+2. Connect OpenClaw to the VolcEngine-hosted Business Data Platform service:
 
    ```bash
    openclaw openviking setup --base-url https://api.vikingdb.cn-beijing.volces.com/openviking --api-key <$OPENVIKING_API_KEY>
@@ -35,7 +35,7 @@
 2. A result similar to the following means the integration is successful:
 
    ```text
-   🦣 OpenViking Plugin Status
+   🦣 Business Data Platform Plugin Status
 
      Status: Configured
      mode:      remote

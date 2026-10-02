@@ -1,10 +1,10 @@
-# OpenViking Helm Chart
+# Business Data Platform Helm Chart
 
-This Helm chart deploys OpenViking on Kubernetes, providing a scalable and production-ready RAG (Retrieval-Augmented Generation) and semantic search service.
+This Helm chart deploys Business Data Platform on Kubernetes, providing a scalable and production-ready RAG (Retrieval-Augmented Generation) and semantic search service.
 
 ## Overview
 
-[OpenViking](https://github.com/volcengine/OpenViking) is an open-source RAG and semantic search engine that serves as a Context Database MCP (Model Context Protocol) server. This Helm chart enables easy deployment on Kubernetes clusters with support for major cloud providers.
+[Business Data Platform](https://github.com/volcengine/OpenViking) is an open-source RAG and semantic search engine that serves as a Context Database MCP (Model Context Protocol) server. This Helm chart enables easy deployment on Kubernetes clusters with support for major cloud providers.
 
 ## Prerequisites
 
@@ -74,9 +74,9 @@ The chart supports automatic LoadBalancer annotation configuration for major clo
 | `openviking.config.server.api_key` | API key for authentication | `null` |
 | `openviking.config.embedding.dense.api_key` | Volcengine API key | `null` |
 
-### OpenViking Configuration
+### Business Data Platform Configuration
 
-All OpenViking configuration options from `ov.conf` are available under `openviking.config`. See `values.yaml` for the complete default configuration.
+All Business Data Platform configuration options from `ov.conf` are available under `openviking.config`. See `values.yaml` for the complete default configuration.
 
 ### Embedding Configuration
 
@@ -130,7 +130,7 @@ openviking:
 
 ### API Key Authentication
 
-Enable API key authentication to secure your OpenViking server:
+Enable API key authentication to secure your Business Data Platform server:
 
 ```yaml
 openviking:
@@ -265,8 +265,8 @@ kubectl delete pvc openviking-data
 
 ## Contributing
 
-Contributions are welcome! Please see the [OpenViking repository](https://github.com/volcengine/OpenViking) for contribution guidelines.
+Contributions are welcome! Please see the [Business Data Platform repository](https://github.com/volcengine/OpenViking) for contribution guidelines.
 
 ## License
 
-This Helm chart is licensed under the Apache License 2.0, matching the OpenViking project license.
+This Helm chart is licensed under the Apache License 2.0, matching the Business Data Platform project license.

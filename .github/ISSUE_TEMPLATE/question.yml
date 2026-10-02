@@ -1,12 +1,12 @@
 name: Question
-description: Ask a question about OpenViking usage
+description: Ask a question about Business Data Platform usage
 title: "[Question]: "
 labels: ["question"]
 body:
   - type: markdown
     attributes:
       value: |
-        Have a question about OpenViking? We're here to help!
+        Have a question about Business Data Platform? We're here to help!
 
   - type: dropdown
     id: issue-origin

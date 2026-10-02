@@ -4,7 +4,7 @@
 """
 Volcengine KMS Encryption Integration Tests
 
-Tests encryption functionality integrated with VikingFS and OpenViking service
+Tests encryption functionality integrated with VikingFS and Business Data Platform service
 using Volcengine KMS as the key provider.
 Requires VOLCENGINE_ACCESS_KEY, VOLCENGINE_SECRET_KEY, and VOLCENGINE_KMS_KEY_ID env vars.
 Run: pytest tests/integration/test_volcengine_kms_encryption_integration.py -v -m integration

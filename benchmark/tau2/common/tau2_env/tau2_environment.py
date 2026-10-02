@@ -68,7 +68,7 @@ def _install_tau2_litellm_rate_limit_retry() -> None:
     AgentGymEnv's user simulator and orchestrator call tau2.utils.llm_utils.generate
     through synchronous module globals imported with ``from ... import generate``.
     Those calls run in tau2's own worker thread, so a sync sleep-based retry is
-    safe and does not block the OpenViking service event loop.
+    safe and does not block the Business Data Platform service event loop.
     """
     try:
         llm_utils = importlib.import_module("tau2.utils.llm_utils")

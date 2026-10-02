@@ -1,19 +1,19 @@
 # API Overview
 
-This page covers how to connect to OpenViking and the conventions shared across all API endpoints.
+This page covers how to connect to Business Data Platform and the conventions shared across all API endpoints.
 
 ## Connection Modes
 
-OpenViking clients connect to an OpenViking Server over HTTP.
+Business Data Platform clients connect to a Business Data Platform Server over HTTP.
 
 | Mode | Use Case | Description |
 |------|----------|-------------|
-| **HTTP** | Connect to OpenViking Server | Connects to a remote server via HTTP API |
+| **HTTP** | Connect to Business Data Platform Server | Connects to a remote server via HTTP API |
 | **CLI** | Shell scripting, agent tool-use | Connects to server via CLI commands |
 
 ### Client-Server Mode
 
-Client-Server mode connects to an OpenViking server via HTTP API, supporting multi-tenancy, remote access, and other features. See the deployment documentation for how to start the OpenViking server.
+Client-Server mode connects to a Business Data Platform server via HTTP API, supporting multi-tenancy, remote access, and other features. See the deployment documentation for how to start the Business Data Platform server.
 
 #### Python SDK Client
 
@@ -166,7 +166,7 @@ curl http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 
 #### CLI Mode
 
-The OpenViking CLI command is `ov` (installed with `npm install -g @openviking/cli`). It connects to an OpenViking server and exposes all operations as shell commands. The CLI also reads connection information from `ovcli.conf` (shared with the HTTP client).
+The Business Data Platform CLI command is `ov` (installed with `npm install -g @openviking/cli`). It connects to a Business Data Platform server and exposes all operations as shell commands. The CLI also reads connection information from `ovcli.conf` (shared with the HTTP client).
 
 Basic usage:
 
@@ -535,7 +535,7 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | Write and activate a new version |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | Activate a version |
 
-### [OpenViking Assets](22-openviking-assets.md), [WebDAV](20-webdav.md), [Agent Runtime API](23-agent-runtime.md), and [VikingBot API](24-vikingbot.md)
+### [Business Data Platform Assets](22-openviking-assets.md), [WebDAV](20-webdav.md), [Agent Runtime API](23-agent-runtime.md), and [VikingBot API](24-vikingbot.md)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -572,4 +572,4 @@ The sidebar is organized by responsibility rather than historical file size:
 | Data Lifecycle | Watches, snapshots, and OVPack |
 | Operations & Observability | System, tasks, Observer, and Metrics |
 | Identity & Governance | Administration, ACL, and privacy configuration |
-| Protocols & Extensions | OpenViking Assets, WebDAV, Agent Runtime API, and VikingBot API |
+| Protocols & Extensions | Business Data Platform Assets, WebDAV, Agent Runtime API, and VikingBot API |

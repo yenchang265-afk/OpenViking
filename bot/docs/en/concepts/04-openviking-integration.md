@@ -1,18 +1,18 @@
-# VikingBot and OpenViking Integration
+# VikingBot and Business Data Platform Integration
 
-OpenViking is VikingBot's long-term context layer. VikingBot handles real-time conversations, model inference, and tool execution. OpenViking provides unified storage and retrieval for Resources, Memories, and Skills, and consolidates reusable memories and experiences from Sessions.
+Business Data Platform is VikingBot's long-term context layer. VikingBot handles real-time conversations, model inference, and tool execution. Business Data Platform provides unified storage and retrieval for Resources, Memories, and Skills, and consolidates reusable memories and experiences from Sessions.
 
 ## Integration Goals
 
 ```text
-OpenViking → VikingBot
+Business Data Platform → VikingBot
   Resource: provide knowledge and file context for tasks
   Skill: provide searchable task instructions and supporting resources
   Memory: provide the current user/Peer's Profile, preferences, entities, and events
   Experience: provide methods the Agent used to complete similar tasks in the past
   Session: provide compressed history and conversation archives
 
-VikingBot → OpenViking
+VikingBot → Business Data Platform
   Add Resources
   Record session messages and context usage
   Commit Sessions to trigger summary, memory, and experience extraction
@@ -23,15 +23,15 @@ Together, the two systems form a context loop: recall → execute → receive fe
 
 ## Connection Modes
 
-VikingBot resolves its OpenViking connection from the same `ov.conf` and supports three topologies:
+VikingBot resolves its Business Data Platform connection from the same `ov.conf` and supports three topologies:
 
 | Mode | Configuration source | Behavior |
 |------|----------------------|----------|
-| **Inherited** | Inherit the root-level `server` | The Bot runs with the current OpenViking Server |
-| **Explicit** | `bot.ov_server.server_url` | The Bot connects to another OpenViking Server |
-| **Standalone** | No available Server URL | Basic chat remains available, while OpenViking capabilities are degraded |
+| **Inherited** | Inherit the root-level `server` | The Bot runs with the current Business Data Platform Server |
+| **Explicit** | `bot.ov_server.server_url` | The Bot connects to another Business Data Platform Server |
+| **Standalone** | No available Server URL | Basic chat remains available, while Business Data Platform capabilities are degraded |
 
-`openviking-server --with-bot` uses **Inherited** mode: the Server starts a managed VikingBot Gateway and passes its own connection information to the Bot. The configuration example below is also Inherited mode: the root-level `server` defines the current OpenViking Server, while `bot.ov_server` supplies only the credentials used by the Bot and does not set `server_url`. To use **Explicit** mode with another OpenViking Server, configure both its target URL and credentials under `bot.ov_server`.
+`openviking-server --with-bot` uses **Inherited** mode: the Server starts a managed VikingBot Gateway and passes its own connection information to the Bot. The configuration example below is also Inherited mode: the root-level `server` defines the current Business Data Platform Server, while `bot.ov_server` supplies only the credentials used by the Bot and does not set `server_url`. To use **Explicit** mode with another Business Data Platform Server, configure both its target URL and credentials under `bot.ov_server`.
 
 Example:
 
@@ -53,14 +53,14 @@ Example:
 
 ## Authentication and Identity Model
 
-OpenViking connections support User keys and Root keys:
+Business Data Platform connections support User keys and Root keys:
 
 | `api_key_type` | Typical scenario | Meaning |
 |----------------|------------------|---------|
-| `user` | `api_key` / `dev` auth mode | Access OpenViking as a User |
+| `user` | `api_key` / `dev` auth mode | Access Business Data Platform as a User |
 | `root` | `trusted` auth mode | The Gateway uses a Root key and forwards trusted identity headers |
 
-If `api_key_type` is not configured explicitly, VikingBot derives it from the effective auth mode of OpenViking Server in the same `ov.conf`.
+If `api_key_type` is not configured explicitly, VikingBot derives it from the effective auth mode of Business Data Platform Server in the same `ov.conf`.
 
 In the current User/Peer model:
 
@@ -73,7 +73,7 @@ A Gateway request may carry a request-scoped `openviking_connection` containing 
 
 ## Client Selection
 
-OpenViking access primarily uses `VikingClient`:
+Business Data Platform access primarily uses `VikingClient`:
 
 ```text
 Request-scoped openviking_connection is present
@@ -92,17 +92,17 @@ The request-level connection takes priority so a multi-user Gateway does not acc
 
 VikingBot uses SandboxManager to compute the workspace ID:
 
-| Sandbox mode | OpenViking workspace ID |
+| Sandbox mode | Business Data Platform workspace ID |
 |--------------|-------------------------|
 | `shared` | `shared` |
 | `per-session` | The safe SessionKey name |
 | `per-channel` | `type__channel_id` |
 
-This ID separates OpenViking clients, Sessions, and experience context associated with Bot workspaces. Identity isolation still follows OpenViking account/user/agent/peer rules; a workspace ID never replaces authentication.
+This ID separates Business Data Platform clients, Sessions, and experience context associated with Bot workspaces. Identity isolation still follows Business Data Platform account/user/agent/peer rules; a workspace ID never replaces authentication.
 
 ## Automatic Context Recall
 
-ContextBuilder assembles OpenViking context before the first model call for each user message. Later tool iterations in the same turn reuse this base context and may append Experiences when a write tool or Skill Hook triggers.
+ContextBuilder assembles Business Data Platform context before the first model call for each user message. Later tool iterations in the same turn reuse this base context and may append Experiences when a write tool or Skill Hook triggers.
 
 ### Peer Profile
 
@@ -135,9 +135,9 @@ Experiences store reusable methods learned from tasks the Agent completed in the
 
 `exp_write_tools` specifies which tool calls trigger additional experience recall. The defaults are `write_file` and `edit_file`. AgentLoop uses recent user messages to retrieve Experiences and adds the result to the current context before the write occurs.
 
-This setting controls only the Bot-side recall timing. Whether OpenViking generates Experiences is governed by the Session memory policy.
+This setting controls only the Bot-side recall timing. Whether Business Data Platform generates Experiences is governed by the Session memory policy.
 
-## OpenViking Tools
+## Business Data Platform Tools
 
 When a channel enables `ov_tools_enable`, the Agent can use:
 
@@ -145,36 +145,36 @@ When a channel enables `ov_tools_enable`, the Agent can use:
 |------|------------|
 | `openviking_list` | Browse a Viking URI directory |
 | `openviking_search` | Semantically search Resources, Memories, and Skills |
-| `openviking_grep` | Run regular-expression searches over OpenViking content |
+| `openviking_grep` | Run regular-expression searches over Business Data Platform content |
 | `openviking_glob` | Search URI paths with glob patterns |
 | `openviking_multi_read` | Read the full content of multiple URIs concurrently |
 | `openviking_add_resource` | Add a URL, local file, or code resource |
 | `openviking_memory_commit` | Explicitly commit long-term memory from the current Session |
 
-OpenViking tools obtain the current actor peer and request-scoped connection through ToolContext. Retrieval covers Resources, Peer Memories, and Skill paths accessible to the current identity.
+Business Data Platform tools obtain the current actor peer and request-scoped connection through ToolContext. Retrieval covers Resources, Peer Memories, and Skill paths accessible to the current identity.
 
 `openviking_add_resource` starts asynchronous resource processing and is not registered in `readonly` mode. `openviking_memory_commit` is intended for cases where the user explicitly asks the Agent to remember something.
 
 ## Using Remote Skills
 
-Upload a Skill package with `ov add-skill ./skills/<name>/` to the OpenViking service used by the Bot, and ensure the Bot's current identity can read it. With `ov_tools_enable` enabled on the channel, an available connection, and `openviking_multi_read` not disabled, the Bot retrieves remote Skill summaries for the user query.
+Upload a Skill package with `ov add-skill ./skills/<name>/` to the Business Data Platform service used by the Bot, and ensure the Bot's current identity can read it. With `ov_tools_enable` enabled on the channel, an available connection, and `openviking_multi_read` not disabled, the Bot retrieves remote Skill summaries for the user query.
 
 The model reads the selected `SKILL.md` URI with `openviking_multi_read`, which validates and activates the Skill. You can also give the Bot a canonical `SKILL.md` URI returned by the service. Text references stay remote; scripts or tools that need local files trigger package download and path rewriting. Each user message activates Skills independently, and execution copies are cleaned at turn completion.
 
 No additional Remote Skill switch or manual download is required. See [Skills](./06-skills.md) for local/remote examples, frontmatter fields, tool policies, and `bot.remote_skills` configuration.
 
-## Local Sessions and OpenViking Sessions
+## Local Sessions and Business Data Platform Sessions
 
 The two Session types have different responsibilities:
 
 | Session | Storage | Responsibility |
 |---------|---------|----------------|
 | VikingBot Session | Local JSONL | Runtime history, channel state, tool events, replies, and feedback |
-| OpenViking Session | OpenViking Server | Message archival, compressed summaries, memory extraction, and experience extraction |
+| Business Data Platform Session | Business Data Platform Server | Message archival, compressed summaries, memory extraction, and experience extraction |
 
-VikingBot Session metadata tracks OpenViking synchronization state:
+VikingBot Session metadata tracks Business Data Platform synchronization state:
 
-- the OpenViking session ID;
+- the Business Data Platform session ID;
 - the last synchronized local message index;
 - the last committed message index;
 - the current pending token count;
@@ -184,7 +184,7 @@ VikingBot Session metadata tracks OpenViking synchronization state:
 
 ```text
 Read unsynchronized messages from the local Session
-  → append_messages to the OpenViking Session
+  → append_messages to the Business Data Platform Session
   → Update last_synced_local_index
   → Query pending_tokens
   → Reach a token/message threshold or force a commit
@@ -218,9 +218,9 @@ Messages use local indexes for incremental synchronization, avoiding repeated ap
 
 ## Compressed Session Context
 
-By default, model history comes from the most recent `memory_window` messages in the local Session. With `agents.session_context_enabled=true`, VikingBot can load compressed history from OpenViking Session and limit it with `session_context_token_budget`.
+By default, model history comes from the most recent `memory_window` messages in the local Session. With `agents.session_context_enabled=true`, VikingBot can load compressed history from Business Data Platform Session and limit it with `session_context_token_budget`.
 
-Before a new turn, if history reaches the threshold, AgentLoop first synchronizes and commits the OpenViking Session, then builds the new prompt context. This prevents long conversations from growing without bound.
+Before a new turn, if history reaches the threshold, AgentLoop first synchronizes and commits the Business Data Platform Session, then builds the new prompt context. This prevents long conversations from growing without bound.
 
 ## Explicit Memory Commit
 
@@ -228,13 +228,13 @@ When the user explicitly asks to remember information long term, the Agent invok
 
 ```text
 Current Bot Session messages
-  → Append to OpenViking Session
+  → Append to Business Data Platform Session
   → Commit
   → Wait for or query the background task
   → Return created/updated/deleted Memory URIs
 ```
 
-VikingBot does not perform active memory consolidation in `readonly` mode or when the channel disables OpenViking tools.
+VikingBot does not perform active memory consolidation in `readonly` mode or when the channel disables Business Data Platform tools.
 
 ## Experience Loop
 
@@ -245,16 +245,16 @@ Current task
   → Retrieve Resource / Peer Memory / Experience
   → Agent uses Skills and tools to complete the task
   → Local Session records messages, tools, and outcome
-  → Incrementally synchronize and commit the OpenViking Session
-  → OpenViking extracts memories and experiences
+  → Incrementally synchronize and commit the Business Data Platform Session
+  → Business Data Platform extracts memories and experiences
   → Recall them in a later task
 ```
 
-Resources provide external knowledge, Peer Memories provide information about the current user, and Experiences describe how the Agent completed similar tasks in the past. These context types have different responsibilities but share Viking URI and the OpenViking retrieval interface.
+Resources provide external knowledge, Peer Memories provide information about the current user, and Experiences describe how the Agent completed similar tasks in the past. These context types have different responsibilities but share Viking URI and the Business Data Platform retrieval interface.
 
 ## Gateway Proxy
 
-After an OpenViking Server is configured, VikingBot Gateway proxies `/api/v1/{path}` to the upstream service. The proxy:
+After a Business Data Platform Server is configured, VikingBot Gateway proxies `/api/v1/{path}` to the upstream service. The proxy:
 
 1. validates the Gateway Token or local request boundary;
 2. calls upstream `/health` to confirm the effective auth mode;
@@ -262,22 +262,22 @@ After an OpenViking Server is configured, VikingBot Gateway proxies `/api/v1/{pa
 4. removes hop-by-hop headers;
 5. forwards authentication headers and preserves the response status.
 
-Bot Chat and OpenViking APIs can therefore share one Gateway address, while OpenViking Server still performs the final identity validation.
+Bot Chat and Business Data Platform APIs can therefore share one Gateway address, while Business Data Platform Server still performs the final identity validation.
 
 ## Degradation and Error Boundaries
 
 | Condition | Behavior |
 |-----------|----------|
-| No OpenViking Server configured | Basic Bot chat continues; OpenViking recall and tools are unavailable or skipped |
+| No Business Data Platform Server configured | Basic Bot chat continues; Business Data Platform recall and tools are unavailable or skipped |
 | Automatic memory recall fails | Log the failure and continue the model call |
 | Session synchronization fails | Record the synchronization error and preserve the local Session |
 | Request-scoped identity is untrusted | Gateway rejects the request |
 | Upstream auth mode differs from configuration | Gateway rejects the proxy or chat request |
-| `ov_tools_enable=false` | Do not inject OpenViking memory or expose OpenViking tools |
+| `ov_tools_enable=false` | Do not inject Business Data Platform memory or expose Business Data Platform tools |
 
 ## Optional FUSE Mount
 
-`openviking_mount` also provides optional FUSE mounting that maps OpenViking content into a local directory and creates or removes mount points by Session. This is not part of the default AgentLoop path. By default, the Bot accesses OpenViking through VikingClient and `openviking_*` tools.
+`openviking_mount` also provides optional FUSE mounting that maps Business Data Platform content into a local directory and creates or removes mount points by Session. This is not part of the default AgentLoop path. By default, the Bot accesses Business Data Platform through VikingClient and `openviking_*` tools.
 
 ## Implementation Locations
 
@@ -286,7 +286,7 @@ Bot Chat and OpenViking APIs can therefore share one Gateway address, while Open
 | Connection configuration and merge logic | `vikingbot/config/loader.py`, `schema.py` |
 | VikingClient adapter | `vikingbot/openviking_mount/ov_server.py` |
 | Automatic recall | `vikingbot/agent/memory.py`, `context.py` |
-| OpenViking tools | `vikingbot/agent/tools/ov_file.py` |
+| Business Data Platform tools | `vikingbot/agent/tools/ov_file.py` |
 | Session synchronization state | `vikingbot/openviking_mount/session_state.py` |
 | Compact and Experience Hooks | `vikingbot/hooks/builtins/openviking_hooks.py` |
 | Gateway proxy and identity resolution | `vikingbot/channels/openapi.py` |
@@ -298,6 +298,6 @@ Bot Chat and OpenViking APIs can therefore share one Gateway address, while Open
 - [Agent Capabilities](./02-agent-capabilities.md)
 - [Skills](./06-skills.md)
 - [Channels, Gateway, and Operations](./03-channels-and-gateway.md)
-- [OpenViking Architecture](../../../../docs/en/concepts/01-architecture.md)
-- [OpenViking Context Types](../../../../docs/en/concepts/02-context-types.md)
-- [OpenViking Session Management](../../../../docs/en/concepts/08-session.md)
+- [Business Data Platform Architecture](../../../../docs/en/concepts/01-architecture.md)
+- [Business Data Platform Context Types](../../../../docs/en/concepts/02-context-types.md)
+- [Business Data Platform Session Management](../../../../docs/en/concepts/08-session.md)

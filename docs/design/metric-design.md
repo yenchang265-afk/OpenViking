@@ -1,12 +1,12 @@
-# OpenViking 指標體系設計方案
+# Business Data Platform 指標體系設計方案
 
 ## 背景
 
-本方案討論的是 OpenViking 的“指標體系（metrics）”，目標是把 `/metrics` 做成一個可持續抓取的 Prometheus 匯出端點，並與 `/api/v1/observer/*`（瞬時狀態）和 `/api/v1/stats/*`（分析統計）形成清晰邊界。
+本方案討論的是 Business Data Platform 的“指標體系（metrics）”，目標是把 `/metrics` 做成一個可持續抓取的 Prometheus 匯出端點，並與 `/api/v1/observer/*`（瞬時狀態）和 `/api/v1/stats/*`（分析統計）形成清晰邊界。
 
 ### 現狀入口與實現特徵
 
-OpenViking 當前已經存在三類與“觀測”相關的入口：
+Business Data Platform 當前已經存在三類與“觀測”相關的入口：
 
 | 入口 | 當前定位 | 當前實現特徵 |
 | --- | --- | --- |
@@ -231,7 +231,7 @@ operation telemetry 已經擁有很多有價值的資料欄位，如：
 - 某個領域內部維護的累計統計；
 - 某個探針執行結果。
 
-在 OpenViking 中，`MetricDataSource` 採用“統一基類 + 中間契約層 + 具體實現類”的三層結構。具體繼承關係如下：
+在 Business Data Platform 中，`MetricDataSource` 採用“統一基類 + 中間契約層 + 具體實現類”的三層結構。具體繼承關係如下：
 
 ```mermaid
 graph LR
@@ -664,7 +664,7 @@ sequenceDiagram
 - 對 Prometheus 多例項聚合不友好；
 - 與 Histogram 的職責邊界重疊；
 - 會增加 registry 與 exporter 實現複雜度；
-- 當前 OpenViking 真實缺的是 Gauge，不是 Summary。
+- 當前 Business Data Platform 真實缺的是 Gauge，不是 Summary。
 
 ### 3.3 標籤策略
 

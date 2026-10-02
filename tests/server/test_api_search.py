@@ -1027,7 +1027,7 @@ async def test_grep_forwards_tags_to_filesystem_service(monkeypatch):
 
     await search_router.grep(
         search_router.GrepRequest(
-            uri="viking://resources", pattern="OpenViking", tags=["team=search", "env=prod"]
+            uri="viking://resources", pattern="Business Data Platform", tags=["team=search", "env=prod"]
         ),
         _ctx=RequestContext(user=UserIdentifier("acct", "alice"), role=Role.USER),
     )
@@ -1051,7 +1051,7 @@ async def test_grep_forwards_include_tags_to_filesystem_service(monkeypatch):
 
     await search_router.grep(
         search_router.GrepRequest(
-            uri="viking://resources", pattern="OpenViking", include_tags=True
+            uri="viking://resources", pattern="Business Data Platform", include_tags=True
         ),
         _ctx=RequestContext(user=UserIdentifier("acct", "alice"), role=Role.USER),
     )
@@ -1076,7 +1076,7 @@ async def test_grep_forwards_context_to_filesystem_service(monkeypatch):
     await search_router.grep(
         search_router.GrepRequest(
             uri="viking://resources",
-            pattern="OpenViking",
+            pattern="Business Data Platform",
             before_context=2,
             after_context=3,
         ),
@@ -1120,9 +1120,9 @@ async def test_grep_level_limit_filters_by_relative_match_path(
     upload_temp_dir,
 ):
     root_file = upload_temp_dir / "root_level.md"
-    root_file.write_text("OpenViking on root level\n")
+    root_file.write_text("Business Data Platform on root level\n")
     deep_file = upload_temp_dir / "deep_level.md"
-    deep_file.write_text("OpenViking in deep level\n")
+    deep_file.write_text("Business Data Platform in deep level\n")
 
     await client.post(
         "/api/v1/resources",
@@ -1147,7 +1147,7 @@ async def test_grep_level_limit_filters_by_relative_match_path(
         "/api/v1/search/grep",
         json={
             "uri": "viking://resources/level-limit",
-            "pattern": "OpenViking",
+            "pattern": "Business Data Platform",
             "level_limit": 2,
         },
     )
@@ -1165,9 +1165,9 @@ async def test_grep_exclude_uri_excludes_specific_uri_range(
     upload_temp_dir,
 ):
     include_file = upload_temp_dir / "include.md"
-    include_file.write_text("# Include\n\nOpenViking should match here.\n")
+    include_file.write_text("# Include\n\nBusiness Data Platform should match here.\n")
     exclude_file = upload_temp_dir / "exclude.md"
-    exclude_file.write_text("# Exclude\n\nOpenViking should be excluded here.\n")
+    exclude_file.write_text("# Exclude\n\nBusiness Data Platform should be excluded here.\n")
 
     await client.post(
         "/api/v1/resources",
@@ -1184,7 +1184,7 @@ async def test_grep_exclude_uri_excludes_specific_uri_range(
         "/api/v1/search/grep",
         json={
             "uri": root_uri,
-            "pattern": "OpenViking",
+            "pattern": "Business Data Platform",
             "exclude_uri": exclude_uri,
         },
     )
@@ -1202,9 +1202,9 @@ async def test_grep_exclude_uri_does_not_exclude_same_named_sibling_dirs(
     upload_temp_dir,
 ):
     group_a_file = upload_temp_dir / "group_a_cache_a.md"
-    group_a_file.write_text("# Group A\n\nOpenViking match in group A cache.\n")
+    group_a_file.write_text("# Group A\n\nBusiness Data Platform match in group A cache.\n")
     group_b_file = upload_temp_dir / "group_b_cache_b.md"
-    group_b_file.write_text("# Group B\n\nOpenViking match in group B cache.\n")
+    group_b_file.write_text("# Group B\n\nBusiness Data Platform match in group B cache.\n")
 
     await client.post(
         "/api/v1/resources",
@@ -1229,7 +1229,7 @@ async def test_grep_exclude_uri_does_not_exclude_same_named_sibling_dirs(
         "/api/v1/search/grep",
         json={
             "uri": "viking://resources",
-            "pattern": "OpenViking",
+            "pattern": "Business Data Platform",
             "exclude_uri": "viking://resources/group_a/cache",
         },
     )

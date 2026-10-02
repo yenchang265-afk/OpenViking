@@ -1,10 +1,10 @@
 # 加密指南
 
-本指南介紹如何在 OpenViking 中啟用和使用靜態資料加密功能。
+本指南介紹如何在 Business Data Platform 中啟用和使用靜態資料加密功能。
 
 ## 概述
 
-OpenViking 提供透明的靜態資料加密，確保多租戶環境下的資料安全與隔離：
+Business Data Platform 提供透明的靜態資料加密，確保多租戶環境下的資料安全與隔離：
 
 - ✅ **透明加密**：API 無變化，應用層無感知
 - ✅ **多租戶隔離**：不同帳戶使用獨立金鑰
@@ -22,7 +22,7 @@ OpenViking 提供透明的靜態資料加密，確保多租戶環境下的資料
 - 全域 `encryption.enabled=true` 時，primary backend 必須加密。
 - backup backend 可以通過自己的 `encryption.enabled` 控制是否加密。
 - `.redirect.json` 和 `.sync_log.json` 等多寫內部後設資料跟隨 primary 加密策略。
-- OpenViking 不提供也不需要公開的加解密 API 來操作這些內部檔案。
+- Business Data Platform 不提供也不需要公開的加解密 API 來操作這些內部檔案。
 
 更多多寫配置見 [多寫儲存指南](./13-multi-write-storage.md)。
 
@@ -90,7 +90,7 @@ asyncio.run(test())
 
 ## API Key 哈希配置
 
-OpenViking 提供兩層加密保護：
+Business Data Platform 提供兩層加密保護：
 
 | 加密層 | 配置項 | 演算法 | 可逆性 | 說明 |
 |--------|--------|------|--------|------|
@@ -99,7 +99,7 @@ OpenViking 提供兩層加密保護：
 
 ### ⚠️ Breaking Change 說明
 
-**版本變更**：OpenViking v0.3.12 → later versions
+**版本變更**：Business Data Platform v0.3.12 → later versions
 
 **行為變化**：
 - **之前**：`encryption.enabled = true` 隱式啟用 API key Argon2id 雜湊
@@ -243,7 +243,7 @@ vault secrets enable -version=2 kv
 vault secrets enable kv
 ```
 
-3. 配置 OpenViking：
+3. 配置 Business Data Platform：
 
 ```json
 {
@@ -306,7 +306,7 @@ path "transit/decrypt/openviking-root" {
 3. 選擇"對稱金鑰"，演算法選擇 `AES_256`
 4. 記錄金鑰 ID
 
-### 配置 OpenViking
+### 配置 Business Data Platform
 
 ```json
 {
@@ -411,7 +411,7 @@ except Exception as e:
 ov backup ./backups/before-encryption.ovpack
 ```
 
-2. 停止 OpenViking，啟用加密，並將儲存配置指向**全新的空** workspace/backend。驗證完成前保留原資料和加密金鑰備份。
+2. 停止 Business Data Platform，啟用加密，並將儲存配置指向**全新的空** workspace/backend。驗證完成前保留原資料和加密金鑰備份。
 3. 啟動加密環境。API Key 模式下，先建立目標 account 和持有 admin key 的恢復操作使用者，再讓 CLI 使用該 key 連線目標環境，參見 [全量備份和恢復](09-ovpack.md#全量備份和恢復)。恢復過程會通過加密儲存層寫入 package 內容：
 
 建立 account 會生成 scope 目錄，因此 `fail` 會拒絕這次恢復。僅在確認目標只有新建 account 的預置內容後，使用下方的 `overwrite`。如果已有業務資料，先停止操作，按 OVPack 指南備份目標並審查衝突。
@@ -481,9 +481,9 @@ Error: KeyMismatchError
 
 ### 部分讀取返回密文
 
-如果使用舊版本 OpenViking 建立的加密檔案，部分讀取可能返回密文。
+如果使用舊版本 Business Data Platform 建立的加密檔案，部分讀取可能返回密文。
 
-**解決方案**：升級到最新版本的 OpenViking。
+**解決方案**：升級到最新版本的 Business Data Platform。
 
 ---
 

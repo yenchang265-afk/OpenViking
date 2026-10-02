@@ -1,17 +1,17 @@
 {
   "name": "openviking-memory",
   "version": "0.5.0",
-  "description": "Long-term semantic memory for Kimi Code CLI, powered by OpenViking.",
+  "description": "Long-term semantic memory for Kimi Code CLI, powered by Business Data Platform.",
   "author": {
-    "name": "OpenViking",
+    "name": "Business Data Platform",
     "url": "https://github.com/volcengine/OpenViking"
   },
   "homepage": "https://github.com/volcengine/OpenViking",
   "license": "Apache-2.0",
   "keywords": ["memory", "openviking", "kimi-code", "long-term-memory"],
   "interface": {
-    "displayName": "OpenViking Memory",
-    "shortDescription": "Recall and capture long-term memory through OpenViking"
+    "displayName": "Business Data Platform Memory",
+    "shortDescription": "Recall and capture long-term memory through Business Data Platform"
   },
   "mcpServers": {
     "openviking": {

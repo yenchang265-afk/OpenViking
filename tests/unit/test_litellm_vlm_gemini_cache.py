@@ -9,7 +9,7 @@ setting `cachedContent`. Gemini then rejects the combination with:
     "CachedContent can not be used with GenerateContent request setting
     system_instruction, tools or tool_config."
 
-OpenViking's memory-extraction ReAct loop adds `cache_control: ephemeral`
+Business Data Platform's memory-extraction ReAct loop adds `cache_control: ephemeral`
 markers and passes `tool_choice="auto"`, so every Gemini call with tools
 hits this 400. The LiteLLM VLM backend works around it by stripping
 `cache_control` markers from messages when the resolved provider is

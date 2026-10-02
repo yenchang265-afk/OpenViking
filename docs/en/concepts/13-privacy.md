@@ -1,6 +1,6 @@
 # Privacy Configs and Skill Privacy Extraction/Restore
 
-This page explains OpenViking privacy configs and how they work with skill write-time extraction and read-time restore.
+This page explains Business Data Platform privacy configs and how they work with skill write-time extraction and read-time restore.
 
 ## Goal
 
@@ -55,7 +55,7 @@ viking://user/{user_space}/privacy/{category}/{target_key}/
 
 ## Skill Privacy Extraction (Write Path)
 
-When adding a skill via `add_skill`, OpenViking runs extraction + placeholderization.
+When adding a skill via `add_skill`, Business Data Platform runs extraction + placeholderization.
 
 ```
 add_skill
@@ -110,7 +110,7 @@ Current matching is suffix-based: `/skills/{name}/SKILL.md`, so it supports user
    -> add to extra-config notice (`Configured but not referenced in content`).
 
 4. If `unresolved_entries` or extra-config entries exist, append notice block:
-   - `[OpenViking Privacy Notice]`
+   - `[Business Data Platform Privacy Notice]`
    - `Related configured privacy values: ...`
    - `Not replaced (missing config): ...` (if any)
    - `Configured but not referenced in content: ...` (if any)

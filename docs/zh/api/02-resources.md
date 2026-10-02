@@ -6,7 +6,7 @@
 
 ### 資源型別
 
-OpenViking 支援多種資源型別，按照功能分類如下：
+Business Data Platform 支援多種資源型別，按照功能分類如下：
 
 文件類
 | 型別 | 副檔名 | 說明 |
@@ -91,7 +91,7 @@ URL/文件  Parser  TreeBuilder  AGFS    Summarizer/Vector
 - 通過 `SemanticQueue` 非同步處理，使用返回的 `task_id` 查詢完成狀態
 
 #### 非等待 Git 倉庫匯入
-- 對 Git 倉庫來源使用 `wait=false` 時，OpenViking 會先校驗倉庫、解析目標 URI、預佔最終 `root_uri`，然後在 clone/parse/finalize 完成前返回。
+- 對 Git 倉庫來源使用 `wait=false` 時，Business Data Platform 會先校驗倉庫、解析目標 URI、預佔最終 `root_uri`，然後在 clone/parse/finalize 完成前返回。
 - 立即響應包含 `status`、`root_uri` 和 `task_id`；抓取、解析、finalize 以及佇列等待會在持久化後臺任務中繼續執行。
 - 可通過 `GET /api/v1/tasks/{task_id}` 查詢任務狀態。Git 資源匯入任務的階段包括 `queued`、`fetching`、`parsing`、`finalizing`、`processing_queue`。
 - 其他資源來源使用 `wait=false` 時，會在響應前完成抓取/解析/finalize；返回的 `task_id` 只用於跟蹤 semantic 和 embedding 佇列完成情況。
@@ -191,8 +191,8 @@ URL/文件  Parser  TreeBuilder  AGFS    Summarizer/Vector
 - `user_id` 和 `peer_id` 路徑片段必須是安全的單段標識，例如 `alice` 或 `web-visitor-alice`。包含路徑分隔符、`.`、`..`、`:` 或 `+` 的值會被拒絕。
 - `path` 和 `temp_file_id` 不能同時指定，上傳本地檔案需要先通過 [temp_upload](#temp-upload) 上傳獲取 `temp_file_id`，在 SDK 和 CLI 中已經封裝好。
 - `tags` 會在資源解析後、向量記錄寫入時同步寫入底層向量庫。`add_resource(tags=...)` 不返回 `tags_result`；需要驗證時，可在 `/api/v1/search/find` 或 `/api/v1/search/search` 中傳相同 `tags` 過濾召回。
-- 只有 Git 倉庫來源在 `wait=false` 時使用完整後臺匯入；OpenViking 會先完成倉庫 preflight 和目標規劃，再返回 `task_id`。
-- 原生 HTTPS Git 的 `args.auth_config` 在 `watch_interval <= 0` 時只用於本次請求；當 `watch_interval > 0` 時，OpenViking 會把與倉庫 URL 繫結的 username/token 儲存到 Watch 私有鑑權狀態，並只在後續 Git 拉取時恢復使用。憑據不會進入普通持久佇列，也不會出現在 Watch API/MCP/CLI 返回中。Git PAT 沒有通用重新整理流程，過期或撤銷後需要重建 Watch 來更換 token。為相容已有用法，系統仍接受 `https://user:token@host/repo.git` 形式的 URL 內嵌憑據並原樣傳遞；由於該 URL 同時也是資源來源標識，它可能被記錄到程序引數、日誌、佇列、資源後設資料和 Watch 狀態中。新接入建議使用 `args.auth_config`。`args.auth_config` 的明文 HTTP 鑑權和帶鑑權重定向仍會被拒絕。
+- 只有 Git 倉庫來源在 `wait=false` 時使用完整後臺匯入；Business Data Platform 會先完成倉庫 preflight 和目標規劃，再返回 `task_id`。
+- 原生 HTTPS Git 的 `args.auth_config` 在 `watch_interval <= 0` 時只用於本次請求；當 `watch_interval > 0` 時，Business Data Platform 會把與倉庫 URL 繫結的 username/token 儲存到 Watch 私有鑑權狀態，並只在後續 Git 拉取時恢復使用。憑據不會進入普通持久佇列，也不會出現在 Watch API/MCP/CLI 返回中。Git PAT 沒有通用重新整理流程，過期或撤銷後需要重建 Watch 來更換 token。為相容已有用法，系統仍接受 `https://user:token@host/repo.git` 形式的 URL 內嵌憑據並原樣傳遞；由於該 URL 同時也是資源來源標識，它可能被記錄到程序引數、日誌、佇列、資源後設資料和 Watch 狀態中。新接入建議使用 `args.auth_config`。`args.auth_config` 的明文 HTTP 鑑權和帶鑑權重定向仍會被拒絕。
 - token 會放在 HTTPS 請求體中傳輸。生產環境應保持診斷請求體 dump 關閉；顯式啟用該功能可能記錄秘密。
 - `reason` 觸發的記憶生成複用 `session.commit` 的抽取鏈路，只使用 `reason`、資源 URI、可用的資源名稱和目錄摘要，不會讀取或展開完整資源正文；系統會寫入 `entities`、`events`、`preferences` 等已有記憶型別，不建立獨立的資源記憶目錄。
 - 刪除資源時，系統會在刪除前掃描本次上下文對應的 self 或 peer 記憶中的 `resource_refs`，清理對應資源 URI 和由該 `reason` 引入的內容，並重新重新整理相關記憶的語義索引。
@@ -498,7 +498,7 @@ task_id      uuid-xxx
 | 欄位 | 型別 | 說明 |
 |------|------|------|
 | `status` | string | 處理狀態：`accepted` 表示已入隊，`success` 表示成功，`error` 表示失敗 |
-| `root_uri` | string | 資源在 OpenViking 中的最終 URI |
+| `root_uri` | string | 資源在 Business Data Platform 中的最終 URI |
 | `task_id` | string | （可選，僅當 `wait=false` 時）可輪詢 `/api/v1/tasks/{task_id}` 的任務 ID。非 Git 匯入用於佇列跟蹤；Git 倉庫匯入用於完整後臺匯入跟蹤。 |
 | `temp_uri` | string | 匯入過程中生成的臨時 URI |
 | `source_path` | string | 原始原始檔路徑或 URL |
@@ -652,4 +652,4 @@ shared 模式的響應示例：
 - [技能](04-skills.md) - 技能管理 API
 - [檢索](06-retrieval.md) - 搜尋和上下文獲取
 - [ovpack 指南](../guides/09-ovpack.md) - ovpack 匯入匯出詳細說明
-- [OpenViking Assets](../guides/18-openviking-assets.md) - 宣告式資源集合協議和執行指南
+- [Business Data Platform Assets](../guides/18-openviking-assets.md) - 宣告式資源集合協議和執行指南

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# LoCoMo evaluation: SDK pre-ingest + SHARED OpenViking namespace.
+# LoCoMo evaluation: SDK pre-ingest + SHARED Business Data Platform namespace.
 #
 # All 10 LoCoMo samples are imported into the same OV user (no
 # per-sample isolation). QA at recall time relies on semantic retrieval to

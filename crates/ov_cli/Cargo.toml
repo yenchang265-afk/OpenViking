@@ -3,8 +3,8 @@ name = "ov_cli"
 version = "0.0.0"
 edition = "2024"
 rust-version = "1.91.1"
-authors = ["OpenViking Contributors"]
-description = "Rust CLI client for OpenViking"
+authors = ["Business Data Platform Contributors"]
+description = "Rust CLI client for Business Data Platform"
 license = "Apache-2.0"
 
 [[bin]]

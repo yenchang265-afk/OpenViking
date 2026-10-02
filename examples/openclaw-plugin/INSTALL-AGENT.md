@@ -1,4 +1,4 @@
-# OpenViking Plugin Agent Install Guide
+# Business Data Platform Plugin Agent Install Guide
 
 This guide is for AI agents and operator automation. Prefer deterministic commands, parse JSON output, and ask the user only when a choice changes the outcome.
 
@@ -20,7 +20,7 @@ This package is the OpenClaw plugin `@openviking/openclaw-plugin`.
 | Show installed plugins | `openclaw plugins list` |
 | Backup install when ClawHub is unavailable | `npx -y openclaw-openviking-setup-helper@latest --base-url <URL> [--api-key <KEY>]` |
 | Operate on a specific OpenClaw instance | add `--workdir <path>` |
-| Start missing OpenViking server | `openviking-server init && openviking-server doctor && openviking-server` |
+| Start missing Business Data Platform server | `openviking-server init && openviking-server doctor && openviking-server` |
 
 Do not install it with:
 
@@ -40,7 +40,7 @@ Before setup, determine:
 
 | Input | Required | How to get it |
 | --- | --- | --- |
-| OpenViking base URL | Yes | Ask user or read `OPENVIKING_BASE_URL` |
+| Business Data Platform base URL | Yes | Ask user or read `OPENVIKING_BASE_URL` |
 | API key | Usually | Ask user or read `OPENVIKING_API_KEY` |
 | Memory scope | Optional; default `none` | Ask whether memory is shared, separated by assistant, or separated by sender. Use `sender`; accept legacy `person` as an alias. |
 | Account ID | Only for root API keys | Ask user if setup reports root-key tenant context is needed |
@@ -79,10 +79,10 @@ Choose memory scope before building that command:
 | Value | Concrete layout | Use when |
 | --- | --- | --- |
 | `none` (default; omit the flag) | Shared `viking://user/<user_id>/memories/...`; no concrete peer memory subtree | General case |
-| `assistant` | Assistant-attributed peer memory under `.../peers/<assistant_id>/memories/...` | A human is the OpenViking user and uses multiple OpenClaw assistants |
-| `sender` | Sender-attributed peer memory under `.../peers/<sender_id>/memories/...` | An agent is the OpenViking user and receives messages from multiple humans |
+| `assistant` | Assistant-attributed peer memory under `.../peers/<assistant_id>/memories/...` | A human is the Business Data Platform user and uses multiple OpenClaw assistants |
+| `sender` | Sender-attributed peer memory under `.../peers/<sender_id>/memories/...` | An agent is the Business Data Platform user and receives messages from multiple humans |
 
-`person` is a legacy alias for `sender`. Accept it from existing config or user input, but write `sender` in new setup commands. OpenViking initializes the managed `peers/` container for every user; `none` only means that no concrete `peers/<peer_id>/memories` subtree is used. Actor-peer recall includes shared user memory plus the current peer memory, and changing the scope does not move existing memories.
+`person` is a legacy alias for `sender`. Accept it from existing config or user input, but write `sender` in new setup commands. Business Data Platform initializes the managed `peers/` container for every user; `none` only means that no concrete `peers/<peer_id>/memories` subtree is used. Actor-peer recall includes shared user memory plus the current peer memory, and changing the scope does not move existing memories.
 
 Examples:
 
@@ -182,9 +182,9 @@ Version boundaries:
 - Published ClawHub packages are built before release and include `dist/*.js`, so normal users do not need to build locally.
 - `ov-install` is the backup/source install path. Use it only after the OpenClaw plugin manager or ClawHub path is unavailable/rate-limited, or when the user explicitly asks to install a source ref. For OpenClaw `>= 2026.5.3`, it builds the plugin during installation.
 
-### 3. Detect or start OpenViking server
+### 3. Detect or start Business Data Platform server
 
-The OpenClaw plugin only connects to an OpenViking HTTP server. It does not start the server.
+The OpenClaw plugin only connects to a Business Data Platform HTTP server. It does not start the server.
 
 Check the default local server first:
 
@@ -192,7 +192,7 @@ Check the default local server first:
 curl -fsS http://127.0.0.1:1933/health
 ```
 
-If no OpenViking server is running and the user wants a local server:
+If no Business Data Platform server is running and the user wants a local server:
 
 ```bash
 pip install openviking --upgrade --force-reinstall
@@ -284,8 +284,8 @@ Core fields:
 | Field | Meaning |
 | --- | --- |
 | `mode` | Legacy compatibility field. Expected value: `remote`. |
-| `baseUrl` | OpenViking HTTP endpoint |
-| `apiKey` | OpenViking API key |
+| `baseUrl` | Business Data Platform HTTP endpoint |
+| `apiKey` | Business Data Platform API key |
 | `peer_role` | `none` (shared user memory), `assistant` (`peers/<assistant_id>`), or `sender` (`peers/<sender_id>`). Legacy `person` is accepted as `sender`. |
 | `peer_prefix` | Optional only with `peer_role=assistant`; prefix for OpenClaw agent IDs. Interactive setup accepts only letters, digits, `_`, and `-`. If unset, the plugin follows session agent IDs. |
 | `accountId` | Required for root API keys |

@@ -210,7 +210,7 @@ def _make_search_experience_tool():
         @property
         def description(self) -> str:
             return (
-                "Search OpenViking case memories under the current user, read each matched "
+                "Search Business Data Platform case memories under the current user, read each matched "
                 "case's Linked Experiences section, and return candidate case summaries plus "
                 "linked experience URIs. Use read_experience to open selected experience URIs."
             )
@@ -279,7 +279,7 @@ def _make_read_experience_tool():
 
         @property
         def description(self) -> str:
-            return "Read one OpenViking experience memory by full URI. Returns Markdown."
+            return "Read one Business Data Platform experience memory by full URI. Returns Markdown."
 
         @property
         def parameters(self) -> dict[str, Any]:
@@ -927,7 +927,7 @@ def _configure_tools(
     task_no: int | None = None,
     data_split: str | None = None,
 ) -> None:
-    # Tau2 rollout may keep generic VikingBot tools, but OpenViking access is
+    # Tau2 rollout may keep generic VikingBot tools, but Business Data Platform access is
     # restricted to automatic experience recall during prompt construction.
     # No openviking_* tool should be callable by the agent.
     del keep_default_tools
@@ -1036,7 +1036,7 @@ def _build_system_prompt(policy: str, *, keep_default_tools: bool, rollout_langu
     instructions.append("Use the provided tools to interact with the environment.")
     instructions.append(
         "Before taking task actions, you MUST use the required `experience_loader` skill. "
-        "It explains how to search OpenViking case memories with the `search_experience` tool, return linked experience URIs, and read selected experiences using the `read_experience` tool."
+        "It explains how to search Business Data Platform case memories with the `search_experience` tool, return linked experience URIs, and read selected experiences using the `read_experience` tool."
     )
     instructions.append(
         "Loaded experiences are guidance from prior training runs. "

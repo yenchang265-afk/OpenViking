@@ -1,7 +1,7 @@
-# OpenViking Go SDK
+# Business Data Platform Go SDK
 
-The Go SDK is an HTTP client for a running OpenViking server. It lives in the
-main OpenViking repository as an independent Go module.
+The Go SDK is an HTTP client for a running Business Data Platform server. It lives in the
+main Business Data Platform repository as an independent Go module.
 
 ```bash
 go get github.com/volcengine/OpenViking/sdk/go
@@ -54,7 +54,7 @@ The client sends the same identity headers as the Python HTTP client:
 For the common `api_key` deployment mode, `APIKey` is enough because the server
 derives account and user identity from the key. Set `Account` and `User` only
 for trusted deployments or gateways where the upstream explicitly forwards
-tenant identity through OpenViking headers.
+tenant identity through Business Data Platform headers.
 
 This SDK does not implement legacy `agent_id` compatibility.
 
@@ -251,7 +251,7 @@ _, _, _ = watches, updated, triggered
 
 ## Error Handling
 
-OpenViking API errors return `*openviking.Error`.
+Business Data Platform API errors return `*openviking.Error`.
 
 ```go
 _, err := client.Read(ctx, "viking://resources/missing.md", 0, -1)
@@ -281,7 +281,7 @@ cd sdk/go
 go run ./examples/basic_usage
 ```
 
-The script creates a temporary Markdown file, imports it as an OpenViking
+The script creates a temporary Markdown file, imports it as a Business Data Platform
 resource, reads and updates it, runs semantic retrieval, exercises watch and
 skill management APIs, then creates a multi-message session, commits it,
 polls the memory extraction task, and searches both user and peer-scoped

@@ -67,10 +67,10 @@ export function findVikingUriInValue(value, skipKeys) {
 }
 
 export function buildGuardMessage(uri, hint = {}) {
-  const tool = hint.tool || "the OpenViking MCP tools";
+  const tool = hint.tool || "the Business Data Platform MCP tools";
   const example = typeof hint.example === "function" ? hint.example(uri) : hint.example;
   const lines = [
-    "viking:// URIs are OpenViking virtual paths, not local filesystem paths.",
+    "viking:// URIs are Business Data Platform virtual paths, not local filesystem paths.",
     `Use ${tool} instead.`,
   ];
   if (example) lines.push(`Example: ${example}`);

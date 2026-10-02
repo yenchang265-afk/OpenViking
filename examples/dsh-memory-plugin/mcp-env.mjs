@@ -3,11 +3,11 @@ import { fileURLToPath } from "node:url";
 import { MCP_SERVER_NAME } from "./config.mjs";
 import { forwardConnectionEnv } from "./shared/mcp-proxy-config.mjs";
 
-/** The same stdio proxy every other OpenViking memory integration starts. */
+/** The same stdio proxy every other Business Data Platform memory integration starts. */
 export const PROXY_PATH = fileURLToPath(new URL("./servers/mcp-proxy.mjs", import.meta.url));
 
 /**
- * Build the dsh-mcp-client config for the OpenViking stdio proxy.
+ * Build the dsh-mcp-client config for the Business Data Platform stdio proxy.
  *
  * DSH scrubs credential-shaped names out of the environment a subprocess
  * inherits, and the Cordis patch is invisible to one, so the proxy cannot

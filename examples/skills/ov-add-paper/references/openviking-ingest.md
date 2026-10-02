@@ -1,6 +1,6 @@
-# OpenViking Ingest Contract
+# Business Data Platform Ingest Contract
 
-`ov-add-paper` must end by importing the generated paper artifact into OpenViking with `ov add-resource`.
+`ov-add-paper` must end by importing the generated paper artifact into Business Data Platform with `ov add-resource`.
 
 ## Recommended CLI Flow
 
@@ -31,7 +31,7 @@ The `stat` preflight should return NOT_FOUND for a new target. If it succeeds, a
 
 ## Directory Upload Pitfall
 
-The CLI zips a local directory before upload. `--include`/`--exclude` are request parameters and may not reduce the client-side ZIP payload. If directory upload repeatedly ends with `Could not reach OpenViking` while `ov health` succeeds and single-file imports work, suspect upload timeout or an unstable large directory payload.
+The CLI zips a local directory before upload. `--include`/`--exclude` are request parameters and may not reduce the client-side ZIP payload. If directory upload repeatedly ends with `Could not reach Business Data Platform` while `ov health` succeeds and single-file imports work, suspect upload timeout or an unstable large directory payload.
 
 Mitigations:
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""OpenViking server mixed-load benchmark."""
+"""Business Data Platform server mixed-load benchmark."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from typing import Any, Awaitable, Callable, Dict, Iterable, List, Optional, Seq
 DEFAULT_DATA_ROOT_URI = "viking://resources/bench/load_test"
 DEFAULT_SESSION_PREFIX = "bench-load-"
 DEFAULT_QUERIES = [
-    "OpenViking server load test",
+    "Business Data Platform server load test",
     "session commit memory extraction",
     "resource ingestion benchmark document",
     "concurrent retrieval latency",
@@ -658,7 +658,7 @@ class BenchmarkRunner:
                     lambda p=path, uri=resource_uri: adapter.add_resource(
                         path=str(p),
                         to=uri,
-                        reason="OpenViking server load benchmark",
+                        reason="Business Data Platform server load benchmark",
                         wait=False,
                         timeout=None,
                     ),
@@ -901,7 +901,7 @@ class BenchmarkRunner:
                     lambda p=path, uri=resource_uri: adapter.add_resource(
                         path=str(p),
                         to=uri,
-                        reason="OpenViking mixed load benchmark",
+                        reason="Business Data Platform mixed load benchmark",
                         wait=False,
                         timeout=None,
                     ),
@@ -1252,17 +1252,17 @@ def build_cli_config_payload(config: BenchmarkConfig) -> Dict[str, Any]:
 
 def write_benchmark_document(path: Path, *, adapter: str, index: int, run_id: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    content = f"""# OpenViking Load Benchmark Document {index}
+    content = f"""# Business Data Platform Load Benchmark Document {index}
 
 Adapter: {adapter}
 Run: {run_id}
 Keywords: benchmark, concurrent retrieval, resource ingestion, session commit.
 
 This generated document is used to test concurrent add_resource, find, search,
-grep, glob, add_message, and commit traffic against a local OpenViking server.
+grep, glob, add_message, and commit traffic against a local Business Data Platform server.
 
 The text intentionally repeats relevant terms so retrieval has stable targets:
-OpenViking server benchmark benchmark benchmark. Session commit memory extraction.
+Business Data Platform server benchmark benchmark benchmark. Session commit memory extraction.
 Resource ingestion queue latency. Mixed SDK CLI subprocess load.
 """
     path.write_text(content, encoding="utf-8")
@@ -1271,7 +1271,7 @@ Resource ingestion queue latency. Mixed SDK CLI subprocess load.
 def build_message_content(*, session_id: str, message_index: int, adapter: str) -> str:
     return (
         f"[{adapter}] session={session_id} message={message_index}. "
-        "The user discussed OpenViking server load testing, concurrent resource ingestion, "
+        "The user discussed Business Data Platform server load testing, concurrent resource ingestion, "
         "retrieval latency, session commit background tasks, and mixed SDK/CLI traffic. "
         "Keep decisions, bottlenecks, follow-up actions, and observed queue behavior."
     )
@@ -1588,7 +1588,7 @@ def render_report_zh(
     output_dir: str,
 ) -> str:
     lines: List[str] = []
-    lines.append("# OpenViking Server 壓測報告")
+    lines.append("# Business Data Platform Server 壓測報告")
     lines.append("")
     lines.append(f"- 執行 ID: `{run_id}`")
     lines.append(f"- Server: `{config.server_url}`")
@@ -1838,7 +1838,7 @@ def write_csv(path: Path, rows: List[Dict[str, Any]]) -> None:
 
 def parse_args(argv: Optional[List[str]] = None) -> BenchmarkConfig:
     parser = argparse.ArgumentParser(
-        description="Run SDK/CLI mixed load benchmark against a running OpenViking server."
+        description="Run SDK/CLI mixed load benchmark against a running Business Data Platform server."
     )
     parser.add_argument(
         "--server-url",

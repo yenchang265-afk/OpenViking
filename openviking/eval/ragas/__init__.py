@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-RAGAS evaluator integration for OpenViking.
+RAGAS evaluator integration for Business Data Platform.
 """
 
 import asyncio
@@ -101,11 +101,11 @@ def _get_llm_config_from_env() -> Optional[Dict[str, str]]:
 
 def _create_ragas_llm_from_config() -> Optional[Any]:
     """
-    Create a RAGAS-compatible LLM from OpenViking VLM configuration or environment variables.
+    Create a RAGAS-compatible LLM from Business Data Platform VLM configuration or environment variables.
 
     Priority:
         1. Environment variables (RAGAS_LLM_API_KEY, RAGAS_LLM_API_BASE, RAGAS_LLM_MODEL)
-        2. OpenViking VLM configuration (~/.openviking/ov.conf)
+        2. Business Data Platform VLM configuration (~/.openviking/ov.conf)
 
     Returns:
         RAGAS LLM instance or None if VLM is not configured.
@@ -139,7 +139,7 @@ def _create_ragas_llm_from_config() -> Optional[Any]:
     try:
         config = get_openviking_config()
     except FileNotFoundError:
-        logger.debug("OpenViking config file not found, skipping VLM config")
+        logger.debug("Business Data Platform config file not found, skipping VLM config")
         return None
 
     vlm_config = config.vlm
@@ -200,7 +200,7 @@ class RagasEvaluator(BaseEvaluator):
             metrics: List of Ragas metrics (e.g., faithfulness, answer_relevancy).
                     If None, uses a default set.
             llm: LLM to use for evaluation (RAGAS LLM instance).
-                 If None, uses OpenViking VLM configuration.
+                 If None, uses Business Data Platform VLM configuration.
             embeddings: Embeddings to use for evaluation.
             config: RagasConfig instance with all settings.
             max_workers: Override max_workers for concurrent evaluation.
@@ -269,7 +269,7 @@ class RagasEvaluator(BaseEvaluator):
                 "RAGAS evaluation requires an LLM. "
                 "Please configure via one of:\n"
                 "  1. Environment variables: RAGAS_LLM_API_KEY, RAGAS_LLM_API_BASE, RAGAS_LLM_MODEL\n"
-                "  2. OpenViking VLM config in ~/.openviking/ov.conf\n"
+                "  2. Business Data Platform VLM config in ~/.openviking/ov.conf\n"
                 "  3. Pass an llm parameter to RagasEvaluator"
             )
 

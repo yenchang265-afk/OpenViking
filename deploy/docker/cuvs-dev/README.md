@@ -1,6 +1,6 @@
 # cuVS development image
 
-This lightweight image contains cuVS, CuPy, the OpenViking local VectorDB
+This lightweight image contains cuVS, CuPy, the Business Data Platform local VectorDB
 native engine, and the minimal Python dependencies needed by the cuVS smoke
 and vector benchmark harnesses. It deliberately excludes the full server,
 bot, Web UI, and unrelated ingestion dependencies. It does not encode any

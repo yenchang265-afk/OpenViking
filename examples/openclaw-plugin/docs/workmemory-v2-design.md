@@ -1,8 +1,8 @@
-# OpenViking Working Memory v2 — 設計文件
+# Business Data Platform Working Memory v2 — 設計文件
 
 ## 文件目標
 
-本文描述 OpenViking Working Memory v2（以下簡稱 WM v2）的當前實現：設計原則、資料結構、協議、流程，以及對應程式碼位置。
+本文描述 Business Data Platform Working Memory v2（以下簡稱 WM v2）的當前實現：設計原則、資料結構、協議、流程，以及對應程式碼位置。
 
 ---
 
@@ -294,7 +294,7 @@ instruction / archive / session 三分割槽：
 
 ## 三、歸檔對話回查工具
 
-OpenViking 在外掛側暴露兩個獨立的 archive 回查工具。
+Business Data Platform 在外掛側暴露兩個獨立的 archive 回查工具。
 
 ### 3.1 `ov_archive_expand`
 

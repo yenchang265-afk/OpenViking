@@ -9,7 +9,7 @@
  *   - source=resume  → `/resume` or short reconnect (no commit/sweep;
  *     may inject latest archive summary if the live OV session was already committed)
  *
- * Every source injects the shared OpenViking profile block unless
+ * Every source injects the shared Business Data Platform profile block unless
  * OPENVIKING_NO_AUTO_INJECT=1. The block contains profile.md plus
  * abstract-annotated indexes of preferences/ and entities/, capped by
  * OPENVIKING_PROFILE_TOKEN_BUDGET with the shared CJK-aware estimator.
@@ -135,12 +135,12 @@ function formatResumeArchiveContext(ovSessionId, context) {
   if (!overview) return "";
   const archiveUri = `viking://~/sessions/${ovSessionId}/history/`;
   const head = [
-    "OpenViking session archive digest:",
+    "Business Data Platform session archive digest:",
     `Latest committed archive for resumed Codex session ${ovSessionId}:`,
   ];
   const tail = [
     "",
-    `More detail: use the OpenViking MCP read/search tools with ${archiveUri} if you need exact prior commands, files, tool outputs, or messages.`,
+    `More detail: use the Business Data Platform MCP read/search tools with ${archiveUri} if you need exact prior commands, files, tool outputs, or messages.`,
   ];
   // Under a byte cap the archive takes at most half of the SessionStart context.
   const maxBytes = cfg.sessionStartMaxBytes > 0
@@ -315,10 +315,10 @@ async function maybeRetireCursorState(state, ageMs) {
 function describeCommittedSessions(commits) {
   const traceIds = commits.map((item) => item.traceId).filter(Boolean);
   if (commits.length === 1) {
-    return `OpenViking session ${commits[0].ovSessionId} is committed` +
+    return `Business Data Platform session ${commits[0].ovSessionId} is committed` +
       (traceIds.length ? ` (trace_id=${traceIds[0]})` : "");
   }
-  return `OpenViking sessions ${commits.map((item) => item.ovSessionId).join(", ")} are committed` +
+  return `Business Data Platform sessions ${commits.map((item) => item.ovSessionId).join(", ")} are committed` +
     (traceIds.length ? ` (trace_ids=${traceIds.join(",")})` : "");
 }
 

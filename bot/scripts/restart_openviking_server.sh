@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Restart OpenViking Server with Bot API enabled
+# Restart Business Data Platform Server with Bot API enabled
 # Usage: ./restart_openviking_server.sh [--port PORT] [--bot-port PORT] [--config PATH] [--data-dir PATH]
 
 set -e
@@ -68,9 +68,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "=========================================="
-echo "Restarting OpenViking Server with Bot API"
+echo "Restarting Business Data Platform Server with Bot API"
 echo "=========================================="
-echo "OpenViking Server Port: $PORT"
+echo "Business Data Platform Server Port: $PORT"
 echo "Bot Port: $BOT_PORT"
 echo "Config: $CONFIG"
 echo "Data Directory: $DATA_DIR"
@@ -170,7 +170,7 @@ for i in {1..10}; do
     if echo "${health_response//[[:space:]]/}" | grep -q '"status":"healthy"'; then
         echo ""
         echo "=========================================="
-        echo "✓ OpenViking Server started successfully!"
+        echo "✓ Business Data Platform Server started successfully!"
         echo "=========================================="
         echo ""
         echo "Server URL: http://localhost:$PORT"
@@ -189,7 +189,7 @@ done
 # If we reach here, server failed to start
 echo ""
 echo "=========================================="
-echo "✗ Failed to start OpenViking Server"
+echo "✗ Failed to start Business Data Platform Server"
 echo "=========================================="
 echo ""
 echo "Recent logs:"

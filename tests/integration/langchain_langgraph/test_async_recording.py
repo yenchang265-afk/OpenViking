@@ -96,7 +96,7 @@ async def test_real_openviking_context_wrapper_ainvoke_uses_async_lifecycle():
 
     async def answer(messages: list[BaseMessage]) -> AIMessage:
         assert "Async deployment color is teal." in str(messages[0].content)
-        return AIMessage(content="OpenViking says teal.")
+        return AIMessage(content="Business Data Platform says teal.")
 
     app = with_openviking_context(
         RunnableLambda(answer),
@@ -107,7 +107,7 @@ async def test_real_openviking_context_wrapper_ainvoke_uses_async_lifecycle():
 
     result = await app.ainvoke([HumanMessage(content="What is the async deployment color?")])
 
-    assert result.content == "OpenViking says teal."
+    assert result.content == "Business Data Platform says teal."
     assert client.batch_sizes == [2]
     assert {"create_session", "get_session_context", "search", "read"}.issubset(client.calls)
     assistant_parts = client.backing.sessions["real-async-wrapper"][1]["parts"]

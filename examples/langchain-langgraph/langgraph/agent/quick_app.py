@@ -1,4 +1,4 @@
-"""Deterministic LangGraph smoke app using OpenViking tools and store."""
+"""Deterministic LangGraph smoke app using Business Data Platform tools and store."""
 
 from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from langchain_core.messages import AIMessage, HumanMessage
@@ -22,10 +22,10 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
     client = client or InMemoryOpenVikingClient(
         {
             "viking://~/memories/profile.md": (
-                "The user wants LangGraph agents to use OpenViking for durable context."
+                "The user wants LangGraph agents to use Business Data Platform for durable context."
             ),
             "viking://resources/runbooks/langgraph.md": (
-                "LangGraph workflows can call OpenViking tools before model nodes."
+                "LangGraph workflows can call Business Data Platform tools before model nodes."
             ),
         }
     )
@@ -42,7 +42,7 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
     )
     model = FakeListChatModel(
         responses=[
-            "The LangGraph workflow should use OpenViking context and azure deployment color.",
+            "The LangGraph workflow should use Business Data Platform context and azure deployment color.",
         ]
     )
 
@@ -60,7 +60,7 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
             [
                 HumanMessage(
                     content=(
-                        "OpenViking context:\n"
+                        "Business Data Platform context:\n"
                         f"{state.get('openviking_context', '')}\n\nQuestion: {latest}"
                     )
                 )
@@ -80,7 +80,7 @@ def build_app(client: InMemoryOpenVikingClient | None = None):
 def main() -> str:
     app = build_app()
     result = app.invoke(
-        {"messages": [HumanMessage(content="How should LangGraph use OpenViking?")]}
+        {"messages": [HumanMessage(content="How should LangGraph use Business Data Platform?")]}
     )
     answer = result["messages"][-1].content
     print(answer)

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Evaluation module for OpenViking.
+Evaluation module for Business Data Platform.
 """
 
 from openviking.eval.ragas import (

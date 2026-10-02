@@ -75,7 +75,7 @@ function formatArchiveSection(sessionCtx, ovSessionId, maxBytes = 0) {
   if (!overview) return null;
   const truncated = truncateToBytes(overview, maxBytes);
   if (truncated !== overview) {
-    overview = `${truncated}\nMore detail: read viking://~/sessions/${ovSessionId}/history/ with the OpenViking MCP read tool.`;
+    overview = `${truncated}\nMore detail: read viking://~/sessions/${ovSessionId}/history/ with the Business Data Platform MCP read tool.`;
   }
 
   return [
@@ -116,7 +116,7 @@ runHookStage({
 
   // Pending replay is independent from profile/archive injection. A user may
   // disable injection but still expect failed writes from prior short-lived
-  // coding sessions to be recovered when OpenViking is healthy again.
+  // coding sessions to be recovered when Business Data Platform is healthy again.
   try {
     const replayResult = await replayPending(fetchJSON, log);
     if (replayResult.replayed > 0 || replayResult.failed > 0 || replayResult.deferred > 0) {

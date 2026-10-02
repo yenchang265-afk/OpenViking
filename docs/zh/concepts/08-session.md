@@ -90,7 +90,7 @@ class Message:
 | 型別 | 說明 |
 |------|------|
 | `TextPart` | 文本內容 |
-| `ImagePart` | 圖片 URL 內容。記憶提取時，OpenViking 可以使用已配置的 VLM 將其描述為文本。 |
+| `ImagePart` | 圖片 URL 內容。記憶提取時，Business Data Platform 可以使用已配置的 VLM 將其描述為文本。 |
 | `ContextPart` | 上下文引用（URI + 摘要） |
 | `ToolPart` | 工具呼叫（輸入 + 輸出） |
 
@@ -136,9 +136,9 @@ commit() 分兩階段執行：
 
 ### 記憶型別
 
-提交會話後，OpenViking 會根據對話內容和當前記憶策略，提取對後續互動有價值的資訊，並儲存到當前使用者的記憶空間。當對話涉及穩定的 Peer 時，相關記憶也可以儲存到對應的 Peer 空間。
+提交會話後，Business Data Platform 會根據對話內容和當前記憶策略，提取對後續互動有價值的資訊，並儲存到當前使用者的記憶空間。當對話涉及穩定的 Peer 時，相關記憶也可以儲存到對應的 Peer 空間。
 
-OpenViking 內建 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories` 和 `experiences` 等記憶型別，也支援根據業務需要自定義。完整用途與路徑見 [上下文型別](./02-context-types.md)。
+Business Data Platform 內建 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories` 和 `experiences` 等記憶型別，也支援根據業務需要自定義。完整用途與路徑見 [上下文型別](./02-context-types.md)。
 
 在 `memory_policy.memory_types` 中，`experiences` 會啟用完整的 Agent Evolution 流程，並自動啟用 `cases` 和 `trajectories`。如果沒有 `experiences`，顯式傳入的 `cases` 和 `trajectories` 會被靜默忽略，不會報錯。
 

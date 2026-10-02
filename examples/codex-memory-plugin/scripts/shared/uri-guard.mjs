@@ -70,10 +70,10 @@ export function findVikingUriInValue(value, skipKeys) {
 }
 
 export function buildGuardMessage(uri, hint = {}) {
-  const tool = hint.tool || "the OpenViking MCP tools";
+  const tool = hint.tool || "the Business Data Platform MCP tools";
   const example = typeof hint.example === "function" ? hint.example(uri) : hint.example;
   const lines = [
-    "viking:// URIs are OpenViking virtual paths, not local filesystem paths.",
+    "viking:// URIs are Business Data Platform virtual paths, not local filesystem paths.",
     `Use ${tool} instead.`,
   ];
   if (example) lines.push(`Example: ${example}`);
@@ -82,9 +82,9 @@ export function buildGuardMessage(uri, hint = {}) {
 
 export function buildGuardNotice(uri, hint = {}) {
   const lines = [
-    `[OpenViking memory plugin] URI guard: this shell command contains the viking:// URI ${uri}.`,
-    "viking:// URIs are OpenViking virtual paths, not local files, so cat, ls, grep and other file commands cannot open them.",
-    `If you meant to read or search OpenViking content, use ${hint.tool || "the OpenViking MCP tools"} instead.`,
+    `[Business Data Platform memory plugin] URI guard: this shell command contains the viking:// URI ${uri}.`,
+    "viking:// URIs are Business Data Platform virtual paths, not local files, so cat, ls, grep and other file commands cannot open them.",
+    `If you meant to read or search Business Data Platform content, use ${hint.tool || "the Business Data Platform MCP tools"} instead.`,
   ];
   if (hint.example) lines.push(`Example: ${hint.example}`);
   lines.push("If the URI is intentional data (an ov CLI argument, an HTTP payload, a search pattern), ignore this notice.");
@@ -121,23 +121,23 @@ export function addSkillExample(uri, { call = "add_skill", edited = false } = {}
 /** The hints a host gets when it names no table of its own. */
 export const DEFAULT_TOOL_HINTS = {
   read: {
-    tool: "OpenViking MCP read",
+    tool: "Business Data Platform MCP read",
     example: (uri) => `read(uris="${uri}")`,
   },
   glob: {
-    tool: "OpenViking MCP glob or list",
+    tool: "Business Data Platform MCP glob or list",
     example: (uri, input = {}) => (
       `glob(pattern="${String(input.pattern ?? "**/*").replaceAll('"', '\\"')}", uri="${uri}")`
     ),
   },
   grep: {
-    tool: "OpenViking MCP grep or search",
+    tool: "Business Data Platform MCP grep or search",
     example: (uri, input = {}) => (
       `grep(uri="${uri}", pattern="${String(input.pattern ?? "").replaceAll('"', '\\"')}")`
     ),
   },
   edit: {
-    tool: (uri) => (isSkillUri(uri) ? "OpenViking MCP add_skill" : "OpenViking MCP edit"),
+    tool: (uri) => (isSkillUri(uri) ? "Business Data Platform MCP add_skill" : "Business Data Platform MCP edit"),
     example: (uri) => (
       isSkillUri(uri)
         ? addSkillExample(uri, { edited: true })
@@ -145,21 +145,21 @@ export const DEFAULT_TOOL_HINTS = {
     ),
   },
   write: {
-    tool: (uri) => (isSkillUri(uri) ? "OpenViking MCP add_skill" : "OpenViking MCP write"),
+    tool: (uri) => (isSkillUri(uri) ? "Business Data Platform MCP add_skill" : "Business Data Platform MCP write"),
     example: (uri) => (
       isSkillUri(uri) ? addSkillExample(uri) : `write(uri="${uri}", content="...")`
     ),
   },
   bash: {
-    tool: "OpenViking MCP read or search",
+    tool: "Business Data Platform MCP read or search",
     example: (uri) => `read(uris="${uri}")`,
   },
   runcommand: {
-    tool: "OpenViking MCP read or search",
+    tool: "Business Data Platform MCP read or search",
     example: (uri) => `read(uris="${uri}")`,
   },
   shell: {
-    tool: "OpenViking MCP read or search",
+    tool: "Business Data Platform MCP read or search",
     example: (uri) => `read(uris="${uri}")`,
   },
 };

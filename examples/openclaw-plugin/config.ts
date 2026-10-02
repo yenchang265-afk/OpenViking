@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { getEnv } from "./runtime-utils.js";
 
 /**
- * Subset of OpenClaw's standard `SecretRef` shape supported by the OpenViking
+ * Subset of OpenClaw's standard `SecretRef` shape supported by the Business Data Platform
  * plugin. The full runtime SDK also recognises `source: "exec"` with a
  * provider plugin, but the plugin self-hosts its own env/file resolution so
  * users on pluginSdkVersion < 2026.6.x (no host-level secret-resolver) still
@@ -34,7 +34,7 @@ export type MemoryOpenVikingConfig = {
   peer_role?: "none" | "assistant" | "sender" | "person";
   peer_prefix?: string;
   apiKey?: string | OpenVikingSecretRef;
-  /** Optional HTTP headers merged into every OpenViking request. */
+  /** Optional HTTP headers merged into every Business Data Platform request. */
   headers?: Record<string, string>;
   /** Advanced option. Only needed when explicitly sending tenant identity headers. With a user key the server derives identity from the key. */
   accountId?: string;
@@ -236,7 +236,7 @@ function resolvePeerPrefix(configured: unknown): string {
  *   * `file`: ~ expanded, then read as UTF-8, then leading/trailing whitespace
  *     stripped (de-facto standard for files written with `echo xxx > key`).
  *     Missing / unreadable files propagate the original node error with an
- *     error prefix that names the OpenViking field, so the user knows which
+ *     error prefix that names the Business Data Platform field, so the user knows which
  *     secretRef failed to load.
  *   * `exec`: rejected with a "not supported" error. The subprocess-based
  *     resolver was removed because marketplace install scanners block plugins
@@ -251,13 +251,13 @@ function resolveSecret(
   if (typeof value === "string") return value;
   if (!value || typeof value !== "object") {
     throw new Error(
-      `OpenViking ${label} must be a plain string or a SecretRef object ` +
+      `Business Data Platform ${label} must be a plain string or a SecretRef object ` +
         `({source:"env"|"file", id})`,
     );
   }
   const obj = value as Record<string, unknown>;
   if (typeof obj.id !== "string" || !obj.id) {
-    throw new Error(`OpenViking ${label} SecretRef requires a non-empty string "id"`);
+    throw new Error(`Business Data Platform ${label} SecretRef requires a non-empty string "id"`);
   }
   const id = obj.id;
   switch (obj.source) {
@@ -265,7 +265,7 @@ function resolveSecret(
       const envValue = getEnv(id);
       if (!envValue) {
         throw new Error(
-          `OpenViking ${label} SecretRef env source: environment variable ${id} is not set or empty`,
+          `Business Data Platform ${label} SecretRef env source: environment variable ${id} is not set or empty`,
         );
       }
       return envValue;
@@ -278,13 +278,13 @@ function resolveSecret(
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         throw new Error(
-          `OpenViking ${label} SecretRef file source: cannot read ${resolvedPath} (${msg})`,
+          `Business Data Platform ${label} SecretRef file source: cannot read ${resolvedPath} (${msg})`,
         );
       }
     }
     case "exec": {
       throw new Error(
-        `OpenViking ${label} SecretRef exec source is not supported in the packaged plugin ` +
+        `Business Data Platform ${label} SecretRef exec source is not supported in the packaged plugin ` +
           `(marketplace install scanners block subprocess execution). Export the secret to an ` +
           `environment variable ({source:"env"}) or a file ({source:"file"}) instead, e.g. ` +
           `OPENVIKING_API_KEY=$(op read ${id}).`,
@@ -292,7 +292,7 @@ function resolveSecret(
     }
     default:
       throw new Error(
-        `OpenViking ${label} SecretRef has unknown source "${String(
+        `Business Data Platform ${label} SecretRef has unknown source "${String(
           (obj as Record<string, unknown>).source,
         )}". Supported: "env" | "file".`,
       );
@@ -803,7 +803,7 @@ export const memoryOpenVikingConfigSchema = {
   },
   uiHints: {
     baseUrl: {
-      label: "OpenViking Base URL",
+      label: "Business Data Platform Base URL",
       placeholder: DEFAULT_BASE_URL,
       help: "HTTP URL when mode is remote (or use ${OPENVIKING_BASE_URL})",
     },
@@ -821,18 +821,18 @@ export const memoryOpenVikingConfigSchema = {
       help: 'Only used when Memory Scope is "assistant". Prefix added to the peer id derived from the OpenClaw agent id.',
     },
     apiKey: {
-      label: "OpenViking API Key",
+      label: "Business Data Platform API Key",
       sensitive: true,
       placeholder: "${OPENVIKING_API_KEY}",
       help:
-        "Optional API key for OpenViking server. Accepts a plain string, " +
+        "Optional API key for Business Data Platform server. Accepts a plain string, " +
         "${ENV_VAR} interpolation, or a SecretRef object ({source: env/file, id}). " +
         "Prefer the SecretRef shapes so the key never sits as plaintext in openclaw.json.",
     },
     headers: {
       label: "Headers",
       advanced: true,
-      help: "Optional HTTP headers merged into every OpenViking request.",
+      help: "Optional HTTP headers merged into every Business Data Platform request.",
     },
     accountId: {
       label: "Account ID",
@@ -849,7 +849,7 @@ export const memoryOpenVikingConfigSchema = {
     targetUri: {
       label: "Search Target URI",
       placeholder: DEFAULT_TARGET_URI,
-      help: "Default OpenViking target URI for memory search",
+      help: "Default Business Data Platform target URI for memory search",
     },
     timeoutMs: {
       label: "Request Timeout (ms)",
@@ -858,13 +858,13 @@ export const memoryOpenVikingConfigSchema = {
     },
     autoCapture: {
       label: "Auto-Capture",
-      help: "Extract memories from recent conversation messages via OpenViking sessions",
+      help: "Extract memories from recent conversation messages via Business Data Platform sessions",
     },
     captureMode: {
       label: "Capture Mode",
       placeholder: DEFAULT_CAPTURE_MODE,
       advanced: true,
-      help: '"semantic" captures all eligible user text and relies on OpenViking extraction; "keyword" uses trigger regex first.',
+      help: '"semantic" captures all eligible user text and relies on Business Data Platform extraction; "keyword" uses trigger regex first.',
     },
     captureMaxLength: {
       label: "Capture Max Length",
@@ -874,7 +874,7 @@ export const memoryOpenVikingConfigSchema = {
     },
     autoRecall: {
       label: "Auto-Recall",
-      help: "Inject relevant OpenViking memories into agent context",
+      help: "Inject relevant Business Data Platform memories into agent context",
     },
     autoRecallTimeoutMs: {
       label: "Auto-Recall Timeout (ms)",
@@ -929,7 +929,7 @@ export const memoryOpenVikingConfigSchema = {
     bypassSessionPatterns: {
       label: "Bypass Session Patterns",
       placeholder: "agent:*:cron:**",
-      help: "Completely bypass OpenViking for matching session keys (no capture, recall, or commit; compaction falls back to OpenClaw's native compactor). Use * within one segment and ** across segments.",
+      help: "Completely bypass Business Data Platform for matching session keys (no capture, recall, or commit; compaction falls back to OpenClaw's native compactor). Use * within one segment and ** across segments.",
       advanced: true,
     },
     commitTokenThresholdRatio: {

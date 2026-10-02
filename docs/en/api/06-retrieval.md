@@ -1,6 +1,6 @@
 # Retrieval
 
-OpenViking provides multiple retrieval methods, including simple vector similarity search, intelligent retrieval with session context, regex pattern matching, and file pattern matching.
+Business Data Platform provides multiple retrieval methods, including simple vector similarity search, intelligent retrieval with session context, regex pattern matching, and file pattern matching.
 
 ## find vs search
 
@@ -350,7 +350,7 @@ openviking find "red poster style" --image ./poster.png --uri "viking://resource
                 "score": 0.12054087276495282,
                 "category": "",
                 "match_reason": "",
-                "abstract": "This directory contains structured API reference documentation for the OpenViking platform, compiling detailed HTTP endpoint specifications for core and extended platform capabilities. It covers functional modules including system health checks, semanti...",
+                "abstract": "This directory contains structured API reference documentation for the Business Data Platform platform, compiling detailed HTTP endpoint specifications for core and extended platform capabilities. It covers functional modules including system health checks, semanti...",
                 "overview": null
             }
         ],
@@ -724,7 +724,7 @@ curl -X POST http://localhost:1933/api/v1/search/search \
         "category": "entities",
         "score": 0.43,
         "detail": "abstract",
-        "text": "OpenViking FS storage layer...",
+        "text": "Business Data Platform FS storage layer...",
         "origin": "self"
       }
     ],

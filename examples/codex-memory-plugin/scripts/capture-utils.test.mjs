@@ -768,7 +768,7 @@ test("captures Codex subagent messages and activity with identity", () => {
   ]);
 });
 
-test("captures generic OpenViking MCP calls as standard tool parts", () => {
+test("captures generic Business Data Platform MCP calls as standard tool parts", () => {
   const results = {
     results: [
       {
@@ -853,7 +853,7 @@ test("keeps MCP tool-level errors out of completed generic read tool parts", () 
           result: {
             Ok: {
               isError: true,
-              content: [{ type: "text", text: "OpenViking request failed (HTTP 500)" }],
+              content: [{ type: "text", text: "Business Data Platform request failed (HTTP 500)" }],
             },
           },
         },
@@ -881,7 +881,7 @@ test("marks paginated MCP errors as failed tool parts", () => {
             tool: "read",
             arguments: { uris: ["viking://user/test/memories/experiences/a.md"] },
             status: "failed",
-            error: { message: "OpenViking request failed (HTTP 500)" },
+            error: { message: "Business Data Platform request failed (HTTP 500)" },
           },
         },
       },

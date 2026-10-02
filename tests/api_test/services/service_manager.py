@@ -61,7 +61,7 @@ class OpenVikingServiceManager:
                 print(f"❌ Port {Config.SERVER_PORT} is in use but service is not responding")
                 return False
 
-        print(f"🚀 Starting OpenViking server on {Config.SERVER_URL}...")
+        print(f"🚀 Starting Business Data Platform server on {Config.SERVER_URL}...")
         cmd = ["python", "-m", "openviking.server.bootstrap"]
 
         try:
@@ -149,7 +149,7 @@ class OpenVikingServiceManager:
 
     def start_all(self) -> bool:
         print("\n" + "=" * 60)
-        print("Starting OpenViking Services")
+        print("Starting Business Data Platform Services")
         print("=" * 60 + "\n")
 
         if not self.start_server():
@@ -162,7 +162,7 @@ class OpenVikingServiceManager:
 
     def stop_all(self):
         print("\n" + "=" * 60)
-        print("Stopping OpenViking Services")
+        print("Stopping Business Data Platform Services")
         print("=" * 60 + "\n")
         self.stop_server()
         print("\n✅ All services stopped")
@@ -170,7 +170,7 @@ class OpenVikingServiceManager:
 
     def __enter__(self):
         if not self.start_all():
-            raise RuntimeError("Failed to start OpenViking services")
+            raise RuntimeError("Failed to start Business Data Platform services")
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):

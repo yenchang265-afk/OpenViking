@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Auth plugin abstract base class for OpenViking multi-tenant HTTP Server."""
+"""Auth plugin abstract base class for Business Data Platform multi-tenant HTTP Server."""
 
 from __future__ import annotations
 

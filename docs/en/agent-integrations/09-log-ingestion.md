@@ -1,8 +1,8 @@
 # Import Local Agent Logs (openviking-server ingest)
 
-`openviking-server ingest` parses the conversation logs that AI coding / agent harnesses (Claude Code, Codex, WorkBuddy, OpenCode, MiMo, Hermes, OpenClaw) already leave on your machine, then "replays" them through OpenViking's existing session pipeline (`create session → batch add messages → commit`, where commit triggers memory extraction). This turns both your historical and newly written conversations into long-term memory. It complements the per-harness memory plugins: a plugin captures **while a conversation is happening**, whereas this tool is for **importing existing logs** and **watching for new logs offline** — no plugin required and no change to the harness itself.
+`openviking-server ingest` parses the conversation logs that AI coding / agent harnesses (Claude Code, Codex, WorkBuddy, OpenCode, MiMo, Hermes, OpenClaw) already leave on your machine, then "replays" them through Business Data Platform's existing session pipeline (`create session → batch add messages → commit`, where commit triggers memory extraction). This turns both your historical and newly written conversations into long-term memory. It complements the per-harness memory plugins: a plugin captures **while a conversation is happening**, whereas this tool is for **importing existing logs** and **watching for new logs offline** — no plugin required and no change to the harness itself.
 
-Key difference from the plugins: this tool is an OpenViking **client**. It runs where the logs live and points at a local or remote server via the SDK, and it is **off by default** — installing OpenViking does not silently scan your local files.
+Key difference from the plugins: this tool is a Business Data Platform **client**. It runs where the logs live and points at a local or remote server via the SDK, and it is **off by default** — installing Business Data Platform does not silently scan your local files.
 
 Source: [openviking/ingest](https://github.com/volcengine/OpenViking/tree/main/openviking/ingest)
 
@@ -27,7 +27,7 @@ The feature is doubly disabled and must be turned on explicitly:
 | `mimo` | Experimental | `~/.local/share/mimocode/mimocode.db` | SQLite, polled by `(time, id)`; skips `part.synthetic` text and `agent_id != main` |
 | `cursor` | Deferred | `~/Library/Application Support/Cursor/User/**/state.vscdb` | undocumented, version-unstable KV blobs; not yet implemented |
 
-> "harness" (agent framework) here means a whole tool like Claude Code or Codex — distinct from OpenViking's "tool" (tool-call) concept.
+> "harness" (agent framework) here means a whole tool like Claude Code or Codex — distinct from Business Data Platform's "tool" (tool-call) concept.
 
 ## Enable in ov.conf
 
@@ -73,7 +73,7 @@ When `server_url` is empty it falls back to `OPENVIKING_URL` or `http://localhos
 
 ## Usage
 
-The `openviking-server ingest` command is installed together with OpenViking.
+The `openviking-server ingest` command is installed together with Business Data Platform.
 
 ```bash
 # Show registered harnesses and their config
@@ -102,7 +102,7 @@ openviking-server ingest status
 
 ## peer_id
 
-Every message carries a peer_id so OpenViking can profile both the human and the model:
+Every message carries a peer_id so Business Data Platform can profile both the human and the model:
 
 - assistant turns: `{harness}/{model}` (or `{harness}/{provider}/{model}` when the provider is meaningful), e.g. `claude_code/claude-opus-4-8`, `opencode/bytedance_ark/doubao-...`;
 - user turns: single-user dev harnesses (claude_code / codex / opencode) use the git identity of the session cwd repo (`user.email` / `user.name`), falling back to the configured `ingest.user` when there is no git repo; group-chat harnesses (hermes / openclaw) use the original username from the log (selected by `user_field`).
@@ -112,7 +112,7 @@ username) use a collision-free `ext-<base64>` form that encodes the complete ide
 The `ext-` namespace is reserved: an ASCII identity that would sanitize to an `ext-` id is
 also encoded so it cannot impersonate an encoded identity. New reads and writes use only
 the canonical id. Older versions may have collapsed multiple mixed-script identities—or
-a mixed-script identity and a real ASCII identity—into the same peer directory. OpenViking
+a mixed-script identity and a real ASCII identity—into the same peer directory. Business Data Platform
 therefore does not attach those ambiguous directories as automatic aliases; operators must
 decide ownership before migrating existing data.
 
@@ -121,7 +121,7 @@ decide ownership before migrating existing data.
 Each harness has a thin adapter that parses its logs into normalized messages and hands them to a replayer that runs `ensure_session → batch add (<=100 per call) → commit`. Memory extraction only runs on **commit**, server-side. OV session ids are `import__{harness}__{native_session_id}` — deterministic and idempotent.
 
 - **Backfill** enumerates every session, replays from the cursor to the end, then commits once per session.
-- **Watch** mirrors OpenViking's own `WatchScheduler`: it uses **interval polling** (not filesystem events) driven by durable cursors, so a missed tick, a sleep, or a restart just reads cursor→end on the next tick and self-heals. JSONL uses a byte-offset cursor (with partial-line / truncation / rotation handling); SQLite uses a `(time, id)` cursor read read-only (WAL-aware).
+- **Watch** mirrors Business Data Platform's own `WatchScheduler`: it uses **interval polling** (not filesystem events) driven by durable cursors, so a missed tick, a sleep, or a restart just reads cursor→end on the next tick and self-heals. JSONL uses a byte-offset cursor (with partial-line / truncation / rotation handling); SQLite uses a `(time, id)` cursor read read-only (WAL-aware).
 
 Cursor state persists in `~/.openviking/ingest/state.db`, so both backfill and watch resume across restarts without re-ingesting.
 

@@ -583,7 +583,7 @@ ov set-tags viking://resources/project/ \
 
 ### reindex()
 
-對已經儲存在 OpenViking 中的現有內容，重新構建語義產物和/或向量索引。這是一個運維維護介面，適用於 embedding 模型更換、VLM 更換、向量庫重刷、版本升級後修復歷史索引等場景。
+對已經儲存在 Business Data Platform 中的現有內容，重新構建語義產物和/或向量索引。這是一個運維維護介面，適用於 embedding 模型更換、VLM 更換、向量庫重刷、版本升級後修復歷史索引等場景。
 
 這個介面面向已有的 `viking://...` 內容，不負責匯入新檔案。常規匯入請使用 [Resources](02-resources.md)。
 
@@ -604,7 +604,7 @@ ov set-tags viking://resources/project/ \
 | tags | list[str] | 否 | `null` | 寫入本次成功重建的全部向量記錄。省略或空陣列配合 `replace` 時保留已有 tags |
 | tag_mode | str | 否 | `replace` | 標籤寫入模式：`replace`、`append` 或 `clear`；`clear` 不要求傳 `tags` 並清空已有標籤 |
 
-HTTP 請求體不接受未知欄位。`uri` 可以使用其他 content API 支援的 OpenViking 路徑變數，服務端會先解析再校驗。
+HTTP 請求體不接受未知欄位。`uri` 可以使用其他 content API 支援的 Business Data Platform 路徑變數，服務端會先解析再校驗。
 
 **支援的 URI 範圍**
 

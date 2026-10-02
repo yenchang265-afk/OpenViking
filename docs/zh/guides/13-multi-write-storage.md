@@ -1,8 +1,8 @@
 # 多寫儲存指南
 
-本指南介紹如何配置 OpenViking 的多寫儲存能力。多寫儲存允許一個 primary 後端同時複製寫入多個 backup 後端，用於高可用、跨區域副本、讀加速和儲存遷移。
+本指南介紹如何配置 Business Data Platform 的多寫儲存能力。多寫儲存允許一個 primary 後端同時複製寫入多個 backup 後端，用於高可用、跨區域副本、讀加速和儲存遷移。
 
-多寫能力位於 RAGFS 內部。OpenViking 的 Python SDK、HTTP API 和 CLI 使用方式保持不變。
+多寫能力位於 RAGFS 內部。Business Data Platform 的 Python SDK、HTTP API 和 CLI 使用方式保持不變。
 
 ## 前置條件
 
@@ -127,7 +127,7 @@
 
 ### Docker 網路配置
 
-在 Docker 中執行 OpenViking 並配置同主機的 S3 備份時，需要注意：
+在 Docker 中執行 Business Data Platform 並配置同主機的 S3 備份時，需要注意：
 
 - **Linux Docker**：使用 `--network host` 或宿主機區域網 IP。Docker bridge 網路可通過閘道器 IP（如 `172.17.0.1:9000`）訪問宿主機區域網。
 - **macOS/Windows Docker Desktop**：`--network host` **不支援**。S3 端點使用 `host.docker.internal`（對映為宿主機的 localhost），或使用宿主機區域網 IP。
@@ -305,7 +305,7 @@ Exclude 用於讓某個 backup 跳過匹配檔案。
 
 ## 加密配置
 
-多寫儲存複用 OpenViking 的透明靜態加密能力。
+多寫儲存複用 Business Data Platform 的透明靜態加密能力。
 
 全域加密開啟示例：
 

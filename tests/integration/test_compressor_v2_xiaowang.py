@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenViking 記憶演示指令碼 — 使用者: 小王（5類工作方式及對應技能）
+Business Data Platform 記憶演示指令碼 — 使用者: 小王（5類工作方式及對應技能）
 """
 
 import argparse
@@ -210,7 +210,7 @@ def run_verify(client: ov.SyncHTTPClient):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=f"OpenViking 記憶演示 — {DISPLAY_NAME}")
+    parser = argparse.ArgumentParser(description=f"Business Data Platform 記憶演示 — {DISPLAY_NAME}")
     parser.add_argument("--url", default=DEFAULT_URL, help=f"Server URL (預設: {DEFAULT_URL})")
     parser.add_argument("--api-key", default=DEFAULT_API_KEY, help=API_KEY_HELP)
     parser.add_argument(
@@ -227,7 +227,7 @@ def main():
 
     console.print(
         Panel(
-            f"[bold]OpenViking 記憶演示 — {DISPLAY_NAME}[/bold]\n"
+            f"[bold]Business Data Platform 記憶演示 — {DISPLAY_NAME}[/bold]\n"
             f"Server: {args.url}  |  Phase: {args.phase}",
             style="magenta",
             width=PANEL_WIDTH,

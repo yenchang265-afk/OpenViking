@@ -18,7 +18,7 @@ from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-DIGEST_HEADER = "OpenViking memory digest:"
+DIGEST_HEADER = "Business Data Platform memory digest:"
 MAX_BULLET_CHARS = 500
 URI_PATTERN = re.compile(r"""viking://[^\s<>"')\]]+""")
 

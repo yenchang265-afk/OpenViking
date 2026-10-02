@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-**問題**：目前 OpenViking 使用「當前工作目錄（CWD）」作為專案身份（peer）。這導致工作目錄一旦改變，專案身份也會隨之改變，之前積累的專案記憶便會失效——無論是更換裝置、移動倉庫位置、從子目錄啟動會話，還是使用 git worktree，都會觸發此問題。此外，目前無法將「專案級配置」固化到專案中：使用者只能設定環境變數，這些配置既不落盤持久化，也無法通過 Git 與團隊成員共享。
+**問題**：目前 Business Data Platform 使用「當前工作目錄（CWD）」作為專案身份（peer）。這導致工作目錄一旦改變，專案身份也會隨之改變，之前積累的專案記憶便會失效——無論是更換裝置、移動倉庫位置、從子目錄啟動會話，還是使用 git worktree，都會觸發此問題。此外，目前無法將「專案級配置」固化到專案中：使用者只能設定環境變數，這些配置既不落盤持久化，也無法通過 Git 與團隊成員共享。
 
 **提案**：
 
@@ -17,7 +17,7 @@
 
 ## 概述
 
-OpenViking 客戶端目前僅依賴一份全域配置（`~/.openviking/ovcli.conf` 結合環境變數），專案身份（actor peer）由程序工作目錄動態推導：`cwd.replace(/[^A-Za-z0-9]/g, "-")`。這一機制帶來了三個長期存在的問題：
+Business Data Platform 客戶端目前僅依賴一份全域配置（`~/.openviking/ovcli.conf` 結合環境變數），專案身份（actor peer）由程序工作目錄動態推導：`cwd.replace(/[^A-Za-z0-9]/g, "-")`。這一機制帶來了三個長期存在的問題：
 
 1. **Peer 身份脆弱易變**。更換機器、移動目錄、在倉庫子目錄中啟動會話或使用 Git worktree，都會推匯出截然不同的 Peer，導致此前積累的專案記憶隨之“消失”。外掛文件已將“倉庫移動或重新命名後 recall 內容為空”列為已知故障模式。
 2. **缺乏對單個 Workspace 的持久化配置能力**。如果想固定 Peer 或調整某個專案的行為，目前只能設定環境變數，這些配置無法隨專案落盤，更無法通過 Git 在團隊間共享。
@@ -124,7 +124,7 @@ Workspace 根目錄的確定規則：從生效的 cwd 向上查詢，最近的�
   "$schema": "https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/schemas/workspace-config-v1.json",
   "version": 1,
   "min_client_version": "0.9.0",
-  "notes": "本專案的 OpenViking 約定,自由文本,僅展示",
+  "notes": "本專案的 Business Data Platform 約定,自由文本,僅展示",
 
   "peer": {
     "source": "git",            // 預設或模板,見「Peer 來源」
@@ -147,7 +147,7 @@ Workspace 根目錄的確定規則：從生效的 cwd 向上查詢，最近的�
     "session_patterns": ["*-scratch", "**/tmp/**"]  // union 合併;沿用 isBypassed 語義:對 session id 與 cwd 都匹配,`*` 不跨 `/`,跨層級用 `**`
   },
 
-  "labels": { "project": "OpenViking" }
+  "labels": { "project": "Business Data Platform" }
 }
 ```
 

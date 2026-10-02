@@ -1,6 +1,6 @@
 # OVPack 匯入匯出
 
-OVPack 是 OpenViking 的可恢復內容包格式，用來遷移或備份 `viking://` 下的公開內容樹。
+OVPack 是 Business Data Platform 的可恢復內容包格式，用來遷移或備份 `viking://` 下的公開內容樹。
 它儲存檔案內容、語義側邊檔案、可遷移的索引標量，以及可選的 dense 向量快照。
 
 OVPack 不是裸 ZIP 複製，也不是可信釋出格式。匯入會校驗 manifest、檔案列表、目錄列表和
@@ -100,7 +100,7 @@ ov import ./exports/my-project.ovpack viking://resources/imported/ --vector-mode
 相容性校驗會比較包內記錄的 embedding provider、model、input、query/document 引數和維度。
 當前 OVPack 向量快照只支援純 dense 索引；如果底層向量索引的 `VectorIndex.IndexType` 是 hybrid，`--include-vectors` 會直接拒絕匯出。匯入到 hybrid index 環境時，`auto` 會重新向量化，`require` 會報錯。
 
-匯出 dense 向量快照前，OpenViking 會先做資料一致性檢查。也就是檢查匯出範圍內按系統規則
+匯出 dense 向量快照前，Business Data Platform 會先做資料一致性檢查。也就是檢查匯出範圍內按系統規則
 應該進入向量索引的內容，是否已經有對應索引記錄。缺失時會拒絕匯出，避免生成不完整的
 遷移包。
 
@@ -362,7 +362,7 @@ my-project/_ovpack/dense.f32                # 僅 --include-vectors 且存在可
 my-project/_ovpack/manifest.json
 ```
 
-`files/` 下儲存使用者內容，路徑與 OpenViking 中的相對路徑完全一致，不再對點檔案做 `_._` 轉義。
+`files/` 下儲存使用者內容，路徑與 Business Data Platform 中的相對路徑完全一致，不再對點檔案做 `_._` 轉義。
 `_ovpack/` 下儲存 OVPack 內部檔案，不參與使用者內容匯入。
 
 manifest 只儲存包結構、檔案 checksum 和內部索引檔案的 checksum，不直接內嵌每個檔案的索引記錄：
@@ -544,9 +544,9 @@ viking://user/alice/sessions/sess_123
 是否被刪改或混入內容，因此預設拒絕。需要遷移舊包時，應先在可信舊環境中匯入，再用當前版本
 重新匯出為 OVPack v3。
 
-OVPack v2 包也會被當前 OpenViking 拒絕。匯入舊包前，需要先用當前版本服務重新匯出。
+OVPack v2 包也會被當前 Business Data Platform 拒絕。匯入舊包前，需要先用當前版本服務重新匯出。
 
-未來版本包也不會靜默相容。處理方式是升級 OpenViking，或在支援該版本的環境中重新匯出為當前
+未來版本包也不會靜默相容。處理方式是升級 Business Data Platform，或在支援該版本的環境中重新匯出為當前
 支持格式。
 
 ## 常見錯誤
@@ -554,7 +554,7 @@ OVPack v2 包也會被當前 OpenViking 拒絕。匯入舊包前，需要先用�
 | 錯誤 | 常見原因 | 處理方式 |
 | --- | --- | --- |
 | `Missing ovpack manifest` | 舊版無 manifest 包 | 在可信環境重新匯出為 v3。 |
-| `Unsupported ovpack format_version` | 包格式版本不是當前支援版本 | 升級 OpenViking 或重新匯出。 |
+| `Unsupported ovpack format_version` | 包格式版本不是當前支援版本 | 升級 Business Data Platform 或重新匯出。 |
 | `sha256 does not match manifest` | 檔案或內部索引內容被改動 | 丟棄該包，或從可信源重新匯出。 |
 | `ovpack entries do not match manifest` | ZIP 中缺檔案/目錄，或混入額外檔案/目錄 | 丟棄該包，或重新匯出。 |
 | `source scope does not match target scope` | 跨 scope 匯入，例如 user 匯入 resources | 匯入到同 scope 的父目錄。 |
@@ -562,7 +562,7 @@ OVPack v2 包也會被當前 OpenViking 拒絕。匯入舊包前，需要先用�
 | `Top-level scope ovpack packages must be imported to viking://` | 將頂級 scope 包匯入了非根父目錄 | 改為匯入 `viking://`。 |
 | `Backup ovpack packages must be restored` | 用普通 import 匯入 backup 包 | 使用 `ov restore`。 |
 | `Resource already exists` | 目標 root 已存在 | 使用 `--on-conflict overwrite` 或 `--on-conflict skip`。 |
-| `incomplete OpenViking vector index snapshot` | 使用 `--include-vectors` 時，匯出範圍內應索引內容缺少索引記錄 | 先執行 `ov system consistency <uri>` 定位問題，再等待處理完成或重新 reindex。 |
+| `incomplete Business Data Platform vector index snapshot` | 使用 `--include-vectors` 時，匯出範圍內應索引內容缺少索引記錄 | 先執行 `ov system consistency <uri>` 定位問題，再等待處理完成或重新 reindex。 |
 | `dense vector snapshot is incompatible` | 包內 embedding 後設資料和當前配置不一致 | 用 `--vector-mode recompute`，或換到相容配置。 |
 
 ## 常見問題

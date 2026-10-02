@@ -786,7 +786,7 @@ async def test_export_include_vectors_rejects_missing_index_records(
 ):
     with pytest.raises(
         InvalidArgumentError,
-        match=r"incomplete OpenViking vector index snapshot",
+        match=r"incomplete Business Data Platform vector index snapshot",
     ) as exc_info:
         await export_ovpack(
             FakeExportVikingFS(),

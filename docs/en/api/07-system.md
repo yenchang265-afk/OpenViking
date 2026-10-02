@@ -1,6 +1,6 @@
 # System Status
 
-The OpenViking System API provides health, readiness, consistency, and multi-write backend synchronization status. Component observers and Prometheus metrics are documented separately.
+The Business Data Platform System API provides health, readiness, consistency, and multi-write backend synchronization status. Component observers and Prometheus metrics are documented separately.
 
 ## API Reference
 
@@ -29,7 +29,7 @@ Anonymous health probes return basic liveness information.
 | profile | string | No | - | When set to `1`, `true`, `yes`, or `on`, enables request-scoped `cProfile` and appends a `profile` field to JSON responses |
 
 **`profile` behavior**:
-- `profile` is implemented at the HTTP middleware layer and works for any OpenViking endpoint that returns JSON, not just `/health`.
+- `profile` is implemented at the HTTP middleware layer and works for any Business Data Platform endpoint that returns JSON, not just `/health`.
 - The request flag only takes effect when the server enables `server.profile_enabled = true` in `ov.conf`; otherwise the server ignores `profile=1`.
 - `profile` only applies to the current request and is automatically disabled when the request completes, so later requests do not inherit it.
 - The middleware only injects a `profile` field into JSON responses; plain text, file, and streaming responses are left unchanged.

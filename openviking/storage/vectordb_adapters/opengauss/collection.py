@@ -107,7 +107,7 @@ class _PgIndex(IIndex):
 
 
 class OpenGaussCollection(ICollection):
-    """A single OpenViking collection stored in an openGauss/PostgreSQL table.
+    """A single Business Data Platform collection stored in an openGauss/PostgreSQL table.
 
     Schema design:
       - One table per collection: ``{collection_name}``
@@ -1241,7 +1241,7 @@ class OpenGaussCollection(ICollection):
         output_fields: Optional[List[str]] = None,
     ) -> SearchResult:
         raise NotImplementedError(
-            "openGauss backend does not provide OpenViking keyword/full-text search"
+            "openGauss backend does not provide Business Data Platform keyword/full-text search"
         )
 
     def search_by_id(

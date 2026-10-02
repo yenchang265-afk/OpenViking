@@ -1,6 +1,6 @@
 # VikingBot tests
 
-All Bot tests live in this directory, including provider and OpenViking session
+All Bot tests live in this directory, including provider and Business Data Platform session
 tests previously under `vikingbot/tests/unit`.
 
 From the repository root, with the bot and dev dependencies installed:

@@ -258,7 +258,7 @@ def _event_time(message: Message) -> str:
 
 
 class MemoryUsageExtractor:
-    """Extract Experience recall/injection events from OpenViking tool parts."""
+    """Extract Experience recall/injection events from Business Data Platform tool parts."""
 
     name = "memory_usage"
 

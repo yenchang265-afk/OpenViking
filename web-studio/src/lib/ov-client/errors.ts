@@ -175,7 +175,7 @@ export function unwrapOvResponse<TResult>(response: unknown): TResult {
     throw new OvClientError({
       code: error?.code || 'ERROR',
       details: error?.details ?? error?.detail,
-      message: error?.message || 'OpenViking request failed',
+      message: error?.message || 'Business Data Platform request failed',
       requestId: getRequestId(response.headers),
       responseBody: payload,
       statusCode: response.status,

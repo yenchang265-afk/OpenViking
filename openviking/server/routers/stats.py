@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Memory health statistics endpoints for OpenViking HTTP Server."""
+"""Memory health statistics endpoints for Business Data Platform HTTP Server."""
 
 from typing import Optional
 

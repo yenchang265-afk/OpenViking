@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Restart OpenViking Server with Test Config (~/.openviking_test/ov.conf)
+# Restart Business Data Platform Server with Test Config (~/.openviking_test/ov.conf)
 # Usage: ./test_restart_openviking_server.sh [--port PORT] [--bot-port PORT]
 
 set -e
@@ -31,9 +31,9 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo "=========================================="
-echo "Restarting OpenViking Server (TEST MODE)"
+echo "Restarting Business Data Platform Server (TEST MODE)"
 echo "=========================================="
-echo "OpenViking Server Port: $PORT"
+echo "Business Data Platform Server Port: $PORT"
 echo "Bot Port: $BOT_PORT"
 echo "Config File: $TEST_CONFIG"
 echo "Data Dir: $TEST_DATA_DIR"
@@ -123,7 +123,7 @@ for i in {1..10}; do
     if echo "${health_response//[[:space:]]/}" | grep -q '"status":"healthy"'; then
         echo ""
         echo "=========================================="
-        echo "✓ OpenViking Server started successfully! (TEST MODE)"
+        echo "✓ Business Data Platform Server started successfully! (TEST MODE)"
         echo "=========================================="
         echo ""
         echo "Server URL: http://localhost:$PORT"
@@ -143,7 +143,7 @@ done
 # If we reach here, server failed to start
 echo ""
 echo "=========================================="
-echo "✗ Failed to start OpenViking Server (TEST MODE)"
+echo "✗ Failed to start Business Data Platform Server (TEST MODE)"
 echo "=========================================="
 echo ""
 echo "Config used: $TEST_CONFIG"

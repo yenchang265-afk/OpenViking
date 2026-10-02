@@ -36,7 +36,7 @@ if FUSE_AVAILABLE:
         def __init__(self, mount: OpenVikingMount):
             self.mount = mount
             logger.info("=" * 60)
-            logger.info("OpenViking FUSE Proxy initialized")
+            logger.info("Business Data Platform FUSE Proxy initialized")
             logger.info("=" * 60)
 
             if not mount._initialized and mount.config.auto_init:
@@ -209,7 +209,7 @@ if FUSE_AVAILABLE:
                     wait = not self.mount.config.async_add_resource
                     self.mount.add_resource(temp_path, wait=wait)
                     logger.info(
-                        f"Added to OpenViking: {path} (async={self.mount.config.async_add_resource})"
+                        f"Added to Business Data Platform: {path} (async={self.mount.config.async_add_resource})"
                     )
 
                 finally:
@@ -236,9 +236,9 @@ if FUSE_AVAILABLE:
                 try:
                     uri = f"viking://resources/{dir_name}"
                     self.mount._client.rm(uri, recursive=True)
-                    logger.info(f"Removed from OpenViking: {uri}")
+                    logger.info(f"Removed from Business Data Platform: {uri}")
                 except Exception as e:
-                    logger.warning(f"Failed to remove from OpenViking: {e}")
+                    logger.warning(f"Failed to remove from Business Data Platform: {e}")
                 return
 
             raise FuseOSError(errno.ENOENT)
@@ -298,7 +298,7 @@ def mount_fuse(config: MountConfig, foreground: bool = True) -> None:
 
     mount = OpenVikingMount(config)
 
-    logger.info(f"Mounting OpenViking FUSE Proxy at: {config.mount_point}")
+    logger.info(f"Mounting Business Data Platform FUSE Proxy at: {config.mount_point}")
     logger.info(f"  Proxy to: {config.openviking_data_path / '.original_files'}")
     logger.info(f"  Press Ctrl+C to unmount")
 

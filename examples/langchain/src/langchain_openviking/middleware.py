@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""LangGraph agent middleware for OpenViking recall and capture."""
+"""LangGraph agent middleware for Business Data Platform recall and capture."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ class _CapturePlan:
 
 
 class OpenVikingContextMiddleware(AgentMiddleware):
-    """Inject OpenViking recall into LangGraph agent model calls.
+    """Inject Business Data Platform recall into LangGraph agent model calls.
 
     The middleware mirrors the OpenClaw-style lifecycle at LangGraph's extension
     points: recall before model calls and optional session capture after agent
@@ -103,7 +103,7 @@ class OpenVikingContextMiddleware(AgentMiddleware):
         capture_on_after_agent: bool = True,
         commit_on_after_agent: bool = False,
         commit_policy: OpenVikingCommitPolicy | None = None,
-        recall_header: str = "Relevant OpenViking context:",
+        recall_header: str = "Relevant Business Data Platform context:",
         include_active_messages: bool = False,
     ):
         super().__init__()
@@ -210,7 +210,7 @@ class OpenVikingContextMiddleware(AgentMiddleware):
         request: ModelRequest,
         handler: Callable[[ModelRequest], Any],
     ) -> Any:
-        """Asynchronously inject OpenViking context before a model call."""
+        """Asynchronously inject Business Data Platform context before a model call."""
 
         plan = self._model_context_plan(request)
         if plan is None:
@@ -435,10 +435,10 @@ class OpenVikingContextMiddleware(AgentMiddleware):
         if actor_peer_id is None:
             return None
         if not isinstance(actor_peer_id, str):
-            raise TypeError("OpenViking actor_peer_resolver must return a string or None")
+            raise TypeError("Business Data Platform actor_peer_resolver must return a string or None")
         normalized = actor_peer_id.strip()
         if not normalized:
-            raise ValueError("OpenViking actor_peer_resolver must not return an empty string")
+            raise ValueError("Business Data Platform actor_peer_resolver must not return an empty string")
         return normalized
 
     def _actor_peer_scope(
@@ -506,7 +506,7 @@ def _validate_actor_peer_transport(
             False,
         ):
             raise ValueError(
-                "actor_peer_resolver requires OpenViking HTTP clients that support "
+                "actor_peer_resolver requires Business Data Platform HTTP clients that support "
                 "request-scoped actor peers"
             )
 

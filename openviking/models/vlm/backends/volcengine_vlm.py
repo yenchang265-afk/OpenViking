@@ -40,7 +40,7 @@ def build_volcengine_request_headers(
 ) -> Dict[str, str]:
     """Return per-request headers with a unique default client request ID.
 
-    The existing prefix identifies OpenViking service traffic. A UUID suffix
+    The existing prefix identifies Business Data Platform service traffic. A UUID suffix
     makes an individual Ark request searchable while custom client request ID
     values remain unchanged.
     """

@@ -37,8 +37,8 @@ def summary_title(suite: str) -> str:
     if suite == "baseline":
         return "Hermes Baseline"
     if suite == "e2e":
-        return "Hermes OpenViking E2E"
-    return "Hermes + OpenViking (pre-ingest)"
+        return "Hermes Business Data Platform E2E"
+    return "Hermes + Business Data Platform (pre-ingest)"
 
 
 def format_optional_int(value: int | None) -> str:
@@ -514,7 +514,7 @@ def format_summary(
                 import_hermes.no_cache_tokens if import_hermes is not None else None,
             ),
             "",
-            "OpenViking Usage",
+            "Business Data Platform Usage",
         ]
     )
 

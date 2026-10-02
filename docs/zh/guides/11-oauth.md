@@ -1,6 +1,6 @@
 # OAuth 2.1 接入指南
 
-OpenViking 服務端原生實現 OAuth 2.1。任何需要 OAuth 的客戶端 — 包括 MCP
+Business Data Platform 服務端原生實現 OAuth 2.1。任何需要 OAuth 的客戶端 — 包括 MCP
 客戶端（Claude.ai / Claude Desktop / ChatGPT / Cursor）以及其他瀏覽器應用
 — 都可以直接對伺服器授權，無需任何第三方代理。協議層（DCR、authorize、
 token、metadata）由官方 `mcp.server.auth` SDK 提供，整體遵循 OAuth 2.1
@@ -50,7 +50,7 @@ API Key 認證仍按原方式工作，OAuth 只是疊加層。
 
 ## 工作原理
 
-OpenViking 授權 UI 預設走 **OpenViking Studio** 內的 consent 頁面（與主服務
+Business Data Platform 授權 UI 預設走 **Business Data Platform Studio** 內的 consent 頁面（與主服務
 同源、與 Studio 共用 session）。MCP 客戶端開啟瀏覽器授權時：
 
 ```
@@ -346,4 +346,4 @@ curl -i https://my.ov/mcp -d '{}' -H 'Content-Type: application/json' | grep -i 
 - [RFC 9728 — OAuth 2.0 Protected Resource Metadata](https://datatracker.ietf.org/doc/html/rfc9728)
 - [RFC 7591 — Dynamic Client Registration](https://datatracker.ietf.org/doc/html/rfc7591)
 - [RFC 7636 — PKCE](https://datatracker.ietf.org/doc/html/rfc7636)
-- [OpenViking MCP 集成指南](06-mcp-integration.md)
+- [Business Data Platform MCP 集成指南](06-mcp-integration.md)

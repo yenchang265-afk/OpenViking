@@ -1,6 +1,6 @@
 ---
 name: knowledge-distillation
-description: Compile one or more OpenViking knowledge bases or document collections into topic-organized, evidence-grounded high-level knowledge, including cross-source findings, trends, changes, drivers, comparisons, implications, and uncertainties. Use with ov compile when the user asks to distill or synthesize a knowledge base, compare multiple collections, or derive higher-order insights such as changes across financial reports; do not use for document-by-document summaries.
+description: Compile one or more Business Data Platform knowledge bases or document collections into topic-organized, evidence-grounded high-level knowledge, including cross-source findings, trends, changes, drivers, comparisons, implications, and uncertainties. Use with ov compile when the user asks to distill or synthesize a knowledge base, compare multiple collections, or derive higher-order insights such as changes across financial reports; do not use for document-by-document summaries.
 ---
 
 # Knowledge Distillation
@@ -46,7 +46,7 @@ or a page for a theme that has no conclusion beyond its label. Do not target a f
 
 Do not create `index.md` by default. Create or update it only when the task instruction explicitly asks
 for a navigation page or the existing target has an established index contract that must be
-maintained. Do not create manual `.overview.md` or `.abstract.md` files; OpenViking owns those
+maintained. Do not create manual `.overview.md` or `.abstract.md` files; Business Data Platform owns those
 derived directory summaries.
 
 Choose stable, path-safe topic and page names. Prefer lowercase kebab-case for Latin paths; for a
@@ -204,5 +204,5 @@ Before finishing, verify that:
   folder summary;
 - no root index was created unless the task or an established target contract requires it;
 - every file has valid OKF frontmatter with non-empty `type`, `title`, and `description`;
-- no OpenViking-generated semantic sidecars, source-by-source digest pages, or duplicate operation
+- no Business Data Platform-generated semantic sidecars, source-by-source digest pages, or duplicate operation
   logs are created.

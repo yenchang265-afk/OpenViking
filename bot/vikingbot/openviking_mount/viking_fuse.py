@@ -1,8 +1,8 @@
 """
-OpenViking FUSE 檔案系統
+Business Data Platform FUSE 檔案系統
 
 實現真正的 FUSE 檔案系統掛載，允許使用標準檔案系統 API（os、pathlib 等）
-直接操作 OpenViking 資料。
+直接操作 Business Data Platform 資料。
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict
 
-# 新增OpenViking專案到路徑
+# 新增Business Data Platform專案到路徑
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 from loguru import logger
@@ -40,9 +40,9 @@ if FUSE_AVAILABLE:
 
     class OpenVikingFUSE(Operations):
         """
-        OpenViking FUSE 操作類
+        Business Data Platform FUSE 操作類
 
-        實現 FUSE 檔案系統操作，將 OpenViking 的虛擬檔案系統
+        實現 FUSE 檔案系統操作，將 Business Data Platform 的虛擬檔案系統
         暴露為標準的 POSIX 檔案系統。
         """
 
@@ -63,13 +63,13 @@ if FUSE_AVAILABLE:
 
         def _path_to_uri(self, path: str) -> str:
             """
-            將 FUSE 路徑轉換為 OpenViking URI
+            將 FUSE 路徑轉換為 Business Data Platform URI
 
             Args:
                 path: FUSE 路徑 (如 /resources/foo)
 
             Returns:
-                OpenViking URI
+                Business Data Platform URI
             """
             if path == "/":
                 path = ""
@@ -296,7 +296,7 @@ if FUSE_AVAILABLE:
             uri = self._file_handles.pop(fh, None)
 
             if uri and uri in self._file_contents:
-                logger.warning(f"File {path} was modified but OpenViking direct write is limited")
+                logger.warning(f"File {path} was modified but Business Data Platform direct write is limited")
 
         def mkdir(self, path: str, mode: int) -> None:
             """
@@ -388,7 +388,7 @@ if FUSE_AVAILABLE:
         config: MountConfig, foreground: bool = False, allow_other: bool = False
     ) -> None:
         """
-        掛載 OpenViking FUSE 檔案系統
+        掛載 Business Data Platform FUSE 檔案系統
 
         Args:
             config: 掛載配置
@@ -402,7 +402,7 @@ if FUSE_AVAILABLE:
         if allow_other:
             fuse_opts["allow_other"] = True
 
-        logger.info(f"Mounting OpenViking FUSE at: {config.mount_point}")
+        logger.info(f"Mounting Business Data Platform FUSE at: {config.mount_point}")
         logger.info(f"  Scope: {config.scope.value}")
         logger.info(f"  Read-only: {config.read_only}")
         logger.info("  Press Ctrl+C to unmount")

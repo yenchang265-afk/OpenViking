@@ -1,23 +1,23 @@
-# OpenViking Memory Plugin for Codex and TraeCode CLI 2.0
+# Business Data Platform Memory Plugin for Codex and TraeCode CLI 2.0
 
-Long-term semantic memory for [Codex](https://developers.openai.com/codex), powered by [OpenViking](https://github.com/volcengine/OpenViking).
+Long-term semantic memory for [Codex](https://developers.openai.com/codex), powered by [Business Data Platform](https://github.com/volcengine/OpenViking).
 TraeCode CLI 2.0 supports the same plugin format; use the shared installer's dedicated `--harness trae-cli` entry.
 
-> **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the
+> **Requires a Business Data Platform server with `viking://~` home-alias support.** Recall targets the
 > caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less
 > `viking://user/memories` shorthand is rejected by newer servers.
 
 This is the Codex counterpart to [`claude-code-memory-plugin`](../claude-code-memory-plugin). It hooks Codex's lifecycle to:
 
-- **Session-start profile injection** on `startup`, `clear`, and `resume`: load `profile.md` plus abstract-annotated indexes of `preferences/` and `entities/` through the shared CJK-aware profile builder, followed by an `<available-skills>` catalog of your own and account-shared OpenViking skills.
+- **Session-start profile injection** on `startup`, `clear`, and `resume`: load `profile.md` plus abstract-annotated indexes of `preferences/` and `entities/` through the shared CJK-aware profile builder, followed by an `<available-skills>` catalog of your own and account-shared Business Data Platform skills.
 - **Auto-recall** relevant memories on every `UserPromptSubmit` and inject them via `hookSpecificOutput.additionalContext`
-- **`viking://` notice on `PreToolUse` (`Bash`)**: a shell command that carries a `viking://` URI still runs, and the model is told that the URI is an OpenViking virtual path and which MCP tool reads it.
-- **Incremental capture on `Stop`** (turn end): append the new user/assistant turns to a deterministic OpenViking session id `cx-<codex_session_id>`. When `pending_tokens` reaches `OPENVIKING_COMMIT_TOKEN_THRESHOLD`, commit while keeping a recent live tail.
-- **Commit on `PreCompact`**: trigger OpenViking's memory extractor on the full pre-compact transcript before Codex summarizes it.
+- **`viking://` notice on `PreToolUse` (`Bash`)**: a shell command that carries a `viking://` URI still runs, and the model is told that the URI is a Business Data Platform virtual path and which MCP tool reads it.
+- **Incremental capture on `Stop`** (turn end): append the new user/assistant turns to a deterministic Business Data Platform session id `cx-<codex_session_id>`. When `pending_tokens` reaches `OPENVIKING_COMMIT_TOKEN_THRESHOLD`, commit while keeping a recent live tail.
+- **Commit on `PreCompact`**: trigger Business Data Platform's memory extractor on the full pre-compact transcript before Codex summarizes it.
 - **Commit on `SessionEnd`** (Codex ≥ 0.145): when a thread shuts down gracefully, catch up any turns `Stop` never sent and commit the OV session, so the extractor runs on the whole conversation the moment you leave.
 - **Fallback sweep on `SessionStart` (source=startup|clear)**: commit state files that carry an end marker whose commit did not go through, or that have been idle past `OPENVIKING_CODEX_IDLE_TTL_MS`. `source=resume` never commits or sweeps; if the live OV session was already committed, it combines the profile block with the latest archive summary for continuity. See `DESIGN.md` for the full decision tree.
 
-It also starts a local stdio MCP proxy that forwards to OpenViking's native `/mcp` endpoint with credentials resolved from env / `ovcli.conf`, so the model has direct access to the server's retrieval, memory, resource, skill (`add_skill`), watch, filesystem, and code-navigation tools.
+It also starts a local stdio MCP proxy that forwards to Business Data Platform's native `/mcp` endpoint with credentials resolved from env / `ovcli.conf`, so the model has direct access to the server's retrieval, memory, resource, skill (`add_skill`), watch, filesystem, and code-navigation tools.
 
 ## Quick Start
 
@@ -35,7 +35,7 @@ For TraeCode CLI 2.0:
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness trae-cli
 ```
 
-Claude Code and Codex share this installer (drop `--harness codex` to pick interactively). It asks for your language (English/中文), the download source (GitHub, or a TOS mirror for GitHub-blocked regions — pass `--dist tos`; Codex on TOS installs from a TOS-hosted git repo and keeps remote updates), and your OpenViking credentials. It:
+Claude Code and Codex share this installer (drop `--harness codex` to pick interactively). It asks for your language (English/中文), the download source (GitHub, or a TOS mirror for GitHub-blocked regions — pass `--dist tos`; Codex on TOS installs from a TOS-hosted git repo and keeps remote updates), and your Business Data Platform credentials. It:
 
 1. Checks `codex` and Node.js 18+ (the plugin itself wants Codex's bundled Node 22+ at runtime)
 2. Sets up `~/.openviking/ovcli.conf` interactively
@@ -58,7 +58,7 @@ This path uses the same checked-in stdio MCP proxy as the installer path. Authen
 The repo ships a Codex marketplace catalog at `.agents/plugins/marketplace.json`, so you can install with Codex's native commands:
 
 ```bash
-# 1. add the OpenViking marketplace (use volcengine/OpenViking once merged
+# 1. add the Business Data Platform marketplace (use volcengine/OpenViking once merged
 #    upstream, or <your-fork>/OpenViking while testing a fork)
 codex plugin marketplace add volcengine/OpenViking
 
@@ -86,7 +86,7 @@ codex            # then trust the hooks at the startup prompt, or via /hooks
 > - **Codex version**: this path relies on Codex injecting and inline-substituting `${PLUGIN_ROOT}` in plugin hook commands (current Codex does both). On an older Codex that doesn't substitute `${PLUGIN_ROOT}`, the hook script paths won't resolve — use path **A**.
 > - **Catalog source**: the catalog entry (`.agents/plugins/marketplace.json`) uses a relative source (`./examples/codex-memory-plugin`). `codex plugin add` therefore installs the plugin from the same marketplace snapshot/ref that you added. This keeps fork, branch, tag, and upstream-main installs reproducible and testable without rewriting the catalog.
 
-This path works out of the box against an unauthenticated local OpenViking at `http://127.0.0.1:1933`. For remote/cloud servers, create `~/.openviking/ovcli.conf` with `url`, `api_key`, and optional `account` / `user`; the proxy reads it when Codex starts.
+This path works out of the box against an unauthenticated local Business Data Platform at `http://127.0.0.1:1933`. For remote/cloud servers, create `~/.openviking/ovcli.conf` with `url`, `api_key`, and optional `account` / `user`; the proxy reads it when Codex starts.
 
 ### Manual setup
 
@@ -169,7 +169,7 @@ Full list: see the `Misc env vars` block in `scripts/config.mjs`. Tuning fields 
 
 #### Private-gateway extra headers
 
-Some private OpenViking deployments sit behind a gateway that requires custom headers on every request. The stdio MCP proxy reads those from `OPENVIKING_EXTRA_HEADERS`, a JSON object of scalar values (header name → header value) — see your deployment's gateway docs for the exact header names it expects.
+Some private Business Data Platform deployments sit behind a gateway that requires custom headers on every request. The stdio MCP proxy reads those from `OPENVIKING_EXTRA_HEADERS`, a JSON object of scalar values (header name → header value) — see your deployment's gateway docs for the exact header names it expects.
 
 ```sh
 export OPENVIKING_EXTRA_HEADERS='{"<header-name>":"<header-value>"}'
@@ -247,7 +247,7 @@ Earlier plugin versions configured tuning fields under a `codex` block in `~/.op
  └────┬──────────┘ └────┬──────┘ └──────┬──────┘ └─────────┬──────┘ └───┬─────────┘
       │                 │                │                  │           │
       │             ┌───▼────────────────▼──────────────────▼───────────▼──┐
-      └────────────►│                OpenViking REST API                   │
+      └────────────►│                Business Data Platform REST API                   │
                     │ /api/v1/search/{recall,search}                       │
                     │ /api/v1/sessions [+/{id}/{messages,commit}]          │
                     │ /api/v1/content/read                                 │
@@ -260,11 +260,11 @@ Earlier plugin versions configured tuning fields under a `codex` block in `~/.op
 
 The checked-in `.mcp.json` starts `servers/mcp-proxy.mjs` with `node`. The proxy keeps stdout protocol-clean, reads the same credential sources as the hooks, sends auth and identity headers to `/mcp`, caches the server `mcp-session-id`, and transparently reinitializes once if the server restarts.
 
-For details on OpenViking's MCP endpoint, tools, and protocol, see the [MCP Integration Guide](../../docs/en/guides/06-mcp-integration.md). The tools list and per-tool semantics are documented there once, not duplicated here.
+For details on Business Data Platform's MCP endpoint, tools, and protocol, see the [MCP Integration Guide](../../docs/en/guides/06-mcp-integration.md). The tools list and per-tool semantics are documented there once, not duplicated here.
 
 ## How It Works
 
-> See [`DESIGN.md`](./DESIGN.md) for the commit decision tree — it's the source of truth for *which* OpenViking session is sealed by *which* hook event.
+> See [`DESIGN.md`](./DESIGN.md) for the commit decision tree — it's the source of truth for *which* Business Data Platform session is sealed by *which* hook event.
 
 ### SessionStart profile injection and fallback sweep
 
@@ -281,7 +281,7 @@ The same builder appends an `<available-skills>` block after `<user-profile>` an
 <user-profile uri="viking://user/default/memories/profile.md">...</user-profile>
 <available-memories>...</available-memories>
 <available-skills>
-  OpenViking skills (stored in OpenViking, not local files). Before following one, read <dir>/<name>/SKILL.md with the OpenViking read tool.
+  Business Data Platform skills (stored in Business Data Platform, not local files). Before following one, read <dir>/<name>/SKILL.md with the Business Data Platform read tool.
   viking://user/default/skills/
     - pr-review — Review a pull request against the team checklist.
   viking://agent/skills/
@@ -290,7 +290,7 @@ The same builder appends an `<available-skills>` block after `<user-profile>` an
 </openviking-context>
 ```
 
-The catalog has its own budget, `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET` or `plugin.codex.skillCatalogTokenBudget` (default `1200`, range `0`–`20000`), and never draws on the profile budget. Every entry keeps its description when that fits; otherwise the catalog lists names only, ending with `... +N more, search OpenViking skills to find the rest` if even the names do not all fit; when not even one name fits, the block shrinks to the single line `<available-skills>N OpenViking skills; search OpenViking skills to find them.</available-skills>`. Set `OPENVIKING_SKILL_CATALOG=0`, `plugin.codex.skillCatalog=false`, or the budget to `0` to leave the catalog out. With no skills, or against a server without `GET /api/v1/skills`, the block is omitted. The bundled `$openviking-skills` skill tells the model how to find a skill, create or replace one with MCP `add_skill`, install one from Git or a local folder, share one to `viking://agent/skills`, and run a one-time migration of local skills that the user asks for and approves skill by skill.
+The catalog has its own budget, `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET` or `plugin.codex.skillCatalogTokenBudget` (default `1200`, range `0`–`20000`), and never draws on the profile budget. Every entry keeps its description when that fits; otherwise the catalog lists names only, ending with `... +N more, search Business Data Platform skills to find the rest` if even the names do not all fit; when not even one name fits, the block shrinks to the single line `<available-skills>N Business Data Platform skills; search Business Data Platform skills to find them.</available-skills>`. Set `OPENVIKING_SKILL_CATALOG=0`, `plugin.codex.skillCatalog=false`, or the budget to `0` to leave the catalog out. With no skills, or against a server without `GET /api/v1/skills`, the block is omitted. The bundled `$openviking-skills` skill tells the model how to find a skill, create or replace one with MCP `add_skill`, install one from Git or a local folder, share one to `viking://agent/skills`, and run a one-time migration of local skills that the user asks for and approves skill by skill.
 
 On `startup` or `clear`, the script walks every state file except the new session_id and, for each one that still holds a live `ovSessionId` or carries an end marker:
 
@@ -302,7 +302,7 @@ Each candidate is committed under its per-session lock with no waiting; a lock t
 
 On any /commit failure (OV unreachable, non-2xx, timeout) we **preserve state** (keep `ovSessionId` set, and keep the `.ended` marker) so the next sweep can retry. `SessionEnd` and `PreCompact` apply the same unreadable-transcript guard as the sweep, so neither commits a session whose transcript it could not read.
 
-On `resume`, the script skips commit/sweep. It still injects the profile block. If local state has no live `ovSessionId`, it also reads `/api/v1/sessions/{cx-session-id}/context` and combines the latest committed archive overview into the same `SessionStart` output. The archive block includes a `viking://~/sessions/{cx-session-id}/history/` URI and tells the model to use the OpenViking MCP `read`/`search` tools for exact prior commands, file paths, tool outputs, or messages. Set `OPENVIKING_RESUME_ARCHIVE_INJECT=0` to disable the archive half without disabling profile injection.
+On `resume`, the script skips commit/sweep. It still injects the profile block. If local state has no live `ovSessionId`, it also reads `/api/v1/sessions/{cx-session-id}/context` and combines the latest committed archive overview into the same `SessionStart` output. The archive block includes a `viking://~/sessions/{cx-session-id}/history/` URI and tells the model to use the Business Data Platform MCP `read`/`search` tools for exact prior commands, file paths, tool outputs, or messages. Set `OPENVIKING_RESUME_ARCHIVE_INJECT=0` to disable the archive half without disabling profile injection.
 
 ### Auto-recall (every UserPromptSubmit)
 
@@ -377,7 +377,7 @@ layers; resolution order is env vars → the workspace layers → `plugin.codex`
 
 ### viking:// URI notice (PreToolUse on Bash)
 
-`viking://` URIs are OpenViking virtual paths, so `cat viking://…` or `ls viking://…` cannot open them. `uri-guard.mjs` runs before every `Bash` call. When the command contains a `viking://` URI, it returns `hookSpecificOutput.additionalContext` without a `permissionDecision`: the command runs unchanged, and the model is told which OpenViking MCP tool reads the URI and to ignore the notice when the URI is intentional data (an `ov` CLI argument, an HTTP payload, a search pattern). A command without a `viking://` URI gets no output.
+`viking://` URIs are Business Data Platform virtual paths, so `cat viking://…` or `ls viking://…` cannot open them. `uri-guard.mjs` runs before every `Bash` call. When the command contains a `viking://` URI, it returns `hookSpecificOutput.additionalContext` without a `permissionDecision`: the command runs unchanged, and the model is told which Business Data Platform MCP tool reads the URI and to ignore the notice when the URI is intentional data (an `ov` CLI argument, an HTTP payload, a search pattern). A command without a `viking://` URI gets no output.
 
 Nothing is denied: Codex edits files through `apply_patch`, whose input is a patch body rather than a path (Codex's `Edit` / `Write` matchers are aliases for it), so there is no path argument to guard.
 
@@ -385,7 +385,7 @@ Nothing is denied: Codex edits files through `apply_patch`, whose input is a pat
 
 ### Stop (turn end → `add_message`, threshold commit)
 
-`auto-capture.mjs` derives one long-lived OpenViking session id per Codex `session_id` as `cx-<safe-session-id>` and incrementally appends every new user/assistant turn via `/api/v1/sessions/{id}/messages`. The `/messages` endpoint auto-creates the session on first append. Per-codex-session state lives at `~/.openviking/codex-plugin-state/<safe-session-id>.json`. Capture sanitizes obvious hook noise, metadata wrappers, and plugin-injected `<openviking-context ...>` blocks before append. Tool calls and results become dedicated `tool` parts and `tool_output` is reported verbatim — the server externalizes anything larger than `tool_output_externalization.threshold_chars` (default `20000`) and leaves a synopsis stub plus `tool_output_ref`, so the original stays readable via `/api/v1/sessions/{id}/tool-results`. `OPENVIKING_CAPTURE_TOOL_MAX_CHARS` (default `1000000`) is only a guard against pathological payloads. Configured `captureFilters` rules run last, just before the payload is sent — see [Input filters](#input-filters).
+`auto-capture.mjs` derives one long-lived Business Data Platform session id per Codex `session_id` as `cx-<safe-session-id>` and incrementally appends every new user/assistant turn via `/api/v1/sessions/{id}/messages`. The `/messages` endpoint auto-creates the session on first append. Per-codex-session state lives at `~/.openviking/codex-plugin-state/<safe-session-id>.json`. Capture sanitizes obvious hook noise, metadata wrappers, and plugin-injected `<openviking-context ...>` blocks before append. Tool calls and results become dedicated `tool` parts and `tool_output` is reported verbatim — the server externalizes anything larger than `tool_output_externalization.threshold_chars` (default `20000`) and leaves a synopsis stub plus `tool_output_ref`, so the original stays readable via `/api/v1/sessions/{id}/tool-results`. `OPENVIKING_CAPTURE_TOOL_MAX_CHARS` (default `1000000`) is only a guard against pathological payloads. Configured `captureFilters` rules run last, just before the payload is sent — see [Input filters](#input-filters).
 
 After a successful append, Stop reads the session meta and commits when `pending_tokens >= OPENVIKING_COMMIT_TOKEN_THRESHOLD` (default `20000`). Threshold commits pass `keep_recent_count=OPENVIKING_COMMIT_KEEP_RECENT_COUNT` (default `10`) so the newest turns remain live for continuity while older context is archived and extracted. `PreCompact` still commits everything before compaction.
 
@@ -449,7 +449,7 @@ CI runs the same files (`.github/workflows/pr.yml`), so a green local run is the
 
 ### Live checks
 
-Two legs need a real server and real Codex auth, so they stay manual. Prerequisites: the `ov` CLI installed and reachable, Node.js 22+, and `~/.openviking/ovcli.conf` (or a per-tenant variant like `ovcli.conf.bob`) pointing at the OpenViking server you want to write to. The plugin sends `Authorization: Bearer <api_key>` from this file, and `X-OpenViking-Account` / `X-OpenViking-User` only in trusted mode.
+Two legs need a real server and real Codex auth, so they stay manual. Prerequisites: the `ov` CLI installed and reachable, Node.js 22+, and `~/.openviking/ovcli.conf` (or a per-tenant variant like `ovcli.conf.bob`) pointing at the Business Data Platform server you want to write to. The plugin sends `Authorization: Bearer <api_key>` from this file, and `X-OpenViking-Account` / `X-OpenViking-User` only in trusted mode.
 
 **Memory extraction landed in the user namespace.** After a session commits, wait ~60 s for OV's extractor, then:
 
@@ -484,7 +484,7 @@ codex-memory-plugin/
 │                                  ${PLUGIN_ROOT} token; no rendering needed on modern Codex)
 ├── skills/
 │   ├── openviking-memory/       # How to use the memory tools
-│   ├── openviking-skills/       # Find, use, create (add_skill), share, and migrate OpenViking skills
+│   ├── openviking-skills/       # Find, use, create (add_skill), share, and migrate Business Data Platform skills
 │   ├── ov-experience-memory/
 │   └── ov-memory-doctor/        # Install / config / connection / local-server troubleshooting
 ├── scripts/
@@ -503,7 +503,7 @@ codex-memory-plugin/
 │   ├── uri-guard.mjs            # PreToolUse hook (viking:// notice on Bash)
 │   └── *.test.mjs               # node --test suites (session-end, pre-compact, ...)
 ├── servers/
-│   └── mcp-proxy.mjs            # stdio -> OpenViking /mcp bridge
+│   └── mcp-proxy.mjs            # stdio -> Business Data Platform /mcp bridge
 ├── setup-helper/
 │   └── install.sh               # One-line installer
 ├── .mcp.json                    # stdio MCP wiring
@@ -525,11 +525,11 @@ The Codex marketplace catalog that exposes this plugin for `codex plugin marketp
 | Compaction hook | n/a (Claude Code does not expose one) | `PreCompact` — full-transcript commit before context loss |
 | Config section | `claude_code` | `codex` |
 | Default config file | `~/.openviking/ov.conf` | `~/.openviking/ovcli.conf`, falls back to `ov.conf` |
-| MCP server | Local stdio proxy to OpenViking `/mcp` | Local stdio proxy to OpenViking `/mcp` |
+| MCP server | Local stdio proxy to Business Data Platform `/mcp` | Local stdio proxy to Business Data Platform `/mcp` |
 
 ## License
 
-Apache-2.0 — same as [OpenViking](https://github.com/volcengine/OpenViking).
+Apache-2.0 — same as [Business Data Platform](https://github.com/volcengine/OpenViking).
 
 
 ### Cloud recall compression

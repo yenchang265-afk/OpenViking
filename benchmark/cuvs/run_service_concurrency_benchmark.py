@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark OpenViking's async vector-service facade under concurrency.
+"""Benchmark Business Data Platform's async vector-service facade under concurrency.
 
 This is the pre-embedding service layer: requests go through
 VikingVectorIndexBackend and its asyncio.to_thread adapter, but use precomputed

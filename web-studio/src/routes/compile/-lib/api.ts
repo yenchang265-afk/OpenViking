@@ -51,7 +51,7 @@ export async function fetchCompileTasks(
     throw new OvClientError({
       code: 'PAGINATION_UNSUPPORTED',
       message:
-        'The server does not support paginated tasks. Update OpenViking and retry.',
+        'The server does not support paginated tasks. Update Business Data Platform and retry.',
     })
   return page
 }

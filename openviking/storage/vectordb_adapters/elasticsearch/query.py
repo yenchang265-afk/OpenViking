@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Pure helpers that translate OpenViking schema and filter DSL to Elasticsearch."""
+"""Pure helpers that translate Business Data Platform schema and filter DSL to Elasticsearch."""
 
 from __future__ import annotations
 
@@ -75,7 +75,7 @@ def build_properties(
     distance: str,
     index_options: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Build mapping properties for an OpenViking collection schema."""
+    """Build mapping properties for a Business Data Platform collection schema."""
     properties: Dict[str, Any] = {"id": {"type": "keyword"}}
     internal: Dict[str, Any] = {}
     for field in fields:
@@ -242,7 +242,7 @@ def build_query(
     filters: Optional[Dict[str, Any]],
     path_field_names: Optional[set[str]] = None,
 ) -> Optional[Dict[str, Any]]:
-    """Translate OpenViking filter DSL to an Elasticsearch query clause.
+    """Translate Business Data Platform filter DSL to an Elasticsearch query clause.
 
     Returns ``None`` when the filter imposes no constraint.
     """
@@ -321,7 +321,7 @@ def sort_score(value: Any) -> float:
 
 
 def similarity_from_score(distance: str, score: Any) -> float:
-    """Convert an Elasticsearch kNN ``_score`` to OpenViking's similarity.
+    """Convert an Elasticsearch kNN ``_score`` to Business Data Platform's similarity.
 
     The other backends report cosine similarity, raw inner product, and
     ``1 / (1 + l2)``; Elasticsearch rescales each to a positive score.

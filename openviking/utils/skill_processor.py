@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Skill Processor for OpenViking.
+Skill Processor for Business Data Platform.
 
 Handles skill parsing, LLM generation, and storage operations.
 """

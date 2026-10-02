@@ -135,7 +135,7 @@ test("assessProbes blames the key when the authenticated /health is rejected too
   assert.equal(summary.authOk, false);
   const titles = report.problems().map((p) => p.title);
   assert.ok(titles.some((t) => t.startsWith("api key rejected on /health")));
-  assert.ok(!titles.some((t) => t.includes("not like OpenViking")));
+  assert.ok(!titles.some((t) => t.includes("not like Business Data Platform")));
   assert.equal(effectiveHealthProbe({ health, healthAuth: { ...health } }), health);
 });
 
@@ -237,7 +237,7 @@ test("assessReady interprets the readiness checks", () => {
 
 test("assessProbes recognises the docker pending-config stub", () => {
   const report = createReport();
-  const health = { ok: false, status: 503, latencyMs: 3, json: { status: "pending_initialization", error: "OpenViking config file not found", config_file: "/app/.openviking/ov.conf", fix: ["mount ~/.openviking on the host to /app/.openviking"] } };
+  const health = { ok: false, status: 503, latencyMs: 3, json: { status: "pending_initialization", error: "Business Data Platform config file not found", config_file: "/app/.openviking/ov.conf", fix: ["mount ~/.openviking on the host to /app/.openviking"] } };
   const summary = assessProbes(report, { health }, { baseUrl: "http://127.0.0.1:1933" }, describeApiKey(""));
   assert.equal(summary.reachable, true);
   const problem = report.problems()[0];
@@ -285,11 +285,11 @@ test("checkWorkspace warns when the workspace asks for a newer client", () => {
 
   const quiet = createReport();
   checkWorkspace(quiet, { cwd: dir, env });
-  assert.ok(!quiet.render().includes("asks for OpenViking plugin"), "no version, no verdict");
+  assert.ok(!quiet.render().includes("asks for Business Data Platform plugin"), "no version, no verdict");
 
   const warned = createReport();
   checkWorkspace(warned, { cwd: dir, env, clientVersion: "0.1.0" });
-  assert.match(warned.render(), /asks for OpenViking plugin 9\.9\.9 and this one is 0\.1\.0/);
+  assert.match(warned.render(), /asks for Business Data Platform plugin 9\.9\.9 and this one is 0\.1\.0/);
 });
 
 test("no doctor wrapper redefines a name doctor-core already exports", () => {

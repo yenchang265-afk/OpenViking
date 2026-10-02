@@ -273,11 +273,11 @@ def _build_client() -> ov.AsyncHTTPClient:
 
 def _assert_ingest_succeeded(result: dict[str, Any]) -> None:
     errors = result.get("errors") or []
-    assert not errors, f"OpenViking returned resource errors: {errors}"
+    assert not errors, f"Business Data Platform returned resource errors: {errors}"
 
     root_uri = result.get("root_uri")
     assert isinstance(root_uri, str) and root_uri.startswith("viking://"), (
-        f"OpenViking did not return a valid root_uri: {result}"
+        f"Business Data Platform did not return a valid root_uri: {result}"
     )
 
     queue_failures: list[str] = []
@@ -293,7 +293,7 @@ def _assert_ingest_succeeded(result: dict[str, Any]) -> None:
                     f"{queue_name}: error_count={error_count}, errors={queue_errors}"
                 )
 
-    assert not queue_failures, "OpenViking queue errors: " + "; ".join(queue_failures)
+    assert not queue_failures, "Business Data Platform queue errors: " + "; ".join(queue_failures)
 
 
 @pytest_asyncio.fixture(scope="module", loop_scope="module")
@@ -301,7 +301,7 @@ async def ov_client():
     client = _build_client()
     await client.initialize()
     try:
-        assert await client.health(), "OpenViking service health check failed"
+        assert await client.health(), "Business Data Platform service health check failed"
         yield client
     finally:
         await client.close()
@@ -393,7 +393,7 @@ def test_service_response_rejects_queue_errors():
 
 @pytest.mark.skipif(
     not _live_tests_enabled(),
-    reason="set OPENVIKING_RUN_MULTIMODAL_INTEGRATION=1 to run against an OpenViking service",
+    reason="set OPENVIKING_RUN_MULTIMODAL_INTEGRATION=1 to run against a Business Data Platform service",
 )
 @pytest.mark.parametrize("case", MULTIMODAL_CASES, ids=lambda case: case.pytest_id)
 @pytest.mark.asyncio(loop_scope="module")
@@ -408,7 +408,7 @@ async def test_multimodal_file_is_supported(case: MultimodalCase, ov_client):
         )
     except Exception as error:
         pytest.fail(
-            f"OpenViking failed to ingest {case.pytest_id} from {case.url}: "
+            f"Business Data Platform failed to ingest {case.pytest_id} from {case.url}: "
             f"{type(error).__name__}: {error}"
         )
 

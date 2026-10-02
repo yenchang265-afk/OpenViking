@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-VikingFS: OpenViking file system abstraction layer
+VikingFS: Business Data Platform file system abstraction layer
 
 Encapsulates the AGFS binding client, providing file operation interface based on Viking URI.
 Responsibilities:
@@ -114,7 +114,7 @@ class VikingFS(
     _SnapshotMixin,
     _VectorMixin,
 ):
-    """RAGFS-based OpenViking file system.
+    """RAGFS-based Business Data Platform file system.
 
     APIs are divided into two categories:
     - RAGFS basic commands (direct forwarding): read, ls, write, mkdir, rm, mv, grep, stat

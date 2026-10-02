@@ -103,7 +103,7 @@ run_openclaw() {
 
 info "OpenClaw 目錄：${OPENCLAW_DIR}"
 info "配置文件：${CONFIG_FILE}"
-info "OpenViking 服務/執行時：保留，不做解除安裝"
+info "Business Data Platform 服務/執行時：保留，不做解除安裝"
 echo ""
 
 # ============================================================
@@ -272,9 +272,9 @@ fi
 echo ""
 
 # ============================================================
-# Step 6: 保留 OpenViking 服務/執行時
+# Step 6: 保留 Business Data Platform 服務/執行時
 # ============================================================
-info "Step 6: 保留 OpenViking 服務/執行時..."
+info "Step 6: 保留 Business Data Platform 服務/執行時..."
 info "已保留 Python 包 openviking、~/.openviking 目錄及 openviking.env 環境檔案"
 echo ""
 

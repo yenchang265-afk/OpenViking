@@ -1,12 +1,12 @@
 # MCP 集成指南
 
-OpenViking 伺服器內建 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) 端點，任何相容 MCP 的客戶端都可以通過 HTTP 直接訪問其記憶和資源能力，無需部署額外程序。
+Business Data Platform 伺服器內建 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) 端點，任何相容 MCP 的客戶端都可以通過 HTTP 直接訪問其記憶和資源能力，無需部署額外程序。
 
 > **快速接入？** 見 [MCP 客戶端](../agent-integrations/06-mcp-clients.md) 獲取各平臺配置片段和注意事項。本頁面覆蓋完整的工具參考和進階配置。
 
 ## 前提條件
 
-1. 已安裝 OpenViking（`pip install openviking` 或從原始碼安裝）
+1. 已安裝 Business Data Platform（`pip install openviking` 或從原始碼安裝）
 2. 有效的配置檔案（參見[配置指南](01-configuration.md)）
 3. `openviking-server` 正在執行（參見[部署指南](03-deployment.md)）
 
@@ -14,7 +14,7 @@ MCP 端點位於 `http://<server>:1933/mcp`，與 REST API 同進程、同埠。
 
 ## 已驗證的接入平臺
 
-以下平臺已成功接入並使用 OpenViking MCP：
+以下平臺已成功接入並使用 Business Data Platform MCP：
 
 | 平臺 | 接入方式 |
 |------|----------|
@@ -28,7 +28,7 @@ MCP 端點位於 `http://<server>:1933/mcp`，與 REST API 同進程、同埠。
 
 ## 鑑權方式
 
-MCP 端點的鑑權與 OpenViking REST API 完全一致，複用同一套 API-Key 認證系統。傳入以下任一 header 即可：
+MCP 端點的鑑權與 Business Data Platform REST API 完全一致，複用同一套 API-Key 認證系統。傳入以下任一 header 即可：
 
 - `X-Api-Key: <your-key>`
 - `Authorization: Bearer <your-key>`
@@ -104,9 +104,9 @@ claude mcp add --transport http openviking \
 
 ### Claude.ai / Claude Desktop（OAuth）
 
-這些客戶端只接受 OAuth 2.1，不接受 API Key。OpenViking 已經原生實現 OAuth 2.1（DCR + PKCE + opaque token，SQLite 後端，配合 Studio consent 授權頁），不再需要外部代理。
+這些客戶端只接受 OAuth 2.1，不接受 API Key。Business Data Platform 已經原生實現 OAuth 2.1（DCR + PKCE + opaque token，SQLite 後端，配合 Studio consent 授權頁），不再需要外部代理。
 
-如果你已經為 OpenViking 服務配好了 HTTPS，直接連線 `https://your-server.com/mcp` 端點即可——客戶端會自動引導完成 OAuth 授權流程。
+如果你已經為 Business Data Platform 服務配好了 HTTPS，直接連線 `https://your-server.com/mcp` 端點即可——客戶端會自動引導完成 OAuth 授權流程。
 
 **詳見 [OAuth 2.1 接入指南](11-oauth.md)** 和 **[公網訪問指南](12-public-access.md)**：
 
@@ -121,7 +121,7 @@ claude mcp add --transport http openviking \
 
 ## 可用的 MCP 工具
 
-連線後，OpenViking MCP 端點暴露 16 個工具：
+連線後，Business Data Platform MCP 端點暴露 16 個工具：
 
 | 工具 | 說明 | 主要引數 |
 |------|------|----------|
@@ -140,7 +140,7 @@ claude mcp add --transport http openviking \
 | `grep` | 在 `viking://` 檔案中進行正則內容搜尋 | `uri`, `pattern`（字串或陣列）, `case_insensitive`, `node_limit` |
 | `glob` | 按 glob 模式匹配檔案 | `pattern`, `uri`(可選範圍), `node_limit` |
 | `forget` | 刪除任意 `viking://` URI（先用 `search` 查詢；刪除目錄需 `recursive=true`）。用它刪 skill 目錄會殘留該 skill 的 privacy 配置，請改用 `ov skills remove` 或 `DELETE /api/v1/skills/{name}` | `uri`, `recursive`(可選) |
-| `health` | 檢查 OpenViking 服務健康狀態 | 無 |
+| `health` | 檢查 Business Data Platform 服務健康狀態 | 無 |
 
 在 MCP 工具中訪問自己的工作區，請使用家目錄別名 `viking://~`。它在所有控制面
 （REST API、`ov` CLI、SDK 和 MCP）上都會展開為 `viking://user/<當前使用者>`，因此
@@ -163,7 +163,7 @@ claude mcp add --transport http openviking \
 - **遠端 URL**(`http(s)://`、`git@`、`ssh://`、`git://`):一次呼叫即完成,server 直接拉取併入庫。
 - **本地檔案路徑**:返回**上傳指令**(純文本)。agent 把檔案以 `multipart/form-data`(欄位名 `file`)POST 到響應裡給出的 `temp_upload` URL。該 URL 內嵌一次性 token(預設 10 分鐘過期)作為鑑權憑證,無需 API Key。Server 隨後在**同一次請求內自動入庫**並返回最終結果,agent **無需**再次呼叫 `add_resource`。
 
-這樣設計是為了讓任何 MCP 客戶端(包括無本地檔案系統的 Claude web、Manus 等沙箱環境)都能往 OpenViking 灌檔案,而不需要客戶端預裝 `ov` CLI。token 上傳複用認證版的 `temp_upload` 路由(API Key 優先,否則走一次性 `?token=`)及其 `TempUploadStore` 持久化,所以 `local` / `shared` 上傳模式行為一致。注意:一次性 token 儲存在程序內,因此多 worker 部署下 `add_resource` 呼叫與後續的上傳 POST 必須落到同一個 worker(或以單 worker 執行),token 才能被解析。
+這樣設計是為了讓任何 MCP 客戶端(包括無本地檔案系統的 Claude web、Manus 等沙箱環境)都能往 Business Data Platform 灌檔案,而不需要客戶端預裝 `ov` CLI。token 上傳複用認證版的 `temp_upload` 路由(API Key 優先,否則走一次性 `?token=`)及其 `TempUploadStore` 持久化,所以 `local` / `shared` 上傳模式行為一致。注意:一次性 token 儲存在程序內,因此多 worker 部署下 `add_resource` 呼叫與後續的上傳 POST 必須落到同一個 worker(或以單 worker 執行),token 才能被解析。
 
 #### 必須配置 `OPENVIKING_PUBLIC_BASE_URL` 的場景
 
@@ -209,10 +209,10 @@ curl http://localhost:1933/health
 
 **可能原因：** 客戶端配置與伺服器配置中的 API 金鑰不匹配。
 
-**解決方案：** 確保 MCP 客戶端配置中的 API 金鑰與 OpenViking 伺服器配置中的一致。參見[認證指南](04-authentication.md)。
+**解決方案：** 確保 MCP 客戶端配置中的 API 金鑰與 Business Data Platform 伺服器配置中的一致。參見[認證指南](04-authentication.md)。
 
 ## 參考
 
 - [MCP 規範](https://modelcontextprotocol.io/)
-- [OpenViking 配置](01-configuration.md)
-- [OpenViking 部署](03-deployment.md)
+- [Business Data Platform 配置](01-configuration.md)
+- [Business Data Platform 部署](03-deployment.md)

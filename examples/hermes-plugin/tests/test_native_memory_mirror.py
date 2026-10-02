@@ -94,7 +94,7 @@ def _wait_for(predicate, *, timeout=2.0):
         if predicate():
             return
         time.sleep(0.01)
-    pytest.fail("timed out waiting for OpenViking mirror worker")
+    pytest.fail("timed out waiting for Business Data Platform mirror worker")
 
 
 def _registry_path(home):
@@ -303,7 +303,7 @@ def test_unmapped_replace_fails_closed_with_warning(mirror, caplog):
         provider.shutdown()
 
     assert client.snapshot() == []
-    assert any("no stable OpenViking URI mapping" in record.message for record in caplog.records)
+    assert any("no stable Business Data Platform URI mapping" in record.message for record in caplog.records)
 
 
 def test_ambiguous_replace_fails_closed_without_guessing(mirror, caplog):
@@ -332,7 +332,7 @@ def test_ambiguous_replace_fails_closed_without_guessing(mirror, caplog):
         provider.shutdown()
 
     assert len(client.snapshot()) == 3
-    assert any("matched 2 OpenViking URI mappings" in record.message for record in caplog.records)
+    assert any("matched 2 Business Data Platform URI mappings" in record.message for record in caplog.records)
 
 
 def test_final_mirror_failure_is_visible_at_warning_level(mirror, caplog):
@@ -345,7 +345,7 @@ def test_final_mirror_failure_is_visible_at_warning_level(mirror, caplog):
         _wait_for(
             lambda: any(
                 record.levelname == "WARNING"
-                and "OpenViking memory mirror failed" in record.message
+                and "Business Data Platform memory mirror failed" in record.message
                 for record in caplog.records
             )
         )
@@ -407,7 +407,7 @@ def test_failed_replace_keeps_previous_registry_mapping(mirror, caplog):
         provider.shutdown()
 
     assert json.loads(_registry_path(mirror.home).read_text(encoding="utf-8")) == previous
-    assert any("OpenViking memory mirror failed" in record.message for record in caplog.records)
+    assert any("Business Data Platform memory mirror failed" in record.message for record in caplog.records)
 
 
 def test_failed_remove_keeps_registry_mapping(mirror, caplog):
@@ -429,7 +429,7 @@ def test_failed_remove_keeps_registry_mapping(mirror, caplog):
         provider.shutdown()
 
     assert json.loads(_registry_path(mirror.home).read_text(encoding="utf-8")) == previous
-    assert any("OpenViking memory mirror failed" in record.message for record in caplog.records)
+    assert any("Business Data Platform memory mirror failed" in record.message for record in caplog.records)
 
 
 def test_registry_save_failure_is_reported_after_remote_acceptance(mirror, caplog, monkeypatch):

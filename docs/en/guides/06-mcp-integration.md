@@ -1,12 +1,12 @@
 # MCP Integration Guide
 
-OpenViking server has a built-in [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) endpoint, allowing any MCP-compatible client to access its memory and resource capabilities over HTTP — no additional processes needed.
+Business Data Platform server has a built-in [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) endpoint, allowing any MCP-compatible client to access its memory and resource capabilities over HTTP — no additional processes needed.
 
 > **Quick setup?** See [MCP Clients](../agent-integrations/06-mcp-clients.md) for client configuration snippets and platform-specific notes. This page covers the full tool reference and advanced configuration.
 
 ## Prerequisites
 
-1. OpenViking installed (`pip install openviking` or from source)
+1. Business Data Platform installed (`pip install openviking` or from source)
 2. A valid configuration file (see [Configuration Guide](01-configuration.md))
 3. `openviking-server` running (see [Deployment Guide](03-deployment.md))
 
@@ -14,7 +14,7 @@ The MCP endpoint is at `http://<server>:1933/mcp`, sharing the same process and 
 
 ## Verified Platforms
 
-The following platforms have been successfully integrated with OpenViking MCP:
+The following platforms have been successfully integrated with Business Data Platform MCP:
 
 | Platform | Integration Method |
 |----------|-------------------|
@@ -28,7 +28,7 @@ The following platforms have been successfully integrated with OpenViking MCP:
 
 ## Authentication
 
-The MCP endpoint shares the same API-Key authentication system as the OpenViking REST API. Pass either header:
+The MCP endpoint shares the same API-Key authentication system as the Business Data Platform REST API. Pass either header:
 
 - `X-Api-Key: <your-key>`
 - `Authorization: Bearer <your-key>`
@@ -105,7 +105,7 @@ Configure `~/.config/opencode/opencode.json`:
 ### Claude.ai / Claude Desktop (OAuth)
 
 These clients only accept OAuth 2.1 — API Keys cannot be passed directly.
-OpenViking ships a native OAuth 2.1 implementation (DCR + PKCE + opaque
+Business Data Platform ships a native OAuth 2.1 implementation (DCR + PKCE + opaque
 tokens, backed by SQLite, with a Studio consent screen for authorization) so
 no external proxy is needed.
 
@@ -114,7 +114,7 @@ If you already have HTTPS configured, just connect to `https://your-server.com/m
 **See the [OAuth 2.1 Guide](11-oauth.md)** and **[Public Access Guide](12-public-access.md)** for:
 
 - End-to-end flow (device-flow style: page displays a 6-character code,
-  user confirms in the OpenViking console)
+  user confirms in the Business Data Platform console)
 - HTTP (local) and HTTPS (production) deployment, including Caddy and nginx
   reverse-proxy templates plus a docker-compose example
 - Connecting Claude.ai / Claude Desktop step by step
@@ -129,7 +129,7 @@ If you already have HTTPS configured, just connect to `https://your-server.com/m
 
 ## Available MCP Tools
 
-Once connected, OpenViking exposes 16 tools:
+Once connected, Business Data Platform exposes 16 tools:
 
 | Tool | Description | Key Parameters |
 |------|-------------|----------------|
@@ -148,7 +148,7 @@ Once connected, OpenViking exposes 16 tools:
 | `grep` | Regex content search across `viking://` files | `uri`, `pattern` (string or array), `case_insensitive`, `node_limit` |
 | `glob` | Find files matching a glob pattern | `pattern`, `uri` (optional scope), `node_limit` |
 | `forget` | Delete any `viking://` URI (use `search` to find it first; pass `recursive=true` to delete a directory). Deleting a skill directory this way leaves the skill's privacy configuration behind; remove a skill with `ov skills remove` or `DELETE /api/v1/skills/{name}` | `uri`, `recursive` (optional) |
-| `health` | Check OpenViking service health | none |
+| `health` | Check Business Data Platform service health | none |
 
 To address your own workspace from an MCP tool, use the home alias `viking://~`. It
 expands to `viking://user/<current-user>` on every control plane (REST API, `ov` CLI,
@@ -173,7 +173,7 @@ The `add_resource` tool accepts both **remote URLs** and **local file paths**, h
 - **Remote URL** (`http(s)://`, `git@`, `ssh://`, `git://`): single round-trip — the server fetches and ingests directly.
 - **Local file path**: the tool returns an **upload instruction** (plain prose). The agent POSTs the file as `multipart/form-data` (field name `file`) to the `temp_upload` URL given in the response. The URL embeds a one-shot token (10-minute TTL by default) that authorizes the upload, so no API key is needed. The server then ingests the file **automatically in the same request** and returns the final result — the agent does **not** call `add_resource` again.
 
-This lets any MCP client — including sandboxed environments without a local filesystem (Claude web, Manus, etc.) — push files into OpenViking without pre-installing the `ov` CLI. The token upload reuses the authenticated `temp_upload` route (API key first, otherwise the one-shot `?token=`) and its `TempUploadStore` persistence, so the same `local` / `shared` upload modes apply. Note: the one-shot token is held in-process, so in a multi-worker deployment the `add_resource` call and the follow-up upload POST must reach the same worker (or run single-worker) for the token to resolve.
+This lets any MCP client — including sandboxed environments without a local filesystem (Claude web, Manus, etc.) — push files into Business Data Platform without pre-installing the `ov` CLI. The token upload reuses the authenticated `temp_upload` route (API key first, otherwise the one-shot `?token=`) and its `TempUploadStore` persistence, so the same `local` / `shared` upload modes apply. Note: the one-shot token is held in-process, so in a multi-worker deployment the `add_resource` call and the follow-up upload POST must reach the same worker (or run single-worker) for the token to resolve.
 
 #### When you must set `OPENVIKING_PUBLIC_BASE_URL`
 
@@ -219,10 +219,10 @@ curl http://localhost:1933/health
 
 **Likely cause:** API key mismatch between client config and server config.
 
-**Fix:** Ensure the API key in your MCP client configuration matches the one in your OpenViking server configuration. See [Authentication Guide](04-authentication.md).
+**Fix:** Ensure the API key in your MCP client configuration matches the one in your Business Data Platform server configuration. See [Authentication Guide](04-authentication.md).
 
 ## References
 
 - [MCP Specification](https://modelcontextprotocol.io/)
-- [OpenViking Configuration](01-configuration.md)
-- [OpenViking Deployment](03-deployment.md)
+- [Business Data Platform Configuration](01-configuration.md)
+- [Business Data Platform Deployment](03-deployment.md)

@@ -801,7 +801,7 @@ async def test_restore_partial_writeback_surfaces_structured_error(
 async def test_restore_rejects_unknown_field_per_pydantic_forbid(client_with_resource):
     """Pydantic ConfigDict(extra='forbid') on RestoreRequest must reject typo'd fields.
 
-    The OpenViking error mapper rewrites FastAPI's default 422 into HTTP 400
+    The Business Data Platform error mapper rewrites FastAPI's default 422 into HTTP 400
     with code INVALID_ARGUMENT — that's the contract callers see.
     """
     client, _ = client_with_resource

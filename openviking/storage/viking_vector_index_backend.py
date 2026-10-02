@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""VikingDB storage backend for OpenViking."""
+"""VikingDB storage backend for Business Data Platform."""
 
 from __future__ import annotations
 

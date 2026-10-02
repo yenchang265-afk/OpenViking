@@ -1,4 +1,4 @@
-//! Crypto commands for OpenViking CLI.
+//! Crypto commands for Business Data Platform CLI.
 //!
 //! This module provides commands for managing cryptographic keys,
 //! including generating and initializing root keys.

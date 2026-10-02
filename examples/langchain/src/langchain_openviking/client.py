@@ -56,14 +56,14 @@ def missing_dependency(extra: str, package: str | None = None) -> OptionalDepend
     if extra == "langgraph":
         install_target += "[langgraph]"
     return OptionalDependencyError(
-        f"{package} is required for this OpenViking integration. "
+        f"{package} is required for this Business Data Platform integration. "
         f'Install it with `pip install "{install_target}"`.'
     )
 
 
 @dataclass(slots=True)
 class OpenVikingConnection:
-    """Connection settings for lazily creating an OpenViking client."""
+    """Connection settings for lazily creating a Business Data Platform client."""
 
     client: Any = None
     url: str | None = None
@@ -99,14 +99,14 @@ class OpenVikingConnection:
 
 @dataclass(slots=True)
 class OpenVikingCommitPolicy:
-    """Commit behavior for OpenViking-backed agent sessions."""
+    """Commit behavior for Business Data Platform-backed agent sessions."""
 
     mode: Literal["never", "always", "pending_tokens"] = "never"
     pending_token_threshold: int = 8_000
 
 
 class OpenVikingClientHandle:
-    """Lazy OpenViking client wrapper with one-shot recovery for safe reads."""
+    """Lazy Business Data Platform client wrapper with one-shot recovery for safe reads."""
 
     def __init__(self, connection: OpenVikingConnection):
         self._connection = connection
@@ -150,7 +150,7 @@ class OpenVikingClientHandle:
         try:
             close()
         except Exception:
-            logger.debug("OpenViking client close during recovery failed", exc_info=True)
+            logger.debug("Business Data Platform client close during recovery failed", exc_info=True)
 
     def get(self) -> Any:
         with self._client_lock:
@@ -276,7 +276,7 @@ class OpenVikingAsyncClientHandle:
         try:
             await aclose_openviking_client(client)
         except Exception:
-            logger.debug("OpenViking async client close during recovery failed", exc_info=True)
+            logger.debug("Business Data Platform async client close during recovery failed", exc_info=True)
 
     async def get(self) -> Any:
         """Return the current client snapshot, initializing it when necessary.
@@ -360,7 +360,7 @@ class OpenVikingAsyncClientHandle:
 
 
 def ensure_client(connection: OpenVikingConnection) -> Any:
-    """Return an initialized OpenViking client from explicit or connection settings."""
+    """Return an initialized Business Data Platform client from explicit or connection settings."""
 
     client = connection.client
     if client is None:
@@ -379,7 +379,7 @@ async def ensure_async_client(
     *,
     client_cache: LoopScopedAsyncClientCache | None = None,
 ) -> Any:
-    """Return a client suitable for non-blocking OpenViking calls.
+    """Return a client suitable for non-blocking Business Data Platform calls.
 
     An explicitly supplied async client is preferred. Existing synchronous
     clients remain supported and are dispatched through a worker thread by
@@ -404,7 +404,7 @@ async def ensure_async_client(
 
 
 def is_not_found_error(exc: BaseException) -> bool:
-    """True for OpenViking NOT_FOUND across cli/sdk exception classes."""
+    """True for Business Data Platform NOT_FOUND across cli/sdk exception classes."""
 
     if isinstance(exc, FileNotFoundError):
         return True
@@ -435,7 +435,7 @@ def apply_commit_policy(
             session_id=session_id,
         )
     if policy.mode != "pending_tokens":
-        raise ValueError(f"Unsupported OpenViking commit policy: {policy.mode}")
+        raise ValueError(f"Unsupported Business Data Platform commit policy: {policy.mode}")
 
     pending_tokens: int | None = None
     if persisted_pending_tokens is not None:
@@ -455,7 +455,7 @@ def apply_commit_policy(
             )
         except Exception:
             logger.debug(
-                "Skipping OpenViking pending-token commit because session lookup failed",
+                "Skipping Business Data Platform pending-token commit because session lookup failed",
                 exc_info=True,
             )
             return None
@@ -487,7 +487,7 @@ async def aapply_commit_policy(
             session_id=session_id,
         )
     if policy.mode != "pending_tokens":
-        raise ValueError(f"Unsupported OpenViking commit policy: {policy.mode}")
+        raise ValueError(f"Unsupported Business Data Platform commit policy: {policy.mode}")
 
     pending_tokens: int | None = None
     if persisted_pending_tokens is not None:
@@ -510,7 +510,7 @@ async def aapply_commit_policy(
             )
         except Exception:
             logger.debug(
-                "Skipping OpenViking pending-token commit because session lookup failed",
+                "Skipping Business Data Platform pending-token commit because session lookup failed",
                 exc_info=True,
             )
             return None
@@ -584,7 +584,7 @@ async def _create_async_client_from_connection(connection: OpenVikingConnection)
             await aclose_openviking_client(client)
         except Exception:
             logger.debug(
-                "OpenViking async client close after initialization failure failed",
+                "Business Data Platform async client close after initialization failure failed",
                 exc_info=True,
             )
         raise
@@ -592,7 +592,7 @@ async def _create_async_client_from_connection(connection: OpenVikingConnection)
 
 
 async def aclose_openviking_client(client: Any) -> None:
-    """Close an async or sync OpenViking client without blocking the event loop."""
+    """Close an async or sync Business Data Platform client without blocking the event loop."""
 
     close = getattr(client, "close", None)
     if not callable(close):
@@ -745,7 +745,7 @@ def _is_recoverable_client_error(exc: BaseException) -> bool:
 
 
 def result_groups(result: Any) -> list[tuple[str, list[Any]]]:
-    """Normalize OpenViking retrieval results into named context groups."""
+    """Normalize Business Data Platform retrieval results into named context groups."""
 
     if result is None:
         return []

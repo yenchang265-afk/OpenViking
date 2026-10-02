@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Prompt template management for OpenViking."""
+"""Prompt template management for Business Data Platform."""
 
 from .manager import get_llm_config, get_manager, render_prompt
 

@@ -1,6 +1,6 @@
 # 檢索機制
 
-OpenViking 採用兩階段檢索：意圖分析 + 層級檢索 + Rerank。
+Business Data Platform 採用兩階段檢索：意圖分析 + 層級檢索 + Rerank。
 
 ## 概覽
 

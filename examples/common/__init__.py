@@ -1,1 +1,1 @@
-"""Common utilities for OpenViking examples"""
+"""Common utilities for Business Data Platform examples"""

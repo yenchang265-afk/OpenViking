@@ -19,7 +19,7 @@ Skill 原始碼：[examples/compile/ov-compile-skills/llm-wiki](https://github.c
 
 ## 第一步：準備來源
 
-如果材料還沒進 OpenViking，先匯入。目錄型來源用 `ov add-resource`，單檔案可以用 `ov write`：
+如果材料還沒進 Business Data Platform，先匯入。目錄型來源用 `ov add-resource`，單檔案可以用 `ov write`：
 
 ```bash
 # 匯入一個目錄作為來源
@@ -94,7 +94,7 @@ research-wiki/
 
 ## 第五步：視覺化成互動式圖譜
 
-`wiki_graph.py` 會**直接連線 OpenViking 服務**讀取 Wiki 頁面（不需要先下載到本地），把頁面按型別著色、按連結連邊，生成一個獨立的互動式 HTML：
+`wiki_graph.py` 會**直接連線 Business Data Platform 服務**讀取 Wiki 頁面（不需要先下載到本地），把頁面按型別著色、按連結連邊，生成一個獨立的互動式 HTML：
 
 ```bash
 python examples/compile/graph-show/llm-wiki/wiki_graph.py \

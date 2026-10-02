@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Parser registry for OpenViking.
+Parser registry for Business Data Platform.
 
 Provides automatic parser selection based on file type.
 """

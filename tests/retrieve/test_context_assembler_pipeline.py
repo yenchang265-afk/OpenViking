@@ -435,7 +435,7 @@ async def test_rewrite_receives_only_served_uris(monkeypatch):
 
     async def ok_rewrite(**kwargs):
         assert kwargs["valid_uris"] == [served_uri]
-        return f"OpenViking memory digest:\n- fact 來源：{served_uri}", "ok", None
+        return f"Business Data Platform memory digest:\n- fact 來源：{served_uri}", "ok", None
 
     monkeypatch.setattr(pipeline_module, "rewrite_context", ok_rewrite)
     result = await assemble_context(
@@ -444,7 +444,7 @@ async def test_rewrite_receives_only_served_uris(monkeypatch):
         params=AssembleParams(query="rewrite me", rewrite="auto"),
     )
 
-    assert result.digest.startswith("OpenViking memory digest:")
+    assert result.digest.startswith("Business Data Platform memory digest:")
     assert result.stats["rewrite"] == "ok"
 
 

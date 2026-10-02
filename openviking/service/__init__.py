@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Service layer for OpenViking.
+Service layer for Business Data Platform.
 
 Provides business logic decoupled from transport layer,
 enabling reuse across HTTP Server and CLI.

@@ -1,4 +1,4 @@
-"""Quick start for the OpenViking Python HTTP SDK.
+"""Quick start for the Business Data Platform Python HTTP SDK.
 
 Run these commands first:
 

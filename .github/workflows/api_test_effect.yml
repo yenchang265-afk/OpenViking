@@ -118,7 +118,7 @@ jobs:
           cd tests/api_test
           uv pip install -r requirements.txt
 
-      - name: Create OpenViking config file
+      - name: Create Business Data Platform config file
         env:
           VLM_API_KEY: ${{ secrets.VLM_API_KEY }}
           EMBEDDING_API_KEY: ${{ secrets.EMBEDDING_API_KEY }}
@@ -172,7 +172,7 @@ jobs:
           EOF
           fi
 
-      - name: Start OpenViking Server
+      - name: Start Business Data Platform Server
         run: |
           SERVER_PORT=1933
           echo "SERVER_PORT=$SERVER_PORT" >> $GITHUB_ENV
@@ -225,7 +225,7 @@ jobs:
             tests/api_test/api-effect-heavy-report.html
             openviking-server.log
 
-      - name: Stop OpenViking Server
+      - name: Stop Business Data Platform Server
         if: always()
         run: |
           if [ -f openviking-server.pid ]; then

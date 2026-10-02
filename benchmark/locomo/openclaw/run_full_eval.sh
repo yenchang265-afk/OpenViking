@@ -6,8 +6,8 @@ set -e
 OpenClaw 完整評估流程指令碼
 
 用法:
-  ./run_full_eval.sh                      # 只匯入 OpenViking (所有 samples)
-  ./run_full_eval.sh --with-claw-import   # 同時匯入 OpenViking 和 OpenClaw (所有 samples)
+  ./run_full_eval.sh                      # 只匯入 Business Data Platform (所有 samples)
+  ./run_full_eval.sh --with-claw-import   # 同時匯入 Business Data Platform 和 OpenClaw (所有 samples)
   ./run_full_eval.sh --skip-import        # 跳過匯入步驟 (所有 samples)
   ./run_full_eval.sh --sample 0           # 只處理第 0 個 sample
   ./run_full_eval.sh --sample 1 --with-claw-import  # 只處理第 1 個 sample，同時匯入 OpenClaw
@@ -77,9 +77,9 @@ mkdir -p "$RESULT_DIR"
 # Step 1: 匯入資料
 if [ "$SKIP_IMPORT" = false ]; then
     if [ "$WITH_CLAW_IMPORT" = true ]; then
-        echo "[1/5] 匯入資料到 OpenViking 和 OpenClaw..."
+        echo "[1/5] 匯入資料到 Business Data Platform 和 OpenClaw..."
 
-        # 後臺執行 OpenViking 匯入
+        # 後臺執行 Business Data Platform 匯入
         python "$SCRIPT_DIR/import_to_ov.py" --no-user-id --input "$INPUT_FILE" $FORCE_INGEST_ARG $SAMPLE_ARG > "$RESULT_DIR/import_ov.log" 2>&1 &
         PID_OV=$!
 
@@ -90,7 +90,7 @@ if [ "$SKIP_IMPORT" = false ]; then
         # 等待兩個匯入任務完成
         wait $PID_OV $PID_CLAW
     else
-        echo "[1/5] 匯入資料到 OpenViking..."
+        echo "[1/5] 匯入資料到 Business Data Platform..."
         python "$SCRIPT_DIR/import_to_ov.py" --no-user-id --input "$INPUT_FILE" $FORCE_INGEST_ARG $SAMPLE_ARG
     fi
 

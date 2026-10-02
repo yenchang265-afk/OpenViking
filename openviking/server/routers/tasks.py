@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Task tracking endpoints for OpenViking HTTP Server.
+"""Task tracking endpoints for Business Data Platform HTTP Server.
 
 Provides observability for background operations (e.g. session commit
 with ``wait=false``).  Callers receive a ``task_id`` and can poll these

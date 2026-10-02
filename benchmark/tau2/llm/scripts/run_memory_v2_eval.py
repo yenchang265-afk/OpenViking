@@ -448,9 +448,9 @@ def _wait_task(client: Any, task_id: str | None, timeout: int) -> dict[str, Any]
         if status == "completed":
             return last or {"status": status}
         if status in {"failed", "cancelled"}:
-            raise RuntimeError(f"OpenViking task {task_id} {status}: {last}")
+            raise RuntimeError(f"Business Data Platform task {task_id} {status}: {last}")
         time.sleep(2)
-    raise TimeoutError(f"OpenViking task {task_id} did not finish within {timeout}s: {last}")
+    raise TimeoutError(f"Business Data Platform task {task_id} did not finish within {timeout}s: {last}")
 
 
 def _read_memory_text(client: Any, match: Any) -> tuple[str, str | None]:
@@ -834,9 +834,9 @@ def _register_memory_agent(args: argparse.Namespace, trace_path: Path) -> None:
                     inject_max_chars=args.first_user_memory_inject_max_chars,
                 )
                 prompt = (
-                    "No OpenViking memory matched this user request."
+                    "No Business Data Platform memory matched this user request."
                     if not block
-                    else "Use these OpenViking memories only when they match the current task:\n\n"
+                    else "Use these Business Data Platform memories only when they match the current task:\n\n"
                     + block
                 )
                 state.system_messages[marker_index] = SystemMessage(role="system", content=prompt)
@@ -887,7 +887,7 @@ def _register_memory_agent(args: argparse.Namespace, trace_path: Path) -> None:
                     if block:
                         prompt = (
                             "Before executing the pending write-like tool call, use these "
-                            "OpenViking memories only when they match the current task:\n\n" + block
+                            "Business Data Platform memories only when they match the current task:\n\n" + block
                         )
                         assistant_message = self._generate(
                             state.system_messages
@@ -914,7 +914,7 @@ def _register_memory_agent(args: argparse.Namespace, trace_path: Path) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Run TAU-2 with OpenViking Memory V2.")
+    parser = argparse.ArgumentParser(description="Run TAU-2 with Business Data Platform Memory V2.")
     parser.add_argument("--tau2-repo", type=Path, required=True)
     parser.add_argument("--run-dir", type=Path, required=True)
     parser.add_argument("--corpus-dir", type=Path)
@@ -961,7 +961,7 @@ def main() -> int:
         ],
         default=TRAIN_TRANSCRIPT_OPENVIKING_TEXT,
         help=(
-            "How to replay TAU-2 train messages into OpenViking sessions. "
+            "How to replay TAU-2 train messages into Business Data Platform sessions. "
             "openviking_text preserves the compact adapter text format; role_tool_blocks "
             "uses role-prefixed messages plus tool-call/tool-response blocks. "
             "custom_like is a compatibility alias for older cached custom-like corpora."
@@ -996,7 +996,7 @@ def main() -> int:
     parser.add_argument(
         "--no-memory",
         action="store_true",
-        help="Run the configured TAU-2 agent without OpenViking retrieval.",
+        help="Run the configured TAU-2 agent without Business Data Platform retrieval.",
     )
     args = parser.parse_args()
     normalize_litellm_env()
@@ -1023,7 +1023,7 @@ def main() -> int:
         ]
         if missing:
             parser.error(
-                "OpenViking memory runs require: "
+                "Business Data Platform memory runs require: "
                 + ", ".join("--" + name.replace("_", "-") for name in missing)
             )
 

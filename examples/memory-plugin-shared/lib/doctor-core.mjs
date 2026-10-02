@@ -500,10 +500,10 @@ export function serverErrorMessage(probe) {
 }
 
 /**
- * Run the standard probe ladder against an OpenViking server.
+ * Run the standard probe ladder against a Business Data Platform server.
  *
  *   health        GET /health without credentials  — reachability, version, auth_mode
- *                 (401/403 where a gateway authenticates ahead of OpenViking)
+ *                 (401/403 where a gateway authenticates ahead of Business Data Platform)
  *   healthAuth    GET /health with credentials     — identity echo (account/user/role)
  *   systemStatus  GET /api/v1/system/status        — first authenticated call the hooks make; real 401/403
  *   fsLs          GET /api/v1/fs/ls?uri=viking://~/memories — tenant-data authorization + resolved user space
@@ -540,7 +540,7 @@ export async function probeOpenViking(conn, { timeoutMs = 5000, mcp = true } = {
 
 /**
  * The /health answer the rest of the report should read. A gateway that
- * authenticates ahead of OpenViking (Cloud behind the Volcengine gateway)
+ * authenticates ahead of Business Data Platform (Cloud behind the Volcengine gateway)
  * answers the credential-less probe with 401/403 before the request reaches
  * the server, so version, auth_mode and identity all come from the
  * authenticated probe instead.
@@ -569,7 +569,7 @@ export function assessProbes(report, probes, conn, keyInfo) {
   }
   summary.reachable = true;
   if (health.status === 401 || health.status === 403) {
-    // The url is fine: something in front of OpenViking demands credentials on
+    // The url is fine: something in front of Business Data Platform demands credentials on
     // /health itself. Read it with the key and carry on down the ladder.
     const authed = probes.healthAuth;
     if (authed?.ok && isObject(authed.json)) {
@@ -577,18 +577,18 @@ export function assessProbes(report, probes, conn, keyInfo) {
       health = authed;
     } else if (!conn.apiKey && !conn.account && !conn.user) {
       report.fail(`GET /health → ${health.status} and no credentials are configured`, serverErrorMessage(health),
-        "this deployment authenticates /health itself (OpenViking Cloud does); set api_key in ~/.openviking/ovcli.conf or OPENVIKING_API_KEY");
+        "this deployment authenticates /health itself (Business Data Platform Cloud does); set api_key in ~/.openviking/ovcli.conf or OPENVIKING_API_KEY");
       return summary;
     } else {
       report.fail(`api key rejected on /health → ${authed?.status || health.status}`,
         `${serverErrorMessage(authed) || serverErrorMessage(health) || "(no message)"} — key ${keyInfo?.display || "?"}`,
-        "this deployment authenticates /health itself and rejected this key; check it against the key issued for this deployment (OpenViking Cloud keys come from the Volcengine console)");
+        "this deployment authenticates /health itself and rejected this key; check it against the key issued for this deployment (Business Data Platform Cloud keys come from the Volcengine console)");
       return summary;
     }
   }
   if (health.status === 404) {
-    report.fail(`GET /health → 404 at ${conn.baseUrl}`, "the url points at a web server, but not at an OpenViking API root",
-      "check for a missing path prefix (OpenViking Cloud needs /openviking) or a reverse proxy that does not forward /health");
+    report.fail(`GET /health → 404 at ${conn.baseUrl}`, "the url points at a web server, but not at a Business Data Platform API root",
+      "check for a missing path prefix (Business Data Platform Cloud needs /openviking) or a reverse proxy that does not forward /health");
     return summary;
   }
   if (health.status >= 300 && health.status < 400) {
@@ -598,14 +598,14 @@ export function assessProbes(report, probes, conn, keyInfo) {
   }
   if (health.status === 503 && health.json?.status === "pending_initialization") {
     const fixes = Array.isArray(health.json.fix) ? health.json.fix.map((f) => `- ${f}`).join("\n") : "";
-    report.fail("the OpenViking docker container is up but has no ov.conf — every request answers 503 until it does",
+    report.fail("the Business Data Platform docker container is up but has no ov.conf — every request answers 503 until it does",
       `${health.json.error || ""}${health.json.config_file ? ` (expected at ${health.json.config_file} inside the container)` : ""}${fixes ? `\n${fixes}` : ""}`,
       "mount ~/.openviking (holding ov.conf) at /app/.openviking, or run `docker exec -it openviking openviking-server init`");
     return summary;
   }
   if (!health.ok || !health.json) {
     report.fail(`GET /health → ${health.status}`, serverErrorMessage(health) || "(non-JSON body)",
-      "the server answered but not like OpenViking — verify the url reaches the OpenViking API, not a proxy error page");
+      "the server answered but not like Business Data Platform — verify the url reaches the Business Data Platform API, not a proxy error page");
     return summary;
   }
   summary.authMode = String(health.json.auth_mode || "");
@@ -761,7 +761,7 @@ export function lintPeerScopeDowngrade(path = peerScopeMemoPath(), now = Date.no
     level: "warn",
     message: `recall peer_scope "${str(data.scope, "actor")}" was rejected by the server (HTTP ${Number(data.status) || 0})`,
     detail: "recall runs against every peer under this user, not just this workspace's",
-    fix: 'upgrade the OpenViking server, or set recallPeerScope to "all" so the wider search is deliberate',
+    fix: 'upgrade the Business Data Platform server, or set recallPeerScope to "all" so the wider search is deliberate',
   }];
 }
 

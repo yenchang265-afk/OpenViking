@@ -1,13 +1,13 @@
-# OpenViking 檔案系統掛載模組
+# Business Data Platform 檔案系統掛載模組
 
-這個模組將 OpenViking 的虛擬檔案系統掛載到本地檔案系統路徑，讓使用者可以像操作普通檔案一樣操作 OpenViking 上的資料。
+這個模組將 Business Data Platform 的虛擬檔案系統掛載到本地檔案系統路徑，讓使用者可以像操作普通檔案一樣操作 Business Data Platform 上的資料。
 
 這個模組只是一個實驗功能，並沒有被實際使用
 
 
 ## 功能特性
 
-- **檔案系統範式**: 將 OpenViking 的 `viking://` URI 對映到本地檔案路徑
+- **檔案系統範式**: 將 Business Data Platform 的 `viking://` URI 對映到本地檔案路徑
 - **多作用域支援**: 支援 resources、session、user 等多種作用域掛載
 - **掛載管理**: 支援多個掛載點的生命週期管理
 - **語義搜尋**: 通過檔案系統路徑進行語義搜尋
@@ -48,7 +48,7 @@ with OpenVikingMount(config) as mount:
     print(f"概覽: {overview}")
     
     # 語義搜尋
-    results = mount.search("什麼是 OpenViking")
+    results = mount.search("什麼是 Business Data Platform")
     for r in results:
         print(f"{r.uri}")
 ```
@@ -131,7 +131,7 @@ vikingbot/openviking_mount/
 
 | 方法 | 說明 |
 |------|------|
-| `initialize()` | 初始化 OpenViking 客戶端 |
+| `initialize()` | 初始化 Business Data Platform 客戶端 |
 | `list_dir(path)` | 列出目錄內容 |
 | `read_file(path)` | 讀取檔案內容 |
 | `write_file(path, content)` | 寫入檔案內容 |
@@ -168,10 +168,10 @@ vikingbot/openviking_mount/
 
 ## 路徑對映
 
-OpenViking URI 到本地檔案路徑的對映規則：
+Business Data Platform URI 到本地檔案路徑的對映規則：
 
 ```
-OpenViking URI                    本地路徑
+Business Data Platform URI                    本地路徑
 -------------------               ------------------
 viking://resources/foo     ->    {mount_point}/resources/foo
 viking://session/bar       ->    {mount_point}/session/bar
@@ -189,7 +189,7 @@ cd /Users/bytedance/workspace/openviking/bot
 
 ## 注意事項
 
-1. **直接寫入限制**: OpenViking 主要通過 `add_resource` 新增外部資源，直接檔案寫入需要特殊處理
+1. **直接寫入限制**: Business Data Platform 主要通過 `add_resource` 新增外部資源，直接檔案寫入需要特殊處理
 2. **效能考慮**: 大量檔案操作可能影響效能，建議批次處理
 3. **資料同步**: `sync_to_disk` 是一個簡化實現，生產環境可能需要更復雜的同步機制
 4. **只讀模式**: 設定 `read_only=True` 可以防止意外修改

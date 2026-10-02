@@ -261,7 +261,7 @@ asyncio_mode = "auto"
 norecursedirs = ["api_test", "oc2ov_test"]
 markers = [
     "integration: tests that require external services or real model configuration",
-    "cli_remote: tests that require a remote OpenViking CLI binary and server connection",
+    "cli_remote: tests that require a remote Business Data Platform CLI binary and server connection",
 ]
 addopts = "-v --cov=openviking --cov-report=term-missing"
 

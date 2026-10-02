@@ -1,12 +1,12 @@
 ---
 name: ov-server-operate
-description: Operate and maintain OpenViking server - configure, install, start, stop, and cleanup the server. Use when need to setup or manage OpenViking service deployment.
-compatibility: OpenViking CLI configured at `~/.openviking/ovcli.conf`
+description: Operate and maintain Business Data Platform server - configure, install, start, stop, and cleanup the server. Use when need to setup or manage Business Data Platform service deployment.
+compatibility: Business Data Platform CLI configured at `~/.openviking/ovcli.conf`
 ---
 
-# OpenViking Server Operations
+# Business Data Platform Server Operations
 
-This guide provides standard operating procedures for deploying, managing, and maintaining OpenViking servers in production environments.
+This guide provides standard operating procedures for deploying, managing, and maintaining Business Data Platform servers in production environments.
 
 ## Table of Content
 - Service Configuration
@@ -20,7 +20,7 @@ This guide provides standard operating procedures for deploying, managing, and m
 
 ### Default Paths and Structure
 
-OpenViking uses the following standard directory structure under `~/.openviking/`:
+Business Data Platform uses the following standard directory structure under `~/.openviking/`:
 
 ```
 ~/.openviking/
@@ -123,7 +123,7 @@ cd ~/.openviking
 uv venv --python 3.12 ov-venv
 ```
 
-### Step 3: Activate and Install OpenViking
+### Step 3: Activate and Install Business Data Platform
 
 ```bash
 # Activate the virtual environment
@@ -234,7 +234,7 @@ Perform full data cleanup in these scenarios:
 # ==========================================
 # STEP 1: STOP THE SERVER FIRST
 # ==========================================
-echo "Step 1: Stopping OpenViking Server..."
+echo "Step 1: Stopping Business Data Platform Server..."
 if pgrep -f openviking-server > /dev/null; then
     pkill -f openviking-server
     sleep 3

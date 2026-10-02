@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""OpenViking-side OAuth routes.
+"""Business Data Platform-side OAuth routes.
 
 The OAuth 2.1 protocol surface (DCR, /authorize parsing, /token, well-known
 metadata) is delegated to the official ``mcp.server.auth`` SDK (mounted from
@@ -98,7 +98,7 @@ _AUTHORIZE_PAGE_TEMPLATE = """<!DOCTYPE html>
   <div class="card">
     <h1>Authorize <span class="client">{client_name}</span></h1>
     <p>This is the cross-device authorization page. On another device that is
-       signed in to OpenViking Studio, open the link below and enter the
+       signed in to Business Data Platform Studio, open the link below and enter the
        verification code.</p>
 
     <div class="codebox">
@@ -108,7 +108,7 @@ _AUTHORIZE_PAGE_TEMPLATE = """<!DOCTYPE html>
       </a>
     </div>
 
-    <p class="hint">If you can open OpenViking Studio on <em>this</em> device,
+    <p class="hint">If you can open Business Data Platform Studio on <em>this</em> device,
       go back to the link your MCP client gave you — Studio will let you
       authorize without typing this code.</p>
 
@@ -239,7 +239,7 @@ async def oauth_protected_resource(request: Request) -> JSONResponse:
         authorization_servers=[AnyHttpUrl(issuer)],
         scopes_supported=[MCP_SCOPE],
         bearer_methods_supported=["header"],
-        resource_name="OpenViking MCP",
+        resource_name="Business Data Platform MCP",
     )
     return JSONResponse(
         metadata.model_dump(mode="json", exclude_none=True),
@@ -441,7 +441,7 @@ async def oauth_verify(
     if ctx.from_oauth:
         raise PermissionDeniedError(
             "OAuth-issued tokens cannot authorize new OAuth clients. "
-            "Use your API key or sign in to OpenViking Studio to verify."
+            "Use your API key or sign in to Business Data Platform Studio to verify."
         )
 
     decision = body.decision.lower().strip()

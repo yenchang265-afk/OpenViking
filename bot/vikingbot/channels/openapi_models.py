@@ -144,16 +144,16 @@ class ChatImage(BaseModel):
 
 
 class OpenVikingConnection(BaseModel):
-    """OpenViking identity forwarded by the Studio proxy."""
+    """Business Data Platform identity forwarded by the Studio proxy."""
 
     api_key: Optional[str] = Field(default=None, description="API key from the active client")
     account_id: Optional[str] = Field(default=None, description="Effective account ID")
     user_id: Optional[str] = Field(default=None, description="Effective user ID")
     agent_id: Optional[str] = Field(default=None, description="Effective agent ID")
     actor_peer_id: Optional[str] = Field(default=None, description="Effective actor peer ID")
-    role: Optional[str] = Field(default=None, description="Effective OpenViking role")
-    api_key_type: Optional[str] = Field(default=None, description="OpenViking API key type")
-    server_url: Optional[str] = Field(default=None, description="OpenViking server URL")
+    role: Optional[str] = Field(default=None, description="Effective Business Data Platform role")
+    api_key_type: Optional[str] = Field(default=None, description="Business Data Platform API key type")
+    server_url: Optional[str] = Field(default=None, description="Business Data Platform server URL")
 
 
 class ChatRequest(BaseModel):
@@ -185,7 +185,7 @@ class ChatRequest(BaseModel):
     )
     openviking_connection: Optional[OpenVikingConnection] = Field(
         default=None,
-        description="Authenticated OpenViking connection forwarded by the server proxy",
+        description="Authenticated Business Data Platform connection forwarded by the server proxy",
     )
 
     @model_validator(mode="after")
@@ -208,7 +208,7 @@ class ChatResponse(BaseModel):
     )
     relevant_memories: Optional[str] = Field(
         default=None,
-        description="OpenViking memories assembled during _process_message",
+        description="Business Data Platform memories assembled during _process_message",
     )
     token_usage: Dict[str, int] = Field(
         default_factory=dict,
@@ -233,7 +233,7 @@ class FeedbackRequest(BaseModel):
     )
     openviking_connection: Optional[OpenVikingConnection] = Field(
         default=None,
-        description="Authenticated OpenViking connection forwarded by the server proxy",
+        description="Authenticated Business Data Platform connection forwarded by the server proxy",
     )
     _principal_scope: str = PrivateAttr(default="local")
 

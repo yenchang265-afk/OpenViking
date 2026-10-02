@@ -31,14 +31,14 @@ export class OpenVikingTransport {
 
   constructor(config: ClientConfig) {
     if (!config.baseUrl?.trim())
-      throw new TypeError("OpenViking: baseUrl is required");
+      throw new TypeError("Business Data Platform: baseUrl is required");
     const url = new URL(config.baseUrl);
     if (!/^https?:$/.test(url.protocol))
-      throw new TypeError("OpenViking: baseUrl must use http or https");
+      throw new TypeError("Business Data Platform: baseUrl must use http or https");
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
     this.fetcher = config.fetch ?? globalThis.fetch;
     if (!this.fetcher)
-      throw new TypeError("OpenViking: fetch is not available");
+      throw new TypeError("Business Data Platform: fetch is not available");
     this.timeout = config.timeout ?? 60_000;
     this.profile = config.profile ?? false;
     this.uploadMode = config.uploadMode;

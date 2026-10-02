@@ -1,8 +1,8 @@
 # LangChain and LangGraph
 
-Wire OpenViking into your LangChain or LangGraph agent as the context backend. The
+Wire Business Data Platform into your LangChain or LangGraph agent as the context backend. The
 standalone integration package provides a retriever, chat history, context wrapper,
-agent tools, LangGraph store, and middleware for OpenViking HTTP deployments.
+agent tools, LangGraph store, and middleware for Business Data Platform HTTP deployments.
 
 ## Install
 
@@ -11,7 +11,7 @@ pip install langchain-openviking                 # LangChain adapters
 pip install "langchain-openviking[langgraph]"    # LangGraph middleware support
 ```
 
-The integration is released independently from the OpenViking server. The full
+The integration is released independently from the Business Data Platform server. The full
 package keeps forwarding the legacy `openviking.integrations.langchain` import
 path to `langchain-openviking` for existing applications.
 
@@ -27,13 +27,13 @@ tools = create_openviking_tools(
 )
 ```
 
-When `url` is omitted, adapters use the HTTP connection settings from the OpenViking CLI config. Embedding and VLM providers are configured in OpenViking, not in your app.
+When `url` is omitted, adapters use the HTTP connection settings from the Business Data Platform CLI config. Embedding and VLM providers are configured in Business Data Platform, not in your app.
 
 ### Async applications
 
 The retriever, context wrapper, chat history, session recorder, and LangGraph
 middleware all have native async paths. URL-based adapters create an async
-OpenViking HTTP client automatically:
+Business Data Platform HTTP client automatically:
 
 ```python
 docs = await retriever.ainvoke("What did the user decide?")
@@ -120,7 +120,7 @@ explicitly. `close()` cannot run inside an active event loop; use `aclose()`
 there. Injected clients remain caller-owned.
 
 LCEL composition returns a plain `RunnableSequence`, which does not expose the
-OpenViking close methods. Keep the managed wrapper and compose inside its
+Business Data Platform close methods. Keep the managed wrapper and compose inside its
 lifecycle:
 
 ```python
@@ -176,16 +176,16 @@ middleware = OpenVikingContextMiddleware(
 )
 ```
 
-The resolved actor peer scopes OpenViking HTTP calls made during recall and
+The resolved actor peer scopes Business Data Platform HTTP calls made during recall and
 capture. Concurrent runs are isolated, and middleware capture progress is keyed
-by actor peer as well as session and message peer. OpenViking session endpoints
+by actor peer as well as session and message peer. Business Data Platform session endpoints
 remain user-scoped and do not use the actor-peer header for message attribution;
 set `peer_id_resolver` as well when captured messages must be attributed to the
 same logical peer. Distinct peers with independent histories should also resolve
 distinct session IDs. When `actor_peer_resolver` is omitted, the existing fixed
 client behavior is unchanged.
 
-The resolver cannot change the OpenViking account or user. Those identities
+The resolver cannot change the Business Data Platform account or user. Those identities
 remain bound to the API key or OAuth credential, so multi-user applications
 must select a credential-bound client before invoking the middleware. Resolve
 the actor peer only from authenticated, server-owned runtime fields; do not
@@ -204,7 +204,7 @@ feature in an existing environment.
 | Give the agent explicit memory tools | `create_openviking_tools()` |
 | Store durable cross-thread state | `OpenVikingStore` |
 | Inject context into LangGraph as middleware | `OpenVikingContextMiddleware` |
-| Back LangChain chat history with OpenViking | `OpenVikingChatMessageHistory` |
+| Back LangChain chat history with Business Data Platform | `OpenVikingChatMessageHistory` |
 | Record caller-selected LangChain messages from a custom lifecycle | `OpenVikingSessionRecorder` |
 
 ## Quick examples
@@ -268,7 +268,7 @@ middleware = OpenVikingContextMiddleware(
 ### Session recorder
 
 Use the recorder when your application already owns the conversation lifecycle
-and only needs reusable OpenViking persistence:
+and only needs reusable Business Data Platform persistence:
 
 ```python
 from langchain_openviking import (
@@ -315,7 +315,7 @@ uv run --project examples/langchain --extra langgraph python examples/langchain-
 uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langgraph/middleware/quick_app.py
 ```
 
-For a real OpenViking server and OpenAI-compatible model flow, see the [live LangGraph app](https://github.com/volcengine/OpenViking/blob/main/examples/langchain-langgraph/langgraph/agent/live_app.py).
+For a real Business Data Platform server and OpenAI-compatible model flow, see the [live LangGraph app](https://github.com/volcengine/OpenViking/blob/main/examples/langchain-langgraph/langgraph/agent/live_app.py).
 
 ## See also
 

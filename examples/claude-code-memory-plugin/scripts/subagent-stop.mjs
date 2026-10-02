@@ -12,7 +12,7 @@
  * created in subagent-start.mjs. An immediate commit runs so the subagent's
  * context is archived before the parent continues.
  *
- * Each subagent is written to a distinct OpenViking session derived from the
+ * Each subagent is written to a distinct Business Data Platform session derived from the
  * parent session id and Claude's subagent id.
  */
 

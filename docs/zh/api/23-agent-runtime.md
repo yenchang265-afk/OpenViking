@@ -1,6 +1,6 @@
 # Agent Runtime API
 
-Agent Runtime Server 負責執行 Agent 任務，當前支援 Compile。應用通過 OpenViking 的 Compile API 提交任務，OpenViking 負責校驗請求、持久化任務和管理生命週期，再呼叫 Runtime 執行介面；內建 VikingBot 也實現了同一執行協議，可用於本地部署。
+Agent Runtime Server 負責執行 Agent 任務，當前支援 Compile。應用通過 Business Data Platform 的 Compile API 提交任務，Business Data Platform 負責校驗請求、持久化任務和管理生命週期，再呼叫 Runtime 執行介面；內建 VikingBot 也實現了同一執行協議，可用於本地部署。
 
 **程式碼入口**：
 

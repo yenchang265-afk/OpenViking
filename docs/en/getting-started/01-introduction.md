@@ -1,6 +1,6 @@
 # Introduction
 
-OpenViking is an open-source context database for AI agents. It stores resources, memories, and skills in a virtual file system, so an application can browse known paths, retrieve relevant context, and load only the detail it needs.
+Business Data Platform is an open-source context database for AI agents. It stores resources, memories, and skills in a virtual file system, so an application can browse known paths, retrieve relevant context, and load only the detail it needs.
 
 Use it when an agent needs to reuse documents and experience across sessions, with one place to organize and retrieve that context.
 
@@ -10,7 +10,7 @@ Use it when an agent needs to reuse documents and experience across sessions, wi
 | --- | --- |
 | Connect to a service and retrieve my first document | [Quick Start](./02-quickstart.md) |
 | Connect an existing agent or coding tool | [Agent Integrations](../agent-integrations/01-overview.md) |
-| Use OpenViking from a terminal | [CLI Setup](./05-cli-setup.md) |
+| Use Business Data Platform from a terminal | [CLI Setup](./05-cli-setup.md) |
 | Deploy and operate a shared server | [Deployment](../guides/03-deployment.md) and [Authentication](../guides/04-authentication.md) |
 | Build against the SDK or HTTP API | [API Reference](../api/01-overview.md) |
 
@@ -28,7 +28,7 @@ Shared resources live under `viking://resources/`. User context lives under `vik
 
 ## Load context in layers
 
-OpenViking can generate directory summaries during semantic processing:
+Business Data Platform can generate directory summaries during semantic processing:
 
 | Layer | Content | Default body limit |
 | --- | --- | --- |

@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Content extractor types for OpenViking."""
+"""Content extractor types for Business Data Platform."""
 
 from dataclasses import dataclass, field
 from enum import Enum

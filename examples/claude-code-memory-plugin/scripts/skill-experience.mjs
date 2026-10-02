@@ -4,7 +4,7 @@
  * Optional PostToolUse(Read) hook for skill experience recall.
  *
  * Default off. When enabled, it only runs for reads of a SKILL.md file under a
- * skills directory, then injects a small experience block if OpenViking has
+ * skills directory, then injects a small experience block if Business Data Platform has
  * relevant experience memories.
  */
 

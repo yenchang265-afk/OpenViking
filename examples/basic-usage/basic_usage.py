@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-OpenViking Basic Usage Example
+Business Data Platform Basic Usage Example
 
-This script demonstrates the core features of OpenViking:
+This script demonstrates the core features of Business Data Platform:
 1. HTTP client initialization
 2. Adding resources (URLs, files, directories)
 3. Browsing the virtual filesystem
@@ -12,7 +12,7 @@ This script demonstrates the core features of OpenViking:
 
 Requirements:
 - pip install openviking --upgrade
-- A running OpenViking server at http://localhost:1933
+- A running Business Data Platform server at http://localhost:1933
 """
 
 import os
@@ -25,14 +25,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 def main():
     print("=" * 60)
-    print("OpenViking Basic Usage Example")
+    print("Business Data Platform Basic Usage Example")
     print("=" * 60)
     print()
 
     # ============================================================
     # 1. Initialization
     # ============================================================
-    print("1. Initializing OpenViking...")
+    print("1. Initializing Business Data Platform...")
     print("-" * 40)
 
     try:
@@ -56,7 +56,7 @@ def main():
 
     except Exception as e:
         print(f"   Error during initialization: {e}")
-        print("   Make sure the OpenViking server is running")
+        print("   Make sure the Business Data Platform server is running")
         sys.exit(1)
 
     print()
@@ -277,7 +277,7 @@ def main():
     # ============================================================
     # 9. Cleanup
     # ============================================================
-    print("9. Closing OpenViking...")
+    print("9. Closing Business Data Platform...")
     print("-" * 40)
 
     try:

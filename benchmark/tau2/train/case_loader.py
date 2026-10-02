@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tau2 task CaseLoader for OpenViking batch policy training."""
+"""Tau2 task CaseLoader for Business Data Platform batch policy training."""
 
 from __future__ import annotations
 

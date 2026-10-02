@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Dataset generator for OpenViking evaluation.
+Dataset generator for Business Data Platform evaluation.
 """
 
 import uuid
@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 class DatasetGenerator:
     """
-    Generates evaluation datasets from OpenViking resources.
+    Generates evaluation datasets from Business Data Platform resources.
     """
 
     def __init__(self, llm: Optional[Any] = None):
@@ -26,7 +26,7 @@ class DatasetGenerator:
 
         Args:
             llm: LLM instance to use for question/answer generation.
-                 Should be an OpenViking VLMProcessor or similar.
+                 Should be a Business Data Platform VLMProcessor or similar.
         """
         self.llm = llm
 

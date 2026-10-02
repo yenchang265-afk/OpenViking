@@ -7,7 +7,7 @@ export default {
     unauthenticated: 'Check your connection credentials and try again.',
     conflict: 'This submission conflicts with an existing request.',
     network: 'Unable to reach the server. Check your connection and try again.',
-    upgrade: 'Update OpenViking to use paginated task history.',
+    upgrade: 'Update Business Data Platform to use paginated task history.',
     details: 'Technical details',
   },
   commandErrors: {

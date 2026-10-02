@@ -1,8 +1,8 @@
-# OpenViking Memory Plugin for Claude Code
+# Business Data Platform Memory Plugin for Claude Code
 
-Long-term semantic memory for Claude Code, powered by [OpenViking](https://github.com/volcengine/OpenViking). Recall happens automatically before every prompt, capture happens automatically after every turn — no MCP tool calls required from the model.
+Long-term semantic memory for Claude Code, powered by [Business Data Platform](https://github.com/volcengine/OpenViking). Recall happens automatically before every prompt, capture happens automatically after every turn — no MCP tool calls required from the model.
 
-> **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the
+> **Requires a Business Data Platform server with `viking://~` home-alias support.** Recall targets the
 > caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less
 > `viking://user/memories` shorthand is rejected by newer servers.
 
@@ -16,13 +16,13 @@ Long-term semantic memory for Claude Code, powered by [OpenViking](https://githu
 bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness claude
 ```
 
-macOS / Linux only. Claude Code and Codex share this installer (drop `--harness claude` to pick interactively): it asks for your language (English/中文), the download source (GitHub, or a TOS mirror for GitHub-blocked regions — pass `--dist tos`), and your OpenViking credentials, then installs `openviking-memory` via the remote marketplace. The stdio MCP proxy reads `ovcli.conf` at runtime, so no shell wrapper or `.mcp.json` rendering is needed. Re-running is safe.
+macOS / Linux only. Claude Code and Codex share this installer (drop `--harness claude` to pick interactively): it asks for your language (English/中文), the download source (GitHub, or a TOS mirror for GitHub-blocked regions — pass `--dist tos`), and your Business Data Platform credentials, then installs `openviking-memory` via the remote marketplace. The stdio MCP proxy reads `ovcli.conf` at runtime, so no shell wrapper or `.mcp.json` rendering is needed. Re-running is safe.
 
 If you'd rather do it by hand, follow the four steps below.
 
 ### Manual setup
 
-#### 1. Have an OpenViking server reachable
+#### 1. Have a Business Data Platform server reachable
 
 Either run one locally or point at a remote one. The [quickstart guide](../../docs/en/getting-started/02-quickstart.md) walks through both options, including how to issue API keys for remote use. Default port is `1933`; local mode runs without authentication.
 
@@ -62,7 +62,7 @@ claude plugin install openviking-memory@openviking
 
 If you skipped step 2, configure the connection afterwards: write `~/.openviking/ovcli.conf` by hand, run `node <plugin-dir>/scripts/setup.mjs` (an interactive wizard bundled with the plugin), or just run the one-line installer.
 
-**Local directory (development)** — registers this checkout so edits to `scripts/` and `hooks/` take effect on the next hook invocation without reinstalling. From the OpenViking repo root:
+**Local directory (development)** — registers this checkout so edits to `scripts/` and `hooks/` take effect on the next hook invocation without reinstalling. From the Business Data Platform repo root:
 
 ```bash
 claude plugin marketplace add "$(pwd)/examples"
@@ -106,7 +106,7 @@ If it doesn't seem to fire, set `OPENVIKING_DEBUG=1` and check `~/.openviking/lo
 
 ## Configuring MCP
 
-The plugin's hooks and MCP entry now use the same configuration chain. The checked-in `.mcp.json` starts `servers/mcp-proxy.mjs` as a local stdio MCP server; that proxy reads `OPENVIKING_*`, `~/.openviking/ovcli.conf`, and `~/.openviking/ov.conf`, then forwards JSON-RPC to the OpenViking server's native `/mcp` endpoint with the right auth and identity headers.
+The plugin's hooks and MCP entry now use the same configuration chain. The checked-in `.mcp.json` starts `servers/mcp-proxy.mjs` as a local stdio MCP server; that proxy reads `OPENVIKING_*`, `~/.openviking/ovcli.conf`, and `~/.openviking/ov.conf`, then forwards JSON-RPC to the Business Data Platform server's native `/mcp` endpoint with the right auth and identity headers.
 
 For normal plugin installs, there is nothing extra to export and no `.mcp.json` value to render. Update `ovcli.conf` or the relevant `OPENVIKING_*` env vars and restart Claude Code; the proxy will use the same target as the hook scripts.
 
@@ -212,14 +212,14 @@ Recall covers skills as well as memories: the server-assembled context block can
 
 In `ovcli.conf` the same knobs are `noAutoInject`, `profileTokenBudget`, `skillCatalog`, and `skillCatalogTokenBudget`, under `plugin` or `plugin.claude_code`.
 
-Every `SessionStart` (`startup`, `clear`, `resume`, `compact`) injects one `<openviking-context>` block: `<user-profile>`, `<available-memories>`, and `<available-skills>`, followed on `resume`/`compact` by the latest archive overview. The skill catalog comes from one `GET /api/v1/skills?node_limit=200` call. It lists your own skills first, then the ones shared with the account under `viking://agent/skills`, leaving out any shared skill with the same name as one of yours. Each description is cut to about 40 tokens, and tags such as `<openviking-context>` inside it are escaped. When the full catalog does not fit its budget, it lists names only, ending with `... +N more, search OpenViking skills to find the rest` if the names run over too; when not even one name fits, it becomes the single line `<available-skills>N OpenViking skills; search OpenViking skills to find them.</available-skills>`. With no skills, or on a server without `GET /api/v1/skills`, the catalog is left out.
+Every `SessionStart` (`startup`, `clear`, `resume`, `compact`) injects one `<openviking-context>` block: `<user-profile>`, `<available-memories>`, and `<available-skills>`, followed on `resume`/`compact` by the latest archive overview. The skill catalog comes from one `GET /api/v1/skills?node_limit=200` call. It lists your own skills first, then the ones shared with the account under `viking://agent/skills`, leaving out any shared skill with the same name as one of yours. Each description is cut to about 40 tokens, and tags such as `<openviking-context>` inside it are escaped. When the full catalog does not fit its budget, it lists names only, ending with `... +N more, search Business Data Platform skills to find the rest` if the names run over too; when not even one name fits, it becomes the single line `<available-skills>N Business Data Platform skills; search Business Data Platform skills to find them.</available-skills>`. With no skills, or on a server without `GET /api/v1/skills`, the catalog is left out.
 
 ```text
 <openviking-context source="startup">
 <user-profile uri="viking://user/default/memories/profile.md">...</user-profile>
 <available-memories>...</available-memories>
 <available-skills>
-  OpenViking skills (stored in OpenViking, not local files). Before following one, read <dir>/<name>/SKILL.md with the OpenViking read tool.
+  Business Data Platform skills (stored in Business Data Platform, not local files). Before following one, read <dir>/<name>/SKILL.md with the Business Data Platform read tool.
   viking://user/default/skills/
     - pr-review — Review a pull request against the team checklist.
   viking://agent/skills/
@@ -228,7 +228,7 @@ Every `SessionStart` (`startup`, `clear`, `resume`, `compact`) injects one `<ope
 </openviking-context>
 ```
 
-The bundled `openviking-skills` skill tells Claude what to do with the catalog: find and use a skill, create, install, or share one with the MCP `add_skill` tool, delete one, and, when you ask, move local skills from `~/.claude/skills` or `<repo>/.claude/skills` into OpenViking. Skills tied to this machine (shipped by a plugin, symlinked in by a CLI installer, or needing a local binary) stay local, and nothing is uploaded until you approve that skill.
+The bundled `openviking-skills` skill tells Claude what to do with the catalog: find and use a skill, create, install, or share one with the MCP `add_skill` tool, delete one, and, when you ask, move local skills from `~/.claude/skills` or `<repo>/.claude/skills` into Business Data Platform. Skills tied to this machine (shipped by a plugin, symlinked in by a CLI installer, or needing a local binary) stay local, and nothing is uploaded until you approve that skill.
 
 #### Lifecycle / behavior / misc
 
@@ -275,7 +275,7 @@ export OPENVIKING_BYPASS_SESSION_PATTERNS='/tmp/**,**/scratch/**,/Users/me/Dev/t
 OPENVIKING_BYPASS_SESSION=1 claude
 ```
 
-When bypass is active, every hook approves immediately without contacting OpenViking.
+When bypass is active, every hook approves immediately without contacting Business Data Platform.
 
 ### Input filters
 
@@ -364,7 +364,7 @@ Keep `.gitignore` from ignoring all of `.openviking/`, or `config.json` can neve
 
 ### Digest compression
 
-`recallCompress` decides where the digest is produced and defaults to `auto`. `client` always compresses locally through `claude -p` (Sonnet with low effort by default — Haiku ignores the effort knob, so its latency is unbounded), keeping the token cost on your own subscription. `server` asks OpenViking for the digest. `auto` prefers local and falls back to the server when no healthy host CLI is found. Compressor execution or output-validation failures fall back to the uncompressed context block; an exact `NO_RELEVANT_MEMORY` response from either compressor is a successful empty result and injects nothing. The compressor subprocess runs with all OpenViking hooks disabled so it cannot recurse. The former `OPENVIKING_RECALL_REWRITE` environment variable and `recallRewrite` config key remain supported as lower-priority compatibility aliases.
+`recallCompress` decides where the digest is produced and defaults to `auto`. `client` always compresses locally through `claude -p` (Sonnet with low effort by default — Haiku ignores the effort knob, so its latency is unbounded), keeping the token cost on your own subscription. `server` asks Business Data Platform for the digest. `auto` prefers local and falls back to the server when no healthy host CLI is found. Compressor execution or output-validation failures fall back to the uncompressed context block; an exact `NO_RELEVANT_MEMORY` response from either compressor is a successful empty result and injects nothing. The compressor subprocess runs with all Business Data Platform hooks disabled so it cannot recurse. The former `OPENVIKING_RECALL_REWRITE` environment variable and `recallRewrite` config key remain supported as lower-priority compatibility aliases.
 
 ### Legacy `claude_code` block in `ov.conf`
 
@@ -388,7 +388,7 @@ Keep `claude_code.captureTimeoutMs` below the `Stop` timeout so the script can f
 
 ## Statusline
 
-The plugin renders a one-line status of OpenViking under your Claude Code input box. The installer registers it in `~/.claude/settings.json` (CC's plugin manifest doesn't accept a `statusLine` field, so this is the only way to wire it in).
+The plugin renders a one-line status of Business Data Platform under your Claude Code input box. The installer registers it in `~/.claude/settings.json` (CC's plugin manifest doesn't accept a `statusLine` field, so this is the only way to wire it in).
 
 Examples:
 
@@ -438,7 +438,7 @@ Or just ask Claude to check the plugin: the `ov-memory-doctor` skill runs the sa
 | Symptom                                    | Cause                                                        | Fix                                                                                                |
 |--------------------------------------------|--------------------------------------------------------------|----------------------------------------------------------------------------------------------------|
 | Plugin not activating                      | No `ov.conf` / `ovcli.conf` found                            | Create one, or set `OPENVIKING_MEMORY_ENABLED=1` plus the URL/API_KEY env vars                     |
-| Hooks fire but recall is empty             | OpenViking server not running, or wrong URL                  | `curl http://localhost:1933/health` (or your remote URL)                                           |
+| Hooks fire but recall is empty             | Business Data Platform server not running, or wrong URL                  | `curl http://localhost:1933/health` (or your remote URL)                                           |
 | Auto-capture extracts 0 memories           | Wrong embedding/extraction model in `ov.conf`                | Check `embedding` / `vlm` config; review server logs                                               |
 | MCP tools hit the wrong server              | stale `ovcli.conf` / env vars, or Claude Code not restarted after config change | See [Configuring MCP](#configuring-mcp), verify `~/.openviking/ovcli.conf`, then restart Claude Code |
 | Remote auth 401 / 403                      | API key / account / user header mismatch                     | Verify `OPENVIKING_API_KEY`, `OPENVIKING_ACCOUNT`, `OPENVIKING_USER` (or their `ov.conf` counterparts) |
@@ -450,7 +450,7 @@ Or just ask Claude to check the plugin: the `ov-memory-doctor` skill runs the sa
 
 Claude Code has a built-in `MEMORY.md` file system. This plugin **complements** it:
 
-| Feature      | Built-in `MEMORY.md`              | OpenViking plugin                                  |
+| Feature      | Built-in `MEMORY.md`              | Business Data Platform plugin                                  |
 |--------------|-----------------------------------|----------------------------------------------------|
 | Storage      | Flat markdown                     | Vector DB + structured extraction                  |
 | Search       | Loaded into context wholesale     | Semantic similarity + ranking + token budget       |
@@ -474,7 +474,7 @@ Claude Code has a built-in `MEMORY.md` file system. This plugin **complements** 
      │   ┌───────────▼───────────┐   │           │
      │   │  hook scripts (.mjs)  │   │           │     ┌──────────────┐
      │   │  read transcript +    │───┼───────────┼────►│              │
-     │   │  call OV HTTP API     │   │           │     │  OpenViking  │
+     │   │  call OV HTTP API     │   │           │     │  Business Data Platform  │
      │   └───────────────────────┘   │           │     │  Server      │
      │                               │           │     │  (Python)    │
      │                  ┌────────────▼───────────▼───►│              │
@@ -485,9 +485,9 @@ Claude Code has a built-in `MEMORY.md` file system. This plugin **complements** 
         context inject                                └──────────────┘
 ```
 
-There is no TypeScript build step and no runtime npm bootstrap. Hooks are plain `.mjs` files that talk to OpenViking over HTTP; MCP uses `servers/mcp-proxy.mjs` as a zero-dependency stdio bridge to the OpenViking server's `/mcp` endpoint.
+There is no TypeScript build step and no runtime npm bootstrap. Hooks are plain `.mjs` files that talk to Business Data Platform over HTTP; MCP uses `servers/mcp-proxy.mjs` as a zero-dependency stdio bridge to the Business Data Platform server's `/mcp` endpoint.
 
-A persistent OpenViking session is created on first contact and reused for the entire Claude Code session. The OV session ID is `cc-<cc_session_id>` (the CC session_id verbatim, no hashing), so resume / compact / multi-hook events all target the same session. Archival + memory extraction is triggered client-side: the `Stop` hook commits when server-reported pending tokens cross `commitTokenThreshold` (default 20000), and `PreCompact` / `SessionEnd` / `SubagentStop` commit unconditionally.
+A persistent Business Data Platform session is created on first contact and reused for the entire Claude Code session. The OV session ID is `cc-<cc_session_id>` (the CC session_id verbatim, no hashing), so resume / compact / multi-hook events all target the same session. Archival + memory extraction is triggered client-side: the `Stop` hook commits when server-reported pending tokens cross `commitTokenThreshold` (default 20000), and `PreCompact` / `SessionEnd` / `SubagentStop` commit unconditionally.
 
 ### Hook responsibilities
 
@@ -500,8 +500,8 @@ A persistent OpenViking session is created on first contact and reused for the e
 | `SessionEnd`          | Claude Code session closes               | Final commit so the last window is archived                                                       |
 | `SubagentStart`       | Parent spawns a subagent via Task tool   | Derive an isolated OV session ID for the subagent, persist start state                            |
 | `SubagentStop`        | Subagent finishes                        | Read subagent transcript → push to an isolated session with subagent peer identity → commit       |
-| `PreToolUse`          | Native `Read` / `Glob` / `Grep` / `Edit` / `Write` whose path is a `viking://` URI | Deny the call and point Claude to the equivalent OpenViking MCP tool; a `Write` / `Edit` on a skill URI (`viking://~/skills/...`, `viking://user/<id>/skills/...`, `viking://agent/skills/...`) is pointed to `add_skill` |
-| `PreToolUse`          | `Bash` command that contains a `viking://` URI | Let the command run and attach a notice pointing Claude to the OpenViking MCP tools in case it meant OpenViking content |
+| `PreToolUse`          | Native `Read` / `Glob` / `Grep` / `Edit` / `Write` whose path is a `viking://` URI | Deny the call and point Claude to the equivalent Business Data Platform MCP tool; a `Write` / `Edit` on a skill URI (`viking://~/skills/...`, `viking://user/<id>/skills/...`, `viking://agent/skills/...`) is pointed to `add_skill` |
+| `PreToolUse`          | `Bash` command that contains a `viking://` URI | Let the command run and attach a notice pointing Claude to the Business Data Platform MCP tools in case it meant Business Data Platform content |
 | `PostToolUse`         | `Read` of a `SKILL.md` file              | Optional (default off): inject an experience block when OV has relevant skill-experience memories |
 
 ### Async write path
@@ -516,7 +516,7 @@ Disable with `claude_code.writePathAsync: false` if you need deterministic order
 
 ### MCP tools available from the server
 
-The plugin's `.mcp.json` starts a local stdio proxy, which connects to the OpenViking server's native HTTP MCP endpoint at `/mcp`. Claude can call the server's retrieval, memory, resource, skill, watch, filesystem, and code-navigation tools on demand. `add_skill` creates or replaces a skill; `write` and `edit` refuse your own `skills/` subtree, and `add_resource` refuses skill targets.
+The plugin's `.mcp.json` starts a local stdio proxy, which connects to the Business Data Platform server's native HTTP MCP endpoint at `/mcp`. Claude can call the server's retrieval, memory, resource, skill, watch, filesystem, and code-navigation tools on demand. `add_skill` creates or replaces a skill; `write` and `edit` refuse your own `skills/` subtree, and `add_resource` refuses skill targets.
 
 See the [MCP integration guide](../../docs/en/guides/06-mcp-integration.md) for the canonical tool list and parameters.
 
@@ -532,11 +532,11 @@ claude-code-memory-plugin/
 │   └── ov.md                # /ov status command
 ├── skills/
 │   ├── openviking-memory/   # how to use the memory tools
-│   ├── openviking-skills/   # find, add, share, and migrate OpenViking skills
+│   ├── openviking-skills/   # find, add, share, and migrate Business Data Platform skills
 │   ├── ov-experience-memory/
 │   └── ov-memory-doctor/    # install / config / connection / local-server troubleshooting
 ├── servers/
-│   └── mcp-proxy.mjs        # stdio -> OpenViking /mcp bridge
+│   └── mcp-proxy.mjs        # stdio -> Business Data Platform /mcp bridge
 ├── scripts/
 │   ├── config.mjs           # shared config loader (env > ovcli.conf > ov.conf)
 │   ├── debug-log.mjs        # log helper for ~/.openviking/logs/cc-hooks.log
@@ -559,4 +559,4 @@ claude-code-memory-plugin/
 
 ## License
 
-Apache-2.0 — same as [OpenViking](https://github.com/volcengine/OpenViking).
+Apache-2.0 — same as [Business Data Platform](https://github.com/volcengine/OpenViking).

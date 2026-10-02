@@ -369,7 +369,7 @@ Each operation contains:
 - The batch acquires exact locks for all target files before validating file state and writing. Writes to disjoint files in the same directory can proceed concurrently; overlapping writes and parent-directory deletion or moves still conflict. Semantic processing starts after all writes finish and the locks are released, refreshing the affected `.overview.md` and `.abstract.md` files together.
 - Resource parent refreshes use the same best-effort behavior as `write()`: L0/L1 lock conflicts skip the directory refresh and its vector updates while preserving file writes and file processing. A later refresh is not guaranteed.
 - An underlying I/O failure can still leave writes completed earlier in the batch visible.
-- Existing `.abstract.md` and `.overview.md` bodies may be replaced or appended. OpenViking preserves and validates protected OKF metadata and rebuilds only the directory's existing L0/L1 vectors for these operations.
+- Existing `.abstract.md` and `.overview.md` bodies may be replaced or appended. Business Data Platform preserves and validates protected OKF metadata and rebuilds only the directory's existing L0/L1 vectors for these operations.
 - In the response body, `semantic_status` (`queued`, `complete`, `deferred`, or `skipped`) reports the directory aggregation status; it is `skipped` if any directory encounters contention before enqueueing. Meanwhile, `vector_status` reports vector maintenance for changed files.
 
 **Python SDK**
@@ -583,7 +583,7 @@ ov set-tags viking://resources/project/ \
 
 ### reindex()
 
-Reindex semantic and/or vector artifacts for existing content already stored in OpenViking. This is an operational maintenance API intended for scenarios such as embedding model changes, VLM changes, vector store rebuild, or post-upgrade repair of existing indexes.
+Reindex semantic and/or vector artifacts for existing content already stored in Business Data Platform. This is an operational maintenance API intended for scenarios such as embedding model changes, VLM changes, vector store rebuild, or post-upgrade repair of existing indexes.
 
 This API operates on existing `viking://...` content. It does not import new files. For normal ingestion, use [Resources](02-resources.md).
 
@@ -604,7 +604,7 @@ This API operates on existing `viking://...` content. It does not import new fil
 | tags | list[str] | No | `null` | Write tags to every successfully rebuilt vector record. Omitting tags, or passing an empty list with `replace`, preserves existing tags |
 | tag_mode | str | No | `replace` | Tag write mode: `replace`, `append`, or `clear`; `clear` removes existing tags without requiring `tags` |
 
-The HTTP request body rejects unknown fields. `uri` may use OpenViking path variables accepted by other content APIs; it is resolved before validation.
+The HTTP request body rejects unknown fields. `uri` may use Business Data Platform path variables accepted by other content APIs; it is resolved before validation.
 
 **Supported URI scopes**
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Benchmark OpenViking collection-level native and cuVS vector search.
+"""Benchmark Business Data Platform collection-level native and cuVS vector search.
 
 Unlike the index microbenchmark, this harness goes through CollectionAdapter
 and therefore includes filter compilation, label mapping, record lookup, and

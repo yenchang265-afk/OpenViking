@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Client-side diagnostics for the OpenViking Codex memory plugin.
+ * Client-side diagnostics for the Business Data Platform Codex memory plugin.
  *
  * Covers the plugin install (marketplace, config.toml enablement, hook trust
  * state, MCP wiring), the client config (which file won, is the JSON valid,

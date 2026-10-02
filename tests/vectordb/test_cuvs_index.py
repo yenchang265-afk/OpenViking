@@ -2417,7 +2417,7 @@ def test_cuvs_l2_scores_match_openviking_score_convention():
 
     labels, scores = index.search([1.0, 0.0], 2, None)
     assert labels == [1, 2]
-    assert scores == [0.0, 0.0]  # OpenViking exposes 1 - squared-L2.
+    assert scores == [0.0, 0.0]  # Business Data Platform exposes 1 - squared-L2.
 
 
 def test_cuvs_memory_estimate_accounts_for_fp32_graphs_and_filter_cache():

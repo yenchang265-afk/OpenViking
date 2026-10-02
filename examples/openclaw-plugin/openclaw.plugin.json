@@ -1,8 +1,8 @@
 {
   "id": "openviking",
-  "name": "OpenViking",
+  "name": "Business Data Platform",
   "kind": "context-engine",
-  "description": "OpenClaw context-engine plugin for memory management — powered by OpenViking",
+  "description": "OpenClaw context-engine plugin for memory management — powered by Business Data Platform",
   "icon": "https://raw.githubusercontent.com/volcengine/OpenViking/main/docs/images/ov-logo-icon.png",
   "activation": {
     "onStartup": true,
@@ -75,7 +75,7 @@
   },
   "uiHints": {
     "baseUrl": {
-      "label": "OpenViking Base URL",
+      "label": "Business Data Platform Base URL",
       "placeholder": "http://127.0.0.1:1933",
       "help": "HTTP URL when mode is remote (or ${OPENVIKING_BASE_URL})"
     },
@@ -90,15 +90,15 @@
       "help": "Only used when Memory Scope is assistant. Prefix added to the peer id derived from the OpenClaw agent id."
     },
     "apiKey": {
-      "label": "OpenViking API Key",
+      "label": "Business Data Platform API Key",
       "sensitive": true,
       "placeholder": "${OPENVIKING_API_KEY}",
-      "help": "Optional API key for OpenViking server. Accepts a plain string, ${ENV_VAR} interpolation, or a SecretRef object ({source: env/file, id}). Prefer a SecretRef so the key is never stored as plaintext in openclaw.json."
+      "help": "Optional API key for Business Data Platform server. Accepts a plain string, ${ENV_VAR} interpolation, or a SecretRef object ({source: env/file, id}). Prefer a SecretRef so the key is never stored as plaintext in openclaw.json."
     },
     "headers": {
       "label": "Headers",
       "advanced": true,
-      "help": "Optional HTTP headers merged into every OpenViking request."
+      "help": "Optional HTTP headers merged into every Business Data Platform request."
     },
     "accountId": {
       "label": "Account ID",
@@ -115,7 +115,7 @@
     "targetUri": {
       "label": "Search Target URI",
       "placeholder": "viking://~/memories",
-      "help": "Default OpenViking target URI for memory search"
+      "help": "Default Business Data Platform target URI for memory search"
     },
     "timeoutMs": {
       "label": "Request Timeout (ms)",
@@ -124,7 +124,7 @@
     },
     "autoCapture": {
       "label": "Auto-Capture",
-      "help": "Extract memories from recent conversation messages via OpenViking sessions"
+      "help": "Extract memories from recent conversation messages via Business Data Platform sessions"
     },
     "captureMode": {
       "label": "Capture Mode",
@@ -140,7 +140,7 @@
     },
     "autoRecall": {
       "label": "Auto-Recall",
-      "help": "Inject relevant OpenViking memories into agent context"
+      "help": "Inject relevant Business Data Platform memories into agent context"
     },
     "autoRecallTimeoutMs": {
       "label": "Auto-Recall Timeout (ms)",
@@ -195,7 +195,7 @@
     "bypassSessionPatterns": {
       "label": "Bypass Session Patterns",
       "placeholder": "agent:*:cron:**",
-      "help": "Completely bypass OpenViking for matching session keys (no capture, recall, or commit; compaction falls back to OpenClaw's native compactor). Use * within one segment and ** across segments.",
+      "help": "Completely bypass Business Data Platform for matching session keys (no capture, recall, or commit; compaction falls back to OpenClaw's native compactor). Use * within one segment and ** across segments.",
       "advanced": true
     },
     "commitTokenThresholdRatio": {

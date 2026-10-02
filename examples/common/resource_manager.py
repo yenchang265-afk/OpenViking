@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Resource Manager - Shared utilities for adding resources to OpenViking
+Resource Manager - Shared utilities for adding resources to Business Data Platform
 """
 
 from pathlib import Path
@@ -12,10 +12,10 @@ from rich.console import Console
 
 def create_client(server_url: str = "http://127.0.0.1:1933") -> SyncHTTPClient:
     """
-    Create and initialize OpenViking client
+    Create and initialize Business Data Platform client
 
     Args:
-        server_url: OpenViking HTTP server URL
+        server_url: Business Data Platform HTTP server URL
 
     Returns:
         Initialized HTTP client
@@ -33,7 +33,7 @@ def add_resource(
     show_output: bool = True,
 ) -> bool:
     """
-    Add a resource to OpenViking database
+    Add a resource to Business Data Platform database
 
     Args:
         client: Initialized HTTP client

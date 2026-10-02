@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Core context abstractions for OpenViking."""
+"""Core context abstractions for Business Data Platform."""
 
 from importlib import import_module
 from typing import TYPE_CHECKING, Any

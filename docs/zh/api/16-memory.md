@@ -55,7 +55,7 @@ curl -X POST http://localhost:1933/api/v1/search/recall \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $OPENVIKING_API_KEY" \
   -d '{
-    "query":"OpenViking API 文件偏好",
+    "query":"Business Data Platform API 文件偏好",
     "quotas":{"events":5,"entities":5,"preferences":3,"experiences":2},
     "max_chars":6500,
     "peer_scope":"all"
@@ -66,7 +66,7 @@ curl -X POST http://localhost:1933/api/v1/search/recall \
 
 ```text
 recall(
-  query="OpenViking API 文件偏好",
+  query="Business Data Platform API 文件偏好",
   quotas={"events": 5, "entities": 5, "preferences": 3, "experiences": 2},
   max_chars=6500,
   peer_scope="all"

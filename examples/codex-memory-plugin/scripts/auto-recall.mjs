@@ -4,7 +4,7 @@
  * Auto-Recall Hook Script for Codex.
  *
  * Triggered by UserPromptSubmit hook.
- * Reads `prompt` from stdin → searches OpenViking → returns recalled memories
+ * Reads `prompt` from stdin → searches Business Data Platform → returns recalled memories
  * via `hookSpecificOutput.additionalContext` so Codex injects them into the turn.
  *
  * Codex output schema (codex-rs/hooks/schema/generated/user-prompt-submit.command.output.schema.json):

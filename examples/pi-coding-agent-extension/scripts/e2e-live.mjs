@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Live context-takeover e2e for the OpenViking pi extension.
+ * Live context-takeover e2e for the Business Data Platform pi extension.
  *
  * This is intentionally manual: it drives a real pi binary, a real
- * OpenViking server, and a real OpenAI-compatible LLM relay.
+ * Business Data Platform server, and a real OpenAI-compatible LLM relay.
  *
  * Required env:
  *   OPENVIKING_URL
@@ -210,7 +210,7 @@ const p3 = payloadsFor(3);
 check(p3.length > 0, `probe captured T3 provider payload (${p3.length} request(s))`);
 if (p3.length > 0) {
   const last = p3[p3.length - 1];
-  check(last.includes("[OpenViking Session Context]"), "T3 request contains the OV overview block");
+  check(last.includes("[Business Data Platform Session Context]"), "T3 request contains the OV overview block");
   // Match the full padded turn body, not the PADDING-T1 marker: the archive
   // overview and recalled memories may legitimately quote the marker.
   check(!last.includes(PAD1), "T3 request no longer contains the raw T1 turn body");

@@ -112,7 +112,7 @@ def _raise_legacy_exception(error: Dict[str, Any]) -> None:
 
 class AsyncHTTPClient(import_openviking_sdk().AsyncHTTPClient):
     def __init__(self, *args, **kwargs):
-        # Heavy local benchmark runs can keep OpenViking search requests queued
+        # Heavy local benchmark runs can keep Business Data Platform search requests queued
         # behind embedding/vector work. Use a larger default read timeout than
         # the upstream SDK's 60s while still respecting explicit caller values
         # and timeouts configured via environment or ovcli.conf.

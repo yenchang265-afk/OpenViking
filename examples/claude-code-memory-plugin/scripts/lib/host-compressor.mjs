@@ -2,7 +2,7 @@
  * Local digest compression through the host CLI.
  *
  * Running the rewrite here keeps the token cost on the user's own subscription
- * instead of the OpenViking deployment. Measured against a server-side rewrite
+ * instead of the Business Data Platform deployment. Measured against a server-side rewrite
  * the latency is the same order as long as the reasoning budget is actually
  * clamped, which is why the default model/effort pair is Sonnet + low (Haiku
  * ignores the effort knob and its latency is unbounded).

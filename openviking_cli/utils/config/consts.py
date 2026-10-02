@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Configuration constants for OpenViking."""
+"""Configuration constants for Business Data Platform."""
 
 from pathlib import Path
 
@@ -8,7 +8,7 @@ DEFAULT_CONFIG_DIR = Path.home() / ".openviking"
 SYSTEM_CONFIG_DIR = Path("/etc/openviking")
 
 # =============================================================================
-# All OpenViking Environment Variables
+# All Business Data Platform Environment Variables
 # =============================================================================
 
 # Configuration file paths

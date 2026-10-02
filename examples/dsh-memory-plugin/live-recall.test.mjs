@@ -7,7 +7,7 @@ import { buildRecallBlock } from "./shared/recall-core.mjs";
 
 // Real-backend recall gate: proves recall returns a genuine hit for content
 // this test itself stored — the one property no stub or mock can certify.
-// Opt-in because it needs a reachable OpenViking server with a working
+// Opt-in because it needs a reachable Business Data Platform server with a working
 // vector backend: set OPENVIKING_E2E=1 plus the usual credential chain
 // (OPENVIKING_* env / ovcli.conf). Skipped otherwise, including in repo CI
 // until a server secret is configured there.
@@ -18,7 +18,7 @@ test("live recall returns a hit for a memory stored by this test", { skip: !enab
   // its whole tail verbatim and extraction has nothing to mine.
   const config = resolveConfig({ workspacePeer: false, scoreThreshold: 0.1, commitKeepRecentCount: 0 });
   const client = new OpenVikingClient(config);
-  assert.equal((await client.healthResult()).ok, true, "OpenViking server must be reachable");
+  assert.equal((await client.healthResult()).ok, true, "Business Data Platform server must be reachable");
 
   const sentinel = `live-e2e-${randomUUID()}`;
   const sessionId = `dsh-live-e2e-${Date.now()}`;

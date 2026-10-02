@@ -1,4 +1,4 @@
-"""Shared Ollama utilities for OpenViking.
+"""Shared Ollama utilities for Business Data Platform.
 
 Used by both the ``openviking-server init`` setup wizard and the ``openviking-server``
 bootstrap to detect, start, and health-check a local Ollama instance.

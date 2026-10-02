@@ -17,10 +17,10 @@ from langchain_openviking._testing_utils import estimate_text_tokens, normalize_
 
 
 class InMemoryOpenVikingClient:
-    """Small OpenViking-compatible client for examples and CI smoke tests.
+    """Small Business Data Platform-compatible client for examples and CI smoke tests.
 
-    This class intentionally implements the OpenViking methods used by the
-    LangChain/LangGraph adapters. It is not a replacement for OpenViking.
+    This class intentionally implements the Business Data Platform methods used by the
+    LangChain/LangGraph adapters. It is not a replacement for Business Data Platform.
     """
 
     def __init__(self, records: dict[str, str] | None = None):

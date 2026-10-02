@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Replay normalized messages into OpenViking via the SDK HTTP client.
+"""Replay normalized messages into Business Data Platform via the SDK HTTP client.
 
 ``ConversationReplayClient`` is a thin, vikingbot-free wrapper over ``ov.AsyncHTTPClient``
 (client-side, transport-agnostic: targets a local or remote server). ``SessionReplayer``

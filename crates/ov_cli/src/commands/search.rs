@@ -928,7 +928,7 @@ mod tests {
                 "type": "resource",
                 "uri": "viking://resources/openviking-conversation-2026-06-01.md",
                 "score": 0.37084102630615234,
-                "abstract": "本資源包含大量 OpenViking CLI 設定和除錯記錄，涵蓋配置、認證、錯誤提示、命令輸出和使用者體驗改進。This document is intentionally long enough to require wrapping and truncation in terminal output."
+                "abstract": "本資源包含大量 Business Data Platform CLI 設定和除錯記錄，涵蓋配置、認證、錯誤提示、命令輸出和使用者體驗改進。This document is intentionally long enough to require wrapping and truncation in terminal output."
             }
         ]);
 

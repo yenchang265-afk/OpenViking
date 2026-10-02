@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-Hierarchical retriever for OpenViking.
+Hierarchical retriever for Business Data Platform.
 
 Implements directory-based hierarchical retrieval with recursive search
 and rerank-based relevance scoring.

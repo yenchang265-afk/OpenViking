@@ -1,12 +1,12 @@
-# OpenViking × cuVS 整合計劃
+# Business Data Platform × cuVS 整合計劃
 
 > 狀態：功能整合與第一輪向量索引驗證已完成，後續進入資料面效能化階段。
-> 原則：cuVS 是可選的 dense-search sidecar，不改變 OpenViking 預設 CPU 行為。
+> 原則：cuVS 是可選的 dense-search sidecar，不改變 Business Data Platform 預設 CPU 行為。
 > 相關文件：[benchmark 計劃](./openviking-cuvs-benchmark-plan.md)、[初步結果](../../benchmark/cuvs/PRELIMINARY_RESULTS.md)、[使用者指南（中文）](../zh/guides/16-cuvs.md)、[User guide (English)](../en/guides/16-cuvs.md)。
 
 ## 1. 目標
 
-本整合只替換 OpenViking 本地 VectorDB 的 dense vector search 執行器，繼續複用現有的：
+本整合只替換 Business Data Platform 本地 VectorDB 的 dense vector search 執行器，繼續複用現有的：
 
 - 權威記錄儲存和持久化恢復；
 - scalar/path index 與過濾 DSL；
@@ -29,7 +29,7 @@
 本階段不做以下擴充：
 
 - 不把 cuVS 變成獨立的完整資料庫後端；
-- 不移除或改寫 OpenViking 原生 dense index；
+- 不移除或改寫 Business Data Platform 原生 dense index；
 - 不改變 native CPU index 的預設 int8 量化；
 - 不把 cuVS 序列化檔案作為權威持久化格式；
 - 不實現多 GPU、跨機分片或共享 GPU 資源池；
@@ -55,7 +55,7 @@
 
 ```mermaid
 flowchart TD
-    API[OpenViking API / Service] --> Adapter[VectorDB Adapter]
+    API[Business Data Platform API / Service] --> Adapter[VectorDB Adapter]
     Adapter --> Collection[LocalCollection]
 
     Collection --> Store[(Local Store<br/>single source of truth)]
@@ -72,7 +72,7 @@ flowchart TD
     Store -. candidate reload .-> Shadow
 ```
 
-一句話概括：OpenViking 管資料、生命週期和查詢語義，cuVS 管 GPU dense top-k；兩者通過 label layout 和 native filter bitmap 對接。
+一句話概括：Business Data Platform 管資料、生命週期和查詢語義，cuVS 管 GPU dense top-k；兩者通過 label layout 和 native filter bitmap 對接。
 
 ### 4.1 元件職責
 
@@ -98,7 +98,7 @@ flowchart TD
 | cuVS GPU index | 否 | 首次查詢或 dirty 後構建，程序退出即丟棄 |
 | Device filter cache | 否 | LRU 快取，mutation 時清空 |
 
-OpenViking 主鍵按現有規則對映為 `uint64 label`。cuVS 返回 dataset row id，`CuVSDenseIndex` 再通過構建時的 label 陣列映射回 OpenViking label，最後由 Collection 回表得到完整記錄。
+Business Data Platform 主鍵按現有規則對映為 `uint64 label`。cuVS 返回 dataset row id，`CuVSDenseIndex` 再通過構建時的 label 陣列映射回 Business Data Platform label，最後由 Collection 回表得到完整記錄。
 
 ## 5. 核心鏈路
 
@@ -462,7 +462,7 @@ URI/path 使用更低閾值，是因為寬路徑需要 native Trie traversal 和
 ### 13.1 功能正確性
 
 - brute-force 和 CAGRA 在真實 GPU runtime 上可構建、查詢和重建；
-- cosine/IP/L2 的 score mapping 符合 OpenViking 接口；
+- cosine/IP/L2 的 score mapping 符合 Business Data Platform 接口；
 - scalar + URI 組合過濾結果不越權；
 - arbitrary cuVS row order 能正確對映 native bitmap；
 - upsert 後新值可檢索、delete 後舊值不可檢索；
@@ -523,7 +523,7 @@ URI/path 使用更低閾值，是因為寬路徑需要 native Trie traversal 和
 
 ## 16. 參考資料
 
-- [OpenViking](https://github.com/volcengine/OpenViking)
+- [Business Data Platform](https://github.com/volcengine/OpenViking)
 - [NVIDIA RAPIDS cuVS](https://github.com/rapidsai/cuvs)
 - [cuVS Getting Started](https://docs.rapids.ai/api/cuvs/stable/getting_started/)
 - [cuVS brute-force Python API](https://docs.rapids.ai/api/cuvs/stable/python_api/neighbors_brute_force/)

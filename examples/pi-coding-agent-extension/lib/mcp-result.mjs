@@ -69,7 +69,7 @@ export function toPiResult(tool, result) {
   const text = joinText(content);
   const truncated = Buffer.byteLength(text) > MAX_RESULT_BYTES || text.split("\n").length > MAX_RESULT_LINES;
   if (truncated) {
-    const hint = "\n[OpenViking] Output truncated. Request fewer items or use a narrower URI, offset or limit.";
+    const hint = "\n[Business Data Platform] Output truncated. Request fewer items or use a narrower URI, offset or limit.";
     const lines = text.split("\n").slice(0, MAX_RESULT_LINES - 1).join("\n");
     const buffer = Buffer.from(lines);
     let end = Math.min(buffer.length, MAX_RESULT_BYTES - Buffer.byteLength(hint));
@@ -82,6 +82,6 @@ export function toPiResult(tool, result) {
       details: { tool, truncated: true },
     };
   }
-  if (result.isError) throw new Error(text.trim() || "OpenViking " + tool + " failed");
+  if (result.isError) throw new Error(text.trim() || "Business Data Platform " + tool + " failed");
   return { content, details: { tool, truncated: false } };
 }

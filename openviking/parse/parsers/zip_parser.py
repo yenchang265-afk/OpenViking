@@ -1,7 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """
-ZIP archive parser for OpenViking.
+ZIP archive parser for Business Data Platform.
 
 Extracts ZIP archives and delegates to DirectoryParser for recursive processing.
 Supports nested ZIP files via DirectoryParser's recursive parser invocation.
@@ -30,7 +30,7 @@ def _is_zip_metadata_entry(path: Path) -> bool:
 
 class ZipParser(BaseParser):
     """
-    ZIP archive parser for OpenViking.
+    ZIP archive parser for Business Data Platform.
 
     Supports: .zip
 

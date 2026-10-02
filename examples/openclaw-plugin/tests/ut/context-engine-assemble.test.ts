@@ -67,7 +67,7 @@ function makeEngine(
 
   const engine = createMemoryOpenVikingContextEngine({
     id: "openviking",
-    name: "Context Engine (OpenViking)",
+    name: "Context Engine (Business Data Platform)",
     version: "test",
     cfg: localCfg,
     logger,
@@ -462,7 +462,7 @@ describe("context-engine assemble()", () => {
           id: "msg_main_no_prompt",
           role: "assistant",
           created_at: "2026-03-24T00:00:00Z",
-          parts: [{ type: "text", text: "Stored answer from OpenViking." }],
+          parts: [{ type: "text", text: "Stored answer from Business Data Platform." }],
         },
       ],
       estimatedTokens: 120,
@@ -494,7 +494,7 @@ describe("context-engine assemble()", () => {
     });
     expect(result.messages[1]).toEqual({
       role: "assistant",
-      content: [{ type: "text", text: "Stored answer from OpenViking." }],
+      content: [{ type: "text", text: "Stored answer from Business Data Platform." }],
     });
     expect(result.systemPromptAddition).toContain("Session Context Guide");
   });

@@ -1,7 +1,7 @@
 [project]
 name = "oc2ov-test"
 version = "0.1.0"
-description = "OpenClaw - OpenViking 端到端自動化測試"
+description = "OpenClaw - Business Data Platform 端到端自動化測試"
 authors = [
     { name = "OpenClaw Team" }
 ]

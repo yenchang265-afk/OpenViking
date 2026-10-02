@@ -1,6 +1,6 @@
-# OpenViking API 自動化測試
+# Business Data Platform API 自動化測試
 
-本目錄包含 OpenViking 的 API 整合測試套件。
+本目錄包含 Business Data Platform 的 API 整合測試套件。
 
 ## 目錄結構
 
@@ -27,7 +27,7 @@ tests/api_test/
 ### 前置條件
 
 1. Python 3.10+
-2. OpenViking Server 已啟動（預設埠 1933）
+2. Business Data Platform Server 已啟動（預設埠 1933）
 
 ### 安裝依賴
 
@@ -49,9 +49,9 @@ cd tests/api_test
 
 這個指令碼會自動：
 1. 檢查 Python 版本
-2. 安裝 OpenViking
+2. 安裝 Business Data Platform
 3. 安裝測試依賴
-4. 啟動 OpenViking Server（自動找可用埠）
+4. 啟動 Business Data Platform Server（自動找可用埠）
 5. 執行所有 API 測試
 6. 停止服務並清理
 
@@ -79,8 +79,8 @@ python -m pytest . -v --html=api-test-report.html --self-contained-html
 
 | 環境變數 | 說明 | 預設值 |
 |---------|------|--------|
-| `SERVER_HOST` | OpenViking Server 主機 | 127.0.0.1 |
-| `SERVER_PORT` | OpenViking Server 端口 | 1933 |
+| `SERVER_HOST` | Business Data Platform Server 主機 | 127.0.0.1 |
+| `SERVER_PORT` | Business Data Platform Server 端口 | 1933 |
 | `OPENVIKING_API_KEY` | API 金鑰 | test-root-api-key |
 | `VLM_API_KEY` | VLM 模型金鑰（可選） | - |
 | `EMBEDDING_API_KEY` | Embedding 模型金鑰（可選） | - |
@@ -142,5 +142,5 @@ python -m pytest retrieval/ -v
 
 ## 相關文件
 
-- OpenViking API 文件：`docs/zh/api/`
+- Business Data Platform API 文件：`docs/zh/api/`
 - CI/CD 配置：`.github/workflows/api_test.yml`

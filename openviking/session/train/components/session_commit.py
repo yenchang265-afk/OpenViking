@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""PolicyTrainer implementation backed by OpenViking session.commit."""
+"""PolicyTrainer implementation backed by Business Data Platform session.commit."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ from openviking_cli.client.http import AsyncHTTPClient
 
 _TRAINING_COMMIT_MEMORY_TYPES = ("cases", "trajectories", "experiences")
 _TRAINING_CASE_SPEC_PROTOCOL = "openviking.batch_train.case_spec.v1"
-_TRAINING_CASE_SPEC_HEADER = "# OpenViking Batch Training CaseSpec v1"
+_TRAINING_CASE_SPEC_HEADER = "# Business Data Platform Batch Training CaseSpec v1"
 _SESSION_BATCH_ADD_MESSAGE_LIMIT = 100
 
 
@@ -497,7 +497,7 @@ def _case_input_payload(case_input: dict[str, Any]) -> dict[str, Any]:
 
 def _evaluation_message_to_request(rollout: Rollout) -> dict[str, Any]:
     text = (
-        "# OpenViking OutcomeEvaluation\n\n"
+        "# Business Data Platform OutcomeEvaluation\n\n"
         "The following structured evaluation describes the outcome of the "
         "preceding rollout. Use it as the training signal when extracting "
         "training memories.\n\n"

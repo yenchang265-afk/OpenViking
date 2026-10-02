@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Exercise the built wheel without the full OpenViking package on ``sys.path``."""
+"""Exercise the built wheel without the full Business Data Platform package on ``sys.path``."""
 
 from __future__ import annotations
 

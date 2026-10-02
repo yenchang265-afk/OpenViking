@@ -3,7 +3,7 @@
 /**
  * Auto-Recall Hook Script for Claude Code (UserPromptSubmit).
  *
- * Searches OpenViking for relevant context and injects an
+ * Searches Business Data Platform for relevant context and injects an
  * <openviking-context> block. Retrieval, ranking and the token budget are the
  * shared recall core's; this hook owns the CC envelope and the statusline
  * snapshot it leaves behind.

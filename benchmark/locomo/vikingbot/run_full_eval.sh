@@ -144,7 +144,7 @@ PY
 
 if [ -t 0 ] && [ -t 1 ]; then
     ui_kv "預設配置" "$DEFAULT_OV_CONF_PATH"
-    printf "\n  %b?%b 請選擇 OpenViking 配置檔案\n" "$UI_YELLOW" "$UI_RESET"
+    printf "\n  %b?%b 請選擇 Business Data Platform 配置檔案\n" "$UI_YELLOW" "$UI_RESET"
     printf "    %b直接回車使用預設路徑%b\n" "$UI_DIM" "$UI_RESET"
     printf "    %b>%b " "$UI_GREEN" "$UI_RESET"
     if ! read -r OV_CONF_PATH < /dev/tty; then
@@ -173,7 +173,7 @@ PRECHECK_STATUS=0
 "$PYTHON_BIN" "$SCRIPT_DIR/preflight_eval_config.py" || PRECHECK_STATUS=$?
 if [ "$PRECHECK_STATUS" -ne 0 ]; then
     if [ "$PRECHECK_STATUS" -eq 2 ]; then
-        ui_warn "已完成 OpenViking API key 初始化，請重新執行評測指令碼。"
+        ui_warn "已完成 Business Data Platform API key 初始化，請重新執行評測指令碼。"
     fi
     exit "$PRECHECK_STATUS"
 fi
@@ -319,7 +319,7 @@ MEMORY_SNAPSHOT_DIR="$RUN_DIR/memories"
 
 ui_section "2. 執行配置"
 ui_kv "配置文件" "$OPENVIKING_CONFIG_FILE"
-ui_kv "OpenViking" "$OPENVIKING_URL"
+ui_kv "Business Data Platform" "$OPENVIKING_URL"
 ui_kv "執行身份" "account=$ACCOUNT · user=$OPENVIKING_USER · auth=$OPENVIKING_AUTH_MODE"
 ui_kv "會話模式" "$([ "$GROUP_CHAT" = "true" ] && printf '群聊' || printf '非群聊')"
 ui_kv "匯入併發" "$PARALLEL_IMPORT_SESSIONS sessions"
