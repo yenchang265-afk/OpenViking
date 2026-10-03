@@ -139,7 +139,7 @@ def _create_ragas_llm_from_config() -> Optional[Any]:
     try:
         config = get_openviking_config()
     except FileNotFoundError:
-        logger.debug("OpenViking config file not found, skipping VLM config")
+        logger.debug("Business Data Platform config file not found, skipping VLM config")
         return None
 
     vlm_config = config.vlm
@@ -269,7 +269,7 @@ class RagasEvaluator(BaseEvaluator):
                 "RAGAS evaluation requires an LLM. "
                 "Please configure via one of:\n"
                 "  1. Environment variables: RAGAS_LLM_API_KEY, RAGAS_LLM_API_BASE, RAGAS_LLM_MODEL\n"
-                "  2. OpenViking VLM config in ~/.openviking/ov.conf\n"
+                "  2. Business Data Platform VLM config in ~/.openviking/ov.conf\n"
                 "  3. Pass an llm parameter to RagasEvaluator"
             )
 

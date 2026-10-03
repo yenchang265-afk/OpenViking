@@ -27,7 +27,7 @@ const workspace = {
         userId: 'User ID',
         userIdPlaceholder: 'Enter a User ID',
       },
-      defaultTitle: 'OpenViking Studio',
+      defaultTitle: 'Business Data Platform',
     },
     navigation: {
       compile: { title: 'Compile' },
@@ -77,12 +77,12 @@ const workspace = {
       },
       loadingSessions: 'Loading...',
       noSessions: 'No sessions',
-      workspaceGroupLabel: 'OpenViking Studio',
+      workspaceGroupLabel: 'Business Data Platform',
     },
   },
   monitoringPage: {
     title: 'Monitoring',
-    description: 'View real-time health for OpenViking components.',
+    description: 'View real-time health for Business Data Platform components.',
     version: 'v{{version}}',
     refresh: 'Refresh',
     updatedAt: 'Updated at {{time}}',
@@ -154,7 +154,7 @@ const workspace = {
         queue: 'Resource processing, semantic generation, and session queues.',
         vikingdb: 'Vector storage and indexing service.',
         models: 'VLM, embedding, and rerank model services.',
-        filesystem: 'OpenViking filesystem and mount services.',
+        filesystem: 'Business Data Platform filesystem and mount services.',
         lock: 'Transaction locks and concurrency control.',
         retrieval: 'Context retrieval service.',
       },
@@ -202,7 +202,7 @@ const workspace = {
       },
     },
     offline: {
-      title: 'OpenViking is not connected',
+      title: 'Business Data Platform is not connected',
       description:
         'Configure the server URL and credentials to view monitoring data.',
       action: 'Open connection settings',
@@ -214,7 +214,7 @@ const workspace = {
       expand: 'Expand steps',
       collapse: 'Collapse',
       title: 'Give your Agent experience and evolution capabilities',
-      connect: 'Connect OpenViking to your Agent',
+      connect: 'Connect Business Data Platform to your Agent',
       docs: 'View integration guide',
       install: 'Install the experience Skill for your Agent',
       hint: 'Run this command in your terminal and select your Agent when prompted.',
@@ -238,7 +238,7 @@ const workspace = {
     loading: 'Loading experiences...',
     loadFailed: 'Could not load experiences',
     networkError:
-      'Could not connect to the OpenViking service. Check the server URL and connection status.',
+      'Could not connect to the Business Data Platform service. Check the server URL and connection status.',
     connectionSettings: 'Open connection settings',
     empty: 'No Agent experiences yet',
     emptyDescription:
@@ -261,9 +261,9 @@ const workspace = {
     },
     help: {
       title: 'No experiences yet? Check:',
-      reasonConnected: 'Whether the Agent is connected to OpenViking',
+      reasonConnected: 'Whether the Agent is connected to Business Data Platform',
       reasonSessions: 'Whether new sessions ran after connecting',
-      reasonCommit: 'Whether those sessions were committed to OpenViking',
+      reasonCommit: 'Whether those sessions were committed to Business Data Platform',
     },
     settings: {
       title: 'Experience settings',
@@ -356,7 +356,7 @@ const workspace = {
       'Skills in this scope will appear here after they are added.',
     loadFailed: 'Could not load skills',
     networkError:
-      'Could not connect to the OpenViking service. Check the server URL and connection status.',
+      'Could not connect to the Business Data Platform service. Check the server URL and connection status.',
     connectionSettings: 'Open connection settings',
     detail: 'Details',
     openPlayground: 'Open in Playground',
@@ -612,7 +612,7 @@ const workspace = {
     addDialog: {
       title: 'Add scheduled sync',
       description:
-        'Add a remote resource and configure how often OpenViking checks for updates.',
+        'Add a remote resource and configure how often Business Data Platform checks for updates.',
     },
     editDialog: {
       title: 'Edit scheduled sync',
@@ -1035,7 +1035,7 @@ const workspace = {
             'Regular users should request a User API Key from their Account admin.',
           secondary:
             'Deployment admins can find the Root API Key at server.root_api_key in the server-side ov.conf. Add it here, then create or regenerate a User Key in Users & Permissions.',
-          title: 'No OpenViking API Key yet?',
+          title: 'No Business Data Platform API Key yet?',
         },
         learnMore: 'Learn how to get an API Key',
         trusted: {
@@ -1058,7 +1058,7 @@ const workspace = {
     },
     connectionPage: {
       description:
-        'Configure the OpenViking server connection, control credential, and active data credential.',
+        'Configure the Business Data Platform server connection, control credential, and active data credential.',
       title: 'Connection settings',
     },
     dialogs: {
@@ -1138,7 +1138,7 @@ const workspace = {
     },
     keyResult: {
       description:
-        'Copy it now. OpenViking may only show a prefix after you leave this state.',
+        'Copy it now. Business Data Platform may only show a prefix after you leave this state.',
       dismiss: 'Dismiss',
       title: 'New API key',
     },
@@ -1180,9 +1180,9 @@ const workspace = {
     },
     page: {
       adminDescription:
-        'Configure the active OpenViking Studio identity and manage accounts, users, and API keys.',
+        'Configure the active Business Data Platform identity and manage accounts, users, and API keys.',
       description:
-        'Configure the OpenViking Studio server URL and API key, then view data for the current identity.',
+        'Configure the Business Data Platform server URL and API key, then view data for the current identity.',
       title: 'Connection & Identity',
     },
     placeholders: {
@@ -1280,7 +1280,7 @@ const workspace = {
     page: {
       description:
         'Aligned with the product overview: menu entries, context data volume, today tokens, today retrievals, agent access, token trend, and context commit stats.',
-      eyebrow: 'OpenViking Studio',
+      eyebrow: 'Business Data Platform',
       settings: 'Connection & Settings',
       title: 'Overview',
     },

@@ -350,7 +350,7 @@ async def preflight_git_repository(
             start_new_session=os.name == "posix",
         )
     except FileNotFoundError as exc:
-        raise UnavailableError("git", "executable not found on the OpenViking Server") from exc
+        raise UnavailableError("git", "executable not found on the Business Data Platform Server") from exc
 
     try:
         _stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)

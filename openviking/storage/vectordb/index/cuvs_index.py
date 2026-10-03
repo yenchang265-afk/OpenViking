@@ -919,7 +919,7 @@ class CuVSDenseIndex:
                 f"choose one of {sorted(self._SUPPORTED_ALGORITHMS)}"
             )
         if self.distance not in {"ip", "l2"}:
-            raise ValueError(f"Unsupported OpenViking distance for cuVS: {self.distance!r}")
+            raise ValueError(f"Unsupported Business Data Platform distance for cuVS: {self.distance!r}")
         self.dtype = str(config.get("dtype", "float32")).lower()
         if self.dtype not in {"float32", "float16"}:
             raise ValueError(

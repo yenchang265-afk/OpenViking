@@ -132,7 +132,7 @@ def _attach_openviking_connection(
             return enriched
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Bot proxy requires a forwardable OpenViking API key.",
+            detail="Bot proxy requires a forwardable Business Data Platform API key.",
         )
     enriched["openviking_connection"] = _build_openviking_connection(
         api_key=api_key,

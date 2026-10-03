@@ -150,7 +150,7 @@ impl ConfigStore {
         let report = self.list_configs_report()?;
         for invalid in &report.invalid_configs {
             eprintln!(
-                "Warning: skipped invalid OpenViking config '{}'",
+                "Warning: skipped invalid Business Data Platform config '{}'",
                 invalid.path.display()
             );
         }
@@ -345,7 +345,7 @@ impl ConfigStore {
 
             let Ok(config) = Config::from_file(&path.to_string_lossy()) else {
                 eprintln!(
-                    "Warning: skipped invalid OpenViking config '{}'",
+                    "Warning: skipped invalid Business Data Platform config '{}'",
                     path.display()
                 );
                 continue;

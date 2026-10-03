@@ -328,7 +328,7 @@ class CompileService:
                 return existing
         endpoint = self._endpoint()
         if not endpoint.local and not str(connection.get("api_key") or "").strip():
-            raise UnauthenticatedError("Compile requires a forwardable OpenViking API key")
+            raise UnauthenticatedError("Compile requires a forwardable Business Data Platform API key")
         normalized = await self._normalize_request(request, ctx)
         payload, private_payload = self._split_payload(normalized)
         return await self._tasks.create(

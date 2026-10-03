@@ -27,13 +27,13 @@ def _reject_stream_config(data: Any, location: str) -> None:
         return
     if "stream" in data:
         raise ValueError(
-            f"{location}.stream is not supported; OpenViking VLM calls return complete responses"
+            f"{location}.stream is not supported; Business Data Platform VLM calls return complete responses"
         )
     extra_request_body = data.get("extra_request_body")
     if isinstance(extra_request_body, dict) and "stream" in extra_request_body:
         raise ValueError(
             f"{location}.extra_request_body.stream is not supported; "
-            "OpenViking VLM calls return complete responses"
+            "Business Data Platform VLM calls return complete responses"
         )
 
 

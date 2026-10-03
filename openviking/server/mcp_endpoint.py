@@ -933,7 +933,7 @@ class StoreMessage(BaseModel):
 
 @mcp.tool()
 async def remember(messages: list[StoreMessage]) -> str:
-    """Store information into OpenViking long-term memory. Use when the user says 'remember this', shares preferences, important facts, or decisions worth persisting."""
+    """Store information into Business Data Platform long-term memory. Use when the user says 'remember this', shares preferences, important facts, or decisions worth persisting."""
     import uuid
 
     from openviking.message.part import TextPart
@@ -964,7 +964,7 @@ async def write(
     wait: bool = False,
     timeout: Optional[float] = None,
 ) -> str:
-    """Write text to a viking:// file. Use this to save files (notes, profiles, knowledge, state) in OpenViking the same way you would use a working directory. To change part of an existing file, prefer the edit tool over a full rewrite.
+    """Write text to a viking:// file. Use this to save files (notes, profiles, knowledge, state) in Business Data Platform the same way you would use a working directory. To change part of an existing file, prefer the edit tool over a full rewrite.
 
     - mode="replace" (default): overwrite the file; creates it and any missing parent directories if needed.
     - mode="create": fail if the file already exists.
@@ -1166,7 +1166,7 @@ async def add_resource(
     tag_mode: str = "replace",
     args: Optional[dict[str, Any]] = None,
 ) -> str:
-    """Add a resource to OpenViking. Asynchronous — processing happens in the background.
+    """Add a resource to Business Data Platform. Asynchronous — processing happens in the background.
 
     For an agent skill, use add_skill instead: a skill added here is stored as an ordinary
     resource and never becomes an installed skill.
@@ -1395,11 +1395,11 @@ async def add_resource(
         "\n"
         f"  {upload_url}\n"
         "\n"
-        "The URL's token authorizes the upload against OpenViking itself (no OpenViking "
+        "The URL's token authorizes the upload against Business Data Platform itself (no Business Data Platform "
         "API key needed); the server ingests the file automatically once received — you "
         "do NOT need to call add_resource again.\n"
         "\n"
-        "If the OpenViking server sits behind a private gateway or reverse proxy that "
+        "If the Business Data Platform server sits behind a private gateway or reverse proxy that "
         "requires extra request headers (e.g. `openviking_name`, tenant/vault headers, "
         "or a gateway API key), those headers are enforced on every request including "
         "this upload — replay the same headers you use for MCP calls when POSTing the "
@@ -1416,7 +1416,7 @@ async def add_resource(
             "request because OPENVIKING_PUBLIC_BASE_URL is not set on the server. "
             "If the upload fails (connection refused, wrong host, TLS error), ask the "
             "server operator to set OPENVIKING_PUBLIC_BASE_URL to the agent-facing "
-            "URL of the OpenViking server (e.g. via docker-compose `environment:` "
+            "URL of the Business Data Platform server (e.g. via docker-compose `environment:` "
             "or systemd unit) and retry."
         )
 
@@ -1452,7 +1452,7 @@ async def add_skill(
     target_uri: str = "",
     list_only: bool = False,
 ) -> str:
-    """Create, install, or replace an agent skill in OpenViking.
+    """Create, install, or replace an agent skill in Business Data Platform.
 
     New skill: pass the full SKILL.md text (YAML frontmatter with ``name`` and
     ``description``, then the Markdown body) as ``data``.
@@ -1497,7 +1497,7 @@ async def add_skill(
     if path.startswith("viking://"):
         return (
             "Error: 'path' must be a Git URL or a local path. To copy a skill already in "
-            "OpenViking, read its SKILL.md and pass the text as 'data'."
+            "Business Data Platform, read its SKILL.md and pass the text as 'data'."
         )
     is_git = path.startswith(GIT_SKILL_SOURCE_PREFIXES)
     if path and not is_git and is_remote_resource_source(path):
@@ -1558,7 +1558,7 @@ async def add_skill(
     if list_only:
         headline = "Local skill source detected — upload it to list the skills it contains.\n"
         outcome = (
-            "The URL's token authorizes this one upload (no OpenViking API key needed). The "
+            "The URL's token authorizes this one upload (no Business Data Platform API key needed). The "
             "server only lists the skills in the file and installs nothing; the upload response "
             "carries each skill's name, path, and description. To install, call add_skill again "
             "without list_only (skills=[...] picks some) and upload to the new URL.\n"
@@ -1566,7 +1566,7 @@ async def add_skill(
     else:
         headline = "Local skill detected — upload it to install.\n"
         outcome = (
-            "The URL's token authorizes this one upload (no OpenViking API key needed) and the "
+            "The URL's token authorizes this one upload (no Business Data Platform API key needed) and the "
             "server installs the skill once the file arrives — you do NOT need to call add_skill "
             "again. The upload response carries the installed skill URIs.\n"
         )
@@ -1583,7 +1583,7 @@ async def add_skill(
         "\n"
         f"  {upload_url}\n"
         "\n" + outcome + "\n"
-        "If the OpenViking server sits behind a private gateway or reverse proxy that "
+        "If the Business Data Platform server sits behind a private gateway or reverse proxy that "
         "requires extra request headers, replay the same headers you use for MCP calls "
         "when POSTing the file.\n"
         "\n"
@@ -1596,7 +1596,7 @@ async def add_skill(
             "request because OPENVIKING_PUBLIC_BASE_URL is not set on the server. "
             "If the upload fails (connection refused, wrong host, TLS error), ask the "
             "server operator to set OPENVIKING_PUBLIC_BASE_URL to the agent-facing "
-            "URL of the OpenViking server and retry."
+            "URL of the Business Data Platform server and retry."
         )
     return prose
 
@@ -1781,7 +1781,7 @@ async def glob(pattern: str, uri: str = "viking://", node_limit: int = 100) -> s
 
 @mcp.tool()
 async def forget(uri: str, recursive: bool = False) -> str:
-    """Permanently delete a viking:// URI from OpenViking. Irreversible — confirm with user before calling.
+    """Permanently delete a viking:// URI from Business Data Platform. Irreversible — confirm with user before calling.
 
     Deleting a skill directory this way leaves the skill's stored privacy values behind:
     remove a skill with ``ov skills remove <name>`` or ``DELETE /api/v1/skills/{name}``."""
@@ -1797,12 +1797,12 @@ async def forget(uri: str, recursive: bool = False) -> str:
 
 @mcp.tool()
 async def health() -> str:
-    """Check whether the OpenViking server is healthy."""
+    """Check whether the Business Data Platform server is healthy."""
     try:
         service = get_service()
-        return f"OpenViking is healthy (service initialized, storage: {type(service.viking_fs).__name__})"
+        return f"Business Data Platform is healthy (service initialized, storage: {type(service.viking_fs).__name__})"
     except Exception as e:
-        return f"OpenViking is unhealthy: {e}"
+        return f"Business Data Platform is unhealthy: {e}"
 
 
 # ---------------------------------------------------------------------------

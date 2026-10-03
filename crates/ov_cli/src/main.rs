@@ -2989,7 +2989,7 @@ fn is_bool_arg(value: &str) -> bool {
 fn language_required_message() -> String {
     format!(
         "{} {}\n{}:\n  {}\n  {}",
-        theme::brand_title("OpenViking").bold(),
+        theme::brand_title("Business Data Platform").bold(),
         theme::body("needs a display language before running commands."),
         theme::strong("Run one of"),
         theme::command("ov language en").bold(),

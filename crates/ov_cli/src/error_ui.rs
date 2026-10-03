@@ -257,8 +257,8 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
             copy(language, "Request Timeout", "請求超時"),
             copy(
                 language,
-                "OpenViking did not respond before the configured timeout expired.",
-                "OpenViking 未在配置的超時時間內響應。",
+                "Business Data Platform did not respond before the configured timeout expired.",
+                "Business Data Platform 未在配置的超時時間內響應。",
             ),
         )
         .with_command(command)
@@ -271,8 +271,8 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
             copy(language, "Connection Error", "連線錯誤"),
             copy(
                 language,
-                "Could not reach OpenViking. The server may be offline, or this config points to the wrong URL.",
-                "無法連線 OpenViking。伺服器可能未啟動，或當前配置指向了錯誤的 URL。",
+                "Could not reach Business Data Platform. The server may be offline, or this config points to the wrong URL.",
+                "無法連線 Business Data Platform。伺服器可能未啟動，或當前配置指向了錯誤的 URL。",
             ),
         )
         .with_command(command)
@@ -304,8 +304,8 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
                     "ov status",
                     copy(
                         language,
-                        "Check OpenViking service status",
-                        "檢查 OpenViking 服務狀態",
+                        "Check Business Data Platform service status",
+                        "檢查 Business Data Platform 服務狀態",
                     ),
                 ),
             ]);
@@ -325,7 +325,7 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
         ]),
         Error::Api { message, details, .. } => {
             let mut report = ErrorReport::new(
-                copy(language, "OpenViking API Error", "OpenViking API 錯誤"),
+                copy(language, "Business Data Platform API Error", "Business Data Platform API 錯誤"),
                 api_error_message(error.code(), message),
             )
             .with_command(command);
@@ -353,15 +353,15 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
         )
             .with_command(command.clone())
             .with_actions(contextual_help_actions(&command, language)),
-        Error::Io(error) => ErrorReport::new(copy(language, "IO Error", "IO 錯誤"), copy(language, "OpenViking could not read or write a file.", "OpenViking 無法讀取或寫入檔案。"))
+        Error::Io(error) => ErrorReport::new(copy(language, "IO Error", "IO 錯誤"), copy(language, "Business Data Platform could not read or write a file.", "Business Data Platform 無法讀取或寫入檔案。"))
             .with_command(command)
             .with_detail(error.to_string()),
         Error::Serialization(error) => {
-            ErrorReport::new(copy(language, "Serialization Error", "序列化錯誤"), copy(language, "OpenViking could not parse structured data.", "OpenViking 無法解析結構化資料。"))
+            ErrorReport::new(copy(language, "Serialization Error", "序列化錯誤"), copy(language, "Business Data Platform could not parse structured data.", "Business Data Platform 無法解析結構化資料。"))
                 .with_command(command)
                 .with_detail(error.to_string())
         }
-        Error::Zip(error) => ErrorReport::new(copy(language, "Archive Error", "壓縮包錯誤"), copy(language, "OpenViking could not process the archive.", "OpenViking 無法處理壓縮包。"))
+        Error::Zip(error) => ErrorReport::new(copy(language, "Archive Error", "壓縮包錯誤"), copy(language, "Business Data Platform could not process the archive.", "Business Data Platform 無法處理壓縮包。"))
             .with_command(command)
             .with_detail(error.to_string()),
         Error::AlreadyReported => ErrorReport::new(copy(language, "Command Error", "命令錯誤"), copy(language, "The command failed.", "命令執行失敗。"))
@@ -579,7 +579,7 @@ fn is_contextual_top_level_command(command: &str) -> bool {
 
 fn api_error_message(code: &str, message: &str) -> String {
     if message.is_empty() {
-        format!("[{code}] OpenViking returned an error")
+        format!("[{code}] Business Data Platform returned an error")
     } else {
         format!("[{code}] {message}")
     }
@@ -1112,7 +1112,7 @@ Usage: ov config [OPTIONS] [COMMAND]
 
         let report = report_for_runtime_error("ov add-resource", &error);
         let rendered = strip_ansi(&render_report(&report, false));
-        assert!(rendered.contains("OpenViking API Error"));
+        assert!(rendered.contains("Business Data Platform API Error"));
         assert!(rendered.contains("[FAILED_PRECONDITION]"));
         assert!(!rendered.contains("Authentication Error"));
 
@@ -1173,7 +1173,7 @@ Usage: ov config [OPTIONS] [COMMAND]
         assert!(rendered.contains("Run ov config to create one"));
         assert!(rendered.contains("ov config"));
         assert!(rendered.contains("Create a config"));
-        assert!(!rendered.contains("OpenViking API Error"));
+        assert!(!rendered.contains("Business Data Platform API Error"));
         assert!(!rendered.contains("ov config validate"));
         assert!(!rendered.contains("ov status"));
     }
@@ -1185,7 +1185,7 @@ Usage: ov config [OPTIONS] [COMMAND]
         let rendered = strip_ansi(&render_report(&report, false));
 
         assert!(rendered.contains("Connection Error"));
-        assert!(rendered.contains("Could not reach OpenViking"));
+        assert!(rendered.contains("Could not reach Business Data Platform"));
         assert!(rendered.contains("ov config validate"));
         assert!(rendered.contains("ov health"));
         assert!(rendered.contains("ov config switch"));

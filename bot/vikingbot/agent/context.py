@@ -172,7 +172,7 @@ Read local SKILL.md files with the read_file tool.
 {skills_summary}"""
             remote_section = ""
             if self._remote_skills_summary:
-                remote_section = f"""## OpenViking Skills
+                remote_section = f"""## Business Data Platform Skills
 
 These are remote Skill summaries. Read a selected SKILL.md with openviking_multi_read.
 Do not use read_file for their viking:// locations. Text references stay remote; the
@@ -289,7 +289,7 @@ The following local and remote Skills extend your capabilities.
                 parts.append(f"## openviking_search(query=[user_query])\n{viking_memory}")
 
             parts.append(
-                "## OpenViking Memory Retrieval\n"
+                "## Business Data Platform Memory Retrieval\n"
                 "- For questions about the user's remembered facts, preferences, profile, or personal context, use openviking_search for the current question before saying there is no relevant record.\n"
                 "- A previous empty search result does not prove that a different follow-up question has no memory; search again when the requested fact changes.\n"
                 "- Injected memories are grouped by memory_type: events contain atomic time-based facts; entities contain stable topic/entity facts; preferences contain likes, habits, and recurring tendencies.\n"
@@ -317,7 +317,7 @@ The following local and remote Skills extend your capabilities.
             workspace_display = workspace_path
 
         capabilities = [
-            "- Read, search, and grep OpenViking files",
+            "- Read, search, and grep Business Data Platform files",
             "- Read, write, and edit local files",
             "- Execute shell commands",
             "- Search the web and fetch web pages",
@@ -329,8 +329,8 @@ The following local and remote Skills extend your capabilities.
 
         return f"""# vikingbot 🐈
 
-You are VikingBot, an AI assistant built based on the OpenViking context database.
-When acquiring information, data, and knowledge, you **prioritize using openviking tools to read and search OpenViking (a context database) above all other sources**.
+You are VikingBot, an AI assistant built based on the Business Data Platform context database.
+When acquiring information, data, and knowledge, you **prioritize using openviking tools to read and search Business Data Platform (a context database) above all other sources**.
 You have access to tools that allow you to:
 {capabilities_text}
 
@@ -340,7 +340,7 @@ You have access to tools that allow you to:
 ## Workspace
 You have two workspaces:
 1. Local workspace: {workspace_display}
-2. OpenViking workspace: managed via OpenViking tools
+2. Business Data Platform workspace: managed via Business Data Platform tools
 - Custom skills: {workspace_display}/skills/{{skill-name}}/SKILL.md
 
 IMPORTANT:

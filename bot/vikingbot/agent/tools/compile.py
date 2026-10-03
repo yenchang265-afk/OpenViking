@@ -354,7 +354,7 @@ class SubmitWikiBundleTool(Tool):
         )
         if self._is_skill_target:
             return (
-                "Submit one complete OpenViking Skill package. Include every file under "
+                "Submit one complete Business Data Platform Skill package. Include every file under "
                 "<skill-name>/ and include <skill-name>/SKILL.md."
                 f"{workspace_notice}"
             )

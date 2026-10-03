@@ -453,12 +453,12 @@ class AgentsConfig(BaseModel):
     commit_keep_recent_turn_count: int = Field(
         default=3,
         ge=0,
-        description="Number of newest logical user Turns retained after an OpenViking commit.",
+        description="Number of newest logical user Turns retained after a Business Data Platform commit.",
     )
     commit_retained_message_token_budget: int = Field(
         default=6_000,
         gt=0,
-        description="Token budget for retained raw OpenViking session messages and checkpoints.",
+        description="Token budget for retained raw Business Data Platform session messages and checkpoints.",
     )
     commit_min_raw_tail_steps: int = Field(
         default=1,

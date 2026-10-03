@@ -126,7 +126,7 @@ const HELP_SECTIONS: &[HelpSection] = &[
 const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     CommandHelpSpec {
         path: &["add-resource"],
-        purpose: "Import a local file, folder, URL, repository, or whole website (sitemap/RSS) into OpenViking.",
+        purpose: "Import a local file, folder, URL, repository, or whole website (sitemap/RSS) into Business Data Platform.",
         examples: &[
             HelpItem {
                 label: "ov add-resource ./docs --parent viking://projects/acme --wait",
@@ -252,7 +252,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["mkdir"],
-        purpose: "Create a directory in OpenViking.",
+        purpose: "Create a directory in Business Data Platform.",
         examples: &[HelpItem {
             label: "ov mkdir viking://projects/acme --description \"ACME project context\"",
             description: "Create a project folder with a description.",
@@ -264,7 +264,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["rm"],
-        purpose: "Remove a resource from OpenViking.",
+        purpose: "Remove a resource from Business Data Platform.",
         examples: &[
             HelpItem {
                 label: "ov rm viking://scratch/old-note.md",
@@ -490,7 +490,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["find"],
-        purpose: "Retrieve relevant OpenViking context semantically.",
+        purpose: "Retrieve relevant Business Data Platform context semantically.",
         examples: &[
             HelpItem {
                 label: "ov find \"deployment rollback steps\"",
@@ -790,7 +790,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["backup"],
-        purpose: "Create a restore-only backup .ovpack for public OpenViking scopes.",
+        purpose: "Create a restore-only backup .ovpack for public Business Data Platform scopes.",
         examples: &[HelpItem {
             label: "ov backup ./openviking-backup.ovpack --include-vectors",
             description: "Create a backup with vectors when compatible.",
@@ -868,7 +868,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["compile"],
-        purpose: "Use a required VikingBot Skill to compile OpenViking materials into Wiki pages or a Skill package.",
+        purpose: "Use a required VikingBot Skill to compile Business Data Platform materials into Wiki pages or a Skill package.",
         examples: &[
             HelpItem {
                 label: "ov compile --from viking://resources/weekly --to viking://resources/wiki --skill viking://agent/skills/monthly_wiki",
@@ -960,7 +960,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["status"],
-        purpose: "Show OpenViking server readiness and component status.",
+        purpose: "Show Business Data Platform server readiness and component status.",
         examples: &[
             HelpItem {
                 label: "ov status",
@@ -984,7 +984,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["observer"],
-        purpose: "Inspect specific OpenViking server subsystems.",
+        purpose: "Inspect specific Business Data Platform server subsystems.",
         examples: &[
             HelpItem {
                 label: "ov observer models",
@@ -1020,7 +1020,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["config"],
-        purpose: "Add, edit, delete, show, validate, or switch OpenViking CLI configs.",
+        purpose: "Add, edit, delete, show, validate, or switch Business Data Platform CLI configs.",
         examples: &[
             HelpItem {
                 label: "ov config",
@@ -1070,7 +1070,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["config", "validate"],
-        purpose: "Parse the active config and probe the configured OpenViking server.",
+        purpose: "Parse the active config and probe the configured Business Data Platform server.",
         examples: &[HelpItem {
             label: "ov config validate",
             description: "Check active URL, auth, and server reachability.",
@@ -1260,7 +1260,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["language"],
-        purpose: "Choose the OpenViking CLI display language.",
+        purpose: "Choose the Business Data Platform CLI display language.",
         examples: &[
             HelpItem {
                 label: "ov language",
@@ -1282,7 +1282,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["version"],
-        purpose: "Print the OpenViking CLI version.",
+        purpose: "Print the Business Data Platform CLI version.",
         examples: &[HelpItem {
             label: "ov version",
             description: "Show the installed CLI version.",
@@ -1432,11 +1432,11 @@ fn render_top_level_help_with_language_and_width(language: Language, width: usiz
     let mut root = Cli::command();
     root.build();
 
-    let title = format!("OpenViking {}", version());
+    let title = format!("Business Data Platform {}", version());
     if width >= BOX_WIDTH || display_width(&title) <= width {
         lines.push(format!(
             "{} {}",
-            theme::brand_title("OpenViking").bold(),
+            theme::brand_title("Business Data Platform").bold(),
             theme::version(version())
         ));
     } else {
@@ -1516,11 +1516,11 @@ fn render_command_help_with_width(spec: &CommandHelpSpec, width: usize) -> Strin
     let clap_command = clap_command_for_path(spec.path)
         .unwrap_or_else(|| panic!("curated help path missing from clap: {command}"));
 
-    let plain_title_line = format!("OpenViking {} · {command}", version());
+    let plain_title_line = format!("Business Data Platform {} · {command}", version());
     if width >= BOX_WIDTH || display_width(&plain_title_line) <= width {
         lines.push(format!(
             "{} {} {}",
-            theme::brand_title("OpenViking").bold(),
+            theme::brand_title("Business Data Platform").bold(),
             theme::version(version()),
             theme::muted(format!("· {command}"))
         ));
@@ -1911,9 +1911,9 @@ fn localized_command_purpose(spec: &CommandHelpSpec, language: Language) -> &str
         return spec.purpose;
     }
     match spec.path {
-        ["config"] => "新增、編輯、刪除、顯示、驗證或切換 OpenViking CLI 配置。",
+        ["config"] => "新增、編輯、刪除、顯示、驗證或切換 Business Data Platform CLI 配置。",
         ["config", "show"] => "顯示當前 CLI 配置，並隱藏敏感資訊。",
-        ["config", "validate"] => "解析當前配置，並探測 OpenViking 伺服器。",
+        ["config", "validate"] => "解析當前配置，並探測 Business Data Platform 伺服器。",
         ["config", "switch"] => "切換到已儲存的 CLI 配置。",
         ["config", "list"] => "列出已儲存的 CLI 配置，並標記當前配置。",
         ["config", "add"] => "不開啟互動式嚮導，建立已儲存的 CLI 配置。",
@@ -1924,8 +1924,8 @@ fn localized_command_purpose(spec: &CommandHelpSpec, language: Language) -> &str
         ["config", "edit"] => "不開啟互動式嚮導，編輯已儲存的 CLI 配置。",
         ["config", "delete"] => "不開啟互動式嚮導，刪除已儲存的 CLI 配置。",
         ["health"] => "快速檢查伺服器是否可連線。",
-        ["status"] => "檢視 OpenViking 伺服器診斷狀態。",
-        ["language"] => "選擇 OpenViking CLI 顯示語言。",
+        ["status"] => "檢視 Business Data Platform 伺服器診斷狀態。",
+        ["language"] => "選擇 Business Data Platform CLI 顯示語言。",
         ["snapshot"] => "管理工作區快照：提交、恢復、檢視、對比，以及遍歷歷史。",
         ["snapshot", "commit"] => "將當前工作區狀態提交為新的快照。",
         ["snapshot", "restore"] => "通過一次前向提交，將專案目錄恢復到歷史快照。",
@@ -2356,7 +2356,7 @@ fn localized_command_description<'a>(
     }
     match name {
         "add-resource" => "新增檔案、資料夾、URL 或倉庫",
-        "add-skill" => "添加技能到 OpenViking",
+        "add-skill" => "添加技能到 Business Data Platform",
         "skills" => "管理已安裝技能",
         "find" => "語義檢索相關上下文",
         "read" => "讀取精確資源內容",
@@ -2727,7 +2727,7 @@ mod tests {
     fn top_level_help_is_grouped_and_promotes_start_here() {
         let rendered = strip_ansi(&render_top_level_help());
 
-        assert!(rendered.contains("OpenViking v"));
+        assert!(rendered.contains("Business Data Platform v"));
         assert!(rendered.contains("Context Database for AI Agents"));
         assert!(rendered.contains("Usage:"));
         assert!(rendered.contains("ov <command> [options]"));
@@ -2900,7 +2900,7 @@ mod tests {
                 .expect("find help should render"),
         );
 
-        assert!(rendered.contains("OpenViking v"));
+        assert!(rendered.contains("Business Data Platform v"));
         assert!(rendered.contains("ov find [OPTIONS] [query]"));
         assert!(rendered.contains("Examples"));
         assert!(rendered.contains("Common options"));
@@ -2965,7 +2965,7 @@ mod tests {
                 .expect("find -help should render"),
         );
 
-        assert!(rendered.contains("OpenViking v"));
+        assert!(rendered.contains("Business Data Platform v"));
         assert!(rendered.contains("ov find [OPTIONS] [query]"));
         assert!(rendered.contains("Usage:"));
     }
@@ -3210,7 +3210,7 @@ mod tests {
                 "system",
                 "Run server utility, health, consistency, backend sync, and crypto commands.",
             ),
-            ("observer", "Inspect specific OpenViking server subsystems."),
+            ("observer", "Inspect specific Business Data Platform server subsystems."),
         ] {
             let rendered = strip_ansi(
                 &render_command_help_request(&os_args(&["ov", command]))

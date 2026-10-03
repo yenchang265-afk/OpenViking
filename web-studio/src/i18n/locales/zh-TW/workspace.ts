@@ -27,7 +27,7 @@ const workspace = {
         userId: '使用者 ID',
         userIdPlaceholder: '輸入使用者 ID',
       },
-      defaultTitle: 'OpenViking Studio',
+      defaultTitle: 'Business Data Platform',
     },
     navigation: {
       compile: { title: '編譯' },
@@ -77,12 +77,12 @@ const workspace = {
       },
       loadingSessions: '載入中...',
       noSessions: '暫無會話',
-      workspaceGroupLabel: 'OpenViking Studio',
+      workspaceGroupLabel: 'Business Data Platform',
     },
   },
   monitoringPage: {
     title: '監控',
-    description: '檢視 OpenViking 各元件的即時健康狀態。',
+    description: '檢視 Business Data Platform 各元件的即時健康狀態。',
     version: 'v{{version}}',
     refresh: '重新整理',
     updatedAt: '更新於 {{time}}',
@@ -154,7 +154,7 @@ const workspace = {
         queue: '資源處理、語義生成和會話提交佇列。',
         vikingdb: '向量資料儲存與索引服務。',
         models: 'VLM、Embedding 和 Rerank 模型服務。',
-        filesystem: 'OpenViking 檔案系統與掛載點。',
+        filesystem: 'Business Data Platform 檔案系統與掛載點。',
         lock: '事務鎖與併發控制服務。',
         retrieval: '上下文檢索服務。',
       },
@@ -202,7 +202,7 @@ const workspace = {
       },
     },
     offline: {
-      title: '尚未連線 OpenViking 服務',
+      title: '尚未連線 Business Data Platform 服務',
       description: '配置服務地址和訪問憑證後即可檢視監控資料。',
       action: '開啟連線設定',
     },
@@ -213,7 +213,7 @@ const workspace = {
       expand: '展開步驟',
       collapse: '收起',
       title: '讓你的 Agent 獲得經驗與進化能力',
-      connect: '將 OpenViking 接入你的 Agent',
+      connect: '將 Business Data Platform 接入你的 Agent',
       docs: '檢視接入指南',
       install: '為你的 Agent 安裝經驗 Skill',
       hint: '在終端執行以下命令，並按提示選擇你使用的 Agent。',
@@ -234,7 +234,7 @@ const workspace = {
     searchNoResultsDescription: '可清除搜尋條件，或切換頁面繼續檢視。',
     loading: '正在載入經驗列表...',
     loadFailed: '經驗列表載入失敗',
-    networkError: '無法連線 OpenViking 服務，請檢查服務地址和連線狀態。',
+    networkError: '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
     empty: '還沒有 Agent 經驗',
     emptyDescription:
@@ -257,9 +257,9 @@ const workspace = {
     },
     help: {
       title: '一直無經驗產生？請檢查：',
-      reasonConnected: 'Agent 是否已接入 OpenViking',
+      reasonConnected: 'Agent 是否已接入 Business Data Platform',
       reasonSessions: '接入後是否產生了新的會話',
-      reasonCommit: '會話是否已提交（commit）到 OpenViking',
+      reasonCommit: '會話是否已提交（commit）到 Business Data Platform',
     },
     settings: {
       title: '經驗設定',
@@ -345,7 +345,7 @@ const workspace = {
     emptyScope: '暫無{{scope}}',
     emptyScopeDescription: '新增對應作用域的技能後，會在這裡展示。',
     loadFailed: '技能載入失敗',
-    networkError: '無法連線 OpenViking 服務，請檢查服務地址和連線狀態。',
+    networkError: '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
     detail: '詳情',
     openPlayground: '在工作臺中開啟',
@@ -587,7 +587,7 @@ const workspace = {
     },
     addDialog: {
       title: '新增定時同步',
-      description: '新增遠端資源，並設定 OpenViking 檢查更新的週期。',
+      description: '新增遠端資源，並設定 Business Data Platform 檢查更新的週期。',
     },
     editDialog: {
       title: '編輯定時同步',
@@ -988,7 +988,7 @@ const workspace = {
           primary: '普通使用者：請向當前帳號管理員索取使用者 API 金鑰。',
           secondary:
             '部署管理員：Root API 金鑰位於服務端 ov.conf 的 server.root_api_key；填入後可在“使用者與許可權”中建立或重新生成使用者金鑰。',
-          title: '還沒有 OpenViking API 金鑰？',
+          title: '還沒有 Business Data Platform API 金鑰？',
         },
         learnMore: '檢視 API 金鑰獲取方式',
         trusted: {
@@ -1010,7 +1010,7 @@ const workspace = {
       userHint: '供工作臺和租戶資料 API 使用。',
     },
     connectionPage: {
-      description: '配置 OpenViking 服務連線、控制面憑證和當前資料訪問憑證。',
+      description: '配置 Business Data Platform 服務連線、控制面憑證和當前資料訪問憑證。',
       title: '連線設定',
     },
     dialogs: {
@@ -1088,7 +1088,7 @@ const workspace = {
     },
     keyResult: {
       description:
-        '請現在複製儲存。離開當前狀態後，OpenViking 可能只展示字首。',
+        '請現在複製儲存。離開當前狀態後，Business Data Platform 可能只展示字首。',
       dismiss: '收起',
       title: '新的 API 金鑰',
     },
@@ -1126,9 +1126,9 @@ const workspace = {
     },
     page: {
       adminDescription:
-        '配置當前 OpenViking Studio 身份，並管理帳號、使用者和 API 金鑰。',
+        '配置當前 Business Data Platform 身份，並管理帳號、使用者和 API 金鑰。',
       description:
-        '配置當前 OpenViking Studio 的服務地址和 API 金鑰，檢視當前身份下的資料。',
+        '配置當前 Business Data Platform 的服務地址和 API 金鑰，檢視當前身份下的資料。',
       title: '連線設定',
     },
     placeholders: {
@@ -1225,7 +1225,7 @@ const workspace = {
     page: {
       description:
         '彙總上下文資料、今日檢索、Token 用量和上下文提交等執行資料。',
-      eyebrow: 'OpenViking Studio',
+      eyebrow: 'Business Data Platform',
       settings: '連線與設定',
       title: '概覽',
     },

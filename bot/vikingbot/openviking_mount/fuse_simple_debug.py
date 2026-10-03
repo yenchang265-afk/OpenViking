@@ -161,7 +161,7 @@ if FUSE_AVAILABLE:
                             "st_mtime": now,
                             "st_ctime": now,
                         }
-                        logger.debug(f"[FUSE] getattr result (OpenViking): {result}")
+                        logger.debug(f"[FUSE] getattr result (Business Data Platform): {result}")
                         return result
             except Exception as e:
                 logger.warning(f"getattr error for {path}: {e}")
@@ -253,7 +253,7 @@ if FUSE_AVAILABLE:
                 content = self.mount._client.read(uri)
                 content_bytes = content.encode("utf-8")
                 result = content_bytes[offset : offset + size]
-                logger.debug(f"[FUSE] read (OpenViking) returned {len(result)} bytes")
+                logger.debug(f"[FUSE] read (Business Data Platform) returned {len(result)} bytes")
                 return result
             except Exception as e:
                 logger.error(f"read error: {e}")
@@ -356,7 +356,7 @@ if FUSE_AVAILABLE:
                     logger.info(f"Saved original PDF to: {original_pdf_path}")
 
                     self.mount.add_resource(temp_path)
-                    logger.info(f"Added PDF to OpenViking: {path}")
+                    logger.info(f"Added PDF to Business Data Platform: {path}")
 
                 finally:
                     temp_path.unlink(missing_ok=True)
@@ -385,7 +385,7 @@ if FUSE_AVAILABLE:
 
                         uri = self._path_to_uri(f"/{pdf_dir_name}")
                         self.mount._client.rm(uri, recursive=True)
-                        logger.info(f"Removed from OpenViking: {uri}")
+                        logger.info(f"Removed from Business Data Platform: {uri}")
                         return
                     except Exception as e:
                         logger.error(f"Failed to delete: {e}")
@@ -435,7 +435,7 @@ def mount_fuse(config: MountConfig, foreground: bool = True) -> None:
 
     mount = OpenVikingMount(config)
 
-    logger.info(f"Mounting OpenViking FUSE at: {config.mount_point}")
+    logger.info(f"Mounting Business Data Platform FUSE at: {config.mount_point}")
     logger.info(f"  Scope: {config.scope.value}")
     logger.info(f"  Read-only: {config.read_only}")
     logger.info(f"  Press Ctrl+C to unmount")

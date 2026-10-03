@@ -1869,7 +1869,7 @@ def create_fastapi_app(state: GameState) -> FastAPI:
             content = file_path.read_text(encoding="utf-8")
             return JSONResponse(content={"path": path, "content": content, "name": file_path.name})
         except Exception:
-            logger.exception("Failed to read OpenViking file")
+            logger.exception("Failed to read Business Data Platform file")
             return _internal_error_response("Failed to read file")
 
     @fastapi_app.get("/api/conversations")

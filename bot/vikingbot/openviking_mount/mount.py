@@ -89,13 +89,13 @@ class OpenVikingMount:
         if ov is None:
             raise ImportError("openviking module is not available")
 
-        logger.info("Connecting to the configured OpenViking Server")
+        logger.info("Connecting to the configured Business Data Platform Server")
 
         self._client = ov.SyncHTTPClient()
         self._client.initialize()
 
         self._initialized = True
-        logger.info("OpenViking initialized successfully")
+        logger.info("Business Data Platform initialized successfully")
 
     def _ensure_client(self) -> None:
         """確保客戶端已初始化"""
@@ -103,7 +103,7 @@ class OpenVikingMount:
             if self.config.auto_init:
                 self.initialize()
             else:
-                raise RuntimeError("OpenViking client not initialized. Call initialize() first.")
+                raise RuntimeError("Business Data Platform client not initialized. Call initialize() first.")
 
     @property
     def client(self) -> Optional[ov.SyncHTTPClient]:
@@ -245,14 +245,14 @@ class OpenVikingMount:
         # 注意：OpenViking的add_resource主要用於新增外部資源
         # 對於直接寫入，可能需要不同的方法
         # 這裡我們先實現一個簡化版本
-        logger.warning("Direct file write is limited in OpenViking. Using add_resource approach.")
+        logger.warning("Direct file write is limited in Business Data Platform. Using add_resource approach.")
 
         uri = self._path_to_uri(path)
         logger.debug(f"Writing file: {uri}")
 
         # 這種情況下，我們可能需要先寫入臨時檔案，然後add_resource
         # 或者使用其他方法
-        raise NotImplementedError("Direct file write requires special handling in OpenViking")
+        raise NotImplementedError("Direct file write requires special handling in Business Data Platform")
 
     def mkdir(self, path: Union[str, Path]) -> None:
         """
@@ -434,7 +434,7 @@ class OpenVikingMount:
         if self._client and self._initialized:
             try:
                 self._client.close()
-                logger.info("OpenViking client closed")
+                logger.info("Business Data Platform client closed")
             except Exception as e:
                 logger.warning(f"Error closing client: {e}")
 
