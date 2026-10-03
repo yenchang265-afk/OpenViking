@@ -131,7 +131,7 @@ class StoreEngineProxy(IMutiTableStore):
         if not callable(seek_page):
             raise RuntimeError(
                 "The native VectorDB engine does not support bounded store scans; "
-                "rebuild or reinstall the matching OpenViking engine package"
+                "rebuild or reinstall the matching Business Data Platform engine package"
             )
 
         end_key = table_name + MAX_UNICODE_CHAR
@@ -142,7 +142,7 @@ class StoreEngineProxy(IMutiTableStore):
         except NotImplementedError as exc:
             raise RuntimeError(
                 "The native VectorDB engine does not support bounded store scans; "
-                "rebuild or reinstall the matching OpenViking engine package"
+                "rebuild or reinstall the matching Business Data Platform engine package"
             ) from exc
 
         while page:
@@ -227,7 +227,7 @@ class StoreEngineProxy(IMutiTableStore):
         if not callable(seek_page):
             raise RuntimeError(
                 "The native VectorDB engine does not support bounded store scans; "
-                "rebuild or reinstall the matching OpenViking engine package"
+                "rebuild or reinstall the matching Business Data Platform engine package"
             )
 
         end_key = table_name + MAX_UNICODE_CHAR
@@ -238,7 +238,7 @@ class StoreEngineProxy(IMutiTableStore):
         except NotImplementedError as exc:
             raise RuntimeError(
                 "The native VectorDB engine does not support bounded store scans; "
-                "rebuild or reinstall the matching OpenViking engine package"
+                "rebuild or reinstall the matching Business Data Platform engine package"
             ) from exc
 
         while page:

@@ -425,7 +425,7 @@ class BotCompileService:
             if not connection and self._openviking_auth_mode() != "dev":
                 raise CompileFailure(
                     "UNAVAILABLE",
-                    "Compile requires an authenticated OpenViking connection.",
+                    "Compile requires an authenticated Business Data Platform connection.",
                     stage="queued",
                 )
             connection = connection or {}
@@ -708,7 +708,7 @@ class BotCompileService:
         if target.rsplit("/", 1)[-1] in _SKILL_EXCLUDED_FILES:
             raise CompileFailure(
                 "INVALID_ARGUMENT",
-                "Compile target must not be an OpenViking derived directory",
+                "Compile target must not be a Business Data Platform derived directory",
                 stage="queued",
             )
         classification = classify_uri(target)
@@ -2454,7 +2454,7 @@ Selected Skill:
                 source_block,
                 "Inspect the source material with the survey-then-targeted-read strategy, then "
                 "submit one complete Skill package containing the files to create or replace. "
-                "Use the scoped OpenViking list/read tools to inspect an existing target Skill "
+                "Use the scoped Business Data Platform list/read tools to inspect an existing target Skill "
                 "on demand; existing auxiliary files not included in the submission are "
                 "preserved.",
             ]

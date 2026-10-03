@@ -440,7 +440,7 @@ def load_server_config(config_path: Optional[str] = None) -> ServerConfig:
         default_path_user = DEFAULT_CONFIG_DIR / DEFAULT_OV_CONF
         default_path_system = SYSTEM_CONFIG_DIR / DEFAULT_OV_CONF
         raise FileNotFoundError(
-            f"OpenViking configuration file not found.\n"
+            f"Business Data Platform configuration file not found.\n"
             f"Please create {default_path_user} or {default_path_system}, or set {OPENVIKING_CONFIG_ENV}.\n"
             f"See: https://openviking.ai/docs"
         )

@@ -126,7 +126,7 @@ class SubagentManager:
                 from vikingbot.agent.memory import MemoryStore
 
                 if not self.config.ov_server.is_available():
-                    raise RuntimeError("OpenViking is unavailable")
+                    raise RuntimeError("Business Data Platform is unavailable")
                 memory_store = MemoryStore(self.workspace, config=self.config)
                 workspace_id = (
                     self.sandbox_manager.to_workspace_id(session_key)

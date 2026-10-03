@@ -425,8 +425,8 @@ def create_app(
             await usage_reporter.close()
 
     app = FastAPI(
-        title="OpenViking API",
-        description="OpenViking HTTP Server - Agent-native context database",
+        title="Business Data Platform API",
+        description="Business Data Platform HTTP Server - Agent-native context database",
         version="0.1.0",
         lifespan=lifespan,
     )

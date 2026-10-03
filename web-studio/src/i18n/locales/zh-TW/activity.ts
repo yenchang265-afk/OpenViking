@@ -100,12 +100,12 @@ const activity = {
       loading: '正在載入授權請求…',
       expired: '此次授權已過期或不再有效，請從 MCP 客戶端重新發起。',
       missingPending: '缺少授權 ID，請開啟 MCP 客戶端給出的連結。',
-      requestSummary: '{{clientName}} 請求訪問你的 OpenViking 工作區。',
+      requestSummary: '{{clientName}} 請求訪問你的 Business Data Platform 工作區。',
       redirectLabel: '回跳地址',
       scopesLabel: '許可權範圍',
       scopesNone: '（無）',
       signInRequired:
-        '請先在“連線設定”中配置 OpenViking Studio 身份憑證，或在下方臨時貼上 API 金鑰完成授權。',
+        '請先在“連線設定”中配置 Business Data Platform 身份憑證，或在下方臨時貼上 API 金鑰完成授權。',
       openConnectionSettings: '開啟連線設定',
       authorize: '授權',
       deny: '拒絕',
@@ -128,7 +128,7 @@ const activity = {
       verifyError: '授權失敗：{{message}}',
       noApiKey: '沒有可用的 API 金鑰。請選擇一個身份或貼上金鑰。',
       signInRequired:
-        '請先在“連線設定”中配置 OpenViking Studio 身份憑證，或在下方臨時貼上 API 金鑰完成驗證。',
+        '請先在“連線設定”中配置 Business Data Platform 身份憑證，或在下方臨時貼上 API 金鑰完成驗證。',
     },
   },
   playground: {
@@ -214,7 +214,7 @@ const activity = {
       globalScope: '全域',
       opened: '已開啟資源',
       onlineTitle: '服務線上',
-      onlineBody: 'OpenViking API 正常響應，根目錄下發現 {{count}} 個節點。',
+      onlineBody: 'Business Data Platform API 正常響應，根目錄下發現 {{count}} 個節點。',
       lsBody: '{{uri}} 下共展示 {{count}} 個節點。',
       fileEmpty: '檔案為空，已在中間預覽區開啟。',
       searchUsage: '用法：{{name}} 查詢詞 [--scope .|viking://resources/...]',

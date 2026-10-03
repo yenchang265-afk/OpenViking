@@ -97,7 +97,7 @@ class RAGEvaluator:
                 self._client = SyncHTTPClient(url=self.server_url)
                 self._client.initialize()
             except Exception as e:
-                logger.error(f"Failed to create OpenViking client: {e}")
+                logger.error(f"Failed to create Business Data Platform client: {e}")
                 raise
         return self._client
 
@@ -378,7 +378,7 @@ async def main_async(args):
 def main():
     """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="RAG Evaluation Tool for OpenViking",
+        description="RAG Evaluation Tool for Business Data Platform",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -416,13 +416,13 @@ Examples:
     parser.add_argument(
         "--config",
         default="./ov.conf",
-        help="Path to OpenViking config file (default: ./ov.conf)",
+        help="Path to Business Data Platform config file (default: ./ov.conf)",
     )
 
     parser.add_argument(
         "--url",
         default="http://127.0.0.1:1933",
-        help="OpenViking server URL (default: http://127.0.0.1:1933)",
+        help="Business Data Platform server URL (default: http://127.0.0.1:1933)",
     )
 
     parser.add_argument(

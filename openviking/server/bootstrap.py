@@ -132,7 +132,7 @@ def _resolve_cli_config_for_bot(config_path: Optional[str]) -> Optional[str]:
 def main():
     """Main entry point for openviking-server command."""
     parser = argparse.ArgumentParser(
-        description="OpenViking HTTP Server",
+        description="Business Data Platform HTTP Server",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -219,7 +219,7 @@ def main():
     except (FileNotFoundError, ValueError) as e:
         if isinstance(e, ValueError):
             print(
-                f"Failed to load OpenViking server configuration from {resolved_config_path}:\n{e}",
+                f"Failed to load Business Data Platform server configuration from {resolved_config_path}:\n{e}",
                 file=sys.stderr,
             )
             print(
@@ -319,7 +319,7 @@ def main():
         ),
     )
     workers_info = f" (workers: {config.workers})" if config.workers > 1 else ""
-    print(f"OpenViking HTTP Server is running on {config.host}:{config.port}{workers_info}")
+    print(f"Business Data Platform HTTP Server is running on {config.host}:{config.port}{workers_info}")
 
     try:
         workers = config.workers

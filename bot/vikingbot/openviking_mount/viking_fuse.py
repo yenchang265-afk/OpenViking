@@ -296,7 +296,7 @@ if FUSE_AVAILABLE:
             uri = self._file_handles.pop(fh, None)
 
             if uri and uri in self._file_contents:
-                logger.warning(f"File {path} was modified but OpenViking direct write is limited")
+                logger.warning(f"File {path} was modified but Business Data Platform direct write is limited")
 
         def mkdir(self, path: str, mode: int) -> None:
             """
@@ -402,7 +402,7 @@ if FUSE_AVAILABLE:
         if allow_other:
             fuse_opts["allow_other"] = True
 
-        logger.info(f"Mounting OpenViking FUSE at: {config.mount_point}")
+        logger.info(f"Mounting Business Data Platform FUSE at: {config.mount_point}")
         logger.info(f"  Scope: {config.scope.value}")
         logger.info(f"  Read-only: {config.read_only}")
         logger.info("  Press Ctrl+C to unmount")

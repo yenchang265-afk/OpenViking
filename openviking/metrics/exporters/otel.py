@@ -358,7 +358,7 @@ class OTelMetricExporter(MetricExporter):
         for name, counter_series in self._registry.iter_counters(include_start_time=True):
             metric = metrics.add()
             metric.name = name
-            metric.description = "OpenViking metric."
+            metric.description = "Business Data Platform metric."
             metric.sum.CopyFrom(self._build_sum(counter_series, now_ns, name=name))
 
     def _append_gauge_metrics(self, metrics, now_ns: int) -> None:
@@ -370,7 +370,7 @@ class OTelMetricExporter(MetricExporter):
         for name, gauge_series in self._registry.iter_gauges():
             metric = metrics.add()
             metric.name = name
-            metric.description = "OpenViking metric."
+            metric.description = "Business Data Platform metric."
             metric.gauge.CopyFrom(self._build_gauge(gauge_series, now_ns, name=name))
 
     def _append_histogram_metrics(self, metrics, now_ns: int) -> None:
@@ -385,7 +385,7 @@ class OTelMetricExporter(MetricExporter):
             series_list = list(series_iter)
             metric = metrics.add()
             metric.name = name
-            metric.description = "OpenViking metric."
+            metric.description = "Business Data Platform metric."
             metric.histogram.CopyFrom(
                 self._build_histogram(
                     label_names=label_names,
@@ -411,7 +411,7 @@ class OTelMetricExporter(MetricExporter):
 
         metric = metrics.add()
         metric.name = "openviking_metrics_dropped_series_total"
-        metric.description = "OpenViking metric."
+        metric.description = "Business Data Platform metric."
         metric.sum.CopyFrom(self._build_sum(dropped_points, now_ns, name=metric.name))
 
     def _build_sum(self, series, now_ns: int, *, name: str) -> Sum:

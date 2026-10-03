@@ -60,13 +60,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--server-host",
         default="127.0.0.1",
-        help="Host for OpenViking server",
+        help="Host for Business Data Platform server",
     )
     parser.add_argument(
         "--server-port",
         type=int,
         default=1933,
-        help="Port for OpenViking server",
+        help="Port for Business Data Platform server",
     )
     parser.add_argument(
         "--vikingbot-url",
@@ -278,7 +278,7 @@ def start_processes(args: argparse.Namespace, config_path: Path) -> int:
         werewolf_cmd.append("--smart-buttons")
 
     print(f"Using config: {config_path}")
-    print(f"Starting OpenViking: {' '.join(openviking_cmd)}")
+    print(f"Starting Business Data Platform: {' '.join(openviking_cmd)}")
     openviking_process = subprocess.Popen(openviking_cmd, env=env)
 
     try:
@@ -286,12 +286,12 @@ def start_processes(args: argparse.Namespace, config_path: Path) -> int:
         print(f"Starting werewolf server: {' '.join(werewolf_cmd)}")
         werewolf_process = subprocess.Popen(werewolf_cmd, env=env)
     except Exception:
-        terminate_process(openviking_process, "OpenViking")
+        terminate_process(openviking_process, "Business Data Platform")
         raise
 
     processes = [
         ("werewolf server", werewolf_process),
-        ("OpenViking", openviking_process),
+        ("Business Data Platform", openviking_process),
     ]
 
     try:

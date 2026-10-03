@@ -154,7 +154,7 @@ class StoragePath:
         """Remove all OpenViking storage."""
         if self.openviking_dir.exists():
             shutil.rmtree(self.openviking_dir)
-            logger.info("Cleaned up all OpenViking storage")
+            logger.info("Cleaned up all Business Data Platform storage")
 
     def get_all_resource_media(self, resource_name: str) -> dict:
         """

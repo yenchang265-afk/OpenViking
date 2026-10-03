@@ -29,7 +29,7 @@ _LEGACY_EXPORTS = [
 
 def _missing_standalone_error() -> ImportError:
     return ImportError(
-        "The legacy OpenViking LangChain integration requires the standalone "
+        "The legacy Business Data Platform LangChain integration requires the standalone "
         "langchain-openviking package. Install it with "
         "`pip install langchain-openviking` (or "
         '`pip install "langchain-openviking[langgraph]"` for LangGraph support).'

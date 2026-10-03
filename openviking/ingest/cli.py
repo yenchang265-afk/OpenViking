@@ -32,7 +32,7 @@ logger = get_logger(__name__)
 
 app = typer.Typer(
     add_completion=False,
-    help="Replay local agent-harness conversation logs into OpenViking.",
+    help="Replay local agent-harness conversation logs into Business Data Platform.",
 )
 
 

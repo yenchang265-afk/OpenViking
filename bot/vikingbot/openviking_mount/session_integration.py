@@ -114,7 +114,7 @@ class SessionOpenVikingManager:
         try:
             if use_fuse and FUSE_AVAILABLE and self._fuse_manager:
                 # 使用 FUSE 掛載
-                logger.info(f"Mounting OpenViking via FUSE for session {session_key}")
+                logger.info(f"Mounting Business Data Platform via FUSE for session {session_key}")
                 logger.info(f"  Mount path: {session_workspace}")
 
                 config = MountConfig(
@@ -140,7 +140,7 @@ class SessionOpenVikingManager:
 
             else:
                 # 使用 API 層掛載 - mount_point就是workspace本身
-                logger.info(f"Mounting OpenViking via API for session {session_key}")
+                logger.info(f"Mounting Business Data Platform via API for session {session_key}")
                 logger.info(f"  Session workspace: {session_workspace}")
 
                 config = MountConfig(

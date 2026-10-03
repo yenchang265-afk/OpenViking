@@ -1,0 +1,4 @@
+[env]
+# Debug builds of ov_cli's help-rendering tests build the full clap command tree,
+# which exceeds the 2 MiB default stack of libtest worker threads.
+RUST_MIN_STACK = "8388608"

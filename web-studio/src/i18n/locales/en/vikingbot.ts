@@ -37,7 +37,7 @@ export default {
   manageBots: 'Manage bots',
   enable: 'Enable VikingBot to begin',
   enableHint:
-    'Ask your administrator to start OpenViking with Bot support and configure a conversation model.',
+    'Ask your administrator to start Business Data Platform with Bot support and configure a conversation model.',
   modelHint: 'VikingBot inherits the root vlm model configuration by default.',
   retry: 'Retry',
   loading: 'Loading…',
@@ -45,7 +45,7 @@ export default {
   comingSoon: 'Coming soon',
   adminOnly:
     'Only the server administrator can manage connections and view platform history.',
-  webReady: 'Web conversations use your current OpenViking identity.',
+  webReady: 'Web conversations use your current Business Data Platform identity.',
   manageHint:
     'Connect an application once, then add its bot to multiple groups.',
   back: 'Back',

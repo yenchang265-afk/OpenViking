@@ -269,7 +269,7 @@ class OpenVikingCompactHook(Hook):
                 state = get_openviking_state(vikingbot_session)
                 state["last_sync_status"] = "error"
                 state["last_sync_error"] = str(e)
-            logger.exception(f"Failed to add message to OpenViking: {e}")
+            logger.exception(f"Failed to add message to Business Data Platform: {e}")
             return {"success": False, "error": str(e)}
         finally:
             if "should_close_client" in locals() and should_close_client:

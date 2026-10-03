@@ -177,7 +177,7 @@ async def set_agent_evolution_status(
     await _check_account_exists(request, account_id)
     service = get_service()
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     runtime_config = _get_runtime_config_manager()
     try:
         await runtime_config.patch_account(
@@ -291,7 +291,7 @@ async def _validate_initial_user_config(
     if not _has_initial_user_config(user_config):
         return
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     if _has_add_targets(user_config):
         await validate_add_targets(
             user_config.add_targets,
@@ -513,7 +513,7 @@ async def migrate_legacy_data(
     manager = _get_api_key_manager(request)
     service = get_service()
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     action = (body.action if body else "migrate").strip().lower()
     if action not in {"migrate", "cleanup"}:
         raise InvalidArgumentError("Migration action must be 'migrate' or 'cleanup'.")
@@ -603,7 +603,7 @@ async def patch_account_settings(
     await _check_account_exists(request, account_id)
     service = get_service()
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     runtime_config = _get_runtime_config_manager()
     patch = body.model_dump(exclude_none=True)
     try:
@@ -649,7 +649,7 @@ async def _memory_template_service(request: Request, ctx: RequestContext, accoun
     await _check_account_exists(request, account_id)
     service = get_service()
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     return service
 
 
@@ -899,7 +899,7 @@ async def get_user_settings(
     await _check_user_exists(request, account_id, user_id, manager)
     service = get_service()
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     user_ctx = RequestContext(
         user=UserIdentifier(account_id, user_id),
         role=Role.USER,
@@ -931,7 +931,7 @@ async def patch_user_settings(
     await _check_user_exists(request, account_id, user_id, manager)
     service = get_service()
     if service.viking_fs is None:
-        raise FailedPreconditionError("OpenViking service is not initialized.")
+        raise FailedPreconditionError("Business Data Platform service is not initialized.")
     user_ctx = RequestContext(
         user=UserIdentifier(account_id, user_id),
         role=Role.USER,
