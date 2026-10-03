@@ -26,6 +26,7 @@ from openviking.storage.ovpack.operations import (
 )
 from openviking_cli.exceptions import InvalidArgumentError, NotFoundError, PermissionDeniedError
 from openviking_cli.session.user_id import UserIdentifier
+from tests.storage.test_transfer_merge_binding import _EnabledAclConfig
 from tests.storage.test_transfer_merge_binding import binding_fs as binding_fs
 from tests.storage.test_transfer_merge_binding import indexed_fs as indexed_fs
 
@@ -1150,8 +1151,7 @@ async def _restricted_pack_source(indexed_fs):
             },
             ctx=admin,
         )
-    acl = AclManager(backend)
-    acl.set_enabled(admin.account_id, True)
+    acl = AclManager(backend, _EnabledAclConfig())
     fs.acl_manager = backend.acl_manager = acl
     await fs.set_acl(
         root,

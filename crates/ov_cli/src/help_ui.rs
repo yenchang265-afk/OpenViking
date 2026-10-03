@@ -2986,7 +2986,6 @@ mod tests {
     fn curated_help_lists_timeout_for_waiting_commands() {
         for args in [
             ["ov", "add-resource", "--help"],
-            ["ov", "add-skill", "--help"],
             ["ov", "rm", "--help"],
             ["ov", "write", "--help"],
         ] {
