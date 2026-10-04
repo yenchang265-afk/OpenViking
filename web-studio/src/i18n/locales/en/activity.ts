@@ -145,6 +145,19 @@ const activity = {
     resizeContext: 'Resize context tree width',
     resizeAction: 'Resize Terminal and Agent width',
     readFailed: 'Failed to read {{uri}}',
+    deleteResource: {
+      label: 'Delete resource',
+      title: 'Delete this resource?',
+      fileDescription:
+        '{{uri}} will be permanently deleted. This cannot be undone.',
+      directoryDescription:
+        '{{uri}} and everything inside it will be permanently deleted. This cannot be undone.',
+      cancel: 'Cancel',
+      confirm: 'Delete',
+      deleting: 'Deleting…',
+      deleted: 'Resource deleted',
+      failed: 'Delete failed: {{error}}',
+    },
     tabs: {
       terminal: 'Terminal',
       agent: 'Agent',
