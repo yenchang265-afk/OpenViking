@@ -151,6 +151,47 @@ services:
         aliases: [elasticsearch]
     restart: unless-stopped
 
+  # Optional Redis for the RAGFS cache provider: durable QueueFS
+  # (storage.agfs.queuefs.backend = "cache") and PathLock
+  # (storage.agfs.pathlock.provider = "cache"), so no queue/lock state lives
+  # in the OpenViking container. Start with: docker compose --profile redis up -d
+  # Set REDIS_PASSWORD in .env. AOF is on because the job queue lives here;
+  # noeviction stops Redis from dropping queued jobs under memory pressure.
+  # Matching ov.conf snippet:
+  #   "cache": {"provider": "redis", "params": {"mode": "standalone",
+  #     "endpoints": ["redis://redis:6379"], "password": "<REDIS_PASSWORD>"}},
+  #   "storage": {"agfs": {"queuefs": {"backend": "cache"},
+  #     "pathlock": {"provider": "cache", "namespace": "openviking"}}}
+  redis:
+    image: redis:7.4-alpine
+    container_name: openviking-redis
+    profiles: ["redis"]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+    command: >
+      /bin/sh -c "
+      [ -n \"$$REDIS_PASSWORD\" ] || { echo 'set REDIS_PASSWORD in .env' >&2; exit 1; };
+      exec redis-server --requirepass \"$$REDIS_PASSWORD\"
+      --appendonly yes --appendfsync everysec
+      --maxmemory-policy noeviction
+      "
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      default:
+      # Reachable as `redis` from a separately run OpenViking container on the
+      # same external network (see the seaweedfs service above).
+      ov-app:
+        aliases: [redis]
+    restart: unless-stopped
+
 networks:
   ov-app:
     external: true
@@ -159,6 +200,7 @@ networks:
 volumes:
   seaweedfs_data:
   elasticsearch_data:
+  redis_data:
   # Uncomment for public HTTPS:
   # caddy_data:
   # caddy_config:
