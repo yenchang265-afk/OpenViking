@@ -209,6 +209,12 @@ export function getAncestorUris(uri: string): string[] {
   return ancestors
 }
 
+// The root and top-level namespaces (viking://resources/, viking://user/, ...)
+// anchor the whole context tree, so Studio never offers to delete them.
+export function canDeleteResourceUri(uri: string): boolean {
+  return getAncestorUris(uri).length > 2
+}
+
 export function mergeExpanded(
   current: Set<string>,
   uris: string[],

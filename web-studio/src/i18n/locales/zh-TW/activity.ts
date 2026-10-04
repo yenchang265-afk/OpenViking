@@ -138,6 +138,18 @@ const activity = {
     resizeContext: '調整上下文樹寬度',
     resizeAction: '調整終端和 Agent 面板寬度',
     readFailed: '無法讀取 {{uri}}',
+    deleteResource: {
+      label: '刪除資源',
+      title: '確定要刪除此資源？',
+      fileDescription: '{{uri}} 將被永久刪除，此操作無法復原。',
+      directoryDescription:
+        '{{uri}} 及其中所有內容將被永久刪除，此操作無法復原。',
+      cancel: '取消',
+      confirm: '刪除',
+      deleting: '正在刪除…',
+      deleted: '資源已刪除',
+      failed: '刪除失敗：{{error}}',
+    },
     tabs: {
       terminal: '終端',
       agent: 'Agent',

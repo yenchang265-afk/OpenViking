@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { fetchDirectorySidecarContent, fetchFsList } from './api'
+import {
+  fetchDirectorySidecarContent,
+  fetchFsList,
+  removeResource,
+} from './api'
 
-const { getContentReadMock, getFsLsMock } = vi.hoisted(() => ({
+const { deleteFsMock, getContentReadMock, getFsLsMock } = vi.hoisted(() => ({
+  deleteFsMock: vi.fn(),
   getContentReadMock: vi.fn(),
   getFsLsMock: vi.fn(),
 }))
@@ -11,12 +16,14 @@ vi.mock('#/lib/ov-client', async (importOriginal) => {
   const original = await importOriginal()
   return {
     ...original,
+    deleteFs: deleteFsMock,
     getContentRead: getContentReadMock,
     getFsLs: getFsLsMock,
   }
 })
 
 beforeEach(() => {
+  deleteFsMock.mockReset()
   getContentReadMock.mockReset()
   getFsLsMock.mockReset()
   getFsLsMock.mockResolvedValue({
@@ -72,5 +79,32 @@ describe('fetchFsList', () => {
         sort_order: 'desc',
       }),
     })
+  })
+})
+
+describe('removeResource', () => {
+  it('deletes directories recursively', async () => {
+    deleteFsMock.mockResolvedValue({
+      data: { status: 'ok', result: { uri: 'viking://resources/demo/' } },
+      headers: {},
+      status: 200,
+    })
+
+    await removeResource('viking://resources/demo/', { recursive: true })
+
+    expect(deleteFsMock).toHaveBeenCalledWith({
+      query: { uri: 'viking://resources/demo/', recursive: true },
+    })
+  })
+
+  it('surfaces server errors as VikingApiError', async () => {
+    deleteFsMock.mockRejectedValue({
+      status: 'error',
+      error: { code: 'PERMISSION_DENIED', message: 'Permission denied' },
+    })
+
+    await expect(
+      removeResource('viking://resources/demo.md'),
+    ).rejects.toMatchObject({ message: expect.any(String) })
   })
 })

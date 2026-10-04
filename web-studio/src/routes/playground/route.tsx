@@ -44,6 +44,7 @@ import {
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import { AgentPanel } from './-components/agent-panel'
+import { DeleteResource } from './-components/delete-resource'
 import {
   ContextExplorerHeader,
   ContextTree,
@@ -66,6 +67,7 @@ import type {
   ResourceOpenHandler,
 } from './-lib/types'
 import {
+  canDeleteResourceUri,
   clampNumber,
   cleanVikingUri,
   createEntryFromUri,
@@ -422,6 +424,15 @@ function PlaygroundWorkbench() {
     })
   }, [invalidateList, syncSearch])
 
+  const handleResourceDeleted = useCallback(
+    (entry: Pick<VikingFsEntry, 'uri'>) => {
+      toast.success(t('deleteResource.deleted'))
+      void invalidateList()
+      handleNavigateDirectory(parentUri(entry.uri))
+    },
+    [handleNavigateDirectory, invalidateList, t],
+  )
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -614,6 +625,16 @@ function PlaygroundWorkbench() {
             >
               <ClipboardIcon className="size-4" />
             </Button>
+            {canDeleteResourceUri(selectedUri) ? (
+              <DeleteResource
+                key={selectedUri}
+                entry={{
+                  isDir: selectedFile?.isDir ?? true,
+                  uri: selectedUri,
+                }}
+                onDeleted={handleResourceDeleted}
+              />
+            ) : null}
             <div className="flex shrink-0 items-center gap-1 lg:hidden">
               <Button
                 type="button"

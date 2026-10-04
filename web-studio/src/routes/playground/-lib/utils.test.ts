@@ -3,6 +3,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
+  canDeleteResourceUri,
   createIdentityStorageKey,
   readPlaygroundExpandedUris,
   writePlaygroundExpandedUris,
@@ -43,5 +44,22 @@ describe('Playground expanded directory persistence', () => {
       'viking://resources/',
     ])
     expect(readPlaygroundExpandedUris('account-a\u0000bob')).toEqual([])
+  })
+})
+
+describe('canDeleteResourceUri', () => {
+  it.each(['viking://', 'viking://resources/', 'viking://user'])(
+    'protects the root and top-level namespace %s',
+    (uri) => {
+      expect(canDeleteResourceUri(uri)).toBe(false)
+    },
+  )
+
+  it.each([
+    'viking://resources/demo/',
+    'viking://resources/demo.md',
+    'viking://user/default/memories/first.md',
+  ])('allows deleting nested resource %s', (uri) => {
+    expect(canDeleteResourceUri(uri)).toBe(true)
   })
 })

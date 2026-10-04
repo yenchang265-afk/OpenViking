@@ -80,6 +80,22 @@ vi.mock('./-components/context-explorer', () => ({
   PlaygroundResizeHandle: () => null,
 }))
 
+vi.mock('./-components/delete-resource', () => ({
+  DeleteResource: ({
+    entry,
+    onDeleted,
+  }: {
+    entry: { uri: string }
+    onDeleted: (entry: { uri: string }) => void
+  }) => (
+    <button
+      type="button"
+      aria-label={`delete ${entry.uri}`}
+      onClick={() => onDeleted(entry)}
+    />
+  ),
+}))
+
 vi.mock('./-components/agent-panel', () => ({ AgentPanel: () => null }))
 vi.mock('./-components/terminal-panel', () => ({ TerminalPanel: () => null }))
 vi.mock('#/routes/resources/-components/find-palette', () => ({
@@ -156,5 +172,39 @@ describe('playground context tree refresh', () => {
 
     expect(screen.getByTestId('preview').textContent).toBe(secondFile)
     expect(mocks.navigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('playground resource deletion', () => {
+  afterEach(cleanup)
+
+  beforeEach(() => {
+    mocks.invalidateList.mockReset().mockResolvedValue(undefined)
+    mocks.navigate.mockReset()
+  })
+
+  it('refreshes the tree and moves to the parent after deleting a file', async () => {
+    mocks.search = { file: firstFile, uri: parentDirectory }
+    render(<PlaygroundRoute />)
+
+    await userEvent.click(
+      await screen.findByRole('button', { name: `delete ${firstFile}` }),
+    )
+
+    expect(mocks.invalidateList).toHaveBeenCalledOnce()
+    await waitFor(() => {
+      expect(screen.getByTestId('preview').textContent).toBe(parentDirectory)
+    })
+    const navigation = mocks.navigate.mock.calls.at(-1)?.[0]
+    expect(
+      navigation.search({ file: firstFile, uri: parentDirectory }),
+    ).toEqual({ uri: parentDirectory })
+  })
+
+  it('does not offer to delete a top-level namespace', () => {
+    mocks.search = { uri: 'viking://resources/' }
+    render(<PlaygroundRoute />)
+
+    expect(screen.queryByRole('button', { name: /^delete / })).toBeNull()
   })
 })
