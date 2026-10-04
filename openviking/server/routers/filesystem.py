@@ -28,7 +28,7 @@ from openviking_cli.exceptions import NotFoundError
 router = APIRouter(prefix="/api/v1/fs", tags=["filesystem"])
 
 
-_ATTR_INDEX_FIELDS = ["level", "search_tags"]
+_ATTR_INDEX_FIELDS = ["level", "search_tags", "uploaded_by"]
 
 
 def _clean_memory_attrs(raw: str) -> dict[str, Any]:
@@ -40,10 +40,12 @@ def _clean_memory_attrs(raw: str) -> dict[str, Any]:
     return attrs
 
 
-async def _tags_attr(service: Any, uri: str, ctx: RequestContext, *, is_dir: bool) -> list[str]:
+async def _index_attrs(
+    service: Any, uri: str, ctx: RequestContext, *, is_dir: bool
+) -> dict[str, Any]:
     vikingdb_manager = getattr(service, "vikingdb_manager", None)
     if not vikingdb_manager:
-        return []
+        return {"tags": [], "uploaded_by": ""}
 
     # Tags are written per level (see ContentWriteCoordinator.set_tags): a
     # directory carries them on its L0/L1 summary records, while a file carries
@@ -63,7 +65,11 @@ async def _tags_attr(service: Any, uri: str, ctx: RequestContext, *, is_dir: boo
         for tag in normalize_search_tags(record.get("search_tags"), discard_invalid=True):
             if tag not in tags:
                 tags.append(tag)
-    return tags
+    uploaded_by = next(
+        (str(record["uploaded_by"]) for record in records if record.get("uploaded_by")),
+        "",
+    )
+    return {"tags": tags, "uploaded_by": uploaded_by}
 
 
 @router.get("/ls")
@@ -213,11 +219,7 @@ async def attrs(
         result = {
             "uri": uri,
             "context_type": context_type_for_uri(uri),
-            "attrs": {
-                "tags": await _tags_attr(
-                    service, uri, _ctx, is_dir=stat_result.get("isDir", False)
-                ),
-            },
+            "attrs": await _index_attrs(service, uri, _ctx, is_dir=stat_result.get("isDir", False)),
         }
         if result["context_type"] == "memory" and not stat_result.get("isDir", False):
             result["attrs"]["memory"] = _clean_memory_attrs(await service.fs.read(uri, ctx=_ctx))

@@ -135,6 +135,9 @@ class CollectionSchemas:
                 {"FieldName": "md5", "FieldType": "string", "DefaultValue": ""},
                 {"FieldName": "account_id", "FieldType": "string"},
                 {"FieldName": "owner_user_id", "FieldType": "string"},
+                # user_id of whoever last uploaded or wrote the record. Older
+                # records lack it; callers treat missing/empty as "unknown".
+                {"FieldName": "uploaded_by", "FieldType": "string"},
                 {
                     "FieldName": ACL_MODE_FIELD,
                     "FieldType": "string",
@@ -166,6 +169,7 @@ class CollectionSchemas:
                 "search_tags",
                 "account_id",
                 "owner_user_id",
+                "uploaded_by",
                 ACL_MODE_FIELD,
                 *ACL_GRANT_FIELDS,
             ]
@@ -319,7 +323,10 @@ async def init_context_collection(storage) -> bool:
     missing_scalar_indexes = sorted(expected_scalar_indexes - existing_scalar_indexes)
 
     async def _update_local_schema() -> None:
-        if vectordb_cfg.backend not in {"local", "cuvs"} or "Fields" not in existing_meta:
+        if (
+            vectordb_cfg.backend not in {"local", "cuvs", "elasticsearch"}
+            or "Fields" not in existing_meta
+        ):
             return
         if not missing_fields and not missing_scalar_indexes:
             return

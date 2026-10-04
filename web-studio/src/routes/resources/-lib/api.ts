@@ -9,6 +9,7 @@ import {
   getFsTree,
   getOvResult,
   normalizeOvClientError,
+  ovClient,
   postContentWrite,
 } from '#/lib/ov-client'
 import type {
@@ -247,6 +248,24 @@ export async function removeResource(
     await getOvResult<unknown>(
       deleteFs({ query: { uri, recursive: options.recursive } }),
     )
+  } catch (error) {
+    throw toVikingApiError(error)
+  }
+}
+
+type FsAttrsResult = { attrs?: { uploaded_by?: unknown } }
+
+/** User id that last uploaded or wrote `uri`, or '' when unknown. */
+export async function fetchResourceUploader(
+  uri: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  try {
+    const result = await getOvResult<FsAttrsResult>(
+      ovClient.client.get({ query: { uri }, signal, url: '/api/v1/fs/attrs' }),
+    )
+    const uploadedBy = result.attrs?.uploaded_by
+    return typeof uploadedBy === 'string' ? uploadedBy : ''
   } catch (error) {
     throw toVikingApiError(error)
   }

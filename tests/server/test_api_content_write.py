@@ -46,14 +46,59 @@ async def test_fs_attrs_filters_legacy_non_kv_search_tags(monkeypatch):
 
     monkeypatch.setattr(filesystem, "VikingDBManagerProxy", FakeVikingDBManagerProxy)
 
-    tags = await filesystem._tags_attr(
+    attrs = await filesystem._index_attrs(
         SimpleNamespace(vikingdb_manager=object()),
         "viking://user/default/memories/events/example.md",
         SimpleNamespace(),
         is_dir=False,
     )
+    tags = attrs["tags"]
 
     assert tags == ["team=search", "channel=app"]
+
+
+async def test_fs_attrs_reads_uploader_from_index_records(monkeypatch):
+    class FakeVikingDBManagerProxy:
+        def __init__(self, *_args):
+            pass
+
+        async def filter(self, **kwargs):
+            assert "uploaded_by" in kwargs["output_fields"]
+            return [
+                {"level": 1, "search_tags": [], "uploaded_by": "bob"},
+                {"level": 0, "search_tags": ["team=search"], "uploaded_by": "alice"},
+            ]
+
+    monkeypatch.setattr(filesystem, "VikingDBManagerProxy", FakeVikingDBManagerProxy)
+
+    attrs = await filesystem._index_attrs(
+        SimpleNamespace(vikingdb_manager=object()),
+        "viking://resources/demo",
+        SimpleNamespace(),
+        is_dir=True,
+    )
+
+    assert attrs == {"tags": ["team=search"], "uploaded_by": "alice"}
+
+
+async def test_fs_attrs_uploader_empty_for_legacy_records(monkeypatch):
+    class FakeVikingDBManagerProxy:
+        def __init__(self, *_args):
+            pass
+
+        async def filter(self, **_kwargs):
+            return [{"level": 2, "search_tags": []}]
+
+    monkeypatch.setattr(filesystem, "VikingDBManagerProxy", FakeVikingDBManagerProxy)
+
+    attrs = await filesystem._index_attrs(
+        SimpleNamespace(vikingdb_manager=object()),
+        "viking://resources/demo/a.md",
+        SimpleNamespace(),
+        is_dir=False,
+    )
+
+    assert attrs["uploaded_by"] == ""
 
 
 async def test_write_rejects_directory_uri(client_with_resource):

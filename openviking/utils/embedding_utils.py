@@ -457,6 +457,7 @@ async def vectorize_directory_meta(
                 created_at=created_at,
                 updated_at=updated_at,
                 user=ctx.user,
+                uploaded_by=ctx.user.user_id,
                 account_id=ctx.account_id,
                 owner_space=owner_space,
                 meta=meta,
@@ -517,6 +518,7 @@ async def vectorize_directory_meta(
                 created_at=created_at,
                 updated_at=updated_at,
                 user=ctx.user,
+                uploaded_by=ctx.user.user_id,
                 account_id=ctx.account_id,
                 owner_space=owner_space,
                 meta=meta,
@@ -625,6 +627,7 @@ async def vectorize_file(
             created_at=created_at,
             updated_at=updated_at,
             user=ctx.user,
+            uploaded_by=ctx.user.user_id,
             account_id=ctx.account_id,
             owner_space=owner_space_for_uri(file_path),
         )

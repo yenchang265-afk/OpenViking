@@ -559,6 +559,19 @@ class TestContextEdgeCases:
         assert "md5" not in ctx.to_dict()
         assert Context.from_dict({"uri": "viking://resources/x/b.py"}).md5 == ""
 
+    def test_uploaded_by_roundtrip(self):
+        ctx = Context(uri="viking://resources/x/a.py", is_leaf=True, uploaded_by="alice")
+
+        assert ctx.to_dict()["uploaded_by"] == "alice"
+        assert Context.from_dict(ctx.to_dict()).uploaded_by == "alice"
+
+    def test_missing_uploaded_by_is_omitted_from_dict(self):
+        # Omitted (not "") so a MERGE write such as a reindex keeps the stored uploader.
+        ctx = Context(uri="viking://resources/x/b.py", is_leaf=True)
+
+        assert "uploaded_by" not in ctx.to_dict()
+        assert Context.from_dict({"uri": "viking://resources/x/b.py"}).uploaded_by == ""
+
 
 def test_content_md5_is_stable_hex_digest():
     assert content_md5(b"print(1)") == content_md5(b"print(1)")

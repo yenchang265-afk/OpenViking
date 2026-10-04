@@ -3,14 +3,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchDirectorySidecarContent,
   fetchFsList,
+  fetchResourceUploader,
   removeResource,
 } from './api'
 
-const { deleteFsMock, getContentReadMock, getFsLsMock } = vi.hoisted(() => ({
-  deleteFsMock: vi.fn(),
-  getContentReadMock: vi.fn(),
-  getFsLsMock: vi.fn(),
-}))
+const { clientGetMock, deleteFsMock, getContentReadMock, getFsLsMock } =
+  vi.hoisted(() => ({
+    clientGetMock: vi.fn(),
+    deleteFsMock: vi.fn(),
+    getContentReadMock: vi.fn(),
+    getFsLsMock: vi.fn(),
+  }))
 
 vi.mock('#/lib/ov-client', async (importOriginal) => {
   const original = await importOriginal()
@@ -19,6 +22,7 @@ vi.mock('#/lib/ov-client', async (importOriginal) => {
     deleteFs: deleteFsMock,
     getContentRead: getContentReadMock,
     getFsLs: getFsLsMock,
+    ovClient: { client: { get: clientGetMock } },
   }
 })
 
@@ -106,5 +110,43 @@ describe('removeResource', () => {
     await expect(
       removeResource('viking://resources/demo.md'),
     ).rejects.toMatchObject({ message: expect.any(String) })
+  })
+})
+
+describe('fetchResourceUploader', () => {
+  it('reads the uploader from the resource attrs', async () => {
+    clientGetMock.mockResolvedValue({
+      data: {
+        status: 'ok',
+        result: {
+          uri: 'viking://resources/demo.md',
+          attrs: { tags: [], uploaded_by: 'alice' },
+        },
+      },
+      headers: {},
+      status: 200,
+    })
+
+    await expect(
+      fetchResourceUploader('viking://resources/demo.md'),
+    ).resolves.toBe('alice')
+    expect(clientGetMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: { uri: 'viking://resources/demo.md' },
+        url: '/api/v1/fs/attrs',
+      }),
+    )
+  })
+
+  it('returns an empty string when the uploader is unknown', async () => {
+    clientGetMock.mockResolvedValue({
+      data: { status: 'ok', result: { attrs: { tags: [] } } },
+      headers: {},
+      status: 200,
+    })
+
+    await expect(
+      fetchResourceUploader('viking://resources/legacy.md'),
+    ).resolves.toBe('')
   })
 })

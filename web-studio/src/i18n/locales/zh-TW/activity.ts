@@ -133,6 +133,7 @@ const activity = {
   },
   playground: {
     copyUri: '複製當前 URI',
+    uploadedBy: '上傳者：{{user}}',
     copied: '已複製 URI',
     copyFailed: '複製失敗',
     resizeContext: '調整上下文樹寬度',

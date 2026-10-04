@@ -658,6 +658,57 @@ async def test_init_context_collection_backfills_metadata_for_empty_legacy_colle
     assert set(scalar_index) - set(existing_scalar_index) == {"tags"}
 
 
+def test_context_collection_schema_indexes_uploaded_by():
+    schema = CollectionSchemas.context_collection("context", 2)
+
+    assert {"FieldName": "uploaded_by", "FieldType": "string"} in schema["Fields"]
+    assert "uploaded_by" in schema["ScalarIndex"]
+
+
+@pytest.mark.asyncio
+async def test_init_context_collection_adds_missing_fields_to_elasticsearch(monkeypatch):
+    # The ES mapping is strict, so a new field must be added before records carry it.
+    schema_updates = []
+    config = _DummyConfig(_DummyEmbedder(), backend="elasticsearch")
+    full_schema = CollectionSchemas.context_collection("context", config.embedding.dimension)
+    existing_fields = [f for f in full_schema["Fields"] if f["FieldName"] != "uploaded_by"]
+    existing_scalar_index = [f for f in full_schema["ScalarIndex"] if f != "uploaded_by"]
+
+    class _FakeStorage:
+        async def create_collection(self, name, schema):
+            del name, schema
+            return False
+
+        async def get_collection_meta(self):
+            return {
+                "Description": "Unified context collection",
+                "Fields": existing_fields,
+                "ScalarIndex": existing_scalar_index,
+            }
+
+        async def count(self):
+            return 0
+
+        async def update_collection_description(self, description):
+            del description
+            return True
+
+        async def update_collection_schema(self, fields, scalar_index):
+            schema_updates.append((fields, scalar_index))
+
+    monkeypatch.setattr(
+        "openviking_cli.utils.config.get_openviking_config",
+        lambda: config,
+    )
+
+    await init_context_collection(_FakeStorage())
+
+    assert len(schema_updates) == 1
+    fields, scalar_index = schema_updates[0]
+    assert "uploaded_by" in {field["FieldName"] for field in fields}
+    assert "uploaded_by" in scalar_index
+
+
 @pytest.mark.asyncio
 async def test_init_context_collection_rejects_mismatched_nonempty_collection(monkeypatch):
     """When embedding dimension mismatches for a non-empty collection, vectors are
