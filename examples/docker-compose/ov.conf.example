@@ -1,0 +1,66 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 1933,
+    "root_api_key": "${OPENVIKING_ROOT_API_KEY}",
+    "cors_origins": ["*"]
+  },
+  "cache": {
+    "provider": "redis",
+    "params": {
+      "mode": "standalone",
+      "endpoints": ["redis://redis:6379"],
+      "password_env": "REDIS_PASSWORD",
+      "db": 0,
+      "command_timeout_ms": 1000
+    }
+  },
+  "storage": {
+    "workspace": "/app/.openviking/data",
+    "agfs": {
+      "backend": "s3",
+      "s3": {
+        "bucket": "openviking",
+        "endpoint": "http://seaweedfs:8333",
+        "region": "us-east-1",
+        "access_key": "${S3_ACCESS_KEY}",
+        "secret_key": "${S3_SECRET_KEY}",
+        "use_ssl": false,
+        "use_path_style": true,
+        "prefix": "ov/"
+      },
+      "queuefs": {
+        "backend": "cache"
+      },
+      "pathlock": {
+        "provider": "cache",
+        "namespace": "openviking"
+      }
+    },
+    "vectordb": {
+      "name": "context",
+      "backend": "elasticsearch",
+      "elasticsearch": {
+        "hosts": ["http://elasticsearch:9200"],
+        "number_of_replicas": 0
+      }
+    }
+  },
+  "embedding": {
+    "dense": {
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_key": "${OPENAI_API_KEY}",
+      "api_base": "https://api.openai.com/v1",
+      "dimension": 1536
+    }
+  },
+  "vlm": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "api_key": "${OPENAI_API_KEY}",
+    "api_base": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "max_retries": 2
+  }
+}
