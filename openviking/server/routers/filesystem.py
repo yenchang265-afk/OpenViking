@@ -28,7 +28,7 @@ from openviking_cli.exceptions import NotFoundError
 router = APIRouter(prefix="/api/v1/fs", tags=["filesystem"])
 
 
-_ATTR_INDEX_FIELDS = ["level", "search_tags", "uploaded_by"]
+_ATTR_INDEX_FIELDS = ["level", "search_tags", "uploaded_by", "updated_by"]
 
 
 def _clean_memory_attrs(raw: str) -> dict[str, Any]:
@@ -45,7 +45,7 @@ async def _index_attrs(
 ) -> dict[str, Any]:
     vikingdb_manager = getattr(service, "vikingdb_manager", None)
     if not vikingdb_manager:
-        return {"tags": [], "uploaded_by": ""}
+        return {"tags": [], "uploaded_by": "", "updated_by": ""}
 
     # Tags are written per level (see ContentWriteCoordinator.set_tags): a
     # directory carries them on its L0/L1 summary records, while a file carries
@@ -65,11 +65,15 @@ async def _index_attrs(
         for tag in normalize_search_tags(record.get("search_tags"), discard_invalid=True):
             if tag not in tags:
                 tags.append(tag)
-    uploaded_by = next(
-        (str(record["uploaded_by"]) for record in records if record.get("uploaded_by")),
-        "",
-    )
-    return {"tags": tags, "uploaded_by": uploaded_by}
+    return {
+        "tags": tags,
+        "uploaded_by": _first_index_value(records, "uploaded_by"),
+        "updated_by": _first_index_value(records, "updated_by"),
+    }
+
+
+def _first_index_value(records: list[dict[str, Any]], field: str) -> str:
+    return next((str(record[field]) for record in records if record.get(field)), "")
 
 
 @router.get("/ls")

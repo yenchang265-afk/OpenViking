@@ -64,9 +64,15 @@ async def test_fs_attrs_reads_uploader_from_index_records(monkeypatch):
 
         async def filter(self, **kwargs):
             assert "uploaded_by" in kwargs["output_fields"]
+            assert "updated_by" in kwargs["output_fields"]
             return [
-                {"level": 1, "search_tags": [], "uploaded_by": "bob"},
-                {"level": 0, "search_tags": ["team=search"], "uploaded_by": "alice"},
+                {"level": 1, "search_tags": [], "uploaded_by": "bob", "updated_by": "carol"},
+                {
+                    "level": 0,
+                    "search_tags": ["team=search"],
+                    "uploaded_by": "alice",
+                    "updated_by": "dave",
+                },
             ]
 
     monkeypatch.setattr(filesystem, "VikingDBManagerProxy", FakeVikingDBManagerProxy)
@@ -78,7 +84,7 @@ async def test_fs_attrs_reads_uploader_from_index_records(monkeypatch):
         is_dir=True,
     )
 
-    assert attrs == {"tags": ["team=search"], "uploaded_by": "alice"}
+    assert attrs == {"tags": ["team=search"], "uploaded_by": "alice", "updated_by": "dave"}
 
 
 async def test_fs_attrs_uploader_empty_for_legacy_records(monkeypatch):
@@ -99,6 +105,7 @@ async def test_fs_attrs_uploader_empty_for_legacy_records(monkeypatch):
     )
 
     assert attrs["uploaded_by"] == ""
+    assert attrs["updated_by"] == ""
 
 
 async def test_write_rejects_directory_uri(client_with_resource):

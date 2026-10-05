@@ -135,9 +135,11 @@ class CollectionSchemas:
                 {"FieldName": "md5", "FieldType": "string", "DefaultValue": ""},
                 {"FieldName": "account_id", "FieldType": "string"},
                 {"FieldName": "owner_user_id", "FieldType": "string"},
-                # user_id of whoever last uploaded or wrote the record. Older
-                # records lack it; callers treat missing/empty as "unknown".
+                # user_ids of whoever first uploaded (set once) and last changed
+                # the record. Older records lack them; callers treat
+                # missing/empty as "unknown".
                 {"FieldName": "uploaded_by", "FieldType": "string"},
+                {"FieldName": "updated_by", "FieldType": "string"},
                 {
                     "FieldName": ACL_MODE_FIELD,
                     "FieldType": "string",
@@ -170,6 +172,7 @@ class CollectionSchemas:
                 "account_id",
                 "owner_user_id",
                 "uploaded_by",
+                "updated_by",
                 ACL_MODE_FIELD,
                 *ACL_GRANT_FIELDS,
             ]
@@ -921,6 +924,10 @@ class TextEmbeddingHandler(DequeueHandlerBase):
                         inserted_data = FieldPatch(merge_fields, merge_modes).apply(
                             {**base, **inserted_data}
                         )
+                        # The original uploader is set once; later writers only
+                        # change updated_by.
+                        if existing_records and existing_records[0].get("uploaded_by"):
+                            inserted_data["uploaded_by"] = existing_records[0]["uploaded_by"]
                         if not existing_records:
                             missing_fields = missing_initial_record_fields(inserted_data)
                             if missing_fields:

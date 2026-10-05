@@ -572,6 +572,18 @@ class TestContextEdgeCases:
         assert "uploaded_by" not in ctx.to_dict()
         assert Context.from_dict({"uri": "viking://resources/x/b.py"}).uploaded_by == ""
 
+    def test_updated_by_roundtrip(self):
+        ctx = Context(uri="viking://resources/x/a.py", is_leaf=True, updated_by="bob")
+
+        assert ctx.to_dict()["updated_by"] == "bob"
+        assert Context.from_dict(ctx.to_dict()).updated_by == "bob"
+
+    def test_missing_updated_by_is_omitted_from_dict(self):
+        ctx = Context(uri="viking://resources/x/b.py", is_leaf=True)
+
+        assert "updated_by" not in ctx.to_dict()
+        assert Context.from_dict({"uri": "viking://resources/x/b.py"}).updated_by == ""
+
 
 def test_content_md5_is_stable_hex_digest():
     assert content_md5(b"print(1)") == content_md5(b"print(1)")

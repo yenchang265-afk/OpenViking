@@ -45,7 +45,7 @@ import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import { AgentPanel } from './-components/agent-panel'
 import { DeleteResource } from './-components/delete-resource'
-import { ResourceUploader } from './-components/resource-uploader'
+import { ResourceAuthors } from './-components/resource-authors'
 import {
   ContextExplorerHeader,
   ContextTree,
@@ -609,7 +609,7 @@ function PlaygroundWorkbench() {
             >
               {displayUri}
             </button>
-            <ResourceUploader uri={selectedUri} />
+            <ResourceAuthors uri={selectedUri} />
             <Button
               type="button"
               size="icon-sm"

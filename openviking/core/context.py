@@ -82,6 +82,7 @@ class Context:
         owner_space: Optional[str] = None,
         md5: Optional[str] = None,
         uploaded_by: Optional[str] = None,
+        updated_by: Optional[str] = None,
         id: Optional[str] = None,
     ):
         """
@@ -116,9 +117,11 @@ class Context:
         # records or non-file records), and incremental diff falls back to reading
         # bytes rather than assuming equality.
         self.md5 = md5 or ""
-        # user_id of whoever last uploaded or wrote this record; "" means unknown
-        # (older records, or writers such as reindex that must not change it).
+        # user_ids of whoever first uploaded / last changed this record; "" means
+        # unknown (older records, or writers such as reindex that must not change it).
+        # uploaded_by is set once: stored values win over later writes.
         self.uploaded_by = uploaded_by or ""
+        self.updated_by = updated_by or ""
         self.vector: Optional[List[float]] = None
         self.vectorize = Vectorize(abstract)
 
@@ -186,6 +189,8 @@ class Context:
             data["md5"] = self.md5
         if self.uploaded_by:
             data["uploaded_by"] = self.uploaded_by
+        if self.updated_by:
+            data["updated_by"] = self.updated_by
 
         if self.user:
             data["user"] = self.user.to_dict()
@@ -246,6 +251,7 @@ class Context:
             owner_space=data.get("owner_space"),
             md5=data.get("md5"),
             uploaded_by=data.get("uploaded_by"),
+            updated_by=data.get("updated_by"),
         )
         obj.id = data.get("id", obj.id)
         obj.vector = data.get("vector")

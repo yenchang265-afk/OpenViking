@@ -253,19 +253,27 @@ export async function removeResource(
   }
 }
 
-type FsAttrsResult = { attrs?: { uploaded_by?: unknown } }
+type FsAttrsResult = {
+  attrs?: { uploaded_by?: unknown; updated_by?: unknown }
+}
 
-/** User id that last uploaded or wrote `uri`, or '' when unknown. */
-export async function fetchResourceUploader(
+export type ResourceAuthors = { uploadedBy: string; updatedBy: string }
+
+/** User ids that first uploaded and last changed `uri`; '' when unknown. */
+export async function fetchResourceAuthors(
   uri: string,
   signal?: AbortSignal,
-): Promise<string> {
+): Promise<ResourceAuthors> {
   try {
     const result = await getOvResult<FsAttrsResult>(
       ovClient.client.get({ query: { uri }, signal, url: '/api/v1/fs/attrs' }),
     )
-    const uploadedBy = result.attrs?.uploaded_by
-    return typeof uploadedBy === 'string' ? uploadedBy : ''
+    const { uploaded_by: uploadedBy, updated_by: updatedBy } =
+      result.attrs ?? {}
+    return {
+      uploadedBy: typeof uploadedBy === 'string' ? uploadedBy : '',
+      updatedBy: typeof updatedBy === 'string' ? updatedBy : '',
+    }
   } catch (error) {
     throw toVikingApiError(error)
   }

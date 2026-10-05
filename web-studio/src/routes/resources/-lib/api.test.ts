@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchDirectorySidecarContent,
   fetchFsList,
-  fetchResourceUploader,
+  fetchResourceAuthors,
   removeResource,
 } from './api'
 
@@ -113,14 +113,14 @@ describe('removeResource', () => {
   })
 })
 
-describe('fetchResourceUploader', () => {
-  it('reads the uploader from the resource attrs', async () => {
+describe('fetchResourceAuthors', () => {
+  it('reads the uploader and last updater from the resource attrs', async () => {
     clientGetMock.mockResolvedValue({
       data: {
         status: 'ok',
         result: {
           uri: 'viking://resources/demo.md',
-          attrs: { tags: [], uploaded_by: 'alice' },
+          attrs: { tags: [], uploaded_by: 'alice', updated_by: 'bob' },
         },
       },
       headers: {},
@@ -128,8 +128,8 @@ describe('fetchResourceUploader', () => {
     })
 
     await expect(
-      fetchResourceUploader('viking://resources/demo.md'),
-    ).resolves.toBe('alice')
+      fetchResourceAuthors('viking://resources/demo.md'),
+    ).resolves.toEqual({ uploadedBy: 'alice', updatedBy: 'bob' })
     expect(clientGetMock).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { uri: 'viking://resources/demo.md' },
@@ -138,7 +138,7 @@ describe('fetchResourceUploader', () => {
     )
   })
 
-  it('returns an empty string when the uploader is unknown', async () => {
+  it('returns empty strings when the authors are unknown', async () => {
     clientGetMock.mockResolvedValue({
       data: { status: 'ok', result: { attrs: { tags: [] } } },
       headers: {},
@@ -146,7 +146,7 @@ describe('fetchResourceUploader', () => {
     })
 
     await expect(
-      fetchResourceUploader('viking://resources/legacy.md'),
-    ).resolves.toBe('')
+      fetchResourceAuthors('viking://resources/legacy.md'),
+    ).resolves.toEqual({ uploadedBy: '', updatedBy: '' })
   })
 })

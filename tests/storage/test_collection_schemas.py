@@ -497,6 +497,50 @@ async def test_embedding_handler_merge_action_reads_and_merges_before_full_upser
 
 
 @pytest.mark.asyncio
+async def test_embedding_handler_merge_keeps_stored_uploader_and_takes_new_updater(monkeypatch):
+    config = _DummyConfig(_DummyEmbedder())
+    monkeypatch.setattr(
+        "openviking_cli.utils.config.get_openviking_config",
+        lambda: config,
+    )
+    captured = {}
+
+    class _MergingVikingDB:
+        is_closing = False
+        uses_content_field = False
+
+        async def get_strict(self, ids, *, ctx):
+            del ctx
+            return [{"id": ids[0], "uploaded_by": "alice", "updated_by": "alice"}]
+
+        async def upsert(self, data, *, ctx, options=UpsertOptions()):
+            del ctx, options
+            captured["data"] = dict(data)
+            return data["id"]
+
+    handler = TextEmbeddingHandler(_MergingVikingDB())
+    msg = EmbeddingMsg(
+        message="body",
+        action=IndexAction.MERGE,
+        context_data={
+            "id": "generated-id",
+            "_upsert_record_id": "generated-id",
+            "uri": "viking://resources/repo/a.py",
+            "account_id": "acct",
+            "abstract": "summary",
+            "uploaded_by": "bob",
+            "updated_by": "bob",
+        },
+    )
+
+    result = await handler.on_dequeue(_build_operation_payload(msg))
+
+    assert result.outcome is ProcessOutcome.SUCCESS
+    assert captured["data"]["uploaded_by"] == "alice"
+    assert captured["data"]["updated_by"] == "bob"
+
+
+@pytest.mark.asyncio
 async def test_embedding_handler_merge_not_found_creates_from_generated_vector(monkeypatch):
     config = _DummyConfig(_DummyEmbedder())
     monkeypatch.setattr("openviking_cli.utils.config.get_openviking_config", lambda: config)
@@ -663,6 +707,8 @@ def test_context_collection_schema_indexes_uploaded_by():
 
     assert {"FieldName": "uploaded_by", "FieldType": "string"} in schema["Fields"]
     assert "uploaded_by" in schema["ScalarIndex"]
+    assert {"FieldName": "updated_by", "FieldType": "string"} in schema["Fields"]
+    assert "updated_by" in schema["ScalarIndex"]
 
 
 @pytest.mark.asyncio

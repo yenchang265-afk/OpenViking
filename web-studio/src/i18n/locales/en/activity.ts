@@ -141,6 +141,7 @@ const activity = {
   playground: {
     copyUri: 'Copy current URI',
     uploadedBy: 'Uploaded by {{user}}',
+    updatedBy: 'Last updated by {{user}}',
     copied: 'URI copied',
     copyFailed: 'Copy failed',
     resizeContext: 'Resize context tree width',

@@ -96,9 +96,9 @@ vi.mock('./-components/delete-resource', () => ({
   ),
 }))
 
-vi.mock('./-components/resource-uploader', () => ({
-  ResourceUploader: ({ uri }: { uri: string }) => (
-    <span data-testid="uploader">{uri}</span>
+vi.mock('./-components/resource-authors', () => ({
+  ResourceAuthors: ({ uri }: { uri: string }) => (
+    <span data-testid="authors">{uri}</span>
   ),
 }))
 vi.mock('./-components/agent-panel', () => ({ AgentPanel: () => null }))
@@ -214,13 +214,13 @@ describe('playground resource deletion', () => {
   })
 })
 
-describe('playground resource uploader', () => {
+describe('playground resource authors', () => {
   afterEach(cleanup)
 
-  it('shows the uploader of the selected file in the header', async () => {
+  it('shows the authors of the selected file in the header', async () => {
     mocks.search = { file: firstFile, uri: parentDirectory }
     render(<PlaygroundRoute />)
 
-    expect((await screen.findByTestId('uploader')).textContent).toBe(firstFile)
+    expect((await screen.findByTestId('authors')).textContent).toBe(firstFile)
   })
 })
