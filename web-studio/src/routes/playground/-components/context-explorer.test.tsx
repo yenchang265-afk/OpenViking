@@ -18,7 +18,8 @@ vi.mock('#/routes/resources/-hooks/viking-fm', () => ({
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, options?: { name?: string }) => {
+    t: (key: string, options?: { name?: string; user?: string }) => {
+      if (options?.user) return `${key}:${options.user}`
       if (key === 'explorer.title') return 'Context tree'
       if (key === 'explorer.expandDirectory') {
         return `Expand ${options?.name}`
@@ -103,6 +104,38 @@ function renderTree({
 
   return { onExpandedKeysChange, onSelectDirectory, onSelectFile }
 }
+
+describe('ContextTree authors', () => {
+  it('requests authors for child listings and shows them on each row', () => {
+    useVikingFsListMock.mockImplementation((uri: string) => ({
+      data: {
+        entries:
+          uri === 'viking://'
+            ? [directory]
+            : [{ ...file, uploadedBy: 'alice', updatedBy: 'bob' }],
+      },
+      isError: false,
+      isLoading: false,
+    }))
+
+    renderTree({ expandedKeys: new Set([directory.uri]) })
+
+    const childCall = useVikingFsListMock.mock.calls.find(
+      ([uri]) => uri === directory.uri,
+    )
+    expect(childCall?.[1]).toMatchObject({ extraFields: ['authors'] })
+    const row = screen.getByRole('button', { name: 'guide.md' })
+    expect(row.querySelector('[title="uploadedBy:alice"]')).toBeTruthy()
+    expect(row.querySelector('[title="updatedBy:bob"]')).toBeTruthy()
+  })
+
+  it('shows no authors for entries without recorded authors', () => {
+    renderTree({ expandedKeys: new Set([directory.uri]) })
+
+    const row = screen.getByRole('button', { name: 'guide.md' })
+    expect(row.querySelector('[title^="uploadedBy"]')).toBeNull()
+  })
+})
 
 describe('ContextTree keyboard semantics', () => {
   it('renders native controls in a labelled, nested list', () => {

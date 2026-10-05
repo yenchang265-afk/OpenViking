@@ -20,6 +20,7 @@ import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import { sortTreeEntries, visibleContextEntries } from '../-lib/utils'
 import { ROOT_URI } from '../-lib/constants'
+import { AuthorChips } from './author-chips'
 
 const TREE_INDENT_WIDTH = 16
 const TREE_ROW_PADDING = 6
@@ -285,6 +286,7 @@ export function ContextTreeNode({
       output: 'agent',
       showAllHidden: true,
       nodeLimit: 200,
+      extraFields: ['authors'],
     },
     shouldLoadChildren,
   )
@@ -399,6 +401,15 @@ export function ContextTreeNode({
           ) : entry.name === '_overview.md' ? (
             <span className="shrink-0 rounded bg-muted px-1 font-sans text-[10px] text-muted-foreground">
               {t('explorer.overviewLevel')}
+            </span>
+          ) : null}
+          {!namespaceHint && (entry.uploadedBy || entry.updatedBy) ? (
+            <span className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 pl-1">
+              <AuthorChips
+                compact
+                uploadedBy={entry.uploadedBy}
+                updatedBy={entry.updatedBy}
+              />
             </span>
           ) : null}
         </button>

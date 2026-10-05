@@ -93,7 +93,8 @@ async def ls(
     ),
     sort_order: Literal["asc", "desc"] = Query("asc", description="Sort direction"),
     extra_fields: Optional[list[str]] = Query(
-        None, description="Extra fields to include: locked, id, count"
+        None,
+        description="Extra fields to include: locked, id, count, authors (uploaded_by/updated_by)",
     ),
     tags: list[str] | None = Query(None, description="Only include entries matching all k=v tags"),
     include_tags: bool = Query(False, description="Include tags in each entry"),

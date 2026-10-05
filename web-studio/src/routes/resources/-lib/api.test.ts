@@ -84,6 +84,58 @@ describe('fetchFsList', () => {
       }),
     })
   })
+
+  it('requests entry authors and maps them onto entries', async () => {
+    getFsLsMock.mockResolvedValue({
+      data: {
+        status: 'ok',
+        result: [
+          {
+            uri: 'viking://resources/a.md',
+            name: 'a.md',
+            isDir: false,
+            uploaded_by: 'alice',
+            updated_by: 'bob',
+          },
+          {
+            uri: 'viking://resources/b.md',
+            name: 'b.md',
+            isDir: false,
+            uploaded_by: '',
+            updated_by: '',
+          },
+        ],
+      },
+      headers: {},
+      status: 200,
+    })
+
+    const result = await fetchFsList('viking://resources', {
+      extraFields: ['authors'],
+    })
+
+    expect(getFsLsMock).toHaveBeenCalledWith({
+      query: expect.objectContaining({ extra_fields: ['authors'] }),
+    })
+    expect(
+      result.entries.map(({ name, uploadedBy, updatedBy }) => ({
+        name,
+        uploadedBy,
+        updatedBy,
+      })),
+    ).toEqual([
+      { name: 'a.md', uploadedBy: 'alice', updatedBy: 'bob' },
+      { name: 'b.md', uploadedBy: '', updatedBy: '' },
+    ])
+  })
+
+  it('omits extra_fields when none are requested', async () => {
+    await fetchFsList('viking://resources')
+
+    expect(getFsLsMock.mock.calls[0][0].query).not.toHaveProperty(
+      'extra_fields',
+    )
+  })
 })
 
 describe('removeResource', () => {

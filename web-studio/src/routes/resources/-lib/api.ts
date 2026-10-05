@@ -70,6 +70,10 @@ export async function fetchFsList(
           simple: options.simple,
           sort_by: options.sortBy ?? 'mtime',
           sort_order: options.sortOrder ?? 'desc',
+          // Not in the generated client yet; the server accepts it on /fs/ls.
+          ...(options.extraFields?.length
+            ? { extra_fields: options.extraFields }
+            : {}),
         },
       }),
     )
