@@ -1464,3 +1464,63 @@ async def test_resource_rm_refreshes_memory_overview_for_cleaned_memories(
         }
     ]
     assert result["memory_cleanup"] == cleanup
+
+
+@pytest.mark.asyncio
+async def test_ls_attaches_authors_from_each_entry_own_index_level(request_context):
+    entries = [
+        {"uri": "viking://resources/docs", "name": "docs", "isDir": True},
+        {"uri": "viking://resources/a.md", "name": "a.md", "isDir": False},
+        {"uri": "viking://resources/legacy.md", "name": "legacy.md", "isDir": False},
+        {"uri": "viking://resources/secret", "name": "secret", "isDir": True, "access": "denied"},
+    ]
+    viking_fs = SimpleNamespace(ls=AsyncMock(return_value=entries))
+    captured = {}
+
+    class FakeVikingDB:
+        async def filter(self, **kwargs):
+            captured.update(kwargs)
+            return [
+                # A directory's authors live on its L0/L1 summary records.
+                {"uri": "viking://resources/docs", "level": 1, "uploaded_by": "alice"},
+                {
+                    "uri": "viking://resources/docs",
+                    "level": 0,
+                    "uploaded_by": "alice",
+                    "updated_by": "bob",
+                },
+                {"uri": "viking://resources/a.md", "level": 0, "uploaded_by": "wrong-level"},
+                {
+                    "uri": "viking://resources/a.md",
+                    "level": 2,
+                    "uploaded_by": "carol",
+                    "updated_by": "carol",
+                },
+                {"uri": "viking://resources/legacy.md", "level": 2},
+            ]
+
+    service = FSService(viking_fs=viking_fs, vikingdb=FakeVikingDB())
+    result = await service.ls(
+        "viking://resources", ctx=request_context, output="agent", extra_fields=["authors"]
+    )
+
+    assert [(e["name"], e.get("uploaded_by"), e.get("updated_by")) for e in result] == [
+        ("docs", "alice", "bob"),
+        ("a.md", "carol", "carol"),
+        ("legacy.md", "", ""),
+        ("secret", None, None),
+    ]
+    assert {"uploaded_by", "updated_by"} <= set(captured["output_fields"])
+
+
+@pytest.mark.asyncio
+async def test_ls_skips_author_lookup_unless_requested(request_context):
+    entries = [{"uri": "viking://resources/a.md", "name": "a.md", "isDir": False}]
+    viking_fs = SimpleNamespace(ls=AsyncMock(return_value=entries))
+    vikingdb = SimpleNamespace(filter=AsyncMock(return_value=[]))
+
+    service = FSService(viking_fs=viking_fs, vikingdb=vikingdb)
+    result = await service.ls("viking://resources", ctx=request_context, output="agent")
+
+    assert result == entries
+    vikingdb.filter.assert_not_awaited()

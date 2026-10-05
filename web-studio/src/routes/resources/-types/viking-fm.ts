@@ -17,6 +17,9 @@ export interface VikingFsEntry {
   modTimestamp: number | null
   abstract: string
   overview?: string
+  /** Present when listed with `extraFields: ['authors']`; '' when unknown. */
+  uploadedBy?: string
+  updatedBy?: string
 }
 
 export interface VikingListQueryOptions {
@@ -29,6 +32,7 @@ export interface VikingListQueryOptions {
   simple?: boolean
   sortBy?: 'name' | 'mtime'
   sortOrder?: 'asc' | 'desc'
+  extraFields?: Array<'authors'>
 }
 
 export interface VikingTreeQueryOptions {

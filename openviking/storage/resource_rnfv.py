@@ -30,6 +30,7 @@ NON_PORTABLE_VECTOR_RECORD_FIELDS = frozenset(
         "content",
         "updated_at",
         "md5",
+        "updated_by",
         "abstract",
         "type",
         "name",

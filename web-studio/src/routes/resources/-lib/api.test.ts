@@ -3,14 +3,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   fetchDirectorySidecarContent,
   fetchFsList,
+  fetchResourceAuthors,
   removeResource,
 } from './api'
 
-const { deleteFsMock, getContentReadMock, getFsLsMock } = vi.hoisted(() => ({
-  deleteFsMock: vi.fn(),
-  getContentReadMock: vi.fn(),
-  getFsLsMock: vi.fn(),
-}))
+const { clientGetMock, deleteFsMock, getContentReadMock, getFsLsMock } =
+  vi.hoisted(() => ({
+    clientGetMock: vi.fn(),
+    deleteFsMock: vi.fn(),
+    getContentReadMock: vi.fn(),
+    getFsLsMock: vi.fn(),
+  }))
 
 vi.mock('#/lib/ov-client', async (importOriginal) => {
   const original = await importOriginal()
@@ -19,6 +22,7 @@ vi.mock('#/lib/ov-client', async (importOriginal) => {
     deleteFs: deleteFsMock,
     getContentRead: getContentReadMock,
     getFsLs: getFsLsMock,
+    ovClient: { client: { get: clientGetMock } },
   }
 })
 
@@ -80,6 +84,58 @@ describe('fetchFsList', () => {
       }),
     })
   })
+
+  it('requests entry authors and maps them onto entries', async () => {
+    getFsLsMock.mockResolvedValue({
+      data: {
+        status: 'ok',
+        result: [
+          {
+            uri: 'viking://resources/a.md',
+            name: 'a.md',
+            isDir: false,
+            uploaded_by: 'alice',
+            updated_by: 'bob',
+          },
+          {
+            uri: 'viking://resources/b.md',
+            name: 'b.md',
+            isDir: false,
+            uploaded_by: '',
+            updated_by: '',
+          },
+        ],
+      },
+      headers: {},
+      status: 200,
+    })
+
+    const result = await fetchFsList('viking://resources', {
+      extraFields: ['authors'],
+    })
+
+    expect(getFsLsMock).toHaveBeenCalledWith({
+      query: expect.objectContaining({ extra_fields: ['authors'] }),
+    })
+    expect(
+      result.entries.map(({ name, uploadedBy, updatedBy }) => ({
+        name,
+        uploadedBy,
+        updatedBy,
+      })),
+    ).toEqual([
+      { name: 'a.md', uploadedBy: 'alice', updatedBy: 'bob' },
+      { name: 'b.md', uploadedBy: '', updatedBy: '' },
+    ])
+  })
+
+  it('omits extra_fields when none are requested', async () => {
+    await fetchFsList('viking://resources')
+
+    expect(getFsLsMock.mock.calls[0][0].query).not.toHaveProperty(
+      'extra_fields',
+    )
+  })
 })
 
 describe('removeResource', () => {
@@ -106,5 +162,43 @@ describe('removeResource', () => {
     await expect(
       removeResource('viking://resources/demo.md'),
     ).rejects.toMatchObject({ message: expect.any(String) })
+  })
+})
+
+describe('fetchResourceAuthors', () => {
+  it('reads the uploader and last updater from the resource attrs', async () => {
+    clientGetMock.mockResolvedValue({
+      data: {
+        status: 'ok',
+        result: {
+          uri: 'viking://resources/demo.md',
+          attrs: { tags: [], uploaded_by: 'alice', updated_by: 'bob' },
+        },
+      },
+      headers: {},
+      status: 200,
+    })
+
+    await expect(
+      fetchResourceAuthors('viking://resources/demo.md'),
+    ).resolves.toEqual({ uploadedBy: 'alice', updatedBy: 'bob' })
+    expect(clientGetMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        query: { uri: 'viking://resources/demo.md' },
+        url: '/api/v1/fs/attrs',
+      }),
+    )
+  })
+
+  it('returns empty strings when the authors are unknown', async () => {
+    clientGetMock.mockResolvedValue({
+      data: { status: 'ok', result: { attrs: { tags: [] } } },
+      headers: {},
+      status: 200,
+    })
+
+    await expect(
+      fetchResourceAuthors('viking://resources/legacy.md'),
+    ).resolves.toEqual({ uploadedBy: '', updatedBy: '' })
   })
 })

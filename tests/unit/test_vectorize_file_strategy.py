@@ -285,6 +285,63 @@ async def test_vectorize_file_omits_md5_when_not_supplied(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_vectorize_file_records_request_user_as_uploader(monkeypatch):
+    queue = DummyQueue()
+    fs = DummyFS("deployment guide")
+    monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
+    monkeypatch.setattr(embedding_utils, "get_viking_fs", lambda: fs)
+    monkeypatch.setattr(
+        embedding_utils,
+        "get_openviking_config",
+        lambda: types.SimpleNamespace(
+            embedding=types.SimpleNamespace(text_source="summary_first", max_input_tokens=1000)
+        ),
+    )
+    req = DummyReq()
+    req.user.user_id = "alice"
+
+    await embedding_utils.vectorize_file(
+        file_path="viking://resources/demo.md",
+        summary_dict={"name": "demo.md", "summary": "deployment summary"},
+        parent_uri="viking://resources",
+        ctx=req,
+    )
+
+    assert queue.items[0].context_data["uploaded_by"] == "alice"
+    assert queue.items[0].context_data["updated_by"] == "alice"
+
+
+@pytest.mark.asyncio
+async def test_vectorize_file_keeps_planned_uploader_but_records_new_updater(monkeypatch):
+    # A re-import carries the stored record's portable fields as overrides: the
+    # original uploader must survive while the updater is the current user.
+    queue = DummyQueue()
+    fs = DummyFS("deployment guide")
+    monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
+    monkeypatch.setattr(embedding_utils, "get_viking_fs", lambda: fs)
+    monkeypatch.setattr(
+        embedding_utils,
+        "get_openviking_config",
+        lambda: types.SimpleNamespace(
+            embedding=types.SimpleNamespace(text_source="summary_first", max_input_tokens=1000)
+        ),
+    )
+    req = DummyReq()
+    req.user.user_id = "bob"
+
+    await embedding_utils.vectorize_file(
+        file_path="viking://resources/demo.md",
+        summary_dict={"name": "demo.md", "summary": "deployment summary"},
+        parent_uri="viking://resources",
+        ctx=req,
+        scalar_override={"uploaded_by": "alice", "updated_by": "alice"},
+    )
+
+    assert queue.items[0].context_data["uploaded_by"] == "alice"
+    assert queue.items[0].context_data["updated_by"] == "bob"
+
+
+@pytest.mark.asyncio
 async def test_vectorize_image_downsamples_large_embedding_input(monkeypatch):
     queue = DummyQueue()
     original = _jpeg_bytes(80, 220)

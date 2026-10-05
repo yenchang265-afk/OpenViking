@@ -375,6 +375,12 @@ export function normalizeFsEntry(
         pickFirstNonEmpty([item.abstract, item.summary, item.description]),
       ),
       overview: String(pickFirstNonEmpty([item.overview, item.l1, item.L1])),
+      ...('uploaded_by' in item || 'updated_by' in item
+        ? {
+            uploadedBy: String(item.uploaded_by ?? ''),
+            updatedBy: String(item.updated_by ?? ''),
+          }
+        : {}),
     }
   }
 

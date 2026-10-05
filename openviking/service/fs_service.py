@@ -192,6 +192,58 @@ class FSService:
             result_entries.append(entry)
         return result_entries
 
+    async def _attach_authors(
+        self,
+        entries: List[Dict[str, Any]],
+        ctx: RequestContext,
+    ) -> List[Dict[str, Any]]:
+        """Attach uploaded_by/updated_by from each entry's own index level.
+
+        One filter query covers the whole page. Directories read their L0/L1
+        summary records and files their L2 record, mirroring tag lookup. Entries
+        the caller may not access are left untouched.
+        """
+        visible = [entry for entry in entries if entry.get("access") != "denied"]
+        uris = list(dict.fromkeys(str(entry.get("uri") or "") for entry in visible))
+        uris = [uri for uri in uris if uri]
+        if not uris:
+            return entries
+        records: List[Dict[str, Any]] = []
+        if self._vikingdb:
+            records = await VikingDBManagerProxy(self._vikingdb, ctx).filter(
+                filter=And(
+                    [Or([Eq("uri", item_uri) for item_uri in uris]), In("level", [0, 1, 2])]
+                ),
+                limit=len(uris) * 3,
+                output_fields=["uri", "level", "uploaded_by", "updated_by"],
+            )
+        records_by_uri: Dict[str, List[Dict[str, Any]]] = {}
+        for record in sorted(records, key=lambda item: item.get("level", 99)):
+            records_by_uri.setdefault(str(record.get("uri") or ""), []).append(record)
+
+        def first(own: List[Dict[str, Any]], field: str) -> str:
+            return next((str(record[field]) for record in own if record.get(field)), "")
+
+        result_entries: List[Dict[str, Any]] = []
+        for entry in entries:
+            if entry.get("access") == "denied":
+                result_entries.append(entry)
+                continue
+            levels = {0, 1} if entry.get("isDir", False) else {2}
+            own = [
+                record
+                for record in records_by_uri.get(str(entry.get("uri") or ""), [])
+                if record.get("level") in levels
+            ]
+            result_entries.append(
+                {
+                    **entry,
+                    "uploaded_by": first(own, "uploaded_by"),
+                    "updated_by": first(own, "updated_by"),
+                }
+            )
+        return result_entries
+
     async def _collect_tagged_page(
         self,
         fetch_page: Callable[[int, Optional[int]], Awaitable[List[Dict[str, Any]]]],
@@ -268,7 +320,7 @@ class FSService:
             node_limit: int = 1000 (maximum number of nodes to list)
             sort_by: Optional sort field for non-recursive listings
             sort_order: Sort direction, "asc" or "desc"
-            extra_fields: Optional extra fields to include (locked, id, count)
+            extra_fields: Optional extra fields to include (locked, id, count, authors)
         """
         viking_fs = self._ensure_initialized()
         extra_fields = extra_fields or []
@@ -319,6 +371,8 @@ class FSService:
             )
         if use_simple_paths:
             return [entry.get("uri", "") for entry in entries]
+        if "authors" in extra_fields:
+            entries = await self._attach_authors(entries, ctx)
         if tags and (output != "original" or extra_fields):
             return await viking_fs._finalize_listing_entries(
                 entries,

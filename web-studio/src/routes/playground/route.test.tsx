@@ -96,6 +96,11 @@ vi.mock('./-components/delete-resource', () => ({
   ),
 }))
 
+vi.mock('./-components/resource-authors', () => ({
+  ResourceAuthors: ({ uri }: { uri: string }) => (
+    <span data-testid="authors">{uri}</span>
+  ),
+}))
 vi.mock('./-components/agent-panel', () => ({ AgentPanel: () => null }))
 vi.mock('./-components/terminal-panel', () => ({ TerminalPanel: () => null }))
 vi.mock('#/routes/resources/-components/find-palette', () => ({
@@ -206,5 +211,16 @@ describe('playground resource deletion', () => {
     render(<PlaygroundRoute />)
 
     expect(screen.queryByRole('button', { name: /^delete / })).toBeNull()
+  })
+})
+
+describe('playground resource authors', () => {
+  afterEach(cleanup)
+
+  it('shows the authors of the selected file in the header', async () => {
+    mocks.search = { file: firstFile, uri: parentDirectory }
+    render(<PlaygroundRoute />)
+
+    expect((await screen.findByTestId('authors')).textContent).toBe(firstFile)
   })
 })

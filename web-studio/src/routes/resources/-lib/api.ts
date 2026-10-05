@@ -9,6 +9,7 @@ import {
   getFsTree,
   getOvResult,
   normalizeOvClientError,
+  ovClient,
   postContentWrite,
 } from '#/lib/ov-client'
 import type {
@@ -69,6 +70,10 @@ export async function fetchFsList(
           simple: options.simple,
           sort_by: options.sortBy ?? 'mtime',
           sort_order: options.sortOrder ?? 'desc',
+          // Not in the generated client yet; the server accepts it on /fs/ls.
+          ...(options.extraFields?.length
+            ? { extra_fields: options.extraFields }
+            : {}),
         },
       }),
     )
@@ -247,6 +252,32 @@ export async function removeResource(
     await getOvResult<unknown>(
       deleteFs({ query: { uri, recursive: options.recursive } }),
     )
+  } catch (error) {
+    throw toVikingApiError(error)
+  }
+}
+
+type FsAttrsResult = {
+  attrs?: { uploaded_by?: unknown; updated_by?: unknown }
+}
+
+export type ResourceAuthors = { uploadedBy: string; updatedBy: string }
+
+/** User ids that first uploaded and last changed `uri`; '' when unknown. */
+export async function fetchResourceAuthors(
+  uri: string,
+  signal?: AbortSignal,
+): Promise<ResourceAuthors> {
+  try {
+    const result = await getOvResult<FsAttrsResult>(
+      ovClient.client.get({ query: { uri }, signal, url: '/api/v1/fs/attrs' }),
+    )
+    const { uploaded_by: uploadedBy, updated_by: updatedBy } =
+      result.attrs ?? {}
+    return {
+      uploadedBy: typeof uploadedBy === 'string' ? uploadedBy : '',
+      updatedBy: typeof updatedBy === 'string' ? updatedBy : '',
+    }
   } catch (error) {
     throw toVikingApiError(error)
   }

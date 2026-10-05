@@ -128,9 +128,7 @@ def _apply_ingest_options(
             embedding_msg.context_data.get("search_tags"), incoming_tags
         )
     embedding_msg.context_data["search_tags"] = incoming_tags
-    embedding_msg.context_data.setdefault("_upsert_options", {})["search_tag_mode"] = (
-        tag_mode
-    )
+    embedding_msg.context_data.setdefault("_upsert_options", {})["search_tag_mode"] = tag_mode
 
 
 async def _enqueue_embedding_message(
@@ -457,6 +455,8 @@ async def vectorize_directory_meta(
                 created_at=created_at,
                 updated_at=updated_at,
                 user=ctx.user,
+                uploaded_by=ctx.user.user_id,
+                updated_by=ctx.user.user_id,
                 account_id=ctx.account_id,
                 owner_space=owner_space,
                 meta=meta,
@@ -517,6 +517,8 @@ async def vectorize_directory_meta(
                 created_at=created_at,
                 updated_at=updated_at,
                 user=ctx.user,
+                uploaded_by=ctx.user.user_id,
+                updated_by=ctx.user.user_id,
                 account_id=ctx.account_id,
                 owner_space=owner_space,
                 meta=meta,
@@ -625,6 +627,8 @@ async def vectorize_file(
             created_at=created_at,
             updated_at=updated_at,
             user=ctx.user,
+            uploaded_by=ctx.user.user_id,
+            updated_by=ctx.user.user_id,
             account_id=ctx.account_id,
             owner_space=owner_space_for_uri(file_path),
         )
