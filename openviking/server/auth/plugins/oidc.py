@@ -23,7 +23,7 @@ from openviking.server.identity import ResolvedIdentity, Role
 from openviking_cli.exceptions import UnauthenticatedError
 
 if TYPE_CHECKING:
-    from jose.backends.base import Key
+    from jwt import PyJWK
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +34,18 @@ _ALLOWED_IDENTIFIER_CHARS = re.compile(r"[^a-zA-Z0-9_.@-]")
 
 def _check_jwt_available() -> bool:
     """Lazy check for JWT library availability (cached after first call)."""
-    global httpx, JWTError, jwk, jwt, Key, ExpiredSignatureError, JWTClaimsError
+    global httpx, jwt, PyJWK, PyJWTError, ExpiredSignatureError
 
     if not hasattr(_check_jwt_available, "_cached"):
         try:
             import httpx  # noqa: F401
-            from jose import JWTError, jwk, jwt  # noqa: F401
-            from jose.backends.base import Key  # noqa: F401
-            from jose.exceptions import ExpiredSignatureError, JWTClaimsError  # noqa: F401
+            import jwt  # noqa: F401
+            from jwt import ExpiredSignatureError, PyJWK, PyJWTError  # noqa: F401
             _check_jwt_available._cached = True
         except ImportError:
             logger.warning(
                 "JWT libraries not available. OIDC authentication will not work. "
-                "Install with: uv pip install python-jose[cryptography] httpx"
+                "Install with: uv pip install pyjwt[crypto] httpx"
             )
             _check_jwt_available._cached = False
     return _check_jwt_available._cached
@@ -76,7 +75,7 @@ class OIDCAuthPlugin(AuthPlugin):
 
     def __init__(self) -> None:
         self._config: Optional[OIDCConfig] = None
-        self._jwks: Dict[str, Key] = {}
+        self._jwks: Dict[str, PyJWK] = {}
         self._mapper: Optional[IdentityMapper] = None
         self._jwks_uri: Optional[str] = None
         self._discovery_lock = asyncio.Lock()
@@ -92,7 +91,7 @@ class OIDCAuthPlugin(AuthPlugin):
         """Resolve identity from OIDC JWT token."""
         if not _check_jwt_available():
             raise UnauthenticatedError(
-                "OIDC authentication not available: missing python-jose and httpx"
+                "OIDC authentication not available: missing pyjwt[crypto] and httpx"
             )
         if self._config is None:
             raise RuntimeError("OIDC config not initialized")
@@ -114,7 +113,7 @@ class OIDCAuthPlugin(AuthPlugin):
             for claim in safe_claims:
                 if claim in claims:
                     logger.debug("Claim '%s': %s", claim, claims[claim])
-        except (JWTError, UnauthenticatedError) as e:
+        except (PyJWTError, UnauthenticatedError) as e:
             logger.debug("Token validation failed: %s", e)
             raise UnauthenticatedError(f"Invalid OIDC token: {e}") from e
 
@@ -182,7 +181,7 @@ class OIDCAuthPlugin(AuthPlugin):
         # Get key ID from token header
         try:
             header = jwt.get_unverified_header(token)
-        except JWTError as e:
+        except PyJWTError as e:
             raise UnauthenticatedError("Invalid token format") from e
 
         kid = header.get("kid")
@@ -199,7 +198,9 @@ class OIDCAuthPlugin(AuthPlugin):
         # application would be a cross-client trust violation.
         assert self._effective_audience is not None
 
-        # Validate token
+        # Validate token. The PyJWK binds its own algorithm, so a token whose
+        # header alg differs from the key's (e.g. HS256 keyed with an RSA
+        # public key) is rejected even though both are in the allow-list.
         try:
             claims = jwt.decode(
                 token,
@@ -216,9 +217,14 @@ class OIDCAuthPlugin(AuthPlugin):
             return claims
         except ExpiredSignatureError:
             raise UnauthenticatedError("Token expired")
-        except JWTClaimsError as e:
+        except (
+            jwt.InvalidAudienceError,
+            jwt.InvalidIssuerError,
+            jwt.ImmatureSignatureError,
+            jwt.MissingRequiredClaimError,
+        ) as e:
             raise UnauthenticatedError(f"Invalid claims: {e}")
-        except JWTError as e:
+        except PyJWTError as e:
             raise UnauthenticatedError(f"Token validation failed: {e}")
 
     async def _discover_jwks_uri(self) -> str:
@@ -269,7 +275,7 @@ class OIDCAuthPlugin(AuthPlugin):
             self._jwks_uri = jwks_uri
             return jwks_uri
 
-    async def _get_key(self, kid: str) -> Key:
+    async def _get_key(self, kid: str) -> PyJWK:
         """Get JWK key for signature validation."""
         if self._config is None:
             raise RuntimeError("OIDC config not initialized")
@@ -294,7 +300,7 @@ class OIDCAuthPlugin(AuthPlugin):
             key_kid = key_dict.get("kid")
             if key_kid:
                 try:
-                    self._jwks[key_kid] = jwk.construct(key_dict)
+                    self._jwks[key_kid] = PyJWK(key_dict)
                 except Exception as e:  # noqa: BLE001
                     logger.warning(
                         "Failed to construct key for kid=%s: %s", key_kid, e

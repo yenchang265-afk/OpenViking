@@ -58,7 +58,7 @@ dependencies = [
     "protobuf>=6.33.5",
     "pdfminer-six>=20251230",
     "typer>=0.12.0",
-    "litellm>=1.83.7,<1.91.2",
+    "litellm>=1.96.2,<1.104.1",
     "python-multipart>=0.0.31",
     # Pin the parsing stack to avoid unvalidated upstream API and grammar changes.
     "tree-sitter==0.25.2",
@@ -102,7 +102,7 @@ test = [
   "hvac>=2.0.0",
 ]
 auth = [
-  "python-jose[cryptography]>=3.3.0",
+  "pyjwt[crypto]>=2.15.1",
   "httpx>=0.25.0",
   "python-ldap>=3.4.0",
 ]
@@ -172,7 +172,7 @@ bot = [
   "fusepy>=3.0.1",
   "opencode-ai>=0.1.0a0",
   # Auth dependencies
-  "python-jose[cryptography]>=3.3.0",
+  "pyjwt[crypto]>=2.15.1",
 ]
 benchmark = [
     "langchain>=1.0.0",
@@ -212,8 +212,10 @@ vikingbot = "vikingbot.cli.commands:app"
 [tool.setuptools_scm]
 write_to = "openviking/_version.py"
 local_scheme = "no-local-version"
-tag_regex = "^v(?P<version>[0-9]+(?:\\.[0-9]+)*)$"
-git_describe_command = "git describe --dirty --tags --long --match v[0-9]*"
+# `upstream-vX.Y.Z` marks the upstream release this fork is based on. It versions
+# fork builds (instead of 0.1.devN) without firing the `v*.*.*` publish workflow.
+tag_regex = "^(?:upstream-)?v(?P<version>[0-9]+(?:\\.[0-9]+)*)$"
+git_describe_command = "git describe --dirty --tags --long --match v[0-9]* --match upstream-v[0-9]*"
 
 [tool.setuptools.packages.find]
 where = [".", "bot"]

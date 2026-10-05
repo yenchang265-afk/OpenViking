@@ -365,8 +365,9 @@ async def test_onboarding_actions_preserve_account_and_validate_body(app, monkey
 def test_studio_routes_are_registered_but_excluded_from_public_schema(app):
     paths = app.openapi()["paths"]
     assert all(route.path not in paths for route in bot_studio.router.routes)
-    assert all(
-        route in app.routes or any(r.path == route.path for r in app.routes)
-        for route in bot_studio.router.routes
-    )
+    # FastAPI >= 0.142 keeps included routers as wrappers in app.routes, so
+    # resolve each route by name through the app instead of scanning paths.
+    for route in bot_studio.router.routes:
+        params = dict.fromkeys(route.param_convertors, "x")
+        assert app.url_path_for(route.name, **params) == route.url_path_for(route.name, **params)
     assert "/api/v1/admin/accounts/{account_id}/users" in paths

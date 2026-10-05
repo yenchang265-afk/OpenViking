@@ -60,6 +60,11 @@ def _build_settings(config: CrawlConfig):
             "CONCURRENT_REQUESTS": config.concurrency,
             "DOWNLOAD_TIMEOUT": config.timeout,
             "DOWNLOAD_DELAY": config.download_delay,
+            # The spider drops HTML bodies over max_html_bytes and never fetches
+            # download links, so abort larger responses mid-stream instead of
+            # buffering up to Scrapy's 1 GiB default (CVE-2017-14158).
+            "DOWNLOAD_MAXSIZE": config.max_html_bytes,
+            "DOWNLOAD_WARNSIZE": 0,
             "RETRY_ENABLED": True,
             "RETRY_TIMES": config.retry_times,
             "ROBOTSTXT_OBEY": True,

@@ -99,12 +99,17 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-${TARGETPLATFORM} \
 # Stage 4: runtime
 FROM python:3.13-slim-trixie
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# Pull Debian security fixes newer than the base image, and drop the base
+# image's system pip: the app runs from /app/.venv, and pip's vendored
+# packages (urllib3, msgpack, setuptools) only add scanner CVEs.
+RUN apt-get update && apt-get upgrade -y \
+ && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     git \
     libstdc++6 \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && python -m pip uninstall -y pip
 
 # Resolve relative storage paths inside the persistent mount.
 WORKDIR /app/.openviking
