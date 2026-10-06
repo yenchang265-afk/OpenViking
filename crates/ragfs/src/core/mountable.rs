@@ -8,6 +8,7 @@ use async_trait::async_trait;
 use radix_trie::{Trie, TrieCommon};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::sync::RwLock;
@@ -863,6 +864,14 @@ impl FileSystem for ArcFileSystem {
         self.0.write(path, data, offset, flags).await
     }
 
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        self.0.write_from_path(path, src, flags).await
+    }
+
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        self.0.read_to_path(path, dst).await
+    }
+
     async fn read_dir(
         &self,
         path: &str,
@@ -952,6 +961,16 @@ impl FileSystem for MountableFS {
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
         let (mount_info, rel_path) = self.find_mount(path).await?;
         mount_info.fs.write(&rel_path, data, offset, flags).await
+    }
+
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        let (mount_info, rel_path) = self.find_mount(path).await?;
+        mount_info.fs.write_from_path(&rel_path, src, flags).await
+    }
+
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        let (mount_info, rel_path) = self.find_mount(path).await?;
+        mount_info.fs.read_to_path(&rel_path, dst).await
     }
 
     async fn compare_and_write(
@@ -2609,5 +2628,65 @@ mod tests {
         assert_eq!(retry["path"], "/");
         assert_eq!(retry["retried"], 0);
         assert_eq!(retry["failed"], 0);
+    }
+
+    async fn mount_spy(mfs: &MountableFS) -> crate::core::test_support::SpyFs {
+        let spy = crate::core::test_support::SpyFs::new();
+        mfs.register_plugin(crate::core::test_support::SpyPlugin { spy: spy.clone() })
+            .await;
+        mfs.mount(PluginConfig::single_backend("spy", "/spy", HashMap::new()))
+            .await
+            .unwrap();
+        spy.clear_calls();
+        spy
+    }
+
+    #[tokio::test]
+    async fn write_from_path_and_read_to_path_route_to_mounted_fs() {
+        let mfs = MountableFS::new();
+        let spy = mount_spy(&mfs).await;
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"payload").unwrap();
+
+        let written = mfs
+            .write_from_path("/spy/a.bin", &src, WriteFlag::Create)
+            .await
+            .unwrap();
+        let dst = dir.path().join("dst");
+        let read = mfs.read_to_path("/spy/a.bin", &dst).await.unwrap();
+
+        assert_eq!((written, read), (7, 7));
+        assert_eq!(std::fs::read(&dst).unwrap(), b"payload");
+        assert_eq!(spy.calls(), vec!["write_from_path", "read_to_path"]);
+    }
+
+    #[cfg(feature = "cache")]
+    #[tokio::test]
+    async fn cached_mount_forwards_write_from_path_and_invalidates_file_cache() {
+        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache_runtime::CacheRuntime;
+
+        let mfs = MountableFS::with_cache_runtime(
+            CacheRuntime::memory(),
+            CacheNamespace::new("spy-cache-test"),
+            CachePolicy::default(),
+        );
+        let spy = mount_spy(&mfs).await;
+        let dir = tempfile::tempdir().unwrap();
+        mfs.write("/spy/a.bin", b"old", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        assert_eq!(mfs.read("/spy/a.bin", 0, 0).await.unwrap(), b"old");
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"new content").unwrap();
+        spy.clear_calls();
+
+        mfs.write_from_path("/spy/a.bin", &src, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        assert_eq!(spy.calls(), vec!["write_from_path"]);
+        assert_eq!(mfs.read("/spy/a.bin", 0, 0).await.unwrap(), b"new content");
     }
 }

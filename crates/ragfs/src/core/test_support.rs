@@ -2,26 +2,31 @@
 
 use async_trait::async_trait;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
-use super::{FileInfo, FileSystem, Result, WriteFlag};
+use super::{
+    ConfigParameter, FileInfo, FileSystem, PluginConfig, Result, ServicePlugin, WriteFlag,
+};
 use crate::plugins::memfs::MemFileSystem;
 
 /// In-memory filesystem that records which data-path methods were called.
 ///
 /// Wrapper tests use it as the inner filesystem to prove that `write_from_path`
 /// and `read_to_path` are forwarded instead of falling back to the buffered
-/// trait defaults (which would show up as `write` / `read`).
+/// trait defaults (which would show up as `write` / `read`). Clones share the
+/// same storage and call log, so a clone can be mounted through [`SpyPlugin`]
+/// while the test keeps a handle for assertions.
+#[derive(Clone)]
 pub(crate) struct SpyFs {
-    inner: MemFileSystem,
-    calls: Mutex<Vec<&'static str>>,
+    inner: Arc<MemFileSystem>,
+    calls: Arc<Mutex<Vec<&'static str>>>,
 }
 
 impl SpyFs {
     pub(crate) fn new() -> Self {
         Self {
-            inner: MemFileSystem::new(),
-            calls: Mutex::new(Vec::new()),
+            inner: Arc::new(MemFileSystem::new()),
+            calls: Arc::new(Mutex::new(Vec::new())),
         }
     }
 
@@ -99,5 +104,33 @@ impl FileSystem for SpyFs {
 
     async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
         self.inner.chmod(path, mode).await
+    }
+}
+
+/// Plugin named `spy` that mounts a clone of the given [`SpyFs`].
+pub(crate) struct SpyPlugin {
+    pub(crate) spy: SpyFs,
+}
+
+#[async_trait]
+impl ServicePlugin for SpyPlugin {
+    fn name(&self) -> &str {
+        "spy"
+    }
+
+    fn readme(&self) -> &str {
+        "Recording plugin for wrapper forwarding tests"
+    }
+
+    async fn validate(&self, _config: &PluginConfig) -> Result<()> {
+        Ok(())
+    }
+
+    async fn initialize(&self, _config: PluginConfig) -> Result<Box<dyn FileSystem>> {
+        Ok(Box::new(self.spy.clone()))
+    }
+
+    fn config_params(&self) -> &[ConfigParameter] {
+        &[]
     }
 }

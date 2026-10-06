@@ -67,7 +67,8 @@ client ──chunked parts──▶ server staging (pod disk) ──path──�
   - **s3fs `read_to_path`:** chunked `get_object_range` loop (the reader at `s3fs/mod.rs:76-140` already exists) into the file.
   - **localfs:** streaming copy (`tokio::io::copy`).
   - **Wrappers** must override and forward explicitly. The default (buffered `self.write`) is correct but never reaches a plugin's streaming override. The runtime stack is `Stats(PathLock(Mountable → [Cached] Stats(Encryption(backend))))`:
-    - `StatsWrappedFS` (`core/stats_wrapper.rs`), `PathLockWrappedFS` (`lock/wrapper.rs`, same lock as `write`), `ArcFileSystem` / `MountableFS` (`core/mountable.rs`), `CachedFileSystem` (`cache/wrapper.rs`, invalidates like `write`), and `MultiWriteWrappedFS` (`core/multibackend_wrapper.rs`, each backend from the same source path).
+    - `StatsWrappedFS` (`core/stats_wrapper.rs`), `PathLockWrappedFS` (`lock/wrapper.rs`, same lock as `write`), `ArcFileSystem` / `MountableFS` (`core/mountable.rs`), and `CachedFileSystem` (`cache/wrapper.rs`, invalidates like `write`).
+    - **Exception: `MultiWriteWrappedFS` keeps the buffered default.** In `SyncMode::Async` the backup fan-out runs in a spawned task after the call returns and holds the bytes (`BackupWriteOp::WriteFile`), so the caller's temp file cannot stand in for them. Multi-write mounts are not used in the current deployment; streaming them needs a durable spool and is a separate change.
   - **Encryption wrapper:** v1 keeps the buffered fallback (whole-file AES-GCM) and enforces `encryption.max_file_bytes` (default 512 MiB) with a clear error. A chunked AEAD format is a separate spec.
 - `ragfs-python` exposes `write_file_from_path(uri, local_path)` and `read_file_to_path(uri, local_path)`, releasing the GIL.
 - `VikingFS` (`openviking/storage/viking_fs/_ops.py`) gains `write_file_from_path` / `read_file_to_path` with the **same** ACL, path-lock and side-effect semantics as `write_file_bytes`.

@@ -56,18 +56,18 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P1 — ragfs streaming core (Rust)
 
-- [ ] **T1: Trait methods with buffered defaults**
+- [x] **T1: Trait methods with buffered defaults**
   - Acceptance: `FileSystem::write_from_path(path, src, flags)` and `read_to_path(path, dst)` exist; the defaults use `self.write` / `self.read`; all existing impls compile unchanged.
   - Verify: `cargo test -p ragfs core::filesystem`; new tests on memfs (0 B, 1 B, 3 MiB round trip).
   - Files: `crates/ragfs/src/core/filesystem.rs`, `crates/ragfs/src/plugins/memfs/mod.rs` (tests)
 
-- [ ] **T2: Forward through Stats + PathLock wrappers**
+- [x] **T2: Forward through Stats + PathLock wrappers**
   - Acceptance: both override and forward to the inner FS; PathLock takes the same lock as `write`; stats count as a write.
   - Verify: spy-inner tests assert forwarding plus lock acquire/release.
   - Files: `crates/ragfs/src/core/stats_wrapper.rs`, `crates/ragfs/src/lock/wrapper.rs`
 
-- [ ] **T3: Forward through Mountable + Cache + MultiWrite**
-  - Acceptance: `ArcFileSystem` / `MountableFS` route to the mounted FS; `CachedFileSystem` invalidates like `write`; `MultiWriteWrappedFS` writes every backend from the same path and keeps its `SyncMode` semantics.
+- [x] **T3: Forward through Mountable + Cache + MultiWrite**
+  - Acceptance: `ArcFileSystem` / `MountableFS` route to the mounted FS; `CachedFileSystem` invalidates like `write`. `MultiWriteWrappedFS` **keeps the buffered default** (decided during T3: async backup fan-out outlives the caller's temp file; see SPEC A), pinned by a test covering size redirects.
   - Verify: spy-inner tests; existing `tests/cache_wrapper.rs` passes.
   - Files: `crates/ragfs/src/core/mountable.rs`, `crates/ragfs/src/cache/wrapper.rs`, `crates/ragfs/src/core/multibackend_wrapper.rs`
 

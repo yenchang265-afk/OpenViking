@@ -18,6 +18,7 @@ use bytes::Bytes;
 use futures::stream::{self, StreamExt};
 use regex::Regex;
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 use tokio::sync::{Mutex, RwLock};
@@ -1123,6 +1124,26 @@ impl FileSystem for CachedFileSystem {
         }
         self.invalidate_parent_directory(path).await;
         Ok(written)
+    }
+
+    /// Stream `src` to the backend, then invalidate like `write`.
+    ///
+    /// The bytes are never in memory here, so the file cache is not refilled;
+    /// the next full read misses and fills it.
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        let _guard = self.operation_lock.write().await;
+        let written = self.backend.write_from_path(path, src, flags).await?;
+        let normalized = normalize_path(path);
+        let key = self.file_key(&normalized);
+        self.cache_delete(&key, &normalized).await;
+        self.invalidate_parent_directory(path).await;
+        Ok(written)
+    }
+
+    /// Stream from the backend, bypassing the file cache like ranged reads do.
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        self.metrics.policy_bypass();
+        self.backend.read_to_path(path, dst).await
     }
 
     async fn read_dir(
