@@ -110,7 +110,7 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: existing `tests/resource` pass; a new test with a spy VikingFS asserts path methods are used.
   - Files: `openviking/resource/staged_source.py`, its tests
 
-- [ ] **T11: Parse output writer: path writes + incremental md5**
+- [x] **T11: Parse output writer: path writes + incremental md5**
   - Acceptance: `ParseArtifactWriter.write_from_path(rel, local_path)` computes md5 in chunks and records it; `AgfsParseOutputStore` and `LocalParseOutputStore` implement path writes (copy for local).
   - Verify: unit tests: manifest md5 equals `content_md5` of the bytes; streamed hashing helper.
   - Files: `openviking/parse/output.py`, `openviking/utils/content_hash.py`

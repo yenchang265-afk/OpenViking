@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import shutil
 import uuid
 from abc import ABC, abstractmethod
@@ -31,7 +32,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
-from openviking.utils.content_hash import content_md5
+from openviking.utils.content_hash import content_md5, file_md5
 from openviking.utils.path_safety import safe_join_viking_uri, sanitize_relative_viking_path
 
 _BACKENDS = frozenset({"agfs", "local"})
@@ -138,6 +139,13 @@ class ParseOutputStore(ABC):
     ) -> None:
         """Move one file between artifacts owned by this store."""
 
+    async def write_from_path(
+        self, ref: ParseArtifactRef, rel_path: str, local_path: str | os.PathLike
+    ) -> None:
+        """Write a local file into the artifact. Stores override this to avoid buffering."""
+        content = await asyncio.to_thread(Path(local_path).read_bytes)
+        await self.write_bytes(ref, rel_path, content)
+
     # -- text convenience -------------------------------------------------
     async def write_text(
         self, ref: ParseArtifactRef, rel_path: str, content: str, *, encoding: str = "utf-8"
@@ -195,6 +203,17 @@ class ParseArtifactWriter:
             raise ValueError("artifact business file path must not be the manifest path")
         await self.store.write_bytes(self.ref, rel_path, content)
         self._md5_by_rel[rel_path] = md5 or content_md5(content)
+        self._finalized = False
+
+    async def write_from_path(
+        self, rel_path: str, local_path: str | os.PathLike, *, md5: str | None = None
+    ) -> None:
+        """Write a local file without buffering it; the manifest md5 is hashed in chunks."""
+        rel_path = self.relative_path(rel_path)
+        if not rel_path or rel_path == ARTIFACT_MANIFEST_NAME:
+            raise ValueError("artifact business file path must not be the manifest path")
+        await self.store.write_from_path(self.ref, rel_path, local_path)
+        self._md5_by_rel[rel_path] = md5 or await asyncio.to_thread(file_md5, local_path)
         self._finalized = False
 
     async def write_text(self, rel_path: str, content: str, *, encoding: str = "utf-8") -> None:
@@ -344,6 +363,16 @@ class AgfsParseOutputStore(ParseOutputStore):
         else:
             await fs.write_file(uri, content.decode("utf-8"), **kwargs)
 
+    async def write_from_path(
+        self, ref: ParseArtifactRef, rel_path: str, local_path: str | os.PathLike
+    ) -> None:
+        fs = self._fs()
+        if not hasattr(fs, "write_file_from_path"):
+            await super().write_from_path(ref, rel_path, local_path)
+            return
+        kwargs = {"ctx": self._ctx} if self._ctx is not None else {}
+        await fs.write_file_from_path(self._resolve(ref, rel_path), local_path, **kwargs)
+
     async def read_bytes(self, ref: ParseArtifactRef, rel_path: str) -> bytes:
         fs = self._fs()
         uri = self._resolve(ref, rel_path)
@@ -466,6 +495,18 @@ class LocalParseOutputStore(ParseOutputStore):
             target.write_bytes(content)
 
         await asyncio.to_thread(_write)
+
+    async def write_from_path(
+        self, ref: ParseArtifactRef, rel_path: str, local_path: str | os.PathLike
+    ) -> None:
+        target = self._resolve(ref, rel_path)
+
+        def _copy() -> None:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            self._check_case_conflict(target)
+            shutil.copyfile(local_path, target)
+
+        await asyncio.to_thread(_copy)
 
     async def read_bytes(self, ref: ParseArtifactRef, rel_path: str) -> bytes:
         target = self._resolve(ref, rel_path)
