@@ -76,8 +76,8 @@ client ──chunked parts──▶ server staging (pod disk) ──path──�
 #### B. Ingest uses paths, not bytes
 
 - Durable source staging (`resource/staged_source.py`): `stage_source` / `_copy_local_tree` call `write_file_from_path` per file. The worker's `materialize_source` calls `read_file_to_path` per entry. Concurrency (`_COPY_CONCURRENCY`) and symlink skipping stay the same.
-- `DirectoryParser._upload_file_directly` and media-original writes (`image.py`, `audio.py`) call `write_file_from_path`.
-- Encoding normalisation (`detect_and_convert_encoding`) applies only to text files under `parsers.max_text_normalize_bytes` (default 16 MiB). Larger or binary files are copied raw.
+- `DirectoryParser._upload_file_directly` and media-original writes (`image.py`, `audio.py`, `video.py`) call `write_file_from_path`; audio/video signature checks read only a 16-byte header.
+- Encoding normalisation (`detect_and_convert_encoding`) applies only to text files up to `MAX_TEXT_NORMALIZE_BYTES` (16 MiB, a module constant in `parse/parsers/upload_utils.py`). Larger or binary files are copied raw.
 - The md5 manifest is computed incrementally (`hashlib` over chunks).
 
 #### C. Server staging: one path for `local` and `shared`

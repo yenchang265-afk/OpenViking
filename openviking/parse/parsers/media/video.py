@@ -30,7 +30,7 @@ from typing import List, Optional, Union
 from openviking.parse.base import NodeType, ParseResult, ResourceNode
 from openviking.parse.output import create_parse_artifact_writer
 from openviking.parse.parsers.base_parser import BaseParser
-from openviking.parse.parsers.media.constants import VIDEO_EXTENSIONS
+from openviking.parse.parsers.media.constants import SIGNATURE_HEADER_BYTES, VIDEO_EXTENSIONS
 from openviking.parse.parsers.media.naming import resolve_media_names
 from openviking_cli.utils.config.parser_config import VideoConfig
 
@@ -76,7 +76,9 @@ class VideoParser(BaseParser):
             raise FileNotFoundError(f"Video file not found: {source}")
 
         # Phase 1: Generate temporary files
-        video_bytes = file_path.read_bytes()
+        # Only the header is needed for the signature check; the original is streamed later.
+        with file_path.open("rb") as f:
+            header = f.read(SIGNATURE_HEADER_BYTES)
         ext = file_path.suffix
 
         from openviking_cli.utils.uri import VikingURI
@@ -105,7 +107,7 @@ class VideoParser(BaseParser):
         ext_lower = ext.lower()
         magic_list = video_magic_bytes.get(ext_lower, [])
         for magic in magic_list:
-            if len(video_bytes) >= len(magic) and video_bytes.startswith(magic):
+            if len(header) >= len(magic) and header.startswith(magic):
                 valid = True
                 break
 
@@ -120,7 +122,7 @@ class VideoParser(BaseParser):
         )
         try:
             await writer.mkdir(root_dir_name)
-            await writer.write_bytes(f"{root_dir_name}/{original_filename}", video_bytes)
+            await writer.write_from_path(f"{root_dir_name}/{original_filename}", file_path)
             artifact_ref = await writer.finalize(resource_rel=root_dir_name)
         except BaseException:
             await writer.cleanup()

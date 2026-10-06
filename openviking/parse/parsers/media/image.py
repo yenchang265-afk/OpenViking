@@ -245,6 +245,7 @@ class ImageParser(BaseParser):
 
             else:
                 # Small image: save as PNG if format is not VLM-supported, else as-is
+                original_rel = f"{root_dir_name}/{original_filename}"
                 if needs_png_conversion:
                     # SVG was already converted to PNG bytes during loading
                     if file_path.suffix.lower() == ".svg":
@@ -252,9 +253,9 @@ class ImageParser(BaseParser):
                     else:
                         with Image.open(file_path) as converted_img:
                             image_bytes = save_image_to_bytes(converted_img, format="PNG")
+                    await writer.write_bytes(original_rel, image_bytes)
                 else:
-                    image_bytes = file_path.read_bytes()
-                await writer.write_bytes(f"{root_dir_name}/{original_filename}", image_bytes)
+                    await writer.write_from_path(original_rel, file_path)
 
             artifact_ref = await writer.finalize(resource_rel=root_dir_name)
         except BaseException:

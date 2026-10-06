@@ -115,8 +115,8 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: unit tests: manifest md5 equals `content_md5` of the bytes; streamed hashing helper.
   - Files: `openviking/parse/output.py`, `openviking/utils/content_hash.py`
 
-- [ ] **T12: DirectoryParser + media originals via paths**
-  - Acceptance: direct-upload files and media originals use `write_from_path`. Text normalisation applies only to text ≤ `parsers.max_text_normalize_bytes` (16 MiB); everything else is copied raw.
+- [x] **T12: DirectoryParser + media originals via paths**
+  - Acceptance: direct-upload files and media originals (audio, **video**, small images stored as-is) use `write_from_path`; audio/video signature checks read a 16-byte header only. Text normalisation applies only to text ≤ `MAX_TEXT_NORMALIZE_BYTES` (16 MiB, module constant in `upload_utils`, not config); everything else is copied raw.
   - Verify: existing `tests/parse` pass; new test: a 20 MiB text file is copied raw, a small text file is still normalised.
   - Files: `openviking/parse/parsers/directory.py`, `media/image.py`, `media/audio.py`, `openviking/parse/parsers/upload_utils.py`
 
