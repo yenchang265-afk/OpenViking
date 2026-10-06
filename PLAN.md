@@ -105,7 +105,7 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P2 — Server and ingest use paths (Python)
 
-- [ ] **T10: Durable staging via paths**
+- [x] **T10: Durable staging via paths**
   - Acceptance: `stage_source` file and dir branches and `_copy_local_tree` call `write_file_from_path`; `materialize_source` calls `read_file_to_path`. No `read_bytes` / `read_file_bytes` left in the module; concurrency and symlink skipping unchanged.
   - Verify: existing `tests/resource` pass; a new test with a spy VikingFS asserts path methods are used.
   - Files: `openviking/resource/staged_source.py`, its tests
