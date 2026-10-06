@@ -157,7 +157,11 @@ make build            # rebuilds ragfs-python into openviking/lib (maturin)
 
 # S3 integration (SeaweedFS)
 docker compose --profile s3 up -d seaweedfs s3-init
-OV_S3_TEST_ENDPOINT=http://127.0.0.1:8333 cargo test -p ragfs --test s3_multipart_integration -- --ignored
+OV_S3_TEST_ENDPOINT=http://127.0.0.1:8333 OV_S3_TEST_BUCKET=openviking \
+OV_S3_TEST_ACCESS_KEY=... OV_S3_TEST_SECRET_KEY=... \
+  cargo test -p ragfs --features s3 --test s3_multipart_integration -- --ignored
+# writes only under _it/multipart/<run>/ and deletes it; use an existing bucket
+# (a SeaweedFS with no free volume slots rejects writes to a new bucket)
 
 # Web Studio: vitest hangs on /mnt/c, so run from a native-fs copy
 (cd web-studio && npm ci && npm run lint && npm run format)

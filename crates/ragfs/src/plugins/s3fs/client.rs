@@ -10,9 +10,14 @@ use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::error::SdkError;
 use aws_sdk_s3::operation::{RequestId, RequestIdExt};
 use aws_sdk_s3::primitives::ByteStream;
+use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::Client;
 use std::collections::HashMap;
 use std::fmt::Write as _;
+use std::path::Path;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+
+use super::multipart::{effective_part_size, part_ranges, MultipartSettings};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const ENCODED_SEGMENT_PREFIX: char = '!';
@@ -369,6 +374,7 @@ pub struct S3Client {
     marker_mode: DirectoryMarkerMode,
     disable_batch_delete: bool,
     auto_detect_content_type: bool,
+    multipart: MultipartSettings,
 }
 
 impl S3Client {
@@ -458,6 +464,8 @@ impl S3Client {
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
+        let multipart = MultipartSettings::from_config(config)?;
+
         // Build S3 config
         let mut s3_config_builder = aws_sdk_s3::Config::builder()
             .behavior_version(BehaviorVersion::latest())
@@ -486,6 +494,7 @@ impl S3Client {
             marker_mode,
             disable_batch_delete,
             auto_detect_content_type,
+            multipart,
         })
     }
 
@@ -712,6 +721,175 @@ impl S3Client {
                 Err(e)
             }
         })
+    }
+
+    /// Upload a local file, using multipart above the configured threshold.
+    ///
+    /// Memory stays bounded by the threshold (single PUT) or one part (multipart).
+    /// With `create_new`, small objects use a conditional PUT; multipart uploads check
+    /// for an existing key first, which leaves a race window with concurrent creators.
+    pub async fn put_object_from_path(
+        &self,
+        key: &str,
+        src: &Path,
+        create_new: bool,
+    ) -> Result<u64> {
+        let total = tokio::fs::metadata(src).await?.len();
+        if total <= self.multipart.threshold_bytes {
+            let data = tokio::fs::read(src).await?;
+            if create_new {
+                self.put_object_create_new(key, data).await?;
+            } else {
+                self.put_object(key, data).await?;
+            }
+            return Ok(total);
+        }
+        if create_new && self.head_object(key).await?.is_some() {
+            return Err(Error::already_exists(key));
+        }
+        self.multipart_upload_from_path(key, src, total).await?;
+        Ok(total)
+    }
+
+    /// Run a multipart upload, aborting it on any failure so no parts are orphaned.
+    async fn multipart_upload_from_path(&self, key: &str, src: &Path, total: u64) -> Result<()> {
+        let scope = format!("bucket={} key={key}", self.bucket);
+        let mut request = self
+            .client
+            .create_multipart_upload()
+            .bucket(&self.bucket)
+            .key(key);
+        if self.auto_detect_content_type {
+            if let Some(content_type) = detect_content_type_for_key(key) {
+                request = request.content_type(content_type);
+            }
+        }
+        let created = request
+            .send()
+            .await
+            .map_err(|e| format_sdk_s3_error("CreateMultipartUpload", &scope, &e))?;
+        let upload_id = created
+            .upload_id()
+            .ok_or_else(|| {
+                Error::internal(format!(
+                    "CreateMultipartUpload returned no upload id: {scope}"
+                ))
+            })?
+            .to_string();
+
+        let result = self
+            .upload_parts_and_complete(key, &upload_id, src, total)
+            .await;
+        if result.is_err() {
+            if let Err(abort_err) = self
+                .client
+                .abort_multipart_upload()
+                .bucket(&self.bucket)
+                .key(key)
+                .upload_id(&upload_id)
+                .send()
+                .await
+            {
+                tracing::warn!(
+                    bucket = %self.bucket,
+                    key = %key,
+                    upload_id = %upload_id,
+                    error = %format_sdk_s3_error("AbortMultipartUpload", &scope, &abort_err),
+                    "failed to abort multipart upload; parts remain until a bucket lifecycle rule removes them"
+                );
+            }
+        }
+        result
+    }
+
+    /// Upload `src` part by part, reading one part into memory at a time.
+    async fn upload_parts_and_complete(
+        &self,
+        key: &str,
+        upload_id: &str,
+        src: &Path,
+        total: u64,
+    ) -> Result<()> {
+        let scope = format!("bucket={} key={key}", self.bucket);
+        let part_size = effective_part_size(total, self.multipart.part_size_bytes);
+        let mut file = tokio::fs::File::open(src).await?;
+        let mut completed = Vec::new();
+
+        for (index, (_offset, len)) in part_ranges(total, part_size).into_iter().enumerate() {
+            let mut part = vec![0u8; len as usize];
+            file.read_exact(&mut part).await?;
+            let part_number = i32::try_from(index + 1)
+                .map_err(|_| Error::internal(format!("too many multipart parts: {scope}")))?;
+            let uploaded = self
+                .client
+                .upload_part()
+                .bucket(&self.bucket)
+                .key(key)
+                .upload_id(upload_id)
+                .part_number(part_number)
+                .body(ByteStream::from(part))
+                .send()
+                .await
+                .map_err(|e| format_sdk_s3_error("UploadPart", &scope, &e))?;
+            completed.push(
+                CompletedPart::builder()
+                    .set_e_tag(uploaded.e_tag().map(str::to_string))
+                    .part_number(part_number)
+                    .build(),
+            );
+        }
+
+        self.client
+            .complete_multipart_upload()
+            .bucket(&self.bucket)
+            .key(key)
+            .upload_id(upload_id)
+            .multipart_upload(
+                CompletedMultipartUpload::builder()
+                    .set_parts(Some(completed))
+                    .build(),
+            )
+            .send()
+            .await
+            .map_err(|e| format_sdk_s3_error("CompleteMultipartUpload", &scope, &e))?;
+        Ok(())
+    }
+
+    /// Stream an object into a local file, creating or truncating `dst`.
+    pub async fn get_object_to_path(&self, key: &str, dst: &Path) -> Result<u64> {
+        let resp = match self
+            .client
+            .get_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .send()
+            .await
+        {
+            Ok(resp) => resp,
+            Err(sdk_err) => {
+                let service_err = sdk_err.into_service_error();
+                if service_err.is_no_such_key() || is_s3_compatible_not_found_code(&service_err) {
+                    return Err(Error::NotFound(key.to_string()));
+                }
+                return Err(format_s3_service_error(
+                    "GetObject",
+                    &format!("bucket={} key={}", self.bucket, key),
+                    &service_err,
+                ));
+            }
+        };
+
+        let mut body = resp.body;
+        let mut file = tokio::fs::File::create(dst).await?;
+        let mut total = 0u64;
+        while let Some(chunk) = body.next().await {
+            let chunk =
+                chunk.map_err(|e| format_generic_s3_error("ReadBody", &self.bucket, key, e))?;
+            file.write_all(&chunk).await?;
+            total += chunk.len() as u64;
+        }
+        file.flush().await?;
+        Ok(total)
     }
 
     /// Delete a single object
@@ -1241,6 +1419,7 @@ mod tests {
             marker_mode: DirectoryMarkerMode::Empty,
             disable_batch_delete: false,
             auto_detect_content_type: false,
+            multipart: MultipartSettings::default(),
         }
     }
 

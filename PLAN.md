@@ -81,12 +81,12 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: unit tests for each flag, missing parent → NotFound, 50 MiB round trip.
   - Files: `crates/ragfs/src/plugins/localfs/mod.rs`
 
-- [ ] **T6: s3 client multipart primitives**
+- [x] **T6: s3 client multipart primitives**
   - Acceptance: `put_object_from_path` (single PUT using `ByteStream::from_path`) plus `multipart_upload_from_path` (create → parts read from file at `multipart_part_size_bytes` → complete; abort on any error); `get_object_to_path` (ranged loop). Thresholds come from mount config (16 MiB / 8 MiB defaults).
   - Verify: unit tests for part planning (sizes, last part, 10,000-part limit) and config parsing.
   - Files: `crates/ragfs/src/plugins/s3fs/client.rs`, s3fs config parsing in `s3fs/mod.rs`
 
-- [ ] **T7: s3fs overrides + integration test**
+- [x] **T7: s3fs overrides + integration test**
   - Acceptance: `S3FileSystem::write_from_path` picks single PUT vs multipart by size; CreateNew uses a conditional PUT below the threshold. Above it, `If-None-Match` on Complete if the backend supports it; otherwise HEAD-check + documented race. Caches invalidated; `read_to_path` uses the ranged loop.
   - Verify: `crates/ragfs/tests/s3_multipart_integration.rs` (`#[ignore]`, env `OV_S3_TEST_ENDPOINT`): 0 B, 1 B, threshold±1, 50 MiB; md5 matches; forced failure leaves no MPU (`ListMultipartUploads`).
   - Files: `crates/ragfs/src/plugins/s3fs/mod.rs`, `crates/ragfs/tests/s3_multipart_integration.rs`
