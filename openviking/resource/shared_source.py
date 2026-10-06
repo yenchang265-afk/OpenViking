@@ -90,8 +90,7 @@ async def materialize_shared_source(
     local_path = local_root / Path(filename).name
     try:
         internal_ctx = RequestContext(user=ctx.user, role=Role.ROOT)
-        content = await viking_fs.read_file_bytes(shared.content_uri, ctx=internal_ctx)
-        await asyncio.to_thread(local_path.write_bytes, content)
+        await viking_fs.read_file_to_path(shared.content_uri, local_path, ctx=internal_ctx)
     except asyncio.CancelledError:
         shutil.rmtree(local_root, ignore_errors=True)
         raise

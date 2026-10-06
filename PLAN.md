@@ -120,7 +120,7 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: existing `tests/parse` pass; new test: a 20 MiB text file is copied raw, a small text file is still normalised.
   - Files: `openviking/parse/parsers/directory.py`, `media/image.py`, `media/audio.py`, `openviking/parse/parsers/upload_utils.py`
 
-- [ ] **T13: Shared temp-upload mode via paths**
+- [x] **T13: Shared temp-upload mode via paths**
   - Acceptance: `_save_shared` uses `write_file_from_path`; `_resolve_shared` uses `read_file_to_path`; both `read_bytes` / `read_file_bytes` calls removed.
   - Verify: `tests/server/test_temp_upload_store_async_io.py` passes, plus a new assertion with spy VikingFS.
   - Files: `openviking/server/temp_upload_store.py`, its tests
