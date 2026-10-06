@@ -347,6 +347,45 @@ impl LocalFileSystem {
         Error::plugin(format!("failed to lock for {operation}: {error}"))
     }
 
+    /// Open `local_path` for writing with `flags`, after the directory and parent checks.
+    fn open_for_write(local_path: &Path, path: &str, flags: WriteFlag) -> Result<fs::File> {
+        if local_path.exists() && local_path.is_dir() {
+            return Err(Error::plugin(format!("is a directory: {}", path)));
+        }
+
+        if let Some(parent) = local_path.parent() {
+            if !parent.exists() {
+                return Err(Error::NotFound(parent.to_string_lossy().to_string()));
+            }
+        }
+
+        let mut options = fs::OpenOptions::new();
+        match flags {
+            WriteFlag::Create => {
+                options.write(true).create(true).truncate(true);
+            }
+            WriteFlag::CreateNew => {
+                options.write(true).create_new(true);
+            }
+            WriteFlag::Append => {
+                options.append(true);
+            }
+            WriteFlag::Truncate => {
+                options.write(true).truncate(true);
+            }
+            WriteFlag::None => {
+                options.write(true);
+            }
+        }
+        options.open(local_path).map_err(|e| {
+            if e.kind() == std::io::ErrorKind::NotFound {
+                Error::NotFound(path.to_string())
+            } else {
+                Error::plugin(format!("failed to open file: {}", e))
+            }
+        })
+    }
+
     /// Map local file failures into stable filesystem error categories.
     fn map_error(path: &str, error: std::io::Error) -> Error {
         if error.kind() == std::io::ErrorKind::NotFound {
@@ -1090,44 +1129,7 @@ impl FileSystem for LocalFileSystem {
 
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
         let local_path = self.resolve_path(path)?;
-
-        // Check if it's a directory
-        if local_path.exists() && local_path.is_dir() {
-            return Err(Error::plugin(format!("is a directory: {}", path)));
-        }
-
-        // Check if parent directory exists
-        if let Some(parent) = local_path.parent() {
-            if !parent.exists() {
-                return Err(Error::NotFound(parent.to_string_lossy().to_string()));
-            }
-        }
-
-        let mut options = fs::OpenOptions::new();
-        match flags {
-            WriteFlag::Create => {
-                options.write(true).create(true).truncate(true);
-            }
-            WriteFlag::CreateNew => {
-                options.write(true).create_new(true);
-            }
-            WriteFlag::Append => {
-                options.append(true);
-            }
-            WriteFlag::Truncate => {
-                options.write(true).truncate(true);
-            }
-            WriteFlag::None => {
-                options.write(true);
-            }
-        }
-        let mut file = options.open(&local_path).map_err(|e| {
-            if e.kind() == std::io::ErrorKind::NotFound {
-                Error::NotFound(path.to_string())
-            } else {
-                Error::plugin(format!("failed to open file: {}", e))
-            }
-        })?;
+        let mut file = Self::open_for_write(&local_path, path, flags)?;
 
         use std::io::{Seek, SeekFrom, Write};
         if matches!(flags, WriteFlag::None) && offset > 0 {
@@ -1137,6 +1139,39 @@ impl FileSystem for LocalFileSystem {
         file.write_all(data)
             .map_err(|e| Error::plugin(format!("failed to write: {}", e)))?;
         Ok(data.len() as u64)
+    }
+
+    /// Stream a local file into `path` with `io::copy` (kernel copy where available).
+    ///
+    /// The source is opened before the target so a missing source leaves no file behind.
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        let local_path = self.resolve_path(path)?;
+        let src = src.to_path_buf();
+        let path = path.to_string();
+        Self::run_blocking_fs(move || {
+            let mut source = fs::File::open(&src)?;
+            let mut target = Self::open_for_write(&local_path, &path, flags)?;
+            io::copy(&mut source, &mut target)
+                .map_err(|e| Error::plugin(format!("failed to write: {}", e)))
+        })
+        .await
+    }
+
+    /// Stream `path` into a local file, creating or truncating `dst`.
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        let local_path = self.resolve_path(path)?;
+        let dst = dst.to_path_buf();
+        let path = path.to_string();
+        Self::run_blocking_fs(move || {
+            let metadata = fs::metadata(&local_path).map_err(|_| Error::NotFound(path.clone()))?;
+            if metadata.is_dir() {
+                return Err(Error::plugin(format!("is a directory: {}", path)));
+            }
+            let mut source = fs::File::open(&local_path).map_err(|e| Self::map_error(&path, e))?;
+            let mut target = fs::File::create(&dst)?;
+            Ok(io::copy(&mut source, &mut target)?)
+        })
+        .await
     }
 
     /// Atomically replace a local file when its current content exactly matches `expected`.
@@ -2187,6 +2222,107 @@ mod tests {
         std::fs::set_permissions(&blocked_dir, restore).unwrap();
 
         assert!(out.is_err());
+    }
+
+    fn patterned_bytes(len: usize) -> Vec<u8> {
+        (0..len).map(|i| (i % 251) as u8).collect()
+    }
+
+    #[tokio::test]
+    async fn write_from_path_and_read_to_path_round_trip() {
+        let (_mount, fs) = fallback_localfs();
+        let scratch = TempDir::new().unwrap();
+
+        for (name, len) in [("empty", 0usize), ("one", 1), ("big", 5 * 1024 * 1024 + 3)] {
+            let data = patterned_bytes(len);
+            let src = scratch.path().join(format!("{name}.src"));
+            let dst = scratch.path().join(format!("{name}.dst"));
+            std::fs::write(&src, &data).unwrap();
+            let target = format!("/{name}.bin");
+
+            let written = fs
+                .write_from_path(&target, &src, WriteFlag::Create)
+                .await
+                .unwrap();
+            let read = fs.read_to_path(&target, &dst).await.unwrap();
+
+            assert_eq!((written, read), (len as u64, len as u64));
+            assert_eq!(std::fs::read(&dst).unwrap(), data);
+        }
+    }
+
+    #[tokio::test]
+    async fn write_from_path_create_truncates_existing_file() {
+        let (_mount, fs) = fallback_localfs();
+        let scratch = TempDir::new().unwrap();
+        let src = scratch.path().join("src");
+        std::fs::write(&src, b"new").unwrap();
+        fs.write("/a.txt", b"much longer old content", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        fs.write_from_path("/a.txt", &src, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        assert_eq!(fs.read("/a.txt", 0, 0).await.unwrap(), b"new");
+    }
+
+    #[tokio::test]
+    async fn write_from_path_create_new_keeps_existing_file() {
+        let (_mount, fs) = fallback_localfs();
+        let scratch = TempDir::new().unwrap();
+        let src = scratch.path().join("src");
+        std::fs::write(&src, b"new").unwrap();
+        fs.write("/a.txt", b"old", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        let result = fs
+            .write_from_path("/a.txt", &src, WriteFlag::CreateNew)
+            .await;
+
+        assert!(result.is_err());
+        assert_eq!(fs.read("/a.txt", 0, 0).await.unwrap(), b"old");
+    }
+
+    #[tokio::test]
+    async fn write_from_path_missing_source_creates_nothing() {
+        let (mount, fs) = fallback_localfs();
+        let scratch = TempDir::new().unwrap();
+
+        let result = fs
+            .write_from_path("/a.txt", &scratch.path().join("missing"), WriteFlag::Create)
+            .await;
+
+        assert!(matches!(result, Err(Error::Io(_))));
+        assert!(!mount.path().join("a.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn write_from_path_missing_parent_is_not_found() {
+        let (_mount, fs) = fallback_localfs();
+        let scratch = TempDir::new().unwrap();
+        let src = scratch.path().join("src");
+        std::fs::write(&src, b"x").unwrap();
+
+        let result = fs
+            .write_from_path("/no/such/dir/a.txt", &src, WriteFlag::Create)
+            .await;
+
+        assert!(matches!(result, Err(Error::NotFound(_))));
+    }
+
+    #[tokio::test]
+    async fn read_to_path_missing_file_is_not_found() {
+        let (_mount, fs) = fallback_localfs();
+        let scratch = TempDir::new().unwrap();
+
+        let result = fs
+            .read_to_path("/missing.txt", &scratch.path().join("dst"))
+            .await;
+
+        assert!(matches!(result, Err(Error::NotFound(_))));
     }
 }
 

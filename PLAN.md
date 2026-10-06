@@ -76,7 +76,7 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: unit tests for under, at and over the cap, plus round trip.
   - Files: `crates/ragfs/src/core/encryption_wrapper.rs`, encryption config struct (`core/types.rs` or `builder.rs`)
 
-- [ ] **T5: localfs streaming override**
+- [x] **T5: localfs streaming override**
   - Acceptance: `write_from_path` streams through `tokio::fs`/`io::copy` while honouring `WriteFlag` (Create/CreateNew/Truncate); `read_to_path` streams out; path validation unchanged.
   - Verify: unit tests for each flag, missing parent → NotFound, 50 MiB round trip.
   - Files: `crates/ragfs/src/plugins/localfs/mod.rs`
