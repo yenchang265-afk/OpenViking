@@ -8,6 +8,7 @@
 //! `PathLockManager`.
 
 use async_trait::async_trait;
+use std::path::Path;
 use std::sync::Arc;
 use tracing::debug;
 
@@ -217,6 +218,35 @@ impl FileSystem for PathLockWrappedFS {
         Self::merge_operation_and_release(result, release)
     }
 
+    async fn write_from_path(
+        &self,
+        path: &str,
+        src: &Path,
+        flags: WriteFlag,
+    ) -> crate::core::Result<u64> {
+        if Self::should_bypass_auto_lock(path) || self.encryption_handles_pathlock(path).await {
+            return self.inner.write_from_path(path, src, flags).await;
+        }
+        let requests = [PathLockRequest {
+            path: path.to_string(),
+            kind: PathLockKind::Exact,
+        }];
+        if self.should_skip_auto_lock(&requests).await? {
+            return self.inner.write_from_path(path, src, flags).await;
+        }
+        let lease = self
+            .manager
+            .acquire_exact(path, self.manager.default_lock_timeout(), None)
+            .await?;
+        let result = self.inner.write_from_path(path, src, flags).await;
+        let release = self.manager.release(&lease).await;
+        Self::merge_operation_and_release(result, release)
+    }
+
+    async fn read_to_path(&self, path: &str, dst: &Path) -> crate::core::Result<u64> {
+        self.inner.read_to_path(path, dst).await
+    }
+
     async fn read_dir(
         &self,
         path: &str,
@@ -397,6 +427,7 @@ impl FileSystem for PathLockWrappedFS {
 mod tests {
     use super::super::manager::PathLockConfig;
     use super::*;
+    use crate::core::test_support::SpyFs;
     use crate::core::Error;
     use crate::lock::provider::MemoryPathLockProvider;
     use crate::plugins::memfs::MemFileSystem;
@@ -533,5 +564,81 @@ mod tests {
             fs.stat("/data/a.md").await,
             Err(Error::NotFound(_))
         ));
+    }
+
+    async fn wrapped_spy() -> (PathLockWrappedFS, Arc<PathLockManager>, Arc<SpyFs>) {
+        let spy = Arc::new(SpyFs::new());
+        spy.mkdir("/data", 0o755).await.unwrap();
+        let manager = Arc::new(PathLockManager::new(
+            spy.clone() as Arc<dyn FileSystem>,
+            Arc::new(MemoryPathLockProvider::new()),
+            PathLockConfig::default(),
+        ));
+        let wrapped = PathLockWrappedFS::new(manager.clone(), spy.clone() as Arc<dyn FileSystem>);
+        (wrapped, manager, spy)
+    }
+
+    #[tokio::test]
+    async fn write_from_path_forwards_to_inner_streaming_write() {
+        let (wrapped, _manager, spy) = wrapped_spy().await;
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"payload").unwrap();
+
+        let written = wrapped
+            .write_from_path("/data/a.bin", &src, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        assert_eq!(written, 7);
+        assert!(spy.calls().contains(&"write_from_path"));
+        assert!(!spy.calls().contains(&"write"));
+        assert_eq!(spy.read("/data/a.bin", 0, 0).await.unwrap(), b"payload");
+    }
+
+    #[tokio::test]
+    async fn write_from_path_takes_exact_lock() {
+        let (wrapped, manager, spy) = wrapped_spy().await;
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"payload").unwrap();
+        let lease = manager
+            .acquire_exact("/data/a.bin", manager.default_lock_timeout(), None)
+            .await
+            .unwrap();
+
+        // The default lock timeout is zero, so a conflicting acquire fails fast.
+        let conflicted = wrapped
+            .write_from_path("/data/a.bin", &src, WriteFlag::Create)
+            .await;
+        assert!(
+            conflicted.is_err(),
+            "write_from_path must contend for the held lock"
+        );
+        assert!(!spy.calls().contains(&"write_from_path"));
+        assert!(!spy.calls().contains(&"write"));
+
+        manager.release(&lease).await.unwrap();
+        wrapped
+            .write_from_path("/data/a.bin", &src, WriteFlag::Create)
+            .await
+            .unwrap();
+        assert!(spy.calls().contains(&"write_from_path"));
+    }
+
+    #[tokio::test]
+    async fn read_to_path_forwards_to_inner_streaming_read() {
+        let (wrapped, _manager, spy) = wrapped_spy().await;
+        spy.write("/data/a.bin", b"payload", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        spy.clear_calls();
+        let dir = tempfile::tempdir().unwrap();
+        let dst = dir.path().join("dst");
+
+        let read = wrapped.read_to_path("/data/a.bin", &dst).await.unwrap();
+
+        assert_eq!(read, 7);
+        assert_eq!(spy.calls(), vec!["read_to_path"]);
     }
 }

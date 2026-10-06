@@ -4,6 +4,7 @@
 //! that automatically collects operation statistics.
 
 use async_trait::async_trait;
+use std::path::Path;
 use std::sync::Arc;
 
 use super::{
@@ -102,6 +103,20 @@ impl FileSystem for StatsWrappedFS {
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
         let timer = OperationTimer::start(FsOperation::Write, Arc::clone(&self.stats));
         let result = self.inner.write(path, data, offset, flags).await;
+        timer.finish(result.is_ok()).await;
+        result
+    }
+
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        let timer = OperationTimer::start(FsOperation::Write, Arc::clone(&self.stats));
+        let result = self.inner.write_from_path(path, src, flags).await;
+        timer.finish(result.is_ok()).await;
+        result
+    }
+
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        let timer = OperationTimer::start(FsOperation::Read, Arc::clone(&self.stats));
+        let result = self.inner.read_to_path(path, dst).await;
         timer.finish(result.is_ok()).await;
         result
     }
@@ -234,5 +249,50 @@ impl FileSystem for StatsWrappedFS {
             .await;
         timer.finish(result.is_ok()).await;
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::test_support::SpyFs;
+
+    #[tokio::test]
+    async fn write_from_path_forwards_and_counts_as_write() {
+        let spy = Arc::new(SpyFs::new());
+        let fs = StatsWrappedFS::with_arc(spy.clone());
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"payload").unwrap();
+
+        let written = fs
+            .write_from_path("/a.bin", &src, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        assert_eq!(written, 7);
+        assert_eq!(spy.calls(), vec!["write_from_path"]);
+        let stats = fs.stats_collector().snapshot().await;
+        assert_eq!(stats.get(FsOperation::Write).count, 1);
+    }
+
+    #[tokio::test]
+    async fn read_to_path_forwards_and_counts_as_read() {
+        let spy = Arc::new(SpyFs::new());
+        let fs = StatsWrappedFS::with_arc(spy.clone());
+        spy.write("/a.bin", b"payload", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        spy.clear_calls();
+        let dir = tempfile::tempdir().unwrap();
+        let dst = dir.path().join("dst");
+
+        let read = fs.read_to_path("/a.bin", &dst).await.unwrap();
+
+        assert_eq!(read, 7);
+        assert_eq!(std::fs::read(&dst).unwrap(), b"payload");
+        assert_eq!(spy.calls(), vec!["read_to_path"]);
+        let stats = fs.stats_collector().snapshot().await;
+        assert_eq!(stats.get(FsOperation::Read).count, 1);
     }
 }
