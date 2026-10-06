@@ -72,6 +72,12 @@ class AGFSSyncClientProtocol(Protocol):
     ) -> str:
         """Write file content to AGFS and return the backend result."""
 
+    def write_file_from_path(self, path: str, local_path: str) -> int:
+        """Write a local file to AGFS without buffering it in Python; return bytes written."""
+
+    def read_file_to_path(self, path: str, local_path: str) -> int:
+        """Read an AGFS file into a local file (created or truncated); return bytes read."""
+
     def mkdir(self, path: str, mode: str = "755") -> Dict[str, Any]:
         """Create a directory in AGFS."""
 

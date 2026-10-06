@@ -5,6 +5,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import Iterator
 from typing import Any, BinaryIO, Dict, List, Union
 
@@ -185,6 +186,36 @@ class AsyncAGFSClient:
         if max_retries == 3:
             return await self.run("write", path, data, ctx=ctx)
         return await self.run("write", path, data, max_retries=max_retries, ctx=ctx)
+
+    async def write_file_from_path(
+        self,
+        path: str,
+        local_path: Union[str, os.PathLike],
+        *,
+        fs_ctx: Dict[str, str] | None = None,
+        auto_pathlock: bool = True,
+    ) -> int:
+        """Write a local file to AGFS without loading it into memory; returns bytes written.
+
+        PathLock behaves as in :meth:`write`.
+        """
+        ctx = _fs_ctx_with_auto_pathlock(path, fs_ctx, auto_pathlock)
+        return await self.run("write_file_from_path", path, os.fspath(local_path), ctx=ctx)
+
+    async def read_file_to_path(
+        self,
+        path: str,
+        local_path: Union[str, os.PathLike],
+        *,
+        fs_ctx: Dict[str, str] | None = None,
+    ) -> int:
+        """Read an AGFS file into a local file (created or truncated); returns bytes read."""
+        return await self.run(
+            "read_file_to_path",
+            path,
+            os.fspath(local_path),
+            ctx=_fs_ctx_or_default(path, fs_ctx),
+        )
 
     async def mkdir(
         self, path: str, mode: str = "755", *, fs_ctx: Dict[str, str] | None = None
