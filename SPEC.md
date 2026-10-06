@@ -130,7 +130,7 @@ All endpoints use the existing auth (`get_upload_request_context`: API key, or s
 ```
 
 - `temp_upload.shared_max_size_bytes` stays as a deprecated alias for `max_file_bytes` (a warning is logged at startup when it is set).
-- `storage.agfs.s3.multipart_threshold_bytes` (16 MiB) and `multipart_part_size_bytes` (8 MiB) are separate settings: storage tuning, not policy.
+- `storage.agfs.s3.multipart_threshold_bytes` (16 MiB) and `multipart_part_size_bytes` (8 MiB) are separate settings: storage tuning, not policy. The Rust s3fs mount already accepts them (P1); the Python `S3Config` model does not expose them yet, so deployments use the defaults until P3 adds the fields.
 - The 10 MB per-file skip in code repos (`upload_utils.py:90`) is a parsing policy and stays as it is (see Open Questions).
 
 ## Tech Stack

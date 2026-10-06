@@ -125,8 +125,9 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: `tests/server/test_temp_upload_store_async_io.py` passes, plus a new assertion with spy VikingFS.
   - Files: `openviking/server/temp_upload_store.py`, its tests
 
-- [ ] **T13b: Memory regression test**
-  - Acceptance: a subprocess harness ingests a 1 GiB direct-upload file (local and shared mode) against SeaweedFS AGFS and reports `VmHWM` delta.
+- [x] **T13b: Memory regression test**
+  - Acceptance: a subprocess harness (`tests/integration/upload_memory_probe.py`) resets `VmHWM` per scenario and measures staging+materialize, shared temp upload and parse-artifact writes, plus a buffered control that must register. Local runs 1 GiB; S3 defaults to 256 MiB (`OV_MEMORY_TEST_S3_BYTES`) because a dev SeaweedFS with no free volume slots rejected writes after ~2 GiB.
+  - Result (2026-10-07): 1 GiB localfs → 3.1 / 2.1 / 2.2 MiB (control 2048 MiB); 256 MiB S3 (SeaweedFS) → all ≤ 128 MiB.
   - Verify: delta ≤ 128 MiB (marked `slow`, env-gated).
   - Files: `tests/integration/test_upload_memory.py`
 
