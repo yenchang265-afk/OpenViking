@@ -91,12 +91,12 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: `crates/ragfs/tests/s3_multipart_integration.rs` (`#[ignore]`, env `OV_S3_TEST_ENDPOINT`): 0 B, 1 B, threshold±1, 50 MiB; md5 matches; forced failure leaves no MPU (`ListMultipartUploads`).
   - Files: `crates/ragfs/src/plugins/s3fs/mod.rs`, `crates/ragfs/tests/s3_multipart_integration.rs`
 
-- [ ] **T8: ragfs-python bindings**
+- [x] **T8: ragfs-python bindings**
   - Acceptance: `write_file_from_path(path, local_path, ctx=None)` and `read_file_to_path(path, local_path, ctx=None)` call `top.*`, release the GIL (`run_scoped`), and use the same ctx handling as `write`.
   - Verify: `make build`; pytest calling both through a memfs/localfs binding.
   - Files: `crates/ragfs-python/src/lib.rs`, `openviking/pyagfs/async_client.py` (+ sync client if separate)
 
-- [ ] **T9: VikingFS path methods**
+- [x] **T9: VikingFS path methods**
   - Acceptance: `VikingFS.write_file_from_path(uri, local_path, ctx, lease_ref, auto_pathlock)` performs exactly the same ACL check, URI mapping, parent-dir creation and pathlock ctx as `write_file_bytes`; `read_file_to_path(uri, local_path, ctx)` mirrors `read_file_bytes` access checks.
   - Verify: `tests/storage` unit tests: ACL denial, parent creation, round trip.
   - Files: `openviking/storage/viking_fs/_ops.py`, `tests/storage/test_viking_fs_path_io.py` (new)
