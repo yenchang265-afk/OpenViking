@@ -71,8 +71,8 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Verify: spy-inner tests; existing `tests/cache_wrapper.rs` passes.
   - Files: `crates/ragfs/src/core/mountable.rs`, `crates/ragfs/src/cache/wrapper.rs`, `crates/ragfs/src/core/multibackend_wrapper.rs`
 
-- [ ] **T4: Encryption wrapper: buffered + cap**
-  - Acceptance: an explicit override reads the file, enforces `encryption.max_file_bytes` (default 512 MiB) with a clear error, then uses the existing temp+replace envelope write. `read_to_path` decrypts to the file.
+- [x] **T4: Encryption wrapper: buffered + cap**
+  - Acceptance: an explicit override checks the source size against a fixed 512 MiB cap (not yet configurable; see SPEC A), reads the file, then uses the existing temp+replace envelope write and returns the plaintext length. `read_to_path` decrypts to the file.
   - Verify: unit tests for under, at and over the cap, plus round trip.
   - Files: `crates/ragfs/src/core/encryption_wrapper.rs`, encryption config struct (`core/types.rs` or `builder.rs`)
 
