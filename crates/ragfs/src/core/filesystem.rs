@@ -264,6 +264,50 @@ pub trait FileSystem: Send + Sync + Any {
     /// * `Error::IsADirectory` - If the path points to a directory
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64>;
 
+    /// Write the full contents of a local file to `path`
+    ///
+    /// The default reads `src` into memory and delegates to [`FileSystem::write`],
+    /// so it is always correct but buffers the whole file. Backends override it to
+    /// stream, and wrappers override it to forward to their inner filesystem so the
+    /// backend's streaming implementation is reached.
+    ///
+    /// # Arguments
+    /// * `path` - The path of the file to write
+    /// * `src` - Local file whose contents become the file at `path`
+    /// * `flags` - Write flags (create, create-new, truncate)
+    ///
+    /// # Returns
+    /// The number of bytes written
+    ///
+    /// # Errors
+    /// * `Error::Io` - If `src` cannot be read
+    /// * Any error [`FileSystem::write`] returns for `path`
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        let data = tokio::fs::read(src).await?;
+        self.write(path, &data, 0, flags).await
+    }
+
+    /// Read the full contents of `path` into a local file
+    ///
+    /// `dst` is created or truncated. The default buffers the whole file through
+    /// [`FileSystem::read`]; backends override it to stream.
+    ///
+    /// # Arguments
+    /// * `path` - The path of the file to read
+    /// * `dst` - Local file to write the contents to
+    ///
+    /// # Returns
+    /// The number of bytes read
+    ///
+    /// # Errors
+    /// * Any error [`FileSystem::read`] returns for `path`
+    /// * `Error::Io` - If `dst` cannot be written
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        let data = self.read(path, 0, 0).await?;
+        tokio::fs::write(dst, &data).await?;
+        Ok(data.len() as u64)
+    }
+
     /// Replace a file only when its full current content equals `expected`.
     ///
     /// # Arguments

@@ -1,6 +1,6 @@
 # Plan: Unified Streaming Large-File Upload
 
-Status: **Draft — awaiting review** (Phase 2: Plan + Phase 3: Tasks)
+Status: **Approved** 2026-10-06 (Phase 2: Plan + Phase 3: Tasks) — implementation in progress
 Spec: [SPEC.md](SPEC.md) (approved 2026-10-06)
 
 ## Components and dependencies
