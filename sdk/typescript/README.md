@@ -22,7 +22,7 @@ const results = await client.search("deployment guide", {
 
 The client follows the same HTTP API, identity headers, response envelope and error codes as `openviking-sdk` for Python and the Go SDK. It supports resources and skills, filesystem/content operations, retrieval, sessions, OVPack files, snapshots, tasks, watches, observer status and tenant administration.
 
-Existing local file paths are uploaded automatically, and local directories are zipped before upload. Other strings are sent to the server as URLs or server-side paths.
+Existing local file paths are uploaded automatically. In Node.js, `addResource` sends local files and directories through chunked upload sessions (`/api/v1/uploads`): directories are not zipped and one part is read from disk at a time, so memory stays flat for large uploads. It falls back to a single `/api/v1/resources/temp_upload` request (zipping directories) when the server has no chunked uploads or `uploadMode` is `"shared"`; `addSkill` always uses the single request. Other strings are sent to the server as URLs or server-side paths.
 
 To ingest content without VLM semantic understanding, pass `processingMode: "vectors_only"` to `addResource`. This writes or syncs the resource tree and vectorizes current files, but does not generate or refresh `.abstract.md` / `.overview.md`.
 

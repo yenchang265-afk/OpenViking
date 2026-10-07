@@ -17,6 +17,8 @@ export interface TransportOptions {
   query?: JsonObject;
   body?: unknown;
   form?: FormData;
+  /** Raw request body sent as-is (e.g. one upload part). */
+  raw?: { data: Uint8Array; contentType: string };
   signal?: AbortSignal;
 }
 
@@ -82,9 +84,12 @@ export class OpenVikingTransport {
     }
     if (this.profile) url.searchParams.set("profile", "1");
     const headers = new Headers(this.headers);
-    let body: string | FormData | undefined;
+    let body: string | FormData | Uint8Array | undefined;
     if (options.form) body = options.form;
-    else if (options.body !== undefined) {
+    else if (options.raw) {
+      headers.set("Content-Type", options.raw.contentType);
+      body = options.raw.data;
+    } else if (options.body !== undefined) {
       headers.set("Content-Type", "application/json");
       body = JSON.stringify(options.body);
     }

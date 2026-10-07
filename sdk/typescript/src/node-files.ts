@@ -107,6 +107,86 @@ export async function nodePathToBlob(
   };
 }
 
+export interface NodeUploadEntry {
+  /** Forward-slash path inside the upload. */
+  path: string;
+  size: number;
+  localPath: string;
+}
+
+/**
+ * List a Node.js local file, or every regular file in a directory (symlinks skipped,
+ * like the zip upload), for a chunked upload. Returns undefined if `path` does not exist.
+ */
+export async function nodeUploadEntries(
+  path: string,
+): Promise<
+  | { kind: "file" | "directory"; name: string; entries: NodeUploadEntry[] }
+  | undefined
+> {
+  const [fs, paths, stat] = await Promise.all([
+    nodeFs(),
+    nodePath(),
+    statOrUndefined(path),
+  ]);
+  if (!stat) return undefined;
+  const name = paths.basename(path);
+  if (stat.isFile())
+    return {
+      kind: "file",
+      name,
+      entries: [{ path: name, size: stat.size, localPath: path }],
+    };
+  if (!stat.isDirectory()) return undefined;
+  const entries: NodeUploadEntry[] = [];
+  const walk = async (directory: string, prefix = ""): Promise<void> => {
+    const items = await fs.readdir(directory, { withFileTypes: true });
+    items.sort((a: { name: string }, b: { name: string }) =>
+      a.name < b.name ? -1 : a.name > b.name ? 1 : 0,
+    );
+    for (const entry of items) {
+      if (entry.isSymbolicLink()) continue;
+      const fullPath = paths.join(directory, entry.name);
+      const relPath = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) await walk(fullPath, relPath);
+      else if (entry.isFile())
+        entries.push({
+          path: relPath,
+          size: (await fs.stat(fullPath)).size,
+          localPath: fullPath,
+        });
+    }
+  };
+  await walk(path);
+  return { kind: "directory", name, entries };
+}
+
+/** Read `length` bytes at `offset` from a Node.js file (one upload part). */
+export async function readNodeFilePart(
+  localPath: string,
+  offset: number,
+  length: number,
+): Promise<Uint8Array> {
+  const handle = await (await nodeFs()).open(localPath, "r");
+  try {
+    const buffer = new Uint8Array(length);
+    let filled = 0;
+    while (filled < length) {
+      const { bytesRead } = await handle.read(
+        buffer,
+        filled,
+        length - filled,
+        offset + filled,
+      );
+      if (bytesRead === 0) break;
+      filled += bytesRead;
+    }
+    return filled === length ? buffer : buffer.subarray(0, filled);
+  } finally {
+    await handle.close();
+  }
+}
+
 /** Resolve the Python/Go-compatible local destination for an OVPack. */
 export async function packOutputPath(
   to: string,
