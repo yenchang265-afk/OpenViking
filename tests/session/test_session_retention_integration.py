@@ -764,7 +764,7 @@ async def test_wm_creation_passes_configured_output_language_to_prompt(client, m
     vlm = FakeVLM()
     monkeypatch.setattr(
         "openviking.session.session.get_openviking_config",
-        lambda: SimpleNamespace(vlm=vlm, output_language_override="zh-CN"),
+        lambda: SimpleNamespace(vlm=vlm, output_language_override="zh-TW"),
     )
 
     result = await session._generate_archive_summary_async(
@@ -773,7 +773,7 @@ async def test_wm_creation_passes_configured_output_language_to_prompt(client, m
 
     assert result == "# Working Memory"
     assert len(prompts) == 1
-    assert "zh-CN" in prompts[0]["prompt"]
+    assert "zh-TW" in prompts[0]["prompt"]
 
 
 async def test_wm_creation_detects_language_from_multiline_user_message(client, monkeypatch):
@@ -809,7 +809,7 @@ async def test_wm_creation_detects_language_from_multiline_user_message(client, 
 
     assert result == "# Working Memory"
     assert len(prompts) == 1
-    assert "zh-CN" in prompts[0]["prompt"]
+    assert "zh-TW" in prompts[0]["prompt"]
 
 
 async def test_wm_update_returns_two_products_in_one_model_call(

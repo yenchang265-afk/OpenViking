@@ -13,11 +13,9 @@ import pytest
 from openviking.prompts import render_prompt
 from openviking.session.memory.utils.language import (
     _detect_language_from_text,
-    _language_from_locale_value,
-    _language_from_timezone_value,
-    _resolve_system_fallback_language,
     resolve_output_language,
     resolve_output_language_from_conversation,
+    resolve_output_language_from_text,
 )
 
 
@@ -190,13 +188,13 @@ class TestOverviewGenerationFlow:
         "description,override,expected_language",
         [
             ("", "", "en"),
-            ("這是用於查詢任務狀態和統計執行時間的客戶端程式碼。", "", "zh-CN"),
+            ("這是用於查詢任務狀態和統計執行時間的客戶端程式碼。", "", "zh-TW"),
             (
                 "Este documento descreve as preferências do usuário e o projeto para completar.",
                 "",
-                "pt",
+                "en",
             ),
-            ("", "zh-CN", "zh-CN"),
+            ("", "zh-TW", "zh-TW"),
         ],
     )
     async def test_import_paths_do_not_set_overview_language(
@@ -229,14 +227,16 @@ class TestOverviewGenerationFlow:
     @pytest.mark.parametrize(
         "lang,file_summaries",
         [
-            ("zh-CN", "[1] file1.py: 這是一個Python檔案\n[2] file2.py: 這是另一個檔案"),
+            ("zh-TW", "[1] file1.py: 這是一個Python檔案\n[2] file2.py: 這是另一個檔案"),
             ("en", "[1] file1.py: This is a Python file\n[2] file2.py: Another file"),
-            ("ja", "[1] file1.py: それはPythonファイルです\n[2] file2.py: これもPython"),
+            ("en", "[1] file1.py: それはPythonファイルです\n[2] file2.py: これもPython"),
         ],
     )
     def test_overview_generation_language_flow(self, lang, file_summaries):
         """目錄摘要 -> 語言檢測 -> overview 模板"""
-        detected_lang = _detect_language_from_text(file_summaries, fallback_language=lang)
+        config = MagicMock()
+        config.output_language_override = ""
+        detected_lang = resolve_output_language(file_summaries, config=config)
         assert detected_lang == lang
 
         prompt = render_prompt(
@@ -250,7 +250,7 @@ class TestOverviewGenerationFlow:
         )
         assert f"Output Language: {lang}" in prompt
         assert "Output in Markdown format" in prompt
-        expected_brief_heading = "簡要描述" if lang == "zh-CN" else "Brief Description"
+        expected_brief_heading = "簡要描述" if lang == "zh-TW" else "Brief Description"
         assert expected_brief_heading in prompt
         assert "abstract_max_chars" not in prompt
 
@@ -295,7 +295,7 @@ class TestOverviewGenerationFlow:
                 "dir_name": "測試",
                 "file_summaries": "[1] test.md: 測試文件",
                 "children_abstracts": "",
-                "output_language": "zh-CN",
+                "output_language": "zh-TW",
             },
         )
 
@@ -314,7 +314,7 @@ class LanguageAwareMockVLM:
         self.is_available = MagicMock(return_value=True)
         self.prompts_received = []
         self.language_responses = {
-            "zh-CN": "中文摘要：這是一個測試函式",
+            "zh-TW": "中文摘要：這是一個測試函式",
             "en": "English summary: This is a test function",
             "ja": "日本語要約：これはテスト関数です",
             "ko": "한국어 요약: 이것은 테스트 함수입니다",
@@ -339,7 +339,7 @@ def _verify_content_language(text: str, expected_lang: str) -> bool:
     arabic_chars = sum(1 for c in text if "\u0600" <= c <= "\u06ff")
 
     thresholds = {
-        "zh-CN": chinese_chars >= 2,
+        "zh-TW": chinese_chars >= 2,
         "en": re.search(r"\b(the|is|are|test|function)\b", text, re.I) is not None,
         "ja": japanese_chars >= 2,
         "ko": korean_chars >= 2,
@@ -353,7 +353,7 @@ class TestGenerateTextSummaryOutputLanguage:
     """端到端測試：驗證 _generate_text_summary 生成的內容語言是否符合預期。"""
 
     _LANGUAGE_LOCALE = {
-        "zh-CN": "zh_CN.UTF-8",
+        "zh-TW": "zh_TW.UTF-8",
         "en": "en_US.UTF-8",
         "ja": "ja_JP.UTF-8",
         "ko": "ko_KR.UTF-8",
@@ -413,7 +413,7 @@ class TestGenerateTextSummaryOutputLanguage:
     @pytest.mark.parametrize(
         "file_key,file_name,expected_lang",
         [
-            ("chinese_md", "chinese_doc.md", "zh-CN"),
+            ("chinese_md", "chinese_doc.md", "zh-TW"),
             ("english_md", "english_doc.md", "en"),
         ],
     )
@@ -463,14 +463,15 @@ class TestGenerateTextSummaryOutputLanguage:
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
-        "content,file_name,expected_lang",
+        "content,file_name,source_lang",
         [
             ("Это русский тестовый файл Python", "russian_code.py", "ru"),
             ("هذا ملف اختبار كود بايثون عربي", "arabic_code.py", "ar"),
         ],
     )
-    async def test_e2e_russian_arabic_output_language(self, content, file_name, expected_lang):
-        """端到端測試：俄文和阿拉伯文內容"""
+    async def test_e2e_russian_arabic_fall_back_to_english(self, content, file_name, source_lang):
+        """端到端測試：俄文和阿拉伯文內容只會輸出英文"""
+        expected_lang = "en"
         from openviking.storage.queuefs.semantic_processor import SemanticProcessor
 
         mock_vlm = LanguageAwareMockVLM()
@@ -480,7 +481,7 @@ class TestGenerateTextSummaryOutputLanguage:
         with (
             patch.dict(
                 os.environ,
-                {"LC_ALL": self._LANGUAGE_LOCALE[expected_lang]},
+                {"LC_ALL": self._LANGUAGE_LOCALE[source_lang]},
             ),
             patch(
                 "openviking.storage.queuefs.semantic_processor.get_viking_fs",
@@ -509,184 +510,91 @@ class TestGenerateTextSummaryOutputLanguage:
 
 
 class TestOutputLanguageOverride:
-    """Config-level `output_language_override` bypasses content-based detection."""
+    """Output language is restricted to English or Traditional Chinese (zh-TW)."""
 
-    def _make_config(self, override: str = "", fallback: str = "en"):
+    def _make_config(self, override: str = ""):
         config = MagicMock()
         config.output_language_override = override
-        config.language_fallback = fallback
         return config
 
-    def test_override_unset_detects_from_content(self):
+    def test_override_unset_detects_chinese_as_traditional(self):
         config = self._make_config(override="")
-        with patch.dict(os.environ, {"LC_ALL": "ja_JP.UTF-8"}):
-            result = resolve_output_language("これは日本語のテキストです", config=config)
-        assert result == "ja"
+        result = resolve_output_language("這是一份關於專案設定的中文文件", config=config)
+        assert result == "zh-TW"
 
     def test_override_unset_uses_english_for_latin_text(self):
-        config = self._make_config(override="", fallback="en")
+        config = self._make_config(override="")
         result = resolve_output_language(
             "Plain English text with no special scripts", config=config
         )
         assert result == "en"
 
-    def test_override_set_bypasses_detection(self):
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "これは日本語のテキストです",
+            "이것은 한국어 텍스트입니다",
+            "Это русский тестовый текст",
+            "Este documento descreve as preferências do usuário e o projeto para completar.",
+        ],
+    )
+    def test_other_detected_languages_fall_back_to_english(self, text):
+        config = self._make_config(override="")
+        assert resolve_output_language(text, config=config) == "en"
+
+    @pytest.mark.parametrize(
+        "env",
+        [
+            {"LC_ALL": "zh_TW.UTF-8"},
+            {"LC_ALL": "ja_JP.UTF-8"},
+            {"TZ": "Asia/Taipei"},
+        ],
+    )
+    def test_undetectable_content_falls_back_to_english_regardless_of_system(self, env):
+        config = self._make_config(override="")
+        with patch.dict(os.environ, env, clear=True):
+            assert resolve_output_language("12345 ---", config=config) == "en"
+            assert resolve_output_language("", config=config) == "en"
+
+    def test_override_en_bypasses_detection(self):
         config = self._make_config(override="en")
-        result = resolve_output_language("これは日本語のテキストです", config=config)
+        result = resolve_output_language("這是一份中文文件", config=config)
         assert result == "en"
 
-    def test_override_set_wins_over_fallback(self):
-        config = self._make_config(override="zh-CN", fallback="en")
+    def test_override_zh_tw_bypasses_detection(self):
+        config = self._make_config(override="zh-TW")
         result = resolve_output_language("Plain English text", config=config)
-        assert result == "zh-CN"
+        assert result == "zh-TW"
+
+    @pytest.mark.parametrize("override,expected", [("zh-CN", "zh-TW"), ("ja", "en"), ("fr", "en")])
+    def test_unsupported_override_is_clamped(self, override, expected):
+        config = self._make_config(override=override)
+        assert resolve_output_language("Plain English text", config=config) == expected
 
     def test_override_whitespace_treated_as_unset(self):
         config = self._make_config(override="   ")
-        with patch.dict(os.environ, {"LC_ALL": "ja_JP.UTF-8"}):
-            result = resolve_output_language("これは日本語のテキストです", config=config)
-        assert result == "ja"
+        result = resolve_output_language("這是一份中文文件", config=config)
+        assert result == "zh-TW"
 
-    def test_locale_hint_used_when_content_has_no_language_signal(self):
+    def test_explicit_fallback_is_clamped(self):
         config = self._make_config(override="")
-        with patch.dict(os.environ, {"LC_ALL": "zh_CN.UTF-8"}, clear=True):
-            result = resolve_output_language("12345 ---", config=config)
-        assert result == "zh-CN"
-
-    @pytest.mark.parametrize(
-        "locale_value,expected",
-        [
-            ("Chinese_China.936", "zh-CN"),
-            ("Chinese (Simplified)_China.936", "zh-CN"),
-            ("English_United States.1252", "en"),
-        ],
-    )
-    def test_windows_locale_hint_values(self, locale_value, expected):
-        assert _language_from_locale_value(locale_value) == expected
-
-    def test_timezone_hint_used_when_locale_hint_absent(self):
-        config = self._make_config(override="")
-        with (
-            patch.dict(os.environ, {"TZ": "Asia/Tokyo"}, clear=True),
-            patch(
-                "openviking.session.memory.utils.language.locale.getlocale",
-                return_value=("C", "UTF-8"),
-            ),
-        ):
-            result = resolve_output_language("12345 ---", config=config)
-        assert result == "ja"
-
-    @pytest.mark.parametrize(
-        "timezone_value,expected",
-        [
-            ("China Standard Time", "zh-CN"),
-            ("Tokyo Standard Time", "ja"),
-            ("Eastern Standard Time", "en"),
-        ],
-    )
-    def test_windows_timezone_hint_values(self, timezone_value, expected):
-        assert _language_from_timezone_value(timezone_value) == expected
-
-    def test_timezone_hint_overrides_english_locale_for_weak_fallback(self):
-        with patch.dict(
-            os.environ,
-            {"LC_ALL": "en_US.UTF-8", "TZ": "Asia/Shanghai"},
-            clear=True,
-        ):
-            assert _resolve_system_fallback_language("en") == "zh-CN"
-
-    def test_non_english_locale_hint_wins_over_timezone(self):
-        with patch.dict(
-            os.environ,
-            {"LC_ALL": "ja_JP.UTF-8", "TZ": "Asia/Shanghai"},
-            clear=True,
-        ):
-            assert _resolve_system_fallback_language("en") == "ja"
-
-    def test_local_timezone_hint_used_when_tz_env_absent(self):
-        with (
-            patch.dict(os.environ, {}, clear=True),
-            patch(
-                "openviking.session.memory.utils.language.locale.getlocale",
-                return_value=("C", "UTF-8"),
-            ),
-            patch(
-                "openviking.session.memory.utils.language.os.path.realpath",
-                return_value="/usr/share/zoneinfo.default/Asia/Shanghai",
-            ),
-        ):
-            assert _resolve_system_fallback_language("en") == "zh-CN"
-
-    def test_english_timezone_hint_used_when_locale_hint_absent(self):
-        config = self._make_config(override="")
-        with (
-            patch.dict(os.environ, {"TZ": "America/New_York"}, clear=True),
-            patch(
-                "openviking.session.memory.utils.language.locale.getlocale",
-                return_value=("C", "UTF-8"),
-            ),
-        ):
-            result = resolve_output_language("12345 ---", config=config)
-        assert result == "en"
-
-    def test_arabic_timezone_hint_used_when_locale_hint_absent(self):
-        config = self._make_config(override="")
-        with (
-            patch.dict(os.environ, {"TZ": "Asia/Riyadh"}, clear=True),
-            patch(
-                "openviking.session.memory.utils.language.locale.getlocale",
-                return_value=("C", "UTF-8"),
-            ),
-        ):
-            result = resolve_output_language("12345 ---", config=config)
-        assert result == "ar"
-
-    def test_content_language_wins_over_locale_hint(self):
-        config = self._make_config(override="")
-        with patch.dict(os.environ, {"LC_ALL": "zh_CN.UTF-8"}, clear=True):
-            result = resolve_output_language(
-                "This is an English document for testing language detection",
-                config=config,
-            )
-        assert result == "en"
-
-    def test_english_content_wins_over_chinese_timezone_hint(self):
-        config = self._make_config(override="")
-        with patch.dict(
-            os.environ,
-            {"LC_ALL": "en_US.UTF-8", "TZ": "Asia/Shanghai"},
-            clear=True,
-        ):
-            result = resolve_output_language(
-                "This is an English document for testing language detection",
-                config=config,
-            )
-        assert result == "en"
-
-    def test_short_latin_content_wins_over_chinese_timezone_hint(self):
-        config = self._make_config(override="")
-        with patch.dict(
-            os.environ,
-            {"LC_ALL": "en_US.UTF-8", "TZ": "Asia/Shanghai"},
-            clear=True,
-        ):
-            result = resolve_output_language("Use Vim", config=config)
+        result = resolve_output_language_from_text("12345", config=config, fallback_language="ja")
         assert result == "en"
 
     def test_conversation_override_set_bypasses_detection(self):
         config = self._make_config(override="en")
-        conversation = "[user]: これは日本語のメッセージです\n[assistant]: reply"
+        conversation = "[user]: 請用中文回覆\n[assistant]: reply"
         result = resolve_output_language_from_conversation(conversation, config=config)
         assert result == "en"
 
-    def test_conversation_override_unset_detects_from_user_content(self):
+    def test_conversation_japanese_user_content_falls_back_to_english(self):
         config = self._make_config(override="")
         conversation = "[user]: これは日本語のメッセージです\n[assistant]: reply"
-        with patch.dict(os.environ, {"LC_ALL": "ja_JP.UTF-8"}):
-            result = resolve_output_language_from_conversation(conversation, config=config)
-        assert result == "ja"
+        result = resolve_output_language_from_conversation(conversation, config=config)
+        assert result == "en"
 
     def test_indexed_conversation_detects_user_content(self):
         config = self._make_config(override="")
         conversation = "[0][user][alice]: 請使用中文\n[1][assistant][bot]: 한국어 응답"
         result = resolve_output_language_from_conversation(conversation, config=config)
-        assert result == "zh-CN"
+        assert result == "zh-TW"

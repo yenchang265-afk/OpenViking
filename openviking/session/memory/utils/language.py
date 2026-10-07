@@ -4,10 +4,7 @@
 Language detection utilities.
 """
 
-import locale
-import os
 import re
-import time
 from typing import Callable
 
 from openviking_cli.utils import get_logger
@@ -21,6 +18,9 @@ _JAPANESE_KANA_MIN_CHARS = 3
 _STRONG_DOMINANT_MIN_CHARS = 10
 _STRONG_DOMINANT_RATIO = 0.95
 _PRIMARY_LANGUAGES = {"zh-CN", "en"}
+# Generated summaries and memories are only ever written in these languages.
+DEFAULT_OUTPUT_LANGUAGE = "en"
+TRADITIONAL_CHINESE = "zh-TW"
 # Bare import paths are machine tokens too: repeated .com domains otherwise
 # count as the Portuguese stopword "com" in code skeletons.
 _URI_LANGUAGE_NOISE_RE = re.compile(
@@ -58,111 +58,17 @@ _LATIN_ACCENT_BONUSES = {
 }
 _LATIN_HINT_LANGUAGES = {"it", "fr", "es", "de", "pt"}
 
-_LOCALE_LANGUAGE_PREFIXES = {
-    "zh": "zh-CN",
-    "ja": "ja",
-    "ko": "ko",
-    "ru": "ru",
-    "ar": "ar",
-    "it": "it",
-    "fr": "fr",
-    "es": "es",
-    "de": "de",
-    "pt": "pt",
-    "en": "en",
-    "chinese": "zh-CN",
-    "japanese": "ja",
-    "korean": "ko",
-    "russian": "ru",
-    "arabic": "ar",
-    "italian": "it",
-    "french": "fr",
-    "spanish": "es",
-    "german": "de",
-    "portuguese": "pt",
-    "english": "en",
-}
 
-# Use Timezone as a weak fallback signal.
-_TIMEZONE_LANGUAGE_GROUPS = {
-    "zh-CN": (
-        "asia/shanghai",
-        "asia/chongqing",
-        "asia/harbin",
-        "asia/urumqi",
-        "asia/hong_kong",
-        "asia/macau",
-        "asia/taipei",
-        "prc",
-        "roc",
-        "hongkong",
-        "china standard time",
-        "taipei standard time",
-    ),
-    "ja": ("asia/tokyo", "japan", "tokyo standard time"),
-    "ko": ("asia/seoul", "rok", "korea standard time"),
-    "ru": (
-        "europe/moscow",
-        "europe/kaliningrad",
-        "asia/yekaterinburg",
-        "asia/vladivostok",
-        "russian standard time",
-    ),
-    "ar": (
-        "asia/riyadh",
-        "asia/dubai",
-        "asia/qatar",
-        "asia/kuwait",
-        "asia/baghdad",
-        "africa/cairo",
-        "africa/algiers",
-        "africa/tunis",
-        "arab standard time",
-        "arabian standard time",
-        "egypt standard time",
-    ),
-    "it": ("europe/rome",),
-    "fr": ("europe/paris",),
-    "es": ("europe/madrid",),
-    "de": ("europe/berlin",),
-    "pt": ("europe/lisbon", "america/sao_paulo"),
-    "en": (
-        "america/new_york",
-        "america/chicago",
-        "america/denver",
-        "america/los_angeles",
-        "america/phoenix",
-        "america/anchorage",
-        "pacific/honolulu",
-        "us/eastern",
-        "us/central",
-        "us/mountain",
-        "us/pacific",
-        "europe/london",
-        "europe/dublin",
-        "gb",
-        "gb-eire",
-        "america/toronto",
-        "america/vancouver",
-        "canada/eastern",
-        "canada/pacific",
-        "australia/sydney",
-        "australia/melbourne",
-        "australia/brisbane",
-        "australia/perth",
-        "pacific/auckland",
-        "nz",
-        "eastern standard time",
-        "pacific standard time",
-        "gmt standard time",
-    ),
-}
+def normalize_output_language(language: str) -> str:
+    """Map any language code onto a supported output language.
 
-_TIMEZONE_LANGUAGE_HINTS = {
-    timezone_name: language
-    for language, timezone_names in _TIMEZONE_LANGUAGE_GROUPS.items()
-    for timezone_name in timezone_names
-}
+    Chinese variants become Traditional Chinese (zh-TW); everything else,
+    including empty or unrecognized codes, becomes English.
+    """
+    normalized = (language or "").strip().lower().replace("_", "-")
+    if normalized == "zh" or normalized.startswith("zh-"):
+        return TRADITIONAL_CHINESE
+    return DEFAULT_OUTPUT_LANGUAGE
 
 
 def _passes_threshold(count: int, total: int) -> bool:
@@ -179,83 +85,6 @@ def _is_strong_dominant(count: int, total: int) -> bool:
         and total > 0
         and count / total >= _STRONG_DOMINANT_RATIO
     )
-
-
-def _language_from_locale_value(value: str) -> str:
-    if not value:
-        return ""
-    normalized = value.split(":", 1)[0].split(".", 1)[0].split("@", 1)[0]
-    normalized = normalized.strip().lower().replace("-", "_")
-    if not normalized or normalized in {"c", "posix"}:
-        return ""
-    prefix = normalized.split("_", 1)[0].split(" ", 1)[0]
-    return _LOCALE_LANGUAGE_PREFIXES.get(prefix, "")
-
-
-def _language_from_timezone_value(value: str) -> str:
-    if not value:
-        return ""
-    normalized = value.strip().lower().lstrip(":")
-    if not normalized or normalized == "local":
-        return ""
-    return _TIMEZONE_LANGUAGE_HINTS.get(normalized, "")
-
-
-def _language_from_local_timezone() -> str:
-    try:
-        path_parts = os.path.realpath("/etc/localtime").split(os.sep)
-        for marker in ("zoneinfo", "zoneinfo.default"):
-            if marker in path_parts:
-                timezone_name = "/".join(path_parts[path_parts.index(marker) + 1 :])
-                if language := _language_from_timezone_value(timezone_name):
-                    return language
-    except Exception:
-        pass
-
-    for timezone_name in time.tzname:
-        if language := _language_from_timezone_value(timezone_name or ""):
-            return language
-    return ""
-
-
-def _resolve_system_fallback_language(default_language: str = "en") -> str:
-    """Resolve a weak fallback hint from system locale/timezone.
-
-    The result is only used when text detection cannot identify a language.
-    Explicit content and output_language_override still take precedence.
-    """
-    default = (default_language or "en").strip() or "en"
-    english_locale_hint = ""
-
-    for env_name in ("LC_ALL", "LC_MESSAGES", "LANGUAGE", "LANG"):
-        language = _language_from_locale_value(os.environ.get(env_name, ""))
-        if language and language != "en":
-            return language
-        if language == "en":
-            english_locale_hint = language
-
-    try:
-        language = _language_from_locale_value(locale.getlocale()[0] or "")
-        if language and language != "en":
-            return language
-        if language == "en":
-            english_locale_hint = language
-    except Exception:
-        pass
-
-    # Honor explicit TZ when set, mainly for Unix-like systems and CI/container environments.
-    language = _language_from_timezone_value(os.environ.get("TZ", ""))
-    if language:
-        return language
-
-    # Fall back to local timezone names; on Windows this may expose Standard Time names via time.tzname.
-    language = _language_from_local_timezone()
-    if language:
-        return language
-
-    if english_locale_hint:
-        return english_locale_hint
-    return default
 
 
 def _detect_latin_language(text: str, fallback_language: str) -> str:
@@ -351,14 +180,13 @@ def resolve_with_override(config, detect: Callable[[], str]) -> str:
 
     The callable returns the detected output language, letting callers choose
     the detector (text vs conversation vs messages) without duplicating the
-    override resolution logic.
+    override resolution logic. Either way the result is normalized to a
+    supported output language (``en`` or ``zh-TW``).
     """
     if config is None:
         config = get_openviking_config()
     override = (getattr(config, "output_language_override", None) or "").strip()
-    if override:
-        return override
-    return detect()
+    return normalize_output_language(override or detect())
 
 
 def resolve_output_language_from_text(
@@ -367,12 +195,7 @@ def resolve_output_language_from_text(
     *,
     fallback_language: str = "en",
 ) -> str:
-    """Resolve output language from text with an explicit fallback language.
-
-    Unlike ``resolve_output_language``, this helper does not consult locale or
-    timezone. Use it when an empty or low-signal text should not inherit the
-    runtime environment language.
-    """
+    """Resolve output language from text with an explicit fallback language."""
     fallback = (fallback_language or "en").strip() or "en"
     return resolve_with_override(config, lambda: _detect_language_from_text(text, fallback))
 
@@ -383,9 +206,13 @@ def strip_language_detection_noise(text: str) -> str:
 
 
 def resolve_output_language(text: str, config=None) -> str:
-    """Resolve output language from text, honoring config override before detection."""
-    fallback = _resolve_system_fallback_language("en")
-    return resolve_output_language_from_text(text, config=config, fallback_language=fallback)
+    """Resolve output language from text, honoring config override before detection.
+
+    Text without a usable language signal resolves to English.
+    """
+    return resolve_output_language_from_text(
+        text, config=config, fallback_language=DEFAULT_OUTPUT_LANGUAGE
+    )
 
 
 def resolve_output_language_from_conversation(conversation: str, config=None) -> str:
@@ -394,9 +221,9 @@ def resolve_output_language_from_conversation(conversation: str, config=None) ->
     When no override is set, uses `detect_language_from_conversation` which
     scopes detection to user-role content only.
     """
-    fallback = _resolve_system_fallback_language("en")
     return resolve_with_override(
-        config, lambda: detect_language_from_conversation(conversation, fallback)
+        config,
+        lambda: detect_language_from_conversation(conversation, DEFAULT_OUTPUT_LANGUAGE),
     )
 
 
