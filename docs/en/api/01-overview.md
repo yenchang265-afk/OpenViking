@@ -373,6 +373,7 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/v1/resources/temp_upload` | Upload a temporary file for a later import |
+| GET | `/api/v1/uploads/limits` | Get the server upload limits |
 | POST | `/api/v1/resources` | Add a resource from a URL or temporary upload |
 | GET | `/api/v1/fs/ls` | List a directory |
 | GET | `/api/v1/fs/tree` | Get a directory tree |

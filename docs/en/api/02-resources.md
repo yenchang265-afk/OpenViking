@@ -639,6 +639,60 @@ Possible shared response:
 
 ---
 
+### upload_limits
+
+Return the server's upload limits (`server.upload`) so clients can check files before uploading.
+
+#### 1. API Implementation Overview
+
+Web Studio, the SDKs and the CLI read these limits instead of hard-coding them. The server enforces the same values: [temp_upload](#temp-upload) rejects files larger than `max_file_bytes`.
+
+**Code Entry Points**:
+- `openviking/server/routers/uploads.py:get_upload_limits` - HTTP router
+- `openviking/server/config.py:UploadConfig` - Configuration (`server.upload` in `ov.conf`)
+
+#### 2. Interface and Parameter Description
+
+This endpoint takes no parameters.
+
+**Response fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| max_file_bytes | int | Largest single file accepted |
+| max_session_bytes | int | Largest total size of one upload, such as a folder |
+| max_files | int | Most files in one upload |
+| part_size_bytes | int | Chunk size clients use for chunked uploads |
+
+#### 3. Usage Examples
+
+**HTTP API**
+
+```
+GET /api/v1/uploads/limits
+```
+
+```bash
+curl http://localhost:1933/api/v1/uploads/limits \
+  -H "X-API-Key: your-key"
+```
+
+**Response Example**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "max_file_bytes": 2147483648,
+    "max_session_bytes": 5368709120,
+    "max_files": 10000,
+    "part_size_bytes": 8388608
+  }
+}
+```
+
+---
+
 ## Related Documentation
 
 - [File System](03-filesystem.md) - File and directory operations

@@ -368,6 +368,7 @@ JSON 輸出 - 錯誤：
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | POST | `/api/v1/resources/temp_upload` | 上傳後續匯入所需的臨時檔案 |
+| GET | `/api/v1/uploads/limits` | 獲取伺服器上傳限制 |
 | POST | `/api/v1/resources` | 從 URL 或臨時檔案新增資源 |
 | GET | `/api/v1/fs/ls` | 列出目錄 |
 | GET | `/api/v1/fs/tree` | 獲取目錄樹 |
