@@ -88,6 +88,50 @@ async def test_async_client_preserves_explicit_fs_ctx() -> None:
     ]
 
 
+class _PathIoClient:
+    """Record path-based I/O calls made through the sync AGFS surface."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, str, dict[str, str] | None]] = []
+
+    def write_file_from_path(
+        self, path: str, local_path: str, *, ctx: dict[str, str] | None = None
+    ) -> int:
+        self.calls.append(("write_file_from_path", path, local_path, ctx))
+        return 7
+
+    def read_file_to_path(
+        self, path: str, local_path: str, *, ctx: dict[str, str] | None = None
+    ) -> int:
+        self.calls.append(("read_file_to_path", path, local_path, ctx))
+        return 7
+
+
+@pytest.mark.asyncio
+async def test_async_client_path_io_derives_ctx_and_honours_auto_pathlock(tmp_path) -> None:
+    client = _PathIoClient()
+    agfs = AsyncAGFSClient(client)
+    local = tmp_path / "f.bin"
+
+    written = await agfs.write_file_from_path("/local/acct-1/data/f.bin", local)
+    unlocked = await agfs.write_file_from_path(
+        "/local/acct-1/data/g.bin", str(local), auto_pathlock=False
+    )
+    read = await agfs.read_file_to_path("/local/acct-1/data/f.bin", local)
+
+    assert (written, unlocked, read) == (7, 7, 7)
+    assert client.calls == [
+        ("write_file_from_path", "/local/acct-1/data/f.bin", str(local), {"account_id": "acct-1"}),
+        (
+            "write_file_from_path",
+            "/local/acct-1/data/g.bin",
+            str(local),
+            {"account_id": "acct-1", "disable_auto_pathlock": "true"},
+        ),
+        ("read_file_to_path", "/local/acct-1/data/f.bin", str(local), {"account_id": "acct-1"}),
+    ]
+
+
 @pytest.mark.asyncio
 async def test_async_client_rejects_cross_account_mv() -> None:
     client = _RecordingClient()

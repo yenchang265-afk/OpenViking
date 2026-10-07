@@ -20,6 +20,8 @@ pub mod multibackend_wrapper;
 pub mod plugin;
 pub mod stats;
 pub mod stats_wrapper;
+#[cfg(test)]
+pub(crate) mod test_support;
 pub mod types;
 
 // Re-export commonly used types

@@ -744,4 +744,89 @@ mod tests {
         assert!(plugin.validate(&config).await.is_ok());
         assert!(plugin.initialize(config).await.is_ok());
     }
+
+    fn patterned_bytes(len: usize) -> Vec<u8> {
+        (0..len).map(|i| (i % 251) as u8).collect()
+    }
+
+    #[tokio::test]
+    async fn test_write_from_path_round_trip() {
+        let fs = MemFileSystem::new();
+        let dir = tempfile::tempdir().unwrap();
+
+        for (name, len) in [("empty", 0usize), ("one", 1), ("big", 3 * 1024 * 1024)] {
+            let src = dir.path().join(name);
+            let data = patterned_bytes(len);
+            std::fs::write(&src, &data).unwrap();
+
+            let target = format!("/{}.bin", name);
+            let written = fs
+                .write_from_path(&target, &src, WriteFlag::Create)
+                .await
+                .unwrap();
+
+            assert_eq!(written, len as u64);
+            assert_eq!(fs.read(&target, 0, 0).await.unwrap(), data);
+        }
+    }
+
+    #[tokio::test]
+    async fn test_write_from_path_missing_source_errors() {
+        let fs = MemFileSystem::new();
+        let dir = tempfile::tempdir().unwrap();
+
+        let result = fs
+            .write_from_path("/x.bin", &dir.path().join("missing"), WriteFlag::Create)
+            .await;
+
+        assert!(matches!(result, Err(Error::Io(_))));
+        assert!(!fs.exists("/x.bin").await);
+    }
+
+    #[tokio::test]
+    async fn test_write_from_path_honours_create_new() {
+        let fs = MemFileSystem::new();
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"new").unwrap();
+        fs.write("/x.bin", b"old", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        let result = fs
+            .write_from_path("/x.bin", &src, WriteFlag::CreateNew)
+            .await;
+
+        assert!(matches!(result, Err(Error::AlreadyExists(_))));
+        assert_eq!(fs.read("/x.bin", 0, 0).await.unwrap(), b"old");
+    }
+
+    #[tokio::test]
+    async fn test_read_to_path_round_trip() {
+        let fs = MemFileSystem::new();
+        let dir = tempfile::tempdir().unwrap();
+        let data = patterned_bytes(3 * 1024 * 1024 + 7);
+        fs.write("/big.bin", &data, 0, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        let dst = dir.path().join("out");
+        std::fs::write(&dst, b"stale content that is longer than nothing").unwrap();
+        let read = fs.read_to_path("/big.bin", &dst).await.unwrap();
+
+        assert_eq!(read, data.len() as u64);
+        assert_eq!(std::fs::read(&dst).unwrap(), data);
+    }
+
+    #[tokio::test]
+    async fn test_read_to_path_missing_errors() {
+        let fs = MemFileSystem::new();
+        let dir = tempfile::tempdir().unwrap();
+
+        let result = fs
+            .read_to_path("/missing.bin", &dir.path().join("out"))
+            .await;
+
+        assert!(matches!(result, Err(Error::NotFound(_))));
+    }
 }

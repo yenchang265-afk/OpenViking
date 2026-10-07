@@ -1931,6 +1931,60 @@ impl RAGFSBindingClient {
         Ok(format!("Written {} bytes", len))
     }
 
+    /// Write a local file's full contents to `path` without loading it into Python.
+    ///
+    /// Backends that support it stream the file (localfs copy, S3 multipart).
+    ///
+    /// Args:
+    ///     path: Destination file path
+    ///     local_path: Local source file
+    ///     ctx: Optional FsContext dict (e.g. {"account_id": ...})
+    ///
+    /// Returns:
+    ///     Number of bytes written
+    #[pyo3(signature = (path, local_path, ctx=None))]
+    fn write_file_from_path(
+        &self,
+        py: Python<'_>,
+        path: String,
+        local_path: String,
+        ctx: Option<HashMap<String, String>>,
+    ) -> PyResult<u64> {
+        let fs_ctx = build_fs_context(ctx);
+        let top = self.top.clone();
+        self.run_scoped(py, fs_ctx, move || async move {
+            top.write_from_path(&path, std::path::Path::new(&local_path), WriteFlag::Create)
+                .await
+        })
+        .map_err(to_py_err)
+    }
+
+    /// Read `path` into a local file (created or truncated) without loading it into Python.
+    ///
+    /// Args:
+    ///     path: Source file path
+    ///     local_path: Local destination file
+    ///     ctx: Optional FsContext dict (e.g. {"account_id": ...})
+    ///
+    /// Returns:
+    ///     Number of bytes read
+    #[pyo3(signature = (path, local_path, ctx=None))]
+    fn read_file_to_path(
+        &self,
+        py: Python<'_>,
+        path: String,
+        local_path: String,
+        ctx: Option<HashMap<String, String>>,
+    ) -> PyResult<u64> {
+        let fs_ctx = build_fs_context(ctx);
+        let top = self.top.clone();
+        self.run_scoped(py, fs_ctx, move || async move {
+            top.read_to_path(&path, std::path::Path::new(&local_path))
+                .await
+        })
+        .map_err(to_py_err)
+    }
+
     /// Create a new empty file.
     #[pyo3(signature = (path, ctx=None))]
     fn create(

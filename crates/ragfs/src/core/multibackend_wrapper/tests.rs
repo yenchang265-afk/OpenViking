@@ -11,6 +11,44 @@ fn test_ctx() -> FsContext {
     Arc::new(FsContextInner::new("acct".to_string()))
 }
 
+/// Multi-write keeps the buffered `write_from_path` default: async backup fan-out
+/// holds the bytes after the call returns, so a caller's temp file cannot stand in.
+#[tokio::test]
+async fn test_write_from_path_buffers_through_write_including_redirects() {
+    let dir = tempfile::tempdir().unwrap();
+    let small = dir.path().join("small");
+    let large = dir.path().join("large");
+    std::fs::write(&small, b"small body").unwrap();
+    let large_data: Vec<u8> = (0..2 * 1024 * 1024).map(|i| (i % 251) as u8).collect();
+    std::fs::write(&large, &large_data).unwrap();
+    let fs = test_multiwrite_fs(vec![RedirectPolicy::FileOverSizePolicy {
+        max_size_mb: 1,
+        target: Some(vec!["backup1".to_string()]),
+    }]);
+
+    FS_CTX
+        .scope(test_ctx(), async {
+            fs.ensure_parent_dirs("/local/acct/docs/small.bin", 0o755)
+                .await?;
+            fs.write_from_path("/local/acct/docs/small.bin", &small, WriteFlag::Create)
+                .await?;
+            fs.write_from_path("/local/acct/docs/large.bin", &large, WriteFlag::Create)
+                .await?;
+
+            assert_eq!(
+                fs.read("/local/acct/docs/small.bin", 0, 0).await?,
+                b"small body"
+            );
+            assert_eq!(
+                fs.read("/local/acct/docs/large.bin", 0, 0).await?,
+                large_data
+            );
+            Ok::<(), Error>(())
+        })
+        .await
+        .unwrap();
+}
+
 /// Create a sync multi-write filesystem with one memfs backup.
 fn test_multiwrite_fs(redirects: Vec<RedirectPolicy>) -> MultiWriteWrappedFS {
     let primary: Arc<dyn FileSystem> = Arc::new(MemFileSystem::new());

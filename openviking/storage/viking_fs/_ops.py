@@ -3,6 +3,7 @@
 """Core filesystem operations mixin for VikingFS."""
 
 import asyncio
+import os
 import uuid
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -1688,12 +1689,15 @@ class _OpsMixin:
         sliced = lines[offset:] if limit == -1 else lines[offset : offset + limit]
         return "".join(sliced)
 
-    async def read_file_bytes(
+    async def _resolve_readable_file_path(
         self,
         uri: str,
         ctx: Optional[RequestContext] = None,
-    ) -> bytes:
-        """Read single binary file. Accepts a Viking URI or a 32-char hex vector record id."""
+    ) -> tuple[str, str]:
+        """Resolve ``uri`` to ``(resolved_uri, agfs_path)`` of a readable regular file.
+
+        Applies the read ACL, falls back across visible read paths, and rejects directories.
+        """
         real_ctx = self._ctx_or_default(ctx)
         uri = await self.resolve_uri(uri, real_ctx)
         await self._ensure_access(uri, ctx)
@@ -1717,9 +1721,36 @@ class _OpsMixin:
                 f"Cannot read directory as file: {uri}",
                 details={"resource": uri, "expected": "file", "actual": "directory"},
             )
+        return uri, path
+
+    async def read_file_bytes(
+        self,
+        uri: str,
+        ctx: Optional[RequestContext] = None,
+    ) -> bytes:
+        """Read single binary file. Accepts a Viking URI or a 32-char hex vector record id."""
+        uri, path = await self._resolve_readable_file_path(uri, ctx)
         try:
             raw = self._handle_agfs_read(await self._async_agfs.read(path))
             return raw
+        except Exception as exc:
+            if is_not_found_error(exc):
+                raise NotFoundError(uri, "file") from exc
+            raise
+
+    async def read_file_to_path(
+        self,
+        uri: str,
+        local_path: Union[str, os.PathLike],
+        ctx: Optional[RequestContext] = None,
+    ) -> int:
+        """Stream a single file into ``local_path`` (created or truncated); return bytes read.
+
+        Same access and resolution rules as :meth:`read_file_bytes`, without buffering.
+        """
+        uri, path = await self._resolve_readable_file_path(uri, ctx)
+        try:
+            return await self._async_agfs.read_file_to_path(path, local_path)
         except Exception as exc:
             if is_not_found_error(exc):
                 raise NotFoundError(uri, "file") from exc
@@ -1746,6 +1777,29 @@ class _OpsMixin:
         await self._async_agfs.write(
             path,
             content,
+            fs_ctx=self._pathlock_fs_ctx(ctx, lease_ref),
+            auto_pathlock=auto_pathlock,
+        )
+
+    async def write_file_from_path(
+        self,
+        uri: str,
+        local_path: Union[str, os.PathLike],
+        ctx: Optional[RequestContext] = None,
+        lease_ref: Dict[str, Any] | None = None,
+        auto_pathlock: bool = True,
+    ) -> int:
+        """Write a local file to ``uri`` without buffering it; return bytes written.
+
+        Same ACL, parent-directory and pathlock semantics as :meth:`write_file_bytes`.
+        """
+        await self._ensure_access(uri, ctx, action=AclAction.WRITE)
+        path = self._uri_to_path(uri, ctx=ctx)
+        await self._ensure_parent_dirs(path, ctx=ctx, lease_ref=lease_ref)
+
+        return await self._async_agfs.write_file_from_path(
+            path,
+            local_path,
             fs_ctx=self._pathlock_fs_ctx(ctx, lease_ref),
             auto_pathlock=auto_pathlock,
         )

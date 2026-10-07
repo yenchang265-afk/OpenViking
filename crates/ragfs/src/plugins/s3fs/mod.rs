@@ -15,10 +15,12 @@
 
 pub mod cache;
 pub mod client;
+mod multipart;
 mod tree;
 
 use async_trait::async_trait;
 use sha2::{Digest, Sha256};
+use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 
@@ -620,6 +622,30 @@ impl FileSystem for S3FileSystem {
         self.stat_cache.invalidate(&normalized).await;
 
         Ok(data.len() as u64)
+    }
+
+    /// Upload a local file: single PUT up to the multipart threshold, multipart above it.
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        let normalized = Self::normalize_path(path);
+        let key = self.client.build_key(&normalized);
+        let create_new = matches!(flags, WriteFlag::CreateNew);
+
+        let written = self
+            .client
+            .put_object_from_path(&key, src, create_new)
+            .await?;
+
+        self.dir_cache.invalidate_parent(&normalized).await;
+        self.stat_cache.invalidate(&normalized).await;
+
+        Ok(written)
+    }
+
+    /// Stream an object into a local file.
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        let normalized = Self::normalize_path(path);
+        let key = self.client.build_key(&normalized);
+        self.client.get_object_to_path(&key, dst).await
     }
 
     async fn compare_and_write(
@@ -1239,6 +1265,18 @@ impl S3FSPlugin {
                     "Infer S3 object Content-Type from the object key filename extension",
                 ),
                 ConfigParameter::optional(
+                    "multipart_threshold_bytes",
+                    "int",
+                    "16777216",
+                    "Path-based writes larger than this use multipart upload",
+                ),
+                ConfigParameter::optional(
+                    "multipart_part_size_bytes",
+                    "int",
+                    "8388608",
+                    "Multipart upload part size (5 MiB to 5 GiB)",
+                ),
+                ConfigParameter::optional(
                     "cache_enabled",
                     "bool",
                     "true",
@@ -1417,6 +1455,8 @@ plugins:
                 ));
             }
         }
+
+        multipart::MultipartSettings::from_config(&config.params)?;
 
         Ok(())
     }

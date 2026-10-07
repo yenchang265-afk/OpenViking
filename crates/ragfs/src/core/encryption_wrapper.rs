@@ -9,6 +9,7 @@
 //! to `self.inner` so plugin-native behavior/optimizations are preserved.
 
 use std::collections::HashMap;
+use std::path::Path;
 use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
@@ -33,6 +34,9 @@ use super::types::{
 const SYSTEM_ACCOUNT_ID: &str = "_system";
 const TEMP_ROOT_CACHE_TTL: Duration = Duration::from_secs(15 * 60);
 const TEMP_ROOT_CACHE_CAP: usize = 1024;
+/// Largest file `write_from_path` will encrypt. The envelope is a single AES-GCM blob,
+/// so the whole plaintext must be buffered; the cap keeps that bounded.
+const DEFAULT_MAX_PATH_WRITE_BYTES: u64 = 512 * 1024 * 1024;
 
 /// A `FileSystem` wrapper that applies envelope encryption to file content.
 pub struct EncryptionWrappedFS {
@@ -50,6 +54,8 @@ pub struct EncryptionWrappedFS {
     pathlock_manager: Arc<PathLockManager>,
     /// Backend mount prefix used to restore manager-visible backend paths.
     backend_prefix: String,
+    /// Size cap for `write_from_path`, which must buffer the plaintext to encrypt it.
+    max_path_write_bytes: u64,
 }
 
 impl EncryptionWrappedFS {
@@ -74,7 +80,14 @@ impl EncryptionWrappedFS {
             temp_root_ready: RwLock::new(HashMap::new()),
             pathlock_manager,
             backend_prefix,
+            max_path_write_bytes: DEFAULT_MAX_PATH_WRITE_BYTES,
         }
+    }
+
+    /// Override the `write_from_path` size cap (default 512 MiB).
+    pub fn with_max_path_write_bytes(mut self, max_bytes: u64) -> Self {
+        self.max_path_write_bytes = max_bytes;
+        self
     }
 
     /// Convert one mount-relative path back to the manager's backend path space.
@@ -331,6 +344,34 @@ impl FileSystem for EncryptionWrappedFS {
             }
         };
         Ok(slice_bytes(plaintext, offset, size))
+    }
+
+    /// Encrypt a local file. The envelope is one AES-GCM blob, so this buffers the
+    /// plaintext (up to the cap) and reuses `write`'s temp-publish and locking.
+    /// Returns the plaintext length (the source size), not the envelope length.
+    async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
+        if Self::should_passthrough_content(path) {
+            return self.inner.write_from_path(path, src, flags).await;
+        }
+        let len = tokio::fs::metadata(src).await?.len();
+        if len > self.max_path_write_bytes {
+            return Err(Error::invalid_operation(format!(
+                "encrypted write of {len} bytes exceeds the {} byte limit for encrypted mounts",
+                self.max_path_write_bytes
+            )));
+        }
+        let data = tokio::fs::read(src).await?;
+        self.write(path, &data, 0, flags).await?;
+        Ok(data.len() as u64)
+    }
+
+    async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
+        if Self::should_passthrough_content(path) {
+            return self.inner.read_to_path(path, dst).await;
+        }
+        let data = self.read(path, 0, 0).await?;
+        tokio::fs::write(dst, &data).await?;
+        Ok(data.len() as u64)
     }
 
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
@@ -968,5 +1009,76 @@ mod tests {
                 temp_path
             );
         }
+    }
+
+    async fn encrypted_memfs() -> (EncryptionWrappedFS, Arc<MountableFS>) {
+        let inner = memfs_stack().await;
+        let manager = memfs_pathlock_manager(inner.clone()).await;
+        let enc = EncryptionWrappedFS::new(
+            inner.clone(),
+            [9u8; 32],
+            crypto::PROVIDER_LOCAL,
+            manager,
+            "/mem".to_string(),
+        );
+        (enc, inner)
+    }
+
+    #[tokio::test]
+    async fn write_from_path_encrypts_and_read_to_path_decrypts() {
+        let (enc, inner) = encrypted_memfs().await;
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"super secret").unwrap();
+        let dst = dir.path().join("dst");
+
+        FS_CTX
+            .scope(ctx("tenant-1"), async {
+                let written = enc
+                    .write_from_path("/mem/a.txt", &src, WriteFlag::Create)
+                    .await
+                    .unwrap();
+                let read = enc.read_to_path("/mem/a.txt", &dst).await.unwrap();
+                assert_eq!((written, read), (12, 12));
+            })
+            .await;
+
+        assert_eq!(std::fs::read(&dst).unwrap(), b"super secret");
+        let raw = inner.read("/mem/a.txt", 0, 0).await.unwrap();
+        assert!(crypto::is_encrypted(&raw), "on-disk must be enveloped");
+    }
+
+    #[tokio::test]
+    async fn write_from_path_enforces_size_cap_before_reading() {
+        let (enc, inner) = encrypted_memfs().await;
+        let enc = enc.with_max_path_write_bytes(4);
+        let dir = tempfile::tempdir().unwrap();
+        let at_cap = dir.path().join("at_cap");
+        let over_cap = dir.path().join("over_cap");
+        std::fs::write(&at_cap, b"1234").unwrap();
+        std::fs::write(&over_cap, b"12345").unwrap();
+
+        FS_CTX
+            .scope(ctx("tenant-1"), async {
+                enc.write_from_path("/mem/ok.txt", &at_cap, WriteFlag::Create)
+                    .await
+                    .unwrap();
+                let result = enc
+                    .write_from_path("/mem/big.txt", &over_cap, WriteFlag::Create)
+                    .await;
+                assert!(matches!(result, Err(Error::InvalidOperation(_))));
+            })
+            .await;
+
+        assert!(inner.stat("/mem/ok.txt").await.is_ok());
+        assert!(matches!(
+            inner.stat("/mem/big.txt").await,
+            Err(Error::NotFound(_))
+        ));
+    }
+
+    #[test]
+    fn default_path_write_cap_is_512_mib() {
+        assert_eq!(DEFAULT_MAX_PATH_WRITE_BYTES, 512 * 1024 * 1024);
     }
 }
