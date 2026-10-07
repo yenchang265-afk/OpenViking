@@ -42,10 +42,17 @@ class TestLanguageDetection:
         language = _detect_language_from_text(text, fallback_language="ja")
         assert language == "ja"
 
-    def test_japanese_text_uses_system_fallback_when_system_is_not_japanese(self):
-        text = "明日は会議です"
-        language = _detect_language_from_text(text, fallback_language="zh-CN")
-        assert language == "zh-CN"
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "明日は会議です",
+            "東京都内の企業向け業務管理システム導入に関する技術仕様書",
+            "本規約は当社が提供する全てのサービスの利用条件を定めるものです",
+        ],
+    )
+    def test_kanji_heavy_japanese_is_not_mistaken_for_chinese(self, text):
+        language = _detect_language_from_text(text, fallback_language="en")
+        assert language == "ja"
 
     def test_strong_japanese_text_can_override_system_fallback(self):
         text = (
@@ -533,6 +540,8 @@ class TestOutputLanguageOverride:
         "text",
         [
             "これは日本語のテキストです",
+            "明日は会議です",
+            "東京都内の企業向け業務管理システム導入に関する技術仕様書",
             "이것은 한국어 텍스트입니다",
             "Это русский тестовый текст",
             "Este documento descreve as preferências do usuário e o projeto para completar.",
@@ -555,6 +564,18 @@ class TestOutputLanguageOverride:
         with patch.dict(os.environ, env, clear=True):
             assert resolve_output_language("12345 ---", config=config) == "en"
             assert resolve_output_language("", config=config) == "en"
+
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "請記住我最近在讀《ノルウェイの森》，後面繼續用中文討論這個內容",
+            "這家店的ラーメン很好吃，我們每週都會去吃一次",
+            "幸福の味，台北最好吃的甜點店",
+        ],
+    )
+    def test_chinese_with_japanese_loanwords_stays_traditional_chinese(self, text):
+        config = self._make_config(override="")
+        assert resolve_output_language(text, config=config) == "zh-TW"
 
     def test_override_en_bypasses_detection(self):
         config = self._make_config(override="en")

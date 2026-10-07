@@ -15,6 +15,11 @@ logger = get_logger(__name__)
 _SCRIPT_MIN_CHARS = 2
 _SCRIPT_MIN_RATIO = 0.20
 _JAPANESE_KANA_MIN_CHARS = 3
+# Japanese grammar needs hiragana particles/okurigana even in kanji-heavy text,
+# while Chinese only borrows katakana words or a stylistic "の".
+_JAPANESE_GRAMMAR_HIRAGANA_RE = re.compile(r"[ぁ-ねは-ゖ]")
+_JAPANESE_GRAMMAR_HIRAGANA_MIN_CHARS = 2
+_JAPANESE_GRAMMAR_HIRAGANA_MIN_RATIO = 0.10
 _STRONG_DOMINANT_MIN_CHARS = 10
 _STRONG_DOMINANT_RATIO = 0.95
 _PRIMARY_LANGUAGES = {"zh-CN", "en"}
@@ -152,8 +157,13 @@ def _detect_language_from_text(user_text: str, fallback_language: str) -> str:
         and japanese_total / signal_total >= _STRONG_DOMINANT_RATIO
         and counts["ja_kana"] / japanese_total >= 0.30
     )
+    grammar_hiragana = len(_JAPANESE_GRAMMAR_HIRAGANA_RE.findall(user_text))
+    japanese_grammar = (
+        grammar_hiragana >= _JAPANESE_GRAMMAR_HIRAGANA_MIN_CHARS
+        and grammar_hiragana / japanese_total >= _JAPANESE_GRAMMAR_HIRAGANA_MIN_RATIO
+    )
     if counts["ja_kana"] >= _JAPANESE_KANA_MIN_CHARS and (
-        _language_allowed_by_fallback("ja", fallback) or strong_japanese
+        _language_allowed_by_fallback("ja", fallback) or strong_japanese or japanese_grammar
     ):
         return "ja"
 
