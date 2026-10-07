@@ -374,6 +374,11 @@ This catalog follows the routes actually mounted by the server. Each group headi
 |--------|------|-------------|
 | POST | `/api/v1/resources/temp_upload` | Upload a temporary file for a later import |
 | GET | `/api/v1/uploads/limits` | Get the server upload limits |
+| POST | `/api/v1/uploads` | Create a chunked upload session |
+| PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | Upload one part of a file |
+| GET | `/api/v1/uploads/{upload_id}` | Get received parts of an upload session |
+| POST | `/api/v1/uploads/{upload_id}/complete` | Complete an upload session |
+| DELETE | `/api/v1/uploads/{upload_id}` | Abort an upload session |
 | POST | `/api/v1/resources` | Add a resource from a URL or temporary upload |
 | GET | `/api/v1/fs/ls` | List a directory |
 | GET | `/api/v1/fs/tree` | Get a directory tree |

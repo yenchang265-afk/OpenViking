@@ -700,6 +700,109 @@ curl http://localhost:1933/api/v1/uploads/limits \
 
 ---
 
+### upload_sessions
+
+把一個大檔案，或整個資料夾（不需壓縮），按檔案切成編號的分片上傳。分片可以重送、中斷的上傳可以續傳，客戶端與服務端都不會把整個檔案載入記憶體。完成工作階段後會返回 `temp_file_id`，可像其他臨時上傳一樣傳給 [add_resource](#add-resource)；資料夾工作階段的匯入結果與對應的 zip 上傳完全相同。
+
+Python SDK、`ov add-resource` 與 Web Studio 會自動使用工作階段，伺服器不支援時會退回 [temp_upload](#temp-upload)。
+
+#### 1. API 實現介紹
+
+| 方法 | 路徑 | 用途 |
+|------|------|------|
+| POST | `/api/v1/uploads` | 為一個檔案或一個資料夾建立工作階段 |
+| PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | 以原始請求主體儲存某檔案的一個分片（從 1 開始編號） |
+| GET | `/api/v1/uploads/{upload_id}` | 查詢已收到的分片，用於續傳 |
+| POST | `/api/v1/uploads/{upload_id}/complete` | 組裝所有分片並返回 `temp_file_id` |
+| DELETE | `/api/v1/uploads/{upload_id}` | 中止並丟棄工作階段 |
+
+**程式碼入口**：
+- `openviking/server/routers/uploads.py` - HTTP 路由
+- `openviking/server/upload_sessions.py` - 工作階段儲存
+
+**限制與規則**：
+- 每個檔案不得超過 `server.upload.max_file_bytes`，總大小不得超過 `max_session_bytes`，檔案數不得超過 `max_files`（見 [upload_limits](#upload-limits)）；超過限制的上傳或分片會返回 HTTP 413。
+- 除了每個檔案的最後一個分片外，每個分片都必須剛好是 `part_size_bytes`（建立工作階段時返回）；最後一個分片為剩餘部分。空檔案沒有分片。
+- 路徑必須是相對路徑、使用正斜線，並在建立時檢查：絕對路徑、`..`、磁碟代號、NUL、空白或 `.` 路徑段，以及互相衝突的路徑（包括大小寫不同或同時作為檔案與資料夾）都會被拒絕並返回 HTTP 400。
+- 工作階段屬於建立它的 account 與 user，並在 `server.temp_upload.ttl_seconds` 後過期。
+- 分片暫存在接收請求的伺服器磁碟上，因此工作階段需要 `server.temp_upload.default_mode` 為 `"local"`。在 `shared` 模式下，`POST /api/v1/uploads` 會返回 HTTP 409，客戶端應改用 `temp_upload`。
+
+#### 2. 介面和引數說明
+
+**建立工作階段的請求主體**
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| kind | string | 是 | `"file"` 或 `"directory"` |
+| name | string | 是 | 檔名或資料夾名稱（作為 `source_name`），必須是單一路徑段 |
+| files | array | 是 | `[{"path": "...", "size": <bytes>}]`；`kind="file"` 時只能有一個項目，且 path 必須等於 `name` |
+
+**上傳分片**：以 `Content-Type: application/octet-stream` 將位元組作為原始請求主體送出。重送同一分片會覆蓋原內容。
+
+#### 3. 使用示例
+
+**HTTP API**
+
+```bash
+# 1. 為包含一個 10 MiB 檔案與一個小檔案的資料夾建立工作階段
+curl -X POST http://localhost:1933/api/v1/uploads \
+  -H "X-API-Key: your-key" -H "Content-Type: application/json" \
+  -d '{"kind": "directory", "name": "docs", "files": [{"path": "big.pdf", "size": 10485760}, {"path": "notes/a.md", "size": 120}]}'
+
+# 2. 逐一送出分片（檔案 0 有兩個分片，檔案 1 有一個）
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/0/parts/1 \
+  -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
+  --data-binary @part-0-1.bin
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/0/parts/2 \
+  -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
+  --data-binary @part-0-2.bin
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/1/parts/1 \
+  -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
+  --data-binary @docs/notes/a.md
+
+# 3. 中斷後，查詢已收到的分片，只補送缺少的部分
+curl http://localhost:1933/api/v1/uploads/9f1c2e7a \
+  -H "X-API-Key: your-key"
+
+# 4. 完成工作階段，再把 temp_file_id 傳給 add_resource
+curl -X POST http://localhost:1933/api/v1/uploads/9f1c2e7a/complete \
+  -H "X-API-Key: your-key"
+
+# 若要放棄，則中止工作階段
+curl -X DELETE http://localhost:1933/api/v1/uploads/9f1c2e7a \
+  -H "X-API-Key: your-key"
+```
+
+**響應示例**（建立）
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "upload_id": "9f1c2e7a",
+    "part_size_bytes": 8388608,
+    "expires_at": 1791370000.0,
+    "files": [
+      {"index": 0, "path": "big.pdf", "size": 10485760, "total_parts": 2},
+      {"index": 1, "path": "notes/a.md", "size": 120, "total_parts": 1}
+    ]
+  }
+}
+```
+
+**響應示例**（完成）
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "temp_file_id": "session_9f1c2e7a"
+  }
+}
+```
+
+---
+
 ## 相關文件
 
 - [檔案系統](03-filesystem.md) - 檔案和目錄操作

@@ -693,6 +693,109 @@ curl http://localhost:1933/api/v1/uploads/limits \
 
 ---
 
+### upload_sessions
+
+Upload one large file, or a whole folder without zipping it, as numbered parts per file. Parts can be re-sent, an interrupted upload can be resumed, and neither the client nor the server holds a whole file in memory. Completing a session returns a `temp_file_id` that you pass to [add_resource](#add-resource) like any other temporary upload; a folder session is ingested exactly like the equivalent zip upload.
+
+The Python SDK, `ov add-resource` and Web Studio use sessions automatically and fall back to [temp_upload](#temp-upload) when the server does not offer them.
+
+#### 1. API Implementation Overview
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/v1/uploads` | Create a session for one file or one folder |
+| PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | Store one part (1-based) of one file from the raw body |
+| GET | `/api/v1/uploads/{upload_id}` | Report received parts, for resuming |
+| POST | `/api/v1/uploads/{upload_id}/complete` | Assemble all parts and return `temp_file_id` |
+| DELETE | `/api/v1/uploads/{upload_id}` | Abort and discard the session |
+
+**Code Entry Points**:
+- `openviking/server/routers/uploads.py` - HTTP router
+- `openviking/server/upload_sessions.py` - Session store
+
+**Limits and rules**:
+- Every file must be at most `server.upload.max_file_bytes`, the total at most `max_session_bytes`, and the file count at most `max_files` (see [upload_limits](#upload-limits)); oversized uploads and parts return HTTP 413.
+- Every part except a file's last must be exactly `part_size_bytes` (returned when the session is created); the last part is the remainder. Empty files have no parts.
+- Paths are relative, forward-slash and checked on creation: absolute paths, `..`, drive letters, NUL, empty or `.` segments, and paths that collide (also case-insensitively, or as both a file and a folder) are rejected with HTTP 400.
+- Sessions belong to the creating account and user, and expire after `server.temp_upload.ttl_seconds`.
+- Parts are staged on the receiving server's disk, so sessions require `server.temp_upload.default_mode` = `"local"`. In `shared` mode, `POST /api/v1/uploads` returns HTTP 409 and clients should use `temp_upload` instead.
+
+#### 2. Interface and Parameter Description
+
+**Create session body**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| kind | string | Yes | `"file"` or `"directory"` |
+| name | string | Yes | File name, or folder name (used as `source_name`); a single path segment |
+| files | array | Yes | `[{"path": "...", "size": <bytes>}]`; for `kind="file"`, exactly one entry whose path equals `name` |
+
+**Part upload**: send the bytes as the raw request body with `Content-Type: application/octet-stream`. Re-sending a part replaces it.
+
+#### 3. Usage Examples
+
+**HTTP API**
+
+```bash
+# 1. Create a session for a folder with one 10 MiB file and one small file
+curl -X POST http://localhost:1933/api/v1/uploads \
+  -H "X-API-Key: your-key" -H "Content-Type: application/json" \
+  -d '{"kind": "directory", "name": "docs", "files": [{"path": "big.pdf", "size": 10485760}, {"path": "notes/a.md", "size": 120}]}'
+
+# 2. Send each part (file 0 has two parts, file 1 has one)
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/0/parts/1 \
+  -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
+  --data-binary @part-0-1.bin
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/0/parts/2 \
+  -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
+  --data-binary @part-0-2.bin
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/1/parts/1 \
+  -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
+  --data-binary @docs/notes/a.md
+
+# 3. After an interruption, see which parts arrived and send only the missing ones
+curl http://localhost:1933/api/v1/uploads/9f1c2e7a \
+  -H "X-API-Key: your-key"
+
+# 4. Complete the session, then pass temp_file_id to add_resource
+curl -X POST http://localhost:1933/api/v1/uploads/9f1c2e7a/complete \
+  -H "X-API-Key: your-key"
+
+# To give up instead, abort the session
+curl -X DELETE http://localhost:1933/api/v1/uploads/9f1c2e7a \
+  -H "X-API-Key: your-key"
+```
+
+**Response Example** (create)
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "upload_id": "9f1c2e7a",
+    "part_size_bytes": 8388608,
+    "expires_at": 1791370000.0,
+    "files": [
+      {"index": 0, "path": "big.pdf", "size": 10485760, "total_parts": 2},
+      {"index": 1, "path": "notes/a.md", "size": 120, "total_parts": 1}
+    ]
+  }
+}
+```
+
+**Response Example** (complete)
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "temp_file_id": "session_9f1c2e7a"
+  }
+}
+```
+
+---
+
 ## Related Documentation
 
 - [File System](03-filesystem.md) - File and directory operations

@@ -369,6 +369,11 @@ JSON 輸出 - 錯誤：
 |------|------|------|
 | POST | `/api/v1/resources/temp_upload` | 上傳後續匯入所需的臨時檔案 |
 | GET | `/api/v1/uploads/limits` | 獲取伺服器上傳限制 |
+| POST | `/api/v1/uploads` | 建立分片上傳工作階段 |
+| PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | 上傳檔案的一個分片 |
+| GET | `/api/v1/uploads/{upload_id}` | 獲取上傳工作階段已收到的分片 |
+| POST | `/api/v1/uploads/{upload_id}/complete` | 完成上傳工作階段 |
+| DELETE | `/api/v1/uploads/{upload_id}` | 中止上傳工作階段 |
 | POST | `/api/v1/resources` | 從 URL 或臨時檔案新增資源 |
 | GET | `/api/v1/fs/ls` | 列出目錄 |
 | GET | `/api/v1/fs/tree` | 獲取目錄樹 |
