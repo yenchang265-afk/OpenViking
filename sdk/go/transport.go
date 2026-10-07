@@ -76,6 +76,11 @@ func (c *Client) doJSON(ctx context.Context, method, path string, query url.Valu
 	if payload != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
+	return c.doRequest(req, out)
+}
+
+// doRequest sends req and decodes the response envelope's result into out.
+func (c *Client) doRequest(req *http.Request, out any) error {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return err

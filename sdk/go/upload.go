@@ -156,6 +156,19 @@ func (c *Client) addLocalUpload(ctx context.Context, payload map[string]any, pat
 		}
 		return err
 	}
+	// Resources prefer chunked sessions (folders unzipped, parts streamed from disk);
+	// skills keep the single-request upload.
+	if includeSourceName && (info.IsDir() || info.Mode().IsRegular()) {
+		tempID, used, err := c.uploadViaSession(ctx, path, info)
+		if err != nil {
+			return err
+		}
+		if used {
+			payload["source_name"] = filepath.Base(path)
+			payload["temp_file_id"] = tempID
+			return nil
+		}
+	}
 	if info.IsDir() {
 		if includeSourceName {
 			payload["source_name"] = filepath.Base(path)
