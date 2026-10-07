@@ -105,6 +105,55 @@ def test_agfs_s3_auto_detect_content_type_is_forwarded_to_ragfs_plugin_config():
 
     assert plugins["s3fs"]["config"]["auto_detect_content_type"] is True
 
+
+def _s3_config(**overrides) -> S3Config:
+    return S3Config(
+        bucket="my-bucket",
+        region="us-west-1",
+        access_key="fake-access-key-for-testing",
+        secret_key="fake-secret-key-for-testing-12345",
+        endpoint="https://s3.amazonaws.com",
+        **overrides,
+    )
+
+
+def test_agfs_s3_multipart_settings_default_to_backend_defaults():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config())
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert "multipart_threshold_bytes" not in plugin_config
+    assert "multipart_part_size_bytes" not in plugin_config
+
+
+def test_agfs_s3_multipart_settings_are_forwarded_to_ragfs_plugin_config():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(
+            multipart_threshold_bytes=64 * 1024 * 1024,
+            multipart_part_size_bytes=16 * 1024 * 1024,
+        ),
+    )
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert plugin_config["multipart_threshold_bytes"] == 64 * 1024 * 1024
+    assert plugin_config["multipart_part_size_bytes"] == 16 * 1024 * 1024
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"multipart_threshold_bytes": 0},
+        {"multipart_part_size_bytes": 5 * 1024 * 1024 - 1},
+        {"multipart_part_size_bytes": 5 * 1024 * 1024 * 1024 + 1},
+    ],
+)
+def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):
+    with pytest.raises(ValueError):
+        _s3_config(**overrides)
+
     # Test 2: invalid backend
     print("\n2. Test invalid backend...")
     try:
