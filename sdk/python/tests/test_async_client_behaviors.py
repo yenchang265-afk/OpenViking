@@ -962,10 +962,10 @@ async def test_add_resource_uploads_local_file_even_when_url_is_localhost(tmp_pa
     fake_http = SimpleNamespace(post=AsyncMock(return_value=object()))
     client._http = fake_http
 
-    async def fake_upload(_path: str) -> str:
+    async def fake_upload(_path) -> str:
         return "upload_resource.md"
 
-    client._upload_temp_file = fake_upload
+    client._upload_path = fake_upload
     client._handle_response_data = lambda _response: {
         "result": {"root_uri": "viking://resources/demo"}
     }

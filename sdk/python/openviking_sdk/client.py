@@ -14,6 +14,7 @@ from urllib.parse import quote
 
 import httpx
 
+from ._upload import upload_via_session
 from ._utils import _path_is_relative_to, run_async
 from .actor_peer import _request_actor_peer_headers
 from .config import resolve_client_config
@@ -697,6 +698,25 @@ class AsyncHTTPClient:
                     entry_count += 1
         return str(zip_path)
 
+    async def _upload_path(self, path: Path) -> str:
+        """Upload a local file or folder and return its ``temp_file_id``.
+
+        Prefers chunked upload sessions (no zip, bounded memory); falls back to the
+        single-request temp upload when the server lacks sessions, refuses them, or
+        this client uses the shared upload mode.
+        """
+        if self._upload_mode != "shared":
+            temp_file_id = await upload_via_session(self, path)
+            if temp_file_id is not None:
+                return temp_file_id
+        if path.is_dir():
+            zip_path = self._zip_directory(str(path))
+            try:
+                return await self._upload_temp_file(zip_path)
+            finally:
+                Path(zip_path).unlink(missing_ok=True)
+        return await self._upload_temp_file(str(path))
+
     async def _upload_temp_file(self, file_path: str) -> str:
         with open(file_path, "rb") as f:
             files = {"file": (Path(file_path).name, f, "application/octet-stream")}
@@ -760,16 +780,9 @@ class AsyncHTTPClient:
 
         path_obj = Path(path)
         if not add_type and path_obj.exists():
-            if path_obj.is_dir():
+            if path_obj.is_dir() or path_obj.is_file():
                 request_data["source_name"] = path_obj.name
-                zip_path = self._zip_directory(path)
-                try:
-                    request_data["temp_file_id"] = await self._upload_temp_file(zip_path)
-                finally:
-                    Path(zip_path).unlink(missing_ok=True)
-            elif path_obj.is_file():
-                request_data["source_name"] = path_obj.name
-                request_data["temp_file_id"] = await self._upload_temp_file(path)
+                request_data["temp_file_id"] = await self._upload_path(path_obj)
             else:
                 request_data["path"] = path
         else:
