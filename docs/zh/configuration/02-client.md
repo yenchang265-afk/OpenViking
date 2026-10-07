@@ -131,7 +131,7 @@ export OPENVIKING_CLI_CONFIG_FILE=/path/to/ovcli.conf
 
 本地目錄上傳還會遵循 `.gitignore`。命令列 `--include`、`--exclude` 會與配置檔案中的規則合併。
 
-## 插件配置
+## 外掛配置
 
 記憶外掛的行為旋鈕寫在 `plugin` 段下。直接掛在它下面的鍵對所有 harness 生效；以 harness 命名的巢狀物件（`claude_code` 或 `codex`）只覆蓋那一個。
 
