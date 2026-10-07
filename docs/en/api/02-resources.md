@@ -573,7 +573,7 @@ Notes:
 - `shared` mode returns a `temp_file_id` in the `shared_<upload_id>` form. The same account can consume it repeatedly while it remains available.
 - New shared uploads create an internal `viking://upload/<created_at_ms>-<uuid>/` directory containing `content` and `meta`. The 13-digit Unix-millisecond timestamp in the directory name is the upload creation time; `meta` is written last and marks a completed upload. These objects are not part of the normal filesystem browsing surface.
 - Shared uploads remain for `server.temp_upload.ttl_seconds` (12 hours by default). Each new shared upload makes one listing of the internal upload root, parses the creation timestamp from each first-level upload directory, and recursively removes expired directories without relying on filesystem modification times.
-- Uploads larger than `server.upload.max_file_bytes` (2 GiB by default) are rejected in both modes; the signed-token route returns HTTP 413. For large files and whole folders, prefer [chunked upload sessions](#chunked-upload-sessions), which the SDKs and CLI use automatically.
+- Uploads larger than `server.upload.max_file_bytes` (2 GiB by default) are rejected in both modes; the signed-token route returns HTTP 413. For large files and whole folders, prefer [chunked upload sessions](#upload-sessions), which the SDKs and CLI use automatically.
 
 #### 3. Usage Examples
 
@@ -601,7 +601,7 @@ curl -X POST http://localhost:1933/api/v1/resources/temp_upload \
 
 **Python SDK**
 
-The `add_resource`, `add_skill` and other endpoints in the Python SDK automatically handle local file uploads, no need to call this endpoint manually. `add_resource` uses [chunked upload sessions](#chunked-upload-sessions) first and falls back to this endpoint. To opt into distributed shared temporary uploads in HTTP client mode, set `upload.mode` to `"shared"` in `ovcli.conf`.
+The `add_resource`, `add_skill` and other endpoints in the Python SDK automatically handle local file uploads, no need to call this endpoint manually. `add_resource` uses [chunked upload sessions](#upload-sessions) first and falls back to this endpoint. To opt into distributed shared temporary uploads in HTTP client mode, set `upload.mode` to `"shared"` in `ovcli.conf`.
 
 **Go SDK**
 
@@ -642,7 +642,61 @@ Possible shared response:
 
 ---
 
-### Chunked upload sessions
+### upload_limits
+
+Return the server's upload limits (`server.upload`) so clients can check files before uploading.
+
+#### 1. API Implementation Overview
+
+Web Studio, the SDKs and the CLI read these limits instead of hard-coding them. The server enforces the same values: [temp_upload](#temp-upload) rejects files larger than `max_file_bytes`.
+
+**Code Entry Points**:
+- `openviking/server/routers/uploads.py:get_upload_limits` - HTTP router
+- `openviking/server/config.py:UploadConfig` - Configuration (`server.upload` in `ov.conf`)
+
+#### 2. Interface and Parameter Description
+
+This endpoint takes no parameters.
+
+**Response fields**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| max_file_bytes | int | Largest single file accepted |
+| max_session_bytes | int | Largest total size of one upload, such as a folder |
+| max_files | int | Most files in one upload |
+| part_size_bytes | int | Chunk size clients use for chunked uploads |
+
+#### 3. Usage Examples
+
+**HTTP API**
+
+```
+GET /api/v1/uploads/limits
+```
+
+```bash
+curl http://localhost:1933/api/v1/uploads/limits \
+  -H "X-API-Key: your-key"
+```
+
+**Response Example**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "max_file_bytes": 2147483648,
+    "max_session_bytes": 5368709120,
+    "max_files": 10000,
+    "part_size_bytes": 8388608
+  }
+}
+```
+
+---
+
+### upload_sessions
 
 Upload one large file, or a whole folder without zipping it, as numbered parts per file. Parts can be re-sent, an interrupted upload can be resumed, and neither the client nor the server holds a whole file in memory. Completing a session returns a `temp_file_id` that you pass to [add_resource](#add-resource) like any other temporary upload; a folder session is ingested exactly like the equivalent zip upload.
 
@@ -652,23 +706,22 @@ The Python SDK, Go SDK, TypeScript SDK (Node.js), `ov add-resource` and Web Stud
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| `GET` | `/api/v1/uploads/limits` | Server upload limits (`server.upload`) |
-| `POST` | `/api/v1/uploads` | Create a session for one file or one folder |
-| `PUT` | `/api/v1/uploads/{upload_id}/files/{index}/parts/{n}` | Store part `n` (1-based) of file `index` from the raw body |
-| `GET` | `/api/v1/uploads/{upload_id}` | Report received parts (for resuming) |
-| `POST` | `/api/v1/uploads/{upload_id}/complete` | Assemble all parts and return `temp_file_id` |
-| `DELETE` | `/api/v1/uploads/{upload_id}` | Abort and discard the session |
+| POST | `/api/v1/uploads` | Create a session for one file or one folder |
+| PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | Store one part (1-based) of one file from the raw body |
+| GET | `/api/v1/uploads/{upload_id}` | Report received parts, for resuming |
+| POST | `/api/v1/uploads/{upload_id}/complete` | Assemble all parts and return `temp_file_id` |
+| DELETE | `/api/v1/uploads/{upload_id}` | Abort and discard the session |
 
 **Code Entry Points**:
 - `openviking/server/routers/uploads.py` - HTTP router
 - `openviking/server/upload_sessions.py` - Session store
 
 **Limits and rules**:
-- Every file must be at most `server.upload.max_file_bytes`, the total at most `max_session_bytes`, and the file count at most `max_files`; oversized uploads and parts return HTTP 413.
+- Every file must be at most `server.upload.max_file_bytes`, the total at most `max_session_bytes`, and the file count at most `max_files` (see [upload_limits](#upload-limits)); oversized uploads and parts return HTTP 413.
 - Every part except a file's last must be exactly `part_size_bytes` (returned when the session is created); the last part is the remainder. Empty files have no parts.
-- Paths are relative, forward-slash and checked on creation: absolute paths, `..`, drive letters, NUL, empty or `.` segments, and paths that collide (also case-insensitively, or as both file and folder) are rejected with HTTP 400.
-- Sessions belong to the creating account **and** user, and expire after `server.temp_upload.ttl_seconds`.
-- Parts are staged on the receiving server's disk, so sessions require `server.temp_upload.default_mode` = `"local"`. In `shared` mode `POST /api/v1/uploads` returns HTTP 409 and clients should use `temp_upload` instead.
+- Paths are relative, forward-slash and checked on creation: absolute paths, `..`, drive letters, NUL, empty or `.` segments, and paths that collide (also case-insensitively, or as both a file and a folder) are rejected with HTTP 400.
+- Sessions belong to the creating account and user, and expire after `server.temp_upload.ttl_seconds`.
+- Parts are staged on the receiving server's disk, so sessions require `server.temp_upload.default_mode` = `"local"`. In `shared` mode, `POST /api/v1/uploads` returns HTTP 409 and clients should use `temp_upload` instead.
 
 #### 2. Interface and Parameter Description
 
@@ -684,48 +737,62 @@ The Python SDK, Go SDK, TypeScript SDK (Node.js), `ov add-resource` and Web Stud
 
 #### 3. Usage Examples
 
+**HTTP API**
+
 ```bash
 # 1. Create a session for a folder with one 10 MiB file and one small file
-curl -s -X POST http://localhost:1933/api/v1/uploads \
+curl -X POST http://localhost:1933/api/v1/uploads \
   -H "X-API-Key: your-key" -H "Content-Type: application/json" \
-  -d '{"kind": "directory", "name": "docs",
-       "files": [{"path": "big.pdf", "size": 10485760},
-                 {"path": "notes/a.md", "size": 120}]}'
-# -> {"status":"ok","result":{"upload_id":"9f1c...","part_size_bytes":8388608,
-#      "files":[{"index":0,"path":"big.pdf","size":10485760,"total_parts":2}, ...]}}
+  -d '{"kind": "directory", "name": "docs", "files": [{"path": "big.pdf", "size": 10485760}, {"path": "notes/a.md", "size": 120}]}'
 
-# 2. Send parts (file 0 has two parts, file 1 has one)
-curl -s -X PUT http://localhost:1933/api/v1/uploads/9f1c.../files/0/parts/1 \
+# 2. Send each part (file 0 has two parts, file 1 has one)
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/0/parts/1 \
   -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
-  --data-binary @<(head -c 8388608 docs/big.pdf)
-curl -s -X PUT http://localhost:1933/api/v1/uploads/9f1c.../files/0/parts/2 \
+  --data-binary @part-0-1.bin
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/0/parts/2 \
   -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
-  --data-binary @<(tail -c +8388609 docs/big.pdf)
-curl -s -X PUT http://localhost:1933/api/v1/uploads/9f1c.../files/1/parts/1 \
+  --data-binary @part-0-2.bin
+curl -X PUT http://localhost:1933/api/v1/uploads/9f1c2e7a/files/1/parts/1 \
   -H "X-API-Key: your-key" -H "Content-Type: application/octet-stream" \
   --data-binary @docs/notes/a.md
 
-# 3. (After an interruption) see which parts arrived, then send only the missing ones
-curl -s http://localhost:1933/api/v1/uploads/9f1c... -H "X-API-Key: your-key"
+# 3. After an interruption, see which parts arrived and send only the missing ones
+curl http://localhost:1933/api/v1/uploads/9f1c2e7a \
+  -H "X-API-Key: your-key"
 
-# 4. Complete, then add the resource
-curl -s -X POST http://localhost:1933/api/v1/uploads/9f1c.../complete -H "X-API-Key: your-key"
-# -> {"status":"ok","result":{"temp_file_id":"session_9f1c..."}}
-curl -s -X POST http://localhost:1933/api/v1/resources \
-  -H "X-API-Key: your-key" -H "Content-Type: application/json" \
-  -d '{"temp_file_id": "session_9f1c...", "reason": "large folder"}'
+# 4. Complete the session, then pass temp_file_id to add_resource
+curl -X POST http://localhost:1933/api/v1/uploads/9f1c2e7a/complete \
+  -H "X-API-Key: your-key"
+
+# To give up instead, abort the session
+curl -X DELETE http://localhost:1933/api/v1/uploads/9f1c2e7a \
+  -H "X-API-Key: your-key"
 ```
 
-**Limits response example** (`GET /api/v1/uploads/limits`)
+**Response Example** (create)
 
 ```json
 {
   "status": "ok",
   "result": {
-    "max_file_bytes": 2147483648,
-    "max_session_bytes": 5368709120,
-    "max_files": 10000,
-    "part_size_bytes": 8388608
+    "upload_id": "9f1c2e7a",
+    "part_size_bytes": 8388608,
+    "expires_at": 1791370000.0,
+    "files": [
+      {"index": 0, "path": "big.pdf", "size": 10485760, "total_parts": 2},
+      {"index": 1, "path": "notes/a.md", "size": 120, "total_parts": 1}
+    ]
+  }
+}
+```
+
+**Response Example** (complete)
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "temp_file_id": "session_9f1c2e7a"
   }
 }
 ```
