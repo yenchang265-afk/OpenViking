@@ -1088,6 +1088,30 @@ def test_vlm_validation():
         print(f"   Fail (provider='volcengine' should have priority, got '{config_b.provider}')")
 
 
+@pytest.mark.parametrize(
+    "value,expected",
+    [
+        ("", ""),
+        ("   ", ""),
+        ("en", "en"),
+        (" EN ", "en"),
+        ("zh-TW", "zh-TW"),
+        ("zh-tw", "zh-TW"),
+        ("zh_TW", "zh-TW"),
+    ],
+)
+def test_output_language_override_accepts_english_and_traditional_chinese(value, expected):
+    config = OpenVikingConfig.model_validate({"output_language_override": value})
+
+    assert config.output_language_override == expected
+
+
+@pytest.mark.parametrize("value", ["zh-CN", "zh", "ja", "fr", "english"])
+def test_output_language_override_rejects_other_languages(value):
+    with pytest.raises(ValueError, match="output_language_override"):
+        OpenVikingConfig.model_validate({"output_language_override": value})
+
+
 if __name__ == "__main__":
     print("\nStarting config validator tests...\n")
 
