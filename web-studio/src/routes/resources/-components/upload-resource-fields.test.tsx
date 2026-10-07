@@ -122,7 +122,7 @@ describe('UploadResourceFields', () => {
     })
   })
 
-  it('packages a dropped folder into a single zip entry', async () => {
+  it('keeps a dropped folder as one entry without zipping it', async () => {
     let current: SelectedUploadFile[] = []
     render(
       <UploadResourceFields
@@ -143,8 +143,40 @@ describe('UploadResourceFields', () => {
     ])
 
     await waitFor(() => expect(current).toHaveLength(1))
-    expect(current[0].file.name).toBe('docs.zip')
-    expect(current[0].fileType).toBe('application/zip')
+    expect(current[0].file.name).toBe('docs')
+    expect(current[0].folder?.name).toBe('docs')
+    expect(current[0].folder?.entries.map((entry) => entry.path)).toEqual([
+      'docs/a.md',
+      'docs/sub/b.md',
+    ])
+  })
+
+  it('rejects a folder larger than the upload session limit', async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={echoT}
+        limits={{ ...LIMITS, maxSessionBytes: 5 }}
+      />,
+    )
+
+    const withPath = (file: File, path: string) =>
+      Object.defineProperty(file, 'path', { value: path })
+    mocks.onDrop?.([
+      withPath(new File(['abc'], 'a.md'), '/docs/a.md'),
+      withPath(new File(['def'], 'b.md'), '/docs/b.md'),
+    ])
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalled())
+    expect(current).toHaveLength(0)
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      'fileTooLarge:{"name":"docs/","size":"5 B"}',
+      { duration: 2500 },
+    )
   })
 
   it('removes from the latest files after an asynchronous append', async () => {

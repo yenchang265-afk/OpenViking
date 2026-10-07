@@ -25,8 +25,8 @@ export const LEGACY_UPLOAD_LIMITS: UploadLimits = {
 }
 
 /**
- * Folders are zipped in browser memory before upload, so they are capped below the
- * server limit until uploads are chunked.
+ * Largest folder zipped in browser memory, which only happens for servers without
+ * chunked uploads.
  */
 export const BROWSER_ZIP_MAX_BYTES = 512 * MIB
 
@@ -45,8 +45,4 @@ export async function fetchUploadLimits(): Promise<UploadLimits> {
   } catch {
     return LEGACY_UPLOAD_LIMITS
   }
-}
-
-export function folderUploadLimitBytes(limits: UploadLimits): number {
-  return Math.min(limits.maxFileBytes, BROWSER_ZIP_MAX_BYTES)
 }

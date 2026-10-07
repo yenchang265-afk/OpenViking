@@ -89,6 +89,8 @@ client ──chunked parts──▶ server staging (pod disk) ──path──�
 
 #### D. Chunked upload sessions (new API)
 
+> **Implemented in P4 with these limits:** sessions stage parts on the receiving server's disk, so they require `temp_upload.default_mode=local` and return 409 in shared mode (clients fall back to the single request). Shared-storage sessions for multi-replica deployments are a follow-up. The optional `X-OV-Part-SHA256` header is not implemented.
+
 All endpoints use the existing auth (`get_upload_request_context`: API key, or signed token for MCP). Sessions are bound to `account_id` + `user_id`.
 
 | Method | Path | Purpose |

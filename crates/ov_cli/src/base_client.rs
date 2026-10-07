@@ -16,7 +16,7 @@ use crate::error::{Error, Result};
 const GATEWAY_MARKER_HEADER: &str = "X-VikingBot-Gateway";
 const GATEWAY_TOKEN_HEADER: &str = "X-Gateway-Token";
 
-fn parse_ignore_dirs(ignore_dirs: Option<&str>) -> Vec<String> {
+pub(crate) fn parse_ignore_dirs(ignore_dirs: Option<&str>) -> Vec<String> {
     ignore_dirs
         .map(|s| {
             s.split(',')
@@ -27,7 +27,7 @@ fn parse_ignore_dirs(ignore_dirs: Option<&str>) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn ignore_dirs_filter<'a>(
+pub(crate) fn ignore_dirs_filter<'a>(
     root: &'a Path,
     ignore_list: &'a [String],
 ) -> impl Fn(&walkdir::DirEntry) -> bool + 'a {
@@ -59,7 +59,7 @@ fn normalize_zip_entry_name(path: &str) -> String {
     path.replace('\\', "/")
 }
 
-fn zip_entry_name(relative_path: &Path) -> Result<String> {
+pub(crate) fn zip_entry_name(relative_path: &Path) -> Result<String> {
     let name = relative_path.to_str().ok_or_else(|| {
         Error::InvalidPath(format!(
             "Non-UTF-8 path: {}",
@@ -166,12 +166,14 @@ impl TimeoutConfig {
     }
 
     pub fn calculate(&self, file_path: &Path) -> Result<std::time::Duration> {
-        let file_size = std::fs::metadata(file_path)?.len();
-        let file_size_mb = file_size as f64 / (1024.0 * 1024.0);
-        let calculated_timeout = (file_size_mb * self.seconds_per_mb).ceil() as u64;
-        let timeout_secs = std::cmp::max(self.min_timeout_secs, calculated_timeout);
+        Ok(self.calculate_for_bytes(std::fs::metadata(file_path)?.len()))
+    }
 
-        Ok(std::time::Duration::from_secs(timeout_secs))
+    /// Timeout for processing or transferring `bytes` of content.
+    pub fn calculate_for_bytes(&self, bytes: u64) -> std::time::Duration {
+        let size_mb = bytes as f64 / (1024.0 * 1024.0);
+        let calculated_timeout = (size_mb * self.seconds_per_mb).ceil() as u64;
+        std::time::Duration::from_secs(std::cmp::max(self.min_timeout_secs, calculated_timeout))
     }
 }
 

@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  BROWSER_ZIP_MAX_BYTES,
-  LEGACY_UPLOAD_LIMITS,
-  fetchUploadLimits,
-  folderUploadLimitBytes,
-} from './upload-limits'
+import { LEGACY_UPLOAD_LIMITS, fetchUploadLimits } from './upload-limits'
 
 const MIB = 1024 * 1024
 
@@ -54,22 +49,5 @@ describe('fetchUploadLimits', () => {
     clientGetMock.mockRejectedValue(new Error('Request failed with status 404'))
 
     await expect(fetchUploadLimits()).resolves.toEqual(LEGACY_UPLOAD_LIMITS)
-  })
-})
-
-describe('folderUploadLimitBytes', () => {
-  it('caps in-browser folder zips below the server file limit', () => {
-    expect(
-      folderUploadLimitBytes({
-        ...LEGACY_UPLOAD_LIMITS,
-        maxFileBytes: 4096 * MIB,
-      }),
-    ).toBe(BROWSER_ZIP_MAX_BYTES)
-    expect(
-      folderUploadLimitBytes({
-        ...LEGACY_UPLOAD_LIMITS,
-        maxFileBytes: 64 * MIB,
-      }),
-    ).toBe(64 * MIB)
   })
 })

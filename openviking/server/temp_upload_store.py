@@ -22,6 +22,11 @@ from typing import TYPE_CHECKING, Any, Optional
 from openviking.server.config import ServerConfig, TempUploadConfig
 from openviking.server.identity import RequestContext, Role
 from openviking.server.local_input_guard import _read_upload_meta
+from openviking.server.upload_sessions import (
+    UploadSessionStore,
+    build_session_store,
+    is_session_temp_file_id,
+)
 from openviking.storage.viking_fs import LS_ALL_NODES, get_viking_fs
 from openviking_cli.exceptions import InvalidArgumentError, PermissionDeniedError
 from openviking_cli.utils.config.open_viking_config import get_openviking_config
@@ -87,6 +92,11 @@ class ResolvedTempUpload:
         if self.mode == "shared" and self.local_path:
             with suppress(FileNotFoundError):
                 await asyncio.to_thread(os.unlink, self.local_path)
+
+
+def get_upload_temp_dir() -> Path:
+    """Local directory that stages HTTP uploads (``{workspace}/temp/upload``)."""
+    return get_openviking_config().storage.get_upload_temp_dir()
 
 
 def get_temp_upload_config(server_config: ServerConfig) -> TempUploadConfig:
@@ -248,10 +258,25 @@ class TempUploadStore:
         temp_file_id: str,
         ctx: RequestContext,
     ) -> ResolvedTempUpload:
+        if is_session_temp_file_id(temp_file_id):
+            return await asyncio.to_thread(self._resolve_session, temp_file_id, ctx)
         shared_id = _parse_shared_temp_file_id(temp_file_id)
         if shared_id is None:
             return await asyncio.to_thread(self._resolve_local, temp_file_id)
         return await self._resolve_shared(temp_file_id, shared_id, ctx)
+
+    def session_store(self) -> UploadSessionStore:
+        """Chunked upload sessions staged under the local upload temp dir."""
+        return build_session_store(self.server_config, get_upload_temp_dir())
+
+    def _resolve_session(self, temp_file_id: str, ctx: RequestContext) -> ResolvedTempUpload:
+        path, name = self.session_store().resolve(temp_file_id, ctx)
+        return ResolvedTempUpload(
+            mode="local",
+            temp_file_id=temp_file_id,
+            original_filename=name,
+            local_path=str(path),
+        )
 
     async def resolve_shared_reference(
         self,
