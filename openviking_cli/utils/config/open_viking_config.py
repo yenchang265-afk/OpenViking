@@ -7,7 +7,7 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field, ValidationError, model_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 from openviking_cli.session.user_id import UserIdentifier
 
@@ -55,6 +55,9 @@ from .runtime_field import RuntimeField
 from .storage_config import StorageConfig
 from .telemetry_config import TelemetryConfig
 from .vlm_config import VLMConfig
+
+# Lowercased, hyphenated spelling -> canonical output_language_override value.
+_OUTPUT_LANGUAGE_OVERRIDES = {"": "", "en": "en", "zh-tw": "zh-TW"}
 
 
 def _get_config_logger():
@@ -319,11 +322,22 @@ class OpenVikingConfig(BaseModel):
         default="",
         description=(
             "When non-empty, bypasses content-based language detection for memory extraction "
-            "and semantic summaries/overviews and forces this language instead. Use when your "
-            "corpus is mixed-language but you want summaries pinned to a single language "
-            "(e.g., 'en', 'zh-CN', 'ja'). Leave empty (default) to auto-detect per content."
+            "and semantic summaries/overviews and forces this language instead. Only 'en' or "
+            "'zh-TW' are accepted. Leave empty (default) to auto-detect per content: Chinese "
+            "content yields 'zh-TW', everything else (or undetectable content) yields 'en'."
         ),
     )
+
+    @field_validator("output_language_override", mode="before")
+    @classmethod
+    def _normalize_output_language_override(cls, value: Any) -> str:
+        normalized = str(value or "").strip()
+        canonical = _OUTPUT_LANGUAGE_OVERRIDES.get(normalized.lower().replace("_", "-"))
+        if canonical is None:
+            raise ValueError(
+                f"output_language_override must be '', 'en' or 'zh-TW', got {normalized!r}"
+            )
+        return canonical
 
     @model_validator(mode="after")
     def _warn_on_deprecated_language_fallback(self) -> "OpenVikingConfig":
