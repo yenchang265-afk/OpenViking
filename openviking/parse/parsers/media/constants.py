@@ -13,3 +13,7 @@ VIDEO_EXTENSIONS = [".mp4", ".avi", ".mov", ".mkv", ".webm", ".flv", ".wmv", ".t
 
 # All media extensions combined
 MEDIA_EXTENSIONS = set(IMAGE_EXTENSIONS + AUDIO_EXTENSIONS + VIDEO_EXTENSIONS)
+
+# Bytes read from the start of an audio/video file for the format signature check
+# (longest signature is 8 bytes); the rest of the file is never loaded.
+SIGNATURE_HEADER_BYTES = 16

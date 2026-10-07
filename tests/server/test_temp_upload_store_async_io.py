@@ -601,4 +601,55 @@ async def test_read_shared_meta_uses_flat_path_for_legacy_id(monkeypatch: pytest
     assert meta["temp_file_id"] == f"shared_{legacy_id}"
 
 
+@pytest.mark.asyncio
+async def test_shared_save_and_resolve_stream_content_through_paths(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    from openviking.pyagfs import get_binding_client
+    from openviking.server.identity import RequestContext, Role
+    from openviking.storage.viking_fs import VikingFS
+    from openviking.utils.agfs_utils import RagfsBindingConfig, mount_agfs_backend
+    from openviking_cli.session.user_id import UserIdentifier
+    from openviking_cli.utils.config.agfs_config import AGFSConfig
+
+    try:
+        client_type, _ = get_binding_client()
+    except ImportError:
+        client_type = None
+    if client_type is None:
+        pytest.skip("RAGFS native extension is unavailable")
+    binding_config = RagfsBindingConfig(
+        agfs=AGFSConfig(path=str(tmp_path / "agfs"), backend="local")
+    )
+    client = client_type(None, config=binding_config.to_binding_dict())
+    mount_agfs_backend(client, binding_config)
+    vfs = VikingFS(agfs=client)
+
+    async def no_buffered_io(*args, **kwargs):
+        raise AssertionError("shared uploads must not buffer whole files")
+
+    monkeypatch.setattr(vfs, "write_file_bytes", no_buffered_io)
+    monkeypatch.setattr(vfs, "read_file_bytes", no_buffered_io)
+    monkeypatch.setattr(temp_upload_store, "get_viking_fs", lambda: vfs)
+    config = SimpleNamespace(
+        temp_upload=SimpleNamespace(ttl_seconds=3600, shared_max_size_bytes=16 * 1024 * 1024)
+    )
+    store = temp_upload_store.TempUploadStore(config)
+    monkeypatch.setattr(store, "_schedule_shared_cleanup", lambda ctx: None)
+    ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role(Role.ROOT))
+    data = bytes(i % 251 for i in range(3 * 1024 * 1024 + 7))
+    chunks = [data[i : i + 1024 * 1024] for i in range(0, len(data), 1024 * 1024)]
+
+    temp_file_id = await store.save_upload(_UploadFile(chunks), "shared", ctx)
+    resolved = await store.resolve_for_consume(temp_file_id, ctx)
+
+    try:
+        assert temp_file_id.startswith("shared_")
+        assert Path(resolved.local_path).read_bytes() == data
+        assert resolved.original_filename == "upload.md"
+    finally:
+        await resolved.cleanup()
+    assert not Path(resolved.local_path).exists()
+
+
 

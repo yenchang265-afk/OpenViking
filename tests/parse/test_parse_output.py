@@ -23,7 +23,7 @@ from openviking.parse.output import (
     read_artifact_manifest,
     resolve_artifact_doc_root,
 )
-from openviking.utils.content_hash import content_md5
+from openviking.utils.content_hash import content_md5, file_md5
 
 
 class _FakeVikingFS:
@@ -331,6 +331,60 @@ async def test_artifact_writer_records_final_bytes_in_manifest(backend, tmp_path
 
     assert ref.resource_rel == "doc"
     assert await read_artifact_manifest(store, ref) == {"doc/a.txt": content_md5(b"final bytes")}
+
+
+class _PathCapableFakeVikingFS(_FakeVikingFS):
+    """Fake VikingFS that also supports path-based writes, recording them."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.path_writes: list[tuple[str, str]] = []
+
+    async def write_file_from_path(self, uri: str, local_path, ctx=None) -> int:
+        self.path_writes.append((uri, str(local_path)))
+        self.files[uri] = Path(local_path).read_bytes()
+        return len(self.files[uri])
+
+    async def write_file_bytes(self, uri: str, content: bytes, ctx=None) -> None:
+        raise AssertionError("path-capable store must not buffer write_from_path")
+
+
+@pytest.mark.parametrize("size", [0, 5, 3 * 1024 * 1024 + 7])
+def test_file_md5_matches_content_md5(tmp_path, size) -> None:
+    data = bytes(i % 251 for i in range(size))
+    path = tmp_path / "f.bin"
+    path.write_bytes(data)
+
+    assert file_md5(path) == content_md5(data)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("backend", ["agfs", "local"])
+async def test_artifact_writer_write_from_path_records_md5(backend, tmp_path) -> None:
+    store = _make_store(backend, tmp_path)
+    writer = await ParseArtifactWriter.create(store)
+    data = bytes(i % 251 for i in range(2 * 1024 * 1024 + 3))
+    src = tmp_path / "src.bin"
+    src.write_bytes(data)
+
+    await writer.write_from_path("doc/big.bin", src)
+    ref = await writer.finalize(resource_rel="doc")
+
+    assert await store.read_bytes(ref, "doc/big.bin") == data
+    assert await read_artifact_manifest(store, ref) == {"doc/big.bin": content_md5(data)}
+
+
+@pytest.mark.asyncio
+async def test_agfs_store_write_from_path_uses_viking_fs_path_write(tmp_path) -> None:
+    fs = _PathCapableFakeVikingFS()
+    store = AgfsParseOutputStore(viking_fs=fs)
+    ref = await store.create_artifact()
+    src = tmp_path / "src.bin"
+    src.write_bytes(b"payload")
+
+    await store.write_from_path(ref, "a/b.bin", src)
+
+    assert fs.path_writes == [(f"{ref.root}/a/b.bin", str(src))]
 
 
 @pytest.mark.asyncio

@@ -2,6 +2,8 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Tests for the shared-upload SOURCE reference and worker materialization."""
 
+from pathlib import Path
+
 import pytest
 
 from openviking.parse.accessors.base import SourceType
@@ -66,12 +68,16 @@ class _FakeVikingFS:
     async def exists(self, uri: str, *, ctx) -> bool:
         return self._exists and uri == self._content_uri
 
-    async def read_file_bytes(self, uri: str, *, ctx) -> bytes:
+    async def read_file_to_path(self, uri: str, local_path, *, ctx) -> int:
         self.read_calls.append(uri)
         self.read_contexts.append(ctx)
         if uri != self._content_uri:
             raise FileNotFoundError(uri)
-        return self._content
+        Path(local_path).write_bytes(self._content)
+        return len(self._content)
+
+    async def read_file_bytes(self, uri: str, *, ctx) -> bytes:
+        raise AssertionError("materialize must stream instead of buffering the upload")
 
 
 def _ctx() -> RequestContext:

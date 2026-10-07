@@ -347,6 +347,82 @@ class TestDirectWriteFiles:
         }
 
 
+class TestDirectWriteStreaming:
+    """Direct writes stream file paths; only small text files are buffered to normalize."""
+
+    _GBK_TEXT = ("# 中文注释，用于编码检测\nprint('你好，世界')\n" * 40).encode("gbk")
+
+    @staticmethod
+    def _spy_writer(monkeypatch) -> Dict[str, List[str]]:
+        from openviking.parse.output import ParseArtifactWriter
+
+        calls: Dict[str, List[str]] = {"write_bytes": [], "write_from_path": []}
+        original_bytes = ParseArtifactWriter.write_bytes
+        original_path = ParseArtifactWriter.write_from_path
+
+        async def write_bytes(self, rel_path, content, **kw):
+            calls["write_bytes"].append(self.relative_path(rel_path).rsplit("/", 1)[-1])
+            await original_bytes(self, rel_path, content, **kw)
+
+        async def write_from_path(self, rel_path, local_path, **kw):
+            calls["write_from_path"].append(self.relative_path(rel_path).rsplit("/", 1)[-1])
+            await original_path(self, rel_path, local_path, **kw)
+
+        monkeypatch.setattr(ParseArtifactWriter, "write_bytes", write_bytes)
+        monkeypatch.setattr(ParseArtifactWriter, "write_from_path", write_from_path)
+        return calls
+
+    async def _parse(self, source: Path, tmp_path: Path) -> Path:
+        store = LocalParseOutputStore(str(tmp_path / "artifacts"))
+        result = await DirectoryParser().parse(source, parse_output_store=store)
+        return Path(result.artifact_ref.root) / source.name
+
+    @pytest.mark.asyncio
+    async def test_small_text_is_normalized_to_utf8(self, tmp_path: Path, monkeypatch) -> None:
+        source = tmp_path / "src"
+        source.mkdir()
+        (source / "legacy.py").write_bytes(self._GBK_TEXT)
+        calls = self._spy_writer(monkeypatch)
+
+        root = await self._parse(source, tmp_path)
+
+        assert (root / "legacy.py").read_bytes() == self._GBK_TEXT.decode("gbk").encode("utf-8")
+        assert calls["write_bytes"] == ["legacy.py"]
+        assert calls["write_from_path"] == []
+
+    @pytest.mark.asyncio
+    async def test_text_over_normalize_limit_is_streamed_raw(
+        self, tmp_path: Path, monkeypatch
+    ) -> None:
+        from openviking.parse.parsers import upload_utils
+
+        monkeypatch.setattr(upload_utils, "MAX_TEXT_NORMALIZE_BYTES", 16)
+        source = tmp_path / "src"
+        source.mkdir()
+        (source / "legacy.py").write_bytes(self._GBK_TEXT)
+        calls = self._spy_writer(monkeypatch)
+
+        root = await self._parse(source, tmp_path)
+
+        assert (root / "legacy.py").read_bytes() == self._GBK_TEXT
+        assert calls["write_from_path"] == ["legacy.py"]
+        assert "legacy.py" not in calls["write_bytes"]
+
+    @pytest.mark.asyncio
+    async def test_direct_media_upload_is_streamed(
+        self, tmp_media_files: Path, tmp_path: Path, monkeypatch
+    ) -> None:
+        calls = self._spy_writer(monkeypatch)
+        out = tmp_path / "out"
+        out.mkdir()
+
+        root = await self._parse(tmp_media_files, out)
+
+        assert (root / "image.png").read_bytes() == b"\x89PNG\r\n\x1a\n"
+        assert (root / "video.mp4").read_bytes() == b"\x00\x00\x00\x18ftyp"
+        assert {"image.png", "photo.jpg", "audio.mp3", "video.mp4"} <= set(calls["write_from_path"])
+
+
 # ---------------------------------------------------------------------------
 # Tests: nested directory structure
 # ---------------------------------------------------------------------------

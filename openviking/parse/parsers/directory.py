@@ -39,7 +39,11 @@ from openviking.parse.output import (
 )
 from openviking.parse.parsers.base_parser import BaseParser
 from openviking.parse.parsers.media.constants import MEDIA_EXTENSIONS
-from openviking.parse.parsers.upload_utils import detect_and_convert_encoding, is_text_file
+from openviking.parse.parsers.upload_utils import (
+    detect_and_convert_encoding,
+    is_text_file,
+    should_normalize_text,
+)
 from openviking.storage.viking_fs import LS_ALL_NODES
 from openviking_cli.exceptions import InvalidArgumentError
 from openviking_cli.utils.logger import get_logger
@@ -828,15 +832,14 @@ class DirectoryParser(BaseParser):
                 }
         else:
             try:
-                content = detect_and_convert_encoding(src_file.read_bytes(), src_file)
-                if preserve_structure:
-                    dst_uri = f"{target_uri}/{rel_path}"
-                else:
-                    dst_uri = f"{target_uri}/{PurePosixPath(rel_path).name}"
-                if target_writer is not None:
-                    await target_writer.write_bytes(dst_uri, content)
-                else:
-                    await viking_fs.write_file(dst_uri, content)
+                await DirectoryParser._write_source_file(
+                    src_file,
+                    rel_path,
+                    target_uri,
+                    viking_fs,
+                    target_writer=target_writer,
+                    preserve_structure=preserve_structure,
+                )
                 return {"ok": True, "meta": {}, "error": None}
             except Exception as exc:
                 warnings.append(f"Failed to upload {rel_path}: {exc}")
@@ -867,19 +870,53 @@ class DirectoryParser(BaseParser):
         src_file = classified_file.path
 
         try:
-            content = detect_and_convert_encoding(src_file.read_bytes(), src_file)
-            if preserve_structure:
-                dst_uri = f"{target_uri}/{rel_path}"
-            else:
-                dst_uri = f"{target_uri}/{PurePosixPath(rel_path).name}"
-            if target_writer is not None:
-                await target_writer.write_bytes(dst_uri, content)
-            else:
-                await viking_fs.write_file(dst_uri, content)
+            await DirectoryParser._write_source_file(
+                src_file,
+                rel_path,
+                target_uri,
+                viking_fs,
+                target_writer=target_writer,
+                preserve_structure=preserve_structure,
+            )
             return {"ok": True, "meta": {}, "error": None}
         except Exception as exc:
             warnings.append(f"Failed to upload {rel_path}: {exc}")
             return {"ok": False, "meta": {}, "error": str(exc)}
+
+    @staticmethod
+    async def _write_source_file(
+        src_file: Path,
+        rel_path: str,
+        target_uri: str,
+        viking_fs: Any,
+        *,
+        target_writer: Optional[ParseArtifactWriter],
+        preserve_structure: bool,
+    ) -> None:
+        """Copy one source file to the target without parsing it.
+
+        Small text files are read to normalize their encoding to UTF-8; everything else is
+        streamed from disk so large files are never held in memory.
+        """
+        if preserve_structure:
+            dst_uri = f"{target_uri}/{rel_path}"
+        else:
+            dst_uri = f"{target_uri}/{PurePosixPath(rel_path).name}"
+
+        if should_normalize_text(src_file):
+            content = detect_and_convert_encoding(
+                await asyncio.to_thread(src_file.read_bytes), src_file
+            )
+            if target_writer is not None:
+                await target_writer.write_bytes(dst_uri, content)
+            else:
+                await viking_fs.write_file(dst_uri, content)
+        elif target_writer is not None:
+            await target_writer.write_from_path(dst_uri, src_file)
+        elif hasattr(viking_fs, "write_file_from_path"):
+            await viking_fs.write_file_from_path(dst_uri, src_file)
+        else:
+            await viking_fs.write_file(dst_uri, await asyncio.to_thread(src_file.read_bytes))
 
     # ------------------------------------------------------------------
     # VikingFS merge helpers

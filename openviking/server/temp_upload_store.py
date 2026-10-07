@@ -62,11 +62,6 @@ def _write_json(path: Path, data: dict[str, Any]) -> None:
         json.dump(data, f)
 
 
-def _write_bytes(path: str, content: bytes) -> None:
-    with open(path, "wb") as f:
-        f.write(content)
-
-
 def _open_binary_for_write(path: str | Path):
     return open(path, "wb")
 
@@ -348,8 +343,9 @@ class TempUploadStore:
         }
 
         try:
-            content = await asyncio.to_thread(Path(temp_path).read_bytes)
-            await vfs.write_file_bytes(content_uri, content, ctx=internal_ctx, auto_pathlock=False)
+            await vfs.write_file_from_path(
+                content_uri, temp_path, ctx=internal_ctx, auto_pathlock=False
+            )
             await vfs.write_file(
                 meta_uri,
                 json.dumps(meta, ensure_ascii=False),
@@ -528,8 +524,7 @@ class TempUploadStore:
             _create_temp_file, prefix="ov_shared_upload_", suffix=file_ext
         )
         try:
-            content = await vfs.read_file_bytes(content_uri, ctx=internal_ctx)
-            await asyncio.to_thread(_write_bytes, temp_path, content)
+            await vfs.read_file_to_path(content_uri, temp_path, ctx=internal_ctx)
         except Exception:
             with suppress(FileNotFoundError):
                 await asyncio.to_thread(os.unlink, temp_path)

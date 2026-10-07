@@ -89,11 +89,7 @@ async def stage_source(
         if path.is_dir():
             await _copy_local_tree(path, source_uri, viking_fs, ctx)
         else:
-            await viking_fs.write_file_bytes(
-                source_uri,
-                await asyncio.to_thread(path.read_bytes),
-                ctx=ctx,
-            )
+            await viking_fs.write_file_from_path(source_uri, path, ctx=ctx)
     except BaseException:
         await viking_fs.delete_temp(temp_uri, ctx=ctx)
         raise
@@ -132,8 +128,7 @@ async def materialize_source(
                 target.mkdir(parents=True, exist_ok=True)
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
-            content = await viking_fs.read_file_bytes(str(entry["uri"]), ctx=ctx)
-            await asyncio.to_thread(target.write_bytes, content)
+            await viking_fs.read_file_to_path(str(entry["uri"]), target, ctx=ctx)
 
         local_path = _local_target(local_root, source_relpath)
         if not local_path.exists():
@@ -185,8 +180,7 @@ async def _copy_local_tree(
 
     async def copy_file(local_path: Path, target_file_uri: str) -> None:
         async with semaphore:
-            content = await asyncio.to_thread(local_path.read_bytes)
-            await viking_fs.write_file_bytes(target_file_uri, content, ctx=ctx)
+            await viking_fs.write_file_from_path(target_file_uri, local_path, ctx=ctx)
 
     await asyncio.gather(*(copy_file(path, uri) for path, uri in files))
 

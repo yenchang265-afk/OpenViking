@@ -37,7 +37,14 @@ def _fake_viking_fs() -> MagicMock:
     fs.create_temp_uri = MagicMock(return_value="viking://temp/abc123")
     fs.mkdir = AsyncMock()
     fs.write_file_bytes = AsyncMock()
+    fs.write_file_from_path = AsyncMock()
     return fs
+
+
+def _written_uris(fs: MagicMock) -> list[str]:
+    """URIs written through either the bytes or the path-based VikingFS write."""
+    calls = fs.write_file_bytes.await_args_list + fs.write_file_from_path.await_args_list
+    return [call.args[0] for call in calls]
 
 
 # --- resolve_media_names (shared by image / audio / video parsers) -----------
@@ -130,7 +137,7 @@ async def test_image_parser_honors_resource_name(tmp_path):
     assert result.root.meta["source_title"] == "vacation"
     assert result.root.title == "vacation"
 
-    written = [call.args[0] for call in fake_fs.write_file_bytes.await_args_list]
+    written = _written_uris(fake_fs)
     assert any(p.endswith("/vacation.png") for p in written)
     assert not any("upload_0123456789abcdef" in p for p in written)
 
@@ -196,6 +203,9 @@ async def test_image_parser_cleans_local_artifact_when_write_fails(tmp_path):
         async def write_bytes(self, ref, rel_path, content):
             raise OSError("disk full")
 
+        async def write_from_path(self, ref, rel_path, local_path):
+            raise OSError("disk full")
+
     upload = tmp_path / "upload.png"
     upload.write_bytes(_png_bytes())
     artifact_root = tmp_path / "artifacts"
@@ -222,6 +232,9 @@ async def test_audio_and_video_clean_local_artifact_when_write_fails(
         async def write_bytes(self, ref, rel_path, content):
             raise OSError("disk full")
 
+        async def write_from_path(self, ref, rel_path, local_path):
+            raise OSError("disk full")
+
     source = tmp_path / filename
     source.write_bytes(content)
     artifact_root = tmp_path / f"artifacts-{filename}"
@@ -231,3 +244,61 @@ async def test_audio_and_video_clean_local_artifact_when_write_fails(
         await parser.parse(source, parse_output_store=store)
 
     assert list(artifact_root.iterdir()) == []
+
+
+class _RecordingStore(LocalParseOutputStore):
+    """Local store that records which write method stored each file."""
+
+    def __init__(self, root: str) -> None:
+        super().__init__(root)
+        self.byte_writes: list[str] = []
+        self.path_writes: list[str] = []
+
+    async def write_bytes(self, ref, rel_path, content):
+        self.byte_writes.append(rel_path)
+        await super().write_bytes(ref, rel_path, content)
+
+    async def write_from_path(self, ref, rel_path, local_path):
+        self.path_writes.append(rel_path)
+        await super().write_from_path(ref, rel_path, local_path)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("parser", "filename", "content"),
+    [
+        (AudioParser(), "clip.mp3", b"ID3" + bytes(range(256)) * 64),
+        (VideoParser(), "clip.mp4", b"\x00\x00\x00\x18ftyp" + bytes(range(256)) * 64),
+        (ImageParser(config=ImageConfig()), "pic.png", _png_bytes()),
+    ],
+    ids=["audio", "video", "image"],
+)
+async def test_media_originals_are_streamed_from_path(tmp_path, parser, filename, content):
+    source = tmp_path / filename
+    source.write_bytes(content)
+    store = _RecordingStore(str(tmp_path / "artifacts"))
+
+    result = await parser.parse(source, parse_output_store=store)
+
+    rel = f"{result.artifact_ref.resource_rel}/{filename}"
+    assert store.path_writes == [rel]
+    assert rel not in store.byte_writes
+    assert Path(result.artifact_ref.root, rel).read_bytes() == content
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("parser", "filename"),
+    [(AudioParser(), "clip.mp3"), (VideoParser(), "clip.mp4")],
+)
+async def test_media_with_wrong_signature_is_rejected_without_writing(tmp_path, parser, filename):
+    source = tmp_path / filename
+    source.write_bytes(b"not a media file at all")
+    artifact_root = tmp_path / "artifacts"
+    store = _RecordingStore(str(artifact_root))
+
+    with pytest.raises(ValueError, match="signature"):
+        await parser.parse(source, parse_output_store=store)
+
+    assert store.path_writes == []
+    assert store.byte_writes == []

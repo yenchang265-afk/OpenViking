@@ -69,6 +69,16 @@ def is_text_file(file_path: Union[str, Path]) -> bool:
     return p.name.upper() in _EXTENSIONLESS_TEXT_NAMES
 
 
+# Text files up to this size are read into memory to normalize their encoding to UTF-8;
+# larger files (and all non-text files) are copied byte-for-byte from disk.
+MAX_TEXT_NORMALIZE_BYTES = 16 * 1024 * 1024
+
+
+def should_normalize_text(file_path: Path) -> bool:
+    """Return whether a direct-upload file is small text whose encoding should be normalized."""
+    return is_text_file(file_path) and file_path.stat().st_size <= MAX_TEXT_NORMALIZE_BYTES
+
+
 def detect_and_convert_encoding(content: bytes, file_path: Union[str, Path] = "") -> bytes:
     """Detect text encoding and normalize content to UTF-8 when needed."""
     if not is_text_file(file_path):

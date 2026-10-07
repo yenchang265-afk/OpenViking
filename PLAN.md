@@ -105,28 +105,29 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P2 — Server and ingest use paths (Python)
 
-- [ ] **T10: Durable staging via paths**
+- [x] **T10: Durable staging via paths**
   - Acceptance: `stage_source` file and dir branches and `_copy_local_tree` call `write_file_from_path`; `materialize_source` calls `read_file_to_path`. No `read_bytes` / `read_file_bytes` left in the module; concurrency and symlink skipping unchanged.
   - Verify: existing `tests/resource` pass; a new test with a spy VikingFS asserts path methods are used.
   - Files: `openviking/resource/staged_source.py`, its tests
 
-- [ ] **T11: Parse output writer: path writes + incremental md5**
+- [x] **T11: Parse output writer: path writes + incremental md5**
   - Acceptance: `ParseArtifactWriter.write_from_path(rel, local_path)` computes md5 in chunks and records it; `AgfsParseOutputStore` and `LocalParseOutputStore` implement path writes (copy for local).
   - Verify: unit tests: manifest md5 equals `content_md5` of the bytes; streamed hashing helper.
   - Files: `openviking/parse/output.py`, `openviking/utils/content_hash.py`
 
-- [ ] **T12: DirectoryParser + media originals via paths**
-  - Acceptance: direct-upload files and media originals use `write_from_path`. Text normalisation applies only to text ≤ `parsers.max_text_normalize_bytes` (16 MiB); everything else is copied raw.
+- [x] **T12: DirectoryParser + media originals via paths**
+  - Acceptance: direct-upload files and media originals (audio, **video**, small images stored as-is) use `write_from_path`; audio/video signature checks read a 16-byte header only. Text normalisation applies only to text ≤ `MAX_TEXT_NORMALIZE_BYTES` (16 MiB, module constant in `upload_utils`, not config); everything else is copied raw.
   - Verify: existing `tests/parse` pass; new test: a 20 MiB text file is copied raw, a small text file is still normalised.
   - Files: `openviking/parse/parsers/directory.py`, `media/image.py`, `media/audio.py`, `openviking/parse/parsers/upload_utils.py`
 
-- [ ] **T13: Shared temp-upload mode via paths**
+- [x] **T13: Shared temp-upload mode via paths**
   - Acceptance: `_save_shared` uses `write_file_from_path`; `_resolve_shared` uses `read_file_to_path`; both `read_bytes` / `read_file_bytes` calls removed.
   - Verify: `tests/server/test_temp_upload_store_async_io.py` passes, plus a new assertion with spy VikingFS.
   - Files: `openviking/server/temp_upload_store.py`, its tests
 
-- [ ] **T13b: Memory regression test**
-  - Acceptance: a subprocess harness ingests a 1 GiB direct-upload file (local and shared mode) against SeaweedFS AGFS and reports `VmHWM` delta.
+- [x] **T13b: Memory regression test**
+  - Acceptance: a subprocess harness (`tests/integration/upload_memory_probe.py`) resets `VmHWM` per scenario and measures staging+materialize, shared temp upload and parse-artifact writes, plus a buffered control that must register. Local runs 1 GiB; S3 defaults to 256 MiB (`OV_MEMORY_TEST_S3_BYTES`) because a dev SeaweedFS with no free volume slots rejected writes after ~2 GiB.
+  - Result (2026-10-07): 1 GiB localfs → 3.1 / 2.1 / 2.2 MiB (control 2048 MiB); 256 MiB S3 (SeaweedFS) → all ≤ 128 MiB.
   - Verify: delta ≤ 128 MiB (marked `slow`, env-gated).
   - Files: `tests/integration/test_upload_memory.py`
 
