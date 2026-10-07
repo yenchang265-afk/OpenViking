@@ -68,7 +68,8 @@ async def test_save_local_offloads_cleanup_writes_and_metadata(
 
     config = SimpleNamespace(
         storage=SimpleNamespace(get_upload_temp_dir=lambda: tmp_path),
-        temp_upload=SimpleNamespace(ttl_seconds=3600, shared_max_size_bytes=1024),
+        temp_upload=SimpleNamespace(ttl_seconds=3600),
+        upload=SimpleNamespace(max_file_bytes=1024),
     )
     monkeypatch.setattr(temp_upload_store, "get_openviking_config", lambda: config)
     monkeypatch.setattr(temp_upload_store.asyncio, "to_thread", recording_to_thread)
@@ -632,7 +633,8 @@ async def test_shared_save_and_resolve_stream_content_through_paths(
     monkeypatch.setattr(vfs, "read_file_bytes", no_buffered_io)
     monkeypatch.setattr(temp_upload_store, "get_viking_fs", lambda: vfs)
     config = SimpleNamespace(
-        temp_upload=SimpleNamespace(ttl_seconds=3600, shared_max_size_bytes=16 * 1024 * 1024)
+        temp_upload=SimpleNamespace(ttl_seconds=3600),
+        upload=SimpleNamespace(max_file_bytes=16 * 1024 * 1024),
     )
     store = temp_upload_store.TempUploadStore(config)
     monkeypatch.setattr(store, "_schedule_shared_cleanup", lambda ctx: None)

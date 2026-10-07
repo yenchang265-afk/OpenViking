@@ -383,7 +383,7 @@ def _get_backend_specific_params(item: Any) -> Any:
 def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
     """Serialize user-facing S3 config into Rust s3fs plugin parameters."""
     directory_marker_mode = _get_config_value(s3_config, "directory_marker_mode")
-    return {
+    params = {
         "bucket": _get_config_value(s3_config, "bucket"),
         "region": _get_config_value(s3_config, "region"),
         "access_key_id": _get_config_value(s3_config, "access_key"),
@@ -401,6 +401,12 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
         ),
         "auto_detect_content_type": _get_config_value(s3_config, "auto_detect_content_type", False),
     }
+    # Multipart tuning is only sent when configured so s3fs keeps a single source of defaults.
+    for key in ("multipart_threshold_bytes", "multipart_part_size_bytes"):
+        value = _get_config_value(s3_config, key)
+        if value is not None:
+            params[key] = value
+    return params
 
 
 def _dump_config_object(config: Any) -> Dict[str, Any]:

@@ -5,7 +5,7 @@
 import sys
 from typing import Any, Dict, List, Literal, Optional
 
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 # Import auth plugin registry for config validation
 from openviking.server.auth.ldap_config import LDAPConfig
@@ -279,6 +279,8 @@ class TempUploadConfig(BaseModel):
     """Temporary upload configuration."""
 
     default_mode: Literal["local", "shared"] = "local"
+    # Deprecated: use ``server.upload.max_file_bytes``. When set explicitly (and that
+    # field is not), ServerConfig copies it there and logs a deprecation warning.
     shared_max_size_bytes: int = 512 * 1024 * 1024
     ttl_seconds: int = Field(12 * 60 * 60, ge=0)
     # When True, shared-upload cleanup also removes directories whose names are
@@ -286,6 +288,32 @@ class TempUploadConfig(BaseModel):
     # default so a malformed entry never triggers an unexpected delete; enable
     # to reclaim junk directories that would otherwise be skipped forever.
     cleanup_invalid_dirs: bool = False
+
+
+_MIB = 1024 * 1024
+
+
+class UploadConfig(BaseModel):
+    """Upload limits shared by the server and every upload client.
+
+    Served to clients from ``GET /api/v1/uploads/limits`` so Web Studio, the CLI and
+    SDKs validate against the same numbers the server enforces.
+    """
+
+    max_file_bytes: int = Field(2048 * _MIB, gt=0, description="Largest single uploaded file")
+    max_session_bytes: int = Field(
+        5120 * _MIB, gt=0, description="Largest total size of one upload (e.g. a folder)"
+    )
+    max_files: int = Field(10_000, gt=0, description="Most files in one upload")
+    part_size_bytes: int = Field(
+        8 * _MIB, ge=_MIB, description="Chunk size clients use for chunked uploads"
+    )
+
+    @model_validator(mode="after")
+    def _session_holds_largest_file(self) -> "UploadConfig":
+        if self.max_session_bytes < self.max_file_bytes:
+            raise ValueError("upload.max_session_bytes must be >= upload.max_file_bytes")
+        return self
 
 
 class ToolOutputExternalizationConfig(BaseModel):
@@ -351,6 +379,7 @@ class ServerConfig(BaseModel):
     public_base_url: Optional[str] = None
     upload_signed_ttl_seconds: int = 600
     temp_upload: TempUploadConfig = Field(default_factory=TempUploadConfig)
+    upload: UploadConfig = Field(default_factory=UploadConfig)
     user_config_defaults: UserConfigDefaults = Field(default_factory=UserConfigDefaults)
     agent_evolution: AgentEvolutionConfig = Field(default_factory=AgentEvolutionConfig)
     tool_output_externalization: ToolOutputExternalizationConfig = Field(
@@ -361,6 +390,31 @@ class ServerConfig(BaseModel):
     @classmethod
     def normalize_user_config_defaults(cls, value: Any) -> Any:
         return value.model_dump() if isinstance(value, UserConfig) else value
+
+    @model_validator(mode="after")
+    def _apply_legacy_upload_size_alias(self) -> "ServerConfig":
+        """Map deprecated ``temp_upload.shared_max_size_bytes`` onto ``upload.max_file_bytes``."""
+        if "shared_max_size_bytes" not in self.temp_upload.model_fields_set:
+            return self
+        legacy = self.temp_upload.shared_max_size_bytes
+        if "max_file_bytes" in self.upload.model_fields_set:
+            logger.warning(
+                "server.temp_upload.shared_max_size_bytes is deprecated and ignored because "
+                "server.upload.max_file_bytes is set"
+            )
+            return self
+        logger.warning(
+            "server.temp_upload.shared_max_size_bytes is deprecated; "
+            "use server.upload.max_file_bytes (using %d)",
+            legacy,
+        )
+        self.upload = UploadConfig(
+            max_file_bytes=legacy,
+            max_session_bytes=max(self.upload.max_session_bytes, legacy),
+            max_files=self.upload.max_files,
+            part_size_bytes=self.upload.part_size_bytes,
+        )
+        return self
 
     def get_effective_auth_mode(self) -> str:
         """Get effective auth mode, auto-detecting if not explicitly set.

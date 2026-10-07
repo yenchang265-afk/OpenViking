@@ -646,6 +646,60 @@ shared 模式的響應示例：
 
 ---
 
+### upload_limits
+
+返回伺服器的上傳限制（`server.upload`），讓客戶端在上傳前先檢查檔案。
+
+#### 1. API 實現介紹
+
+Web Studio、各 SDK 與 CLI 會讀取這些限制，而不是寫死在程式中。服務端會強制執行相同的數值：[temp_upload](#temp-upload) 會拒絕大於 `max_file_bytes` 的檔案。
+
+**程式碼入口**：
+- `openviking/server/routers/uploads.py:get_upload_limits` - HTTP 路由
+- `openviking/server/config.py:UploadConfig` - 設定（`ov.conf` 中的 `server.upload`）
+
+#### 2. 介面和引數說明
+
+此介面沒有引數。
+
+**響應欄位**
+
+| 欄位 | 型別 | 說明 |
+|------|------|------|
+| max_file_bytes | int | 單一檔案的大小上限 |
+| max_session_bytes | int | 單次上傳（例如一個資料夾）的總大小上限 |
+| max_files | int | 單次上傳的檔案數量上限 |
+| part_size_bytes | int | 分片上傳時客戶端使用的分片大小 |
+
+#### 3. 使用示例
+
+**HTTP API**
+
+```
+GET /api/v1/uploads/limits
+```
+
+```bash
+curl http://localhost:1933/api/v1/uploads/limits \
+  -H "X-API-Key: your-key"
+```
+
+**響應示例**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "max_file_bytes": 2147483648,
+    "max_session_bytes": 5368709120,
+    "max_files": 10000,
+    "part_size_bytes": 8388608
+  }
+}
+```
+
+---
+
 ## 相關文件
 
 - [檔案系統](03-filesystem.md) - 檔案和目錄操作

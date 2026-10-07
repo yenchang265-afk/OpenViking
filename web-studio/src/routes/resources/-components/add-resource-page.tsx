@@ -26,6 +26,7 @@ import {
   TooltipTrigger,
 } from '#/components/ui/tooltip'
 import { useResourceUpload } from '../-hooks/use-resource-upload'
+import { useUploadLimits } from '../-hooks/use-upload-limits'
 import type { RemoteStartResult } from '../-hooks/use-resource-upload'
 import { detectRemoteResourceKind } from '../-lib/resource-source'
 import type { RemoteResourceTypeSelection } from '../-lib/resource-source'
@@ -102,6 +103,7 @@ export function AddResourceForm({
   const [remoteResourceType, setRemoteResourceType] =
     useState<RemoteResourceTypeSelection>('auto')
   const [selectedFiles, setSelectedFiles] = useState<SelectedUploadFile[]>([])
+  const uploadLimits = useUploadLimits()
   const [targetUri, setTargetUri] = useState('viking://resources/')
   const [destinationMode, setDestinationMode] =
     useState<ResourceDestinationMode>('parent')
@@ -300,6 +302,7 @@ export function AddResourceForm({
             files={selectedFiles}
             onFilesChange={setSelectedFiles}
             t={t}
+            limits={uploadLimits}
           />
         ) : (
           <RemoteResourceFields
