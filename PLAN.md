@@ -1,6 +1,6 @@
 # Plan: Unified Streaming Large-File Upload
 
-Status: **Approved** 2026-10-06 (Phase 2: Plan + Phase 3: Tasks) — implementation in progress
+Status: **Approved** 2026-10-06 (Phase 2: Plan + Phase 3: Tasks) — **implemented** 2026-10-07 across PRs #16 (P1), #17 (P2), #19 (P3), #20 (P4) and the P5 PR
 Spec: [SPEC.md](SPEC.md) (approved 2026-10-06)
 
 ## Components and dependencies
@@ -184,9 +184,9 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P5 — Remaining SDKs and docs
 
-- [ ] **T22: Go SDK sessions** (`io.SectionReader`, no `bytes.Buffer` body) — `sdk/go/upload.go`, tests
-- [ ] **T23: TS SDK sessions** (Node `FileHandle.read`, browser `Blob.slice`; drop `zipSync` from the upload path) — `sdk/typescript/src/{client,node-files}.ts`, tests
-- [ ] **T24: Docs** — `docs/en/api/02-resources.md` (session API), `docs/en/guides/01-configuration.md` (`server.upload`, multipart thresholds, encryption cap, S3 lifecycle rule, pod disk sizing)
+- [x] **T22: Go SDK sessions** (`io.SectionReader`, no `bytes.Buffer` body) — `sdk/go/upload.go`, tests
+- [x] **T23: TS SDK sessions** (Node `FileHandle.read`, browser `Blob.slice`; drop `zipSync` from the upload path) — `sdk/typescript/src/{client,node-files}.ts`, tests
+- [x] **T24: Docs** — `docs/en/api/02-resources.md` (session API), `docs/en/guides/01-configuration.md` (`server.upload`, multipart thresholds, encryption cap, S3 lifecycle rule, pod disk sizing)
 
 ## Delivery
 

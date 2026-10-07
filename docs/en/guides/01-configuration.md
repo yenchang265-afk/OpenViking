@@ -1755,6 +1755,13 @@ Omitting `auth_mode` (or setting it to `null`) selects `api_key` when a non-empt
 
 Explicit `auth_mode: "api_key"` requires a non-empty `root_api_key`, including on localhost; without it, startup fails instead of falling back to development mode. Use the root key with the Admin API to create accounts and user/admin keys; use those tenant-bound keys for data access. `trusted` mode accepts account/user identity headers from a trusted gateway and does not require user-key provisioning first. Its root key is optional only on localhost and required for non-localhost binds. For role resolution, OIDC/LDAP setup, and gateway requirements, see [Authentication](04-authentication.md).
 
+**Large uploads.** Uploads are streamed end to end: clients send parts, the server stages them on local disk, and staging, parsing and storage copy files by path (S3 uses multipart upload above `storage.agfs.s3.multipart_threshold_bytes`), so server memory does not grow with file size. Plan for:
+
+- **Disk**: about 2–3× the largest concurrent upload under `{workspace}/temp` (the staged upload plus the copy the ingest worker materializes).
+- **S3**: add a bucket lifecycle rule that aborts incomplete multipart uploads (for example after 1 day); failed uploads are aborted, but a crash can leave parts behind.
+- **Encryption**: files are encrypted as a single envelope, so on encrypted mounts a path-based write buffers the file and is limited to 512 MiB.
+- **Chunked sessions** (`/api/v1/uploads`) stage on the receiving server's disk and need `temp_upload.default_mode` = `"local"`; in `shared` mode clients fall back to single-request uploads.
+
 `user_config_defaults` provides deployment defaults for add targets and memory extraction. For add operations, explicit request targets still win: `add_resource.to` / `add_resource.parent` take precedence over user defaults, and `add_skill.target_uri` takes precedence over user defaults. Memory policy precedence is Session policy > User `settings/user_config.json` policy > `server.user_config_defaults.memory_policy` > kernel default. `server.agent_evolution.enabled` supplies the startup default. Runtime resolution is Account override > Cluster runtime override > that startup value. Use the Admin settings APIs for changes without restarting; editing `ov.conf` directly takes effect after restart.
 
 ### Usage Reporter
