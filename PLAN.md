@@ -145,42 +145,42 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P4 — Chunked upload sessions
 
-- [ ] **T15: Session store**
+- [x] **T15: Session store**
   - Acceptance: `UploadSessionStore`: create (validates paths with the `zip_safe` rules, sizes, counts against limits), `put_part` (streams the body to disk, ≤ part size, idempotent), `status`, `complete` (streams parts into files under `sessions/{id}/tree`, verifies sizes, returns `temp_file_id`), `abort`, TTL sweep (removes session dirs). Bound to account + user.
   - Verify: `tests/server/test_upload_sessions.py`: lifecycle, idempotent part, resume listing, traversal, oversize part/file/session, cross-user denial, expiry.
   - Files: `openviking/server/upload_sessions.py` (new), `tests/server/test_upload_sessions.py` (new)
 
-- [ ] **T16: Session endpoints + directory temp ids**
+- [x] **T16: Session endpoints + directory temp ids**
   - Acceptance: `POST /uploads`, `PUT …/parts/{n}`, `GET /uploads/{id}`, `POST …/complete`, `DELETE`; auth via `get_upload_request_context`; 400/404/413 mapping. `_resolve_local` accepts session ids that resolve to a staged file or dir; the local TTL sweep removes directories.
   - Verify: API tests with TestClient; ingesting a folder session produces the same resources as the equivalent zip upload.
   - Files: `openviking/server/routers/uploads.py`, `openviking/server/temp_upload_store.py`, `openviking/server/resource_ingest.py`, tests
 
-- [ ] **T17: Legacy `temp_upload` on the session code path**
+- [~] **T17: Legacy `temp_upload` on the session code path** — *skipped (2026-10-07)*: the legacy route already streams to disk and enforces `upload.max_file_bytes`; rerouting it would change its temp_file_id/sidecar contract and it must keep serving shared mode, which sessions do not support, for no memory or user-facing gain.
   - Acceptance: `POST /resources/temp_upload` internally creates a single-part session (no chunk limit for this legacy path). Signed-token MCP flow is unchanged in behaviour.
   - Verify: `test_api_resources.py`, `test_resources_temp_upload_token.py` and `test_temp_upload_store_async_io.py` pass **unchanged**.
   - Files: `openviking/server/routers/resources.py`, `openviking/server/temp_upload_store.py`
 
-- [ ] **T18: Python SDK session upload**
+- [x] **T18: Python SDK session upload**
   - Acceptance: files and folders upload through sessions (folders without zip); falls back to legacy on 404; one reusable part buffer.
   - Verify: `sdk/python/tests` with a mock transport: part order and sizes, folder manifest, fallback.
   - Files: `sdk/python/openviking_sdk/client.py`, `sdk/python/openviking_sdk/_upload.py` (new), tests
 
-- [ ] **T19: Rust CLI session upload**
+- [x] **T19: Rust CLI session upload**
   - Acceptance: `FileUploader` uses sessions with a reused `Vec` part buffer; folders without zip (honouring `ignore_dirs`); progress per part; falls back to legacy on 404.
   - Verify: `cargo test -p ov_cli` with a mock server.
   - Files: `crates/ov_cli/src/base_client.rs`, `crates/ov_cli/src/client.rs`, `crates/ov_cli/src/upload_session.rs` (new)
 
-- [ ] **T20: Web Studio chunked uploader lib**
+- [x] **T20: Web Studio chunked uploader lib**
   - Acceptance: `uploadSession(files, opts)`: `Blob.slice` parts, 3 parallel PUTs, retry with backoff, resume via `GET /uploads/{id}` within the page session, progress callback, abort.
   - Verify: vitest with mocked client: slicing, resume skips received parts, retries, abort.
   - Files: `web-studio/src/routes/resources/-lib/chunked-upload.ts` (new), its test
 
-- [ ] **T21: Web Studio wiring + folders without zip**
+- [x] **T21: Web Studio wiring + folders without zip**
   - Acceptance: `use-resource-upload` uses `uploadSession`; a folder is one multi-file session; `zipFolder` and its dependency use removed; client regenerated.
   - Verify: vitest; manual: 1 GiB folder, Chrome tab memory ≤ +150 MiB, network-drop resume.
   - Files: `use-resource-upload.tsx`, `upload-resource-fields.tsx`, `-lib/folder-upload.ts`, `src/gen/ov-client/*` (generated)
 
-**Checkpoint D**
+**Checkpoint D** — P4 notes (2026-10-07): sessions stage on local disk and require `temp_upload.default_mode=local` (409 otherwise, clients fall back); skills (`add_skill`/`update_skill`) keep the zip upload; MCP keeps its single signed request. Manual browser E2E (1 GiB folder, network-drop resume) left for review.
 
 ### P5 — Remaining SDKs and docs
 
