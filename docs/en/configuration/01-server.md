@@ -65,7 +65,7 @@ Optional sections use their defaults when omitted. Unknown fields in `ov.conf` a
 | `oauth` | object | disabled | MCP OAuth 2.1 |
 | `prompts` | object | built-in templates | Custom prompt template directory |
 | `ingest` | object | built-in defaults | Conversation-log ingestion |
-| `output_language_override` | string | `""` | Force summary/memory language; empty means auto-detect |
+| `output_language_override` | string | `""` | Force summary/memory language: `en` or `zh-TW` only. Empty means auto-detect: Chinese content → `zh-TW`, everything else (or undetectable) → `en` |
 | `allow_private_networks` | boolean | `false` | Allow fetching private-network resources |
 
 `auto_generate_l0`, `auto_generate_l1`, `default_search_mode`, and `default_search_limit` are deprecated compatibility fields. They are accepted when loading older configuration files but have no runtime effect.

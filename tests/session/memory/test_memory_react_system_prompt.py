@@ -254,7 +254,7 @@ class TestSessionConversationToolFiltering:
 
         provider = SessionExtractContextProvider(messages=messages)
 
-        assert provider._detect_language() == "zh-CN"
+        assert provider._detect_language() == "zh-TW"
 
     async def test_prepare_extraction_messages_replaces_image_part_with_vlm_description(self):
         class FakeVisionVLM:
@@ -364,8 +364,9 @@ class TestSessionConversationToolFiltering:
         assert provider.messages is not messages
 
 
-def test_session_provider_empty_messages_still_uses_environment_fallback(monkeypatch):
-    monkeypatch.setenv("TZ", "Asia/Shanghai")
+def test_session_provider_empty_messages_falls_back_to_english(monkeypatch):
+    monkeypatch.setenv("TZ", "Asia/Taipei")
+    monkeypatch.setenv("LC_ALL", "zh_TW.UTF-8")
     provider = SessionExtractContextProvider(messages=[])
 
-    assert provider.get_output_language() == "zh-CN"
+    assert provider.get_output_language() == "en"
