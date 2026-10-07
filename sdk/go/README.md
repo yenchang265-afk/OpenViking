@@ -199,9 +199,13 @@ an empty string that the server rejects.
 
 ## Files, Directories, and Packs
 
-`AddResource` and `AddSkill` accept local files and directories. Directory
-uploads are zipped by the SDK, symlinks are skipped, and the resulting archive
-is uploaded to `/api/v1/resources/temp_upload` before the final API call.
+`AddResource` and `AddSkill` accept local files and directories; symlinks are
+skipped. `AddResource` sends files and directories through chunked upload
+sessions (`/api/v1/uploads`): directories are not zipped, and each part is
+streamed from disk, so memory stays flat for large uploads. It falls back to a
+single `/api/v1/resources/temp_upload` request (zipping directories) when the
+server has no chunked uploads or `UploadMode` is `"shared"`. `AddSkill` always
+uses the single-request upload.
 
 ```go
 skill, err := client.AddSkill(ctx, "./skills/search-web", nil)

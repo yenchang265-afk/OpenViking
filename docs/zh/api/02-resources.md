@@ -704,7 +704,7 @@ curl http://localhost:1933/api/v1/uploads/limits \
 
 把一個大檔案，或整個資料夾（不需壓縮），按檔案切成編號的分片上傳。分片可以重送、中斷的上傳可以續傳，客戶端與服務端都不會把整個檔案載入記憶體。完成工作階段後會返回 `temp_file_id`，可像其他臨時上傳一樣傳給 [add_resource](#add-resource)；資料夾工作階段的匯入結果與對應的 zip 上傳完全相同。
 
-Python SDK、`ov add-resource` 與 Web Studio 會自動使用工作階段，伺服器不支援時會退回 [temp_upload](#temp-upload)。
+Python SDK、Go SDK、TypeScript SDK（Node.js）、`ov add-resource` 與 Web Studio 會自動使用工作階段，伺服器不支援時會退回 [temp_upload](#temp-upload)。
 
 #### 1. API 實現介紹
 

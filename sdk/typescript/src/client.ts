@@ -6,6 +6,7 @@ import {
   writeResponseToFile,
 } from "./node-files.js";
 import { OpenVikingTransport, type TransportOptions } from "./transport.js";
+import { uploadViaSession } from "./upload-session.js";
 import type {
   AddResourceOptions,
   AclSpec,
@@ -165,11 +166,19 @@ export class OpenVikingClient {
           : undefined,
       telemetry: options.telemetry,
     });
-    const local = await nodePathToBlob(source);
-    if (local) {
-      body.temp_file_id = await this.upload(local.blob, local.filename);
-      body.source_name = local.sourceName;
-    } else body.path = source;
+    // Local paths prefer chunked sessions (no zip, one part in memory); null means
+    // the server has no sessions, so fall back to the single-request upload.
+    const session = await uploadViaSession(this.transport, source);
+    if (session) {
+      body.temp_file_id = session.tempFileId;
+      body.source_name = session.sourceName;
+    } else {
+      const local = session === null ? await nodePathToBlob(source) : undefined;
+      if (local) {
+        body.temp_file_id = await this.upload(local.blob, local.filename);
+        body.source_name = local.sourceName;
+      } else body.path = source;
+    }
     return this.request("POST", "/api/v1/resources", {
       body: mergeExtra(body, options.extra),
     });

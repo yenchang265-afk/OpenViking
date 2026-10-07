@@ -573,6 +573,7 @@ Notes:
 - `shared` mode returns a `temp_file_id` in the `shared_<upload_id>` form. The same account can consume it repeatedly while it remains available.
 - New shared uploads create an internal `viking://upload/<created_at_ms>-<uuid>/` directory containing `content` and `meta`. The 13-digit Unix-millisecond timestamp in the directory name is the upload creation time; `meta` is written last and marks a completed upload. These objects are not part of the normal filesystem browsing surface.
 - Shared uploads remain for `server.temp_upload.ttl_seconds` (12 hours by default). Each new shared upload makes one listing of the internal upload root, parses the creation timestamp from each first-level upload directory, and recursively removes expired directories without relying on filesystem modification times.
+- Uploads larger than `server.upload.max_file_bytes` (2 GiB by default) are rejected in both modes; the signed-token route returns HTTP 413. For large files and whole folders, prefer [chunked upload sessions](#upload-sessions), which the SDKs and CLI use automatically.
 
 #### 3. Usage Examples
 
@@ -600,17 +601,19 @@ curl -X POST http://localhost:1933/api/v1/resources/temp_upload \
 
 **Python SDK**
 
-The `add_resource`, `add_skill` and other endpoints in the Python SDK automatically handle local file uploads, no need to call this endpoint manually. To opt into distributed shared temporary uploads in HTTP client mode, set `upload.mode` to `"shared"` in `ovcli.conf`.
+The `add_resource`, `add_skill` and other endpoints in the Python SDK automatically handle local file uploads, no need to call this endpoint manually. `add_resource` uses [chunked upload sessions](#upload-sessions) first and falls back to this endpoint. To opt into distributed shared temporary uploads in HTTP client mode, set `upload.mode` to `"shared"` in `ovcli.conf`.
 
 **Go SDK**
 
 `client.AddResource`, `client.AddSkill`, `client.ImportOVPack`, and
-`client.RestoreOVPack` automatically call `temp_upload` for local files. Set
-`openviking.Config{UploadMode: "shared"}` to request shared temporary uploads.
+`client.RestoreOVPack` automatically upload local files. `AddResource` uses
+chunked upload sessions first and falls back to `temp_upload`; the others call
+`temp_upload` directly. Set `openviking.Config{UploadMode: "shared"}` to request
+shared temporary uploads.
 
 **CLI**
 
-CLI commands also automatically handle local file uploads, no need to call this endpoint manually.
+CLI commands also automatically handle local file uploads, no need to call this endpoint manually. `ov add-resource` uses chunked upload sessions first and falls back to this endpoint.
 
 **Response Example**
 
@@ -697,7 +700,7 @@ curl http://localhost:1933/api/v1/uploads/limits \
 
 Upload one large file, or a whole folder without zipping it, as numbered parts per file. Parts can be re-sent, an interrupted upload can be resumed, and neither the client nor the server holds a whole file in memory. Completing a session returns a `temp_file_id` that you pass to [add_resource](#add-resource) like any other temporary upload; a folder session is ingested exactly like the equivalent zip upload.
 
-The Python SDK, `ov add-resource` and Web Studio use sessions automatically and fall back to [temp_upload](#temp-upload) when the server does not offer them.
+The Python SDK, Go SDK, TypeScript SDK (Node.js), `ov add-resource` and Web Studio use sessions automatically and fall back to [temp_upload](#temp-upload) when the server does not offer them.
 
 #### 1. API Implementation Overview
 
