@@ -9,19 +9,21 @@ import { toast } from 'sonner'
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
 import { MAX_UPLOAD_FILES, formatFileSize, isBlockedFile } from '../-lib/upload'
-import { folderUploadLimitBytes } from '../-lib/upload-limits'
 import type { UploadLimits } from '../-lib/upload-limits'
-import {
-  getFolderSize,
-  groupFolderFiles,
-  zipFolder,
-} from '../-lib/folder-upload'
+import { getFolderSize, groupFolderFiles } from '../-lib/folder-upload'
 import type { FolderGroup } from '../-lib/folder-upload'
 
 export type SelectedUploadFile = {
   id: string
+  /** The file to upload; for a folder, only a label carrying its name. */
   file: File
   fileType: string | null
+  /** Set for a folder, which is uploaded file by file (not zipped). */
+  folder?: FolderGroup
+}
+
+export function selectedUploadSize(item: SelectedUploadFile): number {
+  return item.folder ? getFolderSize(item.folder) : item.file.size
 }
 
 type UploadResourceFieldsProps = {
@@ -51,11 +53,11 @@ async function detectFileType(file: File): Promise<string | null> {
   }
 }
 
-async function packageFolder(
+function packageFolder(
   folder: FolderGroup,
   t: TFunction<'addResource'>,
-  maxBytes: number,
-): Promise<SelectedUploadFile | null> {
+  limits: UploadLimits,
+): SelectedUploadFile | null {
   if (folder.skippedCount > 0) {
     toast(
       t('folderSkipped', { name: folder.name, count: folder.skippedCount }),
@@ -68,27 +70,37 @@ async function packageFolder(
     toast.error(t('folderEmpty', { name: folder.name }), { duration: 2500 })
     return null
   }
-  if (getFolderSize(folder) > maxBytes) {
+  const oversized = folder.entries.find(
+    ({ file }) => file.size > limits.maxFileBytes,
+  )
+  if (oversized) {
     toast.error(
       t('fileTooLarge', {
-        name: `${folder.name}/`,
-        size: formatFileSize(maxBytes),
+        name: oversized.path,
+        size: formatFileSize(limits.maxFileBytes),
       }),
       { duration: 2500 },
     )
     return null
   }
-  try {
-    return {
-      id: createLocalFileId(),
-      file: await zipFolder(folder),
-      fileType: 'application/zip',
-    }
-  } catch {
-    toast.error(t('folderZipFailed', { name: folder.name }), {
-      duration: 2500,
-    })
+  if (
+    getFolderSize(folder) > limits.maxSessionBytes ||
+    folder.entries.length > limits.maxFiles
+  ) {
+    toast.error(
+      t('fileTooLarge', {
+        name: `${folder.name}/`,
+        size: formatFileSize(limits.maxSessionBytes),
+      }),
+      { duration: 2500 },
+    )
     return null
+  }
+  return {
+    id: createLocalFileId(),
+    file: new File([], folder.name),
+    fileType: null,
+    folder,
   }
 }
 
@@ -117,11 +129,7 @@ export function UploadResourceFields({
         const { looseFiles, folders } = groupFolderFiles(nextFiles)
 
         for (const folder of folders) {
-          const packaged = await packageFolder(
-            folder,
-            t,
-            folderUploadLimitBytes(limits),
-          )
+          const packaged = packageFolder(folder, t, limits)
           if (packaged) accepted.push(packaged)
         }
 
@@ -222,19 +230,19 @@ export function UploadResourceFields({
 
       {files.length ? (
         <div className="overflow-hidden rounded-lg border border-border/60 bg-muted/10">
-          {files.map(({ id, file }) => (
+          {files.map((item) => (
             <div
-              key={id}
+              key={item.id}
               className="flex items-center gap-3 border-b border-border/50 px-4 py-3 last:border-b-0"
             >
               <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-muted">
                 <FileIcon className="size-5 text-muted-foreground" />
               </div>
               <p className="min-w-0 flex-1 truncate text-sm font-medium">
-                {file.name}
+                {item.folder ? `${item.folder.name}/` : item.file.name}
               </p>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {formatFileSize(file.size)}
+                {formatFileSize(selectedUploadSize(item))}
               </span>
               <Button
                 type="button"
@@ -243,7 +251,7 @@ export function UploadResourceFields({
                 className="shrink-0 text-muted-foreground hover:text-foreground"
                 onClick={() =>
                   updateFiles((currentFiles) =>
-                    currentFiles.filter((item) => item.id !== id),
+                    currentFiles.filter(({ id }) => id !== item.id),
                   )
                 }
               >

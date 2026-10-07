@@ -216,7 +216,11 @@ export function AddResourceForm({
     if (mode === 'upload') {
       if (selectedFiles.length === 0) return
       enqueueUploads({
-        files: selectedFiles.map(({ file, fileType }) => ({ file, fileType })),
+        files: selectedFiles.map(({ file, fileType, folder }) => ({
+          file,
+          fileType,
+          folder,
+        })),
         commonBody: buildCommonBody(),
       })
       setSelectedFiles([])

@@ -3,13 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 import i18n from '#/i18n'
-import {
-  getTasks,
-  getOvResult,
-  isOvClientError,
-  postResourcesTempUpload,
-} from '#/lib/ov-client'
+import { getTasks, getOvResult, isOvClientError } from '#/lib/ov-client'
+import { getFolderSize } from '../-lib/folder-upload'
+import type { FolderGroup } from '../-lib/folder-upload'
 import { parseUploadError } from '../-lib/upload'
+import { transferUpload } from '../-lib/upload-transfer'
 import {
   isUploadStatusActive,
   mergeServerTasks,
@@ -23,7 +21,6 @@ import { postResourceImport } from '../-lib/resource-import-api'
 import type {
   ResourceImportCommonBody,
   ResourceImportResult,
-  TempUploadResult,
 } from '../-lib/resource-import-types'
 import type { TaskListResult } from '@ov-server/api/v1/tasks'
 
@@ -64,8 +61,11 @@ export type RemoteUploadState = {
 }
 
 export type UploadBatchItem = {
+  /** The file to upload; for a folder, only a label carrying its name. */
   file: File
   fileType: string | null
+  /** Set for a folder, uploaded file by file through a chunked session. */
+  folder?: FolderGroup
 }
 
 export type UploadBatchParams = {
@@ -117,10 +117,6 @@ const TASK_REFRESH_LIMIT = 50
 
 const ResourceUploadContext =
   React.createContext<ResourceUploadContextValue | null>(null)
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-}
 
 function getErrorMessage(error: unknown): string {
   if (isOvClientError(error)) {
@@ -259,32 +255,15 @@ export function ResourceUploadProvider({
           progress: 0,
         }))
 
-        const uploadResult = await getOvResult<TempUploadResult>(
-          postResourcesTempUpload({
-            body: {
-              file: params.file,
-              telemetry: true,
-            },
-            onUploadProgress: (event: { loaded: number; total?: number }) => {
-              const total = event.total
-              if (!total) return
-              updateTask(taskId, (task) => ({
-                ...task,
-                status: 'uploading',
-                progress: Math.round((event.loaded / total) * 100),
-              }))
-            },
-          }),
+        const { tempFileId, sourceName } = await transferUpload(
+          params,
+          (progress) =>
+            updateTask(taskId, (task) => ({
+              ...task,
+              status: 'uploading',
+              progress,
+            })),
         )
-
-        const tempFileId = isRecord(uploadResult)
-          ? uploadResult.temp_file_id
-          : undefined
-        if (typeof tempFileId !== 'string' || !tempFileId.trim()) {
-          throw new Error(
-            i18n.t('resources:processingTasks.errors.tempUploadMissingId'),
-          )
-        }
 
         updateTask(taskId, (task) => ({
           ...task,
@@ -294,11 +273,7 @@ export function ResourceUploadProvider({
 
         const addResult = await getOvResult<ResourceImportResult>(
           postResourceImport(
-            buildUploadedResourceRequest(
-              tempFileId,
-              params.file.name,
-              commonBody,
-            ),
+            buildUploadedResourceRequest(tempFileId, sourceName, commonBody),
           ),
         )
 
@@ -365,7 +340,7 @@ export function ResourceUploadProvider({
         source: 'local' as const,
         serverTaskId: null,
         fileName: item.file.name,
-        fileSize: item.file.size,
+        fileSize: item.folder ? getFolderSize(item.folder) : item.file.size,
         fileType: item.fileType,
         status: 'pending' as const,
         progress: 0,
