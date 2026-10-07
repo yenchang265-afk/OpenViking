@@ -8,12 +8,9 @@ import { toast } from 'sonner'
 
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
-import {
-  MAX_UPLOAD_FILES,
-  MAX_UPLOAD_FILE_SIZE_BYTES,
-  formatFileSize,
-  isBlockedFile,
-} from '../-lib/upload'
+import { MAX_UPLOAD_FILES, formatFileSize, isBlockedFile } from '../-lib/upload'
+import { folderUploadLimitBytes } from '../-lib/upload-limits'
+import type { UploadLimits } from '../-lib/upload-limits'
 import {
   getFolderSize,
   groupFolderFiles,
@@ -31,6 +28,8 @@ type UploadResourceFieldsProps = {
   files: SelectedUploadFile[]
   onFilesChange: Dispatch<SetStateAction<SelectedUploadFile[]>>
   t: TFunction<'addResource'>
+  /** Server upload limits, from GET /api/v1/uploads/limits. */
+  limits: UploadLimits
 }
 
 function createLocalFileId(): string {
@@ -55,6 +54,7 @@ async function detectFileType(file: File): Promise<string | null> {
 async function packageFolder(
   folder: FolderGroup,
   t: TFunction<'addResource'>,
+  maxBytes: number,
 ): Promise<SelectedUploadFile | null> {
   if (folder.skippedCount > 0) {
     toast(
@@ -68,11 +68,11 @@ async function packageFolder(
     toast.error(t('folderEmpty', { name: folder.name }), { duration: 2500 })
     return null
   }
-  if (getFolderSize(folder) > MAX_UPLOAD_FILE_SIZE_BYTES) {
+  if (getFolderSize(folder) > maxBytes) {
     toast.error(
       t('fileTooLarge', {
         name: `${folder.name}/`,
-        size: formatFileSize(MAX_UPLOAD_FILE_SIZE_BYTES),
+        size: formatFileSize(maxBytes),
       }),
       { duration: 2500 },
     )
@@ -96,6 +96,7 @@ export function UploadResourceFields({
   files,
   onFilesChange,
   t,
+  limits,
 }: UploadResourceFieldsProps) {
   const filesRef = useRef(files)
   filesRef.current = files
@@ -116,7 +117,11 @@ export function UploadResourceFields({
         const { looseFiles, folders } = groupFolderFiles(nextFiles)
 
         for (const folder of folders) {
-          const packaged = await packageFolder(folder, t)
+          const packaged = await packageFolder(
+            folder,
+            t,
+            folderUploadLimitBytes(limits),
+          )
           if (packaged) accepted.push(packaged)
         }
 
@@ -127,11 +132,11 @@ export function UploadResourceFields({
             })
             continue
           }
-          if (file.size > MAX_UPLOAD_FILE_SIZE_BYTES) {
+          if (file.size > limits.maxFileBytes) {
             toast.error(
               t('fileTooLarge', {
                 name: file.name,
-                size: formatFileSize(MAX_UPLOAD_FILE_SIZE_BYTES),
+                size: formatFileSize(limits.maxFileBytes),
               }),
               { duration: 2500 },
             )
@@ -158,7 +163,7 @@ export function UploadResourceFields({
         })
       })()
     },
-    [t, updateFiles],
+    [limits, t, updateFiles],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

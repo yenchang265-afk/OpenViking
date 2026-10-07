@@ -12,11 +12,25 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { UploadResourceFields } from './upload-resource-fields'
 import type { SelectedUploadFile } from './upload-resource-fields'
 import { MAX_UPLOAD_FILES } from '../-lib/upload'
+import type { UploadLimits } from '../-lib/upload-limits'
+import type { TFunction } from 'i18next'
+
+const MIB = 1024 * 1024
+// Echo the key and interpolation options so assertions can check the size shown.
+const echoT = ((key: string, options?: unknown) =>
+  `${key}:${JSON.stringify(options)}`) as unknown as TFunction<'addResource'>
+const LIMITS: UploadLimits = {
+  maxFileBytes: 4 * MIB,
+  maxSessionBytes: 8 * MIB,
+  maxFiles: 100,
+  partSizeBytes: MIB,
+}
 
 const mocks = vi.hoisted(() => ({
   onDrop: null as ((files: File[]) => void) | null,
   pending: new Map<string, (value: null) => void>(),
   toast: vi.fn(),
+  toastError: vi.fn(),
 }))
 
 vi.mock('file-type', () => ({
@@ -38,7 +52,7 @@ vi.mock('react-dropzone', () => ({
 }))
 
 vi.mock('sonner', () => ({
-  toast: Object.assign(mocks.toast, { error: vi.fn() }),
+  toast: Object.assign(mocks.toast, { error: mocks.toastError }),
 }))
 
 afterEach(() => {
@@ -58,6 +72,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        limits={LIMITS}
       />,
     )
 
@@ -92,6 +107,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        limits={LIMITS}
       />,
     )
 
@@ -115,6 +131,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        limits={LIMITS}
       />,
     )
 
@@ -144,6 +161,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        limits={LIMITS}
       />,
     )
 
@@ -154,5 +172,35 @@ describe('UploadResourceFields', () => {
     fireEvent.click(screen.getByRole('button', { name: 'fileInfo.remove' }))
 
     expect(current.map(({ file }) => file.name)).toEqual(['new.pdf'])
+  })
+
+  it('rejects files over the server upload limit and accepts files at it', async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={echoT}
+        limits={LIMITS}
+      />,
+    )
+
+    const atLimit = new File([new Uint8Array(LIMITS.maxFileBytes)], 'ok.pdf')
+    const overLimit = new File(
+      [new Uint8Array(LIMITS.maxFileBytes + 1)],
+      'big.pdf',
+    )
+    mocks.onDrop?.([overLimit, atLimit])
+    await waitFor(() => expect(mocks.pending.has('ok.pdf')).toBe(true))
+    mocks.pending.get('ok.pdf')?.(null)
+
+    await waitFor(() => expect(current).toHaveLength(1))
+    expect(current[0].file.name).toBe('ok.pdf')
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      'fileTooLarge:{"name":"big.pdf","size":"4.0 MB"}',
+      { duration: 2500 },
+    )
   })
 })
