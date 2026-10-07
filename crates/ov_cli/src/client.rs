@@ -8,6 +8,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
 pub use crate::base_client::{BaseClient, FileUploader, TimeoutConfig};
 
 use crate::error::{Error, Result};
+use crate::upload_session::upload_via_session;
 
 /// Drop null-valued keys (and an empty `args` object) from a request body before
 /// sending it. Older, stricter servers use `extra="forbid"` and reject any field
@@ -895,16 +896,41 @@ impl HttpClient {
                     .file_name()
                     .and_then(|n| n.to_str())
                     .map(|s| s.to_string());
-                let zip_file = if show_progress {
-                    self.zip_directory_with_progress(path_obj, verbose, ignore_dirs.as_deref())?
-                } else {
-                    self.zip_directory(path_obj, ignore_dirs.as_deref())?
-                };
-                let temp_file_id = if show_progress {
-                    self.upload_temp_file_with_progress(zip_file.path(), verbose)
-                        .await?
-                } else {
-                    self.upload_temp_file(zip_file.path()).await?
+                let session = upload_via_session(
+                    &self.base,
+                    path_obj,
+                    ignore_dirs.as_deref(),
+                    self.upload_mode().as_deref(),
+                    show_progress,
+                )
+                .await?;
+                let (temp_file_id, dynamic_timeout) = match session {
+                    Some(upload) => (
+                        upload.temp_file_id,
+                        TimeoutConfig::for_resource_processing()
+                            .calculate_for_bytes(upload.total_bytes),
+                    ),
+                    None => {
+                        let zip_file = if show_progress {
+                            self.zip_directory_with_progress(
+                                path_obj,
+                                verbose,
+                                ignore_dirs.as_deref(),
+                            )?
+                        } else {
+                            self.zip_directory(path_obj, ignore_dirs.as_deref())?
+                        };
+                        let temp_file_id = if show_progress {
+                            self.upload_temp_file_with_progress(zip_file.path(), verbose)
+                                .await?
+                        } else {
+                            self.upload_temp_file(zip_file.path()).await?
+                        };
+                        (
+                            temp_file_id,
+                            TimeoutConfig::for_resource_processing().calculate(zip_file.path())?,
+                        )
+                    }
                 };
 
                 let body = build_body(serde_json::json!({
@@ -926,8 +952,6 @@ impl HttpClient {
                     "args": args.clone(),
                 }));
 
-                let dynamic_timeout =
-                    TimeoutConfig::for_resource_processing().calculate(zip_file.path())?;
                 self.base
                     .post_with_timeout("/api/v1/resources", &body, dynamic_timeout)
                     .await
@@ -936,11 +960,21 @@ impl HttpClient {
                     .file_name()
                     .and_then(|n| n.to_str())
                     .map(|s| s.to_string());
-                let temp_file_id = if show_progress {
-                    self.upload_temp_file_with_progress(path_obj, verbose)
-                        .await?
-                } else {
-                    self.upload_temp_file(path_obj).await?
+                let session = upload_via_session(
+                    &self.base,
+                    path_obj,
+                    None,
+                    self.upload_mode().as_deref(),
+                    show_progress,
+                )
+                .await?;
+                let temp_file_id = match session {
+                    Some(upload) => upload.temp_file_id,
+                    None if show_progress => {
+                        self.upload_temp_file_with_progress(path_obj, verbose)
+                            .await?
+                    }
+                    None => self.upload_temp_file(path_obj).await?,
                 };
 
                 let body = build_body(serde_json::json!({

@@ -18,6 +18,7 @@ mod status_ui;
 mod terminal_ui;
 mod theme;
 mod tui;
+mod upload_session;
 mod utils;
 
 use clap::{ArgAction, Args, CommandFactory, Parser, Subcommand};
