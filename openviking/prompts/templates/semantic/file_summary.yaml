@@ -19,7 +19,7 @@ variables:
 
   - name: "output_language"
     type: "string"
-    description: "Language code for output (e.g., 'en', 'zh-CN', 'ja', 'ko', 'ru', 'ar')"
+    description: "Language code for output ('en' or 'zh-TW')"
     required: true
 
 template: |

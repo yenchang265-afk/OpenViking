@@ -65,7 +65,7 @@ openviking-server --config /path/to/ov.conf
 | `oauth` | object | disabled | MCP OAuth 2.1 配置 |
 | `prompts` | object | 內建模板 | 自定義 Prompt 模板目錄 |
 | `ingest` | object | 內建預設值 | 會話日誌匯入配置 |
-| `output_language_override` | string | `""` | 強制摘要和記憶輸出語言；空值表示自動識別 |
+| `output_language_override` | string | `""` | 強制摘要和記憶輸出語言，僅接受 `en` 或 `zh-TW`；空值表示自動識別：中文內容 → `zh-TW`，其他語言或無法識別 → `en` |
 | `allow_private_networks` | boolean | `false` | 是否允許抓取內網或私有地址資源 |
 
 `auto_generate_l0`、`auto_generate_l1`、`default_search_mode` 和 `default_search_limit` 是已棄用的相容欄位。舊配置檔案仍可載入這些欄位，但它們不會影響執行時行為。
