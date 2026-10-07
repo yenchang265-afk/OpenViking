@@ -117,7 +117,8 @@ async def _run(backend: str, size: int) -> Dict[str, float]:
         temp_upload_store.get_viking_fs = lambda: vfs
         store = temp_upload_store.TempUploadStore(
             SimpleNamespace(
-                temp_upload=SimpleNamespace(ttl_seconds=3600, shared_max_size_bytes=size + 1)
+                temp_upload=SimpleNamespace(ttl_seconds=3600),
+                upload=SimpleNamespace(max_file_bytes=size + 1),
             )
         )
         store._schedule_shared_cleanup = lambda _ctx: None

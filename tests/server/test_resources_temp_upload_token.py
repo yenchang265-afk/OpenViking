@@ -224,7 +224,7 @@ async def test_token_upload_oversize_rejected(
     client: httpx.AsyncClient, upload_temp_dir: Path, app
 ):
     """Size cap is enforced by TempUploadStore before ingestion; oversize maps to 413."""
-    app.state.config.temp_upload.shared_max_size_bytes = 16
+    app.state.config.upload.max_file_bytes = 16
     token = _issue()
     big = b"x" * 64
     resp = await client.post(

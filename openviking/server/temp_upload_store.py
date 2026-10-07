@@ -215,6 +215,11 @@ class TempUploadStore:
         self.server_config = server_config
         self.temp_cfg = get_temp_upload_config(server_config)
 
+    @property
+    def max_file_bytes(self) -> int:
+        """Largest accepted upload, from ``server.upload.max_file_bytes``."""
+        return self.server_config.upload.max_file_bytes
+
     @staticmethod
     def build(server_config: ServerConfig) -> "TempUploadStore":
         return TempUploadStore(server_config)
@@ -299,11 +304,11 @@ class TempUploadStore:
                 if not chunk:
                     break
                 total += len(chunk)
-                if total > self.temp_cfg.shared_max_size_bytes:
+                if total > self.max_file_bytes:
                     with suppress(FileNotFoundError):
                         await asyncio.to_thread(temp_file_path.unlink)
                     raise InvalidArgumentError(
-                        f"Upload exceeds size limit ({self.temp_cfg.shared_max_size_bytes} bytes)."
+                        f"Upload exceeds size limit ({self.max_file_bytes} bytes)."
                     )
                 await asyncio.to_thread(f.write, chunk)
         finally:
@@ -320,9 +325,7 @@ class TempUploadStore:
         return temp_filename
 
     async def _save_shared(self, upload_file: Any, ctx: RequestContext) -> str:
-        temp_path, total_size = await _stream_upload_to_local_temp(
-            upload_file, self.temp_cfg.shared_max_size_bytes
-        )
+        temp_path, total_size = await _stream_upload_to_local_temp(upload_file, self.max_file_bytes)
         upload_id = _new_shared_upload_id()
         temp_file_id = f"shared_{upload_id}"
         bucket, leaf = _split_shared_upload_id(upload_id)

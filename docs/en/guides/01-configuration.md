@@ -1702,8 +1702,13 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
     "upload_signed_ttl_seconds": 600,
     "temp_upload": {
       "default_mode": "local",
-      "shared_max_size_bytes": 536870912,
       "ttl_seconds": 43200
+    },
+    "upload": {
+      "max_file_bytes": 2147483648,
+      "max_session_bytes": 5368709120,
+      "max_files": 10000,
+      "part_size_bytes": 8388608
     },
     "user_config_defaults": {
       "add_targets": {
@@ -1732,8 +1737,12 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 | `public_base_url` | str | Public-facing base URL emitted in MCP-issued upload instructions. Resolution order: env var `OPENVIKING_PUBLIC_BASE_URL` → this field → `X-Forwarded-Host`/`X-Forwarded-Proto` request headers → `Host` request header → listen-address fallback. Set this (or the env var) when the server runs behind a reverse proxy that does not forward `X-Forwarded-*` headers. | `null` |
 | `upload_signed_ttl_seconds` | int | TTL in seconds for the one-shot tokens minted by the MCP `add_resource` and `add_skill` tools for local-file uploads via `POST /api/v1/resources/temp_upload?token=...`. | `600` (10 minutes) |
 | `temp_upload.default_mode` | str | Server-side default for `POST /api/v1/resources/temp_upload` when the client does not send `upload_mode`: `"local"` (per-instance disk, current single-node behavior) or `"shared"` (distributed shared store usable across replicas). New shared uploads are stored in internal `viking://upload/<created_at_ms>-<uuid>/content` and `meta` objects, and can be consumed repeatedly for `ttl_seconds`. | `"local"` |
-| `temp_upload.shared_max_size_bytes` | int | Maximum size accepted in `shared` mode, in bytes. Requests above this size are rejected before object-store write. | `536870912` (512 MiB) |
+| `temp_upload.shared_max_size_bytes` | int | **Deprecated** — use `upload.max_file_bytes`. When set and `upload.max_file_bytes` is not, its value is used as `upload.max_file_bytes` and a warning is logged. | `536870912` (512 MiB) |
 | `temp_upload.ttl_seconds` | int | Retention time shared by local and shared temporary uploads, in seconds. Each upload cleans files older than this for its mode; shared cleanup uses one upload-root listing, parses creation time from each first-level directory name, and recursively removes expired directories without filesystem modification times. Set to `0` to disable automatic cleanup. | `43200` (12 hours) |
+| `upload.max_file_bytes` | int | Largest single uploaded file, enforced by `POST /api/v1/resources/temp_upload` in both modes and served to clients by `GET /api/v1/uploads/limits`. | `2147483648` (2 GiB) |
+| `upload.max_session_bytes` | int | Largest total size of one upload (for example a folder). Must be at least `max_file_bytes`. | `5368709120` (5 GiB) |
+| `upload.max_files` | int | Most files in one upload. | `10000` |
+| `upload.part_size_bytes` | int | Chunk size clients use for chunked uploads (minimum 1 MiB). | `8388608` (8 MiB) |
 | `user_config_defaults.add_targets.resource_uri` | str | Deployment default resource add directory used when `add_resource` omits both `to` and `parent`. `viking://~/...` resolves per request user. | `null` |
 | `user_config_defaults.add_targets.skill_uri` | str | Deployment default skill add root used when `add_skill` omits `target_uri`. Only `viking://~/skills` and `viking://agent/skills` are accepted. | `null` |
 | `user_config_defaults.memory_policy` | object | Deployment default memory extraction policy used when neither the Session nor the User has an explicit policy. | `null` |
