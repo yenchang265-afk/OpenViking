@@ -135,7 +135,8 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P3 — One limit config
 
-- [ ] **T14: `server.upload` config + limits endpoint + Web Studio reads it**
+- [x] **T14: `server.upload` config + limits endpoint + Web Studio reads it**
+  - Done 2026-10-07 in four commits. Web Studio calls the endpoint with a hand-written `ovClient.client.get` (as `lib/resource-acl.ts` does) rather than regenerating `src/gen/ov-client`; it falls back to the legacy 512 MiB cap for servers without the endpoint and caps in-browser folder zips at 512 MiB until P4. Also added `storage.agfs.s3.multipart_*` to the Python `S3Config` (forwarded only when set). Manual 1 GiB browser check left for review.
   - Acceptance: `UploadConfig` (`max_file_bytes` 2 GiB, `max_session_bytes` 5 GiB, `max_files` 10,000, `part_size_bytes` 8 MiB). `temp_upload.shared_max_size_bytes` becomes a deprecated alias with a startup warning. `temp_upload_store` enforces `max_file_bytes`. `GET /api/v1/uploads/limits` added. Web Studio fetches limits and removes the hard-coded 10 MB.
   - Verify: pytest for config alias precedence and endpoint; vitest for limit-driven validation; manual 1 GiB upload in Web Studio.
   - Files: `openviking/server/config.py`, `openviking/server/routers/uploads.py` (new; limits only), `openviking/server/app.py`, `web-studio/src/routes/resources/-lib/upload.ts`, `upload-resource-fields.tsx` (+ regenerated `src/gen/ov-client`)

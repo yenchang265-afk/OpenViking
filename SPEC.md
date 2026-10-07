@@ -109,7 +109,7 @@ All endpoints use the existing auth (`get_upload_request_context`: API key, or s
 
 | Client | v1 change |
 |---|---|
-| Web Studio | Read limits from `/uploads/limits`; drop the hard-coded 10 MB; `Blob.slice` parts, 3 parallel PUTs, per-part progress, retry/resume via `GET /uploads/{id}`; folders as multi-file sessions (remove `zipFolder`) |
+| Web Studio | Read limits from `/uploads/limits` (done in P3, with a 512 MiB fallback for older servers and a 512 MiB in-browser zip cap for folders until chunking); drop the hard-coded 10 MB; `Blob.slice` parts, 3 parallel PUTs, per-part progress, retry/resume via `GET /uploads/{id}`; folders as multi-file sessions (remove `zipFolder`) |
 | Rust CLI | Session upload with one reusable part buffer; folders without zip |
 | Python SDK | Session upload; folders without zip (drop `_zip_directory` from the upload path) |
 | Go SDK | Session upload with `io.SectionReader` — **phase 5** |
