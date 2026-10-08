@@ -13,6 +13,7 @@ const { useVikingFsListMock } = vi.hoisted(() => ({
 }))
 
 vi.mock('#/routes/resources/-hooks/viking-fm', () => ({
+  useInvalidateVikingFs: () => ({ invalidateList: vi.fn() }),
   useVikingFsList: useVikingFsListMock,
 }))
 

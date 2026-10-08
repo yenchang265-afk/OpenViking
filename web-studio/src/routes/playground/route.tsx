@@ -67,6 +67,7 @@ import type {
   PlaygroundSearch,
   ResourceOpenHandler,
 } from './-lib/types'
+import { isUriWithin, remapUri } from './-lib/tree-actions'
 import {
   canDeleteResourceUri,
   clampNumber,
@@ -434,6 +435,37 @@ function PlaygroundWorkbench() {
     [handleNavigateDirectory, invalidateList, t],
   )
 
+  // Tree actions can target any row, so only move away when the open item
+  // was deleted or renamed along with it.
+  const handleTreeEntryDeleted = useCallback(
+    (entry: Pick<VikingFsEntry, 'uri'>) => {
+      const selected = selectedFileRef.current
+      if (
+        isUriWithin(currentUri, entry.uri) ||
+        (selected && isUriWithin(selected.uri, entry.uri))
+      ) {
+        handleResourceDeleted(entry)
+        return
+      }
+      toast.success(t('deleteResource.deleted'))
+    },
+    [currentUri, handleResourceDeleted, t],
+  )
+
+  const handleTreeEntryRenamed = useCallback(
+    (fromUri: string, toUri: string) => {
+      const selected = selectedFileRef.current
+      if (selected && !selected.isDir && isUriWithin(selected.uri, fromUri)) {
+        handleSelectFile(
+          createEntryFromUri(remapUri(selected.uri, fromUri, toUri), false),
+        )
+      } else if (isUriWithin(currentUri, fromUri)) {
+        handleNavigateDirectory(remapUri(currentUri, fromUri, toUri))
+      }
+    },
+    [currentUri, handleNavigateDirectory, handleSelectFile],
+  )
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
@@ -587,6 +619,8 @@ function PlaygroundWorkbench() {
                 selectedFile && !selectedFile.isDir ? selectedFile.uri : null
               }
               expandedKeys={expandedKeys}
+              onEntryDeleted={handleTreeEntryDeleted}
+              onEntryRenamed={handleTreeEntryRenamed}
               onExpandedKeysChange={handleExpandedKeysChange}
               onSelectDirectory={handleSelectDirectory}
               onSelectFile={handleSelectFile}

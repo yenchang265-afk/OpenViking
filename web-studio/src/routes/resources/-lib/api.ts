@@ -11,6 +11,8 @@ import {
   normalizeOvClientError,
   ovClient,
   postContentWrite,
+  postFsMkdir,
+  postFsMv,
 } from '#/lib/ov-client'
 import type {
   ContentReadResult,
@@ -251,6 +253,40 @@ export async function removeResource(
   try {
     await getOvResult<unknown>(
       deleteFs({ query: { uri, recursive: options.recursive } }),
+    )
+  } catch (error) {
+    throw toVikingApiError(error)
+  }
+}
+
+/** Creates an empty text file; fails when `uri` already exists. */
+export async function createTextFile(uri: string): Promise<void> {
+  try {
+    await getOvResult<ContentWriteResult>(
+      postContentWrite({
+        body: { uri, content: '', mode: 'create', wait: false },
+      }),
+    )
+  } catch (error) {
+    throw toVikingApiError(error)
+  }
+}
+
+export async function createDirectory(uri: string): Promise<void> {
+  try {
+    await getOvResult<unknown>(postFsMkdir({ body: { uri } }))
+  } catch (error) {
+    throw toVikingApiError(error)
+  }
+}
+
+export async function moveResource(
+  fromUri: string,
+  toUri: string,
+): Promise<void> {
+  try {
+    await getOvResult<unknown>(
+      postFsMv({ body: { from_uri: fromUri, to_uri: toUri } }),
     )
   } catch (error) {
     throw toVikingApiError(error)

@@ -18,9 +18,11 @@ import { cn } from '#/lib/utils'
 import { useVikingFsList } from '#/routes/resources/-hooks/viking-fm'
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
+import { remapExpandedUris } from '../-lib/tree-actions'
 import { sortTreeEntries, visibleContextEntries } from '../-lib/utils'
 import { ROOT_URI } from '../-lib/constants'
 import { AuthorChips } from './author-chips'
+import { ContextTreeMenu, useContextTreeMenuTarget } from './context-tree-menu'
 
 const TREE_INDENT_WIDTH = 16
 const TREE_ROW_PADDING = 6
@@ -140,6 +142,8 @@ const NAMESPACE_ORDER: Partial<Record<string, number>> = {
 export function ContextTree({
   currentUri,
   expandedKeys,
+  onEntryDeleted,
+  onEntryRenamed,
   onExpandedKeysChange,
   onSelectDirectory,
   onSelectFile,
@@ -147,6 +151,8 @@ export function ContextTree({
 }: {
   currentUri: string
   expandedKeys: Set<string>
+  onEntryDeleted?: (entry: Pick<VikingFsEntry, 'isDir' | 'uri'>) => void
+  onEntryRenamed?: (fromUri: string, toUri: string) => void
   onExpandedKeysChange: (next: Set<string>) => void
   onSelectDirectory: (entry: VikingFsEntry) => void
   onSelectFile: (entry: VikingFsEntry) => void
@@ -174,9 +180,23 @@ export function ContextTree({
       ),
     [rootQuery.data?.entries],
   )
+  const handleEntryRenamed = useCallback(
+    (fromUri: string, toUri: string) => {
+      onExpandedKeysChange(remapExpandedUris(expandedKeys, fromUri, toUri))
+      onEntryRenamed?.(fromUri, toUri)
+    },
+    [expandedKeys, onEntryRenamed, onExpandedKeysChange],
+  )
 
   return (
-    <div className="h-full overflow-auto px-2 py-2 font-mono">
+    <ContextTreeMenu
+      className="h-full overflow-auto px-2 py-2 font-mono"
+      currentUri={currentUri}
+      onEntryDeleted={onEntryDeleted}
+      onEntryRenamed={handleEntryRenamed}
+      onSelectDirectory={onSelectDirectory}
+      onSelectFile={onSelectFile}
+    >
       {rootQuery.isLoading ? (
         <div className="flex h-7 items-center gap-2 px-1.5 text-xs text-muted-foreground">
           <Loader2Icon className="size-3 animate-spin" />
@@ -220,7 +240,7 @@ export function ContextTree({
           })}
         </ul>
       )}
-    </div>
+    </ContextTreeMenu>
   )
 }
 
@@ -274,6 +294,7 @@ export function ContextTreeNode({
   const isSelected = isDirSelected || isFileSelected
   const namespaceHint = level === 0 ? entry.abstract : ''
   const rowRef = useRef<HTMLDivElement>(null)
+  const setMenuTarget = useContextTreeMenuTarget()
   const disclosureLabel = entry.isDir
     ? t(isOpen ? 'explorer.collapseDirectory' : 'explorer.expandDirectory', {
         name: entry.name,
@@ -330,6 +351,8 @@ export function ContextTreeNode({
       <TreeIndentGuides level={level} />
       <div
         ref={rowRef}
+        onContextMenu={() => setMenuTarget?.(entry)}
+        onTouchStart={() => setMenuTarget?.(entry)}
         className={cn(
           'group relative z-10 h-7 select-none rounded-md text-xs transition-colors',
           isSelected
