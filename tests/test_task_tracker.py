@@ -7,6 +7,7 @@ import asyncio
 import json
 import time
 from copy import deepcopy
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -909,6 +910,94 @@ async def test_terminal_event_waits_for_owned_work(tracker, outcome):
     assert last["status"] == ("completed" if outcome == "complete" else "failed")
     await tracker.wait_for_descendants(task.task_id, "parent-work")
     assert (await tracker.get(task.task_id, **owner)).execution_events == snapshot.execution_events
+
+
+async def test_waiting_for_descendants_publishes_work_progress(tracker, monkeypatch):
+    from openviking.service.task_work_index import QueueTaskMetadata, TaskWorkIndex
+
+    monkeypatch.setattr("openviking.service.task_tracker.WORK_PROGRESS_INTERVAL_S", 0)
+    owner = _owner_kwargs()
+    task = await tracker.create("add_resource", **owner)
+    await tracker.start(task.task_id, **owner)
+    await tracker.update_stage(task.task_id, "processing_queue", **owner)
+    work_index = TaskWorkIndex()
+    tracker.attach_work_index(work_index)
+    parent = QueueTaskMetadata(task.task_id, "parent-work", "acme", "alice")
+    semantic = QueueTaskMetadata(task.task_id, "semantic-work", "acme", "alice")
+    embedding = QueueTaskMetadata(task.task_id, "embedding-work", "acme", "alice")
+    work_index.register("AddResource", parent)
+    work_index.register("Semantic", semantic)
+    work_index.register("Embedding", embedding)
+    waiting = asyncio.create_task(tracker.wait_for_descendants(task.task_id, "parent-work"))
+
+    async def published(expected):
+        while True:
+            record = await tracker.get(task.task_id, **owner)
+            if record.meta.get("work_progress") == expected:
+                return record
+            await asyncio.sleep(0)
+
+    try:
+        await asyncio.wait_for(
+            published(
+                {
+                    "Semantic": {"done": 0, "total": 1},
+                    "Embedding": {"done": 0, "total": 1},
+                }
+            ),
+            timeout=2,
+        )
+        await work_index.prepare_ack("Semantic", semantic)
+        record = await asyncio.wait_for(
+            published(
+                {
+                    "Semantic": {"done": 1, "total": 1},
+                    "Embedding": {"done": 0, "total": 1},
+                }
+            ),
+            timeout=2,
+        )
+        assert record.stage == "processing_queue"
+        assert record.to_dict()["meta"]["work_progress"]["Semantic"] == {"done": 1, "total": 1}
+    finally:
+        await work_index.prepare_ack("Embedding", embedding)
+        await waiting
+
+    # Counts that settle between throttled writes are still published.
+    record = await tracker.get(task.task_id, **owner)
+    assert record.meta["work_progress"] == {
+        "Semantic": {"done": 1, "total": 1},
+        "Embedding": {"done": 1, "total": 1},
+    }
+
+
+async def test_waiting_for_descendants_throttles_work_progress(tracker, monkeypatch):
+    from openviking.service.task_work_index import QueueTaskMetadata, TaskWorkIndex
+
+    monkeypatch.setattr("openviking.service.task_tracker.WORK_PROGRESS_INTERVAL_S", 3600)
+    owner = _owner_kwargs()
+    task = await tracker.create("add_resource", **owner)
+    await tracker.start(task.task_id, **owner)
+    work_index = TaskWorkIndex()
+    tracker.attach_work_index(work_index)
+    work_index.register("AddResource", QueueTaskMetadata(task.task_id, "parent-work"))
+    children = [QueueTaskMetadata(task.task_id, f"embedding-{i}") for i in range(3)]
+    for child in children:
+        work_index.register("Embedding", child)
+    publish = AsyncMock()
+    monkeypatch.setattr(tracker, "_publish_work_progress", publish)
+
+    waiting = asyncio.create_task(tracker.wait_for_descendants(task.task_id, "parent-work"))
+    for child in children:
+        await asyncio.sleep(0.1)
+        await work_index.prepare_ack("Embedding", child)
+    await waiting
+
+    # One write when waiting starts, one to settle the final counts.
+    assert [call.args[1] for call in publish.await_args_list] == [
+        {"Embedding": {"done": 0, "total": 3}},
+        {"Embedding": {"done": 3, "total": 3}},
+    ]
 
 
 async def test_legacy_tasks_do_not_get_invented_history():

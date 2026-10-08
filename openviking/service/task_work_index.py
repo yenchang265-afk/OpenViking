@@ -158,6 +158,8 @@ class TaskWorkIndex:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._work: Dict[str, set[tuple[str, str]]] = {}
+        # Work items each task has put on each queue, settled or not.
+        self._seen: Dict[str, Dict[str, int]] = {}
         self._active: Dict[str, set[asyncio.Task[Any]]] = {}
         self._failures: Dict[str, str] = {}
         self._processing: Dict[str, ProcessingClock] = {}
@@ -188,8 +190,14 @@ class TaskWorkIndex:
                 work.setdefault(metadata.task_id, set()).add((queue_name, metadata.work_id))
                 if metadata.account_id and metadata.user_id:
                     owners[metadata.task_id] = (metadata.account_id, metadata.user_id)
+        seen: Dict[str, Dict[str, int]] = {}
+        for task_id, entries in work.items():
+            for queue_name, _work_id in entries:
+                counts = seen.setdefault(task_id, {})
+                counts[queue_name] = counts.get(queue_name, 0) + 1
         with self._lock:
             self._work = work
+            self._seen = seen
             self._failures = {}
         return owners
 
@@ -200,13 +208,20 @@ class TaskWorkIndex:
         with self._lock:
             if self.cancellation_requested(metadata.task_id):
                 return False
-            self._work.setdefault(metadata.task_id, set()).add((queue_name, metadata.work_id))
+            entries = self._work.setdefault(metadata.task_id, set())
+            entry = (queue_name, metadata.work_id)
+            if entry not in entries:
+                entries.add(entry)
+                counts = self._seen.setdefault(metadata.task_id, {})
+                counts[queue_name] = counts.get(queue_name, 0) + 1
         return True
 
     def _remove_work(
         self,
         queue_name: str,
         metadata: QueueTaskMetadata,
+        *,
+        uncount: bool = False,
     ) -> tuple[bool, bool]:
         """Remove one work item and report whether it existed and made its task idle."""
         removed = False
@@ -216,8 +231,12 @@ class TaskWorkIndex:
                 entry = (queue_name, metadata.work_id)
                 removed = entry in entries
                 entries.discard(entry)
+                counts = self._seen.get(metadata.task_id)
+                if removed and uncount and counts and counts.get(queue_name, 0) > 0:
+                    counts[queue_name] -= 1
                 if not entries:
                     self._work.pop(metadata.task_id, None)
+                    self._seen.pop(metadata.task_id, None)
             became_idle = (
                 removed
                 and not self._work.get(metadata.task_id)
@@ -232,7 +251,7 @@ class TaskWorkIndex:
         )
         if metadata is None:
             return
-        _removed, became_idle = self._remove_work(queue_name, metadata)
+        _removed, became_idle = self._remove_work(queue_name, metadata, uncount=True)
         callback = self._finalize_before_ack
         if became_idle and callback is not None:
             await callback(metadata)
@@ -278,6 +297,27 @@ class TaskWorkIndex:
                     for _queue_name, work_id in self._work.get(task_id, ())
                 )
             return bool(self._work.get(task_id) or self._active.get(task_id))
+
+    def progress(
+        self, task_id: str, exclude_work_id: Optional[str] = None
+    ) -> Dict[str, Dict[str, int]]:
+        """Return settled vs. known work per queue; totals grow as work is discovered."""
+        with self._lock:
+            entries = list(self._work.get(task_id, ()))
+            seen = dict(self._seen.get(task_id, {}))
+        pending: Dict[str, int] = {}
+        for queue_name, work_id in entries:
+            if work_id == exclude_work_id:
+                seen[queue_name] = seen.get(queue_name, 0) - 1
+                continue
+            pending[queue_name] = pending.get(queue_name, 0) + 1
+        progress: Dict[str, Dict[str, int]] = {}
+        for queue_name in seen.keys() | pending.keys():
+            waiting = pending.get(queue_name, 0)
+            total = max(seen.get(queue_name, 0), waiting)
+            if total > 0:
+                progress[queue_name] = {"done": total - waiting, "total": total}
+        return progress
 
     def cancellation_requested(self, task_id: str) -> bool:
         callback = self._is_cancellation_requested

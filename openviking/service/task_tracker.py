@@ -60,6 +60,8 @@ class TaskStatus(str, Enum):
 
 _TERMINAL_STATUSES = (TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED)
 _ACTIVE_STATUSES = (TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.CANCELLING)
+# Minimum seconds between descendant work progress writes to the task store.
+WORK_PROGRESS_INTERVAL_S = 2.0
 
 _CANCELLABLE_TASK_TYPES = {
     "add_resource",
@@ -500,6 +502,22 @@ class TaskTracker:
                 updated.updated_at = self._next_updated_at(task)
                 await self._persist_and_publish("update", updated, previous=task)
 
+    async def update_meta(
+        self,
+        task_id: str,
+        meta: Dict[str, Any],
+        account_id: Optional[str] = None,
+        user_id: Optional[str] = None,
+    ) -> None:
+        """Merge public metadata into an active task without touching stage or status."""
+        async with self._task_locks.acquire(task_id):
+            task = await self._load_for_update(task_id, account_id, user_id)
+            if task and task.status in _ACTIVE_STATUSES:
+                updated = deepcopy(task)
+                updated.meta.update(deepcopy(meta))
+                updated.updated_at = self._next_updated_at(task)
+                await self._persist_and_publish("update", updated, previous=task)
+
     async def update_task_auth(
         self,
         task_id: str,
@@ -858,9 +876,40 @@ class TaskTracker:
                     account_id=task.account_id,
                     user_id=task.user_id,
                 )
+        last_progress: Optional[Dict[str, Dict[str, int]]] = None
+        next_publish = 0.0
         with pause_task_processing():
             while self._work_index.has_work(task_id, exclude_work_id=current_work_id):
+                now = time.monotonic()
+                if now >= next_publish:
+                    next_publish = now + WORK_PROGRESS_INTERVAL_S
+                    progress = self._work_index.progress(task_id, exclude_work_id=current_work_id)
+                    if progress and progress != last_progress:
+                        last_progress = progress
+                        await self._publish_work_progress(task_id, progress)
                 await asyncio.sleep(0.05)
+        if last_progress is not None:
+            # Settle the published counts so the bar does not stall short of done.
+            progress = self._work_index.progress(task_id, exclude_work_id=current_work_id)
+            if progress and progress != last_progress:
+                await self._publish_work_progress(task_id, progress)
+
+    async def _publish_work_progress(
+        self, task_id: str, progress: Dict[str, Dict[str, int]]
+    ) -> None:
+        """Best-effort: a failed progress write must not fail the task it describes."""
+        task = self._cached_task(task_id)
+        if not task or not task.account_id or not task.user_id:
+            return
+        try:
+            await self.update_meta(
+                task_id,
+                {"work_progress": progress},
+                account_id=task.account_id,
+                user_id=task.user_id,
+            )
+        except Exception as exc:
+            logger.warning("[TaskTracker] Failed to publish work progress for %s: %s", task_id, exc)
 
     async def record_event(
         self,

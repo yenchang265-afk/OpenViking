@@ -3,16 +3,36 @@ import type { TaskRecord } from './task-record'
 
 // Stages the backend reports for add_resource, in order (see
 // openviking/utils/resource_processor.py and resource_service.py).
-// processing_queue covers semantic + embedding work and runs longest.
+// processing_queue covers semantic + embedding work and runs longest; it
+// fills the rest of the bar from the server's meta.work_progress counts.
 const STAGE_PCT = new Map<string, number>([
   ['queued', 5],
   ['fetching', 15],
   ['parsing', 30],
   ['target_resolve', 45],
-  ['processing_queue', 70],
+  ['processing_queue', 50],
 ])
 
 const UNKNOWN_STAGE_PCT = 45
+const QUEUE_PROGRESS_STAGE = 'processing_queue'
+const QUEUE_PROGRESS_MAX_PCT = 99
+const PROGRESS_QUEUES = ['Semantic', 'Embedding']
+
+function getWorkRatio(meta: TaskRecord['meta']): number | null {
+  const workProgress = meta?.work_progress
+  if (!workProgress || typeof workProgress !== 'object') return null
+  let done = 0
+  let total = 0
+  for (const queue of PROGRESS_QUEUES) {
+    const counts = (workProgress as Record<string, unknown>)[queue]
+    if (!counts || typeof counts !== 'object') continue
+    const { done: d, total: t } = counts as { done?: unknown; total?: unknown }
+    if (typeof d !== 'number' || typeof t !== 'number' || t <= 0) continue
+    done += Math.min(d, t)
+    total += t
+  }
+  return total > 0 ? done / total : null
+}
 
 export function getTaskProgressPct(task: TaskRecord): number {
   const status = normalizeTaskStatus(task.status)
@@ -44,5 +64,12 @@ export function getTaskProgressPct(task: TaskRecord): number {
   }
 
   const stage = task.stage?.toLowerCase() ?? ''
-  return STAGE_PCT.get(stage) ?? UNKNOWN_STAGE_PCT
+  const stagePct = STAGE_PCT.get(stage) ?? UNKNOWN_STAGE_PCT
+  if (stage !== QUEUE_PROGRESS_STAGE) return stagePct
+
+  const ratio = getWorkRatio(task.meta)
+  if (ratio === null) return stagePct
+  return Math.round(
+    stagePct + (QUEUE_PROGRESS_MAX_PCT - stagePct) * ratio,
+  )
 }

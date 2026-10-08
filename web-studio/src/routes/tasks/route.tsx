@@ -95,6 +95,8 @@ function TasksRoute() {
   const { identityScopeKey } = useAppConnection()
   const queryClient = useQueryClient()
   const [page, setPage] = React.useState(1)
+  // Queue totals grow as work is discovered; keep a task's bar from moving back.
+  const shownPctRef = React.useRef(new Map<string, number>())
   const [pageSize, setPageSize] = React.useState(DEFAULT_PAGE_SIZE)
   const [taskType, setTaskType] = React.useState<TaskTypeFilter>('all')
   const [statusFilter, setStatusFilter] =
@@ -229,7 +231,11 @@ function TasksRoute() {
   const renderStatus = (task: TaskRecord) => {
     const taskId = task.task_id
     const status = normalizeTaskStatus(task.status)
-    const pct = getTaskProgressPct(task)
+    const pct = Math.max(
+      getTaskProgressPct(task),
+      (taskId && shownPctRef.current.get(taskId)) || 0,
+    )
+    if (taskId && status === 'running') shownPctRef.current.set(taskId, pct)
     const isRetrying =
       retryMutation.isPending && retryMutation.variables.task_id === taskId
     const Icon =

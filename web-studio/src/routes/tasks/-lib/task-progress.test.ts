@@ -41,6 +41,52 @@ describe('getTaskProgressPct', () => {
     expect(getTaskProgressPct(running('connector:running'))).toBe(45)
   })
 
+  it('fills processing_queue from live work_progress counts', () => {
+    const at = (work_progress: unknown) =>
+      getTaskProgressPct({
+        ...running('processing_queue'),
+        meta: { work_progress },
+      })
+
+    const start = at({ Semantic: { done: 0, total: 4 } })
+    const half = at({
+      Semantic: { done: 4, total: 4 },
+      Embedding: { done: 0, total: 4 },
+    })
+    const nearlyDone = at({
+      Semantic: { done: 4, total: 4 },
+      Embedding: { done: 3, total: 4 },
+    })
+
+    expect(start).toBe(getTaskProgressPct(running('processing_queue')))
+    expect(half).toBeGreaterThan(start)
+    expect(nearlyDone).toBeGreaterThan(half)
+    expect(at({ Semantic: { done: 9, total: 9 } })).toBe(99)
+  })
+
+  it('ignores malformed or irrelevant work_progress', () => {
+    const base = getTaskProgressPct(running('processing_queue'))
+    const at = (work_progress: unknown) =>
+      getTaskProgressPct({
+        ...running('processing_queue'),
+        meta: { work_progress },
+      })
+
+    expect(at(null)).toBe(base)
+    expect(at({ Semantic: { done: 'x', total: 3 } })).toBe(base)
+    expect(at({ AddResource: { done: 1, total: 1 } })).toBe(base)
+    expect(at({ Semantic: { done: 1, total: 0 } })).toBe(base)
+  })
+
+  it('uses work_progress only during processing_queue', () => {
+    expect(
+      getTaskProgressPct({
+        ...running('parsing'),
+        meta: { work_progress: { Semantic: { done: 1, total: 1 } } },
+      }),
+    ).toBe(getTaskProgressPct(running('parsing')))
+  })
+
   it('prefers queue counts when the result carries them', () => {
     expect(
       getTaskProgressPct(
