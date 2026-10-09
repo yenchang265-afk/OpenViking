@@ -108,7 +108,7 @@ const workspace = {
       requeued: '重新入隊',
       errors: '錯誤',
       totalRow: '合計',
-      embedding: 'Embedding',
+      embedding: '嵌入向量',
       semanticNodes: '語義節點',
       semantic: '語義處理',
       externalParse: '外部解析',
@@ -535,6 +535,8 @@ const workspace = {
       snapshot_restore_reindex: '快照恢復索引',
       legacy_migration: '舊資料遷移',
       legacy_cleanup: '舊資料清理',
+      account_delete: '刪除帳號',
+      user_delete: '刪除使用者',
     },
   },
   watchesPage: {

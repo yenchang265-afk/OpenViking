@@ -556,6 +556,8 @@ const workspace = {
       snapshot_restore_reindex: 'Snapshot reindex',
       legacy_migration: 'Legacy migration',
       legacy_cleanup: 'Legacy cleanup',
+      account_delete: 'Account deletion',
+      user_delete: 'User deletion',
     },
   },
   watchesPage: {
