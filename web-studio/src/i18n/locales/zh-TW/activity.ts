@@ -182,6 +182,29 @@ const activity = {
       deleted: '資源已刪除',
       failed: '刪除失敗：{{error}}',
     },
+    reindex: {
+      title: '確定要重建此資源的索引？',
+      fileDescription: '重建 {{uri}} 的搜尋索引。',
+      directoryDescription: '重建 {{uri}} 及其中所有內容的搜尋索引。',
+      modeLabel: '重建模式',
+      modes: {
+        vectors_only: {
+          title: '僅向量',
+          description: '以現有內容與摘要重新產生向量。適用於更換嵌入模型後。',
+        },
+        semantic_and_vectors: {
+          title: '摘要與向量',
+          description:
+            '先以 VLM 重新產生 L0/L1 摘要，再重新產生向量。較慢且會呼叫模型。',
+        },
+      },
+      cancel: '取消',
+      confirm: '開始重建',
+      starting: '正在啟動…',
+      started: '已開始重建索引',
+      viewTasks: '檢視任務',
+      failed: '重建索引失敗：{{error}}',
+    },
     tabs: {
       terminal: '終端',
       agent: 'Agent',
@@ -220,6 +243,7 @@ const activity = {
         rename: '重新命名…',
         copyUri: '複製 URI',
         refresh: '重新整理',
+        reindex: '重建索引…',
         delete: '刪除…',
       },
       nameDialog: {
