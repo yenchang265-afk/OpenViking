@@ -50,6 +50,17 @@ class StorageConfig(BaseModel):
         description="Where parsers write intermediate artifacts (agfs temp or local dir)",
     )
 
+    staged_source_ttl_seconds: int = Field(
+        default=7 * 24 * 3600,
+        ge=0,
+        # Temp leaf names carry no year, so ages are only meaningful under a year.
+        le=180 * 24 * 3600,
+        description=(
+            "Age after which a staged add-resource source left in viking://temp is "
+            "swept (max 180 days); 0 disables the sweep"
+        ),
+    )
+
     params: Dict[str, Any] = Field(
         default_factory=dict, description="Additional storage-specific parameters"
     )

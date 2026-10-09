@@ -5,7 +5,7 @@
 import asyncio
 import os
 from concurrent.futures import ThreadPoolExecutor
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -371,6 +371,11 @@ def create_app(
         task_tracker = get_task_tracker()
         task_tracker.start_cleanup_loop()
 
+        # Expire local temp uploads even when no new upload arrives to trigger it.
+        from openviking.server.temp_upload_store import run_local_upload_sweep_loop
+
+        upload_sweep_task = asyncio.create_task(run_local_upload_sweep_loop(config))
+
         # Initialize tracing and OTLP log export from server.observability.
         from openviking.telemetry import tracer_module
 
@@ -396,6 +401,9 @@ def create_app(
 
             uninstall_executor_monitor()
         task_tracker.stop_cleanup_loop()
+        upload_sweep_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await upload_sweep_task
         auth_plugin_state = getattr(app.state, "auth_plugin", None)
         if auth_plugin_state is not None:
             try:
