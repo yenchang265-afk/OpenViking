@@ -1,0 +1,306 @@
+// @vitest-environment jsdom
+
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
+
+import { ContextTree } from './context-explorer'
+
+const api = vi.hoisted(() => ({
+  createDirectory: vi.fn(),
+  createTextFile: vi.fn(),
+  fetchFsStat: vi.fn(),
+  moveResource: vi.fn(),
+  removeResource: vi.fn(),
+}))
+const { invalidateListMock, useVikingFsListMock } = vi.hoisted(() => ({
+  invalidateListMock: vi.fn(),
+  useVikingFsListMock: vi.fn(),
+}))
+
+vi.mock('#/routes/resources/-lib/api', () => api)
+vi.mock('#/routes/resources/-hooks/viking-fm', () => ({
+  useInvalidateVikingFs: () => ({ invalidateList: invalidateListMock }),
+  useVikingFsList: useVikingFsListMock,
+}))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, options?: { name?: string }) =>
+      options?.name ? `${key}:${options.name}` : key,
+  }),
+}))
+
+const namespace: VikingFsEntry = {
+  abstract: '',
+  isDir: true,
+  modTime: '',
+  modTimestamp: 1,
+  name: 'resources',
+  overview: '',
+  size: '',
+  sizeBytes: null,
+  uri: 'viking://resources/',
+}
+
+const folder: VikingFsEntry = {
+  ...namespace,
+  name: 'docs',
+  uri: 'viking://resources/docs/',
+}
+
+const file: VikingFsEntry = {
+  ...namespace,
+  isDir: false,
+  name: 'guide.md',
+  size: '1 KB',
+  sizeBytes: 1024,
+  uri: 'viking://resources/guide.md',
+}
+
+const notFound = { statusCode: 404, code: 'NOT_FOUND', message: 'missing' }
+
+beforeEach(() => {
+  useVikingFsListMock.mockImplementation((uri: string) => ({
+    data: {
+      entries:
+        uri === 'viking://'
+          ? [namespace]
+          : uri === namespace.uri
+            ? [folder, file]
+            : [],
+    },
+    isError: false,
+    isLoading: false,
+  }))
+  api.fetchFsStat.mockRejectedValue(notFound)
+  api.createDirectory.mockResolvedValue(undefined)
+  api.createTextFile.mockResolvedValue(undefined)
+  api.moveResource.mockResolvedValue(undefined)
+  api.removeResource.mockResolvedValue(undefined)
+  invalidateListMock.mockResolvedValue(undefined)
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    callback(0)
+    return 1
+  })
+  Element.prototype.scrollIntoView = vi.fn()
+})
+
+afterEach(() => {
+  cleanup()
+  vi.clearAllMocks()
+  vi.unstubAllGlobals()
+})
+
+function renderTree({ currentUri = 'viking://' } = {}) {
+  const props = {
+    onEntryDeleted: vi.fn(),
+    onEntryRenamed: vi.fn(),
+    onExpandedKeysChange: vi.fn(),
+    onSelectDirectory: vi.fn(),
+    onSelectFile: vi.fn(),
+  }
+  const queryClient = new QueryClient({
+    defaultOptions: { mutations: { retry: false } },
+  })
+
+  render(
+    <QueryClientProvider client={queryClient}>
+      <ContextTree
+        currentUri={currentUri}
+        expandedKeys={new Set([namespace.uri, folder.uri])}
+        {...props}
+      />
+    </QueryClientProvider>,
+  )
+
+  return props
+}
+
+function rightClick(name: string) {
+  fireEvent.contextMenu(screen.getByRole('button', { name }))
+}
+
+async function menuItemNames(): Promise<string[]> {
+  const items = await screen.findAllByRole('menuitem')
+  return items.map((item) => item.textContent)
+}
+
+describe('ContextTree context menu', () => {
+  it('offers file actions on a file row', async () => {
+    renderTree()
+    rightClick('guide.md')
+
+    expect(await menuItemNames()).toEqual([
+      'explorer.menu.open',
+      'explorer.menu.rename',
+      'explorer.menu.copyUri',
+      'explorer.menu.delete',
+    ])
+  })
+
+  it('offers create actions but no rename or delete on a namespace', async () => {
+    renderTree()
+    rightClick('resources')
+
+    expect(await menuItemNames()).toEqual([
+      'explorer.menu.open',
+      'explorer.menu.newFile',
+      'explorer.menu.newFolder',
+      'explorer.menu.copyUri',
+      'explorer.menu.refresh',
+    ])
+  })
+
+  it('creates a folder inside the clicked directory and selects it', async () => {
+    const user = userEvent.setup()
+    const { onSelectDirectory } = renderTree()
+    rightClick('docs')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.newFolder' }),
+    )
+
+    await user.type(
+      await screen.findByLabelText('explorer.nameDialog.nameLabel'),
+      'specs',
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'explorer.nameDialog.create' }),
+    )
+
+    await vi.waitFor(() =>
+      expect(api.createDirectory).toHaveBeenCalledWith(
+        'viking://resources/docs/specs',
+      ),
+    )
+    expect(api.fetchFsStat).toHaveBeenCalledWith(
+      'viking://resources/docs/specs',
+      { throwOnError: true },
+    )
+    expect(invalidateListMock).toHaveBeenCalledWith('viking://resources/docs/')
+    await vi.waitFor(() =>
+      expect(onSelectDirectory).toHaveBeenCalledWith(
+        expect.objectContaining({ uri: 'viking://resources/docs/specs/' }),
+      ),
+    )
+  })
+
+  it('rejects new file names without a writable extension', async () => {
+    const user = userEvent.setup()
+    renderTree()
+    rightClick('docs')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.newFile' }),
+    )
+
+    await user.type(
+      await screen.findByLabelText('explorer.nameDialog.nameLabel'),
+      'notes',
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'explorer.nameDialog.create' }),
+    )
+
+    expect(
+      await screen.findByText('explorer.nameDialog.errors.extension'),
+    ).toBeTruthy()
+    expect(api.createTextFile).not.toHaveBeenCalled()
+  })
+
+  it('refuses names that already exist', async () => {
+    const user = userEvent.setup()
+    api.fetchFsStat.mockResolvedValue(file)
+    renderTree()
+    rightClick('resources')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.newFile' }),
+    )
+
+    await user.type(
+      await screen.findByLabelText('explorer.nameDialog.nameLabel'),
+      'guide.md',
+    )
+    await user.click(
+      screen.getByRole('button', { name: 'explorer.nameDialog.create' }),
+    )
+
+    expect(
+      await screen.findByText(
+        'explorer.nameDialog.failed',
+        { exact: false },
+        { timeout: 2000 },
+      ),
+    ).toBeTruthy()
+    expect(api.createTextFile).not.toHaveBeenCalled()
+  })
+
+  it('renames a folder and remaps expanded paths', async () => {
+    const user = userEvent.setup()
+    const { onEntryRenamed, onExpandedKeysChange } = renderTree()
+    rightClick('docs')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.rename' }),
+    )
+
+    const input = await screen.findByLabelText('explorer.nameDialog.nameLabel')
+    expect((input as HTMLInputElement).value).toBe('docs')
+    await user.clear(input)
+    await user.type(input, 'manuals')
+    await user.click(
+      screen.getByRole('button', { name: 'explorer.nameDialog.rename' }),
+    )
+
+    await vi.waitFor(() =>
+      expect(api.moveResource).toHaveBeenCalledWith(
+        'viking://resources/docs',
+        'viking://resources/manuals',
+      ),
+    )
+    await vi.waitFor(() =>
+      expect(onEntryRenamed).toHaveBeenCalledWith(
+        'viking://resources/docs',
+        'viking://resources/manuals',
+      ),
+    )
+    expect(onExpandedKeysChange).toHaveBeenCalledWith(
+      new Set([namespace.uri, 'viking://resources/manuals/']),
+    )
+  })
+
+  it('deletes a file after confirmation', async () => {
+    const user = userEvent.setup()
+    const { onEntryDeleted } = renderTree()
+    rightClick('guide.md')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.delete' }),
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'deleteResource.confirm' }),
+    )
+
+    await vi.waitFor(() =>
+      expect(api.removeResource).toHaveBeenCalledWith(file.uri, {
+        recursive: false,
+      }),
+    )
+    await vi.waitFor(() =>
+      expect(onEntryDeleted).toHaveBeenCalledWith(
+        expect.objectContaining({ uri: file.uri }),
+      ),
+    )
+  })
+
+  it('creates in the current directory from empty space', async () => {
+    renderTree({ currentUri: 'viking://resources/docs/' })
+    fireEvent.contextMenu(screen.getByRole('list', { name: 'explorer.title' }))
+
+    expect(await menuItemNames()).toEqual([
+      'explorer.menu.newFile',
+      'explorer.menu.newFolder',
+      'explorer.menu.refresh',
+    ])
+  })
+})
