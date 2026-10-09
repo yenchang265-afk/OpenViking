@@ -65,8 +65,20 @@ class AddResourceProcessor(DequeueHandlerBase):
             return
         from openviking.resource.staged_source import StagedSource
 
-        staged = StagedSource.from_dict(msg.staged_source)
-        await self._viking_fs.delete_temp(staged.temp_uri, ctx=ctx)
+        try:
+            staged = StagedSource.from_dict(msg.staged_source)
+            await self._viking_fs.delete_temp(staged.temp_uri, ctx=ctx)
+        except Exception as exc:
+            # The staged-source sweep reclaims what is left behind here.
+            temp_uri = (
+                msg.staged_source.get("temp_uri") if isinstance(msg.staged_source, dict) else None
+            )
+            logger.warning(
+                "[AddResource] Failed to clean staged source task_id=%s temp_uri=%s: %s",
+                msg.task_id,
+                temp_uri,
+                exc,
+            )
 
     async def _cleanup_prepared_artifact(self, msg: AddResourceMsg, ctx: RequestContext) -> None:
         if not msg.prepared or not isinstance(msg.prepared.get("artifact_ref"), dict):

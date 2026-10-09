@@ -203,6 +203,7 @@ Search and Find requests default to `limit: 10`; override the limit on each API 
 | `parse_output.mode` | `agfs`, `local` | `agfs` | Backend for intermediate parser artifacts |
 | `parse_output.local_root` | path or `null` | system temp directory | Root directory used by local parser artifacts |
 | `skip_process_lock` | boolean | `false` | Skip the workspace process lock; use only when accepting concurrent-write risk |
+| `staged_source_ttl_seconds` | integer, 0–15552000 (180 days) | `604800` (7 days) | Age after which a staged add-resource source left behind in `viking://temp` is swept (checked lazily, at most hourly per user, when that user stages a new source; bundles of the user's still-active tasks are kept); `0` disables the sweep |
 
 Remote backends also require endpoint, bucket/collection, credentials, and timeout fields. See [Configuration](../guides/01-configuration.md#storage) for complete examples.
 

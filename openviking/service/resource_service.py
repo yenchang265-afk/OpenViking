@@ -532,6 +532,39 @@ class ResourceService:
             )
             return False
 
+    def _schedule_staged_source_sweep(self, ctx: RequestContext) -> None:
+        """Lazily reclaim staged sources an earlier task failed to clean up."""
+        from openviking.resource.staged_source_sweeper import schedule_staged_source_sweep
+        from openviking_cli.utils.config.open_viking_config import get_openviking_config
+
+        try:
+            ttl_seconds = get_openviking_config().storage.staged_source_ttl_seconds
+            schedule_staged_source_sweep(
+                self._viking_fs,
+                ctx,
+                ttl_seconds,
+                background_tasks=self._background_tasks,
+                oldest_active_at=lambda: self._oldest_active_add_resource_at(ctx),
+            )
+        except Exception as exc:
+            logger.warning("[ResourceService] Failed to schedule staged source sweep: %s", exc)
+
+    async def _oldest_active_add_resource_at(self, ctx: RequestContext) -> Optional[float]:
+        """Creation time of the caller's oldest unfinished add_resource task."""
+        from openviking.service.task_tracker import TaskStatus, get_task_tracker
+
+        active = {TaskStatus.PENDING, TaskStatus.RUNNING, TaskStatus.CANCELLING}
+        tasks = await get_task_tracker().list_tasks(
+            task_type="add_resource",
+            limit=None,
+            account_id=ctx.account_id,
+            user_id=ctx.user.user_id,
+        )
+        created = [
+            t.created_at for t in tasks if t.task_type == "add_resource" and t.status in active
+        ]
+        return min(created, default=None)
+
     async def close_background_tasks(self) -> None:
         """Cancel in-flight connector monitoring tasks during service shutdown."""
         if not self._background_tasks:
@@ -916,6 +949,7 @@ class ResourceService:
                             viking_fs=self._viking_fs,
                             ctx=ctx,
                         )
+                        self._schedule_staged_source_sweep(ctx)
                 finally:
                     prepared.cleanup()
 

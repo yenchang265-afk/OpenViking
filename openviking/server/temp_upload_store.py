@@ -813,6 +813,10 @@ class TempUploadStore:
         with _SHARED_CLEANUP_STATE_LOCK:
             _SHARED_CLEANUP_DUE_AT.pop(account_id, None)
 
+    async def sweep_local_uploads(self) -> None:
+        """Expire local uploads by TTL; uploads alone only sweep when a new one arrives."""
+        await asyncio.to_thread(self._cleanup_local_temp_files, get_upload_temp_dir())
+
     def _cleanup_local_temp_files(self, temp_dir: Path) -> None:
         if self.temp_cfg.ttl_seconds == 0:
             return
@@ -829,3 +833,23 @@ class TempUploadStore:
                     meta_path = temp_dir / f"{file_path.name}.ov_upload.meta"
                     if meta_path.exists():
                         meta_path.unlink(missing_ok=True)
+
+
+LOCAL_UPLOAD_SWEEP_INTERVAL_S = 3600
+
+
+async def run_local_upload_sweep_loop(
+    server_config: ServerConfig,
+    interval_seconds: float = LOCAL_UPLOAD_SWEEP_INTERVAL_S,
+) -> None:
+    """Sweep expired local uploads periodically until cancelled.
+
+    The first sweep waits one interval so storage config is initialized first.
+    """
+    store = TempUploadStore.build(server_config)
+    while True:
+        await asyncio.sleep(interval_seconds)
+        try:
+            await store.sweep_local_uploads()
+        except Exception as exc:
+            logger.warning("Local temp upload sweep failed: %s", exc)

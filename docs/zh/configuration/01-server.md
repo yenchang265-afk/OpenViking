@@ -203,6 +203,7 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 | `parse_output.mode` | `agfs`、`local` | `agfs` | parser 中間產物的儲存後端 |
 | `parse_output.local_root` | 路徑或 `null` | 系統臨時目錄 | local parser artifact 的根目錄 |
 | `skip_process_lock` | boolean | `false` | 是否跳過 workspace 程序鎖；僅在明確接受併發寫風險時啟用 |
+| `staged_source_ttl_seconds` | integer，0–15552000（180 天） | `604800`（7 天） | 留在 `viking://temp` 的 add-resource 暫存來源超過此秒數即被清除（使用者暫存新來源時順帶檢查，每位使用者最多每小時一次；該使用者仍在執行的任務所用的暫存不會被清除）；`0` 表示停用 |
 
 遠端儲存後端還需要配置 endpoint、bucket/collection、鑑權和超時等欄位。完整後端示例見[配置指南](../guides/01-configuration.md#storage)。
 
