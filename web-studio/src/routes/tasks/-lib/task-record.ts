@@ -13,6 +13,7 @@ export type TaskStatus =
 export type TaskRecord = TaskTimestamp & {
   error?: string | null
   execution_events?: TaskEventHistory | null
+  meta?: Record<string, unknown> | null
   resource_id?: string | null
   result?: unknown
   stage?: string | null
