@@ -463,6 +463,12 @@ async def write_abstract_overview(
     ]
     sidecar_lease = lock
     owns_lease = sidecar_lease is None
+    # Summaries run unlocked while the LLM generates, so the directory may have
+    # been removed since the job started. Both the exact sidecar locks and the
+    # writes would recreate it, leaving an empty directory behind.
+    if owns_lease and not await _directory_exists(viking_fs, dir_uri, ctx):
+        logger.info("%s Skipping semantic write for deleted directory %s", log_prefix, dir_uri)
+        return AbstractOverviewWriteResult(wrote=False)
     if sidecar_lease is None:
         sidecar_lease = await viking_fs._async_agfs.pathlock_acquire_exact_batch(lock_paths)
     try:
@@ -526,6 +532,15 @@ async def write_abstract_overview(
     finally:
         if owns_lease:
             await viking_fs._async_agfs.pathlock_release(sidecar_lease)
+
+
+async def _directory_exists(viking_fs: Any, dir_uri: str, ctx: Optional[RequestContext]) -> bool:
+    exists = getattr(viking_fs, "exists", None)
+    if exists is None:
+        # Lightweight storage doubles without existence checks keep the
+        # previous unconditional write behavior.
+        return True
+    return bool(await exists(dir_uri.rstrip("/"), ctx=ctx))
 
 
 async def _raw_if_exists(viking_fs: Any, uri: str, ctx: Optional[RequestContext]) -> Optional[str]:

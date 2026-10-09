@@ -167,6 +167,52 @@ async def test_pending_snapshot_of_missing_directory_does_not_lock():
     assert fs.lock_timeouts == []
 
 
+class _FakeFSWithDirs(_FakeFS):
+    def __init__(self, files, dirs):
+        super().__init__(files)
+        self.dirs = set(dirs)
+
+    async def exists(self, uri, ctx=None):
+        return uri.rstrip("/") in self.dirs or uri in self.files
+
+
+@pytest.mark.asyncio
+async def test_write_to_deleted_directory_skips_without_locking():
+    """A summary finishing after rm must not lock or write: both recreate the directory."""
+    fs = _FakeFSWithDirs({}, dirs=[])
+
+    result = await write_abstract_overview(
+        viking_fs=fs,
+        dir_uri="viking://resources/gone",
+        overview="overview",
+        abstract="abstract",
+        ctx=None,
+        is_stale=lambda: False,
+    )
+
+    assert result.wrote is False
+    assert fs.lock_timeouts == []
+    assert fs.files == {}
+
+
+@pytest.mark.asyncio
+async def test_write_to_existing_directory_still_writes():
+    dir_uri = "viking://resources/present"
+    fs = _FakeFSWithDirs({}, dirs=[dir_uri])
+
+    result = await write_abstract_overview(
+        viking_fs=fs,
+        dir_uri=dir_uri,
+        overview="overview",
+        abstract="abstract",
+        ctx=None,
+        is_stale=lambda: False,
+    )
+
+    assert result.wrote is True
+    assert set(fs.files) == {f"{dir_uri}/.overview.md", f"{dir_uri}/.abstract.md"}
+
+
 @pytest.mark.asyncio
 async def test_pending_snapshot_reads_existing_sidecars_under_lock():
     dir_uri = "viking://resources/present"
