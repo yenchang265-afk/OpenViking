@@ -1188,7 +1188,11 @@ function JsonlMessageCard({ message }: { message: JsonlMessage }) {
       className={`w-full min-w-0 max-w-full rounded-lg border p-3 text-sm shadow-sm ${alignClass}`}
     >
       <div className="mb-2 flex min-w-0 items-center gap-2">
-        <span className="text-xs font-semibold">{message.label}</span>
+        <span className="text-xs font-semibold">
+          {message.role === 'invalid'
+            ? t('filePreview.jsonl.invalidLine')
+            : message.label}
+        </span>
         {message.roleId ? (
           <span className="truncate text-xs text-muted-foreground">
             {message.roleId}

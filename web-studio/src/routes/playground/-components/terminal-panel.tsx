@@ -12,6 +12,7 @@ import { runCompileSubmission } from '#/routes/compile/-lib/terminal'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import i18n from '#/i18n'
 import {
   ArrowRightIcon,
   CheckCircle2Icon,
@@ -342,7 +343,7 @@ function parseWaitTimeout(body: string): number | undefined {
   if (!trimmed) return undefined
   const match = trimmed.match(/^(?:--timeout\s+)?(\d+(?:\.\d+)?)$/)
   if (!match) {
-    throw new Error('Usage: /wait [--timeout seconds]')
+    throw new Error(i18n.t('playground:terminal.waitUsage'))
   }
   return Number(match[1])
 }
@@ -398,7 +399,9 @@ function getNumberFlag(
   if (value === undefined || value === 'true') return undefined
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) {
-    throw new Error(`Invalid --${key}: ${value}`)
+    throw new Error(
+      i18n.t('playground:terminal.invalidFlag', { flag: key, value }),
+    )
   }
   return parsed
 }

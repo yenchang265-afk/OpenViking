@@ -1,5 +1,13 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
-import { EditorState } from '@codemirror/state'
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from 'react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
+import { Compartment, EditorState } from '@codemirror/state'
 import {
   EditorView,
   keymap,
@@ -91,6 +99,48 @@ function detectLanguage(filename: string): string | null {
   return extMap[ext] || null
 }
 
+// CodeMirror's built-in English UI phrases → `resources:codeEditor.*` keys.
+const codeMirrorPhraseKeys: Record<string, string> = {
+  all: 'all',
+  'by word': 'byWord',
+  close: 'close',
+  Completions: 'completions',
+  'Control character': 'controlCharacter',
+  'current match': 'currentMatch',
+  Find: 'find',
+  'Fold line': 'foldLine',
+  'folded code': 'foldedCode',
+  'Folded lines': 'foldedLines',
+  go: 'go',
+  'Go to line': 'goToLine',
+  'match case': 'matchCase',
+  next: 'next',
+  'on line': 'onLine',
+  previous: 'previous',
+  regexp: 'regexp',
+  Replace: 'replace',
+  'replace all': 'replaceAll',
+  replace: 'replaceOne',
+  'replaced match on line $': 'replacedMatchOnLine',
+  'replaced $ matches': 'replacedMatches',
+  'Selection deleted': 'selectionDeleted',
+  to: 'to',
+  unfold: 'unfold',
+  'Unfold line': 'unfoldLine',
+  'Unfolded lines': 'unfoldedLines',
+}
+
+function codeMirrorPhrases(t: TFunction<'resources'>) {
+  return EditorState.phrases.of(
+    Object.fromEntries(
+      Object.entries(codeMirrorPhraseKeys).map(([phrase, key]) => [
+        phrase,
+        t(`codeEditor.${key}`),
+      ]),
+    ),
+  )
+}
+
 export interface CodeEditorHandle {
   getContent: () => string
 }
@@ -120,6 +170,19 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
   ) {
     const containerRef = useRef<HTMLDivElement>(null)
     const viewRef = useRef<EditorView | null>(null)
+    const { t } = useTranslation('resources')
+    // Phrases live in a compartment so a language switch reconfigures the
+    // open editor instead of recreating it (which would drop unsaved edits).
+    const phrasesCompartment = useRef(new Compartment())
+    const phrases = useMemo(() => codeMirrorPhrases(t), [t])
+    const phrasesRef = useRef(phrases)
+
+    useEffect(() => {
+      phrasesRef.current = phrases
+      viewRef.current?.dispatch({
+        effects: phrasesCompartment.current.reconfigure(phrases),
+      })
+    }, [phrases])
 
     useImperativeHandle(ref, () => ({
       getContent: () => viewRef.current?.state.doc.toString() ?? initialContent,
@@ -132,6 +195,7 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
 
       const setup = async () => {
         const extensions = [
+          phrasesCompartment.current.of(phrasesRef.current),
           lineNumbers(),
           drawSelection(),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),

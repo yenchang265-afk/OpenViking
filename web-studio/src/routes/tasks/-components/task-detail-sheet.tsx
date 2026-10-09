@@ -152,7 +152,11 @@ export function TaskDetailSheet({
                       icon={<Layers3Icon />}
                       label={t('detail.fields.type')}
                       value={
-                        t(`types.${task.task_type}`) || task.task_type || '-'
+                        task.task_type
+                          ? t(`types.${task.task_type}`, {
+                              defaultValue: task.task_type,
+                            })
+                          : '-'
                       }
                     />
                     <DetailField

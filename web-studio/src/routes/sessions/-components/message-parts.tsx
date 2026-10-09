@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Streamdown } from 'streamdown'
+import type { StreamdownTranslations } from 'streamdown'
 import { code } from '@streamdown/code'
 import { cjk } from '@streamdown/cjk'
 import { useTranslation } from 'react-i18next'
@@ -32,6 +33,13 @@ export function MarkdownContent({
   content,
   isStreaming,
 }: MarkdownContentProps) {
+  const { t } = useTranslation('sessions')
+  const translations = useMemo(() => {
+    const labels: unknown = t('chat.markdown', { returnObjects: true })
+    return typeof labels === 'object' && labels !== null
+      ? (labels as Partial<StreamdownTranslations>)
+      : undefined
+  }, [t])
   if (!content) return null
 
   return (
@@ -64,7 +72,11 @@ export function MarkdownContent({
         'prose-strong:font-semibold',
       )}
     >
-      <Streamdown plugins={plugins} isAnimating={isStreaming}>
+      <Streamdown
+        plugins={plugins}
+        isAnimating={isStreaming}
+        translations={translations}
+      >
         {content}
       </Streamdown>
     </div>

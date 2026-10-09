@@ -127,7 +127,11 @@ export function AdditionalResourceOptions({
               className="w-full"
             >
               <SelectValue>
-                {t(`preserveStructure.${preserveStructureMode}`)}
+                {t(
+                  preserveStructureMode === 'server_default'
+                    ? 'preserveStructure.serverDefault'
+                    : `preserveStructure.${preserveStructureMode}`,
+                )}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>

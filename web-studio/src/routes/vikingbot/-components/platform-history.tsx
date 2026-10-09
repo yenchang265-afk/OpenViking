@@ -13,7 +13,7 @@ export function PlatformHistory({
   conversation: string
   scope: string
 }) {
-  const { t } = useTranslation('vikingbot')
+  const { t, i18n } = useTranslation('vikingbot')
   const conversations = useQuery({
     queryKey: ['vikingbot', scope, connection, 'conversations'],
     queryFn: () => getConversations(connection),
@@ -68,7 +68,9 @@ export function PlatformHistory({
           >
             <div className="mb-2 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
               <span>{message.sender || t('unknownSender')}</span>
-              <time>{new Date(message.time).toLocaleString()}</time>
+              <time>
+                {new Date(message.time).toLocaleString(i18n.resolvedLanguage)}
+              </time>
             </div>
             <p className="whitespace-pre-wrap break-words text-sm leading-7">
               {message.content}

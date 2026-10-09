@@ -28,7 +28,7 @@ export function Channels({
   canManage: boolean
   scope: string
 }) {
-  const { t } = useTranslation('vikingbot')
+  const { t, i18n } = useTranslation('vikingbot')
   const client = useQueryClient()
   const key = ['vikingbot', scope, 'connections']
   const connections = useQuery({
@@ -247,7 +247,7 @@ export function Channels({
                         <dd>
                           {new Date(
                             connection.status.last_received,
-                          ).toLocaleString()}
+                          ).toLocaleString(i18n.resolvedLanguage)}
                         </dd>
                       </div>
                     )}
@@ -259,7 +259,7 @@ export function Channels({
                         <dd>
                           {new Date(
                             connection.status.last_sent,
-                          ).toLocaleString()}
+                          ).toLocaleString(i18n.resolvedLanguage)}
                         </dd>
                       </div>
                     )}

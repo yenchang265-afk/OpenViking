@@ -1,9 +1,20 @@
 import { FileTextIcon, FolderIcon, Loader2Icon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 import { cn } from '#/lib/utils'
 import { fileNameFromUri } from '#/routes/resources/-lib/normalize'
 
 import type { ResourceOpenHandler, ResourceRef } from '../-lib/types'
+
+// Fixed ref tags written by the terminal (and kept in its stored history);
+// any other meta (e.g. a size or score line) is shown verbatim.
+const refMetaKeys: Record<string, string> = {
+  archive: 'archive',
+  dir: 'dir',
+  session: 'session',
+  'tool result': 'toolResult',
+  'tool search': 'toolSearch',
+}
 
 export function ResourceRefList({
   className,
@@ -16,6 +27,7 @@ export function ResourceRefList({
   onOpenResource: ResourceOpenHandler
   openingUri?: string | null
 }) {
+  const { t } = useTranslation('playground')
   return (
     <div className={cn('grid gap-1.5', className)}>
       {refs.map((ref) => (
@@ -37,7 +49,9 @@ export function ResourceRefList({
           </span>
           {ref.meta ? (
             <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-              {ref.meta}
+              {Object.hasOwn(refMetaKeys, ref.meta)
+                ? t(`terminal.refMeta.${refMetaKeys[ref.meta]}`)
+                : ref.meta}
             </span>
           ) : null}
         </button>
