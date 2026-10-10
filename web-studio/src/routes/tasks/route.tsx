@@ -57,7 +57,11 @@ import {
   getAverageTaskDurationSeconds,
   getTaskDate,
 } from '#/routes/tasks/-lib/task-time'
-import { fetchTasks, MAX_TASKS } from './-lib/task-list'
+import {
+  fetchTasks,
+  getTaskListRefetchInterval,
+  MAX_TASKS,
+} from './-lib/task-list'
 import { getTaskProgressPct } from './-lib/task-progress'
 import { localizeSkippedCommit } from './-lib/localize-commit-result'
 import type { TaskStatusFilter, TaskTypeFilter } from './-lib/task-list'
@@ -108,7 +112,7 @@ function TasksRoute() {
   const tasksQuery = useQuery({
     queryFn: () => fetchTasks(taskType, statusFilter),
     queryKey: ['tasks', identityScopeKey, taskType, statusFilter],
-    refetchInterval: 10_000,
+    refetchInterval: (query) => getTaskListRefetchInterval(query.state.data),
   })
   const rawTasks = tasksQuery.data ?? []
   const allTasks = React.useMemo(() => {

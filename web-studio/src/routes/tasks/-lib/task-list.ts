@@ -1,5 +1,8 @@
 import { getOvResult, getTasks } from '#/lib/ov-client'
-import { normalizeTasks } from '#/routes/tasks/-lib/task-record'
+import {
+  isActiveTaskStatus,
+  normalizeTasks,
+} from '#/routes/tasks/-lib/task-record'
 import type { TaskRecord, TaskStatus } from '#/routes/tasks/-lib/task-record'
 
 export type TaskStatusFilter = Exclude<TaskStatus, 'unknown'> | 'all'
@@ -17,6 +20,18 @@ export type TaskTypeFilter =
   | 'all'
 
 export const MAX_TASKS = 200
+export const ACTIVE_TASK_POLL_MS = 10_000
+export const IDLE_TASK_POLL_MS = 60_000
+
+// Poll fast only while work is in flight; the slow idle poll still picks up
+// tasks started outside this page (CLI, SDK, another tab).
+export function getTaskListRefetchInterval(
+  tasks: readonly { status?: string }[] | undefined,
+): number {
+  return tasks?.some((task) => isActiveTaskStatus(task.status))
+    ? ACTIVE_TASK_POLL_MS
+    : IDLE_TASK_POLL_MS
+}
 
 export async function fetchTasks(
   taskType: TaskTypeFilter,

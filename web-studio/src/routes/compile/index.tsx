@@ -27,6 +27,7 @@ import {
 } from './-components/shared'
 import { ContextLink, useCompileSkillName } from './-components/context-link'
 import { fetchCapabilities, fetchCompileTasks } from './-lib/api'
+import { getTaskListRefetchInterval } from '#/routes/tasks/-lib/task-list'
 
 const STATUSES = [
   'pending',
@@ -85,7 +86,7 @@ function CompileList() {
     queryFn: ({ signal }) =>
       fetchCompileTasks(search.status, search.q, undefined, signal),
     enabled: !!query.data,
-    refetchInterval: 10_000,
+    refetchInterval: (q) => getTaskListRefetchInterval(q.state.data?.items),
   })
   const latestById = new Map(
     latest.data?.items.map((task) => [task.task_id, task]),

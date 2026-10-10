@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { fetchTasks, MAX_TASKS } from './task-list'
+import {
+  ACTIVE_TASK_POLL_MS,
+  fetchTasks,
+  getTaskListRefetchInterval,
+  IDLE_TASK_POLL_MS,
+  MAX_TASKS,
+} from './task-list'
 
 const clientMocks = vi.hoisted(() => ({
   getTasks: vi.fn(),
@@ -92,5 +98,29 @@ describe('task list requests', () => {
     clientMocks.getTasks.mockRejectedValue(new Error('request failed'))
 
     await expect(fetchTasks('all', 'all')).rejects.toThrow('request failed')
+  })
+})
+
+describe('task list polling', () => {
+  it.each(['pending', 'running', 'cancelling'])(
+    'polls fast while a task is %s',
+    (status) => {
+      expect(
+        getTaskListRefetchInterval([{ status: 'completed' }, { status }]),
+      ).toBe(ACTIVE_TASK_POLL_MS)
+    },
+  )
+
+  it('falls back to the idle poll when no task is in flight', () => {
+    expect(
+      getTaskListRefetchInterval([
+        { status: 'completed' },
+        { status: 'failed' },
+        { status: 'cancelled' },
+        { status: undefined },
+      ]),
+    ).toBe(IDLE_TASK_POLL_MS)
+    expect(getTaskListRefetchInterval([])).toBe(IDLE_TASK_POLL_MS)
+    expect(getTaskListRefetchInterval(undefined)).toBe(IDLE_TASK_POLL_MS)
   })
 })
