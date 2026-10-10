@@ -142,6 +142,7 @@ function PlaygroundWorkbench() {
     () => search.upload ?? false,
   )
   const [findPaletteOpen, setFindPaletteOpen] = useState(false)
+  const [treeSelectMode, setTreeSelectMode] = useState(false)
   const [taskDialogOpen, setTaskDialogOpen] = useState(false)
   const [openingUri, setOpeningUri] = useState<string | null>(null)
   const layoutRef = useRef<HTMLDivElement>(null)
@@ -624,10 +625,12 @@ function PlaygroundWorkbench() {
             hasTasks={tasks.length > 0}
             isRefreshing={listQuery.isFetching}
             isRefreshingTasks={isRefreshingTasks}
+            isSelecting={treeSelectMode}
             onAddResource={() => setUploadDialogOpen(true)}
             onOpenProcessingTasks={handleOpenProcessingTasks}
             onOpenSearch={handleOpenSearch}
             onRefresh={() => void handleRefreshContextTree()}
+            onToggleSelecting={() => setTreeSelectMode((on) => !on)}
           />
           <div className="min-h-0 flex-1">
             <ContextTree
@@ -642,6 +645,8 @@ function PlaygroundWorkbench() {
               onExpandedKeysChange={handleExpandedKeysChange}
               onSelectDirectory={handleSelectDirectory}
               onSelectFile={handleSelectFile}
+              onSelectModeChange={setTreeSelectMode}
+              selectMode={treeSelectMode}
             />
           </div>
         </aside>

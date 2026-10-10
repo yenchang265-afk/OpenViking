@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
-import { ContextTree } from './context-explorer'
+import { ContextExplorerHeader, ContextTree } from './context-explorer'
 
 const api = vi.hoisted(() => ({
   createDirectory: vi.fn(),
@@ -95,7 +95,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-function renderTree({ currentUri = 'viking://' } = {}) {
+function renderTree({ currentUri = 'viking://', selectMode = false } = {}) {
   const props = {
     onEntriesDeleted: vi.fn(),
     onEntryDeleted: vi.fn(),
@@ -103,22 +103,28 @@ function renderTree({ currentUri = 'viking://' } = {}) {
     onExpandedKeysChange: vi.fn(),
     onSelectDirectory: vi.fn(),
     onSelectFile: vi.fn(),
+    onSelectModeChange: vi.fn(),
   }
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   })
-
-  render(
+  const tree = (mode: boolean) => (
     <QueryClientProvider client={queryClient}>
       <ContextTree
         currentUri={currentUri}
         expandedKeys={new Set([namespace.uri, folder.uri])}
+        selectMode={mode}
         {...props}
       />
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
 
-  return props
+  const { rerender } = render(tree(selectMode))
+
+  return {
+    ...props,
+    setSelectMode: (mode: boolean) => rerender(tree(mode)),
+  }
 }
 
 function rightClick(name: string) {
@@ -493,5 +499,109 @@ describe('ContextTree batch delete', () => {
         name: 'deleteResource.batchListLabel',
       }),
     ).toBeTruthy()
+  })
+})
+
+describe('ContextTree checkbox mode', () => {
+  it('checks rows on a plain click instead of opening them', () => {
+    const { onSelectDirectory, onSelectFile } = renderTree({
+      selectMode: true,
+    })
+    const row = screen.getByRole('button', { name: 'guide.md' })
+    expect(row.getAttribute('aria-pressed')).toBe('false')
+
+    fireEvent.click(row)
+    fireEvent.click(screen.getByRole('button', { name: 'docs' }))
+
+    expect(row.getAttribute('aria-pressed')).toBe('true')
+    expect(onSelectFile).not.toHaveBeenCalled()
+    expect(onSelectDirectory).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole('button', { name: 'docs' }).getAttribute('aria-pressed'),
+    ).toBe('true')
+  })
+
+  it('leaves namespaces without a checkbox and still opens them', () => {
+    const { onSelectDirectory } = renderTree({ selectMode: true })
+    fireEvent.click(screen.getByRole('button', { name: 'guide.md' }))
+    const namespaceRow = screen.getByRole('button', { name: 'resources' })
+    expect(namespaceRow.getAttribute('aria-pressed')).toBeNull()
+
+    fireEvent.click(namespaceRow)
+
+    expect(onSelectDirectory).toHaveBeenCalled()
+    // Opening a namespace keeps the checks.
+    expect(
+      screen
+        .getByRole('button', { name: 'guide.md' })
+        .getAttribute('aria-pressed'),
+    ).toBe('true')
+  })
+
+  it('shows the toolbar with Delete disabled until something is checked', () => {
+    renderTree({ selectMode: true })
+    const deleteButton = screen.getByRole('button', {
+      name: 'explorer.selection.delete',
+    })
+    expect(deleteButton.hasAttribute('disabled')).toBe(true)
+
+    fireEvent.click(screen.getByRole('button', { name: 'guide.md' }))
+
+    expect(deleteButton.hasAttribute('disabled')).toBe(false)
+  })
+
+  it('exits with Done and with Escape once nothing is checked', () => {
+    const { onSelectModeChange } = renderTree({ selectMode: true })
+    fireEvent.click(
+      screen.getByRole('button', { name: 'explorer.selection.done' }),
+    )
+    expect(onSelectModeChange).toHaveBeenLastCalledWith(false)
+
+    onSelectModeChange.mockClear()
+    const row = screen.getByRole('button', { name: 'guide.md' })
+    fireEvent.click(row)
+    fireEvent.keyDown(row, { key: 'Escape' })
+    expect(row.getAttribute('aria-pressed')).toBe('false')
+    expect(onSelectModeChange).not.toHaveBeenCalled()
+    fireEvent.keyDown(row, { key: 'Escape' })
+    expect(onSelectModeChange).toHaveBeenCalledWith(false)
+  })
+
+  it('drops the checks when the mode is turned off from outside', () => {
+    const { setSelectMode } = renderTree({ selectMode: true })
+    fireEvent.click(screen.getByRole('button', { name: 'guide.md' }))
+    setSelectMode(false)
+    setSelectMode(true)
+
+    expect(
+      screen
+        .getByRole('button', { name: 'guide.md' })
+        .getAttribute('aria-pressed'),
+    ).toBe('false')
+  })
+
+  it('toggles from the explorer header', () => {
+    const onToggleSelecting = vi.fn()
+    render(
+      <ContextExplorerHeader
+        activeTaskCount={0}
+        hasActiveTasks={false}
+        hasTasks={false}
+        isRefreshing={false}
+        isRefreshingTasks={false}
+        isSelecting
+        onAddResource={vi.fn()}
+        onOpenProcessingTasks={vi.fn()}
+        onOpenSearch={vi.fn()}
+        onRefresh={vi.fn()}
+        onToggleSelecting={onToggleSelecting}
+      />,
+    )
+    const toggle = screen.getByRole('button', { name: 'explorer.selectMode' })
+    expect(toggle.getAttribute('aria-pressed')).toBe('true')
+
+    fireEvent.click(toggle)
+
+    expect(onToggleSelecting).toHaveBeenCalled()
   })
 })

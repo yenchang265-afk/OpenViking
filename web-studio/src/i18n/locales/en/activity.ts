@@ -215,6 +215,7 @@ const activity = {
     explorer: {
       title: 'Context tree',
       addResource: 'Add resource',
+      selectMode: 'Select items',
       abstractLevel: 'L0',
       collapseDirectory: 'Collapse {{name}}',
       empty: 'empty',
@@ -245,6 +246,7 @@ const activity = {
         count: '{{count}} selected',
         hint: 'Ctrl/⌘-click or Ctrl/⌘+Space rows to select several',
         marked: 'Selected for batch actions',
+        done: 'Done',
         delete: 'Delete',
         clear: 'Clear',
       },

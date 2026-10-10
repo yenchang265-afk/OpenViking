@@ -6,11 +6,13 @@ import type {
 } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  CheckIcon,
   ChevronRightIcon,
   ClipboardListIcon,
   FileTextIcon,
   FolderIcon,
   FolderTreeIcon,
+  ListChecksIcon,
   Loader2Icon,
   PlusIcon,
   RefreshCcwIcon,
@@ -26,7 +28,11 @@ import { remapExpandedUris } from '../-lib/tree-actions'
 import { sortTreeEntries, visibleContextEntries } from '../-lib/utils'
 import { ROOT_URI } from '../-lib/constants'
 import { AuthorChips } from './author-chips'
-import { ContextTreeMenu, useContextTreeMenu } from './context-tree-menu'
+import {
+  ContextTreeMenu,
+  canSelectForBatch,
+  useContextTreeMenu,
+} from './context-tree-menu'
 
 const TREE_INDENT_WIDTH = 16
 const TREE_ROW_PADDING = 6
@@ -41,20 +47,24 @@ export function ContextExplorerHeader({
   hasTasks,
   isRefreshing,
   isRefreshingTasks,
+  isSelecting = false,
   onAddResource,
   onOpenProcessingTasks,
   onOpenSearch,
   onRefresh,
+  onToggleSelecting,
 }: {
   activeTaskCount: number
   hasActiveTasks: boolean
   hasTasks: boolean
   isRefreshing: boolean
   isRefreshingTasks: boolean
+  isSelecting?: boolean
   onAddResource: () => void
   onOpenProcessingTasks: () => void
   onOpenSearch: () => void
   onRefresh: () => void
+  onToggleSelecting?: () => void
 }) {
   const { t } = useTranslation(['playground', 'resources'])
   const showProcessingTasks = hasTasks || isRefreshingTasks
@@ -99,6 +109,21 @@ export function ContextExplorerHeader({
         >
           <SearchIcon className="size-4" />
         </Button>
+        {onToggleSelecting ? (
+          <Button
+            type="button"
+            size="icon-sm"
+            variant={isSelecting ? 'secondary' : 'ghost'}
+            title={t('explorer.selectMode')}
+            aria-label={t('explorer.selectMode')}
+            aria-pressed={isSelecting}
+            onClick={onToggleSelecting}
+          >
+            <ListChecksIcon
+              className={cn('size-4', isSelecting && 'text-primary')}
+            />
+          </Button>
+        ) : null}
         <Button
           type="button"
           size="icon-sm"
@@ -152,10 +177,14 @@ export function ContextTree({
   onExpandedKeysChange,
   onSelectDirectory,
   onSelectFile,
+  onSelectModeChange,
+  selectMode,
   selectedFileUri,
 }: {
   currentUri: string
   expandedKeys: Set<string>
+  onSelectModeChange?: (selectMode: boolean) => void
+  selectMode?: boolean
   onEntriesDeleted?: (entries: Pick<VikingFsEntry, 'isDir' | 'uri'>[]) => void
   onEntryDeleted?: (entry: Pick<VikingFsEntry, 'isDir' | 'uri'>) => void
   onEntryRenamed?: (fromUri: string, toUri: string) => void
@@ -203,6 +232,8 @@ export function ContextTree({
       onEntryRenamed={handleEntryRenamed}
       onSelectDirectory={onSelectDirectory}
       onSelectFile={onSelectFile}
+      onSelectModeChange={onSelectModeChange}
+      selectMode={selectMode}
     >
       {rootQuery.isLoading ? (
         <div className="flex h-7 items-center gap-2 px-1.5 text-xs text-muted-foreground">
@@ -304,6 +335,9 @@ export function ContextTreeNode({
   const treeMenu = useContextTreeMenu()
   const isMarked = treeMenu?.selection.has(entry.uri) ?? false
   const markedNoteId = useId()
+  // In checkbox mode a click checks the row instead of opening it.
+  const showCheckbox =
+    (treeMenu?.selectMode ?? false) && canSelectForBatch(entry)
   const disclosureLabel = entry.isDir
     ? t(isOpen ? 'explorer.collapseDirectory' : 'explorer.expandDirectory', {
         name: entry.name,
@@ -355,14 +389,15 @@ export function ContextTreeNode({
     }
   }, [entry, isOpen, isSelected, onSelectDirectory, onSelectFile, toggle])
 
-  // Ctrl/⌘-click marks rows for batch actions; a plain click starts over.
+  // Ctrl/⌘-click marks rows for batch actions; a plain click starts over,
+  // except in checkbox mode where it toggles the row.
   const handleRowClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
-    if (treeMenu && (event.ctrlKey || event.metaKey)) {
+    if (treeMenu && (showCheckbox || event.ctrlKey || event.metaKey)) {
       event.preventDefault()
       treeMenu.toggleSelected(entry)
       return
     }
-    treeMenu?.clearSelection()
+    if (!treeMenu?.selectMode) treeMenu?.clearSelection()
     select()
   }
 
@@ -414,19 +449,36 @@ export function ContextTreeNode({
           type="button"
           aria-label={entry.name}
           aria-current={isSelected ? 'location' : undefined}
-          aria-describedby={isMarked ? markedNoteId : undefined}
+          aria-describedby={
+            isMarked && !showCheckbox ? markedNoteId : undefined
+          }
+          aria-pressed={showCheckbox ? isMarked : undefined}
           className="absolute inset-0 z-10 flex min-w-0 cursor-pointer items-center gap-1.5 rounded-md pr-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           style={{ paddingLeft: treeSelectionPadding(level, entry.isDir) }}
           onClick={handleRowClick}
           onKeyDown={handleRowKeyDown}
         >
-          {isMarked ? (
+          {isMarked && !showCheckbox ? (
             <span id={markedNoteId} className="sr-only">
               {t('explorer.selection.marked')}
             </span>
           ) : null}
           {!entry.isDir ? (
             <span aria-hidden="true" className="size-4 shrink-0" />
+          ) : null}
+          {showCheckbox ? (
+            // Decorative: the row button carries the state via aria-pressed.
+            <span
+              aria-hidden="true"
+              className={cn(
+                'flex size-3.5 shrink-0 items-center justify-center rounded-[4px] border',
+                isMarked
+                  ? 'border-primary bg-primary text-primary-foreground'
+                  : 'border-input bg-background',
+              )}
+            >
+              {isMarked ? <CheckIcon className="size-3" /> : null}
+            </span>
           ) : null}
           {entry.isDir ? (
             <FolderIcon

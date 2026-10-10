@@ -208,6 +208,7 @@ const activity = {
     explorer: {
       title: '上下文樹',
       addResource: '新增資源',
+      selectMode: '選取項目',
       abstractLevel: 'L0',
       collapseDirectory: '收起 {{name}}',
       empty: '空',
@@ -238,6 +239,7 @@ const activity = {
         count: '已選取 {{count}} 個',
         hint: '按住 Ctrl/⌘ 點選或按 Ctrl/⌘+空白鍵以選取多個項目',
         marked: '已選取以進行批次操作',
+        done: '完成',
         delete: '刪除',
         clear: '取消',
       },

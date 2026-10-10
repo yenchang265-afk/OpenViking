@@ -10,6 +10,7 @@ import {
 import type { KeyboardEvent, ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
+  CheckIcon,
   ClipboardIcon,
   FilePlusIcon,
   FolderOpenIcon,
@@ -64,6 +65,7 @@ type DeletedEntry = Pick<VikingFsEntry, 'isDir' | 'uri'>
 type ContextTreeMenuContextValue = {
   /** Rows marked for batch actions, keyed by URI, in the order picked. */
   selection: ReadonlyMap<string, VikingFsEntry>
+  selectMode: boolean
   clearSelection: () => void
   setMenuTarget: (entry: VikingFsEntry) => void
   toggleSelected: (entry: VikingFsEntry) => void
@@ -103,6 +105,9 @@ export type ContextTreeMenuProps = {
   onEntryRenamed?: (fromUri: string, toUri: string) => void
   onSelectDirectory: (entry: VikingFsEntry) => void
   onSelectFile: (entry: VikingFsEntry) => void
+  onSelectModeChange?: (selectMode: boolean) => void
+  /** Checkbox mode: rows show checkboxes and a click checks them. */
+  selectMode?: boolean
 }
 
 export function ContextTreeMenu({
@@ -114,12 +119,20 @@ export function ContextTreeMenu({
   onEntryRenamed,
   onSelectDirectory,
   onSelectFile,
+  onSelectModeChange,
+  selectMode = false,
 }: ContextTreeMenuProps) {
   const { t } = useTranslation('playground')
   const { invalidateList } = useInvalidateVikingFs()
   const [target, setTarget] = useState<VikingFsEntry | null>(null)
   const [selection, setSelection] =
     useState<ReadonlyMap<string, VikingFsEntry>>(EMPTY_SELECTION)
+  // Leaving checkbox mode, from here or the header, drops the checks.
+  const [prevSelectMode, setPrevSelectMode] = useState(selectMode)
+  if (prevSelectMode !== selectMode) {
+    setPrevSelectMode(selectMode)
+    if (!selectMode) setSelection(EMPTY_SELECTION)
+  }
   const [dialog, setDialog] = useState<TreeDialog | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const openingDialogRef = useRef(false)
@@ -149,11 +162,12 @@ export function ContextTreeMenu({
   const contextValue = useMemo<ContextTreeMenuContextValue>(
     () => ({
       clearSelection,
+      selectMode,
       selection,
       setMenuTarget: setTarget,
       toggleSelected,
     }),
-    [clearSelection, selection, toggleSelected],
+    [clearSelection, selectMode, selection, toggleSelected],
   )
   const openDialog = useCallback((next: TreeDialog) => {
     openingDialogRef.current = true
@@ -163,12 +177,19 @@ export function ContextTreeMenu({
   const openBatchDelete = () =>
     openDialog({ kind: 'batchDelete', entries: [...selection.values()] })
 
+  const exitSelectMode = () => {
+    clearSelection()
+    onSelectModeChange?.(false)
+  }
+
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (selection.size === 0 || dialogOpen) return
-    if (event.key === 'Escape') {
+    if (dialogOpen) return
+    if (event.key === 'Escape' && (selection.size > 0 || selectMode)) {
       event.preventDefault()
-      clearSelection()
-    } else if (event.key === 'Delete') {
+      // First Escape clears the checks; the next one leaves checkbox mode.
+      if (selection.size > 0) clearSelection()
+      else exitSelectMode()
+    } else if (event.key === 'Delete' && selection.size > 0) {
       event.preventDefault()
       openBatchDelete()
     }
@@ -361,7 +382,7 @@ export function ContextTreeMenu({
           onTouchStartCapture={clearTarget}
           onKeyDown={handleKeyDown}
         >
-          {selection.size > 0 ? (
+          {selection.size > 0 || selectMode ? (
             <div
               role="toolbar"
               aria-label={t('explorer.selection.count', {
@@ -378,20 +399,33 @@ export function ContextTreeMenu({
                 size="xs"
                 variant="ghost"
                 className="text-destructive hover:text-destructive"
+                disabled={selection.size === 0}
                 onClick={openBatchDelete}
               >
                 <Trash2Icon />
                 {t('explorer.selection.delete')}
               </Button>
-              <Button
-                type="button"
-                size="xs"
-                variant="ghost"
-                onClick={clearSelection}
-              >
-                <XIcon />
-                {t('explorer.selection.clear')}
-              </Button>
+              {selectMode ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={exitSelectMode}
+                >
+                  <CheckIcon />
+                  {t('explorer.selection.done')}
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="ghost"
+                  onClick={clearSelection}
+                >
+                  <XIcon />
+                  {t('explorer.selection.clear')}
+                </Button>
+              )}
             </div>
           ) : null}
           {children}
