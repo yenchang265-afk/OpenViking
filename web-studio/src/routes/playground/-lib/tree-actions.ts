@@ -89,6 +89,26 @@ export function remapExpandedUris(
 }
 
 /**
+ * Drops entries that a selected folder already covers (and duplicates), so a
+ * batch delete never targets something an earlier recursive delete removed.
+ * Keeps the input order.
+ */
+export function pruneNestedEntries<T extends { uri: string }>(
+  entries: readonly T[],
+): T[] {
+  return entries.filter(
+    (entry, index) =>
+      !entries.some(
+        (other, otherIndex) =>
+          otherIndex !== index &&
+          isUriWithin(entry.uri, other.uri) &&
+          // Equal URIs: keep only the first occurrence.
+          (!isUriWithin(other.uri, entry.uri) || otherIndex < index),
+      ),
+  )
+}
+
+/**
  * Mirrors the server's reindex scope (openviking/service/reindex_executor.py
  * `_infer_target_type`): no virtual root, no bare `agent` namespace, and no
  * session subtrees.

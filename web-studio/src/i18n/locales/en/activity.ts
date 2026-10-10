@@ -188,6 +188,15 @@ const activity = {
       deleting: 'Deleting…',
       deleted: 'Resource deleted',
       failed: 'Delete failed: {{error}}',
+      batchTitle: 'Delete {{count}} item?',
+      batchTitle_other: 'Delete {{count}} items?',
+      batchDescription:
+        'These items, and everything inside selected folders, will be permanently deleted. This cannot be undone.',
+      batchListLabel: 'Items to delete',
+      batchFailed: '{{count}} item could not be deleted: {{error}}',
+      batchFailed_other: '{{count}} items could not be deleted: {{error}}',
+      deletedCount: '{{count}} item deleted',
+      deletedCount_other: '{{count}} items deleted',
     },
     reindex: {
       title: 'Reindex this resource?',
@@ -231,6 +240,7 @@ const activity = {
     explorer: {
       title: 'Context tree',
       addResource: 'Add resource',
+      selectMode: 'Select items',
       abstractLevel: 'L0',
       collapseDirectory: 'Collapse {{name}}',
       empty: 'empty',
@@ -254,6 +264,17 @@ const activity = {
         refresh: 'Refresh',
         reindex: 'Reindex…',
         delete: 'Delete…',
+        deleteSelected: 'Delete {{count}} item…',
+        deleteSelected_other: 'Delete {{count}} items…',
+        clearSelection: 'Clear selection',
+      },
+      selection: {
+        count: '{{count}} selected',
+        hint: 'Ctrl/⌘-click or Ctrl/⌘+Space rows to select several',
+        marked: 'Selected for batch actions',
+        done: 'Done',
+        delete: 'Delete',
+        clear: 'Clear',
       },
       nameDialog: {
         newFileTitle: 'New file',

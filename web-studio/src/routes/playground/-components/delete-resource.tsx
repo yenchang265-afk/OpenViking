@@ -17,9 +17,35 @@ import {
 import { removeResource } from '#/routes/resources/-lib/api'
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
+import { pruneNestedEntries } from '../-lib/tree-actions'
 import { getErrorMessage } from '../-lib/utils'
 
 type DeletableEntry = Pick<VikingFsEntry, 'isDir' | 'uri'>
+
+type BatchDeleteResult = {
+  deleted: DeletableEntry[]
+  failed: { entry: DeletableEntry; error: unknown }[]
+}
+
+/**
+ * Deletes one at a time so a failure stops nothing else and every outcome is
+ * known. Nested entries are skipped: their selected folder removes them.
+ */
+async function deleteEntries(
+  entries: readonly DeletableEntry[],
+): Promise<BatchDeleteResult> {
+  const deleted: DeletableEntry[] = []
+  const failed: BatchDeleteResult['failed'] = []
+  for (const entry of pruneNestedEntries(entries)) {
+    try {
+      await removeResource(entry.uri, { recursive: entry.isDir })
+      deleted.push(entry)
+    } catch (error) {
+      failed.push({ entry, error })
+    }
+  }
+  return { deleted, failed }
+}
 
 export function DeleteResource({
   entry,
@@ -119,6 +145,92 @@ export function DeleteResourceDialog({
               } catch {
                 // Keep the dialog and error visible so the user can retry.
               }
+            }}
+          >
+            {t(
+              mutation.isPending
+                ? 'deleteResource.deleting'
+                : 'deleteResource.confirm',
+            )}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+/**
+ * Confirms and deletes several entries. Successful deletions are reported
+ * even when others fail; the dialog then stays open on the failures so the
+ * caller can shrink `entries` to them and the user can retry.
+ */
+export function BatchDeleteResourceDialog({
+  entries,
+  onDeleted,
+  onOpenChange,
+  open,
+}: {
+  entries: readonly DeletableEntry[]
+  onDeleted: (deleted: DeletableEntry[]) => void
+  onOpenChange: (open: boolean) => void
+  open: boolean
+}) {
+  const { t } = useTranslation('playground')
+  const mutation = useMutation({ mutationFn: deleteEntries })
+  const { reset } = mutation
+  const failed = mutation.data?.failed ?? []
+
+  useEffect(() => {
+    if (open) reset()
+  }, [open, reset])
+
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(value) => {
+        if (!mutation.isPending) onOpenChange(value)
+      }}
+    >
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {t('deleteResource.batchTitle', { count: entries.length })}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('deleteResource.batchDescription')}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <ul
+          aria-label={t('deleteResource.batchListLabel')}
+          className="max-h-40 overflow-y-auto rounded-md border bg-muted/40 px-3 py-2 font-mono text-xs"
+        >
+          {entries.map((entry) => (
+            <li key={entry.uri} className="break-all leading-5">
+              {entry.uri}
+            </li>
+          ))}
+        </ul>
+        {failed.length > 0 ? (
+          <p role="alert" className="text-sm text-destructive">
+            {t('deleteResource.batchFailed', {
+              count: failed.length,
+              error: getErrorMessage(failed[0].error),
+            })}
+          </p>
+        ) : null}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={mutation.isPending}>
+            {t('deleteResource.cancel')}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            className="bg-destructive text-white hover:bg-destructive/90"
+            disabled={mutation.isPending || entries.length === 0}
+            onClick={async (event) => {
+              event.preventDefault()
+              if (mutation.isPending) return
+              const result = await mutation.mutateAsync(entries)
+              if (result.failed.length === 0) onOpenChange(false)
+              if (result.deleted.length > 0) onDeleted(result.deleted)
             }}
           >
             {t(
