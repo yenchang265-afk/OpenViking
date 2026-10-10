@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next'
 import {
   CheckIcon,
   ClipboardIcon,
+  DatabaseZapIcon,
   FilePlusIcon,
   FolderOpenIcon,
   FolderPlusIcon,
@@ -48,6 +49,7 @@ import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import {
   canCreateInUri,
+  canReindexUri,
   childEntryUri,
   isUriWithin,
   remapUri,
@@ -59,6 +61,7 @@ import {
   DeleteResourceDialog,
 } from './delete-resource'
 import { EntryNameDialog } from './entry-name-dialog'
+import { ReindexDialog } from './reindex-dialog'
 
 type DeletedEntry = Pick<VikingFsEntry, 'isDir' | 'uri'>
 
@@ -92,7 +95,7 @@ const EMPTY_SELECTION: ReadonlyMap<string, VikingFsEntry> = new Map()
 
 type TreeDialog =
   | { kind: 'newFile' | 'newFolder'; dirUri: string }
-  | { kind: 'rename' | 'delete'; entry: VikingFsEntry }
+  | { kind: 'rename' | 'delete' | 'reindex'; entry: VikingFsEntry }
   | { kind: 'batchDelete'; entries: VikingFsEntry[] }
 
 export type ContextTreeMenuProps = {
@@ -358,6 +361,15 @@ export function ContextTreeMenu({
           {t('explorer.menu.refresh')}
         </ContextMenuItem>
       ) : null,
+      target && canReindexUri(target.uri) ? (
+        <ContextMenuItem
+          key="reindex"
+          onClick={() => openDialog({ kind: 'reindex', entry: target })}
+        >
+          <DatabaseZapIcon />
+          {t('explorer.menu.reindex')}
+        </ContextMenuItem>
+      ) : null,
     ].filter(Boolean),
     target && canModify
       ? [
@@ -497,6 +509,14 @@ export function ContextTreeMenu({
           open={dialogOpen}
           onOpenChange={setDialogOpen}
           onDeleted={handleBatchDeleted}
+        />
+      ) : null}
+      {dialog?.kind === 'reindex' ? (
+        <ReindexDialog
+          key={`reindex:${dialog.entry.uri}`}
+          entry={dialog.entry}
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
         />
       ) : null}
     </ContextTreeMenuContext.Provider>

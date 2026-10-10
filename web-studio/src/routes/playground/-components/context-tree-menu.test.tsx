@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   createTextFile: vi.fn(),
   fetchFsStat: vi.fn(),
   moveResource: vi.fn(),
+  reindexResource: vi.fn(),
   removeResource: vi.fn(),
 }))
 const { invalidateListMock, useVikingFsListMock } = vi.hoisted(() => ({
@@ -26,7 +27,11 @@ vi.mock('#/routes/resources/-hooks/viking-fm', () => ({
   useInvalidateVikingFs: () => ({ invalidateList: invalidateListMock }),
   useVikingFsList: useVikingFsListMock,
 }))
-vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
+const { toastSuccessMock } = vi.hoisted(() => ({ toastSuccessMock: vi.fn() }))
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), success: toastSuccessMock },
+}))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string }) =>
@@ -80,6 +85,7 @@ beforeEach(() => {
   api.createDirectory.mockResolvedValue(undefined)
   api.createTextFile.mockResolvedValue(undefined)
   api.moveResource.mockResolvedValue(undefined)
+  api.reindexResource.mockResolvedValue({ taskId: 'task-1' })
   api.removeResource.mockResolvedValue(undefined)
   invalidateListMock.mockResolvedValue(undefined)
   vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
@@ -145,6 +151,7 @@ describe('ContextTree context menu', () => {
       'explorer.menu.open',
       'explorer.menu.rename',
       'explorer.menu.copyUri',
+      'explorer.menu.reindex',
       'explorer.menu.delete',
     ])
   })
@@ -159,6 +166,7 @@ describe('ContextTree context menu', () => {
       'explorer.menu.newFolder',
       'explorer.menu.copyUri',
       'explorer.menu.refresh',
+      'explorer.menu.reindex',
     ])
   })
 
@@ -298,6 +306,56 @@ describe('ContextTree context menu', () => {
         expect.objectContaining({ uri: file.uri }),
       ),
     )
+  })
+
+  it('reindexes a folder with the chosen mode', async () => {
+    const user = userEvent.setup()
+    renderTree()
+    rightClick('docs')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.reindex' }),
+    )
+
+    await user.click(
+      await screen.findByText('reindex.modes.semantic_and_vectors.title'),
+    )
+    await user.click(screen.getByRole('button', { name: 'reindex.confirm' }))
+
+    await vi.waitFor(() =>
+      expect(api.reindexResource).toHaveBeenCalledWith(
+        folder.uri,
+        'semantic_and_vectors',
+      ),
+    )
+    await vi.waitFor(() =>
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        'reindex.started',
+        expect.objectContaining({
+          action: expect.objectContaining({ label: 'reindex.viewTasks' }),
+        }),
+      ),
+    )
+  })
+
+  it('keeps the reindex dialog open with the error when it fails', async () => {
+    const user = userEvent.setup()
+    api.reindexResource.mockRejectedValue({
+      statusCode: 409,
+      code: 'CONFLICT',
+      message: 'already running',
+    })
+    renderTree()
+    rightClick('guide.md')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.reindex' }),
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'reindex.confirm' }),
+    )
+
+    expect(await screen.findByRole('alert')).toBeTruthy()
+    expect(api.reindexResource).toHaveBeenCalledWith(file.uri, 'vectors_only')
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it('creates in the current directory from empty space', async () => {
