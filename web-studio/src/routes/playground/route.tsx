@@ -44,6 +44,11 @@ import {
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import { AgentPanel } from './-components/agent-panel'
+import {
+  CompileGraphSwitch,
+  LazyCompileGraphView,
+  useCompileGraphKind,
+} from './-components/compile-graph/compile-graph-switch'
 import { DeleteResource } from './-components/delete-resource'
 import { ResourceAuthors } from './-components/resource-authors'
 import {
@@ -506,6 +511,14 @@ function PlaygroundWorkbench() {
   }, [])
 
   const selectedUri = selectedFile?.uri ?? currentUri
+  // An llm-wiki or knowledge-graph output folder can also be shown as a graph.
+  const graphDirUri = !selectedFile || selectedFile.isDir ? selectedUri : null
+  const graphKind = useCompileGraphKind(graphDirUri, identityScopeKey)
+  const [graphViewUri, setGraphViewUri] = useState<string | null>(null)
+  const openGraph =
+    graphKind && graphDirUri && graphViewUri === graphDirUri
+      ? { kind: graphKind, dirUri: graphDirUri }
+      : null
   const displayUri =
     selectedUri === ROOT_URI ? selectedUri : selectedUri.replace(/\/$/, '')
   const entries = visibleContextEntries(listQuery.data?.entries ?? [])
@@ -666,6 +679,15 @@ function PlaygroundWorkbench() {
             >
               {displayUri}
             </button>
+            {graphKind && graphDirUri ? (
+              <CompileGraphSwitch
+                kind={graphKind}
+                showGraph={openGraph !== null}
+                onShowGraphChange={(next) =>
+                  setGraphViewUri(next ? graphDirUri : null)
+                }
+              />
+            ) : null}
             <ResourceAuthors uri={selectedUri} />
             <Button
               type="button"
@@ -731,13 +753,22 @@ function PlaygroundWorkbench() {
             ) : null}
           </div>
           <div className="min-h-0 flex-1">
-            <LazyFilePreview
-              file={selectedFile}
-              hideDirectoryHeader
-              onClose={() => setSelectedFile(null)}
-              onNavigate={(uri) => void revealResource(uri)}
-              showCloseButton={false}
-            />
+            {openGraph ? (
+              <LazyCompileGraphView
+                dirUri={openGraph.dirUri}
+                kind={openGraph.kind}
+                scopeKey={identityScopeKey}
+                onOpenFile={(uri) => void revealResource(uri)}
+              />
+            ) : (
+              <LazyFilePreview
+                file={selectedFile}
+                hideDirectoryHeader
+                onClose={() => setSelectedFile(null)}
+                onNavigate={(uri) => void revealResource(uri)}
+                showCloseButton={false}
+              />
+            )}
           </div>
         </main>
         {!rightCollapsed ? (

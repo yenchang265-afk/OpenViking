@@ -67,6 +67,8 @@ ov read viking://resources/journal-kg/entities/sun-wukong.md
 
 ## Step 5: Visualize it as an interactive graph
 
+In Studio, open the output folder in the Playground and switch the header from **Contents** to **Graph** to explore the same graph in the browser: click a node for its details (relations with their evidence), search, filter by entity type, and widen the highlighted neighborhood hop by hop. The script below produces a standalone HTML file instead.
+
 Unlike the LLM Wiki script, `knowledge_graph.py` reads from a **local directory** (it needs both `entities/` and `relations.jsonl` on disk). So download the output first, then generate the HTML.
 
 Download the whole artifact tree. `ov get` downloads one file at a time; combine it with `ov ls -r -s` to pull every path:

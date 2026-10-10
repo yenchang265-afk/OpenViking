@@ -67,6 +67,8 @@ ov read viking://resources/journal-kg/entities/孫悟空.md
 
 ## 第五步：視覺化成互動式圖譜
 
+在 Studio 中，於 Playground 開啟產物資料夾，並將標頭從 **內容** 切換為 **圖譜**，即可在瀏覽器中探索同一張圖：點選節點檢視詳細資訊（含關係與證據）、搜尋、按實體類型篩選，並逐跳擴大高亮的鄰居範圍。下方腳本則會產生一個獨立的 HTML 檔案。
+
 與 LLM Wiki 的指令碼不同，`knowledge_graph.py` 讀取的是**本地目錄**（需要 `entities/` 和 `relations.jsonl` 都在本地）。所以先把產物拉到本地，再生成 HTML。
 
 先把整棵工件樹下載下來。`ov get` 一次下載一個檔案，配合 `ov ls -r -s` 列出全部路徑即可批次拉取：
