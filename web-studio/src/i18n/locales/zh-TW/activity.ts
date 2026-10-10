@@ -258,6 +258,13 @@ const activity = {
         deleteSelected: '刪除 {{count}} 個項目…',
         deleteSelected_other: '刪除 {{count}} 個項目…',
         clearSelection: '取消選取',
+        compileWith: '使用 Skill 編譯',
+        compileWithSkill: '使用此 Skill 編譯…',
+        compileOther: '其他 Skill…',
+        compileInstallHint:
+          '尚未安裝的 Skill 會安裝到 {{root}}，與此帳戶的所有人共享。',
+        compileInstalled: '已將 {{name}} 安裝至共享 Skill',
+        compileInstallFailed: '無法安裝 {{name}}：{{message}}',
       },
       selection: {
         count: '已選取 {{count}} 個',

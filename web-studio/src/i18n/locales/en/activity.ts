@@ -267,6 +267,13 @@ const activity = {
         deleteSelected: 'Delete {{count}} item…',
         deleteSelected_other: 'Delete {{count}} items…',
         clearSelection: 'Clear selection',
+        compileWith: 'Compile with',
+        compileWithSkill: 'Compile with this Skill…',
+        compileOther: 'Other Skill…',
+        compileInstallHint:
+          'Missing Skills are installed to {{root}}, shared with everyone on this account.',
+        compileInstalled: 'Installed {{name}} to shared Skills',
+        compileInstallFailed: 'Could not install {{name}}: {{message}}',
       },
       selection: {
         count: '{{count}} selected',

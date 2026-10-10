@@ -12,6 +12,8 @@ WORKDIR /app/web-studio
 # Keep npm install cached when only Studio sources change.
 COPY web-studio/package.json web-studio/package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm,id=npm-${TARGETPLATFORM} npm ci
+# Studio bundles the compile Skills (src/routes/compile/-lib/builtin-skills.ts).
+COPY examples/compile/ov-compile-skills/ /app/examples/compile/ov-compile-skills/
 COPY web-studio/ ./
 RUN npm run build -- --base=/studio/ \
  && test -f dist/index.html

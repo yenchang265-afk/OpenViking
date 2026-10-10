@@ -24,6 +24,7 @@ import type { CompileRequest, CompileTask } from '../-lib/api'
 import { compileCommand, parseArgs } from '../-lib/commands'
 import { CompileError, CompileShell } from './shared'
 import { SkillPicker } from './skill-picker'
+import { BuiltinSkillsNotice } from './builtin-skills'
 
 type Draft = { skill: string; sources: string; to: string; instruction: string }
 const empty: Draft = { skill: '', sources: '', to: '', instruction: '' }
@@ -40,7 +41,14 @@ function readDraft(key: string): Draft {
     return empty
   }
 }
-export function CompileForm({ fromTask }: { fromTask?: string }) {
+export type CompilePrefill = { skill?: string; from?: string; to?: string }
+export function CompileForm({
+  fromTask,
+  prefill,
+}: {
+  fromTask?: string
+  prefill?: CompilePrefill
+}) {
   const { t } = useTranslation('compile'),
     navigate = useNavigate()
   const { identityScopeKey, connection } = useAppConnection()
@@ -51,18 +59,22 @@ export function CompileForm({ fromTask }: { fromTask?: string }) {
   useEffect(() => {
     clearCompileHandoff()
   }, [])
+  // An explicit link (context tree) outranks a leftover terminal handoff.
+  const terminalHandoff = prefill ? undefined : handoff
   const [draft, setDraft] = useState(() =>
-    handoff
+    terminalHandoff
       ? {
-          skill: handoff.skill || '',
-          sources: handoff.from?.join('\n') || '',
-          to: handoff.to || '',
-          instruction: handoff.instruction || '',
+          skill: terminalHandoff.skill || '',
+          sources: terminalHandoff.from?.join('\n') || '',
+          to: terminalHandoff.to || '',
+          instruction: terminalHandoff.instruction || '',
         }
       : readDraft(draftKey),
   )
   const [args, setArgs] = useState(
-      handoff?.args ? JSON.stringify(handoff.args, null, 2) : '',
+      terminalHandoff?.args
+        ? JSON.stringify(terminalHandoff.args, null, 2)
+        : '',
     ),
     [preview, setPreview] = useState(false)
   const [picker, setPicker] = useState<'sources' | 'to' | null>(null)
@@ -75,7 +87,8 @@ export function CompileForm({ fromTask }: { fromTask?: string }) {
   )
   const mounted = useRef(true),
     completed = useRef(false),
-    filled = useRef(false)
+    filled = useRef(false),
+    prefilled = useRef(false)
   const [recoverKey, setRecoverKey] = useState(() => {
     try {
       return sessionStorage.getItem(submissionKey)
@@ -105,6 +118,21 @@ export function CompileForm({ fromTask }: { fromTask?: string }) {
       setSavingError(true)
     }
   }, [draft, draftKey])
+  useEffect(() => {
+    if (!prefill || prefilled.current) return
+    prefilled.current = true
+    if (
+      Object.values(readDraft(draftKey)).some(Boolean) &&
+      !window.confirm(t('replaceDraft'))
+    )
+      return
+    setDraft({
+      skill: prefill.skill || '',
+      sources: prefill.from || '',
+      to: prefill.to || '',
+      instruction: '',
+    })
+  }, [prefill, draftKey, t])
   const skills = useQuery({
     queryKey: ['compile-skills', identityScopeKey],
     queryFn: ({ signal }) => fetchCompileSkills(signal),
@@ -372,6 +400,7 @@ export function CompileForm({ fromTask }: { fromTask?: string }) {
             <p className="text-xs text-muted-foreground">
               {t('skillLocationHint')}
             </p>
+            <BuiltinSkillsNotice installed={skills.data} />
             {skills.isError && (
               <CompileError
                 error={skills.error}

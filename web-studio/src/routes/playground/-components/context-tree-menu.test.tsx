@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import type * as BuiltinSkills from '#/routes/compile/-lib/builtin-skills'
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import { ContextExplorerHeader, ContextTree } from './context-explorer'
@@ -31,7 +32,15 @@ const { toastSuccessMock } = vi.hoisted(() => ({ toastSuccessMock: vi.fn() }))
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: toastSuccessMock },
 }))
-vi.mock('@tanstack/react-router', () => ({ useNavigate: () => vi.fn() }))
+const { ensureBuiltinSkillMock, navigateMock } = vi.hoisted(() => ({
+  ensureBuiltinSkillMock: vi.fn(),
+  navigateMock: vi.fn(),
+}))
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateMock }))
+vi.mock('#/routes/compile/-lib/builtin-skills', async (importOriginal) => ({
+  ...(await importOriginal<typeof BuiltinSkills>()),
+  ensureBuiltinSkill: ensureBuiltinSkillMock,
+}))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string }) =>
@@ -162,6 +171,7 @@ describe('ContextTree context menu', () => {
 
     expect(await menuItemNames()).toEqual([
       'explorer.menu.open',
+      'explorer.menu.compileWith',
       'explorer.menu.newFile',
       'explorer.menu.newFolder',
       'explorer.menu.copyUri',
@@ -363,10 +373,131 @@ describe('ContextTree context menu', () => {
     fireEvent.contextMenu(screen.getByRole('list', { name: 'explorer.title' }))
 
     expect(await menuItemNames()).toEqual([
+      'explorer.menu.compileWith',
       'explorer.menu.newFile',
       'explorer.menu.newFolder',
       'explorer.menu.refresh',
     ])
+  })
+})
+
+describe('ContextTree compile actions', () => {
+  async function openCompileWith(name: string) {
+    const user = userEvent.setup()
+    rightClick(name)
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: 'explorer.menu.compileWith',
+      }),
+    )
+  }
+
+  it('lists every bundled compile skill for a folder', async () => {
+    renderTree()
+    await openCompileWith('docs')
+
+    for (const name of [
+      'daily-report',
+      'knowledge-distillation',
+      'knowledge-graph',
+      'llm-wiki',
+      'ov-session-report',
+      'explorer.menu.compileOther',
+    ]) {
+      expect(await screen.findByRole('menuitem', { name })).toBeTruthy()
+    }
+  })
+
+  it('installs the skill if needed and opens a prefilled compile form', async () => {
+    ensureBuiltinSkillMock.mockResolvedValue(true)
+    renderTree()
+    await openCompileWith('docs')
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'llm-wiki' }))
+
+    await vi.waitFor(() =>
+      expect(navigateMock).toHaveBeenCalledWith({
+        to: '/compile/new',
+        search: {
+          skill: 'viking://agent/skills/llm-wiki',
+          from: 'viking://resources/docs',
+          to: 'viking://resources/docs-llm-wiki',
+        },
+      }),
+    )
+    expect(ensureBuiltinSkillMock).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'llm-wiki' }),
+    )
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      'explorer.menu.compileInstalled:llm-wiki',
+    )
+    expect(invalidateListMock).toHaveBeenCalledWith('viking://agent/skills')
+  })
+
+  it('stays put when the skill cannot be installed', async () => {
+    ensureBuiltinSkillMock.mockRejectedValue(new Error('denied'))
+    renderTree()
+    await openCompileWith('docs')
+    fireEvent.click(await screen.findByRole('menuitem', { name: 'llm-wiki' }))
+
+    await vi.waitFor(() => expect(ensureBuiltinSkillMock).toHaveBeenCalled())
+    expect(navigateMock).not.toHaveBeenCalled()
+  })
+
+  it('opens the form with only the source for another skill', async () => {
+    renderTree()
+    await openCompileWith('docs')
+    fireEvent.click(
+      await screen.findByRole('menuitem', {
+        name: 'explorer.menu.compileOther',
+      }),
+    )
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/compile/new',
+      search: { from: 'viking://resources/docs' },
+    })
+    expect(ensureBuiltinSkillMock).not.toHaveBeenCalled()
+  })
+
+  it('compiles with a skill folder itself', async () => {
+    const user = userEvent.setup()
+    useVikingFsListMock.mockImplementation((uri: string) => ({
+      data: {
+        entries:
+          uri === 'viking://'
+            ? [namespace]
+            : uri === namespace.uri
+              ? [
+                  {
+                    ...folder,
+                    name: 'llm-wiki',
+                    uri: 'viking://agent/skills/llm-wiki/',
+                  },
+                ]
+              : [],
+      },
+      isError: false,
+      isLoading: false,
+    }))
+    renderTree()
+    rightClick('llm-wiki')
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: 'explorer.menu.compileWithSkill',
+      }),
+    )
+
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/compile/new',
+      search: { skill: 'viking://agent/skills/llm-wiki' },
+    })
+  })
+
+  it('offers no compile action on a file', async () => {
+    renderTree()
+    rightClick('guide.md')
+
+    expect(await menuItemNames()).not.toContain('explorer.menu.compileWith')
   })
 })
 

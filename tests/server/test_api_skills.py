@@ -4,6 +4,7 @@
 import sys
 import types
 import zipfile
+from pathlib import Path
 from unittest.mock import AsyncMock
 
 import pytest
@@ -832,3 +833,31 @@ async def test_mcp_skill_import_and_vector_rebuild_preserve_l1_frontmatter(clien
     assert rebuilt.json()["result"]["failed_records"] == 0
     assert rebuilt.json()["result"]["rebuilt_records"] == 3
     await assert_indexed_body()
+
+
+async def test_skills_api_installs_bundled_compile_skills_like_studio(client):
+    """Studio installs examples/compile/ov-compile-skills inline into the shared root."""
+    skills_dir = Path(__file__).resolve().parents[2] / "examples/compile/ov-compile-skills"
+    names = sorted(path.parent.name for path in skills_dir.glob("*/SKILL.md"))
+    assert names
+
+    for name in names:
+        response = await client.post(
+            "/api/v1/skills",
+            json={
+                "data": (skills_dir / name / "SKILL.md").read_text(encoding="utf-8"),
+                "target_uri": "viking://agent/skills",
+                "source_metadata": {
+                    "type": "studio",
+                    "source": "ov-compile-skills",
+                    "operation": "add",
+                },
+                "wait": True,
+            },
+        )
+        assert response.status_code == 200, response.text
+
+    listed = await client.get("/api/v1/skills")
+    assert listed.status_code == 200, listed.text
+    uris = {skill["uri"] for skill in listed.json()["result"]["skills"]}
+    assert {f"viking://agent/skills/{name}" for name in names} <= uris

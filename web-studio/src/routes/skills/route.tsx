@@ -30,6 +30,7 @@ import {
 } from '#/components/ui/sheet'
 import { useAppConnection } from '#/hooks/use-app-connection'
 import { getOvResult, isOvClientError, ovClient } from '#/lib/ov-client'
+import { BuiltinSkillsNotice } from '#/routes/compile/-components/builtin-skills'
 
 import {
   SKILL_SCOPE_ICONS,
@@ -231,6 +232,8 @@ function SkillsRoute() {
           {t('refresh')}
         </Button>
       </header>
+
+      <BuiltinSkillsNotice installed={skillsQuery.data} />
 
       {skillsQuery.isLoading ? (
         <Card className="min-h-56 items-center justify-center">

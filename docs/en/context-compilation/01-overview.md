@@ -41,6 +41,8 @@ Compile itself does not decide *what* to compile into — the Skill does. The sa
 
 The first two examples also give the complete `ov` commands from **importing sources → adding the Skill → running compile → visualizing the output**, ending in an interactive HTML graph.
 
+Studio ships these Skills too. The **Compile** and **Skills** pages offer to install any that are missing into `viking://agent/skills`, and in the Playground context tree you can right-click a folder and choose **Compile with ▸ <Skill>** to open a compile form with that folder as the source (the Skill is installed first if needed). Right-clicking a Skill folder offers **Compile with this Skill**.
+
 ## Prerequisites
 
 - A running OpenViking service with Bot enabled (`--with-bot`). The default endpoint is `http://localhost:1933`; remote use needs an API Key — see [Authentication](../guides/04-authentication.md). No service yet? Start with the [Quick Start](../getting-started/02-quickstart.md).
