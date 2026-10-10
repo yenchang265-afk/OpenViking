@@ -8,6 +8,7 @@ export default {
     conflict: 'This submission conflicts with an existing request.',
     network: 'Unable to reach the server. Check your connection and try again.',
     upgrade: 'Update Business Data Platform to use paginated task history.',
+    agentOutput: 'The compile agent did not produce usable output.',
     details: 'Technical details',
   },
   commandErrors: {

@@ -77,6 +77,7 @@ export function CompileError({
   retry?: () => void
 }) {
   const { t } = useTranslation('compile')
+  const key = compileErrorKey(error)
   return (
     <div
       role="alert"
@@ -84,8 +85,9 @@ export function CompileError({
     >
       <AlertCircleIcon className="size-4 shrink-0" />
       <div className="min-w-0 flex-1 break-words">
-        <p>{t(compileErrorKey(error))}</p>
-        <details className="mt-2">
+        <p>{t(key)}</p>
+        {/* The agent's reason is the useful part, so show it right away. */}
+        <details className="mt-2" open={key === 'errors.agentOutput'}>
           <summary className="cursor-pointer">{t('errors.details')}</summary>
           <p className="mt-1 whitespace-pre-wrap">{errorText(error)}</p>
         </details>

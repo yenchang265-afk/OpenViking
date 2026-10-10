@@ -180,6 +180,10 @@ class CompileScopedTool(Tool):
         return rendered
 
 
+#: Empty submissions refused before one is accepted (and the task then fails).
+EMPTY_CHECKOUT_RETRIES = 2
+
+
 class SubmitTargetCheckoutTool(Tool):
     """Commit the Resource checkout without asking the agent to describe its diff."""
 
@@ -189,6 +193,7 @@ class SubmitTargetCheckoutTool(Tool):
         target_uri: str,
         source_roots: Mapping[str, str],
         limits: CompileLimits,
+        empty_retries: int = EMPTY_CHECKOUT_RETRIES,
     ):
         self.target_uri = target_uri.rstrip("/")
         self.source_roots = dict(source_roots)
@@ -196,6 +201,7 @@ class SubmitTargetCheckoutTool(Tool):
         self.bundle: RenderedBundle | None = None
         self.page_count = 0
         self.file_count = 0
+        self.empty_retries_left = empty_retries
 
     @property
     def name(self) -> str:
@@ -268,6 +274,18 @@ class SubmitTargetCheckoutTool(Tool):
                 target_uri=self.target_uri,
                 source_roots=self.source_roots,
             )
+            # Small models tend to read the sources and then submit an empty
+            # checkout. Send them back to write before accepting "nothing".
+            if not finalized.files and self.empty_retries_left > 0:
+                self.empty_retries_left -= 1
+                return (
+                    f"Error: Nothing has been written under {COMPILE_TARGET_CHECKOUT_ROOT}/ "
+                    "yet, so this would publish an empty result. Write the output files "
+                    "the Skill describes under that directory with write_file (read the "
+                    "source files first if you have not), then call submit_wiki_bundle "
+                    "again. Submit an empty checkout again only if the sources truly "
+                    "contain nothing to compile."
+                )
             rendered = RenderedBundle(link_count=finalized.link_count)
             self.page_count = len(finalized.wiki_paths)
             self.file_count = len(finalized.files)
