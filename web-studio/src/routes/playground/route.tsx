@@ -452,6 +452,23 @@ function PlaygroundWorkbench() {
     [currentUri, handleResourceDeleted, t],
   )
 
+  const handleTreeEntriesDeleted = useCallback(
+    (entries: Pick<VikingFsEntry, 'uri'>[]) => {
+      const selected = selectedFileRef.current
+      const openEntry = entries.find(
+        (entry) =>
+          isUriWithin(currentUri, entry.uri) ||
+          (selected && isUriWithin(selected.uri, entry.uri)),
+      )
+      toast.success(t('deleteResource.deletedCount', { count: entries.length }))
+      if (openEntry) {
+        void invalidateList()
+        handleNavigateDirectory(parentUri(openEntry.uri))
+      }
+    },
+    [currentUri, handleNavigateDirectory, invalidateList, t],
+  )
+
   const handleTreeEntryRenamed = useCallback(
     (fromUri: string, toUri: string) => {
       const selected = selectedFileRef.current
@@ -619,6 +636,7 @@ function PlaygroundWorkbench() {
                 selectedFile && !selectedFile.isDir ? selectedFile.uri : null
               }
               expandedKeys={expandedKeys}
+              onEntriesDeleted={handleTreeEntriesDeleted}
               onEntryDeleted={handleTreeEntryDeleted}
               onEntryRenamed={handleTreeEntryRenamed}
               onExpandedKeysChange={handleExpandedKeysChange}

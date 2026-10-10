@@ -188,6 +188,15 @@ const activity = {
       deleting: 'Deleting…',
       deleted: 'Resource deleted',
       failed: 'Delete failed: {{error}}',
+      batchTitle: 'Delete {{count}} item?',
+      batchTitle_other: 'Delete {{count}} items?',
+      batchDescription:
+        'These items, and everything inside selected folders, will be permanently deleted. This cannot be undone.',
+      batchListLabel: 'Items to delete',
+      batchFailed: '{{count}} item could not be deleted: {{error}}',
+      batchFailed_other: '{{count}} items could not be deleted: {{error}}',
+      deletedCount: '{{count}} item deleted',
+      deletedCount_other: '{{count}} items deleted',
     },
     tabs: {
       terminal: 'Terminal',
@@ -228,6 +237,16 @@ const activity = {
         copyUri: 'Copy URI',
         refresh: 'Refresh',
         delete: 'Delete…',
+        deleteSelected: 'Delete {{count}} item…',
+        deleteSelected_other: 'Delete {{count}} items…',
+        clearSelection: 'Clear selection',
+      },
+      selection: {
+        count: '{{count}} selected',
+        hint: 'Ctrl/⌘-click or Ctrl/⌘+Space rows to select several',
+        marked: 'Selected for batch actions',
+        delete: 'Delete',
+        clear: 'Clear',
       },
       nameDialog: {
         newFileTitle: 'New file',

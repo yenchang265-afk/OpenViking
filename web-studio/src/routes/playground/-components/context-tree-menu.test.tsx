@@ -97,6 +97,7 @@ afterEach(() => {
 
 function renderTree({ currentUri = 'viking://' } = {}) {
   const props = {
+    onEntriesDeleted: vi.fn(),
     onEntryDeleted: vi.fn(),
     onEntryRenamed: vi.fn(),
     onExpandedKeysChange: vi.fn(),
@@ -302,5 +303,195 @@ describe('ContextTree context menu', () => {
       'explorer.menu.newFolder',
       'explorer.menu.refresh',
     ])
+  })
+})
+
+function ctrlClick(name: string) {
+  fireEvent.click(screen.getByRole('button', { name }), { ctrlKey: true })
+}
+
+function selectionToolbar() {
+  return screen.queryByRole('toolbar', { name: 'explorer.selection.count' })
+}
+
+describe('ContextTree batch delete', () => {
+  it('marks rows with ctrl-click without opening them', () => {
+    const { onSelectDirectory, onSelectFile } = renderTree()
+    ctrlClick('docs')
+    ctrlClick('guide.md')
+
+    expect(selectionToolbar()).toBeTruthy()
+    expect(onSelectDirectory).not.toHaveBeenCalled()
+    expect(onSelectFile).not.toHaveBeenCalled()
+  })
+
+  it('never marks a namespace', () => {
+    renderTree()
+    ctrlClick('resources')
+
+    expect(selectionToolbar()).toBeNull()
+  })
+
+  it('clears the marks on a plain click', () => {
+    const { onSelectFile } = renderTree()
+    ctrlClick('docs')
+    fireEvent.click(screen.getByRole('button', { name: 'guide.md' }))
+
+    expect(selectionToolbar()).toBeNull()
+    expect(onSelectFile).toHaveBeenCalled()
+  })
+
+  it('offers batch actions when right-clicking a marked row', async () => {
+    renderTree()
+    ctrlClick('docs')
+    ctrlClick('guide.md')
+    rightClick('guide.md')
+
+    expect(await menuItemNames()).toEqual([
+      'explorer.menu.clearSelection',
+      'explorer.menu.deleteSelected',
+    ])
+  })
+
+  it('keeps the single-row menu for an unmarked row', async () => {
+    renderTree()
+    ctrlClick('docs')
+    ctrlClick('guide.md')
+    rightClick('resources')
+
+    expect(await menuItemNames()).toContain('explorer.menu.newFile')
+  })
+
+  it('deletes every marked row after one confirmation', async () => {
+    const user = userEvent.setup()
+    const { onEntriesDeleted } = renderTree()
+    ctrlClick('docs')
+    ctrlClick('guide.md')
+    rightClick('guide.md')
+    await user.click(
+      await screen.findByRole('menuitem', {
+        name: 'explorer.menu.deleteSelected',
+      }),
+    )
+
+    const list = await screen.findByRole('list', {
+      name: 'deleteResource.batchListLabel',
+    })
+    expect(list.textContent).toContain(folder.uri)
+    expect(list.textContent).toContain(file.uri)
+    await user.click(
+      screen.getByRole('button', { name: 'deleteResource.confirm' }),
+    )
+
+    await vi.waitFor(() =>
+      expect(onEntriesDeleted).toHaveBeenCalledWith([
+        expect.objectContaining({ uri: folder.uri }),
+        expect.objectContaining({ uri: file.uri }),
+      ]),
+    )
+    expect(api.removeResource).toHaveBeenCalledWith(folder.uri, {
+      recursive: true,
+    })
+    expect(api.removeResource).toHaveBeenCalledWith(file.uri, {
+      recursive: false,
+    })
+    expect(invalidateListMock).toHaveBeenCalledWith(namespace.uri)
+    expect(selectionToolbar()).toBeNull()
+  })
+
+  it('keeps failures selected and retries only them', async () => {
+    const user = userEvent.setup()
+    api.removeResource.mockImplementation(async (uri: string) => {
+      if (uri === file.uri) throw new Error('locked')
+    })
+    const { onEntriesDeleted } = renderTree()
+    ctrlClick('docs')
+    ctrlClick('guide.md')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'explorer.selection.delete' }),
+    )
+    await user.click(
+      await screen.findByRole('button', { name: 'deleteResource.confirm' }),
+    )
+
+    expect((await screen.findByRole('alert')).textContent).toBe(
+      'deleteResource.batchFailed',
+    )
+    expect(onEntriesDeleted).toHaveBeenCalledWith([
+      expect.objectContaining({ uri: folder.uri }),
+    ])
+    const list = screen.getByRole('list', {
+      name: 'deleteResource.batchListLabel',
+    })
+    expect(list.textContent).toBe(file.uri)
+
+    api.removeResource.mockClear()
+    api.removeResource.mockResolvedValue(undefined)
+    await user.click(
+      screen.getByRole('button', { name: 'deleteResource.confirm' }),
+    )
+
+    await vi.waitFor(() =>
+      expect(onEntriesDeleted).toHaveBeenLastCalledWith([
+        expect.objectContaining({ uri: file.uri }),
+      ]),
+    )
+    expect(api.removeResource).toHaveBeenCalledTimes(1)
+    expect(selectionToolbar()).toBeNull()
+  })
+
+  it('marks rows from the keyboard with Ctrl+Space', () => {
+    const { onSelectFile } = renderTree()
+    const row = screen.getByRole('button', { name: 'guide.md' })
+    fireEvent.keyDown(row, { key: ' ', ctrlKey: true })
+
+    expect(selectionToolbar()).toBeTruthy()
+    expect(row.getAttribute('aria-describedby')).toBeTruthy()
+    expect(onSelectFile).not.toHaveBeenCalled()
+  })
+
+  it('moves marks along with a renamed folder', async () => {
+    const user = userEvent.setup()
+    renderTree()
+    // A single mark keeps the regular menu, which offers Rename.
+    ctrlClick('docs')
+    rightClick('docs')
+    await user.click(
+      await screen.findByRole('menuitem', { name: 'explorer.menu.rename' }),
+    )
+    const input = await screen.findByLabelText('explorer.nameDialog.nameLabel')
+    await user.clear(input)
+    await user.type(input, 'manuals')
+    await user.click(
+      screen.getByRole('button', { name: 'explorer.nameDialog.rename' }),
+    )
+    await vi.waitFor(() => expect(api.moveResource).toHaveBeenCalled())
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'explorer.selection.delete' }),
+    )
+    const list = await screen.findByRole('list', {
+      name: 'deleteResource.batchListLabel',
+    })
+    expect(list.textContent).toBe('viking://resources/manuals/')
+  })
+
+  it('handles Escape and Delete keys on the tree', async () => {
+    renderTree()
+    ctrlClick('guide.md')
+    fireEvent.keyDown(screen.getByRole('button', { name: 'guide.md' }), {
+      key: 'Escape',
+    })
+    expect(selectionToolbar()).toBeNull()
+
+    ctrlClick('guide.md')
+    fireEvent.keyDown(screen.getByRole('button', { name: 'guide.md' }), {
+      key: 'Delete',
+    })
+    expect(
+      await screen.findByRole('list', {
+        name: 'deleteResource.batchListLabel',
+      }),
+    ).toBeTruthy()
   })
 })

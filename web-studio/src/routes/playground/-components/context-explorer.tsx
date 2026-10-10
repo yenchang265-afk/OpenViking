@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef } from 'react'
+import type {
+  KeyboardEvent as ReactKeyboardEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   ChevronRightIcon,
@@ -22,7 +26,7 @@ import { remapExpandedUris } from '../-lib/tree-actions'
 import { sortTreeEntries, visibleContextEntries } from '../-lib/utils'
 import { ROOT_URI } from '../-lib/constants'
 import { AuthorChips } from './author-chips'
-import { ContextTreeMenu, useContextTreeMenuTarget } from './context-tree-menu'
+import { ContextTreeMenu, useContextTreeMenu } from './context-tree-menu'
 
 const TREE_INDENT_WIDTH = 16
 const TREE_ROW_PADDING = 6
@@ -142,6 +146,7 @@ const NAMESPACE_ORDER: Partial<Record<string, number>> = {
 export function ContextTree({
   currentUri,
   expandedKeys,
+  onEntriesDeleted,
   onEntryDeleted,
   onEntryRenamed,
   onExpandedKeysChange,
@@ -151,6 +156,7 @@ export function ContextTree({
 }: {
   currentUri: string
   expandedKeys: Set<string>
+  onEntriesDeleted?: (entries: Pick<VikingFsEntry, 'isDir' | 'uri'>[]) => void
   onEntryDeleted?: (entry: Pick<VikingFsEntry, 'isDir' | 'uri'>) => void
   onEntryRenamed?: (fromUri: string, toUri: string) => void
   onExpandedKeysChange: (next: Set<string>) => void
@@ -192,6 +198,7 @@ export function ContextTree({
     <ContextTreeMenu
       className="h-full overflow-auto px-2 py-2 font-mono"
       currentUri={currentUri}
+      onEntriesDeleted={onEntriesDeleted}
       onEntryDeleted={onEntryDeleted}
       onEntryRenamed={handleEntryRenamed}
       onSelectDirectory={onSelectDirectory}
@@ -294,7 +301,9 @@ export function ContextTreeNode({
   const isSelected = isDirSelected || isFileSelected
   const namespaceHint = level === 0 ? entry.abstract : ''
   const rowRef = useRef<HTMLDivElement>(null)
-  const setMenuTarget = useContextTreeMenuTarget()
+  const treeMenu = useContextTreeMenu()
+  const isMarked = treeMenu?.selection.has(entry.uri) ?? false
+  const markedNoteId = useId()
   const disclosureLabel = entry.isDir
     ? t(isOpen ? 'explorer.collapseDirectory' : 'explorer.expandDirectory', {
         name: entry.name,
@@ -346,18 +355,40 @@ export function ContextTreeNode({
     }
   }, [entry, isOpen, isSelected, onSelectDirectory, onSelectFile, toggle])
 
+  // Ctrl/⌘-click marks rows for batch actions; a plain click starts over.
+  const handleRowClick = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    if (treeMenu && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault()
+      treeMenu.toggleSelected(entry)
+      return
+    }
+    treeMenu?.clearSelection()
+    select()
+  }
+
+  // Keyboard equivalent of Ctrl/⌘-click.
+  const handleRowKeyDown = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    if (!treeMenu || !(event.ctrlKey || event.metaKey)) return
+    if (event.key !== ' ' && event.key !== 'Enter') return
+    event.preventDefault()
+    treeMenu.toggleSelected(entry)
+  }
+
   return (
     <li className="relative min-w-0 list-none">
       <TreeIndentGuides level={level} />
       <div
         ref={rowRef}
-        onContextMenu={() => setMenuTarget?.(entry)}
-        onTouchStart={() => setMenuTarget?.(entry)}
+        data-marked={isMarked || undefined}
+        onContextMenu={() => treeMenu?.setMenuTarget(entry)}
+        onTouchStart={() => treeMenu?.setMenuTarget(entry)}
         className={cn(
           'group relative z-10 h-7 select-none rounded-md text-xs transition-colors',
-          isSelected
-            ? 'bg-muted text-foreground'
-            : 'text-muted-foreground hover:bg-muted/55 hover:text-foreground',
+          isMarked
+            ? 'bg-primary/15 text-foreground ring-1 ring-inset ring-primary/40'
+            : isSelected
+              ? 'bg-muted text-foreground'
+              : 'text-muted-foreground hover:bg-muted/55 hover:text-foreground',
         )}
       >
         {entry.isDir ? (
@@ -383,10 +414,17 @@ export function ContextTreeNode({
           type="button"
           aria-label={entry.name}
           aria-current={isSelected ? 'location' : undefined}
+          aria-describedby={isMarked ? markedNoteId : undefined}
           className="absolute inset-0 z-10 flex min-w-0 cursor-pointer items-center gap-1.5 rounded-md pr-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
           style={{ paddingLeft: treeSelectionPadding(level, entry.isDir) }}
-          onClick={select}
+          onClick={handleRowClick}
+          onKeyDown={handleRowKeyDown}
         >
+          {isMarked ? (
+            <span id={markedNoteId} className="sr-only">
+              {t('explorer.selection.marked')}
+            </span>
+          ) : null}
           {!entry.isDir ? (
             <span aria-hidden="true" className="size-4 shrink-0" />
           ) : null}

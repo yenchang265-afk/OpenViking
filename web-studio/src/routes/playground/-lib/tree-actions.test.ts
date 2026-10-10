@@ -4,6 +4,7 @@ import {
   canCreateInUri,
   childEntryUri,
   isUriWithin,
+  pruneNestedEntries,
   remapExpandedUris,
   remapUri,
   renamedEntryUri,
@@ -138,5 +139,37 @@ describe('canCreateInUri', () => {
     expect(canCreateInUri('viking://')).toBe(false)
     expect(canCreateInUri('viking://resources')).toBe(true)
     expect(canCreateInUri('viking://resources/a/')).toBe(true)
+  })
+})
+
+describe('pruneNestedEntries', () => {
+  it('drops entries inside a selected folder and keeps order', () => {
+    const entries = [
+      { uri: 'viking://resources/docs/guide.md' },
+      { uri: 'viking://resources/notes.md' },
+      { uri: 'viking://resources/docs/' },
+      { uri: 'viking://resources/docs/specs/' },
+    ]
+
+    expect(pruneNestedEntries(entries).map((entry) => entry.uri)).toEqual([
+      'viking://resources/notes.md',
+      'viking://resources/docs/',
+    ])
+  })
+
+  it('keeps siblings that only share a name prefix', () => {
+    const entries = [
+      { uri: 'viking://resources/docs/' },
+      { uri: 'viking://resources/docs-old/' },
+    ]
+
+    expect(pruneNestedEntries(entries)).toEqual(entries)
+  })
+
+  it('keeps the first of duplicate URIs', () => {
+    const first = { uri: 'viking://resources/docs/' }
+    const second = { uri: 'viking://resources/docs' }
+
+    expect(pruneNestedEntries([first, second])).toEqual([first])
   })
 })

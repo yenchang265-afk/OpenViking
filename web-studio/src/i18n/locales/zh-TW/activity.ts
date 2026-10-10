@@ -181,6 +181,15 @@ const activity = {
       deleting: '正在刪除…',
       deleted: '資源已刪除',
       failed: '刪除失敗：{{error}}',
+      batchTitle: '確定要刪除 {{count}} 個項目？',
+      batchTitle_other: '確定要刪除 {{count}} 個項目？',
+      batchDescription:
+        '這些項目及所選資料夾中的所有內容將被永久刪除，此操作無法復原。',
+      batchListLabel: '要刪除的項目',
+      batchFailed: '{{count}} 個項目無法刪除：{{error}}',
+      batchFailed_other: '{{count}} 個項目無法刪除：{{error}}',
+      deletedCount: '已刪除 {{count}} 個項目',
+      deletedCount_other: '已刪除 {{count}} 個項目',
     },
     tabs: {
       terminal: '終端',
@@ -221,6 +230,16 @@ const activity = {
         copyUri: '複製 URI',
         refresh: '重新整理',
         delete: '刪除…',
+        deleteSelected: '刪除 {{count}} 個項目…',
+        deleteSelected_other: '刪除 {{count}} 個項目…',
+        clearSelection: '取消選取',
+      },
+      selection: {
+        count: '已選取 {{count}} 個',
+        hint: '按住 Ctrl/⌘ 點選或按 Ctrl/⌘+空白鍵以選取多個項目',
+        marked: '已選取以進行批次操作',
+        delete: '刪除',
+        clear: '取消',
       },
       nameDialog: {
         newFileTitle: '新增檔案',
