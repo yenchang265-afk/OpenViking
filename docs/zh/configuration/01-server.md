@@ -296,6 +296,7 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 | `profile_enabled` | boolean | `false` | 是否允許請求返回效能 profile |
 | `with_bot` | boolean | `false` | 是否啟用 VikingBot API 代理 |
 | `bot_api_url` | URL | `http://localhost:18790` | VikingBot OpenAPI 地址 |
+| `builtin_skills` | boolean | `true` | 在啟動與建立帳戶時，將內建的編譯 Skill 安裝到每個帳戶的 `viking://agent/skills`；不覆寫既有 Skill，已刪除的內建 Skill 不會重新安裝 |
 | `public_base_url` | URL / `null` | `null` | 外部訪問使用的服務基準地址 |
 | `upload_signed_ttl_seconds` | integer | `600` | 簽名上傳 URL 有效期 |
 | `temp_upload.default_mode` | `"local"` / `"shared"` | `"local"` | 臨時上傳儲存模式 |

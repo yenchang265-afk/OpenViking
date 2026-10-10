@@ -8,6 +8,7 @@ export default {
     conflict: '本次提交與已有請求衝突。',
     network: '無法連線伺服器，請檢查網路後重試。',
     upgrade: '請升級 Business Data Platform 後使用任務歷史分頁。',
+    agentOutput: '編譯代理沒有產生可用的輸出。',
     details: '技術詳情',
   },
   commandErrors: {
@@ -140,6 +141,7 @@ export default {
   missingRequest: '該任務未記錄完整建立引數。',
   selectDraft: '用該任務的公開配置替換當前草稿？',
   leave: '進階引數尚未儲存，離開將丟失。是否離開？',
+  replaceDraft: '用選取的資料夾與 Skill 替換當前草稿？',
   viewTask: '檢視任務',
   created: '任務已建立',
   terminalHint: '使用 Skill 編譯素材',

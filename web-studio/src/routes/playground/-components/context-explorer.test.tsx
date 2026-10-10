@@ -17,6 +17,9 @@ vi.mock('#/routes/resources/-hooks/viking-fm', () => ({
   useVikingFsList: useVikingFsListMock,
 }))
 
+vi.mock('#/hooks/use-app-connection', () => ({
+  useAppConnection: () => ({ identityScopeKey: 'explorer-test' }),
+}))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string; user?: string }) => {

@@ -79,6 +79,11 @@ _OV_READ_TOOLS = frozenset(
     }
 )
 _COMPILE_CORE_TOOLS = frozenset({"read_file", "write_file", "edit_file"})
+_EMPTY_OUTPUT_MESSAGE = (
+    "The agent finished without writing any output files. The Bot model may be too "
+    "small to follow this Skill; set a more capable model under bot.agents in ov.conf "
+    "and run the compile again."
+)
 _COMPILE_ISOLATED_EXEC_BACKENDS = frozenset(
     {
         SandboxBackend.SRT,
@@ -1140,6 +1145,17 @@ class BotCompileService:
                 page_count = len(bundle.pages)
                 output_file_count = len(bundle.pages) + len(bundle.files)
 
+            # An empty output is a failed compile, not a successful one with a
+            # warning: report it so it is not mistaken for "done". The checkout
+            # counts the whole final tree; the bundle path counts only changes,
+            # so there "nothing new" is fine when the target already has files.
+            if output_file_count == 0 and (target_checkout_enabled or not target_inventory):
+                raise CompileFailure(
+                    "AGENT_OUTPUT_INVALID",
+                    _EMPTY_OUTPUT_MESSAGE,
+                    stage="agent",
+                )
+
             batch_result: dict[str, Any] = {"created": [], "updated": [], "unchanged": []}
             if rendered.operations:
                 try:
@@ -1168,9 +1184,9 @@ class BotCompileService:
             unchanged = list(
                 dict.fromkeys([*rendered.unchanged, *batch_result.get("unchanged", [])])
             )
-            warnings = []
+            warnings: list[str] = []
             if output_file_count == 0:
-                warnings.append("No reliable output was produced from the supplied materials.")
+                warnings.append("No changes were produced; the existing output was left as is.")
             result = CompileResult(
                 **{
                     "from": request.from_,

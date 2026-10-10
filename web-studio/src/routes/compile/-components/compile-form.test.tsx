@@ -44,14 +44,14 @@ vi.mock('#/routes/resources/-lib/api', () => ({ fetchFileContent: vi.fn() }))
 const storageKey = 'compile-submission:recovery-test'
 const clients: QueryClient[] = []
 const task = { task_id: 'cmp-original', status: 'pending' }
-function mount() {
+function mount(props: Parameters<typeof CompileForm>[0] = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   clients.push(client)
   const page = render(
     <QueryClientProvider client={client}>
-      <CompileForm />
+      <CompileForm {...props} />
     </QueryClientProvider>,
   )
   return {
@@ -140,4 +140,56 @@ it('does not resubmit or discard the recovery key when lookup is unavailable', a
   expect(api.lookupSubmission).toHaveBeenCalledWith(key)
   expect(api.createCompile).not.toHaveBeenCalled()
   expect(sessionStorage.getItem(storageKey)).toBe(key)
+})
+
+const prefill = {
+  skill: 'viking://agent/skills/llm-wiki',
+  from: 'viking://resources/docs',
+  to: 'viking://resources/docs-llm-wiki',
+}
+const prefilledDraft = {
+  skill: prefill.skill,
+  sources: prefill.from,
+  to: prefill.to,
+  instruction: '',
+}
+const savedDraft = { skill: 'old', sources: 'old', to: 'old', instruction: 'x' }
+const readSavedDraft = () =>
+  JSON.parse(localStorage.getItem('compile-draft:recovery-test')!)
+
+it('fills the form from a context tree prefill', async () => {
+  const page = mount({ prefill })
+  await waitFor(() =>
+    expect(
+      (page.container.querySelector('#compile-target') as HTMLInputElement)
+        .value,
+    ).toBe(prefill.to),
+  )
+  await waitFor(() => expect(readSavedDraft()).toEqual(prefilledDraft))
+})
+
+it('asks before a prefill replaces a saved draft', async () => {
+  localStorage.setItem(
+    'compile-draft:recovery-test',
+    JSON.stringify(savedDraft),
+  )
+  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
+  mount({ prefill })
+  await waitFor(() => expect(confirm).toHaveBeenCalledWith('replaceDraft'))
+  expect(readSavedDraft()).toEqual(savedDraft)
+
+  cleanup()
+  confirm.mockReturnValueOnce(true)
+  mount({ prefill })
+  await waitFor(() => expect(readSavedDraft()).toEqual(prefilledDraft))
+  confirm.mockRestore()
+})
+
+it('lets a prefill win over a leftover terminal handoff', async () => {
+  prepareCompileHandoff(
+    'recovery-test',
+    'compile --from viking://resources/stale --to viking://resources/stale-out --skill viking://agent/skills/stale',
+  )
+  mount({ prefill })
+  await waitFor(() => expect(readSavedDraft()).toEqual(prefilledDraft))
 })

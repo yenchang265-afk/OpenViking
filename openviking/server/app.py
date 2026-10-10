@@ -154,6 +154,31 @@ async def _initialize_auth_plugin(
     logger.info("Auth plugin initialized: %s", effective_auth_mode)
 
 
+def _builtin_skill_account_ids(app: FastAPI, service: OpenVikingService) -> list[str]:
+    """Every known account; dev mode and bare trusted mode only have the default."""
+    manager = getattr(app.state, "api_key_manager", None)
+    if manager is None:
+        plugin = getattr(app.state, "auth_plugin", None)
+        manager = getattr(plugin, "_api_key_manager", None)
+    account_ids = [service.user.account_id]
+    if manager is not None:
+        account_ids += [
+            account["account_id"]
+            for account in manager.get_accounts()
+            if account.get("status") != "deleting"
+        ]
+    return list(dict.fromkeys(account_ids))
+
+
+def _start_builtin_skills_install(app: FastAPI, service: OpenVikingService) -> asyncio.Task:
+    """Install the bundled compile Skills in the background, after startup."""
+    from openviking.service.builtin_skills import install_builtin_skills_for_accounts
+
+    return asyncio.create_task(
+        install_builtin_skills_for_accounts(service, _builtin_skill_account_ids(app, service))
+    )
+
+
 async def _initialize_runtime_state(
     app: FastAPI,
     service: OpenVikingService,
@@ -385,9 +410,12 @@ def create_app(
         # Start MCP session manager (must be active before /mcp requests)
         from openviking.server.mcp_endpoint import mcp_lifespan
 
+        builtin_skills_task = None
         async with mcp_lifespan():
             if service is not None:
                 await _initialize_runtime_state(app, service, config)
+                if config.builtin_skills:
+                    builtin_skills_task = _start_builtin_skills_install(app, service)
             yield
 
         # Cleanup
@@ -404,6 +432,10 @@ def create_app(
         upload_sweep_task.cancel()
         with suppress(asyncio.CancelledError):
             await upload_sweep_task
+        if builtin_skills_task is not None:
+            builtin_skills_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await builtin_skills_task
         auth_plugin_state = getattr(app.state, "auth_plugin", None)
         if auth_plugin_state is not None:
             try:

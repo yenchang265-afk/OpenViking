@@ -3494,3 +3494,206 @@ async def test_compile_syncs_skill_package_files(tmp_path: Path):
         "skills/wiki/SKILL.md": "Skill",
         "skills/wiki/references/guide.md": "Guide",
     }
+
+
+def _checkout_context(files: dict[str, bytes]) -> ToolContext:
+    class Sandbox:
+        async def list_files(self, path, *, max_entries):
+            del max_entries
+            assert path == "__compile_staging__/target_checkout"
+            return [SandboxFileInfo(path=p, size=len(b)) for p, b in files.items()]
+
+        async def read_file_bytes(self, path, *, max_bytes=None):
+            del max_bytes
+            return files[path]
+
+    class Manager:
+        async def get_sandbox(self, session_key):
+            del session_key
+            return Sandbox()
+
+    return ToolContext(
+        session_key=SessionKey(type="compile", channel_id="cmp", chat_id="cmp"),
+        sandbox_manager=Manager(),
+    )
+
+
+@pytest.mark.asyncio
+async def test_submit_tool_checkout_sends_an_empty_submission_back_to_write_first():
+    files: dict[str, bytes] = {}
+    context = _checkout_context(files)
+    tool = SubmitTargetCheckoutTool(
+        target_uri="viking://resources/wiki",
+        source_roots={"src_1": "viking://resources/source"},
+        limits=CompileLimits(),
+    )
+
+    for _ in range(2):
+        refused = await tool.execute(context)
+        assert refused.startswith("Error: Nothing has been written under")
+        assert tool.bundle is None
+
+    # After the retries an empty submission is accepted; the service then
+    # fails the task instead of reporting it as completed.
+    accepted = await tool.execute(context)
+    assert accepted.startswith("Target checkout accepted with 0 changed file(s)")
+    assert tool.file_count == 0
+
+
+@pytest.mark.asyncio
+async def test_submit_tool_checkout_accepts_written_output_immediately():
+    page = b"---\ntype: concept\ntitle: Cat\ndescription: A cat.\n---\n\nBody."
+    files = {"__compile_staging__/target_checkout/concept/cat.md": page}
+    tool = SubmitTargetCheckoutTool(
+        target_uri="viking://resources/wiki",
+        source_roots={"src_1": "viking://resources/source"},
+        limits=CompileLimits(),
+    )
+
+    accepted = await tool.execute(_checkout_context(files))
+
+    assert accepted.startswith("Target checkout accepted with 1 changed file(s)")
+    assert tool.empty_retries_left == 2
+
+
+@pytest.mark.asyncio
+async def test_compile_with_no_output_files_fails_instead_of_completing(
+    monkeypatch, tmp_path: Path
+):
+    sandbox = _FakeWorkspaceSandbox({})
+
+    class TaskConfig:
+        uses_managed_opensandbox = False
+
+        def __init__(self):
+            self.bot_data_path = tmp_path
+            self.workspace_path = tmp_path / "host-workspace"
+            self.skills = []
+            self.sandbox = SimpleNamespace(
+                mode=None, model_copy=lambda *, deep: SimpleNamespace(mode=None)
+            )
+
+        def model_copy(self, *, update):
+            copy = TaskConfig()
+            for key, value in update.items():
+                setattr(copy, key, value)
+            return copy
+
+    class FakeSandboxManager:
+        def __init__(self, config, workspace_parent, workspace_path):
+            del config, workspace_path
+            self.workspace = workspace_parent / "workspace"
+            self.workspace.mkdir(parents=True)
+
+        def get_workspace_path(self, session_key):
+            del session_key
+            return self.workspace
+
+        async def get_sandbox(self, session_key):
+            del session_key
+            return sandbox
+
+        async def cleanup_session(self, session_key):
+            del session_key
+
+    class FakeSkillsLoader:
+        def __init__(self, workspace, *, builtin_skills_dir):
+            del workspace, builtin_skills_dir
+
+        def load_skills_for_context(self, names):
+            del names
+            return "Write Wiki pages."
+
+        def _get_skill_meta(self, name):
+            del name
+            return {}
+
+    class FakeRequestLoop:
+        def __init__(self, **kwargs):
+            self.workspace = kwargs["workspace"]
+
+        async def run_structured_task(self, **kwargs):
+            del kwargs
+            # The agent "submits" an empty checkout.
+            return SimpleNamespace(operations=[], link_count=0), [], {}, 3
+
+    class Client:
+        async def get_skill(self, skill_name, *, target_uri):
+            del skill_name, target_uri
+            return {
+                "root_uri": "viking://agent/skills/wiki",
+                "content": "---\nname: wiki\ndescription: Write Wiki\n---\nWrite it.",
+                "files": [],
+            }
+
+        async def batch_write(self, **kwargs):
+            raise AssertionError("an empty output must not be written")
+
+        async def close(self):
+            return None
+
+    async def create_client(**kwargs):
+        del kwargs
+        return Client()
+
+    async def no_op(*args, **kwargs):
+        del args, kwargs
+
+    async def build_sources(*args, **kwargs):
+        del args, kwargs
+        return []
+
+    async def build_catalog(*args, **kwargs):
+        del args, kwargs
+        return [], {}
+
+    monkeypatch.setattr("vikingbot.compile.service.SandboxManager", FakeSandboxManager)
+    monkeypatch.setattr("vikingbot.compile.service.SkillsLoader", FakeSkillsLoader)
+    monkeypatch.setattr("vikingbot.compile.service.AgentLoop", FakeRequestLoop)
+    monkeypatch.setattr("vikingbot.compile.service.VikingClient.create", create_client)
+
+    host_loop = SimpleNamespace(
+        config=TaskConfig(),
+        bus=None,
+        provider=None,
+        model=None,
+        temperature=0,
+        max_iterations=1,
+        memory_window=1,
+        brave_api_key=None,
+        exa_api_key=None,
+        gen_image_model=None,
+        exec_config=None,
+    )
+    service = BotCompileService(agent_loop=host_loop)
+    monkeypatch.setattr(service, "_materialize_skill", no_op)
+    monkeypatch.setattr(service, "_check_requirements", no_op)
+    monkeypatch.setattr(service, "_build_sources", build_sources)
+    monkeypatch.setattr(service, "_build_catalog", build_catalog)
+    submit_tool = SimpleNamespace(file_payloads=[], page_count=0, file_count=0)
+    registry = SimpleNamespace(get=lambda name: submit_tool)
+    monkeypatch.setattr(
+        service, "_build_compile_registry", lambda *args, **kwargs: (registry, set())
+    )
+
+    request = _sanitized_compile_request()
+    task = CompileTask(
+        task_id="cmp_empty",
+        principal_scope="owner",
+        sanitized_request=request,
+        status="accepted",
+        stage="queued",
+        created_at=utc_now(),
+        updated_at=utc_now(),
+    )
+    await service.store.create(task)
+    await service._run_task(task.task_id, request, {"api_key": "secret"})
+
+    failed = await service.store.get(task.task_id)
+    assert failed is not None
+    assert failed.status == "failed"
+    assert failed.result is None
+    assert failed.error is not None
+    assert failed.error.code == "AGENT_OUTPUT_INVALID"
+    assert "without writing any output files" in failed.error.message
+    assert "bot.agents" in failed.error.message

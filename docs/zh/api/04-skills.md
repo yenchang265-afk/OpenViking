@@ -397,8 +397,8 @@ fmt.Println(result["task_id"])
 ov add-skill https://github.com/volcengine/OpenViking/tree/skills/llm-wiki
 
 # 檢視本地技能集合，再選擇匯入
-ov add-skill ./examples/compile/ov-compile-skills --list
-ov add-skill ./examples/compile/ov-compile-skills --skill llm-wiki daily-report --yes
+ov add-skill ./openviking/builtin_skills/compile --list
+ov add-skill ./openviking/builtin_skills/compile --skill llm-wiki daily-report --yes
 
 # 新增技能（從檔案或目錄）
 ov add-skill ./skills/search-web/SKILL.md

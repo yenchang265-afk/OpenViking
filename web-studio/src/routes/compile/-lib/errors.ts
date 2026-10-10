@@ -9,6 +9,7 @@ const errorKeys = {
   CONFLICT: 'errors.conflict',
   NETWORK_ERROR: 'errors.network',
   PAGINATION_UNSUPPORTED: 'errors.upgrade',
+  AGENT_OUTPUT_INVALID: 'errors.agentOutput',
 } as const
 
 export function compileErrorKey(error: unknown) {
