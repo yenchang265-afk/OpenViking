@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   canCreateInUri,
+  canReindexUri,
   childEntryUri,
   isUriWithin,
   remapExpandedUris,
@@ -138,5 +139,23 @@ describe('canCreateInUri', () => {
     expect(canCreateInUri('viking://')).toBe(false)
     expect(canCreateInUri('viking://resources')).toBe(true)
     expect(canCreateInUri('viking://resources/a/')).toBe(true)
+  })
+})
+
+describe('canReindexUri', () => {
+  it('allows resource, user and agent entries', () => {
+    expect(canReindexUri('viking://resources/')).toBe(true)
+    expect(canReindexUri('viking://resources/docs/guide.md')).toBe(true)
+    expect(canReindexUri('viking://user/')).toBe(true)
+    expect(canReindexUri('viking://user/alice/memories/')).toBe(true)
+    expect(canReindexUri('viking://agent/skills/')).toBe(true)
+  })
+
+  it('blocks the root, the bare agent namespace and sessions', () => {
+    expect(canReindexUri('viking://')).toBe(false)
+    expect(canReindexUri('viking://agent/')).toBe(false)
+    expect(canReindexUri('viking://session/s1/')).toBe(false)
+    expect(canReindexUri('viking://user/alice/sessions/')).toBe(false)
+    expect(canReindexUri('viking://user/alice/sessions/s1/a.json')).toBe(false)
   })
 })

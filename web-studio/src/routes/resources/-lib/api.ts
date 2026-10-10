@@ -10,6 +10,7 @@ import {
   getOvResult,
   normalizeOvClientError,
   ovClient,
+  postContentReindex,
   postContentWrite,
   postFsMkdir,
   postFsMv,
@@ -288,6 +289,23 @@ export async function moveResource(
     await getOvResult<unknown>(
       postFsMv({ body: { from_uri: fromUri, to_uri: toUri } }),
     )
+  } catch (error) {
+    throw toVikingApiError(error)
+  }
+}
+
+export type ReindexMode = 'vectors_only' | 'semantic_and_vectors'
+
+/** Starts a background reindex of `uri`; resolves with the tracking task id. */
+export async function reindexResource(
+  uri: string,
+  mode: ReindexMode,
+): Promise<{ taskId: string }> {
+  try {
+    const result = await getOvResult<{ task_id?: unknown }>(
+      postContentReindex({ body: { uri, mode, wait: false } }),
+    )
+    return { taskId: typeof result.task_id === 'string' ? result.task_id : '' }
   } catch (error) {
     throw toVikingApiError(error)
   }

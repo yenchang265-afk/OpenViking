@@ -88,6 +88,22 @@ export function remapExpandedUris(
   return new Set([...expanded].map((uri) => remapUri(uri, fromUri, toUri)))
 }
 
+/**
+ * Mirrors the server's reindex scope (openviking/service/reindex_executor.py
+ * `_infer_target_type`): no virtual root, no bare `agent` namespace, and no
+ * session subtrees.
+ */
+export function canReindexUri(uri: string): boolean {
+  const parts = normalizeFileUri(uri)
+    .slice(ROOT_URI.length)
+    .split('/')
+    .filter(Boolean)
+  if (parts.length === 0) return false
+  if (parts[0] === 'session') return false
+  if (parts[0] === 'agent') return parts.length >= 2
+  return !(parts[0] === 'user' && parts[2] === 'sessions')
+}
+
 /** The virtual root only lists namespaces; entries live one level below it. */
 export function canCreateInUri(uri: string): boolean {
   return normalizeDirUri(uri) !== ROOT_URI

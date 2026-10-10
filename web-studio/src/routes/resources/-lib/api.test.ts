@@ -4,16 +4,23 @@ import {
   fetchDirectorySidecarContent,
   fetchFsList,
   fetchResourceAuthors,
+  reindexResource,
   removeResource,
 } from './api'
 
-const { clientGetMock, deleteFsMock, getContentReadMock, getFsLsMock } =
-  vi.hoisted(() => ({
-    clientGetMock: vi.fn(),
-    deleteFsMock: vi.fn(),
-    getContentReadMock: vi.fn(),
-    getFsLsMock: vi.fn(),
-  }))
+const {
+  clientGetMock,
+  deleteFsMock,
+  getContentReadMock,
+  getFsLsMock,
+  postContentReindexMock,
+} = vi.hoisted(() => ({
+  clientGetMock: vi.fn(),
+  deleteFsMock: vi.fn(),
+  getContentReadMock: vi.fn(),
+  getFsLsMock: vi.fn(),
+  postContentReindexMock: vi.fn(),
+}))
 
 vi.mock('#/lib/ov-client', async (importOriginal) => {
   const original = await importOriginal()
@@ -22,6 +29,7 @@ vi.mock('#/lib/ov-client', async (importOriginal) => {
     deleteFs: deleteFsMock,
     getContentRead: getContentReadMock,
     getFsLs: getFsLsMock,
+    postContentReindex: postContentReindexMock,
     ovClient: { client: { get: clientGetMock } },
   }
 })
@@ -200,5 +208,26 @@ describe('fetchResourceAuthors', () => {
     await expect(
       fetchResourceAuthors('viking://resources/legacy.md'),
     ).resolves.toEqual({ uploadedBy: '', updatedBy: '' })
+  })
+})
+
+describe('reindexResource', () => {
+  it('starts a background reindex and returns its task id', async () => {
+    postContentReindexMock.mockResolvedValue({
+      data: { status: 'ok', result: { task_id: 'task-1', status: 'accepted' } },
+      headers: {},
+      status: 200,
+    })
+
+    await expect(
+      reindexResource('viking://resources/docs/', 'semantic_and_vectors'),
+    ).resolves.toEqual({ taskId: 'task-1' })
+    expect(postContentReindexMock).toHaveBeenCalledWith({
+      body: {
+        uri: 'viking://resources/docs/',
+        mode: 'semantic_and_vectors',
+        wait: false,
+      },
+    })
   })
 })

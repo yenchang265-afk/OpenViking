@@ -189,6 +189,31 @@ const activity = {
       deleted: 'Resource deleted',
       failed: 'Delete failed: {{error}}',
     },
+    reindex: {
+      title: 'Reindex this resource?',
+      fileDescription: 'Rebuild the search index for {{uri}}.',
+      directoryDescription:
+        'Rebuild the search index for {{uri}} and everything inside it.',
+      modeLabel: 'Reindex mode',
+      modes: {
+        vectors_only: {
+          title: 'Vectors only',
+          description:
+            'Re-embed existing content and summaries. Use after changing the embedding model.',
+        },
+        semantic_and_vectors: {
+          title: 'Summaries and vectors',
+          description:
+            'Regenerate L0/L1 summaries with the VLM, then re-embed. Slower and uses model calls.',
+        },
+      },
+      cancel: 'Cancel',
+      confirm: 'Start reindex',
+      starting: 'Starting…',
+      started: 'Reindex started',
+      viewTasks: 'View tasks',
+      failed: 'Reindex failed: {{error}}',
+    },
     tabs: {
       terminal: 'Terminal',
       agent: 'Agent',
@@ -227,6 +252,7 @@ const activity = {
         rename: 'Rename…',
         copyUri: 'Copy URI',
         refresh: 'Refresh',
+        reindex: 'Reindex…',
         delete: 'Delete…',
       },
       nameDialog: {
