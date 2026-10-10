@@ -24,7 +24,6 @@ import type { CompileRequest, CompileTask } from '../-lib/api'
 import { compileCommand, parseArgs } from '../-lib/commands'
 import { CompileError, CompileShell } from './shared'
 import { SkillPicker } from './skill-picker'
-import { BuiltinSkillsNotice } from './builtin-skills'
 
 type Draft = { skill: string; sources: string; to: string; instruction: string }
 const empty: Draft = { skill: '', sources: '', to: '', instruction: '' }
@@ -400,7 +399,6 @@ export function CompileForm({
             <p className="text-xs text-muted-foreground">
               {t('skillLocationHint')}
             </p>
-            <BuiltinSkillsNotice installed={skills.data} />
             {skills.isError && (
               <CompileError
                 error={skills.error}

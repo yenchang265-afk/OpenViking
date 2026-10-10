@@ -15,7 +15,7 @@
 
 預設以 `entity` 和 `concept` 為主，其餘型別只在滿足各自的嚴格判定時才提升。產物是一個**知識庫**，不是逐文件的摘要拼盤。
 
-Skill 原始碼：[examples/compile/ov-compile-skills/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
+Skill 原始碼：[openviking/builtin_skills/compile/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
 
 ## 第一步：準備來源
 
@@ -39,17 +39,17 @@ ov ls -r viking://resources/research
 
 ## 第二步：添加 Skill
 
-把 LLM Wiki 的 Skill 裝進服務。預設落到你的使用者私有 skills 名稱空間；想讓團隊共用就用 `-p viking://agent/skills`：
-
-```bash
-ov add-skill examples/compile/ov-compile-skills/llm-wiki
-```
-
-檢視裝好的 Skill URI：
+LLM Wiki Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
 
 ```bash
 ov skills list
-# → viking://agent/skills/llm-wiki  （或 viking://user/<你>/skills/llm-wiki）
+# → viking://agent/skills/llm-wiki
+```
+
+如果管理員刪除了它，可從套件原始碼重新加入：
+
+```bash
+ov add-skill openviking/builtin_skills/compile/llm-wiki -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯

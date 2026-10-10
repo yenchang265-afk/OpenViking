@@ -5,7 +5,6 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import type * as BuiltinSkills from '#/routes/compile/-lib/builtin-skills'
 import type { VikingFsEntry } from '#/routes/resources/-types/viking-fm'
 
 import { ContextExplorerHeader, ContextTree } from './context-explorer'
@@ -32,15 +31,29 @@ const { toastSuccessMock } = vi.hoisted(() => ({ toastSuccessMock: vi.fn() }))
 vi.mock('sonner', () => ({
   toast: { error: vi.fn(), success: toastSuccessMock },
 }))
-const { ensureBuiltinSkillMock, navigateMock } = vi.hoisted(() => ({
-  ensureBuiltinSkillMock: vi.fn(),
+const { fetchCompileSkillsMock, navigateMock } = vi.hoisted(() => ({
+  fetchCompileSkillsMock: vi.fn(),
   navigateMock: vi.fn(),
 }))
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigateMock }))
-vi.mock('#/routes/compile/-lib/builtin-skills', async (importOriginal) => ({
-  ...(await importOriginal<typeof BuiltinSkills>()),
-  ensureBuiltinSkill: ensureBuiltinSkillMock,
+vi.mock('#/routes/compile/-lib/api', () => ({
+  fetchCompileSkills: fetchCompileSkillsMock,
 }))
+vi.mock('#/hooks/use-app-connection', () => ({
+  useAppConnection: () => ({ identityScopeKey: 'tree-test' }),
+}))
+const installedSkills = [
+  {
+    name: 'mine',
+    uri: 'viking://user/alice/skills/mine',
+    description: 'Private skill',
+  },
+  {
+    name: 'llm-wiki',
+    uri: 'viking://agent/skills/llm-wiki',
+    description: 'Builds a wiki',
+  },
+]
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string }) =>
@@ -392,58 +405,46 @@ describe('ContextTree compile actions', () => {
     )
   }
 
-  it('lists every bundled compile skill for a folder', async () => {
+  it('lists every installed skill for a folder', async () => {
+    fetchCompileSkillsMock.mockResolvedValue(installedSkills)
     renderTree()
     await openCompileWith('docs')
 
-    for (const name of [
-      'daily-report',
-      'knowledge-distillation',
-      'knowledge-graph',
-      'llm-wiki',
-      'ov-session-report',
-      'explorer.menu.compileOther',
-    ]) {
+    for (const name of ['mine', 'llm-wiki', 'explorer.menu.compileOther']) {
       expect(await screen.findByRole('menuitem', { name })).toBeTruthy()
     }
   })
 
-  it('installs the skill if needed and opens a prefilled compile form', async () => {
-    ensureBuiltinSkillMock.mockResolvedValue(true)
+  it('opens a prefilled compile form for the picked skill', async () => {
+    fetchCompileSkillsMock.mockResolvedValue(installedSkills)
     renderTree()
     await openCompileWith('docs')
     fireEvent.click(await screen.findByRole('menuitem', { name: 'llm-wiki' }))
 
-    await vi.waitFor(() =>
-      expect(navigateMock).toHaveBeenCalledWith({
-        to: '/compile/new',
-        search: {
-          skill: 'viking://agent/skills/llm-wiki',
-          from: 'viking://resources/docs',
-          to: 'viking://resources/docs-llm-wiki',
-        },
-      }),
-    )
-    expect(ensureBuiltinSkillMock).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'llm-wiki' }),
-    )
-    expect(toastSuccessMock).toHaveBeenCalledWith(
-      'explorer.menu.compileInstalled:llm-wiki',
-    )
-    expect(invalidateListMock).toHaveBeenCalledWith('viking://agent/skills')
+    expect(navigateMock).toHaveBeenCalledWith({
+      to: '/compile/new',
+      search: {
+        skill: 'viking://agent/skills/llm-wiki',
+        from: 'viking://resources/docs',
+        to: 'viking://resources/docs-llm-wiki',
+      },
+    })
   })
 
-  it('stays put when the skill cannot be installed', async () => {
-    ensureBuiltinSkillMock.mockRejectedValue(new Error('denied'))
+  it('says so when no skill is installed', async () => {
+    fetchCompileSkillsMock.mockResolvedValue([])
     renderTree()
     await openCompileWith('docs')
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'llm-wiki' }))
 
-    await vi.waitFor(() => expect(ensureBuiltinSkillMock).toHaveBeenCalled())
-    expect(navigateMock).not.toHaveBeenCalled()
+    expect(
+      await screen.findByRole('menuitem', {
+        name: 'explorer.menu.compileNoSkills',
+      }),
+    ).toBeTruthy()
   })
 
   it('opens the form with only the source for another skill', async () => {
+    fetchCompileSkillsMock.mockResolvedValue(installedSkills)
     renderTree()
     await openCompileWith('docs')
     fireEvent.click(
@@ -456,7 +457,6 @@ describe('ContextTree compile actions', () => {
       to: '/compile/new',
       search: { from: 'viking://resources/docs' },
     })
-    expect(ensureBuiltinSkillMock).not.toHaveBeenCalled()
   })
 
   it('compiles with a skill folder itself', async () => {

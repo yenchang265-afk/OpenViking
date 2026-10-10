@@ -15,7 +15,7 @@ The Skill picks the smallest page type that matches each page's retrieval purpos
 
 `entity` and `concept` are the defaults; the others are promoted only when they pass their stricter tests. The result is a knowledge base, not a source-by-source pile of summaries.
 
-Skill source: [examples/compile/ov-compile-skills/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/llm-wiki) · Visualization script: [examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
+Skill source: [openviking/builtin_skills/compile/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/llm-wiki) · Visualization script: [examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
 
 ## Step 1: Prepare the sources
 
@@ -39,17 +39,17 @@ ov ls -r viking://resources/research
 
 ## Step 2: Add the Skill
 
-Install the LLM Wiki Skill. By default it lands in your user-private skills namespace; use `-p viking://agent/skills` to make it shared across the team:
-
-```bash
-ov add-skill examples/compile/ov-compile-skills/llm-wiki
-```
-
-Find the installed Skill URI:
+The LLM Wiki Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
 
 ```bash
 ov skills list
-# → viking://agent/skills/llm-wiki  (or viking://user/<you>/skills/llm-wiki)
+# → viking://agent/skills/llm-wiki
+```
+
+If an admin removed it, add it back from the package source:
+
+```bash
+ov add-skill openviking/builtin_skills/compile/llm-wiki -p viking://agent/skills
 ```
 
 ## Step 3: Run compile

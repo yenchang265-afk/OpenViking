@@ -270,10 +270,9 @@ const activity = {
         compileWith: 'Compile with',
         compileWithSkill: 'Compile with this Skill…',
         compileOther: 'Other Skill…',
-        compileInstallHint:
-          'Missing Skills are installed to {{root}}, shared with everyone on this account.',
-        compileInstalled: 'Installed {{name}} to shared Skills',
-        compileInstallFailed: 'Could not install {{name}}: {{message}}',
+        compileLoading: 'Loading Skills…',
+        compileLoadFailed: 'Could not load Skills',
+        compileNoSkills: 'No Skills installed',
       },
       selection: {
         count: '{{count}} selected',

@@ -32,7 +32,7 @@ import {
   ContextMenuTrigger,
 } from '#/components/ui/context-menu'
 import { copyTextToClipboard } from '#/lib/clipboard'
-import { isCompileSourceUri } from '#/routes/compile/-lib/builtin-skills'
+import { isCompileSourceUri } from '#/routes/compile/-lib/tree-compile'
 import { useInvalidateVikingFs } from '#/routes/resources/-hooks/viking-fm'
 import {
   createDirectory,

@@ -16,7 +16,7 @@ Each edge is a compact JSON line, readable as the statement `<from> <relation> <
 
 `relation` is a stable, language-independent machine predicate (`member_of`, `leads`, `located_in`…), `label` is its localized display name, and `entity_type` drives node color, shape, and filtering in the visualization. The graph refreshes incrementally: existing nodes and edges are preserved, evidence is merged, and new knowledge is appended.
 
-Skill source: [examples/compile/ov-compile-skills/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-graph) · Visualization script: [examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
+Skill source: [openviking/builtin_skills/compile/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-graph) · Visualization script: [examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
 
 ## Step 1: Prepare the sources
 
@@ -27,10 +27,17 @@ ov ls -r viking://resources/journal
 
 ## Step 2: Add the Skill
 
+The Knowledge Graph Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+
 ```bash
-ov add-skill examples/compile/ov-compile-skills/knowledge-graph
 ov skills list
 # → viking://agent/skills/knowledge-graph
+```
+
+If an admin removed it, add it back from the package source:
+
+```bash
+ov add-skill openviking/builtin_skills/compile/knowledge-graph -p viking://agent/skills
 ```
 
 ## Step 3: Run compile

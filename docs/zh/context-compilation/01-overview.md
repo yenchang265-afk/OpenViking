@@ -41,7 +41,7 @@ Compile 本身不規定「編譯成什麼」——那由 Skill 決定。同一�
 
 前兩個示例還給出了從**匯入來源 → 新增 Skill → 執行編譯 → 視覺化產物**的完整 `ov` 命令，照著做就能得到一張可互動的 HTML 圖。
 
-Studio 也內建了這些 Skill。**編譯**與 **Skills** 頁面會提示將尚未安裝的 Skill 安裝到 `viking://agent/skills`；在 Playground 的上下文樹中，對資料夾按右鍵選擇 **使用 Skill 編譯 ▸ <Skill>**，即可開啟以該資料夾為來源的編譯表單（必要時會先安裝 Skill）。對 Skill 資料夾按右鍵則可選擇 **使用此 Skill 編譯**。
+這些 Skill 隨 OpenViking 一起發佈（`openviking/builtin_skills/compile`），預設會在伺服器啟動與建立帳戶時安裝到每個帳戶共享的 `viking://agent/skills`。同名的既有 Skill 不會被覆寫，管理員刪除的內建 Skill 也不會被重新安裝；將 `server.builtin_skills` 設為 `false` 即可關閉。在 Studio 的 Playground 上下文樹中，對資料夾按右鍵選擇 **使用 Skill 編譯 ▸ <Skill>**，即可開啟以該資料夾為來源的編譯表單；對 Skill 資料夾按右鍵則可選擇 **使用此 Skill 編譯**。
 
 ## 前置條件
 

@@ -18,7 +18,7 @@ risk/
 
 > 上面只是形態示例——真實的主題和結論由你給的領域決定。
 
-Skill 原始碼：[examples/compile/ov-compile-skills/knowledge-distillation](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-distillation)
+Skill 原始碼：[openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
 
 ## 第一步：準備來源
 
@@ -29,10 +29,17 @@ ov ls -r viking://resources/finance-reports
 
 ## 第二步：添加 Skill
 
+Knowledge Distillation Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+
 ```bash
-ov add-skill examples/compile/ov-compile-skills/knowledge-distillation
 ov skills list
-# → viking://agent/skills/knowledge-distillation  （或 viking://user/<user_name>/skills/knowledge-distillation）
+# → viking://agent/skills/knowledge-distillation
+```
+
+如果管理員刪除了它，可從套件原始碼重新加入：
+
+```bash
+ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯

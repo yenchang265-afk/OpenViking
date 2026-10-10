@@ -41,7 +41,7 @@ Compile itself does not decide *what* to compile into — the Skill does. The sa
 
 The first two examples also give the complete `ov` commands from **importing sources → adding the Skill → running compile → visualizing the output**, ending in an interactive HTML graph.
 
-Studio ships these Skills too. The **Compile** and **Skills** pages offer to install any that are missing into `viking://agent/skills`, and in the Playground context tree you can right-click a folder and choose **Compile with ▸ <Skill>** to open a compile form with that folder as the source (the Skill is installed first if needed). Right-clicking a Skill folder offers **Compile with this Skill**.
+These Skills ship with OpenViking (`openviking/builtin_skills/compile`) and are installed into every account's shared `viking://agent/skills` by default — at server start and when an account is created. Existing Skills with the same name are never overwritten, and a built-in an admin deletes is not reinstalled; set `server.builtin_skills` to `false` to turn this off. In Studio's Playground context tree, right-click a folder and choose **Compile with ▸ <Skill>** to open a compile form with that folder as the source; right-clicking a Skill folder offers **Compile with this Skill**.
 
 ## Prerequisites
 

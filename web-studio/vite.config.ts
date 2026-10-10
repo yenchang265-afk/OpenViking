@@ -1,6 +1,6 @@
 /// <reference types="vitest/config" />
 
-import { defineConfig, searchForWorkspaceRoot } from 'vite'
+import { defineConfig } from 'vite'
 import { devtools } from '@tanstack/devtools-vite'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
@@ -21,16 +21,6 @@ const config = defineConfig({
     }),
     viteReact(),
   ],
-  server: {
-    fs: {
-      // The dev server serves the bundled compile Skills (outside web-studio/)
-      // to the import.meta.glob in compile/-lib/builtin-skills.ts as /@fs/ URLs.
-      allow: [
-        searchForWorkspaceRoot(process.cwd()),
-        '../examples/compile/ov-compile-skills',
-      ],
-    },
-  },
   test: {
     setupFiles: ['./src/test/setup.ts'],
   },
