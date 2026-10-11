@@ -3,6 +3,7 @@ import { getOvResult, postResourcesTempUpload } from '#/lib/ov-client'
 import {
   SessionsUnavailableError,
   UploadSessionError,
+  isProxyRejectedTooLarge,
   resumeUploadSession,
   uploadSession,
 } from './chunked-upload'
@@ -31,6 +32,14 @@ export class FolderTooLargeForZipError extends Error {
       `"${name}" is too large to upload as a zip; this server does not accept chunked uploads.`,
     )
     this.name = 'FolderTooLargeForZipError'
+  }
+}
+
+/** A proxy in front of the server refused an upload request as too large. */
+export class ProxyRequestTooLargeError extends Error {
+  constructor(cause: unknown) {
+    super(i18n.t('resources:processingTasks.errors.proxyTooLarge'), { cause })
+    this.name = 'ProxyRequestTooLargeError'
   }
 }
 
@@ -103,6 +112,20 @@ export async function transferUpload(
   item: UploadItem,
   onProgress?: (percent: number) => void,
 ): Promise<TransferResult> {
+  try {
+    return await transfer(item, onProgress)
+  } catch (error) {
+    const cause = error instanceof UploadSessionError ? error.cause : error
+    if (isProxyRejectedTooLarge(cause))
+      throw new ProxyRequestTooLargeError(cause)
+    throw error
+  }
+}
+
+async function transfer(
+  item: UploadItem,
+  onProgress?: (percent: number) => void,
+): Promise<TransferResult> {
   const options: ChunkedUploadOptions = {
     ...sessionOptions(item),
     onProgress: (sent, total) =>
@@ -114,7 +137,10 @@ export async function transferUpload(
       sourceName: options.name,
     }
   } catch (error) {
-    if (error instanceof UploadSessionError) {
+    if (
+      error instanceof UploadSessionError &&
+      !isProxyRejectedTooLarge(error.cause)
+    ) {
       return {
         tempFileId: await resumeUploadSession(error.uploadId, options),
         sourceName: options.name,

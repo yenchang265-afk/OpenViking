@@ -131,6 +131,7 @@ const resources = {
     success: 'Resource added successfully',
     fileBlocked: '"{{name}}" is not a supported file type.',
     fileTooLarge: '"{{name}}" exceeds the {{size}} file size limit.',
+    fileEmpty: '"{{name}}" is empty, so there is nothing to index.',
     tooManyFiles: 'Only the first {{count}} files were kept.',
     folderEmpty: '"{{name}}" has no supported files to upload.',
     folderSkipped:
@@ -251,7 +252,8 @@ const resources = {
         endpoints:
           'Set connector.enable=true in ov.conf. Set connector.connector to the full doc/add endpoint URL and connector.tracker to the full task/info endpoint URL.',
         allow: 'Add tos to connector.allowed_add_types.',
-        restart: 'Restart Business Data Platform, then import with tos://bucket/path.',
+        restart:
+          'Restart Business Data Platform, then import with tos://bucket/path.',
         noDocumentation:
           'Your Connector deployment provides the service endpoints; Studio does not fill them automatically. A dedicated TOS Connector deployment guide is not currently available.',
       },
@@ -307,6 +309,8 @@ const resources = {
       empty: 'No processing tasks',
       toggleError: 'Toggle error details',
       errors: {
+        proxyTooLarge:
+          "The upload was rejected by a proxy in front of the server because the request is too large (HTTP 413). Ask your administrator to raise the proxy's request body limit, for example client_max_body_size in nginx.",
         tempUploadMissingId: 'The temporary upload did not return a file ID.',
         cancelled: 'Processing cancelled',
         failed: 'Processing failed',

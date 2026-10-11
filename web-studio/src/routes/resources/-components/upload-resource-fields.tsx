@@ -8,7 +8,12 @@ import { toast } from 'sonner'
 
 import { Button } from '#/components/ui/button'
 import { cn } from '#/lib/utils'
-import { MAX_UPLOAD_FILES, formatFileSize, isBlockedFile } from '../-lib/upload'
+import {
+  MAX_UPLOAD_FILES,
+  formatFileSize,
+  isBlockedFile,
+  isEmptyFile,
+} from '../-lib/upload'
 import type { UploadLimits } from '../-lib/upload-limits'
 import { getFolderSize, groupFolderFiles } from '../-lib/folder-upload'
 import type { FolderGroup } from '../-lib/folder-upload'
@@ -148,6 +153,12 @@ export function UploadResourceFields({
               }),
               { duration: 2500 },
             )
+            continue
+          }
+          if (await isEmptyFile(file)) {
+            toast.error(t('fileEmpty', { name: file.name }), {
+              duration: 2500,
+            })
             continue
           }
           accepted.push({

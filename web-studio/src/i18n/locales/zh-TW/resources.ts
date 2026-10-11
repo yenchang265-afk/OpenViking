@@ -123,6 +123,7 @@ const resources = {
     success: '資源新增成功',
     fileBlocked: '"{{name}}" 不是支援的檔案型別。',
     fileTooLarge: '"{{name}}" 超過 {{size}} 檔案大小限制。',
+    fileEmpty: '"{{name}}" 是空檔案，沒有可索引的內容。',
     tooManyFiles: '僅保留前 {{count}} 個檔案，其餘已忽略。',
     folderEmpty: '"{{name}}" 中沒有可上傳的支援檔案。',
     folderSkipped: '已略過 "{{name}}" 中 {{count}} 個隱藏或不支援的檔案。',
@@ -238,7 +239,8 @@ const resources = {
         endpoints:
           '在 ov.conf 中設定 connector.enable=true；connector.connector 填寫完整的 doc/add 介面 URL，connector.tracker 填寫完整的 task/info 介面 URL。',
         allow: '將 tos 加入 connector.allowed_add_types。',
-        restart: '重啟 Business Data Platform 服務後，再使用 tos://bucket/path 匯入。',
+        restart:
+          '重啟 Business Data Platform 服務後，再使用 tos://bucket/path 匯入。',
         noDocumentation:
           'Connector 服務地址由部署方提供，Studio 不會自動填寫；當前暫無獨立的 TOS Connector 部署文件。',
       },
@@ -292,6 +294,8 @@ const resources = {
       empty: '暫無處理任務',
       toggleError: '展開或收起錯誤詳情',
       errors: {
+        proxyTooLarge:
+          '上傳請求過大（HTTP 413），已被伺服器前方的代理拒絕。請聯絡管理員調高代理的請求主體大小限制，例如 nginx 的 client_max_body_size。',
         tempUploadMissingId: '臨時上傳未返回檔案 ID。',
         cancelled: '處理已取消',
         failed: '處理失敗',

@@ -1,8 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { FolderTooLargeForZipError, transferUpload } from './upload-transfer'
+import {
+  FolderTooLargeForZipError,
+  ProxyRequestTooLargeError,
+  transferUpload,
+} from './upload-transfer'
 import type * as ChunkedUpload from './chunked-upload'
 import type { FolderGroup } from './folder-upload'
+import type * as OvErrors from '#/lib/ov-client/errors'
 
 const mocks = vi.hoisted(() => ({
   uploadSession: vi.fn(),
@@ -19,15 +24,33 @@ vi.mock('./chunked-upload', async (importOriginal) => {
   }
 })
 
-vi.mock('#/lib/ov-client', () => ({
-  getOvResult: async (value: unknown) => value,
-  postResourcesTempUpload: mocks.postResourcesTempUpload,
-}))
+vi.mock('#/lib/ov-client', async () => {
+  const errors = await vi.importActual<typeof OvErrors>(
+    '#/lib/ov-client/errors',
+  )
+  return {
+    getOvResult: async (value: unknown) => value,
+    isOvClientError: errors.isOvClientError,
+    postResourcesTempUpload: mocks.postResourcesTempUpload,
+  }
+})
 
 vi.mock('./upload-limits', () => ({ BROWSER_ZIP_MAX_BYTES: 8 }))
 
 const { SessionsUnavailableError, UploadSessionError } =
   await vi.importActual<typeof ChunkedUpload>('./chunked-upload')
+const { OvClientError } = await vi.importActual<typeof OvErrors>(
+  '#/lib/ov-client/errors',
+)
+
+/** What a proxy's HTML 413 page normalizes to: no OpenViking error envelope. */
+function proxy413() {
+  return new OvClientError({
+    code: 'HTTP_ERROR',
+    message: '<html>413 Request Entity Too Large</html>',
+    statusCode: 413,
+  })
+}
 
 function folder(): FolderGroup {
   return {
@@ -97,6 +120,42 @@ describe('transferUpload', () => {
 
     expect(result.tempFileId).toBe('session_u9')
     expect(mocks.resumeUploadSession.mock.calls[0][0]).toBe('u9')
+  })
+
+  it('explains a proxy 413 on a part instead of resuming', async () => {
+    mocks.uploadSession.mockRejectedValue(
+      new UploadSessionError('u9', proxy413()),
+    )
+
+    const error = await transferUpload({
+      file: new File(['x'], 'f.bin'),
+    }).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(ProxyRequestTooLargeError)
+    expect((error as Error).message).not.toContain('<html>')
+    expect(mocks.resumeUploadSession).not.toHaveBeenCalled()
+  })
+
+  it('explains a proxy 413 on the single-request upload', async () => {
+    mocks.uploadSession.mockRejectedValue(new SessionsUnavailableError())
+    mocks.postResourcesTempUpload.mockRejectedValue(proxy413())
+
+    await expect(
+      transferUpload({ file: new File(['x'], 'f.md') }),
+    ).rejects.toBeInstanceOf(ProxyRequestTooLargeError)
+  })
+
+  it("passes the server's own 413 through unchanged", async () => {
+    const serverError = new OvClientError({
+      code: 'RESOURCE_EXHAUSTED',
+      message: "'f.md' exceeds size limit (10 bytes).",
+      statusCode: 413,
+    })
+    mocks.uploadSession.mockRejectedValue(serverError)
+
+    await expect(
+      transferUpload({ file: new File(['x'], 'f.md') }),
+    ).rejects.toBe(serverError)
   })
 
   it('falls back to the single-request upload for a file', async () => {

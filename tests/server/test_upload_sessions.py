@@ -3,6 +3,7 @@
 """Chunked upload session store: lifecycle, resume, limits, path safety and ownership."""
 
 import os
+import re
 import time
 from pathlib import Path
 from typing import AsyncIterator
@@ -248,6 +249,35 @@ async def test_create_rejects_unsafe_paths(tmp_path, bad_path):
 )
 async def test_create_rejects_conflicting_or_invalid_layouts(tmp_path, kind, name, paths):
     with pytest.raises(InvalidArgumentError):
+        await _store(tmp_path).create(
+            kind=kind, name=name, files=[{"path": p, "size": 1} for p in paths], ctx=_ctx()
+        )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "name", "paths", "message"),
+    [
+        ("file", "Q:notes.md", ["Q:notes.md"], "reads as a Windows drive letter"),
+        ("file", "50%2F50.md", ["50%2F50.md"], "encoded '/'"),
+        ("directory", "d", ["a/../../b.txt"], "contains a '..' segment"),
+        ("directory", "d", ["/abs.txt"], "must be relative"),
+        ("directory", "d", ["a//b.txt"], "empty or '.' segment"),
+        ("file", "a\\b.md", ["a\\b.md"], "cannot contain '/', '\\' or NUL"),
+        (
+            "directory",
+            "d",
+            ["README.md", "readme.md"],
+            "'readme.md' and 'README.md' differ only in letter case",
+        ),
+        ("directory", "d", ["a.txt", "a.txt"], "'a.txt' appears twice"),
+        ("directory", "d", ["a", "a/b"], "'a' is both a file and a folder"),
+        ("directory", "d", ["a/b", "a"], "'a' is both a file and a folder"),
+    ],
+)
+async def test_rejections_say_why(tmp_path, kind, name, paths, message):
+    """Studio shows these messages verbatim, so each one names the actual problem."""
+    with pytest.raises(InvalidArgumentError, match=re.escape(message)):
         await _store(tmp_path).create(
             kind=kind, name=name, files=[{"path": p, "size": 1} for p in paths], ctx=_ctx()
         )
