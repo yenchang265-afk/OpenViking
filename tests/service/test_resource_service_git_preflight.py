@@ -239,3 +239,30 @@ async def test_add_resource_rejects_auth_config_for_non_git_sources(monkeypatch)
 
     service._prepare_standard_source_plan.assert_not_awaited()
     assert "azure-pat" not in str(exc_info.value)
+
+
+async def test_queued_git_execution_rechecks_proxy_before_processing(monkeypatch):
+    from openviking_cli.exceptions import PermissionDeniedError
+
+    processor = SimpleNamespace(process_resource=AsyncMock())
+    service = ResourceService(
+        resource_processor=processor, skill_processor=Mock(), viking_fs=Mock()
+    )
+    # Proxy resolved public at submit time; DNS now points it at a private host.
+    monkeypatch.setattr(
+        "openviking.utils.network_guard._resolve_host_addresses",
+        lambda _host: {"10.0.0.5"},
+    )
+    ctx = RequestContext(user=UserIdentifier("account-1", "user-1"), role=Role.USER)
+
+    with pytest.raises(PermissionDeniedError, match="allow_private_networks"):
+        await service._execute_resource_ingestion(
+            path="https://dev.azure.com/org/project/_git/private",
+            ctx=ctx,
+            defer_post_processing=False,
+            to="viking://resources/private",
+            enforce_public_remote_targets=True,
+            auth_config={"token": "azure-pat", "proxy": "http://proxy.corp.example:8080"},
+        )
+
+    processor.process_resource.assert_not_awaited()

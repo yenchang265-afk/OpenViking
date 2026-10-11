@@ -1905,6 +1905,10 @@ class ResourceService:
             if enforce_public_remote_targets and is_remote_resource_source(path):
                 path = require_remote_resource_source(path)
                 kwargs.setdefault("request_validator", ensure_public_remote_target)
+            if enforce_public_remote_targets and is_git_repo_url(path):
+                # Re-check at execution: queued and watch-restored proxies may
+                # now resolve elsewhere than when the request was accepted.
+                ensure_public_git_proxy_target(kwargs.get("auth_config"))
             if resource_lock is not None:
                 kwargs["resource_lock"] = resource_lock
 
