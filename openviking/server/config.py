@@ -305,8 +305,11 @@ class UploadConfig(BaseModel):
         5120 * _MIB, gt=0, description="Largest total size of one upload (e.g. a folder)"
     )
     max_files: int = Field(10_000, gt=0, description="Most files in one upload")
+    # 1 MiB keeps every part within the default request-body limit of common reverse
+    # proxies (nginx and nginx ingress default to 1m), so chunked uploads work behind
+    # them without proxy changes.
     part_size_bytes: int = Field(
-        8 * _MIB, ge=_MIB, description="Chunk size clients use for chunked uploads"
+        _MIB, ge=_MIB, description="Chunk size clients use for chunked uploads"
     )
 
     @model_validator(mode="after")
