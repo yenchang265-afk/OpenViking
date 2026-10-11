@@ -88,14 +88,24 @@ function packageFolder(
     )
     return null
   }
-  if (
-    getFolderSize(folder) > limits.maxSessionBytes ||
-    folder.entries.length > limits.maxFiles
-  ) {
+  if (folder.entries.length > limits.maxFiles) {
     toast.error(
-      t('fileTooLarge', {
+      t('folderTooManyFiles', {
         name: `${folder.name}/`,
-        size: formatFileSize(limits.maxSessionBytes),
+        files: folder.entries.length.toLocaleString(),
+        max: limits.maxFiles.toLocaleString(),
+      }),
+      { duration: 2500 },
+    )
+    return null
+  }
+  const folderSize = getFolderSize(folder)
+  if (folderSize > limits.maxSessionBytes) {
+    toast.error(
+      t('folderTooLarge', {
+        name: `${folder.name}/`,
+        size: formatFileSize(folderSize),
+        max: formatFileSize(limits.maxSessionBytes),
       }),
       { duration: 2500 },
     )

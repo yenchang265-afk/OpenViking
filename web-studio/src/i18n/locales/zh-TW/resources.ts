@@ -126,7 +126,12 @@ const resources = {
     fileEmpty: '"{{name}}" 是空檔案，沒有可索引的內容。',
     tooManyFiles: '僅保留前 {{count}} 個檔案，其餘已忽略。',
     folderEmpty: '"{{name}}" 中沒有可上傳的支援檔案。',
-    folderSkipped: '已略過 "{{name}}" 中 {{count}} 個隱藏或不支援的檔案。',
+    folderSkipped:
+      '已略過 "{{name}}" 中 {{count}} 個隱藏、不支援或自動產生的檔案（例如 node_modules 或建置輸出）。',
+    folderTooManyFiles:
+      '"{{name}}" 有 {{files}} 個檔案，上傳上限為 {{max}} 個。請選擇較小的資料夾或移除自動產生的檔案。',
+    folderTooLarge:
+      '"{{name}}" 大小為 {{size}}，上傳上限為 {{max}}。請選擇較小的資料夾或移除大型檔案。',
     folderZipFailed: '無法打包 "{{name}}" 以進行上傳。',
     error: '請求失敗',
     dirPicker: {

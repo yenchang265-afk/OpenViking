@@ -55,4 +55,35 @@ describe('groupFolderFiles', () => {
     ])
     expect(result.folders[0].skippedCount).toBe(3)
   })
+
+  it('skips installed dependencies and build output inside folders', () => {
+    const kept = withPath(new File([''], 'a.md'), '/repo/src/a.md')
+    const generated = [
+      '/repo/node_modules/pkg/index.js',
+      '/repo/web/node_modules/pkg/index.js',
+      '/repo/target/debug/app.d',
+      '/repo/build/lib/x.py',
+      '/repo/dist/app.js',
+      '/repo/pkg/__pycache__/x.pyc',
+      '/repo/venv/lib/site.py',
+    ].map((path) => withPath(new File([''], path.split('/').pop()!), path))
+
+    const result = groupFolderFiles([kept, ...generated])
+
+    expect(result.folders[0].entries.map((entry) => entry.path)).toEqual([
+      'repo/src/a.md',
+    ])
+    expect(result.folders[0].skippedCount).toBe(generated.length)
+  })
+
+  it('keeps a picked folder or a file that only shares a generated name', () => {
+    const inBuild = withPath(new File([''], 'a.md'), '/build/a.md')
+    const fileNamedDist = withPath(new File([''], 'dist'), '/docs/dist')
+
+    const result = groupFolderFiles([inBuild, fileNamedDist])
+
+    expect(result.folders.map((folder) => folder.entries.length)).toEqual([
+      1, 1,
+    ])
+  })
 })
