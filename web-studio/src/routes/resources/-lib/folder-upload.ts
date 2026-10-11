@@ -10,6 +10,8 @@ export type FolderGroup = {
   name: string
   entries: FolderEntry[]
   skippedCount: number
+  /** The folder's .gitignore files, for applyIgnoreRules; never uploaded. */
+  ignoreFiles?: FolderEntry[]
 }
 
 export type GroupedFiles = {
@@ -28,28 +30,8 @@ export function getRelativePath(file: File): string {
   return raw.replace(/^\.?\/+/, '')
 }
 
-// Installed dependencies and build output: regenerated from source, rarely
-// worth indexing, and often tens of thousands of files (a repo checkout with
-// node_modules or a Rust target/ dir blows past the server's upload limits).
-const GENERATED_DIRS = new Set([
-  'node_modules',
-  '__pycache__',
-  'venv',
-  'target',
-  'build',
-  'dist',
-])
-
 function isHiddenPath(path: string): boolean {
   return path.split('/').some((segment) => segment.startsWith('.'))
-}
-
-/** True below the picked folder only, and only for directories. */
-function isGeneratedPath(path: string): boolean {
-  return path
-    .split('/')
-    .slice(1, -1)
-    .some((segment) => GENERATED_DIRS.has(segment))
 }
 
 export function groupFolderFiles(files: File[]): GroupedFiles {
@@ -68,11 +50,10 @@ export function groupFolderFiles(files: File[]): GroupedFiles {
     const group = folders.get(name) ?? { name, entries: [], skippedCount: 0 }
     folders.set(name, group)
 
-    if (
-      isHiddenPath(path) ||
-      isGeneratedPath(path) ||
-      isBlockedFile(file.name)
-    ) {
+    if (file.name === '.gitignore') {
+      group.ignoreFiles = [...(group.ignoreFiles ?? []), { path, file }]
+    }
+    if (isHiddenPath(path) || isBlockedFile(file.name)) {
       group.skippedCount += 1
       continue
     }

@@ -159,6 +159,38 @@ describe('UploadResourceFields', () => {
     ])
   })
 
+  it("leaves out what the folder's .gitignore and node_modules exclude", async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={echoT}
+        limits={LIMITS}
+      />,
+    )
+
+    const withPath = (file: File, path: string) =>
+      Object.defineProperty(file, 'path', { value: path })
+    mocks.onDrop?.([
+      withPath(new File(['target/\n'], '.gitignore'), '/repo/.gitignore'),
+      withPath(new File(['a'], 'a.md'), '/repo/a.md'),
+      withPath(new File(['b'], 'app.d'), '/repo/target/debug/app.d'),
+      withPath(new File(['c'], 'index.js'), '/repo/node_modules/x/index.js'),
+    ])
+
+    await waitFor(() => expect(current).toHaveLength(1))
+    expect(current[0].folder?.entries.map((entry) => entry.path)).toEqual([
+      'repo/a.md',
+    ])
+    expect(mocks.toast).toHaveBeenCalledWith(
+      'folderSkipped:{"name":"repo","count":3}',
+      { duration: 2500 },
+    )
+  })
+
   it('rejects a folder larger than the upload session limit', async () => {
     let current: SelectedUploadFile[] = []
     render(

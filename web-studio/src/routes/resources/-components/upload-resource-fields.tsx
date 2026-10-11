@@ -15,6 +15,7 @@ import {
   isEmptyFile,
 } from '../-lib/upload'
 import type { UploadLimits } from '../-lib/upload-limits'
+import { applyIgnoreRules } from '../-lib/folder-ignore'
 import { getFolderSize, groupFolderFiles } from '../-lib/folder-upload'
 import type { FolderGroup } from '../-lib/folder-upload'
 
@@ -144,7 +145,11 @@ export function UploadResourceFields({
         const { looseFiles, folders } = groupFolderFiles(nextFiles)
 
         for (const folder of folders) {
-          const packaged = packageFolder(folder, t, limits)
+          const packaged = packageFolder(
+            await applyIgnoreRules(folder),
+            t,
+            limits,
+          )
           if (packaged) accepted.push(packaged)
         }
 
