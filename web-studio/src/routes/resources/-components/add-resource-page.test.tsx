@@ -551,3 +551,62 @@ describe('AddResourceForm watch options', () => {
     expect(commonBody).not.toHaveProperty('preserve_structure')
   })
 })
+
+describe('AddResourceForm folder filters', () => {
+  function pickFolder(paths: Record<string, string>) {
+    const files = Object.entries(paths).map(([path, content]) => {
+      const file = new File([content], path.split('/').pop() ?? path)
+      Object.defineProperty(file, 'webkitRelativePath', { value: path })
+      return file
+    })
+    fireEvent.change(screen.getByTestId('folder-input'), {
+      target: { files },
+    })
+  }
+
+  it('lets an upload keep only included files and skip excluded ones, like the CLI', async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AddResourceForm initialMode="upload" />
+      </QueryClientProvider>,
+    )
+
+    // Visible next to the drop zone, not only under remote advanced options.
+    fireEvent.change(screen.getByLabelText('directoryScan.include'), {
+      target: { value: '*.md, *.ts' },
+    })
+    fireEvent.change(screen.getByLabelText('directoryScan.exclude'), {
+      target: { value: '*.test.ts, drafts/' },
+    })
+    fireEvent.change(screen.getByLabelText('directoryScan.ignoreDirs'), {
+      target: { value: 'vendor' },
+    })
+    pickFolder({
+      'repo/.gitignore': 'dist/\n',
+      'repo/README.md': 'a',
+      'repo/src/app.ts': 'b',
+      'repo/src/app.test.ts': 'c',
+      'repo/src/logo.png': 'd',
+      'repo/drafts/idea.md': 'e',
+      'repo/vendor/lib.ts': 'f',
+      'repo/dist/app.md': 'g',
+    })
+    await waitFor(() => expect(screen.getByText('repo/')).toBeTruthy())
+
+    fireEvent.click(screen.getByRole('button', { name: 'startProcessing' }))
+
+    expect(uploadMocks.enqueueUploads).toHaveBeenCalledOnce()
+    const { files, commonBody } = uploadMocks.enqueueUploads.mock.calls[0][0]
+    expect(
+      files[0].folder.entries.map((entry: { path: string }) => entry.path),
+    ).toEqual(['repo/README.md', 'repo/src/app.ts'])
+    expect(commonBody).toMatchObject({
+      exclude: '*.test.ts, drafts/',
+      ignore_dirs: 'vendor',
+      include: '*.md, *.ts',
+    })
+  })
+})

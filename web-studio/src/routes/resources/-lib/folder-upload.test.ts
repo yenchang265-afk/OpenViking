@@ -55,4 +55,25 @@ describe('groupFolderFiles', () => {
     ])
     expect(result.folders[0].skippedCount).toBe(3)
   })
+
+  it('collects .gitignore files for later matching without uploading them', () => {
+    const kept = withPath(new File([''], 'a.md'), '/repo/a.md')
+    const rootIgnore = withPath(
+      new File([''], '.gitignore'),
+      '/repo/.gitignore',
+    )
+    const nestedIgnore = withPath(
+      new File([''], '.gitignore'),
+      '/repo/web/.gitignore',
+    )
+
+    const [folder] = groupFolderFiles([kept, rootIgnore, nestedIgnore]).folders
+
+    expect(folder.entries.map((entry) => entry.path)).toEqual(['repo/a.md'])
+    expect(folder.ignoreFiles?.map((entry) => entry.path)).toEqual([
+      'repo/.gitignore',
+      'repo/web/.gitignore',
+    ])
+    expect(folder.skippedCount).toBe(2)
+  })
 })

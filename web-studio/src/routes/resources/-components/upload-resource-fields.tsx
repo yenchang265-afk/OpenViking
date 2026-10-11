@@ -15,6 +15,8 @@ import {
   isEmptyFile,
 } from '../-lib/upload'
 import type { UploadLimits } from '../-lib/upload-limits'
+import { filterFolder, loadFolderSource } from '../-lib/folder-filter'
+import type { FolderFilters, FolderSource } from '../-lib/folder-filter'
 import { getFolderSize, groupFolderFiles } from '../-lib/folder-upload'
 import type { FolderGroup } from '../-lib/folder-upload'
 
@@ -25,6 +27,8 @@ export type SelectedUploadFile = {
   fileType: string | null
   /** Set for a folder, which is uploaded file by file (not zipped). */
   folder?: FolderGroup
+  /** The folder before filtering, so changed options can re-filter it. */
+  source?: FolderSource
 }
 
 export function selectedUploadSize(item: SelectedUploadFile): number {
@@ -37,6 +41,8 @@ type UploadResourceFieldsProps = {
   t: TFunction<'addResource'>
   /** Server upload limits, from GET /api/v1/uploads/limits. */
   limits: UploadLimits
+  /** Ignore dirs / include / exclude, applied with the folder's .gitignore. */
+  filters: FolderFilters
 }
 
 function createLocalFileId(): string {
@@ -58,11 +64,61 @@ async function detectFileType(file: File): Promise<string | null> {
   }
 }
 
-function packageFolder(
+/** The first upload limit a folder breaks, as a message; null when it fits. */
+export function folderLimitError(
   folder: FolderGroup,
   t: TFunction<'addResource'>,
   limits: UploadLimits,
+): string | null {
+  if (folder.entries.length === 0) {
+    return t('folderEmpty', { name: folder.name })
+  }
+  const oversized = folder.entries.find(
+    ({ file }) => file.size > limits.maxFileBytes,
+  )
+  if (oversized) {
+    return t('fileTooLarge', {
+      name: oversized.path,
+      size: formatFileSize(limits.maxFileBytes),
+    })
+  }
+  if (folder.entries.length > limits.maxFiles) {
+    return t('folderTooManyFiles', {
+      name: `${folder.name}/`,
+      files: folder.entries.length.toLocaleString(),
+      max: limits.maxFiles.toLocaleString(),
+    })
+  }
+  const folderSize = getFolderSize(folder)
+  if (folderSize > limits.maxSessionBytes) {
+    return t('folderTooLarge', {
+      name: `${folder.name}/`,
+      size: formatFileSize(folderSize),
+      max: formatFileSize(limits.maxSessionBytes),
+    })
+  }
+  return null
+}
+
+/** Re-apply the folder filters to every selected folder (options changed). */
+export function refilterSelectedFiles(
+  files: SelectedUploadFile[],
+  filters: FolderFilters,
+): SelectedUploadFile[] {
+  return files.map((item) =>
+    item.source
+      ? { ...item, folder: filterFolder(item.source, filters) }
+      : item,
+  )
+}
+
+function packageFolder(
+  source: FolderSource,
+  filters: FolderFilters,
+  t: TFunction<'addResource'>,
+  limits: UploadLimits,
 ): SelectedUploadFile | null {
+  const folder = filterFolder(source, filters)
   if (folder.skippedCount > 0) {
     toast(
       t('folderSkipped', { name: folder.name, count: folder.skippedCount }),
@@ -71,34 +127,9 @@ function packageFolder(
       },
     )
   }
-  if (folder.entries.length === 0) {
-    toast.error(t('folderEmpty', { name: folder.name }), { duration: 2500 })
-    return null
-  }
-  const oversized = folder.entries.find(
-    ({ file }) => file.size > limits.maxFileBytes,
-  )
-  if (oversized) {
-    toast.error(
-      t('fileTooLarge', {
-        name: oversized.path,
-        size: formatFileSize(limits.maxFileBytes),
-      }),
-      { duration: 2500 },
-    )
-    return null
-  }
-  if (
-    getFolderSize(folder) > limits.maxSessionBytes ||
-    folder.entries.length > limits.maxFiles
-  ) {
-    toast.error(
-      t('fileTooLarge', {
-        name: `${folder.name}/`,
-        size: formatFileSize(limits.maxSessionBytes),
-      }),
-      { duration: 2500 },
-    )
+  const error = folderLimitError(folder, t, limits)
+  if (error) {
+    toast.error(error, { duration: 2500 })
     return null
   }
   return {
@@ -106,6 +137,7 @@ function packageFolder(
     file: new File([], folder.name),
     fileType: null,
     folder,
+    source,
   }
 }
 
@@ -114,6 +146,7 @@ export function UploadResourceFields({
   onFilesChange,
   t,
   limits,
+  filters,
 }: UploadResourceFieldsProps) {
   const filesRef = useRef(files)
   filesRef.current = files
@@ -134,7 +167,12 @@ export function UploadResourceFields({
         const { looseFiles, folders } = groupFolderFiles(nextFiles)
 
         for (const folder of folders) {
-          const packaged = packageFolder(folder, t, limits)
+          const packaged = packageFolder(
+            await loadFolderSource(folder),
+            filters,
+            t,
+            limits,
+          )
           if (packaged) accepted.push(packaged)
         }
 
@@ -182,7 +220,7 @@ export function UploadResourceFields({
         })
       })()
     },
-    [limits, t, updateFiles],
+    [filters, limits, t, updateFiles],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -253,6 +291,9 @@ export function UploadResourceFields({
                 {item.folder ? `${item.folder.name}/` : item.file.name}
               </p>
               <span className="shrink-0 text-xs text-muted-foreground">
+                {item.folder
+                  ? `${t('fileInfo.folderFiles', { count: item.folder.entries.length })} · `
+                  : null}
                 {formatFileSize(selectedUploadSize(item))}
               </span>
               <Button

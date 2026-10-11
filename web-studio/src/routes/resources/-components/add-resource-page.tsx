@@ -7,8 +7,15 @@ import {
   Loader2Icon,
   Upload,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { Button } from '#/components/ui/button'
 import { Checkbox } from '#/components/ui/checkbox'
@@ -17,7 +24,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '#/components/ui/collapsible'
-import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import {
@@ -34,6 +40,8 @@ import { buildResourceImportCommonBody } from '../-lib/resource-import-request'
 import { getRemoteResourceCapabilities } from '../-lib/resource-source-strategy'
 import type { RemoteSourceOptionState } from '../-lib/resource-source-strategy'
 import { DirectoryPickerDialog } from './directory-picker-dialog'
+import { DirectoryScanFields } from './directory-scan-fields'
+import type { FolderFilters } from '../-lib/folder-filter'
 import { AdditionalResourceOptions } from './additional-resource-options'
 import type { AdditionalResourceOptionsValue } from './additional-resource-options'
 import { GitResourceOptions } from './git-resource-options'
@@ -42,7 +50,11 @@ import { RemoteResourceFields } from './remote-resource-fields'
 import { ResourceDestinationFields } from './resource-destination-fields'
 import type { ResourceDestinationMode } from './resource-destination-fields'
 import { TosResourceOptions } from './tos-resource-options'
-import { UploadResourceFields } from './upload-resource-fields'
+import {
+  UploadResourceFields,
+  folderLimitError,
+  refilterSelectedFiles,
+} from './upload-resource-fields'
 import type { SelectedUploadFile } from './upload-resource-fields'
 import { WebResourceOptions } from './web-resource-options'
 import type { WebResourceOptionsValue } from './web-resource-options'
@@ -115,6 +127,24 @@ export function AddResourceForm({
   const [ignoreDirs, setIgnoreDirs] = useState('')
   const [include, setInclude] = useState('')
   const [exclude, setExclude] = useState('')
+  const folderFilters = useMemo(
+    () => ({ ignoreDirs, include, exclude }),
+    [exclude, ignoreDirs, include],
+  )
+  const setFolderFilters = useCallback((next: FolderFilters) => {
+    setIgnoreDirs(next.ignoreDirs)
+    setInclude(next.include)
+    setExclude(next.exclude)
+  }, [])
+  // Deferred: re-filtering a large folder on every keystroke would lag typing.
+  const deferredFolderFilters = useDeferredValue(folderFilters)
+  useEffect(() => {
+    setSelectedFiles((files) =>
+      files.some((item) => item.source)
+        ? refilterSelectedFiles(files, deferredFolderFilters)
+        : files,
+    )
+  }, [deferredFolderFilters])
   const [watchEnabled, setWatchEnabled] = useState(initialWatchEnabled)
   const [watchInterval, setWatchInterval] = useState('1440')
   const [gitOptions, setGitOptions] = useState(DEFAULT_GIT_OPTIONS)
@@ -215,8 +245,19 @@ export function AddResourceForm({
   const handleSubmit = () => {
     if (mode === 'upload') {
       if (selectedFiles.length === 0) return
+      // Options may have changed since the folder was picked.
+      const files = refilterSelectedFiles(selectedFiles, folderFilters)
+      const limitError = files
+        .map((item) =>
+          item.folder ? folderLimitError(item.folder, t, uploadLimits) : null,
+        )
+        .find(Boolean)
+      if (limitError) {
+        toast.error(limitError, { duration: 2500 })
+        return
+      }
       enqueueUploads({
-        files: selectedFiles.map(({ file, fileType, folder }) => ({
+        files: files.map(({ file, fileType, folder }) => ({
           file,
           fileType,
           folder,
@@ -306,9 +347,19 @@ export function AddResourceForm({
             files={selectedFiles}
             onFilesChange={setSelectedFiles}
             t={t}
+            filters={folderFilters}
             limits={uploadLimits}
           />
-        ) : (
+        ) : null}
+        {activeMode === 'upload' && sourceCapabilities.nativeOptions ? (
+          <DirectoryScanFields
+            value={folderFilters}
+            onChange={setFolderFilters}
+            t={t}
+            showHint
+          />
+        ) : null}
+        {activeMode === 'upload' ? null : (
           <RemoteResourceFields
             disabled={remotePhase === 'processing'}
             onResourceTypeChange={handleRemoteResourceTypeChange}
@@ -478,40 +529,12 @@ export function AddResourceForm({
               />
 
               {activeMode === 'remote' && sourceCapabilities.nativeOptions ? (
-                <div className="space-y-4 border-t border-border/50 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="add-resource-ignore-dirs">
-                      {t('directoryScan.ignoreDirs')}
-                    </Label>
-                    <Input
-                      id="add-resource-ignore-dirs"
-                      placeholder={t('directoryScan.ignoreDirs.placeholder')}
-                      value={ignoreDirs}
-                      onChange={(e) => setIgnoreDirs(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-resource-include">
-                      {t('directoryScan.include')}
-                    </Label>
-                    <Input
-                      id="add-resource-include"
-                      placeholder={t('directoryScan.include.placeholder')}
-                      value={include}
-                      onChange={(e) => setInclude(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-resource-exclude">
-                      {t('directoryScan.exclude')}
-                    </Label>
-                    <Input
-                      id="add-resource-exclude"
-                      placeholder={t('directoryScan.exclude.placeholder')}
-                      value={exclude}
-                      onChange={(e) => setExclude(e.target.value)}
-                    />
-                  </div>
+                <div className="border-t border-border/50 pt-4">
+                  <DirectoryScanFields
+                    value={folderFilters}
+                    onChange={setFolderFilters}
+                    t={t}
+                  />
                 </div>
               ) : null}
 

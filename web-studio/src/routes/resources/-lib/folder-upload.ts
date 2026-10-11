@@ -10,6 +10,8 @@ export type FolderGroup = {
   name: string
   entries: FolderEntry[]
   skippedCount: number
+  /** The folder's .gitignore files, for applyIgnoreRules; never uploaded. */
+  ignoreFiles?: FolderEntry[]
 }
 
 export type GroupedFiles = {
@@ -48,6 +50,9 @@ export function groupFolderFiles(files: File[]): GroupedFiles {
     const group = folders.get(name) ?? { name, entries: [], skippedCount: 0 }
     folders.set(name, group)
 
+    if (file.name === '.gitignore') {
+      group.ignoreFiles = [...(group.ignoreFiles ?? []), { path, file }]
+    }
     if (isHiddenPath(path) || isBlockedFile(file.name)) {
       group.skippedCount += 1
       continue

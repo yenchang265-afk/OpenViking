@@ -98,6 +98,8 @@ const resources = {
       type: '型別',
       unknown: '未知型別',
       remove: '移除',
+      folderFiles_one: '{{count}} 個檔案',
+      folderFiles_other: '{{count}} 個檔案',
     },
     targetUri: '目標 URI',
     'targetUri.placeholder': 'viking://resources/',
@@ -126,7 +128,12 @@ const resources = {
     fileEmpty: '"{{name}}" 是空檔案，沒有可索引的內容。',
     tooManyFiles: '僅保留前 {{count}} 個檔案，其餘已忽略。',
     folderEmpty: '"{{name}}" 中沒有可上傳的支援檔案。',
-    folderSkipped: '已略過 "{{name}}" 中 {{count}} 個隱藏或不支援的檔案。',
+    folderSkipped:
+      '已略過 "{{name}}" 中 {{count}} 個隱藏、不支援或被篩選的檔案（依 .gitignore、忽略目錄、包含或排除規則）。',
+    folderTooManyFiles:
+      '"{{name}}" 有 {{files}} 個檔案，上傳上限為 {{max}} 個。請以 .gitignore 或忽略目錄排除自動產生的資料夾，或選擇較小的資料夾。',
+    folderTooLarge:
+      '"{{name}}" 大小為 {{size}}，上傳上限為 {{max}}。請選擇較小的資料夾或移除大型檔案。',
     folderZipFailed: '無法打包 "{{name}}" 以進行上傳。',
     error: '請求失敗',
     dirPicker: {
@@ -286,6 +293,7 @@ const resources = {
       'include.placeholder': '*.py, *.md',
       exclude: '排除模式',
       'exclude.placeholder': '*.log, *.tmp',
+      hint: '上傳前會依資料夾自身的 .gitignore 與這些選項篩選檔案，與 ov add-resource --include/--exclude/--ignore-dirs 相同。包含與排除比對檔名（例如 *.md）；以 / 結尾的排除項目會略過該路徑（例如 docs/drafts/）。多個項目以逗號分隔。',
     },
   },
   resources: {

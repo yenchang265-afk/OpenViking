@@ -96,11 +96,7 @@ export function buildResourceImportCommonBody({
   if (instruction.trim() && sourceCapabilities.nativeOptions) {
     body.instruction = instruction.trim()
   }
-  if (mode !== 'remote') return body
-
-  if (watchEnabled && sourceCapabilities.watch) {
-    body.watch_interval = Number(watchInterval)
-  }
+  // Directory scan options apply to uploaded folders too, as in the CLI.
   if (ignoreDirs.trim() && sourceCapabilities.nativeOptions) {
     body.ignore_dirs = ignoreDirs.trim()
   }
@@ -109,6 +105,11 @@ export function buildResourceImportCommonBody({
   }
   if (exclude.trim() && sourceCapabilities.nativeOptions) {
     body.exclude = exclude.trim()
+  }
+  if (mode !== 'remote') return body
+
+  if (watchEnabled && sourceCapabilities.watch) {
+    body.watch_interval = Number(watchInterval)
   }
 
   const sourceRequestOptions = buildRemoteSourceRequestOptions(

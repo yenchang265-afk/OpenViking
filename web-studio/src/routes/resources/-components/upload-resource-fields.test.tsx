@@ -9,7 +9,10 @@ import {
 } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { UploadResourceFields } from './upload-resource-fields'
+import {
+  UploadResourceFields,
+  refilterSelectedFiles,
+} from './upload-resource-fields'
 import type { SelectedUploadFile } from './upload-resource-fields'
 import { MAX_UPLOAD_FILES } from '../-lib/upload'
 import type { UploadLimits } from '../-lib/upload-limits'
@@ -25,6 +28,8 @@ const LIMITS: UploadLimits = {
   maxFiles: 100,
   partSizeBytes: MIB,
 }
+
+const NO_FILTERS = { ignoreDirs: '', include: '', exclude: '' }
 
 const mocks = vi.hoisted(() => ({
   onDrop: null as ((files: File[]) => void) | null,
@@ -79,6 +84,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        filters={NO_FILTERS}
         limits={LIMITS}
       />,
     )
@@ -114,6 +120,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        filters={NO_FILTERS}
         limits={LIMITS}
       />,
     )
@@ -139,6 +146,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        filters={NO_FILTERS}
         limits={LIMITS}
       />,
     )
@@ -159,6 +167,48 @@ describe('UploadResourceFields', () => {
     ])
   })
 
+  it('filters a dropped folder by its .gitignore and the folder options', async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={echoT}
+        filters={{ ignoreDirs: '', include: '', exclude: '*.tmp' }}
+        limits={LIMITS}
+      />,
+    )
+
+    const withPath = (file: File, path: string) =>
+      Object.defineProperty(file, 'path', { value: path })
+    mocks.onDrop?.([
+      withPath(new File(['target/\n'], '.gitignore'), '/repo/.gitignore'),
+      withPath(new File(['a'], 'a.md'), '/repo/a.md'),
+      withPath(new File(['b'], 'app.d'), '/repo/target/debug/app.d'),
+      withPath(new File(['c'], 'index.js'), '/repo/node_modules/x/index.js'),
+      withPath(new File(['d'], 'x.tmp'), '/repo/x.tmp'),
+    ])
+
+    await waitFor(() => expect(current).toHaveLength(1))
+    expect(current[0].folder?.entries.map((entry) => entry.path)).toEqual([
+      'repo/a.md',
+      'repo/node_modules/x/index.js',
+    ])
+    expect(mocks.toast).toHaveBeenCalledWith(
+      'folderSkipped:{"name":"repo","count":3}',
+      { duration: 2500 },
+    )
+    expect(
+      refilterSelectedFiles(current, {
+        ignoreDirs: 'node_modules',
+        include: '',
+        exclude: '',
+      })[0].folder?.entries.map((entry) => entry.path),
+    ).toEqual(['repo/a.md', 'repo/x.tmp'])
+  })
+
   it('rejects a folder larger than the upload session limit', async () => {
     let current: SelectedUploadFile[] = []
     render(
@@ -168,6 +218,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={echoT}
+        filters={NO_FILTERS}
         limits={{ ...LIMITS, maxSessionBytes: 5 }}
       />,
     )
@@ -182,7 +233,37 @@ describe('UploadResourceFields', () => {
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalled())
     expect(current).toHaveLength(0)
     expect(mocks.toastError).toHaveBeenCalledWith(
-      'fileTooLarge:{"name":"docs/","size":"5 B"}',
+      'folderTooLarge:{"name":"docs/","size":"6 B","max":"5 B"}',
+      { duration: 2500 },
+    )
+  })
+
+  it('says how many files a folder has when it exceeds the file limit', async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={echoT}
+        filters={NO_FILTERS}
+        limits={{ ...LIMITS, maxFiles: 2 }}
+      />,
+    )
+
+    const withPath = (file: File, path: string) =>
+      Object.defineProperty(file, 'path', { value: path })
+    mocks.onDrop?.(
+      ['a', 'b', 'c'].map((name) =>
+        withPath(new File([name], `${name}.md`), `/docs/${name}.md`),
+      ),
+    )
+
+    await waitFor(() => expect(mocks.toastError).toHaveBeenCalled())
+    expect(current).toHaveLength(0)
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      'folderTooManyFiles:{"name":"docs/","files":"3","max":"2"}',
       { duration: 2500 },
     )
   })
@@ -201,6 +282,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={(key) => key}
+        filters={NO_FILTERS}
         limits={LIMITS}
       />,
     )
@@ -223,6 +305,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={echoT}
+        filters={NO_FILTERS}
         limits={LIMITS}
       />,
     )
@@ -253,6 +336,7 @@ describe('UploadResourceFields', () => {
           current = typeof update === 'function' ? update(current) : update
         }}
         t={echoT}
+        filters={NO_FILTERS}
         limits={LIMITS}
       />,
     )

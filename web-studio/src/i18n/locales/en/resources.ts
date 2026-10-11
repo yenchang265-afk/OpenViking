@@ -102,6 +102,8 @@ const resources = {
       type: 'Type',
       unknown: 'Unknown type',
       remove: 'Remove',
+      folderFiles_one: '{{count}} file',
+      folderFiles_other: '{{count}} files',
     },
     targetUri: 'Target URI',
     'targetUri.placeholder': 'viking://resources/',
@@ -135,7 +137,11 @@ const resources = {
     tooManyFiles: 'Only the first {{count}} files were kept.',
     folderEmpty: '"{{name}}" has no supported files to upload.',
     folderSkipped:
-      'Skipped {{count}} hidden or unsupported file(s) in "{{name}}".',
+      'Skipped {{count}} hidden, unsupported or filtered file(s) in "{{name}}" (by .gitignore, ignore dirs, include or exclude).',
+    folderTooManyFiles:
+      '"{{name}}" has {{files}} files; the upload limit is {{max}}. Exclude generated folders with .gitignore or ignore dirs, or pick a smaller folder.',
+    folderTooLarge:
+      '"{{name}}" is {{size}}; the upload limit is {{max}}. Pick a smaller folder or remove large files.',
     folderZipFailed: 'Could not package "{{name}}" for upload.',
     error: 'Request Failed',
     dirPicker: {
@@ -301,6 +307,7 @@ const resources = {
       'include.placeholder': '*.py, *.md',
       exclude: 'Exclude Pattern',
       'exclude.placeholder': '*.log, *.tmp',
+      hint: 'Folders are filtered by their own .gitignore and these options before upload, like ov add-resource --include/--exclude/--ignore-dirs. Include and exclude match file names (e.g. *.md); an exclude ending in / skips a path (e.g. docs/drafts/). Separate entries with commas.',
     },
   },
   resources: {
