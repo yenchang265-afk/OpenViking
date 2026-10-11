@@ -127,9 +127,9 @@ const resources = {
     tooManyFiles: '僅保留前 {{count}} 個檔案，其餘已忽略。',
     folderEmpty: '"{{name}}" 中沒有可上傳的支援檔案。',
     folderSkipped:
-      '已略過 "{{name}}" 中 {{count}} 個隱藏、不支援或被忽略的檔案（符合 .gitignore 或位於 node_modules）。',
+      '已略過 "{{name}}" 中 {{count}} 個隱藏、不支援或被篩選的檔案（依 .gitignore、忽略目錄、包含或排除規則）。',
     folderTooManyFiles:
-      '"{{name}}" 有 {{files}} 個檔案，上傳上限為 {{max}} 個。請選擇較小的資料夾或將自動產生的檔案加入 .gitignore。',
+      '"{{name}}" 有 {{files}} 個檔案，上傳上限為 {{max}} 個。請以 .gitignore 或忽略目錄排除自動產生的資料夾，或選擇較小的資料夾。',
     folderTooLarge:
       '"{{name}}" 大小為 {{size}}，上傳上限為 {{max}}。請選擇較小的資料夾或移除大型檔案。',
     folderZipFailed: '無法打包 "{{name}}" 以進行上傳。',

@@ -7,8 +7,15 @@ import {
   Loader2Icon,
   Upload,
 } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { Button } from '#/components/ui/button'
 import { Checkbox } from '#/components/ui/checkbox'
@@ -42,7 +49,11 @@ import { RemoteResourceFields } from './remote-resource-fields'
 import { ResourceDestinationFields } from './resource-destination-fields'
 import type { ResourceDestinationMode } from './resource-destination-fields'
 import { TosResourceOptions } from './tos-resource-options'
-import { UploadResourceFields } from './upload-resource-fields'
+import {
+  UploadResourceFields,
+  folderLimitError,
+  refilterSelectedFiles,
+} from './upload-resource-fields'
 import type { SelectedUploadFile } from './upload-resource-fields'
 import { WebResourceOptions } from './web-resource-options'
 import type { WebResourceOptionsValue } from './web-resource-options'
@@ -115,6 +126,19 @@ export function AddResourceForm({
   const [ignoreDirs, setIgnoreDirs] = useState('')
   const [include, setInclude] = useState('')
   const [exclude, setExclude] = useState('')
+  const folderFilters = useMemo(
+    () => ({ ignoreDirs, include, exclude }),
+    [exclude, ignoreDirs, include],
+  )
+  // Deferred: re-filtering a large folder on every keystroke would lag typing.
+  const deferredFolderFilters = useDeferredValue(folderFilters)
+  useEffect(() => {
+    setSelectedFiles((files) =>
+      files.some((item) => item.source)
+        ? refilterSelectedFiles(files, deferredFolderFilters)
+        : files,
+    )
+  }, [deferredFolderFilters])
   const [watchEnabled, setWatchEnabled] = useState(initialWatchEnabled)
   const [watchInterval, setWatchInterval] = useState('1440')
   const [gitOptions, setGitOptions] = useState(DEFAULT_GIT_OPTIONS)
@@ -215,8 +239,19 @@ export function AddResourceForm({
   const handleSubmit = () => {
     if (mode === 'upload') {
       if (selectedFiles.length === 0) return
+      // Options may have changed since the folder was picked.
+      const files = refilterSelectedFiles(selectedFiles, folderFilters)
+      const limitError = files
+        .map((item) =>
+          item.folder ? folderLimitError(item.folder, t, uploadLimits) : null,
+        )
+        .find(Boolean)
+      if (limitError) {
+        toast.error(limitError, { duration: 2500 })
+        return
+      }
       enqueueUploads({
-        files: selectedFiles.map(({ file, fileType, folder }) => ({
+        files: files.map(({ file, fileType, folder }) => ({
           file,
           fileType,
           folder,
@@ -306,6 +341,7 @@ export function AddResourceForm({
             files={selectedFiles}
             onFilesChange={setSelectedFiles}
             t={t}
+            filters={folderFilters}
             limits={uploadLimits}
           />
         ) : (

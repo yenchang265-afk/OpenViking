@@ -135,9 +135,9 @@ const resources = {
     tooManyFiles: 'Only the first {{count}} files were kept.',
     folderEmpty: '"{{name}}" has no supported files to upload.',
     folderSkipped:
-      'Skipped {{count}} hidden, unsupported or ignored file(s) in "{{name}}" (matched by .gitignore, or in node_modules).',
+      'Skipped {{count}} hidden, unsupported or filtered file(s) in "{{name}}" (by .gitignore, ignore dirs, include or exclude).',
     folderTooManyFiles:
-      '"{{name}}" has {{files}} files; the upload limit is {{max}}. Pick a smaller folder or add generated files to .gitignore.',
+      '"{{name}}" has {{files}} files; the upload limit is {{max}}. Exclude generated folders with .gitignore or ignore dirs, or pick a smaller folder.',
     folderTooLarge:
       '"{{name}}" is {{size}}; the upload limit is {{max}}. Pick a smaller folder or remove large files.',
     folderZipFailed: 'Could not package "{{name}}" for upload.',
