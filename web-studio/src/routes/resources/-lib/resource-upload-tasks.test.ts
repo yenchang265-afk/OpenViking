@@ -95,4 +95,35 @@ describe('mergeServerTasks', () => {
     expect(task.errorMessage).toBe('provider overloaded')
     expect(task.errorDetail).toBe('provider overloaded')
   })
+  it('names a failed upload from its meta source_name', () => {
+    const [task] = mergeServerTasks(
+      [],
+      [{ ...serverRecord('boom'), meta: { source_name: 'docs' } }],
+      { cancelled: 'Cancelled', failed: 'Processing failed' },
+    )
+
+    expect(task.fileName).toBe('docs')
+    expect(task.errorMessage).toBe('boom')
+  })
+
+  it('collapses a server-only copy into the local upload with the same task id', () => {
+    const serverCopy = { ...previousTask('Processing failed', 'fallback') }
+    serverCopy.fileName = 'task-1'
+    const local: ResourceUploadTask = {
+      ...previousTask('Processing failed', 'fallback'),
+      fileName: 'docs',
+      id: 'local-1',
+      source: 'local',
+    }
+
+    const tasks = mergeServerTasks(
+      [serverCopy, local],
+      [serverRecord('boom')],
+      { cancelled: 'Cancelled', failed: 'Processing failed' },
+    )
+
+    expect(tasks).toHaveLength(1)
+    expect(tasks[0].id).toBe('local-1')
+    expect(tasks[0].fileName).toBe('docs')
+  })
 })

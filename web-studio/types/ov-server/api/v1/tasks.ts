@@ -15,6 +15,7 @@ export type TaskRecord = {
   updated_at_iso?: string
   resource_id?: string | null
   result?: Record<string, unknown> | null
+  meta?: Record<string, unknown> | null
   error?: string | null
 }
 

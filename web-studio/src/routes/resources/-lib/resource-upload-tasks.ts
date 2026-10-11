@@ -54,8 +54,16 @@ function getNameFromUri(uri: string): string {
   return parts[parts.length - 1] || uri
 }
 
+function getMetaString(record: TaskRecord, key: string): string | null {
+  const value = record.meta?.[key]
+  return typeof value === 'string' && value.trim() ? value : null
+}
+
 function getServerTaskName(record: TaskRecord): string {
-  const sourceName = getResultString(record, 'source_name')
+  // A failed upload has no result yet, so fall back to the name in its meta.
+  const sourceName =
+    getResultString(record, 'source_name') ??
+    getMetaString(record, 'source_name')
   if (sourceName) {
     return sourceName
   }
@@ -165,7 +173,11 @@ export function mergeServerTasks(
 ): ResourceUploadTask[] {
   const previousByServerId = new Map<string, ResourceUploadTask>()
   for (const task of previous) {
-    if (task.serverTaskId) {
+    if (!task.serverTaskId) continue
+    // A refresh can land before a local upload learns its server task id,
+    // leaving a server-only copy; prefer the local entry, which has the name.
+    const current = previousByServerId.get(task.serverTaskId)
+    if (!current || current.source === 'server') {
       previousByServerId.set(task.serverTaskId, task)
     }
   }
@@ -181,7 +193,10 @@ export function mergeServerTasks(
   })
 
   for (const task of previous) {
-    if (consumedLocalIds.has(task.id)) {
+    if (
+      consumedLocalIds.has(task.id) ||
+      (task.serverTaskId && serverTaskIds.has(task.serverTaskId))
+    ) {
       continue
     }
     if (

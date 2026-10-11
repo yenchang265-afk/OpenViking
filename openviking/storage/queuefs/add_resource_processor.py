@@ -390,23 +390,20 @@ class AddResourceProcessor(DequeueHandlerBase):
                     current_stage,
                     exc,
                 )
-                await self._record_watch_execution(
-                    msg,
-                    "failed",
-                    str(exc) or type(exc).__name__,
-                )
+                error = str(exc) or type(exc).__name__
+                await self._record_watch_execution(msg, "failed", error)
                 failure_result = (
                     {"code": exc.code} if isinstance(exc, OpenVikingError) and exc.code else None
                 )
                 await tracker.fail(
                     msg.task_id,
-                    str(exc),
+                    error,
                     account_id=ctx.account_id,
                     user_id=ctx.user.user_id,
                     result=failure_result,
                 )
                 terminal = True
-                return ProcessResult.failed(str(exc))
+                return ProcessResult.failed(error)
             finally:
                 request_wait_tracker.cleanup(telemetry_id)
                 unregister_telemetry(telemetry_id)

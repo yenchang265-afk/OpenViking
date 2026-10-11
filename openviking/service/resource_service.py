@@ -600,7 +600,12 @@ class ResourceService:
                 user_id=msg.user_id,
                 task_id=msg.task_id,
                 meta=(
-                    {"internal": True} if msg.internal_task else {"source_path": msg.source_path}
+                    {"internal": True}
+                    if msg.internal_task
+                    else {
+                        "source_path": msg.source_path,
+                        **({"source_name": msg.source_name} if msg.source_name else {}),
+                    }
                 ),
                 auth=task_auth,
             )
