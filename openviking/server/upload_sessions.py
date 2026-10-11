@@ -38,6 +38,8 @@ SESSION_TEMP_FILE_PREFIX = "session_"
 _SESSION_ID_RE = re.compile(r"^[0-9a-f]{32}$")
 _META_NAME = "session.json"
 _COPY_CHUNK_BYTES = 1024 * 1024
+# Longest single path component on common filesystems (ext4, XFS, APFS), in bytes.
+_MAX_COMPONENT_BYTES = 255
 _KINDS = ("file", "directory")
 
 
@@ -53,15 +55,22 @@ def _total_parts(size: int, part_size: int) -> int:
     return -(-size // part_size)
 
 
+def _component_too_long(component: str) -> bool:
+    return len(component.encode("utf-8", "surrogatepass")) > _MAX_COMPONENT_BYTES
+
+
 def _validate_name(name: Any) -> str:
     if (
         not isinstance(name, str)
         or not name
-        or len(name) > 255
         or name in {".", ".."}
         or any(ch in name for ch in "/\\\x00")
     ):
         raise InvalidArgumentError(f"Invalid upload name: {name!r}")
+    if _component_too_long(name):
+        raise InvalidArgumentError(
+            f"Upload name is longer than {_MAX_COMPONENT_BYTES} bytes: {name!r}"
+        )
     return name
 
 
@@ -72,8 +81,13 @@ def _normalize_rel_path(path: Any) -> str:
         normalized = sanitize_relative_viking_path(path)
     except ValueError as exc:
         raise InvalidArgumentError(f"Invalid upload path: {path!r}") from exc
-    if any(segment in {"", ".", ".."} for segment in normalized.split("/")):
+    segments = normalized.split("/")
+    if any(segment in {"", ".", ".."} for segment in segments):
         raise InvalidArgumentError(f"Invalid upload path: {path!r}")
+    if any(_component_too_long(segment) for segment in segments):
+        raise InvalidArgumentError(
+            f"Upload path has a name longer than {_MAX_COMPONENT_BYTES} bytes: {path!r}"
+        )
     return normalized
 
 
@@ -324,7 +338,9 @@ class UploadSessionStore:
         for index, f in enumerate(meta["files"]):
             target = root if meta["kind"] == "file" else root / f["path"]
             target.parent.mkdir(parents=True, exist_ok=True)
-            tmp = target.with_name(f"{target.name}.{uuid.uuid4().hex}.tmp")
+            # Stage beside the session, not beside the target: a suffix on the target's
+            # own name would push a long (but valid) name past the filesystem limit.
+            tmp = session_dir / f"assemble-{uuid.uuid4().hex}.tmp"
             with tmp.open("wb") as out:
                 part_dir = session_dir / "parts" / str(index)
                 for n in range(1, _total_parts(f["size"], part_size) + 1):
