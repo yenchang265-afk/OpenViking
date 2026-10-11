@@ -2,7 +2,7 @@
 
 Compile timestamped conversation logs, agent sessions, IM messages, collaborative documents, meeting notes, and task records into concise, evidence-grounded **daily reports**: one page per day.
 
-Skill source: [examples/compile/ov-compile-skills/daily-report](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/daily-report)
+Skill source: [openviking/builtin_skills/compile/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/daily-report)
 
 ## Step 1: Prepare the sources
 
@@ -15,10 +15,17 @@ ov ls -r viking://resources/work-logs
 
 ## Step 2: Add the Skill
 
+The Daily Report Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+
 ```bash
-ov add-skill examples/compile/ov-compile-skills/daily-report
 ov skills list
-# → viking://agent/skills/daily-report  (or viking://user/<you>/skills/daily-report)
+# → viking://agent/skills/daily-report
+```
+
+If an admin removed it, add it back from the package source:
+
+```bash
+ov add-skill openviking/builtin_skills/compile/daily-report -p viking://agent/skills
 ```
 
 ## Step 3: Run compile

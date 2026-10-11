@@ -8,6 +8,7 @@ export default {
     conflict: 'This submission conflicts with an existing request.',
     network: 'Unable to reach the server. Check your connection and try again.',
     upgrade: 'Update Business Data Platform to use paginated task history.',
+    agentOutput: 'The compile agent did not produce usable output.',
     details: 'Technical details',
   },
   commandErrors: {
@@ -153,6 +154,7 @@ export default {
   selectDraft:
     'Replace the current draft with this task’s public configuration?',
   leave: 'Advanced parameters will be lost. Leave this page?',
+  replaceDraft: 'Replace the current draft with the selected folder and Skill?',
   viewTask: 'View task',
   created: 'Task created',
   terminalHint: 'Compile materials with a Skill',

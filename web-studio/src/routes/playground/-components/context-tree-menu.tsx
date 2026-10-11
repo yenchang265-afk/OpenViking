@@ -32,6 +32,7 @@ import {
   ContextMenuTrigger,
 } from '#/components/ui/context-menu'
 import { copyTextToClipboard } from '#/lib/clipboard'
+import { isCompileSourceUri } from '#/routes/compile/-lib/tree-compile'
 import { useInvalidateVikingFs } from '#/routes/resources/-hooks/viking-fm'
 import {
   createDirectory,
@@ -56,6 +57,7 @@ import {
   renamedEntryUri,
 } from '../-lib/tree-actions'
 import { canDeleteResourceUri, createEntryFromUri } from '../-lib/utils'
+import { CompileMenuItems } from './compile-menu-items'
 import {
   BatchDeleteResourceDialog,
   DeleteResourceDialog,
@@ -314,6 +316,9 @@ export function ContextTreeMenu({
             {t('explorer.menu.open')}
           </ContextMenuItem>,
         ]
+      : [],
+    menuDirUri !== null && isCompileSourceUri(menuDirUri)
+      ? [<CompileMenuItems key="compile" dirUri={menuDirUri} />]
       : [],
     canCreate && menuDirUri
       ? [

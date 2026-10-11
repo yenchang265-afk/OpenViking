@@ -297,6 +297,7 @@ When `base_url` is configured, OV sends the current user's OV API key in `X-API-
 | `profile_enabled` | boolean | `false` | Allow performance profiles |
 | `with_bot` | boolean | `false` | Enable the VikingBot API proxy |
 | `bot_api_url` | URL | `http://localhost:18790` | VikingBot OpenAPI endpoint |
+| `builtin_skills` | boolean | `true` | Install the bundled compile Skills into every account's `viking://agent/skills` at startup and on account creation; never overwrites, and deleted built-ins stay deleted |
 | `public_base_url` | URL / `null` | `null` | Externally visible base URL |
 | `upload_signed_ttl_seconds` | integer | `600` | Signed upload URL lifetime |
 | `temp_upload.default_mode` | `"local"` / `"shared"` | `"local"` | Temporary upload storage |

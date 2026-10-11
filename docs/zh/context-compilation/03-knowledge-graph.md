@@ -16,7 +16,7 @@ relations.jsonl       # 每行一條有向邊
 
 `relation` 是穩定、語言無關的機器謂詞（`member_of`、`leads`、`located_in`……），`label` 是對應的本地化顯示名（`屬於`、`率領`、`位於`……），`entity_type` 用於視覺化時的節點顏色、形狀和過濾。圖譜可以增量重新整理：已有節點和邊會被保留、合併證據，新知識追加進來。
 
-Skill 原始碼：[examples/compile/ov-compile-skills/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-graph) · 視覺化指令碼：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
+Skill 原始碼：[openviking/builtin_skills/compile/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-graph) · 視覺化指令碼：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
 
 ## 第一步：準備來源
 
@@ -27,10 +27,17 @@ ov ls -r viking://resources/journal
 
 ## 第二步：添加 Skill
 
+Knowledge Graph Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+
 ```bash
-ov add-skill examples/compile/ov-compile-skills/knowledge-graph
 ov skills list
 # → viking://agent/skills/knowledge-graph
+```
+
+如果管理員刪除了它，可從套件原始碼重新加入：
+
+```bash
+ov add-skill openviking/builtin_skills/compile/knowledge-graph -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯
@@ -59,6 +66,8 @@ ov read viking://resources/journal-kg/entities/孫悟空.md
 ```
 
 ## 第五步：視覺化成互動式圖譜
+
+在 Studio 中，於 Playground 開啟產物資料夾，並將標頭從 **內容** 切換為 **圖譜**，即可在瀏覽器中探索同一張圖：點選節點檢視詳細資訊（含關係與證據）、搜尋、按實體類型篩選，並逐跳擴大高亮的鄰居範圍。下方腳本則會產生一個獨立的 HTML 檔案。
 
 與 LLM Wiki 的指令碼不同，`knowledge_graph.py` 讀取的是**本地目錄**（需要 `entities/` 和 `relations.jsonl` 都在本地）。所以先把產物拉到本地，再生成 HTML。
 

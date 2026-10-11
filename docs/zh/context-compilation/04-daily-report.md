@@ -2,7 +2,7 @@
 
 把帶時間戳的對話記錄、Agent 會話、IM 訊息、協作文件、會議紀要、任務記錄等材料，編譯成簡潔、有出處的**日報**：每天一頁。
 
-Skill 原始碼：[examples/compile/ov-compile-skills/daily-report](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/daily-report)
+Skill 原始碼：[openviking/builtin_skills/compile/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/daily-report)
 
 ## 第一步：準備來源
 
@@ -15,10 +15,17 @@ ov ls -r viking://resources/work-logs
 
 ## 第二步：添加 Skill
 
+Daily Report Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+
 ```bash
-ov add-skill examples/compile/ov-compile-skills/daily-report
 ov skills list
-# → viking://agent/skills/daily-report  （或 viking://user/<你>/skills/daily-report）
+# → viking://agent/skills/daily-report
+```
+
+如果管理員刪除了它，可從套件原始碼重新加入：
+
+```bash
+ov add-skill openviking/builtin_skills/compile/daily-report -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯

@@ -574,6 +574,7 @@ setup(
     cmdclass=cmdclass,
     package_data={
         "openviking": [
+            "builtin_skills/**/*",
             "lib/ragfs_python*.so",
             "lib/ragfs_python*.pyd",
             "bin/ov",

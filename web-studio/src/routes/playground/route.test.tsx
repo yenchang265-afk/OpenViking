@@ -102,6 +102,11 @@ vi.mock('./-components/resource-authors', () => ({
   ),
 }))
 vi.mock('./-components/agent-panel', () => ({ AgentPanel: () => null }))
+vi.mock('./-components/compile-graph/compile-graph-switch', () => ({
+  CompileGraphSwitch: () => null,
+  LazyCompileGraphView: () => null,
+  useCompileGraphKind: () => null,
+}))
 vi.mock('./-components/terminal-panel', () => ({ TerminalPanel: () => null }))
 vi.mock('#/routes/resources/-components/find-palette', () => ({
   FindPalette: () => null,

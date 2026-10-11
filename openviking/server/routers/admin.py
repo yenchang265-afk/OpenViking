@@ -425,6 +425,20 @@ async def _run_legacy_migration_task(
 # ---- Account endpoints ----
 
 
+async def _install_builtin_skills(service, account_id: str) -> None:
+    """Give a new account the bundled compile Skills; never fails the create."""
+    from openviking.server.dependencies import get_server_config
+    from openviking.service.builtin_skills import install_builtin_skills
+
+    config = get_server_config()
+    if config is not None and not config.builtin_skills:
+        return
+    try:
+        await install_builtin_skills(service, account_id)
+    except Exception:
+        logger.exception("Could not install built-in Skills for account %s", account_id)
+
+
 @router.post("/accounts")
 @require_auth_root
 async def create_account(
@@ -458,6 +472,7 @@ async def create_account(
     try:
         await service.initialize_account_workspace(account_ctx)
         await _write_initial_user_config(service, account_ctx, body.user_config)
+        await _install_builtin_skills(service, body.account_id)
         if body.settings and runtime_config is not None:
             # Persist the pre-validated override.
             await runtime_config.patch_account(

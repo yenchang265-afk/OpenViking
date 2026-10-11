@@ -18,7 +18,7 @@ risk/
 
 > This is a shape example only — the real topics and findings come from the domain you supply. Note that page names state the **conclusion itself** (`growth-shifted-from-volume-to-pricing`), not a source title (`q2-report-summary`).
 
-Skill source: [examples/compile/ov-compile-skills/knowledge-distillation](https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-distillation)
+Skill source: [openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
 
 ## Step 1: Prepare the sources
 
@@ -29,10 +29,17 @@ ov ls -r viking://resources/finance-reports
 
 ## Step 2: Add the Skill
 
+The Knowledge Distillation Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+
 ```bash
-ov add-skill examples/compile/ov-compile-skills/knowledge-distillation
 ov skills list
-# → viking://agent/skills/knowledge-distillation  (or viking://user/<user_name>/skills/knowledge-distillation)
+# → viking://agent/skills/knowledge-distillation
+```
+
+If an admin removed it, add it back from the package source:
+
+```bash
+ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking://agent/skills
 ```
 
 ## Step 3: Run compile
