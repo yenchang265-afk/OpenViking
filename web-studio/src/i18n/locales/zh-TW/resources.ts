@@ -98,6 +98,8 @@ const resources = {
       type: '型別',
       unknown: '未知型別',
       remove: '移除',
+      folderFiles_one: '{{count}} 個檔案',
+      folderFiles_other: '{{count}} 個檔案',
     },
     targetUri: '目標 URI',
     'targetUri.placeholder': 'viking://resources/',
@@ -291,6 +293,7 @@ const resources = {
       'include.placeholder': '*.py, *.md',
       exclude: '排除模式',
       'exclude.placeholder': '*.log, *.tmp',
+      hint: '上傳前會依資料夾自身的 .gitignore 與這些選項篩選檔案，與 ov add-resource --include/--exclude/--ignore-dirs 相同。包含與排除比對檔名（例如 *.md）；以 / 結尾的排除項目會略過該路徑（例如 docs/drafts/）。多個項目以逗號分隔。',
     },
   },
   resources: {

@@ -102,6 +102,8 @@ const resources = {
       type: 'Type',
       unknown: 'Unknown type',
       remove: 'Remove',
+      folderFiles_one: '{{count}} file',
+      folderFiles_other: '{{count}} files',
     },
     targetUri: 'Target URI',
     'targetUri.placeholder': 'viking://resources/',
@@ -305,6 +307,7 @@ const resources = {
       'include.placeholder': '*.py, *.md',
       exclude: 'Exclude Pattern',
       'exclude.placeholder': '*.log, *.tmp',
+      hint: 'Folders are filtered by their own .gitignore and these options before upload, like ov add-resource --include/--exclude/--ignore-dirs. Include and exclude match file names (e.g. *.md); an exclude ending in / skips a path (e.g. docs/drafts/). Separate entries with commas.',
     },
   },
   resources: {

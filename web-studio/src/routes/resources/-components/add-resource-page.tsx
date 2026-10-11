@@ -24,7 +24,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '#/components/ui/collapsible'
-import { Input } from '#/components/ui/input'
 import { Label } from '#/components/ui/label'
 import { Textarea } from '#/components/ui/textarea'
 import {
@@ -41,6 +40,8 @@ import { buildResourceImportCommonBody } from '../-lib/resource-import-request'
 import { getRemoteResourceCapabilities } from '../-lib/resource-source-strategy'
 import type { RemoteSourceOptionState } from '../-lib/resource-source-strategy'
 import { DirectoryPickerDialog } from './directory-picker-dialog'
+import { DirectoryScanFields } from './directory-scan-fields'
+import type { FolderFilters } from '../-lib/folder-filter'
 import { AdditionalResourceOptions } from './additional-resource-options'
 import type { AdditionalResourceOptionsValue } from './additional-resource-options'
 import { GitResourceOptions } from './git-resource-options'
@@ -130,6 +131,11 @@ export function AddResourceForm({
     () => ({ ignoreDirs, include, exclude }),
     [exclude, ignoreDirs, include],
   )
+  const setFolderFilters = useCallback((next: FolderFilters) => {
+    setIgnoreDirs(next.ignoreDirs)
+    setInclude(next.include)
+    setExclude(next.exclude)
+  }, [])
   // Deferred: re-filtering a large folder on every keystroke would lag typing.
   const deferredFolderFilters = useDeferredValue(folderFilters)
   useEffect(() => {
@@ -344,7 +350,16 @@ export function AddResourceForm({
             filters={folderFilters}
             limits={uploadLimits}
           />
-        ) : (
+        ) : null}
+        {activeMode === 'upload' && sourceCapabilities.nativeOptions ? (
+          <DirectoryScanFields
+            value={folderFilters}
+            onChange={setFolderFilters}
+            t={t}
+            showHint
+          />
+        ) : null}
+        {activeMode === 'upload' ? null : (
           <RemoteResourceFields
             disabled={remotePhase === 'processing'}
             onResourceTypeChange={handleRemoteResourceTypeChange}
@@ -514,40 +529,12 @@ export function AddResourceForm({
               />
 
               {activeMode === 'remote' && sourceCapabilities.nativeOptions ? (
-                <div className="space-y-4 border-t border-border/50 pt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="add-resource-ignore-dirs">
-                      {t('directoryScan.ignoreDirs')}
-                    </Label>
-                    <Input
-                      id="add-resource-ignore-dirs"
-                      placeholder={t('directoryScan.ignoreDirs.placeholder')}
-                      value={ignoreDirs}
-                      onChange={(e) => setIgnoreDirs(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-resource-include">
-                      {t('directoryScan.include')}
-                    </Label>
-                    <Input
-                      id="add-resource-include"
-                      placeholder={t('directoryScan.include.placeholder')}
-                      value={include}
-                      onChange={(e) => setInclude(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="add-resource-exclude">
-                      {t('directoryScan.exclude')}
-                    </Label>
-                    <Input
-                      id="add-resource-exclude"
-                      placeholder={t('directoryScan.exclude.placeholder')}
-                      value={exclude}
-                      onChange={(e) => setExclude(e.target.value)}
-                    />
-                  </div>
+                <div className="border-t border-border/50 pt-4">
+                  <DirectoryScanFields
+                    value={folderFilters}
+                    onChange={setFolderFilters}
+                    t={t}
+                  />
                 </div>
               ) : null}
 

@@ -291,6 +291,9 @@ export function UploadResourceFields({
                 {item.folder ? `${item.folder.name}/` : item.file.name}
               </p>
               <span className="shrink-0 text-xs text-muted-foreground">
+                {item.folder
+                  ? `${t('fileInfo.folderFiles', { count: item.folder.entries.length })} · `
+                  : null}
                 {formatFileSize(selectedUploadSize(item))}
               </span>
               <Button
