@@ -17,12 +17,14 @@ def create_git_http_auth_state(
     repo_url: str,
 ) -> Dict[str, Any]:
     """Create private, repository-bound auth state for a Git watch task."""
-    return {
-        "provider": GIT_HTTP_AUTH_PROVIDER,
-        "username": config.username,
-        "token": config.token,
-        "repo_url": repo_url.strip(),
-    }
+    state: Dict[str, Any] = {"provider": GIT_HTTP_AUTH_PROVIDER}
+    if config.token is not None:
+        state["username"] = config.username
+        state["token"] = config.token
+    if config.proxy is not None:
+        state["proxy"] = config.proxy
+    state["repo_url"] = repo_url.strip()
+    return state
 
 
 def is_git_http_auth_state(auth_state: Optional[Dict[str, Any]]) -> bool:
@@ -40,13 +42,18 @@ def git_http_auth_config_from_state(
             "Stored Git watch credentials do not match the watched repository."
         )
 
-    config = parse_git_http_auth_config(
-        {
-            "username": auth_state.get("username"),
-            "token": auth_state.get("token"),
-        },
-        repo_url,
-    )
+    stored = {
+        key: auth_state[key]
+        for key in ("username", "token", "proxy")
+        if auth_state.get(key) is not None
+    }
+    config = parse_git_http_auth_config(stored, repo_url)
     if config is None:  # pragma: no cover - the mapping above is never None
         raise InvalidArgumentError("Stored Git watch credentials are invalid.")
-    return {"username": config.username, "token": config.token}
+    restored: Dict[str, str] = {}
+    if config.token is not None:
+        restored["username"] = config.username
+        restored["token"] = config.token
+    if config.proxy is not None:
+        restored["proxy"] = config.proxy
+    return restored

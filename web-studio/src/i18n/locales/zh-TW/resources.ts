@@ -189,7 +189,8 @@ const resources = {
         public: '公開倉庫',
         publicHint: '無需憑證，直接訪問倉庫。',
         token: 'HTTPS 令牌',
-        tokenHint: '通過 HTTPS Basic Auth 訪問私有倉庫。',
+        tokenHint:
+          '通過 HTTPS Basic Auth 訪問私有倉庫，例如具備 Code (Read) 權限的 Azure DevOps PAT。',
         httpsOnly: '令牌認證僅支援 HTTPS Git 地址。',
       },
       username: '使用者名稱',
@@ -198,6 +199,10 @@ const resources = {
       'token.placeholder': '個人訪問令牌',
       'token.hint':
         '憑證會隨請求傳送；開啟定時同步後，還會儲存在私有憑證儲存中。',
+      proxy: '代理（選填）',
+      'proxy.placeholder': 'http://proxy.example.com:8080',
+      'proxy.hint':
+        '透過 HTTP(S) 或 SOCKS5 代理存取 Git。如需認證，請使用 http://user:password@host:port。私有網段的代理需在伺服器開啟 allow_private_networks。',
     },
     web: {
       mode: {

@@ -32,6 +32,7 @@ from openviking.utils.code_hosting_utils import (
 from openviking.utils.git_auth import (
     build_git_http_auth_env,
     is_git_https_url,
+    is_git_proxy_failure,
     parse_git_http_auth_config,
     raise_git_auth_error,
 )
@@ -330,6 +331,10 @@ class GitAccessor(DataAccessor):
             if "Could not resolve hostname" in error_msg:
                 user_msg = (
                     "Git command failed: could not resolve hostname. Check the URL or your network."
+                )
+            elif is_git_proxy_failure(stderr):
+                user_msg = (
+                    "Git command failed: the proxy could not be reached or refused the request."
                 )
             if env is None:
                 logger.warning(f"[GitAccessor] {user_msg} Details: {error_msg}")

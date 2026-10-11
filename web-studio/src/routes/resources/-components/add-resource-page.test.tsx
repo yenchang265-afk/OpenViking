@@ -266,6 +266,45 @@ describe('AddResourceForm watch options', () => {
     })
   })
 
+  it('submits a private Azure DevOps clone URL with PAT and proxy', () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    })
+    render(
+      <QueryClientProvider client={queryClient}>
+        <AddResourceForm initialMode="remote" />
+      </QueryClientProvider>,
+    )
+
+    fireEvent.change(screen.getByRole('textbox', { name: 'remoteUrl' }), {
+      target: { value: 'https://org@dev.azure.com/org/project/_git/private' },
+    })
+    fireEvent.click(screen.getByRole('radio', { name: /git.auth.token/ }))
+    fireEvent.change(screen.getByLabelText('git.token'), {
+      target: { value: 'azure-pat' },
+    })
+    fireEvent.change(screen.getByLabelText('git.proxy'), {
+      target: { value: 'http://proxy.corp.example:8080' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'startProcessing' }))
+
+    expect(uploadMocks.startRemote).toHaveBeenCalledWith({
+      commonBody: expect.objectContaining({
+        args: {
+          auth_config: {
+            proxy: 'http://proxy.corp.example:8080',
+            token: 'azure-pat',
+            username: 'oauth2',
+          },
+        },
+      }),
+      onAccepted: undefined,
+      onCompleted: undefined,
+      onFailed: undefined,
+      url: 'https://dev.azure.com/org/project/_git/private',
+    })
+  })
+
   it('clears HTTPS Git credentials when the source changes to SSH', async () => {
     const queryClient = new QueryClient({
       defaultOptions: { queries: { retry: false } },

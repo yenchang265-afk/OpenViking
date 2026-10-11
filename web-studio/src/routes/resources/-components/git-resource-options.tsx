@@ -11,6 +11,7 @@ export type GitRefMode = 'branch' | 'commit'
 
 export type GitResourceOptionsValue = {
   authMode: GitAuthMode
+  proxy: string
   refMode: GitRefMode
   refValue: string
   token: string
@@ -23,6 +24,7 @@ type GitResourceOptionsProps = {
   disabled: boolean
   onChange: (value: GitResourceOptionsValue) => void
   supportsHttpAuth: boolean
+  supportsProxy: boolean
   t: TFunction<'addResource'>
   value: GitResourceOptionsValue
 }
@@ -31,6 +33,7 @@ export function GitResourceOptions({
   disabled,
   onChange,
   supportsHttpAuth,
+  supportsProxy,
   t,
   value,
 }: GitResourceOptionsProps) {
@@ -143,6 +146,26 @@ export function GitResourceOptions({
             </div>
             <p className="text-xs text-muted-foreground sm:col-span-2">
               {t('git.token.hint')}
+            </p>
+          </div>
+        ) : null}
+
+        {supportsProxy ? (
+          <div className="grid gap-2">
+            <Label htmlFor="add-resource-git-proxy">{t('git.proxy')}</Label>
+            <Input
+              id="add-resource-git-proxy"
+              autoComplete="off"
+              spellCheck={false}
+              value={value.proxy}
+              disabled={disabled}
+              onChange={(event) =>
+                onChange({ ...value, proxy: event.target.value })
+              }
+              placeholder={t('git.proxy.placeholder')}
+            />
+            <p className="text-xs text-muted-foreground">
+              {t('git.proxy.hint')}
             </p>
           </div>
         ) : null}

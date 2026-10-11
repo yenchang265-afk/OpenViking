@@ -77,6 +77,16 @@ function looksLikeRemoteFile(url: URL): boolean {
   return REMOTE_FILE_EXTENSIONS.has(extension)
 }
 
+// Azure DevOps Services uses org/project/_git/repo; Azure DevOps Server
+// (on-premises) prefixes a collection path, e.g. tfs/Collection/project/_git/repo.
+function looksLikeAzureDevOpsRepository(url: URL, parts: string[]): boolean {
+  return (
+    parts.length >= 4 &&
+    parts[parts.length - 2] === '_git' &&
+    !url.searchParams.has('path')
+  )
+}
+
 function looksLikeGitRepository(url: URL): boolean {
   if (['git:', 'ssh:'].includes(url.protocol)) return true
   if (!['http:', 'https:'].includes(url.protocol)) return false
@@ -84,10 +94,9 @@ function looksLikeGitRepository(url: URL): boolean {
   const parts = url.pathname.split('/').filter(Boolean)
   const host = url.hostname.toLowerCase()
   if (AZURE_DEVOPS_HOSTS.has(host)) {
-    return (
-      parts.length === 4 && parts[2] === '_git' && !url.searchParams.has('path')
-    )
+    return parts.length === 4 && looksLikeAzureDevOpsRepository(url, parts)
   }
+  if (looksLikeAzureDevOpsRepository(url, parts)) return true
   if (url.pathname.endsWith('.git')) return true
   if (!CODE_HOSTS.has(host)) return false
   if (parts.length < 2) return false
@@ -97,6 +106,29 @@ function looksLikeGitRepository(url: URL): boolean {
   return !['blob', 'raw', 'issues', 'pull', 'merge_requests'].some((segment) =>
     parts.includes(segment),
   )
+}
+
+/**
+ * Azure DevOps "Clone" URLs embed the organization as a username
+ * (https://org@dev.azure.com/...). The server rejects URL userinfo and the
+ * PAT travels in auth_config, so drop a password-less username.
+ */
+export function stripGitUrlUsername(source: string): string {
+  let url: URL
+  try {
+    url = new URL(source)
+  } catch {
+    return source
+  }
+  if (
+    !['http:', 'https:'].includes(url.protocol) ||
+    !url.username ||
+    url.password
+  ) {
+    return source
+  }
+  url.username = ''
+  return url.toString()
 }
 
 export function detectRemoteResourceKind(

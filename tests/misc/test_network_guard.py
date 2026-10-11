@@ -15,6 +15,7 @@ from openviking.utils.network_guard import (
     _normalize_host,
     _resolve_host_addresses,
     build_httpx_request_validation_hooks,
+    ensure_public_git_proxy_target,
     ensure_public_remote_target,
     extract_remote_host,
 )
@@ -280,6 +281,40 @@ class TestEnsurePublicRemoteTarget:
     def test_allows_multiple_public_addresses(self, mock_resolve) -> None:
         mock_resolve.return_value = {"8.8.8.8", "8.8.4.4"}
         ensure_public_remote_target("http://dns-rr.example.com/path")  # should not raise
+
+
+class TestEnsurePublicGitProxyTarget:
+    """Git proxies are outbound targets too and follow the same policy."""
+
+    @pytest.mark.parametrize("auth_config", [None, {}, {"token": "pat"}, "not-a-dict"])
+    def test_ignores_requests_without_a_proxy(self, auth_config) -> None:
+        ensure_public_git_proxy_target(auth_config)  # should not raise
+
+    @patch("openviking.utils.network_guard._resolve_host_addresses")
+    def test_allows_public_proxy(self, mock_resolve) -> None:
+        mock_resolve.return_value = {"8.8.8.8"}
+        ensure_public_git_proxy_target({"proxy": "http://proxy.example:8080"})
+
+    @patch("openviking.utils.network_guard._resolve_host_addresses")
+    def test_rejects_private_proxy_without_leaking_credentials(self, mock_resolve) -> None:
+        mock_resolve.return_value = {"10.1.2.3"}
+        with pytest.raises(PermissionDeniedError, match="allow_private_networks") as exc_info:
+            ensure_public_git_proxy_target(
+                {"proxy": "http://user:proxy-secret@proxy.corp.example:8080"}
+            )
+        assert "proxy-secret" not in str(exc_info.value)
+
+    def test_rejects_loopback_proxy(self) -> None:
+        with pytest.raises(PermissionDeniedError, match="proxy"):
+            ensure_public_git_proxy_target({"proxy": "http://localhost:3128"})
+
+    @patch("openviking.utils.network_guard._is_allow_private_networks", return_value=True)
+    @patch("openviking.utils.network_guard._resolve_host_addresses")
+    def test_allows_private_proxy_when_private_networks_are_enabled(
+        self, mock_resolve, _mock_allow
+    ) -> None:
+        mock_resolve.return_value = {"10.1.2.3"}
+        ensure_public_git_proxy_target({"proxy": "http://proxy.corp.example:8080"})
 
 
 # ── build_httpx_request_validation_hooks ─────────────────────────────────────

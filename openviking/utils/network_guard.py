@@ -140,6 +140,25 @@ def ensure_public_remote_target(source: str) -> None:
         )
 
 
+def ensure_public_git_proxy_target(auth_config: object) -> None:
+    """Apply the remote-target policy to the proxy in a Git ``args.auth_config``.
+
+    Shape errors are left to ``parse_git_http_auth_config``. The rejection
+    never echoes the proxy URL because it may carry credentials.
+    """
+    proxy = auth_config.get("proxy") if isinstance(auth_config, dict) else None
+    if not isinstance(proxy, str) or not proxy.strip():
+        return
+    try:
+        ensure_public_remote_target(proxy.strip())
+    except PermissionDeniedError:
+        raise PermissionDeniedError(
+            "HTTP server only accepts public Git proxy hosts; loopback, link-local, "
+            "and private proxies are not allowed. To use a private proxy, set "
+            "allow_private_networks=true in your ov.conf."
+        ) from None
+
+
 def build_httpx_request_validation_hooks(
     request_validator: Optional[RequestValidator],
 ) -> Optional[dict[str, list[Callable]]]:

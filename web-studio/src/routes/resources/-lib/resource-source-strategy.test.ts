@@ -11,7 +11,9 @@ const DEFAULT_STATE: RemoteSourceOptionState = {
     authMode: 'public',
     refMode: 'branch',
     refValue: '',
+    proxy: '',
     supportsHttpAuth: false,
+    supportsProxy: false,
     token: '',
     username: 'oauth2',
   },
@@ -91,6 +93,56 @@ describe('remote resource source strategy', () => {
         authMode: 'token',
         token: 'secret-token',
       },
+    }
+
+    expect(buildRemoteSourceRequestOptions('git', state)).toEqual({ args: {} })
+  })
+
+  it('sends an Azure DevOps PAT and proxy together in auth_config', () => {
+    const state: RemoteSourceOptionState = {
+      ...DEFAULT_STATE,
+      git: {
+        ...DEFAULT_STATE.git,
+        authMode: 'token',
+        proxy: ' http://proxy.corp.example:8080 ',
+        supportsHttpAuth: true,
+        supportsProxy: true,
+        token: ' azure-pat ',
+        username: '',
+      },
+    }
+
+    expect(buildRemoteSourceRequestOptions('git', state)).toEqual({
+      args: {
+        auth_config: {
+          proxy: 'http://proxy.corp.example:8080',
+          token: 'azure-pat',
+          username: 'oauth2',
+        },
+      },
+    })
+  })
+
+  it('sends a proxy without credentials for a public repository', () => {
+    const state: RemoteSourceOptionState = {
+      ...DEFAULT_STATE,
+      git: {
+        ...DEFAULT_STATE.git,
+        proxy: 'socks5h://proxy.example:1080',
+        supportsProxy: true,
+        token: 'stale-token',
+      },
+    }
+
+    expect(buildRemoteSourceRequestOptions('git', state)).toEqual({
+      args: { auth_config: { proxy: 'socks5h://proxy.example:1080' } },
+    })
+  })
+
+  it('does not send a proxy for an SSH Git source', () => {
+    const state: RemoteSourceOptionState = {
+      ...DEFAULT_STATE,
+      git: { ...DEFAULT_STATE.git, proxy: 'http://proxy.example:8080' },
     }
 
     expect(buildRemoteSourceRequestOptions('git', state)).toEqual({ args: {} })

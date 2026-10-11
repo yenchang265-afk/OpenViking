@@ -201,7 +201,8 @@ const resources = {
         public: 'Public Repository',
         publicHint: 'Access the repository without credentials.',
         token: 'HTTPS Token',
-        tokenHint: 'Uses HTTPS Basic Auth for a private repository.',
+        tokenHint:
+          'Uses HTTPS Basic Auth for a private repository, such as an Azure DevOps PAT with Code (Read) scope.',
         httpsOnly: 'Token authentication only supports HTTPS Git URLs.',
       },
       username: 'Username',
@@ -210,6 +211,10 @@ const resources = {
       'token.placeholder': 'Personal Access Token',
       'token.hint':
         'Credentials are sent in the request body and stored in private Watch authentication state when scheduled sync is enabled.',
+      proxy: 'Proxy (optional)',
+      'proxy.placeholder': 'http://proxy.example.com:8080',
+      'proxy.hint':
+        'Routes Git traffic through an HTTP(S) or SOCKS5 proxy. Add credentials as http://user:password@host:port if needed. Private proxy hosts require allow_private_networks on the server.',
     },
     web: {
       mode: {

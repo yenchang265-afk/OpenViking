@@ -61,8 +61,10 @@ class AddResourceRequest(BaseModel):
         directly_upload_media: Whether to directly upload media files. Default is True.
         preserve_structure: Whether to preserve directory structure when adding directories.
         args: Parser-specific import options. Native HTTPS Git imports accept
-            {"auth_config": {"username": "oauth2", "token": "..."}}; when
-            watch_interval > 0 the credentials are stored in private watch state.
+            {"auth_config": {"username": "oauth2", "token": "...", "proxy": "http://host:port"}};
+            ``proxy`` is optional (http/https/socks5/socks5h, may embed credentials) and
+            may be sent without a token for HTTP(S) Git URLs. When watch_interval > 0
+            these settings are stored in private watch state.
         watch_interval: Interval in minutes (default: 0). Positive values create a new
             Watch using explicit ``to`` or the imported ``root_uri``. Nonpositive values
             create no Watch: native imports with explicit ``to`` pause a single accessible

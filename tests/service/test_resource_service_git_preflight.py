@@ -157,3 +157,85 @@ async def test_git_preflight_cancellation_kills_process_group_and_bounds_reap(mo
         wait_timeouts,
     ) == (True, [call(process.pid, signal.SIGKILL)], [10.0, 1.0])
     process.kill.assert_not_called()
+
+
+async def test_azure_devops_proxy_reaches_preflight_and_private_task_auth(monkeypatch):
+    repo_url = "https://dev.azure.com/org/project/_git/private"
+    proxy = "http://proxy-user:proxy-secret@proxy.corp.example:8080"
+    service = ResourceService(resource_processor=SimpleNamespace())
+    service._preflight_git_source = AsyncMock(
+        return_value=SimpleNamespace(
+            source_name="private",
+            source_path=repo_url,
+            source_format="repository",
+        )
+    )
+    ctx = RequestContext(user=UserIdentifier("account-1", "user-1"), role=Role.USER)
+
+    plan = await service._prepare_standard_source_plan(
+        path=repo_url,
+        ctx=ctx,
+        mode=ParseMode.DEFAULT,
+        allow_local_path_resolution=False,
+        processor_kwargs={"auth_config": {"token": "azure-pat", "proxy": proxy}},
+    )
+
+    preflight_auth = service._preflight_git_source.await_args.kwargs["auth_config"]
+    assert preflight_auth.token == "azure-pat"
+    assert preflight_auth.proxy == proxy
+    assert plan is not None
+    assert plan.task_auth["proxy"] == proxy
+    assert plan.task_auth["token"] == "azure-pat"
+    assert "proxy-secret" not in str(plan.processor_args)
+    assert "azure-pat" not in str(plan.processor_args)
+
+
+async def test_http_add_resource_rejects_private_git_proxy_before_preflight(monkeypatch):
+    from openviking_cli.exceptions import PermissionDeniedError
+
+    service = ResourceService(
+        resource_processor=SimpleNamespace(), skill_processor=Mock(), viking_fs=Mock()
+    )
+    service._preflight_git_source = AsyncMock()
+    monkeypatch.setattr(
+        "openviking.utils.network_guard._resolve_host_addresses",
+        lambda _host: {"10.0.0.5"},
+    )
+    ctx = RequestContext(user=UserIdentifier("account-1", "user-1"), role=Role.USER)
+
+    with pytest.raises(PermissionDeniedError, match="allow_private_networks") as exc_info:
+        await service.add_resource(
+            path="https://dev.azure.com/org/project/_git/private",
+            ctx=ctx,
+            to="viking://resources/private",
+            enforce_public_remote_targets=True,
+            args={
+                "auth_config": {
+                    "token": "azure-pat",
+                    "proxy": "http://u:proxy-secret@proxy.corp.example:8080",
+                }
+            },
+        )
+
+    service._preflight_git_source.assert_not_awaited()
+    assert "proxy-secret" not in str(exc_info.value)
+
+
+async def test_add_resource_rejects_auth_config_for_non_git_sources(monkeypatch):
+    service = ResourceService(
+        resource_processor=SimpleNamespace(), skill_processor=Mock(), viking_fs=Mock()
+    )
+    service._prepare_standard_source_plan = AsyncMock()
+    ctx = RequestContext(user=UserIdentifier("account-1", "user-1"), role=Role.USER)
+
+    with pytest.raises(InvalidArgumentError, match="azure_devops_domains") as exc_info:
+        await service.add_resource(
+            # Azure DevOps Server shape on a host missing from code.*_domains.
+            path="https://tfs.unconfigured.example/tfs/Coll/Project/_git/private",
+            ctx=ctx,
+            to="viking://resources/private",
+            args={"auth_config": {"token": "azure-pat"}},
+        )
+
+    service._prepare_standard_source_plan.assert_not_awaited()
+    assert "azure-pat" not in str(exc_info.value)

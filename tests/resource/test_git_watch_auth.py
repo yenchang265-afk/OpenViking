@@ -27,6 +27,25 @@ def test_git_watch_auth_state_round_trip_is_repository_bound():
     }
 
 
+def test_git_watch_auth_state_round_trips_proxy_with_and_without_token():
+    repo_url = "https://dev.azure.com/org/project/_git/private"
+    proxy = "http://proxy-user:proxy-secret@proxy.corp.example:8080"
+
+    with_token = create_git_http_auth_state(
+        GitHttpAuthConfig(username="azure", token="azure-pat", proxy=proxy),
+        repo_url,
+    )
+    proxy_only = create_git_http_auth_state(GitHttpAuthConfig(proxy=proxy), repo_url)
+
+    assert git_http_auth_config_from_state(with_token, repo_url) == {
+        "username": "azure",
+        "token": "azure-pat",
+        "proxy": proxy,
+    }
+    assert "token" not in proxy_only
+    assert git_http_auth_config_from_state(proxy_only, repo_url) == {"proxy": proxy}
+
+
 def test_git_watch_auth_state_rejects_a_different_repository_without_leaking_token():
     state = create_git_http_auth_state(
         GitHttpAuthConfig(username="git-user", token="git-secret"),
@@ -68,6 +87,8 @@ def test_git_watch_auth_state_is_persisted_but_hidden_from_public_task_dict():
         (b"git@example: Permission denied (publickey).", True),
         (b"fatal: could not read Username: terminal prompts disabled", True),
         (b"fatal: The requested URL returned error: 401", True),
+        (b"fatal: unable to access: Received HTTP code 407 from proxy after CONNECT", True),
+        (b"fatal: unable to access: Could not resolve proxy: proxy.example", False),
         (b"fatal: Could not resolve host: example", False),
         (b"fatal: repository not found", False),
         (b"fatal: unable to access: Connection timed out", False),

@@ -28,7 +28,10 @@ import {
 import { useResourceUpload } from '../-hooks/use-resource-upload'
 import { useUploadLimits } from '../-hooks/use-upload-limits'
 import type { RemoteStartResult } from '../-hooks/use-resource-upload'
-import { detectRemoteResourceKind } from '../-lib/resource-source'
+import {
+  detectRemoteResourceKind,
+  stripGitUrlUsername,
+} from '../-lib/resource-source'
 import type { RemoteResourceTypeSelection } from '../-lib/resource-source'
 import { buildResourceImportCommonBody } from '../-lib/resource-import-request'
 import { getRemoteResourceCapabilities } from '../-lib/resource-source-strategy'
@@ -59,8 +62,13 @@ const DEFAULT_WEB_OPTIONS: WebResourceOptionsValue = {
   skipDownloadLinks: true,
 }
 
+function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//i.test(value.trim())
+}
+
 const DEFAULT_GIT_OPTIONS: GitResourceOptionsValue = {
   authMode: 'public',
+  proxy: '',
   refMode: 'branch',
   refValue: '',
   token: '',
@@ -142,6 +150,7 @@ export function AddResourceForm({
     .trim()
     .toLowerCase()
     .startsWith('https://')
+  const gitSupportsProxy = isHttpUrl(remoteUrl)
   const effectiveWatchEnabled = watchEnabled && sourceCapabilities.watch
   const effectiveDestinationMode: ResourceDestinationMode =
     sourceCapabilities.exactDestination ? 'to' : destinationMode
@@ -149,6 +158,7 @@ export function AddResourceForm({
     git: {
       ...gitOptions,
       supportsHttpAuth: gitSupportsHttpAuth,
+      supportsProxy: gitSupportsProxy,
     },
     watchEnabled: effectiveWatchEnabled,
     web: webOptions,
@@ -168,6 +178,7 @@ export function AddResourceForm({
           ...current,
           authMode: 'public',
           token: '',
+          ...(isHttpUrl(value) ? {} : { proxy: '' }),
         }))
       }
       setRemoteUrl(value)
@@ -228,7 +239,10 @@ export function AddResourceForm({
       return
     }
 
-    const url = remoteUrl.trim()
+    const url =
+      remoteResourceKind === 'git'
+        ? stripGitUrlUsername(remoteUrl.trim())
+        : remoteUrl.trim()
     if (!url) return
     startRemote({
       url,
@@ -329,6 +343,7 @@ export function AddResourceForm({
                 disabled={remotePhase === 'processing'}
                 onChange={setGitOptions}
                 supportsHttpAuth={gitSupportsHttpAuth}
+            supportsProxy={gitSupportsProxy}
                 t={t}
                 value={gitOptions}
               />

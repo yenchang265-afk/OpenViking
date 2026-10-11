@@ -59,13 +59,17 @@ from openviking.utils.git_auth import (
     GitHttpAuthConfig,
     build_git_http_auth_env,
     is_git_https_url,
+    is_git_proxy_failure,
     parse_git_http_auth_config,
     raise_git_auth_error,
     reject_git_http_userinfo,
 )
 from openviking.utils.ingest_options import IngestOptions
 from openviking.utils.media_processor import _smart_stem
-from openviking.utils.network_guard import ensure_public_remote_target
+from openviking.utils.network_guard import (
+    ensure_public_git_proxy_target,
+    ensure_public_remote_target,
+)
 from openviking.utils.resource_processor import ResourceProcessor
 from openviking.utils.skill_processor import SkillProcessingPreparation, SkillProcessor
 from openviking_cli.exceptions import (
@@ -1284,6 +1288,11 @@ class ResourceService:
 
         if proc.returncode != 0:
             raise_git_auth_error(stderr)
+            if is_git_proxy_failure(stderr):
+                raise InvalidArgumentError(
+                    "Cannot access Git repository; the proxy could not be reached or "
+                    "refused the request."
+                )
             raise InvalidArgumentError("Cannot access Git repository; git ls-remote failed.")
         repo_name = parse_code_hosting_url(source)
         return _ResourceSourceInfo(
@@ -1731,6 +1740,16 @@ class ResourceService:
         if enforce_public_remote_targets and is_remote_resource_source(path):
             path = require_remote_resource_source(path)
             kwargs.setdefault("request_validator", ensure_public_remote_target)
+        if kwargs.get("auth_config") is not None and not git_repo_source:
+            # Only GitAccessor reads auth_config; dropping it silently would
+            # import a login page instead of the private repository.
+            raise InvalidArgumentError(
+                "args.auth_config is only supported for Git repository URLs. For a "
+                "self-hosted Git server such as Azure DevOps Server, add its host to "
+                "code.azure_devops_domains (or another code.*_domains list) in ov.conf."
+            )
+        if enforce_public_remote_targets and git_repo_source:
+            ensure_public_git_proxy_target(kwargs.get("auth_config"))
 
         source_plan = await self._prepare_standard_source_plan(
             path=path,

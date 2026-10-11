@@ -42,8 +42,10 @@ export type RemoteSourceOptionState = {
   git: {
     authMode: GitAuthMode
     refMode: GitRefMode
+    proxy: string
     refValue: string
     supportsHttpAuth: boolean
+    supportsProxy: boolean
     token: string
     username: string
   }
@@ -56,22 +58,32 @@ const DEFAULT_STRATEGY: RemoteSourceStrategy = {
   capabilities: DEFAULT_CAPABILITIES,
 }
 
+function buildGitAuthConfig(git: RemoteSourceOptionState['git']) {
+  const proxy = git.supportsProxy ? git.proxy.trim() : ''
+  const authConfig = {
+    ...(git.authMode === 'token' && git.supportsHttpAuth
+      ? {
+          username: git.username.trim() || 'oauth2',
+          token: git.token.trim(),
+        }
+      : {}),
+    ...(proxy ? { proxy } : {}),
+  }
+  return Object.keys(authConfig).length ? authConfig : undefined
+}
+
 const GIT_STRATEGY: RemoteSourceStrategy = {
-  build: (state) => ({
-    args: {
-      ...(state.git.refValue.trim()
-        ? { [state.git.refMode]: state.git.refValue.trim() }
-        : {}),
-      ...(state.git.authMode === 'token' && state.git.supportsHttpAuth
-        ? {
-            auth_config: {
-              username: state.git.username.trim() || 'oauth2',
-              token: state.git.token.trim(),
-            },
-          }
-        : {}),
-    },
-  }),
+  build: (state) => {
+    const authConfig = buildGitAuthConfig(state.git)
+    return {
+      args: {
+        ...(state.git.refValue.trim()
+          ? { [state.git.refMode]: state.git.refValue.trim() }
+          : {}),
+        ...(authConfig ? { auth_config: authConfig } : {}),
+      },
+    }
+  },
   capabilities: DEFAULT_CAPABILITIES,
 }
 

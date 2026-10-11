@@ -128,6 +128,94 @@ def test_git_http_auth_config_rejects_invalid_values(value, repo_url: str, messa
     assert "secret-token" not in str(exc_info.value)
 
 
+def test_git_http_auth_config_adds_repository_scoped_proxy_after_auth() -> None:
+    repo_url = "https://dev.azure.com/org/project/_git/private"
+    proxy = "http://proxy-user:proxy-secret@proxy.corp.example:8080"
+    config = parse_git_http_auth_config(
+        {"token": "azure-pat", "proxy": f"  {proxy}  "},
+        repo_url,
+    )
+
+    assert config is not None
+    assert config.proxy == proxy
+    assert "proxy-secret" not in repr(config)
+
+    env = build_git_http_auth_env(config, repo_url, base_env={})
+    entries = _git_config_entries(env)
+    assert entries[f"http.{repo_url}.extraHeader"] == git_http_basic_auth_header(config)
+    assert entries[f"http.{repo_url}.proxy"] == proxy
+    assert "http.proxy" not in entries
+
+
+@pytest.mark.parametrize(
+    "repo_url",
+    [
+        "https://dev.azure.com/org/project/_git/public",
+        "http://tfs.corp.example/tfs/Collection/project/_git/public",
+    ],
+)
+def test_git_http_auth_config_accepts_proxy_without_token(repo_url: str) -> None:
+    config = parse_git_http_auth_config({"proxy": "socks5h://proxy.example:1080"}, repo_url)
+
+    assert config is not None
+    assert config.token is None
+    env = build_git_http_auth_env(config, repo_url, base_env={})
+    entries = _git_config_entries(env)
+    assert entries[f"http.{repo_url}.proxy"] == "socks5h://proxy.example:1080"
+    assert entries[f"http.{repo_url}.extraHeader"] == ""
+    assert not any(value.startswith("Authorization:") for value in entries.values())
+
+
+@pytest.mark.parametrize(
+    ("value", "repo_url", "message"),
+    [
+        ({"proxy": "   "}, "https://git.example.com/org/repo.git", "proxy"),
+        ({"proxy": 8080}, "https://git.example.com/org/repo.git", "proxy"),
+        (
+            {"proxy": "ftp://user:proxy-secret@proxy.example:21"},
+            "https://git.example.com/org/repo.git",
+            "proxy",
+        ),
+        (
+            {"proxy": "proxy-secret@proxy.example:8080"},
+            "https://git.example.com/org/repo.git",
+            "proxy",
+        ),
+        ({"proxy": "http://:8080"}, "https://git.example.com/org/repo.git", "host"),
+        (
+            {"proxy": "http://u:proxy-secret@proxy.example:notaport"},
+            "https://git.example.com/org/repo.git",
+            "port",
+        ),
+        (
+            {"proxy": "http://u:proxy-secret@proxy.example:8080/path?q=1"},
+            "https://git.example.com/org/repo.git",
+            "path",
+        ),
+        (
+            {"proxy": "http://proxy.example:8080\nhttp.sslVerify=false"},
+            "https://git.example.com/org/repo.git",
+            "proxy",
+        ),
+        (
+            {"proxy": "http://proxy.example:8080"},
+            "git@git.example.com:org/repo.git",
+            "HTTP",
+        ),
+        (
+            {"username": "user", "proxy": "http://proxy.example:8080"},
+            "https://git.example.com/org/repo.git",
+            "token",
+        ),
+    ],
+)
+def test_git_http_auth_config_rejects_invalid_proxy(value, repo_url: str, message: str) -> None:
+    with pytest.raises(InvalidArgumentError, match=message) as exc_info:
+        parse_git_http_auth_config(value, repo_url)
+
+    assert "proxy-secret" not in str(exc_info.value)
+
+
 def _mock_config():
     return SimpleNamespace(
         code=SimpleNamespace(
@@ -802,3 +890,15 @@ class TestGitAccessor:
 
         assert str(exc_info.value) == "Git command failed."
         assert "internal metadata" not in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [{"token": "secret-token"}, {"proxy": "http://proxy.example:8080"}],
+)
+def test_git_http_auth_config_rejects_repo_url_with_control_characters(value) -> None:
+    with pytest.raises(InvalidArgumentError, match="whitespace"):
+        parse_git_http_auth_config(
+            value,
+            "https://git.example.com/org/repo.git\n.sslVerify",
+        )

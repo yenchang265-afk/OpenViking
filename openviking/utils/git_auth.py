@@ -7,7 +7,7 @@ from __future__ import annotations
 import base64
 import os
 from dataclasses import dataclass, field
-from typing import Mapping
+from typing import Mapping, Optional
 from urllib.parse import urlparse
 
 from openviking_cli.exceptions import InvalidArgumentError, OpenVikingError
@@ -15,9 +15,17 @@ from openviking_cli.exceptions import InvalidArgumentError, OpenVikingError
 GIT_AUTH_FAILED = "GIT_AUTH_FAILED"
 
 
+_GIT_PROXY_SCHEMES = frozenset({"http", "https", "socks5", "socks5h"})
+
+
 def raise_git_auth_error(stderr: bytes) -> None:
     """Preserve explicit Git authentication failures without exposing credentials."""
     error = stderr.decode(errors="replace").lower()
+    if "received http code 407 from proxy" in error:
+        raise OpenVikingError(
+            "Git proxy authentication failed. Check the proxy credentials.",
+            code=GIT_AUTH_FAILED,
+        )
     if any(
         marker in error
         for marker in (
@@ -39,12 +47,32 @@ def raise_git_auth_error(stderr: bytes) -> None:
         )
 
 
+def is_git_proxy_failure(stderr: bytes) -> bool:
+    """Return whether Git's stderr reports a proxy connection failure."""
+    error = stderr.decode(errors="replace").lower()
+    return any(
+        marker in error
+        for marker in (
+            "could not resolve proxy",
+            "failed to connect to proxy",
+            "from proxy after connect",
+            "proxy connect aborted",
+            "can't complete socks",
+        )
+    )
+
+
 @dataclass(frozen=True)
 class GitHttpAuthConfig:
-    """Validated request-local HTTP Basic credentials for one Git operation."""
+    """Validated request-local HTTP access settings for one Git operation.
 
-    username: str
-    token: str = field(repr=False)
+    ``token`` enables HTTP Basic auth (HTTPS only); ``proxy`` routes the Git
+    HTTP(S) traffic through a proxy URL that may embed its own credentials.
+    """
+
+    username: str = "oauth2"
+    token: Optional[str] = field(default=None, repr=False)
+    proxy: Optional[str] = field(default=None, repr=False)
 
 
 def is_git_https_url(repo_url: object) -> bool:
@@ -63,13 +91,59 @@ def reject_git_http_userinfo(repo_url: str) -> None:
         )
 
 
+def _has_whitespace_or_control(value: str) -> bool:
+    return any(ch.isspace() or ord(ch) < 0x20 or ord(ch) == 0x7F for ch in value)
+
+
 def _validate_git_https_auth_url(repo_url: str) -> str:
     normalized = repo_url.strip() if isinstance(repo_url, str) else ""
+    # The URL becomes part of a Git config key, so it must be a single token.
+    if _has_whitespace_or_control(normalized):
+        raise InvalidArgumentError(
+            "Git URLs used with args.auth_config must not contain whitespace."
+        )
     if not is_git_https_url(normalized):
         raise InvalidArgumentError(
             "args.auth_config token authentication requires an HTTPS Git URL."
         )
     return normalized
+
+
+def _validate_git_http_proxy_url(repo_url: str) -> str:
+    normalized = repo_url.strip() if isinstance(repo_url, str) else ""
+    if _has_whitespace_or_control(normalized):
+        raise InvalidArgumentError(
+            "Git URLs used with args.auth_config must not contain whitespace."
+        )
+    if urlparse(normalized).scheme.lower() not in {"http", "https"}:
+        raise InvalidArgumentError("args.auth_config.proxy requires an HTTP(S) Git URL.")
+    return normalized
+
+
+def _parse_git_proxy(value: object) -> str:
+    """Validate a proxy URL without echoing it: it may carry credentials."""
+
+    if not isinstance(value, str) or not value.strip():
+        raise InvalidArgumentError("args.auth_config.proxy must be a non-empty string.")
+    proxy = value.strip()
+    if _has_whitespace_or_control(proxy):
+        raise InvalidArgumentError("args.auth_config.proxy must not contain whitespace.")
+    parsed = urlparse(proxy)
+    if parsed.scheme.lower() not in _GIT_PROXY_SCHEMES:
+        raise InvalidArgumentError(
+            "args.auth_config.proxy must be an http://, https://, socks5:// or socks5h:// URL."
+        )
+    if not parsed.hostname:
+        raise InvalidArgumentError("args.auth_config.proxy must include a host.")
+    try:
+        _ = parsed.port
+    except ValueError:
+        raise InvalidArgumentError("args.auth_config.proxy has an invalid port.") from None
+    if parsed.path not in {"", "/"} or parsed.params or parsed.query or parsed.fragment:
+        raise InvalidArgumentError(
+            "args.auth_config.proxy must not include a path, query, or fragment."
+        )
+    return proxy
 
 
 def parse_git_http_auth_config(
@@ -83,10 +157,19 @@ def parse_git_http_auth_config(
     if not isinstance(value, dict):
         raise InvalidArgumentError("args.auth_config must be an object.")
 
-    if set(value) - {"username", "token"}:
+    if set(value) - {"username", "token", "proxy"}:
         raise InvalidArgumentError("args.auth_config contains unsupported fields.")
 
+    proxy = None
+    if value.get("proxy") is not None:
+        proxy = _parse_git_proxy(value["proxy"])
+        _validate_git_http_proxy_url(repo_url)
+
     token = value.get("token")
+    if token is None and proxy is not None:
+        if "username" in value:
+            raise InvalidArgumentError("args.auth_config.username requires a token.")
+        return GitHttpAuthConfig(proxy=proxy)
     if not isinstance(token, str) or not token.strip():
         raise InvalidArgumentError("args.auth_config.token must be a non-empty string.")
 
@@ -96,7 +179,7 @@ def parse_git_http_auth_config(
 
     _validate_git_https_auth_url(repo_url)
 
-    return GitHttpAuthConfig(username=username.strip(), token=token)
+    return GitHttpAuthConfig(username=username.strip(), token=token, proxy=proxy)
 
 
 def git_http_basic_auth_header(config: GitHttpAuthConfig) -> str:
@@ -126,7 +209,10 @@ def build_git_http_auth_env(
 ) -> dict[str, str]:
     """Build an isolated child-process environment containing Git HTTP auth."""
 
-    normalized_repo_url = _validate_git_https_auth_url(repo_url)
+    if config.token is not None:
+        normalized_repo_url = _validate_git_https_auth_url(repo_url)
+    else:
+        normalized_repo_url = _validate_git_http_proxy_url(repo_url)
     env = dict(os.environ if base_env is None else base_env)
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GCM_INTERACTIVE"] = "Never"
@@ -137,11 +223,12 @@ def build_git_http_auth_env(
     _append_git_process_config(env, "http.extraHeader", "")
     scoped_extra_header = f"http.{normalized_repo_url}.extraHeader"
     _append_git_process_config(env, scoped_extra_header, "")
-    _append_git_process_config(
-        env,
-        scoped_extra_header,
-        git_http_basic_auth_header(config),
-    )
+    if config.token is not None:
+        _append_git_process_config(
+            env,
+            scoped_extra_header,
+            git_http_basic_auth_header(config),
+        )
     # Refuse redirects at the same URL-specific precedence as the header, so
     # inherited per-repository config cannot move it to another host or HTTP.
     _append_git_process_config(
@@ -149,4 +236,8 @@ def build_git_http_auth_env(
         f"http.{normalized_repo_url}.followRedirects",
         "false",
     )
+    if config.proxy is not None:
+        # URL-scoped so it outranks inherited http.proxy and *_proxy env vars
+        # for this repository only.
+        _append_git_process_config(env, f"http.{normalized_repo_url}.proxy", config.proxy)
     return env
