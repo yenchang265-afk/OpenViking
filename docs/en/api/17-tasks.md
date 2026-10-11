@@ -401,6 +401,52 @@ ov task list --task-type session_commit --status running
 
 ---
 
+### stream_task_events()
+
+#### 1. API Implementation Introduction
+
+Push background task changes as [Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html) instead of polling `list_tasks()`. Every committed change to a visible task is sent as it happens, whichever client started the task (Web Studio, CLI, SDK or MCP). Visibility matches `list_tasks()`.
+
+**Code Entries:**
+- `openviking/server/routers/tasks.py:stream_task_events()` - HTTP route
+- `openviking/service/task_change_feed.py` - in-process change fan-out
+
+#### 2. Interface and Parameter Description
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| task_type | str | No | None | Only push tasks of this type, for example `add_resource` |
+| include_internal | bool | No | false | Include internal child tasks created by Connector imports |
+
+**Events**
+
+| Event | Data | Meaning |
+|-------|------|---------|
+| `ready` | `{"complete": true}` | Subscribed. Read `list_tasks()` now so nothing that changed earlier is missed. `complete` is `false` when the server runs several workers: only changes made by the worker holding this stream are pushed, so keep polling as a fallback. |
+| `task` | Task record | A task changed. Same shape as `get_task()`. |
+| `resync` | `{}` | The client fell behind and changes were dropped. Read `list_tasks()` again. |
+
+A `: keepalive` comment is sent every 15 seconds while idle.
+
+#### 3. Usage Examples
+
+```bash
+curl -N "http://localhost:1933/api/v1/tasks/events?task_type=add_resource" \
+  -H "X-API-Key: your-key"
+```
+
+```text
+event: ready
+data: {"complete": true}
+
+event: task
+data: {"task_id": "uuid-xxx", "task_type": "add_resource", "status": "completed", ...}
+```
+
+---
+
 ## Related Documentation
 
 - [Sessions](05-sessions.md) - session commit tasks

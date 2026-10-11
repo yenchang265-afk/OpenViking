@@ -486,6 +486,7 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/tasks/{task_id}` | 獲取後臺任務 |
 | POST | `/api/v1/tasks/{task_id}/cancel` | 取消後臺任務 |
 | GET | `/api/v1/tasks` | 列出後臺任務 |
+| GET | `/api/v1/tasks/events` | 串流推送後臺任務變更（SSE） |
 | GET | `/api/v1/observer/queue` | 佇列狀態 |
 | GET | `/api/v1/observer/vikingdb` | VikingDB 狀態 |
 | GET | `/api/v1/observer/models` | 模型狀態 |

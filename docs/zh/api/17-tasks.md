@@ -399,6 +399,44 @@ ov task list --task-type session_commit --status running
 
 ---
 
+### stream_task_events()
+
+#### 1. API 實作介紹
+
+以 [Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html) 推送後臺任務變更，取代輪詢 `list_tasks()`。可見任務的每次已提交變更都會即時推送，無論任務由哪個用戶端發起（Web Studio、CLI、SDK 或 MCP）。可見範圍與 `list_tasks()` 相同。
+
+**程式碼入口：**
+- `openviking/server/routers/tasks.py:stream_task_events()` - HTTP 路由
+- `openviking/service/task_change_feed.py` - 行程內變更分發
+
+#### 2. 介面與參數說明
+
+**參數**
+
+| 參數 | 類型 | 必填 | 預設值 | 說明 |
+|------|------|------|--------|------|
+| task_type | str | 否 | None | 只推送此類型的任務，例如 `add_resource` |
+| include_internal | bool | 否 | false | 包含 Connector 匯入建立的內部子任務 |
+
+**事件**
+
+| 事件 | 資料 | 含義 |
+|------|------|------|
+| `ready` | `{"complete": true}` | 已訂閱。此時讀取 `list_tasks()`，避免遺漏先前的變更。伺服器以多個 worker 執行時 `complete` 為 `false`：只會推送持有此連線的 worker 所做的變更，需保留輪詢作為備援。 |
+| `task` | 任務記錄 | 任務已變更，格式與 `get_task()` 相同。 |
+| `resync` | `{}` | 用戶端處理落後，部分變更已被丟棄，請重新讀取 `list_tasks()`。 |
+
+閒置時每 15 秒傳送一次 `: keepalive` 註解。
+
+#### 3. 使用範例
+
+```bash
+curl -N "http://localhost:1933/api/v1/tasks/events?task_type=add_resource" \
+  -H "X-API-Key: your-key"
+```
+
+---
+
 ## 相關文件
 
 - [會話](05-sessions.md) - 會話提交任務

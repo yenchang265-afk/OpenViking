@@ -491,6 +491,7 @@ This catalog follows the routes actually mounted by the server. Each group headi
 | GET | `/api/v1/tasks/{task_id}` | Get a background task |
 | POST | `/api/v1/tasks/{task_id}/cancel` | Cancel a background task |
 | GET | `/api/v1/tasks` | List background tasks |
+| GET | `/api/v1/tasks/events` | Stream background task changes (SSE) |
 | GET | `/api/v1/observer/queue` | Queue status |
 | GET | `/api/v1/observer/vikingdb` | VikingDB status |
 | GET | `/api/v1/observer/models` | Model status |

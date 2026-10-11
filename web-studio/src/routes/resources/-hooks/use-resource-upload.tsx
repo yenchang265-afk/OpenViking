@@ -9,10 +9,14 @@ import type { FolderGroup } from '../-lib/folder-upload'
 import { parseUploadError } from '../-lib/upload'
 import { transferUpload } from '../-lib/upload-transfer'
 import {
+  attachServerTask,
   isUploadStatusActive,
   mergeServerTasks,
+  needsTaskPolling,
   normalizeTaskList,
+  upsertServerTask,
 } from '../-lib/resource-upload-tasks'
+import { watchTaskEvents } from '../-lib/task-event-stream'
 import {
   buildRemoteResourceRequest,
   buildUploadedResourceRequest,
@@ -48,6 +52,8 @@ export type ResourceUploadTask = {
   errorMessage: string | null
   errorMessageOrigin?: 'fallback' | 'server' | undefined
   rootUri: string | null
+  /** Server `updated_at` of the last applied record, to drop stale ones. */
+  serverUpdatedAt?: number | null
 }
 
 export type RemoteUploadPhase = 'idle' | 'processing' | 'done'
@@ -160,6 +166,25 @@ function createRemoteTaskName(url: string): string {
   }
 }
 
+function getFallbackMessages(): { failed: string; cancelled: string } {
+  return {
+    failed: i18n.t('resources:processingTasks.errors.failed'),
+    cancelled: i18n.t('resources:processingTasks.errors.cancelled'),
+  }
+}
+
+function usePageVisible(): boolean {
+  const [visible, setVisible] = React.useState(
+    () => typeof document === 'undefined' || !document.hidden,
+  )
+  React.useEffect(() => {
+    const onChange = () => setVisible(!document.hidden)
+    document.addEventListener('visibilitychange', onChange)
+    return () => document.removeEventListener('visibilitychange', onChange)
+  }, [])
+  return visible
+}
+
 export function useResourceUpload(): ResourceUploadContextValue {
   const context = React.useContext(ResourceUploadContext)
   if (!context) {
@@ -182,6 +207,9 @@ export function ResourceUploadProvider({
   const [isRefreshingTasks, setIsRefreshingTasks] = React.useState(false)
   const remoteAbortRef = React.useRef<AbortController | null>(null)
   const refreshInFlightRef = React.useRef(false)
+  const refreshQueuedRef = React.useRef(false)
+  const [liveTaskEvents, setLiveTaskEvents] = React.useState(false)
+  const isPageVisible = usePageVisible()
   const notifiedServerTaskIdsRef = React.useRef<Set<string>>(new Set())
   const remoteCompletionCallbacksRef = React.useRef(
     new Map<string, { onCompleted?: () => void; onFailed?: () => void }>(),
@@ -203,6 +231,9 @@ export function ResourceUploadProvider({
   const refreshTasks = React.useCallback(
     async (options: RefreshTasksOptions = {}) => {
       if (refreshInFlightRef.current) {
+        // The read in flight may predate what the caller needs (e.g. a fresh
+        // stream subscription), so read again once it settles.
+        refreshQueuedRef.current = true
         return
       }
 
@@ -212,25 +243,28 @@ export function ResourceUploadProvider({
       }
 
       try {
-        const result = await getOvResult<TaskListResult>(
-          getTasks({
-            query: {
-              limit: TASK_REFRESH_LIMIT,
-              task_type: RESOURCE_ADD_TASK_TYPE,
-            },
-          }),
-        )
-        const serverTasks = normalizeTaskList(result)
-        const fallbackMessages = {
-          failed: i18n.t('resources:processingTasks.errors.failed'),
-          cancelled: i18n.t('resources:processingTasks.errors.cancelled'),
-        }
-        setTasks((prev) =>
-          mergeServerTasks(prev, serverTasks, fallbackMessages),
-        )
-      } catch (error) {
-        if (options.notifyOnError !== false) {
-          toast.error(getErrorMessage(error), { duration: 5000 })
+        let rerun = true
+        while (rerun) {
+          refreshQueuedRef.current = false
+          try {
+            const result = await getOvResult<TaskListResult>(
+              getTasks({
+                query: {
+                  limit: TASK_REFRESH_LIMIT,
+                  task_type: RESOURCE_ADD_TASK_TYPE,
+                },
+              }),
+            )
+            const serverTasks = normalizeTaskList(result)
+            setTasks((prev) =>
+              mergeServerTasks(prev, serverTasks, getFallbackMessages()),
+            )
+          } catch (error) {
+            if (options.notifyOnError !== false) {
+              toast.error(getErrorMessage(error), { duration: 5000 })
+            }
+          }
+          rerun = refreshQueuedRef.current
         }
       } finally {
         refreshInFlightRef.current = false
@@ -294,13 +328,9 @@ export function ResourceUploadProvider({
             : null
 
         if (serverTaskId) {
-          updateTask(taskId, (task) => ({
-            ...task,
-            serverTaskId,
-            status: 'processing',
-            progress: null,
-            rootUri,
-          }))
+          setTasks((prev) =>
+            attachServerTask(prev, taskId, serverTaskId, rootUri),
+          )
           void refreshTasks({ notifyOnError: false, silent: true })
           return
         }
@@ -433,13 +463,9 @@ export function ResourceUploadProvider({
                 onFailed: params.onFailed,
               })
             }
-            updateTask(taskId, (task) => ({
-              ...task,
-              serverTaskId,
-              status: 'processing',
-              progress: null,
-              rootUri,
-            }))
+            setTasks((prev) =>
+              attachServerTask(prev, taskId, serverTaskId, rootUri),
+            )
 
             setRemoteState({
               phase: 'processing',
@@ -522,20 +548,42 @@ export function ResourceUploadProvider({
     setRemoteState(INITIAL_REMOTE_STATE)
   }, [])
 
+  // Load on mount and language change; catch up when the tab shows again,
+  // since fallback polling pauses while it is hidden.
   React.useEffect(() => {
-    void refreshTasks({ notifyOnError: false, silent: true })
-  }, [refreshTasks, t])
+    if (isPageVisible) {
+      void refreshTasks({ notifyOnError: false, silent: true })
+    }
+  }, [isPageVisible, refreshTasks, t])
 
-  const hasActiveServerTasks = React.useMemo(
+  React.useEffect(
     () =>
-      tasks.some(
-        (task) => task.serverTaskId && isUploadStatusActive(task.status),
-      ),
-    [tasks],
+      watchTaskEvents({
+        taskType: RESOURCE_ADD_TASK_TYPE,
+        onLiveChange: setLiveTaskEvents,
+        onEvent: (event) => {
+          if (event.type === 'task') {
+            setTasks((prev) =>
+              upsertServerTask(prev, event.record, getFallbackMessages()),
+            )
+            return
+          }
+          // Subscribed (or changes were dropped): re-read the list so nothing
+          // that changed before the subscription is missed.
+          void refreshTasks({ notifyOnError: false, silent: true })
+        },
+      }),
+    [refreshTasks],
+  )
+
+  // Polling is only the fallback while pushes are unavailable or partial.
+  const shouldPollTasks = React.useMemo(
+    () => !liveTaskEvents && isPageVisible && needsTaskPolling(tasks),
+    [isPageVisible, liveTaskEvents, tasks],
   )
 
   React.useEffect(() => {
-    if (!hasActiveServerTasks) {
+    if (!shouldPollTasks) {
       return undefined
     }
 
@@ -544,7 +592,7 @@ export function ResourceUploadProvider({
     }, TASK_REFRESH_INTERVAL_MS)
 
     return () => window.clearInterval(interval)
-  }, [hasActiveServerTasks, refreshTasks])
+  }, [shouldPollTasks, refreshTasks])
 
   React.useEffect(() => {
     if (remoteState.phase !== 'processing' || !remoteState.taskId) {

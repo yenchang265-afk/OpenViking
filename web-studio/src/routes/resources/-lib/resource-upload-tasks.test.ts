@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import { mergeServerTasks } from './resource-upload-tasks'
+import {
+  attachServerTask,
+  mergeServerTasks,
+  needsTaskPolling,
+  upsertServerTask,
+} from './resource-upload-tasks'
 import type { ResourceUploadTask } from '../-hooks/use-resource-upload'
 import type { TaskRecord } from '@ov-server/api/v1/tasks'
 
@@ -94,5 +99,140 @@ describe('mergeServerTasks', () => {
 
     expect(task.errorMessage).toBe('provider overloaded')
     expect(task.errorDetail).toBe('provider overloaded')
+  })
+})
+
+const FALLBACK = { cancelled: 'Cancelled', failed: 'Processing failed' }
+
+function record(overrides: Partial<TaskRecord> = {}): TaskRecord {
+  return {
+    status: 'running',
+    task_id: 'task-1',
+    task_type: 'add_resource',
+    updated_at: 10,
+    ...overrides,
+  }
+}
+
+function localTask(
+  overrides: Partial<ResourceUploadTask> = {},
+): ResourceUploadTask {
+  return {
+    ...previousTask(''),
+    errorCode: null,
+    errorMessage: null,
+    errorMessageOrigin: undefined,
+    finishedAt: null,
+    id: 'local-1',
+    serverTaskId: null,
+    source: 'local',
+    status: 'processing',
+    ...overrides,
+  }
+}
+
+describe('upsertServerTask', () => {
+  it('adds a task started elsewhere, such as the CLI, to the top', () => {
+    const existing = localTask({ id: 'other', serverTaskId: 'task-0' })
+
+    const tasks = upsertServerTask([existing], record(), FALLBACK)
+
+    expect(tasks.map((task) => task.serverTaskId)).toEqual(['task-1', 'task-0'])
+    expect(tasks[0].source).toBe('server')
+  })
+
+  it('updates the matching task in place and keeps its local identity', () => {
+    const tasks = upsertServerTask(
+      [localTask({ serverTaskId: 'task-1' })],
+      record({ status: 'completed' }),
+      FALLBACK,
+    )
+
+    expect(tasks).toHaveLength(1)
+    expect(tasks[0]).toMatchObject({
+      fileName: 'document.pdf',
+      id: 'local-1',
+      status: 'success',
+    })
+  })
+
+  it('ignores a record older than the state already shown', () => {
+    const [done] = upsertServerTask(
+      [localTask({ serverTaskId: 'task-1' })],
+      record({ status: 'completed', updated_at: 20 }),
+      FALLBACK,
+    )
+
+    const [after] = mergeServerTasks(
+      [done],
+      [record({ status: 'running', updated_at: 15 })],
+      FALLBACK,
+    )
+
+    expect(after.status).toBe('success')
+  })
+})
+
+describe('attachServerTask', () => {
+  it('folds a task pushed before the import response into the local upload', () => {
+    const pushed = upsertServerTask(
+      [localTask()],
+      record({ status: 'completed', result: { root_uri: 'viking://r' } }),
+      FALLBACK,
+    )
+
+    const tasks = attachServerTask(pushed, 'local-1', 'task-1', null)
+
+    expect(tasks).toHaveLength(1)
+    expect(tasks[0]).toMatchObject({
+      id: 'local-1',
+      rootUri: 'viking://r',
+      serverTaskId: 'task-1',
+      source: 'local',
+      status: 'success',
+    })
+  })
+
+  it('keeps the pushed task when the local upload is already gone', () => {
+    const pushed = upsertServerTask([], record(), FALLBACK)
+
+    expect(attachServerTask(pushed, 'local-1', 'task-1', null)).toBe(pushed)
+  })
+
+  it('marks the upload processing when nothing was pushed yet', () => {
+    const [task] = attachServerTask(
+      [localTask({ status: 'uploading', progress: 80 })],
+      'local-1',
+      'task-1',
+      'viking://r',
+    )
+
+    expect(task).toMatchObject({
+      progress: null,
+      rootUri: 'viking://r',
+      serverTaskId: 'task-1',
+      status: 'processing',
+    })
+  })
+})
+
+describe('needsTaskPolling', () => {
+  it('polls only for server work this Studio started', () => {
+    expect(needsTaskPolling([localTask({ serverTaskId: 'task-1' })])).toBe(true)
+    expect(
+      needsTaskPolling([
+        localTask({ serverTaskId: 'task-1', source: 'remote' }),
+      ]),
+    ).toBe(true)
+  })
+
+  it('ignores tasks from other clients, finished work and pending uploads', () => {
+    expect(
+      needsTaskPolling([
+        localTask({ serverTaskId: 'cli-task', source: 'server' }),
+        localTask({ serverTaskId: 'task-2', status: 'success' }),
+        localTask({ status: 'uploading' }),
+      ]),
+    ).toBe(false)
   })
 })

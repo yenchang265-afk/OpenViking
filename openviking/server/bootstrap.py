@@ -20,6 +20,7 @@ import uvicorn
 
 from openviking.server.app import (
     WORKER_BOT_API_URL_ENV,
+    WORKER_COUNT_ENV,
     WORKER_WITH_BOT_ENV,
     create_app,
 )
@@ -330,6 +331,7 @@ def main():
             # pick it up (ServerConfig already reads OPENVIKING_CONFIG_FILE).
             os.environ[WORKER_WITH_BOT_ENV] = "1" if config.with_bot else "0"
             os.environ[WORKER_BOT_API_URL_ENV] = config.bot_api_url
+            os.environ[WORKER_COUNT_ENV] = str(workers)
             uvicorn.run(
                 "openviking.server.app:create_worker_app",
                 factory=True,
