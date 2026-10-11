@@ -29,6 +29,20 @@ export function isUploadStatusActive(
   )
 }
 
+/**
+ * Fallback polling follows only server work this Studio started. Tasks from
+ * other clients still show up through pushes and list refreshes, but a stuck
+ * one can no longer keep polling alive forever.
+ */
+export function needsTaskPolling(tasks: ResourceUploadTask[]): boolean {
+  return tasks.some(
+    (task) =>
+      task.source !== 'server' &&
+      task.serverTaskId !== null &&
+      isUploadStatusActive(task.status),
+  )
+}
+
 function toEpochMillis(value: unknown, fallback: number): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return fallback
@@ -92,6 +106,14 @@ function mergeServerTask(
   fallbackMessages: { failed: string; cancelled: string },
   existing?: ResourceUploadTask,
 ): ResourceUploadTask {
+  // Pushed changes and list reads can arrive out of order; never step back.
+  if (
+    existing?.serverUpdatedAt != null &&
+    typeof record.updated_at === 'number' &&
+    record.updated_at < existing.serverUpdatedAt
+  ) {
+    return existing
+  }
   const status = toUploadStatus(record.status)
   const rootUri = getTaskRootUri(record) ?? existing?.rootUri ?? null
   const createdAt =
@@ -155,6 +177,10 @@ function mergeServerTask(
     errorMessage,
     errorMessageOrigin,
     rootUri,
+    serverUpdatedAt:
+      typeof record.updated_at === 'number'
+        ? record.updated_at
+        : (existing?.serverUpdatedAt ?? null),
   }
 }
 
@@ -195,4 +221,68 @@ export function mergeServerTasks(
   }
 
   return nextTasks
+}
+
+/** Apply one pushed task change; tasks started elsewhere go on top. */
+export function upsertServerTask(
+  previous: ResourceUploadTask[],
+  record: TaskRecord,
+  fallbackMessages: { failed: string; cancelled: string },
+): ResourceUploadTask[] {
+  const index = previous.findIndex(
+    (task) => task.serverTaskId === record.task_id,
+  )
+  if (index === -1) {
+    return [mergeServerTask(record, fallbackMessages), ...previous]
+  }
+  return previous.map((task, i) =>
+    i === index ? mergeServerTask(record, fallbackMessages, task) : task,
+  )
+}
+
+/**
+ * Link a local upload to its server task. A push can arrive before the import
+ * response, so fold that server-only entry into the local task.
+ */
+export function attachServerTask(
+  previous: ResourceUploadTask[],
+  localId: string,
+  serverTaskId: string,
+  rootUri: string | null,
+): ResourceUploadTask[] {
+  if (!previous.some((task) => task.id === localId)) {
+    return previous
+  }
+  const pushed = previous.find(
+    (task) => task.source === 'server' && task.serverTaskId === serverTaskId,
+  )
+  return previous
+    .filter((task) => task !== pushed)
+    .map((task) => {
+      if (task.id !== localId) {
+        return task
+      }
+      if (!pushed) {
+        return {
+          ...task,
+          serverTaskId,
+          status: 'processing',
+          progress: null,
+          rootUri,
+        }
+      }
+      return {
+        ...task,
+        serverTaskId,
+        status: pushed.status,
+        progress: pushed.progress,
+        finishedAt: pushed.finishedAt,
+        errorCode: pushed.errorCode,
+        errorDetail: pushed.errorDetail,
+        errorMessage: pushed.errorMessage,
+        errorMessageOrigin: pushed.errorMessageOrigin,
+        rootUri: rootUri ?? pushed.rootUri,
+        serverUpdatedAt: pushed.serverUpdatedAt,
+      }
+    })
 }

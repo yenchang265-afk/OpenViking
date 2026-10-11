@@ -11,6 +11,7 @@ import {
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import i18n from '#/i18n'
+import type { WatchTaskEventsOptions } from '../-lib/task-event-stream'
 import {
   ResourceUploadProvider,
   useResourceUpload,
@@ -20,6 +21,17 @@ const apiMocks = vi.hoisted(() => ({
   getTasks: vi.fn(),
   postResources: vi.fn(),
   transferUpload: vi.fn(),
+}))
+
+const streamMocks = vi.hoisted(() => ({
+  options: undefined as WatchTaskEventsOptions | undefined,
+}))
+
+vi.mock('../-lib/task-event-stream', () => ({
+  watchTaskEvents: (options: WatchTaskEventsOptions) => {
+    streamMocks.options = options
+    return () => undefined
+  },
 }))
 
 vi.mock('../-lib/upload-transfer', () => ({
@@ -41,6 +53,7 @@ vi.mock('sonner', () => ({
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  streamMocks.options = undefined
 })
 
 function UploadHarness({
@@ -78,6 +91,7 @@ function UploadHarness({
         onClick={() => void refreshTasks()}
       />
       <output data-testid="task-error">{tasks[0]?.errorMessage}</output>
+      <output data-testid="task-count">{tasks.length}</output>
     </>
   )
 }
@@ -193,6 +207,84 @@ describe('ResourceUploadProvider remote completion', () => {
     } finally {
       await i18n.changeLanguage(previousLanguage)
     }
+  })
+})
+
+describe('ResourceUploadProvider pushed task changes', () => {
+  const runningRecord = {
+    created_at: 1,
+    status: 'running',
+    task_id: 'resource-task',
+    task_type: 'add_resource',
+    updated_at: 2,
+  }
+
+  function goLive() {
+    act(() => {
+      streamMocks.options?.onLiveChange(true)
+      streamMocks.options?.onEvent({ type: 'ready', complete: true })
+    })
+  }
+
+  it('completes from a pushed change while the stream is live', async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockResolvedValue({
+      root_uri: 'viking://resources/OpenViking',
+      status: 'success',
+      task_id: 'resource-task',
+    })
+    const onAccepted = vi.fn()
+    const onCompleted = vi.fn()
+    render(
+      <ResourceUploadProvider>
+        <UploadHarness onAccepted={onAccepted} onCompleted={onCompleted} />
+      </ResourceUploadProvider>,
+    )
+    await waitFor(() => expect(streamMocks.options).toBeDefined())
+    goLive()
+
+    fireEvent.click(screen.getByTestId('start'))
+    await waitFor(() => expect(onAccepted).toHaveBeenCalledOnce())
+    act(() => {
+      streamMocks.options?.onEvent({
+        type: 'task',
+        record: { ...runningRecord, status: 'completed', updated_at: 5 },
+      })
+    })
+
+    await waitFor(() => expect(onCompleted).toHaveBeenCalledOnce())
+    expect(streamMocks.options?.taskType).toBe('add_resource')
+  })
+
+  it('keeps one entry when the push beats the import response', async () => {
+    apiMocks.getTasks.mockResolvedValue([runningRecord])
+    let accept: (value: unknown) => void = () => undefined
+    apiMocks.postResources.mockReturnValue(
+      new Promise((resolve) => {
+        accept = resolve
+      }),
+    )
+    render(
+      <ResourceUploadProvider>
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    await waitFor(() => expect(streamMocks.options).toBeDefined())
+    goLive()
+
+    fireEvent.click(screen.getByTestId('start'))
+    await waitFor(() => expect(apiMocks.postResources).toHaveBeenCalledOnce())
+    act(() => {
+      streamMocks.options?.onEvent({ type: 'task', record: runningRecord })
+    })
+    await act(async () => {
+      accept({ status: 'success', task_id: 'resource-task' })
+    })
+
+    await waitFor(() =>
+      expect(apiMocks.getTasks.mock.calls.length).toBeGreaterThan(2),
+    )
+    expect(screen.getByTestId('task-count').textContent).toBe('1')
   })
 })
 

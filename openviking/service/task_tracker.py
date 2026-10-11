@@ -25,6 +25,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import uuid4
 
+from openviking.service.task_change_feed import TaskChangeFeed
 from openviking.service.task_events import (
     PROCESS_EVENT_KINDS,
     TaskEventHistory,
@@ -208,6 +209,7 @@ class TaskTracker:
         self._cleanup_task: Optional[asyncio.Task] = None
         self._work_index = TaskWorkIndex()
         self._install_work_index_callbacks()
+        self.change_feed = TaskChangeFeed()
         logger.info(
             "[TaskTracker] Initialized (store=%s, max_tasks=%d)",
             self._store.__class__.__name__,
@@ -1202,6 +1204,7 @@ class TaskTracker:
             elif task.status in _TERMINAL_STATUSES:
                 self._work_index.forget_processing(task.task_id)
             committed = True
+            self._notify_change(task)
 
         # Semaphore/lock waits remain cancellable. Once the store operation is
         # admitted, settle the physical write and publish its cache snapshot
@@ -1231,6 +1234,15 @@ class TaskTracker:
         published = deepcopy(task)
         with self._lock:
             self._tasks[task.task_id] = published
+
+    def _notify_change(self, task: TaskRecord) -> None:
+        # Push delivery is best effort; it must never fail a committed mutation.
+        if not self.change_feed.has_subscribers():
+            return
+        try:
+            self.change_feed.publish(task, lambda: self._copy(task).to_dict())
+        except Exception:
+            logger.warning("[TaskTracker] Failed to publish task change", exc_info=True)
 
     def _merge_loaded_tasks(self, loaded_tasks: List[TaskRecord]) -> None:
         candidates = [deepcopy(task) for task in loaded_tasks]

@@ -75,6 +75,7 @@ logger = get_logger(__name__)
 
 WORKER_WITH_BOT_ENV = "OPENVIKING_WORKER_WITH_BOT"
 WORKER_BOT_API_URL_ENV = "OPENVIKING_WORKER_BOT_API_URL"
+WORKER_COUNT_ENV = "OPENVIKING_WORKER_COUNT"
 
 
 def _configure_default_executor(config: ServerConfig) -> None:
@@ -97,7 +98,7 @@ def _configure_default_executor(config: ServerConfig) -> None:
 
 
 def create_worker_app() -> FastAPI:
-    """Load file config and replay parent-process Bot CLI overrides."""
+    """Load file config and replay parent-process CLI overrides."""
     resolved_config_path = resolve_config_path(
         None,
         OPENVIKING_CONFIG_ENV,
@@ -111,6 +112,9 @@ def create_worker_app() -> FastAPI:
     bot_api_url = os.environ.get(WORKER_BOT_API_URL_ENV)
     if bot_api_url is not None:
         config.bot_api_url = bot_api_url
+    worker_count = os.environ.get(WORKER_COUNT_ENV)
+    if worker_count is not None:
+        config.workers = int(worker_count)
     return create_app(config, config_path=config_path)
 
 

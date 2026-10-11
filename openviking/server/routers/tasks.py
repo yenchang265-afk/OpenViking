@@ -7,15 +7,20 @@ with ``wait=false``).  Callers receive a ``task_id`` and can poll these
 endpoints to check completion, results, or errors.
 """
 
-from typing import Optional
+import asyncio
+import json
+from typing import Any, AsyncGenerator, Callable, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import StreamingResponse
+from starlette.types import Receive, Scope, Send
 
 from openviking.server.auth import get_request_context
 from openviking.server.identity import RequestContext, Role
 from openviking.server.models import Response
+from openviking.service.task_change_feed import RESYNC, TaskChangeFeed
 from openviking.service.task_store import SYSTEM_TASK_ACCOUNT_ID, SYSTEM_TASK_USER_ID
-from openviking.service.task_tracker import get_task_tracker
+from openviking.service.task_tracker import TaskRecord, get_task_tracker
 from openviking_cli.exceptions import (
     FailedPreconditionError,
     OpenVikingError,
@@ -23,6 +28,95 @@ from openviking_cli.exceptions import (
 )
 
 router = APIRouter(prefix="/api/v1", tags=["tasks"])
+
+# Keeps idle streams open through proxies and lets clients detect dead ones.
+TASK_EVENTS_HEARTBEAT_SECONDS = 15.0
+
+
+class _ClosingStreamingResponse(StreamingResponse):
+    """Close the body generator however the response ends.
+
+    On client disconnect Starlette abandons the generator suspended at
+    ``yield``; without an explicit close its cleanup waits for GC.
+    """
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            await self.body_iterator.aclose()
+
+
+def _task_visibility(
+    ctx: RequestContext, task_type: Optional[str], include_internal: bool
+) -> Callable[[TaskRecord], bool]:
+    """Mirror GET /tasks visibility: ROOT sees every owner, others their own."""
+
+    def visible(task: TaskRecord) -> bool:
+        if ctx.role != Role.ROOT and (
+            task.account_id != ctx.account_id or task.user_id != ctx.user.user_id
+        ):
+            return False
+        if not include_internal and task.meta.get("internal") is True:
+            return False
+        return not task_type or task.task_type == task_type
+
+    return visible
+
+
+def _sse(event: str, data: Any) -> str:
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False, default=str)}\n\n"
+
+
+async def task_event_stream(
+    feed: TaskChangeFeed,
+    visible: Callable[[TaskRecord], bool],
+    *,
+    complete: bool,
+    heartbeat: float = TASK_EVENTS_HEARTBEAT_SECONDS,
+) -> AsyncGenerator[str, None]:
+    """Yield SSE frames: ``ready`` once subscribed, then ``task``, ``resync``
+    or an idle ``ping``."""
+    subscription = feed.subscribe(visible)
+    try:
+        yield _sse("ready", {"complete": complete})
+        while True:
+            try:
+                item = await subscription.next(heartbeat)
+            except asyncio.TimeoutError:
+                # An event, not a comment: browser clients never see comments.
+                yield _sse("ping", {})
+                continue
+            yield _sse("resync", {}) if item is RESYNC else _sse("task", item)
+    finally:
+        feed.unsubscribe(subscription)
+
+
+@router.get("/tasks/events")
+async def stream_task_events(
+    request: Request,
+    task_type: Optional[str] = Query(None, description="Only push tasks of this type"),
+    include_internal: bool = Query(False, description="Include internal Connector child tasks"),
+    _ctx: RequestContext = Depends(get_request_context),
+):
+    """Push background task changes as Server-Sent Events.
+
+    Subscribe first, then read GET /tasks on ``ready`` so no change is missed.
+    ``task`` frames carry the same record as GET /tasks/{task_id}; ``resync``
+    means changes were dropped and the list must be read again. ``complete`` is
+    false with several workers, where only this worker's changes are pushed.
+    """
+    config = getattr(request.app.state, "config", None)
+    complete = getattr(config, "workers", 1) <= 1
+    return _ClosingStreamingResponse(
+        task_event_stream(
+            get_task_tracker().change_feed,
+            _task_visibility(_ctx, task_type, include_internal),
+            complete=complete,
+        ),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("/tasks/{task_id}")
