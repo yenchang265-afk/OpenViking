@@ -46,7 +46,7 @@ Make large uploads (files and folders, up to a configured limit well above today
 
 ### Core rule
 
-> **No code path holds a whole uploaded file in memory.** Every hop streams with a bounded buffer (≤ one part, default 8 MiB). The only difference between backends is the final storage hop.
+> **No code path holds a whole uploaded file in memory.** Every hop streams with a bounded buffer (≤ one part, default 1 MiB). The only difference between backends is the final storage hop.
 
 ### Design (one pipeline)
 
@@ -126,7 +126,7 @@ All endpoints use the existing auth (`get_upload_request_context`: API key, or s
     "max_file_bytes": 2147483648,
     "max_session_bytes": 5368709120,
     "max_files": 10000,
-    "part_size_bytes": 8388608
+    "part_size_bytes": 1048576
   }
 }
 ```

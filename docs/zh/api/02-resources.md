@@ -693,7 +693,7 @@ curl http://localhost:1933/api/v1/uploads/limits \
     "max_file_bytes": 2147483648,
     "max_session_bytes": 5368709120,
     "max_files": 10000,
-    "part_size_bytes": 8388608
+    "part_size_bytes": 1048576
   }
 }
 ```
@@ -780,7 +780,7 @@ curl -X DELETE http://localhost:1933/api/v1/uploads/9f1c2e7a \
   "status": "ok",
   "result": {
     "upload_id": "9f1c2e7a",
-    "part_size_bytes": 8388608,
+    "part_size_bytes": 1048576,
     "expires_at": 1791370000.0,
     "files": [
       {"index": 0, "path": "big.pdf", "size": 10485760, "total_parts": 2},

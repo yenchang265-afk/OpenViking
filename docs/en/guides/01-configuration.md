@@ -1710,7 +1710,7 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
       "max_file_bytes": 2147483648,
       "max_session_bytes": 5368709120,
       "max_files": 10000,
-      "part_size_bytes": 8388608
+      "part_size_bytes": 1048576
     },
     "user_config_defaults": {
       "add_targets": {
@@ -1744,7 +1744,7 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 | `upload.max_file_bytes` | int | Largest single uploaded file, enforced by `POST /api/v1/resources/temp_upload` in both modes and served to clients by `GET /api/v1/uploads/limits`. | `2147483648` (2 GiB) |
 | `upload.max_session_bytes` | int | Largest total size of one upload (for example a folder). Must be at least `max_file_bytes`. | `5368709120` (5 GiB) |
 | `upload.max_files` | int | Most files in one upload. | `10000` |
-| `upload.part_size_bytes` | int | Chunk size clients use for chunked uploads (minimum 1 MiB). | `8388608` (8 MiB) |
+| `upload.part_size_bytes` | int | Chunk size clients use for chunked uploads (minimum 1 MiB). The default fits the 1 MiB request-body limit that nginx and the nginx ingress apply unless configured otherwise; raise it only when every proxy in front of the server accepts larger bodies. | `1048576` (1 MiB) |
 | `user_config_defaults.add_targets.resource_uri` | str | Deployment default resource add directory used when `add_resource` omits both `to` and `parent`. `viking://~/...` resolves per request user. | `null` |
 | `user_config_defaults.add_targets.skill_uri` | str | Deployment default skill add root used when `add_skill` omits `target_uri`. Only `viking://~/skills` and `viking://agent/skills` are accepted. | `null` |
 | `user_config_defaults.memory_policy` | object | Deployment default memory extraction policy used when neither the Session nor the User has an explicit policy. | `null` |

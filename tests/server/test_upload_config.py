@@ -23,7 +23,7 @@ def test_upload_limits_default_to_spec_values():
     assert upload.max_file_bytes == 2048 * MIB
     assert upload.max_session_bytes == 5120 * MIB
     assert upload.max_files == 10_000
-    assert upload.part_size_bytes == 8 * MIB
+    assert upload.part_size_bytes == MIB
 
 
 def test_legacy_shared_max_size_bytes_maps_to_max_file_bytes(monkeypatch):
