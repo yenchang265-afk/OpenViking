@@ -99,6 +99,58 @@ async def test_directory_lifecycle_rebuilds_tree_including_empty_files(tmp_path)
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "name",
+    ["x" * 252 + ".md", "報" * 84 + ".md"],
+    ids=["ascii-255-bytes", "cjk-255-bytes"],
+)
+async def test_names_at_the_filesystem_limit_assemble(tmp_path, name):
+    """A name of exactly 255 bytes is valid; assembly must not lengthen it."""
+    assert len(name.encode()) == 255
+    store = _store(tmp_path)
+    ctx = _ctx()
+    data = _data(PART + 5)
+
+    single = await store.create(
+        kind="file", name=name, files=[{"path": name, "size": len(data)}], ctx=ctx
+    )
+    await _upload_all(store, single["upload_id"], [data], ctx)
+    path, _ = store.resolve((await store.complete(single["upload_id"], ctx))["temp_file_id"], ctx)
+    assert path.name == name and path.read_bytes() == data
+
+    folder = await store.create(
+        kind="directory",
+        name="docs",
+        files=[{"path": f"sub/{name}", "size": len(data)}],
+        ctx=ctx,
+    )
+    await _upload_all(store, folder["upload_id"], [data], ctx)
+    root, _ = store.resolve((await store.complete(folder["upload_id"], ctx))["temp_file_id"], ctx)
+    assert (root / "sub" / name).read_bytes() == data
+    assert not list(root.rglob("*.tmp"))
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("kind", "name", "path"),
+    [
+        ("file", "x" * 253 + ".md", "x" * 253 + ".md"),
+        ("file", "報" * 86 + ".md", "報" * 86 + ".md"),
+        ("directory", "d", "sub/" + "y" * 256),
+        ("directory", "d", "z" * 256 + "/a.md"),
+        ("directory", "n" * 256, "a.md"),
+    ],
+    ids=["ascii-256", "cjk-261", "dir-leaf-256", "dir-segment-256", "dir-name-256"],
+)
+async def test_create_rejects_names_over_the_filesystem_limit(tmp_path, kind, name, path):
+    """Over-long names fail at create with a 400, not at complete with a 500."""
+    with pytest.raises(InvalidArgumentError, match="longer than 255 bytes"):
+        await _store(tmp_path).create(
+            kind=kind, name=name, files=[{"path": path, "size": 1}], ctx=_ctx()
+        )
+
+
+@pytest.mark.asyncio
 async def test_status_lists_received_parts_and_parts_are_idempotent(tmp_path):
     store = _store(tmp_path)
     ctx = _ctx()
