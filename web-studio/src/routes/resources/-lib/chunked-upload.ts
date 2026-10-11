@@ -20,7 +20,7 @@ export interface ChunkedUploadOptions {
   signal?: AbortSignal
 }
 
-/** The server has no chunked uploads (older server) or refuses them (shared mode). */
+/** The server has no chunked uploads, or (older servers) refuses them in shared mode. */
 export class SessionsUnavailableError extends Error {
   constructor() {
     super('Chunked uploads are not available on this server')

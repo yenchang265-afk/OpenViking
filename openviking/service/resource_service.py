@@ -840,7 +840,9 @@ class ResourceService:
             queued_args = self._sanitize_watch_processor_kwargs(queued_args)
             resolved_name = source_name or shared_source.original_filename or None
             source_format = (
-                Path(shared_source.original_filename).suffix.lower().lstrip(".") or "file"
+                "directory"
+                if shared_source.kind == "directory"
+                else Path(shared_source.original_filename).suffix.lower().lstrip(".") or "file"
             )
             return _SourcePlan(
                 path=path,

@@ -1760,7 +1760,7 @@ Explicit `auth_mode: "api_key"` requires a non-empty `root_api_key`, including o
 - **Disk**: about 2–3× the largest concurrent upload under `{workspace}/temp` (the staged upload plus the copy the ingest worker materializes).
 - **S3**: add a bucket lifecycle rule that aborts incomplete multipart uploads (for example after 1 day); failed uploads are aborted, but a crash can leave parts behind.
 - **Encryption**: files are encrypted as a single envelope, so on encrypted mounts a path-based write buffers the file and is limited to 512 MiB.
-- **Chunked sessions** (`/api/v1/uploads`) stage on the receiving server's disk and need `temp_upload.default_mode` = `"local"`; in `shared` mode clients fall back to single-request uploads.
+- **Chunked sessions** (`/api/v1/uploads`) follow `temp_upload.default_mode`: in `local` mode they stage on the receiving server's disk, in `shared` mode the session and its parts live in shared storage so every replica can serve it. Shared sessions expire with the other shared uploads (`ttl_seconds`).
 
 `user_config_defaults` provides deployment defaults for add targets and memory extraction. For add operations, explicit request targets still win: `add_resource.to` / `add_resource.parent` take precedence over user defaults, and `add_skill.target_uri` takes precedence over user defaults. Memory policy precedence is Session policy > User `settings/user_config.json` policy > `server.user_config_defaults.memory_policy` > kernel default. `server.agent_evolution.enabled` supplies the startup default. Runtime resolution is Account override > Cluster runtime override > that startup value. Use the Admin settings APIs for changes without restarting; editing `ov.conf` directly takes effect after restart.
 
