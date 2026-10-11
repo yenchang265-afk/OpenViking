@@ -9,6 +9,7 @@ import calendar
 import json
 import logging
 import os
+import shutil
 import tempfile
 import time
 import uuid
@@ -87,9 +88,13 @@ class ResolvedTempUpload:
     temp_file_id: str
     original_filename: Optional[str]
     local_path: str
+    # Local directory holding a downloaded shared session (file or folder), removed whole.
+    cleanup_dir: Optional[str] = None
 
     async def cleanup(self) -> None:
-        if self.mode == "shared" and self.local_path:
+        if self.cleanup_dir:
+            await asyncio.to_thread(shutil.rmtree, self.cleanup_dir, True)
+        elif self.mode == "shared" and self.local_path:
             with suppress(FileNotFoundError):
                 await asyncio.to_thread(os.unlink, self.local_path)
 
@@ -301,14 +306,18 @@ class TempUploadStore:
         if not await vfs.exists(content_uri, ctx=self._internal_ctx(ctx)):
             raise PermissionDeniedError("Temporary upload is invalid: content missing.")
         original_filename = meta.get("original_filename") or ""
+        layout = meta.get("layout") or "file"
         return SharedSource.from_dict(
             {
                 "temp_file_id": temp_file_id,
                 "content_uri": content_uri,
                 "account_id": ctx.account_id,
                 "original_filename": original_filename,
-                "file_ext": meta.get("file_ext") or Path(original_filename).suffix,
+                "file_ext": meta.get("file_ext")
+                or ("" if layout == "session" else Path(original_filename).suffix),
                 "meta": {},
+                "layout": layout,
+                "kind": meta.get("kind") or "file",
             }
         )
 
@@ -546,6 +555,25 @@ class TempUploadStore:
         internal_ctx = self._internal_ctx(ctx)
         if not await vfs.exists(content_uri, ctx=internal_ctx):
             raise PermissionDeniedError("Temporary upload is invalid: content missing.")
+
+        if meta.get("layout") == "session":
+            from openviking.resource.shared_source import download_session_upload
+
+            local_root = await asyncio.to_thread(tempfile.mkdtemp, prefix="ov_shared_upload_")
+            try:
+                local_path = await download_session_upload(
+                    content_uri, Path(local_root), viking_fs=vfs, ctx=internal_ctx
+                )
+            except BaseException:
+                await asyncio.to_thread(shutil.rmtree, local_root, True)
+                raise
+            return ResolvedTempUpload(
+                mode="shared",
+                temp_file_id=temp_file_id,
+                original_filename=meta.get("original_filename") or None,
+                local_path=str(local_path),
+                cleanup_dir=local_root,
+            )
 
         file_ext = meta.get("file_ext") or ".tmp"
         temp_path = await asyncio.to_thread(

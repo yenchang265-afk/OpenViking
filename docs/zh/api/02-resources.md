@@ -713,7 +713,7 @@ Python SDK、Go SDK、TypeScript SDK（Node.js）、`ov add-resource` 與 Web St
 | POST | `/api/v1/uploads` | 為一個檔案或一個資料夾建立工作階段 |
 | PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | 以原始請求主體儲存某檔案的一個分片（從 1 開始編號） |
 | GET | `/api/v1/uploads/{upload_id}` | 查詢已收到的分片，用於續傳 |
-| POST | `/api/v1/uploads/{upload_id}/complete` | 組裝所有分片並返回 `temp_file_id` |
+| POST | `/api/v1/uploads/{upload_id}/complete` | 完成工作階段（所有分片都必須已收到）並返回 `temp_file_id` |
 | DELETE | `/api/v1/uploads/{upload_id}` | 中止並丟棄工作階段 |
 
 **程式碼入口**：
@@ -725,7 +725,10 @@ Python SDK、Go SDK、TypeScript SDK（Node.js）、`ov add-resource` 與 Web St
 - 除了每個檔案的最後一個分片外，每個分片都必須剛好是 `part_size_bytes`（建立工作階段時返回）；最後一個分片為剩餘部分。空檔案沒有分片。
 - 路徑必須是相對路徑、使用正斜線，並在建立時檢查：絕對路徑、`..`、磁碟代號、NUL、空白或 `.` 路徑段，以及互相衝突的路徑（包括大小寫不同或同時作為檔案與資料夾）都會被拒絕並返回 HTTP 400。
 - 工作階段屬於建立它的 account 與 user，並在 `server.temp_upload.ttl_seconds` 後過期。
-- 分片暫存在接收請求的伺服器磁碟上，因此工作階段需要 `server.temp_upload.default_mode` 為 `"local"`。在 `shared` 模式下，`POST /api/v1/uploads` 會返回 HTTP 409，客戶端應改用 `temp_upload`。
+- 新工作階段依 `server.temp_upload.default_mode` 決定存放位置：
+  - `local`：分片暫存在接收請求的伺服器磁碟上；`upload_id` 為 32 個十六進位字元，`complete` 返回 `session_<upload_id>`。
+  - `shared`：工作階段及其分片存放在 `viking://upload/` 下的共享儲存中，任一副本都能處理該工作階段的任何請求；`upload_id` 形如 `<YYYYMMDDHH>-<32 個十六進位字元>`，`complete` 返回 `shared_<upload_id>`，與其他 shared 上傳一樣使用。`complete` 只檢查所有分片均已儲存；分片在上傳被使用時才合併一次。
+- 對已存在工作階段的請求會交給擁有該 `upload_id` 的儲存處理，因此在 `default_mode` 變更前開始的工作階段仍可完成。
 
 #### 2. 介面和引數說明
 

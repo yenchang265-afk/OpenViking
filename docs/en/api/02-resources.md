@@ -709,7 +709,7 @@ The Python SDK, Go SDK, TypeScript SDK (Node.js), `ov add-resource` and Web Stud
 | POST | `/api/v1/uploads` | Create a session for one file or one folder |
 | PUT | `/api/v1/uploads/{upload_id}/files/{file_index}/parts/{part_number}` | Store one part (1-based) of one file from the raw body |
 | GET | `/api/v1/uploads/{upload_id}` | Report received parts, for resuming |
-| POST | `/api/v1/uploads/{upload_id}/complete` | Assemble all parts and return `temp_file_id` |
+| POST | `/api/v1/uploads/{upload_id}/complete` | Finish the session (every part must be present) and return `temp_file_id` |
 | DELETE | `/api/v1/uploads/{upload_id}` | Abort and discard the session |
 
 **Code Entry Points**:
@@ -721,7 +721,10 @@ The Python SDK, Go SDK, TypeScript SDK (Node.js), `ov add-resource` and Web Stud
 - Every part except a file's last must be exactly `part_size_bytes` (returned when the session is created); the last part is the remainder. Empty files have no parts.
 - Paths are relative, forward-slash and checked on creation: absolute paths, `..`, drive letters, NUL, empty or `.` segments, and paths that collide (also case-insensitively, or as both a file and a folder) are rejected with HTTP 400.
 - Sessions belong to the creating account and user, and expire after `server.temp_upload.ttl_seconds`.
-- Parts are staged on the receiving server's disk, so sessions require `server.temp_upload.default_mode` = `"local"`. In `shared` mode, `POST /api/v1/uploads` returns HTTP 409 and clients should use `temp_upload` instead.
+- New sessions follow `server.temp_upload.default_mode`:
+  - `local`: parts are staged on the receiving server's disk; the `upload_id` is 32 hex characters and `complete` returns `session_<upload_id>`.
+  - `shared`: the session and its parts are kept in shared storage under `viking://upload/`, so any replica can take any request of the session; the `upload_id` has the form `<YYYYMMDDHH>-<32 hex>` and `complete` returns `shared_<upload_id>`, consumed like any shared upload. `complete` only checks that every part is stored; the parts are joined once, when the upload is consumed.
+- Requests on an existing session go to whichever store owns its `upload_id`, so a session started before `default_mode` changes can still be finished.
 
 #### 2. Interface and Parameter Description
 
