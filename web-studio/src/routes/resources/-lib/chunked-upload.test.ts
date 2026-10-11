@@ -144,6 +144,27 @@ describe('uploadSession', () => {
     expect(putMock).toHaveBeenCalledTimes(2)
   })
 
+  it('does not retry a part a proxy refused as too large', async () => {
+    mockCreateAndComplete(4)
+    putMock.mockRejectedValue(
+      new OvClientError({
+        code: 'HTTP_ERROR',
+        message: '<html>413 Request Entity Too Large</html>',
+        statusCode: 413,
+      }),
+    )
+
+    const error = await uploadSession({
+      kind: 'file',
+      name: 'f.bin',
+      sources: [source('f.bin', 'abc')],
+      retryDelayMs: 0,
+    }).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(UploadSessionError)
+    expect(putMock).toHaveBeenCalledTimes(1)
+  })
+
   it('keeps the session for resume when a part keeps failing', async () => {
     mockCreateAndComplete(4)
     putMock.mockRejectedValue(new Error('network'))

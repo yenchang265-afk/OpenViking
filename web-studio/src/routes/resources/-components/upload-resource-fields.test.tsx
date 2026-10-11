@@ -55,6 +55,13 @@ vi.mock('sonner', () => ({
   toast: Object.assign(mocks.toast, { error: mocks.toastError }),
 }))
 
+/** Dropped files are read (empty check) before type detection starts. */
+async function waitForDetection(...names: string[]) {
+  await waitFor(() =>
+    expect(names.every((name) => mocks.pending.has(name))).toBe(true),
+  )
+}
+
 afterEach(() => {
   cleanup()
   mocks.onDrop = null
@@ -78,17 +85,17 @@ describe('UploadResourceFields', () => {
 
     mocks.onDrop?.([new File(['first'], 'first.pdf')])
     mocks.onDrop?.([new File(['second'], 'second.pdf')])
+    await waitForDetection('first.pdf', 'second.pdf')
     mocks.pending.get('second.pdf')?.(null)
-    await Promise.resolve()
-    await Promise.resolve()
+    await waitFor(() => expect(current).toHaveLength(1))
     mocks.pending.get('first.pdf')?.(null)
-    await Promise.resolve()
-    await Promise.resolve()
 
-    expect(current.map(({ file }) => file.name).sort()).toEqual([
-      'first.pdf',
-      'second.pdf',
-    ])
+    await waitFor(() =>
+      expect(current.map(({ file }) => file.name).sort()).toEqual([
+        'first.pdf',
+        'second.pdf',
+      ]),
+    )
   })
 
   it('reports truncation when concurrent drops exceed the latest limit', async () => {
@@ -113,6 +120,7 @@ describe('UploadResourceFields', () => {
 
     mocks.onDrop?.([new File(['first'], 'first.pdf')])
     mocks.onDrop?.([new File(['second'], 'second.pdf')])
+    await waitForDetection('first.pdf', 'second.pdf')
     mocks.pending.get('first.pdf')?.(null)
     mocks.pending.get('second.pdf')?.(null)
 
@@ -198,9 +206,9 @@ describe('UploadResourceFields', () => {
     )
 
     mocks.onDrop?.([new File(['new'], 'new.pdf')])
+    await waitForDetection('new.pdf')
     mocks.pending.get('new.pdf')?.(null)
-    await Promise.resolve()
-    await Promise.resolve()
+    await waitFor(() => expect(current).toHaveLength(2))
     fireEvent.click(screen.getByRole('button', { name: 'fileInfo.remove' }))
 
     expect(current.map(({ file }) => file.name)).toEqual(['new.pdf'])
@@ -232,6 +240,39 @@ describe('UploadResourceFields', () => {
     expect(current[0].file.name).toBe('ok.pdf')
     expect(mocks.toastError).toHaveBeenCalledWith(
       'fileTooLarge:{"name":"big.pdf","size":"4.0 MB"}',
+      { duration: 2500 },
+    )
+  })
+
+  it('rejects empty and whitespace-only files before upload', async () => {
+    let current: SelectedUploadFile[] = []
+    render(
+      <UploadResourceFields
+        files={[]}
+        onFilesChange={(update) => {
+          current = typeof update === 'function' ? update(current) : update
+        }}
+        t={echoT}
+        limits={LIMITS}
+      />,
+    )
+
+    mocks.onDrop?.([
+      new File([], 'empty.md'),
+      new File([' \n\t\n'], 'blank.md'),
+      new File(['# Notes'], 'notes.md'),
+    ])
+    await waitFor(() => expect(mocks.pending.has('notes.md')).toBe(true))
+    mocks.pending.get('notes.md')?.(null)
+
+    await waitFor(() => expect(current).toHaveLength(1))
+    expect(current[0].file.name).toBe('notes.md')
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      'fileEmpty:{"name":"empty.md"}',
+      { duration: 2500 },
+    )
+    expect(mocks.toastError).toHaveBeenCalledWith(
+      'fileEmpty:{"name":"blank.md"}',
       { duration: 2500 },
     )
   })

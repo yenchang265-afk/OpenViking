@@ -57,6 +57,18 @@ interface PartPlan {
 }
 
 const UNAVAILABLE_STATUSES = new Set([404, 405, 409])
+
+/**
+ * A 413 without an OpenViking error envelope: a proxy in front of the server refused
+ * the request body. Re-sending the same bytes cannot succeed.
+ */
+export function isProxyRejectedTooLarge(error: unknown): boolean {
+  return (
+    isOvClientError(error) &&
+    error.statusCode === 413 &&
+    error.code === 'HTTP_ERROR'
+  )
+}
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 function planParts(sources: UploadSource[], partSize: number): PartPlan[] {
@@ -97,7 +109,13 @@ async function sendPart(
       )
       return
     } catch (error) {
-      if (attempt >= maxRetries || options.signal?.aborted) throw error
+      if (
+        attempt >= maxRetries ||
+        options.signal?.aborted ||
+        isProxyRejectedTooLarge(error)
+      ) {
+        throw error
+      }
       await sleep(baseDelay * 2 ** attempt)
     }
   }

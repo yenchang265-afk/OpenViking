@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -18,6 +19,11 @@ import {
 const apiMocks = vi.hoisted(() => ({
   getTasks: vi.fn(),
   postResources: vi.fn(),
+  transferUpload: vi.fn(),
+}))
+
+vi.mock('../-lib/upload-transfer', () => ({
+  transferUpload: apiMocks.transferUpload,
 }))
 
 vi.mock('#/lib/ov-client', () => ({
@@ -187,5 +193,57 @@ describe('ResourceUploadProvider remote completion', () => {
     } finally {
       await i18n.changeLanguage(previousLanguage)
     }
+  })
+})
+
+function FileUploadHarness() {
+  const { enqueueUploads, tasks } = useResourceUpload()
+
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="upload"
+        onClick={() =>
+          enqueueUploads({
+            commonBody: {},
+            files: [{ file: new File(['x'], 'big.md'), fileType: null }],
+          })
+        }
+      />
+      <output data-testid="file-status">
+        {tasks.find((task) => task.fileName === 'big.md')?.status}
+      </output>
+    </>
+  )
+}
+
+describe('ResourceUploadProvider file uploads', () => {
+  it('keeps a failed upload failed when a late part reports progress', async () => {
+    let reportProgress: ((percent: number) => void) | undefined
+    apiMocks.transferUpload.mockImplementation(
+      (_item: unknown, onProgress: (percent: number) => void) => {
+        reportProgress = onProgress
+        return Promise.reject(new Error('rejected by proxy'))
+      },
+    )
+
+    render(
+      <ResourceUploadProvider>
+        <FileUploadHarness />
+      </ResourceUploadProvider>,
+    )
+    fireEvent.click(screen.getByTestId('upload'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('file-status').textContent).toBe('failed'),
+    )
+    expect(apiMocks.transferUpload).toHaveBeenCalledTimes(1)
+    expect(reportProgress).toBeDefined()
+    await act(async () => {
+      reportProgress?.(60)
+    })
+
+    expect(screen.getByTestId('file-status').textContent).toBe('failed')
   })
 })

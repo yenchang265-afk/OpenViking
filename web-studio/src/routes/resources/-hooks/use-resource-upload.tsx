@@ -257,12 +257,13 @@ export function ResourceUploadProvider({
 
         const { tempFileId, sourceName } = await transferUpload(
           params,
+          // Parts still in flight can report after the transfer has failed;
+          // only an uploading task takes progress, so a late report never
+          // turns a failed task back into an uploading one.
           (progress) =>
-            updateTask(taskId, (task) => ({
-              ...task,
-              status: 'uploading',
-              progress,
-            })),
+            updateTask(taskId, (task) =>
+              task.status === 'uploading' ? { ...task, progress } : task,
+            ),
         )
 
         updateTask(taskId, (task) => ({

@@ -40,6 +40,7 @@ _META_NAME = "session.json"
 _COPY_CHUNK_BYTES = 1024 * 1024
 # Longest single path component on common filesystems (ext4, XFS, APFS), in bytes.
 _MAX_COMPONENT_BYTES = 255
+_DRIVE_PREFIX_RE = re.compile(r"^[A-Za-z]:")
 _KINDS = ("file", "directory")
 
 
@@ -60,13 +61,13 @@ def _component_too_long(component: str) -> bool:
 
 
 def _validate_name(name: Any) -> str:
-    if (
-        not isinstance(name, str)
-        or not name
-        or name in {".", ".."}
-        or any(ch in name for ch in "/\\\x00")
-    ):
+    if not isinstance(name, str) or not name or name in {".", ".."}:
         raise InvalidArgumentError(f"Invalid upload name: {name!r}")
+    if any(ch in name for ch in "/\\\x00"):
+        raise InvalidArgumentError(
+            f"Invalid upload name {name!r}: a name cannot contain '/', '\\' or NUL. "
+            "Rename it and try again."
+        )
     if _component_too_long(name):
         raise InvalidArgumentError(
             f"Upload name is longer than {_MAX_COMPONENT_BYTES} bytes: {name!r}"
@@ -74,16 +75,33 @@ def _validate_name(name: Any) -> str:
     return name
 
 
+def _unsafe_path_reason(path: str) -> str:
+    """Say why ``sanitize_relative_viking_path`` refused ``path``, in user terms."""
+    if path.startswith(("/", "\\")):
+        return "it must be relative, not start with '/' or '\\'"
+    if _DRIVE_PREFIX_RE.match(path):
+        return f"it starts with {path[:2]!r}, which reads as a Windows drive letter"
+    if ".." in re.split(r"[\\/]", path):
+        return "it contains a '..' segment"
+    return "it contains an encoded '/', '\\' or '.' segment such as '%2F'"
+
+
+def _invalid_path(path: Any, reason: str) -> InvalidArgumentError:
+    return InvalidArgumentError(f"Invalid upload path {path!r}: {reason}. Rename it and try again.")
+
+
 def _normalize_rel_path(path: Any) -> str:
-    if not isinstance(path, str) or "\x00" in path:
+    if not isinstance(path, str):
         raise InvalidArgumentError(f"Invalid upload path: {path!r}")
+    if "\x00" in path:
+        raise _invalid_path(path, "it contains a NUL character")
     try:
         normalized = sanitize_relative_viking_path(path)
     except ValueError as exc:
-        raise InvalidArgumentError(f"Invalid upload path: {path!r}") from exc
+        raise _invalid_path(path, _unsafe_path_reason(path)) from exc
     segments = normalized.split("/")
     if any(segment in {"", ".", ".."} for segment in segments):
-        raise InvalidArgumentError(f"Invalid upload path: {path!r}")
+        raise _invalid_path(path, "it contains an empty or '.' segment")
     if any(_component_too_long(segment) for segment in segments):
         raise InvalidArgumentError(
             f"Upload path has a name longer than {_MAX_COMPONENT_BYTES} bytes: {path!r}"
@@ -100,8 +118,9 @@ def _validate_files(kind: str, name: str, files: Any, limits: UploadConfig) -> L
         raise InvalidArgumentError("A file upload must contain exactly one file")
 
     validated: List[Dict[str, Any]] = []
-    seen: set[str] = set()
-    dir_prefixes: set[str] = set()
+    # Case-folded path -> path as sent, for files and for the folders that hold them.
+    seen: Dict[str, str] = {}
+    dir_prefixes: Dict[str, str] = {}
     total = 0
     for entry in files:
         if not isinstance(entry, dict):
@@ -115,13 +134,18 @@ def _validate_files(kind: str, name: str, files: Any, limits: UploadConfig) -> L
                 f"{path!r} exceeds size limit ({limits.max_file_bytes} bytes)."
             )
         folded = path.casefold()
-        parents = folded.split("/")[:-1]
-        if folded in seen or folded in dir_prefixes:
-            raise InvalidArgumentError(f"Conflicting upload path: {path!r}")
-        if any("/".join(parents[: i + 1]) in seen for i in range(len(parents))):
-            raise InvalidArgumentError(f"Conflicting upload path: {path!r}")
-        seen.add(folded)
-        dir_prefixes.update("/".join(parents[: i + 1]) for i in range(len(parents)))
+        parts = path.split("/")
+        prefixes = ["/".join(parts[: i + 1]) for i in range(len(parts) - 1)]
+        if folded in seen:
+            raise _conflict(path, seen[folded])
+        if folded in dir_prefixes:
+            raise _conflict(path, dir_prefixes[folded], other_is_folder=True)
+        for prefix in prefixes:
+            if prefix.casefold() in seen:
+                raise _conflict(prefix, seen[prefix.casefold()], other_is_folder=True)
+        seen[folded] = path
+        for prefix in prefixes:
+            dir_prefixes.setdefault(prefix.casefold(), prefix)
         total += size
         validated.append({"path": path, "size": size})
 
@@ -130,6 +154,19 @@ def _validate_files(kind: str, name: str, files: Any, limits: UploadConfig) -> L
     if kind == "file" and validated[0]["path"] != name:
         raise InvalidArgumentError("A file upload's path must equal its name")
     return validated
+
+
+def _conflict(path: str, other: str, *, other_is_folder: bool = False) -> InvalidArgumentError:
+    if other_is_folder:
+        reason = f"{path!r} is both a file and a folder"
+    elif path == other:
+        reason = f"{path!r} appears twice"
+    else:
+        reason = (
+            f"{path!r} and {other!r} differ only in letter case, and uploads treat "
+            "them as the same file"
+        )
+    return InvalidArgumentError(f"Conflicting upload paths: {reason}. Rename one of them.")
 
 
 def _write_json_atomic(path: Path, data: Dict[str, Any]) -> None:
