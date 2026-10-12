@@ -120,6 +120,7 @@ class SkillProcessor:
         source_metadata: Optional[Dict[str, Any]] = None,
         owner_lease_ref: Optional[Dict[str, Any]] = None,
         lease_ref: Any = None,
+        summarize_from_header: bool = False,
     ) -> Dict[str, Any]:
         """
         Process and store a skill.
@@ -144,6 +145,7 @@ class SkillProcessor:
             ctx=ctx,
             allow_local_path_resolution=allow_local_path_resolution,
             source_path_hint=source_path_hint,
+            extract_privacy=apply_privacy,
         )
         telemetry = get_current_telemetry()
         telemetry.set(
@@ -159,6 +161,7 @@ class SkillProcessor:
             source_metadata=source_metadata,
             owner_lease_ref=owner_lease_ref,
             lease_ref=lease_ref,
+            summarize_from_header=summarize_from_header,
         )
 
     async def process_prepared_skill(
@@ -173,6 +176,7 @@ class SkillProcessor:
         source_metadata: Optional[Dict[str, Any]] = None,
         owner_lease_ref: Optional[Dict[str, Any]] = None,
         lease_ref: Any = None,
+        summarize_from_header: bool = False,
     ) -> Dict[str, Any]:
         cleanup_path = preparation.cleanup_path
         skill_dict = preparation.skill_dict
@@ -264,6 +268,12 @@ class SkillProcessor:
                     ctx,
                     lease,
                     source_path=skill_dict.get("source_path", ""),
+                    # The header already summarizes SKILL.md; skip the LLM call.
+                    file_abstracts=(
+                        {f"{skill_dir_uri}/SKILL.md": skill_abstract}
+                        if summarize_from_header
+                        else None
+                    ),
                 )
                 lease = None  # The semantic worker owns the handed-off lease.
 
@@ -284,6 +294,7 @@ class SkillProcessor:
         ctx: RequestContext,
         allow_local_path_resolution: bool = True,
         source_path_hint: Optional[str] = None,
+        extract_privacy: bool = True,
     ) -> SkillProcessingPreparation:
         skill_dict, auxiliary_files, base_path, cleanup_path = self._parse_skill(
             data,
@@ -292,7 +303,10 @@ class SkillProcessor:
         )
         try:
             self._validate_skill_dict(skill_dict)
-            skill_dict, privacy_values = await self.prepare_skill_privacy(skill_dict, ctx)
+            privacy_values: Dict[str, str] = {}
+            if extract_privacy:
+                # The scan is an LLM call; skip it when nothing will store its values.
+                skill_dict, privacy_values = await self.prepare_skill_privacy(skill_dict, ctx)
             return SkillProcessingPreparation(
                 skill_dict=skill_dict,
                 auxiliary_files=auxiliary_files,
@@ -639,6 +653,7 @@ class SkillProcessor:
         lease: Dict[str, Any],
         *,
         source_path: str = "",
+        file_abstracts: Optional[Dict[str, str]] = None,
     ) -> None:
         from openviking.storage.queuefs import get_queue_manager
         from openviking.storage.queuefs.semantic_msg import SemanticMsg
@@ -660,6 +675,7 @@ class SkillProcessor:
             generation_trigger="skill_ingest",
             propagate_to_parent=False,
             source={"path": source_path},
+            file_abstracts=dict(file_abstracts or {}),
         )
         tracker.register_semantic_root(msg.telemetry_id, msg.id)
         tracker.retain_request(msg.telemetry_id, msg.id)
