@@ -201,10 +201,11 @@ jobs:
         env:
           TAG: ${{ github.event.release.tag_name }}
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || 'openviking' }}
         run: |
           set -euo pipefail
           image=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          for ref in "ghcr.io/${image}" "docker.io/${DOCKERHUB_USERNAME}/openviking"; do
+          for ref in "ghcr.io/${image}" "docker.io/${DOCKERHUB_USERNAME}/${DOCKERHUB_REPOSITORY}"; do
             tagged=$(docker buildx imagetools inspect "${ref}:${TAG}" --format '{{.Manifest.Digest}}')
             latest=$(docker buildx imagetools inspect "${ref}:latest" --format '{{.Manifest.Digest}}')
             if [ "$tagged" != "$latest" ]; then

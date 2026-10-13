@@ -13,6 +13,9 @@ on:
 
 env:
   REGISTRY: ghcr.io
+  # Docker Hub repository under the DOCKERHUB_USERNAME account. Set the
+  # DOCKERHUB_REPOSITORY repository variable to push somewhere else.
+  DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || 'openviking' }}
 
 jobs:
   build-and-push-image:
@@ -87,7 +90,7 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/openviking
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPOSITORY }}
           tags: |
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
             type=ref,event=tag,enable=${{ github.ref_type == 'tag' }}
@@ -116,7 +119,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           outputs: |
-            type=image,name=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/openviking,push-by-digest=true,name-canonical=true,push=true
+            type=image,name=docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPOSITORY }},push-by-digest=true,name-canonical=true,push=true
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             OPENVIKING_VERSION=${{ steps.openviking-version.outputs.version }}
@@ -188,7 +191,7 @@ jobs:
         with:
           images: |
             ${{ env.REGISTRY }}/${{ steps.image-name.outputs.image }}
-            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/openviking
+            docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPOSITORY }}
           tags: |
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
             type=ref,event=tag,enable=${{ github.ref_type == 'tag' }}
@@ -227,7 +230,7 @@ jobs:
           for digest_file in /tmp/digests-dockerhub/*; do
             [ -e "$digest_file" ] || continue
             digest="sha256:$(basename "$digest_file")"
-            dockerhub_image_refs+=("docker.io/${{ secrets.DOCKERHUB_USERNAME }}/openviking@${digest}")
+            dockerhub_image_refs+=("docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPOSITORY }}@${digest}")
           done
 
           [ ${#ghcr_image_refs[@]} -gt 0 ] || {
