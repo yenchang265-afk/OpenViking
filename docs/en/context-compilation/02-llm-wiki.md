@@ -1,6 +1,6 @@
 # Example: LLM Wiki
 
-Compile a set of heterogeneous sources into a Karpathy-style, evidence-grounded, interlinked **LLM Wiki**: every page has one clear retrieval purpose, opens with a direct summary, uses consistent terminology, makes relationships explicit, keeps evidence close to the claims it supports, and is fronted by an `index.md` navigation page.
+Organize material from different sources into a Karpathy-style LLM Wiki of interlinked Markdown pages. Each page covers an entity, concept, or question, leading with a conclusion and citing its sources. An `index.md` page provides navigation.
 
 The Skill picks the smallest page type that matches each page's retrieval purpose:
 
@@ -13,9 +13,11 @@ The Skill picks the smallest page type that matches each page's retrieval purpos
 | `analysis` | A cross-source conclusion tied to a clear question |
 | `summary` | A faithful digest of one source (only when `--instruction` explicitly asks for it) |
 
-`entity` and `concept` are the defaults; the others are promoted only when they pass their stricter tests. The result is a knowledge base, not a source-by-source pile of summaries.
+The default page types are `entity` and `concept`; other types follow the conditions in the Skill. Related material from multiple sources is grouped under the same topic.
 
 Skill source: [openviking/builtin_skills/compile/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/llm-wiki) · Visualization script: [examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
+
+Check the [prerequisites](01-overview.md#prerequisites) and run these commands from the OpenViking repository root. Replace the source directory with your own material.
 
 ## Step 1: Prepare the sources
 
@@ -23,7 +25,7 @@ If the material is not in OpenViking yet, import it. Use `ov add-resource` for d
 
 ```bash
 # Import a directory as a source
-ov add-resource ./my-research --to viking://resources/research
+ov add-resource ./my-research --to viking://resources/research --wait
 
 # Or write a single file
 ov mkdir viking://resources/research

@@ -59,6 +59,11 @@ openviking-server doctor
 
 ```bash
 redis-server
+```
+
+在另一個終端啟動 OpenViking：
+
+```bash
 openviking-server --config ~/.openviking/ov.conf
 ```
 
@@ -82,7 +87,7 @@ openviking-server
 將 `storage.agfs.pathlock.provider` 設為 `cache`，即可通過共享 Redis
 CacheRuntime 協調多個 OpenViking 程序的路徑鎖。`pathlock.namespace`
 為必填項，同一 OpenViking 部署的所有程序必須使用相同值。Cache PathLock
-只支援內建 Redis Provider。
+只支援內建 Redis Provider。獨立部署應使用不同 namespace；分散式路徑鎖不會解除 CachedFileSystem 的單寫者前提。
 
 Redis HASH key 按邏輯路徑 scope 拆分：
 
@@ -155,7 +160,7 @@ Provider 釋出物應註明 ABI 版本、目標 OS/CPU、最低執行時版本�
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
 | `provider` | str | `"filesystem"` | `filesystem`、`memory` 或 `cache` |
-| `namespace` | str 或 null | `null` | `provider=cache` 時必填的 OpenViking 例項名 |
+| `namespace` | str 或 null | `null` | `provider=cache` 時必填，同一部署的協作程序共享此名稱空間 |
 | `lock_expire_secs` | float | `30.0` | 鎖 stale 超時；不得小於 `1.0` |
 
 Redis 配置：
@@ -322,4 +327,6 @@ RAGFS 會自動繞過不適合快取的路徑：
 4. 先快取摘要檔案和 raw `read_dir`，再擴充到更多普通小檔案。
 5. 將鎖、控制面和許可權敏感路徑加入 `bypass_prefixes`。
 
-一句話總結：RAGFS 快取負責“按檔案系統語義正確失效”，Provider 負責“把快取物件放在哪裡”。只要 backend 是事實來源，快取命中就必須先通過 envelope 和 generation 校驗。
+RAGFS 快取負責按檔案系統語義失效，Provider 負責決定快取物件放在哪裡。backend 仍是事實來源，快取命中必須先通過 envelope 和 generation 校驗才會返回。
+
+啟用後，將重複讀取和檔案更新後的失效行為與基線比較。確認返回內容保持最新，再判斷命中率提升是否帶來收益。

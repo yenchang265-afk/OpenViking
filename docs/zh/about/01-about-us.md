@@ -2,13 +2,15 @@
 
 ## 專案概述
 
-OpenViking 是由字節跳動公司火山引擎 Viking 團隊發起並維護的開源專案，致力於為 AI Agent 生態系統構建強大的上下文工程基礎設施。作為新一代的上下文資料庫，OpenViking 通過統一的資料抽象層、智慧的語義解析引擎和高效能的混合檢索系統，為各類 AI 應用提供堅實可靠的後端支撐。
+OpenViking 是面向 AI Agent 的開源上下文資料庫，由字節跳動火山引擎 Viking 團隊發起並維護。它用檔案系統組織資源、記憶和技能，供 Agent 瀏覽、檢索和按需讀取。
+
+[在 GitHub 檢視 OpenViking](https://github.com/volcengine/OpenViking)
 
 ## 團隊介紹
 
 ### Viking 團隊背景
 
-Viking 團隊隸屬於字節跳動火山引擎，是專注於非結構化資訊處理和智慧檢索領域的核心技術團隊。團隊匯聚了數十名在分散式系統、機器學習、資料工程和人工智慧演算法等領域的資深專家，在上下文工程技術方面積累了豐富的商業化實踐經驗。
+Viking 團隊主要開發向量檢索、知識庫和記憶管理產品。團隊有數十名工程師，覆蓋分散式系統、機器學習、資料工程和 AI 演算法，在上下文工程上有商業化落地經驗。OpenViking 將這些領域的工程經驗用於開源上下文資料庫，與社群共同開發。
 
 #### 核心技術能力
 
@@ -27,9 +29,9 @@ Viking 團隊隸屬於字節跳動火山引擎，是專注於非結構化資訊�
 - 支援彈性伸縮與故障自動恢復機制
 - 實現資料一致性與系統性能的最佳平衡
 
-### 發展歷程與技術演進
+這些工作涉及三個相互關聯的問題：如何從非結構化內容中提取可檢索的資訊，如何在大量候選內容中找到相關上下文，以及如何保留對後續任務有用的互動經驗。OpenViking 對應提供[資源解析與提取](../concepts/06-extraction.md)、[上下文檢索](../concepts/07-retrieval.md)和[會話與記憶管理](../concepts/08-session.md)。可沿這些入口瞭解實現和使用條件。
 
-Viking 團隊在上下文工程領域的探索歷程，體現了我們對技術創新與產業應用的持續追求，而隨著 AI Agent 應用生態的快速發展，我們計劃將 OpenViking 專案作為新理念和新思路的驗證平臺，實現公開構建，與開源社群一道構建負責任的 AI 應用軟體棧。
+### 發展歷程與技術演進
 
 | 時間階段 | 里程碑事件 | 技術突破與產業影響 |
 |----------|-----------|-------------------|
@@ -41,7 +43,7 @@ Viking 團隊在上下文工程領域的探索歷程，體現了我們對技術�
 
 ### 學術合作與產學研結合
 
-OpenViking 專案自啟動之初就與國內外頂尖高校和研究機構建立了深度的學術合作關係，共同探索適用於 AI 時代的上下文資料庫設計範式與技術最佳實踐。這種產學研結合的模式，確保了專案在保持技術先進性的同時，也能夠緊密結合實際應用需求。
+OpenViking 自啟動起就與高校和研究機構合作，共同探索面向 AI Agent 的上下文資料庫設計與工程實踐，讓研究工作貼近實際應用需求。
 
 我們誠摯感謝以下學者的寶貴貢獻與技術指導，共同發起了 OpenViking 專案：
 
@@ -50,149 +52,63 @@ OpenViking 專案自啟動之初就與國內外頂尖高校和研究機構建立
 - 上海交通大學人工智慧學院副教授，無問芯穹聯合創始人兼首席科學家戴國浩老師
 
 我們與學術界的合作模式包括：
-- **聯合研究專案**：共同開展上下文工程技術的前沿研究
+
+- **聯合研究專案**：共同開展上下文工程的前沿研究
 - **技術研討會**：定期組織學術交流與技術方案評審
 - **人才培養**：為研究生提供實踐平臺與研究課題
-- **成果轉化**：將學術研究成果轉化為工程實現的最佳實踐
+- **成果轉化**：將學術研究成果轉化為工程實踐
+
+### 研究論文
+
+以下論文來自上述合作，其中部分核心機制已整合到 OpenViking。
+
+- **VikingMem: A Memory Base Management System for Stateful LLM-based Applications**<br>
+  Jiajie Fu, Junwen Chen, Mengzhao Wang, Aoxiang He, Maojia Sheng, Xiangyu Ke, Yifan Zhu, and Yunjun Gao. arXiv:2605.29640, 2026。已在 VLDB 2026 演講。<br>
+  以事件驅動長期記憶的提取、更新與整合，服務有狀態 Agent。[arXiv](https://arxiv.org/abs/2605.29640) · [PDF](https://arxiv.org/pdf/2605.29640)
+- **Directory-Aware Query and Maintenance in Vector Databases**<br>
+  Mengzhao Wang, Zheng Gong, Jingpei Hu, Jiajie Fu, Maojia Sheng, Junwen Chen, and Yifan Zhu. arXiv:2606.16903, 2026。已被 ICDE 接收。<br>
+  目錄範圍檢索的形式化基礎與索引設計（TrieHI），OpenViking 用它在向量排序前確定目錄檢索範圍。[arXiv](https://arxiv.org/abs/2606.16903) · [PDF](https://arxiv.org/pdf/2606.16903)
+- **VikingRAG: Accurate and Token-efficient Retrieval-augmented Generation over Structured Documents**<br>
+  Peiyuan Gao, Gaoyuan Zhang, Haojie Qin, Yahui Sun, Qianyi Zhang, Yunhao Zhang, Zeyu Wang, and Wei Lu. arXiv:2609.11390, 2026。投遞中。<br>
+  將語義檢索與文件結構結合，按證據缺口展開相關目錄片段。[arXiv](https://arxiv.org/abs/2609.11390) · [PDF](https://arxiv.org/pdf/2609.11390)
 
 ## 開源組織建設
 
 ### 專案發展階段
 
-OpenViking 目前處於專案發展的早期階段，我們將其劃分為三個關鍵發展階段：
-
-- 第一階段：基礎能力建設
-在開源後的初始階段，我們將專注於構建堅實的技術基礎，包括上下文資料庫的核心協議、介面、AI Agent 設施等，並且提供一個可靠完整的最小實現。
-
-- 第二階段：生態擴充
-建立外掛生態系統，支援第三方功能擴充、推動與主流 AI 框架和工具的深度整合，並擴充企業級功能，滿足規模化部署需求
-
-- 第三階段：產業應用
-形成行業技術標準與最佳實踐、建立認證體系與合作伙伴生態、推動上下文工程技術在更多產業場景的落地應用
+專案圍繞上下文儲存與檢索、Agent 整合和部署能力持續迭代。已實現的能力與後續方向見[路線圖](03-roadmap.md)，已釋出的變更見[更新日誌](02-changelog.md)。
 
 ### 治理架構與決策機制
 
-基於專案的長期發展規劃，我們嘗試建立分層的治理架構：
+開源治理委員會負責技術路線、版本與功能優先順序、核心架構和相容性評審、工程規範、貢獻者協作，以及相關專案的整合。成員包括 Maojia Sheng（[@MaojiaSheng](https://github.com/MaojiaSheng)）、Haojie Qin（[@qin-ctx](https://github.com/qin-ctx)）、Jiahui Zhou（[@zhoujh01](https://github.com/zhoujh01)）、Zhiheng Liu（[@ZaynJarvis](https://github.com/ZaynJarvis)）。符合條件的社群貢獻者可以通過後續的提名與選舉程式加入委員會。
 
-#### 開源治理委員會
-OpenViking 專案由一個專業的開源治理委員會負責整體戰略規劃與技術決策，該委員會由專案的核心貢獻者與領域專家組成，主要職責包括：
+具體模組的協作入口和近期活躍評審者見[貢獻指南](https://github.com/volcengine/OpenViking/blob/main/docs/repository/CONTRIBUTING_CN.md)。
 
-**戰略規劃職能**
-- 制定專案的長期技術路線圖與發展願景
-- 確定版本釋出計劃與功能優先順序
-- 評估技術決策對專案生態的長期影響
-
-**技術治理職能**
-- 建立並維護程式碼質量標準與工程規範
-- 稽核核心架構變更與重大功能實現
-- 確保技術實現的可持續性與向後相容性
-
-**社群發展職能**
-- 制定社群發展策略與貢獻者成長路徑
-- 組織技術交流活動與開發者大會
-- 建立社群激勵機制與榮譽體系
-
-**生態合作職能**
-- 建立與相關開源專案的技術合作關係
-- 推動與商業產品的整合與認證
-- 管理專案的智慧財產權與許可證合規
-
-#### 委員會核心成員構成
-當前開源治理委員會的核心成員包括以下技術專家：
-Haojie Qin, Jiahui Zhou, Linggang Wang, Maojia Sheng, Yaohui Sun
-
-為確保治理結構的開放性與多樣性，我們歡迎符合條件的社群貢獻者通過未來的提名與選舉程式加入治理委員會。
+功能建議和問題在 [GitHub Issues](https://github.com/volcengine/OpenViking/issues) 討論，程式碼與文件變更通過 Pull Request 評審。涉及公開介面、資料儲存、許可權邊界或跨模組架構的改動，請先說明當前行為、目標行為、請求或配置示例，以及相容性影響，再開始實現。
 
 ## 社群參與
 
 ### 加入社群
 
-我們誠摯邀請全球開發者加入 OpenViking 社群，共同構建下一代上下文工程基礎設施。您可以通過以下方式參與：
+#### 微信群
 
-#### 即時交流
-
-##### 微信群
-
-掃描下方二維碼新增小助手微信，備註「OpenViking」後即可加入微信交流群：
+掃描二維碼新增小助手，備註“OpenViking”，申請加入交流群：
 
 ![微信掃碼加群](../../images/wechat-group-qrcode.png)
 
-**Discord**
-
-[加入 Discord 伺服器](https://discord.com/invite/eHvx8E9XF3)
-
-**X**
-
-[關注我們的動態](https://x.com/openvikingai)
+也可以加入 [Discord](https://discord.com/invite/eHvx8E9XF3)，或在 [X](https://x.com/openvikingai) 檢視專案動態。
 
 ### 參與方式
 
-我們提供多種參與渠道，滿足不同開發者的協作需求：
+- **報告問題或提建議**：在 [Issues](https://github.com/volcengine/OpenViking/issues) 提供場景、版本和復現步驟。
+- **改程式碼或文件**：閱讀[貢獻指南](https://github.com/volcengine/OpenViking/blob/main/docs/repository/CONTRIBUTING_CN.md)，提交實現、測試、文件或翻譯。
+- **開發整合**：為 Agent 工具或框架新增外掛，參考[外掛開發指南](../agent-integrations/18-plugin-development.md)。
+- **分享經驗**：在社群分享使用案例、排障過程，或幫助其他使用者解決問題。
 
-#### 1. 程式碼貢獻
-- **提交 Issue**：報告 Bug、提出功能建議或討論技術方案
-- **提交 Pull Request**：貢獻程式碼改進、文件更新或測試用例
-- **程式碼審查**：參與程式碼審查，幫助提升程式碼質量
-
-#### 2. 文件貢獻
-- **完善文件**：補充使用者指南、API 文件或開發教程
-- **翻譯支援**：協助將文件翻譯為其他語言版本
-- **示例程式碼**：提供更多使用示例和最佳實踐
-
-#### 3. 社群支援
-- **技術分享**：在社群中分享使用經驗和技術見解
-- **問題解答**：幫助其他開發者解決使用中的問題
-- **生態建設**：推動 OpenViking 與其他開源專案的整合
-
-#### 4. 生態拓展
-- **外掛開發**：開發第三方外掛或擴充功能
-- **整合適配**：推動 OpenViking 與主流框架的深度整合
-- **應用案例**：分享在實際專案中的應用經驗
+Issue 和 PR 需要提供的資訊見[貢獻指南](https://github.com/volcengine/OpenViking/blob/main/docs/repository/CONTRIBUTING_CN.md)。
 
 ## 討論與協作機制
 
-### 正式渠道
+[GitHub 倉庫](https://github.com/volcengine/OpenViking) 儲存程式碼、文件和評審記錄。[GitHub Discussions](https://github.com/volcengine/OpenViking/discussions) 用於技術方案討論和社群交流，群聊適合即時交流；需要跟蹤的問題和方案請同步到 Issue 或 Pull Request，方便後續查閱和協作。
 
-#### GitHub 平臺
-- **Issues**：用於功能建議、Bug 報告和技術討論
-- **Pull Requests**：用於程式碼貢獻和文件更新
-- **Discussions**：用於技術方案討論和社群交流
-
-#### 程式碼倉庫
-- **主倉庫**：`https://github.com/volcengine/openviking`
-- **Issue 追蹤**：`https://github.com/volcengine/openviking/issues`
-
-### 即時交流
-
-#### 微信群與 Discord
-- **技術討論**：即時技術交流與問題解答
-- **程式碼審查**：快速反饋和協作開發
-- **活動通知**：社群活動和技術分享通知
-
-### 社交媒體
-
-我們關注各大技術社群和社交媒體平臺，及時回應使用者反饋：
-- **技術部落格**：定期釋出技術文章和專案進展
-- **社交媒體**：在相關平臺分享專案動態和使用案例
-- **技術會議**：參與行業會議，分享技術實踐
-
-### 社群目標
-
-我們期望通過開源社群實現以下目標：
-
-1. **技術民主化**：讓更多開發者能夠使用先進的上下文工程技術
-2. **創新加速**：通過社群協作加速技術創新和產品迭代
-3. **標準建立**：推動上下文工程領域的技術標準和最佳實踐
-4. **人才培養**：培養更多上下文工程領域的技術人才
-
-### 合作開放
-
-OpenViking 專案向所有開發者、研究機構和商業公司開放合作機會。我們期待：
-
-- **技術合作**：與學術界和產業界開展深度技術合作
-- **生態整合**：與相關開源專案和商業產品建立整合關係
-- **應用推廣**：共同推動上下文工程技術在更多場景的應用
-
----
-
-**加入我們，共同構建 AI Agent 時代的上下文基礎設施！**
+希望開展技術合作或生態整合的研究機構和企業，可以在 GitHub Discussions 發起討論。

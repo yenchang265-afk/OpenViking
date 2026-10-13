@@ -1,5 +1,7 @@
 DeerFlow 支援通過 MemoryManager 接入 OpenViking 作為長期記憶後端。接入後，DeerFlow 會將對話訊息寫入 OpenViking，並在模型呼叫前通過 OpenViking 進行記憶召回，再注入到上下文中。
 
+本配置支援一個 DeerFlow 使用者，使用 OpenViking `api_key` 模式下的普通 USER API Key。`owner_user_id: default` 適用於未開啟 DeerFlow 登入認證的場景；已開啟時填寫對應的 DeerFlow 使用者 ID。此接入不會為多使用者自動分配憑據，切換前還需移除舊的 trusted 身份預設值。詳見 [DeerFlow 的認證與遷移說明](https://github.com/bytedance/deer-flow/blob/main/docs/OPENVIKING.md#authentication-boundary)。
+
 ## 步驟 1：配置 OpenViking 鑑權資訊
 
 在 DeerFlow 專案根目錄下編輯 `.env` 檔案，把 API Key 填進去：
@@ -60,7 +62,7 @@ HTTP Request: GET {{OPENVIKING_BASE_URL}}/health "HTTP/1.1 200 OK"
 
 ## 步驟 5：驗證寫入與召回
 
-可通過以下日誌確認寫入和召回是否正常：
+下列日誌可確認請求已接收、上下文已注入。等提取完成後，以同一使用者另開會話，詢問上一會話中一條容易識別的資訊，驗證記憶是否能召回：
 
 ```bash
 grep -Ei "messages/batch|commit|search/find|has_memory" logs/gateway.log | tail -100

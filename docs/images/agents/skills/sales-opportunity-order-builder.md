@@ -67,7 +67,8 @@ CLI 在同一個包裡），境內網路給 uv 配 PyPI 映象即可，不依賴
 
    ```bash
    # 境內網路可加：export UV_DEFAULT_INDEX=https://pypi.tuna.tsinghua.edu.cn/simple
-   AGENTPLAN_API_KEY=<已配置的key> uvx --from mcp-server-openviking-controlplane ov-cp list
+   # 先通過憑據管理工具或環境配置設定 AGENTPLAN_API_KEY
+   uvx --from mcp-server-openviking-controlplane ov-cp list
    ```
 
 2. **安裝為 MCP（適合長期使用）**：向用戶展示將寫入 `.mcp.json` 的內容，
@@ -105,15 +106,14 @@ CLI 在同一個包裡），境內網路給 uv 配 PyPI 映象即可，不依賴
 ## Step 4：等庫就緒，獲取並記錄 OpenViking APIKey 與 user 身份
 
 庫建立後處於 `INIT` 狀態，需要輪詢到 `READY` 才能取憑據（INIT 階段取
-api-key 會超時，不是故障，等一會重試即可）：
+api-key 可能超時，先查狀態再決定是否重試）：
 
 1. 用 `get_collection`（或 `ov-cp get <ResourceID>`）輪詢 `Status`，
    直到 `READY`（通常幾分鐘內）。
 2. 調 `get_collection_api_key`（或 `ov-cp api-key <ResourceID>`），返回
    `{UserID, Role, ApiKey}` —— 這裡的 `ApiKey` 就是該庫的
    **OpenViking APIKey**，`UserID` 就是 user 身份。
-3. 安全記錄：庫名、`ResourceID`、`UserID`、OpenViking APIKey。回覆中只說明
-   "已安全記錄"，不展示明文。
+3. 記錄庫名、`ResourceID`、`UserID`；OpenViking APIKey 僅寫入憑據管理器或受保護的本地配置，不寫入普通記憶、文件或日誌。確認寫入成功後再回復憑據已配置，不展示明文。
 4. 之後資料面 MCP 讀寫該庫（上傳、查詢、沉澱）一律用這把 Key。
 
 **控制台兜底路徑**（MCP 不可用、api-key 呼叫被攔、或使用者已有存量庫時同樣適用）：
@@ -134,7 +134,7 @@ APIKey。讓使用者把 Key 配置到資料面工具的環境變數/配置中�
 已完成：
 1. AgentPlan APIKey 可用（用於建庫、聯網、資料集查詢）。
 2. OpenViking 個人庫「[庫名]」已就緒（READY）。
-3. 該庫的 OpenViking APIKey 與 user 身份已安全記錄（用於讀寫庫資料）。
+3. 該庫的 OpenViking APIKey 與 user 身份已配置（用於讀寫庫資料）。
 
 你可以直接這樣說：
 1. **上傳資料**：把這份文件上傳到"[庫名]"。
@@ -185,7 +185,7 @@ APIKey。讓使用者把 Key 配置到資料面工具的環境變數/配置中�
 
 1. 詢問同步範圍（當前會話 / 指定專案 / 最近 N 天 / 關鍵詞）和頻率
    （每天、每週、會話結束後、指定時間）。
-2. 用定時任務能力建立任務；執行時用 OpenViking APIKey 上傳摘要或全文。
+2. 檢查宿主是否提供持久化定時任務能力，再建立任務並返回任務標識。未提供時說明只能手動觸發，不宣稱已設定自動同步。執行時用 OpenViking APIKey 上傳摘要或全文。
 3. 上傳內容帶元資訊：時間、主題、關聯商機、來源會話、摘要、待辦。
 4. 不上傳無關閒聊、敏感憑據或使用者明確排除的內容。
 5. 告知使用者定時任務可暫停、可刪除、可改頻率。
@@ -207,12 +207,12 @@ APIKey。讓使用者把 Key 配置到資料面工具的環境變數/配置中�
 |---|---|---|
 | 無 AgentPlan APIKey | 未購買/未配置 | 給控制台連結，暫停建庫 |
 | create 返回 `ProductUnordered` | 未開通 AgentPlan 抵扣 | 引導控制台開通抵扣，不要重試 |
-| create 返回超限 | 已達 20 庫上限 | 讓使用者刪除閒置庫或複用現有庫 |
-| api-key 呼叫超時 | 庫還在 INIT | 輪詢 `get_collection` 到 READY 再取 |
+| create 返回超限 | 已達 20 庫上限 | 先檢查並複用合適的現有庫；刪除庫需單獨確認資料備份和刪除範圍 |
+| api-key 呼叫超時 | 庫可能未就緒，也可能是網路或服務異常 | 查詢庫狀態；INIT 時等待，READY 後仍超時則檢查端點和服務錯誤 |
 | 控制面 MCP / `ov-cp` 不可用 | 缺控制面能力 | 走 Step 2 徵求安裝同意，或控制台手工建庫 |
 | 拿不到 OpenViking APIKey | — | 控制台「鑑權管理 → 顯示鑑權憑證」兜底 |
 | 資料面讀寫鑑權失敗 | 可能 Key 用混了 | 確認用的是該庫的 OpenViking APIKey |
-| 查詢無結果 | 庫裡沒有相關內容 | 說明未找到，建議上傳哪些文件 |
+| 查詢無結果 | 本次檢索未命中 | 檢查庫、身份、檢索範圍和索引任務狀態，再調整查詢或補充資料 |
 
 ## 安全與合規
 

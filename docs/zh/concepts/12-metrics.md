@@ -1,6 +1,6 @@
 # 指標與 Metrics
 
-OpenViking 提供一套面向機器抓取的指標體系，用於暴露系統執行態、請求質量、模型呼叫情況、資源處理吞吐、探針健康狀態等資訊。
+OpenViking 提供一套面向機器抓取的指標體系，用於暴露系統執行態、請求狀態、模型呼叫情況、資源處理吞吐、探針健康狀態等資訊。
 
 與人類排障用的 `/api/v1/observer/*` 和業務分析用的 `/api/v1/stats/*` 不同，Metrics 的目標是：
 
@@ -94,7 +94,7 @@ MetricRegistry 是程序內的指標註冊中心，用於儲存當前指標值�
 
 ### 訪問 `/metrics`
 
-當前實現中，`/metrics` 未接入 `get_request_context` 等鑑權依賴，因此從程式碼行為上看，它當前等價於公開抓取端點。
+`/metrics` 不要求 OpenViking API Key。需要限制訪問時，在閘道器或反向代理上配置抓取許可權。
 
 ```bash
 curl http://localhost:1933/metrics
@@ -124,7 +124,7 @@ scrape_configs:
 | `context_type` | 檢索上下文型別 | `resource` |
 | `provider` | 模型或外部服務提供方 | `volcengine` |
 | `model_name` | 模型名稱 | `doubao-seed-1-8-251228` |
-| `stage` | 階段標籤（按指標族定義） | 資源階段：`parse`；Token 歸因階段：`embed_query` |
+| `stage` | 階段標籤（按指標族定義） | 資源階段：`parse_artifact`；Token 歸因階段：`embed_query` |
 | `valid` | 當前樣本是否為有效新鮮值 | `1` / `0` |
 
 其中：
@@ -132,12 +132,12 @@ scrape_configs:
 - `account_id` 只在受控白名單指標上啟用，避免高基數失控
 - `valid=0` 表示該狀態/探針的當前樣本是失敗回退值或 stale fallback，不代表標籤本身錯誤
 - `stage` 的語義依賴指標族：
-  - `openviking_resource_stage_*`：資源匯入流水線階段（如 `parse/persist/process`）
+  - `openviking_resource_stage_*`：資源匯入流水線階段（如 `parse_artifact/target_resolve/content_commit`）
   - `openviking_operation_tokens_total`：Token Attribution 的歸因階段（如 `embed_query/rerank/vlm`）
 
 ## 關鍵指標說明
 
-下面的指標說明基於當前實際暴露的代表性指標輸出（整理自 `openviking/metrics/collectors/`）。
+下面列出 Collector 定義的代表性指標。某個指標是否出現，取決於功能是否啟用、是否發生對應事件，以及 Collector 是否採集成功；未出現不能直接解釋為數值為零。
 
 ### 請求與操作
 
@@ -168,14 +168,20 @@ scrape_configs:
 | `openviking_resource_stage_duration_seconds` | Histogram | `account_id, stage, status` | 資源匯入階段耗時分佈 |
 | `openviking_resource_wait_duration_seconds` | Histogram | `account_id, operation` | 資源匯入等待耗時分佈（例如佇列等待） |
 
-典型 `stage` 包括：
+當前內建資源事件按執行路徑上報以下 `stage` 值：
 
-- `request`
-- `parse`
-- `summarize`
-- `persist`
-- `finalize`
-- `process`
+- `source_prepare`
+- `parse_artifact`
+- `target_resolve`
+- `update_plan`
+- `content_commit`
+- `derived_enqueue`
+- `semantic_queue_wait`
+- `semantic_execute`
+- `embedding_queue_wait`
+- `embedding_execute`
+
+Telemetry bridge 還識別舊摘要鍵，對應 `request`、`process`、`parse`、`finalize`、`summarize`、`wait`、`watch`。當前資源摘要構建器不生成這些鍵，因此它們不是當前匯入流水線額外上報的階段。該轉換表也不包含 `persist`。
 
 ### 向量檢索、記憶與語義節點
 
@@ -221,7 +227,7 @@ scrape_configs:
 - `openviking_vlm_*` 和 `openviking_embedding_*` 更適合業務側針對性看板
   - `*_requests_*` 更偏“業務請求視角”
   - `*_calls_* / *_call_duration_* / *_tokens_*` 更偏“模型呼叫視角”（按 `provider/model_name` 聚合）
- - `openviking_operation_tokens_total` 不存 `token_type="all/total"` 這類預聚合標籤，總帳建議在 TSDB 查詢側用 `sum(...)` 聚合得到
+- `openviking_operation_tokens_total` 不存 `token_type="all/total"` 這類預聚合標籤，總帳建議在 TSDB 查詢側用 `sum(...)` 聚合得到
 
 ### 佇列、鎖與系統執行態
 
@@ -231,6 +237,8 @@ scrape_configs:
 | `openviking_queue_errors_total` | Counter | `queue` | 佇列累計錯誤量 |
 | `openviking_queue_pending` | Gauge | `queue` | 佇列待處理數 |
 | `openviking_queue_in_progress` | Gauge | `queue` | 佇列執行中數量 |
+| `openviking_queue_process_duration_seconds` | Histogram | `queue, outcome` | 訊息被 worker 取出後到 handler 結束的處理耗時 |
+| `openviking_queue_end_to_end_duration_seconds` | Histogram | `queue, outcome` | 訊息從入隊到 handler 結束的端到端耗時，包含排隊時間 |
 | `openviking_executor_max_workers` | Gauge | `pool, process_role, worker` | asyncio 預設 executor 最大 worker 數 |
 | `openviking_executor_threads` | Gauge | `pool, process_role, worker` | asyncio 預設 executor 已建立執行緒數 |
 | `openviking_executor_active_tasks` | Gauge | `pool, process_role, worker` | 預設 executor 當前執行中的任務數 |
@@ -246,9 +254,12 @@ scrape_configs:
 | `openviking_lock_descendant_scans_total` | Counter | 無 | 已完成的後代鎖掃描次數 |
 | `openviking_lock_descendant_scan_duration_seconds_total` | Counter | 無 | 後代鎖掃描累計耗時 |
 
+佇列耗時指標中的 `outcome` 可取 `success`、`failed`、`requeued`、`cancelled`、`exception`。其中 `failed` 表示 handler 返回了可確認的失敗結果，`exception` 表示處理過程丟擲異常，當前訊息不會 ACK。
+
 這些指標適合回答：
 
 - 是否有佇列堆積？
+- 哪個佇列處理慢，以及耗時是否主要來自排隊？
 - 是否有鎖競爭或 stale lock？
 - 預設 executor 是否接近執行緒上限或出現排隊？
 
@@ -294,6 +305,8 @@ Python `get_stats()` 保留原有微秒字段。
 | `openviking_task_running` | Gauge | `task_type` | task tracker 執行中任務數 |
 | `openviking_task_completed` | Gauge | `task_type` | task tracker 已完成任務數 |
 | `openviking_task_failed` | Gauge | `task_type` | task tracker 失敗任務數 |
+| `openviking_task_cancelling` | Gauge | `task_type` | 正在取消的任務數 |
+| `openviking_task_cancelled` | Gauge | `task_type` | 已取消任務數 |
 
 ### Cache
 
@@ -391,7 +404,7 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 | `openviking_service_readiness` | Gauge | 可含 `valid` | 服務主 readiness |
 | `openviking_api_key_manager_readiness` | Gauge | 可含 `valid` | API Key Manager readiness |
 | `openviking_storage_readiness` | Gauge | `probe, valid` | 儲存探針，例如 `agfs` |
-| `openviking_model_provider_readiness` | Gauge | `provider, valid` | 模型提供方 readiness |
+| `openviking_model_provider_readiness` | Gauge | `provider, valid` | VLM 客戶端能否按配置建立；不發實際模型請求 |
 | `openviking_async_system_readiness` | Gauge | `probe, valid` | 非同步系統 readiness |
 | `openviking_retrieval_backend_readiness` | Gauge | `probe, valid` | 檢索後端 readiness |
 | `openviking_encryption_component_health` | Gauge | `valid` | 加密元件總體健康 |
@@ -404,6 +417,8 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 - `valid="0"`：當前樣本是失敗回退值或 stale fallback，說明該探針/狀態當前不可完全信任
 
 ### 加密（執行指標）
+
+以下指標由 Python 加密事件驅動，不應當作所有 RAGFS 加密檔案 I/O 的完整計數。評估實際檔案讀寫吞吐時，還需結合 RAGFS 指標和啟用的後端。
 
 | 指標族 | 型別 | 常見標籤 | 含義 |
 |--------|------|----------|------|
@@ -451,6 +466,8 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 - `vlm`
 - `embedding`
 - `rerank`
+
+`openviking_model_provider_readiness=1` 不證明模型認證、額度或遠端推理可用；它只檢查客戶端例項能否建立。模型呼叫錯誤和耗時應結合實際呼叫指標判斷。
 
 ## 配置示例
 
@@ -552,4 +569,3 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 - [資料加密](./10-encryption.md) - 儲存層加密與隔離
 - [Metrics API](../api/09-metrics.md) - `/metrics` 端點用法
 - [VikingBot 問答效果反饋觀測方案設計](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/design/vikingbot-feedback-observability-design.md) - feedback 指標與階段性落地背景
-- [指標體系設計](../../design/metric-design.md) - 指標體系設計細節

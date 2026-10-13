@@ -1,10 +1,10 @@
 # 示例：知識蒸餾
 
-把一個或多個知識庫、文件集合**蒸餾**成按主題組織、有出處的高層次知識：跨來源的發現、趨勢、變化、驅動因素、對比、影響和不確定性。
+從一個或多個知識庫中提煉結論，按主題組織，並保留出處與不確定性。
 
-典型用途：蒸餾一個知識庫、對比多個集合，如從一疊財報裡推匯出「跨報告期的變化」這類高階洞察。
+例如，對比多期財報，分析營收、利潤和風險隨時間的變化。
 
-產物是一棵按主題組織的淺層工件樹，每個主題目錄是一個持久的語義領域，每一頁是一條獨立有用的高層次結論：
+輸出按主題分目錄，每頁說明一條結論：
 
 ```text
 revenue-quality/
@@ -16,14 +16,16 @@ risk/
   customer-concentration-increased.md
 ```
 
-> 上面只是形態示例——真實的主題和結論由你給的領域決定。
+> 以上僅展示目錄結構。實際主題和結論由來源與指令決定，檔名概括結論。
 
 Skill 原始碼：[openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
+
+先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
 ## 第一步：準備來源
 
 ```bash
-ov add-resource ./finance-reports --to viking://resources/finance-reports
+ov add-resource ./finance-reports --to viking://resources/finance-reports --wait
 ov ls -r viking://resources/finance-reports
 ```
 
@@ -71,14 +73,16 @@ ov task status cmp_01abc      # 檢視進度與最終結果
 ov task cancel cmp_01abc      # 協作式取消
 ```
 
-## 第四步：看看產物
+## 第四步：檢視產物
 
-先看主題樹，再鑽進具體結論頁：
+先檢視目錄，再讀取實際生成的結論頁。下面的檔名僅為示例：
 
 ```bash
 ov tree viking://resources/finance-insights
 ov read viking://resources/finance-insights/revenue-quality/growth-shifted-from-volume-to-pricing.md
 ```
+
+預設不生成 `index.md`；需要導航頁時，在 `--instruction` 中明確要求。再次編譯同一主題時，Skill 會要求更新已有分析頁，並標註可能隨時間變化的結論。
 
 ## 相關文件
 

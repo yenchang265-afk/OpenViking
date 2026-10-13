@@ -8,7 +8,7 @@
 - 觀察 token 或檢索行為
 - 把結構化執行摘要接入你自己的日誌或觀測系統
 
-更完整的觀測入口說明，包括健康檢查、`ov tui` 和 `OpenViking Console`，請先看 [可觀測性與排障](05-observability.md)。
+更完整的觀測入口說明，包括健康檢查、`ov tui` 和 `Web Studio`，請先看 [可觀測性與排障](05-observability.md)。
 
 ## 基本說明
 
@@ -50,7 +50,7 @@ Telemetry 是按需返回的。只有你顯式請求時，OpenViking 才會在�
 - `telemetry.id` 是不透明的關聯 ID
 - `telemetry.summary` 是面向呼叫方的結構化摘要
 - 只有本次操作實際產出的分組才會返回
-- 數值型 `0` 預設不會出現在響應裡
+- 可選分組中的數值 0 通常會省略；cuVS 的視訊記憶體估算保留零值
 
 ## 當前支援範圍
 
@@ -66,10 +66,17 @@ Telemetry 是按需返回的。只有你顯式請求時，OpenViking 才會在�
 - `POST /api/v1/sessions`
 - `POST /api/v1/sessions/{session_id}/messages`
 - `POST /api/v1/sessions/{session_id}/commit`
+- `POST /api/v1/sessions/{session_id}/messages/batch`
+- `PATCH /api/v1/sessions/{session_id}/config`
+- `POST /api/v1/content/write`
+- `POST /api/v1/content/batch-write`
+- `POST /api/v1/content/set_tags`
+- `POST /api/v1/skills/find`
+- `PUT /api/v1/skills/{skill_name}`
 
 ### Python SDK
 
-Python 客戶端裡，下面這些呼叫支援相同的 telemetry 語義：
+Python 客戶端的下列操作可請求 telemetry。高層方法的返回值不一定保留 HTTP 頂層 telemetry，讀取完整摘要見下文 Python 示例：
 
 - `add_resource(...)`
 - `add_skill(...)`
@@ -144,7 +151,7 @@ summary 頂層這 3 個基礎欄位總會存在：
 
 ## 欄位說明
 
-只有這次操作實際產出的欄位才會返回。某個分組缺失時，應理解為“不適用”，而不是預設等於 0。
+只有這次操作實際產出的欄位才會返回。分組缺失可能表示不適用、未採集，或零值被裁剪。不能據此認定數值為 0，也不能證明該階段已經執行。
 
 ### 頂層 telemetry 欄位
 
@@ -265,18 +272,20 @@ admission，所以其 `gpu_gate_queue` 為零；worker 側等待仍計入 `batch
 
 ### `summary.memory`
 
-這個分組常見於 `session.commit` 這類記憶提取流程。
+這個分組描述已採集的記憶提取指標。當前 commit 響應僅覆蓋同步歸檔和任務提交，後臺提取可能隨後完成。下表保留的舊階段名稱僅在對應路徑實際記錄時出現，不代表每次 V3 提取都會依次執行這些階段。
 
 | 欄位 | 含義 |
 | --- | --- |
 | `summary.memory.extracted` | 本次操作最終抽取出的 memory 數量 |
 | `summary.memory.extract.duration_ms` | memory extract 主流程總耗時 |
-| `summary.memory.extract.candidates.total` | 最終動作執行前的候選總數 |
+| `summary.memory.extract.candidates.total` | 當前 V3 為新寫入 URI 數與編輯 URI 數之和，不代表所有提議的候選 |
 | `summary.memory.extract.candidates.standard` | 普通 memory candidate 數量 |
 | `summary.memory.extract.actions.created` | 新建 memory 數量 |
 | `summary.memory.extract.actions.merged` | 合併到已有 memory 的次數 |
 | `summary.memory.extract.actions.deleted` | 刪除舊 memory 的次數 |
-| `summary.memory.extract.actions.skipped` | 被跳過的 candidate 數量 |
+| `summary.memory.extract.actions.skipped` | 被跳過的運算元 |
+| `summary.memory.extract.actions.failed` | 已記錄的提取錯誤數 |
+| `summary.memory.extract.actions_by_type` | 按記憶型別分組的動作計數 |
 | `summary.memory.extract.stages.prepare_inputs_ms` | 提取前準備輸入資料的耗時 |
 | `summary.memory.extract.stages.llm_extract_ms` | 呼叫 LLM 做提取的耗時 |
 | `summary.memory.extract.stages.normalize_candidates_ms` | 解析並歸一化候選的耗時 |
@@ -327,26 +336,30 @@ curl -X POST http://localhost:1933/api/v1/resources \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
   -d '{
-    "path": "./docs/readme.md",
+    "path": "https://raw.githubusercontent.com/volcengine/OpenViking/main/README.md",
+    "wait": true,
+    "timeout": 120,
     "reason": "telemetry demo",
     "telemetry": true
   }'
 ```
 
-### Python SDK
+### Python：讀取完整 HTTP 響應
+
+SDK 可傳送 `options={"telemetry": True}`，但當前 `find()` 等高層方法只返回 `result`，不會保留頂層 telemetry。應用需要讀取摘要時，使用 HTTP 請求：
 
 ```python
-from openviking_sdk import AsyncHTTPClient
+import httpx
 
-client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
-await client.initialize()
-
-result = await client.find(
-    query="memory dedup",
-    options={"telemetry": True},
-)
-print(result["telemetry"]["summary"]["operation"])
-print(result["telemetry"]["summary"]["duration_ms"])
+with httpx.Client(base_url="http://localhost:1933", timeout=30) as client:
+    response = client.post(
+        "/api/v1/search/find",
+        headers={"X-API-Key": "your-user-key"},
+        json={"query": "memory dedup", "limit": 5, "telemetry": True},
+    )
+    response.raise_for_status()
+    payload = response.json()
+    print(payload["telemetry"]["summary"])
 ```
 
 ## 限制與注意事項
@@ -354,8 +367,8 @@ print(result["telemetry"]["summary"]["duration_ms"])
 - 當前對外只提供 summary-only telemetry
 - `{"telemetry": {"events": true}}` 不是當前支援的公開請求形態
 - 事件流風格的選擇引數不屬於當前公開介面
-- `session.commit` 只有在 `wait=true` 時才支援 telemetry
-- 如果 `session.commit` 使用 `wait=false` 並請求 telemetry，服務端會返回 `INVALID_ARGUMENT`
+- 當前 `session.commit` 沒有 `wait` 引數。響應 telemetry 覆蓋歸檔和提交，不代表後臺提取完成。有 task ID 時繼續查詢任務狀態，見[會話](../api/05-sessions.md)。
+- 資源匯入使用 `wait=false` 時，後臺處理也可能在響應返回後繼續。需要摘要包含請求內完成的處理時，使用等待模式。
 - telemetry 的頂層結構穩定，但具體有哪些 summary 分組取決於實際操作
 
 ## 相關文件

@@ -335,6 +335,7 @@ class AsyncAGFSClient:
         offset: int = 0,
         sort_by: str | None = None,
         sort_order: str = "asc",
+        directories_only: bool = False,
         fs_ctx: Dict[str, str] | None = None,
     ) -> list[Dict[str, Any]]:
         """Return a sorted range from a recursive directory traversal."""
@@ -343,6 +344,8 @@ class AsyncAGFSClient:
             "node_limit": node_limit,
             "level_limit": level_limit,
         }
+        if directories_only:
+            kwargs["directories_only"] = True
         if offset:
             kwargs["offset"] = offset
         if sort_by is not None:

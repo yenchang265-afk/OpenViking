@@ -92,13 +92,15 @@ volumes:
   caddy_config:
 ```
 
+只通過代理提供公網入口時，刪除 OpenViking 的宿主機埠對映，或繫結到 `127.0.0.1`。舊的 `1934:1934` 對映也應刪除或僅繫結 localhost。Caddy 仍可通過 Compose 網路訪問 `openviking:1933`。
+
 ### 4. 啟動
 
 ```bash
 docker compose up -d
 ```
 
-首次 HTTPS 請求觸發 ACME 證書籤發，後續使用快取。Caddy 自動續期。
+Caddy 會為配置的域名申請並續期證書，簽發失敗時檢視 Caddy 日誌。按請求觸發簽發需要單獨配置，見 [Caddy 自動 HTTPS](https://caddyserver.com/docs/automatic-https)。
 
 ### 5. 驗證
 
@@ -120,9 +122,12 @@ OV 服務的 1933 埠。
 
 ### nginx
 
+示例假設 nginx 與 OpenViking 在同一宿主機。超時值需按最長請求調整；關閉響應緩衝可及時傳遞 MCP 流式響應，見 [nginx 代理緩衝](https://nginx.org/en/docs/http/ngx_http_proxy_module.html#proxy_buffering)。
+
 ```nginx
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;  # nginx < 1.25.1：刪除此行，改用 `listen 443 ssl http2;`
     server_name ov.your-domain.com;
 
     ssl_certificate     /etc/letsencrypt/live/ov.your-domain.com/fullchain.pem;
@@ -130,6 +135,9 @@ server {
 
     location / {
         proxy_pass http://127.0.0.1:1933;
+        proxy_http_version 1.1;
+        proxy_buffering off;
+        proxy_read_timeout 300s;
         proxy_set_header Host              $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Forwarded-Host  $host;
@@ -153,27 +161,28 @@ ov.your-domain.com {
 
 ### Cloudflare / CDN
 
-CDN 源站指向 `http://your-server-ip:1933`。設定
-`OPENVIKING_PUBLIC_BASE_URL=https://ov.your-domain.com` 讓服務端知道自己的
-公網地址。確保 CDN 轉發 `Host`、`X-Forwarded-Proto`、`X-Forwarded-Host` 頭。
+配置驗證證書的 HTTPS 源站或私有源站隧道，限制源站只接受代理訪問。設定 `OPENVIKING_PUBLIC_BASE_URL=https://ov.your-domain.com`，轉發公網 host/protocol 請求頭，並核對代理能否保留流式響應、允許所需請求時長和上傳大小。
 
 ## 告訴服務端公網 URL
 
-OAuth 後設資料、`WWW-Authenticate` 頭、資源 URL 都需要包含公網 origin。
-解析順序（**優先順序從高到低**）：
+OAuth 後設資料和 `WWW-Authenticate` 頭需要包含公網 origin。OAuth 地址輔助函式的解析順序（**優先順序從高到低**）：
 
 1. `OPENVIKING_PUBLIC_BASE_URL` 環境變數
 2. `ov.conf` 裡的 `oauth.issuer`
 3. `X-Forwarded-Proto` + `X-Forwarded-Host` 請求頭
 4. 請求的 `Host` 頭
 
-在反代後面，務必顯式設定選項 1：
+授權伺服器的 issuer 在啟動時確定：環境變數 → `oauth.issuer` → `http://127.0.0.1:1933`，轉發請求頭不會改變它。受保護資源後設資料的 `authorization_servers` 優先使用顯式配置的 `oauth.issuer`，即使已設定環境變數。
+
+MCP 上傳 URL 的順序是：環境變數 → `server.public_base_url` → 轉發 host/protocol → `Host` → 監聽地址回退。統一設定環境變數可讓兩者使用同一地址；若同時設定 `oauth.issuer`，保持 origin 一致。
+
+使用反向代理時，在服務端程序環境中設定選項 1：
 
 ```bash
 export OPENVIKING_PUBLIC_BASE_URL="https://ov.your-domain.com"
 ```
 
-或者 `ov.conf`：
+Compose 部署應修改 `.env` 並執行 `docker compose up -d`，在其他 shell 中執行 `export` 不會更新已有容器。只配置 OAuth issuer 時也可以使用 `ov.conf`：
 
 ```jsonc
 {
@@ -188,7 +197,7 @@ export OPENVIKING_PUBLIC_BASE_URL="https://ov.your-domain.com"
 
 `docker compose up` 預設在 1934 埠啟一個 Caddy 反代，單純 `reverse_proxy
 openviking:1933`，**僅為相容已經書籤到 1934 的舊部署保留**。新部署直接連
-1933 即可，沒有任何路由價值；不需要這個入口可以從 `docker-compose.yml` 註釋
+私網中的 1933，公網客戶端使用上面的 HTTPS 入口；不需要這個入口可以從 `docker-compose.yml` 註釋
 掉 caddy 服務和 1934 埠對映。
 
 ## 相關文件

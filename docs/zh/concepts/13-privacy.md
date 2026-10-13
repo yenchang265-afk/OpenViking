@@ -4,7 +4,7 @@
 
 ## 目標
 
-隱私配置用於把敏感值（如 `api_key`、`token`、`base_url`）從技能正文中分離出來，避免明文長期儲存在 `SKILL.md` 中，同時保留版本化管理與回滾能力。
+隱私配置用於把敏感值（如 `api_key`、`token`、`base_url`）從技能正文中分離出來，減少已識別敏感值在 `SKILL.md` 中的明文儲存，並支援版本查詢和切換。抽取依賴模型，只替換識別並匹配成功的片段，不能保證發現所有敏感資訊。
 
 核心目標：
 
@@ -24,8 +24,8 @@
 使用者空間下的儲存路徑：
 
 ```
-viking://user/{user_space}/privacy/{category}/{target_key}/
-├── .meta.json                 # 元信息（active_version/latest_version/labels 等）
+viking://user/{user_id}/privacy/{category}/{target_key}/
+├── .meta.json                 # 元資訊（active_version/latest_version/labels 等）
 ├── current.json               # 當前生效版本快照
 └── history/
     ├── version_1.json
@@ -45,11 +45,13 @@ viking://user/{user_space}/privacy/{category}/{target_key}/
 - 如果與當前版本 `values` 完全一致，則不新建版本，直接返回當前版本
 - 否則建立新版本並自動設為當前生效版本
 - 允許新增 key（不會因“未知 key”報錯）
+- `values` 是完整快照，不是部分更新；省略的舊 key 不會保留在新版本中
 
 ### activate（激活）
 
 - 將歷史版本設定為當前生效版本（寫回 `current.json`）
 - 更新 `.meta.json` 中的 `active_version`
+- 不會輪換或撤銷第三方服務中的金鑰；這裡只切換 OpenViking 使用的值
 
 ---
 
@@ -74,7 +76,7 @@ add_skill
 3. **保留塊對映**：會同時記錄：
    - `original_content_blocks`
    - `replacement_content_blocks`
-4. **寫盤結果**：`SKILL.md` 持久化的是佔位符內容，不是明文值。
+4. **寫盤結果**：匹配成功的片段以佔位符儲存，未匹配內容保持原樣。該流程處理技能正文，不等於掃描並清理所有附件。
 
 ---
 
@@ -110,14 +112,15 @@ fs.read(uri)
    -> 記入“額外配置”提示（`Configured but not referenced in content`）。
 
 4. 當存在 `unresolved_entries` 或“額外配置”時，會在內容末尾追加：
-   - `[OpenViking Privacy Notice]`
-   - `Related configured privacy values: ...`
-   - `Not replaced (missing config): ...`（如有）
+   - `[Privacy Config Notice]`
+   - `Missing config: ...`（如有）
    - `Configured but not referenced in content: ...`（如有）
 
-> 注意：當前實現中，僅當該 skill 已有 `current` 配置時才會進入 restore。若沒有當前配置，不會追加 notice。
+> 僅當該 skill 已有 `current` 配置時才會進入 restore。若沒有當前配置，不會追加 notice。
 
 ---
+
+`read` 返回的是還原後的值；“額外配置”提示也會包含配置值。Privacy API 和歷史快照同樣可以返回完整值，該功能不等於響應脫敏或儲存加密。需要加密儲存時，另見[儲存加密](./10-encryption.md)。
 
 ## 與 CLI/API 的關係
 
@@ -128,12 +131,12 @@ fs.read(uri)
 常用命令：
 
 ```bash
-openviking privacy categories
-openviking privacy list skill
-openviking privacy skill <target_key>
-openviking privacy upsert skill <target_key> --values-json '{"api_key":"..."}'
-openviking privacy activate skill <target_key> <version>
-openviking read viking://user/default/skills/<target_key>/SKILL.md
+ov privacy categories
+ov privacy list skill
+ov privacy skill search-web
+ov privacy upsert skill search-web --values-json '{"api_key":"..."}'
+ov privacy activate skill search-web 1
+ov read viking://~/skills/search-web/SKILL.md
 ```
 
 ---
@@ -141,7 +144,7 @@ openviking read viking://user/default/skills/<target_key>/SKILL.md
 ## 設計收益
 
 - 降低明文敏感資訊在技能正文中的暴露風險
-- 通過版本化支援金鑰輪換與快速回滾
+- 為外部金鑰輪換後的配置切換保留版本記錄
 - 對上層呼叫透明：`read` 即可拿到還原後的可執行技能文本
 - 對不完整配置提供可觀測提示，便於排障
 

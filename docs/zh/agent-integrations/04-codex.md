@@ -1,29 +1,19 @@
-# Codex 記憶外掛
+# Codex
 
-本外掛旨在為 [Codex](https://developers.openai.com/codex) 提供持久化的跨會話（session）記憶功能。只需安裝一次，即可實現：在會話開始時載入 OpenViking profile、記憶索引和 skill 清單，在每次使用者輸入前自動召回相關記憶，在每輪對話結束後進行增量捕獲，並在上下文壓縮（compaction）前將完整記錄提交給記憶抽取器。同時，該外掛將 Codex 連線至 OpenViking 的 `/mcp` 端點，使模型能夠直接呼叫 `find`、`search`、`read`、`remember` 等工具來主動管理記憶。
+為 [Codex](https://developers.openai.com/codex) 提供跨會話記憶。外掛通過 hooks 自動召回、捕獲和提交對話，通過 MCP 提供檢索、讀取和記憶管理工具。
 
 原始碼：[examples/codex-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/codex-memory-plugin) | [部落格：動機與效果展示](https://blog.openviking.ai/post/openviking-coding-agent/)
 
 ## 安裝
 
-Claude Code 和 Codex 共用同一個安裝指令碼。它會依次詢問介面語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；所有步驟冪等，可安全地重複執行。
+Claude Code 和 Codex 共用同一個安裝指令碼。它會詢問要安裝的 harness 和 OpenViking 憑據；所有步驟冪等，可安全地重複執行。
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
+curl -fsSL https://openviking.ai/install | bash
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
-TraeCode CLI 2.0 可以直接安裝這一 Codex 格式外掛，預設安裝入口是 `--harness trae-cli`：
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
-  --harness trae-cli
-```
-
-GitHub 訪問受限的地區，從火山引擎 TOS 映象運行同一個安裝指令碼（或在下載源提問時選擇「TOS 映象」）。Codex 走 TOS 時安裝自 TOS 託管的 git 倉庫，保留遠端更新能力：
-
-```bash
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
-```
+Codex 從隨 OpenViking 釋出的 git 倉庫安裝外掛，保留遠端更新能力。TraeCode CLI 2.0 可以直接安裝這一 Codex 格式外掛：安裝器詢問要安裝的 harness 時，勾選 **TraeCode CLI 2.0** 即可。
 
 現在不再需要任何 shell wrapper——外掛自帶的 stdio MCP 代理會在執行時讀取 `~/.openviking/ovcli.conf`（或 `OPENVIKING_*` 環境變數），與 hooks 使用同一套配置鏈。安裝完成後啟動 Codex（TraeCode CLI 2.0 是 `trae-cli`）：
 
@@ -33,7 +23,7 @@ codex
 
 ### 首次啟動：信任 hooks
 
-外掛的 hooks 對 Codex 是新的，啟動時會先停在一次信任確認上，選 **Trust all and continue**；想先看一眼 hook 命令就選 Review hooks：
+安裝外掛不會自動信任它的 hooks。首次啟動時 Codex 會顯示類似下面的審閱提示，具體介面隨 Codex 版本變化。選 **Trust all and continue**，或先選 **Review hooks** 檢視命令。選 *Continue without trusting* 後 hooks 不會執行，直到在 `/hooks` 中開啟。
 
 ```text
 Hooks need review
@@ -45,14 +35,9 @@ Hooks can run outside the sandbox after you trust them.
   3. Continue without trusting (hooks won't run)
 ```
 
-全新安裝會一次列出外掛註冊的全部 6 個 hook。之後每次外掛更新只要動了 hook，Codex 都會再攔一次，數字是這次新增或改動的條數（比如只改了一個就是 `1 hook is new or changed`），同樣選 Trust all and continue。
+也可以在 `/hooks` 中檢查 OpenViking 命令，信任並啟用準備使用的條目；同時在 `/plugins` 中確認 `openviking-memory` 已啟用。當前外掛聲明瞭 6 個 hook，新增或修改定義後需要重新審閱，規則見[官方 hook 信任說明](https://learn.chatgpt.com/docs/hooks#review-and-trust-hooks)。
 
-選第 3 項或錯過這一步，hooks 就不會執行：MCP 工具仍能呼叫，但自動召回和捕獲全部停擺。要恢復，得讓兩個彼此獨立的開關都處於開啟狀態：
-
-- `/hooks` — hook 的信任與開關，把標著 *New hook - review required* 或 *Modified since last trusted* 的條目信任並開啟。
-- `/plugins` — 外掛本身的啟用狀態，確認 `openviking-memory` 是 enabled。
-
-任何一邊是關著的，自動召回和捕獲都不會發生。
+Hook 關閉時，MCP 工具仍可能正常使用。自動召回需要 `UserPromptSubmit`，捕獲需要 `Stop`，其餘生命週期提交見下表。之前跳過設定的，可以回到 `/hooks` 啟用相關條目。
 
 <details>
 <summary><b>手動安裝</b></summary>
@@ -79,7 +64,18 @@ TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` �
 
 ## 工作原理
 
-本外掛深度掛載於 Codex 的生命週期之中：在 `SessionStart`（`startup`、`clear` 或 `resume`）階段，它會複用其他 coding-agent 整合共用的 CJK-aware profile 構建邏輯，注入 `profile.md`、`preferences/` 與 `entities/` 的 URI 和摘要索引，以及列出你的 OpenViking skill 的 `<available-skills>` 清單；在每次使用者輸入前，它會搜尋 OpenViking 並注入相關的記憶（觸發 `UserPromptSubmit`）；在每輪對話結束後，會將新的對話追加至當前會話（觸發 `Stop`）；在上下文壓縮前，補齊並提交（commit）完整的對話記錄（觸發 `PreCompact`）；線上程正常退出時提交整段會話（觸發 `SessionEnd`），以確保記憶抽取器能夠在完整的上下文環境中執行。shell 命令執行前（`Bash` 上的 `PreToolUse`），外掛會檢查命令裡是否帶 `viking://` URI：命令照常執行，模型會收到一條提示，建議改用 OpenViking MCP 工具；如果該 URI 是有意傳入的資料（例如 `ov` 命令引數），模型可以忽略這條提示。此外，在啟動新會話時，外掛還會清掃前次執行遺留的孤兒會話（orphan session）。恢復已有會話時，固定 profile 背景還會與最新的 archive digest 合併注入。
+外掛按以下事件處理記憶：
+
+| Codex 事件 | 外掛行為 |
+| --- | --- |
+| `SessionStart`（`startup`、`clear`、`resume`） | 注入 `profile.md`、`preferences/` 和 `entities/` 的 URI 與摘要索引，以及 `<available-skills>` 清單。複用支援中日韓文本的公共 profile 構建邏輯；恢復會話時還可注入最新 archive digest。 |
+| `UserPromptSubmit` | 搜尋並注入與當前輸入相關的記憶。 |
+| `Stop` | 將新增對話追加到 OpenViking 會話。 |
+| `PreCompact` | 補齊並提交壓縮前的完整對話記錄。 |
+| `SessionEnd` | 正常退出時提交會話，觸發後續記憶提取。 |
+| `PreToolUse`（`Bash`） | 檢查命令中的 `viking://` URI，並提示模型使用 OpenViking MCP 工具。命令仍會執行；URI 是 `ov` 引數等有意傳入的資料時，可以忽略提示。 |
+
+新會話啟動時還會清理上次執行遺留、已超過閒置 TTL 的孤兒會話。
 
 > **已知侷限**：`SessionEnd` 需要 Codex 0.145 及以上版本，且只在正常退出時觸發（`/quit`、`/exit`、連按兩次 `Ctrl-C`、EOF、`codex exec` 執行結束）。`SIGTERM`、直接關閉終端、`kill -9` 或崩潰都不會觸發；當 TUI 掛在 `codex app-server` 守護程序上時，該事件會被延後。這些會話——以及 Codex 低於 0.145 的所有會話（以及沒有該事件的 TraeCode CLI 版本）——由下一次 `SessionStart` 的閒置 TTL（生存時間，預設為 30 分鐘）清掃回收。
 
@@ -110,7 +106,7 @@ TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` �
 | `OPENVIKING_CAPTURE_FILTERS` | `""` | CSV 格式的 sed 風格正則規則，作用於每個被捕獲的回合（同一套語法） |
 | `OPENVIKING_DEBUG` | `false` | 是否將日誌寫入 `~/.openviking/logs/codex-hooks.log` |
 
-這些旋鈕大多也可以寫在 `ovcli.conf` 的 `plugin` 段下——見[外掛配置](../configuration/02-client.md#外掛配置)。兩個過濾器 knob 尤其建議寫在那裡，用 JSON 陣列，因為環境變數形式會按逗號切分。
+這些配置大多也可以寫在 `ovcli.conf` 的 `plugin` 段下——見[外掛配置](../configuration/02-client.md#外掛配置)。兩個過濾器建議使用 JSON 陣列，避免環境變數中的逗號被當作分隔符。
 
 如果更看重召回響應速度，請參閱[低延遲召回](./01-overview.md#低延遲召回)，其中說明了如何通過環境變數或 `ovcli.conf` 關閉查詢擴充與 Codex 本地結果壓縮。
 
@@ -130,8 +126,8 @@ TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` �
 |------|------|------|
 | MCP 工具呼叫報認證錯誤 | 當前 ovcli 配置沒有 authenticated server 所需的有效 `api_key` | 修正 `~/.openviking/ovcli.conf`（或執行 `node <外掛目錄>/scripts/setup.mjs`）後重啟 Codex；stdio 代理會在啟動時和認證失敗後重新讀取配置 |
 | MCP 工具呼叫報連線錯誤 | 伺服器不可達或 URL 配置錯誤 | 執行 `curl "$(jq -r '.url' ~/.openviking/ovcli.conf)/health"` 檢查伺服器狀態 |
-| `6 hooks need review`，或外掛已裝但 hook 不生效 | 全新安裝要信任全部 6 個 hook，之後每次外掛更新改動到 hook 時還會再問一次；當時選了 *Continue without trusting* 或直接跳過，hooks 就一直不會執行 | `/hooks` 裡信任並開啟相關條目，`/plugins` 裡確認 `openviking-memory` 已啟用——兩個開關相互獨立，都要是開著的 |
-| `ov config switch` 後外掛仍指向舊伺服器 | 上個會話的代理程序仍在執行 | 重啟 Codex；代理在啟動時解析憑據 |
+| 提示審閱 hook，或外掛已裝但沒有自動召回/捕獲 | 相關 hook 未信任、未啟用，或外掛被停用 | 在 `/hooks` 審閱並啟用相關條目，再到 `/plugins` 確認外掛已啟用。 |
+| `ov config switch` 後外掛仍指向舊伺服器 | 原代理仍保留連線，或憑據環境變數覆蓋了選中的配置 | 重啟 Codex，並檢查憑據環境變數與 `OPENVIKING_CLI_CONFIG_FILE`。遠端呼叫會在認證失敗後檢查檔案變化，不會在每次成功請求時過載 |
 | Hook 與 MCP 指向不同伺服器 | 某一側殘留了過期的 `OPENVIKING_*` 憑據環境變數（預設環境變數優先於 ovcli.conf） | 清除過期環境變數（讓 ovcli.conf 同時驅動兩者）、設定 `OPENVIKING_CREDENTIAL_SOURCE=cli`，或保證環境變數一致 |
 
 ## 參見

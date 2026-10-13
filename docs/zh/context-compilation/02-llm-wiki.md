@@ -1,6 +1,6 @@
 # 示例：LLM Wiki
 
-把一批異構來源編譯成一套 Karpathy 風格、有出處、互相連結的 **LLM Wiki**：每一頁有明確的檢索目的，開頭一句話直給結論，術語統一，關係顯式，證據緊貼結論，並由一個 `index.md` 做導航入口。
+將不同來源的材料整理成 Karpathy 風格的 LLM Wiki，即互相連結的 Markdown 知識庫。每頁圍繞一個實體、概念或問題，先給結論，再列出處；`index.md` 提供導航。
 
 這套 Skill 會按頁面的檢索目的挑選最合適的頁面型別：
 
@@ -13,9 +13,11 @@
 | `analysis` | 圍繞一個問題的跨來源結論 |
 | `summary` | 單一來源的忠實數字化摘要（僅當 `--instruction` 明確要求時才生成） |
 
-預設以 `entity` 和 `concept` 為主，其餘型別只在滿足各自的嚴格判定時才提升。產物是一個**知識庫**，不是逐文件的摘要拼盤。
+預設生成 `entity` 和 `concept` 頁面，其他型別按 Skill 中的條件生成。多個來源中的相關內容會合併到同一主題下。
 
 Skill 原始碼：[openviking/builtin_skills/compile/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
+
+先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
 ## 第一步：準備來源
 
@@ -23,7 +25,7 @@ Skill 原始碼：[openviking/builtin_skills/compile/llm-wiki](https://github.co
 
 ```bash
 # 匯入一個目錄作為來源
-ov add-resource ./my-research --to viking://resources/research
+ov add-resource ./my-research --to viking://resources/research --wait
 
 # 或者寫入單個檔案
 ov mkdir viking://resources/research
@@ -71,7 +73,7 @@ ov task status cmp_01abc      # 檢視進度與最終結果
 ov task cancel cmp_01abc      # 協作式取消
 ```
 
-## 第四步：看看產物
+## 第四步：檢視產物
 
 編譯完成後目標目錄裡就是一套 Markdown 知識庫。先看導航頁，再按需鑽進去：
 

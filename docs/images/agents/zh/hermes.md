@@ -6,7 +6,7 @@
    hermes memory setup openviking
    ```
 
-2. 執行後將出現配置來源選擇介面：
+2. 如果本地已有 `ovcli.conf` 配置，嚮導會詢問配置來源；否則會直接開始建立新配置：
 
    ```text
    OpenViking config source
@@ -36,8 +36,7 @@
    {{OPENVIKING_API_KEY}}
    ```
 
-5. 填寫「Hermes peer ID in OpenViking」：該欄位為 Hermes 在 OpenViking 中的 Agent 身份標識，用於區分不同 Agent 產生的記憶。可直接按 Enter 使用預設值「hermes」，也可自定義填寫。
-6. 選擇配置儲存方式，建議選擇「Mirror to OpenViking store」：
+5. 選擇配置儲存方式，建議選擇「Mirror to OpenViking store」：
 
    ```text
    Save OpenViking config
@@ -46,8 +45,8 @@
     → (●) Mirror to OpenViking store - write ~/.openviking/ovcli.conf.<name> and link it
    ```
 
-7. 填寫「OpenViking profile name」：Hermes 的多租戶能力可隔離不同 Profile 的模型、記憶、配置及憑據。建議為每個 Hermes Profile 配置獨立的 OpenViking 環境或身份，並在此填寫一個便於識別的本地配置名稱，以區分對應的 OpenViking 配置。該名稱僅用於本地標識，不會建立新使用者，也不會改變帳號身份或許可權。
-8. 配置完成後將顯示如下確認資訊：
+6. 填寫「OpenViking profile name」，例如 `hermes`：Hermes 的多租戶能力可隔離不同 Profile 的模型、記憶、配置及憑據。建議為每個 Hermes Profile 配置獨立的 OpenViking 環境或身份，並在此填寫一個便於識別的本地配置名稱，以區分對應的 OpenViking 配置。該名稱僅用於本地標識，不會建立新使用者，也不會改變帳號身份或許可權。
+7. 配置完成後將顯示如下確認資訊：
 
    ```text
    OpenViking memory is ready
@@ -55,6 +54,10 @@
      Config file: ~/.openviking/ovcli.conf.hermes
      Start a new Hermes session to activate.
    ```
+
+新連線預設使用使用者記憶，不設定助手 peer；嚮導不再詢問 peer ID。如需隔離助手
+上下文，可在當前 Hermes profile 的 `config.yaml` 中設定 `memory.openviking.agent`。
+已有的 peer 記憶不會遷移。
 
 ## 步驟2：驗證
 
@@ -64,7 +67,7 @@
    hermes memory status
    ```
 
-2. 返回如下結果即表示接入成功：
+2. 確認已選擇並配置 OpenViking。`available` 不會檢查服務端連通性，也不代表記憶已完成抽取：
 
    ```text
    Memory status
@@ -78,21 +81,11 @@
      openviking config:
        use_ovcli_config: True
        ovcli_config_path: ~/.openviking/ovcli.conf.hermes
-       endpoint: `https://api.vikingdb.cn-beijing.volces.com/openviking`
-       agent: hermes
+       endpoint: https://api.vikingdb.cn-beijing.volces.com/openviking
 
      Plugin:    installed ✓
      Status:    available ✓
 
-     Installed plugins:
-       • byterover  (API key / local)
-       • hindsight  (API key / local)
-       • holographic  (local)
-       • honcho  (API key / local)
-       • mem0  (API key / local)
-       • openviking  (API key / local) ← active
-       • retaindb  (API key / local)
-       • supermemory  (requires API key)
    ```
 
 ## 故障排查
@@ -100,7 +93,7 @@
 | 問題 | 處理 |
 |---|---|
 | Provider 不是 openviking | 重跑 `hermes memory setup openviking` |
-| Status 不是 available | 檢查 API Key |
+| Status 不是 available | 檢查 endpoint 配置和關聯的 OpenViking 配置檔案 |
 
 ## 參考
 

@@ -20,15 +20,8 @@ ZCode 不提供 `PreCompact`、`SessionEnd` 和 subagent 生命週期 Hook。因
 前置條件：Node.js 18+、正在執行的 OpenViking 服務，以及 ZCode。
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
-  --harness zcode
-```
-
-GitHub 不可用的地區可使用 TOS 映象：
-
-```bash
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
-  --harness zcode --dist tos
+curl -fsSL https://openviking.ai/install | bash
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
 安裝器通過 `~/.zcode/` 或 `zcode` 二進位制檢測 ZCode，將執行時安裝到 `~/.openviking/agent-integrations/zcode/`，並把 Hook 與 MCP 配置合併到 `~/.zcode/cli/config.json`。
@@ -43,7 +36,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 | Hook 未執行 | Hook 配置被停用或已過期 | 重跑安裝器並重啟 ZCode |
 | 召回為空 | OpenViking 不可用或記憶尚未提取 | 檢查 `curl http://127.0.0.1:1933/health`，並等待提取完成 |
 | MCP 工具未出現 | MCP proxy 啟動失敗 | 檢查 `~/.zcode/cli/config.json` 中 `mcp.servers.openviking` 的絕對路徑命令 |
-| 重複捕獲 | 舊安裝留下了重複 Hook 條目 | 先執行 `install.sh --harness zcode --uninstall`，再重新安裝 |
+| 重複捕獲 | 舊安裝留下了重複 Hook 條目 | 先執行 `curl -fsSL https://openviking.ai/install \| bash -s -- --uninstall --yes --harness zcode`，再重新安裝 |
 
 實現細節與當前已驗證的 ZCode 假設見外掛目錄中的 [README](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin) 和 [DESIGN.md](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/DESIGN.md)。
 
@@ -63,21 +56,18 @@ Kimi Code 整合是原生 managed plugin。它複用 OpenViking 的共享 Hook �
 前置條件：Node.js 18+、正在執行的 OpenViking 服務，以及 Kimi Code CLI。
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
-  --harness kimicode
-```
-
-GitHub 不可用的地區可使用 TOS 映象：
-
-```bash
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
-  --harness kimicode --dist tos
+curl -fsSL https://openviking.ai/install | bash
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
 安裝器會在 `$KIMI_CODE_HOME/plugins/managed/openviking-memory/`
 下組裝自包含執行時（Kimi home 預設為 `~/.kimi-code/`），並且只更新
 `plugins/installed.json` 中的 `openviking-memory` 記錄，不動其他外掛。
-重跑同一命令可升級；加上 `--uninstall` 只解除安裝該外掛。
+重跑同一命令可升級。只解除安裝該外掛：
+
+```bash
+curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harness kimicode
+```
 
 已驗證的宿主契約和版本見
 [`hosts/kimicode/DESIGN.md`](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/hosts/kimicode/DESIGN.md)。
@@ -92,11 +82,13 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 
 **安裝**：在 AstrBot WebUI → 外掛市場搜尋 **OpenViking Memory** 並安裝；或從連結安裝：`https://github.com/t0saki/astrbot_plugin_openviking_memory.git`
 
+當前外掛要求 AstrBot 4.23.1+ 和相容的 OpenViking 服務。`global` 使用 User Key；`venue` 需要 Admin Key 建立使用者。遷移舊配置前，先核對上方外掛 README。
+
 **主要特性**：
 
 - 基於 hooks 的自動召回與捕獲，模型不需要主動呼叫工具
-- 三檔隔離模式：`venue_user`（群/私聊各自獨立）、`venue_user_fanout`（跨群共享）、`global_user`（全域共享）
-- 四觸發器自動 commit：訊息計數、token 閾值、空閒超時、程序退出 flush
+- `self_scope=global` 共用一個 Bot 身份，`venue` 為群/私聊分別建立使用者；每個人以 peer 表示。舊版 `isolation_mode` 會對映到這兩種範圍。
+- 按訊息數、token 閾值或空閒超時自動 commit
 - 首次接入群聊時自動拉取平臺歷史訊息入庫
 
 ## Open WebUI tool server

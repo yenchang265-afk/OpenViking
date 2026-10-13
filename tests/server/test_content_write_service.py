@@ -105,7 +105,7 @@ async def test_memory_replace_preserves_metadata(service):
 
 @pytest.mark.asyncio
 async def test_shared_resource_creation_inherits_acl_and_preserves_plain_append(
-    service, sample_markdown_file
+    service, sample_markdown_file, monkeypatch
 ):
     """Shared content inherits permissions without granting its creator extra access."""
     writer = RequestContext(user=service.user, role=Role.USER, group_ids=("writers",))
@@ -177,6 +177,31 @@ async def test_shared_resource_creation_inherits_acl_and_preserves_plain_append(
     with pytest.raises(PermissionDeniedError):
         await service.fs.set_acl(uri, [], ctx=writer)
 
+    # MCP keeps full ACL access manage-only and preserves permission errors.
+    import openviking.server.mcp_endpoint as mcp_endpoint
+    from openviking.storage.acl import AclSpec
+
+    monkeypatch.setattr(mcp_endpoint, "get_service", lambda: service)
+    token = mcp_endpoint._mcp_ctx.set(reader)
+    try:
+        with pytest.raises(PermissionDeniedError):
+            await mcp_endpoint.get_acl(uri)
+        with pytest.raises(PermissionDeniedError):
+            await mcp_endpoint.set_acl(uri, AclSpec(acl_mode="inherit"))
+        with pytest.raises(PermissionDeniedError, match="write permission required"):
+            await mcp_endpoint.write(uri, "denied")
+    finally:
+        mcp_endpoint._mcp_ctx.reset(token)
+    token = mcp_endpoint._mcp_ctx.set(admin)
+    try:
+        await mcp_endpoint.write(
+            uri, "line1\n", wait=True, acl=AclSpec(acl_mode="restricted", entries=inherited_entries)
+        )
+        assert (await mcp_endpoint.get_acl(uri))["direct_entries"] == inherited_entries
+        await mcp_endpoint.set_acl(uri, AclSpec(acl_mode="inherit", entries=[]))
+    finally:
+        mcp_endpoint._mcp_ctx.reset(token)
+
     imported = await service.resources.add_resource(
         path=str(sample_markdown_file),
         parent=parent_uri,
@@ -188,7 +213,7 @@ async def test_shared_resource_creation_inherits_acl_and_preserves_plain_append(
     queue_status = await service.resources.wait_processed()
     assert queue_status["Embedding"]["error_count"] == 0
     import_root = imported["root_uri"]
-    children = await service.fs.ls(import_root, ctx=writer, simple=True)
+    children = (await service.fs.ls(import_root, ctx=writer, simple=True)).entries
     for target in [import_root, *children]:
         acl = await service.fs.get_acl(target, ctx=admin)
         assert acl["direct_entries"] == []
@@ -207,7 +232,7 @@ async def test_shared_resource_creation_inherits_acl_and_preserves_plain_append(
     assert removed_acl["acl_mode"] == "inherit"
     assert removed_acl["direct_entries"] == []
     assert removed_acl["effective_entries"] == inherited_entries
-    assert await service.fs.ls(import_root, ctx=reader, simple=True) == children
+    assert (await service.fs.ls(import_root, ctx=reader, simple=True)).entries == children
 
     await service.fs.write(uri, content="line2\n", ctx=writer, mode="append", wait=True)
     assert (await service.fs.get_acl(uri, ctx=admin))["direct_entries"] == []
@@ -268,7 +293,9 @@ async def test_shared_resource_creation_inherits_acl_and_preserves_plain_append(
     assert (await service.fs.get_acl(explicit_import, ctx=admin))[
         "direct_entries"
     ] == inherited_entries
-    imported_children = await service.fs.ls(explicit_import, ctx=admin, simple=True)
+    imported_children = (
+        await service.fs.ls(explicit_import, ctx=admin, simple=True)
+    ).entries
     for child in imported_children:
         report = await service.fs.get_acl(child, ctx=admin)
         assert report["direct_entries"] == []
@@ -1229,8 +1256,8 @@ async def test_create_mode_memory_scope(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_create_mode_resource_scope(monkeypatch):
-    file_uri = "viking://resources/demo/test.md"
-    root_uri = "viking://resources/demo"
+    file_uri = "viking://resources/team_notes/final_draft.md"
+    root_uri = "viking://resources/team_notes"
     ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role.USER)
     viking_fs = _FakeVikingFSForCreate(file_uri=file_uri, root_uri=root_uri, file_exists=False)
     coordinator = ContentWriteCoordinator(viking_fs=viking_fs)
@@ -1252,10 +1279,15 @@ async def test_create_mode_resource_scope(monkeypatch):
     monkeypatch.setattr(coordinator, "_wait_for_queues", _fake_wait_for_queues)
 
     result = await coordinator.write(
-        uri=file_uri, content="content", mode="create", ctx=ctx, wait=True
+        uri="viking://resources/team notes/final draft.md",
+        content="content",
+        mode="create",
+        ctx=ctx,
+        wait=True,
     )
     assert result["context_type"] == "resource"
-    assert viking_fs.content[file_uri] == "content"
+    assert result["uri"] == file_uri
+    assert viking_fs.content == {file_uri: "content"}
 
 
 class _AnyDirVikingFS:
@@ -1542,6 +1574,68 @@ async def test_set_tags_append_merges_existing_tags(monkeypatch):
     assert result["skipped_count"] == 0
     assert result["failed_count"] == 0
     assert fake_store.update_calls == [(file_uri, ["env=prod", "team=search"], "append")]
+
+
+@pytest.mark.asyncio
+async def test_set_tags_clear_ignores_values_and_clears_existing_tags(monkeypatch):
+    file_uri = "viking://resources/demo/doc.md"
+    root_uri = "viking://resources/demo"
+    ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role.USER)
+    fake_vfs = _FakeVikingFS(file_uri=file_uri, root_uri=root_uri)
+    coordinator = ContentWriteCoordinator(viking_fs=fake_vfs)
+
+    class _FakeVectorStore:
+        def __init__(self):
+            self.update_calls = []
+
+        async def update_search_tags(self, uri: str, tags, *, mode: str, levels=None, ctx=None):
+            del ctx
+            assert levels is None
+            self.update_calls.append((uri, list(tags), mode))
+            return [{"uri": uri}]
+
+    fake_store = _FakeVectorStore()
+    fake_vfs.vector_store = fake_store
+
+    result = await coordinator.set_tags(
+        uri=file_uri,
+        tags=["team=ignored"],
+        mode="clear",
+        ctx=ctx,
+    )
+
+    assert result["mode"] == "clear"
+    assert result["tags"] == []
+    assert result["tags_updated"] is True
+    assert fake_store.update_calls == [(file_uri, [], "replace")]
+
+
+@pytest.mark.asyncio
+async def test_set_tags_empty_replace_is_noop(monkeypatch):
+    file_uri = "viking://resources/demo/doc.md"
+    root_uri = "viking://resources/demo"
+    ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role.USER)
+    fake_vfs = _FakeVikingFS(file_uri=file_uri, root_uri=root_uri)
+    coordinator = ContentWriteCoordinator(viking_fs=fake_vfs)
+
+    class _FakeVectorStore:
+        async def update_search_tags(self, *args, **kwargs):
+            raise AssertionError("replace with [] must not update stored tags")
+
+    fake_vfs.vector_store = _FakeVectorStore()
+
+    result = await coordinator.set_tags(
+        uri=file_uri,
+        tags=[],
+        mode="replace",
+        ctx=ctx,
+    )
+
+    assert result["mode"] == "replace"
+    assert result["tags"] == []
+    assert result["tags_updated"] is False
+    assert result["success_count"] == 0
+    assert result["skipped_count"] == 1
 
 
 @pytest.mark.asyncio

@@ -1,22 +1,22 @@
 # 上下文編譯概覽
 
-`ov compile` 把散落在 OpenViking 裡的原始材料——文件、筆記、網頁、訪談記錄、研究資料、程式碼倉庫——**編譯**成結構化、可檢索、方便人和 Agent 反覆使用的知識產物。
+`ov compile` 讀取 OpenViking 中的文件、筆記、網頁或會話記錄，按指定 Skill 整理成 Wiki、知識圖譜、日報等內容，並寫回 OpenViking。
 
 ## 它是怎麼工作的
 
-你只需要提供三樣東西：
+使用已安裝 Skill 編譯時，需要指定：
 
-- **從哪裡來（`--from`）**：一個或多個來源目錄/檔案；
-- **到哪裡去（`--to`）**：產物寫入的目標目錄；
-- **用哪個 Skill（`--skill`）**：一份描述「要編譯成什麼樣」的說明書。
+- `--from`：一個或多個來源目錄或檔案。
+- `--to`：輸出目錄。
+- `--skill`：已安裝的 Skill URI，定義輸出內容和結構。
 
-再加上一個可選的 **`--instruction`**：給這次編譯的補充指令，比如範圍、受眾、語言、側重點。Skill 定義了「編譯成什麼形態」，`--instruction` 則在此之上告訴 Agent「這一次具體要什麼」。
+可選的 `--instruction` 用來補充本次任務的範圍、受眾、語言、側重點或日期。
 
-剩下的交給 OpenViking。Compile 依賴 [VikingBot](../concepts/15-vikingbot.md)：任務被接受後，VikingBot 會載入你指定的 Skill，以你的身份讀取來源，在一個獨立的 **Agent Loop** 裡自主地閱讀、歸納、組織、寫頁面——就像你僱了一個人，把一堆資料整理成一份乾淨的知識庫，然後把成品交回給你。整個過程是非同步的，你可以等它跑完，也可以拿到 `task_id` 之後去做別的事。
-
-換句話說：**你負責給材料和目標，Agent 負責真正把知識整理出來。** 
+編譯由服務端配置的 [Agent Runtime](../api/23-agent-runtime.md) 執行，本地部署可使用內建 [VikingBot](../concepts/15-vikingbot.md)。它以請求使用者的身份讀取來源和 Skill，在獨立的 Agent Loop 中整理並寫入內容。任務非同步執行，返回 `task_id` 後可查詢進度和結果。
 
 ## 一條命令跑起來
+
+先按 [LLM Wiki 示例](02-llm-wiki.md) 匯入來源、安裝 Skill，再執行：
 
 ```bash
 ov compile \
@@ -28,9 +28,17 @@ ov compile \
 
 命令會立即返回一個 `cmp_...` 任務 ID，之後用 `ov task status <id>` 檢視進度、用 `ov task cancel <id>` 取消。完整的欄位說明、任務生命週期和 HTTP 介面見 [Agent Runtime API](../api/23-agent-runtime.md)。
 
+## 使用 Web Studio
+
+Studio 提供 `/compile` 列表、`/compile/new` 新建表單和 `/compile/tasks/<task_id>` 任務詳情頁。可以選擇並預覽 Skill、瀏覽來源目錄、提交多個來源、檢視或取消任務，以及開啟產物目錄。Playground 終端也支援 `compile` 和 `task`，並可將引數帶入表單。
+
+任務列表游標使用程序內金鑰簽名，並繫結呼叫者和篩選條件。服務重啟後舊遊標失效，重新整理列表即可重新開始。一個副本簽發的游標不能直接用於另一個副本。分頁掃描已儲存的任務記錄，不依賴索引，讀取成本仍隨保留的歷史數量增長。
+
+重試 HTTP 提交時，複用相同的 `Idempotency-Key` 和請求引數；同一 Key 對應的引數變化時返回 `409`。提交恢復只在任務記錄保留期間有效：完成或取消的記錄在最後一次更新後保留 24 小時，失敗記錄保留 7 天。這不是永久提交歷史，也不保證跨例項 exactly-once。提交恢復見 [Agent Runtime](../api/23-agent-runtime.md)，任務操作見[任務管理](../api/17-tasks.md)。
+
 ## 換個 Skill，就換一種產物
 
-Compile 本身不規定「編譯成什麼」——那由 Skill 決定。同一批來源，配不同的 Skill，就能得到形態完全不同的知識產物。下面是我們提供的示例 Skill，前兩個還各自配了一個視覺化指令碼，可以直接照著跑：
+Skill 決定輸出內容和結構。倉庫提供以下示例，其中 LLM Wiki 和 Knowledge Graph 還包含視覺化指令碼：
 
 | Skill | 產物形態 | 適合 | 示例 |
 |-------|---------|------|------|
@@ -42,15 +50,19 @@ Compile 本身不規定「編譯成什麼」——那由 Skill 決定。同一�
 前兩個示例還給出了從**匯入來源 → 新增 Skill → 執行編譯 → 視覺化產物**的完整 `ov` 命令，照著做就能得到一張可互動的 HTML 圖。
 
 這些 Skill 隨 OpenViking 一起發佈（`openviking/builtin_skills/compile`），預設會在伺服器啟動與建立帳戶時安裝到每個帳戶共享的 `viking://agent/skills`。同名的既有 Skill 不會被覆寫，管理員刪除的內建 Skill 也不會被重新安裝；將 `server.builtin_skills` 設為 `false` 即可關閉。在 Studio 的 Playground 上下文樹中，對資料夾按右鍵選擇 **使用 Skill 編譯 ▸ <Skill>**，即可開啟以該資料夾為來源的編譯表單；對 Skill 資料夾按右鍵則可選擇 **使用此 Skill 編譯**。
+## 不止生成新產物：整理已有記憶
+
+除了用 Skill 把來源材料編譯成新的知識產物，`ov compile` 還有一種特殊模式——把 `--skill` 設為 `memory`，即可對已有的**記憶**目錄做就地整理（去重、合併、拆分、精簡），且不經過 VikingBot。詳見 [記憶整理](./06-memory-consolidation.md)。
 
 ## 前置條件
 
-- 一個正在執行、且啟用了 Bot（`--with-bot`）的 OpenViking 服務。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。
-- `ov` CLI 已配置好連線（`~/.openviking/ovcli.conf` 或 `OPENVIKING_*` 環境變數）。
-- 視覺化指令碼需要 Python 3；LLM Wiki 的指令碼還會用到 `openviking` Python 包來直接讀取服務裡的 Wiki 頁面。
+- 使用 Skill 的示例需要一個已配置 Compile Runtime 的 OpenViking 服務；本地使用需安裝 `openviking[bot]` 依賴，並通過 `--with-bot` 啟用內建 VikingBot。`--skill memory` 模式在程序內執行，不需要 Compile Runtime，也不傳 `--from`。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。
+- `ov` CLI 已配置好連線（`~/.openviking/ovcli.conf`，或由 `OPENVIKING_CLI_CONFIG_FILE` 指定的檔案）。
+- 示例中的 `examples/...` 是倉庫相對路徑。先下載 [OpenViking 倉庫](https://github.com/volcengine/OpenViking)，在倉庫根目錄執行命令。
+- 視覺化指令碼需要 Python 3。[LLM Wiki 指令碼](https://github.com/volcengine/OpenViking/blob/main/examples/compile/graph-show/llm-wiki/wiki_graph.py)還需要 `openviking` Python 包。
 
 ## 相關文件
 
-- [VikingBot 概念](../concepts/15-vikingbot.md) — Compile 背後的執行體
+- [VikingBot 概念](../concepts/15-vikingbot.md) — 內建 Compile 執行端
 - [Agent Runtime API](../api/23-agent-runtime.md) — 建立、查詢和取消 Compile 任務的完整參考
 - [Skills API](../api/04-skills.md) — 如何管理和自定義 Skill

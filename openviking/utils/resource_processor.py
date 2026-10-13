@@ -38,7 +38,11 @@ from openviking.storage.viking_fs import LS_ALL_NODES, get_viking_fs
 from openviking.storage.vikingdb_manager import VikingDBManager
 from openviking.telemetry import get_current_telemetry
 from openviking.utils import is_github_url
-from openviking.utils.embedding_utils import index_resource, vectorize_file
+from openviking.utils.embedding_utils import (
+    index_resource,
+    vectorize_directory_meta,
+    vectorize_file,
+)
 from openviking.utils.git_auth import is_git_https_url
 from openviking.utils.ingest_options import IngestOptions
 from openviking.utils.log_correlation import log_correlation
@@ -49,6 +53,7 @@ from openviking_cli.utils.config import get_openviking_config
 from openviking_cli.utils.storage import StoragePath
 
 if TYPE_CHECKING:
+    from openviking.config.vlm import VLMResolver
     from openviking.parse.accessors.base import LocalResource
     from openviking.parse.vlm import VLMProcessor
 
@@ -99,12 +104,13 @@ class ResourceProcessor:
         max_context_size: int = 2000,
         max_split_depth: int = 3,
         runtime_config_manager: Optional[Any] = None,
+        vlm_resolver: Optional["VLMResolver"] = None,
     ):
         """Initialize coordinated writer."""
         self.vikingdb = vikingdb
-        self.embedder = vikingdb.get_embedder()
         self.media_storage = media_storage
         self.runtime_config_manager = runtime_config_manager
+        self.vlm_resolver = vlm_resolver
         self.tree_builder = TreeBuilder()
         self._vlm_processor = None
         self._media_processor = None
@@ -139,18 +145,31 @@ class ResourceProcessor:
         return result
 
     def _get_summarizer(self) -> "Summarizer":
-        """Lazy initialization of Summarizer."""
+        """Lazy initialization of the standalone Summarizer."""
         if self._summarizer is None:
             self._summarizer = Summarizer(self._get_vlm_processor())
         return self._summarizer
 
-    def _get_vlm_processor(self) -> "VLMProcessor":
-        """Lazy initialization of VLM processor."""
-        if self._vlm_processor is None:
-            from openviking.parse.vlm import VLMProcessor
+    async def _summarizer_for(self, ctx: RequestContext) -> "Summarizer":
+        """Build a lightweight account-bound summarizer."""
+        if self._summarizer is not None:
+            return self._summarizer
+        if self.vlm_resolver is None:
+            raise RuntimeError("ResourceProcessor requires a VLM resolver for account-owned work")
+        return Summarizer(await self._vlm_processor_for(ctx))
 
-            self._vlm_processor = VLMProcessor()
+    def _get_vlm_processor(self) -> "VLMProcessor":
+        """Return an explicitly configured standalone VLM processor."""
+        if self._vlm_processor is None:
+            raise RuntimeError("ResourceProcessor requires an explicitly configured VLMProcessor")
         return self._vlm_processor
+
+    async def _vlm_processor_for(self, ctx: RequestContext) -> "VLMProcessor":
+        from openviking.parse.vlm import VLMProcessor
+
+        if self.vlm_resolver is None:
+            raise RuntimeError("ResourceProcessor requires a VLM resolver for account-owned work")
+        return VLMProcessor(vlm=await self.vlm_resolver.get_vlm(ctx.account_id))
 
     def _get_media_processor(self):
         """Lazy initialization of unified media processor."""
@@ -158,10 +177,21 @@ class ResourceProcessor:
             from openviking.utils.media_processor import UnifiedResourceProcessor
 
             self._media_processor = UnifiedResourceProcessor(
-                vlm_processor=self._get_vlm_processor(),
                 storage=self.media_storage,
             )
         return self._media_processor
+
+    async def _media_processor_for(self, ctx: RequestContext):
+        from openviking.utils.media_processor import UnifiedResourceProcessor
+
+        if self.vlm_resolver is None and self._media_processor is not None:
+            return self._media_processor
+        if self.vlm_resolver is None:
+            return self._get_media_processor()
+        return UnifiedResourceProcessor(
+            vlm_processor=await self._vlm_processor_for(ctx),
+            storage=self.media_storage,
+        )
 
     def _build_parse_output_store(self):
         """Return the configured parse output store, or None for AGFS mode.
@@ -560,7 +590,7 @@ class ResourceProcessor:
         **kwargs,
     ) -> Optional["LocalResource"]:
         """Freeze a source when durable routing cannot safely defer access."""
-        media_processor = self._get_media_processor()
+        media_processor = await self._media_processor_for(ctx)
         if not snapshot_required and not media_processor.durable_route_requires_preparation(
             path, **kwargs
         ):
@@ -607,7 +637,7 @@ class ResourceProcessor:
         self, resource_uris: List[str], ctx: RequestContext, **kwargs
     ) -> Dict[str, Any]:
         """Expose summarization as a standalone method."""
-        return await self._get_summarizer().summarize(resource_uris, ctx, **kwargs)
+        return await (await self._summarizer_for(ctx)).summarize(resource_uris, ctx, **kwargs)
 
     async def process_resource(
         self,
@@ -663,7 +693,7 @@ class ResourceProcessor:
                     ResourceIngestionEventDataSource,
                 )
 
-                media_processor = self._get_media_processor()
+                media_processor = await self._media_processor_for(ctx)
                 viking_fs = get_viking_fs()
                 # Use reason as instruction fallback so it influences L0/L1
                 # generation and improves search relevance as documented.
@@ -1132,7 +1162,7 @@ class ResourceProcessor:
 
                 if should_summarize:
                     try:
-                        summary_result = await self._get_summarizer().summarize(
+                        summary_result = await (await self._summarizer_for(ctx)).summarize(
                             resource_uris=[root_uri],
                             ctx=ctx,
                             skip_vectorization=not build_index,
@@ -1189,9 +1219,9 @@ class ResourceProcessor:
                 if not should_summarize and temp_uri and not source_committed:
                     viking_fs = get_viking_fs()
                     if vectors_only and target_preexisting and not root_is_file:
-                        diff = await SemanticProcessor()._sync_topdown_recursive(
-                            temp_uri, root_uri, ctx=ctx, lock=resource_lock
-                        )
+                        diff = await SemanticProcessor(
+                            vlm_resolver=self.vlm_resolver
+                        )._sync_topdown_recursive(temp_uri, root_uri, ctx=ctx, lock=resource_lock)
                         sync_deleted_files = list(getattr(diff, "deleted_files", []))
                         sync_deleted_dirs = list(getattr(diff, "deleted_dirs", []))
                     else:
@@ -1215,7 +1245,7 @@ class ResourceProcessor:
                         files=sync_deleted_files, dirs=sync_deleted_dirs, ctx=ctx
                     )
                 if should_refresh_file_parent:
-                    await self._get_summarizer().refresh_file_parent(
+                    await (await self._summarizer_for(ctx)).refresh_file_parent(
                         file_uri=file_refresh.file_uri,
                         ctx=ctx,
                         skip_vectorization=not build_index,
@@ -1243,7 +1273,7 @@ class ResourceProcessor:
                 await get_viking_fs()._async_agfs.pathlock_release(resource_lock)
         elif should_refresh_file_parent:
             try:
-                await self._get_summarizer().refresh_file_parent(
+                await (await self._summarizer_for(ctx)).refresh_file_parent(
                     file_uri=file_refresh.file_uri,
                     ctx=ctx,
                     skip_vectorization=not build_index,
@@ -1313,20 +1343,44 @@ class ResourceProcessor:
         return {"kind": kind, "uri": str(path)}
 
     async def _enqueue_index_actions(
-        self, actions: Any, *, ctx: RequestContext, ingest_options: IngestOptions | None = None
-    ) -> None:
+        self,
+        actions: Any,
+        *,
+        ctx: RequestContext,
+        ingest_options: IngestOptions | None = None,
+        source_contents: Optional[Dict[tuple[str, int], str | bytes]] = None,
+        source_metadata: Optional[Dict[str, Any]] = None,
+    ) -> int:
         from collections import Counter
 
+        from openviking.core.skill_loader import SkillLoader
         from openviking.storage.index_action import IndexAction
         from openviking.storage.queuefs import get_queue_manager
         from openviking.storage.queuefs.embedding_msg import EmbeddingMsg
         from openviking.telemetry import get_current_telemetry
         from openviking.utils.embedding_utils import _enqueue_embedding_message
 
+        if source_contents is not None:
+            missing_sources = [
+                (action.uri, action.level)
+                for action in actions
+                if action.action in {IndexAction.UPSERT, IndexAction.MERGE}
+                and (action.uri, action.level) not in source_contents
+            ]
+            if missing_sources:
+                uri, level = missing_sources[0]
+                source_name = (
+                    f"directory L{level}"
+                    if level in {int(ContextLevel.ABSTRACT), int(ContextLevel.OVERVIEW)}
+                    else "file"
+                )
+                raise ValueError(f"{source_name} vector source is unavailable: {uri}")
+
         queue_manager = get_queue_manager()
         embedding_queue = queue_manager.get_queue(queue_manager.EMBEDDING, allow_create=True)
         telemetry_id = get_current_telemetry().telemetry_id
         action_counts = Counter(action.action.value for action in actions)
+        completed_actions = 0
         delete_ids = [action.record_id for action in actions if action.action == IndexAction.DELETE]
         if delete_ids:
             message = EmbeddingMsg.for_delete(
@@ -1343,22 +1397,37 @@ class ResourceProcessor:
                 message,
                 failure_message="Failed to enqueue planned vector deletes",
             )
+            completed_actions += len(delete_ids)
+        directory_actions: dict[str, dict[int, Any]] = {}
         for action in actions:
             if action.action in {IndexAction.UPSERT, IndexAction.MERGE}:
-                if action.level != int(ContextLevel.DETAIL):
-                    raise ValueError("Direct index upsert only supports file detail records")
-                await self._vectorize_resource_file(
-                    action.uri,
-                    ctx=ctx,
-                    file_md5=action.md5,
-                    ingest_options=ingest_options,
-                    scalar_override={
+                if action.level in {
+                    int(ContextLevel.ABSTRACT),
+                    int(ContextLevel.OVERVIEW),
+                }:
+                    directory_actions.setdefault(action.uri, {})[action.level] = action
+                    continue
+                file_kwargs = {
+                    "ctx": ctx,
+                    "file_md5": action.md5,
+                    "ingest_options": ingest_options,
+                    "scalar_override": {
                         **dict(action.upsert_fields),
                         "_record_id": action.record_id,
                     },
-                    action=action.action.value,
-                    field_patch=action.field_patch,
-                )
+                    "action": action.action.value,
+                    "field_patch": action.field_patch,
+                    "summary": action.summary,
+                }
+                source = (source_contents or {}).get((action.uri, action.level))
+                if source is not None:
+                    if not isinstance(source, bytes):
+                        raise ValueError(f"file vector source must be bytes: {action.uri}")
+                    file_kwargs["file_content"] = source
+                    if getattr(self.vikingdb, "uses_content_field", False):
+                        file_kwargs["materialize_content"] = True
+                if await self._vectorize_resource_file(action.uri, **file_kwargs):
+                    completed_actions += 1
                 continue
             if action.action != IndexAction.UPDATE_FIELDS:
                 continue
@@ -1374,11 +1443,78 @@ class ResourceProcessor:
                 },
                 telemetry_id=telemetry_id,
             )
-            await _enqueue_embedding_message(
+            if await _enqueue_embedding_message(
                 embedding_queue,
                 message,
                 failure_message=f"Failed to enqueue scalar update for {action.uri}",
+            ):
+                completed_actions += 1
+        for uri, levels in directory_actions.items():
+            abstract = (source_contents or {}).get((uri, int(ContextLevel.ABSTRACT)), "")
+            overview = (source_contents or {}).get((uri, int(ContextLevel.OVERVIEW)), "")
+            if isinstance(abstract, bytes):
+                abstract = abstract.decode("utf-8")
+            if isinstance(overview, bytes):
+                overview = overview.decode("utf-8")
+            if int(ContextLevel.ABSTRACT) in levels and not isinstance(abstract, str):
+                raise ValueError(f"directory L0 vector source is unavailable: {uri}")
+            if int(ContextLevel.OVERVIEW) in levels and not isinstance(overview, str):
+                raise ValueError(f"directory L1 vector source is unavailable: {uri}")
+            meta = None
+            if context_type_for_uri(uri) == "skill" and abstract:
+                try:
+                    skill = SkillLoader.parse(str(abstract))
+                except ValueError:
+                    skill = None
+                if skill is not None:
+                    meta = {
+                        "name": skill["name"],
+                        "description": skill.get("description", ""),
+                        "tags": skill.get("tags", []),
+                        "allowed_tools": skill.get("allowed_tools", []),
+                    }
+                else:
+                    try:
+                        import yaml
+
+                        parsed = yaml.safe_load(str(abstract))
+                    except Exception:
+                        parsed = None
+                    if isinstance(parsed, dict):
+                        meta = {
+                            key: parsed.get(key, [] if key in {"tags", "allowed_tools"} else "")
+                            for key in ("name", "description", "tags", "allowed_tools")
+                        }
+                if meta is not None and source_metadata is not None:
+                    meta["source_path"] = str(source_metadata.get("uri") or "")
+            enqueued_levels = await vectorize_directory_meta(
+                uri,
+                abstract,
+                overview,
+                context_type=context_type_for_uri(uri),
+                ctx=ctx,
+                include_abstract=int(ContextLevel.ABSTRACT) in levels,
+                include_overview=int(ContextLevel.OVERVIEW) in levels,
+                content_is_body=True,
+                actions={level: action.action.value for level, action in levels.items()},
+                scalar_overrides={
+                    level: {
+                        **dict(action.upsert_fields),
+                        "_record_id": action.record_id,
+                    }
+                    for level, action in levels.items()
+                },
+                field_patches={
+                    level: action.field_patch
+                    for level, action in levels.items()
+                    if action.field_patch is not None
+                },
+                md5s={
+                    level: action.md5 for level, action in levels.items() if action.md5 is not None
+                },
+                **({"meta": meta} if meta is not None else {}),
             )
+            completed_actions += len(enqueued_levels)
         logger.debug(
             "[DirectIndexActions] %s root=%s action_counts=%s action_count=%d",
             log_correlation(),
@@ -1386,6 +1522,7 @@ class ResourceProcessor:
             dict(action_counts),
             len(actions),
         )
+        return completed_actions
 
     async def _delete_removed_resource_vectors(
         self,
@@ -1513,14 +1650,17 @@ class ResourceProcessor:
         scalar_override: Optional[Dict[str, Any]] = None,
         field_patch: FieldPatch | None = None,
         action: str = "merge",
-    ) -> None:
+        file_content: bytes | None = None,
+        materialize_content: bool = False,
+        summary: str = "",
+    ) -> bool:
         parent = VikingURI(file_uri).parent
         if parent is None:
-            return
+            return False
         name = file_uri.rsplit("/", 1)[-1]
-        await vectorize_file(
+        return await vectorize_file(
             file_path=file_uri,
-            summary_dict={"name": name, "summary": ""},
+            summary_dict={"name": name, "summary": summary},
             parent_uri=parent.uri,
             context_type=context_type_for_uri(file_uri),
             ctx=ctx,
@@ -1529,6 +1669,8 @@ class ResourceProcessor:
             scalar_override=scalar_override,
             field_patch=field_patch,
             action=action,
+            file_content=file_content,
+            materialize_content=materialize_content,
         )
 
     async def reserve_unique_candidate(

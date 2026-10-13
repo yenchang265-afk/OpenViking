@@ -208,6 +208,7 @@ impl FileSystem for StatsWrappedFS {
         offset: Option<usize>,
         sort_by: Option<crate::core::ListSortBy>,
         sort_order: Option<crate::core::SortOrder>,
+        directories_only: bool,
     ) -> Result<Vec<TreeEntry>> {
         let timer = OperationTimer::start(FsOperation::TreeDir, Arc::clone(&self.stats));
         let result = self
@@ -220,6 +221,7 @@ impl FileSystem for StatsWrappedFS {
                 offset,
                 sort_by,
                 sort_order,
+                directories_only,
             )
             .await;
         timer.finish(result.is_ok()).await;

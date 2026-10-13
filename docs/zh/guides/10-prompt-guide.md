@@ -1,4 +1,4 @@
-# OpenViking Prompt 說明與自定義指南
+# 自定義處理 Prompt
 
 本文介紹 OpenViking 當前的 prompt 模板體系，重點說明：
 
@@ -151,16 +151,31 @@ peer_enabled: true
 
 ## 當前 Prompt 模板說明
 
-下面按類別列出當前全部模板。每個條目都說明它用於哪個處理環節，以及主要影響哪類對外能力。
+下面按類別說明模板用途、輸入和相關處理環節。模板檔案存在不代表當前請求會呼叫它；呼叫路徑、模型配置與功能開關共同決定是否生效。
 
 閱讀這一節時，可以用一個簡單規則：
 
 - 普通 prompt 模板，重點看“作用”和“關鍵輸入”
 - memory schema，重點看“作用”和“關鍵欄位”
 
+### 先確認模板是否生效
+
+| 模板或類別 | 當前使用條件 |
+| --- | --- |
+| `compression.ov_wm_v2`、`compression.ov_wm_v2_update` | 會話 working memory 的首次生成與後續更新，見 `openviking/session/session.py` |
+| `retrieval.intent_analysis` | 啟用意圖分析且會話中有可用內容時，用於查詢規劃；特定 query planner 模型會選擇專用模板，見下文 |
+| `retrieval.recall_rewrite` | 啟用服務端 recall 壓縮時，將已組裝上下文改寫為帶來源的摘要 |
+| `semantic.*` | 語義處理佇列根據檔案型別或目錄任務選擇模板 |
+| `parsing.image_summary`、`parsing.audio_summary`、`parsing.video_summary` | 媒體摘要路徑；音影片還要求啟用支援對應輸入的 VLM |
+| `memory/tools.yaml`、`memory/skills.yaml` | 內建 `enabled: false`，僅修改描述不會自動啟用 |
+| `memory/experimental_memory/*.yaml` | 啟用 `memory.experimental_memory_switch` 後加載 |
+| `skill_extract/session_skills.yaml` | Session Skill 提取使用的獨立 schema，載入方式見下文 |
+
+`compression.structured_summary`、`indexing.relevance_scoring`、`parsing.chapter_analysis`、`parsing.context_generation`、`parsing.semantic_grouping`、`processing.*` 和 `test.skill_test_generation` 保留在模板目錄中，但當前服務端原始碼未找到對應的呼叫入口。下文保留其輸入與用途，供維護和擴充參考；不要據此判斷修改它們就會改變線上結果。
+
 ### Compression
 
-這一類 prompt 主要用於 session 壓縮和 working memory 更新。長期記憶抽取使用 `memory` 類別下的 v2 schema-driven memory templates。
+這一類 prompt 主要用於 session 壓縮和 working memory 更新。長期記憶提取使用 `memory` 類中的 schema 定義。
 
 - `compression.ov_wm_v2`
   - 生效環節：首次 working memory 生成階段
@@ -175,7 +190,7 @@ peer_enabled: true
   - 關鍵輸入：`previous_working_memory`、`messages`
 
 - `compression.structured_summary`
-  - 生效環節：session archive 摘要生成階段
+  - 設計用途對應環節：session archive 摘要生成階段
   - 影響能力：歷史會話壓縮摘要、後續回顧和檢索效果
   - 作用：為歸檔後的 session 生成結構化摘要
   - 關鍵輸入：`latest_archive_overview`、`messages`
@@ -185,7 +200,7 @@ peer_enabled: true
 這一類 prompt 主要用於為檢索或索引輔助流程做相關性判斷。
 
 - `indexing.relevance_scoring`
-  - 生效環節：候選內容相關性評估階段
+  - 設計用途對應環節：候選內容相關性評估階段
   - 影響能力：檢索結果排序、候選篩選質量
   - 作用：評估候選內容與使用者查詢之間的相關性
   - 關鍵輸入：`query`、`candidate`
@@ -236,7 +251,7 @@ peer_enabled: true
   - 作用：定義“使用者是誰”這一類穩定資訊的儲存結構
   - 關鍵欄位：`content`
 
-- `skills`
+- `skills`（預設停用）
   - 生效環節：skill 使用記憶落盤與更新階段
   - 影響能力：skill 使用統計、經驗沉澱與推薦流程
   - 作用：定義 skill 使用次數、成功率、適用場景等資訊
@@ -248,7 +263,7 @@ peer_enabled: true
   - 作用：定義 agent 的核心真值、邊界、風格和連續性
   - 關鍵欄位：`core_truths`、`boundaries`、`vibe`、`continuity`
 
-- `tools`
+- `tools`（預設停用）
   - 生效環節：工具使用記憶落盤與更新階段
   - 影響能力：工具使用經驗、最佳引數、失敗模式沉澱
   - 作用：定義工具呼叫統計和工具使用經驗的儲存結構
@@ -265,13 +280,13 @@ peer_enabled: true
 這一類 prompt 主要用於把原始資源內容轉成適合檢索和理解的結構化節點、章節、摘要或影像概述。
 
 - `parsing.chapter_analysis`
-  - 生效環節：長文件章節劃分階段
+  - 設計用途對應環節：長文件章節劃分階段
   - 影響能力：文件章節結構、頁面組織效果
   - 作用：分析文件內容並劃分合理的章節結構
   - 關鍵輸入：`start_page`、`end_page`、`total_pages`、`content`
 
 - `parsing.context_generation`
-  - 生效環節：文件節點語義生成階段
+  - 設計用途對應環節：文件節點語義生成階段
   - 影響能力：節點 abstract/overview 質量、後續檢索匹配效果
   - 作用：為文本節點生成更短、更適合檢索的語義標題、abstract 和 overview
   - 關鍵輸入：`title`、`content`、`children_info`、`instruction`、`context_type`、`is_leaf`
@@ -283,29 +298,34 @@ peer_enabled: true
   - 關鍵輸入：`context`
 
 - `parsing.semantic_grouping`
-  - 生效環節：語義分組與切分階段
+  - 設計用途對應環節：語義分組與切分階段
   - 影響能力：文件節點粒度、內容塊切分質量
   - 作用：根據語義決定內容應該合併還是拆分
   - 關鍵輸入：`items`、`threshold`、`mode`
+
+- `parsing.audio_summary`、`parsing.video_summary`
+  - 生效環節：音影片內容理解，要求 VLM 支援並啟用對應媒體輸入
+  - 作用：生成用於語義索引的媒體概覽，保留主題、事件、事實與可識別的內容
+  - 關鍵輸入：`filename`、`fallback_language`；媒體檔案通過模型輸入另行傳入
 
 ### Processing
 
 這一類 prompt 主要用於從互動記錄、工具鏈和資源背景中提煉策略或經驗，不直接面向單次使用者問答，而是面向後處理和知識沉澱。
 
 - `processing.interaction_learning`
-  - 生效環節：互動後經驗提煉階段
+  - 設計用途對應環節：互動後經驗提煉階段
   - 影響能力：可複用互動經驗、有效資源和成功 skill 的沉澱
   - 作用：從互動記錄中抽取可複用經驗
   - 關鍵輸入：`interactions_summary`、`effective_resources`、`successful_skills`
 
 - `processing.strategy_extraction`
-  - 生效環節：資源新增後策略提煉階段
+  - 設計用途對應環節：資源新增後策略提煉階段
   - 影響能力：資源背景意圖的結構化提煉和後續複用
   - 作用：從資源新增原因、指令和抽象資訊中提煉使用策略
   - 關鍵輸入：`reason`、`instruction`、`abstract`
 
 - `processing.tool_chain_analysis`
-  - 生效環節：工具鏈分析階段
+  - 設計用途對應環節：工具鏈分析階段
   - 影響能力：工具組合模式識別、工具經驗沉澱
   - 作用：分析工具呼叫鏈並識別有價值的使用模式
   - 關鍵輸入：`tool_calls`
@@ -319,6 +339,16 @@ peer_enabled: true
   - 影響能力：檢索 query 規劃、召回方向、不同 context 型別的搜尋質量
   - 作用：結合壓縮摘要、最近訊息和當前訊息生成檢索計劃
   - 關鍵輸入：`compression_summary`、`recent_messages`、`current_message`、`context_type`、`target_abstract`
+
+- `retrieval.ov_intent_analysis_sft_v4`、`retrieval.ov_intent_analysis_sft_v7`
+  - 生效條件：query planner 的 `model` 分別精確匹配 `ollama/guoxuter/ov_intent_analysis_sft:v4_q8` 或 `ollama/guoxuter/ov_intent_analysis_sft:v7_q8`
+  - 作用：使用對應模型的查詢規劃協議；其他模型使用 `retrieval.intent_analysis`
+  - 修改預設模板前先檢查模型配置，避免改到未使用的模板
+
+- `retrieval.recall_rewrite`
+  - 生效環節：服務端上下文組裝後的可選壓縮
+  - 作用：根據當前查詢生成帶來源 URI 的要點；輸出需滿足呼叫方的格式與來源校驗
+  - 關鍵輸入：`query`、`rendered`、`max_bullets`
 
 ### Semantic
 
@@ -344,7 +374,7 @@ peer_enabled: true
 
 - `semantic.overview_generation`
   - 生效環節：目錄級概覽生成階段
-  - 影響能力：目錄 overview、層級檢索與導航體驗
+  - 影響能力：目錄 overview、全域檢索與導航體驗
   - 作用：根據檔案摘要和子目錄 abstract 生成目錄級 overview
   - 關鍵輸入：`dir_name`、`file_summaries`、`children_abstracts`、`output_language`
 
@@ -358,12 +388,17 @@ peer_enabled: true
   - 作用：從 Skill 名稱、描述和正文中抽取關鍵檢索資訊
   - 關鍵輸入：`skill_name`、`skill_description`、`skill_content`
 
+- `skill.privacy_extraction`
+  - 生效環節：Skill 隱私配置提取
+  - 作用：識別需要由使用者維護的私有配置項，供佔位符替換與隱私配置儲存使用
+  - 關鍵輸入：`skill_name`、`skill_description`、`skill_content`
+
 ### Test
 
 這一類 prompt 主要用於輔助生成測試樣例。
 
 - `test.skill_test_generation`
-  - 生效環節：Skill 測試輔助階段
+  - 設計用途對應環節：Skill 測試輔助階段
   - 影響能力：Skill 場景測試設計與驗證樣例生成
   - 作用：根據多個 Skill 的名稱和描述生成測試用例
   - 關鍵輸入：`skills_info`
@@ -514,9 +549,11 @@ export OPENVIKING_PROMPT_TEMPLATES_DIR=/path/to/custom-prompts
 
 載入行為：
 
-- 內建 memory schema 會先載入
-- 如果配置了 `memory.custom_templates_dir`，再繼續載入自定義目錄中的 schema
-- 因此，memory 自定義更接近“擴充和補充”，而不是完全替換整套內建模板
+1. 先載入內建 `memory/` 目錄中的 schema。
+2. 若啟用 `memory.experimental_memory_switch`，再載入內建 `memory/experimental_memory/`。
+3. 若配置 `memory.custom_templates_dir`，載入該目錄；否則嘗試載入所選 prompt 目錄下的 `memory/`。
+
+後加載的同名 `memory_type` 會替換先前定義，新的型別會追加。目錄只讀取直接包含的 `.yaml` 和 `.yml` 檔案，不遞迴載入子目錄。因此，自定義 schema 既能新增型別，也能覆蓋內建型別；改名會建立另一種型別。載入失敗會記錄日誌，應檢查實際載入結果。
 
 示例目錄：
 
@@ -551,6 +588,12 @@ custom-memory/
   - 影響使用者偏好類記憶的組織方式和 recall 顆粒度
 - 修改 `tools`
   - 影響工具經驗沉澱和工具使用建議結果
+
+### Session Skill Schema
+
+`skill_extract/session_skills.yaml` 使用 memory schema 格式，但由 Session Skill 提取鏈路單獨載入。它定義使用者要求記住的會話技能，與 `memory/skills.yaml` 中的技能使用統計不同。
+
+載入器直接讀取所選 prompt 目錄下的 `skill_extract/`，沒有普通 prompt 的逐檔案內建回退。使用自定義 `prompts.templates_dir` 或 `OPENVIKING_PROMPT_TEMPLATES_DIR` 且需要 Session Skill 提取時，應同時複製內建 `skill_extract/` 目錄，並檢查 schema 載入日誌。僅複製一個 `semantic/` 檔案不足以滿足這條鏈路。
 
 ### 自定義時的高風險改動
 
@@ -600,15 +643,19 @@ custom-memory/
 - 新 schema 是否被成功載入
 - 目標記憶型別是否真的參與了提取和落盤
 
+普通模板預設會被 `PromptManager` 快取。更改檔案後，重啟使用這些模板的服務程序；內嵌開發場景可清理對應 manager 的快取並重新載入。Memory registry 也需要重新建立，不能假設已執行的程序會自動讀取新的 schema。
+
 ### 再驗證對外結果是否變化
 
 從使用者角度驗證最有效：
 
-- 如果改的是 `vision` 類別範本，就重新解析圖片、表格或掃描 PDF，看結果是否變化
-- 如果改的是 `semantic` 或 `parsing` 類別範本，就重新匯入文件或檔案，看摘要和結構是否變化
-- 如果改的是 `retrieval` 類別範本，就重新執行相關搜尋，看 query 規劃和召回效果是否變化
-- 如果改的是 `compression` 類別範本，就重新觸發 session commit 或 memory 處理流程，看記憶抽取和合並結果是否變化
+- 如果改的是 `vision` 類别範本，就重新解析圖片、表格或掃描 PDF，看結果是否變化
+- 如果改的是 `semantic` 或 `parsing` 類别範本，就重新匯入文件或檔案，看摘要和結構是否變化
+- 如果改的是 `retrieval` 類别範本，就重新執行相關搜尋，看 query 規劃和召回效果是否變化
+- 如果改的是 `compression` 類别範本，就用新的測試會話觸發對應流程，檢查 working memory 與歸檔概覽；它們不能單獨證明長期記憶提取已改變
 - 如果改的是 `memory` 類 schema，就檢查最終落盤的記憶檔案內容、目錄和欄位結構是否符合預期
+
+比較修改前後的效果時，保持輸入、模型和其他配置不變，使用獨立測試資源或會話。至少包含一個應保留的事實、一個應忽略的無關資訊，以及一個容易遺漏條件的例子。按目標檢查：摘要有沒有丟失關鍵事實，檢索是否召回正確來源，記憶是否存到預期目錄並正確更新已有內容。記錄失敗樣例、耗時和模型用量；表達更順不代表結果更準確。
 
 ### 常見排查思路
 
@@ -634,14 +681,15 @@ openviking/prompts/templates/
 
 其中：
 
-- `compression/`：壓縮、提取、合併
+- `compression/`：working memory 壓縮和歸檔摘要
 - `indexing/`：相關性評估
 - `memory/`：記憶型別定義
 - `parsing/`：結構分析與語義節點生成
 - `processing/`：經驗與策略提煉
 - `retrieval/`：檢索意圖分析
 - `semantic/`：檔案和目錄摘要
-- `skill/`：Skill 摘要
+- `skill/`：Skill 摘要與隱私配置提取
+- `skill_extract/`：Session Skill schema
 - `test/`：測試樣例生成
 - `vision/`：圖片、頁面、表格理解
 

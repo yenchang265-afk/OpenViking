@@ -1,4 +1,4 @@
-# Cursor 記憶整合
+# Cursor
 
 為 Cursor 新增跨專案、跨會話的長期記憶。安裝完成後，OpenViking Hook 會在會話啟動和使用者提交問題時注入相關上下文，在回覆結束後捕獲新對話；MCP 僅用於主動搜尋、讀取和管理記憶。
 
@@ -6,18 +6,11 @@
 
 前置條件：macOS 或 Linux、Node.js 18+，並建議使用最新穩定版 Cursor。安裝過程中會引導配置 OpenViking 連線資訊。
 
-安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。只有本機已執行 OpenViking 服務時才選擇 **自建 / 本地**。
+安裝器詢問連線方式時，火山引擎雲服務使用者請選擇 **火山引擎 OpenViking 雲服務** 並填寫 API Key。服務執行在本機時選擇 **自建 / 本地**（`http://127.0.0.1:1933`）；遠端自建服務請選擇 **自定義 URL / 保持當前** 並填寫其 URL。
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
-  --harness cursor
-```
-
-GitHub 訪問受限時使用 TOS 映象：
-
-```bash
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
-  --harness cursor --dist tos
+curl -fsSL https://openviking.ai/install | bash
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
 安裝完成後完全退出並重新啟動 Cursor。
@@ -27,6 +20,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 - 生命週期 Hook：自動載入畫像、按問題召回、捕獲對話、提交會話並保護 `viking://` URI。
 - OpenViking MCP Server：提供 `search`、`read`、`remember`、`add_skill` 等工具；`search` 的 `mode="context"` 可返回組裝後的上下文。
 - always-on Rule 和 `openviking-memory` Skill：告訴 Agent 如何使用已注入的上下文和記憶工具；另有 `openviking-skills` Skill，講如何查詢、使用、建立（`add_skill`）、共享和遷移存放在 OpenViking 裡的 skill。
+- `ov-experience-memory` Skill：讓 Agent 在執行類任務前檢索並應用以往任務的 Experience。Cursor 只捕獲文本，所以這裡該 Skill 只負責檢索和應用 Experience，它的讀取不會關聯回所用的 Experience。
 
 ## 驗證
 
@@ -34,7 +28,7 @@ bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shar
 2. 開啟 **Cursor Settings → Hooks**，確認 OpenViking 生命週期 Hook 執行了 `scripts/hook.mjs`，URI 保護 Hook 執行了 `scripts/uri-guard.mjs`。
 3. 檢視 `beforeSubmitPrompt` 輸出，確認存在 `additional_context`；這表示當前問題的召回結果已直接交給 Agent，無需先呼叫 MCP。
 4. 開啟 **Cursor Settings → Tools & MCPs**，確認 `openviking` 已連線。
-5. 告訴 Cursor 一個臨時偏好，等待本輪迴復完成；新建會話後詢問該偏好，確認捕獲和跨會話召回均生效。
+5. 告訴 Cursor 一個測試偏好，正常結束會話，並在 Hook 日誌中確認捕獲和提交。等待記憶提取完成後，在同一工作區新建會話並詢問該偏好。
 
 ## 工作原理
 
@@ -50,16 +44,10 @@ skill 清單先列你自己的 skill，再列帳號內共享的 skill；共享 s
 
 ## 升級與解除安裝
 
-重複執行對應渠道的安裝命令即可升級。解除安裝時也應使用原安裝渠道：
+重複執行安裝命令即可升級。解除安裝時執行：
 
 ```bash
-# GitHub
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) \
-  --harness cursor --uninstall --yes
-
-# TOS
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) \
-  --harness cursor --uninstall --yes
+curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harness cursor
 ```
 
 解除安裝僅移除 OpenViking 管理的 Cursor Hook、MCP、Rule、Skill 和執行檔案，保留其他配置。

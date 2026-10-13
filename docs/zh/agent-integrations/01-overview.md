@@ -1,4 +1,4 @@
-# Agent 整合概覽
+# 選擇 Agent 接入方式
 
 OpenViking 可以作為多種 Agent 執行時的長期記憶與上下文後端。按你的執行時挑選合適的接入方式即可。
 
@@ -35,37 +35,4 @@ OpenViking 可以作為多種 Agent 執行時的長期記憶與上下文後端�
 
 ## 低延遲召回
 
-查詢擴充和召回結果壓縮是兩個獨立的可選模型呼叫。需要優先保證響應速度時，可以在 Agent 外掛端同時關閉它們；語義檢索、預算控制、檔位降級和跨輪去重仍會正常工作。
-
-下面這組環境變數同時適用於 Claude Code 和 Codex。查詢擴充在所有經共享載入器解析配置的記憶外掛上都可以關閉；壓縮只有 Claude Code 和 Codex 支援。
-
-```bash
-export OPENVIKING_RECALL_QUERY_EXPANSION=off
-export OPENVIKING_RECALL_COMPRESS=off
-```
-
-兩個外掛都有本地壓縮邏輯，但配置模型不同：
-
-- Claude Code 預設使用 `recallCompress=auto`：優先呼叫本地 `claude -p`（Sonnet + low），本地 CLI 不可用時回落到 OpenViking 服務端生成 digest。`client` 強制只用本地，`server` 強制只用服務端。
-- Codex 預設呼叫本地 `codex exec`，模型順序為 `gpt-5.3-codex-spark`，其次 `gpt-5.6-luna` + low。它不會啟用服務端壓縮。
-
-兩端的共同預設配置是 `recallCompress=auto`。`OPENVIKING_RECALL_COMPRESS=off` 會同時關閉兩端壓縮；Codex 將 `auto` 或 `client` 解釋為啟用本地壓縮。舊的 Claude Code 變數 `OPENVIKING_RECALL_REWRITE` 仍可相容，但新配置請使用統一名稱。
-
-也可以把同樣的設定寫進 `~/.openviking/ovcli.conf`：
-
-```json
-{
-  "url": "https://openviking.example.com",
-  "api_key": "your-api-key",
-  "plugin": {
-    "recallQueryExpansion": "off",
-    "recallCompress": "off"
-  }
-}
-```
-
-環境變數優先於 `ovcli.conf`。修改後重啟對應的 Agent，讓 hook 程序重新載入配置。上述設定屬於外掛客戶端，不需要修改服務端的 `ov.conf`。
-
-`plugin` 段由每個記憶外掛讀取——claude-code、codex、cursor、trae、trae-cn、zcode、kimicode、opencode、dsh 和 pi；`plugin.<harness>` 物件只覆蓋其中某一個 harness 的共享鍵，兩種寫法都認（`claude_code` 或 `claude-code`、`trae_cn` 或 `trae-cn`）。壓縮是例外：其餘 harness 認 `recallQueryExpansion`，但忽略 `recallCompress` 及其配套項——它們都不會請求服務端 digest。
-
-context 請求的等待時間比普通請求更長，因為客戶端提前中斷會丟掉整個響應，而不只是超時的那一段。服務端流水線是序列的，每個可選階段各有保險絲：先是查詢擴充（`retrieval.recall_intent_timeout_s`，5 秒），然後是檢索、正文讀取和預算規劃，最後才是 digest 重寫（`retrieval.recall_rewrite_timeout_s`，30 秒）。因此這個上限按請求實際啟用的階段決定——帶 session、會走查詢擴充時取 15 秒，同時還要 digest 時取 45 秒，兩者都不涉及時沿用外掛自身的普通超時。可以用 `OPENVIKING_RECALL_CONTEXT_TIMEOUT_MS`（或 `plugin.recallContextTimeoutMs`）指定這個上限，取值應高於該請求會用到的保險絲、低於 Agent 自身的 hook 超時。
+接入並驗證外掛後，可按[調整召回延遲](19-recall-tuning.md)配置查詢擴充、結果壓縮與超時。

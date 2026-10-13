@@ -1,6 +1,6 @@
 # 使用 Prometheus 和 Grafana 檢視 OpenViking 指標
 
-這份文件給出一條從零開始的完整鏈路：
+按四步把指標接到看板：
 
 1. 啟動 OpenViking 並確認 `/metrics` 可訪問
 2. 啟動 Prometheus 抓取 OpenViking 指標
@@ -47,7 +47,7 @@ OpenViking 需要先啟用 metrics。最小配置參考：
 }
 ```
 
-配置寫入 `~/.openviking/ov.conf` 後，重啟 OpenViking Server。
+將 metrics 片段合併到現有 `~/.openviking/ov.conf` 後，重啟 OpenViking Server。
 
 如果你還沒有啟動服務，可參考：
 
@@ -65,12 +65,14 @@ curl http://localhost:30300/metrics
 如果返回包含 `openviking_` 字首的文本，說明 metrics 已經啟用。例如：
 
 ```text
-# HELP openviking_http_requests_total Total number of HTTP requests
+# HELP openviking_http_requests_total OpenViking metric.
 # TYPE openviking_http_requests_total counter
-openviking_http_requests_total{method="GET",route="/api/v1/system/status",status="200"} 12
+openviking_http_requests_total{method="POST",route="/api/v1/search/find",status="200"} 12
 ```
 
 如果返回 `Prometheus metrics are disabled.`，說明配置未生效或服務未重啟。
+
+本文示例使用 30300 埠，OpenViking 預設埠為 1933。抓取目標應與實際啟動埠一致。
 
 ## 第 2 步：使用倉庫自帶 compose 檔案部署
 
@@ -99,13 +101,15 @@ openviking_http_requests_total{method="GET",route="/api/v1/system/status",status
 
 - 啟動 Prometheus，並把宿主機埠對映到 `30909`
 - 啟動 Grafana，並把宿主機埠對映到 `13000`
-- 自動把 Grafana 資料來源配置為 `http://127.0.0.1:30909`
+- 通用方案的資料來源是 `http://prometheus:9090`，宿主機網路方案是 `http://127.0.0.1:30909`
 - 自動載入倉庫裡的 OpenViking demo dashboard
 - 自動載入 `OpenViking - Feedback Baseline`，方便直接檢視 `openviking_feedback_*` 與 `openviking_feedback_channel_*` 的基線指標
 
+這些是使用 `admin/admin` 憑證的本地演示配置。localhost 方案中的 Prometheus 仍監聽 `0.0.0.0`，名稱只表示它連線 OpenViking 的方式。僅本地使用時，將看板服務繫結 loopback（Prometheus 使用 `--web.listen-address=127.0.0.1:30909`，Grafana 設定 `GF_SERVER_HTTP_ADDR=127.0.0.1`），或限制網路訪問。
+
 ### 方案 A：通用方案
 
-直接執行：
+在 OpenViking 倉庫根目錄執行。兩套 Compose 使用相同宿主機埠，選擇其中一套：
 
 ```bash
 docker compose -f examples/grafana/docker-compose.yml up -d
@@ -136,7 +140,7 @@ docker compose -f examples/grafana/docker-compose.localhost.yml up -d
 - Prometheus 使用宿主機網路，直接抓取 `127.0.0.1:30300/metrics`
 - Grafana 也使用宿主機網路，並直接連線 `http://127.0.0.1:30909`
 - 不需要把 OpenViking 改成 `0.0.0.0`
-- 不會觸發“非 localhost 監聽必須配置 `root_api_key`”這條安全限制
+- Dev 模式可繼續監聽 loopback；更改 OpenViking 監聽地址前，先檢視[認證要求](04-authentication.md)
 
 訪問地址仍然是：
 
@@ -177,7 +181,7 @@ scrape_configs:
 如果你的 OpenViking 不是監聽在 `30300`，就把這個檔案裡的目標地址改成你的實際埠，然後重新執行：
 
 ```bash
-docker compose -f examples/grafana/docker-compose.yml up -d
+docker compose -f examples/grafana/docker-compose.yml restart prometheus
 ```
 
 如果你使用的是 Linux localhost 方案，對應修改的是：
@@ -193,14 +197,14 @@ targets: ["127.0.0.1:1933"]
 然後重新執行：
 
 ```bash
-docker compose -f examples/grafana/docker-compose.localhost.yml up -d
+docker compose -f examples/grafana/docker-compose.localhost.yml restart prometheus
 ```
 
 ## 第 4 步：可選，手動部署時建立 Docker 網路
 
 如果你使用的是上面的 compose 檔案，這一步不需要手動執行，因為 Compose 會自動建立預設網路。
 
-只有在你堅持使用 `docker run` 分開啟動 Prometheus 和 Grafana 時，才需要先建立一個獨立網路：
+使用 `docker run` 分別啟動時，先建立共享網路：
 
 ```bash
 docker network create openviking-observability
@@ -218,8 +222,9 @@ docker network create openviking-observability
 docker run -d \
   --name prometheus \
   --network openviking-observability \
-  -p 30909:9090 \
-  -v "$PWD/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
+  -p 127.0.0.1:30909:9090 \
+  --add-host host.docker.internal:host-gateway \
+  -v "$PWD/examples/grafana/prometheus.yml:/etc/prometheus/prometheus.yml:ro" \
   prom/prometheus
 ```
 
@@ -267,7 +272,7 @@ Bind for 0.0.0.0:9090 failed: port is already allocated
 docker run -d \
   --name grafana \
   --network openviking-observability \
-  -p 13000:3000 \
+  -p 127.0.0.1:13000:3000 \
   grafana/grafana
 ```
 
@@ -311,11 +316,9 @@ docker ps
 
 ## 第 8 步：先在 Grafana Explore 中直接查詢
 
-新增完資料來源後，先不要急著匯入 dashboard，建議先在 `Explore` 中驗證基礎查詢。
+新增資料來源後，在 `Explore` 中驗證以下查詢：
 
-推薦先試這些查詢：
-
-請求量：
+每秒請求數：
 
 ```promql
 rate(openviking_http_requests_total[5m])
@@ -345,7 +348,7 @@ openviking_queue_pending
 rate(openviking_model_calls_total[5m])
 ```
 
-Token 用量：
+每秒 token 數：
 
 ```promql
 rate(openviking_operation_tokens_total[5m])
@@ -356,6 +359,8 @@ rate(openviking_operation_tokens_total[5m])
 ```promql
 {__name__=~"openviking_.*"}
 ```
+
+`rate()` 需要選定時間窗內有多個樣本。反饋快照 gauge 即使名稱以 `_total` 結尾，也應查詢當前值，見 [Vikingbot 指標驗證](12-vikingbot-metrics-validation.md)。
 
 ## 第 9 步：匯入 OpenViking 自帶 Dashboard
 
@@ -448,7 +453,7 @@ Bind for 0.0.0.0:9090 failed: port is already allocated
 
 ### 5. Dashboard 匯入成功但面板為空
 
-這通常不是 dashboard 檔案損壞，而是：
+先核對以下原因，再修改 dashboard：
 
 - Prometheus 裡還沒有對應指標樣本
 - 過濾條件和當前環境不匹配

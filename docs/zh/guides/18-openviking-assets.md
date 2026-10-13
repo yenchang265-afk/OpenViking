@@ -111,7 +111,9 @@ Git 資產支援：
 | `connector` | 是 | v1 只支持 `git`。 |
 | `description` | 否 | 資產用途說明。 |
 | `params.repo_url` | 是 | Git clone URL。 |
-| `params.branch` | 否 | 要接入的分支；設定時不能為空。 |
+| `params.branch` | 否 | 要接入的分支；設定時不能為空，與 `params.commit` 互斥。 |
+| `params.commit` | 否 | 固定版本的完整 40 位十六進位制 SHA，與 `params.branch` 互斥。 |
+| `to` | 否 | 精確資源目標 URI。同一資產已有 State 對映時必須與其一致；本次選中的資產不能共用目標。 |
 | `auth_ref` | 否 | 覆蓋 `defaults.git.auth_ref`。 |
 | `watch_interval` | 否 | 覆蓋 `defaults.git.watch_interval`。 |
 
@@ -158,7 +160,7 @@ assets:
   - requests
 ```
 
-全團隊維護一份 Catalog；在 Catalog 中修改資產，所有選擇它的 Manifest 都會生效。因為兩種
+全團隊維護一份 Catalog。修改資產後，選擇它的 Manifest 下次執行時會讀取新定義；只編輯檔案不會更新已匯入的資源。因為兩種
 文件同構，Catalog 也可以直接執行：`ov add-resource -m catalog.yaml` 會匯入它定義的全部資產。
 
 CLI 按以下規則查詢 Catalog 檔案：
@@ -179,8 +181,7 @@ connector + normalized locator + ref
 Git URL 會去除協議、使用者名稱字首、埠、結尾的 `.git` 和 `/`，並把主機名統一為小寫。
 因此，同一倉庫的 HTTPS、SSH 和 SCP 風格地址通常會得到相同定位符；不同分支會得到不同資產。
 
-資產名稱不參與身份計算。重新命名資產但保持來源和分支不變時，會繼續關聯原資源；修改來源或
-分支時會產生新資產，舊資源被報告為 orphan。
+資產名稱不參與身份計算。重新命名資產但保持來源和 ref 不變時，會繼續關聯原資源。修改來源、分支或固定 commit 會產生新的資產身份。沒有指定 `to` 時，舊條目成為 orphan；指定 `to` 時，CLI 可以接管該目標下唯一的已有 State 條目，以新身份同步原資源。
 
 出於安全原因，clone URL 不能：
 
@@ -232,6 +233,8 @@ ov add-resource --manifest manifest.yaml --args dry_run:true
 
 任何倉庫不可讀時，dry-run 立即以 `PERMISSION_DENIED` 退出，不再輸出可執行計劃。
 
+使用 `params.commit` 固定版本時，預檢通過 HEAD 檢查倉庫訪問許可權，實際匯入的 fetch/checkout 才會驗證該 SHA。dry-run 成功不代表指定 commit 一定可用。
+
 ### 應用 Manifest
 
 確認計劃後去掉 `dry_run`：
@@ -242,6 +245,8 @@ ov add-resource --manifest manifest.yaml
 
 倉庫中包含一個完整示例（一份共享 Catalog 加一份按名選擇的 Manifest），位於
 [`examples/openviking-assets`](https://github.com/volcengine/OpenViking/tree/main/examples/openviking-assets)。
+
+未使用 `--wait` 時，提交成功不等於解析、語義處理和索引都已完成。驗證檢索前，使用 `--wait` 或檢查返回的任務。分支內容會變化；需要固定源版本時，設定 `params.commit` 並使用 `watch_interval: 0`。
 
 ## 憑據
 
@@ -316,7 +321,9 @@ State 使用 `openviking-assets-state/1` 協議，記錄：
 | State 中沒有該 `asset_id` 的資源 URI | create：建立新資源。 |
 | State 中已有資源 URI | sync：把 URI 作為 `to` 再次呼叫 `add_resource`。 |
 | 資產不再被 Manifest 選擇 | 報告 orphan，保留資源和 State，不自動刪除。 |
-| `asset_id` 因來源或分支變化 | 建立新資產，舊資產成為 orphan。 |
+| 來源或 ref 變化，且未顯式指定 `to` | 建立新資產，舊資產成為 orphan。 |
+| 新身份的 `to` 匹配唯一已有 State 條目 | 接管該目標，以新身份同步。 |
+| 同一身份的 `to` 與 State 不同 | 提交前失敗，需先處理資源和 State 對映。 |
 
 State 屬於執行環境，不是 Catalog 或 Manifest 協議的一部分。共享 Manifest 倉庫通常應在
 `.gitignore` 中加入：
@@ -338,7 +345,7 @@ State 屬於執行環境，不是 Catalog 或 Manifest 協議的一部分。共�
 3. `defaults.git.watch_interval`；
 4. `0`，不自動重新整理。
 
-例如，臨時把 Manifest 中全部資產調整為每 60 分鐘重新整理：
+例如，把本次選中的資產調整為每 60 分鐘重新整理；建立的 Watch 會持續在服務端執行：
 
 ```bash
 ov add-resource --manifest manifest.yaml --watch-interval 60

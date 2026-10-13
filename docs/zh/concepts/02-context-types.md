@@ -1,14 +1,39 @@
 # 上下文型別
 
-基於對人類認知模式的簡化對映與工程化思考，OpenViking 將上下文抽象為 **資源、記憶、能力三種**基本型別，每種型別在 Agent 中有不同的用途。
+OpenViking 管理三類上下文：資源提供參考資料，記憶儲存互動中提取的資訊，技能描述完成任務的方法。
 
 ## 概覽
 
 | 型別 | 用途 | 生命週期 | 主動性 |
 |------|------|----------|--------|
-| **Resource** | 知識和規則 | 長期，相對靜態 | 使用者新增 |
-| **Memory** | Agent 的認知 | 長期，動態更新 | Agent 記錄 |
-| **Skill** | 可宣告的 agent 能動性配置（AgentDefinedContextType） | 長期，靜態 | 使用者或系統新增 |
+| **Resource** | 知識和規則 | 保留至更新或刪除 | 使用者新增 |
+| **Memory** | 偏好、事實和任務經驗 | 長期，動態更新 | 從會話提取或主動記錄 |
+| **Skill** | 任務指令和配套資源 | 長期，可更新 | 使用者或系統新增 |
+
+## 示例準備
+
+以下示例使用同步 Python SDK，需先啟動服務端。`add_resource` 和 `add_skill` 可傳 `wait=True`，等處理完成後再返回。會話提交會在記憶提取完成前返回，且沒有內建等待引數，因此先用下面的函式查詢提交任務，再檢索新內容。輪詢超時不會取消服務端任務。
+
+```python
+import time
+from openviking_sdk import SyncHTTPClient
+
+client = SyncHTTPClient(url="http://localhost:1933", api_key="your-key")
+
+
+def wait_for_task(task_id):
+    deadline = time.monotonic() + 300
+    while time.monotonic() < deadline:
+        task = client.get_task(task_id)
+        if task is None:
+            raise RuntimeError(f"Task {task_id} not found")
+        if task["status"] == "completed":
+            return task
+        if task["status"] in {"failed", "cancelled"}:
+            raise RuntimeError(task)
+        time.sleep(1)
+    raise TimeoutError(f"Task {task_id} is still running")
+```
 
 ## Resource（資源）
 
@@ -17,7 +42,7 @@
 ### 特點
 
 - **使用者主動**：由使用者主動新增的資源類資訊，用於補充大模型的知識，比如產品手冊、程式碼倉庫
-- **靜態內容**：新增後內容很少發生變化，通常為使用者主動修改
+- **顯式更新**：內容變化後重新匯入；支援 Watch 的遠端來源可定時重新整理
 - **結構化儲存**：將按照專案或主題以目錄層級組織，並提取出多層資訊。
 
 ### 示例
@@ -33,6 +58,8 @@
 client.add_resource(
     path="https://docs.example.com/api.pdf",
     options={"reason": "API 文件"},
+    wait=True,
+    timeout=300,
 )
 
 # 搜尋資源
@@ -76,17 +103,18 @@ Schema 定義的 `memories/tools/` 和 `memories/skills/` 型別已停用。它�
 from openviking_sdk import TextPart
 
 # 記憶從會話中自動提取
-session_info = await client.create_session()
+session_info = client.create_session()
 session = client.session(session_id=session_info["session_id"])
-await session.add_message(
+session.add_message(
     role="user",
     parts=[TextPart(text="我喜歡深色模式")],
 )
-commit = await session.commit()  # 啟動後臺記憶提取
-task = await client.get_task(task_id=commit["task_id"])  # 輪詢直到 task["status"] == "completed"
+commit = session.commit()  # 啟動後臺記憶提取
+if commit.get("task_id"):
+    wait_for_task(commit["task_id"])
 
 # 搜尋記憶
-results = await client.find(
+results = client.find(
     query="使用者介面偏好",
     target_uri="viking://~/memories/"
 )
@@ -94,13 +122,13 @@ results = await client.find(
 
 ## Skill（技能 / AgentDefinedContextType）
 
-技能（Skill）是 Agent 可以呼叫的能力，屬於 AgentDefinedContextType 範疇。包括傳統工作流定義、通訊端點、工具配置和支付能力等。它們的共同特徵是：**定義了 agent 如何與外部系統互動**，執行時定義相對靜態，但呼叫經驗會在 Memory 中更新。
+技能（Skill）通過 `SKILL.md` 和配套檔案描述一類任務的步驟、約束和資源。Agent 讀取技能後，使用自己的工具執行任務。呼叫經驗可以單獨儲存為記憶。
 
 ### 特點
 
-- **定義的能力：**用於完成某項工作的工具定義
-- **相對靜態：**執行時技能定義不變，但和工具相關的使用記憶會在記憶中更新
-- **可呼叫：**Agent 決定何時使用哪種技能
+- **任務說明：**記錄完成某項工作的流程和約束
+- **可維護：**技能內容可以更新，執行經驗單獨存為記憶
+- **按需讀取：**Agent 按當前任務選擇技能
 
 ### 儲存位置
 
@@ -111,7 +139,7 @@ viking://~/skills/{skill-name}/  # 預設儲存路徑
 ├── SKILL.md              # L2: 技能定義
 └── scripts               # L2: 附加實現
 
-viking://agent/skills/{skill-name}/  # 通過 --uri 覆蓋，公開共享（account 全域）
+viking://agent/skills/{skill-name}/  # 通過 -p/--parent-auto-create 覆蓋，公開共享（account 全域）
 ├── .abstract.md          # L0: 簡短描述
 ├── .overview.md          # L1: 目錄概覽（生成後）
 ├── SKILL.md              # L2: 技能定義
@@ -120,7 +148,7 @@ viking://agent/skills/{skill-name}/  # 通過 --uri 覆蓋，公開共享（acco
 
 ### AgentDefinedContextType 子型別
 
-AgentDefinedContextType 包含以下子型別，均儲存於 `viking://agent/` 作用域：
+下表列出共享能力的設計分類。當前支援 Skill，預設安裝到使用者私有目錄，也可顯式安裝到 `viking://agent/skills/`。其餘分類是規劃，不表示已提供對應介面：
 
 | 子型別 | 位置 | 說明 |
 |--------|------|------|
@@ -133,37 +161,45 @@ AgentDefinedContextType 包含以下子型別，均儲存於 `viking://agent/` �
 
 ```python
 # 新增技能（預設寫入 viking://~/skills/）
-await client.add_skill(
+client.add_skill(
     data={
         "name": "search-web",
         "description": "搜尋網路獲取資訊",
         "content": "# search-web\n...",
     },
+    wait=True,
+    timeout=300,
 )
 
-# 通過 -p 指定寫入全域 agent 技能根（公開共享）
-ov skills add search-web -p viking://agent/skills
-
 # 搜尋使用者技能
-results = await client.find(
+results = client.find(
     query="網路搜尋",
     target_uri="viking://~/skills/"
 )
 
-# 搜索全局 agent 技能
-results = await client.find(
+# 搜尋全域 agent 技能
+results = client.find(
     query="網路搜尋",
     target_uri="viking://agent/skills/",
 )
 ```
 
+通過 CLI 安裝到帳戶共享技能目錄（需要該路徑的寫入許可權）：
+
+```bash
+ov skills add ./skills/search-web -p viking://agent/skills
+```
+
 ## 統一檢索
 
-根據Agent的需求需求，支援對三種上下文型別統一搜索，提供全面資訊：
+一次檢索可返回搜尋範圍內的資源、記憶和技能。預設範圍包含當前使用者空間和共享資源；如需同時查詢共享技能，應顯式加入 `viking://agent/skills`：
 
 ```python
 # 跨所有上下文型別搜尋
-results = await client.find(query="使用者認證")
+results = client.find(
+    query="使用者認證",
+    target_uri=["viking://~", "viking://resources", "viking://agent/skills"],
+)
 
 for context in results.get("memories", []):
     print(f"記憶: {context['uri']}")
@@ -171,6 +207,12 @@ for context in results.get("resources", []):
     print(f"資源: {context['uri']}")
 for context in results.get("skills", []):
     print(f"技能: {context['uri']}")
+```
+
+操作結束後關閉客戶端：
+
+```python
+client.close()
 ```
 
 ## 相關文件

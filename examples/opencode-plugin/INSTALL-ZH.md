@@ -11,7 +11,7 @@
 
 需要先準備：
 
-- OpenCode
+- OpenCode 1.15.7+ 或 OpenCode 2.0.15+
 - OpenViking HTTP Server
 - Node.js 18+
 - 如果服務端啟用了認證，需要可用的 OpenViking API Key
@@ -37,6 +37,8 @@ curl http://localhost:1933/health
   "plugin": ["@openviking/opencode-plugin"]
 }
 ```
+
+這份 `plugin` 配置同時相容 v1 和 v2；v2 會在載入時規範化為原生的 `plugins`，無需手工遷移配置。
 
 ## 安裝方式二：原始碼安裝
 

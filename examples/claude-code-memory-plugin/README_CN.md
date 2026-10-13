@@ -9,10 +9,11 @@
 ### 一行安裝（推薦）
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness claude
+curl -fsSL https://openviking.ai/install | bash -s -- --harness claude
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
-僅支援 macOS 和 Linux。Claude Code 和 Codex 共用這一個安裝指令碼（去掉 `--harness claude` 可互動勾選）：它會依次詢問介面語言（English/中文）、下載源（GitHub，或 GitHub 受限地區用 TOS 映象——傳 `--dist tos`）和 OpenViking 憑據，然後從遠端 marketplace 安裝 `openviking-memory`。stdio MCP 代理執行時讀取 `ovcli.conf`，不再需要 shell wrapper 或 `.mcp.json` 渲染。重複執行安全。
+僅支援 macOS 和 Linux。Claude Code 和 Codex 共用這一個安裝指令碼（去掉 `--harness claude` 可互動勾選）：它會詢問 OpenViking 服務地址和 API key，檢查服務，列出將要修改的內容，確認後從 OpenViking 釋出版安裝 `openviking-memory`。Claude Code 2.1.224 及以上版本之後會自行更新外掛。stdio MCP 代理執行時讀取 `ovcli.conf`，不再需要 shell wrapper 或 `.mcp.json` 渲染。重複執行安全。
 
 如果你更喜歡手動操作，按下面四步走。
 
@@ -90,7 +91,7 @@ jq -e . /tmp/ov-settings.json >/dev/null && mv /tmp/ov-settings.json ~/.claude/s
 rm -f /tmp/ov-hooks.json
 ```
 
-一行安裝指令碼在檢測到 2.0 之前的版本時會自動執行以上流程（並在 `~/.openviking/openviking-repo` 保留一份原始碼 checkout 供上面的絕對路徑引用）。
+一行安裝指令碼不會做以上配置：檢測到 2.0 之前的版本時，它會跳過 Claude Code 並提示升級。
 
 #### 4. 啟動 Claude Code
 
@@ -368,6 +369,44 @@ OV ✓ │ 🔗 resumed │ +3 today               session 已恢復上下文；
 - 徹底解除安裝：`jq 'del(.statusLine)' ~/.claude/settings.json > t && mv t ~/.claude/settings.json`。
 - 已有自定義 statusline？安裝時會詢問替換 / 跳過 / 稍後手動 compose。
 
+## 來源卡片
+
+外掛會在每次回答下方加一張卡片，列出這次回答用到的 OpenViking 來源：自動召回加進提示的內容，以及 Claude 自己搜尋、讀取的內容。卡片預設摺疊成一行：
+
+```
+OV · 14 sources · 6 past events · 5 work memories · 2 team docs · 1 skill · 1 read in full  [Expand]
+```
+
+展開後列出全部來源和 Claude 自己的查詢：
+
+```
+OV · 14 sources · … · 1 read in full  [Collapse]
+  ◷ 10/3 發版檢查清單補充 · found by Claude · read in full
+  ⚙ openviking-release · auto-recalled
+  …
+Claude's own lookups
+  ⌕ Searched “lark-daemon release” · 6 results
+  ▤ Read 10/3 發版檢查清單補充
+```
+
+- 分組：★ 偏好，◷ 過往事件，◆ 工作記憶（筆記、經驗、你的 agent 的記憶），▤ 團隊文件，⚙ Skill。
+- **read in full**：Claude 用 `read`（MCP 工具，或 `ov read`/`cat`/`abstract`/`overview`）打開了這個檔案。只出現在搜尋結果裡的不算。
+- 沒用到任何 OpenViking 內容的回答不顯示卡片。
+- 用卡片上的按鈕展開或摺疊單張卡片；用 `/openviking-usage expand` 或 `/openviking-usage collapse` 展開或摺疊全部卡片。介面文字只有英文。
+
+**前提。** 卡片是一個 Claude Code hooks 模組（`hooks/hooks.json` 裡的 `modules`，程式碼在 `mods/usage/`），需要 Claude Code 2.1.286 或更高版本，並啟用 hooks 模組。下面這些情況下，Claude Code 會忽略這個模組，命令 hook 照常執行：
+
+- 版本不支援模組。
+- 模組被關閉，例如設定了 `CLAUDE_CODE_ENABLE_FUNCTION_HOOKS=0`，或被灰度開關關閉。
+
+在支援模組、但早於 2.1.286 的版本上，如果開啟了模組，這個模組會因為用到 `session.append` 而載入失敗。Claude Code 會記錄這條錯誤，命令 hook 仍然照常註冊。
+
+**資料。** 模組讀取本外掛 `UserPromptSubmit` hook 返回的 `<openviking-context>` 塊，以及 Claude 發起的 OpenViking MCP 呼叫和 `ov` CLI 呼叫。它不髮網絡請求，不向 OpenViking 寫任何內容。
+
+它在 Claude Code 的外掛儲存裡儲存每次回答的來源 URI、分數、脫敏後的搜尋詞和卡片所在的對話行 id，保留最近 20 個會話，所以 `claude --continue` 之後卡片還在。不儲存 shell 命令和提示原文。卡片不會發給 Claude，不消耗 token。
+
+**開發。** `claude plugin test examples/claude-code-memory-plugin` 會執行 `mods/usage/sources.test.ts`。用 `claude --plugin-dir examples/claude-code-memory-plugin` 啟動一次、生成 `.claude-plugin/types/` 後，可以用 `tsc -p examples/claude-code-memory-plugin/mods/usage` 做型別檢查。
+
 ## 除錯日誌
 
 設定 `claude_code.debug: true` 或 `OPENVIKING_DEBUG=1`，hook 日誌寫到 `~/.openviking/logs/cc-hooks.log`。
@@ -477,7 +516,7 @@ claude-code-memory-plugin/
 ├── .claude-plugin/
 │   └── plugin.json          # plugin manifest
 ├── hooks/
-│   └── hooks.json           # 9 個 hook 註冊
+│   └── hooks.json           # 9 個 hook 註冊 + 來源卡片模組
 ├── commands/
 │   └── ov.md                # /ov 狀態命令
 ├── skills/
@@ -485,6 +524,8 @@ claude-code-memory-plugin/
 │   ├── openviking-skills/   # 查詢、新增、共享和遷移 OpenViking skill
 │   ├── ov-experience-memory/
 │   └── ov-memory-doctor/    # 安裝 / 配置 / 連線 / 本機 server 排障
+├── mods/
+│   └── usage/               # 來源卡片（Claude Code hooks 模組）
 ├── servers/
 │   └── mcp-proxy.mjs        # stdio -> OpenViking /mcp 橋接
 ├── scripts/

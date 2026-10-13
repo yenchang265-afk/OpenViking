@@ -209,6 +209,7 @@ const workspace = {
   },
   agentExperiencePage: {
     pageCount: '本頁 {{count}} 條經驗',
+    searchCount: '顯示 {{count}} 條搜尋結果',
     setup: {
       expand: '展開步驟',
       collapse: '收起',
@@ -228,10 +229,10 @@ const workspace = {
     description:
       '跟蹤從會話提交中沉澱的經驗資產，以及經驗被應用後的執行軌跡與結果分佈。',
     refresh: '重新整理',
-    searchPlaceholder: '搜尋當前頁的經驗名稱或 URI',
+    searchPlaceholder: '搜尋經驗',
     searchClear: '清除',
-    searchNoResults: '當前頁沒有匹配的經驗',
-    searchNoResultsDescription: '可清除搜尋條件，或切換頁面繼續檢視。',
+    searchNoResults: '沒有匹配的經驗',
+    searchNoResultsDescription: '可清除搜尋條件後重試。',
     loading: '正在載入經驗列表...',
     loadFailed: '經驗列表載入失敗',
     networkError:
@@ -861,14 +862,27 @@ const workspace = {
       includeParent: '使用上級授權',
       excludeParent: '排除上級授權',
       limitAccess: '限制訪問',
+      inheritParent: '繼承上級授權',
+      inheritHelpLabel: '瞭解繼承上級授權',
+      inheritHelp:
+        '開啟後，上級目錄的授權與本目錄直接授權共同生效；關閉後，僅本目錄直接授權生效。切換不會刪除本目錄授權，下級目錄預設繼續繼承此目錄的有效許可權。',
       limitTitle: '限制這個目錄的訪問？',
       limitWarning:
         '此目錄將停止繼承上級授權。已有的直接授權（包括所有人授權）仍然生效，請在切換後檢查這些授權。帳號管理員仍可訪問。',
       peopleWithAccess: '有許可權的使用者和使用者組',
+      grantSubjectColumn: '使用者 / 使用者組',
+      grantLevelColumn: '許可權',
+      effectiveLevel: '生效許可權：{{level}}',
+      grantSourceColumn: '來源',
+      accountAdministrators: '帳號管理員',
+      administratorRole: '系統角色',
+      administratorSource: '帳號管理員許可權',
+      removeFor: '移除 {{principal}} 的直接授權',
       defaultRule: '預設繼承上級許可權',
       onlyAdmins: '暫無授權物件，僅帳號管理員可訪問',
-      directSource: '本目錄授權',
-      inheritedSource: '上級目錄授權',
+      directSource: '直接授權',
+      inheritedSource: '來自繼承',
+      directAndInheritedSource: '繼承 + 直接授權',
       adminCredentialIdentity:
         '許可權管理使用 {{account}} 的帳號管理員憑證；資源瀏覽仍使用當前使用者。',
       identity: '資源操作使用當前資料身份：{{account}} / {{user}}。',

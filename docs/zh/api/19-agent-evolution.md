@@ -1,6 +1,6 @@
 # Agent 進化
 
-Agent Evolution API 用於查詢某條 Experience 被實際應用後的 Trajectory 記錄及結果分佈。當前僅提供 HTTP API。
+Agent Evolution API 用於查詢與某條 Experience 成功讀取記錄關聯的 Trajectory 及結果分佈。當前僅提供 HTTP API。讀取記錄用於建立關聯，不能據此認定 Agent 遵循了這條經驗，或結果由該經驗造成。
 
 ## API 參考
 
@@ -54,8 +54,7 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/trajectori
     "limit": 50,
     "offset": 0,
     "has_more": false
-  },
-  "time": 0.01
+  }
 }
 ```
 
@@ -65,7 +64,7 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/trajectori
 
 ### 查詢 Experience 應用結果分佈
 
-統計應用過指定 Experience 的 Trajectory 在五種結果狀態下的數量。該查詢使用精確標量標籤聚合，不讀取全部 Trajectory 檔案。
+統計與指定 Experience 讀取記錄關聯的 Trajectory 在五種結果狀態下的數量。該查詢使用精確標量標籤聚合，不讀取全部 Trajectory 檔案。
 
 **程式碼入口**：
 
@@ -105,8 +104,7 @@ curl -X GET "http://localhost:1933/api/v1/agent-evolution/experiences/outcomes?e
       {"outcome": "unknown", "count": 0},
       {"outcome": "unfinished", "count": 0}
     ]
-  },
-  "time": 0.01
+  }
 }
 ```
 

@@ -71,7 +71,7 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
     def mode(self) -> str:
         return self.backend_mode
 
-    def _get_backend_for_context(self, ctx):
+    async def _get_backend_for_context(self, ctx):
         del ctx
         return SimpleNamespace(strict_query=self._query)
 
@@ -272,13 +272,13 @@ def _records_under(
 
 
 @pytest.mark.asyncio
-async def test_copy_uri_mapping_scans_real_local_path_records(tmp_path):
+async def test_copy_uri_mapping_scans_real_local_path_records(vector_backend_factory, tmp_path):
     if not getattr(vectordb_engine, "PersistStore", None):
         pytest.skip("local persistent vectordb engine is not available in this environment")
 
     source = "viking://resources/src.md"
     target = "viking://resources/dst.md"
-    backend = VikingVectorIndexBackend(
+    backend = vector_backend_factory(
         config=VectorDBBackendConfig(
             backend="local",
             name="context",
@@ -379,8 +379,11 @@ async def test_get_l2_abstracts_by_uris_uses_strict_batched_lookup():
 
 @pytest.mark.asyncio
 async def test_scroll_propagates_real_adapter_query_failure():
-    backend = _SingleAccountBackend.__new__(_SingleAccountBackend)
-    backend._bound_account_id = "acct"
+    backend = _SingleAccountBackend(
+        VectorDBBackendConfig(),
+        bound_account_id="acct",
+        shared_adapter=SimpleNamespace(mode="local"),
+    )
     backend._async_adapter = SimpleNamespace(
         call=AsyncMock(side_effect=RuntimeError("injected query failure"))
     )
@@ -397,8 +400,11 @@ async def test_strict_delete_removes_existing_subset_when_attempted_ids_include_
             1,
         ]
     )
-    backend = _SingleAccountBackend.__new__(_SingleAccountBackend)
-    backend._bound_account_id = "acct"
+    backend = _SingleAccountBackend(
+        VectorDBBackendConfig(),
+        bound_account_id="acct",
+        shared_adapter=SimpleNamespace(mode="local"),
+    )
     backend._async_adapter = SimpleNamespace(call=adapter_call)
 
     deleted = await backend.strict_delete(["written", "never-written"])
@@ -697,12 +703,12 @@ async def test_incremental_hydration_honors_explicit_summary_projection():
 
 
 @pytest.mark.asyncio
-async def test_l2_diff_scan_reads_real_local_backend(tmp_path):
+async def test_l2_diff_scan_reads_real_local_backend(vector_backend_factory, tmp_path):
     if not getattr(vectordb_engine, "PersistStore", None):
         pytest.skip("local persistent vectordb engine is not available in this environment")
 
     root = "viking://resources/docs"
-    backend = VikingVectorIndexBackend(
+    backend = vector_backend_factory(
         config=VectorDBBackendConfig(
             backend="local", name="context", dimension=4, path=str(tmp_path)
         )
@@ -751,12 +757,14 @@ async def test_l2_diff_scan_reads_real_local_backend(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_incremental_inventory_and_hydration_read_real_local_backend(tmp_path):
+async def test_incremental_inventory_and_hydration_read_real_local_backend(
+    vector_backend_factory, tmp_path
+):
     if not getattr(vectordb_engine, "PersistStore", None):
         pytest.skip("local persistent vectordb engine is not available in this environment")
 
     root = "viking://resources/docs"
-    backend = VikingVectorIndexBackend(
+    backend = vector_backend_factory(
         config=VectorDBBackendConfig(
             backend="local", name="context", dimension=4, path=str(tmp_path)
         )

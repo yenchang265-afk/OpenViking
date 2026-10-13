@@ -1,8 +1,8 @@
 # 匯入本地 Agent 日誌（openviking-server ingest）
 
-`openviking-server ingest` 把你本地已有的 AI 編碼 / agent harness 的對話日誌（Claude Code、Codex、WorkBuddy、OpenCode、MiMo、Hermes、OpenClaw）解析成標準訊息，再通過 OpenViking 既有的會話管線“重放”進去（`建立會話 → 批次追加訊息 → 提交`，提交時觸發記憶抽取），從而把這些歷史與新增對話沉澱為長期記憶。它與各 harness 的“記憶外掛”互補：外掛在對話**進行時**即時掛載捕獲，而本工具用於**匯入既有日誌**與**離線監聽新增日誌**，無需外掛、也無需改動對應 harness。
+`openviking-server ingest` 讀取本地 Agent 對話日誌，將訊息匯入 OpenViking 會話並提交，觸發記憶提取。它支援一次性匯入歷史日誌，也支援持續監聽新增日誌，無需修改對應 Agent 或安裝記憶外掛。
 
-與外掛方案的關鍵區別：本工具是 OpenViking 的**客戶端**，跑在日誌所在的機器上，通過 SDK 指向本地或遠端 server；它預設**完全關閉**，不會“裝上就掃你本地檔案”。
+命令執行在日誌所在機器，通過 SDK 連線本地或遠端 OpenViking 服務。匯入預設關閉，安裝 OpenViking 不會掃描本地日誌；需要顯式啟用總開關和指定 Agent 的配置。
 
 原始碼：[openviking/ingest](https://github.com/volcengine/OpenViking/tree/main/openviking/ingest)
 
@@ -98,7 +98,7 @@ openviking-server ingest run
 openviking-server ingest status
 ```
 
-`--reset` 會在重放前刪除並重建對應的 OV 會話；不加 `--reset` 時，重複執行是冪等的（游標保證不會重複追加）。
+`--reset` 會在重放前刪除並重建對應的 OV 會話，不會刪除此前已提取的記憶。正常重跑會從持久化游標續傳，並用服務端訊息數核對中斷的批次。保留游標資料庫，避免多個程序同時重放或其他程式寫入匯入會話；切換服務或使用者時不要沿用同一份游標資料庫。
 
 ## peer_id
 
@@ -121,13 +121,13 @@ openviking-server ingest status
 - **存量回填**：列舉所有會話，從游標讀到末尾後逐會話提交一次。
 - **監聽增量**：參照 OpenViking 自身的 `WatchScheduler`，用**定時輪詢**（非檔案系統事件）+ 持久游標驅動；漏一拍、休眠或重啟後，下一拍從游標讀到末尾即可自愈。JSONL 用位元組偏移游標（含半行/截斷/輪轉處理），SQLite 用 `(time, id)` 游標只讀讀取（相容 WAL）。
 
-游標狀態持久化在 `~/.openviking/ingest/state.db`，因此回填與監聽都能在重啟後續傳，且不會重複入庫。
+游標狀態持久化在 `~/.openviking/ingest/state.db`，在連線身份不變時，回填與監聽可以在重啟後續傳。
 
 ## 成本與隱私
 
 - 提交會觸發記憶抽取（LLM 呼叫）。一次性回填數月曆史可能產生大量呼叫，建議先 `--dry-run`、用 `--since` 收窄時間窗、按 harness 分批開啟。
 - 日誌中可能含敏感內容（憑據、檔案內容）。請在受信任的部署中使用，並確認 `server_url` 指向你期望的 server。
-- tool 呼叫的輸入/輸出預設按低價值丟棄，僅入庫 user / assistant 文本。
+- 預設只匯入 user/assistant 文本，不保留工具呼叫的輸入和輸出。需要結構化工具記錄時，使用對應執行時的記憶外掛。
 
 ## 參見
 

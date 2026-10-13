@@ -1,8 +1,8 @@
-# 多版本管理（快照）
+# 版本管理
 
-OpenViking 在 VikingFS 之上提供了一套基於 Git 的多版本管理能力，稱為**快照（Snapshot）**。它把某個帳號（account）下的整棵資源樹儲存成一系列不可變的提交（commit），讓你能夠回溯歷史、對比版本，並把工作區恢復到任意一個歷史狀態。
+快照將指定範圍內的檔案樹儲存為不可變版本。使用 `commit` 儲存、`log` 檢視歷史、`show` 讀取舊版檔案、`diff` 對比檔案在兩個版本間的差異、`restore` 恢復已儲存的內容。未提交或被排除的檔案不在恢復範圍內，ACL 和向量索引也不儲存歷史版本。
 
-快照能力底層由內嵌在 Rust RAGFS 層的 [gitoxide](https://github.com/Byron/gitoxide) 驅動，按 `account_id` 維護一個邏輯 Git 倉庫（每個帳號一個倉庫），對呼叫方完全透明——你無需關心 `.ovgit` 目錄、物件庫或引用細節。
+快照能力底層由內嵌在 Rust RAGFS 層的 [gitoxide](https://github.com/Byron/gitoxide) 驅動，按 `account_id` 維護一個邏輯 Git 倉庫（每個帳號一個倉庫），使用快照 API 管理版本即可，無需直接修改底層倉庫。
 
 五個核心命令：
 
@@ -20,7 +20,7 @@ OpenViking 在 VikingFS 之上提供了一套基於 Git 的多版本管理能力
 
 - **提交（commit）**：一個快照對應一個提交，由 40 位十六進位制的 SHA-1 `commit_oid` 唯一標識。多數命令也接受 OID 的縮寫字首，或分支名（如 `main`）。
 - **分支（branch）**：預設分支為 `main`。除非顯式傳入，所有命令都作用在 `main` 上。
-- **正向恢復（forward-commit restore）**：`restore` **不會**回退或改寫歷史。它會讀取 `source_commit` 的內容，把差異寫回工作區，並在當前 HEAD 之上**生成一個新的提交**。因此新提交的父提交是恢復操作發生前的 HEAD，而**不是** `source_commit`。HEAD 始終單調向前推進，歷史永遠不會丟失。
+- **正向恢復（forward-commit restore）**：`restore` **不會**回退或改寫歷史。它會讀取 `source_commit` 的內容，把差異寫回工作區，並在當前 HEAD 之上**生成一個新的提交**。因此新提交的父提交是恢復操作發生前的 HEAD，而**不是** `source_commit`。恢復保留此前的提交；選定的原始檔樹與 HEAD 一致時返回 `noop`，不生成新提交。該比較不檢查工作區中未提交的改動。
 - **作用範圍**：`commit` 可以通過 `paths` 限定只快照部分 URI；`restore` 可以通過 `project_dir` 限定只恢復某個子目錄，目錄之外的檔案保持不變。
 
 ## ACL 許可權
@@ -34,7 +34,7 @@ OpenViking 在 VikingFS 之上提供了一套基於 Git 的多版本管理能力
 | `restore` 覆蓋已有檔案 | 檔案的 `write` |
 | `restore` 新建檔案 | 父目錄的 `write` |
 | `restore` 刪除檔案 | 檔案的 `write` |
-| `.ovgitignore` 讀寫刪除 | ADMIN |
+| `.ovgitignore` 讀寫刪除 | ADMIN 或 ROOT |
 
 USER 和 ADMIN 呼叫 `commit`、`log`、`restore` 時必須顯式傳入 `paths` 或 `project_dir`；`show` 必須傳入 `path`，不帶 `path` 的全域提交後設資料查詢只保留給本地 ROOT 模式。使用者可以操作自己有權訪問的公共資源和自己的 `viking://user/{user_id}/...`，不能訪問其他使用者空間。目錄操作會先完整鑑權，不會靜默跳過無權子節點；`restore` 會先鑑權全部寫入和刪除項，再開始修改。
 
@@ -65,7 +65,7 @@ USER 和 ADMIN 呼叫 `commit`、`log`、`restore` 時必須顯式傳入 `paths`
 | author_name | str | 否 | null | 覆蓋預設的提交者名字（預設 `viking-bot`） |
 | author_email | str | 否 | null | 覆蓋預設的提交者郵箱 |
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 result = client.snapshot.commit(
@@ -150,7 +150,7 @@ ov snapshot commit -m "v1 initial import" --paths viking://resources/my_md.md -o
 
 為限制儲存開銷，過濾請求最多檢查 1,000 條提交。如果尚未收集到請求數量的匹配結果，並且仍存在未檢查的更早歷史，介面將返回 `INVALID_ARGUMENT` 錯誤，而不是返回不完整的歷史列表。非過濾請求不受該掃描預算限制，因為每檢查一條提交都會推進返回數量限制。
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 history = client.snapshot.log(
@@ -240,7 +240,7 @@ ov snapshot log --limit 10 \
 | target_ref | str | 是 | - | 提交 OID（支援縮寫字首）、分支名或標籤 |
 | path | str | 否 | null | 某個檔案的 `viking://` URI；省略時返回提交後設資料，但僅限本地 ROOT 模式 |
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 # 檢視提交後設資料（僅本地 ROOT 模式）
@@ -322,7 +322,7 @@ ov snapshot show 3f2a1b9c --path viking://resources/my_project/guide.md --out-fi
 
 對比一個 UTF-8 檔案在兩個快照引用中的內容，並返回 unified diff。`to_ref` 必填；省略 `from_ref` 時，舊版本按空檔案處理，可用於展示檔案的初始版本。
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 result = client.snapshot.diff(
@@ -403,16 +403,9 @@ ov snapshot diff viking://resources/my_project/guide.md \
 | author_name | str | 否 | null | 覆蓋預設的提交者名字 |
 | author_email | str | 否 | null | 覆蓋預設的提交者郵箱 |
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
-result = client.snapshot.restore(
-    project_dir="viking://resources/my_project",
-    source_commit="3f2a1b9c",
-    message="restore to v1",
-)
-print(result["result"], result["new_commit_oid"])
-
 # 先預演，確認要改動哪些檔案
 plan = client.snapshot.restore(
     project_dir="viking://resources/my_project",
@@ -420,6 +413,18 @@ plan = client.snapshot.restore(
     dry_run=True,
 )
 print(plan["diff"])
+```
+
+```python
+# 核對計劃後，再執行恢復
+result = client.snapshot.restore(
+    project_dir="viking://resources/my_project",
+    source_commit="3f2a1b9c",
+    message="restore to v1",
+)
+print(result["result"])
+if result["result"] == "applied":
+    print(result["new_commit_oid"])
 ```
 
 **TypeScript SDK**
@@ -452,10 +457,11 @@ curl -X POST "http://localhost:1933/api/v1/snapshot/restore" \
 
 ```bash
 # 位置引數依次為 <source_commit> <project_dir>
-ov snapshot restore 3f2a1b9c viking://resources/my_project -m "restore to v1" -o json
-
-# 預演
+# 先預演
 ov snapshot restore 3f2a1b9c viking://resources/my_project --dry-run -o json
+
+# 核對計劃後，再執行恢復
+ov snapshot restore 3f2a1b9c viking://resources/my_project -m "restore to v1" -o json
 ```
 
 **響應（applied）**
@@ -525,13 +531,13 @@ ov snapshot restore 3f2a1b9c viking://resources/my_project --dry-run -o json
 
 語法為常見 glob 子集：空行被忽略、`#` 開頭為註釋、行首尾空白被裁剪；**不支援** `!` 取反與反斜槓轉義；檔案大小上限 64 KiB（寫入時即校驗）。匹配路徑為帳號相對 Git 樹路徑（`/` 分隔）。
 
-提供三個方法：`get_gitignore`（讀取，缺失返回空串）、`set_gitignore`（寫入）、`delete_gitignore`（刪除，缺失即成功、冪等）。三者都要求 ADMIN 許可權，只需請求上下文中的帳號，無路徑引數。
+提供三個方法：`get_gitignore`（讀取，缺失返回空串）、`set_gitignore`（寫入）、`delete_gitignore`（刪除，缺失即成功、冪等）。三者都要求 ADMIN 或 ROOT 許可權，只需請求上下文中的帳號，無路徑引數。
 
 ### get_gitignore()
 
 讀取帳號 `.ovgitignore` 內容；檔案不存在時返回空字串。
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 content = client.snapshot.get_gitignore()
@@ -581,7 +587,7 @@ ov snapshot ignore-get -o json
 |------|------|------|--------|------|
 | content | str | 是 | - | `.ovgitignore` 檔案內容（UTF-8） |
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 client.snapshot.set_gitignore(content="*.log\n")
@@ -627,7 +633,7 @@ ov snapshot ignore-set --file ./my-rules -o json
 
 刪除帳號 `.ovgitignore`。檔案不存在也視為成功（冪等）。
 
-**Python HTTP SDK**
+**Python SDK (HTTP)**
 
 ```python
 client.snapshot.delete_gitignore()
@@ -718,5 +724,5 @@ client.close()
 ## 相關文件
 
 - [檔案系統](03-filesystem.md)：快照建立在檔案系統資源之上
-- [系統](07-system.md)：通過 `GET /api/v1/tasks/{task_id}` 跟蹤 restore 觸發的後臺向量重建
+- [後臺任務](17-tasks.md)：通過 `GET /api/v1/tasks/{task_id}` 跟蹤 restore 觸發的後臺向量重建
 - [API 概覽](01-overview.md)：完整端點總覽

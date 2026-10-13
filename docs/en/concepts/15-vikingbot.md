@@ -1,4 +1,4 @@
-# VikingBot: A Multi-Channel AI Agent Powered by OpenViking
+# VikingBot: OpenViking's Native Agent
 
 VikingBot is a multi-channel AI Agent provided by OpenViking. OpenViking manages long-term context such as Resources, Memories, and Skills; VikingBot receives user messages, assembles context, invokes models and tools, and delivers results to a command line, chat platform, or HTTP client.
 
@@ -115,7 +115,7 @@ VikingBot reads the Peer Profile for the trusted current `actor_peer_id` and rec
 - `entities`: people, projects, organizations, and other entities;
 - `preferences`: user preferences, habits, and constraints.
 
-This identity model allows users sharing one Gateway to retain isolated personal context.
+Isolation depends on the OpenViking connection identity. `actor_peer_id` restricts a user's peer collection; chat users sharing one user key can still see that user's own memories and shared resources. Separate user isolation requires distinct user identities.
 
 ### Experience: Reusable Task Knowledge
 

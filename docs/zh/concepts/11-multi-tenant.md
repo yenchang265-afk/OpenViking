@@ -1,6 +1,6 @@
 # 多租戶
 
-OpenViking 的多租戶不是“為每個團隊部署一套獨立服務”，而是在同一個 OpenViking Server 內，用 `account` 和 `user` 兩層身份邊界來隔離和共享資料。
+OpenViking 的多租戶不是“為每個團隊部署一套獨立服務”，而是在同一個 Server 內，通過 `account` 和 `user` 兩層身份邊界隔離和共享資料。
 
 它適合兩類典型場景：
 
@@ -40,7 +40,7 @@ OpenViking 的多租戶不是“為每個團隊部署一套獨立服務”，而
 
 | 角色 | 作用域 | 典型能力 |
 |------|--------|----------|
-| ROOT | 全域 | 建立/刪除 account、跨租戶訪問、管理使用者 |
+| ROOT | 全域 | 建立/刪除 account、管理使用者；API Key 模式下不用於租戶資料讀寫 |
 | ADMIN | 單個 account | 管理本 account 的使用者、重置 user key |
 | USER | 單個 account | 訪問自己的 user/peer/session 資料和 account 內共享資源 |
 
@@ -57,7 +57,7 @@ OpenViking Server 支援兩種多租戶相關認證模式：
 
 ### `root_api_key` 的作用
 
-配置 `server.root_api_key` 後，OpenViking 才進入正式多租戶模式：
+在 `api_key` 模式下，配置 `server.root_api_key` 後啟用基於 key 的帳戶和使用者管理：
 
 - Root key 用於管理 account 和 user
 - User key 由 Admin API 生成，用於普通業務讀寫
@@ -79,7 +79,8 @@ OpenViking Server 支援兩種多租戶相關認證模式：
 | 使用者資源 (`viking://user/{user_id}/resources`) | 否 | 否 | user |
 | Peer 資源 (`viking://user/{user_id}/peers/{peer_id}/resources`) | 否 | 否 | user / peer |
 | 記憶 | 否 | 否 | user / peer |
-| 技能 | 否 | 否 | user |
+| 私有技能 (`viking://user/{user_id}/skills`) | 否 | 否 | user |
+| 共享技能 (`viking://agent/skills`) | 否 | 是，受訪問許可權約束 | account |
 | 會話 | 否 | 否 | user / session |
 
 ### 儲存層
@@ -109,9 +110,9 @@ viking://user/alice/peers/web-visitor-alice/resources/
 檔案系統操作和語義檢索都受租戶約束：
 
 - 非 ROOT 請求會自動按 `account_id` 過濾
-- `resources` 預設允許檢索 account 內共享資源；設定 ACL 後按有效 ACL 過濾
+- `resources` 預設允許檢索 account 內共享資源；開啟帳號級 `acl.enabled` 並設定 ACL 後按有效 ACL 過濾
 - 使用者資源始終按當前 `user space` 隔離；需要共享時移動到 `viking://resources`
-- `memory` 和 `skill` 繼續按當前 `user space` 過濾
+- 記憶和私有技能按當前 `user space` 過濾；共享技能位於 account 內的 `viking://agent/skills`
 - Actor peer 會把 `viking://user/{user}/peers` 過濾到一個 peer，並作用於檔案系統和檢索操作
 
 這意味著“能搜到什麼”與“能讀到什麼”保持一致，不會因為向量召回而越權。
@@ -236,43 +237,36 @@ openclaw config set plugins.entries.openviking.config.peer_prefix "<peer-prefix>
 如果給外掛直接配置 root key，則普通租戶資料 API 沒有從 key 綁定出來的租戶使用者，
 這不適合作為日常讀寫方式。
 
-### Vikingbot：root key 代管使用者身份
+### VikingBot：匹配 Server 的認證模式
 
-Vikingbot 當前的實踐與 OpenClaw 外掛不同，它更接近“平臺代理多個終端使用者”：
+當前 VikingBot 通過 `bot.ov_server.api_key_type` 選擇連線方式，不會通過 root key 自動註冊並快取每個終端使用者的 user key：
 
-- bot 連線 OpenViking 時持有 root key
-- bot 配置固定的 `account_id`
-- bot 會在該 account 下自動註冊使用者
-- bot 會快取每個 user 的 user key，並儘量用對應 user key 去提交/檢索 memory
+- `user`：連線 `api_key` 模式的 Server，`api_key` 必須是 User/Admin key，資料身份由 key 決定。
+- `root`：用於 trusted 模式，Bot 以受信連線傳遞 account/user 身份；不能拿它訪問 `api_key` 模式的租戶資料介面。
+- 同配置啟動時可以繼承當前 Server 的地址和認證設定；外部 Server 應顯式配置連線。
 
-相關配置示例：
+固定使用者身份的配置示例：
 
 ```json
 {
   "bot": {
     "ov_server": {
       "server_url": "http://127.0.0.1:1933",
-      "root_api_key": "test",
-      "account_id": "default",
-      "admin_user_id": "default"
+      "api_key_type": "user",
+      "api_key": "your-user-api-key"
     }
   }
 }
 ```
 
-這種模式的特點：
-
-- 適合一個 bot 服務承載多個聊天使用者
-- 同一 account 下的 `resources` 預設共享，ACL 可以對具體目錄或檔案細化許可權
-- 使用者記憶通過自動註冊的 user 身份隔離
-- bot 側需要承擔更多租戶生命週期管理邏輯
+共享同一個 user key 的聊天參與者仍屬於同一 OpenViking user。`actor_peer_id` 可限制其 peer 集合檢視，但不會把該使用者自己的記憶和共享資源變成逐聊天使用者私有資料。需要獨立 user 邊界時，應由可信身份入口提供不同的使用者連線或使用 trusted 身份傳遞，見[VikingBot 安裝與配置](../guides/17-vikingbot.md)。
 
 ## 什麼時候選哪種實踐
 
 | 場景 | 推薦方式 |
 |------|----------|
 | 一個 OpenClaw 例項對應一個固定身份 | OpenClaw 外掛 + user key |
-| 一個閘道器/機器人服務承載很多終端使用者 | Vikingbot + root key 代管使用者 |
+| 一個閘道器/機器人服務承載很多終端使用者 | 按使用者配置連線或由受信入口傳遞 trusted 身份 |
 | 受信閘道器統一注入身份 | `trusted` 模式 |
 | 單機本地體驗、無需真正租戶隔離 | 開發模式（無 `root_api_key`） |
 
@@ -310,13 +304,13 @@ peer 集合過濾選擇當前使用者內的 peer 內容子空間，例如
 ### 4. OpenClaw 外掛和 Vikingbot 不是同一種租戶實踐
 
 - OpenClaw 外掛：更像“客戶端拿到一個 user 身份後直接訪問”
-- Vikingbot：更像“平臺代理多個使用者，並代為申請和管理 user key”
+- VikingBot：支援固定 User/Admin key，也可作為受信入口傳遞身份；選擇取決於 Server 認證模式
 
 ## 相關文件
 
 - [認證](../guides/04-authentication.md) - 認證模式、請求頭和 key 規則
 - [配置](../guides/01-configuration.md) - `root_api_key` 和 `auth_mode`
-- [管理員（多租戶）](../api/08-admin.md) - Admin API 參考
+- [多租戶](../api/08-admin.md) - Admin API 參考
 - [API 概覽](../api/01-overview.md) - CLI / HTTP 連線方式
 - [資源訪問控制（ACL）](./15-acl.md) - account 內資源授權、繼承和檢索過濾
 - [ACL API](../api/12-acl.md) - HTTP、SDK 和 CLI 接口

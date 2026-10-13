@@ -6,7 +6,7 @@
 
 ### abstract()
 
-讀取 L0 摘要（約 100 token 的概要），不包括 okf 檔案頭。
+讀取 L0 摘要，不包括 OKF 檔案頭。目錄摘要的預設字元上限為 256；字元數不等於 token 數。
 
 **引數**
 
@@ -54,7 +54,7 @@ curl -X GET "http://localhost:1933/api/v1/content/abstract?uri=viking://resource
 **CLI**
 
 ```bash
-openviking abstract viking://resources/docs/
+ov abstract viking://resources/docs/
 ```
 
 
@@ -63,8 +63,7 @@ openviking abstract viking://resources/docs/
 ```json
 {
   "status": "ok",
-  "result": "Documentation for the project API, covering authentication, endpoints...",
-  "time": 0.1
+  "result": "Documentation for the project API, covering authentication, endpoints..."
 }
 ```
 
@@ -119,7 +118,7 @@ curl -X GET "http://localhost:1933/api/v1/content/overview?uri=viking://resource
 **CLI**
 
 ```bash
-openviking overview viking://resources/docs/
+ov overview viking://resources/docs/
 ```
 
 
@@ -128,8 +127,7 @@ openviking overview viking://resources/docs/
 ```json
 {
   "status": "ok",
-  "result": "## docs/\n\nContains API documentation and guides...",
-  "time": 0.1
+  "result": "## docs/\n\nContains API documentation and guides..."
 }
 ```
 
@@ -146,13 +144,13 @@ openviking overview viking://resources/docs/
 | uri | str | 是 | - | Viking URI（如 `viking://resources/docs/api.md`）或 32 字元十六進位制向量記錄 `id`（由 `stat()` 返回） |
 | offset | int | 否 | 0 | 起始行號（0 開始） |
 | limit | int | 否 | -1 | 讀取的行數，`-1` 表示讀到結尾 |
-| raw | bool | 否 | false | 返回未過濾 MEMORY_FIELDS 的原始儲存內容（僅 HTTP API，Python SDK 暫未暴露）。 |
+| raw | bool | 否 | false | 返回未過濾 MEMORY_FIELDS 的原始儲存內容；Python 中使用 `client.read_raw(uri)` 讀取此格式。 |
 
 **說明**
 
-- `read()` 只接受檔案 URI。傳入已存在的目錄 URI 時返回 `INVALID_ARGUMENT`（`400`），而不是 `NOT_FOUND`。該錯誤會攜帶結構化的 `details` 欄位——`details.expected` 為 `"file"`，`details.actual` 為 `"directory"`，`details.resource` 為出錯的 URI（HTTP 路徑上會帶上）——客戶端據此即可以程式設計方式判斷"檔案 vs 目錄"不匹配（例如回退到 `list`），而無需對錯誤訊息做字串匹配。
+- `read()` 只接受檔案 URI。傳入已存在的目錄時返回 `INVALID_ARGUMENT`（HTTP `400`）。HTTP 響應的 `details` 包含 `expected: "file"`、`actual: "directory"` 和目標 `resource` URI，客戶端可據此改用目錄列表介面，無需解析錯誤訊息。
 - 除 Viking URI 外，還可以傳入 `stat()` 返回的 32 字元十六進位制檔案 `id`。服務端通過向量索引查詢對應 URI 並執行相同的許可權校驗。由於索引是非同步生成的，新返回的 ID 可能暫時無法解析；對應向量記錄被刪除後，按 ID 查詢也會失敗。這兩種情況下，服務端都會返回 `NOT_FOUND`，並提示資料可能尚未索引或已經刪除。
-- 公開 URI 引數接受 `resources` 和 `user` 作用域。訪問 session 檔案時，使用 `viking://user/{user_id}/sessions/{session_id}`，也可以使用向後相容的 `viking://session/{session_id}` 別名。`temp`、`queue` 等內部作用域會返回 `INVALID_URI`。
+- 公開 URI 引數接受 `resources`、`user` 和 `agent` 作用域。訪問 session 檔案時，使用 `viking://user/{user_id}/sessions/{session_id}/messages.jsonl`，也可以使用向後相容的 `viking://session/{session_id}/messages.jsonl` 別名。`temp`、`queue` 等內部作用域會返回 `INVALID_URI`。
 
 
 **Python SDK**
@@ -193,7 +191,7 @@ curl -X GET "http://localhost:1933/api/v1/content/read?uri=viking://resources/do
 **CLI**
 
 ```bash
-openviking read viking://resources/docs/api.md
+ov read viking://resources/docs/api.md
 ```
 
 
@@ -202,8 +200,7 @@ openviking read viking://resources/docs/api.md
 ```json
 {
   "status": "ok",
-  "result": "# API Documentation\n\nFull content of the file...",
-  "time": 0.1
+  "result": "# API Documentation\n\nFull content of the file..."
 }
 ```
 
@@ -298,14 +295,14 @@ curl -X POST "http://localhost:1933/api/v1/content/write" \
 **CLI**
 
 ```bash
-openviking write viking://resources/docs/api.md \
-  --content "# Updated API\n\nFresh content." \
+ov write viking://resources/docs/api.md \
+  --content $'# Updated API\n\nFresh content.' \
   --tags team=search,env=prod \
   --tag-mode replace
 ```
 
 
-**響應**
+**`wait=true` 且重新整理完成時的響應**
 
 ```json
 {
@@ -389,8 +386,34 @@ result = client.batch_write(
             "mode": "upsert",
         },
     ],
-    wait=False,
+    wait=True,
 )
+```
+
+**TypeScript SDK**
+
+```typescript
+const result = await client.batchWrite("viking://resources/wiki", [
+  {
+    uri: "viking://resources/wiki/new.md",
+    content: "# New page\n",
+    mode: "upsert",
+  },
+]);
+console.log(result);
+```
+
+**Go SDK**
+
+```go
+content := "# New page\n"
+result, err := client.BatchWrite(ctx, "viking://resources/wiki", []openviking.BatchWriteOperation{
+    {URI: "viking://resources/wiki/new.md", Content: &content, Mode: "upsert"},
+}, nil)
+if err != nil {
+    return err
+}
+fmt.Println(result)
 ```
 
 **HTTP API**
@@ -412,11 +435,11 @@ curl -X POST http://localhost:1933/api/v1/content/batch-write \
         "mode": "upsert"
       }
     ],
-    "wait": false
+    "wait": true
   }'
 ```
 
-**響應**
+**`wait=true` 且重新整理完成時的響應**
 
 ```json
 {
@@ -439,7 +462,7 @@ curl -X POST http://localhost:1933/api/v1/content/batch-write \
 }
 ```
 
-TypeScript、Go SDK 和 CLI 當前不直接暴露 batch write。
+CLI 當前不直接提供批次寫入命令。
 
 ---
 
@@ -450,6 +473,38 @@ TypeScript、Go SDK 和 CLI 當前不直接暴露 batch write。
 | 引數 | 型別 | 必填 | 說明 |
 |------|------|------|------|
 | `uri` | string | 是 | 要下載的檔案 URI |
+
+**Python SDK**
+
+```python
+from pathlib import Path
+
+Path("logo.png").write_bytes(
+    client.download_bytes("viking://resources/images/logo.png")
+)
+```
+
+**TypeScript SDK**
+
+```typescript
+import { writeFile } from "node:fs/promises";
+
+const bytes = await client.downloadBytes("viking://resources/images/logo.png");
+await writeFile("logo.png", bytes);
+```
+
+**Go SDK**
+
+```go
+// Requires the os package.
+data, err := client.DownloadBytes(ctx, "viking://resources/images/logo.png")
+if err != nil {
+    return err
+}
+if err := os.WriteFile("logo.png", data, 0600); err != nil {
+    return err
+}
+```
 
 **HTTP API**
 
@@ -482,13 +537,13 @@ Content-Disposition: attachment; filename*=UTF-8''logo.png
 <binary body>
 ```
 
-`ov get <uri> <local-path>` 通過上述 HTTP API 下載檔案並寫入本地路徑。Python、TypeScript 和 Go SDK 當前沒有獨立的原始位元組下載方法。
+`ov get <uri> <local-path>` 通過上述 HTTP API 下載檔案並寫入本地路徑。
 
 ---
 
 ### set_tags()
 
-設定用於檢索過濾的顯式 `k=v` 標籤。`replace` 替換已有標籤，`append` 追加標籤；對目錄設定 `recursive=true` 時會更新目錄下的檔案。
+設定用於檢索過濾的顯式 `k=v` 標籤。`replace` 替換已有標籤，`append` 追加標籤，`clear` 顯式清空已有標籤；對目錄設定 `recursive=true` 時會更新目錄下的檔案。省略 `tags` 或傳入空陣列配合 `replace` 都是 no-op；只有 `clear` 會清空，且會忽略同時傳入的標籤值。
 
 **Python SDK**
 
@@ -583,7 +638,7 @@ ov set-tags viking://resources/project/ \
 
 ### reindex()
 
-對已經儲存在 OpenViking 中的現有內容，重新構建語義產物和/或向量索引。這是一個運維維護介面，適用於 embedding 模型更換、VLM 更換、向量庫重刷、版本升級後修復歷史索引等場景。
+對已經儲存在 OpenViking 中的現有內容，校驗並修復語義產物和/或向量索引。resource 和 skill 預設使用 RFV（Request / Formal / Vector）增量收斂：檔案內容指紋、目錄 L0/L1 可見正文指紋和請求標量都未變化時直接跳過。需要無條件重建時使用 `force=true`。
 
 這個介面面向已有的 `viking://...` 內容，不負責匯入新檔案。常規匯入請使用 [Resources](02-resources.md)。
 
@@ -597,14 +652,14 @@ ov set-tags viking://resources/project/ \
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
 | uri | str | 是 | - | 要重新索引的 Viking URI |
-| mode | str | 否 | `vectors_only` | 重建模式：`vectors_only`、`semantic_and_vectors` 或 `prune_orphans` |
+| mode | str | 否 | `vectors_only` | 重建模式：`vectors_only` 或 `semantic_and_vectors` |
 | wait | bool | 否 | `true` | 是否等待任務完成 |
-| dry_run | bool | 否 | `false` | 僅適用於 `mode="prune_orphans"`；只報告 orphan 向量記錄，不實際刪除 |
-| recursive | bool | 否 | `true` | 是否遞迴處理下級內容；`false` 僅對 `resource`、`memory` 或 `skill` 目錄的 `semantic_and_vectors` 生效 |
+| force | bool | 否 | `false` | 是否跳過內容指紋比較並強制重新處理範圍內全部 resource/skill 檔案和目錄 level |
+| recursive | bool | 否 | `true` | 是否遞迴處理下級內容；resource/skill 的兩種重建模式都遵守該引數 |
 | tags | list[str] | 否 | `null` | 寫入本次成功重建的全部向量記錄。省略或空陣列配合 `replace` 時保留已有 tags |
 | tag_mode | str | 否 | `replace` | 標籤寫入模式：`replace`、`append` 或 `clear`；`clear` 不要求傳 `tags` 並清空已有標籤 |
 
-HTTP 請求體不接受未知欄位。`uri` 可以使用其他 content API 支援的 OpenViking 路徑變數，服務端會先解析再校驗。
+HTTP 請求體會忽略未知欄位，便於客戶端與服務端在欄位演進期間相容。`uri` 可以使用其他 content API 支援的 OpenViking 路徑變數，服務端會先解析再校驗。
 
 **支援的 URI 範圍**
 
@@ -623,19 +678,18 @@ session 子樹會被跳過。
 
 **模式說明**
 
-- `vectors_only`：基於當前仍可恢復的源資料重建向量庫記錄，不會重寫 `.abstract.md` 和 `.overview.md`
-- `semantic_and_vectors`：先重新生成語義產物，再基於新的語義結果重建向量
-- `prune_orphans`：刪除請求 URI 範圍內原始檔已不存在的向量庫記錄。設定 `dry_run=true` 時，只報告會刪除多少記錄，不實際刪除。
+- `vectors_only`：通過 RFV 對比當前 source MD5 與向量記錄 MD5，只重建缺失或過期的 L0/L1/L2；不會重寫 `.abstract.md` 和 `.overview.md`
+- `semantic_and_vectors`：通過同一 RFV 狀態和 `ContextUpdatePlan` 驅動語義修復及 L0/L1/L2 向量更新，不再執行第二次手工向量掃描
 
 對於 `resource` 和 `skill`，`semantic_and_vectors` 會重新整理目錄/檔案語義產物，包括 `.abstract.md` 和 `.overview.md`。對於 `memory`，它會重建當前已持久化 memory 子樹的語義和向量，但不會回放歷史記憶抽取順序。
 
-對於 `semantic_and_vectors`，語義重新整理和向量重建由 reindex executor 序列編排。語義重新整理階段不會再額外向後臺 embedding queue 投遞自己的向量化任務；向量由 reindex 階段統一重建，因此 `wait=true` 表示等待 reindex 操作本身完成。
+resource/skill 的 `vectors_only` 和 `semantic_and_vectors` 共用一次 F 遍歷和一次窄欄位 V inventory。每個 source 在狀態解析時讀取一次，實際處理複用本次讀取結果，不會為了執行 Plan 再讀取一次 F。`force=true` 會跳過 MD5 相等判斷並重新處理作用域內全部可用 level；完整性檢查仍然執行。
 
-對 `resource` 或 `memory` 目錄設定 `recursive=false` 時，只重新生成目標目錄的 `.abstract.md`、`.overview.md`，並重建該目錄的 L0/L1 向量；下級目錄不會重新生成語義產物，下級目錄和檔案也不會重新向量化。目標目錄仍會讀取本輪確定性取樣命中的既有下級摘要；若取樣命中直接檔案，仍會為當前目錄聚合準備這些檔案的摘要。對 `skill` 目標設定 `recursive=false` 時，會根據 `SKILL.md` 重新生成 skill 目錄的 L0/L1 語義產物及向量，但不會重建 `SKILL.md` 的 L2 向量。該引數不改變 `vectors_only`、`prune_orphans` 或 namespace 目標的既有行為。
+對 resource/skill 目錄設定 `recursive=false` 時，兩種模式都只處理目標目錄自身的 L0/L1。直接 children 只作為目標聚合的既有 REUSE 輸入讀取，不掃描或重建下級內容。namespace 容器自身沒有索引記錄，因此 namespace 目標不接受 `recursive=false`，避免請求靜默成為 no-op。memory 仍使用原有 reindex 鏈路。
 
-對於 `prune_orphans`，原始檔是否存在以當前檔案系統為準。如果整個目錄已經不存在，該目錄下的正文檔案向量和語義 sidecar 向量（例如 `.abstract.md`、`.overview.md`）會一起清理。`dry_run` 用在其他模式時會被拒絕。
+F snapshot 完整時，RFV 差分會把 V 中存在但 F 中不存在的記錄識別為 orphan，並在同一次 reindex 中清理；F snapshot 不完整時 fail-closed，不執行刪除。
 
-傳入非空 `tags` 時，標籤會隨 reindex 生成的向量記錄在同一次 upsert 中寫入，不會在完成後額外呼叫 `set_tags`。目錄或 namespace reindex 會把標籤應用到本次成功重建的目錄 L0/L1 和葉子 L2 記錄。`replace` 覆蓋已有標籤，`append` 按 key 合併；`replace` 配合空陣列時不修改已有標籤。`clear` 不要求傳 `tags`，會清空已有標籤；即使同時傳入標籤值也會忽略。`prune_orphans` 不生成向量，因此會忽略 `tags` 和 `tag_mode`。
+傳入非空 `tags` 時，標籤會隨 reindex 生成的向量記錄在同一次 upsert 中寫入，不會在完成後額外呼叫 `set_tags`。目錄或 namespace reindex 會把標籤應用到本次成功重建的目錄 L0/L1 和葉子 L2 記錄。`replace` 覆蓋已有標籤，`append` 按 key 合併；`replace` 配合空陣列時不修改已有標籤。`clear` 不要求傳 `tags`，會清空已有標籤；即使同時傳入標籤值也會忽略。
 
 子樹 reindex 不是事務性操作。如果部分記錄因缺少語義來源或 embedding 失敗而未重建，只有成功寫入的記錄會更新標籤。
 
@@ -658,24 +712,17 @@ print(result)
 result = client.reindex(
     uri="viking://user/default/skills",
     mode="semantic_and_vectors",
+    force=True,
     wait=False,
 )
 print(result["status"])
-```
-
-```python
-result = client.reindex(
-    uri="viking://resources",
-    mode="prune_orphans",
-    dry_run=True,
-)
-print(result["would_delete_records"])
 ```
 
 **TypeScript SDK**
 
 ```typescript
 console.log(await client.reindex("viking://resources/docs/", {
+  force: true,
   tags: ["team=search"],
   tagMode: "append",
 }));
@@ -689,6 +736,7 @@ console.log(await client.reindex("viking://resources/docs/", {
 ```go
 result, err := client.Reindex(ctx, "viking://resources", &openviking.ReindexOptions{
     Mode: "vectors_only",
+    Force: true,
     Tags: []string{"team=search"},
     TagMode: "replace",
 })
@@ -696,17 +744,6 @@ if err != nil {
     return err
 }
 fmt.Println(result["status"])
-```
-
-```go
-result, err := client.Reindex(ctx, "viking://resources", &openviking.ReindexOptions{
-    Mode: "prune_orphans",
-    DryRun: true,
-})
-if err != nil {
-    return err
-}
-fmt.Println(result["task_id"])
 ```
 
 **HTTP API**
@@ -720,12 +757,12 @@ POST /api/v1/content/reindex
 ```bash
 curl -X POST http://localhost:1933/api/v1/content/reindex \
   -H "Content-Type: application/json" \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
+  -H "X-API-Key: your-admin-key" \
   -d '{
     "uri": "viking://resources",
     "mode": "vectors_only",
     "wait": false,
+    "force": true,
     "tags": ["team=search", "env=prod"],
     "tag_mode": "replace"
   }'
@@ -734,22 +771,18 @@ curl -X POST http://localhost:1933/api/v1/content/reindex \
 **CLI**
 
 ```bash
-openviking reindex viking://resources --mode vectors_only \
-  --tags team=search,env=prod --tag-mode replace
+ov reindex viking://resources --mode vectors_only \
+  --force --tags team=search,env=prod --tag-mode replace
 ```
 
 使用 `--tag-mode clear` 且無需傳 `--tags` 即可清空已有標籤：
 
 ```bash
-openviking reindex viking://resources --mode vectors_only --tag-mode clear
+ov reindex viking://resources --mode vectors_only --tag-mode clear
 ```
 
 ```bash
-openviking reindex viking://user/default/skills --mode semantic_and_vectors --wait false
-```
-
-```bash
-openviking reindex viking://resources --mode prune_orphans --dry-run
+ov reindex viking://user/default/skills --mode semantic_and_vectors --wait false
 ```
 
 **非同步響應（`wait=false`）**
@@ -763,8 +796,7 @@ openviking reindex viking://resources --mode prune_orphans --dry-run
     "object_type": "resource",
     "status": "accepted",
     "task_id": "task_xxx"
-  },
-  "time": 0.1
+  }
 }
 ```
 
@@ -772,8 +804,7 @@ openviking reindex viking://resources --mode prune_orphans --dry-run
 
 ```bash
 curl -X GET http://localhost:1933/api/v1/tasks/task_xxx \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default"
+  -H "X-API-Key: your-admin-key"
 ```
 
 Reindex 後臺任務的 `task_type` 為 `admin_reindex`，`resource_id` 等於請求中的 `uri`，也可以這樣列出：
@@ -794,8 +825,7 @@ GET /api/v1/tasks?task_type=admin_reindex&resource_id=viking://resources
 | mode | 實際執行的 reindex 模式 |
 | scanned_records | 被檢查的記錄或語義源數量 |
 | rebuilt_records | 成功重建的向量記錄數量 |
-| deleted_records | `prune_orphans` 實際刪除的向量記錄數量；`dry_run=true` 時為 `0` |
-| would_delete_records | `prune_orphans` dry-run 模式下將會刪除的向量記錄數量 |
+| deleted_records | RFV 差分確認並刪除的 orphan 向量記錄數量 |
 | unsupported_records | 因沒有可用向量來源而跳過的記錄數量 |
 | failed_records | 重建失敗的記錄數量 |
 | duration_ms | 同步執行耗時，單位毫秒 |
@@ -805,12 +835,10 @@ GET /api/v1/tasks?task_type=admin_reindex&resource_id=viking://resources
 **行為說明**
 
 - `vectors_only` 和 `semantic_and_vectors` 是非破壞式的，採用重建/覆蓋寫入，不需要先 drop 向量集合。
-- `prune_orphans` 除非設定 `dry_run=true`，否則會刪除原始檔已經不存在的向量記錄。
 - 對 `viking://` 發起 reindex 時，會向下分發到支援的頂層名稱空間，並顯式排除 `session`。
 - 名稱空間級 reindex，例如 `viking://user`，會繼續傳播到其支援的子內容型別。
 - 如果只是 embedding 模型或向量索引需要重新整理，應使用 `vectors_only`。
 - 如果語義產物本身也需要重建，再做重向量化，應使用 `semantic_and_vectors`。
-- 如果檔案系統曾繞過正常 API 發生刪除，向量庫可能還殘留已刪除路徑的記錄，應使用 `prune_orphans`。
 - 同一個 URI 和 owner 同時只能執行一個 reindex 任務。對同一目標的併發請求會返回 conflict。
 - 對 resource 檔案，文本檔案在沒有 summary 時可以使用檔案正文；非文本檔案需要已生成的 summary 或已有向量記錄 fallback，否則會計為 unsupported。
 

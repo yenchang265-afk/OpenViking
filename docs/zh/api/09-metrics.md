@@ -2,11 +2,7 @@
 
 OpenViking 提供 `/metrics` 端點，用於向 Prometheus、Grafana Agent 等監控系統匯出執行時指標。
 
-與 `/api/v1/observer/*` 不同，`/metrics` 的定位是：
-
-- 面向機器抓取，而不是面向人工閱讀
-- 返回 Prometheus exposition 文本，而不是統一 JSON 包裝
-- 偏系統執行態與服務執行質量，不承擔業務分析介面職責
+該端點返回供監控系統定時抓取的 Prometheus 文本，內容是系統執行狀態和服務質量訊號，不用於業務分析。需要元件狀態的 JSON 快照時，使用 `/api/v1/observer/*`。
 
 ## API 參考
 
@@ -18,9 +14,7 @@ OpenViking 提供 `/metrics` 端點，用於向 Prometheus、Grafana Agent 等�
 
 **認證**
 
-- 當前實現中，`/metrics` 未接入 `get_request_context` 等鑑權依賴，因此可直接訪問。
-- 也就是說，從程式碼實現角度看，`/metrics` 當前等價於公開抓取端點。
-- 如果後續通過閘道器、反向代理或服務端策略收緊訪問控制，應以實際部署配置為準。
+服務端不對 `/metrics` 請求鑑權。若閘道器或反向代理限制訪問，抓取任務需使用該層要求的憑據。
 
 **HTTP API**
 
@@ -77,7 +71,7 @@ scrape_configs:
 **注意事項**
 
 - `/metrics` 適合高頻抓取，因此其中的指標應保持低基數、低成本。
-- `/metrics` 返回的是 Prometheus 文本，不是標準 OpenViking API 的 `{status, result, time}` JSON 結構。
+- `/metrics` 返回的是 Prometheus 文本，不是標準 OpenViking API 的 `{status, result}` JSON 結構。
 - 人工檢視元件瞬時狀態更適合使用 `/api/v1/observer/*`。
 - `/metrics` 現在也包含 VikingBot feedback observability 指標，這些指標來自對持久化 session 資料的 scrape-time 聚合；具體指標族與示例可參見 Metrics 概念文件中的 feedback 章節。
 

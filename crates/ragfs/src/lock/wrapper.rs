@@ -383,6 +383,7 @@ impl FileSystem for PathLockWrappedFS {
         offset: Option<usize>,
         sort_by: Option<ListSortBy>,
         sort_order: Option<SortOrder>,
+        directories_only: bool,
     ) -> crate::core::Result<Vec<TreeEntry>> {
         self.inner
             .tree_directory(
@@ -393,6 +394,7 @@ impl FileSystem for PathLockWrappedFS {
                 offset,
                 sort_by,
                 sort_order,
+                directories_only,
             )
             .await
     }

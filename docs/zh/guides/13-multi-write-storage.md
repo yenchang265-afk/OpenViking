@@ -1,19 +1,19 @@
-# 多寫儲存指南
+# 主備儲存指南
 
-本指南介紹如何配置 OpenViking 的多寫儲存能力。多寫儲存允許一個 primary 後端同時複製寫入多個 backup 後端，用於高可用、跨區域副本、讀加速和儲存遷移。
+本指南介紹如何配置 OpenViking 的主備儲存能力。主備儲存允許一個 primary 後端同時複製寫入多個 backup 後端，用於儲存副本（包括跨地域副本）、配置讀路由和儲存遷移。primary 故障時不會自動提升 backup。
 
-多寫能力位於 RAGFS 內部。OpenViking 的 Python SDK、HTTP API 和 CLI 使用方式保持不變。
+主備儲存能力位於 RAGFS 內部。OpenViking 的 Python SDK、HTTP API 和 CLI 使用方式保持不變。
 
 ## 前置條件
 
 - 已有可用的 `ov.conf`。
 - 已確認 primary backend 可以正常讀寫。
 - 如果要接入 S3 相容儲存，已準備好 bucket、endpoint 和訪問憑據。
-- 如需遷移已有資料，請遵循 [OVPack 多寫遷移流程](./09-ovpack.md#與多寫儲存配合)；僅啟用 backups 不會複製歷史檔案。
+- 如需遷移已有資料，請遵循 [OVPack 主備儲存遷移流程](./09-ovpack.md#與主備儲存配合)；僅啟用 backups 不會複製歷史檔案。
 
 ## 最小配置
 
-下面示例使用本地目錄作為 primary，並把寫入複製到另一個本地目錄。
+將下列片段合併到現有模型和服務端配置。下面示例使用本地目錄作為 primary，並把寫入複製到另一個本地目錄。
 
 ```json
 {
@@ -94,12 +94,12 @@
 
 ### S3 相容儲存注意事項
 
-使用 S3 相容服務（MinIO、RustFS、Ceph 等）時，`s3` 段需要額外配置以下欄位：
+按實際 endpoint 和物件儲存配置選擇以下 `s3` 欄位：
 
 | 欄位 | 是否必填 | 說明 |
 | --- | --- | --- |
-| `use_path_style` | 大多數 S3 相容服務必填 | 設定為 `true` 使用路徑風格 URL（`http://host/bucket/key`）。大多數 S3 相容服務需要此配置。 |
-| `directory_marker_mode` | S3 相容服務必填 | **必須顯式設定為 `"none"`**。如果不配置，RAGFS Rust binding 啟動時會報 `AGFSConfigError: invalid directory_marker_mode: null` 並靜默崩潰。 |
+| `use_path_style` | 可選，預設 `true` | 使用路徑風格 URL（`http://host/bucket/key`），按 endpoint 支援的方式選擇。 |
+| `directory_marker_mode` | backup 項必填 | `none` 不建立標記，`empty` 建立零位元組標記，`nonempty` 建立帶內容的標記。每個 S3 backup 項都要顯式設定；省略時啟動會報 `AGFSConfigError: configuration error: invalid directory_marker_mode: null (valid: none, empty, nonempty)`。 |
 | `use_ssl` | 可選 | HTTP 端點（如 `http://localhost:9000`）需要設定為 `false`。 |
 
 **S3 相容儲存最小示例（RustFS/MinIO）：**
@@ -121,16 +121,14 @@
 }
 ```
 
-> **為什麼需要 `directory_marker_mode`？**
->
-> S3 相容儲存服務對"目錄"的處理方式與 AWS S3 不同。RAGFS Rust binding 必須知道建立目錄時是否需要寫入目錄標記物件。合法取值為 `"none"`、`"empty"` 和 `"nonempty"`。對於不使用目錄標記的 S3 相容服務（RustFS、MinIO、Ceph 等），設定為 `"none"`。如果省略，Rust binding 預設值為 `null`（不合法），導致服務端在啟動時靜默崩潰，報錯 `AGFSConfigError: invalid directory_marker_mode: null`。
+上面的示例使用 `none`，適用於不使用目錄標記的 S3 相容服務（RustFS、MinIO、Ceph 等）。backup 項的這個欄位沒有預設值；頂層 `storage` 的 S3 配置預設使用 `empty`。
 
 ### Docker 網路配置
 
 在 Docker 中執行 OpenViking 並配置同主機的 S3 備份時，需要注意：
 
 - **Linux Docker**：使用 `--network host` 或宿主機區域網 IP。Docker bridge 網路可通過閘道器 IP（如 `172.17.0.1:9000`）訪問宿主機區域網。
-- **macOS/Windows Docker Desktop**：`--network host` **不支援**。S3 端點使用 `host.docker.internal`（對映為宿主機的 localhost），或使用宿主機區域網 IP。
+- **macOS/Windows Docker Desktop**：從容器訪問宿主機時可使用 `host.docker.internal`。Docker Desktop 4.34 及之後的版本也提供可選的 host networking，啟用方式見 [Docker 官方說明](https://docs.docker.com/engine/network/drivers/host/)。
 
 如果啟用 S3 備份後服務靜默崩潰，請優先排查 Docker 網路。RAGFS Rust binding 在容器內無法訪問 S3 端點時會報 `dispatch failure` 錯誤。
 
@@ -154,7 +152,7 @@
 - primary 寫入成功後立即返回。
 - backup 寫入在後臺執行。
 - 寫入延遲低。
-- backup 可能短暫落後。
+- 後端不可用期間，落後時間沒有固定上限，需觀察同步和恢復狀態。
 
 適合：
 
@@ -172,7 +170,7 @@
     "sync_type": "sync",
     "write_ack_count": 1,
     "write_ack_timeout_ms": 5000,
-    "items": []
+    "items": [{"name": "local-backup", "backend": "local", "local": {"workspace": "./backup-data"}}]
   }
 }
 ```
@@ -206,6 +204,7 @@ backup 預設不參與讀取。要讓 backup 服務讀取，需要顯式配置 `
   "name": "cache-backend",
   "backend": "memfs",
   "operations": [
+    {"operation": "write", "priority": 0},
     {
       "operation": "read",
       "priority": 10
@@ -221,7 +220,7 @@ backup 預設不參與讀取。要讓 backup 服務讀取，需要顯式配置 `
 - primary 始終作為最終兜底。
 - 冷備 backup 不建議配置讀能力。
 
-如果一個 backup 只配置了 `read`，沒有配置 `write`，它不會接收普通多寫複製。只有在你明確知道該 backend 的資料來源時，才應使用這種配置。
+如果一個 backup 只配置了 `read`，沒有配置 `write`，它不會接收普通複製寫入。只有在你明確知道該 backend 的資料來源時，才應使用這種配置。
 
 ## Redirect 配置
 
@@ -305,7 +304,7 @@ Exclude 用於讓某個 backup 跳過匹配檔案。
 
 ## 加密配置
 
-多寫儲存複用 OpenViking 的透明靜態加密能力。
+主備儲存複用 OpenViking 的透明靜態加密能力。
 
 全域加密開啟示例：
 
@@ -357,9 +356,9 @@ Exclude 用於讓某個 backup 跳過匹配檔案。
 
 ## 存量資料遷移
 
-多寫只複製啟用之後的新寫入，不會自動複製歷史檔案。
+主備儲存只複製啟用之後的新寫入，不會自動複製歷史檔案。
 
-使用 OVPack 遷移時，請遵循 [與多寫儲存配合](./09-ovpack.md#與多寫儲存配合)：先在乾淨目標配置多寫，再通過該服務恢復，驗證各副本後恢復業務寫入。目標 account 初始化和恢復衝突處理也在該流程中說明。
+使用 OVPack 遷移時，請遵循 [與主備儲存配合](./09-ovpack.md#與主備儲存配合)：先在乾淨目標配置主備儲存，再通過該服務恢復，驗證各副本後恢復業務寫入。目標 account 初始化和恢復衝突處理也在該流程中說明。
 
 ## 驗證配置
 
@@ -372,13 +371,13 @@ openviking-server doctor
 啟動後可以用普通檔案 API 驗證：
 
 ```bash
-openviking write viking://resources/multiwrite-check.txt \
+ov write viking://resources/multiwrite-check.txt \
   --content "multi-write check"
 
-openviking read viking://resources/multiwrite-check.txt
+ov read viking://resources/multiwrite-check.txt
 ```
 
-如果使用本地 backup，可以直接檢查 backup 目錄中是否出現對應檔案。生產環境更推薦使用系統健康檢查和同步狀態命令。
+如果使用本地 backup，可以直接檢查 backup 目錄中是否出現對應檔案。還應執行 `ov system backend sync-status viking://resources`，逐個核對預期副本。普通讀取成功可能只讀到了 primary，不能證明覆制完成。
 
 ## 常見問題
 
@@ -389,6 +388,7 @@ backup 預設只參與寫入，不參與讀取。需要在 backup 上顯式配�
 ```json
 {
   "operations": [
+    {"operation": "write", "priority": 0},
     {
       "operation": "read",
       "priority": 10
@@ -397,13 +397,13 @@ backup 預設只參與寫入，不參與讀取。需要在 backup 上顯式配�
 }
 ```
 
-### 為什麼啟用多寫後歷史檔案沒有出現在 backup？
+### 為什麼啟用主備儲存後歷史檔案沒有出現在 backup？
 
-多寫只處理啟用後的新寫入。歷史檔案請按 [OVPack 遷移流程](./09-ovpack.md#與多寫儲存配合) 處理；啟用 backups 不會自動補齊。
+主備儲存只處理啟用後的新寫入。歷史檔案請按 [OVPack 遷移流程](./09-ovpack.md#與主備儲存配合) 處理；啟用 backups 不會自動補齊。
 
 ### 非同步模式下能否保證立即讀到 backup 的最新資料？
 
-不能。非同步模式只保證最終一致。需要強讀一致時，應讓讀取回退到 primary，或避免讓可能滯後的 backup 參與讀路由。
+不能。後臺重試需要後端恢復可用才能追上進度。backup 返回舊資料但讀取成功時，不會自動回退 primary；需要最新資料時，應讓讀路由使用 primary。
 
 ### 內部後設資料檔案會出現在使用者列表裡嗎？
 
@@ -415,7 +415,7 @@ backup 預設只參與寫入，不參與讀取。需要在 backup 上顯式配�
 
 ## 相關文件
 
-- [多寫儲存](../concepts/14-multi-write-storage.md)
+- [主備儲存](../concepts/14-multi-write-storage.md)
 - [儲存架構](../concepts/05-storage.md)
 - [配置指南](./01-configuration.md)
 - [加密指南](./08-encryption.md)

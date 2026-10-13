@@ -1,4 +1,4 @@
-# API 概覽
+# SDK、HTTP 與 CLI 約定
 
 本頁介紹如何連線 OpenViking 以及所有 API 端點共享的約定。
 
@@ -64,7 +64,7 @@ Go SDK 傳送的身份請求頭與 Python HTTP client 一致：
 
 普通 `api_key` 部署下只需要設定 `APIKey`，服務端會從 API key 推導租戶身份。只有在 trusted 部署或閘道器顯式透傳租戶身份時，才需要設定 `Account` 和 `User`。
 
-Go SDK 不保留舊 `agent_id` 相容路徑。更多示例見 [`sdk/go/README_CN.md`](../../../sdk/go/README_CN.md)。
+Go SDK 不保留舊 `agent_id` 相容路徑。更多示例見 [`sdk/go/README_CN.md`](https://github.com/volcengine/OpenViking/blob/main/sdk/go/README_CN.md)。
 
 #### JavaScript/TypeScript SDK 客戶端
 
@@ -89,22 +89,20 @@ const results = await client.search("部署文件", {
 ```
 
 它與 Python、Go HTTP Client 使用相同的身份請求頭和響應信封。更多示例見
-[`sdk/typescript/README_CN.md`](../../../sdk/typescript/README_CN.md)。
+[`sdk/typescript/README_CN.md`](https://github.com/volcengine/OpenViking/blob/main/sdk/typescript/README_CN.md)。
 
-未顯式傳入 `url` 時，HTTP 客戶端會自動從 `ovcli.conf` 讀取連線資訊。`ovcli.conf` 是 HTTP 客戶端和 CLI 共享的配置檔案，預設路徑 `~/.openviking/ovcli.conf`，也可通過環境變數指定：
+Python HTTP 客戶端從 `ovcli.conf` 讀取連線資訊，顯式傳入的構造引數覆蓋對應配置。`ovcli.conf` 是 HTTP 客戶端和 CLI 共享的配置檔案，預設路徑 `~/.openviking/ovcli.conf`，也可通過環境變數指定：
 
 ```bash
 export OPENVIKING_CLI_CONFIG_FILE=/path/to/ovcli.conf
 ```
 
-配置文件示例：
+使用 user/admin key 的配置檔案示例：
 
 ```json
 {
   "url": "http://localhost:1933",
-  "api_key": "your-key",
-  "account": "acme",
-  "user": "alice"
+  "api_key": "your-user-or-admin-key"
 }
 ```
 
@@ -114,8 +112,8 @@ export OPENVIKING_CLI_CONFIG_FILE=/path/to/ovcli.conf
 |------|------|--------|
 | `url` | 服務端地址 | （必填） |
 | `api_key` | API Key | `null`（無認證） |
-| `account` | 租戶級請求的預設帳戶請求頭 | `null` |
-| `user` | 租戶級請求的預設使用者請求頭 | `null` |
+| `account` | 帳戶請求頭；trusted 和 dev 模式使用，api_key 模式忽略 | `null` |
+| `user` | 使用者請求頭；trusted 和 dev 模式使用，api_key 模式忽略 | `null` |
 | `timeout` | HTTP 請求超時時間（秒） | `60.0` |
 | `output` | 預設輸出格式：`"table"` 或 `"json"` | `"table"` |
 
@@ -161,7 +159,7 @@ curl http://localhost:1933/api/v1/fs/ls?uri=viking:// \
 
 #### CLI 模式
 
-OpenViking CLI 的命令是 `ov`（通過 `npm install -g @openviking/cli` 安裝），連線到 OpenViking 服務端，將所有操作暴露為 Shell 命令。CLI 同樣從 `ovcli.conf` 讀取連線資訊（與 HTTP 客戶端共享）。
+OpenViking CLI 的命令是 `ov`（通過 `npm install -g @openviking/cli` 安裝），連線到 OpenViking 服務端，提供常用操作的 Shell 命令。CLI 同樣從 `ovcli.conf` 讀取連線資訊（與 HTTP 客戶端共享）。
 
 基本用法：
 
@@ -209,20 +207,19 @@ ov -o json ls viking://resources/
 
 - **Authorization Bearer** 請求頭：`Authorization: Bearer your-key` （建議的方式）
 - **X-API-Key** 請求頭：`X-API-Key: your-key`
-- 如果服務端未配置 API Key，則跳過認證。
+- 只有 dev 模式跳過認證；未設定 `auth_mode` 且未設定 `server.root_api_key` 時自動選擇 dev 模式。其他模式（api_key、trusted、OIDC、LDAP）按各自配置解析身份。
 - `/health` 和 `/ready` 端點始終不需要認證。
 
 ## 響應格式
 
-所有 HTTP API 響應遵循統一格式：
+常規 JSON API 響應遵循以下格式；檔案下載、SSE、Metrics 和 WebDAV 使用各介面說明的格式：
 
 ### 成功響應
 
 ```json
 {
   "status": "ok",
-  "result": { ... },
-  "time": 0.123
+  "result": { ... }
 }
 ```
 
@@ -236,8 +233,7 @@ ov -o json ls viking://resources/
   "error": {
     "code": "NOT_FOUND",
     "message": "Resource not found: viking://resources/nonexistent/"
-  },
-  "time": 0.01
+  }
 }
 ```
 
@@ -302,8 +298,8 @@ JSON 輸出 - 錯誤：
 
 ### 特殊情況
 
-- **字串結果**（`read`、`abstract`、`overview`）：直接列印原文
-- **None 結果**（`mkdir`、`rm`、`mv`）：無輸出
+- Table 模式下，`read`、`abstract`、`overview` 直接列印文本，`mkdir`、`rm`、`mv` 列印操作確認資訊。
+- JSON 模式下，這些命令按上文的 JSON 格式輸出。
 
 ### 退出碼
 
@@ -354,7 +350,7 @@ JSON 輸出 - 錯誤：
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | GET | `/health` | 基礎健康檢查（無需認證） |
-| GET | `/ready` | AGFS、VectorDB 和 API Key 管理器就緒檢查（無需認證） |
+| GET | `/ready` | AGFS、VectorDB、API Key 管理器和 Embedding 就緒檢查（無需認證） |
 | GET | `/api/v1/system/status` | 系統狀態 |
 | POST | `/api/v1/system/wait` | 等待後臺處理完成 |
 | POST | `/api/v1/system/consistency` | 檔案系統與向量索引一致性檢查 |
@@ -404,7 +400,7 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/content/overview` | 讀取概覽（L1） |
 | GET | `/api/v1/content/download` | 下載原始檔案位元組 |
 | POST | `/api/v1/content/write` | 寫入內容並重新整理語義索引 |
-| POST | `/api/v1/content/batch-write` | 執行帶前置條件的多檔案寫入 |
+| POST | `/api/v1/content/batch-write` | 寫入多個檔案並重新整理索引 |
 | POST | `/api/v1/content/set_tags` | 設定檢索標籤 |
 | POST | `/api/v1/content/reindex` | 重建語義或向量索引 |
 
@@ -563,9 +559,9 @@ JSON 輸出 - 錯誤：
 
 ---
 
-## 文件閱讀計劃
+## 按任務查詢介面
 
-左側導航按職責而不是按歷史檔案體積組織：
+按操作型別選擇對應文件：
 
 | 分組 | 適合查詢的內容 |
 |------|----------------|

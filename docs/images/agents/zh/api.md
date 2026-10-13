@@ -1,6 +1,6 @@
 
 ## 步驟 1： 寫入資源
-參考 GitHub 提供的資源寫入示例，自動填入 API Key 和域名
+在執行程式碼的 Python 環境中安裝 `requests`（`python -m pip install requests`）。替換本地檔案路徑和完整目標 URI，目標需尚未佔用；服務地址和 API Key 由頁面填入。
 
 ```python
 import json
@@ -56,16 +56,11 @@ print(json.dumps(result, ensure_ascii=False, indent=2))
 ```
 
 ## 步驟 2： 寫入記憶
-參考 GitHub 提供的記憶寫入示例，自動填入 API Key 和域名
+複用步驟 1 的匯入、連線配置和 `post_json` 函式。建立會話、寫入訊息，再提交記憶提取：
 
 ```python
 text = "[TODO]your-message-text" # e.g. I am a developer
     
-def post_json(path: str, payload: dict, timeout: float):
-    response = requests.post(f"{url}{path}", headers=headers, json=payload, timeout=timeout)
-    response.raise_for_status()
-    return response.json()
-
 # Create a session.
 session = post_json("/api/v1/sessions", {}, 360.0)
 session_id = session["result"]["session_id"]
@@ -88,3 +83,5 @@ result = post_json(
 )
 print(json.dumps(result, ensure_ascii=False, indent=2))
 ```
+
+資源匯入和會話提交可能在後臺處理完成前返回。若 `result["result"]` 中包含 `task_id`，用相同鑑權頭請求 `GET /api/v1/tasks/{task_id}`，直到狀態為 `completed`、`failed` 或 `cancelled`；先處理失敗，再讀取或檢索結果。無待處理內容的 commit 可能不返回任務。

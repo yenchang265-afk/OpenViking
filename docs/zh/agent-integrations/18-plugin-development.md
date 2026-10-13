@@ -1,4 +1,4 @@
-# Hook + MCP Agent 外掛開發與維護規範
+# 開發與維護 Agent 外掛
 
 本文規定如何新增和維護通過生命週期 hook 自動讀寫記憶、通過 MCP 提供工具的 OpenViking Agent 外掛，涵蓋模組職責、協議、狀態、安裝、測試和釋出。宿主是指承載 Agent 的客戶端或執行時，程式碼中也稱 harness。
 
@@ -46,7 +46,7 @@ Task: <describe the plugin addition, fix, or maintenance change>
 5. **交付方式決定生成時機**。使用者直接載入倉庫目錄時，目錄必須已經完整；使用者安裝構建產物時，在打包前生成依賴。不為減少 diff 破壞安裝，也不為方便開發提交不需要的生成物。
 6. **每次抽象都減少維護點**。新介面應讓後續修復少改一個地方。若只是多了一層轉發、更多布林引數或第二套配置表，應重新考慮。
 
-這些原則與倉庫[貢獻指南的職責與設計要求](https://github.com/volcengine/OpenViking/blob/main/CONTRIBUTING_CN.md#職責與設計)一致。衡量改動是否合理，要看一個新維護者能否沿呼叫關係找到規則、解釋失敗、完成交付。程式碼行數和檔案數量只是結果。
+這些原則與倉庫[貢獻指南的職責與設計要求](https://github.com/volcengine/OpenViking/blob/main/docs/repository/CONTRIBUTING_CN.md#職責與設計)一致。衡量改動是否合理，要看一個新維護者能否沿呼叫關係找到規則、解釋失敗、完成交付。程式碼行數和檔案數量只是結果。
 
 ## 2. 接入前先確定宿主契約
 

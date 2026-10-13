@@ -3,10 +3,11 @@
 1. 在終端執行如下安裝命令：
 
    ```bash
-   bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness codex --dist tos
+   curl -fsSL https://openviking.ai/install | bash
+   # AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
    ```
 
-2. 安裝器會依次詢問以下資訊：語言（English / 中文）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
+2. 安裝器會依次詢問以下資訊：要安裝的 harness（勾選 **Codex**）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
@@ -14,7 +15,7 @@
 
 ## 步驟2：驗證
 
-1. 啟動 Codex。首次啟動會停在 Hook 信任確認上，選 **Trust all and continue**：
+1. 啟動 Codex。首次啟動會顯示類似下面的 hook 審閱提示（具體介面隨版本變化），選 **Trust all and continue**：
 
    ```text
    Hooks need review
@@ -26,26 +27,17 @@
      3. Continue without trusting (hooks won't run)
    ```
 
-   OpenViking 註冊的 6 個 Hook 是（Codex 版本較舊時可能少幾個）：
-
-   ```text
-   SessionStart
-   UserPromptSubmit
-   PreToolUse
-   Stop
-   SessionEnd
-   PreCompact
-   ```
-
-2. 錯過這個提示，或當時選了第 3 項，Hook 就不會執行。輸入 `/hooks` 補上信任並開啟條目，`/plugins` 裡確認 `openviking-memory` 已啟用——兩個開關相互獨立，都要是開著的。外掛更新動了 Hook 時會再要求信任一次。
-
-3. 驗證 Profile 載入：信任完成後，提交第一條 Prompt（內容隨意即可）。此時外掛應自動載入 Profile——若對話開頭出現記憶召回內容，則表明接入成功：
+   如果跳過了提示或選了第 3 項，開啟 `/hooks`，檢查 OpenViking 的命令，再信任並開啟需要使用的 hooks。在 `/plugins` 中確認 `openviking-memory` 已啟用。新增或變更的 hooks 需要重新檢查。
+2. 確認 OpenViking MCP 工具可用，讓 Codex 呼叫 `health` 和 `list`。這一步驗證工具連線；自動召回還需開啟 `UserPromptSubmit`，對話採集需開啟 `Stop`。
+3. 在已有記憶的工作目錄中詢問之前儲存的資訊，檢查 hook 輸出或除錯日誌。召回內容類似：
 
    ```text
    • UserPromptSubmit hook (completed)
      hook context: <openviking-context source="auto-recall" format="digest">
        OpenViking memory digest:
    ```
+
+   新帳號可能還沒有 profile 或相關記憶可注入。會話提交時機和完整驗證步驟見下方文件。
 
 ## 故障排查
 

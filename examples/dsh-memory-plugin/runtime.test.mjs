@@ -21,6 +21,19 @@ afterEach(async () => {
   await Promise.all(tempDirs.splice(0).map(dir => rm(dir, { recursive: true, force: true })));
 });
 
+test("runtime uses a portable OpenViking id for DSH IM sessions", () => {
+  const runtime = new OpenVikingRuntime({}, config(), { debug() {} });
+  const state = runtime.stateFor({
+    id: "im:weixin_fixture:dm:1790750070550:chat_fixture@im.wechat",
+    header: { cwd: "/workspace" },
+  });
+
+  assert.equal(
+    state.ovSessionId,
+    "dsh-im_weixin_fixture_dm_1790750070550_chat_fixture@im.wechat__eb8b3dae7d74",
+  );
+});
+
 test("capture queues retryable failures but drops permanent client errors", async () => {
   for (const [status, expectedPending] of [[400, 0], [503, 1]]) {
     const pendingDir = await mkdtemp(join(tmpdir(), `dsh-memory-${status}-`));
@@ -366,6 +379,70 @@ test("autoRecall false stops the recall request", async () => {
   runtime.initialize = async () => ({ ready: true, config: { ...config(), autoRecall: false } });
 
   assert.equal(await runtime.recallMessage({}, [{ role: "user", content: "what did we decide" }]), null);
+});
+
+// A batch of injected context alone (time-context, job notices) carries no
+// user query, so it must not trigger a recall request.
+test("injected context alone does not trigger recall", async () => {
+  const runtime = new OpenVikingRuntime({
+    async fetchJSON() {
+      throw new Error("recall must not run without user input");
+    },
+  }, { ...config(), minQueryLength: 0 }, { debug() {} });
+  runtime.initialize = async () => ({ ready: true, config: { ...config(), minQueryLength: 0 } });
+
+  assert.equal(await runtime.recallMessage({}, [{
+    role: "user",
+    content: [{ type: "text", text: "Current time: 2026-10-05 21:20" }],
+    source: { kind: "time-context" },
+  }]), null);
+});
+
+// recall-core reads options.excludeUris, but the DSH runtime built its options
+// without it, so nothing a user configured could stop a subtree from being
+// recalled: generated directory files came back as ordinary hits.
+test("recallExcludeUris reaches the search request", async () => {
+  const bodies = [];
+  const runtime = new OpenVikingRuntime({
+    async fetchJSON(path, init) {
+      if (/\/search\/search$/.test(path)) bodies.push(JSON.parse(init.body));
+      return {
+        ok: true,
+        result: {
+          context: "<openviking-context>\nrecalled\n</openviking-context>",
+          stats: {},
+        },
+      };
+    },
+  }, { ...config(), recallExcludeUris: ["viking://user/default/skills", "viking://agent/skills"] }, { debug() {} });
+  runtime.initialize = async () => ({
+    ready: true,
+    config: { ...config(), recallExcludeUris: ["viking://user/default/skills", "viking://agent/skills"] },
+  });
+
+  await runtime.recallMessage({}, [{ role: "user", content: "what did we decide" }]);
+
+  assert.equal(bodies.length, 1);
+  assert.deepEqual(bodies[0].exclude_uris, ["viking://user/default/skills", "viking://agent/skills"]);
+});
+
+test("recall sends no exclude_uris when recallExcludeUris is unset", async () => {
+  const bodies = [];
+  const runtime = new OpenVikingRuntime({
+    async fetchJSON(path, init) {
+      if (/\/search\/search$/.test(path)) bodies.push(JSON.parse(init.body));
+      return {
+        ok: true,
+        result: { context: "<openviking-context>\nrecalled\n</openviking-context>", stats: {} },
+      };
+    },
+  }, config(), { debug() {} });
+  runtime.initialize = async () => ({ ready: true, config: config() });
+
+  await runtime.recallMessage({}, [{ role: "user", content: "what did we decide" }]);
+
+  assert.equal(bodies.length, 1);
+  assert.equal("exclude_uris" in bodies[0], false);
 });
 
 test("syncTurns false sends nothing: no capture, no commit, no dispose flush, no replay", async () => {

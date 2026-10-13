@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 
+import asyncio
 import inspect
 import json
 from dataclasses import fields
@@ -108,7 +109,7 @@ async def test_commit_retention_boundary_and_pending_tokens_after_reload(
         else {}
     )
     result = await session.commit_async(keep_recent_count=keep_count, **turn_options)
-    archived = await session._read_archive_messages(result["archive_uri"])
+    archived = await session._archives.read_messages(result["archive_uri"])
     retained = messages[archive_count:]
     assert [message.id for message in archived] == [m.id for m in messages[:archive_count]]
     assert [message.id for message in session.messages] == [m.id for m in retained]
@@ -135,6 +136,51 @@ def test_phase2_auto_commit_policy_parameters_are_appended():
 
     assert list(signature.parameters)[-1] == "auto_commit_policy"
     assert fields(SessionCommitMsg)[-1].name == "auto_commit_policy"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("cancellation_requested", [False, True])
+async def test_phase2_cancellation_marks_archive_only_when_requested(
+    monkeypatch, cancellation_requested
+):
+    session_uri = "viking://user/default/sessions/session-1"
+    archive_uri = f"{session_uri}/history/archive_001"
+    tracker = TaskTracker(_TaskStore())
+    await tracker.create(
+        "session_commit",
+        account_id="default",
+        user_id="default",
+        task_id="task-1",
+    )
+    if cancellation_requested:
+        await tracker.record_cancelled("task-1", account_id="default", user_id="default")
+    else:
+        await tracker.start("task-1", account_id="default", user_id="default")
+
+    monkeypatch.setattr("openviking.service.task_tracker.get_task_tracker", lambda: tracker)
+    files = {}
+    session = Session(
+        viking_fs=_MemoryVikingFS(files),
+        session_id="session-1",
+        session_uri=session_uri,
+    )
+
+    async def cancel_prepare(*_args, **_kwargs):
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(session, "_prepare_phase2_archive_messages", cancel_prepare)
+
+    with pytest.raises(asyncio.CancelledError):
+        await session._run_memory_extraction(
+            task_id="task-1",
+            archive_uri=archive_uri,
+            messages=[],
+            first_message_id="",
+            last_message_id="",
+            memory_policy=None,
+        )
+
+    assert (f"{archive_uri}/.failed.json" in files) is cancellation_requested
 
 
 @pytest.mark.asyncio
@@ -226,8 +272,8 @@ async def test_session_context_skips_pending_archive_with_missing_messages(monke
         session_uri=session_uri,
     )
     monkeypatch.setattr(
-        session,
-        "_list_archive_refs",
+        session._archives,
+        "list_refs",
         AsyncMock(
             return_value=[{"archive_id": "archive_001", "archive_uri": archive_uri, "index": 1}]
         ),

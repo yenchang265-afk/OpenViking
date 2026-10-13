@@ -7,7 +7,7 @@ import re
 import threading
 from contextlib import nullcontext
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional, Set
+from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Mapping, Optional, Set
 from weakref import WeakKeyDictionary
 
 from openviking.core.namespace import classify_uri
@@ -197,6 +197,10 @@ class SemanticTreeExecutor:
         artifact_files: Optional[List[str]] = None,
         file_abstracts: Optional[Dict[str, str]] = None,
         semantic_plan: Optional["SemanticPlan"] = None,
+        telemetry_id: str | None = None,
+        source_contents: Optional[Mapping[tuple[str, int], str | bytes]] = None,
+        source_raw_contents: Optional[Mapping[tuple[str, int], str | bytes]] = None,
+        materialize_content: bool = False,
     ):
         self._processor = processor
         self._context_type = context_type
@@ -215,6 +219,11 @@ class SemanticTreeExecutor:
         self._changes_provided = changes is not None
         self._changes = changes or {}
         self._semantic_plan = semantic_plan
+        self._source_contents = dict(source_contents or {})
+        self._source_raw_contents = (
+            dict(source_raw_contents) if source_raw_contents is not None else None
+        )
+        self._materialize_content = materialize_content
         self._semantic_resource_root = (
             semantic_plan.root_uri.rstrip("/") if semantic_plan is not None else None
         )
@@ -233,6 +242,7 @@ class SemanticTreeExecutor:
         self._task_context = get_task_context()
         self._processing_index = None
         self._telemetry = get_current_telemetry()
+        self._telemetry_id = telemetry_id
         self._stale = False
         self._changed_paths = {
             path for key in ("added", "modified", "deleted") for path in self._changes.get(key, [])
@@ -358,6 +368,22 @@ class SemanticTreeExecutor:
             ):
                 self._stats.total_nodes = 1
                 self._stats.done_nodes = 1
+                return
+            if isinstance(entry, SemanticTreeEntry) and entry.kind == "file":
+                self._stats.total_nodes = 1
+                self._stats.in_progress_nodes = 1
+                # A file-root maintenance plan has no directory node or
+                # sidecars of its own. Execute its planned L2 work directly;
+                # the caller's parent freshness policy handles its parent.
+                previous_incremental = self._incremental_update
+                self._incremental_update = False
+                try:
+                    await self._file_summary_task(root_uri, root_uri)
+                finally:
+                    self._incremental_update = previous_incremental
+                self._root_write_result = AbstractOverviewWriteResult(
+                    wrote=True, abstract_body_changed=True
+                )
                 return
 
         owner = processing_owner.get()
@@ -578,6 +604,16 @@ class SemanticTreeExecutor:
                         dir_uri=dir_uri,
                         ctx=self._ctx,
                         lock=self._lock,
+                        existing_raw=(
+                            {
+                                level: raw
+                                for level in (0, 1)
+                                if (raw := self._source_raw_contents.get((dir_uri, level)))
+                                is not None
+                            }
+                            if self._source_raw_contents is not None
+                            else None
+                        ),
                     )
                 except LockAcquisitionError:
                     if self._generation_trigger != "content_write":
@@ -1045,6 +1081,13 @@ class SemanticTreeExecutor:
         self, dir_uri: str
     ) -> tuple[Optional[str], Optional[str]]:
         if self._semantic_plan is not None:
+            snapshot_overview = self._source_contents.get((dir_uri.rstrip("/"), 1))
+            snapshot_abstract = self._source_contents.get((dir_uri.rstrip("/"), 0))
+            if snapshot_overview is not None or snapshot_abstract is not None:
+                return (
+                    str(snapshot_overview) if snapshot_overview is not None else None,
+                    str(snapshot_abstract) if snapshot_abstract is not None else None,
+                )
             entry = self._plan_entries_by_uri.get(dir_uri.rstrip("/"))
             if entry is None:
                 return None, None
@@ -1106,8 +1149,10 @@ class SemanticTreeExecutor:
                 # Built-in Skills ship their summary; never ask the LLM for it.
                 summary_dict = {"name": file_name, "summary": provided}
             if summary_dict is None:
-                file_content = None
-                if hasattr(self._viking_fs, "read_file_bytes"):
+                file_content = self._source_contents.get((file_path.rstrip("/"), 2))
+                if file_content is not None and not isinstance(file_content, bytes):
+                    raise ValueError(f"file vector source must be bytes: {file_path}")
+                if file_content is None and hasattr(self._viking_fs, "read_file_bytes"):
                     file_content = await self._viking_fs.read_file_bytes(file_path, ctx=self._ctx)
                 summary_kwargs: Dict[str, Any] = {
                     "llm_sem": self._llm_sem,
@@ -1153,6 +1198,10 @@ class SemanticTreeExecutor:
                 vectorize_kwargs: Dict[str, Any] = {}
                 if file_content is not None:
                     vectorize_kwargs["file_content"] = file_content
+                if self._telemetry_id is not None:
+                    vectorize_kwargs["telemetry_id"] = self._telemetry_id
+                if self._materialize_content:
+                    vectorize_kwargs["materialize_content"] = True
                 manifest_md5 = self._file_md5s.get(file_path.rstrip("/")) or None
                 if file_content is not None and not manifest_md5:
                     file_md5 = content_md5(file_content)
@@ -1179,6 +1228,7 @@ class SemanticTreeExecutor:
                 )
                 if enqueued and slot is not None:
                     self._scheduled_vector_record_ids.add(slot.record_id)
+                    self._stats.indexed_records += 1
             except Exception as e:
                 logger.error(
                     "Failed to schedule vectorization for %s: %s",
@@ -1348,6 +1398,15 @@ class SemanticTreeExecutor:
                 consume_pending=consume_pending,
                 lock=self._lock,
                 log_prefix="[SemanticTree]",
+                existing_raw=(
+                    {
+                        level: raw
+                        for level in (0, 1)
+                        if (raw := self._source_raw_contents.get((dir_uri, level))) is not None
+                    }
+                    if self._source_raw_contents is not None
+                    else None
+                ),
             )
         )
         if not wrote.wrote:
@@ -1390,15 +1449,20 @@ class SemanticTreeExecutor:
                 # The package root describes the skill definition, independently
                 # of the summaries produced for its attachments.
                 definition_changed = f"{dir_uri}/SKILL.md" in self._changed_paths
+                plan_entry = self._plan_entries_by_uri.get(dir_uri.rstrip("/"))
+                repair = bool(plan_entry is not None and plan_entry.repair)
                 overview, abstract = await self._processor._skill_root_semantics(
                     dir_uri,
                     ctx=self._ctx,
-                    regenerate=self._generation_trigger == "reindex" or definition_changed,
+                    regenerate=self._generation_trigger == "reindex"
+                    or definition_changed
+                    or repair,
                     lock=self._lock,
+                    skill_content=self._source_contents.get((f"{dir_uri}/SKILL.md", 2)),
                 )
                 should_write = False
-                need_vectorize = not self._incremental_update or definition_changed
-                children_changed = definition_changed
+                need_vectorize = not self._incremental_update or definition_changed or repair
+                children_changed = definition_changed or repair
             elif self._generation_trigger == "content_copy" and not node.transfer_inputs_ready:
                 need_vectorize = False
                 should_write = False
@@ -1410,7 +1474,18 @@ class SemanticTreeExecutor:
                 if not children_changed:
                     overview, abstract = await self._read_existing_overview_abstract(dir_uri)
                     should_write = overview is None or abstract is None
-                    # Rebuilt sidecars must also replace their stale vectors.
+                    plan_entry = self._plan_entries_by_uri.get(dir_uri.rstrip("/"))
+                    if (
+                        self._semantic_plan is not None
+                        and plan_entry is not None
+                        and plan_entry.repair
+                    ):
+                        # RFV maintenance uses ``repair`` for both stale semantic
+                        # input and force rebuilds. Regenerate through the normal
+                        # semantic action before emitting its planned index slots.
+                        overview = None
+                        abstract = None
+                        should_write = True
                     need_vectorize = should_write
                     children_changed = should_write
             if should_write and (overview is None or abstract is None):
@@ -1439,6 +1514,7 @@ class SemanticTreeExecutor:
                             children_abstracts,
                             total_files=len(node.file_paths),
                             total_children=len(node.children_dirs),
+                            ctx=self._ctx,
                         )
                 overview, abstract = self._processor._normalize_overview_generation(overview)
 
@@ -1482,6 +1558,7 @@ class SemanticTreeExecutor:
                 entry = self._plan_entries_by_uri.get(dir_uri.rstrip("/"))
                 slots = {slot.level: slot for slot in entry.index_slots} if entry else {}
 
+            enqueued_levels: set[int] = set()
             if need_vectorize and not self._skip_vectorization:
                 assert overview is not None and abstract is not None
                 try:
@@ -1502,7 +1579,7 @@ class SemanticTreeExecutor:
                                 return False
                             old_body = slot.abstract
                             new_body = abstract if level == 0 else overview
-                            return not old_body or old_body != new_body
+                            return entry.repair or not old_body or old_body != new_body
 
                         include_abstract = should_emit(0)
                         include_overview = should_emit(1)
@@ -1524,7 +1601,13 @@ class SemanticTreeExecutor:
                             },
                             "include_abstract": include_abstract,
                             "include_overview": include_overview,
+                            "md5s": {
+                                0: content_md5(abstract.encode("utf-8")),
+                                1: content_md5(overview.encode("utf-8")),
+                            },
                         }
+                    if self._telemetry_id is not None:
+                        directory_vector_kwargs["telemetry_id"] = self._telemetry_id
                     if include_abstract or include_overview:
                         enqueued_levels = await self._processor._vectorize_directory(
                             dir_uri,
@@ -1557,8 +1640,6 @@ class SemanticTreeExecutor:
                     if self._context_type != "skill":
                         raise
                     self._record_skill_failure(dir_uri, e)
-            else:
-                enqueued_levels = set()
 
             for level, slot in sorted(slots.items()):
                 if (
@@ -1580,6 +1661,11 @@ class SemanticTreeExecutor:
                         }
                     ),
                     ctx=self._ctx,
+                    **(
+                        {"telemetry_id": self._telemetry_id}
+                        if self._telemetry_id is not None
+                        else {}
+                    ),
                 )
                 if enqueued:
                     enqueued_levels.add(level)
@@ -1588,6 +1674,7 @@ class SemanticTreeExecutor:
                 self._scheduled_vector_record_ids.update(
                     slot.record_id for slot in slots.values() if slot.level in enqueued_levels
                 )
+                self._stats.indexed_records += len(enqueued_levels)
         finally:
             self._stats.done_nodes += 1
             self._stats.in_progress_nodes = max(0, self._stats.in_progress_nodes - 1)

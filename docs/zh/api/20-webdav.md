@@ -4,7 +4,7 @@ WebDAV 為 `resources` 名稱空間提供檔案協議訪問。
 
 **程式碼入口**：`openviking/server/routers/webdav.py`
 
-## WebDAV（Phase 1）
+## 支援範圍
 
 OpenViking Server 也提供了一個面向資源檔案的精簡 WebDAV 適配層：
 
@@ -12,7 +12,7 @@ OpenViking Server 也提供了一個面向資源檔案的精簡 WebDAV 適配層
 /webdav/resources
 ```
 
-Phase 1 有意把範圍控制得比較小：
+當前支援以下範圍：
 
 - 僅開放 `resources` 名稱空間，不暴露 memories、skills、sessions 等其他空間。
 - 以文本寫入為主，當前 `PUT` 只接受 UTF-8 文本內容。
@@ -25,7 +25,7 @@ Phase 1 有意把範圍控制得比較小：
 - 通過 WebDAV 覆蓋已有檔案時，會像 `write()` 一樣重新整理相關語義和向量。
 - `PUT` 不會自動建立父目錄。缺失的目錄需要先用 `MKCOL` 建立。
 - 使用者自己建立的點目錄或點檔案仍然可見，只有上面列出的保留內部檔名會被隱藏。
-- 啟用多寫儲存時，被 redirect 到 backup 的檔案仍會通過檔案系統 API 呈現為普通檔案；內部 redirect 和同步後設資料不會暴露給呼叫方。
+- 啟用主備儲存時，被 redirect 到 backup 的檔案仍會通過檔案系統 API 呈現為普通檔案；內部 redirect 和同步後設資料不會暴露給呼叫方。
 
 ## API 參考
 
@@ -43,7 +43,7 @@ Phase 1 有意把範圍控制得比較小：
 
 | 請求頭 | 使用方法 | 必填 | 說明 |
 |--------|----------|------|------|
-| `X-API-Key` | 除 `OPTIONS` 外 | 是 | OpenViking API Key |
+| `X-API-Key` | 除 `OPTIONS` 外 | 取決於鑑權模式 | OpenViking API Key；trusted 模式還可能需要身份頭 |
 | `Depth` | `PROPFIND` | 否 | `0` 僅返回目標；其他值按一級深度處理 |
 | `Destination` | `MOVE` | 是 | `/webdav/resources` 下的目標路徑 |
 | `Overwrite` | `MOVE` | 否 | 預設 `T`；設為 `F` 時不覆蓋已有目標 |

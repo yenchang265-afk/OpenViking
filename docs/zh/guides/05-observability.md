@@ -1,20 +1,12 @@
 # 可觀測性與排障
 
-這份指南把 OpenViking 當前和“觀測”有關的入口放在一起介紹，包括：
-
-- 服務健康檢查與元件狀態
-- 請求級 `telemetry`
-- 終端側 `ov tui`
-- Web 側 `Web Studio`（同 OV server，路徑 `/studio`）
-- `/metrics` 時序指標
-
-如果你只想快速判斷“該看哪裡”，先看下面這張表。
+按排查目標選擇入口：服務是否就緒、資料是否寫入、單次請求發生了什麼，或一段時間內指標如何變化。
 
 ## 先選哪個入口
 
 | 入口 | 適合看什麼 | 典型場景 |
 | --- | --- | --- |
-| `/health`、`observer/*` | 服務是否健康、佇列是否堆積、VikingDB/VLM 狀態 | 部署驗收、值班巡檢 |
+| `/health`、`/ready`、`observer/*` | 服務是否健康、佇列是否堆積、VikingDB/VLM 狀態 | 部署驗收、值班巡檢 |
 | `ov tui` | `viking://` 檔案樹、目錄摘要、檔案正文、向量記錄、受支援圖片檔案的預覽 | 開發除錯、核對資源是否真正落庫 |
 | `Web Studio`（`/studio`） | 同 OV server 的 Web UI：Home 看 token / 檢索 / context commits 趨勢，Resources 瀏覽 URI，Retrieval 直接發 find，Request Logs 看審計日誌 | 不想手敲命令時做互動式排查 |
 | `telemetry` | 單次請求耗時、token、向量檢索、資源處理階段 | 排查一次具體呼叫為什麼慢、為什麼結果異常 |
@@ -24,19 +16,19 @@
 
 ### 健康檢查
 
-`/health` 提供簡單的存活檢查，不需要認證。
+`/health` 提供無需認證的存活檢查，下方僅展示部分響應欄位。就緒檢查用 `/ready`。模型 observer 的健康狀態不證明憑證有效或呼叫成功，詳見[系統狀態](../api/07-system.md)。
 
 ```bash
 curl http://localhost:1933/health
 ```
 
 ```json
-{"status": "ok"}
+{"status": "ok", "healthy": true}
 ```
 
 ### 整體系統狀態
 
-**Python HTTP SDK**
+**Python HTTP SDK（`SyncHTTPClient`）**
 
 ```python
 status = client.get_status()
@@ -77,7 +69,7 @@ curl http://localhost:1933/api/v1/observer/system \
 | `GET /api/v1/observer/vikingdb` | VikingDB | 向量資料庫狀態 |
 | `GET /api/v1/observer/models` | Models | VLM、Embedding 和 Rerank 模型狀態 |
 | `GET /api/v1/observer/lock` | Lock | 鎖和事務狀態 |
-| `GET /api/v1/observer/retrieval` | Retrieval | 檢索質量指標 |
+| `GET /api/v1/observer/retrieval` | Retrieval | 檢索次數和耗時，不代表相關性評估 |
 | `GET /api/v1/observer/filesystem` | Filesystem | 檔案系統操作指標 |
 
 例如：
@@ -89,7 +81,7 @@ curl http://localhost:1933/api/v1/observer/queue \
 
 ### 快速健康檢查
 
-**Python HTTP SDK**
+**Python HTTP SDK（`SyncHTTPClient`）**
 
 ```python
 if client.is_healthy():
@@ -109,11 +101,11 @@ curl http://localhost:1933/api/v1/debug/health \
 
 ### 響應時間
 
-每個 API 響應都包含一個 `X-Process-Time` 請求頭，表示服務端處理時間（單位為秒）：
+`X-Process-Time` 表示請求進入服務端到傳送響應頭的耗時，單位為秒。流式響應不包含完整響應體的傳輸時間：
 
 ```bash
 curl -v http://localhost:1933/api/v1/fs/ls?uri=viking:// \
-  -H "X-API-Key: your-key" 2>&1 | grep X-Process-Time
+  -H "X-API-Key: your-key" 2>&1 | grep -i X-Process-Time
 # < X-Process-Time: 0.0023
 ```
 
@@ -185,7 +177,7 @@ http://127.0.0.1:1933/studio
 
 寫操作（`Add Resource`、`Add Memory`、租戶/使用者管理）通過當前已登入的 API key 鑑權，沒有額外的 `--write-enabled` 開關需要開啟。
 
-從觀測角度看，Studio 的一個優點是直接呼叫 `/api/v1/console/*` BFF 的統計介面（dashboard summary、token series、context commits、audit logs），跟舊 console 複用同一套資料，只是 UI 換了。對於 `find`、`add-resource` 和 `session commit` 這類操作，結果面板可以展開看 `telemetry.summary`。
+Studio 從 `/api/v1/console/*` 讀取 dashboard summary、token series、context commits 和 audit logs。檢視 `find`、`add-resource` 和 `session commit` 等操作的 `telemetry.summary` 時，按[操作遙測](07-operation-telemetry.md)讀取完整 HTTP 響應。
 
 Studio 更適合“邊點邊看”的互動式排查；如果你要把觀測資料接到自己的日誌系統或自動化鏈路，建議直接呼叫 HTTP API 或 SDK，並顯式請求 telemetry。
 
@@ -484,7 +476,7 @@ OpenViking 將訊號級別的可觀測性配置統一放在 `server.observabilit
 
 ### 直接訪問 `/metrics`
 
-當前實現中，`/metrics` 未接入 `get_request_context` 等鑑權依賴，因此從程式碼行為上看，它當前等價於公開抓取端點：
+啟用後，`/metrics` 是無需認證的抓取端點：
 
 ```bash
 curl http://localhost:1933/metrics
@@ -514,7 +506,7 @@ scrape_configs:
 
 - 在 Prometheus UI 裡執行 `openviking_http_requests_total`
 - 或執行 `openviking_service_readiness`
-- 如果已經能返回時間序列，說明 Grafana 後續就能正常出圖
+- 返回時間序列說明抓取正常；各面板還需要對應指標產生樣本，且篩選條件匹配
 
 如果這一步沒有資料，先回到上面的 Prometheus 抓取配置，確認 `targets`、`metrics_path` 和網路連通性。
 
@@ -552,7 +544,7 @@ OpenViking 倉庫裡已經提供了可直接匯入的 dashboard JSON：
 
 匯入成功後，你最終會看到一個以 OpenViking 請求、佇列、探針、模型呼叫和系統狀態為主的總覽 dashboard。效果示意可以參考：
 
-- [grafana-demo-dashboard.png](../../images/grafana-demo-dashboard.png)
+- [grafana-demo-dashboard.png](/grafana-demo-dashboard.png)
 
 這張圖可以幫助你快速確認“匯入後的面板佈局是不是正常”。如果你的 dashboard 基本結構和它一致，但區域性面板沒有資料，通常說明是對應指標當前沒有產生樣本，或者篩選條件與實際流量不匹配。
 
