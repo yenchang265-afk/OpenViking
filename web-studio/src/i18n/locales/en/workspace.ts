@@ -375,7 +375,7 @@ const workspace = {
       nameHint:
         'Up to {{max}} characters: letters, numbers, hyphens, and underscores.',
       nameExists:
-        'A {{scope}} with this name already exists. Creating it will replace that skill.',
+        'A skill with this name already exists in {{scope}}. Creating it will replace that skill.',
       descriptionLabel: 'Description',
       descriptionPlaceholder:
         'What the skill does and when an agent should use it.',
@@ -404,7 +404,7 @@ const workspace = {
       replace: {
         title: 'Replace {{name}}?',
         description:
-          'A {{scope}} with this name already exists. Its SKILL.md will be overwritten with this one. Other files in the skill are kept. This cannot be undone.',
+          'A skill with this name already exists in {{scope}}. Its SKILL.md will be overwritten with this one. Other files in the skill are kept. This cannot be undone.',
         back: 'Back',
         confirm: 'Replace skill',
         replacing: 'Replacing...',

@@ -362,7 +362,7 @@ const workspace = {
       nameLabel: '名稱',
       namePlaceholder: 'pr-review',
       nameHint: '最多 {{max}} 個字元，只能包含英文字母、數字、連字號和底線。',
-      nameExists: '已有同名的{{scope}}，建立後會取代該技能。',
+      nameExists: '{{scope}}中已有同名技能，建立後會取代該技能。',
       descriptionLabel: '簡介',
       descriptionPlaceholder: '技能的用途，以及 Agent 應在何時使用它。',
       descriptionHint: 'Agent 會依據簡介判斷何時使用技能，請說明適用情境。',
@@ -389,7 +389,7 @@ const workspace = {
       replace: {
         title: '要取代 {{name}} 嗎？',
         description:
-          '已有同名的{{scope}}。它的 SKILL.md 會被這份內容覆寫，技能中的其他檔案會保留。此操作無法復原。',
+          '{{scope}}中已有同名技能。它的 SKILL.md 會被這份內容覆寫，技能中的其他檔案會保留。此操作無法復原。',
         back: '返回',
         confirm: '取代技能',
         replacing: '正在取代...',
