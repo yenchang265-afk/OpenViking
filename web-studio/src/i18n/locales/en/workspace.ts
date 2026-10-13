@@ -261,9 +261,11 @@ const workspace = {
     },
     help: {
       title: 'No experiences yet? Check:',
-      reasonConnected: 'Whether the Agent is connected to Business Data Platform',
+      reasonConnected:
+        'Whether the Agent is connected to Business Data Platform',
       reasonSessions: 'Whether new sessions ran after connecting',
-      reasonCommit: 'Whether those sessions were committed to Business Data Platform',
+      reasonCommit:
+        'Whether those sessions were committed to Business Data Platform',
     },
     settings: {
       title: 'Experience settings',
@@ -358,6 +360,48 @@ const workspace = {
     networkError:
       'Could not connect to the Business Data Platform service. Check the server URL and connection status.',
     connectionSettings: 'Open connection settings',
+    create: {
+      open: 'New skill',
+      title: 'Create a skill',
+      description:
+        'Write a SKILL.md for agents to use. You can add more files to it later in the Playground.',
+      scopeLabel: 'Save to',
+      scopeHint: {
+        user: 'Only you can use it. Saved under {{uri}}.',
+        agent: 'Shared with everyone in this workspace. Saved under {{uri}}.',
+      },
+      nameLabel: 'Name',
+      namePlaceholder: 'pr-review',
+      nameHint:
+        'Up to {{max}} characters: letters, numbers, hyphens, and underscores.',
+      descriptionLabel: 'Description',
+      descriptionPlaceholder:
+        'What the skill does and when an agent should use it.',
+      descriptionHint:
+        'Agents read this to decide when to use the skill, so say when it applies.',
+      instructionsLabel: 'Instructions',
+      instructionsPlaceholder: '# Steps\n\n1. ...\n2. ...',
+      instructionsHint:
+        'Markdown body of SKILL.md. Name and description become its frontmatter.',
+      errors: {
+        name: {
+          required: 'Enter a name.',
+          tooLong: 'Use {{max}} characters or fewer.',
+          invalid: 'Use only letters, numbers, hyphens, and underscores.',
+          exists:
+            'A {{scope}} with this name already exists. Pick another name.',
+        },
+        description: {
+          required: 'Enter a description.',
+          tooLong: 'Use {{max}} characters or fewer.',
+        },
+      },
+      cancel: 'Cancel',
+      submit: 'Create skill',
+      creating: 'Creating...',
+      created: 'Created skill {{name}}',
+      failed: 'Could not create the skill: {{error}}',
+    },
     detail: 'Details',
     openPlayground: 'Open in Playground',
     viewDetail: 'View {{name}} details',

@@ -1,16 +1,18 @@
 import * as React from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import {
   ChevronRightIcon,
   ExternalLinkIcon,
   FileCode2Icon,
   LoaderCircleIcon,
+  PlusIcon,
   RefreshCwIcon,
   SparklesIcon,
   UserRoundIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
@@ -31,6 +33,7 @@ import {
 import { useAppConnection } from '#/hooks/use-app-connection'
 import { getOvResult, isOvClientError, ovClient } from '#/lib/ov-client'
 
+import { CreateSkillDialog } from './-components/create-skill-dialog'
 import {
   SKILL_SCOPE_ICONS,
   SkillScopeTabs,
@@ -184,9 +187,11 @@ async function fetchSkillDetail(skill: SkillItem): Promise<SkillDetail> {
 function SkillsRoute() {
   const { t } = useTranslation('skillsPage')
   const { identityScopeKey } = useAppConnection()
+  const queryClient = useQueryClient()
   const [selectedSkill, setSelectedSkill] = React.useState<SkillItem | null>(
     null,
   )
+  const [createOpen, setCreateOpen] = React.useState(false)
   const skillsQuery = useQuery({
     queryFn: fetchSkills,
     queryKey: ['skills', identityScopeKey],
@@ -218,18 +223,29 @@ function SkillsRoute() {
             {t('description')}
           </p>
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={skillsQuery.isFetching}
-          onClick={() => void skillsQuery.refetch()}
-        >
-          <RefreshCwIcon
-            className={skillsQuery.isFetching ? 'animate-spin' : undefined}
-          />
-          {t('refresh')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={skillsQuery.isFetching}
+            onClick={() => void skillsQuery.refetch()}
+          >
+            <RefreshCwIcon
+              className={skillsQuery.isFetching ? 'animate-spin' : undefined}
+            />
+            {t('refresh')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={skillsQuery.isLoading || skillsQuery.isError}
+            onClick={() => setCreateOpen(true)}
+          >
+            <PlusIcon />
+            {t('create.open')}
+          </Button>
+        </div>
       </header>
 
       {skillsQuery.isLoading ? (
@@ -364,6 +380,19 @@ function SkillsRoute() {
           </div>
         </div>
       )}
+
+      <CreateSkillDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        existingSkills={skills}
+        initialScope={activeScope}
+        getErrorMessage={getErrorMessage}
+        onCreated={(draft) => {
+          setActiveScope(draft.scope)
+          toast.success(t('create.created', { name: draft.name }))
+          void queryClient.invalidateQueries({ queryKey: ['skills'] })
+        }}
+      />
 
       <Sheet
         open={Boolean(selectedSkill)}
