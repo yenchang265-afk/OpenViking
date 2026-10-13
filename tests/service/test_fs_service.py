@@ -1579,6 +1579,15 @@ async def test_resource_rm_refreshes_memory_overview_for_cleaned_memories(
     assert result["memory_cleanup"] == cleanup
 
 
+def _listing_viking_fs(entries):
+    """VikingFS stub for ls(): returns ``entries`` and finalizes them unchanged."""
+
+    async def finalize(entries, *_args, **_kwargs):
+        return entries
+
+    return SimpleNamespace(ls=AsyncMock(return_value=entries), _finalize_listing_entries=finalize)
+
+
 @pytest.mark.asyncio
 async def test_ls_attaches_authors_from_each_entry_own_index_level(request_context):
     entries = [
@@ -1587,7 +1596,7 @@ async def test_ls_attaches_authors_from_each_entry_own_index_level(request_conte
         {"uri": "viking://resources/legacy.md", "name": "legacy.md", "isDir": False},
         {"uri": "viking://resources/secret", "name": "secret", "isDir": True, "access": "denied"},
     ]
-    viking_fs = SimpleNamespace(ls=AsyncMock(return_value=entries))
+    viking_fs = _listing_viking_fs(entries)
     captured = {}
 
     class FakeVikingDB:
@@ -1617,7 +1626,7 @@ async def test_ls_attaches_authors_from_each_entry_own_index_level(request_conte
         "viking://resources", ctx=request_context, output="agent", extra_fields=["authors"]
     )
 
-    assert [(e["name"], e.get("uploaded_by"), e.get("updated_by")) for e in result] == [
+    assert [(e["name"], e.get("uploaded_by"), e.get("updated_by")) for e in result.entries] == [
         ("docs", "alice", "bob"),
         ("a.md", "carol", "carol"),
         ("legacy.md", "", ""),
@@ -1629,11 +1638,11 @@ async def test_ls_attaches_authors_from_each_entry_own_index_level(request_conte
 @pytest.mark.asyncio
 async def test_ls_skips_author_lookup_unless_requested(request_context):
     entries = [{"uri": "viking://resources/a.md", "name": "a.md", "isDir": False}]
-    viking_fs = SimpleNamespace(ls=AsyncMock(return_value=entries))
+    viking_fs = _listing_viking_fs(entries)
     vikingdb = SimpleNamespace(filter=AsyncMock(return_value=[]))
 
     service = FSService(viking_fs=viking_fs, vikingdb=vikingdb)
     result = await service.ls("viking://resources", ctx=request_context, output="agent")
 
-    assert result == entries
+    assert result.entries == entries
     vikingdb.filter.assert_not_awaited()

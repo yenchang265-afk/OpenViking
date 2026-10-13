@@ -186,5 +186,5 @@ async def test_health_unavailable_remains_diagnostic_data(monkeypatch):
 
     assert result["isError"] is False
     assert result["content"] == [
-        {"type": "text", "text": "OpenViking is unhealthy: not initialized"}
+        {"type": "text", "text": "Business Data Platform is unhealthy: not initialized"}
     ]

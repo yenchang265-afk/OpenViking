@@ -501,7 +501,7 @@ def language_config(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("override, expected", [("", "zh-CN"), ("ja", "ja")])
+@pytest.mark.parametrize("override, expected", [("", "zh-TW"), ("en", "en")])
 async def test_compile_resolves_language_before_prompt_and_schema(
     monkeypatch, language_config, override, expected
 ):

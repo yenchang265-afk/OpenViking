@@ -24,7 +24,10 @@ def processor(monkeypatch):
         )
     )
     monkeypatch.setattr("openviking.utils.skill_processor.extract_skill_privacy_values", extract)
-    processor = SkillProcessor(vikingdb=None, privacy_config_service=object())
+    vlm_resolver = SimpleNamespace(get_vlm=AsyncMock(return_value=object()))
+    processor = SkillProcessor(
+        vikingdb=None, privacy_config_service=object(), vlm_resolver=vlm_resolver
+    )
     processor.process_prepared_skill = AsyncMock(return_value={"status": "success"})
     return processor, extract
 
