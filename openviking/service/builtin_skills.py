@@ -4,7 +4,8 @@
 
 The Skills in ``openviking/builtin_skills/compile`` are installed into each
 account's shared ``viking://agent/skills`` root, so ``ov compile`` and Studio
-can use them without a manual ``ov add-skill``.
+can use them without a manual ``ov add-skill``. Installing makes no LLM call:
+privacy extraction is skipped and SKILL.md is summarized from its own header.
 
 Installing never overwrites: a Skill whose directory already exists is left
 as is. Each account records the names it has been given in
@@ -90,6 +91,7 @@ async def install_builtin_skills(service: Any, account_id: str, *, wait: bool = 
                 wait=wait,
                 target_uri=BUILTIN_SKILLS_ROOT,
                 source_metadata=dict(_SOURCE_METADATA),
+                summarize_from_header=True,
             )
             installed.append(name)
         known.add(name)

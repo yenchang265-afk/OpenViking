@@ -2223,6 +2223,7 @@ class ResourceService:
         source_metadata: Optional[Dict[str, Any]] = None,
         task_id: Optional[str] = None,
         owner_lease_ref: Optional[Dict[str, Any]] = None,
+        summarize_from_header: bool = False,
     ) -> Dict[str, Any]:
         """Add skill to OpenViking.
 
@@ -2231,6 +2232,8 @@ class ResourceService:
             wait: Whether to wait for vectorization to complete
             timeout: Wait timeout in seconds
             target_uri: Optional root URI override (e.g. ``viking://agent/skills``).
+            summarize_from_header: Use the SKILL.md header as its summary instead
+                of an LLM call (bundled Skills).
 
         Returns:
             Processing result
@@ -2288,6 +2291,7 @@ class ResourceService:
                             target_uri=target_uri,
                             source_metadata=source_metadata,
                             owner_lease_ref=owner_lease_ref,
+                            summarize_from_header=summarize_from_header,
                         )
                     else:
                         result = await self._skill_processor.process_skill(
@@ -2301,6 +2305,7 @@ class ResourceService:
                             target_uri=target_uri,
                             source_metadata=source_metadata,
                             owner_lease_ref=owner_lease_ref,
+                            summarize_from_header=summarize_from_header,
                         )
             finally:
                 await task_tracker.unregister_running_task(task.task_id)

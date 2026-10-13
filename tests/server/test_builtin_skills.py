@@ -67,6 +67,42 @@ async def test_installs_every_bundled_skill_once(client, service):
     assert await install_builtin_skills(service, account_id) == []
 
 
+async def test_installing_never_calls_the_llm(client, service, monkeypatch):
+    """Built-ins ship ready to use: installing one only copies it and embeds it."""
+    from openviking_cli.utils.config.vlm_config import VLMConfig
+
+    prompts: list[str] = []
+
+    async def record_completion(self, prompt, thinking=False):
+        prompts.append(prompt)
+        return "unexpected"
+
+    monkeypatch.setattr(VLMConfig, "get_completion_async", record_completion)
+
+    assert await install_builtin_skills(service, service.user.account_id, wait=True) == BUNDLED
+
+    assert prompts == []
+    assert await _agent_skill_names(client) == set(BUNDLED)
+
+
+async def test_user_skills_still_get_an_llm_summary(client, monkeypatch):
+    from openviking_cli.utils.config.vlm_config import VLMConfig
+
+    prompts: list[str] = []
+
+    async def record_completion(self, prompt, thinking=False):
+        prompts.append(prompt)
+        return "# Summary\n\nA team Skill."
+
+    monkeypatch.setattr(VLMConfig, "get_completion_async", record_completion)
+    custom = "---\nname: team-notes\ndescription: Team's own Skill\n---\n\n# Notes\n"
+    response = await client.post("/api/v1/skills", json={"data": custom, "wait": True})
+    assert response.status_code == 200, response.text
+
+    summaries = [p for p in prompts if "extract user-private configuration items" not in p]
+    assert any("team-notes" in p or "# Notes" in p for p in summaries)
+
+
 async def test_keeps_an_existing_skill_with_the_same_name(client, service):
     custom = "---\nname: llm-wiki\ndescription: Team's own wiki Skill\n---\n\n# Custom\n"
     response = await client.post(

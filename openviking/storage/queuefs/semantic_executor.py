@@ -1097,6 +1097,14 @@ class SemanticTreeExecutor:
                     need_vectorize = False
             else:
                 self._file_change_status[file_path] = True
+            provided = (
+                self._file_abstracts.get(file_path.rstrip("/"))
+                if self._context_type == "skill"
+                else None
+            )
+            if summary_dict is None and provided:
+                # Built-in Skills ship their summary; never ask the LLM for it.
+                summary_dict = {"name": file_name, "summary": provided}
             if summary_dict is None:
                 file_content = None
                 if hasattr(self._viking_fs, "read_file_bytes"):
