@@ -33,7 +33,7 @@ export function ReindexDialog({
   onOpenChange: (open: boolean) => void
   open: boolean
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const navigate = useNavigate()
   const [mode, setMode] = useState<ReindexMode>('vectors_only')
   const mutation = useMutation({

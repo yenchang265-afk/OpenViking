@@ -30,7 +30,7 @@ The command returns a `cmp_...` task ID immediately. Use `ov task status <id>` t
 
 ## Use Web Studio
 
-Studio provides a Compile list at `/compile`, a form at `/compile/new`, and task details at `/compile/tasks/<task_id>`. Select and preview a Skill, browse source directories, submit multiple sources, inspect or cancel a task, and open its output directory. Playground's terminal also supports `compile` and `task`; it can hand parameters to the form.
+Studio provides a Compile list at `/compile`, a form at `/compile/new`, and task details at `/compile/tasks/<task_id>`. Select and preview a Skill, browse source directories, submit multiple sources, inspect or cancel a task, and open its output directory. The Filesystem terminal also supports `compile` and `task`; it can hand parameters to the form.
 
 Task-list cursors are signed with a process-local key and bound to the caller and filters. Restarting the service invalidates old cursors; refresh the list to start again. A cursor from one replica is not portable to another. Pagination scans stored task records rather than using an index, so read cost grows with retained history.
 
@@ -49,7 +49,7 @@ The Skill defines the output. The repository includes these examples; LLM Wiki a
 
 The first two examples also give the complete `ov` commands from **importing sources → adding the Skill → running compile → visualizing the output**, ending in an interactive HTML graph.
 
-These Skills ship with OpenViking (`openviking/builtin_skills/compile`) and are installed into every account's shared `viking://agent/skills` by default — at server start and when an account is created. Existing Skills with the same name are never overwritten, and a built-in an admin deletes is not reinstalled; set `server.builtin_skills` to `false` to turn this off. In Studio's Playground context tree, right-click a folder and choose **Compile with ▸ <Skill>** to open a compile form with that folder as the source; right-clicking a Skill folder offers **Compile with this Skill**.
+These Skills ship with OpenViking (`openviking/builtin_skills/compile`) and are installed into every account's shared `viking://agent/skills` by default — at server start and when an account is created. Existing Skills with the same name are never overwritten, and a built-in an admin deletes is not reinstalled; set `server.builtin_skills` to `false` to turn this off. On Studio's Filesystem page, right-click a folder and choose **Compile with ▸ <Skill>** to open a compile form with that folder as the source; right-clicking a Skill folder offers **Compile with this Skill**.
 ## Not only new artifacts: consolidating existing memories
 
 Besides compiling source material into new knowledge artifacts with a Skill, `ov compile` has a special mode — set `--skill` to `memory` to consolidate an existing **memory** directory in place (dedup, merge, split, compact), without going through VikingBot. See [Memory Consolidation](./06-memory-consolidation.md).

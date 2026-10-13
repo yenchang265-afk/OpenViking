@@ -96,7 +96,7 @@ research-wiki/
 
 ## Step 5: Visualize it as an interactive graph
 
-In Studio, open the output folder in the Playground and switch the header from **Contents** to **Graph** to explore the same graph in the browser: click a node for its details, search, filter by page type, and widen the highlighted neighborhood hop by hop. The script below produces a standalone HTML file instead.
+In Studio, open the output folder on the Filesystem page and switch the header from **Contents** to **Graph** to explore the same graph in the browser: click a node for its details, search, filter by page type, and widen the highlighted neighborhood hop by hop. The script below produces a standalone HTML file instead.
 
 `wiki_graph.py` connects **directly to the OpenViking service** to read the Wiki pages (no local download needed), colors pages by type, links them by their cross-references, and produces a standalone interactive HTML:
 

@@ -54,7 +54,7 @@ export function DeleteResource({
   entry: DeletableEntry
   onDeleted: (entry: DeletableEntry) => void
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const [open, setOpen] = useState(false)
   const label = t('deleteResource.label')
 
@@ -92,7 +92,7 @@ export function DeleteResourceDialog({
   onOpenChange: (open: boolean) => void
   open: boolean
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const mutation = useMutation({
     mutationFn: () => removeResource(entry.uri, { recursive: entry.isDir }),
   })
@@ -175,7 +175,7 @@ export function BatchDeleteResourceDialog({
   onOpenChange: (open: boolean) => void
   open: boolean
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const mutation = useMutation({ mutationFn: deleteEntries })
   const { reset } = mutation
   const failed = mutation.data?.failed ?? []

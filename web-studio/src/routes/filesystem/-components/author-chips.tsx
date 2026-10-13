@@ -14,7 +14,7 @@ export function AuthorChips({
   updatedBy?: string
   compact?: boolean
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const showUpdater = Boolean(updatedBy) && updatedBy !== uploadedBy
   if (!uploadedBy && !showUpdater) return null
 

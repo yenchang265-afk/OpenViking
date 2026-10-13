@@ -27,7 +27,7 @@ export function ResourceRefList({
   onOpenResource: ResourceOpenHandler
   openingUri?: string | null
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   return (
     <div className={cn('grid gap-1.5', className)}>
       {refs.map((ref) => (

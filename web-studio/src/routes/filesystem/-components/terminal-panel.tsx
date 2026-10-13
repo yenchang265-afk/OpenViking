@@ -83,7 +83,7 @@ import {
   entryToRef,
   getErrorMessage,
   readStoredJsonArray,
-  registerPlaygroundAgentSessionId,
+  registerFilesystemAgentSessionId,
   removeStoredValue,
   searchResultToRefs,
   visibleContextEntries,
@@ -343,7 +343,7 @@ function parseWaitTimeout(body: string): number | undefined {
   if (!trimmed) return undefined
   const match = trimmed.match(/^(?:--timeout\s+)?(\d+(?:\.\d+)?)$/)
   if (!match) {
-    throw new Error(i18n.t('playground:terminal.waitUsage'))
+    throw new Error(i18n.t('filesystem:terminal.waitUsage'))
   }
   return Number(match[1])
 }
@@ -400,7 +400,7 @@ function getNumberFlag(
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) {
     throw new Error(
-      i18n.t('playground:terminal.invalidFlag', { flag: key, value }),
+      i18n.t('filesystem:terminal.invalidFlag', { flag: key, value }),
     )
   }
   return parsed
@@ -470,7 +470,7 @@ export function TerminalPanel({
   sessionId?: string
   toolbarContainer: HTMLDivElement | null
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const { connectionRole, identityScopeKey } = useAppConnection()
   const commandHistoryStorageKey = createIdentityStorageKey(
     TERMINAL_COMMAND_HISTORY_STORAGE_KEY,
@@ -1127,7 +1127,7 @@ export function TerminalPanel({
               case 'create': {
                 const requestedId = positional.shift()
                 const result = await createSession(requestedId)
-                registerPlaygroundAgentSessionId(
+                registerFilesystemAgentSessionId(
                   result.session_id,
                   identityScopeKey,
                 )
@@ -1148,7 +1148,7 @@ export function TerminalPanel({
               case 'switch': {
                 const id = positional.shift()
                 if (!id) throw new Error(t('terminal.sessionUsage'))
-                registerPlaygroundAgentSessionId(id, identityScopeKey)
+                registerFilesystemAgentSessionId(id, identityScopeKey)
                 onSessionChange(id)
                 append({
                   body: t('terminal.sessionSwitchedBody', { id }),
@@ -1919,7 +1919,7 @@ export function TerminalHistoryItem({
   onOpenResource: ResourceOpenHandler
   openingUri: string | null
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const Icon =
     entry.kind === 'command'
       ? TerminalIcon

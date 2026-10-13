@@ -127,7 +127,7 @@ export function ContextTreeMenu({
   onSelectModeChange,
   selectMode = false,
 }: ContextTreeMenuProps) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const { invalidateList } = useInvalidateVikingFs()
   const [target, setTarget] = useState<VikingFsEntry | null>(null)
   const [selection, setSelection] =

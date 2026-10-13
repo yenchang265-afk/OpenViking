@@ -50,7 +50,7 @@ export function CompileGraphSwitch({
   showGraph: boolean
   onShowGraphChange: (showGraph: boolean) => void
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const option = (active: boolean) =>
     `inline-flex items-center gap-1 px-2 py-1 text-xs ${active ? 'bg-muted font-medium text-foreground' : 'text-muted-foreground hover:bg-muted/60'}`
   return (

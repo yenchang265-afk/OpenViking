@@ -43,7 +43,7 @@ export function EntryNameDialog({
   /** Pre-select the name without its extension, like desktop explorers. */
   selectStem?: boolean
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const inputId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
   const [name, setName] = useState(initialName)

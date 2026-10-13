@@ -37,7 +37,7 @@ export function CompileGraphView({
   scopeKey,
   onOpenFile,
 }: CompileGraphViewProps) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const root = trimSlash(dirUri)
   const query = useQuery({
     queryKey: ['compile-graph', scopeKey, root, kind],
@@ -96,7 +96,7 @@ function GraphExplorer({
   root: string
   onOpenFile: (uri: string) => void
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const [pickedId, setPickedId] = useState(() => initialNodeId(graph))
   // A refetch can drop the picked node; fall back instead of dangling.
   const selectedId = graph.nodes.some((node) => node.id === pickedId)

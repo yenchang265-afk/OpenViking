@@ -1,4 +1,4 @@
-/** Compile outputs the Playground can draw as a graph. */
+/** Compile outputs the Filesystem page can draw as a graph. */
 export type GraphKind = 'llm-wiki' | 'knowledge-graph'
 
 export type GraphNode = {

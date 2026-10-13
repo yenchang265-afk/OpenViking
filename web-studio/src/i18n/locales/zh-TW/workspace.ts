@@ -64,8 +64,8 @@ const workspace = {
       sessions: {
         title: '會話',
       },
-      playground: {
-        title: '工作臺',
+      filesystem: {
+        title: '檔案系統',
       },
     },
     sidebar: {
@@ -284,7 +284,7 @@ const workspace = {
     detail: {
       back: '返回',
       copyUri: '複製 URI',
-      openPlayground: '在工作臺中開啟',
+      openFilesystem: '在檔案系統中開啟',
       copied: '已複製',
       copyFailed: '複製失敗',
       contentTitle: '經驗內容',
@@ -354,7 +354,7 @@ const workspace = {
       open: '新增技能',
       title: '建立技能',
       description:
-        '撰寫供 Agent 使用的 SKILL.md。之後可在工作臺中為它加入更多檔案。',
+        '撰寫供 Agent 使用的 SKILL.md。之後可在檔案系統中為它加入更多檔案。',
       scopeLabel: '儲存到',
       scopeHint: {
         user: '僅你可以使用，儲存在 {{uri}}。',
@@ -398,7 +398,7 @@ const workspace = {
       failed: '技能建立失敗：{{error}}',
     },
     detail: '詳情',
-    openPlayground: '在工作臺中開啟',
+    openFilesystem: '在檔案系統中開啟',
     viewDetail: '檢視 {{name}} 詳情',
     detailLoading: '正在載入技能詳情...',
     detailLoadFailed: '技能詳情載入失敗',
@@ -1039,14 +1039,14 @@ const workspace = {
       keyGuide: {
         control: {
           primary:
-            '當前使用者 API 金鑰已可用於工作臺和資料訪問，普通使用者無需配置控制憑證。',
+            '當前使用者 API 金鑰已可用於檔案系統和資料訪問，普通使用者無需配置控制憑證。',
           secondary:
             '如需切換帳號或管理使用者，請向部署管理員索取 Root API 金鑰，或向當前帳號管理員索取管理員 API 金鑰。Root API 金鑰位於服務端 ov.conf 的 server.root_api_key。',
           title: '需要管理帳號或使用者？',
         },
         data: {
           primary:
-            'Root 或管理員 API 金鑰主要用於管理操作；工作臺和租戶資料 API 需要繫結使用者身份的使用者 API 金鑰。',
+            'Root 或管理員 API 金鑰主要用於管理操作；檔案系統和租戶資料 API 需要繫結使用者身份的使用者 API 金鑰。',
           secondary:
             '請在“使用者與許可權”中選擇或建立使用者，或者重新生成使用者金鑰，然後將其用作使用者 API 金鑰。',
           title: '還缺少使用者 API 金鑰',
@@ -1074,7 +1074,7 @@ const workspace = {
         primary: '該伺服器配置了 {{mode}} 認證。',
         title: '不支援的認證模式',
       },
-      userHint: '供工作臺和租戶資料 API 使用。',
+      userHint: '供檔案系統和租戶資料 API 使用。',
     },
     connectionPage: {
       description:
@@ -1183,9 +1183,9 @@ const workspace = {
       description:
         '檢視選中帳號下的使用者和憑證，並在網頁端新增使用者或輪換金鑰。',
       memberListDescription:
-        '“切換身份”會將該使用者設為工作臺、檢索等資料頁面的訪問身份，不會改變當前 Root 或管理員憑證。',
+        '“切換身份”會將該使用者設為檔案系統、檢索等資料頁面的訪問身份，不會改變當前 Root 或管理員憑證。',
       memberListDescriptionRoot:
-        '可直接修改成員角色。“切換身份”只會改變工作臺、檢索等資料頁面的訪問身份，不會改變當前 Root 管理憑證。',
+        '可直接修改成員角色。“切換身份”只會改變檔案系統、檢索等資料頁面的訪問身份，不會改變當前 Root 管理憑證。',
       memberListTitle: '空間成員',
       cannotRemoveCurrentIdentity: '不能刪除當前正在使用的身份。',
       cannotRemoveLastManager: '不能刪除空間內最後一個管理員。',

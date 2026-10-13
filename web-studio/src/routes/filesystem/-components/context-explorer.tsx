@@ -66,7 +66,7 @@ export function ContextExplorerHeader({
   onRefresh: () => void
   onToggleSelecting?: () => void
 }) {
-  const { t } = useTranslation(['playground', 'resources'])
+  const { t } = useTranslation(['filesystem', 'resources'])
   const showProcessingTasks = hasTasks || isRefreshingTasks
 
   return (
@@ -193,7 +193,7 @@ export function ContextTree({
   onSelectFile: (entry: VikingFsEntry) => void
   selectedFileUri?: string | null
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const rootQuery = useVikingFsList(ROOT_URI, {
     output: 'agent',
     showAllHidden: true,
@@ -282,7 +282,7 @@ export function ContextTree({
   )
 }
 
-export function PlaygroundResizeHandle({
+export function FilesystemResizeHandle({
   active,
   label,
   onPointerDown,
@@ -324,7 +324,7 @@ export function ContextTreeNode({
   onSelectFile: (entry: VikingFsEntry) => void
   selectedFileUri?: string | null
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const isOpen = expandedKeys.has(entry.uri)
   const isFileSelected = !entry.isDir && selectedFileUri === entry.uri
   const isDirSelected =

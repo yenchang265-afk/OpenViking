@@ -48,7 +48,7 @@ export function GraphNodePanel({
   onSelect,
   onOpenFile,
 }: GraphNodePanelProps) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const titles = useMemo(
     () => new Map(graph.nodes.map((item) => [item.id, item.title])),
     [graph],
@@ -60,7 +60,7 @@ export function GraphNodePanel({
   )
 
   // Same allowlist as graph-show: graph pages select, http(s) opens a new
-  // tab, viking:// opens in the Playground, anything else is plain text.
+  // tab, viking:// opens in the Filesystem page, anything else is plain text.
   const components: Components = {
     a: ({ href = '', children }) => {
       const target =

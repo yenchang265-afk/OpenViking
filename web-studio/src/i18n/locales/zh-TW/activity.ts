@@ -161,13 +161,13 @@ const activity = {
         '請先在“連線設定”中配置 Business Data Platform 身份憑證，或在下方臨時貼上 API 金鑰完成驗證。',
     },
   },
-  playground: {
+  filesystem: {
     copyUri: '複製當前 URI',
     uploadedBy: '上傳者：{{user}}',
     updatedBy: '最後更新者：{{user}}',
     copied: '已複製 URI',
     copyFailed: '複製失敗',
-    resizeContext: '調整上下文樹寬度',
+    resizeContext: '調整檔案系統寬度',
     resizeAction: '調整終端和 Agent 面板寬度',
     readFailed: '無法讀取 {{uri}}',
     deleteResource: {
@@ -225,7 +225,7 @@ const activity = {
     addResource: {
       title: '新增資源',
       description:
-        '新增完成後左側上下文樹會重新整理，右側終端可繼續定位新資源。',
+        '新增完成後左側檔案系統會重新整理，右側終端可繼續定位新資源。',
       submitted: '資源新增任務已提交',
     },
     compileGraph: {
@@ -286,7 +286,7 @@ const activity = {
       },
     },
     explorer: {
-      title: '上下文樹',
+      title: '檔案系統',
       addResource: '新增資源',
       selectMode: '選取項目',
       abstractLevel: 'L0',
@@ -296,7 +296,7 @@ const activity = {
       loading: '載入中',
       overviewLevel: 'L1',
       search: '搜尋上下文',
-      refresh: '重新整理上下文樹',
+      refresh: '重新整理檔案系統',
       namespaces: {
         agent: 'Agent 的能力、工具和經驗',
         user: '使用者個性化記憶',
@@ -360,18 +360,18 @@ const activity = {
     agent: {
       history: '歷史會話',
       newSession: '新建會話',
-      creating: '正在建立工作臺會話...',
+      creating: '正在建立檔案系統會話...',
       detectingBot: '正在檢查 VikingBot 是否可用...',
       createFailed: '建立會話失敗：{{error}}',
       retry: '重試',
       botDisabledFooter: '啟用 VikingBot 後即可與 Agent 對話',
       historyTitle: 'Agent 會話歷史',
       historyDescription:
-        '工作臺與 VikingBot 共用對話記錄，也包含當前瀏覽器儲存的舊 Agent 會話。',
+        '檔案系統與 VikingBot 共用對話記錄，也包含當前瀏覽器儲存的舊 Agent 會話。',
       loadingSessions: '正在載入會話...',
       noSessions: '暫無歷史會話',
-      createTimeout: '建立工作臺會話超時，請檢查連線設定後重試。',
-      newSessionTitle: '新建工作臺會話',
+      createTimeout: '建立檔案系統會話超時，請檢查連線設定後重試。',
+      newSessionTitle: '新建檔案系統會話',
       botPrompt: {
         title: '請啟用 VikingBot',
         description:
@@ -396,7 +396,7 @@ const activity = {
       historyDescription: '檢視當前瀏覽器中執行過的命令。',
       clearHistory: '清空命令歷史',
       noHistory: '暫無命令歷史',
-      welcomeTitle: '終端已連線上下文樹',
+      welcomeTitle: '終端已連線檔案系統',
       welcomeBody:
         '可執行 /status、/ls、/search、/read、/add-resource。/search 預設全域檢索，可通過 --scope . 使用當前目錄，或通過 --scope viking://resources/... 指定目錄。',
       scopeLabel: '目錄：{{uri}}',

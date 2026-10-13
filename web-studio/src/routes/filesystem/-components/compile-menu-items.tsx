@@ -24,7 +24,7 @@ type CompilePrefill = { skill?: string; from?: string; to?: string }
  * skill; any other folder is a source for one of the installed skills.
  */
 export function CompileMenuItems({ dirUri }: { dirUri: string }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const navigate = useNavigate()
   const uri = dirUri.replace(/\/+$/, '')
   const openForm = (search: CompilePrefill) =>
@@ -70,7 +70,7 @@ function SkillItems({
 }: {
   onPick: (skill: { name: string; uri: string }) => void
 }) {
-  const { t } = useTranslation('playground')
+  const { t } = useTranslation('filesystem')
   const { identityScopeKey } = useAppConnection()
   const skills = useQuery({
     queryKey: ['compile-skills', identityScopeKey],
