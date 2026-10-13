@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Regression coverage for canonical options and distributed capability enforcement."""
 
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, create_autospec, patch
 
 import pytest
 from pydantic import ValidationError
@@ -151,3 +151,15 @@ def test_filter_delete_has_no_implicit_row_limit():
     )
     assert cursor.execute.call_args.args[1] == ["tenant", None]
     adapter._conn.commit.assert_called_once_with()
+
+
+def test_random_search_accepts_the_shared_advance_option():
+    # The shared adapter always forwards advance; openGauss does not apply it.
+    with patch.object(OpenGaussCollectionAdapter, "_connect"):
+        adapter = OpenGaussCollectionAdapter("context", OpenGaussConfig())
+    collection = create_autospec(OpenGaussCollection, instance=True)
+    collection.search_by_random.return_value = Mock(data=[])
+    adapter.get_collection = Mock(return_value=collection)
+
+    assert adapter.search_by_random(limit=3) == []
+    assert collection.search_by_random.call_args.kwargs["advance"] is None
