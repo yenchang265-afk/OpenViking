@@ -6,7 +6,10 @@ Deploy OpenViking on Kubernetes using Helm.
 
 - Kubernetes 1.24+
 - Helm 3.x
-- A storage class that supports `ReadWriteOnce` persistent volumes (for RocksDB data)
+- Single-instance mode (default): a storage class that supports `ReadWriteOnce`
+  persistent volumes (for RocksDB data)
+- Multi-instance mode: S3-compatible storage, Elasticsearch / openGauss (or an
+  HTTP vector service) and Redis. See [Multi-instance mode](#multi-instance-mode).
 
 ## Installation
 
@@ -187,11 +190,154 @@ proxy buffering and allow 32 MiB request bodies and 600-second read timeouts. Fo
 annotations, Studio setup and troubleshooting, see
 [OpenViking Gateway deployment and operations](https://docs.openviking.ai/en/guides/22-gateway-operations#helm).
 
+## Multi-instance mode
+
+The default chart runs one pod. Its embedded vector store and local workspace
+belong to that one process. Set `multiInstance.enabled: true` to run several
+API replicas against shared backends instead:
+
+```
+Ingress (hash on Authorization)
+  ├─ /api/v1/admin/*  → <release>-control  (1 pod, Recreate)
+  └─ everything else  → <release>-api      (Deployment, optional HPA + PDB)
+Shared: S3 · Elasticsearch/openGauss · Redis (queues + path locks)
+```
+
+Start from the example file. It is sized as a starting point for about 100k
+employees with about 5k concurrently active:
+
+```bash
+helm upgrade --install openviking ./deploy/helm/openviking \
+  -f deploy/helm/openviking/values-multi-instance.yaml \
+  -f my-overrides.yaml
+```
+
+### What the chart does in this mode
+
+- Renders `<release>-api` and `<release>-control` Deployments. Each pod gets
+  an `emptyDir` for its local workspace. `replicaCount` and `persistence` are
+  ignored.
+- API pods get a config with `enable_watch_scheduler: false`,
+  `memory.session_auto_commit.enabled: false` and
+  `server.api_key_watch_enabled: true`, unless you set the last one yourself.
+  These background jobs have no leader election, so only the control pod runs
+  them, using `config` as you wrote it. The WatchScheduler is on by default.
+  Session auto-commit is off by default; enable it under `config.memory` if
+  you need it, and it will run on the control pod only.
+- Routes `/api/v1/admin` to the control pod. User adds and key rotations merge
+  into `users.json` under a cross-pod path lock. Deleting a user, however,
+  rewrites the whole file from the pod's in-memory snapshot, which can drop
+  users another pod just added. Keep admin writes on one pod, and apply the
+  same rule in your own routing.
+- Uses a rolling update with `maxUnavailable: 0`, a `preStop` sleep and a
+  120-second termination grace. A clean shutdown removes the pod's Redis queue
+  heartbeat, so its in-flight jobs are recovered. A crashed pod's jobs are only
+  recovered the next time any instance starts.
+- Refuses to render unless all of these hold:
+
+  | Key | Required value |
+  |---|---|
+  | `config.storage.vectordb.backend` | not `local` or `cuvs` |
+  | `config.storage.agfs.backend` | `s3` |
+  | `config.cache.provider` | `redis` |
+  | `config.storage.agfs.pathlock.namespace` | set |
+  | `config.storage.agfs.queuefs.backend` | `cache` |
+  | `config.storage.agfs.pathlock.provider` | `cache` |
+  | `config.storage.agfs.cachefs.backend` | not `cache` (it assumes a single writer) |
+  | `config.server.temp_upload.default_mode` | `shared` |
+  | `gateway.enabled` | `false` (run the gateway as its own single-replica release) |
+
+### Settings that matter at scale
+
+- **`server.workers: 1`.** MCP upload tokens are process-local, and restart
+  recovery needs a single worker. Scale with pods.
+- **Affinity is best effort.** Hashing on the `Authorization` header
+  (`nginx.ingress.kubernetes.io/upstream-hash-by`) usually keeps a caller on
+  one pod, which MCP uploads and task-list cursors need, because each process
+  holds its own upload tokens and signs cursors with its own key. A caller still
+  moves to another pod when its token is refreshed or when pods are added or
+  removed. An MCP upload or cursor in flight at that moment fails, and the
+  client has to start it again.
+- **`server.timeout_keep_alive`** must be higher than the load balancer's idle
+  timeout (75 vs 60).
+- **`cache.params.command_timeout_ms`.** The default of 20 ms times out under
+  load. Use about 1000.
+- **LLM concurrency.** `vlm.max_concurrent` (default 32) and
+  `embedding.max_concurrent` (default 10) apply per process. Multiply by
+  `maxReplicas` and keep the total under what the model backend can serve.
+  OpenViking has no RPM/TPM limit, so enforce global limits in an LLM gateway
+  such as LiteLLM.
+- **Authentication.** For a large workforce, prefer `auth_mode: oidc` against
+  company SSO and map `account_id` from a claim such as department. Per-user
+  API keys don't scale well:
+  - each user is created with its own admin call, because there is no bulk
+    endpoint;
+  - each change rewrites the account's `users.json`;
+  - every API pod checks the size and mtime of all `users.json` files every
+    `api_key_watch_interval_seconds`, and reloads whenever one changes.
+- **Per-pod disk.** Each pod's `emptyDir` counts against node ephemeral
+  storage. Set an `ephemeral-storage` request, as the example does, so the
+  scheduler reserves space and the pods are not the first evicted under disk
+  pressure.
+- **Per-pod state.** Usage audit and OAuth SQLite files live in the pod's
+  `emptyDir`. Read usage from `/metrics` (Prometheus) or OTel, and keep
+  `oauth.enabled: false` unless requests stay on one pod.
+- **Runtime config.** Change config by editing values and rolling out.
+  `PATCH /api/v1/admin/configuration` with `source=file` cannot write the
+  read-only ConfigMap.
+
+### Client configuration
+
+Point every client at the ingress, never at individual pods.
+
+`ovcli.conf`, distributed by MDM or a dotfile template, with no per-user
+secrets in it:
+
+```json
+{
+  "url": "https://ov.corp.example.com",
+  "auth_mode": "oidc",
+  "timeout": 60
+}
+```
+
+Supply the token through `OPENVIKING_OIDC_TOKEN`, for example from an SSO
+helper.
+
+Agent plugins (Claude Code, Codex, OpenClaw, ...) read environment variables:
+
+```bash
+OPENVIKING_URL=https://ov.corp.example.com
+OPENVIKING_TIMEOUT_MS=15000
+OPENVIKING_RECALL_TIMEOUT_MS=30000   # default 120000 is long for a per-prompt hook
+```
+
+Plugin `authMode` accepts `trusted` or `api_key`. To use SSO from plugins,
+either:
+
+- send a bearer token (`OPENVIKING_BEARER_TOKEN`), or
+- put a gateway in front that validates SSO and forwards
+  `X-OpenViking-Account` / `X-OpenViking-User` with the root key
+  (`auth_mode: trusted`). Allow only that gateway to reach the pods.
+
+The Python SDK and the `ov` CLI do not retry. Retry idempotent reads (search,
+ls, read) with jitter on 429/502/503. Never auto-retry `add_resource` or
+session commits. Reuse one client per process so connections stay alive.
+
 ## Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `replicaCount` | Number of replicas | `1` |
+| `replicaCount` | Number of replicas in single-instance mode (must be 1) | `1` |
+| `multiInstance.enabled` | Run api + control Deployments against shared backends | `false` |
+| `multiInstance.api.replicas` | API replicas when autoscaling is off | `3` |
+| `multiInstance.api.autoscaling.*` | HPA on CPU (`enabled`, `minReplicas`, `maxReplicas`, `targetCPUUtilizationPercentage`) | off, 3, 20, 60 |
+| `multiInstance.api.podDisruptionBudget.*` | PDB for API pods (`enabled`, `maxUnavailable`) | on, 1 |
+| `multiInstance.api.topologySpread.enabled` | Spread API pods over nodes and zones | `true` |
+| `multiInstance.api.resources` / `multiInstance.control.resources` | Per-component resources; empty uses `resources` | `{}` |
+| `multiInstance.terminationGracePeriodSeconds` | Pod termination grace | `120` |
+| `multiInstance.preStopSleepSeconds` | Sleep before SIGTERM | `15` |
+| `multiInstance.localVolumeSizeLimit` | Per-pod `emptyDir` size limit | `20Gi` |
 | `image.repository` | Container image repository | `ghcr.io/volcengine/openviking` |
 | `image.tag` | Container image tag (`latest`, `main`, pinned release, or empty for `latest`) | `latest` |
 | `image.pullPolicy` | Image pull policy | `Always` |
@@ -223,8 +369,14 @@ annotations, Studio setup and troubleshooting, see
 helm upgrade openviking ./deploy/helm/openviking -f my-values.yaml
 ```
 
-The deployment uses a `Recreate` strategy to avoid data corruption from
-multiple pods accessing the same RocksDB volume simultaneously.
+In single-instance mode the deployment uses a `Recreate` strategy to avoid data
+corruption from multiple pods accessing the same RocksDB volume simultaneously.
+Multi-instance API pods roll; the control pod is recreated.
+
+Switching an existing release from single- to multi-instance mode does not
+migrate data. The single-instance PVC holds a local vector store and local
+files, which a multi-instance release does not read. Re-ingest into the shared
+backends, or migrate the data first.
 
 ## Uninstalling
 

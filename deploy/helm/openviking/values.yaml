@@ -2,6 +2,39 @@
 
 replicaCount: 1
 
+# Several API replicas plus one control pod. Needs shared backends: S3 file
+# storage, a remote vector DB and Redis queues/path locks. The chart refuses
+# to render otherwise. When enabled, replicaCount and persistence are ignored
+# (each pod gets an emptyDir) and gateway must stay disabled. See
+# values-multi-instance.yaml and the README "Multi-instance mode" section.
+multiInstance:
+  enabled: false
+  # Time for queue consumers to finish and remove their Redis heartbeat.
+  terminationGracePeriodSeconds: 120
+  # Sleep before SIGTERM so load balancers stop routing to the pod first.
+  preStopSleepSeconds: 15
+  # Size limit for the per-pod emptyDir holding the local workspace.
+  localVolumeSizeLimit: 20Gi
+  api:
+    # Ignored when autoscaling.enabled is true.
+    replicas: 3
+    # Empty uses the top-level resources.
+    resources: {}
+    autoscaling:
+      enabled: false
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 60
+    podDisruptionBudget:
+      enabled: true
+      maxUnavailable: 1
+    # Spread api pods across nodes and zones (ScheduleAnyway).
+    topologySpread:
+      enabled: true
+  control:
+    # Empty uses the top-level resources.
+    resources: {}
+
 # Same pod, separate process and port. Multiple workers share local SQLite WAL.
 # Create a Secret with encryption-key (Fernet) and admin-token (32+ characters).
 # Requires authenticated OpenViking; dev mode only permits a loopback gateway.

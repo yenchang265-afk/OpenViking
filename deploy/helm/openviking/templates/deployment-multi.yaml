@@ -1,0 +1,41 @@
+{{- if .Values.multiInstance.enabled }}
+{{- $api := .Values.multiInstance.api }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openviking.fullname" . }}-api
+  labels:
+    {{- include "openviking.componentLabels" (dict "root" . "component" "api") | nindent 4 }}
+spec:
+  {{- if not $api.autoscaling.enabled }}
+  replicas: {{ $api.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "openviking.componentSelectorLabels" (dict "root" . "component" "api") | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  template:
+    {{- include "openviking.podTemplate" (dict "root" . "component" "api") | nindent 4 }}
+---
+# Exactly one control pod: it owns admin writes and the background jobs that
+# must not run once per replica. Recreate keeps two from overlapping.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "openviking.fullname" . }}-control
+  labels:
+    {{- include "openviking.componentLabels" (dict "root" . "component" "control") | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "openviking.componentSelectorLabels" (dict "root" . "component" "control") | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    {{- include "openviking.podTemplate" (dict "root" . "component" "control") | nindent 4 }}
+{{- end }}

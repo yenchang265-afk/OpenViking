@@ -1,11 +1,18 @@
-{{- $config := deepCopy .Values.config }}
-{{- if .Values.gateway.enabled }}
-{{- $gateway := dict "enabled" true "host" "0.0.0.0" "port" .Values.gateway.port "workers" .Values.gateway.workers "url" (printf "http://127.0.0.1:%v" .Values.gateway.port) "openviking_url" (printf "http://127.0.0.1:%v" (.Values.config.server.port | default 1933)) "storage_path" (printf "%s/gateway" .Values.persistence.mountPath) }}
-{{- $_ := set $config "gateway" (mergeOverwrite $gateway ($config.gateway | default dict)) }}
+{{- if .Values.multiInstance.enabled }}
+{{- include "openviking.validateMultiInstance" . }}
+{{- range list "api" "control" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "openviking.fullname" $ }}-{{ . }}-config
+  labels:
+    {{- include "openviking.componentLabels" (dict "root" $ "component" .) | nindent 4 }}
+data:
+  ov.conf: |
+    {{- include "openviking.renderConfig" (dict "root" $ "component" .) | nindent 4 }}
 {{- end }}
-{{- if empty $config.storage.workspace }}
-{{- $_ := set $config.storage "workspace" (printf "%s/openviking_workspace" (trimSuffix "/" .Values.persistence.mountPath)) }}
-{{- end }}
+{{- else }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -14,4 +21,5 @@ metadata:
     {{- include "openviking.labels" . | nindent 4 }}
 data:
   ov.conf: |
-    {{- $config | toPrettyJson | nindent 4 }}
+    {{- include "openviking.renderConfig" (dict "root" . "component" "") | nindent 4 }}
+{{- end }}

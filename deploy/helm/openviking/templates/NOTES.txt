@@ -24,6 +24,22 @@ To access the OpenViking API:
   echo "Visit http://127.0.0.1:{{ .Values.service.port }}/health to verify the server is running."
 {{- end }}
 
+{{- if .Values.multiInstance.enabled }}
+
+Multi-instance mode:
+  API pods:    {{ include "openviking.fullname" . }}-api (Service {{ include "openviking.fullname" . }})
+  Control pod: {{ include "openviking.fullname" . }}-control (Service {{ include "openviking.fullname" . }}-control)
+
+  Send /api/v1/admin/* to the control Service. The chart's ingress does this;
+  do the same in your own routing.
+{{- if gt (int (.Values.config.server.workers | default 1)) 1 }}
+
+WARNING: config.server.workers > 1. MCP upload tokens are process-local, so
+MCP uploads can fail when requests land on a different worker. Prefer
+workers: 1 and scale with pods.
+{{- end }}
+{{- end }}
+
 IMPORTANT: Make sure to configure your embedding and VLM API keys in values.yaml
 or via extraEnv before using OpenViking. The server will not function correctly
 without valid model provider credentials.

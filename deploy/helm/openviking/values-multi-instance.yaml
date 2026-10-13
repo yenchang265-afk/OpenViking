@@ -1,0 +1,196 @@
+# Example values for a multi-instance deployment sized as a starting point for
+# a large organization (~100k employees, ~5k concurrently active). Measure with
+# a representative corpus before trusting the numbers. Layer it on top of the
+# chart defaults:
+#
+#   helm upgrade --install openviking ./deploy/helm/openviking \
+#     -f deploy/helm/openviking/values-multi-instance.yaml -f my-overrides.yaml
+#
+# Every ${VAR} below is expanded by OpenViking at startup from extraEnv.
+
+multiInstance:
+  enabled: true
+  api:
+    resources:
+      # ephemeral-storage reserves node disk for the per-pod emptyDir.
+      requests: { cpu: "1", memory: 2Gi, ephemeral-storage: 5Gi }
+      limits: { cpu: "2", memory: 4Gi, ephemeral-storage: 20Gi }
+    autoscaling:
+      enabled: true
+      minReplicas: 8
+      maxReplicas: 40
+      targetCPUUtilizationPercentage: 60
+  control:
+    resources:
+      requests: { cpu: "1", memory: 2Gi, ephemeral-storage: 5Gi }
+      limits: { cpu: "2", memory: 4Gi, ephemeral-storage: 20Gi }
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations:
+    # Best-effort affinity for process-local MCP upload tokens and task-list
+    # cursors. Token refresh and scale events still move callers.
+    nginx.ingress.kubernetes.io/upstream-hash-by: "$http_authorization"
+    # wait_processed calls hold the connection for up to 600s.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "660"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "660"
+    # Upload parts are 1 MiB; leave headroom.
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+  hosts:
+    - host: ov.corp.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: openviking-tls
+      hosts:
+        - ov.corp.example.com
+
+extraEnv:
+  - name: OPENVIKING_PUBLIC_BASE_URL
+    value: https://ov.corp.example.com
+  - name: OPENVIKING_ROOT_API_KEY
+    valueFrom: { secretKeyRef: { name: openviking-secrets, key: root-api-key } }
+  - name: REDIS_PASSWORD
+    valueFrom: { secretKeyRef: { name: openviking-secrets, key: redis-password } }
+  - name: S3_ACCESS_KEY
+    valueFrom: { secretKeyRef: { name: openviking-secrets, key: s3-access-key } }
+  - name: S3_SECRET_KEY
+    valueFrom: { secretKeyRef: { name: openviking-secrets, key: s3-secret-key } }
+  - name: ES_API_KEY
+    valueFrom: { secretKeyRef: { name: openviking-secrets, key: es-api-key } }
+  - name: LLM_GATEWAY_API_KEY
+    valueFrom: { secretKeyRef: { name: openviking-secrets, key: llm-gateway-api-key } }
+
+config:
+  log:
+    level: WARNING
+    output: stdout
+  server:
+    host: "0.0.0.0"
+    port: 1933
+    # One process per pod: MCP upload tokens are single-worker only and
+    # restart recovery needs one worker. Scale with pods instead.
+    workers: 1
+    # Above the load balancer's idle timeout (typically 60s).
+    timeout_keep_alive: 75
+    root_api_key: "${OPENVIKING_ROOT_API_KEY}"
+    cors_origins:
+      - https://ov.corp.example.com
+    # Company SSO. With OIDC there are no per-user API keys to provision.
+    # Accounts are partitioned by a claim (here: department).
+    auth_mode: oidc
+    oidc:
+      issuer: https://sso.corp.example.com/
+      audience: openviking
+      jwks_uri: https://sso.corp.example.com/.well-known/jwks.json
+      identity:
+        account_id:
+          mode: organization
+          source: claim
+          claim: department
+          prefix: bu-
+          fallback: default
+        user_id:
+          source: claim
+          claim: sub
+          normalize: lowercase
+        role:
+          source: claim
+          claim: ov_role
+          mapping:
+            ov-admin: admin
+          default: user
+    temp_upload:
+      default_mode: shared
+    observability:
+      metrics:
+        enabled: true
+        exporters:
+          prometheus:
+            enabled: true
+
+  cache:
+    provider: redis
+    params:
+      mode: sentinel
+      master_name: ov
+      endpoints:
+        - redis://redis-sentinel-0.redis-sentinel:26379
+        - redis://redis-sentinel-1.redis-sentinel:26379
+        - redis://redis-sentinel-2.redis-sentinel:26379
+      password_env: REDIS_PASSWORD
+      pool_size: 64
+      connect_timeout_ms: 1000
+      # The 20ms default times out under load.
+      command_timeout_ms: 1000
+
+  storage:
+    vectordb:
+      name: context
+      project: default
+      backend: elasticsearch
+      elasticsearch:
+        hosts:
+          - https://es-0.es:9200
+          - https://es-1.es:9200
+          - https://es-2.es:9200
+        api_key: "${ES_API_KEY}"
+        verify_certs: true
+        number_of_shards: 3
+        number_of_replicas: 1
+        request_timeout: 30
+        bulk_batch_size: 500
+    agfs:
+      backend: s3
+      timeout: 10
+      s3:
+        bucket: openviking
+        region: us-east-1
+        endpoint: https://s3.corp.example.com
+        access_key: "${S3_ACCESS_KEY}"
+        secret_key: "${S3_SECRET_KEY}"
+        prefix: ov/
+        use_ssl: true
+        use_path_style: true
+      queuefs:
+        backend: cache
+        mode: shared
+        cache_key_prefix: ov-prod
+      pathlock:
+        provider: cache
+        namespace: ov-prod
+        lock_expire_secs: 30
+      # The Redis read cache assumes a single writer; keep it off.
+      cachefs:
+        backend: local
+
+  # Per-process caps multiply by pod count: 40 pods x 8 = 320 concurrent VLM
+  # calls. Size them as (model backend capacity / maxReplicas) and enforce
+  # global RPM/TPM limits in the LLM gateway; OpenViking has no rate-limit key.
+  embedding:
+    dense:
+      provider: openai
+      api_base: http://litellm.llm:4000/v1
+      api_key: "${LLM_GATEWAY_API_KEY}"
+      model: text-embedding-3-large
+      dimension: 1024
+      input: text
+      batch_size: 32
+    max_concurrent: 8
+    max_retries: 3
+  vlm:
+    provider: openai
+    api_base: http://litellm.llm:4000/v1
+    api_key: "${LLM_GATEWAY_API_KEY}"
+    model: gpt-4o-mini
+    temperature: 0.0
+    max_retries: 2
+    timeout: 300
+    max_concurrent: 8
+  queue_workers:
+    add_resource:
+      max_concurrent: 2
+    session_commit:
+      max_concurrent: 4
