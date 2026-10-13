@@ -189,7 +189,9 @@ async def test_startup_covers_every_live_account():
     assert await _builtin_skill_account_ids(dev_app, service) == ["default"]
 
 
-async def test_startup_install_survives_an_unreadable_account_store(monkeypatch):
+async def test_startup_install_still_covers_default_account_when_account_store_fails(
+    monkeypatch,
+):
     from openviking.server.app import _start_builtin_skills_install
 
     class Manager:
@@ -207,4 +209,4 @@ async def test_startup_install_survives_an_unreadable_account_store(monkeypatch)
     service = SimpleNamespace(user=UserIdentifier("default", "default"))
     app = SimpleNamespace(state=SimpleNamespace(api_key_manager=Manager()))
     await _start_builtin_skills_install(app, service)
-    assert installed == []
+    assert installed == [["default"]]

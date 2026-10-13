@@ -160,7 +160,11 @@ async def _initialize_auth_plugin(
 
 
 async def _builtin_skill_account_ids(app: FastAPI, service: OpenVikingService) -> list[str]:
-    """Every known account; dev mode and bare trusted mode only have the default."""
+    """Every known account; dev mode and bare trusted mode only have the default.
+
+    The default account does not need the account store, so it is kept even
+    when listing the other accounts fails.
+    """
     manager = getattr(app.state, "api_key_manager", None)
     if manager is None:
         plugin = getattr(app.state, "auth_plugin", None)
@@ -168,10 +172,13 @@ async def _builtin_skill_account_ids(app: FastAPI, service: OpenVikingService) -
     user = getattr(service, "user", None)
     account_ids = [user.account_id] if user is not None else []
     if manager is not None:
+        try:
+            accounts = await manager.list_accounts()
+        except Exception:
+            logger.exception("Could not list accounts for built-in Skill installation")
+            accounts = []
         account_ids += [
-            account["account_id"]
-            for account in await manager.list_accounts()
-            if account.get("status") != "deleting"
+            account["account_id"] for account in accounts if account.get("status") != "deleting"
         ]
     return list(dict.fromkeys(account_ids))
 
@@ -185,11 +192,7 @@ def _start_builtin_skills_install(app: FastAPI, service: OpenVikingService) -> a
     from openviking.service.builtin_skills import install_builtin_skills_for_accounts
 
     async def install() -> None:
-        try:
-            account_ids = await _builtin_skill_account_ids(app, service)
-        except Exception:
-            logger.exception("Could not list accounts for built-in Skill installation")
-            return
+        account_ids = await _builtin_skill_account_ids(app, service)
         await install_builtin_skills_for_accounts(service, account_ids)
 
     return asyncio.create_task(install())
