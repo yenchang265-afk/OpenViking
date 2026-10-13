@@ -49,7 +49,7 @@ Skill 決定輸出內容和結構。倉庫提供以下示例，其中 LLM Wiki �
 
 前兩個示例還給出了從**匯入來源 → 新增 Skill → 執行編譯 → 視覺化產物**的完整 `ov` 命令，照著做就能得到一張可互動的 HTML 圖。
 
-這些 Skill 隨 OpenViking 一起發佈（`openviking/builtin_skills/compile`），預設會在伺服器啟動與建立帳戶時安裝到每個帳戶共享的 `viking://agent/skills`。同名的既有 Skill 不會被覆寫，管理員刪除的內建 Skill 也不會被重新安裝；將 `server.builtin_skills` 設為 `false` 即可關閉。在 Studio 的檔案系統頁面中，對資料夾按右鍵選擇 **使用 Skill 編譯 ▸ <Skill>**，即可開啟以該資料夾為來源的編譯表單；對 Skill 資料夾按右鍵則可選擇 **使用此 Skill 編譯**。
+這些 Skill 隨 OpenViking 一起發佈（`openviking/builtin_skills/compile`），預設會在伺服器啟動與建立帳戶時安裝到每個帳戶共享的 `viking://agent/skills`。同名的既有 Skill 不會被覆寫，管理員刪除的內建 Skill 也不會被重新安裝；將 `server.builtin_skills` 設為 `false` 即可關閉。在 Studio 的檔案系統頁面中，對資料夾按右鍵選擇 **使用 Skill 編譯 ▸ &lt;Skill&gt;**，即可開啟以該資料夾為來源的編譯表單；對 Skill 資料夾按右鍵則可選擇 **使用此 Skill 編譯**。
 ## 不止生成新產物：整理已有記憶
 
 除了用 Skill 把來源材料編譯成新的知識產物，`ov compile` 還有一種特殊模式——把 `--skill` 設為 `memory`，即可對已有的**記憶**目錄做就地整理（去重、合併、拆分、精簡），且不經過 VikingBot。詳見 [記憶整理](./06-memory-consolidation.md)。
