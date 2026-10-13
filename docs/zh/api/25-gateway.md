@@ -1,43 +1,43 @@
-# OpenViking 网关管理 API
+# OpenViking 閘道器管理 API
 
-OpenViking Server 在 `/api/v1/admin/gateway` 下转发 OpenViking 网关的管理请求。Studio 的网关页面通过这些端点管理上游、上下文配置和网关密钥，并读取请求日志。模型请求不走这组 API，客户端直接发到网关自己的端口（见[OpenViking 网关](../guides/15-gateway.md)）。
+OpenViking Server 在 `/api/v1/admin/gateway` 下轉發 OpenViking 閘道器的管理請求。Studio 的閘道器頁面通過這些端點管理上游、上下文配置和閘道器金鑰，並讀取請求日誌。模型請求不走這組 API，客戶端直接發到閘道器自己的埠（見[OpenViking 閘道器](../guides/15-gateway.md)）。
 
-**前提条件**：
+**前提條件**：
 
-- `ov.conf` 中 `gateway.enabled` 为 `true`，并且网关进程可以通过 `gateway.url` 访问。
-- OpenViking Server 和网关使用同一个管理令牌（默认读取 `OPENVIKING_GATEWAY_ADMIN_TOKEN`，至少 32 个字符）。
-- 调用方使用 ADMIN 密钥或 root 密钥。USER 密钥返回 `403`。
+- `ov.conf` 中 `gateway.enabled` 為 `true`，並且閘道器程序可以通過 `gateway.url` 訪問。
+- OpenViking Server 和閘道器使用同一個管理令牌（預設讀取 `OPENVIKING_GATEWAY_ADMIN_TOKEN`，至少 32 個字元）。
+- 呼叫方使用 ADMIN 金鑰或 root 金鑰。USER 金鑰返回 `403`。
 
-**代码入口**：
+**程式碼入口**：
 
-- `openviking/server/routers/gateway.py` - OpenViking Server 代理、角色检查和账号隔离
-- `openviking_gateway/app.py` - 网关管理路由
-- `openviking_gateway/models.py` - 上游、上下文配置和密钥模型
+- `openviking/server/routers/gateway.py` - OpenViking Server 代理、角色檢查和帳號隔離
+- `openviking_gateway/app.py` - 閘道器管理路由
+- `openviking_gateway/models.py` - 上游、上下文配置和金鑰模型
 
 ## 代理方式
 
-| 方法 | 路径 | 说明 |
+| 方法 | 路徑 | 說明 |
 |------|------|------|
-| GET / POST / PUT / DELETE | `/api/v1/admin/gateway/{path}` | 以调用方账号转发到 `{gateway.url}/admin/{path}` |
+| GET / POST / PUT / DELETE | `/api/v1/admin/gateway/{path}` | 以呼叫方帳號轉發到 `{gateway.url}/admin/{path}` |
 
-发往 `/api/v1/admin/gateway/{path}` 的请求会以相同的方法、查询参数和请求体转发到 `{gateway.url}/admin/{path}`。OpenViking Server 用管理令牌替换调用方的凭据，并把 `X-OpenViking-Account` 设为调用方所在的账号，因此每次调用只能读取和修改本账号的网关对象。账号管理员访问不到其他账号的数据，调用方也无法指定转发目标。
+發往 `/api/v1/admin/gateway/{path}` 的請求會以相同的方法、查詢引數和請求體轉發到 `{gateway.url}/admin/{path}`。OpenViking Server 用管理令牌替換呼叫方的憑據，並把 `X-OpenViking-Account` 設為呼叫方所在的帳號，因此每次呼叫只能讀取和修改本帳號的閘道器物件。帳號管理員訪問不到其他帳號的資料，呼叫方也無法指定轉發目標。
 
-只有第一段路径是 `overview`、`logs`、`guides`、`upstreams`、`policies`、`keys`、`users` 或 `tools` 的请求会被转发。其他路径以及包含 `..` 的路径返回 `404`。网关返回的状态码和响应体原样返回给调用方。
+只有第一段路徑是 `overview`、`logs`、`guides`、`upstreams`、`policies`、`keys`、`users` 或 `tools` 的請求會被轉發。其他路徑以及包含 `..` 的路徑返回 `404`。閘道器返回的狀態碼和響應體原樣返回給呼叫方。
 
-## API 参考
+## API 參考
 
-表格中的路径都相对于 `/api/v1/admin/gateway/`。管理 API 把上下文配置称为 `policies`。
+表格中的路徑都相對於 `/api/v1/admin/gateway/`。管理 API 把上下文配置稱為 `policies`。
 
-### 概览和日志
+### 概覽和日誌
 
-| 方法 | 路径 | 说明 |
+| 方法 | 路徑 | 說明 |
 |------|------|------|
-| GET | `overview` | 根据最近 10,000 条日志汇总用量：请求数、输出 token、首次调用和续写的缓存命中率、降级、召回统计和保存异常，另附 OpenViking 健康状态和 `log_retention_days` |
-| GET | `logs?limit=200` | 最新的请求日志；`limit` 取 1–1000，默认 200 |
-| GET | `guides` | 客户端应使用的地址：`base_url` 和 `public_url_configured` |
-| GET | `tools` | 上下文配置可以提供的 OpenViking 工具：`name`、`description`，以及存在时的 `annotations` |
+| GET | `overview` | 根據最近 10,000 條日誌彙總用量：請求數、輸出 token、首次呼叫和續寫的快取命中率、降級、召回統計和儲存異常，另附 OpenViking 健康狀態和 `log_retention_days` |
+| GET | `logs?limit=200` | 最新的請求日誌；`limit` 取 1–1000，預設 200 |
+| GET | `guides` | 客戶端應使用的地址：`base_url` 和 `public_url_configured` |
+| GET | `tools` | 上下文配置可以提供的 OpenViking 工具：`name`、`description`，以及存在時的 `annotations` |
 
-`tools` 借用本账号某个网关密钥绑定的 OpenViking 密钥读取工具列表。账号里还没有网关密钥时返回空列表；用哪个密钥都读不到时返回错误。
+`tools` 借用本帳號某個閘道器金鑰繫結的 OpenViking 金鑰讀取工具列表。帳號裡還沒有閘道器金鑰時返回空列表；用哪個金鑰都讀不到時返回錯誤。
 
 **HTTP API**
 
@@ -46,7 +46,7 @@ curl http://localhost:1933/api/v1/admin/gateway/overview \
   -H "X-API-Key: your-admin-key"
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -70,21 +70,21 @@ curl http://localhost:1933/api/v1/admin/gateway/overview \
 
 ### 上游和上下文配置
 
-| 方法 | 路径 | 说明 |
+| 方法 | 路徑 | 說明 |
 |------|------|------|
 | GET | `upstreams` | 列出上游 |
-| PUT | `upstreams/{upstream_id}` | 创建或替换上游 |
-| DELETE | `upstreams/{upstream_id}` | 删除上游 |
-| POST | `upstreams/{upstream_id}/test` | 检查网关能否访问服务商的模型列表 |
+| PUT | `upstreams/{upstream_id}` | 建立或替換上游 |
+| DELETE | `upstreams/{upstream_id}` | 刪除上游 |
+| POST | `upstreams/{upstream_id}/test` | 檢查閘道器能否訪問服務商的模型列表 |
 | GET | `policies` | 列出上下文配置 |
-| PUT | `policies/{policy_id}` | 创建或替换上下文配置 |
-| DELETE | `policies/{policy_id}` | 删除上下文配置 |
+| PUT | `policies/{policy_id}` | 建立或替換上下文配置 |
+| DELETE | `policies/{policy_id}` | 刪除上下文配置 |
 
-`upstream_id` 和 `policy_id` 由调用方指定。`PUT` 的请求体是完整对象，未知字段会被拒绝。各字段的默认值和取值范围见[配置参考](../guides/22-gateway-operations.md#配置参考)中的上游设置和上下文配置设置。
+`upstream_id` 和 `policy_id` 由呼叫方指定。`PUT` 的請求體是完整物件，未知欄位會被拒絕。各欄位的預設值和取值範圍見[配置參考](../guides/22-gateway-operations.md#配置參考)中的上游設定和上下文配置設定。
 
-上游的 `api_key` 和 `headers` 的值只写不读，响应中分别换成 `has_api_key` 和 `header_names`。`PUT` 时 `api_key` 留空会保留已存的密钥；省略 `headers` 会保留所有已存的请求头，某个请求头的值留空则保留这个名字已存的值。
+上游的 `api_key` 和 `headers` 的值只寫不讀，響應中分別換成 `has_api_key` 和 `header_names`。`PUT` 時 `api_key` 留空會保留已存的金鑰；省略 `headers` 會保留所有已存的請求頭，某個請求頭的值留空則保留這個名字已存的值。
 
-如果还有网关密钥在用某个上游或上下文配置，删除它会返回 `409`，需要先吊销或更新这些密钥。
+如果還有閘道器金鑰在用某個上游或上下文配置，刪除它會返回 `409`，需要先吊銷或更新這些金鑰。
 
 **HTTP API**
 
@@ -93,7 +93,7 @@ curl http://localhost:1933/api/v1/admin/gateway/upstreams \
   -H "X-API-Key: your-admin-key"
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 [
@@ -120,31 +120,31 @@ curl http://localhost:1933/api/v1/admin/gateway/upstreams \
 ]
 ```
 
-`upstreams/{upstream_id}/test` 返回 `{"ok": true, "status": 200}`，其中 `status` 是服务商返回的状态码；如果 10 秒内连不上服务商，返回 `{"ok": false, "reason": "upstream_unavailable"}`。
+`upstreams/{upstream_id}/test` 返回 `{"ok": true, "status": 200}`，其中 `status` 是服務商返回的狀態碼；如果 10 秒內連不上服務商，返回 `{"ok": false, "reason": "upstream_unavailable"}`。
 
-### 网关密钥
+### 閘道器金鑰
 
-| 方法 | 路径 | 说明 |
+| 方法 | 路徑 | 說明 |
 |------|------|------|
-| GET | `keys` | 列出网关密钥，不含密钥本身 |
-| POST | `keys` | 签发网关密钥；密钥只在这次响应中出现 |
-| DELETE | `keys/{key_id}` | 吊销网关密钥 |
-| POST | `keys/{key_id}/capture/reset` | 让某个会话的对话保存从下一次请求起重新同步 |
+| GET | `keys` | 列出閘道器金鑰，不含金鑰本身 |
+| POST | `keys` | 簽發閘道器金鑰；金鑰只在這次響應中出現 |
+| DELETE | `keys/{key_id}` | 吊銷閘道器金鑰 |
+| POST | `keys/{key_id}/capture/reset` | 讓某個會話的對話儲存從下一次請求起重新同步 |
 
-`POST keys` 的请求体：
+`POST keys` 的請求體：
 
-| 字段 | 类型 | 必填 | 说明 |
+| 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `name` | string | 是 | 显示名称 |
-| `openviking_key` | string | 条件必填 | 网关密钥代表的用户的 OpenViking 密钥；与 `user_id` 二选一 |
-| `user_id` | string | 条件必填 | 调用方账号中的用户，由 OpenViking Server 读取这个用户的密钥；仅账号管理员可用 |
+| `name` | string | 是 | 顯示名稱 |
+| `openviking_key` | string | 條件必填 | 閘道器金鑰代表的使用者的 OpenViking 金鑰；與 `user_id` 二選一 |
+| `user_id` | string | 條件必填 | 呼叫方帳號中的使用者，由 OpenViking Server 讀取這個使用者的金鑰；僅帳號管理員可用 |
 | `policy_id` | string | 是 | 上下文配置 |
-| `upstream_ids` | string[] | 是 | 至少一个上游 |
-| `models` | string[] | 否 | 允许的模型；为空时允许上游提供的所有模型 |
+| `upstream_ids` | string[] | 是 | 至少一個上游 |
+| `models` | string[] | 否 | 允許的模型；為空時允許上游提供的所有模型 |
 
-OpenViking 密钥必须属于调用方账号中的 USER 或 ADMIN。只有 OpenViking Server 能读出已存的用户密钥时，`user_id` 才可用；启用了密钥哈希时改传 `openviking_key`。root 调用方也必须传 `openviking_key`，因为 root 密钥解析出的账号可能和 Studio 显示的账号不同。
+OpenViking 金鑰必須屬於呼叫方帳號中的 USER 或 ADMIN。只有 OpenViking Server 能讀出已存的使用者金鑰時，`user_id` 才可用；啟用了金鑰雜湊時改傳 `openviking_key`。root 呼叫方也必須傳 `openviking_key`，因為 root 金鑰解析出的帳號可能和 Studio 顯示的帳號不同。
 
-已签发的密钥不能修改，`PUT keys/{key_id}` 返回 `405`。需要修改时签发一个新密钥，再吊销旧密钥。
+已簽發的金鑰不能修改，`PUT keys/{key_id}` 返回 `405`。需要修改時簽發一個新金鑰，再吊銷舊金鑰。
 
 **HTTP API**
 
@@ -155,7 +155,7 @@ curl -X POST http://localhost:1933/api/v1/admin/gateway/keys \
   -d '{"name":"alice laptop","user_id":"alice","policy_id":"default","upstream_ids":["openai"]}'
 ```
 
-**响应示例**
+**響應示例**
 
 ```json
 {
@@ -172,44 +172,44 @@ curl -X POST http://localhost:1933/api/v1/admin/gateway/keys \
 }
 ```
 
-`keys/{key_id}/capture/reset` 的请求体是 `{"session": "<会话>", "protocol": "chat"}`，`protocol` 取 `anthropic`、`chat` 或 `responses`。`session` 可以填客户端发送的会话请求头的值（例如 `X-OpenViking-Session`），也可以填请求日志里的 `session` 字段；没有会话请求头的会话只能用后者。成功时返回 `{"status": "ready", "message": "…"}`；密钥或会话不存在时返回 `404`。
+`keys/{key_id}/capture/reset` 的請求體是 `{"session": "<會話>", "protocol": "chat"}`，`protocol` 取 `anthropic`、`chat` 或 `responses`。`session` 可以填客戶端傳送的會話請求頭的值（例如 `X-OpenViking-Session`），也可以填請求日誌裡的 `session` 欄位；沒有會話請求頭的會話只能用後者。成功時返回 `{"status": "ready", "message": "…"}`；金鑰或會話不存在時返回 `404`。
 
-### 用户数据
+### 使用者資料
 
-| 方法 | 路径 | 说明 |
+| 方法 | 路徑 | 說明 |
 |------|------|------|
-| DELETE | `users/{user_id}/data` | 吊销用户的所有网关密钥，并删除网关中这个用户的对话状态 |
+| DELETE | `users/{user_id}/data` | 吊銷使用者的所有閘道器金鑰，並刪除閘道器中這個使用者的對話狀態 |
 
-已经保存到 OpenViking 的会话不受影响。
+已經儲存到 OpenViking 的會話不受影響。
 
-## 错误
+## 錯誤
 
-OpenViking Server 自身产生的错误使用标准错误响应格式：
+OpenViking Server 自身產生的錯誤使用標準錯誤響應格式：
 
-| 状态码 | 错误码 | 原因 |
+| 狀態碼 | 錯誤碼 | 原因 |
 |--------|--------|------|
-| 400 | `INVALID_ARGUMENT` | root 在 `POST keys` 中传了 `user_id`；`user_id` 不存在 |
-| 400 | `INVALID_ARGUMENT` | `POST keys` 同时传了 `user_id` 和 `openviking_key`（原始状态码 422） |
-| 403 | `PERMISSION_DENIED` | 调用方不是 ROOT 或 ADMIN |
-| 404 | `NOT_FOUND` | 路径不在转发范围内 |
-| 409 | `CONFLICT` | 服务端读不出所选用户的密钥 |
-| 503 | `UNAVAILABLE` | OpenViking 网关未启用、管理令牌未配置，或连不上网关（原始状态码 502） |
+| 400 | `INVALID_ARGUMENT` | root 在 `POST keys` 中傳了 `user_id`；`user_id` 不存在 |
+| 400 | `INVALID_ARGUMENT` | `POST keys` 同時傳了 `user_id` 和 `openviking_key`（原始狀態碼 422） |
+| 403 | `PERMISSION_DENIED` | 呼叫方不是 ROOT 或 ADMIN |
+| 404 | `NOT_FOUND` | 路徑不在轉發範圍內 |
+| 409 | `CONFLICT` | 服務端讀不出所選使用者的金鑰 |
+| 503 | `UNAVAILABLE` | OpenViking 閘道器未啟用、管理令牌未配置，或連不上閘道器（原始狀態碼 502） |
 
-网关返回的错误保留网关的状态码，响应体形如 `{"detail": "Unknown context policy"}`：
+閘道器返回的錯誤保留閘道器的狀態碼，響應體形如 `{"detail": "Unknown context policy"}`：
 
-| 状态码 | 原因 |
+| 狀態碼 | 原因 |
 |--------|------|
 | 400 | `POST keys` 指定的上下文配置或上游不存在 |
-| 403 | OpenViking 密钥属于其他账号 |
-| 404 | 资源、密钥或会话不存在 |
-| 405 | 调用了 `PUT keys/{key_id}` |
-| 409 | 删除仍被密钥使用的上游或上下文配置 |
-| 422 | 请求体无效。提交的值可能包含密钥，所以错误信息不会回显它们 |
+| 403 | OpenViking 金鑰屬於其他帳號 |
+| 404 | 資源、金鑰或會話不存在 |
+| 405 | 呼叫了 `PUT keys/{key_id}` |
+| 409 | 刪除仍被金鑰使用的上游或上下文配置 |
+| 422 | 請求體無效。提交的值可能包含金鑰，所以錯誤資訊不會回顯它們 |
 
-网关无法验证 OpenViking 密钥时，响应体是 `{"error": {"message": "<原因>"}}`，原因值见[签发密钥失败](../guides/22-gateway-operations.md#签发密钥失败)。
+閘道器無法驗證 OpenViking 金鑰時，響應體是 `{"error": {"message": "<原因>"}}`，原因值見[簽發金鑰失敗](../guides/22-gateway-operations.md#簽發金鑰失敗)。
 
-## 相关文档
+## 相關文件
 
-- [OpenViking 网关](../guides/15-gateway.md) - 网关的工作方式和客户端接入
-- [OpenViking 网关部署与运维](../guides/22-gateway-operations.md) - 部署、在 Studio 中管理网关和配置参考
-- [管理员](08-admin.md) - 账号、用户和角色
+- [OpenViking 閘道器](../guides/15-gateway.md) - 閘道器的工作方式和客戶端接入
+- [OpenViking 閘道器部署與運維](../guides/22-gateway-operations.md) - 部署、在 Studio 中管理閘道器和配置參考
+- [管理員](08-admin.md) - 帳號、使用者和角色

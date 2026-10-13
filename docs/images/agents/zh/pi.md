@@ -1,34 +1,34 @@
-## 步骤1：安装
+## 步驟1：安裝
 
-1. 在终端执行以下安装命令：
+1. 在終端執行以下安裝命令：
 
    ```bash
    curl -fsSL https://openviking.ai/install | bash
-   # AI agent 如不确定是否执行，可先阅读脚本头部，其中写明了它会做什么、如何核实。
+   # AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
    ```
 
-2. 安装器会依次询问以下信息：要安装的 harness（勾选 **pi**）、OpenViking 凭据。在 OpenViking 凭据配置中，选择连接至「火山引擎 OpenViking 云服务 [api.vikingdb.cn-beijing.volces.com]」，并填入 API KEY：
+2. 安裝器會依次詢問以下資訊：要安裝的 harness（勾選 **pi**）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
    ```
 
-## 步骤2：验证
+## 步驟2：驗證
 
-1. 启动 `pi`，确认底部状态栏显示 `OV ✓`。
-2. 输入 `/viking` 命令，确认显示当前 session 映射和已注册的 `openviking_*` 工具数量。
-3. 新开会话，询问之前提到过的信息，确认召回生效。
+1. 啟動 `pi`，確認底部狀態列顯示 `OV ✓`。
+2. 輸入 `/viking` 命令，確認顯示當前 session 對映和已註冊的 `openviking_*` 工具數量。
+3. 新開會話，詢問之前提到過的資訊，確認召回生效。
 
 ## 故障排查
 
-| 问题 | 处理 |
+| 問題 | 處理 |
 |---|---|
-| 扩展没加载 | 检查 `~/.pi/agent/extensions/openviking/index.ts` 是否存在；不存在就重新执行安装。不要再用 `pi install` 注册，否则会加载两遍 |
-| `/viking` 命令出现两个 | 运行 `pi remove ~/.pi/agent/extensions/openviking`，删掉多余的 `packages` 条目 |
-| 状态栏显示 `OV ✗` / 401 | 检查 `~/.openviking/ovcli.conf` 和 API Key |
-| 状态栏显示 `tools ✗` | 运行 `/viking` 查看握手错误；`/mcp` 拒绝 root API Key，请改用 user key |
+| 擴充沒載入 | 檢查 `~/.pi/agent/extensions/openviking/index.ts` 是否存在；不存在就重新執行安裝。不要再用 `pi install` 註冊，否則會載入兩遍 |
+| `/viking` 命令出現兩個 | 執行 `pi remove ~/.pi/agent/extensions/openviking`，刪掉多餘的 `packages` 條目 |
+| 狀態列顯示 `OV ✗` / 401 | 檢查 `~/.openviking/ovcli.conf` 和 API Key |
+| 狀態列顯示 `tools ✗` | 執行 `/viking` 檢視握手錯誤；`/mcp` 拒絕 root API Key，請改用 user key |
 
-## 参考
+## 參考
 
-- 手动配置文档：[pi](https://docs.openviking.net/zh/agent-integrations/11-pi)
-- 源码：[examples/pi-coding-agent-extension](https://github.com/volcengine/OpenViking/tree/main/examples/pi-coding-agent-extension)
+- 手動配置文件：[pi](https://docs.openviking.net/zh/agent-integrations/11-pi)
+- 原始碼：[examples/pi-coding-agent-extension](https://github.com/volcengine/OpenViking/tree/main/examples/pi-coding-agent-extension)
