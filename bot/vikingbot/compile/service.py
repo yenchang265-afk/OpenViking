@@ -116,6 +116,21 @@ async def _target_has_pages(client: Any, target_uri: str) -> bool:
     return bool((result or {}).get("matches"))
 
 
+def _pipeline_incomplete_error(
+    *, published: bool, conflicts: list[Any], failures: list[str]
+) -> CompileErrorInfo | None:
+    """The task error for a pipeline compile that published nothing.
+
+    With no conflicts or failures to explain it, the model itself wrote nothing,
+    so point the user at a more capable Bot model.
+    """
+    if published:
+        return None
+    if not conflicts and not failures:
+        return CompileErrorInfo(code="COMPILE_INCOMPLETE", message=_EMPTY_OUTPUT_MESSAGE)
+    return CompileErrorInfo(code="COMPILE_INCOMPLETE", message="No output was acknowledged.")
+
+
 def _compile_time(value: Any) -> datetime:
     """Parse ISO/Unix timestamps; naive values use UTC and invalid values raise ValueError."""
     parsed = TypeAdapter(datetime).validate_python(value)
@@ -950,7 +965,7 @@ class BotCompileService:
             warnings.extend(getattr(registry.get("wait_subagents"), "failures", []))
             preserve_workspace = preserve_workspace or bool(warnings)
             if output_file_count == 0:
-                warnings.append("No reliable output was produced from the supplied materials.")
+                warnings.append("No changes were produced; the existing output was left as is.")
             result = CompileResult(
                 **{
                     "from": request.from_,
@@ -1168,12 +1183,10 @@ class BotCompileService:
                     task.status = "completed" if published else "failed"
                     task.stage = "completed" if published else "writing"
                     task.result = compiled
-                    task.error = (
-                        CompileErrorInfo(
-                            code="COMPILE_INCOMPLETE", message="No output was acknowledged."
-                        )
-                        if not published
-                        else None
+                    task.error = _pipeline_incomplete_error(
+                        published=bool(published),
+                        conflicts=conflicts,
+                        failures=pipeline.failures,
                     )
 
             await self.store.update(task_id, complete)
