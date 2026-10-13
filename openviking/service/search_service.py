@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
+# Vector backends that index the ``content`` field for BM25 keyword search.
+_KEYWORD_SEARCH_MODES = ("elasticsearch",)
+
 
 def _ensure_non_empty_query(
     query: str,
@@ -76,14 +79,18 @@ class SearchService:
     async def ensure_keywords_search_supported(self, ctx: RequestContext) -> None:
         """Validate keyword-search support at the top-level request boundary.
 
-        Keyword search needs a backend with a full-text ``content`` index. Only the
-        VikingDB/Volcengine backends provide one, and this build ships neither.
+        Keyword search needs a backend with a full-text ``content`` index, which in
+        this build only the Elasticsearch backend provides. An Account with its own
+        VectorDB is checked against that backend, not the cluster default.
         """
-        self._ensure_initialized()
-        raise InvalidArgumentError(
-            "Keyword search is not supported by the configured vector backend, or full-text "
-            "indexing is not enabled for the content field."
-        )
+        viking_fs = self._ensure_initialized()
+        vector_store = viking_fs._get_vector_store()
+        backend = await vector_store.get_account_backend(ctx.account_id) if vector_store else None
+        if getattr(backend, "_mode", None) not in _KEYWORD_SEARCH_MODES:
+            raise InvalidArgumentError(
+                "Keyword search is not supported by the configured vector backend, or full-text "
+                "indexing is not enabled for the content field."
+            )
 
     async def _resolve_image_url(
         self,
