@@ -1580,10 +1580,15 @@ async def test_resource_rm_refreshes_memory_overview_for_cleaned_memories(
 
 
 def _listing_viking_fs(entries):
-    """VikingFS stub for ls(): returns ``entries`` and finalizes them unchanged."""
+    """VikingFS stub for ls(): returns ``entries`` and finalizes them with the real formatter."""
+    enrichment = SimpleNamespace(
+        _batch_fetch_abstracts=AsyncMock(),
+        _batch_fetch_overviews=AsyncMock(),
+        _augment_entries_extra_fields=AsyncMock(),
+    )
 
-    async def finalize(entries, *_args, **_kwargs):
-        return entries
+    async def finalize(entries, *args, **kwargs):
+        return await VikingFS._finalize_listing_entries(enrichment, entries, *args, **kwargs)
 
     return SimpleNamespace(ls=AsyncMock(return_value=entries), _finalize_listing_entries=finalize)
 
@@ -1626,11 +1631,11 @@ async def test_ls_attaches_authors_from_each_entry_own_index_level(request_conte
         "viking://resources", ctx=request_context, output="agent", extra_fields=["authors"]
     )
 
-    assert [(e["name"], e.get("uploaded_by"), e.get("updated_by")) for e in result.entries] == [
-        ("docs", "alice", "bob"),
-        ("a.md", "carol", "carol"),
-        ("legacy.md", "", ""),
-        ("secret", None, None),
+    assert [(e["uri"], e.get("uploaded_by"), e.get("updated_by")) for e in result.entries] == [
+        ("viking://resources/docs", "alice", "bob"),
+        ("viking://resources/a.md", "carol", "carol"),
+        ("viking://resources/legacy.md", "", ""),
+        ("viking://resources/secret", None, None),
     ]
     assert {"uploaded_by", "updated_by"} <= set(captured["output_fields"])
 
@@ -1644,5 +1649,6 @@ async def test_ls_skips_author_lookup_unless_requested(request_context):
     service = FSService(viking_fs=viking_fs, vikingdb=vikingdb)
     result = await service.ls("viking://resources", ctx=request_context, output="agent")
 
-    assert result.entries == entries
+    assert [e["uri"] for e in result.entries] == ["viking://resources/a.md"]
+    assert "uploaded_by" not in result.entries[0]
     vikingdb.filter.assert_not_awaited()

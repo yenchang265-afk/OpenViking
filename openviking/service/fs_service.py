@@ -401,18 +401,13 @@ class FSService:
                 entries=[entry.get("uri", "") for entry in page.entries],
                 has_more=page.has_more,
             )
-        if "authors" in extra_fields:
-            page = ListingPage(
-                entries=await self._attach_authors(page.entries, ctx),
-                has_more=page.has_more,
-            )
         if (
             output != "original"
             or extra_fields
             or include_abstract is True
             or include_overview is True
         ):
-            return ListingPage(
+            page = ListingPage(
                 entries=await viking_fs._finalize_listing_entries(
                     page.entries,
                     output,
@@ -424,6 +419,13 @@ class FSService:
                     include_overview=include_overview is True,
                     overview_limit=overview_limit,
                 ),
+                has_more=page.has_more,
+            )
+        # Authors go on after formatting: agent output rebuilds each entry
+        # from a fixed field set and would drop them.
+        if "authors" in extra_fields:
+            page = ListingPage(
+                entries=await self._attach_authors(page.entries, ctx),
                 has_more=page.has_more,
             )
         return page
