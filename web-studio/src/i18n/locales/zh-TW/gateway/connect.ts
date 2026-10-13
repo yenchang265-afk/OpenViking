@@ -16,7 +16,7 @@ const connect = {
     notPublic: {
       title: '客戶端可能連不上這個地址',
       description:
-        '這是 OpenViking 訪問閘道器用的地址。請在 `ov.conf` 中把 `gateway.public_url` 設為客戶端應該使用的地址，然後重啟閘道器。',
+        '這是 Business Data Platform 訪問閘道器用的地址。請在 `ov.conf` 中把 `gateway.public_url` 設為客戶端應該使用的地址，然後重啟閘道器。',
     },
     keys: '客戶端用閘道器金鑰（`ovgw_…`）認證，代替服務商的 API Key。',
     manageKeys: '管理金鑰',
@@ -130,7 +130,7 @@ const connect = {
       identity: '`X-OpenViking-Session` 請求頭讓每個聊天各自成為一段對話。',
       notes: {
         sharedMemory:
-          '一個連線金鑰只對應一位記憶歸屬者：通過這個連線聊天的所有 Open WebUI 使用者，讀寫的都是金鑰背後那位 OpenViking 使用者的記憶。',
+          '一個連線金鑰只對應一位記憶歸屬者：通過這個連線聊天的所有 Open WebUI 使用者，讀寫的都是金鑰背後那位 Business Data Platform 使用者的記憶。',
         tasks:
           '閘道器能識別生成標題和摘要的請求。如果請求日誌把其他後臺任務（標籤、追問建議）標成“{{kind}}”，就把 Open WebUI 的任務模型改成不經過閘道器的連線。',
       },
@@ -213,7 +213,7 @@ const connect = {
     fallback:
       '這些請求頭都沒有時，閘道器檢視歷史中最近一條助手回覆。如果恰好有一段之前的對話產生過這條回覆，請求就併入那段對話；否則開始一段新對話。重試、重新生成的回答和內容相同的對話存在歧義，所以只要客戶端允許設定請求頭，就傳送 `X-OpenViking-Session`。',
     scope:
-      '對話歸屬於金鑰背後的 OpenViking 使用者，並且按 API 分開。同一使用者的兩個閘道器金鑰如果傳送相同的 ID，會共享同一段對話。',
+      '對話歸屬於金鑰背後的 Business Data Platform 使用者，並且按 API 分開。同一使用者的兩個閘道器金鑰如果傳送相同的 ID，會共享同一段對話。',
   },
   passthrough: {
     title: '客戶端自帶服務商 API Key',
@@ -226,9 +226,9 @@ const connect = {
   plugin: {
     title: '同時在用 OpenViking 外掛？',
     description:
-      '如果某段對話已經通過 OpenViking 外掛獲得記憶，閘道器會讓出這段對話：不召回、不儲存，也不提供 OpenViking 工具，避免重複補充記憶。其他對話不受影響。',
+      '如果某段對話已經通過 OpenViking 外掛獲得記憶，閘道器會讓出這段對話：不召回、不儲存，也不提供 Business Data Platform 工具，避免重複補充記憶。其他對話不受影響。',
     detection:
-      '閘道器根據外掛注入的記憶塊或 OpenViking 工具識別外掛。整合方也可以通過這個請求頭主動宣告。',
+      '閘道器根據外掛注入的記憶塊或 Business Data Platform 工具識別外掛。整合方也可以通過這個請求頭主動宣告。',
     restart:
       '這個狀態會持續到對話結束。要重新使用閘道器的記憶，請在不啟用外掛的情況下開始一段新對話。',
   },

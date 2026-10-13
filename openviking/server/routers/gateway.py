@@ -38,16 +38,16 @@ async def bind_selected_user(request: Request, ctx: RequestContext, body: bytes)
         # Root may resolve to another account than the one Studio shows (api_key mode
         # resolves it to `default`), so a user ID could name someone else.
         raise HTTPException(
-            400, "Root cannot choose a user; paste the user's OpenViking key instead"
+            400, "Root cannot choose a user; paste the user's Business Data Platform key instead"
         )
     rows = await list_account_users(get_api_key_manager_or_raise(request), ctx.account_id)
     row = pick_account_user(
         [row for row in rows if row["role"] in KEY_USER_ROLES],
         value.pop("user_id"),
-        missing="Unknown OpenViking user in this account",
+        missing="Unknown Business Data Platform user in this account",
         unreadable=(
-            "This user's OpenViking key cannot be read on the server; "
-            "paste the user's OpenViking key instead"
+            "This user's Business Data Platform key cannot be read on the server; "
+            "paste the user's Business Data Platform key instead"
         ),
     )
     return json.dumps({**value, "openviking_key": row["api_key"]}).encode()
@@ -60,10 +60,12 @@ async def proxy_gateway(
 ):
     config = get_openviking_config().gateway
     if not config.enabled:
-        raise HTTPException(503, "OpenViking Gateway is not enabled")
+        raise HTTPException(503, "Business Data Platform Gateway is not enabled")
     token = os.environ.get(config.admin_token_env, "")
     if len(token) < 32:
-        raise HTTPException(503, "OpenViking Gateway management token is not configured")
+        raise HTTPException(
+            503, "Business Data Platform Gateway management token is not configured"
+        )
     # Only fixed management resources. No caller-supplied destination or identity.
     if (
         path.split("/", 1)[0]
@@ -89,7 +91,7 @@ async def proxy_gateway(
                 headers=headers,
             )
     except httpx.HTTPError:
-        raise HTTPException(502, "OpenViking Gateway management service is unavailable")
+        raise HTTPException(502, "Business Data Platform Gateway management service is unavailable")
     return Response(
         upstream.content,
         status_code=upstream.status_code,

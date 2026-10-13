@@ -300,11 +300,13 @@ describe('OverviewPage', () => {
 
     expect(screen.getByText('Degraded')).toBeTruthy()
     expect(
-      screen.getByText("OpenViking is unreachable or didn't answer in time"),
+      screen.getByText(
+        "Business Data Platform is unreachable or didn't answer in time",
+      ),
     ).toBeTruthy()
     expect(
       screen.getByText(
-        '1 conversation is retrying saving to OpenViking after a failure.',
+        '1 conversation is retrying saving to Business Data Platform after a failure.',
       ),
     ).toBeTruthy()
     // Saving problems and degraded requests both link to the issues filter.

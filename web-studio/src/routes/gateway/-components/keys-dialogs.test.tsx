@@ -153,20 +153,20 @@ describe('validateKeyRequest', () => {
 describe('issueProblem', () => {
   it.each([
     [
-      'Unknown OpenViking user in this account',
+      'Unknown Business Data Platform user in this account',
       400,
       'keys.errors.unknownUser',
       true,
     ],
     [
-      "This user's OpenViking key cannot be read on the server; paste the user's OpenViking key instead",
+      "This user's Business Data Platform key cannot be read on the server; paste the user's Business Data Platform key instead",
       409,
       'keys.errors.userKeyUnreadable',
       true,
     ],
     ['root_key_not_allowed', 403, 'keys.errors.rootKey', true],
     [
-      'OpenViking key belongs to another account',
+      'Business Data Platform key belongs to another account',
       403,
       'keys.errors.otherAccount',
       true,
@@ -358,7 +358,10 @@ describe('KeysIssueDialog', () => {
   it('keeps a removed user unselected instead of choosing another', async () => {
     api.listKeyUsers.mockResolvedValue([alice, boss])
     api.issueKey.mockRejectedValue(
-      new GatewayError('Unknown OpenViking user in this account', 400),
+      new GatewayError(
+        'Unknown Business Data Platform user in this account',
+        400,
+      ),
     )
     renderIssueDialog()
     fillName()
@@ -385,7 +388,10 @@ describe('KeysIssueDialog', () => {
 
   it('retries a preselected user rather than another one', async () => {
     api.issueKey.mockRejectedValue(
-      new GatewayError('Unknown OpenViking user in this account', 400),
+      new GatewayError(
+        'Unknown Business Data Platform user in this account',
+        400,
+      ),
     )
     renderIssueDialog()
     await fillRequiredFields()
@@ -418,7 +424,7 @@ describe('KeysIssueDialog', () => {
   it('explains an unreadable user key next to the picker', async () => {
     api.issueKey.mockRejectedValue(
       new GatewayError(
-        "This user's OpenViking key cannot be read on the server; paste the user's OpenViking key instead",
+        "This user's Business Data Platform key cannot be read on the server; paste the user's Business Data Platform key instead",
         409,
       ),
     )

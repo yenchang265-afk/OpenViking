@@ -1,6 +1,6 @@
 const overview = {
   description:
-    'How clients use the gateway: requests, prompt caching and memory, and the health of OpenViking.',
+    'How clients use the gateway: requests, prompt caching and memory, and the health of Business Data Platform.',
   loadFailed: "Couldn't load the overview",
   showIssues: 'Show in Requests',
   sampleNote_one:
@@ -32,7 +32,7 @@ const overview = {
     key: {
       title: 'Issue a gateway key',
       description:
-        'Clients use this key to call the gateway. It belongs to one OpenViking user, whose memory the gateway reads and writes.',
+        'Clients use this key to call the gateway. It belongs to one Business Data Platform user, whose memory the gateway reads and writes.',
       blocked: 'Add an upstream and a context profile first.',
       done_one: '{{count}} key issued',
       done_other: '{{count}} keys issued',
@@ -61,20 +61,20 @@ const overview = {
     },
     continuation: {
       label: 'Within-turn cache hit rate',
-      hint: 'Share of input tokens served from the prompt cache on the model calls that continue a turn, such as after a tool result, including calls made while the model uses OpenViking tools.',
+      hint: 'Share of input tokens served from the prompt cache on the model calls that continue a turn, such as after a tool result, including calls made while the model uses Business Data Platform tools.',
       footnote_one: '{{number}} tool step',
       footnote_other: '{{number}} tool steps',
     },
     recall: {
       label: 'Memory entries recalled',
-      hint: 'Memory entries the gateway added to new messages. The average is how long a search in OpenViking took, counting only messages that searched.',
+      hint: 'Memory entries the gateway added to new messages. The average is how long a search in Business Data Platform took, counting only messages that searched.',
       footnote_one: 'Avg {{duration}} over {{number}} search',
       footnote_other: 'Avg {{duration}} over {{number}} searches',
       none: 'No recalls yet',
     },
   },
   openviking: {
-    title: 'OpenViking',
+    title: 'Business Data Platform',
     description:
       'Finds memory for new messages and stores saved conversations.',
     version: 'Version',
@@ -87,17 +87,17 @@ const overview = {
       ldap: 'LDAP mode',
     },
     unreachable:
-      "While OpenViking can't be reached, requests still go to the model without memory, and saving conversations is retried until it's back.",
+      "While Business Data Platform can't be reached, requests still go to the model without memory, and saving conversations is retried until it's back.",
     starting:
-      "The gateway hasn't finished its first check of OpenViking yet. Refresh in a minute.",
+      "The gateway hasn't finished its first check of Business Data Platform yet. Refresh in a minute.",
   },
   saving: {
     title: 'Saving conversations',
     ok: 'No saving problems in recent requests.',
     retrying_one:
-      '{{count}} conversation is retrying saving to OpenViking after a failure.',
+      '{{count}} conversation is retrying saving to Business Data Platform after a failure.',
     retrying_other:
-      '{{count}} conversations are retrying saving to OpenViking after a failure.',
+      '{{count}} conversations are retrying saving to Business Data Platform after a failure.',
     paused_one:
       '{{count}} conversation paused saving after repeated failures. The gateway tries again every 5 minutes.',
     paused_other:

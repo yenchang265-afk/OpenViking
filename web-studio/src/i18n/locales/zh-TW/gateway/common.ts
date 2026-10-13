@@ -1,13 +1,13 @@
 const common = {
-  title: 'OpenViking 閘道器',
+  title: 'Business Data Platform 閘道器',
   description:
-    '讓任何使用 API Key 的模型客戶端都能用上 OpenViking 記憶。把客戶端指向閘道器後，閘道器會為每條新訊息補充相關記憶，並把對話儲存回 OpenViking。',
+    '讓任何使用 API Key 的模型客戶端都能用上 Business Data Platform 記憶。把客戶端指向閘道器後，閘道器會為每條新訊息補充相關記憶，並把對話儲存回 Business Data Platform。',
   beta: {
     label: 'Beta',
-    hint: '測試版：OpenViking 閘道器仍在完善，後續版本可能調整設定和介面。',
+    hint: '測試版：Business Data Platform 閘道器仍在完善，後續版本可能調整設定和介面。',
   },
   tabs: {
-    label: 'OpenViking 閘道器分割槽',
+    label: 'Business Data Platform 閘道器分割槽',
     overview: '概覽',
     upstreams: '上游',
     profiles: '上下文配置',
@@ -48,42 +48,43 @@ const common = {
   access: {
     title: '需要帳號管理員許可權',
     description:
-      '管理 OpenViking 閘道器需要本帳號的帳號管理員金鑰或 Root 金鑰。請先在連線設定中填寫。',
+      '管理 Business Data Platform 閘道器需要本帳號的帳號管理員金鑰或 Root 金鑰。請先在連線設定中填寫。',
     action: '開啟連線設定',
   },
   unavailable: {
     notEnabled: {
-      title: 'OpenViking 閘道器未開啟',
+      title: 'Business Data Platform 閘道器未開啟',
       description:
-        '這臺伺服器沒有開啟 OpenViking 閘道器。請在 ov.conf 中開啟它，重啟 OpenViking，再啟動閘道器。',
+        '這臺伺服器沒有開啟 Business Data Platform 閘道器。請在 ov.conf 中開啟它，重啟 Business Data Platform，再啟動閘道器。',
     },
     tokenMissing: {
       title: '缺少管理令牌',
       description:
-        'OpenViking 需要和閘道器使用同一個管理令牌才能管理閘道器。請為 OpenViking 和閘道器設定下面的環境變數（至少 32 個字元），然後重啟兩者。',
+        'Business Data Platform 需要和閘道器使用同一個管理令牌才能管理閘道器。請為 Business Data Platform 和閘道器設定下面的環境變數（至少 32 個字元），然後重啟兩者。',
     },
     tokenMismatch: {
       title: '管理令牌不一致',
       description:
-        'OpenViking 和閘道器啟動時用的管理令牌不同，所以閘道器拒絕了 OpenViking 的請求。請把下面的環境變數設成同一個值，然後重啟兩者。',
+        'Business Data Platform 和閘道器啟動時用的管理令牌不同，所以閘道器拒絕了 Business Data Platform 的請求。請把下面的環境變數設成同一個值，然後重啟兩者。',
     },
     unsupported: {
-      title: '這臺 OpenViking 伺服器無法管理 OpenViking 閘道器',
+      title:
+        '這臺 Business Data Platform 伺服器無法管理 Business Data Platform 閘道器',
       description:
-        'Studio 連線的 OpenViking 伺服器不支援 OpenViking 閘道器。請升級 OpenViking Server 並重啟，然後重試。',
+        'Studio 連線的 Business Data Platform 伺服器不支援 Business Data Platform 閘道器。請升級 Business Data Platform Server 並重啟，然後重試。',
     },
     devMode: {
-      title: 'OpenViking 執行在開發模式',
+      title: 'Business Data Platform 執行在開發模式',
       description:
-        '開發模式下每個金鑰都以 Root 身份操作，而閘道器不接受 Root 金鑰，所以簽發不了閘道器金鑰。請把 OpenViking 切換到 API 金鑰模式並重啟，再到連線設定中填寫帳號管理員金鑰。',
+        '開發模式下每個金鑰都以 Root 身份操作，而閘道器不接受 Root 金鑰，所以簽發不了閘道器金鑰。請把 Business Data Platform 切換到 API 金鑰模式並重啟，再到連線設定中填寫帳號管理員金鑰。',
     },
     unreachable: {
-      title: 'OpenViking 連不上閘道器',
+      title: 'Business Data Platform 連不上閘道器',
       description:
-        '閘道器沒有執行，或者 ov.conf 裡的 gateway.url 指向了錯誤的地址。請啟動閘道器，並確認 OpenViking 能訪問這個地址。',
+        '閘道器沒有執行，或者 ov.conf 裡的 gateway.url 指向了錯誤的地址。請啟動閘道器，並確認 Business Data Platform 能訪問這個地址。',
     },
     failed: {
-      title: '無法載入 OpenViking 閘道器',
+      title: '無法載入 Business Data Platform 閘道器',
     },
     fixLabel: '需要修改的配置',
     terminal: '終端',
@@ -92,12 +93,14 @@ const common = {
   },
   errors: {
     reasons: {
-      not_enabled: '這臺伺服器沒有開啟 OpenViking 閘道器。',
-      token_missing: '沒有設定管理令牌，OpenViking 無法管理閘道器。',
+      not_enabled: '這臺伺服器沒有開啟 Business Data Platform 閘道器。',
+      token_missing:
+        '沒有設定管理令牌，Business Data Platform 無法管理閘道器。',
       token_mismatch:
-        '閘道器拒絕了 OpenViking 的管理令牌，兩者必須使用同一個令牌。',
-      unreachable: 'OpenViking 連不上閘道器。',
-      unsupported: '這臺 OpenViking 伺服器不支援 OpenViking 閘道器。',
+        '閘道器拒絕了 Business Data Platform 的管理令牌，兩者必須使用同一個令牌。',
+      unreachable: 'Business Data Platform 連不上閘道器。',
+      unsupported:
+        '這臺 Business Data Platform 伺服器不支援 Business Data Platform 閘道器。',
       conflict: '這項修改與現有配置衝突。',
       invalid: '閘道器拒絕了這些設定，請檢查填寫的值後重試。',
       forbidden: '沒有執行此操作的許可權。',

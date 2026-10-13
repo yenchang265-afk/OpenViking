@@ -290,7 +290,7 @@ class ProxyRequest:
         try:
             await self.app.state.kernel.relayed(self.prepared, self.capture)
         except Exception:
-            logger.exception("OpenViking Gateway reply bookkeeping failed")
+            logger.exception("Business Data Platform Gateway reply bookkeeping failed")
 
     async def finish(self):
         self.metrics.update(self.capture.usage or {})
@@ -324,7 +324,7 @@ class ProxyRequest:
                 )
             await self.management.log(self.credential["account"], self.metrics)
         except Exception:
-            logger.exception("OpenViking Gateway response bookkeeping failed")
+            logger.exception("Business Data Platform Gateway response bookkeeping failed")
 
     async def tool_response(self):
         response, prepared, capture = self.response, self.prepared, self.capture

@@ -114,7 +114,7 @@ class MemoryKernel:
             prepared = await self.prepare(body, protocol, *args)
             return prepared.body, prepared, prepared.metrics
         except Exception:
-            logger.exception("OpenViking Gateway preparation failed")
+            logger.exception("Business Data Platform Gateway preparation failed")
             return self.degraded_body(body, protocol), None, {"degradation": "memory_store_failure"}
 
     async def sent_history(self, scope, messages, protocol):
@@ -816,7 +816,7 @@ class MemoryKernel:
             await self.compaction_failed(request, error.reason)
             return
         except Exception:
-            logger.exception("OpenViking Gateway summary failed")
+            logger.exception("Business Data Platform Gateway summary failed")
             await self.compaction_failed(request, "summary_failed")
             return
         anchor = request.capture_chain[cut]

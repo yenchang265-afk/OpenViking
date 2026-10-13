@@ -87,18 +87,18 @@ export function validateKeyRequest(request: KeyRequest): KeyRequestErrors {
 /** Issuance failures about the user or their key, with copy that says what to do. */
 const ISSUE_ERRORS: Array<[RegExp, string, boolean]> = [
   [
-    /^Unknown OpenViking user in this account$/,
+    /^Unknown (?:OpenViking|Business Data Platform) user in this account$/,
     'keys.errors.unknownUser',
     true,
   ],
   [
-    /^This user's OpenViking key cannot be read/,
+    /^This user's (?:OpenViking|Business Data Platform) key cannot be read/,
     'keys.errors.userKeyUnreadable',
     true,
   ],
   [/^root_key_not_allowed$/, 'keys.errors.rootKey', true],
   [
-    /^OpenViking key belongs to another account/i,
+    /^(?:OpenViking|Business Data Platform) key belongs to another account/i,
     'keys.errors.otherAccount',
     true,
   ],

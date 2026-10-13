@@ -194,7 +194,7 @@ const builders: Record<
         `model = ${JSON.stringify(model)}`,
         '',
         '[model_providers.openviking]',
-        'name = "OpenViking Gateway"',
+        'name = "Business Data Platform Gateway"',
         `base_url = ${JSON.stringify(`${base}/v1`)}`,
         'wire_api = "responses"',
         `env_key = "${KEY_ENV}"`,
@@ -264,7 +264,7 @@ const builders: Record<
         provider: {
           openviking: {
             npm: OPENCODE_PACKAGES[protocol],
-            name: 'OpenViking',
+            name: 'Business Data Platform',
             options: { baseURL: `${base}/v1`, apiKey: `{env:${KEY_ENV}}` },
             models: { [model]: {} },
           },

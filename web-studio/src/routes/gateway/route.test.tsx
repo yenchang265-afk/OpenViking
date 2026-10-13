@@ -124,7 +124,7 @@ describe('layout gates', () => {
 
   it('explains how to turn the gateway on', async () => {
     api.getConnectionInfo.mockRejectedValue(
-      new GatewayError('OpenViking Gateway is not enabled', 503),
+      new GatewayError('Business Data Platform Gateway is not enabled', 503),
     )
     renderLayout()
     expect(await screen.findByText('unavailable.notEnabled.title')).toBeTruthy()

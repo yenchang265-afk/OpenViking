@@ -57,11 +57,11 @@ describe('enum labels', () => {
 
   it('explains OpenViking reasons by pattern', () => {
     expect(openVikingReason(t, 'openviking_http_503')).toBe(
-      'OpenViking returned HTTP 503',
+      'Business Data Platform returned HTTP 503',
     )
     expect(openVikingReason(t, 'openviking_http_401')).toContain('rejected')
     expect(openVikingReason(t, 'openviking_RATE_LIMITED')).toBe(
-      'OpenViking reported error RATE_LIMITED',
+      'Business Data Platform reported error RATE_LIMITED',
     )
     expect(openVikingReason(t, 'history_changed')).toBeUndefined()
   })
@@ -122,9 +122,19 @@ describe('gatewayErrorMessage', () => {
     expect(
       gatewayErrorMessage(
         t,
+        new GatewayError(
+          'Business Data Platform key belongs to another account',
+          403,
+        ),
+      ),
+    ).toBe('This Business Data Platform key belongs to another account.')
+    // A server from before the rebrand still says OpenViking.
+    expect(
+      gatewayErrorMessage(
+        t,
         new GatewayError('OpenViking key belongs to another account', 403),
       ),
-    ).toBe('This OpenViking key belongs to another account.')
+    ).toBe('This Business Data Platform key belongs to another account.')
   })
 
   it('summarizes by category and keeps unexplained messages', () => {
@@ -134,9 +144,9 @@ describe('gatewayErrorMessage', () => {
     expect(
       gatewayErrorMessage(
         t,
-        new GatewayError('OpenViking Gateway is not enabled', 503),
+        new GatewayError('Business Data Platform Gateway is not enabled', 503),
       ),
-    ).toBe('The OpenViking Gateway is turned off on this server.')
+    ).toBe('The Business Data Platform Gateway is turned off on this server.')
     expect(gatewayErrorMessage(t, new Error('socket hang up'))).toBe(
       'socket hang up',
     )

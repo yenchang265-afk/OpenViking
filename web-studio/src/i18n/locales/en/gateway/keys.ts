@@ -1,6 +1,6 @@
 const keys = {
   description:
-    "Each gateway key belongs to one OpenViking user and uses one context profile and a set of upstreams. Keys can't be edited — issue a new key and revoke the old one.",
+    "Each gateway key belongs to one Business Data Platform user and uses one context profile and a set of upstreams. Keys can't be edited — issue a new key and revoke the old one.",
   issue: 'Issue key',
   loadFailed: "Couldn't load gateway keys",
   prerequisites: {
@@ -13,12 +13,12 @@ const keys = {
   empty: {
     title: 'No gateway keys yet',
     description:
-      "A client uses a gateway key in place of a model API key. Its requests reach your upstreams and read and save one OpenViking user's memory. Issue one key per person and client, so you can revoke each on its own.",
+      "A client uses a gateway key in place of a model API key. Its requests reach your upstreams and read and save one Business Data Platform user's memory. Issue one key per person and client, so you can revoke each on its own.",
   },
   table: {
     name: 'Name',
     key: 'Key',
-    user: 'OpenViking user',
+    user: 'Business Data Platform user',
     profile: 'Context profile',
     upstreams: 'Upstreams',
     models: 'Models',
@@ -37,16 +37,16 @@ const keys = {
   revoke: {
     title: 'Revoke “{{name}}”?',
     description:
-      'Clients using this key lose access immediately. Conversations and memory stay; a new key for the same user continues them. Turns not yet saved to OpenViking, such as the latest reply, are saved only if the conversation continues with a new key.',
+      'Clients using this key lose access immediately. Conversations and memory stay; a new key for the same user continues them. Turns not yet saved to Business Data Platform, such as the latest reply, are saved only if the conversation continues with a new key.',
     confirm: 'Revoke key',
     done: 'Revoked “{{name}}”',
   },
   deleteUser: {
     title: "Delete {{user}}'s gateway data?",
     description_one:
-      "This revokes {{user}}'s gateway key and deletes the conversation state the gateway keeps for this user, including turns not yet saved to OpenViking. Their clients lose access immediately. Memories already in OpenViking are not affected.",
+      "This revokes {{user}}'s gateway key and deletes the conversation state the gateway keeps for this user, including turns not yet saved to Business Data Platform. Their clients lose access immediately. Memories already in Business Data Platform are not affected.",
     description_other:
-      'This revokes all {{count}} gateway keys of {{user}} and deletes the conversation state the gateway keeps for this user, including turns not yet saved to OpenViking. Their clients lose access immediately. Memories already in OpenViking are not affected.',
+      'This revokes all {{count}} gateway keys of {{user}} and deletes the conversation state the gateway keeps for this user, including turns not yet saved to Business Data Platform. Their clients lose access immediately. Memories already in Business Data Platform are not affected.',
     confirm: 'Delete gateway data',
     done: "Deleted {{user}}'s gateway data",
   },
@@ -61,11 +61,11 @@ const keys = {
         'Helps you tell keys apart. The person and the client make a good name.',
     },
     user: {
-      label: 'OpenViking user',
-      placeholder: 'Choose an OpenViking user',
+      label: 'Business Data Platform user',
+      placeholder: 'Choose a Business Data Platform user',
       loading: 'Loading users…',
       description:
-        'The gateway recalls and saves memory as this user. Their OpenViking key is read on the server, stored encrypted by the gateway and never shown.',
+        'The gateway recalls and saves memory as this user. Their Business Data Platform key is read on the server, stored encrypted by the gateway and never shown.',
       roles: {
         admin: 'Admin',
         user: 'User',
@@ -78,12 +78,12 @@ const keys = {
       choose: 'Choose a user',
     },
     openvikingKey: {
-      label: 'OpenViking key',
+      label: 'Business Data Platform key',
       description:
-        "An OpenViking user key from this account. The gateway recalls and saves memory as this user. Root keys aren't accepted. Stored encrypted and never shown again.",
+        "A Business Data Platform user key from this account. The gateway recalls and saves memory as this user. Root keys aren't accepted. Stored encrypted and never shown again.",
       gatewayKey:
-        "This is a gateway key. Enter the OpenViking user's own key instead.",
-      paste: 'Paste an OpenViking key',
+        "This is a gateway key. Enter the Business Data Platform user's own key instead.",
+      paste: 'Paste a Business Data Platform key',
     },
     profile: {
       label: 'Context profile',
@@ -113,24 +113,24 @@ const keys = {
   errors: {
     title: "Couldn't issue the key",
     rootKey:
-      'This is a root key. Use the key of an OpenViking user in this account.',
+      'This is a root key. Use the key of a Business Data Platform user in this account.',
     otherAccount:
-      'This OpenViking key belongs to another account. Use a user key from this account.',
+      'This Business Data Platform key belongs to another account. Use a user key from this account.',
     invalidKey:
-      "OpenViking rejected this key. Check that it's complete and hasn't been regenerated.",
+      "Business Data Platform rejected this key. Check that it's complete and hasn't been regenerated.",
     unavailable:
-      "The gateway couldn't reach OpenViking to check this key. Try again in a moment.",
+      "The gateway couldn't reach Business Data Platform to check this key. Try again in a moment.",
     versionMismatch:
-      'OpenViking is older than the gateway requires. Upgrade OpenViking, then try again.',
+      'Business Data Platform is older than the gateway requires. Upgrade Business Data Platform, then try again.',
     unknownUser: 'This user is no longer in this account. Choose another user.',
     userKeyUnreadable:
-      "The server can't read this user's OpenViking key. Paste the key instead.",
+      "The server can't read this user's Business Data Platform key. Paste the key instead.",
   },
   secret: {
     title: 'Copy your gateway key',
     once: 'This is the only time the full key is shown.',
     copyKey: 'Copy gateway key',
-    user: 'OpenViking user',
+    user: 'Business Data Platform user',
     profile: 'Context profile',
     connectTitle: 'Connect a client',
     clients: {
