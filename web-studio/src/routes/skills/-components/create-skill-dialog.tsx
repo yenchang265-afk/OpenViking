@@ -51,6 +51,7 @@ export function CreateSkillDialog({
   const { t } = useTranslation('skillsPage')
   const formId = useId()
   const nameRef = useRef<HTMLInputElement>(null)
+  const footerRef = useRef<HTMLDivElement>(null)
   const [scope, setScope] = useState<SkillScope>(initialScope)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -71,6 +72,14 @@ export function CreateSkillDialog({
     setConfirmingReplace(false)
     reset()
   }, [initialScope, open, reset])
+
+  // The warning grows the form, which can push the buttons out of view in a
+  // short window; bring them back so the user sees what to press.
+  useEffect(() => {
+    if (confirmingReplace) {
+      footerRef.current?.scrollIntoView({ block: 'nearest' })
+    }
+  }, [confirmingReplace])
 
   const existingNames = useMemo(
     () =>
@@ -184,7 +193,7 @@ export function CreateSkillDialog({
                     max: MAX_SKILL_NAME_LENGTH,
                   })
                 : replacing
-                  ? t('create.nameExists', { scope: t(`scopes.${scope}`) })
+                  ? t('create.nameExists', { scope: t(`tabs.${scope}`) })
                   : t('create.nameHint', { max: MAX_SKILL_NAME_LENGTH })}
             </p>
           </div>
@@ -249,7 +258,7 @@ export function CreateSkillDialog({
               </AlertTitle>
               <AlertDescription>
                 {t('create.replace.description', {
-                  scope: t(`scopes.${scope}`),
+                  scope: t(`tabs.${scope}`),
                 })}
               </AlertDescription>
             </Alert>
@@ -263,7 +272,7 @@ export function CreateSkillDialog({
             </p>
           ) : null}
 
-          <DialogFooter>
+          <DialogFooter ref={footerRef}>
             <Button
               type="button"
               variant="outline"

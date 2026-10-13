@@ -8,7 +8,7 @@ import {
   screen,
   waitFor,
 } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type * as CreateSkillModule from '../-lib/create-skill'
 import { CreateSkillDialog } from './create-skill-dialog'
@@ -24,9 +24,18 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
 
+// jsdom does not implement scrollIntoView.
+const scrollIntoView = vi.fn()
+
+beforeEach(() => {
+  Element.prototype.scrollIntoView = scrollIntoView
+})
+
 afterEach(() => {
   cleanup()
   createSkill.mockReset()
+  scrollIntoView.mockReset()
+  delete (Element.prototype as Partial<Element>).scrollIntoView
 })
 
 function renderDialog() {
@@ -99,6 +108,20 @@ describe('CreateSkillDialog', () => {
 
     fill('create.nameLabel', 'pr-review-2')
     expect(screen.queryByText('create.replace.title')).toBeNull()
+  })
+
+  it('scrolls the replace buttons into view', async () => {
+    renderDialog()
+    fill('create.nameLabel', 'pr-review')
+    fill('create.descriptionLabel', 'Reviews pull requests')
+    fireEvent.click(screen.getByRole('button', { name: 'create.submit' }))
+
+    const replace = await screen.findByRole('button', {
+      name: 'create.replace.confirm',
+    })
+    expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
+    const scrolled = scrollIntoView.mock.contexts[0] as Element
+    expect(scrolled.contains(replace)).toBe(true)
   })
 
   it('creates the skill and closes', async () => {
