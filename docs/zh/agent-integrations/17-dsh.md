@@ -52,7 +52,7 @@ curl -fsSL https://openviking.ai/install | bash
 
 ## 工作方式
 
-外掛以 Cordis 外掛的形式跑在 DSH 程序內，而不是外掛 hook，因此能貼著會話走。會話開始時注入 OpenViking 畫像塊、可用記憶索引和 OpenViking 技能清單 `<available-skills>`；模型步驟帶有新的使用者輸入時，用使用者輸入的文本做語義檢索，把結果作為持久訊息追加到同一步驟，因此注入會隨會話重放，也對壓縮可見。DSH 或其他外掛注入的上下文（例如 `time-context`、job 通知）和工具結果既不觸發召回，也不拼進檢索文本。它直接從 DSH 的事件流捕獲 user、assistant 以及（可選的）工具結果訊息，並跳過注入的上下文，待同步 token 超過閾值即 commit，並保留最近十條訊息在本地上下文中。寫入失敗會進入待寫佇列，在下次會話開始時重放。
+外掛以 Cordis 外掛的形式跑在 DSH 程序內，而不是外掛 hook，因此能貼著會話走。會話開始時注入 OpenViking 畫像塊、可用記憶索引和 OpenViking 技能清單 `<available-skills>`；模型步驟帶有新的使用者輸入時，用使用者輸入的文本做語義檢索，把結果作為持久訊息追加到同一步驟，因此注入會隨會話重放，也對壓縮可見。DSH 或其他外掛注入的上下文（例如 `time-context`、job 通知）和工具結果既不觸發召回，也不拼進檢索文本。它直接從 DSH 的事件流捕獲 user、assistant 以及（可選的）工具結果訊息，並跳過注入的上下文，待同步 token 超過閾值或 DSH 開始壓縮時即 commit，每次 commit 都歸檔全部已捕獲的訊息。寫入失敗會進入待寫佇列，在下次會話開始時重放。
 
 每個 DSH 會話對映為 OpenViking 中的 `dsh-<session-id>`，子 agent 各自擁有獨立會話。
 
@@ -104,12 +104,13 @@ patch 中寫的憑證優先於環境變數。行為配置按優先順序從高�
 |------|----------|
 | 沒有注入，也沒有 OpenViking 工具 | `dsh --profile web --dump-config` 裡應能看到 `openviking-memory-runtime`；重新執行安裝器或 `dsh plugin --profile web add …` |
 | 裝到了錯誤的 profile | 安裝器預設 `web`；用 `--dsh-profile <name>` 重新執行 |
-| 安裝時報 `ERESOLVE` | 使用受支援的 `@deepseek-ai/dsh` 版本：`0.1.0-rc.6`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.2` 或穩定版 `0.1.x`（peer 範圍 `>=0.1.0-rc.6 <0.2.0 \|\| ^0.1.5-rc.1 \|\| ^0.1.7-rc.2`），並讓所有 `@deepseek-ai/dsh-*` 宿主包保持同一版本。 |
+| DSH 提示外掛與當前 dsh 版本不相容 | 外掛接受 `0.1.0-rc.6` 起的所有 `@deepseek-ai/dsh` 0.x 版本（peer 範圍 `>=0.1.0-rc.6 <1.0.0-0`），出現這個提示說明 DSH 已是 1.0 或更高；升級外掛，或者確認風險後用 `dsh plugin allow-version` 放行。所有 `@deepseek-ai/dsh-*` 宿主包要保持同一版本。 |
+| 升級 DSH 後外掛啟動失敗 | 已驗證的版本：`0.1.0-rc.6`、`0.1.5-rc.1`、`0.1.5-rc.2`、`0.1.7-rc.2`、`0.2.0-rc.2`、`0.2.1-alpha.1`。更新的 0.x 版本不經預先驗證就會被接受；請把 DSH 固定到已驗證的版本，並提 issue。 |
 | 安裝時報包「不在 npm registry 中」 | 檢查該 profile 的 pnpm 是否設定了 24 小時的最小發布年齡（`minimumReleaseAge`）。等一等，或把該精確版本加進 profile 的 `pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` |
 | 召不回任何內容 | `curl "<OpenViking 服務地址>/health"`；檢查端點配置，以及 prompt 是否長於最小查詢長度（3 個字元） |
 | OpenViking 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；可信模式部署還要檢查 `OPENVIKING_ACCOUNT` 與 `OPENVIKING_USER` |
 | 串入了其他專案的記憶 | 設定 `OPENVIKING_RECALL_PEER_SCOPE=actor`，將 peer 記憶限定為當前 peer；使用者級記憶仍會共享 |
-| 崩潰後沒有 commit | commit 由 token 閾值和 teardown 觸發；排隊的寫入會在下次會話開始時重放 |
+| 崩潰後沒有 commit | commit 由 token 閾值、壓縮開始和 teardown 觸發；排隊的寫入會在下次會話開始時重放 |
 
 ## 延伸閱讀
 

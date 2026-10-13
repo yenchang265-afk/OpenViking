@@ -7,6 +7,15 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 ## 未釋出
 
+- **Working Memory 預設關閉（行為變更）**：commit 仍儲存原文並抽取長期記憶，預設不生成
+  WM 或 checkpoint 摘要。使用者需要單獨升級已安裝的 agent 外掛；新版預設關閉自動歸檔
+  摘要注入和上下文接管，由宿主管理歷史與壓縮。VikingBot 仍預設使用 OV 管理上下文與壓縮，
+  並在會話上下文 commit 時顯式請求 WM。舊版序列化會省略 WM=true，因此過去即使
+  主動開啟，儲存後缺少該欄位的策略升級後仍會變為 false，無法自動恢復使用者當時的意圖。
+  已入隊的舊任務保持提交時的語義。新增 `enable_working_memory` 布林引數僅覆蓋本次
+  commit 的 WM，不覆蓋其他策略。無 WM 的已完成歸檔仍可讀取原文，摘要欄位為空。
+  詳見[升級說明](../guides/working-memory-default-off.md)；缺少完整宿主歷史的舊會話
+  應先匯出原文，通過宿主支援的入口完成歷史交接，再切換模式。
 - **Watch API 遷移（不相容變更）**：使用 `watch_interval > 0` 重新匯入不再更新或恢復已有 Watch。
   原生 Watch 暫停後仍獨佔目標，不相容的目標複用返回 `409 Conflict`。
   依賴重新匯入來更新 Watch 的指令碼應改用 `PATCH /api/v1/watches/{task_id}`

@@ -76,7 +76,7 @@ class TelegramProvider:
             "settings": self.validate_settings(record.get("settings", {})),
         }
 
-    def install(self, service, record):
+    def install(self, service, record, *, openviking_connection):
         from vikingbot.studio.providers.telegram.channel import StudioTelegramChannel
 
         channel_config = TelegramChannelConfig(
@@ -89,6 +89,7 @@ class TelegramProvider:
             channel_config,
             service.manager.bus,
             record=record,
+            openviking_connection=openviking_connection,
             store=service.store,
             workspace_path=service.config.workspace_path,
         )

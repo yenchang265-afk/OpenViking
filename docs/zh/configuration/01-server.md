@@ -17,6 +17,12 @@ openviking-server --config /path/to/ov.conf
 
 服務端啟動時讀取配置。修改模型、檢索、儲存或 `server` 配置後，需要重啟服務；重啟後建議執行 `openviking-server doctor`。
 
+通過單 worker 的 `openviking-server` 啟動時，Studio 的「服務端配置」頁面提供「儲存並重啟」。重啟能力和例項標識複用現有 ROOT 配置讀取介面（`GET /api/v1/admin/configuration?source=file`）返回；只有 ROOT 可以請求重啟（`POST /api/v1/admin/restart`，請求體為 `{"revision":"<已儲存檔案的版本>"}`）。服務校驗當前檔案和版本後返回 HTTP 202，等待現有請求結束，停止其管理的 Bot，再使用原直譯器、啟動引數、環境變數和工作目錄替換當前程序。頁面確認新的服務例項恢復後才顯示成功。單獨點選「儲存配置」仍只儲存檔案。
+
+多 worker 或嵌入式 ASGI 啟動不支援頁面重啟，需要通過部署平臺重啟。配置通過校驗後，外部依賴仍可能導致啟動失敗。如果修改了地址、埠或 ROOT 憑證，請更新 Studio 連線設定。帳號和叢集覆蓋配置仍優先於檔案預設配置。
+
+配置含環境變數引用時，Studio 表單只讀，請使用檔案模式編輯原文。帶引號或未帶引號的引用、轉義和格式按提交內容儲存。Windows `%VAR%` 引用和美元/百分號字面值（包括 `\u0024`、`\u0025`）也使用檔案模式，避免表單序列化引入新的引用。
+
 ## 配置結構
 
 下面只展示常用頂層分組，不是可直接執行的完整配置。首次啟動可從本頁的[最小示例](#最小示例)開始，填寫實際模型與憑據；後續示例中的片段應合併到同一個 `ov.conf`。
@@ -38,7 +44,7 @@ openviking-server --config /path/to/ov.conf
 }
 ```
 
-未配置的可選模組使用預設值。`ov.conf` 及帳戶配置會忽略未知欄位，相容舊版本遺留配置；已知欄位仍校驗型別和取值。欄位名拼寫錯誤也會被忽略，但服務端會輸出 WARNING，逐項列出未被採用的欄位。
+未配置的可選模組使用預設值。`ov.conf` 及帳戶配置會忽略未知欄位（`gateway` 部分除外），相容舊版本遺留配置；已知欄位仍校驗型別和取值。欄位名拼寫錯誤也會被忽略，但服務端會輸出 WARNING，逐項列出未被採用的欄位。
 
 ## 頂層配置
 
@@ -65,6 +71,7 @@ openviking-server --config /path/to/ov.conf
 | `log` | object | 控制台日誌 | 日誌級別、格式和檔案輸出 |
 | `telemetry` | object | disabled | OpenTelemetry trace 上報 |
 | `oauth` | object | disabled | MCP OAuth 2.1 配置 |
+| `gateway` | object | disabled | OpenViking 閘道器配置，閘道器為使用 API Key 的模型客戶端補充 OpenViking 記憶。這一部分的未知欄位會直接報錯，見[配置參考](../guides/22-gateway-operations.md#配置參考) |
 | `prompts` | object | 內建模板 | 自定義 Prompt 模板目錄 |
 | `ingest` | object | 內建預設值 | 會話日誌匯入配置 |
 | `output_language_override` | string | `""` | 強制摘要和記憶輸出語言，僅接受 `en` 或 `zh-TW`；空值表示自動識別：中文內容 → `zh-TW`，其他語言或無法識別 → `en` |

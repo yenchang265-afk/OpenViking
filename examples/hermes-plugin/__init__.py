@@ -69,6 +69,51 @@ _OVCLI_SAVED_PREFIX = "ovcli.conf."
 _CONNECTION_KEYS = ("endpoint", "api_key", "account", "user", "agent")
 _IDENTITY_UNSET = object()
 _OPENVIKING_ENV_KEYS = tuple(f"OPENVIKING_{key.upper()}" for key in _CONNECTION_KEYS)
+_EXTRA_HEADERS_ENV = "OPENVIKING_EXTRA_HEADERS"
+_RESERVED_HEADER_PREFIX = "x-openviking-"
+
+
+def _parse_extra_headers(raw) -> dict:
+    """Extra HTTP headers to send on every OpenViking request.
+
+    Mirrors the JS layer (memory-plugin-shared/lib/mcp-proxy-config.mjs): a JSON
+    object whose values are scalars. Reserved X-OpenViking-* names are dropped so a
+    caller-supplied map can never assert tenant identity (trusted mode reads those
+    as identity, so allowing them would be an impersonation vector).
+    """
+    data = raw
+    if isinstance(data, str):
+        text = data.strip()
+        if not text:
+            return {}
+        try:
+            data = json.loads(text)
+        except (ValueError, TypeError):
+            logger.warning("%s is not valid JSON; ignoring", _EXTRA_HEADERS_ENV)
+            return {}
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        logger.warning("extra headers must be a JSON object of string values; ignoring")
+        return {}
+    parsed = {}
+    for name, value in data.items():
+        if not isinstance(name, str) or not name.strip():
+            continue
+        key = name.strip()
+        if key.lower().startswith(_RESERVED_HEADER_PREFIX):
+            logger.warning("extra headers: ignoring reserved header %r", key)
+            continue
+        if isinstance(value, bool) or not isinstance(value, (str, int, float)):
+            logger.warning("extra headers: header %r must be a scalar; ignoring", key)
+            continue
+        parsed[key] = str(value)
+    return parsed
+
+
+def _extra_headers_key(headers) -> str:
+    """Stable fingerprint so a changed map refreshes the cached client."""
+    return json.dumps(headers or {}, sort_keys=True, separators=(",", ":"))
 _TIMEOUT = 30.0
 _SESSION_DRAIN_TIMEOUT = 10.0
 _DEFERRED_COMMIT_TIMEOUT = (_TIMEOUT * 2) + 5.0
@@ -287,7 +332,8 @@ class _VikingClient:
     def __init__(self, endpoint: str, api_key: str = "",
                  account: Optional[str] | object = _IDENTITY_UNSET,
                  user: Optional[str] | object = _IDENTITY_UNSET,
-                 agent: Optional[str] | object = _IDENTITY_UNSET):
+                 agent: Optional[str] | object = _IDENTITY_UNSET,
+                 extra_headers: Optional[dict] | object = _IDENTITY_UNSET):
         self._endpoint = endpoint.rstrip("/")
         self._api_key = api_key
         # Account/user are local/trusted-mode tenant identity. API-key requests
@@ -297,7 +343,17 @@ class _VikingClient:
         self._account = (get_secret("OPENVIKING_ACCOUNT", "") if account is _IDENTITY_UNSET or account is None else account) or "default"
         self._user = (get_secret("OPENVIKING_USER", "") if user is _IDENTITY_UNSET or user is None else user) or "default"
         self._agent = (get_secret("OPENVIKING_AGENT", "") or _DEFAULT_AGENT) if agent is _IDENTITY_UNSET or agent is None else agent
+        # Extra HTTP headers (e.g. Cloudflare Access service tokens) — same resolution
+        # shape as the identity fields above: an explicit value wins, otherwise the
+        # profile's OPENVIKING_EXTRA_HEADERS.
+        self._extra_headers = (
+            _parse_extra_headers(get_secret(_EXTRA_HEADERS_ENV))
+            if extra_headers is _IDENTITY_UNSET or extra_headers is None
+            else _parse_extra_headers(extra_headers)
+        )
         # Every client owns its resolved identity, including clients retained across reloads.
+        # The snapshot stays a 5-tuple on purpose: it is unpacked positionally in several
+        # places, so extra headers ride beside it (self._extra_headers) instead.
         self._conn_snapshot = (self._endpoint, self._api_key, self._account, self._user, self._agent)
         self._httpx = _get_httpx()
         if self._httpx is None:
@@ -313,6 +369,10 @@ class _VikingClient:
             h.update({k: v for k, v in (("X-OpenViking-Account", self._account), ("X-OpenViking-User", self._user)) if v})
         if self._api_key:
             h.update({"X-API-Key": self._api_key, "Authorization": "Bearer " + self._api_key})
+        if self._extra_headers:
+            # Operator-supplied headers fill gaps; ours win, so a stray entry can never
+            # override authentication or tenant identity.
+            return {**self._extra_headers, **h}
         return h
 
     @staticmethod
@@ -650,6 +710,7 @@ def _connection_values_from_ovcli(data: dict) -> dict:
         "account": _clean_config_value(data.get("account") or data.get("account_id")) if send_identity else "",
         "user": _clean_config_value(data.get("user") or data.get("user_id")) if send_identity else "",
         "agent": _clean_config_value(data.get("actor_peer_id") or data.get("agent_id")),
+        "extra_headers": _parse_extra_headers(data.get("extra_headers")),
     }
 
 
@@ -901,7 +962,9 @@ def _resolve_connection_settings(provider_config: Optional[dict] = None, *, env:
         except quick_local.QuickLocalSetupError as exc:
             raise _OpenVikingEndpointError(str(exc)) from exc
         values = _connection_values_from_ovcli(profile)
-        return {key: values[key] or ("default" if key in ("account", "user") else _DEFAULT_AGENT if key == "agent" else "") for key in _CONNECTION_KEYS}
+        resolved = {key: values[key] or ("default" if key in ("account", "user") else _DEFAULT_AGENT if key == "agent" else "") for key in _CONNECTION_KEYS}
+        resolved["extra_headers"] = values.get("extra_headers") or {}
+        return resolved
     ovcli_values = _ovcli_values_for(provider_config, env=env)
 
     def layered(key: str, default: str = "", *, env_authoritative: bool = False) -> str:
@@ -917,12 +980,14 @@ def _resolve_connection_settings(provider_config: Optional[dict] = None, *, env:
     account = layered("account", env_authoritative=True)
     user = layered("user", env_authoritative=True)
     account, user = account or "default", user or "default"
+    extra_headers_raw = get_secret(_EXTRA_HEADERS_ENV) if env is None else env.get(_EXTRA_HEADERS_ENV)
     return {
         "endpoint": _normalize_openviking_url(layered("endpoint", _DEFAULT_ENDPOINT)),
         "api_key": api_key,
         "account": account,
         "user": user,
         "agent": layered("agent", _DEFAULT_AGENT),
+        "extra_headers": _parse_extra_headers(extra_headers_raw) or ovcli_values.get("extra_headers") or {},
     }
 
 
@@ -1110,7 +1175,7 @@ def _local_listener_suffix(endpoint: str) -> str:
     return f" The listener on {host}:{port} is {_describe_local_port_listener(host, port)}."
 
 
-def _start_local_openviking_server(endpoint: str) -> tuple[str, str]:
+def _start_local_openviking_server(endpoint: str, *, hermes_home=None) -> tuple[str, str]:
     try:
         host, port = _local_openviking_bind(endpoint)
     except ValueError as e:
@@ -1126,7 +1191,7 @@ def _start_local_openviking_server(endpoint: str) -> tuple[str, str]:
     server_cmd = shutil.which("openviking-server")
     if not server_cmd:
         return _LOCAL_SERVER_FAILED, "openviking-server was not found on PATH. Start it manually, then retry."
-    log_path = get_hermes_home() / _OPENVIKING_SERVER_LOG_RELATIVE_PATH
+    log_path = Path(hermes_home or get_hermes_home()) / _OPENVIKING_SERVER_LOG_RELATIVE_PATH
     try:
         log_path.parent.mkdir(parents=True, exist_ok=True)
         # Strip PYTHONPATH: the Desktop backend puts the Hermes venv on it, which
@@ -1136,7 +1201,33 @@ def _start_local_openviking_server(endpoint: str) -> tuple[str, str]:
         # would import aiohttp and friends from the Hermes venv instead of its own (its venv's site-packages
         # are shadowed because PYTHONPATH precedes them) — and on Windows the loaded DLLs then lock the
         # Hermes venv, aborting `hermes update` with access-denied on .pyd files. (#78153)
-        child_env = os.environ.copy()
+        # The server's embedding/VLM models may read provider keys, so the bound profile's pass;
+        # bot, gateway and GitHub tokens never do. HOME stays the user's: ov.conf defaults to
+        # ~/.openviking. Missing helpers fail startup rather than expose secrets.
+        from hermes_cli.config import OPTIONAL_ENV_VARS
+        from hermes_constants import reset_hermes_home_override, set_hermes_home_override
+        from tools.environments.local import _finalize_child_env, _scrub_credentials, served_profile_child_env
+
+        home_token = set_hermes_home_override(hermes_home) if hermes_home else None
+        try:
+            # Profile hydration can re-add bot tokens. Reuse Hermes's credential
+            # policy after the overlay; these helpers predate the base_env API.
+            child_env = _scrub_credentials(
+                served_profile_child_env(target_home=hermes_home, inherit_credentials=True), inherit_credentials=True)
+            # Older hosts put gateway secrets in optional-credential metadata.
+            # Preserve model variables, including providers Hermes does not list.
+            for key in list(child_env):
+                metadata = OPTIONAL_ENV_VARS.get(key.upper(), {})
+                if (metadata.get("category") == "messaging"
+                        or (metadata.get("category") == "setting" and metadata.get("password"))
+                        or key.upper() in {"VERCEL_TOKEN", "VERCEL_OIDC_TOKEN"}):
+                    child_env.pop(key)
+            child_env = _finalize_child_env(child_env)
+        finally:
+            if home_token is not None:
+                reset_hermes_home_override(home_token)
+        if real_home := child_env.get("HERMES_REAL_HOME"):
+            child_env["HOME"] = real_home
         child_env.pop("PYTHONPATH", None)
         with log_path.open("ab") as log_file:
             subprocess.Popen([server_cmd, "--host", host, "--port", str(port)], stdout=log_file, stderr=log_file,
@@ -1431,6 +1522,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
         self._commit_scope: Optional[_CommitScope] = None
         self._profile_prefetched_sessions: Set[str] = set()
         self._conn_snapshot: Optional[tuple] = None
+        self._extra_headers: dict = {}
         self._failed_refresh: Optional[tuple] = None
         self._runtime_start_thread: Optional[threading.Thread] = None
         self._runtime_start_pending = False
@@ -1532,7 +1624,8 @@ class OpenVikingMemoryProvider(MemoryProvider):
 
     def _build_client(self, endpoint: Optional[str] = None) -> _VikingClient:
         endpoint, api_key, account, user, agent = self._settings_tuple(endpoint)
-        return _VikingClient(endpoint, api_key, account=account, user=user, agent=agent)
+        return _VikingClient(endpoint, api_key, account=account, user=user, agent=agent,
+                             extra_headers=self._extra_headers)
 
     def _publish_client(self, client: _VikingClient, endpoint: str) -> None:
         with self._session_state_lock:
@@ -1649,7 +1742,7 @@ class OpenVikingMemoryProvider(MemoryProvider):
                     endpoint = self._endpoint
                     start_state, start_message = _LOCAL_SERVER_STARTED, f"Starting Quick Local at {endpoint}. Logs: {server.paths.root.parent / _OPENVIKING_SERVER_LOG_RELATIVE_PATH}"
                 else:
-                    start_state, start_message = _start_local_openviking_server(endpoint)
+                    start_state, start_message = _start_local_openviking_server(endpoint, hermes_home=self._hermes_home)
             except Exception as exc:
                 logger.debug("OpenViking startup failed", exc_info=True)
                 start_state, start_message = _LOCAL_SERVER_FAILED, f"Startup failed ({type(exc).__name__}). Review the server log."
@@ -1680,8 +1773,14 @@ class OpenVikingMemoryProvider(MemoryProvider):
             settings = self._resolve_bound_connection_settings(config, env)
         except _OpenVikingEndpointError as exc:
             connection_error = str(exc)
-            settings = dict.fromkeys(_CONNECTION_KEYS, "")
+            settings: dict = dict.fromkeys(_CONNECTION_KEYS, "")
         self._endpoint, self._api_key, self._account, self._user, self._agent = (settings[k] for k in _CONNECTION_KEYS)
+        # Resolve extra headers BEFORE any client is built. _VikingClient snapshots them at
+        # construction, and the startup /health probe goes through that client: a gateway that
+        # protects every route (Cloudflare Access, oauth2-proxy) rejects a header-less probe,
+        # which would drop the client and leave the provider unusable until a config change
+        # forced a rebuild. See tests/test_extra_headers.py::test_startup_health_probe_carries_extra_headers.
+        self._extra_headers = _parse_extra_headers(settings.get("extra_headers"))
         # Baseline established — set here, not at the end, so an exception in the
         # connection attempt (swallowed by MemoryManager) can't leave the provider
         # stuck in never-refresh mode.
@@ -1788,7 +1887,8 @@ class OpenVikingMemoryProvider(MemoryProvider):
                     self._failed_refresh = (("quick-local-restart",), time.monotonic())
                 return None
         settings_key = tuple(settings[k] for k in _CONNECTION_KEYS)
-        if settings_key == self._settings_tuple():
+        extra_key = _extra_headers_key(settings.get("extra_headers"))
+        if settings_key == self._settings_tuple() and extra_key == _extra_headers_key(self._extra_headers):
             if self._client is not None:
                 if managed:
                     from .local_server import LocalServer
@@ -1809,6 +1909,9 @@ class OpenVikingMemoryProvider(MemoryProvider):
                 return None
 
         self._endpoint, self._api_key, self._account, self._user, self._agent = settings_key
+        # Same ordering rule as initialize(): the client snapshots extra headers at build time,
+        # so refresh them before rebuilding + probing.
+        self._extra_headers = _parse_extra_headers(settings.get("extra_headers"))
         try:
             client = self._build_client()
         except ImportError:
@@ -1849,7 +1952,8 @@ class OpenVikingMemoryProvider(MemoryProvider):
         if not isinstance(snapshot, tuple):
             snapshot = self._conn_snapshot or self._settings_tuple()
         endpoint, api_key, account, user, agent = snapshot
-        return _VikingClient(endpoint, api_key, account=account, user=user, agent=agent)
+        return _VikingClient(endpoint, api_key, account=account, user=user, agent=agent,
+                             extra_headers=self._extra_headers)
 
     # -- prompt / prefetch ---------------------------------------------------
 
@@ -1963,7 +2067,8 @@ class OpenVikingMemoryProvider(MemoryProvider):
             if scope in ("shared", "peer"):
                 endpoint, api_key, account, user, _agent = client._conn_snapshot
                 client = _VikingClient(endpoint, api_key, account=account, user=user,
-                                       agent=sender_peer if scope == "peer" else "")
+                                       agent=sender_peer if scope == "peer" else "",
+                                       extra_headers=self._extra_headers)
             if scope == "peer":
                 # Explicit roots also constrain fallback searches when there is
                 # no sender. An actor-less user-root search includes all peers.
@@ -2807,6 +2912,8 @@ class OpenVikingMemoryProvider(MemoryProvider):
 
     def _recover_pending_sessions(self) -> None:
         """Commit sessions left pending by dead runs, one thread per former owner."""
+        if not self._writes_enabled:
+            return
         scope = self._capture_commit_scope()
         if not scope.client:
             return

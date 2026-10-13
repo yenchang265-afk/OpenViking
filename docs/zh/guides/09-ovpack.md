@@ -33,22 +33,12 @@ Session 通過 user 名稱空間一起遷移，路徑為
 
 ## 與主備儲存配合
 
-主備儲存只複製啟用之後的新寫入，不會自動同步啟用之前已經存在的歷史檔案。如需同時為 primary 和副本寫入存量，應在**空目標環境恢復之前**啟用主備儲存：
+V2 啟動會把當前 V1 primary 檔案匯入分割槽 metadata，並刪除 V1 sidecar。
+匯入不會刪除 backup 中多餘的舊檔案。首次 V2 啟動前，應停服所有例項並建立
+完整備份。
 
-1. 暫停業務寫入，按源 account 分別匯出或備份。
-2. 配置目標 primary、backup backend 及其寫策略，啟動目標服務並建立恢復身份。
-3. 通過該服務恢復或匯入，使存量內容經過已配置的主備複製分發。
-4. 對每個恢復的 scope 檢查同步狀態，並在切流前驗證各副本中的檔案。恢復返回時，非同步複製仍可能未完成。
-5. 驗證內容和索引完整性後再恢復業務寫入；驗證完成前保留源資料和備份。
-
-例如，使用目標 account 的 admin key 檢查：
-
-```bash
-ov system backend sync-status viking://resources
-ov system backend sync-status viking://user
-```
-
-先恢復再啟用 backups 只會複製後續寫入，不能把歷史內容補到副本。
+匯入開始後不支援原地回滾。要恢復 V1，必須恢復匯入前的完整備份。啟動後使用
+普通檔案 API 驗證 primary 內容，並通過 Prometheus 指標觀察 backup lag。
 
 更多說明見 [主備儲存指南](./13-multi-write-storage.md)。
 

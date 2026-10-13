@@ -62,6 +62,12 @@ Hook 關閉時，MCP 工具仍可能正常使用。自動召回需要 `UserPromp
 啟動 `codex` 後，當前會話首次提交 prompt 時觸發的 `SessionStart` 會載入 profile，之後外掛將在每次使用者輸入前自動召回相關記憶。若設定環境變數 `OPENVIKING_DEBUG=1`，則會將相關事件日誌寫入 `~/.openviking/logs/codex-hooks.log`。
 TraeCode CLI 2.0 使用者啟動 `trae-cli`，並可用 `trae-cli plugin list` 確認外掛已啟用。
 
+## OpenViking 來源彙總
+
+memory 外掛預設內建 OV-Usage。報告彙總自動召回和顯式 OpenViking MCP、`ov` CLI 查詢，統計本輪可用來源，不能證明回答實際採用了每個來源。缺失或無法識別的 rollout 記錄可能省略自動召回歸因。
+
+設定 `OPENVIKING_USAGE_OUTPUT=terminal` 時，只通過 Stop hook 輸出一條資訊訊息；設定為 `desktop` 時，通過模型生成回答頁尾，Stop 不再重複輸出。預設 `auto` 在存在 `TERM_PROGRAM` 或非 `dumb` 的 `TERM` 時選擇 terminal，否則選擇 desktop。這是啟發式判斷，桌面客戶端繼承終端環境變數時可顯式覆蓋。設定 `OPENVIKING_USAGE_VIEW=expanded` 檢視來源詳情，設定為 `off` 關閉報告及其本地後設資料寫入。用 `/hooks` 審閱更新後的 hooks。頁尾遵循更高優先順序的格式要求。報告失敗不會阻斷召回或捕獲，尚未實現互動式展開/摺疊按鈕。
+
 ## 工作原理
 
 外掛按以下事件處理記憶：

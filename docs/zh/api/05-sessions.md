@@ -43,7 +43,7 @@ Session API 按認證使用者作用域訪問會話，並返回 canonical user s
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
 | session_id | str | 否 | None | 會話 ID。如果為 None，則建立一個自動生成 ID 的新會話 |
-| memory_policy | object | 否 | None | 會話預設的記憶抽取策略。可選的 `self` 和 `peer` 開關控制寫入目標；可選的 `working_memory.enabled=false` 跳過 archive summary；可選的頂層 `memory_types` 將抽取限制為指定的 enabled memory schema。包含 `experiences` 時會自動啟用 `cases` 和 `trajectories`；不包含 `experiences` 時，顯式傳入的 `cases` 和 `trajectories` 會被忽略。所有 `enabled` 值都應使用 JSON 布林值。舊版 boolean-like 值暫時仍相容（字串 `"false"` 會正確解析為 false），但會產生棄用警告。`memory_types` 未傳或為 `null` 時允許所有 enabled memory schema。非法結構或未知 memory type 會以 `InvalidArgumentError` 拒絕。 |
+| memory_policy | object | 否 | None | 會話預設的記憶抽取策略。可選的 `self` 和 `peer` 開關控制寫入目標；`working_memory.enabled` 預設 `false`，不生成歸檔摘要和 checkpoint 摘要，顯式設為 `true` 才會生成；可選的頂層 `memory_types` 將抽取限制為指定的 enabled memory schema。包含 `experiences` 時會自動啟用 `cases` 和 `trajectories`；不包含 `experiences` 時，顯式傳入的 `cases` 和 `trajectories` 會被忽略。所有 `enabled` 值都應使用 JSON 布林值。舊版 boolean-like 值暫時仍相容（字串 `"false"` 會正確解析為 false），但會產生棄用警告。`memory_types` 未傳或為 `null` 時允許所有 enabled memory schema。非法結構或未知 memory type 會以 `InvalidArgumentError` 拒絕。 |
 | auto_commit_policy | object | 否 | None | 可選的自動 commit 策略（見下表）。傳入的欄位會被校驗並 clamp 到取值範圍，然後合併到預設值之上；最終生效的策略會在響應的 `result.auto_commit_policy` 中返回，並持久化到 session meta。省略時，新 Session 先繼承 `server.user_config_defaults.auto_commit_policy`，再沿用現有 `memory.session_auto_commit.enabled` 行為。之後可通過 `update_session_config()` 部分更新或停用該策略。 |
 
 `auto_commit_policy` 欄位（均為可選；存在 policy 時，未傳欄位回退到預設值）：
@@ -803,6 +803,8 @@ ov session get-session-context a1b2c3d4 --token-budget 128000
 
 ### get_session_archive()
 
+正常完成的無 WM 歸檔仍返回 `messages` 原文，`abstract` 和 `overview` 為空字串，讀取時不會補生成摘要。pending、failed、不存在或損壞歸檔仍遵循原有錯誤契約。此介面主動展開單個歸檔，不改變 `/context` 的歷史邊界。
+
 #### 1. API 實現介紹
 
 獲取某次已完成歸檔的完整內容。該介面通常配合 `get_session_context()` 使用，當需要檢視更早的歸檔詳情時呼叫。
@@ -1355,6 +1357,7 @@ ov add-memory '[{"role":"user","content":"Hello"},{"role":"assistant","content":
 |------|------|------|--------|------|
 | session_id | str | 是 | - | 要提交的會話 ID |
 | keep_recent_count | int | 否 | 0 | 提交後保留為 live 狀態的最近訊息數 (保持 live, 不歸檔)。`0` (預設) 歸檔全部訊息。 |
+| enable_working_memory | bool 或 null | 否 | null | 僅覆蓋本次 commit 的 WM 生成開關；省略/null 沿用有效策略，true/false 不改變 self、peer、memory_types 或已儲存策略。拒絕字串和數字；響應的 `effective_enable_working_memory` 返回實際生效值。 |
 | reset_context | bool | 否 | false | HTTP API：歸檔全部 live messages 後追加只含 `.done`（帶 `context_reset`）的邊界 archive，目錄內沒有訊息檔案。保留 session ID 和原始歷史，清空注入上下文，並阻止後續摘要繼承 reset 前的 overview。要求 `keep_recent_count=0`，且不設定 `retention_mode`。 |
 
 `reset_context` 供 OpenClaw 外掛 reset hook 和 `Session.commit_async()` 使用；沒有 live messages 時也會建立邊界；若最新 archive 已是 reset 邊界則不重複建立。舊 archive 的記憶提取可以繼續完成，長期記憶保留。SDK 和 CLI 沒有專用的 `reset_context` 引數，需要時使用 HTTP API。

@@ -23,7 +23,7 @@ Admin API 用於多租戶環境下的帳戶、使用者和使用者組管理。�
 | 註冊/移除使用者 | Y | Y（本 account） | N |
 | 管理使用者組和成員 | Y | Y（本 account） | N |
 | 列出 agents（已廢棄，返回空列表） | Y | Y（本 account） | N |
-| 重新生成 User Key | Y | Y（本 account） | N |
+| 重新生成 User Key（僅 API Key 模式） | Y | Y（本 account） | N |
 | 將使用者提升為 ADMIN | Y | Y（本 account） | N |
 
 ## CLI `--sudo` 選項
@@ -440,6 +440,67 @@ PATCH 會先做結構校驗，再構造合併後的配置：未知路徑和執�
 匹配的程序內 Consumer；Consumer 失敗會記錄日誌但不會回滾已持久化的配置，因此介面成功只表示
 配置層更新成功，不保證所有派生客戶端都已完成切換。配置儲存和過載行為見[執行時配置來源與過載行為](../guides/01-configuration.md#runtime-configuration-source)。
 
+檔案儲存始終提交完整 `content` 和舊 `revision`。
+草稿預覽（`source=file&dry_run=true`）可附帶 VLM/Embedding 表單 `settings`；
+其他配置節通過完整檔案編輯。
+
+檔案含美元符號、Windows `%VAR%` 引用或轉義的美元/百分號時，讀取和預覽返回 `form_readonly: true`，不返回模型表單資料，並拒絕表單修改。請使用檔案模式編輯原文，包括帶引號和未帶引號的環境變數引用。驗證沿用啟動時對原文展開環境變數的流程，儲存不會重新序列化文件。檔案校驗會應用 CLI 啟動引數覆蓋，與重啟時的處理一致。
+
+#### 服務端重啟
+
+僅 ROOT 可以重啟通過單 worker `openviking-server` CLI 啟動的程序。
+多 worker 和嵌入式 ASGI 啟動模式不支援遠端重啟。
+
+```http
+POST /api/v1/admin/restart
+Content-Type: application/json
+X-API-Key: <root-api-key>
+
+{"revision": "<已儲存檔案的版本>"}
+```
+
+`revision` 是必填的非空字串。通過
+`GET /api/v1/admin/configuration?source=file` 獲取當前檔案版本和重啟能力；
+`result.restart` 包含 `supported`、`instance_id` 和 `restarting`。
+重啟介面不儲存配置。修改配置時，先通過
+`PATCH /api/v1/admin/configuration?source=file` 提交 `content` 和舊 `revision`，
+再將儲存響應中的新版本提交給重啟介面。
+
+服務端接受重啟前會核對當前檔案版本並校驗配置。
+版本過期或檔案無效返回 `INVALID_ARGUMENT`；啟動模式不支援或檔案不可讀返回
+`FAILED_PRECONDITION`。這些檢查失敗時不會請求重啟。
+
+接受請求後，在優雅關閉前返回 **HTTP 202**：
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "supported": true,
+    "instance_id": "current-instance-id",
+    "restarting": true
+  }
+}
+```
+
+CLI 等待現有請求結束，停止其管理的 Bot，再使用原直譯器、啟動引數、環境變數和
+工作目錄替換當前程序。接受重啟後拒絕檔案儲存請求。HTTP 202 只表示請求已接受，
+不代表服務已恢復；應輪詢檔案配置讀取介面，直到 `instance_id` 改變且
+`restarting` 為 false。外部依賴仍可能阻止啟動。如果地址、埠或 ROOT 憑證發生
+變化，需要先更新客戶端連線設定再輪詢。詳見[服務端配置](../configuration/01-server.md)。
+
+CLI 在接受重啟前儲存當前程序啟動時實際載入的檔案原文，作為獨立的私有恢復備份
+（0600，包含敏感配置）。新程序在配置載入、Bot 啟動、應用初始化或監聽埠時失敗，
+會原子恢復此前執行的配置並重新啟動一次；恢復後的配置讀取響應中
+`result.restart.rolled_back` 為 true，Studio 會提示已回滾。
+應用初始化和埠繫結成功後刪除恢復備份，不對後續執行期故障自動回滾。
+遠端重啟不能切換為多 worker；應通過部署平臺執行這種變更。
+
+恢復備份與每次儲存生成的 `.studio.bak` 不同：後者僅保留上一次儲存前的檔案，
+未必曾成功啟動。自動恢復只回滾配置檔案，不撤銷儲存或外部系統中的副作用，
+也不處理啟動卡死、程序被強制終止或機器故障。若重啟後文件被外部修改，拒絕覆蓋；
+若恢復後的配置仍無法啟動，不再重試，需要管理員在伺服器上恢復服務。
+
 #### Account Configuration 介面參考
 
 Account 配置通過建立介面的 `settings` 初始化，並通過 configuration 介面讀取和更新：
@@ -738,14 +799,15 @@ User override 並重新繼承上述預設值，請 PATCH `{"memory_policy": null
 
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
-| account_id | str | 是 | - | 工作區 ID |
+| account_id | str | 是 | - | 工作區 ID；新建檔案儲存帳戶不超過 255 個 UTF-8 位元組 |
 | admin_user_id | str | 是 | - | 首個管理員使用者 ID |
 | seed | str | 否 | `null` | 可選的確定性 API Key seed。傳入後，key secret 為 `sha256(user_id + "\0" + seed)` |
 | user_config | object | 否 | `null` | 首個管理員使用者的初始配置。支援 `add_targets.resource_uri`、`add_targets.skill_uri` 和 `memory_policy` |
 | settings | object | 否 | `null` | Account 執行時初始配置。僅 ROOT 可提交；支援 `github`、`acl`、`agent_evolution`、`vlm`、`query_planner`、`embedding` 和 `vectordb`。其中 `vectordb` 及 Embedding 建立期欄位只能在這裡設定 |
 
 **說明：**
-- 在 `trusted` 模式下，響應中不會包含 `user_key` 欄位
+- 檔案儲存帳戶建立時，超過 255 個 UTF-8 位元組的 `account_id` 會在寫入帳戶登錄檔前返回 `INVALID_ARGUMENT`。trusted 自動註冊會在請求時拒絕這類新帳戶，避免阻塞其他身份的註冊。既有帳戶和使用者仍可使用，user ID 和 peer ID 規則保持不變。
+- 在 `trusted` 模式下，只建立身份和角色，不生成個人金鑰、金鑰雜湊或金鑰索引；響應不包含 `user_key`，`seed` 不參與處理。
 - 省略 `seed` 時隨機生成 API Key。執行確定性示例前，將 `OV_KEY_SEED` 設為安全生成的秘密值；Go 示例還需匯入 `os`。不要使用短字串或可預測內容作為 seed。
 - `settings` 在帳號和目錄建立前完成結構與有效 Embedding/VectorDB 聯合校驗。校驗失敗不會留下 Account、使用者或配置檔案。
 - Account `vlm`、`query_planner`、`embedding` 和 `vectordb` 是 ROOT-only 配置；欄位 schema、生命週期和校驗見上文 [Account Configuration 介面參考](#account-configuration-介面參考)。當前 Python SDK、CLI 及其他 SDK 的建立帳號封裝尚未暴露 `settings` 引數，使用此能力請直接呼叫 HTTP API。
@@ -1140,7 +1202,7 @@ ov --sudo task status <task_id>
 | user_config | object | 否 | `null` | 新使用者的初始配置。支援 `add_targets.resource_uri`、`add_targets.skill_uri` 和 `memory_policy` |
 
 **說明：**
-- 在 `trusted` 模式下，響應中不會包含 `user_key` 欄位
+- 在 `trusted` 模式下，只建立身份和角色，不生成個人金鑰、金鑰雜湊或金鑰索引；響應不包含 `user_key`，`seed` 不參與處理。
 - 省略 `seed` 時隨機生成 API Key。執行確定性示例前，將 `OV_KEY_SEED` 設為安全生成的秘密值；Go 示例還需匯入 `os`。不要使用短字串或可預測內容作為 seed。
 - ADMIN 只能在自己所屬的 account 中註冊使用者
 - 無法通過使用者註冊介面直接建立 `"root"` 角色
@@ -1272,7 +1334,7 @@ ov admin register-user acme bob-private --role user \
 | role | str | 否 | null | 按角色過濾 |
 | query | str | 否 | null | 僅 HTTP，按使用者 ID 做不區分大小寫的字面包含匹配 |
 | include_summary | bool | 否 | false | 僅 HTTP，以物件返回分頁使用者和帳號統計 |
-| include_credentials | bool | 否 | true | 僅 HTTP。設為 false 時僅返回 `user_id`、`role` 和 `api_key_available`，不返回金鑰或字首；預設保持現有按鑑權模式返回欄位的行為。 |
+| include_credentials | bool | 否 | true | 僅 HTTP。設為 false 時僅返回 `user_id`、`role` 和 `api_key_available`，不返回金鑰或字首；僅當服務端能讀取完整 key 並用於服務端繫結時 `api_key_available` 才為 true，僅存雜湊的憑據返回 false；預設保持現有按鑑權模式返回欄位的行為。 |
 | limit | int | 否 | null | 每頁數量（≥1）。省略則返回所有匹配項 |
 | page | int | 否 | 1 | 從 1 開始的頁碼；僅在設定了 `limit` 時生效 |
 
@@ -1591,6 +1653,7 @@ ov --sudo admin set-role acme bob admin
 | seed | str | 否 | `null` | JSON request body 中可選的確定性 API Key seed。傳入後，key secret 為 `sha256(user_id + "\0" + seed)` |
 
 **說明：**
+- `trusted` 模式拒絕此操作，返回 HTTP 412（`FAILED_PRECONDITION`），不生成或修改金鑰。
 - ADMIN 只能為自己所屬的 account 中的使用者重新生成金鑰
 - 隨機生成或使用新 seed 時，舊金鑰立即失效，需要更新使用該金鑰的客戶端
 - 省略 `seed` 時隨機生成新金鑰。確定性示例使用 `OV_KEY_SEED` 或 `OV_NEW_KEY_SEED`，執行前需將其設為安全生成的秘密值；Go 示例需匯入 `os`。不要把示例變數名直接當作 seed。

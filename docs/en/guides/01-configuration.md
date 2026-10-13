@@ -53,6 +53,36 @@ Create `~/.openviking/ov.conf` in your home configuration directory:
 
 For `provider: "openai-codex"`, `vlm.api_key` is optional when Codex OAuth is already available.
 
+### Ordered credentials in ov.conf
+
+`vlm` and `query_planner` support an ordered `credentials` array. Embedding supports the same array inside each configured `dense`, `sparse`, or `hybrid` section. Index 0 has the highest priority; later entries provide failover credentials. The model sections remain JSON objects, and existing single-credential configurations remain supported.
+
+Merge the following fields into your `ov.conf`; set `PRIMARY_API_KEY` and `BACKUP_API_KEY` before starting the server:
+
+```json
+{
+  "vlm": {
+    "model": "your-vlm-model",
+    "credentials": [
+      {"id": "primary", "provider": "openai", "api_key": "${PRIMARY_API_KEY}"},
+      {"id": "backup", "provider": "openai", "api_key": "${BACKUP_API_KEY}"}
+    ]
+  },
+  "embedding": {
+    "dense": {
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "credentials": [
+        {"id": "primary", "provider": "openai", "api_key": "${PRIMARY_API_KEY}"},
+        {"id": "backup", "provider": "openai", "api_key": "${BACKUP_API_KEY}"}
+      ]
+    }
+  }
+}
+```
+
+Each credential can specify its own provider, model and connection fields; an omitted model uses the parent section's `model`. Embedding credentials must remain compatible with the parent model's vector dimension and input semantics. `query_planner.credentials` follows the VLM format. Rerank remains a single configuration and does not support a `credentials` array.
+
 ## Configuration Scope and Update Lifecycle
 
 OpenViking configuration has two layers:
@@ -880,6 +910,32 @@ For a supported file, OpenViking uploads the media to the Ark Files API without 
 
 Media processing sends file content to the configured external provider. Disabled response storage and best-effort deletion reduce unintended retention but do not replace the provider's own privacy and retention controls; uploaded files do not receive an explicit expiration time, so their retention period is determined by Ark's default policy. Ark Files storage/processing and Responses model tokens can incur provider charges, so review your provider's privacy, retention, and billing terms before enabling this feature. See the official Volcengine Ark documentation for [audio understanding](https://docs.volcengine.com/docs/82379/2377589?lang=zh) and [video understanding](https://docs.volcengine.com/docs/82379/1895586?lang=zh).
 
+### bot.compile
+
+Set the number of concurrent workers per Resource Compile task and stage, for both direct model calls and agent execution:
+
+```json
+{
+  "bot": {
+    "compile": {
+      "map_concurrency": 8,
+      "shuffle_concurrency": 4,
+      "shuffle_batch_size": 4,
+      "reduce_concurrency": 6
+    }
+  }
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `map_concurrency` | Inherits `vlm.max_concurrent` | Concurrent Map extraction jobs |
+| `shuffle_concurrency` | Inherits `vlm.max_concurrent` | Concurrent Shuffle routing jobs and embedding batches |
+| `shuffle_batch_size` | `4` | Maximum primary records per routing request, independent of concurrency and the soft character budget |
+| `reduce_concurrency` | Inherits `vlm.max_concurrent` | Concurrent Reduce jobs; final same-path candidate merges reuse this value |
+
+Concurrency values must be positive integers; omitted or `null` values inherit the default. `shuffle_batch_size` must be a positive integer, defaults to `4`, and does not accept `null`. Routing saves valid decisions individually and re-batches only failed records; the final retry uses single-record requests, with at most three rounds per record. Restart VikingBot after changing these settings. All Compile tasks within one VikingBot service still share the model-request capacity set by `vlm.max_concurrent`, so raising stage concurrency cannot exceed that total limit. Embedding requests also obey the embedding service's own concurrency limit. Recovery uses the same reduce setting by default; an explicit `--concurrency` overrides recovery concurrency.
+
 ### query_planner
 
 Optional lightweight model for retrieval intent analysis and query planning. It uses the same configuration shape as `vlm` for `search()` intent analysis, query expansion, and optional server recall-digest rewriting. If `query_planner` is omitted or empty, OpenViking falls back to `vlm` for backward compatibility.
@@ -1177,7 +1233,6 @@ Storage configuration for context data, including file storage (RAGFS) and vecto
 | `backend` | str | `"local"`, `"s3"`, or `"memory"` | `"local"` |
 | `timeout` | float | Request timeout in seconds | `10.0` |
 | `backups` | object | Multi-write storage configuration. When set, the top-level `backend` acts as the primary backend and `backups.items[]` defines backup backends | `null` |
-| `redirects` | array | File redirect policies for multi-write storage. Matching files are written to the specified backup instead of the primary backend | `[]` |
 | `queuefs` | object | QueueFS configuration. Controls the namespace mode, backend, and runtime options for `/queue` | `{ "mode": "shared", "backend": "sqlite", "recover_stale_sec": 0, "busy_timeout_ms": 5000 }` |
 | `queue_db_path` | str (optional) | Legacy compatibility field for QueueFS sqlite DB path. Superseded by `storage.agfs.queuefs.db_path`. Defaults to `{storage.workspace}/_system/queue/queue.db` when not set. Useful when the workspace volume does not support sqlite (e.g. some network filesystems) | `null` |
 | `s3` | object | S3 backend configuration (when backend is 's3') | - |
@@ -1191,7 +1246,8 @@ RAGFS uses Rust binding mode by default, directly accessing the file system thro
 
 ##### Multi-Write Storage Configuration
 
-`storage.agfs.backups` enables multi-write storage. If it is not configured, OpenViking stays in single-backend mode.
+`storage.agfs.backups` enables asynchronous V2 multi-write storage. The
+top-level backend remains the only direct read source.
 
 ```json
 {
@@ -1199,26 +1255,16 @@ RAGFS uses Rust binding mode by default, directly accessing the file system thro
     "workspace": "./data",
     "agfs": {
       "backend": "local",
-      "redirects": [
-        {
-          "type": "FileExtensionPolicy",
-          "extensions": ["(pdf|ppt|zip)"],
-          "target": ["s3-backup"]
-        }
-      ],
       "backups": {
-        "sync_type": "async",
+        "initial_partitions": 16,
+        "checkpoint_interval_secs": 86400,
+        "provider": "filesystem",
         "items": [
           {
-            "name": "s3-backup",
-            "backend": "s3",
-            "s3": {
-              "bucket": "openviking-backup",
-              "region": "cn-beijing",
-              "endpoint": "https://tos-s3-cn-beijing.volces.com",
-              "access_key": "your-ak",
-              "secret_key": "your-sk",
-              "prefix": "multi-write"
+            "name": "local-backup",
+            "backend": "local",
+            "params": {
+              "workspace": "./data/backup"
             }
           }
         ]
@@ -1232,36 +1278,14 @@ Common `backups` fields:
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `sync_type` | str | Multi-write sync mode. Supports `"async"` or `"sync"` | `"async"` |
-| `write_ack_count` | int | Number of backup acknowledgements required before a `sync` write returns | all backups |
-| `write_ack_timeout_ms` | int | Timeout in milliseconds while waiting for backup acknowledgements in `sync` mode | `null` |
-| `write_concurrency` | int | Maximum async backup write concurrency | `null` |
-| `items` | array | Backup backend list. Each item reuses normal backend configuration and adds fields such as `name`, `operations`, `excludes`, and `encryption` | `[]` |
+| `initial_partitions` | int | Initial metadata partitions; changes do not affect existing accounts | `16` |
+| `checkpoint_interval_secs` | int | Checkpoint discovery interval; minimum `60` | `86400` |
+| `provider` | str | Metadata provider: `filesystem` or top-level CacheRuntime-backed `cache` | `"filesystem"` |
+| `items` | array | Backups with `name`, `backend`, `params`, and optional `encryption` | `[]` |
 
-Common `redirects` fields:
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `type` | str | Policy type. Supports `"FileExtensionPolicy"` or `"FileOverSizePolicy"` | required |
-| `extensions` | array | Extension regex list used by `FileExtensionPolicy`, for example `["(pdf\\|ppt)"]` | `[]` |
-| `max_size_mb` | int | File size threshold in MB used by `FileOverSizePolicy` | `null` |
-| `target` | array | Backup `name` list that receives matched files | required |
-
-File-size redirect example:
-
-```json
-{
-  "type": "FileOverSizePolicy",
-  "max_size_mb": 100,
-  "target": ["s3-backup"]
-}
-```
-
-Notes:
-
-- `redirects` is configured at top-level `storage.agfs` and defines redirect policies for the primary backend.
-- `target` must reference an existing backup `name` from `backups.items[]`.
-- Files matched by redirect still appear as normal readable and listable files through the filesystem APIs.
+The Python configuration layer still accepts legacy sync, retry, operations,
+excludes, and redirects fields. It warns and removes them before calling Rust;
+the fields have no effect.
 
 See the [Multi-Write Storage Guide](./13-multi-write-storage.md) for more examples.
 
@@ -1329,9 +1353,9 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
 }
 ```
 
-The canonical configuration has no global `cache.enabled`. CacheRuntime is initialized when CacheFS or QueueFS selects `backend=cache`, or when PathLock selects `provider=cache`. Cache-backed PathLock currently requires `cache.provider=redis`; DynamicProvider is not supported for PathLock. When all modules use local providers, `cache.params` is not parsed and no Provider connection is opened.
+The canonical configuration has no global `cache.enabled`. CacheRuntime is initialized when CacheFS or QueueFS selects `backend=cache`, PathLock selects `provider=cache`, or multi-write selects `backups.provider=cache`. Cache-backed PathLock currently requires `cache.provider=redis`; DynamicProvider is not supported for PathLock. When all modules use local providers, `cache.params` is not parsed and no Provider connection is opened.
 
-This is a breaking configuration change. `storage.agfs.cache`, `storage.agfs.queuefs.backend="redis"`, and `storage.agfs.queuefs.redis` are rejected. Move Provider settings to top-level `cache.provider/cache.params`, select `cachefs.backend="cache"` or `queuefs.backend="cache"`, use Redis `mode="standalone"` instead of `singleton`, and use `rediss://` instead of `tls_enabled`.
+This is a breaking configuration change. `storage.agfs.cache`, `storage.agfs.queuefs.backend="redis"`, `storage.agfs.queuefs.redis`, and `storage.agfs.backups.provider="redis"` are rejected. Move Provider settings to top-level `cache.provider/cache.params`, select `cachefs.backend="cache"`, `queuefs.backend="cache"`, or `backups.provider="cache"`, use Redis `mode="standalone"` instead of `singleton`, and use `rediss://` instead of `tls_enabled`.
 
 ##### QueueFS Configuration
 
@@ -1792,6 +1816,10 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
     "port": 1933,
     "auth_mode": "api_key",
     "root_api_key": "your-secret-root-key",
+    "account_store": {
+      "provider": "file",
+      "params": {}
+    },
     "profile_enabled": false,
     "cors_origins": ["*"],
     "public_base_url": "https://ov.example.com",
@@ -1827,7 +1855,9 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 | `host` | str | Bind address | `127.0.0.1` |
 | `port` | int | Bind port | `1933` |
 | `auth_mode` | str / null | Built-in modes: `"dev"`, `"api_key"`, `"trusted"`, `"oidc"`, `"ldap"`. When omitted/null, infer `api_key` from a non-empty `root_api_key`; otherwise infer `dev`. | `null` |
-| `root_api_key` | str | Root API key for multi-tenant auth in `api_key` mode. In `trusted` mode it is optional on localhost, but required for any non-localhost deployment; it does not become the source of user identity | `null` |
+| `root_api_key` | str | Root API key for multi-tenant auth in `api_key` mode. In `trusted` mode it is required on every deployment, including localhost; it does not become the source of user identity | `null` |
+| `account_store.provider` | str | Complete Account store provider. The built-in `"file"` provider owns account, user, group, and API-key records while preserving the existing AGFS JSON registry and process-local lookup indexes. | `"file"` |
+| `account_store.params` | object | Provider-specific startup parameters. Framework-owned filesystem and File-provider API-key hashing dependencies cannot be overridden here. | `{}` |
 | `profile_enabled` | bool | Whether to allow request-scoped cProfile via `profile=1` on HTTP requests. When disabled, the server ignores that query parameter. When enabled, the CLI can display the returned `profile`, while the Python HTTP client currently triggers profiling but does not automatically attach the top-level `profile` field to most SDK return values. | `false` |
 | `cors_origins` | list | Allowed CORS origins | `["*"]` |
 | `public_base_url` | str | Public-facing base URL emitted in MCP-issued upload instructions. Resolution order: env var `OPENVIKING_PUBLIC_BASE_URL` → this field → `X-Forwarded-Host`/`X-Forwarded-Proto` request headers → `Host` request header → listen-address fallback. Set this (or the env var) when the server runs behind a reverse proxy that does not forward `X-Forwarded-*` headers. | `null` |
@@ -1847,7 +1877,7 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 
 Omitting `auth_mode` (or setting it to `null`) selects `api_key` when a non-empty `root_api_key` is configured, and `dev` otherwise. `dev` is allowed only on localhost and accepts requests without authentication. An empty-string `root_api_key` is invalid.
 
-Explicit `auth_mode: "api_key"` requires a non-empty `root_api_key`, including on localhost; without it, startup fails instead of falling back to development mode. Use the root key with the Admin API to create accounts and user/admin keys; use those tenant-bound keys for data access. `trusted` mode accepts account/user identity headers from a trusted gateway and does not require user-key provisioning first. Its root key is optional only on localhost and required for non-localhost binds. For role resolution, OIDC/LDAP setup, and gateway requirements, see [Authentication](04-authentication.md).
+Explicit `auth_mode: "api_key"` requires a non-empty `root_api_key`, including on localhost; without it, startup fails instead of falling back to development mode. Use the root key with the Admin API to create accounts and user/admin keys; use those tenant-bound keys for data access. `trusted` mode accepts account/user identity headers from a trusted gateway and does not require user-key provisioning first. Its root key is required for startup and every authenticated request, including on localhost. For role resolution, OIDC/LDAP setup, and gateway requirements, see [Authentication](04-authentication.md).
 
 **Large uploads.** Uploads are streamed end to end: clients send parts, the server stages them on local disk, and staging, parsing and storage copy files by path (S3 uses multipart upload above `storage.agfs.s3.multipart_threshold_bytes`), so server memory does not grow with file size. Plan for:
 
@@ -2022,7 +2052,7 @@ At-rest encryption protects newly written files with account-specific keys throu
 |-----------|------|-------------|---------|
 | `enabled` | bool | Whether encryption is enabled | `false` |
 | `provider` | str | Key provider: `"local"`, `"vault"`, or `"volcengine_kms"` | - |
-| `api_key_hashing.enabled` | bool | Whether to apply Argon2id one-way hashing to API key values (independent of file-level `enabled`); see [Encryption Guide](./08-encryption.md) | `false` |
+| `api_key_hashing.enabled` | bool | File-provider only: whether to apply Argon2id one-way hashing to API key values (independent of file-level `enabled`); see [Encryption Guide](./08-encryption.md) | `false` |
 
 ### Local (File)
 
@@ -2180,6 +2210,10 @@ This illustrates the main sections, not a complete runnable configuration or JSO
     "host": "127.0.0.1",
     "port": 1933,
     "root_api_key": "string",
+    "account_store": {
+      "provider": "file",
+      "params": {}
+    },
     "cors_origins": ["*"]
   }
 }

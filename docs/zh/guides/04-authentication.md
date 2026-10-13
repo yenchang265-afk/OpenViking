@@ -400,7 +400,6 @@ OIDC Claims: {
 | `validate_config(config)` | 在啟動時校驗 `ServerConfig`；遇到致命錯誤應呼叫 `sys.exit(1)` |
 | `initialize(app, service, config)` | 在 `app.state` 上初始化執行時狀態（如 `APIKeyManager`） |
 | `get_request_context_checks(path, identity)` | 可選的認證後路徑/身份檢查 |
-| `requires_api_key_manager()` | Admin API 路由是否需要 `APIKeyManager` |
 | `can_skip_api_key_for_bot_proxy()` | Bot 代理是否可以跳過 API Key 校驗（如 `dev` 模式） |
 
 ### 註冊自定義外掛示例
@@ -444,6 +443,8 @@ rank 用於降權檢查，不會繼承 ADMIN 的介面許可權。`require_role(
 ## 內建認證模式詳情
 
 ### Trusted 模式
+
+Trusted 模式只管理使用者身份和角色。建立帳號（包括首個管理員）和建立使用者都不生成個人金鑰、雜湊或金鑰索引；重置個人金鑰返回 HTTP 412（`FAILED_PRECONDITION`）。Studio 可選擇沒有個人金鑰的使用者；Bot 使用部署配置的 root key 認證，並單獨傳遞使用者身份。已有個人金鑰不會被自動刪除，也不用於 trusted 認證。
 
 trusted 模式的普通資料面請求無需預先註冊 user 或建立 user API Key。服務端會非同步批次註冊
 該 account/user，使其最終出現在既有 account/user 管理介面中（預設五分鐘刷盤）。註冊不會
@@ -582,18 +583,19 @@ root key 請求上攜帶身份 header。
 
 ## Trusted 模式
 
-Trusted 模式不會查詢 user key，而是直接信任每個請求顯式攜帶的身份請求頭：
+Trusted 模式使用 root API key 驗證上游，再從每個請求顯式攜帶的身份請求頭解析使用者，不查詢 user key：
 
 ```json
 {
   "server": {
     "auth_mode": "trusted",
+    "root_api_key": "your-secret-root-key",
     "host": "127.0.0.1"
   }
 }
 ```
 
-資料請求必須提供 `X-OpenViking-Account` 和 `X-OpenViking-User`。若配置了 `root_api_key`，請求還必須攜帶匹配的 API Key，以驗證上游閘道器。
+`server.root_api_key` 缺失、為空或僅含空白時拒絕啟動，localhost 也不例外。資料請求必須提供 `X-OpenViking-Account`、`X-OpenViking-User` 和匹配的 API Key，以驗證上游閘道器。匿名 `/health` 存活探測仍可使用。
 
 角色預設從已註冊使用者查詢，未註冊時為 USER。配置並驗證 root key 後，上游可用 `X-OpenViking-Role: user` 或 `admin` 斷言角色，不接受 `root`。Admin API 的 ROOT 授權來自部署 root key。
 

@@ -2,8 +2,8 @@
 
 <a href="https://openviking.ai/" target="_blank">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/volcengine/OpenViking/f5b6043d29406ec8102402868745bdc879e48f90/docs/images/readme-logo-dark.png">
-    <img alt="OpenViking" src="https://raw.githubusercontent.com/volcengine/OpenViking/f5b6043d29406ec8102402868745bdc879e48f90/docs/images/readme-logo-light.png" width="300" height="56">
+    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/volcengine/OpenViking/main/docs/images/readme-logo-dark.png">
+    <img alt="OpenViking" src="https://raw.githubusercontent.com/volcengine/OpenViking/main/docs/images/readme-logo-light.png" width="300" height="56">
   </picture>
 </a>
 
@@ -158,7 +158,7 @@ uv tool install openviking --upgrade && openviking-server init
 <details>
 <summary><strong>使用 OpenViking Service（火山引擎託管）</strong></summary>
 
-同一個 OpenViking 服務，由火山引擎替你執行。前 50 個檔案免費。在[火山引擎產品頁](https://www.volcengine.com/product/openviking-service)開通後，到控制台的「使用者管理 → API Key」建立一個 API key。服務地址是 `https://api.vikingdb.cn-beijing.volces.com/openviking`，接入 agent 時要用到它和 API key。
+同一個 OpenViking 服務，由火山引擎替你執行。前 50 個檔案免費。在[火山引擎產品頁](https://www.volcengine.com/product/openviking-service?utm_source=github&utm_medium=referral&utm_campaign=readme)開通後，到控制台的「使用者管理 → API Key」建立一個 API key。服務地址是 `https://api.vikingdb.cn-beijing.volces.com/openviking`，接入 agent 時要用到它和 API key。
 
 </details>
 
@@ -347,7 +347,7 @@ ov chat   # 在另一個終端執行
 <img src="../images/commercial-saas.png" alt="商業化 SaaS 版" width="100%" />
 
 <h3>☁️ 商業化 SaaS 版</h3>
-<p>由<a href="https://www.volcengine.com/product/openviking-service">火山引擎</a>託管和運維，提供個人版、企業版，以及開源部署的遷移工具。套餐與額度見<a href="https://docs.volcengine.com/docs/84313/2374478">服務文件</a>。中國以外地區的託管服務計劃在 <a href="https://www.byteplus.com">BytePlus</a> 上線。</p>
+<p>由<a href="https://www.volcengine.com/product/openviking-service?utm_source=github&amp;utm_medium=referral&amp;utm_campaign=readme">火山引擎</a>託管和運維，提供個人版、企業版，以及開源部署的遷移工具。套餐與額度見<a href="https://docs.volcengine.com/docs/84313/2374478">服務文件</a>。中國以外地區的託管服務計劃在 <a href="https://www.byteplus.com">BytePlus</a> 上線。</p>
 
 </td>
 <td width="50%" valign="top">

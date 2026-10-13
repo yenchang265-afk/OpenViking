@@ -149,6 +149,7 @@ describe("OpenVikingClient", () => {
       sourceMessageIds: ["user-1"],
     });
     await client.commitSession("session-1", {
+      enableWorkingMemory: true,
       retentionMode: "turn_budget",
       keepRecentTurnCount: 3,
       retainedMessageTokenBudget: 12_000,
@@ -163,6 +164,7 @@ describe("OpenVikingClient", () => {
       source_message_ids: ["user-1"],
     });
     expect(JSON.parse(String(fetcher.mock.calls[1]![1]?.body))).toEqual({
+      enable_working_memory: true,
       retention_mode: "turn_budget",
       keep_recent_turn_count: 3,
       retained_message_token_budget: 12_000,
@@ -551,9 +553,15 @@ describe("OpenVikingClient", () => {
           uri: "resources/project/a.txt",
           content: "hello",
           mode: "upsert",
+          tags: ["team=search"],
+          tagMode: "append",
+          acl: {
+            acl_mode: "restricted",
+            entries: [{ principal: "group:engineering", level: "write" }],
+          },
         },
       ],
-      { extra: { future_flag: 0 } },
+      { processingMode: "vectors_only", extra: { future_flag: 0 } },
     );
     await expect(
       client.downloadBytes("resources/project/a.txt"),
@@ -573,8 +581,15 @@ describe("OpenVikingClient", () => {
         uri: "viking://resources/project/a.txt",
         content: "hello",
         mode: "upsert",
+        tags: ["team=search"],
+        tag_mode: "append",
+        acl: {
+          acl_mode: "restricted",
+          entries: [{ principal: "group:engineering", level: "write" }],
+        },
       },
     ]);
+    expect(batchWriteBody.processing_mode).toBe("vectors_only");
     expect(
       new URL(String(fetcher.mock.calls[1]![0])).searchParams.get("uri"),
     ).toBe("viking://resources/project/a.txt");

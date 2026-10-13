@@ -1,134 +1,45 @@
 # 主備儲存
 
-主備儲存（multi-write）讓 OpenViking 在一個統一的檔案系統抽象下，同時使用一個主儲存和多個備份儲存。它可用於儲存副本（包括跨地域副本）、配置讀路由和遷移儲存；不會自動把 backup 提升為 primary。
+V2 多寫以一個 primary backend 作為業務真相，並把檔案複製到配置的 backup。
 
-從 API 使用者視角看，`read()`、`write()`、`ls()`、`stat()` 等介面不變。主備儲存邏輯位於 RAGFS 內部，呼叫方不需要關心檔案最終落在哪個底層後端。
+## 讀寫模型
 
-## 核心模型
+- 所有直接讀取只訪問 primary。backup 不參與業務讀取。
+- primary 變更成功後立即返回。
+- metadata 持久化和 backup 應用在後臺非同步執行。
+- backup 落後不會改變 primary 已返回的結果。
+- 多寫 metadata 只儲存在 primary。
 
-主備儲存由一個 primary 和多個 backup 組成：
+該模型是最終一致。程序可能在 primary 成功和事件持久化之間崩潰，導致該次
+複製事件丟失。發生此情況後，需要從 primary 重建受影響的 backup。
 
-| 角色 | 配置位置 | 說明 |
-| --- | --- | --- |
-| primary | `storage.agfs.backend` | 權威寫入目標，也是讀取兜底 |
-| backup | `storage.agfs.backups.items[]` | 接收復制寫入，可選參與讀取 |
+## Metadata 模型
 
-沒有配置 `backups` 時，OpenViking 繼續使用原有單後端模式。
+每個 account 使用固定數量的 metadata partition。事件路由到一個 partition，
+追加到 segment log，再由每個 backup 獨立消費。Checkpoint 壓縮舊歷史，GC
+清理不再需要的 metadata。
 
-## 寫入路徑
+`initial_partitions` 僅在 account metadata 首次建立時決定 partition 數量。
+已有 account 始終使用持久化的 partition 數量和 routes，修改配置不會改變
+現有佈局。本期不支援擴容或縮容。
 
-預設情況下，寫入先落到 primary，再複製到 write-enabled backup。
+## 首次啟用匯入
 
-```text
-Client
-  -> OpenViking API
-  -> RAGFS MultiWrite
-  -> primary
-  -> backup1 / backup2 / ...
-```
+`.multiwrite.json` 不存在時，啟動流程建立 `V2/migrating` 狀態，先啟用前臺
+V2 事件提交，再在後臺匯入 primary 當前檔案。匯入成功後切換為 `stable`。
+匯入不會刪除 backup 中多餘的舊檔案。
 
-backup 未配置 `operations` 時預設參與寫入。這樣可以用最少配置得到冷備能力。
+舊多寫協議和舊遷移欄位直接拒絕，不執行轉換或解釋。
 
-## 同步模式
+## 運維
 
-主備儲存支援兩種一致性模式。
-
-| 模式 | 配置值 | 行為 | 適用場景 |
-| --- | --- | --- | --- |
-| 非同步複製 | `async` | primary 寫成功後立即返回，backup 後臺同步 | 低延遲寫入、最終一致 |
-| 同步複製 | `sync` | primary 寫成功後等待 backup 確認 | 更強寫入確認、可接受額外延遲 |
-
-非同步模式下，backup 可能落後於 primary，恢復時間取決於後端可用性和重試結果。同步模式下，可以通過 `write_ack_count` 和 `write_ack_timeout_ms` 控制需要等待多少 backup 確認，以及等待多久。
-
-同步模式未達到所需確認數時會返回錯誤，但 primary 可能已經寫入成功，不會因此自動回滾。未確認的 backup 仍會在後臺重試；同步狀態的檢查方法見[主備儲存指南](../guides/13-multi-write-storage.md)。
-
-## 讀取路徑
-
-讀取不會預設訪問所有 backup。只有顯式宣告 `read` 操作的 backup 才會進入讀路由。
-
-讀取順序如下：
-
-```text
-1. 按 priority 升序訪問 read-enabled backup
-2. 回退到 primary
-3. 如果檔案被 redirect，則訪問 redirect target
-4. 仍未命中則返回 NotFound
-```
-
-這種設計避免冷備節點預設參與讀取，降低讀到舊資料的風險。
-
-## Redirect
-
-Redirect 表示“某些檔案不寫入 primary，而是寫入指定 backup”。
-
-常見用途：
-
-- 大檔案進入物件儲存。
-- 特定字尾檔案進入專門 backend。
-- 主儲存只儲存常規內容，特殊檔案由其他 backend 儲存。
-
-Redirect 策略配置在 primary 上。命中策略後，OpenViking 會把對映記錄到內部後設資料中。使用者執行 `ls()`、`stat()`、`read()` 時仍能看到正常的檔案系統檢視。
-
-## Exclude
-
-Exclude 表示“某個 backup 不接收匹配的檔案”。
-
-常見用途：
-
-- 記憶體或快取 backend 不儲存大檔案。
-- 某個 backup 只儲存文本類資源。
-- 某個低成本 backend 排除臨時或超大檔案。
-
-Exclude 策略配置在 backup 上，隻影響該 backup 是否接收寫入。
-
-## 內部後設資料
-
-主備儲存使用兩個內部後設資料檔案：
-
-| 文件 | 作用 |
-| --- | --- |
-| `.redirect.json` | 記錄 redirect 檔案對應的目標 backend |
-| `.sync_log.json` | 記錄每個檔案的同步版本和 backup 確認進度 |
-
-這些檔案對普通使用者不可見，不會出現在常規列表結果中，也不應通過公開 API 直接讀寫。
-
-如果 primary 開啟靜態資料加密，這些內部後設資料也會跟隨 primary 加密策略寫入。
-
-## 加密關係
-
-主備儲存不會改變 OpenViking 的透明加密模型。
-
-規則如下：
-
-- Python 層和公共 API 不感知加密實現。
-- primary 在全域加密開啟時必須加密。
-- backup 可以獨立決定是否加密。
-- 內部後設資料必須走 primary 的加密入口。
-
-這意味著啟用主備儲存後，呼叫方式仍然不變；只需要通過配置決定每個 backend 的加密策略。
-
-## 與 OVPack 的關係
-
-主備儲存只負責“啟用之後的新寫入”。它不會自動同步啟用之前已經存在於 primary 中的歷史檔案。
-
-如果要遷移存量資料，推薦流程是：
-
-1. 暫停寫入或安排可核對的增量補齊視窗，再使用 OVPack 或其他受控方式遷移存量。
-2. 校驗目標 backend 資料。
-3. 啟用主備儲存配置。
-4. 補齊遷移期間的變更並驗證同步狀態後恢復寫入；後續新增和修改由主備儲存複製。
-
-## 限制
-
-- 非同步模式下 backup 可能落後；讀取 backup 時不能假設已經看到最新寫入。
-- 啟用主備儲存前的歷史檔案需要單獨遷移或回填。
-- redirect 檔案依賴內部後設資料恢復目錄檢視。
-- 多程序同時寫同一 primary 時，需要未來的分散式後設資料鎖能力。
-- 熱點目錄會頻繁更新內部後設資料，可能帶來額外寫放大。
+V2 不提供同步狀態或手工重試 API 和 CLI 命令。請使用多寫 Prometheus 指標
+觀察佇列深度、worker 失敗、backup lag、協議版本和協議狀態。
 
 ## 相關文件
 
 - [儲存架構](./05-storage.md)
+- [指標](./12-metrics.md)
 - [配置指南](../guides/01-configuration.md)
-- [主備儲存指南](../guides/13-multi-write-storage.md)
+- [多寫儲存指南](../guides/13-multi-write-storage.md)
 - [OVPack 匯入匯出](../guides/09-ovpack.md)

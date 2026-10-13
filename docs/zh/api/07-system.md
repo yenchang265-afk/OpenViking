@@ -1,6 +1,7 @@
 # 系統狀態
 
-OpenViking 系統 API 提供健康檢查、就緒檢查、一致性檢查和主備後端同步狀態。元件級觀測和 Prometheus 指標分別提供獨立文件。
+OpenViking 系統 API 提供健康檢查、就緒檢查、一致性檢查和後臺處理狀態。
+元件級觀測和 Prometheus 指標分別提供獨立文件。
 
 ## API 參考
 
@@ -11,9 +12,8 @@ OpenViking 系統 API 提供健康檢查、就緒檢查、一致性檢查和主�
 基礎存活檢查，無需認證。返回版本號、健康狀態和認證模式。提供憑據後會嘗試解析身份，成功時補充身份欄位；憑據無效時返回認證錯誤。
 
 Trusted 模式下，完整的 `X-OpenViking-Account` 和 `X-OpenViking-User` 請求頭會觸發身份解析，
-包括省略 `root_api_key` 的 localhost 部署。配置了 Root 金鑰的服務繼續校驗認證請求中的金鑰。
-可選布林欄位 `root_api_key_required` 表示 Trusted 服務配置的金鑰要求，解析得到的 `role`
-表示呼叫者許可權。較早版本可能省略該欄位。匿名健康探測返回基礎存活資訊。
+必須攜帶匹配的 root API key，localhost 也不例外。Trusted 模式的 `root_api_key_required`
+始終為 `true`，解析得到的 `role` 表示呼叫者許可權。匿名健康探測返回基礎存活資訊，不包含身份欄位。
 
 **程式碼入口**:
 - `openviking/server/routers/system.py:health_check` - HTTP 路由
@@ -407,99 +407,6 @@ ov system wait --timeout 60
   }
 }
 ```
-
----
-
-### backend_sync_status()
-
-查詢指定 Viking URI 子樹在主備儲存後端之間的同步狀態。該介面要求 ROOT 或 ADMIN 許可權。
-
-**HTTP API**
-
-```http
-POST /api/v1/system/backend/sync-status
-Content-Type: application/json
-```
-
-```bash
-curl -X POST http://localhost:1933/api/v1/system/backend/sync-status \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-admin-key" \
-  -d '{"uri":"viking://resources"}'
-```
-
-也可以使用 URI 路徑形式：
-
-```http
-GET /api/v1/system/sync/{sync_path}
-```
-
-**CLI**
-
-```bash
-ov system backend sync-status viking://resources
-```
-
-**響應示例**
-
-```json
-{
-  "status": "ok",
-  "result": {
-    "path": "viking://resources",
-    "entry_count": 12
-  }
-}
-```
-
-`result` 由當前檔案系統後端返回；`path` 標識查詢範圍，`entry_count` 表示該範圍內的同步記錄數。具體後端可能附加待同步、失敗記錄等診斷欄位。
-
-### backend_sync_retry()
-
-重試指定 URI 子樹中尚未完成的主備後端同步工作。該介面要求 ROOT 或 ADMIN 許可權。
-
-**HTTP API**
-
-```http
-POST /api/v1/system/backend/sync-retry
-Content-Type: application/json
-```
-
-```bash
-curl -X POST http://localhost:1933/api/v1/system/backend/sync-retry \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-admin-key" \
-  -d '{"uri":"viking://resources"}'
-```
-
-URI 路徑形式為：
-
-```http
-POST /api/v1/system/sync/{sync_path}/retry
-```
-
-**CLI**
-
-```bash
-ov system backend sync-retry viking://resources
-```
-
-**響應示例**
-
-```json
-{
-  "status": "ok",
-  "result": {
-    "path": "viking://resources",
-    "retried": 2,
-    "failed": 0
-  }
-}
-```
-
-`retried` 是本次重新排程的記錄數，`failed` 是重試排程失敗的記錄數；具體後端可能附加額外診斷欄位。
-
-公共 Python、TypeScript 和 Go SDK 當前沒有主備後端同步方法，因此以上小節只展示 HTTP 和 CLI Tab。
 
 ---
 

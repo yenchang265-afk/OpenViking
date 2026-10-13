@@ -137,6 +137,14 @@ GET /api/v1/compile/capabilities
 
 配置不可用時，在結果中返回 `can_create: false`，不會因此返回 HTTP 錯誤。此介面僅檢查配置和憑證，不探測執行後端的健康狀態，也不校驗具體 Compile 請求。
 
+### Compile 路由向量
+
+`POST /api/v1/compile/embeddings` 使用當前認證上下文生成臨時路由文本的向量，不建立索引或保留文本。
+
+請求體：必填 `target_uri`（已存在且有讀取許可權的資源或 Skill 名稱空間目標）；可選 `texts`（字串陣列，預設 `[]`，最多 32 條，每條 1–1024 個字元且不能僅含空白）；可選 `expected_model`（模型指紋，非空值必須與當前模型一致）。
+
+返回 `200 OK`，包含 `status: "ok"` 和 `result: {"model": "...", "vectors": [...]}`。向量按輸入順序排列；`texts` 為空時僅返回模型指紋和空向量陣列。
+
 ### 按提交鍵查詢任務
 
 ```http

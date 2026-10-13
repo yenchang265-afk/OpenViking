@@ -30,6 +30,7 @@ const activity = {
       placeholder: '輸入訊息...',
       emptyState: '選擇或建立一個會話開始聊天。',
       thinking: '思考中...',
+      generating: '生成中',
       reasoning: '思考過程',
       iteration: '第 {{count}} 輪',
       toolCall: '工具呼叫',

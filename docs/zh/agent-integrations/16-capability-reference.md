@@ -54,15 +54,18 @@
 | ZCode | 是，帶會話 | profile、記憶索引、skill | 每輪 | 沒有退出事件；每輪已提交 | 沒有壓縮前事件 |
 | Kimi Code | 是，帶會話 | profile、記憶索引、skill，在首次提問時 | 每捕獲 8 條訊息 | 僅當 `SessionEnd` 捕獲到新訊息 | 提交新捕獲的訊息 |
 | OpenCode | 是，帶會話 | profile、記憶索引、skill、已索引的倉庫 | 空閒時，待提交 token 達到 20,000 | 是，在宿主的清理時限內 | 在壓縮前後提交 |
-| DSH | 是，帶會話 | profile、記憶索引、skill，每個會話一次 | 待提交 token 達到 20,000 | 是，預算 3 秒 | 未觀察到 |
+| DSH | 是，帶會話 | profile、記憶索引、skill，每個會話一次 | 待提交 token 達到 20,000 | 是，預算 3 秒 | 先提交，再由宿主摘要 |
 | pi | 是，帶會話 | profile、記憶索引、skill，每輪 | takeover 開：約 30,000 token；關：20,000 | takeover 開：否；關：是 | takeover 替換 pi 的摘要 |
-| OpenClaw | 是，不帶會話 | 無 | token 預算的一半（預設 64,000） | 否 | 外掛接管壓縮 |
+| OpenClaw | 是，帶會話 | profile，每輪 | token 預算的一半（預設 64,000） | 否 | 外掛接管壓縮 |
 | Hermes（內建） | 是，帶會話，有回退路徑 | profile 與記憶清單 | 否；只在會話邊界 | 是，前提是待上傳內容在 10 秒內完成 | fork 型壓縮時提交 |
 | ov CLI | 否 | 否 | 只有 `ov session commit` | 不適用 | 不適用 |
 
+標為 **Hermes（內建）** 的行描述舊版 Hermes 中固定提交的內建 provider。
+使用目錄外掛的版本會載入外部外掛，其不同的生命週期行為見 [Hermes](#hermes)。
+
 表格說明：
 
-- **帶會話的召回**會發送會話 ID，服務端藉助對話內容理解查詢。共享外掛的 context 模式還會擴寫查詢，並記錄最近注入過的記憶，避免重複注入。Hermes 用 list 模式，沒有注入臺帳；OpenClaw 用 `/find`，該介面沒有會話欄位。請求路徑和回退見[召回請求如何到達服務端](#召回請求如何到達服務端)。
+- **帶會話的召回**會發送會話 ID，服務端藉助對話內容理解查詢。共享外掛的 context 模式還會擴寫查詢，並記錄最近注入過的記憶，避免重複注入。Hermes 用 list 模式，沒有注入臺帳。OpenClaw 用 context search 併發送會話 ID，但關閉去重，因為它注入的上下文每輪重建，不寫入歷史。請求路徑和回退見[召回請求如何到達服務端](#召回請求如何到達服務端)。
 - **待提交 token** 是服務端統計的、已捕獲但未提交的訊息量。多數閾值是客戶端設定，見[各整合何時提交](#各整合何時提交)。
 - **正常退出時提交**指整合會發出提交請求。網路錯誤、宿主的退出時限或程序被終止仍可能打斷它。Ctrl+C、訊號和崩潰見[退出時會發生什麼](#退出時會發生什麼)。
 
@@ -87,7 +90,7 @@
 
 使用前需要了解的行為：
 
-- **`remember`** 會建立一個名為 `mcp-store-<id>` 的一次性會話，寫入訊息後立即提交。它是唯一會提交的 MCP 工具。沒有任何 MCP 工具會提交 Agent 當前的對話，那是自動 hook 的工作。
+- **`remember`** 會建立一個名為 `mcp-store-<id>` 的一次性會話，寫入訊息後立即提交。它是唯一會提交的 MCP 工具。提交被接受後它立刻返回，結果裡帶後臺記憶提取任務的 `task_id`；提取過程再決定新建或更新哪些記憶。沒有任何 MCP 工具會提交 Agent 當前的對話，那是自動 hook 的工作。
 - **`find` 與 `search`**：`find` 是不帶會話上下文的快速檢索。`search` 可以傳 `session_id`，並做意圖分析（`retrieval.enable_intent`，預設開啟）。`find` 傳 `context_type="skill"` 時，每個 skill 包只返回一條命中，指向它的 `SKILL.md`，範圍包括使用者自己的和帳戶共享的 skill。
 - **`write` 與 `edit`** 只能寫 `viking://resources`、`viking://user` 和 `viking://agent`。新檔案的副檔名必須是 `.md`、`.txt`、`.json`、`.yaml`、`.yml`、`.toml`、`.py`、`.js` 或 `.ts`。使用者的 `skills/`、`peers/`、`privacy/` 和 `sessions/` 目錄只讀。寫入 `viking://agent/skills` 不會被拒絕，但會跳過 skill 安裝流程，skill 請用 `add_skill`。
 - **`add_resource` 傳本地路徑**時返回一個簽名上傳 URL（預設 600 秒有效）。模型需要把檔案上傳到這個 URL，例如用一條 shell 命令；上傳後自動開始入庫。遠端 URL 會直接入庫。
@@ -186,7 +189,7 @@ skill 走單獨的路徑。建立、安裝或替換 skill 用 MCP `add_skill` �
 | OpenCode | v1：每次 `chat.message`；v2：每次提問 | 訊息的文本部分 | v1 在訊息前插入一個合成 part。v2 把結果存進訊息 metadata，每個模型 step 在該訊息前注入，不發新請求 |
 | DSH | `agent/pre-step` | 本批認領的所有訊息，去掉自身注入的內容 | 追加為一條使用者訊息 |
 | pi | 在 `before_agent_start` 排隊，在 `context` 事件中執行 | 提問 | 前置到最後一條真實使用者訊息，本輪提問拿到本輪的記憶 |
-| OpenClaw | 上下文組裝時 | 最後一條使用者訊息，清洗後截到 4,000 字元 | `<relevant-memories>`，前置到最後一條使用者訊息 |
+| OpenClaw | 上下文組裝時 | 傳入的提問，清洗後截到 4,000 字元 | `<relevant-memories>`，放在 system prompt 中，每輪重建。宿主不傳提問時前置到最後一條使用者訊息 |
 | Hermes | 每次模型呼叫前 | 5 個字元及以上的使用者輸入，去掉 skill 腳手架 | `<memory-context>`，只追加到本次請求中的當前使用者訊息，不寫入儲存 |
 
 <a id="_3-2-3-profile-開場注入"></a>
@@ -220,7 +223,7 @@ skill 走單獨的路徑。建立、安裝或替換 skill 用 MCP `add_skill` �
 | OpenCode | 每個會話的第一條訊息；失敗後不重試，子代理會話跳過。已索引倉庫的列表同時進入 system prompt |
 | DSH | 每個會話一次；壓縮後不再發送 |
 | pi | 放在 system prompt 中，每輪重建 |
-| OpenClaw | 不注入 |
+| OpenClaw | 放在 system prompt 中，每輪重建：`<user-profile>` 包含使用者的 profile，設定了 `peer_role` 時還包含當前 actor peer 的 profile。不注入記憶索引和 skill 清單 |
 | Hermes | 用自己的讀取邏輯載入 profile 及 preferences、entities 清單，預設預算 6,000 token |
 
 預算與限制：
@@ -246,7 +249,7 @@ skill 走單獨的路徑。建立、安裝或替換 skill 用 MCP `add_skill` �
 | OpenCode | 30 秒 |
 | DSH | 10 秒，開啟查詢擴寫時至少 15 秒。召回會阻塞 pre-step |
 | pi | 15 秒 |
-| OpenClaw | 整個召回 5 秒，含 500 ms 健康檢查。預設 `recallPreferAbstract=false` 時每條記憶多一次 read，預算內最多一次 find 和六次 read |
+| OpenClaw | context search 預設 15 秒（`autoRecallTimeoutMs`），之前有一次 500 ms 健康檢查 |
 | Hermes | 總計 4 秒，單請求 3 秒；可配置 |
 
 OpenClaw 和 Hermes 把注入的召回內容限制在 4,000 字元，放不下的條目整條跳過，不截斷。
@@ -293,7 +296,7 @@ Claude Code 和 Codex 預設 `auto`，其他整合預設 `off`。支援服務端
 
 - **會話隱式建立**。服務端收到某個會話的第一條訊息時建立該會話；帶該會話 ID 的第一次 context 模式召回也會建立。DSH 是唯一顯式建立會話的整合。
 - **提交分兩個階段**。`POST /api/v1/sessions/{id}/commit` 在第一階段歸檔訊息後返回。響應中帶有第二階段（記憶抽取）的 `task_id`，抽取在後臺執行。提交請求成功不代表抽取已經完成。
-- **`keep_recent_count`** 決定提交後會話中保留多少條最近的訊息。服務端預設 0，即全部歸檔。Claude Code、Codex、OpenCode 和 DSH 在閾值提交時傳送 10；Cursor、TRAE、TRAE CN、ZCode 和 Hermes 傳送 0；pi 在 takeover 模式下發送最近 3 個使用者輪對應的確切訊息數，其他情況傳送 10；OpenClaw 在閾值提交時傳送 10，在 reset、`memory_store` 和壓縮時傳送 0。
+- **`keep_recent_count`** 決定提交後會話中保留多少條最近的訊息。服務端預設 0，即全部歸檔。Claude Code、Codex、OpenCode、DSH、Cursor、TRAE、TRAE CN、ZCode 和 Hermes 傳送 0；pi 在 takeover 模式下發送最近 3 個使用者輪對應的確切訊息數，其他情況傳送 0；OpenClaw 在閾值提交時傳送 10，在 reset、`memory_store` 和壓縮時傳送 0。
 - **服務端自動提交預設關閉**。`memory.session_auto_commit.enabled` 預設 `false`，關閉時空閒掃描器不會啟動。新會話仍可以從 `server.user_config_defaults.auto_commit_policy` 獲得策略，也可以通過 `POST /api/v1/sessions`、`PATCH /api/v1/sessions/{id}/config`、SDK，或 `ov session new --auto-commit-policy-json` 與 `ov session config set` 顯式設定。策略的預設值是：待提交 token 150,000（嚴格大於）、100 條訊息、86,400 秒空閒超時、`keep_recent_count` 0、無最小間隔。空閒超時還需要 `memory.session_auto_commit.enabled=true`。記憶外掛不傳送策略，所以沒有上述設定時，只有客戶端會提交。
 - **批次寫入**。共享外掛每次 `POST /messages/batch` 最多傳送 100 條訊息，與服務端上限一致；批次介面返回 404 或 405 時改為逐條傳送。
 - **大塊工具輸出單獨存放**。服務端把超過 20,000 字元的工具輸出移到單獨的記錄中，留下 `tool_output_ref`。外掛把自己的上限（`captureToolMaxChars`）提高到 1,000,000，只作為兜底。
@@ -315,7 +318,7 @@ Claude Code 和 Codex 預設 `auto`，其他整合預設 `off`。支援服務端
 | ZCode | 每個 `Stop`；漏掉的 `Stop` 對應的輪次，在下一個 `Stop` 從 rollout 檔案補齊 | 無 | 沒有壓縮前事件 |
 | Kimi Code | 距上次提交捕獲滿 8 條訊息時，在 `Stop` 提交 | `SessionEnd` 和 `Interrupt` 捕獲到新訊息時提交 | `PreCompact` 捕獲到新訊息時提交 |
 | OpenCode | v1 `session.idle`、v2 執行結束時：待提交 token 達到 20,000 | 刪除會話、v1 `session.error`、v1 dispose 和 v2 cleanup 強制提交 | v1 在壓縮前後各一次；v2 在壓縮結束後一次 |
-| DSH | `turn/end` 時待提交 token 達到 20,000 | Cordis teardown 提交每個會話 | 無 |
+| DSH | `turn/end` 時待提交 token 達到 20,000 | Cordis teardown 提交每個會話 | `compaction/start` 提交，跳過閾值檢查 |
 | pi，takeover 開（預設） | 本地估算達到 30,000 token，且使用者輪多於 3 個 | `/viking commit` | `session_before_compact` |
 | pi，takeover 關 | 每次同步後待提交 token 達到 20,000 | `session_shutdown` 和 `/viking commit` | `session_before_compact` |
 | OpenClaw | 每輪結束後達到 `tokenBudget × commitTokenThresholdRatio`（預設 128,000 × 0.5） | `/new`、`/reset` 和 `memory_store` 提交併等待 | `compact()` 提交，並最多等待 5 分鐘完成抽取 |
@@ -392,7 +395,7 @@ Claude Code 和 Codex 預設 `auto`，其他整合預設 `off`。支援服務端
 | TRAE、TRAE CN、ZCode | 宿主摘要 | 沒有壓縮前事件 | 無 |
 | Kimi Code | 宿主摘要 | `PreCompact` 提交新捕獲的訊息 | 無 |
 | OpenCode | 宿主摘要 | v1 重新整理並提交；v2 捕獲 transcript | v1 在 `session.compacted` 時再提交一次；v2 在 `session.compaction.ended` 後提交 |
-| DSH | 未觀察到 | 無。注入的上下文是一條使用者訊息，隨宿主壓縮一起縮減；profile 不再發送 | 無 |
+| DSH | 宿主摘要 | `compaction/start` 無論 token 閾值如何都會提交。注入的上下文是一條使用者訊息，隨宿主壓縮一起縮減；profile 不再發送 | 無 |
 | pi | takeover，預設開啟 | 提交併等待歸檔概覽 | 用概覽替換 pi 的摘要；失敗時 pi 照常壓縮 |
 | OpenClaw | 外掛接管壓縮 | `compact()` 提交併等待 | 下一次上下文組裝從服務端重建歷史 |
 | Hermes（內建） | 宿主摘要 | fork 型壓縮提交舊會話；原地壓縮不做任何處理 | 無 |
@@ -666,10 +669,20 @@ Claude Code、Codex、Cursor、TRAE、ZCode、Kimi Code、DSH 和 pi 還會安�
 
 ### Hermes
 
-[Hermes](./05-hermes.md)。Hermes 有兩個 OpenViking memory provider，都以 provider 名 `openviking` 註冊：
+[Hermes](./05-hermes.md)。Hermes 通過兩種分發方式提供名為 `openviking` 的
+memory provider：
 
-- **內建 provider** 位於 Hermes 的 `plugins/memory/openviking`，無需安裝，用 `hermes memory setup openviking` 配置。本頁的 Hermes 行描述的是 [Hermes 提交 `989798c`](https://github.com/NousResearch/hermes-agent/tree/989798cd5e691230b54b2ea72e5937b68133014c/plugins/memory/openviking) 時的內建 provider。
-- **外部外掛**在本倉庫的 [`examples/hermes-plugin`](https://github.com/volcengine/OpenViking/tree/main/examples/hermes-plugin) 維護，用 `hermes plugins install` 安裝。據其 README，仍內建該 provider 的 Hermes 版本會載入內建副本，外部外掛要在內建副本移除後才生效。配置和已存資料可以沿用。
+- **目錄外掛**在本倉庫的
+  [`examples/hermes-plugin`](https://github.com/volcengine/OpenViking/tree/main/examples/hermes-plugin)
+  中維護。先執行 `hermes plugins install openviking --enable`，再執行
+  `hermes memory setup openviking`。
+- **內建 provider** 存在於舊版 Hermes 的 `plugins/memory/openviking` 中，
+  無需安裝。本頁的 Hermes 行描述
+  [Hermes 提交 `989798c`](https://github.com/NousResearch/hermes-agent/tree/989798cd5e691230b54b2ea72e5937b68133014c/plugins/memory/openviking)
+  時的內建 provider。
+
+仍包含內建 provider 的版本會優先載入內建副本。當更新移除內建副本時，已配置
+OpenViking 的 profile 會自動嘗試安裝目錄外掛。provider 名、配置和已存資料均保持不變。
 
 兩者是獨立的程式碼庫。行為差異如下：
 
@@ -681,7 +694,7 @@ Claude Code、Codex、Cursor、TRAE、ZCode、Kimi Code、DSH 和 pi 還會安�
 | `viking_forget` | 帶明確使用者 ID 的使用者記憶檔案 | 還接受 `viking://~/`，拒絕不帶使用者 ID 的路徑，刪除前檢查歸屬 |
 | cron、子代理和 flush 上下文 | 該提交中沒有說明 | 召回可用；跳過自動寫入和映象 |
 
-內建 provider 的行為：
+上述固定提交中內建 provider 的行為：
 
 - 每次模型呼叫前召回，走帶會話的 `search/search`，以 `/find` 作為回退。預設值：6 條結果、分數閾值 0.15、4,000 字元、總計 4 秒、單請求 3 秒。
 - `viking_remember` 把事實原樣通過獨立會話傳送並提交，返回 `status: submitted`。
@@ -787,7 +800,8 @@ CLI 提供而外掛沒有的能力：多個 `ovcli.conf` profile、帳戶與使�
 - hook 宿主：`examples/agent-hook-plugin/hosts/`，對應 Cursor、TRAE、ZCode 和 Kimi Code。
 - pi takeover：`examples/pi-coding-agent-extension/lib/takeover-core.mjs`。
 - OpenClaw 工具和生命週期 hook：`examples/openclaw-plugin/registries/openviking-tools.ts` 和 `examples/openclaw-plugin/plugin/openviking-lifecycle-hooks.ts`。
-- Hermes：[Hermes](#hermes) 中連結的固定 Hermes 提交裡的內建 provider，以及外部外掛的 [README](https://github.com/volcengine/OpenViking/blob/main/examples/hermes-plugin/README.md)。
+- Hermes：[Hermes](#hermes) 中連結的舊版內建 provider 固定提交，以及目錄外掛的
+  [README](https://github.com/volcengine/OpenViking/blob/main/examples/hermes-plugin/README.md)。
 
 ## 參見
 

@@ -107,7 +107,12 @@ export const sections: DocSection[] = [
         p('agent-integrations/15-agent-plugins'),
         p('agent-integrations/09-log-ingestion'),
         p('agent-integrations/19-recall-tuning'),
-        p('agent-integrations/18-plugin-development')
+        p('agent-integrations/18-plugin-development'),
+        p('guides/working-memory-default-off')
+      ]),
+      g('OpenViking Gateway', 'OpenViking 閘道器', [
+        p('guides/15-gateway'),
+        p('guides/22-gateway-operations')
       ]),
       g('VikingBot', 'VikingBot', [
         p('guides/17-vikingbot'),
@@ -210,6 +215,7 @@ export const sections: DocSection[] = [
       ]),
       g('Administration and operations APIs', '管理與運維 API', [
         p('api/08-admin'),
+        p('api/25-gateway'),
         p('api/12-acl'),
         p('api/10-privacy'),
         p('api/07-system'),

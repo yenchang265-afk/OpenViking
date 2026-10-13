@@ -54,10 +54,10 @@ AGFS 提供 POSIX 風格的檔案操作，支援多種後端。
 
 預設情況下，AGFS 使用一個後端作為內容儲存。配置 `storage.agfs.backups` 後，OpenViking 會啟用主備模式：
 
-- 頂層 `storage.agfs.backend` 是 primary，作為權威寫入目標。
-- `storage.agfs.backups.items[]` 是 backup，用於副本、遷移或讀加速。
+- 頂層 `storage.agfs.backend` 是 primary，也是唯一直接讀取來源。
+- `storage.agfs.backups.items[]` 是後臺非同步更新的 backup。
 - Python SDK、HTTP API 和 CLI 的檔案系統介面保持不變。
-- 主備儲存內部使用 `.redirect.json` 和 `.sync_log.json` 維護 redirect 對映與同步進度，這些檔案對使用者不可見。
+- V2 metadata 分割槽儲存，並且只儲存在 primary。
 
 更多概念說明見 [主備儲存](./14-multi-write-storage.md)，配置示例見 [主備儲存指南](../guides/13-multi-write-storage.md)。
 
@@ -160,5 +160,5 @@ client.mv(
 - [架構概述](./01-architecture.md) - 系統整體架構
 - [上下文層級](./03-context-layers.md) - L0/L1/L2 模型
 - [Viking URI](./04-viking-uri.md) - URI 規範
-- [主備儲存](./14-multi-write-storage.md) - primary/backup、主備路由與一致性
+- [多寫儲存](./14-multi-write-storage.md) - V2 primary 與 backup 一致性
 - [檢索機制](./07-retrieval.md) - 檢索流程詳解

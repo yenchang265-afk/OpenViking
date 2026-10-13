@@ -4,28 +4,9 @@
 
 原始碼：[examples/opencode-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)
 
-工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
-
-## 前置條件
-
-- [OpenCode](https://opencode.ai/) 1.15.7+ 或 2.0.15+
-- Node.js 18+
-- OpenViking HTTP server
-- 如果服務端啟用了鑑權，需要一個可用的 OpenViking API key
-
-先啟動 OpenViking server：
-
-```bash
-openviking-server --config ~/.openviking/ov.conf
-```
-
-在另一個終端檢查服務：
-
-```bash
-curl http://localhost:1933/health
-```
-
 ## 安裝
+
+前置條件：[OpenCode](https://opencode.ai/) 1.15.7+ 或 2.0.15+、Node.js 18+，以及一個可訪問的 OpenViking HTTP server（用 `curl http://localhost:1933/health` 確認）；服務端啟用了鑑權時，還需要一個可用的 OpenViking API key。
 
 ### 一鍵安裝（推薦）
 
@@ -114,7 +95,6 @@ node examples/opencode-plugin/scripts/setup.mjs
     "recallTokenBudget": 2000,
     "minQueryLength": 3,
     "commitTokenThreshold": 20000,
-    "commitKeepRecentCount": 10,
     "profileTokenBudget": 10000,
     "skillCatalog": true,
     "skillCatalogTokenBudget": 1200,
@@ -153,6 +133,8 @@ API key 會由 hooks 和 MCP proxy 作為 `Authorization: Bearer ...` 傳送；`
 - `openviking_list_watches`、`openviking_cancel_watch`、`openviking_forget`、`openviking_health`
 
 OpenCode 2 在每次 execution 結束時抓取本輪使用者訊息、助手回覆和工具結果，並在壓縮前補齊即將移出上下文的對話；達到 token 閾值時提交，compaction、session 刪除和外掛 cleanup 會強制提交。OpenCode 2 會在無活動 60 分鐘、服務停止或本地外掛熱過載時執行 cleanup。
+
+工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
 
 OpenCode 1.15.7 不會呼叫外掛 dispose。v1 的短時 CLI 執行也可能在非同步捕獲完成前退出，這一行為在 v2 適配前已存在。使用常駐 v1 服務可以讓 idle 捕獲完成；OpenCode 1.18.32 會在 instance dispose 時呼叫外掛的 dispose。
 

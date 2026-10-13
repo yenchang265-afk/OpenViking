@@ -354,10 +354,6 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/system/status` | 系統狀態 |
 | POST | `/api/v1/system/wait` | 等待後臺處理完成 |
 | POST | `/api/v1/system/consistency` | 檔案系統與向量索引一致性檢查 |
-| POST | `/api/v1/system/backend/sync-status` | 查詢後端同步狀態 |
-| POST | `/api/v1/system/backend/sync-retry` | 重試後端同步 |
-| GET | `/api/v1/system/sync/{sync_path}` | 路徑形式的同步狀態相容介面 |
-| POST | `/api/v1/system/sync/{sync_path}/retry` | 路徑形式的同步重試相容介面 |
 
 ### [資源](02-resources.md)與[檔案系統](03-filesystem.md)
 
@@ -498,6 +494,7 @@ JSON 輸出 - 錯誤：
 |------|------|------|
 | GET | `/api/v1/admin/configuration` | 獲取 Cluster 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/configuration` | 更新 Cluster 層執行時配置 |
+| POST | `/api/v1/admin/restart` | 請求支援該能力的服務程序優雅重啟（僅 ROOT） |
 | GET | `/api/v1/admin/accounts/{account_id}/configuration` | 獲取 Account 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/accounts/{account_id}/configuration` | 更新 Account 層執行時配置 |
 | GET | `/api/v1/admin/agent-evolution` | 獲取 Agent 進化狀態（deprecated） |
@@ -533,6 +530,15 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | 寫入並激活新版本 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
 
+### [OpenViking 閘道器管理](25-gateway.md)
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| GET | `/api/v1/admin/gateway/{path}` | 讀取呼叫方帳號的閘道器概覽、日誌、上游、上下文配置、金鑰或工具 |
+| POST | `/api/v1/admin/gateway/{path}` | 簽發閘道器金鑰、測試上游或重置對話儲存 |
+| PUT | `/api/v1/admin/gateway/{path}` | 建立或替換上游、上下文配置 |
+| DELETE | `/api/v1/admin/gateway/{path}` | 刪除上游或上下文配置、吊銷金鑰或刪除使用者的閘道器資料 |
+
 ### [OpenViking Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Agent Runtime API](23-agent-runtime.md) 與 [VikingBot API](24-vikingbot.md)
 
 | 方法 | 路徑 | 說明 |
@@ -547,6 +553,7 @@ JSON 輸出 - 錯誤：
 | MKCOL | `/webdav/resources`、`/webdav/resources/{resource_path}` | 建立目錄 |
 | MOVE | `/webdav/resources`、`/webdav/resources/{resource_path}` | 移動或重新命名資源 |
 | POST | `/api/v1/compile` | 建立非同步 Compile 任務 |
+| POST | `/api/v1/compile/embeddings` | 生成 Compile 臨時路由文本的向量 |
 | GET | `/api/v1/compile/capabilities` | 檢查 Compile 可用性 |
 | GET | `/api/v1/compile/submissions/{key}` | 按提交鍵查詢任務 |
 | GET | `/bot/v1/health` | VikingBot 健康檢查 |

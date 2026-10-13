@@ -28,9 +28,19 @@ openviking-server --config ~/.openviking/ov.conf
 curl http://localhost:1933/health
 ```
 
-## 安裝方式一：釋出包安裝
+## 安裝方式一：一鍵安裝（推薦）
 
-普通使用者推薦通過 OpenCode 的 package plugin 機制啟用：
+OpenCode 與其他記憶外掛共用同一個安裝器。它會詢問要安裝的宿主和 OpenViking 憑據：
+
+```bash
+curl -fsSL https://openviking.ai/install | bash
+```
+
+安裝器會把外掛作為本地檔案外掛複製到 `~/.config/opencode/plugins/`，把 `openviking` MCP server 條目寫進 `~/.config/opencode/opencode.json`，並配置 `~/.openviking/ovcli.conf`。
+
+## 安裝方式二：釋出包安裝
+
+也可以通過 OpenCode 的 package plugin 機制啟用：
 
 ```json
 {
@@ -40,7 +50,7 @@ curl http://localhost:1933/health
 
 這份 `plugin` 配置同時相容 v1 和 v2；v2 會在載入時規範化為原生的 `plugins`，無需手工遷移配置。
 
-## 安裝方式二：原始碼安裝
+## 安裝方式三：原始碼安裝
 
 用於開發除錯或 PR 測試。OpenCode 推薦外掛目錄：
 
@@ -113,7 +123,6 @@ export { OpenVikingPlugin, default } from "./openviking/index.mjs"
       "recallTokenBudget": 2000,
       "minQueryLength": 3,
       "commitTokenThreshold": 20000,
-      "commitKeepRecentCount": 10,
       "profileTokenBudget": 10000,
       "skillCatalog": true,
       "skillCatalogTokenBudget": 1200,

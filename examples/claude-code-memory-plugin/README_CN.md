@@ -315,7 +315,7 @@ bypass 命中時所有 hook 直接放行，不聯絡 OpenViking。
 
 ### digest 壓縮
 
-`recallCompress` 決定 digest 在哪裡生成，預設值為 `auto`。`client` 始終通過 `claude -p` 在本地壓縮（預設 Sonnet + 低推理檔——Haiku 不支援 effort 旋鈕，時延不可控），token 成本留在你自己的訂閱額度裡。`server` 讓 OpenViking 生成 digest。`auto` 優先本地，探測不到可用的宿主 CLI 時回落到服務端。壓縮器執行失敗或輸出校驗失敗時會退回未壓縮的上下文塊；任一壓縮器精確返回 `NO_RELEVANT_MEMORY` 都是成功的空結果，不注入任何內容。壓縮子程序執行時所有 OpenViking hook 均被停用，不會遞迴。舊的環境變數 `OPENVIKING_RECALL_REWRITE` 和配置鍵 `recallRewrite` 仍作為低優先順序相容別名保留。
+`recallCompress` 決定 digest 在哪裡生成，預設值為 `auto`。`client` 始終通過 `claude -p` 在本地壓縮（預設 Haiku + 低推理檔），token 成本留在你自己的訂閱額度裡。`server` 讓 OpenViking 生成 digest。`auto` 優先本地，探測不到可用的宿主 CLI 時回落到服務端。壓縮器執行失敗或輸出校驗失敗時會退回未壓縮的上下文塊；任一壓縮器精確返回 `NO_RELEVANT_MEMORY` 都是成功的空結果，不注入任何內容。壓縮子程序執行時所有 OpenViking hook 均被停用，不會遞迴。舊的環境變數 `OPENVIKING_RECALL_REWRITE` 和配置鍵 `recallRewrite` 仍作為低優先順序相容別名保留。
 
 ### 遺留 `claude_code` 塊（在 `ov.conf` 裡）
 
@@ -403,7 +403,7 @@ Claude's own lookups
 
 **資料。** 模組讀取本外掛 `UserPromptSubmit` hook 返回的 `<openviking-context>` 塊，以及 Claude 發起的 OpenViking MCP 呼叫和 `ov` CLI 呼叫。它不髮網絡請求，不向 OpenViking 寫任何內容。
 
-它在 Claude Code 的外掛儲存裡儲存每次回答的來源 URI、分數、脫敏後的搜尋詞和卡片所在的對話行 id，保留最近 20 個會話，所以 `claude --continue` 之後卡片還在。不儲存 shell 命令和提示原文。卡片不會發給 Claude，不消耗 token。
+它在 Claude Code 的外掛儲存裡儲存每次回答的來源 URI、分數、脫敏後的搜尋詞，以及卡片所在對話行的 id 和該行回答文本的雜湊（桌面端靠這個雜湊找到卡片對應的回答），保留最近 20 個會話，所以 `claude --continue` 之後卡片還在。不儲存 shell 命令和提示原文。卡片不會發給 Claude，不消耗 token。
 
 **開發。** `claude plugin test examples/claude-code-memory-plugin` 會執行 `mods/usage/sources.test.ts`。用 `claude --plugin-dir examples/claude-code-memory-plugin` 啟動一次、生成 `.claude-plugin/types/` 後，可以用 `tsc -p examples/claude-code-memory-plugin/mods/usage` 做型別檢查。
 

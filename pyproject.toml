@@ -29,7 +29,7 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "openviking-sdk>=0.1.9",
+    "openviking-sdk>=0.1.15",
     "pydantic>=2.0.0",
     "typing-extensions>=4.5.0",
     "pyyaml>=6.0",
@@ -88,6 +88,16 @@ dependencies = [
 
 
 [project.optional-dependencies]
+gateway = [
+    "aiohttp>=3.13.3",
+    "async-timeout>=5.0.1",
+    "orjson>=3.11.7",
+    "packaging>=24.0",
+]
+gateway-fast = [
+    "uvloop>=0.21; sys_platform != 'win32'",
+    "httptools>=0.6",
+]
 test = [
   "pytest>=7.0.0",
   "pytest-asyncio>=0.21.0",
@@ -206,6 +216,7 @@ Issues = "https://github.com/volcengine/openviking/issues"
 ov = "openviking_cli.rust_cli:main"  # Rust CLI 入口（極簡包裝器）
 openviking = "openviking_cli.rust_cli:main"  # Rust CLI 入口（放棄 python CLI）
 openviking-server = "openviking_cli.server_bootstrap:main"  # also: `openviking-server ingest ...`
+openviking-gateway = "openviking_gateway.cli:main"
 vikingbot = "vikingbot.cli.commands:app"
 
 [tool.setuptools_scm]
@@ -222,6 +233,7 @@ include = ["openviking*", "vikingbot*"]
 exclude = ["tests*", "docs*", "examples*"]
 
 [tool.setuptools.package-data]
+openviking_gateway = ["client-rules.json"]
 openviking = [
     "prompts/templates/**/*.yaml",
     "builtin_skills/**/*",

@@ -54,6 +54,36 @@ openviking-server doctor
 
 如果 `provider` 是 `openai-codex`，並且 Codex OAuth 已經就緒，則 `vlm.api_key` 可以省略。
 
+### ov.conf 的有序憑據陣列
+
+`vlm` 和 `query_planner` 支援有序的 `credentials` 陣列；Embedding 在已配置的 `dense`、`sparse` 或 `hybrid` 節內支援同樣的陣列。索引 0 優先順序最高，後續元素提供故障切換憑據。模型配置節仍是 JSON 物件，原有單憑據配置繼續相容。
+
+將以下欄位合併到你的 `ov.conf`，並在啟動服務前設定 `PRIMARY_API_KEY` 和 `BACKUP_API_KEY`：
+
+```json
+{
+  "vlm": {
+    "model": "your-vlm-model",
+    "credentials": [
+      {"id": "primary", "provider": "openai", "api_key": "${PRIMARY_API_KEY}"},
+      {"id": "backup", "provider": "openai", "api_key": "${BACKUP_API_KEY}"}
+    ]
+  },
+  "embedding": {
+    "dense": {
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "credentials": [
+        {"id": "primary", "provider": "openai", "api_key": "${PRIMARY_API_KEY}"},
+        {"id": "backup", "provider": "openai", "api_key": "${BACKUP_API_KEY}"}
+      ]
+    }
+  }
+}
+```
+
+每項憑據可以獨立指定 provider、模型及連線欄位；未指定模型時使用父級的 `model`。Embedding 憑據必須與父級模型的向量維度和輸入語義相容。`query_planner.credentials` 使用與 VLM 相同的格式。Rerank 仍使用單配置，不支援 `credentials` 陣列。
+
 ## 配置範圍與生效方式
 
 OpenViking 的配置分為兩個層級：
@@ -875,6 +905,32 @@ VLM 的 `model` 填寫對應的方舟模型 endpoint ID。`video_fps` 僅用於�
 
 媒體處理會把檔案內容傳送給所配置的外部 provider。停用響應儲存和 best-effort 刪除可以降低非預期留存風險，但不能替代 provider 自身的隱私與留存控制；上傳檔案未顯式指定過期時間，其保留週期由方舟的預設策略決定。方舟 Files 的儲存/處理以及 Responses 的模型 token 可能產生費用；啟用前請確認 provider 的隱私、留存和計費條款。詳見火山方舟官方[音訊理解文件](https://docs.volcengine.com/docs/82379/2377589?lang=zh)和[影片理解文件](https://docs.volcengine.com/docs/82379/1895586?lang=zh)。
 
+### bot.compile
+
+配置單個 Resource Compile 任務各階段的併發工作數，適用於直接模型呼叫和 agent 執行：
+
+```json
+{
+  "bot": {
+    "compile": {
+      "map_concurrency": 8,
+      "shuffle_concurrency": 4,
+      "shuffle_batch_size": 4,
+      "reduce_concurrency": 6
+    }
+  }
+}
+```
+
+| 欄位 | 預設值 | 說明 |
+|------|--------|------|
+| `map_concurrency` | 繼承 `vlm.max_concurrent` | Map 提取工作併發數 |
+| `shuffle_concurrency` | 繼承 `vlm.max_concurrent` | Shuffle 路由工作及 embedding 批次併發數 |
+| `shuffle_batch_size` | `4` | 每次 Shuffle 路由請求的主記錄數上限；與併發數、字元軟預算獨立 |
+| `reduce_concurrency` | 繼承 `vlm.max_concurrent` | Reduce 工作併發數；同路徑候選的最終 merge 複用此值 |
+
+三個併發配置項必須為正整數；省略或設為 `null` 時繼承預設值。`shuffle_batch_size` 必須為正整數，省略時為 `4`，不接受 `null`。路由逐條儲存合法結果，僅失敗記錄重新組批重試，最後一次降為單條；每條記錄最多嘗試三輪。修改後需重啟 VikingBot 服務。一個 VikingBot 服務內的所有 Compile 任務仍共享 `vlm.max_concurrent` 限制的模型請求容量，因此提進階段併發不會突破這一總上限。Embedding 請求另受 embedding 服務的併發限制。恢復任務預設使用相同的 reduce 配置，顯式 `--concurrency` 可覆蓋恢復併發數。
+
 ### query_planner
 
 可選的輕量模型配置，用於檢索前的意圖分析和 query 規劃/改寫。配置結構與 `vlm` 相同，用於 `search()` 的意圖分析、query expansion，以及可選的服務端 recall 摘要重寫。未配置或配置為空時，OpenViking 會回退到 `vlm`，保持向後相容。
@@ -1167,8 +1223,7 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 |------|------|------|--------|
 | `backend` | str | `"local"`、`"s3"` 或 `"memory"` | `"local"` |
 | `timeout` | float | 請求超時時間（秒） | `10.0` |
-| `backups` | object | 主備儲存配置。配置後頂層 `backend` 作為 primary，`backups.items[]` 作為 backup | `null` |
-| `redirects` | array | 主備儲存的檔案重定向策略。命中後文件寫入指定 backup，而不是 primary | `[]` |
+| `backups` | object | 多寫儲存配置。配置後頂層 `backend` 作為 primary，`backups.items[]` 作為 backup | `null` |
 | `queuefs` | object | QueueFS 配置。控制 `/queue` 的名稱空間模式、後端和執行時引數 | `{ "mode": "shared", "backend": "sqlite", "recover_stale_sec": 0, "busy_timeout_ms": 5000 }` |
 | `queue_db_path` | str（可選）| 舊版相容欄位，用於覆蓋 QueueFS 的 sqlite 資料庫檔案路徑。已被 `storage.agfs.queuefs.db_path` 取代。未設定時預設為 `{storage.workspace}/_system/queue/queue.db`。適用於 workspace 卷不支援 sqlite 的場景（例如某些網路檔案系統） | `null` |
 | `s3` | object | S3 後端配置（`backend=s3` 時使用） | - |
@@ -1183,7 +1238,7 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
 
 ##### 主備儲存配置
 
-`storage.agfs.backups` 用於啟用主備儲存。未配置時，OpenViking 保持單 backend 模式。
+`storage.agfs.backups` 啟用非同步 V2 多寫。頂層 backend 始終是唯一直接讀取來源。
 
 ```json
 {
@@ -1191,26 +1246,16 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
     "workspace": "./data",
     "agfs": {
       "backend": "local",
-      "redirects": [
-        {
-          "type": "FileExtensionPolicy",
-          "extensions": ["(pdf|ppt|zip)"],
-          "target": ["s3-backup"]
-        }
-      ],
       "backups": {
-        "sync_type": "async",
+        "initial_partitions": 16,
+        "checkpoint_interval_secs": 86400,
+        "provider": "filesystem",
         "items": [
           {
-            "name": "s3-backup",
-            "backend": "s3",
-            "s3": {
-              "bucket": "openviking-backup",
-              "region": "cn-beijing",
-              "endpoint": "https://tos-s3-cn-beijing.volces.com",
-              "access_key": "your-ak",
-              "secret_key": "your-sk",
-              "prefix": "multi-write"
+            "name": "local-backup",
+            "backend": "local",
+            "params": {
+              "workspace": "./data/backup"
             }
           }
         ]
@@ -1224,36 +1269,13 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `sync_type` | str | 主備同步模式，支援 `"async"` 或 `"sync"` | `"async"` |
-| `write_ack_count` | int | `sync` 模式下返回前需要的 backup 確認數 | 全部 backup |
-| `write_ack_timeout_ms` | int | `sync` 模式下等待 backup 確認的超時時間，單位毫秒 | `null` |
-| `write_concurrency` | int | 非同步 backup 寫入併發上限 | `null` |
-| `items` | array | backup backend 列表，每個 item 複用普通 backend 配置並增加 `name`、`operations`、`excludes`、`encryption` 等欄位 | `[]` |
+| `initial_partitions` | int | account 首次初始化的 metadata partition 數；修改不影響已有 account | `16` |
+| `checkpoint_interval_secs` | int | Checkpoint 掃描間隔，最小值為 `60` | `86400` |
+| `provider` | str | Metadata provider：`filesystem` 或複用頂層 CacheRuntime 的 `cache` | `"filesystem"` |
+| `items` | array | backup 列表，包含 `name`、`backend`、`params` 和可選 `encryption` | `[]` |
 
-`redirects` 常用字段：
-
-| 引數 | 型別 | 說明 | 預設值 |
-|------|------|------|--------|
-| `type` | str | 策略型別，支援 `"FileExtensionPolicy"` 或 `"FileOverSizePolicy"` | 必填 |
-| `extensions` | array | `FileExtensionPolicy` 使用的副檔名正則列表，例如 `["(pdf\|ppt)"]` | `[]` |
-| `max_size_mb` | int | `FileOverSizePolicy` 使用的檔案大小閾值，單位 MB | `null` |
-| `target` | array | 命中策略後寫入的 backup `name` 列表 | 必填 |
-
-按文件大小重定向示例：
-
-```json
-{
-  "type": "FileOverSizePolicy",
-  "max_size_mb": 100,
-  "target": ["s3-backup"]
-}
-```
-
-注意：
-
-- `redirects` 配置在頂層 `storage.agfs`，表示 primary 的重定向策略。
-- `target` 必須引用 `backups.items[]` 中已經定義的 backup `name`。
-- 命中 redirect 的檔案仍會通過普通檔案系統 API 呈現為可讀、可列舉的檔案。
+Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
+欄位，輸出 warning 後會在呼叫 Rust 前刪除，欄位不生效。
 
 更多配置示例見 [主備儲存指南](./13-multi-write-storage.md)。
 
@@ -1321,9 +1343,9 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
 }
 ```
 
-標準配置沒有全域 `cache.enabled`。當 CacheFS 或 QueueFS 選擇 `backend=cache`，或 PathLock 選擇 `provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
+標準配置沒有全域 `cache.enabled`。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
 
-這是一次配置破壞性變更：`storage.agfs.cache`、`storage.agfs.queuefs.backend="redis"` 和 `storage.agfs.queuefs.redis` 已刪除並會被拒絕。請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，業務模組改為 `cachefs.backend="cache"` 或 `queuefs.backend="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
+這是一次配置破壞性變更：`storage.agfs.cache`、`storage.agfs.queuefs.backend="redis"`、`storage.agfs.queuefs.redis` 和 `storage.agfs.backups.provider="redis"` 已刪除並會被拒絕。請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
 
 ##### QueueFS 配置
 
@@ -1780,6 +1802,10 @@ ov add-resource ./docs --exclude "*.tmp"
     "port": 1933,
     "auth_mode": "api_key",
     "root_api_key": "your-secret-root-key",
+    "account_store": {
+      "provider": "file",
+      "params": {}
+    },
     "profile_enabled": false,
     "cors_origins": ["*"],
     "public_base_url": "https://ov.example.com",
@@ -1810,7 +1836,9 @@ ov add-resource ./docs --exclude "*.tmp"
 | `host` | str | 繫結地址 | `127.0.0.1` |
 | `port` | int | 繫結埠 | `1933` |
 | `auth_mode` | str / null | 內建模式：`"dev"`、`"api_key"`、`"trusted"`、`"oidc"`、`"ldap"`。省略或設為 null 時，有非空 `root_api_key` 則推導為 `api_key`，否則為 `dev`。 | `null` |
-| `root_api_key` | str | `api_key` 模式必填的 Root API Key；`trusted` 模式僅在 localhost 可省略，非 localhost 部署必填，不負責解析普通使用者身份 | `null` |
+| `root_api_key` | str | `api_key` 模式必填的 Root API Key；`trusted` 模式在所有部署中均必填，包括 localhost，不負責解析普通使用者身份 | `null` |
+| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"` Provider，統一持久化 Account、User、Group 和 API Key，相容現有 AGFS JSON 登錄檔並維護程序內查詢索引。 | `"file"` |
+| `account_store.params` | object | Provider 啟動引數。不能通過這裡覆蓋框架注入的 VikingFS 和 File Provider API Key Hash 配置。 | `{}` |
 | `profile_enabled` | bool | 是否允許 HTTP 請求通過 `profile=1` 開啟請求級 cProfile。關閉時服務端會忽略該請求引數；開啟後，CLI 可以顯示返回的 `profile`，而 Python HTTP client 預設只觸發服務端 profile，不會把頂層 `profile` 欄位自動附著到大多數 SDK 返回值上。 | `false` |
 | `cors_origins` | list | CORS 允許的來源 | `["*"]` |
 | `public_base_url` | str | MCP `add_resource` 和 `add_skill` 工具向客戶端返回的上傳指令裡使用的對外可見 base URL。解析順序：環境變數 `OPENVIKING_PUBLIC_BASE_URL` → 本欄位 → 請求頭 `X-Forwarded-Host` / `X-Forwarded-Proto` → 請求頭 `Host` → 監聽地址兜底。當 server 部署在反向代理後且代理不轉發 `X-Forwarded-*` 時，請顯式設定本欄位（或環境變數）。 | `null` |
@@ -1826,7 +1854,7 @@ ov add-resource ./docs --exclude "*.tmp"
 
 省略 `auth_mode`（或設為 `null`）時，配置了非空 `root_api_key` 則選擇 `api_key`，否則選擇 `dev`。`dev` 僅允許監聽 localhost，不進行身份認證。`root_api_key` 不能配置為空字串。
 
-顯式設定 `auth_mode: "api_key"` 時，包括 localhost 在內都必須提供非空 `root_api_key`；缺少該 key 會導致啟動失敗，不會回退到開發模式。使用 root key 呼叫 Admin API 建立 account 和 user/admin key，資料訪問使用這些繫結租戶身份的 key。`trusted` 模式接受可信網關注入的 account/user 身份頭，無需預先建立 user key；其 root key 僅在 localhost 可省略，監聽非 localhost 地址時必填。角色解析、OIDC/LDAP 配置與閘道器要求參見 [身份認證](04-authentication.md)。
+顯式設定 `auth_mode: "api_key"` 時，包括 localhost 在內都必須提供非空 `root_api_key`；缺少該 key 會導致啟動失敗，不會回退到開發模式。使用 root key 呼叫 Admin API 建立 account 和 user/admin key，資料訪問使用這些繫結租戶身份的 key。`trusted` 模式接受可信網關注入的 account/user 身份頭，無需預先建立 user key；其 root key 在啟動和每個認證請求中均必填，包括 localhost。角色解析、OIDC/LDAP 配置與閘道器要求參見 [身份認證](04-authentication.md)。
 
 `user_config_defaults` 提供新增目標和記憶抽取的部署級預設配置。新增操作中，顯式請求目標仍然優先：`add_resource.to` / `add_resource.parent` 優先於使用者預設值，`add_skill.target_uri` 優先於使用者預設值。記憶策略優先順序為 Session 策略 > User `settings/user_config.json` 策略 > `server.user_config_defaults.memory_policy` > 核心預設策略。`server.agent_evolution.enabled` 提供啟動預設值，執行時優先順序為 Account 覆蓋 > Cluster 執行時覆蓋 > 啟動值。無需重啟的修改應使用 Admin settings 介面；直接編輯 `ov.conf` 需要重啟後生效。
 
@@ -1942,7 +1970,7 @@ ov add-resource ./docs --exclude "*.tmp"
 |------|------|------|--------|
 | `enabled` | bool | 是否啟用加密 | `false` |
 | `provider` | str | 金鑰提供程式：`"local"`、`"vault"` 或 `"volcengine_kms"` | - |
-| `api_key_hashing.enabled` | bool | 是否對 API key 欄位啟用 Argon2id 單向雜湊（與檔案級 `enabled` 獨立控制），詳見 [加密指南](./08-encryption.md) | `false` |
+| `api_key_hashing.enabled` | bool | 僅 File Provider：是否對 API key 欄位啟用 Argon2id 單向雜湊（與檔案級 `enabled` 獨立控制），詳見 [加密指南](./08-encryption.md) | `false` |
 
 ### Local（本地文件）
 
@@ -2151,6 +2179,10 @@ Task 記錄檔案位於所屬帳號的系統目錄：
     "host": "string",
     "port": 1933,
     "root_api_key": "string",
+    "account_store": {
+      "provider": "file",
+      "params": {}
+    },
     "cors_origins": ["string"]
   }
 }

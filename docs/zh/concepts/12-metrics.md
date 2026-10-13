@@ -288,14 +288,21 @@ RAGFS 通過一次原生 `metrics()` 呼叫讀取檔案系統、Cache、multi-ba
 | `openviking_ragfs_cache_bytes_total` | Counter | `source` | 來自後端和快取的位元組數 |
 | `openviking_ragfs_cache_operation_duration_seconds_total` | Counter | `operation` | get/put/delete 累計耗時 |
 | `openviking_ragfs_cache_inflight_events_total` | Counter | `event` | leader/follower/backend_saved 次數 |
-| `openviking_ragfs_multiwrite_background_tasks` | Gauge | 無 | 後臺任務數，包含重試迴圈 |
-| `openviking_ragfs_multiwrite_read_routes_total` | Counter | `route` | primary/backup/redirect/miss 路由選擇次數 |
+| `openviking_ragfs_multiwrite_background_tasks` | Gauge | 無 | 每個 mount 的活躍 flush runtime，值為 `0` 或 `1` |
+| `openviking_ragfs_multiwrite_pending_events` | Gauge | 無 | 已提交且正在排隊、執行中或重試中的事件數 |
+| `openviking_ragfs_multiwrite_errors_total` | Counter | `worker` | `flush`、`checkpoint`、`catch_up`、`gc` 的最終失敗次數 |
+| `openviking_ragfs_multiwrite_backend_lag_events` | Gauge | `backend, partition` | 所有 account 的 `tail - synced_seq` 之和 |
+| `openviking_ragfs_multiwrite_protocol_version` | Gauge | `version` | 閉集標籤 `v2` 對應的 mount 數 |
+| `openviking_ragfs_multiwrite_protocol_status` | Gauge | `status` | 閉集標籤 `migrating`、`stable` 對應的 mount 數 |
 
 這些指標不帶 `mount` 和 `account_id` 標籤。未啟用 Cache 或 multi-backend
 時，不生成對應指標族。`status` 為 `success` 或 `error`。
 `exists=false` 計為成功；`replace` 使用 `rename` 操作標籤。
 Histogram 包含全部操作結果，有限桶邊界範圍為 0.0001 至 10 秒。
 Python `get_stats()` 保留原有微秒字段。
+
+protocol 指標始終包含閉集中的兩條 series。任何 protocol、account 或 segment
+manifest 無法讀取或校驗時，本次完整 snapshot 失敗，不會發布部分 lag=0。
 
 ### 任務與 Task Tracker
 

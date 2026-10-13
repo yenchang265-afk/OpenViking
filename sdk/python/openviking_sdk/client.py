@@ -1564,6 +1564,7 @@ class AsyncHTTPClient:
         exclude_uri: Optional[str] = None,
         tags: Optional[List[str]] = None,
         include_tags: bool = False,
+        level_limit: Optional[int] = None,
     ) -> Dict[str, Any]:
         request_json = {
             "uri": VikingURI.normalize(uri),
@@ -1571,6 +1572,8 @@ class AsyncHTTPClient:
             "case_insensitive": case_insensitive,
             "node_limit": node_limit,
         }
+        if level_limit is not None:
+            request_json["level_limit"] = level_limit
         if exclude_uri is not None:
             request_json["exclude_uri"] = VikingURI.normalize(exclude_uri)
         if tags is not None:
@@ -2878,6 +2881,7 @@ class SyncHTTPClient:
         exclude_uri: Optional[str] = None,
         tags: Optional[List[str]] = None,
         include_tags: bool = False,
+        level_limit: Optional[int] = None,
     ) -> Dict[str, Any]:
         return run_async(
             self._async_client.grep(
@@ -2888,6 +2892,7 @@ class SyncHTTPClient:
                 exclude_uri=exclude_uri,
                 tags=tags,
                 include_tags=include_tags,
+                level_limit=level_limit,
             )
         )
 

@@ -578,6 +578,7 @@ setup(
     ),
     cmdclass=cmdclass,
     package_data={
+        "openviking_gateway": ["client-rules.json"],
         "openviking": [
             "builtin_skills/**/*",
             "lib/ragfs_python*.so",

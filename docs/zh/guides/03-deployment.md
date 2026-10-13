@@ -6,7 +6,7 @@ OpenViking 以 HTTP 服務執行。安裝服務端之前，先選擇由誰執行
 
 | 服務方式 | 你需要準備什麼 |
 | --- | --- |
-| [火山引擎託管 OpenViking](https://www.volcengine.com/product/openviking-service) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)獲取 API Key，用獨立 CLI 連線，無需本地服務端或模型配置。 |
+| [火山引擎託管 OpenViking](https://www.volcengine.com/product/openviking-service?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment)獲取 API Key，用獨立 CLI 連線，無需本地服務端或模型配置。 |
 | 團隊已有服務或他人部署 | 向管理員獲取服務地址和 user/admin key。 |
 | 自建 OpenViking | 按下文安裝、配置和執行服務端。 |
 
@@ -298,7 +298,7 @@ docker compose up -d
 啟動後可以訪問：
 - API 服務：`http://localhost:1933`
 - Web Studio：`http://localhost:1933/studio`（與 API 同源）
-- 相容入口：`http://localhost:1934`（Caddy 反代到 1933，僅為已有部署保留）
+- Caddy 入口：`http://localhost:1934`。它把請求轉發到 1933，主要為已有部署保留；同時執行 OpenViking 閘道器時，它還把模型 API 路徑轉發給閘道器，見[OpenViking 閘道器部署與運維](22-gateway-operations.md#docker-compose)。
 
 ### 部署到 Railway
 

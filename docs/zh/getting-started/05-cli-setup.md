@@ -67,7 +67,7 @@ ov config add custom --help
 
 | 目標 | 服務地址 | API Key |
 |---|---|---|
-| OpenViking 服務（火山引擎雲） | 固定地址，不要傳 `--url`。 | 必填。我在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)的“使用者管理 → API Key”中獲取。 |
+| OpenViking 服務（火山引擎雲） | 固定地址，不要傳 `--url`。 | 必填。我在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_05-cli-setup)的“使用者管理 → API Key”中獲取。 |
 | 遠端自建服務 | ASK 我。 | ASK 我。 |
 | 本機自建服務 | `http://127.0.0.1:1933` | 通常不需要。 |
 
@@ -146,7 +146,7 @@ EXECUTE NOW：完成上面的 TODO 列表，達到：`ov config validate` 的檢
 
 | 服務型別 | 服務地址 | API Key |
 |---|---|---|
-| OpenViking 服務（火山引擎雲） | 固定地址，無需填寫。 | 必填。在 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)的**使用者管理 → API Key** 中獲取。 |
+| OpenViking 服務（火山引擎雲） | 固定地址，無需填寫。 | 必填。在 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_05-cli-setup)的**使用者管理 → API Key** 中獲取。 |
 | 遠端自建服務 | 向管理員獲取。 | 向管理員獲取。 |
 | 本機自建服務 | `http://127.0.0.1:1933` | 預設配置不需要。 |
 

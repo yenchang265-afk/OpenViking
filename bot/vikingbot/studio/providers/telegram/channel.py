@@ -17,9 +17,11 @@ def now():
 
 
 class StudioTelegramChannel(TelegramChannel):
-    def __init__(self, config, bus, *, record, store, **kwargs):
+    def __init__(self, config, bus, *, record, store, openviking_connection, **kwargs):
         super().__init__(config, bus, **kwargs)
         self.record = record
+        # Runtime credentials from StudioService.install, never the persisted record.
+        self.openviking_connection = openviking_connection
         self._session_prefix = f"studio:{record['id']}:"
         self.store = store
         self.last_received = None
@@ -92,7 +94,7 @@ class StudioTelegramChannel(TelegramChannel):
                 need_reply=need_reply,
                 media=media or [],
                 metadata=metadata,
-                openviking_connection=dict(self.record["identity"]),
+                openviking_connection=dict(self.openviking_connection),
             )
         )
 

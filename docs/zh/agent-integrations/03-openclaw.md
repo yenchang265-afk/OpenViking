@@ -95,7 +95,7 @@ openclaw openviking setup --base-url https://openviking.example.com --api-key sk
 ```text
 summaryMessage = { role: "user", content: "[Session History Summary]\n" + latest_archive_overview }
 messages = [summaryMessage] + OV active messages
-systemPromptAddition = Session Context Guide（有歸檔時）+ 本輪召回結果（有命中時）
+systemPromptAddition = Session Context Guide（有歸檔時）+ 使用者 profile（profile.md 存在時）+ 本輪召回結果（有命中時）
 ```
 
 `latest_archive_overview` 是服務端返回的摘要正文，`[Session History Summary]` 是外掛加在正文前的固定文本標題。僅在 overview 非空時插入這條合成 user 訊息；active messages 保留近期未壓縮對話。當前 `prompt` 由宿主加入本輪；外掛只用它查詢記憶，不把它重複追加到返回的歷史中。召回結果屬於本次請求的上下文，不直接作為新對話寫回 OV。

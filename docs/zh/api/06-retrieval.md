@@ -660,7 +660,7 @@ Agent 外掛每輪注入上下文時，過去需要按型別逐個檢索、再�
 
 #### 2. 介面和引數說明
 
-**L0 檢索域**：`query`、`image_url`、`context_type`、`limit`、`score_threshold`、`filter`、`tags`、`since`/`until` 以及可選的 `events_time_decay_protection` 與 list 模式一致。`limit` 只約束 quota-free 檢索；一旦 `purpose` 或顯式 `quotas` 啟用分桶檢索，各分類配額就是唯一候選上限。`target_uri` 在 context 模式下暫不支援（返回 400）；`level` 被忽略，檔位由 `detail` 決定。
+**L0 檢索域**：`query`、`image_url`、`context_type`、`limit`、`score_threshold`、`filter`、`tags`、`since`/`until` 以及可選的 `events_time_decay_protection` 與 list 模式一致。`limit` 只約束 quota-free 檢索；一旦 `purpose` 或顯式 `quotas` 啟用分桶檢索，各分類配額之和就是候選上限。`target_uri` 在 context 模式下暫不支援（返回 400）；`level` 被忽略，檔位由 `detail` 決定。
 
 **L1 查詢理解**
 
@@ -675,8 +675,8 @@ Agent 外掛每輪注入上下文時，過去需要按型別逐個檢索、再�
 |------|------|--------|------|
 | `limit` | int | 10 | 僅作為 quota-free 檢索的候選條目上限；`purpose` 或 `quotas` 啟用分桶後被忽略 |
 | `max_tokens` | int | 1600 | 唯一的預算引數，採用感知 CJK 的啟發式估算（codepoint ≥ 0x3000 記 1.5 token/字，其餘按 chars/4） |
-| `quotas` | object | None | 各桶絕對條數上限；鍵取 `events`/`entities`/`preferences`/`experiences`/`resources`/`skills`。顯式傳入後忽略 `limit` |
-| `purpose` | `chat` \| `coding` | None | 按下表的絕對分類配額啟用六域分桶取樣；僅在未顯式傳 `quotas` 時生效 |
+| `quotas` | object | None | 各桶首輪條數上限，總和即候選上限；某個桶用不滿的名額會讓給其他桶剩餘的最佳命中，`0` 表示關閉該桶。鍵取 `events`/`entities`/`preferences`/`experiences`/`resources`/`skills`。顯式傳入後忽略 `limit` |
+| `purpose` | `chat` \| `coding` | None | 按下表的分類配額啟用六域分桶取樣；僅在未顯式傳 `quotas` 時生效 |
 | `detail` | `abstract` \| `overview` \| `full` \| object | None | 為每條結果請求同一個起始檔和最高檔；請求檔不可用或裝不進預算時仍逐檔退檔而不截斷。省略時按類別取預設檔（見下）。也可傳按類別的物件，如 `{"events":"overview","preferences":"abstract"}`，未列出的類別仍取預設檔。`"auto"` 是已廢棄的寫法，等價於省略 |
 | `dedup_turns` | int | 0 | 跨輪冷卻輪數，需要 `session_id`；帳本存在 `{session_uri}/.recall_log.json` |
 | `exclude_uris` | string[] | [] | 無狀態去重兜底，最多 200 條，與 `dedup_turns` 取並集 |
@@ -692,8 +692,8 @@ Agent 外掛每輪注入上下文時，過去需要按型別逐個檢索、再�
 
 **檔位規則**
 
-- **Purpose 預設**：`chat` 使用 `events:3, entities:3, preferences:1, experiences:1, resources:1, skills:1`；`coding` 使用 `events:1, entities:2, preferences:1, experiences:1, resources:3, skills:2`。這些值是每個分類的絕對上限，不是權重。各桶結果彙總後仍會去重並全域排序，但不會再被第二個全域 `limit` 截斷
-- **按類別的預設檔**：省略 `detail` 時，各類別落在下表的檔位；檔案條目中只有 `events` 的預設檔需要回讀正文；目錄命中會讀取 `.overview.md`
+- **Purpose 預設**：`chat` 使用 `events:3, entities:3, preferences:1, experiences:1, resources:1, skills:1`；`coding` 使用 `events:1, entities:2, preferences:1, experiences:1, resources:3, skills:2`。每個桶先按自己的配額取條目；某個桶命中不足時，空出的名額讓給其他桶剩餘的最佳命中，總數（兩個預設都是 10）不會超出。各桶結果彙總後仍會去重並全域排序，但不會再被第二個全域 `limit` 截斷
+- **按類別的預設檔**：省略 `detail` 時，各類別落在下表的檔位；檔案條目中只有 `events` 的預設檔需要回讀正文；目錄命中會讀取 `.overview.md`。預置的作用域目錄（`viking://resources`、`viking://agent` 及其預置子目錄、使用者根目錄及其一級目錄）只用於導航，不會作為條目返回，即使它們的 `.overview.md` 已按內容重新生成也一樣
 
   | 類別 | 預設檔 | 剩餘預算可加深到 | 原因 |
   |------|--------|------------------|------|
@@ -844,7 +844,7 @@ curl -X POST http://localhost:1933/api/v1/search/search \
 | case_insensitive | bool | 否 | False | 忽略大小寫 |
 | node_limit | int | 否 | 256 | 最大返回節點數。省略時預設使用 256；如需更多結果，請顯式傳入更大的整數 |
 | exclude_uri | str | 否 | None | 要排除在搜尋之外的 URI 字首 |
-| level_limit | int | 否 | Python SDK: 5；HTTP API / CLI / Go SDK: 10 | 最大目錄遍歷深度。Go SDK 當前使用 HTTP API 預設值。 |
+| level_limit | int | 否 | 10 | 最大目錄遍歷深度。HTTP SDK 未指定時使用服務端預設值。 |
 | tags | string[] | 否 | 未設定 | 僅搜尋同時匹配全部 `k=v` 檢索標籤的檔案 |
 | include_tags | bool | 否 | `false` | 不過濾時也在每條命中中返回檢索標籤 |
 | before_context | int | 否 | 0 | 每條匹配行之前返回的上下文行數；僅 HTTP API 和 CLI 支援 |

@@ -21,7 +21,7 @@ OpenViking 可以按帳戶加密儲存中新寫入的檔案。加解密由儲存
 
 - 全域 `encryption.enabled=true` 時，primary backend 必須加密。
 - backup backend 可以通過自己的 `encryption.enabled` 控制是否加密。
-- `.redirect.json` 和 `.sync_log.json` 等主備儲存內部後設資料跟隨 primary 加密策略。
+- V2 多寫 metadata 儲存在 raw primary，不經過 `EncryptionWrappedFS`。
 - OpenViking 不提供也不需要公開的加解密 API 來操作這些內部檔案。
 
 更多主備儲存配置見 [主備儲存指南](./13-multi-write-storage.md)。

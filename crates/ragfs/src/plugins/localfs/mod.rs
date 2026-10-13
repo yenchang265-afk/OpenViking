@@ -363,10 +363,21 @@ impl LocalFileSystem {
         options.open(local_path).map_err(|e| {
             if e.kind() == std::io::ErrorKind::NotFound {
                 Error::NotFound(path.to_string())
+            } else if e.kind() == std::io::ErrorKind::AlreadyExists {
+                Error::AlreadyExists(path.to_string())
             } else {
                 Error::plugin(format!("failed to open file: {}", e))
             }
         })
+    }
+
+    /// Read directory-entry metadata, tolerating entries removed after readdir yielded them.
+    fn read_entry_metadata(entry: &fs::DirEntry) -> Result<Option<fs::Metadata>> {
+        match entry.metadata() {
+            Ok(metadata) => Ok(Some(metadata)),
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(error) => Err(Error::plugin(format!("failed to get metadata: {}", error))),
+        }
     }
 
     /// Map local file failures into stable filesystem error categories.
@@ -990,9 +1001,9 @@ impl FileSystem for LocalFileSystem {
             for entry in entries {
                 let entry =
                     entry.map_err(|e| Error::plugin(format!("failed to read entry: {}", e)))?;
-                let metadata = entry
-                    .metadata()
-                    .map_err(|e| Error::plugin(format!("failed to get metadata: {}", e)))?;
+                let Some(metadata) = Self::read_entry_metadata(&entry)? else {
+                    continue;
+                };
 
                 let name = entry.file_name().to_string_lossy().to_string();
                 let mode = if metadata.is_dir() { 0o755 } else { 0o644 };
@@ -1311,6 +1322,18 @@ mod tests {
             &dir.path().join("missing.txt")
         )
         .unwrap());
+    }
+
+    #[test]
+    fn test_listing_skips_entry_removed_after_readdir() {
+        let dir = TempDir::new().unwrap();
+        write_file(dir.path(), ".path.ovlock", "lock");
+        let entry = fs::read_dir(dir.path()).unwrap().next().unwrap().unwrap();
+        fs::remove_file(entry.path()).unwrap();
+
+        assert!(LocalFileSystem::read_entry_metadata(&entry)
+            .unwrap()
+            .is_none());
     }
 
     #[tokio::test]

@@ -17,7 +17,7 @@ OpenViking Server 也提供了一個面向資源檔案的精簡 WebDAV 適配層
 - 僅開放 `resources` 名稱空間，不暴露 memories、skills、sessions 等其他空間。
 - 以文本寫入為主，當前 `PUT` 只接受 UTF-8 文本內容。
 - 只實現一小部分 WebDAV 方法：`OPTIONS`、`PROPFIND`、`GET`、`HEAD`、`PUT`、`DELETE`、`MKCOL`、`MOVE`。
-- 語義側邊檔案和系統內部檔案保持內部可見。`.abstract.md`、`.overview.md`、`.path.ovlock`、`.redirect.json`、`.sync_log.json` 這些派生或內部檔案不會出現在 WebDAV 列表中，也不能被直接訪問。
+- 語義側邊檔案和系統內部檔案保持內部可見。`.abstract.md`、`.overview.md`、`.path.ovlock` 和多寫 metadata 不會出現在 WebDAV 列表中，也不能被直接訪問。
 
 行為說明：
 
@@ -25,7 +25,7 @@ OpenViking Server 也提供了一個面向資源檔案的精簡 WebDAV 適配層
 - 通過 WebDAV 覆蓋已有檔案時，會像 `write()` 一樣重新整理相關語義和向量。
 - `PUT` 不會自動建立父目錄。缺失的目錄需要先用 `MKCOL` 建立。
 - 使用者自己建立的點目錄或點檔案仍然可見，只有上面列出的保留內部檔名會被隱藏。
-- 啟用主備儲存時，被 redirect 到 backup 的檔案仍會通過檔案系統 API 呈現為普通檔案；內部 redirect 和同步後設資料不會暴露給呼叫方。
+- 啟用多寫時，WebDAV 讀取只訪問 primary，backup 在後臺非同步複製。
 
 ## API 參考
 

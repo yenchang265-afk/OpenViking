@@ -216,7 +216,7 @@ ov read viking://resources/docs/api.md
 |------|------|------|--------|------|
 | uri | str | 是 | - | 要寫入的檔案 URI |
 | content | str | 是 | - | 要寫入的新內容 |
-| mode | str | 否 | `replace` | `replace` 覆蓋已有檔案、缺失時建立；`append` 追加已有檔案、缺失時建立；`create` 僅建立缺失檔案，目標已存在時返回 `409 Conflict` |
+| mode | str | 否 | `replace` | `replace` 覆蓋已有檔案、缺失時建立；`append` 追加已有檔案、缺失時建立；`create` 是 `replace` 的相容別名 |
 | wait | bool | 否 | `false` | 是否等待後臺語義/向量重新整理完成 |
 | timeout | float | 否 | `null` | 當 `wait=true` 時的超時時間（秒） |
 | tags | string[] | 否 | 未設定 | 寫入檔案的顯式檢索標籤，例如 `["team=search", "env=prod"]` |
@@ -224,10 +224,11 @@ ov read viking://resources/docs/api.md
 
 **說明**
 
-- `replace` 和 `append` 在目標檔案缺失時都會建立檔案；其中 `append` 會以傳入內容作為新檔案的初始內容。`create` 僅用於建立缺失檔案，目標路徑已存在時返回 `409 Conflict`。目錄始終會被拒絕。
-- 顯式 `create` 只允許以下文本類副檔名：`.md`、`.txt`、`.json`、`.yaml`、`.yml`、`.toml`、`.py`、`.js`、`.ts`。所有寫入模式都會自動建立父目錄。
+- `replace`、`append` 和作為相容別名的 `create` 都會在目標缺失時建立檔案；`append` 會以傳入內容作為新檔案的初始內容，其他情況下 `create` 與 `replace` 完全相同。目錄始終會被拒絕。
+- 使用任意模式建立缺失檔案時，都只允許以下文本類副檔名：`.md`、`.txt`、`.json`、`.yaml`、`.yml`、`.toml`、`.py`、`.js`、`.ts`。所有寫入模式都會自動建立父目錄。
 - 已存在的 `.abstract.md` / `.overview.md` 可以修改正文，但不能通過公共 API 建立；只提交正文時會保留現有 OKF metadata，提交完整 OKF 時 metadata 必須與存量值一致。未知 metadata 欄位會靜默丟棄。sidecar 正文寫入只重建該目錄實際存在的 L0/L1 向量，不觸發語義重新生成。
 - 檔案內容會在 API 返回前完成更新；`wait` 只控制是否等待語義/向量重新整理完成。
+- 正文提交後，如果後續語義/向量任務入隊失敗，不會回滾已寫正文；介面會返回錯誤，呼叫方應重試同一次 write 以重新派發派生維護。顯式 write 始終重新提交最終位元組，因此在向量索引暫時落後於檔案時也能安全重試。
 - 公共 API 已不再接受 `regenerate_semantics` 或 `revectorize`；寫入後會自動排程相關語義與向量處理。
 - 資源寫入附帶的父目錄 L0/L1 重新整理採用盡力更新：父目錄鎖衝突時跳過本次目錄重新整理，保留原文寫入及檔案自身的摘要、向量處理。跳過 L0/L1 寫回時也跳過目錄向量更新，不保證自動補刷；原文檔案本身的鎖衝突仍報錯。提交任務前發現衝突時返回 `semantic_status: "skipped"`；後臺執行期間的跳過記錄在日誌中，`wait=true` 也不保證父目錄摘要更新。
 - 提供非空 `tags` 時，標籤會在該檔案首次向量 upsert 時寫入，而非在處理完成後再單獨更新。省略 `tags`，或顯式傳 `tags: []` 配合 `tag_mode: "replace"`，都不會修改已有標籤。使用 `tag_mode: "clear"` 可清空全部已有標籤，且 `clear` 會忽略同時傳入的標籤值。
@@ -347,6 +348,7 @@ ov write viking://resources/docs/api.md \
 | `wait` | boolean | 否 | `true` | 是否等待語義/向量重新整理 |
 | `timeout` | number | 否 | `null` | `wait=true` 時的重新整理超時時間（秒） |
 | `telemetry` | boolean/object | 否 | `false` | 是否返回操作遙測資訊 |
+| `processing_mode` | string | 否 | `semantic_and_vectors` | 整批統一的處理模式：`semantic_and_vectors` 或 `vectors_only` |
 
 每個 operation 包含：
 
@@ -356,18 +358,24 @@ ov write viking://resources/docs/api.md \
 | `content` | string | 條件必填 | UTF-8 文本；與 `content_base64` 必須且只能提供一個 |
 | `content_base64` | string | 條件必填 | Base64 編碼的位元組；Memory 目標不支援 |
 | `mode` | string | 否 | `replace`（預設）、`append`、`create` 或 `upsert` |
+| `tags` | string[] | 否 | - | 該檔案的顯式檢索標籤 |
+| `tag_mode` | string | 否 | `replace` | 該檔案標籤寫入方式：`replace`、`append` 或 `clear` |
+| `acl` | object | 否 | - | 該檔案的直接 ACL；需要該檔案的 manage 許可權 |
 
 **說明**
 
-- 單次請求最多包含 256 個 operation，單檔案不超過 8 MiB，總內容不超過 16 MiB。
+- 不設定 operation 數量、單檔案大小或總內容大小的應用層上限。
 - 所有目標必須是 `root_uri` 下的檔案、屬於同一 context type，且 canonical URI 不能重複。
 - Resource 目標允許任意安全副檔名；Memory 目標仍使用文本副檔名白名單，且不接受二進位制內容。
-- `replace`、`append`、`create` 與 `write()` 語義一致；`upsert` 會覆蓋已有檔案或建立缺失檔案。
+- `create`、`replace`、`upsert` 是“寫成請求最終正文”的相容寫法：檔案存在時覆蓋，缺失時建立。`append` 在檔案存在時追加，檔案缺失時以請求正文建立檔案。
+- `processing_mode` 對整個 batch 生效，不能在不同 operation 中混用語義模式；`vectors_only` 不重新整理父目錄語義，只維護變化檔案的向量。
+- `tags`、`tag_mode` 與 `acl` 按 operation 生效；tags 會隨該檔案首次向量 upsert 寫入，`clear` 不要求傳 `tags` 並會忽略同時傳入的標籤值。
 - 整批先獲取所有目標檔案的精確鎖，再校驗檔案狀態並寫入；同一目錄下不涉及相同檔案的寫入可以並行，重疊檔案的寫入或父目錄刪除、移動仍會衝突。所有檔案寫完並釋放鎖後才啟動語義處理，統一重新整理受影響的 `.overview.md` / `.abstract.md`。
 - 資源父目錄重新整理與 `write()` 一樣採用盡力更新：L0/L1 鎖衝突時跳過目錄重新整理及對應目錄向量更新，保留原文和檔案自身的處理，不保證自動補刷。
 - 底層 I/O 中途失敗時，本批次較早完成的寫入仍可能已經可見。
 - 已存在的 `.abstract.md` / `.overview.md` 可以 replace 或 append；系統會保留並校驗受保護的 OKF metadata，並只重建對應目錄實際存在的 L0/L1 向量。
-- 響應體中，通過 `semantic_status`（`queued`、`complete`、`deferred` 或 `skipped`）表達目錄聚合狀態；提交任務前任一目錄因鎖衝突跳過時為 `skipped`，通過 `vector_status` 表達變化檔案的向量維護狀態。
+- 響應體中，通過 `semantic_status`（`queued`、`complete`、`deferred` 或 `skipped`）表達按直接父目錄聚合的狀態；只有所有父目錄都未入隊時才為 `skipped`，某一個目錄因鎖衝突跳過不會掩蓋其他目錄已入隊的工作。`vector_status` 表達變化檔案的向量維護狀態。
+- 若正文已提交但非同步重新整理入隊失敗，正文不會回滾。可使用相同最終正文通過 `replace`、`create` 或 `upsert` 重寫；不要直接重放已經成功過的 `append`，否則會重複追加。
 
 **Python SDK**
 

@@ -106,6 +106,8 @@ ov add-resource https://raw.githubusercontent.com/volcengine/OpenViking/refs/hea
 ov ls viking://resources
 ov tree viking://resources -L 2
 ov read viking://resources/...
+# 讀取第 11～15 行（offset 從 0 開始；limit 為 -1 時讀到結尾）
+ov read viking://resources/... --offset 10 --limit 5
 
 # 檢索上下文
 ov find "what is openviking"

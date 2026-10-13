@@ -10,13 +10,13 @@ OpenViking 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一�
 
 ### 火山引擎託管服務
 
-開啟 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
+開啟 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_02-quickstart)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
 
 ```text
 https://api.vikingdb.cn-beijing.volces.com/openviking
 ```
 
-無需安裝服務端，也無需在本機配置模型。[產品介紹](https://www.volcengine.com/product/openviking-service)和[服務文件](https://docs.volcengine.com/docs/84313/2374478)說明託管服務的使用方式與額度。繼續第 2 步。
+無需安裝服務端，也無需在本機配置模型。[產品介紹](https://www.volcengine.com/product/openviking-service?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_02-quickstart)和[服務文件](https://docs.volcengine.com/docs/84313/2374478)說明託管服務的使用方式與額度。繼續第 2 步。
 
 ### 自建服務
 
