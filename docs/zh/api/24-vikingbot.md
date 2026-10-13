@@ -77,6 +77,8 @@ curl -X POST http://localhost:1933/bot/v1/chat \
 
 **CLI**
 
+`ov chat` 預設通過 `/chat/stream` 流式輸出。
+
 ```bash
 ov chat -m "總結我的專案進展"
 ```

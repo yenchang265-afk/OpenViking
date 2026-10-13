@@ -87,6 +87,12 @@ VITE_OV_BASE_URL=http://127.0.0.1:1933 npm run dev
 
 連線彈窗仍可以在執行時覆蓋 server URL、API key、account ID 和 user ID。
 
+### 檔案系統頁面
+
+開啟 `/filesystem` 可瀏覽和預覽上下文、執行終端命令或使用 Agent 面板。Studio 部署在 `/studio` 下時，頁面地址為 `/studio/filesystem`。
+
+原 `/playground` 地址會重定向至 `/filesystem`，並保留選中的檔案、目錄、面板、會話和 URL 片段。瀏覽器中已有的佈局和歷史記錄仍可使用。
+
 ## 連線與鑑權
 
 業務程式碼應使用 `src/lib/ov-client` 下的適配層，而不是直接從 `src/gen/ov-client` 匯入。適配層集中處理 base URL、鑑權頭、telemetry 預設值和錯誤歸一化。

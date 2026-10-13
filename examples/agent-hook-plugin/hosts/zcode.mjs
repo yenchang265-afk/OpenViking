@@ -17,6 +17,7 @@ export const zcode = {
   tracksPendingPrompt: true,
   capturesOnlyWhenEnabled: true,
   detachesCapture: true,
+  requestBudgets: { "session-start": 25_000, "user-prompt-submit": 17_000, stop: 25_000 },
   stages: { "session-start": "start", "user-prompt-submit": "prompt", stop: "capture" },
   envelope(event, block) {
     if (!block) return null;
@@ -45,7 +46,7 @@ export const zcode = {
     // could be a Stop with no new content, or a race with UserPromptSubmit).
     if (plan.toSend.length === 0) return null;
 
-    const result = await addAgentMessages(ctx.fetchJSON, ctx.sessionId, plan.payloads);
+    const result = await addAgentMessages(ctx.fetchJSON, ctx.sessionId, plan.payloads, ctx.peerId);
     const { captured, ...nextState } = applyZcodeCaptureResult(state, plan, result);
     let nextCount = Number(state.capturedSinceCommit || 0) + captured;
     if (captured > 0) {

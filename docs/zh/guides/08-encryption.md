@@ -4,27 +4,27 @@
 
 ## 概述
 
-OpenViking 提供透明的靜態資料加密，確保多租戶環境下的資料安全與隔離：
+OpenViking 可以按帳戶加密儲存中新寫入的檔案。加解密由儲存層處理，客戶端沿用現有 API：
 
-- ✅ **透明加密**：API 無變化，應用層無感知
-- ✅ **多租戶隔離**：不同帳戶使用獨立金鑰
-- ✅ **三種金鑰提供程式**：Local、Vault、火山引擎 KMS
-- ✅ **向後相容**：未加密的舊檔案仍可正常讀取
+- **透明加密**：API 無變化，應用層無感知
+- **多租戶隔離**：不同帳戶使用獨立金鑰
+- **三種金鑰提供程式**：Local、Vault、火山引擎 KMS
+- **向後相容**：未加密的舊檔案仍可正常讀取
 
 加密功能的概念說明見 [資料加密](../concepts/10-encryption.md)。
 
-## 多寫儲存中的加密
+## 主備儲存中的加密
 
-多寫儲存複用同一套透明加密機制。加密仍在 RAGFS 內部完成，Python SDK、HTTP API 和 CLI 不需要處理加解密。
+主備儲存複用同一套透明加密機制。加密仍在 RAGFS 內部完成，Python SDK、HTTP API 和 CLI 不需要處理加解密。
 
 規則：
 
 - 全域 `encryption.enabled=true` 時，primary backend 必須加密。
 - backup backend 可以通過自己的 `encryption.enabled` 控制是否加密。
-- `.redirect.json` 和 `.sync_log.json` 等多寫內部後設資料跟隨 primary 加密策略。
+- V2 多寫 metadata 儲存在 raw primary，不經過 `EncryptionWrappedFS`。
 - OpenViking 不提供也不需要公開的加解密 API 來操作這些內部檔案。
 
-更多多寫配置見 [多寫儲存指南](./13-multi-write-storage.md)。
+更多主備儲存配置見 [主備儲存指南](./13-multi-write-storage.md)。
 
 ## 快速開始
 
@@ -36,7 +36,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ### 2. 配置加密
 
-編輯 `~/.openviking/ov.conf`：
+將下面的加密配置合併到 `~/.openviking/ov.conf`，保留已有模型和服務端配置：
 
 ```json
 {
@@ -58,68 +58,43 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 修改加密配置後重啟服務，再對該服務執行示例。在執行指令碼的環境中安裝 [Python SDK](../api/01-overview.md#完全不依賴配置檔案使用-python-sdk-客戶端)。
 
 ```python
-import asyncio
 from pathlib import Path
-from openviking_sdk import AsyncHTTPClient
+from openviking_sdk import SyncHTTPClient
 
 
-async def test():
+def test():
     # 啟用認證時，將 OPENVIKING_API_KEY 設定為繫結租戶身份的 user/admin key。
-    client = AsyncHTTPClient(url="http://localhost:1933")
+    client = SyncHTTPClient(url="http://localhost:1933")
     try:
-        await client.initialize()
+        client.initialize()
         sample = Path("./encrypted-sample.txt")
         sample.write_text("Hello, encrypted world!", encoding="utf-8")
-        imported = await client.add_resource(
+        imported = client.add_resource(
             path=str(sample),
             wait=True,
             timeout=120,
         )
-        results = await client.find(
+        results = client.find(
             query="encrypted", target_uri=imported["root_uri"]
         )
         print(f"找到 {len(results.get('resources', []))} 個資源")
     finally:
-        await client.close()
+        client.close()
 
 
-asyncio.run(test())
+test()
 ```
 
 示例會等待匯入處理完成並檢查檢索；檢索成功本身不能證明檔案已加密。請按下方“驗證加密”的檔案內容檢查步驟確認儲存檔案頭。
 
 ## API Key 哈希配置
 
-OpenViking 提供兩層加密保護：
+檔案加密和 API Key 雜湊是兩項獨立配置：
 
 | 加密層 | 配置項 | 演算法 | 可逆性 | 說明 |
 |--------|--------|------|--------|------|
-| **檔案層** | `encryption.enabled` | AES-GCM | ✅ 可逆 | 保護整個儲存檔案 |
-| **API key 欄位層** | `encryption.api_key_hashing.enabled` | Argon2id | ❌ 不可逆 | 保護 API key 本身 |
-
-### ⚠️ Breaking Change 說明
-
-**版本變更**：OpenViking v0.3.12 → later versions
-
-**行為變化**：
-- **之前**：`encryption.enabled = true` 隱式啟用 API key Argon2id 雜湊
-- **現在**：需要顯式配置 `encryption.api_key_hashing.enabled`
-
-**影響**：
-- 升級後，如果 `encryption.enabled = true` 但 `encryption.api_key_hashing.enabled` 未顯式配置為 `true`，會在啟動時看到以下警告日誌：
-  ```
-  API key hashing is disabled while file encryption is enabled.
-  Previously, encryption.enabled=true implicitly enabled API key Argon2id hashing.
-  Now, API keys will be stored in plaintext within AES-GCM encrypted files.
-  To maintain the previous behavior, set encryption.api_key_hashing.enabled=true.
-  ```
-
-**遷移選項**：
-
-| 選項 | 配置 | 行為 |
-|------|------|------|
-| **保持原有行為** | `api_key_hashing.enabled = true` | API key 使用 Argon2id 雜湊儲存 |
-| **推薦新行為** | `api_key_hashing.enabled = false`（預設） | API key 明文儲存（檔案層仍加密） |
+| **檔案層** | `encryption.enabled` | AES-GCM | 可逆 | 保護整個儲存檔案 |
+| **API key 欄位層** | `encryption.api_key_hashing.enabled` | Argon2id | 不可逆 | 保護 API key 本身 |
 
 ### 預設行為
 
@@ -127,10 +102,11 @@ OpenViking 提供兩層加密保護：
 - API key 以明文儲存在 JSON 檔案中
 - 如果 `encryption.enabled = true`，整個檔案會被 AES-GCM 加密保護
 - `ov admin list-users` 可以顯示完整的 API key
+- 如果 `encryption.enabled = true` 且未啟用 API key 雜湊，服務端啟動時會輸出一條說明此情況的 INFO 日誌
 
 ### 啟用 Argon2id 雜湊
 
-如果需要最進階別的 API key 保護，可以啟用 Argon2id 單向雜湊：
+啟用 Argon2id 單向雜湊後，服務端不再儲存可還原的 API Key 明文：
 
 ```json
 {
@@ -170,7 +146,7 @@ OpenViking 提供兩層加密保護：
 
 | 提供程式 | 適用場景 | 優點 | 缺點 |
 |---------|---------|------|------|
-| **Local** | 開發環境、單節點部署 | 簡單，無需外部服務 | 金鑰儲存在本地，安全性較低 |
+| **Local** | 開發環境、單節點部署 | 簡單，無需外部服務 | 需要管理本地檔案許可權和獨立金鑰備份 |
 | **Vault** | 生產環境、多雲部署 | 企業級金鑰管理，支援版本控制 | 需要部署和維護 Vault |
 | **Volcengine KMS** | 火山引擎雲部署 | 雲原生金鑰管理服務 | 僅限火山引擎環境 |
 
@@ -221,7 +197,7 @@ ov system crypto init-key -f ~/.openviking/master.key
 
 ### 前置條件
 
-1. 已部署 HashiCorp Vault 服務
+1. 已部署 HashiCorp Vault 服務，並在服務端 Python 環境安裝 `hvac`
 2. 已啟用 Transit 引擎
 3. 有足夠許可權的 Vault Token
 
@@ -237,10 +213,16 @@ vault secrets enable transit
 
 ```bash
 # KV v2（推薦）
-vault secrets enable -version=2 kv
+vault secrets enable -path=secret -version=2 kv
 
 # 或 KV v1
-vault secrets enable kv
+vault secrets enable -path=secret -version=1 kv
+```
+
+按實際部署選擇一條 KV 命令，不要兩條都執行。下面使用 `secret` 掛載點和 KV v2。先由管理員建立 Transit key：
+
+```bash
+vault write -f transit/keys/openviking-root-key type=aes256-gcm96
 ```
 
 3. 配置 OpenViking：
@@ -255,7 +237,7 @@ vault secrets enable kv
       "token": "hvs.xxxxxxxxxxxxxxxxxxxxx",
       "mount_point": "transit",
       "kv_mount_point": "secret",
-      "kv_version": 1,
+      "kv_version": 2,
       "root_key_name": "openviking-root-key",
       "encrypted_root_key_key": "openviking-encrypted-root-key"
     }
@@ -277,17 +259,31 @@ vault secrets enable kv
 
 ### Vault 許可權建議
 
-為 Token 配置最小許可權：
+對於上面的配置，服務 token 需要讀取 Transit key 後設資料、加解密許可權，以及儲存封裝根金鑰的 KV 讀寫許可權。提前建立引擎和 Transit key 後，可參考：
 
 ```hcl
-path "transit/encrypt/openviking-root" {
+path "auth/token/lookup-self" {
+  capabilities = ["read"]
+}
+
+path "transit/keys/openviking-root-key" {
+  capabilities = ["read"]
+}
+
+path "secret/data/openviking-encrypted-root-key" {
+  capabilities = ["read", "create", "update"]
+}
+
+path "transit/encrypt/openviking-root-key" {
   capabilities = ["update"]
 }
 
-path "transit/decrypt/openviking-root" {
+path "transit/decrypt/openviking-root-key" {
   capabilities = ["update"]
 }
 ```
+
+使用 KV v1 時，將 `secret/data/openviking-encrypted-root-key` 改為 `secret/openviking-encrypted-root-key`。provider 還會檢查 `sys/mounts`；許可權不足會記錄警告，Transit 已啟用時不會因此停止啟動。
 
 ---
 
@@ -363,7 +359,7 @@ path "transit/decrypt/openviking-root" {
 
 ### 方法一：檢查檔案內容
 
-加密檔案以魔術數 `OVE1` 開頭：
+檢查物理後端檔案，API 返回的內容已經解密。下面的路徑需換成實際檔案路徑。加密檔案以魔術數 `OVE1` 開頭：
 
 ```bash
 # 檢視檔案前 4 位元組
@@ -381,21 +377,11 @@ hexdump -C ./data/agfs/your-file | head -1
 00000000  7b 22 63 6f 6e 74 65 6e  74 73 22 3a 5b 7b 22 70  |{"contents":[{"p|
 ```
 
-### 方法二：跨提供程式驗證
+### 方法二：重啟後讀回
 
-嘗試用不同提供程式解密彼此的資料，應該會失敗（這是正常的安全行為）：
+重啟前後，通過 API 讀取同一份已匯入檔案，確認內容一致，再按上面的方法核對物理儲存檔案頭。這能檢查部署是否重新載入了原金鑰，並能讀取已有密文。
 
-```python
-# 用 Provider A 加密
-encrypted = await provider_a.encrypt_file_key(plaintext, "test-account")
-
-# 嘗試用 Provider B 解密（應該失敗）
-try:
-    await provider_b.decrypt_file_key(encrypted, "test-account")
-    print("❌ 安全漏洞：跨提供程序解密成功！")
-except Exception as e:
-    print("✓ 安全：跨提供程式解密失敗，符合預期")
-```
+內部 provider 呼叫丟擲異常不能直接當作加密驗證通過。引數錯誤、依賴缺失和網路錯誤都可能在解密前失敗。
 
 ---
 
@@ -426,12 +412,7 @@ ov restore ./backups/before-encryption.ovpack --on-conflict overwrite
 
 ### 切換金鑰提供程式
 
-1. 備份現有資料和金鑰
-2. 使用舊提供程式解密所有資料
-3. 配置新提供程序
-4. 重新加密所有資料
-
-**注意**：這是一個破壞性操作，建議在測試環境先驗證。
+保持舊 provider 和金鑰可用，匯出邏輯 OVPack 備份。按上面的遷移步驟，在使用新 provider 的獨立空環境恢復，核對內容、許可權和重建後的索引，再切換流量。直接修改原環境的 provider 配置不會重新加密已有檔案。
 
 ---
 
@@ -471,19 +452,11 @@ Error: Invalid credentials
 2. 確認金鑰有足夠許可權
 3. 驗證區域配置正確
 
-### 跨提供程式解密失敗（這是正常的）
+### 已有密文無法讀取
 
-```
-Error: KeyMismatchError
-```
+檢查原根金鑰、provider 配置、account 身份和密文是否仍然完整。Vault 需要保留 Transit key 和存放封裝根金鑰的 KV 條目；KMS 需要保留 KMS key 和本地封裝金鑰檔案。不要通過生成新根金鑰修復舊密文的讀取問題。
 
-**說明**：這是預期的安全行為。不同提供程式使用不同的根金鑰，無法相互解密。
-
-### 部分讀取返回密文
-
-如果使用舊版本 OpenViking 建立的加密檔案，部分讀取可能返回密文。
-
-**解決方案**：升級到最新版本的 OpenViking。
+部分讀取會先載入並校驗整個加密檔案，再返回所需的明文切片。部分讀取返回密文時，記錄服務版本，在測試副本上比較完整讀取與部分讀取，核對儲存加密配置和相關修復後再升級。保留原資料及金鑰，以便回退。
 
 ---
 
@@ -492,3 +465,5 @@ Error: KeyMismatchError
 - [資料加密](../concepts/10-encryption.md) - 加密概念說明
 - [配置指南](./01-configuration.md) - 完整配置參考
 - [多租戶](../concepts/11-multi-tenant.md) - 帳號、使用者與 Agent 的隔離模型
+
+Vault 參考：[KV v2](https://developer.hashicorp.com/vault/docs/secrets/kv/kv-v2)、[Transit API](https://developer.hashicorp.com/vault/api-docs/secret/transit)。

@@ -58,6 +58,7 @@ from openviking.server.routers import (
     watches_router,
     webdav_router,
 )
+from openviking.server.routers.gateway import router as gateway_router
 from openviking.server.timing_middleware import RequestTimingMiddleware
 from openviking.service.core import OpenVikingService
 from openviking.service.task_tracker import get_task_tracker
@@ -158,29 +159,43 @@ async def _initialize_auth_plugin(
     logger.info("Auth plugin initialized: %s", effective_auth_mode)
 
 
-def _builtin_skill_account_ids(app: FastAPI, service: OpenVikingService) -> list[str]:
-    """Every known account; dev mode and bare trusted mode only have the default."""
+async def _builtin_skill_account_ids(app: FastAPI, service: OpenVikingService) -> list[str]:
+    """Every known account; dev mode and bare trusted mode only have the default.
+
+    The default account does not need the account store, so it is kept even
+    when listing the other accounts fails.
+    """
     manager = getattr(app.state, "api_key_manager", None)
     if manager is None:
         plugin = getattr(app.state, "auth_plugin", None)
         manager = getattr(plugin, "_api_key_manager", None)
-    account_ids = [service.user.account_id]
+    user = getattr(service, "user", None)
+    account_ids = [user.account_id] if user is not None else []
     if manager is not None:
+        try:
+            accounts = await manager.list_accounts()
+        except Exception:
+            logger.exception("Could not list accounts for built-in Skill installation")
+            accounts = []
         account_ids += [
-            account["account_id"]
-            for account in manager.get_accounts()
-            if account.get("status") != "deleting"
+            account["account_id"] for account in accounts if account.get("status") != "deleting"
         ]
     return list(dict.fromkeys(account_ids))
 
 
 def _start_builtin_skills_install(app: FastAPI, service: OpenVikingService) -> asyncio.Task:
-    """Install the bundled compile Skills in the background, after startup."""
+    """Install the bundled compile Skills in the background, after startup.
+
+    Listing accounts happens inside the task: it reads the account store, and a
+    failure there must not block startup.
+    """
     from openviking.service.builtin_skills import install_builtin_skills_for_accounts
 
-    return asyncio.create_task(
-        install_builtin_skills_for_accounts(service, _builtin_skill_account_ids(app, service))
-    )
+    async def install() -> None:
+        account_ids = await _builtin_skill_account_ids(app, service)
+        await install_builtin_skills_for_accounts(service, account_ids)
+
+    return asyncio.create_task(install())
 
 
 async def _initialize_runtime_state(
@@ -277,6 +292,7 @@ def create_app(
     config: Optional[ServerConfig] = None,
     service: Optional[OpenVikingService] = None,
     config_path: Optional[str] = None,
+    server_overrides: Optional[dict] = None,
 ) -> FastAPI:
     """Create FastAPI application.
 
@@ -284,6 +300,7 @@ def create_app(
         config: Server configuration. If None, loads from default location.
         service: Pre-initialized OpenVikingService (optional).
         config_path: Resolved ov.conf path used for startup configuration.
+        server_overrides: CLI arguments reapplied when loading the startup file.
 
     Returns:
         FastAPI application instance
@@ -477,6 +494,10 @@ def create_app(
     )
 
     app.state.config = config
+    app.state.server_config_overrides = server_overrides or {}
+    from openviking.server.restart import RestartController
+
+    app.state.restart_controller = RestartController()
     app.state.api_key_manager = None
     app.state.deletion_service = None
     set_server_config(config)
@@ -640,6 +661,7 @@ def create_app(
     app.include_router(system_router)
     app.include_router(acl_router)
     app.include_router(admin_router)
+    app.include_router(gateway_router)
     app.include_router(agent_evolution_router)
     app.include_router(compile_router)
     app.include_router(resources_router)
@@ -707,14 +729,11 @@ def create_app(
                 or "http://127.0.0.1:1933"
             )
 
-            # Late-binding role resolver: app.state.api_key_manager is wired
-            # during lifespan, after the provider is constructed. Lambda
-            # closes over `app` and looks up at call time.
-            def _current_role(account_id: str, user_id: str) -> Role:
-                mgr = getattr(app.state, "api_key_manager", None)
-                if mgr is None or not hasattr(mgr, "get_user_role"):
+            async def _current_role(account_id: str, user_id: str) -> Role:
+                manager = getattr(app.state, "api_key_manager", None)
+                if manager is None:
                     return Role.USER
-                return mgr.get_user_role(account_id, user_id)
+                return await manager.get_registered_user_role(account_id, user_id) or Role.USER
 
             _route_provider = OpenVikingOAuthProvider(
                 store=_route_store,

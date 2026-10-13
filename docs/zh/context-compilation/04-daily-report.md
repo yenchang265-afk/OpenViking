@@ -4,12 +4,14 @@
 
 Skill 原始碼：[openviking/builtin_skills/compile/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/daily-report)
 
+先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
+
 ## 第一步：準備來源
 
 日報的來源通常是已經在 OpenViking 裡的會話、訊息或文件。如果要從本地匯入一批記錄：
 
 ```bash
-ov add-resource ./work-logs --to viking://resources/work-logs
+ov add-resource ./work-logs --to viking://resources/work-logs --wait
 ov ls -r viking://resources/work-logs
 ```
 
@@ -37,7 +39,7 @@ ov compile \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
   --skill viking://agent/skills/daily-report \
-  --instruction "生成 2026-08-20 的日報，聚焦我的工作產出與決策"
+  --instruction "按 Asia/Shanghai 時區生成 2026-08-20 的日報，聚焦我的工作產出與決策"
 ```
 
 一次生成多天，把日期範圍寫進 `--instruction` 即可（每天仍是獨立一頁）：
@@ -47,7 +49,7 @@ ov compile \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
   --skill viking://agent/skills/daily-report \
-  --instruction "生成 2026-08-18 至 2026-08-20 每天一份日報"
+  --instruction "按 Asia/Shanghai 時區生成 2026-08-18 至 2026-08-20 每天一份日報"
 ```
 
 命令會立刻返回 `task_id`：
@@ -57,7 +59,7 @@ ov task status cmp_01abc      # 檢視進度與最終結果
 ov task cancel cmp_01abc      # 協作式取消
 ```
 
-## 第四步：看看產物
+## 第四步：檢視產物
 
 日報是純 Markdown，直接讀即可：
 

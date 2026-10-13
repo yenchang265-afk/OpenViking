@@ -101,6 +101,7 @@ class EmbeddingMsg:
     id: str = field(default_factory=lambda: str(uuid4()))
     telemetry_id: str = ""
     queue_enqueued_at: float = 0.0
+    failure_requeue_count: int = 0
 
     def __init__(
         self,
@@ -113,12 +114,14 @@ class EmbeddingMsg:
         field_modes: Optional[Dict[str, str]] = None,
         initial_fields: Optional[Dict[str, Any]] = None,
         queue_enqueued_at: float = 0.0,
+        failure_requeue_count: int = 0,
         *,
         payload: EmbeddingPayload | None = None,
     ) -> None:
         self.id = str(uuid4())
         self.telemetry_id = telemetry_id
         self.queue_enqueued_at = max(float(queue_enqueued_at or 0.0), 0.0)
+        self.failure_requeue_count = max(int(failure_requeue_count or 0), 0)
         self.action = IndexAction(action)
         if payload is not None:
             if any(
@@ -144,6 +147,13 @@ class EmbeddingMsg:
                 initial_fields=dict(initial_fields or {}),
             )
         self._validate_payload()
+        self._validate_account_context()
+
+    def _validate_account_context(self) -> None:
+        context_data = getattr(self.payload, "context_data", {})
+        account_id = context_data.get("account_id") if isinstance(context_data, dict) else None
+        if not isinstance(account_id, str) or not account_id.strip():
+            raise ValueError("Embedding message requires account_id")
 
     def _legacy_payload(
         self,
@@ -316,6 +326,7 @@ class EmbeddingMsg:
             "id": self.id,
             "telemetry_id": self.telemetry_id,
             "queue_enqueued_at": self.queue_enqueued_at,
+            "failure_requeue_count": self.failure_requeue_count,
             "action": self.action.value,
             "payload": self.payload.to_dict(),
         }
@@ -381,6 +392,7 @@ class EmbeddingMsg:
                 payload=payload,
                 telemetry_id=str(data.get("telemetry_id") or ""),
                 queue_enqueued_at=data.get("queue_enqueued_at", 0.0),
+                failure_requeue_count=data.get("failure_requeue_count", 0),
             )
         else:
             obj = cls(
@@ -393,6 +405,7 @@ class EmbeddingMsg:
                 field_modes=data.get("field_modes"),
                 initial_fields=data.get("initial_fields"),
                 queue_enqueued_at=data.get("queue_enqueued_at", 0.0),
+                failure_requeue_count=data.get("failure_requeue_count", 0),
             )
         obj.id = str(data.get("id") or obj.id)
         return obj

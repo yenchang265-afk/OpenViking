@@ -1,6 +1,6 @@
 # 示例：Knowledge Graph
 
-把一批來源編譯成一個**證據可溯、可直接視覺化**的知識圖譜：語義分類的實體節點、語句級出處、帶型別的有向關係邊。產物是這樣一棵工件樹：
+將來源中的實體及其關係整理成知識圖譜：實體帶語義型別，關係是帶型別的有向邊，每條陳述和邊都保留出處。輸出包含實體檔案和關係表：
 
 ```text
 entities/
@@ -18,10 +18,12 @@ relations.jsonl       # 每行一條有向邊
 
 Skill 原始碼：[openviking/builtin_skills/compile/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-graph) · 視覺化指令碼：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
 
+先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
+
 ## 第一步：準備來源
 
 ```bash
-ov add-resource ./journal-to-the-west --to viking://resources/journal
+ov add-resource ./journal-to-the-west --to viking://resources/journal --wait
 ov ls -r viking://resources/journal
 ```
 
@@ -57,7 +59,7 @@ ov task status cmp_01abc      # 檢視進度與最終結果
 ov task cancel cmp_01abc      # 協作式取消
 ```
 
-## 第四步：看看產物
+## 第四步：檢視產物
 
 ```bash
 ov tree viking://resources/journal-kg
@@ -67,11 +69,11 @@ ov read viking://resources/journal-kg/entities/孫悟空.md
 
 ## 第五步：視覺化成互動式圖譜
 
-在 Studio 中，於 Playground 開啟產物資料夾，並將標頭從 **內容** 切換為 **圖譜**，即可在瀏覽器中探索同一張圖：點選節點檢視詳細資訊（含關係與證據）、搜尋、按實體類型篩選，並逐跳擴大高亮的鄰居範圍。下方腳本則會產生一個獨立的 HTML 檔案。
+在 Studio 中，於檔案系統頁面開啟產物資料夾，並將標頭從 **內容** 切換為 **圖譜**，即可在瀏覽器中探索同一張圖：點選節點檢視詳細資訊（含關係與證據）、搜尋、按實體類型篩選，並逐跳擴大高亮的鄰居範圍。下方腳本則會產生一個獨立的 HTML 檔案。
 
 與 LLM Wiki 的指令碼不同，`knowledge_graph.py` 讀取的是**本地目錄**（需要 `entities/` 和 `relations.jsonl` 都在本地）。所以先把產物拉到本地，再生成 HTML。
 
-先把整棵工件樹下載下來。`ov get` 一次下載一個檔案，配合 `ov ls -r -s` 列出全部路徑即可批次拉取：
+`ov get` 一次下載一個檔案。下面的指令碼只下載實體 Markdown 和關係表：
 
 ```bash
 SRC="viking://resources/journal-kg"
@@ -80,7 +82,8 @@ mkdir -p "$DST"
 ov ls -r -s "$SRC" | while read -r uri; do
   # 只下載檔案（entities/*.md 和 relations.jsonl），跳過目錄
   case "$uri" in
-    */entities|"$SRC") continue ;;
+    "$SRC"/entities/*.md|"$SRC"/relations.jsonl) ;;
+    *) continue ;;
   esac
   rel="${uri#$SRC/}"
   mkdir -p "$DST/$(dirname "$rel")"
@@ -88,7 +91,7 @@ ov ls -r -s "$SRC" | while read -r uri; do
 done
 ```
 
-> `ov get` 要求本地目標路徑尚不存在，所以重新下載前先清掉舊目錄（`rm -rf ./journal-kg`）。
+> `ov get` 要求本地目標檔案尚不存在。重複下載時，將 `DST` 換為一個新目錄，保留上次結果。
 
 確認本地目錄結構正確：
 

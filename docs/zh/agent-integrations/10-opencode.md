@@ -1,47 +1,23 @@
-# OpenCode 插件
+# OpenCode
 
-為 [OpenCode](https://opencode.ai/) 提供跨專案、跨會話的長期記憶和已索引倉庫上下文。安裝後，每次對話都會通過 OpenCode plugin hooks 自動召回相關記憶並捕獲新內容；模型可呼叫工具來自 Claude Code / Codex 記憶外掛同款的 OpenViking stdio MCP proxy。
+為 [OpenCode](https://opencode.ai/) 提供跨專案、跨會話的長期記憶和已索引倉庫上下文。安裝後，每次對話都會通過 OpenCode plugin hooks 自動召回相關記憶並捕獲新內容；模型可呼叫工具來自 Claude Code / Codex 記憶外掛同款的 OpenViking stdio MCP 代理。
 
 原始碼：[examples/opencode-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/opencode-plugin)
 
-工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
-
-## 前置條件
-
-- [OpenCode](https://opencode.ai/)
-- Node.js 18+
-- OpenViking HTTP server
-- 如果服務端啟用了鑑權，需要一個可用的 OpenViking API key
-
-先啟動 OpenViking server：
-
-```bash
-openviking-server --config ~/.openviking/ov.conf
-```
-
-在另一個終端檢查服務：
-
-```bash
-curl http://localhost:1933/health
-```
-
 ## 安裝
+
+前置條件：[OpenCode](https://opencode.ai/) 1.15.7+ 或 2.0.15+、Node.js 18+，以及一個可訪問的 OpenViking HTTP server（用 `curl http://localhost:1933/health` 確認）；服務端啟用了鑑權時，還需要一個可用的 OpenViking API key。
 
 ### 一鍵安裝（推薦）
 
-OpenCode 與 Claude Code、Codex 共用同一個安裝器。它會詢問語言（English/中文）、要安裝的 harness、下載源和 OpenViking 憑據；每一步都是冪等的，重複執行完全安全。
+OpenCode 與 Claude Code、Codex 共用同一個安裝器。它會詢問要安裝的 harness 和 OpenViking 憑據；每一步都是冪等的，重複執行完全安全。
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh) --harness opencode
+curl -fsSL https://openviking.ai/install | bash
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
-在 GitHub 訪問困難的地區，可從火山引擎 TOS 映象運行同一個安裝器（或在下載源選擇步驟選"TOS mirror"）：
-
-```bash
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
-```
-
-安裝器會註冊 npm 外掛（TOS 渠道則安裝本地檔案外掛），把 `openviking` MCP server 條目寫進 `~/.config/opencode/opencode.json`，並配置 `~/.openviking/ovcli.conf`。
+安裝器會把外掛作為本地檔案外掛複製到 `~/.config/opencode/plugins/`，把 `openviking` MCP server 條目寫進 `~/.config/opencode/opencode.json`，並配置 `~/.openviking/ovcli.conf`。
 
 ### 手動 npm 安裝
 
@@ -59,6 +35,12 @@ opencode
 ```
 
 已有 `~/.config/opencode/opencode.json` 時，不要覆蓋原檔案；只把 `"@openviking/opencode-plugin"` 合併到已有的 `plugin` 陣列。OpenCode 啟動時會自動下載這個 npm 包，外掛會自動註冊它的 MCP server。
+
+OpenCode 2 使用同一個包：v2 呼叫 `setup()`，OpenCode 1 呼叫 `server()`。OpenCode 2 會把 `"plugin"` 規範化為 `"plugins"`，因此安裝器繼續寫相容 v1/v2 的 `"plugin"`；不要為了 v2 手工改寫現有配置。
+
+外掛自帶 skill，不需要另外安裝：`openviking-memory`、`openviking-skills` 和 `ov-experience-memory`，告訴模型什麼時候該用哪個 OpenViking 工具。OpenCode 1 由外掛的 `config` hook 把外掛的 `skills/` 目錄加進 `skills.paths`；OpenCode 2 則通過 `skill.transform` 註冊這個目錄。這些 skill 只隨外掛的 OpenViking MCP server 一起提供：hook-only 模式下、或你關閉了 `mcp.openviking` 時不會加入。
+
+在 OpenCode 2 中，外掛把 MCP server 設為 `codemode: false`，所以工具仍以 `openviking_*` 直接暴露，不會收進 Code Mode。OpenCode 2 沒有外掛 toast API，服務不可用等資訊只寫入外掛日誌。
 
 ### 原始碼安裝
 
@@ -101,7 +83,7 @@ node examples/memory-plugin-shared/sync.mjs
 node examples/opencode-plugin/scripts/setup.mjs
 ```
 
-行為旋鈕寫在 `~/.openviking/ovcli.conf` 的 `plugin` 段，與嚮導寫入的連線欄位同一個檔案。共享鍵對所有記憶外掛生效；`plugin.opencode` 下的鍵只對本外掛生效，並覆蓋共享鍵：
+行為配置寫在 `~/.openviking/ovcli.conf` 的 `plugin` 段，與嚮導寫入的連線欄位同一個檔案。共享鍵對所有記憶外掛生效；`plugin.opencode` 下的鍵只對本外掛生效，並覆蓋共享鍵：
 
 ```json
 {
@@ -113,7 +95,6 @@ node examples/opencode-plugin/scripts/setup.mjs
     "recallTokenBudget": 2000,
     "minQueryLength": 3,
     "commitTokenThreshold": 20000,
-    "commitKeepRecentCount": 10,
     "profileTokenBudget": 10000,
     "skillCatalog": true,
     "skillCatalogTokenBudget": 1200,
@@ -151,6 +132,12 @@ API key 會由 hooks 和 MCP proxy 作為 `Authorization: Bearer ...` 傳送；`
 - `openviking_remember`、`openviking_write`、`openviking_edit`、`openviking_add_resource`、`openviking_add_skill`
 - `openviking_list_watches`、`openviking_cancel_watch`、`openviking_forget`、`openviking_health`
 
+OpenCode 2 在每次 execution 結束時抓取本輪使用者訊息、助手回覆和工具結果，並在壓縮前補齊即將移出上下文的對話；達到 token 閾值時提交，compaction、session 刪除和外掛 cleanup 會強制提交。OpenCode 2 會在無活動 60 分鐘、服務停止或本地外掛熱過載時執行 cleanup。
+
+工具呼叫和結果會作為獨立的 `tool` part 捕獲，`tool_output` 原樣上報。截斷由服務端負責：超過 `tool_output_externalization.threshold_chars`（預設 `20000`）的輸出會寫入 session 的 tool-result 儲存，part 中只保留 synopsis stub 和 `tool_output_ref`，原文仍可通過 [`/api/v1/sessions/{id}/tool-results`](../api/05-sessions.md#read-tool-result) 讀回。
+
+OpenCode 1.15.7 不會呼叫外掛 dispose。v1 的短時 CLI 執行也可能在非同步捕獲完成前退出，這一行為在 v2 適配前已存在。使用常駐 v1 服務可以讓 idle 捕獲完成；OpenCode 1.18.32 會在 instance dispose 時呼叫外掛的 dispose。
+
 可以讓 OpenCode 搜尋或瀏覽 OpenViking memory。執行時狀態和錯誤日誌會寫入：
 
 ```bash
@@ -162,7 +149,7 @@ API key 會由 hooks 和 MCP proxy 作為 `Authorization: Bearer ...` 傳送；`
 
 | 問題 | 排查方向 |
 |------|----------|
-| 外掛沒有載入 | 確認 `~/.config/opencode/opencode.json` 引用了 `@openviking/opencode-plugin`；原始碼安裝時確認 `~/.config/opencode/plugins/openviking.js` 存在 |
+| 外掛沒有載入 | 確認 `~/.config/opencode/opencode.json` 的 `plugin` 陣列引用了 `@openviking/opencode-plugin`；原始碼安裝時確認 `~/.config/opencode/plugins/openviking.js` 存在 |
 | 載入時報找不到 `lib/shared/*.mjs` | 原始碼複製前沒有執行 `sync.mjs`。在倉庫根目錄執行 `node examples/memory-plugin-shared/sync.mjs` 後重新複製 `lib/` |
 | MCP tools 連到了錯誤的 server | 檢查 `~/.openviking/ovcli.conf`，或用 `OPENVIKING_*` 環境變數；`OPENVIKING_CLI_CONFIG_FILE` 可讓外掛改讀另一份 ovcli.conf |
 | OpenViking 返回 401 / 403 | 檢查 `OPENVIKING_API_KEY`；trusted-mode 部署還要檢查 `OPENVIKING_ACCOUNT` 和 `OPENVIKING_USER` |

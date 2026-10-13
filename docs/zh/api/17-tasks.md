@@ -50,29 +50,29 @@ curl -X GET http://localhost:1933/api/v1/tasks/uuid-xxx \
 **Python SDK**
 
 ```python
-import asyncio
+import time
 
-from openviking_sdk import AsyncHTTPClient
+from openviking_sdk import SyncHTTPClient
 
-client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
-await client.initialize()
+client = SyncHTTPClient(url="http://localhost:1933", api_key="your-key")
+client.initialize()
 
 try:
-    submitted = await client.add_resource("https://example.com/guide.md")
+    submitted = client.add_resource("https://example.com/guide.md")
     task_id = submitted["task_id"]
     print(f"Import task: {task_id}")
     while True:
-        task = await client.get_task(task_id)
+        task = client.get_task(task_id)
         if task is None:
             raise RuntimeError(f"Task {task_id} is no longer available")
         if task["status"] == "completed":
             break
         if task["status"] in {"failed", "cancelled"}:
             raise RuntimeError(f"Import task {task_id}: {task['status']} ({task.get('error')})")
-        await asyncio.sleep(2)
+        time.sleep(2)
     print(task["result"])
 finally:
-    await client.close()
+    client.close()
 ```
 
 **TypeScript SDK**
@@ -150,9 +150,13 @@ ov task status uuid-xxx
 
 每個任務最多保留 64 條事件，序列化事件資料不超過 32 KiB。超限時優先刪除較早事件，`dropped_count` 記錄刪除數量，保留事件的序號不重置。事件隨任務過期清理。舊任務返回 `execution_events: null`；若舊的活躍任務後來產生事件，則 `started_mid_task` 為 true，不會重建此前的歷史。舊版本服務即使收到引數也可能不返回該欄位。Studio 會說明這些情況，並保留任務後設資料、結果和錯誤展示。
 
+::: details 擴充事件與版本回滾相容性
+
 擴充執行事件時，在 `openviking/service/task_events.py` 註冊事件型別、補充 Studio 翻譯，然後在實際執行點呼叫 `await tracker.record_event(task_id, kind, account_id=..., user_id=..., operation=...)`。這個內部介面不修改任務狀態或階段，只接受有長度限制的操作標識，不接受任意日誌內容。現有生命週期方法會自動記錄它們接受的狀態變化。
 
 持久化任務檔案新增 `execution_events` 欄位。回滾目標需要具備未知任務欄位的保留能力（提交 `a5166386` 或之後的版本）；更早的讀取實現可能拒絕這些檔案。回滾期間也會停止上報事件，因此跨降級執行的任務歷史可能不完整。
+
+:::
 
 **響應示例（完成）**
 
@@ -203,6 +207,8 @@ ov task status uuid-xxx
 
 **支援的任務型別**：
 - `add_resource`
+- `add_skill`
+- `compile`
 - `session_commit`
 - `admin_reindex`
 - `snapshot_restore_reindex`
@@ -225,7 +231,7 @@ ov task status uuid-xxx
 **Python SDK**
 
 ```python
-task = await client.cancel_task(task_id="uuid-xxx")
+task = client.cancel_task(task_id="uuid-xxx")
 print(task["status"])
 ```
 
@@ -309,7 +315,12 @@ ov task cancel uuid-xxx
 | status | str | 否 | None | 按任務狀態過濾：`pending`、`running`、`cancelling`、`completed`、`failed`、`cancelled` |
 | resource_id | str | 否 | None | 按資源 ID 過濾，例如會話 ID |
 | include_internal | bool | 否 | false | 是否包含 Connector 匯入產生的內部子任務 |
-| limit | int | 否 | 50 | 最多返回的任務條數 |
+| limit | int | 否 | 50 | 每次最多返回的任務條數，範圍 1～200 |
+| pagination | str | 否 | None | 僅 HTTP；傳 `cursor` 後以分頁物件返回 |
+| cursor | str | 否 | None | 僅 HTTP；上一頁的 `next_cursor`，與 `pagination=cursor` 一起使用 |
+| q | str | 否 | None | 僅 HTTP cursor 模式；在 task ID 和 Compile 請求的 `skill`、`to`、`from` 中做不區分大小寫的包含匹配 |
+
+使用 `pagination=cursor` 時，`result` 是包含 `items`、`has_more` 和 `next_cursor` 的物件，而不是陣列。請求下一頁時原樣傳入 `next_cursor`，並保持相同的過濾條件和身份。未使用 cursor 模式時，`q` 和 `cursor` 不影響結果。
 
 預設僅返回使用者可見任務；排查 Connector 匯入時可傳 `include_internal=true` 檢視其內部 `add_resource` 子任務。
 
@@ -329,19 +340,19 @@ curl -X GET "http://localhost:1933/api/v1/tasks?task_type=session_commit&status=
 **Python SDK**
 
 ```python
-from openviking_sdk import AsyncHTTPClient
+from openviking_sdk import SyncHTTPClient
 
-client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
-await client.initialize()
+client = SyncHTTPClient(url="http://localhost:1933", api_key="your-key")
+client.initialize()
 
-tasks = await client.list_tasks(
+tasks = client.list_tasks(
     task_type="session_commit",
     status="running",
     limit=20,
 )
 for task in tasks:
     print(task["task_id"], task["status"])
-await client.close()
+client.close()
 ```
 
 **TypeScript SDK**

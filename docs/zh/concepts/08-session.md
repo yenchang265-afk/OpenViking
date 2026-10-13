@@ -10,6 +10,9 @@ Session 負責管理對話訊息、記錄上下文使用、提取長期記憶。
 `client.session(session_id=...)` 追加訊息或提交會話。
 
 ```python
+from openviking_sdk import SyncHTTPClient
+
+client = SyncHTTPClient(url="http://localhost:1933", api_key="your-key")
 session_info = client.create_session(session_id="chat_001")
 session = client.session(session_id=session_info["session_id"])
 session.add_message(role="user", content="...")
@@ -22,7 +25,7 @@ session.commit()
 |------|------|
 | `add_message(role, content=None, parts=None, options=None, peer_id=None)` | 添加消息 |
 | `commit()` | 提交：歸檔（同步） + 摘要生成和記憶提取（非同步後臺） |
-| `get_task(task_id)` | 查詢後臺任務狀態 |
+| `client.get_task(task_id)` | 查詢後臺任務狀態 |
 
 ### add_message
 
@@ -66,10 +69,11 @@ result = session.commit()
 #   "archived": True
 # }
 
-# 查詢後臺任務進度
-task = client.get_task(task_id=result["task_id"])
-# task["status"]: "pending" | "running" | "completed" | "failed"
-# sum(task["result"]["memories_extracted"].values()): 3
+# 產生歸檔時才有後臺任務；無可歸檔訊息時返回 skipped 和 task_id: null
+task_id = result.get("task_id")
+if task_id:
+    task = client.get_task(task_id=task_id)
+    print(task)  # 單次查詢，不代表任務已完成
 ```
 
 ## 訊息結構
@@ -100,11 +104,11 @@ class Message:
 
 commit() 分兩階段執行：
 
-**Phase 1（同步，立即完成）**：
-1. 遞增 compression_index
-2. 寫入訊息到歸檔目錄（`messages.jsonl`）
-3. 清空當前訊息列表
-4. 返回 `task_id`
+**Phase 1（請求內完成歸檔準備）**：
+1. 在路徑鎖保護下分配歸檔編號，劃分歸檔訊息和保留訊息
+2. 寫入歸檔訊息（`messages.jsonl`），將後續處理加入持久化佇列
+3. 更新當前訊息列表；預設歸檔全部訊息，也可通過提交引數保留最近的訊息或輪次
+4. 產生歸檔時返回 `task_id`，用於跟蹤後臺處理
 
 **Phase 2（非同步後臺）**：
 5. 生成結構化摘要（LLM）→ 寫入 `.abstract.md` 和 `.overview.md`
@@ -142,31 +146,21 @@ OpenViking 內建 `profile`、`preferences`、`entities`、`events`、`identity`
 
 在 `memory_policy.memory_types` 中，`experiences` 會啟用完整的 Agent Evolution 流程，並自動啟用 `cases` 和 `trajectories`。如果沒有 `experiences`，顯式傳入的 `cases` 和 `trajectories` 會被靜默忽略，不會報錯。
 
+Agent Evolution 還要求生效的 `agent_evolution.enabled` 開關已開啟。選擇 `experiences` 後，流程將任務組織為 case，將執行記錄為 trajectory，再提煉可複用的 experiences。經驗使用情況和執行結果分佈通過 [Agent Evolution API](../api/19-agent-evolution.md) 查詢。`openviking/session/train/` 中的離線訓練框架屬於內部實現，不是公開訓練 API。
+
 ### 提取流程
 
-```
-訊息 → LLM 提取 → 候選記憶
-         ↓
-向量預過濾 → 找相似記憶
-         ↓
-LLM 去重決策 → candidate(skip/create/none) + item(merge/delete)
-         ↓
-寫入 AGFS → 向量化
-```
+<MemoryExtractionDiagram />
 
-### 去重決策
+已有記憶會參與提取，更新可以合併或修改現有檔案，也可能建立或刪除檔案。實際操作受記憶 schema、寫入許可權和輸出校驗約束，不能把每次提交理解成必然新增記憶。只有產生 case 時，後續訓練才會生成 trajectory、experience 或已啟用的 session skill。
 
-| 層級 | 決策 | 說明 |
-|------|------|------|
-| Candidate | `skip` | 候選記憶重複，直接跳過 |
-| Candidate | `create` | 建立候選記憶；必要時先刪除衝突舊記憶 |
-| Candidate | `none` | 不建立候選記憶，只處理已有記憶 |
-| Existing item | `merge` | 將候選內容合併到指定已有記憶 |
-| Existing item | `delete` | 刪除衝突的已有記憶 |
+### 如何檢查更新結果
+
+先等待 commit 對應任務完成，再檢視 `memory_diff.json`。其中新增、修改、刪除是實際檔案變更；`skipped_operations` 表示提取提出了操作，但校驗或策略使其跳過。無實際變化的更新不會計入 diff；正文未變但後設資料發生變化時，仍可能記錄為更新。
 
 ## 記憶變更記錄
 
-每次 `session.commit()` 會在歸檔目錄寫入 `memory_diff.json`，記錄本次提交的所有記憶變更，便於審計和回溯。
+提交後的後臺處理會在歸檔目錄寫入 `memory_diff.json`，記錄本次提交的記憶變更，便於審計和回溯。收到 `task_id` 時檔案可能尚未生成，先按[會話 API](../api/05-sessions.md)查詢任務完成狀態。
 
 ```json
 {
@@ -175,23 +169,23 @@ LLM 去重決策 → candidate(skip/create/none) + item(merge/delete)
   "operations": {
     "adds": [
       {
-        "uri": "memory/user/xxx/identity.md",
+        "uri": "viking://user/alice/memories/identity.md",
         "memory_type": "identity",
         "after": "新建立的檔案內容"
       }
     ],
     "updates": [
       {
-        "uri": "memory/user/xxx/context/project.md",
-        "memory_type": "context",
+        "uri": "viking://user/alice/memories/entities/project.md",
+        "memory_type": "entities",
         "before": "修改前的檔案內容",
         "after": "修改後的檔案內容"
       }
     ],
     "deletes": [
       {
-        "uri": "memory/user/xxx/context/old.md",
-        "memory_type": "context",
+        "uri": "viking://user/alice/memories/entities/old.md",
+        "memory_type": "entities",
         "deleted_content": "被刪除的檔案內容"
       }
     ]

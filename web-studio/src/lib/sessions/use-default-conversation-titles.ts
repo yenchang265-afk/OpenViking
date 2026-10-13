@@ -8,6 +8,8 @@ const PLACEHOLDERS = new Set([
   '新建工作台会话',
   '新建對話',
   '新建工作臺會話',
+  '新建文件系统会话',
+  '新建檔案系統會話',
   'New conversation',
   'New session',
 ])

@@ -45,6 +45,10 @@ from openviking.parse.parsers.upload_utils import (
     should_normalize_text,
 )
 from openviking.storage.viking_fs import LS_ALL_NODES
+from openviking.utils.path_safety import (
+    _normalize_storage_segments,
+    normalize_storage_target_uri,
+)
 from openviking_cli.exceptions import InvalidArgumentError
 from openviking_cli.utils.logger import get_logger
 
@@ -64,6 +68,17 @@ _MERGE_SIDECAR_ALLOWLIST = frozenset({IMAGE_MAPPINGS_FILENAME})
 _UNDERSTANDING_LIMITERS: WeakKeyDictionary[
     asyncio.AbstractEventLoop, tuple[int, asyncio.Semaphore]
 ] = WeakKeyDictionary()
+
+
+def _normalize_output_target(path: str, writer: Optional[ParseArtifactWriter]) -> str:
+    """Normalize a parser output path without assuming its artifact backend."""
+    if path.startswith("viking://"):
+        return normalize_storage_target_uri(path)
+    if writer is None:
+        raise ValueError("non-Viking output paths require an artifact writer")
+    root = writer.ref.root.rstrip("/")
+    relative_path = _normalize_storage_segments(writer.relative_path(path))
+    return f"{root}/{relative_path}" if relative_path else root
 
 
 def _get_understanding_limiter(max_concurrent: int) -> asyncio.Semaphore:
@@ -248,9 +263,10 @@ class DirectoryParser(BaseParser):
             writer = await create_parse_artifact_writer(output_store, viking_fs=viking_fs)
             output_store = writer.store
             temp_uri = writer.ref.root
-            target_uri = f"{temp_uri}/{dir_name}"
+            target_uri = _normalize_output_target(f"{temp_uri}/{dir_name}", writer)
+            target_rel = writer.relative_path(target_uri)
             await writer.mkdir()
-            await writer.mkdir(dir_name)
+            await writer.mkdir(target_rel)
 
             if not processable_files:
                 root = ResourceNode(
@@ -267,7 +283,7 @@ class DirectoryParser(BaseParser):
                     warnings=warnings,
                 )
                 result.temp_dir_path = temp_uri
-                result.artifact_ref = await writer.finalize(resource_rel=dir_name)
+                result.artifact_ref = await writer.finalize(resource_rel=target_rel)
                 result.meta["file_count"] = 0
                 result.meta["dir_name"] = dir_name
                 result.meta["total_processable"] = 0
@@ -424,7 +440,7 @@ class DirectoryParser(BaseParser):
                 warnings=warnings,
             )
             result.temp_dir_path = temp_uri
-            result.artifact_ref = await writer.finalize(resource_rel=dir_name)
+            result.artifact_ref = await writer.finalize(resource_rel=target_rel)
             result.meta["file_count"] = file_count
             result.meta["dir_name"] = dir_name
             result.meta["total_processable"] = len(processable_files)
@@ -720,7 +736,11 @@ class DirectoryParser(BaseParser):
 
         if preserve_structure:
             parent = str(PurePosixPath(classified_file.rel_path).parent)
-            dest = f"{target_uri}/{parent}" if parent != "." else target_uri
+            dest = (
+                    _normalize_output_target(f"{target_uri}/{parent}", target_writer)
+                if parent != "."
+                else target_uri
+            )
         else:
             dest = target_uri
         source_ref = getattr(sub_result, "artifact_ref", None)
@@ -899,9 +919,12 @@ class DirectoryParser(BaseParser):
         streamed from disk so large files are never held in memory.
         """
         if preserve_structure:
-            dst_uri = f"{target_uri}/{rel_path}"
+            dst_uri = _normalize_output_target(f"{target_uri}/{rel_path}", target_writer)
         else:
-            dst_uri = f"{target_uri}/{PurePosixPath(rel_path).name}"
+            dst_uri = _normalize_output_target(
+                f"{target_uri}/{PurePosixPath(rel_path).name}",
+                target_writer,
+            )
 
         if should_normalize_text(src_file):
             content = detect_and_convert_encoding(
@@ -1015,15 +1038,16 @@ class DirectoryParser(BaseParser):
                         for entry in destination_entries
                         if entry.get("name") not in ("", ".", "..")
                     }
-                    if payload.get("name") not in destination_names:
+                    destination_uri = normalize_storage_target_uri(
+                        f"{dest_uri.rstrip('/')}/{payload['name']}"
+                    )
+                    destination_name = destination_uri.rsplit("/", 1)[-1]
+                    if destination_name not in destination_names:
                         src = payload.get(
                             "uri",
                             f"{wrapper_uri.rstrip('/')}/{payload['name']}",
                         )
-                        await viking_fs.move_file(
-                            src,
-                            f"{dest_uri.rstrip('/')}/{payload['name']}",
-                        )
+                        await viking_fs.move_file(src, destination_uri)
                         try:
                             await viking_fs.delete_temp(src_temp_uri)
                         except Exception:
@@ -1040,7 +1064,7 @@ class DirectoryParser(BaseParser):
             ):
                 continue
             src = entry.get("uri", f"{src_temp_uri.rstrip('/')}/{name}")
-            dst = f"{dest_uri.rstrip('/')}/{name}"
+            dst = normalize_storage_target_uri(f"{dest_uri.rstrip('/')}/{name}")
             if DirectoryParser._is_dir_entry(entry):
                 await DirectoryParser._recursive_move(viking_fs, src, dst)
             else:
@@ -1117,7 +1141,7 @@ class DirectoryParser(BaseParser):
             ):
                 continue
             s = f"{src_uri.rstrip('/')}/{name}"
-            d = f"{dst_uri.rstrip('/')}/{name}"
+            d = normalize_storage_target_uri(f"{dst_uri.rstrip('/')}/{name}")
             if DirectoryParser._is_dir_entry(entry):
                 await DirectoryParser._recursive_move(viking_fs, s, d)
             else:

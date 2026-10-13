@@ -11,6 +11,7 @@ export const trae = {
   prefix: "tr-",
   tracksPendingPrompt: true,
   capturesOnlyWhenEnabled: true,
+  requestBudgets: { "session-start": 25_000, "user-prompt-submit": 17_000, stop: 25_000 },
   stages: { "session-start": "start", "user-prompt-submit": "prompt", stop: "capture" },
   envelope(event, block) {
     const value = { decision: "approve" };
@@ -42,7 +43,7 @@ export const trae = {
       }
       toSend.push({ hash, turn: kept[0] });
     }
-    const result = await addAgentMessages(ctx.fetchJSON, ctx.sessionId, toSend.map((item) => item.turn));
+    const result = await addAgentMessages(ctx.fetchJSON, ctx.sessionId, toSend.map((item) => item.turn), ctx.peerId);
     const captured = result.sent + result.queued;
     for (const item of toSend.slice(0, captured)) hashes.add(item.hash);
     let nextCount = Number(state.capturedSinceCommit || 0) + captured;

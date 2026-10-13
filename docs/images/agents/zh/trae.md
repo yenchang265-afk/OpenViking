@@ -1,26 +1,13 @@
 ## 步驟1：安裝
 
-1. 根據所使用的客戶端，在終端執行對應的安裝命令：
-
-   **Trae 國際版**
+1. 在終端執行如下安裝命令：
 
    ```bash
-   bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae --dist tos
+   curl -fsSL https://openviking.ai/install | bash
+   # AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
    ```
 
-   **Trae 中國版**
-
-   ```bash
-   bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae-cn --dist tos
-   ```
-
-   **TraeCode CLI 2.0**
-
-   ```bash
-   bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh) --harness trae-cli --dist tos
-   ```
-
-2. 安裝器會依次詢問以下資訊：語言（English / 中文）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
+2. 安裝器會依次詢問以下資訊：要安裝的 harness（Trae 國際版勾選 **TRAE**，Trae 中國版勾選 **TRAE CN**，或勾選 **TraeCode CLI 2.0**）、OpenViking 憑據。在 OpenViking 憑據配置中，選擇連線至「火山引擎 OpenViking 雲服務 [api.vikingdb.cn-beijing.volces.com]」，並填入 API KEY：
 
    ```text
    {{OPENVIKING_API_KEY}}
@@ -30,7 +17,7 @@
 
 **TRAE / TRAE CN**：在「設定 → MCP → 已配置的 MCP Servers」中確認能夠看到 `openviking` 條目即表示接入成功。
 
-**TraeCode CLI 2.0**：Hook 要先信任才會執行。啟動 `trae-cli`，在信任確認上選 **Trust all and continue**：
+**TraeCode CLI 2.0**：啟動 `trae-cli`，在 hook 審閱提示中選 **Trust all and continue**（具體介面隨版本變化）：
 
 ```text
 Hooks need review
@@ -42,7 +29,9 @@ Hooks can run outside the sandbox after you trust them.
   3. Continue without trusting (hooks won't run)
 ```
 
-再執行 `trae-cli plugin list`，確認 `openviking-memory` 已啟用。錯過這個提示，或當時選了第 3 項，Hook 就不會執行：輸入 `/hooks` 補上信任並開啟條目，`/plugins` 裡確認外掛已啟用——兩個開關相互獨立，都要是開著的。外掛更新動了 Hook 時會再要求信任一次。
+如果跳過了提示或選了第 3 項，在 `/hooks` 中檢查並開啟 OpenViking hooks。執行 `trae-cli plugin list` 確認外掛已啟用。新增或變更的 hooks 需要重新檢查；不同版本支援的會話生命週期見完整文件。
+
+MCP 條目可見只說明配置存在。讓助手呼叫 OpenViking 的 `health` 和 `list` 驗證連線；自動召回需另行檢查：等之前的會話提交併處理完成後，在同一工作目錄中新建會話，詢問已儲存的資訊。
 
 ## 故障排查
 

@@ -77,6 +77,32 @@ def _project_schema() -> MemoryTypeSchema:
     )
 
 
+def _renameable_entity_schema() -> MemoryTypeSchema:
+    return MemoryTypeSchema(
+        memory_type="entities",
+        description="Entities",
+        directory="viking://user/{{ user_space }}/memories/entities",
+        filename_template="{{ category }}/{{ name }}.md",
+        fields=[
+            MemoryField(
+                name="category",
+                field_type=FieldType.STRING,
+                merge_op=MergeOp.REPLACE,
+            ),
+            MemoryField(
+                name="name",
+                field_type=FieldType.STRING,
+                merge_op=MergeOp.REPLACE,
+            ),
+            MemoryField(
+                name="content",
+                field_type=FieldType.STRING,
+                merge_op=MergeOp.PATCH,
+            ),
+        ],
+    )
+
+
 def _profile_schema() -> MemoryTypeSchema:
     return MemoryTypeSchema(
         memory_type="profile",
@@ -156,6 +182,11 @@ def test_json_protocol_preserves_stable_parser_and_empty_contract():
     assert '"preferences": []' in protocol.render_final_instruction(context)
     assert '"delete_ids": []' in protocol.render_final_instruction(context)
 
+    assert protocol.parse('{"memory_operations": [{"type": "edit"}]}', context) == (
+        None,
+        "No expected fields found; got fields: memory_operations",
+    )
+
 
 def test_python_contract_and_bindings_expose_only_selected_schema_fields():
     uri = "viking://user/alice/memories/preferences/editor.md"
@@ -176,6 +207,28 @@ def test_python_contract_and_bindings_expose_only_selected_schema_fields():
     assert "version" not in bindings
     assert uri not in bindings
     assert protocol.render_new_bindings(context, source="duplicate read") == ""
+
+
+def test_python_update_preserves_unchanged_mutable_identity_fields():
+    uri = "viking://user/alice/memories/entities/person/阿珍.md"
+    file = MemoryFile(
+        uri=uri,
+        memory_type="entities",
+        content="大学室友",
+        extra_fields={"category": "person", "name": "阿珍"},
+    )
+    context = _context([_renameable_entity_schema()], files=[file])
+    protocol = create_extraction_output_protocol("python")
+    _bind(protocol, context)
+
+    operations, error = protocol.parse(
+        "entities_1.update(name='陈静娴')\nsdk.commit()",
+        context,
+    )
+
+    assert error is None
+    assert operations.entities[0].category == "person"
+    assert operations.entities[0].name == "陈静娴"
 
 
 def test_python_contract_includes_link_rules_when_enabled():
@@ -541,9 +594,7 @@ def test_python_reserved_existing_retry_explains_new_replacement_binding():
 def test_python_string_literal_retry_pushes_triple_quotes():
     protocol = create_extraction_output_protocol("python")
 
-    retry = protocol.render_format_retry(
-        "Line 33: invalid syntax. Perhaps you forgot a comma?"
-    )
+    retry = protocol.render_format_retry("Line 33: invalid syntax. Perhaps you forgot a comma?")
 
     assert "offending line is shown above" in retry
     assert 'triple-quoted string ("""...""")' in retry
@@ -727,8 +778,26 @@ def test_python_syntax_error_includes_offending_source_line():
 
     assert error is not None
     assert "invalid Python syntax" in error
-    assert 'Little Women' in error
+    assert "Little Women" in error
     assert "^" in error
+
+
+@pytest.mark.parametrize("ending", ["sdk.commit(", "sdk.commit())"])
+@pytest.mark.parametrize(
+    "wrapper", ["{}", "```python\n{}\n```", "Explanation\n```python\n{}\n```\nDone."]
+)
+def test_python_rejects_invalid_program_containing_fenced_example(ending, wrapper):
+    context = _context([_profile_schema()])
+    protocol = create_extraction_output_protocol("python")
+    program = (
+        'sdk.set_profile(content="""Example:\n```python\nsdk.commit()\n```\n'
+        f'Keep this example.""")\n{ending}'
+    )
+
+    operations, error = protocol.parse(wrapper.format(program), context)
+
+    assert operations is None
+    assert error is not None
 
 
 def test_memory_schema_identity_fields_follow_scope_and_uri_template():
@@ -778,17 +847,31 @@ def test_memory_schema_identity_fields_ignore_jinja_token_collisions():
     assert events.identity_fields() == ("peer_id", "event_name", "ranges")
 
 
-def test_python_set_single_file_memory_compiles_to_same_operations_as_json():
+@pytest.mark.parametrize(
+    "content",
+    [
+        "Engineer",
+        'Config:\n```nginx\nadd_header Cache-Control "no-cache";\n```\nDone.',
+        "Example:\n```python\nsdk.commit()\n```\nKeep this example.",
+        "Use the literal ``` marker.",
+        "```text\nfirst\n```\n```python\nsdk.commit()\n```",
+    ],
+)
+@pytest.mark.parametrize(
+    "wrapper",
+    ["{}", "```python\n{}\n```", "Explanation\n```python\n{}\n```\nDone."],
+)
+def test_python_set_single_file_memory_compiles_to_same_operations_as_json(content, wrapper):
     context = _context([_profile_schema()])
     python_protocol = create_extraction_output_protocol("python")
     json_protocol = create_extraction_output_protocol("json")
 
     python_operations, python_error = python_protocol.parse(
-        "sdk.set_profile(content='Engineer')\nsdk.commit()",
+        wrapper.format(f'sdk.set_profile(content="""{content}""")\nsdk.commit()'),
         context,
     )
     json_operations, json_error = json_protocol.parse(
-        '{"profile":[{"page_id":100,"content":"Engineer"}],"delete_ids":[]}',
+        json.dumps({"profile": [{"page_id": 100, "content": content}], "delete_ids": []}),
         context,
     )
 
@@ -1075,6 +1158,49 @@ sdk.commit()
     ]
 
 
+@pytest.mark.parametrize("memory_type", ["experiences", "entities"])
+@pytest.mark.parametrize("method", ['edit(search="old", replace="new")', 'drop(text="old")'])
+def test_python_builtin_content_edit_respects_merge_op_and_offers_valid_repair(memory_type, method):
+    registry = MemoryTypeRegistry(load_schemas=False)
+    registry.load_from_yaml(str(resolve_memory_templates_dir() / f"{memory_type}.yaml"))
+    schema = registry.get(memory_type)
+    assert schema is not None
+    context = _context(
+        [schema],
+        files=[
+            MemoryFile(
+                uri=f"viking://user/alice/memories/{memory_type}/one.md",
+                memory_type=memory_type,
+                content="old text",
+                extra_fields=(
+                    {"experience_name": "one", "supersedes": ""}
+                    if memory_type == "experiences"
+                    else {"category": "concept", "name": "one"}
+                ),
+            )
+        ],
+    )
+    protocol = create_extraction_output_protocol("python")
+    _bind(protocol, context)
+    operations, error = protocol.parse(f"{memory_type}_1.content.{method}", context)
+
+    if memory_type == "entities":
+        assert error is None
+        assert operations is not None
+        assert operations.model_dump()[memory_type][0]["content"]["blocks"]
+    else:
+        assert operations is None
+        assert error is not None
+        assert "merge_op=replace" in error
+        retry = protocol.render_format_retry(error)
+        correction = retry.split("`")[1]
+        assert correction.startswith("experiences_1.content.update(")
+        operations, error = protocol.parse(correction, context)
+        assert error is None
+        assert operations is not None
+        assert operations.model_dump()[memory_type][0]["content"] == "complete new value"
+
+
 def test_python_field_update_replaces_whole_field():
     uri = "viking://user/alice/memories/preferences/editor.md"
     context = _context(
@@ -1122,7 +1248,7 @@ sdk.commit()
     assert blocks == [{"search": "Prefers Neovim", "replace": "Prefers Emacs"}]
 
 
-def test_python_field_edit_rejects_literal_field_placeholder():
+def test_python_unknown_field_is_silently_ignored():
     uri = "viking://user/alice/memories/preferences/editor.md"
     context = _context(
         [_preference_schema()],
@@ -1136,9 +1262,39 @@ def test_python_field_edit_rejects_literal_field_placeholder():
         context,
     )
 
-    assert operations is None
-    assert "memory field 'field' is unavailable" in error
-    assert "not the literal word 'field'" in error
+    # Unknown field access is a no-op: the statement compiles without
+    # touching server state and the whole program still commits.
+    assert error is None
+    assert operations is not None
+    assert operations.preferences == []
+
+
+def test_python_unknown_field_does_not_block_sibling_updates():
+    uri = "viking://user/alice/memories/preferences/editor.md"
+    context = _context(
+        [_preference_schema()],
+        files=[_existing_preference(uri, "editor", "Use Vim", 0)],
+    )
+    protocol = create_extraction_output_protocol("python")
+    _bind(protocol, context)
+
+    operations, error = protocol.parse(
+        """
+preferences_1.bogus.update("ignored")
+preferences_1.bogus.edit(search="Use Vim", replace="Use Neovim")
+preferences_1.bogus.drop(text="Tabs")
+preferences_1.content.edit(search="Use Vim", replace="Use Neovim")
+sdk.commit()
+""",
+        context,
+    )
+
+    assert error is None
+    item = operations.model_dump()["preferences"][0]
+    # The bogus field is silently dropped; the real content edit still applies.
+    assert item["content"]["blocks"] == [
+        {"search": "Use Vim", "replace": "Use Neovim"},
+    ]
 
 
 def test_python_field_edit_emits_block_regardless_of_uniqueness():
@@ -1683,7 +1839,7 @@ def test_python_rejects_fstring_width_format_spec():
     # A width format spec turns a small integer literal into a huge padded string
     # with no repeat operator; format specs are disallowed.
     operations, error = protocol.parse(
-        'sdk.set_profile(content=f"{\'x\':>1000001}")\nsdk.commit()',
+        "sdk.set_profile(content=f\"{'x':>1000001}\")\nsdk.commit()",
         context,
     )
 

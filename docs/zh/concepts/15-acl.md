@@ -166,4 +166,4 @@ ov acl set viking://resources/project-a --acl-mode restricted
 - [ACL API](../api/12-acl.md) - HTTP、SDK 和 CLI 接口
 - [多租戶](./11-multi-tenant.md) - account、user 和角色邊界
 - [Viking URI](./04-viking-uri.md) - URI namespace
-- [檢索](./07-retrieval.md) - 分層檢索流程
+- [檢索](./07-retrieval.md) - 全域檢索流程

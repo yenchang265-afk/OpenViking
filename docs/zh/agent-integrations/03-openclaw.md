@@ -1,4 +1,4 @@
-# OpenClaw 插件
+# OpenClaw
 
 為 [OpenClaw](https://github.com/openclaw/openclaw) 新增長效記憶。安裝完成後，OpenClaw 會自動記住對話中的重要資訊，並在每次回覆前召回相關上下文。
 
@@ -29,7 +29,7 @@ bash cleanup-memory-openviking.sh
 
 ```bash
 openclaw plugins install clawhub:@openviking/openclaw-plugin
-openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --json
+openclaw openviking setup --base-url https://openviking.example.com --api-key sk-xxx --json
 openclaw gateway restart
 ```
 
@@ -42,7 +42,7 @@ openclaw gateway restart
 
 ```bash
 npm install -g openclaw-openviking-setup-helper
-ov-install --base-url http://your-server:1933
+ov-install --base-url https://openviking.example.com
 ```
 
 常用引數：
@@ -53,7 +53,7 @@ ov-install --base-url http://your-server:1933
 | `--plugin-version=VER` | 插件版本：npm 版本、dist-tag 或 Git ref |
 | `--base-url URL` | OpenViking 服務地址 |
 | `--api-key KEY` | OpenViking API Key |
-| `--peer-role ROLE` | 記憶歸屬：`none`、`assistant` 或 `sender`（`person` 是舊別名） |
+| `--peer-role ROLE` | 記憶歸屬：`none`、`assistant` 或 `sender` |
 | `--uninstall` | 解除安裝外掛 |
 
 完整引數列表見 [安裝指南](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/INSTALL.md)。
@@ -74,13 +74,13 @@ ov-install --base-url http://your-server:1933
 
 ```bash
 # Alice 是 OpenViking user；按 OpenClaw 助手分開 peer 記憶。
-openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --peer-role assistant --json
+openclaw openviking setup --base-url https://openviking.example.com --api-key sk-xxx --peer-role assistant --json
 
 # support-agent 是 OpenViking user；按給它發訊息的人分開 peer 記憶。
-openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --peer-role sender --json
+openclaw openviking setup --base-url https://openviking.example.com --api-key sk-xxx --peer-role sender --json
 ```
 
-新配置請使用 `sender`；已有的 `peer_role=person` 配置仍相容，並按 `sender` 處理。OpenViking 會為每個使用者初始化受管的 `peers/` 容器，因此 `none` 的含義是不使用具體的 `peers/<peer_id>/memories` 子樹。Actor-peer 召回同時包含使用者共享記憶和當前 peer 記憶；切換 scope 不會搬遷已有記憶。
+安裝和 setup 只接受 `sender`；已有的 `peer_role=person` 配置仍相容，並按 `sender` 處理。OpenViking 會為每個使用者初始化受管的 `peers/` 容器，因此 `none` 的含義是不使用具體的 `peers/<peer_id>/memories` 子樹。Actor-peer 召回同時包含使用者共享記憶和當前 peer 記憶；切換 scope 不會搬遷已有記憶。
 
 ## assemble 如何組裝上下文
 
@@ -95,7 +95,7 @@ openclaw openviking setup --base-url http://your-server:1933 --api-key sk-xxx --
 ```text
 summaryMessage = { role: "user", content: "[Session History Summary]\n" + latest_archive_overview }
 messages = [summaryMessage] + OV active messages
-systemPromptAddition = Session Context Guide（有歸檔時）+ 本輪召回結果（有命中時）
+systemPromptAddition = Session Context Guide（有歸檔時）+ 使用者 profile（profile.md 存在時）+ 本輪召回結果（有命中時）
 ```
 
 `latest_archive_overview` 是服務端返回的摘要正文，`[Session History Summary]` 是外掛加在正文前的固定文本標題。僅在 overview 非空時插入這條合成 user 訊息；active messages 保留近期未壓縮對話。當前 `prompt` 由宿主加入本輪；外掛只用它查詢記憶，不把它重複追加到返回的歷史中。召回結果屬於本次請求的上下文，不直接作為新對話寫回 OV。
@@ -118,6 +118,26 @@ OV 無資料、無歸檔且訊息數少於宿主輸入、轉換後為空或讀�
 
 這裡的 **session commit** 負責會話歸檔和記憶處理，與儲存資源檔案版本的 [snapshot commit](../guides/15-snapshot.md) 是不同操作。
 
+## Agent experience 召回配置
+
+外掛配置仍接受 `agentExperience`，預設值如下：
+
+```json
+{
+  "agentExperience": {
+    "enabled": false,
+    "recallLimit": 3,
+    "scoreThreshold": 0.35,
+    "maxInjectedChars": 6000,
+    "minQueryChars": 12
+  }
+}
+```
+
+這些欄位仍在配置 Schema 中，但當前 assemble 鏈路不讀取它們。召回使用統一的 `searchContext` 路徑，以及通用的 `autoRecall`、`recallLimit`、`recallScoreThreshold` 和 `recallMaxInjectedChars` 配置。設定 `agentExperience.enabled` 不會啟用獨立的經驗檢索，也不會生成單獨的經驗區塊。
+
+程式碼保留的 `shouldRecallAgentExperience` 函式會對執行、寫操作、失敗、工程物件等詞，以及“經驗”“踩坑”“best practice”“pitfall”等意圖詞打分，但當前召回鏈路沒有呼叫它。不能把這些關鍵詞規則和 `minQueryChars` 當作生效的召回控制項。注入內容使用 `<openviking-context>` 包裹；捕獲使用者文本時會剝離該標記及其內容，避免把召回材料再次當作使用者輸入儲存。
+
 ## 驗證
 
 ```bash
@@ -136,7 +156,7 @@ openclaw config get plugins.slots.contextEngine
 # 期望輸出：openviking
 ```
 
-全鏈路健康檢查：
+先按 HEALTHCHECK.md 啟用 Gateway 的 `/v1/responses` 端點，再從 OpenViking 原始碼目錄執行全鏈路檢查。該命令會發起真實模型請求並寫入測試對話：
 
 ```bash
 python examples/openclaw-plugin/health_check_tools/ov-healthcheck.py
@@ -160,7 +180,7 @@ python examples/openclaw-plugin/health_check_tools/ov-healthcheck.py
 | `autoRecallTimeoutMs` | `5000` | 整個 auto-recall 流程的外層超時（毫秒）；本地嵌入硬體較慢時可調大（取值範圍 1000–300000） |
 
 ```bash
-openclaw config set plugins.entries.openviking.config.baseUrl http://your-server:1933
+openclaw config set plugins.entries.openviking.config.baseUrl https://openviking.example.com
 openclaw config set plugins.entries.openviking.config.apiKey your-api-key
 ```
 

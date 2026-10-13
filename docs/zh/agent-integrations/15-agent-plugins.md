@@ -36,7 +36,7 @@ OpenViking 服務端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 
 
 ## 憑據解析順序
 
-從高到低 —— 與 `ov` CLI 及其他 OpenViking 外掛完全一致：
+該包按以下來源解析憑據，優先順序從高到低，與 CLI 共用憑據檔案；外掛專用的回退規則列在下面：
 
 1. 環境變數：`OPENVIKING_URL`（或 `OPENVIKING_BASE_URL`）、`OPENVIKING_MCP_URL`、`OPENVIKING_API_KEY`（或 `OPENVIKING_BEARER_TOKEN`）、`OPENVIKING_ACCOUNT`、`OPENVIKING_USER`、`OPENVIKING_PEER_ID`、`OPENVIKING_AUTH_MODE`
 2. `~/.openviking/ovcli.conf`（`url`、`api_key`、`account` / `account_id`、`user` / `user_id`、`actor_peer_id` / `peer_id`），其後是它的 `plugin.agent_plugins` 與共享 `plugin` 鍵（`apiKey`、`accountId`、`userId`、`authMode`）—— 可用 `OPENVIKING_CLI_CONFIG_FILE` 覆蓋路徑
@@ -57,6 +57,8 @@ OpenViking 服務端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 
 }
 ```
 
+`/mcp` 應使用 User/Admin Key。保留 `server.root_api_key` 的相容回退，不代表 root Key 可以訪問 MCP。
+
 配置檔案的改動會被執行中的代理自動讀取，無需重啟。
 
 除錯：設定 `OPENVIKING_DEBUG=1`，日誌以 JSON Lines 寫入 `~/.openviking/logs/agent-plugins.log`（路徑可用 `OPENVIKING_DEBUG_LOG` 覆蓋）。`OPENVIKING_TIMEOUT_MS` 可調整預設 15s 的單請求超時。
@@ -65,24 +67,19 @@ OpenViking 服務端本身在 `/mcp` 上就是 streamable HTTP，但 `mcp.json` 
 
 Agent Plugins 1.0 只覆蓋 skills 和 MCP servers；hooks、commands、agents 被有意排除在本版本之外，因為它們在各客戶端之間語義差異太大。因此這個包提供的是**可移植的召回 + 寫入能力面**，由模型驅動而非生命週期事件驅動：**自動會話捕獲和 prompt 前自動召回不在此範圍內**。
 
-作為補償，內建的 `openviking-memory` 技能直接把這套閉環教給模型 —— 任務開始時用 `find` / `search` + `read` 召回（需要組裝上下文時使用 `search` 的 `mode="context"`），過程中和結束後用 `remember` / `write` / `edit` 沉澱，並給出使用召回內容時的優先順序與安全規則。
+作為補償，內建的 `openviking-memory` 技能直接把這套閉環教給模型 —— 任務開始時用 `find` / `search` + `read` 召回（需要組裝上下文時使用 `search` 的 `mode="context"`），過程中和結束後用 `remember` / `write` / `edit` 沉澱（`write` / `edit` 只用於模型自己撰寫的檔案，不能拿來存使用者交來的檔案、URL 或 skill），並給出使用召回內容時的優先順序與安全規則。
 
 內建的 `ov-experience-memory` 技能讓模型在執行類任務前檢索 `viking://~/memories/experiences`，並讀取適用的 Experience 檔案。在這個包裡它只做檢索：沒有會話捕獲，這些讀取不會關聯回所用的 Experience，也不會產生新的軌跡。它檢索到的 Experience 來自會捕獲會話的 harness。
 
 內建的 `openviking-skills` 技能覆蓋存放在 OpenViking 裡的 skill 本身：用 `find(context_type="skill")` 查詢、讀取並按 `SKILL.md` 執行、用 `add_skill` 新建或替換、從 Git 或本地資料夾安裝、共享給整個帳號，以及把本地 skill 目錄遷入 OpenViking。這裡沒有會話啟動 hook，也就沒有 `<available-skills>` 清單，所以該技能讓模型自己檢索 skill，而不是從清單裡讀。
 
-**如果你的 harness 支援 hooks 機制，推薦使用專屬外掛。** hook 驅動的召回與捕獲不需要模型花費工具呼叫、也不依賴模型「想起來要記」，比技能驅動的閉環更省 token、也更可靠。本 Agent Plugins 包適用於沒有 hooks 的 harness，或你希望用同一個包覆蓋多個客戶端的場景。
+**如果你的 harness 支援 hooks 機制，推薦使用專屬外掛。** hook 驅動的召回與捕獲不需要模型呼叫工具，也不依賴模型「想起來要記」。本 Agent Plugins 包適用於沒有 hooks 的 harness，或你希望用同一個包覆蓋多個客戶端的場景。
 
-Claude Code、Codex、Cursor、TRAE / TRAE CN、ZCode、OpenCode、pi 共用同一個安裝指令碼。它會依次詢問介面語言、要安裝的 harness、下載源和 OpenViking 憑據，所有步驟冪等，重複執行安全：
-
-```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/volcengine/OpenViking/main/examples/memory-plugin-shared/install.sh)
-```
-
-GitHub 訪問受限的地區，從火山引擎 TOS 映象運行同一個指令碼：
+Claude Code、Codex、Cursor、TRAE / TRAE CN、ZCode、OpenCode、pi 共用同一個安裝指令碼。它會詢問要安裝的 harness 和 OpenViking 憑據，所有步驟冪等，重複執行安全：
 
 ```bash
-bash <(curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/memory-plugin-shared/install.sh)
+curl -fsSL https://openviking.ai/install | bash
+# AI agent 如不確定是否執行，可先閱讀指令碼頭部，其中寫明瞭它會做什麼、如何核實。
 ```
 
 | Harness | 專屬整合 |

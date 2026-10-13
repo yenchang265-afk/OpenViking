@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 import copy
+import math
 import threading
 import uuid
 from dataclasses import dataclass
+from datetime import timezone
 from typing import Any, Dict, List, Optional
 
 from openviking.storage.vectordb.collection.collection import ICollection
@@ -18,6 +20,7 @@ from openviking.storage.vectordb.collection.result import (
     SearchItemResult,
     SearchResult,
 )
+from openviking.utils.time_utils import parse_iso_datetime
 from openviking_cli.utils import get_logger
 
 from .client import is_not_found
@@ -68,6 +71,21 @@ def _check_result_window(limit: int, offset: int, operation: str) -> None:
             f"Elasticsearch {operation} supports limit + offset <= {_RESULT_WINDOW}, "
             f"got {max(offset, 0) + limit}"
         )
+
+
+def _epoch_ms(value: Any) -> Optional[float]:
+    """Read a stored date (epoch millis or ISO 8601) as epoch millis, or None."""
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value) if math.isfinite(value) else None
+    try:
+        parsed = parse_iso_datetime(str(value))
+    except (TypeError, ValueError):
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.timestamp() * 1000.0
 
 
 def _refresh_param(policy: str) -> Any:
@@ -200,7 +218,8 @@ class ElasticsearchCollection(ICollection):
                 raise
             self._refresh_fields()
 
-    def get_meta_data(self) -> Dict[str, Any]:
+    def get_meta_data(self, *, raise_on_error: bool = False) -> Dict[str, Any]:
+        # Metadata is held locally, so there is no remote read that could fail.
         meta = copy.deepcopy(self._meta)
         index_meta = self._indexes.get(self._default_index_name())
         if index_meta and "ScalarIndex" in index_meta:
@@ -325,7 +344,12 @@ class ElasticsearchCollection(ICollection):
         filters: Optional[Dict[str, Any]] = None,
         sparse_vector: Optional[Dict[str, float]] = None,
         output_fields: Optional[List[str]] = None,
+        advance: Optional[Dict[str, Any]] = None,
+        return_detail_info: bool = False,
     ) -> SearchResult:
+        time_decay = (advance or {}).get("time_decay")
+        if advance and (set(advance) != {"time_decay"} or not isinstance(time_decay, dict)):
+            raise NotImplementedError("Elasticsearch advanced ranking supports time_decay only")
         # Reject sparse queries before the dense short-circuit so a pure sparse
         # query fails loudly instead of looking like "no recall".
         if sparse_vector:
@@ -337,6 +361,10 @@ class ElasticsearchCollection(ICollection):
         if k > _MAX_KNN_K:
             raise ValueError(
                 f"Elasticsearch kNN search supports limit + offset <= {_MAX_KNN_K}, got {k}"
+            )
+        if time_decay is not None:
+            return self._search_with_time_decay(
+                vector, limit, offset, filters, output_fields, time_decay
             )
         knn: Dict[str, Any] = {
             "field": self._vector_field,
@@ -361,6 +389,74 @@ class ElasticsearchCollection(ICollection):
                     score=similarity_from_score(self._distance, hit.get("_score")),
                 )
                 for hit in hits
+            ]
+        )
+
+    def _search_with_time_decay(
+        self,
+        vector: List[float],
+        limit: int,
+        offset: int,
+        filters: Optional[Dict[str, Any]],
+        output_fields: Optional[List[str]],
+        time_decay: Dict[str, Any],
+    ) -> SearchResult:
+        """kNN recall re-ranked by event recency, matching the local engine.
+
+        Elasticsearch decay functions cannot wrap a top-level ``knn`` query, so the
+        decay is applied here: recall 3x the requested window, multiply each
+        similarity by ``exp(ln(decay) / scale * max(0, |origin - t| - offset))``
+        and keep the best ``limit`` after ``offset``. Records without a timestamp
+        keep their similarity unchanged.
+        """
+        decay_field = time_decay["field"]
+        origin = float(time_decay["origin_ms"])
+        protection = float(time_decay["offset_ms"])
+        scale = float(time_decay["scale_ms"])
+        decay = float(time_decay["decay"])
+        if protection < 0 or scale <= 0 or not 0.0 < decay < 1.0:
+            raise ValueError("invalid time-decay range")
+        window = limit + max(offset, 0)
+        recall_k = min(window * 3, _MAX_KNN_K)
+        knn: Dict[str, Any] = {
+            "field": self._vector_field,
+            "query_vector": vector,
+            "k": recall_k,
+            "num_candidates": min(max(recall_k, self._settings.num_candidates), 10000),
+        }
+        query = self._query(filters)
+        if query is not None:
+            knn["filter"] = query
+        fetch_fields = output_fields
+        if output_fields is not None and decay_field not in output_fields:
+            fetch_fields = [*output_fields, decay_field]
+        hits = self._search(knn=knn, size=recall_k, from_=0, source=self._source(fetch_fields))
+        rate = math.log(decay) / scale
+        ranked = []
+        for hit in hits:
+            fields = self._hit_fields(hit)
+            similarity = similarity_from_score(self._distance, hit.get("_score"))
+            time_score = None
+            updated = _epoch_ms(fields.get(decay_field))
+            if updated is not None:
+                time_score = math.exp(rate * max(0.0, abs(origin - updated) - protection))
+            if fetch_fields is not output_fields:
+                fields.pop(decay_field, None)
+            fused = similarity * time_score if time_score is not None else similarity
+            ranked.append((fused, similarity, time_score, hit.get("_id"), fields))
+        ranked.sort(key=lambda item: item[0], reverse=True)
+        return SearchResult(
+            data=[
+                SearchItemResult(
+                    id=record_id,
+                    fields=fields,
+                    score=fused,
+                    origin_score=similarity,
+                    addition_score=time_score,
+                )
+                for fused, similarity, time_score, record_id, fields in ranked[
+                    max(offset, 0) : window
+                ]
             ]
         )
 
@@ -502,13 +598,22 @@ class ElasticsearchCollection(ICollection):
         offset: int = 0,
         filters: Optional[Dict[str, Any]] = None,
         output_fields: Optional[List[str]] = None,
+        mode: Optional[str] = None,
+        fields: Optional[List[str]] = None,
     ) -> SearchResult:
+        # multi_match scores with BM25, the only keyword mode callers request.
+        if mode not in (None, "bm25"):
+            raise NotImplementedError(f"Elasticsearch keyword search does not support mode {mode!r}")
         text = (query or " ".join(keyword for keyword in keywords or [] if keyword)).strip()
-        if not text or not self._text_fields or limit <= 0:
+        text_fields = list(self._text_fields)
+        if fields:
+            wanted = set(fields)
+            text_fields = [name for name in text_fields if name.split(".", 1)[0] in wanted]
+        if not text or not text_fields or limit <= 0:
             return SearchResult(data=[])
         _check_result_window(limit, offset, "keyword search")
         bool_query: Dict[str, Any] = {
-            "must": [{"multi_match": {"query": text, "fields": list(self._text_fields)}}]
+            "must": [{"multi_match": {"query": text, "fields": text_fields}}]
         }
         filter_query = self._query(filters)
         if filter_query is not None:

@@ -1,8 +1,12 @@
-# 隱私配置（Privacy Configs）
+# 隱私配置
 
 隱私配置用於按 `category + target_key` 管理敏感欄位版本（如 skill 的 `api_key`、`base_url`）。
 
-每次更新都會生成版本快照，可查詢歷史版本並切換生效版本。
+配置值變化時會生成版本快照，可查詢歷史版本並切換生效版本。提交與當前版本相同的值不會建立新版本。
+
+以下示例使用當前使用者的 API Key。trusted 模式需補充部署要求的身份頭。讀取介面和 CLI 會返回儲存的實際值；下文的 `***` 僅為示例佔位符，不表示介面自動脫敏。
+
+啟用版本只改變 OpenViking 儲存的配置，不會替外部服務輪換、撤銷或恢復金鑰。
 
 ## 典型場景
 
@@ -24,8 +28,6 @@
 | GET | `/api/v1/privacy-configs/{category}/{target_key}/versions` | 列出版本號 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}/versions/{version}` | 獲取指定版本詳情 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
-
-下面按介面逐一展開說明。
 
 ---
 
@@ -82,9 +84,7 @@ GET /api/v1/privacy-configs
 
 ```bash
 curl -X GET http://localhost:1933/api/v1/privacy-configs \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice"
+  -H "X-API-Key: your-key"
 ```
 
 **響應**
@@ -92,8 +92,7 @@ curl -X GET http://localhost:1933/api/v1/privacy-configs \
 ```json
 {
   "status": "ok",
-  "result": ["skill"],
-  "time": 0.01
+  "result": ["skill"]
 }
 ```
 
@@ -111,9 +110,7 @@ GET /api/v1/privacy-configs/{category}
 
 ```bash
 curl -X GET http://localhost:1933/api/v1/privacy-configs/skill \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice"
+  -H "X-API-Key: your-key"
 ```
 
 **響應**
@@ -121,8 +118,7 @@ curl -X GET http://localhost:1933/api/v1/privacy-configs/skill \
 ```json
 {
   "status": "ok",
-  "result": ["byted-viking-search-knowledgebase"],
-  "time": 0.01
+  "result": ["byted-viking-search-knowledgebase"]
 }
 ```
 
@@ -140,9 +136,7 @@ GET /api/v1/privacy-configs/{category}/{target_key}
 
 ```bash
 curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-search-knowledgebase" \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice"
+  -H "X-API-Key: your-key"
 ```
 
 **響應**
@@ -166,8 +160,7 @@ curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-sea
         "base_url": "https://example.com"
       }
     }
-  },
-  "time": 0.01
+  }
 }
 ```
 
@@ -181,7 +174,7 @@ curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-sea
 
 **行為說明**
 
-- `values` 按整包快照寫入（本次傳入內容成為新版本的 `values`）
+- `values` 完整替換該版本的鍵值；本次省略的 key 不會出現在新快照中
 - 傳入新 key 會直接寫入（允許新增）
 - 若與當前版本完全一致，則複用當前版本號，不新建版本
 
@@ -203,8 +196,6 @@ POST /api/v1/privacy-configs/{category}/{target_key}
 curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-search-knowledgebase" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice" \
   -d '{
     "values": {
       "api_key": "secret-2",
@@ -233,8 +224,7 @@ curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-se
       "region": "cn"
     },
     "change_reason": "rotate key"
-  },
-  "time": 0.02
+  }
 }
 ```
 
@@ -252,9 +242,7 @@ GET /api/v1/privacy-configs/{category}/{target_key}/versions
 
 ```bash
 curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-search-knowledgebase/versions" \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice"
+  -H "X-API-Key: your-key"
 ```
 
 **響應**
@@ -262,8 +250,7 @@ curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-sea
 ```json
 {
   "status": "ok",
-  "result": [1, 2, 3, 4],
-  "time": 0.01
+  "result": [1, 2, 3, 4]
 }
 ```
 
@@ -283,9 +270,7 @@ GET /api/v1/privacy-configs/{category}/{target_key}/versions/{version}
 
 ```bash
 curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-search-knowledgebase/versions/2" \
-  -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice"
+  -H "X-API-Key: your-key"
 ```
 
 **響應**
@@ -301,8 +286,7 @@ curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-sea
       "api_key": "secret-1",
       "base_url": "https://example.com"
     }
-  },
-  "time": 0.01
+  }
 }
 ```
 
@@ -330,8 +314,6 @@ POST /api/v1/privacy-configs/{category}/{target_key}/activate
 curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-search-knowledgebase/activate" \
   -H "Content-Type: application/json" \
   -H "X-API-Key: your-key" \
-  -H "X-OpenViking-Account: default" \
-  -H "X-OpenViking-User: alice" \
   -d '{"version": 2}'
 ```
 
@@ -348,8 +330,7 @@ curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-se
       "api_key": "secret-1",
       "base_url": "https://example.com"
     }
-  },
-  "time": 0.01
+  }
 }
 ```
 
@@ -361,25 +342,28 @@ curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-se
 
 ```bash
 # 分類/目標
-openviking privacy categories
-openviking privacy list skill
+ov privacy categories
+ov privacy list skill
 
 # 當前生效配置（支援快捷形式）
-openviking privacy get skill byted-viking-search-knowledgebase
-openviking privacy skill byted-viking-search-knowledgebase
+ov privacy get skill byted-viking-search-knowledgebase
+ov privacy skill byted-viking-search-knowledgebase
 
 # 更新（整包 JSON）
-openviking privacy upsert skill byted-viking-search-knowledgebase \
+ov privacy upsert skill byted-viking-search-knowledgebase \
   --values-json '{"api_key":"secret-2","base_url":"https://example.com"}'
 
+# 從本地 JSON 檔案讀取值，避免把值直接寫入命令引數
+ov privacy upsert skill byted-viking-search-knowledgebase --values-file ./privacy-values.json
+
 # 僅更新部分 key（先讀取 current 再合併）
-openviking privacy upsert skill byted-viking-search-knowledgebase \
+ov privacy upsert skill byted-viking-search-knowledgebase \
   --key-api_key secret-3
 
 # 版本查詢與切換
-openviking privacy versions skill byted-viking-search-knowledgebase
-openviking privacy version skill byted-viking-search-knowledgebase 2
-openviking privacy activate skill byted-viking-search-knowledgebase 2
+ov privacy versions skill byted-viking-search-knowledgebase
+ov privacy version skill byted-viking-search-knowledgebase 2
+ov privacy activate skill byted-viking-search-knowledgebase 2
 ```
 
 ---

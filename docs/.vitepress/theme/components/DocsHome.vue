@@ -17,6 +17,8 @@ const copied = ref(false)
 const copyError = ref(false)
 let copyTimer
 function openSection(id) {
+  const alias = catalog[locale.value].find(section => section.aliases.includes(id.replace(/^section-/, '')))
+  if (alias) id = `section-${alias.id}`
   if (id.startsWith('section-')) expanded.value = new Set([...expanded.value, id.slice(8)])
 }
 function openHashSection() { openSection(window.location.hash.slice(1)) }
@@ -51,7 +53,7 @@ const shown = computed(() => atlas.value.reduce((n, section) => n + section.page
 const paths = computed(() => [
   { label: t('RETRIEVAL', '檢索'), icon: '↗', title: t('Run your first retrieval', '完成第一次檢索'), description: t('Connect to a service, import a document, and find what matters.', '連線服務，匯入文件，找到所需的上下文。'), href: 'getting-started/02-quickstart', action: t('Start building', '開始使用'), primary: true },
   { label: 'AGENT', icon: '⌘', title: t('Connect your agent', '接入你的 Agent'), description: t('Add cross-session memory to the tools you already use.', '為正在使用的工具加入跨會話記憶。'), href: 'agent-integrations/01-overview', action: t('Explore integrations', '檢視整合') },
-  { label: 'API', icon: '{}', title: t('Build with the API', '通過 API 構建'), description: t('Work with resources, sessions, and retrieval from your application.', '在應用中管理資源、會話和檢索。'), href: 'api/01-overview', action: t('Open API reference', '檢視 API') }
+  { label: t('BUILD', '開發'), icon: '{}', title: t('Build a context-aware application', '開發使用上下文的應用'), description: t('Choose a workflow for retrieval, memory, skills, or compilation.', '從檢索、記憶、技能或上下文編譯任務開始。'), href: 'workflows/01-overview', action: t('Choose a workflow', '選擇開發任務') }
 ])
 const agents = [
   ['Claude Code', '02-claude-code'],
@@ -75,7 +77,7 @@ const agents = [
           <p class="hero-description">{{ t('The context database for AI agents.', '面向 AI Agent 的上下文資料庫。') }}<br>{{ t('Bring knowledge, memory, and skills into one filesystem. Build the second brain for agent-native teams.', '用一個檔案系統組織知識、記憶和技能，做 agent native 團隊的第二大腦。') }}</p>
           <div class="hero-actions">
             <a class="home-button primary" :href="link('getting-started/02-quickstart')">{{ t('Get started', '快速開始') }} <span aria-hidden="true">↗</span></a>
-            <a class="home-button secondary" href="#explore">{{ t('Explore the docs', '瀏覽文件') }} <span aria-hidden="true">↓</span></a>
+            <a class="home-button secondary" href="#start-here">{{ t('Choose your path', '選擇使用路徑') }} <span aria-hidden="true">↓</span></a>
           </div>
         </div>
         <div class="context-workspace">
@@ -99,7 +101,7 @@ const agents = [
     </section>
 
     <div class="home-shell">
-      <section class="start-section" :aria-label="t('Choose your path', '選擇使用路徑')">
+      <section id="start-here" class="start-section" :aria-label="t('Choose your path', '選擇使用路徑')">
         <a v-for="path in paths" :key="path.href" :href="link(path.href)" class="path-card" :class="{ featured: path.primary }">
           <div class="path-top"><span>{{ path.label }}</span><span class="path-icon" aria-hidden="true">{{ path.icon }}</span></div>
           <h2>{{ path.title }}</h2><p>{{ path.description }}</p>
@@ -111,8 +113,13 @@ const agents = [
         <button @click="copyInstall" :aria-label="t('Copy CLI install command', '複製 CLI 安裝命令')"><code><span aria-hidden="true">$ </span>{{ install }}</code><span aria-live="polite">{{ copyError ? t('Select to copy', '請選中複製') : copied ? t('Copied', '已複製') : t('Copy', '複製') }}</span></button>
       </div>
 
+      <section class="integration-strip" :aria-label="t('After the quick start', '首次體驗之後')">
+        <div><p class="eyebrow">{{ t('YOUR NEXT STEP', '體驗之後') }}</p><h2>{{ t('Try it on your own work.', '示例跑通了，換成你的任務。') }}</h2><p>{{ t('Check retrieval, cross-session memory, or a compiled output with sources you know.', '用熟悉的資料，檢查檢索、跨會話記憶或編譯產物。') }}</p></div>
+        <div class="agent-links"><a :href="link('getting-started/06-evaluate')">{{ t('Evaluate OpenViking on your tasks', '用你的任務驗證效果') }}<span aria-hidden="true">↗</span></a></div>
+      </section>
+
       <section class="concept-section" aria-labelledby="concept-title">
-        <div class="section-intro"><p class="eyebrow">02 — {{ t('THE MENTAL MODEL', '理解工作方式') }}</p><h2 id="concept-title">{{ t('A filesystem you can reason about.', '上下文，像檔案一樣清楚。') }}</h2><p>{{ t('Browse the structure. Read the summary. Load the detail when you need it.', '先看目錄，再讀摘要，需要時才載入全文。') }}</p></div>
+        <div class="section-intro"><p class="eyebrow">02 — {{ t('THE MENTAL MODEL', '理解工作方式') }}</p><h2 id="concept-title">{{ t('A filesystem you can reason about.', '上下文，像檔案一樣清楚。') }}</h2><p>{{ t('Browse the structure. Read the summary. Load the detail when you need it.', '先看目錄，再讀摘要，需要時才載入全文。') }}</p><a :href="link('concepts/00-overview')">{{ t('Concepts and principles', '概念與原理：按學習路徑閱讀') }} ↗</a></div>
         <div class="layer-grid">
           <a :href="link('concepts/03-context-layers')" class="layer-item"><div class="layer-art abstract" aria-hidden="true"><span /><span /></div><div class="layer-heading"><code>L0</code><h3>{{ t('The abstract', '摘要') }}</h3></div><p>{{ t('A short description to decide whether a directory is relevant.', '用一段簡述判斷目錄是否相關。') }}</p><span class="layer-file">.abstract.md <span>↗</span></span></a>
           <a :href="link('concepts/03-context-layers')" class="layer-item"><div class="layer-art overview" aria-hidden="true"><span /><span /><span /><span /></div><div class="layer-heading"><code>L1</code><h3>{{ t('The overview', '概覽') }}</h3></div><p>{{ t('Structure and key points to plan what to read next.', '瞭解結構和要點，決定接下來讀什麼。') }}</p><span class="layer-file">.overview.md <span>↗</span></span></a>
@@ -123,19 +130,20 @@ const agents = [
       <section class="integration-strip" :aria-label="t('Agent integrations', 'Agent 整合')"><div><p class="eyebrow">03 — {{ t('INTEGRATIONS', 'Agent 整合') }}</p><h2>{{ t('Your agent. With memory.', '你的 Agent，有了記憶。') }}</h2><a :href="link('agent-integrations/01-overview')">{{ t('All integrations', '全部整合') }} ↗</a></div><div class="agent-links"><a v-for="agent in agents" :key="agent[0]" :href="link(`agent-integrations/${agent[1]}`)">{{ agent[0] }}<span aria-hidden="true">↗</span></a></div></section>
 
       <section class="integration-strip" :aria-label="t('Deployment and operations', '部署與運維')">
-        <div><p class="eyebrow">04 — {{ t('DEPLOYMENT', '部署與運維') }}</p><h2>{{ t('Plan your deployment.', '準備部署。') }}</h2><a :href="link('guides/03-deployment')">{{ t('Deployment options', '選擇部署方式') }} ↗</a></div>
+        <div><p class="eyebrow">04 — {{ t('DEPLOYMENT', '部署與運維') }}</p><h2>{{ t('Plan your deployment.', '準備部署。') }}</h2><a :href="link('guides/00-overview')">{{ t('Deployment options', '選擇部署方式') }} ↗</a></div>
         <div class="agent-links">
           <a :href="link('guides/01-configuration')">{{ t('Configuration', '基礎配置') }}<span aria-hidden="true">↗</span></a>
           <a :href="link('guides/04-authentication')">{{ t('Authentication', '身份認證') }}<span aria-hidden="true">↗</span></a>
           <a :href="link('guides/05-observability')">{{ t('Observability', '可觀測性') }}<span aria-hidden="true">↗</span></a>
+          <a :href="link('guides/20-private-deployment')">{{ t('Enterprise Deployment', '企業私有化部署') }}<span aria-hidden="true">↗</span></a>
         </div>
       </section>
 
       <section id="explore" class="explore-section" aria-labelledby="explore-title">
-        <div class="section-intro"><p class="eyebrow">05 — {{ t('DOCUMENTATION ATLAS', '文件地圖') }}</p><h2 id="explore-title">{{ t('Find your next step.', '下一步。') }}</h2><p>{{ t('From a first connection to the details of a running system.', '尋找每個細節。') }}</p></div>
+        <div class="section-intro"><p class="eyebrow">05 — {{ t('DOCUMENTATION ATLAS', '文件地圖') }}</p><h2 id="explore-title">{{ t('Find your next step.', '按任務查詢文件') }}</h2><p>{{ t('Choose a task, then follow the pages in reading order.', '先選任務，再按組內順序閱讀；介面與欄位集中在參考欄目。') }}</p></div>
         <div class="atlas-layout">
           <aside class="atlas-aside"><label for="doc-filter">{{ t('Find a page', '查詢頁面') }}</label><div class="atlas-input"><span aria-hidden="true">⌕</span><input id="doc-filter" v-model="filter" type="search" :placeholder="t('Title or filename…', '標題或檔名…')" /></div><p class="atlas-count" role="status">{{ filter ? shown : total }} {{ t('pages', '篇文件') }} <span>/ {{ locale.toUpperCase() }}</span></p><nav :aria-label="t('Documentation sections', '文件章節')"><a v-for="section in atlas" :key="section.id" :href="`#section-${section.id}`" @click="openSection(`section-${section.id}`)">{{ section[locale] }}<span>{{ section.pages.length }} {{ t('pages', '篇') }}</span></a></nav><a class="atlas-machine" :href="withBase('/llms.txt')"><span>↳ llms.txt</span><span>{{ t('For your agent', '給你的 Agent') }} ↗</span></a></aside>
-          <div class="atlas-tree"><p v-if="!atlas.length" class="atlas-empty">{{ t('No matching pages. Try “memory”, “API”, or a filename.', '沒有匹配頁面。試試“記憶”“API”或檔名。') }}</p><details v-for="section in atlas" :id="`section-${section.id}`" :key="`${locale}-${section.id}-${!!filter}`" :open="!!filter || expanded.has(section.id)" @toggle="toggleSection(section.id, $event)" class="atlas-group"><summary><span class="folder-glyph" aria-hidden="true">⌑</span><span><strong>{{ section[locale] }}</strong><small>{{ zh ? section.zhNote : section.enNote }}</small></span><span class="section-count">{{ section.pages.length }} {{ t('pages', '篇') }}</span><span class="expand-glyph" aria-hidden="true">+</span></summary><ul><template v-for="(page, index) in section.pages" :key="page.href"><li v-if="page.group && page.group !== section.pages[index - 1]?.group" class="atlas-subgroup">{{ page.group }}</li><li><a :href="withBase(page.href)"><span class="page-branch" aria-hidden="true">↳</span><span>{{ page.title }}</span><span class="page-arrow" aria-hidden="true">↗</span></a></li></template></ul></details></div>
+          <div class="atlas-tree"><p v-if="!atlas.length" class="atlas-empty">{{ t('No matching pages. Try “memory”, “API”, or a filename.', '沒有匹配頁面。試試“記憶”“API”或檔名。') }}</p><details v-for="section in atlas" :id="`section-${section.id}`" :key="`${locale}-${section.id}-${!!filter}`" :open="!!filter || expanded.has(section.id)" @toggle="toggleSection(section.id, $event)" class="atlas-group"><summary><span v-for="alias in section.aliases" :id="`section-${alias}`" :key="alias" /><span class="folder-glyph" aria-hidden="true">⌑</span><span><strong>{{ section[locale] }}</strong><small>{{ zh ? section.zhNote : section.enNote }}</small></span><span class="section-count">{{ section.pages.length }} {{ t('pages', '篇') }}</span><span class="expand-glyph" aria-hidden="true">+</span></summary><ul><template v-for="(page, index) in section.pages" :key="page.href"><li v-if="page.group && page.group !== section.pages[index - 1]?.group" class="atlas-subgroup">{{ page.group }}</li><li><a :href="withBase(page.href)"><span class="page-branch" aria-hidden="true">↳</span><span>{{ page.title }}</span><span class="page-arrow" aria-hidden="true">↗</span></a></li></template></ul></details></div>
         </div>
       </section>
       <section class="home-closing"><div><p class="eyebrow">06 — {{ t('BUILT IN THE OPEN', '一起構建') }}</p><h2>{{ t('Keep exploring.', '繼續探索。') }}</h2><p>{{ t('Read the source, ask a question, or help shape what comes next.', '讀原始碼、提問題，或參與下一步的構建。') }}</p></div><div><a href="https://github.com/volcengine/OpenViking">GitHub <span>↗</span></a><a :href="link('about/02-changelog')">{{ t('Changelog', '更新日誌') }} <span>↗</span></a><a :href="link('about/01-about-us')">{{ t('Community', '加入社群') }} <span>↗</span></a></div></section>

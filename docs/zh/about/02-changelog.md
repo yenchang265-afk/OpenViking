@@ -3,8 +3,19 @@
 OpenViking 的所有重要變更都將記錄在此檔案中。
 此更新日誌從 [GitHub Releases](https://github.com/volcengine/OpenViking/releases) 自動生成。
 
+> 各版本條目記錄釋出時的行為，其中的命令和預設值可能已變更。安裝請使用當前[部署指南](../guides/03-deployment.md)。歷史升級步驟如需清空 workspace，應先停止寫入並做好可恢復的備份；不要把舊版本的清理步驟套用到其他升級。
+
 ## 未釋出
 
+- **Working Memory 預設關閉（行為變更）**：commit 仍儲存原文並抽取長期記憶，預設不生成
+  WM 或 checkpoint 摘要。使用者需要單獨升級已安裝的 agent 外掛；新版預設關閉自動歸檔
+  摘要注入和上下文接管，由宿主管理歷史與壓縮。VikingBot 仍預設使用 OV 管理上下文與壓縮，
+  並在會話上下文 commit 時顯式請求 WM。舊版序列化會省略 WM=true，因此過去即使
+  主動開啟，儲存後缺少該欄位的策略升級後仍會變為 false，無法自動恢復使用者當時的意圖。
+  已入隊的舊任務保持提交時的語義。新增 `enable_working_memory` 布林引數僅覆蓋本次
+  commit 的 WM，不覆蓋其他策略。無 WM 的已完成歸檔仍可讀取原文，摘要欄位為空。
+  詳見[升級說明](../guides/working-memory-default-off.md)；缺少完整宿主歷史的舊會話
+  應先匯出原文，通過宿主支援的入口完成歷史交接，再切換模式。
 - **Watch API 遷移（不相容變更）**：使用 `watch_interval > 0` 重新匯入不再更新或恢復已有 Watch。
   原生 Watch 暫停後仍獨佔目標，不相容的目標複用返回 `409 Conflict`。
   依賴重新匯入來更新 Watch 的指令碼應改用 `PATCH /api/v1/watches/{task_id}`
@@ -16,7 +27,7 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 - **Session policy 相容性**：字串 `"false"` 現在會正確關閉對應的記憶抽取開關。
   現有 boolean-like 值暫時保持相容併產生棄用警告；新配置應使用 JSON 布林值。
 - **工作區 peer 派生規則**：coding agent 外掛不再按工作目錄派生工作區 peer，改為按 git 派生。新的預設值 `peer.source: "git"` 取倉庫歸一化後的 `origin` URL（`github.com-volcengine-openviking`），其次回退到倉庫根路徑，因此同一個倉庫的每個 clone、worktree 和子目錄共用同一個 peer，而 fork 仍是獨立的 peer。不在 git 倉庫中的目錄現在完全不傳送 peer，在那裡記下的內容進入使用者級空間，而不是為每個目錄新建一個名稱空間。要讓這樣的目錄擁有獨立記憶，在其中建立 `.openviking/config.json`，寫入 `{"version": 1, "peer": {"id": "my-project"}}`。無需任何遷移：此前按工作目錄派生的 id 隨時可以在本地重新算出，而預設的 `peer_scope: "all"` 召回本來就會掃描所有 peer，因此寫在舊 id 下的記憶照常召回（`peer_scope: "actor"` 時，Claude Code、Codex、OpenCode 和 DSH 外掛會額外查詢該 id）。設定 `peer.source: "cwd"`（或 `OPENVIKING_PEER_SOURCE=cwd`）即可保持舊行為。
-- **pi 擴充的工具面（不相容變更）**：pi 擴充 0.4.0 移除自己手寫的 7 個 `viking_*` REST 工具，改用官方 MCP 客戶端連線服務端，因此工具清單由服務端 `tools/list` 的返回決定，不再來自擴充自帶的目錄。每個工具的名字是 `openviking_` 加服務端的工具名（`viking_search` → `openviking_search`），不保留舊名別名期；pi 的 `--tools` 和 `--exclude-tools` 按名字精確匹配，白名單裡仍寫 `viking_search` 的話，對應工具會靜默消失，需要手動改名。這些工具的行為與其他 MCP harness 一致：`remember` 另開一個會話並立即提交，不再追加到當前 pi 會話；`read` 只返回全文（`level="abstract"` 和 `level="overview"` 兩檔已移除，替代路徑是 `openviking_search(mode="context", detail="overview")`）；`forget` 直接刪除傳入的 URI；`add_resource` 對本地路徑返回一次性上傳 URL，由模型把檔案 POST 上去。root api key 在 `/mcp` 上被拒絕（403），現在會導致整個會話一個工具都沒有，而此前是工具照常註冊、每次呼叫都返回空結果，這類部署需要改用 user 或 admin key。共享開關 `mcpEnabled: false` 現在對 pi 同樣生效，以這種方式關掉工具不計作故障。以上各種情況下，recall、會話採集和上下文接管都照常工作，其他 harness 不受影響。完整的改名對照和升級說明見擴充 README 的 [Upgrading from 0.3.x](https://github.com/volcengine/OpenViking/blob/main/examples/pi-coding-agent-extension/README.md#upgrading-from-03x)。
+- **pi 擴充的工具面（不相容變更）**：pi 擴充 0.4.0 移除自己手寫的 7 個 `viking_*` REST 工具，改用官方 MCP 客戶端連線服務端，因此工具清單由服務端 `tools/list` 的返回決定，不再來自擴充自帶的目錄。每個工具的名字是 `openviking_` 加服務端的工具名（`viking_search` → `openviking_search`），不保留舊名別名期；pi 的 `--tools` 和 `--exclude-tools` 按名字精確匹配，白名單裡仍寫 `viking_search` 的話，對應工具會靜默消失，需要手動改名。這些工具的行為與其他 MCP harness 一致：`remember` 另開一個會話並立即提交，不再追加到當前 pi 會話；`read` 返回支援按行分頁的文本（`level="abstract"` 和 `level="overview"` 兩檔已移除，替代路徑是 `openviking_search(mode="context", detail="overview")`）；`forget` 直接刪除傳入的 URI；`add_resource` 對本地路徑返回一次性上傳 URL，由模型把檔案 POST 上去。root api key 在 `/mcp` 上被拒絕（403），現在會導致整個會話一個工具都沒有，而此前是工具照常註冊、每次呼叫都返回空結果，這類部署需要改用 user 或 admin key。共享開關 `mcpEnabled: false` 現在對 pi 同樣生效，以這種方式關掉工具不計作故障。以上各種情況下，recall、會話採集和上下文接管都照常工作，其他 harness 不受影響。完整的改名對照和升級說明見擴充 README 的 [Upgrading from 0.3.x](https://github.com/volcengine/OpenViking/blob/main/examples/pi-coding-agent-extension/README.md#upgrading-from-03x)。
 - **外部 peer identity 遷移**：日誌匯入中的混合文字標識改用無損的
   `ext-<base64>` id。`ext-` 名稱空間為編碼身份保留，因此原本會進入該名稱空間的
   ASCII 身份也會被編碼。系統不會自動讀取舊的有損 peer 目錄，因為多個身份可能彼此衝突，

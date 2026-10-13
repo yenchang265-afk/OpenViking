@@ -6,13 +6,19 @@
    openclaw plugins install clawhub:@openviking/openclaw-plugin
    ```
 
-2. 將 OpenClaw 連線至火山引擎託管的 OpenViking 服務：
+2. 執行配置嚮導，服務地址填 `{{OPENVIKING_BASE_URL}}`，API Key 填當前頁面提供的 key：
 
    ```bash
-   openclaw openviking setup --base-url https://api.vikingdb.cn-beijing.volces.com/openviking --api-key <$OPENVIKING_API_KEY>
+   openclaw openviking setup
    ```
 
-3. 配置 `peer_role`：`peer_role` 用於標識對話參與者的型別，並非許可權角色。其中，`assistant` 表示不同的 Agent、工具或模型，`person` 表示不同的人類參與者。完成上述配置後，`peer_role` 預設為 `none`。如需調整 `peer_role`，可執行以下命令：
+   也可以一步完成配置，key 放在 `OPENVIKING_API_KEY` 中：
+
+   ```bash
+   openclaw openviking setup --base-url {{OPENVIKING_BASE_URL}} --api-key "$OPENVIKING_API_KEY"
+   ```
+
+3. 配置 `peer_role`：`peer_role` 用於標識對話參與者的型別，並非許可權角色。其中，`assistant` 表示不同的 Agent、工具或模型，`sender` 表示不同的訊息傳送者（舊值 `person` 仍相容）。完成上述配置後，`peer_role` 預設為 `none`。如需調整 `peer_role`，可執行以下命令：
 
    ```bash
    openclaw openviking setup --reconfigure

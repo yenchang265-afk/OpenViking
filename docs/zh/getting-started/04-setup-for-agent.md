@@ -1,4 +1,4 @@
-# OpenViking 安裝 SOP（For Agent）
+# 供 Agent 執行的服務端安裝說明
 
 ## 目標
 
@@ -9,8 +9,9 @@
 ## 總原則
 
 - 預設走普通使用者安裝路徑，不預設走原始碼構建
-- 預設使用預編譯包，不預設要求 Go / Rust / C++ / CMake
-- 配置不確定時必須先問使用者，不要替使用者猜 provider、model、api_base、api_key、workspace
+- 預設使用預編譯包，不預設要求 Rust / C++ / CMake
+- 先讀取已有配置和使用者已給出的資訊，缺失或不確定的項要先問使用者；不要替使用者猜 provider、model、api_base、api_key、workspace
+- 不覆蓋已有配置；更新前檢查實際差異，保留與本次安裝無關的欄位
 - 只有在安裝失敗並明確指向本地編譯，或使用者主動要求原始碼安裝時，才進入原始碼構建路徑
 
 ## SOP
@@ -40,9 +41,10 @@
 - 使用者不想手填大量模型引數
 
 執行路徑：
-1. 執行 `openviking-server init`
-2. 執行 `openviking-server doctor`
-3. 啟動 `openviking-server`
+1. 安裝 OpenViking Python 包並確認 Ollama 已執行
+2. 執行 `openviking-server init` 選擇本地模型
+3. 執行 `openviking-server doctor`
+4. 啟動 `openviking-server`
 
 #### C. Docker 安裝
 滿足任一情況即可進入：
@@ -76,16 +78,15 @@
 - 使用者明確要修改或重編底層原生元件
 
 進入後再說明需要：
-- Go 1.22+
 - Rust 1.91.1+
 - C++ 編譯器
 - CMake
 
 ### 2. 提問
 
-如果使用者沒有給出完整模型配置，先問，不要直接寫配置檔案。
+先檢查配置檔案、環境變數和使用者已給出的選擇。下面是資訊清單，只補問仍缺失且會影響安裝的項。API Key 應由使用者在本地配置或通過已有憑據機制提供，不要求貼上進聊天。
 
-#### 必問項
+#### 需要的資訊
 
 1. 你準備使用哪種模型提供商？
    - `openai`
@@ -132,7 +133,7 @@
 - 是否已經安裝 Ollama
 - 希望使用哪些本地 embedding / VLM 模型
 
-#### Docker 額外必問項
+#### Docker 需要的資訊
 
 如果使用者選擇 Docker，還要繼續確認：
 - 使用者是想用 `docker run` 還是 `docker compose`
@@ -140,7 +141,7 @@
 - 是否要把宿主機 `~/.openviking` 掛載到容器 `/app/.openviking`
 - 是否要直接通過環境變數 `OPENVIKING_CONF_CONTENT` 注入完整 JSON 配置
 
-#### Windows 額外必問項
+#### Windows 需要的資訊
 
 如果使用者在 Windows，還要繼續確認：
 - 使用者使用的是 PowerShell 還是 cmd.exe
@@ -149,7 +150,7 @@
 
 ### 3. 生成配置
 
-只有在使用者確認完必要資訊後，才能寫 `~/.openviking/ov.conf`。
+只有在使用者確認完必要資訊後，才能寫入或更新 `~/.openviking/ov.conf`，已有配置先保留副本。不要把下面的佔位值直接作為可用配置。
 
 #### 最小配置結構
 
@@ -195,8 +196,10 @@
 
 #### 路徑 A：普通最小安裝
 
+先使用 Python 3.10+ 的虛擬環境，或按[快速開始](02-quickstart.md)用 `uv tool install` 安裝。已啟用虛擬環境時：
+
 ```bash
-pip install openviking --upgrade --force-reinstall
+python -m pip install --upgrade openviking
 ```
 
 使用者確認配置後寫入 `~/.openviking/ov.conf`，然後執行：
@@ -207,6 +210,8 @@ openviking-server
 ```
 
 #### 路徑 B：本地模型安裝（Ollama）
+
+先完成路徑 A 的包安裝，並啟動 Ollama，再執行：
 
 ```bash
 openviking-server init
@@ -222,7 +227,8 @@ openviking-server
 
 ```bash
 docker run --rm \
-  -p 1933:1933 \
+  --name openviking \
+  -p 127.0.0.1:1933:1933 \
   -v ~/.openviking:/app/.openviking \
   ghcr.io/volcengine/openviking:latest
 ```
@@ -252,20 +258,23 @@ docker compose up -d
 如果使用者還沒有 `ov.conf`，可以二選一：
 
 1. 先在宿主機生成並掛載進容器
-2. 啟動容器後進入容器內執行：
+2. 用一次性容器初始化同一個掛載目錄，再按方案 1 啟動服務：
 
 ```bash
-docker exec -it openviking openviking-server init
+docker run --rm -it \
+  -v ~/.openviking:/app/.openviking \
+  ghcr.io/volcengine/openviking:latest openviking-server init
 ```
 
 Dockerfile 還支援在首次啟動時通過 `OPENVIKING_CONF_CONTENT` 注入完整 JSON；如果使用者明確想這樣做，可以採用，但前提仍是配置值已確認。
 
 ##### Docker 驗證
 
-啟動後驗證：
+`/health` 只確認程序可響應；缺配置的容器會返回 `503 pending_initialization`，不能只看 curl 是否收到了響應。啟動後檢查日誌和 `/ready`：
 
 ```bash
 curl http://localhost:1933/health
+curl http://localhost:1933/ready
 ```
 
 #### 路徑 D：Windows 安裝
@@ -273,7 +282,7 @@ curl http://localhost:1933/health
 優先按預編譯 wheel 路徑執行：
 
 ```bat
-pip install openviking --upgrade --force-reinstall
+python -m pip install --upgrade openviking
 ```
 
 配置檔案寫好後，按使用者 shell 設定環境變數。
@@ -313,7 +322,7 @@ set "OPENVIKING_CLI_CONFIG_FILE=%USERPROFILE%\.openviking\ovcli.conf"
 
 #### 路徑 E：原始碼構建
 
-只有進入原始碼構建路徑後，才向用戶說明並準備 Go / Rust / C++ / CMake。
+只有進入原始碼構建路徑後，才準備 Rust、C++ 和 CMake。完整構建步驟見倉庫 CONTRIBUTING.md。
 
 ### 5. 失敗分流
 
@@ -373,7 +382,7 @@ openviking-server doctor
 - 先執行一次標準重灌：
 
 ```bash
-pip install openviking --upgrade --force-reinstall
+python -m pip install --upgrade --force-reinstall openviking
 ```
 
 - 如果仍失敗，再判斷是否需要進入原始碼構建路徑
@@ -387,7 +396,7 @@ pip install openviking --upgrade --force-reinstall
 - 預編譯產物缺失
 
 處理原則：
-- 只有確認進入原始碼構建路徑後，才補充 Go / Rust / C++ / CMake
+- 只有確認進入原始碼構建路徑後，才補充 Rust / C++ / CMake
 - Windows 本地編譯優先補 CMake 和 MinGW
 - 不要把原始碼構建依賴當作普通安裝預設前置
 

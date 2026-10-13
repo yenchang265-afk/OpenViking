@@ -1,5 +1,7 @@
 # VikingBot 安裝與配置
 
+先了解 [VikingBot 的用途與架構](../concepts/15-vikingbot.md)，再按本頁完成安裝。
+
 VikingBot 是 OpenViking 內建的多渠道 AI Agent。它既可以和 OpenViking 一起啟動，也可以在本地獨立除錯，或作為長期執行的 Gateway 接入聊天平臺。
 
 本指南介紹安裝方式，以及三種主要使用場景的配置和啟動方法。Agent 工具、聊天渠道、架構等完整說明請參見 [VikingBot 中文文件](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md)。
@@ -19,7 +21,7 @@ uv tool install "openviking[bot]" --upgrade
 ```
 
 ```bash [pip]
-pip install "openviking[bot]" --upgrade --force-reinstall
+pip install "openviking[bot]" --upgrade
 ```
 
 ```bash [pipx]
@@ -37,6 +39,8 @@ pipx upgrade openviking
 ```bash
 vikingbot --version
 ```
+
+使用 pip 時先啟用虛擬環境。原始碼安裝還需要準備[開發構建依賴](https://github.com/volcengine/OpenViking/blob/main/CONTRIBUTING.md)。
 
 ### 從原始碼安裝
 
@@ -94,6 +98,8 @@ openviking-server doctor
 
 詳細配置見 [OpenViking 配置指南](01-configuration.md)。VikingBot 預設繼承根級 `vlm` 作為 Agent 模型，因此通常不需要重複配置 `bot.agents`。
 
+Server 使用 `api_key` 模式時，先註冊 User/Admin Key 並寫入 `bot.ov_server.api_key`；不能把 root 管理 Key 當作使用者 Key 使用。操作見[認證指南](04-authentication.md)。繼承 `trusted` 模式時，Bot 使用服務端的可信身份配置。
+
 ### 2. 一體啟動
 
 ```bash
@@ -112,6 +118,8 @@ ov find "我的回答偏好"
 ```
 
 `ov config` 中的 URL 應指向當前 OpenViking Server，預設是 `http://127.0.0.1:1933`。如果 Server 開啟了鑑權，還需要配置當前呼叫者的 User/Admin API Key。
+
+記憶在 commit 後非同步提取，立即執行 `ov find` 可能還沒有結果。用檢索驗證記憶是否儲存前，先確認記憶任務已完成。
 
 ## 場景 B：本地除錯 Agent
 
@@ -185,7 +193,9 @@ vikingbot chat
 vikingbot chat --session my-session
 ```
 
-沒有可用的 OpenViking Server 時，VikingBot 會以 standalone 方式執行。本地檔案、Shell、Web 和 Skill 等能力仍可使用，但不會提供 OpenViking 資源檢索和長期記憶能力。
+本地 chat 未顯式配置 `bot.ov_server.server_url` 時，連線繼承的服務失敗可降級為 standalone。顯式配置的服務不可用時停止啟動。繼承的認證模式不匹配也會停止啟動；顯式配置遠端服務時，Bot 會採用服務端報告的模式，再驗證憑據。認證失敗或收到不健康的 HTTP 響應都會停止啟動。一體啟動由服務端管理時，Bot 會保留繼承的上游配置並等待服務啟動。
+
+standalone 模式下，本地檔案、Shell、Web 和 Skill 等能力仍可使用，但不會提供 OpenViking 資源檢索和長期記憶能力。
 
 ## 場景 C：Gateway 統一入口
 
@@ -209,6 +219,7 @@ vikingbot chat --session my-session
     },
     "ov_server": {
       "server_url": "https://openviking.example.com",
+      "api_key_type": "user",
       "api_key": "<bot-openviking-user-api-key>"
     }
   }
@@ -250,6 +261,20 @@ ov find "專案釋出流程"
 Gateway 預設只監聽 `127.0.0.1`。如果改為 `0.0.0.0` 或其他非 localhost 地址，必須配置 `bot.gateway.token`，並在客戶端設定對應的 `gateway_token`。
 
 聊天平臺的憑證和許可權配置見 [VikingBot 渠道配置](https://github.com/volcengine/OpenViking/blob/main/bot/docs/zh/concepts/05-channel.md)。
+
+## 通過 Web Studio 管理
+
+開啟 Web Studio 的 `/vikingbot` 頁面，可使用網頁對話或管理 Server 受管 Bot 的 Telegram 連線。渠道管理和對話歷史僅允許 ROOT 訪問，並按 Studio 當前選擇的 account 隔離；Account ADMIN Key 不具備該許可權。Studio 使用 `GET /api/v1/admin/bot/capabilities`，以及 `/api/v1/admin/accounts/{account_id}/bot` 下的連線、會話、驗證和接入任務介面。
+
+Telegram 接入分三步：
+
+1. 選擇同帳戶普通使用者作為連線的執行身份。服務端繫結可用憑證，瀏覽器無需接收該使用者的 API Key。
+2. 貼上從 @BotFather 取得的 bot token，並列出允許與 bot 對話的 Telegram 使用者（1–100 個）。服務端儲存前會先向 Telegram 驗證 token。
+3. 向 bot 傳送訊息，驗證訊息接收和回覆。
+
+連線和捕獲的訊息儲存在 Bot 資料目錄的 `studio.sqlite3`，檔案許可權為 `0600`。資料庫含 bot token 和繫結使用者的憑證，備份需按服務端配置處理。Studio 管理的會話只開放繫結身份允許的 OpenViking 查詢和記憶工具；Shell、本地檔案、定時任務和未批准的 MCP 工具不可用。
+
+暫停連線保留歷史。刪除連線會移除本地記錄，不會刪除 Telegram bot 或其中的訊息。對話歷史在 Studio 中只讀，從該 Studio 連線捕獲的訊息開始；不會自動遷入 `ov.conf` 中已有的渠道及其舊歷史。同一連線暫停恢復或重啟後保留上下文；刪除並重建連線會建立新的上下文。
 
 ## 更多文件
 

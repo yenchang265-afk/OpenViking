@@ -2,7 +2,10 @@ const workspace = {
   appShell: {
     footer: {
       agentIntegrations: 'Agent 接入',
+      beta: 'Beta',
       connection: '連線設定',
+      gateway: 'OpenViking 閘道器',
+      gatewayBeta: 'OpenViking 閘道器 · Beta',
       docs: '文件站',
       github: 'GitHub',
       sdkApi: 'SDK 與 API',
@@ -64,8 +67,8 @@ const workspace = {
       sessions: {
         title: '會話',
       },
-      playground: {
-        title: '工作臺',
+      filesystem: {
+        title: '檔案系統',
       },
     },
     sidebar: {
@@ -209,6 +212,7 @@ const workspace = {
   },
   agentExperiencePage: {
     pageCount: '本頁 {{count}} 條經驗',
+    searchCount: '顯示 {{count}} 條搜尋結果',
     setup: {
       expand: '展開步驟',
       collapse: '收起',
@@ -228,10 +232,10 @@ const workspace = {
     description:
       '跟蹤從會話提交中沉澱的經驗資產，以及經驗被應用後的執行軌跡與結果分佈。',
     refresh: '重新整理',
-    searchPlaceholder: '搜尋當前頁的經驗名稱或 URI',
+    searchPlaceholder: '搜尋經驗',
     searchClear: '清除',
-    searchNoResults: '當前頁沒有匹配的經驗',
-    searchNoResultsDescription: '可清除搜尋條件，或切換頁面繼續檢視。',
+    searchNoResults: '沒有匹配的經驗',
+    searchNoResultsDescription: '可清除搜尋條件後重試。',
     loading: '正在載入經驗列表...',
     loadFailed: '經驗列表載入失敗',
     networkError:
@@ -283,7 +287,7 @@ const workspace = {
     detail: {
       back: '返回',
       copyUri: '複製 URI',
-      openPlayground: '在工作臺中開啟',
+      openFilesystem: '在檔案系統中開啟',
       copied: '已複製',
       copyFailed: '複製失敗',
       contentTitle: '經驗內容',
@@ -353,7 +357,7 @@ const workspace = {
       open: '新增技能',
       title: '建立技能',
       description:
-        '撰寫供 Agent 使用的 SKILL.md。之後可在工作臺中為它加入更多檔案。',
+        '撰寫供 Agent 使用的 SKILL.md。之後可在檔案系統中為它加入更多檔案。',
       scopeLabel: '儲存到',
       scopeHint: {
         user: '僅你可以使用，儲存在 {{uri}}。',
@@ -397,7 +401,7 @@ const workspace = {
       failed: '技能建立失敗：{{error}}',
     },
     detail: '詳情',
-    openPlayground: '在工作臺中開啟',
+    openFilesystem: '在檔案系統中開啟',
     viewDetail: '檢視 {{name}} 詳情',
     detailLoading: '正在載入技能詳情...',
     detailLoadFailed: '技能詳情載入失敗',
@@ -431,7 +435,7 @@ const workspace = {
       totalDuration: '總耗時',
       processingNotStarted: '未開始',
       processingDurationHelp:
-        '僅累計工序實際處理區間，含模型與 I/O 呼叫；排除排隊和等待下游，並行重疊只計一次。舊任務或重啟後記錄不完整時顯示未記錄。',
+        '處理耗時為至少一個 Work 已被 Worker 領取後的牆鍾時間，包含模型呼叫、I/O、下游等待和退避，並行重疊只計一次；等待耗時為總耗時減去處理耗時，主要包含排隊和排程空檔。',
       processingDuration: '處理耗時',
       waitingDuration: '等待耗時',
       timingUnavailable: '未記錄',
@@ -799,6 +803,119 @@ const workspace = {
     },
   },
   settings: {
+    pageTitle: '設定',
+    tabs: { connection: '連線設定', configuration: '服務端配置' },
+    models: {
+      editMode: '編輯模式',
+      formMode: '表單編輯',
+      fileMode: '檔案編輯',
+      fileContent: 'ov.conf JSON',
+      validateFailed: '配置校驗失敗。',
+      validating: '校驗中...',
+      fileScope:
+        '兩種編輯模式共享同一份配置草稿。表單編輯提供 VLM 和 Embedding 常用欄位，檔案編輯支援完整的普通 JSON 配置。Web Studio 不提供環境變數配置支援；依賴環境變數時，請直接在伺服器上維護 ov.conf。儲存後需重啟服務才能生效，不會自動重啟或更新執行時覆蓋配置。',
+      invalidJsonObject: '請輸入有效的 JSON 物件',
+      copyModelId: '複製模型 ID',
+      copied: '模型 ID 已複製',
+      copyFailed: '複製失敗',
+      hasOverrides: '存在執行時覆蓋',
+      more: '更多操作',
+      fileLocation: '檔案位置',
+      readOnlyStatus: '只讀',
+      pendingRestart: '待重啟',
+      inSync: '與執行配置一致',
+      discardAll: '撤銷修改',
+      saveAll: '儲存配置',
+      reloadFile: '重新載入檔案（請先撤銷未儲存修改）',
+      restartRequired: '檔案配置與執行中的配置不同，需重啟服務後生效。',
+      fileReadOnly: '配置檔案為只讀，無法儲存。',
+      overrideWarning: '檢測到執行時覆蓋，重啟後這些配置仍可能優先於檔案：',
+      parameters: '模型引數',
+      advanced: '進階配置',
+      environmentObject:
+        '配置含環境變數引用或轉義的引用符號，表單只讀。Web Studio 不提供環境變數配置支援；依賴環境變數時，請直接在伺服器上維護 ov.conf。',
+      embeddingContract:
+        '模型身份、向量維度與輸入型別為建立時配置，不能在此修改。',
+      fields: {
+        provider: '服務提供商',
+        text_source: '嵌入文本來源',
+        dimension: '向量維度',
+        input: '輸入型別',
+        query_param: '查詢任務引數',
+        document_param: '文件任務引數',
+        version: '模型版本',
+        model: '模型 ID',
+        api_key: 'API Key',
+        api_base: 'API 地址',
+        api_version: 'API 版本',
+        ak: 'Access Key',
+        sk: 'Secret Key',
+        host: 'Host',
+        region: 'Region',
+        timeout: '請求超時（秒）',
+        thinking: '深度思考（thinking）',
+        max_input_tokens: '輸入 Token 上限',
+        extra_headers: '額外請求頭（JSON）',
+        max_retries: '重試次數',
+        max_concurrent: '併發上限',
+        circuit_breaker: '熔斷引數（JSON）',
+        failback_timeout_seconds: '回切間隔（秒）',
+        failback_request_count: '回切請求數',
+      },
+      listModel: '模型 ID',
+      dimension: '向量維度',
+      dense: '稠密向量',
+      sparse: '稀疏向量',
+      hybrid: '混合向量',
+      priority: '順序',
+      preferred: '首選',
+      backup: '備用',
+      priorityHint:
+        '按配置順序優先使用第一條，故障時切換備用；不表示當前實際使用的連線。',
+      actions: '操作',
+      moveUp: '上移',
+      moveDown: '下移',
+      view: '檢視模型',
+      edit: '編輯模型',
+      addModel: '新增模型',
+      serverSource: 'ov.conf',
+      unsaved: '未儲存',
+      providerDefault: '服務商預設地址',
+      notSet: '未設定',
+      empty: '暫無模型配置',
+      showKey: '顯示 API Key',
+      hideKey: '隱藏 API Key',
+      close: '關閉',
+      dismiss: '取消',
+      apply: '確認修改',
+      confirmRemove: '刪除此模型配置？',
+      vlmType: 'VLM',
+      embeddingType: 'Embedding',
+      loading: '正在讀取服務端配置...',
+      rootRequired: '需要使用 ROOT 管理憑證連線服務才能編輯服務端配置。',
+      loadFailed: '服務端配置讀取失敗，請檢查連線、許可權及服務版本。',
+      retry: '重試',
+      model: '預設模型 ID',
+      provider: '服務提供商',
+      selectProvider: '選擇服務提供商',
+      customProvider: '自定義（OpenAI 相容）',
+      apiKey: 'API Key',
+      apiBase: 'API 地址',
+      remove: '刪除憑證',
+      saving: '儲存中...',
+      saved: '已儲存到 ov.conf，請重啟服務使改動生效',
+      saveAndRestart: '儲存並重啟',
+      restartService: '重啟服務',
+      restarting: '正在重啟服務，等待連線恢復…',
+      restarted: '服務已重啟，配置已重新載入。',
+      restartRolledBack:
+        '新配置啟動失敗，已自動恢復此前執行的配置並重新啟動服務。',
+      restartFailed:
+        '未能確認服務重啟成功，請檢查服務狀態和當前配置。如修改了地址、埠或 ROOT 憑證，請更新連線設定後重試。',
+      restartUnsupported:
+        '當前啟動方式不支援頁面重啟，請通過部署平臺重啟服務。',
+      saveFailed: '儲存失敗，請檢查模型引數及許可權後重試。',
+    },
     acl: {
       page: {
         advanced: '進階設定',
@@ -861,14 +978,27 @@ const workspace = {
       includeParent: '使用上級授權',
       excludeParent: '排除上級授權',
       limitAccess: '限制訪問',
+      inheritParent: '繼承上級授權',
+      inheritHelpLabel: '瞭解繼承上級授權',
+      inheritHelp:
+        '開啟後，上級目錄的授權與本目錄直接授權共同生效；關閉後，僅本目錄直接授權生效。切換不會刪除本目錄授權，下級目錄預設繼續繼承此目錄的有效許可權。',
       limitTitle: '限制這個目錄的訪問？',
       limitWarning:
         '此目錄將停止繼承上級授權。已有的直接授權（包括所有人授權）仍然生效，請在切換後檢查這些授權。帳號管理員仍可訪問。',
       peopleWithAccess: '有許可權的使用者和使用者組',
+      grantSubjectColumn: '使用者 / 使用者組',
+      grantLevelColumn: '許可權',
+      effectiveLevel: '生效許可權：{{level}}',
+      grantSourceColumn: '來源',
+      accountAdministrators: '帳號管理員',
+      administratorRole: '系統角色',
+      administratorSource: '帳號管理員許可權',
+      removeFor: '移除 {{principal}} 的直接授權',
       defaultRule: '預設繼承上級許可權',
       onlyAdmins: '暫無授權物件，僅帳號管理員可訪問',
-      directSource: '本目錄授權',
-      inheritedSource: '上級目錄授權',
+      directSource: '直接授權',
+      inheritedSource: '來自繼承',
+      directAndInheritedSource: '繼承 + 直接授權',
       adminCredentialIdentity:
         '許可權管理使用 {{account}} 的帳號管理員憑證；資源瀏覽仍使用當前使用者。',
       identity: '資源操作使用當前資料身份：{{account}} / {{user}}。',
@@ -1025,14 +1155,14 @@ const workspace = {
       keyGuide: {
         control: {
           primary:
-            '當前使用者 API 金鑰已可用於工作臺和資料訪問，普通使用者無需配置控制憑證。',
+            '當前使用者 API 金鑰已可用於檔案系統和資料訪問，普通使用者無需配置控制憑證。',
           secondary:
             '如需切換帳號或管理使用者，請向部署管理員索取 Root API 金鑰，或向當前帳號管理員索取管理員 API 金鑰。Root API 金鑰位於服務端 ov.conf 的 server.root_api_key。',
           title: '需要管理帳號或使用者？',
         },
         data: {
           primary:
-            'Root 或管理員 API 金鑰主要用於管理操作；工作臺和租戶資料 API 需要繫結使用者身份的使用者 API 金鑰。',
+            'Root 或管理員 API 金鑰主要用於管理操作；檔案系統和租戶資料 API 需要繫結使用者身份的使用者 API 金鑰。',
           secondary:
             '請在“使用者與許可權”中選擇或建立使用者，或者重新生成使用者金鑰，然後將其用作使用者 API 金鑰。',
           title: '還缺少使用者 API 金鑰',
@@ -1046,9 +1176,9 @@ const workspace = {
         learnMore: '檢視 API 金鑰獲取方式',
         trusted: {
           primary:
-            '當前 Trusted 服務啟用了 Root API 金鑰校驗。瀏覽器需要配置相同的金鑰，才能訪問管理介面和租戶資料介面。',
+            'Trusted 模式必須使用 Root API 金鑰，localhost 也不例外。請在上方“Root 或管理員 API 金鑰”中填入服務端的 root key。',
           secondary:
-            '請向部署管理員索取 Root API 金鑰；它位於服務端 ov.conf 的 server.root_api_key。Trusted 模式的資料身份由帳號和使用者斷言確定，不需要使用者 API 金鑰。',
+            '請向部署管理員索取金鑰。如果服務端還沒配置，請在服務端 ov.conf 中設定非空的 server.root_api_key，然後重啟服務，並在這裡填寫同一個值。無需另外生成使用者 API 金鑰。',
           title: 'Trusted 服務需要 Root API 金鑰',
         },
       },
@@ -1060,7 +1190,11 @@ const workspace = {
         primary: '該伺服器配置了 {{mode}} 認證。',
         title: '不支援的認證模式',
       },
-      userHint: '供工作臺和租戶資料 API 使用。',
+      trustedRootHint:
+        '填寫服務端 ov.conf 中的 server.root_api_key；Trusted 模式的管理和資料訪問都使用它。',
+      trustedUserHint:
+        'Trusted 模式無需單獨的使用者 API 金鑰，資料身份由帳號和使用者名稱決定。',
+      userHint: '供檔案系統和租戶資料 API 使用。',
     },
     connectionPage: {
       description:
@@ -1131,6 +1265,8 @@ const workspace = {
         dataKeyRequired: '需要使用者或帳號管理員 API 金鑰',
         rootAvailable: 'Root 管理許可權可用',
         tenantDataAvailable: '租戶資料訪問可用',
+        trustedKeyRequired:
+          '需要 Root API 金鑰，請填寫服務端 ov.conf 中的 server.root_api_key',
         trustedIdentityRequired: 'Trusted 模式的資料訪問需要帳號和使用者資訊',
       },
       state: {
@@ -1169,9 +1305,9 @@ const workspace = {
       description:
         '檢視選中帳號下的使用者和憑證，並在網頁端新增使用者或輪換金鑰。',
       memberListDescription:
-        '“切換身份”會將該使用者設為工作臺、檢索等資料頁面的訪問身份，不會改變當前 Root 或管理員憑證。',
+        '“切換身份”會將該使用者設為檔案系統、檢索等資料頁面的訪問身份，不會改變當前 Root 或管理員憑證。',
       memberListDescriptionRoot:
-        '可直接修改成員角色。“切換身份”只會改變工作臺、檢索等資料頁面的訪問身份，不會改變當前 Root 管理憑證。',
+        '可直接修改成員角色。“切換身份”只會改變檔案系統、檢索等資料頁面的訪問身份，不會改變當前 Root 管理憑證。',
       memberListTitle: '空間成員',
       cannotRemoveCurrentIdentity: '不能刪除當前正在使用的身份。',
       cannotRemoveLastManager: '不能刪除空間內最後一個管理員。',

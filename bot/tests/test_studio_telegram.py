@@ -169,7 +169,9 @@ def test_install_registers_channel_and_agent_config(provider, tmp_path):
         {"type": "telegram", "token": "123456789:old"},
         {"type": "slack", "bot_token": "keep"},
     ]
-    channel = provider.install(service, studio_record())
+    channel = provider.install(
+        service, studio_record(), openviking_connection=studio_record()["identity"]
+    )
     assert added == [channel]
     assert channel.config.channel_key() == provider.runtime_key(studio_record())
     assert channel.config.allow_from == ["alice"]
@@ -180,7 +182,9 @@ def test_install_registers_channel_and_agent_config(provider, tmp_path):
 def test_apply_settings_updates_running_allowlist(provider, tmp_path):
     service = make_service(tmp_path)
     service.manager.add_channel = lambda channel: None
-    channel = provider.install(service, studio_record())
+    channel = provider.install(
+        service, studio_record(), openviking_connection=studio_record()["identity"]
+    )
     service.runtime = lambda record: channel
     record = studio_record() | {"settings": {"allow_from": ["bobby7", "7"]}}
     provider.apply_settings(service, record)
@@ -193,7 +197,9 @@ def make_channel(tmp_path, publish=None):
     config = TelegramChannelConfig(token=TOKEN, allow_from=["alice", "42"])
     bus = SimpleNamespace(publish_inbound=publish or AsyncMock())
     store = StudioStore(tmp_path / "studio.db")
-    channel = StudioTelegramChannel(config, bus, record=record, store=store)
+    channel = StudioTelegramChannel(
+        config, bus, record=record, store=store, openviking_connection=record["identity"]
+    )
     channel._running = True
     return channel, bus, store
 
@@ -322,3 +328,34 @@ async def test_start_ignores_unlisted_senders(tmp_path):
     update, reply = telegram_update("/start")
     await channel._on_start(update, None)
     reply.assert_awaited_once()
+
+
+@pytest.mark.parametrize("auth_mode", ["trusted", "api_key"])
+async def test_trusted_connection_uses_server_root_key_only_at_runtime(tmp_path, auth_mode):
+    from vikingbot.bus.queue import MessageBus
+    from vikingbot.channels.manager import ChannelManager
+    from vikingbot.config.schema import Config
+    from vikingbot.studio.service import StudioService
+
+    item = studio_record() | {"settings": {"allow_from": ["alice"]}}
+    config = Config(storage_workspace=str(tmp_path))
+    config.ov_server.set_effective_auth_mode(auth_mode)
+    config.ov_server.api_key = "runtime-root-key"
+    StudioService(config, ChannelManager(MessageBus())).store.save(item)
+
+    # Restart so the saved connection goes through the production install path.
+    service = StudioService(config, ChannelManager(MessageBus()))
+    runtime = service.runtime(item)
+    runtime._running = True
+    await runtime._handle_message(sender_id="1|alice", chat_id="5", content="hi")
+    event = await runtime.bus.consume_inbound()
+
+    connection = event.openviking_connection
+    assert connection["user_id"] == "bot-user"
+    if auth_mode == "trusted":
+        assert connection["api_key_type"] == "root"
+        assert connection["api_key"] == "runtime-root-key"
+    else:
+        assert connection["api_key"] == "private"
+    assert service.store.connections("a")[0]["identity"] == item["identity"]
+    assert b"runtime-root-key" not in (config.bot_data_path / "studio.sqlite3").read_bytes()

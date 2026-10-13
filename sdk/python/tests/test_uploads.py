@@ -1,3 +1,6 @@
+# Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
+# SPDX-License-Identifier: AGPL-3.0
+
 import json
 import tempfile
 import zipfile
@@ -5,7 +8,8 @@ from pathlib import Path
 
 import httpx
 import pytest
-from openviking_sdk import AsyncHTTPClient, OpenVikingError
+from openviking_sdk import AsyncHTTPClient, OpenVikingError, SyncHTTPClient
+from openviking_sdk.uploads import zip_directory
 
 
 class _SessionServer:
@@ -137,6 +141,55 @@ async def test_failed_part_aborts_the_session(tmp_path):
 
     assert server.requests[-1] == ("DELETE", "/api/v1/uploads/u1")
     assert ("POST", "/api/v1/uploads/u1/complete") not in server.requests
+
+
+@pytest.fixture
+def interrupted_archive(tmp_path, monkeypatch):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "first.txt").write_text("first", encoding="utf-8")
+    (source / "second.txt").write_text("second", encoding="utf-8")
+    archives = tmp_path / "archives"
+    archives.mkdir()
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: str(archives))
+    original_write = zipfile.ZipFile.write
+    error = FileNotFoundError("source disappeared during packing")
+    writes = []
+
+    def fail_second_write(self, filename, *args, **kwargs):
+        writes.append(filename)
+        if len(writes) == 2:
+            raise error
+        return original_write(self, filename, *args, **kwargs)
+
+    monkeypatch.setattr(zipfile.ZipFile, "write", fail_second_write)
+    return source, archives, error
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("sync", [False, True])
+@pytest.mark.parametrize("method", ["add_resource", "add_skill", "update_skill"])
+async def test_directory_import_removes_partial_zip(interrupted_archive, sync, method):
+    source, archives, error = interrupted_archive
+    client = (SyncHTTPClient if sync else AsyncHTTPClient)(url="http://localhost:1933")
+    args = ("demo", str(source)) if method == "update_skill" else (str(source),)
+    with pytest.raises(FileNotFoundError) as raised:
+        if sync:
+            getattr(client, method)(*args)
+        else:
+            await getattr(client, method)(*args)
+    assert raised.value is error
+    assert list(archives.iterdir()) == []
+    assert (source / "first.txt").read_text(encoding="utf-8") == "first"
+    assert (source / "second.txt").read_text(encoding="utf-8") == "second"
+
+
+def test_zip_helper_removes_partial_zip(interrupted_archive):
+    source, archives, error = interrupted_archive
+    with pytest.raises(FileNotFoundError) as raised:
+        zip_directory(str(source))
+    assert raised.value is error
+    assert list(archives.iterdir()) == []
 
 
 class _FakeHTTPClient:

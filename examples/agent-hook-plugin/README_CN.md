@@ -3,11 +3,10 @@
 Cursor、TRAE、TRAE CN 與 ZCode 使用宿主配置檔案；Kimi Code 使用原生託管外掛目錄。它們共用同一個 dispatcher 和記憶執行時，安裝指令碼在安裝時組裝依賴，不在倉庫裡為每個宿主提交共享程式碼副本。
 
 ```bash
-bash examples/memory-plugin-shared/install.sh --harness cursor
-bash examples/memory-plugin-shared/install.sh --harness trae,trae-cn
-bash examples/memory-plugin-shared/install.sh --harness zcode
-bash examples/memory-plugin-shared/install.sh --harness kimicode
+curl -fsSL https://openviking.ai/install | bash
 ```
+
+安裝指令碼會詢問要安裝哪些宿主以及 OpenViking 連線資訊。要從倉庫 checkout 安裝，在倉庫根目錄執行 `bash examples/memory-plugin-shared/install.sh --harness <cursor|trae|trae-cn|zcode|kimicode>`。
 
 > **需要支援 `viking://~` home alias 的 OpenViking 服務端。** 召回通過 `viking://~/memories` 與 `viking://~/skills` 指向呼叫者自己的上下文空間；不帶 uid 的 `viking://user/memories` 簡寫會被較新的服務端拒絕。
 

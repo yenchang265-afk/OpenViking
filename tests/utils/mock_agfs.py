@@ -4,7 +4,7 @@ import uuid
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from openviking.pyagfs.exceptions import AGFSNotFoundError
+from openviking.pyagfs import AGFSNotFoundError
 
 
 class MockAGFSNotFoundError(AGFSNotFoundError, FileNotFoundError):

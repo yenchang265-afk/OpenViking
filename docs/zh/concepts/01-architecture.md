@@ -4,65 +4,52 @@ OpenViking 是為 AI Agent 設計的上下文資料庫，將所有上下文（Me
 
 ## 系統概覽
 
+<ArchitectureDiagram />
+
+<details>
+<summary>文本版本</summary>
+
+```text
+CLI / SDK / HTTP client
+          |
+      HTTP Server
+          |
+      Service Layer
+          |
+   +------+------+----------------+
+   |             |                |
+Retrieval     Sessions       Resource / Skill import
+   |             |                |
+   |       Memory extraction  Parse / Semantic queues
+   |             |                |
+   +-------------+----------------+
+                 |
+             VikingFS
+           /          \
+      RAGFS         Vector index
 ```
-┌────────────────────────────────────────────────────────────────────────────┐
-│                           OpenViking 系統架構                               │
-├────────────────────────────────────────────────────────────────────────────┤
-│                                                                            │
-│                              ┌─────────────┐                               │
-│                              │   Client    │                               │
-│                              │ (OpenViking)│                               │
-│                              └──────┬──────┘                               │
-│                                     │ 委託                                  │
-│                              ┌──────▼──────┐                               │
-│                              │   Service   │                               │
-│                              │    Layer    │                               │
-│                              └──────┬──────┘                               │
-│                                     │                                      │
-│           ┌─────────────────────────┼─────────────────────────┐            │
-│           │                         │                         │            │
-│           ▼                         ▼                         ▼            │
-│    ┌─────────────┐          ┌─────────────┐          ┌─────────────┐      │
-│    │  Retrieve   │          │   Session   │          │    Parse    │      │
-│    │ (上下文檢索) │          │  (會話管理)  │          │ (上下文提取) │      │
-│    │             │          │             │          │             │      │
-│    │ search/find │          │ add         │          │ 文件解析    │      │
-│    │ 意圖分析    │          │ commit      │          │ L0/L1/L2    │      │
-│    │ Rerank     │          │ commit      │          │ 樹構建      │      │
-│    └──────┬──────┘          └──────┬──────┘          └──────┬──────┘      │
-│           │                        │                        │             │
-│           │                        │ 記憶提取               │             │
-│           │                        ▼                        │             │
-│           │                 ┌─────────────┐                 │             │
-│           │                 │ Compressor  │                 │             │
-│           │                 │ 壓縮/去重    │                 │             │
-│           │                 └──────┬──────┘                 │             │
-│           │                        │                        │             │
-│           └────────────────────────┼────────────────────────┘             │
-│                                    ▼                                      │
-│    ┌─────────────────────────────────────────────────────────────────┐    │
-│    │                         Storage 層                               │    │
-│    │              AGFS (檔案內容)  +  向量庫 (索引)                    │    │
-│    └─────────────────────────────────────────────────────────────────┘    │
-│                                                                            │
-└────────────────────────────────────────────────────────────────────────────┘
-```
+
+</details>
 
 ## 核心模組
 
+<div class="module-table">
+
 | 模組 | 職責 | 關鍵能力 |
 |------|------|---------|
-| **Client** | 統一入口 | 提供所有操作介面，委託給 Service 層 |
+| **Client** | 統一入口 | 通過 HTTP API 提交 SDK/CLI 支援的操作 |
 | **Service** | 業務邏輯 | FSService、SearchService、SessionService、ResourceService、PackService、DebugService |
-| **Retrieve** | 上下文檢索 | 意圖分析（IntentAnalyzer）、層級檢索（HierarchicalRetriever）、Rerank 精排 |
-| **Session** | 會話管理 | 訊息記錄、使用追蹤、會話壓縮、記憶提交 |
+| **Retrieve** | 上下文檢索 | 意圖分析（IntentAnalyzer）、全域檢索（HierarchicalRetriever）、Rerank 精排 |
+| **Session** | 會話管理 | 訊息記錄、使用追蹤、會話歸檔、觸發記憶提交 |
 | **Parse** | 上下文提取 | 文件解析（PDF/MD/HTML）、樹構建（TreeBuilder）、非同步語義生成 |
-| **Compressor** | 記憶壓縮 | Schema 驅動的記憶提取、LLM 去重決策 |
-| **Storage** | 儲存層 | VikingFS 虛擬檔案系統、向量索引、AGFS 整合 |
+| **Memory** | 記憶提取 | 按 MemoryType Schema 提取記憶（ExtractLoop），由 LLM 合併去重後以 patch 寫回（MemoryUpdater）；由 `SessionCompressorV3` 編排 |
+| **Storage** | 儲存層 | VikingFS 虛擬檔案系統、向量索引、RAGFS 整合 |
+
+</div>
 
 ## Service 層
 
-Service 層將業務邏輯與傳輸層解耦，便於 HTTP Server 和 CLI 複用：
+Service 層將業務邏輯與傳輸層解耦，CLI 和 SDK 通過 HTTP Server 訪問業務能力：
 
 | Service | 職責 | 主要方法 |
 |---------|------|----------|
@@ -79,44 +66,45 @@ OpenViking 採用雙層儲存架構，實現內容與索引分離（詳見 [儲�
 
 | 儲存層 | 職責 | 內容 |
 |--------|------|------|
-| **AGFS** | 內容儲存 | L0/L1/L2 完整內容、多媒體檔案、關聯關係 |
-| **向量庫** | 索引儲存 | URI、向量、後設資料（不儲存檔案內容） |
+| **RAGFS** | 內容儲存 | L0/L1/L2 完整內容、多媒體檔案、關聯關係 |
+| **向量庫** | 索引儲存 | URI、向量、後設資料和檢索需要的文本（包括摘要） |
 
 ## 資料流概覽
 
 ### 添加上下文
 
 ```
-輸入 → Parser → TreeBuilder → AGFS → SemanticQueue → 向量庫
+輸入 → Parser → TreeBuilder → ResourceProcessor → RAGFS → SemanticQueue → 向量庫
 ```
 
-1. **Parser**：解析文件，建立檔案和目錄結構（無 LLM 呼叫）
-2. **TreeBuilder**：移動臨時目錄到 AGFS，入隊語義處理
-3. **SemanticQueue**：非同步自底向上生成 L0/L1
-4. **向量庫**：建立索引用於語義搜尋
+1. **Parser**：將源文件解析為檔案與目錄；是否呼叫模型取決於所選 Parser
+2. **TreeBuilder**：確定目標 URI，保留臨時產物引用
+3. **ResourceProcessor**：將內容寫入 RAGFS，入隊語義處理
+4. **SemanticQueue**：非同步自底向上生成 L0/L1
+5. **向量庫**：建立索引用於語義搜尋
 
 ### 檢索上下文
 
 ```
-查詢 → 意圖分析 → 層級檢索 → Rerank → 結果
+查詢 → 意圖分析 → 全域檢索 → Rerank → 結果
 ```
 
 1. **意圖分析**：分析查詢意圖，生成 0-5 個型別化查詢
-2. **層級檢索**：目錄級遞迴搜尋，使用優先佇列
-3. **Rerank**：標量過濾 + 模型重排
+2. **全域檢索**：每條查詢在許可權範圍內執行一次向量搜尋
+3. **Rerank**：可選，對召回候選統一精排一次
 4. **結果**：返回按相關性排序的上下文
 
 ### 會話提交
 
 ```
-訊息 → 壓縮 → 歸檔 → 記憶提取 → 儲存
+訊息 → 歸檔邊界 → 歸檔 → 記憶提取 → 儲存
 ```
 
 1. **訊息**：累積對話訊息和使用記錄
-2. **壓縮**：保留最近 N 輪，舊訊息歸檔
+2. **歸檔邊界**：按提交引數劃分歸檔訊息和保留訊息；預設歸檔全部當前訊息
 3. **歸檔**：生成歷史片段的 L0/L1
 4. **記憶提取**：根據記憶策略和 MemoryType Schema 從訊息中提取記憶
-5. **儲存**：寫入 AGFS + 向量庫
+5. **儲存**：寫入 RAGFS + 向量庫
 
 ## 部署模式
 
@@ -126,13 +114,16 @@ OpenViking 採用雙層儲存架構，實現內容與索引分離（詳見 [儲�
 
 ```python
 # Python SDK 連線 OpenViking Server
-client = SyncHTTPClient(url="http://localhost:1933", api_key="xxx")
+from openviking_sdk import SyncHTTPClient
+
+client = SyncHTTPClient(url="http://localhost:1933", api_key="your-key")
 ```
 
 ```bash
 # 或使用 curl / 任意 HTTP 客戶端
 curl http://localhost:1933/api/v1/search/find \
-  -H "X-API-Key: xxx" \
+  -H "X-API-Key: your-key" \
+  -H "Content-Type: application/json" \
   -d '{"query": "how to use openviking"}'
 ```
 
@@ -145,10 +136,10 @@ curl http://localhost:1933/api/v1/search/find \
 
 | 原則 | 說明 |
 |------|------|
-| **儲存層純粹** | 儲存層只做 AGFS 操作和基礎向量搜尋，Rerank 在檢索層完成 |
+| **儲存層純粹** | 儲存層只做 RAGFS 操作和基礎向量搜尋，Rerank 在檢索層完成 |
 | **三層資訊** | L0/L1/L2 實現漸進式詳情載入，節省 Token 消耗 |
 | **兩階段檢索** | 向量搜尋召回候選 + Rerank 精排提高準確性 |
-| **單一資料來源** | 所有內容從 AGFS 讀取，向量庫僅儲存引用和索引 |
+| **單一資料來源** | RAGFS 儲存原始檔，向量記錄保留檢索需要的文本與後設資料 |
 
 ## 相關文件
 
@@ -161,6 +152,6 @@ curl http://localhost:1933/api/v1/search/find \
 - [會話管理](./08-session.md) - 會話和記憶管理
 - [事務模型](./09-transaction.md) - 寫入與一致性模型
 - [資料加密](./10-encryption.md) - 靜態資料加密與金鑰架構
-- [多租戶](./11-multi-tenant.md) - account / user / agent 隔離模型
+- [多租戶](./11-multi-tenant.md) - account / user / peer 隔離模型
 - [指標](./12-metrics.md) - `/metrics` 使用方式與關鍵指標說明
 - [使用者隱私配置](./13-privacy.md) - 隱私版本管理、自動提取Skill隱私配置

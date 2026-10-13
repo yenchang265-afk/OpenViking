@@ -65,13 +65,14 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
         self.backend_mode = "local"
         self.vector_dim = 2
         self.scroll_filters = []
+        self.filter_calls = []
         self.acl_manager = None
 
     @property
     def mode(self) -> str:
         return self.backend_mode
 
-    def _get_backend_for_context(self, ctx):
+    async def _get_backend_for_context(self, ctx):
         del ctx
         return SimpleNamespace(strict_query=self._query)
 
@@ -98,6 +99,26 @@ class _MemoryTransferBackend(VikingVectorIndexBackend):
         page = ordered[offset : offset + limit]
         next_cursor = str(offset + limit) if offset + limit < len(ordered) else None
         return page, next_cursor
+
+    async def filter(
+        self,
+        filter,
+        limit: int = 10,
+        offset: int = 0,
+        output_fields=None,
+        order_by=None,
+        order_desc: bool = False,
+        *,
+        ctx: RequestContext,
+    ) -> list[dict[str, Any]]:
+        del output_fields, order_by, order_desc, ctx
+        self.filter_calls.append((filter, limit, offset))
+        ordered = [
+            dict(self.records[key])
+            for key in sorted(self.records)
+            if _matches_filter(filter, self.records[key])
+        ]
+        return ordered[offset : offset + limit]
 
     async def get(self, ids: list[str], *, ctx: RequestContext) -> list[dict[str, Any]]:
         del ctx
@@ -272,13 +293,13 @@ def _records_under(
 
 
 @pytest.mark.asyncio
-async def test_copy_uri_mapping_scans_real_local_path_records(tmp_path):
+async def test_copy_uri_mapping_scans_real_local_path_records(vector_backend_factory, tmp_path):
     if not getattr(vectordb_engine, "PersistStore", None):
         pytest.skip("local persistent vectordb engine is not available in this environment")
 
     source = "viking://resources/src.md"
     target = "viking://resources/dst.md"
-    backend = VikingVectorIndexBackend(
+    backend = vector_backend_factory(
         config=VectorDBBackendConfig(
             backend="local",
             name="context",
@@ -379,8 +400,11 @@ async def test_get_l2_abstracts_by_uris_uses_strict_batched_lookup():
 
 @pytest.mark.asyncio
 async def test_scroll_propagates_real_adapter_query_failure():
-    backend = _SingleAccountBackend.__new__(_SingleAccountBackend)
-    backend._bound_account_id = "acct"
+    backend = _SingleAccountBackend(
+        VectorDBBackendConfig(),
+        bound_account_id="acct",
+        shared_adapter=SimpleNamespace(mode="local"),
+    )
     backend._async_adapter = SimpleNamespace(
         call=AsyncMock(side_effect=RuntimeError("injected query failure"))
     )
@@ -397,8 +421,11 @@ async def test_strict_delete_removes_existing_subset_when_attempted_ids_include_
             1,
         ]
     )
-    backend = _SingleAccountBackend.__new__(_SingleAccountBackend)
-    backend._bound_account_id = "acct"
+    backend = _SingleAccountBackend(
+        VectorDBBackendConfig(),
+        bound_account_id="acct",
+        shared_adapter=SimpleNamespace(mode="local"),
+    )
     backend._async_adapter = SimpleNamespace(call=adapter_call)
 
     deleted = await backend.strict_delete(["written", "never-written"])
@@ -557,6 +584,85 @@ async def test_incremental_inventory_projects_request_scalar_fields():
 
 
 @pytest.mark.asyncio
+async def test_incremental_inventory_by_uris_reads_exact_uri_groups_only():
+    first = "viking://resources/docs/a.py"
+    second = "viking://resources/docs/b.py"
+    backend = _RealAclMemoryTransferBackend(
+        [
+            _record("a-l2", first, level=2, md5="ma", abstract="A"),
+            _record("b-l2", second, level=2, md5="mb", abstract="B"),
+            _record("parent-l1", "viking://resources/docs", level=1),
+            _record("sibling-l2", "viking://resources/docs/c.py", level=2),
+        ]
+    )
+
+    records = await backend.get_incremental_inventory_by_uris(
+        [first, second],
+        ctx=_ctx(),
+        batch_size=1,
+        output_fields=["id", "uri", "level", "md5", "abstract"],
+    )
+
+    assert records == {
+        first: {
+            "a-l2": {
+                "id": "a-l2",
+                "uri": first,
+                "level": 2,
+                "md5": "ma",
+                "abstract": "A",
+            }
+        },
+        second: {
+            "b-l2": {
+                "id": "b-l2",
+                "uri": second,
+                "level": 2,
+                "md5": "mb",
+                "abstract": "B",
+            }
+        },
+    }
+    assert all(isinstance(filter, And) for filter in backend.scroll_filters)
+    assert all(
+        any(isinstance(condition, In) and condition.field == "uri" for condition in filter.conds)
+        for filter in backend.scroll_filters
+    )
+
+
+@pytest.mark.asyncio
+async def test_incremental_inventory_by_uris_uses_one_exact_filter_per_uri_chunk():
+    first = "viking://resources/docs/a.py"
+    second = "viking://resources/docs/b.py"
+    backend = _RealAclMemoryTransferBackend(
+        [
+            _record("a-l2", first, level=2, md5="ma"),
+            _record("b-l2", second, level=2, md5="mb"),
+        ]
+    )
+
+    records = await backend.get_incremental_inventory_by_uris(
+        [first, second],
+        ctx=_ctx(),
+        batch_size=2,
+    )
+
+    assert set(records) == {first, second}
+    assert len(backend.filter_calls) == 1
+    assert backend.scroll_filters == []
+    scope, limit, offset = backend.filter_calls[0]
+    assert offset == 0
+    assert limit == 7  # 3 canonical levels per URI plus the truncation sentinel.
+    assert isinstance(scope, And)
+    assert any(
+        isinstance(condition, In)
+        and condition.field == "uri"
+        and set(condition.values) == {first, second}
+        for condition in scope.conds
+    )
+
+
+@pytest.mark.asyncio
 async def test_incremental_hydration_fetches_records_by_primary_key():
     root = "viking://resources/docs"
     first = _record("root-l0", root, level=0, abstract="root abstract")
@@ -697,12 +803,12 @@ async def test_incremental_hydration_honors_explicit_summary_projection():
 
 
 @pytest.mark.asyncio
-async def test_l2_diff_scan_reads_real_local_backend(tmp_path):
+async def test_l2_diff_scan_reads_real_local_backend(vector_backend_factory, tmp_path):
     if not getattr(vectordb_engine, "PersistStore", None):
         pytest.skip("local persistent vectordb engine is not available in this environment")
 
     root = "viking://resources/docs"
-    backend = VikingVectorIndexBackend(
+    backend = vector_backend_factory(
         config=VectorDBBackendConfig(
             backend="local", name="context", dimension=4, path=str(tmp_path)
         )
@@ -751,12 +857,14 @@ async def test_l2_diff_scan_reads_real_local_backend(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_incremental_inventory_and_hydration_read_real_local_backend(tmp_path):
+async def test_incremental_inventory_and_hydration_read_real_local_backend(
+    vector_backend_factory, tmp_path
+):
     if not getattr(vectordb_engine, "PersistStore", None):
         pytest.skip("local persistent vectordb engine is not available in this environment")
 
     root = "viking://resources/docs"
-    backend = VikingVectorIndexBackend(
+    backend = vector_backend_factory(
         config=VectorDBBackendConfig(
             backend="local", name="context", dimension=4, path=str(tmp_path)
         )

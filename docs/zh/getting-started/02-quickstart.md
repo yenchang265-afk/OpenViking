@@ -1,4 +1,4 @@
-# 快速開始
+# 匯入並檢索第一份文件
 
 OpenViking 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一份小文件，再檢索其中的內容。使用託管服務或他人部署的服務時，只需安裝 CLI。
 
@@ -10,13 +10,13 @@ OpenViking 以服務端執行。用獨立的 `ov` CLI 連線服務，匯入一�
 
 ### 火山引擎託管服務
 
-開啟 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
+開啟 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_02-quickstart)，從**使用者管理 → API Key** 獲取金鑰。服務地址為：
 
 ```text
 https://api.vikingdb.cn-beijing.volces.com/openviking
 ```
 
-無需安裝服務端，也無需在本機配置模型。[產品介紹](https://www.volcengine.com/product/openviking-service)和[服務文件](https://docs.volcengine.com/docs/84313/2374478)說明託管服務的使用方式與額度。繼續第 2 步。
+無需安裝服務端，也無需在本機配置模型。[產品介紹](https://www.volcengine.com/product/openviking-service?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_02-quickstart)和[服務文件](https://docs.volcengine.com/docs/84313/2374478)說明託管服務的使用方式與額度。繼續第 2 步。
 
 ### 自建服務
 
@@ -52,7 +52,7 @@ ov config
 
 在互動配置中，火山託管服務選擇 **OpenViking Service**，自建服務選擇 **自定義（Custom）**。填寫 API Key，自建服務還需填寫 URL。預設本地服務的金鑰留空。儲存並激活配置。
 
-CLI 將當前連線儲存到 `~/.openviking/ovcli.conf`，它與服務端的 `ov.conf` 是兩個檔案。指令碼化配置和多服務切換見 [CLI 配置](05-cli-setup.md)。
+CLI 將當前連線儲存到 `~/.openviking/ovcli.conf`，它與服務端的 `ov.conf` 是兩個檔案。多服務切換和讓 Agent 配置見 [CLI 配置](05-cli-setup.md)。
 
 檢查連線：
 
@@ -64,34 +64,32 @@ ov health
 
 ## 3. 匯入文件
 
-在當前目錄建立 `quickstart.md`，內容如下：
+本例匯入一條真實的團隊資訊：OpenViking 每週釋出由哪四位 GitHub 使用者輪流負責。在當前目錄建立 `ov-release-rotation.md`，內容如下：
 
 ```markdown
-# Atlas 專案
+# OpenViking 釋出輪值
 
-Atlas 專案每週五備份文件。
-Maya 負責備份流程，每份備份保留 30 天。
+OpenViking 每週五發佈一個新版本。
+釋出負責人按順序輪換：qin-ctx、zhoujh01、ZaynJarvis、t0saki。
 ```
 
 將它匯入新的資源目錄：
 
 ```bash
-ov add-resource ./quickstart.md --to viking://resources/quickstart-demo --wait --timeout 120
+ov add-resource ./ov-release-rotation.md --to viking://resources/ov-release-rotation --wait --timeout 120
 ```
 
 CLI 會自動上傳本地檔案。`--wait` 等待處理完成，命令成功後再繼續。若省略該引數，儲存返回的 `task_id`，用 `ov task status <task_id>` 查詢到 `completed` 後再使用結果。詳見[後臺任務](../api/17-tasks.md)。
 
-本例使用尚未使用的目標 URI。重複執行示例時，換一個新目標，並同步替換下方命令中的 URI。
-
 ## 4. 瀏覽與檢索
 
 ```bash
-ov tree viking://resources/quickstart-demo
-ov overview viking://resources/quickstart-demo
-ov find "誰負責備份流程？" --uri viking://resources/quickstart-demo
+ov tree viking://resources/ov-release-rotation
+ov overview viking://resources/ov-release-rotation
+ov find "誰負責 OpenViking 的每週釋出？" --uri viking://resources/ov-release-rotation
 ```
 
-`tree` 列出匯入後的結構，`overview` 讀取生成的概覽，`find` 返回相關上下文的 URI 和分數。讀取某條命中時，把返回的 URI 傳給 `ov read`：
+`tree` 列出匯入後的結構，`overview` 讀取生成的概覽，`find` 返回相關上下文的 URI 和分數。這個問題的答案就在匯入的檔案中，所以該檔案排在結果第一位。讀取某條命中時，把返回的 URI 傳給 `ov read`：
 
 ```bash
 ov read "<returned-file-uri>"
@@ -102,3 +100,7 @@ ov read "<returned-file-uri>"
 ## 使用 SDK
 
 OpenViking 也提供 Python、TypeScript/JavaScript 和 Go SDK，均連線同一個服務端。客戶端示例見 [API 概覽](../api/01-overview.md)。
+
+## 下一步
+
+先確認你已經讀到示例原文，再按[用你的任務驗證效果](06-evaluate.md)換成自己的資料或會話。接入日常工具時，選擇[Agent 接入方式](../agent-integrations/01-overview.md)；自己寫應用時，進入[應用開發路徑](../workflows/01-overview.md)。

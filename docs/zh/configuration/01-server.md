@@ -1,4 +1,4 @@
-# 服務端配置
+# 服務端配置欄位
 
 首次配置建議使用 `openviking-server init`，儲存後執行 `openviking-server doctor`。
 
@@ -17,7 +17,15 @@ openviking-server --config /path/to/ov.conf
 
 服務端啟動時讀取配置。修改模型、檢索、儲存或 `server` 配置後，需要重啟服務；重啟後建議執行 `openviking-server doctor`。
 
+通過單 worker 的 `openviking-server` 啟動時，Studio 的「服務端配置」頁面提供「儲存並重啟」。重啟能力和例項標識複用現有 ROOT 配置讀取介面（`GET /api/v1/admin/configuration?source=file`）返回；只有 ROOT 可以請求重啟（`POST /api/v1/admin/restart`，請求體為 `{"revision":"<已儲存檔案的版本>"}`）。服務校驗當前檔案和版本後返回 HTTP 202，等待現有請求結束，停止其管理的 Bot，再使用原直譯器、啟動引數、環境變數和工作目錄替換當前程序。頁面確認新的服務例項恢復後才顯示成功。單獨點選「儲存配置」仍只儲存檔案。
+
+多 worker 或嵌入式 ASGI 啟動不支援頁面重啟，需要通過部署平臺重啟。配置通過校驗後，外部依賴仍可能導致啟動失敗。如果修改了地址、埠或 ROOT 憑證，請更新 Studio 連線設定。帳號和叢集覆蓋配置仍優先於檔案預設配置。
+
+配置含環境變數引用時，Studio 表單只讀，請使用檔案模式編輯原文。帶引號或未帶引號的引用、轉義和格式按提交內容儲存。Windows `%VAR%` 引用和美元/百分號字面值（包括 `\u0024`、`\u0025`）也使用檔案模式，避免表單序列化引入新的引用。
+
 ## 配置結構
+
+下面只展示常用頂層分組，不是可直接執行的完整配置。首次啟動可從本頁的[最小示例](#最小示例)開始，填寫實際模型與憑據；後續示例中的片段應合併到同一個 `ov.conf`。
 
 ```json
 {
@@ -36,7 +44,7 @@ openviking-server --config /path/to/ov.conf
 }
 ```
 
-未配置的可選模組使用預設值。`ov.conf` 及帳戶配置會忽略未知欄位，相容舊版本遺留配置；已知欄位仍校驗型別和取值。欄位名拼寫錯誤也會被忽略，但服務端會輸出 WARNING，逐項列出未被採用的欄位。
+未配置的可選模組使用預設值。`ov.conf` 及帳戶配置會忽略未知欄位（`gateway` 部分除外），相容舊版本遺留配置；已知欄位仍校驗型別和取值。欄位名拼寫錯誤也會被忽略，但服務端會輸出 WARNING，逐項列出未被採用的欄位。
 
 ## 頂層配置
 
@@ -46,7 +54,7 @@ openviking-server --config /path/to/ov.conf
 | `default_user` | string | `"default"` | Service context 使用的預設使用者 |
 | `embedding` | object | 內建本地 Dense 模型 | 向量化模型和稀疏/混合檢索配置；預設使用 `local` / `bge-small-zh-v1.5-f16` |
 | `vlm` | object | 空配置 | 內容理解、摘要和記憶抽取使用的模型；使用相關能力前需要配置可用模型 |
-| `query_planner` | object / `null` | `null` | 檢索意圖分析模型；未配置時回退到 `vlm` |
+| `query_planner` | object / `null` | `null` | 檢索意圖分析和召回改寫使用的模型。未配置或為空時回退到 `vlm`；`auto` 模式的召回改寫要求配置叢集級 `query_planner`，或帳戶級 `query_planner` / `vlm` 覆蓋項 |
 | `rerank` | object | disabled | 檢索結果重排模型 |
 | `retrieval` | object | 見下表 | 檢索排序和意圖分析策略 |
 | `storage` | object | 本地儲存 | 工作目錄、檔案系統和向量資料庫 |
@@ -63,6 +71,7 @@ openviking-server --config /path/to/ov.conf
 | `log` | object | 控制台日誌 | 日誌級別、格式和檔案輸出 |
 | `telemetry` | object | disabled | OpenTelemetry trace 上報 |
 | `oauth` | object | disabled | MCP OAuth 2.1 配置 |
+| `gateway` | object | disabled | OpenViking 閘道器配置，閘道器為使用 API Key 的模型客戶端補充 OpenViking 記憶。這一部分的未知欄位會直接報錯，見[配置參考](../guides/22-gateway-operations.md#配置參考) |
 | `prompts` | object | 內建模板 | 自定義 Prompt 模板目錄 |
 | `ingest` | object | 內建預設值 | 會話日誌匯入配置 |
 | `output_language_override` | string | `""` | 強制摘要和記憶輸出語言，僅接受 `en` 或 `zh-TW`；空值表示自動識別：中文內容 → `zh-TW`，其他語言或無法識別 → `en` |
@@ -141,22 +150,21 @@ API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置會複用部分
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
 | `provider` | `vikingdb`、`cohere`、`openai`、`litellm`、`jev` / `null` | `null` | Rerank 服務型別；省略時根據憑證欄位推斷 |
-| `model` | string / `null` | `null` | OpenAI 兼容、LiteLLM 或 Jev Rerank 模型 |
+| `model` | string / `null` | `null` | OpenAI 相容、LiteLLM 或 Jev Rerank 模型 |
+| `mode` | `noul`、`choice` 或 `null` | `noul` | Jev Rerank 模式；`null` 同樣使用 `noul` |
 | `threshold` | number | `0.1` | 判定結果相關的最低分數 |
 | `max_input_tokens` | integer；`0` 或 `>= 128` | `0` | 每個 query-document pair 的最大估算 token；`0` 表示不截斷 |
 | `log_payloads` | boolean | `false` | 記錄完整 rerank 請求和響應；日誌可能包含 query 和文件內容 |
 
 Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑證後才會啟用。
 
-`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe`，模型 `typesafe-ai/jev`），兩者協議相同。它將 query 和候選文件作為結構化 `state`，為每個候選提出一個獨立的相關性問題，並將各自的 yes 機率作為 rerank 分數。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
+`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe`，模型 `typesafe-ai/jev`），兩者協議相同。預設 `noul` 模式獨立評估每個候選；可選的 `choice` 模式橫向比較所有候選並返回相對機率，使用時應將 `threshold` 設為 `0`。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
 
 ## 檢索配置
 
 ```json
 {
   "retrieval": {
-    "hotness_alpha": 0,
-    "score_propagation_alpha": 1,
     "enable_intent": true
   }
 }
@@ -166,8 +174,6 @@ Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑�
 
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `hotness_alpha` | number，`0`–`1` | `0` | 熱度分數權重；`0` 表示關閉熱度加權 |
-| `score_propagation_alpha` | number，`0`–`1` | `1` | 層級檢索時子結果自身分數的權重 |
 | `enable_intent` | boolean | `true` | 有 `session_id` 時是否進行意圖分析和查詢規劃 |
 
 Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK 請求中覆蓋。`retrieval.enable_intent` 控制帶 Session 的 Search 是否執行 LLM 查詢規劃；只有配置了可用的 `rerank` provider 時才會執行結果重排。
@@ -231,6 +237,14 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 
 `max_concurrent` 控制相互獨立的 AddResource 作業併發，`file_operation_concurrency` 控制單個 AddResource 作業內檔案提交和 fallback 比較操作的併發，`file_vectorization_concurrency` 控制單個 vectors-only 目錄作業內的檔案併發。
 
+### `queue_workers.reindex`
+
+| 欄位 | 型別 | 預設值 | 說明 |
+|---|---|---:|---|
+| `max_concurrent` | integer | `4` | 同時消費的完整 Reindex root 作業數，必須大於 `0`；修改後需重啟服務 |
+
+該配置限制相互獨立的非同步 reindex 請求併發。URI 範圍重疊的請求仍由 path lock 保護；VLM 和 embedding 仍分別遵守各自的併發限制。
+
 ### `queue_workers.session_commit`
 
 | 欄位 | 型別 | 預設值 | 說明 |
@@ -260,7 +274,7 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 
 | 欄位 | 型別 | 預設值 | 說明 |
 |---|---|---:|---|
-| `file_vectorization_concurrency` | integer | `8` | 單個 `vectors_only` reindex 任務內併發讀取、準備併入隊的檔案數，必須大於 `0`；超過內部安全上限 `64` 的值會被截斷；修改後需重啟服務 |
+| `file_vectorization_concurrency` | integer | `8` | 單個 resource/skill reindex 任務內併發讀取、計算指紋和準備檔案的數量，必須大於 `0`；超過內部安全上限 `64` 的值會被截斷；修改後需重啟服務 |
 
 ## HTTP 服務配置
 
@@ -351,13 +365,15 @@ Provider 和金鑰管理配置見[加密指南](../guides/08-encryption.md)。
 
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `custom_templates_dir` | path | `""` | 附加的自定義記憶模板目錄 |
+| `custom_templates_dir` | path | `""` | 自定義記憶模板目錄；同名 `memory_type` 覆蓋已載入模板 |
 | `experimental_memory_switch` | boolean | `false` | 是否啟用實驗性記憶模板 |
 | `eager_prefetch` | boolean | `true` | 是否在抽取前預取並讀取記憶內容 |
 | `prefetch_search_topn` | integer，`>= 1` | `5` | 預取時讀取的檢索結果數量 |
 | `extraction_enabled` | boolean | `true` | session commit 時是否抽取長期記憶 |
 | `session_skill_extraction_enabled` | boolean | `false` | 是否同時抽取可複用 Skill |
 | `link_enabled` | boolean | `false` | 是否生成和解析記憶連結 |
+
+自動提交還需要單獨設定策略：記憶抽取開關不會讓會話自動提交。詳見[配置指南](../guides/01-configuration.md)的 `memory.session_auto_commit` 和[會話 API](../api/05-sessions.md)。模板目錄的載入順序和生效方式見 [Prompt 指南](../guides/10-prompt-guide.md)。
 
 ## 解析器配置
 

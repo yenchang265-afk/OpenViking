@@ -10,6 +10,8 @@ OpenViking 的 `cuvs` 後端保留本地後端的記錄持久化、標量索引�
 
 按所選版本核對 [cuVS 安裝要求](https://docs.nvidia.com/cuvs/installation) 和 [Python 包安裝指南](https://docs.nvidia.com/cuvs/installation/python)。當前 cuVS 原始碼構建要求 CUDA Toolkit 12.2+ 和 Ampere 或更新架構的 GPU；安裝包要求取決於所選版本。
 
+先進入 OpenViking 原始碼根目錄並激活 Python 虛擬環境，再按宿主機 CUDA 大版本選擇下面一組命令。
+
 CUDA 12：
 
 ```bash
@@ -123,10 +125,10 @@ dense query 仍固定使用 cuVS。
 `auto_background_rebuild` 預設關閉。開啟後，連續 mutation 會按
 `auto_rebuild_debounce_ms` 合併，worker 在不持有跨後端 mutation 鎖的情況下構建
 新的 immutable GPU snapshot。預設 500 ms 用於避免普通 ingest 的中間 batch
-反覆觸發構建。對於邊界明確、由多次呼叫組成的 bulk load，可把所有寫入放在
+反覆觸發構建。使用內部 vector backend 的程式碼，可以把邊界明確的批次寫入放在
 `async with backend.bulk_ingest(ctx=ctx):` scope 內：native 可見性和持久化仍按
 每次呼叫推進，但 derived GPU maintenance 會延遲到最外層 scope 退出後只調度一次。
-該 scope 只是 maintenance hint，不提供事務或原子性；退出 scope 只負責排程 rebuild，
+這是內部 API，HTTP SDK 不提供該 scope。它只是 maintenance hint，不提供事務或原子性；退出 scope 只負責排程 rebuild，
 本身不等待 GPU ready。vector backend benchmark 會額外在正式計時 search 前顯式等待
 最終 snapshot；無法識別 bulk 邊界的呼叫方仍可按實際 batch 間隔調整 debounce。Auto
 仍為顯式啟用；未開啟 Auto/background rebuild 時，該 scope 對派生維護為 no-op，不改變
@@ -142,8 +144,7 @@ dense query 仍固定使用 cuVS。
 儲存 graph，構建期間可能需要 `N * intermediate_graph_degree * 4` bytes 的
 intermediate graph。每個快取 filter bitset 約佔 `ceil(N / 32) * 4` bytes。
 
-之前的 index-only 測試使用 `cudaMemGetInfo` 記錄 build 前後的視訊記憶體增量；下表每項
-均為 5 個乾淨程序的中位數：
+[歷史索引測試](https://github.com/volcengine/OpenViking/blob/main/benchmark/cuvs/PRELIMINARY_RESULTS.md) 使用 NVIDIA H20、cuVS 26.06、CuPy 14.1.1 和 CUDA runtime 12.9，測試時尚未加入請求微批處理。下表通過 `cudaMemGetInfo` 記錄構建前後的視訊記憶體增量，每項取 5 個乾淨程序的中位數。部署容量需要使用[測試工具](https://github.com/volcengine/OpenViking/blob/main/benchmark/cuvs/README.md) 按自己的配置重新測量：
 
 | 資料集 | cuVS 演算法 | 實測 GPU 增量 |
 | --- | --- | ---: |
@@ -178,8 +179,9 @@ record shadow 儲存預處理後的 Python 浮點值；僅在建立 device datas
 Benchmark 必須同時報告兩邊的資料型別和 Recall@K，不能將結果描述為
 equal-dtype 或 equal-memory。
 這是首版 opt-in 整合的有意邊界，現有 CPU 行為保持不變。auto 模式會根據 filter
-候選閾值在兩種表示之間選擇；要求固定數值表示的應用應使用顯式 backend，或將
-native 路由閾值設為 0。
+候選閾值在兩種表示之間選擇。需要為 dense query 固定數值表示時，應顯式選擇
+backend 和 dtype。將閾值設為 0 只會關閉候選數路由；auto 模式仍可能因視訊記憶體不足、
+GPU 不可用或快照待重建而回退。
 
 GPU 低精度儲存是顯式能力，不做隱式 cast。設定 `dtype: "float16"` 會把 cuVS
 dataset 和每個 query 同時 cast 為 float16，brute-force 與 CAGRA 都不使用混合
@@ -317,3 +319,5 @@ collection.close()
 - 預設情況下，每次 upsert/delete 後仍由下一次查詢同步重建；開啟 `auto_background_rebuild` 後，dirty 期間查詢走 native，連續寫被合併為後臺重建。
 - cuVS 索引不作為權威持久化資料；程序重啟時會從 OpenViking 本地 store 重建，因此不受 cuVS 跨版本序列化格式變化影響。
 - `brute_force` 適合功能對齊和 ground truth；CAGRA 的 graph/search 引數需要在後續結合召回率、QPS、延遲和視訊記憶體進行調優。
+
+GPU 索引本身不持久化。重啟後，OpenViking 從本地儲存的向量重新構建索引；插入、更新和刪除會將其標記為 dirty。預設由下一次 dense 檢索觸發重建。視訊記憶體感知自動模式下，`auto_background_rebuild` 將重建交給後臺執行緒，可用的 GPU 索引就緒前使用 native 回退。即使本地向量儲存已持久化，也需要計入重啟和寫入後的重建耗時。

@@ -1,108 +1,63 @@
-## 步驟1：安裝
+# 為 Hermes 配置 OpenViking Service
 
-1. 在終端執行如下命令，啟動 OpenViking 記憶配置嚮導：
+[OpenViking Service](https://www.volcengine.com/product/openviking-service) 是
+火山引擎託管和運營的 OpenViking 雲服務，無需安裝服務端或配置本地模型。
+在 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)
+開通服務，然後從**使用者管理**的 **API Key** 中建立金鑰。
 
-   ```bash
-   hermes memory setup openviking
-   ```
+## 安裝和配置
 
-2. 執行後將出現配置來源選擇介面：
+在要使用的 Hermes profile 中執行：
 
-   ```text
-   OpenViking config source
-     ↑↓ navigate  ENTER/SPACE select  ESC cancel
-    → (●) Use existing OpenViking profile - choose from detected ovcli.conf profiles
-      (○) Create new OpenViking profile - enter a new URL/API key
-   ```
+```bash
+hermes plugins install openviking --enable
+hermes memory setup openviking
+```
 
-   選項說明：
+安裝時接受依賴安裝提示。如果當前 Hermes 版本已內建 OpenViking，請跳過安裝命令。
 
-   - 複用現有 Profile：直接讀取本地已有的 `ovcli.conf` 中的 OpenViking 地址和金鑰，無需重複填寫。
-   - 新建 Profile：需手動輸入 OpenViking 服務的訪問 URL 和 API 金鑰，適合首次配置或連線新例項的場景。
+在嚮導中：
 
-3. 若選擇「Create new OpenViking profile」，將出現連線方式選擇，請選擇「OpenViking Service (VolcEngine Cloud)」：
+1. 選擇 **Personal Agent** 可召回公共記憶和當前傳送者的記憶，並保留現有歷史設定。
+   選擇 **Shared Agent** 可在每個群組或話題內共享歷史，召回同一 OpenViking 使用者
+   下所有傳送者的記憶。Shared Agent 會要求確認。
+2. 若出現配置來源選項，選擇 **Create new OpenViking profile**。也可以複用已儲存的
+   `ovcli.conf`。
+3. 選擇 **OpenViking Service (VolcEngine Cloud)**。
+4. 輸入服務 API Key。
+5. 選擇儲存位置。**Keep in Hermes only** 儲存到 Hermes 的 `.env`。
+   **Mirror to OpenViking store** 儲存到本地 `ovcli.conf.<name>` 並關聯到 Hermes。
+   兩種方式都會將憑據儲存在當前電腦。
+6. 儲存 OpenViking profile 時，填寫名稱，例如 `hermes`。這只是本地配置名稱，
+   不會建立使用者或改變訪問許可權。
 
-   ```text
-   OpenViking connection
-     ↑↓ navigate  ENTER/SPACE select  ESC cancel
+然後啟動新的 Hermes 會話：
 
-    → (●) OpenViking Service (VolcEngine Cloud) - use the managed OpenViking endpoint
-      (○) Custom - use a local, VPS, or self-hosted OpenViking server
-   ```
+```bash
+hermes
+```
 
-4. 填入 API KEY：
+外部外掛還提供 **Quick Local**，可複用受支援的 Hermes LLM，安裝本地服務和
+embedding 模型。要求和已知問題見[外掛指南](https://hermes-agent.nousresearch.com/docs/plugins/openviking)。
 
-   ```text
-   {{OPENVIKING_API_KEY}}
-   ```
+## 檢視狀態
 
-5. 填寫「Hermes peer ID in OpenViking」：該欄位為 Hermes 在 OpenViking 中的 Agent 身份標識，用於區分不同 Agent 產生的記憶。可直接按 Enter 使用預設值「hermes」，也可自定義填寫。
-6. 選擇配置儲存方式，建議選擇「Mirror to OpenViking store」：
+```bash
+hermes memory status
+```
 
-   ```text
-   Save OpenViking config
-     ↑↓ navigate  ENTER/SPACE select  ESC cancel
-      (○) Keep in Hermes only - write values only to Hermes .env
-    → (●) Mirror to OpenViking store - write ~/.openviking/ovcli.conf.<name> and link it
-   ```
-
-7. 填寫「OpenViking profile name」：Hermes 的多租戶能力可隔離不同 Profile 的模型、記憶、配置及憑據。建議為每個 Hermes Profile 配置獨立的 OpenViking 環境或身份，並在此填寫一個便於識別的本地配置名稱，以區分對應的 OpenViking 配置。該名稱僅用於本地標識，不會建立新使用者，也不會改變帳號身份或許可權。
-8. 配置完成後將顯示如下確認資訊：
-
-   ```text
-   OpenViking memory is ready
-     Created and linked OpenViking profile.
-     Config file: ~/.openviking/ovcli.conf.hermes
-     Start a new Hermes session to activate.
-   ```
-
-## 步驟2：驗證
-
-1. 執行以下命令驗證記憶外掛狀態：
-
-   ```bash
-   hermes memory status
-   ```
-
-2. 返回如下結果即表示接入成功：
-
-   ```text
-   Memory status
-   ────────────────────────────────────────
-     Built-in (MEMORY.md / USER.md):
-       Memory injection:   enabled ✓
-       User profile:       enabled ✓
-       Memory tool:        enabled ✓
-     Provider:  openviking
-
-     openviking config:
-       use_ovcli_config: True
-       ovcli_config_path: ~/.openviking/ovcli.conf.hermes
-       endpoint: `https://api.vikingdb.cn-beijing.volces.com/openviking`
-       agent: hermes
-
-     Plugin:    installed ✓
-     Status:    available ✓
-
-     Installed plugins:
-       • byterover  (API key / local)
-       • hindsight  (API key / local)
-       • holographic  (local)
-       • honcho  (API key / local)
-       • mem0  (API key / local)
-       • openviking  (API key / local) ← active
-       • retaindb  (API key / local)
-       • supermemory  (requires API key)
-   ```
+確認 provider 為 `openviking`，狀態為 `available`。這隻表示配置已儲存，
+不代表服務健康或記憶抽取成功。
 
 ## 故障排查
 
 | 問題 | 處理 |
-|---|---|
-| Provider 不是 openviking | 重跑 `hermes memory setup openviking` |
-| Status 不是 available | 檢查 API Key |
+|------|------|
+| 外掛未安裝 | 在該 profile 中執行 `hermes plugins install openviking --enable`。 |
+| 使用了其他 provider | 重新執行 `hermes memory setup openviking`。 |
+| 狀態不是 available | 檢查儲存的連線設定和關聯的 `ovcli.conf`。 |
 
-## 參考
+## 更多資訊
 
-- 手動配置文件：[Hermes](https://docs.openviking.net/zh/agent-integrations/05-hermes)
-- 原理說明：[OpenViking memory provider](https://hermes-agent.nousresearch.com/docs/user-guide/features/memory-providers#openviking)
+- [Hermes 整合](https://docs.openviking.net/zh/agent-integrations/05-hermes)
+- [外掛指南](https://hermes-agent.nousresearch.com/docs/plugins/openviking)

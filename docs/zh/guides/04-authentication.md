@@ -1,44 +1,30 @@
 # 認證
 
-> **先看這裡：選擇適合你的認證模式**
+選擇認證模式後，配置服務端身份來源，再用對應憑證連線客戶端。大多數部署推薦使用 API Key 模式；配置非空 root key 後，未指定認證模式時會自動選擇 API Key。
 
-## 📚 前置知識 - 我該用哪個？
+## 選擇認證模式
 
-| 認證模式 | 是什麼？ | 適合誰？ | **推薦度** |
-|---------|----------|---------|------------|
-| **API Key** (預設) | OpenViking 自己管理使用者和金鑰 | 小團隊、獨立部署 | ⭐⭐⭐⭐⭐ |
-| **OIDC** | 對接企業單點登入（Okta/Auth0/Keycloak/Azure AD 等） | 企業 SSO 整合 | ⭐⭐⭐⭐ |
-| **LDAP** | 對接企業使用者目錄（Windows AD/OpenLDAP） | 已有企業目錄服務 | ⭐⭐⭐⭐ |
-| **Trusted** | 上游閘道器/反向代理斷言身份 | 部署在受信任內網/閘道器後 | ⭐⭐⭐ |
-| **Dev** | 無認證，僅本地開發 | **只用於本地開發！** | ⭐⭐ |
+| 認證模式 | 是什麼？ | 適合誰？ |
+|---------|----------|---------|
+| **API Key** | OpenViking 自己管理使用者和金鑰 | 小團隊、獨立部署 |
+| **OIDC** | 對接企業單點登入（Okta/Auth0/Keycloak/Azure AD 等） | 企業 SSO 整合 |
+| **LDAP** | 對接企業使用者目錄（Windows AD/OpenLDAP） | 已有企業目錄服務 |
+| **Trusted** | 上游閘道器/反向代理斷言身份 | 部署在受信任內網/閘道器後 |
+| **Dev** | 無認證，僅本地開發 | 本地開發，不接入公網 |
 
-### 🔍 決策樹
+### 決策樹
 
-```
-┌─────────────────────────────────────────────────────┐
-│ 企業裡有現成的身份系統？                           │
-├─────────────────────────────────────────────────────┤
-│ 是 SaaS 身份？（Okta/Auth0/Keycloak）               │
-│ → 用 **OIDC** ✅                                      │
-│                                                     │
-│ 是本地目錄？（Windows AD/OpenLDAP）                  │
-│ → 用 **LDAP** ✅                                      │
-├─────────────────────────────────────────────────────┤
-│ 沒有身份系統？                                       │
-│ → 用 **API Key**（預設）✅                           │
-├─────────────────────────────────────────────────────┤
-│ 部署在內部閘道器後面？                                 │
-│ → 用 **Trusted** ✅                                   │
-└─────────────────────────────────────────────────────┘
-```
+已有單點登入服務選 OIDC，已有企業目錄選 LDAP；由閘道器驗證並注入身份時選 Trusted。沒有這些上游服務時，使用 API Key 管理帳號和憑證。
+
+未顯式設定 `auth_mode` 時，有非空 `root_api_key` 會選用 `api_key`，未配置則選用 `dev`。空字串 `root_api_key` 無效。
 
 ---
 
-## 🏁 快速開始 - 3分鐘跑起來
+## 快速開始
 
-### 方案一：API Key（最簡單）
+### 方案一：API Key
 
-只需要配置 `root_api_key`，剩下的預設就好！
+配置 `root_api_key`，啟動後用它建立 account 和首個管理員。日常資料操作使用返回的 user/admin key。
 
 ```json
 {
@@ -58,12 +44,20 @@ openviking-server
 ```bash
 # 建立帳號 + 管理員
 curl -X POST http://localhost:1933/api/v1/admin/accounts \
-  -H "X-API-Key: your-secret-root-key" \
+  -H "X-API-Key: your-secret-root-key-here" \
   -H "Content-Type: application/json" \
   -d '{"account_id": "my-team", "admin_user_id": "alice"}'
 ```
 
+建立帳號後，儲存響應中的 `user_key`，將它用於 CLI、SDK 和資料 API。root key 不用於租戶資料讀寫。
+
 ### 方案二：OIDC（企業 SSO）
+
+OIDC 和 LDAP 需要可選認證依賴。在執行服務端的 Python 環境中安裝：
+
+```bash
+uv pip install "openviking[auth]"
+```
 
 **最小配置（不需要 mapping）：**
 
@@ -83,10 +77,10 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 - `user_id` → 使用 OIDC 標準欄位 `sub`
 - `role` → 預設為 `user`
 
-啟動後健康檢查會自動驗證是否連線成功！
+啟動後用有效的 OIDC token 請求資料介面，驗證身份對映和訪問許可權；匿名 `/health` 成功只證明服務可訪問。
 
 **進階配置（需要隔離團隊時）：**
-參考下方「🔧 Identity Mapping 詳解」章節。
+參考下方 [Identity Mapping](#identity-mapping-是什麼) 和進階 Mapping 示例。
 
 ### 方案三：LDAP（企業目錄）
 
@@ -116,7 +110,7 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 
 ---
 
-## 📚 概念詳解
+## 身份與對映
 
 ### OIDC 是什麼？
 
@@ -160,7 +154,7 @@ OIDC Claims: {
 
 ---
 
-## ⚙️ 完整配置參考
+## 完整配置參考
 
 ### OIDC 完整配置
 
@@ -303,7 +297,7 @@ OIDC Claims: {
 
 ---
 
-## 🐛 故障排除
+## 故障排除
 
 ### OIDC 常見問題
 
@@ -392,9 +386,9 @@ OIDC Claims: {
 
 ---
 
-## 🔧 自定義認證外掛（進階）
+## 自定義認證外掛
 
-如果內建的模式不夠用，可以自己開發！
+需要接入其他身份源時，可以實現並註冊自定義認證外掛。
 
 服務端採用外掛化認證架構。每種 `auth_mode` 對應一個 `AuthPlugin` 實現。內建外掛（`dev`, `api_key`, `trusted`, `oidc`, `ldap`）會自動註冊；第三方外掛可通過繼承 `AuthPlugin` 並在啟動前註冊來擴充。
 
@@ -406,7 +400,6 @@ OIDC Claims: {
 | `validate_config(config)` | 在啟動時校驗 `ServerConfig`；遇到致命錯誤應呼叫 `sys.exit(1)` |
 | `initialize(app, service, config)` | 在 `app.state` 上初始化執行時狀態（如 `APIKeyManager`） |
 | `get_request_context_checks(path, identity)` | 可選的認證後路徑/身份檢查 |
-| `requires_api_key_manager()` | Admin API 路由是否需要 `APIKeyManager` |
 | `can_skip_api_key_for_bot_proxy()` | Bot 代理是否可以跳過 API Key 校驗（如 `dev` 模式） |
 
 ### 註冊自定義外掛示例
@@ -440,16 +433,18 @@ class CustomAuthPlugin(AuthPlugin):
 ```python
 from openviking.server.identity import Role
 
-Role.register("operator", rank=1)  # 許可權介於 USER (0) 與 ADMIN (1) 之間
+Role.register("operator", rank=1)  # 降權檢查時，與 ADMIN 同級
 ```
 
-自定義角色可直接用於 `require_role()` 和 `require_auth_role()` 裝飾器。
+rank 用於降權檢查，不會繼承 ADMIN 的介面許可權。`require_role()` 和 `require_auth_role()` 按角色名檢查，路由需要明確允許該自定義角色。
 
 ---
 
 ## 內建認證模式詳情
 
 ### Trusted 模式
+
+Trusted 模式只管理使用者身份和角色。建立帳號（包括首個管理員）和建立使用者都不生成個人金鑰、雜湊或金鑰索引；重置個人金鑰返回 HTTP 412（`FAILED_PRECONDITION`）。Studio 可選擇沒有個人金鑰的使用者；Bot 使用部署配置的 root key 認證，並單獨傳遞使用者身份。已有個人金鑰不會被自動刪除，也不用於 trusted 認證。
 
 trusted 模式的普通資料面請求無需預先註冊 user 或建立 user API Key。服務端會非同步批次註冊
 該 account/user，使其最終出現在既有 account/user 管理介面中（預設五分鐘刷盤）。註冊不會
@@ -460,14 +455,14 @@ trusted 模式的普通資料面請求無需預先註冊 user 或建立 user API
 ```bash
 # 建立工作區 + 首個 admin
 curl -X POST http://localhost:1933/api/v1/admin/accounts \
-  -H "X-API-Key: your-secret-root-key" \
+  -H "X-API-Key: your-secret-root-key-here" \
   -H "Content-Type: application/json" \
   -d '{"account_id": "acme", "admin_user_id": "alice"}'
 # 返回: {"result": {"account_id": "acme", "admin_user_id": "alice", "user_key": "..."}}
 
 # 註冊普通使用者（ROOT 或 ADMIN 均可）
 curl -X POST http://localhost:1933/api/v1/admin/accounts/acme/users \
-  -H "X-API-Key: your-secret-root-key" \
+  -H "X-API-Key: your-secret-root-key-here" \
   -H "Content-Type: application/json" \
   -d '{"user_id": "bob", "role": "user"}'
 # 返回: {"result": {"account_id": "acme", "user_id": "bob", "user_key": "..."}}
@@ -482,26 +477,7 @@ ACL 使用者組是例外：組和成員通過 [Admin API](../api/08-admin.md#�
 
 角色更新 API 只支援將使用者提升為 ADMIN。Trusted Admin API 的管理許可權來自已校驗的部署 root key，無需也不支援建立 ROOT 使用者。
 
-下面是“受信上游身份”這種方式的示例：
-
-```bash
-# 首先，註冊閘道器管理員（在 api_key 模式下執行一次）
-curl -X POST http://localhost:1933/api/v1/admin/accounts \
-  -H "X-API-Key: your-secret-root-key" \
-  -H "Content-Type: application/json" \
-  -d '{"account_id": "platform", "admin_user_id": "gateway-admin"}'
-
-# 然後，在 trusted 模式下使用該身份呼叫 Admin API
-curl -X POST http://localhost:1933/api/v1/admin/accounts \
-  -H "X-API-Key: your-secret-root-key" \
-  -H "X-OpenViking-Account: platform" \
-  -H "X-OpenViking-User: gateway-admin" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "account_id": "acme",
-    "admin_user_id": "alice"
-  }'
-```
+配置了 root key 的 Trusted 部署可直接呼叫上面的 Admin API，無需先切換到 API Key 模式或註冊閘道器管理員。
 
 ## 客戶端使用
 
@@ -541,12 +517,12 @@ client = ov.SyncHTTPClient(
 }
 ```
 
-如果使用普通 `user key` 或 `admin key`，`account` 和 `user` 可以省略，因為服務端可以從 key 反查出來；如果使用 `trusted` 模式，則建議明確配置。
+API Key 模式下，服務端從 user/admin key 解析 account 和 user，不接受用身份請求頭切換使用者。Trusted 模式下的資料請求需要明確提供 account 和 user。
 
-**CLI 覆蓋引數**
+**CLI 請求**
 
 ```bash
-openviking --account acme --user alice ls viking://
+ov ls viking://
 ```
 
 ### 使用 --sudo 和 Root API Key
@@ -607,20 +583,25 @@ root key 請求上攜帶身份 header。
 
 ## Trusted 模式
 
-Trusted 模式不會查詢 user key，而是直接信任每個請求顯式攜帶的身份請求頭：
+Trusted 模式使用 root API key 驗證上游，再從每個請求顯式攜帶的身份請求頭解析使用者，不查詢 user key：
 
 ```json
 {
   "server": {
     "auth_mode": "trusted",
+    "root_api_key": "your-secret-root-key",
     "host": "127.0.0.1"
   }
 }
 ```
 
+`server.root_api_key` 缺失、為空或僅含空白時拒絕啟動，localhost 也不例外。資料請求必須提供 `X-OpenViking-Account`、`X-OpenViking-User` 和匹配的 API Key，以驗證上游閘道器。匿名 `/health` 存活探測仍可使用。
+
+角色預設從已註冊使用者查詢，未註冊時為 USER。配置並驗證 root key 後，上游可用 `X-OpenViking-Role: user` 或 `admin` 斷言角色，不接受 `root`。Admin API 的 ROOT 授權來自部署 root key。
+
 ### Dev 模式
 
-當 `auth_mode = "dev"`（或未配置 `root_api_key` 時自動推導）時，認證停用，所有請求以 ROOT 身份訪問 default account。
+當 `auth_mode = "dev"`（或未配置 `root_api_key` 時自動推導）時，認證停用，請求使用 ROOT 身份；未提供身份請求頭時，account 和 user 均為 `default`。Dev 模式只允許監聽 `127.0.0.1`、`localhost` 或 `::1`，監聽其他地址會拒絕啟動。
 
 ```json
 {
@@ -630,7 +611,7 @@ Trusted 模式不會查詢 user key，而是直接信任每個請求顯式攜帶
 }
 ```
 
-> **安全提示：** 預設 `host` 為 `127.0.0.1`。如果需要將服務暴露到網路，**必須**配置 `root_api_key`。
+> 預設 `host` 為 `127.0.0.1`。監聽網路地址前，選擇並配置 API Key、OIDC、LDAP 或受保護的 Trusted 部署。
 
 ---
 
@@ -649,8 +630,7 @@ OpenViking CLI (`ov`) 支援通過 LDAP 進行認證。配置完成後，所有 
     "url": "http://localhost:1933",
     "auth_mode": "ldap",
     "ldap_username": "alice",
-    "ldap_password": "password123",
-    "account": "default"
+    "ldap_password": "your-ldap-password"
 }
 ```
 
@@ -661,12 +641,11 @@ OpenViking CLI (`ov`) 支援通過 LDAP 進行認證。配置完成後，所有 
 | `url` | 是 | OpenViking 伺服器地址 |
 | `auth_mode` | 是 | 認證模式，設定為 `"ldap"` 啟用 LDAP |
 | `ldap_username` | 是 | LDAP 使用者名稱（UID） |
-| `ldap_password` | 否 | LDAP 密碼（不提供時 CLI 不傳送密碼） |
-| `account` | 否 | OpenViking 帳戶 ID（預設為 `"default"`） |
+| `ldap_password` | 是 | LDAP 密碼；缺少此欄位時 CLI 不傳送 Basic Auth |
 
 #### 2. 混合配置
 
-可以部分配置在檔案中，部分通過環境變數（如 `OPENVIKING_URL`、`OPENVIKING_ACCOUNT`）覆蓋。
+用 `OPENVIKING_CLI_CONFIG_FILE` 選擇另一份完整配置檔案。`ov` 不讀取 `OPENVIKING_URL` 或 `OPENVIKING_ACCOUNT` 作為連線覆蓋值（`ov chat` 例外，它用 `OPENVIKING_URL` 拼出 bot endpoint）；這些變數屬於 Agent 外掛配置。
 
 ### 使用 CLI
 
@@ -699,7 +678,7 @@ make build-cli
 
 ### 安全建議
 
-1. **避免明文儲存密碼**：推薦使用環境變數或金鑰管理工具，而非在配置檔案中硬編碼密碼
+1. **限制配置檔案訪問**：當前 CLI 從配置檔案讀取 LDAP 密碼。只允許當前使用者讀取，避擴音交到倉庫或寫入共享日誌
 2. **使用 HTTPS**：生產環境中確保伺服器使用 HTTPS 連線
 3. **最小許可權**：使用普通使用者帳戶進行日常操作，管理員帳戶僅用於管理任務
 4. **定期輪換密碼**：遵循組織的密碼安全策略
@@ -708,7 +687,7 @@ make build-cli
 
 **"Missing LDAP credentials" 錯誤：**
 - 檢查 `auth_mode` 是否設定為 `"ldap"`
-- 確認 `username` 和 `password` 配置正確
+- 確認 `ldap_username` 和 `ldap_password` 配置正確
 
 **"LDAP authentication failed" 錯誤：**
 - 驗證 LDAP 使用者名稱和密碼是否正確
@@ -726,7 +705,7 @@ make build-cli
 RUST_LOG=debug ov ls viking://
 
 # 檢查配置
-ov doctor
+ov config validate
 ```
 
 ---
@@ -741,7 +720,7 @@ ov doctor
 
 ---
 
-## 📝 附錄：Admin API 參考
+## Admin API 參考
 
 | 方法 | 端點 | 角色 | 說明 |
 |------|------|------|------|

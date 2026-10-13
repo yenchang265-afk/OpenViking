@@ -1,10 +1,12 @@
 # 服務端部署
 
+準備自建環境前，先檢視[部署前檢查](19-deployment-checklist.md)。已取得 VikingDB / OpenViking 私有交付包的使用者，請使用[企業私有化部署](20-private-deployment.md)及[升級與排障](21-private-operations.md)流程。
+
 OpenViking 以 HTTP 服務執行。安裝服務端之前，先選擇由誰執行服務：
 
 | 服務方式 | 你需要準備什麼 |
 | --- | --- |
-| [火山引擎託管 OpenViking](https://www.volcengine.com/product/openviking-service) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing)獲取 API Key，用獨立 CLI 連線，無需本地服務端或模型配置。 |
+| [火山引擎託管 OpenViking](https://www.volcengine.com/product/openviking-service?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment) | 在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=guides_03-deployment)獲取 API Key，用獨立 CLI 連線，無需本地服務端或模型配置。 |
 | 團隊已有服務或他人部署 | 向管理員獲取服務地址和 user/admin key。 |
 | 自建 OpenViking | 按下文安裝、配置和執行服務端。 |
 
@@ -60,9 +62,9 @@ openviking-server --config /path/to/ov.conf --host 127.0.0.1 --port 8000
 
 ## 配置
 
-服務端從 `ov.conf` 讀取所有配置。配置檔案各段詳情見 [配置指南](01-configuration.md)。
+服務端從 `ov.conf` 讀取配置，也支援相應環境變數和啟動引數覆蓋。配置檔案各段詳情見 [配置指南](01-configuration.md)。
 
-`ov.conf` 中的 `server` 段控制服務端行為：
+以下是服務監聽、認證和儲存的配置片段，需要與已有 Embedding/VLM 配置合併：
 
 ```json
 {
@@ -228,7 +230,9 @@ Docker 映象預設會同時啟動：
 }
 ```
 
-未設定時服務將拒絕啟動。如需自定義繫結地址，可通過環境變數 `OPENVIKING_SERVER_HOST` 覆蓋。
+未指定 `auth_mode` 且未配置 `root_api_key` 時，服務會自動進入 dev 模式，而 dev 模式監聽非迴環地址會拒絕啟動。上面的示例用於 API Key 認證，其他認證方式見[認證指南](04-authentication.md)。如需自定義繫結地址，可通過 `OPENVIKING_SERVER_HOST` 覆蓋。
+
+映象預設啟用 Bot。API Key 模式下，Bot 還需要在 `bot.ov_server.api_key` 中配置可用的 User/Admin key，不能把 root key 當資料訪問憑據。只部署 OpenViking Server 時使用下文的 `--without-bot`，需要 Bot 時按[VikingBot 配置](17-vikingbot.md)完成身份設定。
 
 **從舊映象升級：** 執行目錄為 `/app` 的舊映象會把 `./data` 解析為預設掛載之外的 `/app/data`。刪除舊容器前，先停止容器並備份其實際工作區（例如 `docker cp openviking:/app/data ./openviking-data-backup`）。啟動替換容器前，將備份恢復到掛載的宿主機工作區，通常為 `~/.openviking/data`。若目標工作區已存在，先確認要保留的資料，不要直接覆蓋。絕對工作區路徑不變；其他相對路徑現在以 `/app/.openviking` 為基準。
 
@@ -236,7 +240,7 @@ Docker 映象預設會同時啟動：
 ```bash
 docker stop openviking
 docker pull ghcr.io/volcengine/openviking:latest
-docker rm -f openviking
+docker rm openviking
 # 然後重新 docker run ...
 ```
 
@@ -294,7 +298,7 @@ docker compose up -d
 啟動後可以訪問：
 - API 服務：`http://localhost:1933`
 - Web Studio：`http://localhost:1933/studio`（與 API 同源）
-- 相容入口：`http://localhost:1934`（Caddy 反代到 1933，僅為已有部署保留）
+- Caddy 入口：`http://localhost:1934`。它把請求轉發到 1933，主要為已有部署保留；同時執行 OpenViking 閘道器時，它還把模型 API 路徑轉發給閘道器，見[OpenViking 閘道器部署與運維](22-gateway-operations.md#docker-compose)。
 
 ### 部署到 Railway
 
@@ -319,12 +323,12 @@ docker compose up -d
 #### 配置管理
 
 - **首次生成配置**：模板在 `OPENVIKING_CONF_CONTENT` 中預置了完整配置並引用 `${OPENAI_API_KEY}`。該變數僅在首次啟動且 `ov.conf` 尚不存在時生效。
-- **後續修改配置**：首次啟動後，請通過 `railway ssh` 或 `railway service files upload --overwrite` 直接修改持久捲上的 `ov.conf`；也可以刪除 `ov.conf` 後重新部署，讓服務按當前 `OPENVIKING_CONF_CONTENT` 重新生成配置檔案。
+- **後續修改配置**：首次啟動後，請按所安裝的 [Railway CLI](https://docs.railway.com/cli) 文件 直接修改持久捲上的 `ov.conf`；需要重新生成時，先備份原配置並核對 `OPENVIKING_CONF_CONTENT`，再移走原配置並重新部署；生成後檢查儲存和認證設定。
 
 #### 資源與費用參考
 
-- **推薦配置**：長期執行建議選擇 **Hobby** 計劃（$5/月，包含 $5 用量抵扣）。以 ~0.5 GB 常駐記憶體估算，月均成本通常在 $5–$7 左右。
-- **免費額度說明**：Railway Free 計劃（$1/月額度）不足以支援服務常駐執行；Trial 贈金適合短期體驗評估，額度到期 30 天后持久卷將被清理，請注意按需備份資料。
+- **費用估算**：套餐和資源計費規則見 [Railway 官方說明](https://docs.railway.com/pricing)。先用自己的文件規模和請求量試跑，再根據用量面板估算成本。
+- **試用與資料保留**：試用額度、有效期和持久卷保留期限，以[Railway 試用說明](https://docs.railway.com/pricing/free-trial)及帳戶顯示為準。請在對應保留期限前備份資料。
 
 > **安全提示**：服務部署後預設監聽並暴露於公網。請妥善保管 `OPENVIKING_ROOT_API_KEY`，在對外開放前請閱讀[公網訪問安全指南](12-public-access.md)。
 
@@ -394,17 +398,20 @@ docker compose up -d
 
 如需公網 HTTPS 訪問，請參考 [公網訪問指南](12-public-access.md)。
 
-如需自行構建映象，請顯式傳入 OpenViking 版本：
-`docker build --build-arg OPENVIKING_VERSION=0.3.12 -t openviking:latest .`
+如需自行構建映象，請顯式傳入 OpenViking 版本。把 `<VERSION>` 替換為釋出版本號：
+`docker build --build-arg OPENVIKING_VERSION=<VERSION> -t openviking:latest .`
 
 ### Kubernetes + Helm
 
-專案提供了 Helm chart，位於 `examples/k8s-helm/`：
+這是開源服務的 Helm chart，與私有交付包的 ovadmin / Operator 流程不同。chart 引數見 [Helm README](https://github.com/volcengine/OpenViking/blob/main/deploy/helm/README.md)。
+
+專案提供了 Helm chart，位於 `deploy/helm/openviking/`：
 
 ```bash
-helm install openviking ./examples/k8s-helm \
-  --set openviking.config.embedding.dense.api_key="YOUR_API_KEY" \
-  --set openviking.config.vlm.api_key="YOUR_API_KEY"
+helm install openviking ./deploy/helm/openviking \
+  --set-string config.server.root_api_key="YOUR_ROOT_API_KEY" \
+  --set-string config.embedding.dense.api_key="YOUR_API_KEY" \
+  --set-string config.vlm.api_key="YOUR_API_KEY"
 ```
 
 詳細的雲上部署指南（包括火山引擎 TOS + 方舟配置）請參考 [雲上部署指南](https://github.com/volcengine/OpenViking/blob/main/examples/cloud/GUIDE.md)。
@@ -413,7 +420,7 @@ helm install openviking ./examples/k8s-helm \
 
 | 端點 | 認證 | 用途 |
 |------|------|------|
-| `GET /health` | 否 | 存活探針 — 立即返回 `{"status": "ok"}` |
+| `GET /health` | 否 | 程序存活檢查；正常時返回 `status: ok`、`healthy: true`，不驗證模型憑據 |
 | `GET /ready` | 否 | 就緒探針 — 檢查 AGFS、VectorDB、APIKeyManager、Embedding、Ollama |
 
 ```bash
@@ -422,10 +429,10 @@ curl http://localhost:1933/health
 
 # 就緒探針
 curl http://localhost:1933/ready
-# {"status": "ready", "checks": {"agfs": "ok", "vectordb": "ok", "api_key_manager": "ok", "embedding": "ok", "ollama": "ok"}}
+# {"status":"ready","checks":{"agfs":{"status":"ok","checks":{"filesystem":"ok","multiwrite_sync":"not_supported"}},"vectordb":"ok","api_key_manager":"ok","embedding":"ok","ollama":"not_configured"}}
 ```
 
-在 Kubernetes 中，使用 `/health` 作為存活探針，`/ready` 作為就緒探針。
+在 Kubernetes 中，使用 `/health` 作為存活探針，`/ready` 作為就緒探針。各項檢查的含義見[系統 API](../api/07-system.md)。
 
 ## 相關文件
 

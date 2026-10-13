@@ -1,6 +1,6 @@
 # 火山引擎模型購買指南
 
-本指南介紹如何在火山引擎購買和配置 OpenViking 所需的模型服務。
+本指南適用於自建 OpenViking：開通火山方舟模型、取得 API Key，並驗證服務端配置。使用託管 OpenViking 時，無需在客戶端配置這些模型，見[快速開始](../getting-started/02-quickstart.md)。
 
 ## 概述
 
@@ -90,7 +90,7 @@ OpenViking 需要以下模型服務：
 
 ### 配置模板
 
-建立 `~/.openviking/ov.conf` 檔案，使用以下模板：
+以下模板說明配置結構；替換所有字串佔位值後再使用。已有配置時只更新相關段落，保留儲存、認證等其他配置：
 
 ```json
 {
@@ -99,8 +99,8 @@ OpenViking 需要以下模型服務：
     "api_key": "<your-api-key>",
     "model": "<model-id>",
     "api_base": "<api-endpoint>",
-    "temperature": <temperature-value>,
-    "max_retries": <retry-count>
+    "temperature": 0.1,
+    "max_retries": 3
   },
   "embedding": {
     "dense": {
@@ -108,7 +108,7 @@ OpenViking 需要以下模型服務：
       "api_key": "<your-api-key>",
       "model": "<model-id>",
       "api_base": "<api-endpoint>",
-      "dimension": <vector-dimension>,
+      "dimension": 1024,
       "input": "<input-type>"
     }
   }
@@ -125,7 +125,7 @@ OpenViking 需要以下模型服務：
 | `api_key` | string | 是 | 火山方舟 API Key |
 | `model` | string | 是 | 模型 ID，如 `doubao-seed-2-0-lite-260428` |
 | `api_base` | string | 否 | API 端點地址，預設為北京區域端點，具體可見附錄-區域端點 |
-| `temperature` | float | 否 | 生成溫度，控制輸出隨機性，範圍 0-1，推薦 0.1 |
+| `temperature` | float | 否 | 生成溫度；支援範圍取決於模型，本例使用 0.1 |
 | `max_retries` | int | 否 | 請求失敗時的重試次數，推薦 3 |
 
 #### Embedding 配置字段
@@ -136,18 +136,18 @@ OpenViking 需要以下模型服務：
 | `api_key` | string | 是 | 火山方舟 API Key |
 | `model` | string | 是 | 模型 ID，如 `doubao-embedding-vision-251215` |
 | `api_base` | string | 否 | API 端點地址，預設為北京區域端點，具體可見附錄-區域端點 |
-| `dimension` | int | 是 | 向量維度，取決於模型（通常為 1024 或 768） |
+| `dimension` | int | 是 | 向量維度，必須與模型輸出及索引一致；本例選擇 1024 |
 | `input` | string | 否 | 輸入型別：`"multimodal"`（多模態）或 `"text"`（純文本），預設`"multimodal"` |
 
 ### 配置示例
 
-將以下內容儲存為 `~/.openviking/ov.conf`：
+將以下模型段落寫入 `~/.openviking/ov.conf`，並保留已有的其他配置：
 
 ```json
 {
   "vlm": {
     "provider": "volcengine",
-    "api_key": "sk-1234567890abcdef1234567890abcdef",
+    "api_key": "your-ark-api-key",
     "model": "doubao-seed-2-0-lite-260428",
     "api_base": "https://ark.cn-beijing.volces.com/api/v3",
     "temperature": 0.1,
@@ -156,7 +156,7 @@ OpenViking 需要以下模型服務：
   "embedding": {
     "dense": {
       "provider": "volcengine",
-      "api_key": "sk-1234567890abcdef1234567890abcdef",
+      "api_key": "your-ark-api-key",
       "model": "doubao-embedding-vision-251215",
       "api_base": "https://ark.cn-beijing.volces.com/api/v3",
       "dimension": 1024,
@@ -166,31 +166,27 @@ OpenViking 需要以下模型服務：
 }
 ```
 
-> ⚠️ **注意**：請將示例中的 `api_key` 替換為你在第 3 步獲取的真實 API Key！
+將兩處 `your-ark-api-key` 替換為第 3 步取得的 API Key。這裡是模型憑據，與連線 OpenViking Server 的 user/admin key 不同。
 
 ## 驗證配置
 
 ### 測試連線
 
-```python
-import asyncio
-from openviking_sdk import AsyncHTTPClient
+先檢查模型配置，再啟動服務：
 
-async def test():
-    client = AsyncHTTPClient(url="http://localhost:1933", api_key="your-key")
-    await client.initialize()
-
-    # 新增簡單資源測試
-    result = await client.add_resource(
-        path="https://example.com",
-        options={"reason": "測試連線"},
-    )
-    print(f"✓ 配置成功: {result['root_uri']}")
-
-    await client.close()
-
-asyncio.run(test())
+```bash
+openviking-server doctor
+openviking-server
 ```
+
+另開終端，按[快速開始](../getting-started/02-quickstart.md)配置 CLI 並建立其中的 `quickstart.md`，然後匯入到未使用的目錄：
+
+```bash
+ov add-resource ./quickstart.md --to viking://resources/model-check --wait --timeout 120
+ov find "誰負責備份流程？" --uri viking://resources/model-check
+```
+
+匯入請求被接受不代表模型配置驗證成功。等任務完成後再檢索；超時可通過返回的 task ID 查詢進度，失敗則檢視任務錯誤。
 
 ### 檢視使用情況
 
@@ -206,16 +202,12 @@ asyncio.run(test())
 
 | 模型型別 | 計費單位 |
 |---------|---------|
-| VLM | 按輸入/輸出 Token 計費 |
-| Embedding | 按文本長度計費 |
+| VLM | 所選模型的輸入/輸出計費規則見[方舟價格說明](https://www.volcengine.com/product/ark) |
+| Embedding | 所選模型及輸入模態的計費規則見[方舟價格說明](https://www.volcengine.com/product/ark) |
 
 ### 免費額度
 
-火山引擎為新使用者提供免費額度：
-
-- 首次開通贈送 Token
-- 足夠完成 OpenViking 的試用體驗
-- 詳見：[火山方舟定價說明](https://www.volcengine.com/docs/82379/1399514)
+是否有贈送額度、適用模型、有效期及超額計費方式，以帳戶控制台和[火山方舟價格說明](https://www.volcengine.com/product/ark)為準。先用小文件觀察實際 token 消耗，再估算批次匯入成本；免費額度不保證覆蓋任意規模的試用。
 
 ## 故障排除
 
@@ -228,7 +220,7 @@ Error: Invalid API Key
 ```
 
 **解決方法**：
-1. 檢查 API Key 是否正確複製（完整的 `sk-` 開頭字串）
+1. 檢查 API Key 是否完整複製、有無多餘空格
 2. 確認 API Key 未被刪除或過期
 3. 重新建立 API Key
 
@@ -240,7 +232,7 @@ Error: Model not activated
 
 **解決方法**：
 1. 在火山方舟控制台檢查模型狀態
-2. 確認模型處於"執行中"狀態
+2. 確認所選模型 ID 對當前帳號可用
 3. 檢查帳戶餘額是否充足
 
 #### 網路連線問題
@@ -253,7 +245,7 @@ Error: Connection timeout
 1. 檢查網路連線
 2. 確認 `api_base` 配置正確
 3. 如在海外，確認可訪問火山引擎服務
-4. 增加配置中的超時時間
+4. 服務可達但處理較慢時，再按[配置指南](01-configuration.md)調整相應超時
 
 ### 獲取幫助
 
@@ -273,13 +265,14 @@ Error: Connection timeout
 | 區域 | API Base |
 |------|----------|
 | 北京 | `https://ark.cn-beijing.volces.com/api/v3` |
-| 上海 | `https://ark.cn-shanghai.volces.com/api/v3` |
+
+本文使用官方示例中的北京端點。其他地域請複製控制台給出的模型呼叫地址，不要只替換域名中的地域字串。
 
 ### 模型版本對照
 
-| 模型名稱 | 當前版本 | 釋出日期 |
-|---------|---------|---------|
-| Doubao-Seed-2.0 | `doubao-seed-2-0-lite-260428` | 2025-12-28 |
-| Doubao-Embedding-Vision | `doubao-embedding-vision-251215` | 2025-06-15 |
+| 用途 | 本文示例模型 ID |
+| --- | --- |
+| VLM | `doubao-seed-2-0-lite-260428` |
+| Embedding | `doubao-embedding-vision-251215` |
 
-> 注：模型版本可能更新，請以火山方舟控制台顯示為準。
+這些是示例版本，不代表最新版本。可用版本見[方舟模型釋出記錄](https://docs.volcengine.com/docs/ark/model-release-announcement?lang=zh)，Embedding 的輸入和維度配置見[向量化文件](https://docs.volcengine.com/docs/ark/vectorization?lang=zh)。更換 Embedding 模型前，應檢查現有索引是否需要重建。

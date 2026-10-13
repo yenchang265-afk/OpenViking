@@ -97,6 +97,7 @@ from openviking_cli.utils.logger import get_logger
 from openviking_cli.utils.uri import VikingURI
 
 if TYPE_CHECKING:
+    from openviking.config.vlm import VLMResolver
     from openviking.storage.acl import AclManager
     from openviking.storage.viking_vector_index_backend import VikingVectorIndexBackend
     from openviking_cli.utils.config import RerankConfig, RetrievalConfig
@@ -133,6 +134,9 @@ class VikingFS(
         retrieval_config: Optional["RetrievalConfig"] = None,
         timeout: int = 10,
         encryptor: Optional[Any] = None,
+        vlm_resolver: Optional["VLMResolver"] = None,
+        embedding_provider: Optional[Any] = None,
+        vector_config_resolver: Optional[Any] = None,
     ):
         self.agfs = agfs
         self._async_agfs = AsyncAGFSClient(agfs)
@@ -142,11 +146,18 @@ class VikingFS(
         self.acl_manager = acl_manager
         self.retrieval_config = retrieval_config
         self._encryptor = encryptor
+        self._vlm_resolver = vlm_resolver
+        self._embedding_provider = embedding_provider
+        self._vector_config_resolver = vector_config_resolver
         self._bound_ctx: contextvars.ContextVar[Optional[RequestContext]] = contextvars.ContextVar(
             "vikingfs_bound_ctx", default=None
         )
         self._background_tasks: set = set()
         self._deletion_guard: Optional[Callable[[str, str], bool]] = None
+
+    def set_vlm_resolver(self, resolver: "VLMResolver") -> None:
+        """Set the VLM resolver supplied by the owning service."""
+        self._vlm_resolver = resolver
 
 
 VikingFS.__module__ = __name__

@@ -35,7 +35,7 @@ const resources = {
       description: '無法從服務端載入審計請求日誌。',
       title: '請求失敗',
     },
-    eyebrow: '工作臺請求記錄',
+    eyebrow: '服務端 API 請求記錄',
     filters: {
       all: '所有日誌',
       apiTypePlaceholder: 'API 型別',
@@ -545,7 +545,7 @@ const resources = {
     detail: {
       score: '相關度',
       level: '層級',
-      openPlayground: '在工作臺中開啟',
+      openFilesystem: '在檔案系統中開啟',
       uri: 'URI',
       summary: '摘要',
       noSummary: '暫無可展示的摘要',

@@ -1,4 +1,4 @@
-# API 文件編寫說明
+# API 文件編寫規範
 
 本文件定義 `docs/zh/api/` 目錄下各 API 模組文件的統一結構和編寫規範。
 
@@ -10,6 +10,15 @@
 - 可複製配置使用合法 JSON；片段或虛擬碼需明確標註，不在 `json` 程式碼塊中混入註釋。
 - 外部工具和服務引用官方文件，只介紹當前任務需要的配置，不復制整套手冊。
 - 提交前在 `docs/` 執行 `npm run check:docs`、`npm run check:api` 和 `npm run docs:build`。自動檢查覆蓋結構與示例，不能替代事實核驗和翻譯 review。
+
+## 文案標準
+
+- 先說明介面做什麼、適用條件和呼叫結果，再解釋實現。讀者應能據此決定下一步。
+- 用具體動作和物件代替“賦能”“閉環”“智慧升級”等空泛表述。術語保留準確含義，不為縮短句子省掉前提。
+- 不寫無依據的效果、效能、費用或安全承諾。預設值、支援範圍和失敗行為以當前實現為準；示例值明確標註。
+- 區分已提交與已完成、可選與必需、當前能力與規劃。總覽、參數列、示例和排障說明應一致。
+- 中文按自然語序寫，英文按英文習慣寫；兩者保持相同的事實和限制，不逐詞硬譯。
+- 保留有用的章節連結；改標題時檢查舊錨點，必要時新增相容錨點。
 
 ## 目錄結構
 
@@ -32,14 +41,9 @@ API 文件按模組組織，每個模組一個檔案，使用兩位數字序號�
 
 ### <API 方法名 1>
 
-#### 1. API 實現介紹
+#### 1. 用途與前置條件
 
-<介紹該 API 的用途，指向對應的程式碼入口，簡單介紹原理和流程>
-
-**程式碼入口**：
-- `openviking/<模組>/<檔案>.py:<類名>.<方法名>` - 核心實現
-- `openviking/server/routers/<路由文件>.py` - HTTP 路由
-- `crates/ov_cli/src/commands/<命令文件>.rs` - CLI 命令
+<說明介面的操作、適用場景，以及需要的許可權、配置或已有資源>
 
 #### 2. 介面和引數說明
 
@@ -100,6 +104,10 @@ API 文件按模組組織，每個模組一個檔案，使用兩位數字序號�
 
 每個公開操作都必須說明成功返回值。JSON 介面至少給出一個與實現一致的響應包示例；檔案下載、SSE、WebDAV 等非 JSON 介面必須說明 HTTP 狀態、關鍵響應頭、響應體或事件格式。不能只寫“返回某些欄位”而不展示結構。錯誤和異常處理示例可按需補充。
 
+#### 5. 實現細節（可選）
+
+按需解釋處理流程，並連結到核心實現、HTTP 路由或 CLI 處理函式，幫助讀者理解行為或排查問題。
+
 ---
 
 ### <API 方法名 2>
@@ -124,18 +132,13 @@ API 文件按模組組織，每個模組一個檔案，使用兩位數字序號�
 
 ### API 參考章節
 
-每個介面按以下三個部分組織：
+每個介面按以下章節組織。實現細節放在響應契約之後，僅保留有助於理解行為或排障的內容。現有頁面仍使用舊的“API 實現介紹”章節和程式碼入口；新頁面及遷移頁面時按本結構編寫。
 
-#### 1. API 實現介紹
+#### 1. 用途與前置條件
 
-- 說明該 API 的用途
-- 提供程式碼入口路徑，方便讀者查閱原始碼
-- 簡單介紹實現原理和處理流程
-
-**程式碼入口說明**：
-- 核心實現：指向主要業務邏輯程式碼
-- HTTP 路由：指向 FastAPI 路由定義
-- CLI 命令：指向 CLI 命令實現（如有）
+- 說明介面做什麼、適合什麼場景。
+- 列出必需的許可權、配置和已有資源。
+- 提前說明呼叫會產生的影響，包括覆蓋或刪除已有資料。
 
 #### 2. 介面和引數說明
 
@@ -156,8 +159,8 @@ API 文件按模組組織，每個模組一個檔案，使用兩位數字序號�
 
 示例切換由加粗標籤自動生成。呼叫方式標籤必須單獨成段，並使用以下固定基礎寫法：
 `**Python SDK**`、`**TypeScript SDK**`、`**Go SDK**`、`**HTTP API**`、`**CLI**`。
-需要區分呼叫形態時，可以在同一個加粗標籤內追加半形括號限定詞，例如
-`**Python HTTP SDK**`；不要把限定詞寫在加粗標籤外，也不要使用全形括號。
+需要區分呼叫形態時，把限定詞用半形括號寫在同一個加粗標籤內，例如
+`**Python SDK (HTTP)**`；不要把限定詞寫在加粗標籤外，也不要使用全形括號。`**Python HTTP SDK**` 這類寫法匹配不到 Tab 規則，只會渲染成普通文本。
 只展示實現中真實存在的呼叫方式；某個 SDK 或 CLI 沒有對應能力時應省略該 Tab，並簡短說明
 可用的替代入口。不要把手寫 HTTP 請求包裝成不存在的 SDK 方法。
 
@@ -173,23 +176,9 @@ API 文件應按 API 模組和具體介面組織，而不是按客戶端語言�
 ````markdown
 ### add_resource()
 
-#### 1. API 實現介紹
+#### 1. 用途與前置條件
 
 向知識庫新增資源，支援本地檔案、目錄、URL 等多種來源。
-
-**處理流程**：
-1. 識別資源型別（本地檔案/目錄/URL）
-2. 呼叫對應 Parser 解析內容
-3. 構建目錄樹並寫入 AGFS
-4. 非同步生成 L0/L1 語義摘要
-5. 建立向量索引
-
-**程式碼入口**：
-- `sdk/python/openviking_sdk/client.py:AsyncHTTPClient.add_resource()` - 非同步 SDK 入口
-- `sdk/python/openviking_sdk/client.py:SyncHTTPClient.add_resource()` - 同步 SDK 入口
-- `openviking/service/resource_service.py:ResourceService.add_resource()` - 核心實現
-- `openviking/server/routers/resources.py:add_resource()` - HTTP 路由
-- `crates/ov_cli/src/handlers.rs:handle_add_resource()` - CLI 處理函式
 
 #### 2. 介面和引數說明
 
@@ -198,14 +187,14 @@ API 文件應按 API 模組和具體介面組織，而不是按客戶端語言�
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
 | path | str | 是 | - | 本地路徑、目錄路徑或 URL |
-| to | str | 否 | None | 目標 Viking URI（必須在 resources 作用域內） |
+| to | str | 否 | None | 最終資源 URI；目標已存在時會覆蓋 |
 | reason | str | 否 | "" | 新增該資源的原因 |
 | wait | bool | 否 | False | 是否等待語義處理完成 |
 
 **說明**
 
 - SDK/CLI 可直接傳本地路徑；裸 HTTP 需要先用 `temp_upload` 上傳
-- 當指定 `to` 且目標已存在時，走增量更新流程
+- 已存在的 `to` 目標會被覆蓋。目標為目錄時，本次匯入未生成的舊檔案可能被刪除；未變化的內容在語義和向量處理中會複用。向已有目錄新增資源時使用 `parent`。
 
 #### 3. 使用示例
 
@@ -244,23 +233,37 @@ print(client.get_task(result["task_id"]))
 **CLI**
 
 ```bash
-openviking add-resource ./documents/guide.md --reason "User guide documentation"
+ov add-resource ./documents/guide.md --reason "User guide documentation"
 ```
 
-**響應示例**
+#### 4. 響應契約
 
 ```json
 {
   "status": "ok",
   "result": {
     "status": "success",
-    "root_uri": "viking://resources/documents/guide.md",
-    "task_id": "uuid-xxx",
-    "errors": []
-  },
-  "time": 0.123
+    "root_uri": "viking://resources/guide",
+    "task_id": "uuid-xxx"
+  }
 }
 ```
+
+#### 5. 實現細節
+
+**處理流程**：
+1. 識別資源型別（本地檔案/目錄/URL）
+2. 呼叫對應 Parser 解析內容
+3. 構建目錄樹並寫入 AGFS
+4. 非同步生成 L0/L1 語義摘要
+5. 建立向量索引
+
+**程式碼入口**：
+- `sdk/python/openviking_sdk/client.py:AsyncHTTPClient.add_resource()` - 非同步 SDK 入口
+- `sdk/python/openviking_sdk/client.py:SyncHTTPClient.add_resource()` - 同步 SDK 入口
+- `openviking/service/resource_service.py:ResourceService.add_resource()` - 核心實現
+- `openviking/server/routers/resources.py:add_resource()` - HTTP 路由
+- `crates/ov_cli/src/handlers.rs:handle_add_resource()` - CLI 處理函式
 
 ---
 ````
@@ -269,7 +272,7 @@ openviking add-resource ./documents/guide.md --reason "User guide documentation"
 
 新增或修改 API 文件時，請檢查：
 
-- [ ] 實現介紹清晰，程式碼入口路徑正確
+- [ ] 用途、前置條件和呼叫影響清楚，引用的程式碼入口路徑正確
 - [ ] 參數列完整且準確
 - [ ] 示例程式碼簡潔且可執行
 - [ ] 呼叫示例使用固定加粗標籤，並且每個 SDK/CLI Tab 都有真實實現

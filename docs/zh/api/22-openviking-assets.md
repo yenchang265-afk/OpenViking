@@ -1,9 +1,9 @@
-# OpenViking Assets Resolver
+# Assets
 
 OpenViking Assets Resolver 用於解析並校驗
-[`openviking-assets/1`](../guides/18-openviking-assets.md) Manifest——既支持在
+[`openviking-assets/1`](../guides/18-openviking-assets.md) Manifest。支援在
 `catalog` 欄位中直接定義資產的單檔案 Manifest，也支援搭配單獨 Catalog 檔案的
-Manifest——並返回可供客戶端執行的標準化資產計劃。它不會克隆倉庫、建立資源或啟動
+Manifest，並返回可供客戶端執行的標準化資產計劃。它不會克隆倉庫、建立資源或啟動
 同步任務。
 
 通常應直接使用 `ov add-resource --manifest <file>`；CLI 會自動呼叫 Resolver 和
@@ -96,7 +96,7 @@ Manifest 按名稱選擇資產時，把 Catalog YAML 放入 `catalog_yaml`，來
 - 連接器、倉庫 URL、Git 引用或資產身份不合法；
 - 同一份 Manifest 中出現重複資產身份。
 
-請求欄位為空、型別錯誤或超過長度限制時，由請求模型返回 HTTP `422`。
+請求欄位為空、型別錯誤或超過長度限制時，返回 HTTP `400` 和 `INVALID_ARGUMENT`，欄位詳情見 `error.details.validation_errors`。
 
 ## 預檢 Git 倉庫許可權
 
@@ -105,7 +105,7 @@ POST /api/v1/openviking-assets/preflight
 ```
 
 該介面在 OpenViking Server 的實際執行環境執行只讀 `git ls-remote`，校驗倉庫和可選 ref
-是否可讀。它不會克隆倉庫、建立資源或啟動任務。Manifest 模式在 dry-run 和正式提交之前
+是否可讀。指定 `commit` 時只驗證倉庫的 HEAD 可讀；精確 SHA 是否存在並可獲取，由正式匯入時的 fetch/checkout 校驗。它不會克隆倉庫、建立資源或啟動任務。Manifest 模式在 dry-run 和正式提交之前
 都會呼叫該介面。
 
 ### 請求體
@@ -116,6 +116,7 @@ POST /api/v1/openviking-assets/preflight
 | `connector` | string | 是 | 當前必須是 `git` |
 | `repo_url` | string | 是 | Git clone URL |
 | `branch` | string | 否 | 要驗證的 branch 或 tag；省略時驗證遠端 `HEAD` |
+| `commit` | string | 否 | 完整的 40 位十六進位制 commit SHA，與 `branch` 互斥 |
 | `auth_config.username` | string | 否 | HTTP Basic 使用者名稱，預設 `oauth2` |
 | `auth_config.token` | string | 否 | 一次性 Git token，不持久化 |
 

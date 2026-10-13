@@ -33,7 +33,7 @@ async function captureTranscript(ctx, state) {
     }
     toSend.push({ hash, turn: kept[0] });
   }
-  const result = await addAgentMessages(ctx.fetchJSON, ctx.sessionId, toSend.map((item) => item.turn));
+  const result = await addAgentMessages(ctx.fetchJSON, ctx.sessionId, toSend.map((item) => item.turn), ctx.peerId);
   const captured = result.sent + result.queued;
   for (const item of toSend.slice(0, captured)) capturedHashes.add(item.hash);
   return {
@@ -48,6 +48,13 @@ async function captureTranscript(ctx, state) {
 
 export const cursor = {
   prefix: "cu-",
+  requestBudgets: {
+    sessionStart: 25_000,
+    beforeSubmitPrompt: 17_000,
+    stop: 25_000,
+    preCompact: 25_000,
+    sessionEnd: 25_000,
+  },
   stages: {
     sessionStart: "start",
     beforeSubmitPrompt: "prompt",

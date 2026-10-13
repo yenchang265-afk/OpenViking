@@ -1,4 +1,4 @@
-# VikingBot：基於 OpenViking 的多渠道 AI Agent
+# VikingBot：OpenViking 原生 Agent
 
 VikingBot 是 OpenViking 提供的多渠道 AI Agent。OpenViking 負責統一管理 Resource、Memory 和 Skill 等長期上下文；VikingBot 負責接收使用者訊息、組織上下文、呼叫模型和工具，並把任務結果交付回命令列、聊天平臺或 HTTP 客戶端。
 
@@ -114,7 +114,7 @@ VikingBot 根據當前可信 `actor_peer_id` 讀取 Peer Profile，並按型別�
 - `entities`：人、專案和組織等實體資訊；
 - `preferences`：使用者偏好、習慣和約束。
 
-這使不同使用者共享同一個 Gateway 時，仍能使用各自隔離的上下文。
+隔離範圍取決於 OpenViking 連線身份。`actor_peer_id` 限制同一 user 下的 peer 集合；如果多個聊天使用者共用一個 user key，該使用者自己的記憶和共享資源仍可見。獨立使用者隔離需要不同的 user 身份。
 
 ### Experience：可複用任務經驗
 

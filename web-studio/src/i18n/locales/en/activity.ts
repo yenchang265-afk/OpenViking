@@ -30,6 +30,7 @@ const activity = {
       placeholder: 'Type a message...',
       emptyState: 'Select or create a session to start chatting.',
       thinking: 'Thinking...',
+      generating: 'Generating',
       reasoning: 'Reasoning',
       iteration: 'Round {{count}}',
       toolCall: 'Tool call',
@@ -167,13 +168,13 @@ const activity = {
         'Sign in to Business Data Platform (Connection & Identity) or paste an API key below to verify.',
     },
   },
-  playground: {
+  filesystem: {
     copyUri: 'Copy current URI',
     uploadedBy: 'Uploaded by {{user}}',
     updatedBy: 'Last updated by {{user}}',
     copied: 'URI copied',
     copyFailed: 'Copy failed',
-    resizeContext: 'Resize context tree width',
+    resizeContext: 'Resize filesystem width',
     resizeAction: 'Resize Terminal and Agent width',
     readFailed: 'Failed to read {{uri}}',
     deleteResource: {
@@ -234,7 +235,7 @@ const activity = {
     addResource: {
       title: 'Add resource',
       description:
-        'After it finishes, the context tree on the left refreshes and the Terminal on the right can locate the new resource.',
+        'After it finishes, the filesystem on the left refreshes and the Terminal on the right can locate the new resource.',
       submitted: 'Resource add task submitted',
     },
     compileGraph: {
@@ -295,7 +296,7 @@ const activity = {
       },
     },
     explorer: {
-      title: 'Context tree',
+      title: 'Filesystem',
       addResource: 'Add resource',
       selectMode: 'Select items',
       abstractLevel: 'L0',
@@ -369,7 +370,7 @@ const activity = {
     agent: {
       history: 'Session history',
       newSession: 'New session',
-      creating: 'Creating Playground session...',
+      creating: 'Creating Filesystem session...',
       detectingBot: 'Detecting bot mode...',
       createFailed: 'Failed to create session: {{error}}',
       retry: 'Retry',
@@ -380,8 +381,8 @@ const activity = {
       loadingSessions: 'Loading sessions...',
       noSessions: 'No session history yet',
       createTimeout:
-        'Creating the Playground session timed out. Check your connection settings and try again.',
-      newSessionTitle: 'New Playground session',
+        'Creating the Filesystem session timed out. Check your connection settings and try again.',
+      newSessionTitle: 'New Filesystem session',
       botPrompt: {
         title: 'Please enable bot mode',
         description:
@@ -406,7 +407,7 @@ const activity = {
       historyDescription: 'Review commands run in this browser.',
       clearHistory: 'Clear command history',
       noHistory: 'No command history',
-      welcomeTitle: 'Terminal connected to the context tree',
+      welcomeTitle: 'Terminal connected to the filesystem',
       welcomeBody:
         'Run /status, /ls, /search, /read, /add-resource. /search is global by default; add --scope . to use the current directory, or --scope viking://resources/... to limit it to a directory.',
       scopeLabel: 'cwd: {{uri}}',

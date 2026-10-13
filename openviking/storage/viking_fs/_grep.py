@@ -15,6 +15,7 @@ from openviking.storage.viking_fs._base import logger
 from openviking_cli.exceptions import PermissionDeniedError
 
 _GREP_LS_PAGE_SIZE = 1000
+_FULLTEXT_UNSUPPORTED_CACHE_TTL = 60.0
 
 
 def _pkg():

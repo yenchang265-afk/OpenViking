@@ -1,37 +1,43 @@
 # 檢索機制
 
-OpenViking 採用兩階段檢索：意圖分析 + 層級檢索 + Rerank。
+OpenViking 使用全域向量檢索，並可在召回完成後對候選結果執行一次 Rerank。會話意圖分析是獨立的前置階段。
 
 ## 概覽
 
 ```
-查詢 → 意圖分析 → 層級檢索 → Rerank → 結果
-         ↓           ↓          ↓
-     TypedQuery  目錄遞迴    精排評分
+查詢 → 意圖分析（可選）→ 全域向量檢索 → Rerank（可選）→ 結果
 ```
 
 ## find() vs search()
 
 | 特性 | find() | search() |
 |------|--------|----------|
-| 會話上下文 | 不需要 | 需要 |
-| 意圖分析 | 不使用 | 使用 LLM 分析 |
-| 查詢數量 | 單一查詢 | 0-5 個 TypedQuery |
-| 延遲 | 低 | 較高 |
+| 會話上下文 | 不使用 | 可選，傳入 `session_id` 時使用 |
+| 意圖分析 | 不使用 | 有會話內容且啟用時使用 LLM |
+| 查詢數量 | 單一查詢 | 零個或多個 TypedQuery |
+| 延遲 | 通常較低 | 取決於意圖分析、查詢數量和是否 Rerank |
 | 適用場景 | 簡單查詢 | 複雜任務 |
+
+`search` 的 `limit` 用於每條規劃查詢；多條查詢合併後的總數可能超過它，當前也不保證跨查詢去重。
 
 ### 使用示例
 
+以下示例使用已配置的同步 Python SDK 客戶端 `client`。
+
 ```python
 # find(): 簡單查詢
-results = await client.find(
+results = client.find(
     query="OAuth 認證",
     target_uri="viking://resources/",
 )
 
 # search(): 複雜任務（需要會話上下文）
-session_info = await client.create_session()
-results = await client.search(
+session_info = client.create_session()
+client.add_message(
+    session_id=session_info["session_id"], role="user",
+    content="我們正在為專案設計 OAuth 登入流程。",
+)
+results = client.search(
     query="幫我建立一個 RFC 文件",
     session_id=session_info["session_id"],
 )
@@ -39,7 +45,7 @@ results = await client.search(
 
 ## 意圖分析
 
-IntentAnalyzer 使用 LLM 分析查詢意圖，生成 0-5 個 TypedQuery。該階段使用的模型可通過 [`query_planner`](../guides/01-configuration.md#query-planner) 配置項單獨指定，未設定時回退到 `vlm`。
+當 `retrieval.enable_intent=true` 且會話包含摘要或訊息時，IntentAnalyzer 使用 LLM 分析查詢意圖，生成零個或多個 TypedQuery。該階段使用的模型可通過 [`query_planner`](../guides/01-configuration.md#query-planner) 配置項單獨指定，未設定時回退到 `vlm`。
 
 ### 輸入
 
@@ -71,95 +77,37 @@ class TypedQuery:
 - **0 個查詢**：閒聊、問候等不需要檢索的場景
 - **多個查詢**：複雜任務可能需要技能 + 資源 + 記憶
 
-## 層級檢索
+## 全域檢索
 
-HierarchicalRetriever 使用優先佇列遞迴搜尋目錄結構。
+`HierarchicalRetriever` 對每條查詢執行一次全域向量檢索。目標目錄、上下文型別、許可權、後設資料過濾和 `level` 一起限定搜尋範圍。未指定 `level` 時，文本查詢可直接命中 L0/L1/L2；不再先定位目錄再逐層搜尋。
 
-### 流程
+### 檢索模式
 
-```
-Step 1: 根據 context_type 確定根目錄
-        ↓
-Step 2: 全域向量搜尋定位起始目錄
-        ↓
-Step 3: 合併起始點 + Rerank 評分
-        ↓
-Step 4: 遞迴搜尋（優先佇列）
-        ↓
-Step 5: 轉換為 MatchedContext
-```
+| 模式 | 向量候選數 | Rerank |
+|------|------------|--------|
+| QUICK | `limit` | 不執行 |
+| THINKING，且配置了可用的 Rerank | `2 × limit` | 對召回候選統一執行一次，返回最多 `limit` 條 |
+| THINKING，未配置可用的 Rerank | `limit` | 不執行 |
 
-### 根目錄對映
+`find()` 使用 QUICK。`search()` 配置了可用的 Rerank 時自動使用 THINKING，否則使用 QUICK。這是內部檢索模式，不是 LLM 的思考引數，也不控制會話意圖分析。意圖分析生成的多條查詢仍分別檢索和排序，再按現有方式彙總。
 
-| context_type | 根目錄 |
-|--------------|--------|
-| MEMORY | `viking://~/memories` |
-| RESOURCE | `viking://resources` |
-| SKILL | `viking://~/skills` 與 `viking://agent/skills` |
-
-### 遞迴搜尋演算法
-
-```python
-while dir_queue:
-    current_uri, parent_score = heapq.heappop(dir_queue)
-
-    # 搜尋子節點
-    results = await search(parent_uri=current_uri)
-
-    for r in results:
-        # 分數傳播
-        final_score = score_propagation_alpha * embedding_score + (1 - score_propagation_alpha) * parent_score
-
-        if final_score > threshold:
-            collected.append(r)
-
-            if not r.is_leaf:  # 目錄繼續遞迴
-                heapq.heappush(dir_queue, (r.uri, final_score))
-
-    # 收斂檢測
-    if topk_unchanged_for_3_rounds:
-        break
-```
-
-### 關鍵引數
-
-| 引數 | 值 | 說明 |
-|------|-----|------|
-| `retrieval.score_propagation_alpha` | 1.0 | 分數傳播混合中子節點自身分數的權重；`1.0` 表示僅使用子節點自身分數，忽略父節點分數 |
-| `MAX_CONVERGENCE_ROUNDS` | 3 | 收斂檢測輪數 |
-| `GLOBAL_SEARCH_TOPK` | 10 | 全域搜尋候選數 |
+影像查詢跳過文本 Rerank，候選數為 `limit`；未指定 `level` 時預設搜尋 L2。
 
 ## Rerank 策略
 
-Rerank 在 THINKING 模式下對候選結果精排。
+Rerank 只處理本次全域召回的候選，不會觸發下一輪檢索。例如 `limit=10`，啟用 Rerank 時先召回向量分數最高的 20 條，再按 Rerank 結果返回最多 10 條；未啟用時直接召回 10 條。
 
-### 觸發條件
+- 使用候選索引記錄的 `abstract` 欄位作為 Rerank 文本。
+- 分數與排序使用 Rerank 分數，否則使用向量分數；訪問頻次、更新時間和父目錄分數不參與加權。
+- 分數閾值在 Rerank 後應用；未啟用 Rerank 時使用向量分數。
+- Rerank 請求失敗或返回無效結果時，保留已有的向量分數回退行為。
+- 不再使用目錄優先佇列、父子分數傳播或多輪收斂判斷。
 
-- 配置了 Rerank AK/SK
-- 使用 THINKING 模式（search() 預設）
-- 如果 rerank 返回無效結果或 API 呼叫失敗，會回退到向量分數
-
-### 評分方式
-
-```python
-if rerank_client and mode == THINKING:
-    scores = rerank_client.rerank_batch(query, documents)
-else:
-    scores = [r["_score"] for r in results]  # 向量分數
-```
-
-### 使用位置
-
-1. **起始點評估**：評估全域搜尋的候選目錄
-2. **遞迴搜尋**：評估每層的子節點
-
-### 後端支援
-
-| 後端 | 模型 |
-|------|------|
-| Volcengine | doubao-seed-rerank |
+支援的 provider 和配置見 [Rerank 配置](../guides/01-configuration.md#rerank)。
 
 ## 檢索結果
+
+以下是服務端內部型別的欄位節選；HTTP/SDK 響應欄位以[檢索 API](../api/06-retrieval.md)為準。
 
 ### MatchedContext
 
@@ -168,7 +116,7 @@ else:
 class MatchedContext:
     uri: str                # 資源 URI
     context_type: ContextType
-    is_leaf: bool           # 是否文件
+    level: int              # 0=摘要，1=概覽，2=詳情
     abstract: str           # L0 摘要
     score: float            # 最終分數
 ```

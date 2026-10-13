@@ -22,5 +22,7 @@ npm i -g @openviking/cli && ov config
 ### 步驟3：配置完成後，可執行以下命令檢視 CLI 用法：
 
 ```bash
+ov config validate
+ov health
 ov --help
 ```

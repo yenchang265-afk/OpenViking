@@ -479,6 +479,99 @@ def test_keyword_search_runs_bm25_over_text_fields():
     assert records == [{"id": "a", "_score": 2.5}]
 
 
+def test_keyword_search_restricts_fields_and_accepts_bm25_mode():
+    client = _FakeClient()
+    adapter = _created(client)
+
+    adapter.search_by_keywords(query="apple", mode="bm25", fields=["abstract"])
+
+    assert client.last("search")["query"]["bool"]["must"][0]["multi_match"]["fields"] == [
+        "abstract.text"
+    ]
+    adapter.search_by_keywords(query="apple", fields=["content", "missing"])
+    assert client.last("search")["query"]["bool"]["must"][0]["multi_match"]["fields"] == ["content"]
+    client.calls.clear()
+    assert adapter.search_by_keywords(query="apple", fields=["missing"]) == []
+    assert not client.calls
+    with pytest.raises(NotImplementedError, match="mode"):
+        adapter.search_by_keywords(query="apple", mode="phrase")
+
+
+def test_strict_metadata_read_is_served_locally():
+    client = _FakeClient()
+    adapter = _created(client)
+
+    meta = adapter.get_collection().get_meta_data(raise_on_error=True)
+
+    assert meta["CollectionName"] == "context"
+
+
+def test_vector_query_applies_event_time_decay():
+    client = _FakeClient()
+    adapter = _created(client)
+    day = 24 * 60 * 60 * 1000
+    client.queue(
+        "search",
+        {
+            "hits": {
+                "hits": [
+                    # cosine 0.8, 7 days old: 5 days past protection, decays to ~0.49
+                    {"_id": "old", "_score": 0.9, "_source": {"updated_at": 100 * day}},
+                    # cosine 0.6, inside the protection window: unchanged
+                    {
+                        "_id": "new",
+                        "_score": 0.8,
+                        "_source": {"updated_at": "1970-04-17T00:00:00+00:00"},
+                    },
+                    # no timestamp: cosine 0.5 is kept
+                    {"_id": "undated", "_score": 0.75, "_source": {}},
+                ]
+            }
+        },
+    )
+    origin = "1970-04-18T00:00:00+00:00"  # 107 days after the epoch
+
+    records = adapter.query(
+        query_vector=[1, 0, 0, 0],
+        limit=2,
+        output_fields=["uri"],
+        advance={"time_decay": {"protection": "2d", "origin": origin}},
+    )
+
+    body = client.last("search")
+    assert body["knn"]["k"] == 6
+    assert body["size"] == 6 and body["from_"] == 0
+    assert body["source"]["includes"] == ["uri", "updated_at"]
+    assert [record["id"] for record in records] == ["new", "undated"]
+    assert records[0]["_score"] == pytest.approx(0.6)
+    assert records[0]["_origin_score"] == pytest.approx(0.6)
+    assert records[0]["_time_score"] == pytest.approx(1.0)
+    assert "updated_at" not in records[0]
+    assert records[1]["_score"] == pytest.approx(0.5)
+    assert "_time_score" not in records[1]
+
+
+def test_time_decay_halves_similarity_each_scale_past_protection():
+    client = _FakeClient()
+    adapter = _created(client)
+    day = 24 * 60 * 60 * 1000
+    client.queue(
+        "search",
+        {"hits": {"hits": [{"_id": "a", "_score": 0.9, "_source": {"updated_at": 0}}]}},
+    )
+
+    records = adapter.query(
+        query_vector=[1, 0, 0, 0],
+        limit=1,
+        advance={"time_decay": {"protection": "0", "origin": "1970-01-08T00:00:00+00:00"}},
+    )
+
+    assert 7 * day == 604_800_000
+    assert records[0]["_origin_score"] == pytest.approx(0.8)
+    assert records[0]["_time_score"] == pytest.approx(0.5)
+    assert records[0]["_score"] == pytest.approx(0.4)
+
+
 def test_bulk_ingest_defers_refresh_until_scope_ends():
     client = _FakeClient()
     adapter = _created(client)
