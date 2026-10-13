@@ -170,11 +170,11 @@ async def test_account_creation_survives_an_install_failure(monkeypatch):
     await admin._install_builtin_skills(object(), "acme")
 
 
-def test_startup_covers_every_live_account():
+async def test_startup_covers_every_live_account():
     from openviking.server.app import _builtin_skill_account_ids
 
     class Manager:
-        def get_accounts(self):
+        async def list_accounts(self):
             return [
                 {"account_id": "default", "status": "active"},
                 {"account_id": "acme", "status": "active"},
@@ -183,7 +183,28 @@ def test_startup_covers_every_live_account():
 
     service = SimpleNamespace(user=UserIdentifier("default", "default"))
     app = SimpleNamespace(state=SimpleNamespace(api_key_manager=Manager()))
-    assert _builtin_skill_account_ids(app, service) == ["default", "acme"]
+    assert await _builtin_skill_account_ids(app, service) == ["default", "acme"]
 
     dev_app = SimpleNamespace(state=SimpleNamespace(api_key_manager=None, auth_plugin=None))
-    assert _builtin_skill_account_ids(dev_app, service) == ["default"]
+    assert await _builtin_skill_account_ids(dev_app, service) == ["default"]
+
+
+async def test_startup_install_survives_an_unreadable_account_store(monkeypatch):
+    from openviking.server.app import _start_builtin_skills_install
+
+    class Manager:
+        async def list_accounts(self):
+            raise RuntimeError("account store unavailable")
+
+    installed = []
+
+    async def install(service, account_ids):
+        installed.append(account_ids)
+
+    monkeypatch.setattr(
+        "openviking.service.builtin_skills.install_builtin_skills_for_accounts", install
+    )
+    service = SimpleNamespace(user=UserIdentifier("default", "default"))
+    app = SimpleNamespace(state=SimpleNamespace(api_key_manager=Manager()))
+    await _start_builtin_skills_install(app, service)
+    assert installed == []
