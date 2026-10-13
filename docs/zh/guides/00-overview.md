@@ -5,10 +5,7 @@
 | 部署目標 | 閱讀順序 | 完成標準 |
 | --- | --- | --- |
 | 本地體驗 | [快速開始](../getting-started/02-quickstart.md) | 匯入一份文件，檢索並讀取其中的內容 |
-| 自建共享服務 | [自建服務](03-deployment.md) → [身份認證](04-authentication.md) → [公網訪問](12-public-access.md) | 驗證持久化、授權訪問、未授權拒絕和首次資料處理 |
-| 企業私有化交付 | [部署前檢查](19-deployment-checklist.md) → [安裝與驗收](20-private-deployment.md) → [升級與排障](21-private-operations.md) | 按交付物清單與安裝指南逐項驗收 |
-
-企業私有化路徑依賴交付物、映象和環境條件，先核對清單。
+| 自建共享服務 | [部署前檢查](19-deployment-checklist.md) → [自建服務](03-deployment.md) → [身份認證](04-authentication.md) → [公網訪問](12-public-access.md) | 驗證持久化、授權訪問、未授權拒絕和首次資料處理 |
 
 ## 配置模型與訪問控制
 
