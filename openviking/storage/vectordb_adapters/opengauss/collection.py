@@ -1193,7 +1193,9 @@ class OpenGaussCollection(ICollection):
         offset: int = 0,
         filters: Optional[Dict[str, Any]] = None,
         output_fields: Optional[List[str]] = None,
+        advance: Optional[Dict[str, Any]] = None,
     ) -> SearchResult:
+        # Accept shared search options; openGauss does not apply time decay.
         select_cols = self._select_output_columns(output_fields)
         where_frag, where_params = _build_where_clause(
             self._normalize_filter_date_times(filters), self._array_fields

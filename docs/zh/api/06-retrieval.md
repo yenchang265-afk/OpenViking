@@ -412,15 +412,15 @@ ov find "紅色海報風格" --image ./poster.png --uri "viking://resources/imag
 | read_content | bool | 否 | False | 按可見內容 read 語義讀取每個最終命中的 URI，並以內聯 `content` 返回。單個讀取失敗時保留原命中，不附加內容；僅支援 `mode="list"`。 |
 | telemetry | bool \| object | 否 | False | 在響應中附帶遙測資料 |
 
-`search()` 使用和 `find()` 相同的目標解析和顯式標籤過濾規則，包括由 `X-OpenViking-Actor-Peer` 或 SDK `actor_peer_id` 選擇的 peer 集合過濾。提供 `image_url` 時，`search()` 會直接執行圖片檢索並跳過會話 query planning。`keywords` 要求非空文本 query，不支援圖片，且需要遠端 VikingDB 配置全文索引。
+`search()` 使用和 `find()` 相同的目標解析和顯式標籤過濾規則，包括由 `X-OpenViking-Actor-Peer` 或 SDK `actor_peer_id` 選擇的 peer 集合過濾。提供 `image_url` 時，`search()` 會直接執行圖片檢索並跳過會話 query planning。`keywords` 要求非空文本 query，不支援圖片，且僅 Elasticsearch 向量後端支援；其他後端會返回錯誤。
 
-事件時間衰減作用於語義 `find()`、`search(mode="list")` 和 `search(mode="context")` 中帶 `memory_type=events` 標籤的結果。記憶提取流程將該標籤寫入 user / peer 事件的 L2 記錄；檢索按標籤判斷，不從 URI 或層級推斷事件型別。無事件標籤的結果、無 query 的純過濾 `find()`、`recall`、`grep` 和 `glob` 不受影響。事件召回階段由向量引擎將原向量分乘以 `time_score`；響應中的 `score` 是最終檢索分數，開啟模型 rerank 時使用模型分。context 模式按最終分組裝候選。保護期內 `time_score` 為 1，原分不變；時間距離與 VikingDB 指數衰減運算元一致，取時間戳與請求時間的絕對差。list 響應中的 event 結果額外返回 `origin_score` 和 `time_score`，CLI 分別展示為 semantic、time 和 final 分。時間取自已有索引的 `updated_at` 欄位，無需重新索引或改寫時間戳；本地計算遇到缺失或非法時間時保持原分；雲端使用索引中的日期時間欄位和後處理運算元。衰減曲線由服務端內部維護，呼叫方只需按請求傳入保護期，無需修改 `ov.conf` 或 `ovcli.conf`。
+事件時間衰減作用於語義 `find()`、`search(mode="list")` 和 `search(mode="context")` 中帶 `memory_type=events` 標籤的結果。記憶提取流程將該標籤寫入 user / peer 事件的 L2 記錄；檢索按標籤判斷，不從 URI 或層級推斷事件型別。無事件標籤的結果、無 query 的純過濾 `find()`、`recall`、`grep` 和 `glob` 不受影響。事件召回階段由向量引擎將原向量分乘以 `time_score`；響應中的 `score` 是最終檢索分數，開啟模型 rerank 時使用模型分。context 模式按最終分組裝候選。保護期內 `time_score` 為 1，原分不變；時間距離與 VikingDB 指數衰減運算元一致，取時間戳與請求時間的絕對差。list 響應中的 event 結果額外返回 `origin_score` 和 `time_score`，CLI 分別展示為 semantic、time 和 final 分。時間取自已有索引的 `updated_at` 欄位，無需重新索引或改寫時間戳；遇到缺失或非法時間時保持原分。衰減曲線由服務端內部維護，呼叫方只需按請求傳入保護期，無需修改 `ov.conf` 或 `ovcli.conf`。
 
 由記憶提取流程新生成或更新的記憶會自動寫入 `memory_type=<型別>` 檢索標籤。啟用衰減時，本地和雲端均將按是否帶 `memory_type=events` 標籤拆成互斥且完整覆蓋原範圍的兩路，再合併排序；兩路均保留原 scope 的許可權、目錄和 level 限制，無需指定 peer id。存量資料不補標籤，無標籤記憶保持原分。直接內容重新整理和普通標籤更新保留已有型別，不從 URI 推斷或重設型別。
 
-本地向量引擎按所需 event 條數在內部最多放大 3 倍候選（上限 100,000），在 C++ 中計算衰減並排序，擷取 top-k 後才讀取摘要等欄位。這是有界候選近似，不能保證將語義候選視窗以外的事件提升進結果。HTTP 向量服務透傳同一規則；雲端 Adapter 使用 VikingDB 分數融合，僅請求 limit + offset，不設定固定 100,000 條輸入預算。cuVS 集合的衰減請求使用其原生標量/向量索引。openGauss 接收透傳引數但不執行時間衰減，保留普通向量分數。
+本地向量引擎按所需 event 條數在內部最多放大 3 倍候選（上限 100,000），在 C++ 中計算衰減並排序，擷取 top-k 後才讀取摘要等欄位。這是有界候選近似，不能保證將語義候選視窗以外的事件提升進結果。HTTP 向量服務透傳同一規則；Elasticsearch Adapter 按 limit + offset 放大 3 倍召回（上限 10,000），並在 Adapter 內套用同一衰減，因為 Elasticsearch 的衰減函式無法包住 kNN 查詢；缺少時間戳的記錄保留原分。cuVS 集合的衰減請求使用其原生標量/向量索引。openGauss 接收透傳引數但不執行時間衰減，保留普通向量分數。
 
-啟用模型 rerank 時，兩路各請求 `2 × limit` 條結果。事件分支在召回時已完成衰減：雲端由 VikingDB 計算，開源本地由 C++ 引擎計算。兩路按召回分合並，取前 `2 × limit` 條統一執行一次模型 rerank，再按模型分排序、過濾閾值並取最終結果，模型後不再衰減。模型失敗時使用已經衰減過的召回分。`origin_score` 和 `time_score` 始終描述召回階段的原向量分與時間因子，因此二者乘積不一定等於成功 rerank 後的模型分。最終分數不混入父目錄分數或熱度分。
+啟用模型 rerank 時，兩路各請求 `2 × limit` 條結果。事件分支在召回時已由向量後端完成衰減：本地由 C++ 引擎計算，Elasticsearch 由 Adapter 計算。兩路按召回分合並，取前 `2 × limit` 條統一執行一次模型 rerank，再按模型分排序、過濾閾值並取最終結果，模型後不再衰減。模型失敗時使用已經衰減過的召回分。`origin_score` 和 `time_score` 始終描述召回階段的原向量分與時間因子，因此二者乘積不一定等於成功 rerank 後的模型分。最終分數不混入父目錄分數或熱度分。
 
 本地引擎的 3 倍擴召作用於事件分支請求視窗，模型的 2 倍候選視窗是另一層限制。例如最終 `limit=10` 時，兩路各返回最多 20 條；本地事件引擎內部最多考慮 60 條向量候選，合併後最多 20 條進入模型。
 
