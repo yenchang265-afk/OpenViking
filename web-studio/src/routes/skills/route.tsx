@@ -387,9 +387,13 @@ function SkillsRoute() {
         existingSkills={skills}
         initialScope={activeScope}
         getErrorMessage={getErrorMessage}
-        onCreated={(draft) => {
+        onCreated={(draft, replaced) => {
           setActiveScope(draft.scope)
-          toast.success(t('create.created', { name: draft.name }))
+          toast.success(
+            t(replaced ? 'create.replaced' : 'create.created', {
+              name: draft.name,
+            }),
+          )
           void queryClient.invalidateQueries({ queryKey: ['skills'] })
         }}
       />

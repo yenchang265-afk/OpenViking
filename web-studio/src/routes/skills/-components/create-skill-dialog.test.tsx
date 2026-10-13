@@ -52,14 +52,53 @@ function fill(label: string, value: string) {
 }
 
 describe('CreateSkillDialog', () => {
-  it('refuses a name already used in the chosen scope', async () => {
+  it('asks before replacing a skill with the same name', async () => {
+    createSkill.mockResolvedValue({ status: 'success' })
+    const { onCreated } = renderDialog()
+    fill('create.nameLabel', 'pr-review')
+    fill('create.descriptionLabel', 'Reviews pull requests')
+    expect(screen.getByText('create.nameExists')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'create.submit' }))
+
+    expect(await screen.findByText('create.replace.title')).toBeTruthy()
+    expect(createSkill).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'create.replace.confirm' }),
+    )
+    await waitFor(() =>
+      expect(onCreated).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'pr-review' }),
+        true,
+      ),
+    )
+    expect(createSkill).toHaveBeenCalledTimes(1)
+  })
+
+  it('goes back from the replace step without saving', async () => {
+    const { onOpenChange } = renderDialog()
+    fill('create.nameLabel', 'pr-review')
+    fill('create.descriptionLabel', 'Reviews pull requests')
+    fireEvent.click(screen.getByRole('button', { name: 'create.submit' }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'create.replace.back' }),
+    )
+
+    expect(screen.queryByText('create.replace.title')).toBeNull()
+    expect(screen.getByRole('button', { name: 'create.submit' })).toBeTruthy()
+    expect(createSkill).not.toHaveBeenCalled()
+    expect(onOpenChange).not.toHaveBeenCalledWith(false)
+  })
+
+  it('drops the replace step when the name changes', async () => {
     renderDialog()
     fill('create.nameLabel', 'pr-review')
     fill('create.descriptionLabel', 'Reviews pull requests')
     fireEvent.click(screen.getByRole('button', { name: 'create.submit' }))
+    expect(await screen.findByText('create.replace.title')).toBeTruthy()
 
-    expect(await screen.findByText('create.errors.name.exists')).toBeTruthy()
-    expect(createSkill).not.toHaveBeenCalled()
+    fill('create.nameLabel', 'pr-review-2')
+    expect(screen.queryByText('create.replace.title')).toBeNull()
   })
 
   it('creates the skill and closes', async () => {
@@ -76,7 +115,7 @@ describe('CreateSkillDialog', () => {
       name: 'triage',
       scope: 'user',
     }
-    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(draft))
+    await waitFor(() => expect(onCreated).toHaveBeenCalledWith(draft, false))
     expect(createSkill.mock.calls[0][0]).toEqual(draft)
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })

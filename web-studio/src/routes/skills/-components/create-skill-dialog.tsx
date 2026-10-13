@@ -1,8 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useMutation } from '@tanstack/react-query'
+import { TriangleAlertIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
+import { Alert, AlertDescription, AlertTitle } from '#/components/ui/alert'
 import { Button } from '#/components/ui/button'
 import {
   Dialog,
@@ -42,7 +44,7 @@ export function CreateSkillDialog({
   existingSkills: { name: string; scope: SkillScope }[]
   getErrorMessage: (error: unknown) => string
   initialScope: SkillScope
-  onCreated: (draft: SkillDraft) => void
+  onCreated: (draft: SkillDraft, replaced: boolean) => void
   onOpenChange: (open: boolean) => void
   open: boolean
 }) {
@@ -54,6 +56,8 @@ export function CreateSkillDialog({
   const [description, setDescription] = useState('')
   const [body, setBody] = useState('')
   const [touched, setTouched] = useState(false)
+  // Set once the user has been told the name is taken and pressed submit again.
+  const [confirmingReplace, setConfirmingReplace] = useState(false)
   const mutation = useMutation({ mutationFn: createSkill })
   const { reset } = mutation
 
@@ -64,6 +68,7 @@ export function CreateSkillDialog({
     setDescription('')
     setBody('')
     setTouched(false)
+    setConfirmingReplace(false)
     reset()
   }, [initialScope, open, reset])
 
@@ -76,7 +81,9 @@ export function CreateSkillDialog({
       ),
     [existingSkills, scope],
   )
-  const nameError = validateSkillName(name, existingNames)
+  const nameError = validateSkillName(name)
+  // The server overwrites a same-named skill's SKILL.md, so ask first.
+  const replacing = !nameError && existingNames.has(name.trim())
   const descriptionError = validateSkillDescription(description)
   const visibleNameError = touched ? nameError : null
   const visibleDescriptionError = touched ? descriptionError : null
@@ -85,6 +92,10 @@ export function CreateSkillDialog({
     event.preventDefault()
     setTouched(true)
     if (nameError || descriptionError || mutation.isPending) return
+    if (replacing && !confirmingReplace) {
+      setConfirmingReplace(true)
+      return
+    }
     const draft: SkillDraft = {
       body,
       description: description.trim(),
@@ -93,7 +104,7 @@ export function CreateSkillDialog({
     }
     try {
       await mutation.mutateAsync(draft)
-      onCreated(draft)
+      onCreated(draft, replacing)
       onOpenChange(false)
     } catch {
       // Keep the dialog and its contents so the user can fix and retry.
@@ -119,7 +130,10 @@ export function CreateSkillDialog({
             <RadioGroup
               aria-label={t('create.scopeLabel')}
               value={scope}
-              onValueChange={(value) => setScope(value as SkillScope)}
+              onValueChange={(value) => {
+                setScope(value as SkillScope)
+                setConfirmingReplace(false)
+              }}
               disabled={mutation.isPending}
               className="grid gap-2 sm:grid-cols-2"
             >
@@ -149,7 +163,10 @@ export function CreateSkillDialog({
               aria-invalid={visibleNameError ? true : undefined}
               aria-describedby={`${formId}-name-hint`}
               disabled={mutation.isPending}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value)
+                setConfirmingReplace(false)
+              }}
             />
             <p
               id={`${formId}-name-hint`}
@@ -157,15 +174,18 @@ export function CreateSkillDialog({
               className={
                 visibleNameError
                   ? 'text-xs text-destructive'
-                  : 'text-xs text-muted-foreground'
+                  : replacing
+                    ? 'text-xs text-amber-600 dark:text-amber-400'
+                    : 'text-xs text-muted-foreground'
               }
             >
               {visibleNameError
                 ? t(`create.errors.name.${visibleNameError}`, {
                     max: MAX_SKILL_NAME_LENGTH,
-                    scope: t(`scopes.${scope}`),
                   })
-                : t('create.nameHint', { max: MAX_SKILL_NAME_LENGTH })}
+                : replacing
+                  ? t('create.nameExists', { scope: t(`scopes.${scope}`) })
+                  : t('create.nameHint', { max: MAX_SKILL_NAME_LENGTH })}
             </p>
           </div>
 
@@ -221,6 +241,20 @@ export function CreateSkillDialog({
             </p>
           </div>
 
+          {confirmingReplace ? (
+            <Alert variant="destructive">
+              <TriangleAlertIcon />
+              <AlertTitle>
+                {t('create.replace.title', { name: name.trim() })}
+              </AlertTitle>
+              <AlertDescription>
+                {t('create.replace.description', {
+                  scope: t(`scopes.${scope}`),
+                })}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
           {mutation.error ? (
             <p role="alert" className="text-sm break-all text-destructive">
               {t('create.failed', {
@@ -234,13 +268,31 @@ export function CreateSkillDialog({
               type="button"
               variant="outline"
               disabled={mutation.isPending}
-              onClick={() => onOpenChange(false)}
+              onClick={() =>
+                confirmingReplace
+                  ? setConfirmingReplace(false)
+                  : onOpenChange(false)
+              }
             >
-              {t('create.cancel')}
+              {t(confirmingReplace ? 'create.replace.back' : 'create.cancel')}
             </Button>
-            <Button type="submit" disabled={mutation.isPending}>
-              {t(mutation.isPending ? 'create.creating' : 'create.submit')}
-            </Button>
+            {confirmingReplace ? (
+              <Button
+                type="submit"
+                variant="destructive"
+                disabled={mutation.isPending}
+              >
+                {t(
+                  mutation.isPending
+                    ? 'create.replace.replacing'
+                    : 'create.replace.confirm',
+                )}
+              </Button>
+            ) : (
+              <Button type="submit" disabled={mutation.isPending}>
+                {t(mutation.isPending ? 'create.creating' : 'create.submit')}
+              </Button>
+            )}
           </DialogFooter>
         </form>
       </DialogContent>

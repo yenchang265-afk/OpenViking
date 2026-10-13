@@ -374,6 +374,8 @@ const workspace = {
       namePlaceholder: 'pr-review',
       nameHint:
         'Up to {{max}} characters: letters, numbers, hyphens, and underscores.',
+      nameExists:
+        'A {{scope}} with this name already exists. Creating it will replace that skill.',
       descriptionLabel: 'Description',
       descriptionPlaceholder:
         'What the skill does and when an agent should use it.',
@@ -388,8 +390,6 @@ const workspace = {
           required: 'Enter a name.',
           tooLong: 'Use {{max}} characters or fewer.',
           invalid: 'Use only letters, numbers, hyphens, and underscores.',
-          exists:
-            'A {{scope}} with this name already exists. Pick another name.',
         },
         description: {
           required: 'Enter a description.',
@@ -400,6 +400,15 @@ const workspace = {
       submit: 'Create skill',
       creating: 'Creating...',
       created: 'Created skill {{name}}',
+      replaced: 'Replaced skill {{name}}',
+      replace: {
+        title: 'Replace {{name}}?',
+        description:
+          'A {{scope}} with this name already exists. Its SKILL.md will be overwritten with this one. Other files in the skill are kept. This cannot be undone.',
+        back: 'Back',
+        confirm: 'Replace skill',
+        replacing: 'Replacing...',
+      },
       failed: 'Could not create the skill: {{error}}',
     },
     detail: 'Details',

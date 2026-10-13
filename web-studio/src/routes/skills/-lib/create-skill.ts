@@ -21,19 +21,14 @@ export type SkillDraft = {
   scope: SkillScope
 }
 
-export type SkillNameError = 'required' | 'tooLong' | 'invalid' | 'exists'
+export type SkillNameError = 'required' | 'tooLong' | 'invalid'
 export type SkillDescriptionError = 'required' | 'tooLong'
 
-export function validateSkillName(
-  name: string,
-  existingNames: ReadonlySet<string>,
-): SkillNameError | null {
+export function validateSkillName(name: string): SkillNameError | null {
   const trimmed = name.trim()
   if (!trimmed) return 'required'
   if (trimmed.length > MAX_SKILL_NAME_LENGTH) return 'tooLong'
   if (!SKILL_NAME_PATTERN.test(trimmed)) return 'invalid'
-  // Installing over an existing name replaces that skill without asking.
-  if (existingNames.has(trimmed)) return 'exists'
   return null
 }
 
