@@ -198,6 +198,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         output_fields: Optional[list[str]] = None,
         order_by: Optional[str] = None,
         order_desc: bool = False,
+        advance: Optional[Dict[str, Any]] = None,
     ) -> list[Dict[str, Any]]:
         if query_vector or sparse_query_vector or order_by:
             return super().query(
@@ -209,6 +210,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
                 output_fields=output_fields,
                 order_by=order_by,
                 order_desc=order_desc,
+                advance=advance,
             )
         # The base class samples plain filters with a random-vector kNN search,
         # which Elasticsearch caps at k <= 10000. A filtered scan pages through

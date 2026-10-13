@@ -488,9 +488,10 @@ def test_keyword_search_restricts_fields_and_accepts_bm25_mode():
     assert client.last("search")["query"]["bool"]["must"][0]["multi_match"]["fields"] == [
         "abstract.text"
     ]
-    # The context schema stores no ``content`` field, so nothing is searchable.
+    adapter.search_by_keywords(query="apple", fields=["content", "missing"])
+    assert client.last("search")["query"]["bool"]["must"][0]["multi_match"]["fields"] == ["content"]
     client.calls.clear()
-    assert adapter.search_by_keywords(query="apple", mode="bm25", fields=["content"]) == []
+    assert adapter.search_by_keywords(query="apple", fields=["missing"]) == []
     assert not client.calls
     with pytest.raises(NotImplementedError, match="mode"):
         adapter.search_by_keywords(query="apple", mode="phrase")
