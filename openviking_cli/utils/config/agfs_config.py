@@ -102,6 +102,49 @@ class S3Config(BaseModel):
         "Unset uses the s3fs default (8 MiB).",
     )
 
+    connect_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Maximum time to open a connection to S3, in milliseconds. "
+        "Unset uses the s3fs default (3100).",
+    )
+
+    read_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Maximum time to send a request and receive the first response byte, "
+        "in milliseconds. Includes upload time, so keep it above the slowest expected PUT. "
+        "Unset means no limit.",
+    )
+
+    attempt_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Maximum time for one S3 request attempt, in milliseconds. Timed-out "
+        "attempts are retried up to max_attempts. Unset uses the s3fs default (60000).",
+    )
+
+    operation_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Maximum total time for an S3 operation including retries, in milliseconds. "
+        "Unset means attempts are bounded only by max_attempts x attempt_timeout_ms.",
+    )
+
+    max_attempts: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=10,
+        description="Maximum S3 request attempts including the first (1 to 10). "
+        "Unset uses the s3fs default (3).",
+    )
+
+    retry_mode: Optional[Literal["standard", "adaptive"]] = Field(
+        default=None,
+        description="S3 retry mode: 'standard', or 'adaptive' to add client-side rate limiting "
+        "when S3 throttles. Unset uses the s3fs default (standard).",
+    )
+
     def validate_config(self):
         """Validate S3 configuration completeness"""
         missing = []

@@ -1447,8 +1447,16 @@ Legacy compatibility example:
 | `auto_detect_content_type` | bool | Automatically infer MIME type from the object key / filename extension and set the S3 object `Content-Type` header during upload | false |
 | `multipart_threshold_bytes` | int | Files written from disk that are larger than this use S3 multipart upload (bounded memory, no 5 GB single-PUT limit) | unset (16 MiB) |
 | `multipart_part_size_bytes` | int | Multipart part size, 5 MiB–5 GiB; one part is held in memory at a time. Pair it with a bucket lifecycle rule that aborts incomplete multipart uploads | unset (8 MiB) |
+| `connect_timeout_ms` | int | Maximum time to open a connection to S3 | unset (3100) |
+| `read_timeout_ms` | int | Maximum time to send a request and receive the first response byte. Includes upload time, so keep it above the slowest expected PUT | unset (no limit) |
+| `attempt_timeout_ms` | int | Maximum time for one S3 request attempt. A timed-out attempt is retried, so a slow S3 response cannot block a server worker thread indefinitely | unset (60000) |
+| `operation_timeout_ms` | int | Maximum total time for one S3 operation including all retries | unset (no limit; bounded by `max_attempts` × `attempt_timeout_ms`) |
+| `max_attempts` | int | Maximum S3 request attempts including the first, 1–10 | unset (3) |
+| `retry_mode` | str | `standard`, or `adaptive` to add client-side rate limiting when S3 throttles | unset (`"standard"`) |
 | `directory_marker_mode` | str | How to persist directory markers: `none`, `empty`, or `nonempty` | `"empty"` |
 | `normalize_encoding_chars` | str | Characters to escape in S3 object keys as `!HH` hexadecimal bytes; empty string disables normalization | `"?#%+@"` |
+
+**Slow S3 responses.** An S3 request that gets no response within `attempt_timeout_ms` is retried, up to `max_attempts` times. If every attempt times out, the API returns `UNAVAILABLE` (HTTP 503) instead of an internal error. The attempt timeout covers sending the request body, so with the defaults a single PUT of `multipart_threshold_bytes` (16 MiB) needs about 280 KB/s upload throughput to finish within 60 s. Downloading a response body is not covered by the attempt timeout; a body that stops flowing for 5 s is cut off by the SDK's stalled-stream protection. To fail faster, lower `attempt_timeout_ms` (for example to 10000), but keep it above the time a single PUT of `multipart_threshold_bytes` needs on your link.
 
 `directory_marker_mode` controls how RAGFS materializes directory objects in S3:
 

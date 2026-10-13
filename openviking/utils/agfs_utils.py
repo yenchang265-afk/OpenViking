@@ -402,8 +402,17 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
         ),
         "auto_detect_content_type": _get_config_value(s3_config, "auto_detect_content_type", False),
     }
-    # Multipart tuning is only sent when configured so s3fs keeps a single source of defaults.
-    for key in ("multipart_threshold_bytes", "multipart_part_size_bytes"):
+    # Tuning is only sent when configured so s3fs keeps a single source of defaults.
+    for key in (
+        "multipart_threshold_bytes",
+        "multipart_part_size_bytes",
+        "connect_timeout_ms",
+        "read_timeout_ms",
+        "attempt_timeout_ms",
+        "operation_timeout_ms",
+        "max_attempts",
+        "retry_mode",
+    ):
         value = _get_config_value(s3_config, key)
         if value is not None:
             params[key] = value

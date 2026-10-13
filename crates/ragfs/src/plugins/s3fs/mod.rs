@@ -16,6 +16,7 @@
 pub mod cache;
 pub mod client;
 mod multipart;
+mod network;
 mod tree;
 
 use async_trait::async_trait;
@@ -1280,6 +1281,42 @@ impl S3FSPlugin {
                     "int",
                     "8388608",
                     "Multipart upload part size (5 MiB to 5 GiB)",
+                ),
+                ConfigParameter::optional(
+                    "connect_timeout_ms",
+                    "int",
+                    "3100",
+                    "Maximum time to open a connection to S3",
+                ),
+                ConfigParameter::optional(
+                    "read_timeout_ms",
+                    "int",
+                    "",
+                    "Maximum time to send a request and receive the first response byte (unset: no limit)",
+                ),
+                ConfigParameter::optional(
+                    "attempt_timeout_ms",
+                    "int",
+                    "60000",
+                    "Maximum time for one S3 request attempt; timed-out attempts are retried",
+                ),
+                ConfigParameter::optional(
+                    "operation_timeout_ms",
+                    "int",
+                    "",
+                    "Maximum total time for an S3 operation including retries (unset: no limit)",
+                ),
+                ConfigParameter::optional(
+                    "max_attempts",
+                    "int",
+                    "3",
+                    "Maximum S3 request attempts including the first (1 to 10)",
+                ),
+                ConfigParameter::optional(
+                    "retry_mode",
+                    "string",
+                    "standard",
+                    "S3 retry mode: standard or adaptive (client-side rate limiting)",
                 ),
                 ConfigParameter::optional(
                     "cache_enabled",

@@ -18,6 +18,7 @@ use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use super::multipart::{effective_part_size, part_ranges, MultipartSettings};
+use super::network::NetworkSettings;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const ENCODED_SEGMENT_PREFIX: char = '!';
@@ -135,15 +136,24 @@ where
                 ))
             }
         }
-        _ => Error::internal(build_s3_error_message(
-            op,
-            scope,
-            &sdk_err.to_string(),
-            None,
-            None,
-            None,
-            None,
-        )),
+        _ => {
+            let message =
+                build_s3_error_message(op, scope, &sdk_err.to_string(), None, None, None, None);
+            if is_sdk_timeout(sdk_err) {
+                Error::timeout(message)
+            } else {
+                Error::internal(message)
+            }
+        }
+    }
+}
+
+/// True when the SDK gave up waiting on the network rather than receiving an S3 response.
+fn is_sdk_timeout<E, R>(sdk_err: &SdkError<E, R>) -> bool {
+    match sdk_err {
+        SdkError::TimeoutError(_) => true,
+        SdkError::DispatchFailure(failure) => failure.is_timeout(),
+        _ => false,
     }
 }
 
@@ -465,12 +475,15 @@ impl S3Client {
             .unwrap_or(false);
 
         let multipart = MultipartSettings::from_config(config)?;
+        let network = NetworkSettings::from_config(config)?;
 
         // Build S3 config
         let mut s3_config_builder = aws_sdk_s3::Config::builder()
             .behavior_version(BehaviorVersion::latest())
             .region(Region::new(region))
-            .force_path_style(use_path_style);
+            .force_path_style(use_path_style)
+            .timeout_config(network.timeout_config())
+            .retry_config(network.retry_config());
 
         // Set endpoint if provided (MinIO, LocalStack, TOS)
         if let Some(ep) = endpoint {
@@ -1421,6 +1434,74 @@ mod tests {
             auto_detect_content_type: false,
             multipart: MultipartSettings::default(),
         }
+    }
+
+    /// Accepts TCP connections and never answers, like a stalled S3 endpoint.
+    /// Returns the endpoint URL, the accepted-connection counter and the server task.
+    async fn spawn_unresponsive_endpoint() -> (
+        String,
+        std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+        let accepted = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter = accepted.clone();
+        let server = tokio::spawn(async move {
+            let mut held = Vec::new();
+            while let Ok((socket, _)) = listener.accept().await {
+                counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                held.push(socket);
+            }
+        });
+        (format!("http://{addr}"), accepted, server)
+    }
+
+    async fn stalled_endpoint_client(endpoint: String, max_attempts: i64) -> S3Client {
+        let config: HashMap<String, ConfigValue> = [
+            ("bucket", ConfigValue::String("test-bucket".to_string())),
+            ("endpoint", ConfigValue::String(endpoint)),
+            ("access_key_id", ConfigValue::String("test-ak".to_string())),
+            (
+                "secret_access_key",
+                ConfigValue::String("test-sk".to_string()),
+            ),
+            ("attempt_timeout_ms", ConfigValue::Int(200)),
+            ("max_attempts", ConfigValue::Int(max_attempts)),
+        ]
+        .into_iter()
+        .map(|(k, v)| (k.to_string(), v))
+        .collect();
+        S3Client::new(&config).await.unwrap()
+    }
+
+    #[tokio::test]
+    async fn test_request_against_stalled_endpoint_fails_with_timeout() {
+        let (endpoint, _accepted, server) = spawn_unresponsive_endpoint().await;
+        let client = stalled_endpoint_client(endpoint, 1).await;
+
+        let result = tokio::time::timeout(Duration::from_secs(10), client.head_object("k"))
+            .await
+            .expect("S3 request must be bounded by attempt_timeout_ms");
+        server.abort();
+
+        let err = result.expect_err("stalled endpoint must not succeed");
+        assert!(matches!(err, Error::Timeout(_)), "{err:?}");
+        assert!(err.to_string().contains("HeadObject"), "{err}");
+    }
+
+    #[tokio::test]
+    async fn test_timed_out_attempt_is_retried_up_to_max_attempts() {
+        let (endpoint, accepted, server) = spawn_unresponsive_endpoint().await;
+        let client = stalled_endpoint_client(endpoint, 2).await;
+
+        let result = tokio::time::timeout(Duration::from_secs(10), client.head_object("k"))
+            .await
+            .expect("retries must stay bounded");
+        server.abort();
+
+        assert!(matches!(result, Err(Error::Timeout(_))), "{result:?}");
+        assert_eq!(accepted.load(std::sync::atomic::Ordering::SeqCst), 2);
     }
 
     #[test]

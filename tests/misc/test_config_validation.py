@@ -154,6 +154,63 @@ def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):
     with pytest.raises(ValueError):
         _s3_config(**overrides)
 
+
+def test_agfs_s3_network_settings_default_to_backend_defaults():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config())
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    for key in (
+        "connect_timeout_ms",
+        "read_timeout_ms",
+        "attempt_timeout_ms",
+        "operation_timeout_ms",
+        "max_attempts",
+        "retry_mode",
+    ):
+        assert key not in plugin_config
+
+
+def test_agfs_s3_network_settings_are_forwarded_to_ragfs_plugin_config():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(
+            connect_timeout_ms=1000,
+            read_timeout_ms=5000,
+            attempt_timeout_ms=10000,
+            operation_timeout_ms=30000,
+            max_attempts=4,
+            retry_mode="adaptive",
+        ),
+    )
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert plugin_config["connect_timeout_ms"] == 1000
+    assert plugin_config["read_timeout_ms"] == 5000
+    assert plugin_config["attempt_timeout_ms"] == 10000
+    assert plugin_config["operation_timeout_ms"] == 30000
+    assert plugin_config["max_attempts"] == 4
+    assert plugin_config["retry_mode"] == "adaptive"
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"connect_timeout_ms": 0},
+        {"read_timeout_ms": 0},
+        {"attempt_timeout_ms": -1},
+        {"operation_timeout_ms": 0},
+        {"max_attempts": 0},
+        {"max_attempts": 11},
+        {"retry_mode": "legacy"},
+    ],
+)
+def test_agfs_s3_network_settings_reject_invalid_values(overrides):
+    with pytest.raises(ValueError):
+        _s3_config(**overrides)
+
     # Test 2: invalid backend
     print("\n2. Test invalid backend...")
     try:
