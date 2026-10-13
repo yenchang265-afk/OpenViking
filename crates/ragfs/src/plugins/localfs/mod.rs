@@ -1916,7 +1916,7 @@ mod tests {
 
     #[tokio::test]
     async fn write_from_path_and_read_to_path_round_trip() {
-        let (_mount, fs) = fallback_localfs();
+        let (_mount, fs) = localfs();
         let scratch = TempDir::new().unwrap();
 
         for (name, len) in [("empty", 0usize), ("one", 1), ("big", 5 * 1024 * 1024 + 3)] {
@@ -1939,7 +1939,7 @@ mod tests {
 
     #[tokio::test]
     async fn write_from_path_create_truncates_existing_file() {
-        let (_mount, fs) = fallback_localfs();
+        let (_mount, fs) = localfs();
         let scratch = TempDir::new().unwrap();
         let src = scratch.path().join("src");
         std::fs::write(&src, b"new").unwrap();
@@ -1956,7 +1956,7 @@ mod tests {
 
     #[tokio::test]
     async fn write_from_path_create_new_keeps_existing_file() {
-        let (_mount, fs) = fallback_localfs();
+        let (_mount, fs) = localfs();
         let scratch = TempDir::new().unwrap();
         let src = scratch.path().join("src");
         std::fs::write(&src, b"new").unwrap();
@@ -1974,7 +1974,7 @@ mod tests {
 
     #[tokio::test]
     async fn write_from_path_missing_source_creates_nothing() {
-        let (mount, fs) = fallback_localfs();
+        let (mount, fs) = localfs();
         let scratch = TempDir::new().unwrap();
 
         let result = fs
@@ -1987,7 +1987,7 @@ mod tests {
 
     #[tokio::test]
     async fn write_from_path_missing_parent_is_not_found() {
-        let (_mount, fs) = fallback_localfs();
+        let (_mount, fs) = localfs();
         let scratch = TempDir::new().unwrap();
         let src = scratch.path().join("src");
         std::fs::write(&src, b"x").unwrap();
@@ -2001,7 +2001,7 @@ mod tests {
 
     #[tokio::test]
     async fn read_to_path_missing_file_is_not_found() {
-        let (_mount, fs) = fallback_localfs();
+        let (_mount, fs) = localfs();
         let scratch = TempDir::new().unwrap();
 
         let result = fs
