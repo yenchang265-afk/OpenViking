@@ -135,7 +135,7 @@ const agents = [
           <a :href="link('guides/01-configuration')">{{ t('Configuration', '基礎配置') }}<span aria-hidden="true">↗</span></a>
           <a :href="link('guides/04-authentication')">{{ t('Authentication', '身份認證') }}<span aria-hidden="true">↗</span></a>
           <a :href="link('guides/05-observability')">{{ t('Observability', '可觀測性') }}<span aria-hidden="true">↗</span></a>
-          <a :href="link('guides/20-private-deployment')">{{ t('Enterprise Deployment', '企業私有化部署') }}<span aria-hidden="true">↗</span></a>
+          <a :href="link('guides/19-deployment-checklist')">{{ t('Deployment checklist', '部署前檢查') }}<span aria-hidden="true">↗</span></a>
         </div>
       </section>
 

@@ -151,15 +151,11 @@ export const sections: DocSection[] = [
     groups: [
       g('Deploy a service', '部署服務', [
         p('guides/00-overview'),
+        p('guides/19-deployment-checklist'),
         p('guides/03-deployment'),
         p('getting-started/04-setup-for-agent'),
         p('guides/01-configuration'),
         p('guides/02-volcengine-purchase-guide')
-      ]),
-      g('Enterprise deployment', '企業私有化部署', [
-        p('guides/19-deployment-checklist'),
-        p('guides/20-private-deployment'),
-        p('guides/21-private-operations')
       ]),
       g('Secure access', '訪問與安全', [
         p('guides/04-authentication'),

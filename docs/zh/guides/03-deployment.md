@@ -1,6 +1,6 @@
 # 服務端部署
 
-準備自建環境前，先檢視[部署前檢查](19-deployment-checklist.md)。已取得 VikingDB / OpenViking 私有交付包的使用者，請使用[企業私有化部署](20-private-deployment.md)及[升級與排障](21-private-operations.md)流程。
+準備自建環境前，先檢視[部署前檢查](19-deployment-checklist.md)。
 
 OpenViking 以 HTTP 服務執行。安裝服務端之前，先選擇由誰執行服務：
 
@@ -403,7 +403,7 @@ docker compose up -d
 
 ### Kubernetes + Helm
 
-這是開源服務的 Helm chart，與私有交付包的 ovadmin / Operator 流程不同。chart 引數見 [Helm README](https://github.com/volcengine/OpenViking/blob/main/deploy/helm/README.md)。
+chart 引數見 [Helm README](https://github.com/volcengine/OpenViking/blob/main/deploy/helm/README.md)。
 
 專案提供了 Helm chart，位於 `deploy/helm/openviking/`：
 

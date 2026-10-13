@@ -90,7 +90,7 @@ for (const locale of ['en', 'zh'] as Locale[]) {
     assert.ok(pages.some(page => page.href.endsWith('/api/12-acl')))
     assert.ok(pages.some(page => page.href.endsWith('/concepts/15-acl')))
     assert.ok(!pages.some(page => page.href.includes('/migration/') || page.href.includes('/design/')))
-    assert.equal(sectionForPage(`${locale}/guides/20-private-deployment.md`)?.id, 'operate')
+    assert.equal(sectionForPage(`${locale}/guides/19-deployment-checklist.md`)?.id, 'operate')
     assert.equal(sectionForPage(`${locale}/guides/09-ovpack.md`)?.id, 'build')
     assert.equal(sectionForPage(`${locale}/api/99-api-doc-writing-guide.md`)?.id, 'project')
     assert.equal(sectionForPage(`${locale}/configuration/01-server.md`)?.id, 'reference')
