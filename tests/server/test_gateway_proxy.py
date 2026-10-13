@@ -101,14 +101,14 @@ async def test_only_users_and_admins_of_the_current_account_can_be_selected(
 ):
     response = await send(app, "POST", "keys", json={**SETTINGS, "user_id": user_id})
     assert response.status_code == 400
-    assert response.json()["detail"] == "Unknown OpenViking user in this account"
+    assert response.json()["detail"] == "Unknown Business Data Platform user in this account"
     assert forwarded == []
 
 
 async def test_unreadable_key_asks_for_a_pasted_key(app, forwarded):
     response = await send(app, "POST", "keys", json={**SETTINGS, "user_id": "hashed"})
     assert response.status_code == 409
-    assert "paste the user's OpenViking key" in response.json()["detail"]
+    assert "paste the user's Business Data Platform key" in response.json()["detail"]
     assert "prefix" not in response.text
     assert forwarded == []
 
@@ -120,7 +120,7 @@ async def test_root_cannot_choose_a_user(app, forwarded):
     )
     response = await send(app, "POST", "keys", json={**SETTINGS, "user_id": "alice"})
     assert response.status_code == 400
-    assert "paste the user's OpenViking key" in response.json()["detail"]
+    assert "paste the user's Business Data Platform key" in response.json()["detail"]
     assert forwarded == []
     app.state.api_key_manager.list_users_page.assert_not_called()
 

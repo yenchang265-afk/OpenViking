@@ -129,7 +129,7 @@ const ERROR_MESSAGES: Array<[RegExp, string]> = [
   [/^Upstream API key is missing/i, 'errors.upstreamKeyMissing'],
   [/subscription OAuth credentials/i, 'errors.subscriptionKey'],
   [
-    /^OpenViking key belongs to another account/i,
+    /^(?:OpenViking|Business Data Platform) key belongs to another account/i,
     'enums.openviking.otherAccount',
   ],
 ]

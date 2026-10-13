@@ -1,13 +1,13 @@
 const common = {
-  title: 'OpenViking Gateway',
+  title: 'Business Data Platform Gateway',
   description:
-    'Give any API-key model client OpenViking memory. Point the client at the gateway, and it adds relevant memory to each new message and saves conversations back to OpenViking.',
+    'Give any API-key model client Business Data Platform memory. Point the client at the gateway, and it adds relevant memory to each new message and saves conversations back to Business Data Platform.',
   beta: {
     label: 'Beta',
-    hint: 'Beta: OpenViking Gateway is still evolving; later releases may change its settings and APIs.',
+    hint: 'Beta: Business Data Platform Gateway is still evolving; later releases may change its settings and APIs.',
   },
   tabs: {
-    label: 'OpenViking Gateway sections',
+    label: 'Business Data Platform Gateway sections',
     overview: 'Overview',
     upstreams: 'Upstreams',
     profiles: 'Profiles',
@@ -48,42 +48,43 @@ const common = {
   access: {
     title: 'Account administrator access required',
     description:
-      'Managing the OpenViking Gateway needs an account administrator or root key for this account. Add one in Connection settings.',
+      'Managing the Business Data Platform Gateway needs an account administrator or root key for this account. Add one in Connection settings.',
     action: 'Open connection settings',
   },
   unavailable: {
     notEnabled: {
-      title: 'The OpenViking Gateway is turned off',
+      title: 'The Business Data Platform Gateway is turned off',
       description:
-        'This server has the OpenViking Gateway turned off. Turn it on in ov.conf, restart OpenViking, then start the gateway.',
+        'This server has the Business Data Platform Gateway turned off. Turn it on in ov.conf, restart Business Data Platform, then start the gateway.',
     },
     tokenMissing: {
       title: 'The management token is missing',
       description:
-        'OpenViking needs the same management token as the gateway to manage it. Set this environment variable (at least 32 characters) for both OpenViking and the gateway, then restart them.',
+        'Business Data Platform needs the same management token as the gateway to manage it. Set this environment variable (at least 32 characters) for both Business Data Platform and the gateway, then restart them.',
     },
     tokenMismatch: {
       title: "The management tokens don't match",
       description:
-        'OpenViking and the gateway were started with different management tokens, so the gateway turns OpenViking away. Set this environment variable to the same value for both, then restart them.',
+        'Business Data Platform and the gateway were started with different management tokens, so the gateway turns Business Data Platform away. Set this environment variable to the same value for both, then restart them.',
     },
     unsupported: {
-      title: "This OpenViking server can't manage an OpenViking Gateway",
+      title:
+        "This Business Data Platform server can't manage a Business Data Platform Gateway",
       description:
-        'Studio is connected to an OpenViking server without gateway support. Upgrade OpenViking Server, restart it, then retry.',
+        'Studio is connected to a Business Data Platform server without gateway support. Upgrade Business Data Platform Server, restart it, then retry.',
     },
     devMode: {
-      title: 'OpenViking runs in development mode',
+      title: 'Business Data Platform runs in development mode',
       description:
-        'In development mode every key acts as root, and the gateway refuses root keys, so no gateway key can be issued. Switch OpenViking to API key mode, restart it, then add an account admin key in Connection settings.',
+        'In development mode every key acts as root, and the gateway refuses root keys, so no gateway key can be issued. Switch Business Data Platform to API key mode, restart it, then add an account admin key in Connection settings.',
     },
     unreachable: {
-      title: "OpenViking can't reach the gateway",
+      title: "Business Data Platform can't reach the gateway",
       description:
-        'The gateway is not running, or gateway.url in ov.conf points to the wrong address. Start the gateway and check that OpenViking can reach that address.',
+        'The gateway is not running, or gateway.url in ov.conf points to the wrong address. Start the gateway and check that Business Data Platform can reach that address.',
     },
     failed: {
-      title: "Couldn't load the OpenViking Gateway",
+      title: "Couldn't load the Business Data Platform Gateway",
     },
     fixLabel: 'What to change',
     terminal: 'Terminal',
@@ -92,14 +93,15 @@ const common = {
   },
   errors: {
     reasons: {
-      not_enabled: 'The OpenViking Gateway is turned off on this server.',
+      not_enabled:
+        'The Business Data Platform Gateway is turned off on this server.',
       token_missing:
-        "OpenViking can't manage the gateway because the management token isn't set.",
+        "Business Data Platform can't manage the gateway because the management token isn't set.",
       token_mismatch:
-        "The gateway rejected OpenViking's management token. Both must use the same token.",
-      unreachable: "OpenViking can't reach the gateway.",
+        "The gateway rejected Business Data Platform's management token. Both must use the same token.",
+      unreachable: "Business Data Platform can't reach the gateway.",
       unsupported:
-        "This OpenViking server doesn't support the OpenViking Gateway.",
+        "This Business Data Platform server doesn't support the Business Data Platform Gateway.",
       conflict: 'This change conflicts with existing settings.',
       invalid:
         'The gateway rejected these settings. Check the values and try again.',

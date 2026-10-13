@@ -133,7 +133,7 @@ const upstreams = {
         '選定服務商後，下方只能選它提供的協議。列表裡沒有的服務商，以及 LiteLLM 這類相容代理，請選“通用”。',
       hints: {
         deepseek:
-          '請求帶工具時，DeepSeek 要求回傳之前每條回覆的推理內容。閘道器會補回客戶端丟掉的部分，所以 OpenViking 工具可以正常使用；如果在下方關閉補全，只有請求關閉了思考模式才會提供這些工具。',
+          '請求帶工具時，DeepSeek 要求回傳之前每條回覆的推理內容。閘道器會補回客戶端丟掉的部分，所以 Business Data Platform 工具可以正常使用；如果在下方關閉補全，只有請求關閉了思考模式才會提供這些工具。',
         ark: '填寫不帶路徑的方舟地址，例如 https://ark.cn-beijing.volces.com。閘道器會按協議補上 /api/v3 或 /api/compatible/v1，並讓每段對話的 prompt_cache_key 保持不變，快取才能持續命中。',
         byteplus:
           '填寫不帶路徑的 BytePlus 方舟地址，例如 https://ark.ap-southeast.bytepluses.com。閘道器會按協議補上 /api/v3 或 /api/compatible/v1，並讓每段對話的 prompt_cache_key 保持不變，快取才能持續命中。',
@@ -213,9 +213,9 @@ const upstreams = {
         '停用的上游不再接收請求。正在使用它的對話會轉到其他提供該模型的上游，前提是客戶端的金鑰允許使用。',
     },
     gatewayTools: {
-      label: '允許 OpenViking 工具',
+      label: '允許 Business Data Platform 工具',
       description:
-        '允許模型通過這個上游使用上下文配置中選定的 OpenViking 工具。關閉後，進行中的對話也會停用這些工具。',
+        '允許模型通過這個上游使用上下文配置中選定的 Business Data Platform 工具。關閉後，進行中的對話也會停用這些工具。',
     },
     replayReasoning: {
       label: '補全推理內容回傳',

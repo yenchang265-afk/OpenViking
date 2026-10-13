@@ -1,6 +1,6 @@
 const overview = {
   description:
-    '客戶端如何使用閘道器：請求量、提示詞快取和記憶召回，以及 OpenViking 的執行狀態。',
+    '客戶端如何使用閘道器：請求量、提示詞快取和記憶召回，以及 Business Data Platform 的執行狀態。',
   loadFailed: '無法載入概覽',
   showIssues: '在請求日誌中檢視',
   sampleNote_one:
@@ -32,7 +32,7 @@ const overview = {
     key: {
       title: '簽發閘道器金鑰',
       description:
-        '客戶端用這個金鑰呼叫閘道器。每個金鑰屬於一個 OpenViking 使用者，閘道器讀寫的就是這個使用者的記憶。',
+        '客戶端用這個金鑰呼叫閘道器。每個金鑰屬於一個 Business Data Platform 使用者，閘道器讀寫的就是這個使用者的記憶。',
       blocked: '請先新增上游並建立上下文配置。',
       done_one: '已簽發 {{count}} 個金鑰',
       done_other: '已簽發 {{count}} 個金鑰',
@@ -61,20 +61,20 @@ const overview = {
     },
     continuation: {
       label: '輪內快取命中率',
-      hint: '同一輪對話裡後續的模型呼叫（例如工具結果返回之後）命中提示詞快取的比例，包括模型使用 OpenViking 工具時產生的呼叫。',
+      hint: '同一輪對話裡後續的模型呼叫（例如工具結果返回之後）命中提示詞快取的比例，包括模型使用 Business Data Platform 工具時產生的呼叫。',
       footnote_one: '{{number}} 個工具步驟',
       footnote_other: '{{number}} 個工具步驟',
     },
     recall: {
       label: '召回的記憶條數',
-      hint: '閘道器為新訊息補充的記憶條數。平均耗時只統計實際檢索了 OpenViking 的訊息。',
+      hint: '閘道器為新訊息補充的記憶條數。平均耗時只統計實際檢索了 Business Data Platform 的訊息。',
       footnote_one: '檢索 {{number}} 次，平均 {{duration}}',
       footnote_other: '檢索 {{number}} 次，平均 {{duration}}',
       none: '還沒有召回',
     },
   },
   openviking: {
-    title: 'OpenViking',
+    title: 'Business Data Platform',
     description: '為新訊息檢索記憶，並儲存對話。',
     version: '版本',
     authMode: '認證方式',
@@ -86,14 +86,17 @@ const overview = {
       ldap: 'LDAP 模式',
     },
     unreachable:
-      '連不上 OpenViking 期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 OpenViking 恢復。',
-    starting: '閘道器還沒完成對 OpenViking 的首次檢查，請稍後重新整理。',
+      '連不上 Business Data Platform 期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 Business Data Platform 恢復。',
+    starting:
+      '閘道器還沒完成對 Business Data Platform 的首次檢查，請稍後重新整理。',
   },
   saving: {
     title: '儲存對話',
     ok: '最近的請求中沒有儲存失敗的對話。',
-    retrying_one: '有 {{count}} 段對話儲存到 OpenViking 失敗，正在重試。',
-    retrying_other: '有 {{count}} 段對話儲存到 OpenViking 失敗，正在重試。',
+    retrying_one:
+      '有 {{count}} 段對話儲存到 Business Data Platform 失敗，正在重試。',
+    retrying_other:
+      '有 {{count}} 段對話儲存到 Business Data Platform 失敗，正在重試。',
     paused_one:
       '有 {{count}} 段對話多次儲存失敗，已暫停儲存；閘道器每 5 分鐘重試一次。',
     paused_other:

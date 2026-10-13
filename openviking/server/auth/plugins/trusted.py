@@ -193,7 +193,7 @@ class TrustedAuthPlugin(AuthPlugin):
         if config.root_api_key and config.root_api_key.strip():
             return
         logger.error(
-            "Cannot start OpenViking: trusted mode requires a non-empty server.root_api_key, "
+            "Cannot start Business Data Platform: trusted mode requires a non-empty server.root_api_key, "
             "including on localhost. Set server.root_api_key in the server's ov.conf and "
             "restart. Configure clients and Web Studio to use the same key."
         )

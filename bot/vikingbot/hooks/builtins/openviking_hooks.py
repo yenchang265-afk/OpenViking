@@ -155,7 +155,7 @@ class OpenVikingCompactHook(Hook):
             if not confirmed:
                 # The caller only clears local messages after a successful sync.
                 raise RuntimeError(
-                    "OpenViking did not confirm Working Memory generation; "
+                    "Business Data Platform did not confirm Working Memory generation; "
                     "session history was kept. Upgrade the server and retry."
                 )
             logger.info(

@@ -20,7 +20,7 @@ def load_config():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="OpenViking Gateway (separate from VikingBot Gateway)"
+        description="Business Data Platform Gateway (separate from VikingBot Gateway)"
     )
     parser.add_argument("--config", help="Path to ov.conf")
     args = parser.parse_args()
@@ -33,7 +33,7 @@ def main():
     ]
     if missing:
         raise SystemExit(
-            "Missing OpenViking Gateway dependencies: "
+            "Missing Business Data Platform Gateway dependencies: "
             + ", ".join(missing)
             + ". Install with: pip install 'openviking[gateway]'"
         )

@@ -163,11 +163,11 @@ describe('toGatewayError', () => {
         status: 'error',
         error: {
           code: 'UNAVAILABLE',
-          message: 'OpenViking Gateway is not enabled',
+          message: 'Business Data Platform Gateway is not enabled',
         },
       },
       'not_enabled',
-      'OpenViking Gateway is not enabled',
+      'Business Data Platform Gateway is not enabled',
     ],
     [
       'a missing management token',
@@ -176,11 +176,12 @@ describe('toGatewayError', () => {
         status: 'error',
         error: {
           code: 'UNAVAILABLE',
-          message: 'OpenViking Gateway management token is not configured',
+          message:
+            'Business Data Platform Gateway management token is not configured',
         },
       },
       'token_missing',
-      'OpenViking Gateway management token is not configured',
+      'Business Data Platform Gateway management token is not configured',
     ],
     [
       'an unreachable gateway',
@@ -189,12 +190,13 @@ describe('toGatewayError', () => {
         status: 'error',
         error: {
           code: 'UNAVAILABLE',
-          message: 'OpenViking Gateway management service is unavailable',
+          message:
+            'Business Data Platform Gateway management service is unavailable',
           details: { original_http_status_code: 502 },
         },
       },
       'unreachable',
-      'OpenViking Gateway management service is unavailable',
+      'Business Data Platform Gateway management service is unavailable',
     ],
     [
       'a management token that differs from the gateway',

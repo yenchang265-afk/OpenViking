@@ -144,7 +144,7 @@ def create_app(config: OpenVikingGatewayConfig | None = None):
                 "localhost",
             }:
                 raise ValueError(
-                    "OpenViking Gateway must bind to loopback when OpenViking uses dev authentication"
+                    "Business Data Platform Gateway must bind to loopback when Business Data Platform uses dev authentication"
                 )
             task = asyncio.create_task(maintenance(app))
             try:
@@ -157,7 +157,7 @@ def create_app(config: OpenVikingGatewayConfig | None = None):
                 management.close()
 
     app = FastAPI(
-        title="OpenViking Gateway",
+        title="Business Data Platform Gateway",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -190,7 +190,7 @@ def create_app(config: OpenVikingGatewayConfig | None = None):
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception("OpenViking Gateway maintenance failed")
+                logger.exception("Business Data Platform Gateway maintenance failed")
                 await asyncio.sleep(1)
 
     @app.exception_handler(VikingError)
@@ -215,7 +215,7 @@ def create_app(config: OpenVikingGatewayConfig | None = None):
             raise HTTPException(403, "Claude subscription OAuth credentials are not supported")
         credential = await management.authenticate(key)
         if not credential:
-            raise HTTPException(401, "Invalid or revoked OpenViking Gateway key")
+            raise HTTPException(401, "Invalid or revoked Business Data Platform Gateway key")
         return credential
 
     def admin_account(request):
@@ -360,7 +360,7 @@ def create_app(config: OpenVikingGatewayConfig | None = None):
             raise HTTPException(422, "Invalid key configuration")
         identity = await app.state.viking.health(value.openviking_key)
         if identity["account_id"] != account:
-            raise HTTPException(403, "OpenViking key belongs to another account")
+            raise HTTPException(403, "Business Data Platform key belongs to another account")
         if not await management.get(account, "policies", value.policy_id):
             raise HTTPException(400, "Unknown context policy")
         for identifier in value.upstream_ids:
@@ -453,7 +453,7 @@ def create_app(config: OpenVikingGatewayConfig | None = None):
                     headers=filtered_headers(response.headers),
                 )
         except (aiohttp.ClientError, asyncio.TimeoutError):
-            raise HTTPException(502, "OpenViking upload is unavailable")
+            raise HTTPException(502, "Business Data Platform upload is unavailable")
 
     @app.api_route("/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     async def proxy(path: str, request: Request):

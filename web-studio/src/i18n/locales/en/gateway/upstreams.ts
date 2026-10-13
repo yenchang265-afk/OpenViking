@@ -137,7 +137,7 @@ const upstreams = {
         'Limits the protocols below to the ones this provider offers. For a provider not listed here, or a compatible proxy such as LiteLLM, choose Generic.',
       hints: {
         deepseek:
-          'With tools present, DeepSeek needs the reasoning of every earlier reply. The gateway restores what clients drop, so OpenViking tools work; if you turn that off below, they are only offered when a request turns thinking off.',
+          'With tools present, DeepSeek needs the reasoning of every earlier reply. The gateway restores what clients drop, so Business Data Platform tools work; if you turn that off below, they are only offered when a request turns thinking off.',
         ark: "Enter the Ark address without a path, such as https://ark.cn-beijing.volces.com. The gateway adds /api/v3 or /api/compatible/v1 for each protocol and keeps each conversation's prompt_cache_key stable so the cache keeps hitting.",
         byteplus:
           "Enter the ModelArk address without a path, such as https://ark.ap-southeast.bytepluses.com. The gateway adds /api/v3 or /api/compatible/v1 for each protocol and keeps each conversation's prompt_cache_key stable so the cache keeps hitting.",
@@ -221,9 +221,9 @@ const upstreams = {
         "A turned-off upstream receives no requests. Conversations on it move to another upstream that serves the model, if the client's key allows one.",
     },
     gatewayTools: {
-      label: 'Allow OpenViking tools',
+      label: 'Allow Business Data Platform tools',
       description:
-        'Context profiles with OpenViking tools can offer them through this upstream. Turning this off also stops them in ongoing conversations.',
+        'Context profiles with Business Data Platform tools can offer them through this upstream. Turning this off also stops them in ongoing conversations.',
     },
     replayReasoning: {
       label: 'Restore reasoning the client drops',
