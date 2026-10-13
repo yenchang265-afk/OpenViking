@@ -234,7 +234,8 @@ const workspace = {
     searchNoResultsDescription: '可清除搜尋條件，或切換頁面繼續檢視。',
     loading: '正在載入經驗列表...',
     loadFailed: '經驗列表載入失敗',
-    networkError: '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
+    networkError:
+      '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
     empty: '還沒有 Agent 經驗',
     emptyDescription:
@@ -345,8 +346,56 @@ const workspace = {
     emptyScope: '暫無{{scope}}',
     emptyScopeDescription: '新增對應作用域的技能後，會在這裡展示。',
     loadFailed: '技能載入失敗',
-    networkError: '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
+    networkError:
+      '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
+    create: {
+      open: '新增技能',
+      title: '建立技能',
+      description:
+        '撰寫供 Agent 使用的 SKILL.md。之後可在工作臺中為它加入更多檔案。',
+      scopeLabel: '儲存到',
+      scopeHint: {
+        user: '僅你可以使用，儲存在 {{uri}}。',
+        agent: '此空間內的所有人都可使用，儲存在 {{uri}}。',
+      },
+      nameLabel: '名稱',
+      namePlaceholder: 'pr-review',
+      nameHint: '最多 {{max}} 個字元，只能包含英文字母、數字、連字號和底線。',
+      nameExists: '已有同名的{{scope}}，建立後會取代該技能。',
+      descriptionLabel: '簡介',
+      descriptionPlaceholder: '技能的用途，以及 Agent 應在何時使用它。',
+      descriptionHint: 'Agent 會依據簡介判斷何時使用技能，請說明適用情境。',
+      instructionsLabel: '指令',
+      instructionsPlaceholder: '# 步驟\n\n1. ...\n2. ...',
+      instructionsHint:
+        'SKILL.md 的 Markdown 正文；名稱和簡介會寫入 frontmatter。',
+      errors: {
+        name: {
+          required: '請輸入名稱。',
+          tooLong: '名稱不能超過 {{max}} 個字元。',
+          invalid: '只能使用英文字母、數字、連字號和底線。',
+        },
+        description: {
+          required: '請輸入簡介。',
+          tooLong: '簡介不能超過 {{max}} 個字元。',
+        },
+      },
+      cancel: '取消',
+      submit: '建立技能',
+      creating: '正在建立...',
+      created: '已建立技能 {{name}}',
+      replaced: '已取代技能 {{name}}',
+      replace: {
+        title: '要取代 {{name}} 嗎？',
+        description:
+          '已有同名的{{scope}}。它的 SKILL.md 會被這份內容覆寫，技能中的其他檔案會保留。此操作無法復原。',
+        back: '返回',
+        confirm: '取代技能',
+        replacing: '正在取代...',
+      },
+      failed: '技能建立失敗：{{error}}',
+    },
     detail: '詳情',
     openPlayground: '在工作臺中開啟',
     viewDetail: '檢視 {{name}} 詳情',
@@ -589,7 +638,8 @@ const workspace = {
     },
     addDialog: {
       title: '新增定時同步',
-      description: '新增遠端資源，並設定 Business Data Platform 檢查更新的週期。',
+      description:
+        '新增遠端資源，並設定 Business Data Platform 檢查更新的週期。',
     },
     editDialog: {
       title: '編輯定時同步',
@@ -878,7 +928,8 @@ const workspace = {
         '這些上級授權仍會儲存，但不會在當前目錄及其下級目錄和檔案生效。',
       inactive: '未生效',
       adminHint: 'Account 管理員始終擁有管理許可權，即使授權列表為空。',
-      indexHint: '修改許可權需要資源已有索引記錄；新建資源請等待索引完成後配置。',
+      indexHint:
+        '修改許可權需要資源已有索引記錄；新建資源請等待索引完成後配置。',
       levelFor: '{{principal}} 的許可權',
       remove: '移除授權',
       restoreInheritance: '恢復繼承上級許可權',
@@ -1012,7 +1063,8 @@ const workspace = {
       userHint: '供工作臺和租戶資料 API 使用。',
     },
     connectionPage: {
-      description: '配置 Business Data Platform 服務連線、控制面憑證和當前資料訪問憑證。',
+      description:
+        '配置 Business Data Platform 服務連線、控制面憑證和當前資料訪問憑證。',
       title: '連線設定',
     },
     dialogs: {
@@ -1114,7 +1166,8 @@ const workspace = {
         '只有配置並通過校驗的 Root 或帳號管理員 API 金鑰才能管理使用者。',
       accessDeniedTitle: '無使用者管理許可權',
       currentAccountDescription: '管理當前帳號的使用者和訪問憑證。',
-      description: '檢視選中帳號下的使用者和憑證，並在網頁端新增使用者或輪換金鑰。',
+      description:
+        '檢視選中帳號下的使用者和憑證，並在網頁端新增使用者或輪換金鑰。',
       memberListDescription:
         '“切換身份”會將該使用者設為工作臺、檢索等資料頁面的訪問身份，不會改變當前 Root 或管理員憑證。',
       memberListDescriptionRoot:
