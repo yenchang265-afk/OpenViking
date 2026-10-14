@@ -171,11 +171,12 @@ services:
   # in the OpenViking container. Start with: docker compose --profile redis up -d
   # Set REDIS_PASSWORD in .env. AOF is on because the job queue lives here;
   # noeviction stops Redis from dropping queued jobs under memory pressure.
-  # Matching ov.conf snippet:
+  # Matching ov.conf snippet (Redis keys are namespaced by the top-level
+  # "service_name", default "openviking-server"):
   #   "cache": {"provider": "redis", "params": {"mode": "standalone",
   #     "endpoints": ["redis://redis:6379"], "password": "<REDIS_PASSWORD>"}},
   #   "storage": {"agfs": {"queuefs": {"backend": "cache"},
-  #     "pathlock": {"provider": "cache", "namespace": "openviking"}}}
+  #     "pathlock": {"provider": "cache"}}}
   redis:
     image: redis:7.4-alpine
     container_name: openviking-redis
