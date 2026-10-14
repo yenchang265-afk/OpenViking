@@ -67,6 +67,22 @@ RETRIEVAL_OUTPUT_FIELDS = [
     "search_tags",
 ]
 
+# Renamed schema fields, current name -> name in collections created before the
+# rename. Collections that only have the old field keep writing it, and reads
+# fold it into the current name so callers never see the old one.
+LEGACY_FIELD_ALIASES: Dict[str, str] = {"created_by": "uploaded_by"}
+
+
+def _fold_legacy_fields(records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    for record in records:
+        for current, legacy in LEGACY_FIELD_ALIASES.items():
+            if legacy in record:
+                value = record.pop(legacy)
+                if value and not record.get(current):
+                    record[current] = value
+    return records
+
+
 LOOKUP_OUTPUT_FIELDS = [
     "uri",
     "level",
@@ -365,6 +381,42 @@ class _SingleAccountBackend:
             self._meta_data_cache = coll.get_meta_data() or {}
         return self._meta_data_cache
 
+    def _known_field_names(self) -> Optional[set]:
+        try:
+            fields = self._get_meta_data(self._get_collection()).get("Fields", [])
+        except Exception:
+            return None
+        return {item.get("FieldName") for item in fields} or None
+
+    def _alias_legacy_write_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Write renamed fields under their old name where only that one exists."""
+        known = self._known_field_names()
+        if not known:
+            return data
+        for current, legacy in LEGACY_FIELD_ALIASES.items():
+            if current in data and current not in known and legacy in known:
+                data[legacy] = data.pop(current)
+        return data
+
+    async def _legacy_read_fields(self, output_fields: Optional[List[str]]) -> Optional[List[str]]:
+        """Also read the old name of renamed fields, and never ask for a missing one."""
+        if not output_fields or not any(name in output_fields for name in LEGACY_FIELD_ALIASES):
+            return output_fields
+        if not self._meta_data_cache:
+            await self._refresh_meta_data_async()
+        known = {item.get("FieldName") for item in (self._meta_data_cache or {}).get("Fields", [])}
+        if not known:
+            return output_fields
+        fields = list(output_fields)
+        for current, legacy in LEGACY_FIELD_ALIASES.items():
+            if current not in fields:
+                continue
+            if legacy in known and legacy not in fields:
+                fields.append(legacy)
+            if current not in known:
+                fields.remove(current)
+        return fields
+
     def _filter_known_fields(self, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             coll = self._get_collection()
@@ -377,7 +429,7 @@ class _SingleAccountBackend:
     def _prepare_upsert_payload(self, data: Dict[str, Any]) -> Dict[str, Any]:
         """Drop runtime-only or stale legacy fields before writing back to the current schema."""
         self._validate_vector_dimension(data.get("vector"))
-        payload = {k: v for k, v in data.items() if v is not None}
+        payload = self._alias_legacy_write_fields({k: v for k, v in data.items() if v is not None})
         filtered = self._filter_known_fields(payload)
         result = {k: v for k, v in filtered.items() if v is not None}
 
@@ -414,7 +466,9 @@ class _SingleAccountBackend:
         """Prepare a strict partial update without inventing omitted fields."""
         self._validate_vector_dimension(data.get("vector"))
         payload = self._filter_known_fields(
-            {key: value for key, value in data.items() if value is not None}
+            self._alias_legacy_write_fields(
+                {key: value for key, value in data.items() if value is not None}
+            )
         )
         if self._adapter.USE_CONTENT_FIELD:
             content = payload.get("content")
@@ -610,7 +664,7 @@ class _SingleAccountBackend:
                 raise
 
             if existing_records:
-                existing = dict(existing_records[0])
+                existing = _fold_legacy_fields([dict(existing_records[0])])[0]
                 if options.search_tag_mode == "append" and payload.get("search_tags") is not None:
                     payload["search_tags"] = merge_search_tags(
                         existing.get("search_tags"),
@@ -725,7 +779,7 @@ class _SingleAccountBackend:
             records = await self._async_adapter.call("get", ids)
             if self._bound_account_id:
                 records = [r for r in records if r.get("account_id") == self._bound_account_id]
-            return records
+            return _fold_legacy_fields(records)
         except Exception as e:
             logger.error("Error getting records: %s", e)
             raise
@@ -750,7 +804,7 @@ class _SingleAccountBackend:
         records = await self._async_adapter.call("get", ids)
         if self._bound_account_id:
             records = [r for r in records if r.get("account_id") == self._bound_account_id]
-        return records
+        return _fold_legacy_fields(records)
 
     @_backend_operation
     async def strict_get(self, ids: List[str]) -> List[Dict[str, Any]]:
@@ -780,17 +834,18 @@ class _SingleAccountBackend:
         order_desc: bool = False,
     ) -> List[Dict[str, Any]]:
         """Query transaction records without fail-open exception handling."""
-        return await self._async_adapter.call(
+        records = await self._async_adapter.call(
             "query",
             query_vector=None,
             sparse_query_vector=None,
             filter=self._with_account_filter(filter),
             limit=limit,
             offset=offset,
-            output_fields=output_fields,
+            output_fields=await self._legacy_read_fields(output_fields),
             order_by=order_by,
             order_desc=order_desc,
         )
+        return _fold_legacy_fields(records)
 
     @_backend_operation
     async def strict_count(self, filter: Optional[Dict[str, Any] | FilterExpr] = None) -> int:
@@ -872,18 +927,19 @@ class _SingleAccountBackend:
                     f"[_SingleAccountBackend.query] Applied account filter, final filter={filter}"
                 )
 
-            return await self._async_adapter.call(
+            records = await self._async_adapter.call(
                 "query",
                 query_vector=query_vector,
                 sparse_query_vector=sparse_query_vector,
                 filter=filter,
                 limit=limit,
                 offset=offset,
-                output_fields=output_fields,
+                output_fields=await self._legacy_read_fields(output_fields),
                 order_by=order_by,
                 order_desc=order_desc,
                 advance=advance,
             )
+            return _fold_legacy_fields(records)
         except Exception as e:
             logger.error("Error querying collection: %s", e, exc_info=True)
             raise
@@ -898,14 +954,15 @@ class _SingleAccountBackend:
         advance: Optional[Dict[str, Any]] = None,
     ) -> List[Dict[str, Any]]:
         try:
-            return await self._async_adapter.call(
+            records = await self._async_adapter.call(
                 "search_by_random",
                 filter=self._with_account_filter(filter),
                 limit=limit,
                 offset=offset,
-                output_fields=output_fields,
+                output_fields=await self._legacy_read_fields(output_fields),
                 advance=advance,
             )
+            return _fold_legacy_fields(records)
         except Exception as e:
             logger.error("Error searching collection by random: %s", e, exc_info=True)
             raise
@@ -1069,7 +1126,7 @@ class _SingleAccountBackend:
                 else:
                     filter = account_filter
 
-            return await self._async_adapter.run(
+            records = await self._async_adapter.run(
                 self._adapter.search_by_keywords,
                 keywords=keywords,
                 query=query,
@@ -1078,8 +1135,9 @@ class _SingleAccountBackend:
                 limit=limit,
                 offset=offset,
                 filter=filter,
-                output_fields=output_fields,
+                output_fields=await self._legacy_read_fields(output_fields),
             )
+            return _fold_legacy_fields(records)
         except Exception as e:
             logger.error("Error searching by keywords: %s", e)
             raise

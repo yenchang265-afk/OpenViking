@@ -136,10 +136,11 @@ class CollectionSchemas:
                 {"FieldName": "md5", "FieldType": "string", "DefaultValue": ""},
                 {"FieldName": "account_id", "FieldType": "string"},
                 {"FieldName": "owner_user_id", "FieldType": "string"},
-                # user_ids of whoever first uploaded (set once) and last changed
-                # the record. Older records lack them; callers treat
-                # missing/empty as "unknown".
-                {"FieldName": "uploaded_by", "FieldType": "string"},
+                # user_ids of whoever created (set once) and last changed the
+                # record. Older records lack them; callers treat missing/empty as
+                # "unknown". Collections created before the rename store the
+                # creator as ``uploaded_by``; the vector backend aliases it.
+                {"FieldName": "created_by", "FieldType": "string"},
                 {"FieldName": "updated_by", "FieldType": "string"},
                 {
                     "FieldName": ACL_MODE_FIELD,
@@ -172,7 +173,7 @@ class CollectionSchemas:
                 "search_tags",
                 "account_id",
                 "owner_user_id",
-                "uploaded_by",
+                "created_by",
                 "updated_by",
                 ACL_MODE_FIELD,
                 *ACL_GRANT_FIELDS,
@@ -914,10 +915,10 @@ class TextEmbeddingHandler(DequeueHandlerBase):
                         inserted_data = FieldPatch(merge_fields, merge_modes).apply(
                             {**base, **inserted_data}
                         )
-                        # The original uploader is set once; later writers only
-                        # change updated_by.
-                        if existing_records and existing_records[0].get("uploaded_by"):
-                            inserted_data["uploaded_by"] = existing_records[0]["uploaded_by"]
+                        # The creator is set once; later writers only change
+                        # updated_by.
+                        if existing_records and existing_records[0].get("created_by"):
+                            inserted_data["created_by"] = existing_records[0]["created_by"]
                         if extracted_memory_type:
                             inserted_data["search_tags"] = merge_search_tags(
                                 inserted_data.get("search_tags"),

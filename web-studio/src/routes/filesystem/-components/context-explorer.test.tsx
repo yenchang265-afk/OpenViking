@@ -116,7 +116,7 @@ describe('ContextTree authors', () => {
         entries:
           uri === 'viking://'
             ? [directory]
-            : [{ ...file, uploadedBy: 'alice', updatedBy: 'bob' }],
+            : [{ ...file, createdBy: 'alice', updatedBy: 'bob' }],
       },
       isError: false,
       isLoading: false,
@@ -129,7 +129,7 @@ describe('ContextTree authors', () => {
     )
     expect(childCall?.[1]).toMatchObject({ extraFields: ['authors'] })
     const row = screen.getByRole('button', { name: 'guide.md' })
-    expect(row.querySelector('[title="uploadedBy:alice"]')).toBeTruthy()
+    expect(row.querySelector('[title="createdBy:alice"]')).toBeTruthy()
     expect(row.querySelector('[title="updatedBy:bob"]')).toBeTruthy()
   })
 
@@ -137,7 +137,7 @@ describe('ContextTree authors', () => {
     renderTree({ expandedKeys: new Set([directory.uri]) })
 
     const row = screen.getByRole('button', { name: 'guide.md' })
-    expect(row.querySelector('[title^="uploadedBy"]')).toBeNull()
+    expect(row.querySelector('[title^="createdBy"]')).toBeNull()
   })
 })
 

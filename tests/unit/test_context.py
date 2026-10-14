@@ -559,18 +559,18 @@ class TestContextEdgeCases:
         assert "md5" not in ctx.to_dict()
         assert Context.from_dict({"uri": "viking://resources/x/b.py"}).md5 == ""
 
-    def test_uploaded_by_roundtrip(self):
-        ctx = Context(uri="viking://resources/x/a.py", is_leaf=True, uploaded_by="alice")
+    def test_created_by_roundtrip(self):
+        ctx = Context(uri="viking://resources/x/a.py", is_leaf=True, created_by="alice")
 
-        assert ctx.to_dict()["uploaded_by"] == "alice"
-        assert Context.from_dict(ctx.to_dict()).uploaded_by == "alice"
+        assert ctx.to_dict()["created_by"] == "alice"
+        assert Context.from_dict(ctx.to_dict()).created_by == "alice"
 
-    def test_missing_uploaded_by_is_omitted_from_dict(self):
-        # Omitted (not "") so a MERGE write such as a reindex keeps the stored uploader.
+    def test_missing_created_by_is_omitted_from_dict(self):
+        # Omitted (not "") so a MERGE write such as a reindex keeps the stored creator.
         ctx = Context(uri="viking://resources/x/b.py", is_leaf=True)
 
-        assert "uploaded_by" not in ctx.to_dict()
-        assert Context.from_dict({"uri": "viking://resources/x/b.py"}).uploaded_by == ""
+        assert "created_by" not in ctx.to_dict()
+        assert Context.from_dict({"uri": "viking://resources/x/b.py"}).created_by == ""
 
     def test_updated_by_roundtrip(self):
         ctx = Context(uri="viking://resources/x/a.py", is_leaf=True, updated_by="bob")

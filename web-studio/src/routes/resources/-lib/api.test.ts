@@ -102,14 +102,14 @@ describe('fetchFsList', () => {
             uri: 'viking://resources/a.md',
             name: 'a.md',
             isDir: false,
-            uploaded_by: 'alice',
+            created_by: 'alice',
             updated_by: 'bob',
           },
           {
             uri: 'viking://resources/b.md',
             name: 'b.md',
             isDir: false,
-            uploaded_by: '',
+            created_by: '',
             updated_by: '',
           },
         ],
@@ -126,14 +126,14 @@ describe('fetchFsList', () => {
       query: expect.objectContaining({ extra_fields: ['authors'] }),
     })
     expect(
-      result.entries.map(({ name, uploadedBy, updatedBy }) => ({
+      result.entries.map(({ name, createdBy, updatedBy }) => ({
         name,
-        uploadedBy,
+        createdBy,
         updatedBy,
       })),
     ).toEqual([
-      { name: 'a.md', uploadedBy: 'alice', updatedBy: 'bob' },
-      { name: 'b.md', uploadedBy: '', updatedBy: '' },
+      { name: 'a.md', createdBy: 'alice', updatedBy: 'bob' },
+      { name: 'b.md', createdBy: '', updatedBy: '' },
     ])
   })
 
@@ -174,13 +174,13 @@ describe('removeResource', () => {
 })
 
 describe('fetchResourceAuthors', () => {
-  it('reads the uploader and last updater from the resource attrs', async () => {
+  it('reads the creator and last updater from the resource attrs', async () => {
     clientGetMock.mockResolvedValue({
       data: {
         status: 'ok',
         result: {
           uri: 'viking://resources/demo.md',
-          attrs: { tags: [], uploaded_by: 'alice', updated_by: 'bob' },
+          attrs: { tags: [], created_by: 'alice', updated_by: 'bob' },
         },
       },
       headers: {},
@@ -189,7 +189,7 @@ describe('fetchResourceAuthors', () => {
 
     await expect(
       fetchResourceAuthors('viking://resources/demo.md'),
-    ).resolves.toEqual({ uploadedBy: 'alice', updatedBy: 'bob' })
+    ).resolves.toEqual({ createdBy: 'alice', updatedBy: 'bob' })
     expect(clientGetMock).toHaveBeenCalledWith(
       expect.objectContaining({
         query: { uri: 'viking://resources/demo.md' },
@@ -207,7 +207,7 @@ describe('fetchResourceAuthors', () => {
 
     await expect(
       fetchResourceAuthors('viking://resources/legacy.md'),
-    ).resolves.toEqual({ uploadedBy: '', updatedBy: '' })
+    ).resolves.toEqual({ createdBy: '', updatedBy: '' })
   })
 })
 

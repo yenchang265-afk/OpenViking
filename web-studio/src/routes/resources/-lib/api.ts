@@ -312,10 +312,10 @@ export async function reindexResource(
 }
 
 type FsAttrsResult = {
-  attrs?: { uploaded_by?: unknown; updated_by?: unknown }
+  attrs?: { created_by?: unknown; updated_by?: unknown }
 }
 
-export type ResourceAuthors = { uploadedBy: string; updatedBy: string }
+export type ResourceAuthors = { createdBy: string; updatedBy: string }
 
 /** User ids that first uploaded and last changed `uri`; '' when unknown. */
 export async function fetchResourceAuthors(
@@ -326,10 +326,10 @@ export async function fetchResourceAuthors(
     const result = await getOvResult<FsAttrsResult>(
       ovClient.client.get({ query: { uri }, signal, url: '/api/v1/fs/attrs' }),
     )
-    const { uploaded_by: uploadedBy, updated_by: updatedBy } =
+    const { created_by: createdBy, updated_by: updatedBy } =
       result.attrs ?? {}
     return {
-      uploadedBy: typeof uploadedBy === 'string' ? uploadedBy : '',
+      createdBy: typeof createdBy === 'string' ? createdBy : '',
       updatedBy: typeof updatedBy === 'string' ? updatedBy : '',
     }
   } catch (error) {

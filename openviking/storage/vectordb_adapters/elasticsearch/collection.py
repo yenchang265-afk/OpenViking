@@ -71,6 +71,7 @@ class ElasticsearchSettings:
     refresh: str = "wait_for"
     bulk_batch_size: int = 500
     num_candidates: int = 100
+    rescore_oversample: Optional[float] = None
 
 
 def _check_result_window(limit: int, offset: int, operation: str) -> None:
@@ -389,7 +390,16 @@ class ElasticsearchCollection(ICollection):
         }
         if filter_query is not None:
             knn["filter"] = filter_query
+        if self._settings.rescore_oversample and self._is_bbq_index():
+            # BBQ keeps one bit per dimension; re-score the top candidates with
+            # the original float vectors so similarities stay comparable.
+            knn["rescore_vector"] = {"oversample": self._settings.rescore_oversample}
         return knn
+
+    def _is_bbq_index(self) -> bool:
+        index_meta = self._indexes.get(self._default_index_name()) or {}
+        index_type = str((index_meta.get("VectorIndex") or {}).get("IndexType") or "")
+        return index_type.startswith("bbq_")
 
     def _search(self, **body: Any) -> List[Dict[str, Any]]:
         response = self._client.search(index=self._index, **body)

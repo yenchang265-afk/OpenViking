@@ -81,7 +81,7 @@ class Context:
         owner_user_id: Optional[str] = None,
         owner_space: Optional[str] = None,
         md5: Optional[str] = None,
-        uploaded_by: Optional[str] = None,
+        created_by: Optional[str] = None,
         updated_by: Optional[str] = None,
         id: Optional[str] = None,
     ):
@@ -117,10 +117,10 @@ class Context:
         # records or non-file records), and incremental diff falls back to reading
         # bytes rather than assuming equality.
         self.md5 = md5 or ""
-        # user_ids of whoever first uploaded / last changed this record; "" means
+        # user_ids of whoever created / last changed this record; "" means
         # unknown (older records, or writers such as reindex that must not change it).
-        # uploaded_by is set once: stored values win over later writes.
-        self.uploaded_by = uploaded_by or ""
+        # created_by is set once: stored values win over later writes.
+        self.created_by = created_by or ""
         self.updated_by = updated_by or ""
         self.vector: Optional[List[float]] = None
         self.vectorize = Vectorize(abstract)
@@ -187,8 +187,8 @@ class Context:
         # with an empty string via partial update.
         if self.md5:
             data["md5"] = self.md5
-        if self.uploaded_by:
-            data["uploaded_by"] = self.uploaded_by
+        if self.created_by:
+            data["created_by"] = self.created_by
         if self.updated_by:
             data["updated_by"] = self.updated_by
 
@@ -250,7 +250,8 @@ class Context:
             owner_user_id=data.get("owner_user_id"),
             owner_space=data.get("owner_space"),
             md5=data.get("md5"),
-            uploaded_by=data.get("uploaded_by"),
+            # ``uploaded_by`` is the pre-rename name of ``created_by``.
+            created_by=data.get("created_by") or data.get("uploaded_by"),
             updated_by=data.get("updated_by"),
         )
         obj.id = data.get("id", obj.id)

@@ -1574,7 +1574,7 @@ Default local mode
 
 <details>
 <summary><b>Elasticsearch</b></summary>
-Stores vectors in an Elasticsearch 8.12+ cluster using `dense_vector` kNN search. Install the client with `pip install "openviking[elasticsearch]"`.
+Stores vectors in an Elasticsearch 8.12+ cluster using `dense_vector` kNN search (the default `bbq_hnsw` index type needs 8.18+). Install the client with `pip install "openviking[elasticsearch]"`.
 
 ```json
 {
@@ -1605,11 +1605,13 @@ Stores vectors in an Elasticsearch 8.12+ cluster using `dense_vector` kNN search
 | `number_of_shards` | int | Primary shards per index | 1 |
 | `number_of_replicas` | int | Replicas per index; unset uses the cluster default (set `0` on a single-node cluster) | null |
 | `refresh` | str | Write refresh policy: `wait_for` (writes visible to the next search), `true`, or `false` | "wait_for" |
-| `index_type` | str | `dense_vector` index type: `hnsw`, `int8_hnsw`, `flat`, or `int8_flat` (`flat` types need Elasticsearch 8.13+) | "hnsw" |
+| `index_type` | str | `dense_vector` index type: `bbq_hnsw`, `bbq_flat`, `hnsw`, `int8_hnsw`, `flat`, or `int8_flat`. `bbq` types need Elasticsearch 8.18+ and at least 64 dimensions; `flat` types need 8.13+ | "bbq_hnsw" |
 | `m` / `ef_construction` | int | HNSW build parameters | 16 / 100 |
 | `num_candidates` | int | Minimum kNN candidates per shard (raised to the requested k) | 100 |
 | `bulk_batch_size` | int | Documents per bulk request | 500 |
+| `rescore_oversample` | float | For `bbq` index types, kNN re-scores `k × rescore_oversample` candidates per shard with the original vectors; `null` disables | 3.0 |
 
+- The default `bbq_hnsw` stores vectors with 1-bit binary quantization (about 32x less memory than `hnsw`) and re-scores the top candidates with the original vectors, so reported similarities match the other index types. It needs Elasticsearch 8.18 or later: on older clusters set `index_type` to `hnsw`. When the embedding has fewer than 64 dimensions the default falls back to `hnsw`, while an explicit `bbq` type is rejected. The index type is fixed when a collection is created, so existing collections keep theirs.
 - `distance_metric` maps to the `dense_vector` similarity: `cosine` → `cosine`, `l2` → `l2_norm`, `ip` → `max_inner_product`. It is fixed when the index is created; changing it requires a new collection.
 - Sparse and hybrid search: with `sparse_weight > 0` at collection creation, the `sparse_vector` field is mapped as `rank_features`. Results are scored like the local engine, `(1 - sparse_weight) × dense similarity + sparse_weight × sparse inner product`, over the union of the kNN and sparse recall sets (3× the requested window from each). A query without a dense vector is sparse-only. The sparse mapping is fixed when the index is created: to enable it on an existing collection, reindex into a new one. A dense-only collection ignores sparse query vectors.
 - `rank_features` holds positive weights only, so sparse terms with zero or negative weights are dropped on write and at query time.

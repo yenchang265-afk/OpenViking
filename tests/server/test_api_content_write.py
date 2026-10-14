@@ -57,20 +57,20 @@ async def test_fs_attrs_filters_legacy_non_kv_search_tags(monkeypatch):
     assert tags == ["team=search", "channel=app"]
 
 
-async def test_fs_attrs_reads_uploader_from_index_records(monkeypatch):
+async def test_fs_attrs_reads_creator_from_index_records(monkeypatch):
     class FakeVikingDBManagerProxy:
         def __init__(self, *_args):
             pass
 
         async def filter(self, **kwargs):
-            assert "uploaded_by" in kwargs["output_fields"]
+            assert "created_by" in kwargs["output_fields"]
             assert "updated_by" in kwargs["output_fields"]
             return [
-                {"level": 1, "search_tags": [], "uploaded_by": "bob", "updated_by": "carol"},
+                {"level": 1, "search_tags": [], "created_by": "bob", "updated_by": "carol"},
                 {
                     "level": 0,
                     "search_tags": ["team=search"],
-                    "uploaded_by": "alice",
+                    "created_by": "alice",
                     "updated_by": "dave",
                 },
             ]
@@ -84,10 +84,10 @@ async def test_fs_attrs_reads_uploader_from_index_records(monkeypatch):
         is_dir=True,
     )
 
-    assert attrs == {"tags": ["team=search"], "uploaded_by": "alice", "updated_by": "dave"}
+    assert attrs == {"tags": ["team=search"], "created_by": "alice", "updated_by": "dave"}
 
 
-async def test_fs_attrs_uploader_empty_for_legacy_records(monkeypatch):
+async def test_fs_attrs_creator_empty_for_legacy_records(monkeypatch):
     class FakeVikingDBManagerProxy:
         def __init__(self, *_args):
             pass
@@ -104,7 +104,7 @@ async def test_fs_attrs_uploader_empty_for_legacy_records(monkeypatch):
         is_dir=False,
     )
 
-    assert attrs["uploaded_by"] == ""
+    assert attrs["created_by"] == ""
     assert attrs["updated_by"] == ""
 
 
