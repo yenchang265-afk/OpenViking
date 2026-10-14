@@ -12,7 +12,7 @@ from openviking.server.identity import RequestContext, Role
 from openviking.storage.acl import AclEntry, AclLevel, AclMode, DirectAcl, EffectiveAcl
 from openviking.storage.viking_fs import _DEFAULT_GREP_FILE_CONCURRENCY, VikingFS
 from openviking.storage.viking_fs import _grep as grep_module
-from openviking_cli.exceptions import PermissionDeniedError
+from openviking_cli.exceptions import InvalidArgumentError, PermissionDeniedError
 from openviking_cli.session.user_id import UserIdentifier
 
 
@@ -378,7 +378,8 @@ async def test_virtual_empty_session_root_uses_merge_fallback(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_grep_preserves_dfs_order_and_node_limit(monkeypatch):
+@pytest.mark.parametrize("pattern", ["match", "["])
+async def test_grep_preserves_dfs_order_and_node_limit(monkeypatch, pattern):
     fs = VikingFS(agfs=_DummyAgfs())
 
     async def fake_stat(uri, ctx=None, skip_count=False):
@@ -417,7 +418,12 @@ async def test_grep_preserves_dfs_order_and_node_limit(monkeypatch):
     )
     monkeypatch.setattr(fs.agfs, "read", fake_agfs_read, raising=False)
 
-    result = await fs.grep("viking://resources", pattern="match", node_limit=3)
+    if pattern == "[":
+        with pytest.raises(InvalidArgumentError, match="Invalid grep pattern"):
+            await fs.grep("viking://resources", pattern=pattern, node_limit=3)
+        return
+
+    result = await fs.grep("viking://resources", pattern=pattern, node_limit=3)
 
     assert result["count"] == 3
     assert result["files_scanned"] == 2

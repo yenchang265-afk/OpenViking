@@ -281,16 +281,16 @@ export OPENVIKING_ASSETS_CREDENTIALS_FILE=/secure/path/assets-credentials.yaml
 
 當最終 `watch_interval` 大於 `0` 時，OpenViking 會把通過 `auth_ref` 解析出的 HTTPS Git
 token 儲存到 Watch task 私有且與倉庫 URL 繫結的鑑權狀態中。token 不會寫入 Manifest
-State、普通入庫佇列或 Watch API/MCP/CLI 返回。週期為 `0` 時，token 仍只在本次請求內使用。
+State、普通入庫佇列或 Watch API/MCP/CLI 返回。週期為 `0` 時，token 儲存在本次匯入任務的私有鑑權狀態中供後臺執行使用。
 Git PAT 沒有通用重新整理流程，token 過期或被撤銷後需要重建 Watch。
 
 Watch 私有狀態儲存在 `viking://resources/.watch_tasks.json`。啟用 VikingFS 檔案加密時會
 靜態加密；否則服務端控制檔案及其備份包含明文 token 狀態。生產環境應限制服務端儲存訪問並
 啟用加密。
 
-即使沒有指定 `--wait`，原生憑據匯入也需要等 clone 和 parse 完成後，服務端才會返回 task；
-因此 CLI 對這類資產預設使用 300 秒請求超時，大倉庫可通過 `--timeout <秒>` 調大。token
-會放在 HTTPS 請求體中傳輸，生產環境應保持診斷請求體 dump 關閉。
+原生憑據匯入在許可權預檢和任務入隊後返回 `task_id`，clone 和 parse 在後臺執行；
+指定 `--wait` 才等待任務完成。HTTP 請求超時統一使用客戶端配置，`add-resource` 不支援
+`--timeout`。token 會放在 HTTPS 請求體中傳輸，生產環境應保持診斷請求體 dump 關閉。
 
 如果目標服務已經具備訪問倉庫所需的 SSH key 或其他認證配置，可以不設定 `auth_ref`。
 
@@ -391,7 +391,6 @@ ov add-resource --manifest manifest.yaml --args skip_failed:true
 | `-m, --manifest <file>` | Manifest 文件。 |
 | `--args <key:value,...>` | Manifest 執行選項，多個選項用逗號分隔，支援的鍵見下表。 |
 | `--wait` | 等待每個資源處理完成。 |
-| `--timeout <seconds>` | HTTP 請求超時。原生私有 Git 即使沒有 `--wait` 也會使用該值，預設 300 秒。 |
 | `--watch-interval <minutes>` | 覆蓋全部資產的更新週期。 |
 
 `--args` 支援的執行選項：

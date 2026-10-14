@@ -326,7 +326,7 @@ Manifest 中聲明瞭 runtime slash alias：
 用途：手動把檔案、目錄、URL、Git 倉庫或 OpenClaw media attachment 匯入 OpenViking resources。
 
 ```text
-/add-resource <source> [--to URI] [--parent URI] [--reason TEXT] [--instruction TEXT] [--wait] [--timeout SEC]
+/add-resource <source> [--to URI] [--parent URI] [--reason TEXT] [--instruction TEXT] [--wait]
 ```
 
 引數：
@@ -339,7 +339,6 @@ Manifest 中聲明瞭 runtime slash alias：
 | `--reason TEXT` | 否 | 匯入原因。 |
 | `--instruction TEXT` | 否 | 匯入處理指令。 |
 | `--wait` | 否 | 等待服務端處理完成。 |
-| `--timeout SEC` | 否 | `--wait` 時的等待超時秒數。 |
 
 示例：
 
@@ -354,7 +353,7 @@ Manifest 中聲明瞭 runtime slash alias：
 用途：手動匯入 `SKILL.md` 檔案或 skill 目錄。
 
 ```text
-/add-skill <source> [--wait] [--timeout SEC]
+/add-skill <source> [--wait]
 ```
 
 引數：
@@ -363,12 +362,11 @@ Manifest 中聲明瞭 runtime slash alias：
 | --- | --- | --- |
 | `<source>` | 是 | `SKILL.md` 檔案或 skill 目錄。 |
 | `--wait` | 否 | 等待服務端處理完成。 |
-| `--timeout SEC` | 否 | `--wait` 時的等待超時秒數。 |
 
 示例：
 
 ```text
-/add-skill ./skills/my-skill --wait --timeout 30
+/add-skill ./skills/my-skill --wait
 ```
 
 ### 6.3 `/ov-search`
@@ -431,8 +429,8 @@ Manifest 中聲明瞭 runtime slash alias：
 
 | Tool | 引數 | 用途 |
 | --- | --- | --- |
-| `add_skill` | `source?`、`data?`、`wait?`、`timeout?` | 匯入或註冊 OpenViking agent skill。 |
-| `ov_search` | `query`、`uri?`、`limit?` | 搜索 OpenViking resources 和 skills。 |
+| `add_skill` | `source?`、`data?`、`wait?` | 匯入或註冊 OpenViking agent skill。 |
+| `ov_search` | `query`、`uri?`、`limit?` | 搜尋 OpenViking resources 和 skills。 |
 | `ov_read` | `uri` | 讀取精確 `viking://...` OpenViking URI 的完整內容。 |
 | `ov_multi_read` | `uris` | 一次讀取多個精確 `viking://...` URI，適合 overview + 同級切片。 |
 | `ov_list` | `uri`、`recursive?`、`simple?`、`limit?` | 列出 OpenViking 目錄，用於補齊同級切片和 `.overview.md`。 |
@@ -450,7 +448,7 @@ Manifest 中聲明瞭 runtime slash alias：
 
 | Tool | 引數 | 預設 | 開啟方式 | 用途 |
 | --- | --- | --- | --- | --- |
-| `add_resource` | `source`、`to?`、`parent?`、`reason?`、`instruction?`、`wait?`、`timeout?` | 不註冊 | `enableAddResourceTool=true`，且被 `enabledTools` 選中 | 允許 Agent 匯入資源。 |
+| `add_resource` | `source`、`to?`、`parent?`、`reason?`、`instruction?`、`wait?` | 不註冊 | `enableAddResourceTool=true`，且被 `enabledTools` 選中 | 允許 Agent 匯入資源。 |
 
 安全邊界：搜尋、讀取、trace 和資源消費路徑應優先使用 `ov_search` / `ov_read`，不要讓 Agent 在檢索階段自動匯入新資源，除非使用者明確授權。
 

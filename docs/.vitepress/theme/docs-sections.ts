@@ -129,6 +129,7 @@ export const sections: DocSection[] = [
         p('workflows/01-overview')
       ]),
       g('Manage context', '組織與維護上下文', [
+        p('guides/23-data-organize'),
         p('guides/18-openviking-assets'),
         p('guides/09-ovpack'),
         p('guides/15-snapshot'),

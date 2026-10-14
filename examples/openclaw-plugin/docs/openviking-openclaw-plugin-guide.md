@@ -284,8 +284,8 @@ transformContext auto recall 流程：
 | API | 官方用途 | 當前外掛對映 | 關鍵引數 / 返回 |
 | --- | --- | --- | --- |
 | `POST /api/v1/resources/temp_upload` | 臨時上傳本地檔案 | `/add-resource`、opt-in `add_resource`、`add_skill` 的本地檔案/目錄路徑 | 外掛本地目錄會先 zip，再上傳，服務端返回 `temp_file_id`：`client.ts:533`、`client.ts:552` |
-| `POST /api/v1/resources` | 匯入檔案、目錄、URL、Git 倉庫等 resource | `/add-resource` 命令；`add_resource` 工具僅在 `enableAddResourceTool=true` 時註冊 | body 官方欄位包括 `path`/`temp_file_id`、`target`/外掛相容 `to`、`parent`、`reason`、`instruction`、`wait`、`timeout`、`strict`、`ignore_dirs`、`include`、`exclude`；返回 `root_uri`、`source_path`、`errors`、`queue_status`：`client.ts:609` |
-| `POST /api/v1/skills` | 匯入 skill，支援 dict、MCP tool、SKILL.md 字串、檔案/目錄 | `add_skill` 工具、`/add-skill` 命令 | body: `data` 或 `temp_file_id`、`wait`、`timeout`；返回 `uri`/`skill_uri`、`name`、`auxiliary_files`、`queue_status`：`client.ts:663` |
+| `POST /api/v1/resources` | 匯入檔案、目錄、URL、Git 倉庫等 resource | `/add-resource` 命令；`add_resource` 工具僅在 `enableAddResourceTool=true` 時註冊 | body 官方欄位包括 `path`/`temp_file_id`、`target`/外掛相容 `to`、`parent`、`reason`、`instruction`、`wait`、`strict`、`ignore_dirs`、`include`、`exclude`；返回 `root_uri`、`source_path`、`errors`、`queue_status`：`client.ts:609` |
+| `POST /api/v1/skills` | 匯入 skill，支援 dict、MCP tool、SKILL.md 字串、檔案/目錄 | `add_skill` 工具、`/add-skill` 命令 | body: `data` 或 `temp_file_id`、`wait`；返回 `uri`/`skill_uri`、`name`、`auxiliary_files`、`queue_status`：`client.ts:663` |
 | `POST /api/v1/pack/export` | 匯出 `.ovpack` | 暫未封裝 | 官方 API Overview 有列出；當前外掛沒有 pack 管理工具 |
 | `POST /api/v1/pack/import` | 匯入 `.ovpack` | 暫未封裝 | 官方 API Overview 有列出；當前外掛沒有 pack 管理工具 |
 
