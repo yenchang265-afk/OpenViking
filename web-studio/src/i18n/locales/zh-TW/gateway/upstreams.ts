@@ -1,4 +1,40 @@
 const upstreams = {
+  import: {
+    action: '從 Business Data Platform 匯入',
+    useSettings: '使用 Business Data Platform 的模型配置',
+    hint: '即服務端的 VLM 配置',
+    running: '匯入中…',
+    summary_one: '已匯入或更新 {{count}} 個上游。',
+    summary_other: '已匯入或更新 {{count}} 個上游。',
+    nothing: 'Business Data Platform 的模型配置裡沒有可匯入的憑證。',
+    needsConfirmation:
+      '以下 Coding Plan 上游會攔截所有請求，確認套餐允許通過閘道器使用後才能啟用：',
+    skipped_one: '{{count}} 個憑證未匯入：',
+    skipped_other: '{{count}} 個憑證未匯入：',
+    confirm: '去確認',
+    dismiss: '關閉',
+    repeat:
+      '再次匯入會按 Business Data Platform 的配置更新地址和憑證，不會重複建立；你改過的啟用狀態、優先順序和模型設定會保留。',
+    reasons: {
+      invalid_configuration: '模型配置無效，請檢查服務端配置後重新匯入。',
+      openai_codex:
+        'Codex 的 OAuth 憑證會定期重新整理，閘道器無法長期使用。請手動新增上游。',
+      azure:
+        'Azure OpenAI 需要 api-version 引數，閘道器暫不支援。請手動新增上游。',
+      litellm_no_api_base:
+        '這個 LiteLLM 憑證沒有填寫 api_base，閘道器無法確定地址。請在服務端配置裡補上 api_base 後重新匯入。',
+      litellm_unsupported_route:
+        '這個 LiteLLM 路由不是 OpenAI 相容協議，閘道器無法直接轉發。請手動新增上游。',
+      unknown: '無法匯入這個憑證，請檢查服務端模型配置。',
+    },
+  },
+  readOnly: {
+    empty: '等待閘道器管理員新增上游。',
+    managedKey: 'API Key 由閘道器管理員保管。',
+    clientKey: 'API Key 由每個客戶端自帶。',
+    codingAllowed: 'Coding Plan，閘道器管理員已允許',
+    codingBlocked: 'Coding Plan，請求已攔截',
+  },
   description:
     '閘道器把請求轉發給這些模型服務商。每個上游只支援一種協議，閘道器不做協議轉換。',
   add: '新增上游',
@@ -50,6 +86,7 @@ const upstreams = {
       '這個上游由客戶端自帶 API Key，閘道器沒有可用於測試的 API Key。',
     noKey: '請先填寫 API Key。',
     result: {
+      unverified: '可達，金鑰未驗證 · {{status}}',
       ok: '可連通 · {{status}}',
       failed: '失敗 · {{status}}',
       unreachable: '無法連線',
@@ -58,20 +95,24 @@ const upstreams = {
     explain: {
       ok: '服務商接受了金鑰，並返回了模型列表。',
       auth: '服務商拒絕了 API Key 或某個請求頭。',
-      notFound:
-        '這個地址下沒有模型列表。請檢查 Base URL；如果服務商本來就不提供模型列表，實際請求可能仍然正常。',
+      rateLimited: '地址可達，但服務商限制了請求頻率，金鑰尚未驗證。',
+      notFound: '地址可達，但服務商不提供模型列表，API Key 尚未驗證。',
       status: '服務商返回了 HTTP {{status}}。',
       unreachable:
         '閘道器在 10 秒內沒有連上服務商。請檢查 Base URL，以及閘道器到服務商之間的網路。',
     },
   },
   delete: {
+    disable: '停用',
+    disableHint: '也可以先停用它，停用後這些金鑰會立即請求不到這個上游。',
+    inUse_one: '仍有 {{count}} 個金鑰在使用它。',
+    inUse_other: '仍有 {{count}} 個金鑰在使用它。',
     action: '刪除',
     blocked_one: '有 {{count}} 個金鑰在使用，請先吊銷',
     blocked_other: '有 {{count}} 個金鑰在使用，請先吊銷',
     title: '刪除“{{name}}”？',
     description:
-      '上游會連同儲存的 API Key 和請求頭一起刪除。目前沒有閘道器金鑰使用它，不會影響任何客戶端。',
+      '上游會連同儲存的 API Key 和請求頭一起刪除。還有金鑰在使用它時無法刪除。',
     confirm: '刪除上游',
   },
   toast: {
@@ -89,7 +130,7 @@ const upstreams = {
       title: '這個上游已不存在',
       description: '它可能已被刪除。請返回列表檢視現有的上游。',
     },
-    missing: '還需填寫：{{fields}}',
+    missing: '還需填寫或修正：{{fields}}',
     separator: '、',
     create: '新增上游',
   },
@@ -134,16 +175,22 @@ const upstreams = {
       hints: {
         deepseek:
           '請求帶工具時，DeepSeek 要求回傳之前每條回覆的推理內容。閘道器會補回客戶端丟掉的部分，所以 Business Data Platform 工具可以正常使用；如果在下方關閉補全，只有請求關閉了思考模式才會提供這些工具。',
-        ark: '填寫不帶路徑的方舟地址，例如 https://ark.cn-beijing.volces.com。閘道器會按協議補上 /api/v3 或 /api/compatible/v1，並讓每段對話的 prompt_cache_key 保持不變，快取才能持續命中。',
+        ark: 'Chat 和 Responses 填寫 https://ark.cn-beijing.volces.com/api/v3，Anthropic 填寫 https://ark.cn-beijing.volces.com/api/compatible；Coding Plan 分別填寫 https://ark.cn-beijing.volces.com/api/coding/v3 和 https://ark.cn-beijing.volces.com/api/coding。閘道器會保持每段對話的 prompt_cache_key 不變，讓快取持續命中。',
         byteplus:
-          '填寫不帶路徑的 BytePlus 方舟地址，例如 https://ark.ap-southeast.bytepluses.com。閘道器會按協議補上 /api/v3 或 /api/compatible/v1，並讓每段對話的 prompt_cache_key 保持不變，快取才能持續命中。',
+          'Chat 和 Responses 填寫 https://ark.ap-southeast.bytepluses.com/api/v3，Anthropic 填寫 https://ark.ap-southeast.bytepluses.com/api/compatible；Coding Plan 分別填寫 https://ark.ap-southeast.bytepluses.com/api/coding/v3 和 https://ark.ap-southeast.bytepluses.com/api/coding。閘道器會保持每段對話的 prompt_cache_key 不變，讓快取持續命中。',
       },
     },
     baseUrl: {
       label: 'Base URL',
       description:
-        '服務商的 API 地址，選擇服務商時會自動填入。末尾帶不帶 /v1 都可以。',
+        '照服務商 SDK 文件填寫 base_url，閘道器在後面拼接 /chat/completions、/responses 或 /v1/messages。同一服務商的不同協議地址不同時，請分別新增上游。',
       preview: '請求將發往',
+      missingPath:
+        '這個服務商的 base_url 需要帶路徑，只填域名會請求到錯誤地址。',
+      anthropicVersion:
+        'Anthropic 的 base_url 不需要 /v1，閘道器會自動拼接 /v1/messages。',
+      removeVersion: '去掉 /v1',
+      correctPath: '改用 {{url}}',
       useDefault: '使用預設地址',
     },
     authMode: {
@@ -163,6 +210,8 @@ const upstreams = {
       placeholder: '貼上服務商的 API Key',
       stored: '已儲存',
       description: '加密儲存，之後不再顯示。',
+      addressChanged:
+        '地址已修改，請重新填寫 API Key。原來儲存的 API Key 不會發往新地址。',
       storedDescription: '已加密儲存。留空則保留原金鑰，填寫新金鑰會替換它。',
     },
     headers: {
@@ -172,15 +221,17 @@ const upstreams = {
       name: '請求頭名稱',
       value: '取值',
       add: '新增請求頭',
+      addressChanged:
+        '地址已修改，請重新填寫請求頭的取值。原來儲存的取值不會發往新地址。',
     },
     codingPlan: {
       label: '這是 Coding Plan 或訂閱金鑰',
       description: '訂閱類金鑰通常只授權在服務商自己的工具裡使用。',
       warning:
-        '勾選後，閘道器會拒絕所有發往這個上游的請求。請改用模型 API Key；如果套餐允許在其他客戶端使用，可以選擇仍然允許。',
-      allow: '仍然允許',
+        '閘道器預設拒絕所有發往這個上游的請求。請改用模型 API Key；如果套餐條款允許在服務商自己的工具之外使用，可以開啟下面的選項。',
+      allow: '允許通過閘道器使用這個套餐',
       allowDescription:
-        '閘道器會用這個金鑰轉發請求，請先確認套餐允許這樣使用。',
+        '部分 Coding Plan 只授權在服務商自己的工具裡使用。開啟前請確認套餐條款允許，否則帳號可能被服務商限制。',
     },
     models: {
       label: '模型',

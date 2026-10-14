@@ -532,12 +532,29 @@ JSON 輸出 - 錯誤：
 
 ### [OpenViking 閘道器管理](25-gateway.md)
 
+閘道器在 Server 內執行時，從 Server 埠訪問；獨立執行時，從閘道器自己的埠訪問。OpenViking API 金鑰決定呼叫方能訪問哪個帳號；部署者設定了閘道器管理金鑰時，修改上游和上下文配置還需要這把金鑰。每個使用者都能給自己簽發閘道器金鑰。許可權矩陣和錯誤原因見[閘道器管理 API](25-gateway.md)。
+
 | 方法 | 路徑 | 說明 |
 |------|------|------|
-| GET | `/api/v1/admin/gateway/{path}` | 讀取呼叫方帳號的閘道器概覽、日誌、上游、上下文配置、金鑰或工具 |
-| POST | `/api/v1/admin/gateway/{path}` | 簽發閘道器金鑰、測試上游或重置對話儲存 |
-| PUT | `/api/v1/admin/gateway/{path}` | 建立或替換上游、上下文配置 |
-| DELETE | `/api/v1/admin/gateway/{path}` | 刪除上游或上下文配置、吊銷金鑰或刪除使用者的閘道器資料 |
+| GET | `/gateway/admin/access` | 讀取呼叫方的許可權和部署告警 |
+| GET | `/gateway/admin/guides` | 讀取客戶端使用的閘道器地址 |
+| GET | `/gateway/admin/tools` | 列出呼叫方可用的 OpenViking 工具 |
+| GET | `/gateway/admin/upstreams/{identifier}` | 讀取單個上游 |
+| GET | `/gateway/admin/policies/{identifier}` | 讀取單個上下文配置 |
+| GET | `/gateway/admin/keys/{identifier}` | 讀取單個閘道器金鑰（不含金鑰本身） |
+| GET | `/gateway/admin/overview` | 讀取呼叫方可見範圍內的用量概覽 |
+| GET | `/gateway/admin/logs` | 讀取呼叫方可見的請求日誌 |
+| GET | `/gateway/admin/upstreams` | 列出本帳號的上游 |
+| PUT / DELETE | `/gateway/admin/upstreams/{identifier}` | 建立/替換或刪除上游 |
+| POST | `/gateway/admin/upstreams/{identifier}/test` | 測試上游連線 |
+| POST | `/gateway/admin/upstreams/import-vlm` | 把 Server 的 VLM 配置匯入為上游（僅嵌入部署） |
+| GET | `/gateway/admin/policies` | 列出本帳號的上下文配置 |
+| PUT / DELETE | `/gateway/admin/policies/{identifier}` | 建立/替換或刪除上下文配置 |
+| GET / POST | `/gateway/admin/keys` | 列出呼叫方可見的閘道器金鑰，或簽發新金鑰 |
+| DELETE | `/gateway/admin/keys/{identifier}` | 吊銷閘道器金鑰 |
+| POST | `/gateway/admin/keys/{identifier}/capture/reset` | 讓一段對話重新開始儲存 |
+| DELETE | `/gateway/admin/users/{user_id}/data` | admin 或 root：刪除某個使用者的閘道器資料 |
+| DELETE | `/gateway/admin/account/data` | root：刪除整個帳號的閘道器資料 |
 
 ### [OpenViking Assets](22-openviking-assets.md)、[WebDAV](20-webdav.md)、[Agent Runtime API](23-agent-runtime.md) 與 [VikingBot API](24-vikingbot.md)
 

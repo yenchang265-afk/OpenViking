@@ -73,7 +73,7 @@ OV_ACME_EMAIL=admin@your-domain.com   # 可選；推薦用於 Let's Encrypt
 }
 ```
 
-如果同時執行[OpenViking 閘道器](15-gateway.md)，請改用閘道器運維指南 [Docker Compose](22-gateway-operations.md#docker-compose) 一節中的域名塊。它把模型 API 路徑轉發給閘道器，其餘請求轉發給 OpenViking。
+開啟 OpenViking 閘道器（`gateway.enabled: true`）後，模型 API 和閘道器管理 API 也在 Server 埠的 `/gateway` 下，這條反代配置同樣覆蓋它們，不需要額外的上游或按路徑分流。
 
 ### 3. 取消 `docker-compose.yml` 中的 HTTPS 註釋
 
@@ -197,13 +197,16 @@ Compose 部署應修改 `.env` 並執行 `docker compose up -d`，在其他 shel
 
 <a id="相容備註-1934-單上游反代"></a>
 
-## 相容備註：`:1934` 反代
+## 相容說明：`:1934` 代理
 
-`docker compose up` 預設在 1934 埠啟一個 Caddy 反代。它把[OpenViking 閘道器](15-gateway.md)的路徑（`/v1/*`、`/api/v3/*`、`/api/compatible/v1/*` 和 `/gateway/uploads`）轉發給 `gateway` 服務，其餘請求轉發給 `openviking:1933`。這個入口**主要為相容已經書籤到 1934 的舊部署保留**。閘道器自己的埠不對宿主機開放，所以不配 HTTPS 時，客戶端要經這個埠訪問閘道器，見閘道器運維指南的 [Docker Compose](22-gateway-operations.md#docker-compose) 一節。新部署直接連私網中的 1933，公網客戶端使用上面的 HTTPS 入口；不需要這個入口可以從 `docker-compose.yml` 註釋掉 caddy 服務和 1934 埠對映。
+自帶 Caddy 的相容埠 1934 把所有路徑轉發到 `openviking:{$OPENVIKING_SERVER_PORT:1933}`。開啟 OpenViking 閘道器後，1933 埠同時提供 OpenViking 的普通介面，以及 `/gateway` 下的模型 API、工具上傳和閘道器管理 API，不再需要單獨的閘道器容器、1935 埠或按路徑分流的規則。
+
+已有書籤或客戶端還在用 1934 時可以保留它，用不到就刪掉埠對映。公網客戶端請走 HTTPS 入口。
+
 
 ## 相關文件
 
 - [部署指南](03-deployment.md) — Docker、systemd、Kubernetes
 - [OAuth 指南](11-oauth.md) — OAuth 2.1 配置與客戶端接入
 - [認證](04-authentication.md) — API Key 管理
-- [OpenViking 閘道器部署與運維](22-gateway-operations.md) — 閘道器的路由、代理設定和 HTTPS
+- [OpenViking 閘道器部署與運維](22-gateway-operations.md) — 閘道器的部署、路由和反向代理要求

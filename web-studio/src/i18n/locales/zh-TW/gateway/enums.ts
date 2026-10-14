@@ -85,8 +85,8 @@ const enums = {
     errorCode: 'Business Data Platform 報告了錯誤 {{code}}',
     versionMismatch: 'Business Data Platform 版本低於閘道器的要求',
     identityMissing: 'Business Data Platform 無法識別這個金鑰所屬的使用者',
-    rootKey: '不接受 Root 金鑰，請使用本帳號下的使用者金鑰。',
-    otherAccount: '這個 Business Data Platform 金鑰屬於其他帳號。',
+    rootKey: '不接受 Root API 金鑰，請使用本帳號下的使用者 API 金鑰。',
+    otherAccount: '這個 Business Data Platform API 金鑰屬於其他帳號。',
   },
   degradation: {
     memory_store_failure: {
@@ -152,6 +152,12 @@ const enums = {
       explanation:
         '流式回覆無法解析，這條回覆沒有儲存到 Business Data Platform。客戶端不受影響。',
       action: '偶爾出現無需處理；頻繁出現時再排查。',
+    },
+    revocation_check_unavailable: {
+      label: '金鑰未校驗',
+      explanation:
+        'Business Data Platform 無法確認這個閘道器金鑰，請求在未檢查金鑰是否已吊銷的情況下照常處理。',
+      action: '檢查 Business Data Platform 是否可達、執行是否正常。',
     },
   },
 }

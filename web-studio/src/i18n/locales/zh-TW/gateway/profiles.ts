@@ -1,4 +1,6 @@
 const profiles = {
+  inUseHelp:
+    '要刪除它，請先吊銷這些金鑰；如果還需要它們，先簽發使用其他上下文配置的新金鑰來替換。',
   description:
     '決定對話如何使用 Business Data Platform 的記憶和工具。儲存後的修改只對之後開始的對話生效。',
   defaultName: '預設',
@@ -18,6 +20,7 @@ const profiles = {
     title: '還沒有上下文配置',
     description:
       '每個閘道器金鑰都需要一份上下文配置。推薦設定會為每條新訊息召回記憶、儲存對話、為長對話生成摘要，並讓模型使用只讀的 Business Data Platform 工具，之後可以隨時修改。',
+    readOnly: '等待閘道器管理員新增上下文配置。',
   },
   summary: {
     recallOn: '開啟 · 每條訊息 {{tokens}} Token',

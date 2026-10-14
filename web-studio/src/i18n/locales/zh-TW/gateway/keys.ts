@@ -1,9 +1,11 @@
 const keys = {
   description:
-    '每個金鑰屬於一個 Business Data Platform 使用者，使用一份上下文配置和一組上游。金鑰不能修改，需要調整時請簽發新金鑰並吊銷舊金鑰。',
+    '每個閘道器金鑰（以 ovgw_ 開頭）屬於一個 Business Data Platform 使用者，使用一份上下文配置和一組上游。金鑰不能修改，需要調整時請簽發新金鑰並吊銷舊金鑰。',
   issue: '簽發金鑰',
   loadFailed: '無法載入閘道器金鑰',
   prerequisites: {
+    managed: '閘道器管理員還沒有新增上游或上下文配置。',
+    unlock: '輸入閘道器管理金鑰',
     upstream: '簽發金鑰前，請先新增上游。',
     profile: '簽發金鑰前，請先建立上下文配置。',
     both: '簽發金鑰前，請先新增上游並建立上下文配置。',
@@ -44,9 +46,9 @@ const keys = {
   deleteUser: {
     title: '刪除 {{user}} 的閘道器資料？',
     description_one:
-      '這會弔銷 {{user}} 的閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態，其中包括尚未儲存到 Business Data Platform 的對話內容。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Data Platform 的記憶不受影響。',
+      '這會弔銷 {{user}} 的閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Data Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Data Platform 的記憶不受影響。',
     description_other:
-      '這會弔銷 {{user}} 的全部 {{count}} 個閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態，其中包括尚未儲存到 Business Data Platform 的對話內容。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Data Platform 的記憶不受影響。',
+      '這會弔銷 {{user}} 的全部 {{count}} 個閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Data Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Data Platform 的記憶不受影響。',
     confirm: '刪除閘道器資料',
     done: '已刪除 {{user}} 的閘道器資料',
   },
@@ -59,28 +61,31 @@ const keys = {
       description: '用來區分不同的金鑰，寫上使用者和客戶端最清楚。',
     },
     user: {
-      label: 'Business Data Platform 使用者',
+      self: '以你的身份（{{user}}）讀寫記憶。',
+      developmentIdentity: '以 {{user}} 的身份讀寫記憶。',
+      label: '給誰用',
       placeholder: '選擇 Business Data Platform 使用者',
       loading: '正在載入使用者…',
       description:
-        '閘道器會以這個使用者的身份召回和儲存記憶。該使用者的 Business Data Platform 金鑰在服務端讀取，由閘道器加密儲存，不會顯示。',
+        '閘道器會以這個使用者的身份召回和儲存記憶。該使用者的使用者 API 金鑰在服務端讀取，由閘道器加密儲存，不會顯示。',
       roles: {
         admin: '管理員',
         user: '使用者',
       },
-      unavailable: '服務端讀不到這個使用者的金鑰，請改為貼上',
-      loadFailed: '無法載入本帳號的使用者，請直接貼上金鑰。',
-      none: '服務端讀不到本帳號使用者的金鑰，請直接貼上。',
-      root: '使用 Root 金鑰時無法在這裡選擇使用者，請直接貼上金鑰。',
+      unavailable: '服務端讀不到這個使用者的使用者 API 金鑰，請改為貼上',
+      loadFailed: '無法載入本帳號的使用者，請直接貼上使用者 API 金鑰。',
+      none: '服務端讀不到本帳號使用者的使用者 API 金鑰，請直接貼上。',
       choose: '選擇使用者',
     },
     openvikingKey: {
-      label: 'Business Data Platform 金鑰',
+      forUser: '貼上 {{user}} 的使用者 API 金鑰',
+      managementKey: '這是閘道器管理金鑰，請貼上該使用者的使用者 API 金鑰。',
+      label: 'Business Data Platform API 金鑰',
       description:
-        '本帳號中某個 Business Data Platform 使用者的金鑰。閘道器會以這個使用者的身份召回和儲存記憶。不接受 Root 金鑰。金鑰加密儲存，之後不再顯示。',
+        '本帳號中某個使用者的使用者 API 金鑰。閘道器會以這個使用者的身份召回和儲存記憶。不接受 Root API 金鑰。金鑰加密儲存，之後不再顯示。',
       gatewayKey:
-        '這是閘道器金鑰，請填寫 Business Data Platform 使用者自己的金鑰。',
-      paste: '貼上 Business Data Platform 金鑰',
+        '這是閘道器金鑰（給客戶端用的），請貼上該使用者的使用者 API 金鑰。',
+      paste: '貼上使用者 API 金鑰',
     },
     profile: {
       label: '上下文配置',
@@ -96,6 +101,7 @@ const keys = {
       required: '至少選擇一個上游',
       empty: '還沒有上游。',
       create: '去新增',
+      blocked: '已攔截',
       off: '已停用',
     },
     models: {
@@ -107,11 +113,11 @@ const keys = {
     submit: '簽發金鑰',
   },
   errors: {
+    requiredVersion: '要求版本：{{version}}。',
     title: '無法簽發金鑰',
-    rootKey:
-      '這是 Root 金鑰。請改用本帳號中某個 Business Data Platform 使用者的金鑰。',
+    rootKey: '這是 Root API 金鑰，請改用本帳號中某個使用者的使用者 API 金鑰。',
     otherAccount:
-      '這個 Business Data Platform 金鑰屬於其他帳號，請使用本帳號的使用者金鑰。',
+      '這個 Business Data Platform API 金鑰屬於其他帳號，請使用本帳號的使用者 API 金鑰。',
     invalidKey:
       'Business Data Platform 拒絕了這個金鑰。請檢查金鑰是否完整，以及是否已被重新生成。',
     unavailable:
@@ -119,14 +125,17 @@ const keys = {
     versionMismatch:
       'Business Data Platform 版本低於閘道器的要求。請升級 Business Data Platform 後重試。',
     unknownUser: '這個使用者已不在本帳號中，請重新選擇。',
+    userRequired: 'root API 金鑰不屬於任何使用者，請選擇這把金鑰對應的使用者。',
     userKeyUnreadable:
-      '服務端讀不到這個使用者的 Business Data Platform 金鑰，請改為貼上。',
+      '服務端只儲存了這個使用者 API 金鑰的雜湊，無法自動讀取。請貼上該使用者的使用者 API 金鑰。',
   },
   secret: {
+    identity: '這把金鑰以 {{user}} 的身份讀寫記憶。',
+    dependency:
+      '它繫結 {{user}} 當前的使用者 API 金鑰。那個金鑰重新生成後，這把閘道器金鑰會自動失效，需要重新簽發。',
     title: '複製閘道器金鑰',
     once: '完整金鑰只顯示這一次。',
     copyKey: '複製閘道器金鑰',
-    user: 'Business Data Platform 使用者',
     profile: '上下文配置',
     connectTitle: '接入客戶端',
     clients: {

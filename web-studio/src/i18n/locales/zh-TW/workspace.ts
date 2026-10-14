@@ -803,6 +803,21 @@ const workspace = {
     },
   },
   settings: {
+    gatewayConnection: {
+      title: '登入 Business Data Platform 閘道器',
+      openvikingUrl: '這臺閘道器連線的 Business Data Platform：{{url}}',
+      apiKey: 'Business Data Platform API 金鑰',
+      keyHint: '使用者、帳號管理員或 Root 的 API 金鑰都可以。',
+      wrongKey:
+        '閘道器金鑰（ovgw_）和閘道器管理金鑰（ovgm_）不能用來登入，請輸入 Business Data Platform API 金鑰。',
+      invalidKey:
+        'Business Data Platform 拒絕了這個 API 金鑰。請確認金鑰正確後重試。',
+      unreachable:
+        '閘道器連不上 Business Data Platform（{{url}}）。確認 Business Data Platform 正在執行、閘道器的 openviking_url（gateway.conf 或 OPENVIKING_GATEWAY_OPENVIKING_URL）指向它，然後重試。',
+      gatewayUnreachable: '連不上這臺閘道器。確認閘道器正在執行後重試。',
+      connect: '登入',
+      connecting: '正在登入…',
+    },
     pageTitle: '設定',
     tabs: { connection: '連線設定', configuration: '服務端配置' },
     models: {

@@ -3899,8 +3899,10 @@ wheels = [
 name = "openviking"
 source = { editable = "." }
 dependencies = [
+    { name = "aiohttp" },
     { name = "apscheduler" },
     { name = "argon2-cffi" },
+    { name = "async-timeout" },
     { name = "charset-normalizer" },
     { name = "cryptography" },
     { name = "defusedxml" },
@@ -3921,6 +3923,8 @@ dependencies = [
     { name = "opentelemetry-instrumentation-asyncio" },
     { name = "opentelemetry-sdk" },
     { name = "openviking-sdk" },
+    { name = "orjson" },
+    { name = "packaging" },
     { name = "pathspec" },
     { name = "pdfminer-six" },
     { name = "pdfplumber" },
@@ -4033,12 +4037,6 @@ eval = [
     { name = "pandas", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "ragas" },
 ]
-gateway = [
-    { name = "aiohttp" },
-    { name = "async-timeout" },
-    { name = "orjson" },
-    { name = "packaging" },
-]
 gateway-fast = [
     { name = "httptools" },
     { name = "uvloop", marker = "sys_platform != 'win32'" },
@@ -4081,11 +4079,11 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "agent-sandbox", marker = "extra == 'bot'", specifier = ">=0.0.23" },
-    { name = "aiohttp", marker = "extra == 'gateway'", specifier = ">=3.13.3" },
+    { name = "aiohttp", specifier = ">=3.13.3" },
     { name = "anyio", marker = "extra == 'gemini-async'", specifier = ">=4.0.0" },
     { name = "apscheduler", specifier = ">=3.11.0" },
     { name = "argon2-cffi", specifier = ">=23.0.0" },
-    { name = "async-timeout", marker = "extra == 'gateway'", specifier = ">=5.0.1" },
+    { name = "async-timeout", specifier = ">=5.0.1" },
     { name = "beautifulsoup4", marker = "extra == 'bot'", specifier = ">=4.12.0" },
     { name = "boto3", marker = "extra == 'test'", specifier = ">=1.42.44" },
     { name = "build", marker = "extra == 'build'" },
@@ -4138,8 +4136,8 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-asyncio", specifier = ">=0.61b0" },
     { name = "opentelemetry-sdk", specifier = ">=1.14" },
     { name = "openviking-sdk", specifier = ">=0.1.15" },
-    { name = "orjson", marker = "extra == 'gateway'", specifier = ">=3.11.7" },
-    { name = "packaging", marker = "extra == 'gateway'", specifier = ">=24.0" },
+    { name = "orjson", specifier = ">=3.11.7" },
+    { name = "packaging", specifier = ">=24.0" },
     { name = "pandas", marker = "extra == 'benchmark'", specifier = ">=2.0.0" },
     { name = "pandas", marker = "extra == 'eval'", specifier = ">=2.0.0" },
     { name = "pandas", marker = "extra == 'test'", specifier = ">=2.0.0" },
@@ -4212,7 +4210,7 @@ requires-dist = [
     { name = "wheel", marker = "extra == 'build'" },
     { name = "xxhash", specifier = ">=3.0.0" },
 ]
-provides-extras = ["gateway", "gateway-fast", "test", "auth", "dev", "doc", "eval", "gemini", "gemini-async", "ocr", "build", "bot", "benchmark", "local-embed", "opengauss", "elasticsearch"]
+provides-extras = ["gateway-fast", "test", "auth", "dev", "doc", "eval", "gemini", "gemini-async", "ocr", "build", "bot", "benchmark", "local-embed", "opengauss", "elasticsearch"]
 
 [package.metadata.requires-dev]
 dev = [{ name = "pytest", specifier = ">=9.0.2" }]

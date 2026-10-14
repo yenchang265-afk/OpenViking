@@ -31,7 +31,10 @@ const common = {
     retry: '重試',
     revoke: '吊銷',
     save: '儲存',
+    view: '檢視',
+    back: '返回',
     viewAll: '檢視全部',
+    viewKeys: '檢視金鑰',
   },
   states: {
     loading: '載入中…',
@@ -46,42 +49,61 @@ const common = {
     failed: '複製失敗，請選中文本後手動複製。',
   },
   access: {
-    title: '需要帳號管理員許可權',
+    title: '先連線 Business Data Platform',
+    invalid: 'Business Data Platform API 金鑰無效',
     description:
-      '管理 Business Data Platform 閘道器需要本帳號的帳號管理員金鑰或 Root 金鑰。請先在連線設定中填寫。',
+      '閘道器用你的 Business Data Platform API 金鑰確認你是誰。請先在連線設定中填寫它。',
+    invalidDescription:
+      'Business Data Platform 拒絕了連線設定中的 API 金鑰，它可能已被重新生成或刪除。請換一個有效的金鑰。',
     action: '開啟連線設定',
+  },
+  management: {
+    title: '輸入閘道器管理金鑰',
+    label: '閘道器管理金鑰',
+    description:
+      '閘道器管理金鑰由部署這臺閘道器的人設定，用來修改上游和上下文配置。它不是 Business Data Platform API 金鑰，也不是客戶端用的閘道器金鑰。',
+    where: '在哪裡找？',
+    prefix:
+      'openviking-server init 和 openviking-gateway init 生成的值以 ovgm_ 開頭。',
+    environment: '也可能設在環境變數裡，它優先於配置檔案：',
+    keyPlaceholder: '<至少 32 個字元>',
+    session: '只儲存在當前瀏覽器標籤頁，關閉後自動鎖定。',
+    wrongKey: '這是閘道器金鑰（給客戶端用的），請輸入閘道器管理金鑰。',
+    invalid:
+      '閘道器管理金鑰不正確。請向部署這臺閘道器的人確認。注意，這裡要填的不是 Business Data Platform 的管理員 API 金鑰。',
+    unlock: '解鎖',
+    unlocked: '已解鎖，現在可以修改上游和上下文配置',
+    lock: '鎖定',
+    editing: '可修改上游和上下文配置',
+    expired: '閘道器管理金鑰已失效，上游和上下文配置恢復為只讀。',
+    readOnly:
+      '上游和上下文配置由閘道器管理員統一提供。你可以檢視、測試連線，並在簽發金鑰時選用。',
+    adminReadOnly:
+      'Business Data Platform 的管理員和 Root 也需要閘道器管理金鑰才能修改。',
+    shared:
+      '你正在修改本帳號所有使用者共用的配置，儲存後立即對使用它的金鑰生效。',
+    publicTitle: '這臺閘道器對所有 Business Data Platform 商業版使用者開放',
+    publicDescription:
+      '它連線的是公共 Business Data Platform 服務，又沒有設定閘道器管理金鑰，所以任何持有商業版 API 金鑰的人都能登入這臺閘道器、用它轉發模型請求，還能修改自己帳號下的上游。如果這臺閘道器只給你自己或團隊使用，請設定閘道器管理金鑰，然後重啟閘道器。',
+    generate: '可以用這條命令生成金鑰：',
+    dismiss: '關閉提示',
   },
   unavailable: {
     notEnabled: {
-      title: 'Business Data Platform 閘道器未開啟',
+      title: '這臺 Business Data Platform 沒有開啟閘道器',
       description:
-        '這臺伺服器沒有開啟 Business Data Platform 閘道器。請在 ov.conf 中開啟它，重啟 Business Data Platform，再啟動閘道器。',
+        '執行 openviking-server init 並選擇 Update gateway；也可以在 ov.conf 中加入下面的配置，然後重啟 Business Data Platform。',
     },
-    tokenMissing: {
-      title: '缺少管理令牌',
+    contact: '請聯絡部署 Business Data Platform 的人開啟閘道器。',
+    trusted: {
+      title: '閘道器不支援 Trusted 模式',
       description:
-        'Business Data Platform 需要和閘道器使用同一個管理令牌才能管理閘道器。請為 Business Data Platform 和閘道器設定下面的環境變數（至少 32 個字元），然後重啟兩者。',
+        '閘道器要靠 API 金鑰識別每個使用者。請在 ov.conf 中把 server.auth_mode 改為 api_key，然後重啟 Business Data Platform。',
     },
-    tokenMismatch: {
-      title: '管理令牌不一致',
+    openvikingUnreachable: {
+      title: '閘道器連不上 Business Data Platform（{{url}}）',
       description:
-        'Business Data Platform 和閘道器啟動時用的管理令牌不同，所以閘道器拒絕了 Business Data Platform 的請求。請把下面的環境變數設成同一個值，然後重啟兩者。',
-    },
-    unsupported: {
-      title:
-        '這臺 Business Data Platform 伺服器無法管理 Business Data Platform 閘道器',
-      description:
-        'Studio 連線的 Business Data Platform 伺服器不支援 Business Data Platform 閘道器。請升級 Business Data Platform Server 並重啟，然後重試。',
-    },
-    devMode: {
-      title: 'Business Data Platform 執行在開發模式',
-      description:
-        '開發模式下每個金鑰都以 Root 身份操作，而閘道器不接受 Root 金鑰，所以簽發不了閘道器金鑰。請把 Business Data Platform 切換到 API 金鑰模式並重啟，再到連線設定中填寫帳號管理員金鑰。',
-    },
-    unreachable: {
-      title: 'Business Data Platform 連不上閘道器',
-      description:
-        '閘道器沒有執行，或者 ov.conf 裡的 gateway.url 指向了錯誤的地址。請啟動閘道器，並確認 Business Data Platform 能訪問這個地址。',
+        '確認 Business Data Platform 正在執行，並檢查閘道器的 openviking_url（gateway.conf 或 OPENVIKING_GATEWAY_OPENVIKING_URL）是否指向它，然後重試。',
     },
     failed: {
       title: '無法載入 Business Data Platform 閘道器',
@@ -90,22 +112,69 @@ const common = {
     terminal: '終端',
     environment: '環境變數',
     docs: '部署說明',
+    enable: {
+      description: 'Studio 可以直接開啟：把設定寫入 ov.conf，然後重啟服務。',
+      descriptionManualRestart:
+        'Studio 可以把設定寫入 ov.conf。這臺服務不能從 Studio 重啟，儲存後請自行重啟。',
+      action: '開啟閘道器',
+      confirmTitle: '開啟閘道器？',
+      confirmRestart:
+        'Studio 會在 ov.conf 中寫入 gateway.enabled: true，然後重啟服務。重啟期間請求會中斷幾秒。',
+      confirmManualRestart:
+        'Studio 會在 ov.conf 中寫入 gateway.enabled: true。重啟服務後閘道器才會開啟。',
+      protect: '只有持有閘道器管理金鑰的人才能修改上游和上下文配置',
+      protectHint:
+        'Studio 會生成金鑰，寫入 ov.conf 的 gateway.management_key，儲存後只顯示一次。',
+      checking: '正在讀取 ov.conf…',
+      saving: '正在儲存 ov.conf…',
+      restarting: '正在儲存 ov.conf 並重啟服務…',
+      savedRestart:
+        '已儲存到 ov.conf。重啟服務後閘道器才會開啟，重啟完成後點“重試”。',
+      readOnly:
+        '這臺服務的 ov.conf 是隻讀的（例如由 Helm ConfigMap 掛載），Studio 改不了它。請在部署配置中開啟閘道器，然後重啟服務：',
+      helm: 'Helm values',
+      stillOff:
+        '服務已重啟，但閘道器仍未開啟。請檢查 OPENVIKING_GATEWAY_ENABLED 是否設成了 false 之類的值，它會覆蓋 ov.conf。',
+      rolledBack:
+        '服務拒絕了新配置，繼續使用原來的配置，所以閘道器仍未開啟。原因請檢視服務日誌。',
+      conflict: 'ov.conf 在頁面載入後被改過，請重新讀取後再試。',
+      reload: '重新讀取 ov.conf',
+      failed: '開啟閘道器失敗：{{message}}',
+      restartFailed:
+        'ov.conf 已儲存，但無法確認服務是否重啟成功：{{message}}。請檢查服務狀態，然後點“重試”。',
+      keyTitle: '儲存閘道器管理金鑰',
+      keyOnce:
+        '金鑰只顯示這一次。修改上游和上下文配置時需要它；關閉這個瀏覽器標籤頁之前，當前頁面保持解鎖。',
+      copyKey: '複製閘道器管理金鑰',
+      copyFailed: '複製失敗，金鑰已選中，請按 Ctrl+C 或 ⌘C 複製。',
+      keyOnceManual:
+        '金鑰只顯示這一次。修改上游和上下文配置時需要它；重啟服務後，在閘道器頁面點“輸入閘道器管理金鑰”並貼上。',
+      keySaved: '已儲存',
+      continue: '已儲存，開啟閘道器',
+    },
   },
   errors: {
     reasons: {
-      not_enabled: '這臺伺服器沒有開啟 Business Data Platform 閘道器。',
-      token_missing:
-        '沒有設定管理令牌，Business Data Platform 無法管理閘道器。',
-      token_mismatch:
-        '閘道器拒絕了 Business Data Platform 的管理令牌，兩者必須使用同一個令牌。',
-      unreachable: 'Business Data Platform 連不上閘道器。',
-      unsupported:
-        '這臺 Business Data Platform 伺服器不支援 Business Data Platform 閘道器。',
+      management_key_required:
+        '上游和上下文配置由閘道器管理員統一提供，輸入閘道器管理金鑰後才能修改。',
+      management_key_invalid:
+        '閘道器管理金鑰不正確，請向部署這臺閘道器的人確認。',
+      vlm_import_forbidden:
+        '你沒有匯入 Business Data Platform 模型配置的許可權。',
+      vlm_import_unavailable:
+        '這臺閘道器不在 Business Data Platform 服務內執行，讀不到服務端的模型配置，請手動新增上游。',
+      in_use_one: '仍有 {{count}} 個金鑰在使用它。',
+      in_use_other: '仍有 {{count}} 個金鑰在使用它。',
+      upstream_key_missing:
+        '這個上游沒有儲存 API Key，或者由客戶端自帶 API Key，閘道器無法發起測試。',
+      trusted_mode_unsupported: '閘道器不支援 Trusted 模式。',
+
+      not_enabled: '這臺 Business Data Platform 沒有開啟閘道器。',
       conflict: '這項修改與現有配置衝突。',
       invalid: '閘道器拒絕了這些設定，請檢查填寫的值後重試。',
       forbidden: '沒有執行此操作的許可權。',
       not_found: '該項已不存在，請重新整理後重試。',
-      unauthorized: '金鑰被拒絕，請檢查連線設定。',
+      unauthorized: 'Business Data Platform API 金鑰被拒絕，請檢查連線設定。',
       other: '操作失敗，請重試。',
     },
     inUse: '仍有金鑰在使用它，請先吊銷這些金鑰。',
@@ -115,11 +184,10 @@ const common = {
     unknownUpstream: '所選的上游中有一個已不存在。',
     keyNotFound: '這段對話使用的閘道器金鑰已被吊銷，無法再重新同步。',
     sessionNotFound: '閘道器中已沒有這段對話的記錄。',
-    upstreamKeyMissing:
-      '沒有可用於測試的已儲存 API Key：這個上游由客戶端自帶 API Key，或者還沒有填寫 API Key。',
     subscriptionKey: '不支援 Claude 訂閱登入，請使用模型 API Key。',
   },
   validation: {
+    anthropicBaseUrl: '去掉末尾的 /v1 才能儲存',
     required: '必填',
     number: '請輸入數字',
     integer: '請輸入整數',
@@ -165,6 +233,7 @@ const common = {
   keyValue: {
     add: '新增',
     remove: '移除',
+    none: '未設定',
     duplicate: '名稱重複，只保留最後一項',
   },
   tags: {

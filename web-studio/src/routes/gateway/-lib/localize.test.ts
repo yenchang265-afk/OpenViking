@@ -55,13 +55,16 @@ describe('enum labels', () => {
     expect(windowReminderLabel(zhT, 'soft')).toBe('已提醒模型儘快開啟新視窗')
   })
 
-  it('explains OpenViking reasons by pattern', () => {
+  it('explains Business Data Platform reasons by pattern', () => {
     expect(openVikingReason(t, 'openviking_http_503')).toBe(
       'Business Data Platform returned HTTP 503',
     )
     expect(openVikingReason(t, 'openviking_http_401')).toContain('rejected')
     expect(openVikingReason(t, 'openviking_RATE_LIMITED')).toBe(
       'Business Data Platform reported error RATE_LIMITED',
+    )
+    expect(openVikingReason(t, 'openviking_unreachable')).toBe(
+      "Business Data Platform is unreachable or didn't answer in time",
     )
     expect(openVikingReason(t, 'history_changed')).toBeUndefined()
   })
@@ -106,35 +109,41 @@ describe('enum labels', () => {
 })
 
 describe('gatewayErrorMessage', () => {
-  it('maps known server messages and OpenViking reasons', () => {
+  it('maps known server messages and Business Data Platform reasons', () => {
     expect(
       gatewayErrorMessage(
         t,
         new GatewayError(
           'Revoke or update dependent keys before deleting this object',
           409,
+          undefined,
+          'in_use',
+          { key_count: 3 },
         ),
       ),
-    ).toBe('Keys still use this. Revoke those keys first.')
+    ).toBe('3 keys still use this.')
     expect(
-      gatewayErrorMessage(zhT, new GatewayError('root_key_not_allowed', 403)),
-    ).toBe('不接受 Root 金鑰，請使用本帳號下的使用者金鑰。')
+      gatewayErrorMessage(
+        zhT,
+        new GatewayError(
+          'root_key_not_allowed',
+          403,
+          undefined,
+          'root_key_not_allowed',
+        ),
+      ),
+    ).toBe('不接受 Root API 金鑰，請使用本帳號下的使用者 API 金鑰。')
     expect(
       gatewayErrorMessage(
         t,
         new GatewayError(
           'Business Data Platform key belongs to another account',
           403,
+          undefined,
+          'other_account',
         ),
       ),
-    ).toBe('This Business Data Platform key belongs to another account.')
-    // A server from before the rebrand still says OpenViking.
-    expect(
-      gatewayErrorMessage(
-        t,
-        new GatewayError('OpenViking key belongs to another account', 403),
-      ),
-    ).toBe('This Business Data Platform key belongs to another account.')
+    ).toBe('This Business Data Platform API key belongs to another account.')
   })
 
   it('summarizes by category and keeps unexplained messages', () => {
@@ -144,9 +153,14 @@ describe('gatewayErrorMessage', () => {
     expect(
       gatewayErrorMessage(
         t,
-        new GatewayError('Business Data Platform Gateway is not enabled', 503),
+        new GatewayError(
+          'Business Data Platform Gateway is not enabled',
+          503,
+          undefined,
+          'not_enabled',
+        ),
       ),
-    ).toBe('The Business Data Platform Gateway is turned off on this server.')
+    ).toBe('The gateway is not enabled on this Business Data Platform server.')
     expect(gatewayErrorMessage(t, new Error('socket hang up'))).toBe(
       'socket hang up',
     )
