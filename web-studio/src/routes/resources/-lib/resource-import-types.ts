@@ -38,7 +38,6 @@ export type ResourceImportRequest = {
   reason?: string
   instruction?: string
   wait?: boolean
-  timeout?: number
   strict?: boolean
   source_name?: string
   ignore_dirs?: string

@@ -61,11 +61,6 @@ export function buildResourceImportCommonBody({
     create_parent: createParent,
     telemetry: true,
     wait: sourceCapabilities.nativeOptions ? additionalOptions.wait : false,
-    ...(sourceCapabilities.nativeOptions &&
-    additionalOptions.wait &&
-    additionalOptions.timeout.trim()
-      ? { timeout: Number(additionalOptions.timeout) }
-      : {}),
     directly_upload_media: sourceCapabilities.nativeOptions
       ? directlyUploadMedia
       : true,

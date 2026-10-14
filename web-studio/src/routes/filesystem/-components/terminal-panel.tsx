@@ -338,16 +338,6 @@ function formatJson(value: unknown): string {
   return JSON.stringify(value, null, 2)
 }
 
-function parseWaitTimeout(body: string): number | undefined {
-  const trimmed = body.trim()
-  if (!trimmed) return undefined
-  const match = trimmed.match(/^(?:--timeout\s+)?(\d+(?:\.\d+)?)$/)
-  if (!match) {
-    throw new Error(i18n.t('filesystem:terminal.waitUsage'))
-  }
-  return Number(match[1])
-}
-
 function joinBodyLines(lines: Array<string | undefined>): string {
   return lines.filter((line): line is string => Boolean(line)).join('\n')
 }
@@ -946,14 +936,10 @@ export function TerminalPanel({
             return
           }
           case '/wait': {
-            const timeout = parseWaitTimeout(body)
-            const result = await getOvResult<unknown>(
-              postSystemWait({
-                body: {
-                  timeout,
-                },
-              }),
-            )
+            if (body.trim()) {
+              throw new Error(i18n.t('filesystem:terminal.waitUsage'))
+            }
+            const result = await getOvResult<unknown>(postSystemWait())
             append({
               body: formatJson(result),
               kind: 'success',

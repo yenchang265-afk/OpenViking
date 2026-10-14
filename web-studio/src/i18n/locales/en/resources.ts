@@ -284,8 +284,6 @@ const resources = {
     'processingMode.semantic': 'Semantic understanding and vectors',
     'processingMode.vectorsOnly': 'Vectors only',
     waitForProcessing: 'Wait for processing to finish',
-    timeout: 'Wait Timeout (seconds)',
-    'timeout.placeholder': 'No limit when empty',
     sourceName: 'Resource Name',
     'sourceName.placeholder': 'Optional override for the detected source name',
     tags: 'Retrieval Tags',

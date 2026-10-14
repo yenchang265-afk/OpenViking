@@ -406,9 +406,6 @@ describe('AddResourceForm watch options', () => {
       target: { value: 'server decides this format' },
     })
     fireEvent.click(screen.getByRole('checkbox', { name: 'waitForProcessing' }))
-    fireEvent.change(screen.getByLabelText('timeout'), {
-      target: { value: '-1' },
-    })
 
     const submit = screen.getByRole('button', { name: 'startProcessing' })
     expect(submit.hasAttribute('disabled')).toBe(false)
@@ -418,7 +415,6 @@ describe('AddResourceForm watch options', () => {
       commonBody: expect.objectContaining({
         args: expect.objectContaining({ depth: -1 }),
         tags: ['server decides this format'],
-        timeout: -1,
       }),
       onAccepted: undefined,
       onCompleted: undefined,

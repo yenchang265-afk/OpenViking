@@ -25,7 +25,6 @@ describe('AdditionalResourceOptions', () => {
           sourceName: '',
           tagMode: 'replace',
           tags: '',
-          timeout: '',
           wait: false,
         }}
       />,

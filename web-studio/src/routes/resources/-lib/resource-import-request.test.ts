@@ -14,7 +14,6 @@ const BASE_FORM_STATE: ResourceImportFormState = {
     sourceName: '',
     tagMode: 'replace',
     tags: '',
-    timeout: '',
     wait: false,
   },
   createParent: true,
@@ -66,7 +65,6 @@ describe('resource import request builders', () => {
           sourceName: 'docs',
           tagMode: 'append',
           tags: 'team=docs, env=test',
-          timeout: '12.5',
           wait: true,
         },
         exclude: '**/dist/**',
@@ -95,7 +93,6 @@ describe('resource import request builders', () => {
       tag_mode: 'append',
       tags: ['team=docs', 'env=test'],
       telemetry: true,
-      timeout: 12.5,
       wait: true,
       watch_interval: 60,
     })
