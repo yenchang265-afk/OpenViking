@@ -2344,12 +2344,12 @@ mod tests {
     #[cfg(feature = "cache")]
     #[tokio::test]
     async fn cached_mount_forwards_write_from_path_and_invalidates_file_cache() {
-        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache::CachePolicy;
         use crate::cache_runtime::CacheRuntime;
 
         let mfs = MountableFS::with_cache_runtime(
             CacheRuntime::memory(),
-            CacheNamespace::new("spy-cache-test"),
+            "spy-cache-test",
             CachePolicy::default(),
         );
         let spy = mount_spy(&mfs).await;
