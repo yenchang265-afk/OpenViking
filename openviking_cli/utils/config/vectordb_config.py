@@ -396,8 +396,12 @@ class ElasticsearchConfig(BaseModel):
             "search, matching the other backends."
         ),
     )
-    index_type: Literal["hnsw", "int8_hnsw", "flat", "int8_flat"] = Field(
-        default="hnsw", description="dense_vector index_options type"
+    index_type: Literal["bbq_hnsw", "bbq_flat", "hnsw", "int8_hnsw", "flat", "int8_flat"] = Field(
+        default="bbq_hnsw",
+        description=(
+            "dense_vector index_options type. The bbq types (Elasticsearch 8.18+) need at "
+            "least 64 dimensions; below that the default falls back to 'hnsw'."
+        ),
     )
     m: int = Field(default=16, ge=2, description="HNSW graph connections per node")
     ef_construction: int = Field(
@@ -411,6 +415,14 @@ class ElasticsearchConfig(BaseModel):
     )
     bulk_batch_size: int = Field(
         default=500, ge=1, le=10000, description="Documents per bulk request"
+    )
+    rescore_oversample: Optional[float] = Field(
+        default=3.0,
+        ge=1.0,
+        description=(
+            "kNN oversample factor for re-scoring bbq results with the original vectors; "
+            "null disables rescoring"
+        ),
     )
 
     model_config = {"extra": "forbid"}

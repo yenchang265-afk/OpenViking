@@ -172,6 +172,75 @@ def test_create_collection_builds_strict_mapping_with_metadata():
     assert stored[INDEXES_KEY]["default"]["VectorIndex"]["Distance"] == "cosine"
 
 
+def _created_with_dims(client: _FakeClient, dims: int, **config: Any):
+    adapter = _adapter(client, **config)
+    adapter.create_collection(
+        "context",
+        CollectionSchemas.context_collection("context", dims),
+        distance="cosine",
+        sparse_weight=0.0,
+        index_name="default",
+    )
+    return adapter
+
+
+def test_default_index_type_is_bbq_hnsw_with_rescoring():
+    client = _FakeClient()
+    adapter = _created_with_dims(client, 64)
+
+    options = client.last("create")["mappings"]["properties"]["vector"]["index_options"]
+    assert options == {"type": "bbq_hnsw", "m": 16, "ef_construction": 100}
+    index = client.mappings[INDEX]["_meta"][INDEXES_KEY]["default"]
+    assert index["VectorIndex"]["IndexType"] == "bbq_hnsw"
+
+    adapter.query(query_vector=[1.0] * 64, limit=2)
+    assert client.last("search")["knn"]["rescore_vector"] == {"oversample": 3.0}
+
+
+def test_bbq_rescoring_can_be_disabled():
+    client = _FakeClient()
+    adapter = _created_with_dims(client, 64, rescore_oversample=None)
+
+    adapter.query(query_vector=[1.0] * 64, limit=2)
+    assert "rescore_vector" not in client.last("search")["knn"]
+
+
+def test_bbq_flat_index_type_has_no_hnsw_parameters():
+    client = _FakeClient()
+    _created_with_dims(client, 64, index_type="bbq_flat")
+    options = client.last("create")["mappings"]["properties"]["vector"]["index_options"]
+    assert options == {"type": "bbq_flat"}
+
+
+def test_default_bbq_falls_back_to_hnsw_below_64_dimensions():
+    client = _FakeClient()
+    adapter = _created(client)
+
+    options = client.last("create")["mappings"]["properties"]["vector"]["index_options"]
+    assert options["type"] == "hnsw"
+    index = client.mappings[INDEX]["_meta"][INDEXES_KEY]["default"]
+    assert index["VectorIndex"]["IndexType"] == "hnsw"
+    adapter.query(query_vector=[1, 0, 0, 0], limit=1)
+    assert "rescore_vector" not in client.last("search")["knn"]
+
+
+def test_explicit_bbq_below_64_dimensions_is_rejected():
+    client = _FakeClient()
+    with pytest.raises(ValueError, match="64"):
+        _created(client, index_type="bbq_hnsw")
+    assert INDEX not in client.mappings
+
+
+def test_existing_hnsw_index_is_not_rescored_after_default_change():
+    client = _FakeClient()
+    _created_with_dims(client, 64, index_type="hnsw")
+
+    reloaded = _adapter(client)
+    reloaded.query(query_vector=[1.0] * 64, limit=1)
+
+    assert "rescore_vector" not in client.last("search")["knn"]
+
+
 def test_flat_index_type_omits_hnsw_parameters():
     client = _FakeClient()
     _created(client, index_type="int8_flat")

@@ -31,7 +31,7 @@ from .elasticsearch.collection import (
     ElasticsearchCollection,
     ElasticsearchSettings,
 )
-from .elasticsearch.query import MATCH_NONE
+from .elasticsearch.query import MATCH_NONE, vector_dimension
 
 logger = get_logger(__name__)
 
@@ -39,6 +39,8 @@ logger = get_logger(__name__)
 _INDEX_NAME_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
 _MAX_INDEX_NAME_BYTES = 255
 _EMPTY_OR_FILTER: Dict[str, Any] = {"op": "or", "conds": []}
+# Elasticsearch rejects bbq index types for vectors with fewer dimensions.
+_BBQ_MIN_DIMS = 64
 
 
 def es_index_name(prefix: str, collection_name: str) -> str:
@@ -81,6 +83,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
             refresh=self._config.refresh,
             bulk_batch_size=self._config.bulk_batch_size,
             num_candidates=self._config.num_candidates,
+            rescore_oversample=self._config.rescore_oversample,
         )
 
     @classmethod
@@ -145,7 +148,25 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
             )
         self._bind_collection(dict(stored[META_KEY]), stored)
 
+    def _resolve_index_type(self, meta: Dict[str, Any]) -> None:
+        """Fall back from the default bbq type when the vectors are too small for it."""
+        dims = vector_dimension(meta.get("Fields", []))
+        if not self._config.index_type.startswith("bbq_") or not 0 < dims < _BBQ_MIN_DIMS:
+            return
+        if "index_type" in self._config.model_fields_set:
+            raise ValueError(
+                f"Elasticsearch index_type {self._config.index_type!r} needs at least "
+                f"{_BBQ_MIN_DIMS} vector dimensions, got {dims}; choose 'hnsw' or 'int8_hnsw'"
+            )
+        logger.warning(
+            "elasticsearch_adapter: %d-dimension vectors are too small for %s; using hnsw",
+            dims,
+            self._config.index_type,
+        )
+        self._config.index_type = "hnsw"
+
     def _create_backend_collection(self, meta: Dict[str, Any]) -> Collection:
+        self._resolve_index_type(meta)
         try:
             sparse_field = ElasticsearchCollection.create_physical_index(
                 self._client,

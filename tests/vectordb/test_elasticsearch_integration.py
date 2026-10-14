@@ -220,3 +220,27 @@ def test_sparse_only_search_and_round_trip(sparse_adapter):
     assert [r["id"] for r in records] == ["c"]
     assert records[0]["_score"] == pytest.approx(1.5)
     assert sparse_adapter.get(["b"])[0]["sparse_vector"] == {"u.s.": 2.0}
+
+
+def test_default_bbq_hnsw_index_rescores_to_exact_similarity():
+    pytest.importorskip("elasticsearch")
+    config = _config(f"ovtest_{uuid.uuid4().hex[:8]}_")
+    instance = ElasticsearchCollectionAdapter("context", config)
+    instance.create_collection(
+        "context",
+        CollectionSchemas.context_collection("context", 64),
+        distance="cosine",
+        sparse_weight=0.0,
+        index_name="default",
+    )
+    try:
+        basis = [[1.0 if i == j else 0.0 for i in range(64)] for j in range(4)]
+        instance.upsert([{"id": str(j), "vector": vector} for j, vector in enumerate(basis)])
+        records = instance.query(query_vector=basis[2], limit=2)
+        assert records[0]["id"] == "2"
+        assert records[0]["_score"] == pytest.approx(1.0, abs=1e-3)
+        stored = instance.get_collection().get_index_meta_data("default")
+        assert stored["VectorIndex"]["IndexType"] == "bbq_hnsw"
+    finally:
+        instance.drop_collection()
+        instance.close()

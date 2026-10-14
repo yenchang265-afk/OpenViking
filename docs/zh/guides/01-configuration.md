@@ -1563,7 +1563,7 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 
 <details>
 <summary><b>Elasticsearch</b></summary>
-使用 Elasticsearch 8.12+ 叢集的 `dense_vector` kNN 搜尋儲存向量。安裝用戶端：`pip install "openviking[elasticsearch]"`。
+使用 Elasticsearch 8.12+ 叢集的 `dense_vector` kNN 搜尋儲存向量（預設的 `bbq_hnsw` 索引型別需要 8.18+）。安裝用戶端：`pip install "openviking[elasticsearch]"`。
 
 ```json
 {
@@ -1594,11 +1594,13 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 | `number_of_shards` | int | 每個索引的主分片數 | 1 |
 | `number_of_replicas` | int | 每個索引的副本數；未設定時使用叢集預設值（單節點叢集請設為 `0`） | null |
 | `refresh` | str | 寫入重新整理策略：`wait_for`（寫入後下一次搜尋可見）、`true` 或 `false` | "wait_for" |
-| `index_type` | str | `dense_vector` 索引型別：`hnsw`、`int8_hnsw`、`flat` 或 `int8_flat`（`flat` 型別需要 Elasticsearch 8.13+） | "hnsw" |
+| `index_type` | str | `dense_vector` 索引型別：`bbq_hnsw`、`bbq_flat`、`hnsw`、`int8_hnsw`、`flat` 或 `int8_flat`。`bbq` 型別需要 Elasticsearch 8.18+ 且至少 64 維；`flat` 型別需要 8.13+ | "bbq_hnsw" |
 | `m` / `ef_construction` | int | HNSW 建構引數 | 16 / 100 |
 | `num_candidates` | int | 每個分片的最少 kNN 候選數（會提高到請求的 k） | 100 |
 | `bulk_batch_size` | int | 每個 bulk 請求的文件數 | 500 |
+| `rescore_oversample` | float | 對 `bbq` 索引型別，kNN 會用原始向量對每個分片的 `k × rescore_oversample` 個候選重新評分；設為 `null` 停用 | 3.0 |
 
+- 預設的 `bbq_hnsw` 以 1-bit 二值量化儲存向量（記憶體約為 `hnsw` 的 1/32），並用原始向量對前幾名候選重新評分，因此回傳的相似度與其他索引型別一致。需要 Elasticsearch 8.18 或更新版本；較舊的叢集請將 `index_type` 設為 `hnsw`。Embedding 少於 64 維時預設會回退為 `hnsw`，明確指定 `bbq` 型別則會報錯。索引型別在建立集合時固定，既有集合保持原型別。
 - `distance_metric` 對應 `dense_vector` 的 similarity：`cosine` → `cosine`、`l2` → `l2_norm`、`ip` → `max_inner_product`。該值在建立索引時固定，修改需要新建 collection。
 - 稀疏/混合檢索：建立集合時若 `sparse_weight > 0`，`sparse_vector` 欄位會對映為 `rank_features`。評分方式與本地引擎一致：`(1 - sparse_weight) × dense 相似度 + sparse_weight × 稀疏內積`，候選集為 kNN 與稀疏召回結果的聯集（各召回請求視窗的 3 倍）。不帶 dense 向量的查詢為純稀疏檢索。稀疏對映在建立索引時固定；若要在既有集合上啟用，需要重建索引到新集合。純 dense 集合會忽略稀疏查詢向量。
 - `rank_features` 只能儲存正權重，因此權重為零或負數的稀疏詞項在寫入和查詢時會被丟棄。

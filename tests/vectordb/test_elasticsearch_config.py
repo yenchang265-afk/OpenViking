@@ -20,7 +20,14 @@ def test_elasticsearch_backend_is_registered_and_accepted():
     assert config.elasticsearch is not None
     assert config.elasticsearch.hosts == ["http://127.0.0.1:9200"]
     assert config.elasticsearch.refresh == "wait_for"
-    assert config.elasticsearch.index_type == "hnsw"
+    assert config.elasticsearch.index_type == "bbq_hnsw"
+    assert config.elasticsearch.rescore_oversample == 3.0
+
+
+def test_elasticsearch_rescore_oversample_can_be_disabled_but_not_below_one():
+    assert ElasticsearchConfig(rescore_oversample=None).rescore_oversample is None
+    with pytest.raises(ValueError, match="rescore_oversample"):
+        ElasticsearchConfig(rescore_oversample=0.5)
 
 
 def test_unknown_backend_error_lists_elasticsearch():
