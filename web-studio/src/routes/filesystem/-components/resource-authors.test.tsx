@@ -35,7 +35,7 @@ function renderAuthors(uri: string) {
 
 it('shows who uploaded the resource', async () => {
   fetchResourceAuthors.mockResolvedValue({
-    uploadedBy: 'alice',
+    createdBy: 'alice',
     updatedBy: 'alice',
   })
 
@@ -43,7 +43,7 @@ it('shows who uploaded the resource', async () => {
 
   const chip = await screen.findByText('alice')
   expect(chip.closest('[title]')?.getAttribute('title')).toBe(
-    'uploadedBy:alice',
+    'createdBy:alice',
   )
   expect(screen.queryByTitle(/^updatedBy:/)).toBeNull()
   expect(fetchResourceAuthors).toHaveBeenCalledWith(
@@ -54,18 +54,18 @@ it('shows who uploaded the resource', async () => {
 
 it('also shows who last updated the resource when it differs', async () => {
   fetchResourceAuthors.mockResolvedValue({
-    uploadedBy: 'alice',
+    createdBy: 'alice',
     updatedBy: 'bob',
   })
 
   renderAuthors('viking://resources/demo.md')
 
-  expect(await screen.findByTitle('uploadedBy:alice')).toBeTruthy()
+  expect(await screen.findByTitle('createdBy:alice')).toBeTruthy()
   expect((await screen.findByTitle('updatedBy:bob')).textContent).toBe('bob')
 })
 
 it('renders nothing when both are unknown', async () => {
-  fetchResourceAuthors.mockResolvedValue({ uploadedBy: '', updatedBy: '' })
+  fetchResourceAuthors.mockResolvedValue({ createdBy: '', updatedBy: '' })
 
   const { container } = renderAuthors('viking://resources/old.md')
 

@@ -16,7 +16,7 @@ export function ResourceAuthors({ uri }: { uri: string }) {
 
   return (
     <AuthorChips
-      uploadedBy={data?.uploadedBy ?? ''}
+      createdBy={data?.createdBy ?? ''}
       updatedBy={data?.updatedBy ?? ''}
     />
   )

@@ -18,7 +18,7 @@ export interface VikingFsEntry {
   abstract: string
   overview?: string
   /** Present when listed with `extraFields: ['authors']`; '' when unknown. */
-  uploadedBy?: string
+  createdBy?: string
   updatedBy?: string
 }
 

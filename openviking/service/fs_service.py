@@ -206,7 +206,7 @@ class FSService:
         entries: List[Dict[str, Any]],
         ctx: RequestContext,
     ) -> List[Dict[str, Any]]:
-        """Attach uploaded_by/updated_by from each entry's own index level.
+        """Attach created_by/updated_by from each entry's own index level.
 
         One filter query covers the whole page. Directories read their L0/L1
         summary records and files their L2 record, mirroring tag lookup. Entries
@@ -224,7 +224,7 @@ class FSService:
                     [Or([Eq("uri", item_uri) for item_uri in uris]), In("level", [0, 1, 2])]
                 ),
                 limit=len(uris) * 3,
-                output_fields=["uri", "level", "uploaded_by", "updated_by"],
+                output_fields=["uri", "level", "created_by", "updated_by"],
             )
         records_by_uri: Dict[str, List[Dict[str, Any]]] = {}
         for record in sorted(records, key=lambda item: item.get("level", 99)):
@@ -247,7 +247,7 @@ class FSService:
             result_entries.append(
                 {
                     **entry,
-                    "uploaded_by": first(own, "uploaded_by"),
+                    "created_by": first(own, "created_by"),
                     "updated_by": first(own, "updated_by"),
                 }
             )

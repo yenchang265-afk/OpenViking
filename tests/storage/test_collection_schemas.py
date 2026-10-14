@@ -552,7 +552,7 @@ async def test_embedding_handler_merge_action_reads_and_merges_before_full_upser
 
 
 @pytest.mark.asyncio
-async def test_embedding_handler_merge_keeps_stored_uploader_and_takes_new_updater(monkeypatch):
+async def test_embedding_handler_merge_keeps_stored_creator_and_takes_new_updater(monkeypatch):
     config = _DummyConfig(_DummyEmbedder())
     monkeypatch.setattr(
         "openviking_cli.utils.config.get_openviking_config",
@@ -566,7 +566,7 @@ async def test_embedding_handler_merge_keeps_stored_uploader_and_takes_new_updat
 
         async def get_strict(self, ids, *, ctx):
             del ctx
-            return [{"id": ids[0], "uploaded_by": "alice", "updated_by": "alice"}]
+            return [{"id": ids[0], "created_by": "alice", "updated_by": "alice"}]
 
         async def upsert(self, data, *, ctx, options=UpsertOptions()):
             del ctx, options
@@ -583,7 +583,7 @@ async def test_embedding_handler_merge_keeps_stored_uploader_and_takes_new_updat
             "uri": "viking://resources/repo/a.py",
             "account_id": "acct",
             "abstract": "summary",
-            "uploaded_by": "bob",
+            "created_by": "bob",
             "updated_by": "bob",
         },
     )
@@ -591,7 +591,7 @@ async def test_embedding_handler_merge_keeps_stored_uploader_and_takes_new_updat
     result = await handler.on_dequeue(_build_operation_payload(msg))
 
     assert result.outcome is ProcessOutcome.SUCCESS
-    assert captured["data"]["uploaded_by"] == "alice"
+    assert captured["data"]["created_by"] == "alice"
     assert captured["data"]["updated_by"] == "bob"
 
 
@@ -759,11 +759,11 @@ async def test_init_context_collection_backfills_metadata_for_empty_legacy_colle
     assert set(scalar_index) - set(existing_scalar_index) == {"tags"}
 
 
-def test_context_collection_schema_indexes_uploaded_by():
+def test_context_collection_schema_indexes_created_by():
     schema = CollectionSchemas.context_collection("context", 2)
 
-    assert {"FieldName": "uploaded_by", "FieldType": "string"} in schema["Fields"]
-    assert "uploaded_by" in schema["ScalarIndex"]
+    assert {"FieldName": "created_by", "FieldType": "string"} in schema["Fields"]
+    assert "created_by" in schema["ScalarIndex"]
     assert {"FieldName": "updated_by", "FieldType": "string"} in schema["Fields"]
     assert "updated_by" in schema["ScalarIndex"]
 
@@ -774,8 +774,8 @@ async def test_init_context_collection_adds_missing_fields_to_elasticsearch(monk
     schema_updates = []
     config = _DummyConfig(_DummyEmbedder(), backend="elasticsearch")
     full_schema = CollectionSchemas.context_collection("context", config.embedding.dimension)
-    existing_fields = [f for f in full_schema["Fields"] if f["FieldName"] != "uploaded_by"]
-    existing_scalar_index = [f for f in full_schema["ScalarIndex"] if f != "uploaded_by"]
+    existing_fields = [f for f in full_schema["Fields"] if f["FieldName"] != "created_by"]
+    existing_scalar_index = [f for f in full_schema["ScalarIndex"] if f != "created_by"]
 
     class _FakeStorage:
         async def create_collection(self, name, schema):
@@ -808,8 +808,8 @@ async def test_init_context_collection_adds_missing_fields_to_elasticsearch(monk
 
     assert len(schema_updates) == 1
     fields, scalar_index = schema_updates[0]
-    assert "uploaded_by" in {field["FieldName"] for field in fields}
-    assert "uploaded_by" in scalar_index
+    assert "created_by" in {field["FieldName"] for field in fields}
+    assert "created_by" in scalar_index
 
 
 @pytest.mark.asyncio

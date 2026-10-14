@@ -4,28 +4,28 @@ import { PencilIcon, UserIcon } from 'lucide-react'
 
 import { cn } from '#/lib/utils'
 
-/** Uploader chip, plus an updater chip when someone else changed it last. */
+/** Creator chip, plus an updater chip when someone else changed it last. */
 export function AuthorChips({
-  uploadedBy = '',
+  createdBy = '',
   updatedBy = '',
   compact = false,
 }: {
-  uploadedBy?: string
+  createdBy?: string
   updatedBy?: string
   compact?: boolean
 }) {
   const { t } = useTranslation('filesystem')
-  const showUpdater = Boolean(updatedBy) && updatedBy !== uploadedBy
-  if (!uploadedBy && !showUpdater) return null
+  const showUpdater = Boolean(updatedBy) && updatedBy !== createdBy
+  if (!createdBy && !showUpdater) return null
 
   return (
     <>
-      {uploadedBy ? (
+      {createdBy ? (
         <AuthorChip
           compact={compact}
           icon={UserIcon}
-          label={t('uploadedBy', { user: uploadedBy })}
-          user={uploadedBy}
+          label={t('createdBy', { user: createdBy })}
+          user={createdBy}
         />
       ) : null}
       {showUpdater ? (

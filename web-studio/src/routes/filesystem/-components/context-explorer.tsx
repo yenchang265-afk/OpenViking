@@ -516,11 +516,11 @@ export function ContextTreeNode({
               {t('explorer.overviewLevel')}
             </span>
           ) : null}
-          {!namespaceHint && (entry.uploadedBy || entry.updatedBy) ? (
+          {!namespaceHint && (entry.createdBy || entry.updatedBy) ? (
             <span className="ml-auto flex min-w-0 shrink-0 items-center gap-1.5 pl-1">
               <AuthorChips
                 compact
-                uploadedBy={entry.uploadedBy}
+                createdBy={entry.createdBy}
                 updatedBy={entry.updatedBy}
               />
             </span>

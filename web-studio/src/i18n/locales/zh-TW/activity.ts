@@ -164,7 +164,7 @@ const activity = {
   },
   filesystem: {
     copyUri: '複製當前 URI',
-    uploadedBy: '上傳者：{{user}}',
+    createdBy: '建立者：{{user}}',
     updatedBy: '最後更新者：{{user}}',
     copied: '已複製 URI',
     copyFailed: '複製失敗',

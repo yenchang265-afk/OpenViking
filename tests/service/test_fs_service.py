@@ -1609,18 +1609,18 @@ async def test_ls_attaches_authors_from_each_entry_own_index_level(request_conte
             captured.update(kwargs)
             return [
                 # A directory's authors live on its L0/L1 summary records.
-                {"uri": "viking://resources/docs", "level": 1, "uploaded_by": "alice"},
+                {"uri": "viking://resources/docs", "level": 1, "created_by": "alice"},
                 {
                     "uri": "viking://resources/docs",
                     "level": 0,
-                    "uploaded_by": "alice",
+                    "created_by": "alice",
                     "updated_by": "bob",
                 },
-                {"uri": "viking://resources/a.md", "level": 0, "uploaded_by": "wrong-level"},
+                {"uri": "viking://resources/a.md", "level": 0, "created_by": "wrong-level"},
                 {
                     "uri": "viking://resources/a.md",
                     "level": 2,
-                    "uploaded_by": "carol",
+                    "created_by": "carol",
                     "updated_by": "carol",
                 },
                 {"uri": "viking://resources/legacy.md", "level": 2},
@@ -1631,13 +1631,13 @@ async def test_ls_attaches_authors_from_each_entry_own_index_level(request_conte
         "viking://resources", ctx=request_context, output="agent", extra_fields=["authors"]
     )
 
-    assert [(e["uri"], e.get("uploaded_by"), e.get("updated_by")) for e in result.entries] == [
+    assert [(e["uri"], e.get("created_by"), e.get("updated_by")) for e in result.entries] == [
         ("viking://resources/docs", "alice", "bob"),
         ("viking://resources/a.md", "carol", "carol"),
         ("viking://resources/legacy.md", "", ""),
         ("viking://resources/secret", None, None),
     ]
-    assert {"uploaded_by", "updated_by"} <= set(captured["output_fields"])
+    assert {"created_by", "updated_by"} <= set(captured["output_fields"])
 
 
 @pytest.mark.asyncio
@@ -1650,5 +1650,5 @@ async def test_ls_skips_author_lookup_unless_requested(request_context):
     result = await service.ls("viking://resources", ctx=request_context, output="agent")
 
     assert [e["uri"] for e in result.entries] == ["viking://resources/a.md"]
-    assert "uploaded_by" not in result.entries[0]
+    assert "created_by" not in result.entries[0]
     vikingdb.filter.assert_not_awaited()

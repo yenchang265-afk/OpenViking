@@ -294,7 +294,7 @@ async def test_vectorize_file_omits_md5_when_not_supplied(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_vectorize_file_records_request_user_as_uploader(monkeypatch):
+async def test_vectorize_file_records_request_user_as_creator(monkeypatch):
     queue = DummyQueue()
     fs = DummyFS("deployment guide")
     monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
@@ -316,14 +316,14 @@ async def test_vectorize_file_records_request_user_as_uploader(monkeypatch):
         ctx=req,
     )
 
-    assert queue.items[0].context_data["uploaded_by"] == "alice"
+    assert queue.items[0].context_data["created_by"] == "alice"
     assert queue.items[0].context_data["updated_by"] == "alice"
 
 
 @pytest.mark.asyncio
-async def test_vectorize_file_keeps_planned_uploader_but_records_new_updater(monkeypatch):
+async def test_vectorize_file_keeps_planned_creator_but_records_new_updater(monkeypatch):
     # A re-import carries the stored record's portable fields as overrides: the
-    # original uploader must survive while the updater is the current user.
+    # original creator must survive while the updater is the current user.
     queue = DummyQueue()
     fs = DummyFS("deployment guide")
     monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
@@ -343,10 +343,10 @@ async def test_vectorize_file_keeps_planned_uploader_but_records_new_updater(mon
         summary_dict={"name": "demo.md", "summary": "deployment summary"},
         parent_uri="viking://resources",
         ctx=req,
-        scalar_override={"uploaded_by": "alice", "updated_by": "alice"},
+        scalar_override={"created_by": "alice", "updated_by": "alice"},
     )
 
-    assert queue.items[0].context_data["uploaded_by"] == "alice"
+    assert queue.items[0].context_data["created_by"] == "alice"
     assert queue.items[0].context_data["updated_by"] == "bob"
 
 
