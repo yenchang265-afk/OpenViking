@@ -87,6 +87,21 @@ class S3Config(BaseModel):
         "during uploads. Disabled by default for backward compatibility.",
     )
 
+    multipart_threshold_bytes: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Files larger than this are uploaded with S3 multipart upload. "
+        "Unset uses the s3fs default (16 MiB).",
+    )
+
+    multipart_part_size_bytes: Optional[int] = Field(
+        default=None,
+        ge=5 * 1024 * 1024,
+        le=5 * 1024 * 1024 * 1024,
+        description="Multipart upload part size; S3 requires 5 MiB to 5 GiB. "
+        "Unset uses the s3fs default (8 MiB).",
+    )
+
     def validate_config(self):
         """Validate S3 configuration completeness"""
         missing = []
