@@ -14,6 +14,7 @@ from openviking.storage.vectordb_adapters.elasticsearch.collection import (
     DISTANCE_KEY,
     INDEXES_KEY,
     META_KEY,
+    SPARSE_FIELD_KEY,
 )
 from openviking.storage.vectordb_adapters.elasticsearch.query import INTERNAL_FIELD
 from openviking.storage.vectordb_adapters.elasticsearch_adapter import (
@@ -135,6 +136,22 @@ def _created(client: _FakeClient, **config: Any) -> ElasticsearchCollectionAdapt
     return adapter
 
 
+def _created_sparse(client: _FakeClient, sparse_weight: float = 0.3, **config: Any):
+    adapter = _adapter(client, **config)
+    assert adapter.create_collection(
+        "context",
+        CollectionSchemas.context_collection("context", 4),
+        distance="cosine",
+        sparse_weight=sparse_weight,
+        index_name="default",
+    )
+    return adapter
+
+
+def _hits(*hits: Dict[str, Any]) -> Dict[str, Any]:
+    return {"hits": {"hits": list(hits)}}
+
+
 def test_create_collection_builds_strict_mapping_with_metadata():
     client = _FakeClient()
     _created(client, number_of_replicas=0)
@@ -204,17 +221,61 @@ def test_distance_change_on_existing_index_is_rejected():
         adapter.collection_exists()
 
 
-def test_sparse_index_is_rejected():
+def test_dense_only_collection_stores_sparse_vectors_without_indexing():
     client = _FakeClient()
-    adapter = _adapter(client)
-    with pytest.raises(NotImplementedError, match="sparse"):
-        adapter.create_collection(
-            "context",
-            CollectionSchemas.context_collection("context", 4),
-            distance="cosine",
-            sparse_weight=0.3,
-            index_name="default",
+    _created(client)
+
+    mappings = client.last("create")["mappings"]
+    assert mappings["properties"]["sparse_vector"] == {"type": "object", "enabled": False}
+    assert SPARSE_FIELD_KEY not in client.mappings[INDEX]["_meta"]
+
+
+def test_sparse_collection_maps_rank_features_and_records_sparse_weight():
+    client = _FakeClient()
+    _created_sparse(client, sparse_weight=0.3)
+
+    mappings = client.last("create")["mappings"]
+    assert mappings["properties"]["sparse_vector"] == {"type": "rank_features"}
+    stored = client.mappings[INDEX]["_meta"]
+    assert stored[SPARSE_FIELD_KEY] == "sparse_vector"
+    vector_index = stored[INDEXES_KEY]["default"]["VectorIndex"]
+    assert vector_index["EnableSparse"] is True
+    assert vector_index["SearchWithSparseLogitAlpha"] == 0.3
+
+
+def test_sparse_index_on_dense_only_collection_is_rejected():
+    client = _FakeClient()
+    adapter = _created(client)
+
+    with pytest.raises(ValueError, match="sparse_vector"):
+        adapter.get_collection().create_index(
+            "hybrid",
+            {"VectorIndex": {"EnableSparse": True, "SearchWithSparseLogitAlpha": 0.5}},
         )
+
+
+def test_sparse_vectors_are_escaped_on_write_and_restored_on_read():
+    client = _FakeClient()
+    adapter = _created_sparse(client)
+
+    adapter.upsert({"id": "a", "sparse_vector": {"u.s.": 0.5, "zero": 0.0}})
+
+    _, document = client.last("bulk")["operations"]
+    assert document["doc"]["sparse_vector"] == {"u%2Es%2E": 0.5}
+
+    client.queue(
+        "mget",
+        {
+            "docs": [
+                {
+                    "_id": "a",
+                    "found": True,
+                    "_source": {"id": "a", "sparse_vector": {"u%2Es%2E": 0.5}},
+                }
+            ]
+        },
+    )
+    assert adapter.get(["a"]) == [{"sparse_vector": {"u.s.": 0.5}, "id": "a"}]
 
 
 def test_upsert_merges_documents_and_derives_path_fields():
@@ -346,6 +407,129 @@ def test_sparse_vector_query_is_rejected():
     adapter = _created(client)
     with pytest.raises(NotImplementedError, match="sparse"):
         adapter.query(sparse_query_vector={"a": 1.0}, limit=1)
+
+
+def test_dense_only_index_ignores_sparse_query_alongside_dense_query():
+    client = _FakeClient()
+    adapter = _created(client)
+
+    adapter.query(query_vector=[1, 0, 0, 0], sparse_query_vector={"a": 1.0}, limit=1)
+
+    searches = [body for name, body in client.calls if name == "search"]
+    assert len(searches) == 1
+    assert "knn" in searches[0] and "query" not in searches[0]
+
+
+def test_hybrid_query_fuses_dense_and_sparse_scores():
+    client = _FakeClient()
+    adapter = _created_sparse(client, sparse_weight=0.3)
+    client.queue(
+        "search",
+        # kNN recall: cosine 0.9 and 0.5
+        _hits(
+            {"_id": "a", "_score": 0.95, "_source": {"uri": "/a", "sparse_vector": {"apple": 0.5}}},
+            {"_id": "b", "_score": 0.75, "_source": {"uri": "/b"}},
+        ),
+        # sparse recall: "c" is found only here
+        _hits(
+            {
+                "_id": "c",
+                "_score": 2.9,
+                "_source": {"uri": "/c", "sparse_vector": {"u%2Es%2E": 1.0, "apple": 1.0}},
+            },
+            {"_id": "a", "_score": 0.5, "_source": {"uri": "/a", "sparse_vector": {"apple": 0.5}}},
+        ),
+        # exact dense score for "c": cosine 0.2
+        _hits({"_id": "c", "_score": 0.6}),
+    )
+
+    records = adapter.query(
+        query_vector=[1, 0, 0, 0],
+        sparse_query_vector={"apple": 1.0, "u.s.": 2.0, "neg": -1.0},
+        filter=Eq("account_id", "acc"),
+        limit=2,
+        output_fields=["uri"],
+    )
+
+    knn, sparse, gap = [body for name, body in client.calls if name == "search"]
+    account = {"terms": {"account_id": ["acc"]}}
+    assert knn["knn"]["k"] == 6 and knn["knn"]["filter"] == account
+    assert knn["source"]["includes"] == ["uri", "sparse_vector"]
+    assert sparse["size"] == 6
+    assert sparse["query"]["bool"]["filter"] == [account]
+    assert [clause["rank_feature"]["field"] for clause in sparse["query"]["bool"]["should"]] == [
+        "sparse_vector.apple",
+        "sparse_vector.u%2Es%2E",
+    ]
+    assert gap["knn"]["filter"] == {"ids": {"values": ["c"]}}
+    assert gap["knn"]["k"] == 1 and gap["source"] is False
+
+    # c: 0.7 * 0.2 + 0.3 * (1 * 1 + 2 * 1); a: 0.7 * 0.9 + 0.3 * 0.5; b: 0.7 * 0.5
+    assert [record["id"] for record in records] == ["c", "a"]
+    assert records[0]["_score"] == pytest.approx(1.04)
+    assert records[1]["_score"] == pytest.approx(0.78)
+    assert all(set(record) == {"id", "uri", "_score"} for record in records)
+
+
+def test_pure_sparse_query_on_sparse_index_skips_knn():
+    client = _FakeClient()
+    adapter = _created_sparse(client, sparse_weight=0.5)
+    client.queue(
+        "search",
+        _hits({"_id": "a", "_score": 1.0, "_source": {"sparse_vector": {"t": 4.0}}}),
+    )
+
+    records = adapter.query(sparse_query_vector={"t": 0.5}, limit=1)
+
+    searches = [body for name, body in client.calls if name == "search"]
+    assert len(searches) == 1 and "knn" not in searches[0]
+    assert records[0]["_score"] == pytest.approx(0.5 * 2.0)
+    assert records[0]["sparse_vector"] == {"t": 4.0}
+
+
+def test_sparse_weight_of_one_ranks_by_sparse_score_only():
+    client = _FakeClient()
+    adapter = _created_sparse(client, sparse_weight=1.0)
+
+    adapter.query(query_vector=[1, 0, 0, 0], sparse_query_vector={"t": 1.0}, limit=1)
+
+    searches = [body for name, body in client.calls if name == "search"]
+    assert len(searches) == 1 and "knn" not in searches[0]
+
+
+def test_sparse_index_survives_reload():
+    client = _FakeClient()
+    _created_sparse(client)
+
+    reloaded = _adapter(client)
+    reloaded.query(sparse_query_vector={"t": 1.0}, limit=1)
+
+    assert "rank_feature" in str(client.last("search")["query"])
+
+
+def test_hybrid_query_applies_time_decay_to_fused_score():
+    client = _FakeClient()
+    adapter = _created_sparse(client, sparse_weight=0.5)
+    client.queue(
+        "search",
+        _hits({"_id": "a", "_score": 0.9, "_source": {"updated_at": 0, "sparse_vector": {}}}),
+        _hits({"_id": "a", "_score": 0.0, "_source": {"updated_at": 0, "sparse_vector": {}}}),
+    )
+
+    records = adapter.query(
+        query_vector=[1, 0, 0, 0],
+        sparse_query_vector={"t": 1.0},
+        limit=1,
+        output_fields=["uri"],
+        advance={"time_decay": {"protection": "0", "origin": "1970-01-08T00:00:00+00:00"}},
+    )
+
+    knn = [body for name, body in client.calls if name == "search"][0]
+    assert knn["source"]["includes"] == ["uri", "updated_at", "sparse_vector"]
+    # fused 0.5 * 0.8 + 0.5 * 0, halved by one scale of decay
+    assert records[0]["_origin_score"] == pytest.approx(0.4)
+    assert records[0]["_score"] == pytest.approx(0.2)
+    assert "updated_at" not in records[0] and "sparse_vector" not in records[0]
 
 
 def test_plain_filter_query_scans_in_id_order():

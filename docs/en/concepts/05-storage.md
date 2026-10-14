@@ -135,7 +135,7 @@ index_meta = {
 | `http` | HTTP remote service |
 | `cuvs` | Local persistence + NVIDIA cuVS dense search |
 | `opengauss` | openGauss DataVec |
-| `elasticsearch` | Elasticsearch 8.x dense_vector kNN |
+| `elasticsearch` | Elasticsearch 8.x dense_vector kNN, with optional rank_features sparse/hybrid search |
 
 ## Vector Synchronization
 

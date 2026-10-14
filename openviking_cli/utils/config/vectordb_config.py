@@ -561,10 +561,6 @@ class VectorDBBackendConfig(BaseModel):
         elif self.backend == "elasticsearch":
             if not self.elasticsearch:
                 raise ValueError("VectorDB elasticsearch backend requires 'elasticsearch' config")
-            if self.sparse_weight > 0.0:
-                raise ValueError(
-                    "VectorDB elasticsearch backend does not support sparse_weight > 0"
-                )
             distance = (self.distance_metric or "cosine").lower()
             if distance not in _ELASTICSEARCH_DISTANCE_METRICS:
                 raise ValueError(

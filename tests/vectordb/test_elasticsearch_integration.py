@@ -178,3 +178,45 @@ def test_distance_mismatch_on_existing_index(adapter):
     with pytest.raises(ValueError, match="distance"):
         other.collection_exists()
     other.close()
+
+
+@pytest.fixture
+def sparse_adapter():
+    pytest.importorskip("elasticsearch")
+    config = _config(f"ovtest_{uuid.uuid4().hex[:8]}_")
+    instance = ElasticsearchCollectionAdapter("context", config)
+    instance.create_collection(
+        "context",
+        CollectionSchemas.context_collection("context", 4),
+        distance="cosine",
+        sparse_weight=0.5,
+        index_name="default",
+    )
+    instance.upsert(
+        [
+            {"id": "a", "vector": [1, 0, 0, 0], "sparse_vector": {"apple": 1.0}},
+            {"id": "b", "vector": [0.9, 0.1, 0, 0], "sparse_vector": {"u.s.": 2.0}},
+            {"id": "c", "vector": [0, 1, 0, 0], "sparse_vector": {"u.s.": 0.5, "cherry": 3.0}},
+            {"id": "d", "vector": [0, 0, 1, 0]},
+        ]
+    )
+    yield instance
+    instance.drop_collection()
+    instance.close()
+
+
+def test_hybrid_search_fuses_dense_and_sparse_scores(sparse_adapter):
+    records = sparse_adapter.query(
+        query_vector=[1, 0, 0, 0], sparse_query_vector={"u.s.": 1.0}, limit=4
+    )
+    assert [r["id"] for r in records] == ["b", "a", "c", "d"]
+    b_cosine = 0.9 / (0.82**0.5)
+    assert records[0]["_score"] == pytest.approx(0.5 * b_cosine + 0.5 * 2.0, abs=1e-3)
+    assert records[2]["_score"] == pytest.approx(0.25, abs=1e-3)
+
+
+def test_sparse_only_search_and_round_trip(sparse_adapter):
+    records = sparse_adapter.query(sparse_query_vector={"cherry": 1.0}, limit=10)
+    assert [r["id"] for r in records] == ["c"]
+    assert records[0]["_score"] == pytest.approx(1.5)
+    assert sparse_adapter.get(["b"])[0]["sparse_vector"] == {"u.s.": 2.0}

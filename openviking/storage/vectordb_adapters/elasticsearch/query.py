@@ -30,6 +30,16 @@ _WILDCARD_SPECIAL = re.compile(r"([\\*?])")
 # Field names become ES mapping keys; dots would create nested objects.
 _FIELD_NAME_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
+# rank_features rejects dots in feature names (they would address sub-fields),
+# so sparse terms are escaped reversibly before they reach Elasticsearch.
+_SPARSE_TERM_ESCAPES = {"%": "%25", ".": "%2E"}
+_SPARSE_TERM_ESCAPE_PATTERN = re.compile(r"[%.]")
+_SPARSE_TERM_UNESCAPE_PATTERN = re.compile(r"%25|%2E")
+_SPARSE_TERM_UNESCAPES = {escaped: raw for raw, escaped in _SPARSE_TERM_ESCAPES.items()}
+# rank_features stores positive normal float32 values only.
+_MIN_FEATURE_VALUE = 1.1754943508222875e-38
+_MAX_FEATURE_VALUE = 3.4028234663852886e38
+
 
 def field_name(field: Dict[str, Any]) -> str:
     return field.get("FieldName") or field.get("field_name") or field.get("name", "")
@@ -74,10 +84,16 @@ def build_properties(
     *,
     distance: str,
     index_options: Dict[str, Any],
+    sparse_features: bool = False,
 ) -> Dict[str, Any]:
-    """Build mapping properties for an OpenViking collection schema."""
+    """Build mapping properties for an OpenViking collection schema.
+
+    With ``sparse_features`` the first ``sparse_vector`` field is mapped as
+    ``rank_features`` so it can be searched; otherwise it is stored only.
+    """
     properties: Dict[str, Any] = {"id": {"type": "keyword"}}
     internal: Dict[str, Any] = {}
+    sparse_name = sparse_vector_field(fields) if sparse_features else None
     for field in fields:
         name = field_name(field)
         ftype = field_type(field)
@@ -116,14 +132,22 @@ def build_properties(
             properties[name] = {"type": "boolean"}
         elif ftype == "date_time":
             properties[name] = {"type": "date", "format": DATE_FORMAT}
+        elif ftype == "sparse_vector" and name == sparse_name:
+            properties[name] = {"type": "rank_features"}
         elif ftype == "sparse_vector":
-            # Stored for round-trips only; sparse search is not supported.
+            # Stored for round-trips only; not searchable.
             properties[name] = {"type": "object", "enabled": False}
         else:
             properties[name] = _keyword()
     if internal:
         properties[INTERNAL_FIELD] = {"type": "object", "properties": internal}
     return properties
+
+
+def sparse_vector_field(fields: Iterable[Dict[str, Any]]) -> Optional[str]:
+    return next(
+        (field_name(field) for field in fields if field_type(field) == "sparse_vector"), None
+    )
 
 
 def path_fields(fields: Iterable[Dict[str, Any]]) -> set[str]:
@@ -357,6 +381,81 @@ def validate_vector(vector: Any, dimension: int, *, field: str = "vector") -> Li
             raise ValueError(f"{field} contains a non-finite value")
         values.append(number)
     return values
+
+
+def encode_sparse_term(term: Any) -> str:
+    return _SPARSE_TERM_ESCAPE_PATTERN.sub(
+        lambda match: _SPARSE_TERM_ESCAPES[match.group()], str(term)
+    )
+
+
+def decode_sparse_term(term: str) -> str:
+    return _SPARSE_TERM_UNESCAPE_PATTERN.sub(
+        lambda match: _SPARSE_TERM_UNESCAPES[match.group()], term
+    )
+
+
+def encode_sparse_vector(vector: Any, *, field: str = "sparse vector") -> Dict[str, float]:
+    """Validate a ``{term: weight}`` mapping and escape its terms for rank_features.
+
+    rank_features only holds positive weights, so empty terms and weights that
+    are zero, negative or below the float32 normal range are dropped; they can
+    only lower a dot product with a positive query.
+    """
+    if not isinstance(vector, dict):
+        raise ValueError(f"{field} must be a mapping of term to weight")
+    encoded: Dict[str, float] = {}
+    for term, value in vector.items():
+        if isinstance(value, bool):
+            raise ValueError(f"{field} contains a non-numeric weight for term {term!r}")
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            raise ValueError(f"{field} contains a non-numeric weight for term {term!r}") from None
+        if not math.isfinite(number) or abs(number) > _MAX_FEATURE_VALUE:
+            raise ValueError(f"{field} contains a non-finite weight for term {term!r}")
+        if number < _MIN_FEATURE_VALUE or term is None or str(term) == "":
+            continue
+        encoded[encode_sparse_term(term)] = number
+    return encoded
+
+
+def decode_sparse_vector(vector: Any) -> Any:
+    if not isinstance(vector, dict):
+        return vector
+    return {decode_sparse_term(str(term)): value for term, value in vector.items()}
+
+
+def build_sparse_query(
+    field: str, terms: Dict[str, float], filter_query: Optional[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """Score documents by the dot product of their rank_features with *terms*.
+
+    A linear ``rank_feature`` clause scores ``boost * stored weight``, so the
+    sum over the query terms is the sparse inner product.
+    """
+    bool_query: Dict[str, Any] = {
+        "should": [
+            {"rank_feature": {"field": f"{field}.{term}", "linear": {}, "boost": weight}}
+            for term, weight in terms.items()
+        ],
+        "minimum_should_match": 1,
+    }
+    if filter_query is not None:
+        bool_query["filter"] = [filter_query]
+    return {"bool": bool_query}
+
+
+def sparse_dot(query_terms: Dict[str, float], stored: Any) -> float:
+    """Exact sparse inner product of escaped query terms and a stored vector."""
+    if not isinstance(stored, dict) or not stored:
+        return 0.0
+    total = 0.0
+    for term, weight in query_terms.items():
+        value = stored.get(term)
+        if value is not None:
+            total += weight * float(value)
+    return total
 
 
 def count_condition_matches(count: int, cond: Optional[Dict[str, Any]]) -> bool:

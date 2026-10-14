@@ -1611,7 +1611,9 @@ Stores vectors in an Elasticsearch 8.12+ cluster using `dense_vector` kNN search
 | `bulk_batch_size` | int | Documents per bulk request | 500 |
 
 - `distance_metric` maps to the `dense_vector` similarity: `cosine` → `cosine`, `l2` → `l2_norm`, `ip` → `max_inner_product`. It is fixed when the index is created; changing it requires a new collection.
-- Sparse and hybrid search (`sparse_weight > 0`) and multimodal search are not supported.
+- Sparse and hybrid search: with `sparse_weight > 0` at collection creation, the `sparse_vector` field is mapped as `rank_features`. Results are scored like the local engine, `(1 - sparse_weight) × dense similarity + sparse_weight × sparse inner product`, over the union of the kNN and sparse recall sets (3× the requested window from each). A query without a dense vector is sparse-only. The sparse mapping is fixed when the index is created: to enable it on an existing collection, reindex into a new one. A dense-only collection ignores sparse query vectors.
+- `rank_features` holds positive weights only, so sparse terms with zero or negative weights are dropped on write and at query time.
+- Multimodal search is not supported.
 - With `cosine`, a record whose embedding is all zeros (some embedders return this for empty text) is stored without a vector: it can be filtered but is never returned by vector search.
 - One vector search returns at most 10000 results (`limit + offset`). Filter and sort queries page past that with `search_after`.
 - OpenViking creates the index with a strict mapping and keeps its metadata in the mapping `_meta`. It refuses to adopt an existing index it did not create.

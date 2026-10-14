@@ -4,7 +4,8 @@
 
 Each OpenViking collection maps to one Elasticsearch index named
 ``<index_prefix><collection name>`` with a ``dense_vector`` field for kNN
-search. Requires ``pip install "openviking[elasticsearch]"``.
+search and, when ``sparse_weight > 0``, a ``rank_features`` field for sparse
+and hybrid search. Requires ``pip install "openviking[elasticsearch]"``.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from .elasticsearch.collection import (
     DISTANCE_KEY,
     INDEXES_KEY,
     META_KEY,
+    SPARSE_FIELD_KEY,
     ElasticsearchCollection,
     ElasticsearchSettings,
 )
@@ -73,6 +75,8 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         self._es_index = es_index_name(self._config.index_prefix, collection_name)
         self._client = client if client is not None else create_client(self._config)
         self._es_backend: Optional[ElasticsearchCollection] = None
+        # Set by create_collection: map the sparse_vector field as rank_features.
+        self._create_sparse = False
         self._settings = ElasticsearchSettings(
             refresh=self._config.refresh,
             bulk_batch_size=self._config.bulk_batch_size,
@@ -117,6 +121,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
             self._distance,
             self._settings,
             indexes=stored.get(INDEXES_KEY) or {},
+            sparse_field=stored.get(SPARSE_FIELD_KEY),
         )
         self._collection = Collection(self._es_backend)
 
@@ -142,7 +147,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
 
     def _create_backend_collection(self, meta: Dict[str, Any]) -> Collection:
         try:
-            ElasticsearchCollection.create_physical_index(
+            sparse_field = ElasticsearchCollection.create_physical_index(
                 self._client,
                 self._es_index,
                 meta,
@@ -150,6 +155,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
                 index_options=self._index_options(),
                 number_of_shards=self._config.number_of_shards,
                 number_of_replicas=self._config.number_of_replicas,
+                sparse=self._create_sparse,
             )
         except Exception as error:
             if not is_already_exists(error):
@@ -162,8 +168,31 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
                 raise
             return self._collection
         logger.info("elasticsearch_adapter: created index %s", self._es_index)
-        self._bind_collection(meta, {})
+        self._bind_collection(meta, {SPARSE_FIELD_KEY: sparse_field})
         return self._collection
+
+    def create_collection(
+        self,
+        name: str,
+        schema: Dict[str, Any],
+        *,
+        distance: str,
+        sparse_weight: float,
+        index_name: str,
+    ) -> bool:
+        # The sparse mapping is fixed at index creation, which the base class
+        # performs before it builds the logical index from sparse_weight.
+        self._create_sparse = sparse_weight > 0.0
+        try:
+            return super().create_collection(
+                name,
+                schema,
+                distance=distance,
+                sparse_weight=sparse_weight,
+                index_name=index_name,
+            )
+        finally:
+            self._create_sparse = False
 
     def _build_default_index_meta(
         self,
@@ -174,16 +203,16 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         sparse_weight: float,
         scalar_index_fields: list[str],
     ) -> Dict[str, Any]:
+        vector_index: Dict[str, Any] = {
+            "IndexType": self._config.index_type,
+            "Distance": distance or self._distance,
+        }
         if use_sparse:
-            raise NotImplementedError(
-                "Elasticsearch backend does not support sparse or hybrid vector indexes"
-            )
+            vector_index["EnableSparse"] = True
+            vector_index["SearchWithSparseLogitAlpha"] = sparse_weight
         return {
             "IndexName": index_name,
-            "VectorIndex": {
-                "IndexType": self._config.index_type,
-                "Distance": distance or self._distance,
-            },
+            "VectorIndex": vector_index,
             "ScalarIndex": scalar_index_fields,
         }
 
