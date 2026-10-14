@@ -1600,7 +1600,9 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 | `bulk_batch_size` | int | 每個 bulk 請求的文件數 | 500 |
 
 - `distance_metric` 對應 `dense_vector` 的 similarity：`cosine` → `cosine`、`l2` → `l2_norm`、`ip` → `max_inner_product`。該值在建立索引時固定，修改需要新建 collection。
-- 不支援稀疏/混合檢索（`sparse_weight > 0`）和多模態檢索。
+- 稀疏/混合檢索：建立集合時若 `sparse_weight > 0`，`sparse_vector` 欄位會對映為 `rank_features`。評分方式與本地引擎一致：`(1 - sparse_weight) × dense 相似度 + sparse_weight × 稀疏內積`，候選集為 kNN 與稀疏召回結果的聯集（各召回請求視窗的 3 倍）。不帶 dense 向量的查詢為純稀疏檢索。稀疏對映在建立索引時固定；若要在既有集合上啟用，需要重建索引到新集合。純 dense 集合會忽略稀疏查詢向量。
+- `rank_features` 只能儲存正權重，因此權重為零或負數的稀疏詞項在寫入和查詢時會被丟棄。
+- 不支援多模態檢索。
 - 使用 `cosine` 時，embedding 全為 0 的記錄（部分 embedder 對空文字會傳回全 0 向量）儲存時不帶向量：可被過濾查詢到，但不會出現在向量檢索結果中。
 - 單次向量檢索最多傳回 10000 筆（`limit + offset`）；過濾和排序查詢透過 `search_after` 翻頁，不受此限制。
 - OpenViking 以嚴格 mapping 建立索引，並將中繼資料儲存在 mapping 的 `_meta` 中；不會接管非 OpenViking 建立的既有索引。

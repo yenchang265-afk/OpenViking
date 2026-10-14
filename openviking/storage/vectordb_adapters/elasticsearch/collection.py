@@ -29,14 +29,19 @@ from .query import (
     INTERNAL_FIELD,
     build_properties,
     build_query,
+    build_sparse_query,
     bulk_errors,
     count_condition_matches,
+    decode_sparse_vector,
     derived_path_fields,
+    encode_sparse_vector,
     field_name,
     field_type,
     path_fields,
     similarity_from_score,
     sort_score,
+    sparse_dot,
+    sparse_vector_field,
     split_batches,
     text_search_fields,
     validate_vector,
@@ -48,6 +53,9 @@ logger = get_logger(__name__)
 META_KEY = "ov_collection"
 INDEXES_KEY = "ov_indexes"
 DISTANCE_KEY = "ov_distance"
+# Name of the sparse_vector field mapped as rank_features; absent when the
+# index was created without sparse search.
+SPARSE_FIELD_KEY = "ov_sparse_field"
 
 # Upper bound for grouped counts; matches the largest page other backends return.
 _GROUPED_COUNT_SIZE = 10000
@@ -107,6 +115,7 @@ class ElasticsearchCollection(ICollection):
         distance: str,
         settings: ElasticsearchSettings,
         indexes: Optional[Dict[str, Dict[str, Any]]] = None,
+        sparse_field: Optional[str] = None,
     ):
         super().__init__()
         self._client = client
@@ -115,6 +124,7 @@ class ElasticsearchCollection(ICollection):
         self._distance = distance
         self._settings = settings
         self._indexes: Dict[str, Dict[str, Any]] = copy.deepcopy(indexes or {})
+        self._sparse_field = sparse_field
         self._lock = threading.Lock()
         self._bulk_depth = 0
         self._refresh_fields()
@@ -133,18 +143,29 @@ class ElasticsearchCollection(ICollection):
         index_options: Dict[str, Any],
         number_of_shards: int,
         number_of_replicas: Optional[int],
-    ) -> None:
+        sparse: bool = False,
+    ) -> Optional[str]:
+        """Create the index; return the searchable sparse field, if any."""
         settings: Dict[str, Any] = {"number_of_shards": number_of_shards}
         if number_of_replicas is not None:
             settings["number_of_replicas"] = number_of_replicas
+        fields = meta.get("Fields", [])
+        sparse_field = sparse_vector_field(fields) if sparse else None
+        stored: Dict[str, Any] = {META_KEY: meta, INDEXES_KEY: {}, DISTANCE_KEY: distance}
+        if sparse_field:
+            stored[SPARSE_FIELD_KEY] = sparse_field
         mappings = {
             "dynamic": "strict",
             "properties": build_properties(
-                meta.get("Fields", []), distance=distance, index_options=index_options
+                fields,
+                distance=distance,
+                index_options=index_options,
+                sparse_features=sparse_field is not None,
             ),
-            "_meta": {META_KEY: meta, INDEXES_KEY: {}, DISTANCE_KEY: distance},
+            "_meta": stored,
         }
         client.indices.create(index=index, settings=settings, mappings=mappings)
+        return sparse_field
 
     @staticmethod
     def read_stored_meta(client: Any, index: str) -> Optional[Dict[str, Any]]:
@@ -168,14 +189,14 @@ class ElasticsearchCollection(ICollection):
         self._dim = vector_dimension(fields)
 
     def _persist_meta(self) -> None:
-        self._client.indices.put_mapping(
-            index=self._index,
-            meta={
-                META_KEY: self._meta,
-                INDEXES_KEY: self._indexes,
-                DISTANCE_KEY: self._distance,
-            },
-        )
+        meta: Dict[str, Any] = {
+            META_KEY: self._meta,
+            INDEXES_KEY: self._indexes,
+            DISTANCE_KEY: self._distance,
+        }
+        if self._sparse_field:
+            meta[SPARSE_FIELD_KEY] = self._sparse_field
+        self._client.indices.put_mapping(index=self._index, meta=meta)
 
     def update(
         self,
@@ -271,7 +292,18 @@ class ElasticsearchCollection(ICollection):
                 f"{self._distance!r}; cannot add an index with distance {requested!r}"
             )
         if vector_index.get("EnableSparse"):
-            raise NotImplementedError("Elasticsearch backend does not support sparse indexes")
+            if self._sparse_field is None:
+                raise ValueError(
+                    f"Elasticsearch index {self._index!r} has no searchable sparse_vector "
+                    "field; it must be created with sparse_weight > 0 and a sparse_vector "
+                    "field in the schema"
+                )
+            alpha = vector_index.get("SearchWithSparseLogitAlpha")
+            if alpha is None or not math.isfinite(float(alpha)) or float(alpha) <= 0:
+                raise ValueError(
+                    "Elasticsearch sparse index requires SearchWithSparseLogitAlpha > 0, "
+                    f"got {alpha!r}"
+                )
         with self._lock:
             self._indexes[index_name] = copy.deepcopy(meta_data)
             self._persist_meta()
@@ -324,12 +356,40 @@ class ElasticsearchCollection(ICollection):
             source["includes"] = [field for field in output_fields if field != "id"] or ["id"]
         return source
 
-    @staticmethod
-    def _hit_fields(hit: Dict[str, Any]) -> Dict[str, Any]:
+    def _hit_fields(self, hit: Dict[str, Any]) -> Dict[str, Any]:
         fields = dict(hit.get("_source") or {})
         fields.pop("id", None)
         fields.pop(INTERNAL_FIELD, None)
+        if self._sparse_field and self._sparse_field in fields:
+            fields[self._sparse_field] = decode_sparse_vector(fields[self._sparse_field])
         return fields
+
+    @staticmethod
+    def _with_fields(output_fields: Optional[List[str]], extra: List[str]) -> Optional[List[str]]:
+        """``output_fields`` plus *extra* fields needed for scoring (None means all)."""
+        if output_fields is None:
+            return None
+        return [*output_fields, *(field for field in extra if field not in output_fields)]
+
+    def _sparse_alpha(self, index_name: str) -> float:
+        """Sparse weight of the logical index, 0.0 when it is dense-only."""
+        vector_index = (self._indexes.get(index_name) or {}).get("VectorIndex") or {}
+        if not self._sparse_field or not vector_index.get("EnableSparse"):
+            return 0.0
+        return float(vector_index.get("SearchWithSparseLogitAlpha") or 0.0)
+
+    def _knn(
+        self, vector: List[float], k: int, filter_query: Optional[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+        knn: Dict[str, Any] = {
+            "field": self._vector_field,
+            "query_vector": vector,
+            "k": k,
+            "num_candidates": min(max(k, self._settings.num_candidates), _MAX_KNN_K),
+        }
+        if filter_query is not None:
+            knn["filter"] = filter_query
+        return knn
 
     def _search(self, **body: Any) -> List[Dict[str, Any]]:
         response = self._client.search(index=self._index, **body)
@@ -350,33 +410,71 @@ class ElasticsearchCollection(ICollection):
         time_decay = (advance or {}).get("time_decay")
         if advance and (set(advance) != {"time_decay"} or not isinstance(time_decay, dict)):
             raise NotImplementedError("Elasticsearch advanced ranking supports time_decay only")
-        # Reject sparse queries before the dense short-circuit so a pure sparse
-        # query fails loudly instead of looking like "no recall".
-        if sparse_vector:
-            raise NotImplementedError("Elasticsearch backend does not support sparse vector search")
-        if not dense_vector or limit <= 0 or self._vector_field is None:
+        alpha = self._sparse_alpha(index_name) if sparse_vector else 0.0
+        has_dense = bool(dense_vector) and self._vector_field is not None
+        if sparse_vector and alpha <= 0.0 and not has_dense:
+            # Fail loudly instead of looking like "no recall".
+            raise NotImplementedError(
+                f"Elasticsearch index {self._index!r} has no sparse vector index; create the "
+                "collection with vectordb.sparse_weight > 0 to search sparse vectors"
+            )
+        # Like the local engine, a dense-only index ignores the sparse query.
+        sparse_terms: Dict[str, float] = {}
+        if alpha > 0.0:
+            sparse_terms = encode_sparse_vector(sparse_vector, field="sparse query vector")
+        vector = (
+            validate_vector(dense_vector, self._dim, field="query vector") if has_dense else None
+        )
+        if limit <= 0 or (vector is None and not sparse_terms):
             return SearchResult(data=[])
-        vector = validate_vector(dense_vector, self._dim, field="query vector")
-        k = limit + max(offset, 0)
-        if k > _MAX_KNN_K:
+        window = limit + max(offset, 0)
+        if window > _MAX_KNN_K:
             raise ValueError(
-                f"Elasticsearch kNN search supports limit + offset <= {_MAX_KNN_K}, got {k}"
+                f"Elasticsearch kNN search supports limit + offset <= {_MAX_KNN_K}, got {window}"
+            )
+        if not sparse_terms and time_decay is None:
+            return self._knn_search(vector, limit, offset, filters, output_fields)
+
+        # Re-ranked searches recall 3x the requested window, score every
+        # candidate, then keep the best ``limit`` after ``offset``.
+        recall_k = min(window * 3, _MAX_KNN_K)
+        decay_field = time_decay["field"] if time_decay is not None else None
+        scoring_fields = [name for name in (decay_field,) if name]
+        if sparse_terms:
+            scoring_fields.append(self._sparse_field)
+            candidates = self._hybrid_candidates(
+                vector, sparse_terms, alpha, recall_k, filters, output_fields, scoring_fields
+            )
+        else:
+            candidates = self._dense_candidates(
+                vector, recall_k, filters, output_fields, scoring_fields
             )
         if time_decay is not None:
-            return self._search_with_time_decay(
-                vector, limit, offset, filters, output_fields, time_decay
+            return self._rank_with_time_decay(
+                candidates, limit, offset, output_fields, scoring_fields, time_decay
             )
-        knn: Dict[str, Any] = {
-            "field": self._vector_field,
-            "query_vector": vector,
-            "k": k,
-            "num_candidates": min(max(k, self._settings.num_candidates), 10000),
-        }
-        query = self._query(filters)
-        if query is not None:
-            knn["filter"] = query
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return SearchResult(
+            data=[
+                SearchItemResult(
+                    id=record_id,
+                    fields=self._finish_fields(hit, output_fields, scoring_fields),
+                    score=score,
+                )
+                for score, record_id, hit in candidates[max(offset, 0) : window]
+            ]
+        )
+
+    def _knn_search(
+        self,
+        vector: List[float],
+        limit: int,
+        offset: int,
+        filters: Optional[Dict[str, Any]],
+        output_fields: Optional[List[str]],
+    ) -> SearchResult:
         hits = self._search(
-            knn=knn,
+            knn=self._knn(vector, limit + max(offset, 0), self._query(filters)),
             size=limit,
             from_=max(offset, 0),
             source=self._source(output_fields),
@@ -392,22 +490,126 @@ class ElasticsearchCollection(ICollection):
             ]
         )
 
-    def _search_with_time_decay(
+    def _dense_candidates(
         self,
         vector: List[float],
-        limit: int,
-        offset: int,
+        recall_k: int,
         filters: Optional[Dict[str, Any]],
         output_fields: Optional[List[str]],
+        scoring_fields: List[str],
+    ) -> List[tuple]:
+        """``(similarity, id, raw hit)`` for the kNN recall set."""
+        hits = self._search(
+            knn=self._knn(vector, recall_k, self._query(filters)),
+            size=recall_k,
+            from_=0,
+            source=self._source(self._with_fields(output_fields, scoring_fields)),
+        )
+        return [
+            (similarity_from_score(self._distance, hit.get("_score")), hit.get("_id"), hit)
+            for hit in hits
+        ]
+
+    def _hybrid_candidates(
+        self,
+        vector: Optional[List[float]],
+        sparse_terms: Dict[str, float],
+        alpha: float,
+        recall_k: int,
+        filters: Optional[Dict[str, Any]],
+        output_fields: Optional[List[str]],
+        scoring_fields: List[str],
+    ) -> List[tuple]:
+        """Fuse dense and sparse recall the way the local engine scores hybrid indexes.
+
+        Each candidate scores ``(1 - alpha) * dense similarity + alpha * sparse
+        inner product``. Candidates come from the union of the kNN and the
+        rank_features recall sets. The sparse product is computed from the
+        stored weights (Elasticsearch scores them at reduced precision), and
+        candidates found only by the sparse query get their dense similarity
+        from an exact kNN search restricted to their IDs.
+        """
+        filter_query = self._query(filters)
+        source = self._source(self._with_fields(output_fields, scoring_fields))
+        use_dense = vector is not None and alpha < 1.0
+        dense_scores: Dict[str, float] = {}
+        hits: Dict[str, Dict[str, Any]] = {}
+        if use_dense:
+            for hit in self._search(
+                knn=self._knn(vector, recall_k, filter_query),
+                size=recall_k,
+                from_=0,
+                source=source,
+            ):
+                record_id = str(hit.get("_id"))
+                dense_scores[record_id] = similarity_from_score(self._distance, hit.get("_score"))
+                hits[record_id] = hit
+        for hit in self._search(
+            query=build_sparse_query(self._sparse_field, sparse_terms, filter_query),
+            size=recall_k,
+            from_=0,
+            source=source,
+        ):
+            hits.setdefault(str(hit.get("_id")), hit)
+        if use_dense:
+            sparse_only = [record_id for record_id in hits if record_id not in dense_scores]
+            if sparse_only:
+                dense_scores.update(self._dense_scores_for(vector, sparse_only))
+        candidates = []
+        for record_id, hit in hits.items():
+            stored = (hit.get("_source") or {}).get(self._sparse_field)
+            score = alpha * sparse_dot(sparse_terms, stored)
+            if use_dense:
+                # Records without a stored vector score 0 on the dense side.
+                score += (1.0 - alpha) * dense_scores.get(record_id, 0.0)
+            candidates.append((score, hit.get("_id"), hit))
+        return candidates
+
+    def _dense_scores_for(self, vector: List[float], ids: List[str]) -> Dict[str, float]:
+        """Dense similarity of specific documents via a kNN search filtered to their IDs.
+
+        The filter matches no more documents than ``num_candidates``, so
+        Elasticsearch scores them exactly instead of walking the HNSW graph.
+        """
+        scores: Dict[str, float] = {}
+        for batch in split_batches(ids, _MAX_KNN_K):
+            for hit in self._search(
+                knn=self._knn(vector, len(batch), {"ids": {"values": batch}}),
+                size=len(batch),
+                source=False,
+            ):
+                scores[str(hit.get("_id"))] = similarity_from_score(
+                    self._distance, hit.get("_score")
+                )
+        return scores
+
+    def _finish_fields(
+        self, hit: Dict[str, Any], output_fields: Optional[List[str]], scoring_fields: List[str]
+    ) -> Dict[str, Any]:
+        """Hit fields without the ones fetched only for scoring."""
+        fields = self._hit_fields(hit)
+        if output_fields is not None:
+            for name in scoring_fields:
+                if name not in output_fields:
+                    fields.pop(name, None)
+        return fields
+
+    def _rank_with_time_decay(
+        self,
+        candidates: List[tuple],
+        limit: int,
+        offset: int,
+        output_fields: Optional[List[str]],
+        scoring_fields: List[str],
         time_decay: Dict[str, Any],
     ) -> SearchResult:
-        """kNN recall re-ranked by event recency, matching the local engine.
+        """Re-rank recalled candidates by event recency, matching the local engine.
 
         Elasticsearch decay functions cannot wrap a top-level ``knn`` query, so the
-        decay is applied here: recall 3x the requested window, multiply each
-        similarity by ``exp(ln(decay) / scale * max(0, |origin - t| - offset))``
-        and keep the best ``limit`` after ``offset``. Records without a timestamp
-        keep their similarity unchanged.
+        decay is applied here: multiply each similarity by
+        ``exp(ln(decay) / scale * max(0, |origin - t| - offset))`` and keep the
+        best ``limit`` after ``offset``. Records without a timestamp keep their
+        similarity unchanged.
         """
         decay_field = time_decay["field"]
         origin = float(time_decay["origin_ms"])
@@ -416,47 +618,27 @@ class ElasticsearchCollection(ICollection):
         decay = float(time_decay["decay"])
         if protection < 0 or scale <= 0 or not 0.0 < decay < 1.0:
             raise ValueError("invalid time-decay range")
-        window = limit + max(offset, 0)
-        recall_k = min(window * 3, _MAX_KNN_K)
-        knn: Dict[str, Any] = {
-            "field": self._vector_field,
-            "query_vector": vector,
-            "k": recall_k,
-            "num_candidates": min(max(recall_k, self._settings.num_candidates), 10000),
-        }
-        query = self._query(filters)
-        if query is not None:
-            knn["filter"] = query
-        fetch_fields = output_fields
-        if output_fields is not None and decay_field not in output_fields:
-            fetch_fields = [*output_fields, decay_field]
-        hits = self._search(knn=knn, size=recall_k, from_=0, source=self._source(fetch_fields))
         rate = math.log(decay) / scale
         ranked = []
-        for hit in hits:
-            fields = self._hit_fields(hit)
-            similarity = similarity_from_score(self._distance, hit.get("_score"))
+        for similarity, record_id, hit in candidates:
             time_score = None
-            updated = _epoch_ms(fields.get(decay_field))
+            updated = _epoch_ms((hit.get("_source") or {}).get(decay_field))
             if updated is not None:
                 time_score = math.exp(rate * max(0.0, abs(origin - updated) - protection))
-            if fetch_fields is not output_fields:
-                fields.pop(decay_field, None)
             fused = similarity * time_score if time_score is not None else similarity
-            ranked.append((fused, similarity, time_score, hit.get("_id"), fields))
+            ranked.append((fused, similarity, time_score, record_id, hit))
         ranked.sort(key=lambda item: item[0], reverse=True)
+        window = limit + max(offset, 0)
         return SearchResult(
             data=[
                 SearchItemResult(
                     id=record_id,
-                    fields=fields,
+                    fields=self._finish_fields(hit, output_fields, scoring_fields),
                     score=fused,
                     origin_score=similarity,
                     addition_score=time_score,
                 )
-                for fused, similarity, time_score, record_id, fields in ranked[
-                    max(offset, 0) : window
-                ]
+                for fused, similarity, time_score, record_id, hit in ranked[max(offset, 0) : window]
             ]
         )
 
@@ -713,6 +895,11 @@ class ElasticsearchCollection(ICollection):
                 document[self._vector_field] = None
             else:
                 document[self._vector_field] = vector
+        if self._sparse_field and document.get(self._sparse_field) is not None:
+            document[self._sparse_field] = encode_sparse_vector(
+                document[self._sparse_field],
+                field=f"record[{record_index}].{self._sparse_field}",
+            )
         derived = derived_path_fields(document, self._path_fields)
         if derived:
             document[INTERNAL_FIELD] = derived

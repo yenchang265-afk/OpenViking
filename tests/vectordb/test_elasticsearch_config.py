@@ -39,9 +39,9 @@ def test_elasticsearch_rejects_l1_distance():
         VectorDBBackendConfig(backend="elasticsearch", distance_metric="l1")
 
 
-def test_elasticsearch_rejects_sparse_weight():
-    with pytest.raises(ValueError, match="sparse_weight"):
-        VectorDBBackendConfig(backend="elasticsearch", sparse_weight=0.5)
+def test_elasticsearch_accepts_sparse_weight():
+    config = VectorDBBackendConfig(backend="elasticsearch", sparse_weight=0.5)
+    assert config.sparse_weight == 0.5
 
 
 def test_elasticsearch_requires_username_and_password_together():

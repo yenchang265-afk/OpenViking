@@ -10,13 +10,17 @@ from openviking.storage.vectordb_adapters.elasticsearch.query import (
     MATCH_NONE,
     build_properties,
     build_query,
+    build_sparse_query,
     bulk_errors,
     count_condition_matches,
+    decode_sparse_vector,
     derived_path_fields,
+    encode_sparse_vector,
     normalize_path,
     path_depth,
     similarity_from_score,
     sort_score,
+    sparse_dot,
     text_search_fields,
     validate_vector,
 )
@@ -47,6 +51,59 @@ def test_mapping_covers_context_schema_field_types():
     assert props["level"] == {"type": "long"}
     assert props["created_at"]["type"] == "date"
     assert props["sparse_vector"] == {"type": "object", "enabled": False}
+
+
+def test_mapping_maps_sparse_vector_to_rank_features_when_enabled():
+    schema = CollectionSchemas.context_collection("context", 8)
+
+    props = build_properties(
+        schema["Fields"], distance="cosine", index_options={}, sparse_features=True
+    )
+
+    assert props["sparse_vector"] == {"type": "rank_features"}
+
+
+def test_sparse_terms_are_escaped_reversibly():
+    raw = {"u.s.": 1.0, "100%": 2.0, "%2E": 3.0, "plain": 4.0}
+
+    encoded = encode_sparse_vector(raw)
+
+    assert not any("." in term for term in encoded)
+    assert len(encoded) == len(raw)
+    assert decode_sparse_vector(encoded) == raw
+
+
+def test_sparse_encoding_drops_non_positive_weights_and_rejects_bad_values():
+    assert encode_sparse_vector({"a": 0.5, "b": 0, "c": -1.0, "": 2.0, "d": 1e-40}) == {"a": 0.5}
+    assert encode_sparse_vector({7: 1}) == {"7": 1.0}
+    with pytest.raises(ValueError, match="non-finite"):
+        encode_sparse_vector({"a": math.inf})
+    with pytest.raises(ValueError, match="non-numeric"):
+        encode_sparse_vector({"a": "x"})
+    with pytest.raises(ValueError, match="mapping"):
+        encode_sparse_vector([1.0, 2.0])
+
+
+def test_sparse_query_sums_linear_rank_features():
+    query = build_sparse_query("sparse_vector", {"a": 0.5, "b%2E": 2.0}, {"term": {"x": 1}})
+
+    assert query == {
+        "bool": {
+            "should": [
+                {"rank_feature": {"field": "sparse_vector.a", "linear": {}, "boost": 0.5}},
+                {"rank_feature": {"field": "sparse_vector.b%2E", "linear": {}, "boost": 2.0}},
+            ],
+            "minimum_should_match": 1,
+            "filter": [{"term": {"x": 1}}],
+        }
+    }
+    assert "filter" not in build_sparse_query("s", {"a": 1.0}, None)["bool"]
+
+
+def test_sparse_dot_is_inner_product_over_shared_terms():
+    assert sparse_dot({"a": 2.0, "b": 1.0}, {"a": 0.5, "c": 9.0}) == pytest.approx(1.0)
+    assert sparse_dot({"a": 2.0}, None) == 0.0
+    assert sparse_dot({"a": 2.0}, {}) == 0.0
 
 
 @pytest.mark.parametrize(
