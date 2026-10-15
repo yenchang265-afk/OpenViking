@@ -525,7 +525,7 @@ max by (job) (openviking_feedback_events_total{valid="0"})
 - `server.observability.metrics.exporters.otel.protocol`：`"grpc"` 或 `"http"`
 - `server.observability.metrics.exporters.otel.tls.insecure`：僅對 OTLP/gRPC 生效；`true` 表示明文連線（無 TLS）
 - `server.observability.metrics.exporters.otel.endpoint`：OTLP 端點（gRPC 用 `host:4317`；HTTP 必須是完整 URL）
-- `server.observability.metrics.exporters.otel.service_name`：OTLP `service.name` 資源屬性（預設 `"openviking-server"`）
+- `server.observability.metrics.exporters.otel.service_name`：OTLP `service.name` 資源屬性；省略時預設繼承頂層 `service_name`
 - `server.observability.metrics.exporters.otel.export_interval_ms`：OTLP 推送間隔，單位毫秒（預設 `10000`）
 - `server.observability.metrics.exporters.otel.headers`：可選的自定義 OTLP 請求頭；gRPC 會作為 metadata 傳送，HTTP 會作為 headers 傳送
 - 使用 gRPC 時，`headers` 中的 key 需要使用小寫形式，例如 `x-byteapm-appkey`；HTTP 不受該限制

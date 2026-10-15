@@ -631,7 +631,6 @@ URI 格式非法、scheme 不支援，或使用 `temp`、`queue` 等內部作用
 |------|------|------|--------|------|
 | uri | str | 是 | - | 要刪除的 Viking URI |
 | wait | bool | 否 | False | 等待刪除後的語義重新整理完成 |
-| timeout | float | 否 | None | `wait=true` 時的重新整理超時，單位秒 |
 | recursive | bool | 否 | False | 遞迴刪除目錄 |
 
 

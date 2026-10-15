@@ -76,7 +76,7 @@ OpenViking 每週五發佈一個新版本。
 將它匯入新的資源目錄：
 
 ```bash
-ov add-resource ./ov-release-rotation.md --to viking://resources/ov-release-rotation --wait --timeout 120
+ov add-resource ./ov-release-rotation.md --to viking://resources/ov-release-rotation --wait
 ```
 
 CLI 會自動上傳本地檔案。`--wait` 等待處理完成，命令成功後再繼續。若省略該引數，儲存返回的 `task_id`，用 `ov task status <task_id>` 查詢到 `completed` 後再使用結果。詳見[後臺任務](../api/17-tasks.md)。

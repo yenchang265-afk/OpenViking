@@ -445,7 +445,7 @@ const activity = {
       unknownCommand:
         'Unknown command. Available: /status, /ls, /search, /find, /read, /session, /add-resource.',
       commandFailed: 'Command failed',
-      waitUsage: 'Usage: /wait [--timeout seconds]',
+      waitUsage: 'Usage: /wait',
       invalidFlag: 'Invalid --{{flag}}: {{value}}',
       refMeta: {
         archive: 'archive',
@@ -717,10 +717,6 @@ const activity = {
             code: '/wait',
             description: 'Wait for service readiness',
           },
-          timeout: {
-            code: '/wait --timeout 30',
-            description: 'Set wait time in seconds',
-          },
         },
       },
       resourceSuggestion: 'Resource path',
@@ -781,7 +777,7 @@ const activity = {
         },
         wait: {
           description: 'Wait for service readiness',
-          usage: '/wait [--timeout seconds]',
+          usage: '/wait',
         },
       },
     },

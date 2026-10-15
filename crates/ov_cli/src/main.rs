@@ -434,14 +434,6 @@ enum Commands {
         /// Wait until processing is complete
         #[arg(long, help_heading = "Common options")]
         wait: bool,
-        /// Request timeout in seconds. Used with --wait and by Manifest private Git imports
-        #[arg(
-            long,
-            value_parser = config::parse_positive_timeout,
-            value_name = "seconds",
-            help_heading = "Common options"
-        )]
-        timeout: Option<f64>,
         /// Enable strict mode for directory scanning (fail if any unsupported files found)
         #[arg(
             long = "strict",
@@ -734,14 +726,6 @@ enum Commands {
         /// Wait until semantic refresh is complete
         #[arg(long, help_heading = "Common options")]
         wait: bool,
-        /// Wait timeout in seconds (only used with --wait)
-        #[arg(
-            long,
-            value_parser = config::parse_positive_timeout,
-            value_name = "seconds",
-            help_heading = "Common options"
-        )]
-        timeout: Option<f64>,
     },
     /// [Data] Copy a file or directory
     Cp {
@@ -848,14 +832,6 @@ enum Commands {
             help_heading = "Advanced options"
         )]
         processing_mode: String,
-        /// Optional wait timeout in seconds
-        #[arg(
-            long,
-            value_parser = config::parse_positive_timeout,
-            value_name = "seconds",
-            help_heading = "Common options"
-        )]
-        timeout: Option<f64>,
         /// Comma-separated k=v retrieval tags to write with the content
         #[arg(long = "tags", value_delimiter = ',')]
         tags: Vec<String>,
@@ -987,7 +963,16 @@ enum Commands {
             help_heading = "Common options"
         )]
         search_type: String,
-        /// Target URI
+        /// Return ranked hits (list) or assembled context (context)
+        #[arg(
+            long,
+            default_value = "list",
+            value_parser = ["list", "context"],
+            value_name = "list|context",
+            help_heading = "Common options"
+        )]
+        mode: String,
+        /// Target URI (list mode only)
         #[arg(
             short,
             long,
@@ -1023,7 +1008,7 @@ enum Commands {
             help_heading = "Advanced options"
         )]
         before: Option<String>,
-        /// Only include results with specific level(s) (0=abstract, 1=overview, 2=file)
+        /// Filter levels (0=abstract, 1=overview, 2=file); ignored in context mode
         #[arg(
             short = 'L',
             long = "level",
@@ -1043,7 +1028,7 @@ enum Commands {
         /// Only include results matching all of these explicit tags
         #[arg(long = "tags", value_delimiter = ',')]
         tags: Option<Vec<String>>,
-        /// Include the full visible content for every matched URI
+        /// Include the full visible content for every matched URI (list mode only)
         #[arg(long, help_heading = "Advanced options")]
         read_content: bool,
         /// Enable event decay with protection duration: 0 (immediate) or Xm/Xh/Xd
@@ -1312,16 +1297,7 @@ enum Commands {
 
     // --- Status & Observability ---
     /// [Status] Wait for queued async processing to complete
-    Wait {
-        /// Wait timeout in seconds
-        #[arg(
-            long,
-            value_parser = config::parse_positive_timeout,
-            value_name = "seconds",
-            help_heading = "Common options"
-        )]
-        timeout: Option<f64>,
-    },
+    Wait,
     /// [Status] Track async resource processing tasks
     Task {
         #[command(subcommand)]
@@ -1570,11 +1546,7 @@ pub(crate) enum SnapshotCmd {
 #[derive(Subcommand)]
 enum SystemCommands {
     /// Wait for queued async processing to complete
-    Wait {
-        /// Wait timeout in seconds
-        #[arg(long, value_parser = config::parse_positive_timeout, value_name = "seconds")]
-        timeout: Option<f64>,
-    },
+    Wait,
     /// Show component status
     Status,
     /// Quick health check
@@ -3341,7 +3313,6 @@ async fn main() {
             reason,
             instruction,
             wait,
-            timeout,
             tags,
             tag_mode,
             acl,
@@ -3374,7 +3345,6 @@ async fn main() {
                                 processing_mode,
                                 external_connector: run.external_connector,
                             },
-                            timeout,
                             ctx,
                         )
                         .await
@@ -3390,7 +3360,6 @@ async fn main() {
                     reason,
                     instruction,
                     wait,
-                    timeout,
                     strict_mode,
                     ignore_dirs,
                     include,
@@ -3538,9 +3507,9 @@ async fn main() {
             on_conflict,
             vector_mode,
         } => handlers::handle_restore(file_path, on_conflict, vector_mode, ctx).await,
-        Commands::Wait { timeout } => {
+        Commands::Wait => {
             let client = ctx.get_client();
-            commands::system::wait(&client, timeout, ctx.output_format, ctx.compact).await
+            commands::system::wait(&client, ctx.output_format, ctx.compact).await
         }
         Commands::Task { action } => match action {
             TaskCommands::Status { task_id } => {
@@ -3709,8 +3678,7 @@ async fn main() {
             uri,
             recursive,
             wait,
-            timeout,
-        } => handlers::handle_rm(uri, recursive, wait, timeout, ctx).await,
+        } => handlers::handle_rm(uri, recursive, wait, ctx).await,
         Commands::Cp {
             from_uri,
             to_uri,
@@ -3822,7 +3790,6 @@ async fn main() {
             mode,
             wait,
             processing_mode,
-            timeout,
             tags,
             tag_mode,
             acl,
@@ -3840,7 +3807,6 @@ async fn main() {
                 from_file,
                 effective_mode,
                 wait,
-                timeout,
                 processing_mode,
                 tags,
                 tag_mode,
@@ -3902,6 +3868,7 @@ async fn main() {
             query,
             image,
             search_type,
+            mode,
             uri,
             session_id,
             node_limit,
@@ -3919,6 +3886,7 @@ async fn main() {
                 uri,
                 image,
                 search_type,
+                mode,
                 session_id,
                 node_limit,
                 threshold,
@@ -4160,12 +4128,23 @@ mod tests {
     }
 
     #[test]
-    fn cli_parses_search_context_type() {
-        let cli = Cli::try_parse_from(["ov", "search", "invoice", "--context-type", "skill"])
-            .expect("search context type should parse");
+    fn cli_parses_search_context_mode_and_type() {
+        let cli = Cli::try_parse_from([
+            "ov",
+            "search",
+            "invoice",
+            "--mode",
+            "context",
+            "--context-type",
+            "skill",
+        ])
+        .expect("search context mode and type should parse");
 
         match cli.command {
-            Commands::Search { context_type, .. } => {
+            Commands::Search {
+                mode, context_type, ..
+            } => {
+                assert_eq!(mode, "context");
                 assert_eq!(context_type, Some(vec!["skill".to_string()]));
             }
             _ => panic!("expected search command"),
@@ -4178,9 +4157,12 @@ mod tests {
             .expect("search image should parse");
 
         match cli.command {
-            Commands::Search { query, image, .. } => {
+            Commands::Search {
+                query, image, mode, ..
+            } => {
                 assert_eq!(query.as_deref(), Some("poster"));
                 assert_eq!(image.as_deref(), Some("viking://x.png"));
+                assert_eq!(mode, "list");
             }
             _ => panic!("expected search command"),
         }
@@ -5251,42 +5233,6 @@ mod tests {
         match cli.command {
             Commands::Language { language } => assert!(language.is_none()),
             _ => panic!("expected language command"),
-        }
-    }
-
-    #[test]
-    fn all_timeout_options_require_positive_finite_seconds() {
-        let command_prefixes = [
-            vec!["ov", "add-resource", "https://example.com", "--timeout"],
-            vec!["ov", "rm", "viking://resources/item", "--timeout"],
-            vec![
-                "ov",
-                "write",
-                "viking://resources/item",
-                "--content",
-                "value",
-                "--timeout",
-            ],
-            vec!["ov", "wait", "--timeout"],
-            vec!["ov", "system", "wait", "--timeout"],
-        ];
-
-        for prefix in command_prefixes {
-            for invalid in ["0", "-1", "inf", "NaN", "1e300"] {
-                let mut args = prefix.clone();
-                args.push(invalid);
-                assert!(
-                    Cli::try_parse_from(&args).is_err(),
-                    "{args:?} should reject an invalid timeout"
-                );
-            }
-
-            let mut args = prefix;
-            args.push("0.1");
-            assert!(
-                Cli::try_parse_from(&args).is_ok(),
-                "{args:?} should accept a positive finite timeout"
-            );
         }
     }
 

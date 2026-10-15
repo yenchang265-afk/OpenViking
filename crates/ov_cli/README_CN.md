@@ -158,6 +158,8 @@ ov cp -r viking://resources/docs viking://resources/docs-backup
 - `grep` - 內容模式搜尋。
 - `glob` - 文件 glob 搜索。
 
+`search --mode list`（預設）返回排序命中列表。`search --mode context` 按服務端預設配置組裝上下文並輸出文本；使用 `-o json` 可保留完整的 `entries`、`rendered`、`digest` 和 `stats` 結果。context 模式支援 `--events-time-decay-protection`，但拒絕 `--uri` 和 `--read-content`，服務端會忽略 `--level`。CLI 暫未提供 `max_tokens`、`detail` 等 context 專用選項。
+
 ### Session 與記憶
 
 - `session new` - 建立 session，並可設定事件記憶預設 tags 和自動提交策略。
@@ -255,11 +257,11 @@ ov -o json config list
 
 ```bash
 # 新增 URL 並等待處理完成
-ov add-resource https://example.com/docs --wait --timeout 60
+ov add-resource https://example.com/docs --wait
 
 # 新增本地目錄並過濾檔案
 ov add-resource ./dir \
-  --wait --timeout 600 \
+  --wait \
   --ignore-dirs "node_modules,dist" \
   --include "*.md,*.py" \
   --exclude "*.tmp,*.log"
@@ -270,6 +272,10 @@ ov add-resource ./docs -p "viking://resources/docs/{calendar:today}" --wait
 # 帶過濾條件的搜尋
 ov find "API authentication" --threshold 0.7 --limit 5
 ov find "authentication" --uri viking://resources/project --level 0,1
+
+# 組裝上下文並啟用事件時間衰減，或檢視完整 JSON 結果
+ov search "recent decisions" --mode context --events-time-decay-protection 7d
+ov -o json search "authentication" --mode context
 
 # 遞迴列目錄
 ov ls viking://resources --recursive

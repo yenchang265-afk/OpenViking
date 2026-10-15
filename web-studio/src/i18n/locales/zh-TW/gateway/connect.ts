@@ -10,13 +10,17 @@ const connect = {
     openai: 'OpenAI 相容的客戶端和 SDK',
     loopback: {
       title: '只有閘道器所在的機器能使用這個地址',
-      description:
-        '其他機器上的客戶端連不上它。請在 `ov.conf` 中把 `gateway.public_url` 設為它們能訪問的地址，然後重啟閘道器。',
+      embedded:
+        '其他機器上的客戶端連不上它。請在 `ov.conf` 中把 `gateway.public_url` 設為它們能訪問的地址（不帶 `/gateway`），然後重啟服務。',
+      standalone:
+        '其他機器上的客戶端連不上它。請把 `gateway.conf` 中的 `public_url` 或環境變數 `OPENVIKING_GATEWAY_PUBLIC_URL` 設為它們能訪問的地址（不帶 `/gateway`），然後重啟閘道器。',
     },
     notPublic: {
       title: '客戶端可能連不上這個地址',
-      description:
-        '這是 Business Data Platform 訪問閘道器用的地址。請在 `ov.conf` 中把 `gateway.public_url` 設為客戶端應該使用的地址，然後重啟閘道器。',
+      embedded:
+        '這是瀏覽器開啟 Studio 時使用的地址。請在 `ov.conf` 中把 `gateway.public_url` 設為客戶端應該使用的地址（不帶 `/gateway`），然後重啟服務。',
+      standalone:
+        '這是瀏覽器開啟 Studio 時使用的地址。請把 `gateway.conf` 中的 `public_url` 或環境變數 `OPENVIKING_GATEWAY_PUBLIC_URL` 設為客戶端應該使用的地址（不帶 `/gateway`），然後重啟閘道器。',
     },
     keys: '客戶端用閘道器金鑰（`ovgw_…`）認證，代替服務商的 API Key。',
     manageKeys: '管理金鑰',

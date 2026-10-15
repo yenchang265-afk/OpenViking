@@ -24,7 +24,6 @@ export type AdditionalResourceOptionsValue = {
   sourceName: string
   tagMode: ResourceTagMode
   tags: string
-  timeout: string
   wait: boolean
 }
 
@@ -158,24 +157,6 @@ export function AdditionalResourceOptions({
           {t('waitForProcessing')}
         </Label>
       </div>
-
-      {value.wait && nativeOptions ? (
-        <div className="grid gap-2 sm:max-w-xs">
-          <Label htmlFor="add-resource-timeout">{t('timeout')}</Label>
-          <Input
-            id="add-resource-timeout"
-            type="number"
-            min="0.1"
-            step="0.1"
-            value={value.timeout}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({ ...value, timeout: event.target.value })
-            }
-            placeholder={t('timeout.placeholder')}
-          />
-        </div>
-      ) : null}
 
       {isRemote && nativeOptions ? (
         <div className="grid gap-2">

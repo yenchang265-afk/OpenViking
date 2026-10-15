@@ -271,8 +271,6 @@ const resources = {
     'processingMode.semantic': '語義理解並生成向量',
     'processingMode.vectorsOnly': '僅生成向量',
     waitForProcessing: '等待處理完成後返回',
-    timeout: '等待超時（秒）',
-    'timeout.placeholder': '不填寫則不限制',
     sourceName: '資源名稱',
     'sourceName.placeholder': '可選，覆蓋自動識別的來源名稱',
     tags: '檢索標籤',

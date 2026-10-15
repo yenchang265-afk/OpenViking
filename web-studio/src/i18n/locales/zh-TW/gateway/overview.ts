@@ -8,6 +8,22 @@ const overview = {
   sampleNote_other:
     '以上資料統計自請求日誌中最新的 {{limit}} 條記錄。日誌保留 {{count}} 天。',
   setup: {
+    providedUpstreams_one: '閘道器管理員已提供 {{count}} 個上游',
+    providedUpstreams_other: '閘道器管理員已提供 {{count}} 個上游',
+    importedUpstreams_one:
+      '已有 {{count}} 個上游，來自 Business Data Platform 的模型配置',
+    importedUpstreams_other:
+      '已有 {{count}} 個上游，來自 Business Data Platform 的模型配置',
+    someImportedUpstreams:
+      '已有 {{count}} 個上游，其中 {{imported}} 個來自 Business Data Platform 的模型配置',
+    waitUpstreams: '等待閘道器管理員新增上游',
+    providedProfiles_one: '閘道器管理員已提供 {{count}} 個上下文配置',
+    providedProfiles_other: '閘道器管理員已提供 {{count}} 個上下文配置',
+    waitProfiles: '等待閘道器管理員新增上下文配置',
+    codingPlan:
+      '{{name}} 是 Coding Plan 上游，確認套餐允許之前，發往它的請求都會被攔截。',
+    confirm: '去確認',
+
     title: '快速開始',
     description:
       '完成下面四步，就能讓第一段對話用上記憶。客戶端發出第一個請求後，這張卡片會自動隱藏。',
@@ -34,6 +50,7 @@ const overview = {
       description:
         '客戶端用這個金鑰呼叫閘道器。每個金鑰屬於一個 Business Data Platform 使用者，閘道器讀寫的就是這個使用者的記憶。',
       blocked: '請先新增上游並建立上下文配置。',
+      waiting: '閘道器管理員新增上游和上下文配置後，才能簽發金鑰。',
       done_one: '已簽發 {{count}} 個金鑰',
       done_other: '已簽發 {{count}} 個金鑰',
       action: '簽發金鑰',
@@ -77,14 +94,6 @@ const overview = {
     title: 'Business Data Platform',
     description: '為新訊息檢索記憶，並儲存對話。',
     version: '版本',
-    authMode: '認證方式',
-    authModes: {
-      api_key: 'API 金鑰模式',
-      trusted: 'Trusted 模式',
-      dev: '開發模式',
-      oidc: 'OIDC 模式',
-      ldap: 'LDAP 模式',
-    },
     unreachable:
       '連不上 Business Data Platform 期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 Business Data Platform 恢復。',
     starting:

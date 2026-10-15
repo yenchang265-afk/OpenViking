@@ -33,8 +33,7 @@
         "backend": "cache"
       },
       "pathlock": {
-        "provider": "cache",
-        "namespace": "openviking"
+        "provider": "cache"
       }
     },
     "vectordb": {

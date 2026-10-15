@@ -1,6 +1,6 @@
 # 資源管理
 
-資源是智慧體可以引用的外部知識。本頁介紹資源匯入、定時更新和臨時檔案上傳。資料包匯出與匯入見 [OVPack](14-ovpack.md)。
+資源是智慧體可以引用的外部知識。本頁介紹資源匯入、定時更新和臨時檔案上傳。目錄規劃見[資料組織指引](../guides/23-data-organize.md)，資料包匯出與匯入見 [OVPack](14-ovpack.md)。
 
 ## 核心概念
 
@@ -76,7 +76,7 @@ URL/文件  Parser  TreeBuilder  AGFS    Summarizer/Vector
 
 OpenViking 先檢查來源和請求引數是否滿足 Connector 接入條件。Connector 在標準流水線之外完成匯入。其餘請求中，[`parser_api`](../guides/01-configuration.md#parser-api) 選中的格式交給外部 Understanding 解析，剩餘格式使用內建 Parser。外部解析只替換 Parse 階段，結果仍進入 TreeBuilder 和後續儲存、語義處理。
 
-Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源不能回退到內建 Accessor。Git 未命中 Connector 時可以回退，但攜帶 Connector 專用憑證時禁止回退。對於支援等待的標準流水線請求，`wait=true` 只等待本次匯入的工作，不等待全域佇列中的無關任務；等待超時不代表匯入已取消。
+Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源不能回退到內建 Accessor。Git 未命中 Connector 時可以回退，但攜帶 Connector 專用憑證時禁止回退。對於支援等待的標準流水線請求，`wait=true` 只等待本次匯入的工作，不等待全域佇列中的無關任務；HTTP 請求超時不代表匯入已取消。
 
 #### 階段 1：源解析 (Parse)
 - 使用 `UnifiedResourceProcessor` 根據資源型別解析內容
@@ -179,8 +179,7 @@ Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源�
 | source_name | string | 否 | None | 來源顯示名；上傳檔案省略時使用原始檔名 |
 | reason | string | 否 | "" | 新增資源的原因；非空時會隨資源 URI 進入常規 session 記憶抽取鏈路，並在生成的記憶中記錄資源引用 |
 | instruction | string | 否 | "" | 語義提取的處理指令（實驗特性） |
-| wait | bool | 否 | False | 是否等待語義處理和向量化完成才返回 |
-| timeout | float | 否 | None | 超時時間（秒），僅 `wait=true` 時生效 |
+| wait | bool | 否 | False | 是否等待語義處理和向量化完成才返回；不支援單獨的 `timeout` 引數，HTTP 超時使用客戶端配置 |
 | strict | bool | 否 | False | 是否使用嚴格模式 |
 | ignore_dirs | string | 否 | None | 要忽略的目錄名（逗號分隔） |
 | include | string | 否 | None | 包含的文件模式（glob） |

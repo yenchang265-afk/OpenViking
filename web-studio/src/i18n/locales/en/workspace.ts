@@ -838,6 +838,22 @@ const workspace = {
     },
   },
   settings: {
+    gatewayConnection: {
+      title: 'Sign in to Business Data Platform Gateway',
+      openvikingUrl: 'This gateway uses Business Data Platform at {{url}}',
+      apiKey: 'Business Data Platform API key',
+      keyHint: 'A user, account admin or root API key all work.',
+      wrongKey:
+        "Gateway keys (ovgw_) and gateway management keys (ovgm_) can't be used to sign in. Enter a Business Data Platform API key.",
+      invalidKey:
+        'Business Data Platform rejected this API key. Check the key and try again.',
+      unreachable:
+        "The gateway can't reach Business Data Platform ({{url}}). Make sure Business Data Platform is running and the gateway's openviking_url (in gateway.conf or OPENVIKING_GATEWAY_OPENVIKING_URL) points to it, then try again.",
+      gatewayUnreachable:
+        "Can't reach this gateway. Make sure it is running, then try again.",
+      connect: 'Sign in',
+      connecting: 'Signing in…',
+    },
     pageTitle: 'Settings',
     tabs: { connection: 'Connection', configuration: 'Server configuration' },
     models: {

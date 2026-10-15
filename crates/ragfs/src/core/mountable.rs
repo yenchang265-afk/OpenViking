@@ -36,7 +36,7 @@ use super::types::{
     BackendsConfig, FileInfo, GlobPage, GrepOptions, GrepResult, PluginConfig, TreeEntry, WriteFlag,
 };
 #[cfg(feature = "cache")]
-use crate::cache::{CacheNamespace, CachePolicy, CacheTraversalMode, CachedFileSystem};
+use crate::cache::{CachePolicy, CacheTraversalMode, CachedFileSystem};
 #[cfg(feature = "cache")]
 use crate::cache_runtime::CacheRuntime;
 
@@ -96,7 +96,7 @@ pub struct MountableFS {
 #[derive(Clone)]
 struct MountCacheConfig {
     runtime: Arc<CacheRuntime>,
-    namespace: CacheNamespace,
+    service_name: String,
     policy: CachePolicy,
 }
 
@@ -252,7 +252,7 @@ impl MountableFS {
     #[cfg(feature = "cache")]
     pub fn with_cache_runtime(
         runtime: Arc<CacheRuntime>,
-        namespace: CacheNamespace,
+        service_name: impl Into<String>,
         policy: CachePolicy,
     ) -> Self {
         Self {
@@ -263,7 +263,7 @@ impl MountableFS {
             pathlock_manager: OnceLock::new(),
             cache: Some(MountCacheConfig {
                 runtime: runtime.clone(),
-                namespace,
+                service_name: service_name.into(),
                 policy,
             }),
             cache_runtime: Some(runtime),
@@ -368,7 +368,7 @@ impl MountableFS {
                 let storage_fs = if is_control_plugin {
                     raw_arc.clone()
                 } else {
-                    self.maybe_wrap_cache(raw_arc.clone(), &normalized_path)
+                    self.maybe_wrap_cache(raw_arc.clone())
                 };
                 #[cfg(not(feature = "cache"))]
                 let storage_fs = raw_arc.clone();
@@ -423,7 +423,7 @@ impl MountableFS {
                         Some(cache) => Arc::new(CachedFileSystem::with_runtime(
                             Box::new(ArcFileSystem(arc)),
                             cache.runtime.clone(),
-                            mount_namespace(&cache.namespace, &normalized_path),
+                            &cache.service_name,
                             cache
                                 .policy
                                 .clone()
@@ -492,7 +492,7 @@ impl MountableFS {
     }
 
     #[cfg(feature = "cache")]
-    fn maybe_wrap_cache(&self, fs: Arc<dyn FileSystem>, mount_path: &str) -> Arc<dyn FileSystem> {
+    fn maybe_wrap_cache(&self, fs: Arc<dyn FileSystem>) -> Arc<dyn FileSystem> {
         match &self.cache {
             Some(cache) => {
                 let policy = if cache.policy.traversal_mode() == CacheTraversalMode::CachedTraversal
@@ -508,7 +508,7 @@ impl MountableFS {
                 Arc::new(CachedFileSystem::with_runtime(
                     Box::new(ArcFileSystem(fs)),
                     cache.runtime.clone(),
-                    mount_namespace(&cache.namespace, mount_path),
+                    &cache.service_name,
                     policy,
                 ))
             }
@@ -884,11 +884,6 @@ impl FileSystem for ArcFileSystem {
     async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
         self.0.chmod(path, mode).await
     }
-}
-
-#[cfg(feature = "cache")]
-fn mount_namespace(base: &CacheNamespace, mount_path: &str) -> CacheNamespace {
-    CacheNamespace::new(format!("{}:{}", base.as_str(), mount_path))
 }
 
 impl Default for MountableFS {
@@ -1275,7 +1270,7 @@ mod tests {
             mount_path: mount_path.to_string(),
             params: HashMap::new(),
             backups: Some(BackendsConfig {
-                namespace: "default".to_string(),
+                service_name: "mw-test".to_string(),
                 initial_partitions: 16,
                 checkpoint_interval_secs: 86_400,
                 provider: "filesystem".to_string(),
@@ -1673,13 +1668,13 @@ mod tests {
     #[cfg(feature = "cache")]
     #[tokio::test]
     async fn mount_wraps_backend_with_cache_when_configured() {
-        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache::CachePolicy;
         use crate::cache_runtime::CacheRuntime;
 
         let reads = Arc::new(AtomicU64::new(0));
         let mfs = MountableFS::with_cache_runtime(
             CacheRuntime::memory(),
-            CacheNamespace::new("mount-test"),
+            "mount-test",
             CachePolicy::default(),
         );
         mfs.register_plugin(CountingPlugin {
@@ -1706,14 +1701,14 @@ mod tests {
     #[cfg(feature = "cache")]
     #[tokio::test]
     async fn queuefs_mount_bypasses_cache_even_when_cache_is_configured() {
-        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache::CachePolicy;
         use crate::cache_runtime::{CacheRuntime, MemoryMockProvider};
         use crate::plugins::QueueFSPlugin;
 
         let provider = Arc::new(MemoryMockProvider::new());
         let mfs = MountableFS::with_cache_runtime(
             CacheRuntime::memory_with_provider(provider.clone()),
-            CacheNamespace::new("queue-cache-test"),
+            "queue-cache-test",
             CachePolicy::default().with_bypass_prefix("/queue"),
         );
         mfs.register_plugin(QueueFSPlugin::new()).await;
@@ -1779,7 +1774,12 @@ mod tests {
         use crate::cache_runtime::{CacheRuntime, MemoryMockProvider};
         use crate::plugins::QueueFSPlugin;
 
-        let provider = Arc::new(MemoryMockProvider::new());
+        let provider = Arc::new(MemoryMockProvider::new().with_script_handler(|request| {
+            panic!(
+                "script execution is outside this shutdown test's scope: {}",
+                request.script_id
+            )
+        }));
         let runtime = CacheRuntime::memory_with_provider(provider.clone());
         let mfs = MountableFS::new();
         mfs.register_plugin(QueueFSPlugin::with_cache_runtime(runtime))
@@ -1787,7 +1787,7 @@ mod tests {
         let mut params = HashMap::new();
         params.insert("backend".into(), ConfigValue::String("cache".into()));
         params.insert(
-            "cache_key_prefix".into(),
+            "service_name".into(),
             ConfigValue::String("mountable-shutdown-test".into()),
         );
         mfs.mount(PluginConfig::single_backend("queuefs", "/queue", params))
@@ -1851,13 +1851,13 @@ mod tests {
     #[cfg(feature = "cache")]
     #[tokio::test]
     async fn copy_within_mount_overwrite_invalidates_cached_destination() {
-        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache::CachePolicy;
         use crate::cache_runtime::CacheRuntime;
         use crate::plugins::MemFSPlugin;
 
         let mfs = with_test_pathlock_manager(Arc::new(MountableFS::with_cache_runtime(
             CacheRuntime::memory(),
-            CacheNamespace::new("copy-cache-test"),
+            "copy-cache-test",
             CachePolicy::default(),
         )))
         .await;
@@ -1904,7 +1904,7 @@ mod tests {
     #[cfg(feature = "cache")]
     #[tokio::test]
     async fn encrypted_mount_caches_ciphertext_below_account_validation() {
-        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache::CachePolicy;
         use crate::cache_runtime::{CacheRuntime, MemoryMockProvider};
         use crate::core::{FsContextInner, FS_CTX};
         use crate::lock::{
@@ -1916,7 +1916,7 @@ mod tests {
         let cache_runtime = CacheRuntime::memory_with_provider(cache_provider.clone());
         let mfs = Arc::new(MountableFS::with_cache_runtime(
             cache_runtime.clone(),
-            CacheNamespace::new("encrypted-mount-test"),
+            "encrypted-mount-test",
             CachePolicy::default(),
         ));
         mfs.register_plugin(MemFSPlugin).await;
@@ -2344,12 +2344,12 @@ mod tests {
     #[cfg(feature = "cache")]
     #[tokio::test]
     async fn cached_mount_forwards_write_from_path_and_invalidates_file_cache() {
-        use crate::cache::{CacheNamespace, CachePolicy};
+        use crate::cache::CachePolicy;
         use crate::cache_runtime::CacheRuntime;
 
         let mfs = MountableFS::with_cache_runtime(
             CacheRuntime::memory(),
-            CacheNamespace::new("spy-cache-test"),
+            "spy-cache-test",
             CachePolicy::default(),
         );
         let spy = mount_spy(&mfs).await;

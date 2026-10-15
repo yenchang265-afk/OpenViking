@@ -12,7 +12,7 @@ from openviking.pyagfs.exceptions import AGFSNotSupportedError
 from openviking.server.identity import RequestContext
 from openviking.storage.expr import And, PathScope, RawDSL
 from openviking.storage.viking_fs._base import logger
-from openviking_cli.exceptions import PermissionDeniedError
+from openviking_cli.exceptions import InvalidArgumentError, PermissionDeniedError
 
 _GREP_LS_PAGE_SIZE = 1000
 _FULLTEXT_UNSUPPORTED_CACHE_TTL = 60.0
@@ -91,19 +91,22 @@ class _GrepMixin:
                 if record.get("uri")
             }
 
-        result = await self._grep_fs(
-            uri=uri,
-            pattern=pattern,
-            exclude_uri=exclude_uri,
-            case_insensitive=case_insensitive,
-            node_limit=node_limit,
-            level_limit=level_limit,
-            ctx=ctx,
-            content_transform=content_transform,
-            allowed_uris=allowed_uris,
-            before_context=before_context,
-            after_context=after_context,
-        )
+        try:
+            result = await self._grep_fs(
+                uri=uri,
+                pattern=pattern,
+                exclude_uri=exclude_uri,
+                case_insensitive=case_insensitive,
+                node_limit=node_limit,
+                level_limit=level_limit,
+                ctx=ctx,
+                content_transform=content_transform,
+                allowed_uris=allowed_uris,
+                before_context=before_context,
+                after_context=after_context,
+            )
+        except re.error as exc:
+            raise InvalidArgumentError(f"Invalid grep pattern: {exc}") from exc
         return self._attach_grep_tags(result, tags_by_uri)
 
     async def _grep_fs(

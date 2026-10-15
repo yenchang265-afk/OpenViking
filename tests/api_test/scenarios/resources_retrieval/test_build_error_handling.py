@@ -131,7 +131,7 @@ class TestBuildErrorHandling:
             cleanup_temp_dir(temp_dir)
 
     def test_error_corrupted_zip(self, api_client):
-        """TC-E16 損壞的ZIP檔案：驗證偽造 .zip 檔案回退或報錯且不崩潰"""
+        """TC-E16 損壞的ZIP檔案：返回明確的引數錯誤。"""
         random_id = str(uuid.uuid4())[:8]
 
         temp_dir = tempfile.mkdtemp()
@@ -141,10 +141,11 @@ class TestBuildErrorHandling:
 
         try:
             response = api_client.add_resource(path=zip_path, wait=True)
-            assert response.status_code == 500, f"損壞ZIP應返回 500, 實際: {response.status_code}"
+            assert response.status_code == 400, response.text
 
             data = response.json()
             assert data.get("status") == "error", f"損壞ZIP應返回 error, 實際: {data.get('status')}"
+            assert data["error"]["code"] == "INVALID_ARGUMENT"
 
             print("✓ TC-E16 損壞的ZIP檔案處理通過")
         finally:

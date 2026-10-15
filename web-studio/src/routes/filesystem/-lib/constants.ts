@@ -164,10 +164,9 @@ export const TERMINAL_COMMANDS: TerminalCommandSuggestion[] = [
     adminOnly: true,
     command: '/wait',
     executable: true,
-    examples: ['wait.default', 'wait.timeout'],
+    examples: ['wait.default'],
     group: 'status',
     key: 'wait',
-    insertText: '/wait ',
-    parameters: ['timeout'],
+    insertText: '/wait',
   },
 ]

@@ -23,6 +23,7 @@ openviking-server doctor
 
 ```json
 {
+  "service_name": "openviking-server",
   "storage": {
     "workspace": "./data",
     "vectordb": {
@@ -53,6 +54,9 @@ openviking-server doctor
 ```
 
 如果 `provider` 是 `openai-codex`，並且 Codex OAuth 已經就緒，則 `vlm.api_key` 可以省略。
+
+頂層 `service_name` 預設是 `"openviking-server"`。使用 cache 的模組會把它作為
+Redis 名稱空間。OTel 的 `service_name` 顯式配置時保持原值，省略時繼承該值。
 
 ### ov.conf 的有序憑據陣列
 
@@ -1179,11 +1183,11 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 |------|------|------|--------|
 | `enable_intent` | bool | `search()` 收到 `session_id` 時是否執行意圖分析和查詢規劃。 | `true` |
 
-`/search` 的 `mode="context"` 組裝面用到兩個超時熔斷：
+普通 `search()` 的會話意圖分析和 `mode="context"` 的查詢擴充共用 `recall_intent_timeout_s`；上下文 digest 重寫使用獨立的超時配置：
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `recall_intent_timeout_s` | float | 會話感知查詢擴充的超時；超時後回退為使用者原查詢 | `5.0` |
+| `recall_intent_timeout_s` | float | 會話意圖分析和上下文查詢擴充的超時；超時或失敗後回退為使用者原查詢 | `5.0` |
 | `recall_rewrite_timeout_s` | float | digest 重寫的超時；超時後 `digest` 為空並照常返回 `rendered` | `30.0` |
 
 查詢擴充需要傳入有內容的 `session_id` 並啟用意圖分析，重寫需要傳入 `rewrite`。這些模型呼叫受各自超時限制；失敗後回退到未擴充的查詢或未重寫的結果。
@@ -1281,6 +1285,10 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 
 ##### 全域 Cache Provider、CacheFS 與 PathLock 配置
 
+頂層 `service_name` 表示當前 OpenViking 部署名。CacheFS、`backend=cache`
+的 QueueFS、Cache PathLock 和 cache-backed 多寫 metadata 都會從它生成
+Redis 名稱空間。
+
 全域 `cache` 與 `storage` 並列，標準配置只包含 Provider 名稱和 Provider 自有引數：
 
 | 引數 | 型別 | 說明 | 預設值 |
@@ -1293,7 +1301,6 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `backend` | str | `local` 完全沿用原檔案系統；`cache` 啟用 CacheFS wrapper | `local` |
-| `namespace` | str | CacheFS key 名稱空間 | `openviking` |
 | `max_file_size_bytes` | int | 允許快取的單檔案最大位元組數 | `1048576` |
 | `traversal_mode` | str | `backend` 或 `cached_traversal` | `backend` |
 | `bypass_prefixes` | array[str] | 繞過快取的路徑字首 | `[]` |
@@ -1303,12 +1310,12 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `provider` | str | `filesystem`、`memory` 或 `cache`；`cache` 複用 Redis CacheRuntime | `filesystem` |
-| `namespace` | str（可選） | Redis PathLock key 使用的 OpenViking 例項名；`provider=cache` 時必填 | `null` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數；不得小於 `1.0` | `30.0` |
 | `lock_timeout_secs` | float | 已廢棄且忽略；執行時等待超時固定為 `0.0` | `0.0` |
 
 ```json
 {
+  "service_name": "production",
   "cache": {
     "provider": "redis",
     "params": {
@@ -1326,16 +1333,13 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
   "storage": {
     "agfs": {
       "cachefs": {
-        "backend": "cache",
-        "namespace": "production"
+        "backend": "cache"
       },
       "queuefs": {
-        "backend": "cache",
-        "cache_key_prefix": "production"
+        "backend": "cache"
       },
       "pathlock": {
         "provider": "cache",
-        "namespace": "production",
         "lock_expire_secs": 30.0
       }
     }
@@ -1343,9 +1347,9 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 }
 ```
 
-標準配置沒有全域 `cache.enabled`。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
+標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
 
-這是一次配置破壞性變更：`storage.agfs.cache`、`storage.agfs.queuefs.backend="redis"`、`storage.agfs.queuefs.redis` 和 `storage.agfs.backups.provider="redis"` 已刪除並會被拒絕。請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
+請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，用頂層 `service_name` 生成共享 Redis 名稱，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
 
 ##### QueueFS 配置
 
@@ -1356,7 +1360,6 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 | `db_path` | str（可選） | 當 backend 為 `"sqlite"` 或 `"sqlite3"` 時使用的 QueueFS sqlite 資料庫路徑 | `null` |
 | `recover_stale_sec` | int | 啟動時恢復超過該秒數的 `processing` 佇列訊息；`0` 表示恢復全部 stale processing 訊息 | `0` |
 | `busy_timeout_ms` | int | QueueFS sqlite 的 busy timeout，單位毫秒 | `5000` |
-| `cache_key_prefix` | str | 當 backend 為 `"cache"` 時使用的 QueueFS key 名稱空間 | `"default"` |
 
 說明：
 
@@ -1364,11 +1367,11 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 - `mode=shared` 會繼續使用歷史上的全域佇列名稱空間 `/queue`；`mode=worker` 會為每個 worker 隔離到 `/queue/worker-<index|pid>`。
 - `db_path` 僅在 QueueFS backend 為 `sqlite` 或 `sqlite3` 時生效。
 - `recover_stale_sec` 和 `busy_timeout_ms` 僅在 QueueFS backend 為 `sqlite` 或 `sqlite3` 時生效。
-- `queuefs.backend=cache` 自動繫結頂層 `cache.provider + cache.params`。
+- `queuefs.backend=cache` 自動繫結頂層 `cache.provider + cache.params`，並使用頂層 `service_name` 作為 key 字首。
 - Redis Cluster 模式的 endpoints 是初始節點，且必須配置 `db=0`；slot 路由、`MOVED`/`ASK`、拓撲更新和重連由 Fred RedisProvider 處理。
 - Redis Sentinel 模式的 endpoints 是 Sentinel 節點，並且必須配置非空 `master_name`；master 發現和故障切換後的重連由 Fred RedisProvider 處理。
 - `username` 和 `password` 用於 Redis 資料節點；`sentinel_username` 和 `sentinel_password` 僅用於 Sentinel 節點。
-- Cache backend 使用 `{cache_key_prefix}:ov:*` key；連線同一 Redis 叢集的不同環境或租戶必須配置不同的 `cache_key_prefix`。
+- Cache backend 使用 `{service_name}:ov:*` key；連線同一 Redis 叢集的不同部署必須配置不同的 `service_name`。
 - Cache backend 的例項心跳 TTL 為 30 秒，每 10 秒續約一次。
 - Cache backend 會在獨立的 startup recovery 任務中按例項心跳狀態執行三次有界 `recover_stale` 掃描，時間點分別為啟動後立即、30 秒和 60 秒，用於覆蓋容器異常退出後舊例項心跳尚未過期的恢復視窗；正常關閉會先刪除 heartbeat，使新例項可以立即恢復 processing 訊息。
 - 所有 Redis 讀命令都發送到主節點，不提供副本讀配置。
@@ -1841,7 +1844,7 @@ ov add-resource ./docs --exclude "*.tmp"
 | `port` | int | 繫結埠 | `1933` |
 | `auth_mode` | str / null | 內建模式：`"dev"`、`"api_key"`、`"trusted"`、`"oidc"`、`"ldap"`。省略或設為 null 時，有非空 `root_api_key` 則推導為 `api_key`，否則為 `dev`。 | `null` |
 | `root_api_key` | str | `api_key` 模式必填的 Root API Key；`trusted` 模式在所有部署中均必填，包括 localhost，不負責解析普通使用者身份 | `null` |
-| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"` Provider，統一持久化 Account、User、Group 和 API Key，相容現有 AGFS JSON 登錄檔並維護程序內查詢索引。 | `"file"` |
+| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"`、`"mysql"` 和 `"redis_mysql"`；統一持久化 Account、User、Group 和 API Key。`"file"` 相容現有 AGFS JSON 登錄檔，並由 Provider 自身維護程序內查詢索引。`"redis_mysql"` 保持 MySQL 為權威儲存，並增加共享 Redis 認證和請求身份讀取快取。 | `"file"` |
 | `account_store.params` | object | Provider 啟動引數。不能通過這裡覆蓋框架注入的 VikingFS 和 File Provider API Key Hash 配置。 | `{}` |
 | `profile_enabled` | bool | 是否允許 HTTP 請求通過 `profile=1` 開啟請求級 cProfile。關閉時服務端會忽略該請求引數；開啟後，CLI 可以顯示返回的 `profile`，而 Python HTTP client 預設只觸發服務端 profile，不會把頂層 `profile` 欄位自動附著到大多數 SDK 返回值上。 | `false` |
 | `cors_origins` | list | CORS 允許的來源 | `["*"]` |
@@ -1855,6 +1858,97 @@ ov add-resource ./docs --exclude "*.tmp"
 | `user_config_defaults.memory_policy` | object | Session 和 User 都未顯式配置策略時使用的部署級預設記憶抽取策略。 | `null` |
 | `user_config_defaults.auto_commit_policy` | object | 新建 Session 未顯式指定策略時使用的部署級自動 Commit 預設策略。 | `null` |
 | `agent_evolution.enabled` | bool | Agent 進化的叢集啟動預設值，執行時可由 Account 或 Cluster Admin settings 覆蓋。開啟時，session commit 可按 session `memory_policy` 生成或更新 cases、trajectories 和 experiences；關閉後已有記憶仍可讀取和檢索。 | `false` |
+
+MySQL Provider 預設儲存高熵 API Key 的帶版本 SHA-256 摘要，並通過獨立摘要索引
+進行固定成本查詢。將 `credential_storage` 設為 `"encrypted"` 可改用 AES-GCM
+可逆加密；此時必須提供 `credential_encryption_key`，其值為 base64 編碼的
+32 位元組金鑰。MySQL 不會持久化 API Key 原文。雜湊模式的使用者列表只展示 key
+prefix；加密模式可為同一列表工作流解密展示 key。`credential_storage` 僅決定
+新寫入憑證的格式，讀取時根據每條記錄的 `material` 字首選擇解碼方式。從加密模式
+遷移到雜湊模式時，應保留 `credential_encryption_key`，直到所有舊加密憑證完成
+輪換。`aesgcm:v1` 記錄不包含 key id，因此不支援直接替換該加密金鑰。
+
+安裝 MySQL extra 後，通過頂層 `service_name` 配置部署名稱。該值會寫入每張
+Account Store 表的 `service_name` 列，並在多個 OpenViking 叢集共用一個資料庫時
+充當隔離邊界。修改 `service_name` 會選擇另一組邏輯 Account Store 分割槽。
+
+Provider 不會建立或遷移資料庫表。啟動服務前，應通過現有 DBA 或部署流程手工建立
+`openviking/server/account_stores/sql/init.sql` 中定義的規範化表。後續經評審的
+schema 變更按順序存放於 `openviking/server/account_stores/sql/changes/`。
+五張 `ov_accounts*` 表的名稱固定；多個 OpenViking 叢集共用資料庫時，通過不同的
+頂層 `service_name` 隔離部署，不使用不同表字首。
+
+```json
+{
+  "service_name": "production",
+  "server": {
+    "account_store": {
+      "provider": "mysql",
+      "params": {
+        "host": "db.example.com",
+        "user": "openviking",
+        "password": "secret",
+        "database": "openviking",
+        "credential_storage": "encrypted",
+        "credential_encryption_key": "base64-encoded-32-byte-key"
+      }
+    }
+  }
+}
+```
+
+`redis_mysql` 需要安裝 `redis-mysql` extra，並在引數中巢狀同一份 MySQL 配置。
+其 `cache` 配置沿用頂層 `cache` 的 `provider/params` 結構，目前 Python
+客戶端支援 `standalone`、`cluster` 和 `sentinel` 三種 Redis 部署模式。
+它預設以固定 60 秒 TTL 快取 API Key 繫結、User、每個 User 的 Group ID 和刪除記錄。
+快取重建與同一 Account 的修改共用 Redis 租約，正常快取命中不獲取該租約。修改會先
+提交 MySQL，再失效相關快取。Redis 不可用時 MySQL 修改仍會成功，遺留快取最多保持到
+固定 TTL 到期。快取回填同時維護 Account
+級、按過期時間排序的 key 索引；每次寫入已索引快取時會清理過期成員，因此刪除或重建
+Account 時只會清理該 Account 當前的 User、Group、刪除記錄和憑據快取。API Key 繫結會
+校驗 Account 和 User 的憑據 fence，所以正常的換 Key、吊銷和刪 User 會使舊繫結失效。
+索引的最後一個有序集合成員被移除後，Redis 會自動刪除空索引；清理結束時不再單獨刪除
+索引，避免失去租約的舊請求誤刪新回填的索引。建立身份或換 Key 會同時清除攜帶和未攜帶
+User 提示的負快取。
+Redis 連線和命令超時通過 `cache.params.connect_timeout_ms` 和
+`cache.params.command_timeout_ms` 配置，未配置時均為 5000 毫秒；這不是整個請求的總超時。
+
+```json
+{
+  "server": {
+    "account_store": {
+      "provider": "redis_mysql",
+      "params": {
+        "mysql": {
+          "host": "db.example.com",
+          "user": "openviking",
+          "password": "secret",
+          "database": "openviking"
+        },
+        "cache": {
+          "provider": "redis",
+          "params": {
+            "mode": "sentinel",
+            "endpoints": [
+              "rediss://sentinel-1.example.com:26379",
+              "rediss://sentinel-2.example.com:26379",
+              "rediss://sentinel-3.example.com:26379"
+            ],
+            "master_name": "openviking",
+            "username": "openviking",
+            "password_env": "OPENVIKING_REDIS_PASSWORD",
+            "sentinel_password_env": "OPENVIKING_SENTINEL_PASSWORD",
+            "key_prefix": "ov:account-auth",
+            "ttl_seconds": 60,
+            "lock_ttl_seconds": 60,
+            "lock_wait_seconds": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 省略 `auth_mode`（或設為 `null`）時，配置了非空 `root_api_key` 則選擇 `api_key`，否則選擇 `dev`。`dev` 僅允許監聽 localhost，不進行身份認證。`root_api_key` 不能配置為空字串。
 
@@ -2052,7 +2146,7 @@ ov add-resource ./docs --exclude "*.tmp"
 
 ## storage.transaction 段
 
-`storage.transaction` 已廢棄，僅保留為相容舊配置。新配置請使用 `storage.agfs.pathlock` 配置 PathLock Provider、namespace 和過期時間。若舊欄位仍然出現，OpenViking 會在執行時給出 warning；其中 `lock_timeout` 已廢棄且會被忽略，`lock_expire` 會在未顯式配置新欄位時自動對映到新的 `pathlock` 配置，`redo_recovery_enabled` 則會被忽略。
+`storage.transaction` 已廢棄，僅保留為相容舊配置。新配置請使用 `storage.agfs.pathlock` 配置 PathLock Provider 和過期時間；Redis key 名稱來自頂層 `service_name`。若舊欄位仍然出現，OpenViking 會在執行時給出 warning；其中 `lock_timeout` 已廢棄且會被忽略，`lock_expire` 會在未顯式配置新欄位時自動對映到新的 `pathlock` 配置，`redo_recovery_enabled` 則會被忽略。
 
 推薦寫法：
 

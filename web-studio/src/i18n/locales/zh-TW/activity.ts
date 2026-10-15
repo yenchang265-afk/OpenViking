@@ -435,7 +435,7 @@ const activity = {
       unknownCommand:
         '未知命令。可用命令：/status、/ls、/search、/find、/read、/session、/add-resource。',
       commandFailed: '命令失敗',
-      waitUsage: '用法：/wait [--timeout 秒數]',
+      waitUsage: '用法：/wait',
       invalidFlag: '無效的 --{{flag}}：{{value}}',
       refMeta: {
         archive: '歸檔',
@@ -701,10 +701,6 @@ const activity = {
             code: '/wait',
             description: '等待服務就緒',
           },
-          timeout: {
-            code: '/wait --timeout 30',
-            description: '指定等待秒數',
-          },
         },
       },
       resourceSuggestion: '資源路徑',
@@ -765,7 +761,7 @@ const activity = {
         },
         wait: {
           description: '等待服務就緒',
-          usage: '/wait [--timeout seconds]',
+          usage: '/wait',
         },
       },
     },

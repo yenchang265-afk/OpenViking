@@ -23,6 +23,7 @@ Create `~/.openviking/ov.conf` in your home configuration directory:
 
 ```json
 {
+  "service_name": "openviking-server",
   "storage": {
     "workspace": "./data",
     "vectordb": {
@@ -52,6 +53,10 @@ Create `~/.openviking/ov.conf` in your home configuration directory:
 ```
 
 For `provider: "openai-codex"`, `vlm.api_key` is optional when Codex OAuth is already available.
+
+Top-level `service_name` defaults to `"openviking-server"`. Cache-backed modules use
+it as their Redis namespace. OTel `service_name` fields keep their own value
+when set and inherit this value when omitted.
 
 ### Ordered credentials in ov.conf
 
@@ -1188,11 +1193,11 @@ Configuration for session intent analysis and context assembly timeouts.
 |-----------|------|-------------|---------|
 | `enable_intent` | bool | Run intent analysis and query planning when `search()` receives a `session_id`. | `true` |
 
-The `mode="context"` assembly face on `/search` uses two timeout fuses:
+Session intent analysis in ordinary `search()` and query expansion in `mode="context"` share `recall_intent_timeout_s`. Context digest rewriting uses a separate timeout:
 
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
-| `recall_intent_timeout_s` | float | Timeout for session-aware query expansion; on timeout the original user query is used | `5.0` |
+| `recall_intent_timeout_s` | float | Timeout for session intent analysis and context query expansion; on timeout or failure the original user query is used | `5.0` |
 | `recall_rewrite_timeout_s` | float | Timeout for the digest rewrite; on timeout `digest` is empty and `rendered` is returned as usual | `30.0` |
 
 Query expansion requires a `session_id` with content and intent analysis enabled; rewriting requires `rewrite`. Each model call has its own timeout. On failure, retrieval falls back to the original query or the unrevised result.
@@ -1291,6 +1296,10 @@ See the [Multi-Write Storage Guide](./13-multi-write-storage.md) for more exampl
 
 ##### Global Cache Provider, CacheFS, and PathLock Configuration
 
+Top-level `service_name` names the OpenViking deployment. CacheFS, QueueFS with
+`backend=cache`, cache-backed PathLock, and cache-backed multi-write metadata
+derive their Redis namespaces from it.
+
 The top-level `cache` section is a sibling of `storage`. Its public shape is Provider-neutral:
 
 | Parameter | Type | Description | Default |
@@ -1303,7 +1312,6 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `backend` | str | `local` keeps the original filesystem path; `cache` enables the CacheFS wrapper | `local` |
-| `namespace` | str | CacheFS key namespace | `openviking` |
 | `max_file_size_bytes` | int | Maximum full-file object size admitted to cache | `1048576` |
 | `traversal_mode` | str | `backend` or `cached_traversal` | `backend` |
 | `bypass_prefixes` | array[str] | Path prefixes that bypass cache | `[]` |
@@ -1313,12 +1321,12 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `provider` | str | `filesystem`, `memory`, or `cache`; `cache` uses the shared Redis CacheRuntime | `filesystem` |
-| `namespace` | str (optional) | OpenViking instance name used in Redis PathLock keys; required when `provider=cache` | `null` |
 | `lock_expire_secs` | float | Seconds before an unrefreshed lock becomes stale; must be at least `1.0` | `30.0` |
 | `lock_timeout_secs` | float | Deprecated and ignored; runtime wait timeout remains `0.0` | `0.0` |
 
 ```json
 {
+  "service_name": "production",
   "cache": {
     "provider": "redis",
     "params": {
@@ -1336,16 +1344,13 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
   "storage": {
     "agfs": {
       "cachefs": {
-        "backend": "cache",
-        "namespace": "production"
+        "backend": "cache"
       },
       "queuefs": {
-        "backend": "cache",
-        "cache_key_prefix": "production"
+        "backend": "cache"
       },
       "pathlock": {
         "provider": "cache",
-        "namespace": "production",
         "lock_expire_secs": 30.0
       }
     }
@@ -1353,9 +1358,9 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
 }
 ```
 
-The canonical configuration has no global `cache.enabled`. CacheRuntime is initialized when CacheFS or QueueFS selects `backend=cache`, PathLock selects `provider=cache`, or multi-write selects `backups.provider=cache`. Cache-backed PathLock currently requires `cache.provider=redis`; DynamicProvider is not supported for PathLock. When all modules use local providers, `cache.params` is not parsed and no Provider connection is opened.
+The canonical configuration has no global `cache.enabled` and no per-module Redis namespace field. CacheRuntime is initialized when CacheFS or QueueFS selects `backend=cache`, PathLock selects `provider=cache`, or multi-write selects `backups.provider=cache`. Cache-backed PathLock currently requires `cache.provider=redis`; DynamicProvider is not supported for PathLock. When all modules use local providers, `cache.params` is not parsed and no Provider connection is opened.
 
-This is a breaking configuration change. `storage.agfs.cache`, `storage.agfs.queuefs.backend="redis"`, `storage.agfs.queuefs.redis`, and `storage.agfs.backups.provider="redis"` are rejected. Move Provider settings to top-level `cache.provider/cache.params`, select `cachefs.backend="cache"`, `queuefs.backend="cache"`, or `backups.provider="cache"`, use Redis `mode="standalone"` instead of `singleton`, and use `rediss://` instead of `tls_enabled`.
+Move Provider settings to top-level `cache.provider/cache.params`, set top-level `service_name` for shared Redis names, select `cachefs.backend="cache"`, `queuefs.backend="cache"`, or `backups.provider="cache"`, use Redis `mode="standalone"` instead of `singleton`, and use `rediss://` instead of `tls_enabled`.
 
 ##### QueueFS Configuration
 
@@ -1366,21 +1371,20 @@ This is a breaking configuration change. `storage.agfs.cache`, `storage.agfs.que
 | `db_path` | str (optional) | SQLite database path for QueueFS when backend is `"sqlite"` or `"sqlite3"` | `null` |
 | `recover_stale_sec` | int | Recover `processing` queue messages older than this many seconds on startup. `0` means recover all stale processing messages | `0` |
 | `busy_timeout_ms` | int | SQLite busy timeout for QueueFS in milliseconds | `5000` |
-| `cache_key_prefix` | str | QueueFS key namespace when backend is `"cache"` | `"default"` |
 
 Notes:
 
 - QueueFS defaults to `sqlite` even if the main AGFS storage backend is `local`, `s3`, or `memory`.
 - `mode=shared` keeps the historical global queue namespace at `/queue`; `mode=worker` isolates each worker under `/queue/worker-<index|pid>`.
 - `db_path` is only used when QueueFS backend is `sqlite` or `sqlite3`.
-- `backend=cache` automatically binds the global `cache.provider + cache.params` configuration.
+- `backend=cache` automatically binds the global `cache.provider + cache.params` configuration and uses top-level `service_name` as the key prefix.
 - `recover_stale_sec` and `busy_timeout_ms` apply only to SQLite backends.
 - Redis Cluster endpoints are seed nodes, and `db` must be `0`. Slot routing, `MOVED`/`ASK`, topology refresh, and reconnects are handled by Fred RedisProvider.
 - Redis Sentinel endpoints are Sentinel nodes and require a non-empty `master_name`; the provider handles master discovery and reconnects.
 - `username` and `password` authenticate data nodes; `sentinel_username` and `sentinel_password` authenticate Sentinel nodes.
 - All Redis reads go to the primary. Replica reads are not configurable.
 - `tls_insecure_skip_verify=true` requires `rediss://` endpoints.
-- QueueFS cache keys use `{cache_key_prefix}:ov:*`; use different prefixes for deployments or tenants sharing one Redis cluster.
+- QueueFS cache keys use `{service_name}:ov:*`; use different service names for deployments sharing one Redis cluster.
 - Redis backend runs three bounded `recover_stale` sweeps in a dedicated startup recovery thread at startup, 30 seconds, and 60 seconds to cover the heartbeat-expiry window after a container restart; it does not run long-lived periodic recovery.
 - If both `storage.agfs.queuefs.db_path` and legacy `storage.agfs.queue_db_path` are set, `storage.agfs.queuefs.db_path` wins.
 - If QueueFS backend is `memory`, any `db_path` or legacy `queue_db_path` is ignored.
@@ -1860,7 +1864,7 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 | `port` | int | Bind port | `1933` |
 | `auth_mode` | str / null | Built-in modes: `"dev"`, `"api_key"`, `"trusted"`, `"oidc"`, `"ldap"`. When omitted/null, infer `api_key` from a non-empty `root_api_key`; otherwise infer `dev`. | `null` |
 | `root_api_key` | str | Root API key for multi-tenant auth in `api_key` mode. In `trusted` mode it is required on every deployment, including localhost; it does not become the source of user identity | `null` |
-| `account_store.provider` | str | Complete Account store provider. The built-in `"file"` provider owns account, user, group, and API-key records while preserving the existing AGFS JSON registry and process-local lookup indexes. | `"file"` |
+| `account_store.provider` | str | Complete Account store provider. Built-in values are `"file"`, `"mysql"`, and `"redis_mysql"`; it owns account, user, group, and API-key records. `"file"` preserves the existing AGFS JSON registry and owns its process-local lookup indexes. `"redis_mysql"` keeps MySQL authoritative and adds a shared Redis cache for authentication and request identity reads. | `"file"` |
 | `account_store.params` | object | Provider-specific startup parameters. Framework-owned filesystem and File-provider API-key hashing dependencies cannot be overridden here. | `{}` |
 | `profile_enabled` | bool | Whether to allow request-scoped cProfile via `profile=1` on HTTP requests. When disabled, the server ignores that query parameter. When enabled, the CLI can display the returned `profile`, while the Python HTTP client currently triggers profiling but does not automatically attach the top-level `profile` field to most SDK return values. | `false` |
 | `cors_origins` | list | Allowed CORS origins | `["*"]` |
@@ -1878,6 +1882,111 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 | `user_config_defaults.memory_policy` | object | Deployment default memory extraction policy used when neither the Session nor the User has an explicit policy. | `null` |
 | `user_config_defaults.auto_commit_policy` | object | Deployment default auto-commit policy for newly created sessions without an explicit policy. | `null` |
 | `agent_evolution.enabled` | bool | Startup cluster default for Agent Evolution. Account and Cluster Admin settings may override it at runtime. When enabled, session commits may generate or update cases, trajectories, and experiences according to the session `memory_policy`. Existing memories remain readable and searchable when disabled. | `false` |
+
+The MySQL provider stores a versioned SHA-256 digest of each high-entropy API
+key by default and uses a separate digest index for constant-cost lookup. Set
+`credential_storage` to `"encrypted"` to retain keys in AES-GCM encrypted form
+instead; this requires `credential_encryption_key`, a base64-encoded 32-byte
+key. MySQL never persists API-key plaintext. Hash mode exposes only key prefixes
+in user listings, while encrypted mode can decrypt the key for the same listing
+workflow. `credential_storage` controls the format of newly written credentials;
+existing rows are decoded from their `material` prefix. When migrating from
+encrypted storage to hash storage, retain `credential_encryption_key` until all
+encrypted credentials have been rotated. Replacing that encryption key directly
+is not supported because `aesgcm:v1` records do not carry a key identifier.
+
+Install the MySQL extra and configure the top-level `service_name`. Its value is
+stored in the `service_name` column on every account-store table and is the
+deployment boundary when multiple OpenViking clusters share a database. Changing
+`service_name` selects a different logical account-store partition.
+
+The provider never creates or migrates database tables. Create the normalized
+tables in `openviking/server/account_stores/sql/init.sql` through your normal
+DBA or deployment process before starting the server. Future reviewed schema
+changes are stored as ordered SQL files in
+`openviking/server/account_stores/sql/changes/`. The five `ov_accounts*` table
+names are fixed; use distinct top-level `service_name` values rather than
+separate table prefixes to isolate OpenViking clusters that share a database.
+
+```json
+{
+  "service_name": "production",
+  "server": {
+    "account_store": {
+      "provider": "mysql",
+      "params": {
+        "host": "db.example.com",
+        "user": "openviking",
+        "password": "secret",
+        "database": "openviking",
+        "credential_storage": "encrypted",
+        "credential_encryption_key": "base64-encoded-32-byte-key"
+      }
+    }
+  }
+}
+```
+
+`redis_mysql` requires the `redis-mysql` extra and wraps the same MySQL
+parameters. Its `cache` block follows the top-level `cache` `provider/params`
+shape. The Python client currently supports `standalone`, `cluster`, and
+`sentinel` Redis deployments. It caches API-key bindings, users, per-user group
+IDs, and deletion records for a fixed 60 seconds by default. Cache fills and account mutations
+share an account-scoped Redis lease; normal cache hits do not acquire that
+lease. Mutations commit to MySQL first, then invalidate affected cache entries.
+If Redis is unavailable, the MySQL mutation still succeeds and stale cache
+entries remain valid only until their fixed TTL expires. Cache fills also
+maintain an
+account-scoped, expiry-scored key index. Each indexed cache fill removes expired
+index members, allowing account deletion or recreation to clear only that
+account's current cached users, groups, deletion records, and credential data.
+API-key bindings are checked against account and user credential fences, so
+normal key replacement, revocation, and user deletion invalidate old bindings.
+Redis automatically removes the index when its last sorted-set member is removed.
+Cleanup does not issue a separate index deletion, which could remove a newer
+fill's index after lease loss. Provisioning
+and key replacement clear negative lookups both with and without a user hint.
+Redis connection and command timeouts are configured with
+`cache.params.connect_timeout_ms` and `cache.params.command_timeout_ms`; both
+default to 5000 milliseconds when omitted. These are socket timeouts, not an
+overall request deadline.
+
+```json
+{
+  "server": {
+    "account_store": {
+      "provider": "redis_mysql",
+      "params": {
+        "mysql": {
+          "host": "db.example.com",
+          "user": "openviking",
+          "password": "secret",
+          "database": "openviking"
+        },
+        "cache": {
+          "provider": "redis",
+          "params": {
+            "mode": "sentinel",
+            "endpoints": [
+              "rediss://sentinel-1.example.com:26379",
+              "rediss://sentinel-2.example.com:26379",
+              "rediss://sentinel-3.example.com:26379"
+            ],
+            "master_name": "openviking",
+            "username": "openviking",
+            "password_env": "OPENVIKING_REDIS_PASSWORD",
+            "sentinel_password_env": "OPENVIKING_SENTINEL_PASSWORD",
+            "key_prefix": "ov:account-auth",
+            "ttl_seconds": 60,
+            "lock_ttl_seconds": 60,
+            "lock_wait_seconds": 30
+          }
+        }
+      }
+    }
+  }
+}
+```
 
 Omitting `auth_mode` (or setting it to `null`) selects `api_key` when a non-empty `root_api_key` is configured, and `dev` otherwise. `dev` is allowed only on localhost and accepts requests without authentication. An empty-string `root_api_key` is invalid.
 
@@ -1988,7 +2097,7 @@ For startup and deployment details see [Deployment](./03-deployment.md), for aut
 
 ## storage.transaction Section
 
-`storage.transaction` is deprecated and kept only for legacy compatibility. Use `storage.agfs.pathlock` for the active PathLock provider, namespace, and expiry configuration. When legacy fields are still present, OpenViking logs a warning at runtime; `lock_timeout` is deprecated and ignored, `lock_expire` is automatically mapped when the new field is unset, and `redo_recovery_enabled` is ignored.
+`storage.transaction` is deprecated and kept only for legacy compatibility. Use `storage.agfs.pathlock` for the active PathLock provider and expiry configuration; Redis key names come from top-level `service_name`. When legacy fields are still present, OpenViking logs a warning at runtime; `lock_timeout` is deprecated and ignored, `lock_expire` is automatically mapped when the new field is unset, and `redo_recovery_enabled` is ignored.
 
 Recommended configuration:
 

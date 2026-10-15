@@ -806,7 +806,7 @@ User override 並重新繼承上述預設值，請 PATCH `{"memory_policy": null
 | settings | object | 否 | `null` | Account 執行時初始配置。僅 ROOT 可提交；支援 `github`、`acl`、`agent_evolution`、`vlm`、`query_planner`、`embedding` 和 `vectordb`。其中 `vectordb` 及 Embedding 建立期欄位只能在這裡設定 |
 
 **說明：**
-- 檔案儲存帳戶建立時，超過 255 個 UTF-8 位元組的 `account_id` 會在寫入帳戶登錄檔前返回 `INVALID_ARGUMENT`。trusted 自動註冊會在請求時拒絕這類新帳戶，避免阻塞其他身份的註冊。既有帳戶和使用者仍可使用，user ID 和 peer ID 規則保持不變。
+- 檔案儲存帳戶建立時，超過 255 個 UTF-8 位元組的 `account_id` 會在寫入帳戶登錄檔前返回 `INVALID_ARGUMENT`。新持久化的 user ID 在所有帳戶儲存 Provider 中最多 255 個字元。trusted 模式會在加入自動註冊佇列前拒絕超長的新 user ID 和新建的超長帳戶，避免無效身份阻塞其他身份註冊；已有的超長 File user 和 account 仍可讀取。
 - 在 `trusted` 模式下，只建立身份和角色，不生成個人金鑰、金鑰雜湊或金鑰索引；響應不包含 `user_key`，`seed` 不參與處理。
 - 省略 `seed` 時隨機生成 API Key。執行確定性示例前，將 `OV_KEY_SEED` 設為安全生成的秘密值；Go 示例還需匯入 `os`。不要使用短字串或可預測內容作為 seed。
 - `settings` 在帳號和目錄建立前完成結構與有效 Embedding/VectorDB 聯合校驗。校驗失敗不會留下 Account、使用者或配置檔案。

@@ -85,7 +85,6 @@ const DEFAULT_ADDITIONAL_OPTIONS: AdditionalResourceOptionsValue = {
   sourceName: '',
   tagMode: 'replace',
   tags: '',
-  timeout: '',
   wait: false,
 }
 

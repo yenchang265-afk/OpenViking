@@ -150,7 +150,6 @@ export class OpenVikingClient {
       reason: options.reason,
       instruction: options.instruction,
       wait: options.wait,
-      timeout: options.timeout,
       strict: options.strict,
       ignore_dirs: options.ignoreDirs,
       include: options.include,
@@ -196,7 +195,6 @@ export class OpenVikingClient {
   ): Promise<JsonObject> {
     const body: JsonObject = compact({
       wait: options.wait ?? false,
-      timeout: options.timeout,
       telemetry: options.telemetry,
       target_uri: options.targetUri,
     });
@@ -288,7 +286,6 @@ export class OpenVikingClient {
   ): Promise<JsonObject> {
     const body: JsonObject = compact({
       wait: options.wait ?? false,
-      timeout: options.timeout,
       source_metadata: options.sourceMetadata,
       target_uri: options.targetUri,
       telemetry: options.telemetry,
@@ -624,14 +621,13 @@ export class OpenVikingClient {
   /** Remove a resource or directory. */
   remove(
     uri: string,
-    options: { recursive?: boolean; wait?: boolean; timeout?: number } = {},
+    options: { recursive?: boolean; wait?: boolean } = {},
   ): Promise<void> {
     return this.request("DELETE", "/api/v1/fs", {
       query: {
         uri: normalizeURI(uri),
         recursive: options.recursive ?? false,
         wait: options.wait ?? false,
-        timeout: options.timeout,
       },
     });
   }
@@ -693,7 +689,6 @@ export class OpenVikingClient {
           ? (options.tagMode ?? "replace")
           : undefined,
       wait: options.wait,
-      timeout: options.timeout,
       telemetry: options.telemetry,
     });
     return this.request("POST", "/api/v1/content/write", {
@@ -720,7 +715,6 @@ export class OpenVikingClient {
         }),
       ),
       wait: options.wait,
-      timeout: options.timeout,
       telemetry: options.telemetry,
       processing_mode: options.processingMode,
     });
@@ -1094,9 +1088,9 @@ export class OpenVikingClient {
     });
   }
   /** Wait for queued processing to finish. */
-  waitProcessed(timeout?: number): Promise<JsonObject> {
+  waitProcessed(): Promise<JsonObject> {
     return this.request("POST", "/api/v1/system/wait", {
-      body: compact({ timeout }),
+      body: {},
     });
   }
   /** Check the raw server health endpoint. */
