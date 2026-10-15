@@ -257,21 +257,8 @@ async def test_ready_returns_503_before_initialized(monkeypatch):
         assert body["reason"] == "initializing"
 
 
-async def test_ready_returns_200_after_initialized(monkeypatch):
-    """Ready returns 200 when service is fully initialized and subsystems are healthy."""
-
-    class MockVikingFS:
-        """Mock VikingFS for readiness checks."""
-
-        async def ls(self, path, ctx=None):
-            return []
-
-        def _get_vector_store(self):
-            class MockVectorStore:
-                async def health_check(self):
-                    return True
-
-            return MockVectorStore()
+def _ready_app(monkeypatch, viking_fs, **server_config):
+    """Create an app whose readiness dependencies are initialized mocks."""
 
     class MockService:
         _initialized = True
@@ -279,17 +266,50 @@ async def test_ready_returns_200_after_initialized(monkeypatch):
 
     service = MockService()
     monkeypatch.setattr("openviking.server.dependencies._service", service)
-    monkeypatch.setattr("openviking.server.routers.system.get_viking_fs", lambda: MockVikingFS())
+    monkeypatch.setattr("openviking.server.routers.system.get_viking_fs", lambda: viking_fs)
     monkeypatch.setattr(
         "openviking_cli.utils.ollama.detect_ollama_in_config",
         lambda config: (False, None, None),
     )
+    app = create_app(config=ServerConfig(**server_config), service=service)
+    # Patched after create_app, which reads the real config singleton.
     monkeypatch.setattr(
         "openviking_cli.utils.config.open_viking_config.OpenVikingConfigSingleton.get_instance",
         lambda: SimpleNamespace(embedding=SimpleNamespace(get_embedder=lambda: None)),
     )
+    return app
 
-    app = create_app(config=ServerConfig(), service=service)
+
+class _StalledVikingFS:
+    """VikingFS whose storage calls block until released, like a hung S3 backend."""
+
+    def __init__(self, *, stall_ls=True, stall_vector=False):
+        self.release = asyncio.Event()
+        self.ls_calls = 0
+        self._stall_ls = stall_ls
+        self._stall_vector = stall_vector
+
+    async def ls(self, path, ctx=None):
+        self.ls_calls += 1
+        if self._stall_ls:
+            await self.release.wait()
+        return []
+
+    def _get_vector_store(self):
+        fs = self
+
+        class MockVectorStore:
+            async def health_check(self):
+                if fs._stall_vector:
+                    await fs.release.wait()
+                return True
+
+        return MockVectorStore()
+
+
+async def test_ready_returns_200_after_initialized(monkeypatch):
+    """Ready returns 200 when service is fully initialized and subsystems are healthy."""
+    app = _ready_app(monkeypatch, _StalledVikingFS(stall_ls=False))
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         resp = await client.get("/ready")
@@ -299,6 +319,45 @@ async def test_ready_returns_200_after_initialized(monkeypatch):
         assert body["checks"]["agfs"]["status"] == "ok"
         assert body["checks"]["agfs"]["checks"]["filesystem"] == "ok"
         assert body["checks"]["agfs"]["checks"] == {"filesystem": "ok"}
+
+
+async def test_ready_returns_503_when_filesystem_probe_stalls(monkeypatch):
+    """A hung storage backend makes /ready fail fast instead of hanging the probe."""
+    viking_fs = _StalledVikingFS()
+    app = _ready_app(monkeypatch, viking_fs, ready_probe_timeout_seconds=0.2)
+    transport = httpx.ASGITransport(app=app)
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            start = time.perf_counter()
+            first = await client.get("/ready")
+            second = await client.get("/ready")
+            elapsed = time.perf_counter() - start
+
+        assert first.status_code == 503
+        assert second.status_code == 503
+        assert "timed out" in first.json()["checks"]["agfs"]["checks"]["filesystem"]
+        assert elapsed < 2.0
+        # The second probe waits on the still-running first one instead of
+        # stacking another blocked storage call.
+        assert viking_fs.ls_calls == 1
+    finally:
+        viking_fs.release.set()
+        await asyncio.sleep(0)
+
+
+async def test_ready_returns_503_when_vectordb_probe_stalls(monkeypatch):
+    viking_fs = _StalledVikingFS(stall_ls=False, stall_vector=True)
+    app = _ready_app(monkeypatch, viking_fs, ready_probe_timeout_seconds=0.2)
+    transport = httpx.ASGITransport(app=app)
+    try:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            resp = await asyncio.wait_for(client.get("/ready"), timeout=2.0)
+
+        assert resp.status_code == 503
+        assert "timed out" in resp.json()["checks"]["vectordb"]
+    finally:
+        viking_fs.release.set()
+        await asyncio.sleep(0)
 
 
 async def test_slow_init_does_not_block_health(monkeypatch):

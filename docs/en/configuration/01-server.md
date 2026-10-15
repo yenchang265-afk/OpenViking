@@ -305,6 +305,7 @@ When `base_url` is configured, OV sends the current user's OV API key in `X-API-
 | `workers` | integer | `1` | Worker process count |
 | `executor_threads` | non-negative integer | `0` | Maximum threads in each worker process's default asyncio executor; `0` uses Python's default sizing policy |
 | `timeout_keep_alive` | integer (seconds) | `5` | Idle HTTP keep-alive timeout; raise it above the upstream's idle-connection lifetime |
+| `ready_probe_timeout_seconds` | number (seconds) | `5.0` | Max wait per `/ready` storage probe (filesystem, vector DB) before it reports `503`; keep the orchestrator probe timeout (e.g. Kubernetes `timeoutSeconds`) above it |
 | `auth_mode` | `dev`, `api_key`, `trusted` / `null` | `null` | Auth mode; null is inferred from `root_api_key` |
 | `root_api_key` | string / `null` | `null` | Root key; setting it defaults auth to `api_key` |
 | `cors_origins` | string[] | `["*"]` | Allowed origins |

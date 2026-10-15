@@ -154,6 +154,59 @@ def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):
     with pytest.raises(ValueError):
         _s3_config(**overrides)
 
+
+_S3_RESILIENCE_SETTINGS = {
+    "connect_timeout_ms": 2_000,
+    "read_timeout_ms": 10_000,
+    "operation_attempt_timeout_ms": 30_000,
+    "operation_timeout_ms": 90_000,
+    "metadata_attempt_timeout_ms": 3_000,
+    "metadata_operation_timeout_ms": 9_000,
+    "max_attempts": 5,
+    "retry_mode": "adaptive",
+    "initial_backoff_ms": 200,
+    "max_backoff_ms": 5_000,
+    "cache_enabled": False,
+    "cache_max_size": 5_000,
+    "cache_ttl": 10,
+    "stat_cache_ttl": 20,
+}
+
+
+def test_agfs_s3_resilience_settings_default_to_backend_defaults():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config())
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    for key in _S3_RESILIENCE_SETTINGS:
+        assert key not in plugin_config
+
+
+def test_agfs_s3_resilience_settings_are_forwarded_to_ragfs_plugin_config():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config(**_S3_RESILIENCE_SETTINGS))
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    for key, value in _S3_RESILIENCE_SETTINGS.items():
+        assert plugin_config[key] == value
+
+
+@pytest.mark.parametrize(
+    "overrides",
+    [
+        {"read_timeout_ms": 0},
+        {"operation_timeout_ms": -1},
+        {"max_attempts": 0},
+        {"max_attempts": 11},
+        {"retry_mode": "aggressive"},
+        {"cache_max_size": 0},
+        {"cache_ttl": -1},
+    ],
+)
+def test_agfs_s3_resilience_settings_reject_invalid_values(overrides):
+    with pytest.raises(ValueError):
+        _s3_config(**overrides)
+
     # Test 2: invalid backend
     print("\n2. Test invalid backend...")
     try:

@@ -2,6 +2,9 @@
 # SPDX-License-Identifier: AGPL-3.0
 """System endpoints for OpenViking HTTP Server."""
 
+import asyncio
+from typing import Awaitable, Callable, TypeVar
+
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -21,6 +24,8 @@ logger = get_logger(__name__)
 
 router = APIRouter()
 
+T = TypeVar("T")
+
 
 def _is_ready_check_ok(value) -> bool:
     """Return whether one readiness check value represents a healthy state."""
@@ -33,6 +38,43 @@ def _is_ready_check_ok(value) -> bool:
             return True
         return all(_is_ready_check_ok(item) for item in nested.values())
     return value in ("ok", "not_configured", "not_supported")
+
+
+_DEFAULT_READY_PROBE_TIMEOUT_SECONDS = 5.0
+
+# In-flight readiness probes by name. Storage calls run to completion even when
+# the awaiting request gives up, so repeated probes against a stalled backend
+# share one call instead of stacking blocked threads.
+_inflight_probes: dict[str, asyncio.Task] = {}
+
+
+def _consume_probe_outcome(task: asyncio.Task) -> None:
+    """Retrieve a finished probe's exception so late failures are not logged as unhandled."""
+    if not task.cancelled():
+        task.exception()
+
+
+async def _bounded_probe(name: str, probe: Callable[[], Awaitable[T]], timeout: float) -> T:
+    """Wait up to ``timeout`` seconds for a probe without cancelling it.
+
+    Raises ``TimeoutError`` when the probe is still running; it keeps running and
+    later callers wait on it rather than starting another.
+    """
+    loop = asyncio.get_running_loop()
+    task = _inflight_probes.get(name)
+    if task is None or task.done() or task.get_loop() is not loop:
+        task = loop.create_task(probe())
+        task.add_done_callback(_consume_probe_outcome)
+        _inflight_probes[name] = task
+    done, _ = await asyncio.wait({task}, timeout=timeout)
+    if not done:
+        raise TimeoutError(f"timed out after {timeout:g}s")
+    return task.result()
+
+
+def _ready_probe_timeout(request: Request) -> float:
+    config = getattr(request.app.state, "config", None)
+    return getattr(config, "ready_probe_timeout_seconds", _DEFAULT_READY_PROBE_TIMEOUT_SECONDS)
 
 
 async def _probe_agfs_readiness() -> dict[str, object]:
@@ -117,10 +159,11 @@ async def readiness_check(request: Request):
         )
 
     checks = {}
+    probe_timeout = _ready_probe_timeout(request)
 
     # 1. AGFS: probe filesystem access
     try:
-        checks["agfs"] = await _probe_agfs_readiness()
+        checks["agfs"] = await _bounded_probe("agfs", _probe_agfs_readiness, probe_timeout)
     except Exception as e:
         checks["agfs"] = {"status": "error", "checks": {"filesystem": f"error: {e}"}}
 
@@ -129,7 +172,7 @@ async def readiness_check(request: Request):
         viking_fs = get_viking_fs()
         storage = viking_fs._get_vector_store()
         if storage:
-            healthy = await storage.health_check()
+            healthy = await _bounded_probe("vectordb", storage.health_check, probe_timeout)
             checks["vectordb"] = "ok" if healthy else "unhealthy"
         else:
             checks["vectordb"] = "not_configured"

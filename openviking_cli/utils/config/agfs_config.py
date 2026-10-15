@@ -102,6 +102,82 @@ class S3Config(BaseModel):
         "Unset uses the s3fs default (8 MiB).",
     )
 
+    # Request deadlines and retries. Unset values use the s3fs defaults, which bound
+    # every S3 call so a slow or stalled endpoint fails fast instead of hanging.
+    connect_timeout_ms: Optional[int] = Field(
+        default=None, gt=0, description="Max time to connect to S3. s3fs default: 5000."
+    )
+
+    read_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Max wait for the first response byte after sending a request. "
+        "s3fs default: 60000.",
+    )
+
+    operation_attempt_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Per-attempt deadline for data operations (GET/PUT/copy/multipart part). "
+        "s3fs default: 120000.",
+    )
+
+    operation_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Total deadline for data operations, including retries. s3fs default: 300000.",
+    )
+
+    metadata_attempt_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Per-attempt deadline for HEAD/LIST/DELETE. s3fs default: 15000.",
+    )
+
+    metadata_operation_timeout_ms: Optional[int] = Field(
+        default=None,
+        gt=0,
+        description="Total deadline for HEAD/LIST/DELETE, including retries. s3fs default: 45000.",
+    )
+
+    max_attempts: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=10,
+        description="Max attempts per S3 request, including the first. s3fs default: 3.",
+    )
+
+    retry_mode: Optional[Literal["standard", "adaptive"]] = Field(
+        default=None,
+        description="'adaptive' adds client-side rate limiting when S3 throttles (e.g. 503 "
+        "SlowDown). s3fs default: 'standard'.",
+    )
+
+    initial_backoff_ms: Optional[int] = Field(
+        default=None, gt=0, description="Initial retry backoff. s3fs default: 1000."
+    )
+
+    max_backoff_ms: Optional[int] = Field(
+        default=None, gt=0, description="Max retry backoff. s3fs default: 20000."
+    )
+
+    # Metadata (listing/stat) cache in front of S3. Unset values use the s3fs defaults.
+    cache_enabled: Optional[bool] = Field(
+        default=None, description="Cache directory listings and stat results. s3fs default: true."
+    )
+
+    cache_max_size: Optional[int] = Field(
+        default=None, gt=0, description="Max cached directory listings. s3fs default: 1000."
+    )
+
+    cache_ttl: Optional[int] = Field(
+        default=None, ge=0, description="Directory listing cache TTL in seconds. s3fs default: 30."
+    )
+
+    stat_cache_ttl: Optional[int] = Field(
+        default=None, ge=0, description="Stat cache TTL in seconds. s3fs default: 60."
+    )
+
     def validate_config(self):
         """Validate S3 configuration completeness"""
         missing = []

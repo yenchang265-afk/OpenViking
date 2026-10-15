@@ -304,6 +304,7 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 | `workers` | integer | `1` | 服務程序數量 |
 | `executor_threads` | 非負整數 | `0` | 每個服務程序的 asyncio 預設 executor 最大執行緒數；`0` 表示沿用 Python 預設策略 |
 | `timeout_keep_alive` | integer（秒） | `5` | 空閒 HTTP keep-alive 超時；應調大到超過上游空閒連線壽命 |
+| `ready_probe_timeout_seconds` | number（秒） | `5.0` | `/ready` 每項儲存探測（檔案系統、向量資料庫）的最長等待時間，逾時回傳 `503`；編排器探針逾時（如 Kubernetes `timeoutSeconds`）應大於此值 |
 | `auth_mode` | `dev`、`api_key`、`trusted` / `null` | `null` | 鑑權模式；空值根據 `root_api_key` 自動判斷 |
 | `root_api_key` | string / `null` | `null` | Root API Key；配置後預設啟用 `api_key` 模式 |
 | `cors_origins` | string[] | `["*"]` | 允許的跨域來源 |

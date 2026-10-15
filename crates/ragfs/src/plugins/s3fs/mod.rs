@@ -16,6 +16,7 @@
 pub mod cache;
 pub mod client;
 mod multipart;
+pub mod resilience;
 mod tree;
 
 use async_trait::async_trait;
@@ -1305,6 +1306,66 @@ impl S3FSPlugin {
                     "60",
                     "Stat cache TTL in seconds",
                 ),
+                ConfigParameter::optional(
+                    "connect_timeout_ms",
+                    "int",
+                    "5000",
+                    "Max time to establish a connection to S3",
+                ),
+                ConfigParameter::optional(
+                    "read_timeout_ms",
+                    "int",
+                    "60000",
+                    "Max wait for the first response byte after sending a request",
+                ),
+                ConfigParameter::optional(
+                    "operation_attempt_timeout_ms",
+                    "int",
+                    "120000",
+                    "Per-attempt deadline for data operations (GET/PUT/copy/multipart)",
+                ),
+                ConfigParameter::optional(
+                    "operation_timeout_ms",
+                    "int",
+                    "300000",
+                    "Total deadline for data operations, including retries",
+                ),
+                ConfigParameter::optional(
+                    "metadata_attempt_timeout_ms",
+                    "int",
+                    "15000",
+                    "Per-attempt deadline for HEAD/LIST/DELETE",
+                ),
+                ConfigParameter::optional(
+                    "metadata_operation_timeout_ms",
+                    "int",
+                    "45000",
+                    "Total deadline for HEAD/LIST/DELETE, including retries",
+                ),
+                ConfigParameter::optional(
+                    "max_attempts",
+                    "int",
+                    "3",
+                    "Max attempts per S3 request (1-10), including the first",
+                ),
+                ConfigParameter::optional(
+                    "retry_mode",
+                    "string",
+                    "standard",
+                    "Retry mode: standard or adaptive (client-side rate limiting on throttling)",
+                ),
+                ConfigParameter::optional(
+                    "initial_backoff_ms",
+                    "int",
+                    "1000",
+                    "Initial retry backoff",
+                ),
+                ConfigParameter::optional(
+                    "max_backoff_ms",
+                    "int",
+                    "20000",
+                    "Max retry backoff",
+                ),
             ],
         }
     }
@@ -1400,6 +1461,22 @@ plugins:
       disable_batch_delete: true
 ```
 
+### Timeouts and Retries
+Every request has a deadline so a slow or stalled endpoint fails fast with a
+timeout/network error instead of hanging. Defaults suit both LAN and WAN backends.
+```yaml
+      connect_timeout_ms: 5000
+      read_timeout_ms: 60000
+      operation_attempt_timeout_ms: 120000   # GET/PUT/copy/multipart, per attempt
+      operation_timeout_ms: 300000           # including retries
+      metadata_attempt_timeout_ms: 15000     # HEAD/LIST/DELETE, per attempt
+      metadata_operation_timeout_ms: 45000
+      max_attempts: 3
+      retry_mode: standard                   # or adaptive
+      initial_backoff_ms: 1000
+      max_backoff_ms: 20000
+```
+
 ## Directory Marker Modes
 
 - `empty` (default): Zero-byte marker objects for directories
@@ -1462,6 +1539,7 @@ plugins:
         }
 
         multipart::MultipartSettings::from_config(&config.params)?;
+        resilience::S3ResilienceSettings::from_config(&config.params)?;
 
         Ok(())
     }
@@ -1642,6 +1720,48 @@ mod tests {
             ..PluginConfig::default()
         };
         assert!(plugin.validate(&config).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_plugin_validate_resilience_settings() {
+        use crate::core::ConfigValue;
+
+        let plugin = S3FSPlugin::new();
+        let config_with = |extra: &[(&str, ConfigValue)]| {
+            let mut params = std::collections::HashMap::new();
+            params.insert(
+                "bucket".to_string(),
+                ConfigValue::String("test".to_string()),
+            );
+            for (key, value) in extra {
+                params.insert(key.to_string(), value.clone());
+            }
+            PluginConfig {
+                name: "s3fs".to_string(),
+                mount_path: "/s3".to_string(),
+                params,
+                ..PluginConfig::default()
+            }
+        };
+
+        let valid = config_with(&[
+            ("operation_timeout_ms", ConfigValue::Int(10_000)),
+            ("metadata_attempt_timeout_ms", ConfigValue::Int(1_000)),
+            ("retry_mode", ConfigValue::String("adaptive".to_string())),
+        ]);
+        assert!(plugin.validate(&valid).await.is_ok());
+
+        let invalid = config_with(&[("read_timeout_ms", ConfigValue::Int(0))]);
+        assert!(plugin.validate(&invalid).await.is_err());
+
+        let declared: Vec<&str> = plugin
+            .config_params()
+            .iter()
+            .map(|p| p.name.as_str())
+            .collect();
+        for key in resilience::RESILIENCE_CONFIG_KEYS {
+            assert!(declared.contains(key), "{key} not declared");
+        }
     }
 
     #[tokio::test]

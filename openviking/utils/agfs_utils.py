@@ -406,6 +406,26 @@ def _get_backend_specific_params(item: Any) -> Any:
     return _get_config_value(item, backend_type)
 
 
+_S3_TUNING_KEYS = (
+    "multipart_threshold_bytes",
+    "multipart_part_size_bytes",
+    "connect_timeout_ms",
+    "read_timeout_ms",
+    "operation_attempt_timeout_ms",
+    "operation_timeout_ms",
+    "metadata_attempt_timeout_ms",
+    "metadata_operation_timeout_ms",
+    "max_attempts",
+    "retry_mode",
+    "initial_backoff_ms",
+    "max_backoff_ms",
+    "cache_enabled",
+    "cache_max_size",
+    "cache_ttl",
+    "stat_cache_ttl",
+)
+
+
 def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
     """Serialize user-facing S3 config into Rust s3fs plugin parameters."""
     directory_marker_mode = _get_config_value(s3_config, "directory_marker_mode")
@@ -427,8 +447,8 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
         ),
         "auto_detect_content_type": _get_config_value(s3_config, "auto_detect_content_type", False),
     }
-    # Multipart tuning is only sent when configured so s3fs keeps a single source of defaults.
-    for key in ("multipart_threshold_bytes", "multipart_part_size_bytes"):
+    # Tuning keys are only sent when configured so s3fs keeps a single source of defaults.
+    for key in _S3_TUNING_KEYS:
         value = _get_config_value(s3_config, key)
         if value is not None:
             params[key] = value

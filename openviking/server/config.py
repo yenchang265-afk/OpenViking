@@ -380,6 +380,15 @@ class ServerConfig(BaseModel):
     # connections the client still believes are reusable, causing sporadic
     # connection-reset / EOF errors.
     timeout_keep_alive: int = 5
+    ready_probe_timeout_seconds: float = Field(
+        default=5.0,
+        gt=0,
+        description=(
+            "Max seconds /ready waits on each storage probe (filesystem, vector DB) "
+            "before reporting it as timed out with 503. Keep the orchestrator probe "
+            "timeout (e.g. Kubernetes timeoutSeconds) above this value."
+        ),
+    )
     auth_mode: Optional[str] = None  # If None, auto-detect based on root_api_key
     root_api_key: Optional[str] = None
     # OIDC/LDAP authentication configuration

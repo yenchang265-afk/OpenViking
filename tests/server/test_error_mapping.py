@@ -12,10 +12,12 @@ from openviking.pyagfs.exceptions import (
     AGFSHTTPError,
     AGFSInternalError,
     AGFSIsADirectoryError,
+    AGFSNetworkError,
     AGFSNotADirectoryError,
     AGFSNotSupportedError,
     AGFSPluginError,
     AGFSResourceExhaustedError,
+    AGFSTimeoutError,
     GitConcurrentCommitError,
 )
 from openviking.server.error_mapping import map_exception
@@ -46,6 +48,21 @@ class _HTTPStatusError(Exception):
     def __init__(self, status_code: int, message: str):
         super().__init__(message)
         self.response = _Response(status_code)
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        AGFSTimeoutError("S3 GetObject error: bucket=b key=k raw=operation timed out"),
+        AGFSNetworkError("S3 PutObject error: bucket=b key=k code=SlowDown"),
+    ],
+)
+def test_transient_storage_errors_map_to_unavailable(exc):
+    """Slow or throttled S3 surfaces as a retryable 503, not a 500."""
+    mapped = map_exception(exc, resource="viking://resources/a.md", resource_type="file")
+
+    assert mapped.code == "UNAVAILABLE"
+    assert ERROR_CODE_TO_HTTP_STATUS[mapped.code] == 503
 
 
 def test_agfs_client_does_not_exist_maps_to_not_found():

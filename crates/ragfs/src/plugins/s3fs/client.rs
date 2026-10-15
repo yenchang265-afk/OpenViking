@@ -18,6 +18,7 @@ use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
 use super::multipart::{effective_part_size, part_ranges, MultipartSettings};
+use super::resilience::S3ResilienceSettings;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const ENCODED_SEGMENT_PREFIX: char = '!';
@@ -73,21 +74,6 @@ fn build_s3_error_message(
     output
 }
 
-fn format_s3_service_error<E>(op: &str, scope: &str, err: &E) -> Error
-where
-    E: std::fmt::Display + ProvideErrorMetadata + RequestId + RequestIdExt,
-{
-    Error::internal(build_s3_error_message(
-        op,
-        scope,
-        &err.to_string(),
-        err.code(),
-        err.message(),
-        err.request_id(),
-        err.extended_request_id(),
-    ))
-}
-
 fn is_s3_compatible_not_found_code<E>(err: &E) -> bool
 where
     E: ProvideErrorMetadata,
@@ -98,6 +84,71 @@ where
         .unwrap_or(false)
 }
 
+/// How a failed S3 request is surfaced, so callers can tell retryable
+/// backend trouble (timeouts, throttling, 5xx) from permanent failures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum S3FailureClass {
+    Timeout,
+    Transient,
+    Permanent,
+}
+
+impl S3FailureClass {
+    fn into_error(self, message: String) -> Error {
+        match self {
+            Self::Timeout => Error::timeout(message),
+            Self::Transient => Error::Network(message),
+            Self::Permanent => Error::internal(message),
+        }
+    }
+}
+
+/// Error codes S3 and S3-compatible services use for throttling or server-side trouble.
+const TRANSIENT_S3_ERROR_CODES: &[&str] = &[
+    "SlowDown",
+    "Throttling",
+    "ThrottlingException",
+    "RequestLimitExceeded",
+    "TooManyRequests",
+    "RequestTimeout",
+    "InternalError",
+    "ServiceUnavailable",
+];
+
+fn is_transient_s3_status(status: u16) -> bool {
+    matches!(status, 429 | 500 | 502 | 503 | 504)
+}
+
+fn classify_sdk_error<E, R>(sdk_err: &SdkError<E, R>) -> S3FailureClass
+where
+    E: ProvideErrorMetadata,
+    R: 'static,
+{
+    use std::any::Any;
+
+    match sdk_err {
+        SdkError::TimeoutError(_) => S3FailureClass::Timeout,
+        SdkError::DispatchFailure(failure) if failure.is_timeout() => S3FailureClass::Timeout,
+        SdkError::DispatchFailure(failure) if failure.is_user() => S3FailureClass::Permanent,
+        SdkError::DispatchFailure(_) | SdkError::ResponseError(_) => S3FailureClass::Transient,
+        SdkError::ServiceError(se) => {
+            let transient_code = se
+                .err()
+                .code()
+                .is_some_and(|code| TRANSIENT_S3_ERROR_CODES.contains(&code));
+            let transient_status = (se.raw() as &dyn Any)
+                .downcast_ref::<HttpResponse>()
+                .is_some_and(|resp| is_transient_s3_status(resp.status().as_u16()));
+            if transient_code || transient_status {
+                S3FailureClass::Transient
+            } else {
+                S3FailureClass::Permanent
+            }
+        }
+        _ => S3FailureClass::Permanent,
+    }
+}
+
 fn format_sdk_s3_error<E, R>(op: &str, scope: &str, sdk_err: &SdkError<E, R>) -> Error
 where
     E: std::fmt::Display + ProvideErrorMetadata + RequestId + RequestIdExt,
@@ -105,12 +156,13 @@ where
 {
     use std::any::Any;
 
+    let class = classify_sdk_error(sdk_err);
     match sdk_err {
         SdkError::ServiceError(se) => {
             if let Some(resp) = (se.raw() as &dyn Any).downcast_ref::<HttpResponse>() {
                 let status = resp.status().as_u16();
                 let headers = resp.headers();
-                Error::internal(build_s3_error_message(
+                class.into_error(build_s3_error_message(
                     op,
                     scope,
                     &format!("HTTP {}: {}", status, se.err()),
@@ -124,7 +176,7 @@ where
                         .or_else(|| headers.get("x-amz-id-2")),
                 ))
             } else {
-                Error::internal(build_s3_error_message(
+                class.into_error(build_s3_error_message(
                     op,
                     scope,
                     &format!("service error: {}", se.err()),
@@ -135,7 +187,7 @@ where
                 ))
             }
         }
-        _ => Error::internal(build_s3_error_message(
+        _ => class.into_error(build_s3_error_message(
             op,
             scope,
             &sdk_err.to_string(),
@@ -171,14 +223,10 @@ where
         .is_some_and(|response| matches!(response.status().as_u16(), 409 | 412))
 }
 
-fn format_generic_s3_error(
-    op: &str,
-    bucket: &str,
-    key: &str,
-    raw_error: impl std::fmt::Display,
-) -> Error {
-    Error::internal(build_s3_error_message(
-        op,
+/// A response body that fails mid-stream (reset, stall, truncation) is a transport failure.
+fn format_read_body_error(bucket: &str, key: &str, raw_error: impl std::fmt::Display) -> Error {
+    S3FailureClass::Transient.into_error(build_s3_error_message(
+        "ReadBody",
         &format!("bucket={bucket} key={key}"),
         &raw_error.to_string(),
         None,
@@ -375,6 +423,7 @@ pub struct S3Client {
     disable_batch_delete: bool,
     auto_detect_content_type: bool,
     multipart: MultipartSettings,
+    resilience: S3ResilienceSettings,
 }
 
 impl S3Client {
@@ -465,12 +514,15 @@ impl S3Client {
             .unwrap_or(false);
 
         let multipart = MultipartSettings::from_config(config)?;
+        let resilience = S3ResilienceSettings::from_config(config)?;
 
         // Build S3 config
-        let mut s3_config_builder = aws_sdk_s3::Config::builder()
-            .behavior_version(BehaviorVersion::latest())
-            .region(Region::new(region))
-            .force_path_style(use_path_style);
+        let mut s3_config_builder = resilience.apply(
+            aws_sdk_s3::Config::builder()
+                .behavior_version(BehaviorVersion::latest())
+                .region(Region::new(region))
+                .force_path_style(use_path_style),
+        );
 
         // Set endpoint if provided (MinIO, LocalStack, TOS)
         if let Some(ep) = endpoint {
@@ -495,6 +547,7 @@ impl S3Client {
             disable_batch_delete,
             auto_detect_content_type,
             multipart,
+            resilience,
         })
     }
 
@@ -530,14 +583,18 @@ impl S3Client {
         {
             Ok(resp) => resp,
             Err(sdk_err) => {
-                let service_err = sdk_err.into_service_error();
-                if service_err.is_no_such_key() || is_s3_compatible_not_found_code(&service_err) {
+                // Classify before narrowing to the service error: timeouts and
+                // dispatch failures are lost once converted.
+                if sdk_err
+                    .as_service_error()
+                    .is_some_and(|e| e.is_no_such_key() || is_s3_compatible_not_found_code(e))
+                {
                     return Err(Error::NotFound(key.to_string()));
                 }
-                return Err(format_s3_service_error(
+                return Err(format_sdk_s3_error(
                     "GetObject",
                     &format!("bucket={} key={}", self.bucket, key),
-                    &service_err,
+                    &sdk_err,
                 ));
             }
         };
@@ -546,7 +603,7 @@ impl S3Client {
             .body
             .collect()
             .await
-            .map_err(|e| format_generic_s3_error("ReadBody", &self.bucket, key, e))?;
+            .map_err(|e| format_read_body_error(&self.bucket, key, e))?;
 
         Ok(bytes.to_vec())
     }
@@ -563,14 +620,16 @@ impl S3Client {
         {
             Ok(resp) => resp,
             Err(sdk_err) => {
-                let service_err = sdk_err.into_service_error();
-                if service_err.is_no_such_key() || is_s3_compatible_not_found_code(&service_err) {
+                if sdk_err
+                    .as_service_error()
+                    .is_some_and(|e| e.is_no_such_key() || is_s3_compatible_not_found_code(e))
+                {
                     return Ok(None);
                 }
-                return Err(format_s3_service_error(
+                return Err(format_sdk_s3_error(
                     "GetObjectWithEtag",
                     &format!("bucket={} key={}", self.bucket, key),
-                    &service_err,
+                    &sdk_err,
                 ));
             }
         };
@@ -586,7 +645,7 @@ impl S3Client {
             .body
             .collect()
             .await
-            .map_err(|e| format_generic_s3_error("ReadBody", &self.bucket, key, e))?;
+            .map_err(|e| format_read_body_error(&self.bucket, key, e))?;
 
         Ok(Some((bytes.to_vec(), etag)))
     }
@@ -610,14 +669,16 @@ impl S3Client {
         {
             Ok(resp) => resp,
             Err(sdk_err) => {
-                let service_err = sdk_err.into_service_error();
-                if service_err.is_no_such_key() || is_s3_compatible_not_found_code(&service_err) {
+                if sdk_err
+                    .as_service_error()
+                    .is_some_and(|e| e.is_no_such_key() || is_s3_compatible_not_found_code(e))
+                {
                     return Err(Error::NotFound(key.to_string()));
                 }
-                return Err(format_s3_service_error(
+                return Err(format_sdk_s3_error(
                     "GetObjectRange",
                     &format!("bucket={} key={}", self.bucket, key),
-                    &service_err,
+                    &sdk_err,
                 ));
             }
         };
@@ -626,7 +687,7 @@ impl S3Client {
             .body
             .collect()
             .await
-            .map_err(|e| format_generic_s3_error("ReadBody", &self.bucket, key, e))?;
+            .map_err(|e| format_read_body_error(&self.bucket, key, e))?;
 
         Ok(bytes.to_vec())
     }
@@ -867,14 +928,16 @@ impl S3Client {
         {
             Ok(resp) => resp,
             Err(sdk_err) => {
-                let service_err = sdk_err.into_service_error();
-                if service_err.is_no_such_key() || is_s3_compatible_not_found_code(&service_err) {
+                if sdk_err
+                    .as_service_error()
+                    .is_some_and(|e| e.is_no_such_key() || is_s3_compatible_not_found_code(e))
+                {
                     return Err(Error::NotFound(key.to_string()));
                 }
-                return Err(format_s3_service_error(
+                return Err(format_sdk_s3_error(
                     "GetObject",
                     &format!("bucket={} key={}", self.bucket, key),
-                    &service_err,
+                    &sdk_err,
                 ));
             }
         };
@@ -883,8 +946,7 @@ impl S3Client {
         let mut file = tokio::fs::File::create(dst).await?;
         let mut total = 0u64;
         while let Some(chunk) = body.next().await {
-            let chunk =
-                chunk.map_err(|e| format_generic_s3_error("ReadBody", &self.bucket, key, e))?;
+            let chunk = chunk.map_err(|e| format_read_body_error(&self.bucket, key, e))?;
             file.write_all(&chunk).await?;
             total += chunk.len() as u64;
         }
@@ -898,6 +960,8 @@ impl S3Client {
             .delete_object()
             .bucket(&self.bucket)
             .key(key)
+            .customize()
+            .config_override(self.resilience.metadata_override())
             .send()
             .await
             .map_err(|e| {
@@ -918,6 +982,8 @@ impl S3Client {
             .bucket(&self.bucket)
             .key(key)
             .if_match(etag)
+            .customize()
+            .config_override(self.resilience.metadata_override())
             .send()
             .await
             .map_err(|e| {
@@ -957,6 +1023,8 @@ impl S3Client {
                     .delete_object()
                     .bucket(&self.bucket)
                     .key(key.as_str())
+                    .customize()
+                    .config_override(self.resilience.metadata_override())
                     .send()
                     .await
                     .map_err(|e| {
@@ -990,6 +1058,8 @@ impl S3Client {
                     .delete_objects()
                     .bucket(&self.bucket)
                     .delete(delete)
+                    .customize()
+                    .config_override(self.resilience.metadata_override())
                     .send()
                     .await
                     .map_err(|e| {
@@ -1011,6 +1081,8 @@ impl S3Client {
             .head_object()
             .bucket(&self.bucket)
             .key(key)
+            .customize()
+            .config_override(self.resilience.metadata_override())
             .send()
             .await
         {
@@ -1070,13 +1142,18 @@ impl S3Client {
                 req = req.continuation_token(token);
             }
 
-            let resp = req.send().await.map_err(|e| {
-                format_sdk_s3_error(
-                    "ListObjectsV2",
-                    &format!("bucket={} prefix={prefix}", self.bucket),
-                    &e,
-                )
-            })?;
+            let resp = req
+                .customize()
+                .config_override(self.resilience.metadata_override())
+                .send()
+                .await
+                .map_err(|e| {
+                    format_sdk_s3_error(
+                        "ListObjectsV2",
+                        &format!("bucket={} prefix={prefix}", self.bucket),
+                        &e,
+                    )
+                })?;
 
             // Process files (contents)
             for obj in resp.contents() {
@@ -1141,13 +1218,18 @@ impl S3Client {
                 req = req.continuation_token(token);
             }
 
-            let resp = req.send().await.map_err(|e| {
-                format_sdk_s3_error(
-                    "ListObjectsV2",
-                    &format!("bucket={} prefix={prefix}", self.bucket),
-                    &e,
-                )
-            })?;
+            let resp = req
+                .customize()
+                .config_override(self.resilience.metadata_override())
+                .send()
+                .await
+                .map_err(|e| {
+                    format_sdk_s3_error(
+                        "ListObjectsV2",
+                        &format!("bucket={} prefix={prefix}", self.bucket),
+                        &e,
+                    )
+                })?;
 
             for obj in resp.contents() {
                 let key = obj.key().unwrap_or("");
@@ -1199,13 +1281,18 @@ impl S3Client {
             req = req.continuation_token(token);
         }
 
-        let resp = req.send().await.map_err(|e| {
-            format_sdk_s3_error(
-                "ListObjectsV2",
-                &format!("bucket={} prefix={prefix}", self.bucket),
-                &e,
-            )
-        })?;
+        let resp = req
+            .customize()
+            .config_override(self.resilience.metadata_override())
+            .send()
+            .await
+            .map_err(|e| {
+                format_sdk_s3_error(
+                    "ListObjectsV2",
+                    &format!("bucket={} prefix={prefix}", self.bucket),
+                    &e,
+                )
+            })?;
 
         let mut objects = Vec::new();
         for obj in resp.contents() {
@@ -1280,6 +1367,8 @@ impl S3Client {
             .bucket(&self.bucket)
             .prefix(&dir_key_slash)
             .max_keys(1)
+            .customize()
+            .config_override(self.resilience.metadata_override())
             .send()
             .await
             .map_err(|e| {
@@ -1313,6 +1402,8 @@ impl S3Client {
                 .bucket(&self.bucket)
                 .prefix(&prefix)
                 .max_keys(1000)
+                .customize()
+                .config_override(self.resilience.metadata_override())
                 .send()
                 .await
                 .map_err(|e| {
@@ -1373,7 +1464,7 @@ impl S3Client {
 mod tests {
     use super::*;
     use crate::core::Error;
-    use aws_sdk_s3::error::{ErrorMetadata, ProvideErrorMetadata};
+    use aws_sdk_s3::error::{ConnectorError, ErrorMetadata, ProvideErrorMetadata};
 
     #[derive(Debug)]
     struct FakeServiceError {
@@ -1420,6 +1511,7 @@ mod tests {
             disable_batch_delete: false,
             auto_detect_content_type: false,
             multipart: MultipartSettings::default(),
+            resilience: S3ResilienceSettings::default(),
         }
     }
 
@@ -1527,37 +1619,46 @@ mod tests {
     }
 
     #[test]
-    fn test_format_generic_s3_error_includes_operation_bucket_key_and_raw_error() {
-        let err =
-            format_generic_s3_error("PutObject", "test-bucket", "tenant/a.txt", "service error");
+    fn test_format_read_body_error_is_network_with_bucket_key_and_raw_error() {
+        let err = format_read_body_error("test-bucket", "tenant/a.txt", "stream stalled");
 
         match err {
-            Error::Internal(message) => {
-                assert!(message.contains("S3 PutObject error"));
+            Error::Network(message) => {
+                assert!(message.contains("S3 ReadBody error"));
                 assert!(message.contains("bucket=test-bucket"));
                 assert!(message.contains("key=tenant/a.txt"));
-                assert!(message.contains("raw=service error"));
+                assert!(message.contains("raw=stream stalled"));
             }
-            other => panic!("expected internal error, got {other:?}"),
+            other => panic!("expected network error, got {other:?}"),
         }
     }
 
-    #[test]
-    fn test_format_s3_service_error_includes_metadata_fields() {
+    fn service_sdk_error(
+        status: u16,
+        code: &'static str,
+    ) -> SdkError<FakeServiceError, HttpResponse> {
         let service_err = FakeServiceError {
             raw: "service error",
             meta: ErrorMetadata::builder()
-                .code("AccessDenied")
+                .code(code)
                 .message("signature mismatch")
                 .custom("aws_request_id", "req-123")
                 .custom("s3_extended_request_id", "ext-456")
                 .build(),
         };
+        let raw = HttpResponse::new(
+            status.try_into().unwrap(),
+            aws_sdk_s3::primitives::SdkBody::empty(),
+        );
+        SdkError::service_error(service_err, raw)
+    }
 
-        let err = format_s3_service_error(
+    #[test]
+    fn test_format_sdk_s3_error_includes_metadata_fields() {
+        let err = format_sdk_s3_error(
             "PutObject",
             "bucket=test-bucket key=tenant/a.txt",
-            &service_err,
+            &service_sdk_error(403, "AccessDenied"),
         );
 
         match err {
@@ -1568,9 +1669,87 @@ mod tests {
                 assert!(message.contains("message=signature mismatch"));
                 assert!(message.contains("request_id=req-123"));
                 assert!(message.contains("extended_request_id=ext-456"));
-                assert!(message.contains("raw=service error"));
+                assert!(message.contains("raw=HTTP 403: service error"));
             }
             other => panic!("expected internal error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_format_sdk_s3_error_maps_timeouts() {
+        let attempt_timeout: SdkError<FakeServiceError, HttpResponse> =
+            SdkError::timeout_error("operation attempt timed out");
+        assert!(matches!(
+            format_sdk_s3_error("GetObject", "bucket=b key=k", &attempt_timeout),
+            Error::Timeout(_)
+        ));
+
+        let connect_timeout: SdkError<FakeServiceError, HttpResponse> =
+            SdkError::dispatch_failure(ConnectorError::timeout("connect timed out".into()));
+        assert!(matches!(
+            format_sdk_s3_error("HeadObject", "bucket=b key=k", &connect_timeout),
+            Error::Timeout(_)
+        ));
+    }
+
+    #[test]
+    fn test_format_sdk_s3_error_maps_transport_failures_to_network() {
+        let io_failure: SdkError<FakeServiceError, HttpResponse> =
+            SdkError::dispatch_failure(ConnectorError::io("connection reset".into()));
+        assert!(matches!(
+            format_sdk_s3_error("GetObject", "bucket=b key=k", &io_failure),
+            Error::Network(_)
+        ));
+
+        let bad_response: SdkError<FakeServiceError, HttpResponse> = SdkError::response_error(
+            "truncated response",
+            HttpResponse::new(
+                200.try_into().unwrap(),
+                aws_sdk_s3::primitives::SdkBody::empty(),
+            ),
+        );
+        assert!(matches!(
+            format_sdk_s3_error("ListObjectsV2", "bucket=b", &bad_response),
+            Error::Network(_)
+        ));
+    }
+
+    #[test]
+    fn test_format_sdk_s3_error_maps_throttling_and_5xx_to_network() {
+        for (status, code) in [
+            (503, "SlowDown"),
+            (503, "ServiceUnavailable"),
+            (500, "InternalError"),
+            (502, "BadGateway"),
+            (504, "GatewayTimeout"),
+            (429, "TooManyRequests"),
+            (400, "RequestTimeout"),
+        ] {
+            let err = format_sdk_s3_error(
+                "PutObject",
+                "bucket=b key=k",
+                &service_sdk_error(status, code),
+            );
+            assert!(matches!(err, Error::Network(_)), "{status} {code}: {err:?}");
+        }
+    }
+
+    #[test]
+    fn test_format_sdk_s3_error_keeps_client_errors_internal() {
+        for (status, code) in [
+            (403, "AccessDenied"),
+            (404, "NoSuchBucket"),
+            (400, "InvalidArgument"),
+        ] {
+            let err = format_sdk_s3_error(
+                "PutObject",
+                "bucket=b key=k",
+                &service_sdk_error(status, code),
+            );
+            assert!(
+                matches!(err, Error::Internal(_)),
+                "{status} {code}: {err:?}"
+            );
         }
     }
 
