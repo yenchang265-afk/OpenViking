@@ -6,6 +6,7 @@ import pytest
 from PIL import Image
 
 from openviking.core.context import ResourceContentType
+from openviking.models.embedder.base import DenseEmbedderBase, EmbedResult
 from openviking.parse.parsers.media.utils import (
     MPEG_TS_PACKET_SIZE,
     MPEG_TS_PROBE_BYTES,
@@ -1003,6 +1004,75 @@ async def test_vectorize_image_file_enqueues_summary_and_image(monkeypatch):
     assert msg.message[1]["image_url"]["url"].startswith("data:image/png;base64,")
     assert "content" not in msg.context_data
     assert fs.read_file_bytes_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_vectorize_image_without_summary_falls_back_to_file_name(monkeypatch):
+    queue = DummyQueue()
+    fs = DummyFS(b"\x89PNG\r\n\x1a\nimage")
+    monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
+    monkeypatch.setattr(embedding_utils, "get_viking_fs", lambda: fs)
+    monkeypatch.setattr(
+        embedding_utils,
+        "get_openviking_config",
+        lambda: types.SimpleNamespace(
+            embedding=types.SimpleNamespace(text_source="summary_first", max_input_tokens=1000)
+        ),
+    )
+
+    await embedding_utils.vectorize_file(
+        file_path="viking://user/default/resources/photo.png",
+        summary_dict={"name": "photo.png", "summary": ""},
+        parent_uri="viking://user/default/resources",
+        ctx=DummyReq(),
+    )
+
+    assert len(queue.items) == 1
+    msg = queue.items[0]
+    assert msg.message[0] == {"type": "text", "text": "photo.png"}
+    assert msg.message[1]["type"] == "image_url"
+    assert msg.context_data["abstract"] == "photo.png"
+
+    # A text-only (or sparse/hybrid) embedder drops the image part; the text it
+    # keeps must not be empty, since embedding providers reject empty input.
+    class TextOnlyEmbedder(DenseEmbedderBase):
+        def embed(self, content, is_query=False):
+            return EmbedResult(dense_vector=[1.0])
+
+        def get_dimension(self) -> int:
+            return 1
+
+    assert TextOnlyEmbedder("test").prepare_embedding_input(msg.message) == "photo.png"
+
+
+@pytest.mark.asyncio
+async def test_vectorize_unreadable_image_without_summary_uses_file_name(monkeypatch):
+    class UnreadableImageFS(DummyFS):
+        async def read_file_bytes(self, _path, ctx=None):
+            self.read_file_bytes_calls += 1
+            raise OSError("cannot read")
+
+    queue = DummyQueue()
+    fs = UnreadableImageFS("")
+    monkeypatch.setattr(embedding_utils, "get_queue_manager", lambda: DummyQueueManager(queue))
+    monkeypatch.setattr(embedding_utils, "get_viking_fs", lambda: fs)
+    monkeypatch.setattr(
+        embedding_utils,
+        "get_openviking_config",
+        lambda: types.SimpleNamespace(
+            embedding=types.SimpleNamespace(text_source="summary_first", max_input_tokens=1000)
+        ),
+    )
+
+    await embedding_utils.vectorize_file(
+        file_path="viking://user/default/resources/photo.png",
+        summary_dict={"name": "photo.png", "summary": ""},
+        parent_uri="viking://user/default/resources",
+        ctx=DummyReq(),
+    )
+
+    assert len(queue.items) == 1
+    assert queue.items[0].message == "photo.png"
 
 
 @pytest.mark.asyncio

@@ -710,19 +710,19 @@ async def vectorize_file(
                     del content
                     context.set_vectorize(Vectorize(text=embedding_text))
         elif content_type == ResourceContentType.IMAGE:
-            # Multimodal embedders consume both parts; text-only embedders fall back to summary.
+            # Multimodal embedders consume both parts; text-only, sparse and hybrid
+            # embedders drop the image and keep only the text. Fall back to the file
+            # name, as audio and video do, so an image without a summary never
+            # reaches those embedders as an empty string, which providers reject.
+            effective_text = summary or file_name
+            context.abstract = effective_text
             image_uri = await _build_image_data_uri(
                 file_path, file_name, viking_fs, ctx, content=file_content
             )
             if image_uri:
-                context.set_vectorize(Vectorize(text=summary, images=[image_uri]))
-            elif summary:
-                context.set_vectorize(Vectorize(text=summary))
+                context.set_vectorize(Vectorize(text=effective_text, images=[image_uri]))
             else:
-                logger.debug(
-                    f"Skipping image {file_path} (image unreadable and no summary available)"
-                )
-                return False
+                context.set_vectorize(Vectorize(text=effective_text))
         elif summary:
             # For non-text files, use summary
             context.set_vectorize(Vectorize(text=summary))
