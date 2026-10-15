@@ -11,8 +11,10 @@ pip install langchain-openviking                 # LangChain 介面卡
 pip install "langchain-openviking[langgraph]"    # LangGraph middleware
 ```
 
-該整合獨立於 OpenViking server 釋出。為相容現有應用，完整包仍會把舊的
-`openviking.integrations.langchain` 匯入路徑轉發到 `langchain-openviking`。
+該整合獨立於 OpenViking server 釋出。從 v0.5.0 之後的下一個服務端版本開始，
+舊的 `openviking.integrations.langchain` 名稱空間將移除，不提供相容轉發模組；
+v0.5.0 仍保留該路徑。請安裝獨立包，並改用 `langchain_openviking` 匯入，
+詳見[未釋出版本的遷移說明](../about/02-changelog.md#未釋出)。
 
 ## 連線
 
@@ -295,17 +297,17 @@ commit 策略。如果後續批次或寫入後的 commit 失敗，`OpenVikingPar
 倉庫內提供了可直接執行的最小示例，使用記憶體測試客戶端，無需模型憑證：
 
 ```bash
-uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langchain/rag/quick_app.py
-uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langchain/context-backend/quick_app.py
-uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langchain/message-history/quick_app.py
-uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langgraph/agent/quick_app.py
-uv run --project examples/langchain --extra langgraph python examples/langchain-langgraph/langgraph/middleware/quick_app.py
+uv run --project integrations/frameworks/langchain --extra langgraph python integrations/frameworks/langchain/examples/langchain/rag/quick_app.py
+uv run --project integrations/frameworks/langchain --extra langgraph python integrations/frameworks/langchain/examples/langchain/context-backend/quick_app.py
+uv run --project integrations/frameworks/langchain --extra langgraph python integrations/frameworks/langchain/examples/langchain/message-history/quick_app.py
+uv run --project integrations/frameworks/langchain --extra langgraph python integrations/frameworks/langchain/examples/langgraph/agent/quick_app.py
+uv run --project integrations/frameworks/langchain --extra langgraph python integrations/frameworks/langchain/examples/langgraph/middleware/quick_app.py
 ```
 
-連線真實 OpenViking 服務和 OpenAI 相容模型的示例見 [live LangGraph app](https://github.com/volcengine/OpenViking/blob/main/examples/langchain-langgraph/langgraph/agent/live_app.py)。
+連線真實 OpenViking 服務和 OpenAI 相容模型的示例見 [live LangGraph app](https://github.com/volcengine/OpenViking/blob/main/integrations/frameworks/langchain/examples/langgraph/agent/live_app.py)。
 
 ## 參見
 
 - [整合能力參考](./16-capability-reference.md)
-- [examples/langchain-langgraph/](https://github.com/volcengine/OpenViking/tree/main/examples/langchain-langgraph) — 上面所有示例的完整原始碼
+- [integrations/frameworks/langchain/examples/](https://github.com/volcengine/OpenViking/tree/main/integrations/frameworks/langchain/examples) — 上面所有示例的完整原始碼
 - [MCP 客戶端](./06-mcp-clients.md) — 非 SDK 方式的 MCP 整合

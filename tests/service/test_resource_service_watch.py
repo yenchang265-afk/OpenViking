@@ -368,9 +368,7 @@ class TestWatchTaskCreation:
         )
 
     def test_watch_persists_clear_without_tags(self, resource_service: ResourceService):
-        assert resource_service._watch_processor_kwargs({}, None, "clear") == {
-            "tag_mode": "clear"
-        }
+        assert resource_service._watch_processor_kwargs({}, None, "clear") == {"tag_mode": "clear"}
 
     def test_add_resource_message_round_trip_preserves_clear_without_tags(self):
         message = AddResourceMsg(
@@ -605,7 +603,11 @@ async def test_add_resource_processor_records_paused_watch_result(
         complete=AsyncMock(),
         fail=AsyncMock(),
         get_task_auth=AsyncMock(return_value={}),
-        wait_for_descendants=AsyncMock(),
+        wait_for_task_work=AsyncMock(),
+        build_queue_status=Mock(return_value={}),
+        get_context_count=Mock(return_value=0),
+        get_queue_timing=Mock(return_value={}),
+        get=AsyncMock(return_value=SimpleNamespace(status=TaskStatus.CANCELLING)),
     )
     monkeypatch.setattr(
         "openviking.storage.queuefs.add_resource_processor.get_task_tracker",

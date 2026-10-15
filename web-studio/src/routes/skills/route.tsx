@@ -39,6 +39,7 @@ import {
   SkillScopeTabs,
   getSkillsForScope,
 } from './-components/skill-scope-tabs'
+import { AddSkillSheet } from './-components/add-skill-sheet'
 import type { SkillScope } from './-components/skill-scope-tabs'
 
 export const Route = createFileRoute('/skills')({
@@ -192,6 +193,7 @@ function SkillsRoute() {
     null,
   )
   const [createOpen, setCreateOpen] = React.useState(false)
+  const [addOpen, setAddOpen] = React.useState(false)
   const skillsQuery = useQuery({
     queryFn: fetchSkills,
     queryKey: ['skills', identityScopeKey],
@@ -199,6 +201,13 @@ function SkillsRoute() {
   })
   const skills = skillsQuery.data ?? []
   const [activeScope, setActiveScope] = React.useState<SkillScope>('user')
+  const onSkillAdded = React.useCallback(
+    (scope: SkillScope) => {
+      setActiveScope(scope)
+      void skillsQuery.refetch()
+    },
+    [skillsQuery.refetch],
+  )
   const visibleSkills = React.useMemo(
     () => getSkillsForScope(skills, activeScope),
     [activeScope, skills],
@@ -224,6 +233,10 @@ function SkillsRoute() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
+            <PlusIcon />
+            {t('add.title')}
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -289,6 +302,10 @@ function SkillsRoute() {
               {t('emptyDescription')}
             </p>
           </div>
+          <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
+            <PlusIcon />
+            {t('add.title')}
+          </Button>
         </Card>
       ) : (
         <div className="grid gap-4">
@@ -396,6 +413,13 @@ function SkillsRoute() {
           )
           void queryClient.invalidateQueries({ queryKey: ['skills'] })
         }}
+      />
+
+      <AddSkillSheet
+        key={identityScopeKey}
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        onAdded={onSkillAdded}
       />
 
       <Sheet

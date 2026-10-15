@@ -690,7 +690,7 @@ Agent 外掛每輪注入上下文時，過去需要按型別逐個檢索、再�
 | `purpose` | `chat` \| `coding` | None | 按下表的分類配額啟用六域分桶取樣；僅在未顯式傳 `quotas` 時生效 |
 | `detail` | `abstract` \| `overview` \| `full` \| object | None | 為每條結果請求同一個起始檔和最高檔；請求檔不可用或裝不進預算時仍逐檔退檔而不截斷。省略時按類別取預設檔（見下）。也可傳按類別的物件，如 `{"events":"overview","preferences":"abstract"}`，未列出的類別仍取預設檔。`"auto"` 是已廢棄的寫法，等價於省略 |
 | `dedup_turns` | int | 0 | 跨輪冷卻輪數，需要 `session_id`；帳本存在 `{session_uri}/.recall_log.json` |
-| `exclude_uris` | string[] | [] | 無狀態去重兜底，最多 200 條，與 `dedup_turns` 取並集 |
+| `exclude_uris` | string[] | [] | 無狀態去重兜底，最多 200 條，與 `dedup_turns` 取並集。目錄 URI 會排除整棵子樹；只想排除已返回的目錄節點本身時，回傳它的 `.abstract.md` 和 `.overview.md` URI；`dedup_turns` 只冷卻原樣返回過的 URI |
 | `peer_scope` | `actor` \| `all` | `all` | `actor` 排除其他 peer，但仍保留全域、User 自有和當前 Actor Peer 內容 |
 | `other_peer_penalty` | number \| object | 按型別預設值 | 對其他 peer 結果施加的分數折損 |
 

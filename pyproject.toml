@@ -93,6 +93,9 @@ dependencies = [
 
 
 [project.optional-dependencies]
+expiry = [
+  "redis>=5,<7",
+]
 gateway-fast = [
     "uvloop>=0.21; sys_platform != 'win32'",
     "httptools>=0.6",
@@ -244,6 +247,7 @@ exclude = ["tests*", "docs*", "examples*"]
 
 [tool.setuptools.package-data]
 openviking_gateway = ["client-rules.json"]
+"openviking.scheduling.expiry" = ["lua/*.lua"]
 openviking = [
     "prompts/templates/**/*.yaml",
     "builtin_skills/**/*",

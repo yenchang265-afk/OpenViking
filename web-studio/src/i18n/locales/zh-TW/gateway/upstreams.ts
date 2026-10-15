@@ -193,6 +193,11 @@ const upstreams = {
       correctPath: '改用 {{url}}',
       useDefault: '使用預設地址',
     },
+    appendEndpointPath: {
+      label: '拼接協議介面路徑',
+      description:
+        '在 Base URL 後拼接所選協議的介面路徑。如果 Base URL 已經是完整的請求地址，請關閉此開關。',
+    },
     authMode: {
       label: 'API Key 由誰提供',
       managed: {

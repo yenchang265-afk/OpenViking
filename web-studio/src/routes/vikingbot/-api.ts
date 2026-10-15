@@ -1,6 +1,6 @@
 import i18n from '#/i18n'
 import { getOvResult, ovClient } from '#/lib/ov-client'
-import type { ServerMode } from '#/hooks/use-server-mode'
+import type { ServerMode } from '#/lib/connection/health'
 
 export type Connection = {
   id: string

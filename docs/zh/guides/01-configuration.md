@@ -1706,6 +1706,7 @@ openviking-server --config /path/to/ov.conf
   "memory": {
     "session_auto_commit": {
       "enabled": false,
+      "idle_backend": "local",
       "check_interval_seconds": 600.0,
       "scan_rate_limit_files_per_second": 2.0
     }
@@ -1716,6 +1717,7 @@ openviking-server --config /path/to/ov.conf
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `enabled` | bool | 自動 commit 總開關。開啟後：未顯式傳入 `auto_commit_policy` 的新 session 會套用預設 policy，同時啟動後臺 idle 掃描器；關閉後兩者都不發生 | `false` |
+| `idle_backend` | string | idle 超時發現後端：`local` 掃描 session 後設資料；`redis` 使用分散式 expiry 排程 | `local` |
 | `check_interval_seconds` | float | 兩輪 idle 掃描之間的最小間隔，單位秒，必須大於 `0` | `600.0` |
 | `scan_rate_limit_files_per_second` | float | idle 掃描時每秒最多讀取的 session `.meta.json` 檔案數，必須大於 `0`，用於限制大量 session 掃描時的儲存 IO 壓力 | `2.0` |
 
@@ -1726,22 +1728,56 @@ openviking-server --config /path/to/ov.conf
 - `enabled=false` 時：既無顯式 policy、也無 `server.user_config_defaults.auto_commit_policy` 的新 Session 保持 auto commit 關閉，並返回 `auto_commit_policy: null`；同時不啟動 `SessionAutoCommitScheduler`。
 - `enabled=true` 時：
   - 既無顯式 policy、也無部署級預設 policy 的新 Session 會帶上下方內建 policy。
-  - `SessionAutoCommitScheduler` 啟動後立即開始一輪掃描，之後每輪結束後至少等待 `check_interval_seconds` 再開始下一輪；若一輪耗時已超過該值，則立即開始下一輪。
-  - 掃描過程中以 `scan_rate_limit_files_per_second` 為上限序列讀取 session `.meta.json`，避免瞬時 IO 洪峰。
-  - 不會做單獨的啟動恢復掃描，idle 檢查只發生在週期掃描時。
+  - `idle_backend="local"` 時，`SessionAutoCommitScheduler` 啟動後立即開始掃描；掃描過程以 `scan_rate_limit_files_per_second` 為上限序列讀取 session `.meta.json`，每輪結束後至少等待 `check_interval_seconds`。
+  - `idle_backend="redis"` 時，服務通過頂層 `expiry` 配置整體啟用 expiry 上報、釋出和 callback 消費。
 - token 和 message-count 自動觸發在訊息寫入後內聯執行，不依賴 scheduler，但同樣以 session 是否帶有 `auto_commit_policy` 為前提。
+
+#### 分散式 Expiry 配置
+
+共享同一份 expiry 狀態的 API、publisher 和 callback 例項必須使用相同且穩定的 `service_name`。它表示部署的文件服務名，不是單個 Pod 名。
+
+```json
+{
+  "expiry": {
+    "service_name": "openviking-documents",
+    "publisher_separate_process": true,
+    "shard_count": 128,
+    "session_consumer_concurrency": 8,
+    "redis": {
+      "mode": "cluster",
+      "endpoints": ["redis://redis-proxy.example.com:6379"],
+      "username": "openviking",
+      "password_env": "OPENVIKING_EXPIRY_REDIS_PASSWORD"
+    }
+  }
+}
+```
+
+| 引數 | 型別 | 說明 | 預設值 |
+|------|------|------|--------|
+| `service_name` | string | 使用同一份 expiry 資料的所有例項共享的穩定文件服務名 | `""` |
+| `publisher_separate_process` | bool | 由 `openviking-server` 在獨立子程序中託管 publisher；為 `false` 時 publisher 在各 API 程序內執行 | `true` |
+| `shard_count` | int | expiry 邏輯分片數；所有共享同一 namespace 的例項必須一致，取值範圍為 `1..512` | `128` |
+| `session_consumer_concurrency` | int | 每個 API 程序中 Session expiry callback 的併發數，必須大於 `0` | `8` |
+| `redis.mode` | string | Redis 部署模式：`standalone` 或 `cluster` | `standalone` |
+| `redis.endpoints` | string array | Redis 地址；叢集模式可以只配置一個統一 proxy 地址 | `[]` |
+| `redis.username` | string | Redis ACL 使用者名稱 | `""` |
+| `redis.password_env` | string | 儲存 Redis 密碼的環境變數名；變數不存在時啟動失敗 | `""` |
+| `redis.password` | string | 相容用明文密碼；建議使用 `password_env`，兩者互斥 | `""` |
+
+啟用 Redis idle auto commit 時必須配置 `service_name` 和 Redis 地址。使用者名稱與密碼只能使用上述獨立欄位，不能寫入 endpoint URI。預設 `publisher_separate_process=true` 時，`openviking-server` 會在開始服務前拉起一個內部 publisher 子程序，在服務關閉時停止它，並在子程序異常退出時一併退出。publisher 不再暴露為公共 CLI 命令。
 
 ##### 單 session 自動 commit 策略
 
-當 session 帶有 `auto_commit_policy` 時，未傳的欄位會回退到下方內建預設值。沒有儲存 policy 的 session 保持 auto commit 關閉。取值會被 clamp 到 `[0, 上限]`，未知欄位會以 `InvalidArgumentError` 拒絕。設定和檢視方式見 [Sessions API](../api/05-sessions.md#create-session)。
+當 session 帶有 `auto_commit_policy` 時，未傳的欄位會回退到下方內建預設值。沒有儲存 policy 的 session 保持 auto commit 關閉。除 idle 超時的寫入下限外，取值會被 clamp 到 `[0, 上限]`；未知欄位會以 `InvalidArgumentError` 拒絕。設定和檢視方式見 [Sessions API](../api/05-sessions.md#create-session)。
 
-| 欄位 | 型別 | 預設值 | 上限 | 說明 |
-|------|------|--------|------|------|
-| `pending_token_threshold` | int | 150000 | 1000000 | 當未提交的 pending token 超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
-| `message_count_threshold` | int | 100 | 1000 | 當未提交的 live message 數量超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
-| `idle_timeout_seconds` | int | 86400 | 604800 | 有未提交內容的 session 在空閒這麼多秒後，進入服務端 idle scheduler 的處理範圍。idle 觸發的 commit 會歸檔全部積壓訊息，並忽略 `keep_recent_count`。 |
-| `keep_recent_count` | int | 0 | 500 | 閾值觸發的自動 commit 後保留（不歸檔）的最近 live message 數量。idle 超時觸發的 commit 會忽略該值並歸檔所有訊息。 |
-| `min_commit_interval_seconds` | int | 0 | 604800 | 兩次自動 commit 之間的最小間隔秒數（節流）。 |
+| 欄位 | 型別 | 預設值 | 最小值 | 上限 | 說明 |
+|------|------|--------|--------|------|------|
+| `pending_token_threshold` | int | 150000 | 0 | 1000000 | 當未提交的 pending token 超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
+| `message_count_threshold` | int | 100 | 0 | 1000 | 當未提交的 live message 數量超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
+| `idle_timeout_seconds` | int | 86400 | 0（關閉）或 300 | 604800 | 新傳入的正數最短為 5 分鐘；存量的小於 300 的正值繼續按原值讀取。idle 觸發的 commit 會歸檔全部積壓訊息，並忽略 `keep_recent_count`。 |
+| `keep_recent_count` | int | 0 | 0 | 500 | 閾值觸發的自動 commit 後保留（不歸檔）的最近 live message 數量。idle 超時觸發的 commit 會忽略該值並歸檔所有訊息。 |
+| `min_commit_interval_seconds` | int | 0 | 0 | 604800 | 兩次自動 commit 之間的最小間隔秒數（節流）。 |
 
 程式碼入口：`openviking/session/auto_commit_policy.py:AutoCommitPolicy`。
 

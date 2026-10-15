@@ -1395,7 +1395,6 @@ class ResourceProcessor:
             await _enqueue_embedding_message(
                 embedding_queue,
                 message,
-                failure_message="Failed to enqueue planned vector deletes",
             )
             completed_actions += len(delete_ids)
         directory_actions: dict[str, dict[int, Any]] = {}
@@ -1446,7 +1445,6 @@ class ResourceProcessor:
             if await _enqueue_embedding_message(
                 embedding_queue,
                 message,
-                failure_message=f"Failed to enqueue scalar update for {action.uri}",
             ):
                 completed_actions += 1
         for uri, levels in directory_actions.items():

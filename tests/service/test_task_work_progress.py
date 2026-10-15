@@ -41,14 +41,16 @@ async def test_progress_ignores_duplicate_registration_and_discarded_work():
     }
 
 
-async def test_progress_is_forgotten_once_task_has_no_work():
+async def test_progress_keeps_settled_work_until_task_is_forgotten():
     index = TaskWorkIndex()
     index.register("Semantic", _work("s1"))
     await index.prepare_ack("Semantic", _work("s1"))
 
-    assert index.progress("task-1") == {}
+    assert index.progress("task-1") == {"Semantic": {"done": 1, "total": 1}}
     index.register("Semantic", _work("s2"))
-    assert index.progress("task-1") == {"Semantic": {"done": 0, "total": 1}}
+    assert index.progress("task-1") == {"Semantic": {"done": 1, "total": 2}}
+    index.forget_task("task-1")
+    assert index.progress("task-1") == {}
 
 
 def test_progress_after_rebuild_starts_from_pending_work():

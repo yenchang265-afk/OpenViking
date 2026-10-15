@@ -42,7 +42,7 @@ Pi 的實驗性上下文管理擴充不在本次 WM 關閉適配範圍內，請�
 
 ## 應用與舊會話
 
-LangChain 請使用 `with_openviking_memory(..., history_factory=...)` 並配合宿主的歷史提供者。未提供 provider 的舊版 `with_openviking_context` 會警告它依賴 OV 歷史。中介軟體預設 `include_session_context=False`。請把它放在原生 summarization 中介軟體之前，使原始訊息在框架替換它們之前被捕獲。訊息捕獲水位線儲存在 graph state 中。可執行的[原生歷史示例](https://github.com/volcengine/OpenViking/blob/main/examples/langchain-langgraph/langgraph/middleware/native_history.py)及其固定版本的依賴，演示了 LangChain summarization 配合 SQLite checkpointer 的用法。
+LangChain 請使用 `with_openviking_memory(..., history_factory=...)` 並配合宿主的歷史提供者。未提供 provider 的舊版 `with_openviking_context` 會警告它依賴 OV 歷史。中介軟體預設 `include_session_context=False`。請把它放在原生 summarization 中介軟體之前，使原始訊息在框架替換它們之前被捕獲。訊息捕獲水位線儲存在 graph state 中。可執行的[原生歷史示例](https://github.com/volcengine/OpenViking/blob/main/integrations/frameworks/langchain/examples/langgraph/middleware/native_history.py)及其固定版本的依賴，演示了 LangChain summarization 配合 SQLite checkpointer 的用法。
 
 VikingBot 是“預設使用宿主歷史”的例外：它仍然使用 OV Working Memory 管理上下文和壓縮。它的會話上下文 commit 會顯式傳送 `enable_working_memory: true`，包括已儲存策略關閉了 WM 的既有會話。它保持現有的 commit-and-clear 流程；之後的上下文讀取使用 OV 的 overview/checkpoint 和保留的訊息，生成仍在進行時則使用待處理歸檔中的訊息。如果服務端未確認 WM 生成，該 commit 會被視為失敗，本地歷史保留以便重試。此變更不會替換 VikingBot 的本地壓縮。
 

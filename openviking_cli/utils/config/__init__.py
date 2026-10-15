@@ -53,6 +53,7 @@ from .consts import (
     SYSTEM_CONFIG_DIR,
 )
 from .embedding_config import EmbeddingConfig
+from .expiry_config import ExpiryConfig, ExpiryRedisConfig
 from .git_config import GitConfig, GitLocalConfig, GitS3Config
 from .log_config import LogConfig
 from .open_viking_config import (
@@ -140,6 +141,8 @@ __all__ = [
     "OVCLIConfig",
     "RerankConfig",
     "RetrievalConfig",
+    "ExpiryConfig",
+    "ExpiryRedisConfig",
     "StorageConfig",
     "OpenGaussConfig",
     "VectorDBBackendConfig",

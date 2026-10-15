@@ -12,9 +12,11 @@ const workspace = {
       users: '使用者與許可權',
     },
     header: {
+      backToConfig: '返回工作區配置',
+      chooseWorkspace: '重新選擇工作區',
       currentUser: {
-        account: '帳號',
-        accountSummary: '帳號 · {{account}}',
+        account: '空間',
+        accountSummary: '空間 · {{account}}',
         keyUnavailable: '使用者憑證不可用',
         loadingUsers: '正在載入使用者',
         loadUsersFailed: '使用者列表載入失敗',
@@ -92,6 +94,7 @@ const workspace = {
     loading: '正在載入監控資料...',
     loadFailed: '監控資料載入失敗',
     health: {
+      unknown: '暫無資料',
       healthy: '正常',
       unhealthy: '異常',
     },
@@ -343,6 +346,34 @@ const workspace = {
   skillsPage: {
     title: '技能',
     description: '檢視當前使用者和當前空間可用的 Agent 技能。',
+    add: {
+      title: '新增 Skill',
+      description:
+        '匯入 SKILL.md 供 Agent 檢索和讀取。是否執行由使用它的 Agent 決定。',
+      scope: '新增到',
+      scopeDescription: {
+        user: '僅當前使用者可用',
+        agent: '與當前帳號共享，需有相應許可權',
+      },
+      content: 'SKILL.md 內容',
+      placeholder:
+        '---\nname: my-skill\ndescription: 說明這個 Skill 的用途\n---\n\n# My skill',
+      contentHint:
+        '貼上完整內容，或選擇本地 SKILL.md 檔案。此處只匯入單個檔案。',
+      upload: '選擇 SKILL.md',
+      removeFile: '移除檔案 {{fileName}}',
+      warnings: '校驗提示',
+      failed: '新增失敗',
+      processingFailed: '後臺處理失敗',
+      processing: '已提交，正在後臺處理',
+      completed: 'Skill 已新增並處理完成',
+      taskId: '任務 ID',
+      close: '關閉',
+      another: '繼續新增',
+      validating: '正在校驗…',
+      adding: '正在提交…',
+      submit: '新增 Skill',
+    },
     refresh: '重新整理',
     loading: '正在載入技能...',
     empty: '暫無可用技能',
@@ -679,6 +710,20 @@ const workspace = {
   },
   accountSwitcher: {
     create: '新建帳號',
+    connections: {
+      add: '新增連線',
+      savedOnly: '顯示連線設定中已儲存的連線',
+      switch: '切換連線',
+      title: '已儲存的連線',
+    },
+    serverAccountsTitle: '服務端帳號',
+    provider: {
+      hosted: '火山託管',
+      opensource: '開源服務',
+    },
+    hosted: {
+      currentWorkspace: '當前空間',
+    },
     dialog: {
       accountLabel: '帳號',
       accountPlaceholder: 'team-account',

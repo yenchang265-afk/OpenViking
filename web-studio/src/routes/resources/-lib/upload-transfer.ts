@@ -1,5 +1,6 @@
 import i18n from '#/i18n'
 import { getOvResult, postResourcesTempUpload } from '#/lib/ov-client'
+import type { OvClientAdapter } from '#/lib/ov-client'
 import {
   SessionsUnavailableError,
   UploadSessionError,
@@ -17,6 +18,12 @@ import { BROWSER_ZIP_MAX_BYTES } from './upload-limits'
 export interface UploadItem {
   file: File
   folder?: FolderGroup
+}
+
+/** Connection-bound client and cancellation for one transfer. */
+export interface TransferOptions {
+  client?: OvClientAdapter['client']
+  signal?: AbortSignal
 }
 
 export interface TransferResult {
@@ -80,6 +87,7 @@ function readTempFileId(result: unknown): string {
 async function legacyTempUpload(
   item: UploadItem,
   onProgress?: (percent: number) => void,
+  transport: TransferOptions = {},
 ): Promise<TransferResult> {
   let file = item.file
   if (item.folder) {
@@ -90,6 +98,7 @@ async function legacyTempUpload(
   }
   const result = await getOvResult<TempUploadResult>(
     postResourcesTempUpload({
+      ...transport,
       body: { file, telemetry: true },
       onUploadProgress: (event: { loaded: number; total?: number }) => {
         if (event.total) {
@@ -111,9 +120,10 @@ async function legacyTempUpload(
 export async function transferUpload(
   item: UploadItem,
   onProgress?: (percent: number) => void,
+  transport: TransferOptions = {},
 ): Promise<TransferResult> {
   try {
-    return await transfer(item, onProgress)
+    return await transfer(item, onProgress, transport)
   } catch (error) {
     const cause = error instanceof UploadSessionError ? error.cause : error
     if (isProxyRejectedTooLarge(cause))
@@ -125,9 +135,11 @@ export async function transferUpload(
 async function transfer(
   item: UploadItem,
   onProgress?: (percent: number) => void,
+  transport: TransferOptions = {},
 ): Promise<TransferResult> {
   const options: ChunkedUploadOptions = {
     ...sessionOptions(item),
+    ...transport,
     onProgress: (sent, total) =>
       onProgress?.(total ? Math.round((sent / total) * 100) : 100),
   }
@@ -148,5 +160,5 @@ async function transfer(
     }
     if (!(error instanceof SessionsUnavailableError)) throw error
   }
-  return legacyTempUpload(item, onProgress)
+  return legacyTempUpload(item, onProgress, transport)
 }
