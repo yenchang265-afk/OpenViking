@@ -17,6 +17,7 @@ pub mod cache;
 pub mod client;
 mod multipart;
 pub mod resilience;
+mod single_flight;
 mod tree;
 
 use async_trait::async_trait;
@@ -236,6 +237,48 @@ impl S3FileSystem {
             dir_cache,
             stat_cache,
         })
+    }
+
+    /// Look up `normalized` in S3 and record the result in the stat cache.
+    async fn stat_uncached(&self, normalized: &str) -> Result<FileInfo> {
+        let normalized = normalized.to_string();
+        let key = self.client.build_key(&normalized);
+
+        // Check if it's a file
+        if let Some(meta) = self.client.head_object(&key).await? {
+            if !meta.is_dir_marker {
+                let info = FileInfo {
+                    name: Self::file_name(&normalized),
+                    size: meta.size as u64,
+                    mode: 0o644,
+                    mod_time: meta.last_modified,
+                    is_dir: false,
+                };
+                self.stat_cache
+                    .put(normalized.clone(), Some(info.clone()))
+                    .await;
+                return Ok(info);
+            }
+        }
+
+        // Check if it's a directory
+        if self.client.directory_exists(&normalized).await? {
+            let info = FileInfo {
+                name: Self::file_name(&normalized),
+                size: 0,
+                mode: 0o755,
+                mod_time: SystemTime::now(),
+                is_dir: true,
+            };
+            self.stat_cache
+                .put(normalized.clone(), Some(info.clone()))
+                .await;
+            return Ok(info);
+        }
+
+        // Not found
+        self.stat_cache.put(normalized.clone(), None).await;
+        Err(Error::not_found(&normalized))
     }
 
     /// Normalize path to consistent format
@@ -585,20 +628,25 @@ impl FileSystem for S3FileSystem {
         let normalized = Self::normalize_path(path);
         let key = self.client.build_key(&normalized);
 
-        // Check if it's a directory
-        if key.ends_with('/') || self.client.directory_exists(&normalized).await? {
-            // Try to read as file first
+        // A key that can only name a directory (the mount root or a marker key).
+        if key.is_empty() || key.ends_with('/') {
             if self.client.head_object(&key).await?.is_none() {
                 return Err(Error::IsADirectory(normalized));
             }
         }
 
-        if offset == 0 && size == 0 {
-            // Full read
+        // Read optimistically and only probe for a directory when no object
+        // exists: a successful read costs one round-trip instead of three.
+        let result = if offset == 0 && size == 0 {
             self.client.get_object(&key).await
         } else {
-            // Range read
             self.client.get_object_range(&key, offset, size).await
+        };
+        match result {
+            Err(Error::NotFound(_)) if self.client.directory_exists(&normalized).await? => {
+                Err(Error::IsADirectory(normalized))
+            }
+            other => other,
         }
     }
 
@@ -788,50 +836,18 @@ impl FileSystem for S3FileSystem {
         // The sliding-TTL cache would otherwise pin stale size/modTime forever.
         let bypass_cache = FsContextView::current().bypass_cache();
 
-        // Check stat cache
-        if !bypass_cache {
-            if let Some(cached) = self.stat_cache.get(&normalized).await {
-                return cached.ok_or_else(|| Error::not_found(&normalized));
-            }
+        if bypass_cache {
+            return self.stat_uncached(&normalized).await;
         }
 
-        let key = self.client.build_key(&normalized);
-
-        // Check if it's a file
-        if let Some(meta) = self.client.head_object(&key).await? {
-            if !meta.is_dir_marker {
-                let info = FileInfo {
-                    name: Self::file_name(&normalized),
-                    size: meta.size as u64,
-                    mode: 0o644,
-                    mod_time: meta.last_modified,
-                    is_dir: false,
-                };
-                self.stat_cache
-                    .put(normalized.clone(), Some(info.clone()))
-                    .await;
-                return Ok(info);
-            }
+        if let Some(cached) = self.stat_cache.get(&normalized).await {
+            return cached.ok_or_else(|| Error::not_found(&normalized));
         }
 
-        // Check if it's a directory
-        if self.client.directory_exists(&normalized).await? {
-            let info = FileInfo {
-                name: Self::file_name(&normalized),
-                size: 0,
-                mode: 0o755,
-                mod_time: SystemTime::now(),
-                is_dir: true,
-            };
-            self.stat_cache
-                .put(normalized.clone(), Some(info.clone()))
-                .await;
-            return Ok(info);
-        }
-
-        // Not found
-        self.stat_cache.put(normalized.clone(), None).await;
-        Err(Error::not_found(&normalized))
+        // Concurrent misses for the same path share one S3 lookup.
+        self.stat_cache
+            .coalesce(&normalized, || self.stat_uncached(&normalized))
+            .await
     }
 
     async fn rename(&self, old_path: &str, new_path: &str) -> Result<()> {
@@ -1366,6 +1382,12 @@ impl S3FSPlugin {
                     "20000",
                     "Max retry backoff",
                 ),
+                ConfigParameter::optional(
+                    "max_concurrent_requests",
+                    "int",
+                    "128",
+                    "Max S3 requests in flight per mount (0 = unlimited)",
+                ),
             ],
         }
     }
@@ -1475,6 +1497,7 @@ timeout/network error instead of hanging. Defaults suit both LAN and WAN backend
       retry_mode: standard                   # or adaptive
       initial_backoff_ms: 1000
       max_backoff_ms: 20000
+      max_concurrent_requests: 128           # per mount; 0 = unlimited
 ```
 
 ## Directory Marker Modes

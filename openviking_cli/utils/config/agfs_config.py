@@ -161,6 +161,15 @@ class S3Config(BaseModel):
         default=None, gt=0, description="Max retry backoff. s3fs default: 20000."
     )
 
+    max_concurrent_requests: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=10_000,
+        description="Max S3 requests in flight per mount; 0 means unlimited. A request that "
+        "cannot start within metadata_operation_timeout_ms fails with a timeout. "
+        "s3fs default: 128.",
+    )
+
     # Metadata (listing/stat) cache in front of S3. Unset values use the s3fs defaults.
     cache_enabled: Optional[bool] = Field(
         default=None, description="Cache directory listings and stat results. s3fs default: true."
@@ -458,6 +467,20 @@ class AGFSConfig(BaseModel):
     )
 
     timeout: int = Field(default=10, description="RAGFS request timeout (seconds)")
+
+    fs_executor_threads: int = Field(
+        default=64,
+        ge=1,
+        description="Threads in the dedicated pool that runs blocking storage calls, kept "
+        "separate from the default executor so a slow backend cannot starve other work.",
+    )
+
+    fs_queue_timeout_ms: int = Field(
+        default=30_000,
+        gt=0,
+        description="A storage call that cannot start within this time (all storage threads "
+        "busy) fails fast with a timeout (HTTP 503) instead of queueing indefinitely.",
+    )
 
     queue_db_path: Optional[str] = Field(
         default=None,

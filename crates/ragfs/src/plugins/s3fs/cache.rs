@@ -6,8 +6,11 @@
 //!
 //! Both caches use LRU eviction with TTL-based expiry.
 
+use super::single_flight::SingleFlight;
 use crate::core::types::FileInfo;
+use crate::core::Result;
 use lru::LruCache;
+use std::future::Future;
 use std::num::NonZeroUsize;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -121,21 +124,24 @@ impl<T: Clone> TtlLruCache<T> {
     }
 
     async fn invalidate_parent(&self, path: &str) {
-        if path == "/" {
-            self.invalidate("/").await;
-            return;
-        }
-
-        let trimmed = path.trim_end_matches('/');
-        if let Some(pos) = trimmed.rfind('/') {
-            let parent = if pos == 0 {
-                "/".to_string()
-            } else {
-                trimmed[..pos].to_string()
-            };
+        if let Some(parent) = parent_path(path) {
             self.invalidate(&parent).await;
         }
     }
+}
+
+/// Parent directory of `path` ("/" is its own parent).
+fn parent_path(path: &str) -> Option<String> {
+    if path == "/" {
+        return Some("/".to_string());
+    }
+    let trimmed = path.trim_end_matches('/');
+    let pos = trimmed.rfind('/')?;
+    Some(if pos == 0 {
+        "/".to_string()
+    } else {
+        trimmed[..pos].to_string()
+    })
 }
 
 /// Directory listing cache
@@ -184,6 +190,9 @@ impl S3ListDirCache {
 /// File metadata (stat) cache
 pub struct S3StatCache {
     cache: TtlLruCache<Option<FileInfo>>,
+    /// In-flight lookups for cache misses. Invalidation detaches them so a
+    /// caller arriving after a write never joins a lookup that began before it.
+    flights: SingleFlight<FileInfo>,
 }
 
 impl S3StatCache {
@@ -196,7 +205,17 @@ impl S3StatCache {
                 Duration::from_secs(if ttl_seconds == 0 { 60 } else { ttl_seconds }),
                 enabled,
             ),
+            flights: SingleFlight::default(),
         }
+    }
+
+    /// Run `fetch` for a cache miss on `path`, sharing it with concurrent misses.
+    pub(crate) async fn coalesce<F, Fut>(&self, path: &str, fetch: F) -> Result<FileInfo>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<FileInfo>>,
+    {
+        self.flights.run(path, fetch).await
     }
 
     /// Get cached stat result
@@ -211,16 +230,21 @@ impl S3StatCache {
 
     /// Invalidate a specific path
     pub async fn invalidate(&self, path: &str) {
+        self.flights.forget(path);
         self.cache.invalidate(path).await;
     }
 
     /// Invalidate all entries with a prefix
     pub async fn invalidate_prefix(&self, prefix: &str) {
+        self.flights.forget_prefix(prefix);
         self.cache.invalidate_prefix(prefix).await;
     }
 
     /// Invalidate the parent of a path
     pub async fn invalidate_parent(&self, path: &str) {
+        if let Some(parent) = parent_path(path) {
+            self.flights.forget(&parent);
+        }
         self.cache.invalidate_parent(path).await;
     }
 }

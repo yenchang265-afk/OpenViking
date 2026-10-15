@@ -26,9 +26,11 @@ pub(crate) const RESILIENCE_CONFIG_KEYS: &[&str] = &[
     "retry_mode",
     "initial_backoff_ms",
     "max_backoff_ms",
+    "max_concurrent_requests",
 ];
 
 const MAX_ATTEMPTS_LIMIT: u32 = 10;
+const MAX_CONCURRENT_REQUESTS_LIMIT: i64 = 10_000;
 
 /// Client-side throttling strategy used by the SDK retry layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +68,9 @@ pub struct S3ResilienceSettings {
     pub initial_backoff: Duration,
     /// Upper bound on retry backoff.
     pub max_backoff: Duration,
+    /// Max S3 requests in flight per mount; 0 means unlimited. A request that
+    /// cannot start within `metadata_operation_timeout` fails with a timeout.
+    pub max_concurrent_requests: usize,
 }
 
 impl Default for S3ResilienceSettings {
@@ -83,6 +88,7 @@ impl Default for S3ResilienceSettings {
             retry_mode: RetryMode::Standard,
             initial_backoff: Duration::from_millis(1_000),
             max_backoff: Duration::from_millis(20_000),
+            max_concurrent_requests: 128,
         }
     }
 }
@@ -125,6 +131,7 @@ impl S3ResilienceSettings {
                 d.initial_backoff.min(max_backoff),
             )?,
             max_backoff,
+            max_concurrent_requests: max_concurrent_requests(config, d.max_concurrent_requests)?,
         };
         settings.validate()?;
         Ok(settings)
@@ -211,6 +218,19 @@ fn max_attempts(config: &HashMap<String, ConfigValue>, default: u32) -> Result<u
         Some(n) if (1..=MAX_ATTEMPTS_LIMIT as i64).contains(&n) => Ok(n as u32),
         _ => Err(Error::config(format!(
             "invalid max_attempts: expected an integer between 1 and {MAX_ATTEMPTS_LIMIT}"
+        ))),
+    }
+}
+
+fn max_concurrent_requests(config: &HashMap<String, ConfigValue>, default: usize) -> Result<usize> {
+    let Some(value) = config.get("max_concurrent_requests") else {
+        return Ok(default);
+    };
+    match value.as_int() {
+        Some(n) if (0..=MAX_CONCURRENT_REQUESTS_LIMIT).contains(&n) => Ok(n as usize),
+        _ => Err(Error::config(format!(
+            "invalid max_concurrent_requests: expected an integer between 0 (unlimited) \
+             and {MAX_CONCURRENT_REQUESTS_LIMIT}"
         ))),
     }
 }
@@ -302,6 +322,21 @@ mod tests {
         assert_config_err(&[("max_attempts", ConfigValue::Int(0))]);
         assert_config_err(&[("max_attempts", ConfigValue::Int(11))]);
         assert_config_err(&[("max_attempts", ConfigValue::Bool(true))]);
+    }
+
+    #[test]
+    fn reads_max_concurrent_requests() {
+        assert_eq!(S3ResilienceSettings::default().max_concurrent_requests, 128);
+        for n in [0, 1, 512] {
+            let settings = S3ResilienceSettings::from_config(&config(&[(
+                "max_concurrent_requests",
+                ConfigValue::Int(n),
+            )]))
+            .unwrap();
+            assert_eq!(settings.max_concurrent_requests, n as usize);
+        }
+        assert_config_err(&[("max_concurrent_requests", ConfigValue::Int(-1))]);
+        assert_config_err(&[("max_concurrent_requests", ConfigValue::Int(10_001))]);
     }
 
     #[test]
