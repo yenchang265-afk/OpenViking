@@ -78,6 +78,52 @@ def test_elasticsearch_rejects_ef_construction_below_m():
         ElasticsearchConfig(m=32, ef_construction=16)
 
 
+@pytest.mark.parametrize(
+    "index_type",
+    [
+        "bbq_hnsw",
+        "bbq_flat",
+        "bbq_disk",
+        "hnsw",
+        "int8_hnsw",
+        "int4_hnsw",
+        "flat",
+        "int8_flat",
+        "int4_flat",
+    ],
+)
+def test_elasticsearch_accepts_every_dense_vector_index_type(index_type):
+    assert ElasticsearchConfig(index_type=index_type).index_type == index_type
+
+
+def test_elasticsearch_rejects_unknown_index_type():
+    with pytest.raises(ValueError, match="index_type"):
+        ElasticsearchConfig(index_type="ivf")
+
+
+def test_elasticsearch_bbq_disk_tuning_defaults_to_cluster_defaults():
+    config = ElasticsearchConfig(index_type="bbq_disk")
+    assert config.cluster_size is None
+    assert config.visit_percentage is None
+
+
+@pytest.mark.parametrize("cluster_size", [63, 65537])
+def test_elasticsearch_rejects_cluster_size_out_of_range(cluster_size):
+    with pytest.raises(ValueError, match="cluster_size"):
+        ElasticsearchConfig(index_type="bbq_disk", cluster_size=cluster_size)
+
+
+def test_elasticsearch_cluster_size_requires_bbq_disk():
+    with pytest.raises(ValueError, match="cluster_size"):
+        ElasticsearchConfig(index_type="hnsw", cluster_size=384)
+
+
+@pytest.mark.parametrize("visit_percentage", [-0.1, 100.1])
+def test_elasticsearch_rejects_visit_percentage_out_of_range(visit_percentage):
+    with pytest.raises(ValueError, match="visit_percentage"):
+        ElasticsearchConfig(index_type="bbq_disk", visit_percentage=visit_percentage)
+
+
 def test_elasticsearch_rejects_empty_hosts():
     with pytest.raises(ValueError, match="hosts"):
         ElasticsearchConfig(hosts=[])

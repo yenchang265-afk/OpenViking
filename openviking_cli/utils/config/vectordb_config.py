@@ -396,11 +396,23 @@ class ElasticsearchConfig(BaseModel):
             "search, matching the other backends."
         ),
     )
-    index_type: Literal["bbq_hnsw", "bbq_flat", "hnsw", "int8_hnsw", "flat", "int8_flat"] = Field(
+    index_type: Literal[
+        "bbq_hnsw",
+        "bbq_flat",
+        "bbq_disk",
+        "hnsw",
+        "int8_hnsw",
+        "int4_hnsw",
+        "flat",
+        "int8_flat",
+        "int4_flat",
+    ] = Field(
         default="bbq_hnsw",
         description=(
             "dense_vector index_options type. The bbq types (Elasticsearch 8.18+) need at "
-            "least 64 dimensions; below that the default falls back to 'hnsw'."
+            "least 64 dimensions; below that the default falls back to 'hnsw'. 'bbq_disk' "
+            "(DiskBBQ) needs Elasticsearch 9.2+ with an Enterprise license; the int4 types "
+            "need 8.15+ and an even number of dimensions."
         ),
     )
     m: int = Field(default=16, ge=2, description="HNSW graph connections per node")
@@ -412,6 +424,24 @@ class ElasticsearchConfig(BaseModel):
         ge=1,
         le=10000,
         description="Minimum kNN candidates per shard; raised to the requested k when larger",
+    )
+    cluster_size: Optional[int] = Field(
+        default=None,
+        ge=64,
+        le=65536,
+        description=(
+            "bbq_disk vectors per cluster; smaller is more accurate but slower. "
+            "Unset uses the Elasticsearch default (384)"
+        ),
+    )
+    visit_percentage: Optional[float] = Field(
+        default=None,
+        ge=0.0,
+        le=100.0,
+        description=(
+            "Percentage of vectors a bbq_disk kNN search visits per shard; num_candidates "
+            "is ignored when set. Unset uses the Elasticsearch default (~1% per 1M vectors)"
+        ),
     )
     bulk_batch_size: int = Field(
         default=500, ge=1, le=10000, description="Documents per bulk request"
@@ -446,6 +476,8 @@ class ElasticsearchConfig(BaseModel):
             )
         if self.ef_construction < self.m:
             raise ValueError("elasticsearch.ef_construction must be >= elasticsearch.m")
+        if self.cluster_size is not None and self.index_type != "bbq_disk":
+            raise ValueError("elasticsearch.cluster_size only applies to index_type='bbq_disk'")
         return self
 
 

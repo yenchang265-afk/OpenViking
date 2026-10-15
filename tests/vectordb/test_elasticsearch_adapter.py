@@ -248,6 +248,73 @@ def test_flat_index_type_omits_hnsw_parameters():
     assert options == {"type": "int8_flat"}
 
 
+def test_bbq_disk_index_type_maps_without_hnsw_parameters_and_rescores():
+    client = _FakeClient()
+    adapter = _created_with_dims(client, 64, index_type="bbq_disk")
+
+    options = client.last("create")["mappings"]["properties"]["vector"]["index_options"]
+    assert options == {"type": "bbq_disk"}
+    index = client.mappings[INDEX]["_meta"][INDEXES_KEY]["default"]
+    assert index["VectorIndex"]["IndexType"] == "bbq_disk"
+
+    adapter.query(query_vector=[1.0] * 64, limit=2)
+    knn = client.last("search")["knn"]
+    assert knn["rescore_vector"] == {"oversample": 3.0}
+    assert "visit_percentage" not in knn
+
+
+def test_bbq_disk_passes_cluster_size_and_visit_percentage():
+    client = _FakeClient()
+    adapter = _created_with_dims(
+        client, 64, index_type="bbq_disk", cluster_size=128, visit_percentage=2.5
+    )
+
+    options = client.last("create")["mappings"]["properties"]["vector"]["index_options"]
+    assert options == {"type": "bbq_disk", "cluster_size": 128}
+    adapter.query(query_vector=[1.0] * 64, limit=2)
+    assert client.last("search")["knn"]["visit_percentage"] == 2.5
+
+
+def test_visit_percentage_follows_stored_index_type_not_config():
+    client = _FakeClient()
+    _created_with_dims(client, 64, index_type="bbq_disk")
+
+    reloaded = _adapter(client, index_type="hnsw", visit_percentage=5.0)
+    reloaded.query(query_vector=[1.0] * 64, limit=1)
+    assert client.last("search")["knn"]["visit_percentage"] == 5.0
+
+
+def test_visit_percentage_is_not_sent_to_hnsw_index():
+    client = _FakeClient()
+    adapter = _created_with_dims(client, 64, index_type="hnsw", visit_percentage=5.0)
+
+    adapter.query(query_vector=[1.0] * 64, limit=1)
+    assert "visit_percentage" not in client.last("search")["knn"]
+
+
+def test_explicit_bbq_disk_below_64_dimensions_is_rejected():
+    client = _FakeClient()
+    with pytest.raises(ValueError, match="64"):
+        _created(client, index_type="bbq_disk")
+    assert INDEX not in client.mappings
+
+
+def test_int4_hnsw_keeps_hnsw_parameters():
+    client = _FakeClient()
+    _created(client, index_type="int4_hnsw")
+    options = client.last("create")["mappings"]["properties"]["vector"]["index_options"]
+    assert options == {"type": "int4_hnsw", "m": 16, "ef_construction": 100}
+
+
+@pytest.mark.parametrize("index_type", ["int4_hnsw", "int4_flat"])
+def test_int4_with_odd_dimensions_is_rejected(index_type):
+    client = _FakeClient()
+    suggestion = index_type.replace("int4_", "int8_")
+    with pytest.raises(ValueError, match=f"even.*'{suggestion}'"):
+        _created_with_dims(client, 5, index_type=index_type)
+    assert INDEX not in client.mappings
+
+
 def test_existing_index_is_reloaded_from_mapping_meta():
     client = _FakeClient()
     _created(client)

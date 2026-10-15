@@ -84,6 +84,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
             bulk_batch_size=self._config.bulk_batch_size,
             num_candidates=self._config.num_candidates,
             rescore_oversample=self._config.rescore_oversample,
+            visit_percentage=self._config.visit_percentage,
         )
 
     @classmethod
@@ -114,6 +115,8 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         if self._config.index_type.endswith("hnsw"):
             options["m"] = self._config.m
             options["ef_construction"] = self._config.ef_construction
+        if self._config.cluster_size is not None:
+            options["cluster_size"] = self._config.cluster_size
         return options
 
     def _bind_collection(self, meta: Dict[str, Any], stored: Dict[str, Any]) -> None:
@@ -149,8 +152,14 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         self._bind_collection(dict(stored[META_KEY]), stored)
 
     def _resolve_index_type(self, meta: Dict[str, Any]) -> None:
-        """Fall back from the default bbq type when the vectors are too small for it."""
+        """Check the index type fits the vectors; the default bbq falls back to hnsw."""
         dims = vector_dimension(meta.get("Fields", []))
+        if self._config.index_type.startswith("int4_") and dims % 2:
+            raise ValueError(
+                f"Elasticsearch index_type {self._config.index_type!r} needs an even number "
+                f"of vector dimensions, got {dims}; choose "
+                f"{self._config.index_type.replace('int4_', 'int8_')!r}"
+            )
         if not self._config.index_type.startswith("bbq_") or not 0 < dims < _BBQ_MIN_DIMS:
             return
         if "index_type" in self._config.model_fields_set:

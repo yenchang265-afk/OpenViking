@@ -72,6 +72,7 @@ class ElasticsearchSettings:
     bulk_batch_size: int = 500
     num_candidates: int = 100
     rescore_oversample: Optional[float] = None
+    visit_percentage: Optional[float] = None
 
 
 def _check_result_window(limit: int, offset: int, operation: str) -> None:
@@ -394,12 +395,17 @@ class ElasticsearchCollection(ICollection):
             # BBQ keeps one bit per dimension; re-score the top candidates with
             # the original float vectors so similarities stay comparable.
             knn["rescore_vector"] = {"oversample": self._settings.rescore_oversample}
+        if self._settings.visit_percentage is not None and self._index_type() == "bbq_disk":
+            # DiskBBQ explores a share of its clusters instead of num_candidates.
+            knn["visit_percentage"] = self._settings.visit_percentage
         return knn
 
-    def _is_bbq_index(self) -> bool:
+    def _index_type(self) -> str:
         index_meta = self._indexes.get(self._default_index_name()) or {}
-        index_type = str((index_meta.get("VectorIndex") or {}).get("IndexType") or "")
-        return index_type.startswith("bbq_")
+        return str((index_meta.get("VectorIndex") or {}).get("IndexType") or "")
+
+    def _is_bbq_index(self) -> bool:
+        return self._index_type().startswith("bbq_")
 
     def _search(self, **body: Any) -> List[Dict[str, Any]]:
         response = self._client.search(index=self._index, **body)

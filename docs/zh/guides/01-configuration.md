@@ -1597,13 +1597,16 @@ Redis 名稱空間。
 | `number_of_shards` | int | 每個索引的主分片數 | 1 |
 | `number_of_replicas` | int | 每個索引的副本數；未設定時使用叢集預設值（單節點叢集請設為 `0`） | null |
 | `refresh` | str | 寫入重新整理策略：`wait_for`（寫入後下一次搜尋可見）、`true` 或 `false` | "wait_for" |
-| `index_type` | str | `dense_vector` 索引型別：`bbq_hnsw`、`bbq_flat`、`hnsw`、`int8_hnsw`、`flat` 或 `int8_flat`。`bbq` 型別需要 Elasticsearch 8.18+ 且至少 64 維；`flat` 型別需要 8.13+ | "bbq_hnsw" |
+| `index_type` | str | `dense_vector` 索引型別：`bbq_hnsw`、`bbq_flat`、`bbq_disk`、`hnsw`、`int8_hnsw`、`int4_hnsw`、`flat`、`int8_flat` 或 `int4_flat`。`bbq` 型別需要 Elasticsearch 8.18+ 且至少 64 維；`bbq_disk`（DiskBBQ）需要 9.2+ 與 Enterprise 授權；`int4` 型別需要 8.15+ 且維度為偶數；`flat` 型別需要 8.13+ | "bbq_hnsw" |
 | `m` / `ef_construction` | int | HNSW 建構引數 | 16 / 100 |
-| `num_candidates` | int | 每個分片的最少 kNN 候選數（會提高到請求的 k） | 100 |
+| `num_candidates` | int | 每個分片的最少 kNN 候選數（會提高到請求的 k）；`bbq_disk` 設定 `visit_percentage` 時忽略此值 | 100 |
+| `cluster_size` | int | 僅 `bbq_disk`：每個叢集的向量數，64–65536；越小越精確但越慢。未設定時使用 Elasticsearch 預設值（384） | null |
+| `visit_percentage` | float | 僅 `bbq_disk`：kNN 搜尋在每個分片上造訪的向量百分比，0–100；越高越精確。於查詢時套用，修改不需重建索引。未設定時使用 Elasticsearch 預設值（每百萬向量約 1%） | null |
 | `bulk_batch_size` | int | 每個 bulk 請求的文件數 | 500 |
 | `rescore_oversample` | float | 對 `bbq` 索引型別，kNN 會用原始向量對每個分片的 `k × rescore_oversample` 個候選重新評分；設為 `null` 停用 | 3.0 |
 
 - 預設的 `bbq_hnsw` 以 1-bit 二值量化儲存向量（記憶體約為 `hnsw` 的 1/32），並用原始向量對前幾名候選重新評分，因此回傳的相似度與其他索引型別一致。需要 Elasticsearch 8.18 或更新版本；較舊的叢集請將 `index_type` 設為 `hnsw`。Embedding 少於 64 維時預設會回退為 `hnsw`，明確指定 `bbq` 型別則會報錯。索引型別在建立集合時固定，既有集合保持原型別。
+- 選擇索引型別：`hnsw` 在記憶體中保留完整浮點向量；`int8_hnsw` / `int4_hnsw` 分別量化為 1/4 / 1/8；`bbq_hnsw` 為 1/32。`bbq_disk`（DiskBBQ）將向量分群並從磁碟讀取，不需在記憶體中保留 HNSW 圖，適合記憶體受限節點上的大型集合，但延遲略高。`flat` 系列為暴力精確搜尋，適合小型集合。所有 `bbq` 型別都會依 `rescore_oversample` 重新評分。
 - `distance_metric` 對應 `dense_vector` 的 similarity：`cosine` → `cosine`、`l2` → `l2_norm`、`ip` → `max_inner_product`。該值在建立索引時固定，修改需要新建 collection。
 - 稀疏/混合檢索：建立集合時若 `sparse_weight > 0`，`sparse_vector` 欄位會對映為 `rank_features`。評分方式與本地引擎一致：`(1 - sparse_weight) × dense 相似度 + sparse_weight × 稀疏內積`，候選集為 kNN 與稀疏召回結果的聯集（各召回請求視窗的 3 倍）。不帶 dense 向量的查詢為純稀疏檢索。稀疏對映在建立索引時固定；若要在既有集合上啟用，需要重建索引到新集合。純 dense 集合會忽略稀疏查詢向量。
 - `rank_features` 只能儲存正權重，因此權重為零或負數的稀疏詞項在寫入和查詢時會被丟棄。
