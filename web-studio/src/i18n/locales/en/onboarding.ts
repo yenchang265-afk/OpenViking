@@ -1,13 +1,13 @@
 export default {
   connectionTitle: 'Connect your workspace.',
   preferencesHint: 'Choose your language and appearance.',
-  connectionHint: 'Connect and verify an OpenViking service.',
+  connectionHint: 'Connect and verify a Business Data Platform service.',
 
   verifiedManagement:
     'Management access verified. Open Users to create a User API Key.',
-  brand: 'OpenViking Studio',
+  brand: 'Business Data Platform',
   invalidService:
-    'This address did not return valid OpenViking service information.',
+    'This address did not return valid Business Data Platform service information.',
   keyRequired: 'This service requires an API Key. Enter it and retry.',
 
   steps: 'Choose a workspace',
@@ -22,7 +22,7 @@ export default {
   hostedEndpoint: 'Service address',
   preferences: 'Preferences',
   connection: 'Connect a service',
-  welcome: 'Welcome to\nOpenViking Studio',
+  welcome: 'Welcome to\nBusiness Data Platform',
   welcomeDescription:
     'Choose a saved connection or add a new one, then set your language and appearance.',
   connectionDescription:

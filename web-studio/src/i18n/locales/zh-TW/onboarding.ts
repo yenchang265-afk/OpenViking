@@ -1,12 +1,12 @@
 export default {
   connectionTitle: '連線你的工作區。',
   preferencesHint: '選擇你熟悉的語言與外觀。',
-  connectionHint: '連線並驗證你的 OpenViking 服務。',
+  connectionHint: '連線並驗證你的 Business Data Platform 服務。',
 
   verifiedManagement:
     '管理許可權驗證成功。進入使用者管理後可建立使用者 API 金鑰。',
-  brand: 'OpenViking Studio',
-  invalidService: '這個地址未返回有效的 OpenViking 服務資訊。',
+  brand: 'Business Data Platform',
+  invalidService: '這個地址未返回有效的 Business Data Platform 服務資訊。',
   keyRequired: '此服務需要 API Key，請填寫後重試。',
 
   steps: '選擇工作區',
@@ -21,7 +21,7 @@ export default {
   hostedEndpoint: '服務地址',
   preferences: '基礎偏好',
   connection: '連線服務',
-  welcome: '歡迎使用\nOpenViking Studio',
+  welcome: '歡迎使用\nBusiness Data Platform',
   welcomeDescription: '選擇已有連線或新增新連線，再配置語言與外觀。',
   connectionDescription: '配置服務連線。驗證成功後，將顯示對應的工作區和功能。',
   language: '語言',

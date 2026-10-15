@@ -189,7 +189,7 @@ def _monitor_expiry_publisher(managed: ExpiryPublisherProcess) -> None:
         return
     print(
         f"Error: managed expiry publisher exited unexpectedly (code {returncode}); "
-        "stopping OpenViking server.",
+        "stopping Business Data Platform server.",
         file=sys.stderr,
     )
     os.kill(os.getpid(), signal.SIGTERM)
