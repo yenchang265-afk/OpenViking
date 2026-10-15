@@ -17,6 +17,7 @@ use crate::git::index_store::{
 use crate::git::object_store::ObjectStore;
 use crate::git::ref_store::RefStore;
 use crate::git::util::validate_ref_name;
+use crate::plugins::s3fs::resilience::S3ResilienceSettings;
 
 /// CAS (Compare-and-Swap) mode for S3 ref updates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +50,8 @@ pub struct S3Config {
     pub use_path_style: bool,
     /// CAS mode for ref updates
     pub cas_mode: CasMode,
+    /// Request timeouts and retry policy
+    pub resilience: S3ResilienceSettings,
 }
 
 impl Default for S3Config {
@@ -62,8 +65,48 @@ impl Default for S3Config {
             secret_access_key: None,
             use_path_style: true,
             cas_mode: CasMode::Native,
+            resilience: S3ResilienceSettings::default(),
         }
     }
+}
+
+/// True when `err` is an S3 service response with one of `statuses` or `codes`.
+///
+/// Matching on the error's Debug text instead would misread timeouts and
+/// dispatch failures whose text happens to contain a status number (durations,
+/// ports, request ids), e.g. turning a timed-out read into "not found".
+fn s3_status_or_code<E, R>(
+    err: &aws_sdk_s3::error::SdkError<E, R>,
+    statuses: &[u16],
+    codes: &[&str],
+) -> bool
+where
+    E: aws_sdk_s3::error::ProvideErrorMetadata,
+    R: 'static,
+{
+    use std::any::Any;
+
+    let aws_sdk_s3::error::SdkError::ServiceError(context) = err else {
+        return false;
+    };
+    if context
+        .err()
+        .code()
+        .is_some_and(|code| codes.contains(&code))
+    {
+        return true;
+    }
+    (context.raw() as &dyn Any)
+        .downcast_ref::<aws_sdk_s3::config::http::HttpResponse>()
+        .is_some_and(|response| statuses.contains(&response.status().as_u16()))
+}
+
+fn is_s3_not_found<E, R>(err: &aws_sdk_s3::error::SdkError<E, R>) -> bool
+where
+    E: aws_sdk_s3::error::ProvideErrorMetadata,
+    R: 'static,
+{
+    s3_status_or_code(err, &[404], &["NoSuchKey", "NotFound"])
 }
 
 /// S3-based object store implementation
@@ -71,6 +114,7 @@ pub struct S3ObjectStore {
     client: Arc<aws_sdk_s3::Client>,
     bucket: String,
     prefix: String,
+    resilience: S3ResilienceSettings,
 }
 
 impl S3ObjectStore {
@@ -80,15 +124,18 @@ impl S3ObjectStore {
             client,
             bucket,
             prefix,
+            resilience: S3ResilienceSettings::default(),
         }
     }
 
     /// Create a new S3ObjectStore from configuration
     pub async fn from_config(config: S3Config) -> Result<Self, ObjectStoreError> {
-        let mut s3_config_builder = aws_sdk_s3::Config::builder()
-            .behavior_version(BehaviorVersion::latest())
-            .region(Region::new(config.region))
-            .force_path_style(config.use_path_style);
+        let mut s3_config_builder = config.resilience.apply(
+            aws_sdk_s3::Config::builder()
+                .behavior_version(BehaviorVersion::latest())
+                .region(Region::new(config.region))
+                .force_path_style(config.use_path_style),
+        );
 
         // Set endpoint if provided (MinIO, LocalStack, TOS)
         if let Some(ep) = config.endpoint {
@@ -104,7 +151,10 @@ impl S3ObjectStore {
         let s3_config = s3_config_builder.build();
         let client = Arc::new(aws_sdk_s3::Client::from_conf(s3_config));
 
-        Ok(Self::new(client, config.bucket, config.prefix))
+        Ok(Self {
+            resilience: config.resilience,
+            ..Self::new(client, config.bucket, config.prefix)
+        })
     }
 
     /// Build the full S3 key for a Git object
@@ -135,22 +185,8 @@ impl ObjectStore for S3ObjectStore {
             .await
         {
             Ok(_) => Ok(()),
-            Err(aws_sdk_s3::error::SdkError::ServiceError(err)) => {
-                // Check if the error indicates object already exists
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("preconditionfailed")
-                    || err_str.to_lowercase().contains("412")
-                    || err_str.to_lowercase().contains("not modified")
-                {
-                    // Object already exists - that's fine for idempotency
-                    Ok(())
-                } else {
-                    Err(ObjectStoreError::Backend(format!(
-                        "S3 put error: {:?}",
-                        err
-                    )))
-                }
-            }
+            // Object already exists - that's fine for idempotency
+            Err(err) if s3_status_or_code(&err, &[304, 412], &["PreconditionFailed"]) => Ok(()),
             Err(err) => Err(ObjectStoreError::Backend(format!("S3 put error: {:?}", err))),
         }
     }
@@ -176,10 +212,7 @@ impl ObjectStore for S3ObjectStore {
             }
             Err(err) => {
                 // Check if the error indicates object not found
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("no_such_key")
-                    || err_str.to_lowercase().contains("404")
-                {
+                if is_s3_not_found(&err) {
                     Err(ObjectStoreError::NotFound(*oid))
                 } else {
                     Err(ObjectStoreError::Backend(format!("S3 get error: {:?}", err)))
@@ -205,10 +238,7 @@ impl ObjectStore for S3ObjectStore {
         {
             Ok(resp) => resp,
             Err(err) => {
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("no_such_key")
-                    || err_str.to_lowercase().contains("404")
-                {
+                if is_s3_not_found(&err) {
                     return Err(ObjectStoreError::NotFound(*oid));
                 }
                 return Err(ObjectStoreError::Backend(format!("S3 get error: {:?}", err)));
@@ -255,16 +285,15 @@ impl ObjectStore for S3ObjectStore {
             .head_object()
             .bucket(&self.bucket)
             .key(&key)
+            .customize()
+            .config_override(self.resilience.metadata_override())
             .send()
             .await
         {
             Ok(_) => Ok(true),
             Err(err) => {
                 // Check if the error indicates object not found
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("not_found")
-                    || err_str.to_lowercase().contains("404")
-                {
+                if is_s3_not_found(&err) {
                     Ok(false)
                 } else {
                     Err(ObjectStoreError::Backend(format!("S3 head error: {:?}", err)))
@@ -276,6 +305,7 @@ impl ObjectStore for S3ObjectStore {
 
 /// S3-based ref store implementation
 pub struct S3RefStore {
+    resilience: S3ResilienceSettings,
     client: Arc<aws_sdk_s3::Client>,
     bucket: String,
     prefix: String,
@@ -286,6 +316,7 @@ impl S3RefStore {
     /// Create a new S3RefStore from an existing S3 client
     pub fn new(client: Arc<aws_sdk_s3::Client>, bucket: String, prefix: String) -> Self {
         Self {
+            resilience: S3ResilienceSettings::default(),
             client,
             bucket,
             prefix,
@@ -301,6 +332,7 @@ impl S3RefStore {
         cas_mode: CasMode,
     ) -> Self {
         Self {
+            resilience: S3ResilienceSettings::default(),
             client,
             bucket,
             prefix,
@@ -310,10 +342,12 @@ impl S3RefStore {
 
     /// Create a new S3RefStore from configuration
     pub async fn from_config(config: S3Config) -> Result<Self, RefStoreError> {
-        let mut s3_config_builder = aws_sdk_s3::Config::builder()
-            .behavior_version(BehaviorVersion::latest())
-            .region(Region::new(config.region))
-            .force_path_style(config.use_path_style);
+        let mut s3_config_builder = config.resilience.apply(
+            aws_sdk_s3::Config::builder()
+                .behavior_version(BehaviorVersion::latest())
+                .region(Region::new(config.region))
+                .force_path_style(config.use_path_style),
+        );
 
         // Set endpoint if provided (MinIO, LocalStack, TOS)
         if let Some(ep) = config.endpoint {
@@ -329,12 +363,10 @@ impl S3RefStore {
         let s3_config = s3_config_builder.build();
         let client = Arc::new(aws_sdk_s3::Client::from_conf(s3_config));
 
-        Ok(Self::with_cas_mode(
-            client,
-            config.bucket,
-            config.prefix,
-            config.cas_mode,
-        ))
+        Ok(Self {
+            resilience: config.resilience,
+            ..Self::with_cas_mode(client, config.bucket, config.prefix, config.cas_mode)
+        })
     }
 
     /// Build the full S3 key for a Git ref
@@ -372,10 +404,7 @@ impl S3RefStore {
             }
             Err(err) => {
                 // Check if the error indicates ref not found
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("no_such_key")
-                    || err_str.to_lowercase().contains("404")
-                {
+                if is_s3_not_found(&err) {
                     Ok(None)
                 } else {
                     Err(RefStoreError::Backend(format!("S3 get error: {:?}", err)))
@@ -437,17 +466,10 @@ impl S3RefStore {
 
         match put_builder.send().await {
             Ok(_) => Ok(()),
-            Err(aws_sdk_s3::error::SdkError::ServiceError(err)) => {
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("preconditionfailed")
-                    || err_str.to_lowercase().contains("412")
-                {
-                    // Conditional check failed - re-read and report conflict
-                    let actual = self.read_ref_opt(account, ref_name).await?.map(|(oid, _)| oid);
-                    Err(RefStoreError::Conflict { expected, actual })
-                } else {
-                    Err(RefStoreError::Backend(format!("S3 put error: {:?}", err)))
-                }
+            Err(err) if s3_status_or_code(&err, &[412], &["PreconditionFailed"]) => {
+                // Conditional check failed - re-read and report conflict
+                let actual = self.read_ref_opt(account, ref_name).await?.map(|(oid, _)| oid);
+                Err(RefStoreError::Conflict { expected, actual })
             }
             Err(err) => Err(RefStoreError::Backend(format!("S3 put error: {:?}", err))),
         }
@@ -516,6 +538,8 @@ impl RefStore for S3RefStore {
             }
 
             let resp = req
+                .customize()
+                .config_override(self.resilience.metadata_override())
                 .send()
                 .await
                 .map_err(|e| RefStoreError::Backend(format!("S3 list error: {:?}", e)))?;
@@ -581,10 +605,12 @@ impl S3IndexStore {
     /// Create a new `S3IndexStore` from configuration. Reuses the same
     /// credential / endpoint setup as [`S3ObjectStore::from_config`].
     pub async fn from_config(config: S3Config) -> Result<Self, IndexStoreError> {
-        let mut s3_config_builder = aws_sdk_s3::Config::builder()
-            .behavior_version(BehaviorVersion::latest())
-            .region(Region::new(config.region))
-            .force_path_style(config.use_path_style);
+        let mut s3_config_builder = config.resilience.apply(
+            aws_sdk_s3::Config::builder()
+                .behavior_version(BehaviorVersion::latest())
+                .region(Region::new(config.region))
+                .force_path_style(config.use_path_style),
+        );
 
         if let Some(ep) = config.endpoint {
             s3_config_builder = s3_config_builder.endpoint_url(ep);
@@ -653,10 +679,7 @@ impl IndexStore for S3IndexStore {
                 }
             }
             Err(err) => {
-                let err_str = format!("{:?}", err);
-                if err_str.to_lowercase().contains("no_such_key")
-                    || err_str.to_lowercase().contains("404")
-                {
+                if is_s3_not_found(&err) {
                     Ok(None)
                 } else {
                     Err(IndexStoreError::Backend(format!("S3 get error: {:?}", err)))
@@ -745,6 +768,61 @@ mod tests {
 
     /// A valid 40-char SHA-1 hex object id used across tests.
     const VALID_OID_HEX: &str = "0123456789abcdef0123456789abcdef01234567";
+
+    fn service_error(
+        status: u16,
+        code: Option<&str>,
+    ) -> aws_sdk_s3::error::SdkError<
+        aws_sdk_s3::operation::get_object::GetObjectError,
+        aws_sdk_s3::config::http::HttpResponse,
+    > {
+        let mut meta =
+            aws_sdk_s3::error::ErrorMetadata::builder().custom("aws_request_id", "req-404-412");
+        if let Some(code) = code {
+            meta = meta.code(code);
+        }
+        aws_sdk_s3::error::SdkError::service_error(
+            aws_sdk_s3::operation::get_object::GetObjectError::generic(meta.build()),
+            aws_sdk_s3::config::http::HttpResponse::new(
+                status.try_into().unwrap(),
+                aws_sdk_s3::primitives::SdkBody::empty(),
+            ),
+        )
+    }
+
+    #[test]
+    fn test_is_s3_not_found_matches_404_status_or_code() {
+        assert!(is_s3_not_found(&service_error(404, None)));
+        assert!(is_s3_not_found(&service_error(404, Some("NoSuchKey"))));
+        assert!(is_s3_not_found(&service_error(400, Some("NotFound"))));
+    }
+
+    #[test]
+    fn test_is_s3_not_found_ignores_status_digits_in_other_errors() {
+        // Request id contains "404" but the response is a 500.
+        assert!(!is_s3_not_found(&service_error(500, Some("InternalError"))));
+        let timeout: aws_sdk_s3::error::SdkError<
+            aws_sdk_s3::operation::get_object::GetObjectError,
+            aws_sdk_s3::config::http::HttpResponse,
+        > = aws_sdk_s3::error::SdkError::timeout_error("attempt exceeded 404ms");
+        assert!(!is_s3_not_found(&timeout));
+    }
+
+    #[test]
+    fn test_precondition_failure_requires_412_or_code() {
+        let codes = &["PreconditionFailed"];
+        assert!(s3_status_or_code(&service_error(412, None), &[412], codes));
+        assert!(s3_status_or_code(
+            &service_error(400, Some("PreconditionFailed")),
+            &[412],
+            codes
+        ));
+        assert!(!s3_status_or_code(
+            &service_error(503, Some("SlowDown")),
+            &[412],
+            codes
+        ));
+    }
 
     #[test]
     fn test_cas_mode_variants() {

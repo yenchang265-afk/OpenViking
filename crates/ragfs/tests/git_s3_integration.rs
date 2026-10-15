@@ -147,6 +147,7 @@ fn load_s3_config() -> Option<S3Config> {
         secret_access_key,
         use_path_style,
         cas_mode,
+        resilience: Default::default(),
     })
 }
 

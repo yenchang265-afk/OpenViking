@@ -1453,6 +1453,20 @@ Legacy compatibility example:
 | `multipart_part_size_bytes` | int | Multipart part size, 5 MiB–5 GiB; one part is held in memory at a time. Pair it with a bucket lifecycle rule that aborts incomplete multipart uploads | unset (8 MiB) |
 | `directory_marker_mode` | str | How to persist directory markers: `none`, `empty`, or `nonempty` | `"empty"` |
 | `normalize_encoding_chars` | str | Characters to escape in S3 object keys as `!HH` hexadecimal bytes; empty string disables normalization | `"?#%+@"` |
+| `connect_timeout_ms` | int | Max time to connect to S3 | unset (5000) |
+| `read_timeout_ms` | int | Max wait for the first response byte after sending a request | unset (60000) |
+| `operation_attempt_timeout_ms` | int | Per-attempt deadline for data operations (GET/PUT/copy/multipart part) | unset (120000) |
+| `operation_timeout_ms` | int | Total deadline for data operations, including retries | unset (300000) |
+| `metadata_attempt_timeout_ms` | int | Per-attempt deadline for HEAD/LIST/DELETE | unset (15000) |
+| `metadata_operation_timeout_ms` | int | Total deadline for HEAD/LIST/DELETE, including retries | unset (45000) |
+| `max_attempts` | int | Max attempts per S3 request (1–10), including the first | unset (3) |
+| `retry_mode` | str | `standard`, or `adaptive` to add client-side rate limiting when S3 throttles | unset (`"standard"`) |
+| `initial_backoff_ms` / `max_backoff_ms` | int | Retry backoff bounds | unset (1000 / 20000) |
+| `cache_enabled` | bool | Cache directory listings and stat results in front of S3 | unset (true) |
+| `cache_max_size` | int | Max cached directory listings | unset (1000) |
+| `cache_ttl` / `stat_cache_ttl` | int | Listing / stat cache TTL in seconds | unset (30 / 60) |
+
+Every S3 request has a deadline, so a slow or stalled endpoint fails fast instead of hanging a request thread. Timeouts surface as `AGFSTimeoutError`, while throttling (`SlowDown`, 429) and 5xx responses that remain after retries surface as `AGFSNetworkError`. The HTTP API returns both as `503 UNAVAILABLE`, so clients can retry. The defaults suit both LAN backends (SeaweedFS, MinIO) and WAN ones (AWS, TOS). On a LAN you can tighten them (e.g. `metadata_attempt_timeout_ms: 3000`). Lowering only an `*_operation_timeout_ms` also lowers its unset attempt timeout.
 
 `directory_marker_mode` controls how RAGFS materializes directory objects in S3:
 

@@ -133,6 +133,7 @@ fn build_s3_service(
         secret_access_key,
         use_path_style: sc.use_path_style,
         cas_mode,
+        resilience: Default::default(),
     };
 
     let rt = tokio::runtime::Handle::try_current()
