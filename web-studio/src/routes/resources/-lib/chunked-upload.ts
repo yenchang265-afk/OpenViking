@@ -1,4 +1,5 @@
 import { getOvResult, isOvClientError, ovClient } from '#/lib/ov-client'
+import type { OvClientAdapter } from '#/lib/ov-client'
 
 /** One file of an upload: its path inside the upload and the browser File. */
 export interface UploadSource {
@@ -18,6 +19,8 @@ export interface ChunkedUploadOptions {
   retryDelayMs?: number
   onProgress?: (sentBytes: number, totalBytes: number) => void
   signal?: AbortSignal
+  /** Client bound to the connection the upload started on (default: current). */
+  client?: OvClientAdapter['client']
 }
 
 /** The server has no chunked uploads, or (older servers) refuses them in shared mode. */
@@ -82,6 +85,10 @@ function planParts(sources: UploadSource[], partSize: number): PartPlan[] {
   )
 }
 
+function clientFor(options: Pick<ChunkedUploadOptions, 'client'>) {
+  return options.client ?? ovClient.client
+}
+
 const partKey = (index: number, number: number) => `${index}:${number}`
 
 function sleep(ms: number): Promise<void> {
@@ -100,8 +107,9 @@ async function sendPart(
     options.signal?.throwIfAborted()
     try {
       await getOvResult(
-        ovClient.client.put({
+        clientFor(options).put({
           url: `/api/v1/uploads/${uploadId}/files/${part.index}/parts/${part.number}`,
+          signal: options.signal,
           body: source.file.slice(part.start, part.end),
           bodySerializer: null,
           headers: { 'Content-Type': 'application/octet-stream' },
@@ -155,12 +163,15 @@ async function finish(
   try {
     await sendMissingParts(uploadId, partSize, received, options)
     const done = await getOvResult<{ temp_file_id: string }>(
-      ovClient.client.post({ url: `/api/v1/uploads/${uploadId}/complete` }),
+      clientFor(options).post({
+        url: `/api/v1/uploads/${uploadId}/complete`,
+        signal: options.signal,
+      }),
     )
     return done.temp_file_id
   } catch (error) {
     if (options.signal?.aborted) {
-      await abortUploadSession(uploadId)
+      await abortUploadSession(uploadId, options.client)
       throw error
     }
     throw new UploadSessionError(uploadId, error)
@@ -180,8 +191,9 @@ export async function uploadSession(
   let created: CreatedSession
   try {
     created = await getOvResult<CreatedSession>(
-      ovClient.client.post({
+      clientFor(options).post({
         url: '/api/v1/uploads',
+        signal: options.signal,
         headers: JSON_HEADERS,
         body: {
           kind: options.kind,
@@ -212,7 +224,10 @@ export async function resumeUploadSession(
   options: ChunkedUploadOptions,
 ): Promise<string> {
   const status = await getOvResult<SessionStatus>(
-    ovClient.client.get({ url: `/api/v1/uploads/${uploadId}` }),
+    clientFor(options).get({
+      url: `/api/v1/uploads/${uploadId}`,
+      signal: options.signal,
+    }),
   )
   const received = new Set(
     status.files.flatMap((f) =>
@@ -223,10 +238,13 @@ export async function resumeUploadSession(
 }
 
 /** Discard a session on the server (best effort). */
-export async function abortUploadSession(uploadId: string): Promise<void> {
+export async function abortUploadSession(
+  uploadId: string,
+  client?: OvClientAdapter['client'],
+): Promise<void> {
   try {
     await getOvResult(
-      ovClient.client.delete({ url: `/api/v1/uploads/${uploadId}` }),
+      clientFor({ client }).delete({ url: `/api/v1/uploads/${uploadId}` }),
     )
   } catch {
     // The server sweeps abandoned sessions after temp_upload.ttl_seconds.

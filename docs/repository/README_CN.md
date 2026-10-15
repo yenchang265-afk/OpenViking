@@ -310,6 +310,8 @@ Codex 首次啟動會停在 `Hooks need review`，選 `Trust all and continue`�
 
 詳細接入方式請參考 [Integrations](https://openviking.ai/integrations)。
 
+框架應用請參考 [LangChain/LangGraph 和 Microsoft Agent Framework 整合包](../../integrations/frameworks/README.md)，其中也介紹瞭如何新增其他框架介面卡。
+
 ## 桌面客戶端（Beta）
 
 桌面客戶端是面向 macOS 和 Windows x64 的控制台（Beta），用於配置支援的本地 Agent 接入、檢視會話中的召回與捕獲事件，並將本地記憶和技能同步到 OpenViking。
@@ -416,4 +418,5 @@ OpenViking 各元件採用不同的許可證：
 - **主專案**：AGPLv3——詳見 [LICENSE](../../LICENSE)
 - **crates/ov\_cli**：Apache 2.0——詳見 [LICENSE](../../crates/LICENSE)
 - **examples**：Apache 2.0——詳見 [LICENSE](../../examples/LICENSE)。`examples/hermes-plugin` 中的 Hermes 外掛保留其 [MIT 許可證](../../examples/hermes-plugin/LICENSE)。
+- **integrations/frameworks**：介面卡的包後設資料和原始碼宣告 AGPLv3，詳見各包的 `LICENSE`；可執行示例保留 Apache 2.0，詳見各包的 `examples/LICENSE`。
 - **third\_party**：各三方專案保留其原有協議

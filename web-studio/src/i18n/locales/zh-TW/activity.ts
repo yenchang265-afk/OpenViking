@@ -23,6 +23,7 @@ const activity = {
       shortcut: '⌘ N 新建會話',
     },
     chat: {
+      emptyReadDescription: '當前會話暫無訊息。',
       historyLoadFailed: '會話記錄載入失敗：{{error}}',
       sendFailed: '訊息傳送失敗：{{error}}',
       copy: '複製',

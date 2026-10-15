@@ -399,6 +399,8 @@ const resources = {
       },
     },
     filePreview: {
+      editFailed: 'Unable to load the complete file for editing.',
+      saveFailed: 'Unable to save the file.',
       directoryLevels: {
         abstractLabel: 'Abstract',
         overviewLabel: 'Overview',
@@ -489,6 +491,12 @@ const resources = {
     },
   },
   retrieval: {
+    modeDescriptions: {
+      find: 'Find relevant context by meaning for a standalone query.',
+      search: 'Search by meaning, optionally using session context.',
+      grep: 'Match file contents using text or a regular expression.',
+      glob: 'Find files using a path pattern, such as **/*.md.',
+    },
     title: 'Retrieval',
     searchPlaceholder: 'Search context',
     placeholders: {

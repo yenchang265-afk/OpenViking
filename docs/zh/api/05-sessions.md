@@ -48,15 +48,15 @@ Session API 按認證使用者作用域訪問會話，並返回 canonical user s
 
 `auto_commit_policy` 欄位（均為可選；存在 policy 時，未傳欄位回退到預設值）：
 
-| 欄位 | 型別 | 預設值 | 上限 | 說明 |
-|------|------|--------|------|------|
-| `pending_token_threshold` | int | 150000 | 1000000 | 當未提交的 pending token 超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
-| `message_count_threshold` | int | 100 | 1000 | 當未提交的 live message 數量超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
-| `idle_timeout_seconds` | int | 86400 | 604800 | 有未提交內容的 session 在空閒這麼多秒後，進入服務端 idle scheduler 的處理範圍。idle 觸發的 commit 會歸檔全部積壓訊息，並忽略 `keep_recent_count`。 |
-| `keep_recent_count` | int | 0 | 500 | 閾值觸發的自動 commit 後保留（不歸檔）的最近 live message 數量。idle 超時觸發的 commit 會忽略該值並歸檔所有訊息。 |
-| `min_commit_interval_seconds` | int | 0 | 604800 | 兩次自動 commit 之間的最小間隔秒數（節流）。 |
+| 欄位 | 型別 | 預設值 | 最小值 | 上限 | 說明 |
+|------|------|--------|--------|------|------|
+| `pending_token_threshold` | int | 150000 | 0 | 1000000 | 當未提交的 pending token 超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
+| `message_count_threshold` | int | 100 | 0 | 1000 | 當未提交的 live message 數量超過該值（嚴格大於）時，會在訊息寫入後觸發一次自動 commit。 |
+| `idle_timeout_seconds` | int | 86400 | 0（關閉）或 300 | 604800 | 有未提交內容的 session 在空閒這麼多秒後，進入服務端 idle scheduler 的處理範圍。idle 觸發的 commit 會歸檔全部積壓訊息，並忽略 `keep_recent_count`。 |
+| `keep_recent_count` | int | 0 | 0 | 500 | 閾值觸發的自動 commit 後保留（不歸檔）的最近 live message 數量。idle 超時觸發的 commit 會忽略該值並歸檔所有訊息。 |
+| `min_commit_interval_seconds` | int | 0 | 0 | 604800 | 兩次自動 commit 之間的最小間隔秒數（節流）。 |
 
-所有欄位最小值為 `0`，會被 clamp 到 `[0, 上限]`。未知欄位會以 `InvalidArgumentError` 拒絕。idle 超時還要求服務端開啟 `memory.session_auto_commit.enabled`；僅設定 `idle_timeout_seconds` 不會啟動掃描器。
+新傳入的 `idle_timeout_seconds` 必須為 `0`（關閉）或不小於 `300`，超過 `604800` 時會被 clamp 到該上限；為相容存量資料，已經儲存的小於 300 的正值仍按原值讀取。其他欄位最小值為 `0`，並會被 clamp 到各自範圍。未知欄位會以 `InvalidArgumentError` 拒絕。idle 超時還要求服務端開啟 `memory.session_auto_commit.enabled`；僅設定 `idle_timeout_seconds` 不會啟動掃描器。
 
 #### 3. 使用示例
 

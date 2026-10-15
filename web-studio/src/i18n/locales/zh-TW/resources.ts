@@ -384,6 +384,8 @@ const resources = {
       },
     },
     filePreview: {
+      editFailed: '無法讀取完整檔案用於編輯。',
+      saveFailed: '檔案儲存失敗。',
       directoryLevels: {
         abstractLabel: '摘要',
         overviewLabel: '概覽',
@@ -474,6 +476,12 @@ const resources = {
     },
   },
   retrieval: {
+    modeDescriptions: {
+      find: '按語義查詢相關上下文，適合單次問題。',
+      search: '按語義檢索，可結合會話上下文查詢相關內容。',
+      grep: '按文本或正規表示式匹配檔案內容。',
+      glob: '按路徑萬用字元查詢檔案，例如 **/*.md。',
+    },
     title: '檢索',
     searchPlaceholder: '輸入檢索內容',
     placeholders: {
