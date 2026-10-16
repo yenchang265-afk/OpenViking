@@ -805,3 +805,128 @@ async fn multipart_part_failure_aborts_the_upload() {
         .count();
     assert_eq!(posts, 1, "completed despite failure");
 }
+
+fn metric_value(
+    metrics: &[ragfs::metrics::RagfsMetric],
+    name: &str,
+    labels: &[(&str, &str)],
+) -> Option<u64> {
+    use ragfs::metrics::RagfsMetricValue;
+
+    metrics
+        .iter()
+        .find(|m| {
+            m.name == name
+                && labels
+                    .iter()
+                    .all(|(k, v)| m.labels.get(*k).map(String::as_str) == Some(*v))
+        })
+        .map(|m| match &m.value {
+            RagfsMetricValue::Counter { value, .. } => *value,
+            RagfsMetricValue::Histogram { count, .. } => *count,
+            RagfsMetricValue::Gauge(value) => *value as u64,
+        })
+}
+
+#[tokio::test]
+async fn request_metrics_count_outcomes_attempts_and_latency() {
+    // GET: 503 then 200 (one request, two attempts). HEAD: 404.
+    let s3 = FakeS3::start(|i, line| match (i, line.split(' ').next()) {
+        (0, _) => slow_down(),
+        (1, _) => ok_after(Duration::ZERO),
+        (_, Some("HEAD")) => Reply::NotFound,
+        _ => Reply::Hang,
+    })
+    .await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    client.get_object("k").await.unwrap();
+    assert!(client.head_object("missing").await.unwrap().is_none());
+    let metrics = client.request_metrics();
+
+    let get = [("operation", "GetObject")];
+    assert_eq!(
+        metric_value(
+            &metrics,
+            "ragfs_s3_requests_total",
+            &[("operation", "GetObject"), ("outcome", "success")]
+        ),
+        Some(1)
+    );
+    assert_eq!(
+        metric_value(&metrics, "ragfs_s3_attempts_total", &get),
+        Some(2)
+    );
+    assert_eq!(
+        metric_value(&metrics, "ragfs_s3_request_duration_seconds", &get),
+        Some(1)
+    );
+    assert_eq!(
+        metric_value(
+            &metrics,
+            "ragfs_s3_requests_total",
+            &[("operation", "HeadObject"), ("outcome", "client_error")]
+        ),
+        Some(1)
+    );
+    assert_eq!(
+        metric_value(&metrics, "ragfs_s3_inflight_requests", &[]),
+        Some(0)
+    );
+}
+
+#[tokio::test]
+async fn request_metrics_classify_timeouts() {
+    let s3 = FakeS3::start(|_, _| Reply::Hang).await;
+    let client = s3
+        .client(&[
+            ("read_timeout_ms", 200),
+            ("operation_attempt_timeout_ms", 300),
+            ("max_attempts", 1),
+        ])
+        .await;
+
+    assert!(client.get_object("k").await.is_err());
+
+    assert_eq!(
+        metric_value(
+            &client.request_metrics(),
+            "ragfs_s3_requests_total",
+            &[("operation", "GetObject"), ("outcome", "timeout")]
+        ),
+        Some(1)
+    );
+}
+
+#[tokio::test]
+async fn mounted_s3_request_metrics_reach_the_native_metrics_export() {
+    use ragfs::core::mountable::MountableFS;
+    use ragfs::plugins::S3FSPlugin;
+
+    let s3 = FakeS3::start(|_, _| ok_after(Duration::ZERO)).await;
+    let mfs = MountableFS::new();
+    mfs.register_plugin(S3FSPlugin::new()).await;
+    mfs.mount(PluginConfig {
+        name: "s3fs".to_string(),
+        mount_path: "/s3".to_string(),
+        params: s3.config(&[]),
+        ..PluginConfig::default()
+    })
+    .await
+    .unwrap();
+
+    // Mounting already issues requests (it reads backend metadata); count the delta.
+    let get_successes = |metrics: &[ragfs::metrics::RagfsMetric]| {
+        metric_value(
+            metrics,
+            "ragfs_s3_requests_total",
+            &[("operation", "GetObject"), ("outcome", "success")],
+        )
+        .unwrap_or(0)
+    };
+    let before = get_successes(&mfs.metrics().await.unwrap());
+
+    mfs.read("/s3/dir/file.txt", 0, 0).await.unwrap();
+
+    assert_eq!(get_successes(&mfs.metrics().await.unwrap()), before + 1);
+}

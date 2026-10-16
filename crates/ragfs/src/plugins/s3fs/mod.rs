@@ -16,6 +16,7 @@
 pub mod cache;
 pub mod client;
 mod multipart;
+mod request_metrics;
 pub mod resilience;
 mod single_flight;
 mod tree;
@@ -279,6 +280,11 @@ impl S3FileSystem {
         // Not found
         self.stat_cache.put(normalized.clone(), None).await;
         Err(Error::not_found(&normalized))
+    }
+
+    /// Per-request S3 metrics (API calls, attempts, latency, outcomes) for this mount.
+    pub fn request_metrics(&self) -> Vec<crate::metrics::RagfsMetric> {
+        self.client.request_metrics()
     }
 
     /// Normalize path to consistent format

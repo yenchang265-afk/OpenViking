@@ -156,6 +156,35 @@ impl MountableFS {
         None
     }
 
+    /// The S3 filesystem under a mount's wrappers, if the mount is s3fs.
+    #[cfg(feature = "s3")]
+    fn as_s3fs(fs: &Arc<dyn FileSystem>) -> Option<&crate::plugins::S3FileSystem> {
+        let any = fs.as_ref() as &dyn std::any::Any;
+        if let Some(s3) = any.downcast_ref::<crate::plugins::S3FileSystem>() {
+            return Some(s3);
+        }
+        if let Some(stats) = any.downcast_ref::<StatsWrappedFS>() {
+            return Self::as_s3fs(stats.inner_fs());
+        }
+        if let Some(enc) = any.downcast_ref::<EncryptionWrappedFS>() {
+            return Self::as_s3fs(enc.inner_fs());
+        }
+        #[cfg(feature = "cache")]
+        if let Some(cache) = any.downcast_ref::<CachedFileSystem>() {
+            return Self::as_s3fs_ref(cache.inner_fs());
+        }
+        #[cfg(feature = "cache")]
+        if let Some(arc) = any.downcast_ref::<ArcFileSystem>() {
+            return Self::as_s3fs(&arc.0);
+        }
+        None
+    }
+
+    #[cfg(all(feature = "s3", feature = "cache"))]
+    fn as_s3fs_ref(fs: &dyn FileSystem) -> Option<&crate::plugins::S3FileSystem> {
+        (fs as &dyn std::any::Any).downcast_ref::<crate::plugins::S3FileSystem>()
+    }
+
     fn as_queuefs_ref(fs: &dyn FileSystem) -> Option<&QueueFileSystem> {
         let any = fs as &dyn std::any::Any;
         if let Some(queuefs) = any.downcast_ref::<QueueFileSystem>() {
@@ -624,6 +653,10 @@ impl MountableFS {
             }
             if let Some(multiwrite) = Self::as_multiwrite(&mount.fs) {
                 metrics.extend(multiwrite.metrics().await?);
+            }
+            #[cfg(feature = "s3")]
+            if let Some(s3) = Self::as_s3fs(&mount.fs) {
+                metrics.extend(s3.request_metrics());
             }
         }
         if let Some(manager) = self.pathlock_manager.get() {

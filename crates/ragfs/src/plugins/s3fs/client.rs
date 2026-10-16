@@ -20,11 +20,14 @@ use std::fmt::Write as _;
 use std::future::Future;
 use std::io::SeekFrom;
 use std::path::Path;
+use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::sync::{Semaphore, SemaphorePermit};
 
 use super::multipart::{effective_part_size, part_ranges, MultipartSettings, MAX_PARTS};
+use super::request_metrics::{MetricsInterceptor, S3RequestMetrics};
 use super::resilience::S3ResilienceSettings;
+use crate::metrics::RagfsMetric;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const ENCODED_SEGMENT_PREFIX: char = '!';
@@ -466,6 +469,8 @@ pub struct S3Client {
     resilience: S3ResilienceSettings,
     /// Caps in-flight requests per mount; `None` when unlimited.
     limiter: Option<Semaphore>,
+    /// Per-request metrics, fed by an interceptor on `client`.
+    request_metrics: Arc<S3RequestMetrics>,
 }
 
 impl S3Client {
@@ -559,11 +564,13 @@ impl S3Client {
         let resilience = S3ResilienceSettings::from_config(config)?;
 
         // Build S3 config
+        let request_metrics = Arc::new(S3RequestMetrics::default());
         let mut s3_config_builder = resilience.apply(
             aws_sdk_s3::Config::builder()
                 .behavior_version(BehaviorVersion::latest())
                 .region(Region::new(region))
-                .force_path_style(use_path_style),
+                .force_path_style(use_path_style)
+                .interceptor(MetricsInterceptor(request_metrics.clone())),
         );
 
         // Set endpoint if provided (MinIO, LocalStack, TOS)
@@ -592,7 +599,13 @@ impl S3Client {
             resilience,
             limiter: (resilience.max_concurrent_requests > 0)
                 .then(|| Semaphore::new(resilience.max_concurrent_requests)),
+            request_metrics,
         })
+    }
+
+    /// Per-request metrics (API calls, attempts, latency, outcomes) for this client.
+    pub fn request_metrics(&self) -> Vec<RagfsMetric> {
+        self.request_metrics.snapshot()
     }
 
     /// Take a request slot, held for the whole S3 call including its response body.
@@ -1733,6 +1746,7 @@ mod tests {
             multipart: MultipartSettings::default(),
             resilience: S3ResilienceSettings::default(),
             limiter: None,
+            request_metrics: Arc::default(),
         }
     }
 
