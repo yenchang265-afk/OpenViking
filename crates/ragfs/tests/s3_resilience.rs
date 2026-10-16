@@ -21,12 +21,24 @@ use tokio::net::{TcpListener, TcpStream};
 enum Reply {
     /// Read the request and never answer.
     Hang,
-    /// Answer after `delay` with `status`; 200 carries `OK_BODY`, others a SlowDown error.
+    /// Answer after `delay` with `status`; 200 carries `OK_BODY`, 412 a
+    /// PreconditionFailed error, others a SlowDown error.
     Respond { status: u16, delay: Duration },
     /// 404 NoSuchKey.
     NotFound,
     /// 200 with an XML body (e.g. a ListObjectsV2 result).
     Xml(&'static str),
+    /// 200 for an object whose ETag is the given hex digest.
+    Etag(&'static str),
+    /// An S3 error response with the given status and code.
+    S3Error(u16, &'static str),
+    /// 200 with the given body and ETag.
+    Body(&'static str, &'static str),
+    /// 200 for an object stored by the last conditional write received: echoes
+    /// its `x-amz-meta-ov-write-id`.
+    OurObject,
+    /// 200 for an object stored by another writer.
+    ObjectWrittenBy(&'static str),
 }
 
 const OK_BODY: &[u8] = b"hello";
@@ -43,6 +55,9 @@ struct FakeS3 {
     log: Arc<Mutex<Vec<String>>>,
 }
 
+/// The `x-amz-meta-ov-write-id` of the last request that carried one.
+type LastWriteId = Arc<Mutex<Option<String>>>;
+
 impl FakeS3 {
     async fn start(script: impl Fn(usize, &str) -> Reply + Send + Sync + 'static) -> Self {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
@@ -50,6 +65,7 @@ impl FakeS3 {
         let log = Arc::new(Mutex::new(Vec::new()));
         let server_log = log.clone();
         let script: Arc<Script> = Arc::new(script);
+        let last_write_id = LastWriteId::default();
         tokio::spawn(async move {
             loop {
                 let Ok((stream, _)) = listener.accept().await else {
@@ -57,7 +73,8 @@ impl FakeS3 {
                 };
                 let log = server_log.clone();
                 let script = script.clone();
-                tokio::spawn(async move { serve(stream, log, script).await });
+                let last_write_id = last_write_id.clone();
+                tokio::spawn(async move { serve(stream, log, script, last_write_id).await });
             }
         });
         Self { endpoint, log }
@@ -111,10 +128,18 @@ impl FakeS3 {
     }
 }
 
-async fn serve(mut stream: TcpStream, log: Arc<Mutex<Vec<String>>>, script: Arc<Script>) {
-    let Some(request_line) = read_request_head(&mut stream).await else {
+async fn serve(
+    mut stream: TcpStream,
+    log: Arc<Mutex<Vec<String>>>,
+    script: Arc<Script>,
+    last_write_id: LastWriteId,
+) {
+    let Some((request_line, headers)) = read_request_head(&mut stream).await else {
         return;
     };
+    if let Some(write_id) = header_value(&headers, "x-amz-meta-ov-write-id") {
+        *last_write_id.lock().unwrap() = Some(write_id);
+    }
     let index = {
         let mut log = log.lock().unwrap();
         let mut parts = request_line.split(' ');
@@ -124,6 +149,7 @@ async fn serve(mut stream: TcpStream, log: Arc<Mutex<Vec<String>>>, script: Arc<
         log.len() - 1
     };
     let is_head = request_line.starts_with("HEAD ");
+    let mut extra_headers = String::new();
     let (status, content_type, body): (u16, &str, Vec<u8>) = match script(index, &request_line) {
         Reply::Hang => {
             // Hold the connection open until the client gives up.
@@ -137,14 +163,37 @@ async fn serve(mut stream: TcpStream, log: Arc<Mutex<Vec<String>>>, script: Arc<
         }
         Reply::Respond { status, delay } => {
             tokio::time::sleep(delay).await;
-            (status, "application/xml", s3_error("SlowDown"))
+            let code = if status == 412 {
+                "PreconditionFailed"
+            } else {
+                "SlowDown"
+            };
+            (status, "application/xml", s3_error(code))
         }
         Reply::NotFound => (404, "application/xml", s3_error("NoSuchKey")),
         Reply::Xml(xml) => (200, "application/xml", xml.as_bytes().to_vec()),
+        Reply::S3Error(status, code) => (status, "application/xml", s3_error(code)),
+        Reply::OurObject => {
+            let write_id = last_write_id.lock().unwrap().clone().unwrap_or_default();
+            extra_headers = format!("x-amz-meta-ov-write-id: {write_id}\r\n");
+            (200, "application/octet-stream", OK_BODY.to_vec())
+        }
+        Reply::ObjectWrittenBy(write_id) => {
+            extra_headers = format!("x-amz-meta-ov-write-id: {write_id}\r\n");
+            (200, "application/octet-stream", OK_BODY.to_vec())
+        }
+        Reply::Body(body, etag) => {
+            extra_headers = format!("ETag: \"{etag}\"\r\n");
+            (200, "application/octet-stream", body.as_bytes().to_vec())
+        }
+        Reply::Etag(etag) => {
+            extra_headers = format!("ETag: \"{etag}\"\r\n");
+            (200, "application/octet-stream", OK_BODY.to_vec())
+        }
     };
     let head = format!(
         "HTTP/1.1 {status} X\r\nContent-Length: {}\r\nContent-Type: {content_type}\r\n\
-         x-amz-request-id: fake-req\r\nConnection: close\r\n\r\n",
+         x-amz-request-id: fake-req\r\n{extra_headers}Connection: close\r\n\r\n",
         body.len(),
     );
     let _ = stream.write_all(head.as_bytes()).await;
@@ -162,8 +211,8 @@ fn s3_error(code: &str) -> Vec<u8> {
     .into_bytes()
 }
 
-/// Read until the end of the request headers and return the request line.
-async fn read_request_head(stream: &mut TcpStream) -> Option<String> {
+/// Read until the end of the request headers; return the request line and headers.
+async fn read_request_head(stream: &mut TcpStream) -> Option<(String, String)> {
     let mut buf = Vec::new();
     let mut chunk = [0u8; 1024];
     while !buf.windows(4).any(|w| w == b"\r\n\r\n") {
@@ -174,7 +223,17 @@ async fn read_request_head(stream: &mut TcpStream) -> Option<String> {
         buf.extend_from_slice(&chunk[..n]);
     }
     let text = String::from_utf8_lossy(&buf);
-    text.lines().next().map(str::to_string)
+    let (line, headers) = text.split_once("\r\n")?;
+    Some((line.to_string(), headers.to_string()))
+}
+
+fn header_value(headers: &str, name: &str) -> Option<String> {
+    headers.lines().find_map(|line| {
+        let (key, value) = line.split_once(':')?;
+        key.trim()
+            .eq_ignore_ascii_case(name)
+            .then(|| value.trim().to_string())
+    })
 }
 
 fn ok_after(delay: Duration) -> Reply {
@@ -385,4 +444,251 @@ async fn saturated_request_slots_fail_fast_with_timeout() {
     assert!(matches!(head, Err(Error::Timeout(_))), "{head:?}");
     assert!(waited < Duration::from_secs(1), "{waited:?}");
     assert_eq!(s3.requests(), 1);
+}
+
+const PAYLOAD: &[u8] = b"payload";
+const PART_ETAG: &str = "321c3cf486ed509164edec1e1981fec8";
+
+/// Deadlines short enough that a hung attempt fails in ~0.3s.
+const FAST_ATTEMPTS: &[(&str, i64)] = &[
+    ("read_timeout_ms", 200),
+    ("operation_attempt_timeout_ms", 300),
+    ("operation_timeout_ms", 1_000),
+    ("metadata_attempt_timeout_ms", 300),
+    ("metadata_operation_timeout_ms", 1_000),
+    ("max_attempts", 3),
+];
+
+fn precondition_failed() -> Reply {
+    Reply::Respond {
+        status: 412,
+        delay: Duration::ZERO,
+    }
+}
+
+#[tokio::test]
+async fn create_new_that_landed_before_timing_out_is_not_reported_as_existing() {
+    // Attempt 1 is applied by S3 but its response never arrives; the retry then
+    // fails If-None-Match because our own object is there.
+    let s3 = FakeS3::start(|i, line| match (i, line.split(' ').next()) {
+        (0, _) => Reply::Hang,
+        (1, Some("PUT")) => precondition_failed(),
+        (_, Some("HEAD")) => Reply::OurObject,
+        _ => Reply::NotFound,
+    })
+    .await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let result = client.put_object_create_new("k", PAYLOAD.to_vec()).await;
+
+    assert!(result.is_ok(), "{result:?}");
+    assert_eq!(
+        s3.request_log(),
+        ["PUT /bucket/k", "PUT /bucket/k", "HEAD /bucket/k"]
+    );
+}
+
+#[tokio::test]
+async fn create_new_conflict_on_first_attempt_is_reported_without_probing() {
+    let s3 = FakeS3::start(|_, _| precondition_failed()).await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let result = client.put_object_create_new("k", PAYLOAD.to_vec()).await;
+
+    assert!(matches!(result, Err(Error::AlreadyExists(_))), "{result:?}");
+    assert_eq!(s3.requests(), 1);
+}
+
+#[tokio::test]
+async fn create_new_retry_conflict_with_someone_elses_object_is_reported() {
+    let s3 = FakeS3::start(|i, line| match (i, line.split(' ').next()) {
+        (0, _) => Reply::Hang,
+        (1, Some("PUT")) => precondition_failed(),
+        (_, Some("HEAD")) => Reply::ObjectWrittenBy("someone-else"),
+        _ => Reply::NotFound,
+    })
+    .await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let result = client.put_object_create_new("k", PAYLOAD.to_vec()).await;
+
+    assert!(matches!(result, Err(Error::AlreadyExists(_))), "{result:?}");
+}
+
+#[tokio::test]
+async fn compare_and_swap_put_that_landed_before_timing_out_reports_success() {
+    let s3 = FakeS3::start(|i, line| match (i, line.split(' ').next()) {
+        (0, _) => Reply::Hang,
+        (1, Some("PUT")) => precondition_failed(),
+        (_, Some("HEAD")) => Reply::OurObject,
+        _ => Reply::NotFound,
+    })
+    .await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let swapped = client
+        .put_object_if_match("k", PAYLOAD.to_vec(), "\"old\"")
+        .await;
+
+    assert!(matches!(swapped, Ok(true)), "{swapped:?}");
+}
+
+#[tokio::test]
+async fn compare_and_swap_delete_that_landed_before_timing_out_reports_success() {
+    let s3 = FakeS3::start(|i, _| match i {
+        0 => Reply::Hang,
+        1 => precondition_failed(),
+        _ => Reply::NotFound,
+    })
+    .await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let deleted = client.delete_object_if_match("k", "\"old\"").await;
+
+    assert!(matches!(deleted, Ok(true)), "{deleted:?}");
+    assert_eq!(
+        s3.request_log(),
+        ["DELETE /bucket/k", "DELETE /bucket/k", "HEAD /bucket/k"]
+    );
+}
+
+#[tokio::test]
+async fn conditional_writes_still_retry_throttling() {
+    let s3 = FakeS3::start(|i, _| {
+        if i == 0 {
+            slow_down()
+        } else {
+            ok_after(Duration::ZERO)
+        }
+    })
+    .await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let result = client.put_object_create_new("k", PAYLOAD.to_vec()).await;
+
+    assert!(result.is_ok(), "{result:?}");
+    assert_eq!(s3.requests(), 2);
+}
+
+const INITIATE_MULTIPART: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+    <InitiateMultipartUploadResult><Bucket>bucket</Bucket><Key>k</Key>\
+    <UploadId>upload-1</UploadId></InitiateMultipartUploadResult>";
+
+#[tokio::test]
+async fn multipart_completion_that_landed_before_timing_out_reports_success() {
+    // CompleteMultipartUpload is applied but its response is lost; the SDK
+    // retry then gets NoSuchUpload because the upload no longer exists.
+    let completes = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let seen = completes.clone();
+    let s3 = FakeS3::start(move |_, line| {
+        let target = line.split(' ').nth(1).unwrap_or("");
+        match line.split(' ').next() {
+            Some("POST") if target.contains("uploads") => Reply::Xml(INITIATE_MULTIPART),
+            Some("PUT") => Reply::Etag(PART_ETAG),
+            Some("POST") => match seen.fetch_add(1, std::sync::atomic::Ordering::SeqCst) {
+                0 => Reply::Hang,
+                _ => Reply::S3Error(404, "NoSuchUpload"),
+            },
+            // The completed object carries the write id set at CreateMultipartUpload.
+            Some("HEAD") => Reply::OurObject,
+            _ => Reply::NotFound,
+        }
+    })
+    .await;
+    let mut extra = FAST_ATTEMPTS.to_vec();
+    extra.push(("multipart_threshold_bytes", 1));
+    let client = s3.client(&extra).await;
+    let src = std::env::temp_dir().join(format!("ragfs-mp-{}", std::process::id()));
+    std::fs::write(&src, OK_BODY).unwrap();
+
+    let result = client.put_object_from_path("k", &src, false).await;
+    std::fs::remove_file(&src).ok();
+
+    assert!(matches!(result, Ok(5)), "{result:?}");
+    assert_eq!(completes.load(std::sync::atomic::Ordering::SeqCst), 2);
+}
+
+#[tokio::test]
+async fn git_ref_swap_that_landed_before_timing_out_is_not_a_conflict() {
+    use ragfs::git::ref_store::RefStore;
+    use ragfs::git::{S3Config, S3RefStore};
+    use ragfs::plugins::s3fs::resilience::S3ResilienceSettings;
+
+    const OLD: &str = "1111111111111111111111111111111111111111";
+    const NEW: &str = "2222222222222222222222222222222222222222";
+    // Read OLD, the swap's response is lost after S3 applied it, the SDK retry
+    // fails If-Match, and the re-read shows the ref already at NEW.
+    let s3 = FakeS3::start(|i, _| match i {
+        0 => Reply::Body("1111111111111111111111111111111111111111\n", "etag-old"),
+        1 => Reply::Hang,
+        2 => precondition_failed(),
+        _ => Reply::Body("2222222222222222222222222222222222222222\n", "etag-new"),
+    })
+    .await;
+    let store = S3RefStore::from_config(S3Config {
+        bucket: "bucket".to_string(),
+        endpoint: Some(s3.endpoint.clone()),
+        access_key_id: Some("ak".to_string()),
+        secret_access_key: Some("sk".to_string()),
+        resilience: S3ResilienceSettings {
+            read_timeout: Duration::from_millis(200),
+            operation_attempt_timeout: Duration::from_millis(300),
+            operation_timeout: Duration::from_secs(1),
+            initial_backoff: Duration::from_millis(1),
+            max_backoff: Duration::from_millis(5),
+            ..S3ResilienceSettings::default()
+        },
+        ..S3Config::default()
+    })
+    .await
+    .unwrap();
+    let oid = |hex: &str| gix_hash::ObjectId::from_hex(hex.as_bytes()).unwrap();
+
+    let result = store
+        .cas_update("acct", "refs/heads/main", Some(oid(OLD)), oid(NEW))
+        .await;
+
+    assert!(result.is_ok(), "{result:?}");
+    assert_eq!(s3.requests(), 4);
+}
+
+#[tokio::test]
+async fn multipart_no_such_upload_for_someone_elses_object_is_an_error() {
+    // The upload was aborted (e.g. by a lifecycle rule) and the key holds an
+    // older object of the same size: that is not our write.
+    let s3 = FakeS3::start(|_, line| {
+        let target = line.split(' ').nth(1).unwrap_or("");
+        match line.split(' ').next() {
+            Some("POST") if target.contains("uploads") => Reply::Xml(INITIATE_MULTIPART),
+            Some("PUT") => Reply::Etag(PART_ETAG),
+            Some("POST") => Reply::S3Error(404, "NoSuchUpload"),
+            Some("HEAD") => Reply::ObjectWrittenBy("older-writer"),
+            Some("DELETE") => Reply::Respond {
+                status: 204,
+                delay: Duration::ZERO,
+            },
+            _ => Reply::NotFound,
+        }
+    })
+    .await;
+    let mut extra = FAST_ATTEMPTS.to_vec();
+    extra.push(("multipart_threshold_bytes", 1));
+    let client = s3.client(&extra).await;
+    let src = std::env::temp_dir().join(format!("ragfs-mp-old-{}", std::process::id()));
+    std::fs::write(&src, OK_BODY).unwrap();
+
+    let result = client.put_object_from_path("k", &src, false).await;
+    std::fs::remove_file(&src).ok();
+
+    assert!(result.is_err(), "{result:?}");
+}
+
+#[tokio::test]
+async fn compare_and_swap_delete_on_missing_bucket_is_an_error() {
+    let s3 = FakeS3::start(|_, _| Reply::S3Error(404, "NoSuchBucket")).await;
+    let client = s3.client(FAST_ATTEMPTS).await;
+
+    let result = client.delete_object_if_match("k", "\"old\"").await;
+
+    assert!(result.is_err(), "{result:?}");
 }

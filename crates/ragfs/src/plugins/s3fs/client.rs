@@ -5,6 +5,7 @@
 
 use crate::core::{ConfigValue, Error, Result};
 use aws_sdk_s3::config::http::HttpResponse;
+use aws_sdk_s3::config::retry::RetryConfig;
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::error::ProvideErrorMetadata;
 use aws_sdk_s3::error::SdkError;
@@ -12,8 +13,10 @@ use aws_sdk_s3::operation::{RequestId, RequestIdExt};
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::Client;
+use bytes::Bytes;
 use std::collections::HashMap;
 use std::fmt::Write as _;
+use std::future::Future;
 use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Semaphore, SemaphorePermit};
@@ -222,6 +225,40 @@ where
     (service_err.raw() as &dyn Any)
         .downcast_ref::<HttpResponse>()
         .is_some_and(|response| matches!(response.status().as_u16(), 409 | 412))
+}
+
+/// Why a conditional request attempt did not apply.
+enum ConditionalFailure {
+    /// The precondition (If-Match / If-None-Match) did not hold.
+    Precondition,
+    /// Any other failure, already classified.
+    Failed(Error),
+}
+
+fn conditional_failure<E, R>(op: &str, scope: &str, sdk_err: &SdkError<E, R>) -> ConditionalFailure
+where
+    E: std::fmt::Display + ProvideErrorMetadata + RequestId + RequestIdExt,
+    R: std::fmt::Debug + Send + Sync + 'static,
+{
+    if is_s3_conditional_failure(sdk_err) {
+        ConditionalFailure::Precondition
+    } else {
+        ConditionalFailure::Failed(format_sdk_s3_error(op, scope, sdk_err))
+    }
+}
+
+/// Disable SDK retries for one request; `run_conditional` retries it safely.
+fn single_attempt(config: aws_sdk_s3::config::Builder) -> aws_sdk_s3::config::Builder {
+    config.retry_config(RetryConfig::disabled())
+}
+
+/// User-metadata key tagging each conditional write with a per-call id, so a
+/// retry can tell whether an earlier attempt of *this* call was applied (a body
+/// hash cannot: a concurrent writer may store identical bytes).
+const WRITE_ID_META: &str = "ov-write-id";
+
+fn new_write_id() -> String {
+    uuid::Uuid::new_v4().to_string()
 }
 
 /// A response body that fails mid-stream (reset, stall, truncation) is a transport failure.
@@ -749,70 +786,154 @@ impl S3Client {
 
     /// Upload an object only when the key does not already exist.
     pub async fn put_object_create_new(&self, key: &str, data: Vec<u8>) -> Result<()> {
-        let _slot = self.acquire_slot().await?;
-        let mut request = self
-            .client
-            .put_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .if_none_match("*")
-            .body(ByteStream::from(data));
-
-        if self.auto_detect_content_type {
-            if let Some(content_type) = detect_content_type_for_key(key) {
-                request = request.content_type(content_type);
-            }
+        let body = Bytes::from(data);
+        let write_id = new_write_id();
+        let scope = format!("bucket={} key={key}", self.bucket);
+        let created = self
+            .run_conditional(
+                || async {
+                    let mut request = self
+                        .client
+                        .put_object()
+                        .bucket(&self.bucket)
+                        .key(key)
+                        .if_none_match("*")
+                        .metadata(WRITE_ID_META, &write_id)
+                        .body(ByteStream::from(body.clone()));
+                    if self.auto_detect_content_type {
+                        if let Some(content_type) = detect_content_type_for_key(key) {
+                            request = request.content_type(content_type);
+                        }
+                    }
+                    request
+                        .customize()
+                        .config_override(single_attempt(aws_sdk_s3::config::Builder::default()))
+                        .send()
+                        .await
+                        .map(|_| ())
+                        .map_err(|e| conditional_failure("PutObjectCreateNew", &scope, &e))
+                },
+                || async { self.has_write_id(key, &write_id).await },
+            )
+            .await?;
+        if created {
+            Ok(())
+        } else {
+            Err(Error::already_exists(key))
         }
-
-        request.send().await.map_err(|e| {
-            if is_s3_conditional_failure(&e) {
-                Error::already_exists(key)
-            } else {
-                format_sdk_s3_error(
-                    "PutObjectCreateNew",
-                    &format!("bucket={} key={key}", self.bucket),
-                    &e,
-                )
-            }
-        })?;
-
-        Ok(())
     }
 
-    /// Upload an object only when its ETag still matches `etag`.
+    /// Replace an object only when its ETag still matches `etag`.
+    ///
+    /// Returns `Ok(false)` when the object changed since `etag` was read.
     pub async fn put_object_if_match(&self, key: &str, data: Vec<u8>, etag: &str) -> Result<bool> {
-        let _slot = self.acquire_slot().await?;
-        let mut request = self
-            .client
-            .put_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .if_match(etag)
-            .body(ByteStream::from(data));
+        let body = Bytes::from(data);
+        let write_id = new_write_id();
+        let scope = format!("bucket={} key={key}", self.bucket);
+        self.run_conditional(
+            || async {
+                let mut request = self
+                    .client
+                    .put_object()
+                    .bucket(&self.bucket)
+                    .key(key)
+                    .if_match(etag)
+                    .metadata(WRITE_ID_META, &write_id)
+                    .body(ByteStream::from(body.clone()));
+                if self.auto_detect_content_type {
+                    if let Some(content_type) = detect_content_type_for_key(key) {
+                        request = request.content_type(content_type);
+                    }
+                }
+                request
+                    .customize()
+                    .config_override(single_attempt(aws_sdk_s3::config::Builder::default()))
+                    .send()
+                    .await
+                    .map(|_| ())
+                    .map_err(|e| conditional_failure("PutObjectIfMatch", &scope, &e))
+            },
+            || async { self.has_write_id(key, &write_id).await },
+        )
+        .await
+    }
 
-        if self.auto_detect_content_type {
-            if let Some(content_type) = detect_content_type_for_key(key) {
-                request = request.content_type(content_type);
+    /// Run a conditional request with retries that cannot misreport its own success.
+    ///
+    /// SDK retries are disabled for conditional requests: when an attempt times
+    /// out after S3 applied it, a blind retry fails its precondition and would
+    /// report a conflict for a write that succeeded. Here transient failures are
+    /// retried with backoff, and a precondition failure on a *retry* asks
+    /// `landed` whether an earlier attempt took effect before reporting it.
+    ///
+    /// Returns `Ok(true)` when applied, `Ok(false)` when the precondition failed.
+    /// Takes a request slot per attempt and releases it during backoff.
+    async fn run_conditional<S, SFut, L, LFut>(&self, send: S, landed: L) -> Result<bool>
+    where
+        S: Fn() -> SFut,
+        SFut: Future<Output = std::result::Result<(), ConditionalFailure>>,
+        L: Fn() -> LFut,
+        LFut: Future<Output = Result<bool>>,
+    {
+        let attempts = self.resilience.max_attempts;
+        let mut backoff = self.resilience.initial_backoff;
+        let mut attempt = 1;
+        loop {
+            let outcome = {
+                let _slot = self.acquire_slot().await?;
+                send().await
+            };
+            match outcome {
+                Ok(()) => return Ok(true),
+                Err(ConditionalFailure::Precondition) if attempt == 1 => return Ok(false),
+                Err(ConditionalFailure::Precondition) => {
+                    let _slot = self.acquire_slot().await?;
+                    return landed().await;
+                }
+                Err(ConditionalFailure::Failed(err))
+                    if attempt < attempts
+                        && matches!(err, Error::Timeout(_) | Error::Network(_)) =>
+                {
+                    tokio::time::sleep(backoff).await;
+                    backoff = (backoff * 2).min(self.resilience.max_backoff);
+                    attempt += 1;
+                }
+                Err(ConditionalFailure::Failed(err)) => return Err(err),
             }
         }
+    }
 
-        request.send().await.map_err(|e| {
-            if is_s3_conditional_failure(&e) {
-                Error::AlreadyExists(key.to_string())
-            } else {
-                format_sdk_s3_error(
-                    "PutObjectIfMatch",
-                    &format!("bucket={} key={key}", self.bucket),
-                    &e,
-                )
-            }
-        }).map(|_| true).or_else(|e| {
-            if matches!(e, Error::AlreadyExists(_)) {
-                Ok(false)
-            } else {
-                Err(e)
-            }
-        })
+    /// Whether `key` currently holds the object written with `write_id`.
+    async fn has_write_id(&self, key: &str, write_id: &str) -> Result<bool> {
+        Ok(self.object_write_id(key).await?.flatten().as_deref() == Some(write_id))
+    }
+
+    /// `None` if `key` does not exist, otherwise the write id it was stored with.
+    ///
+    /// Takes no request slot: callers already hold one.
+    async fn object_write_id(&self, key: &str) -> Result<Option<Option<String>>> {
+        match self
+            .client
+            .head_object()
+            .bucket(&self.bucket)
+            .key(key)
+            .customize()
+            .config_override(self.resilience.metadata_override())
+            .send()
+            .await
+        {
+            Ok(resp) => Ok(Some(
+                resp.metadata()
+                    .and_then(|meta| meta.get(WRITE_ID_META))
+                    .cloned(),
+            )),
+            Err(e) if e.as_service_error().is_some_and(|err| err.is_not_found()) => Ok(None),
+            Err(e) => Err(format_sdk_s3_error(
+                "HeadObject",
+                &format!("bucket={} key={key}", self.bucket),
+                &e,
+            )),
+        }
     }
 
     /// Upload a local file, using multipart above the configured threshold.
@@ -846,11 +967,13 @@ impl S3Client {
     /// Run a multipart upload, aborting it on any failure so no parts are orphaned.
     async fn multipart_upload_from_path(&self, key: &str, src: &Path, total: u64) -> Result<()> {
         let scope = format!("bucket={} key={key}", self.bucket);
+        let write_id = new_write_id();
         let mut request = self
             .client
             .create_multipart_upload()
             .bucket(&self.bucket)
-            .key(key);
+            .key(key)
+            .metadata(WRITE_ID_META, &write_id);
         if self.auto_detect_content_type {
             if let Some(content_type) = detect_content_type_for_key(key) {
                 request = request.content_type(content_type);
@@ -871,7 +994,7 @@ impl S3Client {
             .to_string();
 
         let result = self
-            .upload_parts_and_complete(key, &upload_id, src, total)
+            .upload_parts_and_complete(key, &upload_id, &write_id, src, total)
             .await;
         if result.is_err() {
             let aborted = match self.acquire_slot().await {
@@ -913,6 +1036,7 @@ impl S3Client {
         &self,
         key: &str,
         upload_id: &str,
+        write_id: &str,
         src: &Path,
         total: u64,
     ) -> Result<()> {
@@ -946,7 +1070,8 @@ impl S3Client {
             );
         }
 
-        self.client
+        let completed = self
+            .client
             .complete_multipart_upload()
             .bucket(&self.bucket)
             .key(key)
@@ -957,9 +1082,20 @@ impl S3Client {
                     .build(),
             )
             .send()
-            .await
-            .map_err(|e| format_sdk_s3_error("CompleteMultipartUpload", &scope, &e))?;
-        Ok(())
+            .await;
+        match completed {
+            Ok(_) => Ok(()),
+            // The SDK retried a completion whose first attempt was applied but
+            // timed out: the upload is gone because our object now exists. The
+            // write id (set at CreateMultipartUpload) proves it is ours.
+            Err(e)
+                if e.as_service_error().and_then(|err| err.code()) == Some("NoSuchUpload")
+                    && self.has_write_id(key, write_id).await? =>
+            {
+                Ok(())
+            }
+            Err(e) => Err(format_sdk_s3_error("CompleteMultipartUpload", &scope, &e)),
+        }
     }
 
     /// Stream an object into a local file, creating or truncating `dst`.
@@ -1024,36 +1160,40 @@ impl S3Client {
     }
 
     /// Delete a single object only when its ETag still matches `etag`.
+    ///
+    /// Returns `Ok(false)` when the object changed since `etag` was read.
     pub async fn delete_object_if_match(&self, key: &str, etag: &str) -> Result<bool> {
-        let _slot = self.acquire_slot().await?;
-        self.client
-            .delete_object()
-            .bucket(&self.bucket)
-            .key(key)
-            .if_match(etag)
-            .customize()
-            .config_override(self.resilience.metadata_override())
-            .send()
-            .await
-            .map_err(|e| {
-                if is_s3_conditional_failure(&e) {
-                    Error::AlreadyExists(key.to_string())
-                } else {
-                    format_sdk_s3_error(
-                        "DeleteObjectIfMatch",
-                        &format!("bucket={} key={key}", self.bucket),
-                        &e,
-                    )
-                }
-            })
-            .map(|_| true)
-            .or_else(|e| {
-                if matches!(e, Error::AlreadyExists(_)) {
-                    Ok(false)
-                } else {
-                    Err(e)
-                }
-            })
+        let scope = format!("bucket={} key={key}", self.bucket);
+        self.run_conditional(
+            || async {
+                self.client
+                    .delete_object()
+                    .bucket(&self.bucket)
+                    .key(key)
+                    .if_match(etag)
+                    .customize()
+                    .config_override(single_attempt(self.resilience.metadata_override()))
+                    .send()
+                    .await
+                    .map(|_| ())
+                    .map_err(|e| {
+                        // A retried delete finds the object already gone. Match the
+                        // object codes only: NoSuchBucket is also a 404 but a real error.
+                        if matches!(
+                            e.as_service_error().and_then(|err| err.code()),
+                            Some("NoSuchKey" | "NotFound")
+                        ) {
+                            ConditionalFailure::Precondition
+                        } else {
+                            conditional_failure("DeleteObjectIfMatch", &scope, &e)
+                        }
+                    })
+            },
+            // Gone is the goal state; it cannot distinguish our delete from a
+            // concurrent one, which leaves the same result.
+            || async { Ok(self.object_write_id(key).await?.is_none()) },
+        )
+        .await
     }
 
     /// Batch delete objects (up to 1000 per call)
