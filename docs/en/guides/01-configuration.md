@@ -1456,7 +1456,7 @@ Legacy compatibility example:
 | `directory_marker_mode` | str | How to persist directory markers: `none`, `empty`, or `nonempty` | `"empty"` |
 | `normalize_encoding_chars` | str | Characters to escape in S3 object keys as `!HH` hexadecimal bytes; empty string disables normalization | `"?#%+@"` |
 | `connect_timeout_ms` | int | Max time to connect to S3 | unset (5000) |
-| `read_timeout_ms` | int | Max wait for the first response byte after sending a request | unset (60000) |
+| `read_timeout_ms` | int | Max wait for the first response byte after sending a request. With retries, a stalled backend fails a call in about `max_attempts` × this | unset (20000) |
 | `operation_attempt_timeout_ms` | int | Per-attempt deadline for data operations (GET/PUT/copy/multipart part) | unset (120000) |
 | `operation_timeout_ms` | int | Total deadline for data operations, including retries | unset (300000) |
 | `metadata_attempt_timeout_ms` | int | Per-attempt deadline for HEAD/LIST/DELETE | unset (15000) |

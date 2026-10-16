@@ -78,7 +78,11 @@ impl Default for S3ResilienceSettings {
         Self {
             // SDK default is 3.1s, which is tight for cross-region TLS.
             connect_timeout: Duration::from_millis(5_000),
-            read_timeout: Duration::from_millis(60_000),
+            // Bounds a stalled connection: each attempt waits at most this long for
+            // the response to start, so a hung backend fails in ~max_attempts x 20s
+            // instead of minutes. Only time-to-first-byte; large transfers are not
+            // limited by it (operation_attempt_timeout bounds them).
+            read_timeout: Duration::from_millis(20_000),
             // Fits an 8 MiB multipart part at ~100 KB/s.
             operation_attempt_timeout: Duration::from_millis(120_000),
             operation_timeout: Duration::from_millis(300_000),
@@ -269,6 +273,7 @@ mod tests {
         let settings = S3ResilienceSettings::from_config(&HashMap::new()).unwrap();
         assert_eq!(settings, S3ResilienceSettings::default());
         assert_eq!(settings.connect_timeout, Duration::from_secs(5));
+        assert_eq!(settings.read_timeout, Duration::from_secs(20));
         assert_eq!(settings.operation_attempt_timeout, Duration::from_secs(120));
         assert_eq!(settings.metadata_operation_timeout, Duration::from_secs(45));
         assert_eq!(settings.max_attempts, 3);

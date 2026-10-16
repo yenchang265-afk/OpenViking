@@ -1331,7 +1331,7 @@ impl S3FSPlugin {
                 ConfigParameter::optional(
                     "read_timeout_ms",
                     "int",
-                    "60000",
+                    "20000",
                     "Max wait for the first response byte after sending a request",
                 ),
                 ConfigParameter::optional(
@@ -1488,7 +1488,7 @@ Every request has a deadline so a slow or stalled endpoint fails fast with a
 timeout/network error instead of hanging. Defaults suit both LAN and WAN backends.
 ```yaml
       connect_timeout_ms: 5000
-      read_timeout_ms: 60000
+      read_timeout_ms: 20000
       operation_attempt_timeout_ms: 120000   # GET/PUT/copy/multipart, per attempt
       operation_timeout_ms: 300000           # including retries
       metadata_attempt_timeout_ms: 15000     # HEAD/LIST/DELETE, per attempt

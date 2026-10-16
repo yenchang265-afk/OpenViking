@@ -112,7 +112,7 @@ class S3Config(BaseModel):
         default=None,
         gt=0,
         description="Max wait for the first response byte after sending a request. "
-        "s3fs default: 60000.",
+        "s3fs default: 20000.",
     )
 
     operation_attempt_timeout_ms: Optional[int] = Field(
