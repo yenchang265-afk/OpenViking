@@ -469,6 +469,12 @@ impl S3RefStore {
             Err(err) if s3_status_or_code(&err, &[412], &["PreconditionFailed"]) => {
                 // Conditional check failed - re-read and report conflict
                 let actual = self.read_ref_opt(account, ref_name).await?.map(|(oid, _)| oid);
+                // The ref already holds our target: an earlier SDK attempt was
+                // applied before timing out (its retry then fails If-Match), or
+                // a concurrent writer set the same content-addressed commit.
+                if actual == Some(new) {
+                    return Ok(());
+                }
                 Err(RefStoreError::Conflict { expected, actual })
             }
             Err(err) => Err(RefStoreError::Backend(format!("S3 put error: {:?}", err))),
