@@ -16,6 +16,7 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::path::Path;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::{Semaphore, SemaphorePermit};
 
 use super::multipart::{effective_part_size, part_ranges, MultipartSettings};
 use super::resilience::S3ResilienceSettings;
@@ -424,6 +425,8 @@ pub struct S3Client {
     auto_detect_content_type: bool,
     multipart: MultipartSettings,
     resilience: S3ResilienceSettings,
+    /// Caps in-flight requests per mount; `None` when unlimited.
+    limiter: Option<Semaphore>,
 }
 
 impl S3Client {
@@ -548,7 +551,29 @@ impl S3Client {
             auto_detect_content_type,
             multipart,
             resilience,
+            limiter: (resilience.max_concurrent_requests > 0)
+                .then(|| Semaphore::new(resilience.max_concurrent_requests)),
         })
+    }
+
+    /// Take a request slot, held for the whole S3 call including its response body.
+    ///
+    /// Bounds load on a slow backend; a caller that cannot get a slot within the
+    /// metadata deadline fails with a timeout instead of queueing indefinitely.
+    async fn acquire_slot(&self) -> Result<Option<SemaphorePermit<'_>>> {
+        let Some(limiter) = &self.limiter else {
+            return Ok(None);
+        };
+        let wait = self.resilience.metadata_operation_timeout;
+        match tokio::time::timeout(wait, limiter.acquire()).await {
+            Ok(Ok(permit)) => Ok(Some(permit)),
+            Ok(Err(_)) => Err(Error::internal("S3 request limiter closed")),
+            Err(_) => Err(Error::timeout(format!(
+                "S3 request queue: no free slot within {wait:?} \
+                 (max_concurrent_requests={}, bucket={})",
+                self.resilience.max_concurrent_requests, self.bucket
+            ))),
+        }
     }
 
     /// Build the full S3 key from a filesystem path
@@ -573,6 +598,7 @@ impl S3Client {
 
     /// Get an object's contents
     pub async fn get_object(&self, key: &str) -> Result<Vec<u8>> {
+        let _slot = self.acquire_slot().await?;
         let resp = match self
             .client
             .get_object()
@@ -610,6 +636,7 @@ impl S3Client {
 
     /// Get an object's contents and ETag for conditional updates.
     pub async fn get_object_with_etag(&self, key: &str) -> Result<Option<(Vec<u8>, String)>> {
+        let _slot = self.acquire_slot().await?;
         let resp = match self
             .client
             .get_object()
@@ -652,6 +679,7 @@ impl S3Client {
 
     /// Get an object's contents with range request
     pub async fn get_object_range(&self, key: &str, offset: u64, size: u64) -> Result<Vec<u8>> {
+        let _slot = self.acquire_slot().await?;
         let range = if size == 0 {
             format!("bytes={}-", offset)
         } else {
@@ -694,6 +722,7 @@ impl S3Client {
 
     /// Upload an object
     pub async fn put_object(&self, key: &str, data: Vec<u8>) -> Result<()> {
+        let _slot = self.acquire_slot().await?;
         let mut request = self
             .client
             .put_object()
@@ -720,6 +749,7 @@ impl S3Client {
 
     /// Upload an object only when the key does not already exist.
     pub async fn put_object_create_new(&self, key: &str, data: Vec<u8>) -> Result<()> {
+        let _slot = self.acquire_slot().await?;
         let mut request = self
             .client
             .put_object()
@@ -751,6 +781,7 @@ impl S3Client {
 
     /// Upload an object only when its ETag still matches `etag`.
     pub async fn put_object_if_match(&self, key: &str, data: Vec<u8>, etag: &str) -> Result<bool> {
+        let _slot = self.acquire_slot().await?;
         let mut request = self
             .client
             .put_object()
@@ -825,10 +856,11 @@ impl S3Client {
                 request = request.content_type(content_type);
             }
         }
-        let created = request
-            .send()
-            .await
-            .map_err(|e| format_sdk_s3_error("CreateMultipartUpload", &scope, &e))?;
+        let created = {
+            let _slot = self.acquire_slot().await?;
+            request.send().await
+        }
+        .map_err(|e| format_sdk_s3_error("CreateMultipartUpload", &scope, &e))?;
         let upload_id = created
             .upload_id()
             .ok_or_else(|| {
@@ -842,15 +874,28 @@ impl S3Client {
             .upload_parts_and_complete(key, &upload_id, src, total)
             .await;
         if result.is_err() {
-            if let Err(abort_err) = self
-                .client
-                .abort_multipart_upload()
-                .bucket(&self.bucket)
-                .key(key)
-                .upload_id(&upload_id)
-                .send()
-                .await
-            {
+            let aborted = match self.acquire_slot().await {
+                Ok(_slot) => {
+                    self.client
+                        .abort_multipart_upload()
+                        .bucket(&self.bucket)
+                        .key(key)
+                        .upload_id(&upload_id)
+                        .send()
+                        .await
+                }
+                Err(err) => {
+                    tracing::warn!(
+                        bucket = %self.bucket,
+                        key = %key,
+                        upload_id = %upload_id,
+                        error = %err,
+                        "skipped multipart abort; parts remain until a bucket lifecycle rule removes them"
+                    );
+                    return result;
+                }
+            };
+            if let Err(abort_err) = aborted {
                 tracing::warn!(
                     bucket = %self.bucket,
                     key = %key,
@@ -871,6 +916,7 @@ impl S3Client {
         src: &Path,
         total: u64,
     ) -> Result<()> {
+        let _slot = self.acquire_slot().await?;
         let scope = format!("bucket={} key={key}", self.bucket);
         let part_size = effective_part_size(total, self.multipart.part_size_bytes);
         let mut file = tokio::fs::File::open(src).await?;
@@ -918,6 +964,7 @@ impl S3Client {
 
     /// Stream an object into a local file, creating or truncating `dst`.
     pub async fn get_object_to_path(&self, key: &str, dst: &Path) -> Result<u64> {
+        let _slot = self.acquire_slot().await?;
         let resp = match self
             .client
             .get_object()
@@ -956,6 +1003,7 @@ impl S3Client {
 
     /// Delete a single object
     pub async fn delete_object(&self, key: &str) -> Result<()> {
+        let _slot = self.acquire_slot().await?;
         self.client
             .delete_object()
             .bucket(&self.bucket)
@@ -977,6 +1025,7 @@ impl S3Client {
 
     /// Delete a single object only when its ETag still matches `etag`.
     pub async fn delete_object_if_match(&self, key: &str, etag: &str) -> Result<bool> {
+        let _slot = self.acquire_slot().await?;
         self.client
             .delete_object()
             .bucket(&self.bucket)
@@ -1012,6 +1061,7 @@ impl S3Client {
     /// for S3-compatible services (e.g., Alibaba Cloud OSS) that require
     /// Content-MD5 for DeleteObjects but AWS SDK v2 does not send it by default.
     pub async fn delete_objects(&self, keys: &[String]) -> Result<()> {
+        let _slot = self.acquire_slot().await?;
         if keys.is_empty() {
             return Ok(());
         }
@@ -1076,6 +1126,7 @@ impl S3Client {
 
     /// Get object metadata (HeadObject)
     pub async fn head_object(&self, key: &str) -> Result<Option<ObjectMeta>> {
+        let _slot = self.acquire_slot().await?;
         match self
             .client
             .head_object()
@@ -1123,6 +1174,7 @@ impl S3Client {
 
     /// List objects with prefix and delimiter
     pub async fn list_objects(&self, prefix: &str, delimiter: Option<&str>) -> Result<ListResult> {
+        let _slot = self.acquire_slot().await?;
         let mut files = Vec::new();
         let mut directories = Vec::new();
         let mut continuation_token: Option<String> = None;
@@ -1204,6 +1256,7 @@ impl S3Client {
     /// Preserves directory marker objects (keys ending with '/').
     /// Used by tree_directory for efficient flat traversal.
     pub async fn list_tree_objects(&self, prefix: &str) -> Result<Vec<ObjectMeta>> {
+        let _slot = self.acquire_slot().await?;
         let mut objects = Vec::new();
         let mut continuation_token: Option<String> = None;
 
@@ -1270,6 +1323,7 @@ impl S3Client {
         continuation_token: Option<&str>,
         max_keys: usize,
     ) -> Result<ListTreePage> {
+        let _slot = self.acquire_slot().await?;
         let mut req = self
             .client
             .list_objects_v2()
@@ -1323,6 +1377,7 @@ impl S3Client {
 
     /// Copy an object
     pub async fn copy_object(&self, src_key: &str, dst_key: &str) -> Result<()> {
+        let _slot = self.acquire_slot().await?;
         let copy_source = format!("{}/{}", self.bucket, src_key);
 
         self.client
@@ -1361,6 +1416,7 @@ impl S3Client {
         }
 
         // Check if any objects exist with this prefix
+        let _slot = self.acquire_slot().await?;
         let resp = self
             .client
             .list_objects_v2()
@@ -1396,23 +1452,26 @@ impl S3Client {
 
         // List and delete all objects under prefix
         loop {
-            let resp = self
-                .client
-                .list_objects_v2()
-                .bucket(&self.bucket)
-                .prefix(&prefix)
-                .max_keys(1000)
-                .customize()
-                .config_override(self.resilience.metadata_override())
-                .send()
-                .await
-                .map_err(|e| {
-                    format_sdk_s3_error(
-                        "ListObjectsV2",
-                        &format!("bucket={} prefix={prefix}", self.bucket),
-                        &e,
-                    )
-                })?;
+            // Scoped so the slot is released before delete_objects takes its own.
+            let listed = {
+                let _slot = self.acquire_slot().await?;
+                self.client
+                    .list_objects_v2()
+                    .bucket(&self.bucket)
+                    .prefix(&prefix)
+                    .max_keys(1000)
+                    .customize()
+                    .config_override(self.resilience.metadata_override())
+                    .send()
+                    .await
+            };
+            let resp = listed.map_err(|e| {
+                format_sdk_s3_error(
+                    "ListObjectsV2",
+                    &format!("bucket={} prefix={prefix}", self.bucket),
+                    &e,
+                )
+            })?;
 
             let contents = resp.contents();
             if contents.is_empty() {
@@ -1512,6 +1571,7 @@ mod tests {
             auto_detect_content_type: false,
             multipart: MultipartSettings::default(),
             resilience: S3ResilienceSettings::default(),
+            limiter: None,
         }
     }
 

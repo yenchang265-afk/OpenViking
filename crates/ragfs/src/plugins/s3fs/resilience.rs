@@ -26,9 +26,11 @@ pub(crate) const RESILIENCE_CONFIG_KEYS: &[&str] = &[
     "retry_mode",
     "initial_backoff_ms",
     "max_backoff_ms",
+    "max_concurrent_requests",
 ];
 
 const MAX_ATTEMPTS_LIMIT: u32 = 10;
+const MAX_CONCURRENT_REQUESTS_LIMIT: i64 = 10_000;
 
 /// Client-side throttling strategy used by the SDK retry layer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -66,6 +68,9 @@ pub struct S3ResilienceSettings {
     pub initial_backoff: Duration,
     /// Upper bound on retry backoff.
     pub max_backoff: Duration,
+    /// Max S3 requests in flight per mount; 0 means unlimited. A request that
+    /// cannot start within `metadata_operation_timeout` fails with a timeout.
+    pub max_concurrent_requests: usize,
 }
 
 impl Default for S3ResilienceSettings {
@@ -73,7 +78,11 @@ impl Default for S3ResilienceSettings {
         Self {
             // SDK default is 3.1s, which is tight for cross-region TLS.
             connect_timeout: Duration::from_millis(5_000),
-            read_timeout: Duration::from_millis(60_000),
+            // Bounds a stalled connection: each attempt waits at most this long for
+            // the response to start, so a hung backend fails in ~max_attempts x 20s
+            // instead of minutes. Only time-to-first-byte; large transfers are not
+            // limited by it (operation_attempt_timeout bounds them).
+            read_timeout: Duration::from_millis(20_000),
             // Fits an 8 MiB multipart part at ~100 KB/s.
             operation_attempt_timeout: Duration::from_millis(120_000),
             operation_timeout: Duration::from_millis(300_000),
@@ -83,6 +92,7 @@ impl Default for S3ResilienceSettings {
             retry_mode: RetryMode::Standard,
             initial_backoff: Duration::from_millis(1_000),
             max_backoff: Duration::from_millis(20_000),
+            max_concurrent_requests: 128,
         }
     }
 }
@@ -125,6 +135,7 @@ impl S3ResilienceSettings {
                 d.initial_backoff.min(max_backoff),
             )?,
             max_backoff,
+            max_concurrent_requests: max_concurrent_requests(config, d.max_concurrent_requests)?,
         };
         settings.validate()?;
         Ok(settings)
@@ -215,6 +226,19 @@ fn max_attempts(config: &HashMap<String, ConfigValue>, default: u32) -> Result<u
     }
 }
 
+fn max_concurrent_requests(config: &HashMap<String, ConfigValue>, default: usize) -> Result<usize> {
+    let Some(value) = config.get("max_concurrent_requests") else {
+        return Ok(default);
+    };
+    match value.as_int() {
+        Some(n) if (0..=MAX_CONCURRENT_REQUESTS_LIMIT).contains(&n) => Ok(n as usize),
+        _ => Err(Error::config(format!(
+            "invalid max_concurrent_requests: expected an integer between 0 (unlimited) \
+             and {MAX_CONCURRENT_REQUESTS_LIMIT}"
+        ))),
+    }
+}
+
 fn retry_mode(config: &HashMap<String, ConfigValue>, default: RetryMode) -> Result<RetryMode> {
     let Some(value) = config.get("retry_mode") else {
         return Ok(default);
@@ -249,6 +273,7 @@ mod tests {
         let settings = S3ResilienceSettings::from_config(&HashMap::new()).unwrap();
         assert_eq!(settings, S3ResilienceSettings::default());
         assert_eq!(settings.connect_timeout, Duration::from_secs(5));
+        assert_eq!(settings.read_timeout, Duration::from_secs(20));
         assert_eq!(settings.operation_attempt_timeout, Duration::from_secs(120));
         assert_eq!(settings.metadata_operation_timeout, Duration::from_secs(45));
         assert_eq!(settings.max_attempts, 3);
@@ -302,6 +327,21 @@ mod tests {
         assert_config_err(&[("max_attempts", ConfigValue::Int(0))]);
         assert_config_err(&[("max_attempts", ConfigValue::Int(11))]);
         assert_config_err(&[("max_attempts", ConfigValue::Bool(true))]);
+    }
+
+    #[test]
+    fn reads_max_concurrent_requests() {
+        assert_eq!(S3ResilienceSettings::default().max_concurrent_requests, 128);
+        for n in [0, 1, 512] {
+            let settings = S3ResilienceSettings::from_config(&config(&[(
+                "max_concurrent_requests",
+                ConfigValue::Int(n),
+            )]))
+            .unwrap();
+            assert_eq!(settings.max_concurrent_requests, n as usize);
+        }
+        assert_config_err(&[("max_concurrent_requests", ConfigValue::Int(-1))]);
+        assert_config_err(&[("max_concurrent_requests", ConfigValue::Int(10_001))]);
     }
 
     #[test]

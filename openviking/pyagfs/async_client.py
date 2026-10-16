@@ -4,13 +4,13 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
 from collections.abc import Iterator
 from typing import Any, BinaryIO, Dict, List, Union
 
 from openviking.service.task_tracker_concurrency import run_to_completion
 
+from .fs_executor import run_in_fs_executor
 from .protocols import AGFSSyncClientProtocol
 
 _SYSTEM_ACCOUNT_ID = "_system"
@@ -94,10 +94,10 @@ class AsyncAGFSClient:
         self._client = client
 
     async def run(self, method_name: str, /, *args: Any, **kwargs: Any) -> Any:
-        """Run a sync client method in a worker thread, preserving ctx when supported."""
+        """Run a sync client method on the storage pool, preserving ctx when supported."""
         try:
             return await run_to_completion(
-                lambda: asyncio.to_thread(getattr(self._client, method_name), *args, **kwargs)
+                lambda: run_in_fs_executor(getattr(self._client, method_name), *args, **kwargs)
             )
         except TypeError as exc:
             message = str(exc)
@@ -106,7 +106,7 @@ class AsyncAGFSClient:
             legacy_kwargs = dict(kwargs)
             legacy_kwargs.pop("ctx", None)
             return await run_to_completion(
-                lambda: asyncio.to_thread(
+                lambda: run_in_fs_executor(
                     getattr(self._client, method_name), *args, **legacy_kwargs
                 )
             )
@@ -307,7 +307,7 @@ class AsyncAGFSClient:
         """
         from .helpers import cp
 
-        return await asyncio.to_thread(
+        return await run_in_fs_executor(
             cp,
             self._client,
             src_path,

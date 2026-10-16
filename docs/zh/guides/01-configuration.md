@@ -1230,6 +1230,8 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 | `backups` | object | 多寫儲存配置。配置後頂層 `backend` 作為 primary，`backups.items[]` 作為 backup | `null` |
 | `queuefs` | object | QueueFS 配置。控制 `/queue` 的名稱空間模式、後端和執行時引數 | `{ "mode": "shared", "backend": "sqlite", "recover_stale_sec": 0, "busy_timeout_ms": 5000 }` |
 | `queue_db_path` | str（可選）| 舊版相容欄位，用於覆蓋 QueueFS 的 sqlite 資料庫檔案路徑。已被 `storage.agfs.queuefs.db_path` 取代。未設定時預設為 `{storage.workspace}/_system/queue/queue.db`。適用於 workspace 卷不支援 sqlite 的場景（例如某些網路檔案系統） | `null` |
+| `fs_executor_threads` | int | 執行阻塞式儲存呼叫的專用執行緒池大小，與預設 executor 隔離，避免後端緩慢（如高延遲 S3）拖垮向量資料庫等其他阻塞工作 | `64` |
+| `fs_queue_timeout_ms` | int | 儲存呼叫若在此時間內無法開始（所有儲存執行緒忙碌），立即以逾時失敗（`503 UNAVAILABLE`），而非無限排隊 | `30000` |
 | `s3` | object | S3 後端配置（`backend=s3` 時使用） | - |
 
 

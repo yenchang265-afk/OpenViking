@@ -1240,6 +1240,8 @@ Storage configuration for context data, including file storage (RAGFS) and vecto
 | `backups` | object | Multi-write storage configuration. When set, the top-level `backend` acts as the primary backend and `backups.items[]` defines backup backends | `null` |
 | `queuefs` | object | QueueFS configuration. Controls the namespace mode, backend, and runtime options for `/queue` | `{ "mode": "shared", "backend": "sqlite", "recover_stale_sec": 0, "busy_timeout_ms": 5000 }` |
 | `queue_db_path` | str (optional) | Legacy compatibility field for QueueFS sqlite DB path. Superseded by `storage.agfs.queuefs.db_path`. Defaults to `{storage.workspace}/_system/queue/queue.db` when not set. Useful when the workspace volume does not support sqlite (e.g. some network filesystems) | `null` |
+| `fs_executor_threads` | int | Threads in the dedicated pool for blocking storage calls. It is separate from the default executor, so a slow backend (e.g. high-latency S3) cannot starve vector-DB and other blocking work | `64` |
+| `fs_queue_timeout_ms` | int | A storage call that cannot start within this time (all storage threads busy) fails fast with `503 UNAVAILABLE` instead of queueing | `30000` |
 | `s3` | object | S3 backend configuration (when backend is 's3') | - |
 
 **Configuration Examples**
@@ -1454,7 +1456,7 @@ Legacy compatibility example:
 | `directory_marker_mode` | str | How to persist directory markers: `none`, `empty`, or `nonempty` | `"empty"` |
 | `normalize_encoding_chars` | str | Characters to escape in S3 object keys as `!HH` hexadecimal bytes; empty string disables normalization | `"?#%+@"` |
 | `connect_timeout_ms` | int | Max time to connect to S3 | unset (5000) |
-| `read_timeout_ms` | int | Max wait for the first response byte after sending a request | unset (60000) |
+| `read_timeout_ms` | int | Max wait for the first response byte after sending a request. With retries, a stalled backend fails a call in about `max_attempts` × this | unset (20000) |
 | `operation_attempt_timeout_ms` | int | Per-attempt deadline for data operations (GET/PUT/copy/multipart part) | unset (120000) |
 | `operation_timeout_ms` | int | Total deadline for data operations, including retries | unset (300000) |
 | `metadata_attempt_timeout_ms` | int | Per-attempt deadline for HEAD/LIST/DELETE | unset (15000) |
@@ -1462,6 +1464,7 @@ Legacy compatibility example:
 | `max_attempts` | int | Max attempts per S3 request (1–10), including the first | unset (3) |
 | `retry_mode` | str | `standard`, or `adaptive` to add client-side rate limiting when S3 throttles | unset (`"standard"`) |
 | `initial_backoff_ms` / `max_backoff_ms` | int | Retry backoff bounds | unset (1000 / 20000) |
+| `max_concurrent_requests` | int | Max S3 requests in flight per mount; `0` = unlimited. A request that cannot start within `metadata_operation_timeout_ms` fails with a timeout instead of queueing | unset (128) |
 | `cache_enabled` | bool | Cache directory listings and stat results in front of S3 | unset (true) |
 | `cache_max_size` | int | Max cached directory listings | unset (1000) |
 | `cache_ttl` / `stat_cache_ttl` | int | Listing / stat cache TTL in seconds | unset (30 / 60) |

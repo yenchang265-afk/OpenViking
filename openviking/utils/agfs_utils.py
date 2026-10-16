@@ -419,6 +419,7 @@ _S3_TUNING_KEYS = (
     "retry_mode",
     "initial_backoff_ms",
     "max_backoff_ms",
+    "max_concurrent_requests",
     "cache_enabled",
     "cache_max_size",
     "cache_ttl",

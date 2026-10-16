@@ -176,10 +176,15 @@ class OpenVikingService:
         git_config: Optional[GitConfig] = None,
     ) -> None:
         """Initialize storage resources."""
+        from openviking.pyagfs.fs_executor import configure_fs_executor
         from openviking.utils.agfs_utils import RagfsBindingConfig, create_agfs_client
 
         # Create RAGFS client using utility
         runtime_binding_config = binding_config or RagfsBindingConfig(agfs=config.agfs)
+        configure_fs_executor(
+            threads=config.agfs.fs_executor_threads,
+            queue_timeout_seconds=config.agfs.fs_queue_timeout_ms / 1000,
+        )
         self._agfs_client = create_agfs_client(runtime_binding_config, git_config=git_config)
 
         # Initialize QueueManager with agfs_client
