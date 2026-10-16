@@ -1286,3 +1286,31 @@ if __name__ == "__main__":
 
         traceback.print_exc()
         sys.exit(1)
+
+
+def test_agfs_storage_circuit_breaker_defaults_and_overrides():
+    assert AGFSConfig(path="/tmp/ov-test").circuit_breaker.model_dump() == {
+        "enabled": True,
+        "failure_threshold": 5,
+        "reset_timeout_seconds": 15.0,
+        "max_reset_timeout_seconds": 120.0,
+    }
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        circuit_breaker={"enabled": False, "failure_threshold": 2, "reset_timeout_seconds": 5},
+    )
+    assert config.circuit_breaker.enabled is False
+    assert config.circuit_breaker.failure_threshold == 2
+
+
+@pytest.mark.parametrize(
+    "breaker",
+    [
+        {"failure_threshold": 0},
+        {"reset_timeout_seconds": 0},
+        {"reset_timeout_seconds": 300, "max_reset_timeout_seconds": 60},
+    ],
+)
+def test_agfs_storage_circuit_breaker_rejects_invalid_values(breaker):
+    with pytest.raises(ValueError):
+        AGFSConfig(path="/tmp/ov-test", circuit_breaker=breaker)

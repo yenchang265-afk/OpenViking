@@ -13,6 +13,12 @@ class AGFSConnectionError(AGFSClientError):
     pass
 
 
+class AGFSCircuitOpenError(AGFSConnectionError):
+    """Storage calls to a mount are rejected while its backend keeps failing"""
+
+    pass
+
+
 class AGFSTimeoutError(AGFSClientError):
     """Timeout errors"""
 

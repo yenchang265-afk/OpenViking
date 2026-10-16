@@ -177,6 +177,7 @@ class OpenVikingService:
     ) -> None:
         """Initialize storage resources."""
         from openviking.pyagfs.fs_executor import configure_fs_executor
+        from openviking.pyagfs.storage_breaker import configure_storage_breaker
         from openviking.utils.agfs_utils import RagfsBindingConfig, create_agfs_client
 
         # Create RAGFS client using utility
@@ -184,6 +185,13 @@ class OpenVikingService:
         configure_fs_executor(
             threads=config.agfs.fs_executor_threads,
             queue_timeout_seconds=config.agfs.fs_queue_timeout_ms / 1000,
+        )
+        breaker = config.agfs.circuit_breaker
+        configure_storage_breaker(
+            enabled=breaker.enabled,
+            failure_threshold=breaker.failure_threshold,
+            reset_timeout_seconds=breaker.reset_timeout_seconds,
+            max_reset_timeout_seconds=breaker.max_reset_timeout_seconds,
         )
         self._agfs_client = create_agfs_client(runtime_binding_config, git_config=git_config)
 

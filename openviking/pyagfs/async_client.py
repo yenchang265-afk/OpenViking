@@ -12,6 +12,7 @@ from openviking.service.task_tracker_concurrency import run_to_completion
 
 from .fs_executor import run_in_fs_executor
 from .protocols import AGFSSyncClientProtocol
+from .storage_breaker import guard_storage_call
 
 _SYSTEM_ACCOUNT_ID = "_system"
 
@@ -94,7 +95,16 @@ class AsyncAGFSClient:
         self._client = client
 
     async def run(self, method_name: str, /, *args: Any, **kwargs: Any) -> Any:
-        """Run a sync client method on the storage pool, preserving ctx when supported."""
+        """Run a sync client method on the storage pool, preserving ctx when supported.
+
+        Calls go through the circuit breaker of the mount the path belongs to.
+        """
+        path = args[0] if args else kwargs.get("path")
+        return await guard_storage_call(
+            path, lambda: self._run_unguarded(method_name, *args, **kwargs)
+        )
+
+    async def _run_unguarded(self, method_name: str, /, *args: Any, **kwargs: Any) -> Any:
         try:
             return await run_to_completion(
                 lambda: run_in_fs_executor(getattr(self._client, method_name), *args, **kwargs)
@@ -307,15 +317,18 @@ class AsyncAGFSClient:
         """
         from .helpers import cp
 
-        return await run_in_fs_executor(
-            cp,
-            self._client,
+        return await guard_storage_call(
             src_path,
-            dst_path,
-            recursive=recursive,
-            stream=True,
-            fs_ctx=_fs_ctx_with_auto_pathlock(src_path, fs_ctx, auto_pathlock),
-            allow_same_mount_fast_path=allow_same_mount_fast_path,
+            lambda: run_in_fs_executor(
+                cp,
+                self._client,
+                src_path,
+                dst_path,
+                recursive=recursive,
+                stream=True,
+                fs_ctx=_fs_ctx_with_auto_pathlock(src_path, fs_ctx, auto_pathlock),
+                allow_same_mount_fast_path=allow_same_mount_fast_path,
+            ),
         )
 
     async def grep(self, **kwargs: Any) -> Dict[str, Any]:
