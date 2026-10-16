@@ -279,6 +279,10 @@ RAGFS 通過一次原生 `metrics()` 呼叫讀取檔案系統、Cache、multi-ba
 |--------|------|----------|------|
 | `openviking_ragfs_operation_results_total` | Counter | `plugin, operation, status` | 操作成功和失敗次數 |
 | `openviking_ragfs_operation_duration_seconds` | Histogram | `plugin, operation` | 操作耗時分佈 |
+| `openviking_ragfs_s3_requests_total` | Counter | `operation, outcome` | S3 API 呼叫（`GetObject`、`HeadObject` 等）重試後的最終結果：`success`、`client_error`（4xx，含預期的 404/412）、`server_error`（5xx、429）、`timeout`、`network` |
+| `openviking_ragfs_s3_attempts_total` | Counter | `operation` | S3 HTTP 嘗試次數；減去 `s3_requests_total` 即重試次數 |
+| `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API 呼叫耗時（含重試與退避） |
+| `openviking_ragfs_s3_inflight_requests` | Gauge | 無 | 進行中的 S3 API 呼叫數 |
 | `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | 檔案和目錄快取命中、未命中次數 |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | 無 | 快取未命中後的後端讀取次數 |
 | `openviking_ragfs_cache_operations_total` | Counter | `operation` | 快取 put/delete 嘗試次數 |

@@ -280,6 +280,10 @@ seconds, for example `123 ns = 0.000000123 seconds`.
 |---------------|------|---------------|---------|
 | `openviking_ragfs_operation_results_total` | Counter | `plugin, operation, status` | successful and failed operations |
 | `openviking_ragfs_operation_duration_seconds` | Histogram | `plugin, operation` | operation duration distribution |
+| `openviking_ragfs_s3_requests_total` | Counter | `operation, outcome` | S3 API calls (`GetObject`, `HeadObject`, ...) by final outcome after retries: `success`, `client_error` (4xx, including expected 404/412), `server_error` (5xx, 429), `timeout`, `network` |
+| `openviking_ragfs_s3_attempts_total` | Counter | `operation` | S3 HTTP attempts; minus `s3_requests_total` is the number of retries |
+| `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API call duration including retries and backoff |
+| `openviking_ragfs_s3_inflight_requests` | Gauge | none | S3 API calls currently in flight |
 | `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | file/directory cache hits and misses |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | none | backend loads after cache misses |
 | `openviking_ragfs_cache_operations_total` | Counter | `operation` | cache put/delete attempts |

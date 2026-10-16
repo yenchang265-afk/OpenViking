@@ -88,6 +88,9 @@ sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "mysql"], optio
 aws-config = { version = "1", features = ["behavior-version-latest"], optional = true }
 aws-sdk-s3 = { version = "1", optional = true }
 aws-types = { version = "1", optional = true }
+# Interceptor types for per-request S3 metrics; already built transitively by aws-sdk-s3.
+aws-smithy-runtime-api = { version = "1", optional = true }
+aws-smithy-types = { version = "1", optional = true }
 
 # Cache
 lru = "0.12"
@@ -135,5 +138,5 @@ uuid = { version = "1.0", features = ["v4"] }
 default = []
 cache = ["dep:fred", "dep:libloading", "dep:native-tls"]
 test-utils = []
-s3 = ["aws-sdk-s3", "aws-config", "aws-types"]
+s3 = ["aws-sdk-s3", "aws-config", "aws-types", "aws-smithy-runtime-api", "aws-smithy-types"]
 full = ["s3", "cache"]
