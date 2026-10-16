@@ -39,6 +39,8 @@ enum Reply {
     OurObject,
     /// 200 for an object stored by another writer.
     ObjectWrittenBy(&'static str),
+    /// `Etag` answered after a delay.
+    SlowEtag(Duration, &'static str),
 }
 
 const OK_BODY: &[u8] = b"hello";
@@ -186,6 +188,11 @@ async fn serve(
             extra_headers = format!("ETag: \"{etag}\"\r\n");
             (200, "application/octet-stream", body.as_bytes().to_vec())
         }
+        Reply::SlowEtag(delay, etag) => {
+            tokio::time::sleep(delay).await;
+            extra_headers = format!("ETag: \"{etag}\"\r\n");
+            (200, "application/octet-stream", OK_BODY.to_vec())
+        }
         Reply::Etag(etag) => {
             extra_headers = format!("ETag: \"{etag}\"\r\n");
             (200, "application/octet-stream", OK_BODY.to_vec())
@@ -222,8 +229,22 @@ async fn read_request_head(stream: &mut TcpStream) -> Option<(String, String)> {
         }
         buf.extend_from_slice(&chunk[..n]);
     }
-    let text = String::from_utf8_lossy(&buf);
+    let header_end = buf.windows(4).position(|w| w == b"\r\n\r\n")? + 4;
+    let text = String::from_utf8_lossy(&buf[..header_end]).into_owned();
     let (line, headers) = text.split_once("\r\n")?;
+    // Drain the body so large uploads (multipart parts) complete before we answer.
+    let body_len: usize = header_value(headers, "content-length")
+        .and_then(|len| len.parse().ok())
+        .unwrap_or(0);
+    let mut received = buf.len() - header_end;
+    let mut sink = vec![0u8; 64 * 1024];
+    while received < body_len {
+        let n = stream.read(&mut sink).await.ok()?;
+        if n == 0 {
+            return None;
+        }
+        received += n;
+    }
     Some((line.to_string(), headers.to_string()))
 }
 
@@ -691,4 +712,96 @@ async fn compare_and_swap_delete_on_missing_bucket_is_an_error() {
     let result = client.delete_object_if_match("k", "\"old\"").await;
 
     assert!(result.is_err(), "{result:?}");
+}
+
+const COMPLETE_MULTIPART: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\
+    <CompleteMultipartUploadResult><Bucket>bucket</Bucket><Key>k</Key>\
+    <ETag>\"done-3\"</ETag></CompleteMultipartUploadResult>";
+
+/// Route a multipart upload whose parts each take `part_delay`, logging part
+/// uploads; `fail_part` answers that part number with a 403.
+fn multipart_script(
+    part_delay: Duration,
+    fail_part: Option<&'static str>,
+) -> impl Fn(usize, &str) -> Reply + Send + Sync + 'static {
+    move |_, line| {
+        let target = line.split(' ').nth(1).unwrap_or("");
+        match line.split(' ').next() {
+            Some("POST") if target.contains("uploads") => Reply::Xml(INITIATE_MULTIPART),
+            Some("PUT")
+                if fail_part.is_some_and(|n| target.contains(&format!("partNumber={n}&"))) =>
+            {
+                Reply::S3Error(403, "AccessDenied")
+            }
+            Some("PUT") => Reply::SlowEtag(part_delay, PART_ETAG),
+            Some("POST") => Reply::Xml(COMPLETE_MULTIPART),
+            Some("DELETE") => Reply::Respond {
+                status: 204,
+                delay: Duration::ZERO,
+            },
+            _ => Reply::NotFound,
+        }
+    }
+}
+
+/// A source file of three multipart parts at the minimum part size (5 MiB).
+fn three_part_file(name: &str) -> std::path::PathBuf {
+    let path = std::env::temp_dir().join(format!("ragfs-{name}-{}", std::process::id()));
+    std::fs::write(&path, vec![7u8; 11 * 1024 * 1024]).unwrap();
+    path
+}
+
+const MULTIPART_PARALLEL: &[(&str, i64)] = &[
+    ("multipart_threshold_bytes", 1),
+    ("multipart_part_size_bytes", 5 * 1024 * 1024),
+    ("multipart_concurrency", 3),
+];
+
+#[tokio::test]
+async fn multipart_parts_upload_concurrently() {
+    let s3 = FakeS3::start(multipart_script(Duration::from_millis(400), None)).await;
+    let client = s3.client(MULTIPART_PARALLEL).await;
+    let src = three_part_file("mp-par");
+
+    let started = Instant::now();
+    let result = client.put_object_from_path("k", &src, false).await;
+    let elapsed = started.elapsed();
+    std::fs::remove_file(&src).ok();
+
+    assert!(
+        matches!(result, Ok(n) if n == 11 * 1024 * 1024),
+        "{result:?}"
+    );
+    // Three 400ms parts at once take ~400ms; one at a time would take 1.2s+.
+    assert!(elapsed < Duration::from_millis(1_000), "{elapsed:?}");
+    let parts = s3
+        .request_log()
+        .iter()
+        .filter(|r| r.starts_with("PUT"))
+        .count();
+    assert_eq!(parts, 3);
+}
+
+#[tokio::test]
+async fn multipart_part_failure_aborts_the_upload() {
+    let s3 = FakeS3::start(multipart_script(Duration::from_millis(50), Some("2"))).await;
+    let client = s3.client(MULTIPART_PARALLEL).await;
+    let src = three_part_file("mp-fail");
+
+    let result = client.put_object_from_path("k", &src, false).await;
+    std::fs::remove_file(&src).ok();
+
+    assert!(result.is_err(), "{result:?}");
+    assert!(
+        s3.request_log().iter().any(|r| r.starts_with("DELETE")),
+        "{:?}",
+        s3.request_log()
+    );
+    // Only CreateMultipartUpload was POSTed (the log drops query strings), no completion.
+    let posts = s3
+        .request_log()
+        .iter()
+        .filter(|r| r.starts_with("POST"))
+        .count();
+    assert_eq!(posts, 1, "completed despite failure");
 }

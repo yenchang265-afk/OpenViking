@@ -1452,7 +1452,8 @@ Legacy compatibility example:
 | `use_path_style` | bool | true for PathStyle used by MinIO and some S3-compatible services; false for VirtualHostStyle used by TOS and some S3-compatible services | true |
 | `auto_detect_content_type` | bool | Automatically infer MIME type from the object key / filename extension and set the S3 object `Content-Type` header during upload | false |
 | `multipart_threshold_bytes` | int | Files written from disk that are larger than this use S3 multipart upload (bounded memory, no 5 GB single-PUT limit) | unset (16 MiB) |
-| `multipart_part_size_bytes` | int | Multipart part size, 5 MiB–5 GiB; one part is held in memory at a time. Pair it with a bucket lifecycle rule that aborts incomplete multipart uploads | unset (8 MiB) |
+| `multipart_part_size_bytes` | int | Multipart part size, 5 MiB–5 GiB. Pair it with a bucket lifecycle rule that aborts incomplete multipart uploads | unset (8 MiB) |
+| `multipart_concurrency` | int | Multipart parts uploaded at once, 1–32; memory held is this × part size | unset (4) |
 | `directory_marker_mode` | str | How to persist directory markers: `none`, `empty`, or `nonempty` | `"empty"` |
 | `normalize_encoding_chars` | str | Characters to escape in S3 object keys as `!HH` hexadecimal bytes; empty string disables normalization | `"?#%+@"` |
 | `connect_timeout_ms` | int | Max time to connect to S3 | unset (5000) |
