@@ -390,6 +390,38 @@ class RedisCacheConfig(BaseModel):
         return self
 
 
+class StorageCircuitBreakerConfig(BaseModel):
+    """Circuit breaker for storage calls, scoped per account and per other mount."""
+
+    enabled: bool = Field(
+        default=True,
+        description="Fail storage calls fast (HTTP 503) while their backend keeps timing out, "
+        "instead of making every call wait for its full deadline. Scoped per account "
+        "(/local/{account}) and per other mount, so one tenant cannot pause others.",
+    )
+    failure_threshold: int = Field(
+        default=5,
+        ge=1,
+        description="Consecutive timeout/network failures in a scope that open its circuit.",
+    )
+    reset_timeout_seconds: float = Field(
+        default=15.0,
+        gt=0,
+        description="Seconds an open circuit waits before letting a probe call through.",
+    )
+    max_reset_timeout_seconds: float = Field(
+        default=120.0,
+        gt=0,
+        description="Upper bound for the wait, which doubles each time a probe fails.",
+    )
+
+    @model_validator(mode="after")
+    def _reset_within_max(self) -> "StorageCircuitBreakerConfig":
+        if self.reset_timeout_seconds > self.max_reset_timeout_seconds:
+            raise ValueError("reset_timeout_seconds must not exceed max_reset_timeout_seconds")
+        return self
+
+
 class AGFSPathLockConfig(BaseModel):
     """Configuration for the native RAGFS path lock service."""
 
@@ -488,6 +520,11 @@ class AGFSConfig(BaseModel):
         gt=0,
         description="A storage call that cannot start within this time (all storage threads "
         "busy) fails fast with a timeout (HTTP 503) instead of queueing indefinitely.",
+    )
+
+    circuit_breaker: StorageCircuitBreakerConfig = Field(
+        default_factory=StorageCircuitBreakerConfig,
+        description="Circuit breaker for storage calls, scoped per account and per other mount.",
     )
 
     queue_db_path: Optional[str] = Field(

@@ -197,3 +197,13 @@ def request_context() -> RequestContext:
 def working_memory_policy():
     """Explicit opt-in for tests exercising WM/checkpoint generation."""
     return {"working_memory": {"enabled": True}}
+
+
+@pytest.fixture(autouse=True)
+def _reset_storage_circuit_breakers():
+    """Storage breakers are process-wide; a simulated outage in one test must not
+    leave a mount's circuit open for the next."""
+    from openviking.pyagfs.storage_breaker import reset_storage_breakers
+
+    reset_storage_breakers()
+    yield

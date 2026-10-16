@@ -1242,6 +1242,10 @@ Storage configuration for context data, including file storage (RAGFS) and vecto
 | `queue_db_path` | str (optional) | Legacy compatibility field for QueueFS sqlite DB path. Superseded by `storage.agfs.queuefs.db_path`. Defaults to `{storage.workspace}/_system/queue/queue.db` when not set. Useful when the workspace volume does not support sqlite (e.g. some network filesystems) | `null` |
 | `fs_executor_threads` | int | Threads in the dedicated pool for blocking storage calls. It is separate from the default executor, so a slow backend (e.g. high-latency S3) cannot starve vector-DB and other blocking work | `64` |
 | `fs_queue_timeout_ms` | int | A storage call that cannot start within this time (all storage threads busy) fails fast with `503 UNAVAILABLE` instead of queueing | `30000` |
+| `circuit_breaker.enabled` | bool | Circuit breaker for storage calls, scoped per account (`/local/{account}`) and per other mount. After `failure_threshold` consecutive timeout or network failures in a scope (e.g. S3 down), calls in that scope fail immediately with `503 UNAVAILABLE` instead of each waiting for its full deadline. Other scopes are unaffected, so one tenant cannot pause storage for others; local thread-pool saturation does not count | `true` |
+| `circuit_breaker.failure_threshold` | int | Consecutive failures that open a mount's circuit | `5` |
+| `circuit_breaker.reset_timeout_seconds` | float | Wait before an open circuit lets a probe call through; a successful probe closes it | `15` |
+| `circuit_breaker.max_reset_timeout_seconds` | float | Upper bound for the wait, which doubles each time a probe fails | `120` |
 | `s3` | object | S3 backend configuration (when backend is 's3') | - |
 
 **Configuration Examples**
