@@ -102,6 +102,14 @@ class S3Config(BaseModel):
         "Unset uses the s3fs default (8 MiB).",
     )
 
+    multipart_concurrency: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=32,
+        description="Multipart parts uploaded at once; memory held is this times the part "
+        "size. Unset uses the s3fs default (4).",
+    )
+
     # Request deadlines and retries. Unset values use the s3fs defaults, which bound
     # every S3 call so a slow or stalled endpoint fails fast instead of hanging.
     connect_timeout_ms: Optional[int] = Field(
