@@ -17,12 +17,16 @@ pub(crate) const MIN_PART_SIZE_BYTES: u64 = 5 * MIB;
 pub(crate) const MAX_PART_SIZE_BYTES: u64 = 5 * 1024 * MIB;
 /// S3 allows at most 10,000 parts per upload.
 pub(crate) const MAX_PARTS: u64 = 10_000;
+/// Parts uploaded at once by default; memory held is concurrency x part size.
+pub(crate) const DEFAULT_MULTIPART_CONCURRENCY: usize = 4;
+pub(crate) const MAX_MULTIPART_CONCURRENCY: u64 = 32;
 
-/// Thresholds for choosing single PUT vs multipart, read from mount config.
+/// Multipart thresholds and parallelism, read from mount config.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) struct MultipartSettings {
     pub(crate) threshold_bytes: u64,
     pub(crate) part_size_bytes: u64,
+    pub(crate) concurrency: usize,
 }
 
 impl Default for MultipartSettings {
@@ -30,6 +34,7 @@ impl Default for MultipartSettings {
         Self {
             threshold_bytes: DEFAULT_MULTIPART_THRESHOLD_BYTES,
             part_size_bytes: DEFAULT_MULTIPART_PART_SIZE_BYTES,
+            concurrency: DEFAULT_MULTIPART_CONCURRENCY,
         }
     }
 }
@@ -54,9 +59,18 @@ impl MultipartSettings {
                  (must be between {MIN_PART_SIZE_BYTES} and {MAX_PART_SIZE_BYTES})"
             )));
         }
+        let concurrency =
+            positive_int(config, "multipart_concurrency", defaults.concurrency as u64)?;
+        if concurrency > MAX_MULTIPART_CONCURRENCY {
+            return Err(Error::config(format!(
+                "invalid multipart_concurrency: {concurrency} \
+                 (must be between 1 and {MAX_MULTIPART_CONCURRENCY})"
+            )));
+        }
         Ok(Self {
             threshold_bytes,
             part_size_bytes,
+            concurrency: concurrency as usize,
         })
     }
 }
@@ -120,6 +134,24 @@ mod tests {
         .unwrap();
         assert_eq!(settings.threshold_bytes, 64 * MIB);
         assert_eq!(settings.part_size_bytes, 16 * MIB);
+    }
+
+    #[test]
+    fn settings_read_concurrency_within_limits() {
+        assert_eq!(MultipartSettings::default().concurrency, 4);
+        let settings = MultipartSettings::from_config(&config(&[(
+            "multipart_concurrency",
+            ConfigValue::Int(8),
+        )]))
+        .unwrap();
+        assert_eq!(settings.concurrency, 8);
+        for bad in [0, 33] {
+            let result = MultipartSettings::from_config(&config(&[(
+                "multipart_concurrency",
+                ConfigValue::Int(bad),
+            )]));
+            assert!(matches!(result, Err(Error::Config(_))), "{bad}");
+        }
     }
 
     #[test]

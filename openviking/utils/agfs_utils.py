@@ -409,6 +409,7 @@ def _get_backend_specific_params(item: Any) -> Any:
 _S3_TUNING_KEYS = (
     "multipart_threshold_bytes",
     "multipart_part_size_bytes",
+    "multipart_concurrency",
     "connect_timeout_ms",
     "read_timeout_ms",
     "operation_attempt_timeout_ms",

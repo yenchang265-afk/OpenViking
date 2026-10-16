@@ -133,6 +133,7 @@ def test_agfs_s3_multipart_settings_are_forwarded_to_ragfs_plugin_config():
         s3=_s3_config(
             multipart_threshold_bytes=64 * 1024 * 1024,
             multipart_part_size_bytes=16 * 1024 * 1024,
+            multipart_concurrency=8,
         ),
     )
 
@@ -140,6 +141,7 @@ def test_agfs_s3_multipart_settings_are_forwarded_to_ragfs_plugin_config():
 
     assert plugin_config["multipart_threshold_bytes"] == 64 * 1024 * 1024
     assert plugin_config["multipart_part_size_bytes"] == 16 * 1024 * 1024
+    assert plugin_config["multipart_concurrency"] == 8
 
 
 @pytest.mark.parametrize(
@@ -148,6 +150,8 @@ def test_agfs_s3_multipart_settings_are_forwarded_to_ragfs_plugin_config():
         {"multipart_threshold_bytes": 0},
         {"multipart_part_size_bytes": 5 * 1024 * 1024 - 1},
         {"multipart_part_size_bytes": 5 * 1024 * 1024 * 1024 + 1},
+        {"multipart_concurrency": 0},
+        {"multipart_concurrency": 33},
     ],
 )
 def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):

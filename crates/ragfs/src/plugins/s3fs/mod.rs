@@ -1299,6 +1299,12 @@ impl S3FSPlugin {
                     "Multipart upload part size (5 MiB to 5 GiB)",
                 ),
                 ConfigParameter::optional(
+                    "multipart_concurrency",
+                    "int",
+                    "4",
+                    "Multipart parts uploaded at once (1-32); memory held is this x part size",
+                ),
+                ConfigParameter::optional(
                     "cache_enabled",
                     "bool",
                     "true",

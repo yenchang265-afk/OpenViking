@@ -14,14 +14,16 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::types::{CompletedMultipartUpload, CompletedPart};
 use aws_sdk_s3::Client;
 use bytes::Bytes;
+use futures::stream::{self, StreamExt, TryStreamExt};
 use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::future::Future;
+use std::io::SeekFrom;
 use std::path::Path;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{AsyncReadExt, AsyncSeekExt, AsyncWriteExt};
 use tokio::sync::{Semaphore, SemaphorePermit};
 
-use super::multipart::{effective_part_size, part_ranges, MultipartSettings};
+use super::multipart::{effective_part_size, part_ranges, MultipartSettings, MAX_PARTS};
 use super::resilience::S3ResilienceSettings;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -1040,36 +1042,55 @@ impl S3Client {
         src: &Path,
         total: u64,
     ) -> Result<()> {
-        let _slot = self.acquire_slot().await?;
         let scope = format!("bucket={} key={key}", self.bucket);
         let part_size = effective_part_size(total, self.multipart.part_size_bytes);
-        let mut file = tokio::fs::File::open(src).await?;
-        let mut completed = Vec::new();
-
-        for (index, (_offset, len)) in part_ranges(total, part_size).into_iter().enumerate() {
-            let mut part = vec![0u8; len as usize];
-            file.read_exact(&mut part).await?;
-            let part_number = i32::try_from(index + 1)
-                .map_err(|_| Error::internal(format!("too many multipart parts: {scope}")))?;
-            let uploaded = self
-                .client
-                .upload_part()
-                .bucket(&self.bucket)
-                .key(key)
-                .upload_id(upload_id)
-                .part_number(part_number)
-                .body(ByteStream::from(part))
-                .send()
-                .await
-                .map_err(|e| format_sdk_s3_error("UploadPart", &scope, &e))?;
-            completed.push(
-                CompletedPart::builder()
-                    .set_e_tag(uploaded.e_tag().map(str::to_string))
-                    .part_number(part_number)
-                    .build(),
-            );
+        let parts = part_ranges(total, part_size);
+        if parts.len() > MAX_PARTS as usize {
+            return Err(Error::internal(format!(
+                "too many multipart parts: {scope}"
+            )));
         }
 
+        // Up to `concurrency` parts in flight, each holding one part in memory
+        // and one request slot; `buffered` keeps completion order. The first
+        // failure drops (cancels) the rest and the caller aborts the upload.
+        let completed: Vec<CompletedPart> = stream::iter(parts.into_iter().enumerate())
+            .map(|(index, (offset, len))| {
+                let scope = &scope;
+                async move {
+                    let part_number = i32::try_from(index + 1).map_err(|_| {
+                        Error::internal(format!("too many multipart parts: {scope}"))
+                    })?;
+                    // Slot first, so a part is only read into memory once it can be sent.
+                    let _slot = self.acquire_slot().await?;
+                    let mut file = tokio::fs::File::open(src).await?;
+                    file.seek(SeekFrom::Start(offset)).await?;
+                    let mut part = vec![0u8; len as usize];
+                    file.read_exact(&mut part).await?;
+                    let uploaded = self
+                        .client
+                        .upload_part()
+                        .bucket(&self.bucket)
+                        .key(key)
+                        .upload_id(upload_id)
+                        .part_number(part_number)
+                        .body(ByteStream::from(part))
+                        .send()
+                        .await
+                        .map_err(|e| format_sdk_s3_error("UploadPart", scope, &e))?;
+                    Ok::<_, Error>(
+                        CompletedPart::builder()
+                            .set_e_tag(uploaded.e_tag().map(str::to_string))
+                            .part_number(part_number)
+                            .build(),
+                    )
+                }
+            })
+            .buffered(self.multipart.concurrency)
+            .try_collect()
+            .await?;
+
+        let _slot = self.acquire_slot().await?;
         let completed = self
             .client
             .complete_multipart_upload()
