@@ -1232,7 +1232,7 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 | `queue_db_path` | str（可選）| 舊版相容欄位，用於覆蓋 QueueFS 的 sqlite 資料庫檔案路徑。已被 `storage.agfs.queuefs.db_path` 取代。未設定時預設為 `{storage.workspace}/_system/queue/queue.db`。適用於 workspace 卷不支援 sqlite 的場景（例如某些網路檔案系統） | `null` |
 | `fs_executor_threads` | int | 執行阻塞式儲存呼叫的專用執行緒池大小，與預設 executor 隔離，避免後端緩慢（如高延遲 S3）拖垮向量資料庫等其他阻塞工作 | `64` |
 | `fs_queue_timeout_ms` | int | 儲存呼叫若在此時間內無法開始（所有儲存執行緒忙碌），立即以逾時失敗（`503 UNAVAILABLE`），而非無限排隊 | `30000` |
-| `circuit_breaker.enabled` | bool | 儲存呼叫的每掛載點斷路器。某掛載點連續 `failure_threshold` 次逾時或網路失敗（如 S3 中斷）後，對其呼叫立即以 `503 UNAVAILABLE` 失敗，而非每次都等待完整期限；其他掛載點不受影響 | `true` |
+| `circuit_breaker.enabled` | bool | 儲存呼叫的斷路器，依帳號（`/local/{account}`）與其他掛載點分別計算。某範圍連續 `failure_threshold` 次逾時或網路失敗（如 S3 中斷）後，該範圍的呼叫立即以 `503 UNAVAILABLE` 失敗，而非每次都等待完整期限；其他範圍不受影響，因此單一租戶無法讓其他租戶的儲存暫停；本機執行緒池飽和不計入 | `true` |
 | `circuit_breaker.failure_threshold` | int | 觸發斷路的連續失敗次數 | `5` |
 | `circuit_breaker.reset_timeout_seconds` | float | 斷路後放行一次探測呼叫前的等待時間；探測成功即恢復 | `15` |
 | `circuit_breaker.max_reset_timeout_seconds` | float | 等待時間上限；每次探測失敗時等待時間加倍 | `120` |

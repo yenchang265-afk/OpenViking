@@ -383,17 +383,18 @@ class RedisCacheConfig(BaseModel):
 
 
 class StorageCircuitBreakerConfig(BaseModel):
-    """Per-mount circuit breaker for storage calls."""
+    """Circuit breaker for storage calls, scoped per account and per other mount."""
 
     enabled: bool = Field(
         default=True,
-        description="Fail storage calls to a mount fast (HTTP 503) while its backend keeps "
-        "timing out, instead of making every call wait for its full deadline.",
+        description="Fail storage calls fast (HTTP 503) while their backend keeps timing out, "
+        "instead of making every call wait for its full deadline. Scoped per account "
+        "(/local/{account}) and per other mount, so one tenant cannot pause others.",
     )
     failure_threshold: int = Field(
         default=5,
         ge=1,
-        description="Consecutive timeout/network failures on a mount that open its circuit.",
+        description="Consecutive timeout/network failures in a scope that open its circuit.",
     )
     reset_timeout_seconds: float = Field(
         default=15.0,
@@ -515,7 +516,7 @@ class AGFSConfig(BaseModel):
 
     circuit_breaker: StorageCircuitBreakerConfig = Field(
         default_factory=StorageCircuitBreakerConfig,
-        description="Per-mount circuit breaker for storage calls.",
+        description="Circuit breaker for storage calls, scoped per account and per other mount.",
     )
 
     queue_db_path: Optional[str] = Field(

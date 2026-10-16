@@ -8,6 +8,7 @@ from openviking.pyagfs import AsyncAGFSClient
 from openviking.pyagfs.exceptions import (
     AGFSCircuitOpenError,
     AGFSNotFoundError,
+    AGFSStorageSaturatedError,
     AGFSTimeoutError,
 )
 from openviking.pyagfs.storage_breaker import configure_storage_breaker
@@ -111,4 +112,34 @@ def test_open_circuit_maps_to_unavailable():
     mapped = map_exception(AGFSCircuitOpenError("storage circuit open for /local"))
 
     assert mapped.code == "UNAVAILABLE"
+    assert ERROR_CODE_TO_HTTP_STATUS[mapped.code] == 503
+
+
+@pytest.mark.asyncio
+async def test_one_accounts_failures_do_not_pause_other_accounts():
+    """A tenant cannot trip a shared circuit and deny storage to everyone."""
+    sync = ScriptedClient(*[AGFSTimeoutError("s3 slow")] * 3)
+    client = AsyncAGFSClient(sync)
+    await _fail_times(client, "/local/attacker/big-file", 3)
+
+    with pytest.raises(AGFSCircuitOpenError):
+        await client.stat("/local/attacker/other")
+    assert await client.stat("/local/victim/file") == {"name": "/local/victim/file"}
+
+
+@pytest.mark.asyncio
+async def test_storage_pool_saturation_does_not_trip_the_circuit():
+    """A full local thread pool is overload on our side, not a failing backend."""
+    sync = ScriptedClient(*[AGFSStorageSaturatedError("all storage threads are busy")] * 5)
+    client = AsyncAGFSClient(sync)
+    for _ in range(5):
+        with pytest.raises(AGFSStorageSaturatedError):
+            await client.stat("/local/acct/a")
+
+    assert await client.stat("/local/acct/a") == {"name": "/local/acct/a"}
+
+
+def test_saturation_error_is_still_a_retryable_timeout():
+    assert issubclass(AGFSStorageSaturatedError, AGFSTimeoutError)
+    mapped = map_exception(AGFSStorageSaturatedError("all storage threads are busy"))
     assert ERROR_CODE_TO_HTTP_STATUS[mapped.code] == 503

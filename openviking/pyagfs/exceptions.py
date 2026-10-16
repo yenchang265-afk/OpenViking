@@ -25,6 +25,12 @@ class AGFSTimeoutError(AGFSClientError):
     pass
 
 
+class AGFSStorageSaturatedError(AGFSTimeoutError):
+    """A storage call could not start: all local storage threads are busy"""
+
+    pass
+
+
 class AGFSHTTPError(AGFSClientError):
     """HTTP related errors"""
 

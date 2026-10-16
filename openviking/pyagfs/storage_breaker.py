@@ -4,8 +4,9 @@
 
 While a storage backend (e.g. S3) is down, every call still waits for its full
 deadline before failing. After a run of consecutive timeout/network failures
-on a mount, calls to that mount fail immediately (HTTP 503) until a probe after
-the reset timeout succeeds. Other mounts are unaffected.
+in one scope (an account's data, or a mount), calls in that scope fail
+immediately (HTTP 503) until a probe after the reset timeout succeeds. Other
+scopes are unaffected.
 """
 
 from __future__ import annotations
@@ -13,7 +14,12 @@ from __future__ import annotations
 import threading
 from typing import TYPE_CHECKING, Awaitable, Callable, TypeVar
 
-from .exceptions import AGFSCircuitOpenError, AGFSNetworkError, AGFSTimeoutError
+from .exceptions import (
+    AGFSCircuitOpenError,
+    AGFSNetworkError,
+    AGFSStorageSaturatedError,
+    AGFSTimeoutError,
+)
 
 if TYPE_CHECKING:
     from openviking.utils.circuit_breaker import CircuitBreaker
@@ -77,11 +83,19 @@ def reset_storage_breakers() -> None:
 
 
 def mount_key(path: object) -> str:
-    """The mount root a storage path belongs to, e.g. ``/local`` for ``/local/acct/x``."""
+    """The breaker scope a storage path belongs to.
+
+    Account data under ``/local/{account_id}/...`` is scoped per account, so one
+    tenant's failing calls (e.g. oversized reads that time out) cannot open a
+    circuit that pauses storage for every account. Other paths use their mount
+    root, e.g. ``/queue``.
+    """
     if not isinstance(path, str) or not path.startswith("/"):
         return _UNSCOPED
-    root = path.strip("/").split("/", 1)[0]
-    return f"/{root}"
+    parts = path.strip("/").split("/", 2)
+    if parts[0] == "local" and len(parts) > 1 and parts[1]:
+        return f"/local/{parts[1]}"
+    return f"/{parts[0]}"
 
 
 def _breaker_for(key: str) -> "CircuitBreaker | None":
@@ -113,6 +127,10 @@ async def guard_storage_call(path: object, call: Callable[[], Awaitable[_ResultT
         ) from None
     try:
         result = await call()
+    except AGFSStorageSaturatedError:
+        # Local thread-pool overload says nothing about the backend; counting it
+        # would let request floods open the circuit. Leave the state unchanged.
+        raise
     except (AGFSTimeoutError, AGFSNetworkError) as exc:
         breaker.record_failure(_StorageFailure(type(exc).__name__))
         raise

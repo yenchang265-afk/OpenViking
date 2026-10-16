@@ -18,7 +18,7 @@ import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from typing import Any, Callable, TypeVar
 
-from .exceptions import AGFSTimeoutError
+from .exceptions import AGFSStorageSaturatedError
 
 _ResultT = TypeVar("_ResultT")
 
@@ -78,7 +78,7 @@ def _submit(fn: Callable[..., Any], /, *args: Any, **kwargs: Any) -> tuple[Futur
 async def run_in_fs_executor(fn: Callable[..., _ResultT], /, *args: Any, **kwargs: Any) -> _ResultT:
     """Run a blocking storage call on the storage pool, preserving contextvars.
 
-    Raises ``AGFSTimeoutError`` when the call has not started within the queue
+    Raises ``AGFSStorageSaturatedError`` (an ``AGFSTimeoutError``) when the call has not started within the queue
     timeout; it is then removed from the queue and never runs. A call that has
     started runs to completion (its duration is bounded by backend deadlines).
     """
@@ -93,7 +93,7 @@ async def run_in_fs_executor(fn: Callable[..., _ResultT], /, *args: Any, **kwarg
         raise
     # cancel() only succeeds for work still waiting in the queue.
     if not done and future.cancel():
-        raise AGFSTimeoutError(
+        raise AGFSStorageSaturatedError(
             f"storage call did not start within {queue_timeout:g}s: "
             "all storage threads are busy (backend slow or overloaded)"
         )
