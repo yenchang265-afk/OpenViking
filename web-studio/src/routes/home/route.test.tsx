@@ -17,6 +17,7 @@ const state = vi.hoisted(() => ({
   role: 'user',
   summary: vi.fn(),
   tokens: vi.fn(),
+  tokenRate: vi.fn(),
   commits: vi.fn(),
 }))
 vi.mock('#/hooks/use-app-connection', () => ({
@@ -35,6 +36,7 @@ vi.mock('#/hooks/use-app-connection', () => ({
 vi.mock('./-lib/api', () => ({
   fetchConsoleDashboardSummary: state.summary,
   fetchConsoleTokenSeries: state.tokens,
+  fetchConsoleTokenRate: state.tokenRate,
   fetchConsoleContextCommits: state.commits,
 }))
 vi.mock('react-i18next', () => ({
@@ -49,6 +51,7 @@ beforeEach(() => {
     tokens_per_minute: { total: 0 },
   })
   state.tokens.mockReset().mockResolvedValue({ items: [] })
+  state.tokenRate.mockReset().mockResolvedValue({ items: [], peak: null })
   state.commits.mockReset().mockResolvedValue({ items: [] })
   vi.stubGlobal('matchMedia', () => ({ matches: true }))
 })
@@ -161,6 +164,20 @@ it('renders tokens per minute with its breakdown', async () => {
     expect(within(panel).getByText('10')).toBeTruthy()
     expect(within(panel).getByText('5')).toBeTruthy()
     expect(within(panel).getByText('1.7')).toBeTruthy()
+  } finally {
+    close()
+  }
+})
+
+it('loads the TPM trend for the last 24 hours and refetches per window', async () => {
+  const close = await renderHome()
+  try {
+    await waitFor(() => expect(state.tokenRate).toHaveBeenCalledWith('24h'))
+    await screen.findByText('tpmTrend.empty')
+    act(() => {
+      screen.getByRole('button', { name: 'tpmTrend.windows.7d' }).click()
+    })
+    await waitFor(() => expect(state.tokenRate).toHaveBeenCalledWith('7d'))
   } finally {
     close()
   }

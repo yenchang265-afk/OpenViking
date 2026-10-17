@@ -9,6 +9,9 @@ export type {
   ConsoleRetrievalCounts as RetrievalCounts,
   ConsoleSeriesResult as ConsoleSeries,
   ConsoleTokenCounts as TokenCounts,
+  ConsoleTokenRateItem as TokenRateItem,
+  ConsoleTokenRateResult as TokenRate,
+  ConsoleTokenRateWindow as TokenRateWindow,
   ConsoleTokenSeriesItem as TokenSeriesItem,
   ConsoleTokensPerMinute as TokensPerMinute,
 } from '@ov-server/api/v1/console'

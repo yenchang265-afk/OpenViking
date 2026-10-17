@@ -49,6 +49,19 @@ class UsageAuditStore(Protocol):
     ) -> dict[str, int]:
         """Return token totals for the UTC hour buckets in `[utc_start, utc_end)`."""
 
+    async def get_minute_tokens(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None = None,
+    ) -> dict[datetime, dict[str, int]]:
+        """Return per-minute token counts keyed by UTC minute start in `[utc_start, utc_end)`.
+
+        Minutes without tokens are omitted.
+        """
+
     async def get_today_retrievals(
         self,
         *,

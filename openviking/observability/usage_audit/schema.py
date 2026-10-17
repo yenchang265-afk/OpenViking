@@ -38,6 +38,24 @@ CREATE TABLE IF NOT EXISTS usage_token_hourly (
 CREATE INDEX IF NOT EXISTS idx_usage_token_account_date
     ON usage_token_hourly(account_id, date_utc, hour_utc);
 
+-- Minute-grained token totals for tokens-per-minute trends and peaks. Additive
+-- (created on open), so it needs no schema version bump.
+CREATE TABLE IF NOT EXISTS usage_token_minute (
+    account_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    date_utc TEXT NOT NULL,
+    minute_utc INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    token_type TEXT NOT NULL,
+    token_count INTEGER NOT NULL DEFAULT 0,
+    updated_at TEXT NOT NULL,
+    PRIMARY KEY (
+        account_id, user_id, date_utc, minute_utc, source, token_type
+    )
+);
+CREATE INDEX IF NOT EXISTS idx_usage_token_minute_account_date
+    ON usage_token_minute(account_id, date_utc, minute_utc);
+
 CREATE TABLE IF NOT EXISTS usage_retrieval_hourly (
     account_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
@@ -103,6 +121,7 @@ RESET_ON_SCHEMA_UPGRADE_TABLES = (
     "usage_token_daily",
     "usage_retrieval_daily",
     "usage_token_hourly",
+    "usage_token_minute",
     "usage_retrieval_hourly",
     "usage_context_write_bucket",
     "request_audit",

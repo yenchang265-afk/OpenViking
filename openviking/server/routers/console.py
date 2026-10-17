@@ -86,6 +86,19 @@ async def token_series(
     return _ok_response(result)
 
 
+@router.get("/tokens/rate")
+async def token_rate_series(
+    request: Request,
+    window: str = Query("24h", pattern="^(1h|6h|24h|7d)$"),
+    _ctx: RequestContext = require_role(Role.ROOT, Role.ADMIN, Role.USER),
+):
+    """Return tokens-per-minute trend buckets and the peak minute for a recent window."""
+    service = _runtime_service(request)
+    if service is None:
+        return _disabled_response()
+    return _ok_response(await service.token_rate_series(ctx=_ctx, window=window))
+
+
 @router.get("/context-commits")
 async def context_commits(
     request: Request,

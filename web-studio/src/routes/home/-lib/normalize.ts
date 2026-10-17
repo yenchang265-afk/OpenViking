@@ -4,6 +4,8 @@ import {
 } from '../-constants/dashboard'
 import type {
   ConsoleContextCommitItem,
+  ConsoleTokenRateItem,
+  ConsoleTokenRatePeak,
   ConsoleTokenSeriesItem,
 } from '@ov-server/api/v1/console'
 import type { CommitHeatmapStats, HeatMapDayValue } from '../-types/dashboard'
@@ -25,6 +27,44 @@ export function normalizeTokenSeries(
       vlm_output: vlmOutput,
     }
   })
+}
+
+export type NormalizedTokenRate = {
+  averageTotal: number
+  bucketMinutes: number
+  items: Array<Required<ConsoleTokenRateItem>>
+  peak: Required<ConsoleTokenRatePeak> | null
+}
+
+export function normalizeTokenRate(data: unknown): NormalizedTokenRate {
+  const record = asRecord(data)
+  const peak = asRecord(record.peak)
+  const peakTotal = asNumber(peak.total)
+  return {
+    averageTotal: asNumber(record.average_total),
+    bucketMinutes: asNumber(record.bucket_minutes) || 1,
+    items: asArray(record.items).map((raw) => {
+      const item = asRecord(raw)
+      return {
+        embedding_input: asNumber(item.embedding_input),
+        peak_total: asNumber(item.peak_total),
+        start: asString(item.start),
+        total: asNumber(item.total),
+        vlm_input: asNumber(item.vlm_input),
+        vlm_output: asNumber(item.vlm_output),
+      }
+    }),
+    peak:
+      peakTotal > 0
+        ? {
+            embedding_input: asNumber(peak.embedding_input),
+            minute: asString(peak.minute),
+            total: peakTotal,
+            vlm_input: asNumber(peak.vlm_input),
+            vlm_output: asNumber(peak.vlm_output),
+          }
+        : null,
+  }
 }
 
 function percentile(sortedValues: number[], ratio: number): number {

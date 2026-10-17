@@ -1565,6 +1565,23 @@ const workspace = {
       vlmInput: 'VLM input / min',
       vlmOutput: 'VLM output / min',
     },
+    tpmTrend: {
+      average: 'Average TPM',
+      description:
+        'Tokens per minute, recorded per minute. Wider ranges average each bucket; the dashed line is the busiest minute inside it.',
+      empty:
+        'No per-minute token data in this range yet. It is recorded from this version onwards.',
+      peak: 'Peak TPM (busiest minute)',
+      peakLine: 'Busiest minute',
+      title: 'Tokens per Minute Trend',
+      window: 'Time range',
+      windows: {
+        '1h': '1h',
+        '6h': '6h',
+        '24h': '24h',
+        '7d': '7d',
+      },
+    },
     tokenTrend: {
       description:
         'Shows daily token usage over the last 14 days, including VLM input, VLM output, and embedding input.',

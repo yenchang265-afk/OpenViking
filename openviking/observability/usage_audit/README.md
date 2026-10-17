@@ -290,6 +290,48 @@ GET /api/v1/console/tokens?start_date=2026-05-01&end_date=2026-05-12&bucket=day
 
 返回中會補齊日期範圍內沒有資料的日期。
 
+### Token Rate (TPM)
+
+```text
+GET /api/v1/console/tokens/rate?window=24h
+```
+
+`window` 可選 `1h`、`6h`、`24h`（預設）、`7d`，對應分桶 1、1、5、60 分鐘。資料來自分鐘粒度表 `usage_token_minute`（與小時表一同寫入、按 `usage_retention_days` 清理），只有升級後產生的 Token 才有分鐘資料。
+
+返回示例：
+
+```json
+{
+  "window": "24h",
+  "bucket_minutes": 5,
+  "start": "2026-05-11T10:35:00+00:00",
+  "end": "2026-05-12T10:35:00+00:00",
+  "items": [
+    {
+      "start": "2026-05-12T10:20:00+00:00",
+      "vlm_input": 100.0,
+      "vlm_output": 0.0,
+      "embedding_input": 0.0,
+      "total": 100.0,
+      "peak_total": 400
+    }
+  ],
+  "peak": {
+    "minute": "2026-05-12T10:21:00+00:00",
+    "vlm_input": 400,
+    "vlm_output": 0,
+    "embedding_input": 0,
+    "total": 400
+  },
+  "average_total": 0.3
+}
+```
+
+- `items[].vlm_input/vlm_output/embedding_input/total`：該分桶的平均每分鐘 Token（只除以已經過去的分鐘數）。
+- `items[].peak_total`：該分桶內最忙那一分鐘的 Token 總數。
+- `peak`：整個區間內最忙的一分鐘（UTC 分鐘起點），沒有 Token 時為 `null`。適合用來評估供應商 TPM 限額。
+- `average_total`：整個區間的平均每分鐘 Token。
+
 ### Context Commits
 
 ```text

@@ -65,6 +65,28 @@ export type ConsoleTokenSeriesItem = {
 
 export type ConsoleTokenSeriesResult = ConsoleSeriesResult<ConsoleTokenSeriesItem>
 
+export type ConsoleTokenRateWindow = '1h' | '6h' | '24h' | '7d'
+
+/** Average tokens per minute within one bucket, plus its busiest minute. */
+export type ConsoleTokenRateItem = ConsoleTokenCounts & {
+  peak_total?: number
+  start?: string
+}
+
+export type ConsoleTokenRatePeak = ConsoleTokenCounts & {
+  minute?: string
+}
+
+export type ConsoleTokenRateResult = OvMaybeDisabled & {
+  average_total?: number
+  bucket_minutes?: number
+  end?: string
+  items?: ConsoleTokenRateItem[]
+  peak?: ConsoleTokenRatePeak | null
+  start?: string
+  window?: ConsoleTokenRateWindow
+}
+
 export type ConsoleContextCommitItem = {
   add_resource?: number
   add_skill?: number

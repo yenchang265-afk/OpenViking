@@ -19,9 +19,33 @@ from .inventory import ContextInventoryProvider
 from .store import UsageAuditStore
 from .time import resolve_usage_timezone, resolve_user_timezone
 
+TOKEN_TYPES = ("vlm_input", "vlm_output", "embedding_input")
+# window -> (window length in minutes, bucket size in minutes). Buckets stay at or
+# under ~360 points; each still reports its busiest single minute.
+TOKEN_RATE_WINDOWS = {
+    "1h": (60, 1),
+    "6h": (360, 1),
+    "24h": (1440, 5),
+    "7d": (10080, 60),
+}
+
 
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _token_rate_bounds(now: datetime, window: str) -> tuple[datetime, datetime, int]:
+    """Return `(start, end, bucket_minutes)` with the current minute included.
+
+    `end` is rounded up to the bucket size so every bucket is aligned on a
+    whole multiple of it.
+    """
+    total_minutes, bucket_minutes = TOKEN_RATE_WINDOWS[window]
+    current_end = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    bucket = timedelta(minutes=bucket_minutes)
+    remainder = (current_end - datetime(1970, 1, 1, tzinfo=timezone.utc)) % bucket
+    end = current_end + (bucket - remainder if remainder else timedelta(0))
+    return end - timedelta(minutes=total_minutes), end, bucket_minutes
 
 
 def _recent_token_window(now: datetime) -> tuple[datetime, datetime]:
@@ -128,6 +152,71 @@ class UsageAuditQueryService:
             user_id=self._usage_user_id(ctx),
         )
         return {"start_date": start_date, "end_date": end_date, "bucket": bucket, "items": items}
+
+    async def token_rate_series(self, *, ctx: RequestContext, window: str) -> dict[str, Any]:
+        """Return tokens-per-minute buckets and the busiest minute in a recent window."""
+        if window not in TOKEN_RATE_WINDOWS:
+            raise InvalidArgumentError(f"window must be one of {', '.join(TOKEN_RATE_WINDOWS)}")
+        now = _utc_now()
+        start, end, bucket_minutes = _token_rate_bounds(now, window)
+        minutes = await self._store.get_minute_tokens(
+            account_id=ctx.account_id,
+            utc_start=start,
+            utc_end=end,
+            user_id=self._usage_user_id(ctx),
+        )
+        # Minutes after the current one have not happened yet; averages divide
+        # only by elapsed minutes.
+        elapsed_end = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+        bucket = timedelta(minutes=bucket_minutes)
+        grouped: dict[int, list[dict[str, int]]] = {}
+        for ts, counts in minutes.items():
+            grouped.setdefault((ts - start) // bucket, []).append(counts)
+        items = [
+            self._token_rate_bucket(
+                grouped.get(index, []), start + index * bucket, bucket, elapsed_end
+            )
+            for index in range((end - start) // bucket)
+        ]
+        peak_minute = max(
+            minutes,
+            key=lambda ts: (sum(minutes[ts].values()), ts),
+            default=None,
+        )
+        peak = None
+        if peak_minute is not None and sum(minutes[peak_minute].values()) > 0:
+            peak = {
+                "minute": peak_minute.isoformat(),
+                **minutes[peak_minute],
+                "total": sum(minutes[peak_minute].values()),
+            }
+        window_total = sum(sum(counts.values()) for counts in minutes.values())
+        window_minutes = (min(end, elapsed_end) - start).total_seconds() / 60
+        return {
+            "window": window,
+            "bucket_minutes": bucket_minutes,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "items": items,
+            "peak": peak,
+            "average_total": round(window_total / window_minutes, 1),
+        }
+
+    @staticmethod
+    def _token_rate_bucket(
+        counts: list[dict[str, int]],
+        bucket_start: datetime,
+        bucket: timedelta,
+        elapsed_end: datetime,
+    ) -> dict[str, Any]:
+        elapsed = (min(bucket_start + bucket, elapsed_end) - bucket_start).total_seconds() / 60
+        elapsed = max(elapsed, 1)
+        sums = {key: sum(c[key] for c in counts) for key in TOKEN_TYPES}
+        item: dict[str, Any] = {"start": bucket_start.isoformat()}
+        item.update({key: round(value / elapsed, 1) for key, value in sums.items()})
+        item["total"] = round(sum(sums.values()) / elapsed, 1)
+        item["peak_total"] = max((sum(c.values()) for c in counts), default=0)
+        return item
 
     async def context_commits(
         self,
