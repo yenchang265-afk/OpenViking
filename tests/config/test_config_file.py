@@ -400,6 +400,20 @@ def test_invalid_environment_file_cannot_replace_disk(config_file, monkeypatch):
     assert path.read_bytes() == original
 
 
+def test_unset_braced_environment_variable_cannot_replace_disk(config_file, monkeypatch):
+    path, raw = config_file
+    original = path.read_bytes()
+    revision = read_config_file()["revision"]
+    monkeypatch.delenv("STUDIO_UNSET_SECRET", raising=False)
+    content = (
+        json.dumps(raw)[:-1]
+        + ', "storage": {"agfs": {"s3": {"secret_key": "${STUDIO_UNSET_SECRET}"}}}}'
+    )
+    with pytest.raises(ValueError):
+        save_config_file(content, revision)
+    assert path.read_bytes() == original
+
+
 def test_form_cannot_introduce_environment_references(config_file):
     path, _ = config_file
     with pytest.raises(ValueError, match="file editor"):

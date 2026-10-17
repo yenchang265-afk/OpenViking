@@ -11,6 +11,7 @@ Provides a four-level resolution chain for locating config files:
 
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional
 
@@ -18,6 +19,26 @@ from .consts import (
     DEFAULT_CONFIG_DIR,
     SYSTEM_CONFIG_DIR,
 )
+
+# ``${VAR}`` left behind by expandvars() means the variable is unset. Bare ``$VAR``
+# is not checked so a literal ``$`` inside a value (e.g. a password) still loads.
+_UNEXPANDED_VAR_PATTERN = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def expand_env_vars(raw: str, source: Any) -> str:
+    """Expand ``$VAR`` and ``${VAR}`` in config text; fail on unset ``${VAR}``.
+
+    Raises:
+        ValueError: Naming (never revealing values of) each unset ``${VAR}``.
+    """
+    expanded = os.path.expandvars(raw)
+    missing = sorted(set(_UNEXPANDED_VAR_PATTERN.findall(expanded)))
+    if missing:
+        raise ValueError(
+            f"Config file {source} references environment variables that are not set "
+            f"(write \\u0024{{NAME}} for a literal): {', '.join(missing)}"
+        )
+    return expanded
 
 
 def resolve_config_path(
@@ -84,8 +105,7 @@ def load_json_config(path: Path) -> Dict[str, Any]:
         raw = f.read()
 
     # Expand $VAR and ${VAR} inside the JSON text (useful for container deployments).
-    # Unset variables are left unchanged by expandvars().
-    raw = os.path.expandvars(raw)
+    raw = expand_env_vars(raw, path)
 
     try:
         # print(f"Loading config file: {path}")

@@ -10,6 +10,7 @@ import tempfile
 from contextlib import contextmanager
 from pathlib import Path
 
+from openviking_cli.utils.config.config_loader import expand_env_vars
 from openviking_cli.utils.config.embedding_config import EmbeddingCredential
 from openviking_cli.utils.config.open_viking_config import (
     OpenVikingConfig,
@@ -64,7 +65,7 @@ def _validate(content: str, server_overrides: dict | None = None) -> OpenVikingC
     try:
         from openviking.server.config import ServerConfig, validate_server_config
 
-        expanded = json.loads(os.path.expandvars(content.lstrip("\ufeff")))
+        expanded = json.loads(expand_env_vars(content.lstrip("\ufeff"), "ov.conf"))
         server = expanded.get("server")
         server_config = ServerConfig.model_validate({} if server is None else server)
         # The CLI reapplies these arguments after loading ov.conf on every restart.

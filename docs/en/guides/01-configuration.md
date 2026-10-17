@@ -58,6 +58,10 @@ Top-level `service_name` defaults to `"openviking-server"`. Cache-backed modules
 it as their Redis namespace. OTel `service_name` fields keep their own value
 when set and inherit this value when omitted.
 
+`$VAR` and `${VAR}` in `ov.conf` are replaced with environment variables when the
+file loads. An unset `${VAR}` stops startup (and a Web Studio save) with an error
+naming the variable; write `\u0024{VAR}` to keep a literal `${VAR}` in a value.
+
 ### Ordered credentials in ov.conf
 
 `vlm` and `query_planner` support an ordered `credentials` array. Embedding supports the same array inside each configured `dense`, `sparse`, or `hybrid` section. Index 0 has the highest priority; later entries provide failover credentials. The model sections remain JSON objects, and existing single-credential configurations remain supported.
@@ -1448,11 +1452,11 @@ Legacy compatibility example:
 |-----------|------|-------------|---------|
 | `bucket` | str | S3 bucket name | null |
 | `region` | str | AWS region where the bucket is located (e.g., us-east-1, cn-beijing) | null |
-| `access_key` | str | S3 access key ID | null |
-| `secret_key` | str | S3 secret access key corresponding to the access key ID | null |
+| `access_key` | str | S3 access key ID. Required: RAGFS has no default credential chain (env vars, profiles, IAM roles), so use `"${VAR}"` to read it from the environment | null |
+| `secret_key` | str | S3 secret access key corresponding to the access key ID. Required; use `"${VAR}"` as for `access_key` | null |
 | `endpoint` | str | Custom S3 endpoint, required for S3-compatible services like MinIO or LocalStack. Accepts a full URL (`https://...` or `http://...`) or a bare hostname; bare hostnames are auto-prefixed with `https://` or `http://` based on `use_ssl` | null |
 | `prefix` | str | Optional key prefix for namespace isolation | "" |
-| `use_ssl` | bool | Enable/disable SSL (HTTPS) for S3 connections. Also controls the scheme auto-prefixed onto bare-hostname `endpoint` values | true |
+| `use_ssl` | bool | Enable/disable SSL (HTTPS) for S3 connections. Only applies to bare-hostname `endpoint` values; a full URL's scheme wins, and setting a contradicting `use_ssl` logs a warning | true |
 | `use_path_style` | bool | true for PathStyle used by MinIO and some S3-compatible services; false for VirtualHostStyle used by TOS and some S3-compatible services | true |
 | `auto_detect_content_type` | bool | Automatically infer MIME type from the object key / filename extension and set the S3 object `Content-Type` header during upload | false |
 | `multipart_threshold_bytes` | int | Files written from disk that are larger than this use S3 multipart upload (bounded memory, no 5 GB single-PUT limit) | unset (16 MiB) |

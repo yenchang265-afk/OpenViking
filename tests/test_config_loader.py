@@ -109,6 +109,34 @@ class TestLoadJsonConfig:
 
         assert data == {"api_key": "sk-test-123"}
 
+    def test_rejects_unset_braced_environment_variable(self, tmp_path, monkeypatch):
+        conf = tmp_path / "env.conf"
+        conf.write_text('{"a": "${TEST_UNSET_B}", "b": "${TEST_UNSET_A}", "c": "${TEST_UNSET_A}"}')
+        monkeypatch.delenv("TEST_UNSET_A", raising=False)
+        monkeypatch.delenv("TEST_UNSET_B", raising=False)
+
+        with pytest.raises(ValueError, match=r"not set .*: TEST_UNSET_A, TEST_UNSET_B$"):
+            load_json_config(conf)
+
+    def test_leaves_bare_dollar_text_unchanged(self, tmp_path, monkeypatch):
+        conf = tmp_path / "env.conf"
+        conf.write_text('{"password": "pa$sword", "price": "$5"}')
+        monkeypatch.delenv("sword", raising=False)
+
+        data = load_json_config(conf)
+
+        assert data == {"password": "pa$sword", "price": "$5"}
+
+    def test_json_escaped_dollar_keeps_literal_braced_text(self, tmp_path, monkeypatch):
+        conf = tmp_path / "env.conf"
+        escaped_dollar = chr(92) + "u0024"  # JSON escape for "$", invisible to expandvars
+        conf.write_text('{"template": "' + escaped_dollar + '{TEST_UNSET_A}"}')
+        monkeypatch.delenv("TEST_UNSET_A", raising=False)
+
+        data = load_json_config(conf)
+
+        assert data == {"template": "${TEST_UNSET_A}"}
+
 
 class TestRequireConfig:
     """Tests for require_config."""
@@ -492,6 +520,23 @@ def test_openviking_config_singleton_preserves_value_error_for_bad_config(tmp_pa
 
     OpenVikingConfigSingleton.reset_instance()
     with pytest.raises(ValueError, match="retrieval.recall_intent_timeout_s"):
+        OpenVikingConfigSingleton.initialize(config_path=str(config_path))
+    OpenVikingConfigSingleton.reset_instance()
+
+
+def test_openviking_config_singleton_rejects_unset_environment_variable(tmp_path, monkeypatch):
+    monkeypatch.setenv(OPENVIKING_CONFIG_ENV, "/tmp/codex-no-config.json")
+    monkeypatch.delenv("TEST_UNSET_S3_SECRET", raising=False)
+
+    from openviking_cli.utils.config.open_viking_config import OpenVikingConfigSingleton
+
+    config_path = tmp_path / "ov.conf"
+    config_path.write_text(
+        '{"storage": {"agfs": {"s3": {"secret_key": "${TEST_UNSET_S3_SECRET}"}}}}'
+    )
+
+    OpenVikingConfigSingleton.reset_instance()
+    with pytest.raises(ValueError, match="not set .*: TEST_UNSET_S3_SECRET"):
         OpenVikingConfigSingleton.initialize(config_path=str(config_path))
     OpenVikingConfigSingleton.reset_instance()
 
