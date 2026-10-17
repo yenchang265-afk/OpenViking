@@ -34,12 +34,14 @@ class S3Config(BaseModel):
 
     access_key: Optional[str] = Field(
         default=None,
-        description="S3 access key ID. If not provided, RAGFS may attempt to use environment variables or IAM roles.",
+        description="S3 access key ID (required; RAGFS has no default credential chain). "
+        'Use "${VAR}" to read it from the environment.',
     )
 
     secret_key: Optional[str] = Field(
         default=None,
-        description="S3 secret access key corresponding to the access key ID.",
+        description="S3 secret access key corresponding to the access key ID (required). "
+        'Use "${VAR}" to read it from the environment.',
     )
 
     endpoint: Optional[str] = Field(
@@ -211,6 +213,20 @@ class S3Config(BaseModel):
 
         if missing:
             raise ValueError(f"S3 backend requires the following fields: {', '.join(missing)}")
+
+        # Mirrors s3fs: an http:// or https:// endpoint wins and use_ssl is ignored.
+        scheme = next((s for s in ("https", "http") if self.endpoint.startswith(f"{s}://")), None)
+        if (
+            "use_ssl" in self.model_fields_set
+            and scheme is not None
+            and self.use_ssl != (scheme == "https")
+        ):
+            logger.warning(
+                "S3Config: use_ssl=%s is ignored because endpoint uses %s://; "
+                "the endpoint scheme decides whether TLS is used.",
+                self.use_ssl,
+                scheme,
+            )
 
         return self
 

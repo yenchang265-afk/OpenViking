@@ -3,6 +3,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Test if config validators work correctly"""
 
+import logging
 import sys
 from pathlib import Path
 
@@ -245,6 +246,38 @@ def test_agfs_s3_resilience_settings_reject_invalid_values(overrides):
         print("   Pass")
     except ValueError as e:
         print(f"   Fail: {e}")
+
+
+@pytest.mark.parametrize(
+    ("endpoint", "ssl_overrides", "warns"),
+    [
+        ("http://minio:9000", {"use_ssl": True}, True),
+        ("https://minio:9000", {"use_ssl": False}, True),
+        ("http://minio:9000", {}, False),
+        ("http://minio:9000", {"use_ssl": False}, False),
+        ("https://minio:9000", {"use_ssl": True}, False),
+        ("minio:9000", {"use_ssl": False}, False),
+    ],
+)
+def test_agfs_s3_warns_when_use_ssl_contradicts_endpoint_scheme(
+    endpoint, ssl_overrides, warns, monkeypatch, caplog
+):
+    logger = logging.getLogger("openviking_cli.utils.config.agfs_config")
+    monkeypatch.setattr(logger, "handlers", [*logger.handlers, caplog.handler])
+    caplog.set_level(logging.WARNING, logger=logger.name)
+    s3 = S3Config(
+        bucket="my-bucket",
+        region="us-east-1",
+        access_key="fake-access-key-for-testing",
+        secret_key="fake-secret-key-for-testing-12345",
+        endpoint=endpoint,
+        **ssl_overrides,
+    )
+
+    AGFSConfig(backend="s3", s3=s3)
+
+    assert ("use_ssl" in caplog.text) is warns
+    assert "fake-secret-key-for-testing-12345" not in caplog.text
 
 
 @pytest.mark.parametrize(

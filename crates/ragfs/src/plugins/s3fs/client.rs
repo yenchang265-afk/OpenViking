@@ -578,7 +578,8 @@ impl S3Client {
             s3_config_builder = s3_config_builder.endpoint_url(ep.to_string());
         }
 
-        // Set credentials if provided, otherwise SDK uses default chain
+        // Static credentials only: this builder does not load aws-config, so there is
+        // no default credential chain (env vars, profiles, IAM roles).
         if let (Some(ak), Some(sk)) = (access_key, secret_key) {
             let creds = Credentials::new(ak, sk, None, None, "ragfs-s3fs");
             s3_config_builder = s3_config_builder.credentials_provider(creds);
