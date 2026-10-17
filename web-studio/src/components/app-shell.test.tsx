@@ -73,13 +73,13 @@ it('routes first use to the configuration page before mounting business routes',
   expect(localStorage.getItem('ov_console_connection_profiles')).toBeNull()
 })
 
-it('shows the setup wizard at /config even after selecting a workspace', () => {
+it('shows the connection setup at /config even after selecting a workspace', () => {
   localStorage.clear()
   sessionStorage.setItem('ov_studio_workspace_selected', 'selected')
   bootstrap.pathname = '/config'
   render(<AppShell>{null}</AppShell>)
   expect(screen.getByRole('heading', { level: 1 }).textContent).toContain(
-    'Choose a workspace',
+    'Connect your workspace.',
   )
 })
 

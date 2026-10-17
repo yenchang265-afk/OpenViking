@@ -10,30 +10,13 @@ export default {
     'This address did not return valid Business Data Platform service information.',
   keyRequired: 'This service requires an API Key. Enter it and retry.',
 
-  steps: 'Choose a workspace',
-  workspace: 'Choose a workspace',
-  workspaceHint: 'Choose a saved connection or add a new one.',
   savedWorkspaces: 'Saved connections',
-  connectionChoice: 'Choose a connection',
-  newConnection: 'Add a new service address',
-  savedConnectionUnavailable:
-    'This saved connection is unavailable. Choose another one or enter a new API Key.',
   newAddressHint: 'Enter a valid HTTP or HTTPS address to continue.',
-  hostedEndpoint: 'Service address',
   preferences: 'Preferences',
   connection: 'Connect a service',
   welcome: 'Welcome to\nBusiness Data Platform',
-  welcomeDescription:
-    'Choose a saved connection or add a new one, then set your language and appearance.',
   connectionDescription:
     'Configure and verify your connection to open the appropriate workspace and features.',
-  language: 'Language',
-  theme: 'Appearance',
-  light: 'Light',
-  dark: 'Dark',
-  system: 'System',
-  next: 'Next',
-  back: 'Back',
   verify: 'Verify connection',
   verifying: 'Verifying…',
   verified: 'Connection verified',
@@ -43,7 +26,6 @@ export default {
   enter: 'Enter Studio',
   keyHelp:
     'Use the API Key provided by your service. Open-source development mode does not require a key.',
-  hostedKeyHelp: 'Enter your Volcengine User API Key to access your memories.',
   advanced: 'Advanced open-source connection (optional)',
   loadUsers: 'Load users in this account',
   loadingUsers: 'Loading users…',
