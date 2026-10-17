@@ -1495,6 +1495,30 @@ const workspace = {
       vlmInput: 'VLM 輸入 Token',
       vlmOutput: 'VLM 輸出 Token',
     },
+    tokensPerMinute: {
+      description:
+        '最近 {{minutes}} 分鐘（自上一個 UTC 整點起）平均每分鐘 Token 用量。',
+      embeddingInput: 'Embedding 輸入 / 分鐘',
+      title: '每分鐘 Token',
+      vlmInput: 'VLM 輸入 / 分鐘',
+      vlmOutput: 'VLM 輸出 / 分鐘',
+    },
+    tpmTrend: {
+      average: '平均 TPM',
+      description:
+        '每分鐘 Token 用量，按分鐘記錄。較長區間會取每個時段的平均值；虛線為該時段內最忙的一分鐘。',
+      empty: '此區間尚無每分鐘 Token 資料，自此版本起開始記錄。',
+      peak: '峰值 TPM（最忙的一分鐘）',
+      peakLine: '最忙的一分鐘',
+      title: '每分鐘 Token 趨勢',
+      window: '時間範圍',
+      windows: {
+        '1h': '1 小時',
+        '6h': '6 小時',
+        '24h': '24 小時',
+        '7d': '7 天',
+      },
+    },
     tokenTrend: {
       description:
         '展示最近 14 天的每日 Token 用量，包括 VLM 輸入、VLM 輸出和 Embedding 輸入。',

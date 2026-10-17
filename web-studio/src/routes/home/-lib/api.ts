@@ -1,3 +1,4 @@
+import { client } from '#/gen/ov-client/client.gen'
 import {
   getConsoleContextCommits,
   getConsoleDashboardSummary,
@@ -10,6 +11,8 @@ import type {
   ConsoleSeriesQuery,
   ConsoleContextCommitsResult,
   ConsoleDashboardSummaryResult,
+  ConsoleTokenRateResult,
+  ConsoleTokenRateWindow,
   ConsoleTokenSeriesResult,
 } from '@ov-server/api/v1/console'
 import { getLastDaysRange, getViewerTimezone } from './format'
@@ -30,6 +33,19 @@ export function fetchConsoleTokenSeries(): Promise<ConsoleTokenSeriesResult> {
     timezone: tz,
   }
   return getOvResult<ConsoleTokenSeriesResult>(getConsoleTokens({ query }))
+}
+
+export function fetchConsoleTokenRate(
+  window: ConsoleTokenRateWindow,
+): Promise<ConsoleTokenRateResult> {
+  // Not in the generated SDK yet; uses the same configured client.
+  return getOvResult<ConsoleTokenRateResult>(
+    client.get({
+      responseType: 'json',
+      url: '/api/v1/console/tokens/rate',
+      query: { window },
+    }),
+  )
 }
 
 export function fetchConsoleContextCommits(): Promise<ConsoleContextCommitsResult> {

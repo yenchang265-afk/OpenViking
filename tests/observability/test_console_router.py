@@ -68,6 +68,10 @@ class FakeConsoleService:
             "items": [],
         }
 
+    async def token_rate_series(self, **kwargs):
+        self.token_rate_call = kwargs
+        return {"window": kwargs["window"], "items": [], "peak": None}
+
     async def context_commits(self, **kwargs):
         self.context_commits_call = kwargs
         return {
@@ -212,6 +216,33 @@ async def test_console_router_passes_timezone_to_dashboard_and_series():
     assert service.dashboard_call["timezone_name"] == "Asia/Shanghai"
     assert service.token_series_call["timezone_name"] == "America/New_York"
     assert service.context_commits_call["timezone_name"] == "Europe/Berlin"
+
+
+@pytest.mark.asyncio
+async def test_console_router_serves_token_rate_for_known_windows():
+    service = FakeConsoleService()
+    transport = httpx.ASGITransport(
+        app=_app_with_runtime(FakeRuntime(service), request_context=_user_ctx)
+    )
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        ok = await client.get("/api/v1/console/tokens/rate", params={"window": "6h"})
+        default = await client.get("/api/v1/console/tokens/rate")
+        bad = await client.get("/api/v1/console/tokens/rate", params={"window": "2h"})
+
+    assert ok.status_code == 200
+    assert ok.json()["result"]["window"] == "6h"
+    assert service.token_rate_call["ctx"].role == Role.USER
+    assert default.json()["result"]["window"] == "24h"
+    assert bad.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_console_router_token_rate_reports_disabled_runtime():
+    transport = httpx.ASGITransport(app=_app_with_runtime(None))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/console/tokens/rate")
+
+    assert response.json()["result"]["enabled"] is False
 
 
 @pytest.mark.asyncio

@@ -79,6 +79,17 @@ export function formatShortDate(value: string): string {
   })
 }
 
+/** Format a UTC instant as a viewer-local time, with the date when asked. */
+export function formatTpmTime(value: string, withDate: boolean): string {
+  const date = new Date(value)
+  if (!value || Number.isNaN(date.getTime())) return value
+  return date.toLocaleString(undefined, {
+    ...(withDate ? { day: '2-digit', month: '2-digit' } : {}),
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
 export function isDisabledPayload(value: unknown): boolean {
   return asRecord(value).enabled === false
 }

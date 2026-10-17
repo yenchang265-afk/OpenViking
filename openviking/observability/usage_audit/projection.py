@@ -38,6 +38,8 @@ class UsageAuditProjection:
     """Write-ready rows derived from a batch of observability events."""
 
     token_rows: dict[tuple, int] = field(default_factory=dict)
+    # (account, user, date_utc, minute_of_day_utc, source, token_type) -> count
+    token_minute_rows: dict[tuple, int] = field(default_factory=dict)
     retrieval_rows: dict[tuple, tuple[int, int]] = field(default_factory=dict)
     context_rows: dict[tuple, int] = field(default_factory=dict)
     audit_rows: list[tuple] = field(default_factory=list)
@@ -77,6 +79,7 @@ def project_events(
     viewers from any region.
     """
     token_rows: defaultdict[tuple, int] = defaultdict(int)
+    token_minute_rows: defaultdict[tuple, int] = defaultdict(int)
     retrieval_rows: defaultdict[tuple, tuple[int, int]] = defaultdict(lambda: (0, 0))
     context_rows: defaultdict[tuple, int] = defaultdict(int)
     audit_rows: list[tuple] = []
@@ -88,16 +91,19 @@ def project_events(
         utc_dt = _utc_dt(event)
         event_date = utc_dt.date().isoformat()
         event_hour = int(utc_dt.hour)
+        event_minute = event_hour * 60 + int(utc_dt.minute)
         created_at = utc_dt.isoformat()
         payload = event.payload
 
         if event.event_name == "vlm.call":
             _add_token_rows(
                 token_rows,
+                token_minute_rows,
                 account_id=account_id,
                 user_id=user_id,
                 event_date=event_date,
                 event_hour=event_hour,
+                event_minute=event_minute,
                 source="vlm",
                 provider=payload.get("provider"),
                 model_name=payload.get("model_name"),
@@ -109,10 +115,12 @@ def project_events(
         if event.event_name == "embedding.call":
             _add_token_rows(
                 token_rows,
+                token_minute_rows,
                 account_id=account_id,
                 user_id=user_id,
                 event_date=event_date,
                 event_hour=event_hour,
+                event_minute=event_minute,
                 source="embedding",
                 provider=payload.get("provider"),
                 model_name=payload.get("model_name"),
@@ -124,10 +132,12 @@ def project_events(
         if event.event_name == "rerank.call":
             _add_token_rows(
                 token_rows,
+                token_minute_rows,
                 account_id=account_id,
                 user_id=user_id,
                 event_date=event_date,
                 event_hour=event_hour,
+                event_minute=event_minute,
                 source="rerank",
                 provider=payload.get("provider"),
                 model_name=payload.get("model_name"),
@@ -150,6 +160,7 @@ def project_events(
 
     return UsageAuditProjection(
         token_rows=dict(token_rows),
+        token_minute_rows=dict(token_minute_rows),
         retrieval_rows=dict(retrieval_rows),
         context_rows=dict(context_rows),
         audit_rows=audit_rows,
@@ -166,11 +177,13 @@ def _utc_dt(event: ObservabilityEvent) -> datetime:
 
 def _add_token_rows(
     rows: defaultdict[tuple, int],
+    minute_rows: defaultdict[tuple, int],
     *,
     account_id: str,
     user_id: str,
     event_date: str,
     event_hour: int,
+    event_minute: int,
     source: str,
     provider: Any,
     model_name: Any,
@@ -181,6 +194,11 @@ def _add_token_rows(
     model_key = normalize_identity(model_name)
     input_count = max(safe_int(input_tokens), 0)
     output_count = max(safe_int(output_tokens), 0)
+    for token_type, count in (("input", input_count), ("output", output_count)):
+        if count:
+            minute_rows[(account_id, user_id, event_date, event_minute, source, token_type)] += (
+                count
+            )
     if input_count:
         key = (
             account_id,

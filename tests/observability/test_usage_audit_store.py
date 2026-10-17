@@ -823,3 +823,156 @@ async def test_context_heatmap_rebuckets_hour_for_shanghai(tmp_path):
         assert match["total"] == 1
     finally:
         await store.close()
+
+
+@pytest.mark.asyncio
+async def test_window_tokens_sums_only_hours_inside_utc_window(tmp_path):
+    store = SQLiteUsageAuditStore(tmp_path / "usage.sqlite3")
+    await store.initialize()
+    try:
+        await store.record_batch(
+            [
+                _event(  # before the window
+                    "vlm.call",
+                    {"provider": "p", "model_name": "m", "prompt_tokens": 9999},
+                    ts=datetime(2026, 5, 12, 9, 50, tzinfo=timezone.utc),
+                ),
+                _event(
+                    "vlm.call",
+                    {
+                        "provider": "p",
+                        "model_name": "m",
+                        "prompt_tokens": 100,
+                        "completion_tokens": 40,
+                    },
+                    ts=datetime(2026, 5, 12, 10, 15, tzinfo=timezone.utc),
+                ),
+                _event(
+                    "embedding.call",
+                    {"provider": "p", "model_name": "e", "prompt_tokens": 60},
+                    ts=datetime(2026, 5, 12, 11, 20, tzinfo=timezone.utc),
+                ),
+                _event(  # at the exclusive end of the window
+                    "vlm.call",
+                    {"provider": "p", "model_name": "m", "prompt_tokens": 7777},
+                    ts=datetime(2026, 5, 12, 12, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+
+        tokens = await store.get_window_tokens(
+            account_id="acct-1",
+            utc_start=datetime(2026, 5, 12, 10, tzinfo=timezone.utc),
+            utc_end=datetime(2026, 5, 12, 12, tzinfo=timezone.utc),
+        )
+
+        assert tokens == {
+            "vlm_input": 100,
+            "vlm_output": 40,
+            "embedding_input": 60,
+            "total": 200,
+        }
+    finally:
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_minute_tokens_bucket_events_by_utc_minute(tmp_path):
+    store = SQLiteUsageAuditStore(tmp_path / "usage.sqlite3")
+    await store.initialize()
+    try:
+        await store.record_batch(
+            [
+                _event(
+                    "vlm.call",
+                    {
+                        "provider": "p",
+                        "model_name": "m",
+                        "prompt_tokens": 100,
+                        "completion_tokens": 40,
+                    },
+                    ts=datetime(2026, 5, 12, 10, 15, 5, tzinfo=timezone.utc),
+                ),
+                _event(  # same minute, different model: merged into one minute
+                    "vlm.call",
+                    {"provider": "p", "model_name": "other", "prompt_tokens": 7},
+                    ts=datetime(2026, 5, 12, 10, 15, 50, tzinfo=timezone.utc),
+                ),
+                _event(
+                    "embedding.call",
+                    {"provider": "p", "model_name": "e", "prompt_tokens": 60},
+                    ts=datetime(2026, 5, 12, 10, 16, 30, tzinfo=timezone.utc),
+                ),
+                _event(  # another user
+                    "embedding.call",
+                    {"provider": "p", "model_name": "e", "prompt_tokens": 5},
+                    ts=datetime(2026, 5, 12, 10, 16, 40, tzinfo=timezone.utc),
+                    user_id="user-2",
+                ),
+                _event(  # outside the window
+                    "vlm.call",
+                    {"provider": "p", "model_name": "m", "prompt_tokens": 9999},
+                    ts=datetime(2026, 5, 12, 10, 17, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+        window = {
+            "account_id": "acct-1",
+            "utc_start": datetime(2026, 5, 12, 10, 15, tzinfo=timezone.utc),
+            "utc_end": datetime(2026, 5, 12, 10, 17, tzinfo=timezone.utc),
+        }
+
+        assert await store.get_minute_tokens(**window) == {
+            datetime(2026, 5, 12, 10, 15, tzinfo=timezone.utc): {
+                "vlm_input": 107,
+                "vlm_output": 40,
+                "embedding_input": 0,
+            },
+            datetime(2026, 5, 12, 10, 16, tzinfo=timezone.utc): {
+                "vlm_input": 0,
+                "vlm_output": 0,
+                "embedding_input": 65,
+            },
+        }
+        user_scoped = await store.get_minute_tokens(**window, user_id="user-2")
+        assert user_scoped == {
+            datetime(2026, 5, 12, 10, 16, tzinfo=timezone.utc): {
+                "vlm_input": 0,
+                "vlm_output": 0,
+                "embedding_input": 5,
+            },
+        }
+    finally:
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_minute_tokens_follow_retention_and_delete(tmp_path):
+    store = SQLiteUsageAuditStore(tmp_path / "usage.sqlite3", usage_retention_days=2)
+    await store.initialize()
+    old = datetime(2026, 5, 10, 8, 0, tzinfo=timezone.utc)
+    new = datetime(2026, 5, 12, 8, 0, tzinfo=timezone.utc)
+    window = {
+        "account_id": "acct-1",
+        "utc_start": datetime(2026, 5, 10, tzinfo=timezone.utc),
+        "utc_end": datetime(2026, 5, 13, tzinfo=timezone.utc),
+    }
+    try:
+        for ts in (old, new):
+            await store.record_batch(
+                [
+                    _event(
+                        "vlm.call",
+                        {"provider": "p", "model_name": "m", "prompt_tokens": 1},
+                        ts=ts,
+                    )
+                ]
+            )
+
+        assert list(await store.get_minute_tokens(**window)) == [new]
+
+        deleted = await store.delete_data(account_id="acct-1")
+        assert deleted["usage_token_minute"] == 1
+        assert await store.get_minute_tokens(**window) == {}
+    finally:
+        await store.close()

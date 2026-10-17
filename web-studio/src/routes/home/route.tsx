@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
@@ -7,11 +8,15 @@ import {
   ContextDataPanel,
   TodayRetrievalsPanel,
   TodayTokensPanel,
+  TokensPerMinutePanel,
 } from './-components/metric-panels'
 import { TokenTrendPanel } from './-components/token-trend-panel'
+import { TpmTrendPanel } from './-components/tpm-trend-panel'
+import type { TokenRateWindow } from './-types/dashboard'
 import {
   fetchConsoleContextCommits,
   fetchConsoleDashboardSummary,
+  fetchConsoleTokenRate,
   fetchConsoleTokenSeries,
 } from './-lib/api'
 import { isDisabledPayload } from './-lib/format'
@@ -75,6 +80,14 @@ function HomePage() {
     refetchInterval: 60_000,
   })
 
+  const [tpmWindow, setTpmWindow] = useState<TokenRateWindow>('24h')
+  const tokenRate = useQuery({
+    enabled: canQueryMetrics,
+    queryFn: () => fetchConsoleTokenRate(tpmWindow),
+    queryKey: ['console-token-rate', tpmWindow, metricsScopeKey],
+    refetchInterval: 60_000,
+  })
+
   const contextCommits = useQuery({
     enabled: canQueryMetrics,
     queryFn: fetchConsoleContextCommits,
@@ -93,12 +106,14 @@ function HomePage() {
     isConnectionRoleLoading || (canQueryMetrics && dashboard.isPending)
   const isSeriesLoading =
     isConnectionRoleLoading || (canQueryMetrics && tokenSeries.isPending)
+  const isTokenRateLoading =
+    isConnectionRoleLoading || (canQueryMetrics && tokenRate.isPending)
   const isCommitsLoading =
     isConnectionRoleLoading || (canQueryMetrics && contextCommits.isPending)
 
   return (
     <div className="flex flex-col gap-5 pb-8">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <ContextDataPanel
           data={summary?.context_counts}
           disabled={metricsUnavailable}
@@ -115,6 +130,14 @@ function HomePage() {
           isLoading={isMetricsLoading}
           t={t}
         />
+        <TokensPerMinutePanel
+          data={summary?.tokens_per_minute}
+          disabled={metricsUnavailable}
+          disabledMessage={unavailableMessage}
+          isError={dashboard.isError}
+          isLoading={isMetricsLoading}
+          t={t}
+        />
         <TodayRetrievalsPanel
           data={summary?.today_retrievals}
           disabled={metricsUnavailable}
@@ -124,6 +147,17 @@ function HomePage() {
           t={t}
         />
       </div>
+
+      <TpmTrendPanel
+        data={tokenRate.data}
+        disabled={identityUnavailable}
+        disabledMessage={unavailableMessage}
+        isError={tokenRate.isError}
+        isLoading={isTokenRateLoading}
+        onWindowChange={setTpmWindow}
+        t={t}
+        window={tpmWindow}
+      />
 
       <TokenTrendPanel
         data={tokenSeries.data}

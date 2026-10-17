@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import type { ComponentType, ReactNode } from 'react'
-import { Coins, Database, Search } from 'lucide-react'
+import { Coins, Database, Gauge, Search } from 'lucide-react'
 
 import { Skeleton } from '#/components/ui/skeleton'
 
@@ -9,6 +9,7 @@ import type {
   HomeT,
   RetrievalCounts,
   TokenCounts,
+  TokensPerMinute,
 } from '../-types/dashboard'
 import { asNumber, formatNumber } from '../-lib/format'
 import { DetailRow, Panel } from './panel'
@@ -214,6 +215,57 @@ export function TodayTokensPanel({
           />
           <DetailRow
             label={t('todayTokens.embeddingInput')}
+            value={formatNumber(data?.embedding_input)}
+          />
+        </>
+      )}
+    </MetricPanel>
+  )
+}
+
+export function TokensPerMinutePanel({
+  data,
+  disabled,
+  disabledMessage,
+  isError,
+  isLoading,
+  t,
+}: {
+  data: TokensPerMinute | undefined
+  disabled: boolean
+  disabledMessage: string
+  isError: boolean
+  isLoading: boolean
+  t: HomeT
+}) {
+  const total = asNumber(data?.total)
+  return (
+    <MetricPanel
+      description={t('tokensPerMinute.description', {
+        minutes: asNumber(data?.window_minutes),
+      })}
+      icon={Gauge}
+      isError={isError}
+      isLoading={isLoading}
+      title={t('tokensPerMinute.title')}
+      value={
+        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
+      }
+    >
+      {disabled ? (
+        <p className="text-xs text-muted-foreground">{disabledMessage}</p>
+      ) : (
+        <>
+          <DetailRow
+            label={t('tokensPerMinute.vlmInput')}
+            value={formatNumber(data?.vlm_input)}
+          />
+          <DetailRow
+            label={t('tokensPerMinute.vlmOutput')}
+            value={formatNumber(data?.vlm_output)}
+          />
+          <DetailRow
+            label={t('tokensPerMinute.embeddingInput')}
             value={formatNumber(data?.embedding_input)}
           />
         </>

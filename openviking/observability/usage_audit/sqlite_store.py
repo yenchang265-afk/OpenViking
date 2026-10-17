@@ -33,6 +33,12 @@ def _date_range(start_date: str, end_date: str) -> Iterable[str]:
     return ((start + timedelta(days=offset)).isoformat() for offset in range(days + 1))
 
 
+def _date_minute_utc(value: datetime) -> tuple[str, int]:
+    """Return the `(date_utc, minute_of_day)` key of one UTC instant."""
+    utc = value.astimezone(UTC)
+    return utc.date().isoformat(), utc.hour * 60 + utc.minute
+
+
 def _user_day_window_utc(day: date, tz: tzinfo) -> tuple[datetime, datetime]:
     """Return the UTC `[start, end)` instants spanning one user-tz day."""
     start_local = datetime.combine(day, time.min, tzinfo=tz)
@@ -143,6 +149,7 @@ class SQLiteUsageAuditStore:
         assert self._conn is not None
         tables = (
             "usage_token_hourly",
+            "usage_token_minute",
             "usage_retrieval_hourly",
             "usage_context_write_bucket",
             "request_audit",
@@ -178,6 +185,7 @@ class SQLiteUsageAuditStore:
         conn.execute("BEGIN")
         try:
             self._write_token_rows(conn, projection.token_rows, updated_at)
+            self._write_token_minute_rows(conn, projection.token_minute_rows, updated_at)
             self._write_retrieval_rows(conn, projection.retrieval_rows, updated_at)
             self._write_context_rows(conn, projection.context_rows, updated_at)
             self._write_audit_rows(conn, projection.audit_rows)
@@ -201,6 +209,25 @@ class SQLiteUsageAuditStore:
             ON CONFLICT (
                 account_id, user_id, date_utc, hour_utc,
                 source, token_type, provider, model_name
+            )
+            DO UPDATE SET
+                token_count = token_count + excluded.token_count,
+                updated_at = excluded.updated_at
+            """,
+            [(*key, value, updated_at) for key, value in rows.items() if value > 0],
+        )
+
+    @staticmethod
+    def _write_token_minute_rows(conn, rows: dict[tuple, int], updated_at: str) -> None:
+        conn.executemany(
+            """
+            INSERT INTO usage_token_minute (
+                account_id, user_id, date_utc, minute_utc,
+                source, token_type, token_count, updated_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (
+                account_id, user_id, date_utc, minute_utc, source, token_type
             )
             DO UPDATE SET
                 token_count = token_count + excluded.token_count,
@@ -304,6 +331,7 @@ class SQLiteUsageAuditStore:
         for account_id, cutoff_date in cutoff_by_account.items():
             for table in (
                 "usage_token_hourly",
+                "usage_token_minute",
                 "usage_retrieval_hourly",
                 "usage_context_write_bucket",
             ):
@@ -384,9 +412,31 @@ class SQLiteUsageAuditStore:
     def _get_today_tokens_sync(
         self, account_id: str, user_date: str, tz: tzinfo, user_id: str | None
     ) -> dict[str, int]:
-        assert self._conn is not None
         day = date.fromisoformat(user_date)
         utc_start, utc_end = _user_day_window_utc(day, tz)
+        return self._get_window_tokens_sync(account_id, utc_start, utc_end, user_id)
+
+    async def get_window_tokens(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None = None,
+    ) -> dict[str, int]:
+        async with self._lock:
+            return await asyncio.to_thread(
+                self._get_window_tokens_sync, account_id, utc_start, utc_end, user_id
+            )
+
+    def _get_window_tokens_sync(
+        self,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None,
+    ) -> dict[str, int]:
+        assert self._conn is not None
         rows = self._fetch_hourly_token_rows(
             account_id, utc_start, utc_end, user_id=user_id
         )
@@ -396,6 +446,55 @@ class SQLiteUsageAuditStore:
             if key in result:
                 result[key] += total
         result["total"] = sum(result.values())
+        return result
+
+    async def get_minute_tokens(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None = None,
+    ) -> dict[datetime, dict[str, int]]:
+        async with self._lock:
+            return await asyncio.to_thread(
+                self._get_minute_tokens_sync, account_id, utc_start, utc_end, user_id
+            )
+
+    def _get_minute_tokens_sync(
+        self,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None,
+    ) -> dict[datetime, dict[str, int]]:
+        assert self._conn is not None
+        start_d, start_m = _date_minute_utc(utc_start)
+        end_d, end_m = _date_minute_utc(utc_end)
+        user_filter, user_params = self._user_scope_sql(user_id)
+        cur = self._conn.execute(
+            """
+            SELECT date_utc, minute_utc, source, token_type, SUM(token_count) AS total
+            FROM usage_token_minute
+            WHERE account_id = ?
+              {user_filter}
+              AND (date_utc > ? OR (date_utc = ? AND minute_utc >= ?))
+              AND (date_utc < ? OR (date_utc = ? AND minute_utc < ?))
+            GROUP BY date_utc, minute_utc, source, token_type
+            """.format(user_filter=user_filter),
+            (account_id, *user_params, start_d, start_d, start_m, end_d, end_d, end_m),
+        )
+        result: dict[datetime, dict[str, int]] = {}
+        for row in cur.fetchall():
+            key = f"{row['source']}_{row['token_type']}"
+            if key not in ("vlm_input", "vlm_output", "embedding_input"):
+                continue
+            minute = int(row["minute_utc"])
+            ts = datetime(*_parse_ymd(row["date_utc"]), minute // 60, minute % 60, tzinfo=UTC)
+            slot = result.setdefault(
+                ts, {"vlm_input": 0, "vlm_output": 0, "embedding_input": 0}
+            )
+            slot[key] += int(row["total"] or 0)
         return result
 
     async def get_today_retrievals(
