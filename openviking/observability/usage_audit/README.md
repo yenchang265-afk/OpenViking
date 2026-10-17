@@ -247,10 +247,19 @@ GET /api/v1/console/dashboard/summary
       "find": 10,
       "search": 4,
       "total": 14
+    },
+    "tokens_per_minute": {
+      "vlm_input": 10.0,
+      "vlm_output": 5.0,
+      "embedding_input": 1.7,
+      "total": 16.7,
+      "window_minutes": 90
     }
   }
 }
 ```
+
+`tokens_per_minute` 是從上一個 UTC 整點到現在的平均每分鐘 Token 數（視窗 60–120 分鐘）。Token 以 UTC 小時粒度落庫，因此無法提供精確的滑動 60 分鐘視窗；`window_minutes` 為實際的分母。
 
 如果 Usage/Audit 被關閉或尚未初始化，返回：
 

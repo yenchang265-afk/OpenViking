@@ -7,6 +7,7 @@ import {
   ContextDataPanel,
   TodayRetrievalsPanel,
   TodayTokensPanel,
+  TokensPerMinutePanel,
 } from './-components/metric-panels'
 import { TokenTrendPanel } from './-components/token-trend-panel'
 import {
@@ -98,7 +99,7 @@ function HomePage() {
 
   return (
     <div className="flex flex-col gap-5 pb-8">
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <ContextDataPanel
           data={summary?.context_counts}
           disabled={metricsUnavailable}
@@ -109,6 +110,14 @@ function HomePage() {
         />
         <TodayTokensPanel
           data={summary?.today_tokens}
+          disabled={metricsUnavailable}
+          disabledMessage={unavailableMessage}
+          isError={dashboard.isError}
+          isLoading={isMetricsLoading}
+          t={t}
+        />
+        <TokensPerMinutePanel
+          data={summary?.tokens_per_minute}
           disabled={metricsUnavailable}
           disabledMessage={unavailableMessage}
           isError={dashboard.isError}

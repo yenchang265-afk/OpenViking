@@ -18,6 +18,10 @@ export type ConsoleTokenCounts = {
   vlm_output?: number
 }
 
+export type ConsoleTokensPerMinute = ConsoleTokenCounts & {
+  window_minutes?: number
+}
+
 export type ConsoleRetrievalCounts = {
   find?: number
   search?: number
@@ -28,6 +32,7 @@ export type ConsoleDashboardSummaryResult = OvMaybeDisabled & {
   context_counts?: ConsoleContextCounts
   today_retrievals?: ConsoleRetrievalCounts
   today_tokens?: ConsoleTokenCounts
+  tokens_per_minute?: ConsoleTokensPerMinute
 }
 
 export type ConsoleSeriesBucket = 'day' | '4h' | (string & {})

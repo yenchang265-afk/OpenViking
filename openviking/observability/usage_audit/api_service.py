@@ -9,7 +9,7 @@ falls back to the server-default tz from config when absent or invalid.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from openviking.server.identity import RequestContext, Role
@@ -18,6 +18,21 @@ from openviking_cli.exceptions import InvalidArgumentError
 from .inventory import ContextInventoryProvider
 from .store import UsageAuditStore
 from .time import resolve_usage_timezone, resolve_user_timezone
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _recent_token_window(now: datetime) -> tuple[datetime, datetime]:
+    """Return the UTC `[start, end)` hour buckets covering the previous and current hour.
+
+    Tokens are persisted per UTC hour, so a true rolling 60-minute window is not
+    available; the previous full hour plus the current partial hour is the
+    smallest window that never reads as zero right after an hour boundary.
+    """
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    return current_hour - timedelta(hours=1), current_hour + timedelta(hours=1)
 
 
 class UsageAuditQueryService:
@@ -68,11 +83,29 @@ class UsageAuditQueryService:
         today_retrievals = await self._store.get_today_retrievals(
             account_id=ctx.account_id, user_date=today, tz=tz, user_id=user_id
         )
+        tokens_per_minute = await self._tokens_per_minute(ctx, user_id=user_id)
         return {
             "context_counts": context_counts,
             "today_tokens": today_tokens,
             "today_retrievals": today_retrievals,
+            "tokens_per_minute": tokens_per_minute,
         }
+
+    async def _tokens_per_minute(
+        self, ctx: RequestContext, *, user_id: str | None
+    ) -> dict[str, float | int]:
+        """Return average tokens per minute since the start of the previous UTC hour."""
+        now = _utc_now()
+        utc_start, utc_end = _recent_token_window(now)
+        tokens = await self._store.get_window_tokens(
+            account_id=ctx.account_id, utc_start=utc_start, utc_end=utc_end, user_id=user_id
+        )
+        elapsed_minutes = (now - utc_start).total_seconds() / 60
+        result: dict[str, float | int] = {
+            key: round(value / elapsed_minutes, 1) for key, value in tokens.items()
+        }
+        result["window_minutes"] = round(elapsed_minutes)
+        return result
 
     async def token_series(
         self,

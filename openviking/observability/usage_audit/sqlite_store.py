@@ -384,9 +384,31 @@ class SQLiteUsageAuditStore:
     def _get_today_tokens_sync(
         self, account_id: str, user_date: str, tz: tzinfo, user_id: str | None
     ) -> dict[str, int]:
-        assert self._conn is not None
         day = date.fromisoformat(user_date)
         utc_start, utc_end = _user_day_window_utc(day, tz)
+        return self._get_window_tokens_sync(account_id, utc_start, utc_end, user_id)
+
+    async def get_window_tokens(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None = None,
+    ) -> dict[str, int]:
+        async with self._lock:
+            return await asyncio.to_thread(
+                self._get_window_tokens_sync, account_id, utc_start, utc_end, user_id
+            )
+
+    def _get_window_tokens_sync(
+        self,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None,
+    ) -> dict[str, int]:
+        assert self._conn is not None
         rows = self._fetch_hourly_token_rows(
             account_id, utc_start, utc_end, user_id=user_id
         )

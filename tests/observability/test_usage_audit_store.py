@@ -823,3 +823,54 @@ async def test_context_heatmap_rebuckets_hour_for_shanghai(tmp_path):
         assert match["total"] == 1
     finally:
         await store.close()
+
+
+@pytest.mark.asyncio
+async def test_window_tokens_sums_only_hours_inside_utc_window(tmp_path):
+    store = SQLiteUsageAuditStore(tmp_path / "usage.sqlite3")
+    await store.initialize()
+    try:
+        await store.record_batch(
+            [
+                _event(  # before the window
+                    "vlm.call",
+                    {"provider": "p", "model_name": "m", "prompt_tokens": 9999},
+                    ts=datetime(2026, 5, 12, 9, 50, tzinfo=timezone.utc),
+                ),
+                _event(
+                    "vlm.call",
+                    {
+                        "provider": "p",
+                        "model_name": "m",
+                        "prompt_tokens": 100,
+                        "completion_tokens": 40,
+                    },
+                    ts=datetime(2026, 5, 12, 10, 15, tzinfo=timezone.utc),
+                ),
+                _event(
+                    "embedding.call",
+                    {"provider": "p", "model_name": "e", "prompt_tokens": 60},
+                    ts=datetime(2026, 5, 12, 11, 20, tzinfo=timezone.utc),
+                ),
+                _event(  # at the exclusive end of the window
+                    "vlm.call",
+                    {"provider": "p", "model_name": "m", "prompt_tokens": 7777},
+                    ts=datetime(2026, 5, 12, 12, 0, tzinfo=timezone.utc),
+                ),
+            ]
+        )
+
+        tokens = await store.get_window_tokens(
+            account_id="acct-1",
+            utc_start=datetime(2026, 5, 12, 10, tzinfo=timezone.utc),
+            utc_end=datetime(2026, 5, 12, 12, tzinfo=timezone.utc),
+        )
+
+        assert tokens == {
+            "vlm_input": 100,
+            "vlm_output": 40,
+            "embedding_input": 60,
+            "total": 200,
+        }
+    finally:
+        await store.close()

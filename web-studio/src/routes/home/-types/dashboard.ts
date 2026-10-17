@@ -10,6 +10,7 @@ export type {
   ConsoleSeriesResult as ConsoleSeries,
   ConsoleTokenCounts as TokenCounts,
   ConsoleTokenSeriesItem as TokenSeriesItem,
+  ConsoleTokensPerMinute as TokensPerMinute,
 } from '@ov-server/api/v1/console'
 
 export type TokenTrendPayload = {

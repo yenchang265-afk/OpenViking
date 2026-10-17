@@ -1557,6 +1557,14 @@ const workspace = {
       vlmInput: 'VLM input tokens',
       vlmOutput: 'VLM output tokens',
     },
+    tokensPerMinute: {
+      description:
+        'Average tokens per minute over the last {{minutes}} minutes (since the start of the previous UTC hour).',
+      embeddingInput: 'Embedding input / min',
+      title: 'Tokens / Minute',
+      vlmInput: 'VLM input / min',
+      vlmOutput: 'VLM output / min',
+    },
     tokenTrend: {
       description:
         'Shows daily token usage over the last 14 days, including VLM input, VLM output, and embedding input.',

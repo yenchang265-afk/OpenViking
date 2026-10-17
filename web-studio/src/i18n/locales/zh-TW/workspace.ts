@@ -1495,6 +1495,14 @@ const workspace = {
       vlmInput: 'VLM 輸入 Token',
       vlmOutput: 'VLM 輸出 Token',
     },
+    tokensPerMinute: {
+      description:
+        '最近 {{minutes}} 分鐘（自上一個 UTC 整點起）平均每分鐘 Token 用量。',
+      embeddingInput: 'Embedding 輸入 / 分鐘',
+      title: '每分鐘 Token',
+      vlmInput: 'VLM 輸入 / 分鐘',
+      vlmOutput: 'VLM 輸出 / 分鐘',
+    },
     tokenTrend: {
       description:
         '展示最近 14 天的每日 Token 用量，包括 VLM 輸入、VLM 輸出和 Embedding 輸入。',
