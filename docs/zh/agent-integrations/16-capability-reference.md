@@ -24,7 +24,7 @@
 
 ### 可呼叫工具
 
-“服務端 MCP 工具”指服務端 `tools/list` 返回的工具：當前服務端有 20 個，列在[服務端 MCP 工具](#服務端-mcp-工具)。
+“服務端 MCP 工具”指服務端 `tools/list` 返回的工具：當前服務端有 21 個，列在[服務端 MCP 工具](#服務端-mcp-工具)。
 
 | 整合 | 接入方式 | Agent 可呼叫的工具 |
 |---|---|---|
@@ -81,7 +81,7 @@
 
 | 分組 | 工具 |
 |---|---|
-| 檢索與瀏覽 | `find`、`search`、`read`、`list`、`tree`、`grep`、`glob` |
+| 檢索與瀏覽 | `find`、`search`、`read`、`download`、`list`、`tree`、`grep`、`glob` |
 | 寫入 | `remember`、`write`、`edit`、`add_resource`、`add_skill` |
 | 刪除 | `forget` |
 | 監聽資源 | `list_watches`、`cancel_watch`（商業版暫不支援） |

@@ -62,6 +62,25 @@ const overview = {
       action: '檢視接入指南',
     },
   },
+  quick: {
+    title: '快速模式',
+    description: '跳過下面的步驟，一鍵拿到可以直接使用的閘道器金鑰。',
+    upstreamImport:
+      '上游：匯入 Business Data Platform 服務端的模型配置，沿用它的 API Key 和額度',
+    upstreamUse: '上游：使用 {{names}}（{{models}}，{{protocol}}）',
+    profileCreate: '上下文配置：用推薦設定新建“{{name}}”',
+    profileUse: '上下文配置：使用“{{name}}”',
+    keySelf: '金鑰：為 {{user}} 簽發',
+    keyPick: '金鑰：下一步選擇金鑰歸屬的 Business Data Platform 使用者',
+    action: '一鍵生成金鑰',
+    running: '生成中…',
+    retry: '重試',
+    locked: '建立上下文配置或匯入模型需要閘道器管理金鑰。',
+    noUsable:
+      'Business Data Platform 的模型配置裡沒有閘道器能直接轉發的模型。處理下面列出的問題，或者在第 1 步手動新增上游。',
+    keyName: '快速模式',
+    divider: '或者按步驟手動配置',
+  },
   kpi: {
     requests: {
       label: '請求數',

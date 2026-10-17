@@ -12,7 +12,7 @@ from openviking.observability.context import bind_execution_context
 from openviking.server.identity import RequestContext, Role
 from openviking.service.task_tracker import TaskStatus, get_task_tracker
 from openviking.service.task_work_index import (
-    bind_task_context,
+    bind_task_context_from_message,
     extract_task_metadata,
 )
 from openviking.storage.queuefs.add_resource_msg import AddResourceMsg
@@ -152,6 +152,10 @@ class AddResourceProcessor(DequeueHandlerBase):
         return True
 
     async def _process(self, msg: AddResourceMsg, data: Dict[str, Any]) -> ProcessResult:
+        with bind_task_context_from_message(data):
+            return await self._process_bound(msg, data)
+
+    async def _process_bound(self, msg: AddResourceMsg, data: Dict[str, Any]) -> ProcessResult:
         telemetry_id = msg.telemetry_id or ""
         ctx = RequestContext(
             user=UserIdentifier(msg.account_id, msg.user_id),
@@ -237,11 +241,7 @@ class AddResourceProcessor(DequeueHandlerBase):
                 user_id=ctx.user.user_id,
             )
 
-        with (
-            bind_execution_context(),
-            bind_telemetry(telemetry),
-            bind_task_context(msg.task_id, ctx.account_id, ctx.user.user_id),
-        ):
+        with bind_execution_context(), bind_telemetry(telemetry):
             terminal = False
             try:
                 queue_message_id = str(data.get("id") or "")
@@ -314,14 +314,19 @@ class AddResourceProcessor(DequeueHandlerBase):
                     msg.task_id,
                     exclude_work_id=metadata.work_id if metadata is not None else None,
                 )
-                result["queue_status"] = tracker.build_queue_status(msg.task_id)
+                work_summary = await tracker.get_work_summary(
+                    msg.task_id,
+                    account_id=ctx.account_id,
+                    user_id=ctx.user.user_id,
+                )
+                result["queue_status"] = tracker.format_queue_status(work_summary)
                 if replay_result is None:
-                    result["context_count"] = tracker.get_context_count(msg.task_id)
+                    result["context_count"] = work_summary.context_count
                 record_resource_queue_metrics(
                     telemetry=telemetry,
                     telemetry_id=telemetry_id,
                     root_uri=result.get("root_uri"),
-                    queue_timing=tracker.get_queue_timing(msg.task_id),
+                    queue_timing=tracker.format_queue_timing(work_summary),
                 )
                 telemetry.set("resource.total.duration_ms", telemetry.elapsed_ms())
 

@@ -530,7 +530,7 @@ task_id      uuid-xxx
 | `errors` | array | 處理過程中的錯誤列表 |
 | `warnings` | array | 可選警告，包括部分處理失敗或資源記憶關聯失敗 |
 | `queue_status` | object | 同步等待或已完成任務結果中的佇列彙總，按佇列返回 `processed`、`requeue_count`、`error_count` 和 `errors` |
-| `memory_linking` | object | （可選，僅當 `reason` 觸發記憶生成時）本次資源 URI 與使用者記憶的關聯結果 |
+| `memory_linking` | object | （可選，僅當 `reason` 觸發記憶生成時）本次資源 URI 與使用者記憶的關聯結果。`status="accepted"` 表示記憶提交已入隊、尚未完成，需輪詢 `/api/v1/tasks/{task_id}`（`commit_task_id`）獲取結果 |
 
 **完成後的資源新增任務結果**
 

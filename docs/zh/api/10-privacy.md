@@ -22,9 +22,17 @@
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | GET | `/api/v1/privacy-configs` | 列出隱私配置分類 |
+| POST | `/api/v1/privacy-configs/scan` | 掃描或修復已儲存正文中的登記值 |
 | GET | `/api/v1/privacy-configs/{category}` | 列出分類下目標 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}` | 獲取當前生效配置（meta + current） |
+| GET | `/api/v1/privacy-configs/{category}/{target_key}/fields` | 列出不含明文值的安全欄位後設資料 |
+| GET | `/api/v1/privacy-configs/{category}/{target_key}/field?field={field}` | 獲取單欄位引用；顯式選擇時返回值 |
+| POST | `/api/v1/privacy-configs/resolve` | 按欄位 reference/URI 顯式讀取值 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | 寫入新版本並激活 |
+| PATCH | `/api/v1/privacy-configs/{category}/{target_key}` | 原子合併欄位；目標不存在時建立 |
+| DELETE | `/api/v1/privacy-configs/{category}/{target_key}` | 刪除目標及全部版本 |
+| DELETE | `/api/v1/privacy-configs/{category}/{target_key}/field?field={field}` | 刪除當前生效配置中的欄位 |
+| DELETE | `/api/v1/privacy-configs/selector` | 按 target URI 或欄位 reference/URI 刪除 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}/versions` | 列出版本號 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}/versions/{version}` | 獲取指定版本詳情 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
@@ -68,9 +76,46 @@
 }
 ```
 
+### 輸入格式與容量限制
+
+服務端對 HTTP、CLI、Embedded 和內部寫入執行同一套驗證：
+
+| 專案 | 限制 |
+|------|------|
+| `category` / `target_key` | 非空、最多 255 個 ASCII 字元；僅允許字母、數字、`_`、`-`、`.`、`@`；禁止 `.`、`..`，`@` 最多一個 |
+| values 頂層欄位 | 最多 128 個 |
+| 欄位名 | 非空、最多 255 UTF-8 位元組、禁止控制字元 |
+| 單個字串值 | 最多 64 KiB UTF-8 |
+| values 序列化總量 | 最多 1 MiB |
+| JSON 巢狀 | 最多 16 層；單個物件或陣列最多 4096 項 |
+| labels | 最多 64 項，序列化總量最多 64 KiB |
+| `change_reason` | 最多 1024 個字元 |
+
+違反限制時返回 `INVALID_ARGUMENT`，`details` 包含欄位、原因、實際大小和允許上限。錯誤資訊不會包含敏感值正文。
+
 ---
 
 ## API 參考
+
+### scan_privacy_content()
+
+顯式掃描一個已經持久化的檔案或目錄。預設 dry-run，不返回命中的原值；`fix=true` 時替換無歧義命中，並非同步重新整理相應內容。
+
+```text
+POST /api/v1/privacy-configs/scan
+```
+
+```json
+{
+  "uri": "viking://~/resources/project-a",
+  "fix": false,
+  "node_limit": 1000
+}
+```
+
+`uri` 必填，服務端刻意不支援按 scope 發起全域掃描。`node_limit` 只能在 1–1000 之間。服務端還強制限制為每個程序同時一個掃描、每秒最多讀取 20 個檔案、單檔案最多 1 MiB、總輸入最多 16 MiB、單檔案最多記錄 1000 個替換、每個命中檔案最多返回 32 條引用詳情、單次最多修復 100 個檔案，並使用協作式 60 秒掃描預算；第二個併發請求返回 `RESOURCE_EXHAUSTED`。修復不會等待語義和向量重新整理完成。響應會返回跳過檔案計數、截斷狀態、停止原因和實際生效的限制。重複值對應多個 Privacy 欄位時報告 `ambiguous`，不會任意選取引用。
+
+---
 
 ### list_privacy_categories()
 
@@ -168,6 +213,80 @@ curl -X GET "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-sea
 
 ---
 
+### list_privacy_fields()
+
+列出當前生效欄位的名稱、配置狀態和 owner-bound reference，不返回任何明文值。CLI 在 `reference` 或 `resolve` 的 category 形式省略欄位時使用該介面：僅當 target 恰好有一個欄位時自動推斷；存在多個欄位時列出可選項並要求顯式指定。
+
+```text
+GET /api/v1/privacy-configs/{category}/{target_key}/fields
+```
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "owner_user_id": "alice",
+    "category": "credential",
+    "target_key": "github-prod",
+    "version": 1,
+    "fields": [
+      {
+        "field": "pat",
+        "configured": true,
+        "reference": "{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/pat}}"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### get_privacy_field()
+
+獲取當前生效版本中的單個欄位。預設只返回帶 owner 的引用和配置狀態，不返回實際值；`reveal=true` 是供立即使用場景顯式讀取單欄位的介面。
+
+**HTTP API**
+
+```text
+GET /api/v1/privacy-configs/{category}/{target_key}/field?field={field}&reveal=false
+```
+
+預設響應：
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "owner_user_id": "alice",
+    "category": "credential",
+    "target_key": "github-prod",
+    "field": "api_key",
+    "version": 1,
+    "configured": true,
+    "reference": "{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}"
+  }
+}
+```
+
+傳入 `reveal=true` 時，響應額外包含該欄位的 `value`。介面不會返回同一 target 的其他欄位。target 或 field 不存在時返回 `NOT_FOUND`。
+
+也可以將 owner-bound reference 或欄位 URI 傳給統一解析介面：
+
+```text
+POST /api/v1/privacy-configs/resolve
+```
+
+```json
+{"selector":"{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}"}
+```
+
+欄位 URI 支援 `viking://~/privacy/...#/values/...` 和顯式 `viking://user/{user_id}/privacy/...#/values/...`。顯式 owner 與當前身份不一致時返回 `PERMISSION_DENIED`。
+
+OpenViking 生成、儲存和返回的 canonical reference 始終不帶空格。解析器相容雙左花括號後和雙右花括號前的空格或 Tab，例如 <code>&#123;&#123; ov_privacy:alice:... &#125;&#125;</code>，解析後仍規範化為 <code>&#123;&#123;ov_privacy:alice:...&#125;&#125;</code>；owner、URI 和路徑欄位內部不允許插入空白。
+
+---
+
 ### upsert_privacy_config()
 
 寫入新版本並將其設為當前生效版本。
@@ -226,6 +345,66 @@ curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-se
     "change_reason": "rotate key"
   }
 }
+```
+
+---
+
+### patch_privacy_config()
+
+在服務端 target 鎖內將 `values` 合併到當前配置。target 不存在時以空物件為基礎建立版本 1；target 已存在時保留未涉及的欄位並建立新版本。讀取、合併和寫入在同一把鎖內完成，併發更新不同欄位不會因客戶端 read-modify-write 丟失。
+
+```text
+PATCH /api/v1/privacy-configs/{category}/{target_key}
+```
+
+```json
+{
+  "values": {"pat": "github_pat_..."},
+  "change_reason": "configure GitHub PAT"
+}
+```
+
+CLI 規範引數 `--field` 與 `--field-*` 使用該介面，不在 CLI 中預讀 current；`--key` 與 `--key-*` 繼續作為相容別名：
+
+```bash
+ov privacy upsert credential github --field-pat 'github_pat_...'
+```
+
+---
+
+### delete_privacy_config()
+
+刪除一個 target 的當前值、元資訊和完整版本歷史。重複刪除是安全的：目標不存在時返回 `deleted: false`。
+
+```text
+DELETE /api/v1/privacy-configs/{category}/{target_key}
+```
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "category": "credential",
+    "target_key": "github-prod",
+    "deleted": true
+  }
+}
+```
+
+欄位刪除隻影響當前生效配置，對外不要求指定版本。刪除後仍有欄位時，實現會發佈一個移除該欄位的新 active 快照，已有歷史版本繼續保留；刪除最後一個欄位時會直接刪除整個 target，包括當前值、元資訊和全部歷史，並返回 `target_deleted: true`。
+
+```text
+DELETE /api/v1/privacy-configs/{category}/{target_key}/field?field={field}
+```
+
+target URI、欄位 URI 和 owner-bound reference 也可以通過以下介面刪除：
+
+```text
+DELETE /api/v1/privacy-configs/selector
+```
+
+```json
+{"selector":"viking://~/privacy/credential/github-prod#/values/api_key"}
 ```
 
 ---
@@ -349,6 +528,16 @@ ov privacy list skill
 ov privacy get skill byted-viking-search-knowledgebase
 ov privacy skill byted-viking-search-knowledgebase
 
+# 預設只取得 owner 繫結引用，不返回實際值；僅有一個欄位時可省略 field
+ov privacy reference credential github-prod
+ov privacy reference credential github-prod api_key
+
+# 顯式讀取當前生效版本中的一個欄位，省略規則相同
+ov privacy resolve credential github-prod
+ov privacy resolve credential github-prod api_key
+ov privacy resolve '{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}'
+ov privacy resolve 'viking://~/privacy/credential/github-prod#/values/api_key'
+
 # 更新（整包 JSON）
 ov privacy upsert skill byted-viking-search-knowledgebase \
   --values-json '{"api_key":"secret-2","base_url":"https://example.com"}'
@@ -356,14 +545,26 @@ ov privacy upsert skill byted-viking-search-knowledgebase \
 # 從本地 JSON 檔案讀取值，避免把值直接寫入命令引數
 ov privacy upsert skill byted-viking-search-knowledgebase --values-file ./privacy-values.json
 
-# 僅更新部分 key（先讀取 current 再合併）
+# 更新單個 field；target 不存在時直接建立，存在時在服務端原子合併
 ov privacy upsert skill byted-viking-search-knowledgebase \
-  --key-api_key secret-3
+  --field-api_key secret-3
 
 # 版本查詢與切換
 ov privacy versions skill byted-viking-search-knowledgebase
 ov privacy version skill byted-viking-search-knowledgebase 2
 ov privacy activate skill byted-viking-search-knowledgebase 2
+
+# 刪除目標及全部版本；非互動環境必須顯式 --yes
+ov privacy delete credential github-prod --yes
+ov privacy delete 'viking://~/privacy/credential/github-prod' --yes
+
+# 刪除當前欄位；歷史快照仍保留
+ov privacy delete credential github-prod api_key --yes
+ov privacy delete '{{ov_privacy:alice:viking://~/privacy/credential/github-prod#/values/api_key}}' --yes
+
+# 存量內容掃描必須指定一個 URI，預設為 dry-run；--fix 才會改寫
+ov privacy scan --uri viking://~/resources/project-a
+ov privacy scan --uri viking://~/resources/project-a --fix --node-limit 500
 ```
 
 ---

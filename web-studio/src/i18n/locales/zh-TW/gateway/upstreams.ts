@@ -19,8 +19,6 @@ const upstreams = {
       invalid_configuration: '模型配置無效，請檢查服務端配置後重新匯入。',
       openai_codex:
         'Codex 的 OAuth 憑證會定期重新整理，閘道器無法長期使用。請手動新增上游。',
-      azure:
-        'Azure OpenAI 需要 api-version 引數，閘道器暫不支援。請手動新增上游。',
       litellm_no_api_base:
         '這個 LiteLLM 憑證沒有填寫 api_base，閘道器無法確定地址。請在服務端配置裡補上 api_base 後重新匯入。',
       litellm_unsupported_route:
@@ -78,28 +76,49 @@ const upstreams = {
   },
   test: {
     action: '測試',
-    connection: '測試連線',
+    connection: '測試',
     running: '測試中…',
-    hint: '用已儲存的金鑰和請求頭向服務商請求模型列表。它只驗證地址和金鑰是否可用，不檢查模型配置，也不傳送對話請求。',
+    hint: '先檢查上游連線，再選擇模型傳送真實生成請求。',
     savedOnly: '測試的是已儲存的設定。要測試改動後的設定，請先儲存。',
     passthrough:
       '這個上游由客戶端自帶 API Key，閘道器沒有可用於測試的 API Key。',
     noKey: '請先填寫 API Key。',
+    codingPlan: '這個 Coding Plan 尚未授權通過閘道器發起模型請求。',
     result: {
-      unverified: '可達，金鑰未驗證 · {{status}}',
-      ok: '可連通 · {{status}}',
+      connected: '連線可用 · {{status}}',
+      connectionUnverified: '連線可用 · {{status}}',
+      ok: '模型可用 · {{status}}',
       failed: '失敗 · {{status}}',
       unreachable: '無法連線',
       error: '無法測試',
     },
     explain: {
-      ok: '服務商接受了金鑰，並返回了模型列表。',
+      connected: '服務商接受了金鑰，並返回了模型列表。',
+      connectionUnverified:
+        '地址可達，但服務商不提供模型列表，API Key 尚未驗證；仍可繼續測試模型。',
+      ok: '所選模型已成功生成回覆。',
       auth: '服務商拒絕了 API Key 或某個請求頭。',
-      rateLimited: '地址可達，但服務商限制了請求頻率，金鑰尚未驗證。',
-      notFound: '地址可達，但服務商不提供模型列表，API Key 尚未驗證。',
+      rateLimited: '服務商限制了請求頻率，本次模型生成沒有完成。',
+      requestRejected:
+        '服務商拒絕了生成請求（HTTP {{status}}）。請檢查模型名、協議和完整請求地址。',
+      invalidResponse: '服務商返回成功狀態，但響應不符合所選模型協議。',
       status: '服務商返回了 HTTP {{status}}。',
       unreachable:
-        '閘道器在 10 秒內沒有連上服務商。請檢查 Base URL，以及閘道器到服務商之間的網路。',
+        '閘道器沒有連上服務商或請求超時。請檢查 Base URL，以及閘道器到服務商之間的網路。',
+    },
+    dialog: {
+      title: '測試“{{name}}”',
+      description:
+        '先檢查已儲存配置的連線，再發送一次最小的非流式生成請求測試所選模型。',
+      connection: '上游連線',
+      checkingConnection: '正在檢查連線…',
+      exactEndpoint: '完整請求地址沒有模型列表可檢查，請直接測試模型。',
+      model: '模型',
+      modelPlaceholder: '輸入服務商模型名',
+      configuredModel: '可選擇已配置的模型，也可以輸入其他模型名。',
+      unconfiguredModel: '這個上游未限制模型，請輸入服務商支援的模型名。',
+      response: '上游響應（JSON）',
+      run: '執行測試',
     },
   },
   delete: {
@@ -183,7 +202,7 @@ const upstreams = {
     baseUrl: {
       label: 'Base URL',
       description:
-        '照服務商 SDK 文件填寫 base_url，閘道器在後面拼接 /chat/completions、/responses 或 /v1/messages。同一服務商的不同協議地址不同時，請分別新增上游。',
+        '照服務商 SDK 文件填寫 base_url，閘道器在後面拼接 /chat/completions、/responses 或 /v1/messages。同一服務商的不同協議地址不同時，請分別新增上游。地址裡可以帶查詢引數，金鑰請寫成 {api_key}。',
       preview: '請求將發往',
       missingPath:
         '這個服務商的 base_url 需要帶路徑，只填域名會請求到錯誤地址。',
@@ -197,6 +216,13 @@ const upstreams = {
       label: '拼接協議介面路徑',
       description:
         '在 Base URL 後拼接所選協議的介面路徑。如果 Base URL 已經是完整的請求地址，請關閉此開關。',
+    },
+    keyHeader: {
+      label: '金鑰傳送方式',
+      authorization: 'Authorization: Bearer',
+      apiKey: 'api-key 請求頭（Azure OpenAI）',
+      xApiKey: 'x-api-key 請求頭',
+      inUrl: '放在地址裡（{api_key}），不傳送鑑權請求頭',
     },
     authMode: {
       label: 'API Key 由誰提供',

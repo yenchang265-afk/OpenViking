@@ -21,6 +21,7 @@ from openviking.core.peer_id import normalize_peer_id, safe_peer_id
 from openviking.message import Message, Part
 from openviking.message.part import TextPart, ToolPart
 from openviking.server.config import ToolOutputExternalizationConfig
+from openviking.server.error_mapping import map_exception
 from openviking.server.identity import RequestContext, Role
 from openviking.session import working_memory as wm
 from openviking.session.archive_store import (
@@ -68,6 +69,7 @@ from openviking.utils.model_retry import is_retryable_api_error, retry_async
 from openviking.utils.time_utils import get_current_timestamp
 from openviking.utils.token_estimation import estimate_text_tokens
 from openviking_cli.exceptions import (
+    InternalError,
     NotFoundError,
 )
 from openviking_cli.session.user_id import UserIdentifier
@@ -1197,7 +1199,7 @@ class Session:
             from openviking.service.task_tracker import get_task_tracker
 
             tracker = get_task_tracker()
-            if not task_id or not tracker.has_work(str(task_id)):
+            if not task_id or not await tracker.has_work(str(task_id)):
                 error = "Phase 1 has no QueueFS work to resume"
                 await self._write_failed_marker(
                     archive_uri,
@@ -1652,15 +1654,6 @@ class Session:
                     queue_msg.to_dict(),
                 )
 
-                phase1_stage = "task_tracker_create"
-                await get_task_tracker().create(
-                    "session_commit",
-                    resource_id=self.session_id,
-                    account_id=self.ctx.account_id,
-                    user_id=self.ctx.user.user_id,
-                    task_id=task_id,
-                )
-
                 phase1_stage = "phase1_persist"
                 self._messages = retained_messages
                 await self._write_to_agfs_async(messages=self._messages)
@@ -1727,6 +1720,25 @@ class Session:
 
         self._compression.original_count += len(messages_to_archive)
         logger.info(f"Archived: {len(messages_to_archive)} messages → {archive_uri}/")
+
+        # Registration must not hold the session lock or roll back published Phase 1.
+        try:
+            await get_task_tracker().create(
+                "session_commit",
+                resource_id=self.session_id,
+                account_id=self.ctx.account_id,
+                user_id=self.ctx.user.user_id,
+                task_id=task_id,
+            )
+        except Exception as exc:
+            error = map_exception(exc) or InternalError(str(exc))
+            error.details.update(
+                task_id=task_id,
+                archive_uri=archive_uri,
+                archived=True,
+                stage="task_tracker_create",
+            )
+            raise error
 
         return {
             "session_id": self.session_id,
@@ -2455,20 +2467,6 @@ class Session:
                 record_auto_commit_success=record_auto_commit_success,
             )
 
-            # Write .done last so a recovered queue item can skip completed work.
-            await self._write_done_file(
-                archive_uri,
-                first_message_id,
-                last_message_id,
-                enable_working_memory=enable_working_memory,
-                coverage_start_archive=coverage_start_archive,
-                coverage_end_archive=coverage_end_archive,
-                covered_failed_archives=covered_failed_archives,
-                completed_memory_steps=self._archives.serialize_completed_memory_steps(
-                    completed_memory_steps
-                ),
-            )
-
             result_payload = {
                 "session_id": self.session_id,
                 "archive_uri": archive_uri,
@@ -2511,12 +2509,30 @@ class Session:
                 account_id=self.ctx.account_id,
                 user_id=self.ctx.user.user_id,
             )
+            # Write .done last so a recovered queue item can skip completed work.
+            await self._write_done_file(
+                archive_uri,
+                first_message_id,
+                last_message_id,
+                enable_working_memory=enable_working_memory,
+                coverage_start_archive=coverage_start_archive,
+                coverage_end_archive=coverage_end_archive,
+                covered_failed_archives=covered_failed_archives,
+                completed_memory_steps=self._archives.serialize_completed_memory_steps(
+                    completed_memory_steps
+                ),
+            )
+
             logger.info(f"Session {self.session_id} memory extraction completed")
         except asyncio.CancelledError:
             telemetry.set_error("session.commit.phase2", "CANCELLED", "session commit cancelled")
             snapshot = telemetry.finish("cancelled")
             _publish_telemetry_summary_best_effort(snapshot)
-            if tracker.is_cancellation_requested(task_id):
+            if await tracker.is_cancellation_requested(
+                task_id,
+                account_id=self.ctx.account_id,
+                user_id=self.ctx.user.user_id,
+            ):
                 await self._write_failed_marker(
                     archive_uri,
                     stage="cancelled",
@@ -2836,7 +2852,7 @@ class Session:
         from openviking.service.task_tracker import get_task_tracker
 
         tracker = get_task_tracker()
-        if tracker.has_work(str(task_id)):
+        if await tracker.has_work(str(task_id)):
             return False
 
         error = "Session commit queue work is missing"

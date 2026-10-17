@@ -1,80 +1,75 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Per-task queue progress derived from the task work index."""
+"""Per-task queue progress derived from the task store's Work records."""
 
-from openviking.service.task_work_index import QueueTaskMetadata, TaskWorkIndex
+import pytest
+
+from openviking.service.task_store import PersistentTaskStore
+from openviking.service.task_tracker import TaskTracker
+from tests.test_task_tracker import _FakeAgfs
+
+OWNER = {"account_id": "acme", "user_id": "alice"}
 
 
-def _work(work_id: str, task_id: str = "task-1") -> QueueTaskMetadata:
-    return QueueTaskMetadata(task_id, work_id, "acme", "alice")
+@pytest.fixture
+async def task_id():
+    tracker = TaskTracker(store=PersistentTaskStore(_FakeAgfs()))
+    task = await tracker.create("add_resource", **OWNER)
+    await tracker.start(task.task_id, **OWNER)
+    await tracker.register_work(task.task_id, "parent", "AddResource", **OWNER)
+    return tracker, task.task_id
 
 
-async def test_progress_counts_settled_work_per_queue():
-    index = TaskWorkIndex()
-    index.register("AddResource", _work("parent"))
+async def test_progress_counts_settled_work_per_queue(task_id):
+    tracker, tid = task_id
     for work_id in ("s1", "s2"):
-        index.register("Semantic", _work(work_id))
+        await tracker.register_work(tid, work_id, "Semantic", **OWNER)
     for work_id in ("e1", "e2", "e3"):
-        index.register("Embedding", _work(work_id))
+        await tracker.register_work(tid, work_id, "Embedding", **OWNER)
 
-    await index.prepare_ack("Semantic", _work("s1"))
-    await index.prepare_ack("Embedding", _work("e1"))
+    await tracker.mark_work_done(tid, "s1", **OWNER)
+    await tracker.mark_work_failed(tid, "e1", "boom", **OWNER)
 
-    assert index.progress("task-1", exclude_work_id="parent") == {
+    assert await tracker.work_progress(tid, exclude_work_id="parent", **OWNER) == {
         "Semantic": {"done": 1, "total": 2},
         "Embedding": {"done": 1, "total": 3},
     }
 
 
-async def test_progress_ignores_duplicate_registration_and_discarded_work():
-    index = TaskWorkIndex()
-    index.register("AddResource", _work("parent"))
-    index.register("Semantic", _work("s1"))
-    index.register("Semantic", _work("s1"))
-    index.register("Semantic", _work("s2"))
+async def test_progress_ignores_duplicate_registration_and_discarded_work(task_id):
+    tracker, tid = task_id
+    await tracker.register_work(tid, "s1", "Semantic", **OWNER)
+    await tracker.register_work(tid, "s1", "Semantic", **OWNER)
+    await tracker.register_work(tid, "s2", "Semantic", **OWNER)
 
     # Work that never reached the durable queue is not part of the task.
-    await index.discard("Semantic", _work("s2"))
+    await tracker.discard_work(tid, "s2", **OWNER)
 
-    assert index.progress("task-1", exclude_work_id="parent") == {
+    assert await tracker.work_progress(tid, exclude_work_id="parent", **OWNER) == {
         "Semantic": {"done": 0, "total": 1},
     }
 
 
-async def test_progress_keeps_settled_work_until_task_is_forgotten():
-    index = TaskWorkIndex()
-    index.register("Semantic", _work("s1"))
-    await index.prepare_ack("Semantic", _work("s1"))
+async def test_progress_counts_requeued_and_running_work_as_open(task_id):
+    tracker, tid = task_id
+    await tracker.register_work(tid, "s1", "Semantic", **OWNER)
+    await tracker.register_work(tid, "s2", "Semantic", **OWNER)
+    await tracker.start_work(tid, "s1", **OWNER)
+    await tracker.mark_work_requeued(tid, "s2", **OWNER)
 
-    assert index.progress("task-1") == {"Semantic": {"done": 1, "total": 1}}
-    index.register("Semantic", _work("s2"))
-    assert index.progress("task-1") == {"Semantic": {"done": 1, "total": 2}}
-    index.forget_task("task-1")
-    assert index.progress("task-1") == {}
+    assert await tracker.work_progress(tid, exclude_work_id="parent", **OWNER) == {
+        "Semantic": {"done": 0, "total": 2},
+    }
 
 
-def test_progress_after_rebuild_starts_from_pending_work():
-    index = TaskWorkIndex()
-    index.rebuild(
-        {
-            "Semantic": [{"task_id": "task-1", "_task_work_id": "s1"}],
-            "Embedding": [
-                {"task_id": "task-1", "_task_work_id": "e1"},
-                {"task_id": "task-1", "_task_work_id": "e2"},
-            ],
-        }
-    )
+async def test_progress_after_restart_starts_from_recovered_work(task_id):
+    tracker, tid = task_id
+    restarted = TaskTracker(store=PersistentTaskStore(tracker._store._agfs))
+    await restarted.reconcile_delivery(tid, "s1", "Semantic", **OWNER)
+    await restarted.reconcile_delivery(tid, "e1", "Embedding", **OWNER)
+    await restarted.reconcile_delivery(tid, "e2", "Embedding", **OWNER)
 
-    assert index.progress("task-1") == {
+    assert await restarted.work_progress(tid, **OWNER) == {
         "Semantic": {"done": 0, "total": 1},
         "Embedding": {"done": 0, "total": 2},
     }
-
-
-def test_progress_survives_ack_rollback_without_negative_counts():
-    index = TaskWorkIndex()
-    index.register("Semantic", _work("s1"))
-    index.register("Semantic", _work("s2"))
-    index.rollback_ack("Semantic", _work("s3"))
-
-    assert index.progress("task-1") == {"Semantic": {"done": 0, "total": 3}}

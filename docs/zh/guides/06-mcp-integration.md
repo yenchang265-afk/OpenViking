@@ -124,7 +124,8 @@ claude mcp add --transport http openviking \
 |------|------|----------|
 | `find` | 無 session 上下文的快速語義檢索。只傳 `context_type="skill"` 時改走包級 skill 檢索：每個 skill 包只返回一條命中，URI 指向該包的 `SKILL.md`，摘要取自 skill 本身，即使命中的是包內輔助檔案也是如此；不傳 `target_uri` 時同時檢索自己的 skill 和帳戶共享的 `viking://agent/skills`。`skill` 與其它 context_type 混用時仍走通用檢索路徑 | `query`, `target_uri`(可選), `limit`, `min_score`, `level`(可選), `context_type`(可選), `read_content`(可選——直接內聯每條命中的內容), `events_time_decay_protection`(可選) |
 | `search` | 深度語義檢索；`mode="context"` 組裝可直接注入的上下文，並替代原 `recall` 工具。`list` 模式下每個 skill 包也只出一條命中，URI 指向 `SKILL.md`、摘要取自包本身，但 `limit` 在合併之前生效，所以一個包在多個檔案上命中時會佔掉多個名額，返回條數少於 `limit` | `query`, `mode`（`list` 或 `context`）, `target_uri`（僅 list 模式）, `session_id`(可選), `limit`, `min_score`, `level`（list 模式）, `context_type`(可選), `events_time_decay_protection`（兩種模式均可選），以及 context 模式的 `quotas`, `purpose`, `max_tokens`, `detail` 或 `detail_by_category`, `dedup_turns`, `exclude_uris`, `peer_scope`, 標量 `other_peer_penalty` 或按類別設定的 `other_peer_penalties`, `rewrite`（`off` 或 `auto`） |
-| `read` | 讀取一個或多個 `viking://` URI 的內容。PNG、JPEG、GIF、WebP 返回 MCP 原生圖片內容；WAV、MP3、FLAC、OGG、M4A 返回原生音訊內容。MCP 沒有標準影片內容塊，因此暫不支援影片 | `uris`（單個字串或陣列）, `offset`, `limit`（文本行數） |
+| `read` | 讀取一個或多個 `viking://` URI 的內容。PNG、JPEG、GIF、WebP 返回 MCP 原生圖片內容；WAV、MP3、FLAC、OGG、M4A 返回原生音訊內容。MCP 沒有標準影片內容塊，因此暫不支援影片；需要原始位元組時用 `download` | `uris`（單個字串或陣列）, `offset`, `limit`（文本行數） |
+| `download` | 返回一個短時有效、只能使用一次的 URL，用 `curl` 獲取單個檔案的原始位元組（任意型別，包括 PDF、圖片、壓縮包、音訊和影片）；不返回檔案內容。不支援目錄 | `uri` |
 | `list` | 列出 `viking://` 目錄下的條目 | `uri`, `recursive`(可選) |
 | `tree` | 以縮排形式展示 `viking://` URI 下的遞迴目錄樹——當需要全面瞭解檔案樹結構時使用（單層列表用 `list`，按檔名查詢用 `glob`） | `uri`(可選), `level_limit`(預設 3), `node_limit`(預設 1000), `include_abstract`(可選——同時展示每個目錄的摘要；skill 目錄的摘要就是它的名字和描述) |
 | `remember` | 提交訊息做長期記憶提取；立即返回後臺任務的 `task_id`，提取結果可能什麼都不保留 | `messages`（`{role, content}` 列表） |
@@ -203,7 +204,7 @@ claude mcp add --transport http openviking \
 
 #### 必須配置 `OPENVIKING_PUBLIC_BASE_URL` 的場景
 
-工具響應裡給出的上傳 URL,server 端按以下順序解析:
+`add_resource`、`add_skill` 返回的上傳 URL 和 `download` 返回的下載 URL,server 端都按以下順序解析:
 
 1. 環境變數 `OPENVIKING_PUBLIC_BASE_URL`
 2. `ov.conf` 中的 `server.public_base_url`
@@ -227,6 +228,14 @@ services:
     environment:
       OPENVIKING_PUBLIC_BASE_URL: "https://ov.your-domain.com"
 ```
+
+### 下載原始檔案
+
+`read` 返回文本，小體積的圖片和音訊返回 MCP 原生內容。要拿到任意檔案的原始位元組（例如 PDF、壓縮包、影片或大圖），用檔案的 `uri` 呼叫 `download`。工具先確認檔案存在且呼叫方有讀許可權，再返回一條 `curl -fL -o <本地路徑> <url>` 命令。URL 指向 `GET /api/v1/content/download`，內嵌一次性 token（預設 10 分鐘過期，與上傳共用 `upload_signed_ttl_seconds`），無需 API Key。
+
+token 繫結呼叫方身份和這一個檔案，帶 token 的請求會忽略 `uri` 查詢引數。取檔案時會再次校驗許可權，所以簽發連結後撤銷訪問許可權，下載同樣會失敗。角色處理與上傳一致：在 `api_key` 模式下，使用者已不存在、身份正在刪除或角色已降級時，下載會被拒絕。下載失敗或連結已用過時，重新呼叫 `download` 獲取新連結。帶 API Key 的請求仍走原有路徑，`ov get` 不受影響。
+
+下載 URL 與上文的上傳 URL 使用同一套 base URL 解析規則。部署在反向代理後時，請配置 `OPENVIKING_PUBLIC_BASE_URL`，並確保代理把 `/api/v1/*` 轉發到 server，而不只是 `/mcp`。
 
 ## 故障排除
 

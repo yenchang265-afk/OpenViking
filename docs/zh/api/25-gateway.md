@@ -14,8 +14,8 @@
 
 | 操作 | 未設定管理金鑰 | 已設定管理金鑰 |
 | --- | --- | --- |
-| 讀取上游和上下文配置、測試上游 | 本帳號的任何使用者 | 本帳號的任何使用者；單獨持有管理金鑰也可以，並能指定任意帳號 |
-| 建立、修改、刪除上游或上下文配置 | 本帳號的任何使用者 | 只有帶正確管理金鑰的請求 |
+| 讀取上游和上下文配置 | 本帳號的任何使用者 | 本帳號的任何使用者；單獨持有管理金鑰也可以，並能指定任意帳號 |
+| 建立、修改或刪除上游和上下文配置；測試上游 | 本帳號的任何使用者 | 只有帶正確管理金鑰的請求 |
 | 匯入 OpenViking 的模型配置 | 嵌入部署中的 root（包括本地 dev） | 只有帶正確管理金鑰的請求，且只限嵌入部署 |
 | 簽發、讀取、吊銷閘道器金鑰，重置儲存 | user 只能操作自己的金鑰；admin 操作本帳號；root 操作所選帳號 | 同左，管理金鑰不增加任何許可權 |
 | 讀取日誌和概覽 | user 只看自己的；admin 和 root 看整個帳號 | 同左，始終需要 OpenViking 身份 |
@@ -66,7 +66,7 @@ OpenViking 拒絕 API 金鑰時，返回 401 `openviking_http_401`。
 | GET | `/gateway/admin/upstreams/{identifier}` | 讀取單個上游 |
 | PUT | `/gateway/admin/upstreams/{identifier}` | 建立或替換上游 |
 | DELETE | `/gateway/admin/upstreams/{identifier}` | 刪除沒有金鑰在用的上游 |
-| POST | `/gateway/admin/upstreams/{identifier}/test` | 測試上游連線 |
+| POST | `/gateway/admin/upstreams/{identifier}/test` | 測試上游連線或模型 |
 | POST | `/gateway/admin/upstreams/import-vlm` | 匯入 OpenViking 的模型配置 |
 | GET | `/gateway/admin/policies` | 列出上下文配置 |
 | GET | `/gateway/admin/policies/{identifier}` | 讀取單個上下文配置 |
@@ -90,26 +90,33 @@ curl -X PUT "$SERVER_URL/gateway/admin/upstreams/openai?account_id=team" \
 
 刪除仍有閘道器金鑰在用的物件，返回 409 `in_use` 和 `key_count`。先吊銷這些金鑰；只是想讓請求立即停止發往某個上游，可以停用它而不刪除。
 
-### 連線測試
+### 上游測試
 
-`POST /gateway/admin/upstreams/{identifier}/test` 用已存的憑證請求服務商的模型列表，超時 10 秒，返回 `{ok, status, reason, url}`；沒有收到響應時不含 `status`。只讀呼叫方也能使用。Anthropic 上游同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金鑰，Chat Completions 和 Responses 上游只傳送 Bearer。
+`POST /gateway/admin/upstreams/{identifier}/test` 支援兩種模式：空請求體 `{}` 通過 `GET /v1/models` 檢查連線；`{"model":"<模型名>"}` 使用已存的憑證和請求頭傳送一次很小的非流式生成請求。模型名會先經過上游的別名對映。模型請求使用已配置的 Chat Completions、Responses 或 Anthropic Messages 介面；關閉路徑拼接時，也會遵循配置的完整介面 URL。上游允許 Gateway 工具時，請求會帶上當前帳戶的 OpenViking 工具，並按預設上下文配置篩選；工具目錄暫時不可用時，降級為不帶工具繼續測試。模型測試不設定 reasoning effort，由模型使用預設值。
+
+響應包含 `{ok, kind, status, reason, url}`，其中 `kind` 為 `connection` 或 `model`。測試失敗時還會在 `response` 中返回完整的上游 HTTP 響應，包括 `http_version`、`status`、`reason`、`headers`、`body` 和可選的 `truncated` 標記。響應體最多 16 KiB；沒有收到響應時不含 `status`。超時時間取已配置上游超時與 60 秒中的較小值。兩種測試都需要寫許可權；模型測試會真實請求服務商並可能產生少量費用。
+
+Anthropic 測試同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金鑰；上游請求頭未設定 `anthropic-version` 時，預設使用 `2023-06-01`。Chat Completions 和 Responses 測試只傳送 Bearer 鑑權。`key_header` 不是 `authorization`，或者 `base_url` 含 `{api_key}` 時，按[憑證](../guides/22-gateway-operations.md#憑證)中的規則傳送；返回的 `url` 保留 `{api_key}` 佔位符。
 
 | 服務商的響應 | `reason` | `ok` |
 | --- | --- | --- |
+| Coding Plan 上游尚未授權閘道器使用。閘道器不發請求。 | `coding_plan_blocked` | `false` |
+| 對完整請求地址（`append_endpoint_path` 為 `false`）做連線測試：這種上游沒有模型列表，閘道器不發請求，請改用模型測試。 | `exact_endpoint_untestable` | `false` |
 | 沒有可用的 API Key：沒有儲存，或者上游要求每個客戶端自帶。閘道器不發請求。 | `upstream_key_missing` | `false` |
-| 2xx，響應體帶 `data` 陣列 | `passed` | `true` |
-| 2xx 但響應體表示失敗，或者 401、403 | `upstream_key_rejected` | `false` |
-| 404、405：地址可達，但服務商不提供模型列表，金鑰沒有得到驗證 | `models_unavailable` | `true` |
-| 429：地址可達 | `rate_limited` | `true` |
-| 網路錯誤或 5xx | `upstream_unavailable` | `false` |
+| 2xx，響應符合已配置的模型協議 | `passed` | `true` |
+| 2xx，但響應不是合法 JSON 或不符合已配置的協議 | `invalid_response` | `false` |
+| 401 或 403 | `upstream_key_rejected` | `false` |
+| 400、404、405 或 422 | `model_request_rejected` | `false` |
+| 429 | `rate_limited` | `false` |
+| 網路錯誤、超時、重定向或 5xx | `upstream_unavailable` | `false` |
 
-測試通過只說明地址和金鑰可用，不代表某個具體模型可用，也不代表上游允許使用 Coding Plan。
+連線測試通過說明地址可達；服務商提供 `/v1/models` 時也會驗證已存憑證。部分服務商不提供該介面，返回 404 或 405 後仍可繼續測試模型。模型測試通過說明所選模型完成了本次請求，不代表其他模型也可用，也不會授權使用 Coding Plan。
 
 ### 匯入 VLM 配置
 
 `POST /gateway/admin/upstreams/import-vlm` 把 OpenViking Server 的 VLM 憑證匯入為所選帳號的上游，只在嵌入部署中可用；獨立閘道器返回 404 `vlm_import_unavailable`。
 
-每個匯入的上游 ID 固定為 `vlm-<credential id>`，重複匯入不會產生重複的上游。再次匯入時，來自服務端的欄位（`base_url`、`api_key`、`headers`、`protocol`、`vendor`、`coding_plan`）按服務端配置重新整理，其他欄位保留在閘道器裡改過的值，包括 `name`、`enabled`、`priority`、`models`、`aliases`、`context_windows` 和 `allow_coding_plan`。路徑中含 `coding` 或 `plan` 段的上游會被標為 Coding Plan，在設定 `allow_coding_plan` 之前歸入 `needs_confirmation`。
+每個匯入的上游 ID 固定為 `vlm-<credential id>`，重複匯入不會產生重複的上游。再次匯入時，來自服務端的欄位（`base_url`、`api_key`、`headers`、`protocol`、`vendor`、`coding_plan`、`append_endpoint_path`、`key_header`）按服務端配置重新整理，其他欄位保留在閘道器裡改過的值，包括 `name`、`enabled`、`priority`、`models`、`aliases`、`context_windows` 和 `allow_coding_plan`。路徑中含 `coding` 或 `plan` 段的上游會被標為 Coding Plan，在設定 `allow_coding_plan` 之前歸入 `needs_confirmation`。
 
 ```json
 {
@@ -122,7 +129,6 @@ curl -X PUT "$SERVER_URL/gateway/admin/upstreams/openai?account_id=team" \
 | 跳過原因 `reason` | 說明 |
 | --- | --- |
 | `openai_codex` | Codex OAuth 令牌會定期重新整理，閘道器無法長期使用。 |
-| `azure` | Azure OpenAI 需要 `api-version` 引數，閘道器不傳送它。 |
 | `litellm_no_api_base` | LiteLLM 憑證沒有 `api_base`。在 OpenViking 配置中補上後重新匯入。 |
 | `litellm_unsupported_route` | LiteLLM 路由不使用 OpenAI Chat Completions API，例如 `gemini/`、`bedrock/` 或 `vertex_ai/`。請手動把這個服務商新增為上游。 |
 | `invalid_configuration` | 憑證構不成有效的上游，例如 base URL 無效。 |
@@ -198,7 +204,7 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 
 | HTTP | `reason` | 含義和處理 |
 | --- | --- | --- |
-| 401 | `management_key_invalid` | 管理金鑰不正確。向部署者確認當前的管理金鑰。 |
+| 401 | `management_key_invalid` | 管理金鑰不正確。向部署者確認當前的管理金鑰，或者見[忘記閘道器管理金鑰](../guides/22-gateway-operations.md#忘記閘道器管理金鑰)。 |
 | 403 | `management_key_required` | 已設定管理金鑰，修改上游或上下文配置時必須帶上它。 |
 | 401 | `openviking_http_401` | OpenViking 拒絕了 API 金鑰。換用當前有效的金鑰。 |
 | 401 | `openviking_identity_missing` | OpenViking 沒有返回這把金鑰對應的使用者。 |

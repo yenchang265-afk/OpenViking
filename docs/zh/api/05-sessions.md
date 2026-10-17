@@ -1332,6 +1332,8 @@ ov add-memory '[{"role":"user","content":"Hello"},{"role":"assistant","content":
 
 提交會話。歸檔訊息（Phase 1）在響應返回前完成；有訊息被歸檔時，摘要生成和記憶提取（Phase 2）在後臺非同步執行。產生歸檔的 commit 返回 `status: "accepted"` 和 `task_id`；沒有可歸檔內容的 no-op commit 返回 `status: "skipped"` 和 `task_id: null`。
 
+原獨立 session `extract` 介面已移除，記憶提取統一使用 `commit`。遷移後訊息會按保留策略歸檔；請通過返回的 `task_id` 查詢後臺提取結果，不能將 `accepted` 當作提取完成。
+
 **兩階段提交流程**：
 - **Phase 1（同步）**: 按保留策略拆分訊息，寫入歸檔和恢復記錄，入隊 Phase 2，並將保留訊息寫回 live session
 - **Phase 2（非同步）**: 生成摘要（L0/L1），提取長期記憶並更新關係
@@ -1470,43 +1472,6 @@ ov session commit a1b2c3d4
   }
 }
 ```
-
----
-
-### extract()
-
-#### 1. API 實現介紹
-
-對已有會話的當前 live 訊息執行記憶提取，等待本次提取結果後返回。它不建立新的 commit 任務，也不替代歸檔；已歸檔歷史不會作為本次 live 訊息重複輸入。
-
-**程式碼入口**：
-- `openviking/server/routers/sessions.py:extract_session()` - HTTP 路由
-
-#### 2. 介面和引數說明
-
-**引數**
-
-| 引數 | 型別 | 必填 | 預設值 | 說明 |
-|------|------|------|--------|------|
-| session_id | str | 是 | - | 要提取記憶的會話 ID |
-
-#### 3. 使用示例
-
-**HTTP API**
-
-```http
-POST /api/v1/sessions/{session_id}/extract
-```
-
-```bash
-curl -X POST http://localhost:1933/api/v1/sessions/a1b2c3d4/extract \
-  -H "Content-Type: application/json" \
-  -H "X-API-Key: your-key"
-```
-
-**響應示例**
-
-響應的 `result` 是本次提取產生的記憶寫入結果列表。列表項的具體結構取決於該會話實際提取出了哪些記憶。
 
 <a id="get_task"></a><a id="list_tasks"></a>
 

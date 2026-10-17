@@ -143,3 +143,28 @@ def test_saturation_error_is_still_a_retryable_timeout():
     assert issubclass(AGFSStorageSaturatedError, AGFSTimeoutError)
     mapped = map_exception(AGFSStorageSaturatedError("all storage threads are busy"))
     assert ERROR_CODE_TO_HTTP_STATUS[mapped.code] == 503
+
+
+@pytest.mark.asyncio
+async def test_open_circuit_rejects_native_pathlock_acquisition():
+    class LockingClient(ScriptedClient):
+        def __init__(self):
+            super().__init__(*[AGFSTimeoutError("s3 slow")] * 3)
+            self.lock_requests = []
+
+        async def pathlock_acquire_batch_async(self, fs_ctx, requests, timeout, lease_ref):
+            self.lock_requests.append(requests)
+            return {"lease_id": "l1"}
+
+    sync = LockingClient()
+    client = AsyncAGFSClient(sync)
+    await _fail_times(client, "/local/acct/a", 3)
+
+    with pytest.raises(AGFSCircuitOpenError):
+        await client.pathlock_acquire_batch([{"path": "/local/acct/b", "kind": "exact"}])
+
+    # No lock is taken, so none can leak while the circuit is open.
+    assert sync.lock_requests == []
+    assert await client.pathlock_acquire_batch([{"path": "/queue/semantic", "kind": "exact"}]) == {
+        "lease_id": "l1"
+    }

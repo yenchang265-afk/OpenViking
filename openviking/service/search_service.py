@@ -33,7 +33,7 @@ _KEYWORD_SEARCH_MODES = ("elasticsearch",)
 
 def _validate_query(
     query: str,
-    image_url: Optional[str] = None,
+    image_url: str | list[str] | None = None,
     filter: Optional[Dict] = None,
 ) -> None:
     """Reject malformed query text or a request with nothing to search for.
@@ -99,9 +99,11 @@ class SearchService:
 
     async def _resolve_image_url(
         self,
-        image_url: Optional[str],
+        image_url: str | list[str] | None,
         ctx: RequestContext,
-    ) -> Optional[str]:
+    ) -> str | list[str] | None:
+        if isinstance(image_url, list):
+            return [await self._resolve_image_url(url, ctx) for url in image_url]
         if not image_url:
             return None
         if is_viking_uri(image_url):
@@ -125,7 +127,7 @@ class SearchService:
         score_threshold: Optional[float] = None,
         filter: Optional[Dict] = None,
         level: Optional[List[int]] = None,
-        image_url: Optional[str] = None,
+        image_url: str | list[str] | None = None,
         events_time_decay_protection: Optional[str] = None,
         search_type: SearchType = "semantic",
         context_types: Optional[List[ContextType]] = None,
@@ -183,7 +185,7 @@ class SearchService:
         score_threshold: Optional[float] = None,
         filter: Optional[Dict] = None,
         level: Optional[List[int]] = None,
-        image_url: Optional[str] = None,
+        image_url: str | list[str] | None = None,
         events_time_decay_protection: Optional[str] = None,
         search_type: SearchType = "semantic",
     ) -> Any:
