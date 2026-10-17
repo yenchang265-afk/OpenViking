@@ -1573,6 +1573,7 @@ const workspace = {
         'No per-minute token data in this range yet. It is recorded from this version onwards.',
       peak: 'Peak TPM (busiest minute)',
       peakLine: 'Busiest minute',
+      rerank: 'Rerank tokens',
       title: 'Tokens per Minute Trend',
       window: 'Time range',
       windows: {

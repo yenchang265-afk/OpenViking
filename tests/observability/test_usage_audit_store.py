@@ -903,6 +903,16 @@ async def test_minute_tokens_bucket_events_by_utc_minute(tmp_path):
                     {"provider": "p", "model_name": "e", "prompt_tokens": 60},
                     ts=datetime(2026, 5, 12, 10, 16, 30, tzinfo=timezone.utc),
                 ),
+                _event(  # rerank input and output fold into one rerank count
+                    "rerank.call",
+                    {
+                        "provider": "p",
+                        "model_name": "r",
+                        "prompt_tokens": 20,
+                        "completion_tokens": 3,
+                    },
+                    ts=datetime(2026, 5, 12, 10, 16, 35, tzinfo=timezone.utc),
+                ),
                 _event(  # another user
                     "embedding.call",
                     {"provider": "p", "model_name": "e", "prompt_tokens": 5},
@@ -927,11 +937,13 @@ async def test_minute_tokens_bucket_events_by_utc_minute(tmp_path):
                 "vlm_input": 107,
                 "vlm_output": 40,
                 "embedding_input": 0,
+                "rerank": 0,
             },
             datetime(2026, 5, 12, 10, 16, tzinfo=timezone.utc): {
                 "vlm_input": 0,
                 "vlm_output": 0,
                 "embedding_input": 65,
+                "rerank": 23,
             },
         }
         user_scoped = await store.get_minute_tokens(**window, user_id="user-2")
@@ -940,6 +952,7 @@ async def test_minute_tokens_bucket_events_by_utc_minute(tmp_path):
                 "vlm_input": 0,
                 "vlm_output": 0,
                 "embedding_input": 5,
+                "rerank": 0,
             },
         }
     finally:

@@ -486,13 +486,19 @@ class SQLiteUsageAuditStore:
         )
         result: dict[datetime, dict[str, int]] = {}
         for row in cur.fetchall():
-            key = f"{row['source']}_{row['token_type']}"
-            if key not in ("vlm_input", "vlm_output", "embedding_input"):
+            # Rerank input and output both count against the rerank provider's
+            # budget, so they fold into one series.
+            key = (
+                "rerank"
+                if row["source"] == "rerank"
+                else f"{row['source']}_{row['token_type']}"
+            )
+            if key not in ("vlm_input", "vlm_output", "embedding_input", "rerank"):
                 continue
             minute = int(row["minute_utc"])
             ts = datetime(*_parse_ymd(row["date_utc"]), minute // 60, minute % 60, tzinfo=UTC)
             slot = result.setdefault(
-                ts, {"vlm_input": 0, "vlm_output": 0, "embedding_input": 0}
+                ts, {"vlm_input": 0, "vlm_output": 0, "embedding_input": 0, "rerank": 0}
             )
             slot[key] += int(row["total"] or 0)
         return result

@@ -8,7 +8,9 @@ import type { HomeT, TokenRate } from '../-types/dashboard'
 import { TpmTrendPanel } from './tpm-trend-panel'
 
 vi.mock('recharts', () => ({
-  Area: () => null,
+  Area: ({ dataKey }: { dataKey: string }) => (
+    <g data-testid={`area-${dataKey}`} />
+  ),
   CartesianGrid: () => null,
   ComposedChart: ({ children }: PropsWithChildren) => <svg>{children}</svg>,
   Line: ({ dataKey }: { dataKey: string }) => (
@@ -40,8 +42,9 @@ const data: TokenRate = {
   peak: {
     minute: '2026-05-12T10:21:00+00:00',
     vlm_input: 1000,
-    vlm_output: 234,
+    vlm_output: 200,
     embedding_input: 0,
+    rerank: 34,
     total: 1234,
   },
   window: '24h',
@@ -71,6 +74,12 @@ it('shows the peak and average tokens per minute for the window', async () => {
   expect(screen.getByText('27.5')).toBeTruthy()
   // Wider buckets plot the busiest minute next to the average.
   expect(await screen.findByTestId('line-peak_total')).toBeTruthy()
+})
+
+it('plots rerank tokens as their own series', async () => {
+  renderPanel()
+  expect(await screen.findByTestId('area-rerank')).toBeTruthy()
+  expect(screen.getByText('tpmTrend.rerank')).toBeTruthy()
 })
 
 it('switches the window from the toggle', () => {

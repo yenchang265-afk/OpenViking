@@ -162,9 +162,25 @@ def _user_ctx() -> RequestContext:
 async def test_token_rate_series_reports_each_minute_and_the_peak(monkeypatch):
     store = FakeStore()
     store.minute_tokens = {
-        _minute(10, 5): {"vlm_input": 300, "vlm_output": 100, "embedding_input": 0},
-        _minute(10, 6): {"vlm_input": 0, "vlm_output": 0, "embedding_input": 50},
-        _minute(10, 30): {"vlm_input": 1000, "vlm_output": 200, "embedding_input": 0},
+        _minute(10, 5): {
+            "vlm_input": 300,
+            "vlm_output": 100,
+            "embedding_input": 0,
+            "rerank": 0,
+        },
+        # Rerank-heavy minute: it is the peak only if rerank tokens count.
+        _minute(10, 6): {
+            "vlm_input": 0,
+            "vlm_output": 0,
+            "embedding_input": 50,
+            "rerank": 1500,
+        },
+        _minute(10, 30): {
+            "vlm_input": 1000,
+            "vlm_output": 200,
+            "embedding_input": 0,
+            "rerank": 0,
+        },
     }
     service = UsageAuditQueryService(store=store, inventory=FakeInventory(), timezone_name="UTC")
     monkeypatch.setattr(
@@ -193,18 +209,22 @@ async def test_token_rate_series_reports_each_minute_and_the_peak(monkeypatch):
         "vlm_input": 300.0,
         "vlm_output": 100.0,
         "embedding_input": 0.0,
+        "rerank": 0.0,
         "total": 400.0,
         "peak_total": 400,
     }
+    assert by_start["2026-05-12T10:06:00+00:00"]["rerank"] == 1500.0
+    assert by_start["2026-05-12T10:06:00+00:00"]["total"] == 1550.0
     assert by_start["2026-05-12T10:00:00+00:00"]["total"] == 0.0
     assert result["peak"] == {
-        "minute": "2026-05-12T10:30:00+00:00",
-        "vlm_input": 1000,
-        "vlm_output": 200,
-        "embedding_input": 0,
-        "total": 1200,
+        "minute": "2026-05-12T10:06:00+00:00",
+        "vlm_input": 0,
+        "vlm_output": 0,
+        "embedding_input": 50,
+        "rerank": 1500,
+        "total": 1550,
     }
-    assert result["average_total"] == round((400 + 50 + 1200) / 60, 1)
+    assert result["average_total"] == round((400 + 1550 + 1200) / 60, 1)
 
 
 @pytest.mark.asyncio

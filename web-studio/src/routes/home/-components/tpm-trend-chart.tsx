@@ -31,6 +31,7 @@ const SERIES = [
     color: TOKEN_COLORS.embedding,
     label: 'todayTokens.embeddingInput',
   },
+  { key: 'rerank', color: TOKEN_COLORS.rerank, label: 'tpmTrend.rerank' },
 ] as const
 
 export function TpmTrendChart({

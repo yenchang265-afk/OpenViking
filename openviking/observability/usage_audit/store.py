@@ -59,7 +59,8 @@ class UsageAuditStore(Protocol):
     ) -> dict[datetime, dict[str, int]]:
         """Return per-minute token counts keyed by UTC minute start in `[utc_start, utc_end)`.
 
-        Minutes without tokens are omitted.
+        Each value has `vlm_input`, `vlm_output`, `embedding_input` and `rerank`
+        (rerank input plus output). Minutes without tokens are omitted.
         """
 
     async def get_today_retrievals(

@@ -19,7 +19,9 @@ from .inventory import ContextInventoryProvider
 from .store import UsageAuditStore
 from .time import resolve_usage_timezone, resolve_user_timezone
 
-TOKEN_TYPES = ("vlm_input", "vlm_output", "embedding_input")
+# Token series in the TPM trend; rerank is included so the peak covers every
+# model call that spends tokens.
+TOKEN_TYPES = ("vlm_input", "vlm_output", "embedding_input", "rerank")
 # window -> (window length in minutes, bucket size in minutes). Buckets stay at or
 # under ~360 points; each still reports its busiest single minute.
 TOKEN_RATE_WINDOWS = {
@@ -211,7 +213,7 @@ class UsageAuditQueryService:
     ) -> dict[str, Any]:
         elapsed = (min(bucket_start + bucket, elapsed_end) - bucket_start).total_seconds() / 60
         elapsed = max(elapsed, 1)
-        sums = {key: sum(c[key] for c in counts) for key in TOKEN_TYPES}
+        sums = {key: sum(c.get(key, 0) for c in counts) for key in TOKEN_TYPES}
         item: dict[str, Any] = {"start": bucket_start.isoformat()}
         item.update({key: round(value / elapsed, 1) for key, value in sums.items()})
         item["total"] = round(sum(sums.values()) / elapsed, 1)

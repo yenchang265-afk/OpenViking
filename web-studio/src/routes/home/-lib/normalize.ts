@@ -48,6 +48,7 @@ export function normalizeTokenRate(data: unknown): NormalizedTokenRate {
       return {
         embedding_input: asNumber(item.embedding_input),
         peak_total: asNumber(item.peak_total),
+        rerank: asNumber(item.rerank),
         start: asString(item.start),
         total: asNumber(item.total),
         vlm_input: asNumber(item.vlm_input),
@@ -59,6 +60,7 @@ export function normalizeTokenRate(data: unknown): NormalizedTokenRate {
         ? {
             embedding_input: asNumber(peak.embedding_input),
             minute: asString(peak.minute),
+            rerank: asNumber(peak.rerank),
             total: peakTotal,
             vlm_input: asNumber(peak.vlm_input),
             vlm_output: asNumber(peak.vlm_output),

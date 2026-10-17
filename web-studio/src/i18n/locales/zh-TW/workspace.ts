@@ -1510,6 +1510,7 @@ const workspace = {
       empty: '此區間尚無每分鐘 Token 資料，自此版本起開始記錄。',
       peak: '峰值 TPM（最忙的一分鐘）',
       peakLine: '最忙的一分鐘',
+      rerank: 'Rerank Token',
       title: '每分鐘 Token 趨勢',
       window: '時間範圍',
       windows: {

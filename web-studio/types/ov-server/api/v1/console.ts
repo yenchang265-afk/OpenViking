@@ -67,13 +67,18 @@ export type ConsoleTokenSeriesResult = ConsoleSeriesResult<ConsoleTokenSeriesIte
 
 export type ConsoleTokenRateWindow = '1h' | '6h' | '24h' | '7d'
 
+/** Token counts in the TPM trend; `rerank` is rerank input plus output. */
+export type ConsoleTokenRateCounts = ConsoleTokenCounts & {
+  rerank?: number
+}
+
 /** Average tokens per minute within one bucket, plus its busiest minute. */
-export type ConsoleTokenRateItem = ConsoleTokenCounts & {
+export type ConsoleTokenRateItem = ConsoleTokenRateCounts & {
   peak_total?: number
   start?: string
 }
 
-export type ConsoleTokenRatePeak = ConsoleTokenCounts & {
+export type ConsoleTokenRatePeak = ConsoleTokenRateCounts & {
   minute?: string
 }
 

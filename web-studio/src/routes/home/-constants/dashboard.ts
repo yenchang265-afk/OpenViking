@@ -5,6 +5,7 @@ export const TOKEN_COLORS = {
   embedding: 'var(--home-token-embedding)',
   input: 'var(--home-token-input)',
   output: 'var(--home-token-output)',
+  rerank: 'var(--home-token-rerank)',
 }
 
 export const HEATMAP_COLOR_STOPS = [

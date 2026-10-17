@@ -312,6 +312,7 @@ GET /api/v1/console/tokens/rate?window=24h
       "vlm_input": 100.0,
       "vlm_output": 0.0,
       "embedding_input": 0.0,
+      "rerank": 0.0,
       "total": 100.0,
       "peak_total": 400
     }
@@ -321,13 +322,14 @@ GET /api/v1/console/tokens/rate?window=24h
     "vlm_input": 400,
     "vlm_output": 0,
     "embedding_input": 0,
+    "rerank": 0,
     "total": 400
   },
   "average_total": 0.3
 }
 ```
 
-- `items[].vlm_input/vlm_output/embedding_input/total`：該分桶的平均每分鐘 Token（只除以已經過去的分鐘數）。
+- `items[].vlm_input/vlm_output/embedding_input/rerank/total`：該分桶的平均每分鐘 Token（只除以已經過去的分鐘數）。`rerank` 為 rerank 輸入與輸出之和，並計入 `total`、`peak_total`、`peak` 與 `average_total`。
 - `items[].peak_total`：該分桶內最忙那一分鐘的 Token 總數。
 - `peak`：整個區間內最忙的一分鐘（UTC 分鐘起點），沒有 Token 時為 `null`。適合用來評估供應商 TPM 限額。
 - `average_total`：整個區間的平均每分鐘 Token。
