@@ -385,7 +385,9 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 
 使用 `input: "multimodal"` 時，OpenViking 可以嵌入文本、圖片（PNG、JPG 等）和混合內容。以圖搜圖需要該模式；純文本 embedding 模型仍會索引圖片 summary，但不能接收圖片查詢。
 
-**支持的 provider:**
+Hybrid 是否支援圖片取決於 dense 通道。圖文完整輸入進入 dense，sparse 只接收文字；純圖輸入跳過 sparse。Volcengine hybrid 對純文本保留一次合併請求，對圖文分別請求多模態 dense 和文本 sparse。dense 模型和維度應與索引中已有的向量保持相容。
+
+**支援的 provider:**
 - `openai`: OpenAI Embedding API
 - `azure`: Azure OpenAI Embedding API
 - `volcengine`: 火山引擎 Embedding API
@@ -1891,7 +1893,7 @@ ov add-resource ./docs --exclude "*.tmp"
 | `profile_enabled` | bool | 是否允許 HTTP 請求通過 `profile=1` 開啟請求級 cProfile。關閉時服務端會忽略該請求引數；開啟後，CLI 可以顯示返回的 `profile`，而 Python HTTP client 預設只觸發服務端 profile，不會把頂層 `profile` 欄位自動附著到大多數 SDK 返回值上。 | `false` |
 | `cors_origins` | list | CORS 允許的來源 | `["*"]` |
 | `public_base_url` | str | MCP `add_resource` 和 `add_skill` 工具向客戶端返回的上傳指令裡使用的對外可見 base URL。解析順序：環境變數 `OPENVIKING_PUBLIC_BASE_URL` → 本欄位 → 請求頭 `X-Forwarded-Host` / `X-Forwarded-Proto` → 請求頭 `Host` → 監聽地址兜底。當 server 部署在反向代理後且代理不轉發 `X-Forwarded-*` 時，請顯式設定本欄位（或環境變數）。 | `null` |
-| `upload_signed_ttl_seconds` | int | MCP `add_resource` 和 `add_skill` 為本地檔案上傳 mint 的一次性 token 的過期時間（秒），走 `POST /api/v1/resources/temp_upload?token=...`。 | `600`（10 分鐘） |
+| `upload_signed_ttl_seconds` | int | MCP `add_resource` 和 `add_skill` 為本地檔案上傳 mint 的一次性 token 的過期時間（秒），走 `POST /api/v1/resources/temp_upload?token=...`；MCP `download` 為 `GET /api/v1/content/download?token=...` mint 的一次性 token 也用這個時長。 | `600`（10 分鐘） |
 | `temp_upload.default_mode` | str | `POST /api/v1/resources/temp_upload` 的服務端預設模式（客戶端未顯式傳 `upload_mode` 時使用）：`"local"`（僅當前例項本地磁碟，單機預設行為）或 `"shared"`（分散式共享儲存，多副本部署可跨例項消費）。新的 shared 上傳會固定寫入內部 `viking://upload/<created_at_ms>-<uuid>/content` 和 `meta` 物件，在 `ttl_seconds` 指定的時間內可重複消費。 | `"local"` |
 | `temp_upload.shared_max_size_bytes` | int | `shared` 模式下接受的最大檔案大小（位元組）。超過此閾值的請求會在寫入物件儲存之前被拒絕。 | `536870912`（512 MiB） |
 | `temp_upload.ttl_seconds` | int | local 和 shared 臨時上傳檔案共用的保留時間（秒）。每次對應模式的上傳會清理超過此時間的檔案；shared 只需一次上傳根目錄列舉，從每個一級目錄名解析建立時間，並遞迴刪除過期目錄，不依賴檔案系統修改時間；設為 `0` 時停用自動清理。 | `43200`（12 小時） |

@@ -43,6 +43,7 @@ from openviking_cli.exceptions import (
     InvalidArgumentError,
     NotFoundError,
     PermissionDeniedError,
+    ResourceExhaustedError,
 )
 from openviking_cli.utils.uri import VikingURI
 
@@ -147,6 +148,8 @@ class _OpsMixin:
         ctx: Optional[RequestContext] = None,
         lease_ref: Dict[str, Any] | None = None,
         auto_pathlock: bool = True,
+        *,
+        no_vector: bool = False,
     ) -> Dict[str, Any]:
         """Delete file/directory + recursively update vector index.
 
@@ -156,6 +159,11 @@ class _OpsMixin:
         Acquires a path lock, deletes VectorDB records, then FS files.
         Raises ResourceBusyError when the target is locked by an ongoing
         operation (e.g. semantic processing).
+
+        Set ``no_vector`` only when the caller guarantees the target subtree
+        has no vector/context records. This skips vector cleanup and directory traversal
+        unless descendant ACL checks require it. Namespace permission checks
+        and path locking still apply.
 
         When ``auto_pathlock`` is False and no outer ``lease_ref`` is supplied,
         the VikingFS-level tree/exact lease is skipped and the underlying AGFS
@@ -200,6 +208,8 @@ class _OpsMixin:
                 raise
             if recursive:
                 await self._ensure_access(target_uri, ctx, action=AclAction.MANAGE)
+            if no_vector:
+                return {"estimated_deleted_count": 0}
             # Path does not exist: clean up any orphan index records and return
             uris_to_delete = await self._collect_uris(path, recursive, ctx=ctx)
             uris_to_delete.append(target_uri)
@@ -233,22 +243,29 @@ class _OpsMixin:
                 raise ResourceBusyError(f"Resource is being processed: {uri}", uri=uri)
 
         try:
+            check_descendant_acl = (
+                is_dir
+                and (not no_vector or is_acl_uri(target_uri))
+                and await self._acl_enabled(ctx)
+            )
             uris_to_delete = (
                 await self._collect_uris(
                     path,
                     recursive,
                     ctx=ctx,
-                    strict=is_dir and await self._acl_enabled(ctx),
+                    strict=check_descendant_acl,
                 )
-                if is_dir
+                if is_dir and (not no_vector or check_descendant_acl)
                 else []
             )
             uris_to_delete.append(target_uri)
             if is_dir:
                 await self._ensure_access_many(uris_to_delete, ctx, action=AclAction.MANAGE)
-            real_ctx = self._ctx_or_default(ctx)
-            estimated_count = await _estimate_deleted_count(path, real_ctx)
-            await self._delete_from_vector_store(uris_to_delete, ctx=ctx)
+            estimated_count = 0
+            if not no_vector:
+                real_ctx = self._ctx_or_default(ctx)
+                estimated_count = await _estimate_deleted_count(path, real_ctx)
+                await self._delete_from_vector_store(uris_to_delete, ctx=ctx)
             try:
                 result = await self._async_agfs.rm(
                     path,
@@ -1622,6 +1639,21 @@ class _OpsMixin:
         await self._ensure_parent_dirs(path, ctx=ctx, lease_ref=lease_ref)
 
         if isinstance(content, str):
+            sanitizer = getattr(self, "_privacy_sanitizer", None)
+            if sanitizer is not None and ctx is not None:
+                result = await sanitizer.sanitize(content, ctx=ctx, uri=uri)
+                if result.ambiguous_references:
+                    raise InvalidArgumentError(
+                        "Content contains a Privacy value mapped to multiple fields; "
+                        "insert the intended owner-bound reference explicitly",
+                        details={
+                            "uri": uri,
+                            "candidate_references": [
+                                list(candidates) for candidates in result.ambiguous_references
+                            ],
+                        },
+                    )
+                content = result.content
             content = content.encode("utf-8")
 
         await self._async_agfs.write(
@@ -1699,8 +1731,8 @@ class _OpsMixin:
         self,
         uri: str,
         ctx: Optional[RequestContext] = None,
-    ) -> tuple[str, str]:
-        """Resolve ``uri`` to ``(resolved_uri, agfs_path)`` of a readable regular file.
+    ) -> tuple[str, str, Any]:
+        """Resolve ``uri`` to ``(resolved_uri, agfs_path, stat)`` of a readable regular file.
 
         Applies the read ACL, falls back across visible read paths, and rejects directories.
         """
@@ -1727,17 +1759,43 @@ class _OpsMixin:
                 f"Cannot read directory as file: {uri}",
                 details={"resource": uri, "expected": "file", "actual": "directory"},
             )
-        return uri, path
+        return uri, path, stat
 
     async def read_file_bytes(
         self,
         uri: str,
         ctx: Optional[RequestContext] = None,
+        max_bytes: Optional[int] = None,
     ) -> bytes:
         """Read single binary file. Accepts a Viking URI or a 32-char hex vector record id."""
-        uri, path = await self._resolve_readable_file_path(uri, ctx)
+        if max_bytes is not None and max_bytes < 0:
+            raise InvalidArgumentError("max_bytes must be non-negative")
+        uri, path, stat = await self._resolve_readable_file_path(uri, ctx)
+        if max_bytes is not None:
+            size = stat.get("size") if isinstance(stat, dict) else None
+            if isinstance(size, int) and size > max_bytes:
+                raise ResourceExhaustedError(
+                    "File exceeds the configured read size limit",
+                    details={
+                        "uri": uri,
+                        "reason": "read_limit_exceeded",
+                        "size_bytes": size,
+                        "max_bytes": max_bytes,
+                    },
+                )
         try:
-            raw = self._handle_agfs_read(await self._async_agfs.read(path))
+            read_size = -1 if max_bytes is None else max_bytes + 1
+            raw = self._handle_agfs_read(await self._async_agfs.read(path, size=read_size))
+            if max_bytes is not None and len(raw) > max_bytes:
+                raise ResourceExhaustedError(
+                    "File exceeds the configured read size limit",
+                    details={
+                        "uri": uri,
+                        "reason": "read_limit_exceeded",
+                        "size_bytes": len(raw),
+                        "max_bytes": max_bytes,
+                    },
+                )
             return raw
         except Exception as exc:
             if is_not_found_error(exc):
@@ -1754,7 +1812,7 @@ class _OpsMixin:
 
         Same access and resolution rules as :meth:`read_file_bytes`, without buffering.
         """
-        uri, path = await self._resolve_readable_file_path(uri, ctx)
+        uri, path, _stat = await self._resolve_readable_file_path(uri, ctx)
         try:
             return await self._async_agfs.read_file_to_path(path, local_path)
         except Exception as exc:

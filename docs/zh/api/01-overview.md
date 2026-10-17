@@ -427,7 +427,6 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/sessions/{session_id}/archives/{archive_id}` | 獲取會話歸檔 |
 | DELETE | `/api/v1/sessions/{session_id}` | 刪除會話 |
 | POST | `/api/v1/sessions/{session_id}/commit` | 歸檔會話並提取記憶 |
-| POST | `/api/v1/sessions/{session_id}/extract` | 提取記憶 |
 | POST | `/api/v1/sessions/{session_id}/messages` | 新增單條訊息 |
 | POST | `/api/v1/sessions/{session_id}/messages/batch` | 批量添加消息 |
 | POST | `/api/v1/search/recall` | 已棄用：search 介面 `mode="context"` 之上的輕量預設 |
@@ -523,12 +522,20 @@ JSON 輸出 - 錯誤：
 | PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 新增使用者組成員 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除使用者組成員 |
 | GET | `/api/v1/privacy-configs` | 列出隱私配置分類 |
+| POST | `/api/v1/privacy-configs/scan` | 掃描或修復正文中的登記值 |
 | GET | `/api/v1/privacy-configs/{category}` | 列出分類目標 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}` | 獲取生效配置 |
+| GET | `/api/v1/privacy-configs/{category}/{target_key}/fields` | 列出不含明文值的安全欄位後設資料 |
+| GET | `/api/v1/privacy-configs/{category}/{target_key}/field` | 獲取單欄位引用或顯式讀取值 |
+| POST | `/api/v1/privacy-configs/resolve` | 按欄位 reference/URI 顯式讀取值 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}/versions` | 列出配置版本 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}/versions/{version}` | 獲取指定版本 |
 | POST | `/api/v1/privacy-configs/{category}/{target_key}` | 寫入並激活新版本 |
-| POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 激活指定版本 |
+| PATCH | `/api/v1/privacy-configs/{category}/{target_key}` | 原子合併欄位；不存在時建立 |
+| POST | `/api/v1/privacy-configs/{category}/{target_key}/activate` | 啟用指定版本 |
+| DELETE | `/api/v1/privacy-configs/{category}/{target_key}` | 刪除目標及全部版本 |
+| DELETE | `/api/v1/privacy-configs/{category}/{target_key}/field` | 刪除當前欄位 |
+| DELETE | `/api/v1/privacy-configs/selector` | 按 URI/reference 刪除目標或欄位 |
 
 ### [OpenViking 閘道器管理](25-gateway.md)
 
@@ -546,7 +553,7 @@ JSON 輸出 - 錯誤：
 | GET | `/gateway/admin/logs` | 讀取呼叫方可見的請求日誌 |
 | GET | `/gateway/admin/upstreams` | 列出本帳號的上游 |
 | PUT / DELETE | `/gateway/admin/upstreams/{identifier}` | 建立/替換或刪除上游 |
-| POST | `/gateway/admin/upstreams/{identifier}/test` | 測試上游連線 |
+| POST | `/gateway/admin/upstreams/{identifier}/test` | 測試上游連線或模型 |
 | POST | `/gateway/admin/upstreams/import-vlm` | 把 Server 的 VLM 配置匯入為上游（僅嵌入部署） |
 | GET | `/gateway/admin/policies` | 列出本帳號的上下文配置 |
 | PUT / DELETE | `/gateway/admin/policies/{identifier}` | 建立/替換或刪除上下文配置 |

@@ -388,6 +388,8 @@ When the embedding provider experiences consecutive transient failures (e.g. `42
 
 With `input: "multimodal"`, OpenViking can embed text, images (PNG, JPG, etc.), and mixed content. Image-to-image search requires this mode; text-only embedding models continue to index image summaries but cannot accept image queries.
 
+Hybrid image support depends on the dense channel. The complete mixed input goes to dense, while sparse receives only text; image-only inputs skip sparse. Volcengine hybrid keeps one combined request for text-only input and uses separate multimodal dense and text-only sparse requests for mixed input. Keep the dense model and dimension compatible with the vectors already stored in the index.
+
 **Supported providers:**
 - `openai`: OpenAI Embedding API
 - `azure`: Azure OpenAI Embedding API
@@ -1927,7 +1929,7 @@ When running OpenViking as an HTTP service, add a `server` section to `ov.conf`:
 | `profile_enabled` | bool | Whether to allow request-scoped cProfile via `profile=1` on HTTP requests. When disabled, the server ignores that query parameter. When enabled, the CLI can display the returned `profile`, while the Python HTTP client currently triggers profiling but does not automatically attach the top-level `profile` field to most SDK return values. | `false` |
 | `cors_origins` | list | Allowed CORS origins | `["*"]` |
 | `public_base_url` | str | Public-facing base URL emitted in MCP-issued upload instructions. Resolution order: env var `OPENVIKING_PUBLIC_BASE_URL` → this field → `X-Forwarded-Host`/`X-Forwarded-Proto` request headers → `Host` request header → listen-address fallback. Set this (or the env var) when the server runs behind a reverse proxy that does not forward `X-Forwarded-*` headers. | `null` |
-| `upload_signed_ttl_seconds` | int | TTL in seconds for the one-shot tokens minted by the MCP `add_resource` and `add_skill` tools for local-file uploads via `POST /api/v1/resources/temp_upload?token=...`. | `600` (10 minutes) |
+| `upload_signed_ttl_seconds` | int | TTL in seconds for the one-shot tokens minted by the MCP `add_resource` and `add_skill` tools for local-file uploads via `POST /api/v1/resources/temp_upload?token=...`, and by the MCP `download` tool for `GET /api/v1/content/download?token=...`. | `600` (10 minutes) |
 | `temp_upload.default_mode` | str | Server-side default for `POST /api/v1/resources/temp_upload` when the client does not send `upload_mode`: `"local"` (per-instance disk, current single-node behavior) or `"shared"` (distributed shared store usable across replicas). New shared uploads are stored in internal `viking://upload/<created_at_ms>-<uuid>/content` and `meta` objects, and can be consumed repeatedly for `ttl_seconds`. | `"local"` |
 | `temp_upload.shared_max_size_bytes` | int | **Deprecated** — use `upload.max_file_bytes`. When set and `upload.max_file_bytes` is not, its value is used as `upload.max_file_bytes` and a warning is logged. | `536870912` (512 MiB) |
 | `temp_upload.ttl_seconds` | int | Retention time shared by local and shared temporary uploads, in seconds. Each upload cleans files older than this for its mode; shared cleanup uses one upload-root listing, parses creation time from each first-level directory name, and recursively removes expired directories without filesystem modification times. Set to `0` to disable automatic cleanup. | `43200` (12 hours) |

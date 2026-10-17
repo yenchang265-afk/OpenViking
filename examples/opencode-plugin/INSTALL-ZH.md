@@ -178,7 +178,7 @@ OpenCode 的 `mcp.openviking` 配置。
 進入新的 OpenCode session 後，可以讓 agent 瀏覽 OpenViking memory，或搜尋一個已索引的資源。外掛應暴露 OpenViking MCP server，OpenCode 中的工具名會帶 `openviking_` 字首：
 
 - `openviking_search`、`openviking_find`
-- `openviking_read`、`openviking_list`、`openviking_tree`、`openviking_grep`、`openviking_glob`
+- `openviking_read`、`openviking_download`、`openviking_list`、`openviking_tree`、`openviking_grep`、`openviking_glob`
 - `openviking_remember`、`openviking_write`、`openviking_edit`、`openviking_add_resource`、`openviking_add_skill`
 - `openviking_list_watches`、`openviking_cancel_watch`、`openviking_forget`、`openviking_health`
 
@@ -203,6 +203,7 @@ curl http://localhost:1933/health
 - `openviking_find`：快速語義檢索
 - `openviking_remember`：儲存重要事實或決策，供記憶提取
 - `openviking_read`：讀取一個或多個 `viking://` 檔案
+- `openviking_download`：獲取一次性 URL，用 `curl` 下載檔案原始位元組
 - `openviking_list`：列出 `viking://` 目錄
 - `openviking_tree`：展示 `viking://` 目錄樹
 - `openviking_grep`：精確文本或正則搜尋

@@ -54,7 +54,7 @@ OpenViking 提供多種檢索方法，包括簡單的向量相似度搜索、關
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
 | query | str | 否 | "" | 查詢文本；圖片查詢或僅按過濾條件查詢時可省略 |
-| image_url | str | 否 | None | 圖片查詢，支援 `data:image/...;base64,...`、`http(s)://` 或 `viking://` URI；需要 multimodal embedding 模型 |
+| image_url | str 或 list[str] | 否 | None | 單個圖片 URI 或有序圖片 URI 陣列，每項支援 `data:image/...;base64,...`、`http(s)://` 或 `viking://` URI；需要 multimodal embedding 模型 |
 | target_uri | str \| List[str] | 否 | "" | 限制搜尋範圍到指定的 URI 字首 |
 | events_time_decay_protection | str \| null | 否 | null | 不傳或傳 `null` 關閉衰減；傳 `"0"` 立即衰減；傳 `"7d"` 等時長則在保護期內保持原分，之後衰減。支援非負整數 `Xm`/`Xh`/`Xd` |
 | context_type | str \| List[str] | 否 | None | 限定一個或多個 `ContextType` 取值：`memory`、`resource` 或 `skill` |
@@ -394,7 +394,7 @@ ov find "紅色海報風格" --image ./poster.png --uri "viking://resources/imag
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
 | query | str | 否 | "" | 搜尋查詢字串；未提供 `image_url` 時必填 |
-| image_url | str | 否 | None | 圖片查詢，支援 `data:image/...;base64,...`、`http(s)://` 或 `viking://` URI；需要 multimodal embedding 模型 |
+| image_url | str 或 list[str] | 否 | None | 單個圖片 URI 或有序圖片 URI 陣列，每項支援 `data:image/...;base64,...`、`http(s)://` 或 `viking://` URI；需要 multimodal embedding 模型 |
 | search_type | `"semantic"` \| `"keywords"` | 否 | `"semantic"` | 檢索型別。`semantic` 使用 Embedding 和向量召回；`keywords` 使用 BM25 關鍵詞召回 |
 | mode | `"list"` \| `"context"` | 否 | `"list"` | 返回排序命中列表或組裝好的上下文。CLI `--mode` 會對映到這個欄位；context 專用引數見下文 |
 | target_uri | str \| List[str] | 否 | "" | 限制搜尋範圍到指定的 URI 字首 |

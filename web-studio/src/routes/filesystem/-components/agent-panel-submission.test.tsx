@@ -44,6 +44,8 @@ vi.mock('#/lib/sessions/use-sessions', () => ({
 vi.mock('#/lib/sessions/api', () => ({
   sendChatStream: m.stream,
   addMessage: vi.fn(),
+  interruptChatSession: vi.fn().mockResolvedValue({ interrupted: false }),
+  steerChatSession: vi.fn().mockResolvedValue({ accepted: true }),
   serializeParts: vi.fn(),
 }))
 beforeEach(() => {

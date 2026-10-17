@@ -64,13 +64,16 @@ const common = {
       '閘道器管理金鑰由部署這臺閘道器的人設定，用來修改上游和上下文配置。它不是 Business Data Platform API 金鑰，也不是客戶端用的閘道器金鑰。',
     where: '在哪裡找？',
     prefix:
-      'openviking-server init 和 openviking-gateway init 生成的值以 ovgm_ 開頭。',
+      'openviking-server init、openviking-gateway init 和 Studio“開啟閘道器”生成的值都以 ovgm_ 開頭。',
     environment: '也可能設在環境變數裡，它優先於配置檔案：',
+    studio: 'Root 可以在“設定 → 服務端配置 → 檔案編輯”中檢視 ov.conf。',
+    reset: '實在找不到，就在原來的位置換一個至少 32 個字元的新金鑰，然後重啟。',
+    resetDocs: '檢視運維文件',
     keyPlaceholder: '<至少 32 個字元>',
     session: '只儲存在當前瀏覽器標籤頁，關閉後自動鎖定。',
     wrongKey: '這是閘道器金鑰（給客戶端用的），請輸入閘道器管理金鑰。',
     invalid:
-      '閘道器管理金鑰不正確。請向部署這臺閘道器的人確認。注意，這裡要填的不是 Business Data Platform 的管理員 API 金鑰。',
+      '閘道器管理金鑰不正確。如果金鑰被更換或遺失，請看上方的“在哪裡找？”。注意，這裡要填的不是 Business Data Platform 的管理員 API 金鑰。',
     unlock: '解鎖',
     unlocked: '已解鎖，現在可以修改上游和上下文配置',
     lock: '鎖定',
@@ -79,7 +82,7 @@ const common = {
     readOnly:
       '上游和上下文配置由閘道器管理員統一提供。你可以檢視、測試連線，並在簽發金鑰時選用。',
     adminReadOnly:
-      'Business Data Platform 的管理員和 Root 也需要閘道器管理金鑰才能修改。',
+      'Business Data Platform 的管理員和 Root 也需要閘道器管理金鑰才能修改。如果這臺服務是你部署的，金鑰在 ov.conf 的 gateway.management_key 裡。',
     shared:
       '你正在修改本帳號所有使用者共用的配置，儲存後立即對使用它的金鑰生效。',
     publicTitle: '這臺閘道器對所有 Business Data Platform 商業版使用者開放',
@@ -144,11 +147,11 @@ const common = {
         'ov.conf 已儲存，但無法確認服務是否重啟成功：{{message}}。請檢查服務狀態，然後點“重試”。',
       keyTitle: '儲存閘道器管理金鑰',
       keyOnce:
-        '金鑰只顯示這一次。修改上游和上下文配置時需要它；關閉這個瀏覽器標籤頁之前，當前頁面保持解鎖。',
+        '金鑰已寫入 ov.conf 的 gateway.management_key，Root 之後可以在“設定 → 服務端配置”中檢視。修改上游和上下文配置時需要它；關閉這個瀏覽器標籤頁之前，當前頁面保持解鎖。',
       copyKey: '複製閘道器管理金鑰',
       copyFailed: '複製失敗，金鑰已選中，請按 Ctrl+C 或 ⌘C 複製。',
       keyOnceManual:
-        '金鑰只顯示這一次。修改上游和上下文配置時需要它；重啟服務後，在閘道器頁面點“輸入閘道器管理金鑰”並貼上。',
+        '金鑰已寫入 ov.conf 的 gateway.management_key，Root 之後可以在“設定 → 服務端配置”中檢視。修改上游和上下文配置時需要它；重啟服務後，在閘道器頁面點“輸入閘道器管理金鑰”並貼上。',
       keySaved: '已儲存',
       continue: '已儲存，開啟閘道器',
     },
@@ -158,7 +161,7 @@ const common = {
       management_key_required:
         '上游和上下文配置由閘道器管理員統一提供，輸入閘道器管理金鑰後才能修改。',
       management_key_invalid:
-        '閘道器管理金鑰不正確，請向部署這臺閘道器的人確認。',
+        '閘道器管理金鑰不正確，請用當前的金鑰重新解鎖。解鎖對話方塊的“在哪裡找？”列出了它的存放位置。',
       vlm_import_forbidden:
         '你沒有匯入 Business Data Platform 模型配置的許可權。',
       vlm_import_unavailable:
@@ -200,8 +203,8 @@ const common = {
     unknownCategory: '未知分類“{{name}}”',
     quotasAllZero: '至少把一個分類設為大於 0，或關閉分類限額',
     softBelowHard: '須低於硬提醒時機',
-    baseUrl:
-      '請輸入 http:// 或 https:// 地址，不能包含帳號密碼、查詢引數或片段',
+    baseUrl: '請輸入 http:// 或 https:// 地址，不能包含帳號密碼或 # 片段',
+    baseUrlPlaceholder: '地址裡只能使用 {api_key} 佔位符，且不能放在域名裡',
     subscriptionKey:
       '不支援 Claude 訂閱令牌（sk-ant-oat…），請使用模型 API Key。',
     apiKeyRequired: '請填寫 API Key，或改為由每個客戶端自帶 API Key',

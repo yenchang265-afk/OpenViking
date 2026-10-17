@@ -423,7 +423,7 @@ const activity = {
         '已開啟新增資源彈窗。提交後左側目錄會重新整理，也可以用 /ls 或 /search 繼續定位新內容。',
       addResourceTitle: '新增資源',
       sessionUsage:
-        '用法：/session [current|list|create|switch|get|context|messages|archive|commit|extract|message|tool-results|tool-result|tool-search|delete] ...',
+        '用法：/session [current|list|create|switch|get|context|messages|archive|commit|message|tool-results|tool-result|tool-search|delete] ...',
       sessionDeleteUsage: '用法：/session delete <session_id>',
       sessionMissing:
         '當前沒有會話，請先開啟 Agent 面板建立會話，或指定 session_id。',
@@ -488,7 +488,7 @@ const activity = {
         sessionAction: {
           name: '子命令',
           description:
-            'current、list、create、switch、get、context、messages、archive、commit、extract、message、tool-results、tool-result、tool-search、delete。',
+            'current、list、create、switch、get、context、messages、archive、commit、message、tool-results、tool-result、tool-search、delete。',
         },
         sessionId: {
           name: 'session_id',
@@ -637,10 +637,6 @@ const activity = {
           commit: {
             code: '/session commit [session_id] --keep-recent 10',
             description: '歸檔並觸發記憶提取',
-          },
-          extract: {
-            code: '/session extract [session_id]',
-            description: '從會話中提取記憶',
           },
           message: {
             code: '/session message [session_id] user hello',

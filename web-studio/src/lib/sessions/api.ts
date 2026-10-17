@@ -9,7 +9,6 @@ import {
   postBotV1Chat,
   postSessions,
   postSessionIdCommit,
-  postSessionIdExtract,
   postSessionIdMessages,
 } from '#/gen/ov-client/sdk.gen'
 import {
@@ -348,14 +347,6 @@ export async function commitSession(
   )
 }
 
-export async function extractSession(sessionId: string): Promise<unknown> {
-  return getOvResult<unknown>(
-    postSessionIdExtract({
-      path: { session_id: sessionId },
-    }),
-  )
-}
-
 export async function fetchSessionToolResults(
   sessionId: string,
   options: { limit?: number; toolName?: string } = {},
@@ -510,6 +501,77 @@ export async function sendChat(
   } as unknown as NonNullable<Parameters<typeof postBotV1Chat<true>>[0]>)
 
   return response.data as BotChatResponse
+}
+
+export type InterruptChatSessionResult = {
+  interrupted: boolean
+}
+
+export type SteerChatSessionResult = {
+  accepted: boolean
+}
+
+export async function steerChatSession(
+  sessionId: string,
+  request: BotChatRequest,
+): Promise<SteerChatSessionResult> {
+  const baseUrl = ovClient.getOptions().baseUrl
+  const conn = ovClient.getConnection()
+  const response = await fetch(
+    `${baseUrl}/bot/v1/sessions/${encodeURIComponent(sessionId)}/steer`,
+    {
+      method: 'POST',
+      headers: buildFetchHeaders(),
+      body: JSON.stringify({
+        ...request,
+        session_id: sessionId,
+        user_id: request.user_id || conn.userId || undefined,
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new OvClientError({
+      code: 'BOT_STEER_FAILED',
+      message: extractErrorMessage(
+        text,
+        `Bot steer failed (${response.status})`,
+      ),
+      responseBody: text,
+      statusCode: response.status,
+    })
+  }
+
+  return response.json().catch(() => ({ accepted: false }))
+}
+
+export async function interruptChatSession(
+  sessionId: string,
+): Promise<InterruptChatSessionResult> {
+  const baseUrl = ovClient.getOptions().baseUrl
+  const response = await fetch(
+    `${baseUrl}/bot/v1/sessions/${encodeURIComponent(sessionId)}/interrupt`,
+    {
+      method: 'POST',
+      headers: buildFetchHeaders(),
+    },
+  )
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new OvClientError({
+      code: 'BOT_INTERRUPT_FAILED',
+      message: extractErrorMessage(
+        text,
+        `Bot interrupt failed (${response.status})`,
+      ),
+      responseBody: text,
+      statusCode: response.status,
+    })
+  }
+
+  return response.json().catch(() => ({ interrupted: false }))
 }
 
 // ---------------------------------------------------------------------------

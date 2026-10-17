@@ -42,6 +42,16 @@ description: 用 Docker Compose、Helm 或獨立程序部署 OpenViking 閘道�
 
 管理金鑰不提供命令列引數，因為命令列引數會出現在程序列表和 shell 歷史裡。設定、更換或去掉管理金鑰後需要重啟，這不會弔銷已簽發的閘道器金鑰，也不會改動已有的上游和上下文配置。
 
+#### 忘記閘道器管理金鑰
+
+到閘道器讀取它的位置查詢：
+
+- 環境變數 `OPENVIKING_GATEWAY_MANAGEMENT_KEY` 優先於配置檔案。Compose 部署一般寫在 `docker-compose.yml` 旁邊的 `.env` 裡；Helm 從 `gateway.existingSecret` 指定的 Secret 中讀取 `management-key` 欄位。
+- 沒有設定環境變數時，看 `ov.conf` 的 `gateway.management_key`（嵌入）或 `gateway.conf` 的 `management_key`（獨立）。值寫成 `$VAR` 時，金鑰在對應的環境變數裡。
+- 嵌入部署的 root 還可以在 Studio 的**設定** → **服務端配置** → **檔案編輯**中檢視 `ov.conf`。`openviking-server init` 和 Studio **開啟閘道器**生成的金鑰都以明文儲存在這裡。
+
+實在找不回來，就在原來的位置換一個至少 32 個字元的新值（可以用 `openssl rand -base64 32` 生成），然後重啟。已簽發的閘道器金鑰、上游和上下文配置都不受影響。把環境變數設為空字串不會清除檔案裡的值，需要刪掉這個變數。
+
 ### 加密
 
 閘道器用 OpenViking 自己的加密功能保護已存的憑證和對話狀態（見[加密指南](08-encryption.md)）：
@@ -122,7 +132,7 @@ v0.5 閘道器用自己的金鑰加密資料，這些資料會在首次啟動時
 - `/` 跳轉到 `/studio/`，Studio 只包含閘道器和連線頁面。
 - `/health` 返回 `service: "openviking-gateway"`、`auth_mode` 和 `openviking_url`；請求帶有效的 OpenViking 憑證時，還返回撥用方身份。
 
-**對外地址。** 共享部署要把 `public_url` 設為客戶端訪問 Server（或獨立閘道器）的地址，不帶 `/gateway`，閘道器會自己加上。嵌入閘道器不設定時，沿用 Server 的對外地址（`OPENVIKING_PUBLIC_BASE_URL` 或 `server.public_base_url`）。Studio 的接入指南用它生成配置：Anthropic 客戶端使用 `<public_url>/gateway`，OpenAI 風格的客戶端使用 `<public_url>/gateway/v1`。不設定時，指南使用瀏覽器訪問 Studio 的地址；但檔案匯入的上傳連結必須依賴 `public_url`，見[匯入檔案和技能](#匯入檔案和技能)。
+**對外地址。** 共享部署要把 `public_url` 設為客戶端訪問 Server（或獨立閘道器）的地址，不帶 `/gateway`，閘道器會自己加上。嵌入閘道器不設定時，沿用 Server 的對外地址（`OPENVIKING_PUBLIC_BASE_URL` 或 `server.public_base_url`）。Studio 的接入指南用它生成配置：Anthropic 客戶端使用 `<public_url>/gateway`，OpenAI 風格的客戶端使用 `<public_url>/gateway/v1`。不設定時，指南使用瀏覽器訪問 Studio 的地址；但上傳和下載連結必須依賴 `public_url`，見[匯入檔案和技能](#匯入檔案和技能)。
 
 ### Docker Compose
 
@@ -215,7 +225,7 @@ ov.example.com {
 用 OpenViking API 金鑰連線 Studio 後，在側邊欄開啟 **OpenViking 閘道器**。上游和上下文配置由整個帳號共享，閘道器金鑰和請求日誌屬於各個使用者：
 
 - **沒有設定管理金鑰**：每個登入的使用者都能新增和修改本帳號的上游和上下文配置。
-- **設定了管理金鑰**：“上游”和“上下文配置”標籤頁變為只讀，OpenViking 的 admin 和 root 也一樣。只讀時仍能檢視和測試上游（看不到 API Key 和請求頭），並在給自己簽發金鑰時選用。點**輸入閘道器管理金鑰**解鎖編輯，頁頭會顯示“可修改上游和上下文配置”；解鎖狀態保持到點選**鎖定**或關閉瀏覽器標籤頁。管理金鑰被更換後，Studio 會自動鎖定。
+- **設定了管理金鑰**：“上游”和“上下文配置”標籤頁變為只讀，OpenViking 的 admin 和 root 也一樣。只讀時仍能檢視上游（看不到 API Key 和請求頭），並在給自己簽發金鑰時選用；模型測試會真實請求服務商並可能計費，因此需要寫許可權。點**輸入閘道器管理金鑰**解鎖編輯和測試，頁頭會顯示“可修改上游和上下文配置”；解鎖狀態保持到點選**鎖定**或關閉瀏覽器標籤頁。管理金鑰被更換後，Studio 會自動鎖定。
 - **閘道器金鑰**：每個人都能給自己簽發；帳號管理員可以給本帳號的使用者簽發；root 先在側邊欄切換帳號。見[閘道器金鑰](#閘道器金鑰)。
 
 上游和上下文配置儲存後，立即對使用它們的金鑰生效（上下文配置隻影響之後開始的對話）。還沒有可用的上游或上下文配置、自己又不能修改時，請聯絡部署閘道器的人。
@@ -246,9 +256,11 @@ ov.example.com {
   - Chat Completions 和 Responses 拼接 `/chat/completions` 或 `/responses`。只填域名時不會自動補 `/v1`，OpenAI 要寫 `https://api.openai.com/v1`。
   - Anthropic Messages 拼接 `/v1/messages`，所以 Base URL 不能以 `/v1` 結尾，否則儲存時被拒絕。
   - 末尾的斜槓會被去掉。`/api/paas/v4` 這類帶版本路徑的地址可以直接使用。
+  - Base URL 可以帶查詢引數，例如 `?api-version=…`。客戶端的查詢引數接在後面，同名引數以 Base URL 裡的為準。
   - 客戶端用方舟路徑（`/gateway/api/v3/`、`/gateway/api/compatible/v1/`）發來的請求，按同樣的規則拼接。
+  - Azure OpenAI v1 介面填 `https://RES.openai.azure.com/openai/v1`，Microsoft Foundry 上的 Claude 用 Anthropic Messages 協議、填 `https://RES.services.ai.azure.com/anthropic`，Gemini 的 OpenAI 相容介面填 `https://generativelanguage.googleapis.com/v1beta/openai`，都按拼接規則使用。
   - 一個上游只有一個 Base URL。同一服務商的不同協議地址不同時，要分別建上游：例如智譜 Chat Completions 用 `https://open.bigmodel.cn/api/paas/v4`，Responses 用 `https://open.bigmodel.cn/api/v1`。方舟 Coding Plan 的 Chat Completions 和 Responses 用 `…/api/coding/v3`，Anthropic Messages 用 `…/api/coding`。
-- **拼接協議介面路徑**預設開啟。如果 Base URL 已經是完整的請求地址，可以關閉它；關閉後，閘道器的所有上游請求都直接使用該 URL，不再拼接協議路徑。
+- **拼接協議介面路徑**預設開啟。如果 Base URL 已經是完整的請求地址，可以關閉它；關閉後，閘道器把該協議的請求直接發往這個 URL，不再拼接協議路徑。子路徑接在後面：Anthropic 的 Token 計數發往 `…/count_tokens`。Embeddings、模型列表等其他介面不會路由到這樣的上游，連線測試也會跳過它。例如 Azure OpenAI 部署：協議選 *Chat Completions*，服務商選*通用*，Base URL 填 `https://RES.openai.azure.com/openai/deployments/DEPLOYMENT/chat/completions?api-version=2024-10-21`，關閉這個開關，**金鑰傳送方式**選 *api-key 請求頭*。
 
   編輯頁會實時預覽最終的請求地址；OpenAI、方舟這類地址漏掉路徑，或者 Anthropic 地址多了 `/v1` 時，會給出提示和一鍵修正。
 
@@ -256,7 +268,9 @@ ov.example.com {
 
 - **API Key 由誰提供**：
   - **由閘道器保管 API Key**（預設）：閘道器傳送上游的 API Key，客戶端只需要閘道器金鑰。
-  - **每個客戶端自帶 API Key**：每個請求除了閘道器金鑰，還要在 `X-OpenViking-Upstream-Key` 請求頭裡帶上客戶端自己的服務商 API Key，缺少時返回 401 "Upstream API key is missing"。閘道器按服務商慣用的請求頭轉發這個 API Key，`X-OpenViking-*` 請求頭本身從不轉發。
+  - **每個客戶端自帶 API Key**：每個請求除了閘道器金鑰，還要在 `X-OpenViking-Upstream-Key` 請求頭裡帶上客戶端自己的服務商 API Key，缺少時返回 401 "Upstream API key is missing"。閘道器按**金鑰傳送方式**轉發這個 API Key（Base URL 含 `{api_key}` 時填進地址），`X-OpenViking-*` 請求頭本身從不轉發。
+- **金鑰傳送方式**（僅服務商為*通用*時）：`Authorization: Bearer`（預設）、`api-key` 請求頭（Azure OpenAI）或 `x-api-key` 請求頭。
+- **金鑰放在地址裡**：服務商要求把金鑰寫在地址裡時，在 Base URL 的路徑或查詢引數中寫 `{api_key}`，例如 `?key={api_key}`。閘道器傳送時填入 URL 編碼後的金鑰，並且不再發送鑑權請求頭。不要把金鑰本身寫進地址：能檢視上游的人都能看到 Base URL。
 - **API Key 和額外請求頭只寫不讀**：留空表示保留已存的值，刪除請求頭行就刪除這個請求頭。**修改 Base URL 會清除已存的 API Key 和請求頭值**，所以每次改地址都要重新填寫，已存的金鑰不會被髮往新地址。
 - **額外請求頭**加在發往這個上游的每個請求上，例如服務商的版本或組織請求頭，並覆蓋客戶端傳送的同名請求頭。不能設定 `Host`、`Content-Length`、`Transfer-Encoding` 和 `Connection`。
 - **這是 Coding Plan 或訂閱金鑰**：服務商通常只允許 Coding Plan 這類訂閱金鑰用在自家的程式設計工具裡，通過共享閘道器使用可能導致訂閱被封禁。勾選後，發往這個上游的請求一律被拒絕，返回 403 "Coding Plan upstreams are disabled; configure a model API key"，除非同時勾選**允許通過閘道器使用這個套餐**。閘道器無法從金鑰本身分辨它是不是訂閱金鑰，需要你自己標記。Claude 訂閱令牌（`sk-ant-oat…`）始終被拒絕。
@@ -279,7 +293,7 @@ ov.example.com {
 
 #### 測試和刪除
 
-在上游列表裡點**測試**，閘道器用已存的憑證請求服務商的模型列表，告訴你地址是否有響應、金鑰是否被接受。只讀使用者也能測試。測試不驗證具體模型，也不代表允許使用 Coding Plan；各種結果的含義見[連線測試](../api/25-gateway.md#連線測試)。
+有寫許可權時，在上游列表裡點**測試**，閘道器先檢查已儲存配置的連線。連線成功後，再選擇或輸入模型名執行模型測試。閘道器使用已存的憑證傳送一次很小的生成請求，驗證介面地址、金鑰、模型名和協議能否一起正常工作。上游允許 Gateway 工具時會帶上 OpenViking 工具，reasoning effort 使用模型預設值。服務商可能對模型請求計費。Coding Plan 上游在授權閘道器使用前仍會阻止模型測試。各種結果的含義見[上游測試](../api/25-gateway.md#上游測試)。
 
 有金鑰在用的上游不能刪除：先吊銷這些金鑰，或者改為停用這個上游。
 
@@ -289,7 +303,8 @@ ov.example.com {
 
 - 結果分三組顯示：已匯入、需要確認、未匯入。路徑中帶 `coding` 或 `plan` 的上游被標為 Coding Plan，確認服務商條款允許後，勾選**允許通過閘道器使用這個套餐**才能使用。
 - 重複匯入不會產生重複的上游。再次匯入時，地址、API Key、請求頭、協議和服務商按服務端配置重新整理；你在閘道器裡改過的名稱、啟用狀態、優先順序、模型、別名、上下文視窗和 Coding Plan 確認都保留。
-- Codex OAuth 和 Azure 憑證、缺少 `api_base` 的 LiteLLM 憑證，以及不使用 OpenAI Chat Completions API 的 LiteLLM 路由會被跳過，原因見[匯入 VLM 配置](../api/25-gateway.md#匯入-vlm-配置)。
+- Azure OpenAI 憑證（服務商 `azure`，或 LiteLLM 的 `azure/<deployment>`）會匯入為完整請求地址的上游，帶上配置的 `api_version`，金鑰放在 `api-key` 請求頭裡傳送。
+- Codex OAuth 憑證、缺少 `api_base` 的 LiteLLM 憑證，以及不使用 OpenAI Chat Completions API 的 LiteLLM 路由會被跳過，原因見[匯入 VLM 配置](../api/25-gateway.md#匯入-vlm-配置)。
 
 ### 上下文配置
 
@@ -368,7 +383,7 @@ ov.example.com {
 
 **概覽**標籤頁彙總日誌保留期（預設 30 天）內最新的 10,000 條請求：
 
-- 第一個請求到達之前，顯示**快速開始**清單，順序是“上游 → 上下文配置 → 簽發金鑰 → 接入”。
+- 第一個請求到達之前，顯示**快速開始**清單，順序是“上游 → 上下文配置 → 簽發金鑰 → 接入”。還沒有金鑰時，清單裡的**快速模式**卡片一鍵完成前三步：沒有可用上游時匯入 OpenViking 的 VLM 配置，沒有上下文配置時用推薦設定新建一份，再為當前使用者簽發金鑰。本地 dev 模式以外，root 改為在簽發對話方塊裡選擇金鑰歸屬的使用者。
 - **請求數**：模型請求的數量、最近一次請求的時間，以及這些請求的輸出 token。
 - **首次呼叫快取命中率**：每條新使用者訊息的第一次模型呼叫中，命中服務商提示快取的輸入 token 所佔比例。這是判斷閘道器是否健康最重要的指標，應該接近不經過閘道器時服務商能達到的水平；明顯下降通常說明閘道器傳送的歷史和上一次對不上了，見[首次呼叫快取命中率下降](#首次呼叫快取命中率下降)。
 - **輪內快取命中率**：同一輪裡後續呼叫的命中率，例如工具步驟和 OpenViking 工具的往返，通常很高。
@@ -427,8 +442,10 @@ ov.example.com {
 
 新建的上下文配置預設開啟 **OpenViking 工具**，“使用推薦設定建立”也一樣。**工具**清單來自你的 OpenViking 服務，預設只勾選只讀工具：
 
-- **預設勾選**：`find`、`search`、`grep`、`glob`、`list`、`tree`、`read`、`list_watches`、`get_acl`、`list_users`、`list_groups` 和 `health`。
+- **預設勾選**：`find`、`search`、`grep`、`glob`、`list`、`tree`、`read`、`download`、`list_watches`、`get_acl`、`list_users`、`list_groups` 和 `health`。
 - **預設不勾選**（會修改資料）：`remember`、`write`、`edit`、`add_resource`、`add_skill`、`forget`、`set_acl` 和 `cancel_watch`。想讓模型儲存記憶就勾選 `remember`，想讓它匯入網頁或附件就勾選 `add_resource`。
+
+`download` 返回一條一次性的 `curl` 命令，所以客戶端需要有 shell 工具（哪些名稱算 shell 工具見[匯入檔案和技能](#匯入檔案和技能)）。和上傳連結一樣，下載連結預設經過閘道器，指向 `public_url` 加 `/gateway/downloads`。把 `mcp_file_links` 設為 `direct` 後，閘道器原樣透傳 OpenViking 返回的上傳和下載連結，連結直接指向 Server，此時 Server 的 `OPENVIKING_PUBLIC_BASE_URL`（或 `server.public_base_url`）必須是客戶端能訪問的地址。
 
 OpenViking 以後新增的工具會預設可用，已有對話仍沿用開始時的工具清單。已有的上下文配置保留原來的勾選。
 
@@ -486,7 +503,7 @@ OpenViking 以後新增的工具會預設可用，已有對話仍沿用開始時
 
 OpenViking 服務提供匯入工具、上下文配置也勾選了它們時，模型就能匯入資料。按 URL 匯入不需要額外條件；匯入本地檔案需要以下兩種方式之一：
 
-- **客戶端有 shell 工具**（名稱類似 bash、shell、exec_command、terminal 或 run_command）：匯入工具返回一個一次性上傳連結，模型再用客戶端的 shell 工具上傳檔案，這一步經過客戶端的許可權確認。技能目錄會先打包成 zip。連結指向 `public_url` 加 `/gateway/uploads`，所以 `public_url` 必須是客戶端能訪問的地址，前面的代理也要像其他路徑一樣轉發它。沒有設定 `public_url` 時，匯入失敗並提示 "Set gateway.public_url for client uploads"。
+- **客戶端有 shell 工具**（名稱類似 bash、shell、exec_command、terminal 或 run_command）：匯入工具返回一個一次性上傳連結，模型再用客戶端的 shell 工具上傳檔案，這一步經過客戶端的許可權確認。技能目錄會先打包成 zip。連結指向 `public_url` 加 `/gateway/uploads`，所以 `public_url` 必須是客戶端能訪問的地址，前面的代理也要像其他路徑一樣轉發它。沒有設定 `public_url` 時，匯入失敗並提示 "Set gateway.public_url for client uploads and downloads"。`mcp_file_links` 設為 `direct` 時，連結改為直接指向 OpenViking Server。
 - **使用者訊息帶附件**：沒有 shell 工具時，模型可以匯入使用者訊息裡附帶的檔案，檔案可以是 base64 資料，也可以是附件文本，支援 Responses `input_file` 和 Anthropic `document.source` 中內嵌的 `base64`、`text` 資料。Open WebUI 通常只傳送提取出的文本，這些文本作為文本檔案匯入。附件中的 URL 和服務商的檔案 ID 不會被抓取；要匯入遠端資源，請用匯入工具的 URL 引數。
 
 上傳大小受 `max_body_bytes` 限制（預設 32 MiB）。
@@ -661,7 +678,8 @@ Token 預算只計算模型使用 OpenViking 工具時新增的呼叫、結果�
 | `port` | 獨立 | `1935` | 監聽埠 |
 | `workers` | 獨立 | `1` | worker 程序數，1–64 |
 | `encryption` | 獨立 | 不設定（明文） | 欄位同 `ov.conf` 的 `encryption` 段，見[加密](#加密)；嵌入閘道器沿用 Server 的設定 |
-| `public_url` | 兩者 | 空 | 客戶端訪問的對外地址，不帶 `/gateway`（閘道器自己加）；嵌入時為空則沿用 Server 的對外地址；都沒有時接入指南用請求來源地址，檔案上傳不可用 |
+| `public_url` | 兩者 | 空 | 客戶端訪問的對外地址，不帶 `/gateway`（閘道器自己加）；嵌入時為空則沿用 Server 的對外地址；都沒有時接入指南用請求來源地址，MCP 檔案上傳和下載也不可用（`mcp_file_links` 為 `direct` 時除外） |
+| `mcp_file_links` | 兩者 | `proxy` | MCP 上傳和下載工具返回的連結如何交給客戶端：`proxy` 改寫為 `public_url` 加 `/gateway/uploads` 或 `/gateway/downloads`，需要設定 `public_url`；`direct` 原樣透傳 OpenViking 的連結，需要 Server 的 `OPENVIKING_PUBLIC_BASE_URL`（或 `server.public_base_url`）是客戶端能訪問的地址 |
 | `storage_path` | 兩者 | `~/.openviking/gateway` | 本地儲存目錄 |
 | `management_key` | 兩者 | 空 | 可選的閘道器管理金鑰，至少 32 個字元 |
 | `min_server_version` | 兩者 | `0.4.16` | 獨立閘道器要求的 OpenViking Server 最低版本 |
@@ -721,6 +739,7 @@ URL 必須是 HTTP(S)，不能含憑證、查詢引數或 fragment。未知欄�
 | 服務商 | `vendor` | `generic` | `generic`、`anthropic`、`openai`、`deepseek`、`ark`（火山方舟）或 `byteplus`（BytePlus 方舟）。Studio 只提供服務商支援的協議，API 接受任意組合。 |
 | Base URL | `base_url` | | 服務商地址；預設地址和拼接規則見[上游](#上游)。 |
 | 拼接協議介面路徑 | `append_endpoint_path` | `true` | 拼接所選協議的介面路徑；關閉時把 `base_url` 直接作為完整請求地址。 |
+| 金鑰傳送方式 | `key_header` | `authorization` | `authorization`（Bearer）、`api-key` 或 `x-api-key`。`base_url` 含 `{api_key}` 時不生效。 |
 | API Key 由誰提供 | `auth_mode` | `managed` | `managed`（由閘道器保管 API Key）或 `passthrough`（每個客戶端自帶 API Key）。 |
 | API Key | `api_key` | | 只寫，見[憑證](#憑證)。 |
 | 額外請求頭 | `headers` | `{}` | 只寫，見[憑證](#憑證)。 |
@@ -790,7 +809,7 @@ URL 必須是 HTTP(S)，不能含憑證、查詢引數或 fragment。未知欄�
 | 閘道器不支援 Trusted 模式（`trusted_mode_unsupported`） | 把 Server 改為 `api_key` 認證。 |
 | 閘道器連不上 OpenViking（`openviking_unreachable`） | 只出現在獨立閘道器：檢查 `openviking_url`（`gateway.conf` 或 `OPENVIKING_GATEWAY_OPENVIKING_URL`）和網路。 |
 
-“上游”和“上下文配置”標籤頁只讀，是因為部署者設定了閘道器管理金鑰：點**輸入閘道器管理金鑰**解鎖。OpenViking 的 root 或 admin API 金鑰不能解鎖編輯；管理金鑰被更換後（`management_key_invalid`），Studio 會重新鎖定。
+“上游”和“上下文配置”標籤頁只讀，是因為部署者設定了閘道器管理金鑰：點**輸入閘道器管理金鑰**解鎖。OpenViking 的 root 或 admin API 金鑰不能解鎖編輯；管理金鑰被更換後（`management_key_invalid`），Studio 會重新鎖定。沒人記得金鑰時，見[忘記閘道器管理金鑰](#忘記閘道器管理金鑰)。
 
 ### 簽發金鑰失敗
 
@@ -864,12 +883,12 @@ URL 必須是 HTTP(S)，不能含憑證、查詢引數或 fragment。未知欄�
 - **對話所用的上下文配置關閉了壓縮。** 修改配置只對新對話生效。
 - **壓縮失敗。** 請求詳情會顯示原因，閘道器 60 秒後再試。摘要總因長度上限被截斷時，調大**摘要長度上限**。原因是 `still_over_threshold` 時，說明系統提示詞、工具和摘要本身就佔滿了大部分視窗：調小**摘要長度上限**，或者檢查模型的上下文視窗設定。
 
-### 檔案匯入失敗
+### 檔案匯入或下載失敗
 
-- "Set gateway.public_url for client uploads"：把 `public_url` 設為客戶端能訪問的地址。
-- 上傳連結無法訪問或返回 404：確認 `public_url` 不是舊的 `:1935` 地址，也沒有以 `/gateway` 結尾，並且代理像其他路徑一樣轉發 `/gateway/uploads`。
+- "Set gateway.public_url for client uploads and downloads"：把 `public_url` 設為客戶端能訪問的地址，或者把 `mcp_file_links` 設為 `direct`。
+- 上傳或下載連結無法訪問或返回 404：確認 `public_url` 不是舊的 `:1935` 地址，也沒有以 `/gateway` 結尾，並且代理像其他路徑一樣轉發 `/gateway/uploads` 和 `/gateway/downloads`。`mcp_file_links` 設為 `direct` 時，改查 Server 的 `OPENVIKING_PUBLIC_BASE_URL`。
 - 413：檔案超過了 `max_body_bytes` 或代理的上限。
-- 502 "OpenViking upload is unavailable"：閘道器連不上 OpenViking Server。
+- 502 "OpenViking upload is unavailable" 或 "OpenViking download is unavailable"：閘道器連不上 OpenViking Server。
 - 模型沒有匯入工具：OpenViking 服務沒有提供該工具，上下文配置沒有勾選，或者當前請求不能使用閘道器工具。檢查工具清單和請求詳情。
 
 ### 降級請求的異常

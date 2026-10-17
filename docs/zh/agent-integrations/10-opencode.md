@@ -125,10 +125,10 @@ API key 會由 hooks 和 MCP proxy 作為 `Authorization: Bearer ...` 傳送；`
 
 ## 驗證
 
-安裝後重啟 OpenCode。進入 OpenCode session 後，外掛應暴露 `openviking` MCP server，透傳服務端完整 MCP 工具集（16 個工具）。OpenCode 會給 MCP 工具加 `openviking_` 字首：
+安裝後重啟 OpenCode。進入 OpenCode session 後，外掛應暴露 `openviking` MCP server，透傳服務端完整 MCP 工具集（17 個工具）。OpenCode 會給 MCP 工具加 `openviking_` 字首：
 
 - `openviking_find`、`openviking_search`（`openviking_search` 的 `mode="context"` 替代原 recall 工具）
-- `openviking_read`、`openviking_list`、`openviking_tree`、`openviking_grep`、`openviking_glob`
+- `openviking_read`、`openviking_download`、`openviking_list`、`openviking_tree`、`openviking_grep`、`openviking_glob`
 - `openviking_remember`、`openviking_write`、`openviking_edit`、`openviking_add_resource`、`openviking_add_skill`
 - `openviking_list_watches`、`openviking_cancel_watch`、`openviking_forget`、`openviking_health`
 

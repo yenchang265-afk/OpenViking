@@ -386,12 +386,12 @@ class SessionService:
         self._ensure_initialized()
 
         session_uri = canonical_session_uri(ctx, session_id)
-        session = await self.get(session_id, ctx)
+        session = self.session(ctx, session_id)
         if not await session.exists():
             self._record_lifecycle_metric("delete", "error")
             raise NotFoundError(session_id, "session")
 
-        await self._viking_fs.rm(session_uri, recursive=True, ctx=ctx)
+        await self._viking_fs.rm(session_uri, recursive=True, ctx=ctx, no_vector=True)
         if self._session_expiry_adapter is not None:
             from openviking.scheduling.expiry import SESSION_ITEM_TYPE, ItemIdentity
 
@@ -550,33 +550,6 @@ class SessionService:
             user_id=ctx.user.user_id,
         )
         return task.to_dict() if task else None
-
-    async def extract(self, session_id: str, ctx: RequestContext) -> List[Any]:
-        """Extract memories from a session.
-
-        Args:
-            session_id: Session ID to extract from
-
-        Returns:
-            List of extracted memories
-        """
-        self._ensure_initialized()
-        if not self._session_compressor:
-            raise NotInitializedError("SessionCompressorV3")
-
-        session = await self.get(session_id, ctx)
-        archive_uri = f"{session.uri}/manual_extract"
-
-        memories = await self._session_compressor.extract_long_term_memories(
-            messages=session.messages,
-            user=ctx.user,
-            session_id=session_id,
-            ctx=ctx,
-            archive_uri=archive_uri,
-            agent_evolution_enabled=await self.get_agent_evolution_enabled(ctx.account_id),
-        )
-        self._record_lifecycle_metric("extract", "ok")
-        return memories
 
     @staticmethod
     def effective_auto_commit_policy(session: Session) -> Optional[Dict[str, Any]]:

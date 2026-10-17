@@ -11,7 +11,7 @@
 
 [English](../../README.md) / 中文 / [日本語](README_JA.md)
 
-<a href="https://www.openviking.ai">官網</a> · <a href="https://openviking.ai/studio">線上體驗</a> · <a href="https://github.com/volcengine/OpenViking">GitHub</a> · <a href="https://github.com/volcengine/OpenViking/issues">問題反饋</a> · <a href="https://docs.openviking.ai/">文件</a> · <a href="https://blog.openviking.ai/">部落格</a>
+<a href="https://www.openviking.ai">官網</a> · <a href="https://studio.openviking.ai">線上體驗</a> · <a href="https://github.com/volcengine/OpenViking">GitHub</a> · <a href="https://github.com/volcengine/OpenViking/issues">問題反饋</a> · <a href="https://docs.openviking.ai/">文件</a> · <a href="https://blog.openviking.ai/">部落格</a>
 
 <p>
   <a href="https://github.com/volcengine/OpenViking/releases"><img src="https://img.shields.io/github/v/release/volcengine/OpenViking?color=369eff&labelColor=black&logo=github&style=flat-square" alt="release"></a>
@@ -44,14 +44,14 @@ OpenViking 是面向 AI 智慧體的開源上下文資料庫——用一個檔�
 
 大多數 Agent 記憶是個黑盒：文本進去，向量出來，沒人看得到裡面到底存了什麼。OpenViking 換一種做法，把上下文組織成 `viking://` 虛擬檔案系統。Agent 像操作檔案一樣用 `ls`、`tree`、`read`、`write`、`grep` 瀏覽和修改；你也可以隨時開啟目錄，檢視和編輯 Agent 記住的內容。每個目錄都帶有自動生成的摘要，Agent 先掃摘要，再決定讀哪些內容。
 
-<a href="https://openviking.ai/studio" target="_blank" rel="noopener noreferrer">
+<a href="https://studio.openviking.ai" target="_blank" rel="noopener noreferrer">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="../images/studio-playground-dark.png">
-    <img src="../images/studio-playground.png" alt="OpenViking Studio：瀏覽上下文，體驗語義檢索">
+    <source media="(prefers-color-scheme: dark)" srcset="../images/studio-filesystem-dark.png">
+    <img src="../images/studio-filesystem.png" alt="OpenViking Studio 檔案系統：瀏覽個人記憶與資源">
   </picture>
 </a>
 
-[線上體驗 OpenViking Studio](https://openviking.ai/studio)，無需安裝。 [自行部署 Web Studio](../../web-studio/README_CN.md)。
+[線上體驗 OpenViking Studio](https://studio.openviking.ai)，無需安裝。 [自行部署 Web Studio](../../web-studio/README_CN.md)。
 
 ## 為什麼用 OpenViking
 

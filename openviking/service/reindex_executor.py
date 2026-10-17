@@ -27,7 +27,7 @@ from openviking.core.namespace import (
 from openviking.server.dependencies import get_service
 from openviking.server.identity import RequestContext
 from openviking.service.task_tracker import get_task_tracker, run_tracked_operation
-from openviking.service.task_work_index import get_task_context
+from openviking.service.task_work_index import bind_task_context, get_task_context
 from openviking.session.memory.utils.memory_file_utils import MemoryFileUtils
 from openviking.storage.abstract_overview import body_for_preview, embedding_text_for_body
 from openviking.storage.queuefs.embedding_msg_converter import EmbeddingMsgConverter
@@ -303,7 +303,8 @@ class ReindexExecutor:
                 lock_handoff=handoff,
             )
             queue_manager = get_queue_manager()
-            await queue_manager.enqueue(queue_manager.REINDEX, msg.to_dict())
+            with bind_task_context(task.task_id, task.account_id, task.user_id):
+                await queue_manager.enqueue(queue_manager.REINDEX, msg.to_dict())
             enqueued = True
             await service.viking_fs._async_agfs.pathlock_handoff(lease)
             lease = None
@@ -684,7 +685,7 @@ class ReindexExecutor:
                 )
                 self._apply_embedding_wait_status(
                     counters,
-                    get_task_tracker().build_queue_status(task_context.task_id),
+                    await get_task_tracker().build_queue_status(task_context.task_id),
                 )
         finally:
             active_lease = run.lease if run is not None else lease
@@ -742,7 +743,12 @@ class ReindexExecutor:
             target_uri=uri,
             processing_mode=mode,
             ingest_options=run.ingest_options,
-            force=run.force,
+            # A Skill package has exactly one capability document plus its L0/L1
+            # sidecars. ``vectors_only`` is expected to rebuild all three even
+            # when their md5 values are unchanged (the public API regression
+            # contract relies on this), while other RFV targets retain the
+            # caller-controlled force behavior.
+            force=run.force or (context_type == "skill" and mode == "vectors_only"),
             scalar_target_levels=frozenset({0, 1, 2}),
         )
         snapshot = await build_rfv_snapshot(
