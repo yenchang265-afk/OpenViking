@@ -356,6 +356,7 @@ const workspace = {
       'View Agent skills available to the current user and workspace.',
     add: {
       title: 'Add Skill',
+      import: 'Import SKILL.md',
       description:
         'Import a SKILL.md for agents to find and read. Execution is controlled by the agent using it.',
       scope: 'Add to',
@@ -395,7 +396,7 @@ const workspace = {
       'Could not connect to the Business Data Platform service. Check the server URL and connection status.',
     connectionSettings: 'Open connection settings',
     create: {
-      open: 'New skill',
+      open: 'Write a new skill',
       title: 'Create a skill',
       description:
         'Write a SKILL.md for agents to use. You can add more files to it later in the Filesystem.',

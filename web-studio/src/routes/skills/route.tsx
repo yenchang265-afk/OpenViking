@@ -2,10 +2,13 @@ import * as React from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import {
+  ChevronDownIcon,
   ChevronRightIcon,
   ExternalLinkIcon,
   FileCode2Icon,
+  FileUpIcon,
   LoaderCircleIcon,
+  PencilLineIcon,
   PlusIcon,
   RefreshCwIcon,
   SparklesIcon,
@@ -23,6 +26,12 @@ import {
   CardHeader,
   CardTitle,
 } from '#/components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -233,10 +242,6 @@ function SkillsRoute() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
-            <PlusIcon />
-            {t('add.title')}
-          </Button>
           <Button
             type="button"
             variant="outline"
@@ -249,15 +254,11 @@ function SkillsRoute() {
             />
             {t('refresh')}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            disabled={skillsQuery.isLoading || skillsQuery.isError}
-            onClick={() => setCreateOpen(true)}
-          >
-            <PlusIcon />
-            {t('create.open')}
-          </Button>
+          <AddSkillMenu
+            createDisabled={skillsQuery.isLoading || skillsQuery.isError}
+            onCreate={() => setCreateOpen(true)}
+            onImport={() => setAddOpen(true)}
+          />
         </div>
       </header>
 
@@ -302,10 +303,10 @@ function SkillsRoute() {
               {t('emptyDescription')}
             </p>
           </div>
-          <Button type="button" size="sm" onClick={() => setAddOpen(true)}>
-            <PlusIcon />
-            {t('add.title')}
-          </Button>
+          <AddSkillMenu
+            onCreate={() => setCreateOpen(true)}
+            onImport={() => setAddOpen(true)}
+          />
         </Card>
       ) : (
         <div className="grid gap-4">
@@ -559,6 +560,38 @@ function SkillsRoute() {
         </SheetContent>
       </Sheet>
     </div>
+  )
+}
+
+function AddSkillMenu({
+  createDisabled = false,
+  onCreate,
+  onImport,
+}: {
+  createDisabled?: boolean
+  onCreate: () => void
+  onImport: () => void
+}) {
+  const { t } = useTranslation('skillsPage')
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<Button type="button" size="sm" />}>
+        <PlusIcon />
+        {t('add.title')}
+        <ChevronDownIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-auto">
+        <DropdownMenuItem disabled={createDisabled} onClick={onCreate}>
+          <PencilLineIcon />
+          {t('create.open')}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={onImport}>
+          <FileUpIcon />
+          {t('add.import')}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 

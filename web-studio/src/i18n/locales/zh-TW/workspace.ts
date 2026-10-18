@@ -348,6 +348,7 @@ const workspace = {
     description: '檢視當前使用者和當前空間可用的 Agent 技能。',
     add: {
       title: '新增 Skill',
+      import: '匯入 SKILL.md',
       description:
         '匯入 SKILL.md 供 Agent 檢索和讀取。是否執行由使用它的 Agent 決定。',
       scope: '新增到',
@@ -385,7 +386,7 @@ const workspace = {
       '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
     create: {
-      open: '新增技能',
+      open: '撰寫新技能',
       title: '建立技能',
       description:
         '撰寫供 Agent 使用的 SKILL.md。之後可在檔案系統中為它加入更多檔案。',
