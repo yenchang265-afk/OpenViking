@@ -101,13 +101,25 @@ it('ignores saved hosted connections', () => {
     },
   ])
   render(<StudioSetup onComplete={vi.fn()} />)
-  expect(url().value).toBe('')
+  // The hosted address is not reused; the dev-server default applies instead.
+  expect(url().value).toBe('http://127.0.0.1:1933')
 })
 
 it('defaults to the serving origin when deployed under a base path', () => {
   vi.stubEnv('BASE_URL', '/studio/')
   render(<StudioSetup onComplete={vi.fn()} />)
   expect(url().value).toBe(window.location.origin)
+})
+
+it('prefills the local server under the dev server', () => {
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('http://127.0.0.1:1933')
+})
+
+it('leaves the address empty for a production build served at the root', () => {
+  vi.stubEnv('DEV', false)
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('')
 })
 
 it('defaults to the configured server address over the serving origin', () => {
@@ -141,6 +153,7 @@ it('prefers the active saved address over the configured one', () => {
 
 it('requires a valid address before verifying', () => {
   render(<StudioSetup onComplete={vi.fn()} />)
+  fireEvent.change(url(), { target: { value: '' } })
   expect(verifyButton().disabled).toBe(true)
   fireEvent.change(url(), { target: { value: 'ftp://invalid.test' } })
   expect(verifyButton().disabled).toBe(true)
