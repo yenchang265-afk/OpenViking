@@ -23,17 +23,12 @@ import {
   FieldLabel,
 } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '#/components/ui/select'
 import { canEditStudioConfiguration } from '#/lib/studio-permissions'
-import { resolveConfiguredServiceProvider } from '#/lib/studio-service'
-import { isValidConnectionUrl } from '#/lib/connection/profiles'
-import { CLOUD_SETUP_URL } from '#/lib/connection/onboarding'
+import { identifyServiceProvider } from '#/lib/studio-service'
+import {
+  isValidConnectionUrl,
+  normalizeProfileConnection,
+} from '#/lib/connection/profiles'
 import { useStudioService } from '#/hooks/use-studio-service'
 import { useAppConnection } from '#/hooks/use-app-connection'
 import { useConnectionProbe } from '#/hooks/use-connection-probe'
@@ -322,18 +317,15 @@ function ConnectionSettingsPanel() {
     useAppConnection()
   const [draft, setDraft] = React.useState<ConnectionDraft>(connection)
   const previousConnectionRef = React.useRef({ ...connection })
-  const openSourceUrlRef = React.useRef(
-    resolveConfiguredServiceProvider(
-      connection.baseUrl,
-      connection.serviceSelection,
-    ) === 'opensource'
-      ? connection.baseUrl
-      : '',
-  )
   const [saveError, setSaveError] = React.useState(false)
+  // The selection is always saved as open source, which converts a legacy
+  // hosted profile; official hosted URLs are still detected as hosted.
+  const nextConnection = normalizeProfileConnection({
+    ...draft,
+    serviceSelection: 'opensource',
+  })
   const canEditControlCredential =
-    resolveConfiguredServiceProvider(draft.baseUrl, draft.serviceSelection) ===
-    'opensource'
+    identifyServiceProvider(draft.baseUrl) !== 'volcengine'
   React.useEffect(() => {
     const previous = previousConnectionRef.current
     previousConnectionRef.current = { ...connection }
@@ -343,14 +335,6 @@ function ConnectionSettingsPanel() {
       previous.apiKey !== connection.apiKey ||
       previous.adminApiKey !== connection.adminApiKey
     ) {
-      if (
-        resolveConfiguredServiceProvider(
-          connection.baseUrl,
-          connection.serviceSelection,
-        ) === 'opensource'
-      ) {
-        openSourceUrlRef.current = connection.baseUrl
-      }
       setDraft(connection)
       setSaveError(false)
     } else if (
@@ -378,27 +362,9 @@ function ConnectionSettingsPanel() {
     setDraft((current) => ({ ...current, ...next }))
   }
 
-  function selectServiceType(selection: 'opensource' | 'volcengine'): void {
-    if (
-      resolveConfiguredServiceProvider(
-        draft.baseUrl,
-        draft.serviceSelection,
-      ) === 'opensource' &&
-      selection === 'volcengine'
-    ) {
-      openSourceUrlRef.current = draft.baseUrl
-    }
-    updateDraft({
-      serviceSelection: selection,
-      baseUrl:
-        selection === 'volcengine' ? CLOUD_SETUP_URL : openSourceUrlRef.current,
-    })
-  }
-
   const resolvedIdentity =
     draft.baseUrl === connection.baseUrl &&
     draft.apiKey === connection.apiKey &&
-    draft.serviceSelection === connection.serviceSelection &&
     (draft.apiKey || draft.adminApiKey === connection.adminApiKey) &&
     typeof serverHealth?.account_id === 'string' &&
     serverHealth.account_id &&
@@ -471,61 +437,6 @@ function ConnectionSettingsPanel() {
         </CardHeader>
         <CardContent className="grid gap-4 px-5 py-4">
           <Field>
-            <FieldLabel htmlFor="settings-service-type">
-              {t('studio:serviceType')}
-            </FieldLabel>
-            <FieldContent>
-              <Select
-                value={
-                  draft.serviceSelection === 'auto'
-                    ? resolveConfiguredServiceProvider(draft.baseUrl)
-                    : draft.serviceSelection
-                }
-                onValueChange={(value) =>
-                  selectServiceType(value as 'opensource' | 'volcengine')
-                }
-              >
-                <SelectTrigger
-                  id="settings-service-type"
-                  className="w-full bg-background"
-                >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent
-                  align="start"
-                  className="w-[var(--anchor-width)]"
-                >
-                  <SelectItem value="opensource">
-                    {t('studio:providers.opensource')}
-                  </SelectItem>
-                  <SelectItem value="volcengine">
-                    {t('studio:providers.volcengine')}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-              <FieldDescription>
-                {t('studio:profiles.typeHint')}
-              </FieldDescription>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={service.isChecking}
-                onClick={reconnect}
-              >
-                {t('studio:retry')}
-              </Button>
-              <p className="text-sm" aria-live="polite">
-                {t(
-                  `studio:providers.${service.isChecking ? 'checking' : service.provider}`,
-                )}{' '}
-                {service.version}
-              </p>
-              <FieldDescription>
-                {t(`studio:connectionSummary.${service.provider}`)}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
-          <Field>
             <FieldLabel htmlFor="settings-base-url">
               {t('fields.baseUrl')}
             </FieldLabel>
@@ -535,12 +446,6 @@ function ConnectionSettingsPanel() {
                 value={draft.baseUrl}
                 onChange={(event) =>
                   updateDraft({ baseUrl: event.target.value })
-                }
-                readOnly={
-                  resolveConfiguredServiceProvider(
-                    draft.baseUrl,
-                    draft.serviceSelection,
-                  ) === 'volcengine'
                 }
                 placeholder={t('placeholders.baseUrl')}
                 inputMode="url"
@@ -698,10 +603,12 @@ function ConnectionSettingsPanel() {
                   setSaveError(true)
                   return
                 }
-                saveConnection(draft)
+                saveConnection(nextConnection)
                 reconnect()
               }}
-              disabled={JSON.stringify(draft) === JSON.stringify(connection)}
+              disabled={
+                JSON.stringify(nextConnection) === JSON.stringify(connection)
+              }
             >
               {t('studio:profiles.save')}
             </Button>

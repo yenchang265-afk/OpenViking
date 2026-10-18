@@ -9,7 +9,6 @@ import {
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, expect, it, vi } from 'vitest'
-import userEvent from '@testing-library/user-event'
 
 import { Route } from './route'
 
@@ -84,6 +83,8 @@ afterEach(() => {
   healthState.value = null
   saveConnection.mockClear()
   reconnect.mockClear()
+  Object.assign(config, { url: 'http://localhost:1933', selection: 'auto' })
+  Object.assign(serviceState, { provider: 'opensource', role: 'user', key: '' })
 })
 
 it('preserves the active connection when an invalid address is saved from the details panel', async () => {
@@ -122,35 +123,67 @@ it('preserves the active connection when an invalid address is saved from the de
   client.clear()
 })
 
-it('uses the hosted default address when the Base UI service selector changes', async () => {
-  const user = userEvent.setup()
-  const client = new QueryClient()
+function renderSettings(client: QueryClient): void {
   const Settings = Route.options.component as ComponentType
   render(
     <QueryClientProvider client={client}>
       <Settings />
     </QueryClientProvider>,
   )
-  const serviceType = screen.getByRole('combobox', {
-    name: 'studio:serviceType',
-  })
+}
+
+it('has no service type section and saves an edited legacy hosted connection as open source', () => {
+  config.url = 'https://proxy.example/openviking'
+  config.selection = 'volcengine'
+  const client = new QueryClient()
+  renderSettings(client)
+  expect(screen.queryByText('studio:serviceType')).toBeNull()
+  expect(screen.queryByRole('combobox')).toBeNull()
+  expect(screen.queryByRole('button', { name: 'studio:retry' })).toBeNull()
+  expect(document.getElementById('settings-root-api-key')).toBeTruthy()
   const url = screen.getByLabelText<HTMLInputElement>('fields.baseUrl')
+  expect(url.readOnly).toBe(false)
   fireEvent.change(url, { target: { value: 'https://open-source.example/ov' } })
-  await user.click(serviceType)
-  await user.click(
-    screen.getByRole('option', { name: 'studio:providers.volcengine' }),
-  )
-  expect(url.value).toBe(
-    'https://api.vikingdb.cn-beijing.volces.com/openviking',
-  )
-  expect(url.readOnly).toBe(true)
   fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
   expect(saveConnection).toHaveBeenCalledWith(
     expect.objectContaining({
-      serviceSelection: 'volcengine',
-      baseUrl: 'https://api.vikingdb.cn-beijing.volces.com/openviking',
+      serviceSelection: 'opensource',
+      baseUrl: 'https://open-source.example/ov',
     }),
   )
+  client.clear()
+})
+
+it('lets an unchanged legacy hosted connection be saved as open source', () => {
+  config.url = 'https://proxy.example/openviking'
+  config.selection = 'volcengine'
+  const client = new QueryClient()
+  renderSettings(client)
+  const save = screen.getByRole<HTMLButtonElement>('button', {
+    name: 'studio:profiles.save',
+  })
+  expect(save.disabled).toBe(false)
+  fireEvent.click(save)
+  expect(saveConnection).toHaveBeenCalledWith(
+    expect.objectContaining({
+      serviceSelection: 'opensource',
+      baseUrl: 'https://proxy.example/openviking',
+    }),
+  )
+  client.clear()
+})
+
+it('keeps Save disabled and hides the root key for an official hosted address', () => {
+  config.url = 'https://api.vikingdb.cn-beijing.volces.com/openviking'
+  config.selection = 'volcengine'
+  const client = new QueryClient()
+  renderSettings(client)
+  expect(document.getElementById('settings-root-api-key')).toBeNull()
+  expect(
+    screen.getByRole<HTMLButtonElement>('button', {
+      name: 'studio:profiles.save',
+    }).disabled,
+  ).toBe(true)
   client.clear()
 })
 
@@ -219,7 +252,7 @@ it.each([false, undefined, true])(
   },
 )
 
-it('keeps management credentials editable after authentication fails and retries the connection owner', async () => {
+it('keeps management credentials editable after authentication fails', async () => {
   serviceState.provider = 'unknown'
   config.url = 'https://custom.example'
   config.selection = 'opensource'
@@ -235,12 +268,7 @@ it('keeps management credentials editable after authentication fails and retries
     </QueryClientProvider>,
   )
   expect(document.getElementById('settings-root-api-key')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'studio:retry' }))
-  expect(reconnect).toHaveBeenCalledTimes(1)
   client.clear()
-  serviceState.provider = 'opensource'
-  config.url = 'http://localhost:1933'
-  config.selection = 'auto'
 })
 
 it('unmounts the configuration editor and resets the active tab when switching to a hosted connection', async () => {

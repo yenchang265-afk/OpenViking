@@ -18,6 +18,7 @@ import { createRandomUuid } from '#/lib/browser-crypto'
 import { PLAIN_INPUT_PROPS } from '#/lib/form-input'
 import type { ConnectionProfile } from '#/lib/connection/profiles'
 import { formatHostedIdentity } from '#/lib/connection/identity-label'
+import { identifyServiceProvider } from '#/lib/studio-service'
 import {
   connectionProfileFingerprint,
   isValidConnectionUrl,
@@ -74,7 +75,12 @@ export function ConnectionProfilesList() {
       setError(t('profiles.invalidUrl'))
       return
     }
-    const connection = normalizeProfileConnection(draft.connection)
+    // The selection is always saved as open source, which converts a legacy
+    // hosted profile; official hosted URLs are still detected as hosted.
+    const connection = normalizeProfileConnection({
+      ...draft.connection,
+      serviceSelection: 'opensource',
+    })
     saveProfile({
       ...draft,
       connection: {
@@ -249,37 +255,10 @@ export function ConnectionProfilesList() {
                   {...PLAIN_INPUT_PROPS}
                 />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="profile-provider">
-                  {t('serviceType')}
-                </FieldLabel>
-                <select
-                  id="profile-provider"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={draft.connection.serviceSelection}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      connection: {
-                        ...draft.connection,
-                        serviceSelection: e.target.value as
-                          | 'opensource'
-                          | 'volcengine',
-                      },
-                    })
-                  }
-                >
-                  <option value="opensource">
-                    {t('providers.opensource')}
-                  </option>
-                  <option value="volcengine">
-                    {t('providers.volcengine')}
-                  </option>
-                </select>
-              </Field>
               {PROFILE_FIELDS.filter(
                 (field) =>
-                  draft.connection.serviceSelection === 'opensource' ||
+                  identifyServiceProvider(draft.connection.baseUrl) !==
+                    'volcengine' ||
                   field === 'baseUrl' ||
                   field === 'apiKey',
               ).map((key) => {

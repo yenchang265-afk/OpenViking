@@ -46,9 +46,6 @@ export class StudioSetupRequestError extends Error {
   }
 }
 
-export const CLOUD_SETUP_URL =
-  'https://api.vikingdb.cn-beijing.volces.com/openviking'
-
 const LOCAL_DEV_SERVER_URL = 'http://127.0.0.1:1933'
 
 /**
