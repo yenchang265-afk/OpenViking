@@ -67,6 +67,7 @@ const queueKeys = {
 } as const
 
 const statusTextKeys = {
+  'Active errors:': 'detail.statusText.activeErrors',
   'Embedding Models:': 'detail.statusText.embeddingModels',
   'No collections found.': 'detail.statusText.noCollections',
   'No filesystem statistics available.':

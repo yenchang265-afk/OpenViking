@@ -46,14 +46,14 @@ def _system_to_dict(status: SystemStatus) -> dict:
 
 @router.get("/queue")
 async def observer_queue(
-    _ctx: RequestContext = Depends(get_request_context),
+    ctx: RequestContext = Depends(get_request_context),
     format: Literal["table", "json"] = Query(
         "table", description="Observer status representation format"
     ),
 ):
     """Get queue system status."""
     service = get_service()
-    component = await service.debug.observer.get_queue_status_async(format=format)
+    component = await service.debug.observer.get_queue_status_async(format=format, ctx=ctx)
     return Response(status="ok", result=_component_to_dict(component))
 
 

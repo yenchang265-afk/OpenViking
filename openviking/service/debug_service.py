@@ -151,8 +151,10 @@ class ObserverService:
         """Check if both vikingdb and config dependencies are set."""
         return self._vikingdb is not None and self._config is not None
 
-    async def get_queue_status_async(self, *, format: str = "table") -> ComponentStatus:
-        """Get queue status."""
+    async def get_queue_status_async(
+        self, *, format: str = "table", ctx: Optional[RequestContext] = None
+    ) -> ComponentStatus:
+        """Get queue status; with ctx, include the error reasons it may see."""
         try:
             qm = get_queue_manager()
         except Exception:
@@ -162,7 +164,7 @@ class ObserverService:
                 has_errors=True,
                 status=_queue_not_initialized_status(format),
             )
-        observer = QueueObserver(qm)
+        observer = QueueObserver(qm, ctx=ctx)
         try:
             status = (
                 await observer.get_status_json_async()
@@ -424,7 +426,7 @@ class ObserverService:
         self, ctx: RequestContext, *, format: str = "table"
     ) -> SystemStatus:
         queue, vikingdb, models, lock, filesystem = await asyncio.gather(
-            self.get_queue_status_async(format=format),
+            self.get_queue_status_async(format=format, ctx=ctx),
             self.account_vikingdb(ctx, format=format),
             self.account_models(ctx, format=format),
             self.get_lock_status_async(format=format),

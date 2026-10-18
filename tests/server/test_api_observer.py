@@ -34,6 +34,7 @@ async def test_observer_queue_structured(client: httpx.AsyncClient):
     assert isinstance(result["status"]["queues"], list)
     assert "summary" in result["status"]
     assert isinstance(result["status"]["summary"], dict)
+    assert isinstance(result["status"]["active_errors"], list)
 
 
 async def test_observer_vikingdb(client: httpx.AsyncClient, service):

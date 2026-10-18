@@ -153,7 +153,7 @@ class TestObserverService:
         assert status.is_healthy is True
         assert status.has_errors is False
         assert status.status == "Queue Status Table"
-        mock_observer_cls.assert_called_once_with(mock_queue_manager)
+        mock_observer_cls.assert_called_once_with(mock_queue_manager, ctx=None)
 
     @patch("openviking.service.debug_service.VikingDBObserver")
     def test_vikingdb_property(self, mock_observer_cls):
