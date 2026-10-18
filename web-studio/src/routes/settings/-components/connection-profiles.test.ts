@@ -167,6 +167,23 @@ it('edits a legacy hosted profile as an open-source connection', () => {
   )
 })
 
+it('shows only the address and user key for an official hosted address', () => {
+  connectionState.profiles = [hosted('active', 'default')]
+
+  render(React.createElement(ConnectionProfilesList))
+  fireEvent.click(screen.getByRole('button', { name: 'profiles.edit' }))
+  expect(screen.getByLabelText('profiles.fields.baseUrl')).toBeTruthy()
+  expect(screen.getByLabelText('profiles.fields.apiKey')).toBeTruthy()
+  expect(screen.queryByLabelText('profiles.fields.adminApiKey')).toBeNull()
+  expect(screen.queryByLabelText('profiles.fields.accountId')).toBeNull()
+  expect(screen.queryByLabelText('profiles.fields.userId')).toBeNull()
+
+  fireEvent.change(screen.getByLabelText('profiles.fields.baseUrl'), {
+    target: { value: 'http://192.0.2.1:1933' },
+  })
+  expect(screen.getByLabelText('profiles.fields.adminApiKey')).toBeTruthy()
+})
+
 it('creates a connection on HTTP origins without crypto.randomUUID', () => {
   const getRandomValues = globalThis.crypto.getRandomValues.bind(
     globalThis.crypto,

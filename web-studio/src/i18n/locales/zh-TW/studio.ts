@@ -32,13 +32,6 @@ const studio = {
   backToFiles: '返回檔案列表',
   showOverview: '展開統計與佇列',
   hideOverview: '收起統計與佇列',
-  connectionSummary: {
-    opensource:
-      '當前工作區按開源服務展示；服務擴充套件和管理功能需對應配置與許可權。',
-    volcengine:
-      '當前工作區按火山託管服務展示；僅顯示檢測可用的擴充套件功能，使用者 API Key 不提供管理授權。',
-    unknown: '連線驗證成功後會展示對應功能。自定義地址請指定服務型別。',
-  },
 
   watchesReadDescription: '檢視已配置的定時同步任務及執行狀態。',
   watchesReadEmpty: '當前沒有可訪問的定時同步任務。',
@@ -54,10 +47,6 @@ const studio = {
     unknown: '服務型別待確認',
     checking: '正在檢測連線…',
   },
-  serviceType: '服務型別',
-  auto: '自動檢測',
-  serviceHint:
-    '自動檢測優先識別火山官方域名，其餘地址預設開源服務。火山代理地址請選擇火山託管；連線驗證成功後展示對應功能。',
   cloudManagement:
     '火山管理功能需要連線獨立管理服務。資料 API Key 不會自動開放管理許可權。',
   connectionSettings: '連線設定',

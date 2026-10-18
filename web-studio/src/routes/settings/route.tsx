@@ -24,8 +24,11 @@ import {
 } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 import { canEditStudioConfiguration } from '#/lib/studio-permissions'
-import { resolveConfiguredServiceProvider } from '#/lib/studio-service'
-import { isValidConnectionUrl } from '#/lib/connection/profiles'
+import { identifyServiceProvider } from '#/lib/studio-service'
+import {
+  isValidConnectionUrl,
+  normalizeProfileConnection,
+} from '#/lib/connection/profiles'
 import { useStudioService } from '#/hooks/use-studio-service'
 import { useAppConnection } from '#/hooks/use-app-connection'
 import { useConnectionProbe } from '#/hooks/use-connection-probe'
@@ -315,11 +318,14 @@ function ConnectionSettingsPanel() {
   const [draft, setDraft] = React.useState<ConnectionDraft>(connection)
   const previousConnectionRef = React.useRef({ ...connection })
   const [saveError, setSaveError] = React.useState(false)
-  // Studio only connects to open-source services; saving converts any legacy
-  // hosted or auto-detected selection.
+  // The selection is always saved as open source, which converts a legacy
+  // hosted profile; official hosted URLs are still detected as hosted.
+  const nextConnection = normalizeProfileConnection({
+    ...draft,
+    serviceSelection: 'opensource',
+  })
   const canEditControlCredential =
-    resolveConfiguredServiceProvider(draft.baseUrl, 'opensource') ===
-    'opensource'
+    identifyServiceProvider(draft.baseUrl) !== 'volcengine'
   React.useEffect(() => {
     const previous = previousConnectionRef.current
     previousConnectionRef.current = { ...connection }
@@ -359,7 +365,6 @@ function ConnectionSettingsPanel() {
   const resolvedIdentity =
     draft.baseUrl === connection.baseUrl &&
     draft.apiKey === connection.apiKey &&
-    draft.serviceSelection === connection.serviceSelection &&
     (draft.apiKey || draft.adminApiKey === connection.adminApiKey) &&
     typeof serverHealth?.account_id === 'string' &&
     serverHealth.account_id &&
@@ -431,28 +436,6 @@ function ConnectionSettingsPanel() {
           </div>
         </CardHeader>
         <CardContent className="grid gap-4 px-5 py-4">
-          <Field>
-            <FieldLabel>{t('studio:serviceType')}</FieldLabel>
-            <FieldContent>
-              <Button
-                type="button"
-                variant="outline"
-                disabled={service.isChecking}
-                onClick={reconnect}
-              >
-                {t('studio:retry')}
-              </Button>
-              <p className="text-sm" aria-live="polite">
-                {t(
-                  `studio:providers.${service.isChecking ? 'checking' : service.provider}`,
-                )}{' '}
-                {service.version}
-              </p>
-              <FieldDescription>
-                {t(`studio:connectionSummary.${service.provider}`)}
-              </FieldDescription>
-            </FieldContent>
-          </Field>
           <Field>
             <FieldLabel htmlFor="settings-base-url">
               {t('fields.baseUrl')}
@@ -620,10 +603,12 @@ function ConnectionSettingsPanel() {
                   setSaveError(true)
                   return
                 }
-                saveConnection({ ...draft, serviceSelection: 'opensource' })
+                saveConnection(nextConnection)
                 reconnect()
               }}
-              disabled={JSON.stringify(draft) === JSON.stringify(connection)}
+              disabled={
+                JSON.stringify(nextConnection) === JSON.stringify(connection)
+              }
             >
               {t('studio:profiles.save')}
             </Button>

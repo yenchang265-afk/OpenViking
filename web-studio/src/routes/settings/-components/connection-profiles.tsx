@@ -18,6 +18,7 @@ import { createRandomUuid } from '#/lib/browser-crypto'
 import { PLAIN_INPUT_PROPS } from '#/lib/form-input'
 import type { ConnectionProfile } from '#/lib/connection/profiles'
 import { formatHostedIdentity } from '#/lib/connection/identity-label'
+import { identifyServiceProvider } from '#/lib/studio-service'
 import {
   connectionProfileFingerprint,
   isValidConnectionUrl,
@@ -74,8 +75,8 @@ export function ConnectionProfilesList() {
       setError(t('profiles.invalidUrl'))
       return
     }
-    // Studio only connects to open-source services; saving converts any
-    // legacy hosted profile.
+    // The selection is always saved as open source, which converts a legacy
+    // hosted profile; official hosted URLs are still detected as hosted.
     const connection = normalizeProfileConnection({
       ...draft.connection,
       serviceSelection: 'opensource',
@@ -254,7 +255,13 @@ export function ConnectionProfilesList() {
                   {...PLAIN_INPUT_PROPS}
                 />
               </Field>
-              {PROFILE_FIELDS.map((key) => {
+              {PROFILE_FIELDS.filter(
+                (field) =>
+                  identifyServiceProvider(draft.connection.baseUrl) !==
+                    'volcengine' ||
+                  field === 'baseUrl' ||
+                  field === 'apiKey',
+              ).map((key) => {
                 return (
                   <Field key={key}>
                     <FieldLabel htmlFor={`profile-${key}`}>

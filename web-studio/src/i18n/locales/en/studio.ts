@@ -35,14 +35,6 @@ const studio = {
   backToFiles: 'Back to files',
   showOverview: 'Show statistics and queues',
   hideOverview: 'Hide statistics and queues',
-  connectionSummary: {
-    opensource:
-      'The workspace is configured for an open-source service. Extensions and management require their own configuration and permissions.',
-    volcengine:
-      'The workspace is configured for a hosted service. Only verified extensions are shown; a user API key does not grant management access.',
-    unknown:
-      'Available features appear after connection verification. Select a service type for a custom address.',
-  },
 
   watchesReadDescription:
     'View configured synchronization tasks and their status.',
@@ -64,10 +56,6 @@ const studio = {
     unknown: 'Service type unconfirmed',
     checking: 'Checking connection…',
   },
-  serviceType: 'Service type',
-  auto: 'Detect automatically',
-  serviceHint:
-    'Automatic detection uses Volcengine for official endpoints and open source for other addresses. For a hosted proxy, select Volcengine hosted. Features appear after connection verification.',
   cloudManagement:
     'Hosted management requires a separate management service. A data key does not enable management.',
   connectionSettings: 'Connection settings',
