@@ -53,6 +53,7 @@ import { TosResourceOptions } from './tos-resource-options'
 import {
   UploadResourceFields,
   folderLimitError,
+  isScanningSelection,
   refilterSelectedFiles,
 } from './upload-resource-fields'
 import type { SelectedUploadFile } from './upload-resource-fields'
@@ -243,7 +244,8 @@ export function AddResourceForm({
 
   const handleSubmit = () => {
     if (mode === 'upload') {
-      if (selectedFiles.length === 0) return
+      if (selectedFiles.length === 0 || isScanningSelection(selectedFiles))
+        return
       // Options may have changed since the folder was picked.
       const files = refilterSelectedFiles(selectedFiles, folderFilters)
       const limitError = files
@@ -306,7 +308,7 @@ export function AddResourceForm({
     hasValidDestination &&
     watchRequirementMet &&
     (activeMode === 'upload'
-      ? selectedFiles.length > 0
+      ? selectedFiles.length > 0 && !isScanningSelection(selectedFiles)
       : !!remoteUrl.trim() && hasWatchInterval)
 
   return (

@@ -1,16 +1,19 @@
 // @vitest-environment jsdom
 
 import {
+  act,
   cleanup,
   fireEvent,
   render,
   screen,
   waitFor,
 } from '@testing-library/react'
+import { useState } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
   UploadResourceFields,
+  isScanningSelection,
   refilterSelectedFiles,
 } from './upload-resource-fields'
 import type { SelectedUploadFile } from './upload-resource-fields'
@@ -33,6 +36,9 @@ const NO_FILTERS = { ignoreDirs: '', include: '', exclude: '' }
 
 const mocks = vi.hoisted(() => ({
   onDrop: null as ((files: File[]) => void) | null,
+  getFilesFromEvent: null as
+    | ((event: unknown) => Promise<Array<File | DataTransferItem>>)
+    | null,
   pending: new Map<string, (value: null) => void>(),
   toast: vi.fn(),
   toastError: vi.fn(),
@@ -46,8 +52,14 @@ vi.mock('file-type', () => ({
 }))
 
 vi.mock('react-dropzone', () => ({
-  useDropzone: ({ onDrop }: { onDrop: (files: File[]) => void }) => {
-    mocks.onDrop = onDrop
+  useDropzone: (options: {
+    onDrop: (files: File[]) => void
+    getFilesFromEvent: (
+      event: unknown,
+    ) => Promise<Array<File | DataTransferItem>>
+  }) => {
+    mocks.onDrop = options.onDrop
+    mocks.getFilesFromEvent = options.getFilesFromEvent
     return {
       getInputProps: () => ({}),
       getRootProps: () => ({}),
@@ -70,8 +82,11 @@ async function waitForDetection(...names: string[]) {
 afterEach(() => {
   cleanup()
   mocks.onDrop = null
+  mocks.getFilesFromEvent = null
   mocks.pending.clear()
   vi.clearAllMocks()
+  vi.unstubAllGlobals()
+  vi.restoreAllMocks()
 })
 
 describe('UploadResourceFields', () => {
@@ -158,7 +173,8 @@ describe('UploadResourceFields', () => {
       withPath(new File(['b'], 'b.md'), '/docs/sub/b.md'),
     ])
 
-    await waitFor(() => expect(current).toHaveLength(1))
+    await waitFor(() => expect(current[0]?.folder).toBeDefined())
+    expect(current).toHaveLength(1)
     expect(current[0].file.name).toBe('docs')
     expect(current[0].folder?.name).toBe('docs')
     expect(current[0].folder?.entries.map((entry) => entry.path)).toEqual([
@@ -191,7 +207,8 @@ describe('UploadResourceFields', () => {
       withPath(new File(['d'], 'x.tmp'), '/repo/x.tmp'),
     ])
 
-    await waitFor(() => expect(current).toHaveLength(1))
+    await waitFor(() => expect(current[0]?.folder).toBeDefined())
+    expect(current).toHaveLength(1)
     expect(current[0].folder?.entries.map((entry) => entry.path)).toEqual([
       'repo/a.md',
       'repo/node_modules/x/index.js',
@@ -359,5 +376,255 @@ describe('UploadResourceFields', () => {
       'fileEmpty:{"name":"blank.md"}',
       { duration: 2500 },
     )
+  })
+})
+
+/** Renders with real state, reporting every change to `onChange`. */
+function Harness({
+  onChange,
+}: {
+  onChange: (files: SelectedUploadFile[]) => void
+}) {
+  const [files, setFiles] = useState<SelectedUploadFile[]>([])
+  return (
+    <UploadResourceFields
+      files={files}
+      onFilesChange={(update) =>
+        setFiles((previous) => {
+          const next = typeof update === 'function' ? update(previous) : update
+          onChange(next)
+          return next
+        })
+      }
+      t={echoT}
+      filters={NO_FILTERS}
+      limits={LIMITS}
+    />
+  )
+}
+
+function fileEntry(name: string, content: string): FileSystemFileEntry {
+  return {
+    name,
+    isDirectory: false,
+    isFile: true,
+    file: (resolve: (file: File) => void) => resolve(new File([content], name)),
+  } as unknown as FileSystemFileEntry
+}
+
+/** A dropped folder whose listing waits until `release` is called. */
+function gatedFolderEntry(name: string, children: FileSystemEntry[]) {
+  let release!: () => void
+  const gate = new Promise<void>((resolve) => {
+    release = resolve
+  })
+  const entry = {
+    name,
+    isDirectory: true,
+    isFile: false,
+    createReader: () => {
+      let read = false
+      return {
+        readEntries: (resolve: (entries: FileSystemEntry[]) => void) => {
+          if (read) return resolve([])
+          read = true
+          void gate.then(() => resolve(children))
+        },
+      }
+    },
+  } as unknown as FileSystemDirectoryEntry
+  return { entry, release }
+}
+
+function dropEvent(...entries: FileSystemEntry[]) {
+  return {
+    type: 'drop',
+    dataTransfer: {
+      items: entries.map((entry) => ({
+        kind: 'file',
+        webkitGetAsEntry: () => entry,
+        getAsFile: () => null,
+      })),
+      files: [],
+    },
+  }
+}
+
+describe('UploadResourceFields folder scanning', () => {
+  it('shows a dropped folder at once and fills it in once read', async () => {
+    let current: SelectedUploadFile[] = []
+    render(<Harness onChange={(files) => (current = files)} />)
+
+    const { entry, release } = gatedFolderEntry('docs', [
+      fileEntry('a.md', 'a'),
+    ])
+    let dropped: Array<File | DataTransferItem> = []
+    await act(async () => {
+      dropped = (await mocks.getFilesFromEvent?.(dropEvent(entry))) ?? []
+    })
+
+    expect(dropped).toEqual([])
+    expect(current).toHaveLength(1)
+    expect(current[0].scanning).toEqual({ filesFound: 0 })
+    expect(isScanningSelection(current)).toBe(true)
+    expect(screen.getByText('docs/')).toBeTruthy()
+    expect(screen.getByText('fileInfo.scanning:{"count":0}')).toBeTruthy()
+    const rowId = current[0].id
+
+    release()
+    await waitFor(() => expect(current[0]?.folder).toBeDefined())
+    expect(current[0].id).toBe(rowId)
+    expect(current[0].scanning).toBeUndefined()
+    expect(current[0].folder?.entries.map((item) => item.path)).toEqual([
+      'docs/a.md',
+    ])
+    expect(isScanningSelection(current)).toBe(false)
+  })
+
+  it('stops reading a folder the user removed', async () => {
+    let current: SelectedUploadFile[] = []
+    render(<Harness onChange={(files) => (current = files)} />)
+
+    const { entry, release } = gatedFolderEntry('docs', [
+      fileEntry('a.md', 'a'),
+    ])
+    await act(async () => {
+      await mocks.getFilesFromEvent?.(dropEvent(entry))
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^fileInfo\.remove/ }))
+    expect(current).toEqual([])
+
+    await act(async () => {
+      release()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(current).toEqual([])
+    expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it('drops scanning rows when the fields unmount, e.g. on a source switch', async () => {
+    let current: SelectedUploadFile[] = []
+    function Page({ shown }: { shown: boolean }) {
+      const [files, setFiles] = useState<SelectedUploadFile[]>([])
+      current = files
+      return shown ? (
+        <UploadResourceFields
+          files={files}
+          onFilesChange={setFiles}
+          t={echoT}
+          filters={NO_FILTERS}
+          limits={LIMITS}
+        />
+      ) : null
+    }
+    const { rerender } = render(<Page shown />)
+    const { entry, release } = gatedFolderEntry('docs', [
+      fileEntry('a.md', 'a'),
+    ])
+    await act(async () => {
+      await mocks.getFilesFromEvent?.(dropEvent(entry))
+    })
+    expect(isScanningSelection(current)).toBe(true)
+
+    rerender(<Page shown={false} />)
+    expect(current).toEqual([])
+    await act(async () => {
+      release()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    expect(current).toEqual([])
+  })
+
+  it('passes drag-over items and input picks straight through', async () => {
+    render(<Harness onChange={() => {}} />)
+    const file = new File(['a'], 'a.md')
+
+    const dragged = await mocks.getFilesFromEvent?.({
+      type: 'dragenter',
+      dataTransfer: { items: [{ kind: 'file' }, { kind: 'string' }] },
+    })
+    expect(dragged).toHaveLength(1)
+    expect(
+      await mocks.getFilesFromEvent?.({
+        type: 'change',
+        target: { files: [file] },
+      }),
+    ).toEqual([file])
+  })
+
+  it('opens the folder button with showDirectoryPicker when available', async () => {
+    let current: SelectedUploadFile[] = []
+    render(<Harness onChange={(files) => (current = files)} />)
+    const inputClick = vi.spyOn(screen.getByTestId('folder-input'), 'click')
+    vi.stubGlobal(
+      'showDirectoryPicker',
+      vi.fn().mockResolvedValue({
+        kind: 'directory',
+        name: 'notes',
+        values: async function* () {
+          yield {
+            kind: 'file',
+            name: 'n.md',
+            getFile: async () => new File(['n'], 'n.md'),
+          }
+        },
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /^dropzone\.selectFolder/ }),
+    )
+
+    await waitFor(() => expect(current[0]?.folder).toBeDefined())
+    expect(current[0].folder?.entries.map((item) => item.path)).toEqual([
+      'notes/n.md',
+    ])
+    expect(inputClick).not.toHaveBeenCalled()
+  })
+
+  it('falls back to the folder input when the picker is missing or refused', async () => {
+    render(<Harness onChange={() => {}} />)
+    const inputClick = vi
+      .spyOn(screen.getByTestId('folder-input'), 'click')
+      .mockImplementation(() => {})
+    const button = screen.getByRole('button', {
+      name: /^dropzone\.selectFolder/,
+    })
+
+    fireEvent.click(button)
+    await waitFor(() => expect(inputClick).toHaveBeenCalledTimes(1))
+
+    vi.stubGlobal(
+      'showDirectoryPicker',
+      vi.fn().mockRejectedValue(new DOMException('frame', 'SecurityError')),
+    )
+    fireEvent.click(button)
+    await waitFor(() => expect(inputClick).toHaveBeenCalledTimes(2))
+  })
+
+  it('removes a folder that cannot be read and says so', async () => {
+    let current: SelectedUploadFile[] = []
+    render(<Harness onChange={(files) => (current = files)} />)
+    const broken = {
+      name: 'locked',
+      isDirectory: true,
+      isFile: false,
+      createReader: () => ({
+        readEntries: (_resolve: unknown, reject: (error: Error) => void) =>
+          reject(new Error('denied')),
+      }),
+    } as unknown as FileSystemDirectoryEntry
+
+    await act(async () => {
+      await mocks.getFilesFromEvent?.(dropEvent(broken))
+    })
+
+    await waitFor(() =>
+      expect(mocks.toastError).toHaveBeenCalledWith(
+        'folderReadFailed:{"name":"locked"}',
+        { duration: 2500 },
+      ),
+    )
+    expect(current).toEqual([])
   })
 })

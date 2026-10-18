@@ -62,6 +62,31 @@ export function transformGitignoreLine(line: string, baseRel: string): string {
   return negated ? `!${scoped}` : scoped
 }
 
+export type Gitignore = {
+  /** Add one .gitignore's text; `baseRel` is its folder, relative to the root. */
+  add: (text: string, baseRel: string) => void
+  /** Whether a root-relative path is ignored; end a folder's path with '/'. */
+  ignores: (relPath: string) => boolean
+}
+
+/**
+ * One spec for a whole folder's .gitignore files. Add them shallowest first,
+ * so a nested file's rules (negations included) win over its parents'.
+ */
+export function createGitignore(): Gitignore {
+  const matcher = ignore()
+  return {
+    add: (text, baseRel) => {
+      matcher.add(
+        text
+          .split(/\r?\n/)
+          .map((line) => transformGitignoreLine(line, baseRel)),
+      )
+    },
+    ignores: (relPath) => matcher.ignores(relPath),
+  }
+}
+
 /** Read the folder's .gitignore files and drop what they ignore. */
 export async function loadFolderSource(
   folder: FolderGroup,
@@ -69,19 +94,15 @@ export async function loadFolderSource(
   const files = [...(folder.ignoreFiles ?? [])].sort(
     (a, b) => a.path.split('/').length - b.path.split('/').length,
   )
-  const gitignoreRules: string[] = []
+  const gitignore = createGitignore()
   for (const ignoreFile of files) {
     try {
       const baseRel = dirOf(innerPath(folder, ignoreFile.path))
-      const lines = (await ignoreFile.file.text()).split(/\r?\n/)
-      gitignoreRules.push(
-        ...lines.map((line) => transformGitignoreLine(line, baseRel)),
-      )
+      gitignore.add(await ignoreFile.file.text(), baseRel)
     } catch {
       // An unreadable .gitignore only means fewer files are skipped.
     }
   }
-  const gitignore = ignore().add(gitignoreRules)
   const entries = folder.entries.filter(
     (entry) => !gitignore.ignores(innerPath(folder, entry.path)),
   )
