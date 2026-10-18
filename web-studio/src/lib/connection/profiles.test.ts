@@ -6,6 +6,7 @@ import {
   updateActiveProfile,
   normalizeProfileConnection,
   isValidConnectionUrl,
+  settingsProfileConnection,
 } from '#/lib/connection/profiles'
 import type { ConnectionDraft } from '#/lib/connection/types'
 
@@ -91,4 +92,35 @@ it('recovers a missing active ID and ignores malformed records without losing th
   expect(readConnectionProfiles(fallback).profiles[0].connection.apiKey).toBe(
     'legacy-key',
   )
+})
+it('keeps a legacy hosted selection in Settings only while its address is unchanged', () => {
+  const hosted: ConnectionDraft = {
+    ...fallback,
+    baseUrl: 'https://proxy.example/openviking',
+    serviceSelection: 'volcengine',
+  }
+  expect(
+    settingsProfileConnection(
+      {
+        ...hosted,
+        baseUrl: 'https://proxy.example/openviking/',
+        apiKey: 'rotated',
+      },
+      hosted,
+    ),
+  ).toEqual({
+    ...hosted,
+    baseUrl: 'https://proxy.example/openviking/',
+    apiKey: 'rotated',
+  })
+  expect(
+    settingsProfileConnection(
+      { ...hosted, baseUrl: 'https://open-source.example/ov' },
+      hosted,
+    ).serviceSelection,
+  ).toBe('opensource')
+  const openSource = { ...fallback, serviceSelection: 'auto' as const }
+  expect(
+    settingsProfileConnection(openSource, openSource).serviceSelection,
+  ).toBe('opensource')
 })

@@ -247,12 +247,13 @@ def _message_account_id(data: Optional[Dict[str, Any]]) -> Optional[str]:
             return None
     if not isinstance(payload, dict):
         return None
-    # Embedding messages keep the account in context_data, nested under payload.
+    # Embedding messages keep the account in context_data, nested under payload;
+    # session commits keep it in the serialized user identity.
     for scope in (payload, payload.get("payload")):
         if not isinstance(scope, dict):
             continue
-        context = scope.get("context_data")
-        for source in (scope, context if isinstance(context, dict) else {}):
+        nested = (scope.get("context_data"), scope.get("user"))
+        for source in (scope, *(item for item in nested if isinstance(item, dict))):
             account_id = source.get("account_id")
             if isinstance(account_id, str):
                 return account_id

@@ -24,10 +24,9 @@ import {
 } from '#/components/ui/field'
 import { Input } from '#/components/ui/input'
 import { canEditStudioConfiguration } from '#/lib/studio-permissions'
-import { identifyServiceProvider } from '#/lib/studio-service'
 import {
   isValidConnectionUrl,
-  normalizeProfileConnection,
+  settingsProfileConnection,
 } from '#/lib/connection/profiles'
 import { useStudioService } from '#/hooks/use-studio-service'
 import { useAppConnection } from '#/hooks/use-app-connection'
@@ -318,14 +317,10 @@ function ConnectionSettingsPanel() {
   const [draft, setDraft] = React.useState<ConnectionDraft>(connection)
   const previousConnectionRef = React.useRef({ ...connection })
   const [saveError, setSaveError] = React.useState(false)
-  // The selection is always saved as open source, which converts a legacy
-  // hosted profile; official hosted URLs are still detected as hosted.
-  const nextConnection = normalizeProfileConnection({
-    ...draft,
-    serviceSelection: 'opensource',
-  })
+  const nextConnection = settingsProfileConnection(draft, connection)
+  // Hosted connections authenticate with the user key alone (Bearer).
   const canEditControlCredential =
-    identifyServiceProvider(draft.baseUrl) !== 'volcengine'
+    nextConnection.serviceSelection !== 'volcengine'
   React.useEffect(() => {
     const previous = previousConnectionRef.current
     previousConnectionRef.current = { ...connection }

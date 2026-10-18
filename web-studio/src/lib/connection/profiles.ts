@@ -40,6 +40,25 @@ export function normalizeProfileConnection(
   }
 }
 
+/**
+ * The connection Settings saves when `draft` edits `stored`. Settings only
+ * creates open-source connections, but a legacy hosted profile keeps its
+ * selection, and with it Bearer auth, until its address changes.
+ */
+export function settingsProfileConnection(
+  draft: ConnectionDraft,
+  stored: ConnectionDraft,
+): ConnectionDraft {
+  const address = (value: string) => value.trim().replace(/\/+$/, '')
+  const keepsHosted =
+    stored.serviceSelection === 'volcengine' &&
+    address(draft.baseUrl) === address(stored.baseUrl)
+  return normalizeProfileConnection({
+    ...draft,
+    serviceSelection: keepsHosted ? 'volcengine' : 'opensource',
+  })
+}
+
 export function connectionProfileFingerprint(
   connection: ConnectionDraft,
 ): string {

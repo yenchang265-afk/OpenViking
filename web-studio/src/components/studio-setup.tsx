@@ -62,6 +62,11 @@ function initialDraft(profile: SavedConnection | undefined): ConnectionDraft {
   }
 }
 
+/**
+ * The saved profile to update with a verified connection. A profile is only
+ * reused when the new connection carries every key it already holds, since
+ * completing setup replaces the stored connection wholesale.
+ */
 function matchingProfileId(
   connection: ConnectionDraft,
   profiles: SavedConnection[],
@@ -71,7 +76,9 @@ function matchingProfileId(
     (profile) =>
       normalizedAddress(profile.connection.baseUrl) === address &&
       profile.connection.accountId === connection.accountId &&
-      profile.connection.userId === connection.userId,
+      profile.connection.userId === connection.userId &&
+      (!profile.connection.apiKey || Boolean(connection.apiKey)) &&
+      (!profile.connection.adminApiKey || Boolean(connection.adminApiKey)),
   )?.id
 }
 

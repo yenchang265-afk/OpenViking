@@ -18,11 +18,10 @@ import { createRandomUuid } from '#/lib/browser-crypto'
 import { PLAIN_INPUT_PROPS } from '#/lib/form-input'
 import type { ConnectionProfile } from '#/lib/connection/profiles'
 import { formatHostedIdentity } from '#/lib/connection/identity-label'
-import { identifyServiceProvider } from '#/lib/studio-service'
 import {
   connectionProfileFingerprint,
   isValidConnectionUrl,
-  normalizeProfileConnection,
+  settingsProfileConnection,
 } from '#/lib/connection/profiles'
 
 const PROFILE_FIELDS = [
@@ -68,6 +67,12 @@ export function ConnectionProfilesList() {
     setError('')
     setDraft(profile)
   }
+  const savedConnection = (edited: ConnectionProfile) =>
+    settingsProfileConnection(
+      edited.connection,
+      profiles.find((profile) => profile.id === edited.id)?.connection ??
+        edited.connection,
+    )
   function save(event: React.FormEvent) {
     event.preventDefault()
     if (!draft) return
@@ -75,12 +80,7 @@ export function ConnectionProfilesList() {
       setError(t('profiles.invalidUrl'))
       return
     }
-    // The selection is always saved as open source, which converts a legacy
-    // hosted profile; official hosted URLs are still detected as hosted.
-    const connection = normalizeProfileConnection({
-      ...draft.connection,
-      serviceSelection: 'opensource',
-    })
+    const connection = savedConnection(draft)
     saveProfile({
       ...draft,
       connection: {
@@ -257,8 +257,7 @@ export function ConnectionProfilesList() {
               </Field>
               {PROFILE_FIELDS.filter(
                 (field) =>
-                  identifyServiceProvider(draft.connection.baseUrl) !==
-                    'volcengine' ||
+                  savedConnection(draft).serviceSelection !== 'volcengine' ||
                   field === 'baseUrl' ||
                   field === 'apiKey',
               ).map((key) => {

@@ -140,10 +140,12 @@ it('has no service type section and saves an edited legacy hosted connection as 
   expect(screen.queryByText('studio:serviceType')).toBeNull()
   expect(screen.queryByRole('combobox')).toBeNull()
   expect(screen.queryByRole('button', { name: 'studio:retry' })).toBeNull()
-  expect(document.getElementById('settings-root-api-key')).toBeTruthy()
+  expect(document.getElementById('settings-root-api-key')).toBeNull()
   const url = screen.getByLabelText<HTMLInputElement>('fields.baseUrl')
   expect(url.readOnly).toBe(false)
   fireEvent.change(url, { target: { value: 'https://open-source.example/ov' } })
+  // A new address converts the connection to open source, which takes a root key.
+  expect(document.getElementById('settings-root-api-key')).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
   expect(saveConnection).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -154,7 +156,7 @@ it('has no service type section and saves an edited legacy hosted connection as 
   client.clear()
 })
 
-it('lets an unchanged legacy hosted connection be saved as open source', () => {
+it('keeps a legacy hosted connection hosted while its address is unchanged', () => {
   config.url = 'https://proxy.example/openviking'
   config.selection = 'volcengine'
   const client = new QueryClient()
@@ -162,12 +164,19 @@ it('lets an unchanged legacy hosted connection be saved as open source', () => {
   const save = screen.getByRole<HTMLButtonElement>('button', {
     name: 'studio:profiles.save',
   })
-  expect(save.disabled).toBe(false)
+  // Unchanged: nothing to save, so the stored Bearer auth is not converted.
+  expect(save.disabled).toBe(true)
+  // Hosted auth sends only the user key, so no root key is offered.
+  expect(document.getElementById('settings-root-api-key')).toBeNull()
+  fireEvent.change(document.getElementById('settings-user-api-key')!, {
+    target: { value: 'rotated-user-key' },
+  })
   fireEvent.click(save)
   expect(saveConnection).toHaveBeenCalledWith(
     expect.objectContaining({
-      serviceSelection: 'opensource',
+      serviceSelection: 'volcengine',
       baseUrl: 'https://proxy.example/openviking',
+      apiKey: 'rotated-user-key',
     }),
   )
   client.clear()
