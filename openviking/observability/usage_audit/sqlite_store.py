@@ -22,6 +22,9 @@ from .projection import UsageAuditProjection, project_events, safe_int
 from .schema import RESET_ON_SCHEMA_UPGRADE_TABLES, SCHEMA_VERSION, SQLITE_SCHEMA
 
 UTC = timezone.utc
+# The longest token-rate window (7d) touches at most 8 UTC dates, and nothing
+# reads per-minute rows beyond it, so they never outlive that span.
+MINUTE_RETENTION_DAYS = 8
 
 
 def _date_range(start_date: str, end_date: str) -> Iterable[str]:
@@ -331,7 +334,6 @@ class SQLiteUsageAuditStore:
         for account_id, cutoff_date in cutoff_by_account.items():
             for table in (
                 "usage_token_hourly",
-                "usage_token_minute",
                 "usage_retrieval_hourly",
                 "usage_context_write_bucket",
             ):
@@ -339,6 +341,16 @@ class SQLiteUsageAuditStore:
                     f"DELETE FROM {table} WHERE account_id = ? AND date_utc < ?",
                     (account_id, cutoff_date),
                 )
+        minute_days = MINUTE_RETENTION_DAYS
+        if self._usage_retention_days > 0:
+            minute_days = min(minute_days, self._usage_retention_days)
+        for account_id, cutoff_date in self._cutoff_dates(
+            max_dates_by_account, retention_days=minute_days
+        ).items():
+            conn.execute(
+                "DELETE FROM usage_token_minute WHERE account_id = ? AND date_utc < ?",
+                (account_id, cutoff_date),
+            )
 
     @staticmethod
     def _usage_max_dates(projection: UsageAuditProjection) -> dict[str, str]:

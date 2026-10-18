@@ -989,3 +989,48 @@ async def test_minute_tokens_follow_retention_and_delete(tmp_path):
         assert await store.get_minute_tokens(**window) == {}
     finally:
         await store.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("usage_retention_days", [0, 30])
+async def test_minute_tokens_keep_only_the_trend_window(tmp_path, usage_retention_days):
+    db_path = tmp_path / "usage.sqlite3"
+    store = SQLiteUsageAuditStore(db_path, usage_retention_days=usage_retention_days)
+    await store.initialize()
+    # The 7-day trend touches at most 8 UTC dates: 2026-05-05 through 2026-05-12.
+    stale = datetime(2026, 5, 4, 23, 59, tzinfo=timezone.utc)
+    oldest_kept = datetime(2026, 5, 5, 0, 0, tzinfo=timezone.utc)
+    newest = datetime(2026, 5, 12, 8, 0, tzinfo=timezone.utc)
+    try:
+        for ts in (stale, oldest_kept, newest):
+            await store.record_batch(
+                [
+                    _event(
+                        "vlm.call",
+                        {"provider": "p", "model_name": "m", "prompt_tokens": 1},
+                        ts=ts,
+                    )
+                ]
+            )
+    finally:
+        await store.close()
+
+    conn = sqlite3.connect(db_path)
+    try:
+        minute_dates = [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT date_utc FROM usage_token_minute ORDER BY date_utc"
+            )
+        ]
+        hourly_dates = [
+            row[0]
+            for row in conn.execute(
+                "SELECT DISTINCT date_utc FROM usage_token_hourly ORDER BY date_utc"
+            )
+        ]
+    finally:
+        conn.close()
+    assert minute_dates == ["2026-05-05", "2026-05-12"]
+    # Hourly usage still follows usage_retention_days (0 disables trimming).
+    assert hourly_dates == ["2026-05-04", "2026-05-05", "2026-05-12"]

@@ -189,19 +189,57 @@ it('enters only after verification, invalidates it on edits, and persists on ent
 })
 
 it('updates the saved profile that matches the verified connection', async () => {
-  saveProfiles('active', [{ id: 'active', name: 'Active', connection: openSource }])
+  saveProfiles('active', [
+    {
+      id: 'active',
+      name: 'Active',
+      connection: { ...openSource, adminApiKey: '' },
+    },
+  ])
   mocks.verify.mockImplementation(async (draft) => draft)
   render(<StudioSetup onComplete={vi.fn()} />)
-  fireEvent.change(key(), { target: { value: 'saved-user-key' } })
+  fireEvent.change(key(), { target: { value: 'rotated-user-key' } })
   fireEvent.click(verifyButton())
   await screen.findByRole('status')
   fireEvent.click(screen.getByRole('button', { name: 'enter' }))
   expect(mocks.complete).toHaveBeenCalledWith(
-    expect.objectContaining({ apiKey: 'saved-user-key' }),
+    expect.objectContaining({ apiKey: 'rotated-user-key' }),
     'studio:providers.opensource',
     'active',
   )
 })
+
+it.each([
+  ['a root key alone', { adminApiKey: 'new-root-key' }],
+  ['only one of the saved keys', { apiKey: 'saved-user-key' }],
+])(
+  'adds a new profile instead of dropping saved keys when given %s',
+  async (_label, keys: { apiKey?: string; adminApiKey?: string }) => {
+    saveProfiles('active', [
+      { id: 'active', name: 'Active', connection: openSource },
+    ])
+    mocks.verify.mockImplementation(async (draft) => draft)
+    render(<StudioSetup onComplete={vi.fn()} />)
+    if (keys.apiKey) fireEvent.change(key(), { target: { value: keys.apiKey } })
+    if (keys.adminApiKey) {
+      fireEvent.click(screen.getByRole('button', { name: 'advanced' }))
+      fireEvent.change(
+        screen.getByLabelText<HTMLInputElement>('settings:fields.rootApiKey'),
+        { target: { value: keys.adminApiKey } },
+      )
+    }
+    fireEvent.click(verifyButton())
+    await screen.findByRole('status')
+    fireEvent.click(screen.getByRole('button', { name: 'enter' }))
+    // Same address and identity as the saved profile, but reusing it would
+    // overwrite a key the user did not re-enter.
+    expect(mocks.complete).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: 'team', userId: 'alice' }),
+      'studio:providers.opensource',
+      undefined,
+    )
+  },
+)
 
 it('keeps the user in setup on verification failure', async () => {
   mocks.verify.mockRejectedValueOnce(new Error('Forbidden'))

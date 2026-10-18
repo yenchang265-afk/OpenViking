@@ -8,6 +8,7 @@ from datetime import datetime
 from openviking.server.identity import RequestContext, Role
 from openviking.storage.observers.queue_observer import QueueObserver
 from openviking.storage.queuefs.named_queue import QueueError, QueueStatus
+from openviking.storage.queuefs.session_commit_msg import SessionCommitMsg
 from openviking_cli.session.user_id import UserIdentifier
 
 
@@ -215,6 +216,33 @@ def test_non_root_sees_own_errors_across_message_shapes() -> None:
 
     messages = {e["message"] for e in observer.get_status_json()["active_errors"]}
     assert messages == {"embedding", "legacy", "dict envelope"}
+
+
+def test_non_root_sees_own_session_commit_errors() -> None:
+    def commit_error(message: str, account_id: str) -> QueueError:
+        msg = SessionCommitMsg(
+            task_id="t",
+            session_id="s",
+            session_uri="viking://session/s",
+            archive_uri="viking://session/s/archive",
+            user=UserIdentifier(account_id, "alice").to_dict(),
+        )
+        return QueueError(
+            timestamp=datetime(2026, 10, 18),
+            message=message,
+            data={"id": "1", "data": json.dumps(msg.to_dict())},
+        )
+
+    observer = QueueObserver(
+        _active_semantic_errors(
+            commit_error("acme commit failed", "acme"),
+            commit_error("globex commit failed", "globex"),
+        ),
+        ctx=_ctx("acme", Role.ADMIN),
+    )
+
+    messages = [e["message"] for e in observer.get_status_json()["active_errors"]]
+    assert messages == ["acme commit failed"]
 
 
 def test_errors_without_account_are_hidden_from_non_root() -> None:
