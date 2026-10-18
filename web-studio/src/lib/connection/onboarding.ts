@@ -49,6 +49,23 @@ export class StudioSetupRequestError extends Error {
 export const CLOUD_SETUP_URL =
   'https://api.vikingdb.cn-beijing.volces.com/openviking'
 
+const LOCAL_DEV_SERVER_URL = 'http://127.0.0.1:1933'
+
+/**
+ * The server a new connection defaults to: the build-time `VITE_OV_BASE_URL`,
+ * otherwise the origin when an OpenViking server serves Studio under its base
+ * path, otherwise the local server under `vite dev` (whose own origin is not
+ * an OpenViking server). Empty for any other root-served build.
+ */
+export function currentServerUrl(): string {
+  const configured = import.meta.env.VITE_OV_BASE_URL
+  const url =
+    typeof configured === 'string' ? configured.trim().replace(/\/+$/, '') : ''
+  if (isValidConnectionUrl(url)) return url
+  if (import.meta.env.BASE_URL !== '/') return window.location.origin
+  return import.meta.env.DEV ? LOCAL_DEV_SERVER_URL : ''
+}
+
 function hasConnection(value: unknown, completed = false): boolean {
   if (!value || typeof value !== 'object') return false
   const c = value as Partial<ConnectionDraft>

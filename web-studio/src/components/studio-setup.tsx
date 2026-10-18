@@ -16,6 +16,7 @@ import {
   StudioSetupRequestError,
   studioSetupDestination,
   completeStudioSetup,
+  currentServerUrl,
   markStudioSetupPending,
   savedSetupConnections,
   verifyStudioSetup,
@@ -53,9 +54,7 @@ function initialDraft(profile: SavedConnection | undefined): ConnectionDraft {
     return { ...profile.connection, apiKey: '', adminApiKey: '' }
   return {
     serviceSelection: 'opensource',
-    // Served by an OpenViking server under its base path: that server is the
-    // natural default. The dev server leaves the address for the user.
-    baseUrl: import.meta.env.BASE_URL !== '/' ? window.location.origin : '',
+    baseUrl: currentServerUrl(),
     apiKey: '',
     adminApiKey: '',
     accountId: 'default',

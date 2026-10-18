@@ -101,7 +101,8 @@ it('ignores saved hosted connections', () => {
     },
   ])
   render(<StudioSetup onComplete={vi.fn()} />)
-  expect(url().value).toBe('')
+  // The hosted address is not reused; the dev-server default applies instead.
+  expect(url().value).toBe('http://127.0.0.1:1933')
 })
 
 it('defaults to the serving origin when deployed under a base path', () => {
@@ -110,8 +111,49 @@ it('defaults to the serving origin when deployed under a base path', () => {
   expect(url().value).toBe(window.location.origin)
 })
 
+it('prefills the local server under the dev server', () => {
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('http://127.0.0.1:1933')
+})
+
+it('leaves the address empty for a production build served at the root', () => {
+  vi.stubEnv('DEV', false)
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('')
+})
+
+it('defaults to the configured server address over the serving origin', () => {
+  vi.stubEnv('BASE_URL', '/studio/')
+  vi.stubEnv('VITE_OV_BASE_URL', ' https://api.test/ov/ ')
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('https://api.test/ov')
+})
+
+it('defaults to the configured server address when Studio is hosted separately', () => {
+  vi.stubEnv('VITE_OV_BASE_URL', 'https://api.test/ov')
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('https://api.test/ov')
+})
+
+it('falls back to the serving origin when the configured address is invalid', () => {
+  vi.stubEnv('BASE_URL', '/studio/')
+  vi.stubEnv('VITE_OV_BASE_URL', 'not a url')
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe(window.location.origin)
+})
+
+it('prefers the active saved address over the configured one', () => {
+  vi.stubEnv('VITE_OV_BASE_URL', 'https://api.test/ov')
+  saveProfiles('active', [
+    { id: 'active', name: 'Active', connection: openSource },
+  ])
+  render(<StudioSetup onComplete={vi.fn()} />)
+  expect(url().value).toBe('http://127.0.0.1:1933')
+})
+
 it('requires a valid address before verifying', () => {
   render(<StudioSetup onComplete={vi.fn()} />)
+  fireEvent.change(url(), { target: { value: '' } })
   expect(verifyButton().disabled).toBe(true)
   fireEvent.change(url(), { target: { value: 'ftp://invalid.test' } })
   expect(verifyButton().disabled).toBe(true)
