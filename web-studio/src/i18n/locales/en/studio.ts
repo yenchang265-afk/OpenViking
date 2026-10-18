@@ -3,8 +3,6 @@ const studio = {
     connectionChanged:
       'The connection changed. Select the identity again on the active connection.',
     identityPending: 'Identity unconfirmed',
-    typeHint:
-      'Select the service type for this profile. Save to apply changes to the active connection.',
     title: 'Connection profiles',
     hint: 'Enable one profile to use its service and credentials. To delete the active profile, enable another first.',
     add: 'Add profile',

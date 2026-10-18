@@ -9,7 +9,6 @@ import {
 } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, expect, it, vi } from 'vitest'
-import userEvent from '@testing-library/user-event'
 
 import { Route } from './route'
 
@@ -122,8 +121,9 @@ it('preserves the active connection when an invalid address is saved from the de
   client.clear()
 })
 
-it('uses the hosted default address when the Base UI service selector changes', async () => {
-  const user = userEvent.setup()
+it('offers no service type choice and saves a legacy hosted connection as open source', () => {
+  config.url = 'https://proxy.example/openviking'
+  config.selection = 'volcengine'
   const client = new QueryClient()
   const Settings = Route.options.component as ComponentType
   render(
@@ -131,27 +131,23 @@ it('uses the hosted default address when the Base UI service selector changes', 
       <Settings />
     </QueryClientProvider>,
   )
-  const serviceType = screen.getByRole('combobox', {
-    name: 'studio:serviceType',
-  })
+  expect(
+    screen.queryByRole('combobox', { name: 'studio:serviceType' }),
+  ).toBeNull()
+  expect(document.getElementById('settings-root-api-key')).toBeTruthy()
   const url = screen.getByLabelText<HTMLInputElement>('fields.baseUrl')
+  expect(url.readOnly).toBe(false)
   fireEvent.change(url, { target: { value: 'https://open-source.example/ov' } })
-  await user.click(serviceType)
-  await user.click(
-    screen.getByRole('option', { name: 'studio:providers.volcengine' }),
-  )
-  expect(url.value).toBe(
-    'https://api.vikingdb.cn-beijing.volces.com/openviking',
-  )
-  expect(url.readOnly).toBe(true)
   fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
   expect(saveConnection).toHaveBeenCalledWith(
     expect.objectContaining({
-      serviceSelection: 'volcengine',
-      baseUrl: 'https://api.vikingdb.cn-beijing.volces.com/openviking',
+      serviceSelection: 'opensource',
+      baseUrl: 'https://open-source.example/ov',
     }),
   )
   client.clear()
+  config.url = 'http://localhost:1933'
+  config.selection = 'auto'
 })
 
 it('shows only the server-resolved identity next to the data key', async () => {

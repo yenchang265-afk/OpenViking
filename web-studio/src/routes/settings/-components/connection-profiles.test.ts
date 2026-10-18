@@ -140,6 +140,33 @@ it('lets every record in an identical connection group be managed', () => {
   expect(connectionState.activateProfile).toHaveBeenCalledWith('duplicate')
 })
 
+it('edits a legacy hosted profile as an open-source connection', () => {
+  connectionState.profiles = [hosted('active', 'default'), hosted('old', 'study')]
+
+  render(React.createElement(ConnectionProfilesList))
+  fireEvent.click(screen.getAllByRole('button', { name: 'profiles.edit' })[1])
+  expect(screen.queryByLabelText('serviceType')).toBeNull()
+  fireEvent.change(screen.getByLabelText('profiles.fields.baseUrl'), {
+    target: { value: 'http://192.0.2.1:1933' },
+  })
+  fireEvent.change(screen.getByLabelText('profiles.fields.adminApiKey'), {
+    target: { value: 'root-key' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: 'profiles.save' }))
+
+  expect(connectionState.saveProfile).toHaveBeenCalledWith(
+    expect.objectContaining({
+      id: 'old',
+      connection: expect.objectContaining({
+        serviceSelection: 'opensource',
+        baseUrl: 'http://192.0.2.1:1933',
+        adminApiKey: 'root-key',
+        accountId: 'study',
+      }),
+    }),
+  )
+})
+
 it('creates a connection on HTTP origins without crypto.randomUUID', () => {
   const getRandomValues = globalThis.crypto.getRandomValues.bind(
     globalThis.crypto,

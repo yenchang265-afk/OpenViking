@@ -2,7 +2,6 @@ const studio = {
   profiles: {
     connectionChanged: '連線已切換，請在當前連線上重新選擇身份。',
     identityPending: '身份待確認',
-    typeHint: '為這份配置選擇服務型別。儲存後應用到當前連線。',
     title: '連線配置',
     hint: '啟用一份配置，使用對應服務和憑證。刪除當前配置前，請先啟用另一份配置。',
     add: '新增配置',

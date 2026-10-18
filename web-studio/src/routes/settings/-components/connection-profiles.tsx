@@ -74,7 +74,12 @@ export function ConnectionProfilesList() {
       setError(t('profiles.invalidUrl'))
       return
     }
-    const connection = normalizeProfileConnection(draft.connection)
+    // Studio only connects to open-source services; saving converts any
+    // legacy hosted profile.
+    const connection = normalizeProfileConnection({
+      ...draft.connection,
+      serviceSelection: 'opensource',
+    })
     saveProfile({
       ...draft,
       connection: {
@@ -249,40 +254,7 @@ export function ConnectionProfilesList() {
                   {...PLAIN_INPUT_PROPS}
                 />
               </Field>
-              <Field>
-                <FieldLabel htmlFor="profile-provider">
-                  {t('serviceType')}
-                </FieldLabel>
-                <select
-                  id="profile-provider"
-                  className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-                  value={draft.connection.serviceSelection}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      connection: {
-                        ...draft.connection,
-                        serviceSelection: e.target.value as
-                          | 'opensource'
-                          | 'volcengine',
-                      },
-                    })
-                  }
-                >
-                  <option value="opensource">
-                    {t('providers.opensource')}
-                  </option>
-                  <option value="volcengine">
-                    {t('providers.volcengine')}
-                  </option>
-                </select>
-              </Field>
-              {PROFILE_FIELDS.filter(
-                (field) =>
-                  draft.connection.serviceSelection === 'opensource' ||
-                  field === 'baseUrl' ||
-                  field === 'apiKey',
-              ).map((key) => {
+              {PROFILE_FIELDS.map((key) => {
                 return (
                   <Field key={key}>
                     <FieldLabel htmlFor={`profile-${key}`}>
