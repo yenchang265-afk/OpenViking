@@ -247,10 +247,19 @@ GET /api/v1/console/dashboard/summary
       "find": 10,
       "search": 4,
       "total": 14
+    },
+    "tokens_per_minute": {
+      "vlm_input": 10.0,
+      "vlm_output": 5.0,
+      "embedding_input": 1.7,
+      "total": 16.7,
+      "window_minutes": 90
     }
   }
 }
 ```
+
+`tokens_per_minute` 是從上一個 UTC 整點到現在的平均每分鐘 Token 數（視窗 60–120 分鐘）。Token 以 UTC 小時粒度落庫，因此無法提供精確的滑動 60 分鐘視窗；`window_minutes` 為實際的分母。
 
 如果 Usage/Audit 被關閉或尚未初始化，返回：
 
@@ -280,6 +289,50 @@ GET /api/v1/console/tokens?start_date=2026-05-01&end_date=2026-05-12&bucket=day
 | `timezone` | 否 | IANA 時區名（如 `Asia/Shanghai`）；省略時回退到 server 時區，返回的 `date` 分桶按該時區 |
 
 返回中會補齊日期範圍內沒有資料的日期。
+
+### Token Rate (TPM)
+
+```text
+GET /api/v1/console/tokens/rate?window=24h
+```
+
+`window` 可選 `1h`、`6h`、`24h`（預設）、`7d`，對應分桶 1、1、5、60 分鐘。資料來自分鐘粒度表 `usage_token_minute`（與小時表一同寫入、按 `usage_retention_days` 清理），只有升級後產生的 Token 才有分鐘資料。
+
+返回示例：
+
+```json
+{
+  "window": "24h",
+  "bucket_minutes": 5,
+  "start": "2026-05-11T10:35:00+00:00",
+  "end": "2026-05-12T10:35:00+00:00",
+  "items": [
+    {
+      "start": "2026-05-12T10:20:00+00:00",
+      "vlm_input": 100.0,
+      "vlm_output": 0.0,
+      "embedding_input": 0.0,
+      "rerank": 0.0,
+      "total": 100.0,
+      "peak_total": 400
+    }
+  ],
+  "peak": {
+    "minute": "2026-05-12T10:21:00+00:00",
+    "vlm_input": 400,
+    "vlm_output": 0,
+    "embedding_input": 0,
+    "rerank": 0,
+    "total": 400
+  },
+  "average_total": 0.3
+}
+```
+
+- `items[].vlm_input/vlm_output/embedding_input/rerank/total`：該分桶的平均每分鐘 Token（只除以已經過去的分鐘數）。`rerank` 為 rerank 輸入與輸出之和，並計入 `total`、`peak_total`、`peak` 與 `average_total`。
+- `items[].peak_total`：該分桶內最忙那一分鐘的 Token 總數。
+- `peak`：整個區間內最忙的一分鐘（UTC 分鐘起點），沒有 Token 時為 `null`。適合用來評估供應商 TPM 限額。
+- `average_total`：整個區間的平均每分鐘 Token。
 
 ### Context Commits
 

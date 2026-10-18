@@ -17,6 +17,7 @@ const state = vi.hoisted(() => ({
   role: 'user',
   summary: vi.fn(),
   tokens: vi.fn(),
+  tokenRate: vi.fn(),
   commits: vi.fn(),
 }))
 vi.mock('#/hooks/use-app-connection', () => ({
@@ -35,6 +36,7 @@ vi.mock('#/hooks/use-app-connection', () => ({
 vi.mock('./-lib/api', () => ({
   fetchConsoleDashboardSummary: state.summary,
   fetchConsoleTokenSeries: state.tokens,
+  fetchConsoleTokenRate: state.tokenRate,
   fetchConsoleContextCommits: state.commits,
 }))
 vi.mock('react-i18next', () => ({
@@ -46,8 +48,10 @@ beforeEach(() => {
     context_counts: { total: 0 },
     today_tokens: { total: 0 },
     today_retrievals: { total: 0 },
+    tokens_per_minute: { total: 0 },
   })
   state.tokens.mockReset().mockResolvedValue({ items: [] })
+  state.tokenRate.mockReset().mockResolvedValue({ items: [], peak: null })
   state.commits.mockReset().mockResolvedValue({ items: [] })
   vi.stubGlobal('matchMedia', () => ({ matches: true }))
 })
@@ -82,7 +86,7 @@ it.each(['unknown', 'disabled'])(
     else state.summary.mockResolvedValue({ enabled: false })
     const close = await renderHome()
     try {
-      await waitFor(() => expect(screen.getAllByText('—')).toHaveLength(3), {
+      await waitFor(() => expect(screen.getAllByText('—')).toHaveLength(4), {
         timeout: 2000,
       })
       if (reason === 'unknown') expect(state.summary).not.toHaveBeenCalled()
@@ -97,6 +101,7 @@ it('renders successful zero measurements after the response completes', async ()
     context_counts: { total: 0 },
     today_tokens: { total: 0 },
     today_retrievals: { total: 0 },
+    tokens_per_minute: { total: 0 },
   }
   let complete!: (value: typeof zero) => void
   state.summary.mockImplementation(
@@ -117,6 +122,7 @@ it('renders successful zero measurements after the response completes', async ()
       'contextData.title',
       'todayTokens.title',
       'todayRetrievals.title',
+      'tokensPerMinute.title',
     ]) {
       const panel = screen
         .getByRole('heading', { name: title })
@@ -126,6 +132,52 @@ it('renders successful zero measurements after the response completes', async ()
       ).toBeTruthy()
       expect(within(panel).queryByText('—')).toBeNull()
     }
+  } finally {
+    close()
+  }
+})
+
+it('renders tokens per minute with its breakdown', async () => {
+  state.summary.mockResolvedValue({
+    context_counts: { total: 0 },
+    today_tokens: { total: 0 },
+    today_retrievals: { total: 0 },
+    tokens_per_minute: {
+      embedding_input: 1.7,
+      total: 16.7,
+      vlm_input: 10,
+      vlm_output: 5,
+      window_minutes: 90,
+    },
+  })
+  const close = await renderHome()
+  try {
+    const heading = await screen.findByRole('heading', {
+      name: 'tokensPerMinute.title',
+    })
+    const panel = heading.closest('section')!
+    await waitFor(() =>
+      expect(
+        within(panel).getByText('16.7', { selector: '.text-4xl span' }),
+      ).toBeTruthy(),
+    )
+    expect(within(panel).getByText('10')).toBeTruthy()
+    expect(within(panel).getByText('5')).toBeTruthy()
+    expect(within(panel).getByText('1.7')).toBeTruthy()
+  } finally {
+    close()
+  }
+})
+
+it('loads the TPM trend for the last 24 hours and refetches per window', async () => {
+  const close = await renderHome()
+  try {
+    await waitFor(() => expect(state.tokenRate).toHaveBeenCalledWith('24h'))
+    await screen.findByText('tpmTrend.empty')
+    act(() => {
+      screen.getByRole('button', { name: 'tpmTrend.windows.7d' }).click()
+    })
+    await waitFor(() => expect(state.tokenRate).toHaveBeenCalledWith('7d'))
   } finally {
     close()
   }

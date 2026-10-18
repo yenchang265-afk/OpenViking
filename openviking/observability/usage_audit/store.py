@@ -4,7 +4,7 @@
 
 from __future__ import annotations
 
-from datetime import tzinfo
+from datetime import datetime, tzinfo
 from typing import Any, Protocol, Sequence
 
 from openviking.observability.events import ObservabilityEvent
@@ -38,6 +38,30 @@ class UsageAuditStore(Protocol):
         user_id: str | None = None,
     ) -> dict[str, int]:
         """Return token totals for one account/user scope and viewer-local date."""
+
+    async def get_window_tokens(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None = None,
+    ) -> dict[str, int]:
+        """Return token totals for the UTC hour buckets in `[utc_start, utc_end)`."""
+
+    async def get_minute_tokens(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        utc_end: datetime,
+        user_id: str | None = None,
+    ) -> dict[datetime, dict[str, int]]:
+        """Return per-minute token counts keyed by UTC minute start in `[utc_start, utc_end)`.
+
+        Each value has `vlm_input`, `vlm_output`, `embedding_input` and `rerank`
+        (rerank input plus output). Minutes without tokens are omitted.
+        """
 
     async def get_today_retrievals(
         self,

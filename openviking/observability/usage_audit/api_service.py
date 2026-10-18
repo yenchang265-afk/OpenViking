@@ -9,7 +9,7 @@ falls back to the server-default tz from config when absent or invalid.
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from openviking.server.identity import RequestContext, Role
@@ -18,6 +18,47 @@ from openviking_cli.exceptions import InvalidArgumentError
 from .inventory import ContextInventoryProvider
 from .store import UsageAuditStore
 from .time import resolve_usage_timezone, resolve_user_timezone
+
+# Token series in the TPM trend; rerank is included so the peak covers every
+# model call that spends tokens.
+TOKEN_TYPES = ("vlm_input", "vlm_output", "embedding_input", "rerank")
+# window -> (window length in minutes, bucket size in minutes). Buckets stay at or
+# under ~360 points; each still reports its busiest single minute.
+TOKEN_RATE_WINDOWS = {
+    "1h": (60, 1),
+    "6h": (360, 1),
+    "24h": (1440, 5),
+    "7d": (10080, 60),
+}
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _token_rate_bounds(now: datetime, window: str) -> tuple[datetime, datetime, int]:
+    """Return `(start, end, bucket_minutes)` with the current minute included.
+
+    `end` is rounded up to the bucket size so every bucket is aligned on a
+    whole multiple of it.
+    """
+    total_minutes, bucket_minutes = TOKEN_RATE_WINDOWS[window]
+    current_end = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+    bucket = timedelta(minutes=bucket_minutes)
+    remainder = (current_end - datetime(1970, 1, 1, tzinfo=timezone.utc)) % bucket
+    end = current_end + (bucket - remainder if remainder else timedelta(0))
+    return end - timedelta(minutes=total_minutes), end, bucket_minutes
+
+
+def _recent_token_window(now: datetime) -> tuple[datetime, datetime]:
+    """Return the UTC `[start, end)` hour buckets covering the previous and current hour.
+
+    Tokens are persisted per UTC hour, so a true rolling 60-minute window is not
+    available; the previous full hour plus the current partial hour is the
+    smallest window that never reads as zero right after an hour boundary.
+    """
+    current_hour = now.replace(minute=0, second=0, microsecond=0)
+    return current_hour - timedelta(hours=1), current_hour + timedelta(hours=1)
 
 
 class UsageAuditQueryService:
@@ -68,11 +109,29 @@ class UsageAuditQueryService:
         today_retrievals = await self._store.get_today_retrievals(
             account_id=ctx.account_id, user_date=today, tz=tz, user_id=user_id
         )
+        tokens_per_minute = await self._tokens_per_minute(ctx, user_id=user_id)
         return {
             "context_counts": context_counts,
             "today_tokens": today_tokens,
             "today_retrievals": today_retrievals,
+            "tokens_per_minute": tokens_per_minute,
         }
+
+    async def _tokens_per_minute(
+        self, ctx: RequestContext, *, user_id: str | None
+    ) -> dict[str, float | int]:
+        """Return average tokens per minute since the start of the previous UTC hour."""
+        now = _utc_now()
+        utc_start, utc_end = _recent_token_window(now)
+        tokens = await self._store.get_window_tokens(
+            account_id=ctx.account_id, utc_start=utc_start, utc_end=utc_end, user_id=user_id
+        )
+        elapsed_minutes = (now - utc_start).total_seconds() / 60
+        result: dict[str, float | int] = {
+            key: round(value / elapsed_minutes, 1) for key, value in tokens.items()
+        }
+        result["window_minutes"] = round(elapsed_minutes)
+        return result
 
     async def token_series(
         self,
@@ -95,6 +154,71 @@ class UsageAuditQueryService:
             user_id=self._usage_user_id(ctx),
         )
         return {"start_date": start_date, "end_date": end_date, "bucket": bucket, "items": items}
+
+    async def token_rate_series(self, *, ctx: RequestContext, window: str) -> dict[str, Any]:
+        """Return tokens-per-minute buckets and the busiest minute in a recent window."""
+        if window not in TOKEN_RATE_WINDOWS:
+            raise InvalidArgumentError(f"window must be one of {', '.join(TOKEN_RATE_WINDOWS)}")
+        now = _utc_now()
+        start, end, bucket_minutes = _token_rate_bounds(now, window)
+        minutes = await self._store.get_minute_tokens(
+            account_id=ctx.account_id,
+            utc_start=start,
+            utc_end=end,
+            user_id=self._usage_user_id(ctx),
+        )
+        # Minutes after the current one have not happened yet; averages divide
+        # only by elapsed minutes.
+        elapsed_end = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+        bucket = timedelta(minutes=bucket_minutes)
+        grouped: dict[int, list[dict[str, int]]] = {}
+        for ts, counts in minutes.items():
+            grouped.setdefault((ts - start) // bucket, []).append(counts)
+        items = [
+            self._token_rate_bucket(
+                grouped.get(index, []), start + index * bucket, bucket, elapsed_end
+            )
+            for index in range((end - start) // bucket)
+        ]
+        peak_minute = max(
+            minutes,
+            key=lambda ts: (sum(minutes[ts].values()), ts),
+            default=None,
+        )
+        peak = None
+        if peak_minute is not None and sum(minutes[peak_minute].values()) > 0:
+            peak = {
+                "minute": peak_minute.isoformat(),
+                **minutes[peak_minute],
+                "total": sum(minutes[peak_minute].values()),
+            }
+        window_total = sum(sum(counts.values()) for counts in minutes.values())
+        window_minutes = (min(end, elapsed_end) - start).total_seconds() / 60
+        return {
+            "window": window,
+            "bucket_minutes": bucket_minutes,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "items": items,
+            "peak": peak,
+            "average_total": round(window_total / window_minutes, 1),
+        }
+
+    @staticmethod
+    def _token_rate_bucket(
+        counts: list[dict[str, int]],
+        bucket_start: datetime,
+        bucket: timedelta,
+        elapsed_end: datetime,
+    ) -> dict[str, Any]:
+        elapsed = (min(bucket_start + bucket, elapsed_end) - bucket_start).total_seconds() / 60
+        elapsed = max(elapsed, 1)
+        sums = {key: sum(c.get(key, 0) for c in counts) for key in TOKEN_TYPES}
+        item: dict[str, Any] = {"start": bucket_start.isoformat()}
+        item.update({key: round(value / elapsed, 1) for key, value in sums.items()})
+        item["total"] = round(sum(sums.values()) / elapsed, 1)
+        item["peak_total"] = max((sum(c.values()) for c in counts), default=0)
+        return item
 
     async def context_commits(
         self,
