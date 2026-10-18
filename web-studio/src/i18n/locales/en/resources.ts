@@ -104,6 +104,8 @@ const resources = {
       remove: 'Remove',
       folderFiles_one: '{{count}} file',
       folderFiles_other: '{{count}} files',
+      scanning_one: 'Reading folder… {{count}} file found',
+      scanning_other: 'Reading folder… {{count}} files found',
     },
     targetUri: 'Target URI',
     'targetUri.placeholder': 'viking://resources/',
@@ -143,6 +145,7 @@ const resources = {
     folderTooLarge:
       '"{{name}}" is {{size}}; the upload limit is {{max}}. Pick a smaller folder or remove large files.',
     folderZipFailed: 'Could not package "{{name}}" for upload.',
+    folderReadFailed: 'Could not read the folder "{{name}}".',
     error: 'Request Failed',
     dirPicker: {
       scope: 'Resource scope',

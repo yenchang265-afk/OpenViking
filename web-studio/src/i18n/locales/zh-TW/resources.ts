@@ -100,6 +100,8 @@ const resources = {
       remove: '移除',
       folderFiles_one: '{{count}} 個檔案',
       folderFiles_other: '{{count}} 個檔案',
+      scanning_one: '正在讀取資料夾… 已找到 {{count}} 個檔案',
+      scanning_other: '正在讀取資料夾… 已找到 {{count}} 個檔案',
     },
     targetUri: '目標 URI',
     'targetUri.placeholder': 'viking://resources/',
@@ -135,6 +137,7 @@ const resources = {
     folderTooLarge:
       '"{{name}}" 大小為 {{size}}，上傳上限為 {{max}}。請選擇較小的資料夾或移除大型檔案。',
     folderZipFailed: '無法打包 "{{name}}" 以進行上傳。',
+    folderReadFailed: '無法讀取資料夾 "{{name}}"。',
     error: '請求失敗',
     dirPicker: {
       scope: '資源範圍',

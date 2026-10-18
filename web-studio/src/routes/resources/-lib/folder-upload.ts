@@ -30,7 +30,7 @@ export function getRelativePath(file: File): string {
   return raw.replace(/^\.?\/+/, '')
 }
 
-function isHiddenPath(path: string): boolean {
+export function isHiddenPath(path: string): boolean {
   return path.split('/').some((segment) => segment.startsWith('.'))
 }
 
