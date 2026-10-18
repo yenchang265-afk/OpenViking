@@ -102,6 +102,7 @@ const workspace = {
       healthy: '所有元件執行正常',
       unhealthy: '部分元件需要關注',
       components: '{{healthy}} / {{total}} 個元件正常',
+      attention: '需要關注：',
     },
     queue: {
       title: '任務佇列',
@@ -181,6 +182,7 @@ const workspace = {
         zeroResultRate: '無結果查詢佔比',
       },
       statusText: {
+        activeErrors: '影響健康狀態的錯誤（最新在前）：',
         activeLocks: '活動鎖：{{count}}',
         conflicts: '衝突：{{count}}',
         embeddingModels: 'Embedding 模型：',

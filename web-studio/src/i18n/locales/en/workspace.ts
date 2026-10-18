@@ -102,6 +102,7 @@ const workspace = {
       healthy: 'All components are healthy',
       unhealthy: 'Some components need attention',
       components: '{{healthy}} of {{total}} components healthy',
+      attention: 'Needs attention:',
     },
     queue: {
       title: 'Task queue',
@@ -181,6 +182,7 @@ const workspace = {
         zeroResultRate: 'Zero-Result Rate',
       },
       statusText: {
+        activeErrors: 'Errors affecting health (newest first):',
         activeLocks: 'Active locks: {{count}}',
         conflicts: 'Conflicts: {{count}}',
         embeddingModels: 'Embedding Models:',

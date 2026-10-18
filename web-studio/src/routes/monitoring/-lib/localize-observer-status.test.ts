@@ -85,4 +85,21 @@ describe('localizeObserverStatusBlocks', () => {
       rows: [['合计', '合计', 'TOTAL', 'TOTAL', 'TOTAL']],
     })
   })
+
+  it('localizes the active errors heading and keeps error reasons verbatim', () => {
+    const reason = 'Semantic (2026-10-18 13:12:00): lock lease expired'
+
+    expect(
+      localizeObserverStatusBlocks(
+        [
+          { kind: 'text', value: 'Active errors:' },
+          { kind: 'text', value: reason },
+        ],
+        t,
+      ),
+    ).toEqual([
+      { kind: 'text', value: 'detail.statusText.activeErrors' },
+      { kind: 'text', value: reason },
+    ])
+  })
 })

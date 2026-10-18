@@ -6,10 +6,12 @@ QueueObserver: Queue system observability tool.
 Provides methods to observe and report queue status in various formats.
 """
 
-from typing import Dict, Optional
+import json
+from typing import Any, Dict, List, Optional
 
+from openviking.server.identity import RequestContext, Role
 from openviking.storage.observers.base_observer import BaseObserver
-from openviking.storage.queuefs.named_queue import QueueStatus
+from openviking.storage.queuefs.named_queue import QueueError, QueueStatus
 from openviking.storage.queuefs.queue_manager import QueueManager
 from openviking_cli.utils import run_async
 from openviking_cli.utils.logger import get_logger
@@ -24,13 +26,27 @@ class QueueObserver(BaseObserver):
     Provides methods to query queue status and format output.
     """
 
-    def __init__(self, queue_manager: QueueManager):
+    MAX_REPORTED_ERRORS = 5
+    MAX_ERROR_MESSAGE_CHARS = 300
+
+    def __init__(self, queue_manager: QueueManager, ctx: Optional[RequestContext] = None):
+        # Queues are shared by all accounts, so error reasons are reported only
+        # for a request context: root sees all, other roles their own account.
         self._queue_manager = queue_manager
+        self._ctx = ctx
 
     async def get_status_table_async(self) -> str:
         statuses = await self._queue_manager.check_status()
         tree_stats = self._get_semantic_tree_stats()
-        return self._format_status_as_table(statuses, tree_stats)
+        table = self._format_status_as_table(statuses, tree_stats)
+        active_errors = self._active_errors(statuses)
+        if not active_errors:
+            return table
+        lines = [
+            f"{error['queue']} ({error['timestamp'].replace('T', ' ')}): {error['message']}"
+            for error in active_errors
+        ]
+        return "\n\n".join([table, "\n".join(["Active errors:", *lines])])
 
     async def get_status_json_async(self) -> dict:
         statuses = await self._queue_manager.check_status()
@@ -72,7 +88,7 @@ class QueueObserver(BaseObserver):
         }
         queues.append(semantic)
 
-        return {
+        result = {
             "queues": queues,
             "summary": {
                 "pending": total_pending,
@@ -83,6 +99,9 @@ class QueueObserver(BaseObserver):
                 "total": total_pending + total_in_progress + total_processed,
             },
         }
+        if self._ctx is not None:
+            result["active_errors"] = self._active_errors(statuses)
+        return result
 
     def get_status_table(self) -> str:
         return run_async(self.get_status_table_async())
@@ -164,6 +183,32 @@ class QueueObserver(BaseObserver):
 
         return tabulate(data, headers="keys", tablefmt="pretty")
 
+    def _active_errors(self, statuses: Dict[str, QueueStatus]) -> List[Dict[str, str]]:
+        """Newest error reasons from queues whose errors currently affect health."""
+        if self._ctx is None:
+            return []
+        candidates = [
+            (queue_name, error)
+            for queue_name, status in statuses.items()
+            if status.error_count > 0 and not status.is_complete
+            for error in reversed(status.errors)
+            if self._can_see_error(error)
+        ]
+        candidates.sort(key=lambda item: item[1].timestamp, reverse=True)
+        return [
+            {
+                "queue": queue_name,
+                "timestamp": error.timestamp.isoformat(timespec="seconds"),
+                "message": " ".join(error.message.split())[: self.MAX_ERROR_MESSAGE_CHARS],
+            }
+            for queue_name, error in candidates[: self.MAX_REPORTED_ERRORS]
+        ]
+
+    def _can_see_error(self, error: QueueError) -> bool:
+        if self._ctx.role == Role.ROOT:
+            return True
+        return _message_account_id(error.data) == self._ctx.account_id
+
     def _get_semantic_tree_stats(self) -> Optional[object]:
         semantic_queue = self._queue_manager._queues.get(self._queue_manager.SEMANTIC)
         if not semantic_queue:
@@ -188,3 +233,27 @@ class QueueObserver(BaseObserver):
         return any(
             status.error_count > 0 and not status.is_complete for status in statuses.values()
         )
+
+
+def _message_account_id(data: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Read account_id from a queue delivery, which may wrap its payload as JSON."""
+    if not isinstance(data, dict):
+        return None
+    payload: Any = data.get("data", data)
+    if isinstance(payload, str):
+        try:
+            payload = json.loads(payload)
+        except ValueError:
+            return None
+    if not isinstance(payload, dict):
+        return None
+    # Embedding messages keep the account in context_data, nested under payload.
+    for scope in (payload, payload.get("payload")):
+        if not isinstance(scope, dict):
+            continue
+        context = scope.get("context_data")
+        for source in (scope, context if isinstance(context, dict) else {}):
+            account_id = source.get("account_id")
+            if isinstance(account_id, str):
+                return account_id
+    return None

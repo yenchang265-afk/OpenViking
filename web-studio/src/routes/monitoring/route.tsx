@@ -156,6 +156,12 @@ function MonitoringRoute() {
     (component) => component.is_healthy && !component.has_errors,
   ).length
   const totalCount = Object.keys(overview?.components ?? {}).length
+  const unhealthyTypes = MONITOR_TYPES.slice(1)
+    .map(([name]) => name)
+    .filter((name) => {
+      const component = overview?.components[name]
+      return component && (!component.is_healthy || component.has_errors)
+    })
   const updatedAt = monitoringQuery.dataUpdatedAt
     ? new Intl.DateTimeFormat(i18n.resolvedLanguage, {
         hour: '2-digit',
@@ -265,6 +271,23 @@ function MonitoringRoute() {
                       total: totalCount,
                     })}
                   </p>
+                  {unhealthyTypes.length > 0 ? (
+                    <div className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+                      <span>{t('summary.attention')}</span>
+                      {unhealthyTypes.map((name) => (
+                        <Button
+                          key={name}
+                          type="button"
+                          variant="link"
+                          size="sm"
+                          className="h-auto p-0 text-destructive"
+                          onClick={() => setActiveType(name)}
+                        >
+                          {t(`tabs.${name}`)}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
               <HealthBadge
