@@ -298,7 +298,7 @@ docker compose up -d
 啟動後可以訪問：
 - API 服務：`http://localhost:1933`
 - Web Studio：`http://localhost:1933/studio`（與 API 同源）
-- Caddy 入口：`http://localhost:1934`。它把所有路徑轉發到 1933，主要為已有部署保留。開啟 OpenViking 閘道器後，閘道器在同一埠的 `/gateway` 下提供服務，例如 `http://localhost:1933/gateway/v1`，見[OpenViking 閘道器部署與運維](22-gateway-operations.md#docker-compose)。
+- Caddy 入口：`http://localhost:1934`。它把所有路徑轉發到 1933（或把 `/studio*` 轉發到獨立的 Studio 容器，見 [Studio 與服務端分開構建映象](#studio-與服務端分開構建映象)），主要為已有部署保留。開啟 OpenViking 閘道器後，閘道器在同一埠的 `/gateway` 下提供服務，例如 `http://localhost:1933/gateway/v1`，見[OpenViking 閘道器部署與運維](22-gateway-operations.md#docker-compose)。
 
 ### 部署到 Railway
 
@@ -400,6 +400,23 @@ docker compose up -d
 
 如需自行構建映象，請顯式傳入 OpenViking 版本。把 `<VERSION>` 替換為釋出版本號：
 `docker build --build-arg OPENVIKING_VERSION=<VERSION> -t openviking:latest .`
+
+#### Studio 與服務端分開構建映象
+
+預設構建（target `all-in-one`）會把 Web Studio 打包進服務端映象。若要分別構建和部署，使用 `server` 與 `studio` 兩個 target：
+
+```bash
+# 只含 API 服務端，不掛載 /studio
+docker build --target server --build-arg OPENVIKING_VERSION=<VERSION> -t openviking-server:latest .
+# 只含 Studio：由 nginx 在 8080 埠提供靜態檔案（不需要 build args）
+docker build --target studio -t openviking-studio:latest .
+```
+
+只改 Studio 時只需重建 `studio` 映象，約一分鐘，不會觸發 Rust 和 C++ 編譯。Studio 會向自己所在的源發 API 請求，因此兩者要放在同一個域名後面：`/studio` 和 `/studio/*` 轉發到 Studio 容器，其餘路徑轉發到服務端。`/` 也要重新導向到 `/studio/`，服務端只在打包了 Studio 時才會這樣做。
+
+使用 Docker Compose 時，在 `.env` 中設定 `OPENVIKING_IMAGE=openviking-server:latest` 和 `OPENVIKING_STUDIO_UPSTREAM=studio:8080`，再執行 `docker compose --profile studio up -d`。1934 埠上的 Caddy 會把 `/studio*` 轉發到 `studio` 服務。未設定 `OPENVIKING_STUDIO_UPSTREAM` 時，Caddy 照舊把 `/studio*` 轉發到服務端。在 Kubernetes 上，用 Ingress 配置相同的路徑規則。
+
+同一改動同時涉及兩者時，先部署服務端再部署 Studio，因為 Studio 的客戶端是根據服務端 API 生成的。
 
 ### Kubernetes + Helm
 

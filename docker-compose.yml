@@ -75,9 +75,34 @@ services:
     environment:
       OPENVIKING_PUBLIC_BASE_URL: ${OPENVIKING_PUBLIC_BASE_URL:-}
       OPENVIKING_SERVER_PORT: ${OPENVIKING_SERVER_PORT:-1933}
+      # Where /studio* goes. Defaults to the Studio bundled in the server image;
+      # set to studio:8080 when running the `studio` profile below.
+      OPENVIKING_STUDIO_UPSTREAM: ${OPENVIKING_STUDIO_UPSTREAM:-openviking:${OPENVIKING_SERVER_PORT:-1933}}
       OV_ACME_EMAIL: ${OV_ACME_EMAIL:-}
     depends_on:
       - openviking
+
+  # Optional: serve Studio from its own image (Dockerfile target `studio`), so
+  # Studio and the server are built and deployed independently. Start with:
+  #   docker compose --profile studio up -d
+  # and set OPENVIKING_STUDIO_UPSTREAM=studio:8080 in .env so Caddy routes
+  # /studio* here. Pair it with the `server` image target (no bundled Studio):
+  #   docker build --target server -t openviking-server:local .
+  #   OPENVIKING_IMAGE=openviking-server:local
+  studio:
+    image: ${OPENVIKING_STUDIO_IMAGE:-openviking-studio:local}
+    build:
+      context: .
+      target: studio
+    container_name: openviking-studio
+    profiles: ["studio"]
+    networks:
+      default:
+      # Reachable as `studio` from a proxy on the same external network as a
+      # separately run OpenViking container (see the seaweedfs service below).
+      ov-app:
+        aliases: [studio]
+    restart: unless-stopped
 
   # Optional S3-compatible storage for RAGFS (storage.agfs.backend = "s3"),
   # served by SeaweedFS. Start with: docker compose --profile s3 up -d

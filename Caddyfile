@@ -1,17 +1,29 @@
 # Legacy HTTP entrypoint. Server and gateway (under /gateway) share OPENVIKING_SERVER_PORT.
-# Studio is served at /studio by the same server.
+# Studio is served at /studio by the same server, unless OPENVIKING_STUDIO_UPSTREAM
+# points at a separate Studio container (Dockerfile target `studio`, e.g. studio:8080).
 #
 # For public HTTPS, add a domain block and publish ports 80/443 in Compose:
 #
 #   {$OPENVIKING_PUBLIC_BASE_URL} {
-#       reverse_proxy openviking:{$OPENVIKING_SERVER_PORT:1933} {
-#           flush_interval -1
-#       }
+#       import openviking_routes
 #       # tls {$OV_ACME_EMAIL}
 #   }
 
-:1934 {
-	reverse_proxy openviking:{$OPENVIKING_SERVER_PORT:1933} {
-		flush_interval -1
+(openviking_routes) {
+	redir / /studio/ 302
+
+	@studio path /studio /studio/*
+	handle @studio {
+		reverse_proxy {$OPENVIKING_STUDIO_UPSTREAM:openviking:1933}
 	}
+
+	handle {
+		reverse_proxy openviking:{$OPENVIKING_SERVER_PORT:1933} {
+			flush_interval -1
+		}
+	}
+}
+
+:1934 {
+	import openviking_routes
 }

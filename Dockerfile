@@ -4,14 +4,21 @@
 # ragfs-python's default S3-enabled dependency set currently requires rustc >= 1.91.1.
 FROM rust:1.91.1-trixie AS rust-toolchain
 
+# Build targets (the last stage, all-in-one, is the default):
+#   --target server      API server only; /studio is not mounted
+#   --target studio      static Studio bundle served by nginx on :8080
+#   --target all-in-one  server with Studio bundled at /studio (same as before the split)
+
 # Stage 2: build Studio separately so npm failures stop the Docker build.
-FROM node:24-trixie-slim AS web-studio-builder
-ARG TARGETPLATFORM
+# The bundle is platform-independent, so build it once on the native builder
+# platform instead of once per target platform (under emulation for cross builds).
+FROM --platform=$BUILDPLATFORM node:24-trixie-slim AS web-studio-builder
+ARG BUILDPLATFORM
 WORKDIR /app/web-studio
 
 # Keep npm install cached when only Studio sources change.
 COPY web-studio/package.json web-studio/package-lock.json ./
-RUN --mount=type=cache,target=/root/.npm,id=npm-${TARGETPLATFORM} npm ci
+RUN --mount=type=cache,target=/root/.npm,id=npm-${BUILDPLATFORM} npm ci
 COPY web-studio/ ./
 RUN npm run build -- --base=/studio/ \
  && test -f dist/index.html
@@ -48,6 +55,9 @@ ENV CARGO_TARGET_DIR=/cargo-target
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy
 ENV UV_NO_DEV=1
+# Studio is added in the all-in-one stage, after the venv, so Studio-only
+# changes do not invalidate the native build below.
+ENV OV_SKIP_STUDIO_BUILD=1
 WORKDIR /app
 
 # Copy source required for setup.py artifact builds and native extension build.
@@ -57,14 +67,13 @@ COPY scripts/build_support/ scripts/build_support/
 COPY bot/ bot/
 COPY crates/ crates/
 COPY openviking/ openviking/
-COPY --from=web-studio-builder /app/web-studio/dist/ openviking/web_studio/dist/
 COPY openviking_cli/ openviking_cli/
 COPY openviking_gateway/ openviking_gateway/
 COPY src/ src/
 COPY third_party/ third_party/
 
-# Install project and dependencies. setup.py packages the copied Studio bundle
-# without running npm again, while build_ext still builds native extensions.
+# Install project and dependencies. build_ext builds native extensions; the
+# Studio bundle is not part of this wheel (see OV_SKIP_STUDIO_BUILD above).
 # Default to auto-refreshing uv.lock inside the ephemeral build context when it is
 # stale, so Docker builds stay unblocked after dependency changes. Set
 # UV_LOCK_STRATEGY=locked to keep fail-fast reproducibility checks.
@@ -97,8 +106,8 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-${TARGETPLATFORM} \
             ;; \
     esac
 
-# Stage 4: runtime
-FROM python:3.13-slim-trixie
+# Stage 4: server runtime (no Studio)
+FROM python:3.13-slim-trixie AS server
 
 # Pull Debian security fixes newer than the base image, and drop the base
 # image's system pip: the app runs from /app/.venv, and pip's vendored
@@ -127,7 +136,6 @@ assert png.startswith(b"\x89PNG\r\n\x1a\n"), "SVG conversion did not produce a P
 PYCODE
 # Fail the image build if VikingBot and the separately released SDK drift apart.
 RUN /app/.venv/bin/python -I -c "import inspect, typing; from importlib.metadata import version; from openviking_sdk.client import AsyncHTTPClient; from openviking_sdk.options import BatchWriteOptions; checks = {'get_skill.include_integrity': 'include_integrity' in inspect.signature(AsyncHTTPClient.get_skill).parameters, 'ls.offset': 'offset' in inspect.signature(AsyncHTTPClient.ls).parameters, 'grep.level_limit': 'level_limit' in inspect.signature(AsyncHTTPClient.grep).parameters, 'BatchWriteOptions.skip_conflicts': 'skip_conflicts' in typing.get_type_hints(BatchWriteOptions)}; missing = [name for name, ok in checks.items() if not ok]; raise SystemExit(f\"incompatible openviking-sdk {version('openviking-sdk')}: missing {', '.join(missing)}\" if missing else 0)"
-RUN /app/.venv/bin/python -I -c "from importlib.util import find_spec; from pathlib import Path; spec = find_spec('openviking.web_studio'); locations = list(spec.submodule_search_locations or ()) if spec else []; root = Path('/app/.venv').resolve(); p = (Path(locations[0]).resolve() / 'dist/index.html').resolve() if len(locations) == 1 else None; valid = p is not None and p.is_file() and p.is_relative_to(root); raise SystemExit(0 if valid else f'missing or misplaced Studio bundle: spec_found={spec is not None}, locations={locations!r}, resource={p}')"
 COPY deploy/docker/openviking-entrypoint.sh /usr/local/bin/openviking-entrypoint
 COPY deploy/docker/pending_health_server.py /usr/local/bin/openviking-pending-health
 RUN mkdir -p /app/.openviking \
@@ -152,3 +160,19 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
 # Override command to run CLI, e.g.:
 # docker run --rm -v ~/.openviking:/app/.openviking <image> openviking --help
 ENTRYPOINT ["openviking-entrypoint"]
+
+# Stage 5: Studio only — static bundle served by nginx (non-root, port 8080).
+# Route /studio* here and everything else to the server, on one origin.
+FROM nginxinc/nginx-unprivileged:1.30-alpine AS studio
+COPY deploy/docker/studio-nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=web-studio-builder /app/web-studio/dist/ /usr/share/nginx/html/studio/
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+    CMD ["wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+
+# Stage 6 (default): server with Studio bundled at /studio. Studio is copied
+# after the venv, so a Studio-only change rebuilds just this layer.
+FROM server AS all-in-one
+COPY --from=web-studio-builder /app/web-studio/dist/ /app/web-studio/dist/
+ENV OPENVIKING_WEB_STUDIO_DIR=/app/web-studio/dist
+RUN test -f "${OPENVIKING_WEB_STUDIO_DIR}/index.html"

@@ -1,0 +1,70 @@
+name: Docker Image (Studio)
+
+# Builds the Studio-only image (Dockerfile target `studio`). Runs only when
+# Studio inputs change, so Studio edits skip the native server build entirely.
+# Pushes to Docker Hub on main when DOCKERHUB_USERNAME / DOCKERHUB_TOKEN are set.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: &studio-paths
+      - "web-studio/**"
+      - "Dockerfile"
+      - ".dockerignore"
+      - "deploy/docker/studio-nginx.conf"
+      - ".github/workflows/docker-studio.yml"
+  pull_request:
+    paths: *studio-paths
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || 'business-context-platform' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    env:
+      CAN_PUSH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Log in to Docker Hub
+        if: env.CAN_PUSH == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME || 'local' }}/${{ env.DOCKERHUB_REPOSITORY }}-studio
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      # The bundle is built once on the runner's platform (see Dockerfile), and
+      # the nginx stage only copies files, so arm64 needs no QEMU.
+      - name: Build (and push on main)
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: studio
+          platforms: linux/amd64,linux/arm64
+          push: ${{ env.CAN_PUSH == 'true' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=studio
+          cache-to: type=gha,mode=max,scope=studio

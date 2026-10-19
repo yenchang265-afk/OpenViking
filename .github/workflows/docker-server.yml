@@ -1,0 +1,186 @@
+name: Docker Image (Server)
+
+# Builds the API-server-only image (Dockerfile target `server`, no bundled
+# Studio). Runs only when server inputs change; Studio-only edits are handled by
+# docker-studio.yml. Pushes to Docker Hub on main when DOCKERHUB_USERNAME /
+# DOCKERHUB_TOKEN are set.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths: &server-paths
+      - "Dockerfile"
+      - ".dockerignore"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "pyproject.toml"
+      - "uv.lock"
+      - "setup.py"
+      - "README.md"
+      - "scripts/build_support/**"
+      - "bot/**"
+      - "crates/**"
+      - "openviking/**"
+      - "openviking_cli/**"
+      - "openviking_gateway/**"
+      - "src/**"
+      - "third_party/**"
+      - "deploy/docker/openviking-entrypoint.sh"
+      - "deploy/docker/pending_health_server.py"
+      - ".github/workflows/docker-server.yml"
+  pull_request:
+    paths: *server-paths
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOCKERHUB_REPOSITORY: ${{ vars.DOCKERHUB_REPOSITORY || 'business-context-platform' }}
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    env:
+      CAN_PUSH: ${{ github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}
+    outputs:
+      pushed: ${{ steps.push-flag.outputs.pushed }}
+
+    steps:
+      - name: Record whether this run pushes
+        id: push-flag
+        run: echo "pushed=${CAN_PUSH}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Resolve OpenViking version
+        id: openviking-version
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install "setuptools-scm>=8.0"
+          version="$(
+            python -c "from scripts.build_support.versioning import resolve_openviking_version; print(resolve_openviking_version())"
+          )"
+          if [ -z "${version}" ] || [ "${version}" = "0.0.0" ]; then
+            echo "Resolved invalid OpenViking version: ${version}" >&2
+            exit 2
+          fi
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to Docker Hub
+        if: env.CAN_PUSH == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME || 'local' }}/${{ env.DOCKERHUB_REPOSITORY }}-server
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build (and push by digest on main)
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          target: server
+          platforms: ${{ matrix.platform }}
+          outputs: ${{ env.CAN_PUSH == 'true' && format('type=image,name=docker.io/{0}/{1}-server,push-by-digest=true,name-canonical=true,push=true', secrets.DOCKERHUB_USERNAME, env.DOCKERHUB_REPOSITORY) || 'type=cacheonly' }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            OPENVIKING_VERSION=${{ steps.openviking-version.outputs.version }}
+          cache-from: type=gha,scope=server-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=server-${{ matrix.arch }}
+
+      - name: Export image digest
+        if: env.CAN_PUSH == 'true'
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+
+      - name: Upload image digest
+        if: env.CAN_PUSH == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: server-digests-${{ matrix.arch }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  create-manifest:
+    runs-on: ubuntu-24.04
+    needs: build
+    if: needs.build.outputs.pushed == 'true'
+    permissions:
+      contents: read
+
+    steps:
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags) for Docker
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPOSITORY }}-server
+          tags: |
+            type=sha,prefix=,format=short
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Download image digests
+        uses: actions/download-artifact@v8
+        with:
+          pattern: server-digests-*
+          path: /tmp/digests
+          merge-multiple: true
+
+      - name: Create multi-arch manifest
+        env:
+          IMAGE: docker.io/${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKERHUB_REPOSITORY }}-server
+          SOURCE_TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          refs=()
+          for digest_file in /tmp/digests/*; do
+            [ -e "$digest_file" ] || continue
+            refs+=("${IMAGE}@sha256:$(basename "$digest_file")")
+          done
+          [ ${#refs[@]} -eq 2 ] || {
+            echo "Expected 2 image digests, found ${#refs[@]}" >&2
+            exit 1
+          }
+          tag_args=()
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && tag_args+=(--tag "$tag")
+          done <<< "$SOURCE_TAGS"
+          docker buildx imagetools create "${tag_args[@]}" "${refs[@]}"

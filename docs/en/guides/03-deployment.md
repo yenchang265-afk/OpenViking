@@ -303,7 +303,7 @@ docker compose up -d
 After startup, you can access:
 - API service: `http://localhost:1933`
 - Web Studio: `http://localhost:1933/studio` (same origin as the API)
-- Caddy entry point: `http://localhost:1934`. It proxies every path to 1933 and is kept for existing deployments. With OpenViking Gateway enabled, the gateway is served under `/gateway` on the same port, for example `http://localhost:1933/gateway/v1`; see [OpenViking Gateway deployment and operations](22-gateway-operations.md#docker-compose).
+- Caddy entry point: `http://localhost:1934`. It proxies every path to 1933 (or `/studio*` to a separate Studio container, see [Separate Studio and server images](#separate-studio-and-server-images)) and is kept for existing deployments. With OpenViking Gateway enabled, the gateway is served under `/gateway` on the same port, for example `http://localhost:1933/gateway/v1`; see [OpenViking Gateway deployment and operations](22-gateway-operations.md#docker-compose).
 
 ### Deploy on Railway
 
@@ -405,6 +405,23 @@ For public HTTPS access, see the [Public Access Guide](12-public-access.md).
 
 To build the image yourself, pass an explicit OpenViking version. Replace `<VERSION>` with a release number:
 `docker build --build-arg OPENVIKING_VERSION=<VERSION> -t openviking:latest .`
+
+#### Separate Studio and server images
+
+The default build (target `all-in-one`) bundles Web Studio into the server image. To build and deploy them independently, use the `server` and `studio` targets:
+
+```bash
+# API server only; /studio is not mounted
+docker build --target server --build-arg OPENVIKING_VERSION=<VERSION> -t openviking-server:latest .
+# Studio only: static bundle served by nginx on port 8080 (no build args needed)
+docker build --target studio -t openviking-studio:latest .
+```
+
+A Studio-only change rebuilds only the `studio` image, which takes about a minute and skips the Rust and C++ build. Studio calls the API on its own origin, so serve both behind one host. Route `/studio` and `/studio/*` to the Studio container, and everything else to the server. Also redirect `/` to `/studio/`, which the server only does when Studio is bundled.
+
+With Docker Compose, set `OPENVIKING_IMAGE=openviking-server:latest` and `OPENVIKING_STUDIO_UPSTREAM=studio:8080` in `.env`, then run `docker compose --profile studio up -d`. Caddy on port 1934 routes `/studio*` to the `studio` service. Without `OPENVIKING_STUDIO_UPSTREAM`, Caddy sends `/studio*` to the server, as before. On Kubernetes, use Ingress rules with the same paths.
+
+Deploy the server before Studio when a change touches both, because Studio is generated from the server API.
 
 ### Kubernetes + Helm
 
