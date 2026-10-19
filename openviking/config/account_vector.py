@@ -52,6 +52,11 @@ class AccountEmbeddingModelConfig(BaseModel):
         from openviking_cli.utils.config.embedding_config import EmbeddingModelConfig
 
         for credential in self.credentials:
+            if credential.provider == "custom":
+                raise ValueError(
+                    "The custom embedding provider is configured cluster-wide in "
+                    "ov.conf embedding.dense, not per Account"
+                )
             values = {
                 "model": credential.model or self.model,
                 "dimension": self.dimension,
