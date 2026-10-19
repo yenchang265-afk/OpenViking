@@ -28,6 +28,24 @@ spec:
     - host: {{ .host | quote }}
       http:
         paths:
+          {{- if $.Values.studio.enabled }}
+          # Exact and longer prefixes win over the `/` prefix below, so only
+          # Studio and the bare origin (redirected to /studio/) go to Studio.
+          - path: /studio
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "openviking.studio.fullname" $ }}
+                port:
+                  name: http
+          - path: /
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "openviking.studio.fullname" $ }}
+                port:
+                  name: http
+          {{- end }}
           {{- range .paths }}
           - path: {{ .path }}
             pathType: {{ .pathType }}

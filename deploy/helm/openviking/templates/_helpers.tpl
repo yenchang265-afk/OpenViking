@@ -77,3 +77,38 @@ Return the image name including tag.
 {{- $tag := default "latest" .Values.image.tag -}}
 {{- printf "%s:%s" .Values.image.repository $tag -}}
 {{- end }}
+
+{{/*
+Studio Deployment and Service name.
+*/}}
+{{- define "openviking.studio.fullname" -}}
+{{- printf "%s-studio" (include "openviking.fullname" .) | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+Studio selector labels. The name differs from the server's so the server
+Service and Deployment selectors (name + instance) never match Studio pods.
+*/}}
+{{- define "openviking.studio.selectorLabels" -}}
+app.kubernetes.io/name: {{ printf "%s-studio" (include "openviking.name" .) | trunc 63 | trimSuffix "-" }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/component: studio
+{{- end }}
+
+{{/*
+Studio common labels.
+*/}}
+{{- define "openviking.studio.labels" -}}
+helm.sh/chart: {{ include "openviking.chart" . }}
+{{ include "openviking.studio.selectorLabels" . }}
+app.kubernetes.io/version: {{ default "latest" .Values.studio.image.tag | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+Return the Studio image name including tag.
+*/}}
+{{- define "openviking.studio.image" -}}
+{{- $repository := required "studio.image.repository is required when studio.enabled=true (an image built with `docker build --target studio`)" .Values.studio.image.repository -}}
+{{- printf "%s:%s" $repository (default "latest" .Values.studio.image.tag) -}}
+{{- end }}

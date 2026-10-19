@@ -165,3 +165,47 @@ readinessProbe:
 nodeSelector: {}
 tolerations: []
 affinity: {}
+
+# Web Studio as its own Deployment, built and rolled out independently of the
+# server. The image is built with `docker build --target studio` and serves the
+# bundle at /studio/ on port 8080. When enabled and ingress.enabled is true,
+# every ingress host also routes /studio and the bare origin (redirected to
+# /studio/) to it. Studio calls the API on its own origin, so serve both through
+# the ingress. Pair it with a server image built with `--target server`; the
+# default image also bundles Studio, which then simply goes unused.
+studio:
+  enabled: false
+  # Stateless, so more than one replica is fine.
+  replicaCount: 1
+  image:
+    # Required when enabled, e.g. docker.io/<user>/<repo>-studio.
+    repository: ""
+    pullPolicy: Always
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    limits:
+      cpu: 200m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 32Mi
+  # nginx-unprivileged runs as uid/gid 101 and only writes to /tmp (an emptyDir).
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 101
+    runAsGroup: 101
+    seccompProfile:
+      type: RuntimeDefault
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop: ["ALL"]
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

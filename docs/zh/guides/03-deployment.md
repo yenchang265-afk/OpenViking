@@ -414,7 +414,7 @@ docker build --target studio -t openviking-studio:latest .
 
 只改 Studio 時只需重建 `studio` 映象，約一分鐘，不會觸發 Rust 和 C++ 編譯。Studio 會向自己所在的源發 API 請求，因此兩者要放在同一個域名後面：`/studio` 和 `/studio/*` 轉發到 Studio 容器，其餘路徑轉發到服務端。`/` 也要重新導向到 `/studio/`，服務端只在打包了 Studio 時才會這樣做。
 
-使用 Docker Compose 時，在 `.env` 中設定 `OPENVIKING_IMAGE=openviking-server:latest` 和 `OPENVIKING_STUDIO_UPSTREAM=studio:8080`，再執行 `docker compose --profile studio up -d`。1934 埠上的 Caddy 會把 `/studio*` 轉發到 `studio` 服務。未設定 `OPENVIKING_STUDIO_UPSTREAM` 時，Caddy 照舊把 `/studio*` 轉發到服務端。在 Kubernetes 上，用 Ingress 配置相同的路徑規則。
+使用 Docker Compose 時，在 `.env` 中設定 `OPENVIKING_IMAGE=openviking-server:latest` 和 `OPENVIKING_STUDIO_UPSTREAM=studio:8080`，再執行 `docker compose --profile studio up -d`。1934 埠上的 Caddy 會把 `/studio*` 轉發到 `studio` 服務。未設定 `OPENVIKING_STUDIO_UPSTREAM` 時，Caddy 照舊把 `/studio*` 轉發到服務端。在 Kubernetes 上，在 Helm chart 中設定 `studio.enabled`，它會新增 Studio Deployment 和對應的 Ingress 規則（見 [Helm README](https://github.com/volcengine/OpenViking/blob/main/deploy/helm/README.md#separate-web-studio-deployment)）。
 
 同一改動同時涉及兩者時，先部署服務端再部署 Studio，因為 Studio 的客戶端是根據服務端 API 生成的。
 

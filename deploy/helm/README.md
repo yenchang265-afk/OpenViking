@@ -226,6 +226,44 @@ setting only after switching to a remote vectordb backend such as VikingDB.
 For deployment, Studio management, backups and troubleshooting, see
 [OpenViking Gateway deployment and operations](https://docs.openviking.ai/en/guides/22-gateway-operations).
 
+### Separate Web Studio Deployment
+
+By default, the server image serves Web Studio at `/studio`. Set `studio.enabled: true` to
+run Studio as its own Deployment and Service instead, so it can be built, rolled out and
+rolled back without touching the server pod. Build the images with the `studio` and `server`
+Dockerfile targets (see the
+[deployment guide](https://docs.openviking.ai/en/guides/03-deployment#separate-studio-and-server-images)):
+
+```yaml
+image:
+  repository: docker.io/<user>/<repo>-server   # built with --target server
+  tag: <sha>
+studio:
+  enabled: true
+  image:
+    repository: docker.io/<user>/<repo>-studio # built with --target studio
+    tag: <sha>
+ingress:
+  enabled: true
+  className: nginx
+  hosts:
+    - host: ov.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+```
+
+For every Ingress host, the chart adds `/studio` (Prefix) and `/` (Exact) rules pointing at
+Studio. Studio redirects `/` to `/studio/`. All other paths still go to the server, because
+Kubernetes prefers Exact and longer Prefix matches over the `/` Prefix rule. Studio calls the
+API on its own origin, so both must be served from the same host. Without `ingress.enabled`,
+route `/studio*` to the Studio Service in your own proxy. The Service is named after the server
+Service plus `-studio`, and the install notes print it.
+
+Studio pods are stateless and run nginx as a non-root user (uid 101) with a read-only root
+filesystem, so `studio.replicaCount` can be raised freely. When a change touches both the
+API and Studio, roll out the server first.
+
 ## Configuration
 
 | Parameter | Description | Default |
@@ -252,6 +290,15 @@ For deployment, Studio management, backups and troubleshooting, see
 | `extraEnv` | Additional environment variables | `[]` |
 | `gateway.enabled` | Run OpenViking Gateway inside the server container, under `/gateway` on the server port | `false` |
 | `gateway.existingSecret` | Optional Secret with optional entries `management-key` (required to change upstreams and context profiles) and `encryption-key` (v0.5.0 key, read once for migration) | `""` |
+| `studio.enabled` | Run Web Studio as a separate Deployment and Service, routed by the Ingress | `false` |
+| `studio.replicaCount` | Studio replicas (stateless) | `1` |
+| `studio.image.repository` | Studio image (`docker build --target studio`); required when enabled | `""` |
+| `studio.image.tag` | Studio image tag | `latest` |
+| `studio.image.pullPolicy` | Studio image pull policy | `Always` |
+| `studio.service.type` | Studio Service type | `ClusterIP` |
+| `studio.service.port` | Studio Service port | `8080` |
+| `studio.resources` | Studio container resources | `10m`/`32Mi` requests, `200m`/`128Mi` limits |
+| `studio.podSecurityContext`, `studio.securityContext` | Studio pod and container security context | non-root uid 101, read-only root filesystem, all capabilities dropped |
 
 ## Upgrading
 

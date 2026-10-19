@@ -24,6 +24,20 @@ To access the OpenViking API:
   echo "Visit http://127.0.0.1:{{ .Values.service.port }}/health to verify the server is running."
 {{- end }}
 
+{{- if .Values.studio.enabled }}
+
+Web Studio runs as its own Deployment ({{ include "openviking.studio.fullname" . }}).
+{{- if .Values.ingress.enabled }}
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}/studio/
+{{- end }}
+{{- else }}
+  ingress.enabled is false: Studio calls the API on its own origin, so route
+  /studio* to svc/{{ include "openviking.studio.fullname" . }} and everything else to
+  svc/{{ include "openviking.fullname" . }} through one host (your own ingress or proxy).
+{{- end }}
+{{- end }}
+
 IMPORTANT: Make sure to configure your embedding and VLM API keys in values.yaml
 or via extraEnv before using OpenViking. The server will not function correctly
 without valid model provider credentials.

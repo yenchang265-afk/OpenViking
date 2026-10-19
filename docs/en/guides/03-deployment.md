@@ -419,7 +419,7 @@ docker build --target studio -t openviking-studio:latest .
 
 A Studio-only change rebuilds only the `studio` image, which takes about a minute and skips the Rust and C++ build. Studio calls the API on its own origin, so serve both behind one host. Route `/studio` and `/studio/*` to the Studio container, and everything else to the server. Also redirect `/` to `/studio/`, which the server only does when Studio is bundled.
 
-With Docker Compose, set `OPENVIKING_IMAGE=openviking-server:latest` and `OPENVIKING_STUDIO_UPSTREAM=studio:8080` in `.env`, then run `docker compose --profile studio up -d`. Caddy on port 1934 routes `/studio*` to the `studio` service. Without `OPENVIKING_STUDIO_UPSTREAM`, Caddy sends `/studio*` to the server, as before. On Kubernetes, use Ingress rules with the same paths.
+With Docker Compose, set `OPENVIKING_IMAGE=openviking-server:latest` and `OPENVIKING_STUDIO_UPSTREAM=studio:8080` in `.env`, then run `docker compose --profile studio up -d`. Caddy on port 1934 routes `/studio*` to the `studio` service. Without `OPENVIKING_STUDIO_UPSTREAM`, Caddy sends `/studio*` to the server, as before. On Kubernetes, set `studio.enabled` in the Helm chart, which adds a Studio Deployment and the Ingress rules (see the [Helm README](https://github.com/volcengine/OpenViking/blob/main/deploy/helm/README.md#separate-web-studio-deployment)).
 
 Deploy the server before Studio when a change touches both, because Studio is generated from the server API.
 
