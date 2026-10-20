@@ -820,11 +820,11 @@ def create_app(
         app.add_api_route(_route, _make_favicon_handler(_fname, _mime), include_in_schema=False)
 
     # Web Studio SPA: serve the static bundle when present so the same OV
-    # server origin can host the new frontend at /studio. The directory is
-    # populated by the docker `web-studio-builder` stage and shipped inside
-    # the openviking python package (see pyproject.toml package-data). Outside
-    # docker, set OPENVIKING_WEB_STUDIO_DIR to a local `web-studio/dist` to
-    # enable a dev build without rebuilding the wheel.
+    # server origin can host the new frontend at /studio. Wheels ship the
+    # bundle inside the openviking python package (see pyproject.toml
+    # package-data). OPENVIKING_WEB_STUDIO_DIR overrides the location: the
+    # docker image points it at its bundled copy, and in dev it can point at
+    # a local `web-studio/dist` without rebuilding the wheel.
     _studio_env = os.environ.get("OPENVIKING_WEB_STUDIO_DIR", "").strip()
     if _studio_env:
         _studio_dir = Path(_studio_env)

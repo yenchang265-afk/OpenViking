@@ -1,11 +1,13 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""Built web-studio assets, populated by the docker web-studio-builder stage.
+"""Built web-studio assets, populated by ``setup.py`` when building a wheel.
 
-The actual SPA source lives at the repository root in ``web-studio/``. During
-the docker build the Vite output (``web-studio/dist``) is copied into
-``openviking/web_studio/dist`` so the python wheel ships the bundle as
+The actual SPA source lives at the repository root in ``web-studio/``. A wheel
+build runs ``npm run build`` and copies the Vite output (``web-studio/dist``)
+into ``openviking/web_studio/dist`` so the wheel ships the bundle as
 package-data. The server resolves ``dist/`` relative to this package at
-runtime; if it is absent (e.g. ``pip install`` without running ``npm run
-build`` first) the /studio routes simply aren't registered.
+runtime, unless ``OPENVIKING_WEB_STUDIO_DIR`` points elsewhere (the docker
+image does this, copying the bundle after the venv so Studio-only changes skip
+the native build). If no bundle is found, the /studio routes simply aren't
+registered.
 """
