@@ -29,10 +29,12 @@ curl -fsSL https://openviking.ai/install | bash
 
 ## 各宿主差異
 
-- **Cursor** — 六個事件，其中 `preCompact` 與 `sessionEnd` 是本外掛裡獨有的。Stop 時 `capturedSinceCommit` 達到閾值才 commit，壓縮前無條件 commit。會話字首 `cu-`。見 [Cursor 接入文件](../../docs/zh/agent-integrations/12-cursor.md)。
+- **Cursor** — 七個事件。`afterMCPExecution` 將 OpenViking 工具結果追加到本地 JSONL 日誌，Stop 時與文本 transcript 一起上報；文本去重與工具上傳位置分別管理，成功後推進捕獲位置，失敗由原記錄重試。`capturedSinceCommit` 達到閾值才 commit，壓縮前在訊息完整上報後 commit。會話字首 `cu-`。見 [Cursor 接入文件](../../docs/zh/agent-integrations/12-cursor.md)。
 - **TRAE / TRAE CN** — 採集直接讀 Stop 事件的 `prompt`、`text_content`、`last_assistant_message`，不解析 transcript；每次帶內容的 Stop 都 commit。會話字首 `tr-` 與 `trcn-`。見 [TRAE 接入文件](../../docs/zh/agent-integrations/13-trae.md)。
 - **ZCode** — rollout 檔案是權威增量對話源：穩定的 host `turnId` 用於去重，也讓後續 Stop 能補回漏掉的回合，hook stdin 只是兜底。ZCode 不支援 `PreCompact` 與 `SessionEnd`，因此每次 Stop 都 commit 來補足這兩個訊號。它的輸出 schema 是嚴格的，所以放行時不寫任何內容。會話字首 `zc-`。已驗證的擴充面記錄在 [DESIGN.md](./DESIGN.md)。
 - **Kimi Code** — `wire.jsonl` 是權威 transcript；UserPromptSubmit 輸出原始上下文文本。Stop、PreCompact、SessionEnd 可後臺寫入，Interrupt 保持同步並共享 2 秒的 OpenViking 請求預算。安裝指令碼生成自包含原生外掛，不修改舊的 `config.toml` 或 `mcp.json`。會話字首 `kc-`。
+
+Cursor 工具採集依據 [Hooks 契約](https://cursor.com/docs/hooks) 和 [`@cursor/sdk` 1.0.38](https://registry.npmjs.org/@cursor/sdk/-/sdk-1.0.38.tgz) 的 MCP 執行器實現，後者在 `afterMCPExecution` 中提供 `tool_use_id`。舊事件若沒有原生呼叫 ID，只保留文本採集；介面卡不生成呼叫 ID 或推斷完成狀態。
 
 ## 體檢
 

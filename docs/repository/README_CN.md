@@ -392,6 +392,7 @@ ov chat   # 在另一個終端執行
 - [NoKV](https://github.com/NoKV-Lab/NoKV) - AI 原生的分散式檔案系統
 - [loopx](https://github.com/huangruiteng/loopx) - 輕量級迴圈工程狀態核心
 - [Hermes Agent](https://github.com/NousResearch/hermes-agent) - 與使用者共同成長的智慧體
+- [NVIDIA cuVS](https://github.com/NVIDIA/cuvs) - GPU 加速的向量搜尋與聚類庫
 
 合作提議請[提交 issue](https://github.com/volcengine/OpenViking/issues)。
 

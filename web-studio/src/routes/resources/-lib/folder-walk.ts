@@ -194,6 +194,7 @@ export function canPickFolder(): boolean {
  */
 export async function pickFolder(): Promise<FolderNode | null> {
   const picker = directoryPicker()
+  // eslint-disable-next-line studio-i18n/no-literal-message -- callers check canPickFolder() first and fall back to the file input on any rejection
   if (!picker) throw new Error('showDirectoryPicker is not supported')
   try {
     return folderFromHandle(await picker.call(globalThis, { mode: 'read' }))

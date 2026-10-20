@@ -99,7 +99,8 @@ const connect = {
           'Codex 會先嚐試 WebSocket 連線，閘道器拒絕後它會自動改用 HTTP。',
         metadata:
           '遇到不認識的模型名，Codex 可能提示缺少模型後設資料，這個提示不影響請求。',
-        login: 'ChatGPT 登入無法通過閘道器使用，請為上游配置服務商的 API Key。',
+        login:
+          'Codex 不能用 ChatGPT 帳號登入閘道器。想用 ChatGPT 訂閱，可以把 CLIProxyAPI 新增為上游（OpenAI Codex 團隊認可這種用法）；否則請為上游配置服務商的 API Key。',
       },
     },
     chat: {
@@ -232,7 +233,8 @@ const connect = {
     description:
       '如果某段對話已經通過 OpenViking 外掛獲得記憶，閘道器會讓出這段對話：不召回、不儲存，也不提供 Business Data Platform 工具，避免重複補充記憶。其他對話不受影響。',
     detection:
-      '閘道器根據外掛注入的記憶塊或 Business Data Platform 工具識別外掛。整合方也可以通過這個請求頭主動宣告。',
+      '閘道器根據外掛注入訊息的記憶塊識別外掛。整合方也可以通過這個請求頭主動宣告。',
+    mcp: '只接入 Business Data Platform MCP 工具不算外掛：閘道器照常召回和儲存記憶，只是不再提供自己的 Business Data Platform 工具。',
     restart:
       '這個狀態會持續到對話結束。要重新使用閘道器的記憶，請在不啟用外掛的情況下開始一段新對話。',
   },

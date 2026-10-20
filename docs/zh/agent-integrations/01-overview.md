@@ -22,6 +22,8 @@ OpenViking 可以作為多種 Agent 執行時的長期記憶與上下文後端�
 | **聊天客戶端 / SDK 與 API 應用 / 其他沒有外掛的客戶端** | [OpenViking 閘道器](../guides/15-gateway.md) — 能填 Base URL 和 API Key 的客戶端都能接入閘道器，由閘道器召回記憶、儲存對話，客戶端裡不用裝任何東西 |
 | **ZCode / AstrBot / …** | [社群外掛](./08-community-plugins.md) — 社群維護的各執行時整合 |
 
+Claude Code、Codex、OpenCode、pi、DSH 等 Agent 既能用自己的外掛，也能接入 OpenViking 閘道器。兩者怎麼選，見[閘道器還是外掛](../guides/15-gateway.md#gateway-or-plugin)。
+
 ## 橫向對比各整合能力
 
 想知道各個整合在工具面、自動召回、會話與 commit、壓縮接管、降級容錯上的具體差異，見 [整合能力參考](./16-capability-reference.md)——一份覆蓋全部整合的橫向對照矩陣。

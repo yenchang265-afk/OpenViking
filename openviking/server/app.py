@@ -474,12 +474,6 @@ def create_app(
             builtin_skills_task.cancel()
             with suppress(asyncio.CancelledError):
                 await builtin_skills_task
-        auth_plugin_state = getattr(app.state, "auth_plugin", None)
-        if auth_plugin_state is not None:
-            try:
-                await auth_plugin_state.shutdown()
-            except Exception as e:  # noqa: BLE001
-                logger.warning("Auth plugin shutdown failed: %s", e)
         if oauth_gc_task is not None:
             oauth_gc_task.cancel()
             try:
@@ -492,14 +486,24 @@ def create_app(
                 await oauth_store_state.close()
             except Exception as e:  # noqa: BLE001
                 logger.warning("OAuth store close failed: %s", e)
+        service_closed = not owns_service
         if owns_service and service:
             try:
                 await service.close()
+                service_closed = True
                 logger.info("OpenVikingService closed")
             except asyncio.CancelledError as e:
                 logger.warning(f"OpenVikingService close cancelled during shutdown: {e}")
             except Exception as e:
                 logger.warning(f"OpenVikingService close failed during shutdown: {e}")
+        # Draining workers still check identity/deletion state through the
+        # auth plugin's account store. Retain it if service shutdown failed.
+        auth_plugin_state = getattr(app.state, "auth_plugin", None)
+        if service_closed and auth_plugin_state is not None:
+            try:
+                await auth_plugin_state.shutdown()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Auth plugin shutdown failed: %s", e)
         if usage_reporter is not usage_reporter_unset and usage_reporter is not None:
             await usage_reporter.close()
 

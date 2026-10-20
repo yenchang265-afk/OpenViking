@@ -34,8 +34,8 @@ hermes
 配置後正常聊天即可。外掛預設在待提交內容達到 20,000 tokens、會話結束或切換時
 請求提交。OpenViking 完成抽取後，記憶才能被召回。已有服務端資料會保留。
 
-Quick Local 服務在 Hermes 退出後仍會執行。支援的模型、服務控制命令和已知本地
-embedding 問題見[外掛指南](https://hermes-agent.nousresearch.com/docs/plugins/openviking)。
+Quick Local 服務在 Hermes 退出後仍會執行。支援的模型、服務控制命令和執行環境
+升級說明見[外掛指南](https://hermes-agent.nousresearch.com/docs/plugins/openviking)。
 
 ## 檢視狀態
 

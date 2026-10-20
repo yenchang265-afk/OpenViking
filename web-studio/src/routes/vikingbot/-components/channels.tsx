@@ -1,3 +1,4 @@
+import { formatDateTime } from '#/i18n/format'
 import {
   Dialog,
   DialogContent,
@@ -28,7 +29,7 @@ export function Channels({
   canManage: boolean
   scope: string
 }) {
-  const { t, i18n } = useTranslation('vikingbot')
+  const { t } = useTranslation('vikingbot')
   const client = useQueryClient()
   const key = ['vikingbot', scope, 'connections']
   const connections = useQuery({
@@ -245,9 +246,9 @@ export function Channels({
                           {t('lastReceived')}
                         </dt>
                         <dd>
-                          {new Date(
-                            connection.status.last_received,
-                          ).toLocaleString(i18n.resolvedLanguage)}
+                          {formatDateTime(
+                            new Date(connection.status.last_received),
+                          )}
                         </dd>
                       </div>
                     )}
@@ -257,9 +258,9 @@ export function Channels({
                           {t('lastSent')}
                         </dt>
                         <dd>
-                          {new Date(
-                            connection.status.last_sent,
-                          ).toLocaleString(i18n.resolvedLanguage)}
+                          {formatDateTime(
+                            new Date(connection.status.last_sent),
+                          )}
                         </dd>
                       </div>
                     )}

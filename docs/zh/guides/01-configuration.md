@@ -937,6 +937,8 @@ VLM 的 `model` 填寫對應的方舟模型 endpoint ID。`video_fps` 僅用於�
 
 三個併發配置項必須為正整數；省略或設為 `null` 時繼承預設值。`shuffle_batch_size` 必須為正整數，省略時為 `4`，不接受 `null`。路由逐條儲存合法結果，僅失敗記錄重新組批重試，最後一次降為單條；每條記錄最多嘗試三輪。修改後需重啟 VikingBot 服務。一個 VikingBot 服務內的所有 Compile 任務仍共享 `vlm.max_concurrent` 限制的模型請求容量，因此提進階段併發不會突破這一總上限。Embedding 請求另受 embedding 服務的併發限制。恢復任務預設使用相同的 reduce 配置，顯式 `--concurrency` 可覆蓋恢復併發數。
 
+Compile 繼承模型的 thinking 和 reasoning 配置。模型請求使用有效模型超時配置（`bot.agents.timeout` 或繼承的 `vlm.timeout`）。
+
 ### query_planner
 
 可選的輕量模型配置，用於檢索前的意圖分析和 query 規劃/改寫。配置結構與 `vlm` 相同，用於 `search()` 的意圖分析、query expansion，以及可選的服務端 recall 摘要重寫。未配置或配置為空時，OpenViking 會回退到 `vlm`，保持向後相容。
@@ -1206,6 +1208,7 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 | `skip_process_lock` | bool | 是否跳過本地向量後端（`local`、`cuvs`）對 `storage.workspace` 的 `.openviking.lock` 獨佔檔案鎖。其他後端不會獲取此鎖。跳過檢查不代表本地向量儲存支援多程序共享。 | `false` |
 | `agfs` | object | RAGFS（Rust 實現的 AGFS）配置 | {} |
 | `vectordb` | object | 向量庫儲存配置 | {} |
+| `task_store` | object | 持久化 Task/Work 後端配置 | `{"provider":"file"}` |
 
 
 ```json
@@ -1222,6 +1225,39 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
   }
 }
 ```
+
+#### task_store
+
+Task 記錄預設使用本地 FileStore。需要多個 OpenViking 程序共享
+Task/Work 狀態時，先在 MySQL 中執行
+`openviking/service/sql/task_store_init.sql`，再選擇關係型後端：
+
+```json
+{
+  "storage": {
+    "task_store": {
+      "provider": "mysql",
+      "params": {
+        "user": "openviking",
+        "password": "change-me",
+        "database": "openviking",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "table": "ov_tasks"
+      }
+    }
+  }
+}
+```
+
+`params.table` 是表字首，必須以 ASCII 字母開頭，只能包含 ASCII 字母、數字和
+下劃線，最多 38 個字元，確保派生的表名、索引名和約束名不超過 MySQL 的 64 字元上限。
+使用自定義字首時，需要在建表 SQL 中統一替換 `ov_tasks`。
+
+MySQL 後端需要安裝 `openviking[mysql]` extra。Task mutation、Task
+最終化和 execution event 更新在同一個資料庫事務中提交。`task_id`
+是全域唯一身份；`account_id` 和 `user_id` 用於鑑權和查詢範圍。同一部署
+不要同時讓 FileStore 和 MySQL 表作為寫入端。
 
 #### agfs (RAGFS)
 
@@ -1380,9 +1416,8 @@ Redis 名稱空間。
 - Redis Sentinel 模式的 endpoints 是 Sentinel 節點，並且必須配置非空 `master_name`；master 發現和故障切換後的重連由 Fred RedisProvider 處理。
 - `username` 和 `password` 用於 Redis 資料節點；`sentinel_username` 和 `sentinel_password` 僅用於 Sentinel 節點。
 - Cache backend 使用 `{service_name}:ov:*` key；連線同一 Redis 叢集的不同部署必須配置不同的 `service_name`。
-- Cache backend 的例項心跳 TTL 為 30 秒，每 10 秒續約一次。
-- Cache backend 會在獨立的 startup recovery 任務中按例項心跳狀態執行三次有界 `recover_stale` 掃描，時間點分別為啟動後立即、30 秒和 60 秒，用於覆蓋容器異常退出後舊例項心跳尚未過期的恢復視窗；正常關閉會先刪除 heartbeat，使新例項可以立即恢復 processing 訊息。
-- 所有 Redis 讀命令都發送到主節點，不提供副本讀配置。
+- Cache backend 的例項心跳 TTL 為 30 秒，每 10 秒續約一次。同一 QueueFS cache namespace 中只有一個存活例項持有經 token 校驗的 30 秒 leader lease，並每 10 秒掃描過期的 `processing` 訊息；該例項停止後，其他例項會在 lease 到期後接管。正常關閉會刪除 heartbeat，因此恢復可以立即開始。
+- 所有 Redis 讀命令都傳送到主節點，不提供副本讀配置。
 - `tls_insecure_skip_verify=true` 時 endpoint 必須使用 `rediss://`。
 - 如果同時設定了 `storage.agfs.queuefs.db_path` 和舊欄位 `storage.agfs.queue_db_path`，以前者為準。
 - 如果 QueueFS backend 為 `memory`，則 `db_path` 和舊欄位 `queue_db_path` 都會被忽略。

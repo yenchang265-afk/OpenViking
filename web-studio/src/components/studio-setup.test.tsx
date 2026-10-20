@@ -17,9 +17,22 @@ vi.mock('react-i18next', async (original) => ({
   ...(await original<Record<string, unknown>>()),
   useTranslation: () => ({ t: (key: string) => key }),
 }))
+vi.mock('./setup-identity-directory', () => ({
+  SetupIdentityDirectory: ({
+    onSelect,
+  }: {
+    onSelect: (identity: { accountId: string; userId: string }) => void
+  }) => (
+    <button
+      type="button"
+      onClick={() => onSelect({ accountId: 'team', userId: 'alice' })}
+    >
+      choose-directory-user
+    </button>
+  ),
+}))
 vi.mock('#/lib/connection/onboarding', async (original) => ({
   ...(await original<Record<string, unknown>>()),
-  markStudioSetupPending: vi.fn(),
   verifyStudioSetup: mocks.verify,
   completeStudioSetup: mocks.complete,
 }))
@@ -279,4 +292,64 @@ it('loads the logo from the deployment base path', () => {
   expect(container.querySelector('img')?.getAttribute('src')).toBe(
     '/studio/ov-logo.png',
   )
+})
+
+it('cancels an in-flight verification without replacing the saved workspace', async () => {
+  const onCancel = vi.fn()
+  const onComplete = vi.fn()
+  localStorage.setItem('ov_studio_setup', 'complete')
+  mocks.verify.mockImplementationOnce(() => new Promise(() => {}))
+  render(
+    <StudioSetup
+      onComplete={onComplete}
+      onCancel={onCancel}
+      canReturnToWorkspace
+    />,
+  )
+  fireEvent.change(url(), { target: { value: 'https://other.test' } })
+  fireEvent.click(verifyButton())
+  await waitFor(() => expect(mocks.verify).toHaveBeenCalled())
+  const signal = mocks.verify.mock.calls[0][1] as AbortSignal
+  fireEvent.click(screen.getByRole('button', { name: 'cancel' }))
+  expect(signal.aborted).toBe(true)
+  expect(onCancel).toHaveBeenCalledOnce()
+  expect(onComplete).not.toHaveBeenCalled()
+  expect(mocks.complete).not.toHaveBeenCalled()
+  expect(localStorage.getItem('ov_studio_setup')).toBe('complete')
+})
+
+it('offers an exit on first use without requiring a valid address', () => {
+  const onCancel = vi.fn()
+  render(<StudioSetup onComplete={vi.fn()} onCancel={onCancel} />)
+  fireEvent.click(screen.getByRole('button', { name: 'exit' }))
+  expect(onCancel).toHaveBeenCalledOnce()
+  expect(mocks.verify).not.toHaveBeenCalled()
+})
+
+it('opens the account/user picker only after Verify and rejects a mismatched user key', async () => {
+  mocks.verify.mockImplementationOnce(async (draft) => draft)
+  render(<StudioSetup onComplete={vi.fn()} />)
+  fireEvent.change(url(), { target: { value: 'https://service.test' } })
+  fireEvent.click(screen.getByRole('button', { name: 'advanced' }))
+  fireEvent.change(screen.getByLabelText('settings:fields.rootApiKey'), {
+    target: { value: 'root-secret' },
+  })
+  expect(screen.queryByText('choose-directory-user')).toBeNull()
+  fireEvent.click(verifyButton())
+  fireEvent.click(await screen.findByText('choose-directory-user'))
+  expect(key().value).toBe('')
+  expect(screen.queryByRole('button', { name: 'enter' })).toBeNull()
+  mocks.verify.mockImplementationOnce(async (draft) => ({
+    ...draft,
+    accountId: 'other',
+    userId: 'bob',
+  }))
+  fireEvent.change(key(), { target: { value: 'wrong-user-key' } })
+  fireEvent.click(verifyButton())
+  await waitFor(() =>
+    expect(screen.getByRole('alert').textContent).toContain(
+      'directoryIdentityMismatch',
+    ),
+  )
+  expect(screen.queryByRole('button', { name: 'enter' })).toBeNull()
 })

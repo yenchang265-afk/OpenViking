@@ -35,7 +35,7 @@ describe('gateway translations', () => {
   })
 
   it('label the sidebar entry in both languages', () => {
-    expect(en.appShell.footer.gateway).toBe('Business Data Platform Gateway')
+    expect(en.appShell.footer.gateway).toBe('Gateway')
     expect(zhTW.appShell.footer.gateway).toBe('Business Data Platform 閘道器')
   })
 

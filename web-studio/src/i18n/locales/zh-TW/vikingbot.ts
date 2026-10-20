@@ -25,7 +25,6 @@ export default {
   channels: '機器人',
   intro: '在這裡與 VikingBot 對話，也可以將它接入團隊使用的訊息平臺。',
   newChat: '新建對話',
-  accountRequired: '請先選擇帳號再管理機器人',
   web: '網頁',
   all: '全部',
   search: '搜尋對話',
@@ -33,7 +32,8 @@ export default {
   emptyHint: '提出問題、探索資源，或將機器人接入你使用的訊息平臺。',
   manageBots: '管理機器人',
   enable: '先啟用 VikingBot',
-  enableHint: '請管理員以 Bot 模式啟動 Business Data Platform，並配置對話模型。',
+  enableHint:
+    '請管理員以 Bot 模式啟動 Business Data Platform，並配置對話模型。',
   modelHint: 'VikingBot 預設繼承根級 vlm 模型配置。',
   retry: '重試',
   loading: '載入中…',

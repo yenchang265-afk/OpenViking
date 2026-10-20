@@ -139,6 +139,9 @@ claude mcp add --transport http openviking \
 | `glob` | 按 glob 模式匹配檔案 | `pattern`, `uri`(可選範圍), `node_limit` |
 | `forget` | 刪除任意 `viking://` URI（先用 `search` 查詢；刪除目錄需 `recursive=true`）。用它刪 skill 目錄會殘留該 skill 的 privacy 配置，請改用 `ov skills remove` 或 `DELETE /api/v1/skills/{name}` | `uri`, `recursive`（可選） |
 | `health` | 檢查 OpenViking 服務健康狀態 | 無 |
+| `privacy_tree` | 盤點已儲存的憑據；返回當前欄位後設資料及引用，不含值 | `category`（可選） |
+| `privacy_resolve` | 將完整的 `{{ov_privacy:...}}` 佔位符解析為一個當前欄位的實際值，供立即使用 | `reference` |
+| `privacy_upsert` | 原子合併使用者提供的憑據欄位；返回後設資料和引用，不回顯值 | `category`, `target_key`, `values` |
 | `list_users` | 查詢當前 account 的使用者 ID；預設不返回憑證，管理員也一樣 | `query`(可選，ID 子串), `limit`(預設 100), `page`(預設 1), `include_credentials`(預設 false，僅 ADMIN/ROOT 可設為 true) |
 | `list_groups` | 查詢當前 account 的組 ID，不返回成員名單 | 無 |
 | `get_acl` | 檢視共享資源的直接、繼承和有效 ACL；要求該節點的 manage 或帳號 ADMIN | `uri` |
@@ -157,6 +160,38 @@ claude mcp add --transport http openviking \
 > **注**：MCP 僅暴露 watch 管理的最小閉包（`list_watches` + `cancel_watch`）。pause / resume / trigger 和統一的 `update` 動作刻意不在此處暴露，請通過 REST `/api/v1/watches/*` 介面或 `ov task watch` CLI 使用上述操作。
 
 > `processing_mode=vectors_only` 會跳過 VLM 語義理解階段，不生成或重新整理 `.abstract.md` / `.overview.md`；它只向量化當前非隱藏資源檔案，並保留已存在的舊語義產物。
+
+### 使用 skill 中引用的憑據
+
+當 SKILL.md、文件或工具結果中出現以下認證佔位符，且當前任務需要這個憑據時：
+
+```text
+Authorization: Bearer {{ov_privacy:alice:viking://~/privacy/credential/github#/values/pat}}
+```
+
+呼叫 `privacy_resolve`，原樣傳入完整佔位符，不要帶上外部的 `Authorization: Bearer`：
+
+```json
+{
+  "name": "privacy_resolve",
+  "arguments": {
+    "reference": "{{ov_privacy:alice:viking://~/privacy/credential/github#/values/pat}}"
+  }
+}
+```
+
+以上是 MCP `tools/call` 請求的引數。將返回的 `value` 填入 API 的認證欄位；佔位符本身不是
+可以直接使用的金鑰。解析始終讀取當前生效版本，並拒絕其他 owner 的引用，管理員也不例外。
+也支援欄位級 Privacy URI。不知道引用時，先呼叫 `privacy_tree`，可用 `category` 縮小範圍。
+
+使用者提供 PAT 並要求儲存時，呼叫 `privacy_upsert`，傳入 `category="credential"`、
+`target_key="github"` 和 `values={"pat":"<user-provided-token>"}`。目標不存在時建立，存在時
+合併指定欄位，保留 `username` 等其他欄位。值變化後建立並激活版本，但不會到外部服務輪換憑據。
+成功響應只描述本次更新的欄位，不回顯它們的值。
+
+tree 和 resolve 標記為只讀，upsert 標記為可能覆蓋資料的寫入。只讀不等於不敏感：resolve
+會將明文返回給 MCP 客戶端和 Agent 上下文。儲存文件和記憶時保留引用，不在聊天中複述解析後的
+金鑰。tree 和 upsert 的響應不返回儲存的值。
 
 ### 資源許可權與授權物件
 

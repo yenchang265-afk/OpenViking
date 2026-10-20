@@ -20,7 +20,11 @@ import { formatNumber, formatTpmTime } from '../-lib/format'
 const PEAK_COLOR = 'var(--foreground)'
 
 const SERIES = [
-  { key: 'vlm_input', color: TOKEN_COLORS.input, label: 'todayTokens.vlmInput' },
+  {
+    key: 'vlm_input',
+    color: TOKEN_COLORS.input,
+    label: 'todayTokens.vlmInput',
+  },
   {
     key: 'vlm_output',
     color: TOKEN_COLORS.output,
@@ -79,7 +83,7 @@ export function TpmTrendChart({
               axisLine={false}
               className="text-muted-foreground"
               tick={{ fill: 'currentColor', fontSize: 12 }}
-              tickFormatter={(value) => Number(value).toLocaleString()}
+              tickFormatter={(value) => formatNumber(Number(value))}
               tickLine={false}
               width="auto"
             />
@@ -126,7 +130,11 @@ export function TpmTrendChart({
           />
         ))}
         {showPeakLine ? (
-          <LegendMark color={PEAK_COLOR} dashed label={t('tpmTrend.peakLine')} />
+          <LegendMark
+            color={PEAK_COLOR}
+            dashed
+            label={t('tpmTrend.peakLine')}
+          />
         ) : null}
       </div>
     </>
@@ -145,7 +153,9 @@ function LegendMark({
   return (
     <span className="inline-flex items-center gap-2">
       <span
-        className={dashed ? 'h-0 w-4 border-t-2 border-dashed' : 'size-2.5 rounded-full'}
+        className={
+          dashed ? 'h-0 w-4 border-t-2 border-dashed' : 'size-2.5 rounded-full'
+        }
         style={dashed ? { borderColor: color } : { backgroundColor: color }}
       />
       <span>{label}</span>

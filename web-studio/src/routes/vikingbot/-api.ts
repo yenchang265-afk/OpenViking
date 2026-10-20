@@ -1,4 +1,4 @@
-import i18n from '#/i18n'
+import i18n from '#/i18n/core'
 import { getOvResult, ovClient } from '#/lib/ov-client'
 import type { ServerMode } from '#/lib/connection/health'
 
@@ -40,7 +40,7 @@ export type PlatformMessage = {
 }
 export function botAccountBase() {
   const { accountId } = ovClient.getConnection()
-  if (!accountId) throw new Error(i18n.t('vikingbot:accountRequired'))
+  if (!accountId) throw new Error(i18n.t('studio:errors.botAccountRequired'))
   return `/api/v1/admin/accounts/${encodeURIComponent(accountId)}/bot`
 }
 export function getCapabilities() {
@@ -134,7 +134,7 @@ export function rotateCredentials(
 
 export async function getBotUsers(serverMode: ServerMode) {
   const { accountId } = ovClient.getConnection()
-  if (!accountId) throw new Error(i18n.t('vikingbot:accountRequired'))
+  if (!accountId) throw new Error(i18n.t('studio:errors.botAccountRequired'))
   const users = await getOvResult<
     Array<{ user_id: string; api_key_available: boolean }>
   >(

@@ -71,7 +71,7 @@ openviking-server --config /path/to/ov.conf
 | `log` | object | 控制台日誌 | 日誌級別、格式和檔案輸出 |
 | `telemetry` | object | disabled | OpenTelemetry trace 上報 |
 | `oauth` | object | disabled | MCP OAuth 2.1 配置 |
-| `gateway` | object | disabled | OpenViking 閘道器配置，閘道器為使用 API Key 的模型客戶端補充 OpenViking 記憶。這一部分的未知欄位會直接報錯，見[配置參考](../guides/22-gateway-operations.md#配置參考) |
+| `gateway` | object | disabled | OpenViking 閘道器配置，閘道器為使用 API Key 的模型客戶端補充 OpenViking 記憶。這一部分的未知欄位會直接報錯，見[配置參考](../gateway/13-configuration.md#configuration-reference) |
 | `prompts` | object | 內建模板 | 自定義 Prompt 模板目錄 |
 | `ingest` | object | 內建預設值 | 會話日誌匯入配置 |
 | `output_language_override` | string | `""` | 強制摘要和記憶輸出語言，僅接受 `en` 或 `zh-TW`；空值表示自動識別：中文內容 → `zh-TW`，其他語言或無法識別 → `en` |
@@ -194,6 +194,9 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
     "parse_output": {
       "mode": "agfs"
     }
+  },
+  "parsers": {
+    "download_temp_dir": "/data/openviking/parser-tmp"
   }
 }
 ```
@@ -216,6 +219,14 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 `parse_output.mode=local` 可避免把 parser 中間產物寫入共享 AGFS。當前 worker
 必須在下游任務入隊前把所需位元組提交到正式資源樹。產物會在內容提交後清理；
 請為 `local_root` 預留足夠空間以容納併發匯入。
+
+### `parsers`
+
+| 欄位 | 型別 / 常用值 | 預設值 | 作用 |
+|---|---|---|---|
+| `download_temp_dir` | 路徑或 `null` | 系統臨時目錄 | 內建 parser 下載檔案、Git checkout 和壓縮包解壓使用的臨時目錄 |
+
+配置後，parser 會在該目錄下建立帶有 `ov_git_`、`ov_zip_` 等字首的臨時目錄；未配置時繼續使用系統臨時目錄。
 
 ## 佇列 Worker 配置
 

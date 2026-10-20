@@ -109,6 +109,29 @@ const overview = {
       none: '還沒有召回',
     },
   },
+  cacheMiss: {
+    title_one: '有 {{count}} 段長對話連續沒有命中提示詞快取',
+    title_other: '有 {{count}} 段長對話連續沒有命中提示詞快取',
+    description_one:
+      '最近連續 {{streak}} 次模型呼叫的輸入都不少於 {{tokens}} Token，快取命中率都是 0%。常見原因是請求開頭的內容（系統提示詞、工具定義）每次都在變，或者上游把請求分給了不同的帳號或渠道。',
+    description_other:
+      '最近連續 {{streak}} 次模型呼叫的輸入都不少於 {{tokens}} Token，快取命中率都是 0%。常見原因是請求開頭的內容（系統提示詞、工具定義）每次都在變，或者上游把請求分給了不同的帳號或渠道。',
+    action:
+      '對照服務商後臺的快取記錄：那邊有命中，說明上游沒有把快取用量傳回閘道器；那邊也沒有，檢查系統提示詞裡有沒有時間這類每次都變的內容，以及中轉服務是否在多個渠道之間輪換。',
+    noWrites:
+      '上游也沒有寫入快取，客戶端很可能沒有在請求裡設定 cache_control。對照服務商後臺的快取記錄：那邊有命中，說明上游沒有把快取用量傳回閘道器。',
+    streak_one: '連續 {{count}} 次未命中',
+    streak_other: '連續 {{count}} 次未命中',
+  },
+  cacheUnreported: {
+    title_one: '上游 {{upstreams}} 最近沒有返回過快取命中',
+    title_other: '上游 {{upstreams}} 最近沒有返回過快取命中',
+    description_one:
+      '相關長對話的快取命中率一直是 0%，統計時都按未命中計算。可能是服務商不支援提示詞快取、客戶端沒有開啟快取，或者中轉服務沒有把快取用量傳回閘道器。',
+    description_other:
+      '相關長對話的快取命中率一直是 0%，統計時都按未命中計算。可能是服務商不支援提示詞快取、客戶端沒有開啟快取，或者中轉服務沒有把快取用量傳回閘道器。',
+    separator: '、',
+  },
   openviking: {
     title: 'Business Data Platform',
     description: '為新訊息檢索記憶，並儲存對話。',
