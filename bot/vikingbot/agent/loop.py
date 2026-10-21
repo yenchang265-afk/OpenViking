@@ -32,6 +32,7 @@ from vikingbot.heartbeat.service import HEARTBEAT_METADATA_KEY, is_heartbeat_noo
 from vikingbot.hooks import HookContext
 from vikingbot.hooks.manager import hook_manager
 from vikingbot.integrations.langfuse import LangfuseClient
+from vikingbot.observability import bot_usage
 from vikingbot.observability.outcome import evaluate_response_outcome, should_update_outcome
 from vikingbot.openviking_mount.session_state import (
     get_openviking_session_id,
@@ -1304,7 +1305,10 @@ class AgentLoop:
         active: _ActiveTurn
 
         async def run_active_message() -> OutboundMessage | None:
-            return await self._process_message(msg, active_turn=active)
+            connection = msg.openviking_connection
+            # Model calls of this turn, including subagents it starts, count as this user's.
+            with bot_usage.usage_connection(connection if isinstance(connection, dict) else None):
+                return await self._process_message(msg, active_turn=active)
 
         task = asyncio.create_task(run_active_message())
         is_agent_turn = bool(

@@ -82,6 +82,14 @@ it('plots rerank tokens as their own series', async () => {
   expect(screen.getByText('tpmTrend.rerank')).toBeTruthy()
 })
 
+it('plots bot tokens as their own series', async () => {
+  renderPanel()
+  expect(await screen.findByTestId('area-bot_input')).toBeTruthy()
+  expect(screen.getByTestId('area-bot_output')).toBeTruthy()
+  expect(screen.getByText('todayTokens.botInput')).toBeTruthy()
+  expect(screen.getByText('todayTokens.botOutput')).toBeTruthy()
+})
+
 it('switches the window from the toggle', () => {
   const onWindowChange = renderPanel()
   const current = screen.getByRole('button', { name: 'tpmTrend.windows.24h' })

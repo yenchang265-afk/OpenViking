@@ -1578,6 +1578,8 @@ const workspace = {
       title: '今日檢索次數',
     },
     todayTokens: {
+      botInput: 'Bot 輸入 Token',
+      botOutput: 'Bot 輸出 Token',
       description: '展示今日即時 Token 用量，每天零點重新整理。',
       embeddingInput: 'Embedding 輸入 Token',
       title: '今日 Token 用量',
@@ -1585,6 +1587,8 @@ const workspace = {
       vlmOutput: 'VLM 輸出 Token',
     },
     tokensPerMinute: {
+      botInput: 'Bot 輸入 / 分鐘',
+      botOutput: 'Bot 輸出 / 分鐘',
       description:
         '最近 {{minutes}} 分鐘（自上一個 UTC 整點起）平均每分鐘 Token 用量。',
       embeddingInput: 'Embedding 輸入 / 分鐘',

@@ -19,10 +19,16 @@ export function normalizeTokenSeries(
     const vlmInput = asNumber(record.vlm_input)
     const vlmOutput = asNumber(record.vlm_output)
     const embeddingInput = asNumber(record.embedding_input)
+    const botInput = asNumber(record.bot_input)
+    const botOutput = asNumber(record.bot_output)
     return {
+      bot_input: botInput,
+      bot_output: botOutput,
       date: asString(record.date),
       embedding_input: embeddingInput,
-      total: asNumber(record.total) || vlmInput + vlmOutput + embeddingInput,
+      total:
+        asNumber(record.total) ||
+        vlmInput + vlmOutput + embeddingInput + botInput + botOutput,
       vlm_input: vlmInput,
       vlm_output: vlmOutput,
     }
@@ -46,6 +52,8 @@ export function normalizeTokenRate(data: unknown): NormalizedTokenRate {
     items: asArray(record.items).map((raw) => {
       const item = asRecord(raw)
       return {
+        bot_input: asNumber(item.bot_input),
+        bot_output: asNumber(item.bot_output),
         embedding_input: asNumber(item.embedding_input),
         peak_total: asNumber(item.peak_total),
         rerank: asNumber(item.rerank),
@@ -58,6 +66,8 @@ export function normalizeTokenRate(data: unknown): NormalizedTokenRate {
     peak:
       peakTotal > 0
         ? {
+            bot_input: asNumber(peak.bot_input),
+            bot_output: asNumber(peak.bot_output),
             embedding_input: asNumber(peak.embedding_input),
             minute: asString(peak.minute),
             rerank: asNumber(peak.rerank),

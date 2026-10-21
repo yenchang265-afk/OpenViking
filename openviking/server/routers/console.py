@@ -5,9 +5,11 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
+from pydantic import BaseModel, Field
 
 from openviking.metrics.ragfs_cache import summarize_cache_metrics
 from openviking.server.auth import require_role
@@ -16,6 +18,24 @@ from openviking.server.identity import RequestContext, Role
 from openviking.server.models import Response
 
 router = APIRouter(prefix="/api/v1/console", tags=["console"])
+
+# Bounds one bot report; the bot flushes every few seconds, so real batches are small.
+MAX_BOT_CALLS_PER_REPORT = 1000
+MAX_BOT_CALL_TOKENS = 100_000_000
+
+
+class BotModelCall(BaseModel):
+    """Token usage of one model call made by VikingBot."""
+
+    provider: str = Field(default="", max_length=128)
+    model_name: str = Field(default="", max_length=256)
+    prompt_tokens: int = Field(default=0, ge=0, le=MAX_BOT_CALL_TOKENS)
+    completion_tokens: int = Field(default=0, ge=0, le=MAX_BOT_CALL_TOKENS)
+    occurred_at: Optional[datetime] = None
+
+
+class BotUsageReport(BaseModel):
+    calls: list[BotModelCall] = Field(max_length=MAX_BOT_CALLS_PER_REPORT)
 
 
 def _split_multi(values: Optional[list[str]]) -> list[str]:
@@ -112,6 +132,20 @@ async def token_rate_series(
     if service is None:
         return _disabled_response()
     return _ok_response(await service.token_rate_series(ctx=_ctx, window=window))
+
+
+@router.post("/usage/bot")
+async def report_bot_usage(
+    request: Request,
+    body: BotUsageReport,
+    _ctx: RequestContext = require_role(Role.ROOT, Role.ADMIN, Role.USER),
+):
+    """Record VikingBot model-call token usage for the authenticated user."""
+    service = _runtime_service(request)
+    if service is None:
+        return _disabled_response()
+    calls = [call.model_dump() for call in body.calls]
+    return _ok_response({"accepted": service.record_bot_calls(_ctx, calls)})
 
 
 @router.get("/context-commits")

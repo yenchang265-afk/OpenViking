@@ -35,6 +35,16 @@ const SERIES = [
     color: TOKEN_COLORS.embedding,
     label: 'todayTokens.embeddingInput',
   },
+  {
+    key: 'bot_input',
+    color: TOKEN_COLORS.botInput,
+    label: 'todayTokens.botInput',
+  },
+  {
+    key: 'bot_output',
+    color: TOKEN_COLORS.botOutput,
+    label: 'todayTokens.botOutput',
+  },
   { key: 'rerank', color: TOKEN_COLORS.rerank, label: 'tpmTrend.rerank' },
 ] as const
 

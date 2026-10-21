@@ -108,6 +108,7 @@ store backend，而不是讓多個例項各寫各的本地 SQLite。
 | `vlm.call` | `prompt_tokens` 計入 `vlm_input`，`completion_tokens` 計入 `vlm_output` |
 | `embedding.call` | `prompt_tokens` 計入 `embedding_input` |
 | `rerank.call` | 已可落庫，當前 Console summary/series 暫不展示 |
+| `bot.call` | VikingBot（聊天與 Compile）的模型呼叫；Bot 以獨立程序執行，經 `POST /api/v1/console/usage/bot` 以請求使用者身分回報。`prompt_tokens` 計入 `bot_input`，`completion_tokens` 計入 `bot_output` |
 
 ### 今日檢索
 

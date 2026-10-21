@@ -93,6 +93,10 @@ class FakeConsoleService:
         self.audit_call = kwargs
         return {"total": 0, "success_rate": 0.0, "page": 2, "page_size": 20, "items": []}
 
+    def record_bot_calls(self, ctx, calls):
+        self.bot_calls = {"ctx": ctx, "calls": calls}
+        return len(calls)
+
 
 class FakeRuntime:
     def __init__(self, api_service) -> None:
@@ -353,3 +357,46 @@ async def test_console_cache_reports_disabled_without_ragfs_client(monkeypatch):
 
     assert response.status_code == 200
     assert response.json()["result"]["enabled"] is False
+
+
+@pytest.mark.asyncio
+async def test_console_router_records_bot_usage_for_the_caller():
+    service = FakeConsoleService()
+    app = _app_with_runtime(FakeRuntime(service), request_context=_user_ctx)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post(
+            "/api/v1/console/usage/bot",
+            json={
+                "calls": [
+                    {
+                        "provider": "openai",
+                        "model_name": "m",
+                        "prompt_tokens": 12,
+                        "completion_tokens": 3,
+                        "occurred_at": "2026-05-12T10:15:00Z",
+                    }
+                ]
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.json()["result"] == {"accepted": 1}
+    assert service.bot_calls["ctx"].user.user_id == "user-1"
+    [call] = service.bot_calls["calls"]
+    assert call["prompt_tokens"] == 12
+    assert call["completion_tokens"] == 3
+    assert call["occurred_at"].isoformat() == "2026-05-12T10:15:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_console_router_rejects_negative_bot_tokens():
+    service = FakeConsoleService()
+    transport = httpx.ASGITransport(app=_app_with_runtime(FakeRuntime(service)))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post(
+            "/api/v1/console/usage/bot",
+            json={"calls": [{"prompt_tokens": -1}]},
+        )
+
+    assert response.status_code == 422

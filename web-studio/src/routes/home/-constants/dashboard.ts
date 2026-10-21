@@ -2,6 +2,8 @@ export const TOKEN_SERIES_DAYS = 14
 export const COMMIT_SERIES_DAYS = 365
 
 export const TOKEN_COLORS = {
+  botInput: 'var(--home-token-bot-input)',
+  botOutput: 'var(--home-token-bot-output)',
   embedding: 'var(--home-token-embedding)',
   input: 'var(--home-token-input)',
   output: 'var(--home-token-output)',

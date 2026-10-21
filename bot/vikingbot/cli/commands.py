@@ -78,6 +78,7 @@ from vikingbot.cron.service import CronService  # noqa: E402
 from vikingbot.cron.types import CronJob  # noqa: E402
 from vikingbot.heartbeat.service import HeartbeatService  # noqa: E402
 from vikingbot.integrations.langfuse import LangfuseClient  # noqa: E402
+from vikingbot.observability import bot_usage  # noqa: E402
 from vikingbot.observability.feedback_stats import (  # noqa: E402
     compute_feedback_stats,
     format_feedback_stats_table,
@@ -696,6 +697,8 @@ def prepare_agent_loop(config, bus, session_manager, cron, quiet: bool = False, 
             logger.warning("Langfuse: configured but failed to initialize")
 
     provider = _make_provider(config, langfuse_client)
+    # Report model-call tokens to the Business Data Platform usage dashboard.
+    bot_usage.configure(config.ov_server)
     # Create agent with cron service
     agent = AgentLoop(
         bus=bus,

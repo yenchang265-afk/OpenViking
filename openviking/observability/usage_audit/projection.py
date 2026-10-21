@@ -129,6 +129,25 @@ def project_events(
             )
             continue
 
+        if event.event_name == "bot.call":
+            # Model calls made by VikingBot (chat and Compile), reported to the server
+            # by the bot process because they never pass through this event bus.
+            _add_token_rows(
+                token_rows,
+                token_minute_rows,
+                account_id=account_id,
+                user_id=user_id,
+                event_date=event_date,
+                event_hour=event_hour,
+                event_minute=event_minute,
+                source="bot",
+                provider=payload.get("provider"),
+                model_name=payload.get("model_name"),
+                input_tokens=payload.get("prompt_tokens"),
+                output_tokens=payload.get("completion_tokens"),
+            )
+            continue
+
         if event.event_name == "rerank.call":
             _add_token_rows(
                 token_rows,
