@@ -5,10 +5,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import secrets
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
 from openviking.metrics.ragfs_cache import summarize_cache_metrics
@@ -16,6 +18,7 @@ from openviking.server.auth import require_role
 from openviking.server.dependencies import get_service_or_none
 from openviking.server.identity import RequestContext, Role
 from openviking.server.models import Response
+from openviking.server.routers import bot
 
 router = APIRouter(prefix="/api/v1/console", tags=["console"])
 
@@ -138,9 +141,17 @@ async def token_rate_series(
 async def report_bot_usage(
     request: Request,
     body: BotUsageReport,
+    x_gateway_token: str = Header(default=""),
     _ctx: RequestContext = require_role(Role.ROOT, Role.ADMIN, Role.USER),
 ):
-    """Record VikingBot model-call token usage for the authenticated user."""
+    """Record VikingBot model-call token usage for the authenticated user.
+
+    Only the Bot gateway this server manages (``--with-bot``) may report, proven by
+    the gateway token it shares with this server; user keys alone cannot add usage.
+    """
+    token = os.environ.get("OPENVIKING_BOT_STUDIO_TOKEN") or bot.BOT_API_KEY
+    if not (token and secrets.compare_digest(token.encode(), x_gateway_token.encode())):
+        raise HTTPException(403, "Bot usage reports require the managed Bot gateway token")
     service = _runtime_service(request)
     if service is None:
         return _disabled_response()

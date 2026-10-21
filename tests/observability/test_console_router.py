@@ -360,13 +360,15 @@ async def test_console_cache_reports_disabled_without_ragfs_client(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_console_router_records_bot_usage_for_the_caller():
+async def test_console_router_records_bot_usage_for_the_caller(monkeypatch):
+    monkeypatch.setenv("OPENVIKING_BOT_STUDIO_TOKEN", "gw-token")
     service = FakeConsoleService()
     app = _app_with_runtime(FakeRuntime(service), request_context=_user_ctx)
     transport = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         response = await client.post(
             "/api/v1/console/usage/bot",
+            headers={"X-Gateway-Token": "gw-token"},
             json={
                 "calls": [
                     {
@@ -400,3 +402,33 @@ async def test_console_router_rejects_negative_bot_tokens():
         )
 
     assert response.status_code == 422
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("managed_token", "sent_token"),
+    [("gw-token", None), ("gw-token", "wrong"), (None, "anything")],
+    ids=["missing-token", "wrong-token", "no-managed-bot"],
+)
+async def test_console_router_rejects_bot_usage_without_the_gateway_token(
+    monkeypatch, managed_token, sent_token
+):
+    from openviking.server.routers import bot
+
+    monkeypatch.setattr(bot, "BOT_API_KEY", "")
+    if managed_token:
+        monkeypatch.setenv("OPENVIKING_BOT_STUDIO_TOKEN", managed_token)
+    else:
+        monkeypatch.delenv("OPENVIKING_BOT_STUDIO_TOKEN", raising=False)
+    service = FakeConsoleService()
+    app = _app_with_runtime(FakeRuntime(service), request_context=_user_ctx)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.post(
+            "/api/v1/console/usage/bot",
+            headers={"X-Gateway-Token": sent_token} if sent_token else {},
+            json={"calls": [{"prompt_tokens": 5}]},
+        )
+
+    assert response.status_code == 403
+    assert not hasattr(service, "bot_calls")

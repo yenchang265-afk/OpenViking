@@ -56,7 +56,7 @@ def server(monkeypatch):
 
 
 async def test_calls_are_reported_as_the_request_user(server):
-    reporter = BotUsageReporter(_ov_server(), flush_interval=3600)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
     connection = {"api_key": "user-key", "account_id": "acct-1", "user_id": "user-1"}
 
     with usage_connection(connection):
@@ -83,7 +83,9 @@ async def test_calls_are_reported_as_the_request_user(server):
 
 
 def test_root_key_fallback_names_the_configured_user_only_in_trusted_mode():
-    trusted = BotUsageReporter(_ov_server(api_key_type="root", effective_auth_mode="trusted"))
+    trusted = BotUsageReporter(
+        _ov_server(api_key_type="root", effective_auth_mode="trusted"), gateway_token="gw"
+    )
 
     assert trusted._headers(None) == {
         "X-API-Key": "bot-key",
@@ -91,19 +93,24 @@ def test_root_key_fallback_names_the_configured_user_only_in_trusted_mode():
         "X-OpenViking-User": "bot-user",
     }
     # Like VikingClient, api_key mode treats the key as a user key.
-    api_key_mode = BotUsageReporter(_ov_server(api_key_type="root"))
+    api_key_mode = BotUsageReporter(_ov_server(api_key_type="root"), gateway_token="gw")
     assert api_key_mode._headers(None) == {"X-API-Key": "bot-key"}
     # Without an effective mode, a root key type means trusted.
-    unset = BotUsageReporter(_ov_server(api_key_type="root", effective_auth_mode=""))
+    unset = BotUsageReporter(
+        _ov_server(api_key_type="root", effective_auth_mode=""), gateway_token="gw"
+    )
     assert "X-OpenViking-User" in unset._headers(None)
-    assert BotUsageReporter(_ov_server(effective_auth_mode="dev"))._headers(None) == {}
-    assert BotUsageReporter(_ov_server(server_url=""))._headers(None) is None
+    assert (
+        BotUsageReporter(_ov_server(effective_auth_mode="dev"), gateway_token="gw")._headers(None)
+        == {}
+    )
+    assert BotUsageReporter(_ov_server(server_url=""), gateway_token="gw")._headers(None) is None
 
 
 async def test_calls_without_tokens_or_server_are_not_queued(server):
-    reporter = BotUsageReporter(_ov_server(), flush_interval=3600)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
     reporter.record(provider="p", model_name="m", usage={"prompt_tokens": 0})
-    BotUsageReporter(_ov_server(server_url="")).record(
+    BotUsageReporter(_ov_server(server_url=""), gateway_token="gw").record(
         provider="p", model_name="m", usage={"prompt_tokens": 1}
     )
     await reporter.flush()
@@ -112,7 +119,7 @@ async def test_calls_without_tokens_or_server_are_not_queued(server):
 
 
 async def test_server_errors_are_retried_and_rejections_dropped(server):
-    reporter = BotUsageReporter(_ov_server(), flush_interval=3600)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
     reporter.record(provider="p", model_name="m", usage={"prompt_tokens": 1})
 
     server.status = 503
@@ -130,7 +137,7 @@ async def test_server_errors_are_retried_and_rejections_dropped(server):
 
 
 async def test_background_flush_sends_queued_calls(server):
-    reporter = BotUsageReporter(_ov_server(), flush_interval=0.01)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=0.01)
 
     reporter.record(provider="p", model_name="m", usage={"completion_tokens": 7})
     for _ in range(100):
@@ -153,7 +160,7 @@ async def test_unconfigured_process_ignores_events_and_closes_cleanly(monkeypatc
 async def test_repeated_failures_warn_once(server, monkeypatch):
     warnings = []
     monkeypatch.setattr(bot_usage.logger, "warning", lambda *args: warnings.append(args))
-    reporter = BotUsageReporter(_ov_server(), flush_interval=3600)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
     server.status = 404
 
     for _ in range(3):
@@ -164,7 +171,7 @@ async def test_repeated_failures_warn_once(server, monkeypatch):
 
 
 async def test_only_unsent_reports_are_retried(server):
-    reporter = BotUsageReporter(_ov_server(), flush_interval=3600)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
 
     reporter.record(provider="p", model_name="m", usage={"prompt_tokens": 1})
     server.status = httpx.ConnectError("refused")
@@ -183,7 +190,7 @@ async def test_only_unsent_reports_are_retried(server):
 
 
 def test_oversized_counts_are_clamped_to_the_server_limit():
-    reporter = BotUsageReporter(_ov_server())
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw")
 
     reporter.record(provider="p", model_name="m", usage={"prompt_tokens": 10**12})
 
@@ -192,7 +199,7 @@ def test_oversized_counts_are_clamped_to_the_server_limit():
 
 
 async def test_aclose_sends_queued_calls(server):
-    reporter = BotUsageReporter(_ov_server(), flush_interval=3600)
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
     reporter.record(provider="p", model_name="m", usage={"prompt_tokens": 3})
 
     await reporter.aclose()
@@ -204,7 +211,7 @@ async def test_aclose_sends_queued_calls(server):
 @pytest.fixture
 def configured(monkeypatch):
     monkeypatch.setattr(bot_usage, "_reporter", None)
-    reporter = bot_usage.configure(_ov_server())
+    reporter = bot_usage.configure(_ov_server(), gateway_token="gw")
     reporter._flush_interval = 3600
     yield reporter
     unregister_event_subscriber("bot_usage")
@@ -259,3 +266,16 @@ async def test_adapter_chat_reaches_the_reporter(configured, monkeypatch):
     assert [(c["provider"], c["model_name"], c["prompt_tokens"]) for c in calls] == [
         ("openai", "gpt-test", 13)
     ]
+
+
+async def test_reports_carry_the_gateway_token_and_need_one(server):
+    reporter = BotUsageReporter(_ov_server(), gateway_token="gw", flush_interval=3600)
+    reporter.record(provider="p", model_name="m", usage={"prompt_tokens": 1})
+    await reporter.flush()
+
+    [request] = server.requests
+    assert request.headers["X-Gateway-Token"] == "gw"
+    # The server only accepts the gateway it manages; without its token nothing is queued.
+    tokenless = BotUsageReporter(_ov_server(), gateway_token="")
+    tokenless.record(provider="p", model_name="m", usage={"prompt_tokens": 1})
+    assert not tokenless._pending

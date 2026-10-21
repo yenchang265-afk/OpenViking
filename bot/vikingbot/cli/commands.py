@@ -698,8 +698,13 @@ def prepare_agent_loop(config, bus, session_manager, cron, quiet: bool = False, 
             logger.warning("Langfuse: configured but failed to initialize")
 
     provider = _make_provider(config, langfuse_client)
-    # Report model-call tokens to the Business Data Platform usage dashboard.
-    bot_usage.configure(config.ov_server)
+    # Report model-call tokens to the Business Data Platform usage dashboard; the server
+    # accepts them only from the gateway it manages, proven by their shared token.
+    bot_usage.configure(
+        config.ov_server,
+        gateway_token=os.environ.get("OPENVIKING_BOT_STUDIO_TOKEN")
+        or str(getattr(getattr(config, "gateway", None), "token", "") or "").strip(),
+    )
     # Create agent with cron service
     agent = AgentLoop(
         bus=bus,

@@ -48,15 +48,16 @@ def usage_connection(connection: Mapping[str, Any] | None) -> Iterator[None]:
         _connection.reset(token)
 
 
-def configure(ov_server: Any) -> BotUsageReporter:
+def configure(ov_server: Any, gateway_token: str) -> BotUsageReporter:
     """Report this process's `vlm.call` events to the configured Business Data Platform.
 
     Every VLM backend publishes `vlm.call` from the instance that answered, so failover
     calls carry the model actually used. Subscribers run in the caller's context, which
-    keeps the request identity of `usage_connection`.
+    keeps the request identity of `usage_connection`. The server accepts reports only
+    from the gateway it manages, so nothing is queued without its gateway token.
     """
     global _reporter
-    _reporter = BotUsageReporter(ov_server)
+    _reporter = BotUsageReporter(ov_server, gateway_token=gateway_token)
     register_event_subscriber("bot_usage", _on_event)
     return _reporter
 
@@ -84,8 +85,15 @@ def _on_event(event: ObservabilityEvent) -> None:
 class BotUsageReporter:
     """Batch calls per identity and send them to the server in the background."""
 
-    def __init__(self, ov_server: Any, *, flush_interval: float = FLUSH_INTERVAL_SECONDS):
+    def __init__(
+        self,
+        ov_server: Any,
+        *,
+        gateway_token: str,
+        flush_interval: float = FLUSH_INTERVAL_SECONDS,
+    ):
         self._ov_server = ov_server
+        self._gateway_token = gateway_token
         self._flush_interval = flush_interval
         self._pending: dict[tuple[tuple[str, str], ...], list[dict[str, Any]]] = {}
         self._task: asyncio.Task[None] | None = None
@@ -117,10 +125,10 @@ class BotUsageReporter:
 
         Calls without a request connection are reported as the bot's configured user; a
         root key names that user only in trusted mode, like VikingClient's root-key mode.
-        Returns None when no server is configured.
+        Returns None when no server or gateway token is configured.
         """
         config = self._ov_server
-        if not str(getattr(config, "server_url", "") or "").strip():
+        if not self._gateway_token or not str(getattr(config, "server_url", "") or "").strip():
             return None
         auth_mode = str(getattr(config, "effective_auth_mode", "") or "").lower()
         if auth_mode not in {"trusted", "api_key", "dev"}:
@@ -182,7 +190,11 @@ class BotUsageReporter:
         async with httpx.AsyncClient(timeout=REPORT_TIMEOUT_SECONDS, trust_env=False) as client:
             for key, calls in pending.items():
                 try:
-                    response = await client.post(url, headers=dict(key), json={"calls": calls})
+                    response = await client.post(
+                        url,
+                        headers={**dict(key), "X-Gateway-Token": self._gateway_token},
+                        json={"calls": calls},
+                    )
                 except _UNSENT_ERRORS as exc:
                     self._retry(key, calls, f"{type(exc).__name__}: {exc}")
                     continue
