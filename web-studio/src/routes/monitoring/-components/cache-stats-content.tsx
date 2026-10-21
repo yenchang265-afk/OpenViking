@@ -8,6 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from '#/components/ui/table'
+import { formatNumber } from '#/i18n/format'
 import { formatBytes, formatHitRate } from '#/lib/cache-stats'
 import type { CacheLookupStats, CacheStats } from '#/lib/cache-stats'
 
@@ -41,10 +42,10 @@ function LookupCells({ stats }: { stats: CacheLookupStats }) {
         <HitRateBar rate={stats.hitRate} />
       </TableCell>
       <TableCell className="text-right font-mono text-xs">
-        {stats.hits.toLocaleString()}
+        {formatNumber(stats.hits)}
       </TableCell>
       <TableCell className="text-right font-mono text-xs">
-        {stats.misses.toLocaleString()}
+        {formatNumber(stats.misses)}
       </TableCell>
     </>
   )
@@ -67,10 +68,7 @@ export function CacheStatsContent({ stats }: { stats: CacheStats }) {
     <div className="grid gap-5">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Stat label={t('cache.overall')} value={formatHitRate(stats.hitRate)} />
-        <Stat
-          label={t('cache.lookups')}
-          value={stats.lookups.toLocaleString()}
-        />
+        <Stat label={t('cache.lookups')} value={formatNumber(stats.lookups)} />
         <Stat
           label={t('cache.bytesFromCache')}
           value={formatBytes(stats.bytesFromCache)}
@@ -123,7 +121,7 @@ export function CacheStatsContent({ stats }: { stats: CacheStats }) {
                     </TableCell>
                     <LookupCells stats={operation} />
                     <TableCell className="text-right font-mono text-xs">
-                      {operation.bypasses.toLocaleString()}
+                      {formatNumber(operation.bypasses)}
                     </TableCell>
                   </TableRow>
                 ))
@@ -167,10 +165,10 @@ export function CacheStatsContent({ stats }: { stats: CacheStats }) {
 
       <div className="flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
         <span>
-          {t('cache.backendSaved')}: {stats.backendSaved.toLocaleString()}
+          {t('cache.backendSaved')}: {formatNumber(stats.backendSaved)}
         </span>
         <span>
-          {t('cache.errors')}: {stats.errors.toLocaleString()}
+          {t('cache.errors')}: {formatNumber(stats.errors)}
         </span>
       </div>
       <p className="text-xs text-muted-foreground">{t('cache.sinceStart')}</p>
