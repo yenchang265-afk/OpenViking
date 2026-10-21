@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from dataclasses import dataclass
 from typing import Literal
 
@@ -96,14 +97,32 @@ DEFAULT_PLAN = (
 )
 
 
+def decode_object(value):
+    """Read a JSON-encoded object, as some providers emit for nested arguments; keep other values."""
+    if isinstance(value, str) and value.strip().startswith("{"):
+        try:
+            decoded = json.loads(value)
+        except ValueError:
+            return value
+        if isinstance(decoded, dict):
+            return decoded
+    return value
+
+
 class PlanModel(BaseModel):
     """Discard undeclared planner fields while validating declared fields and constraints.
 
     Open dictionaries such as transform fields and scope definitions retain their
     entries; only unknown model attributes are omitted from the parsed plan.
+    Objects supplied as JSON strings are decoded before validation.
     """
 
     model_config = ConfigDict(extra="ignore")
+
+    @model_validator(mode="before")
+    @classmethod
+    def decode_json_object(cls, value):
+        return decode_object(value)
 
 
 class Transform(PlanModel):
@@ -139,6 +158,7 @@ class Transform(PlanModel):
     @classmethod
     def field_descriptions(cls, value):
         """Preserve field order, treating name-only lists and null descriptions as undescribed."""
+        value = decode_object(value)
         if isinstance(value, list) and all(isinstance(name, str) for name in value):
             return dict.fromkeys(value, "")
         if isinstance(value, dict):
@@ -224,15 +244,23 @@ class Contract(PlanModel):
     @classmethod
     def scope_descriptions(cls, value):
         """Read saved name lists as fields without descriptions; mappings retain their meanings."""
+        value = decode_object(value)
         return dict.fromkeys(value, "") if isinstance(value, list) else value
 
     @model_validator(mode="before")
     @classmethod
     def apply_transform_defaults(cls, value):
-        """Default Reduce output to files while preserving explicit output choices."""
+        """Default Reduce output to files while preserving explicit output choices.
+
+        JSON-encoded routing objects are decoded here so they are not kept as plain instructions.
+        """
+        value = decode_object(value)
         if not isinstance(value, dict):
             return value
         value = dict(value)
+        for name in ("reduce", "routing", "final_routing"):
+            if name in value:
+                value[name] = decode_object(value[name])
         if isinstance(value.get("reduce"), dict):
             value["reduce"] = {"output": "files", **value["reduce"]}
         return value
