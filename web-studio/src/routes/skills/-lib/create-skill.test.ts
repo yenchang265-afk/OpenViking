@@ -1,13 +1,21 @@
 import { parse as parseYaml } from 'yaml'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { splitMarkdownFrontmatter } from '#/lib/markdown-frontmatter'
+import { ovClient } from '#/lib/ov-client'
 
 import {
   buildSkillMarkdown,
+  createSkill,
   validateSkillDescription,
   validateSkillName,
 } from './create-skill'
+
+vi.mock('#/lib/ov-client', () => ({
+  ovClient: { client: { post: vi.fn() } },
+  getOvResult: async (request: Promise<{ data: { result: unknown } }>) =>
+    (await request).data.result,
+}))
 
 describe('validateSkillName', () => {
   it('accepts names the server accepts', () => {
@@ -55,5 +63,23 @@ describe('buildSkillMarkdown', () => {
     expect(
       buildSkillMarkdown({ body: '  ', description: 'd', name: 'n' }),
     ).toBe('---\nname: n\ndescription: d\n---\n')
+  })
+})
+
+describe('createSkill', () => {
+  it('installs the built SKILL.md through the server add-skill route', async () => {
+    vi.mocked(ovClient.client.post).mockResolvedValue({
+      data: { result: { status: 'success' } },
+    } as never)
+
+    await createSkill({ body: '', description: 'd', name: 'n', scope: 'agent' })
+
+    expect(ovClient.client.post).toHaveBeenCalledWith({
+      body: {
+        data: '---\nname: n\ndescription: d\n---\n',
+        target_uri: 'viking://agent/skills',
+      },
+      url: '/api/v1/skills',
+    })
   })
 })

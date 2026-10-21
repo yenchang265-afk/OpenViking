@@ -62,7 +62,7 @@ export async function createSkill(draft: SkillDraft): Promise<unknown> {
         data: buildSkillMarkdown(draft),
         target_uri: SKILL_TARGET_URIS[draft.scope],
       },
-      url: '/api/v1/resources/skills',
+      url: '/api/v1/skills',
     }),
   )
 }
