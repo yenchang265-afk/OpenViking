@@ -1,6 +1,5 @@
-import * as React from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
   ActivityIcon,
   CheckCircle2Icon,
@@ -13,6 +12,7 @@ import {
   LockKeyholeIcon,
   RefreshCwIcon,
   SearchIcon,
+  ZapIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -22,13 +22,26 @@ import { Button } from '#/components/ui/button'
 
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
 import { useAppConnection } from '#/hooks/use-app-connection'
+import {
+  CACHE_STATS_REFETCH_MS,
+  fetchCacheStats,
+  normalizeCacheStats,
+} from '#/lib/cache-stats'
 import { getHealth, getObserverSystem, getOvResult } from '#/lib/ov-client'
 import { cn } from '#/lib/utils'
+import { CacheStatsContent } from './-components/cache-stats-content'
 import { ObserverStatusContent } from './-components/observer-status-content'
 import { stripVersionPrefix } from './-lib/version'
 
+type MonitoringSearch = {
+  tab?: string
+}
+
 export const Route = createFileRoute('/monitoring')({
   component: MonitoringRoute,
+  validateSearch: (search: Record<string, unknown>): MonitoringSearch => ({
+    tab: typeof search.tab === 'string' ? search.tab : undefined,
+  }),
 })
 
 type ObserverComponent = {
@@ -56,6 +69,16 @@ const MONITOR_TYPES = [
 ] as const
 
 type MonitorType = (typeof MONITOR_TYPES)[number][0]
+
+/** CacheFS stats come from metrics, not an observer component, so the tab has no health. */
+const CACHE_TAB = 'cache'
+
+type MonitorTab = MonitorType | typeof CACHE_TAB
+
+function parseMonitorTab(value: string | undefined): MonitorTab {
+  if (value === CACHE_TAB) return CACHE_TAB
+  return MONITOR_TYPES.find(([name]) => name === value)?.[0] ?? 'overview'
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -138,7 +161,13 @@ function HealthBadge({
 function MonitoringRoute() {
   const { i18n, t } = useTranslation('monitoringPage')
   const { identityScopeKey, serverMode } = useAppConnection()
-  const [activeType, setActiveType] = React.useState<MonitorType>('overview')
+  const navigate = useNavigate({ from: '/monitoring' })
+  const activeType = parseMonitorTab(Route.useSearch().tab)
+  const setActiveType = (tab: MonitorTab) =>
+    void navigate({
+      replace: true,
+      search: { tab: tab === 'overview' ? undefined : tab },
+    })
   const monitoringQuery = useQuery({
     enabled: serverMode !== 'offline',
     queryFn: fetchMonitoringOverview,
@@ -147,11 +176,27 @@ function MonitoringRoute() {
     retry: false,
     staleTime: 5_000,
   })
+  const cacheQuery = useQuery({
+    enabled: serverMode !== 'offline',
+    queryFn: fetchCacheStats,
+    queryKey: ['console-cache-stats', identityScopeKey],
+    refetchInterval: CACHE_STATS_REFETCH_MS,
+    retry: false,
+    select: normalizeCacheStats,
+  })
+  // Show the tab only with CacheFS on, unless a link asked for it directly.
+  const showCacheTab =
+    cacheQuery.data?.enabled === true || activeType === CACHE_TAB
   const overview = monitoringQuery.data
   const selectedComponent =
-    activeType === 'overview' ? undefined : overview?.components[activeType]
+    activeType === 'overview' || activeType === CACHE_TAB
+      ? undefined
+      : overview?.components[activeType]
   const SelectedMonitorIcon =
-    MONITOR_TYPES.find(([name]) => name === activeType)?.[1] ?? ActivityIcon
+    activeType === CACHE_TAB
+      ? ZapIcon
+      : (MONITOR_TYPES.find(([name]) => name === activeType)?.[1] ??
+        ActivityIcon)
   const healthyCount = Object.values(overview?.components ?? {}).filter(
     (component) => component.is_healthy && !component.has_errors,
   ).length
@@ -325,6 +370,24 @@ function MonitoringRoute() {
                 {t(`tabs.${name}`)}
               </button>
             ))}
+            {showCacheTab ? (
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeType === CACHE_TAB}
+                className={cn(
+                  'flex h-9 shrink-0 items-center gap-2 rounded-lg px-3 text-sm text-muted-foreground transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  activeType === CACHE_TAB
+                    ? 'bg-background font-medium text-foreground shadow-xs'
+                    : 'hover:bg-background/60 hover:text-foreground',
+                )}
+                onClick={() => setActiveType(CACHE_TAB)}
+              >
+                <ZapIcon className="size-4" />
+                {t(`tabs.${CACHE_TAB}`)}
+              </button>
+            ) : null}
           </div>
 
           {activeType === 'overview' ? (
@@ -381,28 +444,48 @@ function MonitoringRoute() {
                       </p>
                     </div>
                   </div>
-                  <HealthBadge
-                    healthy={
-                      selectedComponent
-                        ? selectedComponent.is_healthy &&
-                          !selectedComponent.has_errors
-                        : undefined
-                    }
-                    label={
-                      !selectedComponent
-                        ? t('health.unknown')
-                        : selectedComponent.is_healthy &&
+                  {activeType === CACHE_TAB ? null : (
+                    <HealthBadge
+                      healthy={
+                        selectedComponent
+                          ? selectedComponent.is_healthy &&
                             !selectedComponent.has_errors
-                          ? t('health.healthy')
-                          : t('health.unhealthy')
-                    }
-                  />
+                          : undefined
+                      }
+                      label={
+                        !selectedComponent
+                          ? t('health.unknown')
+                          : selectedComponent.is_healthy &&
+                              !selectedComponent.has_errors
+                            ? t('health.healthy')
+                            : t('health.unhealthy')
+                      }
+                    />
+                  )}
                 </div>
               </CardHeader>
               <CardContent className="px-5 py-5">
-                <ObserverStatusContent
-                  status={selectedComponent?.status ?? ''}
-                />
+                {activeType !== CACHE_TAB ? (
+                  <ObserverStatusContent
+                    status={selectedComponent?.status ?? ''}
+                  />
+                ) : cacheQuery.isError ? (
+                  <Alert variant="destructive">
+                    <CircleAlertIcon />
+                    <AlertTitle>{t('cache.loadFailed')}</AlertTitle>
+                    <AlertDescription>
+                      {cacheQuery.error instanceof Error
+                        ? cacheQuery.error.message
+                        : String(cacheQuery.error)}
+                    </AlertDescription>
+                  </Alert>
+                ) : cacheQuery.data ? (
+                  <CacheStatsContent stats={cacheQuery.data} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {t('loading')}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}

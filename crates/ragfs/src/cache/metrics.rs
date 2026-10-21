@@ -3,6 +3,71 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Duration;
 
+/// Filesystem operation that consulted the cache.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CacheOperation {
+    /// Full-file `read`.
+    Read,
+    /// Direct `read_dir` (`ls`).
+    ReadDir,
+    /// Directory reads issued by cached `tree` traversal.
+    Tree,
+    /// File and directory reads issued by cached `grep` traversal.
+    Grep,
+}
+
+impl CacheOperation {
+    /// Number of operations tracked per wrapper.
+    pub const COUNT: usize = 4;
+
+    /// Every operation in a stable export order.
+    pub const fn all() -> [Self; Self::COUNT] {
+        [Self::Read, Self::ReadDir, Self::Tree, Self::Grep]
+    }
+
+    /// Stable metric label value.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Read => "read",
+            Self::ReadDir => "read_dir",
+            Self::Tree => "tree",
+            Self::Grep => "grep",
+        }
+    }
+
+    const fn index(self) -> usize {
+        self as usize
+    }
+}
+
+/// Snapshot of cache lookups made on behalf of one operation.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct CacheOperationSnapshot {
+    /// Lookups served from cache.
+    pub hits: u64,
+    /// Lookups that fell through to the backend.
+    pub misses: u64,
+    /// Reads that skipped the cache by policy, range semantics, or runtime bypass.
+    pub bypasses: u64,
+}
+
+#[derive(Default)]
+struct CacheOperationCounters {
+    hits: AtomicU64,
+    misses: AtomicU64,
+    bypasses: AtomicU64,
+}
+
+impl CacheOperationCounters {
+    fn snapshot(&self) -> CacheOperationSnapshot {
+        CacheOperationSnapshot {
+            hits: self.hits.load(Ordering::Relaxed),
+            misses: self.misses.load(Ordering::Relaxed),
+            bypasses: self.bypasses.load(Ordering::Relaxed),
+        }
+    }
+}
+
 /// Snapshot of cache wrapper counters.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct CacheMetricsSnapshot {
@@ -42,6 +107,15 @@ pub struct CacheMetricsSnapshot {
     pub inflight_followers: u64,
     /// Backend reads avoided by inflight followers.
     pub inflight_backend_saved: u64,
+    /// Hit, miss, and bypass counts indexed in `CacheOperation::all()` order.
+    pub operations: [CacheOperationSnapshot; CacheOperation::COUNT],
+}
+
+impl CacheMetricsSnapshot {
+    /// Return the counts recorded for one operation.
+    pub fn operation(&self, operation: CacheOperation) -> CacheOperationSnapshot {
+        self.operations[operation.index()]
+    }
 }
 
 /// Thread-safe cache metric counters.
@@ -65,6 +139,7 @@ pub struct CacheMetrics {
     inflight_leaders: AtomicU64,
     inflight_followers: AtomicU64,
     inflight_backend_saved: AtomicU64,
+    operations: [CacheOperationCounters; CacheOperation::COUNT],
 }
 
 impl CacheMetrics {
@@ -89,24 +164,41 @@ impl CacheMetrics {
             inflight_leaders: self.inflight_leaders.load(Ordering::Relaxed),
             inflight_followers: self.inflight_followers.load(Ordering::Relaxed),
             inflight_backend_saved: self.inflight_backend_saved.load(Ordering::Relaxed),
+            operations: std::array::from_fn(|index| self.operations[index].snapshot()),
         }
     }
 
-    pub(crate) fn file_hit(&self, bytes: usize) {
+    fn operation(&self, operation: CacheOperation) -> &CacheOperationCounters {
+        &self.operations[operation.index()]
+    }
+
+    pub(crate) fn file_hit(&self, operation: CacheOperation, bytes: usize) {
         self.file_hits.fetch_add(1, Ordering::Relaxed);
         self.cache_bytes.fetch_add(bytes as u64, Ordering::Relaxed);
+        self.operation(operation)
+            .hits
+            .fetch_add(1, Ordering::Relaxed);
     }
 
-    pub(crate) fn file_miss(&self) {
+    pub(crate) fn file_miss(&self, operation: CacheOperation) {
         self.file_misses.fetch_add(1, Ordering::Relaxed);
+        self.operation(operation)
+            .misses
+            .fetch_add(1, Ordering::Relaxed);
     }
 
-    pub(crate) fn read_dir_hit(&self) {
+    pub(crate) fn read_dir_hit(&self, operation: CacheOperation) {
         self.read_dir_hits.fetch_add(1, Ordering::Relaxed);
+        self.operation(operation)
+            .hits
+            .fetch_add(1, Ordering::Relaxed);
     }
 
-    pub(crate) fn read_dir_miss(&self) {
+    pub(crate) fn read_dir_miss(&self, operation: CacheOperation) {
         self.read_dir_misses.fetch_add(1, Ordering::Relaxed);
+        self.operation(operation)
+            .misses
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     pub(crate) fn backend_fallback(&self, bytes: usize) {
@@ -146,8 +238,11 @@ impl CacheMetrics {
         self.errors.fetch_add(1, Ordering::Relaxed);
     }
 
-    pub(crate) fn policy_bypass(&self) {
+    pub(crate) fn policy_bypass(&self, operation: CacheOperation) {
         self.policy_bypasses.fetch_add(1, Ordering::Relaxed);
+        self.operation(operation)
+            .bypasses
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     pub(crate) fn inflight_leader(&self) {

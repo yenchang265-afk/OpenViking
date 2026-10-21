@@ -316,6 +316,8 @@ RAGFS 會自動繞過不適合快取的路徑：
 - inflight leader / follower / backend saved
 - backend fallback 位元組數
 
+啟用 CacheFS 後，OpenViking Studio 會在首頁儀表板顯示整體快取命中率，並在「監控 → 快取」中依操作（`read`、`read_dir`、`tree`、`grep`）顯示明細。兩者都讀取 `GET /api/v1/console/cache`，統計自伺服器啟動以來的計數。命中率為 `hits / (hits + misses)`，因策略而略過的讀取另行統計。同樣的計數也以 `openviking_ragfs_cache_requests_total` 和 `openviking_ragfs_cache_operation_requests_total` 指標匯出。
+
 ## 推薦使用順序
 
 1. 關閉快取驗證 backend 基線行為。

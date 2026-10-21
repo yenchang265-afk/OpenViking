@@ -1,7 +1,7 @@
 //! A transparent [`FileSystem`](crate::FileSystem) cache wrapper.
 
 use super::envelope::{CacheEnvelope, CacheObjectKind, GenerationSnapshot};
-use super::{CacheMetrics, CachePolicy, CacheTraversalMode};
+use super::{CacheMetrics, CacheOperation, CachePolicy, CacheTraversalMode};
 use crate::cache_runtime::{CacheError, CacheResult, CacheRuntime, SetOptions, SetResult};
 use crate::core::filesystem::{
     apply_read_dir_options, compile_grep_regex, is_excluded_path, normalize_prefix_path,
@@ -138,7 +138,14 @@ impl CachedFileSystem {
                     }
 
                     let entries = self
-                        .read_dir(&current_path, None, None, sort_by, sort_order)
+                        .read_dir_for(
+                            CacheOperation::Tree,
+                            &current_path,
+                            None,
+                            None,
+                            sort_by,
+                            sort_order,
+                        )
                         .await?;
                     for entry in entries.into_iter().rev() {
                         let is_hidden_file = !entry.is_dir && entry.name.starts_with('.');
@@ -250,7 +257,11 @@ impl CachedFileSystem {
                 }
 
                 let entries = self
-                    .read_dir_with_generation_cache(&current_path, &generation_cache)
+                    .read_dir_with_generation_cache(
+                        CacheOperation::Grep,
+                        &current_path,
+                        &generation_cache,
+                    )
                     .await?;
                 for entry in entries.into_iter().rev() {
                     let entry_path = if current_path == "/" {
@@ -369,7 +380,7 @@ impl CachedFileSystem {
         generation_cache: &Mutex<HashMap<String, u64>>,
     ) -> Result<Vec<GrepMatch>> {
         let content = self
-            .read_with_generation_cache(path, 0, 0, generation_cache)
+            .read_with_generation_cache(CacheOperation::Grep, path, 0, 0, generation_cache)
             .await?;
         let content_str = String::from_utf8_lossy(&content);
         let rel_file = relative_match_file(base_path, path);
@@ -656,7 +667,13 @@ impl CachedFileSystem {
         }
     }
 
-    async fn probe_file(&self, key: &str, path: &str, record_hit: bool) -> Option<Vec<u8>> {
+    /// Return a validated cached file, recording a hit for `record_hit` when set.
+    async fn probe_file(
+        &self,
+        key: &str,
+        path: &str,
+        record_hit: Option<CacheOperation>,
+    ) -> Option<Vec<u8>> {
         self.probe_file_with_generation_cache(key, path, record_hit, None)
             .await
     }
@@ -665,7 +682,7 @@ impl CachedFileSystem {
         &self,
         key: &str,
         path: &str,
-        record_hit: bool,
+        record_hit: Option<CacheOperation>,
         generation_cache: Option<&Mutex<HashMap<String, u64>>>,
     ) -> Option<Vec<u8>> {
         let value = match self.cache_get(key).await {
@@ -692,8 +709,8 @@ impl CachedFileSystem {
         {
             Ok(true) => match envelope.into_file() {
                 Ok(data) => {
-                    if record_hit {
-                        self.metrics.file_hit(data.len());
+                    if let Some(operation) = record_hit {
+                        self.metrics.file_hit(operation, data.len());
                     }
                     Some(data)
                 }
@@ -715,11 +732,12 @@ impl CachedFileSystem {
         }
     }
 
+    /// Return validated cached entries, recording a hit for `record_hit` when set.
     async fn probe_directory(
         &self,
         key: &str,
         path: &str,
-        record_hit: bool,
+        record_hit: Option<CacheOperation>,
     ) -> Option<Vec<FileInfo>> {
         self.probe_directory_with_generation_cache(key, path, record_hit, None)
             .await
@@ -729,7 +747,7 @@ impl CachedFileSystem {
         &self,
         key: &str,
         path: &str,
-        record_hit: bool,
+        record_hit: Option<CacheOperation>,
         generation_cache: Option<&Mutex<HashMap<String, u64>>>,
     ) -> Option<Vec<FileInfo>> {
         let value = match self.cache_get(key).await {
@@ -760,8 +778,8 @@ impl CachedFileSystem {
                         self.cache_delete(key, path).await;
                         return None;
                     }
-                    if record_hit {
-                        self.metrics.read_dir_hit();
+                    if let Some(operation) = record_hit {
+                        self.metrics.read_dir_hit(operation);
                     }
                     Some(entries)
                 }
@@ -806,6 +824,7 @@ impl CachedFileSystem {
 
     async fn read_with_generation_cache(
         &self,
+        operation: CacheOperation,
         path: &str,
         offset: u64,
         size: u64,
@@ -816,25 +835,30 @@ impl CachedFileSystem {
             || !self.policy.cache_file(path, 0)
             || self.is_runtime_bypassed(path).await
         {
-            self.metrics.policy_bypass();
+            self.metrics.policy_bypass(operation);
             return self.backend.read(path, offset, size).await;
         }
 
         let _operation_guard = self.operation_lock.read().await;
         if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass();
+            self.metrics.policy_bypass(operation);
             return self.backend.read(path, offset, size).await;
         }
 
         let normalized = normalize_path(path);
         let key = self.file_key(&normalized);
         if let Some(data) = self
-            .probe_file_with_generation_cache(&key, &normalized, true, Some(generation_cache))
+            .probe_file_with_generation_cache(
+                &key,
+                &normalized,
+                Some(operation),
+                Some(generation_cache),
+            )
             .await
         {
             return Ok(data);
         }
-        self.metrics.file_miss();
+        self.metrics.file_miss(operation);
 
         let (inflight, leader) = self.acquire_inflight(&key).await;
         if leader {
@@ -846,7 +870,7 @@ impl CachedFileSystem {
 
         if !leader {
             if let Some(data) = self
-                .probe_file_with_generation_cache(&key, &normalized, false, Some(generation_cache))
+                .probe_file_with_generation_cache(&key, &normalized, None, Some(generation_cache))
                 .await
             {
                 self.metrics.inflight_backend_saved();
@@ -868,29 +892,35 @@ impl CachedFileSystem {
 
     async fn read_dir_with_generation_cache(
         &self,
+        operation: CacheOperation,
         path: &str,
         generation_cache: &Mutex<HashMap<String, u64>>,
     ) -> Result<Vec<FileInfo>> {
         if !self.policy.cache_directory(path) || self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass();
+            self.metrics.policy_bypass(operation);
             return self.backend.read_dir(path, None, None, None, None).await;
         }
 
         let _operation_guard = self.operation_lock.read().await;
         if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass();
+            self.metrics.policy_bypass(operation);
             return self.backend.read_dir(path, None, None, None, None).await;
         }
 
         let normalized = normalize_path(path);
         let key = self.directory_key(&normalized);
         if let Some(entries) = self
-            .probe_directory_with_generation_cache(&key, &normalized, true, Some(generation_cache))
+            .probe_directory_with_generation_cache(
+                &key,
+                &normalized,
+                Some(operation),
+                Some(generation_cache),
+            )
             .await
         {
             return Ok(entries);
         }
-        self.metrics.read_dir_miss();
+        self.metrics.read_dir_miss(operation);
 
         let (inflight, leader) = self.acquire_inflight(&key).await;
         if leader {
@@ -905,7 +935,7 @@ impl CachedFileSystem {
                 .probe_directory_with_generation_cache(
                     &key,
                     &normalized,
-                    false,
+                    None,
                     Some(generation_cache),
                 )
                 .await
@@ -925,6 +955,74 @@ impl CachedFileSystem {
         drop(inflight_guard);
         self.release_inflight(&key, &inflight).await;
         entries
+    }
+
+    /// Read a directory through the cache, attributing lookups to `operation`.
+    async fn read_dir_for(
+        &self,
+        operation: CacheOperation,
+        path: &str,
+        offset: Option<usize>,
+        limit: Option<usize>,
+        sort_by: Option<ListSortBy>,
+        sort_order: Option<SortOrder>,
+    ) -> Result<Vec<FileInfo>> {
+        if !self.policy.cache_directory(path) || self.is_runtime_bypassed(path).await {
+            self.metrics.policy_bypass(operation);
+            return self
+                .backend
+                .read_dir(path, offset, limit, sort_by, sort_order)
+                .await;
+        }
+
+        let _operation_guard = self.operation_lock.read().await;
+        if self.is_runtime_bypassed(path).await {
+            self.metrics.policy_bypass(operation);
+            return self
+                .backend
+                .read_dir(path, offset, limit, sort_by, sort_order)
+                .await;
+        }
+
+        let normalized = normalize_path(path);
+        let key = self.directory_key(&normalized);
+        if let Some(entries) = self
+            .probe_directory(&key, &normalized, Some(operation))
+            .await
+        {
+            return Ok(apply_read_dir_options(
+                entries, offset, limit, sort_by, sort_order,
+            ));
+        }
+        self.metrics.read_dir_miss(operation);
+
+        let (inflight, leader) = self.acquire_inflight(&key).await;
+        if leader {
+            self.metrics.inflight_leader();
+        } else {
+            self.metrics.inflight_follower();
+        }
+        let inflight_guard = inflight.lock().await;
+
+        if !leader {
+            if let Some(entries) = self.probe_directory(&key, &normalized, None).await {
+                self.metrics.inflight_backend_saved();
+                drop(inflight_guard);
+                self.release_inflight(&key, &inflight).await;
+                return Ok(apply_read_dir_options(
+                    entries, offset, limit, sort_by, sort_order,
+                ));
+            }
+        }
+
+        let entries = self.backend.read_dir(path, None, None, None, None).await;
+        if let Ok(value) = &entries {
+            self.metrics.backend_fallback(0);
+            self.fill_directory(&key, &normalized, value).await;
+        }
+        drop(inflight_guard);
+        self.release_inflight(&key, &inflight).await;
+        entries.map(|entries| apply_read_dir_options(entries, offset, limit, sort_by, sort_order))
     }
 
     async fn fill_file(&self, key: &str, path: &str, data: &[u8]) {
@@ -1045,22 +1143,25 @@ impl FileSystem for CachedFileSystem {
             || !self.policy.cache_file(path, 0)
             || self.is_runtime_bypassed(path).await
         {
-            self.metrics.policy_bypass();
+            self.metrics.policy_bypass(CacheOperation::Read);
             return self.backend.read(path, offset, size).await;
         }
 
         let _operation_guard = self.operation_lock.read().await;
         if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass();
+            self.metrics.policy_bypass(CacheOperation::Read);
             return self.backend.read(path, offset, size).await;
         }
 
         let normalized = normalize_path(path);
         let key = self.file_key(&normalized);
-        if let Some(data) = self.probe_file(&key, &normalized, true).await {
+        if let Some(data) = self
+            .probe_file(&key, &normalized, Some(CacheOperation::Read))
+            .await
+        {
             return Ok(data);
         }
-        self.metrics.file_miss();
+        self.metrics.file_miss(CacheOperation::Read);
 
         let (inflight, leader) = self.acquire_inflight(&key).await;
         if leader {
@@ -1071,7 +1172,7 @@ impl FileSystem for CachedFileSystem {
         let inflight_guard = inflight.lock().await;
 
         if !leader {
-            if let Some(data) = self.probe_file(&key, &normalized, false).await {
+            if let Some(data) = self.probe_file(&key, &normalized, None).await {
                 self.metrics.inflight_backend_saved();
                 drop(inflight_guard);
                 self.release_inflight(&key, &inflight).await;
@@ -1125,7 +1226,7 @@ impl FileSystem for CachedFileSystem {
 
     /// Stream from the backend, bypassing the file cache like ranged reads do.
     async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
-        self.metrics.policy_bypass();
+        self.metrics.policy_bypass(CacheOperation::Read);
         self.backend.read_to_path(path, dst).await
     }
 
@@ -1137,59 +1238,15 @@ impl FileSystem for CachedFileSystem {
         sort_by: Option<ListSortBy>,
         sort_order: Option<SortOrder>,
     ) -> Result<Vec<FileInfo>> {
-        if !self.policy.cache_directory(path) || self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass();
-            return self
-                .backend
-                .read_dir(path, offset, limit, sort_by, sort_order)
-                .await;
-        }
-
-        let _operation_guard = self.operation_lock.read().await;
-        if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass();
-            return self
-                .backend
-                .read_dir(path, offset, limit, sort_by, sort_order)
-                .await;
-        }
-
-        let normalized = normalize_path(path);
-        let key = self.directory_key(&normalized);
-        if let Some(entries) = self.probe_directory(&key, &normalized, true).await {
-            return Ok(apply_read_dir_options(
-                entries, offset, limit, sort_by, sort_order,
-            ));
-        }
-        self.metrics.read_dir_miss();
-
-        let (inflight, leader) = self.acquire_inflight(&key).await;
-        if leader {
-            self.metrics.inflight_leader();
-        } else {
-            self.metrics.inflight_follower();
-        }
-        let inflight_guard = inflight.lock().await;
-
-        if !leader {
-            if let Some(entries) = self.probe_directory(&key, &normalized, false).await {
-                self.metrics.inflight_backend_saved();
-                drop(inflight_guard);
-                self.release_inflight(&key, &inflight).await;
-                return Ok(apply_read_dir_options(
-                    entries, offset, limit, sort_by, sort_order,
-                ));
-            }
-        }
-
-        let entries = self.backend.read_dir(path, None, None, None, None).await;
-        if let Ok(value) = &entries {
-            self.metrics.backend_fallback(0);
-            self.fill_directory(&key, &normalized, value).await;
-        }
-        drop(inflight_guard);
-        self.release_inflight(&key, &inflight).await;
-        entries.map(|entries| apply_read_dir_options(entries, offset, limit, sort_by, sort_order))
+        self.read_dir_for(
+            CacheOperation::ReadDir,
+            path,
+            offset,
+            limit,
+            sort_by,
+            sort_order,
+        )
+        .await
     }
 
     async fn stat(&self, path: &str) -> Result<FileInfo> {
@@ -1392,5 +1449,62 @@ fn nonzero_random_u64() -> u64 {
         1
     } else {
         value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::cache::CacheOperationSnapshot;
+    use crate::plugins::memfs::MemFileSystem;
+
+    async fn cached_memfs(mode: CacheTraversalMode) -> CachedFileSystem {
+        let backend = MemFileSystem::new();
+        backend.mkdir("/docs", 0o755).await.unwrap();
+        backend
+            .write("/docs/a.md", b"alpha\nbeta\n", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        CachedFileSystem::with_runtime(
+            Box::new(backend),
+            CacheRuntime::memory(),
+            "operation-metrics-test",
+            CachePolicy::default().with_traversal_mode(mode),
+        )
+    }
+
+    fn counts(hits: u64, misses: u64, bypasses: u64) -> CacheOperationSnapshot {
+        CacheOperationSnapshot {
+            hits,
+            misses,
+            bypasses,
+        }
+    }
+
+    #[tokio::test]
+    async fn cached_traversal_attributes_lookups_to_tree_and_grep() {
+        let fs = cached_memfs(CacheTraversalMode::CachedTraversal).await;
+
+        fs.tree_directory("/docs", false, None, None, None, None, None, false)
+            .await
+            .unwrap();
+        fs.tree_directory("/docs", false, None, None, None, None, None, false)
+            .await
+            .unwrap();
+        let options = GrepOptions {
+            recursive: true,
+            ..GrepOptions::default()
+        };
+        fs.grep("/docs", "beta", options).await.unwrap();
+        fs.read_dir("/docs", None, None, None, None).await.unwrap();
+
+        let snapshot = fs.metrics().snapshot();
+        assert_eq!(snapshot.operation(CacheOperation::Tree), counts(1, 1, 0));
+        // The directory was filled by `tree`; the file is read for the first time.
+        assert_eq!(snapshot.operation(CacheOperation::Grep), counts(1, 1, 0));
+        assert_eq!(snapshot.operation(CacheOperation::ReadDir), counts(1, 0, 0));
+        assert_eq!(snapshot.operation(CacheOperation::Read), counts(0, 0, 0));
+        assert_eq!(snapshot.read_dir_hits, 3);
+        assert_eq!(snapshot.file_misses, 1);
     }
 }

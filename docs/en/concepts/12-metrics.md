@@ -288,6 +288,7 @@ seconds, for example `123 ns = 0.000000123 seconds`.
 | `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API call duration including retries and backoff |
 | `openviking_ragfs_s3_inflight_requests` | Gauge | none | S3 API calls currently in flight |
 | `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | file/directory cache hits and misses |
+| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | cache `hit`/`miss`/`bypass` per filesystem operation: `read`, `read_dir`, `tree`, `grep` |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | none | backend loads after cache misses |
 | `openviking_ragfs_cache_operations_total` | Counter | `operation` | cache put/delete attempts |
 | `openviking_ragfs_cache_invalidations_total` | Counter | none | completed invalidations |

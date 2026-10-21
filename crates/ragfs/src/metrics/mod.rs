@@ -100,6 +100,21 @@ pub(crate) fn cache_metrics(stats: crate::cache::CacheMetricsSnapshot) -> Vec<Ra
             "ragfs_cache_requests_total", &[("kind", kind), ("result", result)], count, 1.0,
         ));
     }
+    for operation in crate::cache::CacheOperation::all() {
+        let counts = stats.operation(operation);
+        for (result, count) in [
+            ("hit", counts.hits),
+            ("miss", counts.misses),
+            ("bypass", counts.bypasses),
+        ] {
+            metrics.push(RagfsMetric::counter(
+                "ragfs_cache_operation_requests_total",
+                &[("operation", operation.as_str()), ("result", result)],
+                count,
+                1.0,
+            ));
+        }
+    }
     for (name, count) in [
         ("ragfs_cache_backend_fallbacks_total", stats.backend_fallbacks),
         ("ragfs_cache_invalidations_total", stats.invalidations),

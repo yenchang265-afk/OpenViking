@@ -287,6 +287,7 @@ RAGFS 通過一次原生 `metrics()` 呼叫讀取檔案系統、Cache、multi-ba
 | `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API 呼叫耗時（含重試與退避） |
 | `openviking_ragfs_s3_inflight_requests` | Gauge | 無 | 進行中的 S3 API 呼叫數 |
 | `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | 檔案和目錄快取命中、未命中次數 |
+| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | 依檔案系統操作（`read`、`read_dir`、`tree`、`grep`）統計的快取 `hit`/`miss`/`bypass` 次數 |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | 無 | 快取未命中後的後端讀取次數 |
 | `openviking_ragfs_cache_operations_total` | Counter | `operation` | 快取 put/delete 嘗試次數 |
 | `openviking_ragfs_cache_invalidations_total` | Counter | 無 | 已完成的快取失效次數 |
