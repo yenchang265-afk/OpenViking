@@ -73,6 +73,29 @@ POST /api/v1/acl/revoke
 
 ACL 仍儲存在 context 索引內，允許短暫不一致，按現有非同步任務和 wait 語義生效。獨立修改 ACL 要求目標已有 context 記錄；本次不增加無向量記錄或空檔案支援。
 
+## 大小寫別名與 ACL
+
+使用 `localfs` 且底層檔案系統大小寫不敏感時，ACL 按請求 URI 解析許可權，底層檔案系統可能把僅大小寫不同的 URI 解析到同一個真實檔案或目錄。若別名 URI 的許可權判斷被放行，後續 `read`、`stat`、`ls`、`write`、`rm`、`cp`、`mv` 等操作可能作用到真實物件。
+
+直觀例子：
+
+```bash
+# Bob 的目錄只給 Bob 許可權
+ov acl set viking://resources/bob-private --acl-mode restricted --entry user:bob=manage
+
+# Alice 讀取精確路徑，應返回 403
+ov read viking://resources/bob-private/private.md
+
+# 在大小寫不敏感的 localfs 上，別名目錄可能命中同一個真實目錄
+ov read viking://resources/BOB-PRIVATE/private.md
+ov ls viking://resources/BOB-PRIVATE
+ov write viking://resources/BOB-PRIVATE/private.md --content changed --mode replace
+```
+
+同一風險也適用於共享資源樹中可通過公開 URI 訪問的系統生成檔案，例如 `.abstract.md` 和 `.overview.md`。例如真實檔案是 `viking://resources/bob-private/.overview.md` 時，`viking://resources/BOB-PRIVATE/.OVERVIEW.md` 也可能命中它。未通過公開 URI 暴露的底層內部資料庫、佇列或鎖檔案不屬於該 URI 別名問題的直接影響範圍。
+
+大小寫敏感系統上，`BOB-PRIVATE` 和 `bob-private` 是不同路徑；別名目標不存在時返回 `NOT_FOUND`，不會觸發該問題。
+
 **CLI**
 
 ```bash

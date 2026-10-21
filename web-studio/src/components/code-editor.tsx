@@ -1,3 +1,5 @@
+import { editorPhrases } from '#/i18n/editor-phrases'
+import { useTranslation } from 'react-i18next'
 import {
   useEffect,
   useMemo,
@@ -5,11 +7,10 @@ import {
   useImperativeHandle,
   forwardRef,
 } from 'react'
-import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
 import { Compartment, EditorState } from '@codemirror/state'
 import {
   EditorView,
+  getDialog,
   keymap,
   lineNumbers,
   highlightActiveLine,
@@ -99,48 +100,6 @@ function detectLanguage(filename: string): string | null {
   return extMap[ext] || null
 }
 
-// CodeMirror's built-in English UI phrases → `resources:codeEditor.*` keys.
-const codeMirrorPhraseKeys: Record<string, string> = {
-  all: 'all',
-  'by word': 'byWord',
-  close: 'close',
-  Completions: 'completions',
-  'Control character': 'controlCharacter',
-  'current match': 'currentMatch',
-  Find: 'find',
-  'Fold line': 'foldLine',
-  'folded code': 'foldedCode',
-  'Folded lines': 'foldedLines',
-  go: 'go',
-  'Go to line': 'goToLine',
-  'match case': 'matchCase',
-  next: 'next',
-  'on line': 'onLine',
-  previous: 'previous',
-  regexp: 'regexp',
-  Replace: 'replace',
-  'replace all': 'replaceAll',
-  replace: 'replaceOne',
-  'replaced match on line $': 'replacedMatchOnLine',
-  'replaced $ matches': 'replacedMatches',
-  'Selection deleted': 'selectionDeleted',
-  to: 'to',
-  unfold: 'unfold',
-  'Unfold line': 'unfoldLine',
-  'Unfolded lines': 'unfoldedLines',
-}
-
-function codeMirrorPhrases(t: TFunction<'resources'>) {
-  return EditorState.phrases.of(
-    Object.fromEntries(
-      Object.entries(codeMirrorPhraseKeys).map(([phrase, key]) => [
-        phrase,
-        t(`codeEditor.${key}`),
-      ]),
-    ),
-  )
-}
-
 export interface CodeEditorHandle {
   getContent: () => string
 }
@@ -200,6 +159,14 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     },
     ref,
   ) {
+    const { t } = useTranslation('studio')
+    const phrases = useMemo(() => editorPhrases(t), [t])
+    const phrasesRef = useRef(phrases)
+    phrasesRef.current = phrases
+    const phrasesCompartment = useRef(new Compartment())
+    const attributesRef = useRef(ariaLabel)
+    attributesRef.current = ariaLabel
+    const attributesCompartment = useRef(new Compartment())
     const containerRef = useRef<HTMLDivElement>(null)
     const viewRef = useRef<EditorView | null>(null)
     const onChangeRef = useRef(onChange)
@@ -210,19 +177,6 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
     onChangeRef.current = onChange
     contentRef.current = initialContent
     readOnlyRef.current = readOnly
-    const { t } = useTranslation('resources')
-    // Phrases live in a compartment so a language switch reconfigures the
-    // open editor instead of recreating it (which would drop unsaved edits).
-    const phrasesCompartment = useRef(new Compartment())
-    const phrases = useMemo(() => codeMirrorPhrases(t), [t])
-    const phrasesRef = useRef(phrases)
-
-    useEffect(() => {
-      phrasesRef.current = phrases
-      viewRef.current?.dispatch({
-        effects: phrasesCompartment.current.reconfigure(phrases),
-      })
-    }, [phrases])
 
     useImperativeHandle(ref, () => ({
       getContent: () => viewRef.current?.state.doc.toString() ?? initialContent,
@@ -235,14 +189,10 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
 
       const setup = async () => {
         const extensions = [
-          phrasesCompartment.current.of(phrasesRef.current),
           lineNumbers(),
           drawSelection(),
           syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
           history(),
-          EditorView.contentAttributes.of(
-            ariaLabel ? { 'aria-label': ariaLabel } : {},
-          ),
           EditorView.updateListener.of((update) => {
             if (update.docChanged && !syncingRef.current)
               onChangeRef.current?.(update.state.doc.toString())
@@ -319,6 +269,16 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
         if (destroyed) return
 
         extensions.push(
+          phrasesCompartment.current.of(
+            EditorState.phrases.of(phrasesRef.current),
+          ),
+          attributesCompartment.current.of(
+            EditorView.contentAttributes.of(
+              attributesRef.current
+                ? { 'aria-label': attributesRef.current }
+                : {},
+            ),
+          ),
           accessRef.current.of(accessExtensions(readOnlyRef.current)),
         )
         const state = EditorState.create({
@@ -348,8 +308,64 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
       isDark,
       lineWrapping,
       language,
-      ariaLabel,
     ])
+
+    useEffect(() => {
+      const view = viewRef.current
+      if (!view) return
+      // CodeMirror's built-in gotoLine dialog captures its text and initial
+      // value when opened. Phrase reconfiguration recreates that panel from
+      // the old configuration, so restore its draft and refresh captured text.
+      const input = getDialog(
+        view,
+        'cm-dialog',
+      )?.dom.querySelector<HTMLInputElement>('input[name="line"]')
+      const draft = input
+        ? {
+            value: input.value,
+            start: input.selectionStart,
+            end: input.selectionEnd,
+            direction: input.selectionDirection,
+          }
+        : undefined
+      const activeElement = view.dom.ownerDocument.activeElement
+      view.dispatch({
+        effects: [
+          attributesCompartment.current.reconfigure(
+            EditorView.contentAttributes.of(
+              ariaLabel ? { 'aria-label': ariaLabel } : {},
+            ),
+          ),
+          phrasesCompartment.current.reconfigure(
+            EditorState.phrases.of(phrases),
+          ),
+        ],
+      })
+      if (!draft) return
+      const panel = getDialog(view, 'cm-dialog')?.dom
+      const nextInput =
+        panel?.querySelector<HTMLInputElement>('input[name="line"]')
+      if (!nextInput) return
+      nextInput.value = draft.value
+      nextInput.setSelectionRange(
+        draft.start,
+        draft.end,
+        draft.direction ?? undefined,
+      )
+      const label = nextInput.closest('label')?.firstChild
+      if (label?.nodeType === Node.TEXT_NODE)
+        label.textContent = `${view.state.phrase('Go to line')}: `
+      const submit = panel?.querySelector<HTMLButtonElement>(
+        'button[type="submit"]',
+      )
+      if (submit) submit.textContent = view.state.phrase('go')
+      if (activeElement === input) nextInput.focus()
+      else if (
+        activeElement instanceof HTMLElement &&
+        activeElement.isConnected
+      )
+        activeElement.focus()
+    }, [ariaLabel, phrases])
 
     useEffect(() => {
       const view = viewRef.current

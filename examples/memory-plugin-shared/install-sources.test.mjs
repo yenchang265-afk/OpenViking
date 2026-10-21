@@ -203,9 +203,9 @@ test("a GitHub-channel Claude install moves to TOS, and its statusline follows t
   assert.equal(statusLine(), wrapped);
   const chinese = install("--statusline", "--lang", "zh");
   assert.equal(statusLine(), command);
-  assert.match(chinese.stdout, /安装来源： OpenViking 发布版\n/);
-  assert.match(chinese.stdout, /Statusline 已注册（备份：.*settings\.json\.bak\.[0-9-]+）\n/);
-  assert.match(chinese.stdout, /可随时用 export OPENVIKING_STATUSLINE=off 关闭\n/);
+  assert.match(chinese.stdout, /安裝來源： OpenViking 釋出版\n/);
+  assert.match(chinese.stdout, /Statusline 已註冊（備份：.*settings\.json\.bak\.[0-9-]+）\n/);
+  assert.match(chinese.stdout, /可隨時用 export OPENVIKING_STATUSLINE=off 關閉\n/);
 });
 
 test("Claude Code without the plugin command is skipped with an upgrade hint", () => {

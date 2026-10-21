@@ -2,6 +2,8 @@
 
 Agent Evolution API 用於查詢與某條 Experience 成功讀取記錄關聯的 Trajectory 及結果分佈。當前僅提供 HTTP API。讀取記錄用於建立關聯，不能據此認定 Agent 遵循了這條經驗，或結果由該經驗造成。
 
+關聯要求：外掛通過 `add message` 將成功的 OpenViking `read` 工具記錄寫入 Session，再由包含該記錄的 `session commit` 提取出 Trajectory。`viking://~/memories/experiences/...` 按 Session 所屬使用者解析。自動召回或 hook 注入不等於顯式讀取；沒有生成 Trajectory 的提交也不會增加應用軌跡數量。因此 `total` 表示關聯的軌跡數，而非 `read` 呼叫次數。
+
 ## API 參考
 
 ### 查詢 Experience 應用軌跡

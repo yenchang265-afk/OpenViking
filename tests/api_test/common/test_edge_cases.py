@@ -2,6 +2,21 @@ import os
 import tempfile
 import uuid
 
+import pytest
+
+
+def write_or_skip_unavailable(api_client, uri, content):
+    # fs_write(wait=True) fails when embedding fails; the no-secrets CI path only
+    # has a dummy embedding key, so skip there and keep asserting with secrets.
+    response = api_client.fs_write(uri, content, mode="create", wait=True)
+    if response.status_code != 200 and os.getenv("HAS_SECRETS", "true").lower() != "true":
+        try:
+            error = response.json().get("error")
+        except Exception:
+            error = response.text
+        pytest.skip(f"fs_write needs a working embedding model: {error}")
+    return response
+
 
 class TestResourceEdgeCases:
     def test_add_resource_with_temp_file_id_and_path_returns_400(self, api_client):
@@ -95,7 +110,7 @@ class TestContentEdgeCases:
             mkdir_resp = api_client.fs_mkdir(test_uri.rsplit("/", 1)[0])
             assert mkdir_resp.status_code == 200
 
-            write_resp = api_client.fs_write(test_uri, "new file content", mode="create", wait=True)
+            write_resp = write_or_skip_unavailable(api_client, test_uri, "new file content")
             assert write_resp.status_code == 200, (
                 f"write to new file with create mode should return 200, got {write_resp.status_code}: {write_resp.text[:200]}"
             )
@@ -120,7 +135,7 @@ class TestContentEdgeCases:
             mkdir_resp = api_client.fs_mkdir(test_uri.rsplit("/", 1)[0])
             assert mkdir_resp.status_code == 200
 
-            write_resp = api_client.fs_write(test_uri, "", mode="create", wait=True)
+            write_resp = write_or_skip_unavailable(api_client, test_uri, "")
             assert write_resp.status_code == 200, (
                 f"write empty content with create mode should return 200, got {write_resp.status_code}: {write_resp.text[:200]}"
             )

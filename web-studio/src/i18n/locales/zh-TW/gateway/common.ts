@@ -48,6 +48,11 @@ const common = {
     done: '已複製到剪貼簿',
     failed: '複製失敗，請選中文本後手動複製。',
   },
+  docs: {
+    link: '文件',
+    learnMore: '瞭解更多',
+    troubleshoot: '排查說明',
+  },
   access: {
     title: '先連線 Business Data Platform',
     invalid: 'Business Data Platform API 金鑰無效',
@@ -68,7 +73,7 @@ const common = {
     environment: '也可能設在環境變數裡，它優先於配置檔案：',
     studio: 'Root 可以在“設定 → 服務端配置 → 檔案編輯”中檢視 ov.conf。',
     reset: '實在找不到，就在原來的位置換一個至少 32 個字元的新金鑰，然後重啟。',
-    resetDocs: '檢視運維文件',
+    resetDocs: '如何重置',
     keyPlaceholder: '<至少 32 個字元>',
     session: '只儲存在當前瀏覽器標籤頁，關閉後自動鎖定。',
     wrongKey: '這是閘道器金鑰（給客戶端用的），請輸入閘道器管理金鑰。',
@@ -80,7 +85,7 @@ const common = {
     editing: '可修改上游和上下文配置',
     expired: '閘道器管理金鑰已失效，上游和上下文配置恢復為只讀。',
     readOnly:
-      '上游和上下文配置由閘道器管理員統一提供。你可以檢視、測試連線，並在簽發金鑰時選用。',
+      '上游和上下文配置由閘道器管理員統一提供。你可以檢視，並在簽發金鑰時選用。',
     adminReadOnly:
       'Business Data Platform 的管理員和 Root 也需要閘道器管理金鑰才能修改。如果這臺服務是你部署的，金鑰在 ov.conf 的 gateway.management_key 裡。',
     shared:
@@ -114,7 +119,6 @@ const common = {
     fixLabel: '需要修改的配置',
     terminal: '終端',
     environment: '環境變數',
-    docs: '部署說明',
     enable: {
       description: 'Studio 可以直接開啟：把設定寫入 ov.conf，然後重啟服務。',
       descriptionManualRestart:

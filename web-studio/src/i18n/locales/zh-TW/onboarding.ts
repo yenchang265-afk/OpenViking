@@ -1,4 +1,23 @@
 export default {
+  verifyDirectoryHint:
+    '可選。填寫 Root 或 Admin Key 並驗證連線後，可選擇 Account 和 User；訪問資料仍需對應的 User API Key。',
+  loadDirectory: '載入 Account 和 User',
+  directoryHint: '使用 Root 或 Admin API Key 瀏覽可選身份。',
+  directoryControlRequired:
+    '請輸入有效的 Root 或 Admin API Key 後加載帳號和使用者。',
+  directoryLoadFailed: '載入身份失敗，請檢查管理金鑰和服務地址後重試。',
+  directoryAccount: '選擇 Account',
+  directoryUser: '選擇 User',
+  directoryAdminHint:
+    'Admin Key 僅可選擇所屬 Account 中的使用者。訪問資料還需填寫該使用者的 API Key。',
+  directoryKeyHint:
+    '選擇身份不會自動授予資料許可權。請填寫對應的 User API Key；留空則僅進入帳號管理。',
+  directoryIdentityMismatch:
+    '此 User API Key 屬於其他帳號或使用者，請輸入所選身份對應的金鑰。',
+
+  openSourceConnection: 'OpenSource',
+  cancel: '取消',
+  exit: '退出 Studio',
   connectionTitle: '連線你的工作區。',
   preferencesHint: '選擇你熟悉的語言與外觀。',
   connectionHint: '連線並驗證你的 Business Data Platform 服務。',

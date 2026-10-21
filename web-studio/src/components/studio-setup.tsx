@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ChevronDownIcon, Loader2Icon } from 'lucide-react'
+import { SetupIdentityDirectory } from './setup-identity-directory'
 import { Button } from '#/components/ui/button'
 import { Input } from '#/components/ui/input'
 import {
@@ -17,7 +18,6 @@ import {
   studioSetupDestination,
   completeStudioSetup,
   currentServerUrl,
-  markStudioSetupPending,
   savedSetupConnections,
   verifyStudioSetup,
 } from '#/lib/connection/onboarding'
@@ -50,8 +50,7 @@ function savedOpenSourceConnections(): SavedConnection[] {
 }
 
 function initialDraft(profile: SavedConnection | undefined): ConnectionDraft {
-  if (profile)
-    return { ...profile.connection, apiKey: '', adminApiKey: '' }
+  if (profile) return { ...profile.connection, apiKey: '', adminApiKey: '' }
   return {
     serviceSelection: 'opensource',
     baseUrl: currentServerUrl(),
@@ -84,8 +83,12 @@ function matchingProfileId(
 
 export function StudioSetup({
   onComplete,
+  onCancel,
+  canReturnToWorkspace = false,
 }: {
   onComplete: (connection: ConnectionDraft) => void
+  onCancel?: () => void
+  canReturnToWorkspace?: boolean
 }) {
   const { t } = useTranslation(['onboarding', 'studio', 'settings'])
   const [savedConnections] = useState(savedOpenSourceConnections)
@@ -93,6 +96,9 @@ export function StudioSetup({
     initialDraft(savedConnections.at(0)),
   )
   const [advancedOpen, setAdvancedOpen] = useState(false)
+  const [controlVerified, setControlVerified] = useState(false)
+  const [selectedDirectoryIdentity, setSelectedDirectoryIdentity] =
+    useState(false)
   const [verified, setVerified] = useState<ConnectionDraft | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -102,11 +108,18 @@ export function StudioSetup({
   const headingRef = useRef<HTMLHeadingElement>(null)
   const validUrl = isValidConnectionUrl(draft.baseUrl)
   useEffect(() => {
-    markStudioSetupPending()
     headingRef.current?.focus()
     return () => abortRef.current?.abort()
   }, [])
   function update(next: Partial<ConnectionDraft>) {
+    if ('baseUrl' in next || 'adminApiKey' in next) setControlVerified(false)
+    if (
+      'baseUrl' in next ||
+      'adminApiKey' in next ||
+      'accountId' in next ||
+      'userId' in next
+    )
+      setSelectedDirectoryIdentity(false)
     connectionRevisionRef.current += 1
     setDraft((value) => ({ ...value, ...next }))
     setVerified(null)
@@ -143,6 +156,16 @@ export function StudioSetup({
         !controller.signal.aborted &&
         connectionRevision === connectionRevisionRef.current
       ) {
+        if (
+          selectedDirectoryIdentity &&
+          draft.apiKey &&
+          (result.accountId !== draft.accountId ||
+            result.userId !== draft.userId)
+        ) {
+          setError(t('directoryIdentityMismatch'))
+          return
+        }
+        setControlVerified(Boolean(result.adminApiKey))
         setDraft(result)
         setVerified(result)
       }
@@ -178,6 +201,20 @@ export function StudioSetup({
           <span className="text-base font-semibold tracking-tight">
             {t('brand')}
           </span>
+          {onCancel ? (
+            <Button
+              type="button"
+              variant="ghost"
+              className="ml-auto"
+              onClick={() => {
+                connectionRevisionRef.current += 1
+                abortRef.current?.abort()
+                onCancel()
+              }}
+            >
+              {t(canReturnToWorkspace ? 'cancel' : 'exit')}
+            </Button>
+          ) : null}
         </div>
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_1.15fr] lg:gap-20">
           <header className="lg:pt-5">
@@ -208,10 +245,7 @@ export function StudioSetup({
               >
                 <fieldset disabled={busy} className="space-y-4">
                   <div className="grid gap-2">
-                    <label
-                      htmlFor="setup-url"
-                      className="text-sm font-medium"
-                    >
+                    <label htmlFor="setup-url" className="text-sm font-medium">
                       {t('settings:fields.baseUrl')}
                     </label>
                     <Input
@@ -317,9 +351,7 @@ export function StudioSetup({
                                 }
                                 {...PLAIN_INPUT_PROPS}
                                 autoComplete={
-                                  key === 'adminApiKey'
-                                    ? 'new-password'
-                                    : 'off'
+                                  key === 'adminApiKey' ? 'new-password' : 'off'
                                 }
                               />
                             </label>
@@ -329,6 +361,22 @@ export function StudioSetup({
                     </div>
                   </div>
                 </fieldset>
+                {controlVerified && (
+                  <SetupIdentityDirectory
+                    connection={draft}
+                    disabled={busy}
+                    onSelect={(identity) => {
+                      const changed =
+                        identity.accountId !== draft.accountId ||
+                        identity.userId !== draft.userId
+                      update({
+                        ...identity,
+                        ...(changed ? { apiKey: '' } : {}),
+                      })
+                      setSelectedDirectoryIdentity(true)
+                    }}
+                  />
+                )}
                 {error && error !== t('keyRequired') ? (
                   <p
                     role="alert"

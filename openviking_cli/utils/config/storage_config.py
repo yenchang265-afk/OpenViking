@@ -15,6 +15,22 @@ from .vectordb_config import VectorDBBackendConfig
 logger = get_logger(__name__)
 
 
+class TaskStoreConfig(BaseModel):
+    """Durable Task/Work backend selection."""
+
+    provider: str = "file"
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def normalize_provider(self):
+        self.provider = self.provider.strip().lower()
+        if self.provider not in {"file", "mysql"}:
+            raise ValueError(
+                f"storage.task_store.provider must be 'file' or 'mysql', got {self.provider!r}"
+            )
+        return self
+
+
 class StorageConfig(BaseModel):
     """Configuration for storage backend.
 
@@ -59,6 +75,11 @@ class StorageConfig(BaseModel):
             "Age after which a staged add-resource source left in viking://temp is "
             "swept (max 180 days); 0 disables the sweep"
         ),
+    )
+
+    task_store: TaskStoreConfig = Field(
+        default_factory=TaskStoreConfig,
+        description="Persistent Task/Work storage backend",
     )
 
     params: Dict[str, Any] = Field(
@@ -130,7 +151,16 @@ class StorageConfig(BaseModel):
 
     def build_task_tracker(self, agfs: Any):
         """Build the persistent TaskTracker from storage config."""
-        from openviking.service.task_store import PersistentTaskStore
+        from openviking.service.task_store import TaskWorkStore
         from openviking.service.task_tracker import TaskTracker
 
-        return TaskTracker(store=PersistentTaskStore(agfs))
+        store: TaskWorkStore
+        if self.task_store.provider == "mysql":
+            from openviking.service.task_store_mysql import MySQLTaskWorkStore
+
+            store = MySQLTaskWorkStore(params=self.task_store.params)
+        else:
+            from openviking.service.task_store import PersistentTaskStore
+
+            store = PersistentTaskStore(agfs)
+        return TaskTracker(store=store)

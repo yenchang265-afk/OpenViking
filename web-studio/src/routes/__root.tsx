@@ -54,7 +54,8 @@ function DevtoolsSlot() {
 
 function RootErrorComponent({ error, reset }: ErrorComponentProps) {
   const { t } = useTranslation('common')
-  const message = error instanceof Error ? error.message : t('errorBoundary.unknownError')
+  const message =
+    error instanceof Error ? error.message : t('errorBoundary.unknownError')
 
   return (
     <>

@@ -269,14 +269,17 @@ pub(crate) fn report_for_runtime_error(command: impl Into<String>, error: &Error
         ]),
         Error::Network(message) => ErrorReport::new(
             copy(language, "Connection Error", "連線錯誤"),
-            copy(
-                language,
-                "Could not reach Business Data Platform. The server may be offline, or this config points to the wrong URL.",
-                "無法連線 Business Data Platform。伺服器可能未啟動，或當前配置指向了錯誤的 URL。",
+            format!(
+                "{} {}",
+                copy(
+                    language,
+                    "Could not reach Business Data Platform. Check the detail first, then whether the server is running and the URL is correct.",
+                    "無法連線 Business Data Platform。請先檢視詳情，再確認伺服器是否執行、URL 是否正確。"
+                ),
+                detail_line(language, message),
             ),
         )
         .with_command(command)
-        .with_detail(message)
         .with_actions(vec![
             ErrorAction::new("ov config validate", copy(language, "Check the active config", "檢查當前配置")),
             ErrorAction::new("ov health", copy(language, "Run a quick server health check", "快速檢查伺服器健康狀態")),
@@ -1180,9 +1183,29 @@ Usage: ov config [OPTIONS] [COMMAND]
 
         assert!(rendered.contains("Connection Error"));
         assert!(rendered.contains("Could not reach Business Data Platform"));
+        assert!(rendered.contains("connection refused"));
         assert!(rendered.contains("ov config validate"));
         assert!(rendered.contains("ov health"));
         assert!(rendered.contains("ov config switch"));
+    }
+
+    #[test]
+    fn network_error_card_shows_tls_cause_without_guessing_offline() {
+        let error = Error::Network("invalid peer certificate: UnknownIssuer".to_string());
+        let report = report_for_runtime_error("ov health", &error);
+        let rendered = strip_ansi(&render_report(&report, false));
+        let text = rendered
+            .replace('│', " ")
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        assert!(
+            text.contains("invalid peer certificate: UnknownIssuer"),
+            "{rendered}"
+        );
+        assert!(!text.contains("offline"));
+        assert!(!text.contains("wrong URL"));
     }
 
     #[test]

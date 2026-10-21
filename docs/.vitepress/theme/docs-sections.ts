@@ -33,7 +33,8 @@ export const sections: DocSection[] = [
         p('agent-integrations/01-overview'),
         p('workflows/01-overview'),
         p('context-compilation/01-overview'),
-        p('guides/17-vikingbot')
+        p('guides/17-vikingbot'),
+        p('guides/15-gateway')
       ]),
       g('Learn, deploy and troubleshoot', '深入與排障', [
         p('concepts/00-overview'),
@@ -110,13 +111,60 @@ export const sections: DocSection[] = [
         p('agent-integrations/18-plugin-development'),
         p('guides/working-memory-default-off')
       ]),
-      g('OpenViking Gateway', 'OpenViking 閘道器', [
-        p('guides/15-gateway'),
-        p('guides/22-gateway-operations')
-      ]),
       g('VikingBot', 'VikingBot', [
         p('guides/17-vikingbot'),
         p('guides/12-vikingbot-metrics-validation')
+      ])
+    ],
+    nextSteps: [
+      g('Clients without a plugin', '沒有外掛的客戶端', [
+        p('guides/15-gateway')
+      ])
+    ]
+  },
+  // The entry page and the deployment page keep their guides/ paths so released Studio builds,
+  // the Helm README and openviking_gateway/config.py keep linking to them; every other gateway
+  // page lives in gateway/. Ownership does not depend on file location (see the top of this file).
+  {
+    id: 'gateway', en: 'Gateway', zh: '閘道器',
+    enNote: 'Give any API-key client memory through one proxy, then manage and run it.', zhNote: '用一個代理為 API Key 客戶端接入記憶，並管理與運維。',
+    entry: 'guides/15-gateway', aliases: [],
+    groups: [
+      g('Understand the gateway', '瞭解閘道器', [
+        p('guides/15-gateway'),
+        p('gateway/01-how-it-works')
+      ]),
+      g('Get started', '上手與接入', [
+        p('gateway/02-quickstart'),
+        p('gateway/03-connect-clients')
+      ]),
+      g('Memory and tools', '記憶與工具', [
+        p('gateway/04-openviking-tools'),
+        p('gateway/05-long-conversations')
+      ]),
+      g('Manage in Studio', '在 Studio 中管理', [
+        p('gateway/06-manage-in-studio'),
+        p('gateway/07-upstreams'),
+        p('gateway/08-context-profiles'),
+        p('gateway/09-gateway-keys'),
+        p('gateway/10-overview-and-requests')
+      ]),
+      g('Deploy and operate', '部署與運維', [
+        p('guides/22-gateway-operations'),
+        p('gateway/11-security-and-data')
+      ]),
+      g('Troubleshoot and look up', '排障與參考', [
+        p('gateway/12-troubleshooting'),
+        p('gateway/13-configuration')
+      ])
+    ],
+    nextSteps: [
+      g('Related docs', '相關文件', [
+        p('api/25-gateway'),
+        p('guides/04-authentication'),
+        p('guides/12-public-access'),
+        p('guides/06-mcp-integration'),
+        p('agent-integrations/01-overview')
       ])
     ]
   },

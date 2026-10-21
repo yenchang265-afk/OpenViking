@@ -8,6 +8,7 @@ import type { DropEvent } from 'react-dropzone'
 import { toast } from 'sonner'
 
 import { Button } from '#/components/ui/button'
+import { formatNumber } from '#/i18n/format'
 import { cn } from '#/lib/utils'
 import {
   MAX_UPLOAD_FILES,
@@ -109,8 +110,8 @@ export function folderLimitError(
   if (folder.entries.length > limits.maxFiles) {
     return t('folderTooManyFiles', {
       name: `${folder.name}/`,
-      files: folder.entries.length.toLocaleString(),
-      max: limits.maxFiles.toLocaleString(),
+      files: formatNumber(folder.entries.length),
+      max: formatNumber(limits.maxFiles),
     })
   }
   const folderSize = getFolderSize(folder)

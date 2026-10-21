@@ -2,15 +2,15 @@
 
 管理 API 用來檢視許可權、配置上游和上下文配置、簽發閘道器金鑰、讀取用量和日誌。所有路徑都以 `/gateway/admin/` 開頭，由閘道器直接提供：閘道器在 OpenViking Server 內執行時，訪問 Server 的埠（預設 1933）；獨立執行時，訪問閘道器自己的埠（預設 1935）。示例中的 `SERVER_URL` 指這個地址本身，不帶路徑，例如 `http://127.0.0.1:1933`。
 
-模型客戶端不呼叫這組介面。它們用閘道器金鑰訪問 `/gateway/v1/*`、`/gateway/api/v3/*` 或 `/gateway/api/compatible/v1/*`，見[OpenViking 閘道器](../guides/15-gateway.md#接入客戶端)。
+模型客戶端不呼叫這組介面。它們用閘道器金鑰訪問 `/gateway/v1/*`、`/gateway/api/v3/*` 或 `/gateway/api/compatible/v1/*`，見[OpenViking 閘道器](../gateway/03-connect-clients.md#connect-clients)。
 
-## 憑證和帳號範圍
+## 憑證和帳號範圍 {#credentials-and-account-scope}
 
 每個管理請求都要帶 OpenViking API 金鑰，放在 `X-API-Key` 或 `Authorization: Bearer` 中。閘道器向 OpenViking 確認這把金鑰屬於哪個帳號、哪個使用者、什麼角色，確認結果最多快取 30 秒。本地 dev 模式不需要金鑰，呼叫方固定為 root 身份 `default/default`。閘道器不支援 trusted 認證。
 
 上游和上下文配置（API 中叫 `policies`）屬於帳號，同一帳號的使用者共用。請求預設作用於呼叫方所在的帳號；root 可以用 query 引數 `account_id` 指定其他帳號，admin 和 user 只能訪問自己的帳號。
 
-部署者可以另外設定閘道器管理金鑰（配置方法見[閘道器管理金鑰](../guides/22-gateway-operations.md#閘道器管理金鑰)）。設定之後，修改上游和上下文配置的請求必須在 `X-OpenViking-Gateway-Management-Key` 中帶上它，OpenViking 的 admin 和 root 也不例外。請求帶了管理金鑰但值不對時，閘道器直接返回 401 `management_key_invalid`，不會降級成只讀請求。
+部署者可以另外設定閘道器管理金鑰（配置方法見[閘道器管理金鑰](../guides/22-gateway-operations.md#gateway-management-key)）。設定之後，修改上游和上下文配置的請求必須在 `X-OpenViking-Gateway-Management-Key` 中帶上它，OpenViking 的 admin 和 root 也不例外。請求帶了管理金鑰但值不對時，閘道器直接返回 401 `management_key_invalid`，不會降級成只讀請求。
 
 | 操作 | 未設定管理金鑰 | 已設定管理金鑰 |
 | --- | --- | --- |
@@ -26,13 +26,13 @@
 
 只讀檢視不返回上游的 API Key、請求頭的值和請求頭名稱，只保留 `has_api_key` 和 `auth_mode`。
 
-## 許可權與發現
+## 許可權與發現 {#access-and-discovery}
 
 | 方法 | 路徑 | 返回 |
 | --- | --- | --- |
 | GET | `/gateway/admin/access` | 呼叫方的許可權：`managed`、`can_write_objects`、`can_import_vlm`、`can_issue_for_others`、`role`、`account_id`、`user_id`、`warnings` |
 | GET | `/gateway/admin/overview` | 呼叫方可見的最近 10,000 條日誌彙總：用量、快取命中、召回、儲存異常、OpenViking 狀態和日誌保留期 |
-| GET | `/gateway/admin/logs` | 呼叫方可見的最新日誌；`limit` 預設 200，取值 1–1000 |
+| GET | `/gateway/admin/logs` | 呼叫方可見的最新日誌，以 JSON 陣列返回，最新的在前；`limit` 預設 200，取值 1–1000。欄位見[日誌記錄](#log-records)。 |
 | GET | `/gateway/admin/guides` | 客戶端接入地址 `base_url`，以及 `public_url_configured`；`base_url` 是 `public_url` 加 `/gateway`，未設定 `public_url` 時取請求的來源地址加 `/gateway` |
 | GET | `/gateway/admin/tools` | 呼叫方能用的 OpenViking 工具：名稱、描述和 annotations，用呼叫方自己的 OpenViking 金鑰讀取（OpenViking 拒絕 root 訪問 `/mcp`，所以 root 改用本帳號已簽發閘道器金鑰對應的 OpenViking 金鑰，沒有時返回上次讀到的目錄） |
 
@@ -58,7 +58,35 @@ curl "$SERVER_URL/gateway/admin/access" \
 
 OpenViking 拒絕 API 金鑰時，返回 401 `openviking_http_401`。
 
-## 上游和上下文配置
+### 日誌記錄 {#log-records}
+
+日誌只記後設資料，不含訊息內容。發往模型服務商的請求結束時寫一條記錄；對話的儲存狀態變化時也寫一條（`kind` 為 `capture`）。閘道器在請求到達服務商之前就拒絕的，不記日誌。除 `time` 外，欄位都是可選的，不適用時省略。
+
+| 欄位 | 含義 |
+| --- | --- |
+| `time` | 記錄寫入時間，Unix 時間戳（秒） |
+| `request_id` | 閘道器為請求分配的 ID |
+| `kind` | `user`、`continuation`、`auxiliary`、`subagent`、`count`、`passthrough` 或 `capture`，見[請求日誌](../gateway/10-overview-and-requests.md#requests) |
+| `model` | 客戶端傳送的模型名 |
+| `status` | 服務商返回的 HTTP 狀態碼 |
+| `upstream_id`、`credential_id` | 處理請求的上游，以及發出請求的閘道器金鑰 |
+| `session`、`protocol` | 對話及其協議，[重置儲存](#gateway-keys)時要用 |
+| `degradation` | 異常程式碼，見[降級請求的異常](../gateway/12-troubleshooting.md#issues-on-degraded-requests) |
+| `recall_reason`、`recall_count`、`recall_ms` | 記憶檢索的結果程式碼、補充的條數和檢索耗時，見[沒有補充記憶](../gateway/12-troubleshooting.md#no-memory-is-added) |
+| `replay_hits` | 原樣放回記憶的歷史訊息數 |
+| `capture_status`、`capture_reason`、`capture_retry_at` | 儲存狀態（`active`、`disabled`、`retrying` 或 `paused`）、原因，以及下次重試時間（Unix 時間戳，秒），見[儲存狀態](../gateway/10-overview-and-requests.md#saving-status) |
+| `tool_skip_reason` | 請求沒有拿到 OpenViking 工具的原因，見[什麼時候不提供工具](../gateway/04-openviking-tools.md#when-tools-are-not-offered) |
+| `tool_stop_reason` | 工具 Token 預算用完、後續呼叫被拒絕時為 `token_budget`，見[上限](../gateway/04-openviking-tools.md#limits) |
+| `compaction_failed` | 壓縮失敗的原因（`still_over_threshold` 時摘要已保留），見[長對話超出上下文長度](../gateway/12-troubleshooting.md#long-conversations-hit-the-context-limit) |
+| `context_tokens`、`context_window` | 估算的上下文大小，以及用來比較的上下文視窗 |
+| `input_tokens`、`output_tokens`、`cached_tokens`、`cache_write_tokens` | 本次請求所有服務商呼叫（含 OpenViking 工具輪次）的 token 用量合計。`input_tokens` 已包含快取命中和快取寫入的 token。 |
+| `duration_ms` | 從把請求發給服務商到回覆結束的耗時 |
+
+以 `first_upstream_` 和 `hidden_upstream_` 開頭的欄位把 token 用量拆成首次服務商呼叫和 OpenViking 工具輪次兩部分，首次呼叫快取命中率按前者計算。
+
+`/overview` 由這些記錄彙總而來。除用量和快取資料外，還返回 `degradations`（異常程式碼 → 次數）、`capture_issues`（正在重試或已暫停儲存的對話數）、`cache_alerts`、`openviking`（OpenViking 的 `status`，降級時另有 `reason`）和 `log_retention_days`。
+
+## 上游和上下文配置 {#upstreams-and-context-profiles}
 
 | 方法 | 路徑 | 說明 |
 | --- | --- | --- |
@@ -73,7 +101,7 @@ OpenViking 拒絕 API 金鑰時，返回 401 `openviking_http_401`。
 | PUT | `/gateway/admin/policies/{identifier}` | 建立或替換上下文配置 |
 | DELETE | `/gateway/admin/policies/{identifier}` | 刪除沒有金鑰在用的上下文配置 |
 
-ID 由呼叫方指定。`PUT` 提交完整物件，未知欄位會導致校驗失敗。各欄位的含義、預設值和取值範圍見[配置參考](../guides/22-gateway-operations.md#配置參考)。
+ID 由呼叫方指定。`PUT` 提交完整物件，未知欄位會導致校驗失敗。各欄位的含義、預設值和取值範圍見[配置參考](../gateway/13-configuration.md#configuration-reference)。
 
 上游的 `api_key` 和 `headers` 只寫不讀：
 
@@ -90,29 +118,36 @@ curl -X PUT "$SERVER_URL/gateway/admin/upstreams/openai?account_id=team" \
 
 刪除仍有閘道器金鑰在用的物件，返回 409 `in_use` 和 `key_count`。先吊銷這些金鑰；只是想讓請求立即停止發往某個上游，可以停用它而不刪除。
 
-### 上游測試
+### 上游測試 {#upstream-tests}
 
-`POST /gateway/admin/upstreams/{identifier}/test` 支援兩種模式：空請求體 `{}` 通過 `GET /v1/models` 檢查連線；`{"model":"<模型名>"}` 使用已存的憑證和請求頭傳送一次很小的非流式生成請求。模型名會先經過上游的別名對映。模型請求使用已配置的 Chat Completions、Responses 或 Anthropic Messages 介面；關閉路徑拼接時，也會遵循配置的完整介面 URL。上游允許 Gateway 工具時，請求會帶上當前帳戶的 OpenViking 工具，並按預設上下文配置篩選；工具目錄暫時不可用時，降級為不帶工具繼續測試。模型測試不設定 reasoning effort，由模型使用預設值。
+`POST /gateway/admin/upstreams/{identifier}/test` 支援兩種模式：空請求體 `{}` 通過 `GET /v1/models` 檢查連線；`{"model":"<模型名>"}` 使用已存的憑證和請求頭傳送一次很小的非流式生成請求。模型名會先經過上游的別名對映。模型請求使用已配置的 Chat Completions、Responses 或 Anthropic Messages 介面；關閉路徑拼接時，也會遵循配置的完整介面 URL。上游允許 OpenViking 工具時，請求會帶上當前帳號的 OpenViking 工具，並按預設上下文配置篩選；工具目錄暫時不可用時，降級為不帶工具繼續測試。模型測試不設定 reasoning effort，由模型使用預設值。
 
 響應包含 `{ok, kind, status, reason, url}`，其中 `kind` 為 `connection` 或 `model`。測試失敗時還會在 `response` 中返回完整的上游 HTTP 響應，包括 `http_version`、`status`、`reason`、`headers`、`body` 和可選的 `truncated` 標記。響應體最多 16 KiB；沒有收到響應時不含 `status`。超時時間取已配置上游超時與 60 秒中的較小值。兩種測試都需要寫許可權；模型測試會真實請求服務商並可能產生少量費用。
 
-Anthropic 測試同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金鑰；上游請求頭未設定 `anthropic-version` 時，預設使用 `2023-06-01`。Chat Completions 和 Responses 測試只傳送 Bearer 鑑權。`key_header` 不是 `authorization`，或者 `base_url` 含 `{api_key}` 時，按[憑證](../guides/22-gateway-operations.md#憑證)中的規則傳送；返回的 `url` 保留 `{api_key}` 佔位符。
+Anthropic 測試同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金鑰；上游請求頭未設定 `anthropic-version` 時，預設使用 `2023-06-01`。Chat Completions 和 Responses 測試只傳送 Bearer 鑑權。`key_header` 不是 `authorization`，或者 `base_url` 含 `{api_key}` 時，按[憑證](../gateway/07-upstreams.md#credentials)中的規則傳送；返回的 `url` 保留 `{api_key}` 佔位符。
 
-| 服務商的響應 | `reason` | `ok` |
-| --- | --- | --- |
-| Coding Plan 上游尚未授權閘道器使用。閘道器不發請求。 | `coding_plan_blocked` | `false` |
-| 對完整請求地址（`append_endpoint_path` 為 `false`）做連線測試：這種上游沒有模型列表，閘道器不發請求，請改用模型測試。 | `exact_endpoint_untestable` | `false` |
-| 沒有可用的 API Key：沒有儲存，或者上游要求每個客戶端自帶。閘道器不發請求。 | `upstream_key_missing` | `false` |
-| 2xx，響應符合已配置的模型協議 | `passed` | `true` |
-| 2xx，但響應不是合法 JSON 或不符合已配置的協議 | `invalid_response` | `false` |
-| 401 或 403 | `upstream_key_rejected` | `false` |
-| 400、404、405 或 422 | `model_request_rejected` | `false` |
-| 429 | `rate_limited` | `false` |
-| 網路錯誤、超時、重定向或 5xx | `upstream_unavailable` | `false` |
+兩種測試對服務商響應的判斷不同：
 
-連線測試通過說明地址可達；服務商提供 `/v1/models` 時也會驗證已存憑證。部分服務商不提供該介面，返回 404 或 405 後仍可繼續測試模型。模型測試通過說明所選模型完成了本次請求，不代表其他模型也可用，也不會授權使用 Coding Plan。
+| 測試 | 服務商的響應 | `reason` | `ok` |
+| --- | --- | --- | --- |
+| 連線 | 上游是完整請求地址（`append_endpoint_path` 為 `false`），沒有模型列表。閘道器不發請求，請改用模型測試。 | `exact_endpoint_untestable` | `false` |
+| 模型 | Coding Plan 上游尚未授權閘道器使用。閘道器不發請求。 | `coding_plan_blocked` | `false` |
+| 兩者 | 沒有可用的 API Key：沒有儲存，或者上游要求每個客戶端自帶。閘道器不發請求。 | `upstream_key_missing` | `false` |
+| 連線 | 2xx，響應是帶 `data` 列表的 JSON 物件 | `passed` | `true` |
+| 連線 | 其他 2xx：不是合法 JSON、響應體超過 16 KiB、沒有 `data` 列表，或帶 `error` 欄位 | `upstream_key_rejected` | `false` |
+| 連線 | 404 或 405：服務商不提供模型列表，API Key 未經驗證 | `models_unavailable` | `true` |
+| 連線 | 429：地址有響應，但 API Key 未經驗證 | `rate_limited` | `true` |
+| 模型 | 2xx，響應符合已配置的模型協議 | `passed` | `true` |
+| 模型 | 其他 2xx：不是合法 JSON、響應體超過 16 KiB，或不符合已配置的協議 | `invalid_response` | `false` |
+| 模型 | 429 | `rate_limited` | `false` |
+| 模型 | 404 或 405 | `model_request_rejected` | `false` |
+| 兩者 | 400 或 422 | `model_request_rejected` | `false` |
+| 兩者 | 401 或 403 | `upstream_key_rejected` | `false` |
+| 兩者 | 網路錯誤、超時、重定向、5xx 或其他狀態碼 | `upstream_unavailable` | `false` |
 
-### 匯入 VLM 配置
+連線測試返回 `passed`，說明地址可達，已存憑證也有效。`models_unavailable` 和 `rate_limited` 只能說明地址可達，Studio 顯示為中性色的 **連線可用**；要驗證 API Key，請再做一次模型測試。Coding Plan 授權只攔截模型測試，未授權的 Coding Plan 上游照樣可以做連線測試。模型測試通過說明所選模型完成了本次請求，不代表其他模型也可用，也不會授權使用 Coding Plan。
+
+### 匯入 VLM 配置 {#import-vlm-settings}
 
 `POST /gateway/admin/upstreams/import-vlm` 把 OpenViking Server 的 VLM 憑證匯入為所選帳號的上游，只在嵌入部署中可用；獨立閘道器返回 404 `vlm_import_unavailable`。
 
@@ -133,7 +168,7 @@ Anthropic 測試同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金�
 | `litellm_unsupported_route` | LiteLLM 路由不使用 OpenAI Chat Completions API，例如 `gemini/`、`bedrock/` 或 `vertex_ai/`。請手動把這個服務商新增為上游。 |
 | `invalid_configuration` | 憑證構不成有效的上游，例如 base URL 無效。 |
 
-## 閘道器金鑰
+## 閘道器金鑰 {#gateway-keys}
 
 | 方法 | 路徑 | 說明 |
 | --- | --- | --- |
@@ -186,13 +221,13 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 
 立即儲存響應中的 `key`，閘道器只保留它的雜湊。`GET` 返回同樣的欄位，但沒有 `key`。閘道器金鑰不能修改，沒有對應的 `PUT`；要換上下文配置、上游、模型或使用者，就簽發新金鑰，再吊銷舊的。
 
-使用者的 OpenViking API 金鑰重新生成或使用者被刪除後，繫結它的閘道器金鑰會失效並被刪除，使用者資料保留，見[閘道器金鑰](../guides/22-gateway-operations.md#閘道器金鑰)。
+使用者的 OpenViking API 金鑰重新生成或使用者被刪除後，繫結它的閘道器金鑰會失效並被刪除，使用者資料保留，見[閘道器金鑰](../gateway/09-gateway-keys.md#gateway-keys)。
 
 **重置儲存。** 請求體為 `{"session":"<會話請求頭的值或日誌中的 session>","protocol":"chat"}`，`protocol` 取 `chat`、`anthropic` 或 `responses`。成功返回 `{"status":"ready","message":"…"}`，閘道器會在這段對話的下一個請求裡，把完整歷史寫入一個新的 OpenViking 會話。找不到這段對話時返回 404 `not_found`。
 
-**刪除資料。** 兩個刪除介面會清掉閘道器裡尚未儲存的對話內容和日誌，不影響已經存入 OpenViking 的會話和記憶。保留期和其他刪除途徑見[安全與資料](../guides/22-gateway-operations.md#安全與資料)。
+**刪除資料。** 兩個刪除介面會清掉閘道器裡尚未儲存的對話內容和日誌，不影響已經存入 OpenViking 的會話和記憶。保留期和其他刪除途徑見[安全與資料](../gateway/11-security-and-data.md)。
 
-## 錯誤
+## 錯誤 {#errors}
 
 管理介面的錯誤響應帶穩定的頂層 `reason`，以及一句簡短的英文說明 `detail`；部分錯誤另有附加欄位，例如：
 
@@ -204,7 +239,7 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 
 | HTTP | `reason` | 含義和處理 |
 | --- | --- | --- |
-| 401 | `management_key_invalid` | 管理金鑰不正確。向部署者確認當前的管理金鑰，或者見[忘記閘道器管理金鑰](../guides/22-gateway-operations.md#忘記閘道器管理金鑰)。 |
+| 401 | `management_key_invalid` | 管理金鑰不正確。向部署者確認當前的管理金鑰，或者見[忘記閘道器管理金鑰](../guides/22-gateway-operations.md#lost-the-management-key)。 |
 | 403 | `management_key_required` | 已設定管理金鑰，修改上游或上下文配置時必須帶上它。 |
 | 401 | `openviking_http_401` | OpenViking 拒絕了 API 金鑰。換用當前有效的金鑰。 |
 | 401 | `openviking_identity_missing` | OpenViking 沒有返回這把金鑰對應的使用者。 |
@@ -225,4 +260,4 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 
 OpenViking 返回的其他 HTTP 錯誤記為 `openviking_http_<status>`；閘道器自身的通用 HTTP 錯誤記為 `gateway_http_<status>`，例如對不支援的方法返回 405 `gateway_http_405`。
 
-模型客戶端收到的 401 不屬於管理 API。原因可能是閘道器金鑰缺失、錯誤或已吊銷，也可能是它繫結的 OpenViking 金鑰已經失效，排查方法見[客戶端收到閘道器返回的錯誤](../guides/22-gateway-operations.md#客戶端收到閘道器返回的錯誤)。
+模型客戶端收到的 401 不屬於管理 API。原因可能是閘道器金鑰缺失、錯誤或已吊銷，也可能是它繫結的 OpenViking 金鑰已經失效，排查方法見[客戶端收到閘道器返回的錯誤](../gateway/12-troubleshooting.md#clients-get-an-error-from-the-gateway)。

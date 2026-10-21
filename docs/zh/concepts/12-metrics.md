@@ -164,6 +164,7 @@ scrape_configs:
 | `openviking_retrieval_zero_result_total` | Counter | `account_id, context_type` | 檢索零結果次數 |
 | `openviking_retrieval_rerank_used_total` | Counter | `account_id` | 檢索中使用 rerank 的次數 |
 | `openviking_retrieval_rerank_fallback_total` | Counter | `account_id` | 檢索 rerank 回退次數 |
+| `openviking_resource_imports_total` | Counter | `account_id, pipeline, source_type` | 已受理的資源匯入任務數；Connector 匯入使用 `pipeline="connector"`，`source_type` 為 `repository` 或 `document` |
 | `openviking_resource_stage_total` | Counter | `account_id, stage, status` | 資源匯入各階段執行次數 |
 | `openviking_resource_stage_duration_seconds` | Histogram | `account_id, stage, status` | 資源匯入階段耗時分佈 |
 | `openviking_resource_wait_duration_seconds` | Histogram | `account_id, operation` | 資源匯入等待耗時分佈（例如佇列等待） |
@@ -205,6 +206,7 @@ Telemetry bridge 還識別舊摘要鍵，對應 `request`、`process`、`parse`�
 | `openviking_vlm_tokens_input_total` | Counter | `account_id, provider, model_name` | VLM 輸入 token |
 | `openviking_vlm_tokens_output_total` | Counter | `account_id, provider, model_name` | VLM 輸出 token |
 | `openviking_vlm_tokens_total` | Counter | `account_id, provider, model_name` | VLM 總 token |
+| `openviking_vlm_ingestion_tokens_total` | Counter | `account_id, source_type` | 資源匯入階段 VLM 總 token，`source_type` 區分 `repository` / `document` |
 | `openviking_vlm_call_duration_seconds` | Histogram | `account_id, provider, model_name` | VLM 呼叫耗時分佈 |
 | `openviking_embedding_requests_total` | Counter | `account_id, status` | embedding 請求數 |
 | `openviking_embedding_latency_seconds` | Histogram | `account_id, status` | embedding 耗時分佈 |
@@ -214,6 +216,7 @@ Telemetry bridge 還識別舊摘要鍵，對應 `request`、`process`、`parse`�
 | `openviking_embedding_tokens_input_total` | Counter | `account_id, provider, model_name` | embedding 輸入 token（per-call 聚合） |
 | `openviking_embedding_tokens_output_total` | Counter | `account_id, provider, model_name` | embedding 輸出 token（per-call 聚合；若長期為 0 可能不出現） |
 | `openviking_embedding_tokens_total` | Counter | `account_id, provider, model_name` | embedding 總 token（per-call 聚合） |
+| `openviking_embedding_ingestion_tokens_total` | Counter | `account_id, source_type` | 資源匯入階段 embedding 總 token，`source_type` 區分 `repository` / `document` |
 | `openviking_rerank_calls_total` | Counter | `account_id, provider, model_name` | rerank provider 呼叫次數（per-call） |
 | `openviking_rerank_call_duration_seconds` | Histogram | `account_id, provider, model_name` | rerank provider 呼叫耗時分佈（per-call） |
 | `openviking_rerank_tokens_input_total` | Counter | `account_id, provider, model_name` | rerank 輸入 token（per-call 聚合） |

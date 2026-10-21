@@ -27,7 +27,6 @@ export default {
   intro:
     'Talk to VikingBot here, or connect it to your team’s messaging platform.',
   newChat: 'New conversation',
-  accountRequired: 'Select an account before managing bots',
   web: 'Web',
   all: 'All',
   search: 'Search conversations',
@@ -45,7 +44,8 @@ export default {
   comingSoon: 'Coming soon',
   adminOnly:
     'Only the server administrator can manage connections and view platform history.',
-  webReady: 'Web conversations use your current Business Data Platform identity.',
+  webReady:
+    'Web conversations use your current Business Data Platform identity.',
   manageHint:
     'Connect an application once, then add its bot to multiple groups.',
   back: 'Back',

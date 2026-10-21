@@ -1,3 +1,4 @@
+import i18n from '#/i18n/core'
 import { prepareCompileHandoff } from '#/routes/compile/-lib/handoff'
 import { useQuery } from '@tanstack/react-query'
 import { fetchCompileSkills } from '#/routes/compile/-lib/api'
@@ -12,7 +13,6 @@ import { runCompileSubmission } from '#/routes/compile/-lib/terminal'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import i18n from '#/i18n'
 import {
   ArrowRightIcon,
   CheckCircle2Icon,
@@ -219,7 +219,10 @@ const SESSION_SUBCOMMANDS_BY_KEY = new Map(
 )
 
 type TerminalSuggestionGroup =
-  TerminalCommandGroup | 'history' | 'resource' | 'subcommand'
+  | TerminalCommandGroup
+  | 'history'
+  | 'resource'
+  | 'subcommand'
 
 type TerminalSuggestion = Omit<TerminalCommandView, 'group'> & {
   group: TerminalSuggestionGroup

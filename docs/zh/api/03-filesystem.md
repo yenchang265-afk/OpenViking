@@ -70,6 +70,11 @@ OpenViking 提供類 Unix 的檔案系統操作來管理上下文。
 內容。該行為只適用於共享的
 `viking://resources` 名稱空間；個人和 peer 私有名稱空間仍按原有規則隱藏。
 
+在大小寫不敏感的 `localfs` 上，目錄名大小寫別名可能影響 `ls`、`tree` 和 `glob`
+看到的內容。例如真實目錄是 `viking://resources/bob-private/`，請求
+`viking://resources/BOB-PRIVATE/` 也可能列出同一目錄；大小寫敏感系統上，別名目錄
+不存在時會返回 `NOT_FOUND`。
+
 
 **Python SDK (HTTP)**
 
@@ -440,6 +445,8 @@ ov stat viking://resources/my-project/docs
 
 `count` 欄位（僅目錄）包含該目錄下的專案（檔案和子目錄）估計數量（來自向量索引）。
 
+在大小寫不敏感的 `localfs` 上，`stat` 也可能通過大小寫別名返回真實檔案或目錄的後設資料。例如 `viking://resources/docs/REPORT.md` 可能命中真實的 `viking://resources/docs/report.md`；大小寫敏感系統上，別名目標不存在時返回 `NOT_FOUND`。
+
 ---
 
 ### attrs()
@@ -616,6 +623,8 @@ ov mkdir viking://resources/new-project/ --description "介面文件目錄"
 }
 ```
 
+在大小寫不敏感的 `localfs` 上，建立僅大小寫不同的目錄可能命中已有目錄。例如已存在 `viking://resources/docs/` 時，`ov mkdir viking://resources/DOCS/` 可能作用到同一個底層目錄；大小寫敏感系統上二者是不同路徑。
+
 ---
 
 ### rm()
@@ -711,6 +720,8 @@ ov rm viking://resources/old.md [--recursive]
 
 刪除 `viking://resources/...` 時，響應可能包含 `memory_cleanup`，表示刪除前已清理引用該資源 URI 的使用者記憶。
 
+在大小寫不敏感的 `localfs` 上，大小寫別名可能影響刪除目標。例如真實檔案是 `viking://resources/bob-private/private.md`，執行 `ov rm viking://resources/BOB-PRIVATE/private.md` 可能刪除同一個檔案；大小寫敏感系統上，別名目標不存在時該冪等刪除仍會成功，但不會刪除真實檔案。
+
 ---
 
 ### cp()
@@ -797,6 +808,8 @@ ov cp -r viking://resources/docs viking://resources/docs-backup
 
 常見錯誤包括：源或目標父目錄不存在時返回 `NOT_FOUND`；路徑鎖繁忙時返回 `CONFLICT`；複製或刪除目錄但未設定 `recursive=true`、對檔案執行目錄操作、源和目標關係非法或型別衝突時返回 `INVALID_ARGUMENT`（HTTP 400）。
 
+在大小寫不敏感的 `localfs` 上，`from_uri` 和 `to_uri` 都可能受大小寫別名影響。例如 `ov cp viking://resources/BOB-PRIVATE/private.md viking://resources/archive/copy.md` 可能從真實的 `bob-private/private.md` 複製；`to_uri` 僅大小寫不同也可能覆蓋已有目標。大小寫敏感系統上，大小寫不同的源不存在時返回 `NOT_FOUND`，大小寫不同的目標按獨立路徑處理。
+
 ---
 
 ### mv()
@@ -873,6 +886,8 @@ ov mv viking://resources/old-name/ viking://resources/new-name/
   }
 }
 ```
+
+在大小寫不敏感的 `localfs` 上，`from_uri` 和 `to_uri` 都可能受大小寫別名影響。例如 `ov mv viking://resources/BOB-PRIVATE/private.md viking://resources/archive/private.md` 可能移動真實的 `bob-private/private.md`；`to_uri` 僅大小寫不同也可能覆蓋或合併已有目標。大小寫敏感系統上，大小寫不同的源不存在時返回 `NOT_FOUND`，大小寫不同的目標按獨立路徑處理。
 
 <a id="grep"></a><a id="glob"></a>
 

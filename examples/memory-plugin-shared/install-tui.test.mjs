@@ -93,6 +93,7 @@ PATH=/usr/bin:/bin
 HOME=${JSON.stringify(home)}
 refresh_available_harnesses
 HAVE_CURSOR=0
+HAVE_TRAE_CN=0
 INTERACTIVE=0
 REQUESTED_HARNESSES=""
 select_harnesses
@@ -114,6 +115,7 @@ PATH=/usr/bin:/bin
 HOME=${JSON.stringify(home)}
 refresh_available_harnesses
 HAVE_CURSOR=0
+HAVE_TRAE_CN=0
 INTERACTIVE=0
 REQUESTED_HARNESSES=""
 select_harnesses
@@ -143,6 +145,7 @@ TUI_CODEX_BINS="$CODEX_BINS"
 add_detected_traecode_cli_alias
 refresh_available_harnesses
 HAVE_CURSOR=0
+HAVE_TRAE_CN=0
 tui_reset_bin_selection
 INTERACTIVE=0
 REQUESTED_HARNESSES=""
@@ -254,7 +257,7 @@ test("q at the install confirmation cancels rather than taking the default", () 
   assert.match(menu[0], /^ +q\|Q\) cursor="\$\{TUI_MENU_QUIT:-\$def\}"; break ;;$/m);
   const confirm = /^confirm_plan\(\) \{$[\s\S]*?^\}$/m.exec(installerSource);
   assert.ok(confirm, "confirm_plan not found");
-  assert.match(confirm[0], /TUI_MENU_QUIT=1 tui_menu "[^\n]*" 0 "\$\(t 'Proceed' '继续'\)" "\$\(t 'Cancel' '取消'\)"$/m);
+  assert.match(confirm[0], /TUI_MENU_QUIT=1 tui_menu "[^\n]*" 0 "\$\(t 'Proceed' '繼續'\)" "\$\(t 'Cancel' '取消'\)"$/m);
 });
 
 test("an empty element in a comma-separated list is skipped, not fatal", () => {
@@ -519,14 +522,14 @@ exec 3</dev/null
 tui_menu() {
   printf 'menu: %s\\n' "$1"
   TUI_MENU_CHOICE="$2"
-  case "$1" in Language*) TUI_MENU_CHOICE=1 ;; 开始安装*) TUI_MENU_CHOICE=1 ;; esac
+  case "$1" in Language*) TUI_MENU_CHOICE=1 ;; 開始安裝*) TUI_MENU_CHOICE=1 ;; esac
 }
 ${mainMarker}`));
 
   const result = run(["--harness", "cursor", "--url", "http://127.0.0.1:9", "--api-key", ""]);
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /^menu: Language \/ 语言\n/);
+  assert.match(result.stdout, /^menu: Language \/ 語言\n/);
   assert.match(result.stdout, /已取消，未做任何修改。/);
 });
 

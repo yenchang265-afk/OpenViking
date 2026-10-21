@@ -85,6 +85,7 @@ const requests = {
     compactionApplied: '傳送時較早的歷史已被替換',
     compactionWritten: '生成了約 {{tokens}} Token 的摘要，用時 {{duration}}',
     compactionFailed: '壓縮失敗（{{reason}}），已傳送完整歷史',
+    compactionStillOver: '摘要已保留，但用量仍達到壓縮時機（{{reason}}）',
     window: '第 {{number}} 個視窗，由模型管理',
     windowReset: '模型開啟了新視窗',
     saving: '儲存到 Business Data Platform',

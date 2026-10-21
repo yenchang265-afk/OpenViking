@@ -59,13 +59,13 @@ Admin API 用於多租戶環境下的帳戶、使用者和使用者組管理。�
 
 使用者組屬於單個 account，用於通過一個 ACL principal 授權多個使用者。`group_id` 由呼叫者建立時指定，使用與 `user_id` 相同的識別符號規則，是 account 內唯一且穩定的標識；不存在單獨的組名。組內只能加入當前 account 已存在的使用者，不支援巢狀組。
 
-成員關係由服務端加入每次請求的 `RequestContext.group_ids`。新增或移除成員從下一次請求開始生效，不重寫資源 ACL 或 context 記錄。使用者被刪除時會自動退出所有組；使用者組必須為空才能刪除。
+成員關係由服務端加入每次請求的 `RequestContext.group_ids`。新增或移除成員從下一次請求開始生效，不重寫資源 ACL 或 context 記錄。使用者被刪除時會自動退出所有組。無論組是否為空，都可以直接刪除；刪除組會移除該組的全部成員關係，保留使用者及其憑證，也不重寫資源 ACL 或 context 記錄。
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | POST | `/api/v1/admin/accounts/{account_id}/groups` | 建立空組，請求體為 `{"group_id":"engineering"}` |
 | GET | `/api/v1/admin/accounts/{account_id}/groups` | 列出組 |
-| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}` | 刪除空組 |
+| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}` | 刪除組及其全部成員關係，允許組內仍有成員 |
 | GET | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 列出成員 |
 | PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 冪等新增成員；重複呼叫返回 `added=true` |
 | DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除成員；重複呼叫返回 `removed=false` |
@@ -79,9 +79,61 @@ ov --sudo admin remove-group-member acme engineering alice
 ov --sudo admin delete-group acme engineering
 ```
 
+要直接刪除仍有成員的組，可呼叫 `DELETE /api/v1/admin/accounts/acme/groups/engineering`。
+
 Python SDK 提供對應的 `admin_create_group`、`admin_list_groups`、`admin_list_group_members`、`admin_add_group_member`、`admin_remove_group_member` 和 `admin_delete_group`；Go SDK 使用相同名稱的 PascalCase 方法。
 
 ## API 參考
+
+### account / user 存在性查詢
+
+建立 Account/User 前可用兩個精確判存介面替代“列出後本地比對”。二者都命中記憶體登錄檔，時間複雜度 O(1)，且只返回無憑據資訊；開啟 `server.api_key_watch_enabled` 時直接讀記憶體，關閉時會回退讀取持久化的登錄檔。
+
+**查詢單個 Account（僅 ROOT）**
+
+```
+GET /api/v1/admin/accounts/{account_id}
+```
+
+命中返回該 Account 的無憑據後設資料；不存在返回 404。
+
+```bash
+curl "http://localhost:1933/api/v1/admin/accounts/team-a" \
+  -H "X-API-Key: <root-key>"
+```
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "account_id": "team-a",
+    "created_at": "2026-10-20T03:00:00Z",
+    "user_count": 2,
+    "status": "active"
+  }
+}
+```
+
+`status` 為 `deleting` 時附帶 `task_id`。響應不包含 `api_key`、`user_key`、`key_prefix` 或 `seed`。
+
+**查詢單個 User 的成員資訊（ROOT 或本 Account 的 ADMIN）**
+
+```
+GET /api/v1/admin/accounts/{account_id}/users/{user_id}
+```
+
+點讀單個使用者，僅返回無憑據的成員資訊，刻意不復用任何會返回憑據的 user 讀取形態：
+
+```bash
+curl "http://localhost:1933/api/v1/admin/accounts/team-a/users/alice" \
+  -H "X-API-Key: <root-key>"
+```
+
+```json
+{ "status": "ok", "result": { "user_id": "alice", "role": "admin" } }
+```
+
+返回僅含 `user_id` 與 `role`，**不包含** `api_key` 或 `key_prefix`。使用者不存在返回 404。ADMIN 只能查詢自己所屬的 Account，跨 Account 返回 403。建立前的判重可據此進行；併發唯一性仍由建立時的寫入衝突（`ALREADY_EXISTS`）兜底。
 
 ### get_agent_evolution_status
 
@@ -445,6 +497,56 @@ PATCH 會先做結構校驗，再構造合併後的配置：未知路徑和執�
 其他配置節通過完整檔案編輯。
 
 檔案含美元符號、Windows `%VAR%` 引用或轉義的美元/百分號時，讀取和預覽返回 `form_readonly: true`，不返回模型表單資料，並拒絕表單修改。請使用檔案模式編輯原文，包括帶引號和未帶引號的環境變數引用。驗證沿用啟動時對原文展開環境變數的流程，儲存不會重新序列化文件。檔案校驗會應用 CLI 啟動引數覆蓋，與重啟時的處理一致。
+
+#### 草稿模型連線測試
+
+ROOT 可以測試草稿 VLM 或 Embedding 連線，而不儲存或釋出提交的配置。
+這是 Studio 使用的私有介面，刻意不出現在生成的 OpenAPI schema 中，
+並始終返回 `Cache-Control: no-store`。
+
+```http
+POST /api/v1/admin/configuration/test-model
+Content-Type: application/json
+X-API-Key: <root-api-key>
+```
+
+| 欄位 | 型別 | 必填 | 預設值 | 說明 |
+|------|------|------|--------|------|
+| `kind` | string | 是 | - | `vlm` 或 `embedding` |
+| `config` | object | 是 | - | 待測試的草稿 provider 憑證或端點欄位 |
+| `fallback` | object | 否 | `{}` | 現有生效配置，用於補齊未提交的非敏感欄位 |
+| `thinking` | boolean | 否 | `null` | 本次 VLM 探測的 thinking 模式覆蓋 |
+| `mode` | string | 否 | `dense` | Embedding 模式：`dense`、`sparse` 或 `hybrid` |
+
+```bash
+curl -X POST http://localhost:1933/api/v1/admin/configuration/test-model \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <root-api-key>" \
+  -d '{
+    "kind": "vlm",
+    "config": {
+      "provider": "openai",
+      "api_key": "draft-key"
+    },
+    "fallback": {
+      "model": "gpt-4.1"
+    }
+  }'
+```
+
+**響應示例**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "ok": true,
+    "ms": 120
+  }
+}
+```
+
+該介面會脫敏 provider 錯誤，並且不會持久化提交的草稿配置。
 
 #### 服務端重啟
 

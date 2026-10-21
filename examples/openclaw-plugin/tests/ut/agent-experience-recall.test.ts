@@ -12,7 +12,7 @@ describe("shouldRecallAgentExperience", () => {
 
   it("recalls for execution tasks", () => {
     const result = shouldRecallAgentExperience({
-      latestUserText: "修一下 OpenClaw 外掛裡 afterTurn 寫入 tool result 的問題",
+      latestUserText: "修一下 OpenClaw 插件里 afterTurn 写入 tool result 的问题",
     });
     expect(result.recall).toBe(true);
     expect(result.reason).toBe("task_execution");

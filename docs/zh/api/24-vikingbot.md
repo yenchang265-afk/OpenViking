@@ -176,6 +176,66 @@ curl -X POST http://localhost:1933/bot/v1/feedback \
 
 目標回覆不存在時返回 `404`；`rating` 缺少 `feedback_score` 時返回請求校驗錯誤。
 
+### interrupt_session()
+
+中斷活躍或排隊中的 Bot 會話。OpenViking 會把已認證的 Account 和 User
+身份轉發給本地 VikingBot Gateway。
+
+```http
+POST /bot/v1/sessions/{session_id}/interrupt
+```
+
+**HTTP API**
+
+```bash
+curl -X POST http://localhost:1933/bot/v1/sessions/session-id/interrupt \
+  -H "X-API-Key: your-key"
+```
+
+**響應示例**
+
+響應體由 VikingBot 透傳；典型響應如下：
+
+```json
+{
+  "interrupted": true
+}
+```
+
+### steer_session()
+
+向活躍的流式 Bot 會話追加使用者輸入。OpenViking 會丟棄客戶端提交的
+`openviking_connection`，並在轉發前附加已認證的 OpenViking 連線資訊。
+
+```http
+POST /bot/v1/sessions/{session_id}/steer
+Content-Type: application/json
+```
+
+| 欄位 | 型別 | 必填 | 說明 |
+|------|------|------|------|
+| `message` | string | 是 | 追加到活躍會話的使用者輸入 |
+| `openviking_connection` | object | 否 | 客戶端傳入時會被忽略；OpenViking 會附加已認證連線 |
+
+**HTTP API**
+
+```bash
+curl -X POST http://localhost:1933/bot/v1/sessions/session-id/steer \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-key" \
+  -d '{"message":"繼續下一步"}'
+```
+
+**響應示例**
+
+響應體由 VikingBot 透傳；典型響應如下：
+
+```json
+{
+  "accepted": true
+}
+```
+
 ## 客戶端範圍
 
 標準 OpenViking Python、TypeScript 和 Go SDK 當前不封裝 Bot 代理介面；Chat 可通過 `ov` CLI 與 HTTP 使用。VikingBot Gateway 自身還提供 Session 和 Channel API，詳見 [VikingBot 文件](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md#http-api)。

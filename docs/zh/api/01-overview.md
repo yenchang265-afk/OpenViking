@@ -493,6 +493,7 @@ JSON 輸出 - 錯誤：
 |------|------|------|
 | GET | `/api/v1/admin/configuration` | 獲取 Cluster 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/configuration` | 更新 Cluster 層執行時配置 |
+| POST | `/api/v1/admin/configuration/test-model` | 測試草稿模型或 Embedding 連線，不儲存配置 |
 | POST | `/api/v1/admin/restart` | 請求支援該能力的服務程序優雅重啟（僅 ROOT） |
 | GET | `/api/v1/admin/accounts/{account_id}/configuration` | 獲取 Account 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/accounts/{account_id}/configuration` | 更新 Account 層執行時配置 |
@@ -507,9 +508,11 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/admin/accounts` | 建立帳號及首個管理員 |
 | GET | `/api/v1/admin/accounts` | 列出帳號 |
 | POST | `/api/v1/admin/migrate` | 遷移舊版身份資料 |
+| GET | `/api/v1/admin/accounts/{account_id}` | 獲取單個帳號的無憑據後設資料 |
 | DELETE | `/api/v1/admin/accounts/{account_id}` | 刪除帳號 |
 | POST | `/api/v1/admin/accounts/{account_id}/users` | 註冊使用者 |
 | GET | `/api/v1/admin/accounts/{account_id}/users` | 列出使用者 |
+| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 獲取單個使用者的無憑據成員資訊（user_id、role） |
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 獲取使用者記憶策略 |
 | PATCH | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 更新使用者記憶策略 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 移除使用者 |
@@ -522,6 +525,7 @@ JSON 輸出 - 錯誤：
 | PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 新增使用者組成員 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除使用者組成員 |
 | GET | `/api/v1/privacy-configs` | 列出隱私配置分類 |
+| GET | `/api/v1/privacy-configs/tree` | 樹形列出當前目標和欄位後設資料，不返回值 |
 | POST | `/api/v1/privacy-configs/scan` | 掃描或修復正文中的登記值 |
 | GET | `/api/v1/privacy-configs/{category}` | 列出分類目標 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}` | 獲取生效配置 |
@@ -584,6 +588,8 @@ JSON 輸出 - 錯誤：
 | POST | `/bot/v1/chat` | VikingBot 非流式對話 |
 | POST | `/bot/v1/chat/stream` | VikingBot 流式對話 |
 | POST | `/bot/v1/feedback` | 提交 VikingBot 回答反饋 |
+| POST | `/bot/v1/sessions/{session_id}/interrupt` | 中斷活躍或排隊中的 VikingBot 會話 |
+| POST | `/bot/v1/sessions/{session_id}/steer` | 向活躍流式會話傳送追加輸入 |
 | POST | `/bot/v1/compile` | 已停用；返回新介面遷移提示 |
 | GET | `/bot/v1/compile/{task_id}` | 已停用；返回 Task 介面遷移提示 |
 | POST | `/bot/v1/compile/{task_id}/cancel` | 已停用；返回 Task 取消介面遷移提示 |

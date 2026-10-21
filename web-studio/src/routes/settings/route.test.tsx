@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 import type { ComponentType } from 'react'
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { afterEach, expect, it, vi } from 'vitest'
 
@@ -75,6 +69,9 @@ vi.mock('#/hooks/use-studio-service', () => ({
     health: { refetch: vi.fn() },
   }),
 }))
+vi.mock('./-components/connection-profiles', () => ({
+  ConnectionProfilesList: () => <span data-testid="connection-profiles" />,
+}))
 vi.mock('./-components/server-configuration', () => ({
   ServerConfigurationEditor: () => <span data-testid="configuration-editor" />,
 }))
@@ -87,199 +84,6 @@ afterEach(() => {
   Object.assign(serviceState, { provider: 'opensource', role: 'user', key: '' })
 })
 
-it('preserves the active connection when an invalid address is saved from the details panel', async () => {
-  probe.mockResolvedValue({
-    admin: { state: 'skipped' },
-    data: { state: 'ok' },
-  })
-  const client = new QueryClient()
-  const Settings = Route.options.component as ComponentType & {
-    preload?: () => Promise<unknown>
-  }
-  await Settings.preload?.()
-  render(
-    <QueryClientProvider client={client}>
-      <Settings />
-    </QueryClientProvider>,
-  )
-  fireEvent.change(document.getElementById('settings-base-url')!, {
-    target: { value: 'not-a-url' },
-  })
-  fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
-  expect(screen.getByRole('alert').textContent).toBe(
-    'studio:profiles.invalidUrl',
-  )
-  expect(saveConnection).not.toHaveBeenCalled()
-  expect(reconnect).not.toHaveBeenCalled()
-  fireEvent.change(document.getElementById('settings-base-url')!, {
-    target: { value: 'https://proxy.example/openviking' },
-  })
-  fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
-  expect(screen.queryByRole('alert')).toBeNull()
-  expect(saveConnection).toHaveBeenCalledWith(
-    expect.objectContaining({ baseUrl: 'https://proxy.example/openviking' }),
-  )
-  expect(reconnect).toHaveBeenCalledTimes(1)
-  client.clear()
-})
-
-function renderSettings(client: QueryClient): void {
-  const Settings = Route.options.component as ComponentType
-  render(
-    <QueryClientProvider client={client}>
-      <Settings />
-    </QueryClientProvider>,
-  )
-}
-
-it('has no service type section and saves an edited legacy hosted connection as open source', () => {
-  config.url = 'https://proxy.example/openviking'
-  config.selection = 'volcengine'
-  const client = new QueryClient()
-  renderSettings(client)
-  expect(screen.queryByText('studio:serviceType')).toBeNull()
-  expect(screen.queryByRole('combobox')).toBeNull()
-  expect(screen.queryByRole('button', { name: 'studio:retry' })).toBeNull()
-  expect(document.getElementById('settings-root-api-key')).toBeNull()
-  const url = screen.getByLabelText<HTMLInputElement>('fields.baseUrl')
-  expect(url.readOnly).toBe(false)
-  fireEvent.change(url, { target: { value: 'https://open-source.example/ov' } })
-  // A new address converts the connection to open source, which takes a root key.
-  expect(document.getElementById('settings-root-api-key')).toBeTruthy()
-  fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
-  expect(saveConnection).toHaveBeenCalledWith(
-    expect.objectContaining({
-      serviceSelection: 'opensource',
-      baseUrl: 'https://open-source.example/ov',
-    }),
-  )
-  client.clear()
-})
-
-it('keeps a legacy hosted connection hosted while its address is unchanged', () => {
-  config.url = 'https://proxy.example/openviking'
-  config.selection = 'volcengine'
-  const client = new QueryClient()
-  renderSettings(client)
-  const save = screen.getByRole<HTMLButtonElement>('button', {
-    name: 'studio:profiles.save',
-  })
-  // Unchanged: nothing to save, so the stored Bearer auth is not converted.
-  expect(save.disabled).toBe(true)
-  // Hosted auth sends only the user key, so no root key is offered.
-  expect(document.getElementById('settings-root-api-key')).toBeNull()
-  fireEvent.change(document.getElementById('settings-user-api-key')!, {
-    target: { value: 'rotated-user-key' },
-  })
-  fireEvent.click(save)
-  expect(saveConnection).toHaveBeenCalledWith(
-    expect.objectContaining({
-      serviceSelection: 'volcengine',
-      baseUrl: 'https://proxy.example/openviking',
-      apiKey: 'rotated-user-key',
-    }),
-  )
-  client.clear()
-})
-
-it('keeps Save disabled and hides the root key for an official hosted address', () => {
-  config.url = 'https://api.vikingdb.cn-beijing.volces.com/openviking'
-  config.selection = 'volcengine'
-  const client = new QueryClient()
-  renderSettings(client)
-  expect(document.getElementById('settings-root-api-key')).toBeNull()
-  expect(
-    screen.getByRole<HTMLButtonElement>('button', {
-      name: 'studio:profiles.save',
-    }).disabled,
-  ).toBe(true)
-  client.clear()
-})
-
-it('shows only the server-resolved identity next to the data key', async () => {
-  probe.mockResolvedValue({
-    admin: { state: 'skipped' },
-    data: { state: 'ok' },
-  })
-  const client = new QueryClient()
-  const Settings = Route.options.component as ComponentType & {
-    preload?: () => Promise<unknown>
-  }
-  await Settings.preload?.()
-  const content = () => (
-    <QueryClientProvider client={client}>
-      <Settings />
-    </QueryClientProvider>
-  )
-  const view = render(content())
-  expect(
-    await screen.findByText('[studio:profiles.identityPending]'),
-  ).toBeTruthy()
-  expect(screen.queryByText('[account-a/alice]')).toBeNull()
-  healthState.value = { account_id: 'server-account', user_id: 'server-user' }
-  view.rerender(content())
-  expect(await screen.findByText('[server-account/server-user]')).toBeTruthy()
-  fireEvent.change(document.getElementById('settings-user-api-key')!, {
-    target: { value: 'unverified-key' },
-  })
-  expect(screen.getByText('[studio:profiles.identityPending]')).toBeTruthy()
-  client.clear()
-})
-
-it.each([false, undefined, true])(
-  'requires the Root key in trusted mode regardless of legacy metadata: %s',
-  async (required) => {
-    probe.mockResolvedValue({
-      admin: {
-        state: 'error',
-        statusCode: 403,
-        detail: 'Management unavailable',
-      },
-      data: { state: 'ok', detailCode: 'tenantDataAvailable' },
-      rootApiKeyRequired: required,
-    })
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-    const Settings = Route.options.component as ComponentType & {
-      preload?: () => Promise<unknown>
-    }
-    await Settings.preload?.()
-    render(
-      <QueryClientProvider client={client}>
-        <Settings />
-      </QueryClientProvider>,
-    )
-    await waitFor(
-      () => expect(screen.getByText('Management unavailable')).toBeTruthy(),
-      { timeout: 5000 },
-    )
-    expect(
-      Boolean(screen.queryByText('connection.keyGuide.trusted.title')),
-    ).toBe(true)
-    client.clear()
-  },
-)
-
-it('keeps management credentials editable after authentication fails', async () => {
-  serviceState.provider = 'unknown'
-  config.url = 'https://custom.example'
-  config.selection = 'opensource'
-  probe.mockResolvedValue({
-    admin: { state: 'skipped' },
-    data: { state: 'skipped' },
-  })
-  const client = new QueryClient()
-  const Settings = Route.options.component as ComponentType
-  render(
-    <QueryClientProvider client={client}>
-      <Settings />
-    </QueryClientProvider>,
-  )
-  expect(document.getElementById('settings-root-api-key')).toBeTruthy()
-  client.clear()
-})
-
 it('unmounts the configuration editor and resets the active tab when switching to a hosted connection', async () => {
   Object.assign(serviceState, {
     provider: 'opensource',
@@ -289,7 +93,10 @@ it('unmounts the configuration editor and resets the active tab when switching t
   })
   probe.mockResolvedValue({ admin: { state: 'ok' }, data: { state: 'ok' } })
   const client = new QueryClient()
-  const Settings = Route.options.component as ComponentType
+  const Settings = Route.options.component as ComponentType & {
+    preload?: () => Promise<unknown>
+  }
+  await Settings.preload?.()
   const content = () => (
     <QueryClientProvider client={client}>
       <Settings />
@@ -309,43 +116,4 @@ it('unmounts the configuration editor and resets the active tab when switching t
   ).toBe('true')
   client.clear()
   Object.assign(serviceState, { provider: 'opensource', role: 'user', key: '' })
-})
-
-it('preserves an edited URL and user key while health fills in identity', async () => {
-  const originalIdentity = {
-    accountId: connectionState.accountId,
-    userId: connectionState.userId,
-  }
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  })
-  const Settings = Route.options.component as ComponentType
-  const content = () => (
-    <QueryClientProvider client={client}>
-      <Settings />
-    </QueryClientProvider>
-  )
-  const view = render(content())
-  const url = screen.getByLabelText<HTMLInputElement>('fields.baseUrl')
-  const key = document.getElementById(
-    'settings-user-api-key',
-  ) as HTMLInputElement
-  fireEvent.change(url, { target: { value: 'http://recovery.test' } })
-  fireEvent.change(key, { target: { value: 'synthetic-draft' } })
-  connectionState.accountId = 'resolved-account'
-  connectionState.userId = 'resolved-user'
-  view.rerender(content())
-  expect(url.value).toBe('http://recovery.test')
-  expect(key.value).toBe('synthetic-draft')
-  fireEvent.click(screen.getByRole('button', { name: 'studio:profiles.save' }))
-  expect(saveConnection).toHaveBeenCalledWith(
-    expect.objectContaining({
-      baseUrl: 'http://recovery.test',
-      apiKey: 'synthetic-draft',
-      accountId: 'resolved-account',
-      userId: 'resolved-user',
-    }),
-  )
-  Object.assign(connectionState, originalIdentity)
-  client.clear()
 })

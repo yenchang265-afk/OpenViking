@@ -4,7 +4,7 @@
 
 配置值變化時會生成版本快照，可查詢歷史版本並切換生效版本。提交與當前版本相同的值不會建立新版本。
 
-以下示例使用當前使用者的 API Key。trusted 模式需補充部署要求的身份頭。讀取介面和 CLI 會返回儲存的實際值；下文的 `***` 僅為示例佔位符，不表示介面自動脫敏。
+以下示例使用當前使用者的 API Key。trusted 模式需補充部署要求的身份頭。讀取值的介面和 CLI 命令會返回實際值；樹總覽和欄位後設資料介面不返回值。下文的 `***` 僅為示例佔位符，不表示介面自動脫敏。
 
 啟用版本只改變 OpenViking 儲存的配置，不會替外部服務輪換、撤銷或恢復金鑰。
 
@@ -22,6 +22,7 @@
 | 方法 | 路徑 | 說明 |
 |------|------|------|
 | GET | `/api/v1/privacy-configs` | 列出隱私配置分類 |
+| GET | `/api/v1/privacy-configs/tree` | 樹形列出當前目標和欄位後設資料，不返回值 |
 | POST | `/api/v1/privacy-configs/scan` | 掃描或修復已儲存正文中的登記值 |
 | GET | `/api/v1/privacy-configs/{category}` | 列出分類下目標 |
 | GET | `/api/v1/privacy-configs/{category}/{target_key}` | 獲取當前生效配置（meta + current） |
@@ -140,6 +141,54 @@ curl -X GET http://localhost:1933/api/v1/privacy-configs \
   "result": ["skill"]
 }
 ```
+
+---
+
+### list_privacy_tree()
+
+一次請求列出當前使用者的分類、目標、當前生效版本號和欄位後設資料。
+不返回歷史版本或任何儲存的值，沒有 current 快照的目標會被跳過。
+
+**HTTP API**
+
+```text
+GET /api/v1/privacy-configs/tree
+```
+
+可選查詢引數 `category` 將結果限制在一個分類。非法識別符號返回 `INVALID_ARGUMENT`。
+空存量返回 `categories: []`；過濾的分類不存在時返回該分類和 `targets: []`。
+
+```bash
+curl "http://localhost:1933/api/v1/privacy-configs/tree?category=credential" \
+  -H "X-API-Key: your-key"
+```
+
+**響應**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "owner_user_id": "alice",
+    "categories": [{
+      "category": "credential",
+      "targets": [{
+        "target_key": "github",
+        "version": 3,
+        "fields": [{
+          "field": "pat",
+          "configured": true,
+          "reference": "{{ov_privacy:alice:viking://~/privacy/credential/github#/values/pat}}"
+        }]
+      }]
+    }]
+  }
+}
+```
+
+值為 `null` 或空字串時，`configured` 為 false；其他值（包括 `false` 和 `0`）均為已配置。
+API 始終返回綁定當前 owner 的 reference。CLI 的表格輸出僅在設定 `--references`
+時展示引用；JSON 輸出保留全部後設資料。
 
 ---
 
@@ -523,6 +572,11 @@ curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-se
 # 分類/目標
 ov privacy categories
 ov privacy list skill
+
+# 樹形盤點當前目標和欄位，不顯示值
+ov privacy tree
+ov privacy tree --category credential --references
+ov privacy tree --output json
 
 # 當前生效配置（支援快捷形式）
 ov privacy get skill byted-viking-search-knowledgebase

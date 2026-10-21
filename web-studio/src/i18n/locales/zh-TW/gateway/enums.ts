@@ -52,6 +52,7 @@ const enums = {
     recalled: '已補充記憶',
     empty: '沒有找到相關內容',
     disabled: '召回已關閉或預算已用完',
+    budget: '剩餘預算不足，未補充記憶',
     recall_timeout: '召回超時',
   },
   toolSkipReason: {

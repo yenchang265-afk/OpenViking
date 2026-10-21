@@ -97,7 +97,8 @@ class AsyncAGFSClient:
     async def run(self, method_name: str, /, *args: Any, **kwargs: Any) -> Any:
         """Run a sync client method on the storage pool, preserving ctx when supported.
 
-        Calls go through the circuit breaker of the mount the path belongs to.
+        Calls go through the circuit breaker of the mount the path belongs to, and
+        settle I/O before propagating cancellation.
         """
         path = args[0] if args else kwargs.get("path")
         return await guard_storage_call(
@@ -105,10 +106,9 @@ class AsyncAGFSClient:
         )
 
     async def _run_unguarded(self, method_name: str, /, *args: Any, **kwargs: Any) -> Any:
+        method = getattr(self._client, method_name)
         try:
-            return await run_to_completion(
-                lambda: run_in_fs_executor(getattr(self._client, method_name), *args, **kwargs)
-            )
+            return await run_to_completion(lambda: run_in_fs_executor(method, *args, **kwargs))
         except TypeError as exc:
             message = str(exc)
             if "ctx" not in kwargs or "unexpected keyword argument 'ctx'" not in message:
@@ -116,9 +116,7 @@ class AsyncAGFSClient:
             legacy_kwargs = dict(kwargs)
             legacy_kwargs.pop("ctx", None)
             return await run_to_completion(
-                lambda: run_in_fs_executor(
-                    getattr(self._client, method_name), *args, **legacy_kwargs
-                )
+                lambda: run_in_fs_executor(method, *args, **legacy_kwargs)
             )
 
     async def ls(
@@ -319,15 +317,17 @@ class AsyncAGFSClient:
 
         return await guard_storage_call(
             src_path,
-            lambda: run_in_fs_executor(
-                cp,
-                self._client,
-                src_path,
-                dst_path,
-                recursive=recursive,
-                stream=True,
-                fs_ctx=_fs_ctx_with_auto_pathlock(src_path, fs_ctx, auto_pathlock),
-                allow_same_mount_fast_path=allow_same_mount_fast_path,
+            lambda: run_to_completion(
+                lambda: run_in_fs_executor(
+                    cp,
+                    self._client,
+                    src_path,
+                    dst_path,
+                    recursive=recursive,
+                    stream=True,
+                    fs_ctx=_fs_ctx_with_auto_pathlock(src_path, fs_ctx, auto_pathlock),
+                    allow_same_mount_fast_path=allow_same_mount_fast_path,
+                )
             ),
         )
 

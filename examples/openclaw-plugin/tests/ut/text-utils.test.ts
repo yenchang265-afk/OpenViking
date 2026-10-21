@@ -417,7 +417,7 @@ describe("looksLikeQuestionOnlyText", () => {
   });
 
   it("question with memory intent → false", () => {
-    expect(looksLikeQuestionOnlyText("記住這個重要的事情，好嗎？")).toBe(false);
+    expect(looksLikeQuestionOnlyText("记住这个重要的事情，好吗？")).toBe(false);
   });
 
   it("long text with question mark → false (exceeds 280 chars)", () => {

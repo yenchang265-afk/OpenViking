@@ -49,6 +49,7 @@ export function createStoredZip(
   modifiedAt: Date = new Date(),
 ): Blob {
   if (entries.length > MAX_ZIP32_ENTRIES) {
+    // eslint-disable-next-line studio-i18n/no-literal-message -- internal guard; folder uploads are capped by maxFiles with a localized message first
     throw new Error(
       `ZIP archives support at most ${MAX_ZIP32_ENTRIES} entries.`,
     )
