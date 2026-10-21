@@ -171,7 +171,9 @@ def interrupted_archive(tmp_path, monkeypatch):
 @pytest.mark.parametrize("method", ["add_resource", "add_skill", "update_skill"])
 async def test_directory_import_removes_partial_zip(interrupted_archive, sync, method):
     source, archives, error = interrupted_archive
-    client = (SyncHTTPClient if sync else AsyncHTTPClient)(url="http://localhost:1933")
+    # add_resource prefers upload sessions (no zip); shared mode takes the zip path.
+    options = {"upload_mode": "shared"} if method == "add_resource" else {}
+    client = (SyncHTTPClient if sync else AsyncHTTPClient)(url="http://localhost:1933", **options)
     args = ("demo", str(source)) if method == "update_skill" else (str(source),)
     with pytest.raises(FileNotFoundError) as raised:
         if sync:

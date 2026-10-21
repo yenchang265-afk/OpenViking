@@ -394,7 +394,6 @@ describe("plugin module seams", () => {
       reason: "project docs",
       instruction: "extract API notes",
       wait: true,
-      timeout: 30,
     }, "agent-main");
 
     await expect(runtime.addSkillOpenViking({
@@ -415,7 +414,6 @@ describe("plugin module seams", () => {
       path: "./skills/debugger/SKILL.md",
       data: "skill body",
       wait: false,
-      timeout: 5,
     }, "agent-main");
   });
 
@@ -704,7 +702,6 @@ describe("plugin module seams", () => {
       reason: undefined,
       instruction: undefined,
       wait: true,
-      timeout: 30,
     }, "agent-main");
     expect(resourceResult.content[0].text).toBe("Imported OpenViking resource. viking://resources/docs Warnings: warn");
     expect(resourceResult.details).toMatchObject({ action: "resource_imported", root_uri: "viking://resources/docs" });
