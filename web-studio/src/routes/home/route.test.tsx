@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type * as React from 'react'
 import type { ComponentType } from 'react'
 import {
   act,
@@ -19,6 +20,7 @@ const state = vi.hoisted(() => ({
   tokens: vi.fn(),
   tokenRate: vi.fn(),
   commits: vi.fn(),
+  cache: vi.fn(),
 }))
 vi.mock('#/hooks/use-app-connection', () => ({
   useAppConnection: () => ({
@@ -39,6 +41,14 @@ vi.mock('./-lib/api', () => ({
   fetchConsoleTokenRate: state.tokenRate,
   fetchConsoleContextCommits: state.commits,
 }))
+vi.mock('#/lib/cache-stats', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  fetchCacheStats: state.cache,
+}))
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  Link: ({ children }: { children: React.ReactNode }) => <a>{children}</a>,
+}))
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }))
@@ -53,6 +63,7 @@ beforeEach(() => {
   state.tokens.mockReset().mockResolvedValue({ items: [] })
   state.tokenRate.mockReset().mockResolvedValue({ items: [], peak: null })
   state.commits.mockReset().mockResolvedValue({ items: [] })
+  state.cache.mockReset().mockResolvedValue({ enabled: false })
   vi.stubGlobal('matchMedia', () => ({ matches: true }))
 })
 afterEach(() => {
@@ -214,3 +225,42 @@ it.each(['loading', 'error'])(
     }
   },
 )
+
+it('shows the overall cache hit rate when CacheFS is enabled', async () => {
+  state.cache.mockResolvedValue({
+    bypasses: 2,
+    enabled: true,
+    hit_rate: 0.75,
+    hits: 30,
+    misses: 10,
+    operations: [{ hits: 30, misses: 10, operation: 'read' }],
+  })
+  const close = await renderHome()
+  try {
+    const heading = await screen.findByRole('heading', {
+      name: 'cacheHitRate.title',
+    })
+    const panel = heading.closest('section')!
+    expect(
+      within(panel).getByText('75.0%', { selector: '.text-4xl span' }),
+    ).toBeTruthy()
+    expect(within(panel).getByText('30')).toBeTruthy()
+    expect(within(panel).getByText('10')).toBeTruthy()
+    expect(within(panel).getByText('cacheHitRate.details')).toBeTruthy()
+  } finally {
+    close()
+  }
+})
+
+it('hides the cache hit rate when CacheFS is disabled', async () => {
+  const close = await renderHome()
+  try {
+    await waitFor(() => expect(state.cache).toHaveBeenCalled())
+    await screen.findByText('contextData.files')
+    expect(
+      screen.queryByRole('heading', { name: 'cacheHitRate.title' }),
+    ).toBeNull()
+  } finally {
+    close()
+  }
+})

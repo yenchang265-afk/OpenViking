@@ -131,4 +131,40 @@ export type ConsoleAuditQuery = {
   status?: string[] | null
 }
 
+/** Cache lookups since server start; `hit_rate` is null before the first lookup. */
+export type ConsoleCacheLookupCounts = {
+  hit_rate?: number | null
+  hits?: number
+  misses?: number
+}
+
+export type ConsoleCacheKindStats = ConsoleCacheLookupCounts & {
+  kind?: 'file' | 'directory' | (string & {})
+}
+
+export type ConsoleCacheOperation =
+  | 'read'
+  | 'read_dir'
+  | 'tree'
+  | 'grep'
+  | (string & {})
+
+export type ConsoleCacheOperationStats = ConsoleCacheLookupCounts & {
+  bypasses?: number
+  operation?: ConsoleCacheOperation
+}
+
+/** CacheFS counters; `enabled` is false when no mount is wrapped by CacheFS. */
+export type ConsoleCacheStatsResult = OvMaybeDisabled &
+  ConsoleCacheLookupCounts & {
+    backend_saved?: number
+    bypasses?: number
+    bytes_from_backend?: number
+    bytes_from_cache?: number
+    errors?: number
+    kinds?: ConsoleCacheKindStats[]
+    lookups?: number
+    operations?: ConsoleCacheOperationStats[]
+  }
+
 export type ConsoleDisabledResult = OvDisabledResult

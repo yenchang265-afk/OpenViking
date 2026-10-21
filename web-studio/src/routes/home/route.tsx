@@ -5,6 +5,7 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { ContextCommitsPanel } from './-components/context-commits-panel'
 import {
+  CacheHitRatePanel,
   ContextDataPanel,
   TodayRetrievalsPanel,
   TodayTokensPanel,
@@ -21,6 +22,12 @@ import {
 } from './-lib/api'
 import { isDisabledPayload } from './-lib/format'
 import { useAppConnection } from '#/hooks/use-app-connection'
+import {
+  CACHE_STATS_REFETCH_MS,
+  fetchCacheStats,
+  normalizeCacheStats,
+} from '#/lib/cache-stats'
+import { cn } from '#/lib/utils'
 import type {
   ConnectionDraft,
   ConnectionRole,
@@ -95,6 +102,17 @@ function HomePage() {
     refetchInterval: 60_000,
   })
 
+  // Only rendered when the server reports at least one CacheFS-wrapped mount.
+  const cacheStats = useQuery({
+    enabled: canQueryMetrics,
+    queryFn: fetchCacheStats,
+    queryKey: ['console-cache-stats', metricsScopeKey],
+    refetchInterval: CACHE_STATS_REFETCH_MS,
+    retry: false,
+    select: normalizeCacheStats,
+  })
+  const cache = cacheStats.data?.enabled ? cacheStats.data : undefined
+
   const summary = dashboard.data
   const identityUnavailable =
     !isConnectionRoleLoading && connectionRole === 'unknown'
@@ -113,7 +131,12 @@ function HomePage() {
 
   return (
     <div className="flex flex-col gap-5 pb-8">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div
+        className={cn(
+          'grid gap-4 md:grid-cols-2',
+          cache ? 'xl:grid-cols-5' : 'xl:grid-cols-4',
+        )}
+      >
         <ContextDataPanel
           data={summary?.context_counts}
           disabled={metricsUnavailable}
@@ -146,6 +169,7 @@ function HomePage() {
           isLoading={isMetricsLoading}
           t={t}
         />
+        {cache ? <CacheHitRatePanel data={cache} t={t} /> : null}
       </div>
 
       <TpmTrendPanel

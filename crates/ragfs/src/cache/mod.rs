@@ -9,6 +9,6 @@ mod metrics;
 mod policy;
 mod wrapper;
 
-pub use metrics::{CacheMetrics, CacheMetricsSnapshot};
+pub use metrics::{CacheMetrics, CacheMetricsSnapshot, CacheOperation, CacheOperationSnapshot};
 pub use policy::{CacheDecision, CachePolicy, CacheTraversalMode, CacheTreeMode};
 pub use wrapper::CachedFileSystem;

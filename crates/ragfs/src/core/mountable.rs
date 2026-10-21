@@ -1733,6 +1733,53 @@ mod tests {
 
     #[cfg(feature = "cache")]
     #[tokio::test]
+    async fn metrics_report_cache_requests_per_operation() {
+        use crate::cache::CachePolicy;
+        use crate::cache_runtime::CacheRuntime;
+        use crate::metrics::RagfsMetricValue;
+
+        let mfs = MountableFS::with_cache_runtime(
+            CacheRuntime::memory(),
+            "metrics-test",
+            CachePolicy::default(),
+        );
+        mfs.register_plugin(CountingPlugin {
+            reads: Arc::new(AtomicU64::new(0)),
+        })
+        .await;
+        mfs.mount(PluginConfig::single_backend("counting", "/cached", HashMap::new()))
+            .await
+            .unwrap();
+
+        mfs.read("/cached/file.txt", 0, 0).await.unwrap();
+        mfs.read("/cached/file.txt", 0, 0).await.unwrap();
+        mfs.read("/cached/file.txt", 1, 4).await.unwrap();
+
+        let metrics = mfs.metrics().await.unwrap();
+        let value = |operation: &str, result: &str| {
+            metrics
+                .iter()
+                .find(|metric| {
+                    metric.name == "ragfs_cache_operation_requests_total"
+                        && metric.labels.get("operation").map(String::as_str) == Some(operation)
+                        && metric.labels.get("result").map(String::as_str) == Some(result)
+                })
+                .map(|metric| match metric.value {
+                    RagfsMetricValue::Counter { value, .. } => value,
+                    _ => panic!("cache operation requests must be counters"),
+                })
+        };
+
+        assert_eq!(value("read", "hit"), Some(1));
+        assert_eq!(value("read", "miss"), Some(1));
+        assert_eq!(value("read", "bypass"), Some(1));
+        assert_eq!(value("read_dir", "hit"), Some(0));
+        assert_eq!(value("tree", "miss"), Some(0));
+        assert_eq!(value("grep", "bypass"), Some(0));
+    }
+
+    #[cfg(feature = "cache")]
+    #[tokio::test]
     async fn queuefs_mount_bypasses_cache_even_when_cache_is_configured() {
         use crate::cache::CachePolicy;
         use crate::cache_runtime::{CacheRuntime, MemoryMockProvider};

@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { ComponentType, ReactNode } from 'react'
-import { Coins, Database, Gauge, Search } from 'lucide-react'
+import { Link } from '@tanstack/react-router'
+import { ArrowRight, Coins, Database, Gauge, Search, Zap } from 'lucide-react'
 
 import { Skeleton } from '#/components/ui/skeleton'
+import { formatHitRate } from '#/lib/cache-stats'
+import type { CacheStats } from '#/lib/cache-stats'
 
 import type {
   ContextCounts,
@@ -315,6 +318,38 @@ export function TodayRetrievalsPanel({
           />
         </>
       )}
+    </MetricPanel>
+  )
+}
+
+export function CacheHitRatePanel({ data, t }: { data: CacheStats; t: HomeT }) {
+  return (
+    <MetricPanel
+      description={t('cacheHitRate.description')}
+      icon={Zap}
+      title={t('cacheHitRate.title')}
+      value={formatHitRate(data.hitRate)}
+    >
+      <DetailRow
+        label={t('cacheHitRate.hits')}
+        value={formatNumber(data.hits)}
+      />
+      <DetailRow
+        label={t('cacheHitRate.misses')}
+        value={formatNumber(data.misses)}
+      />
+      <DetailRow
+        label={t('cacheHitRate.bypasses')}
+        value={formatNumber(data.bypasses)}
+      />
+      <Link
+        to="/monitoring"
+        search={{ tab: 'cache' }}
+        className="flex min-h-8 items-center gap-1 py-1.5 text-xs font-medium text-primary hover:underline"
+      >
+        {t('cacheHitRate.details')}
+        <ArrowRight className="size-3" />
+      </Link>
     </MetricPanel>
   )
 }

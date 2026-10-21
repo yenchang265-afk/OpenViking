@@ -253,3 +253,103 @@ async def test_console_router_defaults_timezone_to_none_when_missing():
         await client.get("/api/v1/console/dashboard/summary")
 
     assert service.dashboard_call["timezone_name"] is None
+
+
+def _counter(name: str, value: int, **labels: str) -> dict:
+    return {"name": name, "labels": labels, "type": "counter", "value": value, "scale": 1.0}
+
+
+class FakeRagfsClient:
+    def __init__(self, records: list[dict]) -> None:
+        self.records = records
+
+    def metrics(self) -> list[dict]:
+        return self.records
+
+
+class FakeService:
+    def __init__(self, client) -> None:
+        self._agfs_client = client
+
+
+@pytest.fixture
+def ragfs_service(monkeypatch):
+    def install(records: list[dict]) -> None:
+        monkeypatch.setattr(
+            "openviking.server.routers.console.get_service_or_none",
+            lambda: FakeService(FakeRagfsClient(records)),
+        )
+
+    return install
+
+
+@pytest.mark.asyncio
+async def test_console_cache_reports_overall_and_per_operation_hit_rates(ragfs_service):
+    ragfs_service(
+        [
+            _counter("ragfs_operation_results_total", 9, plugin="localfs", operation="read"),
+            _counter("ragfs_cache_requests_total", 6, kind="file", result="hit"),
+            _counter("ragfs_cache_requests_total", 2, kind="file", result="miss"),
+            _counter("ragfs_cache_requests_total", 1, kind="directory", result="hit"),
+            _counter("ragfs_cache_requests_total", 1, kind="directory", result="miss"),
+            _counter("ragfs_cache_operation_requests_total", 6, operation="read", result="hit"),
+            _counter("ragfs_cache_operation_requests_total", 2, operation="read", result="miss"),
+            _counter("ragfs_cache_operation_requests_total", 3, operation="read", result="bypass"),
+            _counter("ragfs_cache_operation_requests_total", 0, operation="tree", result="hit"),
+            _counter("ragfs_cache_operation_requests_total", 0, operation="tree", result="miss"),
+            _counter("ragfs_cache_operation_requests_total", 1, operation="read_dir", result="hit"),
+            _counter(
+                "ragfs_cache_operation_requests_total", 1, operation="read_dir", result="miss"
+            ),
+            _counter("ragfs_cache_policy_bypasses_total", 3),
+            _counter("ragfs_cache_errors_total", 1),
+            _counter("ragfs_cache_bytes_total", 600, source="cache"),
+            _counter("ragfs_cache_bytes_total", 200, source="backend"),
+            _counter("ragfs_cache_inflight_events_total", 4, event="backend_saved"),
+        ]
+    )
+    transport = httpx.ASGITransport(app=_app_with_runtime(None, request_context=_user_ctx))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/console/cache")
+
+    assert response.status_code == 200
+    result = response.json()["result"]
+    assert result["enabled"] is True
+    assert (result["hits"], result["misses"], result["lookups"]) == (7, 3, 10)
+    assert result["hit_rate"] == pytest.approx(0.7)
+    assert result["bypasses"] == 3
+    assert result["errors"] == 1
+    assert result["bytes_from_cache"] == 600
+    assert result["bytes_from_backend"] == 200
+    assert result["backend_saved"] == 4
+    assert [kind["kind"] for kind in result["kinds"]] == ["file", "directory"]
+    assert result["kinds"][1]["hit_rate"] == pytest.approx(0.5)
+    assert result["operations"] == [
+        {"operation": "read", "hits": 6, "misses": 2, "bypasses": 3, "hit_rate": 0.75},
+        {"operation": "read_dir", "hits": 1, "misses": 1, "bypasses": 0, "hit_rate": 0.5},
+        {"operation": "tree", "hits": 0, "misses": 0, "bypasses": 0, "hit_rate": None},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_console_cache_reports_disabled_without_cachefs_series(ragfs_service):
+    ragfs_service(
+        [_counter("ragfs_operation_results_total", 9, plugin="localfs", operation="read")]
+    )
+    transport = httpx.ASGITransport(app=_app_with_runtime(None))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/console/cache")
+
+    assert response.status_code == 200
+    assert response.json()["result"]["enabled"] is False
+
+
+@pytest.mark.asyncio
+async def test_console_cache_reports_disabled_without_ragfs_client(monkeypatch):
+    monkeypatch.setattr("openviking.server.routers.console.get_service_or_none", lambda: None)
+    transport = httpx.ASGITransport(app=_app_with_runtime(None))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/console/cache")
+
+    assert response.status_code == 200
+    assert response.json()["result"]["enabled"] is False

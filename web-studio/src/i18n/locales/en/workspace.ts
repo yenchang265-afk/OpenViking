@@ -132,6 +132,45 @@ const workspace = {
       filesystem: 'Filesystem',
       lock: 'Locks',
       retrieval: 'Retrieval',
+      cache: 'Cache',
+    },
+    cache: {
+      backendSaved: 'Backend reads coalesced',
+      bypasses: 'Bypassed',
+      bytesFromBackend: 'Loaded from backend',
+      bytesFromCache: 'Served from cache',
+      byKind: 'By object type',
+      byOperation: 'By operation',
+      disabled:
+        'CacheFS is not enabled. Set storage.agfs.cachefs.backend to "cache" to turn it on.',
+      errors: 'Cache errors',
+      hitRate: 'Hit rate',
+      hits: 'Hits',
+      kind: 'Object type',
+      kinds: {
+        directory: 'Directories',
+        file: 'Files',
+      },
+      loadFailed: 'Could not load cache statistics',
+      lookups: 'Lookups',
+      misses: 'Misses',
+      noLookups: 'No cache lookups yet',
+      operation: 'Operation',
+      operations: {
+        grep: 'Grep',
+        read: 'Read file',
+        read_dir: 'List directory',
+        tree: 'Tree',
+      },
+      operationHints: {
+        grep: 'File and directory reads during cached grep traversal',
+        read: 'Full-file reads',
+        read_dir: 'Directory listings (ls)',
+        tree: 'Directory reads during cached tree traversal',
+      },
+      overall: 'Overall hit rate',
+      sinceStart:
+        'Counters cover all cached mounts since the server started. Hit rate excludes bypassed reads.',
     },
     detail: {
       noData: 'No monitoring data',
@@ -164,6 +203,7 @@ const workspace = {
         filesystem: 'Business Data Platform filesystem and mount services.',
         lock: 'Transaction locks and concurrency control.',
         retrieval: 'Context retrieval service.',
+        cache: 'CacheFS hit rates by filesystem operation.',
       },
       metrics: {
         averageLatency: 'Avg Latency (ms)',
@@ -1588,6 +1628,15 @@ const workspace = {
       title: 'Overview',
     },
     requestFailed: 'Request failed',
+    cacheHitRate: {
+      bypasses: 'Bypassed',
+      description:
+        'Share of CacheFS lookups served from cache since the server started.',
+      details: 'By operation',
+      hits: 'Hits',
+      misses: 'Misses',
+      title: 'Cache Hit Rate',
+    },
     todayRetrievals: {
       description:
         'Shows successful semantic retrieval calls for find() and search() today. Resets at midnight.',

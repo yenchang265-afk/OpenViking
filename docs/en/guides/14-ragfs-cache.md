@@ -325,6 +325,14 @@ Recommended signals to watch:
 - inflight leader / follower / backend saved
 - backend fallback bytes
 
+When CacheFS is enabled, OpenViking Studio shows the overall cache hit rate on
+the Home dashboard and a per-operation breakdown (`read`, `read_dir`, `tree`,
+`grep`) under Monitoring → Cache. Both read `GET /api/v1/console/cache`, which
+reports counters since server start. Hit rate is `hits / (hits + misses)`;
+reads bypassed by policy are counted separately. The same counters are exported
+as `openviking_ragfs_cache_requests_total` and
+`openviking_ragfs_cache_operation_requests_total`.
+
 ## Recommended Rollout
 
 1. Disable caching to validate baseline backend behavior.

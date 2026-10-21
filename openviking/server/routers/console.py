@@ -4,11 +4,14 @@
 
 from __future__ import annotations
 
+import asyncio
 from typing import Optional
 
 from fastapi import APIRouter, Query, Request
 
+from openviking.metrics.ragfs_cache import summarize_cache_metrics
 from openviking.server.auth import require_role
+from openviking.server.dependencies import get_service_or_none
 from openviking.server.identity import RequestContext, Role
 from openviking.server.models import Response
 
@@ -58,6 +61,18 @@ async def dashboard_summary(
     if service is None:
         return _disabled_response()
     return _ok_response(await service.dashboard_summary(_ctx, timezone_name=timezone))
+
+
+@router.get("/cache")
+async def cache_stats(
+    _ctx: RequestContext = require_role(Role.ROOT, Role.ADMIN, Role.USER),
+):
+    """Return CacheFS hit rates since server start, overall and per operation."""
+    client = getattr(get_service_or_none(), "_agfs_client", None)
+    if client is None or not hasattr(client, "metrics"):
+        return _ok_response({"enabled": False, "message": "CacheFS is not available."})
+    records = await asyncio.to_thread(client.metrics)
+    return _ok_response(summarize_cache_metrics(records))
 
 
 @router.get("/tokens")

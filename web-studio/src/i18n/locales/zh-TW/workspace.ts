@@ -132,6 +132,45 @@ const workspace = {
       filesystem: '檔案系統',
       lock: '鎖',
       retrieval: '檢索',
+      cache: '快取',
+    },
+    cache: {
+      backendSaved: '合併的後端讀取',
+      bypasses: '略過',
+      bytesFromBackend: '自後端載入',
+      bytesFromCache: '由快取提供',
+      byKind: '依物件類型',
+      byOperation: '依操作',
+      disabled:
+        '未啟用 CacheFS。將 storage.agfs.cachefs.backend 設為 "cache" 即可啟用。',
+      errors: '快取錯誤',
+      hitRate: '命中率',
+      hits: '命中',
+      kind: '物件類型',
+      kinds: {
+        directory: '目錄',
+        file: '檔案',
+      },
+      loadFailed: '快取統計載入失敗',
+      lookups: '查詢次數',
+      misses: '未命中',
+      noLookups: '尚無快取查詢',
+      operation: '操作',
+      operations: {
+        grep: 'Grep',
+        read: '讀取檔案',
+        read_dir: '列出目錄',
+        tree: '目錄樹',
+      },
+      operationHints: {
+        grep: '快取 grep 遍歷時的檔案與目錄讀取',
+        read: '完整檔案讀取',
+        read_dir: '目錄列表（ls）',
+        tree: '快取 tree 遍歷時的目錄讀取',
+      },
+      overall: '整體命中率',
+      sinceStart:
+        '統計涵蓋伺服器啟動以來所有啟用快取的掛載點。命中率不含略過的讀取。',
     },
     detail: {
       noData: '暫無監控資料',
@@ -164,6 +203,7 @@ const workspace = {
         filesystem: 'Business Data Platform 檔案系統與掛載點。',
         lock: '事務鎖與併發控制服務。',
         retrieval: '上下文檢索服務。',
+        cache: '依檔案系統操作統計的 CacheFS 命中率。',
       },
       metrics: {
         averageLatency: '平均延遲（毫秒）',
@@ -1522,6 +1562,14 @@ const workspace = {
       title: '概覽',
     },
     requestFailed: '請求失敗',
+    cacheHitRate: {
+      bypasses: '略過',
+      description: '伺服器啟動以來由快取提供的 CacheFS 查詢比例。',
+      details: '依操作',
+      hits: '命中',
+      misses: '未命中',
+      title: '快取命中率',
+    },
     todayRetrievals: {
       description:
         '展示今日基礎檢索（find()）和增強檢索（search()）的成功呼叫次數，每天零點重新整理。',
