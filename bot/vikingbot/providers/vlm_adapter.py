@@ -21,7 +21,6 @@ from openviking.utils.model_retry import effective_max_retries, retry_async
 from openviking.utils.multimodal import redact_image_data_urls
 from openviking_cli.utils import get_logger
 from vikingbot.integrations.langfuse import LangfuseClient
-from vikingbot.observability import bot_usage
 from vikingbot.providers.base import (
     LLMProvider,
     LLMResponse,
@@ -307,11 +306,6 @@ class VLMProviderAdapter(LLMProvider):
             )
 
             llm_response = self._convert_response(result)
-            bot_usage.record_usage(
-                provider=getattr(self._vlm, "provider", None),
-                model_name=getattr(self._vlm, "model", None) or effective_model,
-                usage=llm_response.usage,
-            )
 
             # --- Langfuse: end observation ---
             if langfuse_observation:
@@ -535,11 +529,6 @@ class VLMProviderAdapter(LLMProvider):
 
         if usage:
             self._record_vlm_usage(vlm, usage, time.perf_counter() - start_time)
-            bot_usage.record_usage(
-                provider=getattr(vlm, "provider", None),
-                model_name=getattr(vlm, "model", None) or model or self._default_model,
-                usage=usage,
-            )
 
         yield LLMStreamEvent(
             type="response",

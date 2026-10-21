@@ -652,6 +652,7 @@ def gateway(
                 if cron is not None and hasattr(cron, "stop"):
                     cron.stop()
                 await agent_loop.close_mcp()
+                await bot_usage.aclose()
             finally:
                 try:
                     if manager is not None:
@@ -1061,6 +1062,7 @@ def chat(
                 await asyncio.gather(*tasks)
         finally:
             await agent_loop.close_mcp()
+            await bot_usage.aclose()
 
     try:
         asyncio.run(run())

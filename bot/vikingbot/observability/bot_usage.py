@@ -1,9 +1,9 @@
 """Report VikingBot model-call token usage to the OpenViking server dashboard.
 
 The server's Usage/Audit dashboard only sees model calls made in its own process.
-VikingBot runs separately, so each finished call is queued here under the identity of
-the request that caused it and sent in batches to the server's bot usage endpoint.
-Reporting is best-effort: it never blocks or fails a model call.
+VikingBot runs separately, so each `vlm.call` event in the bot process is queued here
+under the identity of the request that caused it and sent in batches to the server's
+bot usage endpoint. Reporting is best-effort: it never blocks or fails a model call.
 """
 
 from __future__ import annotations
@@ -18,12 +18,20 @@ from typing import Any
 import httpx
 from loguru import logger
 
+from openviking.observability.events import ObservabilityEvent, register_event_subscriber
+
 REPORT_PATH = "/api/v1/console/usage/bot"
 FLUSH_INTERVAL_SECONDS = 5.0
 REPORT_TIMEOUT_SECONDS = 10.0
+# Bound on the final flush when the bot shuts down.
+SHUTDOWN_FLUSH_SECONDS = 3.0
 # Calls kept per identity while the server is unreachable; the oldest are dropped first.
 # Also the server's per-report limit.
 MAX_PENDING_CALLS = 1000
+# The server's per-call token limit; larger provider counts are clamped, not rejected.
+MAX_CALL_TOKENS = 100_000_000
+# Errors raised before the request reached the server, so a retry cannot double-count.
+_UNSENT_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
 
 # Business Data Platform identity of the request whose model calls are being made.
 _connection: ContextVar[Mapping[str, Any] | None] = ContextVar("bot_usage_connection", default=None)
@@ -41,18 +49,34 @@ def usage_connection(connection: Mapping[str, Any] | None) -> Iterator[None]:
 
 
 def configure(ov_server: Any) -> BotUsageReporter:
-    """Install the process reporter for the configured Business Data Platform server."""
+    """Report this process's `vlm.call` events to the configured Business Data Platform.
+
+    Every VLM backend publishes `vlm.call` from the instance that answered, so failover
+    calls carry the model actually used. Subscribers run in the caller's context, which
+    keeps the request identity of `usage_connection`.
+    """
     global _reporter
     _reporter = BotUsageReporter(ov_server)
+    register_event_subscriber("bot_usage", _on_event)
     return _reporter
 
 
-def record_usage(*, provider: Any, model_name: Any, usage: Mapping[str, Any] | None) -> None:
-    """Queue one finished model call; a no-op until `configure` runs."""
-    if _reporter is None or not usage:
+async def aclose() -> None:
+    """Send calls still queued; called when the bot shuts down."""
+    if _reporter is not None:
+        await _reporter.aclose()
+
+
+def _on_event(event: ObservabilityEvent) -> None:
+    if event.event_name != "vlm.call" or _reporter is None:
         return
     try:
-        _reporter.record(provider=provider, model_name=model_name, usage=usage)
+        payload = event.payload
+        _reporter.record(
+            provider=payload.get("provider"),
+            model_name=payload.get("model_name"),
+            usage=payload,
+        )
     except Exception as exc:  # noqa: BLE001 - usage reporting must never break a model call
         logger.debug("Bot usage record failed: {}", exc)
 
@@ -68,8 +92,8 @@ class BotUsageReporter:
         self._failing = False
 
     def record(self, *, provider: Any, model_name: Any, usage: Mapping[str, Any]) -> None:
-        prompt_tokens = max(int(usage.get("prompt_tokens") or 0), 0)
-        completion_tokens = max(int(usage.get("completion_tokens") or 0), 0)
+        prompt_tokens = min(max(int(usage.get("prompt_tokens") or 0), 0), MAX_CALL_TOKENS)
+        completion_tokens = min(max(int(usage.get("completion_tokens") or 0), 0), MAX_CALL_TOKENS)
         if not prompt_tokens and not completion_tokens:
             return
         headers = self._headers(_connection.get())
@@ -91,13 +115,17 @@ class BotUsageReporter:
     def _headers(self, connection: Mapping[str, Any] | None) -> dict[str, str] | None:
         """Return the server auth headers for the request identity, as VikingClient sends them.
 
-        Calls without a request connection are reported as the bot's configured user.
+        Calls without a request connection are reported as the bot's configured user; a
+        root key names that user only in trusted mode, like VikingClient's root-key mode.
         Returns None when no server is configured.
         """
         config = self._ov_server
         if not str(getattr(config, "server_url", "") or "").strip():
             return None
         auth_mode = str(getattr(config, "effective_auth_mode", "") or "").lower()
+        if auth_mode not in {"trusted", "api_key", "dev"}:
+            root = str(getattr(config, "api_key_type", "") or "").lower() == "root"
+            auth_mode = "trusted" if root else "api_key"
         if auth_mode == "dev":
             return {}
         headers: dict[str, str] = {}
@@ -108,11 +136,11 @@ class BotUsageReporter:
                 ("X-OpenViking-User", connection.get("user_id")),
             )
         else:
-            root_key = auth_mode == "trusted" or getattr(config, "api_key_type", None) == "root"
+            trusted = auth_mode == "trusted"
             values = (
                 ("X-API-Key", getattr(config, "api_key", None)),
-                ("X-OpenViking-Account", config.account_id if root_key else None),
-                ("X-OpenViking-User", config.admin_user_id if root_key else None),
+                ("X-OpenViking-Account", config.account_id if trusted else None),
+                ("X-OpenViking-User", config.admin_user_id if trusted else None),
             )
         for name, value in values:
             if value:
@@ -133,20 +161,35 @@ class BotUsageReporter:
             await asyncio.sleep(self._flush_interval)
             await self.flush()
 
+    async def aclose(self) -> None:
+        """Stop the background flusher and send what is queued, within a short bound."""
+        if self._task is not None:
+            self._task.cancel()
+            await asyncio.gather(self._task, return_exceptions=True)
+            self._task = None
+        try:
+            await asyncio.wait_for(self.flush(), SHUTDOWN_FLUSH_SECONDS)
+        except Exception as exc:  # noqa: BLE001 - shutdown must not fail on reporting
+            logger.warning("Bot usage final report failed: {}", exc)
+
     async def flush(self) -> None:
-        """Send every queued batch once; keep batches the server could not accept yet."""
+        """Send every queued batch once; keep batches the server never received."""
         pending, self._pending = self._pending, {}
         if not pending:
             return
         url = str(self._ov_server.server_url).rstrip("/") + REPORT_PATH
-        async with httpx.AsyncClient(timeout=REPORT_TIMEOUT_SECONDS) as client:
+        # Like the bot's other direct server calls, never route through an env proxy.
+        async with httpx.AsyncClient(timeout=REPORT_TIMEOUT_SECONDS, trust_env=False) as client:
             for key, calls in pending.items():
                 try:
                     response = await client.post(url, headers=dict(key), json={"calls": calls})
-                except httpx.HTTPError as exc:
+                except _UNSENT_ERRORS as exc:
                     self._retry(key, calls, f"{type(exc).__name__}: {exc}")
                     continue
-                if response.status_code >= 500 or response.status_code == 429:
+                except Exception as exc:  # noqa: BLE001 - the server may have recorded it
+                    self._warn(f"failed ({type(exc).__name__}: {exc}); calls dropped")
+                    continue
+                if response.status_code in {429, 502, 503, 504}:
                     self._retry(key, calls, f"HTTP {response.status_code}")
                     continue
                 if response.status_code >= 400:
