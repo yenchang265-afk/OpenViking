@@ -20,19 +20,19 @@ export default {
   exit: '退出 Studio',
   connectionTitle: '連線你的工作區。',
   preferencesHint: '選擇你熟悉的語言與外觀。',
-  connectionHint: '連線並驗證你的 Business Data Platform 服務。',
+  connectionHint: '連線並驗證你的 Business Context Platform 服務。',
 
   verifiedManagement:
     '管理許可權驗證成功。進入使用者管理後可建立使用者 API 金鑰。',
-  brand: 'Business Data Platform',
-  invalidService: '這個地址未返回有效的 Business Data Platform 服務資訊。',
+  brand: 'Business Context Platform',
+  invalidService: '這個地址未返回有效的 Business Context Platform 服務資訊。',
   keyRequired: '此服務需要 API Key，請填寫後重試。',
 
   savedWorkspaces: '已有連線',
   newAddressHint: '輸入有效的 HTTP 或 HTTPS 地址後可繼續。',
   preferences: '基礎偏好',
   connection: '連線服務',
-  welcome: '歡迎使用\nBusiness Data Platform',
+  welcome: '歡迎使用\nBusiness Context Platform',
   connectionDescription: '配置服務連線。驗證成功後，將顯示對應的工作區和功能。',
   verify: '驗證連線',
   verifying: '正在驗證…',

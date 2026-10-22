@@ -1248,7 +1248,7 @@ class OpenGaussCollection(ICollection):
         fields: Optional[List[str]] = None,
     ) -> SearchResult:
         raise NotImplementedError(
-            "openGauss backend does not provide Business Data Platform keyword/full-text search"
+            "openGauss backend does not provide Business Context Platform keyword/full-text search"
         )
 
     def search_by_id(

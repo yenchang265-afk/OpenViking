@@ -41,7 +41,7 @@ def _maybe_offer_init() -> None:
     if not interactive or not _config_missing():
         return
 
-    print("No Business Data Platform configuration found.")
+    print("No Business Context Platform configuration found.")
     try:
         answer = input("Run interactive setup now? [Y/n]: ").strip().lower()
     except (EOFError, OSError):

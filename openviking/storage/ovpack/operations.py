@@ -548,7 +548,7 @@ async def export_ovpack(
         )
         if not report.ok:
             raise InvalidArgumentError(
-                "Cannot export incomplete Business Data Platform vector index snapshot",
+                "Cannot export incomplete Business Context Platform vector index snapshot",
                 details=report.details(),
             )
     manifest, index_records, dense_values = await build_manifest(
@@ -606,7 +606,7 @@ async def backup_ovpack(
         )
         if not report.ok:
             raise InvalidArgumentError(
-                "Cannot export incomplete Business Data Platform vector index snapshot",
+                "Cannot export incomplete Business Context Platform vector index snapshot",
                 details=report.details(),
             )
     manifest, index_records, dense_values = await build_manifest(
@@ -634,7 +634,7 @@ async def backup_ovpack(
         vector_config_resolver,
     )
 
-    logger.info(f"[ovpack] Backed up Business Data Platform public scopes to {to}")
+    logger.info(f"[ovpack] Backed up Business Context Platform public scopes to {to}")
     return to
 
 

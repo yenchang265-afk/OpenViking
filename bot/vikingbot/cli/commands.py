@@ -126,7 +126,7 @@ def _warn_deprecated_memory_user(memory_user: list[str] | None) -> None:
         return
     typer.secho(
         "Warning: --memory-user is deprecated and only kept for explicit owner-user lookup. "
-        "Use --memory-peer for the current Business Data Platform User/Peer model.",
+        "Use --memory-peer for the current Business Context Platform User/Peer model.",
         fg=typer.colors.YELLOW,
         err=True,
     )
@@ -698,7 +698,7 @@ def prepare_agent_loop(config, bus, session_manager, cron, quiet: bool = False, 
             logger.warning("Langfuse: configured but failed to initialize")
 
     provider = _make_provider(config, langfuse_client)
-    # Report model-call tokens to the Business Data Platform usage dashboard; the server
+    # Report model-call tokens to the Business Context Platform usage dashboard; the server
     # accepts them only from the gateway it manages, proven by their shared token.
     bot_usage.configure(
         config.ov_server,
@@ -963,7 +963,7 @@ def chat(
     memory_user: list[str] = typer.Option(
         None,
         "--memory-user",
-        help="Deprecated legacy Business Data Platform user ID for root-key memory fanout",
+        help="Deprecated legacy Business Context Platform user ID for root-key memory fanout",
     ),
     disabled_tools: Annotated[list[str] | None, typer.Option("--disable-tool", help="Disable a tool (repeatable)")] = None,
 ):

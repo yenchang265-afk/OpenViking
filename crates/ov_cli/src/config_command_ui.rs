@@ -452,18 +452,18 @@ impl ValidationFailureKind {
     fn message(self, language: Language) -> &'static str {
         match language {
             Language::En => match self {
-                Self::Network => "Could not reach the configured Business Data Platform server.",
+                Self::Network => "Could not reach the configured Business Context Platform server.",
                 Self::Timeout => {
-                    "Business Data Platform did not respond before the configured timeout expired."
+                    "Business Context Platform did not respond before the configured timeout expired."
                 }
-                Self::Auth => "Business Data Platform rejected the API key for this config.",
-                Self::Unhealthy => "Business Data Platform is reachable but reported an unhealthy state.",
+                Self::Auth => "Business Context Platform rejected the API key for this config.",
+                Self::Unhealthy => "Business Context Platform is reachable but reported an unhealthy state.",
                 Self::Other => "The active config could not be validated.",
             },
             Language::ZhCn => match self {
-                Self::Network => "無法連線已配置的 Business Data Platform 伺服器。",
-                Self::Timeout => "Business Data Platform 未在配置的超時時間內響應。",
-                Self::Auth => "Business Data Platform 拒絕了這個配置的 API Key。",
+                Self::Network => "無法連線已配置的 Business Context Platform 伺服器。",
+                Self::Timeout => "Business Context Platform 未在配置的超時時間內響應。",
+                Self::Auth => "Business Context Platform 拒絕了這個配置的 API Key。",
                 Self::Unhealthy => "伺服器可連線，但健康狀態異常。",
                 Self::Other => "當前配置驗證失敗。",
             },
@@ -508,7 +508,7 @@ mod tests {
         assert!(plain.contains("OPENVIKING CONFIG CHECK"));
         assert!(plain.contains("Server        unreachable"));
         assert!(plain.contains("Auth          not checked"));
-        assert!(plain.contains("Could not reach the configured Business Data Platform server."));
+        assert!(plain.contains("Could not reach the configured Business Context Platform server."));
         assert!(plain.contains("ov health                 Quick server probe"));
         assert!(!plain.contains("connection refused"));
     }

@@ -36,7 +36,7 @@ describe('gateway translations', () => {
 
   it('label the sidebar entry in both languages', () => {
     expect(en.appShell.footer.gateway).toBe('Gateway')
-    expect(zhTW.appShell.footer.gateway).toBe('Business Data Platform 閘道器')
+    expect(zhTW.appShell.footer.gateway).toBe('Business Context Platform 閘道器')
   })
 
   it('summarize compaction and tool counts with their values', () => {

@@ -220,7 +220,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
             ):
                 raise RuntimeError(
                     "MySQL task schema is missing or incompatible; provision the configured "
-                    "Task/Work tables before starting Business Data Platform"
+                    "Task/Work tables before starting Business Context Platform"
                 ) from exc
             raise
         except BaseException:

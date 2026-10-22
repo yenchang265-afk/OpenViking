@@ -501,7 +501,7 @@ describe('RequestsPage', () => {
     )
     expect(
       await screen.findByText(
-        'Start a fresh Business Data Platform session for this conversation?',
+        'Start a fresh Business Context Platform session for this conversation?',
       ),
     ).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Resync' }))

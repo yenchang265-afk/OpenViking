@@ -1,6 +1,6 @@
 const overview = {
   description:
-    'How clients use the gateway: requests, prompt caching and memory, and the health of Business Data Platform.',
+    'How clients use the gateway: requests, prompt caching and memory, and the health of Business Context Platform.',
   loadFailed: "Couldn't load the overview",
   showIssues: 'Show in Requests',
   sampleNote_one:
@@ -12,11 +12,11 @@ const overview = {
     providedUpstreams_other:
       '{{count}} upstreams provided by your gateway admin',
     importedUpstreams_one:
-      "{{count}} upstream, imported from Business Data Platform's model settings",
+      "{{count}} upstream, imported from Business Context Platform's model settings",
     importedUpstreams_other:
-      "{{count}} upstreams, imported from Business Data Platform's model settings",
+      "{{count}} upstreams, imported from Business Context Platform's model settings",
     someImportedUpstreams:
-      "{{count}} upstreams, {{imported}} of them imported from Business Data Platform's model settings",
+      "{{count}} upstreams, {{imported}} of them imported from Business Context Platform's model settings",
     waitUpstreams: 'Waiting for your gateway admin to add an upstream',
     providedProfiles_one: '{{count}} profile provided by your gateway admin',
     providedProfiles_other: '{{count}} profiles provided by your gateway admin',
@@ -49,7 +49,7 @@ const overview = {
     key: {
       title: 'Issue a gateway key',
       description:
-        'Clients use this key to call the gateway. It belongs to one Business Data Platform user, whose memory the gateway reads and writes.',
+        'Clients use this key to call the gateway. It belongs to one Business Context Platform user, whose memory the gateway reads and writes.',
       blocked: 'Add an upstream and a context profile first.',
       waiting:
         'You can issue a key once your gateway admin adds an upstream and a profile.',
@@ -69,21 +69,21 @@ const overview = {
     description:
       'Skip the steps below and get a gateway key that works right away.',
     upstreamImport:
-      "Upstream: import the Business Data Platform server's model settings, reusing its API key and quota",
+      "Upstream: import the Business Context Platform server's model settings, reusing its API key and quota",
     upstreamUse: 'Upstream: use {{names}} ({{models}}, {{protocol}})',
     profileCreate:
       'Context profile: create “{{name}}” with the recommended settings',
     profileUse: 'Context profile: use “{{name}}”',
     keySelf: 'Key: issued for {{user}}',
     keyPick:
-      'Key: choose the Business Data Platform user who owns it in the next step',
+      'Key: choose the Business Context Platform user who owns it in the next step',
     action: 'Get a key',
     running: 'Generating…',
     retry: 'Try again',
     locked:
       'Creating a context profile or importing models needs the gateway management key.',
     noUsable:
-      "Business Data Platform's model settings have no model the gateway can relay directly. Fix the issues listed below, or add an upstream yourself in step 1.",
+      "Business Context Platform's model settings have no model the gateway can relay directly. Fix the issues listed below, or add an upstream yourself in step 1.",
     keyName: 'Quick mode',
     divider: 'Or set up step by step',
   },
@@ -103,13 +103,13 @@ const overview = {
     },
     continuation: {
       label: 'Within-turn cache hit rate',
-      hint: 'Share of input tokens served from the prompt cache on the model calls that continue a turn, such as after a tool result, including calls made while the model uses Business Data Platform tools.',
+      hint: 'Share of input tokens served from the prompt cache on the model calls that continue a turn, such as after a tool result, including calls made while the model uses Business Context Platform tools.',
       footnote_one: '{{number}} tool step',
       footnote_other: '{{number}} tool steps',
     },
     recall: {
       label: 'Memory entries recalled',
-      hint: 'Memory entries the gateway added to new messages. The average is how long a search in Business Data Platform took, counting only messages that searched.',
+      hint: 'Memory entries the gateway added to new messages. The average is how long a search in Business Context Platform took, counting only messages that searched.',
       footnote_one: 'Avg {{duration}} over {{number}} search',
       footnote_other: 'Avg {{duration}} over {{number}} searches',
       none: 'No recalls yet',
@@ -139,22 +139,22 @@ const overview = {
     separator: ', ',
   },
   openviking: {
-    title: 'Business Data Platform',
+    title: 'Business Context Platform',
     description:
       'Finds memory for new messages and stores saved conversations.',
     version: 'Version',
     unreachable:
-      "While Business Data Platform can't be reached, requests still go to the model without memory, and saving conversations is retried until it's back.",
+      "While Business Context Platform can't be reached, requests still go to the model without memory, and saving conversations is retried until it's back.",
     starting:
-      "The gateway hasn't finished its first check of Business Data Platform yet. Refresh in a minute.",
+      "The gateway hasn't finished its first check of Business Context Platform yet. Refresh in a minute.",
   },
   saving: {
     title: 'Saving conversations',
     ok: 'No saving problems in recent requests.',
     retrying_one:
-      '{{count}} conversation is retrying saving to Business Data Platform after a failure.',
+      '{{count}} conversation is retrying saving to Business Context Platform after a failure.',
     retrying_other:
-      '{{count}} conversations are retrying saving to Business Data Platform after a failure.',
+      '{{count}} conversations are retrying saving to Business Context Platform after a failure.',
     paused_one:
       '{{count}} conversation paused saving after repeated failures. The gateway tries again every 5 minutes.',
     paused_other:

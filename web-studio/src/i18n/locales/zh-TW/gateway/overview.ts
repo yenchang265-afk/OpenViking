@@ -1,6 +1,6 @@
 const overview = {
   description:
-    '客戶端如何使用閘道器：請求量、提示詞快取和記憶召回，以及 Business Data Platform 的執行狀態。',
+    '客戶端如何使用閘道器：請求量、提示詞快取和記憶召回，以及 Business Context Platform 的執行狀態。',
   loadFailed: '無法載入概覽',
   showIssues: '在請求日誌中檢視',
   sampleNote_one:
@@ -11,11 +11,11 @@ const overview = {
     providedUpstreams_one: '閘道器管理員已提供 {{count}} 個上游',
     providedUpstreams_other: '閘道器管理員已提供 {{count}} 個上游',
     importedUpstreams_one:
-      '已有 {{count}} 個上游，來自 Business Data Platform 的模型配置',
+      '已有 {{count}} 個上游，來自 Business Context Platform 的模型配置',
     importedUpstreams_other:
-      '已有 {{count}} 個上游，來自 Business Data Platform 的模型配置',
+      '已有 {{count}} 個上游，來自 Business Context Platform 的模型配置',
     someImportedUpstreams:
-      '已有 {{count}} 個上游，其中 {{imported}} 個來自 Business Data Platform 的模型配置',
+      '已有 {{count}} 個上游，其中 {{imported}} 個來自 Business Context Platform 的模型配置',
     waitUpstreams: '等待閘道器管理員新增上游',
     providedProfiles_one: '閘道器管理員已提供 {{count}} 個上下文配置',
     providedProfiles_other: '閘道器管理員已提供 {{count}} 個上下文配置',
@@ -48,7 +48,7 @@ const overview = {
     key: {
       title: '簽發閘道器金鑰',
       description:
-        '客戶端用這個金鑰呼叫閘道器。每個金鑰屬於一個 Business Data Platform 使用者，閘道器讀寫的就是這個使用者的記憶。',
+        '客戶端用這個金鑰呼叫閘道器。每個金鑰屬於一個 Business Context Platform 使用者，閘道器讀寫的就是這個使用者的記憶。',
       blocked: '請先新增上游並建立上下文配置。',
       waiting: '閘道器管理員新增上游和上下文配置後，才能簽發金鑰。',
       done_one: '已簽發 {{count}} 個金鑰',
@@ -66,18 +66,18 @@ const overview = {
     title: '快速模式',
     description: '跳過下面的步驟，一鍵拿到可以直接使用的閘道器金鑰。',
     upstreamImport:
-      '上游：匯入 Business Data Platform 服務端的模型配置，沿用它的 API Key 和額度',
+      '上游：匯入 Business Context Platform 服務端的模型配置，沿用它的 API Key 和額度',
     upstreamUse: '上游：使用 {{names}}（{{models}}，{{protocol}}）',
     profileCreate: '上下文配置：用推薦設定新建“{{name}}”',
     profileUse: '上下文配置：使用“{{name}}”',
     keySelf: '金鑰：為 {{user}} 簽發',
-    keyPick: '金鑰：下一步選擇金鑰歸屬的 Business Data Platform 使用者',
+    keyPick: '金鑰：下一步選擇金鑰歸屬的 Business Context Platform 使用者',
     action: '一鍵生成金鑰',
     running: '生成中…',
     retry: '重試',
     locked: '建立上下文配置或匯入模型需要閘道器管理金鑰。',
     noUsable:
-      'Business Data Platform 的模型配置裡沒有閘道器能直接轉發的模型。處理下面列出的問題，或者在第 1 步手動新增上游。',
+      'Business Context Platform 的模型配置裡沒有閘道器能直接轉發的模型。處理下面列出的問題，或者在第 1 步手動新增上游。',
     keyName: '快速模式',
     divider: '或者按步驟手動配置',
   },
@@ -97,13 +97,13 @@ const overview = {
     },
     continuation: {
       label: '輪內快取命中率',
-      hint: '同一輪對話裡後續的模型呼叫（例如工具結果返回之後）命中提示詞快取的比例，包括模型使用 Business Data Platform 工具時產生的呼叫。',
+      hint: '同一輪對話裡後續的模型呼叫（例如工具結果返回之後）命中提示詞快取的比例，包括模型使用 Business Context Platform 工具時產生的呼叫。',
       footnote_one: '{{number}} 個工具步驟',
       footnote_other: '{{number}} 個工具步驟',
     },
     recall: {
       label: '召回的記憶條數',
-      hint: '閘道器為新訊息補充的記憶條數。平均耗時只統計實際檢索了 Business Data Platform 的訊息。',
+      hint: '閘道器為新訊息補充的記憶條數。平均耗時只統計實際檢索了 Business Context Platform 的訊息。',
       footnote_one: '檢索 {{number}} 次，平均 {{duration}}',
       footnote_other: '檢索 {{number}} 次，平均 {{duration}}',
       none: '還沒有召回',
@@ -133,21 +133,21 @@ const overview = {
     separator: '、',
   },
   openviking: {
-    title: 'Business Data Platform',
+    title: 'Business Context Platform',
     description: '為新訊息檢索記憶，並儲存對話。',
     version: '版本',
     unreachable:
-      '連不上 Business Data Platform 期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 Business Data Platform 恢復。',
+      '連不上 Business Context Platform 期間，請求照常發給模型，只是不帶記憶；儲存對話會一直重試，直到 Business Context Platform 恢復。',
     starting:
-      '閘道器還沒完成對 Business Data Platform 的首次檢查，請稍後重新整理。',
+      '閘道器還沒完成對 Business Context Platform 的首次檢查，請稍後重新整理。',
   },
   saving: {
     title: '儲存對話',
     ok: '最近的請求中沒有儲存失敗的對話。',
     retrying_one:
-      '有 {{count}} 段對話儲存到 Business Data Platform 失敗，正在重試。',
+      '有 {{count}} 段對話儲存到 Business Context Platform 失敗，正在重試。',
     retrying_other:
-      '有 {{count}} 段對話儲存到 Business Data Platform 失敗，正在重試。',
+      '有 {{count}} 段對話儲存到 Business Context Platform 失敗，正在重試。',
     paused_one:
       '有 {{count}} 段對話多次儲存失敗，已暫停儲存；閘道器每 5 分鐘重試一次。',
     paused_other:

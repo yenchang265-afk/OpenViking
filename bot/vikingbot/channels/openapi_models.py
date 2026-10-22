@@ -152,9 +152,9 @@ class OpenVikingConnection(BaseModel):
     user_id: Optional[str] = Field(default=None, description="Effective user ID")
     agent_id: Optional[str] = Field(default=None, description="Effective agent ID")
     actor_peer_id: Optional[str] = Field(default=None, description="Effective actor peer ID")
-    role: Optional[str] = Field(default=None, description="Effective Business Data Platform role")
-    api_key_type: Optional[str] = Field(default=None, description="Business Data Platform API key type")
-    server_url: Optional[str] = Field(default=None, description="Business Data Platform server URL")
+    role: Optional[str] = Field(default=None, description="Effective Business Context Platform role")
+    api_key_type: Optional[str] = Field(default=None, description="Business Context Platform API key type")
+    server_url: Optional[str] = Field(default=None, description="Business Context Platform server URL")
 
 
 class ChatRequest(BaseModel):
@@ -186,7 +186,7 @@ class ChatRequest(BaseModel):
     )
     openviking_connection: Optional[OpenVikingConnection] = Field(
         default=None,
-        description="Authenticated Business Data Platform connection forwarded by the server proxy",
+        description="Authenticated Business Context Platform connection forwarded by the server proxy",
     )
 
     @model_validator(mode="after")
@@ -209,7 +209,7 @@ class ChatResponse(BaseModel):
     )
     relevant_memories: Optional[str] = Field(
         default=None,
-        description="Business Data Platform memories assembled during _process_message",
+        description="Business Context Platform memories assembled during _process_message",
     )
     token_usage: Dict[str, int] = Field(
         default_factory=dict,
@@ -234,7 +234,7 @@ class FeedbackRequest(BaseModel):
     )
     openviking_connection: Optional[OpenVikingConnection] = Field(
         default=None,
-        description="Authenticated Business Data Platform connection forwarded by the server proxy",
+        description="Authenticated Business Context Platform connection forwarded by the server proxy",
     )
     _principal_scope: str = PrivateAttr(default="local")
 

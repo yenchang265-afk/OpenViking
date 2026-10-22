@@ -38,15 +38,15 @@ const enums = {
   },
   captureReason: {
     history_changed:
-      'The conversation history changed, so saving continues in a new Business Data Platform session',
+      'The conversation history changed, so saving continues in a new Business Context Platform session',
     continued_after_idle:
-      'A saved turn continued after a pause, so saving continues in a new Business Data Platform session',
+      'A saved turn continued after a pause, so saving continues in a new Business Context Platform session',
     history_changed_during_delivery:
-      'The history changed while saving, so saving continues in a new Business Data Platform session',
+      'The history changed while saving, so saving continues in a new Business Context Platform session',
     manual_reset: 'Resynced by an administrator',
     delivery_recovered: 'Saving works again',
-    delivery_failed: 'Saving to Business Data Platform failed',
-    invalid_archive_id: 'Business Data Platform returned an unexpected archive',
+    delivery_failed: 'Saving to Business Context Platform failed',
+    invalid_archive_id: 'Business Context Platform returned an unexpected archive',
   },
   recallReason: {
     recalled: 'Memory added',
@@ -59,18 +59,18 @@ const enums = {
     tools_require_full_history:
       'Responses requests must send the full conversation and set store: false',
     upstream_tools_disabled:
-      'Business Data Platform tools are turned off for this upstream',
+      'Business Context Platform tools are turned off for this upstream',
     tools_multiple_choices: 'The request asked for several choices (n > 1)',
     tools_structured_output: 'The request asked for structured output',
     tools_non_function: 'The client sent tools that are not functions',
     tools_forced_choice: 'The client required a specific tool',
     deepseek_reasoning_history_required:
       'DeepSeek thinking is on and earlier reasoning cannot be sent back',
-    tool_name_collision: 'The client already has Business Data Platform tools',
+    tool_name_collision: 'The client already has Business Context Platform tools',
     tools_unavailable:
-      "Business Data Platform's tool list couldn't be loaded when this conversation first needed it",
+      "Business Context Platform's tool list couldn't be loaded when this conversation first needed it",
     tools_not_selected_at_session_start:
-      'This conversation has no Business Data Platform tools',
+      'This conversation has no Business Context Platform tools',
   },
   toolStopReason: {
     token_budget: 'Tool token budget reached',
@@ -81,19 +81,19 @@ const enums = {
   },
   openviking: {
     unavailable:
-      "Business Data Platform is unreachable or didn't answer in time",
+      "Business Context Platform is unreachable or didn't answer in time",
     unauthorized:
-      'Business Data Platform rejected the key. It may be wrong or revoked.',
-    httpStatus: 'Business Data Platform returned HTTP {{status}}',
-    errorCode: 'Business Data Platform reported error {{code}}',
+      'Business Context Platform rejected the key. It may be wrong or revoked.',
+    httpStatus: 'Business Context Platform returned HTTP {{status}}',
+    errorCode: 'Business Context Platform reported error {{code}}',
     versionMismatch:
-      'Business Data Platform is older than the gateway requires',
+      'Business Context Platform is older than the gateway requires',
     identityMissing:
-      "Business Data Platform couldn't tell which user this key belongs to",
+      "Business Context Platform couldn't tell which user this key belongs to",
     rootKey:
       "Root API keys aren't accepted. Use a user API key from this account.",
     otherAccount:
-      'This Business Data Platform API key belongs to another account.',
+      'This Business Context Platform API key belongs to another account.',
   },
   degradation: {
     memory_store_failure: {
@@ -139,34 +139,34 @@ const enums = {
     hidden_reply_without_anchor: {
       label: 'No usable model reply',
       explanation:
-        'The model used Business Data Platform tools but returned no content to continue the conversation with. The next request cannot reuse those tool results.',
+        'The model used Business Context Platform tools but returned no content to continue the conversation with. The next request cannot reuse those tool results.',
       action: 'Retry the question or start a new conversation.',
     },
     hidden_tool_history_unavailable: {
       label: 'Tool history unavailable',
       explanation:
-        'This Claude conversation used Business Data Platform tools, but the current request cannot use them. The gateway removed earlier thinking and continues sending the conversation text.',
+        'This Claude conversation used Business Context Platform tools, but the current request cannot use them. The gateway removed earlier thinking and continues sending the conversation text.',
       action:
         'Check why tools were skipped, restore the original settings or start a new conversation.',
     },
     hidden_tool_loop_failed: {
-      label: 'Business Data Platform tools failed',
+      label: 'Business Context Platform tools failed',
       explanation:
-        'A model call failed while the model was using Business Data Platform tools, and the client received an error.',
+        'A model call failed while the model was using Business Context Platform tools, and the client received an error.',
       action:
-        'Check that the upstream supports tool calls, or turn off Business Data Platform tools for that upstream.',
+        'Check that the upstream supports tool calls, or turn off Business Context Platform tools for that upstream.',
     },
     capture_parse_failure: {
       label: 'Reply not saved',
       explanation:
-        "The streamed reply couldn't be read, so it wasn't saved to Business Data Platform. The client wasn't affected.",
+        "The streamed reply couldn't be read, so it wasn't saved to Business Context Platform. The client wasn't affected.",
       action: 'No action needed unless it happens often.',
     },
     revocation_check_unavailable: {
       label: 'Key not verified',
       explanation:
-        "Business Data Platform couldn't confirm the gateway key, so the request was served without checking whether the key was revoked.",
-      action: 'Check that Business Data Platform is reachable and healthy.',
+        "Business Context Platform couldn't confirm the gateway key, so the request was served without checking whether the key was revoked.",
+      action: 'Check that Business Context Platform is reachable and healthy.',
     },
   },
 }

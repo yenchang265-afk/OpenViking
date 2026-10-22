@@ -189,7 +189,7 @@ def _monitor_expiry_publisher(managed: ExpiryPublisherProcess) -> None:
         return
     print(
         f"Error: managed expiry publisher exited unexpectedly (code {returncode}); "
-        "stopping Business Data Platform server.",
+        "stopping Business Context Platform server.",
         file=sys.stderr,
     )
     os.kill(os.getpid(), signal.SIGTERM)
@@ -270,7 +270,7 @@ def main():
 def _main(recovery):
     """Main entry point for openviking-server command."""
     parser = argparse.ArgumentParser(
-        description="Business Data Platform HTTP Server",
+        description="Business Context Platform HTTP Server",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -359,7 +359,7 @@ def _main(recovery):
     except (FileNotFoundError, ValueError) as e:
         if isinstance(e, ValueError):
             print(
-                f"Failed to load Business Data Platform server configuration from {resolved_config_path}:\n{e}",
+                f"Failed to load Business Context Platform server configuration from {resolved_config_path}:\n{e}",
                 file=sys.stderr,
             )
             print(
@@ -488,7 +488,7 @@ def _main(recovery):
             )
             workers_info = f" (workers: {config.workers})" if config.workers > 1 else ""
             print(
-                f"Business Data Platform HTTP Server is running on "
+                f"Business Context Platform HTTP Server is running on "
                 f"{config.host}:{config.port}{workers_info}"
             )
 

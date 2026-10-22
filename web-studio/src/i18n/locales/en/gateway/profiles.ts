@@ -2,7 +2,7 @@ const profiles = {
   inUseHelp:
     'To delete it, revoke those keys first. If they are still needed, issue replacements that use another profile.',
   description:
-    'How conversations use Business Data Platform memory and tools. Saved changes apply only to conversations that start afterwards.',
+    'How conversations use Business Context Platform memory and tools. Saved changes apply only to conversations that start afterwards.',
   defaultName: 'Default',
   loadFailed: "Couldn't load context profiles",
   actions: {
@@ -19,7 +19,7 @@ const profiles = {
   empty: {
     title: 'No context profiles yet',
     description:
-      'Every gateway key needs a context profile. The recommended settings recall memory for each new message, save conversations, summarize long ones and let the model use the read-only Business Data Platform tools. You can change them at any time.',
+      'Every gateway key needs a context profile. The recommended settings recall memory for each new message, save conversations, summarize long ones and let the model use the read-only Business Context Platform tools. You can change them at any time.',
     readOnly: 'Waiting for your gateway admin to add a profile.',
   },
   summary: {
@@ -69,11 +69,11 @@ const profiles = {
   recall: {
     title: 'Recall memory',
     description:
-      "Search Business Data Platform with each new user message and add what's relevant to that message.",
+      "Search Business Context Platform with each new user message and add what's relevant to that message.",
     profile: {
       label: 'User profile at conversation start',
       description:
-        'Give the model your Business Data Platform profile when a conversation starts. This works independently of memory recall.',
+        'Give the model your Business Context Platform profile when a conversation starts. This works independently of memory recall.',
     },
     profileMaxTokens: {
       label: 'Opening context budget',
@@ -83,7 +83,7 @@ const profiles = {
     showRecall: {
       label: 'Show recall summary',
       description:
-        'Start the reply with a one-line summary of what Business Data Platform added: how many entries, of which kinds, and a few names, or why recall failed. The model never sees it, and it is not saved to Business Data Platform. Applies to new conversations.',
+        'Start the reply with a one-line summary of what Business Context Platform added: how many entries, of which kinds, and a few names, or why recall failed. The model never sees it, and it is not saved to Business Context Platform. Applies to new conversations.',
     },
     sources: {
       label: 'Sources',
@@ -110,7 +110,7 @@ const profiles = {
     recallTimeout: {
       label: 'Time limit',
       description:
-        "If Business Data Platform doesn't answer in time, the message goes to the model without memory.",
+        "If Business Context Platform doesn't answer in time, the message goes to the model without memory.",
     },
     queryMaxChars: {
       label: 'Query length',
@@ -134,16 +134,16 @@ const profiles = {
   capture: {
     title: 'Save conversations',
     description:
-      'Write finished turns to a Business Data Platform session so Business Data Platform can extract memories.',
+      'Write finished turns to a Business Context Platform session so Business Context Platform can extract memories.',
     idleSeconds: {
       label: 'Save the latest reply after',
       description:
-        'A turn is saved as soon as the next message arrives. The latest reply waits this long for a follow-up; then it is saved and Business Data Platform starts extracting memories.',
+        'A turn is saved as soon as the next message arrives. The latest reply waits this long for a follow-up; then it is saved and Business Context Platform starts extracting memories.',
     },
     commitTokens: {
       label: 'Commit after',
       description:
-        'Commit once this much saved conversation is waiting. Business Data Platform extracts memories when a commit happens.',
+        'Commit once this much saved conversation is waiting. Business Context Platform extracts memories when a commit happens.',
     },
     keepRecentMessages: {
       label: 'Keep recent messages',
@@ -177,9 +177,9 @@ const profiles = {
       label: 'Agent-managed context windows',
       experimental: 'Experimental',
       description:
-        'Give the model two tools to start a fresh context window with its own hand-off notes, and tell it how full the window is. Compaction, when on, remains the fallback. Works only in conversations that get Business Data Platform tools.',
+        'Give the model two tools to start a fresh context window with its own hand-off notes, and tell it how full the window is. Compaction, when on, remains the fallback. Works only in conversations that get Business Context Platform tools.',
       needsTools:
-        'Business Data Platform tools are off in this profile, so this setting has no effect.',
+        'Business Context Platform tools are off in this profile, so this setting has no effect.',
     },
     softRatio: {
       label: 'Soft reminder at',
@@ -193,16 +193,16 @@ const profiles = {
     },
   },
   tools: {
-    title: 'Business Data Platform tools',
+    title: 'Business Context Platform tools',
     description:
-      'Let the model use Business Data Platform tools while it answers. Supports Chat Completions, Responses and Anthropic Messages with full conversation history.',
+      'Let the model use Business Context Platform tools while it answers. Supports Chat Completions, Responses and Anthropic Messages with full conversation history.',
     available: {
       label: 'Tools',
       description:
-        'The recommended settings select the read-only tools and leave the ones that change data unchecked. Tools added in the future are selected automatically. The upstream must allow Business Data Platform tools as well.',
+        'The recommended settings select the read-only tools and leave the ones that change data unchecked. Tools added in the future are selected automatically. The upstream must allow Business Context Platform tools as well.',
     },
     empty: 'Issue a gateway key to load the tool list.',
-    loadFailed: "Couldn't load Business Data Platform tools",
+    loadFailed: "Couldn't load Business Context Platform tools",
     readOnly: 'Read only',
     modifiesData: 'Modifies data',
     executionNotice:
@@ -210,12 +210,12 @@ const profiles = {
     showCalls: {
       label: 'Show tool calls',
       description:
-        'Add a one-line notice to the reply each time the gateway runs a Business Data Platform tool, so users can see the call. The model never sees these lines, and they are not saved to Business Data Platform.',
+        'Add a one-line notice to the reply each time the gateway runs a Business Context Platform tool, so users can see the call. The model never sees these lines, and they are not saved to Business Context Platform.',
     },
     maxRounds: {
       label: 'Rounds per request',
       description:
-        "After this many tool rounds, further Business Data Platform calls are refused; the model continues with the results it has and the client's own tools. Leave empty for no limit.",
+        "After this many tool rounds, further Business Context Platform calls are refused; the model continues with the results it has and the client's own tools. Leave empty for no limit.",
     },
     timeoutSeconds: {
       label: 'Time limit per call',
@@ -233,7 +233,7 @@ const profiles = {
     totalTokens: {
       label: 'Token budget',
       description:
-        "Estimated tokens that tool calls and results may add to one request. Once used up, further Business Data Platform calls are refused; the model continues with the results it has and the client's own tools. Leave empty for no limit.",
+        "Estimated tokens that tool calls and results may add to one request. Once used up, further Business Context Platform calls are refused; the model continues with the results it has and the client's own tools. Leave empty for no limit.",
     },
   },
 }

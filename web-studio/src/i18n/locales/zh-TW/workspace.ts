@@ -4,8 +4,8 @@ const workspace = {
       agentIntegrations: 'Agent 接入',
       beta: 'Beta',
       connection: '連線設定',
-      gateway: 'Business Data Platform 閘道器',
-      gatewayBeta: 'Business Data Platform 閘道器 · Beta',
+      gateway: 'Business Context Platform 閘道器',
+      gatewayBeta: 'Business Context Platform 閘道器 · Beta',
       docs: '文件站',
       github: 'GitHub',
       sdkApi: 'SDK 與 API',
@@ -32,7 +32,7 @@ const workspace = {
         userId: '使用者 ID',
         userIdPlaceholder: '輸入使用者 ID',
       },
-      defaultTitle: 'Business Data Platform',
+      defaultTitle: 'Business Context Platform',
     },
     navigation: {
       compile: { title: '編譯' },
@@ -82,12 +82,12 @@ const workspace = {
       },
       loadingSessions: '載入中...',
       noSessions: '暫無會話',
-      workspaceGroupLabel: 'Business Data Platform',
+      workspaceGroupLabel: 'Business Context Platform',
     },
   },
   monitoringPage: {
     title: '監控',
-    description: '檢視 Business Data Platform 各元件的即時健康狀態。',
+    description: '檢視 Business Context Platform 各元件的即時健康狀態。',
     version: 'v{{version}}',
     refresh: '重新整理',
     updatedAt: '更新於 {{time}}',
@@ -200,7 +200,7 @@ const workspace = {
         queue: '資源處理、語義生成和會話提交佇列。',
         vikingdb: '向量資料儲存與索引服務。',
         models: 'VLM、Embedding 和 Rerank 模型服務。',
-        filesystem: 'Business Data Platform 檔案系統與掛載點。',
+        filesystem: 'Business Context Platform 檔案系統與掛載點。',
         lock: '事務鎖與併發控制服務。',
         retrieval: '上下文檢索服務。',
         cache: '依檔案系統操作統計的 CacheFS 命中率。',
@@ -250,7 +250,7 @@ const workspace = {
       },
     },
     offline: {
-      title: '尚未連線 Business Data Platform 服務',
+      title: '尚未連線 Business Context Platform 服務',
       description: '配置服務地址和訪問憑證後即可檢視監控資料。',
       action: '開啟連線設定',
     },
@@ -262,7 +262,7 @@ const workspace = {
       expand: '展開步驟',
       collapse: '收起',
       title: '讓你的 Agent 獲得經驗與進化能力',
-      connect: '將 Business Data Platform 接入你的 Agent',
+      connect: '將 Business Context Platform 接入你的 Agent',
       docs: '檢視接入指南',
       install: '為你的 Agent 安裝經驗 Skill',
       hint: '在終端執行以下命令，並按提示選擇你使用的 Agent。',
@@ -284,7 +284,7 @@ const workspace = {
     loading: '正在載入經驗列表...',
     loadFailed: '經驗列表載入失敗',
     networkError:
-      '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
+      '無法連線 Business Context Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
     empty: '還沒有 Agent 經驗',
     emptyDescription:
@@ -307,9 +307,9 @@ const workspace = {
     },
     help: {
       title: '一直無經驗產生？請檢查：',
-      reasonConnected: 'Agent 是否已接入 Business Data Platform',
+      reasonConnected: 'Agent 是否已接入 Business Context Platform',
       reasonSessions: '接入後是否產生了新的會話',
-      reasonCommit: '會話是否已提交（commit）到 Business Data Platform',
+      reasonCommit: '會話是否已提交（commit）到 Business Context Platform',
     },
     settings: {
       title: '經驗設定',
@@ -425,7 +425,7 @@ const workspace = {
     emptyScopeDescription: '新增對應作用域的技能後，會在這裡展示。',
     loadFailed: '技能載入失敗',
     networkError:
-      '無法連線 Business Data Platform 服務，請檢查服務地址和連線狀態。',
+      '無法連線 Business Context Platform 服務，請檢查服務地址和連線狀態。',
     connectionSettings: '開啟連線設定',
     create: {
       open: '撰寫新技能',
@@ -717,7 +717,7 @@ const workspace = {
     addDialog: {
       title: '新增定時同步',
       description:
-        '新增遠端資源，並設定 Business Data Platform 檢查更新的週期。',
+        '新增遠端資源，並設定 Business Context Platform 檢查更新的週期。',
     },
     editDialog: {
       title: '編輯定時同步',
@@ -905,16 +905,16 @@ const workspace = {
   },
   settings: {
     gatewayConnection: {
-      title: '登入 Business Data Platform 閘道器',
-      openvikingUrl: '這臺閘道器連線的 Business Data Platform：{{url}}',
-      apiKey: 'Business Data Platform API 金鑰',
+      title: '登入 Business Context Platform 閘道器',
+      openvikingUrl: '這臺閘道器連線的 Business Context Platform：{{url}}',
+      apiKey: 'Business Context Platform API 金鑰',
       keyHint: '使用者、帳號管理員或 Root 的 API 金鑰都可以。',
       wrongKey:
-        '閘道器金鑰（ovgw_）和閘道器管理金鑰（ovgm_）不能用來登入，請輸入 Business Data Platform API 金鑰。',
+        '閘道器金鑰（ovgw_）和閘道器管理金鑰（ovgm_）不能用來登入，請輸入 Business Context Platform API 金鑰。',
       invalidKey:
-        'Business Data Platform 拒絕了這個 API 金鑰。請確認金鑰正確後重試。',
+        'Business Context Platform 拒絕了這個 API 金鑰。請確認金鑰正確後重試。',
       unreachable:
-        '閘道器連不上 Business Data Platform（{{url}}）。確認 Business Data Platform 正在執行、閘道器的 openviking_url（gateway.conf 或 OPENVIKING_GATEWAY_OPENVIKING_URL）指向它，然後重試。',
+        '閘道器連不上 Business Context Platform（{{url}}）。確認 Business Context Platform 正在執行、閘道器的 openviking_url（gateway.conf 或 OPENVIKING_GATEWAY_OPENVIKING_URL）指向它，然後重試。',
       gatewayUnreachable: '連不上這臺閘道器。確認閘道器正在執行後重試。',
       connect: '登入',
       connecting: '正在登入…',
@@ -986,11 +986,11 @@ const workspace = {
       connectionTest: {
         action: '測試連線',
         testing: '測試中…',
-        hint: '由 Business Data Platform 服務端傳送一次簡短模型請求，可能產生少量用量；不會儲存配置或切換當前執行模型。',
+        hint: '由 Business Context Platform 服務端傳送一次簡短模型請求，可能產生少量用量；不會儲存配置或切換當前執行模型。',
         unsupported: '暫不支援此服務提供商的連線測試。',
         success: '連線成功，模型已返回有效結果（{{ms}} ms）。',
         network:
-          'Business Data Platform 服務端無法連線模型服務，請檢查地址、網路或證書。',
+          'Business Context Platform 服務端無法連線模型服務，請檢查地址、網路或證書。',
         timeout: '測試超過 25 秒，請檢查網路及模型響應速度。',
         invalidResponse: '模型服務沒有返回有效結果。',
         invalid_request: '模型配置或請求引數不正確，請檢查後重試。',
@@ -1312,7 +1312,7 @@ const workspace = {
           primary: '普通使用者：請向當前帳號管理員索取使用者 API 金鑰。',
           secondary:
             '部署管理員：Root API 金鑰位於服務端 ov.conf 的 server.root_api_key；填入後可在“使用者與許可權”中建立或重新生成使用者金鑰。',
-          title: '還沒有 Business Data Platform API 金鑰？',
+          title: '還沒有 Business Context Platform API 金鑰？',
         },
         learnMore: '檢視 API 金鑰獲取方式',
         trusted: {
@@ -1339,7 +1339,7 @@ const workspace = {
     },
     connectionPage: {
       description:
-        '配置 Business Data Platform 服務連線、控制面憑證和當前資料訪問憑證。',
+        '配置 Business Context Platform 服務連線、控制面憑證和當前資料訪問憑證。',
       title: '連線設定',
     },
     dialogs: {
@@ -1419,7 +1419,7 @@ const workspace = {
     },
     keyResult: {
       description:
-        '請現在複製儲存。離開當前狀態後，Business Data Platform 可能只展示字首。',
+        '請現在複製儲存。離開當前狀態後，Business Context Platform 可能只展示字首。',
       dismiss: '收起',
       title: '新的 API 金鑰',
     },
@@ -1458,9 +1458,9 @@ const workspace = {
     },
     page: {
       adminDescription:
-        '配置當前 Business Data Platform 身份，並管理帳號、使用者和 API 金鑰。',
+        '配置當前 Business Context Platform 身份，並管理帳號、使用者和 API 金鑰。',
       description:
-        '配置當前 Business Data Platform 的服務地址和 API 金鑰，檢視當前身份下的資料。',
+        '配置當前 Business Context Platform 的服務地址和 API 金鑰，檢視當前身份下的資料。',
       title: '連線設定',
     },
     placeholders: {
@@ -1557,7 +1557,7 @@ const workspace = {
     page: {
       description:
         '彙總上下文資料、今日檢索、Token 用量和上下文提交等執行資料。',
-      eyebrow: 'Business Data Platform',
+      eyebrow: 'Business Context Platform',
       settings: '連線與設定',
       title: '概覽',
     },

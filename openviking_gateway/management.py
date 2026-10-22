@@ -51,19 +51,19 @@ UPSTREAM_TEST_RESPONSE_LIMIT = 16_384
 DETAILS = {
     "management_key_invalid": "The gateway management key is incorrect.",
     "management_key_required": "Changing upstreams and profiles requires the management key.",
-    "other_account": "This Business Data Platform API key cannot access the selected account.",
-    "forbidden": "This Business Data Platform role cannot perform the operation.",
+    "other_account": "This Business Context Platform API key cannot access the selected account.",
+    "forbidden": "This Business Context Platform role cannot perform the operation.",
     "not_found": "The object does not exist.",
     "in_use": "Gateway keys still use this object; revoke them first.",
     "invalid_configuration": "The request body is invalid.",
     "unknown_user": "The user does not exist in this account.",
-    "user_required": "Business Data Platform root is not an account user; choose the user to issue for.",
-    "user_key_unreadable": "Business Data Platform stores only a hash of this user's API key; paste the key.",
+    "user_required": "Business Context Platform root is not an account user; choose the user to issue for.",
+    "user_key_unreadable": "Business Context Platform stores only a hash of this user's API key; paste the key.",
     "unknown_policy": "The context profile does not exist.",
     "unknown_upstream": "An upstream does not exist.",
-    "vlm_import_unavailable": "This gateway cannot read Business Data Platform model settings.",
-    "vlm_import_forbidden": "Importing Business Data Platform model settings requires the management key "
-    "or, without one, Business Data Platform root.",
+    "vlm_import_unavailable": "This gateway cannot read Business Context Platform model settings.",
+    "vlm_import_forbidden": "Importing Business Context Platform model settings requires the management key "
+    "or, without one, Business Context Platform root.",
 }
 
 

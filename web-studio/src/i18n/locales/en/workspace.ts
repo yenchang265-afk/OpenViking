@@ -32,7 +32,7 @@ const workspace = {
         userId: 'User ID',
         userIdPlaceholder: 'Enter a User ID',
       },
-      defaultTitle: 'Business Data Platform',
+      defaultTitle: 'Business Context Platform',
     },
     navigation: {
       compile: { title: 'Compile' },
@@ -82,12 +82,12 @@ const workspace = {
       },
       loadingSessions: 'Loading...',
       noSessions: 'No sessions',
-      workspaceGroupLabel: 'Business Data Platform',
+      workspaceGroupLabel: 'Business Context Platform',
     },
   },
   monitoringPage: {
     title: 'Monitoring',
-    description: 'View real-time health for Business Data Platform components.',
+    description: 'View real-time health for Business Context Platform components.',
     version: 'v{{version}}',
     refresh: 'Refresh',
     updatedAt: 'Updated at {{time}}',
@@ -200,7 +200,7 @@ const workspace = {
         queue: 'Resource processing, semantic generation, and session queues.',
         vikingdb: 'Vector storage and indexing service.',
         models: 'VLM, embedding, and rerank model services.',
-        filesystem: 'Business Data Platform filesystem and mount services.',
+        filesystem: 'Business Context Platform filesystem and mount services.',
         lock: 'Transaction locks and concurrency control.',
         retrieval: 'Context retrieval service.',
         cache: 'CacheFS hit rates by filesystem operation.',
@@ -250,7 +250,7 @@ const workspace = {
       },
     },
     offline: {
-      title: 'Business Data Platform is not connected',
+      title: 'Business Context Platform is not connected',
       description:
         'Configure the server URL and credentials to view monitoring data.',
       action: 'Open connection settings',
@@ -263,7 +263,7 @@ const workspace = {
       expand: 'Expand steps',
       collapse: 'Collapse',
       title: 'Give your Agent experience and evolution capabilities',
-      connect: 'Connect Business Data Platform to your Agent',
+      connect: 'Connect Business Context Platform to your Agent',
       docs: 'View integration guide',
       install: 'Install the experience Skill for your Agent',
       hint: 'Run this command in your terminal and select your Agent when prompted.',
@@ -286,7 +286,7 @@ const workspace = {
     loading: 'Loading experiences...',
     loadFailed: 'Could not load experiences',
     networkError:
-      'Could not connect to the Business Data Platform service. Check the server URL and connection status.',
+      'Could not connect to the Business Context Platform service. Check the server URL and connection status.',
     connectionSettings: 'Open connection settings',
     empty: 'No Agent experiences yet',
     emptyDescription:
@@ -310,10 +310,10 @@ const workspace = {
     help: {
       title: 'No experiences yet? Check:',
       reasonConnected:
-        'Whether the Agent is connected to Business Data Platform',
+        'Whether the Agent is connected to Business Context Platform',
       reasonSessions: 'Whether new sessions ran after connecting',
       reasonCommit:
-        'Whether those sessions were committed to Business Data Platform',
+        'Whether those sessions were committed to Business Context Platform',
     },
     settings: {
       title: 'Experience settings',
@@ -435,7 +435,7 @@ const workspace = {
       'Skills in this scope will appear here after they are added.',
     loadFailed: 'Could not load skills',
     networkError:
-      'Could not connect to the Business Data Platform service. Check the server URL and connection status.',
+      'Could not connect to the Business Context Platform service. Check the server URL and connection status.',
     connectionSettings: 'Open connection settings',
     create: {
       open: 'Write a new skill',
@@ -744,7 +744,7 @@ const workspace = {
     addDialog: {
       title: 'Add scheduled sync',
       description:
-        'Add a remote resource and configure how often Business Data Platform checks for updates.',
+        'Add a remote resource and configure how often Business Context Platform checks for updates.',
     },
     editDialog: {
       title: 'Edit scheduled sync',
@@ -941,16 +941,16 @@ const workspace = {
   },
   settings: {
     gatewayConnection: {
-      title: 'Sign in to Business Data Platform Gateway',
-      openvikingUrl: 'This gateway uses Business Data Platform at {{url}}',
-      apiKey: 'Business Data Platform API key',
+      title: 'Sign in to Business Context Platform Gateway',
+      openvikingUrl: 'This gateway uses Business Context Platform at {{url}}',
+      apiKey: 'Business Context Platform API key',
       keyHint: 'A user, account admin or root API key all work.',
       wrongKey:
-        "Gateway keys (ovgw_) and gateway management keys (ovgm_) can't be used to sign in. Enter a Business Data Platform API key.",
+        "Gateway keys (ovgw_) and gateway management keys (ovgm_) can't be used to sign in. Enter a Business Context Platform API key.",
       invalidKey:
-        'Business Data Platform rejected this API key. Check the key and try again.',
+        'Business Context Platform rejected this API key. Check the key and try again.',
       unreachable:
-        "The gateway can't reach Business Data Platform ({{url}}). Make sure Business Data Platform is running and the gateway's openviking_url (in gateway.conf or OPENVIKING_GATEWAY_OPENVIKING_URL) points to it, then try again.",
+        "The gateway can't reach Business Context Platform ({{url}}). Make sure Business Context Platform is running and the gateway's openviking_url (in gateway.conf or OPENVIKING_GATEWAY_OPENVIKING_URL) points to it, then try again.",
       gatewayUnreachable:
         "Can't reach this gateway. Make sure it is running, then try again.",
       connect: 'Sign in',
@@ -1026,11 +1026,11 @@ const workspace = {
       connectionTest: {
         action: 'Test connection',
         testing: 'Testing…',
-        hint: 'Sends a small model request from the Business Data Platform server and may incur usage. Does not save the draft or switch running models.',
+        hint: 'Sends a small model request from the Business Context Platform server and may incur usage. Does not save the draft or switch running models.',
         unsupported: 'Connection testing is unavailable for this provider.',
         success: 'Connected: model returned a valid result ({{ms}} ms).',
         network:
-          'The Business Data Platform server could not reach the model service. Check the URL, network or TLS.',
+          'The Business Context Platform server could not reach the model service. Check the URL, network or TLS.',
         timeout:
           'Test timed out after 25 seconds. Check the network and model response time.',
         invalidResponse: 'The model service did not return a valid result.',
@@ -1372,7 +1372,7 @@ const workspace = {
             'Regular users should request a User API Key from their Account admin.',
           secondary:
             'Deployment admins can find the Root API Key at server.root_api_key in the server-side ov.conf. Add it here, then create or regenerate a User Key in Users & Permissions.',
-          title: 'No Business Data Platform API Key yet?',
+          title: 'No Business Context Platform API Key yet?',
         },
         learnMore: 'Learn how to get an API Key',
         trusted: {
@@ -1399,7 +1399,7 @@ const workspace = {
     },
     connectionPage: {
       description:
-        'Configure the Business Data Platform server connection, control credential, and active data credential.',
+        'Configure the Business Context Platform server connection, control credential, and active data credential.',
       title: 'Connection settings',
     },
     dialogs: {
@@ -1481,7 +1481,7 @@ const workspace = {
     },
     keyResult: {
       description:
-        'Copy it now. Business Data Platform may only show a prefix after you leave this state.',
+        'Copy it now. Business Context Platform may only show a prefix after you leave this state.',
       dismiss: 'Dismiss',
       title: 'New API key',
     },
@@ -1523,9 +1523,9 @@ const workspace = {
     },
     page: {
       adminDescription:
-        'Configure the active Business Data Platform identity and manage accounts, users, and API keys.',
+        'Configure the active Business Context Platform identity and manage accounts, users, and API keys.',
       description:
-        'Configure the Business Data Platform server URL and API key, then view data for the current identity.',
+        'Configure the Business Context Platform server URL and API key, then view data for the current identity.',
       title: 'Connection & Identity',
     },
     placeholders: {
@@ -1623,7 +1623,7 @@ const workspace = {
     page: {
       description:
         'Aligned with the product overview: menu entries, context data volume, today tokens, today retrievals, agent access, token trend, and context commit stats.',
-      eyebrow: 'Business Data Platform',
+      eyebrow: 'Business Context Platform',
       settings: 'Connection & Settings',
       title: 'Overview',
     },

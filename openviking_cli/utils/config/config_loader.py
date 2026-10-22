@@ -139,7 +139,7 @@ def require_config(
         default_path_user = DEFAULT_CONFIG_DIR / default_filename
         default_path_system = SYSTEM_CONFIG_DIR / default_filename
         raise FileNotFoundError(
-            f"Business Data Platform {purpose} configuration file not found.\n"
+            f"Business Context Platform {purpose} configuration file not found.\n"
             f"Please create {default_path_user} or {default_path_system}, or set {env_var}.\n"
             f"See: https://openviking.ai/docs"
         )

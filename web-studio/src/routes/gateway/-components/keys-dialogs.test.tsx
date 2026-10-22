@@ -174,7 +174,7 @@ describe('validateKeyRequest', () => {
     ).toEqual({ openviking_key: 'keys.form.openvikingKey.managementKey' })
   })
 
-  it('rejects a gateway key pasted as the Business Data Platform key', () => {
+  it('rejects a gateway key pasted as the Business Context Platform key', () => {
     expect(
       validateKeyRequest({ ...settings, openviking_key: 'ovgw_abc' }),
     ).toEqual({ openviking_key: 'keys.form.openvikingKey.gatewayKey' })
@@ -354,7 +354,7 @@ describe('KeysIssueDialog', () => {
     )
   })
 
-  it('switches to pasting a Business Data Platform key and back', async () => {
+  it('switches to pasting a Business Context Platform key and back', async () => {
     api.issueKey.mockResolvedValue({})
     renderIssueDialog()
     await fillRequiredFields()
@@ -522,7 +522,7 @@ describe('KeysIssueDialog', () => {
     api.listKeyUsers.mockResolvedValue([alice, boss])
     api.issueKey.mockRejectedValue(
       new GatewayError(
-        'Unknown Business Data Platform user in this account',
+        'Unknown Business Context Platform user in this account',
         400,
         undefined,
         'unknown_user',
@@ -554,7 +554,7 @@ describe('KeysIssueDialog', () => {
   it('retries a preselected user rather than another one', async () => {
     api.issueKey.mockRejectedValue(
       new GatewayError(
-        'Unknown Business Data Platform user in this account',
+        'Unknown Business Context Platform user in this account',
         400,
         undefined,
         'unknown_user',
@@ -648,7 +648,7 @@ describe('KeysIssueDialog', () => {
     )
   })
 
-  it('explains a rejected Business Data Platform key next to that field', async () => {
+  it('explains a rejected Business Context Platform key next to that field', async () => {
     api.issueKey.mockRejectedValue(
       new GatewayError(
         'root_key_not_allowed',

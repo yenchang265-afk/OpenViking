@@ -339,7 +339,7 @@ class BotCompileService:
             if not connection and self._openviking_auth_mode() != "dev":
                 raise CompileFailure(
                     "UNAVAILABLE",
-                    "Compile requires an authenticated Business Data Platform connection.",
+                    "Compile requires an authenticated Business Context Platform connection.",
                     stage="queued",
                 )
             connection = connection or {}
@@ -615,7 +615,7 @@ class BotCompileService:
         if target.rsplit("/", 1)[-1] in _SKILL_EXCLUDED_FILES:
             raise CompileFailure(
                 "INVALID_ARGUMENT",
-                "Compile target must not be a Business Data Platform derived directory",
+                "Compile target must not be a Business Context Platform derived directory",
                 stage="queued",
             )
         classification = classify_uri(target)

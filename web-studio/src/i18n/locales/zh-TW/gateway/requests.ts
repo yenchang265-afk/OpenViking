@@ -71,9 +71,9 @@ const requests = {
       '輸入 {{input}} · 快取命中 {{cached}} · 快取寫入 {{cacheWrite}} · 輸出 {{output}}',
     noUsage: '上游沒有返回 Token 用量',
     firstCall: '首次模型呼叫',
-    toolCalls_one: '使用 Business Data Platform 工具之後的呼叫（{{count}} 次）',
+    toolCalls_one: '使用 Business Context Platform 工具之後的呼叫（{{count}} 次）',
     toolCalls_other:
-      '使用 Business Data Platform 工具之後的呼叫（{{count}} 次）',
+      '使用 Business Context Platform 工具之後的呼叫（{{count}} 次）',
     cache: '提示詞快取',
     cacheEligible: '長度足夠，可以快取（至少 {{min}} Token）',
     cacheIneligible: '長度不足，無法快取（需要 {{min}} Token）',
@@ -88,9 +88,9 @@ const requests = {
     compactionStillOver: '摘要已保留，但用量仍達到壓縮時機（{{reason}}）',
     window: '第 {{number}} 個視窗，由模型管理',
     windowReset: '模型開啟了新視窗',
-    saving: '儲存到 Business Data Platform',
+    saving: '儲存到 Business Context Platform',
     nextRetry: '下次重試時間：{{time}}',
-    tools: 'Business Data Platform 工具',
+    tools: 'Business Context Platform 工具',
     toolsSkipped: '未提供：{{reason}}',
     toolRounds:
       '輪數 {{rounds}} · 額外模型呼叫 {{calls}} 次 · 約增加 {{tokens}} Token',
@@ -102,11 +102,11 @@ const requests = {
   },
   resync: {
     action: '重新同步對話…',
-    hint: '在新的 Business Data Platform 會話中重新儲存這段對話。儲存一直處於暫停狀態時可以使用。',
+    hint: '在新的 Business Context Platform 會話中重新儲存這段對話。儲存一直處於暫停狀態時可以使用。',
     keyRevoked: '這段對話使用的閘道器金鑰已被吊銷，無法重新同步。',
-    title: '為這段對話開啟新的 Business Data Platform 會話？',
+    title: '為這段對話開啟新的 Business Context Platform 會話？',
     description:
-      '使用者下次在這段對話中發訊息時，閘道器會把完整歷史寫入新會話。已儲存的內容仍留在舊會話中，因此 Business Data Platform 可能會重複提取部分記憶。',
+      '使用者下次在這段對話中發訊息時，閘道器會把完整歷史寫入新會話。已儲存的內容仍留在舊會話中，因此 Business Context Platform 可能會重複提取部分記憶。',
     confirm: '重新同步',
     done: '這段對話會在下一條訊息時重新儲存。',
   },

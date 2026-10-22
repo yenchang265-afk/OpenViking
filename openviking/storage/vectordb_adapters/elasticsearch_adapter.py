@@ -137,7 +137,7 @@ class ElasticsearchCollectionAdapter(CollectionAdapter):
         if stored is None:
             raise RuntimeError(
                 f"Elasticsearch index {self._es_index!r} exists but was not created by "
-                "Business Data Platform; refusing to adopt it"
+                "Business Context Platform; refusing to adopt it"
             )
         stored_distance = stored.get(DISTANCE_KEY)
         if stored_distance and stored_distance != self._distance:

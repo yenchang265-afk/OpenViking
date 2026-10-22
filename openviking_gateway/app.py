@@ -31,13 +31,13 @@ from .storage import ManagementStore, SQLiteKernelStore, delete_account_data, de
 
 logger = logging.getLogger(__name__)
 VIKING_DETAILS = {
-    "openviking_unavailable": "Business Data Platform is unreachable.",
-    "openviking_unreachable": "Business Data Platform is unreachable.",
-    "openviking_http_401": "Business Data Platform rejected the API key.",
-    "openviking_identity_missing": "Business Data Platform returned no identity for the API key.",
-    "trusted_mode_unsupported": "Business Data Platform Gateway does not support trusted authentication.",
+    "openviking_unavailable": "Business Context Platform is unreachable.",
+    "openviking_unreachable": "Business Context Platform is unreachable.",
+    "openviking_http_401": "Business Context Platform rejected the API key.",
+    "openviking_identity_missing": "Business Context Platform returned no identity for the API key.",
+    "trusted_mode_unsupported": "Business Context Platform Gateway does not support trusted authentication.",
     "root_key_not_allowed": "A root API key cannot back a gateway key; use a user's API key.",
-    "openviking_version_mismatch": "Business Data Platform server is older than this gateway requires.",
+    "openviking_version_mismatch": "Business Context Platform server is older than this gateway requires.",
 }
 
 
@@ -84,7 +84,7 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
             await asyncio.to_thread(management.close)
 
     app = FastAPI(
-        title="Business Data Platform Gateway",
+        title="Business Context Platform Gateway",
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
@@ -133,7 +133,7 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception("Business Data Platform Gateway maintenance failed")
+                logger.exception("Business Context Platform Gateway maintenance failed")
                 await asyncio.sleep(1)
 
     @app.exception_handler(RequestValidationError)
@@ -152,7 +152,7 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
             {
                 "reason": error.reason,
                 "detail": VIKING_DETAILS.get(
-                    error.reason, "Business Data Platform request failed."
+                    error.reason, "Business Context Platform request failed."
                 ),
                 **(
                     {"required_version": config.min_server_version}
@@ -178,7 +178,7 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
         if key.startswith("sk-ant-oat"):
             raise HTTPException(403, "Claude subscription OAuth credentials are not supported")
         credential = await management.authenticate(key)
-        invalid = "Invalid gateway key. It may have been revoked, or removed because its Business Data Platform API key was regenerated. Issue a new key in Business Data Platform Studio → Gateway → Keys."
+        invalid = "Invalid gateway key. It may have been revoked, or removed because its Business Context Platform API key was regenerated. Issue a new key in Business Context Platform Studio → Gateway → Keys."
         if not credential:
             raise HTTPException(401, invalid)
         if app.state.viking.unavailable_reason:
@@ -262,7 +262,7 @@ def create_app(config: GatewayConfig, *, openviking_url: str, vlm_source=None, e
                     headers=filtered_headers(response.headers),
                 )
         except (aiohttp.ClientError, asyncio.TimeoutError):
-            raise HTTPException(502, "Business Data Platform upload is unavailable")
+            raise HTTPException(502, "Business Context Platform upload is unavailable")
 
     @app.get("/downloads")
     async def proxy_download(request: Request):

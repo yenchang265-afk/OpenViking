@@ -998,7 +998,7 @@ async def test_keys_are_immutable_and_errors_explain_themselves(running_gateway)
     response = await client.get(P + "/keys", headers={"X-API-Key": "stale-key"})
     assert response.json() == {
         "reason": "openviking_http_401",
-        "detail": "Business Data Platform rejected the API key.",
+        "detail": "Business Context Platform rejected the API key.",
     }
 
 

@@ -230,7 +230,7 @@ def _probe_embedding_provider(
 
     async def _run_probe():
         return await asyncio.wait_for(
-            embed_compat(embedder, "Business Data Platform doctor embedding probe", is_query=True),
+            embed_compat(embedder, "Business Context Platform doctor embedding probe", is_query=True),
             timeout=10.0,
         )
 
@@ -525,7 +525,7 @@ def check_vikingbot() -> CheckResult:
                 f"but that server is auth_mode={auth_mode}",
                 f"To use {bot_server_url}, set bot.ov_server.api_key_type to 'user' "
                 "and configure a User API key in bot.ov_server.api_key or ovcli.conf api_key.\n"
-                "To use root mode, change that Business Data Platform server to server.auth_mode='trusted'.\n"
+                "To use root mode, change that Business Context Platform server to server.auth_mode='trusted'.\n"
                 "To use another trusted server, set bot.ov_server.server_url to that server "
                 "and keep api_key_type='root'.",
             )
@@ -549,12 +549,12 @@ def check_vikingbot() -> CheckResult:
             return (
                 "warn",
                 "bot.ov_server.api_key_type=root without root API key",
-                "Configure bot.ov_server.api_key with a root API key for trusted Business Data Platform access",
+                "Configure bot.ov_server.api_key with a root API key for trusted Business Context Platform access",
             )
-        return "pass", "bot.ov_server configured for trusted Business Data Platform auth", None
+        return "pass", "bot.ov_server configured for trusted Business Context Platform auth", None
 
     if bot_uses_current_server and auth_mode == "dev":
-        return "pass", "VikingBot aligned with dev Business Data Platform auth", None
+        return "pass", "VikingBot aligned with dev Business Context Platform auth", None
 
     ovcli_api_key = "" if not _is_placeholder_secret(api_key) else _load_ovcli_api_key_for_doctor()
     if not _is_placeholder_secret(api_key):
@@ -575,12 +575,12 @@ def check_vikingbot() -> CheckResult:
                 "warn",
                 "bot.ov_server not configured and ovcli.conf api_key not configured",
                 "Configure bot.ov_server.api_key or ovcli.conf api_key with a "
-                "Business Data Platform User API key",
+                "Business Context Platform User API key",
             )
         return (
             "warn",
             "bot.ov_server.api_key and ovcli.conf api_key not configured",
-            "Create a Business Data Platform User API key and set bot.ov_server.api_key or ovcli.conf api_key",
+            "Create a Business Context Platform User API key and set bot.ov_server.api_key or ovcli.conf api_key",
         )
     return "pass", "bot.ov_server.api_key configured for api_key mode", None
 
@@ -662,7 +662,7 @@ def check_disk() -> tuple[bool, str, Optional[str]]:
         return (
             False,
             f"{free_gb:.1f} GB free in {check_path}",
-            "Free up disk space (Business Data Platform needs at least 1 GB for vector storage)",
+            "Free up disk space (Business Context Platform needs at least 1 GB for vector storage)",
         )
 
     return True, f"{free_gb:.1f} GB free in {check_path}", None
@@ -691,7 +691,7 @@ def run_doctor() -> int:
 
     Returns 0 if all checks pass, 1 otherwise.
     """
-    print("\nBusiness Data Platform Doctor\n")
+    print("\nBusiness Context Platform Doctor\n")
 
     failed = 0
     warned = 0

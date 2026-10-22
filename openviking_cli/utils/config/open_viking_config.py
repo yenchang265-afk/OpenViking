@@ -701,7 +701,7 @@ class OpenVikingConfigSingleton:
                             default_path_user = DEFAULT_CONFIG_DIR / DEFAULT_OV_CONF
                             default_path_system = SYSTEM_CONFIG_DIR / DEFAULT_OV_CONF
                             raise FileNotFoundError(
-                                f"Business Data Platform configuration file not found.\n"
+                                f"Business Context Platform configuration file not found.\n"
                                 f"Please create {default_path_user} or {default_path_system}, "
                                 f"or set {OPENVIKING_CONFIG_ENV}.\n"
                                 f"See: https://openviking.ai/docs"
@@ -741,7 +741,7 @@ class OpenVikingConfigSingleton:
                         default_path_user = DEFAULT_CONFIG_DIR / DEFAULT_OV_CONF
                         default_path_system = SYSTEM_CONFIG_DIR / DEFAULT_OV_CONF
                         raise FileNotFoundError(
-                            f"Business Data Platform configuration file not found.\n"
+                            f"Business Context Platform configuration file not found.\n"
                             f"Please create {default_path_user} or {default_path_system}, "
                             f"or set {OPENVIKING_CONFIG_ENV}.\n"
                             f"See: https://openviking.ai/docs"
@@ -842,7 +842,7 @@ def is_valid_openviking_config(config: OpenVikingConfig) -> bool:
         errors.append("Default account identifier cannot be empty")
 
     if errors:
-        error_message = "Invalid Business Data Platform configuration:\n" + "\n".join(
+        error_message = "Invalid Business Context Platform configuration:\n" + "\n".join(
             f"  - {e}" for e in errors
         )
         raise ValueError(error_message)
@@ -896,6 +896,6 @@ def initialize_openviking_config(
 
     # Validate configuration
     if not is_valid_openviking_config(config):
-        raise ValueError("Invalid Business Data Platform configuration")
+        raise ValueError("Invalid Business Context Platform configuration")
 
     return config

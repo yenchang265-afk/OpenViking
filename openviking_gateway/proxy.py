@@ -342,7 +342,7 @@ class ProxyRequest:
         try:
             await self.app.state.kernel.relayed(self.prepared, self.capture)
         except Exception:
-            logger.exception("Business Data Platform Gateway reply bookkeeping failed")
+            logger.exception("Business Context Platform Gateway reply bookkeeping failed")
 
     async def finish(self):
         self.metrics.update(self.capture.usage or {})
@@ -392,7 +392,7 @@ class ProxyRequest:
                 self.credential["account"], self.metrics, user_id=self.credential["user_id"]
             )
         except Exception:
-            logger.exception("Business Data Platform Gateway response bookkeeping failed")
+            logger.exception("Business Context Platform Gateway response bookkeeping failed")
 
     async def tool_response(self):
         response, prepared, capture = self.response, self.prepared, self.capture

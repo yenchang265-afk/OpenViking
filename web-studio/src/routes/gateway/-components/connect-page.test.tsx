@@ -224,7 +224,7 @@ describe('ConnectPage', () => {
       ),
     ).toBeTruthy()
     expect(
-      screen.getByText(/^Business Data Platform MCP tools alone don't count/),
+      screen.getByText(/^Business Context Platform MCP tools alone don't count/),
     ).toBeTruthy()
   })
 

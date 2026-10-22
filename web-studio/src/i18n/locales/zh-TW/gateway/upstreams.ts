@@ -1,12 +1,12 @@
 const upstreams = {
   import: {
-    action: '從 Business Data Platform 匯入',
-    useSettings: '使用 Business Data Platform 的模型配置',
+    action: '從 Business Context Platform 匯入',
+    useSettings: '使用 Business Context Platform 的模型配置',
     hint: '即服務端的 VLM 配置',
     running: '匯入中…',
     summary_one: '已匯入或更新 {{count}} 個上游。',
     summary_other: '已匯入或更新 {{count}} 個上游。',
-    nothing: 'Business Data Platform 的模型配置裡沒有可匯入的憑證。',
+    nothing: 'Business Context Platform 的模型配置裡沒有可匯入的憑證。',
     needsConfirmation:
       '以下 Coding Plan 上游會攔截所有請求，確認套餐允許通過閘道器使用後才能啟用：',
     skipped_one: '{{count}} 個憑證未匯入：',
@@ -14,7 +14,7 @@ const upstreams = {
     confirm: '去確認',
     dismiss: '關閉',
     repeat:
-      '再次匯入會按 Business Data Platform 的配置更新地址和憑證，不會重複建立；你改過的啟用狀態、優先順序和模型設定會保留。',
+      '再次匯入會按 Business Context Platform 的配置更新地址和憑證，不會重複建立；你改過的啟用狀態、優先順序和模型設定會保留。',
     reasons: {
       invalid_configuration: '模型配置無效，請檢查服務端配置後重新匯入。',
       openai_codex:
@@ -193,7 +193,7 @@ const upstreams = {
         '選定服務商後，下方只能選它提供的協議。列表裡沒有的服務商，以及 LiteLLM 這類相容代理，請選“通用”。',
       hints: {
         deepseek:
-          '請求帶工具時，DeepSeek 要求回傳之前每條回覆的推理內容。閘道器會補回客戶端丟掉的部分，所以 Business Data Platform 工具可以正常使用；如果在下方關閉補全，只有請求關閉了思考模式才會提供這些工具。',
+          '請求帶工具時，DeepSeek 要求回傳之前每條回覆的推理內容。閘道器會補回客戶端丟掉的部分，所以 Business Context Platform 工具可以正常使用；如果在下方關閉補全，只有請求關閉了思考模式才會提供這些工具。',
         ark: 'Chat 和 Responses 填寫 https://ark.cn-beijing.volces.com/api/v3，Anthropic 填寫 https://ark.cn-beijing.volces.com/api/compatible；Coding Plan 分別填寫 https://ark.cn-beijing.volces.com/api/coding/v3 和 https://ark.cn-beijing.volces.com/api/coding。閘道器會保持每段對話的 prompt_cache_key 不變，讓快取持續命中。',
         byteplus:
           'Chat 和 Responses 填寫 https://ark.ap-southeast.bytepluses.com/api/v3，Anthropic 填寫 https://ark.ap-southeast.bytepluses.com/api/compatible；Coding Plan 分別填寫 https://ark.ap-southeast.bytepluses.com/api/coding/v3 和 https://ark.ap-southeast.bytepluses.com/api/coding。閘道器會保持每段對話的 prompt_cache_key 不變，讓快取持續命中。',
@@ -295,9 +295,9 @@ const upstreams = {
         '停用的上游不再接收請求。正在使用它的對話會轉到其他提供該模型的上游，前提是客戶端的金鑰允許使用。',
     },
     gatewayTools: {
-      label: '允許 Business Data Platform 工具',
+      label: '允許 Business Context Platform 工具',
       description:
-        '允許模型通過這個上游使用上下文配置中選定的 Business Data Platform 工具。關閉後，進行中的對話也會停用這些工具。',
+        '允許模型通過這個上游使用上下文配置中選定的 Business Context Platform 工具。關閉後，進行中的對話也會停用這些工具。',
     },
     replayReasoning: {
       label: '補全推理內容回傳',

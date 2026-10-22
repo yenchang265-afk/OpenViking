@@ -1,12 +1,12 @@
 const upstreams = {
   import: {
-    action: 'Import from Business Data Platform',
-    useSettings: "Use Business Data Platform's model settings",
+    action: 'Import from Business Context Platform',
+    useSettings: "Use Business Context Platform's model settings",
     hint: "Uses the server's VLM settings",
     running: 'Importing…',
     summary_one: 'Imported or updated {{count}} upstream.',
     summary_other: 'Imported or updated {{count}} upstreams.',
-    nothing: "Business Data Platform's model settings have nothing to import.",
+    nothing: "Business Context Platform's model settings have nothing to import.",
     needsConfirmation:
       'These Coding Plan upstreams stay blocked until you confirm the plan allows use through the gateway:',
     skipped_one: '{{count}} credential was not imported:',
@@ -14,7 +14,7 @@ const upstreams = {
     confirm: 'Review',
     dismiss: 'Dismiss',
     repeat:
-      "Importing again updates addresses and credentials from Business Data Platform's settings without creating duplicates. Your changes to the enabled state, priority and models are kept.",
+      "Importing again updates addresses and credentials from Business Context Platform's settings without creating duplicates. Your changes to the enabled state, priority and models are kept.",
     reasons: {
       invalid_configuration:
         'The model configuration is invalid. Check the server settings and import again.',
@@ -206,7 +206,7 @@ const upstreams = {
         'Limits the protocols below to the ones this provider offers. For a provider not listed here, or a compatible proxy such as LiteLLM, choose Generic.',
       hints: {
         deepseek:
-          'With tools present, DeepSeek needs the reasoning of every earlier reply. The gateway restores what clients drop, so Business Data Platform tools work; if you turn that off below, they are only offered when a request turns thinking off.',
+          'With tools present, DeepSeek needs the reasoning of every earlier reply. The gateway restores what clients drop, so Business Context Platform tools work; if you turn that off below, they are only offered when a request turns thinking off.',
         ark: 'For Chat and Responses use https://ark.cn-beijing.volces.com/api/v3; for Anthropic use https://ark.cn-beijing.volces.com/api/compatible. Coding Plan paths are /api/coding/v3 and /api/coding respectively. The gateway keeps each conversation’s prompt_cache_key stable for cache hits.',
         byteplus:
           'For Chat and Responses use https://ark.ap-southeast.bytepluses.com/api/v3; for Anthropic use https://ark.ap-southeast.bytepluses.com/api/compatible. Coding Plan paths are /api/coding/v3 and /api/coding respectively. The gateway keeps each conversation’s prompt_cache_key stable for cache hits.',
@@ -312,9 +312,9 @@ const upstreams = {
         "A turned-off upstream receives no requests. Conversations on it move to another upstream that serves the model, if the client's key allows one.",
     },
     gatewayTools: {
-      label: 'Allow Business Data Platform tools',
+      label: 'Allow Business Context Platform tools',
       description:
-        'Context profiles with Business Data Platform tools can offer them through this upstream. Turning this off also stops them in ongoing conversations.',
+        'Context profiles with Business Context Platform tools can offer them through this upstream. Turning this off also stops them in ongoing conversations.',
     },
     replayReasoning: {
       label: 'Restore reasoning the client drops',

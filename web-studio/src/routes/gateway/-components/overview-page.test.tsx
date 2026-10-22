@@ -377,12 +377,12 @@ describe('OverviewPage', () => {
     expect(screen.getByText('Degraded')).toBeTruthy()
     expect(
       screen.getByText(
-        "Business Data Platform is unreachable or didn't answer in time",
+        "Business Context Platform is unreachable or didn't answer in time",
       ),
     ).toBeTruthy()
     expect(
       screen.getByText(
-        '1 conversation is retrying saving to Business Data Platform after a failure.',
+        '1 conversation is retrying saving to Business Context Platform after a failure.',
       ),
     ).toBeTruthy()
     // Saving problems and degraded requests both link to the issues filter.
@@ -698,7 +698,7 @@ describe('OverviewPage quick mode', () => {
 
     expect(
       await screen.findByText(
-        "Upstream: import the Business Data Platform server's model settings, reusing its API key and quota",
+        "Upstream: import the Business Context Platform server's model settings, reusing its API key and quota",
       ),
     ).toBeTruthy()
     expect(
@@ -774,7 +774,7 @@ describe('OverviewPage quick mode', () => {
 
     expect(
       await screen.findByText(
-        'Key: choose the Business Data Platform user who owns it in the next step',
+        'Key: choose the Business Context Platform user who owns it in the next step',
       ),
     ).toBeTruthy()
     fireEvent.click(await quickButton())

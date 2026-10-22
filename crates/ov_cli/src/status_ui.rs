@@ -234,8 +234,8 @@ impl StatusFailureKind {
             Self::Authentication => copy(language, "API key rejected", "API Key 被拒絕"),
             Self::Api => copy(
                 language,
-                "Business Data Platform returned an API error",
-                "Business Data Platform 返回 API 錯誤",
+                "Business Context Platform returned an API error",
+                "Business Context Platform 返回 API 錯誤",
             ),
             Self::Timeout => copy(
                 language,
