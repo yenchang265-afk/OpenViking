@@ -7,7 +7,7 @@ use std::path::Path;
 use std::str::FromStr;
 use tempfile::{Builder, NamedTempFile};
 use zip::CompressionMethod;
-use zip::write::FileOptions;
+use zip::write::SimpleFileOptions;
 
 use indicatif::{ProgressBar, ProgressStyle};
 
@@ -956,8 +956,7 @@ impl<'a> FileUploader<'a> {
         let temp_file = Builder::new().suffix(".zip").tempfile()?;
         let file = File::create(temp_file.path())?;
         let mut zip = zip::ZipWriter::new(file);
-        let options: FileOptions<'_, ()> =
-            FileOptions::default().compression_method(CompressionMethod::Deflated);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
         let walkdir = walkdir::WalkDir::new(dir_path);
         for entry in walkdir
@@ -996,8 +995,7 @@ impl<'a> FileUploader<'a> {
         let temp_file = Builder::new().suffix(".zip").tempfile()?;
         let file = File::create(temp_file.path())?;
         let mut zip = zip::ZipWriter::new(file);
-        let options: FileOptions<'_, ()> =
-            FileOptions::default().compression_method(CompressionMethod::Deflated);
+        let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
 
         let mut total_size = 0u64;
         let mut total_files = 0u64;
