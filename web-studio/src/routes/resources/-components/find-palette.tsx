@@ -444,7 +444,7 @@ export function FindPalette({
             onCompositionEnd={() => {
               composingRef.current = false
             }}
-            className="h-12 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 md:text-sm"
+            className="h-12 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground/70 md:text-sm"
           />
           {query && (
             <button
@@ -455,21 +455,25 @@ export function FindPalette({
               <X className="size-3.5" />
             </button>
           )}
-          <span className="flex items-center gap-1 text-xs text-muted-foreground/70">
+          <span className="flex min-w-0 max-w-[45%] items-center gap-1 whitespace-nowrap text-xs text-muted-foreground/70">
             {isRoot ? (
-              t('searchPalette.scope.global')
+              <span className="truncate">
+                {t('searchPalette.scope.global')}
+              </span>
             ) : (
               <button
                 type="button"
-                className="flex items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
+                className="flex min-w-0 items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-muted hover:text-foreground"
                 title={t('searchPalette.scope.resetToGlobal')}
                 onClick={() => setFindTargetUri(PALETTE_ROOT_URI)}
               >
-                <FolderOpen className="size-3" />
-                {t('searchPalette.scope.current', {
-                  name: findTargetUri.split('/').filter(Boolean).pop(),
-                })}
-                <X className="size-3" />
+                <FolderOpen className="size-3 shrink-0" />
+                <span className="truncate">
+                  {t('searchPalette.scope.current', {
+                    name: findTargetUri.split('/').filter(Boolean).pop(),
+                  })}
+                </span>
+                <X className="size-3 shrink-0" />
               </button>
             )}
           </span>
@@ -477,13 +481,13 @@ export function FindPalette({
 
         {/* Search mode switcher */}
         {mode.kind !== 'dirBrowse' && (
-          <div className="flex items-center gap-1 border-b px-4 py-1.5">
+          <div className="flex items-center gap-1 overflow-x-auto border-b px-4 py-1.5">
             {PALETTE_SEARCH_MODES.map((item) => (
               <button
                 key={item}
                 type="button"
                 className={cn(
-                  'rounded px-1.5 py-0.5 font-mono text-[11px] transition-colors',
+                  'shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] transition-colors',
                   searchMode === item
                     ? 'bg-muted text-foreground'
                     : 'text-muted-foreground/60 hover:text-foreground',
@@ -495,7 +499,7 @@ export function FindPalette({
                   : t(`controls.modes.${item}`, { ns: 'retrieval' })}
               </button>
             ))}
-            <span className="ml-auto text-[11px] text-muted-foreground/50">
+            <span className="ml-auto hidden shrink-0 text-[11px] text-muted-foreground/50 sm:inline">
               <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] text-foreground/70">
                 {KEY_TAB_LABEL}
               </kbd>{' '}
@@ -526,8 +530,8 @@ export function FindPalette({
               {/* Results area */}
               <div
                 className={cn(
-                  'min-h-0 flex-1 overflow-hidden',
-                  showPreview && 'border-r',
+                  'min-h-0 min-w-0 flex-1 overflow-hidden',
+                  showPreview && 'md:border-r',
                 )}
               >
                 {mode.kind === 'idle' ? (
@@ -628,7 +632,8 @@ export function FindPalette({
 
               {/* Preview pane */}
               {showPreview && (
-                <div className="animate-palette-preview flex h-full w-[32rem] flex-col overflow-hidden">
+                // Narrow screens keep the results list; tapping opens the file.
+                <div className="animate-palette-preview hidden h-full w-[min(32rem,55%)] shrink-0 flex-col overflow-hidden md:flex">
                   <LazyFilePreview
                     file={previewEntry}
                     onClose={() => setIndex(-1)}
@@ -645,7 +650,7 @@ export function FindPalette({
         </div>
 
         {mode.kind === 'dirBrowse' ? (
-          <div className="flex items-center gap-3 border-t px-4 py-2 text-xs text-muted-foreground/70">
+          <div className="hidden items-center gap-3 border-t px-4 py-2 text-xs text-muted-foreground/70 sm:flex">
             <span>
               <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] text-foreground/70">
                 ↑↓
@@ -674,19 +679,19 @@ export function FindPalette({
         ) : (
           hasResults && (
             <div className="flex items-center gap-3 border-t px-4 py-2 text-xs text-muted-foreground/70">
-              <span>
+              <span className="hidden sm:inline">
                 <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] text-foreground/70">
                   ↑↓
                 </kbd>{' '}
                 {t('searchPalette.footer.resultMode.navigate')}
               </span>
-              <span>
+              <span className="hidden sm:inline">
                 <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] text-foreground/70">
                   ↵
                 </kbd>{' '}
                 {t('searchPalette.footer.resultMode.open')}
               </span>
-              <span>
+              <span className="hidden sm:inline">
                 <kbd className="rounded border border-border bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] text-foreground/70">
                   {KEY_ESCAPE_LABEL}
                 </kbd>{' '}
