@@ -59,6 +59,12 @@ dependencies = [
     "jinja2>=3.1.6",
     "tabulate>=0.9.0",
     "urllib3>=2.7.0",
+    # Security floors for transitive deps: certifi drops compromised emSign roots
+    # (GHSA-6q48-6c7w-9gw2); Pillow 13 fixes Ghostscript argument injection and
+    # TIFF heap overflow (GHSA-w889-685w-c8fh, GHSA-332p-7hrc-92wf). Pillow 13
+    # requires Python >= 3.11, so 3.10 stays on the latest 12.x.
+    "certifi>=2026.10.19",
+    "pillow>=13.0.0; python_version >= '3.11'",
     "protobuf>=6.33.5",
     "pdfminer-six>=20251230",
     "typer>=0.12.0",
