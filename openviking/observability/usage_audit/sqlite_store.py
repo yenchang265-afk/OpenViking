@@ -25,6 +25,10 @@ UTC = timezone.utc
 # The longest token-rate window (7d) touches at most 8 UTC dates, and nothing
 # reads per-minute rows beyond it, so they never outlive that span.
 MINUTE_RETENTION_DAYS = 8
+# `source_tokentype` keys reported by daily and windowed token reads.
+DAILY_TOKEN_KEYS = ("vlm_input", "vlm_output", "embedding_input", "bot_input", "bot_output")
+# Per-minute keys; rerank input and output fold into one series.
+MINUTE_TOKEN_KEYS = (*DAILY_TOKEN_KEYS, "rerank")
 
 
 def _date_range(start_date: str, end_date: str) -> Iterable[str]:
@@ -452,7 +456,7 @@ class SQLiteUsageAuditStore:
         rows = self._fetch_hourly_token_rows(
             account_id, utc_start, utc_end, user_id=user_id
         )
-        result = {"vlm_input": 0, "vlm_output": 0, "embedding_input": 0}
+        result = dict.fromkeys(DAILY_TOKEN_KEYS, 0)
         for source, token_type, _, _, total in rows:
             key = f"{source}_{token_type}"
             if key in result:
@@ -505,13 +509,11 @@ class SQLiteUsageAuditStore:
                 if row["source"] == "rerank"
                 else f"{row['source']}_{row['token_type']}"
             )
-            if key not in ("vlm_input", "vlm_output", "embedding_input", "rerank"):
+            if key not in MINUTE_TOKEN_KEYS:
                 continue
             minute = int(row["minute_utc"])
             ts = datetime(*_parse_ymd(row["date_utc"]), minute // 60, minute % 60, tzinfo=UTC)
-            slot = result.setdefault(
-                ts, {"vlm_input": 0, "vlm_output": 0, "embedding_input": 0, "rerank": 0}
-            )
+            slot = result.setdefault(ts, dict.fromkeys(MINUTE_TOKEN_KEYS, 0))
             slot[key] += int(row["total"] or 0)
         return result
 
@@ -579,7 +581,7 @@ class SQLiteUsageAuditStore:
         utc_start, _ = _user_day_window_utc(start_day, tz)
         _, utc_end = _user_day_window_utc(end_day, tz)
         by_date: dict[str, dict[str, Any]] = {
-            d: {"date": d, "vlm_input": 0, "vlm_output": 0, "embedding_input": 0}
+            d: {"date": d, **dict.fromkeys(DAILY_TOKEN_KEYS, 0)}
             for d in _date_range(start_user_date, end_user_date)
         }
         for source, token_type, date_utc, hour_utc, total in self._fetch_hourly_token_rows(
@@ -596,8 +598,7 @@ class SQLiteUsageAuditStore:
                 .isoformat()
             )
             slot = by_date.setdefault(
-                local_date,
-                {"date": local_date, "vlm_input": 0, "vlm_output": 0, "embedding_input": 0},
+                local_date, {"date": local_date, **dict.fromkeys(DAILY_TOKEN_KEYS, 0)}
             )
             key = f"{source}_{token_type}"
             if key in slot:

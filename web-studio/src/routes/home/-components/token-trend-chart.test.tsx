@@ -27,6 +27,8 @@ describe('TokenTrendChart', () => {
       <TokenTrendChart
         items={[
           {
+            bot_input: 0,
+            bot_output: 0,
             date: '2026-08-18',
             embedding_input: 1_411_688,
             total: 26_946_050,

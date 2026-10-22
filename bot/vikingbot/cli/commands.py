@@ -78,6 +78,7 @@ from vikingbot.cron.service import CronService  # noqa: E402
 from vikingbot.cron.types import CronJob  # noqa: E402
 from vikingbot.heartbeat.service import HeartbeatService  # noqa: E402
 from vikingbot.integrations.langfuse import LangfuseClient  # noqa: E402
+from vikingbot.observability import bot_usage  # noqa: E402
 from vikingbot.observability.feedback_stats import (  # noqa: E402
     compute_feedback_stats,
     format_feedback_stats_table,
@@ -651,6 +652,7 @@ def gateway(
                 if cron is not None and hasattr(cron, "stop"):
                     cron.stop()
                 await agent_loop.close_mcp()
+                await bot_usage.aclose()
             finally:
                 try:
                     if manager is not None:
@@ -696,6 +698,13 @@ def prepare_agent_loop(config, bus, session_manager, cron, quiet: bool = False, 
             logger.warning("Langfuse: configured but failed to initialize")
 
     provider = _make_provider(config, langfuse_client)
+    # Report model-call tokens to the Business Data Platform usage dashboard; the server
+    # accepts them only from the gateway it manages, proven by their shared token.
+    bot_usage.configure(
+        config.ov_server,
+        gateway_token=os.environ.get("OPENVIKING_BOT_STUDIO_TOKEN")
+        or str(getattr(getattr(config, "gateway", None), "token", "") or "").strip(),
+    )
     # Create agent with cron service
     agent = AgentLoop(
         bus=bus,
@@ -1058,6 +1067,7 @@ def chat(
                 await asyncio.gather(*tasks)
         finally:
             await agent_loop.close_mcp()
+            await bot_usage.aclose()
 
     try:
         asyncio.run(run())

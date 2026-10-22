@@ -220,6 +220,14 @@ export function TodayTokensPanel({
             label={t('todayTokens.embeddingInput')}
             value={formatNumber(data?.embedding_input)}
           />
+          <DetailRow
+            label={t('todayTokens.botInput')}
+            value={formatNumber(data?.bot_input)}
+          />
+          <DetailRow
+            label={t('todayTokens.botOutput')}
+            value={formatNumber(data?.bot_output)}
+          />
         </>
       )}
     </MetricPanel>
@@ -270,6 +278,14 @@ export function TokensPerMinutePanel({
           <DetailRow
             label={t('tokensPerMinute.embeddingInput')}
             value={formatNumber(data?.embedding_input)}
+          />
+          <DetailRow
+            label={t('tokensPerMinute.botInput')}
+            value={formatNumber(data?.bot_input)}
+          />
+          <DetailRow
+            label={t('tokensPerMinute.botOutput')}
+            value={formatNumber(data?.bot_output)}
           />
         </>
       )}

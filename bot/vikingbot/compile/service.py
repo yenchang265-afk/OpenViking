@@ -72,6 +72,7 @@ from vikingbot.compile.sandbox import CompileSandboxManager
 from vikingbot.compile.sources import CompileSourceRange, pack_source_batches
 from vikingbot.compile.store import CompileTaskStore
 from vikingbot.config.schema import SandboxBackend, SandboxMode, SessionKey
+from vikingbot.observability import bot_usage
 from vikingbot.openviking_mount.ov_server import VikingClient
 from vikingbot.providers.base import LLMProvider, LLMResponse, LLMStreamEvent
 from vikingbot.sandbox import SandboxManager
@@ -713,7 +714,8 @@ class BotCompileService:
             acquired = True
 
             try:
-                await self._execute_task(task_id, request, connection)
+                with bot_usage.usage_connection(connection):
+                    await self._execute_task(task_id, request, connection)
             except CompileFailure as exc:
                 await self._fail(task_id, exc)
             except Exception as exc:

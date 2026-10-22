@@ -314,6 +314,8 @@ async def test_sqlite_usage_audit_store_aggregates_dashboard_data(tmp_path):
             "vlm_input": 3,
             "vlm_output": 2,
             "embedding_input": 105,
+            "bot_input": 0,
+            "bot_output": 0,
             "total": 110,
         }
         assert await store.get_today_tokens(
@@ -322,6 +324,8 @@ async def test_sqlite_usage_audit_store_aggregates_dashboard_data(tmp_path):
             "vlm_input": 3,
             "vlm_output": 2,
             "embedding_input": 5,
+            "bot_input": 0,
+            "bot_output": 0,
             "total": 10,
         }
         assert await store.get_today_retrievals(
@@ -412,6 +416,8 @@ async def test_sqlite_usage_audit_store_resets_incompatible_legacy_schema(tmp_pa
             "vlm_input": 8,
             "vlm_output": 2,
             "embedding_input": 0,
+            "bot_input": 0,
+            "bot_output": 0,
             "total": 10,
         }
         commits = await store.get_context_commit_heatmap(
@@ -870,6 +876,8 @@ async def test_window_tokens_sums_only_hours_inside_utc_window(tmp_path):
             "vlm_input": 100,
             "vlm_output": 40,
             "embedding_input": 60,
+            "bot_input": 0,
+            "bot_output": 0,
             "total": 200,
         }
     finally:
@@ -937,12 +945,16 @@ async def test_minute_tokens_bucket_events_by_utc_minute(tmp_path):
                 "vlm_input": 107,
                 "vlm_output": 40,
                 "embedding_input": 0,
+                "bot_input": 0,
+                "bot_output": 0,
                 "rerank": 0,
             },
             datetime(2026, 5, 12, 10, 16, tzinfo=timezone.utc): {
                 "vlm_input": 0,
                 "vlm_output": 0,
                 "embedding_input": 65,
+                "bot_input": 0,
+                "bot_output": 0,
                 "rerank": 23,
             },
         }
@@ -952,6 +964,8 @@ async def test_minute_tokens_bucket_events_by_utc_minute(tmp_path):
                 "vlm_input": 0,
                 "vlm_output": 0,
                 "embedding_input": 5,
+                "bot_input": 0,
+                "bot_output": 0,
                 "rerank": 0,
             },
         }
@@ -1034,3 +1048,55 @@ async def test_minute_tokens_keep_only_the_trend_window(tmp_path, usage_retentio
     assert minute_dates == ["2026-05-05", "2026-05-12"]
     # Hourly usage still follows usage_retention_days (0 disables trimming).
     assert hourly_dates == ["2026-05-04", "2026-05-05", "2026-05-12"]
+
+
+@pytest.mark.asyncio
+async def test_bot_calls_aggregate_into_separate_bot_series(tmp_path):
+    store = SQLiteUsageAuditStore(tmp_path / "usage.sqlite3")
+    await store.initialize()
+    try:
+        ts = datetime(2026, 5, 12, 10, 15, tzinfo=timezone.utc)
+        await store.record_batch(
+            [
+                _event(
+                    "vlm.call",
+                    {"provider": "p", "model_name": "m", "prompt_tokens": 7},
+                    ts=ts,
+                ),
+                _event(
+                    "bot.call",
+                    {
+                        "provider": "p",
+                        "model_name": "bot-model",
+                        "prompt_tokens": 300,
+                        "completion_tokens": 50,
+                    },
+                    ts=ts,
+                ),
+            ]
+        )
+
+        today = await store.get_today_tokens(account_id="acct-1", user_date="2026-05-12", tz=UTC)
+        assert today["vlm_input"] == 7
+        assert today["bot_input"] == 300
+        assert today["bot_output"] == 50
+        assert today["total"] == 357
+        minutes = await store.get_minute_tokens(
+            account_id="acct-1",
+            utc_start=ts,
+            utc_end=datetime(2026, 5, 12, 10, 16, tzinfo=timezone.utc),
+        )
+        assert minutes[ts]["bot_input"] == 300
+        assert minutes[ts]["bot_output"] == 50
+        assert minutes[ts]["vlm_input"] == 7
+        series = await store.get_token_series(
+            account_id="acct-1",
+            start_user_date="2026-05-12",
+            end_user_date="2026-05-12",
+            bucket="day",
+            tz=UTC,
+        )
+        assert series[0]["bot_input"] == 300
+        assert series[0]["bot_output"] == 50
+    finally:
+        await store.close()

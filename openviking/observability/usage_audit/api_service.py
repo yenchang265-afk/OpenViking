@@ -12,6 +12,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
+from openviking.observability.events import ObservabilityEvent, get_event_bus
 from openviking.server.identity import RequestContext, Role
 from openviking_cli.exceptions import InvalidArgumentError
 
@@ -21,7 +22,9 @@ from .time import resolve_usage_timezone, resolve_user_timezone
 
 # Token series in the TPM trend; rerank is included so the peak covers every
 # model call that spends tokens.
-TOKEN_TYPES = ("vlm_input", "vlm_output", "embedding_input", "rerank")
+TOKEN_TYPES = ("vlm_input", "vlm_output", "embedding_input", "bot_input", "bot_output", "rerank")
+# Bot reports carry their own call times; older or future times are recorded as received.
+BOT_CALL_MAX_AGE = timedelta(hours=1)
 # window -> (window length in minutes, bucket size in minutes). Buckets stay at or
 # under ~360 points; each still reports its busiest single minute.
 TOKEN_RATE_WINDOWS = {
@@ -219,6 +222,38 @@ class UsageAuditQueryService:
         item["total"] = round(sum(sums.values()) / elapsed, 1)
         item["peak_total"] = max((sum(c.values()) for c in counts), default=0)
         return item
+
+    def record_bot_calls(self, ctx: RequestContext, calls: list[dict[str, Any]]) -> int:
+        """Publish VikingBot model calls as `bot.call` events for the requesting user.
+
+        The bot runs in its own process, so its calls are reported here instead of
+        reaching this server's event bus directly. Returns the number of calls accepted.
+        """
+        now = _utc_now()
+        bus = get_event_bus()
+        for call in calls:
+            occurred_at = call.get("occurred_at")
+            if occurred_at is not None:
+                if occurred_at.tzinfo is None:
+                    occurred_at = occurred_at.replace(tzinfo=timezone.utc)
+                occurred_at = occurred_at.astimezone(timezone.utc)
+            if occurred_at is None or not now - BOT_CALL_MAX_AGE <= occurred_at <= now:
+                occurred_at = now
+            bus.publish(
+                ObservabilityEvent(
+                    event_name="bot.call",
+                    payload={
+                        "provider": call.get("provider") or "",
+                        "model_name": call.get("model_name") or "",
+                        "prompt_tokens": call["prompt_tokens"],
+                        "completion_tokens": call["completion_tokens"],
+                    },
+                    timestamp=occurred_at,
+                    account_id=ctx.account_id,
+                    user_id=ctx.user.user_id,
+                )
+            )
+        return len(calls)
 
     async def context_commits(
         self,

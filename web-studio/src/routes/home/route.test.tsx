@@ -154,8 +154,10 @@ it('renders tokens per minute with its breakdown', async () => {
     today_tokens: { total: 0 },
     today_retrievals: { total: 0 },
     tokens_per_minute: {
+      bot_input: 30,
+      bot_output: 4,
       embedding_input: 1.7,
-      total: 16.7,
+      total: 50.7,
       vlm_input: 10,
       vlm_output: 5,
       window_minutes: 90,
@@ -169,12 +171,15 @@ it('renders tokens per minute with its breakdown', async () => {
     const panel = heading.closest('section')!
     await waitFor(() =>
       expect(
-        within(panel).getByText('16.7', { selector: '.text-4xl span' }),
+        within(panel).getByText('50.7', { selector: '.text-4xl span' }),
       ).toBeTruthy(),
     )
     expect(within(panel).getByText('10')).toBeTruthy()
     expect(within(panel).getByText('5')).toBeTruthy()
     expect(within(panel).getByText('1.7')).toBeTruthy()
+    expect(within(panel).getByText('tokensPerMinute.botInput')).toBeTruthy()
+    expect(within(panel).getByText('30')).toBeTruthy()
+    expect(within(panel).getByText('4')).toBeTruthy()
   } finally {
     close()
   }

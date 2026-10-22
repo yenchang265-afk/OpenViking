@@ -11,7 +11,10 @@ export type ConsoleContextCounts = {
   total?: number
 }
 
+/** `bot_*` counts model calls made by VikingBot (chat and Compile). */
 export type ConsoleTokenCounts = {
+  bot_input?: number
+  bot_output?: number
   embedding_input?: number
   total?: number
   vlm_input?: number
@@ -56,6 +59,8 @@ export type ConsoleSeriesResult<TItem> = OvMaybeDisabled & {
 }
 
 export type ConsoleTokenSeriesItem = {
+  bot_input?: number
+  bot_output?: number
   date?: string
   embedding_input?: number
   total?: number

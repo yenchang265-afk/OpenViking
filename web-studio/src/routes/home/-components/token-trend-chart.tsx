@@ -92,6 +92,42 @@ export function TokenTrendChart({
                   stopOpacity={0.02}
                 />
               </linearGradient>
+              <linearGradient
+                id="tokenTrendBotInput"
+                x1="0"
+                x2="0"
+                y1="0"
+                y2="1"
+              >
+                <stop
+                  offset="5%"
+                  stopColor={TOKEN_COLORS.botInput}
+                  stopOpacity={0.12}
+                />
+                <stop
+                  offset="95%"
+                  stopColor={TOKEN_COLORS.botInput}
+                  stopOpacity={0.02}
+                />
+              </linearGradient>
+              <linearGradient
+                id="tokenTrendBotOutput"
+                x1="0"
+                x2="0"
+                y1="0"
+                y2="1"
+              >
+                <stop
+                  offset="5%"
+                  stopColor={TOKEN_COLORS.botOutput}
+                  stopOpacity={0.12}
+                />
+                <stop
+                  offset="95%"
+                  stopColor={TOKEN_COLORS.botOutput}
+                  stopOpacity={0.02}
+                />
+              </linearGradient>
             </defs>
             <CartesianGrid
               stroke="currentColor"
@@ -145,6 +181,24 @@ export function TokenTrendChart({
               strokeWidth={2}
               type="monotone"
             />
+            <Area
+              dataKey="bot_input"
+              fill="url(#tokenTrendBotInput)"
+              name="bot_input"
+              stackId="tokens"
+              stroke={TOKEN_COLORS.botInput}
+              strokeWidth={2}
+              type="monotone"
+            />
+            <Area
+              dataKey="bot_output"
+              fill="url(#tokenTrendBotOutput)"
+              name="bot_output"
+              stackId="tokens"
+              stroke={TOKEN_COLORS.botOutput}
+              strokeWidth={2}
+              type="monotone"
+            />
           </AreaChart>
         </ResponsiveContainer>
       </div>
@@ -160,6 +214,14 @@ export function TokenTrendChart({
         <LegendDot
           color={TOKEN_COLORS.embedding}
           label={t('todayTokens.embeddingInput')}
+        />
+        <LegendDot
+          color={TOKEN_COLORS.botInput}
+          label={t('todayTokens.botInput')}
+        />
+        <LegendDot
+          color={TOKEN_COLORS.botOutput}
+          label={t('todayTokens.botOutput')}
         />
       </div>
     </>
@@ -194,6 +256,8 @@ function TokenTrendTooltip({
   const labelForKey = (key: string | undefined) => {
     if (key === 'vlm_input') return t('todayTokens.vlmInput')
     if (key === 'vlm_output') return t('todayTokens.vlmOutput')
+    if (key === 'bot_input') return t('todayTokens.botInput')
+    if (key === 'bot_output') return t('todayTokens.botOutput')
     return t('todayTokens.embeddingInput')
   }
 

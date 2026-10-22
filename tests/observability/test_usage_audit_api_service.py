@@ -209,6 +209,8 @@ async def test_token_rate_series_reports_each_minute_and_the_peak(monkeypatch):
         "vlm_input": 300.0,
         "vlm_output": 100.0,
         "embedding_input": 0.0,
+        "bot_input": 0.0,
+        "bot_output": 0.0,
         "rerank": 0.0,
         "total": 400.0,
         "peak_total": 400,
@@ -282,3 +284,50 @@ async def test_token_rate_series_rejects_unknown_windows():
     )
     with pytest.raises(InvalidArgumentError):
         await service.token_rate_series(ctx=_user_ctx(), window="2h")
+
+
+def test_record_bot_calls_publishes_events_for_the_requesting_user(monkeypatch):
+    now = datetime(2026, 5, 12, 10, 30, 0, tzinfo=UTC)
+    monkeypatch.setattr(api_service_module, "_utc_now", lambda: now)
+    published = []
+
+    class Bus:
+        def publish(self, event):
+            published.append(event)
+
+    monkeypatch.setattr(api_service_module, "get_event_bus", lambda: Bus())
+    service = UsageAuditQueryService(store=FakeStore(), inventory=FakeInventory())
+    ctx = RequestContext(user=UserIdentifier(account_id="acct-1", user_id="user-1"), role=Role.USER)
+    recent = now - timedelta(minutes=2)
+
+    accepted = service.record_bot_calls(
+        ctx,
+        [
+            {
+                "provider": "openai",
+                "model_name": "m",
+                "prompt_tokens": 10,
+                "completion_tokens": 4,
+                "occurred_at": recent,
+            },
+            # Stale, future and naive times: stale/future fall back to now, naive is UTC.
+            {"prompt_tokens": 1, "completion_tokens": 0, "occurred_at": now - timedelta(days=1)},
+            {"prompt_tokens": 1, "completion_tokens": 0, "occurred_at": now + timedelta(hours=1)},
+            {
+                "prompt_tokens": 1,
+                "completion_tokens": 0,
+                "occurred_at": recent.replace(tzinfo=None),
+            },
+        ],
+    )
+
+    assert accepted == 4
+    assert [event.event_name for event in published] == ["bot.call"] * 4
+    assert {(event.account_id, event.user_id) for event in published} == {("acct-1", "user-1")}
+    assert published[0].payload == {
+        "provider": "openai",
+        "model_name": "m",
+        "prompt_tokens": 10,
+        "completion_tokens": 4,
+    }
+    assert [event.timestamp for event in published] == [recent, now, now, recent]

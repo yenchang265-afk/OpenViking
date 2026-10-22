@@ -1645,6 +1645,8 @@ const workspace = {
       title: 'Retrievals Today',
     },
     todayTokens: {
+      botInput: 'Bot input tokens',
+      botOutput: 'Bot output tokens',
       description:
         'Shows real-time token consumption today. Resets at midnight.',
       embeddingInput: 'Embedding input tokens',
@@ -1653,6 +1655,8 @@ const workspace = {
       vlmOutput: 'VLM output tokens',
     },
     tokensPerMinute: {
+      botInput: 'Bot input / min',
+      botOutput: 'Bot output / min',
       description:
         'Average tokens per minute over the last {{minutes}} minutes (since the start of the previous UTC hour).',
       embeddingInput: 'Embedding input / min',
