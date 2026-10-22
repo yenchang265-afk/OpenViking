@@ -136,7 +136,7 @@ export function DirBrowser({
         ) : (
           <>
             <ItemColumn
-              className="w-[clamp(15rem,35vw,22rem)] shrink-0"
+              className="w-[clamp(10rem,35vw,22rem)] shrink-0"
               label={fileNameFromUri(currentUri.replace(/\/$/, '')) || '/'}
               items={items}
               activeIndex={activeIndex}

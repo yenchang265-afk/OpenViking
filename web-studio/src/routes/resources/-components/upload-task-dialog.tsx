@@ -81,23 +81,25 @@ export function UploadTaskDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[min(80vh,640px)] gap-0 overflow-hidden p-0 sm:max-w-3xl">
-        <DialogHeader className="border-b px-6 py-5 pr-16">
+        <DialogHeader className="border-b px-4 py-5 pr-14 sm:px-6 sm:pr-16">
           <DialogTitle className="truncate text-xl">
             {t('processingTasks.title')}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="max-h-[calc(min(80vh,640px)-5.5rem)] overflow-y-auto px-6 py-5">
+        <div className="max-h-[calc(min(80vh,640px)-5.5rem)] overflow-y-auto px-4 py-5 sm:px-6">
           {sortedTasks.length === 0 ? (
             <div className="flex min-h-40 items-center justify-center text-sm text-muted-foreground">
               {t('processingTasks.empty')}
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border border-border/60 bg-muted/10">
-              <div className="grid grid-cols-[minmax(0,1fr)_140px_96px] gap-4 border-b border-border/60 px-4 py-3 text-xs font-medium text-muted-foreground">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-b border-border/60 px-3 py-3 text-xs font-medium text-muted-foreground sm:grid-cols-[minmax(0,1fr)_140px_96px] sm:gap-4 sm:px-4">
                 <div>{t('processingTasks.columns.fileName')}</div>
                 <div>{t('processingTasks.columns.status')}</div>
-                <div>{t('processingTasks.columns.size')}</div>
+                <div className="hidden sm:block">
+                  {t('processingTasks.columns.size')}
+                </div>
               </div>
 
               <div>
@@ -107,6 +109,10 @@ export function UploadTaskDialog({
                   const hasDetail =
                     isFailed &&
                     (task.errorCode || task.errorMessage || task.errorDetail)
+                  const fileSizeLabel =
+                    typeof task.fileSize === 'number'
+                      ? formatFileSize(task.fileSize)
+                      : '-'
 
                   return (
                     <div
@@ -115,7 +121,7 @@ export function UploadTaskDialog({
                     >
                       <div
                         className={cn(
-                          'grid grid-cols-[minmax(0,1fr)_140px_96px] gap-4 px-4 py-3 text-sm',
+                          'grid grid-cols-[minmax(0,1fr)_auto] gap-3 px-3 py-3 text-sm sm:grid-cols-[minmax(0,1fr)_140px_96px] sm:gap-4 sm:px-4',
                           isFailed && 'bg-rose-500/6',
                         )}
                       >
@@ -125,6 +131,10 @@ export function UploadTaskDialog({
                             <span className="truncate font-medium">
                               {task.fileName}
                             </span>
+                          </div>
+                          {/* The size column is hidden on narrow screens. */}
+                          <div className="mt-0.5 pl-6 text-xs text-muted-foreground sm:hidden">
+                            {fileSizeLabel}
                           </div>
                         </div>
 
@@ -146,15 +156,13 @@ export function UploadTaskDialog({
                           ) : null}
                         </div>
 
-                        <div className="flex items-center text-muted-foreground">
-                          {typeof task.fileSize === 'number'
-                            ? formatFileSize(task.fileSize)
-                            : '-'}
+                        <div className="hidden items-center text-muted-foreground sm:flex">
+                          {fileSizeLabel}
                         </div>
                       </div>
 
                       {hasDetail && isExpanded ? (
-                        <div className="space-y-1 border-t border-border/40 bg-rose-500/6 px-10 py-3 text-sm">
+                        <div className="space-y-1 break-words border-t border-border/40 bg-rose-500/6 px-3 py-3 text-sm sm:px-10">
                           {task.errorCode ? (
                             <div className="font-mono text-foreground">
                               {task.errorCode}
