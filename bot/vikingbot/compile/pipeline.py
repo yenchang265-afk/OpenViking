@@ -76,6 +76,21 @@ and a nonempty description. Preserve attachments in their native formats.
 """
 
 
+def check_final_inputs(inputs: list, failures: list[str], warnings: list[str]) -> None:
+    """Warn about partial output, or raise with the first job failure when nothing remains.
+
+    The first failure is the root cause; without it the task error only says that
+    jobs failed, and the details stay hidden in the task's pipeline metadata.
+    """
+    if not failures:
+        return
+    if not inputs:
+        raise ValueError(
+            "No accepted final artifacts remain after failed jobs: " + failures[0][:500]
+        )
+    warnings.append("Partial output; unfinished jobs: " + failures[0][:500])
+
+
 class Pipeline:
     """A task-owned finite executor, reusing provider slots, sandbox, client and commit API.
 
@@ -239,12 +254,7 @@ class Pipeline:
                 elif node.op == "reduce":
                     data[node.name] = await reduce_op.run(self, node, inputs)
                 else:
-                    if self.failures:
-                        if not inputs:
-                            raise ValueError("No accepted final artifacts remain after failed jobs")
-                        self.warnings.append(
-                            "Partial output; unfinished jobs: " + self.failures[0][:500]
-                        )
+                    check_final_inputs(inputs, self.failures, self.warnings)
                     result = await finalize_op.run(self, inputs)
                     complete = not self.failures
                 self.metrics[f"{node.name}_milliseconds"] = round(
