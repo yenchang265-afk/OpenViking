@@ -38,15 +38,15 @@ const enums = {
   },
   captureReason: {
     history_changed:
-      '對話歷史有改動，後續內容改存到新的 Business Data Platform 會話',
+      '對話歷史有改動，後續內容改存到新的 Business Context Platform 會話',
     continued_after_idle:
-      '已儲存的一輪對話在停頓後又繼續了，後續內容改存到新的 Business Data Platform 會話',
+      '已儲存的一輪對話在停頓後又繼續了，後續內容改存到新的 Business Context Platform 會話',
     history_changed_during_delivery:
-      '儲存過程中對話歷史有改動，後續內容改存到新的 Business Data Platform 會話',
+      '儲存過程中對話歷史有改動，後續內容改存到新的 Business Context Platform 會話',
     manual_reset: '管理員已手動重新同步',
     delivery_recovered: '儲存已恢復正常',
-    delivery_failed: '儲存到 Business Data Platform 失敗',
-    invalid_archive_id: 'Business Data Platform 返回了無法識別的歸檔',
+    delivery_failed: '儲存到 Business Context Platform 失敗',
+    invalid_archive_id: 'Business Context Platform 返回了無法識別的歸檔',
   },
   recallReason: {
     recalled: '已補充記憶',
@@ -58,18 +58,18 @@ const enums = {
   toolSkipReason: {
     tools_require_full_history:
       'Responses 請求需回傳完整對話，並設定 store: false',
-    upstream_tools_disabled: '這個上游關閉了 Business Data Platform 工具',
+    upstream_tools_disabled: '這個上游關閉了 Business Context Platform 工具',
     tools_multiple_choices: '請求要求返回多個候選結果（n > 1）',
     tools_structured_output: '請求要求結構化輸出',
     tools_non_function: '客戶端傳入了非函式型別的工具',
     tools_forced_choice: '客戶端指定了必須呼叫的工具',
     deepseek_reasoning_history_required:
       'DeepSeek 開啟了思考模式，但之前回復的推理內容補不回來',
-    tool_name_collision: '客戶端已接入 Business Data Platform 工具',
+    tool_name_collision: '客戶端已接入 Business Context Platform 工具',
     tools_unavailable:
-      '這段對話首次需要工具時無法載入 Business Data Platform 工具清單',
+      '這段對話首次需要工具時無法載入 Business Context Platform 工具清單',
     tools_not_selected_at_session_start:
-      '這段對話沒有 Business Data Platform 工具',
+      '這段對話沒有 Business Context Platform 工具',
   },
   toolStopReason: {
     token_budget: '工具 Token 預算已用完',
@@ -79,15 +79,15 @@ const enums = {
     hard: '已要求模型立即開啟新視窗',
   },
   openviking: {
-    unavailable: 'Business Data Platform 無法訪問或響應超時',
+    unavailable: 'Business Context Platform 無法訪問或響應超時',
     unauthorized:
-      'Business Data Platform 拒絕了這個金鑰，它可能填錯了或已被吊銷。',
-    httpStatus: 'Business Data Platform 返回了 HTTP {{status}}',
-    errorCode: 'Business Data Platform 報告了錯誤 {{code}}',
-    versionMismatch: 'Business Data Platform 版本低於閘道器的要求',
-    identityMissing: 'Business Data Platform 無法識別這個金鑰所屬的使用者',
+      'Business Context Platform 拒絕了這個金鑰，它可能填錯了或已被吊銷。',
+    httpStatus: 'Business Context Platform 返回了 HTTP {{status}}',
+    errorCode: 'Business Context Platform 報告了錯誤 {{code}}',
+    versionMismatch: 'Business Context Platform 版本低於閘道器的要求',
+    identityMissing: 'Business Context Platform 無法識別這個金鑰所屬的使用者',
     rootKey: '不接受 Root API 金鑰，請使用本帳號下的使用者 API 金鑰。',
-    otherAccount: '這個 Business Data Platform API 金鑰屬於其他帳號。',
+    otherAccount: '這個 Business Context Platform API 金鑰屬於其他帳號。',
   },
   degradation: {
     memory_store_failure: {
@@ -132,33 +132,33 @@ const enums = {
     hidden_reply_without_anchor: {
       label: '模型未返回回答',
       explanation:
-        '模型使用 Business Data Platform 工具後沒有返回可用於繼續對話的內容，下一輪無法沿用這次工具呼叫的結果。',
+        '模型使用 Business Context Platform 工具後沒有返回可用於繼續對話的內容，下一輪無法沿用這次工具呼叫的結果。',
       action: '重試本次提問，或開始一段新對話。',
     },
     hidden_tool_history_unavailable: {
       label: '工具歷史無法繼續使用',
       explanation:
-        '這段 Claude 對話用過 Business Data Platform 工具，但當前請求無法使用這些工具。閘道器已去掉之前的思考內容，繼續傳送對話文本。',
+        '這段 Claude 對話用過 Business Context Platform 工具，但當前請求無法使用這些工具。閘道器已去掉之前的思考內容，繼續傳送對話文本。',
       action: '檢視本次請求的工具停用原因，恢復原設定，或開始一段新對話。',
     },
     hidden_tool_loop_failed: {
-      label: 'Business Data Platform 工具呼叫失敗',
+      label: 'Business Context Platform 工具呼叫失敗',
       explanation:
-        '模型使用 Business Data Platform 工具的過程中有一次模型呼叫失敗，客戶端收到了錯誤。',
+        '模型使用 Business Context Platform 工具的過程中有一次模型呼叫失敗，客戶端收到了錯誤。',
       action:
-        '確認這個上游支援工具呼叫，或為它關閉 Business Data Platform 工具。',
+        '確認這個上游支援工具呼叫，或為它關閉 Business Context Platform 工具。',
     },
     capture_parse_failure: {
       label: '回覆未儲存',
       explanation:
-        '流式回覆無法解析，這條回覆沒有儲存到 Business Data Platform。客戶端不受影響。',
+        '流式回覆無法解析，這條回覆沒有儲存到 Business Context Platform。客戶端不受影響。',
       action: '偶爾出現無需處理；頻繁出現時再排查。',
     },
     revocation_check_unavailable: {
       label: '金鑰未校驗',
       explanation:
-        'Business Data Platform 無法確認這個閘道器金鑰，請求在未檢查金鑰是否已吊銷的情況下照常處理。',
-      action: '檢查 Business Data Platform 是否可達、執行是否正常。',
+        'Business Context Platform 無法確認這個閘道器金鑰，請求在未檢查金鑰是否已吊銷的情況下照常處理。',
+      action: '檢查 Business Context Platform 是否可達、執行是否正常。',
     },
   },
 }

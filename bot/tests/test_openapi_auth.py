@@ -1261,7 +1261,7 @@ class TestOpenAPIAuth:
         )
 
         assert response.status_code == 401
-        assert response.json()["detail"] == "Business Data Platform API key header required"
+        assert response.json()["detail"] == "Business Context Platform API key header required"
 
     def test_chat_rejects_trusted_upstream_without_identity(
         self, message_bus, temp_workspace, monkeypatch
@@ -1315,7 +1315,7 @@ class TestOpenAPIAuth:
         )
 
         assert response.status_code == 401
-        assert "Trusted Business Data Platform chat requires" in response.json()["detail"]
+        assert "Trusted Business Context Platform chat requires" in response.json()["detail"]
         assert "X-OpenViking-Account" in response.json()["detail"]
         assert "X-OpenViking-User" in response.json()["detail"]
 
@@ -1453,7 +1453,7 @@ class TestOpenAPIAuth:
         )
 
         assert response.status_code == 401
-        assert response.json()["detail"] == "Business Data Platform API key header required"
+        assert response.json()["detail"] == "Business Context Platform API key header required"
 
     def test_compile_status_validates_request_key_when_not_statically_configured(
         self,
@@ -1589,7 +1589,7 @@ class TestOpenAPIAuth:
         assert response.status_code == 503
         assert (
             response.json()["detail"]
-            == "VikingBot gateway proxy is active, but no available Business Data Platform server is configured"
+            == "VikingBot gateway proxy is active, but no available Business Context Platform server is configured"
         )
 
     def test_chat_rejects_runtime_upstream_dev_on_public_gateway(
@@ -1643,7 +1643,7 @@ class TestOpenAPIAuth:
         assert response.status_code == 403
         assert (
             response.json()["detail"]
-            == "Business Data Platform server auth_mode changed to dev, but dev auth can only be used when gateway and Business Data Platform server are localhost"
+            == "Business Context Platform server auth_mode changed to dev, but dev auth can only be used when gateway and Business Context Platform server are localhost"
         )
 
     def test_gateway_proxy_forwards_openviking_request_without_gateway_token(
@@ -1860,7 +1860,7 @@ class TestOpenAPIAuth:
         assert response.status_code == 403
         assert (
             response.json()["detail"]
-            == "Business Data Platform server auth_mode changed to dev, but dev auth can only be used when gateway and Business Data Platform server are localhost"
+            == "Business Context Platform server auth_mode changed to dev, but dev auth can only be used when gateway and Business Context Platform server are localhost"
         )
 
     def test_bot_channel_accepts_requests_without_channel_api_key(

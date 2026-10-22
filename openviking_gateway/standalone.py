@@ -22,7 +22,7 @@ from .management import request_credential
 logger = logging.getLogger(__name__)
 LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
 WARNINGS = {
-    "public_openviking_without_management_key": "This gateway is open to every Business Data Platform "
+    "public_openviking_without_management_key": "This gateway is open to every Business Context Platform "
     "user. Set OPENVIKING_GATEWAY_MANAGEMENT_KEY to restrict changes to upstreams and "
     "profiles.",
 }
@@ -37,12 +37,12 @@ async def check_openviking(config: StandaloneGatewayConfig) -> dict:
         except VikingError as error:
             health = {"status": "degraded", "reason": error.reason}
     if health.get("reason") == "trusted_mode_unsupported":
-        raise ValueError("Business Data Platform Gateway does not support trusted authentication")
+        raise ValueError("Business Context Platform Gateway does not support trusted authentication")
     if config.host not in LOOPBACK_HOSTS and health.get("auth_mode") != "api_key":
         raise ValueError(
-            "A publicly bound Business Data Platform Gateway requires a successful synchronous "
+            "A publicly bound Business Context Platform Gateway requires a successful synchronous "
             "probe confirming API-key authentication; use a loopback host until "
-            "Business Data Platform is reachable and its authentication mode is known"
+            "Business Context Platform is reachable and its authentication mode is known"
         )
     return health
 
@@ -143,7 +143,7 @@ def create_standalone_app(config: StandaloneGatewayConfig, studio_dir=None):
     @app.get("/studio/{path:path}")
     async def studio(path: str):
         if root is None or not (root / "index.html").is_file():
-            raise HTTPException(503, "Business Data Platform Studio bundle is unavailable")
+            raise HTTPException(503, "Business Context Platform Studio bundle is unavailable")
         candidate = (root / path).resolve()
         if not candidate.is_relative_to(root):
             raise HTTPException(404)

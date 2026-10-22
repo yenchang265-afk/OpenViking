@@ -441,9 +441,9 @@ def _result_reason(result: _OpenVikingHTTPResult) -> str:
 
 def _server_unavailable_warning(server_url: str, result: _OpenVikingHTTPResult) -> None:
     print(
-        f"Warning: Business Data Platform server at {server_url} is unavailable "
+        f"Warning: Business Context Platform server at {server_url} is unavailable "
         f"({_result_reason(result)}). VikingBot will start in standalone mode; "
-        "Business Data Platform memory and file tools are disabled.",
+        "Business Context Platform memory and file tools are disabled.",
         file=sys.stderr,
     )
 
@@ -451,9 +451,9 @@ def _server_unavailable_warning(server_url: str, result: _OpenVikingHTTPResult) 
 def _raise_server_unavailable(server_url: str, result: _OpenVikingHTTPResult) -> None:
     print(
         "Error: configured bot.ov_server.server_url is unavailable.\n"
-        f"Business Data Platform server URL: {server_url}\n"
+        f"Business Context Platform server URL: {server_url}\n"
         f"Reason: {_result_reason(result)}\n"
-        "Start the configured Business Data Platform server or update bot.ov_server.server_url.",
+        "Start the configured Business Context Platform server or update bot.ov_server.server_url.",
         file=sys.stderr,
     )
     raise SystemExit(1)
@@ -461,10 +461,10 @@ def _raise_server_unavailable(server_url: str, result: _OpenVikingHTTPResult) ->
 
 def _raise_server_unhealthy(server_url: str, result: _OpenVikingHTTPResult) -> None:
     print(
-        "Error: Business Data Platform server is reachable but not usable by VikingBot.\n"
-        f"Business Data Platform server URL: {server_url}\n"
+        "Error: Business Context Platform server is reachable but not usable by VikingBot.\n"
+        f"Business Context Platform server URL: {server_url}\n"
         f"Reason: {_result_reason(result)}\n"
-        "Check the Business Data Platform server status and authentication configuration.",
+        "Check the Business Context Platform server status and authentication configuration.",
         file=sys.stderr,
     )
     raise SystemExit(1)
@@ -472,16 +472,16 @@ def _raise_server_unhealthy(server_url: str, result: _OpenVikingHTTPResult) -> N
 
 def _inherited_auth_mode_change_hint(actual_auth_mode: str, current_auth_mode: str) -> str:
     hint = (
-        "VikingBot inherits the Business Data Platform auth mode from the current ov.conf server section. "
-        "The running Business Data Platform process was started with different authentication settings.\n"
-        f"Fix: restart Business Data Platform server with the current ov.conf to apply auth_mode="
+        "VikingBot inherits the Business Context Platform auth mode from the current ov.conf server section. "
+        "The running Business Context Platform process was started with different authentication settings.\n"
+        f"Fix: restart Business Context Platform server with the current ov.conf to apply auth_mode="
         f"'{current_auth_mode}', or update ov.conf server.auth_mode/root_api_key so it "
         f"resolves to '{actual_auth_mode}', then start the gateway again."
     )
     if actual_auth_mode == "api_key":
         hint += (
             " If api_key mode is intended, also configure bot.ov_server.api_key with a "
-            "Business Data Platform User/Admin API key."
+            "Business Context Platform User/Admin API key."
         )
     elif actual_auth_mode == "trusted":
         hint += (
@@ -503,23 +503,23 @@ def _auth_mode_change_hint(
     if actual_auth_mode == "trusted":
         return (
             "To use this server, set bot.ov_server.api_key_type to 'root' and configure "
-            "bot.ov_server.api_key with the Business Data Platform root API key, or remove the "
+            "bot.ov_server.api_key with the Business Context Platform root API key, or remove the "
             "bot.ov_server override so VikingBot "
             "inherits server.auth_mode='trusted' from the same ov.conf."
         )
     if actual_auth_mode == "api_key":
         return (
             "To use this server, set bot.ov_server.api_key_type to 'user' and configure "
-            "bot.ov_server.api_key with a Business Data Platform User/Admin API key, or change the "
-            "Business Data Platform server.auth_mode and restart the server."
+            "bot.ov_server.api_key with a Business Context Platform User/Admin API key, or change the "
+            "Business Context Platform server.auth_mode and restart the server."
         )
     if actual_auth_mode == "dev":
         return (
-            "To use this server, let VikingBot inherit the same dev Business Data Platform server "
-            "configuration, or change the Business Data Platform server.auth_mode and restart the server."
+            "To use this server, let VikingBot inherit the same dev Business Context Platform server "
+            "configuration, or change the Business Context Platform server.auth_mode and restart the server."
         )
     return (
-        "Update bot.ov_server.api_key_type or the Business Data Platform server.auth_mode so both "
+        "Update bot.ov_server.api_key_type or the Business Context Platform server.auth_mode so both "
         f"sides use the same auth mode. VikingBot currently expects '{current_auth_mode}'."
     )
 
@@ -532,8 +532,8 @@ def _raise_auth_mode_mismatch(
 ) -> None:
     if source == "inherited":
         print(
-            "Error: running Business Data Platform auth mode does not match the current ov.conf.\n"
-            f"Business Data Platform server URL: {server_url}\n"
+            "Error: running Business Context Platform auth mode does not match the current ov.conf.\n"
+            f"Business Context Platform server URL: {server_url}\n"
             f"Running server auth_mode: {actual_auth_mode}\n"
             f"Current ov.conf server auth_mode: {current_auth_mode}\n"
             f"{_auth_mode_change_hint(actual_auth_mode, current_auth_mode, source)}",
@@ -542,8 +542,8 @@ def _raise_auth_mode_mismatch(
         raise SystemExit(1)
 
     print(
-        "Error: Business Data Platform auth mode mismatch.\n"
-        f"Business Data Platform server URL: {server_url}\n"
+        "Error: Business Context Platform auth mode mismatch.\n"
+        f"Business Context Platform server URL: {server_url}\n"
         f"Actual server auth_mode: {actual_auth_mode}\n"
         f"VikingBot current auth_mode: {current_auth_mode}\n"
         f"{_auth_mode_change_hint(actual_auth_mode, current_auth_mode, source)}",
@@ -615,7 +615,7 @@ def _validate_dev_boundary(config: Config, server_url: str) -> None:
     if _is_loopback_host(gateway_host) and _is_loopback_url(server_url):
         return
     print(
-        "Error: Business Data Platform dev auth can only be used when gateway and Business Data Platform server "
+        "Error: Business Context Platform dev auth can only be used when gateway and Business Context Platform server "
         "are localhost.",
         file=sys.stderr,
     )
@@ -626,11 +626,11 @@ def _raise_api_key_mode_requires_user_key(ov_server: Any) -> None:
     key_source = _ov_server_api_key_source(ov_server)
     key_hint = "bot.ov_server.api_key"
     print(
-        "Error: Business Data Platform is configured for api_key mode, but VikingBot does not have "
-        "a valid Business Data Platform User/Admin API key.\n"
+        "Error: Business Context Platform is configured for api_key mode, but VikingBot does not have "
+        "a valid Business Context Platform User/Admin API key.\n"
         f"API key source: {key_source}\n"
         f"Fix: configure {key_hint} with a User/Admin API key. "
-        "Root API keys cannot access Business Data Platform data APIs in api_key mode.",
+        "Root API keys cannot access Business Context Platform data APIs in api_key mode.",
         file=sys.stderr,
     )
     raise SystemExit(1)
@@ -638,7 +638,7 @@ def _raise_api_key_mode_requires_user_key(ov_server: Any) -> None:
 
 def _raise_api_key_mode_root_key() -> None:
     print(
-        "Error: bot.ov_server.api_key resolves to a ROOT API key, but Business Data Platform "
+        "Error: bot.ov_server.api_key resolves to a ROOT API key, but Business Context Platform "
         "api_key mode requires a User/Admin API key for memory and file data APIs. "
         "Configure bot.ov_server.api_key with a User/Admin API key.",
         file=sys.stderr,
@@ -649,10 +649,10 @@ def _raise_api_key_mode_root_key() -> None:
 def _raise_trusted_mode_requires_root_key(ov_server: Any) -> None:
     key_source = _ov_server_api_key_source(ov_server)
     print(
-        "Error: VikingBot is configured for trusted Business Data Platform access, but no valid "
+        "Error: VikingBot is configured for trusted Business Context Platform access, but no valid "
         "root API key is available.\n"
         f"API key source: {key_source}\n"
-        "Fix: configure bot.ov_server.api_key with the Business Data Platform root API key for an "
+        "Fix: configure bot.ov_server.api_key with the Business Context Platform root API key for an "
         "explicit bot.ov_server, or configure server.root_api_key when inheriting the "
         "same ov.conf.",
         file=sys.stderr,
@@ -705,7 +705,7 @@ def _validate_trusted_mode_key(ov_server: Any, server_url: str) -> None:
         _raise_trusted_mode_requires_root_key(ov_server)
 
     print(
-        f"Error: VikingBot could not validate trusted Business Data Platform access at {server_url} "
+        f"Error: VikingBot could not validate trusted Business Context Platform access at {server_url} "
         f"({_result_reason(result)}).",
         file=sys.stderr,
     )
@@ -719,8 +719,8 @@ def validate_openviking_auth(config: Config) -> None:
     source = _ov_server_config_source(ov_server)
     if not server_url:
         print(
-            "Warning: no available Business Data Platform server is configured. VikingBot will run "
-            "in standalone mode; Business Data Platform memory and file tools are disabled.",
+            "Warning: no available Business Context Platform server is configured. VikingBot will run "
+            "in standalone mode; Business Context Platform memory and file tools are disabled.",
             file=sys.stderr,
         )
         return
@@ -747,7 +747,7 @@ def validate_openviking_auth(config: Config) -> None:
     if not health.ok:
         if _ov_server_is_server_managed(ov_server):
             print(
-                f"Warning: managed Business Data Platform server at {server_url} is not ready yet "
+                f"Warning: managed Business Context Platform server at {server_url} is not ready yet "
                 f"({_result_reason(health)}). VikingBot will keep the inherited upstream "
                 "and wait for openviking-server to start.",
                 file=sys.stderr,
@@ -797,7 +797,7 @@ def validate_openviking_auth(config: Config) -> None:
         # credential propagation. Fail fast with an actionable message
         # instead of silently defaulting to api_key and then 401-ing.
         print(
-            f"Error: Business Data Platform server at {server_url} is running in "
+            f"Error: Business Context Platform server at {server_url} is running in "
             f"'{auth_mode}' auth mode, which is not supported by "
             "VikingBot yet.\n"
             f"Either switch the server to a supported auth mode "

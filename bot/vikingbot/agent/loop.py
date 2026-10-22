@@ -1052,7 +1052,7 @@ class AgentLoop:
             unsynced_messages = get_unsynced_messages(session)
             if not ov_history and len(unsynced_messages) < len(session.messages):
                 logger.warning(
-                    f"Business Data Platform returned no session context for {session_id}; "
+                    f"Business Context Platform returned no session context for {session_id}; "
                     "falling back to complete local session history."
                 )
                 unsynced_messages = session.messages
@@ -1075,14 +1075,14 @@ class AgentLoop:
                 )
             ):
                 logger.info(
-                    f"Trimmed Business Data Platform session history for {session_id} to "
+                    f"Trimmed Business Context Platform session history for {session_id} to "
                     f"token_budget={token_budget}: messages={len(combined_history)}"
                     f"->{len(trimmed_history)}"
                 )
             return trimmed_history
         except Exception as e:
             logger.warning(
-                f"Failed to load Business Data Platform session context for {session_id}: {e}. "
+                f"Failed to load Business Context Platform session context for {session_id}: {e}. "
                 "Falling back to local session history."
             )
             return session.get_history(provider_name=provider_name)

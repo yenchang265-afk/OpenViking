@@ -1,6 +1,6 @@
 const keys = {
   description:
-    '每個閘道器金鑰（以 ovgw_ 開頭）屬於一個 Business Data Platform 使用者，使用一份上下文配置和一組上游。金鑰不能修改，需要調整時請簽發新金鑰並吊銷舊金鑰。',
+    '每個閘道器金鑰（以 ovgw_ 開頭）屬於一個 Business Context Platform 使用者，使用一份上下文配置和一組上游。金鑰不能修改，需要調整時請簽發新金鑰並吊銷舊金鑰。',
   issue: '簽發金鑰',
   loadFailed: '無法載入閘道器金鑰',
   prerequisites: {
@@ -15,12 +15,12 @@ const keys = {
   empty: {
     title: '還沒有閘道器金鑰',
     description:
-      '客戶端用閘道器金鑰代替模型 API Key。用它發出的請求會轉發到已配置的上游，並讀取和儲存某個 Business Data Platform 使用者的記憶。建議每個人、每個客戶端各用一個金鑰，便於單獨吊銷。',
+      '客戶端用閘道器金鑰代替模型 API Key。用它發出的請求會轉發到已配置的上游，並讀取和儲存某個 Business Context Platform 使用者的記憶。建議每個人、每個客戶端各用一個金鑰，便於單獨吊銷。',
   },
   table: {
     name: '名稱',
     key: '金鑰',
-    user: 'Business Data Platform 使用者',
+    user: 'Business Context Platform 使用者',
     profile: '上下文配置',
     upstreams: '上游',
     models: '模型',
@@ -39,16 +39,16 @@ const keys = {
   revoke: {
     title: '吊銷“{{name}}”？',
     description:
-      '使用這個金鑰的客戶端會立即失去訪問許可權。對話和記憶都會保留，為同一使用者簽發新金鑰後可以接著使用。尚未儲存到 Business Data Platform 的內容（例如最新一條回覆）只有在用新金鑰繼續這段對話時才會儲存。',
+      '使用這個金鑰的客戶端會立即失去訪問許可權。對話和記憶都會保留，為同一使用者簽發新金鑰後可以接著使用。尚未儲存到 Business Context Platform 的內容（例如最新一條回覆）只有在用新金鑰繼續這段對話時才會儲存。',
     confirm: '吊銷金鑰',
     done: '已吊銷“{{name}}”',
   },
   deleteUser: {
     title: '刪除 {{user}} 的閘道器資料？',
     description_one:
-      '這會弔銷 {{user}} 的閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Data Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Data Platform 的記憶不受影響。',
+      '這會弔銷 {{user}} 的閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Context Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Context Platform 的記憶不受影響。',
     description_other:
-      '這會弔銷 {{user}} 的全部 {{count}} 個閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Data Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Data Platform 的記憶不受影響。',
+      '這會弔銷 {{user}} 的全部 {{count}} 個閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Context Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Context Platform 的記憶不受影響。',
     confirm: '刪除閘道器資料',
     done: '已刪除 {{user}} 的閘道器資料',
   },
@@ -64,7 +64,7 @@ const keys = {
       self: '以你的身份（{{user}}）讀寫記憶。',
       developmentIdentity: '以 {{user}} 的身份讀寫記憶。',
       label: '給誰用',
-      placeholder: '選擇 Business Data Platform 使用者',
+      placeholder: '選擇 Business Context Platform 使用者',
       loading: '正在載入使用者…',
       description:
         '閘道器會以這個使用者的身份召回和儲存記憶。該使用者的使用者 API 金鑰在服務端讀取，由閘道器加密儲存，不會顯示。',
@@ -80,7 +80,7 @@ const keys = {
     openvikingKey: {
       forUser: '貼上 {{user}} 的使用者 API 金鑰',
       managementKey: '這是閘道器管理金鑰，請貼上該使用者的使用者 API 金鑰。',
-      label: 'Business Data Platform API 金鑰',
+      label: 'Business Context Platform API 金鑰',
       description:
         '本帳號中某個使用者的使用者 API 金鑰。閘道器會以這個使用者的身份召回和儲存記憶。不接受 Root API 金鑰。金鑰加密儲存，之後不再顯示。',
       gatewayKey:
@@ -117,13 +117,13 @@ const keys = {
     title: '無法簽發金鑰',
     rootKey: '這是 Root API 金鑰，請改用本帳號中某個使用者的使用者 API 金鑰。',
     otherAccount:
-      '這個 Business Data Platform API 金鑰屬於其他帳號，請使用本帳號的使用者 API 金鑰。',
+      '這個 Business Context Platform API 金鑰屬於其他帳號，請使用本帳號的使用者 API 金鑰。',
     invalidKey:
-      'Business Data Platform 拒絕了這個金鑰。請檢查金鑰是否完整，以及是否已被重新生成。',
+      'Business Context Platform 拒絕了這個金鑰。請檢查金鑰是否完整，以及是否已被重新生成。',
     unavailable:
-      '閘道器連不上 Business Data Platform，無法校驗這個金鑰。請稍後重試。',
+      '閘道器連不上 Business Context Platform，無法校驗這個金鑰。請稍後重試。',
     versionMismatch:
-      'Business Data Platform 版本低於閘道器的要求。請升級 Business Data Platform 後重試。',
+      'Business Context Platform 版本低於閘道器的要求。請升級 Business Context Platform 後重試。',
     unknownUser: '這個使用者已不在本帳號中，請重新選擇。',
     userRequired: 'root API 金鑰不屬於任何使用者，請選擇這把金鑰對應的使用者。',
     userKeyUnreadable:

@@ -1,6 +1,6 @@
 const keys = {
   description:
-    "Each gateway key (starting with ovgw_) belongs to one Business Data Platform user and uses one context profile and a set of upstreams. Keys can't be edited — issue a new key and revoke the old one.",
+    "Each gateway key (starting with ovgw_) belongs to one Business Context Platform user and uses one context profile and a set of upstreams. Keys can't be edited — issue a new key and revoke the old one.",
   issue: 'Issue key',
   loadFailed: "Couldn't load gateway keys",
   prerequisites: {
@@ -16,12 +16,12 @@ const keys = {
   empty: {
     title: 'No gateway keys yet',
     description:
-      "A client uses a gateway key in place of a model API key. Its requests reach your upstreams and read and save one Business Data Platform user's memory. Issue one key per person and client, so you can revoke each on its own.",
+      "A client uses a gateway key in place of a model API key. Its requests reach your upstreams and read and save one Business Context Platform user's memory. Issue one key per person and client, so you can revoke each on its own.",
   },
   table: {
     name: 'Name',
     key: 'Key',
-    user: 'Business Data Platform user',
+    user: 'Business Context Platform user',
     profile: 'Context profile',
     upstreams: 'Upstreams',
     models: 'Models',
@@ -40,16 +40,16 @@ const keys = {
   revoke: {
     title: 'Revoke “{{name}}”?',
     description:
-      'Clients using this key lose access immediately. Conversations and memory stay; a new key for the same user continues them. Turns not yet saved to Business Data Platform, such as the latest reply, are saved only if the conversation continues with a new key.',
+      'Clients using this key lose access immediately. Conversations and memory stay; a new key for the same user continues them. Turns not yet saved to Business Context Platform, such as the latest reply, are saved only if the conversation continues with a new key.',
     confirm: 'Revoke key',
     done: 'Revoked “{{name}}”',
   },
   deleteUser: {
     title: "Delete {{user}}'s gateway data?",
     description_one:
-      "This revokes {{user}}'s gateway key and deletes their request logs and the conversation state the gateway keeps for this user, including turns not yet saved to Business Data Platform. Their clients lose access immediately. Memories already in Business Data Platform are not affected.",
+      "This revokes {{user}}'s gateway key and deletes their request logs and the conversation state the gateway keeps for this user, including turns not yet saved to Business Context Platform. Their clients lose access immediately. Memories already in Business Context Platform are not affected.",
     description_other:
-      'This revokes all {{count}} gateway keys of {{user}} and deletes their request logs and the conversation state the gateway keeps for this user, including turns not yet saved to Business Data Platform. Their clients lose access immediately. Memories already in Business Data Platform are not affected.',
+      'This revokes all {{count}} gateway keys of {{user}} and deletes their request logs and the conversation state the gateway keeps for this user, including turns not yet saved to Business Context Platform. Their clients lose access immediately. Memories already in Business Context Platform are not affected.',
     confirm: 'Delete gateway data',
     done: "Deleted {{user}}'s gateway data",
   },
@@ -67,7 +67,7 @@ const keys = {
       self: 'Read and write memory as you ({{user}}).',
       developmentIdentity: 'Read and write memory as {{user}}.',
       label: 'Who is this for?',
-      placeholder: 'Choose a Business Data Platform user',
+      placeholder: 'Choose a Business Context Platform user',
       loading: 'Loading users…',
       description:
         'The gateway recalls and saves memory as this user. Their user API key is read on the server, stored encrypted by the gateway and never shown.',
@@ -86,7 +86,7 @@ const keys = {
       forUser: "Paste {{user}}'s user API key",
       managementKey:
         "This is a gateway management key. Paste this user's user API key instead.",
-      label: 'Business Data Platform API key',
+      label: 'Business Context Platform API key',
       description:
         "The user API key of a user in this account. The gateway recalls and saves memory as this user. Root API keys aren't accepted. Stored encrypted and never shown again.",
       gatewayKey:
@@ -125,13 +125,13 @@ const keys = {
     rootKey:
       'This is a root API key. Use the user API key of a user in this account.',
     otherAccount:
-      'This Business Data Platform API key belongs to another account. Use a user API key from this account.',
+      'This Business Context Platform API key belongs to another account. Use a user API key from this account.',
     invalidKey:
-      "Business Data Platform rejected this key. Check that it's complete and hasn't been regenerated.",
+      "Business Context Platform rejected this key. Check that it's complete and hasn't been regenerated.",
     unavailable:
-      "The gateway couldn't reach Business Data Platform to check this key. Try again in a moment.",
+      "The gateway couldn't reach Business Context Platform to check this key. Try again in a moment.",
     versionMismatch:
-      'Business Data Platform is older than the gateway requires. Upgrade Business Data Platform, then try again.',
+      'Business Context Platform is older than the gateway requires. Upgrade Business Context Platform, then try again.',
     unknownUser: 'This user is no longer in this account. Choose another user.',
     userRequired:
       'A root API key has no user of its own. Choose the user this key is for.',

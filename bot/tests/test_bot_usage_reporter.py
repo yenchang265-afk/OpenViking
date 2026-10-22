@@ -1,4 +1,4 @@
-"""Bot model-call token reporting to the Business Data Platform usage dashboard."""
+"""Bot model-call token reporting to the Business Context Platform usage dashboard."""
 
 import asyncio
 import json

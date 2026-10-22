@@ -21,20 +21,20 @@ export default {
   exit: 'Exit Studio',
   connectionTitle: 'Connect your workspace.',
   preferencesHint: 'Choose your language and appearance.',
-  connectionHint: 'Connect and verify a Business Data Platform service.',
+  connectionHint: 'Connect and verify a Business Context Platform service.',
 
   verifiedManagement:
     'Management access verified. Open Users to create a User API Key.',
-  brand: 'Business Data Platform',
+  brand: 'Business Context Platform',
   invalidService:
-    'This address did not return valid Business Data Platform service information.',
+    'This address did not return valid Business Context Platform service information.',
   keyRequired: 'This service requires an API Key. Enter it and retry.',
 
   savedWorkspaces: 'Saved connections',
   newAddressHint: 'Enter a valid HTTP or HTTPS address to continue.',
   preferences: 'Preferences',
   connection: 'Connect a service',
-  welcome: 'Welcome to\nBusiness Data Platform',
+  welcome: 'Welcome to\nBusiness Context Platform',
   connectionDescription:
     'Configure and verify your connection to open the appropriate workspace and features.',
   verify: 'Verify connection',

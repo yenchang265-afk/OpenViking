@@ -33,7 +33,7 @@ MAX_CALL_TOKENS = 100_000_000
 # Errors raised before the request reached the server, so a retry cannot double-count.
 _UNSENT_ERRORS = (httpx.ConnectError, httpx.ConnectTimeout, httpx.PoolTimeout)
 
-# Business Data Platform identity of the request whose model calls are being made.
+# Business Context Platform identity of the request whose model calls are being made.
 _connection: ContextVar[Mapping[str, Any] | None] = ContextVar("bot_usage_connection", default=None)
 _reporter: BotUsageReporter | None = None
 
@@ -49,7 +49,7 @@ def usage_connection(connection: Mapping[str, Any] | None) -> Iterator[None]:
 
 
 def configure(ov_server: Any, gateway_token: str) -> BotUsageReporter:
-    """Report this process's `vlm.call` events to the configured Business Data Platform.
+    """Report this process's `vlm.call` events to the configured Business Context Platform.
 
     Every VLM backend publishes `vlm.call` from the instance that answered, so failover
     calls carry the model actually used. Subscribers run in the caller's context, which

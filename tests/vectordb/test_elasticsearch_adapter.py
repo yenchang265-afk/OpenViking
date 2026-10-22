@@ -272,7 +272,7 @@ def test_foreign_index_is_not_adopted():
     client = _FakeClient()
     client.mappings[INDEX] = {"properties": {}}
 
-    with pytest.raises(RuntimeError, match="not created by Business Data Platform"):
+    with pytest.raises(RuntimeError, match="not created by Business Context Platform"):
         _adapter(client).collection_exists()
 
 

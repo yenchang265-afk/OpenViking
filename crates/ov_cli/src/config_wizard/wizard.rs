@@ -236,8 +236,8 @@ fn status_box_title(mode: StatusBoxMode) -> &'static str {
         StatusBoxMode::Full => copy(Language::current(), HEADER_TAGLINE, HEADER_TAGLINE_ZH),
         StatusBoxMode::Compact => copy(
             Language::current(),
-            "Business Data Platform | Context Database for AI Agents",
-            "Business Data Platform | AI Agent 上下文資料庫",
+            "Business Context Platform | Context Database for AI Agents",
+            "Business Context Platform | AI Agent 上下文資料庫",
         ),
     }
 }
@@ -299,8 +299,8 @@ fn input_hint() -> &'static str {
 fn section_add() -> &'static str {
     copy(
         Language::current(),
-        "Create a new Business Data Platform config.",
-        "建立新的 Business Data Platform 配置。",
+        "Create a new Business Context Platform config.",
+        "建立新的 Business Context Platform 配置。",
     )
 }
 
@@ -378,12 +378,12 @@ fn custom_api_key_input_helper_lines(mode: CustomKeyMode) -> Vec<String> {
         (Language::En, CustomKeyMode::RootKey) => {
             "For self-hosted admin setup and --sudo commands."
         }
-        (Language::En, CustomKeyMode::UserKey) => "For normal Business Data Platform commands.",
+        (Language::En, CustomKeyMode::UserKey) => "For normal Business Context Platform commands.",
         (Language::En, CustomKeyMode::NoKey) => {
             "Optional for local servers. Add one if auth is enabled."
         }
         (Language::ZhCn, CustomKeyMode::RootKey) => "用於自定義管理初始化和 --sudo 命令。",
-        (Language::ZhCn, CustomKeyMode::UserKey) => "用於常規 Business Data Platform 命令。",
+        (Language::ZhCn, CustomKeyMode::UserKey) => "用於常規 Business Context Platform 命令。",
         (Language::ZhCn, CustomKeyMode::NoKey) => "本地服務可不填；如果啟用了認證，請填寫。",
     };
     vec![theme::muted(copy).to_string()]
@@ -6202,7 +6202,7 @@ mod tests {
         assert!(!header.contains("CLI config"));
         assert!(!header.contains("profile manager"));
         assert!(!header.contains("↑/↓ choose"));
-        assert!(!header.contains("Business Data Platform CLI v"));
+        assert!(!header.contains("Business Context Platform CLI v"));
     }
 
     #[test]
@@ -6247,7 +6247,7 @@ mod tests {
         let header = lines.join("\n");
 
         assert!(!header.contains("Context Database for AI Agents"));
-        assert!(!header.contains("Business Data Platform CLI v"));
+        assert!(!header.contains("Business Context Platform CLI v"));
     }
 
     #[test]
@@ -6279,7 +6279,7 @@ mod tests {
                 .expect("footer should render")
                 .contains(&version)
         );
-        assert!(!lines[0].contains("Business Data Platform CLI"));
+        assert!(!lines[0].contains("Business Context Platform CLI"));
         assert!(lines[0].starts_with('╭'));
         assert!(lines[0].ends_with('╮'));
         assert!(lines.last().expect("footer should render").starts_with('╰'));
@@ -6334,7 +6334,7 @@ mod tests {
 
         assert!(width >= COMPACT_STATUS_DETAIL_WIDTH + 4);
         assert!(width <= status_box_width());
-        assert!(lines[0].contains("Business Data Platform | Context Database for AI Agents"));
+        assert!(lines[0].contains("Business Context Platform | Context Database for AI Agents"));
         assert!(text.contains("Active:"));
         assert!(!text.contains('⣿'));
         assert!(!text.contains('⣶'));
@@ -6927,7 +6927,7 @@ mod tests {
     #[test]
     fn add_config_name_rendering_has_no_default_or_current_label() {
         let lines = input_live_lines(
-            "Create a new Business Data Platform config.",
+            "Create a new Business Context Platform config.",
             add_config_name_label(),
             None,
             None,
@@ -7155,7 +7155,7 @@ mod tests {
     #[test]
     fn add_custom_api_key_rendering_has_no_existing_value_placeholder() {
         let lines = input_live_lines(
-            "Create a new Business Data Platform config.",
+            "Create a new Business Context Platform config.",
             "API key (optional)",
             None,
             None,
@@ -7174,7 +7174,7 @@ mod tests {
     fn local_no_key_identity_prompt_shows_default_identity() {
         let (default, value_label, helper_lines) = identity_prompt_parts(IdentityMode::LocalNoKey);
         let lines = input_live_lines(
-            "Create a new Business Data Platform config.",
+            "Create a new Business Context Platform config.",
             "Account ID",
             default,
             value_label,
@@ -7194,7 +7194,7 @@ mod tests {
     fn root_key_identity_prompt_has_no_default_identity() {
         let (default, value_label, helper_lines) = identity_prompt_parts(IdentityMode::RootKey);
         let lines = input_live_lines(
-            "Create a new Business Data Platform config.",
+            "Create a new Business Context Platform config.",
             "Account ID",
             default,
             value_label,

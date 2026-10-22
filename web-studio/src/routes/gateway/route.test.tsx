@@ -138,7 +138,7 @@ describe('layout gates', () => {
     )
   }
 
-  it('asks for a Business Data Platform key if none is configured', async () => {
+  it('asks for a Business Context Platform key if none is configured', async () => {
     state.role = 'user'
     state.credential = ''
     renderLayout()
@@ -153,7 +153,7 @@ describe('layout gates', () => {
     state.credential = ''
     api.getAccess.mockRejectedValue(
       new GatewayError(
-        'Business Data Platform Gateway is not enabled',
+        'Business Context Platform Gateway is not enabled',
         404,
         undefined,
         'not_enabled',
@@ -199,7 +199,7 @@ describe('layout gates', () => {
     expect(screen.getByText('actions.retry')).toBeTruthy()
   })
 
-  it('shows an unreachable Business Data Platform on an embedded server as a plain failure', async () => {
+  it('shows an unreachable Business Context Platform on an embedded server as a plain failure', async () => {
     api.getAccess.mockRejectedValue(
       new GatewayError('unreachable', 503, undefined, 'openviking_unreachable'),
     )

@@ -75,8 +75,8 @@ const requests = {
       'Input {{input}} · cached {{cached}} · cache write {{cacheWrite}} · output {{output}}',
     noUsage: "The upstream didn't report token usage",
     firstCall: 'First model call',
-    toolCalls_one: 'After Business Data Platform tools ({{count}} call)',
-    toolCalls_other: 'After Business Data Platform tools ({{count}} calls)',
+    toolCalls_one: 'After Business Context Platform tools ({{count}} call)',
+    toolCalls_other: 'After Business Context Platform tools ({{count}} calls)',
     cache: 'Prompt cache',
     cacheEligible: 'Long enough to cache (at least {{min}} tokens)',
     cacheIneligible: 'Too short to cache (needs {{min}} tokens)',
@@ -94,9 +94,9 @@ const requests = {
       'Summary kept, but usage is still at or above Compact at ({{reason}})',
     window: 'Window {{number}}, managed by the model',
     windowReset: 'The model started a new window',
-    saving: 'Saving to Business Data Platform',
+    saving: 'Saving to Business Context Platform',
     nextRetry: 'Next retry at {{time}}',
-    tools: 'Business Data Platform tools',
+    tools: 'Business Context Platform tools',
     toolsSkipped: 'Not offered: {{reason}}',
     toolRounds:
       'Rounds: {{rounds}} · extra model calls: {{calls}} · tokens added: about {{tokens}}',
@@ -109,13 +109,13 @@ const requests = {
   },
   resync: {
     action: 'Resync conversation…',
-    hint: 'Starts saving this conversation again in a new Business Data Platform session. Use it when saving stays paused.',
+    hint: 'Starts saving this conversation again in a new Business Context Platform session. Use it when saving stays paused.',
     keyRevoked:
       "The gateway key this conversation used has been revoked, so it can't be resynced.",
     title:
-      'Start a fresh Business Data Platform session for this conversation?',
+      'Start a fresh Business Context Platform session for this conversation?',
     description:
-      'The gateway writes the full history to the new session the next time the user sends a message. What was already saved stays in the old session, so Business Data Platform may extract some memories twice.',
+      'The gateway writes the full history to the new session the next time the user sends a message. What was already saved stays in the old session, so Business Context Platform may extract some memories twice.',
     confirm: 'Resync',
     done: 'The conversation will be saved again with its next message.',
   },

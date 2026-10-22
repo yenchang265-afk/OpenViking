@@ -32,7 +32,7 @@ const studio = {
     botAccountRequired: '請先選擇帳號，再管理 Bot',
     waitUsage: '用法：/wait [--timeout seconds]',
     unknown: '未知錯誤',
-    requestFailed: 'Business Data Platform 請求失敗',
+    requestFailed: 'Business Context Platform 請求失敗',
     sessionUriMissing: '缺少會話 URI',
     invalidFlag: '引數 --{{key}} 無效：{{value}}',
     missingApiKeyHint: '請前往設定配置 X-API-Key。',
@@ -69,7 +69,7 @@ const studio = {
     replacedMatches: '已替換 $ 個匹配項',
   },
   oauthClient: 'MCP 客戶端',
-  localConnection: '本地 Business Data Platform',
+  localConnection: '本地 Business Context Platform',
   profiles: {
     connectionChanged: '連線已切換，請在當前連線上重新選擇身份。',
     identityPending: '身份待確認',

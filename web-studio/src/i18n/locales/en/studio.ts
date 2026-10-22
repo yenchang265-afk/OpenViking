@@ -32,7 +32,7 @@ const studio = {
     botAccountRequired: 'Select an account before managing bots',
     waitUsage: 'Usage: /wait [--timeout seconds]',
     unknown: 'Unknown error',
-    requestFailed: 'Business Data Platform request failed',
+    requestFailed: 'Business Context Platform request failed',
     sessionUriMissing: 'Session URI is missing',
     invalidFlag: 'Invalid --{{key}}: {{value}}',
     missingApiKeyHint: 'Please go to Settings and set X-API-Key.',
@@ -69,7 +69,7 @@ const studio = {
     replacedMatches: 'replaced $ matches',
   },
   oauthClient: 'MCP client',
-  localConnection: 'Local Business Data Platform',
+  localConnection: 'Local Business Context Platform',
   profiles: {
     connectionChanged:
       'The connection changed. Select the identity again on the active connection.',

@@ -186,10 +186,10 @@ describe('toGatewayError', () => {
       503,
       {
         detail:
-          'Business Data Platform Gateway management token is not configured',
+          'Business Context Platform Gateway management token is not configured',
       },
       'other',
-      'Business Data Platform Gateway management token is not configured',
+      'Business Context Platform Gateway management token is not configured',
     ],
   ])('reads %s', async (_, status, body, reason, detail) => {
     request.mockRejectedValue(failure(status, body))

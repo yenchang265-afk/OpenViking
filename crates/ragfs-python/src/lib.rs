@@ -431,9 +431,9 @@ impl RagfsCacheConfig {
 /// Load PathLock configuration from one canonical OpenViking config file.
 fn pathlock_config_from_ov_conf(path: &str, service_name: &str) -> Result<PathLockConfig, String> {
     let raw = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read Business Data Platform config {path}: {error}"))?;
+        .map_err(|error| format!("failed to read Business Context Platform config {path}: {error}"))?;
     let json: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|error| format!("failed to parse Business Data Platform config {path}: {error}"))?;
+        .map_err(|error| format!("failed to parse Business Context Platform config {path}: {error}"))?;
     pathlock_config_from_canonical_ov_conf(&json, service_name)
 }
 
@@ -495,9 +495,9 @@ fn pathlock_config_from_value(
 
 fn cache_config_from_ov_conf(path: &str, service_name: &str) -> Result<RagfsCacheConfig, String> {
     let raw = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read Business Data Platform config {path}: {error}"))?;
+        .map_err(|error| format!("failed to read Business Context Platform config {path}: {error}"))?;
     let json: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|error| format!("failed to parse Business Data Platform config {path}: {error}"))?;
+        .map_err(|error| format!("failed to parse Business Context Platform config {path}: {error}"))?;
     cache_config_from_canonical_ov_conf(&json, service_name)
 }
 
@@ -508,9 +508,9 @@ fn cache_config_from_ov_conf_with_runtime(
     service_name: &str,
 ) -> Result<RagfsCacheConfig, String> {
     let raw = fs::read_to_string(path)
-        .map_err(|error| format!("failed to read Business Data Platform config {path}: {error}"))?;
+        .map_err(|error| format!("failed to read Business Context Platform config {path}: {error}"))?;
     let json: serde_json::Value = serde_json::from_str(&raw)
-        .map_err(|error| format!("failed to parse Business Data Platform config {path}: {error}"))?;
+        .map_err(|error| format!("failed to parse Business Context Platform config {path}: {error}"))?;
     cache_config_from_canonical_ov_conf_with_runtime(&json, force_runtime, service_name)
 }
 

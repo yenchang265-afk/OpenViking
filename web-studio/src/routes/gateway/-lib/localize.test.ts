@@ -55,16 +55,16 @@ describe('enum labels', () => {
     expect(windowReminderLabel(zhT, 'soft')).toBe('已提醒模型儘快開啟新視窗')
   })
 
-  it('explains Business Data Platform reasons by pattern', () => {
+  it('explains Business Context Platform reasons by pattern', () => {
     expect(openVikingReason(t, 'openviking_http_503')).toBe(
-      'Business Data Platform returned HTTP 503',
+      'Business Context Platform returned HTTP 503',
     )
     expect(openVikingReason(t, 'openviking_http_401')).toContain('rejected')
     expect(openVikingReason(t, 'openviking_RATE_LIMITED')).toBe(
-      'Business Data Platform reported error RATE_LIMITED',
+      'Business Context Platform reported error RATE_LIMITED',
     )
     expect(openVikingReason(t, 'openviking_unreachable')).toBe(
-      "Business Data Platform is unreachable or didn't answer in time",
+      "Business Context Platform is unreachable or didn't answer in time",
     )
     expect(openVikingReason(t, 'history_changed')).toBeUndefined()
   })
@@ -109,7 +109,7 @@ describe('enum labels', () => {
 })
 
 describe('gatewayErrorMessage', () => {
-  it('maps known server messages and Business Data Platform reasons', () => {
+  it('maps known server messages and Business Context Platform reasons', () => {
     expect(
       gatewayErrorMessage(
         t,
@@ -137,13 +137,13 @@ describe('gatewayErrorMessage', () => {
       gatewayErrorMessage(
         t,
         new GatewayError(
-          'Business Data Platform key belongs to another account',
+          'Business Context Platform key belongs to another account',
           403,
           undefined,
           'other_account',
         ),
       ),
-    ).toBe('This Business Data Platform API key belongs to another account.')
+    ).toBe('This Business Context Platform API key belongs to another account.')
   })
 
   it('summarizes by category and keeps unexplained messages', () => {
@@ -154,13 +154,13 @@ describe('gatewayErrorMessage', () => {
       gatewayErrorMessage(
         t,
         new GatewayError(
-          'Business Data Platform Gateway is not enabled',
+          'Business Context Platform Gateway is not enabled',
           503,
           undefined,
           'not_enabled',
         ),
       ),
-    ).toBe('The gateway is not enabled on this Business Data Platform server.')
+    ).toBe('The gateway is not enabled on this Business Context Platform server.')
     expect(gatewayErrorMessage(t, new Error('socket hang up'))).toBe(
       'socket hang up',
     )

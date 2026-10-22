@@ -141,7 +141,7 @@ const connect = {
         'The `X-OpenViking-Session` header gives every chat its own conversation.',
       notes: {
         sharedMemory:
-          'One connection key is one memory owner: every Open WebUI user who chats through this connection reads and writes the memory of the Business Data Platform user behind the key.',
+          'One connection key is one memory owner: every Open WebUI user who chats through this connection reads and writes the memory of the Business Context Platform user behind the key.',
         tasks:
           "The gateway recognizes title and summary requests. If Requests shows other background tasks (tags, follow-up suggestions) as “{{kind}}”, set Open WebUI's task model to a connection that doesn't go through the gateway.",
       },
@@ -225,7 +225,7 @@ const connect = {
     fallback:
       'Without any of them, the gateway looks at the latest assistant reply in the history. If exactly one earlier conversation produced it, the request joins that conversation; otherwise it starts a new one. Retries, regenerated answers and identical chats are ambiguous, so send `X-OpenViking-Session` whenever the client lets you set headers.',
     scope:
-      'Conversations belong to the Business Data Platform user behind the key, separately for each API. Two keys of the same user that send the same id share one conversation.',
+      'Conversations belong to the Business Context Platform user behind the key, separately for each API. Two keys of the same user that send the same id share one conversation.',
   },
   passthrough: {
     title: 'Bring your own provider key',
@@ -238,10 +238,10 @@ const connect = {
   plugin: {
     title: 'Using an OpenViking plugin too?',
     description:
-      "If a conversation already gets memory from an OpenViking plugin, the gateway steps aside for it: no recall, no saving and no Business Data Platform tools, so memory isn't added twice. Other conversations are unaffected.",
+      "If a conversation already gets memory from an OpenViking plugin, the gateway steps aside for it: no recall, no saving and no Business Context Platform tools, so memory isn't added twice. Other conversations are unaffected.",
     detection:
       'The gateway recognizes a plugin by the memory blocks it adds to messages. Integrations can also announce themselves with this header.',
-    mcp: "Business Data Platform MCP tools alone don't count: the gateway still recalls and saves memory, and only stops offering its own Business Data Platform tools.",
+    mcp: "Business Context Platform MCP tools alone don't count: the gateway still recalls and saves memory, and only stops offering its own Business Context Platform tools.",
     restart:
       "This lasts for the rest of the conversation. To use the gateway's memory again, start a new conversation without the plugin.",
   },

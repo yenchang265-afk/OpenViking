@@ -46,7 +46,7 @@ class RAGQueryPipeline:
 
             self._client = SyncHTTPClient(url=self.server_url)
             self._client.initialize()
-            logger.info("Business Data Platform client initialized")
+            logger.info("Business Context Platform client initialized")
         return self._client
 
     def _get_llm(self):

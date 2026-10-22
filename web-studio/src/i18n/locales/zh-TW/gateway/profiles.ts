@@ -2,7 +2,7 @@ const profiles = {
   inUseHelp:
     '要刪除它，請先吊銷這些金鑰；如果還需要它們，先簽發使用其他上下文配置的新金鑰來替換。',
   description:
-    '決定對話如何使用 Business Data Platform 的記憶和工具。儲存後的修改只對之後開始的對話生效。',
+    '決定對話如何使用 Business Context Platform 的記憶和工具。儲存後的修改只對之後開始的對話生效。',
   defaultName: '預設',
   loadFailed: '無法載入上下文配置',
   actions: {
@@ -19,7 +19,7 @@ const profiles = {
   empty: {
     title: '還沒有上下文配置',
     description:
-      '每個閘道器金鑰都需要一份上下文配置。推薦設定會為每條新訊息召回記憶、儲存對話、為長對話生成摘要，並讓模型使用只讀的 Business Data Platform 工具，之後可以隨時修改。',
+      '每個閘道器金鑰都需要一份上下文配置。推薦設定會為每條新訊息召回記憶、儲存對話、為長對話生成摘要，並讓模型使用只讀的 Business Context Platform 工具，之後可以隨時修改。',
     readOnly: '等待閘道器管理員新增上下文配置。',
   },
   summary: {
@@ -65,11 +65,11 @@ const profiles = {
   recall: {
     title: '召回記憶',
     description:
-      '每收到一條新的使用者訊息，就用它檢索 Business Data Platform，並把相關內容附加到這條訊息上。',
+      '每收到一條新的使用者訊息，就用它檢索 Business Context Platform，並把相關內容附加到這條訊息上。',
     profile: {
       label: '會話開頭提供使用者畫像',
       description:
-        '新對話開始時，向模型提供你的 Business Data Platform 使用者畫像。此設定獨立於記憶召回。',
+        '新對話開始時，向模型提供你的 Business Context Platform 使用者畫像。此設定獨立於記憶召回。',
     },
     profileMaxTokens: {
       label: '開頭內容預算',
@@ -79,7 +79,7 @@ const profiles = {
     showRecall: {
       label: '顯示召回摘要',
       description:
-        '在回覆開頭用一行說明 Business Data Platform 附加了什麼：幾條、屬於哪些類別、幾個條目名，召回失敗時說明原因。模型看不到這行摘要，它也不會儲存到 Business Data Platform。只對新對話生效。',
+        '在回覆開頭用一行說明 Business Context Platform 附加了什麼：幾條、屬於哪些類別、幾個條目名，召回失敗時說明原因。模型看不到這行摘要，它也不會儲存到 Business Context Platform。只對新對話生效。',
     },
     sources: {
       label: '檢索範圍',
@@ -105,7 +105,7 @@ const profiles = {
     recallTimeout: {
       label: '超時時間',
       description:
-        'Business Data Platform 沒有及時返回時，這條訊息會不帶記憶直接發給模型。',
+        'Business Context Platform 沒有及時返回時，這條訊息會不帶記憶直接發給模型。',
     },
     queryMaxChars: {
       label: '檢索文本長度',
@@ -128,16 +128,16 @@ const profiles = {
   capture: {
     title: '儲存對話',
     description:
-      '把已完成的輪次寫入 Business Data Platform 會話，讓 Business Data Platform 從中提取記憶。',
+      '把已完成的輪次寫入 Business Context Platform 會話，讓 Business Context Platform 從中提取記憶。',
     idleSeconds: {
       label: '最新回覆等待時長',
       description:
-        '下一條訊息到達時，上一輪會立即儲存。最新一輪迴復會先等待這段時間，如果沒有後續訊息，就儲存下來，Business Data Platform 隨即開始提取記憶。',
+        '下一條訊息到達時，上一輪會立即儲存。最新一輪迴復會先等待這段時間，如果沒有後續訊息，就儲存下來，Business Context Platform 隨即開始提取記憶。',
     },
     commitTokens: {
       label: '提交閾值',
       description:
-        '已儲存但未提交的對話達到這個量時提交一次。Business Data Platform 在提交時提取記憶。',
+        '已儲存但未提交的對話達到這個量時提交一次。Business Context Platform 在提交時提取記憶。',
     },
     keepRecentMessages: {
       label: '保留最近訊息',
@@ -169,9 +169,9 @@ const profiles = {
       label: 'Agent 自管上下文視窗',
       experimental: '實驗性',
       description:
-        '給模型兩個工具，讓它自己寫好交接筆記、開啟新的上下文視窗，並告訴它當前視窗用了多少。開啟壓縮時，壓縮仍作為兜底。只在能使用 Business Data Platform 工具的對話中生效。',
+        '給模型兩個工具，讓它自己寫好交接筆記、開啟新的上下文視窗，並告訴它當前視窗用了多少。開啟壓縮時，壓縮仍作為兜底。只在能使用 Business Context Platform 工具的對話中生效。',
       needsTools:
-        '這份配置沒有開啟 Business Data Platform 工具，此設定不會生效。',
+        '這份配置沒有開啟 Business Context Platform 工具，此設定不會生效。',
     },
     softRatio: {
       label: '軟提醒時機',
@@ -185,16 +185,16 @@ const profiles = {
     },
   },
   tools: {
-    title: 'Business Data Platform 工具',
+    title: 'Business Context Platform 工具',
     description:
-      '讓模型在回答時使用 Business Data Platform 工具。支援 Chat Completions、Responses 和 Anthropic Messages；客戶端須回傳完整對話。',
+      '讓模型在回答時使用 Business Context Platform 工具。支援 Chat Completions、Responses 和 Anthropic Messages；客戶端須回傳完整對話。',
     available: {
       label: '工具',
       description:
-        '推薦設定勾選只讀工具，會修改資料的工具不勾選。以後新增的工具會自動啟用。上游也需要允許使用 Business Data Platform 工具。',
+        '推薦設定勾選只讀工具，會修改資料的工具不勾選。以後新增的工具會自動啟用。上游也需要允許使用 Business Context Platform 工具。',
     },
     empty: '簽發閘道器金鑰後即可載入工具清單。',
-    loadFailed: '無法載入 Business Data Platform 工具',
+    loadFailed: '無法載入 Business Context Platform 工具',
     readOnly: '只讀',
     modifiesData: '會修改資料',
     executionNotice:
@@ -202,12 +202,12 @@ const profiles = {
     showCalls: {
       label: '顯示工具呼叫',
       description:
-        '閘道器每執行一次 Business Data Platform 工具，就在回覆里加一行提示，讓使用者看到這次呼叫。模型看不到這些提示，它們也不會儲存到 Business Data Platform。',
+        '閘道器每執行一次 Business Context Platform 工具，就在回覆里加一行提示，讓使用者看到這次呼叫。模型看不到這些提示，它們也不會儲存到 Business Context Platform。',
     },
     maxRounds: {
       label: '每次請求的工具輪數',
       description:
-        '達到這個輪數後，閘道器拒絕後續的 Business Data Platform 呼叫，模型用已有結果和客戶端自己的工具繼續。留空表示不限。',
+        '達到這個輪數後，閘道器拒絕後續的 Business Context Platform 呼叫，模型用已有結果和客戶端自己的工具繼續。留空表示不限。',
     },
     timeoutSeconds: {
       label: '單次呼叫超時',
@@ -224,7 +224,7 @@ const profiles = {
     totalTokens: {
       label: 'Token 預算',
       description:
-        '一次請求中，工具呼叫和結果最多增加的 Token 數（估算值）。用完後，閘道器拒絕後續的 Business Data Platform 呼叫，模型用已有結果和客戶端自己的工具繼續。留空表示不限。',
+        '一次請求中，工具呼叫和結果最多增加的 Token 數（估算值）。用完後，閘道器拒絕後續的 Business Context Platform 呼叫，模型用已有結果和客戶端自己的工具繼續。留空表示不限。',
     },
   },
 }

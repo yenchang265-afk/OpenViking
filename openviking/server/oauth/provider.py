@@ -158,7 +158,7 @@ class OpenVikingOAuthProvider(
         if requested and requested != "none":
             logger.warning(
                 "DCR: client %s requested token_endpoint_auth_method=%s; "
-                "downgrading to 'none' (Business Data Platform only supports public PKCE clients).",
+                "downgrading to 'none' (Business Context Platform only supports public PKCE clients).",
                 client_info.client_id,
                 requested,
             )

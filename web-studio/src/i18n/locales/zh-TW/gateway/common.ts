@@ -1,13 +1,13 @@
 const common = {
-  title: 'Business Data Platform 閘道器',
+  title: 'Business Context Platform 閘道器',
   description:
-    '讓任何使用 API Key 的模型客戶端都能用上 Business Data Platform 記憶。把客戶端指向閘道器後，閘道器會為每條新訊息補充相關記憶，並把對話儲存回 Business Data Platform。',
+    '讓任何使用 API Key 的模型客戶端都能用上 Business Context Platform 記憶。把客戶端指向閘道器後，閘道器會為每條新訊息補充相關記憶，並把對話儲存回 Business Context Platform。',
   beta: {
     label: 'Beta',
-    hint: '測試版：Business Data Platform 閘道器仍在完善，後續版本可能調整設定和介面。',
+    hint: '測試版：Business Context Platform 閘道器仍在完善，後續版本可能調整設定和介面。',
   },
   tabs: {
-    label: 'Business Data Platform 閘道器分割槽',
+    label: 'Business Context Platform 閘道器分割槽',
     overview: '概覽',
     upstreams: '上游',
     profiles: '上下文配置',
@@ -54,19 +54,19 @@ const common = {
     troubleshoot: '排查說明',
   },
   access: {
-    title: '先連線 Business Data Platform',
-    invalid: 'Business Data Platform API 金鑰無效',
+    title: '先連線 Business Context Platform',
+    invalid: 'Business Context Platform API 金鑰無效',
     description:
-      '閘道器用你的 Business Data Platform API 金鑰確認你是誰。請先在連線設定中填寫它。',
+      '閘道器用你的 Business Context Platform API 金鑰確認你是誰。請先在連線設定中填寫它。',
     invalidDescription:
-      'Business Data Platform 拒絕了連線設定中的 API 金鑰，它可能已被重新生成或刪除。請換一個有效的金鑰。',
+      'Business Context Platform 拒絕了連線設定中的 API 金鑰，它可能已被重新生成或刪除。請換一個有效的金鑰。',
     action: '開啟連線設定',
   },
   management: {
     title: '輸入閘道器管理金鑰',
     label: '閘道器管理金鑰',
     description:
-      '閘道器管理金鑰由部署這臺閘道器的人設定，用來修改上游和上下文配置。它不是 Business Data Platform API 金鑰，也不是客戶端用的閘道器金鑰。',
+      '閘道器管理金鑰由部署這臺閘道器的人設定，用來修改上游和上下文配置。它不是 Business Context Platform API 金鑰，也不是客戶端用的閘道器金鑰。',
     where: '在哪裡找？',
     prefix:
       'openviking-server init、openviking-gateway init 和 Studio“開啟閘道器”生成的值都以 ovgm_ 開頭。',
@@ -78,7 +78,7 @@ const common = {
     session: '只儲存在當前瀏覽器標籤頁，關閉後自動鎖定。',
     wrongKey: '這是閘道器金鑰（給客戶端用的），請輸入閘道器管理金鑰。',
     invalid:
-      '閘道器管理金鑰不正確。如果金鑰被更換或遺失，請看上方的“在哪裡找？”。注意，這裡要填的不是 Business Data Platform 的管理員 API 金鑰。',
+      '閘道器管理金鑰不正確。如果金鑰被更換或遺失，請看上方的“在哪裡找？”。注意，這裡要填的不是 Business Context Platform 的管理員 API 金鑰。',
     unlock: '解鎖',
     unlocked: '已解鎖，現在可以修改上游和上下文配置',
     lock: '鎖定',
@@ -87,34 +87,34 @@ const common = {
     readOnly:
       '上游和上下文配置由閘道器管理員統一提供。你可以檢視，並在簽發金鑰時選用。',
     adminReadOnly:
-      'Business Data Platform 的管理員和 Root 也需要閘道器管理金鑰才能修改。如果這臺服務是你部署的，金鑰在 ov.conf 的 gateway.management_key 裡。',
+      'Business Context Platform 的管理員和 Root 也需要閘道器管理金鑰才能修改。如果這臺服務是你部署的，金鑰在 ov.conf 的 gateway.management_key 裡。',
     shared:
       '你正在修改本帳號所有使用者共用的配置，儲存後立即對使用它的金鑰生效。',
-    publicTitle: '這臺閘道器對所有 Business Data Platform 商業版使用者開放',
+    publicTitle: '這臺閘道器對所有 Business Context Platform 商業版使用者開放',
     publicDescription:
-      '它連線的是公共 Business Data Platform 服務，又沒有設定閘道器管理金鑰，所以任何持有商業版 API 金鑰的人都能登入這臺閘道器、用它轉發模型請求，還能修改自己帳號下的上游。如果這臺閘道器只給你自己或團隊使用，請設定閘道器管理金鑰，然後重啟閘道器。',
+      '它連線的是公共 Business Context Platform 服務，又沒有設定閘道器管理金鑰，所以任何持有商業版 API 金鑰的人都能登入這臺閘道器、用它轉發模型請求，還能修改自己帳號下的上游。如果這臺閘道器只給你自己或團隊使用，請設定閘道器管理金鑰，然後重啟閘道器。',
     generate: '可以用這條命令生成金鑰：',
     dismiss: '關閉提示',
   },
   unavailable: {
     notEnabled: {
-      title: '這臺 Business Data Platform 沒有開啟閘道器',
+      title: '這臺 Business Context Platform 沒有開啟閘道器',
       description:
-        '執行 openviking-server init 並選擇 Update gateway；也可以在 ov.conf 中加入下面的配置，然後重啟 Business Data Platform。',
+        '執行 openviking-server init 並選擇 Update gateway；也可以在 ov.conf 中加入下面的配置，然後重啟 Business Context Platform。',
     },
-    contact: '請聯絡部署 Business Data Platform 的人開啟閘道器。',
+    contact: '請聯絡部署 Business Context Platform 的人開啟閘道器。',
     trusted: {
       title: '閘道器不支援 Trusted 模式',
       description:
-        '閘道器要靠 API 金鑰識別每個使用者。請在 ov.conf 中把 server.auth_mode 改為 api_key，然後重啟 Business Data Platform。',
+        '閘道器要靠 API 金鑰識別每個使用者。請在 ov.conf 中把 server.auth_mode 改為 api_key，然後重啟 Business Context Platform。',
     },
     openvikingUnreachable: {
-      title: '閘道器連不上 Business Data Platform（{{url}}）',
+      title: '閘道器連不上 Business Context Platform（{{url}}）',
       description:
-        '確認 Business Data Platform 正在執行，並檢查閘道器的 openviking_url（gateway.conf 或 OPENVIKING_GATEWAY_OPENVIKING_URL）是否指向它，然後重試。',
+        '確認 Business Context Platform 正在執行，並檢查閘道器的 openviking_url（gateway.conf 或 OPENVIKING_GATEWAY_OPENVIKING_URL）是否指向它，然後重試。',
     },
     failed: {
-      title: '無法載入 Business Data Platform 閘道器',
+      title: '無法載入 Business Context Platform 閘道器',
     },
     fixLabel: '需要修改的配置',
     terminal: '終端',
@@ -167,21 +167,21 @@ const common = {
       management_key_invalid:
         '閘道器管理金鑰不正確，請用當前的金鑰重新解鎖。解鎖對話方塊的“在哪裡找？”列出了它的存放位置。',
       vlm_import_forbidden:
-        '你沒有匯入 Business Data Platform 模型配置的許可權。',
+        '你沒有匯入 Business Context Platform 模型配置的許可權。',
       vlm_import_unavailable:
-        '這臺閘道器不在 Business Data Platform 服務內執行，讀不到服務端的模型配置，請手動新增上游。',
+        '這臺閘道器不在 Business Context Platform 服務內執行，讀不到服務端的模型配置，請手動新增上游。',
       in_use_one: '仍有 {{count}} 個金鑰在使用它。',
       in_use_other: '仍有 {{count}} 個金鑰在使用它。',
       upstream_key_missing:
         '這個上游沒有儲存 API Key，或者由客戶端自帶 API Key，閘道器無法發起測試。',
       trusted_mode_unsupported: '閘道器不支援 Trusted 模式。',
 
-      not_enabled: '這臺 Business Data Platform 沒有開啟閘道器。',
+      not_enabled: '這臺 Business Context Platform 沒有開啟閘道器。',
       conflict: '這項修改與現有配置衝突。',
       invalid: '閘道器拒絕了這些設定，請檢查填寫的值後重試。',
       forbidden: '沒有執行此操作的許可權。',
       not_found: '該項已不存在，請重新整理後重試。',
-      unauthorized: 'Business Data Platform API 金鑰被拒絕，請檢查連線設定。',
+      unauthorized: 'Business Context Platform API 金鑰被拒絕，請檢查連線設定。',
       other: '操作失敗，請重試。',
     },
     inUse: '仍有金鑰在使用它，請先吊銷這些金鑰。',

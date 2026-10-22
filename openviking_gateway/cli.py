@@ -36,7 +36,7 @@ def load_config() -> StandaloneGatewayConfig:
     raw = json.loads(os.path.expandvars(path.read_text())) if path else {}
     if not raw.get("openviking_url") and not os.environ.get(ENVIRONMENT_PREFIX + "OPENVIKING_URL"):
         raise SystemExit(
-            "Business Data Platform Gateway needs a Business Data Platform server URL: run `openviking-gateway init` "
+            "Business Context Platform Gateway needs a Business Context Platform server URL: run `openviking-gateway init` "
             "or set OPENVIKING_GATEWAY_OPENVIKING_URL"
         )
     return StandaloneGatewayConfig.model_validate(raw)
@@ -68,10 +68,10 @@ def init(path: Path) -> int:
     )
 
     current = json.loads(path.read_text()) if path.is_file() else {}
-    _rule("Business Data Platform Gateway")
+    _rule("Business Context Platform Gateway")
     url = current.get("openviking_url") or "http://127.0.0.1:1933"
     while True:
-        url = _prompt_required_input("Business Data Platform server URL", url)
+        url = _prompt_required_input("Business Context Platform server URL", url)
         if url.startswith("$"):
             break  # Resolved from the environment when the gateway starts.
         try:
@@ -84,7 +84,7 @@ def init(path: Path) -> int:
         try:
             health = asyncio.run(probe(url))
         except VikingError as error:
-            print(f"  {_red('Business Data Platform check failed: ' + error.reason)}")
+            print(f"  {_red('Business Context Platform check failed: ' + error.reason)}")
             # Without a terminal every prompt returns its default; retrying would loop.
             if _prompt_confirm("Enter a different URL?", default=sys.stdin.isatty()):
                 continue
@@ -126,7 +126,7 @@ def main():
         help="gateway.conf path (default: $OPENVIKING_GATEWAY_CONFIG_FILE, "
         "~/.openviking/gateway.conf, /etc/openviking/gateway.conf)",
     )
-    parser = argparse.ArgumentParser(description="Business Data Platform Gateway", parents=[common])
+    parser = argparse.ArgumentParser(description="Business Context Platform Gateway", parents=[common])
     commands = parser.add_subparsers(dest="command")
     commands.add_parser("init", parents=[common], help="Create or update gateway.conf")
     # Checked before parsing: the init subcommand would otherwise swallow a removed
