@@ -70,82 +70,88 @@ export function ContextExplorerHeader({
   const showProcessingTasks = hasTasks || isRefreshingTasks
 
   return (
-    <div className="border-b px-3 py-3">
+    // Container queries keep the toolbar intact when the pane is dragged
+    // narrower than the viewport breakpoints account for.
+    <div className="@container border-b px-3 py-3">
       <div className="flex items-center gap-2">
-        <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <div className="hidden size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary @[19rem]:flex">
           <FolderTreeIcon className="size-4" />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-sm font-semibold">{t('explorer.title')}</div>
+        <div className="hidden min-w-0 flex-1 @[15rem]:block">
+          <div className="truncate text-sm font-semibold">
+            {t('explorer.title')}
+          </div>
         </div>
-        {showProcessingTasks ? (
+        <div className="ml-auto flex shrink-0 items-center gap-0.5 @[19rem]:gap-1">
+          {showProcessingTasks ? (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              className="relative"
+              title={t('processingTasks.title', { ns: 'resources' })}
+              onClick={onOpenProcessingTasks}
+            >
+              <ClipboardListIcon
+                className={cn(
+                  'size-4',
+                  (hasActiveTasks || isRefreshingTasks) && 'text-primary',
+                )}
+              />
+              {activeTaskCount > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
+                  {activeTaskCount}
+                </span>
+              ) : null}
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="icon-sm"
             variant="ghost"
-            className="relative"
-            title={t('processingTasks.title', { ns: 'resources' })}
-            onClick={onOpenProcessingTasks}
+            title={t('explorer.search')}
+            onClick={onOpenSearch}
           >
-            <ClipboardListIcon
-              className={cn(
-                'size-4',
-                (hasActiveTasks || isRefreshingTasks) && 'text-primary',
-              )}
-            />
-            {activeTaskCount > 0 ? (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold leading-none text-primary-foreground">
-                {activeTaskCount}
-              </span>
-            ) : null}
+            <SearchIcon className="size-4" />
           </Button>
-        ) : null}
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          title={t('explorer.search')}
-          onClick={onOpenSearch}
-        >
-          <SearchIcon className="size-4" />
-        </Button>
-        {onToggleSelecting ? (
-          <Button
-            type="button"
-            size="icon-sm"
-            variant={isSelecting ? 'secondary' : 'ghost'}
-            title={t('explorer.selectMode')}
-            aria-label={t('explorer.selectMode')}
-            aria-pressed={isSelecting}
-            onClick={onToggleSelecting}
-          >
-            <ListChecksIcon
-              className={cn('size-4', isSelecting && 'text-primary')}
-            />
-          </Button>
-        ) : null}
-        {onAddResource ? (
+          {onToggleSelecting ? (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant={isSelecting ? 'secondary' : 'ghost'}
+              title={t('explorer.selectMode')}
+              aria-label={t('explorer.selectMode')}
+              aria-pressed={isSelecting}
+              onClick={onToggleSelecting}
+            >
+              <ListChecksIcon
+                className={cn('size-4', isSelecting && 'text-primary')}
+              />
+            </Button>
+          ) : null}
+          {onAddResource ? (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              title={t('explorer.addResource')}
+              onClick={onAddResource}
+            >
+              <PlusIcon className="size-4" />
+            </Button>
+          ) : null}
           <Button
             type="button"
             size="icon-sm"
             variant="ghost"
-            title={t('explorer.addResource')}
-            onClick={onAddResource}
+            title={t('explorer.refresh')}
+            onClick={onRefresh}
           >
-            <PlusIcon className="size-4" />
+            <RefreshCcwIcon
+              className={cn('size-4', isRefreshing && 'animate-spin')}
+            />
           </Button>
-        ) : null}
-        <Button
-          type="button"
-          size="icon-sm"
-          variant="ghost"
-          title={t('explorer.refresh')}
-          onClick={onRefresh}
-        >
-          <RefreshCcwIcon
-            className={cn('size-4', isRefreshing && 'animate-spin')}
-          />
-        </Button>
+        </div>
       </div>
     </div>
   )
