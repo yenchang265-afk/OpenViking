@@ -282,9 +282,11 @@ class SkillProcessor:
                     lease,
                     source_path=skill_dict.get("source_path", ""),
                     # The header already summarizes SKILL.md; skip the LLM call.
+                    # Dict input can omit the description, so fall back to the LLM.
                     file_abstracts=(
                         {f"{skill_dir_uri}/SKILL.md": skill_abstract}
                         if summarize_from_header
+                        and str(skill_dict.get("description") or "").strip()
                         else None
                     ),
                 )

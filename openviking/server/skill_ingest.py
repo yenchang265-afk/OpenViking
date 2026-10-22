@@ -61,6 +61,8 @@ async def install_skills(
                     source_path_hint=source_path_hint,
                     target_uri=target_uri,
                     source_metadata=skill_source,
+                    # SKILL.md requires a description; reuse it instead of an LLM summary.
+                    summarize_from_header=True,
                 )
                 return result
 
