@@ -202,6 +202,8 @@ class ResourceService:
         self._watch_scheduler = watch_scheduler
         self._resource_memory_link_service = resource_memory_link_service
         self._background_tasks: set[asyncio.Task[Any]] = set()
+        # Background skill runs whose body has not started, keyed to their task id.
+        self._unstarted_skill_tasks: Dict[asyncio.Task[Any], tuple[str, str, str]] = {}
         self._connector_delegate: Optional["ConnectorDelegate"] = None
 
     def set_dependencies(
@@ -575,6 +577,24 @@ class ResourceService:
             task.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
         self._background_tasks.clear()
+        await self._fail_unstarted_skill_tasks()
+
+    async def _fail_unstarted_skill_tasks(self) -> None:
+        """Settle skill tasks cancelled before their body ran, so pollers stop."""
+        from openviking.service.task_tracker import get_task_tracker
+
+        unstarted = list(self._unstarted_skill_tasks.values())
+        self._unstarted_skill_tasks.clear()
+        for task_id, account_id, user_id in unstarted:
+            try:
+                await get_task_tracker().fail(
+                    task_id,
+                    "Skill processing cancelled before it started",
+                    account_id=account_id,
+                    user_id=user_id,
+                )
+            except Exception as exc:
+                logger.warning("[ResourceService] Failed to settle skill task %s: %s", task_id, exc)
 
     def _unregister_telemetry_after_task(
         self,
@@ -2415,12 +2435,17 @@ class ResourceService:
             return await self.add_skill(preparation, ctx, **add_kwargs)
 
         from openviking.service.task_tracker import get_task_tracker
+        from openviking.service.task_tracker_concurrency import run_to_completion
 
-        task = await get_task_tracker().create(
-            "add_skill", account_id=ctx.account_id, user_id=ctx.user.user_id
+        task = await run_to_completion(
+            lambda: get_task_tracker().create(
+                "add_skill", account_id=ctx.account_id, user_id=ctx.user.user_id
+            )
         )
 
         async def run() -> None:
+            # From here add_skill settles the task, even when cancelled.
+            self._unstarted_skill_tasks.pop(background, None)
             try:
                 await self.add_skill(preparation, ctx, task_id=task.task_id, **add_kwargs)
             except Exception as exc:
@@ -2429,6 +2454,11 @@ class ResourceService:
 
         background = asyncio.create_task(run())
         self._background_tasks.add(background)
+        self._unstarted_skill_tasks[background] = (
+            task.task_id,
+            ctx.account_id,
+            ctx.user.user_id,
+        )
         background.add_done_callback(self._background_tasks.discard)
 
         skill_uri = self._skill_processor.skill_dir_uri(

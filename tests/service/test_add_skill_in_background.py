@@ -38,8 +38,28 @@ def _service(add_skill) -> ResourceService:
     service._viking_fs = object()
     service._skill_processor = SkillProcessor(vikingdb=None)
     service._background_tasks = set()
+    service._unstarted_skill_tasks = {}
     service.add_skill = add_skill
     return service
+
+
+@pytest.mark.asyncio
+async def test_shutdown_before_start_fails_the_task(tracker):
+    add_skill = AsyncMock()
+    service = _service(add_skill)
+    ctx = _ctx()
+
+    result = await service.add_skill_in_background(
+        SKILL_MD, ctx, target_uri="viking://agent/skills"
+    )
+    # Shutdown cancels the background run before its first step.
+    await service.close_background_tasks()
+
+    add_skill.assert_not_awaited()
+    owner = {"account_id": ctx.account_id, "user_id": ctx.user.user_id}
+    task = await tracker.get(result["task_id"], **owner)
+    assert task.status is TaskStatus.FAILED
+    assert not service._unstarted_skill_tasks
 
 
 @pytest.mark.asyncio
