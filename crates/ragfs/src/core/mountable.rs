@@ -778,7 +778,7 @@ impl MountableFS {
         }
     }
 
-    /// Copy one file within one raw backend in bounded-size chunks.
+    /// Copy one file within one raw backend with bounded memory.
     async fn copy_raw_within_mount(
         raw_backend: Arc<dyn FileSystem>,
         src_rel_path: &str,
@@ -798,28 +798,33 @@ impl MountableFS {
             return Ok(());
         }
 
-        let mut offset = 0u64;
-        while offset < source_info.size {
-            let chunk_len = (source_info.size - offset).min(DEFAULT_RAW_COPY_CHUNK_SIZE as u64);
-            let chunk = raw_backend.read(src_rel_path, offset, chunk_len).await?;
-            let flag = if offset == 0 {
-                WriteFlag::Create
-            } else {
-                WriteFlag::None
-            };
+        if source_info.size <= DEFAULT_RAW_COPY_CHUNK_SIZE as u64 {
+            let data = raw_backend.read(src_rel_path, 0, 0).await?;
             raw_backend
-                .write(dst_rel_path, &chunk, offset, flag)
+                .write(dst_rel_path, &data, 0, WriteFlag::Create)
                 .await?;
-            offset = offset.saturating_add(chunk.len() as u64);
-            if chunk.is_empty() {
-                return Err(Error::internal(format!(
-                    "raw backend returned empty chunk while copying '{}' -> '{}'",
-                    src_rel_path, dst_rel_path
-                )));
-            }
+            return Ok(());
         }
 
-        Ok(())
+        // Object stores replace the whole object on every write and ignore the
+        // offset, so offset-chunked writes would keep only the last chunk.
+        // Stream through a local temp file instead: s3fs reads and uploads it
+        // without buffering the file in memory (multipart above its threshold).
+        let tmp = std::env::temp_dir().join(format!("ragfs-copy-{}", uuid::Uuid::new_v4()));
+        let result = async {
+            raw_backend.read_to_path(src_rel_path, &tmp).await?;
+            raw_backend
+                .write_from_path(dst_rel_path, &tmp, WriteFlag::Create)
+                .await
+                .map(|_| ())
+        }
+        .await;
+        if let Err(error) = tokio::fs::remove_file(&tmp).await {
+            if error.kind() != std::io::ErrorKind::NotFound {
+                warn!(path = %tmp.display(), %error, "failed to remove raw copy temp file");
+            }
+        }
+        result
     }
 
     /// Find the mount point for a given path
@@ -2470,5 +2475,86 @@ mod tests {
 
         assert_eq!(spy.calls(), vec!["write_from_path"]);
         assert_eq!(mfs.read("/spy/a.bin", 0, 0).await.unwrap(), b"new content");
+    }
+
+    /// Object-store write semantics, as in s3fs: every write except `CreateNew`
+    /// replaces the whole object and ignores `offset`.
+    struct WholeObjectFs(crate::plugins::memfs::MemFileSystem);
+
+    #[async_trait]
+    impl FileSystem for WholeObjectFs {
+        async fn create(&self, path: &str) -> Result<()> {
+            self.0.create(path).await
+        }
+        async fn mkdir(&self, path: &str, mode: u32) -> Result<()> {
+            self.0.mkdir(path, mode).await
+        }
+        async fn remove(&self, path: &str) -> Result<()> {
+            self.0.remove(path).await
+        }
+        async fn remove_all(&self, path: &str) -> Result<()> {
+            self.0.remove_all(path).await
+        }
+        async fn read(&self, path: &str, offset: u64, size: u64) -> Result<Vec<u8>> {
+            self.0.read(path, offset, size).await
+        }
+        async fn write(
+            &self,
+            path: &str,
+            data: &[u8],
+            _offset: u64,
+            flags: WriteFlag,
+        ) -> Result<u64> {
+            let flags = if flags == WriteFlag::CreateNew {
+                WriteFlag::CreateNew
+            } else {
+                WriteFlag::Create
+            };
+            self.0.write(path, data, 0, flags).await
+        }
+        async fn read_dir(
+            &self,
+            path: &str,
+            offset: Option<usize>,
+            limit: Option<usize>,
+            sort_by: Option<crate::core::ListSortBy>,
+            sort_order: Option<crate::core::SortOrder>,
+        ) -> Result<Vec<FileInfo>> {
+            self.0
+                .read_dir(path, offset, limit, sort_by, sort_order)
+                .await
+        }
+        async fn stat(&self, path: &str) -> Result<FileInfo> {
+            self.0.stat(path).await
+        }
+        async fn rename(&self, old_path: &str, new_path: &str) -> Result<()> {
+            self.0.rename(old_path, new_path).await
+        }
+        async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
+            self.0.chmod(path, mode).await
+        }
+    }
+
+    #[tokio::test]
+    async fn raw_copy_of_large_file_keeps_every_byte_on_object_stores() {
+        let backend = Arc::new(WholeObjectFs(crate::plugins::memfs::MemFileSystem::new()));
+        let size = DEFAULT_RAW_COPY_CHUNK_SIZE + DEFAULT_RAW_COPY_CHUNK_SIZE / 8;
+        let data: Vec<u8> = (0..size).map(|i| (i % 251) as u8).collect();
+        backend
+            .write("/src.bin", &data, 0, WriteFlag::Create)
+            .await
+            .unwrap();
+
+        MountableFS::copy_raw_within_mount(backend.clone(), "/src.bin", "/dst.bin")
+            .await
+            .unwrap();
+
+        let copied = backend.read("/dst.bin", 0, 0).await.unwrap();
+        assert_eq!(
+            copied.len(),
+            data.len(),
+            "copy must not keep only the last chunk"
+        );
+        assert!(copied == data, "copied bytes differ from the source");
     }
 }
