@@ -85,7 +85,7 @@ async def test_installing_never_calls_the_llm(client, service, monkeypatch):
     assert await _agent_skill_names(client) == set(BUNDLED)
 
 
-async def test_user_skills_still_get_an_llm_summary(client, monkeypatch):
+async def test_user_skills_summarize_from_header(client, monkeypatch):
     from openviking_cli.utils.config.vlm_config import VLMConfig
 
     prompts: list[str] = []
@@ -99,8 +99,10 @@ async def test_user_skills_still_get_an_llm_summary(client, monkeypatch):
     response = await client.post("/api/v1/skills", json={"data": custom, "wait": True})
     assert response.status_code == 200, response.text
 
+    # Only the privacy scan calls the LLM; the header is the SKILL.md summary.
     summaries = [p for p in prompts if "extract user-private configuration items" not in p]
-    assert any("team-notes" in p or "# Notes" in p for p in summaries)
+    assert not any("team-notes" in p or "# Notes" in p for p in summaries)
+    assert len(prompts) - len(summaries) == 1
 
 
 async def test_keeps_an_existing_skill_with_the_same_name(client, service):

@@ -35,6 +35,31 @@ async def test_install_skills_summarizes_from_header(monkeypatch):
     assert add_skill.await_args.kwargs["summarize_from_header"] is True
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("wait", "expect_background"), [(False, True), (True, False)])
+async def test_install_skills_background_unless_waiting(monkeypatch, wait, expect_background):
+    add_skill = AsyncMock(return_value={"task_id": "inline"})
+    add_in_background = AsyncMock(return_value={"task_id": "bg"})
+    service = SimpleNamespace(
+        resources=SimpleNamespace(add_skill=add_skill, add_skill_in_background=add_in_background)
+    )
+    monkeypatch.setattr(skill_ingest, "get_service", lambda: service)
+
+    @asynccontextmanager
+    async def fake_source(data, **_):
+        yield [(data, {"type": "api"})]
+
+    monkeypatch.setattr(skill_ingest, "resolve_skill_source", fake_source)
+
+    result = await skill_ingest.install_skills(
+        "---\nname: demo\n---", _ctx(), wait=wait, background=True
+    )
+
+    assert result["task_id"] == ("bg" if expect_background else "inline")
+    if expect_background:
+        assert add_in_background.await_args.kwargs["summarize_from_header"] is True
+
+
 def _processor_with_mocks():
     viking_fs = MagicMock()
     viking_fs._async_agfs.pathlock_acquire_tree = AsyncMock(return_value={"lease_ref": "t"})

@@ -14,7 +14,7 @@ import os
 import signal
 import time
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -2371,6 +2371,77 @@ class ResourceService:
         finally:
             if not telemetry_cleanup_scheduled:
                 unregister_telemetry(telemetry_id)
+
+    async def add_skill_in_background(
+        self,
+        data: Any,
+        ctx: RequestContext,
+        *,
+        target_uri: Optional[str] = None,
+        allow_local_path_resolution: bool = True,
+        source_path_hint: Optional[str] = None,
+        source_metadata: Optional[Dict[str, Any]] = None,
+        summarize_from_header: bool = False,
+    ) -> Dict[str, Any]:
+        """Validate a skill now; run the privacy scan and storage as a background task.
+
+        Returns as soon as the task exists, so callers poll it instead of waiting
+        for the privacy LLM call. Skills with source files run inline, because
+        the caller deletes those files when this returns.
+        """
+        self._ensure_initialized()
+        preparation = await self._skill_processor.prepare_skill_processing(
+            data,
+            ctx=ctx,
+            allow_local_path_resolution=allow_local_path_resolution,
+            source_path_hint=source_path_hint,
+            extract_privacy=False,
+        )
+        preparation = replace(preparation, privacy_pending=True)
+        if not target_uri:
+            from openviking.server.dependencies import get_server_config
+
+            target_uri = await effective_skill_add_target(
+                viking_fs=self._viking_fs,
+                ctx=ctx,
+                server_config=get_server_config(),
+            )
+        add_kwargs: Dict[str, Any] = {
+            "target_uri": target_uri,
+            "source_metadata": source_metadata,
+            "summarize_from_header": summarize_from_header,
+        }
+        if preparation.auxiliary_files or preparation.cleanup_path:
+            return await self.add_skill(preparation, ctx, **add_kwargs)
+
+        from openviking.service.task_tracker import get_task_tracker
+
+        task = await get_task_tracker().create(
+            "add_skill", account_id=ctx.account_id, user_id=ctx.user.user_id
+        )
+
+        async def run() -> None:
+            try:
+                await self.add_skill(preparation, ctx, task_id=task.task_id, **add_kwargs)
+            except Exception as exc:
+                # add_skill already recorded the failure on the task.
+                logger.warning("[ResourceService] Background add_skill failed: %s", exc)
+
+        background = asyncio.create_task(run())
+        self._background_tasks.add(background)
+        background.add_done_callback(self._background_tasks.discard)
+
+        skill_uri = self._skill_processor.skill_dir_uri(
+            ctx, target_uri, preparation.skill_dict["name"]
+        )
+        return {
+            "status": "accepted",
+            "root_uri": skill_uri,
+            "uri": skill_uri,
+            "name": preparation.skill_dict["name"],
+            "auxiliary_files": 0,
+            "task_id": task.task_id,
+        }
 
     async def cancel_skill_processing(self, task_id: str, ctx: RequestContext) -> None:
         """Stop one failed update's work before its caller restores the old package."""

@@ -138,6 +138,8 @@ class AddSkillRequest(BaseModel):
             HTTP requests do not treat strings as host filesystem paths.
         temp_file_id: Temporary upload id returned by /api/v1/resources/temp_upload.
         wait: Whether to wait for skill processing to complete.
+        background: Return the task right after validation instead of after the
+            privacy scan and storage. Ignored when ``wait`` is set.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -147,6 +149,7 @@ class AddSkillRequest(BaseModel):
     skills: list[str] = Field(default_factory=list)
     list_only: bool = False
     wait: bool = False
+    background: bool = False
     source_metadata: Optional[Dict[str, Any]] = None
     target_uri: Optional[str] = None
     telemetry: TelemetryRequest = False
@@ -405,6 +408,7 @@ async def add_skill(
                 allow_local_path_resolution=allow_local_path_resolution,
                 source_path_hint=source_path_hint,
                 telemetry=request.telemetry,
+                background=request.background,
             )
         finally:
             if resolved:

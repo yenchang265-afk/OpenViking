@@ -34,10 +34,13 @@ async def install_skills(
     allow_local_path_resolution: bool = False,
     source_path_hint: Optional[str] = None,
     telemetry: TelemetryRequest = False,
+    background: bool = False,
 ) -> dict[str, Any]:
     """Install the skills found in ``data``; return one result or ``{"installed", "total"}``.
 
     ``list_only`` describes the source's skills without persisting anything.
+    ``background`` (ignored with ``wait``) returns each skill's task before its
+    privacy scan runs; callers poll the task for completion.
     ``target_uri`` must already be validated as a skill root by the caller.
     """
     service = get_service()
@@ -53,6 +56,16 @@ async def install_skills(
         for skill_data, skill_source in targets:
 
             async def _install(skill_data=skill_data, skill_source=skill_source):
+                if background and not wait:
+                    return await service.resources.add_skill_in_background(
+                        skill_data,
+                        ctx,
+                        target_uri=target_uri,
+                        allow_local_path_resolution=isinstance(skill_data, Path),
+                        source_path_hint=source_path_hint,
+                        source_metadata=skill_source,
+                        summarize_from_header=True,
+                    )
                 result = await service.resources.add_skill(
                     data=skill_data,
                     ctx=ctx,
