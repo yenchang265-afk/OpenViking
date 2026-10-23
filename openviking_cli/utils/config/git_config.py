@@ -69,12 +69,13 @@ class GitConfig(BaseModel):
         default=True,
         description="Enable git-based multi-version management for VikingFS content.",
     )
-    backend: Literal["local", "s3"] = Field(
+    backend: Literal["local", "s3", "agfs"] = Field(
         default="local",
         description="Git object backend. 'local' stores objects on the local filesystem; "
-        "'s3' stores them on a remote S3-compatible bucket. When unset, defaults to "
-        "the same backend as 'storage.agfs.backend' (a 'memory' storage backend maps "
-        "to 'local').",
+        "'s3' stores them on a remote S3-compatible bucket; 'agfs' stores them on a "
+        "tiered AGFS mount (small objects in MariaDB, only >= 1 MiB in S3). When unset, "
+        "defaults to the same backend as 'storage.agfs.backend' (a 'memory' storage "
+        "backend maps to 'local'), or to 'agfs' when S3 tiered storage is enabled.",
     )
     default_branch: str = Field(
         default="main",

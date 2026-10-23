@@ -54,8 +54,10 @@ class TieredStorageConfig(BaseModel):
 
     table: Optional[str] = Field(
         default=None,
-        pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,63}$",
-        description="Index table name. Unset uses agfs_entries.",
+        # At most 60 chars: the git mount uses "<table>_git" (MariaDB limit 64).
+        pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,59}$",
+        description="Index table name. Unset uses agfs_entries; git history then uses "
+        "agfs_git_entries, otherwise <table>_git.",
     )
 
     max_connections: Optional[int] = Field(

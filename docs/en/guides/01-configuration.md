@@ -1663,6 +1663,8 @@ How it behaves:
 - **Listings come from MariaDB,** so `ls`, `stat` and `tree` make no S3 LIST calls.
 - Set `directory_marker_mode` to `none`. Directories live in MariaDB, so marker objects would only add zero-byte objects.
 
+**Git history (snapshots).** With tiering enabled, OpenViking also mounts `/ovgit`: a second tiered mount on the same bucket, with S3 prefix `.ovgit` and table `agfs_git_entries` (or `<table>_git`). `git.backend` then defaults to `agfs`, which stores git objects, refs and commit indexes through that mount. So small git objects (typically ~1 KB) land in MariaDB too. `git.backend: "s3"` is rejected while tiering is on, because it would write every git object straight to the bucket. `local` is still allowed, but only suits a single instance. The `/ovgit` layout matches the old S3 git backend (`.ovgit/{account}/objects/…`), so `import_existing` also migrates existing git history.
+
 MariaDB settings: `max_allowed_packet` ≥ 16 MiB (the MariaDB default), `innodb_file_per_table=ON`, and a user with `CREATE, SELECT, INSERT, UPDATE, DELETE` on the database. Back up MariaDB together with the bucket. A restore that brings back unreferenced blobs is safe.
 
 When a Redis cache is configured (`cache.provider = "redis"`), it wraps the tiered mount, so hot small files and listings are served from Redis. Keep `max_file_size` in the cache policy close to the tiering threshold, so Redis never stores multi-megabyte values.

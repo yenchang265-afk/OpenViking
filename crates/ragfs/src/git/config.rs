@@ -19,6 +19,8 @@ pub struct GitConfig {
     pub local: Option<GitLocalConfig>,
     #[serde(default)]
     pub s3: Option<GitS3ConfigPy>,
+    #[serde(default)]
+    pub agfs: Option<GitAgfsConfig>,
 
     #[serde(default)]
     pub tuning: GitTuningConfig,
@@ -27,6 +29,22 @@ pub struct GitConfig {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GitLocalConfig {
     pub base_dir: String,
+}
+
+/// `agfs` backend: Git data stored through a mounted RAGFS filesystem.
+#[derive(Debug, Clone, Deserialize)]
+pub struct GitAgfsConfig {
+    /// Mount point holding Git data, normally a dedicated tiered mount.
+    #[serde(default = "default_agfs_mount_path")]
+    pub mount_path: String,
+}
+
+impl Default for GitAgfsConfig {
+    fn default() -> Self {
+        Self {
+            mount_path: default_agfs_mount_path(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -85,6 +103,9 @@ fn default_author_name() -> String {
 }
 fn default_author_email() -> String {
     "bot@openviking.local".to_string()
+}
+fn default_agfs_mount_path() -> String {
+    "/ovgit".to_string()
 }
 fn default_s3_prefix() -> String {
     ".ovgit".to_string()
@@ -147,6 +168,19 @@ mod tests {
         assert_eq!(s3.region, "us-west-2");
         assert_eq!(s3.cas_mode, "native");
         assert!(cfg.tuning.commit_index_enabled);
+    }
+
+    #[test]
+    fn parses_agfs_config_with_default_mount_path() {
+        let toml_src = r#"
+            enabled = true
+            backend = "agfs"
+
+            [agfs]
+        "#;
+        let cfg: GitConfig = toml::from_str(toml_src).unwrap();
+        assert_eq!(cfg.backend, "agfs");
+        assert_eq!(cfg.agfs.unwrap().mount_path, "/ovgit");
     }
 
     #[test]

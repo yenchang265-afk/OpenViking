@@ -67,7 +67,7 @@ openviking-server --config /path/to/ov.conf
 | `compile_api` | object | disabled | 外部 Compile 任務 API |
 | `connector` | object | disabled | 外部 Connector 資料匯入服務 |
 | `encryption` | object | disabled | 文件和敏感字段加密 |
-| `git` | object | local | 版本管理後端，可使用 `local` 或 `s3` |
+| `git` | object | local | 版本管理後端，可使用 `local`、`s3` 或 `agfs`（S3 分層儲存時的預設） |
 | `log` | object | 控制台日誌 | 日誌級別、格式和檔案輸出 |
 | `telemetry` | object | disabled | OpenTelemetry trace 上報 |
 | `oauth` | object | disabled | MCP OAuth 2.1 配置 |

@@ -153,6 +153,56 @@ class TestGitInheritsFromAgfs:
         assert cfg.git.backend == "s3"
 
 
+class TestGitWithTieredStorage:
+    """With S3 tiered storage, git history must go through the tiered /ovgit mount."""
+
+    TIERED_S3 = {**TestGitInheritsFromAgfs.FULL_S3, "tiered": {"enabled": True}}
+
+    def _storage(self, s3=None):
+        return {"workspace": "/tmp/x", "agfs": {"backend": "s3", "s3": s3 or self.TIERED_S3}}
+
+    def test_tiered_storage_defaults_git_to_agfs(self):
+        cfg = OpenVikingConfig(storage=self._storage())
+        assert cfg.git.backend == "agfs"
+        assert cfg.git.s3 is None
+
+    def test_untiered_s3_keeps_inheriting_s3(self):
+        cfg = OpenVikingConfig(storage=self._storage(TestGitInheritsFromAgfs.FULL_S3))
+        assert cfg.git.backend == "s3"
+
+    def test_explicit_s3_backend_with_tiering_rejected(self):
+        with pytest.raises(ValidationError, match="writes small git objects"):
+            OpenVikingConfig(
+                storage=self._storage(),
+                git={"backend": "s3", "s3": {"bucket": "B", "region": "R"}},
+            )
+
+    def test_explicit_local_backend_with_tiering_allowed(self):
+        cfg = OpenVikingConfig(storage=self._storage(), git={"backend": "local"})
+        assert cfg.git.backend == "local"
+
+    def test_agfs_backend_without_tiering_rejected(self):
+        with pytest.raises(ValidationError, match="requires storage.agfs.backend 's3'"):
+            OpenVikingConfig(
+                storage={"workspace": "/tmp/x", "agfs": {"backend": "local"}},
+                git={"backend": "agfs"},
+            )
+
+    def test_disabled_git_skips_tiering_checks(self):
+        cfg = OpenVikingConfig(
+            storage=self._storage(),
+            git={"enabled": False, "backend": "s3", "s3": {"bucket": "B", "region": "R"}},
+        )
+        assert cfg.git.enabled is False
+
+    def test_agfs_git_dict_points_at_the_tiered_mount(self, tmp_path):
+        cfg = OpenVikingConfig(storage=self._storage())
+        result = _build_git_config_dict(cfg.git, tmp_path)
+        assert result["backend"] == "agfs"
+        assert result["agfs"] == {"mount_path": "/ovgit"}
+        assert "local" not in result and "s3" not in result
+
+
 class TestGitS3ConfigParsing:
     """A5.1 — parsing of the s3 backend config."""
 

@@ -63,6 +63,10 @@ pub struct TieredSettings {
     pub max_connections: u32,
     /// Index pre-existing bucket objects when mounting.
     pub import_existing: bool,
+    /// Top-level backend names owned by another mount (e.g. `.ovgit` when this
+    /// mount's prefix is the bucket root); ignored by the untiered-data guard
+    /// and by the import.
+    pub import_exclude: Vec<String>,
 }
 
 impl TieredSettings {
@@ -103,8 +107,28 @@ impl TieredSettings {
             table,
             max_connections: max_connections as u32,
             import_existing: bool_param(params, "tiered_import_existing")?,
+            import_exclude: name_list_param(params, "tiered_import_exclude")?,
         }))
     }
+}
+
+fn name_list_param(params: &HashMap<String, ConfigValue>, key: &str) -> Result<Vec<String>> {
+    let Some(value) = params.get(key) else {
+        return Ok(Vec::new());
+    };
+    let names = value
+        .as_string_list()
+        .ok_or_else(|| Error::config(format!("{} must be a list of strings", key)))?;
+    if let Some(bad) = names
+        .iter()
+        .find(|name| name.is_empty() || name.contains('/'))
+    {
+        return Err(Error::config(format!(
+            "{} entries must be single path segments, got '{}'",
+            key, bad
+        )));
+    }
+    Ok(names.to_vec())
 }
 
 fn bool_param(params: &HashMap<String, ConfigValue>, key: &str) -> Result<bool> {
@@ -195,7 +219,8 @@ pub async fn maybe_wrap(
         ));
     }
     let store = connect_store(&settings).await?;
-    let tiered = TieredFileSystem::new(store, Arc::from(raw), settings.small_threshold_bytes);
+    let tiered = TieredFileSystem::new(store, Arc::from(raw), settings.small_threshold_bytes)
+        .with_import_exclude(settings.import_exclude);
     if settings.import_existing {
         let stats = tiered.import_untiered().await?;
         info!(mount = %config.mount_path, ?stats, "tiered: imported pre-existing objects");

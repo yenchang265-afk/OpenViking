@@ -657,6 +657,46 @@ async fn legacy_backend() -> (TieredFileSystem, Arc<MemoryTierStore>, Arc<MemFil
 }
 
 #[tokio::test]
+async fn excluded_root_names_belong_to_another_mount() {
+    let (fs, _, blobs) = setup();
+    // Legacy Git data under the bucket root, owned by the /ovgit mount.
+    blobs
+        .ensure_parent_dirs("/.ovgit/acct/objects/aa/bb", 0o755)
+        .await
+        .unwrap();
+    blobs
+        .write("/.ovgit/acct/objects/aa/bb", b"git", 0, WriteFlag::Create)
+        .await
+        .unwrap();
+    assert!(
+        fs.has_untiered_data().await.unwrap(),
+        "unexcluded: guard trips"
+    );
+
+    let fs = fs.with_import_exclude(vec![".ovgit".to_string()]);
+    assert!(!fs.has_untiered_data().await.unwrap());
+    assert_eq!(fs.import_untiered().await.unwrap(), ImportStats::default());
+    assert!(matches!(fs.stat("/.ovgit").await, Err(Error::NotFound(_))));
+    assert!(
+        blobs.stat("/.ovgit/acct/objects/aa/bb").await.is_ok(),
+        "the other mount's objects are left untouched"
+    );
+}
+
+#[test]
+fn settings_parse_import_exclude_list() {
+    let map = params(&[
+        ("tiered_enabled", ConfigValue::Bool(true)),
+        (
+            "tiered_import_exclude",
+            ConfigValue::StringList(vec![".ovgit".into()]),
+        ),
+    ]);
+    let settings = TieredSettings::from_params(&map).unwrap().unwrap();
+    assert_eq!(settings.import_exclude, vec![".ovgit"]);
+}
+
+#[tokio::test]
 async fn untiered_data_is_detected_only_while_the_index_is_empty() {
     let (fresh, _, _) = setup();
     assert!(!fresh.has_untiered_data().await.unwrap());
@@ -818,6 +858,18 @@ fn settings_reject_invalid_values() {
             ConfigValue::String("1starts_with_digit".into()),
         ),
         ("tiered_dsn_env", ConfigValue::String(String::new())),
+        (
+            "tiered_import_exclude",
+            ConfigValue::String(".ovgit".into()),
+        ),
+        (
+            "tiered_import_exclude",
+            ConfigValue::StringList(vec!["a/b".into()]),
+        ),
+        (
+            "tiered_import_exclude",
+            ConfigValue::StringList(vec![String::new()]),
+        ),
     ];
     for (key, value) in cases {
         let mut map = params(&[("tiered_enabled", ConfigValue::Bool(true))]);

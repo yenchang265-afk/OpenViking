@@ -22,6 +22,12 @@ from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Git history on tiered S3 storage: a second tiered s3fs mount whose key layout
+# matches the legacy git S3 backend, so `import_existing` migrates old git data.
+GIT_AGFS_MOUNT_PATH = "/ovgit"
+GIT_S3_PREFIX = ".ovgit"
+DEFAULT_GIT_TIERED_TABLE = "agfs_git_entries"
+
 
 @dataclass(frozen=True)
 class RagfsBindingConfig:
@@ -371,7 +377,26 @@ def _generate_plugin_config(
         "config": mount_config,
     }
 
+    if plugin_name == "s3fs" and mount_config.get("tiered_enabled"):
+        # /local must not treat the git mount's objects as its own legacy data.
+        mount_config["tiered_import_exclude"] = [GIT_S3_PREFIX]
+        config["s3fs_git"] = {
+            "enabled": True,
+            "plugin": "s3fs",
+            "path": GIT_AGFS_MOUNT_PATH,
+            "config": _git_mount_params(primary_plugin_config),
+        }
+
     return config
+
+
+def _git_mount_params(s3_params: Dict[str, Any]) -> Dict[str, Any]:
+    """S3 params for the tiered git mount: same bucket and tiering, own prefix and table."""
+    params = dict(s3_params)
+    params["prefix"] = GIT_S3_PREFIX
+    table = s3_params.get("tiered_table")
+    params["tiered_table"] = f"{table}_git" if table else DEFAULT_GIT_TIERED_TABLE
+    return params
 
 
 def _map_backend_to_plugin_name(backend: str) -> str:
@@ -639,6 +664,11 @@ def _build_git_config_dict(git_config: Any, storage_path: Path) -> Dict[str, Any
         result["s3"] = s3_dict
         return result
 
+    if backend == "agfs":
+        # The tiered git mount is created by _generate_plugin_config at this path.
+        result["agfs"] = {"mount_path": GIT_AGFS_MOUNT_PATH}
+        return result
+
     # Default: local backend
     local_cfg = getattr(git_config, "local", None)
     base_dir = getattr(local_cfg, "base_dir", "") if local_cfg is not None else ""
@@ -766,7 +796,8 @@ def mount_agfs_backend(agfs: Any, config: RagfsBindingConfig | Any) -> None:
             logger.debug(
                 f"[RAGFSUtils] Mounting {plugin_name} at {mount_path} with config keys: {list(cfg.keys()) if isinstance(cfg, dict) else type(cfg)}"
             )
-            agfs.mount(plugin_name, mount_path, cfg)
+            # Entries may set "plugin" so one plugin can be mounted more than once.
+            agfs.mount(plugin_config.get("plugin", plugin_name), mount_path, cfg)
             logger.debug(f"[RAGFSUtils] Successfully mounted {plugin_name}")
         except Exception as e:
             logger.error(f"[RAGFSUtils] Failed to mount {plugin_name}: {e}")

@@ -1628,6 +1628,8 @@ CachedFileSystem（Redis，可選）→ TieredFileSystem → { MariaDB：索引 
 - **目錄列表來自 MariaDB，** 所以 `ls`、`stat`、`tree` 不會呼叫 S3 LIST。
 - 請將 `directory_marker_mode` 設為 `none`。目錄已存在 MariaDB，marker 物件只會多出零位元組物件。
 
+**git 歷史（快照）。** 啟用分層後，OpenViking 會另外掛載 `/ovgit`：同一個 bucket 上的第二個分層掛載，S3 prefix 為 `.ovgit`，資料表為 `agfs_git_entries`（或 `<table>_git`）。此時 `git.backend` 預設為 `agfs`，git 物件、分支指標和 commit 索引都經由這個掛載儲存，因此小的 git 物件（通常約 1 KB）同樣進 MariaDB。分層啟用時會拒絕 `git.backend: "s3"`，因為它會把每個 git 物件直接寫進 bucket。`local` 仍可使用，但只適用單一實例。`/ovgit` 的配置與舊的 S3 git 後端相同（`.ovgit/{account}/objects/…`），所以 `import_existing` 也會一併遷移既有的 git 歷史。
+
 MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（MariaDB 預設值）、`innodb_file_per_table=ON`，以及對該資料庫具備 `CREATE, SELECT, INSERT, UPDATE, DELETE` 權限的使用者。請將 MariaDB 與 bucket 一起備份；還原時多出沒被引用的 blob 是安全的。
 
 設定 Redis 快取（`cache.provider = "redis"`）時，快取會包在分層掛載外層，常用的小檔與目錄列表直接由 Redis 回應。請讓快取策略的 `max_file_size` 接近分層門檻，避免 Redis 存放數 MB 的值。

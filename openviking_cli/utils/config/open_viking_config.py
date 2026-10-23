@@ -69,6 +69,13 @@ def _get_config_logger():
     return logging.getLogger(__name__)
 
 
+def _raw_s3_tiered_enabled(agfs: Dict[str, Any]) -> bool:
+    """Whether a raw `storage.agfs` dict enables S3 tiered storage."""
+    s3 = agfs.get("s3")
+    tiered = s3.get("tiered") if isinstance(s3, dict) else None
+    return isinstance(tiered, dict) and tiered.get("enabled") is True
+
+
 class ConnectorConfig(BaseModel):
     """Configuration for external Connector service."""
 
@@ -397,6 +404,26 @@ class OpenVikingConfig(BaseModel):
             raise ValueError("top-level cache config is required when an AGFS backend uses cache")
         return self
 
+    @model_validator(mode="after")
+    def _validate_git_backend_against_tiering(self) -> "OpenVikingConfig":
+        """Keep git storage consistent with S3 tiered storage."""
+        if not self.git.enabled:
+            return self
+        agfs = self.storage.agfs
+        s3 = getattr(agfs, "s3", None)
+        tiered = agfs.backend == "s3" and s3 is not None and s3.tiered.enabled
+        if tiered and self.git.backend == "s3":
+            raise ValueError(
+                "git.backend 's3' writes small git objects straight to the bucket, which "
+                "S3 tiered storage exists to prevent; use 'agfs' (the default) or 'local'"
+            )
+        if self.git.backend == "agfs" and not tiered:
+            raise ValueError(
+                "git.backend 'agfs' requires storage.agfs.backend 's3' with "
+                "storage.agfs.s3.tiered.enabled"
+            )
+        return self
+
     @model_validator(mode="before")
     @classmethod
     def _inherit_git_defaults_from_agfs(cls, data: Any) -> Any:
@@ -431,7 +458,10 @@ class OpenVikingConfig(BaseModel):
             agfs_backend = agfs.get("backend", "local")
             if agfs_backend == "memory":
                 agfs_backend = "local"
-            if agfs_backend in ("local", "s3"):
+            if agfs_backend == "s3" and _raw_s3_tiered_enabled(agfs):
+                # Plain 's3' would write small git objects straight to the bucket.
+                agfs_backend = "agfs"
+            if agfs_backend in ("local", "s3", "agfs"):
                 git["backend"] = agfs_backend
 
         if git.get("backend", "local") == "s3":

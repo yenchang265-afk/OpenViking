@@ -20,8 +20,8 @@ use similar::{Algorithm, TextDiff};
 
 use ragfs::core::FileSystem;
 use ragfs::git::{
-    GitConfig, GitService, IndexStore, LocalIndexStore, LocalObjectStore, LocalRefStore,
-    ObjectStore, RefStore,
+    AgfsIndexStore, AgfsObjectStore, AgfsRefStore, GitAgfsConfig, GitConfig, GitService,
+    IndexStore, LocalIndexStore, LocalObjectStore, LocalRefStore, ObjectStore, RefStore,
 };
 
 #[cfg(feature = "s3")]
@@ -38,6 +38,9 @@ use ragfs::git::{CasMode, S3Config, S3IndexStore, S3ObjectStore, S3RefStore};
 /// - `s3` (feature-gated): requires `[git.s3]` with `bucket`, `region`.
 ///   `access_key` and `secret_key` are read directly from the config; when
 ///   omitted, the AWS SDK default credentials chain is used.
+/// - `agfs`: stores Git data through `vfs` under `[git.agfs].mount_path`
+///   (default `/ovgit`), normally a size-tiered mount, so small objects never
+///   become individual S3 objects.
 pub fn build_git_service(
     cfg: &GitConfig,
     vfs: Arc<dyn FileSystem>,
@@ -60,6 +63,20 @@ pub fn build_git_service(
             let rs = Arc::new(LocalRefStore::new(lc.base_dir.clone()));
             let is: Option<Arc<dyn IndexStore>> = if cfg.tuning.commit_index_enabled {
                 Some(Arc::new(LocalIndexStore::new(lc.base_dir.clone())))
+            } else {
+                None
+            };
+            (os, rs, is)
+        }
+        "agfs" => {
+            let mount_path = cfg
+                .agfs
+                .as_ref()
+                .map_or_else(|| GitAgfsConfig::default().mount_path, |a| a.mount_path.clone());
+            let os = Arc::new(AgfsObjectStore::new(vfs.clone(), &mount_path));
+            let rs = Arc::new(AgfsRefStore::new(vfs.clone(), &mount_path));
+            let is: Option<Arc<dyn IndexStore>> = if cfg.tuning.commit_index_enabled {
+                Some(Arc::new(AgfsIndexStore::new(vfs.clone(), &mount_path)))
             } else {
                 None
             };
@@ -650,8 +667,19 @@ mod tests {
                 base_dir: base_dir.into(),
             }),
             s3: None,
+            agfs: None,
             tuning: Default::default(),
         }
+    }
+
+    #[tokio::test]
+    async fn build_git_service_agfs_returns_some() {
+        let fs = Arc::new(MountableFS::new()) as Arc<dyn ragfs::core::FileSystem>;
+        let mut cfg = local_cfg("/unused");
+        cfg.backend = "agfs".into();
+        cfg.local = None;
+        let svc = build_git_service(&cfg, fs).expect("build ok");
+        assert!(svc.is_some());
     }
 
     #[tokio::test]

@@ -46,6 +46,7 @@ pub struct TieredFileSystem {
     store: Arc<dyn TierStore>,
     blobs: Arc<dyn FileSystem>,
     threshold: u64,
+    import_exclude: Vec<String>,
 }
 
 impl TieredFileSystem {
@@ -55,7 +56,20 @@ impl TieredFileSystem {
             store,
             blobs,
             threshold,
+            import_exclude: Vec::new(),
         }
+    }
+
+    /// Ignore these top-level backend names in [`Self::has_untiered_data`] and
+    /// [`Self::import_untiered`], because another mount owns them.
+    pub fn with_import_exclude(mut self, names: Vec<String>) -> Self {
+        self.import_exclude = names;
+        self
+    }
+
+    /// Whether a top-level backend entry belongs to this mount's legacy data.
+    fn is_importable_root_entry(&self, name: &str) -> bool {
+        name != BLOB_ROOT.trim_start_matches('/') && !self.import_exclude.iter().any(|n| n == name)
     }
 
     /// Delete blobs that no index row references and that are older than `min_age`.
@@ -101,9 +115,10 @@ impl TieredFileSystem {
         if !self.store.list_children("/").await?.is_empty() {
             return Ok(false);
         }
-        let blob_root_name = BLOB_ROOT.trim_start_matches('/');
         match self.blobs.read_dir("/", None, None, None, None).await {
-            Ok(entries) => Ok(entries.iter().any(|entry| entry.name != blob_root_name)),
+            Ok(entries) => Ok(entries
+                .iter()
+                .any(|entry| self.is_importable_root_entry(&entry.name))),
             Err(Error::NotFound(_)) => Ok(false),
             Err(error) => Err(error),
         }
@@ -129,7 +144,7 @@ impl TieredFileSystem {
                 } else {
                     format!("{}/{}", dir, info.name)
                 };
-                if path == BLOB_ROOT {
+                if dir == "/" && !self.is_importable_root_entry(&info.name) {
                     continue;
                 }
                 if info.is_dir {

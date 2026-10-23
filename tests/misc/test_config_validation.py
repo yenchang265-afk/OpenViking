@@ -163,9 +163,11 @@ def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):
 def test_agfs_s3_tiered_storage_is_off_by_default():
     config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config())
 
-    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+    plugin_config = plugins["s3fs"]["config"]
 
     assert not any(key.startswith("tiered_") for key in plugin_config)
+    assert "s3fs_git" not in plugins
 
 
 def test_agfs_s3_tiered_storage_enabled_leaves_defaults_to_ragfs():
@@ -174,8 +176,62 @@ def test_agfs_s3_tiered_storage_enabled_leaves_defaults_to_ragfs():
     plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
 
     assert {k: v for k, v in plugin_config.items() if k.startswith("tiered_")} == {
-        "tiered_enabled": True
+        "tiered_enabled": True,
+        "tiered_import_exclude": [".ovgit"],
     }
+
+
+def test_agfs_s3_tiered_storage_adds_tiered_git_mount():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(prefix="", tiered={"enabled": True, "import_existing": True}),
+    )
+
+    git_mount = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs_git"]
+
+    assert git_mount["plugin"] == "s3fs"
+    assert git_mount["path"] == "/ovgit"
+    params = git_mount["config"]
+    assert params["bucket"] == "my-bucket"
+    assert params["prefix"] == ".ovgit", "same keys as the legacy git S3 backend"
+    assert params["tiered_enabled"] is True
+    assert params["tiered_import_existing"] is True
+    assert params["tiered_table"] == "agfs_git_entries"
+    assert "tiered_import_exclude" not in params
+
+
+def test_agfs_s3_tiered_git_mount_derives_table_from_custom_table():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(tiered={"enabled": True, "table": "tenant_a"}),
+    )
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+
+    assert plugins["s3fs"]["config"]["tiered_table"] == "tenant_a"
+    assert plugins["s3fs_git"]["config"]["tiered_table"] == "tenant_a_git"
+
+
+def test_mount_agfs_backend_mounts_the_git_mount_with_the_s3fs_plugin(tmp_path):
+    class RecordingBinding:
+        def __init__(self):
+            self.mounts = []
+
+        def mount(self, plugin, path, cfg):
+            self.mounts.append((plugin, path))
+
+        def unmount(self, path):
+            pass
+
+    config = AGFSConfig(path=str(tmp_path), backend="s3", s3=_s3_config(tiered={"enabled": True}))
+    binding = RecordingBinding()
+
+    mount_agfs_backend(binding, config)
+
+    assert ("s3fs", "/local") in binding.mounts
+    assert ("s3fs", "/ovgit") in binding.mounts
 
 
 def test_agfs_s3_tiered_storage_settings_are_forwarded_to_ragfs_plugin_config():
