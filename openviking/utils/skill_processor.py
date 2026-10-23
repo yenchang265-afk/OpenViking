@@ -49,6 +49,8 @@ class SkillProcessingPreparation:
     base_path: Optional[Path]
     cleanup_path: Optional[Path]
     privacy_values: Dict[str, str]
+    # True when preparation skipped the privacy LLM scan; processing runs it.
+    privacy_pending: bool = False
 
 
 def validate_skill_name(name: Any) -> str:
@@ -193,6 +195,7 @@ class SkillProcessor:
     ) -> Dict[str, Any]:
         cleanup_path = preparation.cleanup_path
         skill_dict = preparation.skill_dict
+        privacy_values = preparation.privacy_values
         auxiliary_files = preparation.auxiliary_files
         base_path = preparation.base_path
         telemetry = get_current_telemetry()
@@ -202,8 +205,10 @@ class SkillProcessor:
         if owner_lease_ref is None:
             owner_lease_ref = lease_ref
         try:
-            effective_root_uri = self._resolve_skill_root_uri(ctx, target_uri)
-            skill_dir_uri = f"{effective_root_uri}/{skill_dict['name']}"
+            if apply_privacy and preparation.privacy_pending:
+                skill_dict, privacy_values = await self.prepare_skill_privacy(skill_dict, ctx)
+
+            skill_dir_uri = self.skill_dir_uri(ctx, target_uri, skill_dict["name"])
 
             async def acquire_package_lock() -> None:
                 nonlocal lease
@@ -221,7 +226,7 @@ class SkillProcessor:
                 skill_dict = await run_to_completion(
                     lambda: self.apply_skill_privacy(
                         skill_dict,
-                        preparation.privacy_values,
+                        privacy_values,
                         ctx,
                         change_reason=privacy_change_reason,
                         delete_if_empty=False,
@@ -282,9 +287,11 @@ class SkillProcessor:
                     lease,
                     source_path=skill_dict.get("source_path", ""),
                     # The header already summarizes SKILL.md; skip the LLM call.
+                    # Dict input can omit the description, so fall back to the LLM.
                     file_abstracts=(
                         {f"{skill_dir_uri}/SKILL.md": skill_abstract}
                         if summarize_from_header
+                        and str(skill_dict.get("description") or "").strip()
                         else None
                     ),
                 )
@@ -447,6 +454,11 @@ class SkillProcessor:
             normalized["tags"] = SkillProcessor._normalize_list_field(tags)
 
         return normalized
+
+    @classmethod
+    def skill_dir_uri(cls, ctx: RequestContext, target_uri: Optional[str], name: str) -> str:
+        """URI of the package directory for skill ``name`` under ``target_uri``."""
+        return f"{cls._resolve_skill_root_uri(ctx, target_uri)}/{name}"
 
     @staticmethod
     def _resolve_skill_root_uri(ctx: RequestContext, target_uri: Optional[str]) -> str:

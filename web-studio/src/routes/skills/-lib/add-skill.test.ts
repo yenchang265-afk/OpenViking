@@ -26,11 +26,19 @@ it('validates content before adding and sends explicit private or shared targets
   await addNewSkill('shared content', 'agent')
   expect(ovClient.client.post).toHaveBeenNthCalledWith(2, {
     url: '/api/v1/skills',
-    body: { data: 'private content', target_uri: 'viking://~/skills' },
+    body: {
+      data: 'private content',
+      background: true,
+      target_uri: 'viking://~/skills',
+    },
   })
   expect(ovClient.client.post).toHaveBeenNthCalledWith(3, {
     url: '/api/v1/skills',
-    body: { data: 'shared content', target_uri: 'viking://agent/skills' },
+    body: {
+      data: 'shared content',
+      background: true,
+      target_uri: 'viking://agent/skills',
+    },
   })
 })
 

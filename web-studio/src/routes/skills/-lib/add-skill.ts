@@ -40,6 +40,8 @@ export async function addNewSkill(
       url: '/api/v1/skills',
       body: {
         data,
+        // Return the task before the server's privacy scan; the sheet polls it.
+        background: true,
         target_uri:
           scope === 'agent' ? 'viking://agent/skills' : 'viking://~/skills',
       },
