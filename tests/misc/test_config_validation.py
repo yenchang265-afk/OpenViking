@@ -246,6 +246,8 @@ def test_agfs_s3_tiered_storage_settings_are_forwarded_to_ragfs_plugin_config():
                 "table": "tenant_a_entries",
                 "max_connections": 8,
                 "import_existing": True,
+                "gc_interval_secs": 600,
+                "gc_min_age_secs": 120,
             }
         ),
     )
@@ -254,6 +256,8 @@ def test_agfs_s3_tiered_storage_settings_are_forwarded_to_ragfs_plugin_config():
 
     assert plugin_config["tiered_enabled"] is True
     assert plugin_config["tiered_import_existing"] is True
+    assert plugin_config["tiered_gc_interval_secs"] == 600
+    assert plugin_config["tiered_gc_min_age_secs"] == 120
     assert plugin_config["tiered_small_threshold_bytes"] == 2 * 1024 * 1024
     assert plugin_config["tiered_dsn_env"] == "OV_MARIADB_DSN"
     assert plugin_config["tiered_table"] == "tenant_a_entries"
@@ -269,6 +273,8 @@ def test_agfs_s3_tiered_storage_settings_are_forwarded_to_ragfs_plugin_config():
         {"enabled": True, "max_connections": 257},
         {"enabled": True, "table": "entries; DROP TABLE x"},
         {"enabled": True, "dsn_env": ""},
+        {"enabled": True, "gc_interval_secs": -1},
+        {"enabled": True, "gc_min_age_secs": 59},
     ],
 )
 def test_agfs_s3_tiered_storage_rejects_invalid_values(tiered):

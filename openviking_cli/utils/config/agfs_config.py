@@ -67,6 +67,22 @@ class TieredStorageConfig(BaseModel):
         description="MariaDB connection pool size. Unset uses the ragfs default (16).",
     )
 
+    gc_interval_secs: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=7 * 24 * 3600,
+        description="How often unreferenced S3 blobs (left by crashes) are deleted; 0 disables. "
+        "Unset uses the ragfs default (3600).",
+    )
+
+    gc_min_age_secs: Optional[int] = Field(
+        default=None,
+        ge=60,
+        le=7 * 24 * 3600,
+        description="Only blobs unreferenced and older than this are deleted. "
+        "Unset uses the ragfs default (3600).",
+    )
+
     import_existing: bool = Field(
         default=False,
         description="At startup, index objects the bucket held before tiering was enabled "

@@ -1634,6 +1634,8 @@ CachedFileSystem (Redis, optional) → TieredFileSystem → { MariaDB: index + f
 | `table` | str | Index table name (letters, digits, `_`) | unset (`agfs_entries`) |
 | `max_connections` | int | MariaDB connection pool size (1–256) | unset (16) |
 | `import_existing` | bool | At startup, index objects the bucket held before tiering (see below) | `false` |
+| `gc_interval_secs` | int | How often unreferenced S3 blobs left by crashes are deleted; `0` disables | unset (3600) |
+| `gc_min_age_secs` | int | Only delete unreferenced blobs older than this (≥ 60) | unset (3600) |
 
 ```json
 {

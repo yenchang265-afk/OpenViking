@@ -11,10 +11,11 @@
 
 use std::path::Path;
 use std::sync::Arc;
-use std::time::{Duration, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 use async_trait::async_trait;
-use tracing::warn;
+use tokio::task::JoinHandle;
+use tracing::{info, warn};
 
 use crate::core::errors::{Error, Result};
 use crate::core::filesystem::{apply_read_dir_options, FileSystem};
@@ -77,34 +78,34 @@ impl TieredFileSystem {
     /// `min_age` protects blobs whose row is still being written. Returns the
     /// number of blobs deleted.
     pub async fn collect_orphan_blobs(&self, min_age: Duration) -> Result<usize> {
-        // Snapshot references before listing so a blob written in between is
-        // either referenced or younger than `min_age`.
-        let referenced = self.store.blob_keys().await?;
-        let shards = match self.blobs.read_dir(BLOB_ROOT, None, None, None, None).await {
-            Ok(shards) => shards,
-            Err(Error::NotFound(_)) => return Ok(0),
-            Err(error) => return Err(error),
-        };
-        let cutoff = SystemTime::now()
-            .checked_sub(min_age)
-            .unwrap_or(SystemTime::UNIX_EPOCH);
-        let mut deleted = 0;
-        for shard in shards.iter().filter(|shard| shard.is_dir) {
-            let shard_path = format!("{}/{}", BLOB_ROOT, shard.name);
-            let blobs = self
-                .blobs
-                .read_dir(&shard_path, None, None, None, None)
-                .await?;
-            for blob in blobs.iter().filter(|blob| !blob.is_dir) {
-                let key = format!("{}/{}", shard_path, blob.name);
-                if referenced.contains(&key) || blob.mod_time > cutoff {
-                    continue;
+        collect_orphans(self.store.as_ref(), self.blobs.as_ref(), min_age).await
+    }
+
+    /// Run [`Self::collect_orphan_blobs`] every `interval` in the background.
+    ///
+    /// The task holds weak references and stops once this filesystem is
+    /// dropped. Every instance of a deployment may run it: deleting a blob
+    /// another instance already removed is not an error.
+    pub fn spawn_orphan_gc(&self, interval: Duration, min_age: Duration) -> JoinHandle<()> {
+        let store = Arc::downgrade(&self.store);
+        let blobs = Arc::downgrade(&self.blobs);
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(interval).await;
+                let (Some(store), Some(blobs)) = (store.upgrade(), blobs.upgrade()) else {
+                    return;
+                };
+                let started = Instant::now();
+                match collect_orphans(store.as_ref(), blobs.as_ref(), min_age).await {
+                    Ok(deleted) => info!(
+                        deleted,
+                        elapsed_ms = started.elapsed().as_millis() as u64,
+                        "tiered: orphan blob GC finished"
+                    ),
+                    Err(error) => warn!(%error, "tiered: orphan blob GC failed"),
                 }
-                self.blobs.remove(&key).await?;
-                deleted += 1;
             }
-        }
-        Ok(deleted)
+        })
     }
 
     /// Whether the blob backend holds data written before tiering was enabled.
@@ -424,6 +425,47 @@ impl TieredFileSystem {
             }
         }
     }
+}
+
+/// Delete unreferenced blobs under [`BLOB_ROOT`] older than `min_age`.
+async fn collect_orphans(
+    store: &dyn TierStore,
+    blobs: &dyn FileSystem,
+    min_age: Duration,
+) -> Result<usize> {
+    // Snapshot references before listing so a blob written in between is
+    // either referenced or younger than `min_age`.
+    let referenced = store.blob_keys().await?;
+    let shards = match blobs.read_dir(BLOB_ROOT, None, None, None, None).await {
+        Ok(shards) => shards,
+        Err(Error::NotFound(_)) => return Ok(0),
+        Err(error) => return Err(error),
+    };
+    let cutoff = SystemTime::now()
+        .checked_sub(min_age)
+        .unwrap_or(SystemTime::UNIX_EPOCH);
+    let mut deleted = 0;
+    for shard in shards.iter().filter(|shard| shard.is_dir) {
+        let shard_path = format!("{}/{}", BLOB_ROOT, shard.name);
+        let entries = match blobs.read_dir(&shard_path, None, None, None, None).await {
+            Ok(entries) => entries,
+            Err(Error::NotFound(_)) => continue,
+            Err(error) => return Err(error),
+        };
+        for blob in entries.iter().filter(|blob| !blob.is_dir) {
+            let key = format!("{}/{}", shard_path, blob.name);
+            if referenced.contains(&key) || blob.mod_time > cutoff {
+                continue;
+            }
+            match blobs.remove(&key).await {
+                Ok(()) => deleted += 1,
+                // Another instance's GC got there first.
+                Err(Error::NotFound(_)) => {}
+                Err(error) => return Err(error),
+            }
+        }
+    }
+    Ok(deleted)
 }
 
 /// Return `data[offset..offset+size]`, clamped; `size == 0` reads to the end.

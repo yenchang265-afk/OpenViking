@@ -792,6 +792,99 @@ async fn orphan_gc_is_a_no_op_before_any_blob_exists() {
     assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
 }
 
+/// Write an unreferenced blob, as a crash between upload and publish leaves.
+async fn plant_orphan(blobs: &MemFileSystem) {
+    blobs
+        .ensure_parent_dirs("/_blobs/zz/orphan", 0o755)
+        .await
+        .unwrap();
+    blobs
+        .write("/_blobs/zz/orphan", b"lost", 0, WriteFlag::Create)
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn background_gc_deletes_orphans_and_keeps_live_blobs() {
+    let (fs, _, blobs) = setup();
+    fs.write("/live", &large(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
+    plant_orphan(&blobs).await;
+
+    let _gc = fs.spawn_orphan_gc(Duration::from_millis(10), Duration::ZERO);
+    for _ in 0..200 {
+        if blob_keys(&blobs).await.len() == 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+
+    assert_eq!(blob_keys(&blobs).await.len(), 1, "orphan collected");
+    assert_eq!(fs.read("/live", 0, 0).await.unwrap(), large());
+}
+
+#[tokio::test]
+async fn background_gc_stops_when_the_filesystem_is_dropped() {
+    let (fs, store, blobs) = setup();
+    let gc = fs.spawn_orphan_gc(Duration::from_millis(5), Duration::ZERO);
+    drop((fs, store, blobs));
+
+    tokio::time::timeout(Duration::from_secs(2), gc)
+        .await
+        .expect("GC task exits once its filesystem is gone")
+        .unwrap();
+}
+
+#[tokio::test]
+async fn concurrent_gc_runs_delete_each_orphan_once_without_errors() {
+    let (fs, _, blobs) = setup();
+    plant_orphan(&blobs).await;
+
+    let (a, b) = tokio::join!(
+        fs.collect_orphan_blobs(Duration::ZERO),
+        fs.collect_orphan_blobs(Duration::ZERO)
+    );
+
+    assert_eq!(a.unwrap() + b.unwrap(), 1);
+    assert!(blob_keys(&blobs).await.is_empty());
+}
+
+#[test]
+fn settings_gc_defaults_and_bounds() {
+    let on = params(&[("tiered_enabled", ConfigValue::Bool(true))]);
+    let settings = TieredSettings::from_params(&on).unwrap().unwrap();
+    assert_eq!(settings.gc_interval, Some(Duration::from_secs(3600)));
+    assert_eq!(settings.gc_min_age, Duration::from_secs(3600));
+
+    let off = params(&[
+        ("tiered_enabled", ConfigValue::Bool(true)),
+        ("tiered_gc_interval_secs", ConfigValue::Int(0)),
+    ]);
+    assert_eq!(
+        TieredSettings::from_params(&off)
+            .unwrap()
+            .unwrap()
+            .gc_interval,
+        None
+    );
+
+    for (key, value) in [
+        ("tiered_gc_min_age_secs", 59),
+        ("tiered_gc_interval_secs", 8 * 24 * 3600),
+        ("tiered_gc_interval_secs", -1),
+    ] {
+        let map = params(&[
+            ("tiered_enabled", ConfigValue::Bool(true)),
+            (key, ConfigValue::Int(value)),
+        ]);
+        assert!(
+            matches!(TieredSettings::from_params(&map), Err(Error::Config(_))),
+            "{key}={value} should be rejected"
+        );
+    }
+}
+
 fn params(pairs: &[(&str, ConfigValue)]) -> HashMap<String, ConfigValue> {
     pairs
         .iter()

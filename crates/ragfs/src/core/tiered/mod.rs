@@ -17,6 +17,9 @@
 //! | `tiered_table` | `agfs_entries` | index table name |
 //! | `tiered_max_connections` | 16 | SQL pool size |
 //! | `tiered_import_existing` | `false` | index objects written before tiering at mount |
+//! | `tiered_import_exclude` | `[]` | top-level names owned by another mount |
+//! | `tiered_gc_interval_secs` | 3600 | orphan blob GC period; `0` disables it |
+//! | `tiered_gc_min_age_secs` | 3600 | GC only deletes unreferenced blobs older than this |
 
 #[cfg(feature = "tiered")]
 pub mod mariadb;
@@ -28,6 +31,7 @@ mod tests;
 
 use std::collections::HashMap;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tracing::info;
 
@@ -49,6 +53,12 @@ pub const DEFAULT_DSN_ENV: &str = "RAGFS_TIERED_DSN";
 pub const DEFAULT_TABLE: &str = "agfs_entries";
 const DEFAULT_MAX_CONNECTIONS: u32 = 16;
 const MAX_MAX_CONNECTIONS: i64 = 256;
+/// Default orphan GC period and minimum blob age (one hour).
+const DEFAULT_GC_SECS: i64 = 3600;
+/// Upper bound for GC timing settings (one week).
+const MAX_GC_SECS: i64 = 7 * 24 * 3600;
+/// Shortest allowed GC age: blobs younger than this may still be publishing.
+const MIN_GC_MIN_AGE_SECS: i64 = 60;
 
 /// Validated `tiered_*` mount parameters.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -67,6 +77,10 @@ pub struct TieredSettings {
     /// mount's prefix is the bucket root); ignored by the untiered-data guard
     /// and by the import.
     pub import_exclude: Vec<String>,
+    /// How often orphan blobs are collected; `None` disables the background GC.
+    pub gc_interval: Option<Duration>,
+    /// Minimum age of an unreferenced blob before GC deletes it.
+    pub gc_min_age: Duration,
 }
 
 impl TieredSettings {
@@ -108,6 +122,23 @@ impl TieredSettings {
             max_connections: max_connections as u32,
             import_existing: bool_param(params, "tiered_import_existing")?,
             import_exclude: name_list_param(params, "tiered_import_exclude")?,
+            gc_interval: match int_param(
+                params,
+                "tiered_gc_interval_secs",
+                DEFAULT_GC_SECS,
+                0,
+                MAX_GC_SECS,
+            )? {
+                0 => None,
+                secs => Some(Duration::from_secs(secs as u64)),
+            },
+            gc_min_age: Duration::from_secs(int_param(
+                params,
+                "tiered_gc_min_age_secs",
+                DEFAULT_GC_SECS,
+                MIN_GC_MIN_AGE_SECS,
+                MAX_GC_SECS,
+            )? as u64),
         }))
     }
 }
@@ -230,6 +261,9 @@ pub async fn maybe_wrap(
              set tiered_import_existing=true once to index them",
             config.mount_path
         )));
+    }
+    if let Some(interval) = settings.gc_interval {
+        tiered.spawn_orphan_gc(interval, settings.gc_min_age);
     }
     Ok(Box::new(tiered))
 }

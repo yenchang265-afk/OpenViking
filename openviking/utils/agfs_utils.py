@@ -483,7 +483,14 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
     return params
 
 
-_TIERED_KEYS = ("small_threshold_bytes", "dsn_env", "table", "max_connections")
+_TIERED_KEYS = (
+    "small_threshold_bytes",
+    "dsn_env",
+    "table",
+    "max_connections",
+    "gc_interval_secs",
+    "gc_min_age_secs",
+)
 
 
 def _serialize_tiered_params(tiered: Any) -> Dict[str, Any]:

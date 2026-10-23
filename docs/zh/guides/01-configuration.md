@@ -1599,6 +1599,8 @@ CachedFileSystem（Redis，可選）→ TieredFileSystem → { MariaDB：索引 
 | `table` | str | 索引資料表名稱（英數字與 `_`） | 未設定（`agfs_entries`） |
 | `max_connections` | int | MariaDB 連線池大小（1–256） | 未設定（16） |
 | `import_existing` | bool | 啟動時為分層前就存在於 bucket 的物件建立索引（見下文） | `false` |
+| `gc_interval_secs` | int | 定期刪除當機留下、沒被引用的 S3 blob 的間隔；`0` 表示關閉 | 未設定（3600） |
+| `gc_min_age_secs` | int | 只刪除沒被引用且早於此時間的 blob（≥ 60） | 未設定（3600） |
 
 ```json
 {
