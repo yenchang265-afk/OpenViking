@@ -169,6 +169,9 @@ impl MountableFS {
         if let Some(enc) = any.downcast_ref::<EncryptionWrappedFS>() {
             return Self::as_s3fs(enc.inner_fs());
         }
+        if let Some(tiered) = any.downcast_ref::<super::tiered::TieredFileSystem>() {
+            return Self::as_s3fs(tiered.inner_fs());
+        }
         #[cfg(feature = "cache")]
         if let Some(cache) = any.downcast_ref::<CachedFileSystem>() {
             return Self::as_s3fs_ref(cache.inner_fs());
@@ -182,7 +185,12 @@ impl MountableFS {
 
     #[cfg(all(feature = "s3", feature = "cache"))]
     fn as_s3fs_ref(fs: &dyn FileSystem) -> Option<&crate::plugins::S3FileSystem> {
-        (fs as &dyn std::any::Any).downcast_ref::<crate::plugins::S3FileSystem>()
+        let any = fs as &dyn std::any::Any;
+        // A tiered mount sits between the cache and the s3fs plugin.
+        if let Some(tiered) = any.downcast_ref::<super::tiered::TieredFileSystem>() {
+            return Self::as_s3fs(tiered.inner_fs());
+        }
+        any.downcast_ref::<crate::plugins::S3FileSystem>()
     }
 
     fn as_queuefs_ref(fs: &dyn FileSystem) -> Option<&QueueFileSystem> {
@@ -366,6 +374,13 @@ impl MountableFS {
 
         // Validate configuration
         plugin.validate(&config).await?;
+        if config.backups.is_some()
+            && super::tiered::TieredSettings::from_params(&config.params)?.is_some()
+        {
+            return Err(Error::config(
+                "tiered storage does not support multi-write (backups) mounts",
+            ));
+        }
 
         let (enc_root_key, enc_provider_type) = self.get_encryption_config().await;
         #[cfg(feature = "cache")]
@@ -381,8 +396,15 @@ impl MountableFS {
                 // Control plugins (queuefs, serverinfofs) are dynamic virtual filesystems; never
                 // cache or encrypt them.
                 let raw = plugin.initialize(config.clone()).await?;
-                let raw_arc: Arc<dyn FileSystem> = Arc::from(raw);
                 let is_control_plugin = matches!(config.name.as_str(), "queuefs" | "serverinfofs");
+                // Size tiering sits directly on the plugin so the shape probe, cache,
+                // encryption and raw-copy paths all see one index-backed filesystem.
+                let raw = if is_control_plugin {
+                    raw
+                } else {
+                    super::tiered::maybe_wrap(raw, &config).await?
+                };
+                let raw_arc: Arc<dyn FileSystem> = Arc::from(raw);
                 if !is_control_plugin {
                     ensure_backend_shape(
                         &raw_arc,

@@ -22,6 +22,57 @@ class DirectoryMarkerMode(str, Enum):
     NONEMPTY = "nonempty"
 
 
+class TieredStorageConfig(BaseModel):
+    """Size-tiered storage for the S3 backend.
+
+    Files smaller than ``small_threshold_bytes`` and the path index live in
+    MariaDB/MySQL; only larger files become S3 objects. This keeps object
+    stores such as MinIO free of small objects while users still upload
+    files of any size.
+    """
+
+    enabled: bool = Field(
+        default=False,
+        description="Keep small files and the path index in MariaDB/MySQL; "
+        "only files >= small_threshold_bytes are written to S3.",
+    )
+
+    small_threshold_bytes: Optional[int] = Field(
+        default=None,
+        gt=0,
+        le=8 * 1024 * 1024,
+        description="Files smaller than this stay in MariaDB. Unset uses the ragfs default (1 MiB).",
+    )
+
+    dsn_env: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        description="Environment variable holding the DSN "
+        "(mysql://user:pass@host:3306/db). Unset uses RAGFS_TIERED_DSN. "
+        "The DSN itself is never stored in config.",
+    )
+
+    table: Optional[str] = Field(
+        default=None,
+        pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,63}$",
+        description="Index table name. Unset uses agfs_entries.",
+    )
+
+    max_connections: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=256,
+        description="MariaDB connection pool size. Unset uses the ragfs default (16).",
+    )
+
+    import_existing: bool = Field(
+        default=False,
+        description="At startup, index objects the bucket held before tiering was enabled "
+        "(small files move into MariaDB, large files are indexed in place). Safe to re-run; "
+        "turn it off once migration is done, since every startup lists the whole bucket.",
+    )
+
+
 class S3Config(BaseModel):
     """Configuration for S3 backend."""
 
@@ -195,6 +246,11 @@ class S3Config(BaseModel):
 
     stat_cache_ttl: Optional[int] = Field(
         default=None, ge=0, description="Stat cache TTL in seconds. s3fs default: 60."
+    )
+
+    tiered: TieredStorageConfig = Field(
+        default_factory=TieredStorageConfig,
+        description="Size-tiered storage: small files in MariaDB, large files in S3.",
     )
 
     def validate_config(self):

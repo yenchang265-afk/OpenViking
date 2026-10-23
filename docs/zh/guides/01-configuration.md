@@ -1484,6 +1484,7 @@ Redis 名稱空間。
 | `auto_detect_content_type` | bool | 上傳時根據 object key / 檔名字尾自動推斷 MIME 型別，並寫入 S3 物件的 `Content-Type` | false |
 | `directory_marker_mode` | str | 目錄 marker 的持久化方式，可選 `none`、`empty`、`nonempty` | `"empty"` |
 | `normalize_encoding_chars` | str | 需要在 S3 object key 中轉義為 `!HH` 十六進位制位元組的字元集合；空字串表示關閉編碼 | `"?#%+@"` |
+| `tiered` | object | 依大小分層儲存：小檔放 MariaDB、大檔放 S3，見[依大小分層儲存](#size-tiered-storage) | 關閉 |
 
 `directory_marker_mode` 用來控制 RAGFS 在 S3 中如何落目錄物件：
 
@@ -1579,6 +1580,61 @@ Redis 名稱空間。
 ```
 
 </details>
+
+##### 依大小分層儲存 {#size-tiered-storage}
+
+物件儲存對每個物件都有固定成本。MinIO 的每個物件都會在其 erasure set 的每顆磁碟寫入中繼資料，大量小物件會造成 inode 壓力、列表變慢、修復（heal）時間變長，因此維運團隊常要求物件至少 1 MiB。但使用者經常上傳小檔（程式碼、詞彙表、領域筆記），OpenViking 本身也會在每個目錄寫入很小的 `.abstract.md`、`.overview.md`、`.meta.json`、`.relations.json`。
+
+啟用 `tiered.enabled` 後，RAGFS 會把所有小於 `small_threshold_bytes` 的檔案**以及路徑索引**存進 MariaDB（或 MySQL），只有較大的檔案才寫入 S3。使用者仍可上傳任意大小的檔案，而 bucket 永遠不會收到小於門檻的物件。
+
+```
+CachedFileSystem（Redis，可選）→ TieredFileSystem → { MariaDB：索引 + 小於 1 MiB 的檔案 | S3：≥ 1 MiB 的檔案 }
+```
+
+| 欄位 | 型別 | 說明 | 預設值 |
+|------|------|------|--------|
+| `enabled` | bool | 為 S3 掛載啟用分層 | `false` |
+| `small_threshold_bytes` | int | 小於此大小的檔案留在 MariaDB（上限 8 MiB） | 未設定（1 MiB） |
+| `dsn_env` | str | 存放 DSN `mysql://user:pass@host:3306/db` 的環境變數名稱 | 未設定（`RAGFS_TIERED_DSN`） |
+| `table` | str | 索引資料表名稱（英數字與 `_`） | 未設定（`agfs_entries`） |
+| `max_connections` | int | MariaDB 連線池大小（1–256） | 未設定（16） |
+| `import_existing` | bool | 啟動時為分層前就存在於 bucket 的物件建立索引（見下文） | `false` |
+
+```json
+{
+  "storage": {
+    "agfs": {
+      "backend": "s3",
+      "s3": {
+        "bucket": "openviking",
+        "endpoint": "http://minio:9000",
+        "region": "us-east-1",
+        "access_key": "${S3_ACCESS_KEY}",
+        "secret_key": "${S3_SECRET_KEY}",
+        "directory_marker_mode": "none",
+        "tiered": { "enabled": true }
+      }
+    }
+  }
+}
+```
+
+啟動服務時在環境變數中提供 DSN，例如 `RAGFS_TIERED_DSN=mysql://openviking:<password>@mariadb:3306/openviking`。DSN 只從環境變數讀取，不會寫進 `ov.conf`。若要強制 TLS，加上 `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem`。資料表會在首次啟動時建立。若啟用了分層但環境變數不存在，掛載會在啟動時直接失敗，不會悄悄退回未分層的儲存。compose 檔內附 `mariadb` sidecar：`docker compose --profile tiered up -d mariadb`。
+
+運作方式：
+
+- **大檔使用不可變的 blob key。** 大檔存在 bucket 的 `_blobs/<xx>/<uuid>` 下，由 MariaDB 記錄每個路徑對應的 key。rename、move、replace 都只更新資料列，不做 S3 複製。
+- **MariaDB 是唯一的事實來源。** 大檔寫入順序：先上傳 blob，再更新資料列，最後刪除舊 blob。刪除順序：先刪資料列，再刪 blob。當機最多留下沒被引用的 blob，不會出現指向不存在內容的路徑。
+- **目錄列表來自 MariaDB，** 所以 `ls`、`stat`、`tree` 不會呼叫 S3 LIST。
+- 請將 `directory_marker_mode` 設為 `none`。目錄已存在 MariaDB，marker 物件只會多出零位元組物件。
+
+MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（MariaDB 預設值）、`innodb_file_per_table=ON`，以及對該資料庫具備 `CREATE, SELECT, INSERT, UPDATE, DELETE` 權限的使用者。請將 MariaDB 與 bucket 一起備份；還原時多出沒被引用的 blob 是安全的。
+
+設定 Redis 快取（`cache.provider = "redis"`）時，快取會包在分層掛載外層，常用的小檔與目錄列表直接由 Redis 回應。請讓快取策略的 `max_file_size` 接近分層門檻，避免 Redis 存放數 MB 的值。
+
+**現有 bucket。** 若索引是空的但 bucket 已有物件，掛載會拒絕啟動，現有檔案不會悄悄從視圖中消失。遷移時，只需在一次啟動中設定 `import_existing: true`：小檔會複製進 MariaDB 並刪除原物件；大檔則就地建立索引，資料列直接指向原本的物件 key，不做任何複製。匯入中途當機後可以安全地重跑。完成後請關閉此選項，因為每次執行都會列出整個 bucket。
+
+限制：分層不支援 multi-write（`backups`）掛載。
 
 #### vectordb
 

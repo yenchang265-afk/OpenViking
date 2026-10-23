@@ -160,6 +160,66 @@ def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):
         _s3_config(**overrides)
 
 
+def test_agfs_s3_tiered_storage_is_off_by_default():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config())
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert not any(key.startswith("tiered_") for key in plugin_config)
+
+
+def test_agfs_s3_tiered_storage_enabled_leaves_defaults_to_ragfs():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config(tiered={"enabled": True}))
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert {k: v for k, v in plugin_config.items() if k.startswith("tiered_")} == {
+        "tiered_enabled": True
+    }
+
+
+def test_agfs_s3_tiered_storage_settings_are_forwarded_to_ragfs_plugin_config():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(
+            tiered={
+                "enabled": True,
+                "small_threshold_bytes": 2 * 1024 * 1024,
+                "dsn_env": "OV_MARIADB_DSN",
+                "table": "tenant_a_entries",
+                "max_connections": 8,
+                "import_existing": True,
+            }
+        ),
+    )
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert plugin_config["tiered_enabled"] is True
+    assert plugin_config["tiered_import_existing"] is True
+    assert plugin_config["tiered_small_threshold_bytes"] == 2 * 1024 * 1024
+    assert plugin_config["tiered_dsn_env"] == "OV_MARIADB_DSN"
+    assert plugin_config["tiered_table"] == "tenant_a_entries"
+    assert plugin_config["tiered_max_connections"] == 8
+
+
+@pytest.mark.parametrize(
+    "tiered",
+    [
+        {"enabled": True, "small_threshold_bytes": 0},
+        {"enabled": True, "small_threshold_bytes": 8 * 1024 * 1024 + 1},
+        {"enabled": True, "max_connections": 0},
+        {"enabled": True, "max_connections": 257},
+        {"enabled": True, "table": "entries; DROP TABLE x"},
+        {"enabled": True, "dsn_env": ""},
+    ],
+)
+def test_agfs_s3_tiered_storage_rejects_invalid_values(tiered):
+    with pytest.raises(ValueError):
+        _s3_config(tiered=tiered)
+
+
 _S3_RESILIENCE_SETTINGS = {
     "connect_timeout_ms": 2_000,
     "read_timeout_ms": 10_000,

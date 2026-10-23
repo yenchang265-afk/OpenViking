@@ -454,6 +454,28 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
         value = _get_config_value(s3_config, key)
         if value is not None:
             params[key] = value
+    params.update(_serialize_tiered_params(_get_config_value(s3_config, "tiered")))
+    return params
+
+
+_TIERED_KEYS = ("small_threshold_bytes", "dsn_env", "table", "max_connections")
+
+
+def _serialize_tiered_params(tiered: Any) -> Dict[str, Any]:
+    """Serialize size-tiered storage config into ``tiered_*`` mount params.
+
+    Nothing is emitted unless tiering is enabled, and unset values are left to
+    the ragfs defaults.
+    """
+    if tiered is None or not _get_config_value(tiered, "enabled", False):
+        return {}
+    params: Dict[str, Any] = {"tiered_enabled": True}
+    for key in _TIERED_KEYS:
+        value = _get_config_value(tiered, key)
+        if value is not None:
+            params[f"tiered_{key}"] = value
+    if _get_config_value(tiered, "import_existing", False):
+        params["tiered_import_existing"] = True
     return params
 
 

@@ -13,9 +13,10 @@ name = "ragfs_python"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["extension-module", "s3"]
+default = ["extension-module", "s3", "tiered"]
 extension-module = ["pyo3/extension-module"]
 s3 = ["ragfs/s3"]
+tiered = ["ragfs/tiered"]
 
 [dependencies]
 ragfs = { path = "../ragfs", features = ["cache"] }
