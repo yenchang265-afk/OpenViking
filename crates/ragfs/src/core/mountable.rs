@@ -852,7 +852,7 @@ impl MountableFS {
 }
 
 #[cfg(feature = "cache")]
-struct ArcFileSystem(Arc<dyn FileSystem>);
+pub(crate) struct ArcFileSystem(pub(crate) Arc<dyn FileSystem>);
 
 #[cfg(feature = "cache")]
 #[async_trait]

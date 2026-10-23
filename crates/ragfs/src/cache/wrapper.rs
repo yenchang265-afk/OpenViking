@@ -40,8 +40,6 @@ pub struct CachedFileSystem {
     operation_lock: RwLock<()>,
     inflight: Mutex<HashMap<String, Arc<Mutex<()>>>>,
     bypass_scopes: RwLock<Vec<String>>,
-    generation_epoch: u64,
-    generations: RwLock<HashMap<String, u64>>,
 }
 
 impl CachedFileSystem {
@@ -70,8 +68,6 @@ impl CachedFileSystem {
             operation_lock: RwLock::new(()),
             inflight: Mutex::new(HashMap::new()),
             bypass_scopes: RwLock::new(Vec::new()),
-            generation_epoch: nonzero_random_u64(),
-            generations: RwLock::new(HashMap::new()),
         }
     }
 
@@ -509,17 +505,16 @@ impl CachedFileSystem {
 
     async fn current_generations(&self, keys: &[String]) -> CacheResult<Vec<u64>> {
         let provider_values = self.cache_batch_get(keys).await?;
-        let local_generations = self.generations.read().await;
         let mut values = Vec::with_capacity(keys.len());
         let mut missing = Vec::new();
 
         for (key, provider_value) in keys.iter().zip(provider_values) {
             let value = match provider_value {
                 None => {
-                    let value = local_generations
-                        .get(key)
-                        .copied()
-                        .unwrap_or(self.generation_epoch);
+                    // An expired or evicted key must restart at a fresh random value.
+                    // Restoring a remembered value would let a later bump reproduce a
+                    // generation that surviving entries already recorded.
+                    let value = nonzero_random_u64();
                     missing.push((key.clone(), value));
                     value
                 }
@@ -535,14 +530,6 @@ impl CachedFileSystem {
                 }
             };
             values.push(value);
-        }
-        drop(local_generations);
-
-        {
-            let mut local_generations = self.generations.write().await;
-            for (key, value) in keys.iter().zip(values.iter()) {
-                local_generations.insert(key.clone(), *value);
-            }
         }
 
         self.put_missing_generations(missing).await;
@@ -658,7 +645,6 @@ impl CachedFileSystem {
             }
         };
         let next = current.wrapping_add(1);
-        self.generations.write().await.insert(key.clone(), next);
         if self
             .cache_put(&key, Bytes::copy_from_slice(&next.to_be_bytes()), path)
             .await
@@ -1506,5 +1492,64 @@ mod tests {
         assert_eq!(snapshot.operation(CacheOperation::Read), counts(0, 0, 0));
         assert_eq!(snapshot.read_dir_hits, 3);
         assert_eq!(snapshot.file_misses, 1);
+    }
+
+    /// A generation key that expires (or is evicted) must never be restored to an
+    /// old value: a later bump would then reproduce a generation some surviving
+    /// cache entry already recorded, and that entry would validate again.
+    #[tokio::test]
+    async fn lost_generation_key_never_revalidates_deleted_subtree() {
+        use crate::core::mountable::ArcFileSystem;
+
+        let backend: Arc<dyn FileSystem> = Arc::new(MemFileSystem::new());
+        backend.mkdir("/p", 0o755).await.unwrap();
+        backend
+            .write("/p/x", b"v1", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        backend
+            .write("/p/y", b"y", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        let runtime = CacheRuntime::memory();
+        let instance = || {
+            CachedFileSystem::with_runtime(
+                Box::new(ArcFileSystem(backend.clone())),
+                runtime.clone(),
+                "generation-loss-test",
+                CachePolicy::default(),
+            )
+        };
+        let (a, b, c) = (instance(), instance(), instance());
+
+        // C remembers the current generation of /p.
+        c.read("/p/x", 0, 0).await.unwrap();
+        // A deletes the subtree (one bump of /p); it is recreated without further
+        // bumps, and B caches the new content under the bumped generation.
+        a.remove_all("/p").await.unwrap();
+        backend.mkdir("/p", 0o755).await.unwrap();
+        backend
+            .write("/p/x", b"v2", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        backend
+            .write("/p/y", b"y", 0, WriteFlag::Create)
+            .await
+            .unwrap();
+        assert_eq!(b.read("/p/x", 0, 0).await.unwrap(), b"v2");
+
+        // The /p generation key expires while B's entry for /p/x survives.
+        runtime.del(&[c.generation_key("/p")]).await.unwrap();
+        // C touches the subtree again, then A deletes it.
+        c.read("/p/y", 0, 0).await.unwrap();
+        a.remove_all("/p").await.unwrap();
+
+        assert!(
+            matches!(
+                b.read("/p/x", 0, 0).await,
+                Err(crate::core::Error::NotFound(_))
+            ),
+            "B must not serve content deleted after the generation key was lost"
+        );
     }
 }
