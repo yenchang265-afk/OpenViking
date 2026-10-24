@@ -1,7 +1,8 @@
 """Finalize guard when upstream pipeline jobs fail."""
 
 import pytest
-from vikingbot.compile.pipeline import check_final_inputs
+
+from openviking.compile.pipeline import check_final_inputs
 
 
 def test_no_failures_leaves_warnings_untouched():

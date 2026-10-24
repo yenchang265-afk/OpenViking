@@ -911,19 +911,17 @@ VLM 的 `model` 填寫對應的方舟模型 endpoint ID。`video_fps` 僅用於�
 
 媒體處理會把檔案內容傳送給所配置的外部 provider。停用響應儲存和 best-effort 刪除可以降低非預期留存風險，但不能替代 provider 自身的隱私與留存控制；上傳檔案未顯式指定過期時間，其保留週期由方舟的預設策略決定。方舟 Files 的儲存/處理以及 Responses 的模型 token 可能產生費用；啟用前請確認 provider 的隱私、留存和計費條款。詳見火山方舟官方[音訊理解文件](https://docs.volcengine.com/docs/82379/2377589?lang=zh)和[影片理解文件](https://docs.volcengine.com/docs/82379/1895586?lang=zh)。
 
-### bot.compile
+### compile_api
 
-配置單個 Resource Compile 任務各階段的併發工作數，適用於直接模型呼叫和 agent 執行：
+Compile 在 OpenViking 伺服器內作為持久佇列工作執行，與 `add_resource` 相同；被重啟中斷的任務會從頭重新執行。配置單個 Resource Compile 任務各階段的併發工作數，適用於直接模型呼叫和 agent 轉換：
 
 ```json
 {
-  "bot": {
-    "compile": {
-      "map_concurrency": 8,
-      "shuffle_concurrency": 4,
-      "shuffle_batch_size": 4,
-      "reduce_concurrency": 6
-    }
+  "compile_api": {
+    "map_concurrency": 8,
+    "shuffle_concurrency": 4,
+    "shuffle_batch_size": 4,
+    "reduce_concurrency": 6
   }
 }
 ```
@@ -934,10 +932,11 @@ VLM 的 `model` 填寫對應的方舟模型 endpoint ID。`video_fps` 僅用於�
 | `shuffle_concurrency` | 繼承 `vlm.max_concurrent` | Shuffle 路由工作及 embedding 批次併發數 |
 | `shuffle_batch_size` | `4` | 每次 Shuffle 路由請求的主記錄數上限；與併發數、字元軟預算獨立 |
 | `reduce_concurrency` | 繼承 `vlm.max_concurrent` | Reduce 工作併發數；同路徑候選的最終 merge 複用此值 |
+| `max_active_tasks_per_user` | `10` | 每個使用者允許的待執行或執行中 Compile 任務數，超出返回 `429` |
 
-三個併發配置項必須為正整數；省略或設為 `null` 時繼承預設值。`shuffle_batch_size` 必須為正整數，省略時為 `4`，不接受 `null`。路由逐條儲存合法結果，僅失敗記錄重新組批重試，最後一次降為單條；每條記錄最多嘗試三輪。修改後需重啟 VikingBot 服務。一個 VikingBot 服務內的所有 Compile 任務仍共享 `vlm.max_concurrent` 限制的模型請求容量，因此提進階段併發不會突破這一總上限。Embedding 請求另受 embedding 服務的併發限制。恢復任務預設使用相同的 reduce 配置，顯式 `--concurrency` 可覆蓋恢復併發數。
+三個併發配置項必須為正整數；省略或設為 `null` 時繼承預設值。`shuffle_batch_size` 必須為正整數，省略時為 `4`。路由逐條儲存合法結果，僅失敗記錄重新組批重試，最後一次降為單條；每條記錄最多嘗試三輪。修改後需重啟伺服器。同一伺服器內的所有 Compile 任務共享 `vlm.max_concurrent` 限制的模型請求容量，因此提高階段併發不會突破這一總上限。Embedding 請求另受 embedding 服務的併發限制。`queue_workers.external_task.max_concurrent` 控制同時執行的 Compile 任務數。
 
-Compile 繼承模型的 thinking 和 reasoning 配置。模型請求使用有效模型超時配置（`bot.agents.timeout` 或繼承的 `vlm.timeout`）。
+Compile 使用帳號的 `vlm` 模型，並繼承其 thinking、reasoning 和超時配置。原 `bot.compile` 配置區塊已不再生效。
 
 ### query_planner
 

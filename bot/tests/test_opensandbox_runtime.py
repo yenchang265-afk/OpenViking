@@ -200,22 +200,6 @@ async def test_binary_files_use_remote_api_and_sdk_errors_are_reported(tmp_path)
     assert "Exit code: 1" in output
 
 
-@pytest.mark.asyncio
-async def test_compile_remote_state_handles_missing_files_only(tmp_path):
-    from opensandbox.exceptions import SandboxApiException
-    from vikingbot.compile.pipeline_io import TaskFiles
-
-    error = SandboxApiException(status_code=500)
-    read = AsyncMock(side_effect=[SandboxApiException(status_code=404), error])
-    backend = OpenSandboxBackend(configured(tmp_path).sandbox, "shared", tmp_path / "work")
-    backend._sandbox = SimpleNamespace(files=SimpleNamespace(read_bytes_stream=read))
-    files = TaskFiles(backend)
-    assert await files.get("runtime") is None
-    with pytest.raises(SandboxApiException) as caught:
-        await files.get("finalize")
-    assert caught.value is error
-
-
 def probe_manager():
     files = {}
 
@@ -474,10 +458,6 @@ def test_gateway_preflights_before_serving_and_always_cleans_up(tmp_path, monkey
     )
     monkeypatch.setattr("uvicorn.Server", lambda _: server)
     monkeypatch.setattr("vikingbot.sandbox.runtime.OpenSandboxRuntime", lambda _: runtime)
-    monkeypatch.setattr(
-        "vikingbot.compile.service.BotCompileService",
-        lambda **_: SimpleNamespace(start=AsyncMock(), close=AsyncMock()),
-    )
     if fail:
         with pytest.raises(typer.Exit):
             commands.gateway(port=None, host="127.0.0.1", verbose=False, config_path=None)

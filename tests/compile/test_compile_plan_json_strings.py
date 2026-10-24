@@ -4,7 +4,8 @@ import json
 
 import pytest
 from pydantic import ValidationError
-from vikingbot.compile.plan import Contract, PlanProposal, ReviewDecision, Routing, parse_plan
+
+from openviking.compile.plan import Contract, PlanProposal, ReviewDecision, Routing, parse_plan
 
 CONTRACT = {
     "extract": {"instructions": "Extract facts.", "output": "records", "execution": "direct"},

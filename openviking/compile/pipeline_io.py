@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 import json
 import posixpath
-import shlex
 import time
 import uuid
 from collections import Counter
@@ -16,15 +15,14 @@ import json_repair
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
+from openviking.compile.hashing import digest
+from openviking.compile.models import COMPILE_STAGING_ROOT
+from openviking.compile.results import FileResponse, RouteBatchResponse
+from openviking.compile.schemas import result_schema
+from openviking.compile.skill_resources import EvidenceReader
 from openviking.models.model_error import ModelError
 from openviking.utils.token_estimation import estimate_text_tokens
 from openviking_cli.exceptions import NotFoundError
-from vikingbot.compile.hashing import digest
-from vikingbot.compile.models import COMPILE_STAGING_ROOT
-from vikingbot.compile.results import FileResponse, RouteBatchResponse
-from vikingbot.compile.schemas import result_schema
-from vikingbot.compile.skill_resources import EvidenceReader
-from vikingbot.utils.helpers import cal_str_tokens
 
 T = TypeVar("T")
 R = TypeVar("R", bound=BaseModel)
@@ -111,10 +109,9 @@ class ModelCallLimitError(ModelCallError):
 
 
 class TaskFiles:
-    """Small independently replaced shards, accessed through the sandbox's file API.
+    """Small independently replaced shards in the task's scratch directory.
 
-    The task owns these paths. Same-directory rename publishes a complete JSON file;
-    host-accessible sandboxes use native replacement, remote ones use exec/mv.
+    The task owns these paths. Same-directory rename publishes a complete JSON file.
     A missing or interrupted cache shard is a cache miss, never successful work.
     """
 
@@ -127,17 +124,10 @@ class TaskFiles:
         temporary = reference + "." + uuid.uuid4().hex + ".tmp"
         await self.sandbox.write_file(temporary, json.dumps(value, ensure_ascii=False))
         local_path = self.sandbox.local_file_path(temporary)
-        if local_path is not None:
-            # Both names share the sandbox-validated parent; only the suffix differs.
-            await asyncio.to_thread(
-                local_path.replace, local_path.with_name(posixpath.basename(reference))
-            )
-            return reference
-        paths = [
-            shlex.quote(posixpath.join(self.sandbox.sandbox_cwd, p)) for p in (temporary, reference)
-        ]
-        output = await self.sandbox.execute(f"mv -f -- {paths[0]} {paths[1]}")
-        self.sandbox._ensure_command_succeeded(output, "Compile state publication")
+        # Both names share the scratch-validated parent; only the suffix differs.
+        await asyncio.to_thread(
+            local_path.replace, local_path.with_name(posixpath.basename(reference))
+        )
         return reference
 
     async def get(self, path: str) -> Any:
@@ -300,8 +290,8 @@ class JsonModel:
             if self.resources and stage not in {"plan", "review", "route", "combine"}
             else 0,
         }
-        self.metrics["estimated_input_tokens"] += cal_str_tokens(
-            json.dumps([messages, tools], ensure_ascii=False), text_type="mixed"
+        self.metrics["estimated_input_tokens"] += estimate_text_tokens(
+            json.dumps([messages, tools], ensure_ascii=False)
         )
         try:
             async with asyncio.timeout(seconds):

@@ -1,12 +1,14 @@
 # Agent Runtime API
 
-Agent Runtime Server 負責執行 Agent 任務，當前支援 Compile。應用通過 OpenViking 的 Compile API 提交任務，OpenViking 負責校驗請求、持久化任務和管理生命週期，再呼叫 Runtime 執行介面；內建 VikingBot 也實現了同一執行協議，可用於本地部署。
+應用通過 OpenViking 的 Compile API 提交 Compile 任務。OpenViking 校驗請求，把任務持久化為佇列工作，並在伺服器程序內執行，因此中斷的任務會在重啟後恢復。
 
 **程式碼入口**：
 
 - `openviking/server/routers/compile.py` - 建立 Compile 任務
 - `openviking/server/routers/tasks.py` - 查詢和取消任務
-- `openviking/service/compile_service.py` - Runtime 呼叫與任務狀態收斂
+- `openviking/service/compile_service.py` - 請求校驗與任務執行
+- `openviking/service/external_task_service.py` - 基於持久佇列的任務生命週期
+- `openviking/compile/` - Skill 流水線（plan、map、shuffle、reduce、finalize）
 
 ## Compile 任務介面
 
@@ -15,14 +17,19 @@ Agent Runtime Server 負責執行 Agent 任務，當前支援 Compile。應用�
 | 欄位 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
 | `from` | string[] | 是 | - | 一個或多個來源目錄 |
-| `to` | string | 是 | - | 目標 Resource 或 Memory 目錄，或受支援的 Skill namespace |
+| `to` | string | 是 | - | 目標 Resource 目錄或受支援的 Skill namespace；Memory 目錄請使用 `--skill memory` |
 | `skill` | string | 是 | - | Skill 目錄或其 `SKILL.md` URI |
 | `instruction` | string | 否 | Skill 驅動的預設值 | 本次 Compile 的補充指令 |
-| `args` | object | 否 | - | 執行端擴充引數；`model_name` 可傳模型 Endpoint ID |
+| `args` | object | 否 | - | 可選的 `last_compile_time` 與 `wiki_links`（見下表） |
 
-`args` 整體可省略，模型 Endpoint ID 也不是頂層欄位。需要指定模型時使用 `args.model_name`；不傳時由執行端使用其預設模型配置。
+`args` 只接受以下鍵，其他鍵返回 `400 INVALID_ARGUMENT`：
 
-下面的模型選擇示例要求執行端支援 `args.model_name`。使用內建 VikingBot 時，省略 `args` 和 CLI 的 `--args`，它不接受非空擴充引數。Python 示例使用 `SyncHTTPClient`；使用 `AsyncHTTPClient` 時需 `await compile()`。
+| 鍵 | 型別 | 說明 |
+|----|------|------|
+| `last_compile_time` | ISO 8601 時間或 Unix 秒 | 增量編譯：只處理在此時間點及之後修改的來源檔案；沒有更新的檔案時，任務不呼叫模型也不寫入，直接完成 |
+| `wiki_links` | boolean | 按實際 Markdown 路徑重建 resource 的 `index.md` |
+
+Compile 使用帳號配置的 `vlm` 模型。Python 示例使用 `SyncHTTPClient`；使用 `AsyncHTTPClient` 時需 `await compile()`。
 
 **HTTP API**
 
@@ -40,7 +47,7 @@ curl -X POST http://localhost:1933/api/v1/compile \
     "to": "viking://resources/research-wiki",
     "skill": "viking://user/default/skills/research-compiler",
     "instruction": "追蹤歷史進展，並保留支撐證據。",
-    "args": {"model_name": "your-model-endpoint-id"}
+    "args": {"wiki_links": true}
   }'
 ```
 
@@ -67,7 +74,7 @@ ov compile \
   --to viking://resources/research-wiki \
   --skill viking://user/default/skills/research-compiler \
   --instruction "追蹤歷史進展，並保留支撐證據。" \
-  --args '{"model_name":"your-model-endpoint-id"}'
+  --args '{"wiki_links":true}'
 ```
 
 `--args` 必須是 JSON object。命令提交後立即返回 Task ID。
@@ -83,7 +90,7 @@ task = client.compile(
     ["viking://resources/research"],
     "viking://resources/research-wiki",
     "viking://user/default/skills/research-compiler",
-    {"args": {"model_name": "your-model-endpoint-id"}},
+    {"args": {"wiki_links": True}},
 )
 ```
 
@@ -92,7 +99,7 @@ const task = await client.compile(
   ["viking://resources/research"],
   "viking://resources/research-wiki",
   "viking://user/default/skills/research-compiler",
-  { args: { model_name: "your-model-endpoint-id" } },
+  { args: { wiki_links: true } },
 );
 ```
 
@@ -103,7 +110,7 @@ task, err := client.Compile(
     "viking://resources/research-wiki",
     "viking://user/default/skills/research-compiler",
     &openviking.CompileOptions{
-        Args: map[string]any{"model_name": "your-model-endpoint-id"},
+        Args: map[string]any{"wiki_links": true},
     },
 )
 ```
@@ -131,15 +138,15 @@ GET /api/v1/compile/capabilities
 
 | 欄位 | 含義 |
 |------|------|
-| `configured` | 是否已配置 Compile 執行端點 |
-| `can_create` | 當前認證上下文是否允許向該端點提交任務 |
-| `reason_code` | 未配置端點時為 `NOT_CONFIGURED`；遠端端點需要可轉發的 OV API Key 時為 `API_KEY_REQUIRED`；其他情況為 `null` |
+| `configured` | 伺服器的 Compile 執行環境是否已初始化 |
+| `can_create` | 當前認證上下文是否可以提交 Compile 任務 |
+| `reason_code` | 執行環境尚未初始化時為 `NOT_CONFIGURED`；其他情況為 `null` |
 
-配置不可用時，在結果中返回 `can_create: false`，不會因此返回 HTTP 錯誤。此介面僅檢查配置和憑證，不探測執行後端的健康狀態，也不校驗具體 Compile 請求。
+執行環境不可用時，在結果中返回 `can_create: false`，不會因此返回 HTTP 錯誤。此介面不探測模型健康狀態，也不校驗具體 Compile 請求。
 
 ### Compile 路由向量
 
-`POST /api/v1/compile/embeddings` 使用當前認證上下文生成臨時路由文本的向量，不建立索引或保留文本。
+`POST /api/v1/compile/embeddings` 使用當前認證上下文生成臨時路由文本的向量，不建立索引或保留文本。Compile 本身在程序內呼叫同一邏輯。
 
 請求體：必填 `target_uri`（已存在且有讀取許可權的資源或 Skill 名稱空間目標）；可選 `texts`（字串陣列，預設 `[]`，最多 32 條，每條 1–1024 個字元且不能僅含空白）；可選 `expected_model`（模型指紋，非空值必須與當前模型一致）。
 
@@ -190,12 +197,12 @@ POST /api/v1/tasks/{task_id}/cancel
 ov task cancel cmp_01abc
 ```
 
-任務會先進入 `cancelling`，待當前程序內工作和清理完成後進入 `cancelled`；已經完成的寫入不會回滾。重複取消已經 `cancelled` 的任務是冪等的。
+任務會先進入 `cancelling`，待當前程序內工作和清理完成後進入 `cancelled`。Compile 在寫入目標前會檢查取消，因此已取消的任務通常不會寫入；已經完成的寫入不會回滾。重複取消已經 `cancelled` 的任務是冪等的。
 
 | Status | 常見 Stage |
 |--------|------------|
 | `pending` | `queued` |
-| `running` | 執行端返回的執行 Stage，例如 `agent`、`writing` |
+| `running` | `running`、`collecting_context`、`pipeline`、`writing`；memory 模式為 `consolidating` |
 | `cancelling` | 收斂當前程序內工作和清理資源 |
 | `completed` | `completed`、`salvaged` |
 | `failed` | 失敗發生時的 Stage；響應包含 `error` |
@@ -213,68 +220,19 @@ POST /bot/v1/compile/{task_id}/cancel
 
 建立任務使用 `/api/v1/compile`，查詢和取消統一使用 `/api/v1/tasks/{task_id}`。
 
-## Runtime 執行介面
+## 執行與重啟恢復
 
-以下介面由 `compile_api.base_url` 指向的執行服務提供，供 OV 呼叫。應用通過前述 Compile API 提交任務。
+Compile 在 OpenViking 伺服器內執行，方式與 `add_resource` 的處理相同：
 
-### 建立執行任務
+- 每個任務是 `ExternalTask` 佇列上的一條持久 QueueFS 訊息，任務結果儲存後才確認（ack）該訊息。
+- 任務執行中伺服器停止或崩潰時，下次啟動會重新投遞訊息，任務**從頭重新執行**。中斷那次的部分工作會被丟棄；只有在一次執行結束時才寫入目標，未變化的頁面保持不變。
+- 同一目標的任務逐個執行，其他任務在佇列中等待。
+- 模型呼叫使用帳號的 `vlm` 配置，並共用伺服器級的 `vlm.max_concurrent` 容量。單任務的各階段並行度在 [`compile_api`](../guides/01-configuration.md#compile_api) 下設定。
+- 每個任務最多執行 3 次，`meta.attempts` 記錄次數；被中斷三次的任務以 `INTERRUPTED` 失敗，不會在每次重啟時重新執行。
+- 任務以建立者的身份和權限執行，不會隨任務儲存 API Key 或其他憑證。使用 API Key 鑑權時，每次執行前會重新檢查建立者：取提交時與當前角色中較低者，只保留使用者仍所屬的群組；使用者已被刪除時以 `UNAUTHENTICATED` 失敗。
+- 每個使用者最多同時有 `compile_api.max_active_tasks_per_user`（預設 10）個待執行或執行中的 Compile 任務，超出返回 `429 RESOURCE_EXHAUSTED`。
 
-```http
-POST /runtime/v1/tasks
-Idempotency-Key: <OV task_id>
-```
-
-```json
-{
-  "task_type": "compile",
-  "payload": {
-    "from": ["viking://resources/research"],
-    "to": "viking://resources/research-wiki",
-    "skill": "viking://agent/skills/wiki",
-    "instruction": "整理成知識庫",
-    "args": {"model_name": "your-model-endpoint-id"}
-  }
-}
-```
-
-`task_type` 和 `payload` 均必填。當前只支援 `task_type="compile"`；`payload` 使用本頁建立任務的欄位及校驗規則，`instruction`、`args` 可省略。內建 VikingBot 不支援非空 `args`。不支援的型別或無效的 payload 返回 `4xx`，不建立執行任務。
-
-OV 通過 `X-API-Key` 傳遞當前使用者的 OV API Key；配置 `compile_api.gateway_token` 時還會發送 `X-Gateway-Token`。這些憑證不能出現在公開任務結果中。
-
-接受請求後返回 `202 Accepted`，響應包含執行端標識：
-
-```json
-{"session_id": "session-123"}
-```
-
-同一使用者的相同 `Idempotency-Key` 必須返回同一個 `session_id`，不能重複執行。`session_id` 用於執行端查詢和取消；應用查詢 OV 任務時使用 `task_id`。
-
-### 查詢與取消執行任務
-
-```http
-POST /runtime/v1/tasks/status
-POST /runtime/v1/tasks/cancel
-```
-
-兩個介面均使用以下請求體：
-
-```json
-{"session_id": "session-123"}
-```
-
-兩個介面均返回執行狀態，例如：
-
-```json
-{
-  "status": "running",
-  "stage": "compile: agent",
-  "error": null,
-  "meta": {},
-  "result": null
-}
-```
-
-`status` 可為 `pending`、`running`、`cancelling`、`completed`、`failed` 或 `cancelled`。取消請求可以先返回 `cancelling`，實際執行停止並完成清理後再返回 `cancelled`；重複取消已結束任務返回其當前終態。查詢和取消均須校驗任務歸屬。
+`queue_workers.external_task.max_concurrent` 控制同時執行的 Compile 任務數。
 
 ## 相關文件
 

@@ -1,4 +1,4 @@
-"""Studio task pagination and submission retry contracts."""
+"""Studio task pagination, submission retry and restart recovery contracts."""
 
 import asyncio
 import json
@@ -70,7 +70,6 @@ async def test_concurrent_submission_retry_and_restart(monkeypatch):
     import ragfs_python
 
     import openviking.service.external_task_service as module
-    from openviking.service.external_task_service import ExternalTaskSnapshot
     from openviking.storage.queuefs.queue_manager import QueueManager
 
     agfs = _FakeAgfs()
@@ -87,10 +86,7 @@ async def test_concurrent_submission_retry_and_restart(monkeypatch):
         task_type="compile",
         task_id_prefix="cmp_",
         serialization_key=lambda payload: payload["to"],
-        poll_interval_seconds=0.001,
-        poll_max_attempts=1,
-        submit=AsyncMock(return_value="external-task"),
-        get=AsyncMock(return_value=ExternalTaskSnapshot(status="completed", result={"done": True})),
+        run=AsyncMock(return_value={"done": True}),
     )
     service = ExternalTaskService()
     service.register(provider)
@@ -98,7 +94,6 @@ async def test_concurrent_submission_retry_and_restart(monkeypatch):
     params = {
         "resource_id": None,
         "payload": {"from": ["viking://resources/a"], "to": "viking://resources/b"},
-        "connection": {},
         "ctx": ctx,
         "idempotency_key": "test-submission-123",
     }
@@ -114,9 +109,9 @@ async def test_concurrent_submission_retry_and_restart(monkeypatch):
         waiting = await service.create("compile", **{**params, "ctx": other})
         assert waiting.task_id != again.task_id
 
+        # The server stops while the first task is mid-pipeline; its message is unacked.
         owner = {"account_id": ctx.account_id, "user_id": ctx.user.user_id}
-        await tracker.start(again.task_id, stage="polling", **owner)
-        await tracker.update_task_auth(again.task_id, {"external_task_id": "submitted"}, **owner)
+        await tracker.start(again.task_id, stage="pipeline", **owner)
         tracker = TaskTracker(PersistentTaskStore(agfs))
         service = ExternalTaskService()
         service.register(provider)
@@ -125,9 +120,21 @@ async def test_concurrent_submission_retry_and_restart(monkeypatch):
         assert {task.task_id for task in recovered} == {again.task_id, waiting.task_id}
         await service.restore_tasks(recovered)
 
+        # The interrupted task still owns its target, so the other one rotates behind it.
         assert not await service.execute(waiting.task_id, other.account_id, other.user.user_id)
-        provider.submit.assert_not_awaited()
+        provider.run.assert_not_awaited()
+        # Redelivery re-runs the interrupted task in-process as its owner, to completion.
         assert await service.execute(again.task_id, ctx.account_id, ctx.user.user_id)
+        # The outcome is persisted before the queue ACK finalizes the status.
+        resumed = await tracker.get(again.task_id, **owner)
+        assert resumed.result == {"done": True}
+        assert resumed.error is None
+        run_ctx = provider.run.await_args.args[2]
+        assert (run_ctx.account_id, run_ctx.user.user_id, run_ctx.role) == (
+            "acme",
+            "alice",
+            Role.USER,
+        )
         assert await service.execute(waiting.task_id, other.account_id, other.user.user_id)
         assert (await tracker.get(waiting.task_id, account_id="acme", user_id="bob")).result == {
             "done": True
@@ -137,7 +144,7 @@ async def test_concurrent_submission_retry_and_restart(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch):
+async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch, tmp_path):
     import httpx
     from fastapi import FastAPI
     from fastapi.responses import JSONResponse
@@ -166,7 +173,13 @@ async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch):
         ensure_write_access=AsyncMock(),
     )
     compile_service = CompileService(CompileApiConfig(), tasks, fs)
-    compile_service.configure_local_backend("http://localhost:1", "")
+
+    def configure_runtime():
+        compile_service.configure_runtime(
+            service=SimpleNamespace(), vlm_resolver=None, work_root=tmp_path, model_concurrency=1
+        )
+
+    configure_runtime()
     tasks.register(compile_service)
     monkeypatch.setattr(
         compile_router, "get_service", lambda: SimpleNamespace(compile=compile_service)
@@ -187,9 +200,9 @@ async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch):
         "from": ["viking://resources/source"],
         "to": "viking://resources/wiki",
         "skill": "viking://agent/skills/wiki",
-        "args": {"api_key": "synthetic-private-key", "mode": "summary"},
+        "args": {"wiki_links": True},
     }
-    headers = {"Idempotency-Key": "http-retry-key-123", "X-Request-ID": "original-request-id"}
+    headers = {"Idempotency-Key": "http-retry-key-123"}
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app=app), base_url="http://test"
     ) as client:
@@ -204,15 +217,17 @@ async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch):
         }
         first = await client.post("/api/v1/compile", json=payload, headers=headers)
         assert first.status_code == 202, first.text
-        second = await client.post(
-            "/api/v1/compile",
-            json=payload,
-            headers={**headers, "X-Request-ID": "retry-request-id"},
-        )
+        second = await client.post("/api/v1/compile", json=payload, headers=headers)
         task_id = first.json()["result"]["task_id"]
         assert second.json()["result"]["task_id"] == task_id
+        # Only the server-resolved identity is kept; no forwarded credentials.
         auth = await tracker.get_task_auth(task_id, account_id="acme", user_id="alice")
-        assert auth["openviking_connection"]["request_id"] == "original-request-id"
+        assert auth["request_identity"]["role"] == "user"
+        assert "openviking_connection" not in auth
+        unsupported = await client.post(
+            "/api/v1/compile", json={**payload, "args": {"api_key": "x"}}
+        )
+        assert unsupported.status_code == 400
         recovery = await client.get("/api/v1/compile/submissions/http-retry-key-123")
         assert recovery.json()["result"]["task_id"] == task_id
         assert isinstance((await client.get("/api/v1/tasks")).json()["result"], list)
@@ -247,15 +262,15 @@ async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch):
         from openviking_cli.exceptions import NotFoundError
 
         fs.stat.side_effect = NotFoundError("deleted-source", "resource")
-        compile_service._local_endpoint = None
+        compile_service._runner = None
         restored = await client.post("/api/v1/compile", json=payload, headers=headers)
         assert restored.status_code == 202, restored.text
         assert restored.json()["result"]["task_id"] == task_id
         changed = await client.post(
-            "/api/v1/compile", json={**payload, "args": {"api_key": "different"}}, headers=headers
+            "/api/v1/compile", json={**payload, "args": {"wiki_links": False}}, headers=headers
         )
         assert changed.status_code == 409
-        compile_service.configure_local_backend("http://localhost:1", "")
+        configure_runtime()
         rejected = await client.post(
             "/api/v1/compile", json=payload, headers={"Idempotency-Key": "new-invalid-request-key"}
         )

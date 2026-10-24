@@ -321,7 +321,6 @@ Restart `vikingbot gateway` after changing the configuration.
 | `bot.sandbox.backend` | `direct` | Execution backend |
 | `bot.sandbox.mode` | `shared` | Workspace isolation mode |
 | `bot.sandbox.backends.direct.allow_exec` | `true` | Allow agents to execute host commands through the built-in `exec` tool; disabling it also removes the tool from subagents and Compile |
-| `bot.sandbox.backends.direct.allow_compile_exec` | `false` | Compile uses dedicated read tools; both this setting and `allow_exec` must be `true` for Compile agents to execute host commands |
 | `bot.heartbeat.enabled` | `true` | Whether to check `HEARTBEAT.md` periodically |
 | `bot.heartbeat.interval_seconds` | `600` | Heartbeat interval |
 | `bot.mode` | `normal` | One of `normal`, `readonly`, or `debug` |
@@ -497,7 +496,7 @@ Direct allows agents to execute host commands by default. To disable this capabi
 }
 ```
 
-Chat, subagents, and Compile can no longer call the built-in `exec` tool when disabled; chat, retrieval, and workspace file tools remain available. `allow_compile_exec=true` cannot override this setting. The switch only controls agent command execution with Direct: it does not affect other sandbox backends or provide file or network isolation. For a Gateway exposed to untrusted users, choose an isolated backend and configure channel allowlists and network/file policies.
+Chat and subagents can no longer call the built-in `exec` tool when disabled; chat, retrieval, and workspace file tools remain available. The switch only controls agent command execution with Direct: it does not affect other sandbox backends or provide file or network isolation. For a Gateway exposed to untrusted users, choose an isolated backend and configure channel allowlists and network/file policies.
 
 ```json
 {

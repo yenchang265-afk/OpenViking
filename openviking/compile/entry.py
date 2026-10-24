@@ -4,11 +4,11 @@ from typing import Literal
 
 from pydantic import Field
 
+from openviking.compile import file_ops
+from openviking.compile.ops.common import payload
+from openviking.compile.pipeline_io import ModelCallError, ModelCallLimitError
+from openviking.compile.results import FileResponse, Group
 from openviking.models.model_error import ModelErrorKind, model_error_kind
-from vikingbot.compile import file_ops
-from vikingbot.compile.ops.common import payload
-from vikingbot.compile.pipeline_io import ModelCallError, ModelCallLimitError
-from vikingbot.compile.results import FileResponse, Group
 
 
 class EntryResponse(FileResponse):

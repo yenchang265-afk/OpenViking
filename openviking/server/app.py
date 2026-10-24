@@ -214,6 +214,13 @@ async def _initialize_runtime_state(
     await service.initialize()
     await service.apply_agent_evolution_config()
     await _initialize_auth_plugin(app, service, config)
+    if config.get_effective_auth_mode() == "api_key" and app.state.api_key_manager is not None:
+        from openviking.service.external_task_service import key_store_identity_resolver
+
+        # Durable tasks re-check their owner's current access before each attempt.
+        service.external_tasks.set_identity_resolver(
+            key_store_identity_resolver(app.state.api_key_manager)
+        )
     from openviking.service.deletion import setup_deletion
 
     app.state.deletion_service = await setup_deletion(
@@ -383,8 +390,6 @@ def create_app(
             service = OpenVikingService()
 
         assert service is not None
-        if config.with_bot:
-            service.compile.configure_local_backend(config.bot_api_url, bot_gateway_token)
         _configure_session_runtime(service)
         set_service(service)
 

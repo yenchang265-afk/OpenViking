@@ -318,7 +318,6 @@ export OPENVIKING_CONFIG_FILE=/path/to/ov.conf
 | `bot.sandbox.backend` | `direct` | 執行後端 |
 | `bot.sandbox.mode` | `shared` | 工作區隔離方式 |
 | `bot.sandbox.backends.direct.allow_exec` | `true` | 是否允許 Agent 通過內建 `exec` 工具在宿主機執行命令；關閉後也禁止子 Agent 和 Compile 使用該工具 |
-| `bot.sandbox.backends.direct.allow_compile_exec` | `false` | Compile 預設使用專用讀取工具；只有此項和 `allow_exec` 均為 `true` 時，才允許 Compile Agent 在宿主機執行命令 |
 | `bot.heartbeat.enabled` | `true` | 是否週期檢查 `HEARTBEAT.md` |
 | `bot.heartbeat.interval_seconds` | `600` | 心跳間隔 |
 | `bot.mode` | `normal` | 可選 `normal`、`readonly`、`debug` |
@@ -494,7 +493,7 @@ Direct 預設允許 Agent 在宿主機執行命令。要關閉這項能力，在
 }
 ```
 
-關閉後，聊天、子 Agent 和 Compile 均不能呼叫內建 `exec` 工具；聊天、檢索和工作區檔案工具仍可使用。`allow_compile_exec=true` 不能覆蓋此設定。此開關僅針對 Direct 的 Agent 命令執行，不影響其他沙箱後端，也不提供檔案或網路隔離。對不可信使用者開放 Gateway 時，應選擇隔離後端，並設定渠道白名單和網路/檔案策略。
+關閉後，聊天和子 Agent 均不能呼叫內建 `exec` 工具；聊天、檢索和工作區檔案工具仍可使用。此開關僅針對 Direct 的 Agent 命令執行，不影響其他沙箱後端，也不提供檔案或網路隔離。對不可信使用者開放 Gateway 時，應選擇隔離後端，並設定渠道白名單和網路/檔案策略。
 
 ```json
 {

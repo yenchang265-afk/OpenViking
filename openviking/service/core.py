@@ -9,6 +9,7 @@ Main service class that composes all sub-services and manages infrastructure lif
 import asyncio
 import inspect
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 from openviking.core.directories import DirectoryInitializer
@@ -150,6 +151,7 @@ class OpenVikingService:
         from openviking.config.vlm import ClusterVLMResolver
 
         cluster_vlm = ClusterVLMResolver(lambda: config).get_vlm_sync()
+        self._compile_model_concurrency = cluster_vlm.max_concurrent
         self._init_storage(
             config.storage,
             max_concurrent_embedding=config.embedding.max_concurrent,
@@ -446,6 +448,10 @@ class OpenVikingService:
         return self._agent_evolution_service
 
     @property
+    def external_tasks(self) -> ExternalTaskService:
+        return self._external_task_service
+
+    @property
     def compile(self) -> CompileService:
         """Get the Compile task service."""
         return self._compile_service
@@ -630,6 +636,12 @@ class OpenVikingService:
             viking_fs=self._viking_fs,
         )
         self._compile_service.configure_memory_runner(vikingdb=self._vikingdb_manager)
+        self._compile_service.configure_runtime(
+            service=self,
+            vlm_resolver=self._vlm_resolver,
+            work_root=Path(self._config.storage.workspace) / "_system" / "compile_work",
+            model_concurrency=self._compile_model_concurrency,
+        )
 
         if self._queue_manager:
             for queue_name in (
