@@ -140,6 +140,6 @@ default = []
 cache = ["dep:fred", "dep:libloading", "dep:native-tls"]
 test-utils = []
 s3 = ["aws-sdk-s3", "aws-config", "aws-types", "aws-smithy-runtime-api", "aws-smithy-types"]
-# MariaDB/MySQL-backed small-file tier (core::tiered).
+# MySQL/MariaDB-backed small-file tier (core::tiered).
 tiered = ["dep:sqlx"]
 full = ["s3", "cache", "tiered"]

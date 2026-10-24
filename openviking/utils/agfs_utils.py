@@ -350,6 +350,7 @@ def _generate_plugin_config(
         }
     elif backend == "s3" and s3_config:
         primary_plugin_config = _serialize_s3_plugin_params(s3_config)
+        primary_plugin_config.update(_serialize_tiered_params(getattr(agfs_config, "tiered", None)))
 
     # Build the mount config dict for the primary backend
     mount_config: Dict[str, Any] = dict(primary_plugin_config)
@@ -479,17 +480,20 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
         value = _get_config_value(s3_config, key)
         if value is not None:
             params[key] = value
-    params.update(_serialize_tiered_params(_get_config_value(s3_config, "tiered")))
     return params
 
 
+# Engine-independent `storage.agfs.tiered` keys.
 _TIERED_KEYS = (
     "small_threshold_bytes",
+    "gc_interval_secs",
+    "gc_min_age_secs",
+)
+# Keys of the backend's sub-block (`storage.agfs.tiered.<backend>`).
+_TIERED_BACKEND_KEYS = (
     "dsn_env",
     "table",
     "max_connections",
-    "gc_interval_secs",
-    "gc_min_age_secs",
 )
 
 
@@ -501,9 +505,15 @@ def _serialize_tiered_params(tiered: Any) -> Dict[str, Any]:
     """
     if tiered is None or not _get_config_value(tiered, "enabled", False):
         return {}
-    params: Dict[str, Any] = {"tiered_enabled": True}
+    backend = _get_config_value(tiered, "backend", "mysql")
+    params: Dict[str, Any] = {"tiered_enabled": True, "tiered_backend": backend}
     for key in _TIERED_KEYS:
         value = _get_config_value(tiered, key)
+        if value is not None:
+            params[f"tiered_{key}"] = value
+    engine = _get_config_value(tiered, backend)
+    for key in _TIERED_BACKEND_KEYS:
+        value = _get_config_value(engine, key) if engine is not None else None
         if value is not None:
             params[f"tiered_{key}"] = value
     if _get_config_value(tiered, "import_existing", False):

@@ -1517,7 +1517,6 @@ Legacy compatibility example:
 | `cache_enabled` | bool | Cache directory listings and stat results in front of S3 | unset (true) |
 | `cache_max_size` | int | Max cached directory listings | unset (1000) |
 | `cache_ttl` / `stat_cache_ttl` | int | Listing / stat cache TTL in seconds | unset (30 / 60) |
-| `tiered` | object | Size-tiered storage: small files in MariaDB, large files in S3. See [Size-tiered storage](#size-tiered-storage) | disabled |
 
 Every S3 request has a deadline, so a slow or stalled endpoint fails fast instead of hanging a request thread. Timeouts surface as `AGFSTimeoutError`, while throttling (`SlowDown`, 429) and 5xx responses that remain after retries surface as `AGFSNetworkError`. The HTTP API returns both as `503 UNAVAILABLE`, so clients can retry. The defaults suit both LAN backends (SeaweedFS, MinIO) and WAN ones (AWS, TOS). On a LAN you can tighten them (e.g. `metadata_attempt_timeout_ms: 3000`). Lowering only an `*_operation_timeout_ms` also lowers its unset attempt timeout.
 
@@ -1620,22 +1619,33 @@ Supports S3 storage in VirtualHostStyle mode, such as TOS.
 
 Object stores pay a fixed cost per object. In MinIO, every object writes metadata on each drive of its erasure set, so many tiny objects cause inode pressure, slow listings and long heal times. Operators often ask for a minimum object size such as 1 MiB. Users, though, upload small files all the time (code, glossaries, domain notes), and OpenViking itself writes small `.abstract.md`, `.overview.md`, `.meta.json` and `.relations.json` files in every directory.
 
-With `tiered.enabled`, RAGFS keeps every file smaller than `small_threshold_bytes` **and the path index** in MariaDB (or MySQL), and writes only larger files to S3. Users can still upload files of any size, and the bucket never receives an object smaller than the threshold.
+With `storage.agfs.tiered.enabled`, RAGFS keeps every file smaller than `small_threshold_bytes` **and the path index** in a SQL tier store, and writes only larger files to S3. Users can still upload files of any size, and the bucket never receives an object smaller than the threshold. `tiered` sits next to `s3` under `storage.agfs`, because it is a layer over the S3 backend rather than an S3 setting. It requires `storage.agfs.backend: "s3"`.
 
 ```
-CachedFileSystem (Redis, optional) → TieredFileSystem → { MariaDB: index + files < 1 MiB | S3: files ≥ 1 MiB }
+CachedFileSystem (Redis, optional) → TieredFileSystem → { MySQL: index + files < 1 MiB | S3: files ≥ 1 MiB }
 ```
+
+`storage.agfs.tiered`:
 
 | Field | Type | Description | Default |
 |------|------|------|--------|
 | `enabled` | bool | Turn tiering on for the S3 mount | `false` |
-| `small_threshold_bytes` | int | Files smaller than this stay in MariaDB (max 8 MiB) | unset (1 MiB) |
-| `dsn_env` | str | Environment variable holding the DSN `mysql://user:pass@host:3306/db` | unset (`RAGFS_TIERED_DSN`) |
-| `table` | str | Index table name (letters, digits, `_`) | unset (`agfs_entries`) |
-| `max_connections` | int | MariaDB connection pool size (1–256) | unset (16) |
+| `backend` | str | Tier store engine. Only `mysql` today (MySQL 8+ or MariaDB 10.6+, same protocol and SQL) | `"mysql"` |
+| `small_threshold_bytes` | int | Files smaller than this stay in the tier store (max 8 MiB) | unset (1 MiB) |
 | `import_existing` | bool | At startup, index objects the bucket held before tiering (see below) | `false` |
 | `gc_interval_secs` | int | How often unreferenced S3 blobs left by crashes are deleted; `0` disables | unset (3600) |
 | `gc_min_age_secs` | int | Only delete unreferenced blobs older than this (≥ 60) | unset (3600) |
+| `mysql` | object | Settings for backend `mysql` (below) | |
+
+Engine settings live in the sub-block named after `backend`, so adding an engine later never changes the shared keys. Unknown keys are rejected.
+
+`storage.agfs.tiered.mysql`:
+
+| Field | Type | Description | Default |
+|------|------|------|--------|
+| `dsn_env` | str | Environment variable holding the DSN `mysql://user:pass@host:3306/db` | unset (`RAGFS_TIERED_DSN`) |
+| `table` | str | Index table name (letters, digits, `_`, up to 60 characters) | unset (`agfs_entries`) |
+| `max_connections` | int | Connection pool size (1–256) | unset (16) |
 
 ```json
 {
@@ -1648,30 +1658,36 @@ CachedFileSystem (Redis, optional) → TieredFileSystem → { MariaDB: index + f
         "region": "us-east-1",
         "access_key": "${S3_ACCESS_KEY}",
         "secret_key": "${S3_SECRET_KEY}",
-        "directory_marker_mode": "none",
-        "tiered": { "enabled": true }
+        "directory_marker_mode": "none"
+      },
+      "tiered": {
+        "enabled": true,
+        "backend": "mysql",
+        "mysql": { "dsn_env": "RAGFS_TIERED_DSN" }
       }
     }
   }
 }
 ```
 
-Start the server with the DSN in the environment, for example `RAGFS_TIERED_DSN=mysql://openviking:<password>@mariadb:3306/openviking`. The DSN is read from the environment only, never from `ov.conf`. Add `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem` to require TLS. The table is created on first start. If tiering is enabled and the variable is missing, the mount fails at startup instead of silently falling back to untiered storage. The compose file ships a `mariadb` sidecar: set `MARIADB_PASSWORD` in `.env`, then run `docker compose --profile tiered up -d mariadb`. It publishes host port 3306; set `MARIADB_HOST_PORT` if the host already uses that port.
+Start the server with the DSN in the environment, for example `RAGFS_TIERED_DSN=mysql://openviking:<password>@mysql:3306/openviking`. The DSN is read from the environment only, never from `ov.conf`. Add `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem` to require TLS. The table is created on first start. If tiering is enabled and the variable is missing, the mount fails at startup instead of silently falling back to untiered storage. The compose file ships a MariaDB sidecar (MySQL-compatible) under the `tiered` profile: set `MARIADB_PASSWORD` in `.env`, then run `docker compose --profile tiered up -d mariadb`. It publishes host port 3306; set `MARIADB_HOST_PORT` if the host already uses that port.
+
+The old location `storage.agfs.s3.tiered` is rejected at startup with a message naming the new one, instead of being ignored: ignoring it would mount an empty-looking bucket over already migrated data.
 
 How it behaves:
 
-- **Large files use immutable blob keys.** They are stored under `_blobs/<xx>/<uuid>` in the bucket, and MariaDB maps each path to its key. Rename, move and replace only update rows, with no S3 copy.
-- **MariaDB is the source of truth.** A large write uploads the blob first, then updates the row, then deletes the previous blob. A delete removes the row first, then the blob. A crash can leave an unreferenced blob, never a path that points at missing bytes.
-- **Listings come from MariaDB,** so `ls`, `stat` and `tree` make no S3 LIST calls.
-- Set `directory_marker_mode` to `none`. Directories live in MariaDB, so marker objects would only add zero-byte objects.
+- **Large files use immutable blob keys.** They are stored under `_blobs/<xx>/<uuid>` in the bucket, and the tier store maps each path to its key. Rename, move and replace only update rows, with no S3 copy.
+- **The tier store is the source of truth.** A large write uploads the blob first, then updates the row, then deletes the previous blob. A delete removes the row first, then the blob. A crash can leave an unreferenced blob, never a path that points at missing bytes.
+- **Listings come from the tier store,** so `ls`, `stat` and `tree` make no S3 LIST calls.
+- Set `directory_marker_mode` to `none`. Directories live in the tier store, so marker objects would only add zero-byte objects.
 
-**Git history (snapshots).** With tiering enabled, OpenViking also mounts `/ovgit`: a second tiered mount on the same bucket, with S3 prefix `.ovgit` and table `agfs_git_entries` (or `<table>_git`). `git.backend` then defaults to `agfs`, which stores git objects, refs and commit indexes through that mount. So small git objects (typically ~1 KB) land in MariaDB too. `git.backend: "s3"` is rejected while tiering is on, because it would write every git object straight to the bucket. `local` is still allowed, but only suits a single instance. The `/ovgit` layout matches the old S3 git backend (`.ovgit/{account}/objects/…`), so `import_existing` also migrates existing git history.
+**Git history (snapshots).** With tiering enabled, OpenViking also mounts `/ovgit`: a second tiered mount on the same bucket, with S3 prefix `.ovgit` and table `agfs_git_entries` (or `<table>_git`). `git.backend` then defaults to `agfs`, which stores git objects, refs and commit indexes through that mount. So small git objects (typically ~1 KB) land in the tier store too. `git.backend: "s3"` is rejected while tiering is on, because it would write every git object straight to the bucket. `local` is still allowed, but only suits a single instance. The `/ovgit` layout matches the old S3 git backend (`.ovgit/{account}/objects/…`), so `import_existing` also migrates existing git history.
 
-MariaDB settings: `max_allowed_packet` ≥ 16 MiB (the MariaDB default), `innodb_file_per_table=ON`, and a user with `CREATE, SELECT, INSERT, UPDATE, DELETE` on the database. Back up MariaDB together with the bucket. A restore that brings back unreferenced blobs is safe.
+MySQL/MariaDB settings: `max_allowed_packet` ≥ 16 MiB (the default on both), `innodb_file_per_table=ON`, and a user with `CREATE, SELECT, INSERT, UPDATE, DELETE` on the database. Back up the database together with the bucket. A restore that brings back unreferenced blobs is safe.
 
 When a Redis cache is configured (`cache.provider = "redis"`), it wraps the tiered mount, so hot small files and listings are served from Redis. Keep `max_file_size` in the cache policy close to the tiering threshold, so Redis never stores multi-megabyte values.
 
-**Existing buckets.** If the index is empty but the bucket already holds objects, the mount refuses to start, so existing files never silently disappear from view. Set `import_existing: true` for one startup to migrate. Small files are copied into MariaDB and their objects deleted. Large files are indexed in place: their row points at the existing object key, so nothing is copied. The import can be re-run safely after a crash. Turn it off once it finishes, because every run lists the whole bucket.
+**Existing buckets.** If the index is empty but the bucket already holds objects, the mount refuses to start, so existing files never silently disappear from view. Set `import_existing: true` for one startup to migrate. Small files are copied into the tier store and their objects deleted. Large files are indexed in place: their row points at the existing object key, so nothing is copied. Directory markers left empty afterwards are deleted too. The import can be re-run safely after a crash. Turn it off once it finishes, because every run lists the whole bucket.
 
 Limitations: tiering does not support multi-write (`backups`) mounts.
 

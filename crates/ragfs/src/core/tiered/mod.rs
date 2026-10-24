@@ -4,7 +4,7 @@
 //! Object stores such as MinIO pay a fixed per-object cost (metadata on every
 //! erasure-set drive), so many tiny objects hurt them. A tiered mount keeps
 //! every file below `tiered_small_threshold_bytes` inline in a [`TierStore`]
-//! (MariaDB in production) and writes only larger files to the wrapped backend,
+//! (MySQL or MariaDB in production) and writes only larger files to the wrapped backend,
 //! under immutable blob keys. Users keep uploading files of any size.
 //!
 //! Enabled per mount with `tiered_enabled = true` in the plugin params:
@@ -12,6 +12,7 @@
 //! | param | default | meaning |
 //! |---|---|---|
 //! | `tiered_enabled` | `false` | wrap the mount |
+//! | `tiered_backend` | `mysql` | small-file store engine (only `mysql`: MySQL 8+ or MariaDB) |
 //! | `tiered_small_threshold_bytes` | 1 MiB | files below this stay inline |
 //! | `tiered_dsn_env` | `RAGFS_TIERED_DSN` | env var holding `mysql://user:pass@host:3306/db` |
 //! | `tiered_table` | `agfs_entries` | index table name |
@@ -22,7 +23,7 @@
 //! | `tiered_gc_min_age_secs` | 3600 | GC only deletes unreferenced blobs older than this |
 
 #[cfg(feature = "tiered")]
-pub mod mariadb;
+pub mod mysql;
 pub mod store;
 pub mod wrapper;
 
@@ -45,7 +46,7 @@ pub use wrapper::{ImportStats, TieredFileSystem, BLOB_ROOT, MAX_PATH_BYTES};
 const MIB: i64 = 1024 * 1024;
 /// Default inline threshold: the infra minimum object size.
 pub const DEFAULT_SMALL_THRESHOLD_BYTES: u64 = MIB as u64;
-/// Largest inline threshold; keeps rows well under MariaDB's `max_allowed_packet`.
+/// Largest inline threshold; keeps rows well under MySQL's `max_allowed_packet`.
 pub const MAX_SMALL_THRESHOLD_BYTES: u64 = 8 * MIB as u64;
 /// Default env var holding the store DSN.
 pub const DEFAULT_DSN_ENV: &str = "RAGFS_TIERED_DSN";
@@ -60,9 +61,34 @@ const MAX_GC_SECS: i64 = 7 * 24 * 3600;
 /// Shortest allowed GC age: blobs younger than this may still be publishing.
 const MIN_GC_MIN_AGE_SECS: i64 = 60;
 
+/// Engine holding the small-file tier and the path index.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TieredBackend {
+    /// MySQL 8+ or MariaDB (same wire protocol and SQL).
+    Mysql,
+}
+
+impl TieredBackend {
+    /// Names accepted by `tiered_backend`.
+    pub const SUPPORTED: &'static [&'static str] = &["mysql"];
+
+    fn parse(name: &str) -> Result<Self> {
+        match name {
+            "mysql" => Ok(Self::Mysql),
+            other => Err(Error::config(format!(
+                "tiered_backend '{}' is not supported; expected one of: {}",
+                other,
+                Self::SUPPORTED.join(", ")
+            ))),
+        }
+    }
+}
+
 /// Validated `tiered_*` mount parameters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TieredSettings {
+    /// Engine of the small-file store.
+    pub backend: TieredBackend,
     /// Files smaller than this many bytes stay inline.
     pub small_threshold_bytes: u64,
     /// Env var that holds the store DSN (the DSN itself is never in config).
@@ -115,7 +141,9 @@ impl TieredSettings {
                 table
             )));
         }
+        let backend = TieredBackend::parse(&string_param(params, "tiered_backend", "mysql")?)?;
         Ok(Some(Self {
+            backend,
             small_threshold_bytes: threshold as u64,
             dsn_env,
             table,
@@ -223,9 +251,14 @@ pub async fn connect_store(settings: &TieredSettings) -> Result<Arc<dyn TierStor
             settings.dsn_env
         ))
     })?;
-    let store =
-        mariadb::MariaDbTierStore::connect(&dsn, &settings.table, settings.max_connections).await?;
-    Ok(Arc::new(store))
+    match settings.backend {
+        TieredBackend::Mysql => {
+            let store =
+                mysql::MySqlTierStore::connect(&dsn, &settings.table, settings.max_connections)
+                    .await?;
+            Ok(Arc::new(store))
+        }
+    }
 }
 
 /// Connect the production [`TierStore`] described by `settings`.

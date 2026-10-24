@@ -156,10 +156,11 @@ class TestGitInheritsFromAgfs:
 class TestGitWithTieredStorage:
     """With S3 tiered storage, git history must go through the tiered /ovgit mount."""
 
-    TIERED_S3 = {**TestGitInheritsFromAgfs.FULL_S3, "tiered": {"enabled": True}}
-
-    def _storage(self, s3=None):
-        return {"workspace": "/tmp/x", "agfs": {"backend": "s3", "s3": s3 or self.TIERED_S3}}
+    def _storage(self, tiered=True):
+        agfs = {"backend": "s3", "s3": TestGitInheritsFromAgfs.FULL_S3}
+        if tiered:
+            agfs["tiered"] = {"enabled": True}
+        return {"workspace": "/tmp/x", "agfs": agfs}
 
     def test_tiered_storage_defaults_git_to_agfs(self):
         cfg = OpenVikingConfig(storage=self._storage())
@@ -167,7 +168,7 @@ class TestGitWithTieredStorage:
         assert cfg.git.s3 is None
 
     def test_untiered_s3_keeps_inheriting_s3(self):
-        cfg = OpenVikingConfig(storage=self._storage(TestGitInheritsFromAgfs.FULL_S3))
+        cfg = OpenVikingConfig(storage=self._storage(tiered=False))
         assert cfg.git.backend == "s3"
 
     def test_explicit_s3_backend_with_tiering_rejected(self):

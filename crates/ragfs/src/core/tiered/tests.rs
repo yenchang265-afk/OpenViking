@@ -943,6 +943,7 @@ fn settings_apply_defaults_and_overrides() {
     assert_eq!(settings.table, DEFAULT_TABLE);
     assert_eq!(settings.max_connections, 16);
     assert!(!settings.import_existing);
+    assert_eq!(settings.backend, TieredBackend::Mysql);
 
     let custom = params(&[
         ("tiered_enabled", ConfigValue::Bool(true)),
@@ -956,8 +957,10 @@ fn settings_apply_defaults_and_overrides() {
             ConfigValue::String("tenant_a_entries".into()),
         ),
         ("tiered_max_connections", ConfigValue::Int(4)),
+        ("tiered_backend", ConfigValue::String("mysql".into())),
     ]);
     let settings = TieredSettings::from_params(&custom).unwrap().unwrap();
+    assert_eq!(settings.backend, TieredBackend::Mysql);
     assert_eq!(settings.small_threshold_bytes, 2 * 1024 * 1024);
     assert_eq!(settings.dsn_env, "MY_DSN");
     assert_eq!(settings.table, "tenant_a_entries");
@@ -983,6 +986,9 @@ fn settings_reject_invalid_values() {
             ConfigValue::String("1starts_with_digit".into()),
         ),
         ("tiered_dsn_env", ConfigValue::String(String::new())),
+        ("tiered_backend", ConfigValue::String("mariadb".into())),
+        ("tiered_backend", ConfigValue::String("postgres".into())),
+        ("tiered_backend", ConfigValue::Bool(true)),
         (
             "tiered_import_exclude",
             ConfigValue::String(".ovgit".into()),

@@ -1,7 +1,7 @@
-//! End-to-end: s3fs + MariaDB through `TieredFileSystem` at the production 1 MiB
+//! End-to-end: s3fs + MySQL through `TieredFileSystem` at the production 1 MiB
 //! threshold, asserting the bucket never receives an object smaller than 1 MiB.
 //!
-//! Ignored by default; needs both an S3-compatible endpoint and MariaDB:
+//! Ignored by default; needs both an S3-compatible endpoint and MySQL/MariaDB:
 //!
 //! ```text
 //! OV_S3_TEST_ENDPOINT=http://127.0.0.1:8333 \
@@ -21,7 +21,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::Client;
-use ragfs::core::tiered::mariadb::MariaDbTierStore;
+use ragfs::core::tiered::mysql::MySqlTierStore;
 use ragfs::core::tiered::{TieredFileSystem, DEFAULT_SMALL_THRESHOLD_BYTES};
 use ragfs::core::{ConfigValue, FileSystem, PluginConfig, ServicePlugin, WriteFlag};
 use ragfs::plugins::S3FSPlugin;
@@ -179,7 +179,7 @@ async fn bucket_never_receives_objects_below_one_mib() {
     };
     env.ensure_bucket().await;
     let store = Arc::new(
-        MariaDbTierStore::connect(&env.dsn, &env.table, 8)
+        MySqlTierStore::connect(&env.dsn, &env.table, 8)
             .await
             .unwrap(),
     );

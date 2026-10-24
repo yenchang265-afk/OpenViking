@@ -1,9 +1,9 @@
 //! End-to-end: Git history through the `agfs` backend on a tiered `/ovgit`
-//! mount (s3fs + MariaDB), asserting the bucket never receives an object
+//! mount (s3fs + MySQL), asserting the bucket never receives an object
 //! smaller than 1 MiB, and that legacy S3 Git data migrates with
 //! `tiered_import_existing`.
 //!
-//! Ignored by default; needs an S3-compatible endpoint and MariaDB:
+//! Ignored by default; needs an S3-compatible endpoint and MySQL/MariaDB:
 //!
 //! ```text
 //! OV_S3_TEST_ENDPOINT=http://127.0.0.1:8333 \

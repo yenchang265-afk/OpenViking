@@ -69,10 +69,9 @@ def _get_config_logger():
     return logging.getLogger(__name__)
 
 
-def _raw_s3_tiered_enabled(agfs: Dict[str, Any]) -> bool:
-    """Whether a raw `storage.agfs` dict enables S3 tiered storage."""
-    s3 = agfs.get("s3")
-    tiered = s3.get("tiered") if isinstance(s3, dict) else None
+def _raw_tiered_enabled(agfs: Dict[str, Any]) -> bool:
+    """Whether a raw `storage.agfs` dict enables tiered storage."""
+    tiered = agfs.get("tiered")
     return isinstance(tiered, dict) and tiered.get("enabled") is True
 
 
@@ -410,8 +409,7 @@ class OpenVikingConfig(BaseModel):
         if not self.git.enabled:
             return self
         agfs = self.storage.agfs
-        s3 = getattr(agfs, "s3", None)
-        tiered = agfs.backend == "s3" and s3 is not None and s3.tiered.enabled
+        tiered = agfs.backend == "s3" and agfs.tiered.enabled
         if tiered and self.git.backend == "s3":
             raise ValueError(
                 "git.backend 's3' writes small git objects straight to the bucket, which "
@@ -420,7 +418,7 @@ class OpenVikingConfig(BaseModel):
         if self.git.backend == "agfs" and not tiered:
             raise ValueError(
                 "git.backend 'agfs' requires storage.agfs.backend 's3' with "
-                "storage.agfs.s3.tiered.enabled"
+                "storage.agfs.tiered.enabled"
             )
         return self
 
@@ -458,7 +456,7 @@ class OpenVikingConfig(BaseModel):
             agfs_backend = agfs.get("backend", "local")
             if agfs_backend == "memory":
                 agfs_backend = "local"
-            if agfs_backend == "s3" and _raw_s3_tiered_enabled(agfs):
+            if agfs_backend == "s3" and _raw_tiered_enabled(agfs):
                 # Plain 's3' would write small git objects straight to the bucket.
                 agfs_backend = "agfs"
             if agfs_backend in ("local", "s3", "agfs"):

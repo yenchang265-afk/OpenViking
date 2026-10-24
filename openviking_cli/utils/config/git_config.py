@@ -73,9 +73,9 @@ class GitConfig(BaseModel):
         default="local",
         description="Git object backend. 'local' stores objects on the local filesystem; "
         "'s3' stores them on a remote S3-compatible bucket; 'agfs' stores them on a "
-        "tiered AGFS mount (small objects in MariaDB, only >= 1 MiB in S3). When unset, "
+        "tiered AGFS mount (small objects in MySQL, only >= 1 MiB in S3). When unset, "
         "defaults to the same backend as 'storage.agfs.backend' (a 'memory' storage "
-        "backend maps to 'local'), or to 'agfs' when S3 tiered storage is enabled.",
+        "backend maps to 'local'), or to 'agfs' when storage.agfs.tiered is enabled.",
     )
     default_branch: str = Field(
         default="main",

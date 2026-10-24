@@ -1,11 +1,11 @@
-//! TieredFileSystem + MariaDbTierStore integration tests.
+//! TieredFileSystem + MySqlTierStore integration tests.
 //!
 //! Ignored by default; they need a reachable MariaDB/MySQL. Run against the local
 //! sidecar (`docker compose --profile tiered up -d mariadb`) with:
 //!
 //! ```text
 //! OV_TIERED_TEST_DSN=mysql://openviking:openviking@127.0.0.1:3306/openviking \
-//!   cargo test -p ragfs --features tiered --test tiered_mariadb_integration -- --ignored
+//!   cargo test -p ragfs --features tiered --test tiered_mysql_integration -- --ignored
 //! ```
 //!
 //! Every test creates its own uniquely named table and drops it afterwards, so it
@@ -16,7 +16,7 @@
 use std::sync::Arc;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use ragfs::core::tiered::mariadb::MariaDbTierStore;
+use ragfs::core::tiered::mysql::MySqlTierStore;
 use ragfs::core::tiered::{Location, TierStore, TieredFileSystem};
 use ragfs::core::{Error, FileSystem, WriteFlag};
 use ragfs::plugins::MemFileSystem;
@@ -26,7 +26,7 @@ const THRESHOLD: u64 = 64;
 
 struct Harness {
     fs: Arc<TieredFileSystem>,
-    store: Arc<MariaDbTierStore>,
+    store: Arc<MySqlTierStore>,
     dsn: String,
     table: String,
 }
@@ -42,7 +42,7 @@ impl Harness {
             .unwrap()
             .as_nanos();
         let table = format!("it_{}_{}", std::process::id(), nanos % 1_000_000_000_000);
-        let store = Arc::new(MariaDbTierStore::connect(&dsn, &table, 8).await.unwrap());
+        let store = Arc::new(MySqlTierStore::connect(&dsn, &table, 8).await.unwrap());
         let blobs = Arc::new(MemFileSystem::new());
         let fs = Arc::new(TieredFileSystem::new(store.clone(), blobs, THRESHOLD));
         Some(Self {
@@ -78,7 +78,7 @@ macro_rules! harness {
 }
 
 #[tokio::test]
-#[ignore = "requires OV_TIERED_TEST_DSN (MariaDB)"]
+#[ignore = "requires OV_TIERED_TEST_DSN (MySQL or MariaDB)"]
 async fn routes_by_size_and_round_trips_both_tiers() {
     let h = harness!();
     let fs = &h.fs;
@@ -108,7 +108,7 @@ async fn routes_by_size_and_round_trips_both_tiers() {
 }
 
 #[tokio::test]
-#[ignore = "requires OV_TIERED_TEST_DSN (MariaDB)"]
+#[ignore = "requires OV_TIERED_TEST_DSN (MySQL or MariaDB)"]
 async fn directory_rename_and_subtree_delete_use_byte_ranges() {
     let h = harness!();
     let fs = &h.fs;
@@ -155,7 +155,7 @@ async fn directory_rename_and_subtree_delete_use_byte_ranges() {
 }
 
 #[tokio::test]
-#[ignore = "requires OV_TIERED_TEST_DSN (MariaDB)"]
+#[ignore = "requires OV_TIERED_TEST_DSN (MySQL or MariaDB)"]
 async fn conditional_ops_and_error_contract() {
     let h = harness!();
     let fs = &h.fs;
@@ -196,7 +196,7 @@ async fn conditional_ops_and_error_contract() {
 }
 
 #[tokio::test]
-#[ignore = "requires OV_TIERED_TEST_DSN (MariaDB)"]
+#[ignore = "requires OV_TIERED_TEST_DSN (MySQL or MariaDB)"]
 async fn concurrent_create_new_has_exactly_one_winner() {
     let h = harness!();
     let tasks: Vec<_> = (0..8)
@@ -226,7 +226,7 @@ async fn concurrent_create_new_has_exactly_one_winner() {
 }
 
 #[tokio::test]
-#[ignore = "requires OV_TIERED_TEST_DSN (MariaDB)"]
+#[ignore = "requires OV_TIERED_TEST_DSN (MySQL or MariaDB)"]
 async fn parallel_writers_sharing_new_ancestors_all_succeed() {
     let h = harness!();
     let tasks: Vec<_> = (0..16)
@@ -256,7 +256,7 @@ async fn parallel_writers_sharing_new_ancestors_all_succeed() {
 }
 
 #[tokio::test]
-#[ignore = "requires OV_TIERED_TEST_DSN (MariaDB)"]
+#[ignore = "requires OV_TIERED_TEST_DSN (MySQL or MariaDB)"]
 async fn orphan_gc_keeps_referenced_blobs() {
     let h = harness!();
     h.fs.write("/keep.bin", &large(), 0, WriteFlag::Create)

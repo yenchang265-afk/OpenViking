@@ -1,4 +1,4 @@
-//! MariaDB / MySQL implementation of [`TierStore`].
+//! MySQL implementation (MySQL 8+ or MariaDB, same wire protocol and SQL) of [`TierStore`].
 //!
 //! One InnoDB table holds every path of a tiered mount. `path` is a
 //! `VARBINARY` primary key, so subtree operations are byte-range scans
@@ -144,13 +144,13 @@ fn descendant_bounds(path: &str) -> (String, String) {
     }
 }
 
-/// A [`TierStore`] backed by one MariaDB/MySQL table.
-pub struct MariaDbTierStore {
+/// A [`TierStore`] backed by one MySQL/MariaDB table.
+pub struct MySqlTierStore {
     pool: MySqlPool,
     table: String,
 }
 
-impl MariaDbTierStore {
+impl MySqlTierStore {
     /// Connect with `dsn` (`mysql://user:pass@host:3306/db`) and create the
     /// table when missing. `table` must already be a validated identifier.
     pub async fn connect(dsn: &str, table: &str, max_connections: u32) -> Result<Self> {
@@ -493,7 +493,7 @@ impl MariaDbTierStore {
 }
 
 #[async_trait]
-impl TierStore for MariaDbTierStore {
+impl TierStore for MySqlTierStore {
     async fn get(&self, path: &str) -> Result<Option<TierEntry>> {
         with_retry(path, || async {
             let sql = self.sql(&format!("SELECT {} FROM {{t}} WHERE path = ?", COLUMNS));
@@ -597,7 +597,7 @@ impl TierStore for MariaDbTierStore {
             Ok(result.rows_affected())
         })
         .await?;
-        // MariaDB reports 0 affected rows when the value is unchanged, so confirm existence.
+        // MySQL/MariaDB report 0 affected rows when the value is unchanged, so confirm existence.
         if updated == 0 && self.get(path).await?.is_none() {
             return Err(Error::not_found(path));
         }
