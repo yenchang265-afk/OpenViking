@@ -1834,6 +1834,8 @@ impl RAGFSBindingClient {
             ];
             #[cfg(feature = "s3")]
             features.push("s3fs");
+            #[cfg(feature = "tiered")]
+            features.push("tiered");
             m.insert(
                 "features".to_string(),
                 features.into_pyobject(py)?.into_any().unbind(),

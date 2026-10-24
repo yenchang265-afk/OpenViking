@@ -20,6 +20,7 @@ pub mod multibackend_wrapper;
 pub mod plugin;
 pub mod stats;
 pub mod stats_wrapper;
+pub mod tiered;
 #[cfg(test)]
 pub(crate) mod test_support;
 pub mod types;

@@ -67,7 +67,7 @@ Optional sections use their defaults when omitted. Unknown fields in `ov.conf` a
 | `compile_api` | object | disabled | External Compile task API |
 | `connector` | object | disabled | External Connector ingestion service |
 | `encryption` | object | disabled | File and secret encryption |
-| `git` | object | local | Version backend: `local` or `s3` |
+| `git` | object | local | Version backend: `local`, `s3`, or `agfs` (default with S3 tiered storage) |
 | `log` | object | console | Log level, format, and file output |
 | `telemetry` | object | disabled | OpenTelemetry tracing |
 | `oauth` | object | disabled | MCP OAuth 2.1 |

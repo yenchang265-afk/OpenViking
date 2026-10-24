@@ -22,6 +22,14 @@ from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
+# Git history on tiered S3 storage: a second tiered s3fs mount under the storage
+# prefix (`<prefix>/.ovgit`), with the legacy git S3 backend's key layout so
+# `import_existing` migrates old git data found there.
+GIT_AGFS_MOUNT_PATH = "/ovgit"
+GIT_S3_PREFIX = ".ovgit"
+DEFAULT_TIERED_TABLE = "agfs_entries"
+DEFAULT_GIT_TIERED_TABLE = "agfs_git_entries"
+
 
 @dataclass(frozen=True)
 class RagfsBindingConfig:
@@ -344,6 +352,7 @@ def _generate_plugin_config(
         }
     elif backend == "s3" and s3_config:
         primary_plugin_config = _serialize_s3_plugin_params(s3_config)
+        primary_plugin_config.update(_serialize_tiered_params(getattr(agfs_config, "tiered", None)))
 
     # Build the mount config dict for the primary backend
     mount_config: Dict[str, Any] = dict(primary_plugin_config)
@@ -371,7 +380,35 @@ def _generate_plugin_config(
         "config": mount_config,
     }
 
+    if plugin_name == "s3fs" and mount_config.get("tiered_enabled"):
+        # /local must not treat the git mount's objects as its own legacy data.
+        mount_config["tiered_import_exclude"] = [GIT_S3_PREFIX]
+        config["s3fs_git"] = {
+            "enabled": True,
+            "plugin": "s3fs",
+            "path": GIT_AGFS_MOUNT_PATH,
+            "config": _git_mount_params(primary_plugin_config),
+        }
+
     return config
+
+
+def _git_mount_params(s3_params: Dict[str, Any]) -> Dict[str, Any]:
+    """S3 params for the tiered git mount: same bucket and tiering, own prefix and table.
+
+    The prefix sits under the storage prefix, so deployments sharing a bucket by
+    prefix never share (and garbage-collect) each other's git blobs. The table
+    follows the effective table name, so writing the default explicitly keeps
+    the same git table.
+    """
+    params = dict(s3_params)
+    storage_prefix = (s3_params.get("prefix") or "").strip("/")
+    params["prefix"] = f"{storage_prefix}/{GIT_S3_PREFIX}" if storage_prefix else GIT_S3_PREFIX
+    table = s3_params.get("tiered_table") or DEFAULT_TIERED_TABLE
+    params["tiered_table"] = (
+        DEFAULT_GIT_TIERED_TABLE if table == DEFAULT_TIERED_TABLE else f"{table}_git"
+    )
+    return params
 
 
 def _map_backend_to_plugin_name(backend: str) -> str:
@@ -454,6 +491,44 @@ def _serialize_s3_plugin_params(s3_config: Any) -> Dict[str, Any]:
         value = _get_config_value(s3_config, key)
         if value is not None:
             params[key] = value
+    return params
+
+
+# Engine-independent `storage.agfs.tiered` keys.
+_TIERED_KEYS = (
+    "small_threshold_bytes",
+    "gc_interval_secs",
+    "gc_min_age_secs",
+)
+# Keys of the backend's sub-block (`storage.agfs.tiered.<backend>`).
+_TIERED_BACKEND_KEYS = (
+    "dsn_env",
+    "table",
+    "max_connections",
+)
+
+
+def _serialize_tiered_params(tiered: Any) -> Dict[str, Any]:
+    """Serialize size-tiered storage config into ``tiered_*`` mount params.
+
+    Nothing is emitted unless tiering is enabled, and unset values are left to
+    the ragfs defaults.
+    """
+    if tiered is None or not _get_config_value(tiered, "enabled", False):
+        return {}
+    backend = _get_config_value(tiered, "backend", "mysql")
+    params: Dict[str, Any] = {"tiered_enabled": True, "tiered_backend": backend}
+    for key in _TIERED_KEYS:
+        value = _get_config_value(tiered, key)
+        if value is not None:
+            params[f"tiered_{key}"] = value
+    engine = _get_config_value(tiered, backend)
+    for key in _TIERED_BACKEND_KEYS:
+        value = _get_config_value(engine, key) if engine is not None else None
+        if value is not None:
+            params[f"tiered_{key}"] = value
+    if _get_config_value(tiered, "import_existing", False):
+        params["tiered_import_existing"] = True
     return params
 
 
@@ -617,6 +692,11 @@ def _build_git_config_dict(git_config: Any, storage_path: Path) -> Dict[str, Any
         result["s3"] = s3_dict
         return result
 
+    if backend == "agfs":
+        # The tiered git mount is created by _generate_plugin_config at this path.
+        result["agfs"] = {"mount_path": GIT_AGFS_MOUNT_PATH}
+        return result
+
     # Default: local backend
     local_cfg = getattr(git_config, "local", None)
     base_dir = getattr(local_cfg, "base_dir", "") if local_cfg is not None else ""
@@ -744,7 +824,8 @@ def mount_agfs_backend(agfs: Any, config: RagfsBindingConfig | Any) -> None:
             logger.debug(
                 f"[RAGFSUtils] Mounting {plugin_name} at {mount_path} with config keys: {list(cfg.keys()) if isinstance(cfg, dict) else type(cfg)}"
             )
-            agfs.mount(plugin_name, mount_path, cfg)
+            # Entries may set "plugin" so one plugin can be mounted more than once.
+            agfs.mount(plugin_config.get("plugin", plugin_name), mount_path, cfg)
             logger.debug(f"[RAGFSUtils] Successfully mounted {plugin_name}")
         except Exception as e:
             logger.error(f"[RAGFSUtils] Failed to mount {plugin_name}: {e}")

@@ -160,6 +160,185 @@ def test_agfs_s3_multipart_settings_reject_out_of_range_values(overrides):
         _s3_config(**overrides)
 
 
+def test_agfs_s3_tiered_storage_is_off_by_default():
+    config = AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config())
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+    plugin_config = plugins["s3fs"]["config"]
+
+    assert not any(key.startswith("tiered_") for key in plugin_config)
+    assert "s3fs_git" not in plugins
+
+
+def test_agfs_s3_tiered_storage_enabled_leaves_defaults_to_ragfs():
+    config = AGFSConfig(
+        path="/tmp/ov-test", backend="s3", s3=_s3_config(), tiered={"enabled": True}
+    )
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert {k: v for k, v in plugin_config.items() if k.startswith("tiered_")} == {
+        "tiered_enabled": True,
+        "tiered_backend": "mysql",
+        "tiered_import_exclude": [".ovgit"],
+    }
+
+
+def test_agfs_s3_tiered_storage_adds_tiered_git_mount():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(prefix=""),
+        tiered={"enabled": True, "import_existing": True},
+    )
+
+    git_mount = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs_git"]
+
+    assert git_mount["plugin"] == "s3fs"
+    assert git_mount["path"] == "/ovgit"
+    params = git_mount["config"]
+    assert params["bucket"] == "my-bucket"
+    assert params["prefix"] == ".ovgit", "same keys as the legacy git S3 backend"
+    assert params["tiered_enabled"] is True
+    assert params["tiered_import_existing"] is True
+    assert params["tiered_table"] == "agfs_git_entries"
+    assert "tiered_import_exclude" not in params
+
+
+def test_agfs_s3_tiered_git_mount_derives_table_from_custom_table():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(),
+        tiered={"enabled": True, "mysql": {"table": "tenant_a"}},
+    )
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+
+    assert plugins["s3fs"]["config"]["tiered_table"] == "tenant_a"
+    assert plugins["s3fs_git"]["config"]["tiered_table"] == "tenant_a_git"
+
+
+@pytest.mark.parametrize(
+    ("storage_prefix", "git_prefix"),
+    [("", ".ovgit"), ("ov/", "ov/.ovgit"), ("tenant-a", "tenant-a/.ovgit")],
+)
+def test_agfs_tiered_git_mount_lives_under_the_storage_prefix(storage_prefix, git_prefix):
+    # Deployments sharing a bucket by prefix must not share (and GC) git blobs.
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(prefix=storage_prefix),
+        tiered={"enabled": True},
+    )
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+
+    assert plugins["s3fs_git"]["config"]["prefix"] == git_prefix
+    assert plugins["s3fs"]["config"]["tiered_import_exclude"] == [".ovgit"]
+
+
+@pytest.mark.parametrize("mysql", [{}, {"table": "agfs_entries"}])
+def test_agfs_tiered_git_table_depends_on_the_effective_table(mysql):
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(),
+        tiered={"enabled": True, "mysql": mysql},
+    )
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+
+    assert plugins["s3fs_git"]["config"]["tiered_table"] == "agfs_git_entries"
+
+
+def test_mount_agfs_backend_mounts_the_git_mount_with_the_s3fs_plugin(tmp_path):
+    class RecordingBinding:
+        def __init__(self):
+            self.mounts = []
+
+        def mount(self, plugin, path, cfg):
+            self.mounts.append((plugin, path))
+
+        def unmount(self, path):
+            pass
+
+    config = AGFSConfig(path=str(tmp_path), backend="s3", s3=_s3_config(), tiered={"enabled": True})
+    binding = RecordingBinding()
+
+    mount_agfs_backend(binding, config)
+
+    assert ("s3fs", "/local") in binding.mounts
+    assert ("s3fs", "/ovgit") in binding.mounts
+
+
+def test_agfs_s3_tiered_storage_settings_are_forwarded_to_ragfs_plugin_config():
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(),
+        tiered={
+            "enabled": True,
+            "backend": "mysql",
+            "small_threshold_bytes": 2 * 1024 * 1024,
+            "import_existing": True,
+            "gc_interval_secs": 600,
+            "gc_min_age_secs": 120,
+            "mysql": {
+                "dsn_env": "OV_MYSQL_DSN",
+                "table": "tenant_a_entries",
+                "max_connections": 8,
+            },
+        },
+    )
+
+    plugin_config = _generate_plugin_config(config, Path("/tmp/ov-test"))["s3fs"]["config"]
+
+    assert plugin_config["tiered_enabled"] is True
+    assert plugin_config["tiered_import_existing"] is True
+    assert plugin_config["tiered_gc_interval_secs"] == 600
+    assert plugin_config["tiered_gc_min_age_secs"] == 120
+    assert plugin_config["tiered_small_threshold_bytes"] == 2 * 1024 * 1024
+    assert plugin_config["tiered_backend"] == "mysql"
+    assert plugin_config["tiered_dsn_env"] == "OV_MYSQL_DSN"
+    assert plugin_config["tiered_table"] == "tenant_a_entries"
+    assert plugin_config["tiered_max_connections"] == 8
+
+
+@pytest.mark.parametrize(
+    "tiered",
+    [
+        {"enabled": True, "small_threshold_bytes": 0},
+        {"enabled": True, "small_threshold_bytes": 8 * 1024 * 1024 + 1},
+        {"enabled": True, "mysql": {"max_connections": 0}},
+        {"enabled": True, "mysql": {"max_connections": 257}},
+        {"enabled": True, "mysql": {"table": "entries; DROP TABLE x"}},
+        {"enabled": True, "mysql": {"dsn_env": ""}},
+        {"enabled": True, "gc_interval_secs": -1},
+        {"enabled": True, "gc_min_age_secs": 59},
+        {"enabled": True, "backend": "mariadb"},
+        {"enabled": True, "backend": "postgres"},
+        # Engine settings belong in the backend's sub-block.
+        {"enabled": True, "dsn_env": "X"},
+        {"enabled": True, "mysql": {"dns_env": "X"}},
+    ],
+)
+def test_agfs_tiered_storage_rejects_invalid_values(tiered):
+    with pytest.raises(ValueError):
+        AGFSConfig(path="/tmp/ov-test", backend="s3", s3=_s3_config(), tiered=tiered)
+
+
+def test_agfs_tiered_storage_requires_the_s3_backend():
+    with pytest.raises(ValueError, match="storage.agfs.backend 's3'"):
+        AGFSConfig(path="/tmp/ov-test", backend="local", tiered={"enabled": True})
+
+
+def test_agfs_tiered_storage_old_location_under_s3_is_rejected():
+    # Silently ignoring it would mount an empty-looking bucket over migrated data.
+    with pytest.raises(ValueError, match="storage.agfs.tiered"):
+        _s3_config(tiered={"enabled": True})
+
+
 _S3_RESILIENCE_SETTINGS = {
     "connect_timeout_ms": 2_000,
     "read_timeout_ms": 10_000,

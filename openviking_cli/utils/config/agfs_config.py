@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Any, List, Literal, Optional
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from openviking_cli.utils.logger import get_logger
 
@@ -20,6 +20,95 @@ class DirectoryMarkerMode(str, Enum):
     NONE = "none"
     EMPTY = "empty"
     NONEMPTY = "nonempty"
+
+
+class TieredMySQLConfig(BaseModel):
+    """MySQL (8+) or MariaDB store for size-tiered storage."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    dsn_env: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        description="Environment variable holding the DSN "
+        "(mysql://user:pass@host:3306/db). Unset uses RAGFS_TIERED_DSN. "
+        "The DSN itself is never stored in config.",
+    )
+
+    table: Optional[str] = Field(
+        default=None,
+        # At most 60 chars: the git mount uses "<table>_git" (MySQL limit 64).
+        pattern=r"^[A-Za-z_][A-Za-z0-9_]{0,59}$",
+        description="Index table name. Unset uses agfs_entries; git history then uses "
+        "agfs_git_entries, otherwise <table>_git.",
+    )
+
+    max_connections: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=256,
+        description="Connection pool size. Unset uses the ragfs default (16).",
+    )
+
+
+class TieredStorageConfig(BaseModel):
+    """Size-tiered storage over the S3 backend (`storage.agfs.tiered`).
+
+    Files smaller than ``small_threshold_bytes`` and the path index live in a
+    SQL store chosen by ``backend``; only larger files become S3 objects. This
+    keeps object stores such as MinIO free of small objects while users still
+    upload files of any size. Engine-specific settings go in the sub-block named
+    after the backend (e.g. ``mysql``).
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = Field(
+        default=False,
+        description="Keep small files and the path index in the tier store; "
+        "only files >= small_threshold_bytes are written to S3.",
+    )
+
+    backend: Literal["mysql"] = Field(
+        default="mysql",
+        description="Tier store engine. 'mysql' covers MySQL 8+ and MariaDB.",
+    )
+
+    small_threshold_bytes: Optional[int] = Field(
+        default=None,
+        gt=0,
+        le=8 * 1024 * 1024,
+        description="Files smaller than this stay in the tier store. "
+        "Unset uses the ragfs default (1 MiB).",
+    )
+
+    gc_interval_secs: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=7 * 24 * 3600,
+        description="How often unreferenced S3 blobs (left by crashes) are deleted; 0 disables. "
+        "Unset uses the ragfs default (3600).",
+    )
+
+    gc_min_age_secs: Optional[int] = Field(
+        default=None,
+        ge=60,
+        le=7 * 24 * 3600,
+        description="Only blobs unreferenced and older than this are deleted. "
+        "Unset uses the ragfs default (3600).",
+    )
+
+    import_existing: bool = Field(
+        default=False,
+        description="At startup, index objects the bucket held before tiering was enabled "
+        "(small files move into the tier store, large files are indexed in place). Safe to "
+        "re-run; turn it off once migration is done, since every startup lists the whole bucket.",
+    )
+
+    mysql: TieredMySQLConfig = Field(
+        default_factory=TieredMySQLConfig,
+        description="Settings for backend 'mysql'.",
+    )
 
 
 class S3Config(BaseModel):
@@ -196,6 +285,17 @@ class S3Config(BaseModel):
     stat_cache_ttl: Optional[int] = Field(
         default=None, ge=0, description="Stat cache TTL in seconds. s3fs default: 60."
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _reject_tiered_here(cls, data: Any) -> Any:
+        # Ignoring it would mount an empty-looking bucket over already migrated data.
+        if isinstance(data, dict) and "tiered" in data:
+            raise ValueError(
+                "'storage.agfs.s3.tiered' moved to 'storage.agfs.tiered' "
+                "(engine settings such as dsn_env/table go under 'storage.agfs.tiered.mysql')"
+            )
+        return data
 
     def validate_config(self):
         """Validate S3 configuration completeness"""
@@ -588,6 +688,12 @@ class AGFSConfig(BaseModel):
     # RAGFS will act as a gateway to the specified S3 bucket.
     s3: S3Config = Field(default_factory=lambda: S3Config(), description="S3 backend configuration")
 
+    tiered: TieredStorageConfig = Field(
+        default_factory=TieredStorageConfig,
+        description="Size-tiered storage over the S3 backend: small files and the path "
+        "index in a SQL store, only large files in S3.",
+    )
+
     # Multi-write configuration
     backups: Optional[dict[str, Any]] = Field(
         default=None, description="Multi-write backups configuration. None = single backend mode."
@@ -627,6 +733,11 @@ class AGFSConfig(BaseModel):
         elif self.backend == "s3":
             # Validate S3 configuration
             self.s3.validate_config()
+
+        if self.tiered.enabled and self.backend != "s3":
+            raise ValueError(
+                f"storage.agfs.tiered requires storage.agfs.backend 's3', got '{self.backend}'"
+            )
 
         if self.queue_db_path is not None and self.queuefs.db_path is None:
             logger.warning(

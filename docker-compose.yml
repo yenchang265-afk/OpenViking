@@ -207,6 +207,51 @@ services:
         aliases: [redis]
     restart: unless-stopped
 
+  # Optional MariaDB for size-tiered AGFS storage: files below
+  # tiered_small_threshold_bytes (default 1 MiB) and the path index live here,
+  # so the S3 bucket only receives objects >= 1 MiB. Start with:
+  #   docker compose --profile tiered up -d mariadb
+  # Set MARIADB_PASSWORD in .env and pass the DSN to OpenViking as
+  # RAGFS_TIERED_DSN=mysql://openviking:<MARIADB_PASSWORD>@mariadb:3306/openviking
+  # Matching ov.conf snippet (inside "storage.agfs.s3"):
+  #   "directory_marker_mode": "none",
+  #   "tiered": {"enabled": true}
+  mariadb:
+    image: mariadb:11.4
+    container_name: openviking-mariadb
+    profiles: ["tiered"]
+    environment:
+      MARIADB_DATABASE: openviking
+      MARIADB_USER: openviking
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:-}
+      MARIADB_RANDOM_ROOT_PASSWORD: "1"
+    # Fail inside this container only, so other profiles still start without the var.
+    entrypoint: >
+      /bin/sh -c "
+      [ -n \"$$MARIADB_PASSWORD\" ] || { echo 'set MARIADB_PASSWORD in .env' >&2; exit 1; };
+      exec docker-entrypoint.sh mariadbd
+      --max-allowed-packet=64M
+      --innodb-file-per-table=ON
+      --character-set-server=utf8mb4
+      "
+    ports:
+      # Override when the host already runs MySQL/MariaDB on 3306.
+      - "127.0.0.1:${MARIADB_HOST_PORT:-3306}:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      default:
+      # Reachable as `mariadb` from a separately run OpenViking container on the
+      # same external network (see the seaweedfs service above).
+      ov-app:
+        aliases: [mariadb]
+    restart: unless-stopped
+
 networks:
   ov-app:
     external: true
@@ -216,6 +261,7 @@ volumes:
   seaweedfs_data:
   elasticsearch_data:
   redis_data:
+  mariadb_data:
   # Uncomment for public HTTPS:
   # caddy_data:
   # caddy_config:
