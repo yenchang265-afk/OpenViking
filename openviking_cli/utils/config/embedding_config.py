@@ -4,6 +4,7 @@ from typing import Any, ClassVar, List, Literal, Optional, Tuple, cast
 
 from pydantic import BaseModel, Field, model_validator
 
+from openviking_cli.utils.config.custom_embedding_gateway_config import CustomGatewayConfig
 from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -69,7 +70,7 @@ class EmbeddingModelConfig(BaseModel):
     provider: Optional[str] = Field(
         default="volcengine",
         description=(
-            "Provider type: 'openai', 'volcengine', 'vikingdb', 'jina', 'ollama', 'gemini', 'voyage', 'dashscope', 'minimax', 'cohere', 'litellm', 'local'. "
+            "Provider type: 'openai', 'volcengine', 'vikingdb', 'jina', 'ollama', 'gemini', 'voyage', 'dashscope', 'minimax', 'cohere', 'litellm', 'local', 'custom'. "
             "For OpenRouter or other OpenAI-compatible providers, use 'litellm' with "
             "api_base and api_key, or 'openai' with api_base and extra_headers."
         ),
@@ -94,7 +95,7 @@ class EmbeddingModelConfig(BaseModel):
     encoding_format: Optional[Literal["float", "base64"]] = Field(
         default=None,
         description=(
-            "Wire format for embedding values. Applies to OpenAI / Azure providers. "
+            "Wire format for embedding values. Applies to OpenAI / Azure / custom providers. "
             "Leave unset to use the OpenAI Python SDK default (currently 'base64', "
             "which is bandwidth-efficient and decoded client-side). Set to 'float' "
             "to send/receive plain JSON arrays. This is the recommended workaround "
@@ -134,6 +135,14 @@ class EmbeddingModelConfig(BaseModel):
     max_video_frames: Optional[int] = Field(
         default=None,
         description="Maximum video frames for DashScope multimodal models (multimodal models only).",
+    )
+
+    custom: Optional[CustomGatewayConfig] = Field(
+        default=None,
+        description=(
+            "Token-exchange gateway settings for provider='custom'. "
+            "GATEWAY_<FIELD> environment variables override these values."
+        ),
     )
 
     # New multi-credential configuration
@@ -178,6 +187,7 @@ class EmbeddingModelConfig(BaseModel):
         "cohere",
         "litellm",
         "local",
+        "custom",
     )
 
     @classmethod
@@ -252,6 +262,7 @@ class EmbeddingModelConfig(BaseModel):
                     f"{', '.join(missing)}"
                 )
         # ollama / litellm / local: no auth requirement enforced here
+        # custom: validated from its own settings block in _validate_custom_gateway
 
     @model_validator(mode="after")
     def validate_config(self):
@@ -265,6 +276,9 @@ class EmbeddingModelConfig(BaseModel):
         # When credentials are configured, defer provider/api_key validation to
         # per-credential checks; the parent-level provider/api_key may be left
         # blank because each credential carries its own settings.
+        if self.provider == "custom" or self.custom is not None:
+            self._validate_custom_gateway()
+
         if self.credentials:
             self._validate_credentials()
             self._validate_credential_dimensions()
@@ -287,6 +301,23 @@ class EmbeddingModelConfig(BaseModel):
         )
 
         return self
+
+    def _validate_custom_gateway(self) -> None:
+        """Check the custom provider's gateway block, built from the environment if absent."""
+        if self.provider != "custom":
+            raise ValueError("Embedding: 'custom' settings require provider 'custom'")
+        if self.credentials:
+            raise ValueError("Embedding: custom provider does not support credentials failover")
+        if self.api_key or self.api_base:
+            raise ValueError(
+                "Embedding: custom provider reads its token and URL from custom.api_token "
+                "and custom.embedding_url; remove api_key and api_base"
+            )
+        if not self.dimension:
+            raise ValueError("Embedding: custom provider requires 'dimension' to be set explicitly")
+        if self.custom is None:
+            self.custom = CustomGatewayConfig()
+        self.custom.validate_complete("Embedding")
 
     def _validate_provider_specific_options(
         self, *, label: str, provider: Optional[str], model: Optional[str]
@@ -366,6 +397,8 @@ class EmbeddingModelConfig(BaseModel):
             label = f"credentials[{cred_id}]"
             resolved_provider = (cred.provider or self.provider or "").lower() or None
             resolved_model = cred.model or self.model
+            if resolved_provider == "custom":
+                raise ValueError(f"{label}: custom provider does not support credentials failover")
             self._validate_provider_auth(
                 label=label,
                 provider=resolved_provider,
@@ -737,6 +770,7 @@ class EmbeddingConfig(BaseModel):
         """
         from openviking.models.embedder import (
             CohereDenseEmbedder,
+            CustomDenseEmbedder,
             DashScopeDenseEmbedder,
             GeminiDenseEmbedder,
             JinaDenseEmbedder,
@@ -995,6 +1029,20 @@ class EmbeddingConfig(BaseModel):
                     **({"query_param": cfg.query_param} if cfg.query_param else {}),
                     **({"document_param": cfg.document_param} if cfg.document_param else {}),
                     **({"extra_headers": cfg.extra_headers} if cfg.extra_headers else {}),
+                },
+            ),
+            ("custom", "dense"): (
+                CustomDenseEmbedder,
+                lambda cfg: {
+                    "model_name": cfg.model,
+                    "dimension": cfg.dimension,
+                    "gateway": cfg.custom,
+                    "config": dict(runtime_config),
+                    **(
+                        {"encoding_format": cfg.encoding_format}
+                        if cfg.encoding_format is not None
+                        else {}
+                    ),
                 },
             ),
             ("local", "dense"): (
