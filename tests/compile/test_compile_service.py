@@ -238,14 +238,39 @@ async def test_create_rejects_beyond_active_task_cap(tmp_path, tracker):
     service, tasks = _compile_service(
         tmp_path, config=CompileApiConfig(max_active_tasks_per_user=2)
     )
-    await tracker.create("compile", task_id="cmp_a", **OWNER)
+
+    async def live(task_id, **owner):
+        await tracker.create("compile", task_id=task_id, **owner)
+        await tracker.register_running_task(task_id, **owner)
+
+    await live("cmp_a", **OWNER)
+    # Records left active without queue work (e.g. by an older version) never run
+    # again and do not count.
+    await tracker.create("compile", task_id="cmp_orphan", **OWNER)
     await service.create(_request(), ctx=CTX)
-    await tracker.create("compile", task_id="cmp_b", **OWNER)
+    await live("cmp_b", **OWNER)
     # Another user's tasks do not count against this user.
-    await tracker.create("compile", task_id="cmp_c", account_id="acme", user_id="bob")
+    await live("cmp_c", account_id="acme", user_id="bob")
     with pytest.raises(ResourceExhaustedError):
         await service.create(_request(), ctx=CTX)
     assert tasks.create.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_memory_retry_with_same_key_returns_task_even_at_cap(tmp_path, tracker):
+    service, tasks = _compile_service(
+        tmp_path, config=CompileApiConfig(max_active_tasks_per_user=1)
+    )
+    payload = {"to": "viking://user/alice/memories", "skill": "memory"}
+    service._memory_runner = SimpleNamespace(prepare=AsyncMock(return_value=payload))
+    tasks.recover_submission = AsyncMock(return_value="existing-task")
+    await tracker.create("compile", task_id="cmp_live", **OWNER)
+    await tracker.register_running_task("cmp_live", **OWNER)
+    request = CompileRequest.model_validate({"to": payload["to"], "skill": "memory"})
+    assert await service.create(request, ctx=CTX, idempotency_key="memory-key-0001") == (
+        "existing-task"
+    )
+    tasks.create.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -281,3 +306,126 @@ async def test_key_store_resolver_reads_role_and_groups():
     resolve = key_store_identity_resolver(manager)
     assert await resolve("acme", "alice") == ("admin", ("eng",))
     assert await resolve("acme", "ghost") is None
+
+
+def _direct_service(monkeypatch, tracker, run):
+    """An ExternalTaskService whose deliveries are driven by calling execute()."""
+    import openviking.service.external_task_service as external
+
+    monkeypatch.setattr(external, "get_task_tracker", lambda: tracker)
+    monkeypatch.setattr(external, "get_queue_manager", lambda: SimpleNamespace(enqueue=AsyncMock()))
+    service = ExternalTaskService()
+    service.register(_Provider(run))
+    return service
+
+
+@pytest.mark.asyncio
+async def test_deliveries_wait_for_identity_policy_then_run_narrowed(monkeypatch, tracker):
+    run = AsyncMock(return_value={"ok": True})
+    service = _direct_service(monkeypatch, tracker, run)
+    admin = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.ADMIN)
+    task = await service.create(
+        "compile",
+        resource_id=None,
+        payload={"from": ["viking://resources/raw"], "to": "viking://resources/wiki"},
+        ctx=admin,
+    )
+    service.defer_until_identity_policy()
+    # Recovered work rotates until the server's auth has decided the policy.
+    assert not await service.execute(task.task_id, "acme", "alice")
+    run.assert_not_awaited()
+
+    service.set_identity_resolver(AsyncMock(return_value=(Role.USER, ())))
+    assert await service.execute(task.task_id, "acme", "alice")
+    assert run.await_args.args[2].role == Role.USER
+
+
+@pytest.mark.asyncio
+async def test_result_published_before_cancel_is_kept(monkeypatch, tracker):
+    from openviking.service.external_task_service import TaskCompletedDuringCancel
+
+    run = AsyncMock(side_effect=TaskCompletedDuringCancel({"created": ["page"]}))
+    service = _direct_service(monkeypatch, tracker, run)
+    task = await _submit(service)
+    # A shutdown cancel: the delivery stays unacked, but the outcome is stored.
+    with pytest.raises(asyncio.CancelledError):
+        await service.execute(task.task_id, "acme", "alice")
+    assert (await tracker.get(task.task_id, **OWNER)).result == {"created": ["page"]}
+    # Redelivery after restart acknowledges it instead of compiling again.
+    assert await service.execute(task.task_id, "acme", "alice")
+    assert run.await_count == 1
+
+
+@pytest.mark.asyncio
+async def test_outcome_write_is_retried_and_target_released(monkeypatch, tracker):
+    import openviking.service.external_task_service as external
+
+    monkeypatch.setattr(external.asyncio, "sleep", AsyncMock())
+    service = _direct_service(monkeypatch, tracker, AsyncMock(return_value={"ok": True}))
+    task = await _submit(service)
+    real = service._apply_snapshot
+    calls = {"n": 0}
+
+    async def flaky(*args, **kwargs):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise OSError("storage unavailable")
+        return await real(*args, **kwargs)
+
+    service._apply_snapshot = flaky
+    assert await service.execute(task.task_id, "acme", "alice")
+    assert (await tracker.get(task.task_id, **OWNER)).result == {"ok": True}
+
+    other = await _submit(service)
+    service._apply_snapshot = AsyncMock(side_effect=OSError("storage down"))
+    with pytest.raises(OSError):
+        await service.execute(other.task_id, "acme", "alice")
+    # The attempt has stopped, so other work for the same target is not blocked.
+    assert service._owners == {}
+
+
+@pytest.mark.asyncio
+async def test_key_store_resolver_rejects_deleting_users_and_inactive_accounts():
+    from openviking.service.external_task_service import key_store_identity_resolver
+
+    manager = SimpleNamespace(
+        get_user=AsyncMock(return_value={"role": "user"}),
+        get_user_group_ids=AsyncMock(return_value=[]),
+        get_deletion=AsyncMock(return_value=None),
+        get_account=AsyncMock(return_value={"status": "active"}),
+    )
+    resolve = key_store_identity_resolver(manager)
+    assert await resolve("acme", "alice") == ("user", ())
+    manager.get_deletion.return_value = {"task_id": "del-1"}
+    assert await resolve("acme", "alice") is None
+    manager.get_deletion.return_value = None
+    manager.get_account.return_value = {"status": "deleting"}
+    assert await resolve("acme", "alice") is None
+
+
+@pytest.mark.asyncio
+async def test_user_cancel_after_publish_keeps_result(durable):
+    from openviking.service.external_task_service import TaskCompletedDuringCancel
+
+    started = threading.Event()
+
+    async def run(task, payload, ctx, *, progress, cancelled):
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        except asyncio.CancelledError:
+            # The runner's view: output was already published when cancel landed.
+            raise TaskCompletedDuringCancel({"created": ["page"]}) from None
+
+    task = await _submit(durable.start(_Provider(run)))
+    assert await asyncio.to_thread(started.wait, 20)
+    await durable.tracker.cancel(task.task_id, **OWNER)
+
+    async def settled():
+        current = await durable.tracker.get(task.task_id, **OWNER)
+        return current.status == TaskStatus.CANCELLED
+
+    await _wait_for(settled)
+    current = await durable.tracker.get(task.task_id, **OWNER)
+    assert current.result == {"created": ["page"]}
+    assert current.error is None

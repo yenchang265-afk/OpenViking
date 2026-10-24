@@ -11,6 +11,7 @@ from openviking.compile import runner as runner_module
 from openviking.compile.models import CompileFailure, CompileLimits, SanitizedCompileRequest
 from openviking.compile.pipeline_io import TaskFiles
 from openviking.compile.renderer import RenderedBundle
+from openviking.service.external_task_service import TaskCompletedDuringCancel
 
 PAGE = "viking://resources/wiki/topic.md"
 
@@ -165,10 +166,12 @@ async def test_publish_runs_outside_task_context_and_survives_cancel(tmp_path, s
     task.cancel()
     await asyncio.sleep(0)
     release.set()
-    with pytest.raises(asyncio.CancelledError):
+    with pytest.raises(TaskCompletedDuringCancel) as raised:
         await task
-    # The write completed before cancellation took effect, outside the Compile task.
+    # The write completed before cancellation took effect, outside the Compile task,
+    # and its result travels with the cancellation.
     assert seen == {"context": None, "finished": True}
+    assert raised.value.result["created"] == [PAGE]
 
 
 def test_prune_scratch_removes_only_old_other_tasks(tmp_path):

@@ -36,6 +36,8 @@ _ACTIVE_STATUSES = frozenset({"pending", "running", "cancelling"})
 # Started attempts per task, counting re-runs after restarts. A task that keeps
 # dying with the process must not crash-loop and re-spend model tokens forever.
 MAX_TASK_ATTEMPTS = 3
+# Tries to store a finished attempt's outcome before leaving it to redelivery.
+OUTCOME_WRITE_ATTEMPTS = 3
 
 
 class ExternalTaskError(RuntimeError):
@@ -53,6 +55,18 @@ class ExternalTaskError(RuntimeError):
         self.code = code
         self.transient = transient
         # Partial output retained on the failed task, e.g. per-item errors.
+        self.result = result
+
+
+class TaskCompletedDuringCancel(asyncio.CancelledError):
+    """Cancellation that arrived after the task's work had already completed.
+
+    The provider raises it instead of a plain CancelledError so the finished
+    result is recorded before cancellation propagates.
+    """
+
+    def __init__(self, result: dict[str, Any]) -> None:
+        super().__init__("task completed before cancellation took effect")
         self.result = result
 
 
@@ -110,10 +124,21 @@ class ExternalTaskService:
         self._submission_locks = KeyedAsyncLockPool[str]()
         self._submission_dispatcher = OwnerLoopDispatcher()
         self._identity_resolver: IdentityResolver | None = None
+        # Embedded use runs tasks immediately; the HTTP server defers them until
+        # its auth plugin has decided the identity policy.
+        self._identity_policy_ready = True
+
+    def defer_until_identity_policy(self) -> None:
+        """Hold deliveries (they rotate) until set_identity_resolver is called."""
+        self._identity_policy_ready = False
 
     def set_identity_resolver(self, resolver: IdentityResolver | None) -> None:
-        """Re-check each task owner before every attempt (key-backed auth only)."""
+        """Re-check each task owner before every attempt (key-backed auth only).
+
+        Passing None also releases deferred deliveries for auth modes without a check.
+        """
         self._identity_resolver = resolver
+        self._identity_policy_ready = True
 
     async def _current_identity(self, ctx: RequestContext) -> RequestContext:
         """Never run with more access than the owner has now.
@@ -130,7 +155,8 @@ class ExternalTaskService:
         stored, now = Role(ctx.role), Role(current_role or Role.USER)
         return dataclasses.replace(
             ctx,
-            role=stored if stored.rank <= now.rank else now,
+            # A same-rank change of role still takes the current role.
+            role=stored if stored == now or stored.rank < now.rank else now,
             group_ids=tuple(group for group in ctx.group_ids if group in set(current_groups)),
         )
 
@@ -347,6 +373,9 @@ class ExternalTaskService:
             # resubmitting credentials that have already been cleared.
             if task.result is not None or task.error is not None:
                 return True
+            if not self._identity_policy_ready:
+                # Recovered work must not run before its owner can be re-checked.
+                return False
 
             provider = self._provider(task.task_type)
             payload = task.meta.get("request")
@@ -378,10 +407,11 @@ class ExternalTaskService:
             await run_to_completion(lambda: self.cancel_recovered(task_id, account_id, user_id))
             raise
         finally:
-            # An interrupted delivery keeps ownership until recovery confirms
-            # the Runtime has stopped; it must not admit another target writer.
+            # Execution is in-process, so once this delivery exits nothing writes
+            # to the target any more; a redelivery claims it again.
             if claimed:
                 self._executing.remove(task_id)
+                self._release(task)
 
     async def _execute_task(
         self,
@@ -422,6 +452,15 @@ class ExternalTaskService:
             ctx = await self._current_identity(restore_request_context(auth, account_id, user_id))
             await tracker.start(task_id, account_id=account_id, user_id=user_id, stage="running")
             result = await provider.run(task, payload, ctx, progress=progress, cancelled=cancelled)
+        except TaskCompletedDuringCancel as exc:
+            # Keep the published result even though the attempt was cancelled.
+            completed = ExternalTaskSnapshot(status="completed", result=exc.result)
+            await run_to_completion(
+                lambda: self._persist_outcome(
+                    completed, task_id=task_id, account_id=account_id, user_id=user_id
+                )
+            )
+            raise
         except ExternalTaskError as exc:
             snapshot = ExternalTaskSnapshot(
                 status="failed", result=exc.result, error_code=exc.code, error_message=str(exc)
@@ -433,9 +472,27 @@ class ExternalTaskService:
             )
         else:
             snapshot = ExternalTaskSnapshot(status="completed", result=result)
-        await self._apply_snapshot(
+        await self._persist_outcome(
             snapshot, task_id=task_id, account_id=account_id, user_id=user_id
         )
+
+    async def _persist_outcome(
+        self, snapshot: ExternalTaskSnapshot, *, task_id: str, account_id: str, user_id: str
+    ) -> None:
+        """Retry transient storage errors; a final failure leaves the message for restart."""
+        for attempt in range(OUTCOME_WRITE_ATTEMPTS):
+            try:
+                await self._apply_snapshot(
+                    snapshot, task_id=task_id, account_id=account_id, user_id=user_id
+                )
+                return
+            except Exception:
+                if attempt + 1 == OUTCOME_WRITE_ATTEMPTS:
+                    raise
+                logger.warning(
+                    "Saving the outcome of task %s failed; retrying", task_id, exc_info=True
+                )
+                await asyncio.sleep(0.5 * 2**attempt)
 
     async def cancel_recovered(self, task_id: str, account_id: str, user_id: str) -> None:
         """Record cancellation once the in-process attempt has stopped."""
@@ -546,6 +603,7 @@ __all__ = [
     "ExternalTaskService",
     "ExternalTaskSnapshot",
     "TaskCancelled",
+    "TaskCompletedDuringCancel",
     "TaskProgress",
 ]
 
@@ -581,9 +639,17 @@ def key_store_identity_resolver(manager: Any) -> IdentityResolver:
     """Resolve task owners through the API key store used by key-based auth."""
 
     async def resolve(account_id: str, user_id: str) -> tuple[str, tuple[str, ...]] | None:
+        # Mirror request authentication: unknown users, users being deleted and
+        # accounts that are no longer active cannot run work.
         user = await manager.get_user(account_id, user_id)
         if not user:
             return None
+        if hasattr(manager, "get_deletion") and await manager.get_deletion(account_id, user_id):
+            return None
+        if hasattr(manager, "get_account"):
+            account = await manager.get_account(account_id)
+            if account is None or account.get("status", "active") != "active":
+                return None
         groups: tuple[str, ...] = ()
         if hasattr(manager, "get_user_group_ids"):
             groups = tuple(await manager.get_user_group_ids(account_id, user_id))

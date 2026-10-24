@@ -171,6 +171,13 @@ class CompileService:
             payload = await self._memory_runner.prepare(
                 target=request.to, instruction=request.instruction, ctx=ctx
             )
+            if idempotency_key:
+                # A retried submission returns its task without counting against capacity.
+                existing = await self._tasks.recover_submission(
+                    self.task_type, payload, {}, ctx, idempotency_key
+                )
+                if existing is not None:
+                    return existing
             return await self._submit(payload, payload["to"], ctx, idempotency_key)
         request = self._normalize_request_uris(request, ctx)
         self._validate_args(request.args)
@@ -240,20 +247,22 @@ class CompileService:
             raise ExternalTaskError(exc.code, str(exc)) from exc
 
     async def _ensure_capacity(self, ctx: RequestContext) -> None:
-        """Bound queued work per user; each queued task also re-runs after a restart."""
+        """Bound queued work per user; each queued task also re-runs after a restart.
+
+        Only tasks with live queue work count. Records left active by older
+        versions or by a lost outcome write never run again, and must not lock
+        the user out; cancelling them settles them immediately.
+        """
         limit = self._config.max_active_tasks_per_user
         tracker = task_tracker_module.get_task_tracker()
+        owner = {"account_id": ctx.account_id, "user_id": ctx.user.user_id}
         active = 0
         for status in _ACTIVE_TASK_STATUSES:
-            active += len(
-                await tracker.list_tasks(
-                    task_type=self.task_type,
-                    status=status,
-                    limit=limit,
-                    account_id=ctx.account_id,
-                    user_id=ctx.user.user_id,
-                )
-            )
+            for task in await tracker.list_tasks(
+                task_type=self.task_type, status=status, limit=None, **owner
+            ):
+                if await tracker.has_work(task.task_id, **owner):
+                    active += 1
         if active >= limit:
             raise ResourceExhaustedError(
                 f"Too many active Compile tasks ({active}); wait for some to finish",

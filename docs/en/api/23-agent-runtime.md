@@ -197,7 +197,7 @@ POST /api/v1/tasks/{task_id}/cancel
 ov task cancel cmp_01abc
 ```
 
-The task first enters `cancelling`, then becomes `cancelled` after in-process work and cleanup settle. Compile checks for cancellation before it publishes to the target, so a cancelled task normally writes nothing; writes that already completed are not rolled back. Repeated cancellation of an already `cancelled` task is idempotent.
+The task first enters `cancelling`, then becomes `cancelled` after in-process work and cleanup settle. Compile checks for cancellation before it publishes to the target, so a cancelled task normally writes nothing. A cancel that arrives while publishing waits for it to finish; the task becomes `cancelled` and keeps its result. Completed writes are not rolled back. Repeated cancellation of an already `cancelled` task is idempotent.
 
 | Status | Typical stages |
 |--------|----------------|
@@ -229,7 +229,7 @@ Compile runs inside the OpenViking server, the same way `add_resource` processin
 - Tasks for the same target run one at a time; other tasks for that target wait in the queue.
 - Model calls use the account's `vlm` configuration and share the server-wide `vlm.max_concurrent` capacity. Per-task stage concurrency is set under [`compile_api`](../guides/01-configuration.md#compile_api).
 - A task gets at most 3 attempts. `meta.attempts` counts them; a task interrupted three times fails with `INTERRUPTED` instead of re-running on every restart.
-- A task runs with its creator's identity and permissions. No API key or other credential is stored with the task. With API key authentication, each attempt re-checks the creator: it runs with the lower of the submit-time and current role and only groups the user still belongs to, and fails with `UNAUTHENTICATED` if the user was removed.
+- A task runs with its creator's identity and permissions. No API key or other credential is stored with the task. With API key authentication, each attempt re-checks the creator: it runs with the lower of the submit-time and current role and only groups the user still belongs to, and fails with `UNAUTHENTICATED` if the user was removed or is being deleted, or the account is no longer active. After a restart, recovered tasks wait until authentication is ready.
 - Each user can have at most `compile_api.max_active_tasks_per_user` (default 10) pending or running Compile tasks; more return `429 RESOURCE_EXHAUSTED`.
 
 `queue_workers.external_task.max_concurrent` sets how many Compile tasks run at once.

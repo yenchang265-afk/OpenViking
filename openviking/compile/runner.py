@@ -36,6 +36,7 @@ from openviking.compile.scratch import ScratchDir
 from openviking.compile.sources import pack_source_batches
 from openviking.core.namespace import classify_uri, relative_uri_path
 from openviking.core.skill_loader import validate_skill_format
+from openviking.service.external_task_service import TaskCompletedDuringCancel
 from openviking.service.task_tracker_concurrency import run_to_completion
 from openviking.service.task_work_index import detach_task_context
 from openviking.utils.path_safety import sanitize_relative_viking_path
@@ -215,6 +216,9 @@ class CompileRunner:
             )
             succeeded = True
             return result
+        except TaskCompletedDuringCancel:
+            succeeded = True
+            raise
         except CompileFailure:
             raise
         except OpenVikingError as exc:
@@ -319,15 +323,26 @@ class CompileRunner:
             stage = "writing"
             await progress(stage, metrics())
 
+            published: dict[str, Any] = {}
+
             async def publish() -> dict[str, Any]:
                 # Index refresh for written pages belongs to its own write task, as
                 # with an HTTP batch write, not to this Compile task's lifecycle.
                 with detach_task_context():
-                    return await self._publish(request, pipeline, rendered, client=client)
+                    published["result"] = await self._publish(
+                        request, pipeline, rendered, client=client
+                    )
+                    return published["result"]
 
             # A cancel or shutdown after this point lands once publishing settles, so
             # written pages always get their index refresh queued.
-            return await run_to_completion(publish)
+            try:
+                return await run_to_completion(publish)
+            except asyncio.CancelledError:
+                if "result" in published:
+                    # The output is live; record it instead of re-running the compile.
+                    raise TaskCompletedDuringCancel(published["result"]) from None
+                raise
         except OpenVikingError as exc:
             code = "WRITE_CONFLICT" if exc.code in {"CONFLICT", "ALREADY_EXISTS"} else exc.code
             if stage == "writing" and exc.code in {"REFRESH_FAILED", "DEADLINE_EXCEEDED"}:
