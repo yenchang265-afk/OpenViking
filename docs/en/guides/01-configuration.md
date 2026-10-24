@@ -1656,7 +1656,7 @@ CachedFileSystem (Redis, optional) → TieredFileSystem → { MariaDB: index + f
 }
 ```
 
-Start the server with the DSN in the environment, for example `RAGFS_TIERED_DSN=mysql://openviking:<password>@mariadb:3306/openviking`. The DSN is read from the environment only, never from `ov.conf`. Add `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem` to require TLS. The table is created on first start. If tiering is enabled and the variable is missing, the mount fails at startup instead of silently falling back to untiered storage. The compose file ships a `mariadb` sidecar: `docker compose --profile tiered up -d mariadb`.
+Start the server with the DSN in the environment, for example `RAGFS_TIERED_DSN=mysql://openviking:<password>@mariadb:3306/openviking`. The DSN is read from the environment only, never from `ov.conf`. Add `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem` to require TLS. The table is created on first start. If tiering is enabled and the variable is missing, the mount fails at startup instead of silently falling back to untiered storage. The compose file ships a `mariadb` sidecar: set `MARIADB_PASSWORD` in `.env`, then run `docker compose --profile tiered up -d mariadb`. It publishes host port 3306; set `MARIADB_HOST_PORT` if the host already uses that port.
 
 How it behaves:
 

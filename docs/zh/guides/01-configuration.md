@@ -1621,7 +1621,7 @@ CachedFileSystem（Redis，可選）→ TieredFileSystem → { MariaDB：索引 
 }
 ```
 
-啟動服務時在環境變數中提供 DSN，例如 `RAGFS_TIERED_DSN=mysql://openviking:<password>@mariadb:3306/openviking`。DSN 只從環境變數讀取，不會寫進 `ov.conf`。若要強制 TLS，加上 `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem`。資料表會在首次啟動時建立。若啟用了分層但環境變數不存在，掛載會在啟動時直接失敗，不會悄悄退回未分層的儲存。compose 檔內附 `mariadb` sidecar：`docker compose --profile tiered up -d mariadb`。
+啟動服務時在環境變數中提供 DSN，例如 `RAGFS_TIERED_DSN=mysql://openviking:<password>@mariadb:3306/openviking`。DSN 只從環境變數讀取，不會寫進 `ov.conf`。若要強制 TLS，加上 `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem`。資料表會在首次啟動時建立。若啟用了分層但環境變數不存在，掛載會在啟動時直接失敗，不會悄悄退回未分層的儲存。compose 檔內附 `mariadb` sidecar：先在 `.env` 設定 `MARIADB_PASSWORD`，再執行 `docker compose --profile tiered up -d mariadb`。預設對外開放主機 3306 埠；若主機已占用該埠，請設定 `MARIADB_HOST_PORT`。
 
 運作方式：
 
