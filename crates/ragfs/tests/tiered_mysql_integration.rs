@@ -14,7 +14,7 @@
 #![cfg(feature = "tiered")]
 
 use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::Duration;
 
 use ragfs::core::tiered::mysql::MySqlTierStore;
 use ragfs::core::tiered::{Location, TierStore, TieredFileSystem};
@@ -37,11 +37,8 @@ impl Harness {
         let dsn = std::env::var("OV_TIERED_TEST_DSN")
             .ok()
             .filter(|v| !v.is_empty())?;
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let table = format!("it_{}_{}", std::process::id(), nanos % 1_000_000_000_000);
+        let id = uuid::Uuid::new_v4().simple().to_string();
+        let table = format!("it_{id}");
         let store = Arc::new(MySqlTierStore::connect(&dsn, &table, 8).await.unwrap());
         let blobs = Arc::new(MemFileSystem::new());
         let fs = Arc::new(TieredFileSystem::new(store.clone(), blobs, THRESHOLD));
@@ -148,8 +145,12 @@ async fn directory_rename_and_subtree_delete_use_byte_ranges() {
     assert!(matches!(fs.stat("/proj").await, Err(Error::NotFound(_))));
 
     fs.remove_all("/archive").await.unwrap();
-    assert!(fs.stat("/proj-other/c.md").await.is_ok());
-    assert!(fs.stat("/projX/d.md").await.is_ok());
+    fs.stat("/proj-other/c.md")
+        .await
+        .expect("a sibling sharing the prefix survives");
+    fs.stat("/projX/d.md")
+        .await
+        .expect("a sibling sharing the prefix survives");
     assert!(matches!(fs.stat("/archive").await, Err(Error::NotFound(_))));
     h.drop_table().await;
 }

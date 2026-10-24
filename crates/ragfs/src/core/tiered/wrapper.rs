@@ -36,8 +36,8 @@ pub struct ImportStats {
     pub directories: usize,
     /// Small files moved into the store.
     pub inlined: usize,
-    /// Large files indexed at their existing object key.
-    pub indexed_in_place: usize,
+    /// Large files copied into a blob, with the original object deleted.
+    pub moved_to_blobs: usize,
     /// Leftover objects of already inlined files that were deleted.
     pub cleaned: usize,
     /// Backend directories (S3 directory markers) removed once emptied.
@@ -167,8 +167,10 @@ impl TieredFileSystem {
     /// Index files that exist in the blob backend but not in the store.
     ///
     /// Small files move inline (row first, then the object is deleted). Large
-    /// files are indexed in place: their row points at the existing object key,
-    /// so nothing is copied and no data moves before its row exists. Safe to
+    /// files are copied into a new blob (server-side when the backend can), the
+    /// row is published, and only then is the original deleted, so every blob
+    /// lives under [`BLOB_ROOT`] where orphan GC covers it, and a deleted file
+    /// can never be re-imported from a leaked original. Safe to
     /// re-run after a crash; already indexed paths are skipped and leftover
     /// objects of inlined files are deleted. An object newer than its row was
     /// written by an untiered writer after the import (e.g. an old replica
@@ -178,8 +180,7 @@ impl TieredFileSystem {
     /// since on S3 each is a 0-byte marker object.
     pub async fn import_untiered(&self) -> Result<ImportStats> {
         let mut stats = ImportStats::default();
-        // Objects already referenced by a row (e.g. a large file imported in place
-        // and renamed since) must not be imported a second time at their key.
+        // Objects a row already references must not be imported a second time.
         let referenced = self.store.blob_keys().await?;
         let mut pending = vec!["/".to_string()];
         // Discovery order: every directory comes after its parent.
@@ -230,7 +231,7 @@ impl TieredFileSystem {
     /// mount is tiered, so the directory cannot gain children in between.
     async fn remove_empty_backend_dir(&self, dir: &str) -> Result<bool> {
         match self.blobs.read_dir(dir, None, None, None, None).await {
-            // Still holds large files indexed in place.
+            // Still holds objects, e.g. ones kept as import conflicts.
             Ok(children) if !children.is_empty() => return Ok(false),
             Ok(_) => {}
             Err(Error::NotFound(_)) => return Ok(false),
@@ -287,16 +288,47 @@ impl TieredFileSystem {
             }
             remove_if_present(self.blobs.as_ref(), path).await?;
         } else {
-            let mut entry =
-                Self::file_entry(path, info.size, mode, Location::Blob(path.to_string()));
-            entry.mod_time = info.mod_time;
-            match self.store.put_file(entry, None, PutMode::CreateNew).await {
-                Ok(_) => stats.indexed_in_place += 1,
-                Err(Error::AlreadyExists(_)) => {}
+            let key = Self::new_blob_key();
+            match self.copy_into_blob(path, &key).await {
+                Ok(()) => {}
+                // Moved by a concurrent import.
+                Err(Error::NotFound(_)) => return Ok(()),
                 Err(error) => return Err(error),
             }
+            let mut entry = Self::file_entry(path, info.size, mode, Location::Blob(key.clone()));
+            entry.mod_time = info.mod_time;
+            match self.store.put_file(entry, None, PutMode::CreateNew).await {
+                Ok(_) => stats.moved_to_blobs += 1,
+                Err(Error::AlreadyExists(_)) => {
+                    // Another replica published its own copy; this one is unreferenced.
+                    remove_if_present(self.blobs.as_ref(), &key).await?;
+                }
+                // The commit may have landed: leave the copy for orphan GC.
+                Err(error) => return Err(error),
+            }
+            remove_if_present(self.blobs.as_ref(), path).await?;
         }
         Ok(())
+    }
+
+    /// Copy backend object `src` into the new blob `key`, server-side when the
+    /// backend can, otherwise streamed through a local temp file.
+    async fn copy_into_blob(&self, src: &str, key: &str) -> Result<()> {
+        if self.blobs.server_side_copy(src, key).await? {
+            return Ok(());
+        }
+        let tmp = std::env::temp_dir().join(format!("ragfs-import-{}", uuid::Uuid::new_v4()));
+        let result = async {
+            self.blobs.read_to_path(src, &tmp).await?;
+            self.put_blob_from_path(key, &tmp).await.map(|_| ())
+        }
+        .await;
+        if let Err(error) = tokio::fs::remove_file(&tmp).await {
+            if error.kind() != std::io::ErrorKind::NotFound {
+                warn!(path = %tmp.display(), %error, "tiered import: failed to remove temp file");
+            }
+        }
+        result
     }
 
     /// The blob backend, for mount-stack capability discovery.

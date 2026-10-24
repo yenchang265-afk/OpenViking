@@ -308,6 +308,23 @@ pub trait FileSystem: Send + Sync + Any {
         Ok(data.len() as u64)
     }
 
+    /// Copy file `src` to `dst` inside the backend, without its bytes passing
+    /// through this process.
+    ///
+    /// `dst` is created or replaced. The default reports no support; object
+    /// stores override it with a server-side copy.
+    ///
+    /// # Returns
+    /// `true` when copied, `false` when the backend cannot copy this file itself
+    /// (callers then copy through [`FileSystem::read_to_path`] and
+    /// [`FileSystem::write_from_path`]).
+    ///
+    /// # Errors
+    /// * `Error::NotFound` - If `src` does not exist
+    async fn server_side_copy(&self, _src: &str, _dst: &str) -> Result<bool> {
+        Ok(false)
+    }
+
     /// Replace a file only when its full current content equals `expected`.
     ///
     /// # Arguments

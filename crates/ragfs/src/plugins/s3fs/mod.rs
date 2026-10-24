@@ -44,6 +44,9 @@ use crate::core::{
 };
 use tree::{build_tree_entries_from_flat_listing, build_tree_entries_from_listing_page, rel_parts};
 
+/// Largest object a single CopyObject request may copy (S3 limit: 5 GiB).
+const MAX_COPY_OBJECT_BYTES: i64 = 5 * 1024 * 1024 * 1024;
+
 /// Check whether `path` is under `exclude_path` (including itself).
 fn s3_is_excluded_path(path: &str, exclude_path: &str) -> bool {
     if exclude_path == "/" {
@@ -694,6 +697,29 @@ impl FileSystem for S3FileSystem {
         self.stat_cache.invalidate(&normalized).await;
 
         Ok(written)
+    }
+
+    /// CopyObject within the bucket; objects above its 5 GiB limit are not copied.
+    async fn server_side_copy(&self, src: &str, dst: &str) -> Result<bool> {
+        let src_normalized = Self::normalize_path(src);
+        let dst_normalized = Self::normalize_path(dst);
+        let src_key = self.client.build_key(&src_normalized);
+        let meta = self
+            .client
+            .head_object(&src_key)
+            .await?
+            .ok_or_else(|| Error::not_found(&src_normalized))?;
+        if meta.is_dir_marker {
+            return Err(Error::IsADirectory(src_normalized));
+        }
+        if meta.size > MAX_COPY_OBJECT_BYTES {
+            return Ok(false);
+        }
+        let dst_key = self.client.build_key(&dst_normalized);
+        self.client.copy_object(&src_key, &dst_key).await?;
+        self.dir_cache.invalidate_parent(&dst_normalized).await;
+        self.stat_cache.invalidate(&dst_normalized).await;
+        Ok(true)
     }
 
     /// Stream an object into a local file.

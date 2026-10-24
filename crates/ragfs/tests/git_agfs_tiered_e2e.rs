@@ -18,7 +18,6 @@
 
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use aws_sdk_s3::config::{BehaviorVersion, Credentials, Region};
 use aws_sdk_s3::Client;
@@ -49,11 +48,8 @@ struct Env {
 impl Env {
     fn from_env() -> Option<Self> {
         let var = |name: &str| std::env::var(name).ok().filter(|v| !v.is_empty());
-        let nanos = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_nanos();
-        let run = format!("{}_{}", std::process::id(), nanos % 1_000_000_000_000);
+        let id = uuid::Uuid::new_v4().simple().to_string();
+        let run = &id[..20];
         Some(Self {
             endpoint: var("OV_S3_TEST_ENDPOINT")?,
             access_key: var("OV_S3_TEST_ACCESS_KEY")?,
@@ -62,7 +58,7 @@ impl Env {
             dsn: var("OV_TIERED_TEST_DSN")?,
             prefix: format!("_it/tiered-git/{run}"),
             table: format!("git_{run}"),
-            account: format!("acct{}", nanos % 1_000_000),
+            account: format!("acct{}", &id[20..]),
         })
     }
 
@@ -411,6 +407,16 @@ async fn legacy_s3_git_history_migrates_with_import_existing() {
 
     // 3. Mount with import_existing and read the full history through agfs.
     let vfs = env.vfs(true).await;
+    let leftovers: Vec<_> = env
+        .objects()
+        .await
+        .into_iter()
+        .filter(|(key, _)| !key.contains("/_blobs/"))
+        .collect();
+    assert!(
+        leftovers.is_empty(),
+        "import moves every legacy object into GC-managed _blobs: {leftovers:?}"
+    );
     let svc = env.agfs_service(&vfs);
     let oids = log_oids(&svc, &env.account).await;
     assert_eq!(oids.len(), 3);

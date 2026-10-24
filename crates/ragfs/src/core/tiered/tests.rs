@@ -710,7 +710,7 @@ async fn untiered_data_is_detected_only_while_the_index_is_empty() {
 }
 
 #[tokio::test]
-async fn import_inlines_small_files_and_indexes_large_ones_in_place() {
+async fn import_inlines_small_files_and_moves_large_ones_into_blobs() {
     let (fs, store, blobs) = legacy_backend().await;
 
     let stats = fs.import_untiered().await.unwrap();
@@ -720,27 +720,29 @@ async fn import_inlines_small_files_and_indexes_large_ones_in_place() {
         ImportStats {
             directories: 1,
             inlined: 1,
-            indexed_in_place: 1,
+            moved_to_blobs: 1,
             cleaned: 0,
-            removed_directories: 0,
+            removed_directories: 1,
             conflicts: 0
         }
     );
     assert_eq!(location(&store, "/docs/a.md").await, Location::Inline);
-    assert_eq!(
-        location(&store, "/docs/big.bin").await,
-        Location::Blob("/docs/big.bin".to_string())
-    );
-    assert!(matches!(
-        blobs.stat("/docs/a.md").await,
-        Err(Error::NotFound(_))
-    ));
+    let Location::Blob(key) = location(&store, "/docs/big.bin").await else {
+        panic!("expected a blob");
+    };
+    assert!(key.starts_with("/_blobs/"), "{key} is GC-managed");
+    for legacy in ["/docs/a.md", "/docs/big.bin", "/docs"] {
+        assert!(
+            matches!(blobs.stat(legacy).await, Err(Error::NotFound(_))),
+            "{legacy} should be gone from the backend"
+        );
+    }
     assert_eq!(fs.read("/docs/a.md", 0, 0).await.unwrap(), small());
     assert_eq!(fs.read("/docs/big.bin", 0, 0).await.unwrap(), large());
 }
 
 #[tokio::test]
-async fn import_is_idempotent_and_survives_renames_of_in_place_files() {
+async fn import_is_idempotent_and_survives_renames_of_imported_files() {
     let (fs, _, blobs) = legacy_backend().await;
     fs.import_untiered().await.unwrap();
     assert_eq!(fs.import_untiered().await.unwrap(), ImportStats::default());
@@ -748,20 +750,37 @@ async fn import_is_idempotent_and_survives_renames_of_in_place_files() {
     fs.rename("/docs/big.bin", "/archive/big.bin")
         .await
         .unwrap();
-    assert_eq!(fs.import_untiered().await.unwrap().indexed_in_place, 0);
+    assert_eq!(fs.import_untiered().await.unwrap(), ImportStats::default());
     assert!(matches!(
         fs.stat("/docs/big.bin").await,
         Err(Error::NotFound(_))
     ));
 
-    // Overwriting the renamed file releases the original object.
+    // Overwriting the renamed file releases its blob.
     fs.write("/archive/big.bin", &small(), 0, WriteFlag::Truncate)
         .await
         .unwrap();
-    assert!(matches!(
-        blobs.stat("/docs/big.bin").await,
-        Err(Error::NotFound(_))
-    ));
+    assert!(blob_keys(&blobs).await.is_empty());
+}
+
+#[tokio::test]
+async fn a_large_file_leaked_after_import_is_collected_and_never_resurrected() {
+    let (fs, store, blobs) = legacy_backend().await;
+    fs.import_untiered().await.unwrap();
+    // Crash between deleting the row and releasing its blob.
+    store.remove_entry("/docs/big.bin").await.unwrap();
+    fs.write("/live", &small(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
+
+    assert_eq!(fs.import_untiered().await.unwrap(), ImportStats::default());
+    assert!(
+        matches!(fs.stat("/docs/big.bin").await, Err(Error::NotFound(_))),
+        "a re-import must not bring the deleted file back"
+    );
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 1);
+    assert!(blob_keys(&blobs).await.is_empty());
 }
 
 #[tokio::test]
@@ -780,18 +799,14 @@ async fn import_removes_backend_directories_it_emptied() {
     let stats = fs.import_untiered().await.unwrap();
 
     // On S3 each of these is a 0-byte directory marker object.
-    assert_eq!(stats.removed_directories, 3);
-    for gone in ["/notes/deep", "/notes", "/empty"] {
+    assert_eq!(stats.removed_directories, 4);
+    for gone in ["/notes/deep", "/notes", "/empty", "/docs"] {
         assert!(
             matches!(blobs.stat(gone).await, Err(Error::NotFound(_))),
             "{gone} should be removed from the backend"
         );
         assert!(fs.stat(gone).await.unwrap().is_dir, "{gone} stays indexed");
     }
-    assert!(
-        blobs.stat("/docs").await.is_ok(),
-        "a directory still holding an in-place large file is kept"
-    );
     assert_eq!(fs.import_untiered().await.unwrap(), ImportStats::default());
 }
 
@@ -954,6 +969,7 @@ async fn import_keeps_an_object_newer_than_its_row() {
     fs.import_untiered().await.unwrap();
     // An untiered writer (e.g. an old replica mid-rollout) rewrites the path.
     tokio::time::sleep(Duration::from_millis(20)).await;
+    blobs.ensure_parent_dirs("/docs/a.md", 0o755).await.unwrap();
     blobs
         .write("/docs/a.md", b"newer", 0, WriteFlag::Create)
         .await
