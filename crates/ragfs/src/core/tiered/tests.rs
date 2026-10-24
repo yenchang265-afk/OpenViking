@@ -719,7 +719,8 @@ async fn import_inlines_small_files_and_indexes_large_ones_in_place() {
             directories: 1,
             inlined: 1,
             indexed_in_place: 1,
-            cleaned: 0
+            cleaned: 0,
+            removed_directories: 0
         }
     );
     assert_eq!(location(&store, "/docs/a.md").await, Location::Inline);
@@ -758,6 +759,37 @@ async fn import_is_idempotent_and_survives_renames_of_in_place_files() {
         blobs.stat("/docs/big.bin").await,
         Err(Error::NotFound(_))
     ));
+}
+
+#[tokio::test]
+async fn import_removes_backend_directories_it_emptied() {
+    let (fs, _, blobs) = legacy_backend().await;
+    blobs
+        .ensure_parent_dirs("/notes/deep/x.md", 0o755)
+        .await
+        .unwrap();
+    blobs
+        .write("/notes/deep/x.md", &small(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
+    blobs.mkdir("/empty", 0o755).await.unwrap();
+
+    let stats = fs.import_untiered().await.unwrap();
+
+    // On S3 each of these is a 0-byte directory marker object.
+    assert_eq!(stats.removed_directories, 3);
+    for gone in ["/notes/deep", "/notes", "/empty"] {
+        assert!(
+            matches!(blobs.stat(gone).await, Err(Error::NotFound(_))),
+            "{gone} should be removed from the backend"
+        );
+        assert!(fs.stat(gone).await.unwrap().is_dir, "{gone} stays indexed");
+    }
+    assert!(
+        blobs.stat("/docs").await.is_ok(),
+        "a directory still holding an in-place large file is kept"
+    );
+    assert_eq!(fs.import_untiered().await.unwrap(), ImportStats::default());
 }
 
 #[tokio::test]

@@ -39,6 +39,8 @@ pub struct ImportStats {
     pub indexed_in_place: usize,
     /// Leftover objects of already inlined files that were deleted.
     pub cleaned: usize,
+    /// Backend directories (S3 directory markers) removed once emptied.
+    pub removed_directories: usize,
 }
 
 /// A `FileSystem` that keeps small files in a [`TierStore`] and large files in
@@ -131,13 +133,16 @@ impl TieredFileSystem {
     /// files are indexed in place: their row points at the existing object key,
     /// so nothing is copied and no data moves before its row exists. Safe to
     /// re-run after a crash; already indexed paths are skipped and leftover
-    /// objects of inlined files are deleted.
+    /// objects of inlined files are deleted. Backend directories left empty
+    /// afterwards are removed too, since on S3 each is a 0-byte marker object.
     pub async fn import_untiered(&self) -> Result<ImportStats> {
         let mut stats = ImportStats::default();
         // Objects already referenced by a row (e.g. a large file imported in place
         // and renamed since) must not be imported a second time at their key.
         let referenced = self.store.blob_keys().await?;
         let mut pending = vec!["/".to_string()];
+        // Discovery order: every directory comes after its parent.
+        let mut visited = Vec::new();
         while let Some(dir) = pending.pop() {
             for info in self.blobs.read_dir(&dir, None, None, None, None).await? {
                 let path = if dir == "/" {
@@ -154,13 +159,41 @@ impl TieredFileSystem {
                         Err(Error::AlreadyExists(_)) => {}
                         Err(error) => return Err(error),
                     }
+                    visited.push(path.clone());
                     pending.push(path);
                 } else if !referenced.contains(&path) {
                     self.import_file(&path, &info, &mut stats).await?;
                 }
             }
         }
+        // Children before parents, so emptied subtrees disappear bottom-up.
+        for dir in visited.iter().rev() {
+            if self.remove_empty_backend_dir(dir).await? {
+                stats.removed_directories += 1;
+            }
+        }
         Ok(stats)
+    }
+
+    /// Remove `dir` from the blob backend if it has no children left.
+    ///
+    /// Backends disagree on `remove` for directories (s3fs deletes an empty
+    /// one, memfs refuses), so emptiness is checked here and `remove_all`
+    /// deletes the bare directory. Nothing writes to legacy paths once the
+    /// mount is tiered, so the directory cannot gain children in between.
+    async fn remove_empty_backend_dir(&self, dir: &str) -> Result<bool> {
+        match self.blobs.read_dir(dir, None, None, None, None).await {
+            // Still holds large files indexed in place.
+            Ok(children) if !children.is_empty() => return Ok(false),
+            Ok(_) => {}
+            Err(Error::NotFound(_)) => return Ok(false),
+            Err(error) => return Err(error),
+        }
+        match self.blobs.remove_all(dir).await {
+            Ok(()) => Ok(true),
+            Err(Error::NotFound(_)) => Ok(false),
+            Err(error) => Err(error),
+        }
     }
 
     async fn import_file(
