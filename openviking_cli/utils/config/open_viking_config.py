@@ -12,6 +12,7 @@ from pydantic import BaseModel, Field, ValidationError, field_validator, model_v
 from openviking_cli.session.user_id import UserIdentifier
 
 from .agent_evolution_config import AgentEvolutionConfig
+from .agfs_config import TieredStorageConfig
 from .cache_config import CacheConfig
 from .config_loader import expand_env_vars, resolve_config_path
 from .config_utils import (
@@ -70,9 +71,18 @@ def _get_config_logger():
 
 
 def _raw_tiered_enabled(agfs: Dict[str, Any]) -> bool:
-    """Whether a raw `storage.agfs` dict enables tiered storage."""
+    """Whether a raw `storage.agfs` dict enables tiered storage.
+
+    Parsed with the model itself so coerced values (e.g. the string "true" from
+    `${VAR}` expansion) count exactly as they will after validation.
+    """
     tiered = agfs.get("tiered")
-    return isinstance(tiered, dict) and tiered.get("enabled") is True
+    if tiered is None:
+        return False
+    try:
+        return TieredStorageConfig.model_validate(tiered).enabled
+    except ValidationError:
+        return False  # reported by the real validation of storage.agfs
 
 
 class ConnectorConfig(BaseModel):
@@ -419,6 +429,16 @@ class OpenVikingConfig(BaseModel):
             raise ValueError(
                 "git.backend 'agfs' requires storage.agfs.backend 's3' with "
                 "storage.agfs.tiered.enabled"
+            )
+        if self.git.backend == "agfs" and self.git.s3 is not None:
+            raise ValueError(
+                "git.s3 is ignored by git.backend 'agfs' (git history lives under "
+                "<storage.agfs.s3.prefix>/.ovgit in the storage bucket); remove git.s3"
+            )
+        if self.git.backend == "agfs" and self.encryption.enabled:
+            raise ValueError(
+                "git.backend 'agfs' does not support server encryption yet; "
+                "set git.backend to 'local' or disable git"
             )
         return self
 

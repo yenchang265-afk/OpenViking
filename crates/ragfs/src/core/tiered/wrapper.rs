@@ -9,6 +9,7 @@
 //! [`TieredFileSystem::collect_orphan_blobs`]) but never a row that points at
 //! missing bytes.
 
+use std::collections::HashSet;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant, SystemTime};
@@ -41,7 +42,12 @@ pub struct ImportStats {
     pub cleaned: usize,
     /// Backend directories (S3 directory markers) removed once emptied.
     pub removed_directories: usize,
+    /// Objects newer than their indexed row, left in place (see the import docs).
+    pub conflicts: usize,
 }
+
+/// Unreferenced blobs seen by the previous GC run, deleted on a second sighting.
+type GcSuspects = std::sync::Mutex<HashSet<String>>;
 
 /// A `FileSystem` that keeps small files in a [`TierStore`] and large files in
 /// a blob backend.
@@ -50,6 +56,7 @@ pub struct TieredFileSystem {
     blobs: Arc<dyn FileSystem>,
     threshold: u64,
     import_exclude: Vec<String>,
+    gc_suspects: Arc<GcSuspects>,
 }
 
 impl TieredFileSystem {
@@ -60,6 +67,7 @@ impl TieredFileSystem {
             blobs,
             threshold,
             import_exclude: Vec::new(),
+            gc_suspects: Arc::new(GcSuspects::default()),
         }
     }
 
@@ -77,10 +85,20 @@ impl TieredFileSystem {
 
     /// Delete blobs that no index row references and that are older than `min_age`.
     ///
-    /// `min_age` protects blobs whose row is still being written. Returns the
+    /// A blob is deleted only when two consecutive runs both saw it
+    /// unreferenced. Its age alone is not enough: a multipart upload reports
+    /// the upload start as LastModified, so a blob can look old the moment it
+    /// appears, before its row is committed. Nothing runs while the index is
+    /// empty, since every blob would then look unreferenced. Returns the
     /// number of blobs deleted.
     pub async fn collect_orphan_blobs(&self, min_age: Duration) -> Result<usize> {
-        collect_orphans(self.store.as_ref(), self.blobs.as_ref(), min_age).await
+        collect_orphans(
+            self.store.as_ref(),
+            self.blobs.as_ref(),
+            min_age,
+            &self.gc_suspects,
+        )
+        .await
     }
 
     /// Run [`Self::collect_orphan_blobs`] every `interval` in the background.
@@ -91,14 +109,17 @@ impl TieredFileSystem {
     pub fn spawn_orphan_gc(&self, interval: Duration, min_age: Duration) -> JoinHandle<()> {
         let store = Arc::downgrade(&self.store);
         let blobs = Arc::downgrade(&self.blobs);
+        let suspects = Arc::downgrade(&self.gc_suspects);
         tokio::spawn(async move {
             loop {
                 tokio::time::sleep(interval).await;
-                let (Some(store), Some(blobs)) = (store.upgrade(), blobs.upgrade()) else {
+                let (Some(store), Some(blobs), Some(suspects)) =
+                    (store.upgrade(), blobs.upgrade(), suspects.upgrade())
+                else {
                     return;
                 };
                 let started = Instant::now();
-                match collect_orphans(store.as_ref(), blobs.as_ref(), min_age).await {
+                match collect_orphans(store.as_ref(), blobs.as_ref(), min_age, &suspects).await {
                     Ok(deleted) => info!(
                         deleted,
                         elapsed_ms = started.elapsed().as_millis() as u64,
@@ -127,14 +148,34 @@ impl TieredFileSystem {
         }
     }
 
+    /// Whether the index is empty although the backend holds tiered blobs.
+    ///
+    /// That means the mount points at the wrong or a lost index (DSN, table,
+    /// restore), not at a new deployment: mounting it would hide every file and
+    /// leave every blob looking unreferenced.
+    pub async fn has_blobs_without_index(&self) -> Result<bool> {
+        if !self.store.list_children("/").await?.is_empty() {
+            return Ok(false);
+        }
+        match self.blobs.read_dir(BLOB_ROOT, None, None, None, None).await {
+            Ok(shards) => Ok(!shards.is_empty()),
+            Err(Error::NotFound(_)) => Ok(false),
+            Err(error) => Err(error),
+        }
+    }
+
     /// Index files that exist in the blob backend but not in the store.
     ///
     /// Small files move inline (row first, then the object is deleted). Large
     /// files are indexed in place: their row points at the existing object key,
     /// so nothing is copied and no data moves before its row exists. Safe to
     /// re-run after a crash; already indexed paths are skipped and leftover
-    /// objects of inlined files are deleted. Backend directories left empty
-    /// afterwards are removed too, since on S3 each is a 0-byte marker object.
+    /// objects of inlined files are deleted. An object newer than its row was
+    /// written by an untiered writer after the import (e.g. an old replica
+    /// during a rolling rollout); it is kept and counted in `conflicts`.
+    /// Replicas may import concurrently: work another replica already did is
+    /// skipped. Backend directories left empty afterwards are removed too,
+    /// since on S3 each is a 0-byte marker object.
     pub async fn import_untiered(&self) -> Result<ImportStats> {
         let mut stats = ImportStats::default();
         // Objects already referenced by a row (e.g. a large file imported in place
@@ -144,7 +185,13 @@ impl TieredFileSystem {
         // Discovery order: every directory comes after its parent.
         let mut visited = Vec::new();
         while let Some(dir) = pending.pop() {
-            for info in self.blobs.read_dir(&dir, None, None, None, None).await? {
+            let entries = match self.blobs.read_dir(&dir, None, None, None, None).await {
+                Ok(entries) => entries,
+                // Emptied and removed by a concurrent import.
+                Err(Error::NotFound(_)) => continue,
+                Err(error) => return Err(error),
+            };
+            for info in entries {
                 let path = if dir == "/" {
                     format!("/{}", info.name)
                 } else {
@@ -202,29 +249,52 @@ impl TieredFileSystem {
         info: &FileInfo,
         stats: &mut ImportStats,
     ) -> Result<()> {
-        if self.store.get(path).await?.is_some() {
-            // Indexed already and not referenced as a blob (checked by the caller):
-            // the object is a leftover of an inlined file or of an overwritten path.
-            self.blobs.remove(path).await?;
-            stats.cleaned += 1;
+        if let Some(row) = self.store.get(path).await? {
+            // Indexed already and not referenced as a blob (checked by the caller).
+            if info.mod_time > row.mod_time + IMPORT_CLOCK_SLACK {
+                warn!(
+                    path,
+                    "tiered import: object is newer than its indexed row; kept, not imported"
+                );
+                stats.conflicts += 1;
+                return Ok(());
+            }
+            // A leftover of an inlined file or of an overwritten path.
+            if remove_if_present(self.blobs.as_ref(), path).await? {
+                stats.cleaned += 1;
+            }
             return Ok(());
         }
         let mode = if info.mode == 0 { 0o644 } else { info.mode };
         if info.size < self.threshold {
-            let data = self.blobs.read(path, 0, 0).await?;
+            let data = match self.blobs.read(path, 0, 0).await {
+                Ok(data) => data,
+                // Inlined and removed by a concurrent import.
+                Err(Error::NotFound(_)) => return Ok(()),
+                Err(error) => return Err(error),
+            };
             let mut entry = Self::file_entry(path, data.len() as u64, mode, Location::Inline);
             entry.mod_time = info.mod_time;
-            self.store
+            match self
+                .store
                 .put_file(entry, Some(&data), PutMode::CreateNew)
-                .await?;
-            self.blobs.remove(path).await?;
-            stats.inlined += 1;
+                .await
+            {
+                Ok(_) => stats.inlined += 1,
+                // Another replica indexed it first; its row holds the same object.
+                Err(Error::AlreadyExists(_)) => {}
+                Err(error) => return Err(error),
+            }
+            remove_if_present(self.blobs.as_ref(), path).await?;
         } else {
             let mut entry =
                 Self::file_entry(path, info.size, mode, Location::Blob(path.to_string()));
             entry.mod_time = info.mod_time;
-            self.store.put_file(entry, None, PutMode::CreateNew).await?;
-            stats.indexed_in_place += 1;
+            match self.store.put_file(entry, None, PutMode::CreateNew).await {
+                Ok(_) => stats.indexed_in_place += 1,
+                Err(Error::AlreadyExists(_)) => {}
+                Err(error) => return Err(error),
+            }
         }
         Ok(())
     }
@@ -460,14 +530,34 @@ impl TieredFileSystem {
     }
 }
 
-/// Delete unreferenced blobs under [`BLOB_ROOT`] older than `min_age`.
+/// Tolerance when comparing an object's LastModified with its row's mod_time:
+/// the store keeps microseconds, S3 reports milliseconds or seconds.
+const IMPORT_CLOCK_SLACK: Duration = Duration::from_millis(1);
+
+/// Remove `path`, treating an already missing object as done.
+async fn remove_if_present(blobs: &dyn FileSystem, path: &str) -> Result<bool> {
+    match blobs.remove(path).await {
+        Ok(()) => Ok(true),
+        Err(Error::NotFound(_)) => Ok(false),
+        Err(error) => Err(error),
+    }
+}
+
+/// Delete unreferenced blobs under [`BLOB_ROOT`] older than `min_age` that the
+/// previous run (recorded in `suspects`) also saw unreferenced.
 async fn collect_orphans(
     store: &dyn TierStore,
     blobs: &dyn FileSystem,
     min_age: Duration,
+    suspects: &GcSuspects,
 ) -> Result<usize> {
+    if store.list_children("/").await?.is_empty() {
+        // Every blob would look unreferenced against an empty (wrong or lost) index.
+        lock_suspects(suspects).clear();
+        return Ok(0);
+    }
     // Snapshot references before listing so a blob written in between is
-    // either referenced or younger than `min_age`.
+    // either referenced or seen for the first time.
     let referenced = store.blob_keys().await?;
     let shards = match blobs.read_dir(BLOB_ROOT, None, None, None, None).await {
         Ok(shards) => shards,
@@ -477,7 +567,7 @@ async fn collect_orphans(
     let cutoff = SystemTime::now()
         .checked_sub(min_age)
         .unwrap_or(SystemTime::UNIX_EPOCH);
-    let mut deleted = 0;
+    let mut candidates = HashSet::new();
     for shard in shards.iter().filter(|shard| shard.is_dir) {
         let shard_path = format!("{}/{}", BLOB_ROOT, shard.name);
         let entries = match blobs.read_dir(&shard_path, None, None, None, None).await {
@@ -487,18 +577,38 @@ async fn collect_orphans(
         };
         for blob in entries.iter().filter(|blob| !blob.is_dir) {
             let key = format!("{}/{}", shard_path, blob.name);
-            if referenced.contains(&key) || blob.mod_time > cutoff {
-                continue;
-            }
-            match blobs.remove(&key).await {
-                Ok(()) => deleted += 1,
-                // Another instance's GC got there first.
-                Err(Error::NotFound(_)) => {}
-                Err(error) => return Err(error),
+            if !referenced.contains(&key) && blob.mod_time <= cutoff {
+                candidates.insert(key);
             }
         }
     }
+    let confirmed: Vec<String> = {
+        let mut previous = lock_suspects(suspects);
+        let confirmed = candidates
+            .intersection(&previous)
+            .cloned()
+            .collect::<Vec<_>>();
+        *previous = candidates
+            .into_iter()
+            .filter(|key| !confirmed.contains(key))
+            .collect();
+        confirmed
+    };
+    let mut deleted = 0;
+    for key in confirmed {
+        // Another instance's GC may have got there first.
+        if remove_if_present(blobs, &key).await? {
+            deleted += 1;
+        }
+    }
     Ok(deleted)
+}
+
+fn lock_suspects(suspects: &GcSuspects) -> std::sync::MutexGuard<'_, HashSet<String>> {
+    // The set is only a hint; a panic mid-update leaves nothing unsafe behind.
+    suspects
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 /// Return `data[offset..offset+size]`, clamped; `size == 0` reads to the end.

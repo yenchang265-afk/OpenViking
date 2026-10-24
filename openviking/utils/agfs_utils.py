@@ -22,10 +22,12 @@ from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-# Git history on tiered S3 storage: a second tiered s3fs mount whose key layout
-# matches the legacy git S3 backend, so `import_existing` migrates old git data.
+# Git history on tiered S3 storage: a second tiered s3fs mount under the storage
+# prefix (`<prefix>/.ovgit`), with the legacy git S3 backend's key layout so
+# `import_existing` migrates old git data found there.
 GIT_AGFS_MOUNT_PATH = "/ovgit"
 GIT_S3_PREFIX = ".ovgit"
+DEFAULT_TIERED_TABLE = "agfs_entries"
 DEFAULT_GIT_TIERED_TABLE = "agfs_git_entries"
 
 
@@ -392,11 +394,20 @@ def _generate_plugin_config(
 
 
 def _git_mount_params(s3_params: Dict[str, Any]) -> Dict[str, Any]:
-    """S3 params for the tiered git mount: same bucket and tiering, own prefix and table."""
+    """S3 params for the tiered git mount: same bucket and tiering, own prefix and table.
+
+    The prefix sits under the storage prefix, so deployments sharing a bucket by
+    prefix never share (and garbage-collect) each other's git blobs. The table
+    follows the effective table name, so writing the default explicitly keeps
+    the same git table.
+    """
     params = dict(s3_params)
-    params["prefix"] = GIT_S3_PREFIX
-    table = s3_params.get("tiered_table")
-    params["tiered_table"] = f"{table}_git" if table else DEFAULT_GIT_TIERED_TABLE
+    storage_prefix = (s3_params.get("prefix") or "").strip("/")
+    params["prefix"] = f"{storage_prefix}/{GIT_S3_PREFIX}" if storage_prefix else GIT_S3_PREFIX
+    table = s3_params.get("tiered_table") or DEFAULT_TIERED_TABLE
+    params["tiered_table"] = (
+        DEFAULT_GIT_TIERED_TABLE if table == DEFAULT_TIERED_TABLE else f"{table}_git"
+    )
     return params
 
 

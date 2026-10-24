@@ -8,7 +8,7 @@ use async_trait::async_trait;
 use super::*;
 use crate::core::errors::{Error, Result};
 use crate::core::filesystem::FileSystem;
-use crate::core::types::{ConfigValue, WriteFlag};
+use crate::core::types::{ConfigValue, FileInfo, WriteFlag};
 use crate::plugins::memfs::MemFileSystem;
 
 const THRESHOLD: u64 = 16;
@@ -570,6 +570,7 @@ async fn ambiguous_publish_failure_leaves_the_blob_for_gc() {
 
     // The commit may have landed, so the blob is kept; GC removes it once unreferenced.
     assert_eq!(blob_keys(&blobs).await.len(), 2);
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
     assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 1);
     assert_eq!(fs.read("/keep", 0, 0).await.unwrap(), large());
 }
@@ -636,6 +637,7 @@ async fn orphan_gc_deletes_only_old_unreferenced_blobs() {
             .unwrap(),
         0
     );
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
     assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 1);
     assert_eq!(blob_keys(&blobs).await.len(), 1);
     assert_eq!(fs.read("/live", 0, 0).await.unwrap(), large());
@@ -720,7 +722,8 @@ async fn import_inlines_small_files_and_indexes_large_ones_in_place() {
             inlined: 1,
             indexed_in_place: 1,
             cleaned: 0,
-            removed_directories: 0
+            removed_directories: 0,
+            conflicts: 0
         }
     );
     assert_eq!(location(&store, "/docs/a.md").await, Location::Inline);
@@ -871,7 +874,11 @@ async fn background_gc_stops_when_the_filesystem_is_dropped() {
 #[tokio::test]
 async fn concurrent_gc_runs_delete_each_orphan_once_without_errors() {
     let (fs, _, blobs) = setup();
+    fs.write("/live", &small(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
     plant_orphan(&blobs).await;
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
 
     let (a, b) = tokio::join!(
         fs.collect_orphan_blobs(Duration::ZERO),
@@ -880,6 +887,174 @@ async fn concurrent_gc_runs_delete_each_orphan_once_without_errors() {
 
     assert_eq!(a.unwrap() + b.unwrap(), 1);
     assert!(blob_keys(&blobs).await.is_empty());
+}
+
+#[tokio::test]
+async fn gc_spares_a_blob_published_between_two_runs() {
+    let (fs, store, blobs) = setup();
+    fs.write("/live", &small(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
+    // A multipart upload reports LastModified = upload start, so a blob can look
+    // old the moment it appears, before its row is committed.
+    plant_orphan(&blobs).await;
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
+    assert_eq!(blob_keys(&blobs).await.len(), 1, "first sighting only");
+
+    let entry = TierEntry {
+        path: "/big".to_string(),
+        size: 4,
+        mode: 0o644,
+        mod_time: SystemTime::now(),
+        location: Location::Blob("/_blobs/zz/orphan".to_string()),
+    };
+    store
+        .put_file(entry, None, PutMode::CreateNew)
+        .await
+        .unwrap();
+
+    assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
+    assert_eq!(fs.read("/big", 0, 0).await.unwrap(), b"lost");
+}
+
+#[tokio::test]
+async fn gc_never_runs_against_an_empty_index() {
+    // Wrong DSN/table or a lost database: every blob would look unreferenced.
+    let (fs, _, blobs) = setup();
+    plant_orphan(&blobs).await;
+
+    for _ in 0..3 {
+        assert_eq!(fs.collect_orphan_blobs(Duration::ZERO).await.unwrap(), 0);
+    }
+    assert_eq!(blob_keys(&blobs).await.len(), 1);
+}
+
+#[tokio::test]
+async fn blobs_without_an_index_are_detected() {
+    let (fresh, _, _) = setup();
+    assert!(!fresh.has_blobs_without_index().await.unwrap());
+
+    let (fs, _, blobs) = setup();
+    plant_orphan(&blobs).await;
+    assert!(fs.has_blobs_without_index().await.unwrap());
+    assert!(
+        !fs.has_untiered_data().await.unwrap(),
+        "blobs are not legacy data"
+    );
+
+    fs.write("/live", &small(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
+    assert!(!fs.has_blobs_without_index().await.unwrap());
+}
+
+#[tokio::test]
+async fn import_keeps_an_object_newer_than_its_row() {
+    let (fs, _, blobs) = legacy_backend().await;
+    fs.import_untiered().await.unwrap();
+    // An untiered writer (e.g. an old replica mid-rollout) rewrites the path.
+    tokio::time::sleep(Duration::from_millis(20)).await;
+    blobs
+        .write("/docs/a.md", b"newer", 0, WriteFlag::Create)
+        .await
+        .unwrap();
+
+    let stats = fs.import_untiered().await.unwrap();
+
+    assert_eq!(stats.conflicts, 1);
+    assert_eq!(stats.cleaned, 0);
+    assert_eq!(
+        blobs.read("/docs/a.md", 0, 0).await.unwrap(),
+        b"newer",
+        "the newer object is not deleted"
+    );
+}
+
+/// A blob backend whose listings were taken before another replica imported.
+struct StaleListingFs {
+    inner: Arc<MemFileSystem>,
+    listings: HashMap<String, Vec<FileInfo>>,
+}
+
+impl StaleListingFs {
+    async fn snapshot(inner: Arc<MemFileSystem>, dirs: &[&str]) -> Self {
+        let mut listings = HashMap::new();
+        for dir in dirs {
+            let entries = inner.read_dir(dir, None, None, None, None).await.unwrap();
+            listings.insert(dir.to_string(), entries);
+        }
+        Self { inner, listings }
+    }
+}
+
+#[async_trait]
+impl FileSystem for StaleListingFs {
+    async fn create(&self, path: &str) -> Result<()> {
+        self.inner.create(path).await
+    }
+    async fn mkdir(&self, path: &str, mode: u32) -> Result<()> {
+        self.inner.mkdir(path, mode).await
+    }
+    async fn remove(&self, path: &str) -> Result<()> {
+        self.inner.remove(path).await
+    }
+    async fn remove_all(&self, path: &str) -> Result<()> {
+        self.inner.remove_all(path).await
+    }
+    async fn read(&self, path: &str, offset: u64, size: u64) -> Result<Vec<u8>> {
+        self.inner.read(path, offset, size).await
+    }
+    async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
+        self.inner.write(path, data, offset, flags).await
+    }
+    async fn read_dir(
+        &self,
+        path: &str,
+        offset: Option<usize>,
+        limit: Option<usize>,
+        sort_by: Option<crate::core::ListSortBy>,
+        sort_order: Option<crate::core::SortOrder>,
+    ) -> Result<Vec<FileInfo>> {
+        match self.listings.get(path) {
+            Some(entries) => Ok(entries.clone()),
+            None => {
+                self.inner
+                    .read_dir(path, offset, limit, sort_by, sort_order)
+                    .await
+            }
+        }
+    }
+    async fn stat(&self, path: &str) -> Result<FileInfo> {
+        self.inner.stat(path).await
+    }
+    async fn rename(&self, old_path: &str, new_path: &str) -> Result<()> {
+        self.inner.rename(old_path, new_path).await
+    }
+    async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
+        self.inner.chmod(path, mode).await
+    }
+}
+
+#[tokio::test]
+async fn import_tolerates_another_replica_importing_the_same_bucket() {
+    let (fs_a, store, blobs) = legacy_backend().await;
+    blobs
+        .write("/docs/gone.md", &small(), 0, WriteFlag::Create)
+        .await
+        .unwrap();
+    let stale = StaleListingFs::snapshot(blobs.clone(), &["/", "/docs"]).await;
+    let fs_b = TieredFileSystem::new(store.clone(), Arc::new(stale), THRESHOLD);
+
+    // Replica A finishes first; B still works from listings taken before A ran.
+    fs_a.import_untiered().await.unwrap();
+    // Also an object that vanished after B listed it, with no row anywhere.
+    store.remove_entry("/docs/gone.md").await.unwrap();
+
+    fs_b.import_untiered()
+        .await
+        .expect("a concurrent import converges instead of failing the mount");
+    assert_eq!(fs_b.read("/docs/a.md", 0, 0).await.unwrap(), small());
+    assert_eq!(fs_b.read("/docs/big.bin", 0, 0).await.unwrap(), large());
 }
 
 #[test]

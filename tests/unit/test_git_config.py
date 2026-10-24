@@ -196,6 +196,30 @@ class TestGitWithTieredStorage:
         )
         assert cfg.git.enabled is False
 
+    def test_tiering_enabled_by_a_coerced_value_still_defaults_git_to_agfs(self):
+        # e.g. "enabled": "${OV_TIERED}" expanded to the string "true".
+        storage = self._storage()
+        storage["agfs"]["tiered"] = {"enabled": "true"}
+        cfg = OpenVikingConfig(storage=storage)
+        assert cfg.storage.agfs.tiered.enabled is True
+        assert cfg.git.backend == "agfs"
+
+    def test_encryption_with_agfs_git_rejected(self):
+        with pytest.raises(ValidationError, match="encryption"):
+            OpenVikingConfig(storage=self._storage(), encryption={"enabled": True})
+
+    def test_encryption_with_local_git_allowed(self):
+        cfg = OpenVikingConfig(
+            storage=self._storage(), encryption={"enabled": True}, git={"backend": "local"}
+        )
+        assert cfg.git.backend == "local"
+
+    def test_git_s3_section_with_agfs_backend_rejected(self):
+        with pytest.raises(ValidationError, match="git.s3"):
+            OpenVikingConfig(
+                storage=self._storage(), git={"s3": {"bucket": "B", "prefix": "elsewhere"}}
+            )
+
     def test_agfs_git_dict_points_at_the_tiered_mount(self, tmp_path):
         cfg = OpenVikingConfig(storage=self._storage())
         result = _build_git_config_dict(cfg.git, tmp_path)

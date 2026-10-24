@@ -1598,7 +1598,7 @@ CachedFileSystem（Redis，可選）→ TieredFileSystem → { MySQL：索引 + 
 | `backend` | str | 分層儲存引擎。目前只有 `mysql`（MySQL 8+ 或 MariaDB 10.6+，協定與 SQL 相同） | `"mysql"` |
 | `small_threshold_bytes` | int | 小於此大小的檔案留在分層儲存（上限 8 MiB） | 未設定（1 MiB） |
 | `import_existing` | bool | 啟動時為分層前就存在於 bucket 的物件建立索引（見下文） | `false` |
-| `gc_interval_secs` | int | 定期刪除當機留下、沒被引用的 S3 blob 的間隔；`0` 表示關閉 | 未設定（3600） |
+| `gc_interval_secs` | int | 定期清理當機留下、沒被引用的 S3 blob 的間隔；`0` 表示關閉。blob 必須連續兩次清理都沒被引用才會刪除 | 未設定（3600） |
 | `gc_min_age_secs` | int | 只刪除沒被引用且早於此時間的 blob（≥ 60） | 未設定（3600） |
 | `mysql` | object | `mysql` 後端的設定（見下表） | |
 
@@ -1609,7 +1609,7 @@ CachedFileSystem（Redis，可選）→ TieredFileSystem → { MySQL：索引 + 
 | 欄位 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `dsn_env` | str | 存放 DSN `mysql://user:pass@host:3306/db` 的環境變數名稱 | 未設定（`RAGFS_TIERED_DSN`） |
-| `table` | str | 索引資料表名稱（英數字與 `_`，最多 60 字元） | 未設定（`agfs_entries`） |
+| `table` | str | 索引資料表名稱（英數字與 `_`，最多 60 字元）。值為 `agfs_entries` 時 git 歷史使用 `agfs_git_entries`，否則使用 `<table>_git` | 未設定（`agfs_entries`） |
 | `max_connections` | int | 連線池大小（1–256） | 未設定（16） |
 
 ```json
@@ -1645,14 +1645,15 @@ CachedFileSystem（Redis，可選）→ TieredFileSystem → { MySQL：索引 + 
 - **分層儲存是唯一的事實來源。** 大檔寫入順序：先上傳 blob，再更新資料列，最後刪除舊 blob。刪除順序：先刪資料列，再刪 blob。當機最多留下沒被引用的 blob，不會出現指向不存在內容的路徑。
 - **目錄列表來自分層儲存，** 所以 `ls`、`stat`、`tree` 不會呼叫 S3 LIST。
 - 請將 `directory_marker_mode` 設為 `none`。目錄已存在分層儲存，marker 物件只會多出零位元組物件。
+- **拒絕錯誤或遺失的索引。** 若索引是空的但 bucket 已有分層 blob（`_blobs/`），掛載會在啟動時失敗，這通常代表 DSN 或 `table` 指向了錯的資料庫。孤兒 blob 清理也絕不會在空索引上執行，因此設定錯誤的資料庫不會讓所有 blob 看起來都沒被引用。
 
-**git 歷史（快照）。** 啟用分層後，OpenViking 會另外掛載 `/ovgit`：同一個 bucket 上的第二個分層掛載，S3 prefix 為 `.ovgit`，資料表為 `agfs_git_entries`（或 `<table>_git`）。此時 `git.backend` 預設為 `agfs`，git 物件、分支指標和 commit 索引都經由這個掛載儲存，因此小的 git 物件（通常約 1 KB）同樣進分層儲存。分層啟用時會拒絕 `git.backend: "s3"`，因為它會把每個 git 物件直接寫進 bucket。`local` 仍可使用，但只適用單一實例。`/ovgit` 的配置與舊的 S3 git 後端相同（`.ovgit/{account}/objects/…`），所以 `import_existing` 也會一併遷移既有的 git 歷史。
+**git 歷史（快照）。** 啟用分層後，OpenViking 會另外掛載 `/ovgit`：同一個 bucket 上的第二個分層掛載，S3 prefix 為 `<s3.prefix>/.ovgit`（`s3.prefix` 為空時就是 `.ovgit`），資料表為 `agfs_git_entries`（自訂資料表時為 `<table>_git`）。以 prefix 共用同一個 bucket 的多個部署因此各自保有獨立的 git blob。此時 `git.backend` 預設為 `agfs`，git 物件、分支指標和 commit 索引都經由這個掛載儲存，因此小的 git 物件（通常約 1 KB）同樣進分層儲存。分層啟用時會拒絕 `git.backend: "s3"`，因為它會把每個 git 物件直接寫進 bucket。`local` 仍可使用，但只適用單一實例。`/ovgit` 的配置與舊的 S3 git 後端相同（`.ovgit/{account}/objects/…`），所以 `import_existing` 也會一併遷移既有的 git 歷史。舊後端寫在 bucket 根目錄的 `.ovgit/`，若 `s3.prefix` 不為空，請先把它複製到 prefix 底下（例如 `aws s3 sync s3://<bucket>/.ovgit/ s3://<bucket>/<prefix>/.ovgit/`）。git 使用 `agfs` 時會拒絕 `git.s3` 區塊，因為它不會生效。`agfs` git 目前不支援伺服器端加密；啟用加密時請改用 `git.backend: "local"` 或關閉 git。
 
 MySQL／MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（兩者的預設值）、`innodb_file_per_table=ON`，以及對該資料庫具備 `CREATE, SELECT, INSERT, UPDATE, DELETE` 權限的使用者。請將資料庫與 bucket 一起備份；還原時多出沒被引用的 blob 是安全的。
 
 設定 Redis 快取（`cache.provider = "redis"`）時，快取會包在分層掛載外層，常用的小檔與目錄列表直接由 Redis 回應。請讓快取策略的 `max_file_size` 接近分層門檻，避免 Redis 存放數 MB 的值。
 
-**現有 bucket。** 若索引是空的但 bucket 已有物件，掛載會拒絕啟動，現有檔案不會悄悄從視圖中消失。遷移時，只需在一次啟動中設定 `import_existing: true`：小檔會複製進分層儲存並刪除原物件；大檔則就地建立索引，資料列直接指向原本的物件 key，不做任何複製；之後變空的目錄 marker 也會一併刪除。匯入中途當機後可以安全地重跑。完成後請關閉此選項，因為每次執行都會列出整個 bucket。
+**現有 bucket。** 若索引是空的但 bucket 已有物件，掛載會拒絕啟動，現有檔案不會悄悄從視圖中消失。遷移時，只需在一次啟動中設定 `import_existing: true`：小檔會複製進分層儲存並刪除原物件；大檔則就地建立索引，資料列直接指向原本的物件 key，不做任何複製；之後變空的目錄 marker 也會一併刪除。匯入中途當機後可以安全地重跑，多個副本也可以同時執行。若物件比它已建立索引的資料列更新（例如滾動升級期間由未分層的舊副本寫入），該物件會保留、記錄警告且不匯入；遷移前請先停止未分層的寫入者。完成後請關閉 `import_existing`，因為每次執行都會列出整個 bucket。
 
 限制：分層不支援 multi-write（`backups`）掛載。
 

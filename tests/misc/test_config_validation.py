@@ -219,6 +219,39 @@ def test_agfs_s3_tiered_git_mount_derives_table_from_custom_table():
     assert plugins["s3fs_git"]["config"]["tiered_table"] == "tenant_a_git"
 
 
+@pytest.mark.parametrize(
+    ("storage_prefix", "git_prefix"),
+    [("", ".ovgit"), ("ov/", "ov/.ovgit"), ("tenant-a", "tenant-a/.ovgit")],
+)
+def test_agfs_tiered_git_mount_lives_under_the_storage_prefix(storage_prefix, git_prefix):
+    # Deployments sharing a bucket by prefix must not share (and GC) git blobs.
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(prefix=storage_prefix),
+        tiered={"enabled": True},
+    )
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+
+    assert plugins["s3fs_git"]["config"]["prefix"] == git_prefix
+    assert plugins["s3fs"]["config"]["tiered_import_exclude"] == [".ovgit"]
+
+
+@pytest.mark.parametrize("mysql", [{}, {"table": "agfs_entries"}])
+def test_agfs_tiered_git_table_depends_on_the_effective_table(mysql):
+    config = AGFSConfig(
+        path="/tmp/ov-test",
+        backend="s3",
+        s3=_s3_config(),
+        tiered={"enabled": True, "mysql": mysql},
+    )
+
+    plugins = _generate_plugin_config(config, Path("/tmp/ov-test"))
+
+    assert plugins["s3fs_git"]["config"]["tiered_table"] == "agfs_git_entries"
+
+
 def test_mount_agfs_backend_mounts_the_git_mount_with_the_s3fs_plugin(tmp_path):
     class RecordingBinding:
         def __init__(self):

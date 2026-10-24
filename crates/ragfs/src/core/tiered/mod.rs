@@ -277,14 +277,19 @@ pub async fn maybe_wrap(
     let Some(settings) = TieredSettings::from_params(&config.params)? else {
         return Ok(raw);
     };
-    if config.backups.is_some() {
-        return Err(Error::config(
-            "tiered storage does not support multi-write (backups) mounts",
-        ));
-    }
+    // MountableFS rejects tiering on multi-write (backups) mounts before this point.
     let store = connect_store(&settings).await?;
     let tiered = TieredFileSystem::new(store, Arc::from(raw), settings.small_threshold_bytes)
         .with_import_exclude(settings.import_exclude);
+    if tiered.has_blobs_without_index().await? {
+        // Mounting would hide every file, and GC would see every blob as unreferenced.
+        return Err(Error::config(format!(
+            "tiered storage index (table '{}', DSN from env {}) is empty but mount '{}' \
+             already holds tiered blobs under {}; the DSN or table probably points at the \
+             wrong database. Refusing to mount",
+            settings.table, settings.dsn_env, config.mount_path, BLOB_ROOT
+        )));
+    }
     if settings.import_existing {
         let stats = tiered.import_untiered().await?;
         info!(mount = %config.mount_path, ?stats, "tiered: imported pre-existing objects");

@@ -1633,7 +1633,7 @@ CachedFileSystem (Redis, optional) → TieredFileSystem → { MySQL: index + fil
 | `backend` | str | Tier store engine. Only `mysql` today (MySQL 8+ or MariaDB 10.6+, same protocol and SQL) | `"mysql"` |
 | `small_threshold_bytes` | int | Files smaller than this stay in the tier store (max 8 MiB) | unset (1 MiB) |
 | `import_existing` | bool | At startup, index objects the bucket held before tiering (see below) | `false` |
-| `gc_interval_secs` | int | How often unreferenced S3 blobs left by crashes are deleted; `0` disables | unset (3600) |
+| `gc_interval_secs` | int | How often unreferenced S3 blobs left by crashes are collected; `0` disables. A blob is deleted only when two consecutive runs both find it unreferenced | unset (3600) |
 | `gc_min_age_secs` | int | Only delete unreferenced blobs older than this (≥ 60) | unset (3600) |
 | `mysql` | object | Settings for backend `mysql` (below) | |
 
@@ -1644,7 +1644,7 @@ Engine settings live in the sub-block named after `backend`, so adding an engine
 | Field | Type | Description | Default |
 |------|------|------|--------|
 | `dsn_env` | str | Environment variable holding the DSN `mysql://user:pass@host:3306/db` | unset (`RAGFS_TIERED_DSN`) |
-| `table` | str | Index table name (letters, digits, `_`, up to 60 characters) | unset (`agfs_entries`) |
+| `table` | str | Index table name (letters, digits, `_`, up to 60 characters). Git history uses `agfs_git_entries` while this is `agfs_entries`, otherwise `<table>_git` | unset (`agfs_entries`) |
 | `max_connections` | int | Connection pool size (1–256) | unset (16) |
 
 ```json
@@ -1680,14 +1680,15 @@ How it behaves:
 - **The tier store is the source of truth.** A large write uploads the blob first, then updates the row, then deletes the previous blob. A delete removes the row first, then the blob. A crash can leave an unreferenced blob, never a path that points at missing bytes.
 - **Listings come from the tier store,** so `ls`, `stat` and `tree` make no S3 LIST calls.
 - Set `directory_marker_mode` to `none`. Directories live in the tier store, so marker objects would only add zero-byte objects.
+- **A wrong or lost index is refused.** If the index is empty but the bucket already holds tiered blobs (`_blobs/`), the mount fails at startup. That usually means the DSN or `table` points at the wrong database. Orphan GC also never runs against an empty index, so a misconfigured database cannot make every blob look unreferenced.
 
-**Git history (snapshots).** With tiering enabled, OpenViking also mounts `/ovgit`: a second tiered mount on the same bucket, with S3 prefix `.ovgit` and table `agfs_git_entries` (or `<table>_git`). `git.backend` then defaults to `agfs`, which stores git objects, refs and commit indexes through that mount. So small git objects (typically ~1 KB) land in the tier store too. `git.backend: "s3"` is rejected while tiering is on, because it would write every git object straight to the bucket. `local` is still allowed, but only suits a single instance. The `/ovgit` layout matches the old S3 git backend (`.ovgit/{account}/objects/…`), so `import_existing` also migrates existing git history.
+**Git history (snapshots).** With tiering enabled, OpenViking also mounts `/ovgit`: a second tiered mount on the same bucket, with S3 prefix `<s3.prefix>/.ovgit` (just `.ovgit` when `s3.prefix` is empty) and table `agfs_git_entries` (or `<table>_git` for a custom table). Deployments that share a bucket by prefix therefore keep separate git blobs. `git.backend` then defaults to `agfs`, which stores git objects, refs and commit indexes through that mount. So small git objects (typically ~1 KB) land in the tier store too. `git.backend: "s3"` is rejected while tiering is on, because it would write every git object straight to the bucket. `local` is still allowed, but only suits a single instance. The `/ovgit` layout matches the old S3 git backend (`.ovgit/{account}/objects/…`), so `import_existing` also migrates existing git history. The old backend wrote to `.ovgit/` at the bucket root, so with a non-empty `s3.prefix` copy it under the prefix first (for example `aws s3 sync s3://<bucket>/.ovgit/ s3://<bucket>/<prefix>/.ovgit/`). A `git.s3` section is rejected while git uses `agfs`, because it would be ignored. Server encryption is not supported with `agfs` git yet; use `git.backend: "local"` or disable git when encryption is on.
 
 MySQL/MariaDB settings: `max_allowed_packet` ≥ 16 MiB (the default on both), `innodb_file_per_table=ON`, and a user with `CREATE, SELECT, INSERT, UPDATE, DELETE` on the database. Back up the database together with the bucket. A restore that brings back unreferenced blobs is safe.
 
 When a Redis cache is configured (`cache.provider = "redis"`), it wraps the tiered mount, so hot small files and listings are served from Redis. Keep `max_file_size` in the cache policy close to the tiering threshold, so Redis never stores multi-megabyte values.
 
-**Existing buckets.** If the index is empty but the bucket already holds objects, the mount refuses to start, so existing files never silently disappear from view. Set `import_existing: true` for one startup to migrate. Small files are copied into the tier store and their objects deleted. Large files are indexed in place: their row points at the existing object key, so nothing is copied. Directory markers left empty afterwards are deleted too. The import can be re-run safely after a crash. Turn it off once it finishes, because every run lists the whole bucket.
+**Existing buckets.** If the index is empty but the bucket already holds objects, the mount refuses to start, so existing files never silently disappear from view. Set `import_existing: true` for one startup to migrate. Small files are copied into the tier store and their objects deleted. Large files are indexed in place: their row points at the existing object key, so nothing is copied. Directory markers left empty afterwards are deleted too. The import can be re-run safely after a crash, and several replicas may run it at the same time. An object that is newer than its indexed row (written by an untiered replica during a rolling rollout) is kept, logged and not imported; stop untiered writers before migrating. Turn `import_existing` off once it finishes, because every run lists the whole bucket.
 
 Limitations: tiering does not support multi-write (`backups`) mounts.
 
