@@ -93,6 +93,21 @@ def unexpected_error_code(exc: Exception, *, stage: str) -> str:
     return "WRITE_FAILED" if writing else "INTERNAL"
 
 
+async def ensure_target_directory(client: Any, target: str) -> None:
+    """Create a missing target directory, as submission did under the bot runtime."""
+    try:
+        stat = await client.stat(target)
+    except OpenVikingError as exc:
+        if exc.code != "NOT_FOUND":
+            raise
+        await client.mkdir(target)
+        return
+    if not stat.get("isDir", stat.get("is_dir", False)):
+        raise CompileFailure(
+            "INVALID_ARGUMENT", f"Compile target must be a directory: {target}", stage="queued"
+        )
+
+
 async def list_source_files(
     client: Any, roots: list[str], *, cutoff: datetime | None = None
 ) -> list[str]:
@@ -198,6 +213,7 @@ class CompileRunner:
         stage = "collecting_context"
         try:
             await progress(stage, {})
+            await ensure_target_directory(client, request.to)
             source_files = None
             if request.last_compile_time is not None:
                 source_files = await list_source_files(

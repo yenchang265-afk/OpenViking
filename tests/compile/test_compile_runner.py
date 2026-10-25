@@ -291,3 +291,41 @@ async def test_skill_target_rejects_changed_package(tmp_path):
         )
     assert raised.value.code == "WRITE_CONFLICT"
     assert client.published is None
+
+
+@pytest.mark.asyncio
+async def test_missing_target_directory_is_created(tmp_path, stub_pipeline):
+    from openviking_cli.exceptions import NotFoundError
+
+    client = _Client()
+    target = "viking://resources/wiki"
+    created = []
+    original_stat = client.stat
+
+    async def stat(uri):
+        if uri == target and not created:
+            raise NotFoundError(uri, "file")
+        return await original_stat(uri)
+
+    async def mkdir(uri):
+        created.append(uri)
+
+    client.stat, client.mkdir = stat, mkdir
+    attempt, _ = _run(tmp_path, client, _request())
+    result = await attempt
+    assert created == [target]
+    assert result["created"] == [PAGE]
+
+
+@pytest.mark.asyncio
+async def test_target_that_is_a_file_fails(tmp_path, stub_pipeline):
+    client = _Client()
+
+    async def stat(uri):
+        return {"isDir": False}
+
+    client.stat = stat
+    attempt, _ = _run(tmp_path, client, _request())
+    with pytest.raises(CompileFailure) as raised:
+        await attempt
+    assert raised.value.code == "INVALID_ARGUMENT"

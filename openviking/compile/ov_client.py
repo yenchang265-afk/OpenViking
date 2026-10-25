@@ -62,6 +62,10 @@ class InProcessVikingClient:
             )
         return page.entries
 
+    async def mkdir(self, uri: str) -> None:
+        with _mapped_errors(uri):
+            await self._service.fs.mkdir(uri, ctx=self._ctx)
+
     async def glob(self, pattern: str, uri: str) -> dict[str, Any]:
         with _mapped_errors(uri):
             return await self._service.fs.glob(pattern, ctx=self._ctx, uri=uri)
