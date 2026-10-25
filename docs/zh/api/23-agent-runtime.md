@@ -227,7 +227,7 @@ Compile 在 OpenViking 伺服器內執行，方式與 `add_resource` 的處理�
 - 每個任務是 `ExternalTask` 佇列上的一條持久 QueueFS 訊息，任務結果儲存後才確認（ack）該訊息。
 - 任務執行中伺服器停止或崩潰時，下次啟動會重新投遞訊息，任務**從頭重新執行**。中斷那次的部分工作會被丟棄；只有在一次執行結束時才寫入目標，未變化的頁面保持不變。
 - 同一目標的任務逐個執行，其他任務在佇列中等待。
-- 模型呼叫使用帳號的 `vlm` 配置，並共用伺服器級的 `vlm.max_concurrent` 容量。單任務的各階段並行度在 [`compile_api`](../guides/01-configuration.md#compile_api) 下設定。
+- 模型呼叫使用帳號的 `vlm` 配置，並共用伺服器級的 `vlm.max_concurrent` 容量。單任務的各階段並行度在 [`compile_api`](../guides/01-configuration.md#compile-api) 下設定。
 - 每個任務最多執行 3 次，`meta.attempts` 記錄次數；被中斷三次的任務以 `INTERRUPTED` 失敗，不會在每次重啟時重新執行。
 - 任務以建立者的身份和權限執行，不會隨任務儲存 API Key 或其他憑證。使用 API Key 或 trusted 鑑權時，每次執行前會重新檢查建立者：只保留使用者仍所屬的群組；使用者正在刪除或帳號不再處於啟用狀態時以 `UNAUTHENTICATED` 失敗。API Key 鑑權還會取提交時與當前角色中較低者，並在使用者已被刪除時失敗。失敗執行的暫存檔保留 7 天，並隨使用者或帳號一併刪除。重啟後，恢復的任務會等鑑權就緒後再執行。
 - 每個使用者最多同時有 `compile_api.max_active_tasks_per_user`（預設 10）個待執行或執行中的 Compile 任務，超出返回 `429 RESOURCE_EXHAUSTED`。
