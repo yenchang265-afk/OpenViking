@@ -400,7 +400,7 @@ const activity = {
       noHistory: '暫無命令歷史',
       welcomeTitle: '終端已連線檔案系統',
       welcomeBody:
-        '可執行 /status、/ls、/search、/read、/add-resource。/search 預設全域檢索，可通過 --scope . 使用當前目錄，或通過 --scope viking://resources/... 指定目錄。',
+        '可執行 /status、/ls、/find、/search、/read、/write、/add-resource。搜尋時可用 --uri viking://resources/... 限定目錄。',
       scopeLabel: '目錄：{{uri}}',
       globalScope: '全域',
       opened: '已開啟資源',
@@ -409,9 +409,24 @@ const activity = {
         'Business Context Platform API 正常響應，根目錄下發現 {{count}} 個節點。',
       lsBody: '{{uri}} 下共展示 {{count}} 個節點。',
       fileEmpty: '檔案為空，已在中間預覽區開啟。',
-      searchUsage: '用法：{{name}} 查詢詞 [--scope .|viking://resources/...]',
+      searchUsage: '用法：{{name}} 查詢詞 [--uri viking://resources/...]',
       searchScopeLine: '搜尋範圍：{{scope}}',
+      patternUsage:
+        '用法：{{name}} <模式> [--uri viking://...] [--node-limit 數量]',
+      patternHits: '在 {{uri}} 中找到 {{count}} 項。',
       helpParameters: '引數',
+      parameterName: '引數',
+      parameterRequired: '必填',
+      parameterDescription: '說明',
+      parameterDefault: '預設值',
+      parameterTypes: {
+        Text: '文本',
+        URI: 'URI',
+        Number: '數字',
+        Boolean: '布林值',
+      },
+      yes: '是',
+      no: '否',
       helpExamples: '示例',
       helpSubcommands: '子命令',
       noParameters: '無引數',
@@ -419,9 +434,24 @@ const activity = {
       readUsage: '用法：/read viking://resources/...',
       enterUri: '請輸入 viking:// URI',
       hits: '命中資源 {{resources}} 條、記憶 {{memories}} 條、技能 {{skills}} 條。',
-      addResourceBody:
-        '已開啟新增資源彈窗。提交後左側目錄會重新整理，也可以用 /ls 或 /search 繼續定位新內容。',
-      addResourceTitle: '新增資源',
+      resourceProcessing: '任務已提交，正在處理。任務 ID：{{taskId}}',
+      resourceCompleted: '匯入完成，已開啟 {{uri}}。',
+      resourceFailed: '資源匯入未成功。',
+      resourceTaskFailed: '匯入失敗：{{reason}}\n任務 ID：{{taskId}}',
+      backgroundTaskFailed: '任務失敗：{{reason}}\n任務 ID：{{taskId}}',
+      resourceStillProcessing:
+        '任務仍在處理，請到任務中心檢視。任務 ID：{{taskId}}',
+      viewResourceTask: '檢視任務狀態',
+      taskCompleted: '任務完成',
+      taskCompletedHint: '任務已完成，可點選檢視結果。',
+      viewResult: '檢視結果',
+      taskDetails: {
+        taskId: 'Task ID:',
+        rootUri: 'Root URI:',
+        uri: 'URI:',
+        name: 'Name:',
+        auxiliaryFiles: 'Auxiliary files:',
+      },
       sessionUsage:
         '用法：/session [current|list|create|switch|get|context|messages|archive|commit|message|tool-results|tool-result|tool-search|delete] ...',
       sessionDeleteUsage: '用法：/session delete <session_id>',
@@ -433,10 +463,20 @@ const activity = {
       sessionSwitchedBody: '已切換到會話：{{id}}',
       sessionDeletedBody: '已刪除會話：{{id}}',
       sessionMessageAddedBody: '已向會話 {{id}} 新增訊息。',
-      unknownCommand:
-        '未知命令。可用命令：/status、/ls、/search、/find、/read、/session、/add-resource。',
+      unknownCommand: '未知命令。輸入 / 可瀏覽可用命令。',
+      addMemoryUsage: '用法：/add-memory "記憶內容" [--session-id <會話 ID>]',
+      addMemorySubmitted: '會話已提交，記憶正在後臺提取。',
+      memoryCompleted: '會話 {{id}} 的後臺處理已完成。',
+      skillCompleted: 'Skill 處理完成；可在「技能」頁面檢視。',
+      addSkillUsage:
+        '用法：/add-skill <Git URL> [-p viking://agent/skills]。本地檔案請到「技能」頁面上傳。',
+      addResourceUsage:
+        '用法：/add-resource <URL> [--to <URI>|--parent <URI>] [--args <JSON>] [--reason <說明>]。視覺化上傳請點選檔案系統上方的「新增資源」。',
+      writeUsage:
+        '用法：/write <URI> --content "文本" [--mode replace|append|create] [--wait]',
+      waitUsage: '用法：/wait（當前開源 API 不接收超時引數）',
+      addSkillSubmitted: 'Skill 已提交處理；可在「技能」頁面檢視。',
       commandFailed: '命令失敗',
-      waitUsage: '用法：/wait',
       invalidFlag: '無效的 --{{flag}}：{{value}}',
       refMeta: {
         archive: '歸檔',
@@ -447,24 +487,46 @@ const activity = {
       },
       running: '正在執行命令...',
       placeholder: '輸入 CLI 命令，例如 /status',
+      inputHint: '輸入 / 檢視全部指令 · ↑↓ 選擇 · Enter 補全',
       suggestionsTitle: '命令建議',
       suggestionsHint: '↑↓ 選擇 · Tab 補全 · Enter 執行',
+      paletteGroups: {
+        core: '核心流程',
+        filesystem: '檔案系統',
+        search: '搜尋與上下文',
+        status: '配置與狀態',
+        history: '歷史命令',
+        resource: '資源路徑',
+        subcommand: '會話命令',
+      },
       quickStart: {
         title: '快速開始',
+        heading: 'OpenViking CLI',
+        description: 'CLI 直接操作上下文',
         addResource: {
           title: '新增資源',
           command: '/add-resource',
           code: '匯入文件或檔案到 viking://resources',
         },
+        addSkill: {
+          title: '新增 Skill',
+          command: '/add-skill',
+          code: '輸入 Git 地址，將 Skill 新增到個人或共享目錄',
+        },
         addMemory: {
           title: '新增記憶',
-          command: '通過 Agent 會話提取記憶',
-          code: '在 Agent 面板傳送訊息，然後提交會話',
+          command: '/add-memory',
+          code: '輸入記憶內容；可選指定已有會話 ID',
         },
         find: {
           title: '查詢相關上下文',
-          command: '/find openviking 價值',
+          command: 'ov find "OpenViking 有什麼價值？"',
           code: '在當前範圍內搜尋資源、記憶和技能',
+        },
+        compile: {
+          title: '編譯素材',
+          command: '/compile',
+          code: '選擇素材目錄、輸出目錄和 Skill',
         },
       },
       commandGroups: {
@@ -476,12 +538,102 @@ const activity = {
         history: '歷史記錄',
       },
       commandParameters: {
+        compileFrom: {
+          name: '--from <素材目錄>',
+          description: '必填。需要編譯的 viking:// 素材路徑，可重複填寫。',
+        },
+        compileTo: {
+          name: '--to <輸出目錄>',
+          description: '必填。編譯結果儲存到這個 viking:// 目錄。',
+        },
+        compileSkill: {
+          name: '--skill <Skill URI>',
+          description: '必填。用於組織素材的已安裝 Skill。',
+        },
+        skillSource: {
+          name: '<Git URL>',
+          description:
+            '必填。Git 倉庫或含 SKILL.md 的 GitHub 子目錄；本地檔案請到技能頁面上傳。',
+        },
+        skillScope: {
+          name: '--scope user|agent',
+          description: '可選。預設新增為個人 Skill；agent 為帳號共享 Skill。',
+        },
+        skillParent: {
+          name: '-p <URI>',
+          description: '可選。Skill 的目標根目錄，預設 viking://~/skills。',
+        },
+        resourceSource: {
+          name: '<URL>',
+          description: '可選。遠端 URL 直接匯入；省略則開啟本地上傳表單。',
+        },
+        resourceTo: {
+          name: '--to <URI>',
+          description: '可選。完整目標 URI；不能與 --parent 同用。',
+        },
+        resourceParent: {
+          name: '--parent <URI>',
+          description: '可選。資源父目錄 URI；不能與 --to 同用。',
+        },
+        resourceReason: {
+          name: '--reason <說明>',
+          description: '可選。說明此次匯入的用途。',
+        },
+        resourceArgs: {
+          name: '--args <JSON>',
+          description: '可選。解析器引數，例如 Git 的 {"branch":"main"}。',
+        },
+        writeContent: {
+          name: '--content <文本>',
+          description: '必填。寫入的文本，包含空格時請用引號包裹。',
+        },
+        writeMode: {
+          name: '--mode <模式>',
+          description: '可選。replace、append 或 create；預設 replace。',
+        },
+        writeWait: {
+          name: '--wait',
+          description: '可選。等待服務端處理完成。',
+        },
+        nodeLimit: {
+          name: '--node-limit <n>',
+          description: '可選。最多返回的結果數，預設 10；模式搜尋預設 256。',
+        },
+        threshold: {
+          name: '--threshold <分數>',
+          description: '可選。僅返回達到最低分數的結果。',
+        },
+        searchSessionId: {
+          name: '--session-id <id>',
+          description: '可選。將檢索關聯到指定會話。',
+        },
+        pattern: {
+          name: '<模式>',
+          description: '必填。grep 搜正文，glob 匹配路徑。',
+        },
+        ignoreCase: {
+          name: '-i',
+          description: '可選。grep 匹配時忽略大小寫。',
+        },
+        taskAction: {
+          name: 'list|status|cancel',
+          description: '必填。列出編譯任務，或查詢、取消任務。',
+        },
+        taskId: { name: '<task_id>', description: 'status 和 cancel 必填。' },
+        memoryContent: {
+          name: '<記憶內容>',
+          description: '必填。寫入會話的文本；包含空格時請用引號包裹。',
+        },
+        memorySessionId: {
+          name: '--session-id <會話 ID>',
+          description: '可選。指定已有會話；省略時自動新建會話。',
+        },
         query: {
           name: '查詢詞',
           description: '要檢索的關鍵詞或語義問題。',
         },
         scope: {
-          name: '--scope <.|uri>',
+          name: '--uri <.|uri>',
           description:
             '可選。不填則全域搜尋；傳入 . 使用當前目錄，傳入 URI 使用指定目錄。',
         },
@@ -545,6 +697,24 @@ const activity = {
         },
       },
       commandExamples: {
+        compile: {
+          default: {
+            code: '/compile --from viking://resources/source --to viking://resources/output --skill viking://~/skills/daily-report',
+            description: '用已安裝的 Skill 編譯指定素材目錄',
+          },
+        },
+        addSkill: {
+          git: {
+            code: '/add-skill https://github.com/volcengine/OpenViking/tree/main/examples/compile/ov-compile-skills/daily-report',
+            description: '從 GitHub 子目錄新增個人 Skill',
+          },
+        },
+        addMemory: {
+          default: {
+            code: '/add-memory "需要記住的內容"',
+            description: '新建會話並提取記憶',
+          },
+        },
         status: {
           default: {
             code: '/status',
@@ -567,11 +737,11 @@ const activity = {
             description: '全域語義檢索',
           },
           current: {
-            code: '/search agent --scope .',
+            code: '/search agent --uri .',
             description: '使用當前高亮目錄',
           },
           scoped: {
-            code: '/search agent --scope viking://resources/',
+            code: '/search agent --uri viking://resources/',
             description: '只在指定目錄檢索',
           },
         },
@@ -581,11 +751,11 @@ const activity = {
             description: '全域查詢相關資源',
           },
           current: {
-            code: '/find agent --scope .',
+            code: '/find agent --uri .',
             description: '使用當前高亮目錄',
           },
           scoped: {
-            code: '/find agent --scope viking://resources/',
+            code: '/find agent --uri viking://resources/',
             description: '只在指定目錄查詢',
           },
         },
@@ -600,6 +770,51 @@ const activity = {
             code: '/add-resource',
             description: '開啟新增資源表單',
           },
+          remote: {
+            code: `ov add-resource https://github.com/volcengine/OpenViking --to viking://resources/openviking-repo --args '{"branch":"main"}'`,
+            description: '匯入 OpenViking 倉庫的 main 分支',
+          },
+        },
+        write: {
+          default: {
+            code: '/write viking://resources/notes.md --content "新內容"',
+            description: '替換檔案內容',
+          },
+          append: {
+            code: '/write viking://resources/notes.md --content "補充內容" --append',
+            description: '追加到已有檔案',
+          },
+        },
+        grep: {
+          default: {
+            code: '/grep "OpenViking"',
+            description: '在資源正文中查詢文字',
+          },
+          scoped: {
+            code: '/grep "OpenViking" --uri viking://resources/',
+            description: '只在指定目錄查詢文字',
+          },
+        },
+        glob: {
+          default: {
+            code: '/glob "**/*.md"',
+            description: '按路徑模式查詢 Markdown 檔案',
+          },
+          scoped: {
+            code: '/glob "**/*.md" --uri viking://resources/',
+            description: '在指定目錄匹配路徑',
+          },
+        },
+        task: {
+          list: {
+            code: '/task list --task-type compile',
+            description: '列出編譯任務',
+          },
+          status: {
+            code: '/task status <task_id>',
+            description: '查詢任務狀態',
+          },
+          cancel: { code: '/task cancel <task_id>', description: '取消任務' },
         },
         session: {
           current: {
@@ -714,43 +929,73 @@ const activity = {
         },
         ls: {
           description: '檢視已有資源',
-          usage: '/ls [viking://resources/...]',
+          usage: '/ls [<URI>]',
         },
         search: {
           description: '語義檢索上下文',
-          usage: '/search 查詢詞',
+          usage: '/search <查詢詞> [--uri <URI>] [--node-limit <n>]',
         },
         find: {
           description: '查詢相關資源',
-          usage: '/find 查詢詞',
+          usage: '/find <查詢詞> [--uri <URI>] [--node-limit <n>]',
         },
         read: {
           description: '讀取資源檔案',
-          usage: '/read viking://resources/.../file.md',
+          usage: '/read <URI>',
+        },
+        compile: {
+          description: '使用 Skill 編譯素材',
+          usage:
+            '/compile --from <素材目錄> --to <輸出目錄> --skill <Skill URI>',
+        },
+        addSkill: {
+          description: '從 Git 地址新增 Skill',
+          usage: '/add-skill <Git URL> [-p <目標根目錄>]',
+        },
+        addMemory: {
+          description: '向指定會話寫入訊息並提取記憶',
+          usage: '/add-memory "記憶內容" [--session-id <會話 ID>]',
         },
         addResource: {
           description: '新增外部資源',
-          usage: '/add-resource',
+          usage:
+            '/add-resource <URL> [--to <URI>|--parent <URI>] [--args <JSON>]',
+        },
+        write: {
+          description: '寫入或追加資源檔案',
+          usage: '/write <URI> --content <文本> [--mode replace|append|create]',
+        },
+        grep: {
+          description: '按正文模式查詢資源',
+          usage: '/grep <模式> [--uri <URI>]',
+        },
+        glob: {
+          description: '按路徑模式查詢資源',
+          usage: '/glob <模式> [--uri <URI>]',
+        },
+        task: {
+          description: '檢視和管理編譯任務',
+          usage: '/task <list|status|cancel> [<任務 ID>]',
         },
         session: {
           description: '管理 Agent 會話',
-          usage: '/session 子命令',
+          usage: '/session <子命令>',
         },
         tree: {
           description: '展示目錄樹',
-          usage: '/tree [viking://resources/...]',
+          usage: '/tree [<URI>]',
         },
         stat: {
           description: '檢視資源元資訊',
-          usage: '/stat viking://resources/...',
+          usage: '/stat <URI>',
         },
         abstract: {
           description: '讀取目錄摘要',
-          usage: '/abstract viking://resources/...',
+          usage: '/abstract <URI>',
         },
         overview: {
           description: '讀取目錄概覽',
-          usage: '/overview viking://resources/...',
+          usage: '/overview <URI>',
         },
         health: {
           description: '檢視後端健康狀態',

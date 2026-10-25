@@ -570,7 +570,7 @@ SDK 1.39.0 起提供所需的客戶端上下文管理器和關閉方法，用於
     "dense": {
       "provider": "gemini",
       "api_key": "your-google-api-key",
-      "model": "gemini-embedding-2-preview",
+      "model": "gemini-embedding-2",
       "dimension": 3072
     }
   }
@@ -578,11 +578,15 @@ SDK 1.39.0 起提供所需的客戶端上下文管理器和關閉方法，用於
 ```
 
 可用 Gemini 嵌入模型:
-- `gemini-embedding-2-preview`: 8192 token 輸入限制, 1–3072 輸出維度 (MRL)
+- `gemini-embedding-2`: 8192 token 輸入限制, 1–3072 輸出維度 (MRL)
 - `gemini-embedding-001`: 2048 token 輸入限制, 1–3072 輸出維度 (MRL)
 - `text-embedding-004`: 2048 token 輸入限制, 768 輸出維度（固定）
 
 推薦維度: `768`、`1536` 或 `3072`（預設: `3072`）。
+
+穩定版 Gemini Embedding 2 不接受 `task_type` 請求欄位，而是使用文件規定的文本任務指令。
+配置 `query_param` 或 `document_param` 後，OpenViking 會自動新增相應指令。如果修改已有索引的
+embedding 模型，除非 provider 明確保證兩個向量空間相容，否則應重新生成該索引的向量。
 
 獲取 API Key: https://aistudio.google.com/apikey
 
@@ -645,7 +649,7 @@ SDK 1.39.0 起提供所需的客戶端上下文管理器和關閉方法，用於
     "dense": {
       "provider": "gemini",
       "api_key": "your-google-api-key",
-      "model": "gemini-embedding-2-preview",
+      "model": "gemini-embedding-2",
       "dimension": 3072,
       "query_param": "RETRIEVAL_QUERY",
       "document_param": "RETRIEVAL_DOCUMENT"

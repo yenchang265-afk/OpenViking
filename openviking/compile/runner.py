@@ -28,6 +28,7 @@ from openviking.compile.models import (
     CompileLimits,
     CompileResult,
     SanitizedCompileRequest,
+    has_directory_plan,
 )
 from openviking.compile.ops import finalize as finalize_op
 from openviking.compile.pipeline import Pipeline
@@ -35,6 +36,7 @@ from openviking.compile.pipeline_agent import agent_runner
 from openviking.compile.renderer import RenderedBundle
 from openviking.compile.scratch import ScratchDir
 from openviking.compile.sources import pack_source_batches
+from openviking.compile.target_tools import target_tools
 from openviking.core.namespace import classify_uri, relative_uri_path
 from openviking.core.skill_loader import validate_skill_format
 from openviking.service.external_task_service import TaskCompletedDuringCancel
@@ -109,12 +111,16 @@ async def ensure_target_directory(client: Any, target: str) -> None:
 
 
 async def list_source_files(
-    client: Any, roots: list[str], *, cutoff: datetime | None = None
+    client: Any,
+    roots: list[str],
+    *,
+    cutoff: datetime | None = None,
+    allow_empty: bool = False,
 ) -> list[str]:
     """List unique sources, excluding files strictly older than the UTC cutoff.
 
     Unknown file times are retained; directory times never prune descendants.
-    Listing failures propagate. Empty sources raise only without a cutoff.
+    Full reprocessing allows empty roots; listing failures propagate.
     """
 
     async def inventory(root: str) -> list[dict[str, Any]]:
@@ -154,7 +160,7 @@ async def list_source_files(
                 except ValueError:
                     pass
             files.add(uri)
-    if not files and cutoff is None:
+    if not files and cutoff is None and not allow_empty:
         raise ValueError("Compile sources contain no files")
     return sorted(files)
 
@@ -215,16 +221,30 @@ class CompileRunner:
             await progress(stage, {})
             await ensure_target_directory(client, request.to)
             source_files = None
-            if request.last_compile_time is not None:
+            execution = (request.changes or {}).get("execution") or {}
+            full_execution = execution.get("mode") == "full" or (
+                not execution and request.instruction_provided
+            )
+            if has_directory_plan(request.changes) and request.changes.get("head"):
+                pass  # Sources are discovered through the snapshot change plan.
+            elif full_execution:
+                source_files = await list_source_files(client, request.from_, allow_empty=True)
+                request = request.model_copy(update={"last_compile_time": None})
+            elif request.last_compile_time is not None:
                 source_files = await list_source_files(
                     client, request.from_, cutoff=request.last_compile_time
                 )
-                if not source_files:
-                    # An incremental no-op finishes without model calls or target writes.
-                    succeeded = True
-                    return CompileResult(
-                        from_=request.from_, to=request.to, skill=request.skill
-                    ).model_dump(by_alias=True)
+            if (
+                source_files is not None
+                and not source_files
+                and not full_execution
+                and request.changes is None
+            ):
+                # An incremental no-op finishes without model calls or target writes.
+                succeeded = True
+                return CompileResult(
+                    from_=request.from_, to=request.to, skill=request.skill
+                ).model_dump(by_alias=True)
             skill_text = await client.read_raw(f"{request.skill}/SKILL.md")
             if not skill_text.strip():
                 raise CompileFailure("SKILL_INVALID", "Compile Skill is empty", stage=stage)
@@ -283,6 +303,9 @@ class CompileRunner:
             usage=usage,
         )
         pipeline.model.agent_runner = agent_runner(self.limits)
+        pipeline.tools = target_tools(client)
+        # Reader wrappers only check that a context exists; the client is task-scoped.
+        pipeline.tool_context = client
 
         def metrics() -> dict[str, Any]:
             """Expose token totals and existing error summaries, without per-call counters."""
@@ -300,11 +323,13 @@ class CompileRunner:
             }
 
         await progress("pipeline", {})
-        ordered = (
-            source_files
-            if source_files is not None
-            else await list_source_files(client, request.from_)
-        )
+        ordered: list[str] = []
+        if not (has_directory_plan(request.changes) and request.changes.get("head")):
+            ordered = (
+                source_files
+                if source_files is not None
+                else await list_source_files(client, request.from_)
+            )
         await pipeline.files.put("inputs", dict.fromkeys(ordered, "pending"))
 
         async def source_batches():
@@ -386,7 +411,7 @@ class CompileRunner:
     ) -> dict[str, Any]:
         skill_target = classify_uri(request.to).context_type == "skill"
         result: dict[str, Any] = {"created": [], "updated": [], "unchanged": []}
-        if skill_target:
+        if skill_target and not pipeline.noop:
             result = await self._write_skill_bundle(
                 client=client, target_uri=request.to, rendered=rendered
             )
@@ -430,13 +455,15 @@ class CompileRunner:
                     [*([] if skill_target else rendered.unchanged), *result.get("unchanged", [])]
                 )
             ),
-            page_count=len(set(rendered.wiki_uris) & set(published)),
+            page_count=len(set(published)),
             link_count=rendered.link_count,
             link_report=rendered.link_report,
             warnings=pipeline.warnings,
         ).model_dump(by_alias=True)
         error = pipeline_incomplete_error(
-            published=bool(published), conflicts=conflicts, failures=pipeline.failures
+            published=bool(published) or pipeline.noop,
+            conflicts=conflicts,
+            failures=pipeline.failures,
         )
         if error is not None:
             # Keep conflicts and warnings so the user can see why nothing landed.

@@ -180,6 +180,7 @@ bot = [
   "python-socketio>=5.16.2",
   "python-engineio>=4.13.2",
   "msgpack>=1.0.8",
+  "numpy>=1.26.0",
   "python-socks[asyncio]>=2.4.0",
   "prompt-toolkit>=3.0.0",
   "pygments>=2.16.0",
@@ -257,7 +258,7 @@ openviking_gateway = ["client-rules.json"]
 "openviking.scheduling.expiry" = ["lua/*.lua"]
 openviking = [
     "prompts/templates/**/*.yaml",
-    "builtin_skills/**/*",
+    "system_assets/**/*",
     "server/static/**/*",
     "web_studio/dist/**/*",
     "lib/ragfs_python*.so",
@@ -297,6 +298,7 @@ norecursedirs = ["api_test", "oc2ov_test"]
 markers = [
     "integration: tests that require external services or real model configuration",
     "cli_remote: tests that require a remote OpenViking CLI binary and server connection",
+    "system_asset_sync: server tests that need the real startup system-asset sync",
 ]
 addopts = "-v --cov=openviking --cov-report=term-missing"
 

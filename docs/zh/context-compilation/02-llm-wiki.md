@@ -15,7 +15,7 @@
 
 預設生成 `entity` 和 `concept` 頁面，其他型別按 Skill 中的條件生成。多個來源中的相關內容會合併到同一主題下。
 
-Skill 原始碼：[openviking/builtin_skills/compile/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
+Skill 原始碼：[openviking/system_assets/compile/example-skills/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
 
 先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
@@ -51,7 +51,7 @@ ov skills list
 如果管理員刪除了它，可從套件原始碼重新加入：
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/llm-wiki -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯

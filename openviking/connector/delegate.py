@@ -50,6 +50,7 @@ from openviking.resource.processing_mode import (
     ProcessingMode,
 )
 from openviking.server.identity import RequestContext
+from openviking.service.task_domain import TaskPatch
 from openviking.utils.tags import normalize_search_tags
 from openviking_cli.exceptions import InternalError, InvalidArgumentError
 from openviking_cli.utils import get_logger
@@ -57,6 +58,7 @@ from openviking_cli.utils import get_logger
 logger = get_logger(__name__)
 
 _TOS_BUCKET_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{1,61}[a-z0-9])$")
+CONNECTOR_DISPLAY_RESOURCE_CONFIG_ARG = "resource_config"
 
 
 def _safe_http_response(response: httpx.Response) -> Any:
@@ -467,7 +469,9 @@ class ConnectorDelegate:
             supported_args = CONNECTOR_SUPPORTED_ARGS.get(
                 add_type, frozenset()
             ) | CONNECTOR_CREDENTIAL_ARGS.get(add_type, frozenset())
-            unknown_args = sorted(set(connector_args) - supported_args)
+            unknown_args = sorted(
+                set(connector_args) - supported_args - {CONNECTOR_DISPLAY_RESOURCE_CONFIG_ARG}
+            )
             if unknown_args:
                 supported_hint = (
                     f"supported: {sorted(supported_args)}"
@@ -553,10 +557,14 @@ class ConnectorDelegate:
             # semantics, so they travel wholesale through param_config. The
             # caller supplies credentials under the reserved args.auth_config
             # key, lifted into the top-level auth_config field.
+            display_only_args = {
+                CONNECTOR_ARGS_AUTH_CONFIG_KEY,
+                CONNECTOR_DISPLAY_RESOURCE_CONFIG_ARG,
+            }
             forwarded_args = {
                 key: value
                 for key, value in (connector_args or {}).items()
-                if key != CONNECTOR_ARGS_AUTH_CONFIG_KEY and value is not None
+                if key not in display_only_args and value is not None
             }
             declared_auth = (connector_args or {}).get(CONNECTOR_ARGS_AUTH_CONFIG_KEY)
             if declared_auth is not None and not isinstance(declared_auth, dict):
@@ -854,9 +862,9 @@ class ConnectorDelegate:
                     )
                     last_status = status
 
-                await task_tracker.update_stage(
+                await task_tracker.patch_task(
                     ov_task_id,
-                    f"connector:{status}",
+                    TaskPatch(stage=f"connector:{status}"),
                     account_id=ctx.account_id,
                     user_id=ctx.user.user_id,
                 )

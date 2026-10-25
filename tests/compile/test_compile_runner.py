@@ -61,6 +61,7 @@ def stub_pipeline(monkeypatch):
             self.files = TaskFiles(sandbox)
             self.model = SimpleNamespace(agent_runner=None)
             self.failures, self.warnings, self.artifacts = [], [], []
+            self.noop = False
 
         async def run(self, batches):
             async for batch in batches:

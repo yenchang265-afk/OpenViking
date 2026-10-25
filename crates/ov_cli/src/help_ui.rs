@@ -584,7 +584,7 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
     },
     CommandHelpSpec {
         path: &["snapshot"],
-        purpose: "Manage workspace snapshots: commit, restore, show, diff, and walk history.",
+        purpose: "Manage workspace snapshots: commit, restore, show, compare files or directories, and walk history.",
         examples: &[
             HelpItem {
                 label: "ov snapshot commit -m \"checkpoint before refactor\" --paths viking://resources/my_project",
@@ -702,6 +702,24 @@ const COMMAND_HELP_SPECS: &[CommandHelpSpec] = &[
         next_steps: &[HelpItem {
             label: "ov snapshot log --paths viking://docs/spec.md",
             description: "Find commits that changed this file.",
+        }],
+    },
+    CommandHelpSpec {
+        path: &["snapshot", "diff-paths"],
+        purpose: "List changed source files under directories between two snapshots, one page at a time.",
+        examples: &[
+            HelpItem {
+                label: "ov snapshot diff-paths --paths viking://resources/docs --from <old> --to <new> -o json",
+                description: "List added, modified, and deleted source files.",
+            },
+            HelpItem {
+                label: "ov snapshot diff-paths --paths viking://resources/docs --to <commit> --offset 100 --limit 100 -o json",
+                description: "List the next page against an empty tree; use next_offset until has_more is false.",
+            },
+        ],
+        next_steps: &[HelpItem {
+            label: "ov snapshot diff <file-uri> --from <old> --to <new>",
+            description: "Read a changed file's text diff.",
         }],
     },
     CommandHelpSpec {
@@ -1942,6 +1960,7 @@ fn localized_command_purpose(spec: &CommandHelpSpec, language: Language) -> &str
         ["snapshot", "show"] => "檢視某次提交的後設資料，或指定路徑下的單個檔案內容。",
         ["snapshot", "log"] => "按分支遍歷提交歷史，最新的在前。",
         ["snapshot", "diff"] => "對比指定檔案在兩個快照中的內容差異。",
+        ["snapshot", "diff-paths"] => "分頁列出目錄中兩個快照之間新增、修改和刪除的原始檔。",
         _ => spec.purpose,
     }
 }

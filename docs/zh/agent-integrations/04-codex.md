@@ -79,7 +79,6 @@ memory 外掛預設內建 OV-Usage。報告彙總自動召回和顯式 OpenVikin
 | `Stop` | 將新增對話追加到 OpenViking 會話。 |
 | `PreCompact` | 補齊並提交壓縮前的完整對話記錄。 |
 | `SessionEnd` | 正常退出時提交會話，觸發後續記憶提取。 |
-| `PreToolUse`（`Bash`） | 檢查命令中的 `viking://` URI，並提示模型使用 OpenViking MCP 工具。命令仍會執行；URI 是 `ov` 引數等有意傳入的資料時，可以忽略提示。 |
 
 新會話啟動時還會清理上次執行遺留、已超過閒置 TTL 的孤兒會話。
 

@@ -36,6 +36,7 @@ from openviking.service.task_domain import (
     TERMINAL_WORK_STATES,
     DeleteExpiredResult,
     QueueWorkSummary,
+    TaskPatch,
     TaskRecord,
     TaskRetentionPolicy,
     TaskStatus,
@@ -290,6 +291,8 @@ class TaskTracker:
     def __init__(self, store: TaskWorkStore) -> None:
         self._store = store
         self._cleanup_task: Optional[asyncio.Task[Any]] = None
+        # Bound after Compile storage initialization; shares the cleanup clock and batch size.
+        self.compile_history_cleanup: Optional[Callable[..., Awaitable[int]]] = None
         self._cancel_poll_task: Optional[asyncio.Task[Any]] = None
         self._work_index = TaskWorkIndex()
         self._running: ContextVar[tuple[str, str, str, bool] | None] = ContextVar(
@@ -388,9 +391,15 @@ class TaskTracker:
                 logger.exception("[TaskTracker] cancel-poll error")
 
     async def delete_expired(self) -> DeleteExpiredResult:
+        now = time.time()
+        if self.compile_history_cleanup is not None:
+            try:
+                await self.compile_history_cleanup(now=now, limit=self.CLEANUP_BATCH)
+            except Exception:
+                logger.exception("[TaskTracker] Compile history cleanup error")
         result = await self._store.delete_expired(
             TaskRetentionPolicy(self.TTL_COMPLETED, self.TTL_FAILED),
-            now=time.time(),
+            now=now,
             limit=self.CLEANUP_BATCH,
         )
         for deleted in result.deleted:
@@ -440,17 +449,27 @@ class TaskTracker:
         *,
         account_id: str,
         user_id: str,
+        task_id: Optional[str] = None,
     ) -> Optional[TaskRecord]:
+        """Create an operation atomically, or return None while another is active.
+
+        An explicit task_id replays the same operation; a task with a different
+        type or resource raises ValueError. Owner validation belongs to create.
+        """
         try:
-            return await self.create(
+            task = await self.create(
                 task_type,
                 resource_id,
                 account_id=account_id,
                 user_id=user_id,
+                task_id=task_id,
                 reject_if_active=True,
             )
         except TaskAlreadyActive:
             return None
+        if task.task_type != task_type or task.resource_id != resource_id:
+            raise ValueError("Task ID belongs to another operation")
+        return task
 
     async def start(
         self,
@@ -461,39 +480,22 @@ class TaskTracker:
     ) -> None:
         await self._store.start_task(task_id, stage=stage, account_id=account_id, user_id=user_id)
 
-    async def update_stage(
+    async def patch_task(
         self,
         task_id: str,
-        stage: str,
-        account_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-        *,
-        meta: Optional[Dict[str, Any]] = None,
-    ) -> None:
-        await self._store.update_stage(
-            task_id, stage, meta=meta, account_id=account_id, user_id=user_id
-        )
-
-    async def update_task_auth(
-        self,
-        task_id: str,
-        values: Dict[str, Any],
+        patch: TaskPatch,
         *,
         account_id: str,
         user_id: str,
-    ) -> None:
+    ) -> StoreOperationResult:
+        """Atomically apply permitted Task fields without changing task state."""
         self._validate_owner(account_id, user_id)
-        await self._store.update_auth(task_id, values, account_id=account_id, user_id=user_id)
-
-    async def update_meta(
-        self,
-        task_id: str,
-        meta: Dict[str, Any],
-        account_id: Optional[str] = None,
-        user_id: Optional[str] = None,
-    ) -> None:
-        """Merge public metadata into an active task without touching stage or status."""
-        await self._store.merge_meta(task_id, meta, account_id=account_id, user_id=user_id)
+        return await self._store.patch_task(
+            task_id,
+            patch,
+            account_id=account_id,
+            user_id=user_id,
+        )
 
     async def complete(
         self,
@@ -1232,29 +1234,15 @@ class TaskTracker:
     ) -> None:
         """Best-effort: a failed progress write must not fail the task it describes."""
         try:
-            await self.update_meta(
+            # Waiters may not know the owner; the store resolves the task by ID.
+            await self._store.patch_task(
                 task_id,
-                {"work_progress": progress},
+                TaskPatch(meta={"work_progress": progress}),
                 account_id=account_id,
                 user_id=user_id,
             )
         except Exception as exc:
             logger.warning("[TaskTracker] Failed to publish work progress for %s: %s", task_id, exc)
-
-    async def mark_enqueue_complete(
-        self,
-        task_id: str,
-        work_id: str,
-        *,
-        account_id: str,
-        user_id: str,
-    ) -> None:
-        await self._store.mark_enqueue_complete(
-            task_id,
-            work_id,
-            account_id=account_id,
-            user_id=user_id,
-        )
 
     async def is_enqueue_complete(
         self,
@@ -1264,12 +1252,8 @@ class TaskTracker:
         account_id: str,
         user_id: str,
     ) -> bool:
-        return await self._store.is_enqueue_complete(
-            task_id,
-            work_id,
-            account_id=account_id,
-            user_id=user_id,
-        )
+        auth = await self.get_task_auth(task_id, account_id=account_id, user_id=user_id)
+        return work_id in set(auth.get("enqueue_complete_work_ids") or ())
 
     async def build_queue_status(
         self,

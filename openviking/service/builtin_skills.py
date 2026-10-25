@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Install the bundled compile Skills into every account by default.
 
-The Skills in ``openviking/builtin_skills/compile`` are installed into each
+The Skills in ``openviking/system_assets/compile/example-skills`` are installed into each
 account's shared ``viking://agent/skills`` root, so ``ov compile`` and Studio
 can use them without a manual ``ov add-skill``. Installing makes no LLM call:
 privacy extraction is skipped and SKILL.md is summarized from its own header.
@@ -17,7 +17,6 @@ are still installed once.
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from typing import Any, Iterable
 
 from openviking.pyagfs import AGFSAlreadyExistsError, AGFSNotFoundError, AsyncAGFSClient
@@ -25,12 +24,13 @@ from openviking.pyagfs.async_client import fs_ctx_from_agfs_path
 from openviking.server.identity import RequestContext, Role
 from openviking.service.task_store import SYSTEM_TASK_USER_ID
 from openviking.storage.viking_fs import get_viking_fs
+from openviking.system_assets import SYSTEM_ASSETS_DIR
 from openviking_cli.session.user_id import UserIdentifier
 from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
-BUILTIN_SKILLS_DIR = Path(__file__).resolve().parent.parent / "builtin_skills" / "compile"
+BUILTIN_SKILLS_DIR = SYSTEM_ASSETS_DIR / "compile" / "example-skills"
 BUILTIN_SKILLS_ROOT = "viking://agent/skills"
 INSTALLED_RECORD_PATH = "/local/{account_id}/_system/builtin_skills.json"
 _SOURCE_METADATA = {"type": "builtin", "source": "ov-compile-skills", "operation": "add"}

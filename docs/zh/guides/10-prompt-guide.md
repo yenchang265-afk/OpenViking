@@ -18,7 +18,7 @@ OpenViking 當前的 prompt 主要分為兩類：
    - 存放在 `openviking/prompts/templates/<category>/*.yaml`
    - 用於給模型下發任務，例如做圖片理解、文件總結、記憶提取、檢索意圖分析等
 2. memory schema 模板
-   - 存放在 `openviking/prompts/templates/memory/*.yaml`
+   - 存放在 `openviking/system_assets/memory/memory_templates/builtin/*.yaml`
    - 用於定義某類記憶的欄位、檔名模板、內容模板和目錄規則
 
 從使用角度看，這些模板主要服務於以下處理環節：
@@ -231,7 +231,7 @@ peer_enabled: true
   - 生效環節：經驗型記憶落盤與更新階段
   - 影響能力：從任務結果中沉澱可複用指導
   - 作用：記錄持久的執行經驗及其替代的舊記憶
-  - 關鍵欄位：`experience_name`、`content`、`supersedes`
+  - 關鍵欄位：`experience_name`、`content`、`supersedes`（可選；不替換其他經驗時可省略）
 
 - `identity`
   - 生效環節：agent identity 記憶落盤階段

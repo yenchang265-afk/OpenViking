@@ -154,4 +154,4 @@ curl http://localhost:1933/api/v1/search/find \
 - [資料加密](./10-encryption.md) - 靜態資料加密與金鑰架構
 - [多租戶](./11-multi-tenant.md) - account / user / peer 隔離模型
 - [指標](./12-metrics.md) - `/metrics` 使用方式與關鍵指標說明
-- [使用者隱私配置](./13-privacy.md) - 隱私版本管理、自動提取Skill隱私配置
+- [使用者隱私配置](./13-privacy.md) - 隱私版本管理、自動提取Skill/Session隱私配置

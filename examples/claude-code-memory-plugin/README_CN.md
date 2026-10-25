@@ -153,6 +153,7 @@ claude
 | `OPENVIKING_LOG_RANKING_DETAILS`       | `false`       | 每候選打分日誌（很囉嗦）                                           |
 | `OPENVIKING_RECALL_MAX_TOKENS`         | `1600`        | 服務端組裝上下文塊的 token 預算（與本地壓縮輸入上限相互獨立）         |
 | `OPENVIKING_RECALL_DEDUP_TURNS`        | `5`           | 跨輪冷卻：最近 N 輪已注入過的 URI 本輪跳過                           |
+| `OPENVIKING_RECALL_EVENTS_DECAY_PROTECTION` | （關） | 事件記憶在此期限內（`7d`、`12h`）保持原分，之後衰減，較早的事件不再壓過新的。以 `events_time_decay_protection` 傳送。 |
 | `OPENVIKING_RECALL_QUERY_EXPANSION`    | `auto`        | `auto` 讓服務端結合會話上下文擴充短提問；`off` 關閉                   |
 | `OPENVIKING_RECALL_COMPRESS`           | `auto`        | digest 壓縮：`off`、`client`（本地宿主 CLI）、`server`、`auto`（本地優先、失敗回落服務端） |
 | `OPENVIKING_RECALL_COMPRESS_MAX_BULLETS` | `6`         | digest 條數上限                                                     |

@@ -2,7 +2,7 @@
 
 把帶時間戳的對話記錄、Agent 會話、IM 訊息、協作文件、會議紀要、任務記錄等材料，編譯成簡潔、有出處的**日報**：每天一頁。
 
-Skill 原始碼：[openviking/builtin_skills/compile/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/daily-report)
+Skill 原始碼：[openviking/system_assets/compile/example-skills/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/daily-report)
 
 先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
@@ -27,7 +27,7 @@ ov skills list
 如果管理員刪除了它，可從套件原始碼重新加入：
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/daily-report -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/daily-report -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯

@@ -10,7 +10,7 @@ from pathlib import Path, PurePosixPath
 class ScratchDir:
     """Confine relative task paths to one local directory.
 
-    The pipeline only needs file reads, writes and same-directory replacement;
+    The pipeline only needs file reads, writes, listings and same-directory replacement;
     there is no command execution. Paths are POSIX-relative to the root.
     """
 
@@ -46,6 +46,19 @@ class ScratchDir:
     async def read_file_bytes(self, relative: str) -> bytes:
         path = self.local_file_path(relative)
         return await asyncio.to_thread(path.read_bytes)
+
+    async def list_dir(self, relative: str) -> list[str]:
+        """Return sorted entry names; directories end with ``/``."""
+        path = self.local_file_path(relative)
+
+        def entries() -> list[str]:
+            if not path.is_dir():
+                raise FileNotFoundError(relative)
+            return sorted(
+                f"{item.name}/" if item.is_dir() else item.name for item in path.iterdir()
+            )
+
+        return await asyncio.to_thread(entries)
 
     def reset(self) -> None:
         """Start a fresh attempt; interrupted attempts re-run from the beginning."""

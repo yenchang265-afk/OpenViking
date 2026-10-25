@@ -33,7 +33,7 @@ export async function validateNewSkill(data: string): Promise<SkillValidation> {
 
 export async function addNewSkill(
   data: string,
-  scope: SkillScope,
+  scope: SkillScope | `viking://${string}`,
 ): Promise<{ task_id?: string }> {
   return getOvResult<{ task_id?: string }>(
     ovClient.client.post({
@@ -43,7 +43,11 @@ export async function addNewSkill(
         // Return the task before the server's privacy scan; the sheet polls it.
         background: true,
         target_uri:
-          scope === 'agent' ? 'viking://agent/skills' : 'viking://~/skills',
+          scope === 'agent'
+            ? 'viking://agent/skills'
+            : scope === 'user'
+              ? 'viking://~/skills'
+              : scope,
       },
     }),
   )

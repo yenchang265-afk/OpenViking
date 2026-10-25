@@ -253,6 +253,16 @@ store.put(("users", "ada"), "preferences", None)  # 值為 None 表示刪除該�
 `put()` 會在修改記錄前校驗名稱空間。其他刪除錯誤會向呼叫方丟擲。
 記錄和搜尋索引檔案分別刪除；如果只完成其中一步，請解決報告的錯誤後重試，以完成清理。
 
+讀取記錄時，僅記錄不存在才返回 `None`；許可權、後端和 JSON 解析錯誤會向呼叫方丟擲，
+`put()` 不會在讀取失敗後覆蓋記錄。
+`list_namespaces(prefix=("users", "*"))` 中的每個 `*` 匹配一層名稱空間，
+也適用於 `viking://~/peers/support/memories/langgraph_store` 這樣的 peer 主目錄別名。
+
+`search()` 支援 `filter={"metadata": {"color": "blue"}}` 這樣的巢狀 JSON 篩選。
+篩選中的 `eq`、`ne`、`gt`、`gte`、`lt`、`lte` 和 `in` 在所有巢狀層級均為保留的運算子別名。
+使用 `index=["items[*].text"]` 可以只索引陣列中的指定欄位，同時保留完整的儲存值。
+已有條目的索引會在再次寫入該條目時更新。
+
 ### LangGraph middleware
 
 ```python
@@ -287,6 +297,11 @@ except OpenVikingPartialWriteError as exc:
 recorder.flush("support-thread-1")
 recorder.close()
 ```
+
+向 `record()` 或 `arecord()` 傳入 `commit_policy=` 可僅覆蓋本次呼叫的策略，
+不改變 recorder 的預設值。`None` 使用預設策略；`OpenVikingCommitPolicy(mode="never")`
+禁止本次寫入後的新 commit，但仍會重試之前失敗的 commit。`history.clear()` 和 `aclear()`
+會在刪除或重建失敗時丟擲異常；重建失敗時舊 session 已被刪除，待確認的上下文引用不會被確認。
 
 `record()` 只寫入呼叫方傳入的訊息；它會過濾框架控制訊息、按服務端限制分批寫入，並應用已配置的
 commit 策略。如果後續批次或寫入後的 commit 失敗，`OpenVikingPartialWriteError` 會報告已經

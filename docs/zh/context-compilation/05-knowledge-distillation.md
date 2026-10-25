@@ -18,7 +18,7 @@ risk/
 
 > 以上僅展示目錄結構。實際主題和結論由來源與指令決定，檔名概括結論。
 
-Skill 原始碼：[openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
+Skill 原始碼：[openviking/system_assets/compile/example-skills/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/knowledge-distillation)
 
 先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
@@ -41,7 +41,7 @@ ov skills list
 如果管理員刪除了它，可從套件原始碼重新加入：
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/knowledge-distillation -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯

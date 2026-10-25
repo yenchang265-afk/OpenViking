@@ -8,11 +8,13 @@ import workspace from './zh-TW/workspace'
 import resources from './zh-TW/resources'
 import activity from './zh-TW/activity'
 import memoryTemplates from './zh-TW/memory-templates'
+import dataManagement from './zh-TW/data-management'
 
 const zhTW = {
   studio,
   onboarding,
   gateway,
+  dataManagement,
   compile,
   vikingbot,
   ...workspace,

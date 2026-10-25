@@ -11,6 +11,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import httpx
 import pytest
@@ -24,6 +25,7 @@ from openviking.server.identity import RequestContext, Role
 from openviking.service.core import OpenVikingService
 from openviking.service.task_tracker import get_task_tracker
 from openviking.storage.queuefs import QueueManager, SessionCommitMsg, get_queue_manager
+from openviking.system_assets.sync import SystemAssetSynchronizer
 from openviking_cli.session.user_id import UserIdentifier
 from openviking_cli.utils.config.embedding_config import EmbeddingConfig
 from openviking_cli.utils.config.vlm_config import VLMConfig
@@ -68,6 +70,17 @@ def _install_fake_embedder(monkeypatch):
 
     monkeypatch.setattr(EmbeddingConfig, "get_embedder", lambda self: FakeEmbedder(self.dimension))
     return FakeEmbedder
+
+
+def _skip_system_asset_sync(monkeypatch, request=None) -> None:
+    """Skip startup system-asset sync unless the test is marked ``system_asset_sync``.
+
+    After an earlier service in the same process, the sync's durable content write
+    never settles and initialize() waits forever; most tests do not need the assets.
+    """
+    if request is not None and request.node.get_closest_marker("system_asset_sync"):
+        return
+    monkeypatch.setattr(SystemAssetSynchronizer, "sync", AsyncMock(return_value=0))
 
 
 def _install_fake_vlm(monkeypatch):
@@ -188,10 +201,11 @@ def upload_temp_dir(temp_dir: Path, monkeypatch) -> Path:
 
 
 @pytest_asyncio.fixture(scope="function")
-async def service(temp_dir: Path, monkeypatch):
+async def service(temp_dir: Path, monkeypatch, request):
     """Create and initialize an OpenVikingService for in-process API tests."""
     fake_embedder_cls = _install_fake_embedder(monkeypatch)
     _install_fake_vlm(monkeypatch)
+    _skip_system_asset_sync(monkeypatch, request)
     svc = OpenVikingService(
         path=str(temp_dir / "data"), user=UserIdentifier.the_default_user("test_user")
     )
@@ -260,6 +274,7 @@ async def running_server(temp_dir: Path, monkeypatch):
         yield
 
     monkeypatch.setattr("openviking.server.mcp_endpoint.mcp_lifespan", _noop_mcp_lifespan)
+    _skip_system_asset_sync(monkeypatch)
 
     svc = OpenVikingService(
         path=str(temp_dir / "sdk_data"), user=UserIdentifier.the_default_user("sdk_test_user")

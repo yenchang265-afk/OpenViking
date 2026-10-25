@@ -1,10 +1,10 @@
 # 版本管理
 
-快照將指定範圍內的檔案樹儲存為不可變版本。使用 `commit` 儲存、`log` 檢視歷史、`show` 讀取舊版檔案、`diff` 對比檔案在兩個版本間的差異、`restore` 恢復已儲存的內容。未提交或被排除的檔案不在恢復範圍內，ACL 和向量索引也不儲存歷史版本。
+快照將指定範圍內的檔案樹儲存為不可變版本。使用 `commit` 儲存、`log` 檢視歷史、`show` 讀取舊版檔案、`diff` 對比檔案內容、`diff-paths` 列出變化檔案、`restore` 恢復已儲存的內容。未提交或被排除的檔案不在恢復範圍內，ACL 和向量索引也不儲存歷史版本。
 
 快照能力底層由內嵌在 Rust RAGFS 層的 [gitoxide](https://github.com/Byron/gitoxide) 驅動，按 `account_id` 維護一個邏輯 Git 倉庫（每個帳號一個倉庫），使用快照 API 管理版本即可，無需直接修改底層倉庫。
 
-五個核心命令：
+核心命令：
 
 | 命令 | 作用 |
 |------|------|
@@ -12,6 +12,7 @@
 | `log` | 從最新提交開始回溯歷史 |
 | `show` | 檢視某個提交的後設資料，或讀取該提交中某個檔案的內容 |
 | `diff` | 以 unified diff 格式對比某個檔案在兩個快照中的內容 |
+| `diff-paths` | 分頁列出指定目錄內發生變化的原始檔 |
 | `restore` | 把目錄（或整棵帳號樹）恢復到某個歷史快照的狀態 |
 
 此外還提供帳號級 `.ovgitignore` 排除規則的管理命令（`get`/`set`/`delete`），用於在 `commit` 時按規則排除匹配的檔案。詳見 [ignore 管理](#ignore-管理)。
@@ -30,6 +31,7 @@
 | 操作 | 許可權要求 |
 |------|----------|
 | `show(path=...)` / `diff` / `log` | `read` |
+| `diff_paths` | 來源目錄和每個變化檔案的 `read`；任一子節點無權則整次失敗，且不暴露該 URI |
 | `commit` | `write`；目錄會遞迴檢查當前全部子節點，任一子節點無權則整次失敗 |
 | `restore` 覆蓋已有檔案 | 檔案的 `write` |
 | `restore` 新建檔案 | 父目錄的 `write` |
@@ -385,6 +387,61 @@ ov snapshot diff viking://resources/my_project/guide.md \
 
 ---
 
+### diff_paths()
+
+列出一個或多個目錄在兩個快照之間新增、修改和刪除的原始檔，排除派生摘要 `.abstract.md`、`.overview.md`、`.relations.json`。重疊目錄中的同一檔案只返回一次，結果按 URI 排序。
+
+| HTTP 引數 | 必填 | 預設值 | 說明 |
+|-----------|------|--------|------|
+| `paths` | 是 | - | 目錄 URI 列表；通過重複查詢引數傳入多個目錄 |
+| `from` | 否 | null | 基線快照引用；省略（SDK `from_ref=None`）時與空樹比較，目標快照的檔案均返回 `added` |
+| `to` | 是 | - | 有效的目標快照引用，不允許為空或 null |
+| `offset` | 否 | 0 | 起始位置，必須為非負整數 |
+| `limit` | 否 | 100 | 每頁條數，範圍 1–1000 |
+
+**HTTP API**
+
+```http
+GET /api/v1/snapshot/diff-paths?paths={uri1}&paths={uri2}&from={base}&to={head}&offset=0&limit=100
+```
+
+**CLI**
+
+```bash
+ov snapshot diff-paths \
+  --paths viking://resources/research,viking://resources/notes \
+  --from 3f2a1b9c --to 9a0b1c2d --offset 0 --limit 100 -o json
+```
+
+**Python SDK (HTTP)**
+
+```python
+page = client.snapshot.diff_paths(
+    ["viking://resources/research", "viking://resources/notes"],
+    from_ref="3f2a1b9c", to_ref="9a0b1c2d", offset=0, limit=100,
+)
+```
+
+**響應**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "changes": [{"uri": "viking://resources/research/guide.md", "change_type": "modified"}],
+    "offset": 0,
+    "limit": 100,
+    "total": 1,
+    "has_more": false,
+    "next_offset": null
+  }
+}
+```
+
+`change_type` 為 `added`、`modified` 或 `deleted`。`has_more=true` 時，保持目錄和快照 ID 不變，以 `next_offset` 查詢下一頁；最後一頁的 `next_offset=null`。分頁限制響應大小，底層仍會計算完整變化列表。讀取檔案內容可使用 [diff()](#diff) 或 [show()](#show)。
+
+---
+
 ### restore()
 
 把某個目錄（或整棵帳號樹）恢復到 `source_commit` 時的狀態。
@@ -522,6 +579,37 @@ ov snapshot restore 3f2a1b9c viking://resources/my_project -m "restore to v1" -o
   }
 }
 ```
+
+---
+
+### 單檔案版本恢復（HTTP API）
+
+`POST /api/v1/snapshot/restore` 也支援恢復 Compile 產物檔案的歷史內容。該模式使用以下三個必填欄位，不與 `project_dir`、`source_commit` 混用：
+
+| 引數 | 型別 | 說明 |
+|------|------|------|
+| path | str | Compile 產物檔案的 `viking://` URI |
+| restore_version | str | 提供恢復內容的歷史版本，例如 `v1` |
+| current_version | str | 寫入前要求匹配的當前版本，例如 `v2`；不匹配時返回 `409 CONFLICT`，`error.details.resource` 為 `VERSION_CONFLICT` |
+
+先呼叫 `GET /api/v1/snapshot/versions?uri=<檔案 URI>` 獲取 `current_version` 和歷史版本列表，再提交恢復請求：
+
+響應中的 `total` 表示當前保留的可查詢版本總數，不受 `limit`、`before_version` 影響；`next_before_version` 用於繼續載入更舊版本。
+
+```bash
+curl -X POST "http://localhost:1933/api/v1/snapshot/restore" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-key" \
+  -d '{
+    "path": "viking://resources/wiki/entity/project.md",
+    "restore_version": "v1",
+    "current_version": "v2"
+  }'
+```
+
+當 v1 與當前內容不同時，恢復會生成新版本 v3，內容取自 v1；v1、v2 的歷史記錄保留。響應中的 `version_id` 為 `v3`，`meta.restored_from` 為 `v1`。內容相同時返回 `result: "noop"`、`meta.restored_from: null`，不新增版本。
+
+僅指定檔案被恢復；相關 Wiki 頁面和索引正文保持原內容。目標存在執行中的 Compile 時，返回 `409 CONFLICT`，`error.details.resource` 為 `COMPILE_RUNNING`。此模式不提供 `dry_run` 預演；目錄恢復的預演引數不適用於單檔案恢復。
 
 ---
 

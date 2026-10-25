@@ -18,7 +18,7 @@ risk/
 
 > This is a shape example only — the real topics and findings come from the domain you supply. Note that page names state the **conclusion itself** (`growth-shifted-from-volume-to-pricing`), not a source title (`q2-report-summary`).
 
-Skill source: [openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
+Skill source: [openviking/system_assets/compile/example-skills/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/knowledge-distillation)
 
 Check the [prerequisites](01-overview.md#prerequisites) and run these commands from the OpenViking repository root. Replace the source directory with your own material.
 
@@ -41,7 +41,7 @@ ov skills list
 If an admin removed it, add it back from the package source:
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/knowledge-distillation -p viking://agent/skills
 ```
 
 ## Step 3: Run compile

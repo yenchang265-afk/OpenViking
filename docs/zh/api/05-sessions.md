@@ -587,7 +587,7 @@ curl --get http://localhost:1933/api/v1/sessions/session-id/tool-results \
 
 ### read_tool_result()
 
-按 Unicode 字元範圍讀取一個外接工具結果。
+按 Unicode 字元範圍讀取一個外接工具結果。 此 API 返回的內容中可能含有敏感資訊的佔位符，若需還原，使用[內容 API](12-content.md) 讀取對應檔案。
 
 | 引數 | 型別 | 必填 | 預設值 | 說明 |
 |------|------|------|--------|------|
@@ -927,7 +927,7 @@ ov session get-session-archive a1b2c3d4 archive_002
 
 #### 1. API 實現介紹
 
-刪除該會話目錄，包括訊息、歸檔歷史和會話內的審計記錄。已經抽取到使用者或 Peer 記憶目錄的長期記憶不會隨之刪除；需要刪除這些記憶時，單獨定位並刪除對應 URI。此介面不提供自動撤銷。
+刪除該會話目錄，包括訊息、歸檔歷史和會話內的審計記錄。已經抽取到使用者或 Peer 記憶目錄的長期記憶不會隨之刪除；需要刪除這些記憶時，單獨定位並刪除對應 URI。此介面不提供自動撤銷。對應的 Privacy 配置（`category=session`、`target_key=session_id`）會保留。
 
 **程式碼入口**：
 - `openviking/server/routers/sessions.py:delete_session()` - HTTP 路由

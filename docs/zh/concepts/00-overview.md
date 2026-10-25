@@ -28,7 +28,7 @@
 | 處理何時結束，失敗後如何恢復？ | [任務狀態](16-queue-lifecycle.md) → [路徑鎖與崩潰恢復](09-transaction.md) |
 | 主備寫入、讀取和觀測有什麼語義？ | [主備儲存](14-multi-write-storage.md) → [指標與 Metrics](12-metrics.md) |
 | 誰能看到什麼，許可權如何繼承？ | [多租戶](11-multi-tenant.md) → [資源訪問控制（ACL）](15-acl.md) |
-| 資料如何加密，Skill 隱私如何處理？ | [資料加密](10-encryption.md) → [隱私配置與 Skill 隱私提取/載入](13-privacy.md) |
+| 資料如何加密，Skill 和 Session 隱私如何處理？ | [資料加密](10-encryption.md) → [隱私配置與自動管理](13-privacy.md) |
 
 配置和部署步驟集中在[部署運維](../guides/00-overview.md)。原理頁說明行為與約束，操作指南說明如何設定和驗證，兩者通過連結連線。
 

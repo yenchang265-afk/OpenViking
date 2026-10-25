@@ -6,6 +6,7 @@
 import asyncio
 from pathlib import Path
 from typing import AsyncGenerator, Generator
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
@@ -15,6 +16,7 @@ from openviking.server.identity import RequestContext, Role
 from openviking.service.core import OpenVikingService
 from openviking.service.task_tracker import set_task_tracker
 from openviking.storage import viking_fs as viking_fs_module
+from openviking.system_assets.sync import SystemAssetSynchronizer
 from openviking_cli.session.user_id import UserIdentifier
 from openviking_cli.utils.config.embedding_config import EmbeddingConfig
 from openviking_cli.utils.config.open_viking_config import OpenVikingConfigSingleton
@@ -148,6 +150,9 @@ async def service(
             return 1024
 
     monkeypatch.setattr(EmbeddingConfig, "get_embedder", lambda self: FakeEmbedder())
+    # MockLocalAGFS has no queue workers, so the durable content write behind
+    # startup system-asset sync would never settle and initialize() would hang.
+    monkeypatch.setattr(SystemAssetSynchronizer, "sync", AsyncMock(return_value=0))
     mock_agfs = MockLocalAGFS(root_path=test_data_dir / "mock_agfs_root")
     monkeypatch.setattr(
         "openviking.utils.agfs_utils.create_agfs_client",

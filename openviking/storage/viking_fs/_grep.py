@@ -39,6 +39,7 @@ class _GrepMixin:
         tag_filter: Optional[Dict[str, Any]] = None,
         before_context: int = 0,
         after_context: int = 0,
+        force_fs: bool = False,
     ) -> Dict:
         """Content search by pattern or keywords.
 

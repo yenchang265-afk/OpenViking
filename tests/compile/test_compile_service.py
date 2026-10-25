@@ -10,6 +10,7 @@ import pytest
 from openviking.server.identity import RequestContext, Role
 from openviking.service.compile_service import CompileRequest, CompileService
 from openviking.service.external_task_service import ExternalTaskError, ExternalTaskService
+from openviking.service.task_domain import TaskPatch
 from openviking.service.task_store import PersistentTaskStore
 from openviking.service.task_tracker import TaskStatus, TaskTracker
 from openviking.storage.queuefs.external_task_processor import ExternalTaskProcessor
@@ -223,7 +224,9 @@ async def test_task_interrupted_too_often_fails_without_running(monkeypatch):
     service = ExternalTaskService()
     service.register(_Provider(run))
     task = await _submit(service)
-    await tracker.update_meta(task.task_id, {"attempts": external.MAX_TASK_ATTEMPTS}, **OWNER)
+    await tracker.patch_task(
+        task.task_id, TaskPatch(meta={"attempts": external.MAX_TASK_ATTEMPTS}), **OWNER
+    )
 
     assert await service.execute(task.task_id, "acme", "alice")
     run.assert_not_awaited()

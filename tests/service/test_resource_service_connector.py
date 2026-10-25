@@ -109,7 +109,7 @@ def _task_tracker():
     return SimpleNamespace(
         create=AsyncMock(return_value=SimpleNamespace(task_id="task-1")),
         start=AsyncMock(),
-        update_stage=AsyncMock(),
+        patch_task=AsyncMock(),
         complete=AsyncMock(),
         fail=AsyncMock(),
         mark_cancelled=AsyncMock(),
@@ -239,12 +239,19 @@ async def test_connector_watch_stores_only_encrypted_replay_state(
 
     monkeypatch.setattr(service._connector, "_monitor", complete_monitor)
 
-    await service.add_resource(
+    result = await service.add_resource(
         path="tos://bucket/docs/",
         ctx=ctx,
         to="viking://resources/x/y",
         watch_interval=5,
-        args={"tos_prefix": ["tos://bucket/docs/"]},
+        args={
+            "tos_prefix": ["tos://bucket/docs/"],
+            "resource_config": {
+                "resource_name": "Team Docs",
+                "resource_tag": "tos_docs",
+                "ignored": "value",
+            },
+        },
     )
 
     task = await watch_manager.get_task_by_uri(
@@ -254,6 +261,7 @@ async def test_connector_watch_stores_only_encrypted_replay_state(
         role=str(Role.USER),
     )
     assert task is not None
+    assert result["watch_id"] == task.task_id
     assert task.is_active is True
     assert task.last_status is None
     background_tasks = list(service._background_tasks)
@@ -263,6 +271,14 @@ async def test_connector_watch_stores_only_encrypted_replay_state(
     assert task.last_status == "completed"
     assert task.last_task_id == "task-1"
     assert task.source_type == "tos"
+    assert task.processor_kwargs["resource_config"] == {
+        "resource_name": "Team Docs",
+        "resource_tag": "tos_docs",
+    }
+    assert task.to_dict()["processor_kwargs"]["resource_config"] == {
+        "resource_name": "Team Docs",
+        "resource_tag": "tos_docs",
+    }
     assert task.auth_state["provider"] == "connector_encrypted"
     assert "secret" not in json.dumps(task.auth_state)
     assert "auth_state" not in task.to_dict()
@@ -275,6 +291,9 @@ async def test_connector_watch_stores_only_encrypted_replay_state(
         "tos",
         {"tos_prefix": ["tos://bucket/docs/"]},
     )
+    assert connector_client.submit_doc_add.await_args.kwargs["param_config"] == {
+        "tos_prefix": ["tos://bucket/docs/"]
+    }
 
 
 @pytest.mark.asyncio
@@ -1826,6 +1845,7 @@ async def test_git_credentials_with_include_never_enqueue_native_job(
 )
 async def test_native_git_enqueue_rejects_credentials_before_durable_job(
     monkeypatch,
+    connector_config,
     ctx,
     service,
     credential_args,
@@ -1986,7 +2006,7 @@ async def test_native_git_watch_refresh_queues_with_restored_task_auth(
 
 @pytest.mark.asyncio
 async def test_native_git_rejects_malformed_nested_auth_without_secret_in_error(
-    monkeypatch, ctx, service
+    monkeypatch, connector_config, ctx, service
 ):
     monkeypatch.setattr(resource_service_module, "is_git_repo_url", lambda _path: True)
     service._connector.should_delegate = Mock(return_value=False)
@@ -2512,7 +2532,7 @@ async def test_monitor_connector_task_maps_terminal_status(
             on_success=on_success,
         )
 
-    assert tracker.update_stage.await_args.args[1] == expected_stage
+    assert tracker.patch_task.await_args.args[1].stage == expected_stage
     assert outcome["status"] == expected_status
     if expected_status == "completed":
         on_success.assert_awaited_once_with(None)
