@@ -198,10 +198,14 @@ class CompileResult(BaseModel):
 
 
 class CompileFailure(RuntimeError):
-    def __init__(self, code: str, message: str, *, stage: str):
+    def __init__(
+        self, code: str, message: str, *, stage: str, result: dict[str, Any] | None = None
+    ):
         super().__init__(message)
         self.code = code
         self.stage = stage
+        # Diagnostic result (e.g. skipped conflicts) kept on the failed task.
+        self.result = result
 
 
 def utc_now() -> str:

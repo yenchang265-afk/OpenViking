@@ -24,6 +24,7 @@ from openviking.service.external_task_service import (
 from openviking.service.fs_service import FSService
 from openviking.service.memory_compile import MemoryCompileRunner
 from openviking.service.task_tracker import TaskRecord
+from openviking.service.task_tracker_concurrency import KeyedAsyncLockPool
 from openviking_cli.exceptions import (
     InvalidArgumentError,
     NotFoundError,
@@ -118,6 +119,7 @@ class CompileService:
         self._model_concurrency = 1
         self._model_slots: asyncio.Semaphore | None = None
         self._model_slots_loop: asyncio.AbstractEventLoop | None = None
+        self._capacity_locks = KeyedAsyncLockPool[tuple[str, str]]()
 
     def configure_memory_runner(self, vikingdb: Any = None) -> None:
         """Install the in-process memory-consolidation runner for `--skill memory`."""
@@ -202,14 +204,16 @@ class CompileService:
         ctx: RequestContext,
         idempotency_key: str | None,
     ) -> TaskRecord:
-        await self._ensure_capacity(ctx)
-        return await self._tasks.create(
-            self.task_type,
-            resource_id=resource_id,
-            payload=payload,
-            ctx=ctx,
-            **({"idempotency_key": idempotency_key} if idempotency_key else {}),
-        )
+        # Serialize per owner so concurrent submissions cannot all pass the cap.
+        async with self._capacity_locks.acquire((ctx.account_id, ctx.user.user_id)):
+            await self._ensure_capacity(ctx)
+            return await self._tasks.create(
+                self.task_type,
+                resource_id=resource_id,
+                payload=payload,
+                ctx=ctx,
+                **({"idempotency_key": idempotency_key} if idempotency_key else {}),
+            )
 
     async def run(
         self,
@@ -233,6 +237,9 @@ class CompileService:
         from openviking.compile.ov_client import InProcessVikingClient
 
         try:
+            # Tasks queued by older versions skipped today's submit-time checks.
+            self._validate_target(payload["to"])
+            self._validate_args(payload.get("args"))
             request = self._sanitized_request(payload)
             vlm = await self._vlm_resolver.get_vlm(ctx.account_id)
             return await self._runner.run(
@@ -242,9 +249,12 @@ class CompileService:
                 provider=CompileProvider(vlm, self._slots()),
                 progress=progress,
                 cancelled=cancelled,
+                owner=(ctx.account_id, ctx.user.user_id),
             )
+        except InvalidArgumentError as exc:
+            raise ExternalTaskError("INVALID_ARGUMENT", str(exc)) from exc
         except CompileFailure as exc:
-            raise ExternalTaskError(exc.code, str(exc)) from exc
+            raise ExternalTaskError(exc.code, str(exc), result=exc.result) from exc
 
     async def _ensure_capacity(self, ctx: RequestContext) -> None:
         """Bound queued work per user; each queued task also re-runs after a restart.
@@ -268,6 +278,11 @@ class CompileService:
                 f"Too many active Compile tasks ({active}); wait for some to finish",
                 details={"limit": limit},
             )
+
+    async def purge_scratch(self, account_id: str, user_id: str | None = None) -> None:
+        """Remove Compile scratch (source copies) of a deleted user or account."""
+        if self._runner is not None:
+            await asyncio.to_thread(self._runner.purge_owner, account_id, user_id)
 
     def _slots(self) -> asyncio.Semaphore:
         """Share model-call capacity across Compile tasks on the worker's event loop."""

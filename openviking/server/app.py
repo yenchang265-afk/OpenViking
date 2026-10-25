@@ -215,16 +215,20 @@ async def _initialize_runtime_state(
 
     # Queue workers start inside initialize(); recovered durable tasks wait until
     # the auth plugin below has decided how their owners are re-checked.
-    service.external_tasks.defer_until_identity_policy()
+    durable_tasks = getattr(service, "external_tasks", None)
+    if durable_tasks is not None:
+        durable_tasks.defer_until_identity_policy()
     await service.initialize()
     await service.apply_agent_evolution_config()
     await _initialize_auth_plugin(app, service, config)
     manager = app.state.api_key_manager
-    service.external_tasks.set_identity_resolver(
-        key_store_identity_resolver(manager)
-        if config.get_effective_auth_mode() == "api_key" and manager is not None
-        else None
-    )
+    auth_mode = config.get_effective_auth_mode()
+    if durable_tasks is not None:
+        durable_tasks.set_identity_resolver(
+            key_store_identity_resolver(manager, require_user=auth_mode == "api_key")
+            if auth_mode in ("api_key", "trusted") and manager is not None
+            else None
+        )
     from openviking.service.deletion import setup_deletion
 
     app.state.deletion_service = await setup_deletion(

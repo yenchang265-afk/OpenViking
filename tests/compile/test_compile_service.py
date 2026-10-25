@@ -429,3 +429,95 @@ async def test_user_cancel_after_publish_keeps_result(durable):
     current = await durable.tracker.get(task.task_id, **OWNER)
     assert current.result == {"created": ["page"]}
     assert current.error is None
+
+
+@pytest.mark.asyncio
+async def test_trusted_resolver_narrows_groups_and_keeps_header_role():
+    from openviking.service.external_task_service import key_store_identity_resolver
+
+    manager = SimpleNamespace(
+        get_user=AsyncMock(return_value=None),
+        get_user_group_ids=AsyncMock(return_value=["eng"]),
+        get_deletion=AsyncMock(return_value=None),
+        get_account=AsyncMock(return_value=None),
+    )
+    resolve = key_store_identity_resolver(manager, require_user=False)
+    # Trusted users may be unknown to the store: keep the role, still narrow groups.
+    assert await resolve("acme", "alice") == (None, ("eng",))
+    service = ExternalTaskService()
+    service.set_identity_resolver(resolve)
+    stored = RequestContext(
+        user=UserIdentifier("acme", "alice"), role=Role.ADMIN, group_ids=("eng", "ops")
+    )
+    narrowed = await service._current_identity(stored)
+    assert (narrowed.role, narrowed.group_ids) == (Role.ADMIN, ("eng",))
+    manager.get_deletion.return_value = {"task_id": "del-1"}
+    assert await resolve("acme", "alice") is None
+
+
+@pytest.mark.asyncio
+async def test_concurrent_submissions_cannot_exceed_cap(tmp_path, tracker):
+    from openviking_cli.exceptions import ResourceExhaustedError
+
+    service, tasks = _compile_service(
+        tmp_path, config=CompileApiConfig(max_active_tasks_per_user=1)
+    )
+    counter = {"n": 0}
+
+    async def create(task_type, **kwargs):
+        await asyncio.sleep(0)  # yield inside the critical section
+        counter["n"] += 1
+        task_id = f"cmp_{counter['n']}"
+        await tracker.create("compile", task_id=task_id, **OWNER)
+        await tracker.register_running_task(task_id, **OWNER)
+        return task_id
+
+    tasks.create = AsyncMock(side_effect=create)
+    results = await asyncio.gather(
+        *(service.create(_request(), ctx=CTX) for _ in range(3)), return_exceptions=True
+    )
+    assert sum(isinstance(r, str) for r in results) == 1
+    assert sum(isinstance(r, ResourceExhaustedError) for r in results) == 2
+
+
+@pytest.mark.asyncio
+async def test_queued_payload_is_revalidated_before_running(tmp_path):
+    service, _ = _compile_service(tmp_path)
+    payload = {
+        "from": ["viking://resources/raw"],
+        "to": "viking://user/alice/memories/entities",
+        "skill": "viking://agent/skills/llm-wiki",
+    }
+    task = SimpleNamespace(task_id="cmp_old")
+    with pytest.raises(ExternalTaskError) as raised:
+        await service.run(task, payload, CTX, progress=AsyncMock(), cancelled=AsyncMock())
+    assert raised.value.code == "INVALID_ARGUMENT"
+
+
+@pytest.mark.asyncio
+async def test_compile_failure_result_reaches_task_error(tmp_path):
+    from openviking.compile.models import CompileFailure
+
+    service, _ = _compile_service(tmp_path)
+    service._vlm_resolver = SimpleNamespace(get_vlm=AsyncMock(return_value=SimpleNamespace()))
+    service._runner.run = AsyncMock(
+        side_effect=CompileFailure("COMPILE_INCOMPLETE", "none", stage="writing", result={"x": 1})
+    )
+    task = SimpleNamespace(task_id="cmp_x")
+    payload = {
+        "from": ["viking://resources/raw"],
+        "to": "viking://resources/wiki",
+        "skill": "viking://agent/skills/llm-wiki",
+    }
+    with pytest.raises(ExternalTaskError) as raised:
+        await service.run(task, payload, CTX, progress=AsyncMock(), cancelled=AsyncMock())
+    assert (raised.value.code, raised.value.result) == ("COMPILE_INCOMPLETE", {"x": 1})
+
+
+@pytest.mark.asyncio
+async def test_purge_scratch_removes_deleted_owner_files(tmp_path):
+    service, _ = _compile_service(tmp_path)
+    scratch = service._runner.scratch("cmp_a", ("acme", "alice")).root
+    scratch.mkdir(parents=True)
+    await service.purge_scratch("acme", "alice")
+    assert not scratch.exists()

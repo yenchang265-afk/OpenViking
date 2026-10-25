@@ -13,8 +13,9 @@ import time
 from collections.abc import Awaitable, Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from tempfile import TemporaryDirectory
+from tempfile import mkdtemp
 from typing import Any
+from urllib.parse import quote
 
 from pydantic import TypeAdapter
 
@@ -150,22 +151,29 @@ class CompileRunner:
         self.limits = limits
         self.work_root = work_root
 
-    def scratch(self, task_id: str) -> ScratchDir:
-        return ScratchDir(self.work_root / task_id)
+    def _owner_root(self, account_id: str, user_id: str | None = None) -> Path:
+        """Group scratch by owner so identity deletion can purge it."""
+        root = self.work_root / quote(account_id, safe="")
+        return root if user_id is None else root / quote(user_id, safe="")
+
+    def scratch(self, task_id: str, owner: tuple[str, str]) -> ScratchDir:
+        return ScratchDir(self._owner_root(*owner) / task_id)
 
     def prune_scratch(
-        self, *, keep: str, max_age_seconds: float = SCRATCH_RETENTION_SECONDS
+        self, *, keep: Path, max_age_seconds: float = SCRATCH_RETENTION_SECONDS
     ) -> None:
         """Remove scratch kept by old failed or cancelled attempts; it holds source copies."""
-        if not self.work_root.is_dir():
-            return
         cutoff = time.time() - max_age_seconds
-        for entry in self.work_root.iterdir():
+        for entry in self.work_root.glob("*/*/*"):
             try:
-                if entry.name != keep and entry.is_dir() and entry.stat().st_mtime < cutoff:
+                if entry != keep and entry.is_dir() and entry.stat().st_mtime < cutoff:
                     shutil.rmtree(entry, ignore_errors=True)
             except OSError:
                 continue
+
+    def purge_owner(self, account_id: str, user_id: str | None = None) -> None:
+        """Delete all scratch of a deleted user, or of a whole account."""
+        shutil.rmtree(self._owner_root(account_id, user_id), ignore_errors=True)
 
     async def run(
         self,
@@ -176,14 +184,15 @@ class CompileRunner:
         provider: CompileProvider,
         progress: Progress,
         cancelled: CancelCheck,
+        owner: tuple[str, str],
     ) -> dict[str, Any]:
         """Return the public CompileResult; raise CompileFailure on a reportable failure.
 
         The scratch directory is reset first so a re-delivered task starts clean.
         It is removed after success and kept after failure for diagnosis.
         """
-        scratch = self.scratch(task_id)
-        await asyncio.to_thread(self.prune_scratch, keep=task_id)
+        scratch = self.scratch(task_id, owner)
+        await asyncio.to_thread(self.prune_scratch, keep=scratch.root)
         await asyncio.to_thread(scratch.reset)
         succeeded = False
         stage = "collecting_context"
@@ -393,11 +402,6 @@ class CompileRunner:
         summary["warnings"] = pipeline.warnings
         summary["conflicts"] = conflicts
         await pipeline.files.put("summary", summary)
-        error = pipeline_incomplete_error(
-            published=bool(published), conflicts=conflicts, failures=pipeline.failures
-        )
-        if error is not None:
-            raise CompileFailure(error.code, error.message, stage="writing")
         compiled = CompileResult(
             from_=request.from_,
             to=request.to,
@@ -414,14 +418,23 @@ class CompileRunner:
             link_count=rendered.link_count,
             link_report=rendered.link_report,
             warnings=pipeline.warnings,
+        ).model_dump(by_alias=True)
+        error = pipeline_incomplete_error(
+            published=bool(published), conflicts=conflicts, failures=pipeline.failures
         )
-        return compiled.model_dump(by_alias=True)
+        if error is not None:
+            # Keep conflicts and warnings so the user can see why nothing landed.
+            raise CompileFailure(error.code, error.message, stage="writing", result=compiled)
+        return compiled
 
     async def _materialize_skill_package(
         self, *, client: Any, skill_result: Mapping[str, Any], skill_dir: Path
     ) -> None:
-        skill_dir.mkdir(parents=True, exist_ok=True)
-        (skill_dir / "SKILL.md").write_bytes(str(skill_result.get("content") or "").encode("utf-8"))
+        await asyncio.to_thread(
+            _write_local,
+            skill_dir / "SKILL.md",
+            str(skill_result.get("content") or "").encode("utf-8"),
+        )
         for item in skill_result.get("files") or []:
             if not isinstance(item, Mapping) or item.get("is_dir"):
                 continue
@@ -436,8 +449,7 @@ class CompileRunner:
             except ValueError as exc:
                 raise CompileFailure("SKILL_INVALID", str(exc), stage="writing") from exc
             data = await client.download_bytes(str(item.get("uri") or ""))
-            local.parent.mkdir(parents=True, exist_ok=True)
-            local.write_bytes(data)
+            await asyncio.to_thread(_write_local, local, data)
 
     async def _write_skill_bundle(
         self, *, client: Any, target_uri: str, rendered: RenderedBundle
@@ -468,7 +480,9 @@ class CompileRunner:
         if not rendered.operations:
             result["unchanged"].append(root_uri)
             return result
-        with TemporaryDirectory(prefix="openviking-compile-skill-") as temp_dir:
+        # Package files are staged off the event loop shared by concurrent Compile tasks.
+        temp_dir = await asyncio.to_thread(mkdtemp, prefix="openviking-compile-skill-")
+        try:
             temp_root = Path(temp_dir).resolve()
             skill_dir = temp_root / skill_name
             try:
@@ -490,35 +504,13 @@ class CompileRunner:
                     skill_result=await client.get_skill(skill_name, target_uri=target_uri),
                     skill_dir=skill_dir,
                 )
-            for operation in rendered.operations:
-                relative = sanitize_relative_viking_path(
-                    relative_uri_path(target_uri, operation["uri"])
-                )
-                local = temp_root / relative
-                old = local.read_bytes() if local.is_file() else None
-                expected = operation.get("expected_sha256")
-                if (operation["mode"] == "create" and local.exists()) or (
-                    operation["mode"] == "replace"
-                    and (old is None or content_hash(old) != expected)
-                ):
-                    raise CompileFailure(
-                        "WRITE_CONFLICT", f"Skill file changed: {operation['uri']}", stage="writing"
-                    )
-                local.parent.mkdir(parents=True, exist_ok=True)
-                local.write_bytes(file_ops.file_bytes(operation))
-            skill_md = skill_dir / "SKILL.md"
-            validation = validate_skill_format(
-                skill_md.read_text(encoding="utf-8") if skill_md.is_file() else "",
-                strict=True,
-                skill_dir_name=skill_name,
-                source_path=str(skill_md),
+            await asyncio.to_thread(
+                _stage_skill_operations,
+                temp_root,
+                skill_name,
+                target_uri,
+                rendered.operations,
             )
-            if not validation["valid"]:
-                raise CompileFailure(
-                    "AGENT_OUTPUT_INVALID",
-                    "; ".join(issue["message"] for issue in validation["errors"]),
-                    stage="rendering",
-                )
             if exists:
                 published = await client.update_skill(
                     skill_name, str(skill_dir), target_uri=target_uri, wait=True
@@ -529,3 +521,41 @@ class CompileRunner:
                 str(published.get("root_uri") or published.get("uri") or root_uri)
             )
             return result
+        finally:
+            await asyncio.to_thread(shutil.rmtree, temp_dir, ignore_errors=True)
+
+
+def _write_local(path: Path, data: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(data)
+
+
+def _stage_skill_operations(
+    temp_root: Path, skill_name: str, target_uri: str, operations: list[dict[str, Any]]
+) -> None:
+    """Apply rendered revisions to the materialized package and validate its SKILL.md."""
+    for operation in operations:
+        relative = sanitize_relative_viking_path(relative_uri_path(target_uri, operation["uri"]))
+        local = temp_root / relative
+        old = local.read_bytes() if local.is_file() else None
+        expected = operation.get("expected_sha256")
+        if (operation["mode"] == "create" and local.exists()) or (
+            operation["mode"] == "replace" and (old is None or content_hash(old) != expected)
+        ):
+            raise CompileFailure(
+                "WRITE_CONFLICT", f"Skill file changed: {operation['uri']}", stage="writing"
+            )
+        _write_local(local, file_ops.file_bytes(operation))
+    skill_md = temp_root / skill_name / "SKILL.md"
+    validation = validate_skill_format(
+        skill_md.read_text(encoding="utf-8") if skill_md.is_file() else "",
+        strict=True,
+        skill_dir_name=skill_name,
+        source_path=str(skill_md),
+    )
+    if not validation["valid"]:
+        raise CompileFailure(
+            "AGENT_OUTPUT_INVALID",
+            "; ".join(issue["message"] for issue in validation["errors"]),
+            stage="rendering",
+        )

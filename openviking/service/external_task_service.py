@@ -86,8 +86,9 @@ class ExternalTaskSnapshot:
 TaskProgress = Callable[[str, dict[str, Any]], Awaitable[None]]
 # Return True once cancellation of the running task was requested.
 TaskCancelled = Callable[[], Awaitable[bool]]
-# Return the owner's current (role, group_ids), or None when the user no longer exists.
-IdentityResolver = Callable[[str, str], Awaitable[tuple[str, tuple[str, ...]] | None]]
+# Return the owner's current (role, group_ids), or None when the owner may no longer
+# run work. A None role keeps the submit-time role (identity stores without roles).
+IdentityResolver = Callable[[str, str], Awaitable[tuple[str | None, tuple[str, ...]] | None]]
 
 
 class ExternalTaskProvider(Protocol):
@@ -152,7 +153,8 @@ class ExternalTaskService:
         if current is None:
             raise ExternalTaskError("UNAUTHENTICATED", "The task owner no longer exists")
         current_role, current_groups = current
-        stored, now = Role(ctx.role), Role(current_role or Role.USER)
+        stored = Role(ctx.role)
+        now = stored if current_role is None else Role(current_role)
         return dataclasses.replace(
             ctx,
             # A same-rank change of role still takes the current role.
@@ -635,25 +637,34 @@ def restore_request_context(
     )
 
 
-def key_store_identity_resolver(manager: Any) -> IdentityResolver:
-    """Resolve task owners through the API key store used by key-based auth."""
+def key_store_identity_resolver(manager: Any, *, require_user: bool = True) -> IdentityResolver:
+    """Resolve task owners through the server-managed account store.
 
-    async def resolve(account_id: str, user_id: str) -> tuple[str, tuple[str, ...]] | None:
-        # Mirror request authentication: unknown users, users being deleted and
-        # accounts that are no longer active cannot run work.
+    API key auth (require_user) knows every user and their role. Trusted auth takes
+    users and roles from request headers, so a user missing from the store keeps
+    the submit-time role; groups and deletion state still come from the store.
+    """
+
+    async def resolve(account_id: str, user_id: str) -> tuple[str | None, tuple[str, ...]] | None:
+        # Mirror request authentication: users being deleted and accounts that are
+        # no longer active cannot run work.
         user = await manager.get_user(account_id, user_id)
-        if not user:
+        if not user and require_user:
             return None
         if hasattr(manager, "get_deletion") and await manager.get_deletion(account_id, user_id):
             return None
         if hasattr(manager, "get_account"):
             account = await manager.get_account(account_id)
-            if account is None or account.get("status", "active") != "active":
+            if account is None:
+                if require_user:
+                    return None
+            elif account.get("status", "active") != "active":
                 return None
         groups: tuple[str, ...] = ()
         if hasattr(manager, "get_user_group_ids"):
             groups = tuple(await manager.get_user_group_ids(account_id, user_id))
-        return str(user.get("role") or Role.USER), groups
+        role = str(user.get("role") or Role.USER) if user else None
+        return role, groups
 
     return resolve
 

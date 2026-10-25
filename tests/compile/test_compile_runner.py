@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -85,6 +86,7 @@ def _run(tmp_path, client, request, *, cancelled=False):
         provider=provider,
         progress=progress,
         cancelled=AsyncMock(return_value=cancelled),
+        owner=("acme", "alice"),
     )
     return attempt, progress
 
@@ -92,7 +94,7 @@ def _run(tmp_path, client, request, *, cancelled=False):
 @pytest.mark.asyncio
 async def test_attempt_publishes_and_removes_scratch(tmp_path, stub_pipeline):
     client = _Client()
-    stale = tmp_path / "cmp_test" / "left-from-crash.json"
+    stale = tmp_path / "acme" / "alice" / "cmp_test" / "left-from-crash.json"
     stale.parent.mkdir(parents=True)
     stale.write_text("{}")
     attempt, progress = _run(tmp_path, client, _request())
@@ -106,7 +108,7 @@ async def test_attempt_publishes_and_removes_scratch(tmp_path, stub_pipeline):
     ]
     assert stub_pipeline.seen_batches
     # A previous interrupted attempt is discarded and success cleans up.
-    assert not (tmp_path / "cmp_test").exists()
+    assert not (tmp_path / "acme" / "alice" / "cmp_test").exists()
 
 
 @pytest.mark.asyncio
@@ -116,7 +118,7 @@ async def test_cancellation_stops_before_any_write(tmp_path, stub_pipeline):
     with pytest.raises(asyncio.CancelledError):
         await attempt
     client.batch_write.assert_not_awaited()
-    assert (tmp_path / "cmp_test").exists()
+    assert (tmp_path / "acme" / "alice" / "cmp_test").exists()
 
 
 @pytest.mark.asyncio
@@ -139,7 +141,7 @@ async def test_nothing_published_fails_with_model_hint(tmp_path, stub_pipeline):
     assert raised.value.code == "COMPILE_INCOMPLETE"
     assert "more capable" in str(raised.value)
     # Failed attempts keep their scratch files for diagnosis.
-    assert (tmp_path / "cmp_test").exists()
+    assert (tmp_path / "acme" / "alice" / "cmp_test").exists()
 
 
 @pytest.mark.asyncio
@@ -179,12 +181,113 @@ def test_prune_scratch_removes_only_old_other_tasks(tmp_path):
     import time
 
     runner = runner_module.CompileRunner(limits=CompileLimits(), work_root=tmp_path)
-    old, recent, current = (tmp_path / name for name in ("cmp_old", "cmp_recent", "cmp_now"))
+    old = runner.scratch("cmp_old", ("acme", "bob")).root
+    recent = runner.scratch("cmp_recent", ("acme", "alice")).root
+    current = runner.scratch("cmp_now", ("acme", "alice")).root
     for path in (old, recent, current):
-        path.mkdir()
+        path.mkdir(parents=True)
     stale = time.time() - runner_module.SCRATCH_RETENTION_SECONDS - 60
     os.utime(old, (stale, stale))
     os.utime(current, (stale, stale))
-    runner.prune_scratch(keep="cmp_now")
+    runner.prune_scratch(keep=current)
     assert not old.exists()
     assert recent.exists() and current.exists()
+
+
+def test_purge_owner_removes_user_or_account_scratch(tmp_path):
+    runner = runner_module.CompileRunner(limits=CompileLimits(), work_root=tmp_path)
+    alice = runner.scratch("cmp_a", ("acme", "alice")).root
+    bob = runner.scratch("cmp_b", ("acme", "bob")).root
+    other = runner.scratch("cmp_c", ("other", "alice")).root
+    for path in (alice, bob, other):
+        path.mkdir(parents=True)
+    runner.purge_owner("acme", "alice")
+    assert not alice.exists() and bob.exists()
+    runner.purge_owner("acme")
+    assert not bob.exists() and other.exists()
+
+
+@pytest.mark.asyncio
+async def test_nothing_published_keeps_conflicts_on_failure(tmp_path, stub_pipeline):
+    client = _Client()
+    conflict = {"uri": PAGE, "code": "CONFLICT", "message": "changed"}
+    client.batch_write = AsyncMock(
+        return_value={"created": [], "updated": [], "unchanged": [], "conflicts": [conflict]}
+    )
+    attempt, _ = _run(tmp_path, client, _request())
+    with pytest.raises(CompileFailure) as raised:
+        await attempt
+    assert raised.value.code == "COMPILE_INCOMPLETE"
+    assert raised.value.result["conflicts"] == [conflict]
+
+
+class _SkillClient:
+    """In-memory Skill namespace for Skill-target publishing."""
+
+    def __init__(self, existing=None):
+        self.existing = existing
+        self.published = None
+
+    async def stat(self, uri):
+        from openviking_cli.exceptions import NotFoundError
+
+        if self.existing is None:
+            raise NotFoundError(uri, "skill")
+        return {"isDir": True}
+
+    async def get_skill(self, name, *, target_uri):
+        return {"content": self.existing, "files": []}
+
+    async def _capture(self, path):
+        root = Path(path)
+        self.published = {
+            str(f.relative_to(root)): f.read_text() for f in root.rglob("*") if f.is_file()
+        }
+
+    async def add_skill(self, path, *, target_uri, wait):
+        await self._capture(path)
+        return {"root_uri": f"{target_uri}/demo"}
+
+    async def update_skill(self, name, path, *, target_uri, wait):
+        await self._capture(path)
+        return {"root_uri": f"{target_uri}/demo"}
+
+
+SKILL_MD = "---\nname: demo\ndescription: Demo skill for tests.\n---\n# Demo\n"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("existing", [None, "old"])
+async def test_skill_target_publishes_one_validated_package(tmp_path, existing):
+    from openviking.compile.hashing import content_hash
+
+    target = "viking://agent/skills"
+    operation = {"uri": f"{target}/demo/SKILL.md", "content": SKILL_MD, "mode": "create"}
+    if existing is not None:
+        operation.update(mode="replace", expected_sha256=content_hash(existing.encode()))
+    client = _SkillClient(existing)
+    runner = runner_module.CompileRunner(limits=CompileLimits(), work_root=tmp_path)
+    result = await runner._write_skill_bundle(
+        client=client, target_uri=target, rendered=RenderedBundle(operations=[operation])
+    )
+    assert result["updated" if existing else "created"] == [f"{target}/demo"]
+    assert client.published == {"SKILL.md": SKILL_MD}
+
+
+@pytest.mark.asyncio
+async def test_skill_target_rejects_changed_package(tmp_path):
+    target = "viking://agent/skills"
+    operation = {
+        "uri": f"{target}/demo/SKILL.md",
+        "content": SKILL_MD,
+        "mode": "replace",
+        "expected_sha256": "0" * 64,
+    }
+    client = _SkillClient("someone else's edit")
+    runner = runner_module.CompileRunner(limits=CompileLimits(), work_root=tmp_path)
+    with pytest.raises(CompileFailure) as raised:
+        await runner._write_skill_bundle(
+            client=client, target_uri=target, rendered=RenderedBundle(operations=[operation])
+        )
+    assert raised.value.code == "WRITE_CONFLICT"
+    assert client.published is None
