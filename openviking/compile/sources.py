@@ -7,7 +7,7 @@ from bisect import bisect_right
 from dataclasses import dataclass
 from typing import Iterable
 
-from vikingbot.compile.models import CompileLimits
+from openviking.compile.models import CompileLimits
 
 _HEADING = re.compile(r"^ {0,3}(#{1,6})[ \t]+\S")
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")

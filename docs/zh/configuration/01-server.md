@@ -64,7 +64,7 @@ openviking-server --config /path/to/ov.conf
 | `parsers` | object | 各解析器預設值 | PDF、程式碼、圖片、音影片等解析行為 |
 | `semantic` | object | 內建預設值 | abstract 和 overview 的生成限制 |
 | `parser_api` | object | disabled | 第三方文件解析 API |
-| `compile_api` | object | disabled | 外部 Compile 任務 API |
+| `compile_api` | object | built-in defaults | 伺服器內 Compile 流水線併發配置 |
 | `connector` | object | disabled | 外部 Connector 資料匯入服務 |
 | `encryption` | object | disabled | 文件和敏感字段加密 |
 | `git` | object | local | 版本管理後端，可使用 `local`、`s3` 或 `agfs`（S3 分層儲存時的預設） |

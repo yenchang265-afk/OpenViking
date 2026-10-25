@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Tests for `ov compile --skill memory` in-place memory consolidation."""
 
-import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock
 
@@ -10,15 +9,14 @@ import pytest
 
 from openviking.server.identity import RequestContext, Role
 from openviking.service.compile_service import MEMORY_COMPILE_SKILL, CompileRequest
+from openviking.service.external_task_service import ExternalTaskError
 from openviking.service.memory_compile import (
     MemoryCompileRunner,
     _discover_memory_types,
     _memory_type_from_target,
     _peer_id_from_memory_uri,
 )
-from openviking.service.task_store import PersistentTaskStore
-from openviking.service.task_tracker import TaskStatus, TaskTracker
-from openviking.service.task_work_index import get_task_context
+from openviking.service.task_tracker import TaskStatus
 from openviking.session.memory.consolidation_context_provider import (
     ConsolidationExtractContextProvider,
     build_consolidation_isolation_handler,
@@ -40,7 +38,6 @@ from openviking.session.memory.merge_op import FieldType, MergeOp
 from openviking.session.memory.utils.memory_file_utils import MemoryFileUtils
 from openviking_cli.exceptions import InvalidArgumentError, NotFoundError
 from openviking_cli.session.user_id import UserIdentifier
-from tests.test_task_tracker import _FakeAgfs
 
 
 def _ctx(user_id: str = "u1") -> RequestContext:
@@ -170,8 +167,6 @@ async def test_root_compile_creates_one_task_and_one_loop(monkeypatch, language_
     language_config.output_language_override = "en"
     vlm = SimpleNamespace(model="test", get_completion_async=AsyncMock(return_value="sdk.commit()"))
     language_config.vlm = SimpleNamespace(get_vlm_instance=lambda: vlm)
-    tracker = TaskTracker(PersistentTaskStore(_FakeAgfs()))
-    monkeypatch.setattr("openviking.service.memory_compile.get_task_tracker", lambda: tracker)
     uris = [
         f"{target}/entities/person/alice.md",
         f"{target}/preferences/alice/food.md",
@@ -207,9 +202,8 @@ async def test_root_compile_creates_one_task_and_one_loop(monkeypatch, language_
     monkeypatch.setattr("openviking.service.memory_compile.acquire_memory_operation_lease", acquire)
     runner = MemoryCompileRunner(service)
 
-    accepted = await runner.create(target=target, instruction="整理全部已有记忆", ctx=_ctx())
-    await asyncio.gather(*list(runner._running))
-    final = await tracker.get(accepted.task_id, account_id="acc", user_id="u1")
+    payload = await runner.prepare(target=target, instruction="整理全部已有记忆", ctx=_ctx())
+    result = await runner.run("cmp_root", payload, _ctx())
 
     vlm.get_completion_async.assert_awaited_once()
     fs.glob.assert_awaited_once()
@@ -220,20 +214,20 @@ async def test_root_compile_creates_one_task_and_one_loop(monkeypatch, language_
     assert handler.allowed_memory_types == {"entities", "preferences", "profile"}
     assert handler.allowed_peer_ids == ({"agent_x"} if "/peers/" in target else set())
     assert handler.allow_self == ("/peers/" not in target)
-    assert final.status == TaskStatus.COMPLETED
-    assert final.meta["request"]["memory_type"] is None
-    assert final.result["memory_type"] is None
-    assert final.result["memory_types"] == ["entities", "preferences", "profile"]
-    assert final.result["errors"] == []
+    assert payload == {
+        "to": target,
+        "skill": "memory",
+        "memory_type": None,
+        "peer_id": "agent_x" if "/peers/" in target else None,
+        "instruction": "整理全部已有记忆",
+    }
+    assert result["memory_type"] is None
+    assert result["memory_types"] == ["entities", "preferences", "profile"]
+    assert result["errors"] == []
     prompt = vlm.get_completion_async.await_args.kwargs["messages"][0]["content"]
     for name in ("entities", "preferences", "profile"):
         assert name in prompt
     assert "create_events" not in prompt
-    assert not await tracker.has_work(
-        accepted.task_id,
-        account_id="acc",
-        user_id="u1",
-    )
 
 
 @pytest.mark.asyncio
@@ -734,9 +728,6 @@ async def test_compile_task_apply_outcomes(
     language_config.output_language_override = "en"
     language_config.vlm = SimpleNamespace(get_vlm_instance=lambda: SimpleNamespace(model="test"))
     ctx = _ctx()
-    tracker = TaskTracker(PersistentTaskStore(_FakeAgfs()))
-    task = await tracker.create("compile", account_id=ctx.account_id, user_id=ctx.user.user_id)
-    monkeypatch.setattr("openviking.service.memory_compile.get_task_tracker", lambda: tracker)
     monkeypatch.setattr(
         "openviking.service.memory_compile.tracer.get_trace_id", lambda: "test-trace"
     )
@@ -764,19 +755,21 @@ async def test_compile_task_apply_outcomes(
     monkeypatch.setattr("openviking.service.memory_compile.MemoryUpdater.apply_operations", apply)
     runner = MemoryCompileRunner(SimpleNamespace(_ensure_initialized=lambda: viking_fs))
 
-    await runner._run(
-        task_id=task.task_id,
-        target=directory,
-        memory_type="entities",
-        peer_id=None,
-        instruction=None,
-        ctx=ctx,
-    )
-
-    final = await tracker.get(task.task_id, account_id=ctx.account_id, user_id=ctx.user.user_id)
-    assert final.status == expected_status
-    assert final.stage == expected_status.value
-    assert final.result == {
+    payload = {
+        "to": directory,
+        "skill": "memory",
+        "memory_type": "entities",
+        "peer_id": None,
+        "instruction": None,
+    }
+    if expected_status == TaskStatus.FAILED:
+        with pytest.raises(ExternalTaskError) as raised:
+            await runner.run("cmp_outcome", payload, ctx)
+        assert raised.value.code == "MEMORY_CONSOLIDATION_FAILED"
+        result = raised.value.result
+    else:
+        result = await runner.run("cmp_outcome", payload, ctx)
+    assert result == {
         "to": directory,
         "skill": "memory",
         "trace_id": "test-trace",
@@ -790,15 +783,7 @@ async def test_compile_task_apply_outcomes(
         "total_deletes": int(change == "deleted"),
         "errors": ["write failed"] if has_error else [],
     }
-    if expected_status == TaskStatus.FAILED:
-        assert final.error.startswith("MEMORY_CONSOLIDATION_FAILED:")
-    else:
-        assert final.error is None
-    assert not await tracker.has_work(
-        task.task_id,
-        account_id=ctx.account_id,
-        user_id=ctx.user.user_id,
-    )
+
     if has_operations:
         apply.assert_awaited_once()
         viking_fs._async_agfs.pathlock_release.assert_awaited_once_with(lease)
@@ -807,62 +792,10 @@ async def test_compile_task_apply_outcomes(
         viking_fs._async_agfs.pathlock_release.assert_not_awaited()
     if change and has_error:
         warning.assert_called_once_with(
-            "Memory-mode compile %s partially succeeded: %s", task.task_id, ["write failed"]
+            "Memory-mode compile %s partially succeeded: %s", "cmp_outcome", ["write failed"]
         )
     else:
         warning.assert_not_called()
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize("memory_type", [None, "entities"])
-async def test_cancel_running_compile_interrupts_before_memory_write(monkeypatch, memory_type):
-    tracker = TaskTracker(PersistentTaskStore(_FakeAgfs()))
-    ctx = _ctx()
-    task = await tracker.create(
-        "compile",
-        account_id=ctx.account_id,
-        user_id=ctx.user.user_id,
-        task_id="cmp_cancel",
-    )
-    monkeypatch.setattr("openviking.service.memory_compile.get_task_tracker", lambda: tracker)
-    model_started = asyncio.Event()
-    memory_write = AsyncMock()
-    runner = MemoryCompileRunner(SimpleNamespace())
-
-    async def consolidate(**kwargs):
-        del kwargs
-        assert get_task_context().task_id == task.task_id
-        model_started.set()
-        await asyncio.Future()
-        await memory_write()
-
-    monkeypatch.setattr(runner, "_consolidate", consolidate)
-    worker = asyncio.create_task(
-        runner._run(
-            task_id=task.task_id,
-            target="viking://user/u1/memories" + (f"/{memory_type}" if memory_type else ""),
-            memory_type=memory_type,
-            peer_id=None,
-            instruction=None,
-            ctx=ctx,
-        )
-    )
-    await model_started.wait()
-
-    cancelling = await tracker.cancel(
-        task.task_id, account_id=ctx.account_id, user_id=ctx.user.user_id
-    )
-    assert cancelling.status == TaskStatus.CANCELLING
-    await asyncio.wait_for(worker, timeout=1)
-
-    final = await tracker.get(task.task_id, account_id=ctx.account_id, user_id=ctx.user.user_id)
-    assert final.status == TaskStatus.CANCELLED
-    assert not await tracker.has_work(
-        task.task_id,
-        account_id=ctx.account_id,
-        user_id=ctx.user.user_id,
-    )
-    memory_write.assert_not_awaited()
 
 
 @pytest.fixture

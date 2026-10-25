@@ -8,11 +8,11 @@ from dataclasses import asdict
 
 from loguru import logger
 
-from vikingbot.agent.tools.base import Tool
-from vikingbot.compile import file_ops
-from vikingbot.compile.plan import PLANNING_RULES, ReviewDecision, parse_plan
-from vikingbot.compile.results import Group, Record
-from vikingbot.compile.skill_resources import EvidenceReader
+from openviking.compile import file_ops
+from openviking.compile.plan import PLANNING_RULES, ReviewDecision, parse_plan
+from openviking.compile.results import Group, Record
+from openviking.compile.skill_resources import EvidenceReader
+from openviking.compile.tool import Tool
 
 REVIEW_PROMPT = """## Stage Review
 

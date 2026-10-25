@@ -526,17 +526,6 @@ class VikingClient:
         )
         return result
 
-    async def compile_embeddings(
-        self, texts: List[str], *, target_uri: str, expected_model: str | None = None
-    ) -> Dict[str, Any]:
-        """Use the authenticated server embedder for transient Compile routing batches."""
-        response = await self.client._request(
-            "POST",
-            "/api/v1/compile/embeddings",
-            json={"texts": texts, "target_uri": target_uri, "expected_model": expected_model},
-        )
-        return self.client._handle_response_data(response).get("result", {})
-
     async def list_resources(
         self,
         path: Optional[str] = None,

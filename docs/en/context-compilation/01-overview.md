@@ -12,7 +12,7 @@ Compilation with an installed Skill needs:
 
 Use the optional `--instruction` to specify this run's scope, audience, language, emphasis, or date range.
 
-The configured [Agent Runtime](../api/23-agent-runtime.md) runs the compilation; local deployments can use the built-in [VikingBot](../concepts/15-vikingbot.md). It reads the sources and Skill under the requesting user's identity, then organizes and writes content in a dedicated agent loop. The task runs asynchronously and returns a `task_id` for checking progress and results.
+The OpenViking server runs the compilation itself, as durable queue work like `add_resource` (see [Agent Runtime API](../api/23-agent-runtime.md)). It reads the sources and Skill under the requesting user's identity, then organizes and writes content through a plan / map / shuffle / reduce pipeline. The task runs asynchronously and returns a `task_id` for checking progress and results; a task interrupted by a server restart runs again from the beginning.
 
 ## Run it in one command
 
@@ -52,17 +52,16 @@ The first two examples also give the complete `ov` commands from **importing sou
 These Skills ship with OpenViking (`openviking/builtin_skills/compile`) and are installed into every account's shared `viking://agent/skills` by default — at server start and when an account is created. Existing Skills with the same name are never overwritten, and a built-in an admin deletes is not reinstalled; set `server.builtin_skills` to `false` to turn this off. On Studio's Filesystem page, right-click a folder and choose **Compile with ▸ &lt;Skill&gt;** to open a compile form with that folder as the source; right-clicking a Skill folder offers **Compile with this Skill**.
 ## Not only new artifacts: consolidating existing memories
 
-Besides compiling source material into new knowledge artifacts with a Skill, `ov compile` has a special mode — set `--skill` to `memory` to consolidate an existing **memory** directory in place (dedup, merge, split, compact), without going through VikingBot. See [Memory Consolidation](./06-memory-consolidation.md).
+Besides compiling source material into new knowledge artifacts with a Skill, `ov compile` has a special mode — set `--skill` to `memory` to consolidate an existing **memory** directory in place (dedup, merge, split, compact) on the memory framework instead of the Skill pipeline. See [Memory Consolidation](./06-memory-consolidation.md).
 
 ## Prerequisites
 
-- For the Skill-based examples, a running OpenViking service with a Compile Runtime configured. For local use, install the `openviking[bot]` dependencies and enable the built-in VikingBot with `--with-bot`. The `--skill memory` mode runs in-process without a Compile Runtime and takes no `--from`. The default endpoint is `http://localhost:1933`; remote use needs an API Key — see [Authentication](../guides/04-authentication.md). No service yet? Start with the [Quick Start](../getting-started/02-quickstart.md).
+- A running OpenViking service with a `vlm` model configured. The `--skill memory` mode takes no `--from`. The default endpoint is `http://localhost:1933`; remote use needs an API Key — see [Authentication](../guides/04-authentication.md). No service yet? Start with the [Quick Start](../getting-started/02-quickstart.md).
 - The `ov` CLI configured with a connection (`~/.openviking/ovcli.conf`, or a file selected by `OPENVIKING_CLI_CONFIG_FILE`).
 - Paths beginning with `examples/...` are relative to the repository. Download the [OpenViking repository](https://github.com/volcengine/OpenViking) and run the commands from its root.
 - Python 3 for the visualization scripts. The [LLM Wiki script](https://github.com/volcengine/OpenViking/blob/main/examples/compile/graph-show/llm-wiki/wiki_graph.py) also requires the `openviking` Python package.
 
 ## Related docs
 
-- [VikingBot concepts](../concepts/15-vikingbot.md) — the built-in Compile runtime
 - [Agent Runtime API](../api/23-agent-runtime.md) — full reference for creating, inspecting, and cancelling Compile tasks
 - [Skills API](../api/04-skills.md) — managing and customizing Skills

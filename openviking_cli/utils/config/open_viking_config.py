@@ -172,23 +172,27 @@ class ParserRuntimeConfig(BaseModel):
 
 
 class CompileApiConfig(BaseModel):
-    """Configuration for the external Compile task API."""
+    """Per-task Compile batching and worker limits.
 
-    base_url: str = ""
-    gateway_token: str = ""
-    http_timeout_seconds: float = 10.0
-    poll_interval_ms: int = 30000
+    Compile runs inside the server. Unset concurrency inherits vlm.max_concurrent;
+    model calls across Compile tasks also share that server-wide capacity.
+    """
 
-    @model_validator(mode="after")
-    def _validate(self) -> "CompileApiConfig":
-        if self.base_url and "://" not in self.base_url:
-            raise ValueError("compile_api.base_url must include scheme (e.g., https://...)")
-        if self.http_timeout_seconds <= 0:
-            raise ValueError("compile_api.http_timeout_seconds must be > 0")
-        if self.poll_interval_ms <= 0:
-            raise ValueError("compile_api.poll_interval_ms must be > 0")
-        self.base_url = self.base_url.rstrip("/")
-        return self
+    map_concurrency: Optional[int] = Field(
+        default=None, ge=1, description="Maximum concurrent Map jobs per task."
+    )
+    shuffle_concurrency: Optional[int] = Field(
+        default=None, ge=1, description="Maximum concurrent Shuffle routing jobs per task."
+    )
+    shuffle_batch_size: int = Field(
+        default=4, ge=1, description="Maximum primary records per Shuffle routing request."
+    )
+    reduce_concurrency: Optional[int] = Field(
+        default=None, ge=1, description="Maximum concurrent Reduce jobs per task."
+    )
+    max_active_tasks_per_user: int = Field(
+        default=10, ge=1, description="Maximum pending or running Compile tasks per user."
+    )
 
 
 class RuntimeConfigSettings(BaseModel):

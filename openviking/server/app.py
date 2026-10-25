@@ -211,9 +211,24 @@ async def _initialize_runtime_state(
     config: ServerConfig,
 ) -> None:
     """Initialize service and auth dependencies before traffic is accepted."""
+    from openviking.service.external_task_service import key_store_identity_resolver
+
+    # Queue workers start inside initialize(); recovered durable tasks wait until
+    # the auth plugin below has decided how their owners are re-checked.
+    durable_tasks = getattr(service, "external_tasks", None)
+    if durable_tasks is not None:
+        durable_tasks.defer_until_identity_policy()
     await service.initialize()
     await service.apply_agent_evolution_config()
     await _initialize_auth_plugin(app, service, config)
+    manager = app.state.api_key_manager
+    auth_mode = config.get_effective_auth_mode()
+    if durable_tasks is not None:
+        durable_tasks.set_identity_resolver(
+            key_store_identity_resolver(manager, require_user=auth_mode == "api_key")
+            if auth_mode in ("api_key", "trusted") and manager is not None
+            else None
+        )
     from openviking.service.deletion import setup_deletion
 
     app.state.deletion_service = await setup_deletion(
@@ -383,8 +398,6 @@ def create_app(
             service = OpenVikingService()
 
         assert service is not None
-        if config.with_bot:
-            service.compile.configure_local_backend(config.bot_api_url, bot_gateway_token)
         _configure_session_runtime(service)
         set_service(service)
 

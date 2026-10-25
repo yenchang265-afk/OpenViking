@@ -743,6 +743,243 @@ async def get_skill(
     return Response(status="ok", result=result)
 
 
+async def apply_skill_update(
+    service,
+    ctx: RequestContext,
+    *,
+    skill_name: str,
+    root_uri: str,
+    data: Any,
+    allow_local_path_resolution: bool,
+    source_metadata: Dict[str, Any],
+    git_source: Optional[Dict[str, Any]] = None,
+    source_path_hint: Optional[str] = None,
+    wait: bool = False,
+    resolved: Any = None,
+) -> Dict[str, Any]:
+    """Replace an installed Skill package with backup, privacy and rollback handling.
+
+    allow_local_path_resolution is only for trusted server-side callers and
+    validated temp uploads; HTTP request bodies never resolve local paths.
+    """
+    # Derive backup root from the actual skill root URI to keep backup in the same scope.
+    skill_root_parent = root_uri.rsplit("/", 1)[0]
+    backup_uri = f"{skill_root_parent}/.{skill_name}.update-backup-{uuid.uuid4().hex}"
+    backup_created = False
+    privacy_update_attempted = False
+    previous_privacy = None
+    preparation = None
+    privacy = service.privacy_configs
+    viking_fs = service.fs._ensure_initialized()  # noqa: SLF001
+    update_lease = None
+    privacy_lease = None
+    task_id = str(uuid.uuid4())
+    deleted_privacy_snapshot = None
+    cleanup_warnings = []
+
+    def report_cleanup_failure(location: str, exc: Exception) -> None:
+        warning = f"Skill update cleanup failed at {location}: {exc}"
+        cleanup_warnings.append(warning)
+        logger.warning(warning, exc_info=True)
+
+    async def discard_backup() -> None:
+        # Called only after commit or successful restoration. Failure to
+        # discard this now-unused copy must not change that outcome.
+        if backup_created:
+            try:
+                await viking_fs.rm(backup_uri, ctx=ctx, recursive=True, lease_ref=update_lease)
+            except Exception as exc:
+                report_cleanup_failure(backup_uri, exc)
+
+    async def back_up_package() -> None:
+        nonlocal update_lease, privacy_lease, backup_created, previous_privacy
+        update_lease = await viking_fs._async_agfs.pathlock_acquire_tree_batch(
+            [viking_fs._uri_to_path(uri, ctx=ctx) for uri in (root_uri, backup_uri)]
+        )
+        # Tree acquisition may recreate a missing directory for its token.
+        # Recheck the installed definition and snapshot privacy under the lock.
+        if not await viking_fs.exists(f"{root_uri}/SKILL.md", ctx=ctx):
+            raise NotFoundError(root_uri, "skill")
+        if privacy is not None:
+            # Always acquire package then config. Keep config ownership
+            # through commit/rollback so a separate successful save cannot
+            # be silently replaced by restoration of this request's state.
+            privacy_lease = await viking_fs._async_agfs.pathlock_acquire_tree(
+                viking_fs._uri_to_path(privacy.get_config_root(ctx, "skill", skill_name), ctx=ctx),
+                timeout_secs=30.0,
+            )
+            previous_privacy = await privacy.get_current(ctx, "skill", skill_name)
+        try:
+            await transfer_skill_package(
+                viking_fs, root_uri, backup_uri, ctx=ctx, lease_ref=update_lease
+            )
+        except Exception as exc:
+            raise InternalError(
+                f"Skill backup failed; backup location: {backup_uri}", cause=exc
+            ) from exc
+        backup_created = True
+        await clear_skill_package_contents(viking_fs, root_uri, ctx=ctx, lease_ref=update_lease)
+
+    async def restore_package() -> None:
+        # Do not restore while either queued or active work can write back.
+        await service.resources.cancel_skill_processing(task_id, ctx)
+        failures = []
+        if backup_created:
+            try:
+                await clear_skill_package_contents(
+                    viking_fs, root_uri, ctx=ctx, lease_ref=update_lease
+                )
+                await transfer_skill_package(
+                    viking_fs, backup_uri, root_uri, ctx=ctx, lease_ref=update_lease
+                )
+            except Exception as exc:
+                failures.append(f"package: {exc}")
+        if privacy_update_attempted:
+            try:
+                await _restore_skill_privacy(
+                    service,
+                    ctx,
+                    skill_name,
+                    previous_privacy,
+                    deleted_privacy_snapshot,
+                    owner_lease_ref=privacy_lease,
+                )
+            except Exception as exc:
+                failures.append(f"privacy: {exc}")
+        if failures:
+            raise InternalError(
+                f"Skill update rollback failed; backup location: {backup_uri}; "
+                + "; ".join(failures)
+            )
+        await discard_backup()
+
+    async def release_update_locks() -> None:
+        try:
+            if privacy_lease is not None:
+                try:
+                    # Deletion inside the update preserved the locked
+                    # directory. Remove an empty config only now, after
+                    # all possible config writes and rollback have ended.
+                    if (
+                        await privacy.get_meta(ctx, "skill", skill_name) is None
+                        and await privacy.get_current(ctx, "skill", skill_name) is None
+                        and not await privacy.list_versions(ctx, "skill", skill_name)
+                    ):
+                        await viking_fs.rm(
+                            privacy.get_config_root(ctx, "skill", skill_name),
+                            recursive=True,
+                            ctx=ctx,
+                            lease_ref=privacy_lease,
+                        )
+                except Exception as exc:
+                    # Config data has already been committed/restored.
+                    # Retain the result (or original error), but still
+                    # release both locks and report the leftover directory.
+                    report_cleanup_failure(privacy.get_config_root(ctx, "skill", skill_name), exc)
+                finally:
+                    await viking_fs._async_agfs.pathlock_release(privacy_lease)
+        finally:
+            if update_lease is not None:
+                await viking_fs._async_agfs.pathlock_release(update_lease)
+
+    try:
+        async with resolve_skill_source(
+            data,
+            allow_local_path_resolution=allow_local_path_resolution,
+            source_metadata=source_metadata,
+            git_source=git_source,
+        ) as targets:
+            if len(targets) > 1:
+                targets = [
+                    (item, metadata) for item, metadata in targets if item.name == skill_name
+                ]
+            if len(targets) != 1:
+                raise InvalidArgumentError("Update source must identify exactly one skill")
+            skill_data, skill_source = targets[0]
+            preparation = await service.resources._skill_processor.prepare_skill_processing(  # noqa: SLF001
+                skill_data,
+                ctx=ctx,
+                allow_local_path_resolution=isinstance(skill_data, Path),
+                source_path_hint=source_path_hint,
+            )
+            expected_name = _validate_skill_name(skill_name)
+            if preparation.skill_dict.get("name") != expected_name:
+                raise InvalidArgumentError(
+                    f"Skill name mismatch: path name is '{expected_name}', content name is '{preparation.skill_dict.get('name')}'",
+                    details={
+                        "expected": expected_name,
+                        "actual": preparation.skill_dict.get("name"),
+                    },
+                )
+            await run_to_completion(back_up_package)
+            # All synchronous configuration changes must finish before the
+            # package can produce background summary or embedding work.
+            if (
+                privacy is not None
+                and previous_privacy is not None
+                and not preparation.privacy_values
+            ):
+                privacy_root = privacy.get_config_root(ctx, "skill", skill_name)
+                privacy_paths = [".meta.json", "current.json"]
+                privacy_paths.extend(
+                    f"history/{version_filename(version)}"
+                    for version in await privacy.list_versions(ctx, "skill", skill_name)
+                )
+                deleted_privacy_snapshot = {
+                    path: await viking_fs.read_file_bytes(f"{privacy_root}/{path}", ctx=ctx)
+                    for path in privacy_paths
+                }
+            privacy_update_attempted = True
+            await run_to_completion(
+                lambda: service.resources._skill_processor.apply_skill_privacy(  # noqa: SLF001
+                    preparation.skill_dict,
+                    preparation.privacy_values,
+                    ctx,
+                    change_reason="auto-extracted from update_skill",
+                    delete_if_empty=True,
+                    owner_lease_ref=privacy_lease,
+                )
+            )
+            result = await service.resources.add_skill(
+                data=preparation,
+                ctx=ctx,
+                wait=wait,
+                allow_local_path_resolution=False,
+                source_path_hint=source_path_hint,
+                apply_privacy=False,
+                privacy_change_reason="auto-extracted from update_skill",
+                target_uri=skill_root_parent,
+                source_metadata=skill_source,
+                task_id=task_id,
+                owner_lease_ref=update_lease,
+            )
+    except BaseException as update_error:
+        try:
+            await run_to_completion(restore_package)
+        except Exception as rollback_error:
+            raise InternalError(
+                "Skill update failed and rollback could not complete", cause=rollback_error
+            ) from update_error
+        raise
+    else:
+        await run_to_completion(discard_backup)
+        result["action"] = "update"
+    finally:
+        try:
+            await run_to_completion(release_update_locks)
+        finally:
+            if preparation and preparation.cleanup_path:
+                shutil.rmtree(preparation.cleanup_path, ignore_errors=True)
+            if resolved:
+                try:
+                    await run_to_completion(resolved.cleanup)
+                except Exception as exc:
+                    report_cleanup_failure(resolved.local_path, exc)
+    if cleanup_warnings:
+        result.setdefault("warnings", []).extend(cleanup_warnings)
+    return result
+
+
 @router.put("/{skill_name}")
 async def update_skill(
     http_request: Request,
@@ -793,234 +1030,22 @@ async def update_skill(
 
     source_path_hint = resolved.original_filename if resolved else None
 
-    async def _update() -> Dict[str, Any]:
-        # Derive backup root from the actual skill root URI to keep backup in the same scope.
-        skill_root_parent = root_uri.rsplit("/", 1)[0]
-        backup_uri = f"{skill_root_parent}/.{skill_name}.update-backup-{uuid.uuid4().hex}"
-        backup_created = False
-        privacy_update_attempted = False
-        previous_privacy = None
-        preparation = None
-        privacy = service.privacy_configs
-        viking_fs = service.fs._ensure_initialized()  # noqa: SLF001
-        update_lease = None
-        privacy_lease = None
-        task_id = str(uuid.uuid4())
-        deleted_privacy_snapshot = None
-        cleanup_warnings = []
-
-        def report_cleanup_failure(location: str, exc: Exception) -> None:
-            warning = f"Skill update cleanup failed at {location}: {exc}"
-            cleanup_warnings.append(warning)
-            logger.warning(warning, exc_info=True)
-
-        async def discard_backup() -> None:
-            # Called only after commit or successful restoration. Failure to
-            # discard this now-unused copy must not change that outcome.
-            if backup_created:
-                try:
-                    await viking_fs.rm(backup_uri, ctx=_ctx, recursive=True, lease_ref=update_lease)
-                except Exception as exc:
-                    report_cleanup_failure(backup_uri, exc)
-
-        async def back_up_package() -> None:
-            nonlocal update_lease, privacy_lease, backup_created, previous_privacy
-            update_lease = await viking_fs._async_agfs.pathlock_acquire_tree_batch(
-                [viking_fs._uri_to_path(uri, ctx=_ctx) for uri in (root_uri, backup_uri)]
-            )
-            # Tree acquisition may recreate a missing directory for its token.
-            # Recheck the installed definition and snapshot privacy under the lock.
-            if not await viking_fs.exists(f"{root_uri}/SKILL.md", ctx=_ctx):
-                raise NotFoundError(root_uri, "skill")
-            if privacy is not None:
-                # Always acquire package then config. Keep config ownership
-                # through commit/rollback so a separate successful save cannot
-                # be silently replaced by restoration of this request's state.
-                privacy_lease = await viking_fs._async_agfs.pathlock_acquire_tree(
-                    viking_fs._uri_to_path(
-                        privacy.get_config_root(_ctx, "skill", skill_name), ctx=_ctx
-                    ),
-                    timeout_secs=30.0,
-                )
-                previous_privacy = await privacy.get_current(_ctx, "skill", skill_name)
-            try:
-                await transfer_skill_package(
-                    viking_fs, root_uri, backup_uri, ctx=_ctx, lease_ref=update_lease
-                )
-            except Exception as exc:
-                raise InternalError(
-                    f"Skill backup failed; backup location: {backup_uri}", cause=exc
-                ) from exc
-            backup_created = True
-            await clear_skill_package_contents(
-                viking_fs, root_uri, ctx=_ctx, lease_ref=update_lease
-            )
-
-        async def restore_package() -> None:
-            # Do not restore while either queued or active work can write back.
-            await service.resources.cancel_skill_processing(task_id, _ctx)
-            failures = []
-            if backup_created:
-                try:
-                    await clear_skill_package_contents(
-                        viking_fs, root_uri, ctx=_ctx, lease_ref=update_lease
-                    )
-                    await transfer_skill_package(
-                        viking_fs, backup_uri, root_uri, ctx=_ctx, lease_ref=update_lease
-                    )
-                except Exception as exc:
-                    failures.append(f"package: {exc}")
-            if privacy_update_attempted:
-                try:
-                    await _restore_skill_privacy(
-                        service,
-                        _ctx,
-                        skill_name,
-                        previous_privacy,
-                        deleted_privacy_snapshot,
-                        owner_lease_ref=privacy_lease,
-                    )
-                except Exception as exc:
-                    failures.append(f"privacy: {exc}")
-            if failures:
-                raise InternalError(
-                    f"Skill update rollback failed; backup location: {backup_uri}; "
-                    + "; ".join(failures)
-                )
-            await discard_backup()
-
-        async def release_update_locks() -> None:
-            try:
-                if privacy_lease is not None:
-                    try:
-                        # Deletion inside the update preserved the locked
-                        # directory. Remove an empty config only now, after
-                        # all possible config writes and rollback have ended.
-                        if (
-                            await privacy.get_meta(_ctx, "skill", skill_name) is None
-                            and await privacy.get_current(_ctx, "skill", skill_name) is None
-                            and not await privacy.list_versions(_ctx, "skill", skill_name)
-                        ):
-                            await viking_fs.rm(
-                                privacy.get_config_root(_ctx, "skill", skill_name),
-                                recursive=True,
-                                ctx=_ctx,
-                                lease_ref=privacy_lease,
-                            )
-                    except Exception as exc:
-                        # Config data has already been committed/restored.
-                        # Retain the result (or original error), but still
-                        # release both locks and report the leftover directory.
-                        report_cleanup_failure(
-                            privacy.get_config_root(_ctx, "skill", skill_name), exc
-                        )
-                    finally:
-                        await viking_fs._async_agfs.pathlock_release(privacy_lease)
-            finally:
-                if update_lease is not None:
-                    await viking_fs._async_agfs.pathlock_release(update_lease)
-
-        try:
-            async with resolve_skill_source(
-                data,
-                allow_local_path_resolution=allow_local_path_resolution,
-                source_metadata=source_metadata,
-                git_source=git_source,
-            ) as targets:
-                if len(targets) > 1:
-                    targets = [
-                        (item, metadata) for item, metadata in targets if item.name == skill_name
-                    ]
-                if len(targets) != 1:
-                    raise InvalidArgumentError("Update source must identify exactly one skill")
-                skill_data, skill_source = targets[0]
-                preparation = await service.resources._skill_processor.prepare_skill_processing(  # noqa: SLF001
-                    skill_data,
-                    ctx=_ctx,
-                    allow_local_path_resolution=isinstance(skill_data, Path),
-                    source_path_hint=source_path_hint,
-                )
-                expected_name = _validate_skill_name(skill_name)
-                if preparation.skill_dict.get("name") != expected_name:
-                    raise InvalidArgumentError(
-                        f"Skill name mismatch: path name is '{expected_name}', content name is '{preparation.skill_dict.get('name')}'",
-                        details={
-                            "expected": expected_name,
-                            "actual": preparation.skill_dict.get("name"),
-                        },
-                    )
-                await run_to_completion(back_up_package)
-                # All synchronous configuration changes must finish before the
-                # package can produce background summary or embedding work.
-                if (
-                    privacy is not None
-                    and previous_privacy is not None
-                    and not preparation.privacy_values
-                ):
-                    privacy_root = privacy.get_config_root(_ctx, "skill", skill_name)
-                    privacy_paths = [".meta.json", "current.json"]
-                    privacy_paths.extend(
-                        f"history/{version_filename(version)}"
-                        for version in await privacy.list_versions(_ctx, "skill", skill_name)
-                    )
-                    deleted_privacy_snapshot = {
-                        path: await viking_fs.read_file_bytes(f"{privacy_root}/{path}", ctx=_ctx)
-                        for path in privacy_paths
-                    }
-                privacy_update_attempted = True
-                await run_to_completion(
-                    lambda: service.resources._skill_processor.apply_skill_privacy(  # noqa: SLF001
-                        preparation.skill_dict,
-                        preparation.privacy_values,
-                        _ctx,
-                        change_reason="auto-extracted from update_skill",
-                        delete_if_empty=True,
-                        owner_lease_ref=privacy_lease,
-                    )
-                )
-                result = await service.resources.add_skill(
-                    data=preparation,
-                    ctx=_ctx,
-                    wait=request.wait,
-                    allow_local_path_resolution=False,
-                    source_path_hint=source_path_hint,
-                    apply_privacy=False,
-                    privacy_change_reason="auto-extracted from update_skill",
-                    target_uri=skill_root_parent,
-                    source_metadata=skill_source,
-                    task_id=task_id,
-                    owner_lease_ref=update_lease,
-                )
-        except BaseException as update_error:
-            try:
-                await run_to_completion(restore_package)
-            except Exception as rollback_error:
-                raise InternalError(
-                    "Skill update failed and rollback could not complete", cause=rollback_error
-                ) from update_error
-            raise
-        else:
-            await run_to_completion(discard_backup)
-            result["action"] = "update"
-        finally:
-            try:
-                await run_to_completion(release_update_locks)
-            finally:
-                if preparation and preparation.cleanup_path:
-                    shutil.rmtree(preparation.cleanup_path, ignore_errors=True)
-                if resolved:
-                    try:
-                        await run_to_completion(resolved.cleanup)
-                    except Exception as exc:
-                        report_cleanup_failure(resolved.local_path, exc)
-        if cleanup_warnings:
-            result.setdefault("warnings", []).extend(cleanup_warnings)
-        return result
-
     execution = await run_operation(
         operation="skills.update",
         telemetry=request.telemetry,
-        fn=_update,
+        fn=lambda: apply_skill_update(
+            service,
+            _ctx,
+            skill_name=skill_name,
+            root_uri=root_uri,
+            data=data,
+            allow_local_path_resolution=allow_local_path_resolution,
+            source_metadata=source_metadata,
+            git_source=git_source,
+            source_path_hint=source_path_hint,
+            wait=request.wait,
+            resolved=resolved,
+        ),
     )
     return Response(
         status="ok",

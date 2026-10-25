@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from vikingbot.compile.plan import PlanProposal, ReviewDecision
-from vikingbot.compile.results import (
+from openviking.compile.plan import PlanProposal, ReviewDecision
+from openviking.compile.results import (
     FileResponse,
     RecordResponse,
     RouteBatchResponse,

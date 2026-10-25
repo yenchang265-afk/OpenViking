@@ -3,24 +3,20 @@
 """In-process memory consolidation for `ov compile --skill memory`.
 
 This runs the memory framework (ExtractLoop + MemoryUpdater) directly inside
-OpenViking core, without the VikingBot agent path. It borrows the lightweight
-`session.commit` task shape: create a tracked task, run one background
-``asyncio.Task``, and record running/completed/failed via the task tracker.
-There is no QueueFS re-delivery; a crashed run leaves the task failed.
+OpenViking core. Tasks are durable Compile tasks: the queue-backed task service
+owns their lifecycle and runs ``run`` again from the start after a restart.
 """
 
 from __future__ import annotations
 
-import asyncio
 from typing import Any, Optional
 
 from openviking.core.namespace import classify_uri, uri_parts
 from openviking.core.path_variables import resolve_path_variables
 from openviking.core.uri_validation import validate_request_viking_uri
 from openviking.server.identity import RequestContext
+from openviking.service.external_task_service import ExternalTaskError
 from openviking.service.fs_service import FSService
-from openviking.service.task_tracker import TaskRecord, get_task_tracker
-from openviking.service.task_work_index import bind_task_context
 from openviking.session.memory.consolidation_context_provider import (
     ConsolidationExtractContextProvider,
     build_consolidation_isolation_handler,
@@ -100,68 +96,31 @@ async def _discover_memory_types(
 
 
 class MemoryCompileRunner:
-    """Own the validation and background execution of memory-mode Compile tasks."""
-
-    task_type = "compile"
-    task_id_prefix = "cmp_"
+    """Validate and execute memory-mode Compile tasks."""
 
     def __init__(self, fs: FSService, vikingdb: Any = None) -> None:
         self._fs = fs
         self._vikingdb = vikingdb
-        # Keep strong references so background tasks are not garbage collected.
-        self._running: set[asyncio.Task[None]] = set()
 
     def set_vikingdb(self, vikingdb: Any) -> None:
         self._vikingdb = vikingdb
 
-    async def create(
+    async def prepare(
         self,
         *,
         target: str,
         instruction: Optional[str],
         ctx: RequestContext,
-    ) -> TaskRecord:
+    ) -> dict[str, Any]:
+        """Validate the target and return the durable task request payload."""
         canonical_target, memory_type, peer_id = await self._normalize_target(target, ctx)
-        tracker = get_task_tracker()
-        task = await tracker.create(
-            self.task_type,
-            resource_id=canonical_target,
-            account_id=ctx.account_id,
-            user_id=ctx.user.user_id,
-            meta={
-                "request": {
-                    "to": canonical_target,
-                    "skill": "memory",
-                    "memory_type": memory_type,
-                    "peer_id": peer_id,
-                    "instruction": instruction,
-                }
-            },
-        )
-        await tracker.update_stage(
-            task.task_id,
-            "queued",
-            account_id=ctx.account_id,
-            user_id=ctx.user.user_id,
-        )
-        background = asyncio.create_task(
-            self._run(
-                task_id=task.task_id,
-                target=canonical_target,
-                memory_type=memory_type,
-                peer_id=peer_id,
-                instruction=instruction,
-                ctx=ctx,
-            )
-        )
-        self._running.add(background)
-        background.add_done_callback(self._running.discard)
-        current = await tracker.get(
-            task.task_id,
-            account_id=ctx.account_id,
-            user_id=ctx.user.user_id,
-        )
-        return current or task
+        return {
+            "to": canonical_target,
+            "skill": "memory",
+            "memory_type": memory_type,
+            "peer_id": peer_id,
+            "instruction": instruction,
+        }
 
     async def _normalize_target(
         self,
@@ -181,22 +140,11 @@ class MemoryCompileRunner:
         canonical = str(stat.get("uri") or uri).rstrip("/")
         return canonical, memory_type, _peer_id_from_memory_uri(canonical)
 
-    async def _run(
-        self,
-        *,
-        task_id: str,
-        target: str,
-        memory_type: Optional[str],
-        peer_id: Optional[str],
-        instruction: Optional[str],
-        ctx: RequestContext,
-    ) -> None:
-        tracker = get_task_tracker()
-        running_work_id = await tracker.register_running_task(
-            task_id,
-            account_id=ctx.account_id,
-            user_id=ctx.user.user_id,
-        )
+    async def run(
+        self, task_id: str, payload: dict[str, Any], ctx: RequestContext
+    ) -> dict[str, Any]:
+        """Consolidate once; raise ExternalTaskError when no memory change succeeded."""
+        target = payload["to"]
         root_token = None
         if bind_root_observability_context is not None:
             root_attrs = create_root_span_attributes(
@@ -211,62 +159,34 @@ class MemoryCompileRunner:
         try:
             with tracer.start_as_current_span(name="compile.memory.consolidate"):
                 trace_id = tracer.get_trace_id() or ""
-                await tracker.start(
-                    task_id,
-                    account_id=ctx.account_id,
-                    user_id=ctx.user.user_id,
-                    stage="consolidating",
-                )
-                with bind_task_context(
-                    task_id,
-                    ctx.account_id,
-                    ctx.user.user_id,
-                    work_id=running_work_id,
-                ):
+                try:
                     result = await self._consolidate(
                         target=target,
-                        memory_type=memory_type,
-                        peer_id=peer_id,
-                        instruction=instruction,
+                        memory_type=payload.get("memory_type"),
+                        peer_id=payload.get("peer_id"),
+                        instruction=payload.get("instruction"),
                         ctx=ctx,
                     )
+                except Exception as exc:
+                    tracer.error(f"Memory-mode compile failed: {exc}")
+                    raise ExternalTaskError("MEMORY_CONSOLIDATION_FAILED", str(exc)) from exc
                 result = {"to": target, "skill": "memory", "trace_id": trace_id, **result}
                 if result["errors"]:
                     if not any(result[key] for key in ("adds", "updates", "deletes")):
-                        await tracker.fail(
-                            task_id,
-                            "MEMORY_CONSOLIDATION_FAILED: No memory changes succeeded; "
-                            "see result.errors for details",
-                            account_id=ctx.account_id,
-                            user_id=ctx.user.user_id,
+                        raise ExternalTaskError(
+                            "MEMORY_CONSOLIDATION_FAILED",
+                            "No memory changes succeeded; see result.errors for details",
                             result=result,
                         )
-                        return
                     logger.warning(
                         "Memory-mode compile %s partially succeeded: %s",
                         task_id,
                         result["errors"],
                     )
-                await tracker.complete(
-                    task_id,
-                    result,
-                    account_id=ctx.account_id,
-                    user_id=ctx.user.user_id,
-                )
-        except asyncio.CancelledError:
-            return
-        except Exception as exc:  # noqa: BLE001 - surface any failure as task error
-            tracer.error(f"Memory-mode compile failed: {exc}")
-            await tracker.fail(
-                task_id,
-                f"MEMORY_CONSOLIDATION_FAILED: {exc}",
-                account_id=ctx.account_id,
-                user_id=ctx.user.user_id,
-            )
+                return result
         finally:
             if root_token is not None and reset_root_observability_context is not None:
                 reset_root_observability_context(root_token)
-            await tracker.unregister_running_task(task_id)
 
     async def _consolidate(
         self,

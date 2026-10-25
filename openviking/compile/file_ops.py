@@ -12,18 +12,18 @@ from typing import TYPE_CHECKING
 
 import yaml
 
-from openviking.core.skill_loader import validate_skill_format
-from openviking.utils.path_safety import safe_join_viking_uri
-from openviking_cli.exceptions import OpenVikingError
-from vikingbot.compile.hashing import content_hash, digest
-from vikingbot.compile.renderer import (
+from openviking.compile.hashing import content_hash, digest
+from openviking.compile.renderer import (
     _split_frontmatter,
     validate_relative_file_path,
 )
-from vikingbot.compile.results import FileDraft, FileResponse, Group, InputReferenceError
+from openviking.compile.results import FileDraft, FileResponse, Group, InputReferenceError
+from openviking.core.skill_loader import validate_skill_format
+from openviking.utils.path_safety import safe_join_viking_uri
+from openviking_cli.exceptions import OpenVikingError
 
 if TYPE_CHECKING:
-    from vikingbot.compile.pipeline import Pipeline
+    from openviking.compile.pipeline import Pipeline
 
 
 def encode_content(value: str | bytes) -> dict:

@@ -10,17 +10,17 @@ from collections import Counter
 from functools import partial
 from typing import TYPE_CHECKING
 
+from openviking.compile import file_ops
+from openviking.compile.hashing import content_hash, digest
+from openviking.compile.ops import common
+from openviking.compile.pipeline_io import ModelCallError, bounded_jobs, retry_allowed
+from openviking.compile.plan import Node, Transform
+from openviking.compile.results import CombineResponse, FileDraft, FileResponse, Group, Record
 from openviking.core.namespace import relative_uri_path
 from openviking.models.model_error import ModelErrorKind, model_error_kind
-from vikingbot.compile import file_ops
-from vikingbot.compile.hashing import content_hash, digest
-from vikingbot.compile.ops import common
-from vikingbot.compile.pipeline_io import ModelCallError, bounded_jobs, retry_allowed
-from vikingbot.compile.plan import Node, Transform
-from vikingbot.compile.results import CombineResponse, FileDraft, FileResponse, Group, Record
 
 if TYPE_CHECKING:
-    from vikingbot.compile.pipeline import Pipeline
+    from openviking.compile.pipeline import Pipeline
 
 
 # Reduce guidance is independent of Map, including intermediate record output.

@@ -10,13 +10,11 @@ import json
 from dataclasses import asdict
 from typing import TYPE_CHECKING
 
-from openviking.core.namespace import relative_uri_path
-from openviking.models.model_error import ModelErrorKind, model_error_kind
-from vikingbot.compile import file_ops
-from vikingbot.compile.hashing import content_hash, digest
-from vikingbot.compile.pipeline_io import MAX_JOB_ATTEMPTS
-from vikingbot.compile.renderer import validate_relative_file_path
-from vikingbot.compile.results import (
+from openviking.compile import file_ops
+from openviking.compile.hashing import content_hash, digest
+from openviking.compile.pipeline_io import MAX_JOB_ATTEMPTS
+from openviking.compile.renderer import validate_relative_file_path
+from openviking.compile.results import (
     CombineResponse,
     EvidenceSpan,
     FileDraft,
@@ -27,10 +25,12 @@ from vikingbot.compile.results import (
     Record,
     RecordResponse,
 )
-from vikingbot.compile.skill_resources import EvidenceReader
+from openviking.compile.skill_resources import EvidenceReader
+from openviking.core.namespace import relative_uri_path
+from openviking.models.model_error import ModelErrorKind, model_error_kind
 
 if TYPE_CHECKING:
-    from vikingbot.compile.pipeline import Pipeline
+    from openviking.compile.pipeline import Pipeline
 
 
 # Combine receives only its batch and this evidence-consolidation contract.

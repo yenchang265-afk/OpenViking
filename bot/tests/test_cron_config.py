@@ -55,10 +55,6 @@ def test_startup_respects_cron_config(tmp_path, monkeypatch, enabled, mode):
     monkeypatch.setattr(
         commands, "prepare_heartbeat", lambda *_: SimpleNamespace(start=AsyncMock())
     )
-    monkeypatch.setattr(
-        "vikingbot.compile.service.BotCompileService",
-        lambda **_: SimpleNamespace(start=AsyncMock()),
-    )
     monkeypatch.setattr("uvicorn.Server", lambda _: SimpleNamespace(serve=AsyncMock()))
     monkeypatch.setenv("VIKINGBOT_LOG_FILE", str(tmp_path / "bot.log"))
 

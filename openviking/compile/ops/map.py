@@ -5,14 +5,14 @@ from __future__ import annotations
 from functools import partial
 from typing import TYPE_CHECKING
 
-from vikingbot.compile.ops import common
-from vikingbot.compile.ops import reduce as reduce_op
-from vikingbot.compile.pipeline_io import bounded_jobs
-from vikingbot.compile.plan import Node, Transform
-from vikingbot.compile.results import Group, Record, RecordResponse
+from openviking.compile.ops import common
+from openviking.compile.ops import reduce as reduce_op
+from openviking.compile.pipeline_io import bounded_jobs
+from openviking.compile.plan import Node, Transform
+from openviking.compile.results import Group, Record, RecordResponse
 
 if TYPE_CHECKING:
-    from vikingbot.compile.pipeline import Pipeline
+    from openviking.compile.pipeline import Pipeline
 
 
 # Both output types and execution modes share one assignment-level contract.
@@ -86,7 +86,6 @@ catalog; related_subjects does not confirm that a file exists.
 Use available tools as needed. With file tools, large results may be written
 to temporary files and submitted using emit's reference fields. Temporary
 files are separate from the output directory.
-read_skill_resource provides local paths for Skill scripts and their dependencies.
 
 Submit the complete result through emit without extra prose.
 """

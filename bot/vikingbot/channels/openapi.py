@@ -167,13 +167,11 @@ class OpenAPIChannel(BaseChannel):
         workspace_path: Path | None = None,
         app: "FastAPI | None" = None,
         global_config: Config | None = None,
-        compile_service: Any | None = None,
         agent_loop: Any | None = None,
     ):
         super().__init__(config, bus, workspace_path)
         self.config = config
         self._global_config = global_config
-        self._compile_service = compile_service
         self._agent_loop = agent_loop
         # Regular OpenAPI pending and sessions
         self._pending: Dict[str, PendingResponse] = {}
@@ -415,16 +413,6 @@ class OpenAPIChannel(BaseChannel):
             await channel._prepare_chat_request(http_request, request, auth)
             return await channel._handle_chat_stream(request)
 
-        if channel._compile_service is not None:
-            from vikingbot.compile.router import register_compile_routes
-
-            register_compile_routes(
-                router,
-                channel=channel,
-                verify_gateway_request=verify_gateway_request,
-                service=channel._compile_service,
-            )
-
         @router.post("/feedback", response_model=FeedbackResponse)
         async def submit_feedback(
             request: FeedbackRequest,
@@ -623,16 +611,6 @@ class OpenAPIChannel(BaseChannel):
             x_gateway_token: Optional[str] = Header(None, alias="X-Gateway-Token"),
         ) -> GatewayRequestAuth:
             return await channel._verify_gateway_request(http_request, x_gateway_token)
-
-        if channel._compile_service is not None:
-            from vikingbot.compile.router import register_runtime_task_routes
-
-            register_runtime_task_routes(
-                router,
-                channel=channel,
-                verify_gateway_request=verify_gateway_request,
-                service=channel._compile_service,
-            )
 
         @router.get("/health")
         async def gateway_health(
@@ -1151,49 +1129,6 @@ class OpenAPIChannel(BaseChannel):
         chat_request._principal_scope = scope
         if connection:
             chat_request.openviking_connection = OpenVikingConnection(**connection)
-
-    async def _prepare_compile_request(
-        self,
-        http_request: Request,
-        compile_request: Any,
-        auth: GatewayRequestAuth,
-    ) -> None:
-        """Resolve Compile identity using the same rules as chat."""
-        if compile_request.openviking_connection is not None:
-            if not auth.can_trust_forwarded_connection:
-                raise HTTPException(
-                    status_code=403,
-                    detail="openviking_connection is only accepted from trusted server proxy",
-                )
-        # Dev auth is a single principal, so forwarded credentials must not change task ownership.
-        if self._ov_server_auth_mode() == "dev":
-            _connection, scope = await self._resolve_request_identity(http_request, auth)
-            compile_request._principal_scope = scope
-            compile_request.openviking_connection = None
-            return
-
-        if compile_request.openviking_connection is not None:
-            if not self._ov_server_url():
-                raise HTTPException(
-                    status_code=503,
-                    detail=OPENVIKING_UPSTREAM_NOT_CONFIGURED_DETAIL,
-                )
-            health = await self._assert_runtime_upstream_auth_mode(
-                self._identity_headers_from_connection(compile_request.openviking_connection)
-            )
-            compile_request.openviking_connection = self._reconcile_forwarded_connection(
-                compile_request.openviking_connection,
-                health,
-            )
-            compile_request._principal_scope = self._connection_principal_scope(
-                compile_request.openviking_connection
-            )
-            return
-
-        connection, scope = await self._resolve_request_identity(http_request, auth)
-        compile_request._principal_scope = scope
-        if connection:
-            compile_request.openviking_connection = OpenVikingConnection(**connection)
 
     async def _resolve_request_identity(
         self,

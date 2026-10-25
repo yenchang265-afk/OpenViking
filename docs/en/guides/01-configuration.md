@@ -921,19 +921,17 @@ For a supported file, OpenViking uploads the media to the Ark Files API without 
 
 Media processing sends file content to the configured external provider. Disabled response storage and best-effort deletion reduce unintended retention but do not replace the provider's own privacy and retention controls; uploaded files do not receive an explicit expiration time, so their retention period is determined by Ark's default policy. Ark Files storage/processing and Responses model tokens can incur provider charges, so review your provider's privacy, retention, and billing terms before enabling this feature. See the official Volcengine Ark documentation for [audio understanding](https://docs.volcengine.com/docs/82379/2377589?lang=zh) and [video understanding](https://docs.volcengine.com/docs/82379/1895586?lang=zh).
 
-### bot.compile
+### compile_api
 
-Set the number of concurrent workers per Resource Compile task and stage, for both direct model calls and agent execution:
+Compile runs inside the OpenViking server as durable queue work, like `add_resource`; a task interrupted by a restart runs again from the beginning. Set the number of concurrent workers per Resource Compile task and stage, for both direct model calls and agent transforms:
 
 ```json
 {
-  "bot": {
-    "compile": {
-      "map_concurrency": 8,
-      "shuffle_concurrency": 4,
-      "shuffle_batch_size": 4,
-      "reduce_concurrency": 6
-    }
+  "compile_api": {
+    "map_concurrency": 8,
+    "shuffle_concurrency": 4,
+    "shuffle_batch_size": 4,
+    "reduce_concurrency": 6
   }
 }
 ```
@@ -944,10 +942,11 @@ Set the number of concurrent workers per Resource Compile task and stage, for bo
 | `shuffle_concurrency` | Inherits `vlm.max_concurrent` | Concurrent Shuffle routing jobs and embedding batches |
 | `shuffle_batch_size` | `4` | Maximum primary records per routing request, independent of concurrency and the soft character budget |
 | `reduce_concurrency` | Inherits `vlm.max_concurrent` | Concurrent Reduce jobs; final same-path candidate merges reuse this value |
+| `max_active_tasks_per_user` | `10` | Pending or running Compile tasks allowed per user; more are rejected with `429` |
 
-Concurrency values must be positive integers; omitted or `null` values inherit the default. `shuffle_batch_size` must be a positive integer, defaults to `4`, and does not accept `null`. Routing saves valid decisions individually and re-batches only failed records; the final retry uses single-record requests, with at most three rounds per record. Restart VikingBot after changing these settings. All Compile tasks within one VikingBot service still share the model-request capacity set by `vlm.max_concurrent`, so raising stage concurrency cannot exceed that total limit. Embedding requests also obey the embedding service's own concurrency limit. Recovery uses the same reduce setting by default; an explicit `--concurrency` overrides recovery concurrency.
+Concurrency values must be positive integers; omitted or `null` values inherit the default. `shuffle_batch_size` must be a positive integer and defaults to `4`. Routing saves valid decisions individually and re-batches only failed records; the final retry uses single-record requests, with at most three rounds per record. Restart the server after changing these settings. All Compile tasks in one server share the model-request capacity set by `vlm.max_concurrent`, so raising stage concurrency cannot exceed that total limit. Embedding requests also obey the embedding service's own concurrency limit. `queue_workers.external_task.max_concurrent` sets how many Compile tasks run at once.
 
-Compile inherits the model's thinking and reasoning settings. Model requests use the effective model timeout (`bot.agents.timeout`, or inherited `vlm.timeout`).
+Compile uses the account's `vlm` model and inherits its thinking, reasoning and timeout settings. The former `bot.compile` block is ignored.
 
 ### query_planner
 

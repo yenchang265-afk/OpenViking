@@ -9,7 +9,7 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from vikingbot.compile.results import RecordDraft
+from openviking.compile.results import RecordDraft
 
 # Shared operator and DSL rules; input_binding describes the collection available to each role.
 PLANNING_RULES = """## Available Operators

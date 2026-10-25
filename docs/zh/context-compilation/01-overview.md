@@ -12,7 +12,7 @@
 
 可選的 `--instruction` 用來補充本次任務的範圍、受眾、語言、側重點或日期。
 
-編譯由服務端配置的 [Agent Runtime](../api/23-agent-runtime.md) 執行，本地部署可使用內建 [VikingBot](../concepts/15-vikingbot.md)。它以請求使用者的身份讀取來源和 Skill，在獨立的 Agent Loop 中整理並寫入內容。任務非同步執行，返回 `task_id` 後可查詢進度和結果。
+編譯由 OpenViking 伺服器自身執行，與 `add_resource` 一樣作為持久佇列工作（見 [Agent Runtime API](../api/23-agent-runtime.md)）。它以請求使用者的身份讀取來源和 Skill，通過 plan / map / shuffle / reduce 流水線整理並寫入內容。任務非同步執行，返回 `task_id` 後可查詢進度和結果；被伺服器重啟中斷的任務會從頭重新執行。
 
 ## 一條命令跑起來
 
@@ -52,17 +52,16 @@ Skill 決定輸出內容和結構。倉庫提供以下示例，其中 LLM Wiki �
 這些 Skill 隨 OpenViking 一起發佈（`openviking/builtin_skills/compile`），預設會在伺服器啟動與建立帳戶時安裝到每個帳戶共享的 `viking://agent/skills`。同名的既有 Skill 不會被覆寫，管理員刪除的內建 Skill 也不會被重新安裝；將 `server.builtin_skills` 設為 `false` 即可關閉。在 Studio 的檔案系統頁面中，對資料夾按右鍵選擇 **使用 Skill 編譯 ▸ &lt;Skill&gt;**，即可開啟以該資料夾為來源的編譯表單；對 Skill 資料夾按右鍵則可選擇 **使用此 Skill 編譯**。
 ## 不止生成新產物：整理已有記憶
 
-除了用 Skill 把來源材料編譯成新的知識產物，`ov compile` 還有一種特殊模式——把 `--skill` 設為 `memory`，即可對已有的**記憶**目錄做就地整理（去重、合併、拆分、精簡），且不經過 VikingBot。詳見 [記憶整理](./06-memory-consolidation.md)。
+除了用 Skill 把來源材料編譯成新的知識產物，`ov compile` 還有一種特殊模式——把 `--skill` 設為 `memory`，即可基於記憶框架而非 Skill 流水線，對已有的**記憶**目錄做就地整理（去重、合併、拆分、精簡）。詳見 [記憶整理](./06-memory-consolidation.md)。
 
 ## 前置條件
 
-- 使用 Skill 的示例需要一個已配置 Compile Runtime 的 OpenViking 服務；本地使用需安裝 `openviking[bot]` 依賴，並通過 `--with-bot` 啟用內建 VikingBot。`--skill memory` 模式在程序內執行，不需要 Compile Runtime，也不傳 `--from`。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。
+- 一個已配置 `vlm` 模型的 OpenViking 服務。`--skill memory` 模式不傳 `--from`。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。
 - `ov` CLI 已配置好連線（`~/.openviking/ovcli.conf`，或由 `OPENVIKING_CLI_CONFIG_FILE` 指定的檔案）。
 - 示例中的 `examples/...` 是倉庫相對路徑。先下載 [OpenViking 倉庫](https://github.com/volcengine/OpenViking)，在倉庫根目錄執行命令。
 - 視覺化指令碼需要 Python 3。[LLM Wiki 指令碼](https://github.com/volcengine/OpenViking/blob/main/examples/compile/graph-show/llm-wiki/wiki_graph.py)還需要 `openviking` Python 包。
 
 ## 相關文件
 
-- [VikingBot 概念](../concepts/15-vikingbot.md) — 內建 Compile 執行端
 - [Agent Runtime API](../api/23-agent-runtime.md) — 建立、查詢和取消 Compile 任務的完整參考
 - [Skills API](../api/04-skills.md) — 如何管理和自定義 Skill

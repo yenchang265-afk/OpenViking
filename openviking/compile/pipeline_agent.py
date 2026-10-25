@@ -1,63 +1,26 @@
-"""Focused pipeline children using the existing AgentLoop and isolated file tools."""
+"""Focused pipeline children: a bounded tool loop over task-private scratch files."""
 
 from __future__ import annotations
 
 import json
 import uuid
 from collections import Counter
-from copy import copy
+from typing import Any
 
 import json_repair
 
-from vikingbot.agent.tools.base import Tool
-from vikingbot.agent.tools.compile import CompileChildTool
-from vikingbot.agent.tools.registry import ToolRegistry
-from vikingbot.compile import file_ops
-from vikingbot.compile.hashing import content_hash
-from vikingbot.compile.models import COMPILE_DRAFT_ROOT
-from vikingbot.compile.pipeline_io import TaskFiles, retry_allowed
-from vikingbot.compile.renderer import validate_relative_file_path
-from vikingbot.compile.results import FileResponse, RecordResponse
-from vikingbot.compile.schemas import result_schema
-from vikingbot.compile.skill_resources import EvidenceReader
-from vikingbot.providers.base import LLMProvider
+from openviking.compile import file_ops
+from openviking.compile.hashing import content_hash
+from openviking.compile.models import COMPILE_DRAFT_ROOT
+from openviking.compile.pipeline_io import TaskFiles, retry_allowed
+from openviking.compile.renderer import validate_relative_file_path
+from openviking.compile.results import FileResponse, RecordResponse
+from openviking.compile.schemas import result_schema
+from openviking.compile.skill_resources import EvidenceReader
+from openviking.compile.tool import Tool
 
-
-class ChildProvider(LLMProvider):
-    """Route each child request through the task's bounded, metered provider calls."""
-
-    def __init__(self, model, schema, stage="agent", *, submit=None):
-        super().__init__()
-        self.model = model
-        self.stage = stage
-        self.submit = submit
-        self.failures = Counter()
-
-    def get_default_model(self):
-        return self.model.model
-
-    async def chat(self, messages, tools=None, **kwargs):
-        """Retry truncated output without executing incomplete tool calls."""
-        while True:
-            response = await self.model.call(
-                self.stage, messages, tools, max_tokens=self.model.max_tokens
-            )
-            if response.finish_reason not in {"length", "max_tokens"}:
-                return response
-            error = "Agent output was truncated; use smaller writes or content_ref and complete tool calls"
-            if not retry_allowed(self.failures, error):
-                raise ValueError(error)
-            self.model.metrics["repairs"] += 1
-            messages = [*messages, {"role": "user", "content": error}]
-
-
-async def complete_tool_result(result, session_key):
-    """Keep scoped tool evidence complete for subsequent model requests.
-
-    Child file tools cannot read shared preview spill files, so head/tail previews
-    are not a lossless delivery mechanism for these isolated assignments.
-    """
-    return result
+# Lines returned by one read_file call when no limit is given.
+READ_FILE_DEFAULT_LINES = 400
 
 
 async def prepare_assignment(data, sandbox, root):
@@ -147,7 +110,7 @@ class EmitResult(Tool):
         parameters["required"] = []
         return parameters
 
-    async def execute(self, tool_context, **kwargs):
+    async def execute(self, **kwargs):
         """Return bounded validation feedback; only valid output terminates the child."""
         try:
             if (
@@ -240,92 +203,181 @@ class EmitResult(Tool):
             return feedback
 
 
-def agent_runner(loop, session_key, connection, limits):
-    """Bind an isolated child adapter; queueing/cancellation remain owned by Pipeline.
+class ScratchFileTool(Tool):
+    """read_file/write_file/edit_file confined to one child's private scratch root.
 
-    Each call has fresh history, a private scratch root and the existing subagent
-    iteration limit. Large files are submitted by reference, then hashed and checked.
-    Skill reads use the authenticated task client; source/history catalogs stay hidden.
+    Viking URIs, absolute paths and traversal are rejected; skills and sources are
+    read through read_skill_resource and read_evidence instead.
+    """
+
+    _SCHEMAS = {
+        "read_file": (
+            "Read a UTF-8 file in your scratch directory. offset/limit select zero-based lines.",
+            {
+                "path": {"type": "string"},
+                "offset": {"type": "integer", "minimum": 0},
+                "limit": {"type": "integer", "minimum": 1},
+            },
+            ["path"],
+        ),
+        "write_file": (
+            "Create or replace a UTF-8 file in your scratch directory.",
+            {"path": {"type": "string"}, "content": {"type": "string"}},
+            ["path", "content"],
+        ),
+        "edit_file": (
+            "Replace one exact occurrence of old_text with new_text in a scratch file.",
+            {
+                "path": {"type": "string"},
+                "old_text": {"type": "string"},
+                "new_text": {"type": "string"},
+            },
+            ["path", "old_text", "new_text"],
+        ),
+    }
+
+    def __init__(self, name: str, sandbox: Any, root: str):
+        description, properties, required = self._SCHEMAS[name]
+        self.name, self.description = name, description
+        self.parameters = {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+            "additionalProperties": False,
+        }
+        self.sandbox, self.root = sandbox, root
+
+    def _path(self, path: str) -> str:
+        if str(path).startswith("viking://"):
+            raise ValueError("Scratch file tools only access your own scratch directory")
+        return f"{self.root}/{validate_relative_file_path(path)}"
+
+    async def execute(self, **kwargs: Any) -> str:
+        path = self._path(kwargs["path"])
+        if self.name == "write_file":
+            await self.sandbox.write_file(path, kwargs["content"])
+            return f"Wrote {kwargs['path']}."
+        try:
+            text = (await self.sandbox.read_file_bytes(path)).decode("utf-8")
+        except FileNotFoundError as exc:
+            raise ValueError(f"No such scratch file: {kwargs['path']}") from exc
+        if self.name == "read_file":
+            lines = text.splitlines(keepends=True)
+            offset = kwargs.get("offset", 0)
+            end = offset + kwargs.get("limit", READ_FILE_DEFAULT_LINES)
+            body = "".join(lines[offset:end])
+            remaining = max(0, len(lines) - end)
+            return body + (
+                f"\n[{remaining} more lines; continue with offset={end}]" if remaining else ""
+            )
+        count = text.count(kwargs["old_text"])
+        if count != 1:
+            raise ValueError(f"old_text must occur exactly once; found {count}")
+        await self.sandbox.write_file(path, text.replace(kwargs["old_text"], kwargs["new_text"]))
+        return f"Edited {kwargs['path']}."
+
+
+_AGENT_INSTRUCTIONS = (
+    "\nUse emit to submit. Supplied Skill attachments are complete; "
+    "they fulfill the Skill's reading requirements without a tool call. Do not reread them. "
+    "read_skill_resource is available for additional references. "
+    "Use assigned evidence, Skill attachments and your scratch files for this job. "
+    "Prefer one inline emit for small finished results; scratch writing and rereading "
+    "are optional, not mandatory verification steps. "
+    "Write large/multiple files using write_file, then emit content_ref paths "
+    "relative to your scratch root, without repeating their content. Runtime hashes "
+    "the files and validates paths, revisions and source coverage before acceptance. "
+    "For a large record collection, build a JSON result file incrementally with file "
+    "tools, then emit only result_ref pointing to that file. Finished independent Map "
+    "files may use ready_path plus ready_content_ref and concise routing payloads. "
+    "Use edit_file to repair existing JSON."
+)
+
+
+def agent_runner(limits):
+    """Bind an isolated child loop; queueing/cancellation remain owned by Pipeline.
+
+    Each call has fresh history, a private scratch root and the subagent iteration
+    limit. Large files are submitted by reference, then hashed and checked. Every
+    model request goes through the task's bounded, metered JsonModel.call.
     """
 
     async def run(system, data, schema, validate, model, *, stage="agent"):
-        child_id = uuid.uuid4().hex
-        root = f"{COMPILE_DRAFT_ROOT}/{child_id}"
+        sandbox = model.files.sandbox
+        root = f"{COMPILE_DRAFT_ROOT}/{uuid.uuid4().hex}"
         evidence = EvidenceReader(model.files, data)
-        submit = EmitResult(schema, validate, model.files.sandbox, root, data, model.metrics)
+        submit = EmitResult(schema, validate, sandbox, root, data, model.metrics)
         assignment = data
         if not model.fits(system, data, schema):
-            assignment = await prepare_assignment(data, model.files.sandbox, root)
+            assignment = await prepare_assignment(data, sandbox, root)
             evidence.delivered.clear()
-        registry = ToolRegistry(config=loop.config)
-        registry.register(submit)
+        tools: dict[str, Tool] = {"emit": submit}
         if model.resources:
-            registry.register(model.resources)
+            tools[model.resources.name] = model.resources
         if evidence.allowed - evidence.delivered:
-            registry.register(evidence)
+            tools[evidence.name] = evidence
         for name in ("read_file", "write_file", "edit_file"):
-            tool = loop.tools.get(name)
-            if tool is not None:
-                registry.register(CompileChildTool(tool, root, merge_only=True))
-        tool = loop.tools.get("exec")
-        if (
-            loop.config.sandbox.backend == "direct"
-            and not loop.config.sandbox.backends.direct.allow_compile_exec
-        ):
-            tool = None
-        if tool is not None:
-            await model.files.sandbox.write_file(f"{root}/.keep", "")
-            registry.register(CompileChildTool(tool, root))
-            system += (
-                "\nUse exec with pipelines, Python or shell commands when they improve efficiency."
-            )
-        child = copy(loop)
-        child.provider = ChildProvider(model, schema, stage, submit=submit)
-        child._preview_tool_result = complete_tool_result
-        instructions = (
-            "\nUse emit to submit. Supplied Skill attachments are complete; "
-            "they fulfill the Skill's reading requirements without a tool call. Do not reread them. "
-            "read_skill_resource is available for additional references. "
-            "Use assigned evidence, Skill attachments and your scratch files for this job. "
-            "Prefer one inline emit for small finished results; scratch writing and rereading "
-            "are optional, not mandatory verification steps. "
-            "Write large/multiple files using write_file, then emit content_ref paths "
-            "relative to your scratch root, without repeating their content. Runtime hashes "
-            "the files and validates paths, revisions and source coverage before acceptance. "
-            "For a large record collection, build a JSON result file incrementally with file "
-            "tools, then emit only result_ref pointing to that file. Finished independent Map "
-            "files may use ready_path plus ready_content_ref and concise routing payloads. "
-            "read_skill_resource provides local paths for Skill scripts and their dependencies. "
-            "Use edit_file to repair existing JSON."
-        )
-        if stage == "map_agent":
-            instructions = ""  # Map's prompt covers both inline and scratch-based submission.
-        await child._run_agent_loop(
-            messages=[
+            tools[name] = ScratchFileTool(name, sandbox, root)
+        schemas = [tool.to_schema() for tool in tools.values()]
+        messages: list[dict[str, Any]] = [
+            {
+                "role": "system",
+                # Map's prompt covers both inline and scratch-based submission.
+                "content": system + ("" if stage == "map_agent" else _AGENT_INSTRUCTIONS),
+            },
+            {"role": "user", "content": json.dumps(assignment, ensure_ascii=False)},
+        ]
+        failures: Counter = Counter()
+        for _ in range(limits.subagent_iterations):
+            response = await model.call(stage, messages, schemas, max_tokens=model.max_tokens)
+            if response.finish_reason in {"length", "max_tokens"}:
+                # Never execute incomplete tool calls from truncated output.
+                error = "Agent output was truncated; use smaller writes or content_ref and complete tool calls"
+                if not retry_allowed(failures, error):
+                    raise ValueError(error)
+                model.metrics["repairs"] += 1
+                messages.append({"role": "user", "content": error})
+                continue
+            calls = response.tool_calls or []
+            if not calls:
+                messages.append({"role": "assistant", "content": response.content or ""})
+                messages.append(
+                    {"role": "user", "content": "Submit the result with the emit tool."}
+                )
+                continue
+            messages.append(
                 {
-                    "role": "system",
-                    "content": system + instructions,
-                },
-                {"role": "user", "content": json.dumps(assignment, ensure_ascii=False)},
-            ],
-            session_key=session_key,
-            publish_events=False,
-            tool_registry=registry,
-            stop_tool_names=["emit"],
-            openviking_tool_names=set(registry.tool_names),
-            openviking_connection=connection,
-            allow_final_fallback=False,
-            inject_write_experience=False,
-            agent_id=child_id,
-            context_compact_budget=None,
-            max_iterations=limits.subagent_iterations,
-            should_stop=lambda: not submit.can_retry,
-        )
-        if submit.result is None:
-            raise ValueError(
-                "Required agent transform ended without validated output: "
-                + (submit.last_error or "No emit result was submitted")
+                    "role": "assistant",
+                    "content": response.content,
+                    "tool_calls": [
+                        {
+                            "id": call.id,
+                            "type": "function",
+                            "function": {
+                                "name": call.name,
+                                "arguments": json.dumps(call.arguments, ensure_ascii=False),
+                            },
+                        }
+                        for call in calls
+                    ],
+                }
             )
-        return submit.result
+            for call in calls:
+                tool = tools.get(call.name)
+                try:
+                    if tool is None:
+                        raise ValueError(f"Unknown tool: {call.name}")
+                    result = await tool.execute(**call.arguments)
+                except (ValueError, TypeError, KeyError, OSError) as exc:
+                    result = "Error: " + str(exc)[:800]
+                messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
+            if submit.result is not None:
+                return submit.result
+            if not submit.can_retry:
+                break
+        raise ValueError(
+            "Required agent transform ended without validated output: "
+            + (submit.last_error or "No emit result was submitted")
+        )
 
     return run

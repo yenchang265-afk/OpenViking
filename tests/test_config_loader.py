@@ -217,14 +217,15 @@ def test_queue_worker_concurrency_rejects_non_positive_value(value):
 
 def test_parser_and_compile_api_validation():
     assert ParserApiConfig(max_concurrent=9) == ParserApiConfig()
-    with pytest.raises(ValueError, match="compile_api.base_url must include scheme"):
-        CompileApiConfig(base_url="compile.example.com")
+    with pytest.raises(ValueError):
+        CompileApiConfig(map_concurrency=0)
 
-    config = CompileApiConfig(
-        base_url="https://compile.example.com/",
-    )
-    assert config.base_url == "https://compile.example.com"
-    assert config.gateway_token == ""
+    config = CompileApiConfig(reduce_concurrency=3)
+    assert config.reduce_concurrency == 3
+    assert config.map_concurrency is None
+    assert config.shuffle_batch_size == 4
+    # Settings for the removed remote Compile service are ignored.
+    assert not hasattr(CompileApiConfig(base_url="https://compile.example.com"), "base_url")
 
 
 def test_parser_api_upload_defaults():

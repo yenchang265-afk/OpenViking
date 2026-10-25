@@ -12,6 +12,11 @@ from urllib.parse import quote
 
 import yaml
 
+from openviking.compile.models import (
+    COMPILE_STAGING_ROOT,
+    WikiBundleDraft,
+    WikiLanguage,
+)
 from openviking.core.namespace import context_type_for_uri, relative_uri_path
 from openviking.session.memory.dataclass import MemoryFile, StoredLink
 from openviking.session.memory.utils.link_renderer import LinkRenderer, MarkdownLink
@@ -27,11 +32,6 @@ from openviking.utils.path_safety import (
     validate_safe_viking_uri_path,
 )
 from openviking_cli.utils import VikingURI
-from vikingbot.compile.models import (
-    COMPILE_STAGING_ROOT,
-    WikiBundleDraft,
-    WikiLanguage,
-)
 
 _FRONTMATTER_RE = re.compile(r"\A---[ \t]*\r?\n(.*?)\r?\n---[ \t]*(?:\r?\n|\Z)", re.DOTALL)
 _FRONTMATTER_START_RE = re.compile(rb"\A---[ \t]*\r?\n")

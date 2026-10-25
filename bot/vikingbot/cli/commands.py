@@ -575,16 +575,12 @@ def gateway(
 
     cron = prepare_cron(config, bus)
     agent_loop = prepare_agent_loop(config, bus, session_manager, cron)
-    from vikingbot.compile.service import BotCompileService
-
-    compile_service = BotCompileService(agent_loop=agent_loop)
     channels = prepare_channel(
         config,
         bus,
         fastapi_app=fastapi_app,
         enable_openapi=True,
         openapi_port=effective_port,
-        compile_service=compile_service,
         agent_loop=agent_loop,
     )
     heartbeat = prepare_heartbeat(config, agent_loop, session_manager)
@@ -621,7 +617,6 @@ def gateway(
 
         try:
             await runtime.start(manager)
-            await compile_service.start()
             server_task = asyncio.create_task(server.serve())
             tasks = [
                 server_task,
@@ -645,8 +640,6 @@ def gateway(
             if tasks:
                 await asyncio.gather(combined, return_exceptions=True)
             try:
-                if hasattr(compile_service, "close"):
-                    await compile_service.close()
                 if hasattr(heartbeat, "stop"):
                     heartbeat.stop()
                 if cron is not None and hasattr(cron, "stop"):
@@ -802,7 +795,6 @@ def prepare_channel(
     fastapi_app=None,
     enable_openapi: bool = False,
     openapi_port: int = 18790,
-    compile_service=None,
     agent_loop=None,
 ):
     """Prepare channels for the bot.
@@ -829,7 +821,6 @@ def prepare_channel(
             bus,
             app=fastapi_app,  # Pass the external FastAPI app
             global_config=config,
-            compile_service=compile_service,
             agent_loop=agent_loop,
         )
         from vikingbot.studio.service import StudioService

@@ -4,15 +4,12 @@ from __future__ import annotations
 
 import asyncio
 import json
-import posixpath
-import uuid
 
+from openviking.compile.hashing import content_hash
+from openviking.compile.renderer import validate_relative_file_path
+from openviking.compile.tool import Tool
 from openviking.core.namespace import relative_uri_path
 from openviking.utils.path_safety import safe_join_viking_uri
-from vikingbot.agent.tools.base import Tool
-from vikingbot.compile.hashing import content_hash
-from vikingbot.compile.models import COMPILE_STAGING_ROOT
-from vikingbot.compile.renderer import validate_relative_file_path
 
 
 class SkillResources(Tool):
@@ -21,8 +18,6 @@ class SkillResources(Tool):
     A task snapshots at most 32 attachments, 256 KiB each and 1 MiB total. Reads
     return complete requested line ranges with hashes and explicit remaining lines.
     Hashes bind execution caches and recovery to attachments read by execution stages.
-    Complete snapshots are saved in the task sandbox with their Skill-relative layout
-    so commands can use scripts and loaded dependencies through ordinary file paths.
     """
 
     name = "read_skill_resource"
@@ -48,13 +43,6 @@ class SkillResources(Tool):
         self.snapshots: dict[str, str] = {}
         self.hashes: dict[str, str] = {}
         self.lock = asyncio.Lock()
-        self.local_root = posixpath.join(
-            files.sandbox.sandbox_cwd, COMPILE_STAGING_ROOT, "skills", uuid.uuid4().hex
-        )
-        self.description += (
-            f" Loaded attachments are saved under {self.local_root} with their Skill-relative "
-            "paths; reads return local_path for the complete file in the sandbox."
-        )
 
     def path(self, path):
         """Reject traversal, encoded traversal and namespace escape before any client read."""
@@ -84,7 +72,6 @@ class SkillResources(Tool):
                 if size + len(raw) > 1024 * 1024:
                     raise ValueError("Skill dependencies exceed 1 MiB")
                 content = raw.decode("utf-8")
-                await self.files.sandbox.write_file(posixpath.join(self.local_root, path), content)
                 self.snapshots[path] = content
                 self.hashes[path] = content_hash(raw)
                 await self.files.put("skill-dependencies", self.hashes)
@@ -109,7 +96,6 @@ class SkillResources(Tool):
         return json.dumps(
             {
                 "path": path,
-                "local_path": posixpath.join(self.local_root, path),
                 "sha256": self.hashes[path],
                 "offset": offset,
                 "end": end,

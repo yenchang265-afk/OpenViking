@@ -10,11 +10,11 @@ from array import array
 from collections.abc import Sequence
 from threading import Event
 
+from openviking.compile.hashing import digest
+from openviking.compile.pipeline_io import MAX_JOB_ATTEMPTS, bounded_jobs
+from openviking.compile.plan import Routing
+from openviking.compile.results import Group, Record, RouteBatchResponse, RouteDecision
 from openviking.core.namespace import relative_uri_path
-from vikingbot.compile.hashing import digest
-from vikingbot.compile.pipeline_io import MAX_JOB_ATTEMPTS, bounded_jobs
-from vikingbot.compile.plan import Routing
-from vikingbot.compile.results import Group, Record, RouteBatchResponse, RouteDecision
 
 
 def top_candidates(

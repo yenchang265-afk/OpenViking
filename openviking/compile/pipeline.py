@@ -11,22 +11,22 @@ from typing import Any
 
 from loguru import logger
 
+from openviking.compile import entry
+from openviking.compile.hashing import content_hash, digest
+from openviking.compile.models import CompileFailure, utc_now
+from openviking.compile.ops import finalize as finalize_op
+from openviking.compile.ops import map as map_op
+from openviking.compile.ops import reduce as reduce_op
+from openviking.compile.ops.shuffle import Shuffle
+from openviking.compile.pipeline_io import JsonModel, TaskFiles, bounded_jobs
+from openviking.compile.plan import PLANNING_RULES, Contract, PlanProposal, parse_plan
+from openviking.compile.renderer import RenderedBundle
+from openviking.compile.results import Record
+from openviking.compile.review import REVIEW_PROMPT
+from openviking.compile.review import run as review_stage
+from openviking.compile.skill_resources import SkillResources
 from openviking.core.namespace import classify_uri
 from openviking.utils.path_safety import safe_join_viking_uri
-from vikingbot.compile import entry
-from vikingbot.compile.hashing import content_hash, digest
-from vikingbot.compile.models import CompileFailure, utc_now
-from vikingbot.compile.ops import finalize as finalize_op
-from vikingbot.compile.ops import map as map_op
-from vikingbot.compile.ops import reduce as reduce_op
-from vikingbot.compile.ops.shuffle import Shuffle
-from vikingbot.compile.pipeline_io import JsonModel, TaskFiles, bounded_jobs
-from vikingbot.compile.plan import PLANNING_RULES, Contract, PlanProposal, parse_plan
-from vikingbot.compile.renderer import RenderedBundle
-from vikingbot.compile.results import Record
-from vikingbot.compile.review import REVIEW_PROMPT
-from vikingbot.compile.review import run as review_stage
-from vikingbot.compile.skill_resources import SkillResources
 
 _PLANNER = """## Task Description
 

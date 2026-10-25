@@ -319,6 +319,10 @@ class DeletionService:
             if scheduler is not None:
                 await run_to_completion(lambda: scheduler.delete_tasks(account_id, user_id))
             await run_to_completion(lambda: self._cancel_tasks(account_id, user_id))
+            compile_service = getattr(self._service, "compile", None)
+            if compile_service is not None:
+                # Kept scratch of failed Compile attempts holds copies of the sources.
+                await run_to_completion(lambda: compile_service.purge_scratch(account_id, user_id))
             await run_to_completion(
                 lambda: tracker.delete_tasks(
                     account_id,

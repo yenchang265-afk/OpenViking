@@ -1,14 +1,13 @@
-"""Models and stable limits for VikingBot compile tasks."""
+"""Models and stable limits for Compile tasks."""
 
 from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from openviking.session.memory.dataclass import WikiLink
-from vikingbot.channels.openapi_models import OpenVikingConnection
 
 DEFAULT_COMPILE_INSTRUCTION = (
     "Follow the loaded Skill's instructions to transform the provided source materials "
@@ -18,7 +17,6 @@ COMPILE_STAGING_ROOT = "__compile_staging__"
 COMPILE_OUTPUT_ROOT = f"{COMPILE_STAGING_ROOT}/output"
 COMPILE_DRAFT_ROOT = f"{COMPILE_STAGING_ROOT}/drafts"
 OKF_VERSION = "0.1"
-TERMINAL_STATUSES = frozenset({"completed", "failed", "cancelled"})
 WikiLanguage = Literal["en", "zh-CN"]
 
 
@@ -52,26 +50,6 @@ class CompileLimits(BaseModel):
     cleanup_grace_seconds: float = 40
     terminal_task_retention_seconds: float = 24 * 60 * 60
     terminal_task_records: int = 1000
-
-
-class CompileRequest(BaseModel):
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)
-
-    from_: list[str] = Field(alias="from", min_length=1)
-    to: str = Field(min_length=1)
-    instruction: str | None = None
-    skill: str = Field(min_length=1)
-    args: dict[str, Any] | None = None
-    openviking_connection: OpenVikingConnection | None = None
-    _principal_scope: str = PrivateAttr(default="local")
-
-    @model_validator(mode="before")
-    @classmethod
-    def _accept_reason(cls, data: Any) -> Any:
-        if isinstance(data, dict) and "reason" in data:
-            data = dict(data)
-            data.setdefault("instruction", data.pop("reason"))
-        return data
 
 
 class SanitizedCompileRequest(BaseModel):
@@ -219,59 +197,15 @@ class CompileResult(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
-class CompileTask(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    task_id: str
-    principal_scope: str
-    sanitized_request: SanitizedCompileRequest
-    status: Literal[
-        "accepted",
-        "running",
-        "committing",
-        "cancelling",
-        "completed",
-        "failed",
-        "cancelled",
-    ]
-    stage: str
-    created_at: str
-    updated_at: str
-    meta: dict[str, Any] = Field(default_factory=dict)
-    result: CompileResult | None = None
-    error: CompileErrorInfo | None = None
-
-    def public_dict(self) -> dict[str, Any]:
-        data = self.model_dump(exclude={"principal_scope", "sanitized_request"}, exclude_none=True)
-        if self.result is not None:
-            data["result"] = self.result.model_dump(by_alias=True)
-        return data
-
-
-class CompileAccepted(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    session_id: str
-    task_id: str
-    status: Literal["accepted"] = "accepted"
-    to: str
-
-
-class CompileSessionRequest(BaseModel):
-    """Status or cancellation request scoped by the authenticated caller and session ID."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    session_id: str = Field(min_length=1)
-    # Original task args forwarded by OpenViking; optional and unused for session lookup.
-    args: dict[str, Any] | None = None
-
-
 class CompileFailure(RuntimeError):
-    def __init__(self, code: str, message: str, *, stage: str):
+    def __init__(
+        self, code: str, message: str, *, stage: str, result: dict[str, Any] | None = None
+    ):
         super().__init__(message)
         self.code = code
         self.stage = stage
+        # Diagnostic result (e.g. skipped conflicts) kept on the failed task.
+        self.result = result
 
 
 def utc_now() -> str:
@@ -279,19 +213,14 @@ def utc_now() -> str:
 
 
 __all__ = [
-    "CompileAccepted",
     "CompileErrorInfo",
     "CompileFileDraft",
     "CompileFailure",
     "CompileLimits",
-    "CompileRequest",
     "CompileResult",
-    "CompileSessionRequest",
-    "CompileTask",
     "DEFAULT_COMPILE_INSTRUCTION",
     "OKF_VERSION",
     "SanitizedCompileRequest",
-    "TERMINAL_STATUSES",
     "WikiBundleDraft",
     "WikiLanguage",
     "WikiPageDraft",

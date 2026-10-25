@@ -1,6 +1,6 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""QueueFS consumer for externally executed tasks."""
+"""QueueFS consumer for durable, in-process task execution (e.g. Compile)."""
 
 from __future__ import annotations
 

@@ -5,21 +5,21 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING
 
-from openviking.core.namespace import relative_uri_path
-from openviking.utils.path_safety import safe_join_viking_uri
-from openviking_cli.exceptions import OpenVikingError
-from vikingbot.compile import file_ops
-from vikingbot.compile.hashing import content_hash
-from vikingbot.compile.models import CompileFailure
-from vikingbot.compile.renderer import (
+from openviking.compile import file_ops
+from openviking.compile.hashing import content_hash
+from openviking.compile.models import CompileFailure
+from openviking.compile.renderer import (
     RenderedBundle,
     _link_uri,
     finalize_resource_output,
     relocate_wiki_links,
 )
+from openviking.core.namespace import relative_uri_path
+from openviking.utils.path_safety import safe_join_viking_uri
+from openviking_cli.exceptions import OpenVikingError
 
 if TYPE_CHECKING:
-    from vikingbot.compile.pipeline import Pipeline
+    from openviking.compile.pipeline import Pipeline
 
 
 async def run(runtime: Pipeline, references: list[str]) -> RenderedBundle:

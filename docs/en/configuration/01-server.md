@@ -64,7 +64,7 @@ Optional sections use their defaults when omitted. Unknown fields in `ov.conf` a
 | `parsers` | object | parser defaults | PDF, code, image, audio, video, and text parsing |
 | `semantic` | object | built-in defaults | Abstract and overview generation limits |
 | `parser_api` | object | disabled | Third-party file parser API |
-| `compile_api` | object | disabled | External Compile task API |
+| `compile_api` | object | built-in defaults | In-server Compile pipeline concurrency |
 | `connector` | object | disabled | External Connector ingestion service |
 | `encryption` | object | disabled | File and secret encryption |
 | `git` | object | local | Version backend: `local`, `s3`, or `agfs` (default with S3 tiered storage) |

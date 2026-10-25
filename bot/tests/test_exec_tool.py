@@ -2,8 +2,6 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Regression tests for agent command access and working directories."""
 
-from types import SimpleNamespace
-
 import pytest
 from vikingbot.agent.tools.factory import register_default_tools
 from vikingbot.agent.tools.registry import ToolRegistry
@@ -57,14 +55,3 @@ async def test_exec_tool_runs_in_selected_directory(tmp_path, relative_dir, allo
         assert result.strip() == str(working_dir.resolve())
     else:
         assert result == "Error: Tool 'exec' not found"
-
-
-def test_compile_exec_requires_opt_in():
-    from vikingbot.compile.service import BotCompileService
-
-    service = SimpleNamespace(config=Config())
-    assert not BotCompileService._compile_capabilities(service).exec_enabled
-    service.config.sandbox.backends.direct.allow_compile_exec = True
-    assert BotCompileService._compile_capabilities(service).exec_enabled
-    service.config.sandbox.backends.direct.allow_exec = False
-    assert not BotCompileService._compile_capabilities(service).exec_enabled
