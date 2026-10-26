@@ -12,6 +12,7 @@ import {
   PlusIcon,
   RefreshCwIcon,
   SparklesIcon,
+  Trash2Icon,
   UserRoundIcon,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -43,6 +44,7 @@ import { useAppConnection } from '#/hooks/use-app-connection'
 import { getOvResult, isOvClientError, ovClient } from '#/lib/ov-client'
 
 import { CreateSkillDialog } from './-components/create-skill-dialog'
+import { DeleteSkillDialog } from './-components/delete-skill-dialog'
 import {
   SKILL_SCOPE_ICONS,
   SkillScopeTabs,
@@ -50,6 +52,7 @@ import {
 } from './-components/skill-scope-tabs'
 import { AddSkillSheet } from './-components/add-skill-sheet'
 import type { SkillScope } from './-components/skill-scope-tabs'
+import { skillTargetUri } from './-lib/delete-skill'
 
 export const Route = createFileRoute('/skills')({
   component: SkillsRoute,
@@ -180,13 +183,12 @@ async function fetchSkills(): Promise<SkillItem[]> {
 }
 
 async function fetchSkillDetail(skill: SkillItem): Promise<SkillDetail> {
-  const targetUri = skill.uri.slice(0, skill.uri.lastIndexOf('/'))
   const result = await getOvResult<unknown>(
     ovClient.client.get({
       query: {
         include_content: true,
         include_files: true,
-        target_uri: targetUri,
+        target_uri: skillTargetUri(skill.uri),
       },
       url: `/api/v1/skills/${encodeURIComponent(skill.name)}`,
     }),
@@ -203,6 +205,7 @@ function SkillsRoute() {
   )
   const [createOpen, setCreateOpen] = React.useState(false)
   const [addOpen, setAddOpen] = React.useState(false)
+  const [deleteOpen, setDeleteOpen] = React.useState(false)
   const skillsQuery = useQuery({
     queryFn: fetchSkills,
     queryKey: ['skills', identityScopeKey],
@@ -461,6 +464,18 @@ function SkillsRoute() {
                   <ExternalLinkIcon />
                 </Button>
               ) : null}
+              {selectedSkill ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setDeleteOpen(true)}
+                >
+                  <Trash2Icon />
+                  {t('delete.open')}
+                </Button>
+              ) : null}
             </div>
           </SheetHeader>
 
@@ -559,6 +574,23 @@ function SkillsRoute() {
           </div>
         </SheetContent>
       </Sheet>
+
+      {selectedSkill ? (
+        <DeleteSkillDialog
+          open={deleteOpen}
+          onOpenChange={setDeleteOpen}
+          skill={selectedSkill}
+          getErrorMessage={getErrorMessage}
+          onDeleted={(skill) => {
+            setSelectedSkill(null)
+            toast.success(t('delete.deleted', { name: skill.name }))
+            queryClient.removeQueries({
+              queryKey: ['skill-detail', identityScopeKey, skill.uri],
+            })
+            void queryClient.invalidateQueries({ queryKey: ['skills'] })
+          }}
+        />
+      ) : null}
     </div>
   )
 }

@@ -194,6 +194,69 @@ async def test_skills_api_list_show_find_and_delete(client):
     assert missing_privacy_response.status_code == 404
 
 
+async def test_skills_api_delete_with_target_uri_stays_in_that_scope(client):
+    added = await _add_skill(client, "scoped-skill", "User-scope skill")
+
+    wrong_scope = await client.delete(
+        "/api/v1/skills/scoped-skill",
+        params={"target_uri": "viking://agent/skills"},
+    )
+    assert wrong_scope.status_code == 404, wrong_scope.text
+    assert (await client.get("/api/v1/skills/scoped-skill")).status_code == 200
+
+    target_uri = added["uri"].rsplit("/", 1)[0]
+    right_scope = await client.delete(
+        "/api/v1/skills/scoped-skill",
+        params={"target_uri": target_uri},
+    )
+    assert right_scope.status_code == 200, right_scope.text
+    assert right_scope.json()["result"]["uri"] == added["uri"]
+    assert (await client.get("/api/v1/skills/scoped-skill")).status_code == 404
+
+
+async def test_skills_api_delete_keeps_privacy_shared_with_other_scope(client):
+    """Privacy config is keyed by skill name, so a same-named skill in the
+    other scope still reads it after one of the two is deleted."""
+    user_skill = await _add_skill(client, "twin-skill", "User copy")
+    agent_response = await client.post(
+        "/api/v1/skills",
+        json={
+            "data": _skill_md("twin-skill", "Shared copy"),
+            "target_uri": "viking://agent/skills",
+            "wait": True,
+        },
+    )
+    assert agent_response.status_code == 200, agent_response.text
+    agent_skill = agent_response.json()["result"]
+    privacy_response = await client.post(
+        "/api/v1/privacy-configs/skill/twin-skill",
+        json={"values": {"api_key": "secret-1"}, "change_reason": "seed"},
+    )
+    assert privacy_response.status_code == 200, privacy_response.text
+
+    first = await client.delete(
+        "/api/v1/skills/twin-skill",
+        params={"target_uri": user_skill["uri"].rsplit("/", 1)[0]},
+    )
+    assert first.status_code == 200, first.text
+    first_result = first.json()["result"]
+    assert first_result["privacy_deleted"] is False
+    assert first_result["privacy_kept_for"] == agent_skill["uri"]
+    kept = await client.get("/api/v1/privacy-configs/skill/twin-skill")
+    assert kept.status_code == 200, kept.text
+
+    last = await client.delete(
+        "/api/v1/skills/twin-skill",
+        params={"target_uri": "viking://agent/skills"},
+    )
+    assert last.status_code == 200, last.text
+    last_result = last.json()["result"]
+    assert last_result["privacy_deleted"] is True
+    assert "privacy_kept_for" not in last_result
+    gone = await client.get("/api/v1/privacy-configs/skill/twin-skill")
+    assert gone.status_code == 404
+
+
 async def test_skills_api_update_requires_matching_name(client):
     await _add_skill(client, "update-skill", "Original description")
 

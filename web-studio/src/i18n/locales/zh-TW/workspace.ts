@@ -474,6 +474,17 @@ const workspace = {
       },
       failed: '技能建立失敗：{{error}}',
     },
+    delete: {
+      open: '刪除',
+      title: '要刪除 {{name}} 嗎？',
+      description:
+        '將移除 {{uri}}，包含 SKILL.md 及其中所有檔案。Agent 將無法再使用此技能。此操作無法復原。',
+      cancel: '取消',
+      confirm: '刪除技能',
+      deleting: '正在刪除...',
+      deleted: '已刪除技能 {{name}}',
+      failed: '技能刪除失敗：{{error}}',
+    },
     detail: '詳情',
     openFilesystem: '在檔案系統中開啟',
     viewDetail: '檢視 {{name}} 詳情',
