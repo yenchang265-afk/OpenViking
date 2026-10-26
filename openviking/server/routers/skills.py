@@ -317,6 +317,32 @@ async def _require_skill(
     raise NotFoundError(_skill_root_uri(ctx, skill_name), "skill")
 
 
+async def _same_named_skill_elsewhere(
+    service, ctx: RequestContext, skill_name: str, deleted_root_uri: str
+) -> Optional[str]:
+    """Return the root of a same-named skill in another scope, if one remains.
+
+    An unreadable scope counts as still holding the skill: keeping a privacy
+    config is recoverable, deleting one that is still used is not.
+    """
+    for scope_root in (None, "viking://agent/skills"):
+        root_uri = _skill_root_uri(ctx, skill_name, scope_root)
+        if root_uri == deleted_root_uri:
+            continue
+        try:
+            stat = await service.fs.stat(root_uri, ctx=ctx, skip_count=True)
+        except NotFoundError:
+            continue
+        except Exception:
+            logger.warning(
+                "Keeping skill privacy config: could not check %s", root_uri, exc_info=True
+            )
+            return root_uri
+        if stat and stat.get("isDir", False):
+            return root_uri
+    return None
+
+
 async def _list_skill_files(
     service,
     ctx: RequestContext,
@@ -1077,11 +1103,18 @@ async def delete_skill(
     root_uri = await _require_skill(service, _ctx, skill_name, target_uri, fallback=False)
     result = await service.fs.rm(root_uri, ctx=_ctx, recursive=True)
     privacy_deleted = False
+    privacy_kept_for: Optional[str] = None
     privacy = service.privacy_configs
     if privacy is not None:
-        privacy_deleted = await privacy.delete(_ctx, "skill", skill_name)
+        # Privacy config is keyed by skill name only, so a same-named skill in
+        # the other scope still restores from it; keep it while one remains.
+        privacy_kept_for = await _same_named_skill_elsewhere(service, _ctx, skill_name, root_uri)
+        if privacy_kept_for is None:
+            privacy_deleted = await privacy.delete(_ctx, "skill", skill_name)
     response_result: Dict[str, Any] = {"name": skill_name, "uri": root_uri, "root_uri": root_uri}
     if isinstance(result, dict) and "estimated_deleted_count" in result:
         response_result["estimated_deleted_count"] = result["estimated_deleted_count"]
     response_result["privacy_deleted"] = privacy_deleted
+    if privacy_kept_for is not None:
+        response_result["privacy_kept_for"] = privacy_kept_for
     return Response(status="ok", result=response_result)
