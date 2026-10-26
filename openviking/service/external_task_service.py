@@ -418,12 +418,23 @@ class ExternalTaskService:
             claimed = True
             on_start = getattr(provider, "on_start", None)
             if on_start is not None:
-                started = await on_start(task)
+                try:
+                    started = await on_start(task)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    # A failure here must still become the task's outcome; an escaped
+                    # exception would leave the delivery unacked and the target claimed.
+                    logger.exception("Durable task %s failed before starting", task_id)
+                    code = exc.code if isinstance(exc, ExternalTaskError) else "INTERNAL"
+                    started = ExternalTaskSnapshot(
+                        status="failed", error_code=code, error_message=str(exc)
+                    )
                 if started == "busy":
                     # Another instance owns the target; the finally block releases it here.
                     return False
                 if isinstance(started, ExternalTaskSnapshot):
-                    await self._apply_snapshot(
+                    await self._persist_outcome(
                         started, task_id=task_id, account_id=account_id, user_id=user_id
                     )
                     return True

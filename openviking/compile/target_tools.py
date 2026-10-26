@@ -13,6 +13,7 @@ import json
 from typing import Any
 
 from openviking.compile.tool import Tool
+from openviking.core.namespace import relative_uri_path
 
 # Reads per multi_read call run concurrently up to this bound.
 _READ_CONCURRENCY = 8
@@ -157,10 +158,64 @@ class SearchTool(Tool):
         limit: int = 10,
         **_: Any,
     ) -> str:
-        result = await self.client.find(query, target_uri=target_uri, limit=limit)
+        """Return matches as JSON; search failures are reported to the model, not raised."""
+        try:
+            result = await self.client.find(query, target_uri=target_uri, limit=limit)
+        except Exception as exc:
+            return f"Error searching Viking resources: {exc}"
         if hasattr(result, "to_dict"):
             result = result.to_dict()
+        # Snippets cannot supply live rules from the task's pinned Skill.
+        return json.dumps(_drop_pinned(result, self.client), ensure_ascii=False, default=str)
+
+
+class GlobTool(Tool):
+    name = "openviking_glob"
+    description = (
+        "Find files in the compile target by glob pattern (e.g. **/name.md). "
+        "uri must be the target or a directory inside it."
+    )
+    parameters = {
+        "type": "object",
+        "properties": {
+            "pattern": {"type": "string", "minLength": 1},
+            "uri": {"type": "string", "description": "Target directory to search."},
+        },
+        "required": ["pattern"],
+    }
+
+    def __init__(self, client: Any, target: str):
+        self.client = client
+        self.target = target.rstrip("/")
+
+    async def execute(
+        self, _tool_context: Any = None, *, pattern: str, uri: str | None = None, **_: Any
+    ) -> str:
+        """Return matches as JSON; queries outside the target or failures return an error."""
+        uri = (uri or self.target).rstrip("/")
+        if uri != self.target and not relative_uri_path(self.target, uri):
+            return f"Error: uri must be {self.target} or a directory inside it"
+        try:
+            result = await self.client.glob(pattern, uri)
+        except Exception as exc:
+            return f"Error globbing Viking resources: {exc}"
         return json.dumps(result, ensure_ascii=False, default=str)
+
+
+def _drop_pinned(value: Any, client: Any) -> Any:
+    """Remove result items located inside the task's pinned Skill package."""
+    pinned = getattr(client, "is_pinned_skill_uri", None)
+    if pinned is None:
+        return value
+    if isinstance(value, list):
+        return [
+            _drop_pinned(item, client)
+            for item in value
+            if not (isinstance(item, dict) and pinned(str(item.get("uri") or "")))
+        ]
+    if isinstance(value, dict):
+        return {key: _drop_pinned(item, client) for key, item in value.items()}
+    return value
 
 
 def target_tools(client: Any) -> dict[str, Tool]:

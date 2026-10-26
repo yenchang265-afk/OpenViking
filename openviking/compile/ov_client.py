@@ -60,6 +60,10 @@ class InProcessVikingClient:
         # Recorded on published files; "compile" defers indexing to task finalization.
         self._edit_source = edit_source
 
+    def is_pinned_skill_uri(self, uri: str) -> bool:
+        """True for URIs inside the pinned Skill package, whose reads use the snapshot."""
+        return self._snapshot_ref(uri) is not None
+
     def _snapshot_ref(self, uri: str) -> str | None:
         snapshot = self._skill_snapshot
         if snapshot and (uri == snapshot["uri"] or uri.startswith(snapshot["uri"] + "/")):

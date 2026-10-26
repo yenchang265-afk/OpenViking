@@ -18,6 +18,7 @@ from openviking.compile.renderer import validate_relative_file_path
 from openviking.compile.results import FileResponse, RecordResponse
 from openviking.compile.schemas import result_schema
 from openviking.compile.skill_resources import EvidenceReader
+from openviking.compile.target_tools import GlobTool
 from openviking.compile.tool import Tool
 
 # Lines returned by one read_file call when no limit is given.
@@ -348,6 +349,10 @@ def agent_runner(limits):
             assignment = await prepare_assignment(data, sandbox, root)
             evidence.delivered.clear()
         tools: dict[str, Tool] = {"emit": submit}
+        if final_review and model.resources:
+            # Staging holds only this run's outputs; review checks references in the target.
+            glob = GlobTool(model.resources.client, data["target"])
+            tools[glob.name] = glob
         if model.resources:
             tools[model.resources.name] = model.resources
         if evidence.allowed - evidence.delivered:

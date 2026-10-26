@@ -3,8 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import shutil
+from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+
+
+@dataclass(frozen=True)
+class ScratchFile:
+    """A regular file in scratch; ``path`` is relative to the scratch root."""
+
+    path: str
+    size: int
 
 
 class ScratchDir:
@@ -43,9 +53,50 @@ class ScratchDir:
 
         await asyncio.to_thread(write)
 
+    async def write_file_bytes(self, relative: str, content: bytes) -> None:
+        await self.write_file(relative, content)
+
     async def read_file_bytes(self, relative: str) -> bytes:
         path = self.local_file_path(relative)
         return await asyncio.to_thread(path.read_bytes)
+
+    async def list_files(
+        self, relative: str = ".", *, max_entries: int | None
+    ) -> list[ScratchFile]:
+        """Recursively list regular files below ``relative``; symlinks are not followed.
+
+        Returned paths are relative to the scratch root and include ``relative``.
+        A ``max_entries`` quota counts directories and files and raises ValueError
+        on overflow; None lists everything.
+        """
+        if max_entries is not None and max_entries <= 0:
+            raise ValueError("max_entries must be positive")
+        start = PurePosixPath(relative)
+        start_path = self.local_file_path(relative)
+
+        def inventory() -> list[ScratchFile]:
+            files: list[ScratchFile] = []
+            pending = [(start, start_path)]
+            visited = 0
+            while pending:
+                directory, local_directory = pending.pop()
+                try:
+                    entries = list(os.scandir(local_directory))
+                except FileNotFoundError:
+                    continue
+                for entry in entries:
+                    visited += 1
+                    if max_entries is not None and visited > max_entries:
+                        raise ValueError(f"Scratch inventory exceeds {max_entries} entries")
+                    child = directory / entry.name
+                    if entry.is_dir(follow_symlinks=False):
+                        pending.append((child, Path(entry.path)))
+                    elif entry.is_file(follow_symlinks=False):
+                        size = entry.stat(follow_symlinks=False).st_size
+                        files.append(ScratchFile(path=child.as_posix(), size=size))
+            return sorted(files, key=lambda item: item.path)
+
+        return await asyncio.to_thread(inventory)
 
     async def list_dir(self, relative: str) -> list[str]:
         """Return sorted entry names; directories end with ``/``."""

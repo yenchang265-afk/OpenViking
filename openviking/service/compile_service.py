@@ -245,6 +245,10 @@ class CompileService:
         submitted = self._payload(normalized)
         payload = submitted
         if self._lifecycle is not None:
+            # Reject at capacity before prepare() saves sources, schedule and key.
+            # _submit re-checks under the owner lock; holding that lock across
+            # prepare() would invert the scheduler's target-then-owner lock order.
+            await self._ensure_capacity(ctx)
             payload = await self._lifecycle.prepare(
                 submitted, ctx, instruction_set=request._instruction_sent
             )

@@ -383,9 +383,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                 select(
                     exists().where(
                         Work.task_id == task_id,
-                        Work.state.not_in(
-                            [WorkState.DONE.value, WorkState.FAILED.value]
-                        ),
+                        Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]),
                     )
                 )
             )
@@ -401,9 +399,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
         user_id: Optional[str] = None,
     ) -> list[WorkRecord]:
         Work = self._models.Work
-        statement = select(Work).where(
-            *self._work_query(Work, task_id, None, account_id, user_id)
-        )
+        statement = select(Work).where(*self._work_query(Work, task_id, None, account_id, user_id))
         if work_ids is not None:
             ids = set(work_ids)
             if not ids:
@@ -415,9 +411,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
     async def _event_history(self, session: AsyncSession, task_id: str) -> Optional[dict]:
         Event = self._models.Event
         rows = (
-            await session.scalars(
-                select(Event).where(Event.task_id == task_id).order_by(Event.seq)
-            )
+            await session.scalars(select(Event).where(Event.task_id == task_id).order_by(Event.seq))
         ).all()
         if not rows:
             return None
@@ -461,9 +455,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
             "dropped_count": int(history["dropped_count"]),
             "started_mid_task": bool(history["started_mid_task"]),
         }
-        await session.execute(
-            update(Event).where(Event.task_id == task_id).values(**metadata)
-        )
+        await session.execute(update(Event).where(Event.task_id == task_id).values(**metadata))
         for item in items:
             if int(item["seq"]) in existing:
                 continue
@@ -480,9 +472,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                     **metadata,
                 )
             )
-        await session.execute(
-            delete(Event).where(Event.task_id == task_id, Event.seq < min(seqs))
-        )
+        await session.execute(delete(Event).where(Event.task_id == task_id, Event.seq < min(seqs)))
 
     async def _lock_work(self, session: AsyncSession, task_id: str, work_id: str) -> Any:
         Work = self._models.Work
@@ -782,9 +772,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                         select(Work.task_id)
                         .where(
                             Work.task_id.in_(task_ids),
-                            Work.state.not_in(
-                                [WorkState.DONE.value, WorkState.FAILED.value]
-                            ),
+                            Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]),
                         )
                         .distinct()
                     )
@@ -807,9 +795,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                     )
                 )
             if blockers:
-                active = [
-                    item for item in blockers if item.code is StoreOperationCode.ACTIVE_TASK
-                ]
+                active = [item for item in blockers if item.code is StoreOperationCode.ACTIVE_TASK]
                 if active:
                     code = StoreOperationCode.ACTIVE_TASK
                     message = "Cannot delete active task records: " + ", ".join(
@@ -875,9 +861,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                         select(Work.task_id)
                         .where(
                             Work.task_id.in_(task_ids),
-                            Work.state.not_in(
-                                [WorkState.DONE.value, WorkState.FAILED.value]
-                            ),
+                            Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]),
                         )
                         .distinct()
                     )
@@ -998,8 +982,8 @@ class MySQLTaskWorkStore(TaskWorkStore):
         task_id: str,
         patch: TaskPatch,
         *,
-        account_id: str,
-        user_id: str,
+        account_id: Optional[str],
+        user_id: Optional[str],
     ) -> StoreOperationResult:
         Task = self._models.Task
         async with self._transaction() as session:
@@ -1008,9 +992,8 @@ class MySQLTaskWorkStore(TaskWorkStore):
                 selected.append(Task.stage)
             if "meta" not in patch.clear_fields and patch.meta is not None:
                 selected.append(Task.meta)
-            if (
-                "auth" not in patch.clear_fields
-                and (patch.auth is not None or patch.add_enqueue_complete_work_ids)
+            if "auth" not in patch.clear_fields and (
+                patch.auth is not None or patch.add_enqueue_complete_work_ids
             ):
                 selected.append(Task.auth)
             result = await session.execute(
@@ -1323,9 +1306,10 @@ class MySQLTaskWorkStore(TaskWorkStore):
             row = result.one_or_none()
             if row is None:
                 return _not_found_result()
-            if row.status in {
-                item.value for item in TERMINAL_TASK_STATUSES
-            } or row.status == TaskStatus.CANCELLING.value:
+            if (
+                row.status in {item.value for item in TERMINAL_TASK_STATUSES}
+                or row.status == TaskStatus.CANCELLING.value
+            ):
                 return StoreOperationResult.rejected(
                     StoreOperationCode.ALREADY_TERMINAL
                     if row.status in {item.value for item in TERMINAL_TASK_STATUSES}
@@ -1695,12 +1679,8 @@ class MySQLTaskWorkStore(TaskWorkStore):
     ) -> bool:
         Work = self._models.Work
         async with self._session_factory() as session:
-            predicates = list(
-                self._work_query(Work, task_id, None, account_id, user_id)
-            )
-            predicates.append(
-                Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value])
-            )
+            predicates = list(self._work_query(Work, task_id, None, account_id, user_id))
+            predicates.append(Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]))
             if exclude_work_id is not None:
                 predicates.append(Work.work_id != exclude_work_id)
             return bool(await session.scalar(select(exists().where(*predicates))))

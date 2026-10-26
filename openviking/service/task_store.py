@@ -214,9 +214,11 @@ class TaskWorkStore(Protocol):
         task_id: str,
         patch: TaskPatch,
         *,
-        account_id: str,
-        user_id: str,
-    ) -> StoreOperationResult: ...
+        account_id: Optional[str],
+        user_id: Optional[str],
+    ) -> StoreOperationResult:
+        """Owner fields scope the lookup; None looks the task up by ID alone."""
+        ...
 
     async def record_event(
         self,
@@ -511,8 +513,8 @@ class PersistentTaskStore(TaskWorkStore):
         task_id: str,
         patch: TaskPatch,
         *,
-        account_id: str,
-        user_id: str,
+        account_id: Optional[str],
+        user_id: Optional[str],
     ) -> StoreOperationResult:
         def mutate(task: TaskRecord, _work_set: _WorkSet) -> StoreOperationResult:
             if task.status not in ACTIVE_TASK_STATUSES:

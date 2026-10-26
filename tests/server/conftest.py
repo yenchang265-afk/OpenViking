@@ -75,8 +75,9 @@ def _install_fake_embedder(monkeypatch):
 def _skip_system_asset_sync(monkeypatch, request=None) -> None:
     """Skip startup system-asset sync unless the test is marked ``system_asset_sync``.
 
-    After an earlier service in the same process, the sync's durable content write
-    never settles and initialize() waits forever; most tests do not need the assets.
+    On this suite's local storage, initialize() was seen to wait indefinitely on the
+    sync's durable content write (e.g. in test_api_sessions.py, also on upstream);
+    the cause is not isolated. Most tests do not need the assets, so they opt in.
     """
     if request is not None and request.node.get_closest_marker("system_asset_sync"):
         return
@@ -264,7 +265,7 @@ async def client_with_resource(client, service, sample_markdown_file):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def running_server(temp_dir: Path, monkeypatch):
+async def running_server(temp_dir: Path, monkeypatch, request):
     """Start a real uvicorn server in a background thread."""
     fake_embedder_cls = _install_fake_embedder(monkeypatch)
     _install_fake_vlm(monkeypatch)
@@ -274,7 +275,7 @@ async def running_server(temp_dir: Path, monkeypatch):
         yield
 
     monkeypatch.setattr("openviking.server.mcp_endpoint.mcp_lifespan", _noop_mcp_lifespan)
-    _skip_system_asset_sync(monkeypatch)
+    _skip_system_asset_sync(monkeypatch, request)
 
     svc = OpenVikingService(
         path=str(temp_dir / "sdk_data"), user=UserIdentifier.the_default_user("sdk_test_user")

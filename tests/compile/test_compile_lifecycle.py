@@ -248,3 +248,146 @@ def test_snapshot_id_must_be_a_commit():
         InProcessVikingClient(
             SimpleNamespace(), CTX, skill_snapshot={"uri": "viking://x", "snapshot_id": "main"}
         )
+
+
+@pytest.mark.asyncio
+async def test_final_review_stages_and_reads_back_through_real_scratch(tmp_path):
+    from openviking.compile.hashing import content_hash
+    from openviking.compile.ops import finalize as finalize_op
+    from openviking.compile.pipeline_io import ROOT, TaskFiles
+
+    scratch = ScratchDir(tmp_path / "task")
+    scratch.reset()
+    files = TaskFiles(scratch)
+    body = "# Topic\n\nReviewed body.\n"
+    await files.put(
+        "artifacts/a1",
+        {
+            "path": "notes/topic.md",
+            "owner": "group-1",
+            "content": body,
+            "sha256": content_hash(body.encode()),
+            "base_hash": None,
+            "source_refs": ["r1"],
+        },
+    )
+    staged = {}
+
+    async def agent_runner(prompt, data, schema, validate, model, *, stage):
+        assert stage == "final_review_agent"
+        directory = data["artifact_directory"]
+        # The review edits a staged file in place; validation must read it back.
+        await scratch.write_file(f"{ROOT}/{directory}/notes/topic.md", body + "Edited.\n")
+        decision = schema(excluded={})
+        await validate(decision)
+        staged["listing"] = await scratch.list_files(f"{ROOT}/{directory}", max_entries=None)
+        return decision
+
+    runtime = SimpleNamespace(
+        skill_target=False,
+        skill="# Skill",
+        target="viking://resources/wiki",
+        request=SimpleNamespace(wiki_links=False, instruction="Compile"),
+        files=files,
+        evidence={"r1": {"uri": "viking://resources/raw/a.md"}},
+        model=SimpleNamespace(agent_runner=agent_runner, timeout=30),
+        output_instructions="",
+        output_format="files",
+        changes=None,
+        warnings=[],
+        old={},
+        metrics={},
+        client=SimpleNamespace(),
+    )
+
+    rendered = await finalize_op.run(runtime, ["artifacts/a1"])
+
+    assert [entry.path.rsplit("/", 2)[-2:] for entry in staged["listing"]] == [
+        ["notes", "topic.md"]
+    ]
+    assert not runtime.warnings, runtime.warnings
+    (operation,) = rendered.operations
+    assert operation["uri"] == "viking://resources/wiki/notes/topic.md"
+    assert operation["content"].endswith("Edited.\n")
+
+
+@pytest.mark.asyncio
+async def test_on_start_failure_is_recorded_and_releases_target(monkeypatch, tracker):  # noqa: F811
+    run = AsyncMock(return_value={"done": True})
+    service = _direct_service(monkeypatch, tracker, run)
+    provider = service._providers["compile"]
+    provider.on_start = AsyncMock(side_effect=RuntimeError("snapshot commit failed"))
+    finished = []
+
+    async def on_finish(task, snapshot):
+        finished.append(snapshot.status)
+        return snapshot
+
+    provider.on_finish = on_finish
+    task = await _submit(service)
+
+    # The delivery settles (ACK) instead of escaping and staying unacknowledged.
+    assert await service.execute(task.task_id, "acme", "alice")
+    run.assert_not_awaited()
+    current = await tracker.get(task.task_id, **OWNER)
+    assert current.status == TaskStatus.FAILED
+    assert current.error == "INTERNAL: snapshot commit failed"
+    # on_finish still runs, so the lifecycle can release the target.
+    assert finished == ["failed"]
+    assert not service._owners and not service._executing
+
+
+@pytest.mark.asyncio
+async def test_glob_tool_stays_inside_target_and_reports_errors():
+    from openviking.compile.target_tools import GlobTool
+
+    client = SimpleNamespace(
+        glob=AsyncMock(return_value={"matches": ["viking://resources/wiki/a.md"]})
+    )
+    tool = GlobTool(client, "viking://resources/wiki/")
+
+    assert "a.md" in await tool.execute(pattern="**/a.md")
+    client.glob.assert_awaited_once_with("**/a.md", "viking://resources/wiki")
+    assert (await tool.execute(pattern="*", uri="viking://resources/other")).startswith("Error")
+    client.glob.side_effect = RuntimeError("index down")
+    assert (await tool.execute(pattern="*")).startswith("Error globbing")
+
+
+@pytest.mark.asyncio
+async def test_search_tool_reports_errors_and_hides_pinned_skill_hits():
+    from openviking.compile.target_tools import SearchTool
+
+    pinned = "viking://agent/skills/llm-wiki"
+    client = SimpleNamespace(
+        find=AsyncMock(
+            return_value={
+                "resources": [{"uri": "viking://resources/wiki/a.md"}],
+                "skills": [{"uri": f"{pinned}/SKILL.md"}],
+            }
+        ),
+        is_pinned_skill_uri=lambda uri: uri.startswith(pinned + "/"),
+    )
+    tool = SearchTool(client)
+
+    result = await tool.execute(query="q", target_uri="viking://resources/wiki")
+    assert "a.md" in result and "SKILL.md" not in result
+    client.find.side_effect = RuntimeError("vector index unavailable")
+    assert (await tool.execute(query="q", target_uri="viking://resources/wiki")).startswith(
+        "Error searching"
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_at_capacity_does_not_save_target_settings(tmp_path):
+    from openviking_cli.exceptions import ResourceExhaustedError
+
+    service, tasks = _compile_service(tmp_path)
+    lifecycle = _lifecycle()
+    service.configure_lifecycle(lifecycle)
+    service._ensure_capacity = AsyncMock(side_effect=ResourceExhaustedError("full"))
+
+    with pytest.raises(ResourceExhaustedError):
+        await service.create(_request(args={"auto_update": True}), ctx=CTX)
+
+    lifecycle.prepare.assert_not_awaited()
+    tasks.create.assert_not_awaited()
