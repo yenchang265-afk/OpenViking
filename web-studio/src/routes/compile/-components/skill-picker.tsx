@@ -1,7 +1,19 @@
 import { Combobox } from '@base-ui/react/combobox'
 import { Check, ChevronsUpDown } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { SYSTEM_EXAMPLE_SKILLS_ROOT } from '../-lib/api'
 import type { CompileSkill } from '../-lib/api'
+
+const BUILT_IN_PREFIX = `${SYSTEM_EXAMPLE_SKILLS_ROOT}/`
+
+function skillGroupLabel(
+  uri: string,
+  t: (key: 'mySkills' | 'builtInSkills' | 'sharedSkills') => string,
+): string {
+  if (uri.startsWith('viking://user/')) return t('mySkills')
+  if (uri.startsWith(BUILT_IN_PREFIX)) return t('builtInSkills')
+  return t('sharedSkills')
+}
 
 export function SkillPicker({
   value,
@@ -36,11 +48,16 @@ export function SkillPicker({
       items: items.filter((s) => s.uri.startsWith('viking://agent/skills/')),
     },
     {
+      label: t('builtInSkills'),
+      items: items.filter((s) => s.uri.startsWith(BUILT_IN_PREFIX)),
+    },
+    {
       label: t('otherSkills'),
       items: items.filter(
         (s) =>
           !s.uri.startsWith('viking://user/') &&
-          !s.uri.startsWith('viking://agent/skills/'),
+          !s.uri.startsWith('viking://agent/skills/') &&
+          !s.uri.startsWith(BUILT_IN_PREFIX),
       ),
     },
   ].filter((group) => group.items.length)
@@ -67,7 +84,7 @@ export function SkillPicker({
       >
         <span className="truncate">
           {selected
-            ? `${selected.name} · ${selected.uri.startsWith('viking://user/') ? t('mySkills') : t('sharedSkills')}`
+            ? `${selected.name} · ${skillGroupLabel(selected.uri, t)}`
             : t(loading ? 'loading' : 'chooseSkill')}
         </span>
         <ChevronsUpDown className="size-4 shrink-0 text-muted-foreground" />

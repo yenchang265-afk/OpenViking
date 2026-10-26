@@ -581,7 +581,7 @@ setup(
         "openviking_gateway": ["client-rules.json"],
         "openviking.scheduling.expiry": ["lua/*.lua"],
         "openviking": [
-            "builtin_skills/**/*",
+            "system_assets/**/*",
             "lib/ragfs_python*.so",
             "lib/ragfs_python*.pyd",
             "bin/ov",

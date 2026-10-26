@@ -2,7 +2,7 @@
 
 Compile timestamped conversation logs, agent sessions, IM messages, collaborative documents, meeting notes, and task records into concise, evidence-grounded **daily reports**: one page per day.
 
-Skill source: [openviking/builtin_skills/compile/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/daily-report)
+Skill source: [openviking/system_assets/compile/example-skills/daily-report](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/daily-report)
 
 Check the [prerequisites](01-overview.md#prerequisites) and run these commands from the OpenViking repository root. Replace the source directory with your own material.
 
@@ -17,17 +17,17 @@ ov ls -r viking://resources/work-logs
 
 ## Step 2: Add the Skill
 
-The Daily Report Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+The Daily Report Skill ships with OpenViking. Every account has a read-only copy at `viking://system/compile/example-skills/daily-report`, synced at server start and when an account is created, so `--skill` can use it directly. Check that it is there:
 
 ```bash
-ov skills list
-# → viking://agent/skills/daily-report
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/daily-report/
 ```
 
-If an admin removed it, add it back from the package source:
+To customize the Skill, install an editable copy and pass its URI to `--skill` instead:
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/daily-report -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/daily-report -p viking://agent/skills
 ```
 
 ## Step 3: Run compile
@@ -38,7 +38,7 @@ Spell out the **date, timezone, report subject, and emphasis** in `--instruction
 ov compile \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
-  --skill viking://agent/skills/daily-report \
+  --skill viking://system/compile/example-skills/daily-report \
   --instruction "Daily report for 2026-08-20 in Asia/Shanghai, focused on my outcomes and decisions"
 ```
 
@@ -48,7 +48,7 @@ For several days at once, put the date range in `--instruction` (each day is sti
 ov compile \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
-  --skill viking://agent/skills/daily-report \
+  --skill viking://system/compile/example-skills/daily-report \
   --instruction "One daily report per day for 2026-08-18 to 2026-08-20 in Asia/Shanghai"
 ```
 

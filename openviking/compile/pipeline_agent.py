@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import inspect
 import json
 import uuid
 from collections import Counter
@@ -12,11 +13,12 @@ import json_repair
 from openviking.compile import file_ops
 from openviking.compile.hashing import content_hash
 from openviking.compile.models import COMPILE_DRAFT_ROOT
-from openviking.compile.pipeline_io import TaskFiles, retry_allowed
+from openviking.compile.pipeline_io import ROOT, TaskFiles, retry_allowed
 from openviking.compile.renderer import validate_relative_file_path
 from openviking.compile.results import FileResponse, RecordResponse
 from openviking.compile.schemas import result_schema
 from openviking.compile.skill_resources import EvidenceReader
+from openviking.compile.target_tools import GlobTool
 from openviking.compile.tool import Tool
 
 # Lines returned by one read_file call when no limit is given.
@@ -101,6 +103,8 @@ class EmitResult(Tool):
     @property
     def parameters(self):
         parameters = result_schema(self.schema, self.data)
+        if self.sandbox is None:
+            return parameters
         parameters["properties"]["result_ref"] = {
             "type": "string",
             "description": "Relative path used with write_file for a JSON file containing the "
@@ -120,7 +124,11 @@ class EmitResult(Tool):
             ):
                 kwargs = json_repair.loads(kwargs["raw"], stream_stable=True)
             if isinstance(kwargs, dict) and "result_ref" in kwargs:
-                if len(kwargs) != 1 or self.sandbox is None:
+                if self.sandbox is None:
+                    raise ValueError(
+                        "result_ref is unavailable; submit inline emit arguments, without a result file"
+                    )
+                if len(kwargs) != 1:
                     raise ValueError("result_ref is an alternative to all inline result fields")
                 relative = validate_relative_file_path(kwargs["result_ref"])
                 raw = await self.sandbox.read_file_bytes(f"{self.root}/{relative}")
@@ -168,7 +176,9 @@ class EmitResult(Tool):
                         draft.content_sha256 = actual
                         draft.content_ref = None
             if self.validate:
-                self.validate(result)
+                checked = self.validate(result)
+                if inspect.isawaitable(checked):
+                    await checked
             self.result = result
             return "Result accepted."
         except (ValueError, TypeError, OSError) as exc:
@@ -207,7 +217,8 @@ class ScratchFileTool(Tool):
     """read_file/write_file/edit_file confined to one child's private scratch root.
 
     Viking URIs, absolute paths and traversal are rejected; skills and sources are
-    read through read_skill_resource and read_evidence instead.
+    read through read_skill_resource and read_evidence instead. Final review reads
+    the whole task tree but may only write below ``write_prefix``.
     """
 
     _SCHEMAS = {
@@ -234,9 +245,14 @@ class ScratchFileTool(Tool):
             },
             ["path", "old_text", "new_text"],
         ),
+        "list_dir": (
+            "List entries of a directory in your scratch directory ('.' for its root).",
+            {"path": {"type": "string"}},
+            ["path"],
+        ),
     }
 
-    def __init__(self, name: str, sandbox: Any, root: str):
+    def __init__(self, name: str, sandbox: Any, root: str, write_prefix: str | None = None):
         description, properties, required = self._SCHEMAS[name]
         self.name, self.description = name, description
         self.parameters = {
@@ -245,15 +261,32 @@ class ScratchFileTool(Tool):
             "required": required,
             "additionalProperties": False,
         }
-        self.sandbox, self.root = sandbox, root
+        self.sandbox, self.root, self.write_prefix = sandbox, root, write_prefix
 
     def _path(self, path: str) -> str:
         if str(path).startswith("viking://"):
             raise ValueError("Scratch file tools only access your own scratch directory")
-        return f"{self.root}/{validate_relative_file_path(path)}"
+        if self.name == "list_dir" and str(path).strip() in {"", "."}:
+            return self.root
+        relative = validate_relative_file_path(path)
+        if (
+            self.write_prefix is not None
+            and self.name in {"write_file", "edit_file"}
+            and not relative.startswith(self.write_prefix + "/")
+        ):
+            raise ValueError(
+                f"Write only inside {self.write_prefix}/; use the same path as read_file"
+            )
+        return f"{self.root}/{relative}"
 
     async def execute(self, **kwargs: Any) -> str:
         path = self._path(kwargs["path"])
+        if self.name == "list_dir":
+            try:
+                entries = await self.sandbox.list_dir(path)
+            except FileNotFoundError as exc:
+                raise ValueError(f"No such scratch directory: {kwargs['path']}") from exc
+            return "\n".join(entries) or "(empty)"
         if self.name == "write_file":
             await self.sandbox.write_file(path, kwargs["content"])
             return f"Wrote {kwargs['path']}."
@@ -297,38 +330,55 @@ _AGENT_INSTRUCTIONS = (
 def agent_runner(limits):
     """Bind an isolated child loop; queueing/cancellation remain owned by Pipeline.
 
-    Each call has fresh history, a private scratch root and the subagent iteration
+    Each call has fresh history, a private scratch root and its stage's iteration
     limit. Large files are submitted by reference, then hashed and checked. Every
-    model request goes through the task's bounded, metered JsonModel.call.
+    model request goes through the task's bounded, metered JsonModel.call. Final
+    review can browse task files, with writes confined to its staged outputs.
     """
 
     async def run(system, data, schema, validate, model, *, stage="agent"):
         sandbox = model.files.sandbox
-        root = f"{COMPILE_DRAFT_ROOT}/{uuid.uuid4().hex}"
+        final_review = stage == "final_review_agent"
+        root = ROOT if final_review else f"{COMPILE_DRAFT_ROOT}/{uuid.uuid4().hex}"
         evidence = EvidenceReader(model.files, data)
-        submit = EmitResult(schema, validate, sandbox, root, data, model.metrics)
+        submit = EmitResult(
+            schema, validate, None if final_review else sandbox, root, data, model.metrics
+        )
         assignment = data
         if not model.fits(system, data, schema):
             assignment = await prepare_assignment(data, sandbox, root)
             evidence.delivered.clear()
         tools: dict[str, Tool] = {"emit": submit}
+        if final_review and model.resources:
+            # Staging holds only this run's outputs; review checks references in the target.
+            glob = GlobTool(model.resources.client, data["target"])
+            tools[glob.name] = glob
         if model.resources:
             tools[model.resources.name] = model.resources
         if evidence.allowed - evidence.delivered:
             tools[evidence.name] = evidence
-        for name in ("read_file", "write_file", "edit_file"):
-            tools[name] = ScratchFileTool(name, sandbox, root)
+        for name in (
+            "read_file",
+            "write_file",
+            "edit_file",
+            *(["list_dir"] if final_review else []),
+        ):
+            tools[name] = ScratchFileTool(
+                name, sandbox, root, data["artifact_directory"] if final_review else None
+            )
         schemas = [tool.to_schema() for tool in tools.values()]
         messages: list[dict[str, Any]] = [
             {
                 "role": "system",
-                # Map's prompt covers both inline and scratch-based submission.
-                "content": system + ("" if stage == "map_agent" else _AGENT_INSTRUCTIONS),
+                # These stages define their own file access and submission rules.
+                "content": system
+                + ("" if stage == "map_agent" or final_review else _AGENT_INSTRUCTIONS),
             },
             {"role": "user", "content": json.dumps(assignment, ensure_ascii=False)},
         ]
         failures: Counter = Counter()
-        for _ in range(limits.subagent_iterations):
+        iterations = limits.final_review_iterations if final_review else limits.subagent_iterations
+        for _ in range(iterations):
             response = await model.call(stage, messages, schemas, max_tokens=model.max_tokens)
             if response.finish_reason in {"length", "max_tokens"}:
                 # Never execute incomplete tool calls from truncated output.

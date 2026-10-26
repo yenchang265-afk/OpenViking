@@ -1,5 +1,6 @@
 import i18n from '#/i18n/core'
 import { getOvResult, ovClient, OvClientError } from '#/lib/ov-client'
+import { fetchFsList } from '#/routes/resources/-lib/api'
 import type { TaskRecord } from '#/routes/tasks/-lib/task-record'
 
 export type CompileRequest = {
@@ -118,7 +119,11 @@ export async function lookupSubmission(key: string) {
   )
 }
 export type CompileSkill = { name: string; uri: string; description: string }
-export async function fetchCompileSkills(
+/** Bundled compile Skills, synced into every account's system namespace. */
+export const SYSTEM_EXAMPLE_SKILLS_ROOT =
+  'viking://system/compile/example-skills'
+
+async function fetchInstalledSkills(
   signal?: AbortSignal,
 ): Promise<CompileSkill[]> {
   const result = await getOvResult<{
@@ -133,4 +138,34 @@ export async function fetchCompileSkills(
     const uri = s.uri || s.root_uri
     return uri ? [{ name: s.name, uri, description: s.description || '' }] : []
   })
+}
+
+/** Built-in Skills are optional: servers without the system namespace list none. */
+async function fetchSystemExampleSkills(): Promise<CompileSkill[]> {
+  try {
+    const { entries } = await fetchFsList(SYSTEM_EXAMPLE_SKILLS_ROOT, {
+      sortBy: 'name',
+      sortOrder: 'asc',
+    })
+    return entries
+      .filter((entry) => entry.isDir)
+      .map((entry) => ({
+        name: entry.name,
+        uri: `${SYSTEM_EXAMPLE_SKILLS_ROOT}/${entry.name}`,
+        description: '',
+      }))
+  } catch {
+    return []
+  }
+}
+
+export async function fetchCompileSkills(
+  signal?: AbortSignal,
+): Promise<CompileSkill[]> {
+  const [installed, builtIn] = await Promise.all([
+    fetchInstalledSkills(signal),
+    fetchSystemExampleSkills(),
+  ])
+  const seen = new Set(installed.map((skill) => skill.uri))
+  return [...installed, ...builtIn.filter((skill) => !seen.has(skill.uri))]
 }

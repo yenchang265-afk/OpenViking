@@ -1,8 +1,6 @@
 # 隱私配置
 
-隱私配置用於按 `category + target_key` 管理敏感欄位版本（如 skill 的 `api_key`、`base_url`）。
-
-配置值變化時會生成版本快照，可查詢歷史版本並切換生效版本。提交與當前版本相同的值不會建立新版本。
+隱私配置在當前使用者空間內，按 `category + target_key` 管理技能、會話中的敏感資訊（如金鑰、憑據等）。配置值變化時會生成版本快照，可查詢歷史版本並切換生效版本。提交與當前版本相同的值不會建立新版本。
 
 以下示例使用當前使用者的 API Key。trusted 模式需補充部署要求的身份頭。讀取值的介面和 CLI 命令會返回實際值；樹總覽和欄位後設資料介面不返回值。下文的 `***` 僅為示例佔位符，不表示介面自動脫敏。
 
@@ -10,10 +8,10 @@
 
 ## 典型場景
 
-- 為某個 skill 儲存金鑰等敏感配置
+- 為某個 skill 或 session 儲存金鑰等敏感配置
 - 輪換金鑰（新版本）
 - 回滾到歷史版本
-- 在讀取 skill 內容時按佔位符自動恢復配置值
+- 在讀取 skill 或 session 內容時按佔位符恢復配置值
 
 ---
 
@@ -84,7 +82,8 @@
 | 專案 | 限制 |
 |------|------|
 | `category` / `target_key` | 非空、最多 255 個 ASCII 字元；僅允許字母、數字、`_`、`-`、`.`、`@`；禁止 `.`、`..`，`@` 最多一個 |
-| values 頂層欄位 | 最多 128 個 |
+| Session 的 `target_key` | 當 Session ID 符合上行的限制時，使用 Session ID 作為 `target_key`；否則為 `_` 加 SHA-256 前 24 位十六進位制（原始 Session ID 會自動記錄在 `labels.session_id`） |
+| values 頂層欄位 | `category=session` 最多 1024 個；其他類別最多 128 個 |
 | 欄位名 | 非空、最多 255 UTF-8 位元組、禁止控制字元 |
 | 單個字串值 | 最多 64 KiB UTF-8 |
 | values 序列化總量 | 最多 1 MiB |
@@ -138,9 +137,11 @@ curl -X GET http://localhost:1933/api/v1/privacy-configs \
 ```json
 {
   "status": "ok",
-  "result": ["skill"]
+  "result": ["session", "skill"]
 }
 ```
+
+只返回已有配置的分類；Session 未提取到原值時，不會建立對應的 Privacy 配置。
 
 ---
 
@@ -572,6 +573,7 @@ curl -X POST "http://localhost:1933/api/v1/privacy-configs/skill/byted-viking-se
 # 分類/目標
 ov privacy categories
 ov privacy list skill
+ov privacy list session
 
 # 樹形盤點當前目標和欄位，不顯示值
 ov privacy tree
@@ -626,5 +628,7 @@ ov privacy scan --uri viking://~/resources/project-a --fix --node-limit 500
 ## 相關文件
 
 - [技能](04-skills.md) - 技能寫入與讀取
+- [會話](05-sessions.md) - 會話建立與隱私配置
+- [隱私配置](../concepts/13-privacy.md) - 隱私敏感值的提取與還原機制
 - [檔案系統](03-filesystem.md) - `read`/`write`/`ls` 等
 - [系統](07-system.md) - 服務狀態與可觀測性

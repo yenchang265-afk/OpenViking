@@ -37,7 +37,7 @@ TRAE 和 TRAE CN 使用安裝後的 `hooks.json`，不需要審閱 hook，安裝
 
 - `SessionStart`：載入使用者畫像、當前專案記憶，以及 OpenViking skill 清單 `<available-skills>`。
 - `UserPromptSubmit`：根據當前問題召回並注入相關內容，召回範圍包括你自己的 skill 和帳號內共享在 `viking://agent/skills` 下的 skill。
-- `PreToolUse`：在 TRAE 和 TRAE CN 上，`Read`、`Glob`、`Grep` 的路徑是 `viking://` URI 時拒絕呼叫，並提示改用 OpenViking MCP 工具；`Bash` 或 `RunCommand` 命令帶 `viking://` URI 時照常執行，同時附加改用建議。TraeCode CLI 2.0 使用 Codex 外掛，它的 `PreToolUse` 只匹配 `Bash`，只附加同樣的提示，不拒絕呼叫。
+- `PreToolUse`：在 TRAE 和 TRAE CN 上，`Read`、`Glob`、`Grep` 的路徑是 `viking://` URI 時拒絕呼叫，並提示改用 OpenViking MCP 工具；`Bash` 或 `RunCommand` 命令帶 `viking://` URI 時照常執行，同時附加改用建議。TraeCode CLI 2.0 使用 Codex 外掛，它不安裝 URI guard。
 - TRAE/TRAE CN 的 `Stop` 捕獲並提交本輪訊息；TraeCode CLI 2.0 遵循 Codex 外掛的捕獲與生命週期提交策略。
 - OpenViking MCP Server：透傳服務端完整 MCP 工具集（21 個工具）：`find`、`search`、`read`、`download`、`list`、`tree`、`remember`、`write`、`edit`、`add_resource`、`add_skill`、`list_watches`、`cancel_watch`、`grep`、`glob`、`forget`、`health`、`list_users`、`list_groups`、`get_acl`、`set_acl`。其中 `search` 的 `mode="context"` 可返回組裝後的上下文。
 skill 清單先列你自己的 skill，再列帳號內共享的 skill，每條描述截到約 40 token。清單的預算 `skillCatalogTokenBudget`（預設 `1200` token）獨立於畫像預算；描述放不下時只列名稱。把 `skillCatalog` 設為 `false` 或把預算設為 `0` 即可關閉，既可以寫在 `~/.openviking/ovcli.conf` 的 `plugin` 段（見[外掛配置](../configuration/02-client.md#外掛配置)），也可以用環境變數 `OPENVIKING_SKILL_CATALOG` 和 `OPENVIKING_SKILL_CATALOG_TOKEN_BUDGET`。

@@ -18,6 +18,7 @@ from typing import Any, Awaitable, Callable, Iterable, Mapping, Protocol
 from uuid import uuid4
 
 from openviking.server.identity import RequestContext, Role
+from openviking.service.task_domain import TaskPatch
 from openviking.service.task_tracker import TaskRecord, TaskStatus, get_task_tracker
 from openviking.service.task_tracker_concurrency import (
     KeyedAsyncLockPool,
@@ -25,6 +26,7 @@ from openviking.service.task_tracker_concurrency import (
     run_to_completion,
 )
 from openviking.service.task_work_index import bind_task_context
+from openviking.storage.errors import ResourceBusyError
 from openviking.storage.queuefs import QueueManager, get_queue_manager
 from openviking_cli.exceptions import ConflictError
 from openviking_cli.session.user_id import UserIdentifier
@@ -38,6 +40,8 @@ _ACTIVE_STATUSES = frozenset({"pending", "running", "cancelling"})
 MAX_TASK_ATTEMPTS = 3
 # Tries to store a finished attempt's outcome before leaving it to redelivery.
 OUTCOME_WRITE_ATTEMPTS = 3
+# Wait between provider finalization attempts while its output is locked.
+FINISH_RETRY_SECONDS = 1.0
 
 
 class ExternalTaskError(RuntimeError):
@@ -92,7 +96,13 @@ IdentityResolver = Callable[[str, str], Awaitable[tuple[str | None, tuple[str, .
 
 
 class ExternalTaskProvider(Protocol):
-    """Executor contract for one durable task type."""
+    """Executor contract for one durable task type.
+
+    Providers may also define ``on_start(task)`` (return ``"busy"`` to rotate the
+    delivery, an ExternalTaskSnapshot to settle it without running, or anything
+    else to proceed) and ``on_finish(task, snapshot)`` returning the snapshot to
+    record; both are optional.
+    """
 
     task_type: str
     task_id_prefix: str
@@ -214,7 +224,10 @@ class ExternalTaskService:
         private_payload: Mapping[str, Any] | None = None,
         ctx: RequestContext,
         idempotency_key: str | None = None,
+        submission_payload: Mapping[str, Any] | None = None,
     ) -> TaskRecord:
+        """``submission_payload`` (default ``payload``) is what idempotent retries must match."""
+
         async def create_task():
             return await self._create(
                 task_type,
@@ -223,6 +236,7 @@ class ExternalTaskService:
                 private_payload=private_payload,
                 ctx=ctx,
                 idempotency_key=idempotency_key,
+                submission_payload=submission_payload,
             )
 
         if not idempotency_key:
@@ -244,10 +258,13 @@ class ExternalTaskService:
         private_payload: Mapping[str, Any] | None = None,
         ctx: RequestContext,
         idempotency_key: str | None = None,
+        submission_payload: Mapping[str, Any] | None = None,
     ) -> TaskRecord:
         provider = self._provider(task_type)
         tracker = get_task_tracker()
-        request_hash = submission_request_hash(payload, private_payload)
+        request_hash = submission_request_hash(
+            payload if submission_payload is None else submission_payload, private_payload
+        )
         token = uuid4().hex
         task_id = (
             submission_task_id(ctx, task_type, provider.task_id_prefix, idempotency_key)
@@ -282,9 +299,9 @@ class ExternalTaskService:
             return task
         enqueued = False
         try:
-            await tracker.update_stage(
+            await tracker.patch_task(
                 task.task_id,
-                "queued",
+                TaskPatch(stage="queued"),
                 account_id=ctx.account_id,
                 user_id=ctx.user.user_id,
             )
@@ -399,6 +416,28 @@ class ExternalTaskService:
                 self._owners.setdefault(key, set()).add(task_id)
             self._executing.add(task_id)
             claimed = True
+            on_start = getattr(provider, "on_start", None)
+            if on_start is not None:
+                try:
+                    started = await on_start(task)
+                except asyncio.CancelledError:
+                    raise
+                except Exception as exc:
+                    # A failure here must still become the task's outcome; an escaped
+                    # exception would leave the delivery unacked and the target claimed.
+                    logger.exception("Durable task %s failed before starting", task_id)
+                    code = exc.code if isinstance(exc, ExternalTaskError) else "INTERNAL"
+                    started = ExternalTaskSnapshot(
+                        status="failed", error_code=code, error_message=str(exc)
+                    )
+                if started == "busy":
+                    # Another instance owns the target; the finally block releases it here.
+                    return False
+                if isinstance(started, ExternalTaskSnapshot):
+                    await self._persist_outcome(
+                        started, task_id=task_id, account_id=account_id, user_id=user_id
+                    )
+                    return True
             await self._execute_task(task, provider, payload, account_id, user_id)
             return True
         except asyncio.CancelledError:
@@ -428,8 +467,8 @@ class ExternalTaskService:
         task_id = task.task_id
 
         async def progress(stage: str, meta: dict[str, Any]) -> None:
-            await tracker.update_stage(
-                task_id, stage, account_id=account_id, user_id=user_id, meta=meta
+            await tracker.patch_task(
+                task_id, TaskPatch(stage=stage, meta=meta), account_id=account_id, user_id=user_id
             )
 
         async def cancelled() -> bool:
@@ -447,8 +486,11 @@ class ExternalTaskService:
                     f"Task was interrupted {attempt - 1} times before finishing; not retrying",
                 )
             # Persist the count before running so a crash during the attempt still counts.
-            await tracker.update_meta(
-                task_id, {"attempts": attempt}, account_id=account_id, user_id=user_id
+            await tracker.patch_task(
+                task_id,
+                TaskPatch(meta={"attempts": attempt}),
+                account_id=account_id,
+                user_id=user_id,
             )
             auth = await self._task_auth(task_id, account_id, user_id)
             ctx = await self._current_identity(restore_request_context(auth, account_id, user_id))
@@ -547,12 +589,11 @@ class ExternalTaskService:
                     key not in task.meta or task.meta[key] != value for key, value in meta.items()
                 )
             ):
-                await tracker.update_stage(
+                await tracker.patch_task(
                     task_id,
-                    stage,
+                    TaskPatch(stage=stage, meta=meta),
                     account_id=account_id,
                     user_id=user_id,
-                    meta=meta,
                 )
         if snapshot.status in _ACTIVE_STATUSES:
             return False
@@ -562,6 +603,19 @@ class ExternalTaskService:
                 f"Unknown external task status: {snapshot.status}",
                 transient=False,
             )
+        if task is not None:
+            on_finish = getattr(self._providers.get(task.task_type), "on_finish", None)
+            if on_finish is not None:
+
+                async def finish():
+                    """Keep lock retries inside cancellation-protected provider finalization."""
+                    while True:
+                        try:
+                            return await on_finish(task, snapshot)
+                        except ResourceBusyError:
+                            await asyncio.sleep(FINISH_RETRY_SECONDS)
+
+                snapshot = await run_to_completion(finish)
 
         async def finalize() -> None:
             if snapshot.status == "failed":

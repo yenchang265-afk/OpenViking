@@ -548,7 +548,7 @@ Claude Code 和 Codex 預設 `auto`，其他整合預設 `off`。支援服務端
 | Hermes（內建） | 無 | 無 | 無 | 有；`hermes memory status` 列出環境變數覆蓋項 |
 | ov CLI | 無 | CLI 本身 | 無 | `ov config` |
 
-Claude Code、Codex、Cursor、TRAE、ZCode、Kimi Code、DSH 和 pi 還會安裝 **URI guard**：檔案工具的路徑是 `viking://` URI 時，呼叫會被拒絕，並提示改用 OpenViking 工具；shell 命令中包含這種 URI 時照常執行，但附帶一條提示。各宿主檢查哪些工具不同，見[各整合說明](#各整合說明)。
+Claude Code、Cursor、TRAE、ZCode、Kimi Code、DSH 和 pi 還會安裝 **URI guard**：檔案工具的路徑是 `viking://` URI 時，呼叫會被拒絕，並提示改用 OpenViking 工具；shell 命令中包含這種 URI 時照常執行，但附帶一條提示。各宿主檢查哪些工具不同，見[各整合說明](#各整合說明)。
 
 <a id="_4-harness-檔案卡"></a>
 
@@ -570,11 +570,11 @@ Claude Code、Codex、Cursor、TRAE、ZCode、Kimi Code、DSH 和 pi 還會安�
 
 ### Codex 與 TraeCode CLI 2.0
 
-[Codex](./04-codex.md)、[TRAE](./13-trae.md)。外掛市場外掛，包含 6 個 hook（`SessionStart`、`UserPromptSubmit`、`PreToolUse:Bash`、`Stop`、`SessionEnd`、`PreCompact`）、一個 MCP 代理，以及與 Claude Code 相同的 4 個 skill。
+[Codex](./04-codex.md)、[TRAE](./13-trae.md)。外掛市場外掛，包含 6 個 hook（`SessionStart`、`UserPromptSubmit`、`Stop`、`SessionEnd`、`PreCompact`、`PostToolUse`）、一個 MCP 代理，以及與 Claude Code 相同的 4 個 skill。
 
 - `SessionEnd` 只在乾淨退出且 Codex 0.145 及以上時觸發。訊號、崩潰、舊版本和 `codex app-server` 延後的情況都交給啟動時的掃描，掃描使用 30 分鐘空閒超時。
 - `Stop` 和 `SessionEnd` 在分離的 worker 中寫入。每個會話一把鎖，按順序處理 `Stop` worker、`PreCompact`、`SessionEnd` worker 和掃描。
-- Codex 用 `apply_patch` 編輯檔案，它沒有路徑引數，所以 Bash 上的 URI guard 只附加提示，從不拒絕。
+- 不安裝 URI guard。Codex 會把 `PreToolUse` 的提示寫在工具呼叫和它的輸出之間，火山方舟 Ark 這類按 chat 訊息校驗歷史的 Responses 服務端會因此返回 HTTP 400。
 - Codex 為每個 hook 儲存信任記錄。升級新增 hook 後，需要在 `/hooks` 中批准新的 hook。
 - TraeCode CLI 2.0（執行檔 `traecli`，配置 `~/.trae/traecli.toml`）是 Codex 系 CLI，安裝同一個外掛。只支援 2.0；早期面向 1.0 的獨立外掛已移除，`--harness trae-cli --uninstall` 仍可刪除舊安裝留下的副本。不帶 `SessionEnd` 的版本會忽略該 hook。
 

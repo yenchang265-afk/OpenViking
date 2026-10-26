@@ -18,7 +18,7 @@ risk/
 
 > This is a shape example only — the real topics and findings come from the domain you supply. Note that page names state the **conclusion itself** (`growth-shifted-from-volume-to-pricing`), not a source title (`q2-report-summary`).
 
-Skill source: [openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
+Skill source: [openviking/system_assets/compile/example-skills/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/knowledge-distillation)
 
 Check the [prerequisites](01-overview.md#prerequisites) and run these commands from the OpenViking repository root. Replace the source directory with your own material.
 
@@ -31,17 +31,17 @@ ov ls -r viking://resources/finance-reports
 
 ## Step 2: Add the Skill
 
-The Knowledge Distillation Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+The Knowledge Distillation Skill ships with OpenViking. Every account has a read-only copy at `viking://system/compile/example-skills/knowledge-distillation`, synced at server start and when an account is created, so `--skill` can use it directly. Check that it is there:
 
 ```bash
-ov skills list
-# → viking://agent/skills/knowledge-distillation
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/knowledge-distillation/
 ```
 
-If an admin removed it, add it back from the package source:
+To customize the Skill, install an editable copy and pass its URI to `--skill` instead:
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/knowledge-distillation -p viking://agent/skills
 ```
 
 ## Step 3: Run compile
@@ -52,7 +52,7 @@ Spell out the **analytical question, comparison dimensions, baseline, and scope*
 ov compile \
   --from viking://resources/finance-reports \
   --to viking://resources/finance-insights \
-  --skill viking://agent/skills/knowledge-distillation \
+  --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "Compare the last three years of reports; obtain changes and drivers in revenue quality, profitability, and risk"
 ```
 
@@ -62,7 +62,7 @@ ov compile \
 ov compile \
   --from viking://resources/finance-2024,viking://resources/finance-2025 \
   --to viking://resources/finance-insights \
-  --skill viking://agent/skills/knowledge-distillation \
+  --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "Compare the two yearly knowledge bases; surface changes and structural differences in key metrics"
 ```
 

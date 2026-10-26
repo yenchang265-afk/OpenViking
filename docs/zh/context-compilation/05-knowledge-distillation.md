@@ -18,7 +18,7 @@ risk/
 
 > 以上僅展示目錄結構。實際主題和結論由來源與指令決定，檔名概括結論。
 
-Skill 原始碼：[openviking/builtin_skills/compile/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-distillation)
+Skill 原始碼：[openviking/system_assets/compile/example-skills/knowledge-distillation](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/knowledge-distillation)
 
 先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
@@ -31,17 +31,17 @@ ov ls -r viking://resources/finance-reports
 
 ## 第二步：添加 Skill
 
-Knowledge Distillation Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+Knowledge Distillation Skill 隨 OpenViking 一起發佈。每個帳戶都有一份唯讀副本 `viking://system/compile/example-skills/knowledge-distillation`，在伺服器啟動與建立帳戶時同步，`--skill` 可直接使用。確認它已存在：
 
 ```bash
-ov skills list
-# → viking://agent/skills/knowledge-distillation
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/knowledge-distillation/
 ```
 
-如果管理員刪除了它，可從套件原始碼重新加入：
+如需自訂此 Skill，請安裝一份可編輯的副本，並改用該 URI 作為 `--skill`：
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/knowledge-distillation -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯
@@ -52,7 +52,7 @@ ov add-skill openviking/builtin_skills/compile/knowledge-distillation -p viking:
 ov compile \
   --from viking://resources/finance-reports \
   --to viking://resources/finance-insights \
-  --skill viking://agent/skills/knowledge-distillation \
+  --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "對比近三年財報，找到營收質量、盈利能力和風險的變化及驅動因素"
 ```
 
@@ -62,7 +62,7 @@ ov compile \
 ov compile \
   --from viking://resources/finance-2024,viking://resources/finance-2025 \
   --to viking://resources/finance-insights \
-  --skill viking://agent/skills/knowledge-distillation \
+  --skill viking://system/compile/example-skills/knowledge-distillation \
   --instruction "對比兩個年度知識庫，找出關鍵指標的變化與結構性差異"
 ```
 

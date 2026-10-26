@@ -456,9 +456,11 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/watches/{task_id}/trigger` | 按任務 ID 觸發 watch |
 | POST | `/api/v1/snapshot/commit` | 建立快照 |
 | GET | `/api/v1/snapshot/log` | 檢視快照歷史 |
+| GET | `/api/v1/snapshot/versions` | 列出 Compile 產出檔案的版本 |
 | POST | `/api/v1/snapshot/restore` | 恢復歷史快照 |
 | GET | `/api/v1/snapshot/show` | 查看快照或其中的文件 |
 | GET | `/api/v1/snapshot/diff` | 對比快照 |
+| GET | `/api/v1/snapshot/diff-paths` | 分頁列出變化的原始檔 |
 | GET | `/api/v1/snapshot/ignore` | 讀取快照忽略規則 |
 | PUT | `/api/v1/snapshot/ignore` | 替換快照忽略規則 |
 | DELETE | `/api/v1/snapshot/ignore` | 清空快照忽略規則 |
@@ -581,6 +583,11 @@ JSON 輸出 - 錯誤：
 | MKCOL | `/webdav/resources`、`/webdav/resources/{resource_path}` | 建立目錄 |
 | MOVE | `/webdav/resources`、`/webdav/resources/{resource_path}` | 移動或重新命名資源 |
 | POST | `/api/v1/compile` | 建立非同步 Compile 任務 |
+| GET | `/api/v1/compile/config` | 讀取目標配置 |
+| POST | `/api/v1/compile/config/update` | 更新目標配置 |
+| GET | `/api/v1/compile/configs` | 列出可見目標 |
+| GET | `/api/v1/compile/operations` | 列出目標操作記錄 |
+| GET | `/api/v1/compile/operations/{operation_id}/outputs` | 列出操作產出及版本引用 |
 | POST | `/api/v1/compile/embeddings` | 生成 Compile 臨時路由文本的向量 |
 | GET | `/api/v1/compile/capabilities` | 檢查 Compile 可用性 |
 | GET | `/api/v1/compile/submissions/{key}` | 按提交鍵查詢任務 |

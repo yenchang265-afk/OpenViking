@@ -6,6 +6,8 @@ import {
   ArrowLeftIcon,
   BotIcon,
   ClipboardIcon,
+  HistoryIcon,
+  PackageIcon,
   PanelRightCloseIcon,
   PanelRightOpenIcon,
   TerminalIcon,
@@ -59,6 +61,8 @@ import {
   FilesystemResizeHandle,
 } from './-components/context-explorer'
 import { TerminalPanel } from './-components/terminal-panel'
+import { DataManagementDialog } from './-components/data-management-dialog'
+import { SnapshotComparisonDialog } from './-components/snapshot-comparison-dialog'
 import {
   ROOT_URI,
   FILESYSTEM_LEFT_WIDTH,
@@ -117,6 +121,7 @@ function FilesystemWorkbench() {
   const { t } = useTranslation(['filesystem', 'resources'])
   const { provider } = useStudioService()
   const canUseLocalTools = provider === 'opensource'
+  const canUseCliPanel = canUseLocalTools || provider === 'volcengine'
   const { identityScopeKey } = useAppConnection()
   const search = Route.useSearch()
   const navigate = useNavigate({ from: Route.fullPath })
@@ -143,7 +148,7 @@ function FilesystemWorkbench() {
     ),
   )
   const [activePanel, setActivePanel] = useState<FilesystemPanel>(
-    search.panel ?? 'agent',
+    provider === 'volcengine' ? 'terminal' : (search.panel ?? 'agent'),
   )
   const [actionPanelOpen, setActionPanelOpen] = useState(false)
   const isCompactLayout = useIsCompactFilesystemLayout()
@@ -153,6 +158,9 @@ function FilesystemWorkbench() {
   const [findPaletteOpen, setFindPaletteOpen] = useState(false)
   const [treeSelectMode, setTreeSelectMode] = useState(false)
   const [taskDialogOpen, setTaskDialogOpen] = useState(false)
+  const [dataManagementMode, setDataManagementMode] = useState<
+    'history' | 'transfer' | 'compare' | null
+  >(null)
   const [openingUri, setOpeningUri] = useState<string | null>(null)
   const layoutRef = useRef<HTMLDivElement>(null)
   const [leftWidth, setLeftWidth] = useState(() =>
@@ -176,6 +184,7 @@ function FilesystemWorkbench() {
   )
   const [rightCollapsed, setRightCollapsed] = useState(
     () =>
+      provider === 'opensource' &&
       typeof window !== 'undefined' &&
       window.localStorage.getItem(FILESYSTEM_RIGHT_COLLAPSED_STORAGE_KEY) ===
         '1',
@@ -210,7 +219,7 @@ function FilesystemWorkbench() {
     refreshTasks,
     tasks,
   } = useResourceUpload()
-  const { invalidateList } = useInvalidateVikingFs()
+  const { invalidateAll, invalidateList } = useInvalidateVikingFs()
 
   const syncSearch = useCallback(
     (next: {
@@ -264,10 +273,13 @@ function FilesystemWorkbench() {
   )
 
   useEffect(() => {
-    if (search.panel === 'agent' || search.panel === 'terminal') {
-      setActivePanel(search.panel)
+    if (provider === 'volcengine') {
+      setActivePanel('terminal')
+      setRightCollapsed(false)
+    } else {
+      setActivePanel(search.panel ?? 'agent')
     }
-  }, [search.panel])
+  }, [provider, search.panel])
 
   useEffect(() => {
     if (search.upload) {
@@ -380,10 +392,11 @@ function FilesystemWorkbench() {
 
   const handlePanelChange = useCallback(
     (panel: FilesystemPanel) => {
+      if (provider === 'volcengine' && panel !== 'terminal') return
       setActivePanel(panel)
       syncSearch({ panel })
     },
-    [syncSearch],
+    [provider, syncSearch],
   )
 
   const handleOpenActionPanel = useCallback(
@@ -523,6 +536,15 @@ function FilesystemWorkbench() {
     graphKind && graphDirUri && graphViewUri === graphDirUri
       ? { kind: graphKind, dirUri: graphDirUri }
       : null
+  const selectedIsDirectory = selectedFile?.isDir ?? true
+  const transferUri = selectedIsDirectory
+    ? selectedUri
+    : normalizeDirUri(parentUri(selectedUri))
+  useEffect(() => {
+    setDataManagementMode(null)
+  }, [selectedUri])
+  const canManageSelectedUri = selectedUri !== ROOT_URI
+  const canTransferSelectedUri = transferUri.startsWith('viking://resources/')
   const displayUri =
     selectedUri === ROOT_URI ? selectedUri : selectedUri.replace(/\/$/, '')
   const entries = visibleContextEntries(listQuery.data?.entries ?? [])
@@ -722,7 +744,34 @@ function FilesystemWorkbench() {
                 onDeleted={handleResourceDeleted}
               />
             ) : null}
-            {canUseLocalTools ? (
+            {canManageSelectedUri ? (
+              <Button
+                type="button"
+                size="icon-sm"
+                variant="ghost"
+                title={t('dataManagement:historyTitle')}
+                aria-label={t('dataManagement:historyTitle')}
+                onClick={() => setDataManagementMode('history')}
+              >
+                <HistoryIcon className="size-4" />
+              </Button>
+            ) : null}
+            {canTransferSelectedUri ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                title={t('dataManagement:transferTitle')}
+                aria-label={t('dataManagement:transferTitle')}
+                onClick={() => setDataManagementMode('transfer')}
+              >
+                <PackageIcon className="size-4" />
+                <span className="hidden sm:inline">
+                  {t('dataManagement:transferShortLabel')}
+                </span>
+              </Button>
+            ) : null}
+            {canUseCliPanel ? (
               <div className="flex shrink-0 items-center gap-1 lg:hidden">
                 <Button
                   type="button"
@@ -734,19 +783,21 @@ function FilesystemWorkbench() {
                 >
                   <TerminalIcon className="size-4" />
                 </Button>
-                <Button
-                  type="button"
-                  size="icon-sm"
-                  variant={activePanel === 'agent' ? 'secondary' : 'ghost'}
-                  title={t('tabs.agent')}
-                  aria-label={t('tabs.agent')}
-                  onClick={() => handleOpenActionPanel('agent')}
-                >
-                  <BotIcon className="size-4" />
-                </Button>
+                {canUseLocalTools ? (
+                  <Button
+                    type="button"
+                    size="icon-sm"
+                    variant={activePanel === 'agent' ? 'secondary' : 'ghost'}
+                    title={t('tabs.agent')}
+                    aria-label={t('tabs.agent')}
+                    onClick={() => handleOpenActionPanel('agent')}
+                  >
+                    <BotIcon className="size-4" />
+                  </Button>
+                ) : null}
               </div>
             ) : null}
-            {canUseLocalTools && rightCollapsed ? (
+            {canUseCliPanel && rightCollapsed ? (
               <Button
                 type="button"
                 size="icon-sm"
@@ -780,7 +831,7 @@ function FilesystemWorkbench() {
             )}
           </div>
         </main>
-        {canUseLocalTools && !rightCollapsed ? (
+        {canUseCliPanel && !rightCollapsed ? (
           <FilesystemResizeHandle
             active={resizingPane === 'action'}
             label={t('resizeAction')}
@@ -788,14 +839,13 @@ function FilesystemWorkbench() {
           />
         ) : null}
 
-        {!isCompactLayout && canUseLocalTools && !rightCollapsed ? (
+        {!isCompactLayout && canUseCliPanel && !rightCollapsed ? (
           <aside className="hidden min-h-0 min-w-0 flex-col bg-muted/15 lg:flex lg:w-[var(--filesystem-right-width)] lg:min-w-[var(--filesystem-right-width)]">
             <FilesystemActionPanel
               activePanel={activePanel}
               currentUri={currentUri}
               entries={entries}
               onCollapse={toggleRightCollapsed}
-              onOpenAddResource={() => setUploadDialogOpen(true)}
               onOpenResource={revealResource}
               onPanelChange={handlePanelChange}
               onSessionChange={(sessionId) =>
@@ -803,24 +853,25 @@ function FilesystemWorkbench() {
               }
               openingUri={openingUri}
               sessionId={search.session}
+              showAgentTab={canUseLocalTools}
             />
           </aside>
         ) : null}
       </div>
 
-      {canUseLocalTools && isCompactLayout ? (
+      {canUseCliPanel && isCompactLayout ? (
         <FilesystemMobileActionScreen
           activePanel={activePanel}
           currentUri={currentUri}
           entries={entries}
           onClose={() => setActionPanelOpen(false)}
-          onOpenAddResource={() => setUploadDialogOpen(true)}
           onOpenResource={revealResource}
           onPanelChange={handlePanelChange}
           onSessionChange={(sessionId) => syncSearch({ session: sessionId })}
           open={actionPanelOpen}
           openingUri={openingUri}
           sessionId={search.session}
+          showAgentTab={canUseLocalTools}
         />
       ) : null}
 
@@ -856,6 +907,23 @@ function FilesystemWorkbench() {
             tasks={tasks}
           />
         </>
+      ) : null}
+      {dataManagementMode === 'compare' ? (
+        <SnapshotComparisonDialog
+          key={`${identityScopeKey}:${selectedUri}:compare`}
+          onClose={() => setDataManagementMode(null)}
+          uri={selectedUri}
+        />
+      ) : dataManagementMode ? (
+        <DataManagementDialog
+          key={`${identityScopeKey}:${dataManagementMode === 'transfer' ? transferUri : selectedUri}:${dataManagementMode}`}
+          mode={dataManagementMode}
+          onClose={() => setDataManagementMode(null)}
+          onCompare={() => setDataManagementMode('compare')}
+          onChanged={() => void invalidateAll()}
+          uri={dataManagementMode === 'transfer' ? transferUri : selectedUri}
+          isDirectory={dataManagementMode === 'transfer' || selectedIsDirectory}
+        />
       ) : null}
       <FindPalette
         open={findPaletteOpen}
@@ -894,23 +962,23 @@ function FilesystemActionPanel({
   currentUri,
   entries,
   onCollapse,
-  onOpenAddResource,
   onOpenResource,
   onPanelChange,
   onSessionChange,
   openingUri,
   sessionId,
+  showAgentTab,
 }: {
   activePanel: FilesystemPanel
   currentUri: string
   entries: VikingFsEntry[]
   onCollapse: () => void
-  onOpenAddResource: () => void
   onOpenResource: ResourceOpenHandler
   onPanelChange: (panel: FilesystemPanel) => void
   onSessionChange: (sessionId: string) => void
   openingUri: string | null
   sessionId?: string
+  showAgentTab: boolean
 }) {
   const { t } = useTranslation('filesystem')
   const [toolbarContainer, setToolbarContainer] =
@@ -922,6 +990,7 @@ function FilesystemActionPanel({
         <FilesystemActionTabs
           activePanel={activePanel}
           onPanelChange={onPanelChange}
+          showAgentTab={showAgentTab}
         />
         <div
           ref={setToolbarContainer}
@@ -944,12 +1013,12 @@ function FilesystemActionPanel({
         activePanel={activePanel}
         currentUri={currentUri}
         entries={entries}
-        onOpenAddResource={onOpenAddResource}
         onOpenResource={onOpenResource}
         onSessionChange={onSessionChange}
         openingUri={openingUri}
         sessionId={sessionId}
         toolbarContainer={toolbarContainer}
+        showAgentTab={showAgentTab}
       />
     </div>
   )
@@ -960,25 +1029,25 @@ function FilesystemMobileActionScreen({
   currentUri,
   entries,
   onClose,
-  onOpenAddResource,
   onOpenResource,
   onPanelChange,
   onSessionChange,
   open,
   openingUri,
   sessionId,
+  showAgentTab,
 }: {
   activePanel: FilesystemPanel
   currentUri: string
   entries: VikingFsEntry[]
   onClose: () => void
-  onOpenAddResource: () => void
   onOpenResource: ResourceOpenHandler
   onPanelChange: (panel: FilesystemPanel) => void
   onSessionChange: (sessionId: string) => void
   open: boolean
   openingUri: string | null
   sessionId?: string
+  showAgentTab: boolean
 }) {
   const { t } = useTranslation(['filesystem', 'resources'])
   const [toolbarContainer, setToolbarContainer] =
@@ -1004,6 +1073,7 @@ function FilesystemMobileActionScreen({
         <FilesystemActionTabs
           activePanel={activePanel}
           onPanelChange={onPanelChange}
+          showAgentTab={showAgentTab}
         />
         <div
           ref={setToolbarContainer}
@@ -1015,12 +1085,12 @@ function FilesystemMobileActionScreen({
           activePanel={activePanel}
           currentUri={currentUri}
           entries={entries}
-          onOpenAddResource={onOpenAddResource}
           onOpenResource={onOpenResource}
           onSessionChange={onSessionChange}
           openingUri={openingUri}
           sessionId={sessionId}
           toolbarContainer={toolbarContainer}
+          showAgentTab={showAgentTab}
         />
       </div>
     </div>
@@ -1030,9 +1100,11 @@ function FilesystemMobileActionScreen({
 function FilesystemActionTabs({
   activePanel,
   onPanelChange,
+  showAgentTab,
 }: {
   activePanel: FilesystemPanel
   onPanelChange: (panel: FilesystemPanel) => void
+  showAgentTab: boolean
 }) {
   const { t } = useTranslation('filesystem')
 
@@ -1044,12 +1116,14 @@ function FilesystemActionTabs({
         label={t('tabs.terminal')}
         onClick={() => onPanelChange('terminal')}
       />
-      <PanelTab
-        active={activePanel === 'agent'}
-        icon={BotIcon}
-        label={t('tabs.agent')}
-        onClick={() => onPanelChange('agent')}
-      />
+      {showAgentTab ? (
+        <PanelTab
+          active={activePanel === 'agent'}
+          icon={BotIcon}
+          label={t('tabs.agent')}
+          onClick={() => onPanelChange('agent')}
+        />
+      ) : null}
     </div>
   )
 }
@@ -1058,30 +1132,29 @@ function FilesystemActionContent({
   activePanel,
   currentUri,
   entries,
-  onOpenAddResource,
   onOpenResource,
   onSessionChange,
   openingUri,
   sessionId,
   toolbarContainer,
+  showAgentTab,
 }: {
   activePanel: FilesystemPanel
   currentUri: string
   entries: VikingFsEntry[]
-  onOpenAddResource: () => void
   onOpenResource: ResourceOpenHandler
   onSessionChange: (sessionId: string) => void
   openingUri: string | null
   sessionId?: string
   toolbarContainer: HTMLDivElement | null
+  showAgentTab: boolean
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      {activePanel === 'terminal' ? (
+      {activePanel === 'terminal' || !showAgentTab ? (
         <TerminalPanel
           currentUri={currentUri}
           entries={entries}
-          onOpenAddResource={onOpenAddResource}
           onOpenResource={onOpenResource}
           onSessionChange={onSessionChange}
           openingUri={openingUri}

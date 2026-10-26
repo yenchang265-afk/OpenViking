@@ -144,14 +144,14 @@ ov overview viking://resources/docs/
 | uri | str | 是 | - | Viking URI（如 `viking://resources/docs/api.md`）或 32 字元十六進位制向量記錄 `id`（由 `stat()` 返回） |
 | offset | int | 否 | 0 | 起始行號（0 開始） |
 | limit | int | 否 | -1 | 讀取的行數，`-1` 表示讀到結尾 |
-| raw | bool | 否 | false | 返回未過濾 MEMORY_FIELDS 的原始儲存內容；Python 中使用 `client.read_raw(uri)` 讀取此格式。 |
+| raw | bool | 否 | false | 跳過預設脫敏和 MEMORY_FIELDS 過濾，並嘗試還原佔位符；Python 中使用 `client.read_raw(uri)`。 |
 
 **說明**
 
 - `read()` 只接受檔案 URI。傳入已存在的目錄時返回 `INVALID_ARGUMENT`（HTTP `400`）。HTTP 響應的 `details` 包含 `expected: "file"`、`actual: "directory"` 和目標 `resource` URI，客戶端可據此改用目錄列表介面，無需解析錯誤訊息。
 - 除 Viking URI 外，還可以傳入 `stat()` 返回的 32 字元十六進位制檔案 `id`。服務端通過向量索引查詢對應 URI 並執行相同的許可權校驗。由於索引是非同步生成的，新返回的 ID 可能暫時無法解析；對應向量記錄被刪除後，按 ID 查詢也會失敗。這兩種情況下，服務端都會返回 `NOT_FOUND`，並提示資料可能尚未索引或已經刪除。
 - 公開 URI 引數接受 `resources`、`user` 和 `agent` 作用域。訪問 session 檔案時，使用 `viking://user/{user_id}/sessions/{session_id}/messages.jsonl`，也可以使用向後相容的 `viking://session/{session_id}/messages.jsonl` 別名。`temp`、`queue` 等內部作用域會返回 `INVALID_URI`。
-
+- 敏感資訊的處理：預設讀取（`raw=false`）保留已有佔位符，並對殘留的已登記明文脫敏；`raw=true` 跳過預設脫敏，返回載入還原後的內容，該還原隻影響返回內容，不修改儲存檔案，詳見[隱私配置](../concepts/13-privacy.md)。
 
 **Python SDK**
 
@@ -347,6 +347,7 @@ ov write viking://resources/docs/api.md \
 | `wait` | boolean | 否 | `true` | 是否等待語義/向量重新整理 |
 | `telemetry` | boolean/object | 否 | `false` | 是否返回操作遙測資訊 |
 | `processing_mode` | string | 否 | `semantic_and_vectors` | 整批統一的處理模式：`semantic_and_vectors` 或 `vectors_only` |
+| `defer_processing` | boolean | 否 | `false` | 只儲存檔案，不派發語義和向量處理；後處理由呼叫方安排 |
 
 每個 operation 包含：
 
@@ -368,7 +369,7 @@ ov write viking://resources/docs/api.md \
 - `create`、`replace`、`upsert` 是“寫成請求最終正文”的相容寫法：檔案存在時覆蓋，缺失時建立。`append` 在檔案存在時追加，檔案缺失時以請求正文建立檔案。
 - `processing_mode` 對整個 batch 生效，不能在不同 operation 中混用語義模式；`vectors_only` 不重新整理父目錄語義，只維護變化檔案的向量。
 - `tags`、`tag_mode` 與 `acl` 按 operation 生效；tags 會隨該檔案首次向量 upsert 寫入，`clear` 不要求傳 `tags` 並會忽略同時傳入的標籤值。
-- 整批先獲取所有目標檔案的精確鎖，再校驗檔案狀態並寫入；同一目錄下不涉及相同檔案的寫入可以並行，重疊檔案的寫入或父目錄刪除、移動仍會衝突。所有檔案寫完並釋放鎖後才啟動語義處理，統一重新整理受影響的 `.overview.md` / `.abstract.md`。
+- 整批先獲取所有目標檔案的精確鎖，再校驗檔案狀態並寫入；同一目錄下不涉及相同檔案的寫入可以並行，重疊檔案的寫入或父目錄刪除、移動仍會衝突。未啟用延遲模式時，非同步處理持有檔案鎖直到關聯工作結束，統一重新整理受影響的 `.overview.md` / `.abstract.md`。
 - 資源父目錄重新整理與 `write()` 一樣採用盡力更新：L0/L1 鎖衝突時跳過目錄重新整理及對應目錄向量更新，保留原文和檔案自身的處理，不保證自動補刷。
 - 底層 I/O 中途失敗時，本批次較早完成的寫入仍可能已經可見。
 - 已存在的 `.abstract.md` / `.overview.md` 可以 replace 或 append；系統會保留並校驗受保護的 OKF metadata，並只重建對應目錄實際存在的 L0/L1 向量。

@@ -16,7 +16,7 @@ relations.jsonl       # 每行一條有向邊
 
 `relation` 是穩定、語言無關的機器謂詞（`member_of`、`leads`、`located_in`……），`label` 是對應的本地化顯示名（`屬於`、`率領`、`位於`……），`entity_type` 用於視覺化時的節點顏色、形狀和過濾。圖譜可以增量重新整理：已有節點和邊會被保留、合併證據，新知識追加進來。
 
-Skill 原始碼：[openviking/builtin_skills/compile/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/knowledge-graph) · 視覺化指令碼：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
+Skill 原始碼：[openviking/system_assets/compile/example-skills/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/knowledge-graph) · 視覺化指令碼：[examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
 
 先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
@@ -29,17 +29,17 @@ ov ls -r viking://resources/journal
 
 ## 第二步：添加 Skill
 
-Knowledge Graph Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+Knowledge Graph Skill 隨 OpenViking 一起發佈。每個帳戶都有一份唯讀副本 `viking://system/compile/example-skills/knowledge-graph`，在伺服器啟動與建立帳戶時同步，`--skill` 可直接使用。確認它已存在：
 
 ```bash
-ov skills list
-# → viking://agent/skills/knowledge-graph
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/knowledge-graph/
 ```
 
-如果管理員刪除了它，可從套件原始碼重新加入：
+如需自訂此 Skill，請安裝一份可編輯的副本，並改用該 URI 作為 `--skill`：
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/knowledge-graph -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯
@@ -48,7 +48,7 @@ ov add-skill openviking/builtin_skills/compile/knowledge-graph -p viking://agent
 ov compile \
   --from viking://resources/journal \
   --to viking://resources/journal-kg \
-  --skill viking://agent/skills/knowledge-graph \
+  --skill viking://system/compile/example-skills/knowledge-graph \
   --instruction "抽取人物、地點、法寶及其關係，構建可遍歷的知識圖譜"
 ```
 

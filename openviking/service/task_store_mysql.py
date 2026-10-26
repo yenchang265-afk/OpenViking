@@ -28,6 +28,7 @@ from openviking.service.task_domain import (
     TERMINAL_TASK_STATUSES,
     DeletedTask,
     DeleteExpiredResult,
+    TaskPatch,
     TaskRecord,
     TaskRetentionPolicy,
     TaskStatus,
@@ -382,9 +383,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                 select(
                     exists().where(
                         Work.task_id == task_id,
-                        Work.state.not_in(
-                            [WorkState.DONE.value, WorkState.FAILED.value]
-                        ),
+                        Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]),
                     )
                 )
             )
@@ -400,9 +399,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
         user_id: Optional[str] = None,
     ) -> list[WorkRecord]:
         Work = self._models.Work
-        statement = select(Work).where(
-            *self._work_query(Work, task_id, None, account_id, user_id)
-        )
+        statement = select(Work).where(*self._work_query(Work, task_id, None, account_id, user_id))
         if work_ids is not None:
             ids = set(work_ids)
             if not ids:
@@ -414,9 +411,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
     async def _event_history(self, session: AsyncSession, task_id: str) -> Optional[dict]:
         Event = self._models.Event
         rows = (
-            await session.scalars(
-                select(Event).where(Event.task_id == task_id).order_by(Event.seq)
-            )
+            await session.scalars(select(Event).where(Event.task_id == task_id).order_by(Event.seq))
         ).all()
         if not rows:
             return None
@@ -460,9 +455,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
             "dropped_count": int(history["dropped_count"]),
             "started_mid_task": bool(history["started_mid_task"]),
         }
-        await session.execute(
-            update(Event).where(Event.task_id == task_id).values(**metadata)
-        )
+        await session.execute(update(Event).where(Event.task_id == task_id).values(**metadata))
         for item in items:
             if int(item["seq"]) in existing:
                 continue
@@ -479,9 +472,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                     **metadata,
                 )
             )
-        await session.execute(
-            delete(Event).where(Event.task_id == task_id, Event.seq < min(seqs))
-        )
+        await session.execute(delete(Event).where(Event.task_id == task_id, Event.seq < min(seqs)))
 
     async def _lock_work(self, session: AsyncSession, task_id: str, work_id: str) -> Any:
         Work = self._models.Work
@@ -781,9 +772,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                         select(Work.task_id)
                         .where(
                             Work.task_id.in_(task_ids),
-                            Work.state.not_in(
-                                [WorkState.DONE.value, WorkState.FAILED.value]
-                            ),
+                            Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]),
                         )
                         .distinct()
                     )
@@ -806,9 +795,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                     )
                 )
             if blockers:
-                active = [
-                    item for item in blockers if item.code is StoreOperationCode.ACTIVE_TASK
-                ]
+                active = [item for item in blockers if item.code is StoreOperationCode.ACTIVE_TASK]
                 if active:
                     code = StoreOperationCode.ACTIVE_TASK
                     message = "Cannot delete active task records: " + ", ".join(
@@ -874,9 +861,7 @@ class MySQLTaskWorkStore(TaskWorkStore):
                         select(Work.task_id)
                         .where(
                             Work.task_id.in_(task_ids),
-                            Work.state.not_in(
-                                [WorkState.DONE.value, WorkState.FAILED.value]
-                            ),
+                            Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]),
                         )
                         .distinct()
                     )
@@ -992,71 +977,27 @@ class MySQLTaskWorkStore(TaskWorkStore):
             await self._store_event_history(session, task_id, task.execution_events)
             return StoreOperationResult.applied()
 
-    async def update_stage(
+    async def patch_task(
         self,
         task_id: str,
-        stage: str,
+        patch: TaskPatch,
         *,
-        meta: Optional[Dict[str, Any]],
         account_id: Optional[str],
         user_id: Optional[str],
     ) -> StoreOperationResult:
         Task = self._models.Task
         async with self._transaction() as session:
-            query_result = await session.execute(
-                select(
-                    Task.status,
-                    Task.stage,
-                    Task.meta,
-                    Task.updated_at,
-                )
-                .where(*self._task_query(Task, task_id, account_id, user_id))
-                .with_for_update()
-            )
-            row = query_result.one_or_none()
-            if row is None:
-                return _not_found_result()
-            if row.status not in {item.value for item in ACTIVE_TASK_STATUSES}:
-                return _inactive_result(row.status, "Task stage cannot be updated")
-
-            previous = TaskRecord(
-                task_id=task_id,
-                task_type="",
-                status=TaskStatus(row.status),
-                stage=row.stage,
-                meta=_json_copy(row.meta) or {},
-                execution_events=await self._event_history(session, task_id),
-            )
-            task = deepcopy(previous)
-            task.stage = stage
-            if meta:
-                _deep_merge(task.meta, deepcopy(meta))
-            append_task_events(task, previous)
-            await session.execute(
-                update(Task)
-                .where(*self._task_query(Task, task_id, account_id, user_id))
-                .values(
-                    stage=task.stage,
-                    meta=_json_copy(task.meta),
-                    is_internal=bool(task.meta.get("internal")),
-                    updated_at=TaskRecord.next_updated_at(row.updated_at),
-                )
-            )
-            await self._store_event_history(session, task_id, task.execution_events)
-            return StoreOperationResult.applied()
-
-    async def update_auth(
-        self,
-        task_id: str,
-        values: Dict[str, Any],
-        *,
-        account_id: str,
-        user_id: str,
-    ) -> StoreOperationResult:
-        Task = self._models.Task
-        async with self._transaction() as session:
+            selected = [Task.status, Task.updated_at]
+            if "stage" in patch.clear_fields or patch.stage is not None:
+                selected.append(Task.stage)
+            if "meta" not in patch.clear_fields and patch.meta is not None:
+                selected.append(Task.meta)
+            if "auth" not in patch.clear_fields and (
+                patch.auth is not None or patch.add_enqueue_complete_work_ids
+            ):
+                selected.append(Task.auth)
             result = await session.execute(
-                select(Task.status, Task.auth, Task.updated_at)
+                select(*selected)
                 .where(*self._task_query(Task, task_id, account_id, user_id))
                 .with_for_update()
             )
@@ -1064,49 +1005,56 @@ class MySQLTaskWorkStore(TaskWorkStore):
             if row is None:
                 return _not_found_result()
             if row.status not in {item.value for item in ACTIVE_TASK_STATUSES}:
-                return _inactive_result(row.status, "Task auth cannot be updated")
-            auth = _json_copy(row.auth) or {}
-            _deep_merge(auth, deepcopy(values))
-            await session.execute(
-                update(Task)
-                .where(*self._task_query(Task, task_id, account_id, user_id))
-                .values(
-                    auth=auth,
-                    updated_at=TaskRecord.next_updated_at(row.updated_at),
-                )
-            )
-            return StoreOperationResult.applied()
+                return _inactive_result(row.status, "Task cannot be patched")
+            if patch.is_empty():
+                return StoreOperationResult.noop()
 
-    async def merge_meta(
-        self,
-        task_id: str,
-        values: Dict[str, Any],
-        *,
-        account_id: str,
-        user_id: str,
-    ) -> StoreOperationResult:
-        Task = self._models.Task
-        async with self._transaction() as session:
-            result = await session.execute(
-                select(Task.status, Task.meta, Task.updated_at)
-                .where(*self._task_query(Task, task_id, account_id, user_id))
-                .with_for_update()
-            )
-            row = result.one_or_none()
-            if row is None:
-                return _not_found_result()
-            if row.status not in (TaskStatus.PENDING.value, TaskStatus.RUNNING.value):
-                return _inactive_result(row.status, "Task meta cannot be updated")
-            meta = _json_copy(row.meta) or {}
-            _deep_merge(meta, deepcopy(values))
+            values: dict[str, Any] = {
+                "updated_at": TaskRecord.next_updated_at(row.updated_at),
+            }
+            if "result" in patch.clear_fields or patch.result is not None:
+                values["result"] = (
+                    None if "result" in patch.clear_fields else _json_copy(patch.result)
+                )
+            if "stage" in patch.clear_fields or patch.stage is not None:
+                stage = None if "stage" in patch.clear_fields else patch.stage
+                values["stage"] = stage
+                if stage != row.stage:
+                    previous = TaskRecord(
+                        task_id=task_id,
+                        task_type="",
+                        status=TaskStatus(row.status),
+                        stage=row.stage,
+                        execution_events=await self._event_history(session, task_id),
+                    )
+                    task = deepcopy(previous)
+                    task.stage = stage
+                    append_task_events(task, previous)
+                    await self._store_event_history(session, task_id, task.execution_events)
+            if "meta" in patch.clear_fields or patch.meta is not None:
+                meta = {}
+                if "meta" not in patch.clear_fields:
+                    meta = _json_copy(row.meta) or {}
+                    _deep_merge(meta, _json_copy(patch.meta))
+                values["meta"] = meta
+                values["is_internal"] = bool(meta.get("internal"))
+            if (
+                "auth" in patch.clear_fields
+                or patch.auth is not None
+                or patch.add_enqueue_complete_work_ids
+            ):
+                auth = {} if "auth" in patch.clear_fields else (_json_copy(row.auth) or {})
+                if patch.auth is not None:
+                    _deep_merge(auth, _json_copy(patch.auth))
+                if patch.add_enqueue_complete_work_ids:
+                    completed = set(auth.get("enqueue_complete_work_ids") or ())
+                    completed.update(patch.add_enqueue_complete_work_ids)
+                    auth["enqueue_complete_work_ids"] = sorted(completed)
+                values["auth"] = auth
             await session.execute(
                 update(Task)
                 .where(*self._task_query(Task, task_id, account_id, user_id))
-                .values(
-                    meta=meta,
-                    is_internal=bool(meta.get("internal")),
-                    updated_at=TaskRecord.next_updated_at(row.updated_at),
-                )
+                .values(**values)
             )
             return StoreOperationResult.applied()
 
@@ -1343,60 +1291,6 @@ class MySQLTaskWorkStore(TaskWorkStore):
                 return StoreOperationResult.applied()
             return StoreOperationResult.applied()
 
-    async def mark_enqueue_complete(
-        self,
-        task_id: str,
-        work_id: str,
-        *,
-        account_id: str,
-        user_id: str,
-    ) -> StoreOperationResult:
-        Task = self._models.Task
-        async with self._transaction() as session:
-            result = await session.execute(
-                select(Task.status, Task.auth, Task.updated_at)
-                .where(*self._task_query(Task, task_id, account_id, user_id))
-                .with_for_update()
-            )
-            row = result.one_or_none()
-            if row is None:
-                return _not_found_result()
-            if row.status not in {item.value for item in ACTIVE_TASK_STATUSES}:
-                return StoreOperationResult.noop(
-                    StoreOperationCode.ALREADY_TERMINAL,
-                    f"Task is already {row.status}",
-                )
-            completed = set((row.auth or {}).get("enqueue_complete_work_ids") or ())
-            if work_id in completed:
-                return StoreOperationResult.noop(StoreOperationCode.DUPLICATE)
-            completed.add(work_id)
-            auth = _json_copy(row.auth) or {}
-            auth["enqueue_complete_work_ids"] = sorted(completed)
-            await session.execute(
-                update(Task)
-                .where(*self._task_query(Task, task_id, account_id, user_id))
-                .values(
-                    auth=auth,
-                    updated_at=TaskRecord.next_updated_at(row.updated_at),
-                )
-            )
-            return StoreOperationResult.applied()
-
-    async def is_enqueue_complete(
-        self,
-        task_id: str,
-        work_id: str,
-        *,
-        account_id: str,
-        user_id: str,
-    ) -> bool:
-        Task = self._models.Task
-        async with self._session_factory() as session:
-            auth = await session.scalar(
-                select(Task.auth).where(*self._task_query(Task, task_id, account_id, user_id))
-            )
-            return bool(auth and work_id in set(auth.get("enqueue_complete_work_ids") or ()))
-
     async def add_work(
         self, work: WorkRecord, *, account_id: str, user_id: str
     ) -> StoreOperationResult:
@@ -1412,9 +1306,10 @@ class MySQLTaskWorkStore(TaskWorkStore):
             row = result.one_or_none()
             if row is None:
                 return _not_found_result()
-            if row.status in {
-                item.value for item in TERMINAL_TASK_STATUSES
-            } or row.status == TaskStatus.CANCELLING.value:
+            if (
+                row.status in {item.value for item in TERMINAL_TASK_STATUSES}
+                or row.status == TaskStatus.CANCELLING.value
+            ):
                 return StoreOperationResult.rejected(
                     StoreOperationCode.ALREADY_TERMINAL
                     if row.status in {item.value for item in TERMINAL_TASK_STATUSES}
@@ -1784,12 +1679,8 @@ class MySQLTaskWorkStore(TaskWorkStore):
     ) -> bool:
         Work = self._models.Work
         async with self._session_factory() as session:
-            predicates = list(
-                self._work_query(Work, task_id, None, account_id, user_id)
-            )
-            predicates.append(
-                Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value])
-            )
+            predicates = list(self._work_query(Work, task_id, None, account_id, user_id))
+            predicates.append(Work.state.not_in([WorkState.DONE.value, WorkState.FAILED.value]))
             if exclude_work_id is not None:
                 predicates.append(Work.work_id != exclude_work_id)
             return bool(await session.scalar(select(exists().where(*predicates))))

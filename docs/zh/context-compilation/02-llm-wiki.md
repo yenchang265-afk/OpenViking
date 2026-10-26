@@ -15,7 +15,7 @@
 
 預設生成 `entity` 和 `concept` 頁面，其他型別按 Skill 中的條件生成。多個來源中的相關內容會合併到同一主題下。
 
-Skill 原始碼：[openviking/builtin_skills/compile/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/builtin_skills/compile/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
+Skill 原始碼：[openviking/system_assets/compile/example-skills/llm-wiki](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/llm-wiki) · 視覺化指令碼：[examples/compile/graph-show/llm-wiki](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/llm-wiki)
 
 先確認[前置條件](01-overview.md#前置條件)，並在 OpenViking 倉庫根目錄執行以下命令。來源目錄需替換為自己的資料目錄。
 
@@ -41,17 +41,17 @@ ov ls -r viking://resources/research
 
 ## 第二步：添加 Skill
 
-LLM Wiki Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+LLM Wiki Skill 隨 OpenViking 一起發佈。每個帳戶都有一份唯讀副本 `viking://system/compile/example-skills/llm-wiki`，在伺服器啟動與建立帳戶時同步，`--skill` 可直接使用。確認它已存在：
 
 ```bash
-ov skills list
-# → viking://agent/skills/llm-wiki
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/llm-wiki/
 ```
 
-如果管理員刪除了它，可從套件原始碼重新加入：
+如需自訂此 Skill，請安裝一份可編輯的副本，並改用該 URI 作為 `--skill`：
 
 ```bash
-ov add-skill openviking/builtin_skills/compile/llm-wiki -p viking://agent/skills
+ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking://agent/skills
 ```
 
 ## 第三步：執行編譯
@@ -60,7 +60,7 @@ ov add-skill openviking/builtin_skills/compile/llm-wiki -p viking://agent/skills
 ov compile \
   --from viking://resources/research \
   --to viking://resources/research-wiki \
-  --skill viking://agent/skills/llm-wiki \
+  --skill viking://system/compile/example-skills/llm-wiki \
   --instruction "面向團隊檢索整理成 Wiki，保留每條結論的出處"
 ```
 
