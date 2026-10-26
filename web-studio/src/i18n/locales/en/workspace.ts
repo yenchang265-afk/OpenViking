@@ -488,6 +488,17 @@ const workspace = {
       },
       failed: 'Could not create the skill: {{error}}',
     },
+    delete: {
+      open: 'Delete',
+      title: 'Delete {{name}}?',
+      description:
+        'This removes {{uri}} with SKILL.md and every other file in it. Agents can no longer use this skill. This cannot be undone.',
+      cancel: 'Cancel',
+      confirm: 'Delete skill',
+      deleting: 'Deleting...',
+      deleted: 'Deleted skill {{name}}',
+      failed: 'Could not delete the skill: {{error}}',
+    },
     detail: 'Details',
     openFilesystem: 'Open in Filesystem',
     viewDetail: 'View {{name}} details',

@@ -194,6 +194,26 @@ async def test_skills_api_list_show_find_and_delete(client):
     assert missing_privacy_response.status_code == 404
 
 
+async def test_skills_api_delete_with_target_uri_stays_in_that_scope(client):
+    added = await _add_skill(client, "scoped-skill", "User-scope skill")
+
+    wrong_scope = await client.delete(
+        "/api/v1/skills/scoped-skill",
+        params={"target_uri": "viking://agent/skills"},
+    )
+    assert wrong_scope.status_code == 404, wrong_scope.text
+    assert (await client.get("/api/v1/skills/scoped-skill")).status_code == 200
+
+    target_uri = added["uri"].rsplit("/", 1)[0]
+    right_scope = await client.delete(
+        "/api/v1/skills/scoped-skill",
+        params={"target_uri": target_uri},
+    )
+    assert right_scope.status_code == 200, right_scope.text
+    assert right_scope.json()["result"]["uri"] == added["uri"]
+    assert (await client.get("/api/v1/skills/scoped-skill")).status_code == 404
+
+
 async def test_skills_api_update_requires_matching_name(client):
     await _add_skill(client, "update-skill", "Original description")
 

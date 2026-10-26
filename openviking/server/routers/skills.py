@@ -269,8 +269,18 @@ def _skill_root_from_hit_uri(hit_uri: str) -> str:
 
 
 async def _require_skill(
-    service, ctx: RequestContext, skill_name: str, target_uri: Optional[str] = None
+    service,
+    ctx: RequestContext,
+    skill_name: str,
+    target_uri: Optional[str] = None,
+    *,
+    fallback: bool = True,
 ) -> str:
+    """Resolve a skill's root URI, trying ``target_uri`` first.
+
+    With ``fallback=False`` a given ``target_uri`` is the only scope searched, so
+    a destructive call never lands on a same-named skill in another scope.
+    """
     if target_uri:
         root_uri = _skill_root_uri(ctx, skill_name, target_uri)
         try:
@@ -281,6 +291,8 @@ async def _require_skill(
             pass
         except Exception as exc:
             raise NotFoundError(root_uri, "skill") from exc
+        if not fallback:
+            raise NotFoundError(root_uri, "skill")
 
     user_root_uri = _skill_root_uri(ctx, skill_name)
     try:
@@ -1062,7 +1074,7 @@ async def delete_skill(
 ):
     """Remove one installed agent skill."""
     service = get_service()
-    root_uri = await _require_skill(service, _ctx, skill_name, target_uri)
+    root_uri = await _require_skill(service, _ctx, skill_name, target_uri, fallback=False)
     result = await service.fs.rm(root_uri, ctx=_ctx, recursive=True)
     privacy_deleted = False
     privacy = service.privacy_configs
