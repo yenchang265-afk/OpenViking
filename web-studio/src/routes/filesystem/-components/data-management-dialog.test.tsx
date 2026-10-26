@@ -18,6 +18,7 @@ vi.mock('sonner', () => ({
 
 vi.mock('../-lib/data-management', () => ({
   createDataManagementClient: () => ({ client: {} }),
+  downloadBlob: vi.fn(),
   exportOvpack: vi.fn(),
   importOvpack: vi.fn(),
   listSnapshots: vi.fn(),

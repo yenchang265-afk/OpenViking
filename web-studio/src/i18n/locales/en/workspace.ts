@@ -498,6 +498,14 @@ const workspace = {
       deleting: 'Deleting...',
       deleted: 'Deleted skill {{name}}',
       failed: 'Could not delete the skill: {{error}}',
+      backupHint:
+        'Download a backup first. To restore the skill, open {{parent}} in Filesystem and import the backup with OVPack. Privacy config values are not included.',
+      backup: 'Download backup',
+      backingUp: 'Preparing backup...',
+      backedUp: 'Backup downloaded',
+      backupFailed: 'Could not download the backup: {{error}}',
+      typeName:
+        'This shared skill is removed for everyone. Type {{name}} to confirm.',
     },
     detail: 'Details',
     openFilesystem: 'Open in Filesystem',

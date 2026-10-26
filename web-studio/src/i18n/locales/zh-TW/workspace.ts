@@ -484,6 +484,14 @@ const workspace = {
       deleting: '正在刪除...',
       deleted: '已刪除技能 {{name}}',
       failed: '技能刪除失敗：{{error}}',
+      backupHint:
+        '建議先下載備份。若要復原，請在檔案系統中開啟 {{parent}}，再用 OVPack 匯入備份。備份不包含隱私設定的值。',
+      backup: '下載備份',
+      backingUp: '正在準備備份...',
+      backedUp: '備份已下載',
+      backupFailed: '備份下載失敗：{{error}}',
+      typeName:
+        '這是共享技能，刪除後所有人都無法使用。請輸入 {{name}} 以確認。',
     },
     detail: '詳情',
     openFilesystem: '在檔案系統中開啟',

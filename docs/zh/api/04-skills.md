@@ -545,7 +545,7 @@ curl -X GET "http://localhost:1933/api/v1/skills?node_limit=1000" \
 | `include_integrity` | `false` | 在樹鎖內讀取快照；與 `include_files=true` 一起使用才生成檔案雜湊與 revision |
 | `include_source` | `false` | 返回 `.source.json` 來源資訊；沒有記錄時 `source.tracked=false` |
 
-按名稱讀取、更新、刪除共用查詢邏輯：預設先找使用者私有 Skill，再找共享 Skill；顯式指定 `target_uri` 時先找目標根，未找到時仍會回退到私有/共享根。當前 `target_uri` 對這三個操作不是嚴格的“僅限該根”保證。處理同名 Skill 時，應先讀取並檢查返回的 `root_uri`。
+按名稱讀取、更新共用查詢邏輯：預設先找使用者私有 Skill，再找共享 Skill；顯式指定 `target_uri` 時先找目標根，未找到時仍會回退到私有/共享根，因此 `target_uri` 對這兩個操作不是嚴格的“僅限該根”保證。處理同名 Skill 時，應先讀取並檢查返回的 `root_uri`。刪除的規則更嚴格，見[刪除技能](#刪除技能)。
 
 **Python SDK**：
 
@@ -794,7 +794,13 @@ curl -X PUT http://localhost:1933/api/v1/skills/search-web \
 
 ### 刪除技能
 
-`DELETE /api/v1/skills/{skill_name}` 接受可選查詢引數 `target_uri`，遞迴刪除解析到的 Skill 包，並處理關聯 Skill privacy 配置。目標根回退規則與讀取相同。
+`DELETE /api/v1/skills/{skill_name}` 接受可選查詢引數 `target_uri`，遞迴刪除解析到的 Skill 包，並處理關聯 Skill privacy 配置。
+
+- 不帶 `target_uri` 時，查詢規則與讀取相同：先找使用者私有 Skill，再找共享 Skill。
+- 帶 `target_uri` 時只在該根中查找；找不到時返回 `404 NOT_FOUND`，不會刪除另一個根中的同名 Skill。
+- Privacy 配置按使用者儲存、以 Skill 名稱為鍵，因此同名的私有 Skill 和共享 Skill 讀取同一份配置。另一個根中仍有同名 Skill 時，刪除會保留該配置，並在 `privacy_kept_for` 中返回那個 Skill；刪除最後一份時才移除配置。無法檢查另一個根時，配置會保留。
+- 刪除共享 Skill 只會清除呼叫者自己的 privacy 配置。Privacy 配置僅限擁有者操作（管理員也不例外），因此其他使用者對該名稱的配置會保留，日後重新安裝同名 Skill 時會繼續使用。擁有者可用 `DELETE /api/v1/privacy-configs/skill/{skill_name}` 自行刪除。
+- 刪除無法復原。如需保留副本，請先用 `POST /api/v1/pack/export`（`{"uri": "<root_uri>"}`）匯出 Skill 目錄；復原時用 `POST /api/v1/pack/import`，並以 Skill 所在的根（例如 `viking://agent/skills`）作為 `parent`。匯出內容不包含 privacy 配置的值。Web Studio 的刪除對話框提供這個備份功能。
 
 **Python SDK**：
 
@@ -909,12 +915,13 @@ ov skills remove old-skill -p viking://~/skills --yes
     "uri": "viking://user/default/skills/old-skill",
     "root_uri": "viking://user/default/skills/old-skill",
     "estimated_deleted_count": 4,
-    "privacy_deleted": false
+    "privacy_deleted": false,
+    "privacy_kept_for": "viking://agent/skills/old-skill"
   }
 }
 ```
 
-`estimated_deleted_count` 僅在底層檔案系統提供刪除數量估算時出現。
+`estimated_deleted_count` 僅在底層檔案系統提供刪除數量估算時出現。`privacy_kept_for` 僅在因另一個根中仍有同名 Skill 而保留 privacy 配置時出現。
 
 ## 最佳實踐
 

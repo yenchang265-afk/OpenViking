@@ -212,6 +212,20 @@ export async function exportOvpack(
   return data
 }
 
+/** Save an OVPack export as `<last URI segment>.ovpack`. */
+export function downloadBlob(blob: Blob, uri: string): void {
+  const name = uri.replace(/\/$/, '').split('/').at(-1) || 'openviking'
+  const safeName = name.replace(/[^\w.-]+/g, '_')
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `${safeName}.ovpack`
+  document.body.append(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+}
+
 export async function importOvpack(
   source: OvClientAdapter,
   parent: string,
