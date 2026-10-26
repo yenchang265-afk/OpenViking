@@ -796,7 +796,7 @@ curl -X PUT http://localhost:1933/api/v1/skills/search-web \
 - Without `target_uri`, the name resolves like read: the private user Skill first, then the shared Skill.
 - With `target_uri`, only that root is searched. A miss returns `404 NOT_FOUND` and never deletes a same-name Skill in the other root.
 - Privacy configuration is stored per user and keyed by Skill name, so a private and a shared Skill with the same name read the same configuration. Delete keeps it while a same-name Skill remains in the other root and reports that Skill as `privacy_kept_for`; deleting the last copy removes it. If the other root cannot be checked, the configuration is kept.
-- Deleting a shared Skill only clears the caller's privacy configuration. Privacy configuration is owner-only, even for administrators, so other users' configurations for that name stay and are reused if a Skill with that name is installed again. Owners remove theirs with `DELETE /api/v1/privacy-configs/skill/{skill_name}`.
+- Deleting a shared Skill only clears the caller's privacy configuration. Privacy configuration is owner-only, even for administrators, so other users' configurations for that name stay and are reused if a Skill with that name is installed again. Owners remove theirs with `DELETE /api/v1/privacy-configs/{category}/{target_key}` (`category=skill`, `target_key` = the Skill name).
 - Delete cannot be undone. To keep a copy, export the Skill directory first with `POST /api/v1/pack/export` (`{"uri": "<root_uri>"}`), and restore it with `POST /api/v1/pack/import` using the Skill's root (for example `viking://agent/skills`) as `parent`. The export does not include privacy configuration values. Web Studio offers this backup in its delete dialog.
 
 **Python SDK**
