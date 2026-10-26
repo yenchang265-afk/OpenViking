@@ -24,6 +24,7 @@ import { formatDateTime } from '#/i18n/format'
 import {
   commitSnapshot,
   createDataManagementClient,
+  downloadBlob,
   exportOvpack,
   importOvpack,
   listSnapshots,
@@ -41,19 +42,6 @@ interface Props {
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
-}
-
-function downloadBlob(blob: Blob, uri: string): void {
-  const name = uri.replace(/\/$/, '').split('/').at(-1) || 'openviking'
-  const safeName = name.replace(/[^\w.-]+/g, '_')
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = `${safeName}.ovpack`
-  document.body.append(link)
-  link.click()
-  link.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }
 
 export function DataManagementDialog({

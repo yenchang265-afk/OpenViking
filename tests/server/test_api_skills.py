@@ -214,6 +214,39 @@ async def test_skills_api_delete_with_target_uri_stays_in_that_scope(client):
     assert (await client.get("/api/v1/skills/scoped-skill")).status_code == 404
 
 
+async def test_skills_api_deleted_skill_restores_from_ovpack_backup(client, upload_temp_dir):
+    """The backup Studio offers before delete must bring the skill back."""
+    # Pack routes require an API key manager, even in dev-mode tests.
+    client._transport.app.state.api_key_manager = object()
+    added = await _add_skill(client, "backup-skill", "Skill to back up")
+
+    exported = await client.post(
+        "/api/v1/pack/export", json={"uri": added["uri"], "include_vectors": False}
+    )
+    assert exported.status_code == 200, exported.text
+    backup = upload_temp_dir / "backup-skill.ovpack"
+    backup.write_bytes(exported.content)
+
+    target_uri = added["uri"].rsplit("/", 1)[0]
+    deleted = await client.delete("/api/v1/skills/backup-skill", params={"target_uri": target_uri})
+    assert deleted.status_code == 200, deleted.text
+    assert (await client.get("/api/v1/skills/backup-skill")).status_code == 404
+
+    imported = await client.post(
+        "/api/v1/pack/import",
+        json={"temp_file_id": backup.name, "parent": target_uri},
+    )
+    assert imported.status_code == 200, imported.text
+    assert imported.json()["result"]["uri"] == added["uri"]
+
+    restored = await client.get("/api/v1/skills/backup-skill", params={"target_uri": target_uri})
+    assert restored.status_code == 200, restored.text
+    assert restored.json()["result"]["description"] == "Skill to back up"
+    assert "# backup-skill" in restored.json()["result"]["content"]
+    listed = (await client.get("/api/v1/skills")).json()["result"]["skills"]
+    assert any(skill["name"] == "backup-skill" for skill in listed)
+
+
 async def test_skills_api_delete_keeps_privacy_shared_with_other_scope(client):
     """Privacy config is keyed by skill name, so a same-named skill in the
     other scope still reads it after one of the two is deleted."""
