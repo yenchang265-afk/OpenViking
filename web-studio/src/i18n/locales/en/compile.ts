@@ -81,6 +81,7 @@ export default {
   targetRequired: 'Set an output directory.',
   mySkills: 'My Skills',
   sharedSkills: 'Shared Skills',
+  builtInSkills: 'Built-in Skills',
   otherSkills: 'Other paths',
 
   noMatchingSkills: 'No matching skills',

@@ -17,14 +17,14 @@ ov ls -r viking://resources/work-logs
 
 ## 第二步：添加 Skill
 
-Daily Report Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+Daily Report Skill 隨 OpenViking 一起發佈。每個帳戶都有一份唯讀副本 `viking://system/compile/example-skills/daily-report`，在伺服器啟動與建立帳戶時同步，`--skill` 可直接使用。確認它已存在：
 
 ```bash
-ov skills list
-# → viking://agent/skills/daily-report
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/daily-report/
 ```
 
-如果管理員刪除了它，可從套件原始碼重新加入：
+如需自訂此 Skill，請安裝一份可編輯的副本，並改用該 URI 作為 `--skill`：
 
 ```bash
 ov add-skill openviking/system_assets/compile/example-skills/daily-report -p viking://agent/skills
@@ -38,7 +38,7 @@ ov add-skill openviking/system_assets/compile/example-skills/daily-report -p vik
 ov compile \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
-  --skill viking://agent/skills/daily-report \
+  --skill viking://system/compile/example-skills/daily-report \
   --instruction "按 Asia/Shanghai 時區生成 2026-08-20 的日報，聚焦我的工作產出與決策"
 ```
 
@@ -48,7 +48,7 @@ ov compile \
 ov compile \
   --from viking://resources/work-logs \
   --to viking://resources/daily-report \
-  --skill viking://agent/skills/daily-report \
+  --skill viking://system/compile/example-skills/daily-report \
   --instruction "按 Asia/Shanghai 時區生成 2026-08-18 至 2026-08-20 每天一份日報"
 ```
 

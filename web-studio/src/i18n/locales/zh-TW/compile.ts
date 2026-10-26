@@ -74,6 +74,7 @@ export default {
   targetRequired: '請設定輸出目錄。',
   mySkills: '我的 Skill',
   sharedSkills: '共享 Skill',
+  builtInSkills: '內建 Skill',
   otherSkills: '其他路徑',
 
   noMatchingSkills: '沒有匹配的 Skill',

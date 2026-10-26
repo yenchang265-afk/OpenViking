@@ -29,14 +29,14 @@ ov ls -r viking://resources/journal
 
 ## 第二步：添加 Skill
 
-Knowledge Graph Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+Knowledge Graph Skill 隨 OpenViking 一起發佈。每個帳戶都有一份唯讀副本 `viking://system/compile/example-skills/knowledge-graph`，在伺服器啟動與建立帳戶時同步，`--skill` 可直接使用。確認它已存在：
 
 ```bash
-ov skills list
-# → viking://agent/skills/knowledge-graph
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/knowledge-graph/
 ```
 
-如果管理員刪除了它，可從套件原始碼重新加入：
+如需自訂此 Skill，請安裝一份可編輯的副本，並改用該 URI 作為 `--skill`：
 
 ```bash
 ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p viking://agent/skills
@@ -48,7 +48,7 @@ ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p 
 ov compile \
   --from viking://resources/journal \
   --to viking://resources/journal-kg \
-  --skill viking://agent/skills/knowledge-graph \
+  --skill viking://system/compile/example-skills/knowledge-graph \
   --instruction "抽取人物、地點、法寶及其關係，構建可遍歷的知識圖譜"
 ```
 

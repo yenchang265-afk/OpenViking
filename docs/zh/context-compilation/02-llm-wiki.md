@@ -41,14 +41,14 @@ ov ls -r viking://resources/research
 
 ## 第二步：添加 Skill
 
-LLM Wiki Skill 隨 OpenViking 一起發佈，預設會安裝到每個帳戶共享的 `viking://agent/skills`（伺服器選項 `server.builtin_skills`）。確認它已存在：
+LLM Wiki Skill 隨 OpenViking 一起發佈。每個帳戶都有一份唯讀副本 `viking://system/compile/example-skills/llm-wiki`，在伺服器啟動與建立帳戶時同步，`--skill` 可直接使用。確認它已存在：
 
 ```bash
-ov skills list
-# → viking://agent/skills/llm-wiki
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/llm-wiki/
 ```
 
-如果管理員刪除了它，可從套件原始碼重新加入：
+如需自訂此 Skill，請安裝一份可編輯的副本，並改用該 URI 作為 `--skill`：
 
 ```bash
 ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking://agent/skills
@@ -60,7 +60,7 @@ ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking:
 ov compile \
   --from viking://resources/research \
   --to viking://resources/research-wiki \
-  --skill viking://agent/skills/llm-wiki \
+  --skill viking://system/compile/example-skills/llm-wiki \
   --instruction "面向團隊檢索整理成 Wiki，保留每條結論的出處"
 ```
 

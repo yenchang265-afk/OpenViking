@@ -398,9 +398,6 @@ class ServerConfig(BaseModel):
     cors_origins: List[str] = Field(default_factory=lambda: ["*"])
     with_bot: bool = False  # Enable Bot API proxy to Vikingbot
     bot_api_url: str = "http://localhost:18790"  # Vikingbot OpenAPIChannel URL (default port)
-    # Install the bundled compile Skills (openviking/system_assets/compile/example-skills)
-    # into every account's viking://agent/skills. Never overwrites; deleted built-ins stay deleted.
-    builtin_skills: bool = True
     encryption_enabled: bool = False  # Whether file-level AES encryption is enabled
     api_key_hashing_enabled: bool = False  # Whether API key Argon2id hashing is enabled (default: false, rely on file encryption)
     # When true, poll the shared key store and reload the in-memory index on change so

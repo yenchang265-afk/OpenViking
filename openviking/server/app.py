@@ -166,45 +166,6 @@ async def _initialize_auth_plugin(
     logger.info("Auth plugin initialized: %s", effective_auth_mode)
 
 
-async def _builtin_skill_account_ids(app: FastAPI, service: OpenVikingService) -> list[str]:
-    """Every known account; dev mode and bare trusted mode only have the default.
-
-    The default account does not need the account store, so it is kept even
-    when listing the other accounts fails.
-    """
-    manager = getattr(app.state, "api_key_manager", None)
-    if manager is None:
-        plugin = getattr(app.state, "auth_plugin", None)
-        manager = getattr(plugin, "_api_key_manager", None)
-    user = getattr(service, "user", None)
-    account_ids = [user.account_id] if user is not None else []
-    if manager is not None:
-        try:
-            accounts = await manager.list_accounts()
-        except Exception:
-            logger.exception("Could not list accounts for built-in Skill installation")
-            accounts = []
-        account_ids += [
-            account["account_id"] for account in accounts if account.get("status") != "deleting"
-        ]
-    return list(dict.fromkeys(account_ids))
-
-
-def _start_builtin_skills_install(app: FastAPI, service: OpenVikingService) -> asyncio.Task:
-    """Install the bundled compile Skills in the background, after startup.
-
-    Listing accounts happens inside the task: it reads the account store, and a
-    failure there must not block startup.
-    """
-    from openviking.service.builtin_skills import install_builtin_skills_for_accounts
-
-    async def install() -> None:
-        account_ids = await _builtin_skill_account_ids(app, service)
-        await install_builtin_skills_for_accounts(service, account_ids)
-
-    return asyncio.create_task(install())
-
-
 async def _initialize_runtime_state(
     app: FastAPI,
     service: OpenVikingService,
@@ -462,7 +423,6 @@ def create_app(
         from openviking.server.mcp_endpoint import mcp_lifespan
 
         gateway = app.state.gateway_app
-        builtin_skills_task = None
         async with AsyncExitStack() as stack:
             await stack.enter_async_context(mcp_lifespan())
             # Deletion setup receives the gateway, so it must be running first.
@@ -470,8 +430,6 @@ def create_app(
                 await stack.enter_async_context(gateway.router.lifespan_context(gateway))
             if service is not None:
                 await _initialize_runtime_state(app, service, config)
-                if config.builtin_skills:
-                    builtin_skills_task = _start_builtin_skills_install(app, service)
             if gateway is not None and config.get_effective_auth_mode() == "dev":
                 from openviking_gateway.app import seed_defaults
 
@@ -492,10 +450,6 @@ def create_app(
         upload_sweep_task.cancel()
         with suppress(asyncio.CancelledError):
             await upload_sweep_task
-        if builtin_skills_task is not None:
-            builtin_skills_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await builtin_skills_task
         if oauth_gc_task is not None:
             oauth_gc_task.cancel()
             try:

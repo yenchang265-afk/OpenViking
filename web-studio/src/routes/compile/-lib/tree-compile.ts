@@ -1,8 +1,11 @@
 const trimSlash = (uri: string) => uri.replace(/\/+$/, '')
 
-/** `viking://agent/skills/<name>` or `viking://user/<id>/skills/<name>`. */
+/**
+ * `viking://agent/skills/<name>`, `viking://user/<id>/skills/<name>` or a bundled
+ * `viking://system/compile/example-skills/<name>`.
+ */
 export function isSkillRootUri(uri: string): boolean {
-  return /^viking:\/\/(?:agent|user\/[^/]+)\/skills\/[^/]+$/.test(
+  return /^viking:\/\/(?:agent\/skills|user\/[^/]+\/skills|system\/compile\/example-skills)\/[^/]+$/.test(
     trimSlash(uri),
   )
 }

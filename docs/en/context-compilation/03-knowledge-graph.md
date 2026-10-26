@@ -29,14 +29,14 @@ ov ls -r viking://resources/journal
 
 ## Step 2: Add the Skill
 
-The Knowledge Graph Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+The Knowledge Graph Skill ships with OpenViking. Every account has a read-only copy at `viking://system/compile/example-skills/knowledge-graph`, synced at server start and when an account is created, so `--skill` can use it directly. Check that it is there:
 
 ```bash
-ov skills list
-# → viking://agent/skills/knowledge-graph
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/knowledge-graph/
 ```
 
-If an admin removed it, add it back from the package source:
+To customize the Skill, install an editable copy and pass its URI to `--skill` instead:
 
 ```bash
 ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p viking://agent/skills
@@ -48,7 +48,7 @@ ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p 
 ov compile \
   --from viking://resources/journal \
   --to viking://resources/journal-kg \
-  --skill viking://agent/skills/knowledge-graph \
+  --skill viking://system/compile/example-skills/knowledge-graph \
   --instruction "Extract characters, places, artifacts and their relationships into a traversable graph"
 ```
 

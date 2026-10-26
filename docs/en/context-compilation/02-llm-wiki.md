@@ -41,14 +41,14 @@ ov ls -r viking://resources/research
 
 ## Step 2: Add the Skill
 
-The LLM Wiki Skill ships with OpenViking and is installed into every account's shared `viking://agent/skills` by default (server option `server.builtin_skills`). Check that it is there:
+The LLM Wiki Skill ships with OpenViking. Every account has a read-only copy at `viking://system/compile/example-skills/llm-wiki`, synced at server start and when an account is created, so `--skill` can use it directly. Check that it is there:
 
 ```bash
-ov skills list
-# → viking://agent/skills/llm-wiki
+ov ls viking://system/compile/example-skills
+# → viking://system/compile/example-skills/llm-wiki/
 ```
 
-If an admin removed it, add it back from the package source:
+To customize the Skill, install an editable copy and pass its URI to `--skill` instead:
 
 ```bash
 ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking://agent/skills
@@ -60,7 +60,7 @@ ov add-skill openviking/system_assets/compile/example-skills/llm-wiki -p viking:
 ov compile \
   --from viking://resources/research \
   --to viking://resources/research-wiki \
-  --skill viking://agent/skills/llm-wiki \
+  --skill viking://system/compile/example-skills/llm-wiki \
   --instruction "Organize into a team-searchable Wiki, keeping the source of every claim"
 ```
 

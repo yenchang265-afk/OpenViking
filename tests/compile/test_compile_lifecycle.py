@@ -391,3 +391,13 @@ async def test_create_at_capacity_does_not_save_target_settings(tmp_path):
 
     lifecycle.prepare.assert_not_awaited()
     tasks.create.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_create_accepts_bundled_system_example_skill(tmp_path):
+    service, tasks = _compile_service(tmp_path)
+    skill = "viking://system/compile/example-skills/llm-wiki"
+
+    await service.create(_request(skill=f"{skill}/SKILL.md"), ctx=CTX)
+
+    assert tasks.create.await_args.kwargs["payload"]["skill"] == skill

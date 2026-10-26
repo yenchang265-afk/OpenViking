@@ -12,6 +12,10 @@ describe('tree compile helpers', () => {
     expect(isSkillRootUri('viking://agent/skills')).toBe(false)
     expect(isSkillRootUri('viking://agent/skills/llm-wiki/refs')).toBe(false)
     expect(isSkillRootUri('viking://resources/skills/x')).toBe(false)
+    expect(
+      isSkillRootUri('viking://system/compile/example-skills/llm-wiki'),
+    ).toBe(true)
+    expect(isSkillRootUri('viking://system/compile/example-skills')).toBe(false)
   })
 
   it('accepts any directory below the root as a source', () => {
