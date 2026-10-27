@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { getLastDaysRange } from './format'
+import {
+  formatDateRange,
+  formatPercent,
+  getLastDaysRange,
+  getSeriesRange,
+} from './format'
 
 afterEach(() => {
   vi.useRealTimers()
@@ -57,5 +62,37 @@ describe('getLastDaysRange', () => {
       endDate: '2026-03-09',
       startDate: '2026-02-24',
     })
+  })
+})
+
+describe('getSeriesRange', () => {
+  it('prefers the range the server reported', () => {
+    expect(
+      getSeriesRange({ end_date: '2026-10-27', start_date: '2026-10-14' }, 3),
+    ).toEqual({ endDate: '2026-10-27', startDate: '2026-10-14' })
+  })
+
+  it('falls back to the requested last days', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-10-27T12:00:00Z'))
+    expect(getSeriesRange(undefined, 14)).toEqual(getLastDaysRange(14))
+  })
+})
+
+describe('formatDateRange', () => {
+  it('formats a localized range instead of raw date keys', () => {
+    const label = formatDateRange('2026-10-14', '2026-10-27')
+    expect(label).not.toContain('2026-10-14')
+    expect(label).toContain('2026')
+    expect(label).toContain('14')
+    expect(label).toContain('27')
+  })
+})
+
+describe('formatPercent', () => {
+  it('formats a ratio with at most one decimal', () => {
+    expect(formatPercent(0.025)).toBe('2.5%')
+    expect(formatPercent(0)).toBe('0%')
+    expect(formatPercent(undefined)).toBe('0%')
   })
 })

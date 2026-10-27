@@ -4,13 +4,9 @@ import { Skeleton } from '#/components/ui/skeleton'
 import { cn } from '#/lib/utils'
 
 import type { HomeT, TokenRate, TokenRateWindow } from '../-types/dashboard'
-import {
-  formatNumber,
-  formatTpmTime,
-  isDisabledPayload,
-} from '../-lib/format'
+import { formatNumber, formatTpmTime, isDisabledPayload } from '../-lib/format'
 import { normalizeTokenRate } from '../-lib/normalize'
-import { EmptyState, Panel, SectionHeading } from './panel'
+import { EmptyState, Panel, SectionHeading, StaleNotice } from './panel'
 
 const TpmTrendChart = lazy(() =>
   import('./tpm-trend-chart').then((module) => ({
@@ -26,7 +22,9 @@ export function TpmTrendPanel({
   disabledMessage,
   isError,
   isLoading,
+  isRefreshing = false,
   onWindowChange,
+  staleMessage,
   t,
   window,
 }: {
@@ -35,7 +33,10 @@ export function TpmTrendPanel({
   disabledMessage?: string
   isError: boolean
   isLoading: boolean
+  /** Previous window's data is shown while the selected window loads. */
+  isRefreshing?: boolean
   onWindowChange: (window: TokenRateWindow) => void
+  staleMessage?: string
   t: HomeT
   window: TokenRateWindow
 }) {
@@ -82,7 +83,18 @@ export function TpmTrendPanel({
       ) : !series.peak ? (
         <EmptyState>{t('tpmTrend.empty')}</EmptyState>
       ) : (
-        <>
+        <div
+          aria-busy={isRefreshing}
+          className={cn(
+            'transition-opacity',
+            isRefreshing && 'pointer-events-none opacity-50',
+          )}
+        >
+          {staleMessage ? (
+            <div className="mb-3">
+              <StaleNotice message={staleMessage} />
+            </div>
+          ) : null}
           <dl className="mb-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-xl border border-border/60 px-4 py-3">
               <dt className="text-xs text-muted-foreground">
@@ -113,7 +125,7 @@ export function TpmTrendPanel({
               t={t}
             />
           </Suspense>
-        </>
+        </div>
       )}
     </Panel>
   )

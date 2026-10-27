@@ -56,6 +56,15 @@ export function DetailRow({ label, value }: { label: string; value: string }) {
   )
 }
 
+/** Shown when a refetch failed but the last loaded data is still on screen. */
+export function StaleNotice({ message }: { message: string }) {
+  return (
+    <p role="status" className="text-xs text-amber-700 dark:text-amber-400">
+      {message}
+    </p>
+  )
+}
+
 export function EmptyState({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-24 items-center justify-center rounded-xl border border-dashed border-border/60 bg-background/45 px-4 text-center text-sm text-muted-foreground dark:bg-white/[0.04]">

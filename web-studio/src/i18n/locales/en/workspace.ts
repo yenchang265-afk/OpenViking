@@ -1647,6 +1647,44 @@ const workspace = {
       title: 'Overview',
     },
     requestFailed: 'Request failed',
+    staleData: 'Refresh failed. Showing the last loaded data.',
+    refresh: 'Refresh',
+    updatedAt: 'Updated at {{time}}',
+    requestHealth: {
+      coverage: '{{requests}} requests since {{time}}',
+      empty: 'No audited requests in the last 24 hours',
+    },
+    requestErrors: {
+      clientErrors: 'Client errors (4xx)',
+      description:
+        'Share of audited requests in the last 24 hours that returned a 5xx status.',
+      details: 'View request logs',
+      serverErrors: 'Server errors (5xx)',
+      title: 'Server Error Rate',
+    },
+    latency: {
+      description:
+        '95th-percentile response time of audited requests in the last 24 hours.',
+      p50: 'p50, all requests',
+      retrievalCount: 'Retrieval requests',
+      retrievalP95: 'p95, retrieval',
+      title: 'Latency (p95)',
+      value: '{{value}} ms',
+    },
+    failedTasks: {
+      active: 'Running or queued',
+      checked: 'Of the {{tasks}} newest tasks',
+      description:
+        'Background tasks that failed in the last 24 hours, among the newest tasks.',
+      details: 'View tasks',
+      title: 'Failed Tasks (24h)',
+    },
+    summaryError: {
+      requestId: 'Request ID',
+      retry: 'Retry',
+      status: 'HTTP {{status}}',
+      title: 'Could not load dashboard metrics',
+    },
     cacheHitRate: {
       bypasses: 'Bypassed',
       description:
@@ -1682,6 +1720,7 @@ const workspace = {
       title: 'Tokens / Minute',
       vlmInput: 'VLM input / min',
       vlmOutput: 'VLM output / min',
+      window: 'Average over the last {{minutes}} min',
     },
     tpmTrend: {
       average: 'Average TPM',

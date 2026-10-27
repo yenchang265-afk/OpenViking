@@ -6,6 +6,8 @@ export type {
   ConsoleContextCommitItem as ContextCommitItem,
   ConsoleContextCounts as ContextCounts,
   ConsoleDashboardSummaryResult as ConsoleDashboardSummary,
+  ConsoleLatencySummary as LatencySummary,
+  ConsoleRequestHealthResult as RequestHealth,
   ConsoleRetrievalCounts as RetrievalCounts,
   ConsoleSeriesResult as ConsoleSeries,
   ConsoleTokenCounts as TokenCounts,

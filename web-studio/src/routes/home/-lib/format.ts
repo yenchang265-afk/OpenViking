@@ -22,6 +22,14 @@ export function formatNumber(value: unknown): string {
   return asNumber(value).toLocaleString(i18n.resolvedLanguage ?? i18n.language)
 }
 
+/** Format a 0–1 ratio as a percentage with at most one decimal, e.g. "2.5%". */
+export function formatPercent(ratio: unknown): string {
+  return new Intl.NumberFormat(i18n.resolvedLanguage ?? i18n.language, {
+    maximumFractionDigits: 1,
+    style: 'percent',
+  }).format(asNumber(ratio))
+}
+
 export function parseDateKey(value: string | undefined): Date {
   const fallback = new Date()
   if (!value) return fallback
@@ -68,6 +76,26 @@ export function getLastDaysRange(
     endDate,
     startDate: earlier.toISOString().slice(0, 10),
   }
+}
+
+/** The range a series response covers, falling back to the requested days. */
+export function getSeriesRange(
+  data: { end_date?: string; start_date?: string } | undefined,
+  days: number,
+): { endDate: string; startDate: string } {
+  if (data?.start_date && data.end_date) {
+    return { endDate: data.end_date, startDate: data.start_date }
+  }
+  return getLastDaysRange(days)
+}
+
+/** Format two YYYY-MM-DD keys as a localized range, e.g. "Oct 14 – 27, 2026". */
+export function formatDateRange(startDate: string, endDate: string): string {
+  const formatter = new Intl.DateTimeFormat(
+    i18n.resolvedLanguage ?? i18n.language,
+    { day: 'numeric', month: 'short', year: 'numeric' },
+  )
+  return formatter.formatRange(parseDateKey(startDate), parseDateKey(endDate))
 }
 
 export function formatShortDate(value: string): string {
