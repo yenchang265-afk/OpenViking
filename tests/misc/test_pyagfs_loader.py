@@ -1,4 +1,7 @@
+import importlib.util
 import sysconfig
+
+import pytest
 
 import openviking.pyagfs as pyagfs
 
@@ -54,3 +57,22 @@ def test_find_ragfs_so_allows_stable_abi_artifact(tmp_path, monkeypatch):
     abi3.touch()
 
     assert pyagfs._find_ragfs_so() == str(abi3)
+
+
+def test_rust_module_survives_repeated_loads():
+    # PyO3 builds the module with multi-phase init (PEP 489), so every load from
+    # the vendored file re-runs its init. openviking.pyagfs already loaded it once
+    # at import; each further load must succeed rather than fail on state the
+    # first init stored.
+    so_path = pyagfs._find_ragfs_so()
+    if so_path is None:
+        pytest.skip("ragfs_python binding not built into openviking/lib")
+
+    for _ in range(2):
+        spec = importlib.util.spec_from_file_location("ragfs_python", so_path)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        assert module.RAGFSBindingClient is not None
+
+    client, _ = pyagfs.get_binding_client()
+    assert client is not None
