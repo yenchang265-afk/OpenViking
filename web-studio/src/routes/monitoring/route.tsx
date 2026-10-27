@@ -27,7 +27,10 @@ import {
   fetchCacheStats,
   normalizeCacheStats,
 } from '#/lib/cache-stats'
-import { getHealth, getObserverSystem, getOvResult } from '#/lib/ov-client'
+import {
+  fetchMonitoringOverview,
+  monitoringOverviewQueryKey,
+} from '#/lib/monitoring-overview'
 import { cn } from '#/lib/utils'
 import { CacheStatsContent } from './-components/cache-stats-content'
 import { ObserverStatusContent } from './-components/observer-status-content'
@@ -43,20 +46,6 @@ export const Route = createFileRoute('/monitoring')({
     tab: typeof search.tab === 'string' ? search.tab : undefined,
   }),
 })
-
-type ObserverComponent = {
-  has_errors: boolean
-  is_healthy: boolean
-  name: string
-  status: string
-}
-
-type MonitoringOverview = {
-  components: Record<string, ObserverComponent>
-  errors: string[]
-  healthy: boolean
-  version?: string
-}
 
 const MONITOR_TYPES = [
   ['overview', LayoutDashboardIcon],
@@ -78,50 +67,6 @@ type MonitorTab = MonitorType | typeof CACHE_TAB
 function parseMonitorTab(value: string | undefined): MonitorTab {
   if (value === CACHE_TAB) return CACHE_TAB
   return MONITOR_TYPES.find(([name]) => name === value)?.[0] ?? 'overview'
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
-}
-
-function normalizeComponent(
-  name: string,
-  value: unknown,
-): ObserverComponent | undefined {
-  if (!isRecord(value)) return undefined
-
-  return {
-    has_errors: value.has_errors === true,
-    is_healthy: value.is_healthy === true,
-    name: typeof value.name === 'string' ? value.name : name,
-    status: typeof value.status === 'string' ? value.status : '',
-  }
-}
-
-async function fetchMonitoringOverview(): Promise<MonitoringOverview> {
-  const [health, observer] = await Promise.all([
-    getOvResult<Record<string, unknown>>(getHealth()),
-    getOvResult<Record<string, unknown>>(getObserverSystem()),
-  ])
-  const rawComponents = isRecord(observer.components) ? observer.components : {}
-  const components: Record<string, ObserverComponent> = {}
-
-  for (const [name] of MONITOR_TYPES) {
-    if (name === 'overview') continue
-    const component = normalizeComponent(name, rawComponents[name])
-    if (component) components[name] = component
-  }
-
-  return {
-    components,
-    errors: Array.isArray(observer.errors)
-      ? observer.errors.filter(
-          (error): error is string => typeof error === 'string',
-        )
-      : [],
-    healthy: observer.is_healthy === true,
-    version: typeof health.version === 'string' ? health.version : undefined,
-  }
 }
 
 function HealthBadge({
@@ -171,7 +116,7 @@ function MonitoringRoute() {
   const monitoringQuery = useQuery({
     enabled: serverMode !== 'offline',
     queryFn: fetchMonitoringOverview,
-    queryKey: ['monitoring-overview', identityScopeKey],
+    queryKey: monitoringOverviewQueryKey(identityScopeKey),
     refetchInterval: 10_000,
     retry: false,
     staleTime: 5_000,
