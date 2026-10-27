@@ -165,7 +165,7 @@ fn pathlock_err_to_py(err: PathLockError) -> PyErr {
         | PathLockError::EmptyToken { .. } =>
         {
             #[allow(deprecated)]
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let ty = LOCK_ACQUISITION_ERROR_TYPE
                     .get()
                     .expect("LockAcquisitionError not initialized");
@@ -1220,7 +1220,7 @@ fn py_any_to_config_value(v: &Bound<'_, PyAny>) -> PyResult<ConfigValue> {
         Ok(ConfigValue::Bool(b))
     } else if let Ok(i) = v.extract::<i64>() {
         Ok(ConfigValue::Int(i))
-    } else if let Ok(list) = v.downcast::<PyList>() {
+    } else if let Ok(list) = v.cast::<PyList>() {
         let mut strings = Vec::new();
         let mut has_nested = false;
         for item in list.iter() {
@@ -1263,13 +1263,13 @@ fn py_to_json_value(v: &Bound<'_, PyAny>) -> PyResult<serde_json::Value> {
         }
     } else if let Ok(s) = v.extract::<String>() {
         Ok(serde_json::Value::String(s))
-    } else if let Ok(list) = v.downcast::<PyList>() {
+    } else if let Ok(list) = v.cast::<PyList>() {
         let mut arr = Vec::new();
         for item in list.iter() {
             arr.push(py_to_json_value(&item)?);
         }
         Ok(serde_json::Value::Array(arr))
-    } else if let Ok(dict) = v.downcast::<PyDict>() {
+    } else if let Ok(dict) = v.cast::<PyDict>() {
         let mut map = serde_json::Map::new();
         for (k, val) in dict.iter() {
             let key: String = k.extract()?;

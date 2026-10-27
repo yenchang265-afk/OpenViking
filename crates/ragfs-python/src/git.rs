@@ -746,7 +746,7 @@ mod tests {
 
     #[test]
     fn map_git_error_feature_disabled() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let err = map_git_error(py, GitError::FeatureDisabled);
             // We don't require the openviking.pyagfs module to be importable
@@ -758,7 +758,7 @@ mod tests {
 
     #[test]
     fn map_git_error_concurrent_commit() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let err = map_git_error(
                 py,
@@ -780,7 +780,7 @@ mod tests {
     #[test]
     fn map_git_error_writeback_partial() {
         use ragfs::git::RestoreWritebackPartial;
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let payload = RestoreWritebackPartial {
                 new_commit_oid: gix_hash::ObjectId::null(gix_hash::Kind::Sha1),
@@ -813,7 +813,7 @@ mod tests {
 
     #[test]
     fn map_git_error_path_not_found() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let err = map_git_error(py, GitError::PathNotFound("foo/bar".into()));
             assert!(err.to_string().contains("foo/bar"));
@@ -887,7 +887,7 @@ mod tests {
 
     #[test]
     fn map_git_error_invalid_account() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let err = map_git_error(py, GitError::InvalidAccountId("../bad".into()));
             assert!(err.to_string().contains("bad"));
@@ -896,7 +896,7 @@ mod tests {
 
     #[test]
     fn map_git_error_blob_too_large() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let err = map_git_error(
                 py,
@@ -923,7 +923,7 @@ mod tests {
 
     #[test]
     fn map_git_error_log_budgets_preserve_messages() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let cases = [
                 GitError::TooManyLogPaths {
@@ -1003,7 +1003,7 @@ mod tests {
 
     #[test]
     fn parse_commit_request_required_fields() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "acct1").unwrap();
@@ -1023,7 +1023,7 @@ mod tests {
 
     #[test]
     fn parse_commit_request_with_paths_list() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "a").unwrap();
@@ -1042,7 +1042,7 @@ mod tests {
 
     #[test]
     fn parse_commit_request_missing_required_errors() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("branch", "main").unwrap();
@@ -1054,7 +1054,7 @@ mod tests {
 
     #[test]
     fn parse_restore_request_defaults_project_dir_none() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "a").unwrap();
@@ -1071,7 +1071,7 @@ mod tests {
 
     #[test]
     fn parse_restore_request_project_dir_some() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "a").unwrap();
@@ -1087,7 +1087,7 @@ mod tests {
 
     #[test]
     fn parse_restore_request_dry_run_and_message() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "a").unwrap();
@@ -1106,7 +1106,7 @@ mod tests {
 
     #[test]
     fn parse_show_request_with_and_without_path() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "a").unwrap();
@@ -1125,7 +1125,7 @@ mod tests {
 
     #[test]
     fn parse_log_request_with_paths() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let kwargs = PyDict::new(py);
             kwargs.set_item("account", "a").unwrap();
@@ -1147,7 +1147,7 @@ mod tests {
 
     #[test]
     fn commit_response_created_to_dict() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let oid = gix_hash::ObjectId::null(gix_hash::Kind::Sha1);
             let resp = ragfs::git::CommitResponse::Created {
@@ -1156,7 +1156,7 @@ mod tests {
                 ignored: 3,
             };
             let obj = commit_response_to_pydict(py, resp).expect("converts");
-            let d = obj.bind(py).downcast::<PyDict>().unwrap();
+            let d = obj.bind(py).cast::<PyDict>().unwrap();
             assert_eq!(d.get_item("result").unwrap().unwrap().extract::<String>().unwrap(), "created");
             assert_eq!(d.get_item("commit_oid").unwrap().unwrap().extract::<String>().unwrap(), oid.to_hex().to_string());
             assert_eq!(d.get_item("changed").unwrap().unwrap().extract::<usize>().unwrap(), 2);
@@ -1166,7 +1166,7 @@ mod tests {
 
     #[test]
     fn commit_response_noop_to_dict() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let oid = gix_hash::ObjectId::null(gix_hash::Kind::Sha1);
             let resp = ragfs::git::CommitResponse::Noop {
@@ -1174,7 +1174,7 @@ mod tests {
                 ignored: 4,
             };
             let obj = commit_response_to_pydict(py, resp).expect("converts");
-            let d = obj.bind(py).downcast::<PyDict>().unwrap();
+            let d = obj.bind(py).cast::<PyDict>().unwrap();
             assert_eq!(d.get_item("result").unwrap().unwrap().extract::<String>().unwrap(), "noop");
             assert_eq!(d.get_item("commit_oid").unwrap().unwrap().extract::<String>().unwrap(), oid.to_hex().to_string());
             assert_eq!(d.get_item("ignored").unwrap().unwrap().extract::<usize>().unwrap(), 4);
@@ -1183,7 +1183,7 @@ mod tests {
 
     #[test]
     fn log_entries_to_pylist_includes_commit_metadata() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let oid = gix_hash::ObjectId::null(gix_hash::Kind::Sha1);
             let actor = ragfs::git::Actor {
@@ -1201,10 +1201,10 @@ mod tests {
                 message: "subject\n\nbody".to_string(),
             }];
             let obj = log_entries_to_pylist(py, entries).expect("converts");
-            let list = obj.bind(py).downcast::<PyList>().unwrap();
+            let list = obj.bind(py).cast::<PyList>().unwrap();
             assert_eq!(list.len(), 1);
             let first = list.get_item(0).unwrap();
-            let d = first.downcast::<PyDict>().unwrap();
+            let d = first.cast::<PyDict>().unwrap();
             assert_eq!(
                 d.get_item("oid").unwrap().unwrap().extract::<String>().unwrap(),
                 oid.to_hex().to_string()
@@ -1214,13 +1214,13 @@ mod tests {
                 "subject\n\nbody"
             );
             let parents = d.get_item("parents").unwrap().unwrap();
-            assert_eq!(parents.downcast::<PyList>().unwrap().len(), 1);
+            assert_eq!(parents.cast::<PyList>().unwrap().len(), 1);
         });
     }
 
     #[test]
     fn show_response_blob_to_dict_carries_bytes() {
-        pyo3::prepare_freethreaded_python();
+        pyo3::Python::initialize();
         Python::attach(|py| {
             let oid = gix_hash::ObjectId::null(gix_hash::Kind::Sha1);
             let resp = ragfs::git::ShowResponse::Blob {
@@ -1229,7 +1229,7 @@ mod tests {
                 bytes: bytes::Bytes::from_static(b"hello"),
             };
             let obj = show_response_to_pydict(py, resp).expect("converts");
-            let d: &Bound<PyDict> = obj.bind(py).downcast().unwrap();
+            let d: &Bound<PyDict> = obj.bind(py).cast().unwrap();
             let b: Vec<u8> = d.get_item("bytes").unwrap().unwrap().extract().unwrap();
             assert_eq!(b, b"hello".to_vec());
             let size: u64 = d.get_item("size").unwrap().unwrap().extract().unwrap();

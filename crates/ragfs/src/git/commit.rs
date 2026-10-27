@@ -67,12 +67,12 @@ mod tests {
         let raw = read_object(&store, "acct", &oid).await.unwrap();
         let (kind, _, hdr) = parse_object_header(&raw).unwrap();
         assert_eq!(kind, gix_object::Kind::Commit);
-        let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..]).unwrap();
+        let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..], gix_hash::Kind::Sha1).unwrap();
         assert_eq!(parsed.tree(), tree);
         assert_eq!(parsed.parents().count(), 0);
         assert_eq!(parsed.message, b"init".as_bstr());
-        assert_eq!(parsed.author.name, b"alice".as_bstr());
-        assert_eq!(parsed.author.email, b"alice@example.com".as_bstr());
+        assert_eq!(parsed.author().unwrap().name, b"alice".as_bstr());
+        assert_eq!(parsed.author().unwrap().email, b"alice@example.com".as_bstr());
     }
 
     #[tokio::test]
@@ -99,7 +99,7 @@ mod tests {
 
         let raw = read_object(&store, "acct", &oid).await.unwrap();
         let (_, _, hdr) = parse_object_header(&raw).unwrap();
-        let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..]).unwrap();
+        let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..], gix_hash::Kind::Sha1).unwrap();
         let parents: Vec<_> = parsed.parents().collect();
         assert_eq!(parents.len(), 1);
         assert_eq!(parents[0], parent);

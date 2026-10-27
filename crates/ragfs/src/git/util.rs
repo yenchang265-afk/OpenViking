@@ -154,6 +154,16 @@ fn zlib_compress_bound(source_len: u64) -> u64 {
         .saturating_add(13)
 }
 
+/// Compute an object's SHA-1 id. Hashing uses collision detection (sha1dc), so a
+/// crafted SHA-1 collision is rejected instead of aliasing an existing object.
+fn hash_object(
+    kind: gix_object::Kind,
+    data: &[u8],
+) -> Result<gix_hash::ObjectId, crate::git::error::ObjectStoreError> {
+    gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data)
+        .map_err(|e| crate::git::error::ObjectStoreError::Backend(format!("object hash: {e}")))
+}
+
 /// Serialize, compress, and write a Git object to ObjectStore.
 /// Returns the object's ObjectId.
 pub async fn write_object(
@@ -163,7 +173,7 @@ pub async fn write_object(
     data: &[u8],
 ) -> Result<gix_hash::ObjectId, crate::git::error::ObjectStoreError> {
     let header = gix_object::encode::loose_header(kind, data.len() as u64);
-    let oid = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data);
+    let oid = hash_object(kind, data)?;
     let mut full = Vec::with_capacity(header.len() + data.len());
     full.extend_from_slice(&header);
     full.extend_from_slice(data);
@@ -183,7 +193,7 @@ pub async fn write_object_if_absent(
     kind: gix_object::Kind,
     data: &[u8],
 ) -> Result<gix_hash::ObjectId, crate::git::error::ObjectStoreError> {
-    let oid = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data);
+    let oid = hash_object(kind, data)?;
     if store.exists(account, &oid).await? {
         return Ok(oid);
     }
@@ -271,7 +281,7 @@ mod tests {
         assert_eq!(&raw[offset..], data);
 
         // Validate OID matches expected
-        let expected_oid = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data);
+        let expected_oid = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data).unwrap();
         assert_eq!(oid, expected_oid);
     }
 
@@ -339,7 +349,7 @@ mod tests {
         let (parsed_kind, _size, offset) = parse_object_header(&raw).unwrap();
         assert_eq!(parsed_kind, kind);
         assert_eq!(&raw[offset..], data);
-        let expected = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data);
+        let expected = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data).unwrap();
         assert_eq!(oid1, expected);
     }
 }

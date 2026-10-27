@@ -1500,13 +1500,17 @@ async fn load_commit_meta(
             "expected commit object, got {kind:?}"
         )));
     }
-    let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..])
+    let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..], gix_hash::Kind::Sha1)
         .map_err(|e| GitError::Other(format!("commit decode: {e}")))?;
     Ok(CommitMeta {
         tree: parsed.tree(),
         parents: parsed.parents().collect(),
-        author: actor_from_signature_ref(&parsed.author),
-        committer: actor_from_signature_ref(&parsed.committer),
+        author: actor_from_signature_ref(
+            parsed.author().map_err(|e| GitError::Other(format!("commit author decode: {e}")))?,
+        )?,
+        committer: actor_from_signature_ref(
+            parsed.committer().map_err(|e| GitError::Other(format!("commit committer decode: {e}")))?,
+        )?,
         message: parsed.message.to_string(),
     })
 }
@@ -1673,19 +1677,23 @@ async fn resolve_abbreviated_oid(
     }
 }
 
-/// Project a borrowed `gix_actor::SignatureRef` into our owned `Actor` DTO.
+/// Project a parsed `gix_actor::SignatureRef` into our owned `Actor` DTO.
 ///
-/// gix-actor 0.31.5 fields used: `SignatureRef.name: &BStr`, `.email: &BStr`,
-/// `.time: gix_date::Time` (not the raw `&str` of later versions). `Time`
-/// provides `.seconds: i64` and `.offset: i32`.
-// TODO: gix_date::Time.sign dropped — Actor not roundtrip-safe for "-0000"
-fn actor_from_signature_ref(sig: &gix_actor::SignatureRef<'_>) -> crate::git::types::Actor {
-    crate::git::types::Actor {
+/// `CommitRef` keeps signatures as raw bytes and `SignatureRef.time` as the raw
+/// `&str`, so both are parsed here; `Time` provides `.seconds` and `.offset`.
+// TODO: gix_date::Time has no sign — Actor not roundtrip-safe for "-0000"
+fn actor_from_signature_ref(
+    sig: gix_actor::SignatureRef<'_>,
+) -> Result<crate::git::types::Actor, GitError> {
+    let time = sig
+        .time()
+        .map_err(|e| GitError::Other(format!("commit signature time decode: {e}")))?;
+    Ok(crate::git::types::Actor {
         name: sig.name.to_string(),
         email: sig.email.to_string(),
-        time_seconds: sig.time.seconds,
-        tz_offset_seconds: sig.time.offset,
-    }
+        time_seconds: time.seconds,
+        tz_offset_seconds: time.offset,
+    })
 }
 
 /// Return true iff `e` is `Error::NotFound(_)`.
@@ -2137,7 +2145,7 @@ mod tests {
             .await
             .unwrap();
         let (_, _, hdr) = crate::git::util::parse_object_header(&raw).unwrap();
-        let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..]).unwrap();
+        let parsed = gix_object::CommitRef::from_bytes(&raw[hdr..], gix_hash::Kind::Sha1).unwrap();
         parsed.parents().collect()
     }
 
@@ -3919,7 +3927,6 @@ mod tests {
             time: gix_date::Time {
                 seconds: 1_700_000_000,
                 offset: 3600,
-                sign: gix_date::time::Sign::Plus,
             },
         };
         let committer = gix_actor::Signature {
@@ -3928,7 +3935,6 @@ mod tests {
             time: gix_date::Time {
                 seconds: 1_700_000_100,
                 offset: -7200,
-                sign: gix_date::time::Sign::Minus,
             },
         };
         let commit = Commit {
