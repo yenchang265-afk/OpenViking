@@ -408,6 +408,7 @@ Hybrid image support depends on the dense channel. The complete mixed input goes
 - `dashscope`: DashScope (Alibaba Tongyi) Embedding API
 - `litellm`: LiteLLM Embedding API
 - `local`: Local GGUF embedding models
+- `custom`: An HTTP embedding gateway that uses token exchange (see below)
 
 **OpenAI-compatible provider example with JSON float embeddings:**
 
@@ -427,6 +428,72 @@ Hybrid image support depends on the dense channel. The complete mixed input goes
 ```
 
 `encoding_format` is optional and is only forwarded for `provider: "openai"` and `provider: "azure"`. Leave it unset for the OpenAI Python SDK default. Set it to `"float"` when an OpenAI-compatible upstream gateway cannot deserialize base64 embedding payloads correctly.
+
+**Custom gateway provider (`custom`):**
+
+`provider: "custom"` sends embeddings to an HTTP gateway that serves OpenAI-compatible
+models behind a token exchange. OpenViking posts the long-lived API token to the token
+endpoint as `{"key": "<api token>"}` and reads the short-lived access token from the
+`token` field. It then sends that token as the raw value of `auth_header`, with no
+`Bearer` prefix. Each embedding request is
+`{"texts": [...], "model": "<model>", "encoding-format": "float" | "base64"}`, and the
+gateway answers with `{"returnCode": ..., "returnMessage": ..., "returnData": [{"index": 0, "embedding": ...}]}`.
+
+```json
+{
+  "embedding": {
+    "dense": {
+      "provider": "custom",
+      "model": "your-embedding-model",
+      "dimension": 1024,
+      "encoding_format": "float",
+      "custom": {
+        "token_exchange_url": "https://token.example.test/exchange",
+        "embedding_url": "https://embed.example.test/embeddings",
+        "auth_header": "X-Example-Access-Token",
+        "token_file": "/path/to/api-token"
+      }
+    }
+  }
+}
+```
+
+Every `custom` field can also be set with a `GATEWAY_<FIELD>` environment variable, and a
+non-empty variable overrides ov.conf. With all required variables set, the `custom` block
+can be left out. These variables are unrelated to the `OPENVIKING_GATEWAY_*` settings of
+the OpenViking Gateway.
+
+| Field | Environment variable | Default |
+|---|---|---|
+| `token_exchange_url` | `GATEWAY_TOKEN_EXCHANGE_URL` | required |
+| `embedding_url` | `GATEWAY_EMBEDDING_URL` | required |
+| `auth_header` | `GATEWAY_AUTH_HEADER` | required |
+| `api_token` | `GATEWAY_API_TOKEN` | required unless `token_file` is set |
+| `token_file` | `GATEWAY_TOKEN_FILE` | none; read once at startup when `api_token` is unset |
+| `timeout` | `GATEWAY_TIMEOUT` | `30` seconds, for both the token exchange and embedding calls |
+| `token_request_field` / `token_response_field` | `GATEWAY_TOKEN_REQUEST_FIELD` / `GATEWAY_TOKEN_RESPONSE_FIELD` | `key` / `token` |
+| `token_lifetime` / `token_refresh_margin` | `GATEWAY_TOKEN_LIFETIME` / `GATEWAY_TOKEN_REFRESH_MARGIN` | `1200` / `60` seconds |
+| `success_code` | `GATEWAY_SUCCESS_CODE` | `0` |
+| `texts_field` / `model_field` / `encoding_format_field` | `GATEWAY_TEXTS_FIELD` / `GATEWAY_MODEL_FIELD` / `GATEWAY_ENCODING_FORMAT_FIELD` | `texts` / `model` / `encoding-format` |
+| `code_field` / `message_field` / `data_field` | `GATEWAY_CODE_FIELD` / `GATEWAY_MESSAGE_FIELD` / `GATEWAY_DATA_FIELD` | `returnCode` / `returnMessage` / `returnData` |
+
+- **Keep the API token out of ov.conf.** Prefer `GATEWAY_API_TOKEN` or a token file.
+  Startup fails with a clear error when a required setting is missing, or when neither
+  token source is available or readable.
+- **Token refresh.** The token endpoint reports no expiry. OpenViking assumes
+  `token_lifetime` and refreshes `token_refresh_margin` seconds early. If the gateway
+  answers `401`, OpenViking discards the token, exchanges a new one and retries the
+  request once. Concurrent requests share one cached token. Requests that find it expired
+  at the same moment may each exchange once.
+- **Gateway responses.** The return code must equal `success_code`. Embeddings are ordered
+  by `index`, and there must be exactly one per input. `float` and `base64`
+  (little-endian float32) embeddings are both accepted. Every vector must have
+  `dimension` values, so `dimension` is required.
+- **Token usage.** It comes from an optional `usage` object (`prompt_tokens`,
+  `total_tokens`) in the gateway response. When the gateway reports none, usage is an
+  **estimate** (about 4 characters per token), not a billed count.
+- **Scope.** `custom` is a cluster-level provider. It does not support `credentials`
+  failover or Account-level embedding settings. It does not use `api_key` or `api_base`.
 
 **OpenRouter example with provider routing:**
 
