@@ -402,7 +402,7 @@ async fn load_tree(
 ) -> Result<Tree, GitError> {
     let raw = read_object(store, account, oid).await?;
     let (_, _, header_len) = parse_object_header(&raw)?;
-    let tree_ref = TreeRef::from_bytes(&raw[header_len..])
+    let tree_ref = TreeRef::from_bytes(&raw[header_len..], gix_hash::Kind::Sha1)
         .map_err(|e| GitError::CorruptedObject(format!("invalid tree: {e}")))?;
     Ok(Tree::from(tree_ref))
 }

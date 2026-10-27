@@ -160,7 +160,7 @@ fn random_account() -> String {
 fn loose_object(data: &[u8]) -> (ObjectId, Bytes) {
     let kind = gix_object::Kind::Blob;
     let header = gix_object::encode::loose_header(kind, data.len() as u64);
-    let oid = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data);
+    let oid = gix_object::compute_hash(gix_hash::Kind::Sha1, kind, data).expect("hash object");
     let mut full = Vec::with_capacity(header.len() + data.len());
     full.extend_from_slice(&header);
     full.extend_from_slice(data);
@@ -170,7 +170,7 @@ fn loose_object(data: &[u8]) -> (ObjectId, Bytes) {
 
 /// Compute a deterministic [`ObjectId`] from arbitrary bytes (used as ref values).
 fn oid_of(data: &[u8]) -> ObjectId {
-    gix_object::compute_hash(gix_hash::Kind::Sha1, gix_object::Kind::Blob, data)
+    gix_object::compute_hash(gix_hash::Kind::Sha1, gix_object::Kind::Blob, data).expect("hash object")
 }
 
 /// Print a skip notice once and return `true` when no S3 config is available.

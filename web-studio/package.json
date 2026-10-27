@@ -90,7 +90,7 @@
     "yaml": "^2.8.1"
   },
   "devDependencies": {
-    "@hey-api/openapi-ts": "^0.95.0",
+    "@hey-api/openapi-ts": "^0.99.0",
     "@tailwindcss/typography": "^0.5.16",
     "@tanstack/devtools-vite": "latest",
     "@tanstack/eslint-config": "latest",
@@ -118,6 +118,10 @@
     "vitest": "^4.1.12"
   },
   "overrides": {
-    "mermaid": "^11.16.1"
+    "mermaid": "^11.16.1",
+    "js-yaml": "^4.3.2",
+    "@tailwindcss/typography": {
+      "postcss-selector-parser": "^6.1.5"
+    }
   }
 }
