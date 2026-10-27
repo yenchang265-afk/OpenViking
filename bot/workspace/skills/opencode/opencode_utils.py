@@ -11,11 +11,13 @@ import traceback
 from opencode_ai import Opencode
 
 
-def execute_cmd(cmd):
+def execute_cmd(cmd, cwd=None):
+    """Run a command given as an argument list (no shell), optionally in cwd."""
     try:
         result = subprocess.run(
             cmd,
-            shell=True,
+            cwd=cwd,
+            shell=False,
             text=True,
             encoding="utf-8",
             stdout=subprocess.PIPE,
