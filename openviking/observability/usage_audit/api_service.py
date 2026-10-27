@@ -9,8 +9,9 @@ falls back to the server-default tz from config when absent or invalid.
 
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta, timezone
-from typing import Any
+from typing import Any, Sequence
 
 from openviking.observability.events import ObservabilityEvent, get_event_bus
 from openviking.server.identity import RequestContext, Role
@@ -33,6 +34,11 @@ TOKEN_RATE_WINDOWS = {
     "24h": (1440, 5),
     "7d": (10080, 60),
 }
+
+# Request health reads audit rows, whose retention is capped per account, so a
+# busy account may cover less than the whole window; `since` reports how much.
+REQUEST_HEALTH_WINDOWS = {"1h": timedelta(hours=1), "24h": timedelta(hours=24)}
+RETRIEVAL_API_TYPES = frozenset({"search.find", "search.search"})
 
 
 def _utc_now() -> datetime:
@@ -62,6 +68,39 @@ def _recent_token_window(now: datetime) -> tuple[datetime, datetime]:
     """
     current_hour = now.replace(minute=0, second=0, microsecond=0)
     return current_hour - timedelta(hours=1), current_hour + timedelta(hours=1)
+
+
+def _percentile(sorted_values: Sequence[float], percent: int) -> float:
+    """Nearest-rank percentile of an ascending, non-empty sequence."""
+    rank = max(math.ceil(percent / 100 * len(sorted_values)), 1)
+    return sorted_values[rank - 1]
+
+
+def _latency_summary(durations: Sequence[float]) -> dict[str, float] | None:
+    if not durations:
+        return None
+    ordered = sorted(durations)
+    return {"p50": round(_percentile(ordered, 50), 1), "p95": round(_percentile(ordered, 95), 1)}
+
+
+def summarize_request_health(window: str, rows: Sequence[dict[str, Any]]) -> dict[str, Any]:
+    """Summarize audit rows (newest first) into error counts and latency percentiles."""
+    statuses = [int(row["status_code"]) for row in rows]
+    durations = [float(row["duration_ms"]) for row in rows]
+    retrieval = [
+        float(row["duration_ms"]) for row in rows if row["api_type"] in RETRIEVAL_API_TYPES
+    ]
+    server_errors = sum(1 for status in statuses if status >= 500)
+    return {
+        "window": window,
+        "sample_size": len(rows),
+        "since": rows[-1]["created_at"] if rows else None,
+        "server_errors": server_errors,
+        "client_errors": sum(1 for status in statuses if 400 <= status < 500),
+        "error_rate": round(server_errors / len(rows), 4) if rows else 0.0,
+        "latency_ms": _latency_summary(durations),
+        "retrieval": {"count": len(retrieval), "latency_ms": _latency_summary(retrieval)},
+    }
 
 
 class UsageAuditQueryService:
@@ -276,6 +315,18 @@ class UsageAuditQueryService:
             user_id=self._usage_user_id(ctx),
         )
         return {"start_date": start_date, "end_date": end_date, "bucket": bucket, "items": items}
+
+    async def request_health(self, *, ctx: RequestContext, window: str) -> dict[str, Any]:
+        """Return server error rate and latency percentiles for recent requests."""
+        span = REQUEST_HEALTH_WINDOWS.get(window)
+        if span is None:
+            raise InvalidArgumentError(f"window must be one of {sorted(REQUEST_HEALTH_WINDOWS)}")
+        rows = await self._store.get_request_samples(
+            account_id=ctx.account_id,
+            utc_start=_utc_now() - span,
+            user_id=self._audit_user_id(ctx),
+        )
+        return summarize_request_health(window, rows)
 
     async def audit_logs(
         self,

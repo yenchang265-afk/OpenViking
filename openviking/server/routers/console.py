@@ -137,6 +137,19 @@ async def token_rate_series(
     return _ok_response(await service.token_rate_series(ctx=_ctx, window=window))
 
 
+@router.get("/requests/health")
+async def request_health(
+    request: Request,
+    window: str = Query("24h", pattern="^(1h|24h)$"),
+    _ctx: RequestContext = require_role(Role.ROOT, Role.ADMIN, Role.USER),
+):
+    """Return server error rate and latency percentiles for recent audited requests."""
+    service = _runtime_service(request)
+    if service is None:
+        return _disabled_response()
+    return _ok_response(await service.request_health(ctx=_ctx, window=window))
+
+
 @router.post("/usage/bot")
 async def report_bot_usage(
     request: Request,

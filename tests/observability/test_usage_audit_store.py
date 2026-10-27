@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -1098,5 +1098,54 @@ async def test_bot_calls_aggregate_into_separate_bot_series(tmp_path):
         )
         assert series[0]["bot_input"] == 300
         assert series[0]["bot_output"] == 50
+    finally:
+        await store.close()
+
+
+@pytest.mark.asyncio
+async def test_sqlite_store_returns_recent_request_samples_newest_first(tmp_path):
+    store = SQLiteUsageAuditStore(tmp_path / "usage.sqlite3")
+    await store.initialize()
+    base = datetime(2026, 5, 12, 10, 0, tzinfo=timezone.utc)
+
+    def request(request_id, *, minutes, status="200", user_id="user-1"):
+        return _event(
+            "http.request",
+            {
+                "request_id": request_id,
+                "method": "POST",
+                "route": "/api/v1/search/find",
+                "status": status,
+                "duration_seconds": 0.25,
+            },
+            ts=base + timedelta(minutes=minutes),
+            user_id=user_id,
+        )
+
+    try:
+        await store.record_batch(
+            [
+                request("old", minutes=-90),
+                request("ok", minutes=5),
+                request("failed", minutes=10, status="500"),
+                request("other-user", minutes=15, user_id="user-2"),
+            ]
+        )
+        samples = await store.get_request_samples(
+            account_id="acct-1", utc_start=base, user_id="user-1"
+        )
+        assert [sample["status_code"] for sample in samples] == [500, 200]
+        assert samples[0] == {
+            "api_type": "search.find",
+            "status_code": 500,
+            "duration_ms": 250.0,
+            "created_at": (base + timedelta(minutes=10)).isoformat(),
+        }
+        account_wide = await store.get_request_samples(account_id="acct-1", utc_start=base)
+        assert len(account_wide) == 3
+        limited = await store.get_request_samples(account_id="acct-1", utc_start=base, limit=1)
+        assert [sample["created_at"] for sample in limited] == [
+            (base + timedelta(minutes=15)).isoformat()
+        ]
     finally:
         await store.close()

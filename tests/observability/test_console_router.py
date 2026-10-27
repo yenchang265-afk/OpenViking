@@ -72,6 +72,10 @@ class FakeConsoleService:
         self.token_rate_call = kwargs
         return {"window": kwargs["window"], "items": [], "peak": None}
 
+    async def request_health(self, **kwargs):
+        self.request_health_call = kwargs
+        return {"window": kwargs["window"], "sample_size": 0}
+
     async def context_commits(self, **kwargs):
         self.context_commits_call = kwargs
         return {
@@ -245,6 +249,33 @@ async def test_console_router_token_rate_reports_disabled_runtime():
     transport = httpx.ASGITransport(app=_app_with_runtime(None))
     async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
         response = await client.get("/api/v1/console/tokens/rate")
+
+    assert response.json()["result"]["enabled"] is False
+
+
+@pytest.mark.asyncio
+async def test_console_router_serves_request_health_for_known_windows():
+    service = FakeConsoleService()
+    transport = httpx.ASGITransport(
+        app=_app_with_runtime(FakeRuntime(service), request_context=_user_ctx)
+    )
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        ok = await client.get("/api/v1/console/requests/health", params={"window": "1h"})
+        default = await client.get("/api/v1/console/requests/health")
+        bad = await client.get("/api/v1/console/requests/health", params={"window": "7d"})
+
+    assert ok.status_code == 200
+    assert ok.json()["result"]["window"] == "1h"
+    assert service.request_health_call["ctx"].role == Role.USER
+    assert default.json()["result"]["window"] == "24h"
+    assert bad.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_console_router_request_health_reports_disabled_runtime():
+    transport = httpx.ASGITransport(app=_app_with_runtime(None))
+    async with httpx.AsyncClient(transport=transport, base_url="http://testserver") as client:
+        response = await client.get("/api/v1/console/requests/health")
 
     assert response.json()["result"]["enabled"] is False
 

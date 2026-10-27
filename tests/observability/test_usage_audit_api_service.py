@@ -44,6 +44,13 @@ class FakeStore:
         self.token_series_call = kwargs
         return []
 
+    request_samples: list[dict[str, Any]] = []
+    request_samples_call: dict[str, Any] | None = None
+
+    async def get_request_samples(self, **kwargs):
+        self.request_samples_call = kwargs
+        return self.request_samples
+
     async def query_audit_logs(self, **kwargs):
         self.audit_call = kwargs
         return {"total": 0, "success_rate": 0.0, "page": 1, "page_size": 10, "items": []}
@@ -331,3 +338,77 @@ def test_record_bot_calls_publishes_events_for_the_requesting_user(monkeypatch):
         "completion_tokens": 4,
     }
     assert [event.timestamp for event in published] == [recent, now, now, recent]
+
+
+def _sample(status_code: int, duration_ms: float, api_type: str = "resources", minute: int = 0):
+    return {
+        "api_type": api_type,
+        "status_code": status_code,
+        "duration_ms": duration_ms,
+        "created_at": datetime(2026, 5, 12, 10, minute, tzinfo=UTC).isoformat(),
+    }
+
+
+@pytest.mark.asyncio
+async def test_request_health_summarizes_errors_and_latency(monkeypatch):
+    now = datetime(2026, 5, 12, 12, 0, tzinfo=UTC)
+    monkeypatch.setattr(api_service_module, "_utc_now", lambda: now)
+    store = FakeStore()
+    # Newest first, as the store returns them.
+    store.request_samples = [
+        _sample(200, 10, "search.find", minute=50),
+        _sample(503, 900, minute=40),
+        _sample(404, 5, minute=30),
+        _sample(200, 30, "search.search", minute=20),
+        *[_sample(200, 20, minute=10) for _ in range(16)],
+    ]
+    service = UsageAuditQueryService(store=store, inventory=FakeInventory(), timezone_name="UTC")
+    ctx = RequestContext(user=UserIdentifier("acct-1", "user-1"), role=Role.USER)
+
+    result = await service.request_health(ctx=ctx, window="24h")
+
+    assert store.request_samples_call["account_id"] == "acct-1"
+    assert store.request_samples_call["user_id"] == "user-1"
+    assert store.request_samples_call["utc_start"] == now - timedelta(hours=24)
+    assert result["window"] == "24h"
+    assert result["sample_size"] == 20
+    assert result["since"] == datetime(2026, 5, 12, 10, 10, tzinfo=UTC).isoformat()
+    assert result["server_errors"] == 1
+    assert result["client_errors"] == 1
+    assert result["error_rate"] == 0.05
+    # Nearest-rank percentiles over all 20 durations.
+    assert result["latency_ms"] == {"p50": 20, "p95": 30}
+    assert result["retrieval"] == {"count": 2, "latency_ms": {"p50": 10, "p95": 30}}
+
+
+@pytest.mark.asyncio
+async def test_request_health_is_empty_without_requests(monkeypatch):
+    monkeypatch.setattr(api_service_module, "_utc_now", lambda: datetime(2026, 5, 12, tzinfo=UTC))
+    store = FakeStore()
+    store.request_samples = []
+    service = UsageAuditQueryService(store=store, inventory=FakeInventory(), timezone_name="UTC")
+    ctx = RequestContext(user=UserIdentifier("acct-1", "admin"), role=Role.ADMIN)
+
+    result = await service.request_health(ctx=ctx, window="1h")
+
+    assert store.request_samples_call["user_id"] is None
+    assert result == {
+        "window": "1h",
+        "sample_size": 0,
+        "since": None,
+        "server_errors": 0,
+        "client_errors": 0,
+        "error_rate": 0.0,
+        "latency_ms": None,
+        "retrieval": {"count": 0, "latency_ms": None},
+    }
+
+
+@pytest.mark.asyncio
+async def test_request_health_rejects_unknown_window():
+    service = UsageAuditQueryService(
+        store=FakeStore(), inventory=FakeInventory(), timezone_name="UTC"
+    )
+    ctx = RequestContext(user=UserIdentifier("acct-1", "user-1"), role=Role.USER)
+    with pytest.raises(InvalidArgumentError):
+        await service.request_health(ctx=ctx, window="2h")
