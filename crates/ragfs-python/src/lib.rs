@@ -3156,9 +3156,11 @@ fn ragfs_python(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     let errors_mod = py.import("openviking.storage.errors")?;
     let exc_type: Py<PyType> = errors_mod.getattr("LockAcquisitionError")?.extract()?;
-    LOCK_ACQUISITION_ERROR_TYPE
-        .set(exc_type)
-        .map_err(|_| PyRuntimeError::new_err("LockAcquisitionError already initialized"))?;
+    // PyO3 uses multi-phase init (PEP 489), so this runs again each time the
+    // extension is loaded in the same process (openviking.pyagfs loads it at
+    // import and again from get_binding_client). The class comes from the same
+    // cached `openviking.storage.errors`, so keep the first one stored.
+    let _ = LOCK_ACQUISITION_ERROR_TYPE.set(exc_type);
 
     Ok(())
 }
