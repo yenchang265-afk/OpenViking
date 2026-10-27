@@ -9,8 +9,9 @@ import type {
   HomeT,
 } from '../-types/dashboard'
 import {
+  formatDateRange,
   formatNumber,
-  getLastDaysRange,
+  getSeriesRange,
   isDisabledPayload,
   parseDateKey,
 } from '../-lib/format'
@@ -19,7 +20,7 @@ import {
   computeCommitHeatmapStats,
   normalizeCommitHeatmapData,
 } from '../-lib/normalize'
-import { EmptyState, Panel, SectionHeading } from './panel'
+import { EmptyState, Panel, SectionHeading, StaleNotice } from './panel'
 
 const ContextCommitsHeatmap = lazy(() =>
   import('./context-commits-heatmap').then((module) => ({
@@ -33,6 +34,7 @@ export function ContextCommitsPanel({
   disabledMessage,
   isError,
   isLoading,
+  staleMessage,
   t,
 }: {
   data: ConsoleSeries<ContextCommitItem> | undefined
@@ -40,6 +42,7 @@ export function ContextCommitsPanel({
   disabledMessage?: string
   isError: boolean
   isLoading: boolean
+  staleMessage?: string
   t: HomeT
 }) {
   const items = useMemo(
@@ -53,13 +56,10 @@ export function ContextCommitsPanel({
   )
   const stats = useMemo(() => computeCommitHeatmapStats(items), [items])
   const disabled = Boolean(disabledProp) || isDisabledPayload(data)
-  const rangeLabel =
-    data?.start_date && data.end_date
-      ? `${data.start_date} - ${data.end_date}`
-      : `${getLastDaysRange(COMMIT_SERIES_DAYS).startDate} - ${getLastDaysRange(COMMIT_SERIES_DAYS).endDate}`
-  const range = getLastDaysRange(COMMIT_SERIES_DAYS)
-  const startDate = parseDateKey(data?.start_date ?? range.startDate)
-  const endDate = parseDateKey(data?.end_date ?? range.endDate)
+  const range = getSeriesRange(data, COMMIT_SERIES_DAYS)
+  const rangeLabel = formatDateRange(range.startDate, range.endDate)
+  const startDate = parseDateKey(range.startDate)
+  const endDate = parseDateKey(range.endDate)
   const title =
     !isLoading && !isError && !disabled
       ? totalCommits > 0
@@ -88,16 +88,23 @@ export function ContextCommitsPanel({
       ) : items.length === 0 ? (
         <EmptyState>{t('contextCommits.empty')}</EmptyState>
       ) : (
-        <Suspense fallback={<Skeleton className="h-72 w-full" />}>
-          <ContextCommitsHeatmap
-            endDate={endDate}
-            items={items}
-            panelColors={panelColors}
-            startDate={startDate}
-            stats={stats}
-            t={t}
-          />
-        </Suspense>
+        <>
+          {staleMessage ? (
+            <div className="mb-3">
+              <StaleNotice message={staleMessage} />
+            </div>
+          ) : null}
+          <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+            <ContextCommitsHeatmap
+              endDate={endDate}
+              items={items}
+              panelColors={panelColors}
+              startDate={startDate}
+              stats={stats}
+              t={t}
+            />
+          </Suspense>
+        </>
       )}
     </Panel>
   )

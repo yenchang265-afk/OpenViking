@@ -68,7 +68,8 @@ export type ConsoleTokenSeriesItem = {
   vlm_output?: number
 }
 
-export type ConsoleTokenSeriesResult = ConsoleSeriesResult<ConsoleTokenSeriesItem>
+export type ConsoleTokenSeriesResult =
+  ConsoleSeriesResult<ConsoleTokenSeriesItem>
 
 export type ConsoleTokenRateWindow = '1h' | '6h' | '24h' | '7d'
 
@@ -107,7 +108,8 @@ export type ConsoleContextCommitItem = {
   total?: number
 }
 
-export type ConsoleContextCommitsResult = ConsoleSeriesResult<ConsoleContextCommitItem>
+export type ConsoleContextCommitsResult =
+  ConsoleSeriesResult<ConsoleContextCommitItem>
 
 export type ConsoleAuditLogItem = {
   account_id?: string | null
@@ -124,9 +126,10 @@ export type ConsoleAuditLogItem = {
   user_id?: string | null
 }
 
-export type ConsoleAuditResult = OvMaybeDisabled & PaginatedResult<ConsoleAuditLogItem> & {
-  success_rate?: number
-}
+export type ConsoleAuditResult = OvMaybeDisabled &
+  PaginatedResult<ConsoleAuditLogItem> & {
+    success_rate?: number
+  }
 
 export type ConsoleAuditQuery = {
   api_type?: string[] | null
@@ -173,3 +176,30 @@ export type ConsoleCacheStatsResult = OvMaybeDisabled &
   }
 
 export type ConsoleDisabledResult = OvDisabledResult
+
+export type ConsoleRequestHealthWindow = '1h' | '24h'
+
+/** Nearest-rank percentiles in milliseconds; null when no request matched. */
+export type ConsoleLatencySummary = {
+  p50: number
+  p95: number
+}
+
+/**
+ * Error and latency summary of recent audited requests. Audit retention is
+ * capped per account, so `since` (oldest row read) may be later than the
+ * window start on a busy account.
+ */
+export type ConsoleRequestHealthResult = OvMaybeDisabled & {
+  client_errors?: number
+  error_rate?: number
+  latency_ms?: ConsoleLatencySummary | null
+  retrieval?: {
+    count?: number
+    latency_ms?: ConsoleLatencySummary | null
+  }
+  sample_size?: number
+  server_errors?: number
+  since?: string | null
+  window?: ConsoleRequestHealthWindow
+}

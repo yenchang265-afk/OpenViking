@@ -15,7 +15,7 @@ import type {
   TokensPerMinute,
 } from '../-types/dashboard'
 import { asNumber, formatNumber } from '../-lib/format'
-import { DetailRow, Panel } from './panel'
+import { DetailRow, Panel, StaleNotice } from './panel'
 
 function parseDisplayNumber(value: string): number | null {
   const normalized = value.replace(/,/g, '').trim()
@@ -28,20 +28,27 @@ function easeOutCubic(value: number): number {
   return 1 - Math.pow(1 - value, 3)
 }
 
-function MetricPanel({
+export function MetricPanel({
   children,
   description,
+  errorHint,
   icon: Icon,
   isError,
   isLoading,
+  staleMessage,
+  subtitle,
   title,
   value,
 }: {
   children?: ReactNode
   description: string
+  /** Shown under the dash on error when no page-level banner explains it. */
+  errorHint?: string
   icon: ComponentType<{ className?: string }>
   isError?: boolean
   isLoading?: boolean
+  staleMessage?: string
+  subtitle?: string
   title: string
   value: string
 }) {
@@ -101,6 +108,11 @@ function MetricPanel({
             <h2 className="truncate text-sm font-semibold tracking-normal text-muted-foreground">
               {title}
             </h2>
+            {subtitle ? (
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                {subtitle}
+              </p>
+            ) : null}
             <p className="sr-only">{description}</p>
           </div>
           <span className="flex size-7 shrink-0 items-center justify-center text-muted-foreground">
@@ -111,12 +123,24 @@ function MetricPanel({
         {isLoading ? (
           <Skeleton className="mt-4 h-10 w-24" />
         ) : isError ? (
-          <p className="mt-4 text-sm text-destructive">{value}</p>
+          <>
+            <div className="mt-4 text-4xl font-bold leading-none text-muted-foreground">
+              —
+            </div>
+            {errorHint ? (
+              <p className="mt-2 text-xs text-destructive">{errorHint}</p>
+            ) : null}
+          </>
         ) : (
           <div className="mt-4 text-4xl font-bold leading-none tracking-normal tabular-nums text-foreground">
             <span ref={valueRef}>{value}</span>
           </div>
         )}
+        {staleMessage && !isLoading && !isError ? (
+          <div className="mt-2">
+            <StaleNotice message={staleMessage} />
+          </div>
+        ) : null}
       </div>
 
       {children && !isLoading && !isError ? (
@@ -134,6 +158,7 @@ export function ContextDataPanel({
   disabledMessage,
   isError,
   isLoading,
+  staleMessage,
   t,
 }: {
   data: ContextCounts | undefined
@@ -141,6 +166,7 @@ export function ContextDataPanel({
   disabledMessage: string
   isError: boolean
   isLoading: boolean
+  staleMessage?: string
   t: HomeT
 }) {
   const total = asNumber(data?.total)
@@ -150,10 +176,9 @@ export function ContextDataPanel({
       icon={Database}
       isError={isError}
       isLoading={isLoading}
+      staleMessage={staleMessage}
       title={t('contextData.title')}
-      value={
-        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
-      }
+      value={disabled ? '—' : formatNumber(total)}
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>
@@ -183,6 +208,7 @@ export function TodayTokensPanel({
   disabledMessage,
   isError,
   isLoading,
+  staleMessage,
   t,
 }: {
   data: TokenCounts | undefined
@@ -190,6 +216,7 @@ export function TodayTokensPanel({
   disabledMessage: string
   isError: boolean
   isLoading: boolean
+  staleMessage?: string
   t: HomeT
 }) {
   const total = asNumber(data?.total)
@@ -199,10 +226,9 @@ export function TodayTokensPanel({
       icon={Coins}
       isError={isError}
       isLoading={isLoading}
+      staleMessage={staleMessage}
       title={t('todayTokens.title')}
-      value={
-        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
-      }
+      value={disabled ? '—' : formatNumber(total)}
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>
@@ -240,6 +266,7 @@ export function TokensPerMinutePanel({
   disabledMessage,
   isError,
   isLoading,
+  staleMessage,
   t,
 }: {
   data: TokensPerMinute | undefined
@@ -247,21 +274,27 @@ export function TokensPerMinutePanel({
   disabledMessage: string
   isError: boolean
   isLoading: boolean
+  staleMessage?: string
   t: HomeT
 }) {
   const total = asNumber(data?.total)
+  const windowMinutes = asNumber(data?.window_minutes)
   return (
     <MetricPanel
       description={t('tokensPerMinute.description', {
-        minutes: asNumber(data?.window_minutes),
+        minutes: windowMinutes,
       })}
       icon={Gauge}
       isError={isError}
       isLoading={isLoading}
-      title={t('tokensPerMinute.title')}
-      value={
-        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
+      staleMessage={staleMessage}
+      subtitle={
+        windowMinutes > 0 && !disabled
+          ? t('tokensPerMinute.window', { minutes: windowMinutes })
+          : undefined
       }
+      title={t('tokensPerMinute.title')}
+      value={disabled ? '—' : formatNumber(total)}
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>
@@ -299,6 +332,7 @@ export function TodayRetrievalsPanel({
   disabledMessage,
   isError,
   isLoading,
+  staleMessage,
   t,
 }: {
   data: RetrievalCounts | undefined
@@ -306,6 +340,7 @@ export function TodayRetrievalsPanel({
   disabledMessage: string
   isError: boolean
   isLoading: boolean
+  staleMessage?: string
   t: HomeT
 }) {
   const total = asNumber(data?.total)
@@ -315,10 +350,9 @@ export function TodayRetrievalsPanel({
       icon={Search}
       isError={isError}
       isLoading={isLoading}
+      staleMessage={staleMessage}
       title={t('todayRetrievals.title')}
-      value={
-        isError ? t('requestFailed') : disabled ? '—' : formatNumber(total)
-      }
+      value={disabled ? '—' : formatNumber(total)}
     >
       {disabled ? (
         <p className="text-xs text-muted-foreground">{disabledMessage}</p>

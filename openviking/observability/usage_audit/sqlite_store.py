@@ -29,6 +29,8 @@ MINUTE_RETENTION_DAYS = 8
 DAILY_TOKEN_KEYS = ("vlm_input", "vlm_output", "embedding_input", "bot_input", "bot_output")
 # Per-minute keys; rerank input and output fold into one series.
 MINUTE_TOKEN_KEYS = (*DAILY_TOKEN_KEYS, "rerank")
+# Upper bound on audit rows read for request health; per-account retention is lower.
+REQUEST_SAMPLE_LIMIT = 5000
 
 
 def _date_range(start_date: str, end_date: str) -> Iterable[str]:
@@ -793,6 +795,45 @@ class SQLiteUsageAuditStore:
             "session_add_message": 0,
             "session_commit": 0,
         }
+
+    async def get_request_samples(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        user_id: str | None = None,
+        limit: int = REQUEST_SAMPLE_LIMIT,
+    ) -> list[dict[str, Any]]:
+        async with self._lock:
+            return await asyncio.to_thread(
+                self._get_request_samples_sync, account_id, utc_start, user_id, int(limit)
+            )
+
+    def _get_request_samples_sync(
+        self,
+        account_id: str,
+        utc_start: datetime,
+        user_id: str | None,
+        limit: int,
+    ) -> list[dict[str, Any]]:
+        assert self._conn is not None
+        where = ["account_id = ?", "created_at >= ?"]
+        # created_at is stored as a UTC isoformat string, so it sorts as text.
+        params: list[Any] = [account_id, utc_start.astimezone(UTC).isoformat()]
+        if user_id:
+            where.append("user_id = ?")
+            params.append(user_id)
+        rows = self._conn.execute(
+            f"""
+            SELECT api_type, status_code, duration_ms, created_at
+            FROM request_audit
+            WHERE {" AND ".join(where)}
+            ORDER BY created_at DESC, id DESC
+            LIMIT ?
+            """,
+            [*params, max(limit, 1)],
+        ).fetchall()
+        return [dict(row) for row in rows]
 
     async def query_audit_logs(
         self,

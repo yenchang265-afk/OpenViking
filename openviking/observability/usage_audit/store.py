@@ -98,6 +98,19 @@ class UsageAuditStore(Protocol):
     ) -> list[dict[str, Any]]:
         """Return context write bucket rows for a viewer-local date range and user scope."""
 
+    async def get_request_samples(
+        self,
+        *,
+        account_id: str,
+        utc_start: datetime,
+        user_id: str | None = None,
+        limit: int = ...,
+    ) -> list[dict[str, Any]]:
+        """Return audit rows created since `utc_start`, newest first.
+
+        Each row has `api_type`, `status_code`, `duration_ms` and `created_at`.
+        """
+
     async def query_audit_logs(
         self,
         *,

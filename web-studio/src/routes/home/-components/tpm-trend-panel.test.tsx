@@ -50,9 +50,7 @@ const data: TokenRate = {
   window: '24h',
 }
 
-function renderPanel(
-  props: Partial<Parameters<typeof TpmTrendPanel>[0]> = {},
-) {
+function renderPanel(props: Partial<Parameters<typeof TpmTrendPanel>[0]> = {}) {
   const onWindowChange = vi.fn()
   render(
     <TpmTrendPanel
@@ -112,4 +110,15 @@ it('explains when the window has no minute data yet', () => {
 it('shows the unavailable message when usage is disabled', () => {
   renderPanel({ data: { enabled: false }, disabledMessage: 'off' })
   expect(screen.getByText('off')).toBeTruthy()
+})
+
+it('dims the chart while another window loads', () => {
+  renderPanel({ isRefreshing: true })
+  expect(screen.getByText('1,234').closest('[aria-busy="true"]')).toBeTruthy()
+})
+
+it('flags data left over from a failed refresh', () => {
+  renderPanel({ staleMessage: 'stale' })
+  expect(screen.getByRole('status').textContent).toBe('stale')
+  expect(screen.getByText('1,234')).toBeTruthy()
 })

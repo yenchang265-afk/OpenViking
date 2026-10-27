@@ -11,6 +11,8 @@ import type {
   ConsoleSeriesQuery,
   ConsoleContextCommitsResult,
   ConsoleDashboardSummaryResult,
+  ConsoleRequestHealthResult,
+  ConsoleRequestHealthWindow,
   ConsoleTokenRateResult,
   ConsoleTokenRateWindow,
   ConsoleTokenSeriesResult,
@@ -43,6 +45,19 @@ export function fetchConsoleTokenRate(
     client.get({
       responseType: 'json',
       url: '/api/v1/console/tokens/rate',
+      query: { window },
+    }),
+  )
+}
+
+export function fetchConsoleRequestHealth(
+  window: ConsoleRequestHealthWindow = '24h',
+): Promise<ConsoleRequestHealthResult> {
+  // Not in the generated SDK yet; uses the same configured client.
+  return getOvResult<ConsoleRequestHealthResult>(
+    client.get({
+      responseType: 'json',
+      url: '/api/v1/console/requests/health',
       query: { window },
     }),
   )

@@ -4,9 +4,13 @@ import { Skeleton } from '#/components/ui/skeleton'
 
 import { TOKEN_SERIES_DAYS } from '../-constants/dashboard'
 import type { ConsoleSeries, HomeT, TokenSeriesItem } from '../-types/dashboard'
-import { getLastDaysRange, isDisabledPayload } from '../-lib/format'
+import {
+  formatDateRange,
+  getSeriesRange,
+  isDisabledPayload,
+} from '../-lib/format'
 import { normalizeTokenSeries } from '../-lib/normalize'
-import { EmptyState, Panel, SectionHeading } from './panel'
+import { EmptyState, Panel, SectionHeading, StaleNotice } from './panel'
 
 const TokenTrendChart = lazy(() =>
   import('./token-trend-chart').then((module) => ({
@@ -20,6 +24,7 @@ export function TokenTrendPanel({
   disabledMessage,
   isError,
   isLoading,
+  staleMessage,
   t,
 }: {
   data: ConsoleSeries<TokenSeriesItem> | undefined
@@ -27,14 +32,13 @@ export function TokenTrendPanel({
   disabledMessage?: string
   isError: boolean
   isLoading: boolean
+  staleMessage?: string
   t: HomeT
 }) {
   const items = normalizeTokenSeries(data?.items)
   const disabled = Boolean(disabledProp) || isDisabledPayload(data)
-  const rangeLabel =
-    data?.start_date && data.end_date
-      ? `${data.start_date} - ${data.end_date}`
-      : `${getLastDaysRange(TOKEN_SERIES_DAYS).startDate} - ${getLastDaysRange(TOKEN_SERIES_DAYS).endDate}`
+  const range = getSeriesRange(data, TOKEN_SERIES_DAYS)
+  const rangeLabel = formatDateRange(range.startDate, range.endDate)
 
   return (
     <Panel>
@@ -57,9 +61,16 @@ export function TokenTrendPanel({
       ) : items.length === 0 ? (
         <EmptyState>{t('tokenTrend.empty')}</EmptyState>
       ) : (
-        <Suspense fallback={<Skeleton className="h-72 w-full" />}>
-          <TokenTrendChart items={items} t={t} />
-        </Suspense>
+        <>
+          {staleMessage ? (
+            <div className="mb-3">
+              <StaleNotice message={staleMessage} />
+            </div>
+          ) : null}
+          <Suspense fallback={<Skeleton className="h-72 w-full" />}>
+            <TokenTrendChart items={items} t={t} />
+          </Suspense>
+        </>
       )}
     </Panel>
   )
