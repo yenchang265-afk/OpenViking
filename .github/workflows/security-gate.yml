@@ -135,6 +135,19 @@ jobs:
               - 'web-studio/package-lock.json'
               - '.trivyignore.yaml'
 
+      # .git is not in the build context, so the Dockerfile needs the version
+      # passed in; resolve it the same way build-docker-image.yml does.
+      - name: Resolve OpenViking version
+        id: openviking-version
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install "setuptools-scm>=8.0"
+          version="$(
+            python -c "from scripts.build_support.versioning import resolve_openviking_version; print(resolve_openviking_version())"
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
       - name: Set up Docker Buildx
         if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
         uses: docker/setup-buildx-action@v4
@@ -148,6 +161,8 @@ jobs:
           load: true
           push: false
           tags: openviking:security-scan
+          build-args: |
+            OPENVIKING_VERSION=${{ steps.openviking-version.outputs.version }}
           cache-from: type=gha,scope=security-gate
           cache-to: type=gha,mode=max,scope=security-gate
 
