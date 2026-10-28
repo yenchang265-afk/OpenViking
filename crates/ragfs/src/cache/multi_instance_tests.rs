@@ -423,3 +423,135 @@ async fn instances_agree_on_reinitialized_generation() {
     );
     assert!(cluster.provider.len().await > 0);
 }
+
+/// Gate instance B's backend `gate_op` on `target`, run `mutate` on instance A
+/// while B is paused, then require B to agree with the backend.
+async fn assert_late_fill_rejected<F, Fut>(label: &str, gate_op: GateOp, target: &str, mutate: F)
+where
+    F: FnOnce(Arc<CachedFileSystem>, Arc<dyn FileSystem>) -> Fut,
+    Fut: std::future::Future<Output = ()>,
+{
+    let cluster = Cluster::new();
+    cluster.seed_dir("/d").await;
+    cluster.seed("/d/f", "v1").await;
+    cluster.seed("/d/g", "g").await;
+    let (a, b) = (cluster.instance(), cluster.instance());
+
+    let mut gate = b.arm(gate_op, target);
+    let reader = {
+        let fs = Arc::clone(&b.fs);
+        let target = target.to_string();
+        tokio::spawn(async move {
+            match gate_op {
+                GateOp::ReadDir => fs
+                    .read_dir(&target, None, None, None, None)
+                    .await
+                    .map(|_| ()),
+                _ => fs.read(&target, 0, 0).await.map(|_| ()),
+            }
+        })
+    };
+    gate.wait().await;
+    mutate(Arc::clone(&a.fs), Arc::clone(&cluster.backend)).await;
+    gate.release();
+    let _ = reader.await.unwrap();
+
+    match gate_op {
+        GateOp::ReadDir => {
+            let mut expected = cluster
+                .backend
+                .read_dir(target, None, None, None, None)
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|entry| entry.name)
+                .collect::<Vec<_>>();
+            expected.sort();
+            assert_eq!(b.names(target).await, expected, "{label}");
+        }
+        _ => {
+            let expected = cluster.backend.read(target, 0, 0).await.ok();
+            assert_eq!(b.fs.read(target, 0, 0).await.ok(), expected, "{label}");
+        }
+    }
+}
+
+#[tokio::test]
+async fn every_file_mutation_rejects_late_fills() {
+    assert_late_fill_rejected("truncate", GateOp::Read, "/d/f", |a, _| async move {
+        a.truncate("/d/f", 0).await.unwrap();
+    })
+    .await;
+    assert_late_fill_rejected("replace", GateOp::Read, "/d/f", |a, _| async move {
+        a.replace("/d/g", "/d/f").await.unwrap();
+    })
+    .await;
+    assert_late_fill_rejected("write_from_path", GateOp::Read, "/d/f", |a, _| async move {
+        let dir = tempfile::tempdir().unwrap();
+        let src = dir.path().join("src");
+        std::fs::write(&src, b"streamed").unwrap();
+        a.write_from_path("/d/f", &src, WriteFlag::Truncate)
+            .await
+            .unwrap();
+    })
+    .await;
+    assert_late_fill_rejected(
+        "invalidate_external_write",
+        GateOp::Read,
+        "/d/f",
+        |a, backend| async move {
+            backend
+                .write("/d/f", b"raw", 0, WriteFlag::Truncate)
+                .await
+                .unwrap();
+            a.invalidate_external_write("/d/f").await;
+        },
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn every_directory_mutation_rejects_late_listing_fills() {
+    assert_late_fill_rejected("mkdir", GateOp::ReadDir, "/d", |a, _| async move {
+        a.mkdir("/d/sub", 0o755).await.unwrap();
+    })
+    .await;
+    assert_late_fill_rejected("remove", GateOp::ReadDir, "/d", |a, _| async move {
+        a.remove("/d/f").await.unwrap();
+    })
+    .await;
+    assert_late_fill_rejected("rename", GateOp::ReadDir, "/d", |a, _| async move {
+        a.rename("/d/f", "/d/h").await.unwrap();
+    })
+    .await;
+    assert_late_fill_rejected(
+        "ensure_parent_dirs",
+        GateOp::ReadDir,
+        "/d",
+        |a, _| async move {
+            a.ensure_parent_dirs("/d/new/x", 0o755).await.unwrap();
+        },
+    )
+    .await;
+}
+
+/// A bump that keeps failing must not fail the write; this instance stops
+/// trusting the cache for the path and the failure is counted.
+#[tokio::test]
+async fn failed_bump_degrades_without_failing_the_write() {
+    let cluster = Cluster::new();
+    cluster.seed("/f", "v1").await;
+    let a = cluster.instance();
+    assert_eq!(a.read_string("/f").await.unwrap(), "v1");
+
+    cluster.provider.set_unavailable(true);
+    a.fs.write("/f", b"v2", 0, WriteFlag::Truncate)
+        .await
+        .unwrap();
+    cluster.provider.set_unavailable(false);
+
+    let snapshot = a.fs.metrics().snapshot();
+    assert!(snapshot.invalidation_failures >= 1);
+    assert_eq!(a.read_string("/f").await.unwrap(), "v2");
+    assert!(a.fs.metrics().snapshot().policy_bypasses >= 1);
+}

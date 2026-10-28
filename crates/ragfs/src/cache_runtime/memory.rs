@@ -36,6 +36,7 @@ pub struct MemoryMockProvider {
     max_active_sets: AtomicU64,
     next_set_failure: Mutex<Option<String>>,
     script_handler: Option<Arc<ScriptHandler>>,
+    incr_by_supported: bool,
 }
 
 struct ActiveSetGuard<'a> {
@@ -71,6 +72,7 @@ impl MemoryMockProvider {
             max_active_sets: AtomicU64::new(0),
             next_set_failure: Mutex::new(None),
             script_handler: None,
+            incr_by_supported: true,
         }
     }
 
@@ -92,6 +94,12 @@ impl MemoryMockProvider {
     /// Delay individual set calls to exercise bounded write concurrency.
     pub fn with_set_delay(mut self, delay: Duration) -> Self {
         self.set_delay = delay;
+        self
+    }
+
+    /// Advertise no INCRBY support, like a dynamic provider without `incrby`.
+    pub fn without_incr_by(mut self) -> Self {
+        self.incr_by_supported = false;
         self
     }
 
@@ -251,6 +259,11 @@ impl CacheProvider for MemoryMockProvider {
                 CacheOperation::ExecuteScript.name().to_string(),
             ));
         }
+        if operations.contains(&CacheOperation::IncrBy) && !self.incr_by_supported {
+            return Err(CacheError::UnsupportedOperation(
+                CacheOperation::IncrBy.name().to_string(),
+            ));
+        }
         Ok(())
     }
 
@@ -371,6 +384,11 @@ impl CacheProvider for MemoryMockProvider {
 
     async fn incr_by(&self, key: &str, delta: i64) -> CacheResult<i64> {
         self.ensure_open()?;
+        if !self.incr_by_supported {
+            return Err(CacheError::UnsupportedOperation(
+                CacheOperation::IncrBy.name().to_string(),
+            ));
+        }
         let mut values = self.values.write().await;
         let current = match values.get(key) {
             None => 0,
