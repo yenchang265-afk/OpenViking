@@ -6,6 +6,8 @@
 
 mod envelope;
 mod metrics;
+#[cfg(test)]
+mod multi_instance_tests;
 mod policy;
 mod wrapper;
 

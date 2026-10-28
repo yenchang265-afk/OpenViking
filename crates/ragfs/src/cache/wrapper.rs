@@ -1068,7 +1068,7 @@ impl CachedFileSystem {
         self.object_key("dir", path)
     }
 
-    fn generation_key(&self, path: &str) -> String {
+    pub(super) fn generation_key(&self, path: &str) -> String {
         self.object_key("subtree", path)
     }
 
