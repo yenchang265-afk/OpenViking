@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.9
 
 # Stage 1: provide Rust toolchain (required by setup.py -> build_ov_cli_artifact -> cargo build)
-# ragfs-python's default S3-enabled dependency set currently requires rustc >= 1.91.1.
-FROM rust:1.91.1-trixie AS rust-toolchain
+# ragfs-python's default S3-enabled dependency set currently requires rustc >= 1.94.1.
+FROM rust:1.94.1-trixie AS rust-toolchain
 
 # Stage 2: build Studio separately so npm failures stop the Docker build.
 # The bundle is platform-independent, so build it once on the native builder
