@@ -10,7 +10,19 @@ Status: **Implemented** 2026-10-29 on branch `worktree-cachefs-multi-instance-pl
 - **R4 harness:** the provider's GET delay sleeps before reading, so it never overlaps two bumps. The test uses a SET delay instead.
 - **Bump:** `INCRBY` first. A result of 1 means the key was missing, and only then is it re-based with a random `SET`. That keeps the common case to one round trip.
 - **Stress oracle:** mutations are recorded when they start, not when they return, because readers see a write's effect before the call returns. An uncached control run validates the oracle. With 3×2 tasks × 300 ops and 0–3 ms jitter, the test caught an injected missing write bump. It passed on 8 seeds.
-- **Benchmark (T13):** standalone Redis through the WSL→Docker port forward, p50 over 3 runs each. Depth 3 hit: main 573–581 µs, branch 574–655 µs. Depth 8 hit: main 598–610 µs, branch 651–680 µs (about +10%, at the budget; run-to-run spread about ±8%). Miss and fill were in line with main.
+- **Bump:** `INCRBY` first. A result below `MIN_BASE` (`1 << 40`; live counters start at or above it) means the key was just recreated, and only then is it re-based with a random `SET`. That keeps the common case to one round trip and still re-bases when a retry follows a lost reply. Retries run after the operation lock is released when bumps are atomic.
+- **Envelope keys:** an envelope records `subtree` of strict ancestors plus `ver(path)`. `subtree(path)` itself is redundant, because every operation that bumps it also bumps `ver(path)`. That keeps the hit MGET at the size it has on main.
+- **Review fixes:** external raw writes bump every ancestor listing and run under the operation lock. Traversal fills snapshot live counters. A memo mismatch is re-checked against live counters before deleting.
+- **Benchmark (T13), after the review fixes:** standalone Redis through the WSL→Docker port forward, p50 over 3 runs each.
+
+  | | main | branch |
+  |---|---|---|
+  | depth 3 hit | 588–596 µs | 558–564 µs |
+  | depth 8 hit | 597–604 µs | 588–594 µs |
+  | depth 3 miss+fill | 844–849 µs | 798–816 µs |
+  | depth 8 miss+fill | 866–896 µs | 804–815 µs |
+
+  The first cut, which still recorded `subtree(path)`, was about +10% on depth 8 hits.
 - **Not verified locally:** Redis Cluster mode (no multi-node cluster available) and T16.
 Scope: `crates/ragfs/src/cache/*`, the CacheFS config path (Rust builder, `ragfs-python` binding, `openviking_cli` config), metrics, and the RAGFS cache guide.
 
@@ -194,6 +206,11 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
   - Checklist: two app containers via `docker run` on `openviking-net` with the same `ov.conf` (`multi_instance: true`) and `tiered.env`, sharing redis/seaweedfs/mariadb. Write on A, then read on B returns the new content. `rm -r` a directory on A, then `ls`/`tree` on B is consistent. Kill Redis mid-write: the write succeeds, the `invalidation_failures` metric goes up, and the B read recovers after the TTL. Studio cache dashboard shows the hit rate on both instances.
 
 ## Out of scope (follow-ups)
+
+- **Counter TTL refresh:** counters inherit the provider default TTL, and INCRBY does not refresh it. Every envelope records `subtree("/")`, so the whole namespace re-validates about once per TTL. This is correct (re-init is random), but it costs hits. Consider a longer explicit counter TTL or `EXPIRE` on bump.
+- **Expiring runtime bypass:** a failed bump of `ver("/")` (for example from `ensure_parent_dirs`) bypasses CacheFS for the rest of the process's life. A bypass that expires after the cache TTL would be enough.
+- **Naming:** wrapper parameters are still called `generation_cache` and methods `*_with_generation_cache`, as on main.
+- **Stress coverage:** add rename, read_dir and tree to the randomized workload, and inject counter eviction.
 
 - **Write-through fill in multi-instance mode** under a distributed PathLock held for the write.
 - **Strict mode:** bump before the backend mutation and fail the write if the provider is unreachable. This trades write availability for no-stale-on-partition.
