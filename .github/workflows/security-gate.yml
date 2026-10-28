@@ -25,7 +25,7 @@ concurrency:
 env:
   TRIVY_IMAGE: aquasec/trivy:0.67.2
   GITLEAKS_VERSION: 8.28.0
-  SEMGREP_VERSION: 1.131.0
+  SEMGREP_VERSION: 1.180.0
 
 jobs:
   sca:
@@ -105,6 +105,9 @@ jobs:
   image:
     name: Container image vulnerabilities
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read  # paths-filter lists the PR's changed files via the API
     steps:
       - uses: actions/checkout@v6
         with:
