@@ -1126,7 +1126,10 @@ impl FileSystem for CachedFileSystem {
         let key = self.file_key(&normalized);
         self.bump_object(&normalized).await;
         self.cache_delete(&key, &normalized).await;
-        if offset == 0
+        // Across processes a concurrent writer's fill can land after a newer
+        // backend write, so multi-instance mode leaves filling to the next read.
+        if !self.policy.multi_instance()
+            && offset == 0
             && matches!(
                 flags,
                 WriteFlag::Create | WriteFlag::CreateNew | WriteFlag::Truncate

@@ -555,3 +555,41 @@ async fn failed_bump_degrades_without_failing_the_write() {
     assert_eq!(a.read_string("/f").await.unwrap(), "v2");
     assert!(a.fs.metrics().snapshot().policy_bypasses >= 1);
 }
+
+/// R3: write-through fill is unsafe across writers. A's backend write lands
+/// first, B's second, but A's fill lands last.
+#[tokio::test]
+async fn multi_instance_mode_never_serves_a_superseded_write() {
+    let cluster = Cluster::new();
+    cluster.seed("/f", "v0").await;
+    let policy = || CachePolicy::default().with_multi_instance(true);
+    let (a, b) = (
+        cluster.instance_with(policy()),
+        cluster.instance_with(policy()),
+    );
+
+    let mut gate = a.arm(GateOp::Write, "/f");
+    let writer = {
+        let fs = Arc::clone(&a.fs);
+        tokio::spawn(async move { fs.write("/f", b"v1", 0, WriteFlag::Truncate).await })
+    };
+    gate.wait().await;
+    b.fs.write("/f", b"v2", 0, WriteFlag::Truncate)
+        .await
+        .unwrap();
+    gate.release();
+    writer.await.unwrap().unwrap();
+
+    assert_eq!(a.read_string("/f").await.unwrap(), "v2");
+    assert_eq!(b.read_string("/f").await.unwrap(), "v2");
+}
+
+#[tokio::test]
+async fn single_instance_mode_keeps_write_through_fill() {
+    let cluster = Cluster::new();
+    let a = cluster.instance();
+    a.fs.write("/f", b"v1", 0, WriteFlag::Create).await.unwrap();
+    assert_eq!(a.read_string("/f").await.unwrap(), "v1");
+    let snapshot = a.fs.metrics().snapshot();
+    assert_eq!((snapshot.file_hits, snapshot.file_misses), (1, 0));
+}
