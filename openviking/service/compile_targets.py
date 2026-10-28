@@ -29,6 +29,7 @@ import sys
 import time
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
+from dataclasses import replace
 from typing import (
     Annotated,
     Any,
@@ -48,6 +49,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
 
+from openviking.core.namespace_policy import is_system_uri
 from openviking.pyagfs import AsyncAGFSClient
 from openviking.pyagfs.async_client import fs_ctx_from_agfs_path
 from openviking.pyagfs.exceptions import (
@@ -716,6 +718,15 @@ def task_ctx(account_id: str, user_id: str) -> RequestContext:
     )
 
 
+def skill_snapshot_ctx(skill: str, ctx: RequestContext) -> RequestContext:
+    """Context for pinning the Skill snapshot.
+
+    A snapshot commit requires write access, which system Skills grant only to
+    ROOT; the request already checked that the owner may read the Skill.
+    """
+    return replace(ctx, role=Role.ROOT) if is_system_uri(skill) else ctx
+
+
 def overlaps(a: str, b: str) -> bool:
     return a == b or a.startswith(f"{b}/") or b.startswith(f"{a}/")
 
@@ -1073,7 +1084,7 @@ class CompileLifecycle:
                     self._fs,
                     [request["skill"]],
                     f"compile {task.task_id} skill",
-                    ctx,
+                    skill_snapshot_ctx(request["skill"], ctx),
                     wait_busy=False,
                     lease_ref=lease,
                 ),

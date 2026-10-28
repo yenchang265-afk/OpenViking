@@ -401,3 +401,24 @@ async def test_create_accepts_bundled_system_example_skill(tmp_path):
     await service.create(_request(skill=f"{skill}/SKILL.md"), ctx=CTX)
 
     assert tasks.create.await_args.kwargs["payload"]["skill"] == skill
+
+
+@pytest.mark.asyncio
+async def test_system_skill_snapshot_passes_commit_write_check():
+    from openviking.service.compile_targets import skill_snapshot_ctx, task_ctx
+    from openviking.storage.acl import AclAction
+    from openviking.storage.viking_fs import VikingFS
+    from openviking_cli.exceptions import PermissionDeniedError
+
+    fs = VikingFS(agfs=SimpleNamespace(), acl_manager=None)
+    ctx = task_ctx("acme", "alice")
+    system_skill = "viking://system/compile/example-skills/llm-wiki"
+    user_skill = "viking://agent/skills/llm-wiki"
+
+    # The task owner cannot write the bundled Skill, so its snapshot is elevated.
+    with pytest.raises(PermissionDeniedError, match="write permission required"):
+        await fs._ensure_access(system_skill, ctx, action=AclAction.WRITE)
+    await fs._ensure_access(
+        system_skill, skill_snapshot_ctx(system_skill, ctx), action=AclAction.WRITE
+    )
+    assert skill_snapshot_ctx(user_skill, ctx) is ctx
