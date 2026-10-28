@@ -30,10 +30,10 @@ tags:
 
 # Install OpenViking Memory — Agent Installation & Reference Skill
 
-You are about to help a user install and configure the OpenViking memory plugin for OpenClaw.
-The user does NOT know how to use a terminal. You will collect a few values through natural conversation, then run **all** commands yourself using your shell tool.
+This skill helps a user install and configure the OpenViking memory plugin for OpenClaw.
+The user may not be familiar with a terminal. Collect a few values through conversation, then run the commands below with your shell tool, telling the user what you are doing at each stage.
 
-**Read this entire document before starting. Follow every step in order. Do NOT skip steps.**
+Read the whole document before starting and follow the steps in order.
 
 This skill is split into two halves:
 
@@ -52,13 +52,13 @@ If the user's first message contains Chinese characters, respond in **Chinese** 
 Otherwise respond in **English**.
 All user-facing messages below have (CN)/(EN) variants — use the matching one.
 
-Do NOT show this step to the user.
+This step needs no user-facing message.
 
 ---
 
-## STEP 1: Detect Operating System (silently)
+## STEP 1: Detect Operating System
 
-Run this command and remember the result. Do NOT show it to the user.
+Run this command and remember the result. No user-facing message is needed.
 
 ```bash
 uname -s 2>/dev/null || echo WINDOWS
@@ -70,9 +70,9 @@ uname -s 2>/dev/null || echo WINDOWS
 
 ---
 
-## STEP 2: Check Prerequisites (silently)
+## STEP 2: Check Prerequisites
 
-Run silently:
+Run:
 
 ```bash
 node -v
@@ -84,16 +84,16 @@ openclaw --version
 > (CN) 你的系統沒有安裝 Node.js。OpenClaw 和 OpenViking 外掛需要 Node.js >= 22。請先安裝 Node.js，然後再回來找我。
 > (EN) Node.js is not installed. OpenClaw and the OpenViking plugin require Node.js >= 22. Please install Node.js first, then come back.
 
-**Stop. Do NOT continue.**
+**Stop here and do not continue.**
 
 **If `openclaw` is missing:**
 
 > (CN) 你的系統沒有安裝 OpenClaw。請先安裝 OpenClaw（>= 2026.5.27），然後再回來找我。
 > (EN) OpenClaw is not installed. Please install OpenClaw (>= 2026.5.27) first, then come back.
 
-**Stop. Do NOT continue.**
+**Stop here and do not continue.**
 
-If both exist, proceed to STEP 3 silently.
+If both exist, proceed to STEP 3.
 
 ---
 
@@ -131,7 +131,7 @@ Collect 3 values through natural conversation. Be flexible: if the user gives se
 - `ov.example.com` without protocol → prepend `https://`.
 - Strip trailing `/`, `/health`, or `/api`.
 - After normalization must start with `http://` or `https://`.
-- If the user says they don't know, ask them to check with the admin or look at how the server was started. **Do NOT make up a URL.**
+- If the user says they don't know, ask them to check with the admin or look at how the server was started. Do not guess a URL.
 
 ### 4b. `API_KEY` (OPTIONAL)
 
@@ -146,7 +146,7 @@ Collect 3 values through natural conversation. Be flexible: if the user gives se
 > (CN) 記憶要存在哪一層？預設共享在 `viking://user/<user_id>/memories`（`none`）。也可以按 OpenClaw 助手存到 `.../peers/<assistant_id>/memories`（`assistant`），或按傳送者存到 `.../peers/<sender_id>/memories`（`sender`）。
 > (EN) Where should memory live? The default is shared `viking://user/<user_id>/memories` (`none`). You can instead use `.../peers/<assistant_id>/memories` (`assistant`) or `.../peers/<sender_id>/memories` (`sender`).
 
-Default to `none`. **Never silently pick another value** — the three options mean different storage layouts and are awkward to change later:
+Default to `none`. Ask the user before choosing any non-default value — the three options mean different storage layouts and are awkward to change later:
 
 | Value | Concrete layout | Choose it when |
 |---|---|---|
@@ -156,7 +156,7 @@ Default to `none`. **Never silently pick another value** — the three options m
 
 `person` is a legacy alias for `sender`. Accept it from an existing config or explicit user input, but normalize/write new setup values as `sender`.
 
-OpenViking initializes the managed `peers/` container for every user. Do not tell the user that `none` removes that container: it only avoids a concrete peer memory subtree. With `assistant` or `sender`, actor-peer recall includes shared user memory plus the current peer memory; it hides other peer subtrees. Changing this setting does not move existing memories.
+OpenViking initializes the managed `peers/` container for every user. Choosing `none` does not remove that container; it only avoids a concrete peer memory subtree. With `assistant` or `sender`, actor-peer recall includes shared user memory plus the current peer memory and excludes other peer subtrees. Changing this setting does not move existing memories.
 
 - Empty / "default" / "預設" / "共用" → leave unset (plugin defaults to `none`).
 - Otherwise pass `--peer-role none|assistant|sender`. Treat explicit legacy `person` as `sender`. Any other value → ask again.
@@ -181,7 +181,7 @@ See **Reference: Multi-Tenant** for what these mean.
 
 ---
 
-## STEP 5: Pre-flight Connectivity Check (silently)
+## STEP 5: Pre-flight Connectivity Check
 
 Tell the user briefly:
 
@@ -231,13 +231,13 @@ This skill **does not install or operate the OpenViking server**. If the user's 
 
 If the user fixes the URL → back to STEP 4a.
 If the user wants `--allow-offline` → remember `ALLOW_OFFLINE=true` and continue to STEP 6.
-If the user gives up / cannot fix → stop here. Do NOT continue with a broken state.
+If the user gives up / cannot fix → stop here. Do not continue with a broken state.
 
 ---
 
 ## STEP 6: Install the Plugin
 
-The plugin can be installed two ways. **Always try Path A first.** Use Path B only as a backup when Path A fails because ClawHub is unavailable, rate-limited, or authentication blocks anonymous install. For version conflicts, dependency errors, or other non-registry failures, stop and show the user the error instead of switching paths silently.
+The plugin can be installed two ways. **Always try Path A first.** Use Path B only as a backup when Path A fails because ClawHub is unavailable, rate-limited, or authentication blocks anonymous install. For version conflicts, dependency errors, or other non-registry failures, stop and show the user the error rather than switching to Path B.
 
 ### Path A — Primary: `openclaw plugins install` (uses ClawHub)
 
@@ -270,17 +270,17 @@ If the install **succeeds**, jump to STEP 7.
 
 If both attempts fail with one of the fallback-eligible errors above, go to Path B. If the failure is a version conflict, missing dependency, package validation error, or another non-registry error, stop and show the last 30 lines to the user.
 
-### Path B — Backup: `ov-install` (bypasses ClawHub)
+### Path B — Backup: `ov-install` (installs from npm instead of ClawHub)
 
 Tell the user:
 
 > (CN) ClawHub 現在好像被限流、不可用，或者當前帳號不能安裝。我改用備用路徑，通過 npm 下載並部署外掛包。
 > (EN) ClawHub looks rate-limited, unavailable, or blocked for this account. I'll use the backup path and install the plugin package from npm.
 
-Run the installer with `npx` (no global install needed):
+Tell the user this downloads and runs the published `openclaw-openviking-setup-helper` npm package, and get their confirmation before running it. Then run it with `npx` (no global install needed):
 
 ```bash
-npx -y openclaw-openviking-setup-helper@latest --base-url BASE_URL [--api-key API_KEY] [--peer-role PEER_ROLE] [--peer-prefix PEER_PREFIX] [--account-id ACCOUNT_ID] [--user-id USER_ID]
+npx -y openclaw-openviking-setup-helper --base-url BASE_URL [--api-key API_KEY] [--peer-role PEER_ROLE] [--peer-prefix PEER_PREFIX] [--account-id ACCOUNT_ID] [--user-id USER_ID]
 ```
 
 Build the flag list according to what the user gave you:
@@ -300,7 +300,7 @@ Build the flag list according to what the user gave you:
 
 This means **STEP 7 is effectively done by `ov-install`**. After `ov-install` exits 0, jump straight to **STEP 9** (gateway restart) and **STEP 10** (verify).
 
-If `ov-install` exits non-zero, capture the last 30 lines of its output, show them to the user, and stop. Don't retry blindly.
+If `ov-install` exits non-zero, capture the last 30 lines of its output, show them to the user, and stop. Don't retry without new input.
 
 ---
 
@@ -347,7 +347,7 @@ The wizard prints a single JSON object:
 | `success: false` and `error` contains `"Server unreachable"` | Connectivity broke between STEP 5 and STEP 7. Offer `--allow-offline`; if accepted, retry. Otherwise back to STEP 4a. |
 | `success: false` and `error` contains `"Root API key detected"` and `"Missing: --account-id, --user-id"` | **Root-key path — see below.** |
 | `success: false` and `error` contains `"Invalid API key"` / `keyProbe.keyType: "unknown"` after auth failure detail | API key wrong. Back to STEP 4b. |
-| `success: false` and any other `action: "error"` | Show `error` to the user, stop. Do NOT pretend success. |
+| `success: false` and any other `action: "error"` | Show `error` to the user, stop. Report the failure accurately. |
 
 ### Slot conflict (`slot_blocked`)
 
@@ -355,7 +355,7 @@ The error text looks like:
 
 > `contextEngine slot is owned by "<other-plugin>". Config was saved but slot was NOT changed. Use --force-slot to replace.`
 
-**Do NOT silently use `--force-slot`.** Ask the user:
+Ask the user before using `--force-slot`:
 
 > (CN) 你的 OpenClaw 當前 contextEngine 槽被 `<other-plugin>` 佔著。如果用 OpenViking 替換它，`<other-plugin>` 就不再生效。要替換嗎？
 > (EN) Your `contextEngine` slot is currently owned by `<other-plugin>`. Activating OpenViking will disable it. Replace?
@@ -552,7 +552,7 @@ The agent-visible `add_resource` tool is disabled by default (`enableAddResource
 | `data` | No | Raw `SKILL.md` content or MCP tool dict. Exactly one of `source` or `data` is required. |
 | `wait` | No | Wait for processing completion. |
 
-Agent Skill best practice: verify frontmatter has a precise `name`, a trigger-oriented `description`, useful `tags`, explicit scope boundaries, and concrete execution steps. Do not include secrets in skill content.
+Agent Skill best practice: verify frontmatter has a precise `name`, a trigger-oriented `description`, useful `tags`, explicit scope boundaries, and concrete execution steps. Keep credentials such as API keys out of skill content.
 
 ### `ov_search` — Search Resources and Skills
 
@@ -664,7 +664,7 @@ If the user runs multiple OpenClaw instances (e.g. testing several agents in par
 To target a non-default instance:
 
 ```bash
-npx -y openclaw-openviking-setup-helper@latest --workdir ~/.openclaw-second --base-url ... --api-key ...
+npx -y openclaw-openviking-setup-helper --workdir ~/.openclaw-second --base-url ... --api-key ...
 ```
 
 `ov-install` writes a helper env file when the state dir is non-default:
@@ -723,7 +723,7 @@ openclaw gateway restart
 ### If installed through backup `ov-install`
 
 ```bash
-npx -y openclaw-openviking-setup-helper@latest --uninstall
+npx -y openclaw-openviking-setup-helper --uninstall
 ```
 
 This will:
@@ -771,14 +771,14 @@ Match against actual stderr / JSON `error` strings.
 
 ## Important Rules
 
-1. **Never ask the user to run commands.** You run everything via your shell tool.
-2. **Never skip STEP 5 (connectivity check).** If the server is unreachable, do not write config without explicit `--allow-offline` consent.
-3. **Never silently use `--force-slot`.** Slot replacement disables another plugin — always confirm with the user first.
-4. **Never invent values.** If the user can't provide a required value, stop and tell them what to ask their admin.
-5. **Never claim success without STEP 10.** Only after `openclaw openviking status --json` shows `configured: true && slotActive: true && health.ok: true` may you tell the user it's done.
+1. Run the commands yourself with your shell tool where possible, and tell the user what each one does.
+2. Run the STEP 5 connectivity check. If the server is unreachable, write config only with explicit `--allow-offline` consent from the user.
+3. Confirm with the user before using `--force-slot`; slot replacement disables another plugin.
+4. Do not invent values. If the user can't provide a required value, stop and tell them what to ask their admin.
+5. Report success only after STEP 10: once `openclaw openviking status --json` shows `configured: true && slotActive: true && health.ok: true` you can tell the user it's done.
 6. **Use `--peer-prefix` for assistant peer prefixes.** The old ID-style setup flag is no longer supported by the schema.
 7. **For Windows, use PowerShell equivalents.** Don't rely on `nohup`, `&`, `mkdir -p`, `source`, etc.
-8. **Switch to Path B (ov-install) only for ClawHub/rate-limit/registry availability failures.** Don't use it to hide version conflicts or package validation errors.
+8. **Switch to Path B (ov-install) only for ClawHub/rate-limit/registry availability failures.** Report version conflicts and package validation errors to the user instead.
 9. **Do NOT install or operate the OpenViking server.** This skill assumes the server is already running. If it isn't, tell the user to contact their admin or follow the OpenViking docs.
 10. **Be brief and friendly in user-visible text.** Save technical detail for when something actually fails.
 11. **Do NOT use `clawhub install openviking`.** That installs a different thing (an AgentSkill, not the plugin).
