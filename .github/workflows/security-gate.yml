@@ -135,6 +135,15 @@ jobs:
               - 'web-studio/package-lock.json'
               - '.trivyignore.yaml'
 
+      # The full image build (Rust + C++ + web + Python venv) exceeds the
+      # runner's free disk; drop preinstalled toolchains the build never uses.
+      - name: Free runner disk space
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+
       # .git is not in the build context, so the Dockerfile needs the version
       # passed in; resolve it the same way build-docker-image.yml does.
       - name: Resolve OpenViking version

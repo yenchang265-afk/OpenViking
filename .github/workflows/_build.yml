@@ -313,6 +313,16 @@ jobs:
         mv dist_fixed/*.whl dist/
         rmdir dist_fixed
 
+    # The smoke test builds tree-sitter-language-pack from source (it only
+    # ships manylinux_2_34 wheels; this container is glibc 2.31), which needs
+    # several GB of /tmp. Drop build intermediates that are no longer needed.
+    - name: Free build artifacts before smoke test (Linux)
+      shell: bash
+      run: |
+        rm -rf target build "${CARGO_HOME:-$HOME/.cargo}/registry" /tmp/patchelf-*
+        uv cache clean || true
+        df -h . /tmp
+
     - name: Smoke test built wheel (Linux)
       shell: bash
       run: |
