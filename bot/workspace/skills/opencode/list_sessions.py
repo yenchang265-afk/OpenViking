@@ -40,7 +40,7 @@ try:
     project_list = list_project(client)
     sessions = []
     for project in project_list:
-        r = execute_cmd(f"cd {project['path']};opencode session list --format=json")
+        r = execute_cmd(["opencode", "session", "list", "--format=json"], cwd=project["path"])
         if r is None:
             continue
         try:
