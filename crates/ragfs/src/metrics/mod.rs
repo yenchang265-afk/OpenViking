@@ -120,6 +120,8 @@ pub(crate) fn cache_metrics(stats: crate::cache::CacheMetricsSnapshot) -> Vec<Ra
         ("ragfs_cache_invalidations_total", stats.invalidations),
         ("ragfs_cache_errors_total", stats.errors),
         ("ragfs_cache_policy_bypasses_total", stats.policy_bypasses),
+        ("ragfs_cache_stale_versions_total", stats.stale_versions),
+        ("ragfs_cache_invalidation_failures_total", stats.invalidation_failures),
     ] {
         metrics.push(RagfsMetric::counter(name, &[], count, 1.0));
     }

@@ -42,6 +42,8 @@ def summarize_cache_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     totals = {
         "bypasses": 0,
         "errors": 0,
+        "stale_versions": 0,
+        "invalidation_failures": 0,
         "backend_saved": 0,
         "bytes_from_cache": 0,
         "bytes_from_backend": 0,
@@ -72,6 +74,12 @@ def summarize_cache_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
             totals["bypasses"] += value
         elif name == "ragfs_cache_errors_total":
             totals["errors"] += value
+        elif name == "ragfs_cache_stale_versions_total":
+            totals["stale_versions"] += value
+        elif name == "ragfs_cache_invalidation_failures_total":
+            # Bumps that failed after retries: other instances may serve stale
+            # entries for the affected paths until the cache TTL expires.
+            totals["invalidation_failures"] += value
         elif name == "ragfs_cache_inflight_events_total" and labels.get("event") == "backend_saved":
             totals["backend_saved"] += value
         elif name == "ragfs_cache_bytes_total":
