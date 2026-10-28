@@ -405,12 +405,21 @@ class AGFSCacheFSConfig(BaseModel):
         default_factory=list,
         description="Path prefixes that bypass cache",
     )
+    multi_instance: bool = Field(
+        default=False,
+        description=(
+            "Several OpenViking instances share this cache namespace; disables "
+            "write-through fill and requires a provider with atomic INCRBY"
+        ),
+    )
 
     @model_validator(mode="after")
     def validate_config(self):
         """Validate CacheFS limits."""
         if self.max_file_size_bytes <= 0:
             raise ValueError("cachefs max_file_size_bytes must be > 0")
+        if self.multi_instance and self.backend != "cache":
+            raise ValueError("cachefs multi_instance requires backend='cache'")
         return self
 
 

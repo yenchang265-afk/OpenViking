@@ -142,6 +142,8 @@ def _build_provider_cache_config(
             "enabled": cachefs_enabled,
             "runtime_enabled": runtime_enabled,
             "provider": provider,
+            "multi_instance": cachefs_enabled
+            and bool(getattr(cachefs_model, "multi_instance", False)),
         }
     )
     if provider == "redis":
