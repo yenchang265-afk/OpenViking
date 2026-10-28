@@ -11,6 +11,7 @@ use crate::cache_runtime::{
     CacheError, CacheOperation, CacheResult, CacheRuntime, SetCondition, SetOptions, SetResult,
 };
 use bytes::Bytes;
+use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -19,6 +20,9 @@ use uuid::Uuid;
 
 const KEY_LAYOUT_VERSION: &str = "v2";
 const INIT_ATTEMPTS: usize = 3;
+/// Every live counter starts at or above this value. A smaller value means
+/// INCRBY recreated a lost key, so the bump re-bases it to a random value.
+const MIN_BASE: i64 = 1 << 40;
 
 /// Counter values already read during one traversal, keyed by counter key.
 pub(super) type VersionMemo = Mutex<HashMap<String, i64>>;
@@ -70,6 +74,11 @@ impl VersionStore {
         }
     }
 
+    /// Return whether bumps use atomic INCRBY (safe across processes).
+    pub fn atomic_bump(&self) -> bool {
+        self.atomic_bump
+    }
+
     /// Return the provider key for one object kind and path.
     pub fn key(&self, kind: KeyKind, path: &str) -> String {
         let normalized = normalize_path(path);
@@ -82,10 +91,15 @@ impl VersionStore {
         )
     }
 
-    /// Counter keys an envelope for `path` must record: every ancestor subtree
-    /// generation (including `path` itself) and the object version of `path`.
+    /// Counter keys an envelope for `path` must record: the subtree
+    /// generation of every strict ancestor and the object version of `path`.
+    ///
+    /// `subtree(path)` itself is not needed: every operation that bumps it
+    /// (mkdir, remove, remove_all, rename, replace) also bumps `ver(path)`.
     pub fn snapshot_keys(&self, path: &str) -> Vec<String> {
-        ancestor_scopes(path)
+        let mut scopes = ancestor_scopes(path);
+        scopes.pop();
+        scopes
             .iter()
             .map(|scope| self.key(KeyKind::Subtree, scope))
             .chain(std::iter::once(self.key(KeyKind::Object, path)))
@@ -135,11 +149,18 @@ impl VersionStore {
                 .await
                 .map(|_| ());
         }
-        // A missing key must restart from a random base, never from zero: a
-        // surviving envelope may have recorded a small value before the key
-        // was lost. INCRBY alone would recreate the key at 1.
-        self.store(key, random_counter(), SetCondition::Nx).await?;
-        self.runtime.incr_by(key, 1).await.map(|_| ())
+        // Live counters start at MIN_BASE or above, so a smaller INCRBY result
+        // means the key was just recreated from nothing. Re-base it to a fresh
+        // random value: a small value could collide with one a surviving
+        // envelope recorded before the key was lost. Checking `< MIN_BASE`
+        // rather than `== 1` still re-bases when a retry follows a lost reply
+        // or a failed re-base. Overwriting is safe because any value written
+        // in between is replaced by a value nobody recorded.
+        if self.runtime.incr_by(key, 1).await? < MIN_BASE {
+            self.store(key, random_counter(), SetCondition::None)
+                .await?;
+        }
+        Ok(())
     }
 
     /// Read counters, initializing missing ones to a value all instances agree on.
@@ -196,14 +217,15 @@ impl VersionStore {
             )));
         }
 
-        let mut values = Vec::with_capacity(keys.len());
-        for (key, value) in keys.iter().zip(raw) {
-            values.push(match value {
-                Some(value) => decode_counter(key, &value)?,
-                None => self.initialize(key).await?,
-            });
-        }
-        Ok(values)
+        join_all(keys.iter().zip(raw).map(|(key, value)| async move {
+            match value {
+                Some(value) => decode_counter(key, &value),
+                None => self.initialize(key).await,
+            }
+        }))
+        .await
+        .into_iter()
+        .collect()
     }
 
     /// Store a random base with SET NX, or adopt the value another instance won with.
@@ -249,10 +271,11 @@ fn decode_counter(key: &str, value: &[u8]) -> CacheResult<i64> {
         .ok_or_else(|| CacheError::InvalidData(format!("counter {key} is not a decimal integer")))
 }
 
-/// Random positive base far below `i64::MAX`, so INCRBY never overflows in practice.
+/// Random base in `[MIN_BASE, 2^62)`, far below `i64::MAX` so INCRBY never
+/// overflows in practice.
 fn random_counter() -> i64 {
-    let value = (Uuid::new_v4().as_u128() as u64) >> 2;
-    value.max(1) as i64
+    let value = ((Uuid::new_v4().as_u128() as u64) >> 2) as i64;
+    value.max(MIN_BASE)
 }
 
 pub(super) fn normalize_path(path: &str) -> String {
@@ -312,16 +335,19 @@ mod tests {
     }
 
     #[test]
-    fn snapshot_keys_cover_ancestors_and_object() {
+    fn snapshot_keys_cover_strict_ancestors_and_object() {
         let (store, _) = store_with(MemoryMockProvider::new());
         assert_eq!(
             store.snapshot_keys("/a/b"),
             vec![
                 store.key(KeyKind::Subtree, "/"),
                 store.key(KeyKind::Subtree, "/a"),
-                store.key(KeyKind::Subtree, "/a/b"),
                 store.key(KeyKind::Object, "/a/b"),
             ]
+        );
+        assert_eq!(
+            store.snapshot_keys("/"),
+            vec![store.key(KeyKind::Object, "/")]
         );
     }
 
@@ -355,7 +381,25 @@ mod tests {
         store.bump(&key).await.unwrap();
         let raw = runtime.get(&key).await.unwrap().unwrap();
         let value = decode_counter(&key, &raw).unwrap();
-        assert!(value > 1, "bump must not restart the counter at 1");
+        assert!(value >= MIN_BASE, "bump must not restart the counter at 1");
+    }
+
+    #[tokio::test]
+    async fn bump_retry_rebases_after_a_failed_rebase() {
+        let provider = Arc::new(MemoryMockProvider::new());
+        let runtime = CacheRuntime::memory_with_provider(Arc::clone(&provider));
+        let store = VersionStore::new(Arc::clone(&runtime), "svc".to_string());
+        let key = store.key(KeyKind::Object, "/f");
+
+        provider.fail_next_set_matching(":ver:");
+        assert!(store.bump(&key).await.is_err(), "re-base SET failed");
+        // The retry sees 2, not 1, and must still re-base.
+        store.bump(&key).await.unwrap();
+        let value = decode_counter(&key, &runtime.get(&key).await.unwrap().unwrap()).unwrap();
+        assert!(
+            value >= MIN_BASE,
+            "retried bump left a small counter: {value}"
+        );
     }
 
     #[tokio::test]
@@ -399,6 +443,7 @@ mod tests {
         let (left, right) = (left.unwrap(), right.unwrap());
         // Both snapshots share the `/` and `/d` subtree counters.
         assert_eq!(left[..2], right[..2]);
+        assert!(left.iter().all(|snapshot| snapshot.value >= MIN_BASE));
     }
 
     #[tokio::test]

@@ -589,6 +589,8 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
         config.bypass_prefixes = string_array_field(cachefs, "bypass_prefixes")?;
         config.multi_instance = bool_field(cachefs, "multi_instance", false)?;
     }
+    // Reject multi_instance without CacheFS before the early return below; the
+    // TTL check runs again once the provider params are parsed.
     validate_cachefs_multi_instance(&config)?;
 
     if !config.runtime_enabled {

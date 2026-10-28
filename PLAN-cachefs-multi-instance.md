@@ -1,6 +1,17 @@
 # Plan: Multi-Instance CacheFS
 
-Status: **Draft** 2026-10-28. Awaiting review.
+Status: **Implemented** 2026-10-29 on branch `worktree-cachefs-multi-instance-plan` (T1–T15). T16 (deployment check) is left for a manual run.
+
+## Implementation notes
+
+- **Open questions, as decided:** (1) explicit `multi_instance` flag, default off; (2) degrade on a failed bump (retry, metric, TTL bound), no strict mode; (3) no Redis Cluster hash tag. T13 had no Cluster numbers, so this stays open.
+- **Test location:** the race, bump-table and stress tests live in-crate (`src/cache/multi_instance_tests.rs`, `src/cache/stress_tests.rs`) instead of `tests/`, because the harness needs `pub(crate)` items (`ArcFileSystem`, key helpers). The real-Redis variants (T11) are a `redis` submodule there, gated on `REDIS_URL` / `REDIS_CLUSTER_URLS`. `tests/common/gated_fs.rs` was not needed.
+- **R3** (concurrent write-through) needs the T8 flag, so its RED test landed with T8. It reproduced `v1` served while the backend held `v2`.
+- **R4 harness:** the provider's GET delay sleeps before reading, so it never overlaps two bumps. The test uses a SET delay instead.
+- **Bump:** `INCRBY` first. A result of 1 means the key was missing, and only then is it re-based with a random `SET`. That keeps the common case to one round trip.
+- **Stress oracle:** mutations are recorded when they start, not when they return, because readers see a write's effect before the call returns. An uncached control run validates the oracle. With 3×2 tasks × 300 ops and 0–3 ms jitter, the test caught an injected missing write bump. It passed on 8 seeds.
+- **Benchmark (T13):** standalone Redis through the WSL→Docker port forward, p50 over 3 runs each. Depth 3 hit: main 573–581 µs, branch 574–655 µs. Depth 8 hit: main 598–610 µs, branch 651–680 µs (about +10%, at the budget; run-to-run spread about ±8%). Miss and fill were in line with main.
+- **Not verified locally:** Redis Cluster mode (no multi-node cluster available) and T16.
 Scope: `crates/ragfs/src/cache/*`, the CacheFS config path (Rust builder, `ragfs-python` binding, `openviking_cli` config), metrics, and the RAGFS cache guide.
 
 ## Problem
@@ -98,84 +109,84 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 ### P0 — Test harness and failing race tests
 
-- [ ] **T1: Two-instance harness**
+- [x] **T1: Two-instance harness**
   - Acceptance: a helper builds N `CachedFileSystem`s that share one `CacheRuntime::memory()` and one backend. `SharedFs` forwards to an `Arc<MemFileSystem>`, because `with_runtime` takes a `Box<dyn FileSystem>`. A `GatedFs` wrapper can pause chosen ops (`read`, `read_dir`, `write`) after the inner call returns, using `tokio::sync::Notify`/`Barrier`, to force interleavings deterministically.
   - Verify: a smoke test where both instances read and write the same file without gating and stay consistent.
   - Files: `crates/ragfs/tests/cache_multi_instance.rs` (new), `crates/ragfs/tests/common/gated_fs.rs` (new)
 
-- [ ] **T2: RED tests R1/R2**
+- [x] **T2: RED tests R1/R2**
   - Acceptance: (a) B's read of `/f` is gated after the backend read, A writes `/f`, B is released, then a read from either instance must return the new data. (b) The same with A `remove`ing `/f`: the next read must be NotFound. (c) The same with A `remove_all`ing the ancestor `/d`. (d) Directory variant: B's `read_dir(/d)` is gated, A creates `/d/x`, then the listing must contain `x`.
   - Verify: all four **fail** on `main`.
   - Files: `crates/ragfs/tests/cache_multi_instance.rs`
 
-- [ ] **T3: RED tests R3/R4/R5**
+- [x] **T3: RED tests R3/R4/R5**
   - Acceptance: (a) R3: A and B write `/f` with interleaved gating while write-through fill is enabled in multi-instance mode, and the final read must equal the backend. This is marked as expecting the multi-instance flag from T8. (b) R4: a gated provider wrapper around `MemoryMockProvider` interleaves two bumps, and both must take effect (final value = initial + 2). (c) R5: an envelope is filled on A after the generation key was lost, and B must get a hit (both agree on the re-initialized value).
   - Verify: all **fail** on `main`.
   - Files: `crates/ragfs/tests/cache_multi_instance.rs`, `crates/ragfs/src/cache_runtime/memory.rs` (gate hook, test-utils only)
 
 ### P1 — Version store
 
-- [ ] **T4: `cache/versions.rs`**
+- [x] **T4: `cache/versions.rs`**
   - Acceptance: `VersionStore` owns the key layout v2 (`object_key(kind, path)`, with `file`/`dir`/`subtree`/`ver`), decimal i64 encoding, `snapshot(paths, memo) -> Vec<VersionSnapshot>` (MGET plus `SET NX` init plus re-GET on lost NX), `matches(snapshot, memo)`, and `bump(keys)` (`SET NX` random then `INCRBY`, or a GET+SET fallback when the provider lacks `IncrBy`). It reports per-key errors so the caller can bypass the affected scope.
   - Verify: unit tests for encoding round trip, NX agreement between two callers, bump atomicity using T3's gated provider, the fallback path, and invalid-length/invalid-decimal values → `InvalidData`.
   - Files: `crates/ragfs/src/cache/versions.rs` (new), `crates/ragfs/src/cache/mod.rs`
 
-- [ ] **T5: Envelope v2**
+- [x] **T5: Envelope v2**
   - Acceptance: `CACHE_ENVELOPE_VERSION = 2`. `GenerationSnapshot` is renamed to `VersionSnapshot { key, value: i64 }` and covers both `ver` and `subtree`. v1 envelopes are rejected (decode error, then the key is deleted).
   - Verify: unit tests for decoding v1 (rejected) and v2 (round trip).
   - Files: `crates/ragfs/src/cache/envelope.rs`
 
 ### P2 — Wire the protocol into `CachedFileSystem`
 
-- [ ] **T6: Snapshot before backend read**
+- [x] **T6: Snapshot before backend read**
   - Acceptance: `read`, `read_with_generation_cache`, `read_dir_with_generation_cache` and `read_dir_for` take the snapshot before `backend.read*`, reusing probe values when the envelope existed. `fill_file`/`fill_directory` take the snapshot as a parameter and never re-read versions. Probes validate `ver(path)` as well as the ancestor `subtree`s. `current_generations*` and `put_missing_generations` are replaced by `VersionStore`.
   - Verify: T2 (a)–(d) and T3 (c) go GREEN. The existing `lost_generation_key_never_revalidates_deleted_subtree` still passes.
   - Files: `crates/ragfs/src/cache/wrapper.rs`
 
-- [ ] **T7: Bump table for mutations**
+- [x] **T7: Bump table for mutations**
   - Acceptance: every mutation in the bump table calls `VersionStore::bump` after the backend call. Data-key DELs stay as cleanup. `bump_generation` uses atomic bump. `invalidate_external_write` bumps `ver(path)` and `ver(parent)`. Bump failure retries 3× with backoff, then local bypass, an `invalidation_failures` metric and an error log.
   - Verify: T3 (b) GREEN. A new test per row of the bump table: gate a fill, run the op on the other instance, assert no stale hit. A test that a provider failure on bump does not fail the write and increments the metric.
   - Files: `crates/ragfs/src/cache/wrapper.rs`, `crates/ragfs/src/cache/metrics.rs`
 
 ### P3 — Multi-instance mode and config
 
-- [ ] **T8: `multi_instance` in Rust config**
+- [x] **T8: `multi_instance` in Rust config**
   - Acceptance: `CachePolicy::with_multi_instance(bool)`. When true, `write` skips write-through fill. `build_configured_stack` adds `CacheOperation::IncrBy` to `require_operations` when `multi_instance` is set, and fails startup with a clear message if the provider lacks it.
   - Verify: T3 (a) GREEN. A builder test: a dynamic provider stub without `incrby` plus `multi_instance` gives a config error, and without `multi_instance` it starts.
   - Files: `crates/ragfs/src/cache/policy.rs`, `crates/ragfs/src/cache/wrapper.rs`, `crates/ragfs/src/core/builder.rs`
 
-- [ ] **T9: Binding parse**
+- [x] **T9: Binding parse**
   - Acceptance: `ragfs-python` reads `storage.agfs.cachefs.multi_instance` (bool, default false, type-checked). With the Redis provider, it rejects `multi_instance=true` with `default_ttl_seconds=0`.
   - Verify: binding unit tests for default, true, wrong type, and TTL=0 rejection.
   - Files: `crates/ragfs-python/src/lib.rs`
 
-- [ ] **T10: Python config model**
+- [x] **T10: Python config model**
   - Acceptance: `AGFSCacheFSConfig.multi_instance: bool = False`. The validator rejects `multi_instance=true` with `backend="local"`. `open_viking_config` cross-checks the Redis `default_ttl_seconds > 0` with a user-friendly error. `agfs_utils` passes the flag through.
   - Verify: `tests/misc/test_config_validation.py` cases. `make build`, then `pytest tests/misc tests/unit/service/test_core_encryption_startup.py`.
   - Files: `openviking_cli/utils/config/agfs_config.py`, `openviking_cli/utils/config/open_viking_config.py`, `openviking/utils/agfs_utils.py`, `tests/misc/test_config_validation.py`
 
 ### P4 — Integration, stress and performance
 
-- [ ] **T11: Two runtimes on real Redis** (env-gated like `redis_runtime.rs`)
+- [x] **T11: Two runtimes on real Redis** (env-gated like `redis_runtime.rs`)
   - Acceptance: two `CacheRuntime::redis` connections to the same server, each wrapping a `CachedFileSystem` over a shared backend. T2/T3 scenarios replayed. Cluster variant if `REDIS_CLUSTER_URL` is set. Version values are verified as decimal strings via a raw GET.
   - Files: `crates/ragfs/tests/cache_multi_instance_redis.rs` (new)
 
-- [ ] **T12: Randomized stress test**
+- [x] **T12: Randomized stress test**
   - Acceptance: 3 instances × 8 tasks, random ops (`write`/`read`/`remove`/`rename`/`mkdir`/`read_dir`) over a small path set, with random gate delays. Oracle (per-path write history): a read may return the value of write W only if no other write that *completed before the read started* was ordered after W. Hits that overlap an in-flight write may return the value from before that write, because the bump is the commit point. After quiescence, every cached read equals the backend. Fixed seed in CI, plus an env var for long runs.
   - Files: `crates/ragfs/tests/cache_multi_instance.rs`
 
-- [ ] **T13: Benchmark**
+- [x] **T13: Benchmark**
   - Acceptance: hit and miss latency, before and after, on standalone Redis (local docker sidecar) for 4 KiB files at depth 3 and 8. Hit p50 regression ≤ 10 %. Record numbers in the PR. Cluster numbers inform the hash-tag decision (open question 3).
   - Files: `crates/ragfs/benches/` or a `tests/benchmark` script (follow existing bench layout)
 
 ### P5 — Observability and docs
 
-- [ ] **T14: Metrics and console**
+- [x] **T14: Metrics and console**
   - Acceptance: new counters `stale_version` (envelope rejected because a version moved) and `invalidation_failures`, exported as `openviking_ragfs_cache_*` and included in `GET /api/v1/console/cache`.
   - Verify: `tests/observability/test_console_router.py`.
   - Files: `crates/ragfs/src/cache/metrics.rs`, `crates/ragfs-python/src/lib.rs` (metrics snapshot), `openviking/metrics/ragfs_cache.py`, `openviking/server/routers/console.py`
 
-- [ ] **T15: Guide and configuration docs (en + zh)**
+- [x] **T15: Guide and configuration docs (en + zh)**
   - Acceptance: replace the single-writer assumption with the multi-instance contract. Cover the prerequisites (consistent backend, Redis primary reads, TTL > 0), the bump table, the residual risks (failed bumps, failover), the v1→v2 upgrade procedure, and the `multi_instance` option row.
   - Files: `docs/en/guides/14-ragfs-cache.md`, `docs/zh/guides/14-ragfs-cache.md`, `docs/en/guides/01-configuration.md`, `docs/zh/guides/01-configuration.md`
 

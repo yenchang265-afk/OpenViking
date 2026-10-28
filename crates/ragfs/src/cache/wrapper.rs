@@ -25,7 +25,7 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, RwLockWriteGuard};
 
 const GREP_CACHE_FILE_CONCURRENCY: usize = 8;
 /// Backoff between attempts to bump counters that failed after a mutation.
@@ -34,6 +34,9 @@ const BUMP_RETRY_DELAYS: [Duration; 3] = [
     Duration::from_millis(50),
     Duration::from_millis(200),
 ];
+
+/// Counter bumps that failed, as `(key, normalized path)` pairs.
+type PendingBumps = Vec<(String, String)>;
 
 /// A provider-independent read-through filesystem cache.
 ///
@@ -67,9 +70,17 @@ impl CachedFileSystem {
         service_name: String,
         policy: CachePolicy,
     ) -> Self {
+        let versions = VersionStore::new(Arc::clone(&runtime), service_name);
+        if policy.multi_instance() && !versions.atomic_bump() {
+            // The stack builder rejects this; direct callers only get a warning.
+            tracing::warn!(
+                "CacheFS multi_instance mode without atomic INCRBY: concurrent bumps \
+                 from different processes can be lost"
+            );
+        }
         Self {
             backend,
-            versions: VersionStore::new(Arc::clone(&runtime), service_name),
+            versions,
             runtime,
             policy,
             metrics: Arc::new(CacheMetrics::default()),
@@ -100,12 +111,21 @@ impl CachedFileSystem {
     }
 
     /// Invalidate cache objects affected by a write that bypassed this wrapper.
+    ///
+    /// Raw writers may also have created missing parent directories, so every
+    /// ancestor listing is invalidated, not only the direct parent.
     pub(crate) async fn invalidate_external_write(&self, path: &str) {
-        let parent = parent_path(path);
-        self.bump_counters(&[(KeyKind::Object, path), (KeyKind::Object, &parent)])
-            .await;
+        let guard = self.operation_lock.write().await;
+        let scopes = ancestor_scopes(&parent_path(path));
+        let counters = std::iter::once((KeyKind::Object, path))
+            .chain(scopes.iter().map(|scope| (KeyKind::Object, scope.as_str())))
+            .collect::<Vec<_>>();
+        let pending = self.bump_counters(&counters).await;
         self.invalidate_path_objects(path).await;
-        self.invalidate_parent_directory(path).await;
+        for scope in &scopes {
+            self.cache_delete(&self.directory_key(scope), scope).await;
+        }
+        self.settle_bumps(guard, pending).await;
     }
 
     async fn tree_directory_via_cache(
@@ -483,12 +503,9 @@ impl CachedFileSystem {
     }
 
     /// Bump counters after a backend mutation so other instances stop
-    /// trusting entries filled before it.
-    ///
-    /// The bump is the commit point for every instance sharing the namespace,
-    /// so failed bumps are retried before this instance falls back to a local
-    /// bypass. Other instances may then serve stale entries until their TTL.
-    async fn bump_counters(&self, counters: &[(KeyKind, &str)]) {
+    /// trusting entries filled before it. Returns the bumps that failed; the
+    /// caller hands them to [`Self::settle_bumps`] together with its lock.
+    async fn bump_counters(&self, counters: &[(KeyKind, &str)]) -> PendingBumps {
         let mut pending = Vec::<(String, String)>::new();
         for (kind, path) in counters {
             let key = self.versions.key(*kind, path);
@@ -496,52 +513,77 @@ impl CachedFileSystem {
                 pending.push((key, normalize_path(path)));
             }
         }
+        self.attempt_bumps(pending).await
+    }
 
-        let mut retries = BUMP_RETRY_DELAYS.iter();
-        loop {
-            let results = join_all(pending.iter().map(|(key, _)| async move {
-                let started = Instant::now();
-                let result = self.versions.bump(key).await;
-                self.metrics.put(started.elapsed());
-                result
-            }))
-            .await;
-            let failed = pending
-                .into_iter()
-                .zip(results)
-                .filter_map(|(counter, result)| match result {
-                    Ok(()) => {
-                        self.metrics.invalidation();
-                        None
-                    }
-                    Err(_) => {
-                        self.metrics.error();
-                        Some(counter)
-                    }
-                })
-                .collect::<Vec<_>>();
-            if failed.is_empty() {
+    async fn attempt_bumps(&self, pending: PendingBumps) -> PendingBumps {
+        let results = join_all(pending.iter().map(|(key, _)| async move {
+            let started = Instant::now();
+            let result = self.versions.bump(key).await;
+            self.metrics.put(started.elapsed());
+            result
+        }))
+        .await;
+        pending
+            .into_iter()
+            .zip(results)
+            .filter_map(|(counter, result)| match result {
+                Ok(()) => {
+                    self.metrics.invalidation();
+                    None
+                }
+                Err(_) => {
+                    self.metrics.error();
+                    Some(counter)
+                }
+            })
+            .collect()
+    }
+
+    /// Retry failed bumps, then release the mutation's operation lock.
+    ///
+    /// The bump is the commit point for every instance sharing the namespace,
+    /// so failed bumps are retried before this instance falls back to a local
+    /// bypass. Other instances may then serve stale entries until their TTL.
+    /// Atomic bumps do not need the lock, so it is released before the retry
+    /// backoff instead of stalling every other operation in this process.
+    async fn settle_bumps(&self, guard: RwLockWriteGuard<'_, ()>, mut pending: PendingBumps) {
+        let _guard = if self.versions.atomic_bump() {
+            drop(guard);
+            None
+        } else {
+            Some(guard)
+        };
+        for delay in BUMP_RETRY_DELAYS {
+            if pending.is_empty() {
                 return;
             }
-            match retries.next() {
-                Some(delay) => {
-                    tokio::time::sleep(*delay).await;
-                    pending = failed;
-                }
-                None => {
-                    for (key, path) in failed {
-                        self.metrics.invalidation_failure();
-                        tracing::error!(
-                            path = %path,
-                            key = %key,
-                            "CacheFS counter bump failed; other instances may serve stale \
-                             entries for this path until the cache TTL expires"
-                        );
-                        self.mark_bypass(&path).await;
-                    }
-                    return;
-                }
-            }
+            tokio::time::sleep(delay).await;
+            pending = self.attempt_bumps(pending).await;
+        }
+        for (key, path) in pending {
+            self.metrics.invalidation_failure();
+            tracing::error!(
+                path = %path,
+                key = %key,
+                "CacheFS counter bump failed; other instances may serve stale \
+                 entries for this path until the cache TTL expires"
+            );
+            self.mark_bypass(&path).await;
+        }
+    }
+
+    /// Check an envelope's recorded counters. A mismatch against the traversal
+    /// memo is re-checked against live counters: the memo may be older than
+    /// an entry another instance filled after a bump.
+    async fn validate(
+        &self,
+        envelope: &CacheEnvelope,
+        memo: Option<&VersionMemo>,
+    ) -> CacheResult<bool> {
+        match self.versions.matches(envelope.versions(), memo).await {
+            Ok(false) if memo.is_some() => self.versions.matches(envelope.versions(), None).await,
+            result => result,
         }
     }
 
@@ -581,11 +623,7 @@ impl CachedFileSystem {
             }
         };
 
-        match self
-            .versions
-            .matches(envelope.versions(), generation_cache)
-            .await
-        {
+        match self.validate(&envelope, generation_cache).await {
             Ok(true) => match envelope.into_file() {
                 Ok(data) => {
                     if let Some(operation) = record_hit {
@@ -648,11 +686,7 @@ impl CachedFileSystem {
             }
         };
 
-        match self
-            .versions
-            .matches(envelope.versions(), generation_cache)
-            .await
-        {
+        match self.validate(&envelope, generation_cache).await {
             Ok(true) => match envelope.into_directory() {
                 Ok(entries) => {
                     if !self.policy.cache_directory_entries(path, entries.len()) {
@@ -764,10 +798,10 @@ impl CachedFileSystem {
 
         // Snapshot before the backend read: a mutation that lands after it
         // bumps a recorded counter, so a late fill can never validate.
-        let versions = self
-            .versions
-            .snapshot(&normalized, Some(generation_cache))
-            .await;
+        // Snapshot live counters, not the traversal memo: a memoized value that
+        // moved since the traversal started would make this fill stale for
+        // every other reader the moment it is written.
+        let versions = self.versions.snapshot(&normalized, None).await;
         let data = self.backend.read(path, 0, 0).await;
         if let Ok(value) = &data {
             self.metrics.backend_fallback(value.len());
@@ -835,10 +869,7 @@ impl CachedFileSystem {
             }
         }
 
-        let versions = self
-            .versions
-            .snapshot(&normalized, Some(generation_cache))
-            .await;
+        let versions = self.versions.snapshot(&normalized, None).await;
         let entries = self.backend.read_dir(path, None, None, None, None).await;
         if let Ok(value) = &entries {
             self.metrics.backend_fallback(0);
@@ -968,25 +999,25 @@ impl CachedFileSystem {
 
     /// Bump counters for a change to the object at `path` (content, mode, or
     /// existence) so its own entries and its parent listing stop matching.
-    async fn bump_object(&self, path: &str) {
+    async fn bump_object(&self, path: &str) -> PendingBumps {
         let parent = parent_path(path);
         self.bump_counters(&[(KeyKind::Object, path), (KeyKind::Object, &parent)])
-            .await;
+            .await
     }
 
     /// Bump counters for a change that can affect everything below `path`.
-    async fn bump_subtree(&self, path: &str) {
+    async fn bump_subtree(&self, path: &str) -> PendingBumps {
         let parent = parent_path(path);
         self.bump_counters(&[
             (KeyKind::Subtree, path),
             (KeyKind::Object, path),
             (KeyKind::Object, &parent),
         ])
-        .await;
+        .await
     }
 
     /// Bump counters for a move of `from` onto `to`.
-    async fn bump_move(&self, from: &str, to: &str) {
+    async fn bump_move(&self, from: &str, to: &str) -> PendingBumps {
         let (from_parent, to_parent) = (parent_path(from), parent_path(to));
         self.bump_counters(&[
             (KeyKind::Subtree, from),
@@ -996,7 +1027,7 @@ impl CachedFileSystem {
             (KeyKind::Object, &from_parent),
             (KeyKind::Object, &to_parent),
         ])
-        .await;
+        .await
     }
 
     async fn invalidate_path_objects(&self, path: &str) {
@@ -1027,41 +1058,45 @@ impl CachedFileSystem {
 #[async_trait]
 impl FileSystem for CachedFileSystem {
     async fn create(&self, path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.create(path).await?;
-        self.bump_object(path).await;
+        let pending = self.bump_object(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn mkdir(&self, path: &str, mode: u32) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.mkdir(path, mode).await?;
-        self.bump_subtree(path).await;
+        let pending = self.bump_subtree(path).await;
         self.cache_delete(&self.directory_key(path), path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn remove(&self, path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.remove(path).await?;
-        self.bump_subtree(path).await;
+        let pending = self.bump_subtree(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn remove_all(&self, path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         let result = self.backend.remove_all(path).await;
         // Recursive deletion is not transactional: a backend can remove part of
         // the subtree before reporting an error. Invalidate conservatively so
         // provider-backed caches cannot continue serving deleted objects.
-        self.bump_subtree(path).await;
+        let pending = self.bump_subtree(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         result
     }
 
@@ -1120,15 +1155,16 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         let written = self.backend.write(path, data, offset, flags).await?;
         let normalized = normalize_path(path);
         let key = self.file_key(&normalized);
-        self.bump_object(&normalized).await;
+        let pending = self.bump_object(&normalized).await;
         self.cache_delete(&key, &normalized).await;
         // Across processes a concurrent writer's fill can land after a newer
         // backend write, so multi-instance mode leaves filling to the next read.
         if !self.policy.multi_instance()
+            && pending.is_empty()
             && offset == 0
             && matches!(
                 flags,
@@ -1143,6 +1179,7 @@ impl FileSystem for CachedFileSystem {
             self.fill_file(&key, &normalized, data, versions).await;
         }
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(written)
     }
 
@@ -1151,13 +1188,14 @@ impl FileSystem for CachedFileSystem {
     /// The bytes are never in memory here, so the file cache is not refilled;
     /// the next full read misses and fills it.
     async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         let written = self.backend.write_from_path(path, src, flags).await?;
         let normalized = normalize_path(path);
         let key = self.file_key(&normalized);
-        self.bump_object(&normalized).await;
+        let pending = self.bump_object(&normalized).await;
         self.cache_delete(&key, &normalized).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(written)
     }
 
@@ -1191,42 +1229,46 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn rename(&self, old_path: &str, new_path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.rename(old_path, new_path).await?;
-        self.bump_move(old_path, new_path).await;
+        let pending = self.bump_move(old_path, new_path).await;
         self.invalidate_path_objects(old_path).await;
         self.invalidate_path_objects(new_path).await;
         self.invalidate_parent_directory(old_path).await;
         self.invalidate_parent_directory(new_path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn replace(&self, src_path: &str, dst_path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.replace(src_path, dst_path).await?;
-        self.bump_move(src_path, dst_path).await;
+        let pending = self.bump_move(src_path, dst_path).await;
         self.invalidate_path_objects(src_path).await;
         self.invalidate_path_objects(dst_path).await;
         self.invalidate_parent_directory(src_path).await;
         self.invalidate_parent_directory(dst_path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.chmod(path, mode).await?;
-        self.bump_object(path).await;
+        let pending = self.bump_object(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn truncate(&self, path: &str, size: u64) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.truncate(path, size).await?;
-        self.bump_object(path).await;
+        let pending = self.bump_object(path).await;
         self.cache_delete(&self.file_key(path), path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
@@ -1235,17 +1277,18 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn ensure_parent_dirs(&self, path: &str, mode: u32) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.ensure_parent_dirs(path, mode).await?;
         let scopes = ancestor_scopes(&parent_path(path));
         let counters = scopes
             .iter()
             .map(|scope| (KeyKind::Object, scope.as_str()))
             .collect::<Vec<_>>();
-        self.bump_counters(&counters).await;
+        let pending = self.bump_counters(&counters).await;
         for scope in &scopes {
             self.cache_delete(&self.directory_key(scope), scope).await;
         }
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
@@ -1407,6 +1450,33 @@ mod tests {
         assert_eq!(snapshot.operation(CacheOperation::Read), counts(0, 0, 0));
         assert_eq!(snapshot.read_dir_hits, 3);
         assert_eq!(snapshot.file_misses, 1);
+    }
+
+    /// A traversal memo older than a bump must not reject (and delete) an
+    /// entry that was filled after the bump with the current counter values.
+    #[tokio::test]
+    async fn stale_traversal_memo_keeps_a_fresh_entry() {
+        let fs = cached_memfs(CacheTraversalMode::CachedTraversal).await;
+        assert_eq!(fs.read("/docs/a.md", 0, 0).await.unwrap(), b"alpha\nbeta\n");
+
+        let memo = VersionMemo::default();
+        let key = fs.generation_key("/docs");
+        let live = fs.versions.snapshot("/docs/a.md", None).await.unwrap();
+        let current = live
+            .iter()
+            .find(|snapshot| snapshot.key == key)
+            .unwrap()
+            .value;
+        memo.lock().await.insert(key, current - 1);
+
+        let data = fs
+            .read_with_generation_cache(CacheOperation::Grep, "/docs/a.md", 0, 0, &memo)
+            .await
+            .unwrap();
+        assert_eq!(data, b"alpha\nbeta\n");
+        let snapshot = fs.metrics().snapshot();
+        assert_eq!(snapshot.operation(CacheOperation::Grep), counts(1, 0, 0));
+        assert_eq!(snapshot.stale_versions, 0);
     }
 
     /// A generation key that expires (or is evicted) must never be restored to an
