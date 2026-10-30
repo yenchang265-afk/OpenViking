@@ -1,0 +1,194 @@
+name: 05. Security Gate
+
+# Blocks PRs that introduce known HIGH/CRITICAL vulnerabilities (SCA), new
+# SAST findings, leaked secrets, or a vulnerable runtime image. Uses
+# exit-code tools rather than GitHub Advanced Security so it works on a
+# private repo without GHAS. No paths-ignore: a required check that never
+# runs stays "pending" and blocks the merge forever.
+#
+# Accepted risks go in .trivyignore.yaml with a reason and an expired_at date.
+
+on:
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 1 * * 0'  # Weekly full rescan: new CVEs land on code already merged
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TRIVY_IMAGE: aquasec/trivy:0.67.2
+  GITLEAKS_VERSION: 8.28.0
+  SEMGREP_VERSION: 1.180.0
+
+jobs:
+  sca:
+    name: Dependency vulnerabilities (SCA)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Scan lockfiles (uv, npm, Cargo)
+        run: |
+          docker run --rm -v "$PWD":/src -w /src "$TRIVY_IMAGE" fs \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --ignorefile .trivyignore.yaml \
+            --skip-dirs third_party,examples,docs,bot \
+            --exit-code 1 \
+            .
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        working-directory: ${{ runner.temp }}
+        run: |
+          base="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+          tarball="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfLO "$base/$tarball"
+          curl -sSfLO "$base/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " $tarball\$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum -c -
+          tar -xzf "$tarball" gitleaks
+          echo "$PWD" >> "$GITHUB_PATH"
+
+      - name: Scan commits for secrets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # PRs: only the commits the PR adds. Schedule/dispatch: current tree.
+          if [ -n "$BASE_SHA" ]; then
+            gitleaks git --redact --verbose --log-opts="$BASE_SHA..$HEAD_SHA" .
+          else
+            gitleaks dir --redact --verbose .
+          fi
+
+  sast:
+    name: Static analysis (SAST)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install semgrep
+        run: pip install "semgrep==${SEMGREP_VERSION}"
+
+      - name: Semgrep (findings new in this PR only)
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          semgrep scan --config p/default \
+            --baseline-commit "$BASE_SHA" \
+            --severity ERROR \
+            --exclude third_party --exclude tests --exclude test_data \
+            --error --metrics off
+
+  image:
+    name: Container image vulnerabilities
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read  # paths-filter lists the PR's changed files via the API
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      # The image build is slow (Rust + C++ + web), so on PRs only rebuild
+      # when something that lands in the image's dependency set changes.
+      - name: Detect image-affecting changes
+        id: changes
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            image:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'pyproject.toml'
+              - 'uv.lock'
+              - 'setup.py'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - 'crates/**/Cargo.toml'
+              - 'web-studio/package.json'
+              - 'web-studio/package-lock.json'
+              - '.trivyignore.yaml'
+
+      # The full image build (Rust + C++ + web + Python venv) exceeds the
+      # runner's free disk; drop preinstalled toolchains the build never uses.
+      - name: Free runner disk space
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker image prune --all --force
+          df -h /
+
+      # .git is not in the build context, so the Dockerfile needs the version
+      # passed in; resolve it the same way build-docker-image.yml does.
+      - name: Resolve OpenViking version
+        id: openviking-version
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        run: |
+          set -euo pipefail
+          python -m pip install "setuptools-scm>=8.0"
+          version="$(
+            python -c "from scripts.build_support.versioning import resolve_openviking_version; print(resolve_openviking_version())"
+          )"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build image (amd64, not pushed)
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: openviking:security-scan
+          build-args: |
+            OPENVIKING_VERSION=${{ steps.openviking-version.outputs.version }}
+          cache-from: type=gha,scope=security-gate
+          cache-to: type=gha,mode=max,scope=security-gate
+
+      - name: Scan image
+        if: github.event_name != 'pull_request' || steps.changes.outputs.image == 'true'
+        run: |
+          docker run --rm \
+            -v /var/run/docker.sock:/var/run/docker.sock \
+            -v "$PWD/.trivyignore.yaml":/.trivyignore.yaml:ro \
+            "$TRIVY_IMAGE" image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL \
+            --ignore-unfixed \
+            --ignorefile /.trivyignore.yaml \
+            --exit-code 1 \
+            openviking:security-scan
+
+      - name: Skip note
+        if: github.event_name == 'pull_request' && steps.changes.outputs.image != 'true'
+        run: echo "No image-affecting changes; image scan skipped (weekly run covers main)."

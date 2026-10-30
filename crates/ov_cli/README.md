@@ -19,7 +19,7 @@ The npm package installs the platform-specific `ov` binary for macOS, Linux, or 
 ### Install from source
 
 ```bash
-# OpenViking requires Rust >= 1.91.1.
+# OpenViking requires Rust >= 1.94.1.
 cargo install --path crates/ov_cli
 ```
 

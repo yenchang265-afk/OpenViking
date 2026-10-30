@@ -1,0 +1,21 @@
+# Accepted vulnerability risks for the Security Gate workflow.
+# Every entry needs a reason (statement) and an expiry; once expired_at
+# passes, Trivy fails the gate again so the exception gets re-reviewed.
+vulnerabilities:
+  # filelock 4.2.1 fixes this, but litellm 1.104.x pins filelock<4.0.
+  # Recheck when litellm lifts the cap.
+  - id: CVE-2026-112940
+    statement: "Blocked by litellm's filelock<4.0 requirement; no compatible fixed release."
+    expired_at: 2026-11-27
+
+  # twisted (via scrapy, used by the web crawler) is only fixed in 26.10.0rc*.
+  # Recheck once 26.10.0 final ships.
+  - id: CVE-2026-115775
+    statement: "Fix only in twisted 26.10.0 release candidates; waiting for a final release."
+    expired_at: 2026-11-27
+  - id: CVE-2026-115776
+    statement: "Fix only in twisted 26.10.0 release candidates; waiting for a final release."
+    expired_at: 2026-11-27
+  - id: CVE-2026-115778
+    statement: "Fix only in twisted 26.10.0 release candidates; waiting for a final release."
+    expired_at: 2026-11-27

@@ -78,7 +78,7 @@ Only use this path if one of the following is true:
 - The user explicitly wants to modify or rebuild low-level native components
 
 Only then explain the required toolchain:
-- Rust 1.91.1+
+- Rust 1.94.1+
 - A C++ compiler
 - CMake
 
@@ -196,7 +196,7 @@ Only add these when the provider requires them, when the README examples explici
 
 #### Path A: Standard minimal install
 
-Use a Python 3.10+ virtual environment, or follow the [Quick Start](02-quickstart.md) with `uv tool install`. In an activated virtual environment:
+Use a Python 3.11+ virtual environment, or follow the [Quick Start](02-quickstart.md) with `uv tool install`. In an activated virtual environment:
 
 ```bash
 python -m pip install --upgrade openviking
