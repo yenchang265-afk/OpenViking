@@ -171,7 +171,9 @@ async function finish(
     return done.temp_file_id
   } catch (error) {
     if (options.signal?.aborted) {
-      await abortUploadSession(uploadId, options.client)
+      // Don't wait: a cancel often means the server stopped answering, and the
+      // caller (e.g. the next queued file) must not hang on the discard.
+      void abortUploadSession(uploadId, options.client)
       throw error
     }
     throw new UploadSessionError(uploadId, error)
@@ -223,12 +225,21 @@ export async function resumeUploadSession(
   uploadId: string,
   options: ChunkedUploadOptions,
 ): Promise<string> {
-  const status = await getOvResult<SessionStatus>(
-    clientFor(options).get({
-      url: `/api/v1/uploads/${uploadId}`,
-      signal: options.signal,
-    }),
-  )
+  let status: SessionStatus
+  try {
+    status = await getOvResult<SessionStatus>(
+      clientFor(options).get({
+        url: `/api/v1/uploads/${uploadId}`,
+        signal: options.signal,
+      }),
+    )
+  } catch (error) {
+    // Cancelled before finish() could discard the session: discard it here.
+    if (options.signal?.aborted) {
+      void abortUploadSession(uploadId, options.client)
+    }
+    throw error
+  }
   const received = new Set(
     status.files.flatMap((f) =>
       f.received_parts.map((n) => partKey(f.index, n)),

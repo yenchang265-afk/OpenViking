@@ -4,6 +4,7 @@ import type { OvClientAdapter } from '#/lib/ov-client'
 import {
   SessionsUnavailableError,
   UploadSessionError,
+  abortUploadSession,
   isProxyRejectedTooLarge,
   resumeUploadSession,
   uploadSession,
@@ -149,16 +150,33 @@ async function transfer(
       sourceName: options.name,
     }
   } catch (error) {
-    if (
-      error instanceof UploadSessionError &&
-      !isProxyRejectedTooLarge(error.cause)
-    ) {
+    if (error instanceof UploadSessionError) {
       return {
-        tempFileId: await resumeUploadSession(error.uploadId, options),
+        tempFileId: await resumeOrDiscard(error, options),
         sourceName: options.name,
       }
     }
     if (!(error instanceof SessionsUnavailableError)) throw error
   }
   return legacyTempUpload(item, onProgress, transport)
+}
+
+/**
+ * Resume a session whose parts kept failing; if it cannot finish, discard it on the
+ * server instead of leaving it staged until temp_upload.ttl_seconds.
+ */
+async function resumeOrDiscard(
+  error: UploadSessionError,
+  options: ChunkedUploadOptions,
+): Promise<string> {
+  try {
+    if (isProxyRejectedTooLarge(error.cause)) throw error
+    return await resumeUploadSession(error.uploadId, options)
+  } catch (failure) {
+    // A cancelled upload already discarded its session.
+    if (!options.signal?.aborted) {
+      await abortUploadSession(error.uploadId, options.client)
+    }
+    throw failure
+  }
 }

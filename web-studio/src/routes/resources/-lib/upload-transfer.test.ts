@@ -10,6 +10,7 @@ import type { FolderGroup } from './folder-upload'
 import type * as OvErrors from '#/lib/ov-client/errors'
 
 const mocks = vi.hoisted(() => ({
+  abortUploadSession: vi.fn(),
   uploadSession: vi.fn(),
   resumeUploadSession: vi.fn(),
   postResourcesTempUpload: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock('./chunked-upload', async (importOriginal) => {
   const original = await importOriginal()
   return {
     ...(original as object),
+    abortUploadSession: mocks.abortUploadSession,
     uploadSession: mocks.uploadSession,
     resumeUploadSession: mocks.resumeUploadSession,
   }
@@ -64,6 +66,7 @@ function folder(): FolderGroup {
 }
 
 beforeEach(() => {
+  mocks.abortUploadSession.mockReset()
   mocks.uploadSession.mockReset()
   mocks.resumeUploadSession.mockReset()
   mocks.postResourcesTempUpload.mockReset()
@@ -120,6 +123,42 @@ describe('transferUpload', () => {
 
     expect(result.tempFileId).toBe('session_u9')
     expect(mocks.resumeUploadSession.mock.calls[0][0]).toBe('u9')
+    expect(mocks.abortUploadSession).not.toHaveBeenCalled()
+  })
+
+  it('discards the session when the resumed upload fails too', async () => {
+    const client = {} as never
+    const resumeError = new Error('still offline')
+    mocks.uploadSession.mockRejectedValue(
+      new UploadSessionError('u9', new Error('network')),
+    )
+    mocks.resumeUploadSession.mockRejectedValue(resumeError)
+
+    await expect(
+      transferUpload({ file: new File(['x'], 'f.bin') }, undefined, { client }),
+    ).rejects.toBe(resumeError)
+    expect(mocks.abortUploadSession).toHaveBeenCalledExactlyOnceWith(
+      'u9',
+      client,
+    )
+  })
+
+  it('leaves the discard to the cancelled upload itself', async () => {
+    const controller = new AbortController()
+    mocks.uploadSession.mockRejectedValue(
+      new UploadSessionError('u9', new Error('network')),
+    )
+    mocks.resumeUploadSession.mockImplementation(async () => {
+      controller.abort()
+      throw new DOMException('Aborted', 'AbortError')
+    })
+
+    await expect(
+      transferUpload({ file: new File(['x'], 'f.bin') }, undefined, {
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow('Aborted')
+    expect(mocks.abortUploadSession).not.toHaveBeenCalled()
   })
 
   it('explains a proxy 413 on a part instead of resuming', async () => {
@@ -134,6 +173,7 @@ describe('transferUpload', () => {
     expect(error).toBeInstanceOf(ProxyRequestTooLargeError)
     expect((error as Error).message).not.toContain('<html>')
     expect(mocks.resumeUploadSession).not.toHaveBeenCalled()
+    expect(mocks.abortUploadSession).toHaveBeenCalledOnce()
   })
 
   it('explains a proxy 413 on the single-request upload', async () => {
