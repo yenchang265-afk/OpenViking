@@ -247,4 +247,24 @@ describe('resumeUploadSession', () => {
     expect(await blobText(putMock.mock.calls[0][0].body)).toBe('4567')
     expect(progress).toEqual([6, 10])
   })
+
+  it('discards the session when cancelled while reading its status', async () => {
+    const controller = new AbortController()
+    getMock.mockImplementation(() => {
+      controller.abort()
+      return Promise.reject(new DOMException('Aborted', 'AbortError'))
+    })
+
+    await expect(
+      resumeUploadSession('u1', {
+        kind: 'file',
+        name: 'f.bin',
+        sources: [source('f.bin', '0123456789')],
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow('Aborted')
+    expect(deleteMock).toHaveBeenCalledExactlyOnceWith({
+      url: '/api/v1/uploads/u1',
+    })
+  })
 })

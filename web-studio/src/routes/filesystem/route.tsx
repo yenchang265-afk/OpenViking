@@ -111,7 +111,10 @@ export const Route = createFileRoute('/filesystem')({
 function FilesystemRoute() {
   const { provider } = useStudioService()
   return (
-    <ResourceUploadProvider enabled={provider === 'opensource'}>
+    <ResourceUploadProvider
+      enabled={provider === 'opensource'}
+      remoteOwner="filesystem"
+    >
       <FilesystemWorkbench />
     </ResourceUploadProvider>
   )
