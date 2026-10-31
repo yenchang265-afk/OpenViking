@@ -181,16 +181,10 @@ pub async fn build_configured_stack(
         None => None,
     };
     if cache.cachefs.enabled {
-        runtime
-            .as_ref()
-            .expect("cache provider is validated")
-            .require_operations(&[
-                CacheOperation::Get,
-                CacheOperation::Set,
-                CacheOperation::Del,
-                CacheOperation::Mget,
-            ])
-            .map_err(|error| Error::config(format!("CacheFS provider is incompatible: {error}")))?;
+        validate_cachefs_provider(
+            runtime.as_ref().expect("cache provider is validated"),
+            &cache.cachefs.policy,
+        )?;
     }
     let mountable = if cache.cachefs.enabled {
         Arc::new(MountableFS::with_cache_runtime(
@@ -207,6 +201,29 @@ pub async fn build_configured_stack(
         Arc::new(MountableFS::new())
     };
     build_stack_with_mountable_and_runtime(config, mountable, runtime).await
+}
+
+/// Check that the shared provider supports every operation CacheFS issues.
+#[cfg(feature = "cache")]
+fn validate_cachefs_provider(runtime: &CacheRuntime, policy: &CachePolicy) -> Result<()> {
+    let operations = [
+        CacheOperation::Get,
+        CacheOperation::Set,
+        CacheOperation::Del,
+        CacheOperation::Mget,
+    ]
+    .into_iter()
+    // Without atomic INCRBY, bumps from different processes can overwrite each other.
+    .chain(policy.multi_instance().then_some(CacheOperation::IncrBy))
+    .collect::<Vec<_>>();
+    runtime.require_operations(&operations).map_err(|error| {
+        let hint = if policy.multi_instance() {
+            " (cachefs multi_instance requires atomic incrby)"
+        } else {
+            ""
+        };
+        Error::config(format!("CacheFS provider is incompatible{hint}: {error}"))
+    })
 }
 
 async fn build_stack_with_mountable_and_runtime(
@@ -387,6 +404,25 @@ mod tests {
             .mountable
             .mount(plugin_config("localfs", mount_path, params))
             .await
+    }
+
+    #[cfg(feature = "cache")]
+    #[test]
+    fn multi_instance_cachefs_requires_atomic_incr_by() {
+        use crate::cache_runtime::MemoryMockProvider;
+
+        let without_incr_by = CacheRuntime::memory_with_provider(Arc::new(
+            MemoryMockProvider::new().without_incr_by(),
+        ));
+        let single = CachePolicy::default();
+        let multi = CachePolicy::default().with_multi_instance(true);
+
+        assert!(validate_cachefs_provider(&without_incr_by, &single).is_ok());
+        let error = validate_cachefs_provider(&without_incr_by, &multi)
+            .unwrap_err()
+            .to_string();
+        assert!(error.contains("multi_instance"), "{error}");
+        assert!(validate_cachefs_provider(&CacheRuntime::memory(), &multi).is_ok());
     }
 
     #[tokio::test]

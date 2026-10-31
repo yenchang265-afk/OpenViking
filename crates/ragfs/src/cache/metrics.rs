@@ -107,6 +107,11 @@ pub struct CacheMetricsSnapshot {
     pub inflight_followers: u64,
     /// Backend reads avoided by inflight followers.
     pub inflight_backend_saved: u64,
+    /// Cached entries rejected because a recorded counter moved since the fill.
+    pub stale_versions: u64,
+    /// Counter bumps that still failed after retries; other instances may
+    /// serve stale entries for the affected paths until the cache TTL.
+    pub invalidation_failures: u64,
     /// Hit, miss, and bypass counts indexed in `CacheOperation::all()` order.
     pub operations: [CacheOperationSnapshot; CacheOperation::COUNT],
 }
@@ -139,6 +144,8 @@ pub struct CacheMetrics {
     inflight_leaders: AtomicU64,
     inflight_followers: AtomicU64,
     inflight_backend_saved: AtomicU64,
+    stale_versions: AtomicU64,
+    invalidation_failures: AtomicU64,
     operations: [CacheOperationCounters; CacheOperation::COUNT],
 }
 
@@ -164,6 +171,8 @@ impl CacheMetrics {
             inflight_leaders: self.inflight_leaders.load(Ordering::Relaxed),
             inflight_followers: self.inflight_followers.load(Ordering::Relaxed),
             inflight_backend_saved: self.inflight_backend_saved.load(Ordering::Relaxed),
+            stale_versions: self.stale_versions.load(Ordering::Relaxed),
+            invalidation_failures: self.invalidation_failures.load(Ordering::Relaxed),
             operations: std::array::from_fn(|index| self.operations[index].snapshot()),
         }
     }
@@ -255,5 +264,13 @@ impl CacheMetrics {
 
     pub(crate) fn inflight_backend_saved(&self) {
         self.inflight_backend_saved.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn stale_version(&self) {
+        self.stale_versions.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub(crate) fn invalidation_failure(&self) {
+        self.invalidation_failures.fetch_add(1, Ordering::Relaxed);
     }
 }

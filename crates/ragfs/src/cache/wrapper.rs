@@ -1,8 +1,11 @@
 //! A transparent [`FileSystem`](crate::FileSystem) cache wrapper.
 
-use super::envelope::{CacheEnvelope, CacheObjectKind, GenerationSnapshot};
+use super::envelope::{CacheEnvelope, CacheObjectKind};
+use super::versions::{
+    ancestor_scopes, normalize_path, KeyKind, VersionMemo, VersionSnapshot, VersionStore,
+};
 use super::{CacheMetrics, CacheOperation, CachePolicy, CacheTraversalMode};
-use crate::cache_runtime::{CacheError, CacheResult, CacheRuntime, SetOptions, SetResult};
+use crate::cache_runtime::{CacheResult, CacheRuntime, SetOptions, SetResult};
 use crate::core::filesystem::{
     apply_read_dir_options, compile_grep_regex, is_excluded_path, normalize_prefix_path,
     paginate_entries, relative_depth, relative_match_file,
@@ -15,17 +18,25 @@ use crate::core::{
 };
 use async_trait::async_trait;
 use bytes::Bytes;
+use futures::future::join_all;
 use futures::stream::{self, StreamExt};
 use regex::Regex;
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::Arc;
-use std::time::Instant;
-use tokio::sync::{Mutex, RwLock};
-use uuid::Uuid;
+use std::time::{Duration, Instant};
+use tokio::sync::{Mutex, RwLock, RwLockWriteGuard};
 
 const GREP_CACHE_FILE_CONCURRENCY: usize = 8;
-const GENERATION_PUT_CONCURRENCY: usize = 8;
+/// Backoff between attempts to bump counters that failed after a mutation.
+const BUMP_RETRY_DELAYS: [Duration; 3] = [
+    Duration::from_millis(10),
+    Duration::from_millis(50),
+    Duration::from_millis(200),
+];
+
+/// Counter bumps that failed, as `(key, normalized path)` pairs.
+type PendingBumps = Vec<(String, String)>;
 
 /// A provider-independent read-through filesystem cache.
 ///
@@ -34,7 +45,7 @@ const GENERATION_PUT_CONCURRENCY: usize = 8;
 pub struct CachedFileSystem {
     backend: Box<dyn FileSystem>,
     runtime: Arc<CacheRuntime>,
-    service_name: String,
+    versions: VersionStore,
     policy: CachePolicy,
     metrics: Arc<CacheMetrics>,
     operation_lock: RwLock<()>,
@@ -59,10 +70,18 @@ impl CachedFileSystem {
         service_name: String,
         policy: CachePolicy,
     ) -> Self {
+        let versions = VersionStore::new(Arc::clone(&runtime), service_name);
+        if policy.multi_instance() && !versions.atomic_bump() {
+            // The stack builder rejects this; direct callers only get a warning.
+            tracing::warn!(
+                "CacheFS multi_instance mode without atomic INCRBY: concurrent bumps \
+                 from different processes can be lost"
+            );
+        }
         Self {
             backend,
+            versions,
             runtime,
-            service_name,
             policy,
             metrics: Arc::new(CacheMetrics::default()),
             operation_lock: RwLock::new(()),
@@ -92,9 +111,21 @@ impl CachedFileSystem {
     }
 
     /// Invalidate cache objects affected by a write that bypassed this wrapper.
+    ///
+    /// Raw writers may also have created missing parent directories, so every
+    /// ancestor listing is invalidated, not only the direct parent.
     pub(crate) async fn invalidate_external_write(&self, path: &str) {
+        let guard = self.operation_lock.write().await;
+        let scopes = ancestor_scopes(&parent_path(path));
+        let counters = std::iter::once((KeyKind::Object, path))
+            .chain(scopes.iter().map(|scope| (KeyKind::Object, scope.as_str())))
+            .collect::<Vec<_>>();
+        let pending = self.bump_counters(&counters).await;
         self.invalidate_path_objects(path).await;
-        self.invalidate_parent_directory(path).await;
+        for scope in &scopes {
+            self.cache_delete(&self.directory_key(scope), scope).await;
+        }
+        self.settle_bumps(guard, pending).await;
     }
 
     async fn tree_directory_via_cache(
@@ -195,7 +226,7 @@ impl CachedFileSystem {
             ..options
         };
         let mut result = GrepResult::new();
-        let generation_cache = Mutex::new(HashMap::new());
+        let generation_cache = VersionMemo::default();
         let mut file_batch = Vec::new();
         let mut stack = vec![GrepTask::Visit {
             path: base_path.clone(),
@@ -313,7 +344,7 @@ impl CachedFileSystem {
         re: &Regex,
         options: GrepOptions<'_>,
         result: &mut GrepResult,
-        generation_cache: &Mutex<HashMap<String, u64>>,
+        generation_cache: &VersionMemo,
     ) -> Result<()> {
         if file_batch.is_empty()
             || options
@@ -373,7 +404,7 @@ impl CachedFileSystem {
         remaining_limit: usize,
         before_context: usize,
         after_context: usize,
-        generation_cache: &Mutex<HashMap<String, u64>>,
+        generation_cache: &VersionMemo,
     ) -> Result<Vec<GrepMatch>> {
         let content = self
             .read_with_generation_cache(CacheOperation::Grep, path, 0, 0, generation_cache)
@@ -415,33 +446,6 @@ impl CachedFileSystem {
         let result = self.runtime.get(key).await;
         self.metrics.get(started.elapsed());
         result
-    }
-
-    async fn cache_batch_get(&self, keys: &[String]) -> CacheResult<Vec<Option<Bytes>>> {
-        if keys.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        if keys.len() == 1 {
-            let mut values = Vec::with_capacity(keys.len());
-            for key in keys {
-                values.push(self.cache_get(key).await?);
-            }
-            return Ok(values);
-        }
-
-        let started = Instant::now();
-        let result = self.runtime.mget(keys).await;
-        self.metrics.get(started.elapsed());
-        let values = result?;
-        if values.len() != keys.len() {
-            return Err(CacheError::InvalidData(format!(
-                "batch_get returned {} values for {} keys",
-                values.len(),
-                keys.len()
-            )));
-        }
-        Ok(values)
     }
 
     async fn cache_put(&self, key: &str, value: Bytes, affected_path: &str) -> bool {
@@ -498,158 +502,88 @@ impl CachedFileSystem {
             .any(|scope| is_same_or_descendant(&normalized, scope))
     }
 
-    async fn current_generation(&self, key: &str) -> CacheResult<u64> {
-        let values = self.current_generations(&[key.to_string()]).await?;
-        Ok(values[0])
-    }
-
-    async fn current_generations(&self, keys: &[String]) -> CacheResult<Vec<u64>> {
-        let provider_values = self.cache_batch_get(keys).await?;
-        let mut values = Vec::with_capacity(keys.len());
-        let mut missing = Vec::new();
-
-        for (key, provider_value) in keys.iter().zip(provider_values) {
-            let value = match provider_value {
-                None => {
-                    // An expired or evicted key must restart at a fresh random value.
-                    // Restoring a remembered value would let a later bump reproduce a
-                    // generation that surviving entries already recorded.
-                    let value = nonzero_random_u64();
-                    missing.push((key.clone(), value));
-                    value
-                }
-                Some(value) if value.len() == std::mem::size_of::<u64>() => {
-                    let mut bytes = [0_u8; 8];
-                    bytes.copy_from_slice(&value);
-                    u64::from_be_bytes(bytes)
-                }
-                Some(_) => {
-                    return Err(CacheError::InvalidData(format!(
-                        "generation key {key} has invalid length"
-                    )))
-                }
-            };
-            values.push(value);
-        }
-
-        self.put_missing_generations(missing).await;
-
-        Ok(values)
-    }
-
-    async fn current_generations_memoized(
-        &self,
-        keys: &[String],
-        generation_cache: &Mutex<HashMap<String, u64>>,
-    ) -> CacheResult<Vec<u64>> {
-        let mut values = vec![None; keys.len()];
-        let mut missing_keys = Vec::new();
-        let mut missing_positions = Vec::new();
-
-        {
-            let generation_cache = generation_cache.lock().await;
-            for (index, key) in keys.iter().enumerate() {
-                if let Some(value) = generation_cache.get(key) {
-                    values[index] = Some(*value);
-                } else {
-                    missing_positions.push(index);
-                    missing_keys.push(key.clone());
-                }
+    /// Bump counters after a backend mutation so other instances stop
+    /// trusting entries filled before it. Returns the bumps that failed; the
+    /// caller hands them to [`Self::settle_bumps`] together with its lock.
+    async fn bump_counters(&self, counters: &[(KeyKind, &str)]) -> PendingBumps {
+        let mut pending = Vec::<(String, String)>::new();
+        for (kind, path) in counters {
+            let key = self.versions.key(*kind, path);
+            if !pending.iter().any(|(existing, _)| existing == &key) {
+                pending.push((key, normalize_path(path)));
             }
         }
+        self.attempt_bumps(pending).await
+    }
 
-        let missing_values = self.current_generations(&missing_keys).await?;
-        if !missing_values.is_empty() {
-            let mut generation_cache = generation_cache.lock().await;
-            for (index, value) in missing_positions.into_iter().zip(missing_values) {
-                generation_cache.insert(keys[index].clone(), value);
-                values[index] = Some(value);
-            }
-        }
-
-        values
+    async fn attempt_bumps(&self, pending: PendingBumps) -> PendingBumps {
+        let results = join_all(pending.iter().map(|(key, _)| async move {
+            let started = Instant::now();
+            let result = self.versions.bump(key).await;
+            self.metrics.put(started.elapsed());
+            result
+        }))
+        .await;
+        pending
             .into_iter()
-            .map(|value| {
-                value.ok_or_else(|| CacheError::Internal("missing generation value".to_string()))
+            .zip(results)
+            .filter_map(|(counter, result)| match result {
+                Ok(()) => {
+                    self.metrics.invalidation();
+                    None
+                }
+                Err(_) => {
+                    self.metrics.error();
+                    Some(counter)
+                }
             })
             .collect()
     }
 
-    async fn put_missing_generations(&self, missing: Vec<(String, u64)>) {
-        stream::iter(missing)
-            .for_each_concurrent(GENERATION_PUT_CONCURRENCY, |(key, value)| async move {
-                let started = Instant::now();
-                let result = self
-                    .runtime
-                    .set(
-                        &key,
-                        Bytes::copy_from_slice(&value.to_be_bytes()),
-                        SetOptions::default(),
-                    )
-                    .await;
-                self.metrics.put(started.elapsed());
-                if !matches!(result, Ok(SetResult::Applied)) {
-                    self.metrics.error();
-                }
-            })
-            .await;
-    }
-
-    async fn generation_snapshots(&self, path: &str) -> CacheResult<Vec<GenerationSnapshot>> {
-        let keys = ancestor_scopes(path)
-            .into_iter()
-            .map(|scope| self.generation_key(&scope))
-            .collect::<Vec<_>>();
-        let values = self.current_generations(&keys).await?;
-        Ok(keys
-            .into_iter()
-            .zip(values)
-            .map(|(key, value)| GenerationSnapshot { key, value })
-            .collect())
-    }
-
-    async fn generations_match_with_cache(
-        &self,
-        envelope: &CacheEnvelope,
-        generation_cache: Option<&Mutex<HashMap<String, u64>>>,
-    ) -> CacheResult<bool> {
-        let keys = envelope
-            .generations()
-            .iter()
-            .map(|snapshot| snapshot.key.clone())
-            .collect::<Vec<_>>();
-        let values = match generation_cache {
-            Some(generation_cache) => {
-                self.current_generations_memoized(&keys, generation_cache)
-                    .await?
-            }
-            None => self.current_generations(&keys).await?,
+    /// Retry failed bumps, then release the mutation's operation lock.
+    ///
+    /// The bump is the commit point for every instance sharing the namespace,
+    /// so failed bumps are retried before this instance falls back to a local
+    /// bypass. Other instances may then serve stale entries until their TTL.
+    /// Atomic bumps do not need the lock, so it is released before the retry
+    /// backoff instead of stalling every other operation in this process.
+    async fn settle_bumps(&self, guard: RwLockWriteGuard<'_, ()>, mut pending: PendingBumps) {
+        let _guard = if self.versions.atomic_bump() {
+            drop(guard);
+            None
+        } else {
+            Some(guard)
         };
-
-        for (snapshot, value) in envelope.generations().iter().zip(values) {
-            if value != snapshot.value {
-                return Ok(false);
-            }
-        }
-        Ok(true)
-    }
-
-    async fn bump_generation(&self, path: &str) {
-        let key = self.generation_key(path);
-        let current = match self.current_generation(&key).await {
-            Ok(value) => value,
-            Err(_) => {
-                self.metrics.error();
-                self.mark_bypass(path).await;
+        for delay in BUMP_RETRY_DELAYS {
+            if pending.is_empty() {
                 return;
             }
-        };
-        let next = current.wrapping_add(1);
-        if self
-            .cache_put(&key, Bytes::copy_from_slice(&next.to_be_bytes()), path)
-            .await
-        {
-            self.metrics.invalidation();
+            tokio::time::sleep(delay).await;
+            pending = self.attempt_bumps(pending).await;
+        }
+        for (key, path) in pending {
+            self.metrics.invalidation_failure();
+            tracing::error!(
+                path = %path,
+                key = %key,
+                "CacheFS counter bump failed; other instances may serve stale \
+                 entries for this path until the cache TTL expires"
+            );
+            self.mark_bypass(&path).await;
+        }
+    }
+
+    /// Check an envelope's recorded counters. A mismatch against the traversal
+    /// memo is re-checked against live counters: the memo may be older than
+    /// an entry another instance filled after a bump.
+    async fn validate(
+        &self,
+        envelope: &CacheEnvelope,
+        memo: Option<&VersionMemo>,
+    ) -> CacheResult<bool> {
+        match self.versions.matches(envelope.versions(), memo).await {
+            Ok(false) if memo.is_some() => self.versions.matches(envelope.versions(), None).await,
+            result => result,
         }
     }
 
@@ -669,7 +603,7 @@ impl CachedFileSystem {
         key: &str,
         path: &str,
         record_hit: Option<CacheOperation>,
-        generation_cache: Option<&Mutex<HashMap<String, u64>>>,
+        generation_cache: Option<&VersionMemo>,
     ) -> Option<Vec<u8>> {
         let value = match self.cache_get(key).await {
             Ok(value) => value?,
@@ -689,10 +623,7 @@ impl CachedFileSystem {
             }
         };
 
-        match self
-            .generations_match_with_cache(&envelope, generation_cache)
-            .await
-        {
+        match self.validate(&envelope, generation_cache).await {
             Ok(true) => match envelope.into_file() {
                 Ok(data) => {
                     if let Some(operation) = record_hit {
@@ -707,6 +638,7 @@ impl CachedFileSystem {
                 }
             },
             Ok(false) => {
+                self.metrics.stale_version();
                 self.cache_delete(key, path).await;
                 None
             }
@@ -734,7 +666,7 @@ impl CachedFileSystem {
         key: &str,
         path: &str,
         record_hit: Option<CacheOperation>,
-        generation_cache: Option<&Mutex<HashMap<String, u64>>>,
+        generation_cache: Option<&VersionMemo>,
     ) -> Option<Vec<FileInfo>> {
         let value = match self.cache_get(key).await {
             Ok(value) => value?,
@@ -754,10 +686,7 @@ impl CachedFileSystem {
             }
         };
 
-        match self
-            .generations_match_with_cache(&envelope, generation_cache)
-            .await
-        {
+        match self.validate(&envelope, generation_cache).await {
             Ok(true) => match envelope.into_directory() {
                 Ok(entries) => {
                     if !self.policy.cache_directory_entries(path, entries.len()) {
@@ -776,6 +705,7 @@ impl CachedFileSystem {
                 }
             },
             Ok(false) => {
+                self.metrics.stale_version();
                 self.cache_delete(key, path).await;
                 None
             }
@@ -814,7 +744,7 @@ impl CachedFileSystem {
         path: &str,
         offset: u64,
         size: u64,
-        generation_cache: &Mutex<HashMap<String, u64>>,
+        generation_cache: &VersionMemo,
     ) -> Result<Vec<u8>> {
         if offset != 0
             || size != 0
@@ -866,10 +796,16 @@ impl CachedFileSystem {
             }
         }
 
+        // Snapshot before the backend read: a mutation that lands after it
+        // bumps a recorded counter, so a late fill can never validate.
+        // Snapshot live counters, not the traversal memo: a memoized value that
+        // moved since the traversal started would make this fill stale for
+        // every other reader the moment it is written.
+        let versions = self.versions.snapshot(&normalized, None).await;
         let data = self.backend.read(path, 0, 0).await;
         if let Ok(value) = &data {
             self.metrics.backend_fallback(value.len());
-            self.fill_file(&key, &normalized, value).await;
+            self.fill_file(&key, &normalized, value, versions).await;
         }
         drop(inflight_guard);
         self.release_inflight(&key, &inflight).await;
@@ -880,7 +816,7 @@ impl CachedFileSystem {
         &self,
         operation: CacheOperation,
         path: &str,
-        generation_cache: &Mutex<HashMap<String, u64>>,
+        generation_cache: &VersionMemo,
     ) -> Result<Vec<FileInfo>> {
         if !self.policy.cache_directory(path) || self.is_runtime_bypassed(path).await {
             self.metrics.policy_bypass(operation);
@@ -933,10 +869,12 @@ impl CachedFileSystem {
             }
         }
 
+        let versions = self.versions.snapshot(&normalized, None).await;
         let entries = self.backend.read_dir(path, None, None, None, None).await;
         if let Ok(value) = &entries {
             self.metrics.backend_fallback(0);
-            self.fill_directory(&key, &normalized, value).await;
+            self.fill_directory(&key, &normalized, value, versions)
+                .await;
         }
         drop(inflight_guard);
         self.release_inflight(&key, &inflight).await;
@@ -1001,28 +939,34 @@ impl CachedFileSystem {
             }
         }
 
+        let versions = self.versions.snapshot(&normalized, None).await;
         let entries = self.backend.read_dir(path, None, None, None, None).await;
         if let Ok(value) = &entries {
             self.metrics.backend_fallback(0);
-            self.fill_directory(&key, &normalized, value).await;
+            self.fill_directory(&key, &normalized, value, versions)
+                .await;
         }
         drop(inflight_guard);
         self.release_inflight(&key, &inflight).await;
         entries.map(|entries| apply_read_dir_options(entries, offset, limit, sort_by, sort_order))
     }
 
-    async fn fill_file(&self, key: &str, path: &str, data: &[u8]) {
+    /// Store `data` with the counter snapshot taken before it was read.
+    async fn fill_file(
+        &self,
+        key: &str,
+        path: &str,
+        data: &[u8],
+        versions: CacheResult<Vec<VersionSnapshot>>,
+    ) {
         if !self.policy.cache_file(path, data.len()) {
             return;
         }
-        let generations = match self.generation_snapshots(path).await {
-            Ok(generations) => generations,
-            Err(_) => {
-                self.metrics.error();
-                return;
-            }
+        let Ok(versions) = versions else {
+            self.metrics.error();
+            return;
         };
-        match CacheEnvelope::file(path.to_string(), data.to_vec(), generations).encode() {
+        match CacheEnvelope::file(path.to_string(), data.to_vec(), versions).encode() {
             Ok(value) => {
                 self.cache_put(key, value, path).await;
             }
@@ -1030,23 +974,60 @@ impl CachedFileSystem {
         }
     }
 
-    async fn fill_directory(&self, key: &str, path: &str, entries: &[FileInfo]) {
+    /// Store raw entries with the counter snapshot taken before they were read.
+    async fn fill_directory(
+        &self,
+        key: &str,
+        path: &str,
+        entries: &[FileInfo],
+        versions: CacheResult<Vec<VersionSnapshot>>,
+    ) {
         if !self.policy.cache_directory_entries(path, entries.len()) {
             return;
         }
-        let generations = match self.generation_snapshots(path).await {
-            Ok(generations) => generations,
-            Err(_) => {
-                self.metrics.error();
-                return;
-            }
+        let Ok(versions) = versions else {
+            self.metrics.error();
+            return;
         };
-        match CacheEnvelope::directory(path.to_string(), entries.to_vec(), generations).encode() {
+        match CacheEnvelope::directory(path.to_string(), entries.to_vec(), versions).encode() {
             Ok(value) => {
                 self.cache_put(key, value, path).await;
             }
             Err(_) => self.metrics.error(),
         }
+    }
+
+    /// Bump counters for a change to the object at `path` (content, mode, or
+    /// existence) so its own entries and its parent listing stop matching.
+    async fn bump_object(&self, path: &str) -> PendingBumps {
+        let parent = parent_path(path);
+        self.bump_counters(&[(KeyKind::Object, path), (KeyKind::Object, &parent)])
+            .await
+    }
+
+    /// Bump counters for a change that can affect everything below `path`.
+    async fn bump_subtree(&self, path: &str) -> PendingBumps {
+        let parent = parent_path(path);
+        self.bump_counters(&[
+            (KeyKind::Subtree, path),
+            (KeyKind::Object, path),
+            (KeyKind::Object, &parent),
+        ])
+        .await
+    }
+
+    /// Bump counters for a move of `from` onto `to`.
+    async fn bump_move(&self, from: &str, to: &str) -> PendingBumps {
+        let (from_parent, to_parent) = (parent_path(from), parent_path(to));
+        self.bump_counters(&[
+            (KeyKind::Subtree, from),
+            (KeyKind::Subtree, to),
+            (KeyKind::Object, from),
+            (KeyKind::Object, to),
+            (KeyKind::Object, &from_parent),
+            (KeyKind::Object, &to_parent),
+        ])
+        .await
     }
 
     async fn invalidate_path_objects(&self, path: &str) {
@@ -1061,65 +1042,61 @@ impl CachedFileSystem {
     }
 
     fn file_key(&self, path: &str) -> String {
-        self.object_key("file", path)
+        self.versions.key(KeyKind::File, path)
     }
 
     fn directory_key(&self, path: &str) -> String {
-        self.object_key("dir", path)
+        self.versions.key(KeyKind::Directory, path)
     }
 
-    fn generation_key(&self, path: &str) -> String {
-        self.object_key("subtree", path)
-    }
-
-    fn object_key(&self, kind: &str, path: &str) -> String {
-        let normalized = normalize_path(path);
-        format!(
-            "{}:ov:cache:v1:{}:{:016x}",
-            self.service_name,
-            kind,
-            stable_hash(normalized.as_bytes())
-        )
+    #[cfg(test)]
+    pub(super) fn generation_key(&self, path: &str) -> String {
+        self.versions.key(KeyKind::Subtree, path)
     }
 }
 
 #[async_trait]
 impl FileSystem for CachedFileSystem {
     async fn create(&self, path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.create(path).await?;
+        let pending = self.bump_object(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn mkdir(&self, path: &str, mode: u32) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.mkdir(path, mode).await?;
-        self.bump_generation(path).await;
+        let pending = self.bump_subtree(path).await;
         self.cache_delete(&self.directory_key(path), path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn remove(&self, path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.remove(path).await?;
-        self.bump_generation(path).await;
+        let pending = self.bump_subtree(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn remove_all(&self, path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         let result = self.backend.remove_all(path).await;
         // Recursive deletion is not transactional: a backend can remove part of
         // the subtree before reporting an error. Invalidate conservatively so
         // provider-backed caches cannot continue serving deleted objects.
-        self.bump_generation(path).await;
+        let pending = self.bump_subtree(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         result
     }
 
@@ -1166,10 +1143,11 @@ impl FileSystem for CachedFileSystem {
             }
         }
 
+        let versions = self.versions.snapshot(&normalized, None).await;
         let data = self.backend.read(path, 0, 0).await;
         if let Ok(value) = &data {
             self.metrics.backend_fallback(value.len());
-            self.fill_file(&key, &normalized, value).await;
+            self.fill_file(&key, &normalized, value, versions).await;
         }
         drop(inflight_guard);
         self.release_inflight(&key, &inflight).await;
@@ -1177,12 +1155,17 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         let written = self.backend.write(path, data, offset, flags).await?;
         let normalized = normalize_path(path);
         let key = self.file_key(&normalized);
+        let pending = self.bump_object(&normalized).await;
         self.cache_delete(&key, &normalized).await;
-        if offset == 0
+        // Across processes a concurrent writer's fill can land after a newer
+        // backend write, so multi-instance mode leaves filling to the next read.
+        if !self.policy.multi_instance()
+            && pending.is_empty()
+            && offset == 0
             && matches!(
                 flags,
                 WriteFlag::Create | WriteFlag::CreateNew | WriteFlag::Truncate
@@ -1190,9 +1173,13 @@ impl FileSystem for CachedFileSystem {
             && self.policy.cache_file(&normalized, data.len())
             && !self.is_runtime_bypassed(&normalized).await
         {
-            self.fill_file(&key, &normalized, data).await;
+            // The operation lock serializes this process's writers, so a
+            // snapshot taken after this write's own bump is current.
+            let versions = self.versions.snapshot(&normalized, None).await;
+            self.fill_file(&key, &normalized, data, versions).await;
         }
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(written)
     }
 
@@ -1201,12 +1188,14 @@ impl FileSystem for CachedFileSystem {
     /// The bytes are never in memory here, so the file cache is not refilled;
     /// the next full read misses and fills it.
     async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         let written = self.backend.write_from_path(path, src, flags).await?;
         let normalized = normalize_path(path);
         let key = self.file_key(&normalized);
+        let pending = self.bump_object(&normalized).await;
         self.cache_delete(&key, &normalized).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(written)
     }
 
@@ -1240,42 +1229,46 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn rename(&self, old_path: &str, new_path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.rename(old_path, new_path).await?;
-        self.bump_generation(old_path).await;
-        self.bump_generation(new_path).await;
+        let pending = self.bump_move(old_path, new_path).await;
         self.invalidate_path_objects(old_path).await;
         self.invalidate_path_objects(new_path).await;
         self.invalidate_parent_directory(old_path).await;
         self.invalidate_parent_directory(new_path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn replace(&self, src_path: &str, dst_path: &str) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.replace(src_path, dst_path).await?;
-        self.bump_generation(src_path).await;
-        self.bump_generation(dst_path).await;
+        let pending = self.bump_move(src_path, dst_path).await;
         self.invalidate_path_objects(src_path).await;
         self.invalidate_path_objects(dst_path).await;
         self.invalidate_parent_directory(src_path).await;
         self.invalidate_parent_directory(dst_path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.chmod(path, mode).await?;
+        let pending = self.bump_object(path).await;
         self.invalidate_path_objects(path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
     async fn truncate(&self, path: &str, size: u64) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.truncate(path, size).await?;
+        let pending = self.bump_object(path).await;
         self.cache_delete(&self.file_key(path), path).await;
         self.invalidate_parent_directory(path).await;
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
@@ -1284,11 +1277,18 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn ensure_parent_dirs(&self, path: &str, mode: u32) -> Result<()> {
-        let _guard = self.operation_lock.write().await;
+        let guard = self.operation_lock.write().await;
         self.backend.ensure_parent_dirs(path, mode).await?;
-        for scope in ancestor_scopes(&parent_path(path)) {
-            self.cache_delete(&self.directory_key(&scope), &scope).await;
+        let scopes = ancestor_scopes(&parent_path(path));
+        let counters = scopes
+            .iter()
+            .map(|scope| (KeyKind::Object, scope.as_str()))
+            .collect::<Vec<_>>();
+        let pending = self.bump_counters(&counters).await;
+        for scope in &scopes {
+            self.cache_delete(&self.directory_key(scope), scope).await;
         }
+        self.settle_bumps(guard, pending).await;
         Ok(())
     }
 
@@ -1371,14 +1371,6 @@ impl FileSystem for CachedFileSystem {
     }
 }
 
-fn normalize_path(path: &str) -> String {
-    if path.is_empty() || path == "/" {
-        "/".to_string()
-    } else {
-        format!("/{}", path.trim_matches('/'))
-    }
-}
-
 fn parent_path(path: &str) -> String {
     let normalized = normalize_path(path);
     if normalized == "/" {
@@ -1396,46 +1388,12 @@ fn parent_path(path: &str) -> String {
         .unwrap_or_else(|| "/".to_string())
 }
 
-fn ancestor_scopes(path: &str) -> Vec<String> {
-    let normalized = normalize_path(path);
-    if normalized == "/" {
-        return vec!["/".to_string()];
-    }
-
-    let mut scopes = vec!["/".to_string()];
-    let mut current = String::new();
-    for component in normalized.trim_start_matches('/').split('/') {
-        current.push('/');
-        current.push_str(component);
-        scopes.push(current.clone());
-    }
-    scopes
-}
-
 fn is_same_or_descendant(path: &str, scope: &str) -> bool {
     scope == "/"
         || path == scope
         || path
             .strip_prefix(scope)
             .is_some_and(|suffix| suffix.starts_with('/'))
-}
-
-fn stable_hash(bytes: &[u8]) -> u64 {
-    let mut hash = 0xcbf29ce484222325_u64;
-    for byte in bytes {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
-    }
-    hash
-}
-
-fn nonzero_random_u64() -> u64 {
-    let value = Uuid::new_v4().as_u128() as u64;
-    if value == 0 {
-        1
-    } else {
-        value
-    }
 }
 
 #[cfg(test)]
@@ -1492,6 +1450,33 @@ mod tests {
         assert_eq!(snapshot.operation(CacheOperation::Read), counts(0, 0, 0));
         assert_eq!(snapshot.read_dir_hits, 3);
         assert_eq!(snapshot.file_misses, 1);
+    }
+
+    /// A traversal memo older than a bump must not reject (and delete) an
+    /// entry that was filled after the bump with the current counter values.
+    #[tokio::test]
+    async fn stale_traversal_memo_keeps_a_fresh_entry() {
+        let fs = cached_memfs(CacheTraversalMode::CachedTraversal).await;
+        assert_eq!(fs.read("/docs/a.md", 0, 0).await.unwrap(), b"alpha\nbeta\n");
+
+        let memo = VersionMemo::default();
+        let key = fs.generation_key("/docs");
+        let live = fs.versions.snapshot("/docs/a.md", None).await.unwrap();
+        let current = live
+            .iter()
+            .find(|snapshot| snapshot.key == key)
+            .unwrap()
+            .value;
+        memo.lock().await.insert(key, current - 1);
+
+        let data = fs
+            .read_with_generation_cache(CacheOperation::Grep, "/docs/a.md", 0, 0, &memo)
+            .await
+            .unwrap();
+        assert_eq!(data, b"alpha\nbeta\n");
+        let snapshot = fs.metrics().snapshot();
+        assert_eq!(snapshot.operation(CacheOperation::Grep), counts(1, 0, 0));
+        assert_eq!(snapshot.stale_versions, 0);
     }
 
     /// A generation key that expires (or is evicted) must never be restored to an

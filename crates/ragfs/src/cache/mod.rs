@@ -6,7 +6,12 @@
 
 mod envelope;
 mod metrics;
+#[cfg(test)]
+mod multi_instance_tests;
 mod policy;
+#[cfg(test)]
+mod stress_tests;
+mod versions;
 mod wrapper;
 
 pub use metrics::{CacheMetrics, CacheMetricsSnapshot, CacheOperation, CacheOperationSnapshot};

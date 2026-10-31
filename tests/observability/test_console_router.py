@@ -338,6 +338,8 @@ async def test_console_cache_reports_overall_and_per_operation_hit_rates(ragfs_s
             ),
             _counter("ragfs_cache_policy_bypasses_total", 3),
             _counter("ragfs_cache_errors_total", 1),
+            _counter("ragfs_cache_stale_versions_total", 5),
+            _counter("ragfs_cache_invalidation_failures_total", 2),
             _counter("ragfs_cache_bytes_total", 600, source="cache"),
             _counter("ragfs_cache_bytes_total", 200, source="backend"),
             _counter("ragfs_cache_inflight_events_total", 4, event="backend_saved"),
@@ -354,6 +356,8 @@ async def test_console_cache_reports_overall_and_per_operation_hit_rates(ragfs_s
     assert result["hit_rate"] == pytest.approx(0.7)
     assert result["bypasses"] == 3
     assert result["errors"] == 1
+    assert result["stale_versions"] == 5
+    assert result["invalidation_failures"] == 2
     assert result["bytes_from_cache"] == 600
     assert result["bytes_from_backend"] == 200
     assert result["backend_saved"] == 4

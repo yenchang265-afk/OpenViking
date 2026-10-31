@@ -40,6 +40,7 @@ pub struct CachePolicy {
     max_cached_dir_entries: usize,
     traversal_mode: CacheTraversalMode,
     bypass_prefixes: Vec<String>,
+    multi_instance: bool,
 }
 
 impl CachePolicy {
@@ -50,6 +51,7 @@ impl CachePolicy {
             max_cached_dir_entries: DEFAULT_MAX_CACHED_DIR_ENTRIES,
             traversal_mode: CacheTraversalMode::Backend,
             bypass_prefixes: Vec::new(),
+            multi_instance: false,
         }
     }
 
@@ -63,6 +65,21 @@ impl CachePolicy {
     pub fn with_traversal_mode(mut self, mode: CacheTraversalMode) -> Self {
         self.traversal_mode = mode;
         self
+    }
+
+    /// Declare that several processes share this cache namespace.
+    ///
+    /// Multi-instance mode drops the write-through fill after full writes,
+    /// which is only safe while one process serializes all writers, and
+    /// requires a provider with atomic INCRBY.
+    pub fn with_multi_instance(mut self, multi_instance: bool) -> Self {
+        self.multi_instance = multi_instance;
+        self
+    }
+
+    /// Return whether several processes share this cache namespace.
+    pub fn multi_instance(&self) -> bool {
+        self.multi_instance
     }
 
     /// Set the tree traversal strategy.

@@ -749,20 +749,17 @@ impl MountableFS {
                 .copy_within_primary(&src_rel_path, &dst_rel_path)
                 .await
         } else {
-            match Self::copy_raw_within_mount(
+            let copied = Self::copy_raw_within_mount(
                 raw_backend.expect("raw backend checked above"),
                 &src_rel_path,
                 &dst_rel_path,
             )
-            .await
-            {
-                Ok(()) => {
-                    #[cfg(feature = "cache")]
-                    Self::invalidate_cache_after_raw_write(&dst_mount, &dst_rel_path).await;
-                    Ok(true)
-                }
-                Err(error) => Err(error),
-            }
+            .await;
+            // A failed copy may still have created parent directories or a
+            // partial destination file, so invalidate either way.
+            #[cfg(feature = "cache")]
+            Self::invalidate_cache_after_raw_write(&dst_mount, &dst_rel_path).await;
+            copied.map(|()| true)
         };
 
         let release = match auto_lease {

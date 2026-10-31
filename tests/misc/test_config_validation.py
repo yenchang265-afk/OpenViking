@@ -551,6 +551,54 @@ def test_top_level_cache_provider_params_build_redis_binding_config():
     assert binding["cache"]["redis"]["master_name"] == "mymaster"
 
 
+def _multi_instance_config(params: dict, backend: str = "cache") -> dict:
+    return {
+        "cache": {"provider": "redis", "params": params},
+        "storage": {
+            "workspace": "/tmp/ov-test",
+            "agfs": {"cachefs": {"backend": backend, "multi_instance": True}},
+        },
+    }
+
+
+def test_cachefs_multi_instance_reaches_binding_dict():
+    config = OpenVikingConfig.model_validate(_multi_instance_config({}))
+    binding = RagfsBindingConfig(
+        agfs=config.storage.agfs,
+        cache=config.cache,
+        service_name=config.service_name,
+    ).to_binding_dict()
+
+    assert config.storage.agfs.cachefs.multi_instance is True
+    assert binding["cache"]["multi_instance"] is True
+
+
+def test_cachefs_multi_instance_defaults_off():
+    config = OpenVikingConfig.model_validate(
+        {
+            "cache": {"provider": "redis", "params": {}},
+            "storage": {"workspace": "/tmp/ov-test", "agfs": {"cachefs": {"backend": "cache"}}},
+        }
+    )
+    binding = RagfsBindingConfig(
+        agfs=config.storage.agfs,
+        cache=config.cache,
+        service_name=config.service_name,
+    ).to_binding_dict()
+
+    assert binding["cache"]["multi_instance"] is False
+
+
+def test_cachefs_multi_instance_requires_cache_backend():
+    with pytest.raises(ValueError, match="multi_instance requires backend='cache'"):
+        OpenVikingConfig.model_validate(_multi_instance_config({}, backend="local"))
+
+
+def test_cachefs_multi_instance_requires_redis_ttl():
+    with pytest.raises(ValueError, match="default_ttl_seconds > 0"):
+        OpenVikingConfig.model_validate(_multi_instance_config({"default_ttl_seconds": 0}))
+
+
 def test_queuefs_cache_uses_top_level_provider_without_enabling_cachefs():
     config = OpenVikingConfig.model_validate(
         {
