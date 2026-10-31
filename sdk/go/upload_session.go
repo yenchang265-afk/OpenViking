@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -152,17 +153,20 @@ func changedWhileUploading(entry uploadEntry) error {
 }
 
 // isTransientPartError reports failures worth re-sending a part for: network errors
-// and 5xx, 408 and 429 responses. Cancellation and other API errors are final.
-func isTransientPartError(err error) bool {
-	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+// (including the client's own timeout) and 5xx, 408 and 429 responses. A cancelled
+// caller context and every other error are final. Cancellation is read from ctx, not
+// from err: an http.Client timeout also matches context.DeadlineExceeded.
+func isTransientPartError(ctx context.Context, err error) bool {
+	if ctx.Err() != nil {
 		return false
 	}
 	var apiErr *Error
-	if !errors.As(err, &apiErr) {
-		return true
+	if errors.As(err, &apiErr) {
+		status := apiErr.StatusCode
+		return status >= 500 || status == http.StatusRequestTimeout || status == http.StatusTooManyRequests
 	}
-	status := apiErr.StatusCode
-	return status >= 500 || status == http.StatusRequestTimeout || status == http.StatusTooManyRequests
+	var urlErr *url.Error
+	return errors.As(err, &urlErr)
 }
 
 func (c *Client) putPart(ctx context.Context, path string, data []byte) error {
@@ -174,7 +178,7 @@ func (c *Client) putPart(ctx context.Context, path string, data []byte) error {
 		req.ContentLength = int64(len(data))
 		req.Header.Set("Content-Type", "application/octet-stream")
 		_, err = c.doRequest(req, nil)
-		if err == nil || attempt >= partRetries || !isTransientPartError(err) {
+		if err == nil || attempt >= partRetries || !isTransientPartError(ctx, err) {
 			return err
 		}
 		select {

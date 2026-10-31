@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 )
 
 // sessionServer is a fake /api/v1/uploads API that records parts per file.
@@ -25,6 +26,9 @@ type sessionServer struct {
 	failStatus   int // status failPart answers (default 500)
 	failTimes    int // fail failPart only for its first N attempts (0: always)
 	onCreate     func()
+	stallFirst   string        // this part's first attempt outlasts the client timeout
+	onPart       func()        // runs before each part is answered
+	timeout      time.Duration // client timeout (default: the SDK's)
 	attempts     map[string]int
 	mu           sync.Mutex
 	created      map[string]any
@@ -52,6 +56,16 @@ func (s *sessionServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Method == http.MethodPut && strings.HasPrefix(r.URL.Path, "/api/v1/uploads/u1/files/"):
 		attempt := s.attempts[r.URL.Path]
 		s.attempts[r.URL.Path] = attempt + 1
+		if s.onPart != nil {
+			s.onPart()
+		}
+		if r.URL.Path == s.stallFirst && attempt == 0 {
+			// Let the retry in while this attempt hangs past the client timeout.
+			s.mu.Unlock()
+			time.Sleep(4 * s.timeout)
+			s.mu.Lock()
+			return
+		}
 		if r.URL.Path == s.failPart && (s.failTimes == 0 || attempt < s.failTimes) {
 			status := s.failStatus
 			if status == 0 {
@@ -112,7 +126,7 @@ func sessionTestClient(t *testing.T, s *sessionServer, uploadMode string) (*Clie
 	partRetryBaseDelay = 0
 	t.Cleanup(func() { partRetryBaseDelay = previousDelay })
 	server := httptest.NewServer(s)
-	client, err := NewClient(Config{BaseURL: server.URL, APIKey: "key", UploadMode: uploadMode})
+	client, err := NewClient(Config{BaseURL: server.URL, APIKey: "key", UploadMode: uploadMode, Timeout: s.timeout})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,6 +246,40 @@ func TestAddResourceRetriesATransientPartFailure(t *testing.T) {
 	}
 }
 
+func TestAddResourceRetriesAPartThatTimedOut(t *testing.T) {
+	part := "/api/v1/uploads/u1/files/0/parts/1"
+	s := &sessionServer{partSize: 4, stallFirst: part, timeout: 200 * time.Millisecond}
+	client, closeServer := sessionTestClient(t, s, "")
+	defer closeServer()
+	file := filepath.Join(t.TempDir(), "f.bin")
+	writeTestFile(t, file, "0123456789")
+
+	if _, err := client.AddResource(context.Background(), file, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := s.attempts[part]; got != 2 {
+		t.Fatalf("attempts = %d, want 2", got)
+	}
+}
+
+func TestAddResourceStopsRetryingWhenTheCallerCancels(t *testing.T) {
+	part := "/api/v1/uploads/u1/files/0/parts/1"
+	s := &sessionServer{partSize: 4, failPart: part, failStatus: http.StatusServiceUnavailable}
+	client, closeServer := sessionTestClient(t, s, "")
+	defer closeServer()
+	file := filepath.Join(t.TempDir(), "f.bin")
+	writeTestFile(t, file, "0123456789")
+	ctx, cancel := context.WithCancel(context.Background())
+	s.onPart = func() { cancel() }
+
+	if _, err := client.AddResource(ctx, file, nil); err == nil {
+		t.Fatal("expected error")
+	}
+	if got := s.attempts[part]; got != 1 {
+		t.Fatalf("attempts = %d, want 1", got)
+	}
+}
+
 func TestAddResourceDoesNotRetryARejectedPart(t *testing.T) {
 	part := "/api/v1/uploads/u1/files/0/parts/2"
 	s := &sessionServer{partSize: 4, failPart: part, failStatus: http.StatusBadRequest}
@@ -252,24 +300,28 @@ func TestAddResourceFailsNamingAFileChangedAfterListing(t *testing.T) {
 	cases := []struct {
 		name    string
 		changed string
-		change  func(t *testing.T, root string)
+		// change runs on the server goroutine, so it reports errors instead of
+		// calling t.Fatal there.
+		change func(root string) error
 	}{
-		{"grows", "a.md", func(t *testing.T, root string) {
-			writeTestFile(t, filepath.Join(root, "a.md"), "0123456789-more")
+		{"grows", "a.md", func(root string) error {
+			return os.WriteFile(filepath.Join(root, "a.md"), []byte("0123456789-more"), 0o644)
 		}},
-		{"shrinks", "sub/b.txt", func(t *testing.T, root string) {
-			writeTestFile(t, filepath.Join(root, "sub", "b.txt"), "x")
+		{"shrinks", "sub/b.txt", func(root string) error {
+			return os.WriteFile(filepath.Join(root, "sub", "b.txt"), []byte("x"), 0o644)
 		}},
-		{"is removed", "sub/b.txt", func(t *testing.T, root string) {
-			if err := os.Remove(filepath.Join(root, "sub", "b.txt")); err != nil {
-				t.Fatal(err)
-			}
+		{"is removed", "sub/b.txt", func(root string) error {
+			return os.Remove(filepath.Join(root, "sub", "b.txt"))
 		}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := makeUploadFolder(t)
-			s := &sessionServer{partSize: 4, onCreate: func() { tc.change(t, root) }}
+			s := &sessionServer{partSize: 4, onCreate: func() {
+				if err := tc.change(root); err != nil {
+					t.Error(err)
+				}
+			}}
 			client, closeServer := sessionTestClient(t, s, "")
 			defer closeServer()
 
