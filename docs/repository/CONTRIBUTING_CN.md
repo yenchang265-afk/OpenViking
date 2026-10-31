@@ -87,8 +87,8 @@ OpenViking 重視聚焦且經過充分理解的改動。無論是否使用 AI �
 
 ### 前置要求
 
-- Python 3.10+
-- 從原始碼構建、開發 Rust Binding 或內建 `ov` CLI 時需要 Rust 1.91.1+
+- Python 3.11+
+- 從原始碼構建、開發 Rust Binding 或內建 `ov` CLI 時需要 Rust 1.94.1+
 - 僅開發 `sdk/go` 時需要 Go 1.22+
 - 支援 C++17 的編譯器：GCC 9+ 或 Clang 11+
 - CMake 3.15+

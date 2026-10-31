@@ -78,7 +78,7 @@
 - 使用者明確要修改或重編底層原生元件
 
 進入後再說明需要：
-- Rust 1.91.1+
+- Rust 1.94.1+
 - C++ 編譯器
 - CMake
 
@@ -196,7 +196,7 @@
 
 #### 路徑 A：普通最小安裝
 
-先使用 Python 3.10+ 的虛擬環境，或按[快速開始](02-quickstart.md)用 `uv tool install` 安裝。已啟用虛擬環境時：
+先使用 Python 3.11+ 的虛擬環境，或按[快速開始](02-quickstart.md)用 `uv tool install` 安裝。已啟用虛擬環境時：
 
 ```bash
 python -m pip install --upgrade openviking

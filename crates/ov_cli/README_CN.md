@@ -19,7 +19,7 @@ npm 包會安裝適配 macOS、Linux 或 Windows 的平臺二進位制。
 ### 從原始碼安裝
 
 ```bash
-# OpenViking 要求 Rust >= 1.91.1。
+# OpenViking 要求 Rust >= 1.94.1。
 cargo install --path crates/ov_cli
 ```
 

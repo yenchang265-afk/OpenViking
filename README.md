@@ -121,7 +121,7 @@ The memory evaluation used [Doubao 2.0 Pro](https://console.volcengine.com/ark/r
 
 ## Quick start
 
-Set up an OpenViking server first; if you already have one, skip to [Use it with your agent](#use-it-with-your-agent). Deploying your own needs uv, Python 3.10+ and a model provider with an embedding model and a VLM.
+Set up an OpenViking server first; if you already have one, skip to [Use it with your agent](#use-it-with-your-agent). Deploying your own needs uv, Python 3.11+ and a model provider with an embedding model and a VLM.
 
 <details open>
 <summary><strong>Let your agent deploy it</strong></summary>
