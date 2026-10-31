@@ -90,6 +90,8 @@ type ResourceUploadContextValue = {
   tasks: ResourceUploadTask[]
   remoteState: RemoteUploadState
   enqueueUploads: (params: UploadBatchParams) => void
+  /** Stop a local upload still queued or sending data. */
+  cancelUpload: (taskId: string) => void
   startRemote: (params: RemoteStartParams) => void
   resetRemote: () => void
   refreshTasks: () => Promise<void>
@@ -300,6 +302,14 @@ export function ResourceUploadProvider({
     [isSourceCurrent, scope],
   )
 
+  const cancelUpload = React.useCallback(
+    (taskId: string) => {
+      if (!isSourceCurrent()) return
+      scope.cancelUpload(taskId)
+    },
+    [isSourceCurrent, scope],
+  )
+
   const startRemote = React.useCallback(
     (params: RemoteStartParams) => {
       if (!isSourceCurrent()) return
@@ -477,6 +487,7 @@ export function ResourceUploadProvider({
       tasks,
       remoteState,
       enqueueUploads,
+      cancelUpload,
       startRemote,
       resetRemote,
       refreshTasks,
@@ -488,6 +499,7 @@ export function ResourceUploadProvider({
       tasks,
       remoteState,
       enqueueUploads,
+      cancelUpload,
       startRemote,
       resetRemote,
       refreshTasks,

@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import {
 import { cn } from '#/lib/utils'
 import type { ResourceUploadTask } from '../-hooks/use-resource-upload'
 import { formatFileSize } from '../-lib/upload'
+import { isCancellableUpload } from '../-lib/resource-upload-tasks'
 
 function TaskStatusBadge({ status }: { status: ResourceUploadTask['status'] }) {
   const { t } = useTranslation('resources')
@@ -51,12 +53,15 @@ type UploadTaskDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   tasks: ResourceUploadTask[]
+  /** Offers a cancel button for local uploads still queued or sending data. */
+  onCancelTask?: (taskId: string) => void
 }
 
 export function UploadTaskDialog({
   open,
   onOpenChange,
   tasks,
+  onCancelTask,
 }: UploadTaskDialogProps) {
   const { t } = useTranslation('resources')
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set())
@@ -140,6 +145,19 @@ export function UploadTaskDialog({
 
                         <div className="flex items-center gap-2">
                           <TaskStatusBadge status={task.status} />
+                          {onCancelTask && isCancellableUpload(task) ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              onClick={() => onCancelTask(task.id)}
+                              aria-label={t('processingTasks.cancelAria', {
+                                name: task.fileName,
+                              })}
+                            >
+                              {t('processingTasks.cancel')}
+                            </Button>
+                          ) : null}
                           {hasDetail ? (
                             <button
                               type="button"

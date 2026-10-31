@@ -217,6 +217,7 @@ function FilesystemWorkbench() {
   })
   const {
     activeTaskCount,
+    cancelUpload,
     hasActiveTasks,
     isRefreshingTasks,
     refreshTasks,
@@ -907,6 +908,7 @@ function FilesystemWorkbench() {
           <UploadTaskDialog
             open={taskDialogOpen}
             onOpenChange={setTaskDialogOpen}
+            onCancelTask={cancelUpload}
             tasks={tasks}
           />
         </>

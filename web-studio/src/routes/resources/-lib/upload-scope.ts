@@ -19,7 +19,7 @@ import {
 import type { OvClientAdapter } from '#/lib/ov-client'
 import { parseUploadError } from './upload'
 import { transferUpload } from './upload-transfer'
-import { attachServerTask } from './resource-upload-tasks'
+import { attachServerTask, isCancellableUpload } from './resource-upload-tasks'
 import {
   buildRemoteResourceRequest,
   buildUploadedResourceRequest,
@@ -80,6 +80,8 @@ export interface UploadScope {
   /** Register a task-list refresh to run after an import hands work to the server. */
   onRefreshRequested: (refresh: () => void) => () => void
   enqueueUploads: (params: UploadBatchParams) => void
+  /** Stop a local upload still queued or sending data (see isCancellableUpload). */
+  cancelUpload: (taskId: string) => void
   /** Start one remote import per owner; the owner's form tracks only its own. */
   startRemote: (owner: string, params: RemoteStartParams) => void
   resetRemote: (owner: string) => void
@@ -173,6 +175,8 @@ function captureConnection() {
   }
 }
 
+const CONNECTION_CHECK_INTERVAL_MS = 1_000
+
 // Jobs still sending data from this tab; closing it would lose them.
 const runningJobs = new Set<AbortController>()
 
@@ -209,6 +213,8 @@ function createUploadScope(): UploadScope {
   const refreshers = new Set<() => void>()
   const jobs = new Set<AbortController>()
   const remoteControllers = new Map<string, AbortController>()
+  const uploadControllers = new Map<string, AbortController>()
+  let connectionWatch: ReturnType<typeof setInterval> | null = null
   let cancelled = false
   let snapshot: UploadScopeSnapshot = { tasks: [], remoteStates: {} }
   let uploadQueue: Promise<void> = Promise.resolve()
@@ -252,17 +258,30 @@ function createUploadScope(): UploadScope {
     for (const refresh of refreshers) refresh()
   }
 
+  const stopConnectionWatch = () => {
+    if (connectionWatch === null) return
+    clearInterval(connectionWatch)
+    connectionWatch = null
+  }
+
   const beginJob = (): AbortController | null => {
     if (!isCurrent()) return null
     const controller = new AbortController()
     jobs.add(controller)
     trackJob(controller)
+    // A job only checks the connection when it reports progress or reaches a
+    // step, and a remote import does neither while its request is open. Check
+    // on a timer too, so a connection switch stops every job promptly.
+    connectionWatch ??= setInterval(() => {
+      if (!connection.isCurrent()) scope.cancel()
+    }, CONNECTION_CHECK_INTERVAL_MS)
     return controller
   }
 
   const endJob = (controller: AbortController) => {
     jobs.delete(controller)
     untrackJob(controller)
+    if (jobs.size === 0) stopConnectionWatch()
   }
 
   /**
@@ -367,13 +386,14 @@ function createUploadScope(): UploadScope {
         errorMessage,
       }))
       toast.error(errorMessage, { duration: 5000 })
+    } finally {
+      uploadControllers.delete(taskId)
+      endJob(controller)
     }
   }
 
   const enqueueUploads = (params: UploadBatchParams) => {
-    if (params.files.length === 0) return
-    const controller = beginJob()
-    if (!controller) return
+    if (params.files.length === 0 || !isCurrent()) return
 
     const createdAt = Date.now()
     const nextTasks: ResourceUploadTask[] = params.files.map((item, index) => ({
@@ -393,17 +413,36 @@ function createUploadScope(): UploadScope {
     }))
     setTasks((previous) => [...nextTasks, ...previous])
 
-    // Batches upload one file at a time, in the order they were queued.
+    // Files upload one at a time, in the order they were queued. Each has its
+    // own controller, so cancelling one moves the queue on to the next.
     let batch = uploadQueue
     for (const [index, item] of params.files.entries()) {
       const task = nextTasks[index]
+      const controller = beginJob()
+      if (!controller) break
+      uploadControllers.set(task.id, controller)
       batch = batch.then(() =>
         runFileUpload(task.id, item, params.commonBody, controller),
       )
     }
     // The queue lives as long as the scope: never let one failure stall it.
     uploadQueue = batch.catch(() => undefined)
-    void uploadQueue.finally(() => endJob(controller))
+  }
+
+  /** Stop a local upload that is still queued or sending data. */
+  const cancelUpload = (taskId: string) => {
+    const controller = uploadControllers.get(taskId)
+    const task = snapshot.tasks.find((item) => item.id === taskId)
+    if (!controller || !task || !isCancellableUpload(task)) return
+    controller.abort()
+    updateTask(taskId, (current) => ({
+      ...current,
+      status: 'cancelled',
+      progress: null,
+      finishedAt: Date.now(),
+      errorCode: 'CANCELED',
+      errorMessage: i18n.t('resources:processingTasks.errors.uploadCancelled'),
+    }))
   }
 
   const runRemoteImport = async (
@@ -571,7 +610,9 @@ function createUploadScope(): UploadScope {
       untrackJob(controller)
     }
     jobs.clear()
+    stopConnectionWatch()
     remoteControllers.clear()
+    uploadControllers.clear()
     listeners.clear()
     refreshers.clear()
     scope.remoteCompletionCallbacks.clear()
@@ -594,6 +635,7 @@ function createUploadScope(): UploadScope {
       return () => refreshers.delete(refresh)
     },
     enqueueUploads,
+    cancelUpload,
     startRemote,
     resetRemote,
     cancel,
