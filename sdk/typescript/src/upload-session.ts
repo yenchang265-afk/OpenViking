@@ -5,6 +5,105 @@ import type { OpenVikingTransport } from "./transport.js";
 /** Statuses meaning the server cannot take a chunked upload (no route or shared mode). */
 const SESSIONS_UNAVAILABLE = new Set([404, 405, 409]);
 
+/** Statuses (beside 5xx) after which a part is re-sent. */
+const TRANSIENT_STATUSES = new Set([408, 429]);
+/** Error codes of failures that never reached the server: network down, timeout. */
+const TRANSIENT_CODES = new Set(["UNAVAILABLE", "DEADLINE_EXCEEDED"]);
+
+/** Part re-send policy: extra attempts and the first backoff, doubled per attempt. */
+export const partRetry = { attempts: 3, baseDelayMs: 500 };
+
+interface UploadEntry {
+  path: string;
+  size: number;
+  localPath: string;
+}
+
+function isTransient(error: unknown): boolean {
+  if (!(error instanceof OpenVikingError)) return false;
+  if (error.statusCode !== undefined)
+    return error.statusCode >= 500 || TRANSIENT_STATUSES.has(error.statusCode);
+  return TRANSIENT_CODES.has(error.code);
+}
+
+/** The file no longer has the size the session was created with. */
+function changedWhileUploading(entry: UploadEntry, cause?: unknown) {
+  return new OpenVikingError(
+    `'${entry.path}' changed while uploading (it was ${entry.size} bytes when ` +
+      "the upload started). Retry, or leave out files that are being written, " +
+      "such as .git or logs.",
+    {
+      code: "FAILED_PRECONDITION",
+      details: { path: entry.path, size: entry.size },
+      cause,
+    },
+  );
+}
+
+async function readDeclaredPart(
+  entry: UploadEntry,
+  offset: number,
+  length: number,
+): Promise<Uint8Array> {
+  let data: Uint8Array;
+  try {
+    data = await readNodeFilePart(entry.localPath, offset, length);
+  } catch (error) {
+    throw changedWhileUploading(entry, error);
+  }
+  if (data.length < length) throw changedWhileUploading(entry);
+  return data;
+}
+
+async function putPart(
+  transport: OpenVikingTransport,
+  url: string,
+  data: Uint8Array,
+): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await transport.request("PUT", url, {
+        raw: { data, contentType: "application/octet-stream" },
+      });
+      return;
+    } catch (error) {
+      if (attempt >= partRetry.attempts || !isTransient(error)) throw error;
+      await new Promise((resolve) =>
+        setTimeout(resolve, partRetry.baseDelayMs * 2 ** attempt),
+      );
+    }
+  }
+}
+
+/** Send exactly the `entry.size` bytes the session declared, as numbered parts. */
+async function sendFileParts(
+  transport: OpenVikingTransport,
+  uploadId: string,
+  index: number,
+  entry: UploadEntry,
+  partSize: number,
+): Promise<void> {
+  for (
+    let number = 1, offset = 0;
+    offset < entry.size;
+    number += 1, offset += partSize
+  ) {
+    const data = await readDeclaredPart(
+      entry,
+      offset,
+      Math.min(partSize, entry.size - offset),
+    );
+    await putPart(
+      transport,
+      `/api/v1/uploads/${uploadId}/files/${index}/parts/${number}`,
+      data,
+    );
+  }
+  // A byte past the declared size: the file grew after the listing.
+  if ((await readNodeFilePart(entry.localPath, entry.size, 1)).length > 0)
+    throw changedWhileUploading(entry);
+}
+
 /**
  * Upload a Node.js local file or directory through /api/v1/uploads, reading one part
  * from disk at a time (directories are not zipped).
@@ -49,22 +148,7 @@ export async function uploadViaSession(
 
   try {
     for (const [index, entry] of local.entries.entries()) {
-      for (
-        let number = 1, offset = 0;
-        offset < entry.size;
-        number += 1, offset += partSize
-      ) {
-        const data = await readNodeFilePart(
-          entry.localPath,
-          offset,
-          Math.min(partSize, entry.size - offset),
-        );
-        await transport.request(
-          "PUT",
-          `/api/v1/uploads/${uploadId}/files/${index}/parts/${number}`,
-          { raw: { data, contentType: "application/octet-stream" } },
-        );
-      }
+      await sendFileParts(transport, uploadId, index, entry, partSize);
     }
     const done = await transport.request<{ temp_file_id: string }>(
       "POST",

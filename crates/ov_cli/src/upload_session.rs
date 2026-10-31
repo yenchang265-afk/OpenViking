@@ -156,6 +156,100 @@ pub(crate) async fn upload_via_session(
     })
 }
 
+/// Extra attempts for a part after a transient failure (network, timeout, 5xx, 408, 429).
+const PART_RETRIES: u32 = 3;
+/// First backoff before re-sending a part; doubled per attempt.
+const PART_RETRY_BASE_DELAY: std::time::Duration = if cfg!(test) {
+    std::time::Duration::from_millis(1)
+} else {
+    std::time::Duration::from_millis(500)
+};
+
+/// The file is no longer the size the session was created with: written, truncated or
+/// removed while the upload ran (often `.git/` or a log or database being written to).
+fn changed_while_uploading(entry: &UploadEntry) -> Error {
+    Error::Client(format!(
+        "'{}' changed while uploading (it was {} bytes when the upload started). \
+         Retry, or leave out files that are being written, e.g. --ignore-dirs .git",
+        entry.path, entry.size
+    ))
+}
+
+fn is_transient(error: &Error) -> bool {
+    match error {
+        Error::Network(_) | Error::Timeout(_) => true,
+        Error::Api {
+            status: Some(status),
+            ..
+        } => *status >= 500 || *status == 408 || *status == 429,
+        _ => false,
+    }
+}
+
+async fn put_part(client: &BaseClient, url: &str, part: bytes::Bytes) -> Result<()> {
+    let mut attempt = 0;
+    loop {
+        let request = client
+            .http
+            .put(url)
+            .headers(client.build_headers())
+            .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
+            .body(part.clone());
+        let result = match client
+            .send_request(request, "Upload part request failed")
+            .await
+        {
+            Ok(response) => client.handle_response::<Value>(response).await.map(drop),
+            Err(error) => Err(error),
+        };
+        match result {
+            Err(error) if attempt < PART_RETRIES && is_transient(&error) => {
+                tokio::time::sleep(PART_RETRY_BASE_DELAY * 2u32.pow(attempt)).await;
+                attempt += 1;
+            }
+            other => return other,
+        }
+    }
+}
+
+/// Send exactly the `entry.size` bytes the session declared, as numbered parts.
+async fn send_file_parts(
+    client: &BaseClient,
+    upload_id: &str,
+    index: usize,
+    entry: &UploadEntry,
+    part_size: u64,
+    progress: Option<&ProgressBar>,
+) -> Result<()> {
+    let mut file = tokio::fs::File::open(&entry.local)
+        .await
+        .map_err(|_| changed_while_uploading(entry))?;
+    let mut remaining = entry.size;
+    let mut number = 1u64;
+    while remaining > 0 {
+        let want = remaining.min(part_size);
+        let part = read_part(&mut file, want as usize).await?;
+        if (part.len() as u64) < want {
+            return Err(changed_while_uploading(entry));
+        }
+        let url = format!(
+            "{}/api/v1/uploads/{}/files/{}/parts/{}",
+            client.base_url, upload_id, index, number
+        );
+        put_part(client, &url, bytes::Bytes::from(part)).await?;
+        if let Some(pb) = progress {
+            pb.inc(want);
+        }
+        remaining -= want;
+        number += 1;
+    }
+    // More bytes than declared: the file grew after the listing.
+    if !read_part(&mut file, 1).await?.is_empty() {
+        return Err(changed_while_uploading(entry));
+    }
+    Ok(())
+}
+
 async fn send_all_and_complete(
     client: &BaseClient,
     upload_id: &str,
@@ -167,32 +261,7 @@ async fn send_all_and_complete(
         if let Some(pb) = progress {
             pb.set_message(entry.path.clone());
         }
-        let mut file = tokio::fs::File::open(&entry.local).await?;
-        let mut number = 1u64;
-        loop {
-            let part = read_part(&mut file, part_size as usize).await?;
-            if part.is_empty() {
-                break;
-            }
-            let sent = part.len() as u64;
-            let request = client
-                .http
-                .put(format!(
-                    "{}/api/v1/uploads/{}/files/{}/parts/{}",
-                    client.base_url, upload_id, index, number
-                ))
-                .headers(client.build_headers())
-                .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
-                .body(part);
-            let response = client
-                .send_request(request, "Upload part request failed")
-                .await?;
-            let _: Value = client.handle_response(response).await?;
-            if let Some(pb) = progress {
-                pb.inc(sent);
-            }
-            number += 1;
-        }
+        send_file_parts(client, upload_id, index, entry, part_size, progress).await?;
     }
     let request = client
         .http
@@ -432,6 +501,122 @@ mod tests {
         let log = recorded.lock().unwrap().clone();
         assert_eq!(log.last().unwrap().0, "DELETE");
         assert!(!log.iter().any(|(_, p, _)| p.ends_with("/complete")));
+    }
+
+    /// Session API whose part `fail_path` answers `status` for its first `failures` attempts.
+    fn flaky_part_api(
+        fail_path: &'static str,
+        status: u16,
+        failures: usize,
+    ) -> impl Fn(&str, &str) -> (u16, String) + Send + Sync + 'static {
+        let attempts = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let api = session_api(4, 200, None);
+        move |method, path| {
+            if method == "PUT" && path == fail_path {
+                let attempt = attempts.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                if attempt < failures {
+                    let body = json!({"status": "error", "error": {"code": "X", "message": "x"}});
+                    return (status, body.to_string());
+                }
+            }
+            api(method, path)
+        }
+    }
+
+    fn puts_to(recorded: &Recorded, path: &str) -> usize {
+        recorded
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(method, p, _)| method == "PUT" && p == path)
+            .count()
+    }
+
+    /// List `docs`, let `change` touch it, then send the listing as a session.
+    async fn send_after_change(change: impl FnOnce(&Path)) -> (Result<String>, Recorded) {
+        let dir = folder();
+        let root = dir.path().join("docs");
+        let entries = collect_entries(&root, Some("node_modules")).unwrap();
+        change(&root);
+        let (url, recorded) = serve(session_api(4, 200, None)).await;
+        let result = send_all_and_complete(&client(url), "u1", &entries, 4, None).await;
+        (result, recorded)
+    }
+
+    fn assert_changed_error(result: Result<String>, path: &str) {
+        let message = result.unwrap_err().to_string();
+        assert!(message.contains(path), "{message}");
+        assert!(message.contains("changed while uploading"), "{message}");
+    }
+
+    #[tokio::test]
+    async fn file_that_grows_after_listing_fails_naming_it() {
+        let (result, recorded) = send_after_change(|root| {
+            std::fs::write(root.join("a.md"), b"0123456789-and-more").unwrap();
+        })
+        .await;
+
+        assert_changed_error(result, "a.md");
+        // Only the declared 10 bytes were offered, never the appended ones.
+        assert_eq!(parts_by_file(&recorded)["0"], b"0123456789");
+        assert!(
+            !recorded
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|(_, p, _)| p.ends_with("/complete"))
+        );
+    }
+
+    #[tokio::test]
+    async fn file_that_shrinks_after_listing_fails_naming_it() {
+        let (result, recorded) = send_after_change(|root| {
+            std::fs::write(root.join("sub").join("b.txt"), b"x").unwrap();
+        })
+        .await;
+
+        assert_changed_error(result, "sub/b.txt");
+        assert_eq!(puts_to(&recorded, "/api/v1/uploads/u1/files/1/parts/1"), 0);
+    }
+
+    #[tokio::test]
+    async fn file_removed_after_listing_fails_naming_it() {
+        let (result, _) = send_after_change(|root| {
+            std::fs::remove_file(root.join("sub").join("b.txt")).unwrap();
+        })
+        .await;
+
+        assert_changed_error(result, "sub/b.txt");
+    }
+
+    #[tokio::test]
+    async fn transient_part_failure_is_retried() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("f.bin");
+        std::fs::write(&file, b"0123456789").unwrap();
+        let part = "/api/v1/uploads/u1/files/0/parts/2";
+        let (url, recorded) = serve(flaky_part_api(part, 503, 2)).await;
+
+        let result = upload_via_session(&client(url), &file, None, None, false).await;
+
+        assert_eq!(result.unwrap().unwrap().temp_file_id, "session_u1");
+        assert_eq!(puts_to(&recorded, part), 3);
+        assert_eq!(parts_by_file(&recorded)["0"].len(), 10 + 4 * 2);
+    }
+
+    #[tokio::test]
+    async fn rejected_part_is_not_retried() {
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("f.bin");
+        std::fs::write(&file, b"0123456789").unwrap();
+        let part = "/api/v1/uploads/u1/files/0/parts/2";
+        let (url, recorded) = serve(flaky_part_api(part, 400, usize::MAX)).await;
+
+        let result = upload_via_session(&client(url), &file, None, None, false).await;
+
+        assert!(result.is_err());
+        assert_eq!(puts_to(&recorded, part), 1);
+        assert_eq!(recorded.lock().unwrap().last().unwrap().0, "DELETE");
     }
 
     #[test]
