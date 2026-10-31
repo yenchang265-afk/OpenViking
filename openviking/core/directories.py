@@ -28,7 +28,26 @@ if TYPE_CHECKING:
     from openviking.storage.viking_fs import VikingFS
     from openviking.system_assets.sync import SystemAssetSynchronizer
 
+from openviking.storage.errors import LockAcquisitionError, ResourceBusyError
 from openviking_cli.exceptions import NotFoundError
+from openviking_cli.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
+# Backoff between directory-init attempts that hit a peer's PathLock (~6 s total).
+_LOCK_RETRY_DELAYS: tuple[float, ...] = (0.1, 0.3, 0.8, 1.6, 3.2)
+
+
+def _is_lock_conflict(exc: BaseException) -> bool:
+    """True when ``exc`` or an exception it wraps is a PathLock conflict."""
+    seen: set[int] = set()
+    current: BaseException | None = exc
+    while current is not None and id(current) not in seen:
+        if isinstance(current, (LockAcquisitionError, ResourceBusyError)):
+            return True
+        seen.add(id(current))
+        current = current.__cause__ or current.__context__
+    return False
 
 
 @dataclass
@@ -350,10 +369,42 @@ class DirectoryInitializer:
         return created_targets, first_error
 
     async def _ensure_agfs_directory(self, target: _DirectoryTarget) -> _DirectoryTarget | None:
-        """Fill missing L0/L1 files, preserving stored text for vector initialization."""
-        from openviking_cli.utils.logger import get_logger
+        """Fill missing L0/L1 files, preserving stored text for vector initialization.
 
-        logger = get_logger(__name__)
+        Several instances can initialize the same account at once (a fleet
+        starting on an empty namespace). A PathLock conflict means a peer is
+        writing this directory, so back off, re-read, and write only what is
+        still missing.
+        """
+        for delay in (*_LOCK_RETRY_DELAYS, None):
+            metadata = await self._read_directory_metadata(target)
+            if metadata is None:
+                return None
+            contents, missing = metadata
+            try:
+                await self._get_viking_fs().write_context(
+                    uri=target.uri,
+                    **missing,
+                    is_leaf=False,
+                    ctx=target.ctx,
+                )
+            except Exception as exc:
+                if delay is None or not _is_lock_conflict(exc):
+                    raise
+                logger.info(
+                    "[VikingFS] Directory %s is locked by another writer; retrying in %.2fs",
+                    target.uri,
+                    delay,
+                )
+                await asyncio.sleep(delay)
+                continue
+            return replace(target, definition=replace(target.definition, **contents))
+        return None
+
+    async def _read_directory_metadata(
+        self, target: _DirectoryTarget
+    ) -> tuple[dict[str, str], dict[str, str]] | None:
+        """Return stored-or-default L0/L1 text and the missing part, or None to skip."""
         viking_fs = self._get_viking_fs()
         contents = {}
         missing = {}
@@ -382,13 +433,7 @@ class DirectoryInitializer:
             logger.debug(f"[VikingFS] Directory {target.uri} already exists")
             return None
         logger.debug(f"[VikingFS] Creating directory: {target.uri} for scope {target.scope}")
-        await viking_fs.write_context(
-            uri=target.uri,
-            **missing,
-            is_leaf=False,
-            ctx=target.ctx,
-        )
-        return replace(target, definition=replace(target.definition, **contents))
+        return contents, missing
 
     async def _ensure_directory_l0_l1_vectors(self, targets: list[_DirectoryTarget]) -> None:
         """Seed missing L0/L1 records after one batch existence read."""

@@ -175,3 +175,94 @@ def test_preset_directory_uris_cover_seeded_directories_only():
     } <= uris
     assert f"{user_root}/memories/preferences" not in uris
     assert "viking://resources/proj" not in uris
+
+
+def _raise_lock_conflict(uri):
+    """Mirror VikingFS.write_context, which re-raises a PathLock conflict as IOError."""
+    from openviking.storage.errors import LockAcquisitionError
+
+    try:
+        raise LockAcquisitionError("lock acquire timed out after 0ms")
+    except LockAcquisitionError as e:
+        raise IOError(f"Failed to write {uri}: {e}")
+
+
+class _ContendedVikingFS(_FakeVikingFS):
+    """Fails writes to chosen URIs with a lock conflict, as when a peer holds the lock."""
+
+    def __init__(self, conflicts, on_conflict=None):
+        super().__init__()
+        self.conflicts = dict(conflicts)
+        self.on_conflict = on_conflict
+        self.write_calls = []
+
+    async def write_context(self, uri, abstract="", overview="", is_leaf=False, ctx=None):
+        self.write_calls.append(uri)
+        if self.conflicts.get(uri, 0) > 0:
+            self.conflicts[uri] -= 1
+            if self.on_conflict is not None:
+                self.on_conflict(self, uri)
+            _raise_lock_conflict(uri)
+        await super().write_context(uri, abstract, overview, is_leaf, ctx)
+
+
+@pytest.fixture
+def no_lock_backoff(monkeypatch):
+    monkeypatch.setattr("openviking.core.directories._LOCK_RETRY_DELAYS", (0.0, 0.0, 0.0))
+
+
+@pytest.mark.asyncio
+async def test_workspace_init_adopts_directory_a_peer_created_while_locked(no_lock_backoff):
+    def peer_wins(fs, uri):
+        fs.contexts[uri] = {"abstract": "peer abstract", "overview": "peer overview"}
+
+    viking_fs = _ContendedVikingFS({"viking://agent": 1}, on_conflict=peer_wins)
+    initializer = DirectoryInitializer(_FakeVikingDB(), viking_fs=viking_fs)
+    ctx = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.ADMIN)
+
+    await initializer.initialize_account_workspace(ctx)
+
+    assert viking_fs.contexts["viking://agent"]["abstract"] == "peer abstract"
+    assert viking_fs.write_calls.count("viking://agent") == 1
+    assert "viking://agent/skills" in viking_fs.contexts
+
+
+@pytest.mark.asyncio
+async def test_workspace_init_retries_a_transient_lock_conflict(no_lock_backoff):
+    viking_fs = _ContendedVikingFS({"viking://agent": 2})
+    initializer = DirectoryInitializer(_FakeVikingDB(), viking_fs=viking_fs)
+    ctx = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.ADMIN)
+
+    account_count, _ = await initializer.initialize_account_workspace(ctx)
+
+    assert account_count == 6
+    assert viking_fs.write_calls.count("viking://agent") == 3
+    assert viking_fs.contexts["viking://agent"]["abstract"]
+
+
+@pytest.mark.asyncio
+async def test_workspace_init_gives_up_on_a_lock_that_never_clears(no_lock_backoff):
+    viking_fs = _ContendedVikingFS({"viking://agent": 99})
+    initializer = DirectoryInitializer(_FakeVikingDB(), viking_fs=viking_fs)
+    ctx = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.ADMIN)
+
+    with pytest.raises(IOError, match="lock acquire timed out"):
+        await initializer.initialize_account_workspace(ctx)
+    assert viking_fs.write_calls.count("viking://agent") == 4
+
+
+@pytest.mark.asyncio
+async def test_workspace_init_does_not_retry_other_write_errors(no_lock_backoff):
+    viking_fs = _ContendedVikingFS({})
+    viking_fs.write_context = AsyncMock(side_effect=IOError("Failed to write: disk full"))
+    initializer = DirectoryInitializer(_FakeVikingDB(), viking_fs=viking_fs)
+    ctx = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.ADMIN)
+
+    with pytest.raises(IOError, match="disk full"):
+        await initializer.initialize_account_workspace(ctx)
+    agent_calls = [
+        c
+        for c in viking_fs.write_context.await_args_list
+        if c.kwargs.get("uri") == "viking://agent"
+    ]
+    assert len(agent_calls) == 1
