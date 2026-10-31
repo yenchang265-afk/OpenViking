@@ -257,7 +257,7 @@ async def test_ready_returns_503_before_initialized(monkeypatch):
         assert body["reason"] == "initializing"
 
 
-def _ready_app(monkeypatch, viking_fs, **server_config):
+def _ready_app(monkeypatch, viking_fs, storage=None, **server_config):
     """Create an app whose readiness dependencies are initialized mocks."""
 
     class MockService:
@@ -275,9 +275,96 @@ def _ready_app(monkeypatch, viking_fs, **server_config):
     # Patched after create_app, which reads the real config singleton.
     monkeypatch.setattr(
         "openviking_cli.utils.config.open_viking_config.OpenVikingConfigSingleton.get_instance",
-        lambda: SimpleNamespace(embedding=SimpleNamespace(get_embedder=lambda: None)),
+        lambda: SimpleNamespace(
+            embedding=SimpleNamespace(get_embedder=lambda: None), storage=storage
+        ),
     )
     return app
+
+
+def _cache_storage(*, pathlock="cache", queuefs="cache"):
+    return SimpleNamespace(
+        agfs=SimpleNamespace(
+            pathlock=SimpleNamespace(provider=pathlock),
+            queuefs=SimpleNamespace(backend=queuefs),
+        )
+    )
+
+
+class _CacheBackedVikingFS:
+    """VikingFS whose PathLock and queue registry round-trip through a cache provider."""
+
+    def __init__(self, error=None):
+        self.error = error
+        self.calls = []
+        fs = self
+
+        class _Agfs:
+            async def pathlock_is_locked(self, path, ignore_stale=True, *, fs_ctx=None):
+                fs.calls.append(("pathlock_is_locked", path))
+                if fs.error is not None:
+                    raise fs.error
+                return False
+
+            async def ls(self, path, *args, **kwargs):
+                fs.calls.append(("ls", path))
+                if fs.error is not None:
+                    raise fs.error
+                return []
+
+        self._async_agfs = _Agfs()
+
+    async def ls(self, path, ctx=None):
+        return []
+
+    def _get_vector_store(self):
+        class MockVectorStore:
+            async def health_check(self):
+                return True
+
+        return MockVectorStore()
+
+
+async def test_ready_probes_cache_backed_pathlock_and_queue(monkeypatch):
+    viking_fs = _CacheBackedVikingFS()
+    app = _ready_app(monkeypatch, viking_fs, storage=_cache_storage())
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/ready")
+
+    assert resp.status_code == 200
+    assert resp.json()["checks"]["cache"] == {
+        "status": "ok",
+        "checks": {"pathlock": "ok", "queue": "ok"},
+    }
+    assert ("pathlock_is_locked", "/") in viking_fs.calls
+    assert ("ls", "/queue") in viking_fs.calls
+
+
+async def test_ready_returns_503_when_cache_provider_is_unreachable(monkeypatch):
+    error = RuntimeError("cache queue_exists: Redis SISMEMBER: Timeout Error")
+    app = _ready_app(monkeypatch, _CacheBackedVikingFS(error), storage=_cache_storage())
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/ready")
+
+    assert resp.status_code == 503
+    cache = resp.json()["checks"]["cache"]
+    assert cache["status"] == "error"
+    assert "Redis SISMEMBER" in cache["checks"]["pathlock"]
+
+
+async def test_ready_skips_cache_probe_without_cache_backends(monkeypatch):
+    viking_fs = _CacheBackedVikingFS()
+    storage = _cache_storage(pathlock="filesystem", queuefs="sqlite")
+    app = _ready_app(monkeypatch, viking_fs, storage=storage)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        resp = await client.get("/ready")
+
+    assert resp.status_code == 200
+    assert resp.json()["checks"]["cache"] == "not_configured"
+    assert viking_fs.calls == []
 
 
 class _StalledVikingFS:

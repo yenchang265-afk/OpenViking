@@ -88,6 +88,43 @@ async def _probe_agfs_readiness() -> dict[str, object]:
     return {"status": "ok", "checks": checks}
 
 
+def _cache_backed_subsystems() -> tuple[bool, bool]:
+    """Return whether PathLock and QueueFS use the shared cache provider."""
+    from openviking_cli.utils.config.open_viking_config import OpenVikingConfigSingleton
+
+    agfs = getattr(getattr(OpenVikingConfigSingleton.get_instance(), "storage", None), "agfs", None)
+    pathlock = getattr(getattr(agfs, "pathlock", None), "provider", None) == "cache"
+    queue = getattr(getattr(agfs, "queuefs", None), "backend", None) == "cache"
+    return pathlock, queue
+
+
+async def _probe_cache_readiness() -> object:
+    """Round-trip the cache provider through the subsystems that depend on it.
+
+    /health stays green while Redis is down, but PathLock and QueueFS writes fail.
+    Read-only calls: a lock lookup on "/" and a listing of the queue registry.
+    """
+    pathlock, queue = _cache_backed_subsystems()
+    if not (pathlock or queue):
+        return "not_configured"
+    agfs = get_viking_fs()._async_agfs
+    checks: dict[str, str] = {}
+    if pathlock:
+        try:
+            await agfs.pathlock_is_locked("/")
+            checks["pathlock"] = "ok"
+        except Exception as e:
+            checks["pathlock"] = f"error: {e}"
+    if queue:
+        try:
+            await agfs.ls("/queue")
+            checks["queue"] = "ok"
+        except Exception as e:
+            checks["queue"] = f"error: {e}"
+    status = "ok" if all(v == "ok" for v in checks.values()) else "error"
+    return {"status": status, "checks": checks}
+
+
 @router.get("/health", tags=["system"])
 async def health_check(request: Request):
     """Health check endpoint (no authentication required)."""
@@ -178,6 +215,12 @@ async def readiness_check(request: Request):
             checks["vectordb"] = "not_configured"
     except Exception as e:
         checks["vectordb"] = f"error: {e}"
+
+    # 2b. Cache provider (Redis) behind PathLock / QueueFS, when they use it.
+    try:
+        checks["cache"] = await _bounded_probe("cache", _probe_cache_readiness, probe_timeout)
+    except Exception as e:
+        checks["cache"] = {"status": "error", "checks": {"provider": f"error: {e}"}}
 
     # 3. APIKeyManager: check if loaded
     try:
