@@ -19,3 +19,6 @@ vulnerabilities:
   - id: CVE-2026-115778
     statement: "Fix only in twisted 26.10.0 release candidates; waiting for a final release."
     expired_at: 2026-11-27
+  - id: GHSA-vpp8-g58w-m8mp
+    statement: "Fix only in twisted 26.10.0 release candidates; waiting for a final release."
+    expired_at: 2026-11-27
