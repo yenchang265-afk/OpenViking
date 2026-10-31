@@ -96,7 +96,7 @@ export const Route = createFileRoute('/watches')({
 
 function WatchesRoute() {
   return (
-    <ResourceUploadProvider>
+    <ResourceUploadProvider remoteOwner="watches">
       <WatchManagementPage />
     </ResourceUploadProvider>
   )

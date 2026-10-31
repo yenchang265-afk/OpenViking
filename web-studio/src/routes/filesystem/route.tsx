@@ -111,7 +111,10 @@ export const Route = createFileRoute('/filesystem')({
 function FilesystemRoute() {
   const { provider } = useStudioService()
   return (
-    <ResourceUploadProvider enabled={provider === 'opensource'}>
+    <ResourceUploadProvider
+      enabled={provider === 'opensource'}
+      remoteOwner="filesystem"
+    >
       <FilesystemWorkbench />
     </ResourceUploadProvider>
   )
@@ -214,6 +217,7 @@ function FilesystemWorkbench() {
   })
   const {
     activeTaskCount,
+    cancelUpload,
     hasActiveTasks,
     isRefreshingTasks,
     refreshTasks,
@@ -904,6 +908,7 @@ function FilesystemWorkbench() {
           <UploadTaskDialog
             open={taskDialogOpen}
             onOpenChange={setTaskDialogOpen}
+            onCancelTask={cancelUpload}
             tasks={tasks}
           />
         </>

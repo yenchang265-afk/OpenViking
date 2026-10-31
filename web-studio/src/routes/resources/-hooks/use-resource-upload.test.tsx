@@ -12,8 +12,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { toast } from 'sonner'
 
 import i18n from '#/i18n'
+import { ovClient } from '#/lib/ov-client'
 import type * as OvClientModule from '#/lib/ov-client'
 import type { WatchTaskEventsOptions } from '../-lib/task-event-stream'
+import { resetUploadScopeForTests } from '../-lib/upload-scope'
 import {
   ResourceUploadProvider,
   useResourceUpload,
@@ -55,6 +57,7 @@ vi.mock('sonner', () => ({
 
 afterEach(() => {
   cleanup()
+  resetUploadScopeForTests()
   vi.clearAllMocks()
   streamMocks.options = undefined
 })
@@ -81,7 +84,8 @@ function UploadHarness({
   onCompleted: () => void
   onFailed?: () => void
 }) {
-  const { refreshTasks, startRemote, tasks } = useResourceUpload()
+  const { refreshTasks, remoteState, resetRemote, startRemote, tasks } =
+    useResourceUpload()
 
   return (
     <>
@@ -103,15 +107,76 @@ function UploadHarness({
         data-testid="refresh"
         onClick={() => void refreshTasks()}
       />
+      <button type="button" data-testid="reset" onClick={resetRemote} />
       <output data-testid="task-error">{tasks[0]?.errorMessage}</output>
       <output data-testid="task-count">{tasks.length}</output>
+      <output data-testid="remote-phase">{remoteState.phase}</output>
     </>
   )
 }
 
+describe('ResourceUploadProvider remote form state', () => {
+  it("keeps one page's remote import out of another page's form", async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockReturnValue(new Promise(() => undefined))
+    const filesystem = render(
+      <ResourceUploadProvider remoteOwner="filesystem">
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    fireEvent.click(screen.getByTestId('start'))
+    await waitFor(() => expect(apiMocks.postResources).toHaveBeenCalledOnce())
+    const signal = apiMocks.postResources.mock.calls[0][0].signal as AbortSignal
+    filesystem.unmount()
+
+    const watches = render(
+      <ResourceUploadProvider remoteOwner="watches">
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    expect(screen.getByTestId('remote-phase').textContent).toBe('idle')
+    fireEvent.click(screen.getByTestId('reset'))
+    expect(signal.aborted).toBe(false)
+    watches.unmount()
+
+    // The page that started it shows it still running when it comes back.
+    render(
+      <ResourceUploadProvider remoteOwner="filesystem">
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    expect(screen.getByTestId('remote-phase').textContent).toBe('processing')
+  })
+
+  it('starts a fresh form when the page returns after its import finished', async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockResolvedValue({
+      root_uri: 'viking://resources/OpenViking',
+      status: 'success',
+    })
+    const page = render(
+      <ResourceUploadProvider>
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    fireEvent.click(screen.getByTestId('start'))
+    await waitFor(() =>
+      expect(screen.getByTestId('remote-phase').textContent).toBe('done'),
+    )
+    page.unmount()
+
+    render(
+      <ResourceUploadProvider>
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    expect(screen.getByTestId('remote-phase').textContent).toBe('idle')
+  })
+})
+
 describe('ResourceUploadProvider remote completion', () => {
   it.each(['resolve', 'reject'] as const)(
-    'stops remote notifications after unmount when the request later %ss',
+    'keeps the remote import after unmount but skips the page callbacks when it %ss',
     async (outcome) => {
       let resolveImport!: (result: { status: string; root_uri: string }) => void
       let rejectImport!: (error: Error) => void
@@ -142,7 +207,7 @@ describe('ResourceUploadProvider remote completion', () => {
         .signal as AbortSignal
       expect(signal.aborted).toBe(false)
       unmount()
-      expect(signal.aborted).toBe(true)
+      expect(signal.aborted).toBe(false)
 
       await act(async () => {
         if (outcome === 'resolve') {
@@ -158,11 +223,47 @@ describe('ResourceUploadProvider remote completion', () => {
       expect(onAccepted).not.toHaveBeenCalled()
       expect(onCompleted).not.toHaveBeenCalled()
       expect(onFailed).not.toHaveBeenCalled()
-      expect(toast.success).not.toHaveBeenCalled()
-      expect(toast.error).not.toHaveBeenCalled()
+      if (outcome === 'resolve') {
+        expect(toast.success).toHaveBeenCalledOnce()
+        expect(toast.error).not.toHaveBeenCalled()
+      } else {
+        expect(toast.error).toHaveBeenCalledOnce()
+        expect(toast.success).not.toHaveBeenCalled()
+      }
       expect(apiMocks.getTasks).toHaveBeenCalledOnce()
     },
   )
+
+  it('warns before the tab closes only while an import is in flight', async () => {
+    let resolveImport!: (result: { status: string; root_uri: string }) => void
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveImport = resolve
+        }),
+    )
+    const closeTab = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    render(
+      <ResourceUploadProvider>
+        <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+      </ResourceUploadProvider>,
+    )
+    expect(closeTab()).toBe(false)
+
+    fireEvent.click(screen.getByTestId('start'))
+    await waitFor(() => expect(apiMocks.postResources).toHaveBeenCalledOnce())
+    expect(closeTab()).toBe(true)
+
+    await act(async () => {
+      resolveImport({ status: 'success', root_uri: 'viking://resources/x' })
+    })
+    expect(closeTab()).toBe(false)
+  })
 
   it('notifies after submission and again after the background task completes', async () => {
     let taskStatus = 'processing'
@@ -377,6 +478,162 @@ function FileUploadHarness() {
   )
 }
 
+function QueueHarness() {
+  const { cancelUpload, enqueueUploads, tasks } = useResourceUpload()
+  const statusOf = (name: string) =>
+    tasks.find((task) => task.fileName === name)?.status
+  return (
+    <>
+      <button
+        type="button"
+        data-testid="upload-two"
+        onClick={() =>
+          enqueueUploads({
+            commonBody: {},
+            files: [
+              { file: new File(['a'], 'stuck.md'), fileType: null },
+              { file: new File(['b'], 'next.md'), fileType: null },
+            ],
+          })
+        }
+      />
+      {['stuck', 'next'].map((name) => (
+        <button
+          key={name}
+          type="button"
+          data-testid={`cancel-${name}`}
+          onClick={() => {
+            const task = tasks.find((item) => item.fileName === `${name}.md`)
+            if (task) cancelUpload(task.id)
+          }}
+        />
+      ))}
+      <output data-testid="stuck-status">{statusOf('stuck.md')}</output>
+      <output data-testid="next-status">{statusOf('next.md')}</output>
+    </>
+  )
+}
+
+describe('ResourceUploadProvider cancellation', () => {
+  it('keeps the rest of a batch going when one file fails badly', async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockResolvedValue({ status: 'success' })
+    apiMocks.transferUpload.mockImplementation((item: { file: File }) =>
+      item.file.name === 'stuck.md'
+        ? Promise.reject(new Error('transfer failed'))
+        : Promise.resolve({ tempFileId: 'temp-next', sourceName: 'next' }),
+    )
+    // Reporting the first failure itself throws.
+    vi.mocked(toast.error).mockImplementationOnce(() => {
+      throw new Error('toast broke')
+    })
+    render(
+      <ResourceUploadProvider>
+        <QueueHarness />
+      </ResourceUploadProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('upload-two'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('next-status').textContent).toBe('success'),
+    )
+  })
+
+  it('stops the close-tab warning as soon as an upload is cancelled', async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    // A transfer that never settles, even once cancelled.
+    apiMocks.transferUpload.mockReturnValue(new Promise(() => undefined))
+    const closeTab = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    render(
+      <ResourceUploadProvider>
+        <QueueHarness />
+      </ResourceUploadProvider>,
+    )
+    fireEvent.click(screen.getByTestId('upload-two'))
+    await waitFor(() =>
+      expect(screen.getByTestId('stuck-status').textContent).toBe('uploading'),
+    )
+    expect(closeTab()).toBe(true)
+
+    fireEvent.click(screen.getByTestId('cancel-stuck'))
+    fireEvent.click(screen.getByTestId('cancel-next'))
+
+    expect(closeTab()).toBe(false)
+  })
+
+  it('cancels a stuck upload and moves on to the next file', async () => {
+    const signals: AbortSignal[] = []
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockResolvedValue({ status: 'success' })
+    apiMocks.transferUpload.mockImplementation(
+      (
+        item: { file: File },
+        _onProgress: unknown,
+        transport: { signal: AbortSignal },
+      ) => {
+        signals.push(transport.signal)
+        if (item.file.name === 'stuck.md') {
+          return new Promise((_resolve, reject) => {
+            transport.signal.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            )
+          })
+        }
+        return Promise.resolve({ tempFileId: 'temp-next', sourceName: 'next' })
+      },
+    )
+    render(
+      <ResourceUploadProvider>
+        <QueueHarness />
+      </ResourceUploadProvider>,
+    )
+    fireEvent.click(screen.getByTestId('upload-two'))
+    await waitFor(() =>
+      expect(screen.getByTestId('stuck-status').textContent).toBe('uploading'),
+    )
+    expect(screen.getByTestId('next-status').textContent).toBe('pending')
+
+    fireEvent.click(screen.getByTestId('cancel-stuck'))
+
+    expect(signals[0].aborted).toBe(true)
+    expect(screen.getByTestId('stuck-status').textContent).toBe('cancelled')
+    await waitFor(() =>
+      expect(screen.getByTestId('next-status').textContent).toBe('success'),
+    )
+    expect(signals[1].aborted).toBe(false)
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('stops a remote import soon after the connection changes, with no page open', async () => {
+    const original = ovClient.getConnection()
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockReturnValue(new Promise(() => undefined))
+    try {
+      const page = render(
+        <ResourceUploadProvider>
+          <UploadHarness onAccepted={vi.fn()} onCompleted={vi.fn()} />
+        </ResourceUploadProvider>,
+      )
+      fireEvent.click(screen.getByTestId('start'))
+      await waitFor(() => expect(apiMocks.postResources).toHaveBeenCalledOnce())
+      const signal = apiMocks.postResources.mock.calls[0][0]
+        .signal as AbortSignal
+      page.unmount()
+
+      ovClient.setConnection({ apiKey: 'fixture-rotated-key' })
+
+      await waitFor(() => expect(signal.aborted).toBe(true), { timeout: 3000 })
+    } finally {
+      ovClient.setConnection(original)
+    }
+  })
+})
+
 describe('ResourceUploadProvider file uploads', () => {
   it('keeps a failed upload failed when a late part reports progress', async () => {
     let reportProgress: ((percent: number) => void) | undefined
@@ -404,5 +661,89 @@ describe('ResourceUploadProvider file uploads', () => {
     })
 
     expect(screen.getByTestId('file-status').textContent).toBe('failed')
+  })
+
+  it('cancels a transfer at the next part once the connection changes', async () => {
+    const original = ovClient.getConnection()
+    let reportProgress: ((percent: number) => void) | undefined
+    let signal: AbortSignal | undefined
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.transferUpload.mockImplementation(
+      (
+        _item: unknown,
+        onProgress: (percent: number) => void,
+        transport: { signal: AbortSignal },
+      ) => {
+        reportProgress = onProgress
+        signal = transport.signal
+        return new Promise(() => undefined)
+      },
+    )
+    try {
+      const page = render(
+        <ResourceUploadProvider>
+          <FileUploadHarness />
+        </ResourceUploadProvider>,
+      )
+      fireEvent.click(screen.getByTestId('upload'))
+      await waitFor(() => expect(apiMocks.transferUpload).toHaveBeenCalled())
+      act(() => reportProgress?.(30))
+      expect(signal?.aborted).toBe(false)
+
+      ovClient.setConnection({ apiKey: 'fixture-rotated-key' })
+      act(() => reportProgress?.(60))
+
+      expect(signal?.aborted).toBe(true)
+
+      // Switching back starts clean instead of reviving the cancelled upload.
+      ovClient.setConnection(original)
+      page.unmount()
+      render(
+        <ResourceUploadProvider>
+          <FileUploadHarness />
+        </ResourceUploadProvider>,
+      )
+      expect(screen.getByTestId('file-status').textContent).toBe('')
+    } finally {
+      ovClient.setConnection(original)
+    }
+  })
+
+  it('keeps a transfer when only the server-mode identity headers change', async () => {
+    const original = ovClient.getConnection()
+    let reportProgress: ((percent: number) => void) | undefined
+    let signal: AbortSignal | undefined
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.transferUpload.mockImplementation(
+      (
+        _item: unknown,
+        onProgress: (percent: number) => void,
+        transport: { signal: AbortSignal },
+      ) => {
+        reportProgress = onProgress
+        signal = transport.signal
+        return new Promise(() => undefined)
+      },
+    )
+    try {
+      render(
+        <ResourceUploadProvider>
+          <FileUploadHarness />
+        </ResourceUploadProvider>,
+      )
+      fireEvent.click(screen.getByTestId('upload'))
+      await waitFor(() => expect(apiMocks.transferUpload).toHaveBeenCalled())
+
+      // A health re-check drops and restores trusted-mode identity headers.
+      ovClient.setConnection({ identityHeaders: !original.identityHeaders })
+      act(() => reportProgress?.(40))
+      ovClient.setConnection({ identityHeaders: original.identityHeaders })
+      act(() => reportProgress?.(80))
+
+      expect(signal?.aborted).toBe(false)
+      expect(screen.getByTestId('file-status').textContent).toBe('uploading')
+    } finally {
+      ovClient.setConnection(original)
+    }
   })
 })
