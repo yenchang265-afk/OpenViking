@@ -1,0 +1,91 @@
+name: RAGFS Cache Tests
+
+# CacheFS and the cache runtime only compile with the `cache` feature, so no
+# other workflow runs their tests. A Redis service lets the real-Redis race
+# and runtime tests run instead of skipping on a missing REDIS_URL.
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'crates/ragfs/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/ragfs-cache.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'crates/ragfs/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.github/workflows/ragfs-cache.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ragfs-cache-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cache-tests:
+    name: RAGFS cache tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      REDIS_URL: redis://127.0.0.1:6379
+      CARGO_TERM_COLOR: always
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo registry and index
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-ragfs-cache-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ragfs-cache-
+            ${{ runner.os }}-cargo-
+
+      - name: Cache build artifacts
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: ${{ runner.os }}-target-ragfs-cache-${{ hashFiles('**/Cargo.lock') }}-${{ hashFiles('crates/ragfs/**/*.rs') }}
+          restore-keys: |
+            ${{ runner.os }}-target-ragfs-cache-${{ hashFiles('**/Cargo.lock') }}-
+            ${{ runner.os }}-target-ragfs-cache-
+
+      # Unit tests whose path names the cache (CacheFS, cache runtime, the
+      # multi-instance race and stress tests, and cache-backed QueueFS/git).
+      # The skipped test already fails on main: its mock panics on the
+      # queuefs.release_recovery_leader.v1 script. Drop the skip once fixed.
+      - name: Unit tests
+        run: >-
+          cargo test -p ragfs --features cache,test-utils --lib cache --
+          --skip shutdown_reaches_cache_queuefs_through_stats_wrapper
+
+      - name: Integration tests
+        run: >-
+          cargo test -p ragfs --features cache,test-utils
+          --test cache_runtime --test redis_runtime --test dynamic_provider
+          --test cache_latency
