@@ -497,14 +497,17 @@ function QueueHarness() {
           })
         }
       />
-      <button
-        type="button"
-        data-testid="cancel-stuck"
-        onClick={() => {
-          const task = tasks.find((item) => item.fileName === 'stuck.md')
-          if (task) cancelUpload(task.id)
-        }}
-      />
+      {['stuck', 'next'].map((name) => (
+        <button
+          key={name}
+          type="button"
+          data-testid={`cancel-${name}`}
+          onClick={() => {
+            const task = tasks.find((item) => item.fileName === `${name}.md`)
+            if (task) cancelUpload(task.id)
+          }}
+        />
+      ))}
       <output data-testid="stuck-status">{statusOf('stuck.md')}</output>
       <output data-testid="next-status">{statusOf('next.md')}</output>
     </>
@@ -512,6 +515,57 @@ function QueueHarness() {
 }
 
 describe('ResourceUploadProvider cancellation', () => {
+  it('keeps the rest of a batch going when one file fails badly', async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    apiMocks.postResources.mockResolvedValue({ status: 'success' })
+    apiMocks.transferUpload.mockImplementation((item: { file: File }) =>
+      item.file.name === 'stuck.md'
+        ? Promise.reject(new Error('transfer failed'))
+        : Promise.resolve({ tempFileId: 'temp-next', sourceName: 'next' }),
+    )
+    // Reporting the first failure itself throws.
+    vi.mocked(toast.error).mockImplementationOnce(() => {
+      throw new Error('toast broke')
+    })
+    render(
+      <ResourceUploadProvider>
+        <QueueHarness />
+      </ResourceUploadProvider>,
+    )
+
+    fireEvent.click(screen.getByTestId('upload-two'))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('next-status').textContent).toBe('success'),
+    )
+  })
+
+  it('stops the close-tab warning as soon as an upload is cancelled', async () => {
+    apiMocks.getTasks.mockResolvedValue([])
+    // A transfer that never settles, even once cancelled.
+    apiMocks.transferUpload.mockReturnValue(new Promise(() => undefined))
+    const closeTab = () => {
+      const event = new Event('beforeunload', { cancelable: true })
+      window.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+    render(
+      <ResourceUploadProvider>
+        <QueueHarness />
+      </ResourceUploadProvider>,
+    )
+    fireEvent.click(screen.getByTestId('upload-two'))
+    await waitFor(() =>
+      expect(screen.getByTestId('stuck-status').textContent).toBe('uploading'),
+    )
+    expect(closeTab()).toBe(true)
+
+    fireEvent.click(screen.getByTestId('cancel-stuck'))
+    fireEvent.click(screen.getByTestId('cancel-next'))
+
+    expect(closeTab()).toBe(false)
+  })
+
   it('cancels a stuck upload and moves on to the next file', async () => {
     const signals: AbortSignal[] = []
     apiMocks.getTasks.mockResolvedValue([])

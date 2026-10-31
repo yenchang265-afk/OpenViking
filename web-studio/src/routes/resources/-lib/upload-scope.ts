@@ -421,12 +421,13 @@ function createUploadScope(): UploadScope {
       const controller = beginJob()
       if (!controller) break
       uploadControllers.set(task.id, controller)
-      batch = batch.then(() =>
-        runFileUpload(task.id, item, params.commonBody, controller),
-      )
+      // The queue lives as long as the scope: a file that fails in an
+      // unexpected way must not skip the files after it or stall the queue.
+      batch = batch
+        .then(() => runFileUpload(task.id, item, params.commonBody, controller))
+        .catch(() => endJob(controller))
     }
-    // The queue lives as long as the scope: never let one failure stall it.
-    uploadQueue = batch.catch(() => undefined)
+    uploadQueue = batch
   }
 
   /** Stop a local upload that is still queued or sending data. */
@@ -435,6 +436,9 @@ function createUploadScope(): UploadScope {
     const task = snapshot.tasks.find((item) => item.id === taskId)
     if (!controller || !task || !isCancellableUpload(task)) return
     controller.abort()
+    // Nothing of this upload is worth keeping the tab open for any more, even
+    // if its request takes a while to give up.
+    endJob(controller)
     updateTask(taskId, (current) => ({
       ...current,
       status: 'cancelled',
