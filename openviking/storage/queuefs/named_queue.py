@@ -172,6 +172,23 @@ class NamedQueue:
                 pass
             self._initialized = True
 
+    async def _recreate_if_missing(self, operation: Callable[[], Awaitable[_ResultT]]) -> _ResultT:
+        """Run ``operation``; if the backend lost this queue, create it again and retry once.
+
+        A cache-backed queue registry lives in Redis. A Redis restart without
+        persistence, a flush, or a failover that drops data removes every queue
+        created at startup, and each later operation reports "not found".
+        """
+        try:
+            return await operation()
+        except (AGFSNotFoundError, FileNotFoundError):
+            logger.warning(
+                "[NamedQueue] Queue %s is missing in the backend; re-creating it", self.name
+            )
+            self._initialized = False
+            await self._ensure_initialized()
+            return await operation()
+
     async def enqueue(self, data: Union[str, Dict[str, Any]]) -> EnqueueReceipt:
         """Send message to queue (enqueue)."""
         await self._ensure_initialized()
@@ -181,7 +198,10 @@ class NamedQueue:
 
     async def _enqueue(self, ctx: EnqueueContext) -> str:
         data = json.dumps(ctx.payload) if isinstance(ctx.payload, dict) else ctx.payload
-        msg_id = await self._async_agfs.write(f"{self.path}/enqueue", data.encode("utf-8"))
+        payload = data.encode("utf-8")
+        msg_id = await self._recreate_if_missing(
+            lambda: self._async_agfs.write(f"{self.path}/enqueue", payload)
+        )
         ctx.committed = True
         return msg_id if isinstance(msg_id, str) else str(msg_id)
 
@@ -211,7 +231,9 @@ class NamedQueue:
 
         Normalises the various return types AGFSClient.read() may produce.
         """
-        content = await self._async_agfs.read(f"{self.path}/dequeue")
+        content = await self._recreate_if_missing(
+            lambda: self._async_agfs.read(f"{self.path}/dequeue")
+        )
         if not content or content == b"{}":
             return None
         if isinstance(content, bytes):
@@ -348,7 +370,8 @@ class NamedQueue:
         size_file = f"{self.path}/size"
 
         try:
-            content = await self._async_agfs.read(size_file)
+            # Workers poll size(), so this also repairs a lost queue with no new writes.
+            content = await self._recreate_if_missing(lambda: self._async_agfs.read(size_file))
             if content is None:
                 return 0
             if isinstance(content, bytes):
