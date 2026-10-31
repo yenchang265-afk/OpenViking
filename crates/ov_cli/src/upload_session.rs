@@ -168,11 +168,17 @@ const PART_RETRY_BASE_DELAY: std::time::Duration = if cfg!(test) {
 /// The file is no longer the size the session was created with: written, truncated or
 /// removed while the upload ran (often `.git/` or a log or database being written to).
 fn changed_while_uploading(entry: &UploadEntry) -> Error {
-    Error::Client(format!(
-        "'{}' changed while uploading (it was {} bytes when the upload started). \
-         Retry, or leave out files that are being written, e.g. --ignore-dirs .git",
-        entry.path, entry.size
-    ))
+    // FAILED_PRECONDITION, like the SDKs; no HTTP status, so it is never retried.
+    Error::Api {
+        code: Some("FAILED_PRECONDITION".into()),
+        message: format!(
+            "'{}' changed while uploading (it was {} bytes when the upload started). \
+             Retry, or leave out files that are being written, e.g. --ignore-dirs .git",
+            entry.path, entry.size
+        ),
+        details: Some(json!({"path": entry.path, "size": entry.size})),
+        status: None,
+    }
 }
 
 fn is_transient(error: &Error) -> bool {
@@ -221,9 +227,13 @@ async fn send_file_parts(
     part_size: u64,
     progress: Option<&ProgressBar>,
 ) -> Result<()> {
-    let mut file = tokio::fs::File::open(&entry.local)
-        .await
-        .map_err(|_| changed_while_uploading(entry))?;
+    let mut file =
+        tokio::fs::File::open(&entry.local)
+            .await
+            .map_err(|error| match error.kind() {
+                std::io::ErrorKind::NotFound => changed_while_uploading(entry),
+                _ => Error::Io(error),
+            })?;
     let mut remaining = entry.size;
     let mut number = 1u64;
     while remaining > 0 {
@@ -544,7 +554,9 @@ mod tests {
     }
 
     fn assert_changed_error(result: Result<String>, path: &str) {
-        let message = result.unwrap_err().to_string();
+        let error = result.unwrap_err();
+        assert_eq!(error.code(), "FAILED_PRECONDITION");
+        let message = error.to_string();
         assert!(message.contains(path), "{message}");
         assert!(message.contains("changed while uploading"), "{message}");
     }

@@ -1,5 +1,6 @@
 import { OpenVikingError } from "./errors.js";
-import { nodeUploadEntries, readNodeFilePart } from "./node-files.js";
+import { nodeUploadEntries, openNodeFile } from "./node-files.js";
+import type { NodeFileReader } from "./node-files.js";
 import type { OpenVikingTransport } from "./transport.js";
 
 /** Statuses meaning the server cannot take a chunked upload (no route or shared mode). */
@@ -40,19 +41,15 @@ function changedWhileUploading(entry: UploadEntry, cause?: unknown) {
   );
 }
 
-async function readDeclaredPart(
-  entry: UploadEntry,
-  offset: number,
-  length: number,
-): Promise<Uint8Array> {
-  let data: Uint8Array;
+/** A file removed after the listing changed; other open errors keep their cause. */
+async function openEntry(entry: UploadEntry): Promise<NodeFileReader> {
   try {
-    data = await readNodeFilePart(entry.localPath, offset, length);
+    return await openNodeFile(entry.localPath);
   } catch (error) {
-    throw changedWhileUploading(entry, error);
+    if ((error as { code?: unknown }).code === "ENOENT")
+      throw changedWhileUploading(entry, error);
+    throw error;
   }
-  if (data.length < length) throw changedWhileUploading(entry);
-  return data;
 }
 
 async function putPart(
@@ -83,25 +80,29 @@ async function sendFileParts(
   entry: UploadEntry,
   partSize: number,
 ): Promise<void> {
-  for (
-    let number = 1, offset = 0;
-    offset < entry.size;
-    number += 1, offset += partSize
-  ) {
-    const data = await readDeclaredPart(
-      entry,
-      offset,
-      Math.min(partSize, entry.size - offset),
-    );
-    await putPart(
-      transport,
-      `/api/v1/uploads/${uploadId}/files/${index}/parts/${number}`,
-      data,
-    );
+  // One handle for every part: a file replaced mid-upload cannot mix contents.
+  const file = await openEntry(entry);
+  try {
+    for (
+      let number = 1, offset = 0;
+      offset < entry.size;
+      number += 1, offset += partSize
+    ) {
+      const length = Math.min(partSize, entry.size - offset);
+      const data = await file.read(offset, length);
+      if (data.length < length) throw changedWhileUploading(entry);
+      await putPart(
+        transport,
+        `/api/v1/uploads/${uploadId}/files/${index}/parts/${number}`,
+        data,
+      );
+    }
+    // A byte past the declared size: the file grew after the listing.
+    if ((await file.read(entry.size, 1)).length > 0)
+      throw changedWhileUploading(entry);
+  } finally {
+    await file.close();
   }
-  // A byte past the declared size: the file grew after the listing.
-  if ((await readNodeFilePart(entry.localPath, entry.size, 1)).length > 0)
-    throw changedWhileUploading(entry);
 }
 
 /**
