@@ -258,7 +258,7 @@ RAGFS 主要快取三類物件。
 <service_name>:ov:cache:v2:subtree:<hash(scope)>  單一目錄 scope 的 generation
 ```
 
-`path` 的 envelope 會記錄 `path` 的物件版本，以及每個祖先 scope（含 `path` 本身）的 subtree generation。計數器以十進位整數儲存，因此 Provider 可以用原子 `INCRBY` 遞增。遺失的計數器（過期或被淘汰）會以隨機值通過 `SET NX` 重建，所有實例都會採用同一個值，舊 envelope 也不會意外匹配。
+`path` 的 envelope 會記錄 `path` 的物件版本，以及每個嚴格祖先 scope（不含 `path` 本身）的 subtree generation。不需要記錄 `subtree(path)`：每個會 bump 它的操作也會 bump `ver(path)`。計數器以十進位整數儲存，因此 Provider 可以用原子 `INCRBY` 遞增。遺失的計數器（過期或被淘汰）會以隨機值通過 `SET NX` 重建，所有實例都會採用同一個值，舊 envelope 也不會意外匹配。
 
 `remove_all` 和目錄 `rename` 可能讓 Provider 中殘留子孫 key。RAGFS 會 bump subtree generation，讓所有子孫 envelope 校驗失敗，後續真實讀取會回源並重建快取。
 

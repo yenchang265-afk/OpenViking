@@ -276,7 +276,8 @@ Two kinds of counters decide whether an envelope is still valid:
 ```
 
 An envelope for `path` records the object version of `path` and the subtree
-generation of every ancestor scope, including `path` itself. Counters are
+generation of every strict ancestor scope. It does not need `subtree(path)`
+itself: every operation that bumps it also bumps `ver(path)`. Counters are
 decimal integers, so the Provider can advance them with an atomic `INCRBY`.
 A missing counter (expired or evicted) is re-created from a random value with
 `SET NX`, so every instance adopts the same value and old envelopes never

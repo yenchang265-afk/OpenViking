@@ -3,6 +3,8 @@
 //! Ignored by default. Run with:
 //! `REDIS_URL=redis://127.0.0.1:6379 cargo test --features cache --test cache_latency -- --ignored --nocapture`
 //!
+//! Set `REDIS_CLUSTER_URLS` (comma-separated seeds) to also measure Cluster mode.
+//!
 //! It uses only the public API so the same file can be run on an older
 //! checkout to compare before/after numbers.
 
@@ -137,19 +139,43 @@ async fn measure_depth(config: &RedisProviderConfig, depth: usize) {
 }
 
 #[tokio::test]
-#[ignore = "needs REDIS_URL; prints latency numbers"]
+#[ignore = "needs REDIS_URL or REDIS_CLUSTER_URLS; prints latency numbers"]
 async fn cachefs_hit_and_miss_latency() {
-    let Ok(url) = std::env::var("REDIS_URL") else {
-        eprintln!("REDIS_URL not set; skipping");
-        return;
-    };
-    let config = RedisProviderConfig {
-        endpoints: vec![url],
+    let base = RedisProviderConfig {
         command_timeout_ms: 1_000,
         default_ttl_seconds: 60,
         ..RedisProviderConfig::default()
     };
-    for depth in [3, 8] {
-        measure_depth(&config, depth).await;
+    let standalone = std::env::var("REDIS_URL").ok().map(|url| {
+        (
+            "standalone",
+            RedisProviderConfig {
+                endpoints: vec![url],
+                ..base.clone()
+            },
+        )
+    });
+    // Comma-separated cluster seeds. Counters of one path sit in different
+    // slots, so this shows the cost of per-key reads in Cluster mode.
+    let cluster = std::env::var("REDIS_CLUSTER_URLS").ok().map(|urls| {
+        (
+            "cluster",
+            RedisProviderConfig {
+                mode: "cluster".to_string(),
+                endpoints: urls.split(',').map(|url| url.trim().to_string()).collect(),
+                ..base.clone()
+            },
+        )
+    });
+    let configs = standalone.into_iter().chain(cluster).collect::<Vec<_>>();
+    if configs.is_empty() {
+        eprintln!("REDIS_URL / REDIS_CLUSTER_URLS not set; skipping");
+        return;
+    }
+    for (mode, config) in configs {
+        eprintln!("== {mode}");
+        for depth in [3, 8] {
+            measure_depth(&config, depth).await;
+        }
     }
 }

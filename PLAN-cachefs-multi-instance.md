@@ -4,7 +4,7 @@ Status: **Implemented** 2026-10-29 on branch `worktree-cachefs-multi-instance-pl
 
 ## Implementation notes
 
-- **Open questions, as decided:** (1) explicit `multi_instance` flag, default off; (2) degrade on a failed bump (retry, metric, TTL bound), no strict mode; (3) no Redis Cluster hash tag. T13 had no Cluster numbers, so this stays open.
+- **Open questions, as decided:** (1) explicit `multi_instance` flag, default off; (2) degrade on a failed bump (retry, metric, TTL bound), no strict mode; (3) no Redis Cluster hash tag: the Cluster run below shows no regression against main, so a hot slot is not worth it yet.
 - **Test location:** the race, bump-table and stress tests live in-crate (`src/cache/multi_instance_tests.rs`, `src/cache/stress_tests.rs`) instead of `tests/`, because the harness needs `pub(crate)` items (`ArcFileSystem`, key helpers). The real-Redis variants (T11) are a `redis` submodule there, gated on `REDIS_URL` / `REDIS_CLUSTER_URLS`. `tests/common/gated_fs.rs` was not needed.
 - **R3** (concurrent write-through) needs the T8 flag, so its RED test landed with T8. It reproduced `v1` served while the backend held `v2`.
 - **R4 harness:** the provider's GET delay sleeps before reading, so it never overlaps two bumps. The test uses a SET delay instead.
@@ -23,7 +23,17 @@ Status: **Implemented** 2026-10-29 on branch `worktree-cachefs-multi-instance-pl
   | depth 8 miss+fill | 866–896 µs | 804–815 µs |
 
   The first cut, which still recorded `subtree(path)`, was about +10% on depth 8 hits.
-- **Not verified locally:** Redis Cluster mode (no multi-node cluster available) and T16.
+- **Redis Cluster (2026-10-31):** the T11 Redis tests pass against a local 3-master cluster (Redis 7, ports 7000–7002, `REDIS_CLUSTER_URLS`), with keys spread across all three nodes and counters stored as decimal text. `tests/cache_latency.rs` now also reads `REDIS_CLUSTER_URLS`. p50 in a debug build in a shared 4-vCPU container, so treat it as relative only:
+
+  | | main standalone | branch standalone | main cluster | branch cluster |
+  |---|---|---|---|---|
+  | depth 3 hit | 1167–1170 µs | 1173–1225 µs | 1914–2081 µs | 1834–2097 µs |
+  | depth 8 hit | 1238–1249 µs | 1212–1269 µs | 3275–3287 µs | 3113–3179 µs |
+  | depth 3 miss+fill | 1473–1591 µs | 1469–1623 µs | 2277–2962 µs | 2184–2521 µs |
+  | depth 8 miss+fill | 1538–1584 µs | 1537–1606 µs | 3607–3626 µs | 3501–3784 µs |
+
+  Ranges cover 2 alternating runs per side, with each side rebuilt before its run. The branch is within noise of main in both modes. In Cluster mode, both main and the branch read each ancestor's counter with its own GET, so depth 8 hits cost about 2.5× standalone. That overhead was already on main; this PR does not add it.
+- **Not verified:** T16 (needs a Docker daemon).
 Scope: `crates/ragfs/src/cache/*`, the CacheFS config path (Rust builder, `ragfs-python` binding, `openviking_cli` config), metrics, and the RAGFS cache guide.
 
 ## Problem
@@ -221,7 +231,7 @@ Each task is TDD: write the failing test first. Each touches ≤ 5 files.
 
 1. **Flag vs. always-on.** Recommend the explicit `multi_instance` flag (default off), so single-instance setups keep write-through fill and dynamic providers without `incrby` keep working.
 2. **Failed bump policy.** Recommend degrade (retry, metric, TTL bound) over strict fail-write for now. Is a TTL-bounded stale window on bump failure acceptable for production?
-3. **Redis Cluster hash tag** for `ver`/`subtree` keys: decide after T13.
+3. **Redis Cluster hash tag** for `ver`/`subtree` keys: not now. Cluster hits match main. Revisit if Cluster deployments need deep-path hit latency close to standalone.
 
 ## Delivery
 
