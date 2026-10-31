@@ -419,6 +419,17 @@ class OpenVikingConfig(BaseModel):
         )
         if uses_canonical_cache and self.cache is None:
             raise ValueError("top-level cache config is required when an AGFS backend uses cache")
+        if (
+            agfs.cachefs.multi_instance
+            and self.cache is not None
+            and self.cache.provider.strip() == "redis"
+            and int(self.cache.params.get("default_ttl_seconds", 3600)) == 0
+        ):
+            # The TTL bounds how long a failed counter bump can leave other
+            # instances serving stale CacheFS entries.
+            raise ValueError(
+                "storage.agfs.cachefs.multi_instance requires cache.params.default_ttl_seconds > 0"
+            )
         return self
 
     @model_validator(mode="after")

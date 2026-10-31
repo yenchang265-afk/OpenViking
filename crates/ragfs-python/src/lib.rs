@@ -300,6 +300,7 @@ struct RagfsCacheConfig {
     max_file_size_bytes: usize,
     traversal_mode: CacheTraversalMode,
     bypass_prefixes: Vec<String>,
+    multi_instance: bool,
     redis: RedisCacheConfig,
     dynamic: DynamicCacheConfig,
 }
@@ -349,6 +350,7 @@ impl Default for RagfsCacheConfig {
             max_file_size_bytes: CachePolicy::default().max_file_size(),
             traversal_mode: CacheTraversalMode::Backend,
             bypass_prefixes: Vec::new(),
+            multi_instance: false,
             redis: RedisCacheConfig::default(),
             dynamic: DynamicCacheConfig::default(),
         }
@@ -585,7 +587,11 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
         config.traversal_mode =
             traversal_mode(string_field(cachefs, "traversal_mode", "backend")?)?;
         config.bypass_prefixes = string_array_field(cachefs, "bypass_prefixes")?;
+        config.multi_instance = bool_field(cachefs, "multi_instance", false)?;
     }
+    // Reject multi_instance without CacheFS before the early return below; the
+    // TTL check runs again once the provider params are parsed.
+    validate_cachefs_multi_instance(&config)?;
 
     if !config.runtime_enabled {
         return Ok(config);
@@ -665,6 +671,7 @@ fn cache_config_from_value(
         usize_field(cache, "max_file_size_bytes", config.max_file_size_bytes)?;
     config.traversal_mode = traversal_mode(string_field(cache, "traversal_mode", "backend")?)?;
     config.bypass_prefixes = string_array_field(cache, "bypass_prefixes")?;
+    config.multi_instance = bool_field(cache, "multi_instance", false)?;
 
     if let Some(redis) = cache.get("redis") {
         let redis = redis
@@ -747,6 +754,7 @@ fn parse_redis_config(
 }
 
 fn validate_cache_runtime_config(config: &RagfsCacheConfig) -> Result<(), String> {
+    validate_cachefs_multi_instance(config)?;
     if !config.enabled && !config.runtime_enabled {
         return Ok(());
     }
@@ -754,6 +762,25 @@ fn validate_cache_runtime_config(config: &RagfsCacheConfig) -> Result<(), String
         && config.dynamic.library.trim().is_empty()
     {
         return Err("cache dynamic provider library must not be empty".to_string());
+    }
+    Ok(())
+}
+
+/// Multi-instance CacheFS needs CacheFS enabled and a TTL backstop.
+fn validate_cachefs_multi_instance(config: &RagfsCacheConfig) -> Result<(), String> {
+    if !config.multi_instance {
+        return Ok(());
+    }
+    if !config.enabled {
+        return Err("storage.agfs.cachefs.multi_instance requires backend=cache".to_string());
+    }
+    if config.provider == CacheProviderKind::Redis && config.redis.default_ttl_seconds == 0 {
+        // The TTL bounds how long a failed counter bump can leave other
+        // instances serving stale entries.
+        return Err(
+            "storage.agfs.cachefs.multi_instance requires cache.params.default_ttl_seconds > 0"
+                .to_string(),
+        );
     }
     Ok(())
 }
@@ -913,7 +940,9 @@ fn string_array_field_or_default(
 
 fn cache_policy_from_config(config: &RagfsCacheConfig) -> CachePolicy {
     config.bypass_prefixes.iter().fold(
-        CachePolicy::new(config.max_file_size_bytes).with_traversal_mode(config.traversal_mode),
+        CachePolicy::new(config.max_file_size_bytes)
+            .with_traversal_mode(config.traversal_mode)
+            .with_multi_instance(config.multi_instance),
         |policy, prefix| policy.with_bypass_prefix(prefix),
     )
 }
@@ -3665,6 +3694,86 @@ mod tests {
 
             assert!(error.contains(provider));
         }
+    }
+
+    /// Parse one ov.conf JSON document through the config-path entry point.
+    fn parse_cache_config(name: &str, json: &str) -> Result<RagfsCacheConfig, String> {
+        let path =
+            std::env::temp_dir().join(format!("openviking-{name}-{}.json", std::process::id()));
+        fs::write(&path, json).unwrap();
+        let result = cache_config_from_ov_conf(path.to_str().unwrap(), "test-service");
+        fs::remove_file(path).unwrap();
+        result
+    }
+
+    #[test]
+    fn cachefs_multi_instance_defaults_off_and_reaches_policy() {
+        let template = |cachefs: &str| {
+            format!(
+                r#"{{"service_name": "test-service",
+                    "cache": {{"provider": "redis", "params": {{}}}},
+                    "storage": {{"agfs": {{"cachefs": {cachefs}}}}}}}"#
+            )
+        };
+        let default = parse_cache_config(
+            "cachefs-multi-default",
+            &template(r#"{"backend": "cache"}"#),
+        )
+        .unwrap();
+        assert!(!default.multi_instance);
+        assert!(!cache_policy_from_config(&default).multi_instance());
+
+        let enabled = parse_cache_config(
+            "cachefs-multi-enabled",
+            &template(r#"{"backend": "cache", "multi_instance": true}"#),
+        )
+        .unwrap();
+        assert!(enabled.multi_instance);
+        assert!(cache_policy_from_config(&enabled).multi_instance());
+
+        let error = parse_cache_config(
+            "cachefs-multi-type",
+            &template(r#"{"backend": "cache", "multi_instance": "yes"}"#),
+        )
+        .unwrap_err();
+        assert!(error.contains("multi_instance"), "{error}");
+    }
+
+    #[test]
+    fn cachefs_multi_instance_requires_cache_backend_and_ttl() {
+        let error = parse_cache_config(
+            "cachefs-multi-local",
+            r#"{"service_name": "test-service",
+                "storage": {"agfs": {"cachefs": {"backend": "local", "multi_instance": true}}}}"#,
+        )
+        .unwrap_err();
+        assert!(error.contains("backend=cache"), "{error}");
+
+        let error = parse_cache_config(
+            "cachefs-multi-ttl",
+            r#"{"service_name": "test-service",
+                "cache": {"provider": "redis", "params": {"default_ttl_seconds": 0}},
+                "storage": {"agfs": {"cachefs": {"backend": "cache", "multi_instance": true}}}}"#,
+        )
+        .unwrap_err();
+        assert!(error.contains("default_ttl_seconds"), "{error}");
+    }
+
+    #[test]
+    fn runtime_cache_dict_carries_multi_instance() {
+        let config = cache_config_from_value(
+            &serde_json::json!({"enabled": true, "multi_instance": true}),
+            "test-service",
+        )
+        .unwrap();
+        assert!(cache_policy_from_config(&config).multi_instance());
+
+        let error = cache_config_from_value(
+            &serde_json::json!({"enabled": false, "multi_instance": true}),
+            "test-service",
+        )
+        .unwrap_err();
+        assert!(error.contains("backend=cache"), "{error}");
     }
 
     #[test]

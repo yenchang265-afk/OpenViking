@@ -29,6 +29,11 @@ path = "tests/redis_runtime.rs"
 required-features = ["cache"]
 
 [[test]]
+name = "cache_latency"
+path = "tests/cache_latency.rs"
+required-features = ["cache"]
+
+[[test]]
 name = "dynamic_provider"
 path = "tests/dynamic_provider.rs"
 required-features = ["cache"]
