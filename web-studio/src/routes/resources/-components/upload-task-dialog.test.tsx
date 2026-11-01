@@ -67,6 +67,46 @@ describe('UploadTaskDialog', () => {
     expect(onCancelTask).toHaveBeenCalledExactlyOnceWith('sending')
   })
 
+  it('tells queued, uploading and processing tasks apart', () => {
+    render(
+      <UploadTaskDialog
+        open
+        onOpenChange={vi.fn()}
+        tasks={[
+          task({ id: 'queued', status: 'pending', progress: 0 }),
+          task({
+            id: 'sending',
+            status: 'uploading',
+            progress: 42,
+            createdAt: 2,
+          }),
+          task({
+            id: 'starting',
+            status: 'uploading',
+            progress: null,
+            createdAt: 3,
+          }),
+          task({
+            id: 'importing',
+            status: 'processing',
+            progress: null,
+            createdAt: 4,
+          }),
+        ]}
+      />,
+    )
+
+    const statusOf = (name: string) =>
+      screen
+        .getByText(`${name}.md`)
+        .closest('[data-task-row]')
+        ?.querySelector('[data-task-status]')?.textContent
+    expect(statusOf('queued')).toBe('Queued')
+    expect(statusOf('sending')).toBe('Uploading 42%')
+    expect(statusOf('starting')).toBe('Uploading')
+    expect(statusOf('importing')).toBe('Processing')
+  })
+
   it('shows no cancel buttons without a cancel handler', () => {
     render(
       <UploadTaskDialog
