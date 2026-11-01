@@ -27,6 +27,7 @@ from openviking.utils.content_hash import content_md5
 from openviking_cli.exceptions import (
     InvalidArgumentError,
     NotFoundError,
+    OpenVikingError,
 )
 from openviking_cli.session.user_id import UserIdentifier
 from tests.test_task_tracker import _FakeAgfs
@@ -155,6 +156,50 @@ async def test_system_write_is_file_only_without_queue_work(
     assert _last_content_write_refresh(_coordinator_queue_for_unit_tests) == {"kind": "none"}
     _coordinator_queue_for_unit_tests.content_write.enqueue.assert_awaited_once()
     _coordinator_queue_for_unit_tests.semantic.enqueue.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("mode", "retry_safe"), [("replace", True), ("append", False)])
+async def test_write_reports_saved_content_when_root_enqueue_fails(
+    _coordinator_queue_for_unit_tests, mode, retry_safe
+):
+    root = "viking://system/memory/memory_templates/custom/demo"
+    uri = f"{root}/template.md"
+    vfs = _VFS(root, files={uri: "old-"} if mode == "append" else None)
+    coordinator = ContentWriteCoordinator(vfs)
+    ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role.ADMIN)
+    _coordinator_queue_for_unit_tests.content_write.enqueue.side_effect = RuntimeError(
+        "queue unavailable"
+    )
+
+    with pytest.raises(OpenVikingError) as exc_info:
+        await coordinator.write(uri=uri, content="template", ctx=ctx, mode=mode, wait=False)
+
+    error = exc_info.value
+    assert error.code == "CONTENT_INDEX_NOT_QUEUED"
+    assert error.details["uri"] == uri
+    assert error.details["content_committed"] is True
+    assert error.details["retry_safe"] is retry_safe
+    assert error.details["task_id"]
+    assert error.details["cause"] == "RuntimeError"
+    assert "queue unavailable" not in str(error)
+    assert vfs.files[uri].endswith("template")
+    assert vfs._async_agfs.releases == 1
+
+
+@pytest.mark.asyncio
+async def test_write_errors_before_commit_are_not_reported_as_saved(
+    _coordinator_queue_for_unit_tests,
+):
+    root = "viking://system/memory/memory_templates/custom/demo"
+    uri = f"{root}/template.md"
+    vfs = _VFS(root, fail_uri=uri)
+    coordinator = ContentWriteCoordinator(vfs)
+    ctx = RequestContext(user=UserIdentifier.the_default_user(), role=Role.ADMIN)
+
+    with pytest.raises(OSError, match="injected write failure"):
+        await coordinator.write(uri=uri, content="template", ctx=ctx, wait=False)
+    _coordinator_queue_for_unit_tests.content_write.enqueue.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -983,13 +1028,18 @@ async def test_batch_retries_after_root_enqueue_failure(
         "queue unavailable"
     )
 
-    with pytest.raises(RuntimeError, match="queue unavailable"):
+    with pytest.raises(OpenVikingError) as exc_info:
         await coordinator.batch_write(
             root_uri=root,
             operations=[{"uri": target, "content": "A", "mode": "upsert"}],
             ctx=ctx,
             wait=False,
         )
+    assert exc_info.value.code == "CONTENT_INDEX_NOT_QUEUED"
+    assert exc_info.value.details["content_committed"] is True
+    assert exc_info.value.details["retry_safe"] is True
+    assert isinstance(exc_info.value.__cause__, RuntimeError)
+    assert vfs.files[target] == "A"
 
     _coordinator_queue_for_unit_tests.content_write.enqueue.side_effect = None
     result = await coordinator.batch_write(

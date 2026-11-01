@@ -208,6 +208,45 @@ def _root_owns_failure(exc: BaseException) -> bool:
     return bool(getattr(exc, _ROOT_OWNS_FAILURE_ATTR, False))
 
 
+_COMMITTED_BEFORE_DISPATCH_ATTR = "_openviking_content_write_committed_before_dispatch"
+
+
+def _mark_committed_before_dispatch(exc: BaseException) -> None:
+    """Record that content was saved but its root refresh work was never queued."""
+    if not isinstance(exc, Exception):
+        return
+    try:
+        setattr(exc, _COMMITTED_BEFORE_DISPATCH_ATTR, True)
+    except Exception:
+        pass
+
+
+def _committed_before_dispatch(exc: BaseException) -> bool:
+    return bool(getattr(exc, _COMMITTED_BEFORE_DISPATCH_ATTR, False))
+
+
+def _index_not_queued_error(
+    exc: BaseException, *, uri: str, task_id: Optional[str], retry_safe: bool
+) -> OpenVikingError:
+    """Tell the caller the content landed even though the request as a whole failed.
+
+    Without this, a queue outage after the commit surfaced as a generic error, and a
+    client retrying an ``append`` wrote the content twice.
+    """
+    return OpenVikingError(
+        "Content was saved, but its indexing could not be queued. "
+        "Re-run the write (if retry_safe) or reindex the URI once the queue recovers.",
+        code="CONTENT_INDEX_NOT_QUEUED",
+        details={
+            "uri": uri,
+            "content_committed": True,
+            "retry_safe": retry_safe,
+            "task_id": task_id,
+            "cause": type(exc).__name__,
+        },
+    )
+
+
 def _failure_payload(exc: BaseException) -> Dict[str, Any]:
     payload: Dict[str, Any] = {
         "message": str(exc) or type(exc).__name__,
@@ -352,6 +391,10 @@ class ContentWriteCoordinator:
                 await self._fail_content_write_task(
                     task.task_id if task is not None else task_id, exc, ctx=ctx
                 )
+            if _committed_before_dispatch(exc):
+                raise _index_not_queued_error(
+                    exc, uri=uri, task_id=task_id, retry_safe=mode != "append"
+                ) from exc
             raise
         if task is None:
             raise RuntimeError("Content write completed without creating a root Task")
@@ -649,6 +692,13 @@ class ContentWriteCoordinator:
                         exc,
                         ctx=ctx,
                     )
+            if _committed_before_dispatch(exc):
+                raise _index_not_queued_error(
+                    exc,
+                    uri=root_uri,
+                    task_id=task_id,
+                    retry_safe=not any(op.get("mode") == "append" for op in operations),
+                ) from exc
             raise
         if task is None:
             raise RuntimeError("Content batch write completed without creating a root Task")
@@ -972,6 +1022,8 @@ class ContentWriteCoordinator:
                 except BaseException as exc:
                     if root_dispatched:
                         _mark_root_owns_failure(exc)
+                    else:
+                        _mark_committed_before_dispatch(exc)
                     raise
                 lock_settled = True
                 if write_error is not None:
@@ -2023,6 +2075,8 @@ class ContentWriteCoordinator:
                 except BaseException as exc:
                     if root_dispatched:
                         _mark_root_owns_failure(exc)
+                    else:
+                        _mark_committed_before_dispatch(exc)
                     raise
                 lock_settled = True
                 return result
@@ -2173,6 +2227,8 @@ class ContentWriteCoordinator:
                 except BaseException as exc:
                     if root_dispatched:
                         _mark_root_owns_failure(exc)
+                    else:
+                        _mark_committed_before_dispatch(exc)
                     raise
                 return result
             raise RuntimeError("Content write root Task was not created")
@@ -2334,6 +2390,8 @@ class ContentWriteCoordinator:
                 except BaseException as exc:
                     if root_dispatched:
                         _mark_root_owns_failure(exc)
+                    else:
+                        _mark_committed_before_dispatch(exc)
                     raise
                 return result
             raise RuntimeError("Content write root Task was not created")
@@ -2666,6 +2724,8 @@ class ContentWriteCoordinator:
                 except BaseException as exc:
                     if root_dispatched:
                         _mark_root_owns_failure(exc)
+                    else:
+                        _mark_committed_before_dispatch(exc)
                     raise
                 return result
             raise RuntimeError("Content write root Task was not created")
