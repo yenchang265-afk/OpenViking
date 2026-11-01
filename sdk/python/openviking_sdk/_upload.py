@@ -7,16 +7,25 @@ single-request ``/api/v1/resources/temp_upload``.
 
 from __future__ import annotations
 
+import asyncio
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
+import httpx
+
 from ._utils import _path_is_relative_to
+from .errors import FailedPreconditionError
 
 if TYPE_CHECKING:
     from openviking_sdk.client import AsyncHTTPClient
 
 # Older servers (no route), method not allowed, or sessions refused (shared upload mode).
 _SESSIONS_UNAVAILABLE = frozenset({404, 405, 409})
+
+# A part is re-sent after network errors, 5xx and these statuses, with doubling delays.
+_TRANSIENT_STATUSES = frozenset({408, 429})
+_PART_RETRIES = 3
+_PART_RETRY_BASE_DELAY = 0.5
 
 
 def list_upload_files(path: Path) -> List[Dict[str, Any]]:
@@ -72,7 +81,7 @@ async def upload_via_session(client: "AsyncHTTPClient", path: Path) -> Optional[
 
     try:
         for index, entry in enumerate(entries):
-            await _send_file_parts(client, upload_id, index, entry["local"], part_size)
+            await _send_file_parts(client, upload_id, index, entry, part_size)
         done = client._handle_response(
             await client._request("POST", f"/api/v1/uploads/{upload_id}/complete")
         )
@@ -85,18 +94,59 @@ async def upload_via_session(client: "AsyncHTTPClient", path: Path) -> Optional[
     return done["temp_file_id"]
 
 
-async def _send_file_parts(
-    client: "AsyncHTTPClient", upload_id: str, index: int, local: Path, part_size: int
-) -> None:
-    with open(local, "rb") as f:
-        number = 1
-        while part := f.read(part_size):
-            client._handle_response(
-                await client._request(
-                    "PUT",
-                    f"/api/v1/uploads/{upload_id}/files/{index}/parts/{number}",
-                    content=part,
-                    headers={"Content-Type": "application/octet-stream"},
-                )
+def _changed_while_uploading(entry: Dict[str, Any]) -> FailedPreconditionError:
+    """The file no longer has the size the session was created with."""
+    return FailedPreconditionError(
+        f"'{entry['path']}' changed while uploading (it was {entry['size']} bytes when the "
+        "upload started). Retry, or leave out files that are being written, such as .git "
+        "or logs.",
+        details={"path": entry["path"], "size": entry["size"]},
+    )
+
+
+def _is_transient_status(status_code: int) -> bool:
+    return status_code >= 500 or status_code in _TRANSIENT_STATUSES
+
+
+async def _put_part(client: "AsyncHTTPClient", url: str, part: bytes) -> None:
+    """PUT one part, re-sending it after network errors and transient statuses."""
+    for attempt in range(_PART_RETRIES + 1):
+        last_attempt = attempt == _PART_RETRIES
+        try:
+            response = await client._request(
+                "PUT", url, content=part, headers={"Content-Type": "application/octet-stream"}
             )
+        except httpx.TransportError:
+            if last_attempt:
+                raise
+        else:
+            if last_attempt or not _is_transient_status(response.status_code):
+                client._handle_response(response)
+                return
+        await asyncio.sleep(_PART_RETRY_BASE_DELAY * 2**attempt)
+
+
+async def _send_file_parts(
+    client: "AsyncHTTPClient", upload_id: str, index: int, entry: Dict[str, Any], part_size: int
+) -> None:
+    """Send exactly the ``entry["size"]`` bytes the session declared, as numbered parts."""
+    try:
+        f = open(entry["local"], "rb")
+    except FileNotFoundError:
+        raise _changed_while_uploading(entry) from None
+    with f:
+        remaining = entry["size"]
+        number = 1
+        while remaining > 0:
+            want = min(part_size, remaining)
+            part = f.read(want)
+            if len(part) < want:
+                raise _changed_while_uploading(entry)
+            await _put_part(
+                client, f"/api/v1/uploads/{upload_id}/files/{index}/parts/{number}", part
+            )
+            remaining -= want
             number += 1
+        if f.read(1):
+            # More bytes than declared: the file grew after the listing.
+            raise _changed_while_uploading(entry)

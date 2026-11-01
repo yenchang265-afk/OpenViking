@@ -302,7 +302,10 @@ const resources = {
       title: '檔案處理任務',
       empty: '暫無處理任務',
       toggleError: '展開或收起錯誤詳情',
+      cancel: '取消',
+      cancelAria: '取消上傳 {{name}}',
       errors: {
+        uploadCancelled: '上傳已取消',
         proxyTooLarge:
           '上傳請求過大（HTTP 413），已被伺服器前方的代理拒絕。請聯絡管理員調高代理的請求主體大小限制，例如 nginx 的 client_max_body_size。',
         tempUploadMissingId: '臨時上傳未返回檔案 ID。',
@@ -316,6 +319,9 @@ const resources = {
       },
       status: {
         cancelled: '已取消',
+        pending: '排隊中',
+        uploading: '上傳中',
+        uploadingProgress: '上傳中 {{progress}}%',
         processing: '處理中',
         success: '處理成功',
         failed: '處理失敗',

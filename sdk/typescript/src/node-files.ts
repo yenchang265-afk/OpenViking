@@ -164,30 +164,34 @@ export async function nodeUploadEntries(
   return { kind: "directory", name, entries };
 }
 
-/** Read `length` bytes at `offset` from a Node.js file (one upload part). */
-export async function readNodeFilePart(
-  localPath: string,
-  offset: number,
-  length: number,
-): Promise<Uint8Array> {
+/** An open Node.js file read in parts; one handle keeps every part from one file. */
+export interface NodeFileReader {
+  /** Read up to `length` bytes at `offset`; fewer only at end of file. */
+  read(offset: number, length: number): Promise<Uint8Array>;
+  close(): Promise<void>;
+}
+
+/** Open a Node.js file for reading upload parts. */
+export async function openNodeFile(localPath: string): Promise<NodeFileReader> {
   const handle = await (await nodeFs()).open(localPath, "r");
-  try {
-    const buffer = new Uint8Array(length);
-    let filled = 0;
-    while (filled < length) {
-      const { bytesRead } = await handle.read(
-        buffer,
-        filled,
-        length - filled,
-        offset + filled,
-      );
-      if (bytesRead === 0) break;
-      filled += bytesRead;
-    }
-    return filled === length ? buffer : buffer.subarray(0, filled);
-  } finally {
-    await handle.close();
-  }
+  return {
+    async read(offset: number, length: number) {
+      const buffer = new Uint8Array(length);
+      let filled = 0;
+      while (filled < length) {
+        const { bytesRead } = await handle.read(
+          buffer,
+          filled,
+          length - filled,
+          offset + filled,
+        );
+        if (bytesRead === 0) break;
+        filled += bytesRead;
+      }
+      return filled === length ? buffer : buffer.subarray(0, filled);
+    },
+    close: () => handle.close(),
+  };
 }
 
 /** Resolve the Python/Go-compatible local destination for an OVPack. */

@@ -15,10 +15,16 @@ from openviking_sdk.uploads import zip_directory
 class _SessionServer:
     """Mock upload-session API that records requests and assembles parts."""
 
-    def __init__(self, *, part_size=4, create_status=200, fail_part=None):
+    def __init__(
+        self, *, part_size=4, create_status=200, fail_part=None, fail_status=500, fail_times=None
+    ):
         self.part_size = part_size
         self.create_status = create_status
         self.fail_part = fail_part
+        self.fail_status = fail_status
+        # None: fail_part always fails; N: it fails its first N attempts.
+        self.fail_times = fail_times
+        self.part_attempts = {}
         self.requests = []
         self.files = []
         self.parts = {}
@@ -41,8 +47,13 @@ class _SessionServer:
             )
         if request.method == "PUT" and path.startswith("/api/v1/uploads/u1/files/"):
             _, index, _, number = path.rsplit("/", 3)
-            if self.fail_part == (int(index), int(number)):
-                return httpx.Response(500, json={"status": "error", "error": {"message": "boom"}})
+            key = (int(index), int(number))
+            attempt = self.part_attempts.get(key, 0)
+            self.part_attempts[key] = attempt + 1
+            if self.fail_part == key and (self.fail_times is None or attempt < self.fail_times):
+                return httpx.Response(
+                    self.fail_status, json={"status": "error", "error": {"message": "boom"}}
+                )
             self.parts[(int(index), int(number))] = request.content
             return httpx.Response(200, json={"status": "ok", "result": {}})
         if request.method == "POST" and path == "/api/v1/uploads/u1/complete":
@@ -130,7 +141,7 @@ async def test_shared_upload_mode_skips_sessions(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_failed_part_aborts_the_session(tmp_path):
+async def test_failed_part_aborts_the_session(tmp_path, no_retry_delay):
     server = _SessionServer(part_size=4, fail_part=(0, 2))
     client = _client_for(server)
     file_path = tmp_path / "f.bin"
@@ -141,6 +152,78 @@ async def test_failed_part_aborts_the_session(tmp_path):
 
     assert server.requests[-1] == ("DELETE", "/api/v1/uploads/u1")
     assert ("POST", "/api/v1/uploads/u1/complete") not in server.requests
+
+
+@pytest.fixture
+def no_retry_delay(monkeypatch):
+    monkeypatch.setattr("openviking_sdk._upload._PART_RETRY_BASE_DELAY", 0)
+
+
+@pytest.mark.asyncio
+async def test_transient_part_failure_is_retried(tmp_path, no_retry_delay):
+    server = _SessionServer(part_size=4, fail_part=(0, 2), fail_status=503, fail_times=2)
+    client = _client_for(server)
+    file_path = tmp_path / "f.bin"
+    file_path.write_bytes(b"0123456789")
+
+    assert await client._upload_path(file_path) == "session_u1"
+    assert server.part_attempts[(0, 2)] == 3
+    assert server.assembled(0) == b"0123456789"
+
+
+@pytest.mark.asyncio
+async def test_rejected_part_is_not_retried(tmp_path, no_retry_delay):
+    server = _SessionServer(part_size=4, fail_part=(0, 2), fail_status=400)
+    client = _client_for(server)
+    file_path = tmp_path / "f.bin"
+    file_path.write_bytes(b"0123456789")
+
+    with pytest.raises(OpenVikingError):
+        await client._upload_path(file_path)
+    assert server.part_attempts[(0, 2)] == 1
+    assert server.requests[-1] == ("DELETE", "/api/v1/uploads/u1")
+
+
+def _change_after_listing(monkeypatch, change):
+    from openviking_sdk import _upload
+
+    original = _upload.list_upload_files
+
+    def listing_then_change(path):
+        entries = original(path)
+        change(path)
+        return entries
+
+    monkeypatch.setattr(_upload, "list_upload_files", listing_then_change)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("label", "change", "changed_path"),
+    [
+        ("grows", lambda root: (root / "a.md").write_bytes(b"0123456789-more"), "a.md"),
+        ("shrinks", lambda root: (root / "sub" / "b.txt").write_bytes(b"x"), "sub/b.txt"),
+        ("is removed", lambda root: (root / "sub" / "b.txt").unlink(), "sub/b.txt"),
+    ],
+)
+async def test_file_changed_after_listing_fails_naming_it(
+    tmp_path, monkeypatch, label, change, changed_path
+):
+    server = _SessionServer(part_size=4)
+    client = _client_for(server)
+    folder = _make_folder(tmp_path)
+    _change_after_listing(monkeypatch, change)
+
+    with pytest.raises(OpenVikingError) as raised:
+        await client._upload_path(folder)
+
+    assert changed_path in str(raised.value), label
+    assert "changed while uploading" in str(raised.value), label
+    assert raised.value.code == "FAILED_PRECONDITION"
+    assert server.requests[-1] == ("DELETE", "/api/v1/uploads/u1")
+    # Never more than the declared bytes are offered for a file.
+    for index, entry in enumerate(server.files):
+        assert len(server.assembled(index)) <= entry["size"]
 
 
 @pytest.fixture
