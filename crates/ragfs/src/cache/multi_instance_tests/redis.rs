@@ -1,6 +1,8 @@
 //! Real-Redis variants: every instance opens its own connection, like separate
-//! OpenViking processes. Set `REDIS_URL` (standalone) and/or
-//! `REDIS_CLUSTER_URLS` (comma-separated cluster seeds) to run them.
+//! OpenViking processes. Set `REDIS_URL` (standalone),
+//! `REDIS_CLUSTER_URLS` (comma-separated cluster seeds), and/or
+//! `REDIS_SENTINEL_TEST_URLS` plus `REDIS_SENTINEL_TEST_MASTER`
+//! (comma-separated Sentinels and the monitored master name) to run them.
 
 use super::*;
 use crate::cache_runtime::RedisProviderConfig;
@@ -25,7 +27,23 @@ fn configs() -> Vec<RedisProviderConfig> {
             endpoints: urls.split(',').map(|url| url.trim().to_string()).collect(),
             ..base.clone()
         });
-    standalone.into_iter().chain(cluster).collect()
+    let sentinel = match (
+        std::env::var("REDIS_SENTINEL_TEST_URLS"),
+        std::env::var("REDIS_SENTINEL_TEST_MASTER"),
+    ) {
+        (Ok(urls), Ok(master)) => Some(RedisProviderConfig {
+            mode: "sentinel".to_string(),
+            endpoints: urls.split(',').map(|url| url.trim().to_string()).collect(),
+            master_name: Some(master),
+            ..base.clone()
+        }),
+        _ => None,
+    };
+    standalone
+        .into_iter()
+        .chain(cluster)
+        .chain(sentinel)
+        .collect()
 }
 
 /// Unique namespace per test and run, so reruns never see old keys.
