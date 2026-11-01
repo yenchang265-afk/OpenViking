@@ -24,6 +24,18 @@ To access the OpenViking API:
   echo "Visit http://127.0.0.1:{{ .Values.service.port }}/health to verify the server is running."
 {{- end }}
 
+{{- if .Values.multiInstance.enabled }}
+
+Multi-instance mode: {{ .Values.replicaCount }} API replica(s) share the configured
+Redis, S3 and vector store; each pod has its own emptyDir workspace.
+{{- if .Values.multiInstance.scheduler.enabled }}
+The watch scheduler runs in {{ include "openviking.fullname" . }}-scheduler (1 replica, no Service traffic).
+{{- else }}
+The watch scheduler is off on every pod (multiInstance.scheduler.enabled=false).
+{{- end }}
+Make sure the Task store tables from openviking/service/sql/task_store_init.sql exist.
+{{- end }}
+
 IMPORTANT: Make sure to configure your embedding and VLM API keys in values.yaml
 or via extraEnv before using OpenViking. The server will not function correctly
 without valid model provider credentials.

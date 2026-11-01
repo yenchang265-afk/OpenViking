@@ -1,0 +1,21 @@
+{{- if and .Values.multiInstance.enabled .Values.multiInstance.scheduler.enabled }}
+# Runs the watch scheduler exactly once for the release. Its pods carry their own
+# app name, so neither the API Deployment nor the Service selects them, and the
+# Recreate strategy never runs two schedulers at the same time.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ printf "%s-scheduler" (include "openviking.fullname" .) | trunc 63 | trimSuffix "-" }}
+  labels:
+    {{- include "openviking.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "openviking.schedulerSelectorLabels" . | nindent 6 }}
+  strategy:
+    type: Recreate
+  template:
+    {{- include "openviking.podTemplate" (dict "root" . "scheduler" true) | trim | nindent 4 }}
+{{- end }}

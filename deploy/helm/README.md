@@ -6,7 +6,8 @@ Deploy OpenViking on Kubernetes using Helm.
 
 - Kubernetes 1.24+
 - Helm 3.x
-- A storage class that supports `ReadWriteOnce` persistent volumes (for RocksDB data)
+- A storage class that supports `ReadWriteOnce` persistent volumes (single replica only;
+  see [Multiple replicas](#multiple-replicas) for shared backends)
 
 ## Installation
 
@@ -139,6 +140,67 @@ OpenViking expands environment variables inside `ov.conf` at startup, so the
 ConfigMap can contain placeholders while the actual secrets stay in Kubernetes
 Secrets.
 
+### Multiple replicas
+
+By default the chart runs one pod with a `ReadWriteOnce` volume. To run several API
+replicas, keep no state in the pods and set `multiInstance.enabled: true`. Every replica
+then needs the same shared backends:
+
+| State | Setting | Why |
+|---|---|---|
+| Files | `config.storage.agfs.backend: s3` (optionally `tiered` to MySQL/MariaDB) | Local AGFS would give each pod its own files |
+| Vectors | `config.storage.vectordb.backend: elasticsearch`, `http` or `opengauss` | The embedded `local`/`cuvs` store locks the workspace to one process |
+| Locks, queue, file cache | `config.cache.provider: redis`, `pathlock.provider: cache` (and usually `queuefs.backend: cache`, `cachefs.backend: cache`) | Pods coordinate through Redis |
+| Tasks | `config.storage.task_store.provider: mysql` | The file Task store counts open work in process memory; a Task whose work another pod finishes would wait forever |
+
+`helm install` fails with an explanation when one of these is missing, or when
+`replicaCount > 1` without `multiInstance.enabled`. The gateway, OAuth and the bot keep
+their state in the pod's workspace, so they are refused in this mode.
+
+In multi-instance mode the chart:
+
+- gives each pod an `emptyDir` workspace (`multiInstance.workspaceSizeLimit`) instead of
+  the PVC, and sets `OV_INSTANCE_ID` to the pod name;
+- sets `storage.agfs.cachefs.multi_instance: true` (when CacheFS uses the cache),
+  `server.temp_upload.default_mode: shared`, and, with the default `file` account store,
+  `server.api_key_watch_enabled: true` with a 10 s poll so users and keys created on one
+  pod reach the others. Values you set explicitly in `config` win;
+- runs the watch scheduler in a separate single-replica `<release>-scheduler` Deployment
+  (`Recreate`, no Service traffic) and turns it off on the API replicas, so each due watch
+  runs once. Disable it with `multiInstance.scheduler.enabled: false` if you do not use
+  watches;
+- rolls out API replicas with `RollingUpdate` (`maxSurge: 1`, `maxUnavailable: 0`).
+  Override with `strategy`. Use `Recreate` for a release that changes the CacheFS format,
+  because old and new versions must not share a cache namespace.
+
+Before the first install, create the Task store tables from
+`openviking/service/sql/task_store_init.sql`. Keep secrets out of the ConfigMap: put every
+`${VAR}` the config references in one Secret and load it with `envFrom`.
+[`values-multi-instance.yaml`](openviking/values-multi-instance.yaml) is a complete example:
+
+```bash
+kubectl create secret generic openviking-secrets \
+  --from-literal=OPENVIKING_ROOT_API_KEY="$(openssl rand -base64 32)" \
+  --from-literal=REDIS_PASSWORD=... \
+  --from-literal=S3_ACCESS_KEY=... --from-literal=S3_SECRET_KEY=... \
+  --from-literal=MARIADB_PASSWORD=... \
+  --from-literal=RAGFS_TIERED_DSN="mysql://openviking:<MARIADB_PASSWORD>@mariadb:3306/openviking" \
+  --from-literal=OPENAI_API_KEY=...
+helm install openviking ./deploy/helm/openviking \
+  -f deploy/helm/openviking/values-multi-instance.yaml
+```
+
+Probes stay as they are: liveness on `/health`, readiness on `/ready`. `/ready` returns 503
+while the cache provider is unreachable, which takes a pod out of the Service without
+restarting it. Do not point liveness at `/ready`, or a Redis outage restarts every pod at
+once. Set `OPENVIKING_PUBLIC_BASE_URL` (or `config.server.public_base_url`) to the address
+clients use, because MCP upload and download links are built from it.
+
+Sizing: each pod opens up to 16 MySQL connections for the tiered store plus the Task store
+pool, so check the database's `max_connections` against the replica count. Each pod also
+runs its own queue workers against the embedding and VLM providers; lower
+`config.queue_workers` if a self-hosted model server cannot keep up.
+
 ### OpenViking Gateway
 
 Set `gateway.enabled: true` to run [OpenViking Gateway](https://docs.openviking.ai/en/guides/15-gateway)
@@ -200,7 +262,7 @@ kubectl create secret generic openviking-gateway \
   --from-literal=management-key="$(openssl rand -base64 32)"
 ```
 
-Keep `replicaCount: 1`: the gateway's SQLite databases serve one pod only. The default
+Keep `replicaCount: 1` (and `multiInstance.enabled: false`): the gateway's SQLite databases serve one pod only. The default
 local vectordb also locks the workspace to a single worker, so raise the server's `workers`
 setting only after switching to a remote vectordb backend such as VikingDB.
 
@@ -230,7 +292,15 @@ For deployment, Studio management, backups and troubleshooting, see
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `replicaCount` | Number of replicas | `1` |
+| `replicaCount` | Number of API replicas; more than 1 requires `multiInstance.enabled` | `1` |
+| `multiInstance.enabled` | Run several replicas against shared backends (see [Multiple replicas](#multiple-replicas)) | `false` |
+| `multiInstance.workspaceSizeLimit` | `emptyDir` size limit for each pod's workspace | `""` |
+| `multiInstance.scheduler.enabled` | Run the watch scheduler in a separate single-replica Deployment | `true` |
+| `multiInstance.scheduler.resources` | Resources for the scheduler pod (defaults to `resources`) | `{}` |
+| `strategy` | Deployment strategy; empty = `Recreate`, or `RollingUpdate` in multi-instance mode | `{}` |
+| `envFrom` | Extra environment sources, e.g. a Secret holding every `${VAR}` in `config` | `[]` |
+| `podDisruptionBudget.enabled` | Create a PodDisruptionBudget for the API pods | `false` |
+| `podDisruptionBudget.minAvailable` | Minimum available API pods | `1` |
 | `image.repository` | Container image repository | `ghcr.io/volcengine/openviking` |
 | `image.tag` | Container image tag (`latest`, `main`, pinned release, or empty for `latest`) | `latest` |
 | `image.pullPolicy` | Image pull policy | `Always` |
@@ -259,8 +329,9 @@ For deployment, Studio management, backups and troubleshooting, see
 helm upgrade openviking ./deploy/helm/openviking -f my-values.yaml
 ```
 
-The deployment uses a `Recreate` strategy to avoid data corruption from
-multiple pods accessing the same RocksDB volume simultaneously.
+A single-replica deployment uses a `Recreate` strategy so two pods never open the same
+embedded vector store volume at once. Multi-instance deployments roll out with
+`RollingUpdate`; see [Multiple replicas](#multiple-replicas).
 
 ## Uninstalling
 

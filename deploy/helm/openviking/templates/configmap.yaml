@@ -6,6 +6,33 @@
 {{- if empty $config.storage.workspace }}
 {{- $_ := set $config.storage "workspace" (printf "%s/openviking_workspace" (trimSuffix "/" .Values.persistence.mountPath)) }}
 {{- end }}
+{{- if .Values.multiInstance.enabled }}
+{{- /* Defaults every replica needs; explicit values in config win. */}}
+{{- $agfs := $config.storage.agfs | default dict }}
+{{- $cachefs := $agfs.cachefs | default dict }}
+{{- if and (eq ($cachefs.backend | default "local") "cache") (not (hasKey $cachefs "multi_instance")) }}
+{{- $_ := set $cachefs "multi_instance" true }}
+{{- $_ := set $agfs "cachefs" $cachefs }}
+{{- end }}
+{{- $server := $config.server | default dict }}
+{{- $tempUpload := $server.temp_upload | default dict }}
+{{- if not (hasKey $tempUpload "default_mode") }}
+{{- $_ := set $tempUpload "default_mode" "shared" }}
+{{- $_ := set $server "temp_upload" $tempUpload }}
+{{- end }}
+{{- $accountStore := ($server.account_store | default dict).provider | default "file" }}
+{{- if and (eq $accountStore "file") (not (hasKey $server "api_key_watch_enabled")) }}
+{{- $_ := set $server "api_key_watch_enabled" true }}
+{{- if not (hasKey $server "api_key_watch_interval_seconds") }}
+{{- $_ := set $server "api_key_watch_interval_seconds" 10 }}
+{{- end }}
+{{- end }}
+{{- $_ := set $config "server" $server }}
+{{- /* Set per Deployment: "true" on the scheduler, "false" on API replicas. */}}
+{{- if not (hasKey $config "enable_watch_scheduler") }}
+{{- $_ := set $config "enable_watch_scheduler" "${OV_ENABLE_WATCH_SCHEDULER}" }}
+{{- end }}
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

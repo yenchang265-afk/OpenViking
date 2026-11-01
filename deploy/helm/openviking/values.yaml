@@ -1,6 +1,27 @@
 # Default values for openviking.
 
+# More than one replica requires multiInstance.enabled and shared backends.
 replicaCount: 1
+
+# Run several API replicas against shared backends: a Redis cache provider,
+# S3 (optionally tiered to MySQL/MariaDB), a remote vector store, and the MySQL
+# Task store. See "Multiple replicas" in deploy/helm/README.md and
+# values-multi-instance.yaml for a complete example.
+multiInstance:
+  enabled: false
+  # Each pod gets an emptyDir workspace for temp files and its own usage audit.
+  # Optional size limit, e.g. "10Gi".
+  workspaceSizeLimit: ""
+  scheduler:
+    # Extra single-replica Deployment that runs the watch scheduler. It receives
+    # no Service traffic, and API replicas run with the scheduler off, so each
+    # due watch runs once. Disable if you do not use watches.
+    enabled: true
+    resources: {}
+
+# Deployment update strategy. Empty uses Recreate for a single replica and
+# RollingUpdate (maxSurge 1, maxUnavailable 0) in multiInstance mode.
+strategy: {}
 
 # Gateway runs inside the server under /gateway on the same port and uses the server's encryption settings.
 gateway:
@@ -72,6 +93,7 @@ resources:
     cpu: 500m
     memory: 1Gi
 
+# Ignored in multiInstance mode, where each pod uses an emptyDir workspace.
 persistence:
   enabled: true
   # Storage class for the PVC. Leave empty for the default storage class.
@@ -142,6 +164,16 @@ extraEnv: []
   #     secretKeyRef:
   #       name: my-secret
   #       key: root-api-key
+
+# Extra environment sources, e.g. one Secret holding every ${VAR} in config.
+envFrom: []
+  # - secretRef:
+  #     name: openviking-secrets
+
+# PodDisruptionBudget for the API pods. Useful with several replicas.
+podDisruptionBudget:
+  enabled: false
+  minAvailable: 1
 
 # Liveness and readiness probes.
 livenessProbe:
