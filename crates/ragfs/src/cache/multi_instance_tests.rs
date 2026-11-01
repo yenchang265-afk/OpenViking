@@ -664,6 +664,7 @@ async fn bump_retries_do_not_block_other_operations() {
 }
 
 /// Real-Redis variants: every instance opens its own connection, like separate
-/// OpenViking processes. Set `REDIS_URL` (standalone) and/or
-/// `REDIS_CLUSTER_URLS` (comma-separated cluster seeds) to run them.
+/// OpenViking processes. Set `REDIS_URL` (standalone), `REDIS_CLUSTER_URLS`
+/// (comma-separated cluster seeds), and/or `REDIS_SENTINEL_TEST_URLS` plus
+/// `REDIS_SENTINEL_TEST_MASTER` to run them.
 mod redis;

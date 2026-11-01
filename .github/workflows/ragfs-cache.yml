@@ -2,7 +2,8 @@ name: RAGFS Cache Tests
 
 # CacheFS and the cache runtime only compile with the `cache` feature, so no
 # other workflow runs their tests. A Redis service lets the real-Redis race
-# and runtime tests run instead of skipping on a missing REDIS_URL.
+# and runtime tests run instead of skipping on a missing REDIS_URL. A Redis
+# primary plus Sentinel runs the same tests again through Sentinel discovery.
 
 on:
   push:
@@ -45,9 +46,29 @@ jobs:
           --health-retries 10
     env:
       REDIS_URL: redis://127.0.0.1:6379
+      REDIS_SENTINEL_TEST_URLS: redis://127.0.0.1:26379
+      REDIS_SENTINEL_TEST_MASTER: ragfs
       CARGO_TERM_COLOR: always
     steps:
       - uses: actions/checkout@v6
+
+      # Sentinel reports the master address it monitors. Sharing the primary's
+      # network namespace makes that 127.0.0.1:6380, which the runner reaches
+      # through the published port.
+      - name: Start Redis Sentinel
+        run: |
+          docker run -d --name redis-primary -p 6380:6380 -p 26379:26379 \
+            redis:7.4-alpine redis-server --port 6380 --save '' --appendonly no
+          docker run -d --name redis-sentinel --network container:redis-primary \
+            redis:7.4-alpine sh -c 'printf "port 26379\nsentinel monitor ragfs 127.0.0.1 6380 1\n" > /tmp/sentinel.conf && exec redis-server /tmp/sentinel.conf --sentinel'
+          for _ in $(seq 1 30); do
+            if docker exec redis-sentinel redis-cli -p 26379 sentinel get-master-addr-by-name ragfs | grep -q 6380; then
+              exit 0
+            fi
+            sleep 1
+          done
+          docker logs redis-sentinel
+          exit 1
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@v1
