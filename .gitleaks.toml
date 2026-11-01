@@ -1,0 +1,38 @@
+# gitleaks config for the Security Gate secret scan.
+#
+# Keeps every default rule. The allowlist matches the exact values gitleaks
+# flags in docs, examples and tests, never whole paths, so a real key added
+# to the same files still fails the scan. (A `paths` allowlist skips the
+# file before scanning, even with condition = "AND".)
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Placeholders, test fixtures and code mistaken for keys"
+regexes = [
+  # Doc and example placeholders
+  '''^your-[a-z-]+$''',
+  '''^(YOUR_ROOT_API_KEY|ADMIN_API_KEY)$''',
+  '''^my-strong-secret-key-2024$''',
+  # Values the docs truncate, such as "abcdef1234567890..."
+  '''\.\.\.$''',
+
+  # Test fixtures
+  '''^(AKIA|ASIA)ABCDEFGHIJKLMNOP$''',
+  '''^sk_(live_)?ABCDEF(GHIJ)?$''',
+  '''^sk-proj-12345678901234567890_api_key$''',
+  '''^user:\{BODY\}$''',
+  '''^(invalid-key-12345|INVALID_KEY_XYZ_123)$''',
+  '''^(env-key-1234567890|key-0123456789abcdef)$''',
+  '''^test-root-key-for-(vault-)?encryption-tests-abcdef123456$''',
+  # Repetition, not the literal, so semgrep's Mailgun rule skips this line
+  '''^test-root-key-(abcdef1234567890){2}$''',
+  '''^root-test-1234567890abcd$''',
+  '''^test-submission-123$''',
+
+  # Code the generic-api-key rule mistakes for keys
+  '''^[a-z_]+=(True|False|[0-9]+)$''',
+  '''^approx_chars_div_4$''',
+  '''^(git/)?acct1/refs/heads/main$''',
+]
