@@ -12,6 +12,8 @@ OpenClaw 完整評估流程指令碼
   ./run_full_eval.sh --sample 0           # 只處理第 0 個 sample
   ./run_full_eval.sh --sample 1 --with-claw-import  # 只處理第 1 個 sample，同時匯入 OpenClaw
   ./run_full_eval.sh --force-ingest       # 強制重新匯入所有資料
+
+需要環境變數 OPENCLAW_GATEWAY_TOKEN（OpenClaw gateway token）。
 '
 
 # 基於指令碼所在目錄計算資料檔案路徑
@@ -19,7 +21,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 INPUT_FILE="$SCRIPT_DIR/../data/locomo10.json"
 RESULT_DIR="$SCRIPT_DIR/result"
 OUTPUT_CSV="$RESULT_DIR/qa_results.csv"
-GATEWAY_TOKEN="90f2d2dc2f7b4d50cb943d3d3345e667bb3e9bcb7ec3a1fb"
+GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:?set OPENCLAW_GATEWAY_TOKEN to the OpenClaw gateway token}"
 
 
 # 解析引數
