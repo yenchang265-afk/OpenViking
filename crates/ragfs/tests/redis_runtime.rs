@@ -44,10 +44,10 @@ fn docker(args: &[&str]) {
 
 /// A Redis restart must not leave the client stuck. Set `REDIS_RESTART_CONTAINER`
 /// to the name of the Docker container behind `REDIS_URL`; the test kills it,
-/// keeps issuing commands through the outage (as QueueFS pollers do), starts it
-/// again, and expects commands to succeed within the reconnect backoff bound.
-#[tokio::test]
-async fn redis_runtime_recovers_after_server_restart() {
+/// keeps `callers` tasks issuing commands through the outage (as QueueFS pollers
+/// and request handlers do), starts it again, and expects commands to succeed
+/// within the reconnect backoff bound.
+async fn assert_recovers_after_restart(test_name: &str, callers: usize) {
     let (Some(base), Ok(container)) = (config(), std::env::var("REDIS_RESTART_CONTAINER")) else {
         return;
     };
@@ -55,19 +55,35 @@ async fn redis_runtime_recovers_after_server_restart() {
         connect_timeout_ms: 1_000,
         ..base
     };
-    let runtime = CacheRuntime::redis(config).await.unwrap();
-    let probe = key("restart", "probe");
+    let runtime = std::sync::Arc::new(CacheRuntime::redis(config).await.unwrap());
+    let probe = key(test_name, "probe");
     runtime
         .set(&probe, Bytes::from_static(b"1"), SetOptions::default())
         .await
         .unwrap();
 
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let workers = (0..callers)
+        .map(|_| {
+            let (runtime, stop, probe) = (runtime.clone(), stop.clone(), probe.clone());
+            tokio::spawn(async move {
+                while !stop.load(std::sync::atomic::Ordering::Relaxed) {
+                    let _ = runtime.get(&probe).await;
+                    tokio::time::sleep(Duration::from_millis(20)).await;
+                }
+            })
+        })
+        .collect::<Vec<_>>();
+
+    tokio::time::sleep(Duration::from_millis(300)).await;
     docker(&["kill", &container]);
-    for _ in 0..5 {
-        assert!(runtime.get(&probe).await.is_err());
-        tokio::time::sleep(Duration::from_millis(500)).await;
-    }
+    tokio::time::sleep(Duration::from_secs(3)).await;
     docker(&["start", &container]);
+    tokio::time::sleep(Duration::from_secs(2)).await;
+    stop.store(true, std::sync::atomic::Ordering::Relaxed);
+    for worker in workers {
+        worker.await.unwrap();
+    }
 
     let deadline = tokio::time::Instant::now() + Duration::from_secs(45);
     let mut last_error = None;
@@ -81,7 +97,17 @@ async fn redis_runtime_recovers_after_server_restart() {
         }
         tokio::time::sleep(Duration::from_millis(500)).await;
     }
-    panic!("Redis client did not recover after restart: {last_error:?}");
+    panic!("Redis client did not recover after restart ({callers} callers): {last_error:?}");
+}
+
+#[tokio::test]
+async fn redis_runtime_recovers_after_server_restart() {
+    assert_recovers_after_restart("restart-idle", 1).await;
+}
+
+#[tokio::test]
+async fn redis_runtime_recovers_after_server_restart_under_load() {
+    assert_recovers_after_restart("restart-load", 64).await;
 }
 
 #[tokio::test]
