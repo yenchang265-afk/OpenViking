@@ -356,6 +356,8 @@ docker compose up -d
 
 MySQL Task store 與帳號 store 需要 `mysql` / `redis-mysql` extras，Docker 映像檔已內建。
 
+完整範例：多個容器請參考 `examples/docker-compose/ov.conf.multi-instance.example`；Kubernetes 請使用 Helm chart 的 `multiInstance` 模式搭配 `deploy/helm/openviking/values-multi-instance.yaml`（詳見 `deploy/helm/README.md`）。
+
 示例：
 
 ```json

@@ -81,6 +81,49 @@ docker run -d --name openviking --network openviking-net -p 1933:1933 \
   --env-file .env -v ~/.openviking:/app/.openviking openviking:local
 ```
 
+## Running several instances
+
+`ov.conf.multi-instance.example` runs several OpenViking containers against the same
+backends. On top of `ov.conf.example` it adds what each instance must share or keep
+apart:
+
+- `storage.task_store` on MySQL/MariaDB (`tiered` profile), so one instance can finish
+  work queued by another;
+- `storage.agfs.tiered` (small files and the path index in MariaDB);
+- `cachefs.multi_instance: true` and a 600 s cache TTL;
+- `server.api_key_watch_enabled`, so users and keys created on one instance reach the
+  others within 10 s;
+- `server.temp_upload.default_mode: shared`, so any instance can take an upload chunk;
+- a usage-audit SQLite file per instance (`${OV_INSTANCE_ID}`);
+- `enable_watch_scheduler` from `${OV_ENABLE_WATCH_SCHEDULER}`: `true` on exactly one
+  instance, or every instance re-imports every due watch.
+
+Add `MARIADB_PASSWORD` and `RAGFS_TIERED_DSN` to `.env`, start the `tiered` profile too,
+and create the Task store tables once:
+
+```bash
+docker compose exec -T mariadb sh -c 'mariadb -uopenviking -p"$MARIADB_PASSWORD" openviking' \
+  < openviking/service/sql/task_store_init.sql
+```
+
+Then give each container its own name, host port, `OV_INSTANCE_ID` and scheduler flag:
+
+```bash
+for i in a b; do
+  docker run -d --name "openviking-$i" --network openviking-net \
+    -p "$([ $i = a ] && echo 19331 || echo 19332):1933" --env-file .env \
+    -e OPENVIKING_CONFIG_FILE=/app/.openviking/ov.conf.multi-instance \
+    -e OV_INSTANCE_ID="$i" -e OV_ENABLE_WATCH_SCHEDULER="$([ $i = a ] && echo true || echo false)" \
+    -e OPENVIKING_WITH_BOT=0 -v ~/.openviking:/app/.openviking openviking:local
+done
+```
+
+with the example copied to `~/.openviking/ov.conf.multi-instance`. Put a load balancer
+in front, with readiness on `/ready`: it returns 503 while Redis is unreachable. The
+gateway, OAuth and vikingbot keep state in one instance's workspace, so leave them off.
+For Kubernetes, the Helm chart's `multiInstance` mode applies the same settings; see
+`deploy/helm/README.md`.
+
 ## Migrating an existing local install
 
 Switching `vectordb` from `local` to `elasticsearch` starts with an empty

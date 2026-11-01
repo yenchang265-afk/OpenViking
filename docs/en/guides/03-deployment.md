@@ -361,6 +361,8 @@ When the instances share one deployment (same `service_name`, Redis, object stor
 
 The MySQL Task and account stores need the `mysql` / `redis-mysql` extras, which the Docker image installs.
 
+Complete examples: `examples/docker-compose/ov.conf.multi-instance.example` for several containers, and the Helm chart's `multiInstance` mode with `deploy/helm/openviking/values-multi-instance.yaml` for Kubernetes (see `deploy/helm/README.md`).
+
 Example:
 
 ```json

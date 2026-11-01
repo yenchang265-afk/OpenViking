@@ -1,0 +1,107 @@
+{
+  "service_name": "openviking",
+  "server": {
+    "host": "0.0.0.0",
+    "port": 1933,
+    "root_api_key": "${OPENVIKING_ROOT_API_KEY}",
+    "cors_origins": ["*"],
+    "temp_upload": {
+      "default_mode": "shared"
+    },
+    "api_key_watch_enabled": true,
+    "api_key_watch_interval_seconds": 10,
+    "observability": {
+      "usage_audit": {
+        "sqlite_path": "/app/.openviking/data/_system/usage_audit/usage_audit-${OV_INSTANCE_ID}.sqlite3"
+      }
+    }
+  },
+  "enable_watch_scheduler": "${OV_ENABLE_WATCH_SCHEDULER}",
+  "cache": {
+    "provider": "redis",
+    "params": {
+      "mode": "standalone",
+      "endpoints": ["redis://redis:6379"],
+      "password_env": "REDIS_PASSWORD",
+      "db": 0,
+      "command_timeout_ms": 1000,
+      "default_ttl_seconds": 600
+    }
+  },
+  "storage": {
+    "workspace": "/app/.openviking/data",
+    "agfs": {
+      "backend": "s3",
+      "s3": {
+        "bucket": "openviking",
+        "endpoint": "http://seaweedfs:8333",
+        "region": "us-east-1",
+        "access_key": "${S3_ACCESS_KEY}",
+        "secret_key": "${S3_SECRET_KEY}",
+        "use_ssl": false,
+        "use_path_style": true,
+        "prefix": "ov/"
+      },
+      "tiered": {
+        "enabled": true,
+        "backend": "mysql",
+        "import_existing": false,
+        "mysql": {
+          "dsn_env": "RAGFS_TIERED_DSN"
+        }
+      },
+      "queuefs": {
+        "backend": "cache"
+      },
+      "pathlock": {
+        "provider": "cache"
+      },
+      "cachefs": {
+        "backend": "cache",
+        "max_file_size_bytes": 1048576,
+        "bypass_prefixes": ["/queue", "/tmp"],
+        "multi_instance": true
+      }
+    },
+    "vectordb": {
+      "name": "context",
+      "backend": "elasticsearch",
+      "elasticsearch": {
+        "hosts": ["http://elasticsearch:9200"],
+        "number_of_replicas": 0
+      }
+    },
+    "task_store": {
+      "provider": "mysql",
+      "params": {
+        "host": "mariadb",
+        "port": 3306,
+        "user": "openviking",
+        "password": "${MARIADB_PASSWORD}",
+        "database": "openviking",
+        "table": "ov_tasks"
+      }
+    }
+  },
+  "embedding": {
+    "dense": {
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_key": "${OPENAI_API_KEY}",
+      "api_base": "https://api.openai.com/v1",
+      "dimension": 1536
+    }
+  },
+  "vlm": {
+    "provider": "openai",
+    "model": "gpt-4o-mini",
+    "api_key": "${OPENAI_API_KEY}",
+    "api_base": "https://api.openai.com/v1",
+    "temperature": 0.0,
+    "max_retries": 2
+  },
+  "log": {
+    "level": "INFO",
+    "output": "stdout"
+  }
+}
