@@ -333,6 +333,9 @@ const resources = {
       },
       status: {
         cancelled: 'Cancelled',
+        pending: 'Queued',
+        uploading: 'Uploading',
+        uploadingProgress: 'Uploading {{progress}}%',
         processing: 'Processing',
         success: 'Processed',
         failed: 'Processing failed',

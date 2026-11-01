@@ -319,6 +319,9 @@ const resources = {
       },
       status: {
         cancelled: '已取消',
+        pending: '排隊中',
+        uploading: '上傳中',
+        uploadingProgress: '上傳中 {{progress}}%',
         processing: '處理中',
         success: '處理成功',
         failed: '處理失敗',
