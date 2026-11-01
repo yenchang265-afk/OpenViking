@@ -351,6 +351,16 @@ For multi-instance deployments, prefer these settings:
 - Use a remote vector backend for shared storage. The existing `storage.skip_process_lock` option only disables the embedded-backend startup guard; it does not add multi-process support to embedded vector storage.
 - For QueueFS, prefer an explicit per-instance local SQLite path via `storage.agfs.queuefs.db_path`. If usage audit is enabled, prefer an explicit per-instance local SQLite path via `server.observability.usage_audit.sqlite_path` instead of mixing these files into a shared workspace volume.
 
+When the instances share one deployment (same `service_name`, Redis, object store and vector store), also set:
+
+- `storage.task_store.provider: "mysql"` (provision `openviking/service/sql/task_store_init.sql` first). The default file Task store counts open Work in process memory, so a Task whose queued Work another instance finishes waits forever. Account creation, startup and content writes can hang.
+- A shared account registry: `server.api_key_watch_enabled: true` with the default `file` store (instances reload users and keys within `api_key_watch_interval_seconds`), or `server.account_store.provider` `mysql` / `redis_mysql`. Without either, a user or key created on one instance stays unknown to the others until they restart.
+- `storage.agfs.cachefs.multi_instance: true` on every instance when CacheFS uses the shared cache. See the [RAGFS cache guide](14-ragfs-cache.md).
+- `enable_watch_scheduler: true` on exactly one instance. Watch tasks are shared, but the scheduler only prevents overlapping runs inside one process, so every enabled instance would re-import every due watch.
+- Readiness checks against `/ready`, not `/health`. `/health` only reports that the process is alive; `/ready` also round-trips the cache provider used by PathLock and QueueFS and returns 503 while it is unreachable. Keep liveness on `/health`, or a cache outage restarts every instance at once.
+
+The MySQL Task and account stores need the `mysql` / `redis-mysql` extras, which the Docker image installs.
+
 Example:
 
 ```json

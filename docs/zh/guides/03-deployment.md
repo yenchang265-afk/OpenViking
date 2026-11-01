@@ -346,6 +346,16 @@ docker compose up -d
 - 共享儲存應使用遠端向量後端。保留的 `storage.skip_process_lock` 開關只關閉本地後端的啟動保護，不會使本地向量儲存支援多程序共享。
 - 對 QueueFS，建議通過 `storage.agfs.queuefs.db_path` 顯式指定例項本地的 SQLite 路徑。如果啟用了 usage audit，建議通過 `server.observability.usage_audit.sqlite_path` 顯式指定例項本地的 SQLite 路徑，不要預設和共享 workspace 卷混用。
 
+如果多個例項共用同一套部署（相同的 `service_name`、Redis、物件儲存與向量儲存），還要設定：
+
+- `storage.task_store.provider: "mysql"`（先用 `openviking/service/sql/task_store_init.sql` 建好資料表）。預設的 file Task store 把未完成的 Work 記在行程記憶體裡，若某個 Task 排進佇列的 Work 被其他例項做完，這個 Task 會永遠等下去，建立帳號、啟動和內容寫入都可能卡住。
+- 共享的帳號登錄表：預設 `file` store 搭配 `server.api_key_watch_enabled: true`（各例項會在 `api_key_watch_interval_seconds` 內重新載入使用者與金鑰），或改用 `server.account_store.provider` 為 `mysql` / `redis_mysql`。兩者都沒設時，在某個例項建立的使用者或金鑰，其他例項要重啟後才看得到。
+- CacheFS 使用共享快取時，每個例項都要設 `storage.agfs.cachefs.multi_instance: true`，詳見 [RAGFS 快取指南](14-ragfs-cache.md)。
+- 只在其中一個例項設 `enable_watch_scheduler: true`。Watch 任務是共享的，但排程器只在單一行程內防止重複執行，所以每個開啟的例項都會重新匯入每個到期的 watch。
+- readiness 檢查請用 `/ready`，不要用 `/health`。`/health` 只表示行程還活著；`/ready` 還會實際連一次 PathLock 與 QueueFS 使用的快取服務，連不上時回 503。liveness 請維持用 `/health`，否則快取一斷線，所有例項會同時被重啟。
+
+MySQL Task store 與帳號 store 需要 `mysql` / `redis-mysql` extras，Docker 映像檔已內建。
+
 示例：
 
 ```json
