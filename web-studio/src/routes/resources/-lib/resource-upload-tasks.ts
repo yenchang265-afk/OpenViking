@@ -30,6 +30,17 @@ export function isUploadStatusActive(
 }
 
 /**
+ * A local upload can be cancelled until its import request is sent; after that
+ * the server may already be processing it.
+ */
+export function isCancellableUpload(task: ResourceUploadTask): boolean {
+  return (
+    task.source === 'local' &&
+    (task.status === 'pending' || task.status === 'uploading')
+  )
+}
+
+/**
  * Fallback polling follows only server work this Studio started. Tasks from
  * other clients still show up through pushes and list refreshes, but a stuck
  * one can no longer keep polling alive forever.

@@ -316,7 +316,10 @@ const resources = {
       title: 'File Processing Tasks',
       empty: 'No processing tasks',
       toggleError: 'Toggle error details',
+      cancel: 'Cancel',
+      cancelAria: 'Cancel uploading {{name}}',
       errors: {
+        uploadCancelled: 'Upload cancelled',
         proxyTooLarge:
           "The upload was rejected by a proxy in front of the server because the request is too large (HTTP 413). Ask your administrator to raise the proxy's request body limit, for example client_max_body_size in nginx.",
         tempUploadMissingId: 'The temporary upload did not return a file ID.',
@@ -330,6 +333,9 @@ const resources = {
       },
       status: {
         cancelled: 'Cancelled',
+        pending: 'Queued',
+        uploading: 'Uploading',
+        uploadingProgress: 'Uploading {{progress}}%',
         processing: 'Processing',
         success: 'Processed',
         failed: 'Processing failed',

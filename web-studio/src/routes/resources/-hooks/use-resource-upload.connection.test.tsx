@@ -7,6 +7,7 @@ import type { AxiosAdapter, InternalAxiosRequestConfig } from 'axios'
 
 import { ovClient } from '#/lib/ov-client'
 import { client as sdkClient } from '#/gen/ov-client/client.gen'
+import { resetUploadScopeForTests } from '../-lib/upload-scope'
 import {
   ResourceUploadProvider,
   useResourceUpload,
@@ -111,6 +112,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  resetUploadScopeForTests()
   axios.defaults.adapter = originalGlobalAdapter
   ovClient.instance.defaults.adapter = originalClientAdapter
   sdkClient.setConfig({ adapter: originalSdkAdapter })
@@ -134,12 +136,9 @@ describe('ResourceUploadProvider connection ownership', () => {
     )
   })
 
-  it('stops the remaining local files when its workspace unmounts during temp upload', async () => {
-    const { requests, finishFirstUpload } =
-      recordUploadsWithFirstRequestPaused()
-    const view = renderHook(() => useResourceUpload(), {
-      wrapper: ResourceUploadProvider,
-    })
+  function enqueueTwoFiles(view: {
+    result: { current: ReturnType<typeof useResourceUpload> }
+  }) {
     act(() => {
       view.result.current.enqueueUploads({
         commonBody: {},
@@ -155,6 +154,69 @@ describe('ResourceUploadProvider connection ownership', () => {
         ],
       })
     })
+  }
+
+  it('keeps uploading the remaining local files after its workspace unmounts', async () => {
+    const { requests, finishFirstUpload } =
+      recordUploadsWithFirstRequestPaused()
+    const view = renderHook(() => useResourceUpload(), {
+      wrapper: ResourceUploadProvider,
+    })
+    enqueueTwoFiles(view)
+    await waitFor(() =>
+      expect(requests.filter((request) => request.fileName)).toHaveLength(1),
+    )
+
+    view.unmount()
+    expect(
+      requests.find((request) => request.fileName === 'first.txt')?.signal
+        ?.aborted,
+    ).toBe(false)
+    await act(async () => {
+      finishFirstUpload()
+    })
+    await waitFor(() =>
+      expect(
+        requests.filter((request) => request.path === '/api/v1/resources'),
+      ).toHaveLength(2),
+    )
+
+    const writes = requests.filter((request) =>
+      request.path?.startsWith('/api/v1/resources'),
+    )
+    expect(writes.map(({ fileName, path }) => ({ fileName, path }))).toEqual([
+      { fileName: 'first.txt', path: '/api/v1/resources/temp_upload' },
+      { fileName: null, path: '/api/v1/resources' },
+      { fileName: 'second.txt', path: '/api/v1/resources/temp_upload' },
+      { fileName: null, path: '/api/v1/resources' },
+    ])
+    for (const request of writes) {
+      expect(request).toMatchObject({
+        baseUrl: SOURCE_URL,
+        credential: 'fixture-alice-key',
+      })
+      expect(request.signal?.aborted).toBe(false)
+    }
+
+    // Coming back to the workspace shows the uploads the page started.
+    const returned = renderHook(() => useResourceUpload(), {
+      wrapper: ResourceUploadProvider,
+    })
+    expect(
+      returned.result.current.tasks.map((task) => [task.fileName, task.status]),
+    ).toEqual([
+      ['first.txt', 'success'],
+      ['second.txt', 'success'],
+    ])
+  })
+
+  it('stops the remaining local files when the connection changes after its workspace unmounts', async () => {
+    const { requests, finishFirstUpload } =
+      recordUploadsWithFirstRequestPaused()
+    const view = renderHook(() => useResourceUpload(), {
+      wrapper: ResourceUploadProvider,
+    })
+    enqueueTwoFiles(view)
     await waitFor(() =>
       expect(requests.filter((request) => request.fileName)).toHaveLength(1),
     )
@@ -166,14 +228,14 @@ describe('ResourceUploadProvider connection ownership', () => {
     })
 
     view.unmount()
-    expect(
-      requests.find((request) => request.fileName === 'first.txt')?.signal
-        ?.aborted,
-    ).toBe(true)
     selectWorkspace(TARGET_URL, 'bob')
     await act(async () => {
       finishFirstUpload()
     })
+    expect(
+      requests.find((request) => request.fileName === 'first.txt')?.signal
+        ?.aborted,
+    ).toBe(true)
 
     expect(
       requests.filter(

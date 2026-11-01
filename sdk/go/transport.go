@@ -88,8 +88,9 @@ func (c *Client) doJSONEnvelope(ctx context.Context, method, path string, query 
 	return c.doRequest(req, out)
 }
 
-// doRequest sends req and decodes the response envelope's result into out.
-func (c *Client) doRequest(req *http.Request, out any) error {
+// doRequest sends req, decodes the response envelope's result into out and returns
+// the envelope.
+func (c *Client) doRequest(req *http.Request, out any) (*responseEnvelope, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, err

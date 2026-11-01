@@ -1,14 +1,17 @@
 package openviking
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // uploadEntry is one file of a chunked upload: its path inside the upload, size and
@@ -132,24 +135,85 @@ func (c *Client) sendSessionParts(ctx context.Context, uploadID string, partSize
 	return done.TempFileID, nil
 }
 
+// partRetries is how many extra attempts a part gets after a transient failure;
+// partRetryBaseDelay is the first backoff, doubled per attempt.
+const partRetries = 3
+
+var partRetryBaseDelay = 500 * time.Millisecond
+
+// changedWhileUploading reports a file that no longer has the size the session was
+// created with: written, truncated or removed while the upload ran.
+func changedWhileUploading(entry uploadEntry) error {
+	return &Error{
+		Code: "FAILED_PRECONDITION",
+		Message: fmt.Sprintf("'%s' changed while uploading (it was %d bytes when the upload started). "+
+			"Retry, or leave out files that are being written, such as .git or logs.", entry.Path, entry.Size),
+		Details: map[string]any{"path": entry.Path, "size": entry.Size},
+	}
+}
+
+// isTransientPartError reports failures worth re-sending a part for: network errors
+// (including the client's own timeout) and 5xx, 408 and 429 responses. A cancelled
+// caller context and every other error are final. Cancellation is read from ctx, not
+// from err: an http.Client timeout also matches context.DeadlineExceeded.
+func isTransientPartError(ctx context.Context, err error) bool {
+	if ctx.Err() != nil {
+		return false
+	}
+	var apiErr *Error
+	if errors.As(err, &apiErr) {
+		status := apiErr.StatusCode
+		return status >= 500 || status == http.StatusRequestTimeout || status == http.StatusTooManyRequests
+	}
+	var urlErr *url.Error
+	return errors.As(err, &urlErr)
+}
+
+func (c *Client) putPart(ctx context.Context, path string, data []byte) error {
+	for attempt := 0; ; attempt++ {
+		req, err := c.newRequest(ctx, http.MethodPut, path, nil, bytes.NewReader(data))
+		if err != nil {
+			return err
+		}
+		req.ContentLength = int64(len(data))
+		req.Header.Set("Content-Type", "application/octet-stream")
+		_, err = c.doRequest(req, nil)
+		if err == nil || attempt >= partRetries || !isTransientPartError(ctx, err) {
+			return err
+		}
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(partRetryBaseDelay << attempt):
+		}
+	}
+}
+
+// sendFileParts sends exactly the entry.Size bytes the session declared, as parts.
 func (c *Client) sendFileParts(ctx context.Context, uploadID string, index int, entry uploadEntry, partSize int64) error {
 	file, err := os.Open(entry.Local)
+	if errors.Is(err, os.ErrNotExist) {
+		return changedWhileUploading(entry)
+	}
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 	for number, offset := 1, int64(0); offset < entry.Size; number, offset = number+1, offset+partSize {
-		length := min(partSize, entry.Size-offset)
+		data := make([]byte, min(partSize, entry.Size-offset))
+		if _, err := file.ReadAt(data, offset); errors.Is(err, io.EOF) {
+			return changedWhileUploading(entry)
+		} else if err != nil {
+			return err
+		}
 		path := fmt.Sprintf("/api/v1/uploads/%s/files/%d/parts/%d", uploadID, index, number)
-		req, err := c.newRequest(ctx, http.MethodPut, path, nil, io.NewSectionReader(file, offset, length))
-		if err != nil {
+		if err := c.putPart(ctx, path, data); err != nil {
 			return err
 		}
-		req.ContentLength = length
-		req.Header.Set("Content-Type", "application/octet-stream")
-		if err := c.doRequest(req, nil); err != nil {
-			return err
-		}
+	}
+	// A byte past the declared size: the file grew after the listing.
+	if n, _ := file.ReadAt(make([]byte, 1), entry.Size); n > 0 {
+		return changedWhileUploading(entry)
 	}
 	return nil
 }

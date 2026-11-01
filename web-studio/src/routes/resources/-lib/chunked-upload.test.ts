@@ -219,7 +219,42 @@ describe('uploadSession', () => {
     ).rejects.toThrow()
     expect(deleteMock).toHaveBeenCalledWith({ url: '/api/v1/uploads/u1' })
   })
+
+  it('does not wait for the server to discard a cancelled session', async () => {
+    mockCreateAndComplete(1)
+    const controller = new AbortController()
+    putMock.mockImplementation(async () => {
+      controller.abort()
+      throw new DOMException('Aborted', 'AbortError')
+    })
+    // A hung server never answers the DELETE either.
+    deleteMock.mockReturnValue(new Promise(() => undefined))
+
+    const outcome = await settleWithin(
+      uploadSession({
+        kind: 'file',
+        name: 'f.bin',
+        sources: [source('f.bin', 'abc')],
+        concurrency: 1,
+        signal: controller.signal,
+      }),
+    )
+
+    expect(outcome).toBe('rejected')
+    expect(deleteMock).toHaveBeenCalledWith({ url: '/api/v1/uploads/u1' })
+  })
 })
+
+/** 'resolved' | 'rejected', or 'pending' if the promise is still open after 200 ms. */
+async function settleWithin(promise: Promise<unknown>): Promise<string> {
+  return Promise.race([
+    promise.then(
+      () => 'resolved',
+      () => 'rejected',
+    ),
+    new Promise<string>((resolve) => setTimeout(() => resolve('pending'), 200)),
+  ])
+}
 
 describe('resumeUploadSession', () => {
   it('sends only the parts the server is missing', async () => {
@@ -246,5 +281,46 @@ describe('resumeUploadSession', () => {
     )
     expect(await blobText(putMock.mock.calls[0][0].body)).toBe('4567')
     expect(progress).toEqual([6, 10])
+  })
+
+  it('discards the session when cancelled while reading its status', async () => {
+    const controller = new AbortController()
+    getMock.mockImplementation(() => {
+      controller.abort()
+      return Promise.reject(new DOMException('Aborted', 'AbortError'))
+    })
+
+    await expect(
+      resumeUploadSession('u1', {
+        kind: 'file',
+        name: 'f.bin',
+        sources: [source('f.bin', '0123456789')],
+        signal: controller.signal,
+      }),
+    ).rejects.toThrow('Aborted')
+    expect(deleteMock).toHaveBeenCalledExactlyOnceWith({
+      url: '/api/v1/uploads/u1',
+    })
+  })
+
+  it('does not wait for the discard when cancelled while reading its status', async () => {
+    const controller = new AbortController()
+    getMock.mockImplementation(() => {
+      controller.abort()
+      return Promise.reject(new DOMException('Aborted', 'AbortError'))
+    })
+    deleteMock.mockReturnValue(new Promise(() => undefined))
+
+    const outcome = await settleWithin(
+      resumeUploadSession('u1', {
+        kind: 'file',
+        name: 'f.bin',
+        sources: [source('f.bin', '0123456789')],
+        signal: controller.signal,
+      }),
+    )
+
+    expect(outcome).toBe('rejected')
+    expect(deleteMock).toHaveBeenCalledOnce()
   })
 })

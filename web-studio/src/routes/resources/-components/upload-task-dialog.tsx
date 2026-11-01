@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -12,13 +13,21 @@ import {
 import { cn } from '#/lib/utils'
 import type { ResourceUploadTask } from '../-hooks/use-resource-upload'
 import { formatFileSize } from '../-lib/upload'
+import { isCancellableUpload } from '../-lib/resource-upload-tasks'
 
-function TaskStatusBadge({ status }: { status: ResourceUploadTask['status'] }) {
+function TaskStatusBadge({
+  status,
+  progress,
+}: Pick<ResourceUploadTask, 'status' | 'progress'>) {
   const { t } = useTranslation('resources')
 
   if (status === 'success') {
     return (
-      <Badge variant="secondary" className="bg-emerald-500/12 text-emerald-400">
+      <Badge
+        data-task-status
+        variant="secondary"
+        className="bg-emerald-500/12 text-emerald-400"
+      >
         {t('processingTasks.status.success')}
       </Badge>
     )
@@ -26,7 +35,11 @@ function TaskStatusBadge({ status }: { status: ResourceUploadTask['status'] }) {
 
   if (status === 'failed') {
     return (
-      <Badge variant="secondary" className="bg-rose-500/12 text-destructive">
+      <Badge
+        data-task-status
+        variant="secondary"
+        className="bg-rose-500/12 text-destructive"
+      >
         {t('processingTasks.status.failed')}
       </Badge>
     )
@@ -34,14 +47,50 @@ function TaskStatusBadge({ status }: { status: ResourceUploadTask['status'] }) {
 
   if (status === 'cancelled') {
     return (
-      <Badge variant="secondary" className="text-muted-foreground">
+      <Badge
+        data-task-status
+        variant="secondary"
+        className="text-muted-foreground"
+      >
         {t('processingTasks.status.cancelled')}
       </Badge>
     )
   }
 
+  // Waiting for earlier files in the queue; nothing sent yet.
+  if (status === 'pending') {
+    return (
+      <Badge
+        data-task-status
+        variant="secondary"
+        className="text-muted-foreground"
+      >
+        {t('processingTasks.status.pending')}
+      </Badge>
+    )
+  }
+
+  // Sending data from this tab; the import has not started yet.
+  if (status === 'uploading') {
+    return (
+      <Badge
+        data-task-status
+        variant="secondary"
+        className="bg-sky-500/12 text-sky-400 tabular-nums"
+      >
+        {typeof progress === 'number'
+          ? t('processingTasks.status.uploadingProgress', { progress })
+          : t('processingTasks.status.uploading')}
+      </Badge>
+    )
+  }
+
   return (
-    <Badge variant="secondary" className="bg-amber-500/12 text-amber-300">
+    <Badge
+      data-task-status
+      variant="secondary"
+      className="bg-amber-500/12 text-amber-300"
+    >
       {t('processingTasks.status.processing')}
     </Badge>
   )
@@ -51,12 +100,15 @@ type UploadTaskDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   tasks: ResourceUploadTask[]
+  /** Offers a cancel button for local uploads still queued or sending data. */
+  onCancelTask?: (taskId: string) => void
 }
 
 export function UploadTaskDialog({
   open,
   onOpenChange,
   tasks,
+  onCancelTask,
 }: UploadTaskDialogProps) {
   const { t } = useTranslation('resources')
   const [expandedTaskIds, setExpandedTaskIds] = useState<Set<string>>(new Set())
@@ -117,6 +169,7 @@ export function UploadTaskDialog({
                   return (
                     <div
                       key={task.id}
+                      data-task-row
                       className="border-b border-border/50 last:border-b-0"
                     >
                       <div
@@ -139,7 +192,23 @@ export function UploadTaskDialog({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <TaskStatusBadge status={task.status} />
+                          <TaskStatusBadge
+                            status={task.status}
+                            progress={task.progress}
+                          />
+                          {onCancelTask && isCancellableUpload(task) ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="xs"
+                              onClick={() => onCancelTask(task.id)}
+                              aria-label={t('processingTasks.cancelAria', {
+                                name: task.fileName,
+                              })}
+                            >
+                              {t('processingTasks.cancel')}
+                            </Button>
+                          ) : null}
                           {hasDetail ? (
                             <button
                               type="button"
