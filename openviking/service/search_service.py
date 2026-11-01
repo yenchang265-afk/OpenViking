@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Union
 
 from openviking.core.namespace_policy import is_system_uri
 from openviking.core.retrieval_types import SearchType
+from openviking.models.rerank import RerankClient
+from openviking.retrieve.rerank_scoring import Reranker
 from openviking.server.identity import RequestContext
 from openviking.storage.viking_fs import VikingFS
 from openviking.utils.image_search import (
@@ -28,8 +30,11 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-# Vector backends that index the ``content`` field for BM25 keyword search.
+# Vector backends that always index the ``content`` field for BM25 keyword search.
 _KEYWORD_SEARCH_MODES = ("elasticsearch",)
+# Vector backends whose collections support keyword search only when their
+# metadata declares a full-text ``content`` index (openGauss native BM25).
+_FULLTEXT_PROBE_MODES = ("opengauss",)
 
 
 def _reject_system_targets(target_uri: Union[str, List[str]]) -> None:
@@ -89,17 +94,49 @@ class SearchService:
             return True
         return bool(self._viking_fs.retrieval_config.enable_intent)
 
+    def context_reranker(self) -> Optional[Reranker]:
+        """The reranker context assembly applies to its merged candidates, if any.
+
+        None unless ``retrieval.apply_rerank_to_context`` is on and ``rerank`` has
+        a usable provider config. Off by default, so context mode keeps vector
+        scores, as find() does.
+        """
+        if not self._viking_fs or self._viking_fs.retrieval_config is None:
+            return None
+        if not self._viking_fs.retrieval_config.apply_rerank_to_context:
+            return None
+        rerank_config = self._viking_fs.rerank_config
+        if not rerank_config or not rerank_config.is_available():
+            return None
+        client = RerankClient.from_config(rerank_config)
+        if client is None:
+            return None
+        return Reranker(
+            client=client,
+            threshold=rerank_config.threshold,
+            max_input_tokens=rerank_config.max_input_tokens,
+        )
+
     async def ensure_keywords_search_supported(self, ctx: RequestContext) -> None:
         """Validate keyword-search support at the top-level request boundary.
 
-        Keyword search needs a backend with a full-text ``content`` index, which in
-        this build only the Elasticsearch backend provides. An Account with its own
-        VectorDB is checked against that backend, not the cluster default.
+        Keyword search needs a backend with a full-text ``content`` index: the
+        Elasticsearch backend always provides one, and openGauss does when its
+        collection metadata declares it. An Account with its own VectorDB is
+        checked against that backend, not the cluster default.
         """
         viking_fs = self._ensure_initialized()
         vector_store = viking_fs._get_vector_store()
         backend = await vector_store.get_account_backend(ctx.account_id) if vector_store else None
-        if getattr(backend, "_mode", None) not in _KEYWORD_SEARCH_MODES:
+        mode = getattr(backend, "_mode", None)
+        if mode in _KEYWORD_SEARCH_MODES:
+            return
+        if mode not in _FULLTEXT_PROBE_MODES or not await viking_fs._collection_has_fulltext(
+            vector_store,
+            ctx,
+            supported_modes=_FULLTEXT_PROBE_MODES,
+            raise_on_error=True,
+        ):
             raise InvalidArgumentError(
                 "Keyword search is not supported by the configured vector backend, or full-text "
                 "indexing is not enabled for the content field."
@@ -259,11 +296,7 @@ class SearchService:
             raise RuntimeError("Vector store not initialized. Call OpenViking.initialize() first.")
         if search_type == "semantic" and not embedder:
             raise RuntimeError("Embedder not configured.")
-        retriever = SkillPackageRetriever(
-            storage=storage,
-            embedder=embedder,
-            rerank_config=fs.rerank_config,
-        )
+        retriever = SkillPackageRetriever(storage=storage, embedder=embedder)
         result = await retriever.retrieve_skills(
             TypedQuery(query, ContextType.SKILL, "", target_directories=targets),
             ctx,

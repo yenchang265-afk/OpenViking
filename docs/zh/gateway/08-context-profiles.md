@@ -8,9 +8,11 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 
 ## 什麼是上下文配置 {#context-profiles}
 
-[上下文配置](../guides/15-gateway.md#key-terms)是一組有名字的記憶設定。每個[閘道器金鑰](09-gateway-keys.md#gateway-keys)在簽發時選定一份配置，一份配置可以供多個金鑰使用。比如準備一份“Coding”配置，召回記憶、資源和技能；再準備一份“Chat”配置，只召回記憶，預算也小一些。
+[上下文配置](../guides/15-gateway.md#key-terms)是一組有名字的記憶設定。每個[閘道器金鑰](09-gateway-keys.md#gateway-keys)在簽發時選定一份配置，一份配置可以供多個金鑰使用。[直接使用 OpenViking API 金鑰](09-gateway-keys.md#openviking-keys)的客戶端使用帳號中 ID 為 `default` 的配置（快速模式建立的那份），沒有時使用部署的 `default_profile`；它們不計入使用這份配置的金鑰。比如準備一份“Coding”配置，召回記憶、資源和技能；再準備一份“Chat”配置，只召回記憶，預算也小一些。
 
-一份配置分為四個部分，下表中的預設值也就是推薦設定：
+嵌入式 dev 模式在啟動時將 `default_profile` 一次性寫入 `default` 帳號；之後修改 `ov.conf` 不會改變已儲存的配置，請在 Studio 中修改。
+
+除了名稱和[允許客戶端覆蓋設定](#client-overrides)開關，一份配置分為四個部分，下表中的預設值也就是推薦設定：
 
 | 部分 | 作用 | 主要設定和預設值 |
 | --- | --- | --- |
@@ -26,13 +28,13 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 ### 建立、複製或刪除配置 {#manage-profiles}
 
 1. 開啟 **上下文配置** 標籤頁。標籤頁為空時，選擇**使用推薦設定建立**可一鍵建立一份名為“預設”的配置，選擇**自定義**則先開啟編輯頁。已有配置後，改用**新建配置**。
-2. 在編輯頁填寫**名稱**，為閘道器金鑰選擇配置時會顯示這個名稱。再按本頁的說明調整各部分。
+2. 在編輯頁填寫**名稱**，為閘道器金鑰選擇配置時會顯示這個名稱。名稱下方的**允許客戶端覆蓋設定**預設開啟，見[允許客戶端覆蓋設定](#client-overrides)。再按本頁的說明調整各部分。
 3. 選擇**建立配置**；編輯已有配置時選擇**儲存**。之後能看到這份配置的卡片，上面概括了各部分的設定和使用它的金鑰數（剛建立時顯示**沒有金鑰在用**）。
 
 其他操作：
 
 - **複製一份**：在卡片上或編輯頁的**更多操作**（⋯）選單中，開啟一份名為“… 副本”的複製。想做一份變體，這樣最快。
-- **恢復推薦設定**：在同一個選單中，把各項恢復為推薦設定，儲存後生效。
+- **恢復推薦設定**：在同一個選單中，把四個部分恢復為推薦設定，名稱和**允許客戶端覆蓋設定**保持不變，儲存後生效。
 - 有金鑰在用的配置不能刪除。先吊銷這些金鑰；如果還需要它們，先簽發使用其他配置的新金鑰來替換。
 - Studio 處於只讀狀態時，卡片上顯示**檢視**而不是**編輯**，也不能建立、複製或刪除配置，見[解鎖編輯](06-manage-in-studio.md#unlock-editing)。
 
@@ -100,6 +102,24 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 - **OpenViking 工具**部分包括**工具**清單和**顯示工具呼叫**，**進階設定**中還有**每次請求的工具輪數**、**單次呼叫超時**、**結果大小上限**、**總時長**和 **Token 預算**。詳見[選擇工具](04-openviking-tools.md#choose-tools)和[上限](04-openviking-tools.md#limits)。閘道器執行所選工具時不經過客戶端的許可權確認，勾選會修改資料的工具之前，請先閱讀[風險和控制點](04-openviking-tools.md#risks-and-controls)。
 
 每項設定的 API 名稱和取值範圍見[配置參考](13-configuration.md#context-profile-settings)。
+
+## 允許客戶端覆蓋設定 {#client-overrides}
+
+**允許客戶端覆蓋設定**位於配置的**名稱**下方，預設開啟。開啟後，客戶端可以為對話修改這份配置的設定：在 `X-OpenViking-Context` 請求頭裡用 JSON 物件傳入要修改的欄位，欄位名使用[配置參考](13-configuration.md#context-profile-settings)中的 API 名稱。例如：
+
+```text
+X-OpenViking-Context: {"recall":false,"max_tokens":800,"context_types":["memory"]}
+```
+
+- **能改什麼。** 除 `name` 和 `client_overrides` 以外的所有設定。請求頭沒有給出的欄位沿用配置中的值。`{"disabled_tools":[]}` 表示提供全部 OpenViking 工具，包括會修改資料的工具和服務端以後新增的工具。
+- **何時生效。** 與儲存配置的修改一樣，對話會沿用開始時的設定：只有對話第一個請求裡的請求頭決定設定。之後的請求頭仍會校驗，所以無效的請求頭，或開關關閉後的任何請求頭，仍會報錯。
+- **錯誤。** 開關關閉時，帶這個請求頭的請求一律返回 403 `context_override_not_allowed`，而不是按已儲存的設定處理。開關開啟時，請求頭有下列情況之一會返回 400 `context_override_invalid`：
+  - 不是 JSON 物件；
+  - 出現未知欄位或 `name`、`client_overrides`；
+  - 取值越界。
+- **請求日誌。** [請求詳情](10-overview-and-requests.md#request-details)中列出客戶端在請求頭裡傳入了哪些欄位，只記名稱，不記取值。
+
+這個開關預設開啟，所以持有使用這份配置的金鑰的人可以修改任意欄位，包括預算和會修改資料的工具。對 `default` 配置來說，這也包括所有[直接使用 OpenViking API 金鑰](09-gateway-keys.md#openviking-keys)的客戶端。需要鎖定的配置請關閉它。各客戶端如何傳送這個請求頭，見[覆蓋上下文配置](03-connect-clients.md#override-profile-settings)。
 
 ## 下一步 {#next-steps}
 

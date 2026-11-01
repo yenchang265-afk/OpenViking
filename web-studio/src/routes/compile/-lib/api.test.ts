@@ -1,16 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { fetchCompileSkills, fetchCompileTask, fetchCompileTasks } from './api'
+import {
+  BUILTIN_SKILLS_ROOT,
+  fetchCompileSkills,
+  fetchCompileTask,
+  fetchCompileTasks,
+} from './api'
 
 const clientMocks = vi.hoisted(() => ({
   get: vi.fn(),
 }))
-
-const fsMocks = vi.hoisted(() => ({
-  fetchFsList: vi.fn(),
-}))
-
-vi.mock('#/routes/resources/-lib/api', () => fsMocks)
 
 vi.mock('#/lib/ov-client', () => ({
   getOvResult: async (value: unknown) => value,
@@ -62,42 +61,105 @@ describe('compile task API normalization', () => {
   })
 })
 
-describe('compile skill listing', () => {
+describe('built-in skill discovery', () => {
+  it('discovers server-provided skills and reads file-only metadata, including unknown skills', async () => {
+    clientMocks.get.mockImplementation(async ({ url, query }) => {
+      if (url === '/api/v1/skills') {
+        expect(query.target_uri).toBe(BUILTIN_SKILLS_ROOT)
+        return {
+          skills: [
+            {
+              name: 'future-tool',
+              root_uri: `${BUILTIN_SKILLS_ROOT}/future-tool`,
+            },
+          ],
+        }
+      }
+      return {
+        content:
+          '---\nname: future-tool\ndescription: A new server-provided capability.\n---\nBody',
+      }
+    })
+    expect(await fetchCompileSkills(undefined, BUILTIN_SKILLS_ROOT)).toEqual([
+      {
+        name: 'future-tool',
+        uri: `${BUILTIN_SKILLS_ROOT}/future-tool`,
+        description: 'A new server-provided capability.',
+      },
+    ])
+  })
+
+  it('keeps other skills when one definition is unreadable', async () => {
+    clientMocks.get
+      .mockResolvedValueOnce({
+        skills: [
+          {
+            name: 'ready',
+            uri: `${BUILTIN_SKILLS_ROOT}/ready`,
+            description: 'Ready to use',
+          },
+          { name: 'unreadable', uri: `${BUILTIN_SKILLS_ROOT}/unreadable` },
+        ],
+      })
+      .mockRejectedValueOnce(new Error('Unavailable'))
+    const result = await fetchCompileSkills(undefined, BUILTIN_SKILLS_ROOT)
+    expect(result).toHaveLength(2)
+    expect(result[0].description).toBe('Ready to use')
+    expect(result[1].metadataError).toBe(true)
+  })
+
+  it('does not start definition reads after a connection abort', async () => {
+    const controller = new AbortController()
+    clientMocks.get.mockImplementationOnce(async () => {
+      controller.abort()
+      return { skills: [{ name: 'wiki', uri: `${BUILTIN_SKILLS_ROOT}/wiki` }] }
+    })
+    await expect(
+      fetchCompileSkills(controller.signal, BUILTIN_SKILLS_ROOT),
+    ).rejects.toThrow()
+    expect(clientMocks.get).toHaveBeenCalledOnce()
+  })
+})
+
+describe('unscoped compile skill listing', () => {
+  const installed = {
+    name: 'mine',
+    uri: 'viking://user/alice/skills/mine',
+    description: 'd',
+  }
+
   it('adds bundled system Skills after installed ones', async () => {
-    clientMocks.get.mockResolvedValue({
-      skills: [
-        {
-          name: 'mine',
-          uri: 'viking://user/alice/skills/mine',
-          description: 'd',
-        },
-      ],
-    })
-    fsMocks.fetchFsList.mockResolvedValue({
-      entries: [
-        { name: 'llm-wiki', isDir: true },
-        { name: '.abstract.md', isDir: false },
-      ],
-    })
+    clientMocks.get.mockImplementation(async ({ query }) =>
+      query?.target_uri === BUILTIN_SKILLS_ROOT
+        ? {
+            skills: [
+              {
+                name: 'llm-wiki',
+                uri: `${BUILTIN_SKILLS_ROOT}/llm-wiki`,
+                description: 'Wiki',
+              },
+            ],
+          }
+        : { skills: [installed] },
+    )
 
     expect(await fetchCompileSkills()).toEqual([
-      {
-        name: 'mine',
-        uri: 'viking://user/alice/skills/mine',
-        description: 'd',
-      },
+      installed,
       {
         name: 'llm-wiki',
-        uri: 'viking://system/compile/example-skills/llm-wiki',
-        description: '',
+        uri: `${BUILTIN_SKILLS_ROOT}/llm-wiki`,
+        description: 'Wiki',
       },
     ])
   })
 
   it('still lists installed Skills when the system namespace is unavailable', async () => {
-    clientMocks.get.mockResolvedValue({ skills: [] })
-    fsMocks.fetchFsList.mockRejectedValue(new Error('not found'))
+    clientMocks.get.mockImplementation(async ({ query }) => {
+      if (query?.target_uri === BUILTIN_SKILLS_ROOT)
+        throw new Error('not found')
+      return { skills: [installed] }
+    })
 
-    expect(await fetchCompileSkills()).toEqual([])
+    expect(await fetchCompileSkills()).toEqual([installed])
   })
 })

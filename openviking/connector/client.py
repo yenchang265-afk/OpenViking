@@ -54,6 +54,25 @@ class ConnectorClient:
         headers["Authorization"] = token
         return headers
 
+    def resolve_connector_credential(
+        self, resolve_url: str, api_key: str, reference: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Resolve centrally managed Connector credentials for a credential reference.
+
+        Synchronous transport: the unified resolver is reached from both async
+        imports (via ``asyncio.to_thread``) and synchronous watch replays,
+        returns the freshly assembled ``auth_config`` for this call only, and
+        never exposes remote business messages or response bodies that may
+        carry credentials.
+        """
+        try:
+            with httpx.Client(timeout=10.0) as client:
+                rsp = client.post(resolve_url, json=reference, headers={"X-API-Key": api_key})
+            rsp.raise_for_status()
+            return _unwrap_connector_response(rsp.json())
+        except (httpx.HTTPError, ValueError, InternalError):
+            raise InternalError("External connector credential resolution failed.") from None
+
     async def submit_doc_add(
         self,
         add_type: str,

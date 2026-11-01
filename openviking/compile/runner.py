@@ -20,7 +20,6 @@ from urllib.parse import quote
 from pydantic import TypeAdapter
 
 from openviking.compile import file_ops
-from openviking.compile.hashing import content_hash
 from openviking.compile.llm import CompileProvider
 from openviking.compile.models import (
     CompileErrorInfo,
@@ -35,7 +34,7 @@ from openviking.compile.pipeline import Pipeline
 from openviking.compile.pipeline_agent import agent_runner
 from openviking.compile.renderer import RenderedBundle
 from openviking.compile.scratch import ScratchDir
-from openviking.compile.sources import pack_source_batches
+from openviking.compile.sources import pack_source_batches, read_source
 from openviking.compile.target_tools import target_tools
 from openviking.core.namespace import classify_uri, relative_uri_path
 from openviking.core.skill_loader import validate_skill_format
@@ -102,7 +101,7 @@ async def ensure_target_directory(client: Any, target: str) -> None:
     except OpenVikingError as exc:
         if exc.code != "NOT_FOUND":
             raise
-        await client.mkdir(target)
+        await client.mkdir(target, description="compile target folder")
         return
     if not stat.get("isDir", stat.get("is_dir", False)):
         raise CompileFailure(
@@ -336,8 +335,9 @@ class CompileRunner:
             """Retain at most one read batch of source bodies while seeding task shards."""
             for start in range(0, len(ordered), 8):
                 uris = ordered[start : start + 8]
+                # Image sources fail per file instead of being decoded as text.
                 contents = await asyncio.gather(
-                    *(client.read_raw(uri) for uri in uris), return_exceptions=True
+                    *(read_source(client, uri) for uri in uris), return_exceptions=True
                 )
                 readable = []
                 for uri, content in zip(uris, contents, strict=True):
@@ -457,7 +457,6 @@ class CompileRunner:
             ),
             page_count=len(set(published)),
             link_count=rendered.link_count,
-            link_report=rendered.link_report,
             warnings=pipeline.warnings,
         ).model_dump(by_alias=True)
         error = pipeline_incomplete_error(
@@ -580,11 +579,8 @@ def _stage_skill_operations(
     for operation in operations:
         relative = sanitize_relative_viking_path(relative_uri_path(target_uri, operation["uri"]))
         local = temp_root / relative
-        old = local.read_bytes() if local.is_file() else None
-        expected = operation.get("expected_sha256")
-        if (operation["mode"] == "create" and local.exists()) or (
-            operation["mode"] == "replace" and (old is None or content_hash(old) != expected)
-        ):
+        # Upstream dropped per-file revision hashes for Skill updates; only creates are guarded.
+        if operation["mode"] == "create" and local.exists():
             raise CompileFailure(
                 "WRITE_CONFLICT", f"Skill file changed: {operation['uri']}", stage="writing"
             )

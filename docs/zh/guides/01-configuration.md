@@ -339,7 +339,7 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 
 | 引數 | 型別 | 說明 |
 |------|------|------|
-| `max_concurrent` | int | 最大併發 Embedding 請求數（`embedding.max_concurrent`，預設：`10`；必須 `>= 1`） |
+| `max_concurrent` | int | 入庫文件 Embedding 請求的最大併發數（`embedding.max_concurrent`，預設：`10`；必須 `>= 1`）。檢索查詢的 Embedding 請求不受此限制 |
 | `max_retries` | int | Embedding provider 瞬時錯誤的最大重試次數（`embedding.max_retries`，預設：`3`；`0` 表示停用重試） |
 | `text_source` | str | 文本檔案向量化時使用的文本來源。`content_only` 讀取原文內容；`summary_first` 優先使用摘要，沒有摘要時回退到原文；`summary_only` 已棄用，作為 `summary_first` 的相容別名；舊配置仍可載入，會記錄警告並歸一為 `summary_first`。預設：`content_only` |
 | `max_input_tokens` | int | 使用原文內容向量化時，傳送給 embedding 模型的最大估算 token 數。預設：`4096` |
@@ -1099,6 +1099,8 @@ PDF 解析配置。支援三種策略：`local`（本地 pdfplumber）、`mineru
     "provider": "jev",
     "api_key": "your-typesafe-api-key",
     "model": "jev-latest",
+    "mode": "noul",
+    "candidates_visible": false,
     "timeout": 120,
     "log_payloads": false,
     "threshold": 0.1
@@ -1116,7 +1118,7 @@ PDF 解析配置。支援三種策略：`local`（本地 pdfplumber）、`mineru
   "rerank": {
     "provider": "jev",
     "api_key": "your-vercel-ai-gateway-api-key",
-    "api_base": "https://ai-gateway.vercel.sh/typesafe",
+    "api_base": "https://ai-gateway.vercel.sh/typesafe/v1/systemone",
     "model": "typesafe-ai/jev",
     "threshold": 0.1
   }
@@ -1132,12 +1134,27 @@ PDF 解析配置。支援三種策略：`local`（本地 pdfplumber）、`mineru
 - `api_base` 必須帶 `/typesafe` 字尾；`https://ai-gateway.vercel.sh/v1` 是
   Vercel 自有的 evaluate 協議，介面卡不支援。
 
-Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支援兩種模式：
+Jev 介面卡支援兩種評分模式：
 
 - `noul`（預設）：為每篇文件提出獨立的相關性問題，返回的 yes 機率作為分數。
   所有問題放在一次 HTTP 請求中，各文件分數不要求總和為 1。
 - `choice`：用一個問題橫向比較所有候選文件，以 `candidate_{index}` 對應輸入
   下標，並按原文件順序讀取 `probabilities` 作為分數。
+
+Noul 的候選可見性由 `rerank.candidates_visible` 控制：
+
+- `false`（預設，僅限 Noul）：共享 `state` 只保留 query，每個問題通過
+  `instructions.candidate_document` 攜帶自己的文件；該問題及共享 state
+  不包含其他候選。所有問題仍在一次 HTTP 請求中傳送，分數保持原文件順序。
+- `true`：query 和所有候選文件都放在共享 `state` 中。
+  Noul 獨立評分不代表候選互相不可見。
+
+Noul 現在省略 `candidates_visible` 即預設隔離。要保留共享候選上下文，需顯式
+設定 `"candidates_visible": true`。
+
+Choice 不受這個 Noul 專用開關影響，始終將全部候選放入共享 `state` 進行比較。
+配置 `"mode": "choice"` 時，省略 `candidates_visible`、設定為 `false` 或 `true`，
+請求結構和評分行為均相同。
 
 通過 `rerank.mode` 選擇模式；未配置或配置為 `null` 時預設使用 `noul`。Choice
 返回候選池內總和為 1 的相對機率，不是絕對相關機率，不適合使用絕對分數閾值。
@@ -1154,13 +1171,14 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 | `sk` | str | VikingDB Secret Key（僅 `vikingdb` 提供方使用） |
 | `model_name` | str | 模型名稱（僅 `vikingdb` 提供方使用，預設：`doubao-seed-rerank`） |
 | `api_key` | str | API Key（用於 `openai`、`cohere` 或 `jev` 提供方） |
-| `api_base` | str | 介面地址（用於 `openai` 或 `jev`；Jev 預設為 `https://api.typesafe.ai`，Vercel 使用 `https://ai-gateway.vercel.sh/typesafe`） |
+| `api_base` | str | 完整介面地址（用於 `openai` 或 `jev`；Jev 預設為 `https://api.typesafe.ai/v1/systemone`，Vercel 使用 `https://ai-gateway.vercel.sh/typesafe/v1/systemone`；自定義 Jev URL 會原樣使用） |
 | `model` | str | 模型名稱（用於 OpenAI 相容、LiteLLM 或 `jev` 提供方） |
 | `mode` | `"noul"`、`"choice"` 或 `null` | Jev Rerank 模式；省略或 `null` 時使用 `"noul"` |
+| `candidates_visible` | bool | 僅用於 Jev Noul；預設 `false`，每個候選隔離到自己的問題中。顯式 `true` 可共享候選上下文；Choice 忽略此選項。 |
 | `timeout` | float | HTTP Rerank provider（包括 Jev）的請求超時時間，單位為秒。預設：`30.0` |
 | `max_input_tokens` | int | 每個 query-document 對傳送給 reranker 的最大估算原始文本 token 數；超長輸入會保留開頭和結尾。`0` 表示不截斷。預設：`0` |
 | `log_payloads` | bool | 記錄完整 rerank 請求和響應；日誌可能包含 query 和文件內容。預設：`false` |
-| `threshold` | float | 分數閾值，範圍為 `0.0` 到 `1.0`。低於此值的結果會被過濾。預設：`0.1` |
+| `threshold` | float | Rerank 分數閾值，範圍為 `0.0` 到 `1.0`。Rerank 後低於此值的結果會被過濾；它不過濾向量分數（未使用 Rerank 或 Rerank 失敗時），請求中的 `score_threshold` 優先。預設：`0.1` |
 | `extra_headers` | object | 自定義 HTTP 請求頭（OpenAI 相容 provider 可用，可選） |
 
 **支持的提供方:**
@@ -1180,6 +1198,7 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 {
   "retrieval": {
     "enable_intent": true,
+    "apply_rerank_to_context": false,
     "recall_intent_timeout_s": 5.0,
     "recall_rewrite_timeout_s": 30.0
   }
@@ -1189,6 +1208,7 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `enable_intent` | bool | `search()` 收到 `session_id` 時是否執行意圖分析和查詢規劃。 | `true` |
+| `apply_rerank_to_context` | bool | 是否用已配置的 [`rerank`](#rerank) 模型重排 `mode="context"` 的候選：每個請求用原始查詢及其擴充查詢統一重排一次，在配額和 token 預算之前執行。需要可用的 `rerank` 配置；影象查詢保持向量分數。 | `false` |
 
 普通 `search()` 的會話意圖分析和 `mode="context"` 的查詢擴充共用 `recall_intent_timeout_s`；上下文 digest 重寫使用獨立的超時配置：
 
@@ -1233,10 +1253,13 @@ Jev 介面卡將 query 和候選文件作為共享的 System One `state`，支�
 
 Task 記錄預設使用本地 FileStore。需要多個 OpenViking 程序共享
 Task/Work 狀態時，先在 MySQL 中執行
-`openviking/service/sql/task_store_init.sql`，再選擇關係型後端：
+`openviking/service/sql/task_store_init.sql`，再按順序執行
+`openviking/service/sql/changes/` 下的變更指令碼，配置穩定的頂層
+`service_name` 後選擇關係型後端：
 
 ```json
 {
+  "service_name": "production",
   "storage": {
     "task_store": {
       "provider": "mysql",
@@ -1259,7 +1282,11 @@ Task/Work 狀態時，先在 MySQL 中執行
 
 MySQL 後端需要安裝 `openviking[mysql]` extra。Task mutation、Task
 最終化和 execution event 更新在同一個資料庫事務中提交。`task_id`
-是全域唯一身份；`account_id` 和 `user_id` 用於鑑權和查詢範圍。同一部署
+在同一個 `service_name` 分割槽內唯一；頂層 `service_name` 會寫入每條
+Task/Work/Event 記錄，用於隔離共用同一套表的多個 OpenViking 部署。
+`account_id` 和 `user_id` 用於鑑權和查詢範圍。新庫需要先執行 init SQL，
+再按順序執行變更指令碼；升級使用舊 TaskStore 表的庫前，先執行
+`openviking/service/sql/changes/0001_task_store_service_name.sql`。同一部署
 不要同時讓 FileStore 和 MySQL 表作為寫入端。
 
 #### agfs (RAGFS)
@@ -1300,6 +1327,7 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
       "backups": {
         "initial_partitions": 16,
         "checkpoint_interval_secs": 86400,
+        "reconcile_existing_data": false,
         "provider": "filesystem",
         "items": [
           {
@@ -1322,6 +1350,7 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
 |------|------|------|--------|
 | `initial_partitions` | int | account 首次初始化的 metadata partition 數；修改不影響已有 account | `16` |
 | `checkpoint_interval_secs` | int | Checkpoint 掃描間隔，最小值為 `60` | `86400` |
+| `reconcile_existing_data` | bool | 首次啟用多寫時，掃描 primary 已存在檔案並寫入 V2 metadata。僅在 backup 已對齊或明確跳過歷史回填時保持 `false`。 | `false` |
 | `provider` | str | Metadata provider：`filesystem` 或複用頂層 CacheRuntime 的 `cache` | `"filesystem"` |
 | `items` | array | backup 列表，包含 `name`、`backend`、`params` 和可選 `encryption` | `[]` |
 
@@ -1357,9 +1386,19 @@ Redis 名稱空間。
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `provider` | str | `filesystem`、`memory` 或 `cache`；`cache` 複用 Redis CacheRuntime | `filesystem` |
+| `provider` | str | `filesystem`、`memory`、`sqlite` 或 `cache`；`cache` 複用 Redis CacheRuntime | `filesystem` |
+| `sqlite_path` | str / null | 可顯式覆蓋本地共享鎖資料庫的絕對路徑。見 [SQLite 配置](../configuration/01-server.md#storage) | 使用 `sqlite` 時為 `{storage.workspace}/_system/pathlock/pathlock.db` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數；不得小於 `1.0` | `30.0` |
 | `lock_timeout_secs` | float | 已廢棄且忽略；執行時等待超時固定為 `0.0` | `0.0` |
+
+SQLite PathLock 僅適用於同一主機上的程序共享同一個本地磁碟資料庫檔案。
+不能將資料庫放在 EFS/NFS/SMB，也不能為每個副本配置獨立的容器本地資料庫。
+workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
+詳見 [SQLite 部署限制](../configuration/01-server.md#storage)。
+
+多個容器或主機共享 EFS 時，使用下面的共享 Redis PathLock 配置。
+所有副本必須連線同一個 Redis 部署，並使用相同的頂層 `service_name` 和鎖過期配置。
+示例同時使用 Redis QueueFS，避免預設的 SQLite 佇列資料庫落在 EFS。
 
 ```json
 {
@@ -2230,7 +2269,7 @@ Redis 連線和命令超時通過 `cache.params.connect_timeout_ms` 和
 | `provider` | str | 金鑰提供程式：`"local"`、`"vault"` 或 `"volcengine_kms"` | - |
 | `api_key_hashing.enabled` | bool | 僅 File Provider：是否對 API key 欄位啟用 Argon2id 單向雜湊（與檔案級 `enabled` 獨立控制），詳見 [加密指南](./08-encryption.md) | `false` |
 
-### Local（本地文件）
+### Local
 
 適合開發環境和單節點部署：
 
@@ -2249,6 +2288,10 @@ Redis 連線和命令超時通過 `cache.params.connect_timeout_ms` 和
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `local.key_file` | str | 根金鑰檔案路徑 | `~/.openviking/master.key` |
+| `local.root_key` | str | 直接配置的 32 位元組根金鑰，必須編碼為恰好 64 個十六進位制字元 | - |
+
+不要同時配置 `local.key_file` 和 `local.root_key`。如果兩者都省略，`local.key_file` 預設使用
+`~/.openviking/master.key`。內聯金鑰的管理和安全要求詳見[加密指南](./08-encryption.md)。
 
 ### Vault（HashiCorp Vault）
 

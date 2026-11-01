@@ -38,6 +38,7 @@ Skill 可以編排多個工具，但不會自動獲得額外許可權。工具�
 | 命令 | `exec` | 在沙箱後端執行 shell 命令 |
 | 網路 | `web_search`、`web_fetch` | 搜尋和讀取網頁 |
 | OpenViking | `openviking_list/search/grep/glob/multi_read` | 瀏覽、檢索和讀取上下文 |
+| OpenViking | `openviking_rule_search`（Beta） | 檢索適用於具體任務的已編譯約束 |
 | OpenViking | `openviking_add_resource`、`openviking_memory_commit` | 新增資源和提交記憶 |
 | 對外操作 | `message`、`generate_image` | 主動傳送訊息或生成圖片 |
 | 自動化 | `cron` | 管理定時 Agent 任務，預設關閉 |

@@ -30,6 +30,10 @@ const keys = {
   missing: '已刪除',
   missingProfile: '這個上下文配置已不存在',
   missingUpstream: '這個上游已不存在',
+  openviking: {
+    name: 'OpenViking API 金鑰',
+    defaults: '帳號預設',
+  },
   extra: '+{{count}}',
   actions: {
     revokeKey: '吊銷“{{name}}”',
@@ -47,8 +51,12 @@ const keys = {
     title: '刪除 {{user}} 的閘道器資料？',
     description_one:
       '這會弔銷 {{user}} 的閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Context Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Context Platform 的記憶不受影響。',
+    description_zero:
+      '這會刪除閘道器為 {{user}} 儲存的對話狀態（包括尚未儲存到 Business Context Platform 的內容）和請求日誌。已經存入 Business Context Platform 的記憶不受影響。',
     description_other:
       '這會弔銷 {{user}} 的全部 {{count}} 個閘道器金鑰，並刪除閘道器為該使用者儲存的對話狀態（包括尚未儲存到 Business Context Platform 的內容）和請求日誌。該使用者的客戶端會立即失去訪問許可權。已經存入 Business Context Platform 的記憶不受影響。',
+    directKey:
+      '直接使用其 Business Context Platform API 金鑰的客戶端仍可使用，直到在 Business Context Platform 中重新生成這把金鑰。',
     confirm: '刪除閘道器資料',
     done: '已刪除 {{user}} 的閘道器資料',
   },

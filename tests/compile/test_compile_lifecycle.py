@@ -1,5 +1,6 @@
 """Upstream Compile lifecycle (target registry, incremental plans) on the in-server runtime."""
 
+import asyncio
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -37,17 +38,16 @@ CHANGES = {
 
 
 def _lifecycle(**overrides):
-    async def prepare(payload, ctx, *, instruction_set, scheduled_target_id=None):
+    async def prepare(payload, ctx, *, instruction_set, scheduled_record=None):
         task_payload = {k: v for k, v in payload.items() if k != "args"}
         runtime = {k: v for k, v in (payload.get("args") or {}).items() if k != "mode"}
         if runtime:
             task_payload["args"] = runtime
-        task_payload["compile"] = {"target_id": "t1", "trigger": "manual"}
+        task_payload["compile"] = {"mode": "incremental", "trigger": "manual"}
         return task_payload
 
     hooks = {
         "prepare": AsyncMock(side_effect=prepare),
-        "record_created": AsyncMock(),
         "record_queued": AsyncMock(),
         "runtime_changes": AsyncMock(return_value=None),
     }
@@ -67,15 +67,16 @@ async def test_create_registers_target_and_keeps_submission_hash_input(tmp_path)
         idempotency_key="key-0123456789abcdef",
     )
 
+    # Target state is prepared in the background; history waits for it.
+    await asyncio.gather(*service._history_tasks)
     assert lifecycle.prepare.await_args.kwargs["instruction_set"] is True
     kwargs = tasks.create.await_args.kwargs
-    assert kwargs["payload"]["compile"]["target_id"] == "t1"
+    assert kwargs["payload"]["compile"] == {"mode": "full", "trigger": "manual"}
     assert kwargs["payload"]["args"] == {"wiki_links": True}
     # Idempotent retries compare the caller's request, not the registry metadata.
     assert "compile" not in kwargs["submission_payload"]
     assert kwargs["submission_payload"]["args"] == {"mode": "full", "wiki_links": True}
     lifecycle.record_queued.assert_awaited_once()
-    lifecycle.record_created.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -387,9 +388,9 @@ async def test_create_at_capacity_does_not_save_target_settings(tmp_path):
     service._ensure_capacity = AsyncMock(side_effect=ResourceExhaustedError("full"))
 
     with pytest.raises(ResourceExhaustedError):
-        await service.create(_request(args={"auto_update": True}), ctx=CTX)
+        await service.create(_request(), ctx=CTX)
 
-    lifecycle.prepare.assert_not_awaited()
+    lifecycle.prepare.assert_not_called()
     tasks.create.assert_not_awaited()
 
 
@@ -401,24 +402,3 @@ async def test_create_accepts_bundled_system_example_skill(tmp_path):
     await service.create(_request(skill=f"{skill}/SKILL.md"), ctx=CTX)
 
     assert tasks.create.await_args.kwargs["payload"]["skill"] == skill
-
-
-@pytest.mark.asyncio
-async def test_system_skill_snapshot_passes_commit_write_check():
-    from openviking.service.compile_targets import skill_snapshot_ctx, task_ctx
-    from openviking.storage.acl import AclAction
-    from openviking.storage.viking_fs import VikingFS
-    from openviking_cli.exceptions import PermissionDeniedError
-
-    fs = VikingFS(agfs=SimpleNamespace(), acl_manager=None)
-    ctx = task_ctx("acme", "alice")
-    system_skill = "viking://system/compile/example-skills/llm-wiki"
-    user_skill = "viking://agent/skills/llm-wiki"
-
-    # The task owner cannot write the bundled Skill, so its snapshot is elevated.
-    with pytest.raises(PermissionDeniedError, match="write permission required"):
-        await fs._ensure_access(system_skill, ctx, action=AclAction.WRITE)
-    await fs._ensure_access(
-        system_skill, skill_snapshot_ctx(system_skill, ctx), action=AclAction.WRITE
-    )
-    assert skill_snapshot_ctx(user_skill, ctx) is ctx

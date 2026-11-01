@@ -9,6 +9,7 @@
 | MCP 工具、引數與上傳協議 | [MCP 工具與協議](../guides/06-mcp-integration.md)；安裝客戶端看[連線 MCP 客戶端](../agent-integrations/06-mcp-clients.md) |
 | 資源、檔案和檢索介面 | [資源](../api/02-resources.md)、[檔案系統](../api/03-filesystem.md)、[內容](../api/12-content.md)、[檢索](../api/06-retrieval.md) |
 | 會話、記憶與技能介面 | [會話](../api/05-sessions.md)、[記憶](../api/16-memory.md)、[技能](../api/04-skills.md) |
+| 規則編譯與適用性召回（Beta） | [規則 API（Beta）](../api/26-rules.md) |
 | 管理、許可權與後臺狀態 | [Admin](../api/08-admin.md)、[ACL](../api/12-acl.md)、[後臺任務](../api/17-tasks.md)、[Observer](../api/18-observer.md) |
 | 資料一致性、隔離和處理完成的含義 | [系統架構](../concepts/01-architecture.md)、[事務與恢復](../concepts/09-transaction.md)、[多租戶](../concepts/11-multi-tenant.md)、[任務狀態](../concepts/16-queue-lifecycle.md) |
 

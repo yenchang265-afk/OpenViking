@@ -47,11 +47,11 @@ OpenViking 閘道器是一個模型 API 代理：客戶端只要能修改 Base U
 
 ## 一張圖看懂架構 {#architecture-at-a-glance}
 
-![OpenViking 閘道器的兩種執行形態。嵌入：客戶端訪問 OpenViking Server 的埠，Server 把 /gateway 下的所有路徑（模型 API、上傳和閘道器管理）交給同一程序裡的閘道器，閘道器通過本機迴環 HTTP、用使用者本人的 OpenViking 金鑰檢索和儲存記憶。獨立：openviking-gateway 用自己的埠提供同樣的 /gateway 路徑和只含閘道器頁面的 Studio，通過 HTTP(S) 呼叫已有的 OpenViking 服務。兩種形態下，閘道器都用同一種 API 把請求轉發給上游模型服務商；會話和記憶的正本在 OpenViking，閘道器本機只有兩個 SQLite 檔案（開啟 OpenViking 加密時加密儲存）](../../images/gateway/architecture.zh.svg)
+![OpenViking 閘道器的兩種執行形態。嵌入：客戶端訪問 OpenViking Server 的埠，Server 把 /gateway 下的所有路徑（模型 API、上傳和閘道器管理）交給同一程序裡的閘道器，閘道器通過本機迴環 HTTP、用使用者本人的 OpenViking 金鑰檢索和儲存記憶。獨立：openviking-gateway 用自己的埠提供同樣的 /gateway 路徑和只含閘道器頁面的 Studio，通過 HTTP(S) 呼叫已有的 OpenViking 服務。兩種形態下，閘道器都用同一種 API 把請求轉發給上游模型服務商；會話和記憶的正本在 OpenViking，閘道器自身的資料預設存在本機兩個 SQLite 檔案中，也可以存在共享的 Redis 中，開啟 OpenViking 加密時加密儲存](../../images/gateway/architecture.zh.svg)
 
 - **執行在哪**：開啟後嵌入 OpenViking Server，和 Server 共用埠；也可以用 `openviking-gateway` 獨立執行，連線已有的 OpenViking 服務（開源版或商業版）。兩種方式下閘道器的所有 URL 都在 `/gateway` 下（例如 `/gateway/v1`），客戶端路徑相同，見[選擇部署方式](22-gateway-operations.md#deployment-options)。
 - **和 OpenViking 的關係**：閘道器只呼叫 OpenViking 的公開介面，向量化和記憶提取都在 OpenViking 中完成。
-- **資料在哪**：會話和記憶的正本在 OpenViking。閘道器本機只有兩個 SQLite 檔案（開啟 OpenViking 加密時加密儲存），一個存上游、金鑰和配置，一個存對話狀態，見[安全與資料](../gateway/11-security-and-data.md)。
+- **資料在哪**：會話和記憶的正本在 OpenViking。閘道器預設使用兩個 SQLite 檔案，多副本部署可以改用共享 Redis。開啟 OpenViking 加密後，兩種後端中儲存的值都會加密。見[安全與資料](../gateway/11-security-and-data.md)。
 - **出故障時**：OpenViking 不可用時，對話照常進行，只是不帶記憶，儲存會自動重試。閘道器停止服務時，經過它的模型呼叫全部失敗。
 
 ## 能得到什麼，代價是什麼 {#what-you-get-and-what-it-costs}

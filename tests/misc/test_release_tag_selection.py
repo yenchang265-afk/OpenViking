@@ -64,7 +64,7 @@ def test_release_build_pins_cli_and_wheel_to_git_version() -> None:
     resolve_command = (
         "env -u OPENVIKING_VERSION "
         "-u SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPENVIKING "
-        "uv run --frozen python -c"
+        "uv run --no-sync python -c"
     )
     pretend_version_export = (
         'echo "SETUPTOOLS_SCM_PRETEND_VERSION_FOR_OPENVIKING=$OPENVIKING_VERSION" >> "$GITHUB_ENV"'

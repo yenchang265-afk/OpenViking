@@ -4,7 +4,7 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 
 # 把客戶端接入 OpenViking 閘道器
 
-本頁按客戶端給出具體配置，以及驗證配置是否生效的方法。每個客戶端都需要三樣東西：閘道器地址、閘道器金鑰，以及這把金鑰繫結的一個已啟用上游——它要支援客戶端使用的協議，並提供客戶端請求的模型。還沒有閘道器金鑰？先看[快速上手](02-quickstart.md)。
+本頁按客戶端給出具體配置，以及驗證配置是否生效的方法。每個客戶端都需要三樣東西：閘道器地址、閘道器金鑰（部署方開啟 `openviking_keys` 時，也可以用使用者的 OpenViking API 金鑰，見[直接使用 OpenViking API 金鑰](09-gateway-keys.md#openviking-keys)），以及這把金鑰繫結的一個已啟用上游——它要支援客戶端使用的協議，並提供客戶端請求的模型。還沒有閘道器金鑰？先看[快速上手](02-quickstart.md)。
 
 以下兩條限制對所有客戶端都適用：
 
@@ -32,12 +32,22 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 
 預設情況下，服務商的 API Key 由閘道器保管，客戶端只需傳送閘道器金鑰。[上游](07-upstreams.md#upstreams)也可以把 **API Key 由誰提供**設為**每個客戶端自帶 API Key**（見[憑證](07-upstreams.md#credentials)）。這時客戶端仍把閘道器金鑰填在原來填 API Key 的地方，同時在每個請求裡用 `X-OpenViking-Upstream-Key` 請求頭帶上自己的服務商 API Key。在 Studio 中，**接入**標籤頁的**客戶端自帶服務商 API Key**卡片會列出哪些上游需要它。
 
-缺了這個請求頭，所有請求都會返回 401 `Upstream API key is missing`。各客戶端的新增方式：
+缺了這個請求頭，所有請求都會返回 401 `Upstream API key is missing`。各客戶端的新增方式見[在客戶端裡新增請求頭](#add-a-header)。
 
-| 客戶端 | 如何傳送 `X-OpenViking-Upstream-Key` |
+## 覆蓋上下文配置 {#override-profile-settings}
+
+客戶端可以用 `X-OpenViking-Context` 請求頭，為新對話修改金鑰所用上下文配置的設定。它的值是一個 JSON 物件，列出要修改的欄位，例如 `{"recall":false}` 表示不召回，`{"disabled_tools":[]}` 表示提供全部 OpenViking 工具，包括會修改資料的工具。配置需要開啟**允許客戶端覆蓋設定**（預設開啟）；請求頭能包含什麼、可能返回哪些錯誤，見[允許客戶端覆蓋設定](08-context-profiles.md#client-overrides)。各客戶端的新增方式見[在客戶端裡新增請求頭](#add-a-header)。
+
+對話會沿用開始時的設定，所以修改後的請求頭從下一段新對話起生效，例如換一個新的 `X-OpenViking-Session` 值。與所有 `X-OpenViking-*` 請求頭一樣，它不會轉發給服務商。
+
+## 在客戶端裡新增請求頭 {#add-a-header}
+
+上面兩個請求頭都要隨每個請求傳送。各客戶端的新增方式：
+
+| 客戶端 | 如何新增請求頭 |
 | --- | --- |
-| Claude Code | `export ANTHROPIC_CUSTOM_HEADERS='X-OpenViking-Upstream-Key: <provider-key>'` |
-| Codex CLI | 在服務商配置裡使用 `env_http_headers`，例如 `env_http_headers = { "X-OpenViking-Upstream-Key" = "PROVIDER_API_KEY" }`，並把服務商 API Key 匯出為 `PROVIDER_API_KEY` |
+| Claude Code | `export ANTHROPIC_CUSTOM_HEADERS='<Name>: <value>'`。有多個請求頭時每行一個，例如 `export ANTHROPIC_CUSTOM_HEADERS=$'X-OpenViking-Upstream-Key: <provider-key>\nX-OpenViking-Context: {"recall":false}'` |
+| Codex CLI | 在服務商配置裡，固定值用 `http_headers`，例如 `http_headers = { "X-OpenViking-Context" = '{"recall":false}' }`；從環境變數讀取用 `env_http_headers`，例如 `env_http_headers = { "X-OpenViking-Upstream-Key" = "PROVIDER_API_KEY" }`，並把服務商 API Key 匯出為 `PROVIDER_API_KEY` |
 | OpenAI 和 Anthropic SDK | 在客戶端上設定 `default_headers`，或在每個請求裡傳 `extra_headers` |
 | Open WebUI | 加到連線的自定義請求頭裡，與會話請求頭放在一起 |
 
@@ -228,7 +238,7 @@ pi 可以使用 Chat Completions、Anthropic Messages 或 Responses，Base URL �
 
 ## DSH {#dsh}
 
-[DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）的模型層基於 pi，`api` 和 Base URL 的取值與 pi 相同：`https://ov.example.com/gateway/v1`，Anthropic Messages 用 `https://ov.example.com/gateway`。在 profile 配置中新增一個服務商；`dsh web` 使用的 profile 是 `web`，所以檔案是 `~/.dsh/profiles/web/cordis.patch.yml`：
+[DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）的模型層基於 pi，`api` 和 Base URL 的取值與 pi 相同：`https://ov.example.com/gateway/v1`，Anthropic Messages 用 `https://ov.example.com/gateway`。在 profile 配置中新增一個服務商；`dsh web` 使用的 profile 是 `web`，所以檔案是 `~/.dsh/profiles/web/cordis.patch.yml`；DeepSeek Harness Desktop 桌面應用用的是 `~/.dsh/profiles/desktop/cordis.patch.yml`：
 
 ```yaml
 - id: llm-pi-ai
@@ -247,6 +257,7 @@ pi 可以使用 Chat Completions、Anthropic Messages 或 Responses，Base URL �
 把閘道器金鑰匯出為 `OPENVIKING_GATEWAY_KEY`（也就是 `apiKeyEnv` 填的變數名），然後啟動 `dsh web`，在模型選擇器中選擇 `openviking` 服務商下的 `<model>`。
 
 - 也可以在 Web UI 的 Settings → Models → Add model provider → Custom model API 中新增，寫入的是同一個檔案。
+- Desktop 看不到在終端裡 export 的變數。macOS 上把 `OPENVIKING_GATEWAY_KEY` 寫進 shell 啟動檔案（`~/.zprofile` 或 `~/.zshrc`）；Windows 上用 `setx` 設定。然後用 ⌘Q 或托盤選單退出 Desktop，再重新開啟。Desktop 的恢復對話方塊會把 `cordis.patch.yml` 挪成 `.bak-<時間戳>` 檔案，執行過恢復後需要重新新增服務商。
 - DSH 的一個服務商只使用一種協議。要通過多種協議使用閘道器，就為每種協議各宣告一個服務商。
 - 除非 DSH 傳送了某個會話請求頭，否則閘道器根據歷史匹配它的對話（見[閘道器如何識別對話](#how-conversations-are-recognized)）。
 - 同一個 profile 裡裝了 [OpenViking 的 DSH 外掛](../agent-integrations/17-dsh.md)時，閘道器會讓出這些對話，兩者選一個即可。

@@ -5,16 +5,15 @@
 import asyncio
 from typing import Awaitable, Callable, TypeVar
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Body, Depends, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from openviking.core.path_variables import resolve_path_variables
 from openviking.core.uri_validation import validate_request_viking_uri
-from openviking.pyagfs.exceptions import AGFSInvalidOperationError, AGFSNotSupportedError
-from openviking.server.auth import get_request_context, require_role
+from openviking.server.auth import get_request_context
 from openviking.server.dependencies import get_service
-from openviking.server.identity import AuthMode, RequestContext, Role
+from openviking.server.identity import AuthMode, RequestContext
 from openviking.server.models import Response
 from openviking.storage.viking_fs import get_viking_fs
 from openviking_cli.exceptions import UnauthenticatedError
@@ -243,6 +242,16 @@ async def system_status(
     )
 
 
+class WaitRequest(BaseModel):
+    """Legacy wait parameters, retained for request compatibility."""
+
+    timeout: float | None = Field(
+        default=None,
+        deprecated=True,
+        description="Deprecated compatibility parameter; accepted and ignored.",
+    )
+
+
 class ConsistencyRequest(BaseModel):
     """Request model for filesystem/vector-index consistency checks."""
 
@@ -251,6 +260,7 @@ class ConsistencyRequest(BaseModel):
 
 @router.post("/api/v1/system/wait", tags=["system"])
 async def wait_processed(
+    request: WaitRequest | None = Body(None),
     _ctx: RequestContext = Depends(get_request_context),
 ):
     """Wait for all processing to complete."""

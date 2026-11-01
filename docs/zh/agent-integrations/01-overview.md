@@ -11,16 +11,17 @@ OpenViking 可以作為多種 Agent 執行時的長期記憶與上下文後端�
 | **Codex / TraeCode CLI 2.0** | [Codex 記憶外掛](./04-codex.md) — 生命週期 hooks 自動召回與增量捕獲 |
 | **Cursor** | [Cursor 記憶整合](./12-cursor.md) — 一條命令安裝生命週期 Hook、MCP 工具、Rules 與 Skills |
 | **TRAE / TRAE CN** | [TRAE 記憶整合](./13-trae.md) — 一個安裝器完成 prompt 召回、回合捕獲與 OpenViking 工具接入 |
-| **DeepSeek Harness（`dsh`）** | [DeepSeek Harness 記憶外掛](./17-dsh.md) — 程序內 Cordis 外掛，pre-step 召回、事件捕獲與 OpenViking MCP 工具 |
+| **DeepSeek Harness（`dsh`）/ DeepSeek Harness Desktop** | [DeepSeek Harness 記憶外掛](./17-dsh.md) — 程序內 Cordis 外掛，pre-step 召回、事件捕獲與 OpenViking MCP 工具 |
 | **Hermes Agent** | [Hermes Agent](./05-hermes.md)。自動捕獲和召回記憶，舊版本使用內建提供方。 |
 | **OpenCode** | [OpenCode 外掛](./10-opencode.md) — MCP 工具 + 生命週期 hooks，覆蓋倉庫上下文、自動召回與捕獲 |
 | **pi** | [pi Coding Agent 擴充](./11-pi.md) — 原生擴充，自動召回、逐輪捕獲、閾值 commit，並把服務端的 MCP 工具註冊為 pi 原生工具 |
 | **LangChain / LangGraph** | [LangChain 和 LangGraph](./07-langchain-langgraph.md) — retriever、tools、context backend、store 和 middleware |
+| **VikingBot** | [VikingBot 安裝與配置](../guides/17-vikingbot.md) — 內建 Agent，提供 `openviking_rule_search` 規則搜尋工具（Beta） |
 | **多個本地開發 Agent / 希望使用桌面介面** | [OpenViking Helper](./14-openviking-helper.md) — 視覺化完成 Agent 接入、會話分析和記憶管理 |
 | **任意支援 Agent Plugins 1.0 的客戶端** | [Agent Plugins 1.0 外掛包](./15-agent-plugins.md) — 一個可移植的包：`openviking-memory` 技能 + OpenViking MCP 工具 |
 | **Manus / Claude Desktop / ChatGPT / 其他 MCP 客戶端** | [MCP 客戶端](./06-mcp-clients.md) — 任何相容 MCP 的客戶端直接對接內建 `/mcp` 端點 |
 | **聊天客戶端 / SDK 與 API 應用 / 其他沒有外掛的客戶端** | [OpenViking 閘道器](../guides/15-gateway.md) — 能填 Base URL 和 API Key 的客戶端都能接入閘道器，由閘道器召回記憶、儲存對話，客戶端裡不用裝任何東西 |
-| **ZCode / AstrBot / …** | [社群外掛](./08-community-plugins.md) — 社群維護的各執行時整合 |
+| **ZCode / CodeBuddy Code / AstrBot / …** | [社群外掛](./08-community-plugins.md) — 社群維護的各執行時整合 |
 
 Claude Code、Codex、OpenCode、pi、DSH 等 Agent 既能用自己的外掛，也能接入 OpenViking 閘道器。兩者怎麼選，見[閘道器還是外掛](../guides/15-gateway.md#gateway-or-plugin)。
 

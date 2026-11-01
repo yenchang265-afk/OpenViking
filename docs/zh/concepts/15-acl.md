@@ -32,8 +32,8 @@ ACL 條目使用帶型別的 principal：
 | Level | 允許的操作 |
 |-------|------------|
 | `read` | 讀取、列目錄、`find/search/grep` |
-| `write` | `read` 的能力，以及寫入、建立、刪除或移動檔案、修改 tags |
-| `manage` | `write` 的能力，以及刪除或移動目錄、管理 ACL |
+| `write` | `read` 的能力，以及寫入、建立、修改 tags |
+| `manage` | `write` 的能力，以及刪除或移動檔案和目錄、管理 ACL |
 
 高等級包含低等級能力。授予 `manage`，等價於同時授予 `read` 和 `write`。
 
@@ -90,10 +90,10 @@ read user:carol on viking://resources/A/B/C/report.md
 |------|----------|
 | read、stat、list、tree、find、search、grep、glob | read |
 | write、create、mkdir、set tags | write |
-| 刪除或移動檔案 | write |
-| 刪除或移動目錄 | 目錄及完整子樹的 manage |
+| 刪除或移動檔案 | manage |
+| 刪除或移動目錄 | 該目錄的 manage（授權整個子樹，包括 restricted 後代） |
 | 管理 ACL | manage |
-| move 目標父目錄 | write |
+| cp、move 目標 | 新路徑要求父目錄 write；已有檔案要求檔案 write；已有目錄要求目錄 manage |
 
 服務端會先 canonicalize URI，再在同一個鑑權入口中依次執行 account/owner/actor peer 等硬邊界、開啟時的有效 ACL 或關閉時的原有 namespace 規則，以及寫入和刪除的 namespace 防護。
 
@@ -102,11 +102,13 @@ read user:carol on viking://resources/A/B/C/report.md
 
 目錄上的 ACL 授權會被所有後代繼承。`list`、`tree` 和批次結果仍逐個檢查有效 ACL，因為預設開放的目錄下可能存在獨立的 restricted 邊界。
 
-共享區內部移動時，節點自己的 direct ACL 和 restricted 狀態隨節點移動，inherited 按新父節點重新計算。個人資源移入共享區時不攜帶 ACL，只繼承目標目錄許可權；共享資源移回個人區時清空 ACL。
+複製和移動不攜帶源 ACL：已有目標保留自己的 ACL，新建目標繼承目標父目錄的 ACL；移入個人區時清空 ACL。
 
-遞迴修改 tags、刪除或移動目錄會先校驗完整目標子樹。任一節點缺少所需能力，或子樹掃描不完整，操作都會整體中止。
+刪除和移動檢查指定檔案或目錄的許可權，授權後不逐個檢查子節點。複製按目錄範圍查詢不可讀內容，核實命中路徑存在且當前許可權確實不可讀後，拒絕整次複製；不逐個檢查目標子節點的寫入許可權。遞迴修改 tags 仍檢查完整子樹，許可權不足或掃描不完整時整體中止。
 
 目錄 `stat` 的 `count` 使用相同的路徑和 ACL 標量過濾，表示當前使用者可見的 context 數量。
+
+列表的摘要和概覽複用本次已通過的讀取授權，不再為每個條目重複查詢 ACL。
 
 ## 檢索過濾
 

@@ -8,10 +8,15 @@ import { prepareCompileHandoff } from '../-lib/handoff'
 import { OvClientError } from '#/lib/ov-client'
 
 const api = vi.hoisted(() => ({
+  BUILTIN_SKILLS_ROOT: 'viking://system/compile/example-skills',
   createCompile: vi.fn(),
   lookupSubmission: vi.fn(),
   fetchCompileSkills: vi.fn(async () => []),
   fetchCompileTask: vi.fn(),
+  fetchCapabilities: vi.fn(async () => ({
+    configured: true,
+    can_create: true,
+  })),
   navigate: vi.fn(),
 }))
 vi.mock('../-lib/api', () => api)
@@ -21,7 +26,7 @@ vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <span>{children}</span>,
 }))
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
+  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
 }))
 vi.mock('#/hooks/use-app-connection', () => ({
   useAppConnection: () => ({
@@ -39,7 +44,10 @@ vi.mock('./skill-picker', () => ({ SkillPicker: () => null }))
 vi.mock('#/routes/resources/-components/directory-picker-dialog', () => ({
   DirectoryPickerDialog: () => null,
 }))
-vi.mock('#/routes/resources/-lib/api', () => ({ fetchFileContent: vi.fn() }))
+vi.mock('#/routes/resources/-lib/api', () => ({
+  fetchFileContent: vi.fn(),
+  fetchFsStat: vi.fn(async () => ({ isDir: true })),
+}))
 
 const storageKey = 'compile-submission:recovery-test'
 const clients: QueryClient[] = []
@@ -61,8 +69,157 @@ function mount(props: Parameters<typeof CompileForm>[0] = {}) {
 }
 beforeEach(() => {
   vi.clearAllMocks()
+  api.fetchCapabilities.mockResolvedValue({
+    configured: true,
+    can_create: true,
+  })
   localStorage.clear()
   sessionStorage.clear()
+})
+
+const savedDraft = {
+  skill: 'viking://agent/skills/wiki',
+  sources:
+    'viking://resources/one\nviking://resources/two\nviking://resources/three',
+  to: 'viking://resources/wiki',
+  instruction: 'Keep citations',
+}
+const draftKey = 'compile-draft:recovery-test'
+
+it('prefills only the current user resource root and preserves the old draft until explicitly restored', () => {
+  localStorage.setItem(draftKey, JSON.stringify(savedDraft))
+  const page = mount()
+  const fields = page.getAllByRole('textbox', { name: 'sourceNumber' })
+  expect(fields).toHaveLength(1)
+  expect((fields[0] as HTMLInputElement).value).toBe(
+    'viking://user/alice/resources',
+  )
+  expect(JSON.parse(localStorage.getItem(draftKey)!)).toEqual(savedDraft)
+  fireEvent.click(page.getByRole('button', { name: 'restoreDraft' }))
+  expect(
+    page
+      .getAllByRole('textbox', { name: 'sourceNumber' })
+      .map((field) => (field as HTMLInputElement).value),
+  ).toEqual(savedDraft.sources.split('\n'))
+  expect(
+    (page.getByRole('textbox', { name: 'target *' }) as HTMLInputElement).value,
+  ).toBe(savedDraft.to)
+  expect(page.queryByRole('button', { name: 'restoreDraft' })).toBeNull()
+})
+
+it('starts a new draft on editing and keeps clear from restoring previous sources', () => {
+  localStorage.setItem(draftKey, JSON.stringify(savedDraft))
+  const page = mount()
+  fireEvent.change(page.getByRole('textbox', { name: 'sourceNumber' }), {
+    target: { value: 'viking://resources/new' },
+  })
+  expect(JSON.parse(localStorage.getItem(draftKey)!).sources).toBe(
+    'viking://resources/new',
+  )
+  expect(page.queryByRole('button', { name: 'restoreDraft' })).toBeNull()
+  fireEvent.click(page.getByRole('button', { name: 'clear' }))
+  expect(page.getAllByRole('textbox', { name: 'sourceNumber' })).toHaveLength(1)
+  expect(
+    (page.getByRole('textbox', { name: 'sourceNumber' }) as HTMLInputElement)
+      .value,
+  ).toBe('')
+  expect(JSON.parse(localStorage.getItem(draftKey)!).sources).toBe('')
+})
+
+it('uses only the filesystem entry directory instead of merging old draft sources', () => {
+  localStorage.setItem(draftKey, JSON.stringify(savedDraft))
+  const page = mount({ prefill: { from: 'viking://resources/current' } })
+  const fields = page.getAllByRole('textbox', { name: 'sourceNumber' })
+  expect(fields).toHaveLength(1)
+  expect((fields[0] as HTMLInputElement).value).toBe(
+    'viking://resources/current',
+  )
+})
+
+it('still fills all original sources when rerunning an existing task', async () => {
+  api.fetchCompileTask.mockResolvedValueOnce({
+    meta: {
+      request: {
+        skill: savedDraft.skill,
+        from: savedDraft.sources.split('\n'),
+        to: savedDraft.to,
+      },
+    },
+  })
+  const page = mount({ fromTask: 'original-task' })
+  await waitFor(() =>
+    expect(page.getAllByRole('textbox', { name: 'sourceNumber' })).toHaveLength(
+      3,
+    ),
+  )
+  expect(
+    (page.getByRole('textbox', { name: 'target *' }) as HTMLInputElement).value,
+  ).toBe(savedDraft.to)
+})
+
+it('preserves pending submission parameters ahead of new entry and rerun values', async () => {
+  localStorage.setItem(draftKey, JSON.stringify(savedDraft))
+  sessionStorage.setItem(storageKey, `${Date.now()}:pending`)
+  prepareCompileHandoff(
+    'recovery-test',
+    'compile --from viking://resources/handoff --to viking://resources/new --skill viking://agent/skills/new',
+  )
+  api.fetchCompileTask.mockResolvedValueOnce({
+    meta: {
+      request: {
+        skill: 'viking://agent/skills/other',
+        from: ['viking://resources/rerun'],
+        to: 'viking://resources/rerun-output',
+      },
+    },
+  })
+  const page = mount({
+    fromTask: 'different-task',
+    prefill: { from: 'viking://resources/current' },
+  })
+  await waitFor(() => expect(api.fetchCompileTask).toHaveBeenCalled())
+  expect(
+    page
+      .getAllByRole('textbox', { name: 'sourceNumber' })
+      .map((field) => (field as HTMLInputElement).value),
+  ).toEqual(savedDraft.sources.split('\n'))
+  expect(
+    (page.getByRole('textbox', { name: 'target *' }) as HTMLInputElement).value,
+  ).toBe(savedDraft.to)
+  expect(page.queryByRole('button', { name: 'restoreDraft' })).toBeNull()
+})
+
+it('blocks a direct form submission when execution requirements are not met', async () => {
+  prepareCompileHandoff(
+    'recovery-test',
+    'compile --from viking://resources/source --to viking://resources/wiki --skill viking://system/compile/example-skills/llm-wiki',
+  )
+  api.fetchCapabilities.mockResolvedValue({
+    configured: false,
+    can_create: false,
+  })
+  const page = mount()
+  page.submit()
+  await waitFor(() =>
+    expect(
+      page.getByRole('button', { name: 'start' }).hasAttribute('disabled'),
+    ).toBe(true),
+  )
+  expect(api.createCompile).not.toHaveBeenCalled()
+})
+
+it('still recovers an accepted task when execution is no longer configured', async () => {
+  const key = `${Date.now()}:accepted-task`
+  sessionStorage.setItem(storageKey, key)
+  api.fetchCapabilities.mockResolvedValue({
+    configured: false,
+    can_create: false,
+  })
+  api.lookupSubmission.mockResolvedValueOnce(task)
+  const page = mount()
+  page.submit()
+  await waitFor(() => expect(api.navigate).toHaveBeenCalled())
+  expect(api.createCompile).not.toHaveBeenCalled()
 })
 afterEach(() => {
   cleanup()
@@ -174,7 +331,7 @@ const prefilledDraft = {
   to: prefill.to,
   instruction: '',
 }
-const savedDraft = { skill: 'old', sources: 'old', to: 'old', instruction: 'x' }
+const oldDraft = { skill: 'old', sources: 'old', to: 'old', instruction: 'x' }
 const readSavedDraft = () =>
   JSON.parse(localStorage.getItem('compile-draft:recovery-test')!)
 
@@ -189,20 +346,13 @@ it('fills the form from a context tree prefill', async () => {
   await waitFor(() => expect(readSavedDraft()).toEqual(prefilledDraft))
 })
 
-it('asks before a prefill replaces a saved draft', async () => {
-  localStorage.setItem(
-    'compile-draft:recovery-test',
-    JSON.stringify(savedDraft),
-  )
-  const confirm = vi.spyOn(window, 'confirm').mockReturnValueOnce(false)
-  mount({ prefill })
-  await waitFor(() => expect(confirm).toHaveBeenCalledWith('replaceDraft'))
-  expect(readSavedDraft()).toEqual(savedDraft)
-
-  cleanup()
-  confirm.mockReturnValueOnce(true)
-  mount({ prefill })
+it('replaces a saved draft without asking, like a filesystem entry', async () => {
+  localStorage.setItem('compile-draft:recovery-test', JSON.stringify(oldDraft))
+  const confirm = vi.spyOn(window, 'confirm')
+  const page = mount({ prefill })
   await waitFor(() => expect(readSavedDraft()).toEqual(prefilledDraft))
+  expect(confirm).not.toHaveBeenCalled()
+  expect(page.queryByRole('button', { name: 'restoreDraft' })).toBeNull()
   confirm.mockRestore()
 })
 

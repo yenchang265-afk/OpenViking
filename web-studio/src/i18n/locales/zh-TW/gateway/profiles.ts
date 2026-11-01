@@ -62,6 +62,11 @@ const profiles = {
     placeholder: '例如：程式設計',
     description: '為閘道器金鑰選擇配置時顯示這個名稱。',
   },
+  clientOverrides: {
+    label: '允許客戶端覆蓋設定',
+    description:
+      '客戶端可以用 X-OpenViking-Context 請求頭為新對話修改下面的任意設定，包括預算和會修改資料的工具。配置需要保持原樣時，請關閉此項。',
+  },
   recall: {
     title: '召回記憶',
     description:

@@ -129,9 +129,9 @@ class InProcessVikingClient:
             )
         return page.entries
 
-    async def mkdir(self, uri: str) -> None:
+    async def mkdir(self, uri: str, *, description: str | None = None) -> None:
         with _mapped_errors(uri):
-            await self._service.fs.mkdir(uri, ctx=self._ctx)
+            await self._service.fs.mkdir(uri, ctx=self._ctx, description=description)
 
     async def glob(self, pattern: str, uri: str) -> dict[str, Any]:
         with _mapped_errors(uri):
@@ -176,7 +176,9 @@ class InProcessVikingClient:
                 ctx=self._ctx,
                 wait=wait,
                 skip_conflicts=skip_conflicts,
-                **({"defer_processing": True, "edit_source": "compile"} if compile_edit else {}),
+                # Compile output is indexed by the write's own refresh task; the
+                # lifecycle only finalizes the target directory when the run finishes.
+                **({"edit_source": "compile"} if compile_edit else {}),
             )
 
     async def get_skill(self, skill_name: str, *, target_uri: str) -> dict[str, Any]:

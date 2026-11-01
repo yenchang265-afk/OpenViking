@@ -84,11 +84,11 @@ Collector 負責把輸入轉成指標語義：
 
 ### MetricRegistry
 
-MetricRegistry 是程序內的指標註冊中心，用於儲存當前指標值，並在匯出時統一讀取。
+MetricRegistry 保留 OpenViking 的指標名、標籤約束和帳戶維度規則。單次事件的計數與耗時直接交給 OpenTelemetry SDK 累計；RAGFS 和狀態採集器返回的累計值作為快照接入，不會重新作為事件計數。
 
 ### Exporter
 
-當前首個落地匯出器是 Prometheus Exporter，用於把 registry 中的指標渲染成 Prometheus exposition 文本。
+`/metrics` 使用官方 Prometheus Python 客戶端輸出文本；OTLP HTTP/gRPC 使用 OpenTelemetry 官方匯出器處理編碼、傳送和重試。現有 endpoint、headers、TLS 和上報週期配置保持不變。
 
 ## 使用方式
 
@@ -138,6 +138,31 @@ scrape_configs:
 ## 關鍵指標說明
 
 下面列出 Collector 定義的代表性指標。某個指標是否出現，取決於功能是否啟用、是否發生對應事件，以及 Collector 是否採集成功；未出現不能直接解釋為數值為零。
+
+### 耗時分佈與分位數
+
+業務打點只記錄實際耗時和標籤；Python 與 RAGFS 的耗時累計由各自的 OpenTelemetry SDK 完成。
+接入層統一配置預設統計範圍，業務採集器無需維護桶邊界。Python 從 0.01 秒、RAGFS 從 0.0001 秒起，
+按每個十倍數量級的 1、2、5 檔覆蓋到 5,000,000 秒（約 58 天），超出範圍仍計入 `+Inf`。
+這裡的範圍不是任務超時；看板不應通過 `< 10` 或固定縱軸上限過濾慢請求。
+
+Prometheus 的 `_bucket`、`_count`、`_sum` 和 OTLP Histogram 都帶有 `bucket_schema`，
+該標籤由實際桶邊界計算，採集器不能自行設定。**聚合分位數時必須保留 `bucket_schema`**，避免滾動升級時把
+新舊分桶混算。沒有該標籤的舊資料會形成獨立的一組；其已經合併到最後一桶的細節無法恢復。
+
+```promql
+histogram_quantile(0.99,
+  sum by (le, bucket_schema, operation) (
+    rate(openviking_operation_duration_seconds_bucket[5m])
+  )
+)
+```
+
+P95 將 `0.99` 改為 `0.95`。平均耗時使用同一組 `operation, bucket_schema` 的
+`rate(_sum) / rate(_count)`，僅在次數大於零時顯示；沒有完成記錄時不能用零耗時代替。
+分位數仍是桶內插值估算，低流量或粗粒度桶內的結果不等於精確的單次請求耗時。
+預設每組 Python 耗時直方圖輸出 30 條 Prometheus 時序，RAGFS 輸出 36 條；
+應將新增桶的採集和儲存成本計入容量規劃。
 
 ### 請求與操作
 
@@ -256,6 +281,12 @@ Telemetry bridge 還識別舊摘要鍵，對應 `request`、`process`、`parse`�
 | `openviking_lock_stale_leases_released_total` | Counter | 無 | 已釋放的過期租約數 |
 | `openviking_lock_descendant_scans_total` | Counter | 無 | 已完成的後代鎖掃描次數 |
 | `openviking_lock_descendant_scan_duration_seconds_total` | Counter | 無 | 後代鎖掃描累計耗時 |
+| `openviking_lock_descendant_scan_duration_seconds` | Histogram | `bucket_schema` | 已完成後代鎖掃描的耗時分佈，可計算平均、P95 和 P99 |
+| `openviking_lock_redis_acquire_duration_seconds` | Histogram | `kind, result, bucket_schema` | Redis 獲取往返耗時，包含響應解碼；batch 包含 Tree 時 `kind=tree`，否則為 `exact`；`result` 為 `ok`、`conflict`、`invalid_token`、`invalid_request`、`invalid_response` 或 `error` |
+| `openviking_lock_redis_slow_acquisitions_total` | Counter | 無 | Redis 獲取往返超過 10ms 的累計次數，包含失敗請求 |
+
+Redis 獲取指標統計已返回的指令碼呼叫，不包含本地校驗、manager 衝突等待，
+以及響應前被取消的呼叫。scope、owner 和服務名保留在慢日誌中，不作為指標標籤。
 
 佇列耗時指標中的 `outcome` 可取 `success`、`failed`、`requeued`、`cancelled`、`exception`。其中 `failed` 表示 handler 返回了可確認的失敗結果，`exception` 表示處理過程丟擲異常，當前訊息不會 ACK。
 
@@ -306,8 +337,9 @@ RAGFS 通過一次原生 `metrics()` 呼叫讀取檔案系統、Cache、multi-ba
 這些指標不帶 `mount` 和 `account_id` 標籤。未啟用 Cache 或 multi-backend
 時，不生成對應指標族。`status` 為 `success` 或 `error`。
 `exists=false` 計為成功；`replace` 使用 `rename` 操作標籤。
-Histogram 包含全部操作結果，有限桶邊界範圍為 0.0001 至 10 秒。
-Python `get_stats()` 保留原有微秒字段。
+Histogram 包含全部操作結果，使用 Rust OpenTelemetry SDK 統計；輸出邊界和計數直接來自 SDK。
+尚未發生的操作不匯出空直方圖，避免為每個外掛和操作持續釋出無樣本的長尾桶；原有操作計數器保留。
+Python `get_stats()` 保留原有微秒欄位。
 
 protocol 指標始終包含閉集中的兩條 series。任何 protocol、account 或 segment
 manifest 無法讀取或校驗時，本次完整 snapshot 失敗，不會發布部分 lag=0。

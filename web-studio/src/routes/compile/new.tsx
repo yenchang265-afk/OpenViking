@@ -45,6 +45,7 @@ function NewCompile() {
   }, [prefill, fromTask, navigate])
   return (
     <CompileForm
+      // The prefill is held in state, so stripping it from the URL must not remount.
       key={`${identityScopeKey}:${fromTask || ''}`}
       fromTask={fromTask}
       prefill={prefill}

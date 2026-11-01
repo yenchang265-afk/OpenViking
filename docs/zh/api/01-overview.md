@@ -398,6 +398,7 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/content/write` | 寫入內容並重新整理語義索引 |
 | POST | `/api/v1/content/batch-write` | 寫入多個檔案並重新整理索引 |
 | POST | `/api/v1/content/set_tags` | 設定檢索標籤 |
+| POST | `/api/v1/content/ensure_directory_index` | 確保既有目錄的索引就緒，僅在兩層摘要都缺失時建立 L0 |
 | POST | `/api/v1/content/reindex` | 重建語義或向量索引 |
 
 ### [技能](04-skills.md)
@@ -430,8 +431,17 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/sessions/{session_id}/messages` | 新增單條訊息 |
 | POST | `/api/v1/sessions/{session_id}/messages/batch` | 批量添加消息 |
 | POST | `/api/v1/search/recall` | 已棄用：search 介面 `mode="context"` 之上的輕量預設 |
+| POST | `/api/v1/rules/compile` | 非同步編譯使用者規則 |
+| POST | `/api/v1/rules/search` | 檢索適用於當前任務的完整規則 |
 | GET | `/api/v1/agent-evolution/experiences/trajectories` | 分頁查詢應用過指定 Experience 的 Trajectory |
 | GET | `/api/v1/agent-evolution/experiences/outcomes` | 聚合應用過指定 Experience 的 Trajectory 結果分佈 |
+
+### [規則（Beta）](26-rules.md)
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| POST | `/api/v1/rules/compile` | 提交規則編譯後臺任務 |
+| POST | `/api/v1/rules/search` | 按任務上下文召回適用的 active 規則 |
 
 ### [檢索](06-retrieval.md)
 
@@ -509,7 +519,7 @@ JSON 輸出 - 錯誤：
 | DELETE | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 刪除記憶模板覆蓋，恢復部署預設值 |
 | POST | `/api/v1/admin/accounts` | 建立帳號及首個管理員 |
 | GET | `/api/v1/admin/accounts` | 列出帳號 |
-| POST | `/api/v1/admin/migrate` | 遷移舊版身份資料 |
+| POST | `/api/v1/admin/migrate` | 預留遷移入口；僅 ROOT 可呼叫，當前返回 400 INVALID_ARGUMENT |
 | GET | `/api/v1/admin/accounts/{account_id}` | 獲取單個帳號的無憑據後設資料 |
 | DELETE | `/api/v1/admin/accounts/{account_id}` | 刪除帳號 |
 | POST | `/api/v1/admin/accounts/{account_id}/users` | 註冊使用者 |
@@ -518,13 +528,13 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 獲取使用者記憶策略 |
 | PATCH | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 更新使用者記憶策略 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 移除使用者 |
-| PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/role` | 將使用者提升為 ADMIN |
+| PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/role` | 在 USER 與 ADMIN 之間變更使用者角色 |
 | POST | `/api/v1/admin/accounts/{account_id}/users/{user_id}/key` | 重新生成使用者 Key |
 | POST | `/api/v1/admin/accounts/{account_id}/groups` | 建立使用者組 |
 | GET | `/api/v1/admin/accounts/{account_id}/groups` | 列出使用者組 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}` | 刪除使用者組 |
 | GET | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 列出使用者組成員 |
-| PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 新增使用者組成員 |
+| PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 批次新增使用者組成員 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除使用者組成員 |
 | GET | `/api/v1/privacy-configs` | 列出隱私配置分類 |
 | GET | `/api/v1/privacy-configs/tree` | 樹形列出當前目標和欄位後設資料，不返回值 |
@@ -587,6 +597,7 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/compile/config/update` | 更新目標配置 |
 | GET | `/api/v1/compile/configs` | 列出可見目標 |
 | GET | `/api/v1/compile/operations` | 列出目標操作記錄 |
+| GET | `/api/v1/compile/operations/{operation_id}` | 讀取單條操作詳情 |
 | GET | `/api/v1/compile/operations/{operation_id}/outputs` | 列出操作產出及版本引用 |
 | POST | `/api/v1/compile/embeddings` | 生成 Compile 臨時路由文本的向量 |
 | GET | `/api/v1/compile/capabilities` | 檢查 Compile 可用性 |

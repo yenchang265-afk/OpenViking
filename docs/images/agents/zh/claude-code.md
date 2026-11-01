@@ -47,6 +47,16 @@
      ✅ Status: OpenViking server is healthy and running
    ```
 
+## 步驟3：開始使用
+
+在 Claude Code 中新開一個會話，傳送：
+
+```text
+按 https://docs.openviking.net/agents/zh/onboarding.md 帶我完成 OpenViking 首次使用。
+```
+
+Agent 會檢查連線，並帶你完成首次使用。
+
 ## 故障排查
 
 | 問題 | 處理 |

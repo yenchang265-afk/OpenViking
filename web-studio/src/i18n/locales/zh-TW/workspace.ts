@@ -679,8 +679,6 @@ const workspace = {
       connector_import: '連接器匯入',
       admin_reindex: '重建索引',
       snapshot_restore_reindex: '快照恢復索引',
-      legacy_migration: '舊資料遷移',
-      legacy_cleanup: '舊資料清理',
       account_delete: '刪除帳號',
       user_delete: '刪除使用者',
     },

@@ -20,7 +20,7 @@ Applications submit Compile tasks through OpenViking's Compile API. OpenViking v
 | `to` | string | Yes | - | Target Resource directory or a supported Skill namespace; Memory directories use `--skill memory` |
 | `skill` | string | Yes | - | Skill directory or its `SKILL.md` URI |
 | `instruction` | string | No | Skill-driven default | Additional instructions for this Compile run |
-| `args` | object | No | - | Optional `last_compile_time` and `wiki_links` (see below) |
+| `args` | object | No | - | Optional `last_compile_time`, `wiki_links`, and scheduling controls (see below) |
 
 `args` accepts only these keys; any other key returns `400 INVALID_ARGUMENT`:
 
@@ -28,8 +28,10 @@ Applications submit Compile tasks through OpenViking's Compile API. OpenViking v
 |-----|------|-------------|
 | `last_compile_time` | ISO 8601 timestamp or Unix seconds | Incremental compile: only source files modified at or after this time are processed. With no newer files the task completes without model calls or writes |
 | `wiki_links` | boolean | Rebuild resource `index.md` files from the actual Markdown paths |
+| `auto_update` | boolean | Scheduling control: save target settings and register or remove the scheduled update instead of compiling now |
+| `update_schedule` | object | Scheduling control: the automatic update schedule (format under [Target settings](#target-settings-and-operation-history)) |
 
-Compile uses the account's configured `vlm` model. The Python example uses `SyncHTTPClient`; await `compile()` with `AsyncHTTPClient`.
+Compile uses the account's configured `vlm` model. The scheduling controls `auto_update` and `update_schedule` are handled by OpenViking. The Python example uses `SyncHTTPClient`; await `compile()` with `AsyncHTTPClient`.
 
 **HTTP API**
 
@@ -51,7 +53,7 @@ curl -X POST http://localhost:1933/api/v1/compile \
   }'
 ```
 
-The endpoint returns `202 Accepted` with an OV task record:
+Without scheduling controls, the endpoint immediately queues a Compile task and returns `202 Accepted` with an OV task record:
 
 ```json
 {
@@ -66,6 +68,22 @@ The endpoint returns `202 Accepted` with an OV task record:
 }
 ```
 
+When `args` explicitly contains `auto_update` or `update_schedule`, the request only saves target settings and registers or removes the schedule. It returns `200 OK` with the saved configuration and `next_run_at`, without a `task_id`. No Compile task runs until the next scheduled time. For example:
+
+```json
+{
+  "from": ["viking://resources/research"],
+  "to": "viking://resources/research-wiki",
+  "skill": "viking://user/default/skills/research-compiler",
+  "args": {
+    "auto_update": true,
+    "update_schedule": {"frequency": "daily", "hour": 0, "minute": 0}
+  }
+}
+```
+
+A non-null `update_schedule` enables automatic updates unless `auto_update=false` is explicit. Disabling updates returns `next_run_at: null`. A request without either scheduling control still compiles immediately, including targets that already have a saved schedule. Schedule saves update the target by `to`; they do not create a task submission for `GET /api/v1/compile/submissions/{key}`.
+
 **CLI**
 
 ```bash
@@ -77,7 +95,7 @@ ov compile \
   --args '{"wiki_links":true}'
 ```
 
-`--args` must be a JSON object. The command returns a task ID immediately after submission.
+`--args` must be a JSON object. Immediate submissions return a task ID; schedule saves return the next run time.
 
 **SDKs**
 
@@ -119,23 +137,26 @@ task, err := client.Compile(
 
 ### Target settings and operation history
 
-These endpoints use the current account and authentication context. `to` is the registered target's `viking://` URI. Reading or updating one target requires write access; listing targets returns only accessible targets.
+These endpoints use the current account and authentication context. `to` is the registered target's `viking://` URI. Reading settings, operation history, operation details or outputs requires read access; updating settings requires write access. Listing targets returns only accessible targets.
 
 | HTTP API | Description and result (`status: "ok"`) |
 |----------|------------------------|
 | `GET /api/v1/compile/config?to={to}` | `result` contains target settings and run status |
 | `POST /api/v1/compile/config/update` | Required JSON body field `to` identifies the registered Compile output directory to configure; `result` contains the updated settings and run status |
-| `GET /api/v1/compile/configs` | Optional query parameters: `limit` (1–100, default 20) and `cursor`; `result.targets` contains this page of visible target summaries ordered by `target_id` ascending; pass `result.next_cursor` unchanged as the next page's `cursor`; null marks the last page |
+| `GET /api/v1/compile/configs` | Optional query parameters: `limit` (1–100, default 20) and `cursor`; `result.targets` contains this page of readable active target summaries ordered by `sha256(to)` ascending, excluding deleted targets before pagination; `result.next_cursor` is the last returned target URI; pass it unchanged as the next page's `cursor` to continue after its hash; null marks the last page |
 | `GET /api/v1/compile/operations?to={to}` | `result.operations` contains operations, newest first; `result.next_cursor` continues pagination |
+| `GET /api/v1/compile/operations/{operation_id}?to={to}` | `result` contains one operation with the same fields as a history item, including `params` and public `meta`, excluding private execution checkpoints |
 | `GET /api/v1/compile/operations/{operation_id}/outputs?to={to}` | `result.outputs` contains output files and frozen version references, ordered by URI; `result.next_cursor` continues pagination |
 
 The update body requires `to`, `from` (a non-empty source URI array), `skill`, and `auto_update` (boolean). When `auto_update=true`, a valid `update_schedule` is required. When `auto_update=false`, the schedule can be omitted or null; the saved rule is cleared and the returned value is null. New targets have no default rule, and enabling updates after disabling them requires a rule. Optional `instruction` preserves the saved value when omitted; `null` or an empty string clears it. Updating settings does not submit a Compile task.
 
 `update_schedule` requires `frequency` (`daily` or `weekly`). Optional `hour` (0–23) and `minute` (0–59) default to 0. Weekly schedules also accept `weekday` (1=Monday through 7=Sunday, default 1). Schedules use `Asia/Shanghai` time.
 
-Scheduled updates require `compile_api.scheduler_enabled=true` (default `false`) and valid `expiry.service_name` and `expiry.redis` configuration. `compile_api.scheduler_backend` only accepts `redis` (the default); `local` is invalid. Enabling `auto_update` while scheduling is disabled returns `COMPILE_SCHEDULER_DISABLED`. Manual incremental Compile and version management do not require Redis.
+Scheduled updates require `compile_api.scheduler_enabled=true` (default `false`) and valid `expiry.service_name` and `expiry.redis` configuration. `compile_api.scheduler_backend` only accepts `redis` (the default); `local` is invalid. A schedule request synchronously rejects disabled or missing scheduling configuration with HTTP 412 (`COMPILE_SCHEDULER_DISABLED`), and unavailable Redis registration with HTTP 503. A failed schedule save does not submit a Compile task. Compile failures, including the first run, do not cancel subsequent scheduled runs. Manual incremental Compile and version management do not require Redis.
 
-Both history endpoints accept optional query parameters `limit` (1–100, default 20) and `cursor`. Pass the returned `next_cursor` unchanged; `null` marks the last page. `operation_id` is 1–128 characters, starts with a letter or digit, and otherwise allows letters, digits, `:`, `.`, `_`, and `-`. Operations remain queryable after target deletion. Missing targets, operations, or output manifests return `404`. A null `version_id` or `snapshot_id` on an output item indicates that the corresponding reference is unavailable.
+The history and output list endpoints accept optional query parameters `limit` (1–100, default 20) and `cursor`. Pass the returned `next_cursor` unchanged; `null` marks the last page.
+
+An `operation_id` contains a fixed-width creation timestamp and a unique suffix. History pages follow descending operation ID order, and a cursor remains usable after its record is cleaned up. Compile operations link to execution tasks through `meta.task_id`; `operation_id` differs from `task_id`. Use `task_id` to query or cancel a task and the history item's `operation_id` to read operation details or outputs.
 
 ### Check Compile availability
 
@@ -206,6 +227,7 @@ ov task status cmp_01abc
 ```
 
 Terminal task responses also contain the result or error.
+
 
 ### Cancel a task
 

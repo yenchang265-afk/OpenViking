@@ -4,11 +4,14 @@ import asyncio
 import json
 import time
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 import pytest
 
 from openviking.server.identity import RequestContext, Role
+from openviking.service.compile_targets import (
+    new_operation,
+)
 from openviking.service.external_task_service import ExternalTaskService
 from openviking.service.task_pagination import decode_cursor, encode_cursor, page_scope
 from openviking.service.task_store import PersistentTaskStore
@@ -16,6 +19,147 @@ from openviking.service.task_tracker import TaskStatus, TaskTracker
 from openviking_cli.exceptions import ConflictError, InvalidArgumentError
 from openviking_cli.session.user_id import UserIdentifier
 from tests.test_task_tracker import _FakeAgfs
+
+
+@pytest.mark.parametrize(
+    "skill,valid",
+    [
+        ("viking://system/compile/example-skills/llm-wiki/SKILL.md", True),
+        ("viking://system/compile/example-skills", False),
+        ("viking://system/compile/example-skills/llm-wiki/references", False),
+        ("viking://system/memory/memory_templates/builtin", False),
+    ],
+)
+def test_compile_builtin_skill_uri(skill, valid):
+    """Compile accepts system Skill roots and rejects other system directories."""
+    from openviking.service.compile_service import CompileRequest, CompileService
+    from openviking_cli.utils.config.open_viking_config import CompileApiConfig
+
+    service = CompileService(CompileApiConfig(), ExternalTaskService(), SimpleNamespace())
+    ctx = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.USER)
+    request = CompileRequest.model_validate(
+        {"from": ["viking://resources/source"], "to": "viking://resources/wiki", "skill": skill}
+    )
+    if valid:
+        assert service._normalize_request_uris(request, ctx).skill == skill.removesuffix(
+            "/SKILL.md"
+        )
+    else:
+        with pytest.raises(InvalidArgumentError, match="skill must resolve"):
+            service._normalize_request_uris(request, ctx)
+
+
+@pytest.mark.parametrize(
+    "target",
+    [
+        "viking://system",
+        "viking://system/compile",
+        "viking://system/compile/example-skills",
+        "viking://system/resources/wiki",
+    ],
+)
+def test_compile_rejects_system_target(target):
+    from openviking.service.compile_service import CompileService
+
+    CompileService._validate_target("viking://user/alice/skills")
+    CompileService._validate_target("viking://agent/skills")
+
+    with pytest.raises(InvalidArgumentError, match="system namespace"):
+        CompileService._validate_target(target)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "viking://system/compile/example-skills/llm-wiki",
+        "viking://system/memory/memory_templates/custom/qa/input",
+    ],
+)
+def test_compile_rejects_system_source(source):
+    from openviking.service.compile_service import CompileRequest, CompileService
+    from openviking_cli.utils.config.open_viking_config import CompileApiConfig
+
+    service = CompileService(CompileApiConfig(), ExternalTaskService(), SimpleNamespace())
+    ctx = RequestContext(user=UserIdentifier("acme", "alice"), role=Role.ADMIN)
+    request = CompileRequest.model_validate(
+        {
+            "from": [source],
+            "to": "viking://resources/wiki",
+            "skill": "viking://system/compile/example-skills/llm-wiki",
+        }
+    )
+
+    with pytest.raises(InvalidArgumentError, match="Compile source.*system namespace"):
+        service._normalize_request_uris(request, ctx)
+
+
+@pytest.mark.asyncio
+async def test_compile_api_rejects_system_target_without_creating_task(service, app, client):
+    from openviking.server.auth import get_request_context
+    from openviking.service.task_tracker import get_task_tracker
+
+    ctx = RequestContext(user=service.user, role=Role.USER, api_key="test-compile-key")
+    app.dependency_overrides[get_request_context] = lambda: ctx
+    owner = {"account_id": ctx.account_id, "user_id": ctx.user.user_id}
+    tracker = get_task_tracker()
+    before = {
+        task.task_id for task in await tracker.list_tasks(task_type="compile", limit=None, **owner)
+    }
+
+    response = await client.post(
+        "/api/v1/compile",
+        json={
+            "from": ["viking://resources/source"],
+            "to": "viking://system/compile-output",
+            "skill": "viking://system/compile/example-skills/llm-wiki",
+        },
+    )
+
+    assert response.status_code == 400, response.text
+    assert "system namespace" in response.text
+    after = {
+        task.task_id for task in await tracker.list_tasks(task_type="compile", limit=None, **owner)
+    }
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "source",
+    [
+        "viking://system/compile/example-skills/llm-wiki",
+        "viking://system/memory/memory_templates/custom/qa/input",
+    ],
+)
+async def test_compile_api_rejects_system_source_without_creating_task(
+    source, service, app, client
+):
+    from openviking.server.auth import get_request_context
+    from openviking.service.task_tracker import get_task_tracker
+
+    ctx = RequestContext(user=service.user, role=Role.ADMIN, api_key="test-compile-key")
+    app.dependency_overrides[get_request_context] = lambda: ctx
+    owner = {"account_id": ctx.account_id, "user_id": ctx.user.user_id}
+    tracker = get_task_tracker()
+    before = {
+        task.task_id for task in await tracker.list_tasks(task_type="compile", limit=None, **owner)
+    }
+
+    response = await client.post(
+        "/api/v1/compile",
+        json={
+            "from": [source],
+            "to": "viking://resources/wiki",
+            "skill": "viking://system/compile/example-skills/llm-wiki",
+        },
+    )
+
+    assert response.status_code == 400, response.text
+    assert "Compile source must not be in the system namespace" in response.text
+    after = {
+        task.task_id for task in await tracker.list_tasks(task_type="compile", limit=None, **owner)
+    }
+    assert after == before
 
 
 @pytest.mark.asyncio
@@ -168,7 +312,7 @@ async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch, tmp_
     tasks = ExternalTaskService()
     fs = SimpleNamespace(
         stat=AsyncMock(
-            side_effect=lambda uri, ctx: {"uri": uri, "isDir": not uri.endswith("SKILL.md")}
+            side_effect=lambda uri, ctx, **_: {"uri": uri, "isDir": not uri.endswith("SKILL.md")}
         ),
         ensure_write_access=AsyncMock(),
     )
@@ -282,6 +426,62 @@ async def test_http_contract_preserves_legacy_list_and_retries(monkeypatch, tmp_
 
 
 @pytest.mark.asyncio
+async def test_schedule_retries_initial_failure_and_disables_deleted_targets(service, monkeypatch):
+    """Initial failure remains retryable; invalid credentials and deletion disable scheduling."""
+    from datetime import datetime, timedelta
+
+    import openviking.service.compile_scheduler as scheduling
+
+    store = service.compile.lifecycle.store
+    account = service.user.account_id
+    ctx = RequestContext(user=service.user, role=Role.USER)
+    target = "viking://resources/scheduled"
+    async with store.edit(account, target, create=True):
+        pass
+    config = await service.compile.get_config(target, ctx)
+    assert config["auto_update"] is False and config["update_schedule"] is None
+    schedule = {"frequency": "daily", "hour": 0, "minute": 0}
+
+    scheduler = scheduling.CompileScheduler(service.compile, store, service.viking_fs)
+    scheduler.install_expiry(
+        SimpleNamespace(register_handler=Mock(), report=AsyncMock(), unregister=AsyncMock())
+    )
+    now = datetime(2026, 10, 22, 12, tzinfo=scheduling.TZ)
+    assert await scheduler.trigger_if_due(account, target, now) == "not_due"
+
+    async with store.edit(account, target) as record:
+        record.update(
+            initialized=False,
+            last_run={"status": "failed"},
+            auto_update=True,
+            update_schedule=schedule,
+            auto_update_enabled_at="2026-10-20T00:00:00+08:00",
+        )
+    with monkeypatch.context() as patch:
+        patch.setattr(scheduler, "_executor", AsyncMock(return_value=(ctx, {})))
+        submit = AsyncMock()
+        patch.setattr(service.compile, "create_scheduled", submit)
+        assert await scheduler.trigger_if_due(account, target, now) == "submitted"
+        assert await scheduler.trigger_if_due(account, target, now) == "not_due"
+        submit.assert_awaited_once()
+    assert await scheduler.trigger_if_due(account, target, now + timedelta(days=1)) == "disabled"
+    invalid = await store.get(account, target)
+    assert invalid["auto_update"] is False and invalid["update_schedule"] is None
+    assert (await store.list_summaries(account))[0]["update_schedule"] is None
+
+    async with store.edit(account, target) as record:
+        record.update(auto_update=True, update_schedule=schedule)
+    await service.compile.lifecycle.versions.after_remove(target, ctx)
+    deleted = await store.get(account, target)
+    assert deleted["status"] == "deleted" and deleted["update_schedule"] is None
+    async with store.edit(account, target, create=True):
+        pass
+    reused = await store.get(account, target)
+    assert reused["status"] == "active" and reused["auto_update"] is False
+    assert reused["update_schedule"] is None
+
+
+@pytest.mark.asyncio
 async def test_cursor_prunes_cold_expired_records_without_loading_cache():
     agfs = _FakeAgfs()
     store = PersistentTaskStore(agfs)
@@ -354,3 +554,47 @@ async def test_cursor_cleanup_rechecks_task_updated_after_scan():
     )
     assert [record.task_id for record in page] == [task.task_id]
     assert await store.get_task(task.task_id, **owner) is not None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failed_dir", ["operation_outputs", "operations"])
+async def test_compile_history_retention_and_retry(service, monkeypatch, failed_dir):
+    store = service.compile.lifecycle.store
+    account = service.user.account_id
+    target = "viking://resources/history"
+    async with store.edit(account, target, create=True):
+        pass
+    now = time.time()
+    for operation_id, status, finished_at in (
+        ("expired", "completed", now - 604801),
+        ("boundary", "failed", now - 604800),
+        ("missing", "cancelled", None),
+        ("running", "running", now - 604801),
+    ):
+        operation = new_operation(operation_id, "restore", {}, "user", status=status)
+        operation["finished_at"] = finished_at
+        await store.merge_outputs(account, target, operation_id, [])
+        await store.put_operation(account, target, operation)
+    async with store.edit(account, "viking://resources/history") as record:
+        record["active_task_id"] = "running-task"
+    assert await store.delete_expired(now=now, limit=256) == 0
+    async with store.edit(account, "viking://resources/history") as record:
+        record["active_task_id"] = None
+    remove = store.remove
+
+    async def fail_remove(path, **kwargs):
+        if path.endswith(f"/{failed_dir}/expired.json"):
+            raise OSError("history deletion failed")
+        await remove(path, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(store, "remove", fail_remove)
+        assert await store.delete_expired(now=now, limit=256) == 0
+    assert await store.get_operation(account, target, "expired") is not None
+    for _ in range(4):
+        await store.delete_expired(now=now, limit=2)
+    assert await store.get_operation(account, target, "expired") is None
+    assert await store.get_outputs(account, target, "expired") is None
+    for operation_id in ("boundary", "missing", "running"):
+        assert await store.get_operation(account, target, operation_id) is not None
+        assert await store.get_outputs(account, target, operation_id) is not None

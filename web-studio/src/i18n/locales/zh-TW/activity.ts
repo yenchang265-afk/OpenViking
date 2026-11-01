@@ -5,10 +5,13 @@ const activity = {
     },
     threadList: {
       title: '會話',
+      backToList: '返回會話列表',
       newSession: '新建會話',
       count: '{{count}} 個會話',
       count_other: '{{count}} 個會話',
       loading: '正在載入會話...',
+      loadFailed: '會話載入失敗',
+      retry: '重試',
       emptyTitle: '還沒有會話',
       emptyDescription: '點選右上角的加號開始一段新對話。',
       deleteSession: '刪除“{{title}}”',
@@ -303,6 +306,7 @@ const activity = {
         agent: 'Agent 的能力、工具和經驗',
         user: '使用者個性化記憶',
         resources: 'Agent 可引用的外部資源',
+        system: '系統內建資源',
       },
       menu: {
         label: '{{name}} 的操作',
@@ -472,6 +476,19 @@ const activity = {
         '用法：/add-skill <Git URL> [-p viking://agent/skills]。本地檔案請到「技能」頁面上傳。',
       addResourceUsage:
         '用法：/add-resource <URL> [--to <URI>|--parent <URI>] [--args <JSON>] [--reason <說明>]。視覺化上傳請點選檔案系統上方的「新增資源」。',
+      mkdirUsage: '用法：/mkdir <viking://URI> [--description "描述"]',
+      mvUsage: '用法：/mv <源 viking://URI> <目標 viking://URI>',
+      cpUsage:
+        '用法：/cp <源 viking://URI> <目標 viking://URI> [-r|--recursive]',
+      mkdirCreated: '已建立目錄：{{uri}}',
+      mvCompleted: '已移動：{{from}} → {{to}}',
+      cpCompleted: '已複製：{{from}} → {{to}}',
+      rmUsage: '用法：/rm <viking://URI> [-r|--recursive]，必須明確指定目標。',
+      rmConfirm: '確認刪除 {{uri}}？此操作無法撤銷。',
+      rmConfirmRecursive:
+        '確認刪除 {{uri}} 及其所有子檔案和子目錄？此操作無法撤銷。',
+      rmCancelled: '已取消刪除',
+      rmDeleted: '已刪除：{{uri}}',
       writeUsage:
         '用法：/write <URI> --content "文本" [--mode replace|append|create] [--wait]',
       waitUsage: '用法：/wait（當前開源 API 不接收超時引數）',
@@ -590,6 +607,22 @@ const activity = {
         writeMode: {
           name: '--mode <模式>',
           description: '可選。replace、append 或 create；預設 replace。',
+        },
+        sourceUri: {
+          name: '<source URI>',
+          description: '必填，明確指定原始檔或目錄的 Viking URI。',
+        },
+        targetUri: {
+          name: '<target URI>',
+          description: '必填，明確指定目標 Viking URI。',
+        },
+        directoryDescription: {
+          name: '--description <text>',
+          description: '可選，目錄的初始描述；含空格時請加引號。',
+        },
+        recursive: {
+          name: '-r, --recursive',
+          description: '遞迴處理目錄及其所有內容（用於複製或刪除）。',
         },
         writeWait: {
           name: '--wait',
@@ -773,6 +806,38 @@ const activity = {
           remote: {
             code: `ov add-resource https://github.com/volcengine/OpenViking --to viking://resources/openviking-repo --args '{"branch":"main"}'`,
             description: '匯入 OpenViking 倉庫的 main 分支',
+          },
+        },
+        mkdir: {
+          default: {
+            code: '/mkdir viking://resources/new-docs --description "Project docs"',
+            description: '建立目錄並設定描述',
+          },
+        },
+        mv: {
+          default: {
+            code: '/mv viking://resources/old.md viking://resources/new.md',
+            description: '移動或重新命名檔案或目錄',
+          },
+        },
+        cp: {
+          file: {
+            code: '/cp viking://resources/notes.md viking://resources/notes-copy.md',
+            description: '複製單個檔案',
+          },
+          directory: {
+            code: '/cp viking://resources/docs viking://resources/docs-copy --recursive',
+            description: '遞迴複製目錄',
+          },
+        },
+        rm: {
+          file: {
+            code: '/rm viking://resources/notes.md',
+            description: '刪除單個檔案（需確認）',
+          },
+          directory: {
+            code: '/rm viking://resources/old-docs --recursive',
+            description: '刪除目錄及其內容（需確認）',
           },
         },
         write: {
@@ -960,6 +1025,22 @@ const activity = {
           description: '新增外部資源',
           usage:
             '/add-resource <URL> [--to <URI>|--parent <URI>] [--args <JSON>]',
+        },
+        mkdir: {
+          description: '建立目錄',
+          usage: '/mkdir <URI> [--description <text>]',
+        },
+        mv: {
+          description: '移動或重新命名檔案或目錄',
+          usage: '/mv <source URI> <target URI>',
+        },
+        cp: {
+          description: '複製檔案或目錄',
+          usage: '/cp <source URI> <target URI> [-r|--recursive]',
+        },
+        rm: {
+          description: '刪除檔案或目錄（執行前確認）',
+          usage: '/rm <URI> [-r|--recursive]',
         },
         write: {
           description: '寫入或追加資源檔案',

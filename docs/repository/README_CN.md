@@ -109,6 +109,8 @@ viking://resources/my_project/
 
 OpenViking 0.3.22 的評測覆蓋長對話使用者記憶（LoCoMo）和多輪智慧體任務（tau2-bench）。完整結果和實驗設定（含知識庫問答）見[評測報告](https://blog.openviking.ai/post/openviking-benchmark-results/)，復現指令碼在 [./benchmark](../../benchmark)。
 
+自己執行評測，請從 [RAG 與 Memory 評測指南](../../benchmark/README_zh.md)開始：以 VikingBot 為日常記憶評測主入口，另列官網 LoCoMo 復現、mem0 prompt 對照和 RAG 評測，避免用 RAG 流程評測記憶。
+
 記憶評測使用 [Doubao 2.0 Pro](https://console.volcengine.com/ark/region:cn-beijing/model/detail?Id=doubao-seed-2-0-pro) 作為 VLM，使用 [Doubao-embedding-vision-251215](https://console.volcengine.com/ark/region:cn-beijing/model/detail?Id=doubao-embedding-vision) 作為 Embedding 模型。
 
 <picture>
@@ -189,21 +191,17 @@ ov grep "openviking" --uri viking://resources/volcengine/OpenViking/docs/zh
 <summary><strong>讓 agent 幫你安裝</strong></summary>
 
 ```text
-幫我安裝 OpenViking 記憶外掛，執行：
+幫我安裝 OpenViking 記憶外掛，並帶我開始使用。OpenViking 是為 Agent 提供的上下文資料庫（https://github.com/volcengine/OpenViking），下面的命令和連結來自它的官方文件。
 
-curl -fsSL https://openviking.ai/install | bash -s -- --yes --url <SERVER_URL>
+1. 執行官方安裝器。它需要聯網並寫入我的主目錄，如果被你的沙箱攔住，請向我申請批准：
+   curl -fsSL https://openviking.ai/install | bash -s -- --yes --lang zh --url <SERVER_URL> --api-key <API_KEY>
+2. 裝好後讀 OpenViking 的接入引導，按它帶我完成設定。匯入歷史、寫協作規則這類選擇，引導會讓你先問我。docs.openviking.ai 和 docs.openviking.net 是同一個文件站，哪個打得開用哪個：
+   https://docs.openviking.ai/agents/zh/onboarding.md
 
-<SERVER_URL> 是我的 OpenViking 服務地址，向我要，不要猜。服務開了鑑權的話，
-要一個 user key（root key 讀寫不了記憶）：先看看有沒有已儲存的，沒有再向我要
-（用 --api-key 傳入），並告訴我不想把 key 貼進對話時可以怎麼給你。
-不要複述 key。沒開鑑權就加 --api-key ''，免得沿用之前儲存的 key。
-
-指令碼需要聯網並寫入主目錄，如果被沙箱攔住，請求我批准後在沙箱外執行。
-
-裝完告訴我裝進了哪些工具、各自的後續步驟，再問我要不要給其他工具也裝。
+API key 是我在這個服務上給自己生成的 user key，安裝器會把它存到本機的 ~/.openviking/ovcli.conf。命令裡原樣使用就行，回覆裡不用再顯示它，也不要寫進別的檔案或規則。全程用中文和我交流。
 ```
 
-準備好服務地址；服務開了鑑權的話，還要它的 API key。
+傳送前把 `<SERVER_URL>` 換成你的服務地址，把 `<API_KEY>` 換成 user key，root key 讀寫不了記憶。服務沒開鑑權的話，傳 `--api-key ''`。
 
 </details>
 
@@ -419,5 +417,5 @@ OpenViking 各元件採用不同的許可證：
 - **主專案**：AGPLv3——詳見 [LICENSE](../../LICENSE)
 - **crates/ov\_cli**：Apache 2.0——詳見 [LICENSE](../../crates/LICENSE)
 - **examples**：Apache 2.0——詳見 [LICENSE](../../examples/LICENSE)。`examples/hermes-plugin` 中的 Hermes 外掛保留其 [MIT 許可證](../../examples/hermes-plugin/LICENSE)。
-- **integrations/frameworks**：介面卡的包後設資料和原始碼宣告 AGPLv3，詳見各包的 `LICENSE`；可執行示例保留 Apache 2.0，詳見各包的 `examples/LICENSE`。
+- **integrations/frameworks**：LangChain/LangGraph 介面卡採用 AGPLv3，Microsoft Agent Framework 介面卡採用 MIT，詳見各包的 `LICENSE`；可執行示例保留 Apache 2.0，詳見各包的 `examples/LICENSE`。
 - **third\_party**：各三方專案保留其原有協議

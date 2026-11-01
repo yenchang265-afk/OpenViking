@@ -45,6 +45,8 @@ curl -fsSL https://openviking.ai/install | bash
 
 </details>
 
+安裝完成後，在 Claude Code 中新開一個會話，讓它按 https://docs.openviking.net/agents/zh/onboarding.md 執行。它會檢查連線，並帶你完成首次使用，詳見[一鍵接入](../getting-started/07-agent-onboarding.md)。
+
 ## 驗證
 
 啟動 `claude`，隨後：

@@ -38,7 +38,7 @@ def tracker(monkeypatch):
 def _compile_service(tmp_path, fs=None, config=None):
     fs = fs or SimpleNamespace(
         stat=AsyncMock(
-            side_effect=lambda uri, ctx: {"uri": uri, "isDir": not uri.endswith("SKILL.md")}
+            side_effect=lambda uri, ctx, **_: {"uri": uri, "isDir": not uri.endswith("SKILL.md")}
         ),
         ensure_write_access=AsyncMock(),
     )
@@ -94,8 +94,9 @@ async def test_create_queues_normalized_payload(tmp_path):
         "args": {"wiki_links": True, "last_compile_time": 1700000000},
     }
     assert kwargs["ctx"] is CTX
+    # wiki_links is still accepted but no longer reaches the pipeline.
     request = service._sanitized_request(kwargs["payload"])
-    assert request.wiki_links is True
+    assert not hasattr(request, "wiki_links")
     assert request.last_compile_time.year == 2023
     assert request.instruction_provided is False
 

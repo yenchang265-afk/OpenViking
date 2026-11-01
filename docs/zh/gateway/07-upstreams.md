@@ -29,6 +29,15 @@ description: 新增和配置 OpenViking 閘道器轉發請求的模型服務地�
 | 火山方舟 | 三種都有 | Chat Completions 和 Responses 為 `https://ark.cn-beijing.volces.com/api/v3`；Anthropic Messages 為 `https://ark.cn-beijing.volces.com/api/compatible` |
 | BytePlus 方舟（海外站） | 三種都有 | Chat Completions 和 Responses 為 `https://ark.ap-southeast.bytepluses.com/api/v3`；Anthropic Messages 為 `https://ark.ap-southeast.bytepluses.com/api/compatible` |
 
+## 部署預設上游 {#deployment-default-upstreams}
+
+運維可以在閘道器配置中設定 `default_upstreams`，供[直接使用 OpenViking API 金鑰](09-gateway-keys.md#openviking-keys)的客戶端使用，見[配置示例](13-configuration.md#gateway-fields)。
+
+- 僅在帳號沒有儲存上游時生效。帳號一旦儲存任何上游，就整組替換部署預設值，即使儲存的上游全部已停用。
+- 部署預設值不會複製到帳號儲存中，也不會在 Studio 中顯示。簽發的閘道器金鑰繼續使用它們選定的已儲存上游。
+- 保持物件的 key（例如 `ark-chat`）穩定：它就是凍結到對話中、供後續輪次路由使用的上游 ID。
+- 託管憑證寫成 `"api_key": "$ARK_API_KEY"`，Helm 部署通過 `extraEnv` 從 Secret 注入 `ARK_API_KEY`。閘道器載入檔案時展開環境變數引用，不要把明文 API 金鑰寫進 ConfigMap。
+
 ## 新增上游 {#add-an-upstream}
 
 1. 在**上游**標籤頁點**新增上游**，開啟**新建上游**編輯頁。頁面分為**介面**、**憑證**、**模型**和**路由**四部分。
@@ -148,6 +157,15 @@ Claude 訂閱令牌（`sk-ant-oat…`）無論怎麼勾選都會被拒絕，見[
 停用一個上游後，原本使用它的對話會轉到下一個候選上游，造成一次服務商快取未命中，並丟掉之前的 Claude 思考塊，這些請求被標為**上游已切換**（見[降級請求的異常](12-troubleshooting.md#issues-on-degraded-requests)）。想保留恢復的餘地，就停用而不是刪除。
 
 閘道器不做故障轉移：選中的上游出錯時，客戶端收到這個錯誤；服務商無法訪問時返回 502 "Model upstream is unavailable"。
+
+### 按請求指定上游 {#upstream-url-header}
+
+部署在閘道器前面的服務可以用 `X-OpenViking-Upstream-URL` 請求頭為每個請求選擇上游，客戶端也可以傳送這個請求頭。它的值必須與金鑰繫結的某個上游的 **Base URL** 相同（沒有已存上游的 OpenViking 金鑰，對應[部署預設上游](#deployment-default-upstreams)），只忽略末尾的 `/`。這個請求頭把路由範圍縮小到這些上游，再按常規的 API、模型和**優先順序**規則從中選擇，所以 Chat Completions 上游和 Responses 上游可以共用一個 Base URL。
+
+- 沒有繫結的上游使用這個 Base URL：請求返回 403 "Upstream URL is not allowed"。閘道器從不向未配置的地址發請求。
+- 閘道器照常使用選中上游的憑證。**每個客戶端自帶 API Key** 時，API Key 來自 `X-OpenViking-Upstream-Key`；Coding Plan 上游未放行時仍會被拒絕。
+- 對話改用另一個 Base URL 時轉到那個上游，與停用原上游一樣標為**上游已切換**。
+- 不帶這個請求頭時，路由不變。與所有 `X-OpenViking-*` 請求頭一樣，它不會轉發給服務商。
 
 ### 補全推理內容回傳 {#restore-reasoning}
 

@@ -13,7 +13,7 @@ from openviking.compile.ops.common import payload
 from openviking.compile.pipeline_io import ModelCallError, ModelCallLimitError
 from openviking.compile.renderer import validate_relative_file_path
 from openviking.compile.results import FileResponse, Group
-from openviking.compile.sources import split_source
+from openviking.compile.sources import read_source, split_source
 from openviking.core.namespace import relative_uri_path
 from openviking.models.model_error import ModelErrorKind, model_error_kind
 
@@ -143,7 +143,8 @@ async def run(runtime, sources, context):
                     await runtime.files.put("inputs", manifest)
                     selected = set()
                     for uri in dict.fromkeys(source_uris):
-                        text = await runtime.client.read_raw(uri)
+                        # Image sources raise instead of being decoded as text.
+                        text = await read_source(runtime.client, uri)
                         lines = text.splitlines(keepends=True)
                         excerpt = "".join(
                             lines[offset:] if limit == -1 else lines[offset : offset + limit]

@@ -150,7 +150,7 @@ ov overview viking://resources/docs/
 
 - `read()` 只接受檔案 URI。傳入已存在的目錄時返回 `INVALID_ARGUMENT`（HTTP `400`）。HTTP 響應的 `details` 包含 `expected: "file"`、`actual: "directory"` 和目標 `resource` URI，客戶端可據此改用目錄列表介面，無需解析錯誤訊息。
 - 除 Viking URI 外，還可以傳入 `stat()` 返回的 32 字元十六進位制檔案 `id`。服務端通過向量索引查詢對應 URI 並執行相同的許可權校驗。由於索引是非同步生成的，新返回的 ID 可能暫時無法解析；對應向量記錄被刪除後，按 ID 查詢也會失敗。這兩種情況下，服務端都會返回 `NOT_FOUND`，並提示資料可能尚未索引或已經刪除。
-- 公開 URI 引數接受 `resources`、`user` 和 `agent` 作用域。訪問 session 檔案時，使用 `viking://user/{user_id}/sessions/{session_id}/messages.jsonl`，也可以使用向後相容的 `viking://session/{session_id}/messages.jsonl` 別名。`temp`、`queue` 等內部作用域會返回 `INVALID_URI`。
+- 公開 URI 引數接受 `resources`、`user` 和 `agent` 作用域。訪問 session 檔案時，使用 `viking://user/{user_id}/sessions/{session_id}/messages.jsonl`，或表示當前使用者的 `viking://~/sessions/{session_id}/messages.jsonl`。舊的 `viking://session/...` 以及 `temp`、`queue` 等內部作用域會返回 `INVALID_URI`。
 - 敏感資訊的處理：預設讀取（`raw=false`）保留已有佔位符，並對殘留的已登記明文脫敏；`raw=true` 跳過預設脫敏，返回載入還原後的內容，該還原隻影響返回內容，不修改儲存檔案，詳見[隱私配置](../concepts/13-privacy.md)。
 
 **Python SDK**
@@ -218,8 +218,10 @@ ov read viking://resources/docs/api.md
 | content | str | 是 | - | 要寫入的新內容 |
 | mode | str | 否 | `replace` | `replace` 覆蓋已有檔案、缺失時建立；`append` 追加已有檔案、缺失時建立；`create` 是 `replace` 的相容別名 |
 | wait | bool | 否 | `false` | 是否等待後臺語義/向量重新整理完成 |
+| timeout | float | 否 | None | 已廢棄：僅為相容舊請求保留，傳入值會被忽略；HTTP 超時使用客戶端配置 |
 | tags | string[] | 否 | 未設定 | 寫入檔案的顯式檢索標籤，例如 `["team=search", "env=prod"]` |
 | tag_mode | string | 否 | `replace` | 標籤更新方式：`replace` 覆蓋、`append` 按 key 合併、`clear` 清空已有標籤且不要求傳 `tags` |
+| resolve_conflicts | bool | 否 | false | 解決衝突 |
 
 **說明**
 
@@ -231,6 +233,7 @@ ov read viking://resources/docs/api.md
 - 公共 API 已不再接受 `regenerate_semantics` 或 `revectorize`；寫入後會自動排程相關語義與向量處理。
 - 資源寫入附帶的父目錄 L0/L1 重新整理採用盡力更新：父目錄鎖衝突時跳過本次目錄重新整理，保留原文寫入及檔案自身的摘要、向量處理。跳過 L0/L1 寫回時也跳過目錄向量更新，不保證自動補刷；原文檔案本身的鎖衝突仍報錯。提交任務前發現衝突時返回 `semantic_status: "skipped"`；後臺執行期間的跳過記錄在日誌中，`wait=true` 也不保證父目錄摘要更新。
 - 提供非空 `tags` 時，標籤會在該檔案首次向量 upsert 時寫入，而非在處理完成後再單獨更新。省略 `tags`，或顯式傳 `tags: []` 配合 `tag_mode: "replace"`，都不會修改已有標籤。使用 `tag_mode: "clear"` 可清空全部已有標籤，且 `clear` 會忽略同時傳入的標籤值。
+- `resolve_conflicts=true` 表示編輯目的是進行衝突解決。
 
 
 **Python SDK**
@@ -345,6 +348,7 @@ ov write viking://resources/docs/api.md \
 | `root_uri` | string | 是 | - | 包含所有寫入目標的已存在 Resource 或 Memory 目錄 |
 | `operations` | array | 是 | - | 要校驗並執行的檔案寫入 |
 | `wait` | boolean | 否 | `true` | 是否等待語義/向量重新整理 |
+| timeout | float | 否 | None | 已廢棄：僅為相容舊請求保留，傳入值會被忽略；HTTP 超時使用客戶端配置 |
 | `telemetry` | boolean/object | 否 | `false` | 是否返回操作遙測資訊 |
 | `processing_mode` | string | 否 | `semantic_and_vectors` | 整批統一的處理模式：`semantic_and_vectors` 或 `vectors_only` |
 | `defer_processing` | boolean | 否 | `false` | 只儲存檔案，不派發語義和向量處理；後處理由呼叫方安排 |
@@ -548,6 +552,59 @@ Content-Disposition: attachment; filename*=UTF-8''logo.png
 
 ---
 
+### ensure_directory_index()
+
+確保一個既有目錄的語義索引就緒，保留已有 L0/L1 內容和標籤。僅當 `.abstract.md` 和 `.overview.md` 都不存在時，使用 `fallback_abstract` 建立 L0。已有摘要保持不變，只補缺失索引，不呼叫 LLM。目標為檔案、namespace 不支援語義索引、摘要為空或格式損壞、無許可權時返回錯誤。
+
+**Python SDK**
+
+```python
+result = client.ensure_directory_index(
+    uri="viking://resources/project/",
+    fallback_abstract="This is the compile generated folder",
+    wait=True,
+)
+client.set_tags(
+    uri="viking://resources/project/",
+    tags=["compile_target=true"],
+    mode="append",
+    recursive=False,
+)
+```
+
+TypeScript 對應 `client.ensureDirectoryIndex(uri, fallbackAbstract, { wait: true })`；Go 對應 `client.EnsureDirectoryIndex(ctx, uri, fallbackAbstract, nil)`，預設等待索引就緒。
+
+**HTTP API**
+
+```http
+POST /api/v1/content/ensure_directory_index
+Content-Type: application/json
+
+{
+  "uri": "viking://resources/project/",
+  "fallback_abstract": "This is the compile generated folder",
+  "wait": true
+}
+```
+
+`uri` 和非空的 `fallback_abstract` 必填。`wait` 預設 `true`，返回時確認已有摘要對應的全部索引層可讀取。`wait=false` 時缺失索引進入佇列，結果包含 `task_id`；`indexed_levels` 只列出響應時已經可讀取的層。介面檢查目錄寫許可權，不處理子目錄。
+
+**響應**
+
+```json
+{
+  "status": "ok",
+  "result": {
+    "uri": "viking://resources/project",
+    "created_abstract": true,
+    "indexed_levels": [0],
+    "vector_status": "complete"
+  }
+}
+```
+
+---
+
 ### set_tags()
 
 設定用於檢索過濾的顯式 `k=v` 標籤。`replace` 替換已有標籤，`append` 追加標籤，`clear` 顯式清空已有標籤；對目錄設定 `recursive=true` 時會更新目錄下的檔案。省略 `tags` 或傳入空陣列配合 `replace` 都是 no-op；只有 `clear` 會清空，且會忽略同時傳入的標籤值。
@@ -645,7 +702,7 @@ ov set-tags viking://resources/project/ \
 
 ### reindex()
 
-對已經儲存在 OpenViking 中的現有內容，校驗並修復語義產物和/或向量索引。resource 和 skill 預設使用 RFV（Request / Formal / Vector）增量收斂：檔案內容指紋、目錄 L0/L1 可見正文指紋和請求標量都未變化時直接跳過。需要無條件重建時使用 `force=true`。
+對已經儲存在 OpenViking 中的現有內容，校驗並修復語義產物和/或向量索引。對於 resource 和 skill，reindex 會比較正式內容與已有向量記錄：缺失或過期的記錄會被重建，內容已不存在的孤兒向量會被刪除，狀態一致的記錄會被跳過。只有完整讀取兩邊狀態後才允許刪除；需要無條件重建現有內容時使用 `force=true`，但完整性檢查仍會執行。
 
 這個介面面向已有的 `viking://...` 內容，不負責匯入新檔案。常規匯入請使用 [Resources](02-resources.md)。
 
@@ -683,20 +740,28 @@ HTTP 請求體會忽略未知欄位，便於客戶端與服務端在欄位演進
 `viking://user/<user_id>/sessions/...` 會被拒絕；重建更大的 user 名稱空間時，
 session 子樹會被跳過。
 
+具體 user 根的 namespace reindex 會處理 `resources`、skill package、memory shard、peer 的 resources/memories，以及其他已索引的直屬檔案和自定義一級目錄。寬範圍操作使用分頁淺層發現，跳過 session、privacy、內部 settings 與儲存控制子樹。帶 actor-peer 檢視的請求應指定明確可見的內容目標，因為更大的 namespace 無法提供完整的正式內容檢視。
+
+namespace 會結合正式內容和已有向量記錄發現目標，並按受支援的 URI 字首一次讀取、複用完整的輕量向量記錄清單，因此可以清理已經缺失的內容根。可重試錯誤或記錄數量變化最多觸發三次整份重讀；讀取不完整時不執行刪除。直接請求已經缺失的目標仍返回 `NOT_FOUND`，應從仍存在的父範圍或 namespace 清理其殘留向量；具體內容請求不會擴大到兄弟範圍。
+
+memory 使用原檔案的 L2，不再生成虛擬 `#chunk_NNNN` 記錄。reindex 會清理全部孤兒記錄和歷史 chunk；顯式檔案請求也會清理自身舊 chunk。原 memory 檔案處理失敗時保留其已有 L2，名稱類似 chunk URI 的真實檔案也不會被誤刪。
+
+memory 目錄 L0/L1 分別要求有效且非空的 `.abstract.md`/`.overview.md` 來源。確認來源缺失或為空時刪除該 level 的舊記錄；IO 或格式錯誤時保留舊記錄，增加 `failed_records` 並報告 warning。另一 level 與健康檔案繼續處理。
+
+`semantic_and_vectors` 模式中，memory 目錄目標先清理孤兒記錄，再複用與 `add_resources` 相同的處理流程，並等待相關語義和向量任務完成。精確 memory 檔案目標只重建自身 L2 和清理歷史 chunk，不重新生成目錄語義。
+
 **模式說明**
 
-- `vectors_only`：通過 RFV 對比當前 source MD5 與向量記錄 MD5，只重建缺失或過期的 L0/L1/L2；不會重寫 `.abstract.md` 和 `.overview.md`
-- `semantic_and_vectors`：通過同一 RFV 狀態和 `ContextUpdatePlan` 驅動語義修復及 L0/L1/L2 向量更新，不再執行第二次手工向量掃描
+- `vectors_only`：比較當前內容指紋與向量記錄指紋，只重建缺失或過期的 L0/L1/L2；不會重寫 `.abstract.md` 和 `.overview.md`
+- `semantic_and_vectors`：先修復語義產物，再更新對應的 L0/L1/L2 向量
 
-對於 `resource` 和 `skill`，`semantic_and_vectors` 會重新整理目錄/檔案語義產物，包括 `.abstract.md` 和 `.overview.md`。對於 `memory`，它會重建當前已持久化 memory 子樹的語義和向量，但不會回放歷史記憶抽取順序。
+對於 `resource` 和 `skill`，`semantic_and_vectors` 會重新整理目錄/檔案語義產物，包括 `.abstract.md` 和 `.overview.md`。對於 `memory`，它會重建當前已持久化 memory 子樹的語義和向量。
 
-resource/skill 的 `vectors_only` 和 `semantic_and_vectors` 共用一次 F 遍歷和一次窄欄位 V inventory。每個 source 在狀態解析時讀取一次，實際處理複用本次讀取結果，不會為了執行 Plan 再讀取一次 F。`force=true` 會跳過 MD5 相等判斷並重新處理作用域內全部可用 level；完整性檢查仍然執行。
+resource/skill 的兩種模式共用一次正式內容掃描和一次輕量向量記錄讀取。每個來源只讀取一次，並在後續處理中複用。`force=true` 會跳過指紋相等判斷並重新處理範圍內全部可用 level；完整性檢查仍然執行。
 
-對 resource/skill 目錄設定 `recursive=false` 時，兩種模式都只處理目標目錄自身的 L0/L1。直接 children 只作為目標聚合的既有 REUSE 輸入讀取，不掃描或重建下級內容。namespace 容器自身沒有索引記錄，因此 namespace 目標不接受 `recursive=false`，避免請求靜默成為 no-op。memory 仍使用原有 reindex 鏈路。
+對 resource/skill 目錄設定 `recursive=false` 時，兩種模式都只處理目標目錄自身的 L0/L1。直接子項只用於聚合目標目錄，不會被掃描或重建。namespace 容器自身沒有索引記錄，因此 namespace 目標不接受 `recursive=false`，避免請求靜默成為 no-op。memory 仍使用原有 reindex 鏈路。
 
-F snapshot 完整時，RFV 差分會把 V 中存在但 F 中不存在的記錄識別為 orphan，並在同一次 reindex 中清理；F snapshot 不完整時 fail-closed，不執行刪除。
-
-傳入非空 `tags` 時，標籤會隨 reindex 生成的向量記錄在同一次 upsert 中寫入，不會在完成後額外呼叫 `set_tags`。目錄或 namespace reindex 會把標籤應用到本次成功重建的目錄 L0/L1 和葉子 L2 記錄。`replace` 覆蓋已有標籤，`append` 按 key 合併；`replace` 配合空陣列時不修改已有標籤。`clear` 不要求傳 `tags`，會清空已有標籤；即使同時傳入標籤值也會忽略。
+傳入非空 `tags` 時，標籤會隨 reindex 生成的向量記錄在同一次寫入中儲存，不會在完成後額外呼叫 `set_tags`。目錄或 namespace reindex 會把標籤應用到本次成功重建的目錄 L0/L1 和葉子 L2 記錄。`replace` 覆蓋已有標籤，`append` 按 key 合併；`replace` 配合空陣列時不修改已有標籤。`clear` 不要求傳 `tags`，會清空已有標籤；即使同時傳入標籤值也會忽略。
 
 子樹 reindex 不是事務性操作。如果部分記錄因缺少語義來源或 embedding 失敗而未重建，只有成功寫入的記錄會更新標籤。
 
@@ -832,7 +897,7 @@ GET /api/v1/tasks?task_type=admin_reindex&resource_id=viking://resources
 | mode | 實際執行的 reindex 模式 |
 | scanned_records | 被檢查的記錄或語義源數量 |
 | rebuilt_records | 成功重建的向量記錄數量 |
-| deleted_records | RFV 差分確認並刪除的 orphan 向量記錄數量 |
+| deleted_records | 已確認沒有對應內容並刪除的向量記錄數量 |
 | unsupported_records | 因沒有可用向量來源而跳過的記錄數量 |
 | failed_records | 重建失敗的記錄數量 |
 | duration_ms | 同步執行耗時，單位毫秒 |
@@ -841,11 +906,7 @@ GET /api/v1/tasks?task_type=admin_reindex&resource_id=viking://resources
 
 **行為說明**
 
-- `vectors_only` 和 `semantic_and_vectors` 是非破壞式的，採用重建/覆蓋寫入，不需要先 drop 向量集合。
-- 對 `viking://` 發起 reindex 時，會向下分發到支援的頂層名稱空間，並顯式排除 `session`。
-- 名稱空間級 reindex，例如 `viking://user`，會繼續傳播到其支援的子內容型別。
-- 如果只是 embedding 模型或向量索引需要重新整理，應使用 `vectors_only`。
-- 如果語義產物本身也需要重建，再做重向量化，應使用 `semantic_and_vectors`。
+- Reindex 不會刪除整個向量集合；它覆蓋有效內容的向量記錄，並只刪除已確認沒有對應內容的記錄。
 - 同一個 URI 和 owner 同時只能執行一個 reindex 任務。對同一目標的併發請求會返回 conflict。
 - 對 resource 檔案，文本檔案在沒有 summary 時可以使用檔案正文；非文本檔案需要已生成的 summary 或已有向量記錄 fallback，否則會計為 unsupported。
 

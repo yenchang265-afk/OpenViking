@@ -60,7 +60,7 @@ viking://user/{user_id}/privacy/{category}/{target_key}/
 
 ## 技能的隱私提取與讀取還原
 
-### 自動提取（寫入鏈路）
+### 已登記值保護（寫入鏈路）
 
 當通過 `add_skill` 寫入 Skill 時，會走隱私提取與佔位符化流程。
 
@@ -135,26 +135,25 @@ fs.read(uri)
 
 ### 自動提取（寫入鏈路）
 
-向 Session 寫入訊息時，會在工具輸出外接和訊息落盤前，通過常見的規則，提取敏感值並替換為佔位符。
+向 Session 寫入訊息時，會在工具輸出外接和訊息落盤前，將匹配已登記 Privacy 值的內容替換為佔位符。新敏感值的自動探測因誤報產生大量無效資料，已在程式碼中暫時禁用，後續再處理；目前沒有執行時配置開關。
 
 ```
 Session.add_messages_async
   -> extract_and_store_session_privacy
     -> PrivacySanitizer（保護已登記的個人金鑰）
-    -> PrivacyExtractor（規則提取新值並佔位符化）
-    -> privacy.insert_values(category="session", target_key=session_id, updates=...)
+    -> 跳過新值探測，不新增 Session Privacy 欄位
   -> 工具輸出外接
   -> 寫入佔位符化後的訊息
 ```
 
 #### 關鍵點
 
-1. **抽取結果來源**：通過固定的常見規則（不呼叫模型）識別敏感值，將結果作為隱私鍵值。
-2. **覆蓋範圍**：處理 TextPart 文本、ContextPart 摘要和 ToolPart 輸入、輸出。工具輸入中，敏感欄位對應的值整體儲存和遮罩。
+1. **匹配來源**：僅匹配已登記的 Privacy 值；固定規則和敏感欄位名不再觸發新值提取。
+2. **覆蓋範圍**：處理 TextPart 文本、ContextPart 摘要和 ToolPart 輸入、輸出。工具輸入遞迴匹配已登記值，不再根據欄位名整體儲存和遮罩。
 3. **內容替換**：原文中的敏感片段會替換為佔位符：
    - 當前 Session 的敏感值統一使用以下佔位符，以 Session ID 或其雜湊對映值標識會話：<code>&#123;&#123;ov_privacy:session:&#123;session_id&#125;:&#123;field_name&#125;&#125;&#125;</code>。
    - 若敏感片段與已登記的個人金鑰（credential）匹配，則優先使用唯一匹配欄位的佔位符，例如 <code>&#123;&#123;ov_privacy:alice:viking://~/privacy/credential/github#/values/pat&#125;&#125;</code>。
-4. **寫盤結果**：匹配成功的片段以佔位符儲存，未匹配內容保持原樣。新提取的隱私值儲存在當前 Session 的配置中。
+4. **寫盤結果**：匹配成功的片段以佔位符儲存，未匹配內容保持原樣；不新增 Session Privacy 資料。歷史配置和已有佔位符的讀取還原繼續保留。
 
 ---
 

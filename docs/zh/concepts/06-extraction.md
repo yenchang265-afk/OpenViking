@@ -40,7 +40,7 @@ Parser 負責文件格式轉換和結構化，在臨時目錄建立檔案結構�
 
 ### 文件分節
 
-Markdown 解析器按標題和大小組織章節，合併較短小節，拆分過長內容。預設 `max_section_size` 為 2048 tokens，`max_section_chars` 為 6000 字元。配置還定義了 `section_size_flexibility=0.3`，但當前 Markdown 分節程式碼未使用該值。過長的單個表格行可以保持完整。這些值是分節目標，不能當作每個輸出檔案的絕對上限。
+Markdown 解析器按標題和字元陣列織章節，合併較短小節，拆分過長內容。預設 `max_section_chars` 為 2000 字元；`max_section_size` 和 `section_size_flexibility` 僅保留配置相容，不參與分節。普通文本遵守字元上限，過長的單個表格行仍保持完整。顯式 `no_split` 模式不拆分正文。
 
 不同解析器和 `parse_mode` 的行為不同。需要保持單檔案時，可在支援的匯入中使用 `parse_mode="no_split"`，詳見[資源管理](../api/02-resources.md)。
 
@@ -92,7 +92,7 @@ L0/L1 是目錄級 sidecar，不是 per-file sidecar。生成父目錄摘要時�
 
 ### Freshness、取樣與父級重新整理
 
-每次生成都會記錄直接子項覆蓋情況，超過 `semantic.overview_sample_limit`（預設 32）時使用穩定取樣。resource/skill 的父級重新整理取決於子目錄 L0 正文變化和 freshness 閾值，L0 正文不變時不向上傳播。`pending_child_changes` 統計等待重新整理的變化事件，同一子項重複變化也會分別計數。閾值、手動重新整理和延後更新的規則見[上下文層級](03-context-layers.md)。
+每次生成都會收集全部直接子項摘要，不再按 32 條取樣；保留原有 `semantic.max_overview_prompt_chars`（預設 60000 字元）預算及分批、截斷邏輯。resource/skill 的父級重新整理取決於子目錄 L0 正文變化和 freshness 閾值，L0 正文不變時不向上傳播。`pending_child_changes` 統計等待重新整理的變化事件，同一子項重複變化也會分別計數。閾值、手動重新整理和延後更新的規則見[上下文層級](03-context-layers.md)。
 
 ### 處理限制
 
@@ -101,7 +101,7 @@ L0/L1 是目錄級 sidecar，不是 per-file sidecar。生成父目錄摘要時�
 | `vlm.max_concurrent` | 32 | 語義處理併發上限，傳入 `SemanticProcessor.max_concurrent_llm` |
 | `max_images_per_call` | 10 | `VLMProcessor` 構造引數：單次最大圖片數，非 `ov.conf` 欄位 |
 | `max_sections_per_call` | 20 | `VLMProcessor` 構造引數：單次最大章節數，非 `ov.conf` 欄位 |
-| `semantic.overview_sample_limit` | 32 | 單個目錄摘要使用的直接子項樣本上限 |
+| `semantic.overview_sample_limit` | 32 | freshness 排程的小目錄閾值，不限制摘要輸入條數 |
 
 ## 程式碼骨架提取
 

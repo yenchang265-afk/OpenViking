@@ -253,7 +253,7 @@ peer 是使用者空間下的一段路徑字首——`viking://user/<you>/peers/
 | `{git_root}` | 倉庫根路徑，所有非字母數字字元替換成 `-` | 不在 git 倉庫中。倉庫內某個子目錄放了 `.openviking/config.json` 時，它仍然是倉庫自己的根，因此標記子目錄不會拆散預設 peer |
 | `{cwd}` | 工作目錄，所有非字母數字字元替換成 `-` | 從不為空——它也不在任何預設鏈裡，裸路徑只有在你明確要求時才會成為 peer |
 | `{dir}` | 工作區根目錄的目錄名：倉庫根，或放著 `.openviking/config.json` 的那個目錄 | 該目錄不是工作區 |
-| `{harness}` | 當前 agent 的名字（`claude-code`、`codex`、`dsh`、`opencode`、`pi`、`cursor`、`trae`、`trae-cn`、`zcode`） | 從不為空——但 MCP proxy 不參與推導，所以只走 proxy 的讀路徑解析不出它 |
+| `{harness}` | 當前 agent 的名字（`claude-code`、`codebuddy`、`codex`、`dsh`、`opencode`、`pi`、`cursor`、`trae`、`trae-cn`、`zcode`） | 從不為空——但 MCP proxy 不參與推導，所以只走 proxy 的讀路徑解析不出它 |
 
 在 `/Users/x/Dev/OpenViking/examples/codex-memory-plugin` 目錄下、`origin` 為 `git@github.com:volcengine/OpenViking.git` 時，peer 是 `github.com-volcengine-openviking`——無論從哪個子目錄、哪個 worktree、哪臺機器、哪份 clone 得到的都是同一個值。因此同一倉庫的所有 clone 共享一個 peer，而 fork 的 `origin` 不同，預設就是獨立的 peer。推導過程直接讀取倉庫檔案而不呼叫 `git`，因此 `PATH` 中沒有 `git` 時同樣可用；URL 會先歸一化，使同一倉庫的 ssh 與 https 寫法收斂到同一個值，URL 中內嵌的 token 也不會進入 peer id。
 

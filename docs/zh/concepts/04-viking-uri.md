@@ -24,8 +24,7 @@ viking://{scope}/{path}
 | **upload** | 臨時上傳檔案 | 臨時 | 內部 |
 
 公開 API 和 CLI 的檔案系統/內容操作接受公開作用域 `resources`、`user` 和 `agent`，
-以及根 URI `viking://`。`session` 保留為 user session 路徑的向後相容別名；
-新 session 資料位於 `viking://user/{user_id}/sessions`。
+以及根 URI `viking://`。Session 資料位於 `viking://user/{user_id}/sessions`。
 `temp`、`queue` 和 `upload` 是內部實現作用域，不能通過公開 API 的 URI 引數直接訪問。
 
 ### Home 別名 `~`
@@ -160,8 +159,7 @@ viking://user/{user_id}/sessions/{session_id}/history   # 歸檔歷史
 viking://~/sessions/{session_id}/                       # 自己的會話（家目錄別名寫法）
 ```
 
-`viking://session/{session_id}` 會作為當前使用者 session 路徑的向後相容別名被接受。
-它不是新會話資料的獨立儲存根。
+舊 URI `viking://session/{session_id}` 不再接受。
 
 ## 路徑變數
 

@@ -228,6 +228,15 @@ const connect = {
     upstreams: '需要它的上游：{{names}}',
     none: '目前沒有上游需要它。',
   },
+  context: {
+    title: '覆蓋上下文配置',
+    description:
+      '客戶端可以在這個請求頭裡用 JSON 物件傳入要修改的配置欄位，為新對話覆蓋金鑰的上下文配置。',
+    tools:
+      '`{"disabled_tools":[]}` 表示提供全部 OpenViking 工具，包括會修改資料的工具。',
+    scope:
+      '對話開始時的設定會沿用到對話結束。關閉了“允許客戶端覆蓋設定”的配置會拒絕這個請求頭。',
+  },
   plugin: {
     title: '同時在用 OpenViking 外掛？',
     description:

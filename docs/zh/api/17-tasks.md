@@ -316,7 +316,7 @@ ov task cancel uuid-xxx
 | task_type | str | 否 | None | 按任務型別過濾，例如 `session_commit` |
 | status | str | 否 | None | 按任務狀態過濾：`pending`、`running`、`cancelling`、`completed`、`failed`、`cancelled` |
 | resource_id | str | 否 | None | 按資源 ID 過濾，例如會話 ID |
-| include_internal | bool | 否 | false | 是否包含 Connector 匯入產生的內部子任務 |
+| include_internal | bool | 否 | false | 是否包含 Connector 匯入和 Compile 產生的內部任務 |
 | limit | int | 否 | 50 | 每次最多返回的任務條數，範圍 1～200 |
 | pagination | str | 否 | None | 僅 HTTP；傳 `cursor` 後以分頁物件返回 |
 | cursor | str | 否 | None | 僅 HTTP；上一頁的 `next_cursor`，與 `pagination=cursor` 一起使用 |
@@ -324,7 +324,7 @@ ov task cancel uuid-xxx
 
 使用 `pagination=cursor` 時，`result` 是包含 `items`、`has_more` 和 `next_cursor` 的物件，而不是陣列。請求下一頁時原樣傳入 `next_cursor`，並保持相同的過濾條件和身份。未使用 cursor 模式時，`q` 和 `cursor` 不影響結果。
 
-預設僅返回使用者可見任務；排查 Connector 匯入時可傳 `include_internal=true` 檢視其內部 `add_resource` 子任務。
+預設僅返回使用者可見任務；可傳 `include_internal=true` 檢視 Connector 匯入產生的內部 `add_resource` 任務，以及 Compile 產生的內部 `ensure_directory_index` 任務。
 
 #### 3. 使用示例
 

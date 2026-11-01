@@ -15,6 +15,8 @@ curl -fsSL https://openviking.ai/install | bash
 
 安裝完成後完全退出並重新啟動 Cursor。
 
+安裝完成後，在 Cursor 中新開一個會話，讓它按 https://docs.openviking.net/agents/zh/onboarding.md 執行。它會檢查連線，並帶你完成首次使用，詳見[一鍵接入](../getting-started/07-agent-onboarding.md)。
+
 ## 安裝內容
 
 - 生命週期 Hook：自動載入畫像、按問題召回、捕獲對話、提交會話並保護 `viking://` URI。

@@ -32,3 +32,4 @@ toml = "0.8"
 gix-hash = { version = "0.27", features = ["sha1"] }
 bytes = "1.5"
 similar = "3.1"
+uuid = { version = "1", features = ["v4"] }

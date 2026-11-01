@@ -87,13 +87,13 @@ RUN --mount=type=cache,target=/root/.cache/uv,id=uv-${TARGETPLATFORM} \
     fi; \
     case "${UV_LOCK_STRATEGY}" in \
         locked) \
-            uv sync --locked --no-editable --reinstall-package openviking --extra bot --extra gemini --extra opengauss --extra elasticsearch --extra expiry \
+            uv sync --locked --no-editable --reinstall-package openviking --extra bot --extra gemini --extra opengauss --extra elasticsearch --extra expiry --extra mysql --extra redis-mysql \
             ;; \
         auto) \
             if ! uv lock --check; then \
                 uv lock; \
             fi; \
-            uv sync --locked --no-editable --reinstall-package openviking --extra bot --extra gemini --extra opengauss --extra elasticsearch --extra expiry \
+            uv sync --locked --no-editable --reinstall-package openviking --extra bot --extra gemini --extra opengauss --extra elasticsearch --extra expiry --extra mysql --extra redis-mysql \
             ;; \
         *) \
             echo "Unsupported UV_LOCK_STRATEGY: ${UV_LOCK_STRATEGY}" >&2; \
@@ -131,6 +131,8 @@ assert png.startswith(b"\x89PNG\r\n\x1a\n"), "SVG conversion did not produce a P
 PYCODE
 # Fail the image build if VikingBot and the separately released SDK drift apart.
 RUN /app/.venv/bin/python -I -c "import inspect, typing; from importlib.metadata import version; from openviking_sdk.client import AsyncHTTPClient; from openviking_sdk.options import BatchWriteOptions; checks = {'get_skill.include_integrity': 'include_integrity' in inspect.signature(AsyncHTTPClient.get_skill).parameters, 'ls.offset': 'offset' in inspect.signature(AsyncHTTPClient.ls).parameters, 'grep.level_limit': 'level_limit' in inspect.signature(AsyncHTTPClient.grep).parameters, 'BatchWriteOptions.skip_conflicts': 'skip_conflicts' in typing.get_type_hints(BatchWriteOptions)}; missing = [name for name, ok in checks.items() if not ok]; raise SystemExit(f\"incompatible openviking-sdk {version('openviking-sdk')}: missing {', '.join(missing)}\" if missing else 0)"
+# Redis and the gateway Lua scripts must survive wheel packaging.
+RUN /app/.venv/bin/python -I -c "import redis; from importlib.resources import files; assert any(p.name.endswith('.lua') for p in files('openviking_gateway').joinpath('lua').iterdir()), 'gateway Lua scripts missing from installed package'"
 COPY deploy/docker/openviking-entrypoint.sh /usr/local/bin/openviking-entrypoint
 COPY deploy/docker/pending_health_server.py /usr/local/bin/openviking-pending-health
 RUN mkdir -p /app/.openviking \

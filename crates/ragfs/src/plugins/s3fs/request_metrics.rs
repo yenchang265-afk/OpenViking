@@ -19,7 +19,9 @@ use aws_smithy_runtime_api::box_error::BoxError;
 use aws_smithy_runtime_api::client::orchestrator::{Metadata, OrchestratorError};
 use aws_smithy_types::config_bag::{Storable, StoreReplace};
 
-use crate::core::stats::{OperationStats, DURATION_BUCKET_BOUNDS_NS};
+use opentelemetry::KeyValue;
+
+use crate::metrics::duration::DurationMetrics;
 use crate::metrics::{RagfsMetric, RagfsMetricValue};
 
 /// How one S3 API call ended, after any retries.
@@ -51,13 +53,14 @@ impl Outcome {
 struct OperationTotals {
     outcomes: BTreeMap<Outcome, u64>,
     attempts: u64,
-    durations: OperationStats,
 }
 
 /// Request counters for one S3 client (one mount).
 #[derive(Default)]
 pub(crate) struct S3RequestMetrics {
     operations: Mutex<BTreeMap<String, OperationTotals>>,
+    /// End-to-end call durations, one series per `operation` attribute.
+    durations: DurationMetrics,
     inflight: AtomicUsize,
 }
 
@@ -73,9 +76,9 @@ impl S3RequestMetrics {
         let totals = operations.entry(operation.to_string()).or_default();
         let count = totals.outcomes.entry(outcome).or_default();
         *count = count.saturating_add(1);
-        totals
-            .durations
-            .record(elapsed, outcome == Outcome::Success);
+        drop(operations);
+        self.durations
+            .record(elapsed, &[KeyValue::new("operation", operation.to_string())]);
     }
 
     /// Native metric records for this client.
@@ -101,15 +104,19 @@ impl S3RequestMetrics {
                 totals.attempts,
                 1.0,
             ));
-            let durations = &totals.durations;
+        }
+        for point in self.durations.snapshot() {
             metrics.push(RagfsMetric {
                 name: "ragfs_s3_request_duration_seconds".into(),
-                labels: [("operation".to_string(), operation.clone())].into(),
+                labels: point
+                    .attributes()
+                    .map(|attribute| (attribute.key.to_string(), attribute.value.to_string()))
+                    .collect(),
                 value: RagfsMetricValue::Histogram {
-                    bucket_bounds: DURATION_BUCKET_BOUNDS_NS.to_vec(),
-                    bucket_counts: durations.duration_bucket_counts.to_vec(),
-                    count: durations.count,
-                    sum: durations.total_time_ns,
+                    bucket_bounds: point.bounds().map(|bound| bound as u64).collect(),
+                    bucket_counts: point.bucket_counts().collect(),
+                    count: point.count(),
+                    sum: point.sum(),
                     scale: 1e-9,
                 },
             });

@@ -333,7 +333,7 @@ ov system consistency viking://resources/my-project
 
 **引數**
 
-無引數。HTTP 請求超時使用客戶端配置。
+無必填引數。可選 JSON 請求體仍接受舊版 `timeout` 欄位，但該欄位已廢棄，傳入值會被忽略。不傳請求體仍可呼叫。HTTP 請求超時使用客戶端配置。
 
 #### 3. 使用示例
 

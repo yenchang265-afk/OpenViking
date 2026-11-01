@@ -26,8 +26,12 @@ import {
   CompileStatus,
 } from './-components/shared'
 import { ContextLink, useCompileSkillName } from './-components/context-link'
-import { fetchCapabilities, fetchCompileTasks } from './-lib/api'
+import { fetchCompileTasks } from './-lib/api'
 import { getTaskListRefetchInterval } from '#/routes/tasks/-lib/task-list'
+import {
+  CapabilityNotice,
+  useCompileCapability,
+} from './-components/capability-notice'
 
 const STATUSES = [
   'pending',
@@ -76,11 +80,7 @@ function CompileList() {
       fetchCompileTasks(search.status, search.q, pageParam, signal),
     getNextPageParam: (page) => page.next_cursor || undefined,
   })
-  const capability = useQuery({
-    queryKey: ['compile-capability', identityScopeKey],
-    queryFn: fetchCapabilities,
-    retry: false,
-  })
+  const capability = useCompileCapability()
   const latest = useQuery({
     queryKey: ['compile-latest', identityScopeKey, search],
     queryFn: ({ signal }) =>
@@ -107,20 +107,13 @@ function CompileList() {
       back={false}
       title={t('title')}
       actions={
-        <Button
-          disabled={capability.data?.can_create === false}
-          onClick={() => void navigate({ to: '/compile/new' })}
-        >
+        <Button onClick={() => void navigate({ to: '/compile/new' })}>
           <PlusIcon />
           {t('new')}
         </Button>
       }
     >
-      {capability.data?.can_create === false && (
-        <p role="status" className="rounded-lg border bg-muted/30 p-4 text-sm">
-          {t('unconfigured')}
-        </p>
-      )}
+      <CapabilityNotice capability={capability} />
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative w-full sm:max-w-md">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />

@@ -248,7 +248,6 @@ ov session commit s1 --no-event-tags
 - `admin remove-user` - 移除使用者。
 - `admin set-role` - 修改使用者角色，僅 ROOT。
 - `admin regenerate-key` - 輪轉使用者 API key。
-- `admin migrate` - 遷移 legacy agent/session 資料，僅 ROOT。
 - `system` - 管理類系統工具命令。
 - `reindex` - 為 URI 重建語義和向量產物。
 

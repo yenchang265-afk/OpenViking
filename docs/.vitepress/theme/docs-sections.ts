@@ -2,7 +2,7 @@
 // This manifest owns grouping and order; article labels come from Markdown H1.
 // Top navigation, sidebars, breadcrumbs, the homepage and llms.txt share this structure.
 export type Locale = 'en' | 'zh'
-export type DocPage = { path: string }
+export type DocPage = { path: string; reference?: boolean; en?: string; zh?: string }
 export type DocGroup = { en: string; zh: string; pages: DocPage[] }
 export type DocSection = {
   id: string; en: string; zh: string; enNote: string; zhNote: string
@@ -10,36 +10,50 @@ export type DocSection = {
   nextSteps?: DocGroup[]
 }
 const p = (path: string): DocPage => ({ path })
+const reference = (path: string, en: string, zh: string): DocPage => ({ path, reference: true, en, zh })
 const g = (en: string, zh: string, pages: DocPage[]): DocGroup => ({ en, zh, pages })
 
 export const sections: DocSection[] = [
   {
     id: 'getting-started', en: 'Quickstart', zh: '開始使用',
     enNote: 'Get a first result, evaluate it on your tasks, and choose what to connect.', zhNote: '完成首次體驗，用自己的任務驗證效果，再選擇接入路徑。',
-    entry: 'getting-started/01-introduction', aliases: [],
+    entry: 'getting-started/02-quickstart', aliases: [],
     groups: [
-      g('Get your first result', '先完成一次體驗', [
-        p('getting-started/01-introduction'),
+      g('Start', '開始', [
         p('getting-started/02-quickstart'),
-        p('getting-started/05-cli-setup')
+        p('getting-started/01-introduction'),
+        p('getting-started/07-agent-onboarding'),
+        p('getting-started/05-cli-setup'),
+        p('getting-started/07-options')
       ]),
-      g('Evaluate the result', '驗證實際效果', [
+      g('Studio', 'Studio', [
+        p('getting-started/23-studio')
+      ]),
+      g('Features', '功能', [
+        p('getting-started/08-resources'),
+        p('getting-started/09-memory'),
+        p('getting-started/10-skills'),
+        p('getting-started/16-rules'),
         p('getting-started/06-evaluate')
-      ])
-    ],
-    // Cross-section exits aid onboarding without changing article ownership.
-    nextSteps: [
-      g('Use it in your work', '接入你的工作', [
-        p('agent-integrations/01-overview'),
-        p('workflows/01-overview'),
-        p('context-compilation/01-overview'),
-        p('guides/17-vikingbot'),
-        p('guides/15-gateway')
       ]),
-      g('Learn, deploy and troubleshoot', '深入與排障', [
-        p('concepts/00-overview'),
-        p('guides/00-overview'),
-        p('guides/05-observability')
+      g('Integrations', '整合', [
+        reference('agent-integrations/01-overview', 'Agent integration', 'Agent 接入'),
+        reference('workflows/01-overview', 'Application development', '應用開發'),
+        p('getting-started/11-vikingbot'),
+        p('getting-started/12-gateway')
+      ]),
+      g('Data management', '資料管理', [
+        p('getting-started/13-compile'),
+        p('getting-started/14-versions'),
+        p('getting-started/15-transfer')
+      ]),
+      g('Team management', '團隊管理', [
+        p('getting-started/17-authentication'),
+        p('getting-started/18-accounts'),
+        p('getting-started/19-users'),
+        p('getting-started/20-peers'),
+        p('getting-started/21-access-control'),
+        p('getting-started/22-sharing')
       ])
     ]
   },
@@ -57,7 +71,8 @@ export const sections: DocSection[] = [
       g('Processing and memory', '處理與記憶', [
         p('concepts/06-extraction'),
         p('concepts/07-retrieval'),
-        p('concepts/08-session')
+        p('concepts/08-session'),
+        p('concepts/17-rule-scenarios')
       ]),
       g('Architecture and reliability', '架構與可靠性', [
         p('concepts/01-architecture'),
@@ -176,6 +191,9 @@ export const sections: DocSection[] = [
       g('Choose a workflow', '選擇開發任務', [
         p('workflows/01-overview')
       ]),
+      g('Rule validation (Beta)', '規則校驗（Beta）', [
+        p('workflows/02-rule-validation')
+      ]),
       g('Manage context', '組織與維護上下文', [
         p('guides/23-data-organize'),
         p('guides/18-openviking-assets'),
@@ -250,6 +268,9 @@ export const sections: DocSection[] = [
         p('api/04-skills'),
         p('api/19-agent-evolution')
       ]),
+      g('Rules (Beta)', '規則（Beta）', [
+        p('api/26-rules')
+      ]),
       g('Data and extension APIs', '資料與擴充 API', [
         p('api/11-snapshot'),
         p('api/14-ovpack'),
@@ -295,6 +316,6 @@ export const legacyPages: Record<string, string> = {
 
 export function sectionForPage(relativePath: string): DocSection | undefined {
   const path = relativePath.replace(/^(en|zh)\//, '').replace(/\.md$/, '')
-  return sections.find(section => section.groups.some(group => group.pages.some(page => page.path === path)))
+  return sections.find(section => section.groups.some(group => group.pages.some(page => !page.reference && page.path === path)))
     || sections.find(section => section.id === legacyPages[path])
 }

@@ -1,7 +1,9 @@
 import i18n from '#/i18n/core'
 import { getOvResult, ovClient, OvClientError } from '#/lib/ov-client'
-import { fetchFsList } from '#/routes/resources/-lib/api'
 import type { TaskRecord } from '#/routes/tasks/-lib/task-record'
+import { parse as parseYaml } from 'yaml'
+import { splitMarkdownFrontmatter } from '#/lib/markdown-frontmatter'
+import { normalizeReadContent } from '#/routes/resources/-lib/normalize'
 
 export type CompileRequest = {
   from: string[]
@@ -102,12 +104,12 @@ export async function cancelCompile(id: string) {
     ),
   )
 }
-export function fetchCapabilities() {
+export function fetchCapabilities(signal?: AbortSignal) {
   return getOvResult<{
     configured: boolean
     can_create: boolean
     reason_code?: string
-  }>(ovClient.client.get({ url: '/api/v1/compile/capabilities' }))
+  }>(ovClient.client.get({ url: '/api/v1/compile/capabilities', signal }))
 }
 export async function lookupSubmission(key: string) {
   return normalizeCompileTask(
@@ -118,13 +120,17 @@ export async function lookupSubmission(key: string) {
     ),
   )
 }
-export type CompileSkill = { name: string; uri: string; description: string }
 /** Bundled compile Skills, synced into every account's system namespace. */
-export const SYSTEM_EXAMPLE_SKILLS_ROOT =
-  'viking://system/compile/example-skills'
-
-async function fetchInstalledSkills(
+export const BUILTIN_SKILLS_ROOT = 'viking://system/compile/example-skills'
+export type CompileSkill = {
+  name: string
+  uri: string
+  description: string
+  metadataError?: boolean
+}
+async function fetchSkillsUnder(
   signal?: AbortSignal,
+  targetUri?: string,
 ): Promise<CompileSkill[]> {
   const result = await getOvResult<{
     skills: Array<{
@@ -133,38 +139,80 @@ async function fetchInstalledSkills(
       root_uri?: string
       description?: string
     }>
-  }>(ovClient.client.get({ url: '/api/v1/skills', signal }))
-  return result.skills.flatMap((s) => {
+  }>(
+    ovClient.client.get({
+      url: '/api/v1/skills',
+      signal,
+      ...(targetUri ? { query: { target_uri: targetUri } } : {}),
+    }),
+  )
+  const skills = result.skills.flatMap((s) => {
     const uri = s.uri || s.root_uri
     return uri ? [{ name: s.name, uri, description: s.description || '' }] : []
   })
+  if (targetUri !== BUILTIN_SKILLS_ROOT) return skills
+  signal?.throwIfAborted()
+  // System assets are file-only: their descriptions do not have abstract sidecars.
+  // Read the definition supplied by this server, including skills unknown to Studio.
+  return Promise.all(
+    skills.map(async (skill): Promise<CompileSkill> => {
+      if (skill.description) return skill
+      try {
+        const content = await getOvResult<unknown>(
+          ovClient.client.get({
+            url: '/api/v1/content/read',
+            signal,
+            query: {
+              uri: `${skill.uri.replace(/\/$/, '')}/SKILL.md`,
+              limit: 100,
+            },
+          }),
+        )
+        const frontmatter = splitMarkdownFrontmatter(
+          normalizeReadContent(content),
+        )
+        const meta = frontmatter
+          ? parseYaml(
+              frontmatter.rawFrontmatter.split('\n').slice(1, -1).join('\n'),
+            )
+          : null
+        if (
+          !meta ||
+          typeof meta.description !== 'string' ||
+          !meta.description.trim()
+        )
+          return { ...skill, metadataError: true }
+        return {
+          ...skill,
+          name:
+            typeof meta.name === 'string' && meta.name.trim()
+              ? meta.name
+              : skill.name,
+          description: meta.description,
+        }
+      } catch (error) {
+        if (signal?.aborted) throw error
+        return { ...skill, metadataError: true }
+      }
+    }),
+  )
 }
 
-/** Built-in Skills are optional: servers without the system namespace list none. */
-async function fetchSystemExampleSkills(): Promise<CompileSkill[]> {
-  try {
-    const { entries } = await fetchFsList(SYSTEM_EXAMPLE_SKILLS_ROOT, {
-      sortBy: 'name',
-      sortOrder: 'asc',
-    })
-    return entries
-      .filter((entry) => entry.isDir)
-      .map((entry) => ({
-        name: entry.name,
-        uri: `${SYSTEM_EXAMPLE_SKILLS_ROOT}/${entry.name}`,
-        description: '',
-      }))
-  } catch {
-    return []
-  }
-}
-
+/**
+ * List Skills under `targetUri`; without a scope, list installed Skills plus
+ * the built-in ones. Built-ins are optional: older servers list none.
+ */
 export async function fetchCompileSkills(
   signal?: AbortSignal,
+  targetUri?: string,
 ): Promise<CompileSkill[]> {
+  if (targetUri !== undefined) return fetchSkillsUnder(signal, targetUri)
   const [installed, builtIn] = await Promise.all([
-    fetchInstalledSkills(signal),
-    fetchSystemExampleSkills(),
+    fetchSkillsUnder(signal),
+    fetchSkillsUnder(signal, BUILTIN_SKILLS_ROOT).catch((error: unknown) => {
+      if (signal?.aborted) throw error
+      return []
+    }),
   ])
   const seen = new Set(installed.map((skill) => skill.uri))
   return [...installed, ...builtIn.filter((skill) => !seen.has(skill.uri))]
