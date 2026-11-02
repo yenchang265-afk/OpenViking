@@ -1,4 +1,8 @@
 export default {
+  managementTitle: 'VikingBot 管理',
+  managementHint: '管理帳號下的機器人渠道、應用憑據及平臺會話歷史。',
+  workbenchUnavailable:
+    'VikingBot 服務暫不可用，請聯絡服務管理員確認已啟用並配置完成。',
   operationFailed: '操作未完成，請重試。錯誤詳情：',
   viewSetup: '檢視配置',
   chooseBotChannel: '選擇機器人接入的平臺。',
@@ -29,7 +33,7 @@ export default {
   all: '全部',
   search: '搜尋對話',
   empty: '開始與 VikingBot 對話',
-  emptyHint: '提出問題、探索資源，或將機器人接入你使用的訊息平臺。',
+  emptyHint: '使用當前使用者身份提問、探索資源，繼續之前的 Web 對話。',
   manageBots: '管理機器人',
   enable: '先啟用 VikingBot',
   enableHint:

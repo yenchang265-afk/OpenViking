@@ -1,15 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useAppConnection } from '#/hooks/use-app-connection'
-import { CompileForm } from './-components/compile-form'
-import type { CompilePrefill } from './-components/compile-form'
+import { NewCompile } from '#/features/workbench/compile/new'
+import type { NewCompileSearch } from '#/features/workbench/compile/new'
+import { createFileRoute } from '@tanstack/react-router'
 
-type NewCompileSearch = {
-  fromTask?: string
-  skill?: string
-  from?: string
-  to?: string
-}
 const text = (value: unknown) => (typeof value === 'string' ? value : undefined)
 // Prefill only ever names Viking URIs; anything else in a link is dropped.
 const vikingUri = (value: unknown) =>
@@ -25,30 +17,3 @@ export const Route = createFileRoute('/compile/new')({
   }),
   component: NewCompile,
 })
-function NewCompile() {
-  const { identityScopeKey } = useAppConnection()
-  const navigate = useNavigate()
-  const { fromTask, skill, from, to } = Route.useSearch()
-  const [prefill] = useState<CompilePrefill | undefined>(() =>
-    skill || from || to ? { skill, from, to } : undefined,
-  )
-  // Read once: a reload must keep the edited draft, not re-apply the link.
-  const stripped = useRef(false)
-  useEffect(() => {
-    if (!prefill || stripped.current) return
-    stripped.current = true
-    void navigate({
-      to: '/compile/new',
-      search: fromTask ? { fromTask } : {},
-      replace: true,
-    })
-  }, [prefill, fromTask, navigate])
-  return (
-    <CompileForm
-      // The prefill is held in state, so stripping it from the URL must not remount.
-      key={`${identityScopeKey}:${fromTask || ''}`}
-      fromTask={fromTask}
-      prefill={prefill}
-    />
-  )
-}

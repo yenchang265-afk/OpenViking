@@ -95,7 +95,7 @@ VITE_OV_BASE_URL=http://127.0.0.1:1933 npm run dev
 
 ## 連線與鑑權
 
-業務程式碼應使用 `src/lib/ov-client` 下的適配層，而不是直接從 `src/gen/ov-client` 匯入。適配層集中處理 base URL、鑑權頭、telemetry 預設值和錯誤歸一化。
+業務程式碼應使用 `src/shared/api/ov-client` 下的適配層，而不是直接從 `src/gen/ov-client` 匯入。適配層集中處理 base URL、鑑權頭、telemetry 預設值和錯誤歸一化。
 
 瀏覽器儲存：
 
@@ -152,20 +152,21 @@ http://127.0.0.1:1933/openapi.json
 ## 專案結構
 
 ```text
-src/routes/              TanStack Router 路由
-src/routes/<page>/       頂層頁面模組
-src/routes/<page>/-*     頁面私有元件、hooks、schemas 和工具函式
-src/components/ui/       共享基礎 UI 元件
-src/components/          共享業務元件
-src/hooks/               共享 React hooks
-src/lib/ov-client/       OpenViking client 執行時適配層
-src/gen/ov-client/       OpenAPI 生成客戶端
-src/i18n/locales/        en 和 zh-CN 翻譯資源
-src/styles.css           全域樣式和設計 token
-types/ov-server/         手工補充的服務端 typed result 子集
+src/app/                 Application bootstrap, layouts, navigation and router boundaries
+src/features/workbench/  User data pages and their components, hooks and models
+src/features/admin/      Account and service administration
+src/features/connection/ Connection profiles, credentials, identity and onboarding
+src/features/resource-acl/ Resource permission management shared by both modes
+src/features/oauth/      Authorization and cross-device verification
+src/routes/              Thin TanStack Router declarations; stable public URLs
+src/shared/              Base UI, transport, pure models and utilities
+src/gen/ov-client/       Generated OpenAPI client
+src/i18n/                Translation runtime and resources
+src/styles.css           Global styles and design tokens
+types/ov-server/         Supplemental typed server-result subsets
 ```
 
-頁面私有實現應放在對應路由目錄下。新增或修改使用者可見文本時，應遵循 [Web Studio 國際化貢獻指南](./CONTRIBUTING_CN.md)。
+頁面實現歸屬各自功能模組；路由只裝配頁面、校驗查詢引數和處理重定向。目錄職責和依賴規則見[前端工程結構](./docs/frontend-structure.md)。使用者可見文本遵循[國際化貢獻指南](./CONTRIBUTING_CN.md)。
 
 ## 部署
 

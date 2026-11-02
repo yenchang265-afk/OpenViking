@@ -1,6 +1,49 @@
 const studio = {
+  credentialStorage: {
+    sessionOnly:
+      '當前環境無法安全儲存憑據，連線僅在本頁有效，重新整理或關閉後需重新配置。已有本地記錄保留；使用 HTTPS 可自動加密儲存。',
+    startError:
+      '無法讀取本地加密憑據。請使用 HTTPS 或 localhost，並允許此站點使用瀏覽器儲存後重新整理。已有憑據未被清除。',
+    saveError:
+      '憑據尚未儲存到本機，請勿關閉或重新整理頁面。請檢查瀏覽器儲存許可權後重試儲存。',
+  },
+  managementKey: {
+    title: '配置管理許可權',
+    description:
+      '為當前服務新增 Root API Key 或 Account Admin API Key。現有 User API Key 和工作臺身份會保留。',
+    label: '管理 API Key',
+    scopeHint:
+      'Root 可管理所有 Account；Account Admin 僅管理該 Key 所屬的 Account。',
+    submit: '驗證並進入管理後臺',
+    verifying: '正在驗證…',
+    notAdmin: '這是普通 User API Key，請填寫 Root 或 Account Admin API Key。',
+    identityMissing: '服務未返回該管理員所屬的 Account，無法確認管理範圍。',
+    invalidService: '此地址未返回有效的 Business Context Platform 服務響應。',
+  },
+  userKey: {
+    title: '配置 User API Key',
+    description: '為當前連線和 Account 新增一個 User，無需重複配置服務。',
+    hint: 'User ID 將自動識別。已有 User API Key 會保留在本機，供之後切換使用。',
+    rootKey: '這裡需要 User API Key，請勿填寫 Root API Key。',
+    accountMismatch: '此 API Key 不屬於當前 Account，請在對應連線下配置。',
+    identityMissing:
+      '服務未返回有效的 Account 和 User ID，無法確認此使用者身份。',
+    saved: '已儲存並切換為 {{user}}',
+  },
   duration: { milliseconds: '{{value}} 毫秒', seconds: '{{value}} 秒' },
   errors: {
+    requestInvalid: '請求引數無效，請檢查填寫內容後重試。',
+    authenticationFailed: 'API Key 缺失或無效，請檢查連線憑據。',
+    permissionDenied: '當前身份沒有執行此操作的許可權。',
+    resourceNotFound: '請求的資源不存在，請重新整理後重試。',
+    requestConflict: '資源已發生變化或已存在，請重新整理後重試。',
+    payloadTooLarge: '上傳內容過大，請縮小後重試。',
+    rateLimited: '請求過於頻繁，請稍後重試。',
+    serviceUnavailable: '服務暫時無法完成請求，請稍後重試。',
+    requestTimedOut: '請求超時，請檢查連線後重試。',
+    networkFailed: '無法連線服務，請檢查服務地址和網路。',
+    details: '技術詳情',
+
     botHealth: 'Bot 健康檢查失敗（{{status}}）',
     botSteer: '追加 Bot 輸入失敗（{{status}}）',
     botInterrupt: '中斷 Bot 失敗（{{status}}）',
@@ -71,6 +114,12 @@ const studio = {
   oauthClient: 'MCP 客戶端',
   localConnection: '本地 Business Context Platform',
   profiles: {
+    managementHint:
+      '支援 Root 或 Account Admin API Key。Root 可管理所有 Account；Account Admin 僅管理所屬 Account。',
+    back: '返回連線設定',
+    editorHint: '配置服務地址和訪問憑據，新增或更改的憑據會在儲存前校驗。',
+    saveActivate: '儲存並啟用',
+    notFound: '此連線配置不存在或已被刪除。',
     connectionChanged: '連線已切換，請在當前連線上重新選擇身份。',
     identityPending: '身份待確認',
     title: '連線配置',
@@ -133,6 +182,11 @@ const studio = {
   directoryDescription: '瀏覽自己的上下文，以及獲得授權的共享資源。',
   directoryError: '無法開啟目錄：目錄可能不存在，或當前身份沒有訪問許可權。',
   states: {
+    trustedCredentialRequired: {
+      title: '請配置 Trusted 認證憑據',
+      description:
+        '此服務使用 trusted 認證。請在連線設定中配置服務的 Root API Key，之後可通過 Account 和 User ID 切換訪問身份，無需 User API Key。',
+    },
     gatewayAuthMode: {
       title: 'Gateway 需要 API Key 認證模式',
       description:

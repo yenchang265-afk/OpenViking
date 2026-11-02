@@ -1,6 +1,5 @@
 // @vitest-environment jsdom
-import type * as React from 'react'
-import type { ComponentType } from 'react'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import {
   act,
   cleanup,
@@ -9,12 +8,12 @@ import {
   waitFor,
   within,
 } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import type * as React from 'react'
+import type { ComponentType } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
-import { OvClientError } from '#/lib/ov-client'
-
-import { Route } from './route'
+import { Route } from '#/routes/home/route'
+import { OvClientError } from '#/shared/api/ov-client'
 
 const state = vi.hoisted(() => ({
   role: 'user',
@@ -28,7 +27,7 @@ const state = vi.hoisted(() => ({
   commits: vi.fn(),
   cache: vi.fn(),
 }))
-vi.mock('#/hooks/use-app-connection', () => ({
+vi.mock('#/features/connection/hooks/use-app-connection', () => ({
   useAppConnection: () => ({
     connection: {
       baseUrl: 'http://localhost:1933',
@@ -43,22 +42,22 @@ vi.mock('#/hooks/use-app-connection', () => ({
     serverMode: state.serverMode,
   }),
 }))
-vi.mock('./-lib/api', () => ({
+vi.mock('#/features/workbench/home/lib/api', () => ({
   fetchConsoleDashboardSummary: state.summary,
   fetchConsoleTokenSeries: state.tokens,
   fetchConsoleTokenRate: state.tokenRate,
   fetchConsoleContextCommits: state.commits,
   fetchConsoleRequestHealth: state.requestHealth,
 }))
-vi.mock('#/routes/tasks/-lib/task-list', async (importOriginal) => ({
+vi.mock('#/features/workbench/tasks/lib/task-list', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchTasks: state.tasks,
 }))
-vi.mock('#/lib/monitoring-overview', async (importOriginal) => ({
+vi.mock('#/shared/lib/monitoring-overview', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchMonitoringOverview: state.health,
 }))
-vi.mock('#/lib/cache-stats', async (importOriginal) => ({
+vi.mock('#/shared/lib/cache-stats', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   fetchCacheStats: state.cache,
 }))

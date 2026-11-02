@@ -7,6 +7,7 @@ import {
   supportedLanguages,
   toSupportedLanguage,
 } from './resources'
+import { syncManifestLanguage } from './manifest'
 
 i18n.use(LanguageDetector).init({
   defaultNS: 'common',
@@ -28,6 +29,7 @@ export default i18n
 function syncDocumentLanguage() {
   if (typeof document !== 'undefined') {
     document.documentElement.lang = i18n.resolvedLanguage ?? defaultLanguage
+    syncManifestLanguage(document.documentElement.lang)
   }
 }
 
