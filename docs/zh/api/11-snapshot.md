@@ -588,13 +588,11 @@ ov snapshot restore 3f2a1b9c viking://resources/my_project -m "restore to v1" -o
 
 | 引數 | 型別 | 說明 |
 |------|------|------|
-| path | str | Compile 產物檔案的 `viking://` URI |
-| restore_version | str | 提供恢復內容的歷史版本的 UUID `version_id` |
-| current_version | str | 呼叫方觀察到的當前版本的 UUID `version_id`；不匹配時返回 `409 CONFLICT`，`error.details.resource` 為 `VERSION_CONFLICT` |
+| path | str | Compile 產物檔案的 `viking://` URI，也是歷史快照中的讀取路徑 |
+| restore_commit_id | str | 提供恢復內容的完整 commit ID（40 位小寫十六進位制） |
+| current_commit_id | str | 呼叫方觀察到的該檔案在 `main` 上最後一次變更的完整 commit ID；不匹配時返回 `409 CONFLICT`，`error.details.resource` 為 `VERSION_CONFLICT` |
 
-先呼叫 `GET /api/v1/snapshot/versions?uri=<檔案 URI>` 獲取 `current_version` 和歷史版本列表，再提交恢復請求：
-
-每條版本記錄包含 `version_id`（完整 UUID4 十六進位制字串）和正整數 `version_number`。客戶端在恢復和分頁時原樣傳遞 ID，使用 `version_number` 展示 `v1`、`v2` 等編號。版本列表按從新到舊的順序返回。編號在檔案的一輪生命週期內遞增，跨分頁和歷史清理保持不變。新版本索引從 1 開始編號；檔案刪除重建後版本 ID 不復用，舊恢復請求無法匹配重建檔案。
+`GET /api/v1/snapshot/versions?uri=<檔案 URI>` 用於查詢版本歷史。每條版本記錄包含 `version_id`（完整 UUID4 十六進位制字串）和正整數 `version_number`。客戶端在分頁時原樣傳遞版本 ID，使用 `version_number` 展示 `v1`、`v2` 等編號。版本列表按從新到舊的順序返回。編號在檔案的一輪生命週期內遞增，跨分頁和歷史清理保持不變。新版本索引從 1 開始編號；檔案刪除重建後版本 ID 不復用，舊版本 UUID 不會匹配重建檔案。
 
 響應中的 `to` 是檔案所屬的 Compile 目標目錄，可與版本記錄的 `meta.operation_id` 一起用於查詢操作詳情。`total` 表示當前保留的可查詢版本總數，不受 `limit`、`before_version` 影響，不等於最新版本編號。將 `next_before_version` 原樣作為 `before_version` 傳入可繼續載入更舊版本。該遊標和 `current_version` 都使用 UUID ID；不要根據 ID 或頁面內位置排序或推算展示編號。
 
@@ -604,17 +602,14 @@ curl -X POST "http://localhost:1933/api/v1/snapshot/restore" \
   -H "X-API-Key: your-key" \
   -d '{
     "path": "viking://resources/wiki/entity/project.md",
-    "restore_version": "0334d9abe4ac4f25a3e59d0b401bb01c",
-    "current_version": "54c71fb7bf134b71a9b7ed604c21f5b4"
+    "restore_commit_id": "0334d9abe4ac4f25a3e59d0b401bb01c12345678",
+    "current_commit_id": "54c71fb7bf134b71a9b7ed604c21f5b412345678"
   }'
 ```
 
-例如，當前為第 2 版且第 1 版內容不同時，恢復第 1 版會生成第 3 版，並保留前兩版的歷史。響應包含新的 UUID `version_id`、`version_number: 3`，`meta.restored_from` 為第 1 版的 UUID。內容相同時返回當前 ID 和編號，以及 `result: "noop"`、`meta.restored_from: null`，不新增版本，也不遞增編號。
+例如，當前為第 2 版且第 1 版內容不同時，恢復第 1 版會生成第 3 版，並保留前兩版的歷史。響應包含新的 UUID `version_id`、`version_number: 3`，`meta.restored_from` 為來源 commit ID。內容相同時返回當前 ID 和編號，以及 `result: "noop"`、`meta.restored_from: null`，不新增版本，也不遞增編號。
 
-恢復先檢查當前版本，再查詢歷史版本，並在寫入鎖內、修改內容前再次檢查當前版本。`current_version` 過期時返回 `409 CONFLICT`，`error.details.resource` 為 `VERSION_CONFLICT`，包括刪除重建後的舊請求；當前版本匹配但歷史版本不存在時返回 `404`。
-
-僅指定檔案被恢復；相關 Wiki 頁面和索引正文保持原內容。目標存在執行中的 Compile 時，返回 `409 CONFLICT`，`error.details.resource` 為 `COMPILE_RUNNING`。此模式不提供 `dry_run` 預演；目錄恢復的預演引數不適用於單檔案恢復。
-
+恢復先校驗該檔案最新變更的 commit，再讀取歷史 commit 中的同一路徑，並在寫入鎖內再次校驗。`current_commit_id` 過期時返回 `409 VERSION_CONFLICT`；當前 commit 匹配但歷史 commit 或路徑不存在時返回 `404`。不自動追蹤重新命名或移動前的路徑。
 ---
 
 ## ignore 管理

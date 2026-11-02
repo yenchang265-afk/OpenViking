@@ -1,5 +1,7 @@
 const studio = {
   credentialStorage: {
+    plaintext:
+      '當前環境無法加密儲存憑據。連線將以明文儲存在此瀏覽器中，重新整理後仍可使用。使用 HTTPS 並允許瀏覽器儲存可啟用自動加密。',
     sessionOnly:
       '當前環境無法安全儲存憑據，連線僅在本頁有效，重新整理或關閉後需重新配置。已有本地記錄保留；使用 HTTPS 可自動加密儲存。',
     startError:
