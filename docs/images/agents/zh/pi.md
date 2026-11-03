@@ -19,6 +19,16 @@
 2. 輸入 `/viking` 命令，確認顯示當前 session 對映和已註冊的 `openviking_*` 工具數量。
 3. 新開會話，詢問之前提到過的資訊，確認召回生效。
 
+## 步驟3：開始使用
+
+在 pi 中新開一個會話，傳送：
+
+```text
+按 https://docs.openviking.net/agents/zh/onboarding.md 帶我完成 OpenViking 首次使用。
+```
+
+Agent 會檢查連線，並帶你完成首次使用。
+
 ## 故障排查
 
 | 問題 | 處理 |

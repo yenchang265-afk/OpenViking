@@ -33,6 +33,8 @@ Hooks can run outside the sandbox after you trust them.
 
 TRAE 和 TRAE CN 使用安裝後的 `hooks.json`，不需要審閱 hook，安裝後重啟對應客戶端。
 
+安裝完成後，在 TRAE 中新開一個會話，讓它按 https://docs.openviking.net/agents/zh/onboarding.md 執行。它會檢查連線，並帶你完成首次使用，詳見[一鍵接入](../getting-started/07-agent-onboarding.md)。
+
 ## 安裝內容
 
 - `SessionStart`：載入使用者畫像、當前專案記憶，以及 OpenViking skill 清單 `<available-skills>`。

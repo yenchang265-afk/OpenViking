@@ -7,6 +7,31 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 ## 未釋出
 
+- **移除舊會話遷移（不相容變更）**：刪除舊遷移實現、`ov admin migrate`（含 `--cleanup`）
+  及 Python、TypeScript、Go SDK 的對應方法。保留僅 ROOT 可呼叫的
+  `POST /api/v1/admin/migrate` 入口，當前返回 `400 / INVALID_ARGUMENT`，不建立任務。
+  新版本不再提供 0.3.x 遺留會話的遷移和清理工具；升級不會自動遷移或刪除這些舊目錄。
+  已遷移的會話和正常會話操作不受影響。
+- **閘道器部署與行為**：
+  - 新增獨立 Helm chart `deploy/helm/openviking-gateway`：帶 PVC 的單副本 SQLite，
+    或共享 Redis 的多副本部署。在包含這些功能的版本釋出之前，需要顯式設定 `image.tag`，
+    見[運維指南](../guides/22-gateway-operations.md#helm)。
+  - 新增可選設定：`storage`（Redis）、`management_api`、`openviking_keys`、`tenancy`、
+    `default_upstreams` 和 `default_profile`、`request_log_sink`、`capture_concurrency` 以及 `keep_alive_seconds`。
+    預設儲存仍是 SQLite。
+  - 新增 `X-OpenViking-Upstream-URL` 請求頭，按 Base URL 從允許的上游中選擇一個，
+    見[按請求指定上游](../gateway/07-upstreams.md#upstream-url-header)。
+  - `session_ttl_seconds`（不低於 3600）取代 `session_ttl_days`，對話可以在一天內過期；
+    舊欄位會被忽略並在啟動時列印警告，升級時請改用新欄位。
+  - 無需修改配置的行為變化：獨立閘道器 keep-alive 從 5 秒提高到 75 秒；
+    繫結公網地址的閘道器在啟動時遇到 OpenViking 不可達或返回 5xx 會等待並重試；
+    空閒 SSE 流每 15 秒傳送一條註釋心跳；OpenViking 以 402 或 403 拒絕金鑰的請求會被拒絕，
+    不再轉發；儲存時收到 OpenViking 401、且 `/health` 也返回 401 時，會以 `gateway_key_revoked`
+    暫停儲存。
+- **火山引擎 KMS `key_file`（升級需操作）**：`encryption.volcengine_kms.key_file` 現在對服務端和閘道器
+  都會生效；此前版本忽略該欄位，根金鑰始終位於 `~/.openviking/openviking-volcengine-root-key.enc`。
+  如果配置了 `key_file`，升級前把該檔案移到配置的路徑。配置的檔案不存在而預設檔案存在時，
+  啟動會失敗，不會生成新的根金鑰。
 - **LangChain 匯入遷移（不相容變更）**：服務端不再提供
   `openviking.integrations.langchain` 及其轉發模組，舊匯入會立即失敗，
   不提供棄用過渡期或相容佔位模組。請安裝 `langchain-openviking`

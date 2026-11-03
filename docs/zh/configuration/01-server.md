@@ -33,6 +33,7 @@ openviking-server --config /path/to/ov.conf
   "vlm": {},
   "query_planner": {},
   "rerank": {},
+  "rules": {},
   "retrieval": {},
   "storage": {},
   "server": {},
@@ -56,6 +57,7 @@ openviking-server --config /path/to/ov.conf
 | `vlm` | object | 空配置 | 內容理解、摘要和記憶抽取使用的模型；使用相關能力前需要配置可用模型 |
 | `query_planner` | object / `null` | `null` | 檢索意圖分析和召回改寫使用的模型。未配置或為空時回退到 `vlm`；`auto` 模式的召回改寫要求配置叢集級 `query_planner`，或帳戶級 `query_planner` / `vlm` 覆蓋項 |
 | `rerank` | object | disabled | 檢索結果重排模型 |
+| `rules` | object | 空配置 | 規則編譯和適用性判斷使用的可選專用模型 |
 | `retrieval` | object | 見下表 | 檢索排序和意圖分析策略 |
 | `storage` | object | 本地儲存 | 工作目錄、檔案系統和向量資料庫 |
 | `queue_workers` | object | 見下表 | QueueFS 消費 worker 的執行時併發配置 |
@@ -145,6 +147,88 @@ API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置會複用部分
 
 更換模型或 `dimension` 可能與已有向量集合不相容，需要遷移或重建索引。
 
+### `rules`
+
+Compiled Rule 的可選模型與生命週期配置：
+
+```json
+{
+  "rules": {
+    "jev_rule_matcher": {
+      "provider": "typesafe",
+      "api_key": "${JEV_API_KEY}"
+    },
+    "compiler": {
+      "provider": "openai",
+      "model": "gpt-4o"
+    },
+    "compiler_context_window": 0
+  }
+}
+```
+
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
+|---|---|---|---|
+| `jev_rule_matcher` | Jev Noul 配置 / `null` | `null` | Scenario 過濾和 Rule 適用性判斷使用的 Jev Noul 模型 |
+| `compiler` | VLM 配置 / `null` | `null` | 專用 Rule Compiler |
+| `compiler_context_window` | `0` 或 integer `>= 2048` | `0` | Compiler 上下文視窗；`0` 表示自動探測並使用保守回退值 |
+| `scenario_irrelevance_threshold` | number，`0.5`-`1.0` | `0.9` | Scenario 無關機率達到該值時跳過 |
+| `archived_retention_days` | integer，`>= 1` | `30` | archived Rule 的物理刪除保留天數 |
+| `archived_cleanup_interval_seconds` | integer，`>= 60` | `2592000` | archived Rule 清理週期 |
+| `archived_cleanup_enabled` | boolean | `true` | 是否定期清理 archived Rule |
+
+Rule 編譯始終以 `thinking=true` 呼叫專用 Compiler 或回退的帳戶預設 VLM，
+並覆蓋其配置預設值。請使用支援思考模式的模型，否則編譯可能失敗。
+
+#### `rules.jev_rule_matcher`
+
+該配置用於 Scenario 過濾和 Rule 適用性的獨立 Jev System One 判斷，不用於檢索結果重排。
+
+| 欄位 | 型別 / 可選值 | 預設值 | 作用 |
+|---|---|---|---|
+| `provider` | `typesafe`、`vercel`、`openrouter`、`custom` | `typesafe` | 選擇 endpoint 和 model 預設值 |
+| `api_key` | string | 必填 | 所選 provider 的 API Key |
+| `api_base` | URL / `null` | provider 預設值 | 完整的 System One 請求 URL；顯式配置的值會原樣使用 |
+| `model` | string / `null` | provider 預設值 | 模型名或 Endpoint ID；`custom` 必填 |
+| `timeout` | number | `30` | HTTP 請求超時秒數 |
+| `extra_headers` | object / `null` | `null` | 附加 HTTP 請求頭 |
+| `log_payloads` | boolean | `false` | 是否記錄完整請求和響應；日誌可能包含任務與 Rule 內容 |
+
+| Provider | 預設請求 URL | 預設 model | 說明 |
+|---|---|---|---|
+| `typesafe` | `https://api.typesafe.ai/v1/systemone` | `jev-latest` | TypeSafe 直連 |
+| `vercel` | `https://ai-gateway.vercel.sh/typesafe/v1/systemone` | `typesafe-ai/jev` | Vercel AI Gateway 的 TypeSafe 相容 API |
+| `openrouter` | `https://openrouter.ai/api/v1/systemone` | `jev-latest` | OpenRouter System One API |
+| `custom` | 無 | 無 | 必須同時配置 `api_base` 和 `model` |
+
+`api_base` 和 `model` 可分別覆蓋 provider 預設值。顯式配置的 `api_base` 是完整
+POST URL，任何 provider（包括 `custom`）都不會修改它或追加字尾。
+`extra_headers` 會擴充 provider 請求頭，也可以覆蓋預設請求頭。Rule 匹配固定使用
+獨立 Noul 判斷，因此不再包含 `mode`、`threshold` 或 `max_input_tokens` 配置。
+Scenario 過濾閾值由 `rules.scenario_irrelevance_threshold` 配置；
+Rule 適用性使用 Rule 搜尋請求中的 `rule_probability_threshold`（預設 `0.65`）。
+
+Rule 狀態為 `active`、`paused`、`archived`。`PAUSE` 暫停檢索但不設定清理期限；
+`ARCHIVE` 從 `archived_at` 開始計算保留期；`RESTORE` 將 paused Rule 恢復為
+active。編譯候選只包含 active 和 paused Rule；archived Rule 視為邏輯刪除，不是
+編譯候選，也無法通過 Rule 編譯恢復。`ARCHIVE` 必須由使用者指令明確表達刪除、丟棄
+或移入回收站；不包含刪除語義的停用請求使用 `PAUSE`。
+
+Rule 按 Scenario 直接存放在 `memories/rules/<scenario_id>/`：`abstract.md`
+儲存場景元資訊，`<atomic_id>.md` 儲存規則。儲存格式見
+[規則（Beta）](../concepts/17-rule-scenarios.md)。
+
+`jev_rule_matcher` 未配置、不可用、呼叫失敗或返回無效結果時，Scenario 和 Rule 判斷
+直接放行，不呼叫 VLM。Scenario 診斷記錄 `decision=pass`；Rule 返回 `judge=pass`
+和 warning，以 `1.0` 作為通過閾值的放行分數，
+該值不是模型評估的適用機率。Agent 仍需根據具體事實核驗適用條件和例外。
+規則編譯從 `compiler` 回退到帳戶預設 VLM。原 `rule_matcher` 配置已移除，不再讀取。
+
+Rule 的 `applies_when` 可以為空，預設空值；為空時表示任何情況都適用，除非
+`exception` 條件成立。沒有適用條件和例外的候選 Rule 適用機率直接取 `1.0`。
+Compiler 會優先忠實提煉原文中的物件、操作、前提和場景，儘量生成非空且可判定的
+`applies_when`，不得編造條件或丟棄原文已有的限制。空條件不表示未知或不適用。
+
 ### `rerank`
 
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
@@ -152,20 +236,21 @@ API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置會複用部分
 | `provider` | `vikingdb`、`cohere`、`openai`、`litellm`、`jev` / `null` | `null` | Rerank 服務型別；省略時根據憑證欄位推斷 |
 | `model` | string / `null` | `null` | OpenAI 相容、LiteLLM 或 Jev Rerank 模型 |
 | `mode` | `noul`、`choice` 或 `null` | `noul` | Jev Rerank 模式；`null` 同樣使用 `noul` |
-| `threshold` | number | `0.1` | 判定結果相關的最低分數 |
+| `threshold` | number | `0.1` | 判定結果相關的最低 Rerank 分數；只過濾模型產出的 Rerank 分數，不過濾向量分數；請求中的 `score_threshold` 優先 |
 | `max_input_tokens` | integer；`0` 或 `>= 128` | `0` | 每個 query-document pair 的最大估算 token；`0` 表示不截斷 |
 | `log_payloads` | boolean | `false` | 記錄完整 rerank 請求和響應；日誌可能包含 query 和文件內容 |
 
 Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑證後才會啟用。
 
-`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe`，模型 `typesafe-ai/jev`），兩者協議相同。預設 `noul` 模式獨立評估每個候選；可選的 `choice` 模式橫向比較所有候選並返回相對機率，使用時應將 `threshold` 設為 `0`。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
+`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai/v1/systemone`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe/v1/systemone`，模型 `typesafe-ai/jev`），兩者協議相同。Rerank 的 `api_base` 可以是服務根地址或完整 System One URL；缺少 `/v1/systemone` 時會自動追加。預設 `noul` 模式獨立評估每個候選；可選的 `choice` 模式橫向比較所有候選並返回相對機率，使用時應將 `threshold` 設為 `0`。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
 
 ## 檢索配置
 
 ```json
 {
   "retrieval": {
-    "enable_intent": true
+    "enable_intent": true,
+    "apply_rerank_to_context": false
   }
 }
 ```
@@ -175,8 +260,9 @@ Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑�
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
 | `enable_intent` | boolean | `true` | 有 `session_id` 時是否進行意圖分析和查詢規劃 |
+| `apply_rerank_to_context` | boolean | `false` | 是否用已配置的 `rerank` 模型重排 `search(mode="context")` 的候選 |
 
-Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK 請求中覆蓋。`retrieval.enable_intent` 控制帶 Session 的 Search 是否執行 LLM 查詢規劃；只有配置了可用的 `rerank` provider 時才會執行結果重排。
+Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK 請求中覆蓋。`retrieval.enable_intent` 控制帶 Session 的 Search 是否執行 LLM 查詢規劃；只有配置了可用的 `rerank` provider 時才會執行結果重排。Context 模式使用 Find 的向量分數召回；開啟 `retrieval.apply_rerank_to_context` 且 `rerank` 可用時，會在配額和 token 預算之前，用原始查詢及其擴充查詢對合並後的候選統一重排一次，每個請求多一次 Rerank 呼叫。
 
 ## 儲存配置
 
@@ -207,12 +293,58 @@ Search 和 Find 請求的預設 `limit` 為 `10`，可以在每次 API 或 SDK �
 |---|---|---|---|
 | `workspace` | path | `"./data"` | OpenViking 工作目錄 |
 | `agfs.backend` | `local`、`memory`、`s3` | `local` | 檔案與後設資料儲存後端 |
+| `agfs.pathlock.provider` | `filesystem`、`memory`、`sqlite`、`cache` | `filesystem` | 路徑鎖儲存 |
+| `agfs.pathlock.sqlite_path` | 本地檔案絕對路徑 | 使用 `sqlite` 時為 `{workspace}/_system/pathlock/pathlock.db` | SQLite 共享鎖資料庫，可顯式覆蓋 |
 | `vectordb.backend` | `local`、`cuvs`、`http`、`opengauss`、`elasticsearch` | `local` | 向量資料庫後端 |
 | `vectordb.dimension` | integer | 跟隨 Embedding | 向量集合維度 |
 | `parse_output.mode` | `agfs`、`local` | `agfs` | parser 中間產物的儲存後端 |
 | `parse_output.local_root` | 路徑或 `null` | 系統臨時目錄 | local parser artifact 的根目錄 |
 | `skip_process_lock` | boolean | `false` | 是否跳過 workspace 程序鎖；僅在明確接受併發寫風險時啟用 |
 | `staged_source_ttl_seconds` | integer，0–15552000（180 天） | `604800`（7 天） | 留在 `viking://temp` 的 add-resource 暫存來源超過此秒數即被清除（使用者暫存新來源時順帶檢查，每位使用者最多每小時一次；該使用者仍在執行的任務所用的暫存不會被清除）；`0` 表示停用 |
+
+同機本地磁碟上的路徑鎖可通過 SQLite 避免遞迴掃描業務目錄。將 `storage.agfs.pathlock` 設定為
+`{"provider":"sqlite"}`。資料庫預設位於
+`{storage.workspace}/_system/pathlock/pathlock.db`，初始化執行時 binding 時
+根據最終 workspace 解析為絕對路徑。顯式指定的絕對路徑 `sqlite_path` 優先，
+資料庫父目錄會自動建立。
+直接通過 `RAGFSBindingClient(config_path=..., config={"service_name": ...})` 構造時，
+省略 `sqlite_path` 或將其設為 `null` 也會使用上述預設路徑。
+所有參與程序必須訪問同一個實際的本地資料庫檔案，並使用相同的頂層 `service_name` 和鎖過期配置。
+同一主機上的容器必須共享該本地檔案；不同容器檔案系統中相同的路徑字串指向獨立資料庫，
+不能互相協調路徑鎖。
+SQLite 是鎖狀態的唯一儲存，通過路徑索引查詢，並在事務中原子檢查及獲取 Exact/Tree 鎖；
+資料庫阻塞操作在非同步執行器之外執行。
+SQLite 每次嘗試對瞬時資料庫寫競爭最多等待 100 毫秒，即使邏輯鎖等待超時為零也會執行該等待。
+僅 Busy 會在 provider 內重試，最多嘗試 3 次，重試前分別退避 1、4 毫秒；
+資料庫等待可累計約 300 毫秒，另加 5 毫秒退避及執行、排程開銷。
+重試耗盡仍向 manager 返回 Busy；邏輯鎖 Conflict 不重試。
+WAL 使用 `synchronous=FULL` 保證崩潰後已提交鎖記錄的永續性，
+代價是比 `NORMAL` 更多的同步 I/O。
+租約心跳在一次 SQLite 事務中批次重新整理所屬路徑，大租約按有限大小分批執行。
+`stale_locks_removed` 包含 SQLite/Redis 原子加鎖事務實際回收的鎖數量，
+失敗並回滾的事務不會增加計數。
+
+SQLite 加鎖會完整刪除其他 owner 持有、已過期且與本次請求衝突的記錄：
+目標路徑、祖先 Tree 鎖，以及請求 Tree 鎖時的全部後代鎖。
+清理與加鎖在同一事務內完成，舊 owner 在接管後無法通過續租恢復這些記錄。
+全域增量清理每次加鎖最多刪除 256 條記錄；衝突記錄清理不受此上限限制，
+因此過期子樹較大時仍會增加事務開銷。
+
+不能將資料庫放在 EFS、NFS 或 SMB 上。SQLite WAL 要求參與者位於同一主機，不支援網路檔案系統；
+頻繁更新鎖記錄還會增加同步 I/O。如果 `storage.workspace` 位於 EFS，預設資料庫路徑也會落在 EFS。
+將資料庫改到各容器本地磁碟會形成獨立的鎖狀態，無法協調多個副本。
+
+多個容器或主機共享 EFS 時，使用共享 Redis PathLock：
+設定 `storage.agfs.pathlock.provider="cache"` 和頂層 `cache.provider="redis"`。
+所有副本必須連線同一個 Redis 部署，並使用相同的頂層 `service_name` 和鎖過期配置。
+參見[共享 Redis 配置示例](../guides/01-configuration.md)。
+共享 QueueFS 也需選擇適合該部署的後端，例如 `storage.agfs.queuefs.backend="cache"`；
+僅修改 PathLock 不會改變預設的 SQLite 佇列後端。
+
+切換 provider 前需停止全部參與程序，
+SQLite 與 filesystem 鎖檔案不共享協議。程序執行期間不能刪除資料庫及其 WAL/SHM 檔案。
+崩潰程序的鎖在 `lock_expire_secs`（預設 30 秒）後可被接管。
+此配置不會改變 workspace 程序鎖或其他後端的併發限制。
 
 遠端儲存後端還需要配置 endpoint、bucket/collection、鑑權和超時等欄位。完整後端示例見[配置指南](../guides/01-configuration.md#storage)。
 

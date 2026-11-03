@@ -89,7 +89,7 @@ class TypedQuery:
 | THINKING，且配置了可用的 Rerank | `2 × limit` | 對召回候選統一執行一次，返回最多 `limit` 條 |
 | THINKING，未配置可用的 Rerank | `limit` | 不執行 |
 
-`find()` 使用 QUICK。`search()` 配置了可用的 Rerank 時自動使用 THINKING，否則使用 QUICK。這是內部檢索模式，不是 LLM 的思考引數，也不控制會話意圖分析。意圖分析生成的多條查詢仍分別檢索和排序，再按現有方式彙總。
+`find()` 使用 QUICK。`search()` 配置了可用的 Rerank 時自動使用 THINKING，否則使用 QUICK。這是內部檢索模式，不是 LLM 的思考引數，也不控制會話意圖分析。意圖分析生成的多條查詢仍分別檢索和排序，再按現有方式彙總。Context 模式（`search(mode="context")`）通過 `find()` 召回，因此預設使用向量分數；服務端開啟 `retrieval.apply_rerank_to_context` 後，會在配額和 token 預算之前，用原始查詢及其會話擴充查詢對合並後的候選每個請求統一重排一次。
 
 影像查詢跳過文本 Rerank，候選數為 `limit`；未指定 `level` 時預設搜尋 L2。
 
@@ -99,7 +99,7 @@ Rerank 只處理本次全域召回的候選，不會觸發下一輪檢索。例�
 
 - 使用候選索引記錄的 `abstract` 欄位作為 Rerank 文本。
 - 分數與排序使用 Rerank 分數，否則使用向量分數；訪問頻次、更新時間和父目錄分數不參與加權。
-- 分數閾值在 Rerank 後應用；未啟用 Rerank 時使用向量分數。
+- 分數閾值在 Rerank 後應用。請求中的 `score_threshold` 過濾所有分數；未指定時，`rerank.threshold` 只過濾模型產出的 Rerank 分數，向量分數（未啟用 Rerank 或 Rerank 失敗時）不受其過濾。
 - Rerank 請求失敗或返回無效結果時，保留已有的向量分數回退行為。
 - 不再使用目錄優先佇列、父子分數傳播或多輪收斂判斷。
 

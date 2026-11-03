@@ -9,9 +9,17 @@ OpenViking 提供多種檢索方法，包括簡單的向量相似度搜索、關
 | 意圖分析 | 否 | 有會話內容且 `retrieval.enable_intent=true` 時執行 |
 | 會話上下文 | 不使用 | 可選 |
 | 查詢擴充 | 否 | 意圖分析啟用且有會話內容時執行 |
-| 重排序 | 不使用 | 配置了重排序模型時用於文本查詢 |
+| 重排序 | 從不使用 | `mode="list"`：配置了重排序模型時用於文本查詢。`mode="context"`：僅在開啟 `retrieval.apply_rerank_to_context` 時使用 |
 | 預設結果數 | 10 | 每條規劃查詢最多 10 條 |
 | 使用場景 | 簡單查詢 | 對話式搜尋 |
+
+各路徑的 Rerank 情況：
+
+- `find()` 從不執行 Rerank，始終使用向量分數。
+- `search(mode="list")` 在配置了可用的 `rerank` 時對文本查詢執行 Rerank。
+- `search(mode="context")` 僅在服務端設定 `retrieval.apply_rerank_to_context=true`（預設 `false`）且 `rerank` 配置可用時執行 Rerank：每次組裝在配額和 token 預算之前對合並後的候選統一重排一次，僅限文本查詢，Rerank 呼叫失敗時回退到向量分數。
+
+分數閾值遵循同一規則：請求中的 `score_threshold` 優先，過濾該路徑產出的任何分數；未指定時，`rerank.threshold`（預設 `0.1`）只過濾 Reranker 產出的分數，僅用向量分數的路徑（包括 `find()` 和 Rerank 失敗後的回退）預設閾值為 `0`。
 
 ## 檢索流程
 
@@ -417,7 +425,7 @@ ov find "紅色海報風格" --image ./poster.png --uri "viking://resources/imag
 
 `search()` 使用和 `find()` 相同的目標解析和顯式標籤過濾規則，包括由 `X-OpenViking-Actor-Peer` 或 SDK `actor_peer_id` 選擇的 peer 集合過濾。提供 `image_url` 時，`search()` 會直接執行圖片檢索並跳過會話 query planning。`keywords` 要求非空文本 query，不支援圖片，且僅 Elasticsearch 向量後端支援；其他後端會返回錯誤。
 
-事件時間衰減作用於語義 `find()`、`search(mode="list")` 和 `search(mode="context")` 中帶 `memory_type=events` 標籤的結果。記憶提取流程將該標籤寫入 user / peer 事件的 L2 記錄；檢索按標籤判斷，不從 URI 或層級推斷事件型別。無事件標籤的結果、無 query 的純過濾 `find()`、`recall`、`grep` 和 `glob` 不受影響。事件召回階段由向量引擎將原向量分乘以 `time_score`；響應中的 `score` 是最終檢索分數，開啟模型 rerank 時使用模型分。context 模式按最終分組裝候選。保護期內 `time_score` 為 1，原分不變；時間距離與 VikingDB 指數衰減運算元一致，取時間戳與請求時間的絕對差。list 響應中的 event 結果額外返回 `origin_score` 和 `time_score`，CLI 分別展示為 semantic、time 和 final 分。時間取自已有索引的 `updated_at` 欄位，無需重新索引或改寫時間戳；遇到缺失或非法時間時保持原分。衰減曲線由服務端內部維護，呼叫方只需按請求傳入保護期，無需修改 `ov.conf` 或 `ovcli.conf`。
+事件時間衰減作用於語義 `find()`、`search(mode="list")` 和 `search(mode="context")` 中帶 `memory_type=events` 標籤的結果。記憶提取流程將該標籤寫入 user / peer 事件的 L2 記錄；檢索按標籤判斷，不從 URI 或層級推斷事件型別。無事件標籤的結果、無 query 的純過濾 `find()`、`recall`、`grep` 和 `glob` 不受影響。事件召回階段由向量引擎將原向量分乘以 `time_score`；響應中的 `score` 是最終檢索分數，開啟模型 rerank 時使用模型分。context 模式預設按向量分組裝候選，開啟 `retrieval.apply_rerank_to_context` 後按模型分組裝。保護期內 `time_score` 為 1，原分不變；時間距離與 VikingDB 指數衰減運算元一致，取時間戳與請求時間的絕對差。list 響應中的 event 結果額外返回 `origin_score` 和 `time_score`，CLI 分別展示為 semantic、time 和 final 分。時間取自已有索引的 `updated_at` 欄位，無需重新索引或改寫時間戳；遇到缺失或非法時間時保持原分。衰減曲線由服務端內部維護，呼叫方只需按請求傳入保護期，無需修改 `ov.conf` 或 `ovcli.conf`。
 
 由記憶提取流程新生成或更新的記憶會自動寫入 `memory_type=<型別>` 檢索標籤。啟用衰減時，本地和雲端均將按是否帶 `memory_type=events` 標籤拆成互斥且完整覆蓋原範圍的兩路，再合併排序；兩路均保留原 scope 的許可權、目錄和 level 限制，無需指定 peer id。存量資料不補標籤，無標籤記憶保持原分。直接內容重新整理和普通標籤更新保留已有型別，不從 URI 推斷或重設型別。
 
@@ -659,7 +667,7 @@ Agent 外掛每輪注入上下文時，過去需要按型別逐個檢索、再�
 
 **處理流程**：
 1. **L1 查詢理解**：可選，結合 Session 最近訊息做有界意圖擴充（最多 3 條查詢，超時熔斷，失敗回退原查詢）
-2. **L0 檢索**：按 `quotas` 分桶獨立檢索，或不設配額時全域檢索一次
+2. **L0 檢索**：按 `quotas` 分桶獨立檢索，或不設配額時全域檢索一次。命中使用與 `find()` 相同的向量分數；服務端開啟 `retrieval.apply_rerank_to_context` 且 `rerank` 配置可用時，合併後的候選會在配額和預算之前用原始查詢及其擴充查詢統一重排一次（見下文）
 3. **L2 組裝**：token 預算內填充檔位（全員先落到各自類別的預設檔，再用剩餘預算按分數序加深），超限退檔不截斷
 4. **L3 重寫**：可選，把組裝結果壓成帶 URI 引用的 digest（超時熔斷，失敗仍返回未重寫的 `rendered`；精確返回 `NO_RELEVANT_MEMORY` 時記為 `stats.rewrite="no_relevant"`，Coding Agent 客戶端不會再回退注入 `rendered`）
 
@@ -672,6 +680,8 @@ Agent 外掛每輪注入上下文時，過去需要按型別逐個檢索、再�
 #### 2. 介面和引數說明
 
 **L0 檢索域**：`query`、`image_url`、`context_type`、`limit`、`score_threshold`、`filter`、`tags`、`since`/`until` 以及可選的 `events_time_decay_protection` 與 list 模式一致。`limit` 只約束 quota-free 檢索；一旦 `purpose` 或顯式 `quotas` 啟用分桶檢索，各分類配額之和就是候選上限。`target_uri` 在 context 模式下暫不支援（返回 400）；`level` 被忽略，檔位由 `detail` 決定。
+
+**可選 Rerank**：開啟 `retrieval.apply_rerank_to_context` 且 `rerank` 配置可用時，文本查詢每個請求對合並、去重後的候選執行一次 Rerank，以原始 `query` 與各條擴充查詢拼接後的文本打分，只由擴充查詢召回的命中也按該擴充點明的主題評判。不設配額時為此召回 `2 × limit` 條候選；分桶檢索每桶最多重排 `2 × quota` 條，候選不足的桶留出的名額讓給其他桶。Skill 以其包摘要參與打分。參與重排的候選 `score` 變為 Rerank 分數，`other_peer_penalty` 仍在其上生效。`score_threshold` 隨之改為過濾最終分數而非召回；未指定時，`rerank.threshold` 只過濾模型分數。模型未打分的候選（文本為空或 Rerank 呼叫失敗）保留向量分數。影象查詢不執行 Rerank。`stats.rerank` 報告 `used`、`candidates`（送入模型的數量）和 `capped`（被每桶上限排除的數量）
 
 **L1 查詢理解**
 
@@ -809,7 +819,7 @@ curl -X POST http://localhost:1933/api/v1/search/search \
 | `entries[].text` | string | 該檔位的正文；`uri` 檔為空 |
 | `rendered` | string | 扁平 XML 上下文塊，可直接注入；重寫返回 `no_relevant` 時為空 |
 | `digest` | string | 重寫成功時的摘要；失敗或壓縮器判定無相關記憶時為空字串 |
-| `stats` | object | 預算用量、檔位分佈、擴充與重寫狀態（`off`、`ok`、`no_relevant`、`failed` 或 `timeout`）、去重帳本狀態；某個檢索域失敗時附帶 `retrieval_errors`，用於區分「檢索壞了」和「確實沒有相關記憶」 |
+| `stats` | object | 預算用量、檔位分佈、擴充與重寫狀態（`off`、`ok`、`no_relevant`、`failed` 或 `timeout`）、去重帳本狀態；某個檢索域失敗時附帶 `retrieval_errors`，用於區分「檢索壞了」和「確實沒有相關記憶」；請求應用了 context Rerank 時附帶 `rerank` |
 
 當 `stats.rewrite` 為 `no_relevant` 時，響應仍保留 `entries` 供檢查，但 `digest` 和
 `rendered` 都為空字串。這樣即使客戶端尚未識別新狀態，也不會回退注入原文。本輪

@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+import json
 import re
 from bisect import bisect_right
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Iterable
+from urllib.parse import urlsplit
 
-from openviking.compile.models import CompileLimits
+from openviking.compile.models import CompileFailure, CompileLimits
+from openviking.parse.parsers.media.utils import get_media_type
 
 _HEADING = re.compile(r"^ {0,3}(#{1,6})[ \t]+\S")
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
@@ -25,6 +28,7 @@ class CompileSourceRange:
     frontmatter, enclosing headings and a table header when they fit the repeat budget.
     Continuation flags identify cuts inside an oversized line or table row;
     these fragments require their adjacent ranges for complete interpretation.
+    Images keep zero offsets and carry their original bytes and hash instead of text.
     """
 
     uri: str
@@ -36,14 +40,46 @@ class CompileSourceRange:
     context: str = ""
     continues_before: bool = False
     continues_after: bool = False
+    image: dict | None = None
+    sha256: str | None = None
+
+    def as_assignment(self) -> dict:
+        """Attach exact text ranges or bounded references to original images."""
+        if self.image:
+            return {"uri": self.uri, "sha256": self.sha256, "media_kind": "image"}
+        return asdict(self)
 
     @property
     def input_chars(self) -> int:
         """Count source text and repeated context against the batch character budget."""
+        if self.image:
+            return len(json.dumps(self.as_assignment(), ensure_ascii=False))
         return len(self.content) + len(self.context)
 
 
-def split_source(uri: str, content: str, max_chars: int) -> list[CompileSourceRange]:
+def is_image_source(uri: str) -> bool:
+    """Classify a source by its path extension, as the media parser does."""
+    return get_media_type(urlsplit(uri).path, None) == "image"
+
+
+async def read_source(client, uri) -> str:
+    """Read a text source; reject images before their bytes are decoded as text.
+
+    The in-server tool loop delivers text-only tool results, so image evidence
+    cannot reach the model; upstream's multimodal image reads are not ported.
+    """
+    if is_image_source(uri):
+        raise CompileFailure(
+            "UNSUPPORTED_MEDIA",
+            f"In-server Compile cannot read image evidence: {uri}",
+            stage="pipeline",
+        )
+    return await client.read_raw(uri)
+
+
+def split_source(
+    uri: str, content: str | CompileSourceRange, max_chars: int
+) -> list[CompileSourceRange]:
     """Partition original text by characters, preferring headings, paragraphs and whole lines.
 
     Complete table rows fit together with their header whenever the budget permits.
@@ -51,6 +87,12 @@ def split_source(uri: str, content: str, max_chars: int) -> list[CompileSourceRa
     frontmatter/headings/table headers use at most one quarter of the budget; their
     original text remains in the source ranges. Empty files retain one empty range.
     """
+    if isinstance(content, CompileSourceRange):
+        return [content]
+    if is_image_source(uri):
+        raise CompileFailure(
+            "INVALID_ARGUMENT", "Image evidence must not be split as text", stage="pipeline"
+        )
     if max_chars < 1:
         raise ValueError("Source character budget must be positive")
     lines = content.splitlines(keepends=True)
@@ -136,7 +178,7 @@ def split_source(uri: str, content: str, max_chars: int) -> list[CompileSourceRa
 
 
 def pack_source_batches(
-    sources: Iterable[tuple[str, str]], limits: CompileLimits
+    sources: Iterable[tuple[str, str | CompileSourceRange]], limits: CompileLimits
 ) -> list[list[CompileSourceRange]]:
     """Pack exact source ranges in input order, bounded only by characters.
 

@@ -450,7 +450,7 @@ Inspect recall traces when `traceRecall` is enabled.
     "name": "openviking_tool_result_search",
     "sessionKey": "main",
     "args": {
-      "tool_output_ref": "viking://session/<session_id>/tool-results/<tool_result_id>",
+      "tool_output_ref": "viking://user/{user_id}/sessions/<session_id>/tool-results/<tool_result_id>",
       "query": "error",
       "limit": 10,
       "context_chars": 300
@@ -463,7 +463,7 @@ Inspect recall traces when `traceRecall` is enabled.
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `tool_output_ref` | string | 是 | `viking://session/.../tool-results/...` URI，也兼容 `ref` 或 `uri` |
+| `tool_output_ref` | string | 是 | `viking://user/{user_id}/sessions/.../tool-results/...` URI，也兼容 `ref` 或 `uri` |
 | `query` | string | 是 | 搜尋關鍵詞或精確文本 |
 | `limit` | number | 否 | 最多匹配數，預設 20 |
 | `context_chars` | number | 否 | 每個命中周圍保留字元數，預設 300，也相容 `contextChars` |
@@ -481,7 +481,7 @@ Inspect recall traces when `traceRecall` is enabled.
     "name": "openviking_tool_result_read",
     "sessionKey": "main",
     "args": {
-      "tool_output_ref": "viking://session/<session_id>/tool-results/<tool_result_id>",
+      "tool_output_ref": "viking://user/{user_id}/sessions/<session_id>/tool-results/<tool_result_id>",
       "offset": 0,
       "limit": 4000
     }
@@ -493,7 +493,7 @@ Inspect recall traces when `traceRecall` is enabled.
 
 | 欄位 | 型別 | 必填 | 說明 |
 |------|------|------|------|
-| `tool_output_ref` | string | 是 | `viking://session/.../tool-results/...` URI，也兼容 `ref` 或 `uri` |
+| `tool_output_ref` | string | 是 | `viking://user/{user_id}/sessions/.../tool-results/...` URI，也兼容 `ref` 或 `uri` |
 | `offset` | number | 否 | 起始字元偏移，預設 0 |
 | `limit` | number | 否 | 最多返回字元數 |
 

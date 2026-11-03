@@ -29,7 +29,7 @@ T = TypeVar("T")
 R = TypeVar("R", bound=BaseModel)
 ROOT = f"{COMPILE_STAGING_ROOT}/pipeline"
 # Cache identity for the processing rules used by model calls.
-PROCESSING_VERSION = "compile-pipeline-36"
+PROCESSING_VERSION = "compile-pipeline-37"
 # Output-token fallback when the configured VLM provides no value.
 DEFAULT_MAX_TOKENS = 32_000
 # Total attempts per operator job or routing record, including the initial execution.
@@ -430,7 +430,7 @@ class JsonModel:
             }
         ]
         readers = dict(readers or {})
-        if stage not in {"plan", "combine"}:
+        if stage != "plan":
             evidence = EvidenceReader(self.files, data)
             if evidence.allowed - evidence.delivered:
                 readers["read_evidence"] = evidence

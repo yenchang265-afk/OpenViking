@@ -134,7 +134,7 @@ class MemoryCompileRunner:
         ).rstrip("/")
         memory_type = _memory_type_from_target(uri)
         await self._fs.ensure_write_access(uri, ctx)
-        stat = await self._fs.stat(uri, ctx)
+        stat = await self._fs.stat(uri, ctx, skip_count=True)
         if not stat.get("isDir"):
             raise InvalidArgumentError("Memory-mode Compile target must be a directory")
         canonical = str(stat.get("uri") or uri).rstrip("/")
@@ -183,6 +183,14 @@ class MemoryCompileRunner:
                         task_id,
                         result["errors"],
                     )
+                try:
+                    # Index and tag the consolidated directory before reporting completion.
+                    await self._fs.finalize_compile_directories(target, ctx)
+                except Exception as exc:
+                    tracer.error(f"Memory-mode compile finalization failed: {exc}")
+                    raise ExternalTaskError(
+                        "MEMORY_CONSOLIDATION_FAILED", str(exc), result=result
+                    ) from exc
                 return result
         finally:
             if root_token is not None and reset_root_observability_context is not None:

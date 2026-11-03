@@ -179,7 +179,8 @@ Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源�
 | source_name | string | 否 | None | 來源顯示名；上傳檔案省略時使用原始檔名 |
 | reason | string | 否 | "" | 新增資源的原因；非空時會隨資源 URI 進入常規 session 記憶抽取鏈路，並在生成的記憶中記錄資源引用 |
 | instruction | string | 否 | "" | 語義提取的處理指令（實驗特性） |
-| wait | bool | 否 | False | 是否等待語義處理和向量化完成才返回；不支援單獨的 `timeout` 引數，HTTP 超時使用客戶端配置 |
+| wait | bool | 否 | False | 是否等待語義處理和向量化完成才返回 |
+| timeout | float | 否 | None | 已廢棄：僅為相容舊請求保留，傳入值會被忽略；HTTP 超時使用客戶端配置 |
 | strict | bool | 否 | False | 是否使用嚴格模式 |
 | ignore_dirs | string | 否 | None | 要忽略的目錄名（逗號分隔） |
 | include | string | 否 | None | 包含的文件模式（glob） |
@@ -422,6 +423,11 @@ fmt.Println(result["task_id"])
 ```
 
 **CLI**
+
+`ov add-resource --wait` 只提交一次，再輪詢任務，不設定整體等待期限。
+狀態查詢超時、網路錯誤及 HTTP 429/502/503/504 會重試；連續 10 次失敗後
+退出並提供任務查詢命令。Ctrl+C 僅停止等待，不取消任務，退出碼為 130。
+完成後 CLI 結果保留 `task_id`。
 
 ```bash
 # 添加本地文件

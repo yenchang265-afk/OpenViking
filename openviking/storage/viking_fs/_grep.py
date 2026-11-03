@@ -63,7 +63,7 @@ class _GrepMixin:
         Returns:
             Dict with matches, count, match_count, files_scanned
         """
-        await self._ensure_access(uri, ctx)
+        # stat() authorizes the requested path.
         # Skip vector_store.count() — the count field is not needed for grep.
         await self.stat(uri, ctx=ctx, skip_count=True)
 
@@ -72,16 +72,16 @@ class _GrepMixin:
             vector_store = self._get_vector_store()
             if vector_store is None:
                 return {"matches": [], "count": 0, "match_count": 0, "files_scanned": 0}
-            records = await vector_store.filter(
-                filter=And(
+            records = await self._grep_tag_records(
+                vector_store,
+                And(
                     [
                         PathScope("uri", uri, depth=level_limit),
                         RawDSL(tag_filter),
                     ]
                 ),
-                limit=100000,
-                output_fields=["uri", "search_tags"],
-                ctx=ctx,
+                ctx,
+                ordered=await self._vector_backend_is_opengauss(vector_store, ctx),
             )
             allowed_uris = {str(record["uri"]) for record in records if record.get("uri")}
             if not allowed_uris:
@@ -125,11 +125,7 @@ class _GrepMixin:
         after_context=0,
     ):
         """Filesystem grep path: prefer native agfs grep and fall back if unavailable."""
-        native_safe = (
-            content_transform is None
-            and allowed_uris is None
-            and await self._session_native_grep_safe(uri, ctx)
-        )
+        native_safe = content_transform is None and allowed_uris is None
         if native_safe:
             try:
                 # Session grep historically used the Python fallback, where
@@ -169,36 +165,47 @@ class _GrepMixin:
             after_context=after_context,
         )
 
-    async def _session_native_grep_safe(self, uri: str, ctx: Optional[RequestContext]) -> bool:
-        """Return whether native grep sees every visible path for ``uri``.
+    @staticmethod
+    async def _vector_backend_is_opengauss(vector_store, ctx) -> bool:
+        """Return whether the Account's vector backend is openGauss."""
+        account_id = getattr(ctx, "account_id", None) if ctx is not None else None
+        if account_id and hasattr(vector_store, "get_account_backend"):
+            try:
+                backend = await vector_store.get_account_backend(account_id)
+                return getattr(backend, "_mode", "") == "opengauss"
+            except Exception:
+                logger.debug("grep: account backend lookup failed", exc_info=True)
+        backend_type = getattr(vector_store, "_mode", None) or getattr(
+            vector_store, "_backend_type", ""
+        )
+        return backend_type == "opengauss"
 
-        Canonical session reads merge the current user namespace with two
-        historical storage layouts. Native AGFS grep accepts one physical
-        root, so it is complete only when no visible legacy candidate exists.
-        """
-        legacy_uri = self._legacy_session_alias(uri)
-        if legacy_uri is None:
-            return True
-
-        real_ctx = self._ctx_or_default(ctx)
-        if self._is_session_root_uri(uri):
-            primary_path = self._uri_to_path(uri, ctx=ctx)
-            if not await self._agfs_path_exists(primary_path):
-                return False
-            legacy_path = self._legacy_session_path(legacy_uri, ctx=ctx)
-            owner_user_id = self._safe_uri_parts(uri)[1]
-            legacy_items = await self._legacy_session_root_items(
-                legacy_path, real_ctx, uri.rstrip("/"), owner_user_id
+    async def _grep_tag_records(self, vector_store, filter, ctx, ordered=False):
+        if not ordered:
+            return await vector_store.filter(
+                filter=filter,
+                limit=100000,
+                output_fields=["uri", "search_tags"],
+                ctx=ctx,
             )
-            return not legacy_items
 
-        primary_path = self._uri_to_path(uri, ctx=ctx)
-        for path in self._read_paths(uri, ctx=ctx)[1:]:
-            if not await self._agfs_path_exists(path):
-                continue
-            if await self._read_path_visible(uri, path, primary_path, real_ctx):
-                return False
-        return True
+        # Unordered OG filters dispatch to random ANN sampling, not a full tag listing.
+        records = []
+        offset = 0
+        while True:
+            page = await vector_store.filter(
+                filter=filter,
+                limit=100000,
+                offset=offset,
+                order_by="id",
+                order_desc=False,
+                output_fields=["uri", "search_tags"],
+                ctx=ctx,
+            )
+            records.extend(page)
+            if len(page) < 100000:
+                return records
+            offset += len(page)
 
     @staticmethod
     def _attach_grep_tags(result: Dict, tags_by_uri: Dict[str, List[str]]) -> Dict:

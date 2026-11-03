@@ -145,6 +145,7 @@ Experience 儲存 Agent 過去完成任務時形成的可複用方法。VikingBo
 |------|------|
 | `openviking_list` | 瀏覽 Viking URI 目錄 |
 | `openviking_search` | 對資源、記憶和 Skill 做語義檢索 |
+| `openviking_rule_search`（Beta） | 檢索適用於具體任務上下文的已編譯 Rules |
 | `openviking_grep` | 在 OpenViking 內容中做正則搜尋 |
 | `openviking_glob` | 按 URI 路徑模式搜尋 |
 | `openviking_multi_read` | 併發讀取多個 URI 的完整內容 |
@@ -153,7 +154,9 @@ Experience 儲存 Agent 過去完成任務時形成的可複用方法。VikingBo
 
 OpenViking 工具通過 ToolContext 獲得當前 actor peer 和 request-scoped connection。檢索預設覆蓋當前身份允許訪問的資源、Peer 記憶和 Skill 路徑。
 
-`openviking_add_resource` 是非同步資源處理操作；`readonly` 模式不註冊該工具。`openviking_memory_commit` 適用於使用者明確要求“記住”某項資訊的場景。
+`openviking_rule_search` 是規則搜尋工具，只讀，在 `readonly` 模式中會註冊。`openviking_add_resource` 是非同步資源處理操作；
+`readonly` 模式不註冊該工具。`openviking_memory_commit` 適用於使用者明確要求“記住”
+某項資訊的場景。
 
 ## 使用遠端 Skill
 

@@ -51,6 +51,8 @@ curl -X POST http://localhost:1933/api/v1/admin/accounts \
 
 建立帳號後，儲存響應中的 `user_key`，將它用於 CLI、SDK 和資料 API。root key 不用於租戶資料讀寫。
 
+User key 採用三段式格式 `base64url(account).base64url(user).base64url(secret)`。服務端只接受該格式；裸金鑰或其他格式一律以 `401 Invalid API key` 拒絕。
+
 ### 方案二：OIDC（企業 SSO）
 
 OIDC 和 LDAP 需要可選認證依賴。在執行服務端的 Python 環境中安裝：
@@ -477,7 +479,7 @@ ACL 使用者組是例外：組和成員通過 [Admin API](../api/08-admin.md#�
 - 攜帶受信部署自身的 `root_api_key`。對於 `/api/v1/admin/*`，服務端校驗該 key 後會將請求視為 ROOT。
 - 如果 Admin 路由指向具體 account/user，也可以同時攜帶 `X-OpenViking-Account` + `X-OpenViking-User`。這些 header 必須與目標 URL 匹配，並會保留為請求身份；授權仍來自受信 `root_api_key`。
 
-角色更新 API 只支援將使用者提升為 ADMIN。Trusted Admin API 的管理許可權來自已校驗的部署 root key，無需也不支援建立 ROOT 使用者。
+角色更新 API 僅用於身份管理變更操作，支援在 USER 與 ADMIN 之間切換，包括提升和降級。ROOT 可操作任意帳戶，ADMIN 僅限本帳戶。Trusted Admin API 的管理許可權來自已校驗的部署 root key，無需也不支援建立 ROOT 使用者。
 
 配置了 root key 的 Trusted 部署可直接呼叫上面的 Admin API，無需先切換到 API Key 模式或註冊閘道器管理員。
 
@@ -730,7 +732,7 @@ ov config validate
 | GET | `/api/v1/admin/accounts` | ROOT | 列出所有工作區 |
 | DELETE | `/api/v1/admin/accounts/{id}` | ROOT | 刪除工作區 |
 | POST | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN | 註冊使用者 |
-| GET | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN | 列出使用者 |
+| GET | `/api/v1/admin/accounts/{id}/users` | ROOT, ADMIN, USER | 列出使用者；ADMIN/USER 僅限本帳戶 |
 | DELETE | `/api/v1/admin/accounts/{id}/users/{uid}` | ROOT, ADMIN | 移除使用者 |
-| PUT | `/api/v1/admin/accounts/{id}/users/{uid}/role` | ROOT, ADMIN | 將使用者提升為 ADMIN；ADMIN 僅限本帳戶 |
-| POST | `/api/v1/admin/accounts/{id}/users/{uid}/key` | ROOT, ADMIN | 重新生成 user key |
+| PUT | `/api/v1/admin/accounts/{id}/users/{uid}/role` | ROOT, ADMIN | 身份管理變更：切換 USER/ADMIN；ADMIN 僅限本帳戶 |
+| POST | `/api/v1/admin/accounts/{id}/users/{uid}/key` | ROOT, ADMIN, USER | 重新生成 user key；USER 僅能使用個人 API Key 認證輪換自身金鑰 |

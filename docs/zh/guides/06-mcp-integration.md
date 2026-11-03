@@ -144,7 +144,7 @@ claude mcp add --transport http openviking \
 | `privacy_tree` | 盤點已儲存的憑據；返回當前欄位後設資料及引用，不含值 | `category`（可選） |
 | `privacy_resolve` | 將完整的 <code v-pre>{{ov_privacy:...}}</code> 佔位符解析為一個當前欄位的實際值，供立即使用 | `reference` |
 | `privacy_upsert` | 原子合併使用者提供的憑據欄位；返回後設資料和引用，不回顯值 | `category`, `target_key`, `values` |
-| `list_users` | 查詢當前 account 的使用者 ID；預設不返回憑證，管理員也一樣 | `query`(可選，ID 子串), `limit`(預設 100), `page`(預設 1), `include_credentials`(預設 false，僅 ADMIN/ROOT 可設為 true) |
+| `list_users` | 查詢當前 account 的使用者 ID；預設不返回憑證，管理員也一樣 | `query`(可選，ID 子串), `limit`(預設 100), `page`(預設 1), `include_credentials`(預設 false，true 時按角色限制可見範圍) |
 | `list_groups` | 查詢當前 account 的組 ID，不返回成員名單 | 無 |
 | `get_acl` | 檢視共享資源的直接、繼承和有效 ACL；要求該節點的 manage 或帳號 ADMIN | `uri` |
 | `set_acl` | 設定共享資源 ACL；按修改前的許可權校驗 manage | `uri`, `acl` |
@@ -201,8 +201,10 @@ tree 和 resolve 標記為只讀，upsert 標記為可能覆蓋資料的寫入�
 
 `list_users`、`list_groups` 對當前 account 的普通使用者開放，不接受跨 account 查詢引數。
 `list_users` 預設僅返回 `user_id` 和匹配總數，`list_groups` 僅返回 `group_id`。
-管理員也必須顯式傳 `include_credentials=true` 才會返回可用的憑證欄位；普通使用者傳該引數會得到
-`PERMISSION_DENIED`，即使查詢結果為空也一樣。trusted 鑑權模式禁止返回憑證。
+管理員也必須顯式傳 `include_credentials=true` 才會返回憑證欄位：ROOT 可獲得全部 `api_key` 明文，
+ADMIN 僅自身記錄為 `api_key` 明文，其他使用者一律為打碼後的 `key_prefix`；使用個人 API Key
+認證的 USER 僅獲取自身已儲存金鑰（僅存雜湊時為字首），其他行不包含金鑰或字首。
+通過 OAuth 等其他方式認證的 USER 不返回憑據。trusted 鑑權模式禁止返回憑證。
 組成員管理和成員名單查詢仍使用管理員介面。
 
 完整 ACL 的查詢和修改都要求資源的 `manage` 許可權；普通使用者即使是資源 manager，也不會因此獲得

@@ -148,7 +148,7 @@ API 認證指南，涵蓋 OAuth 2.0、JWT 令牌和 API 金鑰。
 - `unsampled_entries`：未取樣的直接子項數，滿足 `sampled + unsampled = total`。
 - `pending_child_changes`：尚未反映到當前正文中的直接子項變化事件數（同一子項重複變化會分別計數）。
 
-當直接子項超過 `semantic.overview_sample_limit`（預設 32）時，系統使用確定性、保序的穩定取樣。相同目錄樹重複重新整理會選擇相同樣本，減少採樣變化帶來的正文差異；模型重新生成的正文仍可能不同。
+摘要生成收集全部直接子項，不再按條數取樣。保留原有 60000 字元摘要預算及分批、截斷邏輯。`semantic.overview_sample_limit` 僅保留為 freshness 排程的小目錄閾值。
 
 `pending_child_changes > 0` 表示正文仍然可讀，但已知落後於下層變化。父目錄重新整理成功後，該值會隨新的覆蓋率後設資料重置為 0。
 

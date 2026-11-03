@@ -6,6 +6,12 @@ OpenViking 提供類 Unix 的檔案系統操作來管理上下文。
 
 讀取或寫入檔案正文見[內容 API](12-content.md)。通過 WebDAV 客戶端訪問檔案見 [WebDAV](20-webdav.md)。
 
+`viking://system` 的檔案系統和內容 API 對所有角色開放讀取；ROOT 和 ADMIN
+只能修改 `viking://system/memory/memory_templates/custom/` 下的具體資產。
+`builtin/` 內建模板和 `viking://system/compile/example-skills/` 官方示例由服務自動同步，
+API 不允許寫入、追加、刪除、移動或覆蓋複製，也不能通過操作其父目錄繞過限制。
+自定義模板也可以通過[模板管理 API](08-admin.md)釋出。
+
 ## API 參考
 
 <a id="abstract"></a><a id="overview"></a><a id="read"></a><a id="write"></a>
@@ -640,6 +646,7 @@ URI 格式非法、scheme 不支援，或使用 `temp`、`queue` 等內部作用
 |------|------|------|--------|------|
 | uri | str | 是 | - | 要刪除的 Viking URI |
 | wait | bool | 否 | False | 等待刪除後的語義重新整理完成 |
+| timeout | float | 否 | None | 已廢棄：僅為相容舊請求保留，傳入值會被忽略；HTTP 超時使用客戶端配置 |
 | recursive | bool | 否 | False | 遞迴刪除目錄 |
 
 

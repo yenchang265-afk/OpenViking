@@ -33,6 +33,16 @@ Hooks can run outside the sandbox after you trust them.
 
 MCP 條目可見只說明配置存在。讓助手呼叫 OpenViking 的 `health` 和 `list` 驗證連線；自動召回需另行檢查：等之前的會話提交併處理完成後，在同一工作目錄中新建會話，詢問已儲存的資訊。
 
+## 步驟3：開始使用
+
+在 TRAE、TRAE CN 或 TraeCode CLI 2.0 中新開一個會話，傳送：
+
+```text
+按 https://docs.openviking.net/agents/zh/onboarding.md 帶我完成 OpenViking 首次使用。
+```
+
+Agent 會檢查連線，並帶你完成首次使用。
+
 ## 故障排查
 
 | 問題 | 處理 |

@@ -158,7 +158,7 @@ ov export viking://resources/my-project/ ./exports/my-project.ovpack --include-v
 | on_conflict | string | 否 | fail | 衝突策略：`fail`、`overwrite` 或 `skip` |
 | vector_mode | string | 否 | auto | 向量處理方式：`auto`、`recompute` 或 `require` |
 
-**許可權要求**：ROOT、ADMIN 或 USER
+**許可權要求**：ROOT、ADMIN 或 USER；開啟 ACL 時，新路徑匯入要求目標父目錄 `write`，覆蓋已有目錄要求該目錄 `manage`；授權後不逐個檢查子節點。
 
 **行為說明**：
 - API 已不再接受 `vectorize` 或 `force`。

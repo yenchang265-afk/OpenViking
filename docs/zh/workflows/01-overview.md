@@ -7,7 +7,8 @@
 | 讓應用檢索文件或程式碼 | [匯入資源](../api/02-resources.md) → [檢索](../api/06-retrieval.md) → [讀取內容](../api/12-content.md) | 用已知答案的問題查詢，讀取命中 URI，核對原文 |
 | 跨會話複用記憶 | [會話與記憶模型](../concepts/08-session.md) → [會話 API](../api/05-sessions.md) → [記憶 API](../api/16-memory.md) | 提交會話並確認後臺任務完成，再檢查記憶內容和歸屬 |
 | 讓 Agent 複用技能 | [技能 API](../api/04-skills.md) → [隱私模型](../concepts/13-privacy.md) | 檢查安裝後的技能內容、可見範圍和呼叫方式 |
-| 從已有資料產出 Wiki、圖譜或日報 | [上下文編譯](../context-compilation/01-overview.md) → 選擇產物教程 | 檢查任務狀態、產物目錄，以及產物與輸入來源的對應關係 |
+| 規則校驗（Beta） | [規則概念](../concepts/17-rule-scenarios.md) → [編譯、召回與核驗](./02-rule-validation.md) → [規則 API](../api/26-rules.md) | 檢查編譯與索引任務、原文證據，再由 Agent 逐條核驗適用條件、例外及計劃動作 |
+| 從已有資料產出 Wiki、圖譜或日報 | [上下文編譯](../context-compilation/01-overview.md) → [Wiki](../context-compilation/02-llm-wiki.md) / [知識圖譜](../context-compilation/03-knowledge-graph.md) / [日報](../context-compilation/04-daily-report.md) | 檢查任務狀態、產物目錄，以及產物與輸入來源的對應關係 |
 | 同步或遷移已有上下文 | [專案資源同步](../guides/18-openviking-assets.md)、[OVPack](../guides/09-ovpack.md)或[版本恢復](../guides/15-snapshot.md) | 按對應指南核對同步狀態、匯入結果或恢復後的內容 |
 
 ## 先驗證檢索，再接入應用

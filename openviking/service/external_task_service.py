@@ -17,6 +17,7 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Iterable, Mapping, Protocol
 from uuid import uuid4
 
+from openviking.pyagfs import GitConcurrentCommitError
 from openviking.server.identity import RequestContext, Role
 from openviking.service.task_domain import TaskPatch
 from openviking.service.task_tracker import TaskRecord, TaskStatus, get_task_tracker
@@ -422,6 +423,16 @@ class ExternalTaskService:
                     started = await on_start(task)
                 except asyncio.CancelledError:
                     raise
+                except (ResourceBusyError, GitConcurrentCommitError) as exc:
+                    # Target contention is transient: rotate behind other target work
+                    # instead of failing the task (upstream #6615).
+                    if isinstance(exc, ResourceBusyError) and not exc.retryable:
+                        logger.exception("Durable task %s failed before starting", task_id)
+                        started = ExternalTaskSnapshot(
+                            status="failed", error_code="CONFLICT", error_message=str(exc)
+                        )
+                    else:
+                        started = "busy"
                 except Exception as exc:
                     # A failure here must still become the task's outcome; an escaped
                     # exception would leave the delivery unacked and the target claimed.

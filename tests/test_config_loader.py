@@ -366,6 +366,22 @@ def test_openviking_config_ignores_unknown_fields(monkeypatch, caplog):
             "default_user": "alice",
             "memory": {"unknown_memory_field": "value", "session_skill_extraction_enabled": True},
             "storage": {"agfs": {"cache": {"enabled": True}}},
+            "vlm": {
+                "model": "test-model",
+                "credentials": [
+                    {"provider": "openai", "api_key": "test-secret", "retired_field": True}
+                ],
+            },
+            "ingest": {
+                "harnesses": {
+                    "claude_code": {"enabled": True, "commit": {"keep_recent_count": 2}},
+                    "codex": {
+                        "retired_field": "test-secret",
+                        "commit": {"retired_field": "test-secret"},
+                    },
+                },
+                "memory_policy": {"custom_policy": {"value": "test-secret"}},
+            },
             "parsers": {
                 "markdwon": {},
                 "memory": {"session_skill_extraction_enabled": False},
@@ -381,12 +397,23 @@ def test_openviking_config_ignores_unknown_fields(monkeypatch, caplog):
     assert config.markdown.max_heading_depth == 4
     assert config.code.max_line_length == 120
     assert config.anydoc.max_table_rows == 20
+    assert config.ingest.harnesses["claude_code"].enabled is True
+    assert config.ingest.harnesses["claude_code"].commit.keep_recent_count == 2
+    assert config.ingest.memory_policy == {"custom_policy": {"value": "test-secret"}}
     dumped = config.to_dict()
     assert "retired_section" not in dumped
     assert "unknown_memory_field" not in dumped["memory"]
     assert "cache" not in dumped["storage"]["agfs"]
     assert "Ignoring unknown config field 'storage.agfs.cache'" in caplog.text
     assert "Ignoring unknown config field 'parsers.markdown.unknown_field'" in caplog.text
+    assert "Ignoring unknown config field 'vlm.credentials[0].retired_field'" in caplog.text
+    assert "Ignoring unknown config field 'ingest.harnesses.claude_code'" not in caplog.text
+    assert "Ignoring unknown config field 'ingest.harnesses.codex'" not in caplog.text
+    assert "Ignoring unknown config field 'ingest.harnesses.codex.retired_field'" in caplog.text
+    assert (
+        "Ignoring unknown config field 'ingest.harnesses.codex.commit.retired_field'" in caplog.text
+    )
+    assert "ingest.memory_policy" not in caplog.text
     assert "test-secret" not in caplog.text
 
 

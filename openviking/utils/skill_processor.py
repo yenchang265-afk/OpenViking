@@ -200,7 +200,7 @@ class SkillProcessor:
         summarize_from_header: bool = False,
         on_package_written: Optional[Callable[[str, Any], Awaitable[None]]] = None,
     ) -> Dict[str, Any]:
-        """Store a prepared package and call on_package_written under its lease before indexing."""
+        """Store a prepared package and apply privacy changes under its write lease."""
         cleanup_path = preparation.cleanup_path
         skill_dict = preparation.skill_dict
         privacy_values = preparation.privacy_values
@@ -226,10 +226,7 @@ class SkillProcessor:
                 )
 
             await run_to_completion(acquire_package_lock)
-
-            # Preparation above is read-only. A rejected package writer must
-            # not change its privacy config, and cancellation must let an
-            # in-flight config write finish before releasing the package lock.
+            # Privacy changes finish under the package lease even if installation is cancelled.
             if apply_privacy:
                 skill_dict = await run_to_completion(
                     lambda: self.apply_skill_privacy(

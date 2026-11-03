@@ -1,6 +1,12 @@
 export default {
+  directoryOptions: '選擇其他資料身份（進階）',
+  rootSetupTitle: '開始使用工作臺',
+  rootSetupDescription:
+    'Root Key 用於管理服務，不能直接訪問使用者資料。當前 Account：{{account}}。建立使用身份後，可在憑據結果中進入工作臺；團隊成員的身份不會自動替換你的工作臺身份。',
+  rootSetupCreate: '建立使用身份',
+  rootSetupExisting: '配置已有 User Key',
   verifyDirectoryHint:
-    '可選。填寫 Root 或 Admin Key 並驗證連線後，可選擇 Account 和 User；訪問資料仍需對應的 User API Key。',
+    '可選。需要額外的管理許可權時填寫。Account Admin 管理本 Account，Root 管理服務與所有 Account。',
   loadDirectory: '載入 Account 和 User',
   directoryHint: '使用 Root 或 Admin API Key 瀏覽可選身份。',
   directoryControlRequired:
@@ -18,7 +24,7 @@ export default {
   openSourceConnection: 'OpenSource',
   cancel: '取消',
   exit: '退出 Studio',
-  connectionTitle: '連線你的工作區。',
+  connectionTitle: '連線 Business Context Platform 服務。',
   preferencesHint: '選擇你熟悉的語言與外觀。',
   connectionHint: '連線並驗證你的 Business Context Platform 服務。',
 
@@ -41,8 +47,10 @@ export default {
   healthRequestFailed: '檢查服務健康狀態時失敗：',
   dataRequestFailed: '檢查記憶訪問許可權時失敗：',
   enter: '進入 Studio',
-  keyHelp: '填寫服務提供的 API Key。開源開發模式無需填寫。',
-  advanced: '開源高階連線配置（選填）',
+  keyLabel: 'API Key',
+  keyHelp:
+    '可填寫 User、Account Admin 或 Root Key，驗證後自動識別權限和身份。開發模式無需填寫。',
+  advanced: '開源進階連線配置（選填）',
   loadUsers: '讀取此帳號的使用者',
   loadingUsers: '正在讀取使用者…',
   chooseUser: '選擇使用者',

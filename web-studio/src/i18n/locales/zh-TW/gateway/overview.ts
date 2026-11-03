@@ -25,31 +25,29 @@ const overview = {
     confirm: '去確認',
 
     title: '快速開始',
-    description:
-      '完成下面四步，就能讓第一段對話用上記憶。客戶端發出第一個請求後，這張卡片會自動隱藏。',
     progress: '已完成 {{done}}/{{total}}',
     done: '已完成',
     view: '檢視',
     upstream: {
       title: '新增上游',
-      description:
-        '閘道器把請求轉發給哪個模型服務商，例如 Anthropic、OpenAI 或火山方舟。',
+      description: '閘道器轉發請求的模型服務，例如 OpenAI 或火山方舟。',
       done_one: '已新增 {{count}} 個上游',
       done_other: '已新增 {{count}} 個上游',
       action: '新增上游',
+      manual: '手動新增',
     },
     profile: {
       title: '建立上下文配置',
-      description:
-        '決定閘道器如何為新訊息補充記憶、如何儲存對話。推薦設定適合大多數客戶端。',
+      description: '決定如何給新訊息補充記憶、如何儲存對話。',
       done_one: '已有 {{count}} 個上下文配置',
       done_other: '已有 {{count}} 個上下文配置',
+      action: '使用推薦設定',
     },
     key: {
       title: '簽發閘道器金鑰',
-      description:
-        '客戶端用這個金鑰呼叫閘道器。每個金鑰屬於一個 Business Context Platform 使用者，閘道器讀寫的就是這個使用者的記憶。',
-      blocked: '請先新增上游並建立上下文配置。',
+      description: '客戶端憑這個金鑰呼叫閘道器。',
+      blocked: '完成前兩步後即可簽發。',
+      name: '我的金鑰',
       waiting: '閘道器管理員新增上游和上下文配置後，才能簽發金鑰。',
       done_one: '已簽發 {{count}} 個金鑰',
       done_other: '已簽發 {{count}} 個金鑰',
@@ -57,8 +55,7 @@ const overview = {
     },
     connect: {
       title: '接入客戶端',
-      description:
-        '把 Claude Code、Codex CLI 或聊天應用指向閘道器地址並填入金鑰，然後發一條訊息。',
+      description: '把客戶端指向閘道器地址、填入金鑰，發一條訊息。',
       action: '檢視接入指南',
     },
   },

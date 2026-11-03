@@ -161,7 +161,7 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
-| `provider` | str | `"filesystem"` | `filesystem`、`memory` 或 `cache` |
+| `provider` | str | `"filesystem"` | `filesystem`、`memory`、`sqlite` 或 `cache`；見 [SQLite 配置](../configuration/01-server.md#storage) |
 | `lock_expire_secs` | float | `30.0` | 鎖 stale 超時；不得小於 `1.0` |
 
 Redis 配置：

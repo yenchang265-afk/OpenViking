@@ -194,7 +194,10 @@ async def test_root_compile_creates_one_task_and_one_loop(monkeypatch, language_
         ),
     )
     service = SimpleNamespace(
-        ensure_write_access=AsyncMock(), stat=fs.stat, _ensure_initialized=lambda: fs
+        ensure_write_access=AsyncMock(),
+        stat=fs.stat,
+        _ensure_initialized=lambda: fs,
+        finalize_compile_directories=AsyncMock(),
     )
     apply = AsyncMock(return_value=MemoryUpdateResult())
     monkeypatch.setattr("openviking.service.memory_compile.MemoryUpdater.apply_operations", apply)
@@ -204,6 +207,8 @@ async def test_root_compile_creates_one_task_and_one_loop(monkeypatch, language_
 
     payload = await runner.prepare(target=target, instruction="整理全部已有记忆", ctx=_ctx())
     result = await runner.run("cmp_root", payload, _ctx())
+
+    service.finalize_compile_directories.assert_awaited_once_with(target, _ctx())
 
     vlm.get_completion_async.assert_awaited_once()
     fs.glob.assert_awaited_once()
@@ -753,7 +758,13 @@ async def test_compile_task_apply_outcomes(
         apply_result.add_error(f"{directory}/person/bob.md", RuntimeError("write failed"))
     apply = AsyncMock(return_value=apply_result)
     monkeypatch.setattr("openviking.service.memory_compile.MemoryUpdater.apply_operations", apply)
-    runner = MemoryCompileRunner(SimpleNamespace(_ensure_initialized=lambda: viking_fs))
+    finalize = AsyncMock()
+    runner = MemoryCompileRunner(
+        SimpleNamespace(
+            _ensure_initialized=lambda: viking_fs,
+            finalize_compile_directories=finalize,
+        )
+    )
 
     payload = {
         "to": directory,
@@ -783,7 +794,10 @@ async def test_compile_task_apply_outcomes(
         "total_deletes": int(change == "deleted"),
         "errors": ["write failed"] if has_error else [],
     }
-
+    if expected_status == TaskStatus.FAILED:
+        finalize.assert_not_awaited()
+    else:
+        finalize.assert_awaited_once_with(directory, ctx)
     if has_operations:
         apply.assert_awaited_once()
         viking_fs._async_agfs.pathlock_release.assert_awaited_once_with(lease)

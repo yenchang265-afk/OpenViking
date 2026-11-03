@@ -275,6 +275,15 @@ middleware = OpenVikingContextMiddleware(
 )
 ```
 
+中介軟體會將召回上下文新增到當前使用者訊息的副本中，再傳送給模型；系統指令和已儲存的
+對話訊息保持不變。同一輪工具呼叫複用召回結果，新的使用者訊息會重新召回。
+
+使用 LangGraph checkpointer 時，中介軟體會在內部圖狀態中儲存完整召回文本，供後續輪次或
+重啟後隨原訊息重放，從而保留一致的提示詞字首，便於模型服務複用快取。實際快取命中取決於
+模型服務。每個 session/peer 範圍最多保留 500 條記錄，並遵循應用的 checkpoint 保留策略。
+尚未寫入 OpenViking 的結構化上下文引用也會儲存到 checkpoint，直到對應的助手訊息被確認寫入，
+因此工具呼叫中斷後恢復時仍能保留召回來源。
+
 ### Session recorder
 
 當應用已經自行管理會話生命週期，只需要複用 OpenViking 持久化能力時，可使用 recorder：

@@ -2,34 +2,45 @@
 # SPDX-License-Identifier: AGPL-3.0
 """Synchronize packaged system assets into an account's system namespace."""
 
-import asyncio
-import base64
-from dataclasses import replace
+import json
+import re
+from contextlib import asynccontextmanager
+from functools import cached_property
 from pathlib import Path
+from typing import Any, AsyncIterator
 
 from openviking.core.namespace import uri_parts
+from openviking.core.namespace_constants import SYSTEM_ASSET_ROOT_MAPPINGS
 from openviking.core.namespace_policy import (
-    SYSTEM_EXAMPLE_SKILLS_ROOT,
     SYSTEM_FIXED_DIRECTORIES,
-    SYSTEM_MEMORY_BUILTIN_ROOT,
 )
-from openviking.server.identity import RequestContext, Role
-from openviking.storage.content_write import ContentWriteCoordinator
-from openviking.storage.errors import LockAcquisitionError, ResourceBusyError
+from openviking.pyagfs import AGFSAlreadyExistsError, AsyncAGFSClient
+from openviking.server.identity import RequestContext
+from openviking.storage.pathlock_transfer import PathLockGuard
 from openviking.storage.viking_fs import VikingFS
 from openviking.system_assets import SYSTEM_ASSETS_DIR
 from openviking_cli.exceptions import NotFoundError
-from openviking_cli.utils.logger import get_logger
 
-logger = get_logger(__name__)
+_MANIFEST_FILENAME = "manifest.json"
+_MANIFEST_SCHEMA_VERSION = 1
+_SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+SYSTEM_ASSET_MANIFEST_PATH = "/local/_system/system_assets_manifest.json"
+_SYNC_LOCK_TIMEOUT_SECONDS = 300.0
 
-# Backoff between sync attempts on a root a peer instance is writing (~6 s total).
-_LOCK_RETRY_DELAYS: tuple[float, ...] = (0.1, 0.3, 0.8, 1.6, 3.2)
 
-_MANAGED_ASSET_ROOTS = (
-    (Path("compile/example-skills"), SYSTEM_EXAMPLE_SKILLS_ROOT),
-    (Path("memory/memory_templates/builtin"), SYSTEM_MEMORY_BUILTIN_ROOT),
-)
+@asynccontextmanager
+async def system_asset_sync_lock(agfs: AsyncAGFSClient) -> AsyncIterator[Any]:
+    """Serialize automatic asset updates and settle ownership before cancellation."""
+    guard = PathLockGuard(agfs)
+    try:
+        lease = await guard.acquire(
+            lambda: agfs.pathlock_acquire_exact(
+                SYSTEM_ASSET_MANIFEST_PATH, timeout_secs=_SYNC_LOCK_TIMEOUT_SECONDS
+            )
+        )
+        yield lease
+    finally:
+        await guard.close()
 
 
 class SystemAssetSynchronizer:
@@ -41,77 +52,72 @@ class SystemAssetSynchronizer:
         assets_dir: Path = SYSTEM_ASSETS_DIR,
     ):
         self._viking_fs = viking_fs
-        self._coordinator = ContentWriteCoordinator(viking_fs=viking_fs)
         self._assets_dir = assets_dir
 
-    async def sync(self, ctx: RequestContext) -> int:
-        root_ctx = replace(ctx, role=Role.ROOT, actor_peer_id=None)
-        for uri in sorted(SYSTEM_FIXED_DIRECTORIES, key=lambda value: len(uri_parts(value))):
-            await self._viking_fs.mkdir(uri, exist_ok=True, ctx=root_ctx)
+    @cached_property
+    def manifest(self) -> bytes:
+        """Return the validated manifest shipped with the current image."""
+        manifest_path = self._assets_dir / _MANIFEST_FILENAME
+        raw = manifest_path.read_bytes()
+        try:
+            payload = json.loads(raw.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+            raise ValueError(f"invalid packaged system asset manifest: {manifest_path}") from exc
+        if (
+            not isinstance(payload, dict)
+            or payload.get("schema_version") != _MANIFEST_SCHEMA_VERSION
+            or not isinstance(payload.get("sha256"), str)
+            or not _SHA256_PATTERN.fullmatch(payload["sha256"])
+        ):
+            raise ValueError(f"invalid packaged system asset manifest: {manifest_path}")
+        return raw
 
-        for relative_root, _ in _MANAGED_ASSET_ROOTS:
+    @property
+    def manifest_digest(self) -> str:
+        return json.loads(self.manifest)["sha256"]
+
+    def _iter_managed_assets(self):
+        for relative_root, target_root in SYSTEM_ASSET_ROOT_MAPPINGS:
             source_root = self._assets_dir / relative_root
             if not source_root.is_dir():
                 raise FileNotFoundError(f"packaged system asset directory not found: {source_root}")
+            for source_path in sorted(path for path in source_root.rglob("*") if path.is_file()):
+                relative_path = source_path.relative_to(source_root).as_posix()
+                yield source_path, f"{target_root}/{relative_path}"
 
-        written = 0
-        for relative_root, target_root in _MANAGED_ASSET_ROOTS:
-            written += await self._sync_root(
-                self._assets_dir / relative_root, target_root, root_ctx
-            )
-        return written
+    async def sync(self, ctx: RequestContext, *, lease_ref: Any = None) -> int:
+        """Use a new-account Tree lease, or serialize an existing-account update."""
+        if lease_ref is not None:
+            return await self.sync_under_lock(ctx, lease_ref=lease_ref)
+        async with system_asset_sync_lock(self._viking_fs._async_agfs):
+            return await self.sync_under_lock(ctx)
 
-    async def _sync_root(
-        self, source_root: Path, target_root: str, root_ctx: RequestContext
-    ) -> int:
-        """Write the assets that differ under one root; retry while a peer holds its lock.
-
-        Instances starting together sync the same account at once. A busy root
-        means a peer is writing it, so back off and recompute what still differs.
-        """
-        for delay in (*_LOCK_RETRY_DELAYS, None):
-            operations = await self._pending_operations(source_root, target_root, root_ctx)
-            if not operations:
-                return 0
+    async def sync_under_lock(self, ctx: RequestContext, *, lease_ref: Any = None) -> int:
+        """Write only packaged assets under the caller's manifest or account Tree lock."""
+        agfs = self._viking_fs._async_agfs
+        fs_ctx = self._viking_fs._pathlock_fs_ctx(ctx, lease_ref)
+        for uri in sorted(SYSTEM_FIXED_DIRECTORIES, key=lambda value: len(uri_parts(value))):
+            path = self._viking_fs._uri_to_path(uri, ctx=ctx)
+            await agfs.ensure_parent_dirs(path, fs_ctx=fs_ctx)
             try:
-                await self._coordinator.batch_write(
-                    root_uri=target_root,
-                    operations=operations,
-                    ctx=root_ctx,
-                )
-            except (LockAcquisitionError, ResourceBusyError):
-                if delay is None:
-                    raise
-                logger.info(
-                    "System assets under %s are being written by another instance; "
-                    "retrying in %.2fs",
-                    target_root,
-                    delay,
-                )
-                await asyncio.sleep(delay)
-                continue
-            return len(operations)
-        return 0
+                await agfs.mkdir(path, fs_ctx=fs_ctx)
+            except AGFSAlreadyExistsError:
+                pass
 
-    async def _pending_operations(
-        self, source_root: Path, target_root: str, root_ctx: RequestContext
-    ) -> list[dict[str, str]]:
-        operations = []
-        for source_path in sorted(path for path in source_root.rglob("*") if path.is_file()):
-            relative_path = source_path.relative_to(source_root).as_posix()
-            target_uri = f"{target_root}/{relative_path}"
+        pending: list[tuple[str, bytes]] = []
+        for source_path, target_uri in self._iter_managed_assets():
             expected = source_path.read_bytes()
             try:
-                current = await self._viking_fs.read_file_bytes(target_uri, ctx=root_ctx)
+                current = await self._viking_fs.read_file_bytes(target_uri, ctx=ctx)
             except (FileNotFoundError, NotFoundError):
                 current = None
             if current == expected:
                 continue
-            operations.append(
-                {
-                    "uri": target_uri,
-                    "content_base64": base64.b64encode(expected).decode("ascii"),
-                    "mode": "replace",
-                }
-            )
-        return operations
+            pending.append((self._viking_fs._uri_to_path(target_uri, ctx=ctx), expected))
+
+        for path, content in pending:
+            await agfs.ensure_parent_dirs(path, fs_ctx=fs_ctx)
+            # This trusted package-copy path is separate from externally authorized
+            # VFS writes. Encryption remains in AGFS; the outer lock owns exclusion.
+            await agfs.write(path, content, fs_ctx=fs_ctx, auto_pathlock=False)
+        return len(pending)

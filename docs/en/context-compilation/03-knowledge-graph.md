@@ -16,7 +16,7 @@ Each edge is a compact JSON line, readable as the statement `<from> <relation> <
 
 `relation` is a stable, language-independent machine predicate (`member_of`, `leads`, `located_in`…), `label` is its localized display name, and `entity_type` drives node color, shape, and filtering in the visualization. The graph refreshes incrementally: existing nodes and edges are preserved, evidence is merged, and new knowledge is appended.
 
-Skill source: [openviking/system_assets/compile/example-skills/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/openviking/system_assets/compile/example-skills/knowledge-graph) · Visualization script: [examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
+Skill source: [examples/compile/ov-compile-skills/knowledge-graph](https://github.com/yenchang265-afk/OpenViking/tree/main/examples/compile/ov-compile-skills/knowledge-graph) · Visualization script: [examples/compile/graph-show/knowledge-graph](https://github.com/volcengine/OpenViking/tree/main/examples/compile/graph-show/knowledge-graph)
 
 Check the [prerequisites](01-overview.md#prerequisites) and run these commands from the OpenViking repository root. Replace the source directory with your own material.
 
@@ -29,17 +29,10 @@ ov ls -r viking://resources/journal
 
 ## Step 2: Add the Skill
 
-The Knowledge Graph Skill ships with OpenViking. Every account has a read-only copy at `viking://system/compile/example-skills/knowledge-graph`, synced at server start and when an account is created, so `--skill` can use it directly. Check that it is there:
-
 ```bash
-ov ls viking://system/compile/example-skills
-# → viking://system/compile/example-skills/knowledge-graph/
-```
-
-To customize the Skill, install an editable copy and pass its URI to `--skill` instead:
-
-```bash
-ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p viking://agent/skills
+ov add-skill examples/compile/ov-compile-skills/knowledge-graph -p viking://agent/skills --wait
+ov skills list
+# → viking://agent/skills/knowledge-graph
 ```
 
 ## Step 3: Run compile
@@ -48,7 +41,7 @@ ov add-skill openviking/system_assets/compile/example-skills/knowledge-graph -p 
 ov compile \
   --from viking://resources/journal \
   --to viking://resources/journal-kg \
-  --skill viking://system/compile/example-skills/knowledge-graph \
+  --skill viking://agent/skills/knowledge-graph \
   --instruction "Extract characters, places, artifacts and their relationships into a traversable graph"
 ```
 

@@ -276,13 +276,13 @@ async def test_skill_target_publishes_one_validated_package(tmp_path, existing):
 
 
 @pytest.mark.asyncio
-async def test_skill_target_rejects_changed_package(tmp_path):
+async def test_skill_target_rejects_create_over_existing_file(tmp_path):
+    # Upstream dropped per-file revision hashes; creating an existing file still conflicts.
     target = "viking://agent/skills"
     operation = {
         "uri": f"{target}/demo/SKILL.md",
         "content": SKILL_MD,
-        "mode": "replace",
-        "expected_sha256": "0" * 64,
+        "mode": "create",
     }
     client = _SkillClient("someone else's edit")
     runner = runner_module.CompileRunner(limits=CompileLimits(), work_root=tmp_path)
@@ -308,13 +308,13 @@ async def test_missing_target_directory_is_created(tmp_path, stub_pipeline):
             raise NotFoundError(uri, "file")
         return await original_stat(uri)
 
-    async def mkdir(uri):
-        created.append(uri)
+    async def mkdir(uri, *, description=None):
+        created.append((uri, description))
 
     client.stat, client.mkdir = stat, mkdir
     attempt, _ = _run(tmp_path, client, _request())
     result = await attempt
-    assert created == [target]
+    assert created == [(target, "compile target folder")]
     assert result["created"] == [PAGE]
 
 

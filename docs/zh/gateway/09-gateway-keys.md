@@ -16,6 +16,25 @@ description: 簽發把客戶端接入 OpenViking 閘道器的閘道器金鑰，�
 
 **金鑰**標籤頁列出你自己的金鑰；帳號管理員和 root 能看到本帳號的全部金鑰，並多出一列 **OpenViking 使用者**。**金鑰**列只顯示每把金鑰的開頭幾個字元。
 
+閘道器金鑰是客戶端可用的兩種憑證之一。另一種是使用者自己的 OpenViking API 金鑰，需要部署方允許，見[直接使用 OpenViking API 金鑰](#openviking-keys)。
+
+## 直接使用 OpenViking API 金鑰 {#openviking-keys}
+
+部署方把 [`openviking_keys`](13-configuration.md#gateway-fields) 設為 `true` 後，客戶端可以在填閘道器金鑰的地方直接填使用者的 OpenViking API 金鑰。此時凡是不以 `ovgw_` 開頭的金鑰，都按 OpenViking API 金鑰處理。這個開關預設關閉；關閉時這類金鑰直接被拒絕，不會去問 OpenViking。
+
+- **身份就是金鑰本身的使用者。** 首次請求時，閘道器先向 OpenViking 確認這把金鑰：接受 admin 和 user 金鑰，不接受 root 金鑰。要換成另一位使用者，客戶端改用那位使用者的金鑰即可，沒有用來切換身份的 header。
+- **使用帳號的預設設定。** 使用帳號的 `default` [上下文配置](08-context-profiles.md#context-profiles)（沒有時用內建預設值）和全部已啟用的上游，不限模型。客戶端仍可用 `X-OpenViking-Context` 請求頭為對話修改這份配置的設定，見[允許客戶端覆蓋設定](08-context-profiles.md#client-overrides)。
+- **閘道器像儲存簽發的金鑰一樣儲存它**，所以記憶儲存和日誌都照常工作。請開啟[加密](../guides/22-gateway-operations.md#encryption)。**金鑰**標籤頁把它列為 **OpenViking API 金鑰**，配置和上游顯示為**帳號預設**。
+- **只有 OpenViking 能吊銷它。** **金鑰**標籤頁上沒有它的**吊銷**按鈕。[刪除使用者的閘道器資料](#delete-a-users-gateway-data)會刪掉閘道器儲存的副本、日誌和對話狀態，但仍帶著這把金鑰的客戶端照常可用，從頭開始。要讓它失效，請在 OpenViking 中重新生成金鑰，或關閉 `openviking_keys`。金鑰重新生成後，閘道器會在隨後的請求中刪除副本，與[閘道器金鑰](#when-the-openviking-key-changes)相同。
+
+預設的 `tenancy: account` 下，同一 OpenViking 帳號和使用者的金鑰共享對話狀態。使用 `tenancy: key` 後，每把 OpenViking 金鑰都有獨立分割槽，即使兩個庫返回相同的帳號和使用者身份也互相隔離。對話、召回、寫回、模型繫結和請求日誌都使用該分割槽。此模式要求設定 `management_api: false`，並在啟動前配置 `default_upstreams` 和 `default_profile`；Studio 和管理路由不可用。
+
+按金鑰隔離時，輪換 OpenViking 金鑰會進入新分割槽並開始新對話。排障時可以不輸出金鑰，直接計算分割槽名：`"k_" + hashlib.sha256(("openviking\0" + key).encode()).hexdigest()`。OpenViking 的真實帳號身份單獨儲存，用於吊銷檢查。
+
+快取的 OpenViking 金鑰及其使用者記錄，從建立時起經過配置的 `session_ttl_seconds` 後過期，請求不會續期。下一個請求會向 OpenViking 重新確認金鑰並重建記錄，分割槽和對話 scope 保持不變。簽發的閘道器金鑰沒有這項 TTL。待寫回內容和清理行為見[保留期限](11-security-and-data.md#retention)。
+
+如果客戶端需要自己的上下文配置、上游或允許的模型，或者需要單獨吊銷，請使用閘道器金鑰。
+
 ## 簽發金鑰 {#issue-a-key}
 
 如果**金鑰**標籤頁提示先新增上游或建立上下文配置，請先完成；自己沒有許可權時，聯絡部署閘道器的人。在全新的閘道器上，概覽頁**快速模式**卡片裡的**一鍵生成金鑰**可以一步完成這些準備並簽發金鑰，見[快速開始清單和快速模式](06-manage-in-studio.md#get-started-checklist)。
@@ -71,7 +90,7 @@ description: 簽發把客戶端接入 OpenViking 閘道器的閘道器金鑰，�
 
 吊銷金鑰不會刪除閘道器為使用者儲存的資料。要刪除，帳號管理員或 root 在**金鑰**標籤頁開啟該使用者任意一把金鑰的 **…** 選單，選擇**刪除該使用者的閘道器資料…**，再點**刪除閘道器資料**確認。這一操作會：
 
-- 吊銷該使用者的全部閘道器金鑰，其客戶端立即失去訪問許可權；
+- 吊銷該使用者的全部閘道器金鑰，其客戶端立即失去訪問許可權；[直接使用該使用者 OpenViking API 金鑰](#openviking-keys)的客戶端仍可使用，直到在 OpenViking 中重新生成這把金鑰；
 - 刪除閘道器為該使用者儲存的對話狀態，包括尚未儲存到 OpenViking 的內容；
 - 刪除該使用者的請求日誌。
 

@@ -101,7 +101,7 @@ test()
 **預設情況下，`encryption.api_key_hashing.enabled = false`**：
 - API key 以明文儲存在 JSON 檔案中
 - 如果 `encryption.enabled = true`，整個檔案會被 AES-GCM 加密保護
-- `ov admin list-users` 可以顯示完整的 API key
+- `ov admin list-users` 傳入 `--reveal-api-keys` 後可以顯示完整的 API key
 - 如果 `encryption.enabled = true` 且未啟用 API key 雜湊，服務端啟動時會輸出一條說明此情況的 INFO 日誌
 
 ### 啟用 Argon2id 雜湊
@@ -122,7 +122,7 @@ test()
 **注意**：啟用後：
 - API key 使用 Argon2id 單向雜湊儲存
 - 無法從雜湊值還原出明文 key
-- `ov admin list-users` 只顯示 `key_prefix` 而不是完整的 API key
+- `ov admin list-users` 只顯示 `key_prefix` 而不是完整的 API key（呼叫方自身的行也無法顯示明文，因為服務端未儲存明文）
 - 只有在建立使用者或重新生成 key 時才能看到明文 key
 
 ### 配置示例
@@ -146,7 +146,7 @@ test()
 
 | 提供程式 | 適用場景 | 優點 | 缺點 |
 |---------|---------|------|------|
-| **Local** | 開發環境、單節點部署 | 簡單，無需外部服務 | 需要管理本地檔案許可權和獨立金鑰備份 |
+| **Local** | 開發環境、單節點部署 | 簡單，無需外部服務 | 需要管理本地金鑰許可權和獨立金鑰備份 |
 | **Vault** | 生產環境、多雲部署 | 企業級金鑰管理，支援版本控制 | 需要部署和維護 Vault |
 | **Volcengine KMS** | 火山引擎雲部署 | 雲原生金鑰管理服務 | 僅限火山引擎環境 |
 
@@ -190,6 +190,33 @@ ov system crypto init-key -f ~/.openviking/master.key
   }
 }
 ```
+
+### 在配置中直接提供根金鑰
+
+對於簡單、受控的部署，Local provider 可以直接從 `ov.conf` 讀取同一個 32 位元組根金鑰，
+不再使用單獨的金鑰檔案：
+
+```json
+{
+  "encryption": {
+    "enabled": true,
+    "provider": "local",
+    "local": {
+      "root_key": "<64 個十六進位制字元的根金鑰>"
+    }
+  }
+}
+```
+
+配置值是 32 位元組金鑰的十六進位制表示，因此必須恰好包含 64 個十六進位制字元。可以使用
+`openssl rand -hex 32` 生成，也可以在兩種 Local 配置之間遷移時直接複用已有
+`master.key` 的內容。
+
+- 不要同時配置 `root_key` 和 `key_file`；如果兩者都省略，Local provider 仍使用
+  `~/.openviking/master.key`。
+- 內聯金鑰不會自動生成；金鑰丟失或改變後，已有加密資料將無法讀取。
+- 此時必須把 `ov.conf` 當作金鑰檔案管理：只允許服務使用者讀取、安全備份，並且禁止提交到版本控制。
+- 生產環境需要集中式金鑰管理時，仍建議使用 Vault 或 KMS。
 
 ---
 

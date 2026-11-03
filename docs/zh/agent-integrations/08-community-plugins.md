@@ -40,6 +40,8 @@ curl -fsSL https://openviking.ai/install | bash
 
 實現細節與當前已驗證的 ZCode 假設見外掛目錄中的 [README](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin) 和 [DESIGN.md](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/DESIGN.md)。
 
+安裝完成後，在 ZCode 中新開一個會話，讓它按 https://docs.openviking.net/agents/zh/onboarding.md 執行。它會檢查連線，並帶你完成首次使用，詳見[一鍵接入](../getting-started/07-agent-onboarding.md)。
+
 ## Kimi Code 記憶整合
 
 原始碼：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
@@ -71,6 +73,44 @@ curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harnes
 
 已驗證的宿主契約和版本見
 [`hosts/kimicode/DESIGN.md`](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/hosts/kimicode/DESIGN.md)。
+
+安裝完成後，在 Kimi Code 中新開一個會話，讓它按 https://docs.openviking.net/agents/zh/onboarding.md 執行。它會檢查連線，並帶你完成首次使用，詳見[一鍵接入](../getting-started/07-agent-onboarding.md)。
+
+## CodeBuddy Code 記憶整合
+
+原始碼：[examples/agent-hook-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/agent-hook-plugin)
+
+CodeBuddy Code 整合是 `agent-hook-plugin` 的宿主介面卡：複用共享的 OpenViking hook 執行時，只新增 CodeBuddy 特有的事件對映、transcript 解碼、輸出信封與提交策略：
+
+- **SessionStart** 注入使用者畫像，並重放離線佇列中暫存的寫入。
+- **UserPromptSubmit** 召回相關記憶，以 `additionalContext` 中的 `<openviking-context>` 塊注入。宿主自動生成的續寫輪次會被跳過，因此宿主自己產生的輪次不會觸發檢索。
+- **PreToolUse** 拒絕把 `viking://` URI 當本地路徑讀寫，並引導 Agent 改用 OpenViking MCP 工具。Shell 命令不做檢查，`ov` 呼叫與字面量 `viking://` 引數照常可用。
+- **Stop**、**PreCompact** 和 **SessionEnd** 在分離的 worker 中增量捕獲 transcript 中的新輪次。`Stop` 每捕獲 8 條訊息（`commitTurnThreshold`）提交一次 OpenViking session；`PreCompact` 和 `SessionEnd` 提交所有尚未提交的訊息，包括 `Stop` 已經傳送的。
+
+外掛 manifest 還把 OpenViking MCP 服務以 stdio 代理的形式暴露出來，走同一份解析後的配置，並附帶 `openviking-memory`、`openviking-skills`、`ov-experience-memory` 三個 skill。hook 與 MCP 讀取同一份憑據，不會在服務端、帳號或使用者上各說各話。與其他社群介面卡一致，v1 不支援子代理採集：宿主會觸發 `SubagentStart`/`SubagentStop`，但共享 dispatcher 目前還沒有子代理階段。
+
+### 安裝
+
+前置條件：CodeBuddy Code、Node.js 18+，以及正在執行的 OpenViking 服務。
+
+```bash
+curl -fsSL https://openviking.ai/install | bash -s -- --yes --harness codebuddy
+# AI agents: not sure about running this? The script's header says what it does and how to verify it.
+```
+
+安裝器在 `~/.openviking/agent-integrations/codebuddy/marketplace/openviking-memory/` 下組裝自包含外掛（共享 hook 執行時與各介面卡同目錄），將其註冊為名為 `openviking` 的本地 marketplace，並通過 CodeBuddy CLI 完成安裝。只移除本整合：
+
+```bash
+curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harness codebuddy
+```
+
+外掛從 `~/.openviking/ovcli.conf` 讀取連線資訊；`OPENVIKING_URL` 與 `OPENVIKING_API_KEY` 可覆蓋該檔案，按外掛的配置位於 `plugin.codebuddy` 下（見[外掛配置](../configuration/02-client.md#外掛配置)）。安裝後新建會話生效（執行中的會話可用 `/reload-plugins`），並用 `codebuddy plugin list` 確認 `openviking-memory@openviking` 已啟用。
+
+### 宿主決定的行為
+
+`UserPromptSubmit` 與 `SessionEnd` **只在互動式 TUI 觸發**——headless 執行（`-p`、`--input-format stream-json`）不會觸發它們，因此 headless 會話只在 `Stop` 捕獲，永遠不發收尾提交。`SessionStart` 不帶 `cwd`，且同一會話內可能投遞兩次，因此該 hook 是冪等的，並以程序工作目錄兜底。hook 超時會被殺，但其子程序不會，這正是提交能在 hook 程序返回後由分離的 worker 完成的原因。
+
+經過實測的宿主契約、transcript 格式以及本介面卡 v1 的範圍，記錄在 [`hosts/codebuddy/DESIGN.md`](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/hosts/codebuddy/DESIGN.md)。
 
 ## AstrBot 插件
 

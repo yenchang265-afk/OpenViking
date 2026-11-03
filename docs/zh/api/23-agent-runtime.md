@@ -20,7 +20,7 @@
 | `to` | string | 是 | - | 目標 Resource 目錄或受支援的 Skill namespace；Memory 目錄請使用 `--skill memory` |
 | `skill` | string | 是 | - | Skill 目錄或其 `SKILL.md` URI |
 | `instruction` | string | 否 | Skill 驅動的預設值 | 本次 Compile 的補充指令 |
-| `args` | object | 否 | - | 可選的 `last_compile_time` 與 `wiki_links`（見下表） |
+| `args` | object | 否 | - | 可選的 `last_compile_time`、`wiki_links` 與排程控制欄位（見下表） |
 
 `args` 只接受以下鍵，其他鍵返回 `400 INVALID_ARGUMENT`：
 
@@ -28,8 +28,10 @@
 |----|------|------|
 | `last_compile_time` | ISO 8601 時間或 Unix 秒 | 增量編譯：只處理在此時間點及之後修改的來源檔案；沒有更新的檔案時，任務不呼叫模型也不寫入，直接完成 |
 | `wiki_links` | boolean | 按實際 Markdown 路徑重建 resource 的 `index.md` |
+| `auto_update` | boolean | 排程控制：儲存目標配置並註冊或移除排程更新，不立即編譯 |
+| `update_schedule` | object | 排程控制：自動更新排程（格式見[目標配置與操作歷史](#目標配置與操作歷史)） |
 
-Compile 使用帳號配置的 `vlm` 模型。Python 示例使用 `SyncHTTPClient`；使用 `AsyncHTTPClient` 時需 `await compile()`。
+Compile 使用帳號配置的 `vlm` 模型。排程控制欄位 `auto_update` 和 `update_schedule` 由 OpenViking 處理。Python 示例使用 `SyncHTTPClient`；使用 `AsyncHTTPClient` 時需 `await compile()`。
 
 **HTTP API**
 
@@ -51,7 +53,7 @@ curl -X POST http://localhost:1933/api/v1/compile \
   }'
 ```
 
-接口返回 `202 Accepted` 和 OV TaskRecord：
+未傳排程控制欄位時，介面立即將 Compile 任務入隊，並返回 `202 Accepted` 和 OV TaskRecord：
 
 ```json
 {
@@ -66,6 +68,22 @@ curl -X POST http://localhost:1933/api/v1/compile \
 }
 ```
 
+當 `args` 顯式包含 `auto_update` 或 `update_schedule` 時，請求只儲存目標配置並註冊或移除排程。介面返回 `200 OK`，結果包含已儲存配置和 `next_run_at`，不包含 `task_id`；到下一計劃時間才建立並執行 Compile 任務。例如：
+
+```json
+{
+  "from": ["viking://resources/research"],
+  "to": "viking://resources/research-wiki",
+  "skill": "viking://user/default/skills/research-compiler",
+  "args": {
+    "auto_update": true,
+    "update_schedule": {"frequency": "daily", "hour": 0, "minute": 0}
+  }
+}
+```
+
+傳入非空 `update_schedule` 時會開啟自動更新，除非顯式指定 `auto_update=false`。關閉後返回 `next_run_at: null`。不傳這兩個排程控制欄位時仍立即編譯，即使目標已有定時策略。計劃按 `to` 更新，不會建立供 `GET /api/v1/compile/submissions/{key}` 查詢的任務提交記錄。
+
 **CLI**
 
 ```bash
@@ -77,7 +95,7 @@ ov compile \
   --args '{"wiki_links":true}'
 ```
 
-`--args` 必須是 JSON object。命令提交後立即返回 Task ID。
+`--args` 必須是 JSON object。立即編譯返回 Task ID；儲存計劃返回下次執行時間。
 
 **SDK**
 
@@ -119,23 +137,26 @@ task, err := client.Compile(
 
 ### 目標配置與操作歷史
 
-這些介面使用當前帳號和認證上下文。`to` 為已註冊目標的 `viking://` URI。讀取或更新單個目標需要寫許可權；目標列表僅返回有訪問許可權的目標。
+這些介面使用當前帳號和認證上下文。`to` 為已註冊目標的 `viking://` URI。查詢配置、操作歷史、操作詳情或產出需要讀許可權；更新配置需要寫許可權。目標列表僅返回有訪問許可權的目標。
 
 | HTTP API | 說明與返回結果（`status: "ok"`） |
 |----------|--------------------------|
 | `GET /api/v1/compile/config?to={to}` | `result` 包含目標配置和執行狀態 |
 | `POST /api/v1/compile/config/update` | 請求體必填 `to`，指定要更新配置的已註冊編譯產物目錄；`result` 包含更新後的配置和執行狀態 |
-| `GET /api/v1/compile/configs` | 可選查詢引數 `limit`（1–100，預設 20）和 `cursor`；`result.targets` 按 `target_id` 升序返回本頁可見目標摘要；將 `result.next_cursor` 原樣作為下一頁的 `cursor`，末頁為 `null` |
+| `GET /api/v1/compile/configs` | 可選查詢引數 `limit`（1–100，預設 20）和 `cursor`；`result.targets` 按 `sha256(to)` 升序返回本頁有讀取許可權的 active 目標摘要，已刪除目標在分頁前排除；`result.next_cursor` 為本頁最後一個目標 URI，原樣作為下一頁的 `cursor`，從其雜湊之後繼續讀取，末頁為 `null` |
 | `GET /api/v1/compile/operations?to={to}` | `result.operations` 按時間倒序返回操作記錄；`result.next_cursor` 用於翻頁 |
+| `GET /api/v1/compile/operations/{operation_id}?to={to}` | `result` 返回單條操作詳情，欄位與操作列表中的記錄一致，包含 `params` 和公開的 `meta`，不包含私有執行檢查點 |
 | `GET /api/v1/compile/operations/{operation_id}/outputs?to={to}` | `result.outputs` 按 URI 排序返回產出檔案及凍結版本引用；`result.next_cursor` 用於翻頁 |
 
 更新請求體必填 `to`、`from`（非空來源 URI 陣列）、`skill` 和 `auto_update`（布林值）。`auto_update=true` 時必須提供有效的 `update_schedule`；`auto_update=false` 時可省略或傳 `null`，已儲存的規則會清空，返回值為 `null`。新目標不設定預設規則，關閉後重新開啟需要提供規則。可選 `instruction` 省略時保留已儲存的值，傳 `null` 或空字串時清空。更新配置不提交 Compile 任務。
 
 `update_schedule` 必填 `frequency`（`daily` 或 `weekly`）。可選 `hour`（0–23）和 `minute`（0–59）預設均為 0。每週計劃還接受 `weekday`（1 為週一，7 為週日，預設 1）。計劃使用 `Asia/Shanghai` 時區。
 
-定時自動更新需要顯式配置 `compile_api.scheduler_enabled=true`（預設 `false`），並提供有效的 `expiry.service_name` 和 `expiry.redis` 配置。`compile_api.scheduler_backend` 僅接受 `redis`（預設值），配置 `local` 無效。排程關閉時開啟 `auto_update` 會返回 `COMPILE_SCHEDULER_DISABLED`。手動增量編譯和版本管理不依賴 Redis。
+定時自動更新需要顯式配置 `compile_api.scheduler_enabled=true`（預設 `false`），並提供有效的 `expiry.service_name` 和 `expiry.redis` 配置。`compile_api.scheduler_backend` 僅接受 `redis`（預設值），配置 `local` 無效。定時請求會同步校驗：排程未啟用或缺少配置時返回 HTTP 412（`COMPILE_SCHEDULER_DISABLED`），Redis 註冊不可用時返回 HTTP 503。儲存計劃失敗不會提交 Compile 任務。編譯失敗本身不會取消後續定時執行，包括首次編譯失敗。手動增量編譯和版本管理不依賴 Redis。
 
-兩個歷史介面均接受可選查詢引數 `limit`（1–100，預設 20）和 `cursor`。翻頁時原樣傳入返回的 `next_cursor`，其為 `null` 時表示最後一頁。`operation_id` 長度為 1–128 個字元，以字母或數字開頭，其餘字元允許字母、數字、`:`、`.`、`_` 和 `-`。目標刪除後仍可查詢操作記錄。目標、操作或產出清單不存在時返回 `404`。產出項的 `version_id` 或 `snapshot_id` 為 `null` 時，表示對應引用不可用。
+操作列表和產出列表介面均接受可選查詢引數 `limit`（1–100，預設 20）和 `cursor`。翻頁時原樣傳入返回的 `next_cursor`，其為 `null` 時表示最後一頁。
+
+`operation_id` 包含固定寬度的建立時間字首和唯一字尾，操作歷史按該 ID 倒序分頁；遊標對應的記錄被清理後仍可繼續翻頁。Compile 操作通過 `meta.task_id` 關聯執行任務，`operation_id` 與 `task_id` 不同；任務查詢和取消使用 `task_id`，操作詳情和產出查詢使用操作列表返回的 `operation_id`。
 
 ### 檢查 Compile 可用性
 
@@ -206,6 +227,7 @@ ov task status cmp_01abc
 ```
 
 任務進入終態後，響應還會包含結果或錯誤。
+
 
 ### 取消任務
 

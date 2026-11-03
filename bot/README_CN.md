@@ -406,7 +406,7 @@ Agent 實際使用的活動目錄還取決於 `bot.sandbox.mode`：
 |------|------|
 | 檔案與命令 | `read_file`、`write_file`、`edit_file`、`list_dir`、`exec` |
 | Web | `web_search`、`web_fetch` |
-| OpenViking | `openviking_list`、`openviking_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read`、`openviking_add_resource`、`openviking_memory_commit` |
+| OpenViking | `openviking_list`、`openviking_search`、`openviking_rule_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read`、`openviking_add_resource`、`openviking_memory_commit` |
 | 其他 | `message`、`generate_image`、`cron`、`spawn` |
 
 `readonly` 模式不會註冊 `openviking_add_resource`。渠道設定 `ov_tools_enable: false` 時，該渠道不顯示 OpenViking 工具，也不注入 Profile、Memory 和 Experience。

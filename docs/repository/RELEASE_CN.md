@@ -8,6 +8,7 @@ OpenViking 的發版目標不是單一產物，而是圍繞不同使用入口釋
 
 - `openviking` Python 主包：面向本地執行時、服務端、CLI 及完整功能使用者。
 - Python SDK `openviking-sdk`：面向只通過 HTTP 呼叫已有 OpenViking 服務的輕量客戶端使用者。
+- Microsoft Agent Framework 適配包 `openviking-ms-agent-framework`：面向連線已有 OpenViking 服務的 MAF 應用。
 - Docker 映象：面向容器化部署，釋出到 GHCR 和 Docker Hub。
 - TOS 釋出資產：面向原始碼包、安裝指令碼和穩定下載路徑。
 - Rust CLI / npm 包：面向通過 npm 安裝 `ov` CLI 的使用者。
@@ -24,7 +25,9 @@ OpenViking 的發版目標不是單一產物，而是圍繞不同使用入口釋
 | --- | --- | --- |
 | `openviking` 主包 | `vX.Y.Z` | 主 release tag，例如 `v0.3.26`。 |
 | `openviking-sdk` | `python-sdk@X.Y.Z` | SDK 專用 tag，例如 `python-sdk@0.1.3`。 |
+| `openviking-ms-agent-framework` | `openviking-ms-agent-framework@X.Y.Z` | 必須與 `integrations/frameworks/microsoft-agent-framework/pyproject.toml` 中的版本一致。 |
 | Rust CLI / npm CLI | `cli@X.Y.Z` | CLI 專用 tag，例如 `cli@0.2.0`。 |
+| Vika（`vika/`） | `openviking-vika@X.Y.Z` | 必須與 `vika/package.json` 中的版本一致，見 [Vika 發版流程](#vika-發版流程)。 |
 | ClawHub 外掛 latest | `YYYY.M.D` 或 `YYYY.M.D-N` | 由 workflow 自動生成或手動指定。 |
 | ClawHub 插件 dev | `YYYY.M.D-dev.N` | dev channel 使用。 |
 
@@ -129,6 +132,18 @@ python-sdk@X.Y.Z
 
 SDK workflow 也支援手動觸發，並可選擇 `testpypi`、`pypi` 或 `both`。手動觸發適合驗證和補發；正式 SDK 發版建議使用 `python-sdk@X.Y.Z` tag。
 
+## Microsoft Agent Framework 發版流程
+
+適配包位於 `integrations/frameworks/microsoft-agent-framework`，版本在該目錄的 `pyproject.toml` 中獨立維護。
+
+1. 合入適配包改動，並確認整合檢查通過。
+2. 手動執行 `Microsoft Agent Framework Integration Release`，選擇 `testpypi`，驗證釋出的 wheel 可以安裝和匯入。
+3. 在已測試的提交上建立 `openviking-ms-agent-framework@X.Y.Z` tag，並基於它釋出 GitHub Release，使用 `gh release create <tag> --latest=false` 避免替換主包的 latest Release。workflow 會校驗 tag 與包版本一致，執行離線契約測試、構建產物併發布到 PyPI。
+
+手動觸發還支援 `pypi` 和 `both`，用於釋出和補發。僅推送 tag 不會觸發此 workflow。
+
+分別在 PyPI 和 TestPyPI 配置 GitHub Trusted Publisher：倉庫為 `volcengine/OpenViking`，workflow 檔名為 `python-agent-framework-release.yml`，environment 分別為 `pypi` 和 `testpypi`。首次發版時，以包名 `openviking-ms-agent-framework` 註冊 pending publisher。釋出通過 OIDC 完成認證。
+
 ## Rust CLI / npm 發版流程
 
 Rust CLI 的 tag 格式為：
@@ -143,6 +158,21 @@ cli@X.Y.Z
 - wrapper 包：`@openviking/cli`
 
 workflow 會把 tag 中的版本寫入平臺包和 wrapper 包。如果 npm 上已存在同版本包，workflow 會跳過已釋出版本。
+
+## Vika 發版流程
+
+Vika（`vika/`）按平臺釋出自包含的安裝包：linux-x64、linux-arm64、darwin-x64、darwin-arm64，每個都自帶 Node 和依賴。`Vika Release` workflow（`vika-release.yml`）負責測試、構建並上傳到 TOS 釋出桶的 `vika/` 下：
+
+- `vika/releases/<版本>/`：安裝包及其 `.sha256`、`install.sh`，以及最後上傳的 `release.json`。每個版本只發布一次：同一版本的另一份構建已經上傳時，workflow 直接停止；重跑失敗的釋出 job 會把同一份構建釋出完。釋出 job 依次執行，不會並行。
+- `vika/install.sh` 和 `vika/latest`：最後寫入，只有比當前 `vika/latest` 更新的正式版才會更新。使用者用 `curl -fsSL https://ovrelease.tos-cn-beijing.volces.com/vika/install.sh | sh` 安裝，`vika upgrade` 按 `vika/latest` 升級。版本更舊的 tag（例如舊版本線上的熱修復）或帶 `-` 的 tag（例如 `openviking-vika@0.6.0-rc.1`）只發布自己的版本目錄；帶 `-` 的版本在 GitHub 上標記為預釋出。
+
+正式發版：在 `vika/package.json` 中設定版本併合入，然後推送與之一致的 `openviking-vika@X.Y.Z` tag。tag 不能以 `v` 開頭：推送 `v*.*.*` tag、為 `v*` tag 釋出 Release 都會觸發主包的 workflow。workflow 同時為該 tag 建立 GitHub Release，不會將其標記為倉庫的最新 Release。
+
+分支預覽：在該分支上執行 workflow，可以在 Actions 頁面操作，也可以執行 `gh workflow run vika-release.yml --ref <分支>`。它釋出 `<package 版本>-<commit>`，不改動 `vika/latest`，執行摘要裡給出安裝命令。釋出需要 TOS secrets，所以只能預覽本倉庫內的分支。
+
+改動 `vika/` 的 PR 會跑測試，並構建、檢查 linux-x64 安裝包，但不釋出。
+
+workflow 使用與 `release-tos.yml` 相同的 TOS secrets。倉庫變數 `VIKA_DOWNLOAD_BASE` 和 `VIKA_TOS_PREFIX` 可以覆蓋公開地址和 key 字首，例如在 fork 中對著測試桶演練。
 
 ## OpenClaw / ClawHub 外掛釋出
 

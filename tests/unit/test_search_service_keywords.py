@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -47,4 +48,35 @@ async def test_keywords_search_is_rejected_without_a_vector_store():
     fs = SimpleNamespace(_get_vector_store=lambda: None)
 
     with pytest.raises(InvalidArgumentError, match="Keyword search is not supported"):
+        await SearchService(fs).ensure_keywords_search_supported(_ctx())
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("has_fulltext", [True, False])
+async def test_keywords_search_on_opengauss_follows_the_fulltext_probe(has_fulltext):
+    fs, _ = _fs_with_backend_mode("opengauss")
+    check = AsyncMock(return_value=has_fulltext)
+    fs._collection_has_fulltext = check
+    service = SearchService(fs)
+
+    if has_fulltext:
+        await service.ensure_keywords_search_supported(_ctx())
+    else:
+        with pytest.raises(InvalidArgumentError, match="Keyword search is not supported"):
+            await service.ensure_keywords_search_supported(_ctx())
+
+    check.assert_awaited_once_with(
+        fs._get_vector_store(),
+        _ctx(),
+        supported_modes=("opengauss",),
+        raise_on_error=True,
+    )
+
+
+@pytest.mark.asyncio
+async def test_keywords_capability_check_propagates_metadata_failures():
+    fs, _ = _fs_with_backend_mode("opengauss")
+    fs._collection_has_fulltext = AsyncMock(side_effect=RuntimeError("metadata unavailable"))
+
+    with pytest.raises(RuntimeError, match="metadata unavailable"):
         await SearchService(fs).ensure_keywords_search_supported(_ctx())

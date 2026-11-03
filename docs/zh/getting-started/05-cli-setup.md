@@ -1,286 +1,247 @@
-# 安裝與使用 CLI
+# CLI 入門
 
-`ov` 是 OpenViking 的命令列客戶端。OpenViking 把 Agent 的上下文存成一個檔案系統：資源、記憶和技能都是 `viking://` 下的目錄和檔案。用 `ov` 可以瀏覽、讀取、檢索和寫入這些內容。Agent 也用同樣的命令操作這些內容。
+`ov` 是 OpenViking 的命令列客戶端。你可以在終端中用它匯入資料、檢索內容和讀取原文，也可以讓能夠執行終端命令的 Agent 呼叫它，為回答提供依據。
 
-`ov` 連線一個已有的 OpenViking 服務。還沒有服務時，先完成[快速開始](02-quickstart.md)的第 1 步。
+本頁從安裝和連線開始，帶你瀏覽一份資料、按問題檢索並讀取結果。完成後，你就可以在自己的終端或 Agent 中使用同一個 OpenViking 連線。
 
-## 讓 Agent 配置
+## 準備工作
 
-點選下方的**複製**，把提示詞貼上給你使用的程式設計 Agent，例如 Claude Code、Codex 或 Cursor。Agent 會安裝 `ov`，向你確認要連線的服務，然後儲存配置並檢查連線。
+準備以下工具和連線資訊：
 
-<AgentPrompt>
+| 準備項 | 獲取方式 |
+| --- | --- |
+| Node.js 和 npm | 從 [Node.js 官網](https://nodejs.org/en/download)安裝 LTS 版本，npm 隨安裝包提供；已有可用的 `ov` 時可直接進入[連線](#連線) |
+| OpenViking 服務 | 使用已開通的火山引擎雲服務或正在執行的自建服務；還沒有服務時，先完成[快速開始](02-quickstart.md#開通或啟動服務)中的開通或啟動步驟 |
+| 訪問憑據 | 雲服務使用控制台提供的 API Key；開啟認證的自建服務使用管理員提供的 User/Admin Key；預設無鑑權的本機服務可留空 |
+| 一份可訪問的資料 | 使用服務中已有的資料；首次體驗可在連線成功後[匯入燈塔樣例](02-quickstart.md#匯入樣例) |
 
-````markdown
-# openviking-cli
-
-> `ov` 是 OpenViking 的命令列客戶端。OpenViking 是面向 AI Agent 的上下文資料庫。`ov` 連線已有的 OpenViking 服務端，或連線火山引擎上的 OpenViking 服務。
-
-我希望你為我安裝並配置 OpenViking CLI（`ov`）。自主執行下面的全部步驟。只在步驟標註 ASK 的地方停下來問我。
-
-OBJECTIVE：安裝 `ov`，為我的 OpenViking 服務儲存一個命名配置，並把它設為當前配置。
-
-DONE WHEN：`ov config validate` 的檢查項全部通過（配置檔案有效、伺服器可連線、認證已通過、健康），並且 `ov health -o json` 返回 `"healthy": true`。
-
-## TODO
-
-- [ ] 安裝 `ov` 並設定顯示語言
-- [ ] 確認要連線的服務
-- [ ] 儲存並激活命名配置
-- [ ] 驗證連線
-
-## 規則
-
-- 你不能猜測連線目標。已有配置、本地檔案、開放埠和正在執行的服務都不代表我的同意。
-- 切換、替換或刪除配置，探測或啟動本地服務，或寫入資料之前，你必須先 ASK 我。
-- API Key 不能出現在命令文本、shell 歷史、日誌、記憶或打印出的配置檔案中。只能通過 stdin 或已經存在的環境變數傳入 key。
-- 如果你無法用這兩種方式傳入 key，ASK 我自己執行 `ov config` 並輸入 key。
-- 執行 `ov config add` 時必須傳 `--name`，這樣重試會更新同一個配置。
-- `ov config add|edit|list|switch|delete` 必須加 `-o json`。根據退出碼和 `error.code` 判斷結果，不要解析說明文字。
-- 如果本機 `ov --help` 與本文不一致，以本機幫助為準，並告訴我差異。
-
-## 第 1 步：安裝 ov
-
-需要 Node.js 和 npm。
+安裝 Node.js 後，重新開啟終端，確認 Node.js 和 npm 可用：
 
 ```bash
-command -v ov || npm i -g @openviking/cli
+node --version
+npm --version
+```
+
+CLI 通過 HTTP 連線服務。僅安裝 CLI 時，無需在本機安裝 Python 或配置模型；資料處理使用服務端配置的模型。
+
+## 安裝
+
+使用 npm 安裝 `ov`：
+
+```bash
+npm install -g @openviking/cli
+```
+
+安裝後設定顯示語言，便於後續互動和 Agent 呼叫。中文使用 `zh-CN`，英文使用 `en`：
+
+```bash
 ov language zh-CN
+```
+
+確認終端可以找到 CLI 並輸出版本號：
+
+```bash
 ov --version
 ```
 
-如果我用英文和你交流，改用 `ov language en`。未儲存顯示語言時，大多數 `ov` 命令在非互動式 shell 中以退出碼 2 退出。
+如果安裝服務端時已提供 `ov`，可以直接使用已有命令。
 
-安裝後仍找不到 `ov` 時，把 `$(npm prefix -g)/bin` 加入 `PATH`。不要使用 `sudo npm`。沒有 npm 時，先 ASK 我，再用 `cargo install --git https://github.com/volcengine/OpenViking ov_cli` 從原始碼構建。
+## 連線
 
-檢視要用到的命令幫助：
-
-```bash
-ov config add ov-service --help
-ov config add custom --help
-```
-
-## 第 2 步：確認連線目標
-
-執行 `ov config list -o json`。如果已有配置與目標一致，先 ASK 我，再用 `ov config switch <NAME> -o json` 啟用它。
-
-否則，除非我已經說明，ASK 我要連線哪種目標：
-
-| 目標 | 服務地址 | API Key |
-|---|---|---|
-| OpenViking 服務（火山引擎雲） | 固定地址，不要傳 `--url`。 | 必填。我在[控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_05-cli-setup)的“使用者管理 → API Key”中獲取。 |
-| 遠端自建服務 | ASK 我。 | ASK 我。 |
-| 本機自建服務 | `http://127.0.0.1:1933` | 通常不需要。 |
-
-只有目標是本機自建服務時，才檢查服務是否執行：`curl -fsS http://127.0.0.1:1933/health`。檢查失敗時，ASK 我啟動服務端。參見 https://docs.openviking.ai/zh/guides/03-deployment 。
-
-除非我的管理員提供了 `--account` 和 `--user` 的值，否則不要詢問這兩項。
-
-## 第 3 步：儲存並激活配置
-
-把 `<NAME>`、`<URL>` 和 `<ENV_VAR>` 替換為確認過的值，不保留尖括號。`$OV_API_KEY` 表示可信的執行時金鑰來源，不是字面量 key。
-
-OpenViking 服務：
-
-```bash
-printf '%s' "$OV_API_KEY" | ov config add ov-service --name <NAME> --api-key-stdin --activate -o json
-```
-
-使用 API Key 的遠端自建服務：
-
-```bash
-printf '%s' "$OV_API_KEY" | ov config add custom --name <NAME> --url <URL> --api-key-stdin --activate -o json
-```
-
-無鑑權的本機自建服務：
-
-```bash
-ov config add custom --name <NAME> --url http://127.0.0.1:1933 --activate -o json
-```
-
-特殊金鑰情況：
-
-- key 已經在環境變數中時，用 `--api-key-env <ENV_VAR>` 代替 `--api-key-stdin`。
-- 只有 root key，且服務端為 `trusted` 模式：使用 `--root-api-key-stdin --account <ACCOUNT> --user <USER>`。服務端為 `api_key` 模式時，root key 不能讀取資料，ASK 我提供 user 或 admin key。
-- 同時有 user key 和 root key：使用 `--api-key-stdin --root-api-key-env <ENV_VAR>`。一條命令只有一個 stdin，所以第二個 key 必須來自已存在的環境變數。
-
-`ov config` 子命令的退出碼：
-
-| 退出碼 | 含義 | 你的操作 |
-|---|---|---|
-| `0` | 成功，或已經處於目標狀態 | 繼續。 |
-| `2` | 輸入錯誤、缺少引數，或未設定顯示語言 | 修正輸入，或執行 `ov language <code>`。 |
-| `3` | 同名配置已存在且內容不同 | 先 ASK 我，再加 `--force`。 |
-| `4` | 服務端不可達，或配置校驗失敗 | ASK 我確認 URL，以及服務是否執行。 |
-| `5` | 鑑權失敗，或 key 角色不匹配 | ASK 我確認 key 和 key 型別。 |
-| `6` | 操作被拒絕，例如刪除當前配置 | ASK 我如何繼續。 |
-
-不要用猜測的值重試。
-
-## 第 4 步：驗證
-
-```bash
-ov config validate
-ov health -o json
-```
-
-讀取輸出內容。退出碼為 0 不代表服務健康。檢視配置時使用 `ov config show`，它會隱藏金鑰。不要列印 `~/.openviking/ovcli.conf`。
-
-除非我要求，不要匯入資料做演示。
-
-配置完成後，我可能會讓你用 `ov` 瀏覽、檢索、新增或整理內容。OpenViking 的內容是 `viking://` 下的目錄樹。讀取時，先用 `ov abstract` 或 `ov overview` 讀目錄摘要，再用 `ov read` 讀需要的檔案。執行 `ov --help` 檢視命令分組。使用某條命令前，先執行 `ov <命令> --help`。
-
-EXECUTE NOW：完成上面的 TODO 列表，達到：`ov config validate` 的檢查項全部通過，並且 `ov health -o json` 返回 `"healthy": true`。
-
-需要更多上下文時，閱讀 https://docs.openviking.ai/llms.txt 。
-````
-
-</AgentPrompt>
-
-下文是手動配置步驟。
-
-## 準備
-
-需要 Node.js 和 npm。
-
-還需要連線資訊。連線資訊取決於服務型別：
-
-| 服務型別 | 服務地址 | API Key |
-|---|---|---|
-| OpenViking 服務（火山引擎雲） | 固定地址，無需填寫。 | 必填。在 [OpenViking 控制台](https://console.volcengine.com/vikingdb/openviking/region:openviking+cn-beijing?utm_source=opensource_docs&utm_medium=referral&utm_campaign=getting-started_05-cli-setup)的**使用者管理 → API Key** 中獲取。 |
-| 遠端自建服務 | 向管理員獲取。 | 向管理員獲取。 |
-| 本機自建服務 | `http://127.0.0.1:1933` | 預設配置不需要。 |
-
-## 1. 安裝 `ov`
-
-```bash
-npm i -g @openviking/cli
-ov language zh-CN
-ov --version
-```
-
-`ov language` 設定顯示語言。英文介面使用 `en`。未設定語言時，大多數命令不能執行。
-
-在執行 OpenViking 服務端的機器上，`ov` 已隨服務端安裝。跳過 `npm i`，只設置語言。
-
-## 2. 新增連線
+開啟連線嚮導，為要訪問的服務新增一個命名連線：
 
 ```bash
 ov config
 ```
 
-按提示操作：
+按所選服務填寫連線資訊，儲存後設為當前配置。已有對應連線時，直接選中它即可。
 
-1. 選擇**新增配置**。
-2. 選擇服務型別。OpenViking 服務選擇 **OpenViking 服務（火山引擎雲）**；自建服務選擇**自定義**。
-3. 輸入配置名稱。留空時，`ov` 自動生成名稱。
-4. 按提示輸入服務地址和 API Key。
-5. 校驗通過後，選擇**儲存並設為當前配置**。
+| 服務 | 連線型別 | 填寫內容 |
+| --- | --- | --- |
+| 本機預設服務 | 自定義（Custom） | URL 為 `http://127.0.0.1:1933`；預設無鑑權模式下金鑰留空 |
+| 遠端自建服務 | 自定義（Custom） | 使用管理員提供的服務 URL 和 User/Admin Key |
+| 火山引擎雲服務 | OpenViking Service | 使用嚮導提供的服務地址，輸入控制台取得的 API Key |
 
-## 3. 檢查連線
+可以將連線命名為 `local`、`cloud` 等便於識別的名稱。服務 URL 指向 OpenViking 資料服務；模型的 API 地址配置在服務端。
+
+通過嚮導輸入金鑰，可以避免把金鑰明文寫入命令歷史。在 API Key 認證模式下，普通資料訪問使用 User/Admin Key，Root Key 用於服務管理。更多身份配置見[身份認證](../guides/04-authentication.md)。
+
+## 檢查連線
+
+先檢視當前連線，核對服務地址。該命令會隱藏金鑰：
+
+```bash
+ov config show
+```
+
+再驗證配置、連線和認證：
 
 ```bash
 ov config validate
 ```
 
-輸出的**檢查項**全部通過時，連線可用：配置檔案“有效”，伺服器“可連線”，認證“已通過”，健康狀態“健康”。
-
-配置到此完成。接下來可以[匯入並檢索第一份文件](02-quickstart.md#_3-匯入文件)。想了解更多，可以繼續往下看。
-
-## `ov` 能做什麼
-
-OpenViking 的內容是一棵目錄樹。執行 `ov ls` 檢視根目錄 `viking://`：
-
-- `viking://resources/`：匯入的文件、程式碼倉庫和網頁。同一帳號內共享。
-- `viking://user/<使用者 ID>/`：你的記憶、私有資源、技能和會話。`viking://~/` 指向這個目錄。
-- `viking://agent/`：同一帳號內共享的技能和 Agent 配置。
-
-每個目錄有 L0 摘要和 L1 概覽。檔案全文是 L2。先讀目錄的 L0 和 L1，判斷內容是否相關，再讀需要的 L2 檔案。詳見 [Viking URI](../concepts/04-viking-uri.md) 和[上下文層級](../concepts/03-context-layers.md)。
-
-| 任務 | 命令 |
-|---|---|
-| 瀏覽目錄 | `ov ls`、`ov tree`、`ov stat`。`ov tui` 開啟互動式瀏覽介面。 |
-| 按層讀取 | `ov abstract`（L0）、`ov overview`（L1）、`ov read`（L2）。`ov get` 把檔案下載到本地。 |
-| 檢索 | `ov find`（語義檢索）、`ov grep`（匹配內容）、`ov glob`（匹配路徑） |
-| 匯入資料和技能 | `ov add-resource`、`ov add-skill`、`ov skills` |
-| 寫入和整理 | `ov write`、`ov mkdir`、`ov mv`、`ov cp`、`ov rm` |
-| 從對話中提取記憶 | `ov session new`、`ov session add-message`、`ov session commit`。`ov add-memory` 一步完成這三步。 |
-| 等待後臺處理 | `ov task list`、`ov task status`、`ov wait` |
-| 儲存和回滾版本 | `ov snapshot` |
-| 備份與遷移 | `ov export`、`ov import`、`ov backup`、`ov restore` |
-| 重建索引（`viking://resources` 需要 admin key） | `ov reindex` |
-| 管理使用者（需要 admin 或 root key） | `ov admin list-users`、`ov admin register-user`、`ov admin regenerate-key` |
-| 檢查服務 | `ov health`、`ov status` |
-
-匯入資料和提交會話後，服務端在後臺處理：解析內容，提取記憶，生成 L0 和 L1，建立索引。處理完成前，`ov find` 檢索不到新內容。
-
-用 `ov <命令> --help` 檢視命令的引數。這些操作也可以直接交給 Agent 完成。
-
-::: warning 注意
-`ov rm -r` 會刪除目錄及其中的全部內容。刪除在服務端執行，使用同一服務的其他 Agent 也會失去這些內容。刪除前，先用 `ov ls` 確認 URI。
-:::
-
-## 管理多個連線
+檢查通過後，檢視服務健康狀態：
 
 ```bash
-ov config list     # 列出已儲存的配置
-ov config switch   # 選擇當前配置
-ov config show     # 檢視當前配置，金鑰會被隱藏
+ov health
 ```
 
-編輯或刪除配置時，執行 `ov config` 並選擇對應操作。在指令碼中新增配置時，使用 `ov config add`，引數見 `ov config add --help`。
+結果中的 `healthy: true` 表示服務健康。接下來讀取一份資料，確認當前身份可以訪問所需內容。資料匯入所用的模型，以及 VikingBot 的問答能力，在各自的使用步驟中驗證。
 
-當前配置是 `~/.openviking/ovcli.conf`。每個已儲存的配置是 `~/.openviking/ovcli.conf.<名稱>`。設定 `OPENVIKING_CLI_CONFIG_FILE` 後，`ov` 改用該檔案作為當前配置，已儲存的配置位於該檔案所在目錄。全部欄位見[客戶端配置](../configuration/02-client.md)。
+## 瀏覽與讀取
 
-## API Key
+列出當前服務中可訪問的共享資料目錄：
 
-服務使用 API Key 認證時，key 有三種角色：
+```bash
+ov ls viking://resources
+```
 
-- **User key**：用於資料命令，例如 `ov add-resource` 和 `ov find`。大多數使用者只需要這種 key。
-- **Admin key**：可以執行資料命令，也可以管理本帳號的使用者。
-- **Root key**：管理整個服務，例如建立帳號。在 `api_key` 模式下，root key 不能讀寫帳號資料。
+如果還沒有資料，先[匯入燈塔樣例](02-quickstart.md#匯入樣例)，等待處理完成後回到這裡。以下使用樣例目錄 `viking://resources/lighthouse-demo`；使用自己的資料時，將命令中的目錄 URI 換成實際路徑。
 
-一個配置可以同時儲存 user key 和 root key。普通命令使用 user key。`ov admin`、`ov system`、`ov reindex`、`ov task status` 和 `ov task list` 加 `--sudo` 時使用 root key。詳見[認證](../guides/04-authentication.md)。
+展開目錄，找到資料正文對應的檔案 URI：
 
-保護 API Key：
+```bash
+ov tree viking://resources/lighthouse-demo
+```
 
-- 在 `ov config` 的輸入框中輸入 key。不要把 key 寫進命令，shell 歷史會儲存命令。
-- 用 `ov config show` 檢視配置，它會隱藏金鑰。不要分享 `~/.openviking/ovcli.conf` 的內容或截圖。
-- 演示和試用時，使用可以撤銷的臨時 key。
-- 讓 Agent 配置時，不要把 key 貼上到對話中。把 key 放進環境變數，或在 Agent 請求時自己執行 `ov config` 輸入 key。
+複製輸出中的檔案 URI，替換下面的佔位值，讀取正文：
+
+```bash
+ov read "<檔案 URI>"
+```
+
+樣例正文包含“試點環境”和“反饋收集”等內容。能夠讀到正文，說明連線和檔案訪問已完成。
+
+## 檢索資料
+
+當你有具體問題時，可以先檢索相關內容，再讀取命中的原文。檢索使用服務端的模型配置，可能產生模型呼叫費用。
+
+```bash
+ov find "燈塔專案第一版怎樣收集使用者反饋？" --uri viking://resources/lighthouse-demo
+```
+
+結果會列出匹配內容及其 URI。選擇與問題相關的結果，用 `ov read` 讀取正文，核對反饋由誰收集、如何交付。CLI 返回的檢索結果可以作為 Agent 生成回答的依據。
+
+## 交給 Agent 使用
+
+在能夠執行終端命令的 Agent 中傳送下面的任務，讓它使用已配置的 CLI 完成檢索、閱讀和回答：
+
+```text
+請使用已配置的 ov CLI，查詢 viking://resources/lighthouse-demo 中的資料。
+先按“燈塔專案第一版怎樣收集使用者反饋，需要提前準備什麼？”進行 ov find 檢索，
+再用 ov read 讀取相關結果的原文，然後回答這個問題。
+為關鍵結論列出來原始檔的完整 viking:// URI；資料未說明的內容請明確指出。
+```
+
+Agent 需要能訪問 `ov` 命令及其連線配置。如果 Agent 執行在另一臺電腦、容器或不同系統使用者下，在該環境中完成安裝和連線，再執行任務。
+
+`ov chat` 則將問題傳送給服務端的 **VikingBot**。使用它需要目標服務已啟用 VikingBot；本機可按 [VikingBot](11-vikingbot.md) 章節使用 `openviking-server --with-bot` 啟動。火山引擎雲服務路徑使用上面的 Agent 呼叫方式完成問答。`ov health` 檢查的是資料服務，Bot 的可用狀態需另外檢查。
+
+## 切換連線
+
+同時使用雲端和本地服務時，先列出已儲存的連線：
+
+```bash
+ov config list
+```
+
+開啟選擇器，切換到目標連線：
+
+```bash
+ov config switch
+```
+
+切換後檢視當前地址，並重新檢查連線：
+
+```bash
+ov config show
+ov health
+```
+
+切換連線後，命令訪問的是目標服務及當前身份下的內容。雲端匯入的資料會保留在雲端；在本地體驗同一樣例時，需要向本地服務匯入。遷移已有資料可參考[匯入匯出](15-transfer.md#資料服務間遷移)。
+
+兩類配置檔案分別負責連線和服務執行：
+
+| 配置檔案 | 用途 |
+| --- | --- |
+| `~/.openviking/ovcli.conf` | CLI 當前連線、訪問憑據和命令預設行為 |
+| `~/.openviking/ov.conf` | 自建服務的模型、儲存和服務引數 |
+
+需要指定其他配置路徑或在指令碼中管理命名連線時，檢視[客戶端配置](../configuration/02-client.md)和 `ov config --help`。
+
+## 常用命令
+
+| 目的 | 命令 |
+| --- | --- |
+| 檢視目錄 | `ov ls "<目錄 URI>"`、`ov tree "<目錄 URI>"` |
+| 按問題檢索 | `ov find "問題" --uri "<目錄 URI>"` |
+| 讀取原文 | `ov read "<檔案 URI>"` |
+| 檢視已生成的目錄概覽 | `ov overview "<目錄 URI>"` |
+| 檢視後臺任務 | `ov task status <task_id>` |
+| 查詢引數 | `ov --help`、`ov <命令> --help` |
 
 ## 常見問題
 
-### 找不到 `ov`
+| 現象 | 下一步 |
+| --- | --- |
+| 找不到 `npm` 或 `ov` | 安裝 Node.js 後重新開啟終端；若 npm 已可用而 `ov` 不可用，檢查 npm 全域可執行檔案目錄是否在 `PATH` 中 |
+| npm 安裝許可權錯誤 | 按 [npm 官方指南](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally)調整全域安裝許可權 |
+| 命令提示設定語言 | 執行 `ov language zh-CN` 或 `ov language en`，儲存顯示語言 |
+| 連線失敗 | 用 `ov config show` 核對當前 URL；本機服務需保持執行，再用 `ov config validate` 檢查 |
+| 認證失敗或讀取被拒絕 | 核對 Key 型別和資料訪問許可權，見[身份認證](../guides/04-authentication.md) |
+| 切換連線後找不到原資料 | 核對目標服務和身份；向該服務匯入樣例，或遷移原資料 |
+| `ov chat` 返回 `404 page not found` | 核對當前地址是否提供 VikingBot 介面；雲服務可由已有 Agent 呼叫 CLI 完成問答，本地服務按 [VikingBot](11-vikingbot.md) 章節啟動並檢查 Bot |
+| 匯入時模型返回 `UnsupportedModel` | 核對服務端 `ov.conf` 中模型名稱、端點和套餐是否匹配，參見[模型開通指南](../guides/02-volcengine-purchase-guide.md) |
+| 找不到目錄概覽 | 檢視資料處理狀態；概覽是否生成取決於處理方式與配置，見[上下文層級](../concepts/03-context-layers.md) |
 
-開啟一個新終端。仍然找不到時，把 npm 全域 binary 目錄加入 `PATH`。在 macOS 和 Linux 上，該目錄通常是 `$(npm prefix -g)/bin`。
+## 讓 Agent 配置
 
-### npm 報許可權錯誤
+也可以讓 Agent 幫你完成安裝和連線。複製下面的提示詞，並補充要連線的服務型別、連線名稱和自建服務地址。API Key 通過互動向導輸入，或由已有的可信環境變數提供。
 
-按你平時管理 Node.js 的方式修復許可權，例如使用 nvm。除非你一直用 sudo 管理全域包，否則不要執行 `sudo npm i -g`。
+<AgentPrompt>
 
-### 命令提示需要顯示語言
+```text
+請幫我安裝並配置 OpenViking CLI（ov），連線我指定的 OpenViking 服務。
 
-執行 `ov language zh-CN` 或 `ov language en`，然後重新執行命令。
+先檢查 ov 是否已安裝；需要安裝時使用 npm install -g @openviking/cli。
+如果缺少 Node.js/npm，請說明安裝方式。將 CLI 顯示語言設為 zh-CN。
 
-### 本機服務沒有響應
+根據我提供的目標，檢視 ov config list -o json，複用匹配的命名連線；
+新建連線前檢視 ov config add ov-service --help 或 ov config add custom --help。
+使用明確的 --name 儲存連線，並將已確認的目標設為當前配置。
+如果服務型別、URL 或憑據來源缺失，請向我詢問缺失項。
+遇到同名但內容不同的配置，先說明差異，再詢問是否替換。
 
-檢查服務：
+API Key 使用 --api-key-env 從已有環境變數讀取，或通過 --api-key-stdin 傳入。
+如果沒有可用的安全輸入方式，引導我在終端執行 ov config 輸入金鑰。
+展示配置時使用 ov config show，避免輸出憑據。
 
-```bash
-curl http://127.0.0.1:1933/health
+完成後執行 ov config validate 和 ov health，檢查實際返回結果。
+告訴我當前連線的服務地址、檢查結果，以及仍需處理的問題。
+本次任務完成安裝和連線，資料匯入由後續任務指定。
 ```
 
-檢查失敗時，先啟動服務端。參見[部署](../guides/03-deployment.md)。
-
-### API Key 校驗失敗
-
-執行 `ov config`，選擇**編輯配置**，重新輸入 key。OpenViking 服務的 key 從控制台複製。自建服務的 key 和 key 型別向管理員確認。在 `api_key` 模式下，資料命令需要 user key 或 admin key。
-
-### 當前配置不對
-
-執行 `ov config list` 檢視當前配置。執行 `ov config switch` 選擇其他配置。
+</AgentPrompt>
 
 ## 下一步
 
-- 匯入並檢索第一份文件：[快速開始](02-quickstart.md)。
-- 把 OpenViking 接入你日常使用的 Agent：[Agent 接入方式](../agent-integrations/01-overview.md)。
+繼續[快速開始](02-quickstart.md#提問並核對)，完成帶來源的資料問答；準備匯入自己的專案資料時，檢視[資料檢索](08-resources.md)。
+
+<!-- Preserve incoming links to previous section titles. -->
+<a id="_1-安裝"></a>
+<a id="_2-連線"></a>
+<a id="_4-瀏覽與讀取"></a>
+<a id="安裝與使用-cli"></a>
+<a id="準備"></a>
+<a id="_1-安裝-ov"></a>
+<a id="_2-新增連線"></a>
+<a id="_3-檢查連線"></a>
+<a id="ov-能做什麼"></a>
+<a id="管理多個連線"></a>
+<a id="api-key"></a>
+<a id="找不到-ov"></a>
+<a id="npm-報許可權錯誤"></a>
+<a id="命令提示需要顯示語言"></a>
+<a id="本機服務沒有響應"></a>
+<a id="api-key-校驗失敗"></a>
+<a id="當前配置不對"></a>

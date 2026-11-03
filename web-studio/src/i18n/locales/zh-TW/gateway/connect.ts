@@ -11,16 +11,16 @@ const connect = {
     loopback: {
       title: '只有閘道器所在的機器能使用這個地址',
       embedded:
-        '其他機器上的客戶端連不上它。請在 `ov.conf` 中把 `gateway.public_url` 設為它們能訪問的地址（不帶 `/gateway`），然後重啟服務。',
+        '其他機器上的客戶端連不上它。請在 `ov.conf` 中把 `gateway.public_url` 設為它們能訪問的地址（不帶 `/admin/gateway`），然後重啟服務。',
       standalone:
-        '其他機器上的客戶端連不上它。請把 `gateway.conf` 中的 `public_url` 或環境變數 `OPENVIKING_GATEWAY_PUBLIC_URL` 設為它們能訪問的地址（不帶 `/gateway`），然後重啟閘道器。',
+        '其他機器上的客戶端連不上它。請把 `gateway.conf` 中的 `public_url` 或環境變數 `OPENVIKING_GATEWAY_PUBLIC_URL` 設為它們能訪問的地址（不帶 `/admin/gateway`），然後重啟閘道器。',
     },
     notPublic: {
       title: '客戶端可能連不上這個地址',
       embedded:
-        '這是瀏覽器開啟 Studio 時使用的地址。請在 `ov.conf` 中把 `gateway.public_url` 設為客戶端應該使用的地址（不帶 `/gateway`），然後重啟服務。',
+        '這是瀏覽器開啟 Studio 時使用的地址。請在 `ov.conf` 中把 `gateway.public_url` 設為客戶端應該使用的地址（不帶 `/admin/gateway`），然後重啟服務。',
       standalone:
-        '這是瀏覽器開啟 Studio 時使用的地址。請把 `gateway.conf` 中的 `public_url` 或環境變數 `OPENVIKING_GATEWAY_PUBLIC_URL` 設為客戶端應該使用的地址（不帶 `/gateway`），然後重啟閘道器。',
+        '這是瀏覽器開啟 Studio 時使用的地址。請把 `gateway.conf` 中的 `public_url` 或環境變數 `OPENVIKING_GATEWAY_PUBLIC_URL` 設為客戶端應該使用的地址（不帶 `/admin/gateway`），然後重啟閘道器。',
     },
     keys: '客戶端用閘道器金鑰（`ovgw_…`）認證，代替服務商的 API Key。',
     manageKeys: '管理金鑰',
@@ -227,6 +227,15 @@ const connect = {
     note: '閘道器把這個金鑰轉交給服務商，不會記錄它。',
     upstreams: '需要它的上游：{{names}}',
     none: '目前沒有上游需要它。',
+  },
+  context: {
+    title: '覆蓋上下文配置',
+    description:
+      '客戶端可以在這個請求頭裡用 JSON 物件傳入要修改的配置欄位，為新對話覆蓋金鑰的上下文配置。',
+    tools:
+      '`{"disabled_tools":[]}` 表示提供全部 OpenViking 工具，包括會修改資料的工具。',
+    scope:
+      '對話開始時的設定會沿用到對話結束。關閉了“允許客戶端覆蓋設定”的配置會拒絕這個請求頭。',
   },
   plugin: {
     title: '同時在用 OpenViking 外掛？',

@@ -10,7 +10,9 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 
 兩個標籤頁讀的都是閘道器的請求日誌：每個經過閘道器的模型請求對應一條記錄。普通使用者只看到自己的請求，帳號管理員和 root 看到整個帳號的請求。概覽裡的數字也是從這些記錄算出來的，所以統計範圍和請求日誌一致。
 
-日誌只記後設資料，從不儲存提示詞、回覆或記憶內容，詳見[請求日誌記什麼](11-security-and-data.md#what-request-logs-record)。記錄預設保留 30 天，見[保留期限](11-security-and-data.md#retention)。
+設定 `request_log_sink: "stdout"` 後，新記錄只寫到 stdout。全新部署的請求日誌頁和概覽中的請求統計保持為空；之前已儲存的記錄仍可見，直到過期。新請求請通過 [stdout 觀測流程](../guides/22-gateway-operations.md#monitoring)檢視。
+
+日誌只記後設資料，從不儲存提示詞、回覆或記憶內容，詳見[請求日誌記什麼](11-security-and-data.md#what-request-logs-record)。儲存中的記錄預設保留 30 天；stdout 的保留期限由日誌採集系統管理。見[保留期限](11-security-and-data.md#retention)。
 
 ## 概覽 {#overview}
 
@@ -89,6 +91,7 @@ description: 讀懂 Studio 中 OpenViking 閘道器的“概覽”和“請求�
 - 上下文視窗用量，以及歷史是否經過壓縮、模型是否開啟了新視窗
 - 儲存狀態和下次重試時間
 - OpenViking 工具詳情，包括沒有提供工具的原因
+- 客戶端在 `X-OpenViking-Context` 中傳入的配置項，只記名稱；它們只在對話的第一個請求中生效
 
 有異常的請求，展開後還會說明發生了什麼、該怎麼處理。
 

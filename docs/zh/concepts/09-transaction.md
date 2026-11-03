@@ -221,6 +221,13 @@ async with LockContext(lock_manager, [src], lock_mode="mv", mv_dst_path=dst):
 
 Exact 和 Tree 表達操作範圍，檔案、目錄或缺失路徑表達目標的當前狀態，兩者獨立。鎖保護路徑名字，目標不存在也可以申請鎖。
 
+鎖路徑必須是絕對路徑。Manager 在獲取鎖或檢查租約覆蓋範圍前，對空路徑、
+相對路徑、重複 `/`、`.` 或 `..` 路徑段及 NUL 返回 `InvalidRequest`。
+非根路徑末尾的單個 `/` 會被移除。Redis 和 SQLite 的 token 操作要求路徑
+已完成這一規範化；Redis Lua 批次獲取也會在修改 token 前校驗全部請求。
+應使用 `/local/account-a/file`，避免 `/local/account-a/./file`、
+`/local/account-a//file` 等別名。
+
 以下衝突關係限定為不同 owner、同一 Provider scope 內的請求：
 
 | 已持有 | 新請求 | 衝突 |
@@ -239,17 +246,17 @@ Exact 和 Tree 表達操作範圍，檔案、目錄或缺失路徑表達目標�
 
 ### Filesystem Provider 鎖協議
 
-鎖型別由呼叫者選擇，Resolver 根據目標狀態決定 token 位置：
+鎖型別由呼叫者選擇。Filesystem Provider 對所有目標統一使用父目錄 sidecar：
 
 | 目標狀態 | Exact token | Tree token |
 | --- | --- | --- |
 | 現存檔案 `/docs/a` | `/docs/.exact.ovlock.a.<hash>`，內容為 E | 同一 sidecar，內容為 T |
-| 現存目錄 `/docs/a` | `/docs/a/.path.ovlock`，內容為 E | 同一目錄內檔案，內容為 T |
-| 缺失路徑 `/docs/a` | 父目錄 sidecar，內容為 E | 建立目標目錄後寫內部 `.path.ovlock`，內容為 T |
+| 現存目錄 `/docs/a` | `/docs/.exact.ovlock.a.<hash>`，內容為 E | 同一 sidecar，內容為 T |
+| 缺失路徑 `/docs/a` | `/docs/.exact.ovlock.a.<hash>`，內容為 E | 同一 sidecar，內容為 T |
 
-sidecar 位於目標旁邊，但只代表該目標，不會鎖住整個父目錄。`<hash>` 來自完整後端路徑的 SHA-1 字首，與業務檔案內容無關。
+sidecar 位於目標旁邊，但只代表該目標，不會鎖住整個父目錄。遞迴刪除目標時不會刪除位於父目錄中的 token，因此鎖的互斥保護會持續到 lease 正式釋放。`<hash>` 來自完整後端路徑的 SHA-1 字首，與業務檔案內容無關。
 
-`.exact.ovlock.*` 可以存 Tree token，`.path.ovlock` 也可以存 Exact token。檔名是儲存協議的一部分，不能單憑名字判斷邏輯鎖型別。token 內容為：
+`.exact.ovlock.*` 根據實際鎖型別儲存 E 或 T。為相容升級前遺留 token，衝突檢測仍讀取目標內部的 `.path.ovlock`，但新鎖不再寫入該位置。檔名是儲存協議的一部分，不能單憑名字判斷邏輯鎖型別。token 內容為：
 
 ```text
 {owner_id}:{time_ns}:{lock_type}
@@ -258,6 +265,17 @@ sidecar 位於目標旁邊，但只代表該目標，不會鎖住整個父目錄
 `lock_type` 為 `E` 或 `T`。該歸屬 token 用於競爭檢查、續期和條件釋放，不代表所有業務寫入都有儲存端 fencing 校驗。
 
 lease 將邏輯範圍 `covered_paths` 與 token 位置 `lock_paths` 分開記錄。Owned lease 控制續期、釋放和交接；Borrowed lease 僅提供已有鎖的覆蓋證明，不能釋放外層鎖。
+
+#### 協議遷移與釋出
+
+新版本對新 sidecar 和舊 `.path.ovlock` 執行雙讀，但只向新 sidecar 寫入 token。升級前已存在的 lease 不做原地遷移：續期、釋放和交接繼續使用 lease 中記錄的舊 `lock_paths`，直到舊 token 正常釋放或過期。
+
+舊版本不會檢查祖先路徑的新 sidecar，因此 Filesystem Provider 不能讓新舊版本在同一後端上同時處理寫請求。當前版本採用協調切換：
+
+1. 停止新的寫請求，等待活躍 lease 和待交接任務排空，然後停止所有舊例項。
+2. 全量啟動新版本例項，確認舊 token 已釋放或可按過期規則回收，再恢復寫流量。
+
+如果部署必須保持零停機滾動升級，需要拆成兩個可獨立釋出的協議階段：先發布“新舊雙讀、仍寫舊 token”的相容版本；全部例項升級後，再統一切換為“新舊雙讀、只寫新 sidecar”。兩個階段之間不得存在舊例項讀取新 sidecar 的視窗。
 
 ### Cache Provider 鎖協議
 
@@ -279,8 +297,10 @@ HASH key 按路徑 scope 隔離：
 
 所有 key 都使用 `{service_name}` 作為 Redis Cluster hash tag。Exact 獲取使用
 `HMGET` 讀取目標和祖先；Tree 獲取只對所屬 scope 的 HASH 執行
-`HGETALL`。`/` 和 `/local` 的 global 鎖不會掃描 account 或 `_system`
-HASH。跨 scope batch 會被拒絕。
+`HGETALL`。`/` 和 `/local` 的 Tree 鎖會返回 `InvalidRequest`，因為它們的
+子樹跨越 account 和 `_system` HASH。Tree 根路徑應使用 `/local/<account>`、
+`/local/_system` 或其後代。`/` 和 `/local` 的 Exact 鎖仍然支援，只保護
+對應路徑本身。跨 scope batch 會被拒絕。
 
 ### Filesystem 獲取鎖流程（EXACT 模式）
 
@@ -318,8 +338,8 @@ HASH。跨 scope batch 會被拒絕。
        - 目標目錄不存在？ -> 視為無後代鎖
        - 陳舊鎖？ -> 移除後重試
        - 活躍鎖？ -> 等待
-    4. 確保 Resolver 選定的 token 父目錄存在；缺失目標會因此被建立成目錄
-    5. 寫入 TREE (T) token（現存檔案用 sidecar，其餘用內部 .path.ovlock）
+    4. 確保 Resolver 選定的 sidecar 父目錄存在；不會建立缺失目標本身
+    5. 在父目錄 sidecar 寫入 TREE (T) token
     6. TOCTOU 雙重檢查：重新掃描後代目錄和祖先目錄
        - 發現衝突：比較 (timestamp, handle_id)
        - 後到者（更大的 timestamp/handle_id）主動讓步（刪除自己的鎖），防止活鎖
@@ -332,11 +352,11 @@ HASH。跨 scope batch 會被拒絕。
 
 ### 缺失目錄建立規則
 
-鎖系統允許為了放置鎖檔案而建立目錄，但建立前必須先檢查衝突：
+鎖系統允許為了放置 sidecar 而建立缺失的父目錄鏈，但不會建立被鎖目標本身。建立前必須先檢查衝突：
 
 ```
 1. 發現祖先 TreeLock / 同路徑鎖 / 後代鎖衝突 -> 不建立目錄，直接失敗或等待
-2. 當前無衝突 -> 可以建立目錄並寫鎖
+2. 當前無衝突 -> 可以建立 sidecar 的父目錄並寫鎖
 3. 寫鎖後再次檢查時發現新衝突 -> 刪除自己的鎖並失敗或重試
 4. 第 3 步不會回滾剛建立的空目錄
 ```
@@ -353,10 +373,9 @@ HASH。跨 scope batch 會被拒絕。
 ```
 
 如果兩個請求同時建立 `java-guide`，兩邊都可能先看到“當前無衝突”，但最終只有
-fencing token 校驗通過的一方成功持有 `TreeLock(java-guide)`；失敗方會刪除自己的鎖，
-已創建出來的空目錄可以保留。
+fencing token 校驗通過的一方成功持有 `TreeLock(java-guide)`；失敗方會刪除自己的鎖。
 
-獲取失敗的回滾和正常釋放只清理 token，不保證刪除為存放 token 建立的目錄。Exact sidecar 也可能建立缺失的父目錄鏈。Snapshot 對缺失目標採用單獨的策略，見 [快照的範圍與併發](../guides/15-snapshot.md#提交範圍與併發)。
+獲取失敗的回滾和正常釋放只清理 token，不保證刪除為存放 sidecar 建立的父目錄鏈。Snapshot 對缺失目標採用單獨的策略，見 [快照的範圍與併發](../guides/15-snapshot.md#提交範圍與併發)。
 
 ### 鎖過期清理
 
@@ -364,7 +383,15 @@ fencing token 校驗通過的一方成功持有 `TreeLock(java-guide)`；失敗�
 
 **陳舊鎖檢測**：PathLockEngine 檢查歸屬 token 中的時間戳。超過 `lock_expire`（預設 30s）的鎖被視為陳舊鎖，在加鎖過程中自動移除。
 
-**程序內清理**：Rust PathLockManager 在續期迴圈中檢查長期未成功續期的 lease，以 `2 × lock_expire` 為閾值嘗試清理，並校驗歸屬後釋放 token。
+**失鎖後的授權失效**：手動和後臺續租使用相同規則。token 不存在或 owner 不匹配時，同 owner 下共享實際 token 路徑（`lock_paths`）的所有本地 lease 立即整份失效，包括待交接的 lease。Tree 祖先和 Exact 後代使用不同 token，不會因邏輯覆蓋關係連帶失效。
+
+網路等不確定錯誤允許短暫重試，但每個 token 距離最近一次成功確認達到 `0.8 × lock_expire`（預設 24 秒）時撤銷授權。使用單調時鐘分別記錄各 token 的確認時間；部分續租成功、重入和本地交接/接管不會延長失敗 token 的期限。寫入授權檢查也會檢查期限，無需等待下次心跳。失效 lease 不能再授權後續受保護寫入、續租、複用 owner 或交接/接管，且不會恢復有效。
+
+**程序內清理**：失效 lease 保留釋放能力和本地引用，後臺重試帶 owner 校驗的清理。token 已不存在或已被其他 owner 接管均視為清理完成，不會刪除新 owner 的 token；仍被其他有效本地 lease 引用的 token 也不會被刪除。從首次失效起超過六個心跳間隔（`2 × lock_expire`，預設 60 秒），即使 Provider 持續不可用也記錄剩餘路徑並移除本地 entry，遺留的遠端 token 依賴過期清理。重試不會延長該視窗。
+
+**失效診斷**：manager 在清理期間保留首次失效的時間與原因。`pathlock lease invalidated` 日誌包含 `reason`、`lease_ref`、`owner_id` 和 `affected_paths`。`TokenLost` 表示必要 token 缺失或歸屬不符，應檢查 token 過期、刪除和接管情況；`ConfirmationDeadlineExceeded` 表示安全期限內未能確認歸屬，應檢查 Provider 健康、網路延遲和續租排程，對應 token 日誌還包含 `since_last_confirmation_ms` 和 `failures`；`ReleaseFailed` 表示釋放或降級錯誤導致撤銷授權並進入清理重試，釋放日誌會記錄具體錯誤。後續響應和清理失敗不會覆蓋首次原因或重置時間，清理視窗耗盡的日誌也會保留該原因。
+
+上述檢查在發現失鎖或達到期限後拒絕後續操作；不會中斷已經通過授權檢查的寫入，也不提供儲存側 fencing。
 
 **孤兒鎖**：程序崩潰後遺留的 Provider token，在後續 acquire 檢查同一路徑或 scope 時通過 stale lock 檢測自動移除。
 
@@ -438,8 +465,13 @@ Redis 配置：
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `provider` | str | `filesystem`、`memory` 或 `cache` | `filesystem` |
+| `provider` | str | `filesystem`、`memory`、`sqlite` 或 `cache` | `filesystem` |
+| `sqlite_path` | str / null | 使用 `sqlite` 時可覆蓋本地資料庫絕對路徑；見 [SQLite 配置](../configuration/01-server.md#storage) | 使用 `sqlite` 時為 `{storage.workspace}/_system/pathlock/pathlock.db` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數 | `30.0` |
+
+跨容器或主機共享 EFS 的副本應使用 `provider="cache"`，連線共享 Redis。
+SQLite 僅支援同機共享同一個本地磁碟資料庫檔案，不支援 EFS/NFS/SMB
+或各容器獨立的本地資料庫。參見[部署限制與 Provider 選擇](../configuration/01-server.md#storage)。
 
 相容舊寫法：
 
@@ -461,6 +493,89 @@ Redis 配置：
 ### QueueFS 持久化
 
 重啟恢復要求佇列內容已持久化。QueueFS 預設使用 SQLite；使用 cache 後端時，永續性取決於所配置的 Provider。memory 後端不保留程序退出後的任務。
+
+### 單例項路徑鎖 Provider 切換：filesystem → Redis
+
+這裡切換的是 **路徑鎖的儲存與協調後端**：從 filesystem Provider 使用的
+`.ovlock` 鎖檔案，切換為 cache Provider 使用的 Redis 鎖記錄。
+業務檔案仍儲存在原有檔案儲存中，QueueFS 仍使用原有持久化佇列後端
+（例如 SQLite）；業務資料和佇列訊息無需遷入 Redis。
+
+此流程僅支援 **單例項、停機切換**。按以下步驟操作：
+
+1. 暫停新請求和任務提交，禁用可能自動拉起舊例項的自動重啟或排程策略，
+   保留原有檔案儲存和持久化佇列。
+2. 停止舊服務及其所有佇列消費程序。在程序管理器或部署平臺中核對舊例項的
+   PID / 容器已全部退出，且沒有殘留子程序、獨立 worker 或其他訪問同一儲存的
+   filesystem 路徑鎖寫入者；確認舊例項的鎖心跳續租任務也已停止。
+   **完成此檢查前，不得啟動使用 Redis 路徑鎖的新例項。**
+3. 將 `storage.agfs.pathlock.provider` 從 `filesystem` 改為 `cache`，
+   並將該 cache Provider 配置為使用 Redis。
+4. 啟動一個新例項，檢查積壓任務從原佇列恢復、在 Redis 中取得新路徑鎖並正常消費，
+   再恢復請求入口和任務提交。
+
+`handoff` 會保留舊程序內的 lease 並繼續心跳續租，因此停止請求入口或關閉監聽埠
+不足以證明舊寫入者已停止；必須確認上述程序全部退出。程序退出後，其記憶體中的
+lease registry 和心跳任務隨之終止，磁碟上仍可能殘留 `.ovlock` token。
+無需排空佇列、刪除這些鎖檔案或等待舊租約過期。
+
+filesystem 與 Redis 是相互獨立的鎖協調域，Redis 的 acquire **不會檢查或阻擋
+舊 filesystem token**。如果舊程序仍在執行，同一路徑可能同時被兩套後端授予
+不同 owner，兩個程序也可能同時寫業務檔案；等待舊 token 過期不能替代退出檢查。
+
+新 handoff 包含 `handle_mode`；舊訊息缺少該欄位時仍可恢復。
+消費者遇到 Provider 變化或舊 token 不可用時，按完整邏輯路徑和 Exact/Tree
+型別重新加鎖，獲得新 owner 後才執行任務。優先使用 `covered_paths`；
+舊 `.path.ovlock` 可反解 Tree 路徑，無法反解的 Exact 檔名使用任務自身的
+完整路徑請求。不會只恢復混合批次中的部分路徑。
+重新加鎖遇到衝突或服務錯誤時保留任務重試；非法覆蓋、失效引用和重複 adopt
+不會觸發重新加鎖。舊 `.ovlock` 檔案無需掃描或複製到 Redis。
+
+恢復必須攜帶有效帳號上下文；缺少上下文或覆蓋路徑不屬於該帳號時拒絕恢復。
+語義任務優先保留 `covered_paths` 中的 Exact/Tree 型別；歷史訊息缺少覆蓋型別、
+無法確定原始粒度時，按任務路徑保守獲取 Tree 鎖並記錄 warning。
+這可能將原來的 Exact 鎖擴大為 Tree 鎖，降低恢復期間的併發度。
+
+### 恢復阻塞的重試與告警
+
+QueueFS 沒有全域最大重試次數或死信佇列。AddResource、Reindex、ContentWrite
+和 Semantic 消費者對 `HandoffRecoveryBlocked` 的每條投遞鏈最多重試 8 次
+（首次嘗試之外），通過替代訊息中的 `lock_handoff_retry` 持久化計數。
+如果替代訊息已入隊、原訊息尚未 ACK 時程序崩潰，恢復後兩條訊息可能形成
+不同的投遞鏈，各自沿用訊息中的計數，因此這不是同一 work 的全域重試上限。
+每次重試前等待
+`min(0.5 × 2^retry, 30)` 秒；退避期間仍佔用當前消費者槽位。
+等待取消或重新入隊失敗時，不 ACK 原訊息；達到上限時結束該 work 並記錄失敗，
+關聯任務通過任務跟蹤機制進入 FAILED，可查詢失敗原因。失敗不會自動進入死信佇列。
+
+每次阻塞記錄 warning，達到上限記錄 error，並匯出
+`openviking_pathlock_recovery_blocked_total{queue, outcome}`，其中 `outcome`
+為 `retry` 或 `exhausted`。先啟用 `server.observability.metrics.enabled`
+和 `server.observability.metrics.exporters.prometheus.enabled`，配置 Prometheus
+抓取 `/metrics`，再將以下示例加入 Prometheus 告警規則：
+
+```yaml
+groups:
+  - name: openviking-pathlock-recovery
+    rules:
+      - alert: OpenVikingPathlockRecoveryBlocked
+        expr: sum by (queue) (increase(openviking_pathlock_recovery_blocked_total{outcome="retry"}[5m])) >= 8
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenViking 路徑鎖恢復反覆阻塞"
+      - alert: OpenVikingPathlockRecoveryExhausted
+        expr: sum by (queue) (increase(openviking_pathlock_recovery_blocked_total{outcome="exhausted"}[5m])) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "OpenViking 路徑鎖恢復已達重試上限"
+```
+
+閾值應按業務流量調整。告警後結合日誌中的 `task_id` 和失敗原因檢查競爭寫入者或
+Redis 可用性，解決原因後重新提交失敗任務。指標啟用和規則配置見
+[指標體系](./12-metrics.md)及 [Grafana 與 Prometheus](../guides/11-grafana-prometheus.md)。
 
 ## 相關文件
 

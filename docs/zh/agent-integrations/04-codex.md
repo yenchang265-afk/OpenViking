@@ -57,6 +57,8 @@ Hook 關閉時，MCP 工具仍可能正常使用。自動召回需要 `UserPromp
 
 </details>
 
+安裝完成後，在 Codex 中新開一個會話，讓它按 https://docs.openviking.net/agents/zh/onboarding.md 執行。它會檢查連線，並帶你完成首次使用，詳見[一鍵接入](../getting-started/07-agent-onboarding.md)。
+
 ## 驗證
 
 啟動 `codex` 後，當前會話首次提交 prompt 時觸發的 `SessionStart` 會載入 profile，之後外掛將在每次使用者輸入前自動召回相關記憶。若設定環境變數 `OPENVIKING_DEBUG=1`，則會將相關事件日誌寫入 `~/.openviking/logs/codex-hooks.log`。

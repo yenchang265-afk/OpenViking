@@ -14,6 +14,7 @@ V2 多寫在 primary 成功後返回，metadata 和 backup 在後臺非同步更
       "backups": {
         "initial_partitions": 16,
         "checkpoint_interval_secs": 86400,
+        "reconcile_existing_data": false,
         "provider": "filesystem",
         "items": [
           {
@@ -30,12 +31,13 @@ V2 多寫在 primary 成功後返回，metadata 和 backup 在後臺非同步更
 }
 ```
 
-V2 的三個頂層配置是：
+V2 的頂層配置是：
 
 | 欄位 | 預設值 | 含義 |
 | --- | --- | --- |
 | `initial_partitions` | `16` | 為 account 建立的 metadata partition 數量 |
 | `checkpoint_interval_secs` | `86400` | Checkpoint 掃描間隔，最小值為 `60` |
+| `reconcile_existing_data` | `false` | 掃描 primary 已存在檔案並寫入 V2 metadata |
 | `provider` | `"filesystem"` | Metadata segment provider：`filesystem` 或 `cache` |
 
 每個 `items[]` 需要 `name`、`backend` 和 backend 專用 `params`。
@@ -66,8 +68,13 @@ redirects 欄位，輸出 warning 後會在呼叫 Rust 前刪除，欄位不生�
 
 ## 首次啟用與回滾
 
-`.multiwrite.json` 不存在時，mount 先啟用前臺 V2 事件提交，再在後臺匯入
-primary 當前檔案。匯入不會刪除 backup 中多餘的舊檔案。
+`.multiwrite.json` 不存在時，mount 先啟用前臺 V2 事件提交，並初始化 V2
+metadata。若 `reconcile_existing_data=true`，啟動流程還會掃描 primary 當前檔案
+並寫入 V2 metadata。該流程不會刪除 backup 中多餘的舊檔案。
+
+預設 `reconcile_existing_data=false` 時，primary 上啟用前已存在的檔案不會作為
+V2 write event 記錄。只有在 backup 已與 primary 對齊，或明確跳過歷史回填時
+才保持預設值。
 
 舊多寫協議和舊遷移欄位直接拒絕。啟用多寫前必須建立完整備份；回滾二進位制
 前必須先恢復該備份。
