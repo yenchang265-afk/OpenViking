@@ -56,7 +56,7 @@ for (const locale of ['en', 'zh'] as Locale[]) {
     assert.deepEqual(start.groups.map(group => group.pages.length), [5, 1, 5, 4, 3, 6])
     assert.equal(owned.length, 22)
     assert.equal(links.length, owned.length + 2)
-    assert.deepEqual(start.groups.map(group => group.zh), ['开始', 'Studio', '功能', '集成', '数据管理', '团队管理'])
+    assert.deepEqual(start.groups.map(group => group.zh), ['開始', 'Studio', '功能', '整合', '資料管理', '團隊管理'])
     assert.deepEqual(start.groups[1].pages.map(page => page.path), ['getting-started/23-studio'])
     assert.deepEqual(start.groups[3].pages.map(page => page.path), [
       'agent-integrations/01-overview', 'workflows/01-overview',
@@ -64,7 +64,7 @@ for (const locale of ['en', 'zh'] as Locale[]) {
     ])
     for (const [path, title, owner] of [
       ['agent-integrations/01-overview', locale === 'zh' ? 'Agent 接入' : 'Agent integration', 'agent-integrations'],
-      ['workflows/01-overview', locale === 'zh' ? '应用开发' : 'Application development', 'build']
+      ['workflows/01-overview', locale === 'zh' ? '應用開發' : 'Application development', 'build']
     ]) {
       const item = links.find(item => item.link === `/${locale}/${path}`)!
       assert.ok(item.text?.startsWith(title))

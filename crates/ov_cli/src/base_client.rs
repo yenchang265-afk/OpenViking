@@ -716,7 +716,7 @@ mod tests {
     use super::*;
     use serde_json::json;
     use std::time::Duration;
-    use tokio::io::AsyncWriteExt;
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpListener;
 
     #[test]
@@ -832,6 +832,10 @@ mod tests {
         let address = listener.local_addr().unwrap();
         tokio::spawn(async move {
             let (mut connection, _) = listener.accept().await.unwrap();
+            // Read the request first; answering before it is sent makes hyper
+            // cancel the request instead of returning the 503.
+            let mut request = vec![0; 8192];
+            let _ = connection.read(&mut request).await.unwrap();
             connection
                 .write_all(
                     b"HTTP/1.1 503 Service Unavailable\r\nContent-Length: 20\r\n\r\nupstream unavailable",

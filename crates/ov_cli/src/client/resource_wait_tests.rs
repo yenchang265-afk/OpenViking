@@ -121,6 +121,8 @@ async fn submits_once_and_polls_file_directory_url_and_connector() {
     ] {
         let mut replies = Vec::new();
         if local {
+            // No upload sessions on this server: fall back to one temp upload.
+            replies.push((404, json!({"status":"error"}), 0));
             replies.push((
                 200,
                 json!({"status":"ok","result":{"temp_file_id":"upload"}}),

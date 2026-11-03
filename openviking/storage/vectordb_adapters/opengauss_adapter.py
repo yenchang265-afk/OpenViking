@@ -63,6 +63,7 @@ def _save_collection_meta(conn, name: str, meta: Dict[str, Any], distributed: bo
     _ensure_meta_table(conn, distributed=distributed)
     cursor = conn.cursor()
     try:
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(
             f'SELECT meta_json FROM "{_META_TABLE}" WHERE table_name = %s FOR UPDATE',
             (name,),
@@ -70,6 +71,7 @@ def _save_collection_meta(conn, name: str, meta: Dict[str, Any], distributed: bo
         row = cursor.fetchone()
         if row is None:
             merged = dict(meta)
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
             cursor.execute(
                 f'INSERT INTO "{_META_TABLE}" (table_name, meta_json) VALUES (%s, %s)',
                 (name, json.dumps(merged)),
@@ -77,6 +79,7 @@ def _save_collection_meta(conn, name: str, meta: Dict[str, Any], distributed: bo
         else:
             merged = json.loads(row[0]) if isinstance(row[0], str) else dict(row[0])
             merged.update(meta)
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
             cursor.execute(
                 f'UPDATE "{_META_TABLE}" SET meta_json = %s WHERE table_name = %s',
                 (json.dumps(merged), name),

@@ -20,12 +20,15 @@ def _probe_error(error) -> dict[str, Any]:
 
 def _optional_probe(cursor, name, read):
     """Missing optional catalogs/functions mean unknown, not absence of a feature."""
+    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- savepoint names are constants
     cursor.execute(f"SAVEPOINT {name}")
     try:
         result = read()
     except Exception as error:
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- savepoint names are constants
         cursor.execute(f"ROLLBACK TO SAVEPOINT {name}")
         result = _probe_error(error)
+    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- savepoint names are constants
     cursor.execute(f"RELEASE SAVEPOINT {name}")
     return result
 

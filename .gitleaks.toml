@@ -30,6 +30,10 @@ regexes = [
   '''^test-root-key-(abcdef1234567890){2}$''',
   '''^root-test-1234567890abcd$''',
   '''^test-submission-123$''',
+  # Upstream sync fixtures: Studio key menu, history import, ov_cli admin output
+  '''^ov-bob-secret-9012$''',
+  '''^ovk-abcdef123456$''',
+  '''^YWNtZQ\.YWxpY2U\.abcdefgh$''',
 
   # Code the generic-api-key rule mistakes for keys
   '''^[a-z_]+=(True|False|[0-9]+)$''',

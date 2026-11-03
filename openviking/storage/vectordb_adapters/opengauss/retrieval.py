@@ -227,6 +227,7 @@ class OpenGaussRetrievalMixin:
 
     def _sparse_enabled_on_cursor(self, cursor) -> bool:
         # A handle opened before backfill must not keep skipping maintenance.
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(
             f'SELECT meta_json FROM "{_META_TABLE}" WHERE table_name = %s', (self._name,)
         )
@@ -242,6 +243,7 @@ class OpenGaussRetrievalMixin:
         return True
 
     def _persist_sparse_state_on_cursor(self, cursor, updates: dict) -> dict:
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(
             f'SELECT meta_json FROM "{_META_TABLE}" WHERE table_name = %s FOR UPDATE',
             (self._name,),
@@ -253,6 +255,7 @@ class OpenGaussRetrievalMixin:
         retrieval = dict(meta.get("_sparse_index", {}))
         retrieval.update(updates)
         meta = {**meta, "_sparse_index": retrieval}
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(
             f'UPDATE "{_META_TABLE}" SET meta_json = %s WHERE table_name = %s',
             (json.dumps(meta, ensure_ascii=False), self._name),
@@ -342,6 +345,7 @@ class OpenGaussRetrievalMixin:
         with self._lock:
             cursor = self._cursor()
             try:
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f"LOCK TABLE {table} IN SHARE ROW EXCLUSIVE MODE")
                 meta = self._load_metadata_on_cursor(cursor)
                 cursor.execute(
@@ -358,8 +362,10 @@ class OpenGaussRetrievalMixin:
                     f"CHECK (octet_length(term) BETWEEN 1 AND {MAX_SPARSE_TERM_BYTES}), "
                     "CHECK (weight > 0 AND weight < 'Infinity'::double precision))"
                 )
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f"CREATE INDEX IF NOT EXISTS {term_index} ON {postings} (term, id)")
                 self._validate_sparse_storage_on_cursor(cursor)
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f"DELETE FROM {postings}")
                 self._insert_sparse_postings_on_cursor(cursor)
                 new_meta = self._persist_sparse_state_on_cursor(
@@ -396,6 +402,7 @@ class OpenGaussRetrievalMixin:
             return
         self._validate_sparse_storage_on_cursor(cursor, ids)
         postings = _quote_identifier(self._sparse_posting_table_name())
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(f"DELETE FROM {postings} WHERE id IN ({placeholders})", ids)
         self._insert_sparse_postings_on_cursor(cursor, ids)
 
@@ -414,10 +421,12 @@ class OpenGaussRetrievalMixin:
                 f" AND NOT EXISTS (SELECT 1 FROM {_quote_identifier(self._name)} c "
                 f'WHERE c."id" = {postings}.id)'
             )
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(f"DELETE FROM {postings}{where}", ids or [])
 
     def _drop_sparse_postings_on_cursor(self, cursor) -> None:
         """Explicit collection-drop hook, in the collection's drop transaction."""
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(
             f'SELECT meta_json FROM "{_META_TABLE}" WHERE table_name = %s',
             (self._name,),
@@ -425,6 +434,7 @@ class OpenGaussRetrievalMixin:
         row = cursor.fetchone()
         meta = json.loads(row[0]) if row and isinstance(row[0], str) else (row[0] if row else {})
         if meta.get("_sparse_index"):
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
             cursor.execute(
                 f"DROP TABLE IF EXISTS {_quote_identifier(self._sparse_posting_table_name())}"
             )
@@ -557,6 +567,7 @@ class OpenGaussRetrievalMixin:
         try:
             if has_dense:
                 self._apply_search_params_on_cursor(cursor, index_name)
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
             cursor.execute(sql, params)
             columns = [desc[0] for desc in cursor.description]
             rows = cursor.fetchall()

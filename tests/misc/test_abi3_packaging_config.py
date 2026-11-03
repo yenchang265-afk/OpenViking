@@ -39,7 +39,7 @@ def test_setup_no_longer_bundles_mingw_runtime_dlls_for_engine():
     assert "_stage_windows_engine_runtime_dlls" not in setup_py
 
 
-def test_release_workflows_default_to_single_cp310_and_drop_pybind11():
+def test_release_workflows_default_to_single_cp311_and_drop_pybind11():
     build_workflow = _read_text(".github/workflows/_build.yml")
     release_workflow = _read_text(".github/workflows/release.yml")
     lite_workflow = _read_text(".github/workflows/_test_lite.yml")
@@ -47,9 +47,9 @@ def test_release_workflows_default_to_single_cp310_and_drop_pybind11():
     codeql_workflow = _read_text(".github/workflows/_codeql.yml")
     uv_lock = _read_text("uv.lock")
 
-    assert "default: '[\"3.10\"]'" in build_workflow
-    assert "default: '[\"3.10\"]'" in release_workflow
-    assert "python_json: ${{ inputs.python_json || '[\"3.10\"]' }}" in release_workflow
+    assert "default: '[\"3.11\"]'" in build_workflow
+    assert "default: '[\"3.11\"]'" in release_workflow
+    assert "python_json: ${{ inputs.python_json || '[\"3.11\"]' }}" in release_workflow
 
     for workflow_text in (
         build_workflow,

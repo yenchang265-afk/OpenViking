@@ -487,6 +487,7 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
     # ------------------------------------------------------------------
 
     def _load_metadata_on_cursor(self, cursor) -> Dict[str, Any]:
+        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
         cursor.execute(
             f'SELECT meta_json FROM "{_META_TABLE}" WHERE table_name = %s FOR UPDATE',
             (self._name,),
@@ -537,6 +538,7 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
             try:
                 if definitions:
                     # Serialize schema changes before locking their metadata row.
+                    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                     cursor.execute(f'LOCK TABLE "{self._name}" IN SHARE ROW EXCLUSIVE MODE')
                 meta = self._load_metadata_on_cursor(cursor)
                 existing = {field["FieldName"]: field for field in meta.get("Fields", [])}
@@ -557,12 +559,14 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
                     ddl = _field_to_column_ddl(field)
                     if not ddl:
                         raise ValueError(f"unsupported field definition: {name}")
+                    # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                     cursor.execute(f'ALTER TABLE "{self._name}" ADD COLUMN {ddl}')
                     existing[name] = dict(field)
                 if fields is not None:
                     meta["Fields"] = list(existing.values())
                 if description is not None:
                     meta["Description"] = description
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(
                     f'UPDATE "{_META_TABLE}" SET meta_json = %s WHERE table_name = %s',
                     (json.dumps(meta), self._name),
@@ -622,9 +626,12 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
         with self._lock:
             cursor = self._cursor()
             try:
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f'DROP TABLE IF EXISTS "{self._name}" CASCADE')
                 self._drop_sparse_postings_on_cursor(cursor)
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f"DROP TABLE IF EXISTS {idx_table} CASCADE")
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(
                     f'DELETE FROM "{_META_TABLE}" WHERE table_name = %s',
                     (self._name,),
@@ -1654,6 +1661,7 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
                     ] + [record_id]
 
                     if not update_set:
+                        # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                         cursor.execute(
                             f'UPDATE {table_identifier} SET "id" = "id" WHERE "id" = %s',
                             [record_id],
@@ -1691,6 +1699,7 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
                                     update_values,
                                 )
                             else:
+                                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                                 cursor.execute(
                                     f'UPDATE {table_identifier} SET "id" = "id" WHERE "id" = %s',
                                     [record_id],
@@ -1865,6 +1874,7 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
         with self._lock:
             cursor = self._cursor()
             try:
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f'DELETE FROM "{self._name}" WHERE id IN ({placeholders})', str_keys)
                 if self._has_sparse_column_on_cursor(cursor):
                     self._delete_sparse_postings_on_cursor(cursor, str_keys)
@@ -1879,6 +1889,7 @@ class OpenGaussCollection(OpenGaussFulltextMixin, OpenGaussRetrievalMixin, IColl
         with self._lock:
             cursor = self._cursor()
             try:
+                # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _validate_identifier; values bound as %s
                 cursor.execute(f'TRUNCATE TABLE "{self._name}"')
                 if self._has_sparse_column_on_cursor(cursor):
                     self._delete_sparse_postings_on_cursor(cursor)

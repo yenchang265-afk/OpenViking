@@ -168,11 +168,13 @@ test("secrets are redacted before anything is sent", () => {
     '{"api_key": "ovk-abcdef123456"}',
     "my key is sk-ant-api03-ABCDEFGHIJKLMNOPQRSTUVWX",
     "token ghp_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+    // nosemgrep: generic.secrets.security.detected-aws-access-key-id-value.detected-aws-access-key-id-value -- fake key fixture asserting redaction
     "AWS AKIAABCDEFGHIJKLMNOP",
   ];
   for (const text of cases) {
     const out = redactSecrets(text);
     assert.match(out, /\[REDACTED\]/, text);
+    // nosemgrep: generic.secrets.security.detected-aws-access-key-id-value.detected-aws-access-key-id-value -- fake key fixture asserting redaction
     assert.doesNotMatch(out, /abcdef123456|ABCDEFGHIJKLMNOPQRSTUVWX|ABCDEFGHIJKLMNOPQRSTUVWXYZ0123|AKIAABCDEFGHIJKLMNOP/, text);
   }
   // The configured key, wherever it shows up and whatever it looks like.
