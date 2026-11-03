@@ -43,7 +43,10 @@ impl RedisClient {
                 connection.internal_command_timeout =
                     Duration::from_millis(config.command_timeout_ms);
                 connection.max_command_attempts = 1;
-                connection.max_command_buffer_len = config.pool_size;
+                // Keep fred's router queue unbounded (its default). `concurrency`
+                // already caps in-flight commands at pool_size. A bounded queue
+                // left the client wedged after a Redis restart under load: every
+                // command timed out until the process restarted.
             })
             .with_performance_config(|performance| {
                 performance.default_command_timeout =

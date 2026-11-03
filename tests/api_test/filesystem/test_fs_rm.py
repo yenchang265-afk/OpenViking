@@ -1,5 +1,27 @@
 import json
+import time
 import uuid
+
+# mkdir queues background work on the new directory (its metadata embedding),
+# so an immediate rm can get a retryable 409 while that work holds the path.
+RM_RETRY_DEADLINE_SECS = 30.0
+RM_RETRY_INTERVAL_SECS = 0.5
+
+
+def is_retryable_conflict(response):
+    if response.status_code != 409:
+        return False
+    error = response.json().get("error") or {}
+    return bool((error.get("details") or {}).get("retryable"))
+
+
+def rm_retrying_busy_path(api_client, uri):
+    deadline = time.monotonic() + RM_RETRY_DEADLINE_SECS
+    while True:
+        response = api_client.fs_rm(uri, recursive=True)
+        if not is_retryable_conflict(response) or time.monotonic() >= deadline:
+            return response
+        time.sleep(RM_RETRY_INTERVAL_SECS)
 
 
 class TestFsRm:
@@ -14,7 +36,7 @@ class TestFsRm:
                 f"Failed to create test directory: {response.status_code}"
             )
 
-            response = api_client.fs_rm(test_dir, recursive=True)
+            response = rm_retrying_busy_path(api_client, test_dir)
             print(f"\nFS rm API status code: {response.status_code}")
 
             data = response.json()
