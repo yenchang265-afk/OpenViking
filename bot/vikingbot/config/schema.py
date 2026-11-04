@@ -399,7 +399,7 @@ class AgentsConfig(BaseModel):
 
     _inherits_root_vlm: bool = PrivateAttr(default=False)
 
-    model: str = "openai/doubao-seed-2-0-pro-260215"
+    model: str = "openai/gpt-5.4"
     temperature: float = Field(
         default=0.7,
         ge=0.0,
@@ -465,7 +465,7 @@ class AgentsConfig(BaseModel):
         ge=0,
         description="Minimum number of latest assistant Steps retained without compaction.",
     )
-    gen_image_model: str = "openai/doubao-seedream-4-5-251128"
+    gen_image_model: str = "openai/gpt-image-1"
     thinking: bool = Field(
         default=True,
         description="Enable model thinking/reasoning mode for VikingBot agent calls.",
