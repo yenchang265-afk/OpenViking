@@ -228,10 +228,10 @@ elasticsearch = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/volcengine/openviking"
+Homepage = "https://github.com/yenchang265-afk/OpenViking"
 Documentation = "https://openviking.ai"
-Repository = "https://github.com/volcengine/openviking"
-Issues = "https://github.com/volcengine/openviking/issues"
+Repository = "https://github.com/yenchang265-afk/OpenViking"
+Issues = "https://github.com/yenchang265-afk/OpenViking/issues"
 
 [project.scripts]
 ov = "openviking_cli.rust_cli:main"  # Rust CLI 入口（極簡包裝器）
