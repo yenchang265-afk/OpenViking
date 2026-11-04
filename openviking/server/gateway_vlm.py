@@ -84,11 +84,6 @@ def vlm_upstreams(config: VLMConfig) -> dict:
                 f"?api-version={version}"
             )
             exact = True
-        elif provider == "volcengine":
-            from openviking.models.vlm.backends.volcengine_vlm import DEFAULT_VOLCENGINE_API_BASE
-
-            base = base or DEFAULT_VOLCENGINE_API_BASE
-            headers = {k: v for k, v in headers.items() if k.lower() != "x-client-request-id"}
         elif provider == "openai":
             base = base or "https://api.openai.com/v1"
         elif provider == "kimi":

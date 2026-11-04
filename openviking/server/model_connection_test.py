@@ -10,11 +10,10 @@ from openviking.models.model_error import model_error_kind
 from openviking_cli.utils.config.embedding_config import EmbeddingConfig
 from openviking_cli.utils.config.vlm_config import VLMConfig
 
-VLM_PROVIDERS = {"openai", "azure", "volcengine", "glm", "kimi", "litellm"}
+VLM_PROVIDERS = {"openai", "azure", "glm", "kimi", "litellm"}
 EMBEDDING_PROVIDERS = {
     "openai",
     "azure",
-    "volcengine",
     "jina",
     "gemini",
     "voyage",

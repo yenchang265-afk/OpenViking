@@ -6,21 +6,14 @@ from pydantic import BaseModel, Field, model_validator
 
 
 class RerankConfig(BaseModel):
-    """Configuration for rerank API. Supports VikingDB, Cohere, OpenAI-compatible, LiteLLM, and Jev (TypeSafe) providers."""
+    """Configuration for rerank API. Supports Cohere, OpenAI-compatible, LiteLLM, and Jev (TypeSafe) providers."""
 
     provider: Optional[str] = Field(
         default=None,
-        description="Rerank provider: 'vikingdb', 'cohere', 'openai', 'litellm', or 'jev'. Auto-detected from config if omitted.",
+        description="Rerank provider: 'cohere', 'openai', 'litellm', or 'jev'. Auto-detected from config if omitted.",
     )
 
-    # VikingDB fields
-    ak: Optional[str] = Field(default=None, description="VikingDB Access Key")
-    sk: Optional[str] = Field(default=None, description="VikingDB Secret Key")
-    host: str = Field(
-        default="api-vikingdb.vikingdb.cn-beijing.volces.com", description="VikingDB API host"
-    )
-    model_name: str = Field(default="doubao-seed-rerank", description="Rerank model name")
-    model_version: str = Field(default="251028", description="Rerank model version")
+    model_name: str = Field(default="rerank-v3.5", description="Rerank model name (Cohere)")
 
     # Shared provider fields
     api_key: Optional[str] = Field(
@@ -86,8 +79,6 @@ class RerankConfig(BaseModel):
             return "openai"
         if self.api_key:
             return "cohere"
-        if self.ak and self.sk:
-            return "vikingdb"
         return None
 
     @model_validator(mode="after")
@@ -102,7 +93,6 @@ class RerankConfig(BaseModel):
                 raise ValueError("Jev rerank mode must be one of ['noul', 'choice']")
 
         if provider and provider not in [
-            "vikingdb",
             "cohere",
             "openai",
             "litellm",
@@ -110,7 +100,7 @@ class RerankConfig(BaseModel):
         ]:
             raise ValueError(
                 "Rerank provider must be one of "
-                "['vikingdb', 'cohere', 'openai', 'litellm', 'jev'], got "
+                "['cohere', 'openai', 'litellm', 'jev'], got "
                 f"'{provider}'"
             )
         if provider == "openai":
@@ -125,9 +115,6 @@ class RerankConfig(BaseModel):
             if not self.api_key:
                 label = "Cohere" if provider == "cohere" else "Jev"
                 raise ValueError(f"{label} rerank provider requires 'api_key'")
-        if provider == "vikingdb":
-            if not self.ak or not self.sk:
-                raise ValueError("VikingDB rerank provider requires 'ak' and 'sk'")
         return self
 
     def is_available(self) -> bool:
@@ -139,6 +126,4 @@ class RerankConfig(BaseModel):
             return self.api_key is not None and self.api_base is not None
         if p == "litellm":
             return self.model is not None
-        if p == "vikingdb":
-            return self.ak is not None and self.sk is not None
         return False

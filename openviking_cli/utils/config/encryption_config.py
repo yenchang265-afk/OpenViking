@@ -84,7 +84,7 @@ class EncryptionConfig(BaseModel):
 
     Provides configuration for multi-tenant encryption functionality including:
     - Envelope encryption with AES-256-GCM
-    - Multiple key providers (Local File, Vault, Volcengine KMS)
+    - Multiple key providers (Local File, Vault)
     - API Key hashing with Argon2id
 
     Example configurations:

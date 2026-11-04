@@ -16,7 +16,6 @@ from typing import Any
 from loguru import logger
 
 from openviking.models.model_error import model_error_kind
-from openviking.models.vlm.backends.volcengine_vlm import build_volcengine_request_headers
 from openviking.utils.model_retry import effective_max_retries, retry_async
 from openviking.utils.multimodal import redact_image_data_urls
 from openviking_cli.utils import get_logger
@@ -236,7 +235,7 @@ class VLMProviderAdapter(LLMProvider):
     When bot.agents.provider is explicitly set, _make_provider() creates the
     appropriate VLM backend via VLMFactory.create() and wraps it with this
     adapter.  The VLM backend handles model name resolution internally (e.g.
-    VolcEngineVLM passes the model verbatim, LiteLLMVLMProvider auto-detects
+    OpenAIVLM passes the model verbatim, LiteLLMVLMProvider auto-detects
     the provider from model name keywords), so no manual prefixing is needed.
     """
 
@@ -290,12 +289,7 @@ class VLMProviderAdapter(LLMProvider):
             # An explicit empty list asks VLM backends for a structured response
             # without exposing tools, so per-response usage is preserved.
             response_tools = tools if tools is not None else []
-            # Effort overrides are scoped to the native Ark backend, not compatible APIs.
-            completion_overrides = (
-                {"reasoning_effort": reasoning_effort}
-                if reasoning_effort is not None and self._vlm.provider == "volcengine"
-                else {}
-            )
+            completion_overrides = {}
             result = await self._vlm.get_completion_async(
                 messages=messages,
                 thinking=thinking if thinking is not None else getattr(self._vlm, "thinking", None),
@@ -421,7 +415,7 @@ class VLMProviderAdapter(LLMProvider):
         if primary is not None and backup is not None:
             return cls._supports_native_stream(primary) and cls._supports_native_stream(backup)
 
-        return getattr(vlm, "provider", None) in {"openai", "volcengine"} and callable(
+        return getattr(vlm, "provider", None) in {"openai"} and callable(
             getattr(vlm, "get_async_client", None)
         )
 
@@ -551,7 +545,6 @@ class VLMProviderAdapter(LLMProvider):
         max_tokens: int | None,
         temperature: float,
     ) -> dict[str, Any]:
-        provider = getattr(vlm, "provider", None)
         configured_max_tokens = getattr(vlm, "max_tokens", None)
         effective_max_tokens = max_tokens if max_tokens is not None else configured_max_tokens
         # A wrapped credential owns its model.  The model passed by AgentLoop is
@@ -561,28 +554,6 @@ class VLMProviderAdapter(LLMProvider):
             if vlm is not self._vlm
             else model or getattr(vlm, "model", None)
         ) or self._default_model
-
-        if provider == "volcengine":
-            kwargs: dict[str, Any] = {
-                "model": effective_model,
-                "messages": messages,
-                "temperature": getattr(vlm, "temperature", temperature),
-                "thinking": {"type": "enabled" if getattr(vlm, "thinking", False) else "disabled"},
-                "stream": True,
-                "stream_options": {"include_usage": True},
-            }
-            if effective_max_tokens is not None:
-                kwargs["max_tokens"] = effective_max_tokens
-            reasoning_effort = getattr(vlm, "reasoning_effort", None)
-            if getattr(vlm, "thinking", False) and reasoning_effort is not None:
-                kwargs["reasoning_effort"] = reasoning_effort
-            kwargs["extra_headers"] = build_volcengine_request_headers(
-                getattr(vlm, "extra_headers", None)
-            )
-            if tools:
-                kwargs["tools"] = tools
-                kwargs["tool_choice"] = "auto"
-            return kwargs
 
         kwargs = vlm._build_text_kwargs(
             messages=messages,

@@ -125,7 +125,7 @@ class ChoiceRerankMode:
 
 
 class JevRerankClient(RerankBase):
-    """Jev rerank client — same interface as VikingDB RerankClient."""
+    """Jev rerank client."""
 
     def __init__(
         self,

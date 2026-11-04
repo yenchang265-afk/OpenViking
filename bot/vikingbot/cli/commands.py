@@ -96,14 +96,6 @@ from vikingbot.utils.helpers import (  # noqa: E402
     set_bot_data_path,
 )
 
-# Ignore Pydantic V1 compatibility warning with Python 3.14+ from volcenginesdkarkruntime
-warnings.filterwarnings(
-    "ignore",
-    message="Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.",
-    category=UserWarning,
-    module="volcenginesdkarkruntime._compat",
-)
-
 app = typer.Typer(
     name="vikingbot",
     help=f"{__logo__} vikingbot - Personal AI Assistant",

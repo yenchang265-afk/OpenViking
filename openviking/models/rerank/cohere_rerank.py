@@ -3,7 +3,7 @@
 """
 Cohere Rerank API Client.
 
-Drop-in replacement for VikingDB RerankClient, using Cohere's Rerank v3.5 API.
+Cohere Rerank v3.5 API client.
 Same interface: rerank_batch(query, documents) -> List[float]
 """
 
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class CohereRerankClient(RerankBase):
-    """Cohere Rerank API client — same interface as VikingDB RerankClient."""
+    """Cohere Rerank API client."""
 
     def __init__(
         self,
@@ -115,5 +115,5 @@ class CohereRerankClient(RerankBase):
             return None
         return cls(
             api_key=config.api_key,
-            model=config.model_name if config.model_name != "doubao-seed-rerank" else "rerank-v3.5",
+            model=config.model_name,
         )

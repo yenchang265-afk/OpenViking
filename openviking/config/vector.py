@@ -168,14 +168,7 @@ def validate_vector_settings(
             continue
         if model.input not in {"text", "multimodal"}:
             raise ValueError(f"embedding.{mode}.input must be text or multimodal")
-        providers = (
-            [credential.provider or model.provider for credential in model.credentials]
-            if model.credentials
-            else [model.provider]
-        )
-        if mode != "dense" and any(
-            provider not in {"volcengine", "vikingdb"} for provider in providers
-        ):
+        if mode != "dense":
             raise ValueError(f"embedding.{mode} requires a provider supporting {mode} output")
     return vectordb.model_copy(update={"dimension": dimension})
 

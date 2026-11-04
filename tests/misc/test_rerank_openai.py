@@ -214,28 +214,11 @@ class TestRerankClientFactoryDispatch:
         client = RerankClient.from_config(config)
         assert isinstance(client, OpenAIRerankClient)
 
-    def test_factory_dispatches_to_vikingdb_client(self):
-        config = RerankConfig(
-            provider="vikingdb",
-            ak="test-ak",
-            sk="test-sk",
-        )
-        client = RerankClient.from_config(config)
-        assert isinstance(client, RerankClient)
-        assert not isinstance(client, OpenAIRerankClient)
-
-    def test_factory_defaults_to_vikingdb(self):
-        """Config without provider field defaults to vikingdb."""
-        config = RerankConfig(ak="test-ak", sk="test-sk")
-        client = RerankClient.from_config(config)
-        assert isinstance(client, RerankClient)
-        assert not isinstance(client, OpenAIRerankClient)
-
     def test_factory_returns_none_for_none_config(self):
         assert RerankClient.from_config(None) is None
 
-    def test_factory_returns_none_for_unavailable_vikingdb_config(self):
-        config = RerankConfig()  # no ak/sk
+    def test_factory_returns_none_for_unconfigured_rerank(self):
+        config = RerankConfig()  # no provider credentials
         assert RerankClient.from_config(config) is None
 
     def test_factory_returns_none_for_unavailable_openai_config(self):
@@ -245,14 +228,6 @@ class TestRerankClientFactoryDispatch:
 
 
 class TestRerankConfig:
-    def test_vikingdb_is_available(self):
-        config = RerankConfig(ak="ak", sk="sk")
-        assert config.is_available() is True
-
-    def test_vikingdb_not_available_without_credentials(self):
-        config = RerankConfig()
-        assert config.is_available() is False
-
     def test_openai_is_available(self):
         config = RerankConfig(
             provider="openai",
@@ -274,7 +249,4 @@ class TestRerankConfig:
 
     def test_explicit_provider_requires_its_own_credentials(self):
         with pytest.raises(ValidationError, match="api_key"):
-            RerankConfig(provider="cohere", ak="ak", sk="sk")
-
-        with pytest.raises(ValidationError, match="ak"):
-            RerankConfig(provider="vikingdb", api_key="key")
+            RerankConfig(provider="cohere")

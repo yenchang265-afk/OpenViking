@@ -24,7 +24,6 @@ def test_runtime_modules_use_unified_get_logger():
         "openviking/parse/parsers/pdf.py",
         "openviking/parse/parsers/code/ast/providers.py",
         "openviking/models/rerank/base.py",
-        "openviking/models/rerank/volcengine_rerank.py",
         "openviking/models/rerank/openai_rerank.py",
         "openviking/models/rerank/litellm_rerank.py",
         "openviking/models/rerank/cohere_rerank.py",
@@ -38,7 +37,6 @@ def test_runtime_modules_use_unified_get_logger():
         "openviking/models/embedder/gemini_embedders.py",
         "openviking/models/vlm/base.py",
         "openviking/models/vlm/backends/litellm_vlm.py",
-        "openviking/models/vlm/backends/volcengine_vlm.py",
         "openviking/models/vlm/backends/openai_vlm.py",
         "openviking_cli/session/user_id.py",
     ]

@@ -1471,16 +1471,16 @@ def test_embedding_validation():
 
     # Case B: Both provided -> provider takes precedence
     config_b = EmbeddingModelConfig(
-        provider="volcengine",
+        provider="jina",
         backend="openai",  # Conflicting backend
-        model="doubao",
+        model="jina-embeddings-v3",
         api_key="test-key",
         dimension=1024,
     )
-    if config_b.provider == "volcengine":
-        print("   Pass (provider='volcengine' priority over backend='openai')")
+    if config_b.provider == "jina":
+        print("   Pass (provider='jina' priority over backend='openai')")
     else:
-        print(f"   Fail (provider='volcengine' should have priority, got '{config_b.provider}')")
+        print(f"   Fail (provider='jina' should have priority, got '{config_b.provider}')")
 
     # Test 5: Ollama provider (no API key required)
     print("\n5. Test Ollama provider (no API key required)...")
@@ -1568,12 +1568,12 @@ def test_vlm_validation():
 
     # Case B: Both provided -> provider takes precedence
     config_b = VLMConfig(
-        provider="volcengine", backend="openai", model="doubao", api_key="test-key"
+        provider="glm", backend="openai", model="glm-4", api_key="test-key"
     )
-    if config_b.provider == "volcengine":
-        print("   Pass (provider='volcengine' priority over backend='openai')")
+    if config_b.provider == "glm":
+        print("   Pass (provider='glm' priority over backend='openai')")
     else:
-        print(f"   Fail (provider='volcengine' should have priority, got '{config_b.provider}')")
+        print(f"   Fail (provider='glm' should have priority, got '{config_b.provider}')")
 
 
 @pytest.mark.parametrize(

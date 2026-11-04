@@ -104,13 +104,6 @@ class TestRerankConfig:
         assert config._effective_provider() == "cohere"
         assert config.is_available() is True
 
-    def test_vikingdb_provider_auto_detected(self):
-        from openviking_cli.utils.config.rerank_config import RerankConfig
-
-        config = RerankConfig(ak="ak", sk="sk")
-        assert config._effective_provider() == "vikingdb"
-        assert config.is_available() is True
-
     def test_explicit_provider_overrides(self):
         from openviking_cli.utils.config.rerank_config import RerankConfig
 

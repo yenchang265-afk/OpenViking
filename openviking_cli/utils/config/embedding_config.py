@@ -67,16 +67,16 @@ class EmbeddingModelConfig(BaseModel):
         ),
     )
     provider: Optional[str] = Field(
-        default="volcengine",
+        default="openai",
         description=(
-            "Provider type: 'openai', 'volcengine', 'vikingdb', 'jina', 'ollama', 'gemini', 'voyage', 'dashscope', 'minimax', 'cohere', 'litellm', 'local'. "
+            "Provider type: 'openai', 'jina', 'ollama', 'gemini', 'voyage', 'dashscope', 'minimax', 'cohere', 'litellm', 'local'. "
             "For OpenRouter or other OpenAI-compatible providers, use 'litellm' with "
             "api_base and api_key, or 'openai' with api_base and extra_headers."
         ),
     )
     backend: Optional[str] = Field(
-        default="volcengine",
-        description="Backend type (Deprecated, use 'provider' instead): 'openai', 'volcengine', 'vikingdb', 'voyage', 'local'",
+        default="openai",
+        description="Backend type (Deprecated, use 'provider' instead): 'openai', 'voyage', 'local'",
     )
     version: Optional[str] = Field(default=None, description="Model version")
     ak: Optional[str] = Field(default=None, description="Access Key ID for VikingDB API")
@@ -167,8 +167,6 @@ class EmbeddingModelConfig(BaseModel):
     _VALID_PROVIDERS: ClassVar[Tuple[str, ...]] = (
         "openai",
         "azure",
-        "volcengine",
-        "vikingdb",
         "jina",
         "ollama",
         "gemini",
@@ -225,7 +223,6 @@ class EmbeddingModelConfig(BaseModel):
                     f"{label}: Azure provider requires 'api_base' (Azure endpoint) to be set"
                 )
         elif provider in {
-            "volcengine",
             "jina",
             "gemini",
             "voyage",
@@ -235,7 +232,6 @@ class EmbeddingModelConfig(BaseModel):
         }:
             if not api_key:
                 provider_label = {
-                    "volcengine": "Volcengine",
                     "jina": "Jina",
                     "gemini": "Gemini",
                     "voyage": "Voyage",
@@ -244,13 +240,6 @@ class EmbeddingModelConfig(BaseModel):
                     "dashscope": "DashScope",
                 }[provider]
                 raise ValueError(f"{label}: {provider_label} provider requires 'api_key' to be set")
-        elif provider == "vikingdb":
-            missing = [n for n, v in (("ak", ak), ("sk", sk), ("region", region)) if not v]
-            if missing:
-                raise ValueError(
-                    f"{label}: VikingDB provider requires the following fields: "
-                    f"{', '.join(missing)}"
-                )
         # ollama / litellm / local: no auth requirement enforced here
 
     @model_validator(mode="after")
@@ -483,8 +472,7 @@ class EmbeddingModelConfig(BaseModel):
             except ImportError:
                 return 1024
 
-        # Providers without a known dimension lookup (volcengine,
-        # vikingdb, ollama for unlisted models, etc.) cannot be cross-checked
+        # Providers without a known dimension lookup (ollama for unlisted models, etc.) cannot be cross-checked
         # here without an explicit dimension. Return None so validation skips
         # them; same-provider credentials are typically dimension-compatible
         # by construction, and any real mismatch will surface at write time.
@@ -495,11 +483,10 @@ class EmbeddingModelConfig(BaseModel):
 
         When credentials are configured, the first credential's provider takes
         precedence over the parent's (which may still hold its default value of
-        ``volcengine``). Without this fallback, credential-only configurations
+        ``openai``). Without this fallback, credential-only configurations
         targeting a non-default provider would silently use the parent's
         default for dimension/metadata resolution and produce a vector-space
-        mismatch (e.g. parent volcengine -> 2048 dim while the actual OpenAI
-        embedder returns 1536).
+        mismatch (e.g. parent default dimension while the actual embedder differs).
         """
         if self.credentials and self.credentials[0].provider:
             return self.credentials[0].provider
@@ -634,7 +621,7 @@ class EmbeddingCircuitBreakerConfig(BaseModel):
 
 class EmbeddingConfig(BaseModel):
     """
-    Embedding configuration, supports OpenAI, VolcEngine, VikingDB, Jina, Gemini, Voyage, or LiteLLM APIs.
+    Embedding configuration, supports OpenAI, Jina, Gemini, Voyage, or LiteLLM APIs.
 
     Structure:
     - dense: Configuration for dense embedder
@@ -725,7 +712,7 @@ class EmbeddingConfig(BaseModel):
         """Factory method to create embedder instance based on provider and type.
 
         Args:
-            provider: Provider type ('openai', 'volcengine', 'vikingdb', 'jina', 'ollama', 'gemini', 'voyage', 'litellm')
+            provider: Provider type ('openai', 'jina', 'ollama', 'gemini', 'voyage', 'litellm')
             embedder_type: Embedder type ('dense', 'sparse', 'hybrid')
             config: EmbeddingModelConfig instance
 
@@ -745,12 +732,6 @@ class EmbeddingConfig(BaseModel):
             MinimaxDenseEmbedder,
             OpenAIDenseEmbedder,
             RetryEmbedder,
-            VikingDBDenseEmbedder,
-            VikingDBHybridEmbedder,
-            VikingDBSparseEmbedder,
-            VolcengineDenseEmbedder,
-            VolcengineHybridEmbedder,
-            VolcengineSparseEmbedder,
             VoyageDenseEmbedder,
         )
 
@@ -813,84 +794,6 @@ class EmbeddingConfig(BaseModel):
                         else {}
                     ),
                     **({"extra_body": cfg.extra_body} if cfg.extra_body else {}),
-                },
-            ),
-            ("volcengine", "dense"): (
-                VolcengineDenseEmbedder,
-                lambda cfg: {
-                    "model_name": cfg.model,
-                    "api_key": cfg.api_key,
-                    "api_base": cfg.api_base,
-                    "dimension": cfg.dimension,
-                    "input_type": cfg.input,
-                    "config": dict(runtime_config),
-                    **({"extra_headers": cfg.extra_headers} if cfg.extra_headers else {}),
-                },
-            ),
-            ("volcengine", "sparse"): (
-                VolcengineSparseEmbedder,
-                lambda cfg: {
-                    "model_name": cfg.model,
-                    "api_key": cfg.api_key,
-                    "api_base": cfg.api_base,
-                    "config": dict(runtime_config),
-                    **({"extra_headers": cfg.extra_headers} if cfg.extra_headers else {}),
-                },
-            ),
-            ("volcengine", "hybrid"): (
-                VolcengineHybridEmbedder,
-                lambda cfg: {
-                    "model_name": cfg.model,
-                    "api_key": cfg.api_key,
-                    "api_base": cfg.api_base,
-                    "dimension": cfg.dimension,
-                    "input_type": cfg.input,
-                    "config": dict(runtime_config),
-                    **({"extra_headers": cfg.extra_headers} if cfg.extra_headers else {}),
-                },
-            ),
-            ("vikingdb", "dense"): (
-                VikingDBDenseEmbedder,
-                lambda cfg: {
-                    "model_name": cfg.model,
-                    "model_version": cfg.version,
-                    "ak": cfg.ak,
-                    "sk": cfg.sk,
-                    "region": cfg.region,
-                    "host": cfg.host,
-                    "dimension": cfg.dimension,
-                    "input_type": cfg.input,
-                    "config": dict(runtime_config),
-                    **({"query_param": cfg.query_param} if cfg.query_param else {}),
-                    **({"document_param": cfg.document_param} if cfg.document_param else {}),
-                },
-            ),
-            ("vikingdb", "sparse"): (
-                VikingDBSparseEmbedder,
-                lambda cfg: {
-                    "model_name": cfg.model,
-                    "model_version": cfg.version,
-                    "ak": cfg.ak,
-                    "sk": cfg.sk,
-                    "region": cfg.region,
-                    "host": cfg.host,
-                    "config": dict(runtime_config),
-                },
-            ),
-            ("vikingdb", "hybrid"): (
-                VikingDBHybridEmbedder,
-                lambda cfg: {
-                    "model_name": cfg.model,
-                    "model_version": cfg.version,
-                    "ak": cfg.ak,
-                    "sk": cfg.sk,
-                    "region": cfg.region,
-                    "host": cfg.host,
-                    "dimension": cfg.dimension,
-                    "input_type": cfg.input,
-                    "config": dict(runtime_config),
-                    **({"query_param": cfg.query_param} if cfg.query_param else {}),
-                    **({"document_param": cfg.document_param} if cfg.document_param else {}),
                 },
             ),
             ("jina", "dense"): (

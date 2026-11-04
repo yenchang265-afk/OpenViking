@@ -7,7 +7,6 @@ Provider Registry — single source of truth for canonical LLM provider metadata
 from __future__ import annotations
 
 VALID_PROVIDERS: tuple[str, ...] = (
-    "volcengine",
     "openai",
     "azure",
     "kimi",

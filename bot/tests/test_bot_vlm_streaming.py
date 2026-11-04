@@ -5,7 +5,7 @@ import pytest
 from vikingbot.providers.vlm_adapter import VLMProviderAdapter
 
 from openviking.models.model_error import ModelError, ModelErrorKind
-from openviking.models.vlm import FailoverVLM, MultiCredentialVLM, OpenAIVLM, VolcEngineVLM
+from openviking.models.vlm import FailoverVLM, MultiCredentialVLM, OpenAIVLM
 
 
 class FakeCompletions:
@@ -120,17 +120,17 @@ async def test_vlm_adapter_streams_with_credential_failover_before_first_delta()
         error=ModelError(ModelErrorKind.RATE_LIMIT_ERROR, "Rate limit exceeded")
     )
     backup_completions = FakeCompletions(chunks=[stream_chunk("backup", finish_reason="stop")])
-    primary = VolcEngineVLM(
+    primary = OpenAIVLM(
         {
-            "provider": "volcengine",
+            "provider": "openai",
             "model": "primary-model",
             "api_key": "primary-key",
             "max_retries": 0,
         }
     )
-    backup = VolcEngineVLM(
+    backup = OpenAIVLM(
         {
-            "provider": "volcengine",
+            "provider": "openai",
             "model": "backup-model",
             "api_key": "backup-key",
             "thinking": True,

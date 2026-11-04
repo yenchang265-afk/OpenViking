@@ -196,7 +196,7 @@ class VLMConfig(BaseModel):
         description="Maximum tokens for VLM completion output (None = provider default)",
     )
 
-    thinking: bool = Field(default=False, description="Enable thinking mode for VolcEngine models")
+    thinking: bool = Field(default=False, description="Enable thinking mode for models that support it")
 
     max_concurrent: int = Field(
         default=32, description="Maximum number of concurrent LLM calls for semantic processing"

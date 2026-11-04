@@ -338,12 +338,6 @@ def _load_rate_limit_error_classes() -> tuple[type[BaseException], ...]:
         classes.append(openai.RateLimitError)
     except Exception:
         pass
-    try:
-        from volcenginesdkarkruntime._exceptions import ArkRateLimitError
-
-        classes.append(ArkRateLimitError)
-    except Exception:
-        pass
     return tuple(classes)
 
 
