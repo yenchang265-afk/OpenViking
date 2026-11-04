@@ -49,30 +49,17 @@ export const TARGETS = [
     committed: false,
   },
   {
-    root: join(ROOT, "examples", "dsh-memory-plugin"),
-    dir: join(ROOT, "examples", "dsh-memory-plugin", "shared"),
-    committed: false,
-  },
-  {
     root: join(ROOT, "examples", "pi-coding-agent-extension"),
     dir: join(ROOT, "examples", "pi-coding-agent-extension", "shared"),
     committed: false,
   },
-  // Published as a package too, but ov-install's GitHub source downloads the
-  // plugin file by file at a git ref, and it has no way to run this generator.
-  {
-    root: join(ROOT, "examples", "openclaw-plugin"),
-    dir: join(ROOT, "examples", "openclaw-plugin", "shared"),
-    committed: true,
-  },
 ];
 
-// cursor, trae, trae-cn and zcode vendor nothing: the installer copies the
-// canonical runtime to `$OV_HOME/agent-integrations/memory-plugin-shared/lib`
-// and they import it by the relative path that resolves both there and here.
-export const ASSEMBLED_ROOTS = [
-  join(ROOT, "examples", "agent-hook-plugin"),
-];
+// Harnesses that vendor nothing: the installer copies the canonical runtime to
+// `$OV_HOME/agent-integrations/memory-plugin-shared/lib` and they import it by
+// the relative path that resolves both there and here. None remain since the
+// agent-hook-plugin hosts were removed, so `lib/MANIFEST` is empty.
+export const ASSEMBLED_ROOTS = [];
 
 export const GENERATED_HEADER = "// GENERATED FROM examples/memory-plugin-shared/lib. DO NOT EDIT.\n";
 
@@ -87,10 +74,8 @@ export const GENERATED_HEADER = "// GENERATED FROM examples/memory-plugin-shared
 // here is.
 export const SKILLS_DIR = join(ROOT, "examples", "skills");
 export const SKILL_TARGETS = [
-  // openviking-memory is not shipped to openclaw-plugin: its REST tool surface
-  // has its own operator skill (openviking-context-database) with different
-  // tool names. Nor to agent-plugins, whose copy of this one skill is a
-  // deliberately different hook-free variant.
+  // openviking-memory is not shipped to agent-plugins, whose copy of this one
+  // skill is a deliberately different hook-free variant.
   {
     skill: "openviking-memory",
     dir: join(ROOT, "examples", "codex-memory-plugin", "skills"),
@@ -99,21 +84,6 @@ export const SKILL_TARGETS = [
   {
     skill: "openviking-memory",
     dir: join(ROOT, "examples", "claude-code-memory-plugin", "skills"),
-    committed: true,
-  },
-  {
-    skill: "openviking-memory",
-    dir: join(ROOT, "examples", "agent-hook-plugin", "hosts", "cursor", "skills"),
-    committed: true,
-  },
-  {
-    skill: "openviking-memory",
-    dir: join(ROOT, "examples", "agent-hook-plugin", "hosts", "codebuddy", "skills"),
-    committed: true,
-  },
-  {
-    skill: "openviking-memory",
-    dir: join(ROOT, "examples", "dsh-memory-plugin", "skills"),
     committed: true,
   },
   {
@@ -141,21 +111,6 @@ export const SKILL_TARGETS = [
   },
   {
     skill: "openviking-skills",
-    dir: join(ROOT, "examples", "agent-hook-plugin", "hosts", "cursor", "skills"),
-    committed: true,
-  },
-  {
-    skill: "openviking-skills",
-    dir: join(ROOT, "examples", "agent-hook-plugin", "hosts", "codebuddy", "skills"),
-    committed: true,
-  },
-  {
-    skill: "openviking-skills",
-    dir: join(ROOT, "examples", "dsh-memory-plugin", "skills"),
-    committed: true,
-  },
-  {
-    skill: "openviking-skills",
     dir: join(ROOT, "agent-plugins", "skills"),
     committed: true,
   },
@@ -170,7 +125,7 @@ export const SKILL_TARGETS = [
     committed: true,
   },
   // The harnesses that ship the experience workflow today. Where capture sends
-  // no tool parts (agent-plugins, Cursor; dsh with captureToolResults off),
+  // no tool parts (agent-plugins),
   // the copy only retrieves and applies Experience, and its reads feed no
   // trajectory back to the server.
   {
@@ -186,26 +141,6 @@ export const SKILL_TARGETS = [
   {
     skill: "ov-experience-memory",
     dir: join(ROOT, "agent-plugins", "skills"),
-    committed: true,
-  },
-  {
-    skill: "ov-experience-memory",
-    dir: join(ROOT, "examples", "openclaw-plugin", "skills"),
-    committed: true,
-  },
-  {
-    skill: "ov-experience-memory",
-    dir: join(ROOT, "examples", "agent-hook-plugin", "hosts", "cursor", "skills"),
-    committed: true,
-  },
-  {
-    skill: "ov-experience-memory",
-    dir: join(ROOT, "examples", "agent-hook-plugin", "hosts", "codebuddy", "skills"),
-    committed: true,
-  },
-  {
-    skill: "ov-experience-memory",
-    dir: join(ROOT, "examples", "dsh-memory-plugin", "skills"),
     committed: true,
   },
   {
