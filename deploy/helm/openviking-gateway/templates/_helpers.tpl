@@ -40,5 +40,5 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- end -}}
 
 {{- define "openviking-gateway.rootKey" -}}
-{{- if and .Values.config.encryption.enabled (has .Values.config.encryption.provider (list "local" "volcengine_kms")) -}}true{{- end -}}
+{{- if and .Values.config.encryption.enabled (has .Values.config.encryption.provider (list "local")) -}}true{{- end -}}
 {{- end -}}
