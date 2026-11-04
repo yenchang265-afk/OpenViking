@@ -65,10 +65,6 @@ def main():
     env = {item["name"] for item in spec["template"]["spec"]["containers"][0]["env"]}
     assert config.storage.redis["password_env"] in env
     assert config.encryption["local"]["key_file"] == "/etc/openviking-gateway/keys/root-key"
-    _, _, config = render("redis.yaml", "--set", "config.encryption.provider=volcengine_kms")
-    assert (
-        config.encryption["volcengine_kms"]["key_file"] == "/etc/openviking-gateway/keys/root-key"
-    )
     resources, spec, _ = render("sqlite.yaml", "--set", "persistence.enabled=false")
     assert not any(item["kind"] == "PersistentVolumeClaim" for item in resources)
     assert {"name": "data", "emptyDir": {}} in spec["template"]["spec"]["volumes"]

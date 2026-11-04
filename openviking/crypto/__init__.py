@@ -25,7 +25,6 @@ from openviking.crypto.providers import (
     LocalFileProvider,
     RootKeyProvider,
     VaultProvider,
-    VolcengineKMSProvider,
     create_root_key_provider,
 )
 
@@ -33,7 +32,6 @@ __all__ = [
     "RootKeyProvider",
     "LocalFileProvider",
     "VaultProvider",
-    "VolcengineKMSProvider",
     "create_root_key_provider",
     "FileEncryptor",
     "validate_encryption_config",

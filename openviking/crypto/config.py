@@ -41,7 +41,7 @@ def validate_encryption_config(config: Dict[str, Any]) -> Tuple[bool, List[str]]
 
     # Check provider
     provider = encryption_config.get("provider", "local")
-    supported_providers = ["local", "vault", "volcengine_kms"]
+    supported_providers = ["local", "vault"]
     if provider not in supported_providers:
         errors.append(f"Unsupported provider: {provider}")
 
@@ -50,8 +50,6 @@ def validate_encryption_config(config: Dict[str, Any]) -> Tuple[bool, List[str]]
         errors.extend(_validate_local_provider_config(encryption_config))
     elif provider == "vault":
         errors.extend(_validate_vault_provider_config(encryption_config))
-    elif provider == "volcengine_kms":
-        errors.extend(_validate_volcengine_provider_config(encryption_config))
 
     return len(errors) == 0, errors
 
@@ -115,27 +113,6 @@ def _validate_vault_provider_config(config: Dict[str, Any]) -> List[str]:
         errors.append("encryption.vault.address is required")
     if not token:
         errors.append("encryption.vault.token is required")
-
-    return errors
-
-
-def _validate_volcengine_provider_config(config: Dict[str, Any]) -> List[str]:
-    """Validate Volcengine Provider configuration."""
-    errors = []
-    volc_config = config.get("volcengine_kms", {})
-    region = volc_config.get("region")
-    access_key = volc_config.get("access_key")
-    secret_key = volc_config.get("secret_key")
-    key_id = volc_config.get("key_id")
-
-    if not region:
-        errors.append("encryption.volcengine_kms.region is required")
-    if not access_key:
-        errors.append("encryption.volcengine_kms.access_key is required")
-    if not secret_key:
-        errors.append("encryption.volcengine_kms.secret_key is required")
-    if not key_id:
-        errors.append("encryption.volcengine_kms.key_id is required")
 
     return errors
 

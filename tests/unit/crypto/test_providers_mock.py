@@ -27,11 +27,9 @@ from openviking.crypto.encryptor import FileEncryptor
 from openviking.crypto.providers import (
     PROVIDER_LOCAL,
     PROVIDER_VAULT,
-    PROVIDER_VOLCENGINE,
     ConfigError,
     LocalFileProvider,
     VaultProvider,
-    VolcengineKMSProvider,
 )
 from openviking.metrics.datasources.encryption import EncryptionEventDataSource
 
@@ -82,22 +80,6 @@ def vault_invalid_path(monkeypatch):
     return InvalidPath
 
 
-@pytest.fixture
-def volcengine_mock_provider():
-    """Create a VolcengineKMSProvider with mocked methods."""
-    provider = VolcengineKMSProvider(
-        access_key_id="mock-access-key",
-        secret_access_key="mock-secret-key",
-        region="cn-beijing",
-        key_id="mock-key-id",
-    )
-
-    # Mock all the methods that would call external services
-    provider._get_kms_client = AsyncMock()
-
-    yield provider
-
-
 class TestEnvelopeFormat:
     """Tests for envelope format and provider-type byte round-tripping."""
 
@@ -130,16 +112,6 @@ class TestEnvelopeFormat:
         # FileEncryptor should detect it as Vault type
         encryptor = FileEncryptor(mock_provider)
         assert encryptor._provider_type == PROVIDER_VAULT
-
-    @pytest.mark.asyncio
-    async def test_volcengine_provider_type_detection(self):
-        """Test that VolcengineKMSProvider type is correctly detected by FileEncryptor."""
-        # Create a minimal mock provider that just needs type detection
-        mock_provider = Mock(spec=VolcengineKMSProvider)
-
-        # FileEncryptor should detect it as Volcengine type
-        encryptor = FileEncryptor(mock_provider)
-        assert encryptor._provider_type == PROVIDER_VOLCENGINE
 
     @pytest.mark.asyncio
     async def test_provider_type_roundtrip(self, local_file_provider):
@@ -278,71 +250,6 @@ class TestVaultProviderMock:
         client.secrets.kv.v1.create_or_update_secret.assert_not_called()
 
 
-class TestVolcengineKMSProviderMock:
-    """Tests for VolcengineKMSProvider with mocked methods."""
-
-    @pytest.mark.asyncio
-    async def test_volcengine_encrypt_decrypt_with_mock(self, volcengine_mock_provider):
-        """Test encrypt_file_key and decrypt_file_key can be mocked."""
-        account_id = "test-account"
-        plaintext_key = secrets.token_bytes(32)
-        mock_ciphertext = base64.b64encode(b"encrypted_data")
-        mock_iv = secrets.token_bytes(12)
-
-        # Setup mock methods
-        volcengine_mock_provider.encrypt_file_key = AsyncMock(
-            return_value=(mock_ciphertext, mock_iv)
-        )
-        volcengine_mock_provider.decrypt_file_key = AsyncMock(return_value=plaintext_key)
-
-        # Encrypt
-        encrypted, iv = await volcengine_mock_provider.encrypt_file_key(plaintext_key, account_id)
-        assert encrypted == mock_ciphertext
-        assert iv == mock_iv
-        volcengine_mock_provider.encrypt_file_key.assert_called_once_with(plaintext_key, account_id)
-
-        # Decrypt
-        decrypted = await volcengine_mock_provider.decrypt_file_key(encrypted, iv, account_id)
-        assert decrypted == plaintext_key
-        volcengine_mock_provider.decrypt_file_key.assert_called_once_with(encrypted, iv, account_id)
-
-    @pytest.mark.asyncio
-    async def test_persist_failure_clears_cache_and_retries(
-        self, volcengine_mock_provider, tmp_path
-    ):
-        """A failed persist must not leave an unpersisted ephemeral key cached."""
-        volcengine_mock_provider.key_file = tmp_path / "root-key.enc"
-        volcengine_mock_provider._encrypt_with_kms = AsyncMock(side_effect=RuntimeError("KMS down"))
-
-        with pytest.raises(ConfigError, match="data loss risk"):
-            await volcengine_mock_provider.get_root_key()
-
-        # Cache must be cleared so a retry re-creates and re-persists the key
-        # instead of returning via the get_root_key fast path a key that was
-        # never written to disk.
-        assert volcengine_mock_provider._root_key is None
-        with pytest.raises(ConfigError, match="data loss risk"):
-            await volcengine_mock_provider.get_root_key()
-        assert volcengine_mock_provider._encrypt_with_kms.call_count == 2
-
-    @pytest.mark.asyncio
-    async def test_missing_key_file_never_shadows_the_default_root_key(
-        self, volcengine_mock_provider, tmp_path, monkeypatch
-    ):
-        """A key_file that earlier releases ignored must not replace the key they created."""
-        monkeypatch.setenv("HOME", str(tmp_path))
-        default_key_file = tmp_path / ".openviking" / VolcengineKMSProvider.ROOT_KEY_FILENAME
-        default_key_file.parent.mkdir()
-        default_key_file.write_bytes(b"existing-root-key")
-        volcengine_mock_provider.key_file = tmp_path / "configured" / "root-key.enc"
-        volcengine_mock_provider._encrypt_with_kms = AsyncMock()
-
-        with pytest.raises(ConfigError, match="move it to"):
-            await volcengine_mock_provider.get_root_key()
-        volcengine_mock_provider._encrypt_with_kms.assert_not_called()
-        assert not volcengine_mock_provider.key_file.exists()
-
-
 class TestCrossProviderEnvelope:
     """Tests for cross-provider envelope behavior."""
 
@@ -352,12 +259,10 @@ class TestCrossProviderEnvelope:
         # Create mock providers
         mock_local = Mock(spec=LocalFileProvider)
         mock_vault = Mock(spec=VaultProvider)
-        mock_volcengine = Mock(spec=VolcengineKMSProvider)
 
         # Each should be detected as different types
         assert FileEncryptor(mock_local)._provider_type == PROVIDER_LOCAL
         assert FileEncryptor(mock_vault)._provider_type == PROVIDER_VAULT
-        assert FileEncryptor(mock_volcengine)._provider_type == PROVIDER_VOLCENGINE
 
     @pytest.mark.asyncio
     async def test_same_provider_different_instance_can_decrypt(self, local_file_provider):
@@ -424,7 +329,6 @@ async def test_hkdf_derive_logs_debug_when_metrics_recording_fails(
     [
         ("local_file_provider", "local"),
         ("vault_mock_provider", "vault"),
-        ("volcengine_mock_provider", "volcengine_kms"),
     ],
 )
 async def test_get_root_key_logs_debug_when_metrics_recording_fails(

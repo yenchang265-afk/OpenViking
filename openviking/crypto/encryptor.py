@@ -72,15 +72,12 @@ class FileEncryptor:
         from openviking.crypto.providers import (
             LocalFileProvider,
             VaultProvider,
-            VolcengineKMSProvider,
         )
 
         if isinstance(provider, LocalFileProvider):
             return PROVIDER_LOCAL
         elif isinstance(provider, VaultProvider):
             return PROVIDER_VAULT
-        elif isinstance(provider, VolcengineKMSProvider):
-            return PROVIDER_VOLCENGINE
         else:
             raise ValueError(f"Unknown provider type: {type(provider)}")
 

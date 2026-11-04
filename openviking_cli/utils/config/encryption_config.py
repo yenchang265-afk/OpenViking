@@ -62,20 +62,6 @@ class VaultEncryptionProviderConfig(BaseModel):
     )
 
 
-class VolcengineKMSEncryptionProviderConfig(BaseModel):
-    """Volcengine KMS encryption provider configuration.
-
-    Uses Volcengine Key Management Service for key management.
-    Suitable for production environments on Volcengine.
-    """
-
-    key_id: Optional[str] = Field(default=None, description="Volcengine KMS key ID")
-    region: str = Field(default="cn-beijing", description="Volcengine KMS region")
-    access_key: Optional[str] = Field(default=None, description="Volcengine access key ID")
-    secret_key: Optional[str] = Field(default=None, description="Volcengine secret access key")
-    key_file: Optional[str] = Field(default=None, description="Path to encrypted root key file")
-
-
 class APIKeyHashingConfig(BaseModel):
     """API key hashing configuration.
 
@@ -128,7 +114,7 @@ class EncryptionConfig(BaseModel):
 
     provider: str = Field(
         default="local",
-        description="Key provider type: 'local', 'vault', 'volcengine_kms'",
+        description="Key provider type: 'local', 'vault'",
     )
 
     local: LocalEncryptionProviderConfig = Field(
@@ -139,11 +125,6 @@ class EncryptionConfig(BaseModel):
     vault: VaultEncryptionProviderConfig = Field(
         default_factory=VaultEncryptionProviderConfig,
         description="Vault provider configuration",
-    )
-
-    volcengine_kms: VolcengineKMSEncryptionProviderConfig = Field(
-        default_factory=VolcengineKMSEncryptionProviderConfig,
-        description="Volcengine KMS provider configuration",
     )
 
     api_key_hashing: APIKeyHashingConfig = Field(
