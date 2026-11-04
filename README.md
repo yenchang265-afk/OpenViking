@@ -247,26 +247,6 @@ Setup guides for each integration:
 <sub>Hooks&nbsp;+&nbsp;MCP</sub>
 </td>
 <td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/12-cursor"><img src="docs/images/integrations/logos/cursor.png" width="32" height="32" alt=""><br><strong>Cursor</strong></a><br>
-<sub>Hooks&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/13-trae"><img src="docs/images/integrations/logos/trae.png" width="32" height="32" alt=""><br><strong>TRAE</strong></a><br>
-<sub>Hooks&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/03-openclaw"><img src="docs/images/integrations/logos/openclaw.png" width="32" height="32" alt=""><br><strong>OpenClaw</strong></a><br>
-<sub>Context&nbsp;engine</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/05-hermes"><img src="docs/images/integrations/logos/hermes-agent.png" width="32" height="32" alt=""><br><strong>Hermes</strong></a><br>
-<sub>Built-in</sub>
-</td>
-</tr>
-</tbody>
-<tbody>
-<tr>
-<td align="center" valign="bottom" width="16%">
 <a href="https://docs.openviking.ai/en/agent-integrations/10-opencode"><img src="docs/images/integrations/logos/opencode.png" width="32" height="32" alt=""><br><strong>OpenCode</strong></a><br>
 <sub>Plugin&nbsp;+&nbsp;MCP</sub>
 </td>
@@ -274,12 +254,12 @@ Setup guides for each integration:
 <a href="https://docs.openviking.ai/en/agent-integrations/11-pi"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/integrations/logos/pi-dark.svg"><img src="docs/images/integrations/logos/pi.svg" width="32" height="32" alt=""></picture><br><strong>pi</strong></a><br>
 <sub>Native&nbsp;extension</sub>
 </td>
+</tr>
+</tbody>
+<tbody>
+<tr>
 <td align="center" valign="bottom" width="16%">
 <a href="docs/images/agents/en/deerflow-memory-manager.md"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/integrations/logos/deerflow-dark.svg"><img src="docs/images/integrations/logos/deerflow.svg" width="32" height="32" alt=""></picture><br><strong>DeerFlow</strong></a><br>
-<sub>Plugin&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/17-dsh"><picture><source media="(prefers-color-scheme: dark)" srcset="docs/images/integrations/logos/dsh-dark.svg"><img src="docs/images/integrations/logos/dsh.svg" width="32" height="32" alt=""></picture><br><strong>DSH</strong></a><br>
 <sub>Plugin&nbsp;+&nbsp;MCP</sub>
 </td>
 <td align="center" valign="bottom" width="16%">
@@ -419,7 +399,7 @@ The OpenViking project uses different licenses for different components:
 
 - **Main Project**: AGPLv3 - see the [LICENSE](./LICENSE) file for details
 - **crates/ov\_cli**: Apache 2.0 - see the [LICENSE](./crates/LICENSE) for details
-- **examples**: Apache 2.0 - see the [LICENSE](./examples/LICENSE) for details. The Hermes plugin in `examples/hermes-plugin` retains its [MIT license](./examples/hermes-plugin/LICENSE).
+- **examples**: Apache 2.0 - see the [LICENSE](./examples/LICENSE) for details.
 - **integrations/frameworks**: the LangChain/LangGraph adapter uses AGPLv3 and the Microsoft Agent Framework adapter uses MIT; see each package's `LICENSE`. Their runnable examples retain Apache 2.0; see each package's `examples/LICENSE`.
 - **third\_party**: Respective original licenses of third-party projects
 

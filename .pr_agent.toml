@@ -90,7 +90,7 @@ description = "Apply when the PR modifies async/await patterns, changes commit()
 description = "Apply when the PR modifies embedding models, vectorization logic, chunked vectorization, or VLM provider integrations in openviking/embedding/ or openviking/vlm/."
 
 [custom_labels."plugin-bot"]
-description = "Apply when the PR modifies TypeScript code in bot/ or examples/openclaw-plugin/, including hook handlers, process management, or client initialization."
+description = "Apply when the PR modifies TypeScript code in bot/, including hook handlers, process management, or client initialization."
 
 [custom_labels."api-breaking"]
 description = "Apply when the PR removes, renames, or changes the type of any public API parameter, REST endpoint, SDK method, or configuration key that external consumers depend on."
@@ -211,7 +211,7 @@ BECAUSE PR #148f6e3 fixed overly broad `except Exception` to specific
      (ImportError, ModuleNotFoundError, AttributeError). Broad catches hide
      real bugs.
 
-### TYPESCRIPT / BOT (bot/, examples/openclaw-plugin/)
+### TYPESCRIPT / BOT (bot/)
 
 R8. PLUGIN HOOK TIMEOUT
 WHEN code registers or modifies a hook handler (before_prompt_build,

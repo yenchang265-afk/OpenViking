@@ -28,10 +28,9 @@ PLUGINS=(
   "examples/magpie-memory-plugin:examples/magpie-memory-plugin/package.json"
 )
 
-# A change to the shared library reaches every plugin, and it no longer reaches
-# them through a vendored copy inside their directory: the config-driven hook
-# hosts have the runtime assembled at install time, and the packaged plugins
-# build their copies at pack time. So the library counts as a change to all.
+# A change to the shared library reaches every plugin, and not always through a
+# vendored copy inside its directory: the packaged plugins build their copies at
+# pack time. So the library counts as a change to all.
 SHARED_LIB="examples/memory-plugin-shared/lib"
 
 read_version() { # read_version <ref-or-empty> <path>

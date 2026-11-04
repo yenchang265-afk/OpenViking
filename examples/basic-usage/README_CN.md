@@ -240,7 +240,6 @@ memories = client.find(
 - [MCP 集成指南](../../docs/zh/guides/06-mcp-integration.md)：接入 Claude Code、Cursor、Claude Desktop、OpenClaw 等 MCP 宿主。
 - [Claude Code 記憶外掛](../claude-code-memory-plugin/README.md)：在 Claude Code 中使用 OpenViking 長期記憶。
 - [OpenCode 外掛](../opencode-plugin/INSTALL-ZH.md)：在 OpenCode 中使用 OpenViking 倉庫上下文與記憶工具。
-- [OpenClaw 外掛](../openclaw-plugin/README_CN.md)：與 OpenClaw 整合。
 
 ## 常見問題
 
