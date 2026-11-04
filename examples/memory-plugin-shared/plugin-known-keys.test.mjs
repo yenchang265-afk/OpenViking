@@ -19,7 +19,6 @@ const KNOB_READERS = [
   "examples/claude-code-memory-plugin/scripts/config.mjs",
   "examples/codex-memory-plugin/scripts/config.mjs",
   "examples/opencode-plugin/lib/config.mjs",
-  "examples/dsh-memory-plugin/config.mjs",
   "examples/pi-coding-agent-extension/config.ts",
   "examples/memory-plugin-shared/lib/agent-hook-runtime.mjs",
 ];

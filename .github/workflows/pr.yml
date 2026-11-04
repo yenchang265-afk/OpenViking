@@ -42,7 +42,6 @@ jobs:
           # 24+: the pi extension tests import .ts glue directly via native type stripping.
           node-version: '24'
 
-      - run: npm ci --prefix examples/dsh-memory-plugin
       - run: npm ci --prefix examples/pi-coding-agent-extension --ignore-scripts
 
       # The plugins published as packages keep no shared copies in git; they are
@@ -91,39 +90,6 @@ jobs:
           bash -n examples/codex-memory-plugin/setup-helper/install.sh
           bash -n examples/codex-memory-plugin/setup-helper/tos-install.sh
 
-  openclaw-tests:
-    needs: check-deps
-    if: ${{ needs.check-deps.outputs.openclaw_changed == 'true' }}
-    runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: examples/openclaw-plugin
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-
-      - name: Generate the shared runtime copies
-        run: node ../memory-plugin-shared/sync.mjs
-
-      - name: Install plugin dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Run the OpenClaw plugin Vitest suite
-        # The suite is otherwise never exercised by CI, so regressions in
-        # examples/openclaw-plugin only surface in user installs.
-        # tests/ut/architecture-boundaries.test.ts is excluded until its 2
-        # pre-existing failures are resolved (see #4720 / #4731 / #4732);
-        # every other file passes (42 files / 675 tests).
-        # The node_modules exclude restores vitest's default filters, which a
-        # custom --exclude replaces.
-        run: >
-          npm test --
-          --exclude "tests/ut/architecture-boundaries.test.ts"
-          --exclude "**/node_modules/**"
-
   plugin-versions:
     needs: check-deps
     runs-on: ubuntu-24.04
@@ -149,7 +115,6 @@ jobs:
       wheel_os: ${{ steps.check.outputs.wheel_os }}
       plugins_changed: ${{ steps.check.outputs.plugins_changed }}
       langchain_changed: ${{ steps.check.outputs.langchain_changed }}
-      openclaw_changed: ${{ steps.check.outputs.openclaw_changed }}
       sdk_python_changed: ${{ steps.check.outputs.sdk_python_changed }}
     steps:
       - uses: actions/checkout@v6

@@ -18,7 +18,6 @@ on:
       - "examples/skills/**"
       - "examples/claude-code-memory-plugin/**"
       - "examples/codex-memory-plugin/**"
-      - "examples/openclaw-plugin/**"
       - "agent-plugins/**"
   workflow_dispatch:
 

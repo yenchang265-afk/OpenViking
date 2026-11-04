@@ -23,9 +23,7 @@ cd "$ROOT"
 PLUGINS=(
   "examples/claude-code-memory-plugin:examples/claude-code-memory-plugin/.claude-plugin/plugin.json"
   "examples/codex-memory-plugin:examples/codex-memory-plugin/.codex-plugin/plugin.json"
-  "examples/agent-hook-plugin:examples/agent-hook-plugin/plugin.json"
   "examples/opencode-plugin:examples/opencode-plugin/package.json"
-  "examples/dsh-memory-plugin:examples/dsh-memory-plugin/package.json"
   "examples/pi-coding-agent-extension:examples/pi-coding-agent-extension/package.json"
   "examples/magpie-memory-plugin:examples/magpie-memory-plugin/package.json"
 )
@@ -58,12 +56,6 @@ process.stdin.on("end", () => {
 # CodeBuddy resolves its installed plugin by the manifest version, so keep
 # both aligned with the integration and root manifests.
 PAIRED=(
-  "examples/agent-hook-plugin/plugin.json:examples/agent-hook-plugin/hosts/cursor/openviking.integration.json"
-  "examples/agent-hook-plugin/plugin.json:examples/agent-hook-plugin/hosts/trae/openviking.integration.json"
-  "examples/agent-hook-plugin/plugin.json:examples/agent-hook-plugin/hosts/zcode/openviking.integration.json"
-  "examples/agent-hook-plugin/plugin.json:examples/agent-hook-plugin/hosts/kimicode/openviking.integration.json"
-  "examples/agent-hook-plugin/plugin.json:examples/agent-hook-plugin/hosts/kimicode/kimi.plugin.json"
-  "examples/agent-hook-plugin/plugin.json:examples/agent-hook-plugin/hosts/codebuddy/plugin.json"
 )
 
 failed=0

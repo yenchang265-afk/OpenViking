@@ -60,10 +60,6 @@ def plan(paths, full=False):
             r"^(pyproject\.toml|uv\.lock)$|"
             r"^\.github/workflows/(pr|python-langchain-release)\.yml$"
         ),
-        "openclaw_changed": changed(
-            r"^examples/openclaw-plugin/|^examples/memory-plugin-shared/(lib/|sync\.mjs)|"
-            r"^\.github/workflows/pr\.yml$"
-        ),
         "sdk_python_changed": changed(r"^sdk/python/|^\.github/workflows/pr\.yml$"),
     }
 
