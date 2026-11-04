@@ -22,7 +22,6 @@ def configured(provider, model="model", **kwargs):
     "provider,model,base,protocol,vendor",
     [
         ("openai", "gpt", "https://api.openai.com/v1", "chat", "openai"),
-        ("volcengine", "ep-123", "https://ark.cn-beijing.volces.com/api/v3", "chat", "ark"),
         ("litellm", "anthropic/claude", "https://api.anthropic.com", "anthropic", "anthropic"),
         ("litellm", "ollama/qwen", "http://localhost:11434/v1", "chat", "generic"),
         ("litellm", "ollama_chat/qwen", "http://localhost:11434/v1", "chat", "generic"),
@@ -64,19 +63,11 @@ def test_kimi_alias_base_and_custom_user_agent():
     assert default["headers"]["User-Agent"] == "KimiCLI/1.30.0"
 
 
-def test_glm_and_byteplus():
+def test_glm():
     (glm,) = vlm_upstreams(configured("glm"))["upstreams"]
     assert glm["base_url"] == "https://api.z.ai/api/coding/paas/v4"
     assert glm["coding_plan"] is True
-    (ark,) = vlm_upstreams(
-        configured(
-            "volcengine",
-            api_base="https://ark.ap-southeast.bytepluses.com/api/v3",
-            extra_headers={"X-Client-Request-Id": "ov", "custom": "value"},
-        )
-    )["upstreams"]
-    assert ark["vendor"] == "byteplus"
-    assert ark["headers"] == {"custom": "value"}
+
 
 
 @pytest.mark.parametrize(

@@ -4,7 +4,6 @@
 Rerank models for OpenViking.
 
 Provides rerank functionality for hierarchical retrieval with multiple provider support:
-- vikingdb: VikingDB's native rerank service
 - cohere: Cohere Rerank v3.5 API
 - litellm: LiteLLM rerank (supports multiple providers)
 - openai: OpenAI-compatible rerank API
@@ -12,11 +11,11 @@ Provides rerank functionality for hierarchical retrieval with multiple provider 
 """
 
 from openviking.models.rerank.base import RerankBase
+from openviking.models.rerank.client import RerankClient
 from openviking.models.rerank.cohere_rerank import CohereRerankClient
 from openviking.models.rerank.jev_rerank import JevRerankClient
 from openviking.models.rerank.litellm_rerank import LiteLLMRerankClient
 from openviking.models.rerank.openai_rerank import OpenAIRerankClient
-from openviking.models.rerank.volcengine_rerank import RerankClient
 
 __all__ = [
     "RerankBase",

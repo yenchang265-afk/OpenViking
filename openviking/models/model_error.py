@@ -233,24 +233,6 @@ def _sdk_kind(error: BaseException) -> tuple[ModelErrorKind, str] | None:
         kind = kind or class_kinds.get(name) or _kind_from_status(_status_code(error))
         return kind or ModelErrorKind.UNKNOWN, provider
 
-    if module.startswith("volcenginesdkarkruntime"):
-        provider = "volcengine"
-        class_kinds = {
-            "ArkAPITimeoutError": ModelErrorKind.TRANSIENT_NETWORK_ERROR,
-            "ArkAPIConnectionError": ModelErrorKind.TRANSIENT_NETWORK_ERROR,
-            "ArkAuthenticationError": ModelErrorKind.AUTHENTICATION_ERROR,
-            "ArkPermissionDeniedError": ModelErrorKind.PERMISSION_DENIED,
-            "ArkNotFoundError": ModelErrorKind.MODEL_NOT_FOUND,
-            "ArkInternalServerError": ModelErrorKind.TRANSIENT_SERVICE_ERROR,
-            "ArkContentFilterFinishReasonError": ModelErrorKind.CONTENT_SAFETY,
-        }
-        kind = (
-            _kind_from_code(error)
-            or class_kinds.get(name)
-            or _kind_from_status(_status_code(error))
-        )
-        return kind or ModelErrorKind.UNKNOWN, provider
-
     if module.startswith("litellm"):
         provider = "litellm"
         class_kinds = {

@@ -448,7 +448,7 @@ class OpenAIDenseEmbedder(DenseEmbedderBase):
 class OpenAISparseEmbedder(SparseEmbedderBase):
     """OpenAI does not support sparse embedding
 
-    This class is a placeholder for error messaging. For sparse embedding, use Volcengine or other providers.
+    This class is a placeholder for error messaging. For sparse embedding, use another provider.
     """
 
     def __init__(self, *args, **kwargs):
@@ -458,7 +458,7 @@ class OpenAISparseEmbedder(SparseEmbedderBase):
         super().__init__(model_name=model_name or "openai-sparse-unsupported")
         raise NotImplementedError(
             "OpenAI does not support sparse embeddings. "
-            "Consider using VolcengineSparseEmbedder or other providers."
+            "Consider using another provider."
         )
 
     def embed(self, text: str, is_query: bool = False) -> EmbedResult:
@@ -468,7 +468,7 @@ class OpenAISparseEmbedder(SparseEmbedderBase):
 class OpenAIHybridEmbedder(HybridEmbedderBase):
     """OpenAI does not support hybrid embedding
 
-    This class is a placeholder for error messaging. For hybrid embedding, use Volcengine or other providers.
+    This class is a placeholder for error messaging. For hybrid embedding, use another provider.
     """
 
     def __init__(self, *args, **kwargs):
@@ -478,7 +478,7 @@ class OpenAIHybridEmbedder(HybridEmbedderBase):
         super().__init__(model_name=model_name or "openai-hybrid-unsupported")
         raise NotImplementedError(
             "OpenAI does not support hybrid embeddings. "
-            "Consider using VolcengineHybridEmbedder or other providers."
+            "Consider using another provider."
         )
 
     def embed(self, text: str, is_query: bool = False) -> EmbedResult:

@@ -309,27 +309,3 @@ def test_factory_places_retry_inside_failover(monkeypatch):
 
     assert isinstance(embedder, FailoverEmbedder)
     assert all(isinstance(child, RetryEmbedder) for child in embedder._embedders)
-
-
-def test_factory_places_retry_inside_composite(monkeypatch):
-    monkeypatch.setattr("openai.OpenAI", lambda **_kwargs: object())
-    monkeypatch.setattr("volcenginesdkarkruntime.Ark", lambda **_kwargs: object())
-    config = EmbeddingConfig(
-        dense=EmbeddingModelConfig(
-            provider="openai",
-            model="text-embedding-3-small",
-            api_key="openai-key",
-            dimension=2,
-        ),
-        sparse=EmbeddingModelConfig(
-            provider="volcengine",
-            model="doubao-embedding",
-            api_key="ark-key",
-        ),
-    )
-
-    embedder = config.get_embedder()
-
-    assert isinstance(embedder, CompositeHybridEmbedder)
-    assert isinstance(embedder.dense_embedder, RetryEmbedder)
-    assert isinstance(embedder.sparse_embedder, RetryEmbedder)

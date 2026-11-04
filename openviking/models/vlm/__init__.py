@@ -7,7 +7,6 @@ from .backends.glm_vlm import GLMVLM
 from .backends.kimi_vlm import KimiVLM
 from .backends.litellm_vlm import LiteLLMVLMProvider
 from .backends.openai_vlm import OpenAIVLM
-from .backends.volcengine_vlm import VolcEngineVLM
 from .base import (
     AllCredentialsFailedError,
     FailoverVLM,
@@ -27,7 +26,6 @@ __all__ = [
     "CodexVLM",
     "KimiVLM",
     "GLMVLM",
-    "VolcEngineVLM",
     "LiteLLMVLMProvider",
     "get_all_provider_names",
     "is_valid_provider",

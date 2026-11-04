@@ -5,7 +5,7 @@ OpenViking Encryption Module
 
 Provides multi-tenant encryption functionality, including:
 - Envelope Encryption
-- Multiple key providers (Local File, Vault, Volcengine KMS)
+- Multiple key providers (Local File, Vault)
 - API Key hashing storage (Argon2id)
 """
 

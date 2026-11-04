@@ -282,7 +282,7 @@ async def generate_image_summary(
             raise ValueError(f"Expected bytes for image file, got {type(image_bytes)}")
 
         # Check for unsupported formats (SVG, etc.) by detecting magic bytes
-        # SVG format is not supported by VolcEngine VLM API, skip VLM analysis
+        # SVG format is not supported by some VLM APIs, skip VLM analysis
         if _is_svg(image_bytes):
             logger.info(
                 f"[MediaUtils.generate_image_summary] SVG format detected, skipping VLM analysis: {image_uri}"

@@ -18,19 +18,19 @@ def test_per_credential_model_overrides_parent_model():
     parent = EmbeddingModelConfig(
         model="parent-model",
         dimension=1024,
-        provider="volcengine",
+        provider="ollama",
         api_key="parent-key",
         credentials=[
             EmbeddingCredential(
                 id="cred-a",
-                provider="volcengine",
+                provider="ollama",
                 model="endpoint-a",
                 api_key="key-a",
                 api_base="https://example.com/a",
             ),
             EmbeddingCredential(
                 id="cred-b",
-                provider="volcengine",
+                provider="ollama",
                 api_key="key-b",
                 api_base="https://example.com/b",
             ),
@@ -148,25 +148,25 @@ def test_credential_without_inheritance_does_not_raise_at_get_embedder():
 
 
 def test_effective_provider_falls_back_to_first_credential():
-    """When parent provider is left at default (volcengine) but credentials
+    """When parent provider is left at default (openai) but credentials
     specify a different provider, _effective_provider must return the
     credential's provider so dimension/metadata reflect reality."""
     cfg = EmbeddingModelConfig(
         credentials=[
             EmbeddingCredential(
                 id="a",
-                provider="openai",
-                model="text-embedding-3-small",
+                provider="ollama",
+                model="nomic-embed-text",
                 api_key="sk",
             )
         ],
     )
 
-    # Parent provider is the model default ("volcengine"), but the actual
+    # Parent provider is the model default ("openai"), but the actual
     # request will go to OpenAI.
-    assert cfg.provider == "volcengine"
-    assert cfg._effective_provider() == "openai"
-    assert cfg._effective_model() == "text-embedding-3-small"
+    assert cfg.provider == "openai"
+    assert cfg._effective_provider() == "ollama"
+    assert cfg._effective_model() == "nomic-embed-text"
 
 
 def test_effective_model_prefers_credential_when_set():
@@ -208,7 +208,7 @@ def test_get_effective_dimension_uses_credential_provider_and_model():
             )
         ],
     )
-    # Was 2048 before the fix because parent provider defaulted to volcengine.
+    # Was 2048 before the fix because parent provider defaulted to a different provider.
     assert cfg.get_effective_dimension() == 1536
 
 
@@ -315,20 +315,20 @@ def test_explicit_parent_dimension_overrides_per_cred_resolution():
 
 
 def test_credentials_with_unknown_dimension_provider_pass():
-    """Providers without a known dim lookup (e.g. volcengine) are skipped
+    """Providers without a known dim lookup (e.g. ollama) are skipped
     and do not block validation."""
     cfg = EmbeddingModelConfig(
         dimension=1024,
         credentials=[
             EmbeddingCredential(
                 id="a",
-                provider="volcengine",
+                provider="ollama",
                 model="ep-A",
                 api_key="ark-1",
             ),
             EmbeddingCredential(
                 id="b",
-                provider="volcengine",
+                provider="ollama",
                 model="ep-B",
                 api_key="ark-2",
             ),
@@ -346,7 +346,7 @@ def test_cross_provider_credentials_with_compatible_dimensions_pass():
         credentials=[
             EmbeddingCredential(
                 id="vk",
-                provider="volcengine",
+                provider="ollama",
                 model="ep-X",
                 api_key="ark",
             ),

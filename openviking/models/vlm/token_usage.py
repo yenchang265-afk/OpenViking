@@ -77,7 +77,7 @@ class ModelTokenUsage:
         """Update token usage for specified provider
 
         Args:
-            provider: Provider name (openai, volcengine)
+            provider: Provider name (openai, azure, ...)
             prompt_tokens: Number of input tokens
             completion_tokens: Number of output tokens
         """

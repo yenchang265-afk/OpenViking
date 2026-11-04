@@ -3722,7 +3722,6 @@ dependencies = [
     { name = "urllib3" },
     { name = "uvicorn" },
     { name = "volcengine" },
-    { name = "volcengine-python-sdk", extra = ["ark"] },
     { name = "xxhash" },
 ]
 
@@ -3998,7 +3997,6 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.39.0" },
     { name = "uvloop", marker = "sys_platform != 'win32' and extra == 'gateway-fast'", specifier = ">=0.21" },
     { name = "volcengine", specifier = ">=1.0.216" },
-    { name = "volcengine-python-sdk", extras = ["ark"], specifier = ">=5.0.3" },
     { name = "websocket-client", marker = "extra == 'bot'", specifier = ">=1.6.0" },
     { name = "websockets", marker = "extra == 'bot'", specifier = ">=12.0" },
     { name = "wheel", marker = "extra == 'build'" },
@@ -6825,14 +6823,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/7a/c7/3bcba4b4b97a148b54626e76882892fcad7303d4b7bdb386ca4104a0327d/volcengine_python_sdk-5.0.14.tar.gz", hash = "sha256:17e5ee29e85a131632309ec15aa98a8004c8b4b2cac7a5dfb3fa564e5f101678", size = 7853458, upload-time = "2026-03-09T08:23:24.312Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/7f/38/208479c5f8b7799f2d9440c38e98ceb14690311220b4b2cd0807023c39c3/volcengine_python_sdk-5.0.14-py2.py3-none-any.whl", hash = "sha256:5492e80245bed1a7e8381c9c8e03e93cabae1a3c09c6ecb10e81c5e5bf901beb", size = 30663602, upload-time = "2026-03-09T08:23:20.165Z" },
-]
-
-[package.optional-dependencies]
-ark = [
-    { name = "anyio" },
-    { name = "cryptography" },
-    { name = "httpx" },
-    { name = "pydantic" },
 ]
 
 [[package]]

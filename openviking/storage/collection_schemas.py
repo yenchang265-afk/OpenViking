@@ -201,7 +201,7 @@ def _build_embedding_metadata(config: "OpenVikingConfig") -> Dict[str, Any]:
     # provider/model used at request time (see EmbeddingConfig._effective_*),
     # so the metadata signature must reflect the credential rather than the
     # parent's possibly-default provider/model. Otherwise a credential-only
-    # OpenAI config would still be signed as ``provider=volcengine`` (the parent
+    # OpenAI config would still be signed as the parent's default provider (the parent
     # default), masking real vector-space changes.
     first_cred = None
     creds = getattr(model_cfg, "credentials", None) or []

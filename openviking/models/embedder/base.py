@@ -470,7 +470,7 @@ class EmbedderBase(ABC):
 
         Args:
             model_name: Model name
-            provider: Provider name (openai, volcengine, etc.)
+            provider: Provider name (openai, etc.)
             prompt_tokens: Number of input tokens
             completion_tokens: Number of output tokens
             duration_seconds: Wall-clock duration of the embedding provider call in seconds
@@ -647,7 +647,7 @@ class CompositeHybridEmbedder(HybridEmbedderBase):
 
     Example:
         >>> dense = OpenAIDenseEmbedder(...)
-        >>> sparse = VolcengineSparseEmbedder(...)
+        >>> sparse = SomeSparseEmbedder(...)
         >>> embedder = CompositeHybridEmbedder(dense, sparse)
         >>> result = embedder.embed("test")
     """

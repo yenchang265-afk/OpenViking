@@ -228,7 +228,7 @@ class VLMBase(ABC):
 
         Args:
             model_name: Model name
-            provider: Provider name (openai, volcengine)
+            provider: Provider name (openai, azure, ...)
             prompt_tokens: Number of prompt tokens
             completion_tokens: Number of completion tokens
             duration_seconds: Wall-clock duration of the VLM call in seconds
@@ -364,12 +364,7 @@ class VLMFactory:
         """
         provider = (config.get("provider") or config.get("backend") or "openai").lower()
 
-        if provider == "volcengine":
-            from .backends.volcengine_vlm import VolcEngineVLM
-
-            return VolcEngineVLM(config)
-
-        elif provider in ("openai", "azure"):
+        if provider in ("openai", "azure"):
             from .backends.openai_vlm import OpenAIVLM
 
             return OpenAIVLM(config)
