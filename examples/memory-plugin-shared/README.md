@@ -2,11 +2,11 @@
 
 For contributor guidance on adding and maintaining hook + MCP integrations, see the [Agent plugin development and maintenance standard](../../docs/en/agent-integrations/18-plugin-development.md) ([中文](../../docs/zh/agent-integrations/18-plugin-development.md)). When using a coding agent, have it read and follow this standard before making changes.
 
-This directory contains shared JavaScript modules. `sync.mjs` vendors each module into the plugins whose code imports it — Claude Code, Codex, OpenCode, dsh, pi, openclaw and the bundled `agent-plugins` servers — together with the matching `lib/*.d.mts` declaration for the targets written in TypeScript. cursor, trae, trae-cn and zcode vendor nothing: the installer copies the modules `lib/MANIFEST` names — the same sync writes it — to `$OV_HOME/agent-integrations/memory-plugin-shared/lib`, and they import it from there.
+This directory contains shared JavaScript modules. `sync.mjs` vendors each module into the plugins whose code imports it — Claude Code, Codex, OpenCode, pi, magpie and the bundled `agent-plugins` servers — together with the matching `lib/*.d.mts` declaration for the targets written in TypeScript.
 
-`lib/install/` is the exception: it holds the installer's own JavaScript — the JSONC editor OpenCode's config needs and the hooks/mcp merge cursor, trae, trae-cn and zcode install through — which runs from `install.sh` and never from a hook. No shared module imports it, so it stays out of every closure and out of `lib/MANIFEST`.
+`lib/install/` is the exception: it holds the installer's own JavaScript — the JSONC editor OpenCode's config needs and the hooks/mcp cleanup `--uninstall` runs for the hook hosts earlier installers set up — which runs from `install.sh` and never from a hook. No shared module imports it, so it stays out of every closure.
 
-When the copies are made follows how the plugin is delivered. Claude Code, Codex and `agent-plugins` are installed by pointing a host at a directory in this repository, so their copies are committed and a push to main regenerates them. OpenCode, dsh and openclaw publish as npm packages and pi is tarred by the installer, so those build their copies at pack time and keep none in git — run `node examples/memory-plugin-shared/sync.mjs` once in a fresh checkout before running their tests.
+When the copies are made follows how the plugin is delivered. Claude Code, Codex and `agent-plugins` are installed by pointing a host at a directory in this repository, so their copies are committed and a push to main regenerates them. OpenCode and magpie publish as npm packages and pi is tarred by the installer, so those build their copies at pack time and keep none in git — run `node examples/memory-plugin-shared/sync.mjs` once in a fresh checkout before running their tests.
 
 > **Requires an OpenViking server with `viking://~` home-alias support.** Recall targets the
 > caller's own context space through `viking://~/memories` and `viking://~/skills`; the uid-less
@@ -14,7 +14,7 @@ When the copies are made follows how the plugin is delivered. Claude Code, Codex
 
 ## Installer
 
-`install.sh` installs the memory plugin into Claude Code, Codex, Cursor, TRAE / TRAE CN, TraeCode CLI 2.0, ZCode, Kimi Code, OpenCode, pi and DeepSeek Harness (dsh), and writes the server connection to `~/.openviking/ovcli.conf`. Its header comment lists the hosts it contacts and the files it writes for each harness; `--help` lists every option and environment variable.
+`install.sh` installs the memory plugin into Claude Code, Codex, TraeCode CLI 2.0, OpenCode and pi, and writes the server connection to `~/.openviking/ovcli.conf`. Its header comment lists the hosts it contacts and the files it writes for each harness; `--help` lists every option and environment variable.
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -32,14 +32,13 @@ Everything comes from the documentation site, which serves the downloads under `
 
 - Claude Code 2.1.224 and newer registers a URL marketplace and updates the plugin on its own. Older 2.x builds, custom Claude-format CLIs, and a URL marketplace that cannot be registered fall back to a local directory marketplace from the plugin bundle. Claude Code without `claude plugin` (older than 2.0) is skipped with a hint to upgrade.
 - Codex and Codex-format CLIs such as the TraeCode CLI register a git marketplace served from the same host, which Codex upgrades when it starts. When that fails they fall back to the directory marketplace from the bundle.
-- Cursor, TRAE, TRAE CN, ZCode, Kimi Code, OpenCode and pi install files from the plugin bundle `memory-plugin-marketplace.zip`, downloaded at most once per run into `~/.openviking/memory-plugin-marketplace`. They update when the installer runs again.
-- dsh installs `@openviking/dsh-memory-plugin` from npm through `dsh plugin add`.
+- OpenCode and pi install files from the plugin bundle `memory-plugin-marketplace.zip`, downloaded at most once per run into `~/.openviking/memory-plugin-marketplace`. They update when the installer runs again.
 
 After the confirmation the installer runs a version check: it asks `https://openviking.ai/install/v1/<harness>.json` which release to install, once per selected harness. `OPENVIKING_SKIP_VERSION_CHECK=1` skips the check and installs the latest release, which is also what happens when the check fails. The answer names one download location, and the installer reads the same paths from the one it is using. When the answer names a checksum, the bundle is verified against it; the docs site holds the latest release only and publishes none, so there the answer names the version that is installed.
 
 Run from a repository checkout, the installer uses that checkout's plugins (`--source dev`) and downloads nothing from the release; `--source archive` or `--dist tos` installs the release instead. `--dist github`, `--source remote` and `OPENVIKING_REPO_URL` / `OPENVIKING_REPO_REF` / `OPENVIKING_REPO_BRANCH` are accepted and ignored with a notice; to install a branch, run `install.sh` from a checkout of it.
 
-`--uninstall --harness <list>` removes the Cursor, TRAE, TRAE CN, ZCode and Kimi Code integrations. Claude Code, Codex, OpenCode, pi and dsh are removed with their own commands, which the installer prints at the end of an install.
+The installer no longer installs Cursor, TRAE, TRAE CN, ZCode, Kimi Code, CodeBuddy Code or DeepSeek Harness. `--uninstall` still removes the Cursor, TRAE, TRAE CN, ZCode, Kimi Code and CodeBuddy Code integrations an earlier installer set up — those it detects, or the ones `--harness <list>` names. Claude Code, Codex, OpenCode and pi are removed with their own commands, which the installer prints at the end of an install.
 
 The install ends with a "Not done" list, when something that was asked for did not happen (a selected harness whose CLI was not found, a server that could not be reached or rejected the key, a CLI that npm could not install), and then a line linking the agent onboarding guide, `https://docs.openviking.<host>/agents/<en|zh>/onboarding.md`, on the docs host the downloads came from and in the installer's language. Run from inside a dsh session (`DSH_SHELL=1`), the dsh plugin goes into that session's profile (`DSH_PROFILE`) unless `--dsh-profile` names another.
 
