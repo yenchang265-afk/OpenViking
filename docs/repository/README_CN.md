@@ -246,26 +246,6 @@ Codex 首次啟動會停在 `Hooks need review`，選 `Trust all and continue`�
 <sub>Hooks&nbsp;+&nbsp;MCP</sub>
 </td>
 <td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/zh/agent-integrations/12-cursor"><img src="../images/integrations/logos/cursor.png" width="32" height="32" alt=""><br><strong>Cursor</strong></a><br>
-<sub>Hooks&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/zh/agent-integrations/13-trae"><img src="../images/integrations/logos/trae.png" width="32" height="32" alt=""><br><strong>TRAE</strong></a><br>
-<sub>Hooks&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/zh/agent-integrations/03-openclaw"><img src="../images/integrations/logos/openclaw.png" width="32" height="32" alt=""><br><strong>OpenClaw</strong></a><br>
-<sub>上下文引擎</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/zh/agent-integrations/05-hermes"><img src="../images/integrations/logos/hermes-agent.png" width="32" height="32" alt=""><br><strong>Hermes</strong></a><br>
-<sub>內建記憶</sub>
-</td>
-</tr>
-</tbody>
-<tbody>
-<tr>
-<td align="center" valign="bottom" width="16%">
 <a href="https://docs.openviking.ai/zh/agent-integrations/10-opencode"><img src="../images/integrations/logos/opencode.png" width="32" height="32" alt=""><br><strong>OpenCode</strong></a><br>
 <sub>Plugin&nbsp;+&nbsp;MCP</sub>
 </td>
@@ -273,12 +253,12 @@ Codex 首次啟動會停在 `Hooks need review`，選 `Trust all and continue`�
 <a href="https://docs.openviking.ai/zh/agent-integrations/11-pi"><picture><source media="(prefers-color-scheme: dark)" srcset="../images/integrations/logos/pi-dark.svg"><img src="../images/integrations/logos/pi.svg" width="32" height="32" alt=""></picture><br><strong>pi</strong></a><br>
 <sub>原生擴充</sub>
 </td>
+</tr>
+</tbody>
+<tbody>
+<tr>
 <td align="center" valign="bottom" width="16%">
 <a href="../images/agents/zh/deerflow-memory-manager.md"><picture><source media="(prefers-color-scheme: dark)" srcset="../images/integrations/logos/deerflow-dark.svg"><img src="../images/integrations/logos/deerflow.svg" width="32" height="32" alt=""></picture><br><strong>DeerFlow</strong></a><br>
-<sub>Plugin&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/zh/agent-integrations/17-dsh"><picture><source media="(prefers-color-scheme: dark)" srcset="../images/integrations/logos/dsh-dark.svg"><img src="../images/integrations/logos/dsh.svg" width="32" height="32" alt=""></picture><br><strong>DSH</strong></a><br>
 <sub>Plugin&nbsp;+&nbsp;MCP</sub>
 </td>
 <td align="center" valign="bottom" width="16%">
@@ -416,6 +396,6 @@ OpenViking 各元件採用不同的許可證：
 
 - **主專案**：AGPLv3——詳見 [LICENSE](../../LICENSE)
 - **crates/ov\_cli**：Apache 2.0——詳見 [LICENSE](../../crates/LICENSE)
-- **examples**：Apache 2.0——詳見 [LICENSE](../../examples/LICENSE)。`examples/hermes-plugin` 中的 Hermes 外掛保留其 [MIT 許可證](../../examples/hermes-plugin/LICENSE)。
+- **examples**：Apache 2.0——詳見 [LICENSE](../../examples/LICENSE)。
 - **integrations/frameworks**：LangChain/LangGraph 介面卡採用 AGPLv3，Microsoft Agent Framework 介面卡採用 MIT，詳見各包的 `LICENSE`；可執行示例保留 Apache 2.0，詳見各包的 `examples/LICENSE`。
 - **third\_party**：各三方專案保留其原有協議

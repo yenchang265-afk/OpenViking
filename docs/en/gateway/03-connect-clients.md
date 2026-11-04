@@ -260,7 +260,6 @@ Export the gateway key as `OPENVIKING_GATEWAY_KEY`, the variable `apiKeyEnv` nam
 - Desktop does not see variables exported in a terminal. On macOS, export `OPENVIKING_GATEWAY_KEY` in your shell startup file (`~/.zprofile` or `~/.zshrc`); on Windows, set it with `setx`. Then quit Desktop with ⌘Q or from the tray and reopen it. If Desktop's recovery dialog runs, it moves `cordis.patch.yml` aside to a `.bak-<timestamp>` file, so add the provider again.
 - A DSH provider speaks one protocol. To use the gateway over several, declare one provider per protocol.
 - Unless DSH sends one of the session headers, the gateway matches its conversations by their history (see [How conversations are recognized](#how-conversations-are-recognized)).
-- If the [OpenViking plugin for DSH](../agent-integrations/17-dsh.md) is installed in the same profile, the gateway steps aside for those conversations. Use one or the other.
 
 Next, [check the connection](#check-the-connection).
 

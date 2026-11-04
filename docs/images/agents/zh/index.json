@@ -73,52 +73,12 @@
       "detailPath": "https://docs.openviking.net/agents/zh/workbuddy.md"
     },
     {
-      "id": "trae",
-      "name": "TRAE",
-      "tags": ["Hook", "MCP"],
-      "logo": "https://docs.openviking.net/agents/image/trae/logo.png",
-      "summary": "通過原生 Hook 與 MCP 工具，為 TRAE 和 TRAE CN 提供 prompt 自動召回與回合捕獲",
-      "detailPath": "https://docs.openviking.net/agents/zh/trae.md"
-    },
-    {
-      "id": "cursor",
-      "name": "Cursor",
-      "tags": ["Plugin", "Memory"],
-      "logo": "https://docs.openviking.net/agents/image/cursor/logo.png",
-      "summary": "一條命令安裝 Cursor 生命週期 Hook、MCP 工具、Rules 與 Skills，實現自動記憶召回和會話捕獲",
-      "detailPath": "https://docs.openviking.net/agents/zh/cursor.md"
-    },
-    {
-      "id": "openclaw",
-      "name": "OpenClaw",
-      "tags": ["Plugin"],
-      "logo": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_sth/ljhwZthlaukjlkulzlp/agent_logo/OpenClaw.png",
-      "summary": "Plugin 接入，作為 OpenClaw 的 context engine，支援多 Agent 跨會話記憶與自迭代，通過 npm 安裝助手工具一鍵完成配置",
-      "detailPath": "https://docs.openviking.net/agents/zh/openclaw.md"
-    },
-    {
-      "id": "hermes",
-      "name": "Hermes Agent",
-      "tags": ["Provider"],
-      "logo": "https://lf3-static.bytednsdoc.com/obj/eden-cn/lm_sth/ljhwZthlaukjlkulzlp/agent_logo/Hermes-Agent.png",
-      "summary": "為 Hermes 提供長期記憶，自動捕獲和召回。連線 OpenViking Service 或自有服務，也可通過外部外掛使用 Quick Local。",
-      "detailPath": "https://docs.openviking.net/agents/zh/hermes.md"
-    },
-    {
       "id": "opencode",
       "name": "OpenCode",
       "tags": ["Plugin"],
       "logo": "https://docs.openviking.net/agents/image/opencode/logo.png",
       "summary": "提供一個統一 OpenCode 外掛，支援倉庫上下文、記憶工具、session 同步與自動 recall",
       "detailPath": "https://docs.openviking.net/agents/zh/opencode.md"
-    },
-    {
-      "id": "deepseek-harness",
-      "name": "DeepSeek Harness",
-      "tags": ["Plugin"],
-      "logo": "https://docs.openviking.net/agents/image/deepseek-harness/logo.png",
-      "summary": "為 DeepSeek Harness 提供跨專案、跨會話的長期記憶；安裝後可自動召回相關記憶、捕獲新內容，並直接使用 OpenViking 工具與 openviking-memory 技能，無需額外配置。",
-      "detailPath": "https://docs.openviking.net/agents/zh/deepseek-harness.md"
     },
     {
       "id": "deerflow",
@@ -147,22 +107,6 @@
       "logo": "https://docs.openviking.net/agents/image/pi/logo.png",
       "summary": "為 pi 提供跨會話長期記憶，自動召回、逐輪捕獲並接管上下文；服務端的 MCP 工具註冊為 pi 原生工具",
       "detailPath": "https://docs.openviking.net/agents/zh/pi.md"
-    },
-    {
-      "id": "zcode",
-      "name": "ZCode",
-      "tags": ["Hook", "MCP"],
-      "logo": "https://docs.openviking.net/agents/image/zcode/logo.png",
-      "summary": "通過生命週期 Hook 和 MCP 工具，為 ZCode 提供畫像注入、按問題召回和逐輪捕獲",
-      "detailPath": "https://docs.openviking.net/agents/zh/zcode.md"
-    },
-    {
-      "id": "kimi-code",
-      "name": "Kimi Code",
-      "tags": ["Plugin"],
-      "logo": "https://docs.openviking.net/agents/image/kimi-code/logo.png",
-      "summary": "Kimi Code 原生外掛，自動召回記憶、捕獲對話，並提供 OpenViking MCP 工具",
-      "detailPath": "https://docs.openviking.net/agents/zh/kimi-code.md"
     }
   ]
 }

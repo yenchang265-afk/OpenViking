@@ -10,12 +10,7 @@ const { page } = useData()
 const brands: Record<string, { file: string; invert?: boolean; dark?: string }> = {
   '02-claude-code': { file: 'claude-code.svg' },
   '04-codex': { file: 'codex.svg', invert: true },
-  '12-cursor': { file: 'cursor.svg', invert: true },
-  '13-trae': { file: 'trae.svg' },
   '10-opencode': { file: 'opencode.svg', invert: true },
-  '17-dsh': { file: 'logos/dsh.svg', dark: 'logos/dsh-dark.svg' },
-  '03-openclaw': { file: 'openclaw.jpg' },
-  '05-hermes': { file: 'hermes-agent.png' },
   '11-pi': { file: 'pi.svg', invert: true },
   '07-langchain-langgraph': { file: 'langchain.svg' }
 }

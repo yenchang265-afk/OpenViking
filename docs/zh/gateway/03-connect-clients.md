@@ -260,7 +260,6 @@ pi 可以使用 Chat Completions、Anthropic Messages 或 Responses，Base URL �
 - Desktop 看不到在終端裡 export 的變數。macOS 上把 `OPENVIKING_GATEWAY_KEY` 寫進 shell 啟動檔案（`~/.zprofile` 或 `~/.zshrc`）；Windows 上用 `setx` 設定。然後用 ⌘Q 或托盤選單退出 Desktop，再重新開啟。Desktop 的恢復對話方塊會把 `cordis.patch.yml` 挪成 `.bak-<時間戳>` 檔案，執行過恢復後需要重新新增服務商。
 - DSH 的一個服務商只使用一種協議。要通過多種協議使用閘道器，就為每種協議各宣告一個服務商。
 - 除非 DSH 傳送了某個會話請求頭，否則閘道器根據歷史匹配它的對話（見[閘道器如何識別對話](#how-conversations-are-recognized)）。
-- 同一個 profile 裡裝了 [OpenViking 的 DSH 外掛](../agent-integrations/17-dsh.md)時，閘道器會讓出這些對話，兩者選一個即可。
 
 配好後，[檢查接入是否生效](#check-the-connection)。
 

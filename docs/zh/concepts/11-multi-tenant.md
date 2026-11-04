@@ -16,7 +16,7 @@ OpenViking 的多租戶不是“為每個團隊部署一套獨立服務”，而
 - 在同一個 `account` 內共享 `resources`，並用 ACL 對目錄或檔案細化授權
 - 用 `user` 隔離使用者級記憶和會話
 - 用 ROOT / ADMIN / USER 角色分層管理許可權
-- 支持 OpenClaw 插件、Vikingbot、CLI、HTTP SDK 等不同接入方式
+- 支持 Agent 外掛、Vikingbot、CLI、HTTP SDK 等不同接入方式
 
 ## 核心身份模型
 
@@ -200,43 +200,6 @@ user/admin key；如果需要上游斷言身份，請使用 trusted mode。
 
 ## 接入實踐
 
-### OpenClaw 外掛 2.0：每個例項使用 user key
-
-OpenClaw 外掛當前的多租戶實踐是“外掛側只持有一個使用者身份”：
-
-- 遠端模式配置 `baseUrl + apiKey`，可選 `peer_role` / `peer_prefix`
-- `apiKey` 推薦配置為某個 user 的 user key
-- 服務端從 user key 自動解析 `account_id` 和 `user_id`
-- 外掛把 OpenClaw agent 身份保留在 peer/session metadata 中，而不是租戶 header 中
-
-典型配置：
-
-```bash
-openclaw config set plugins.entries.openviking.config.mode remote
-openclaw config set plugins.entries.openviking.config.baseUrl "http://your-server:1933"
-openclaw config set plugins.entries.openviking.config.apiKey "<user-api-key>"
-openclaw config set plugins.entries.openviking.config.peer_role assistant
-openclaw config set plugins.entries.openviking.config.peer_prefix "<peer-prefix>"
-```
-
-這種模式的特點：
-
-- 接入簡單，外掛不需要管理 account/user 生命週期
-- 最適合“一個 OpenClaw 例項對應一個 OpenViking 使用者”的場景
-- `peer_prefix` 用於區分 OpenClaw 執行時身份，參與 peer/session 後設資料
-- 同一 account 內的 `resources` 預設共享，也可以通過 ACL 限制到指定使用者；memory 按 user scope 隔離
-
-### OpenClaw 外掛為何通常不配 `account` / `user`
-
-因為在 `api_key` 模式下，user key 已經足夠表達身份：
-
-- `account`、`user` 由服務端從 key 反解
-- 外掛可以提供 `peer_prefix` 作為執行時身份標籤
-- 外掛內部寫入 user-scoped memory，並用 `peer_id` 表達每條訊息的說話人
-
-如果給外掛直接配置 root key，則普通租戶資料 API 沒有從 key 綁定出來的租戶使用者，
-這不適合作為日常讀寫方式。
-
 ### VikingBot：匹配 Server 的認證模式
 
 當前 VikingBot 通過 `bot.ov_server.api_key_type` 選擇連線方式，不會通過 root key 自動註冊並快取每個終端使用者的 user key：
@@ -265,7 +228,6 @@ openclaw config set plugins.entries.openviking.config.peer_prefix "<peer-prefix>
 
 | 場景 | 推薦方式 |
 |------|----------|
-| 一個 OpenClaw 例項對應一個固定身份 | OpenClaw 外掛 + user key |
 | 一個閘道器/機器人服務承載很多終端使用者 | 按使用者配置連線或由受信入口傳遞 trusted 身份 |
 | 受信閘道器統一注入身份 | `trusted` 模式 |
 | 單機本地體驗、無需真正租戶隔離 | 開發模式（無 `root_api_key`） |
@@ -301,11 +263,6 @@ peer 集合過濾選擇當前使用者內的 peer 內容子空間，例如
 - 預設全部請求以 ROOT 身份執行
 - 不適合暴露到公網或團隊共享環境
 
-### 4. OpenClaw 外掛和 Vikingbot 不是同一種租戶實踐
-
-- OpenClaw 外掛：更像“客戶端拿到一個 user 身份後直接訪問”
-- VikingBot：支援固定 User/Admin key，也可作為受信入口傳遞身份；選擇取決於 Server 認證模式
-
 ## 相關文件
 
 - [認證](../guides/04-authentication.md) - 認證模式、請求頭和 key 規則
@@ -316,5 +273,4 @@ peer 集合過濾選擇當前使用者內的 peer 內容子空間，例如
 - [ACL API](../api/12-acl.md) - HTTP、SDK 和 CLI 接口
 - [資料加密](./10-encryption.md) - 多租戶下的靜態資料加密
 - [多租戶示例](https://github.com/volcengine/OpenViking/blob/main/examples/multi_tenant/README.md) - 完整管理流程示例
-- [OpenClaw 插件](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/README_CN.md) - OpenClaw 的接入方式
 - [Vikingbot](https://github.com/volcengine/OpenViking/blob/main/bot/README_CN.md) - bot 的多使用者接入方式

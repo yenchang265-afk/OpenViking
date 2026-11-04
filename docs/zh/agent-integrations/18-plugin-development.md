@@ -8,7 +8,7 @@
 
 使用 VibeCoding 或其他 AI 輔助程式設計方式新增、修復、重構 Agent 外掛時，**必須讓 coding agent 在修改前完整閱讀並遵循本文**。將文件路徑和具體任務一起交給 Agent，要求它先核實宿主契約，再實施，並按驗收檢查單報告結果。生成了程式碼或測試通過，都不能替代對協議、恢復和安裝產物的驗證。
 
-優先參考 [Claude Code](./02-claude-code.md) 和 [Codex](./04-codex.md) 外掛，瞭解共享能力如何接入原生 hook 與 MCP；配置檔案式宿主可參考 `agent-hook-plugin`，常駐擴充可參考 OpenCode、DSH 和其他外掛。參考其職責劃分和已驗證行為，不要讓 Agent 整目錄複製，也不要要求所有宿主照搬同一套事件。
+優先參考 [Claude Code](./02-claude-code.md) 和 [Codex](./04-codex.md) 外掛，瞭解共享能力如何接入原生 hook 與 MCP；常駐擴充可參考 OpenCode、pi 和其他外掛。參考其職責劃分和已驗證行為，不要讓 Agent 整目錄複製，也不要要求所有宿主照搬同一套事件。
 
 下面的提示詞可以直接交給 coding agent；把最後一行替換為具體任務：
 
@@ -18,7 +18,7 @@ docs/en/agent-integrations/18-plugin-development.md
 (Chinese: docs/zh/agent-integrations/18-plugin-development.md).
 
 Inspect examples/memory-plugin-shared/lib/ and the Claude Code and Codex
-plugins. Also inspect agent-hook-plugin, OpenCode, DSH, or another existing
+plugins. Also inspect OpenCode, pi, or another existing
 integration when its host model matches the task. Verify the target host's
 events, payloads, output schema, time limits, and installation contract.
 
@@ -42,7 +42,7 @@ Task: <describe the plugin addition, fix, or maintenance change>
 1. **同一行為有一個權威實現**。共享模組擁有規則，介面卡提供宿主事實；不允許在介面卡中複製一套“略有不同”的規則。
 2. **統一必須發生在執行鏈上**。呼叫 `buildPluginConfig()`、`buildRecallBlockDetailed()` 或共享傳送器，才構成複用。複製檔案、匯出同名函式、約定大家保持一致，都不足以防止分叉。
 3. **能推導的清單不手寫**。配置鍵、診斷鍵、workspace 對映來自 schema；執行時檔案集合來自 import 閉包；安裝包必需檔案來自入口和 manifest。
-4. **保留真實差異**。Claude Code 的子代理事件、Codex 的退出補償、ZCode 的嚴格輸出格式，各有明確原因。統一它們的公共能力，不強迫它們擁有相同的生命週期。
+4. **保留真實差異**。Claude Code 的子代理事件、Codex 的退出補償，各有明確原因。統一它們的公共能力，不強迫它們擁有相同的生命週期。
 5. **交付方式決定生成時機**。使用者直接載入倉庫目錄時，目錄必須已經完整；使用者安裝構建產物時，在打包前生成依賴。不為減少 diff 破壞安裝，也不為方便開發提交不需要的生成物。
 6. **每次抽象都減少維護點**。新介面應讓後續修復少改一個地方。若只是多了一層轉發、更多布林引數或第二套配置表，應重新考慮。
 
@@ -71,9 +71,8 @@ Task: <describe the plugin addition, fix, or maintenance change>
 
 | 宿主條件 | 應採用的形態 | 參考 |
 | --- | --- | --- |
-| 通過配置檔案安裝 hook 和 MCP；公共排程足夠表達生命週期 | 在 `agent-hook-plugin/hosts/` 增加介面卡及宿主配置 | [agent-hook-plugin](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/README.md) |
 | 原生外掛要求獨立 manifest、目錄和生命週期入口 | 獨立外掛目錄，入口呼叫共享執行時 | [Claude Code](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/README.md)、[Codex](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/README.md) |
-| 以宿主 SDK 回呼執行，需要常駐狀態或 dispose/idle 回呼 | 使用宿主擴充包，複用共享能力，明確自己的會話排程 | [OpenCode](https://github.com/volcengine/OpenViking/blob/main/examples/opencode-plugin/README.md)、[DSH](https://github.com/volcengine/OpenViking/blob/main/examples/dsh-memory-plugin/README.md) |
+| 以宿主 SDK 回呼執行，需要常駐狀態或 dispose/idle 回呼 | 使用宿主擴充包，複用共享能力，明確自己的會話排程 | [OpenCode](https://github.com/volcengine/OpenViking/blob/main/examples/opencode-plugin/README.md) |
 | 宿主能註冊原生工具，但自身沒有 MCP 支援 | 使用官方 MCP 客戶端，把服務端的 `tools/list` 註冊成加 `openviking_` 字首的宿主原生工具；不得自行維護工具目錄 | [pi](https://github.com/volcengine/OpenViking/blob/main/examples/pi-coding-agent-extension/README.md) |
 | 只有 MCP，沒有自動注入或完整會話記錄 | 交付 MCP-only 整合，明確能力範圍 | [Agent Plugins](https://github.com/volcengine/OpenViking/blob/main/agent-plugins/README.md) |
 
@@ -121,10 +120,6 @@ sync / install / pack 負責把這張依賴圖完整交付到機器上
 
 “薄”指它只擁有宿主差異，不設行數上限。例如 [cc-transcript.mjs](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/scripts/cc-transcript.mjs) 負責 Claude 訊息塊和巢狀 `tool_result` 的轉換；[Codex capture-utils.mjs](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/scripts/capture-utils.mjs) 還要展開巢狀工具活動並消除同一呼叫的重複表示，因此可以更長。兩者都應把通用內容處理交給共享程式碼。
 
-新增薄宿主時，優先使用現有 [`HOSTS`](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/hosts/index.mjs) 和 dispatcher 支援的 `stages`、`envelope`、`prompt`、`normalizeInput`、`capture`、`guard`。需要新增介面時，先說明哪一個宿主事實無法表達，再決定是否擴充；不要預先設計覆蓋所有未來 Agent 的介面卡 DSL。
-
-現有 `hosts/cursor.mjs`、`hosts/trae.mjs` 和 `hosts/zcode.mjs` 表明，事件對映適合資料，訊息轉換適合純函式，非同步捕獲適合顯式回呼。不要把這三種東西壓進一個包含網路訪問的“配置物件生成器”。
-
 ## 4. 配置、憑據和身份
 
 ### 4.1 一次宣告，統一解析
@@ -142,7 +137,7 @@ sync / install / pack 負責把這張依賴圖完整交付到機器上
 7. 舊 `ov.conf` 中對應宿主的配置段。
 8. schema 預設值。
 
-宿主 SDK 直接提供引數時，通過共享 builder 的顯式參數列達，記錄優先順序。現有 DSH 的宿主配置參與相容層，`hostInput` 還能固定連線或 peer；這些有具體含義的入口，不能被解釋為介面卡可以任意覆蓋最終配置。
+宿主 SDK 直接提供引數時，通過共享 builder 的顯式參數列達，記錄優先順序。這些有具體含義的入口，不能被解釋為介面卡可以任意覆蓋最終配置。
 
 配置示例只放必要值。例如下面的 `ovcli.conf` 片段為共享 resolver 提供召回預設值，並對 Codex 關閉自動捕獲；環境變數和 workspace 等更高優先順序配置仍可覆蓋：
 
@@ -195,11 +190,11 @@ peer 解析使用共享實現。現狀預設從 Git 身份推導，普通非 Git
 | 子代理 | 保留身份和父子關係，避免重複 | `SubagentStart`、`SubagentStop` | 當前 hook manifest 沒有這兩個事件 |
 | 本地工具檢查 | 檔案工具的路徑是虛擬 URI 時拒絕；shell 命令帶虛擬 URI 時附加提示 | `PreToolUse` URI guard，匹配 Read、Glob、Grep、Edit、Write、Bash | 不註冊：Codex 會把 `PreToolUse` 的上下文作為 developer 訊息插在工具呼叫和輸出之間，部分 Responses 服務端會拒絕；檔案編輯走 `apply_patch`，沒有路徑引數 |
 
-以兩份 [Claude Code hooks.json](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/hooks/hooks.json) 和 [Codex hooks.json](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/hooks/hooks.json) 為事件註冊依據。相同事件名稱不保證 payload 或輸出格式相同。沒有結束事件的宿主必須選擇並說明替代提交點，例如 ZCode 在 Stop 提交；不能假裝存在一個永遠不會執行的 SessionEnd。
+以兩份 [Claude Code hooks.json](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/hooks/hooks.json) 和 [Codex hooks.json](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/hooks/hooks.json) 為事件註冊依據。相同事件名稱不保證 payload 或輸出格式相同。沒有結束事件的宿主必須選擇並說明替代提交點；不能假裝存在一個永遠不會執行的 SessionEnd。
 
 ### 5.2 Hook 入口的固定職責
 
-入口使用 `runHookStage()` 處理 stdin、按會話 cwd 過載配置、啟用和 bypass 判斷，並保證只輸出一次。宿主特有 session 欄位通過 resolver 傳入，不能為相容一個欄位名而關閉 bypass。輸出必須嚴格符合當前事件的宿主協議：`decision: "approve"` 不是通用格式，Cursor 的 `additional_context` 與其他宿主的 `hookSpecificOutput.additionalContext` 也不能混用。
+入口使用 `runHookStage()` 處理 stdin、按會話 cwd 過載配置、啟用和 bypass 判斷，並保證只輸出一次。宿主特有 session 欄位通過 resolver 傳入，不能為相容一個欄位名而關閉 bypass。輸出必須嚴格符合當前事件的宿主協議：`decision: "approve"` 不是通用格式。
 
 stdout 只承載宿主約定的結果，日誌寫 stderr 或共享日誌檔案。無結果、停用、配置不可用、網路失敗時，都應產生該事件合法的空結果，避免讓記憶服務故障阻斷使用者正常互動。URI guard 的明確拒絕則應保留拒絕語義，不能被統一異常處理改成允許。
 
@@ -303,12 +298,6 @@ examples/memory-plugin-shared/
   testing/support.mjs          測試輔助，不隨執行時交付
   sync.mjs                     分發目標與閉包生成
 
-examples/agent-hook-plugin/
-  hosts/<host>.mjs             宿主介面卡
-  hosts/<host>/                宿主宣告、hook/MCP 配置和必要資源
-  scripts/hook.mjs             共用排程入口
-  servers/mcp-proxy.mjs        共用 MCP 入口
-
 examples/<host>-memory-plugin/ 獨立原生外掛需要時才建立
   <宿主 manifest 目錄>/
   hooks/
@@ -324,11 +313,10 @@ examples/<host>-memory-plugin/ 獨立原生外掛需要時才建立
 
 | 交付方式 | 當前例子 | 生成要求 |
 | --- | --- | --- |
-| 宿主直接載入 Git 中的外掛目錄 | Claude Code、Codex、`agent-plugins`、OpenClaw（`ov-install` 的 GitHub 源） | 共享副本提交到 Git，checkout 後即可載入 |
-| npm 包或安裝歸檔 | OpenCode、DSH、Pi | 在 prepack 或 staging 時生成；執行時副本不提交 Git |
-| 安裝器組裝相鄰執行時目錄 | Cursor、TRAE、TRAE CN、ZCode | 使用 `ASSEMBLED_ROOTS` 推導 `lib/MANIFEST`，按 manifest 複製共享執行時 |
+| 宿主直接載入 Git 中的外掛目錄 | Claude Code、Codex、`agent-plugins` | 共享副本提交到 Git，checkout 後即可載入 |
+| npm 包或安裝歸檔 | OpenCode、magpie、Pi | 在 prepack 或 staging 時生成；執行時副本不提交 Git |
 
-[`sync.mjs`](https://github.com/volcengine/OpenViking/blob/main/examples/memory-plugin-shared/sync.mjs) 是上述目標的登記處。新增獨立外掛登記 `TARGETS` 的 source root、目標目錄和 `committed`；新增組裝根才擴充 `ASSEMBLED_ROOTS`，普通薄宿主通常已被現有根覆蓋。是否交付 Skill 另外登記 `SKILL_TARGETS`。不要維護一份“需要複製的 20 個模組”清單。
+[`sync.mjs`](https://github.com/volcengine/OpenViking/blob/main/examples/memory-plugin-shared/sync.mjs) 是上述目標的登記處。新增獨立外掛登記 `TARGETS` 的 source root、目標目錄和 `committed`；是否交付 Skill 另外登記 `SKILL_TARGETS`。不要維護一份“需要複製的 20 個模組”清單。
 
 修改共享原始碼後執行：
 
@@ -445,7 +433,7 @@ node --test --test-concurrency=1 \
 | 共享行為修復 | 修改權威模組、驗證受影響宿主、生成副本、檢查所有相關分發產物和版本 |
 | 宿主 payload 或事件升級 | 更新介面卡、真實格式 fixture、最低版本/降級說明；不修改其他宿主的預設行為 |
 | 新增配置項 | schema、真實消費者、configured 語義、診斷來源、使用者文件；不得只加解析 |
-| 增加公共模組依賴 | 同目錄型別宣告、sync 閉包、`lib/MANIFEST`、歸檔和離線安裝驗證 |
+| 增加公共模組依賴 | 同目錄型別宣告、sync 閉包、歸檔和離線安裝驗證 |
 | 目錄或包名變更 | import、manifest、installer、marketplace、CI path filter、Skill、連結與解除安裝識別 |
 | 刪除相容邏輯 | 明確支援版本與遷移說明；不能順手刪除仍承諾支援的配置別名 |
 | 純文件改動 | 校驗與現狀一致、相對連結有效；不為說明文字改動無關行為 |
@@ -458,7 +446,7 @@ node --test --test-concurrency=1 \
 
 宿主 manifest、`package.json`、存在的 lockfile 根包版本、安裝 manifest 和安裝器判定版本必須一致。修改版本時使用相應包管理流程，不為一個版本數字重寫無關依賴。`User-Agent` 和 doctor 應報告實際產物版本，避免使用者顯示已升級而程式碼仍舊。
 
-npm/歸檔目標的構建必須從乾淨原始碼生成共享檔案，再打包。當前 [`plugin-npm-release.yml`](https://github.com/volcengine/OpenViking/blob/main/.github/workflows/plugin-npm-release.yml) 的矩陣覆蓋 DSH 和 OpenCode；其他包要核對各自發布流程，不能因使用相同 prepack 就推斷已接入這個矩陣。釋出觸發條件必須關注共享源變化，不能依賴已經不提交的 shared 副本發生 diff 才觸發。
+npm/歸檔目標的構建必須從乾淨原始碼生成共享檔案，再打包。當前 [`plugin-npm-release.yml`](https://github.com/volcengine/OpenViking/blob/main/.github/workflows/plugin-npm-release.yml) 的矩陣覆蓋 magpie 和 OpenCode；其他包要核對各自發布流程，不能因使用相同 prepack 就推斷已接入這個矩陣。釋出觸發條件必須關注共享源變化，不能依賴已經不提交的 shared 副本發生 diff 才觸發。
 
 合併前按實際 base 檢查版本，例如在本地 `origin/main` 已更新且確為目標分支時：
 
@@ -499,5 +487,4 @@ git status --short --untracked-files=normal -- examples agent-plugins
 - 配置、peer、生成策略：[Memory Plugin Shared README](https://github.com/volcengine/OpenViking/blob/main/examples/memory-plugin-shared/README.md)。
 - Claude Code 的事件接線：[hooks.json](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/hooks/hooks.json)；召回適配：[auto-recall.mjs](https://github.com/volcengine/OpenViking/blob/main/examples/claude-code-memory-plugin/scripts/auto-recall.mjs)。
 - Codex 的提交、異常退出與恢復：[DESIGN.md](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/DESIGN.md)；實現：[session-end.mjs](https://github.com/volcengine/OpenViking/blob/main/examples/codex-memory-plugin/scripts/session-end.mjs)。
-- 新增配置檔案式宿主：[agent-hook-plugin README](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/README.md)；嚴格協議例項：[ZCode DESIGN](https://github.com/volcengine/OpenViking/blob/main/examples/agent-hook-plugin/DESIGN.md)。
 - CI 和交付檢查：[pr.yml](https://github.com/volcengine/OpenViking/blob/main/.github/workflows/pr.yml)、[sync.mjs](https://github.com/volcengine/OpenViking/blob/main/examples/memory-plugin-shared/sync.mjs)、[marketplace archive checker](https://github.com/volcengine/OpenViking/blob/main/.github/scripts/check-marketplace-archive.mjs)。

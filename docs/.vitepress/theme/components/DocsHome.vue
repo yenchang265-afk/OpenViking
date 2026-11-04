@@ -58,9 +58,8 @@ const paths = computed(() => [
 const agents = [
   ['Claude Code', '02-claude-code'],
   ['Codex', '04-codex'],
-  ['Cursor', '12-cursor'],
-  ['Hermes', '05-hermes'],
-  ['OpenCode', '10-opencode']
+  ['OpenCode', '10-opencode'],
+  ['pi', '11-pi']
 ]
 </script>
 

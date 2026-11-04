@@ -75,7 +75,7 @@ The bundled `openviking-skills` skill covers the skills stored in OpenViking its
 
 **If your harness has its own hook system, prefer the dedicated plugin.** Hook-driven recall and capture happen without the model spending tool calls or deciding to remember. Use this Agent Plugins package for harnesses that have no hooks, or when you want one package that works across many clients.
 
-One installer covers Claude Code, Codex, Cursor, TRAE / TRAE CN, ZCode, OpenCode, and pi. It asks which harnesses to install and for your OpenViking credentials, and every step is idempotent:
+One installer covers Claude Code, Codex, OpenCode, and pi. It asks which harnesses to install and for your OpenViking credentials, and every step is idempotent:
 
 ```bash
 curl -fsSL https://openviking.ai/install | bash
@@ -87,11 +87,7 @@ curl -fsSL https://openviking.ai/install | bash
 | Claude Code | [Claude Code Memory Plugin](./02-claude-code.md) |
 | Codex | [Codex Memory Plugin](./04-codex.md) |
 | OpenCode | [OpenCode Plugin](./10-opencode.md) |
-| Cursor | [Cursor Memory Integration](./12-cursor.md) |
-| TRAE / TRAE CN | [TRAE Memory Integration](./13-trae.md) |
 | pi | [pi Coding Agent Extension](./11-pi.md) — uses the official MCP client and registers the server's tools natively |
-| OpenClaw | [OpenClaw Plugin](./03-openclaw.md) — separate install flow |
-| ZCode | [Community Integrations](./08-community-plugins.md) |
 
 Per the spec, client-specific integrations can later be embedded in this same package under reverse-domain namespaced directories (e.g. `com.example.client/`) or the manifest's `extensions` field, without breaking other clients.
 

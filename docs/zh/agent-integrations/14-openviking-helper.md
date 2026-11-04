@@ -62,6 +62,4 @@ Helper 會按 Agent 和專案展示本地 memory、rule 檔案及 `SKILL.md` 技
 - [Agent 整合概覽](./01-overview.md)
 - [Claude Code 記憶外掛](./02-claude-code.md)
 - [Codex 記憶外掛](./04-codex.md)
-- [Cursor 記憶整合](./12-cursor.md)
-- [TRAE 記憶整合](./13-trae.md)
 - [OpenCode 插件](./10-opencode.md)

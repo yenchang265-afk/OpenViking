@@ -357,13 +357,8 @@ ov add-resource ./docs/design.md --parent-auto-create viking://user/<user_id>/re
 | Claude Code | `claude` | 退出後重新執行 `claude`；不要用 `/reload-plugins` | 開新會話。不要用 `claude --continue` / `--resume` 回到安裝對話：外掛會把整段安裝對話連同裡面的 key 補存到 OpenViking | 用到 OpenViking 的回答下方有來源卡片（Claude Code 2.1.286 及以上）；`/openviking-memory:ov` 檢視狀態 | 支援 | `~/.claude/CLAUDE.md` |
 | Codex | `codex` | **退出前先信任 hooks**：桌面版點輸入框下方的 hooks 圖示，CLI 在會話裡輸入 `/hooks`，信任 OpenViking 的全部 hooks；信任記錄存在 `~/.codex/config.toml`，重啟後不會再提示。然後退出：CLI 執行 `codex resume --last` 回到這段對話；桌面版退出後重新開啟，回到這段對話。重啟後如果仍出現「Hooks need review」，選 **Trust all and continue**。要告訴使用者：信任之後，這段安裝對話會儲存到他自己的 OpenViking 帳號裡，包括安裝命令裡的 API key 和匯入時列出的會話摘要，回到原會話或開新會話都一樣；介意的話，之後在控制台換一個新 key | 回到原會話（就是左邊那條命令），發「已重啟」 | 回答後有一行 OV-Usage，例如 `OpenViking · 3 sources · 1 past event · 2 team docs · 1 read` | 支援 | `~/.codex/AGENTS.md`；同目錄有 `AGENTS.override.md` 時 Codex 讀的是它 |
 | TraeCode CLI 2.0 | `trae-cli` | **退出前先信任 hooks**：在會話裡輸入 `/hooks`，信任 OpenViking 的全部 hooks。然後退出，重新執行 `trae-cli`（或 `traecli`）；仍出現「Hooks need review」時選 **Trust all and continue** | 開新會話 | 回答後有一行 OV-Usage，與 Codex 相同 | 轉成 JSONL；會話在 `~/.trae/cli/sessions/`，和 Codex 相同的 rollout 格式 | 未確認 |
-| Cursor | `cursor` | 完全退出 Cursor 後重新開啟 | 開新會話（**+**），不要在恢復出來的安裝對話裡繼續 | 設定 → Hooks 裡的 OpenViking hook；設定 → Tools & MCPs 裡 `openviking` 顯示已連線 | 轉成 JSONL；會話位置未確認 | Cursor 設定裡的 User Rules，請使用者貼上 |
-| TRAE / TRAE CN | `trae` / `trae-cn` | 完全退出應用後重新開啟；無需批准 hook | 開新會話 | MCP 設定裡 `openviking` 顯示已連線 | 轉成 JSONL；會話位置未確認 | 應用設定裡的個人規則，請使用者貼上 |
-| ZCode | `zcode` | 重啟 ZCode | 開新會話 | 無文件說明 | 轉成 JSONL；會話位置未確認 | 應用設定裡的個人規則，請使用者貼上 |
-| Kimi Code | `kimicode` | 退出 Kimi Code；不要用 `/reload` | 開新會話，不要恢復當前會話 | 無文件說明 | 轉成 JSONL；會話在 `~/.kimi-code/sessions/`（設定了 `$KIMI_CODE_HOME` 時在該目錄下） | `~/.kimi-code/AGENTS.md`（同上） |
 | OpenCode | `opencode` | 重啟 OpenCode | 開新會話 | 無文件說明 | 轉成 JSONL；會話在 SQLite 庫 `~/.local/share/opencode/opencode.db` | `~/.config/opencode/AGENTS.md` |
 | pi | `pi` | 重啟 pi | 開新會話 | 底欄顯示 `OV ✓`；`/viking` 檢視狀態 | 轉成 JSONL；會話在 `~/.pi/agent/sessions/*/*.jsonl` | `~/.pi/agent/AGENTS.md` |
-| DeepSeek Harness | `dsh` | 用安裝器輸出中 `DeepSeek Harness profile：` 那一行的 profile 新開會話：`dsh --profile <profile>` | 開新會話 | 會話頂部顯示「上下文注入 · openviking-memory」 | 轉成 JSONL；會話在 `~/.dsh/sessions/` | 未確認 |
 
 - **Codex 的審批。** Codex 執行需要聯網的命令前會請求批准，包括這裡讀回用的 `ov find`、`ov read` 和 `ov session`。執行帶 key 的安裝命令時選 **Yes, proceed**，不要選「以後以這個字首開頭的命令不再詢問」，那條規則會把 key 存下來。OpenViking 的 `search` 工具第一次執行時，Codex 會請求允許，選 **Always allow** 即可。Hooks 信任和命令批准是兩件事。
 - **選項工具。**

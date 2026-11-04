@@ -1361,7 +1361,7 @@ ov add-memory '[{"role":"user","content":"Hello"},{"role":"assistant","content":
 | enable_working_memory | bool 或 null | 否 | null | 僅覆蓋本次 commit 的 WM 生成開關；省略/null 沿用有效策略，true/false 不改變 self、peer、memory_types 或已儲存策略。拒絕字串和數字；響應的 `effective_enable_working_memory` 返回實際生效值。 |
 | reset_context | bool | 否 | false | HTTP API：歸檔全部 live messages 後追加只含 `.done`（帶 `context_reset`）的邊界 archive，目錄內沒有訊息檔案。保留 session ID 和原始歷史，清空注入上下文，並阻止後續摘要繼承 reset 前的 overview。要求 `keep_recent_count=0`，且不設定 `retention_mode`。 |
 
-`reset_context` 供 OpenClaw 外掛 reset hook 和 `Session.commit_async()` 使用；沒有 live messages 時也會建立邊界；若最新 archive 已是 reset 邊界則不重複建立。舊 archive 的記憶提取可以繼續完成，長期記憶保留。SDK 和 CLI 沒有專用的 `reset_context` 引數，需要時使用 HTTP API。
+`reset_context` 供 `Session.commit_async()` 使用；沒有 live messages 時也會建立邊界；若最新 archive 已是 reset 邊界則不重複建立。舊 archive 的記憶提取可以繼續完成，長期記憶保留。SDK 和 CLI 沒有專用的 `reset_context` 引數，需要時使用 HTTP API。
 
 
 有效策略按 Session `.meta.json`、最新 `settings/user_config.json`、核心預設值的

@@ -106,14 +106,9 @@ export const sections: DocSection[] = [
       g('Coding tools', '程式設計工具', [
         p('agent-integrations/02-claude-code'),
         p('agent-integrations/04-codex'),
-        p('agent-integrations/12-cursor'),
-        p('agent-integrations/13-trae'),
-        p('agent-integrations/10-opencode'),
-        p('agent-integrations/17-dsh')
+        p('agent-integrations/10-opencode')
       ]),
       g('Agents and frameworks', 'Agent 與框架', [
-        p('agent-integrations/03-openclaw'),
-        p('agent-integrations/05-hermes'),
         p('agent-integrations/11-pi'),
         p('agent-integrations/07-langchain-langgraph'),
         p('agent-integrations/08-community-plugins')

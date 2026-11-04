@@ -53,7 +53,7 @@ test('GitHub、非 OV 路径、第三方、下载资源及 API 不透传', () =>
     'https://www.volcengine.com.evil.example/product/openviking-service',
     'https://console.volcengine.com/vikingdb/openviking-other',
     'https://api.vikingdb.cn-beijing.volces.com/openviking',
-    '/zh/llms.txt', '/agents/zh/hermes.md', '/brand.svg',
+    '/zh/llms.txt', '/agents/zh/pi.md', '/brand.svg',
     'mailto:contact@example.com', 'javascript:void(0)'
   ]) assert.equal(attributionUrl(target, tagged), undefined, target)
   assert.deepEqual(readUtm(attributionUrl('https://www.openviking.ai/enterprise', tagged)!), incoming)

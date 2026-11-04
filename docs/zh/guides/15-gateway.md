@@ -74,7 +74,7 @@ OpenViking 閘道器是一個模型 API 代理：客戶端只要能修改 Base U
 
 ## 閘道器還是外掛 {#gateway-or-plugin}
 
-OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Cursor、TRAE、OpenCode、pi、DSH、OpenClaw 和 Hermes（見 [Agent 整合概覽](../agent-integrations/01-overview.md)）。兩者讀寫的是同一份 OpenViking 記憶，區別在於執行位置：閘道器位於模型呼叫的鏈路上，改的是模型收到的請求；外掛執行在某個 Agent 內部，靠這個 Agent 的事件工作。沒有哪一種總是更好，下面的差別大多由這一點決定，有些還因外掛而異。
+OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、OpenCode 和 pi（見 [Agent 整合概覽](../agent-integrations/01-overview.md)）。兩者讀寫的是同一份 OpenViking 記憶，區別在於執行位置：閘道器位於模型呼叫的鏈路上，改的是模型收到的請求；外掛執行在某個 Agent 內部，靠這個 Agent 的事件工作。沒有哪一種總是更好，下面的差別大多由這一點決定，有些還因外掛而異。
 
 ### 逐項對比 {#gateway-and-plugin-compared}
 
@@ -84,15 +84,15 @@ OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Curs
 | 適用客戶端 | 能設定 Base URL 和 API Key、使用 Anthropic Messages、Chat Completions 或 Responses 的客戶端：聊天應用、SDK 指令碼、低程式碼平臺和程式設計 Agent。Cursor 和 TRAE 不行，它們的模型呼叫從廠商伺服器發出。 | 只有帶 OpenViking 外掛的 Agent。其他 MCP 客戶端可以接入 OpenViking 工具，但沒有自動召回和儲存。 |
 | 模型登入方式 | 需要服務商的 API Key，由閘道器保管，或[由客戶端各自傳送](../gateway/03-connect-clients.md#bring-your-own-provider-key)。客戶端不能用訂閱帳號登入，可以改用[訂閱反代上游](../gateway/07-upstreams.md#custom-upstreams)。Codex 可以通過 [CLIProxyAPI](../gateway/03-connect-clients.md#codex-chatgpt-subscription) 使用 ChatGPT 訂閱；其他訂閱服務請自行確認其使用條款。 | 不經手模型呼叫，Agent 原來怎麼登入就怎麼登入，訂閱也可以。 |
 | 召回 | 每條新的使用者訊息召回一次，結果附加在這條訊息末尾；檢索預設最多等 2 秒。預設檢索記憶、資源和技能。 | 在 Agent 的提問事件裡進行。多數外掛會帶上會話 ID，讓服務端結合對話擴充查詢；自動召回不含資源。 |
-| 儲存 | 晚一輪儲存已完成的輪次，連同客戶端自己的工具呼叫和結果。子 Agent 請求和雜項請求不儲存。 | 跟隨 Agent 的事件，通常在每輪結束時。子 Agent 各不相同：Claude Code、OpenCode 和 DSH 存成單獨的會話，Codex 併入主會話，Hermes 不儲存。 |
+| 儲存 | 晚一輪儲存已完成的輪次，連同客戶端自己的工具呼叫和結果。子 Agent 請求和雜項請求不儲存。 | 跟隨 Agent 的事件，通常在每輪結束時。子 Agent 各不相同：Claude Code 和 OpenCode 存成單獨的會話，Codex 併入主會話。 |
 | OpenViking 工具 | 由閘道器在回覆過程中執行，不支援工具或 MCP 的客戶端也能用。預設只開放只讀工具。呼叫[不經過客戶端的許可權確認](../gateway/04-openviking-tools.md#risks-and-controls)，每次呼叫顯示一行提示。 | 由 Agent 當作自己的工具執行，呼叫和結果出現在對話記錄裡，遵循 Agent 的工具許可權設定。 |
-| 提示詞快取 | 在後續請求裡把每個記憶塊逐位元組原樣放回，快取字首保持不變。**概覽**頁顯示快取命中率。 | 因外掛而異。基於 hook 的外掛把記憶塊交給 Agent，由 Agent 儲存在自己的歷史裡；pi 和 OpenCode v2 也會讓之前的召回保持不變；OpenClaw 每輪在系統提示詞裡重建召回內容。 |
-| 長對話 | 接近模型上下文視窗時由閘道器壓縮，任何客戶端都適用，包括從不壓縮的應用。[實驗性的 Agent 自管上下文視窗](../gateway/05-long-conversations.md#experimental-agent-managed-context-windows)讓模型自己決定何時開啟新視窗。 | 由 Agent 自己壓縮，多數外掛會先提交已捕獲的內容。pi 和 OpenClaw 可以用 OpenViking 的摘要替換 Agent 的摘要。 |
+| 提示詞快取 | 在後續請求裡把每個記憶塊逐位元組原樣放回，快取字首保持不變。**概覽**頁顯示快取命中率。 | 因外掛而異。基於 hook 的外掛把記憶塊交給 Agent，由 Agent 儲存在自己的歷史裡；pi 和 OpenCode v2 也會讓之前的召回保持不變。 |
+| 長對話 | 接近模型上下文視窗時由閘道器壓縮，任何客戶端都適用，包括從不壓縮的應用。[實驗性的 Agent 自管上下文視窗](../gateway/05-long-conversations.md#experimental-agent-managed-context-windows)讓模型自己決定何時開啟新視窗。 | 由 Agent 自己壓縮，多數外掛會先提交已捕獲的內容。pi 可以用 OpenViking 的摘要替換 Agent 的摘要。 |
 | 按專案區分記憶 | 看不到工作目錄。要按專案隔離，就給每個專案一個繫結不同 OpenViking 使用者的閘道器金鑰。 | 基於共享外掛程式碼的外掛會自動給記憶標上當前程式碼倉庫。 |
 | 可見性 | 補充的記憶在客戶端裡看不到，除非上下文配置開啟了[召回摘要](../gateway/08-context-profiles.md#recall-summary)。Studio 的請求日誌記錄條數和儲存狀態，不記錄內容。 | Claude Code 的狀態列和 `/openviking-memory:ov` 命令顯示召回條數和補充內容的來源；pi 的狀態列顯示連線狀態。其他外掛沒有自己的狀態顯示。 |
 | 部署與運維 | 一個服務，嵌入 OpenViking Server 或獨立執行。使用者只改 Base URL 和金鑰；上游、上下文配置和金鑰都在 Studio 裡管理。 | 每臺機器分別安裝和升級，各自配置 OpenViking 憑證。 |
 | 團隊使用 | 管理員給每人簽發一個閘道器金鑰，可以單獨吊銷。閘道器保管服務商 API Key 時，使用者看不到它。 | 每人用自己的 OpenViking API 金鑰安裝外掛。行為設定可以寫進程式碼倉庫的 `.openviking/config.json`，按倉庫共享。 |
-| 出故障時 | OpenViking 不可用時，請求照常發出，只是不帶記憶，儲存會自動重試。閘道器本身停止服務時（嵌入形態即 OpenViking Server 停止時），經過它的模型呼叫全部失敗。服務商 API Key 和尚未儲存的對話文本集中存放在閘道器，每次模型呼叫也多經過一跳。 | OpenViking 不可用時，Agent 等到外掛的召回超時（多數為 15 秒，Hermes 為 4 秒）後不帶記憶繼續；多數外掛會把寫入失敗的內容排隊存到磁碟。模型呼叫從不依賴 OpenViking。 |
+| 出故障時 | OpenViking 不可用時，請求照常發出，只是不帶記憶，儲存會自動重試。閘道器本身停止服務時（嵌入形態即 OpenViking Server 停止時），經過它的模型呼叫全部失敗。服務商 API Key 和尚未儲存的對話文本集中存放在閘道器，每次模型呼叫也多經過一跳。 | OpenViking 不可用時，Agent 等到外掛的召回超時（多數為 15 秒）後不帶記憶繼續；多數外掛會把寫入失敗的內容排隊存到磁碟。模型呼叫從不依賴 OpenViking。 |
 
 各外掛的細節見 [Agent 整合能力](../agent-integrations/16-capability-reference.md)，閘道器的細節見 [OpenViking 閘道器的工作原理](../gateway/01-how-it-works.md)。
 
@@ -108,7 +108,6 @@ OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Curs
 以下情況選外掛：
 
 - 你用 Claude 訂閱帳號登入 Claude Code；
-- 你用 Cursor 或 TRAE，只有外掛能接入；
 - 你希望記憶不用配置就按程式碼倉庫標記，或者希望每次 OpenViking 工具呼叫都在 Agent 裡展示並經過確認；
 - 你希望儲存跟隨 Agent 的事件，例如子 Agent 的會話、Agent 壓縮前的儲存、退出時的提交；
 - 你不想在模型呼叫鏈路上多加一個服務。
@@ -123,7 +122,7 @@ OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Curs
 
 請求中出現 OpenViking 外掛的跡象時，閘道器會讓路：不再為這段[對話](#key-terms)補充記憶、儲存對話或提供 OpenViking 工具，只做轉發，避免同一份內容被補充兩次、儲存兩次。判斷依據有兩類：
 
-- 外掛插入的記憶塊：`<openviking-context>`（基於共享外掛程式碼的外掛，例如 Claude Code、Codex、OpenCode、pi 和 DSH）、`<relevant-memories>`（OpenClaw）、`<memory-context>`（Hermes）或 `<relevant-memory>`；
+- 外掛插入的記憶塊：`<openviking-context>`（基於共享外掛程式碼的外掛，例如 Claude Code、Codex、OpenCode 和 pi）、`<relevant-memories>`、`<memory-context>` 或 `<relevant-memory>`；
 - `X-OpenViking-Plugin` 請求頭。外掛和應用的作者可以傳送它，明確告訴閘道器不要補充記憶。
 
 這個判斷對整段對話有效，其他對話不受影響；想重新用上閘道器記憶，需要不帶外掛開始新對話。Studio 的請求日誌會把這些請求標為**檢測到 OpenViking 外掛**。實際效果是記憶由外掛負責，閘道器只做轉發；客戶端仍然需要閘道器金鑰，以及配有服務商 API Key 的上游。

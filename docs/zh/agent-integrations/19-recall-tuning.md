@@ -29,7 +29,7 @@ export OPENVIKING_RECALL_COMPRESS=off
 | `client` | 只用本地壓縮器，適用於 Claude Code 和 Codex |
 | `auto` | 有本地壓縮器時優先使用，否則請求服務端自動處理 |
 
-Claude Code 和 Codex 預設使用 `auto`，本地壓縮器分別是 `claude -p` 和 `codex exec`，見[Agent 整合能力：召回摘要](./16-capability-reference.md#_3-2-5-召回再摘要)。其他支援雲端壓縮的整合預設保持 `off`，需要顯式開啟。服務端壓縮適用於 Claude Code、Codex、OpenCode、DSH、pi、Cursor、TRAE、TRAE CN、ZCode、OpenClaw 和 Hermes 外部外掛，要求服務端支援 context-search rewrite。Hermes 內建 provider 不支援召回摘要。
+Claude Code 和 Codex 預設使用 `auto`，本地壓縮器分別是 `claude -p` 和 `codex exec`，見[Agent 整合能力：召回摘要](./16-capability-reference.md#_3-2-5-召回再摘要)。其他支援雲端壓縮的整合預設保持 `off`，需要顯式開啟。服務端壓縮適用於 Claude Code、Codex、OpenCode 和 pi，要求服務端支援 context-search rewrite。
 
 這些設定控制自動召回。模型主動呼叫 MCP `search` 時，使用該次呼叫傳入的引數。完整規則與舊服務端回退行為見[共享外掛說明](https://github.com/volcengine/OpenViking/blob/main/examples/memory-plugin-shared/README.md#cloud-recall-compression)。
 

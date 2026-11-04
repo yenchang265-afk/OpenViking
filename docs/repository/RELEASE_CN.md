@@ -12,10 +12,9 @@ OpenViking 的發版目標不是單一產物，而是圍繞不同使用入口釋
 - Docker 映象：面向容器化部署，釋出到 GHCR 和 Docker Hub。
 - TOS 釋出資產：面向原始碼包、安裝指令碼和穩定下載路徑。
 - Rust CLI / npm 包：面向通過 npm 安裝 `ov` CLI 的使用者。
-- OpenClaw / ClawHub 外掛：面向 OpenClaw 外掛分發渠道。
 - VikingBot：當前隨 `openviking[bot]` 和官方 Docker 映象分發；歷史獨立發版入口單獨說明，避免誤用。
 
-一次正式主版本發版應確保 Python 包、Docker 映象和 TOS 資產使用同一個主版本 tag；SDK、CLI、ClawHub 外掛則使用各自獨立的 tag 或 version 名稱空間。
+一次正式主版本發版應確保 Python 包、Docker 映象和 TOS 資產使用同一個主版本 tag；SDK、CLI 則使用各自獨立的 tag 或 version 名稱空間。
 
 ## 版本與 tag 約定
 
@@ -28,8 +27,6 @@ OpenViking 的發版目標不是單一產物，而是圍繞不同使用入口釋
 | `openviking-ms-agent-framework` | `openviking-ms-agent-framework@X.Y.Z` | 必須與 `integrations/frameworks/microsoft-agent-framework/pyproject.toml` 中的版本一致。 |
 | Rust CLI / npm CLI | `cli@X.Y.Z` | CLI 專用 tag，例如 `cli@0.2.0`。 |
 | Vika（`vika/`） | `openviking-vika@X.Y.Z` | 必須與 `vika/package.json` 中的版本一致，見 [Vika 發版流程](#vika-發版流程)。 |
-| ClawHub 外掛 latest | `YYYY.M.D` 或 `YYYY.M.D-N` | 由 workflow 自動生成或手動指定。 |
-| ClawHub 插件 dev | `YYYY.M.D-dev.N` | dev channel 使用。 |
 
 主包版本通過 `setuptools_scm` 從 Git tag 解析；正式主發版建議統一使用 `vX.Y.Z`。SDK 版本同樣通過 `setuptools_scm` 解析，但只匹配 `python-sdk@*` tag，以避免和主包 tag 混淆。
 
@@ -111,7 +108,7 @@ TOS 釋出桶仍會隨每次發版收到同樣的檔案，供仍指向它的安�
 
 回滾時執行 `gh workflow run release-tos.yml -f tag=<上一個正常的 tag> -f update_latest=true`。workflow 定義取自預設分支，但它呼叫的指令碼來自 tag 的 checkout，所以只能重新發布已經包含當前釋出指令碼的 tag；要退回更早的外掛程式碼，按熱修復流程釋出。
 
-兩種操作完成後，Claude Code（URL marketplace）在下次檢查更新時生效，版本號變低也算更新。Codex 在下次啟動時生效，TraeCode CLI 在執行 `trae-cli plugin marketplace upgrade` 時生效。Cursor、TRAE、TRAE CN、ZCode、Kimi Code、OpenCode、pi，以及使用本地目錄 marketplace 的 Claude Code，需要重新執行安裝器才會變化。dsh 從 npm 安裝，不受影響。
+兩種操作完成後，Claude Code（URL marketplace）在下次檢查更新時生效，版本號變低也算更新。Codex 在下次啟動時生效，TraeCode CLI 在執行 `trae-cli plugin marketplace upgrade` 時生效。OpenCode、pi，以及使用本地目錄 marketplace 的 Claude Code，需要重新執行安裝器才會變化。
 
 ## Python SDK 發版流程
 
@@ -174,22 +171,6 @@ Vika（`vika/`）按平臺釋出自包含的安裝包：linux-x64、linux-arm64�
 
 workflow 使用與 `release-tos.yml` 相同的 TOS secrets。倉庫變數 `VIKA_DOWNLOAD_BASE` 和 `VIKA_TOS_PREFIX` 可以覆蓋公開地址和 key 字首，例如在 fork 中對著測試桶演練。
 
-## OpenClaw / ClawHub 外掛釋出
-
-OpenClaw 外掛通過 `ClawHub release (OpenViking plugin)` workflow 手動釋出。輸入引數包括：
-
-- `version`：可選；為空時由 workflow 按日期自動生成。
-- `channel`：`auto`、`dev` 或 `latest`。
-- `changelog`：本次外掛釋出說明。
-
-workflow 會先解析 channel 和 version，再打包 `examples/openclaw-plugin`，推送生成的 package branch，最後呼叫 ClawHub 官方 trusted publishing workflow 釋出。
-
-推薦做法：
-
-- 正式渠道使用 `latest` 或 `auto`。
-- 開發驗證使用 `dev`。
-- 手動指定 version 時，確保符合對應 channel 的格式要求。
-
 ## VikingBot 釋出說明
 
 VikingBot 當前不再作為推薦的獨立 PyPI 包發版路徑維護。現行分發方式是隨主包釋出：
@@ -211,7 +192,7 @@ VikingBot 當前不再作為推薦的獨立 PyPI 包發版路徑維護。現行�
 - 版本號未在 PyPI、npm 或 Docker registry 中釋出過。
 - tag 命名符合對應產物約定。
 - Python 包依賴、構建配置和 README 已同步更新。
-- Docker Hub、PyPI/TestPyPI、TOS、npm、ClawHub 等釋出所需 secrets 或 trusted publishing 配置可用。
+- Docker Hub、PyPI/TestPyPI、TOS、npm 等釋出所需 secrets 或 trusted publishing 配置可用。
 - Release notes 已準備好，且說明破壞性變更、遷移步驟和重要修復。
 
 ## 發版後驗證清單
@@ -224,7 +205,6 @@ VikingBot 當前不再作為推薦的獨立 PyPI 包發版路徑維護。現行�
 - 多架構 Docker manifest 可正常拉取。
 - TOS 版本化路徑和穩定路徑可訪問。
 - npm 上存在對應 CLI 平臺包和 wrapper 包。
-- ClawHub 外掛 channel 和 version 符合預期。
 
 ## 故障處理與補發原則
 

@@ -245,26 +245,6 @@ Codex は初回起動時に `Hooks need review` で止まるので、`Trust all 
 <sub>Hooks&nbsp;+&nbsp;MCP</sub>
 </td>
 <td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/12-cursor"><img src="../images/integrations/logos/cursor.png" width="32" height="32" alt=""><br><strong>Cursor</strong></a><br>
-<sub>Hooks&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/13-trae"><img src="../images/integrations/logos/trae.png" width="32" height="32" alt=""><br><strong>TRAE</strong></a><br>
-<sub>Hooks&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/03-openclaw"><img src="../images/integrations/logos/openclaw.png" width="32" height="32" alt=""><br><strong>OpenClaw</strong></a><br>
-<sub>コンテキストエンジン</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/05-hermes"><img src="../images/integrations/logos/hermes-agent.png" width="32" height="32" alt=""><br><strong>Hermes</strong></a><br>
-<sub>内蔵メモリ</sub>
-</td>
-</tr>
-</tbody>
-<tbody>
-<tr>
-<td align="center" valign="bottom" width="16%">
 <a href="https://docs.openviking.ai/en/agent-integrations/10-opencode"><img src="../images/integrations/logos/opencode.png" width="32" height="32" alt=""><br><strong>OpenCode</strong></a><br>
 <sub>Plugin&nbsp;+&nbsp;MCP</sub>
 </td>
@@ -272,12 +252,12 @@ Codex は初回起動時に `Hooks need review` で止まるので、`Trust all 
 <a href="https://docs.openviking.ai/en/agent-integrations/11-pi"><picture><source media="(prefers-color-scheme: dark)" srcset="../images/integrations/logos/pi-dark.svg"><img src="../images/integrations/logos/pi.svg" width="32" height="32" alt=""></picture><br><strong>pi</strong></a><br>
 <sub>ネイティブ拡張</sub>
 </td>
+</tr>
+</tbody>
+<tbody>
+<tr>
 <td align="center" valign="bottom" width="16%">
 <a href="../images/agents/en/deerflow-memory-manager.md"><picture><source media="(prefers-color-scheme: dark)" srcset="../images/integrations/logos/deerflow-dark.svg"><img src="../images/integrations/logos/deerflow.svg" width="32" height="32" alt=""></picture><br><strong>DeerFlow</strong></a><br>
-<sub>Plugin&nbsp;+&nbsp;MCP</sub>
-</td>
-<td align="center" valign="bottom" width="16%">
-<a href="https://docs.openviking.ai/en/agent-integrations/17-dsh"><picture><source media="(prefers-color-scheme: dark)" srcset="../images/integrations/logos/dsh-dark.svg"><img src="../images/integrations/logos/dsh.svg" width="32" height="32" alt=""></picture><br><strong>DSH</strong></a><br>
 <sub>Plugin&nbsp;+&nbsp;MCP</sub>
 </td>
 <td align="center" valign="bottom" width="16%">
@@ -415,6 +395,6 @@ OpenViking プロジェクトは、コンポーネントごとに異なるライ
 
 - **メインプロジェクト**: AGPLv3 - 詳細は [LICENSE](../../LICENSE) ファイルを参照してください
 - **crates/ov\_cli**: Apache 2.0 - 詳細は [LICENSE](../../crates/LICENSE) を参照してください
-- **examples**: Apache 2.0 - 詳細は [LICENSE](../../examples/LICENSE) を参照してください。`examples/hermes-plugin` の Hermes プラグインは元の [MIT ライセンス](../../examples/hermes-plugin/LICENSE) を保持します。
+- **examples**: Apache 2.0 - 詳細は [LICENSE](../../examples/LICENSE) を参照してください。
 - **integrations/frameworks**: LangChain/LangGraph アダプターは AGPLv3、Microsoft Agent Framework アダプターは MIT を採用しています。各パッケージの `LICENSE` を参照してください。実行可能なサンプルは Apache 2.0 を維持し、各パッケージの `examples/LICENSE` に記載されています。
 - **third\_party**: 各サードパーティプロジェクトの元のライセンス

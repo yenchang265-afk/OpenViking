@@ -16,7 +16,7 @@ With multi-tenancy enabled, you can:
 - Share `resources` within the same `account`, with ACLs for per-directory or per-file grants
 - Isolate user memories and sessions with `user`
 - Manage permissions with ROOT / ADMIN / USER roles
-- Support different integration patterns such as OpenClaw plugin, Vikingbot, CLI, and HTTP SDKs
+- Support different integration patterns such as agent plugins, Vikingbot, CLI, and HTTP SDKs
 
 ## Core Identity Model
 
@@ -202,44 +202,6 @@ identity assertion.
 
 ## Integration Patterns
 
-### OpenClaw Plugin 2.0: one instance uses one user key
-
-The current OpenClaw plugin follows a "plugin holds one user identity" model:
-
-- Remote mode config is `baseUrl + apiKey`, with optional `peer_role` / `peer_prefix`
-- `apiKey` should normally be a user key
-- The server resolves `account_id` and `user_id` from that user key
-- The plugin keeps OpenClaw agent identity in peer/session metadata, not tenant headers
-
-Typical config:
-
-```bash
-openclaw config set plugins.entries.openviking.config.mode remote
-openclaw config set plugins.entries.openviking.config.baseUrl "http://your-server:1933"
-openclaw config set plugins.entries.openviking.config.apiKey "<user-api-key>"
-openclaw config set plugins.entries.openviking.config.peer_role assistant
-openclaw config set plugins.entries.openviking.config.peer_prefix "<peer-prefix>"
-```
-
-Characteristics of this model:
-
-- Simple integration, because the plugin does not manage account/user lifecycle
-- Best for "one OpenClaw instance maps to one OpenViking user identity"
-- `peer_prefix` distinguishes OpenClaw runtime identities when building peer/session metadata
-- `resources` are shared by default inside the same account and can be restricted with ACLs, while user memory stays user-scoped
-
-### Why the OpenClaw plugin usually does not set `account` / `user`
-
-In `api_key` mode, a user key is already enough to express identity:
-
-- `account` and `user` are resolved server-side from the key
-- The plugin can provide `peer_prefix` for runtime identity labeling
-- Internally, the plugin writes user-scoped memory and uses `peer_id` for per-message speaker identity
-
-If you give the plugin a root key directly, normal tenant-scoped data APIs will
-not have a key-bound tenant user, so that is not a good default for day-to-day
-access.
-
 ### VikingBot: Match the Server Authentication Mode
 
 Current VikingBot selects its connection through `bot.ov_server.api_key_type`. It does not automatically register each end user and cache a user key using a root key:
@@ -268,7 +230,6 @@ Chat participants sharing one user key remain inside one OpenViking user boundar
 
 | Scenario | Recommended pattern |
 |----------|---------------------|
-| One OpenClaw instance maps to one fixed identity | OpenClaw plugin + user key |
 | One gateway or bot service serves many end users | Per-user connections or trusted identity forwarding |
 | A trusted gateway injects identity upstream | `trusted` mode |
 | Local single-user experience without formal tenant isolation | Dev mode without `root_api_key` |
@@ -305,11 +266,6 @@ That is only dev mode:
 - All requests run as ROOT
 - It is not suitable for public or shared deployments
 
-### 4. OpenClaw plugin and Vikingbot are not the same multi-tenant pattern
-
-- OpenClaw plugin is closer to "a client directly uses one user identity"
-- VikingBot supports a fixed User/Admin key or trusted identity forwarding, according to the Server authentication mode
-
 ## Related Documentation
 
 - [Authentication](../guides/04-authentication.md) - Auth modes, headers, and key rules
@@ -320,5 +276,4 @@ That is only dev mode:
 - [ACL API](../api/12-acl.md) - HTTP, SDK, and CLI interfaces
 - [Data Encryption](./10-encryption.md) - At-rest encryption in multi-tenant deployments
 - [Multi-tenant Example](https://github.com/volcengine/OpenViking/blob/main/examples/multi_tenant/README.md) - End-to-end management workflow
-- [OpenClaw Plugin](https://github.com/volcengine/OpenViking/blob/main/examples/openclaw-plugin/README.md) - OpenClaw integration
 - [Vikingbot](https://github.com/volcengine/OpenViking/blob/main/bot/README.md) - Bot-side multi-user integration

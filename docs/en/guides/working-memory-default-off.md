@@ -17,14 +17,13 @@ with the new default; there is no server-side workaround for their polling.
 | --- | --- | --- |
 | Claude Code, Codex / TraeCode CLI, OpenCode | No automatic archive injection on resume/compact; host history remains authoritative | `resumeArchiveInject: true` enables supplemental archive injection, not summary generation |
 | Pi official extension | Native Pi compaction; no takeover or resume archive injection | `takeoverEnabled: true`; commits request WM explicitly |
-| OpenClaw | `contextManagementMode: "native"`; keep host messages and delegate compaction to the host | `contextManagementMode: "openviking"`; commits request WM explicitly |
 | VikingBot | `session_context_enabled: true`; OV manages history and compaction, and commits explicitly request WM | Set `session_context_enabled: false` to use VikingBot's existing local mode |
 | LangChain / LangGraph | Middleware captures/recalls without fetching OV session history | Legacy OV history adapters require WM and an explicit application decision |
 
 Existing explicit plugin settings and environment variables still take priority
 over defaults. Remove them or set them to false to switch an installation that
 previously enabled takeover/injection. Installers do not overwrite that choice.
-Hermes, WorkBuddy, AstrBot and other capture/recall integrations inherit the
+WorkBuddy, AstrBot and other capture/recall integrations inherit the
 server default; their host history is not replaced by this change.
 
 The Pi experimental context-management extension is excluded from this release's
@@ -108,7 +107,6 @@ switch a history-dependent conversation when its raw source is incomplete.
 
 ## Diagnostics and rollback
 
-OpenClaw health checks only require an overview when the commit confirms WM=true.
 Pi live E2E defaults to native history; use `E2E_TAKEOVER=1` to test explicit
 takeover. Tests that exercise WM/checkpoints explicitly opt in.
 

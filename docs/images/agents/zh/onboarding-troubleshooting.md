@@ -16,8 +16,7 @@
 | docs.openviking.net 打不開 | 換成 docs.openviking.ai，路徑不變。安裝器本身會自動嘗試兩個站點。 |
 | 找不到 `ov` 命令 | 用 `--yes --harness cli` 重跑安裝器，已儲存的連線會保留。`ov` 已安裝但不在 `PATH` 裡時，把 `$(npm prefix -g)/bin` 加進 `PATH`；安裝器回退到 `~/.local` 時則是 `~/.local/bin`。 |
 | `ov` 提示需要先設定顯示語言 | 執行 `ov language zh-CN`（或 `ov language en`）。 |
-| DeepSeek Harness：`dsh plugin add` 失敗 | 安裝 pnpm（`npm i -g pnpm`），再用 `--harness dsh` 重跑安裝器。 |
 | `安裝校驗失敗`（英文 `Installation validation failed`） | 重跑當前宿主的安裝。仍然失敗，把失敗的檢查項告訴使用者。 |
 | 匯入指令碼提示 `not supported yet` | 指令碼不能直接讀這個宿主的歷史，按[其他宿主：把會話轉成 JSONL](https://docs.openviking.net/agents/zh/onboarding-other-hosts.md)轉換後用 `--input` 匯入。 |
 | 匯入指令碼提示 `--session: no session matches …` | 給的 id 不對，什麼都沒有上傳。重新執行 `--list`，用它列印的 id。 |
-| 重啟後沒有召回 | 先分清是庫裡沒有相關內容，還是 hook 沒執行。Codex 和 TraeCode CLI：在 `/hooks` 裡信任 OpenViking 的 hook，在 `/plugins` 裡確認 `openviking-memory` 已啟用。Cursor 和 TRAE：應用沒有完全退出。其他情況執行診斷：Claude Code 用 `/openviking-memory:ov` 或 `ov-memory-doctor` skill；Codex 用 `$ov-memory-doctor` skill；Cursor、TRAE、TRAE CN、ZCode 執行 `node ~/.openviking/agent-integrations/<cursor\|trae\|trae-cn\|zcode>/scripts/ov-memory-doctor.mjs`；pi 用 `/viking`；DeepSeek Harness 執行 `dsh --profile <profile> --dump-config`（`<profile>` 是安裝器輸出的那個），輸出裡應包含 `openviking-memory`。命令列宿主還可以在啟動前設定 `OPENVIKING_DEBUG=1`，hook 日誌會寫到 `~/.openviking/logs/`；從程式塢或啟動器開啟的桌面應用讀不到 shell 裡設定的環境變數。 |
+| 重啟後沒有召回 | 先分清是庫裡沒有相關內容，還是 hook 沒執行。Codex 和 TraeCode CLI：在 `/hooks` 裡信任 OpenViking 的 hook，在 `/plugins` 裡確認 `openviking-memory` 已啟用。其他情況執行診斷：Claude Code 用 `/openviking-memory:ov` 或 `ov-memory-doctor` skill；Codex 用 `$ov-memory-doctor` skill；pi 用 `/viking`。命令列宿主還可以在啟動前設定 `OPENVIKING_DEBUG=1`，hook 日誌會寫到 `~/.openviking/logs/`；從程式塢或啟動器開啟的桌面應用讀不到 shell 裡設定的環境變數。 |

@@ -10,11 +10,10 @@ OpenViking 現在預設 `working_memory.enabled=false`。commit 仍會儲存原�
 | --- | --- | --- |
 | Claude Code、Codex / TraeCode CLI、OpenCode | resume/compact 時不自動注入歸檔；以宿主歷史為準 | `resumeArchiveInject: true` 啟用補充的歸檔注入，不會生成摘要 |
 | Pi 官方擴充 | 使用 Pi 原生 compaction；不接管，也不在 resume 時注入歸檔 | `takeoverEnabled: true`；commit 時顯式請求 WM |
-| OpenClaw | `contextManagementMode: "native"`：保留宿主訊息，壓縮交給宿主 | `contextManagementMode: "openviking"`；commit 時顯式請求 WM |
 | VikingBot | `session_context_enabled: true`：由 OV 管理歷史與壓縮，commit 時顯式請求 WM | 設定 `session_context_enabled: false` 使用 VikingBot 現有的本地模式 |
 | LangChain / LangGraph | 中介軟體只做捕獲和 recall，不再拉取 OV 會話歷史 | 舊版 OV 歷史介面卡需要開啟 WM，並由應用顯式決定 |
 
-已有的顯式外掛配置和環境變數仍優先於預設值。如果某個安裝之前開啟了接管或注入，要切換時請刪除這些配置或設為 false，安裝器不會覆蓋你的選擇。Hermes、WorkBuddy、AstrBot 等其他捕獲/recall 類整合沿用服務端預設值，它們的宿主歷史不受此變更影響。
+已有的顯式外掛配置和環境變數仍優先於預設值。如果某個安裝之前開啟了接管或注入，要切換時請刪除這些配置或設為 false，安裝器不會覆蓋你的選擇。WorkBuddy、AstrBot 等其他捕獲/recall 類整合沿用服務端預設值，它們的宿主歷史不受此變更影響。
 
 Pi 的實驗性上下文管理擴充不在本次 WM 關閉適配範圍內，請勿把它當作 WM 關閉後的歷史後端。
 
@@ -50,6 +49,6 @@ VikingBot 是“預設使用宿主歷史”的例外：它仍然使用 OV Workin
 
 ## 診斷與回滾
 
-OpenClaw 的健康檢查僅在 commit 確認 WM=true 時才要求有 overview。Pi 的 live E2E 預設使用原生歷史；如需測試顯式接管，請設定 `E2E_TAKEOVER=1`。測試 WM/checkpoint 的用例需要顯式開啟。
+Pi 的 live E2E 預設使用原生歷史；如需測試顯式接管，請設定 `E2E_TAKEOVER=1`。測試 WM/checkpoint 的用例需要顯式開啟。
 
 重新開啟 WM 隻影響之後的 commit，不會為之前的歸檔補建缺失的摘要。回滾服務端行為時，請保留原始備份和更新後的外掛。舊版客戶端可能重新應用舊的接管邊界，不得悄悄替換已遷移到宿主歷史的會話。
