@@ -31,7 +31,6 @@ share/python-wheels/
 .ttadk
 MANIFEST
 # The shared memory-plugin installer's module list — not a Python sdist manifest.
-!examples/memory-plugin-shared/lib/MANIFEST
 openviking.egg-info/
 data/
 

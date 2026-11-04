@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -54,17 +54,13 @@ SEL_CLAUDE_BINS=claude
 SEL_CODEX_BINS=codex
 SEL_OPENCODE=1
 SEL_PI=1
-SEL_CURSOR_APP=1
-SEL_TRAE=1
-SEL_TRAE_CN=0
-SEL_KIMICODE=0
-SEL_CODEBUDDY=0
+SEL_CLI=0
 tui_finish_selection
 printf '%s\\n' "$SELECTED_HARNESSES"
 `);
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), "claude,codex,opencode,pi,cursor,trae");
+  assert.equal(result.stdout.trim(), "claude,codex,opencode,pi");
 });
 
 test("unexpected installer failures include actionable diagnostics", () => {
@@ -85,7 +81,7 @@ installer_test_failure
   assert.doesNotMatch(result.stderr, /\/dev\/tty/);
 });
 
-test("a pre-existing TRAE home directory keeps TRAE Desktop as the default", (t) => {
+test("a pre-existing TRAE home directory is no longer an install default", (t) => {
   const home = makeTempHome(t);
   mkdirSync(join(home, ".trae"));
 
@@ -102,7 +98,7 @@ printf '%s:%s\\n' "$HAVE_TRAE" "$SELECTED_HARNESSES"
 `);
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), "1:trae,cli");
+  assert.equal(result.stdout.trim(), "1:claude,codex,cli");
 });
 
 test("TRAE CLI configuration does not auto-select the TRAE CLI harness", (t) => {
@@ -124,7 +120,7 @@ printf '%s\\n' "$SELECTED_HARNESSES"
 `);
 
   assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), "trae,cli");
+  assert.equal(result.stdout.trim(), "claude,codex,cli");
 });
 
 test("TraeCode CLI 2.0 command aliases use the Codex-format selection", (t) => {
@@ -157,7 +153,7 @@ printf '%s:%s:%s\\n' "$SELECTED_HARNESSES" "$detected" "$label"
 `);
 
     assert.equal(result.status, 0, result.stderr);
-    assert.equal(result.stdout.trim(), "codex,trae,cli:yes:TraeCode CLI 2.0", command);
+    assert.equal(result.stdout.trim(), "codex,cli:yes:TraeCode CLI 2.0", command);
   }
 });
 
@@ -489,8 +485,17 @@ function detachedInstaller(t, transform = (source) => source) {
   mkdirSync(bin, { recursive: true });
   const script = join(dir, "install.sh");
   writeFileSync(script, transform(installerSource));
-  const dshLog = join(dir, "dsh.log");
-  writeFileSync(join(bin, "dsh"), `#!/bin/sh\necho "$*" >> "${dshLog}"\necho "@openviking/dsh-memory-plugin openviking-memory-runtime"\n`, { mode: 0o755 });
+  // npm installs the CLI (ov) into a prefix under the temporary home.
+  const npmPrefix = join(home, "npm-global");
+  writeFileSync(join(bin, "npm"), [
+    "#!/bin/sh",
+    `prefix="${npmPrefix}"`,
+    'case "$1" in',
+    '  prefix) echo "$prefix" ;;',
+    '  install) mkdir -p "$prefix/bin" "$prefix/lib/node_modules" && printf \'#!/bin/sh\\necho 0.0.0-test\\n\' > "$prefix/bin/ov" && chmod +x "$prefix/bin/ov" ;;',
+    "esac",
+    "",
+  ].join("\n"), { mode: 0o755 });
   // Nothing here downloads, and a curl that cannot connect keeps the server
   // check away from whatever listens on the default port.
   writeFileSync(join(bin, "curl"), "#!/bin/sh\nexit 7\n", { mode: 0o755 });
@@ -509,13 +514,13 @@ function detachedInstaller(t, transform = (source) => source) {
     },
     timeout: 30_000,
   });
-  return { home, dshLog, run };
+  return { home, run };
 }
 
 test("cancelling at the confirmation leaves the machine untouched", (t) => {
   // Drive the interactive flow without a terminal: every menu takes its
   // default except the confirmation, which is cancelled.
-  const { home, dshLog, run } = detachedInstaller(t, (source) => source.replace(mainMarker, `INTERACTIVE=1
+  const { home, run } = detachedInstaller(t, (source) => source.replace(mainMarker, `INTERACTIVE=1
 exec 3</dev/null
 tui_menu() {
   TUI_MENU_CHOICE="$2"
@@ -523,16 +528,14 @@ tui_menu() {
 }
 ${mainMarker}`));
 
-  const result = run(["--harness", "cursor,dsh", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "secret-api-key"]);
+  const result = run(["--harness", "cli", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "secret-api-key"]);
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /\[2\/5\] Review/);
-  assert.match(result.stdout, /~\/\.cursor\/hooks\.json/);
-  assert.match(result.stdout, /Shared hook runtime: ~\/\.openviking\/agent-integrations\/memory-plugin-shared\n/);
+  assert.match(result.stdout, /\[2\/4\] Review/);
+  assert.match(result.stdout, /npm install -g @openviking\/cli@latest \(~\/npm-global\/bin\/ov\)/);
   assert.match(result.stdout, /Cancelled; nothing was changed\./);
   assert.doesNotMatch(`${result.stdout}${result.stderr}`, /secret-api-key/);
   assert.deepEqual(readdirSync(home), ["bin"]);
-  assert.equal(existsSync(dshLog), false);
 });
 
 test("an interactive run without --lang asks for the language first", (t) => {
@@ -546,7 +549,7 @@ tui_menu() {
 }
 ${mainMarker}`));
 
-  const result = run(["--harness", "cursor", "--url", "http://127.0.0.1:9", "--api-key", ""]);
+  const result = run(["--harness", "cli", "--url", "http://127.0.0.1:9", "--api-key", ""]);
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stdout, /^menu: Language \/ 語言\n/);
@@ -582,20 +585,20 @@ test("a non-interactive run with no server says so and how to re-run", (t) => {
   const { home, run } = detachedInstaller(t);
   const notice = /No server was given: the plugin is configured for http:\/\/127\.0\.0\.1:1933 without an API key\./;
 
-  const result = run(["--harness", "dsh", "--lang", "en", "--yes"]);
+  const result = run(["--harness", "cli", "--lang", "en", "--yes"]);
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.match(result.stdout, notice);
   assert.ok(result.stdout.indexOf("Review") < result.stdout.search(notice));
-  assert.match(result.stdout, /curl -fsSL https:\/\/openviking\.ai\/install \| bash -s -- --yes --harness dsh --url <server-url> --api-key <api-key>/);
+  assert.match(result.stdout, /curl -fsSL https:\/\/openviking\.ai\/install \| bash -s -- --yes --harness cli --url <server-url> --api-key <api-key>/);
   assert.match(result.stdout, /\[4\/4\] Validation/);
-  assert.match(result.stdout, /DeepSeek Harness\n {4}Next: start a new dsh session: dsh --profile web\n {4}Updates: re-run this installer\n {4}Uninstall: dsh plugin --profile web rm @openviking\/dsh-memory-plugin/);
+  assert.match(result.stdout, /CLI \(ov\)\n {4}Next: run ov health, which uses the same credentials\n {4}Updates: re-run this installer\n {4}Uninstall: npm uninstall -g @openviking\/cli/);
   assert.equal(JSON.parse(readFileSync(join(home, ".openviking", "ovcli.conf"), "utf8")).url, "http://127.0.0.1:1933");
   // The unreachable server is repeated at the end, then where the agent goes next.
   assert.match(result.stdout, /!! {2}Not done:\n {6}- Cannot reach http:\/\/127\.0\.0\.1:1933\. If the server is not running yet, start it before using the plugin\.\n==> Onboarding guide \(for your agent\): https:\/\/docs\.openviking\.ai\/agents\/en\/onboarding\.md\n$/);
 
   // Once a server is configured, a re-run has nothing to warn about.
-  const again = run(["--harness", "dsh", "--lang", "en", "--yes"]);
+  const again = run(["--harness", "cli", "--lang", "en", "--yes"]);
   assert.equal(again.status, 0, `${again.stdout}\n${again.stderr}`);
   assert.doesNotMatch(again.stdout, notice);
 });
@@ -603,287 +606,14 @@ test("a non-interactive run with no server says so and how to re-run", (t) => {
 test("what was asked for but not installed is listed again just before the onboarding link", (t) => {
   const { run } = detachedInstaller(t);
 
-  // pi is selected but not on PATH; dsh is.
-  const result = run(["--harness", "dsh,pi", "--lang", "en", "--yes"]);
+  // pi is selected but not on PATH; npm, for the CLI, is.
+  const result = run(["--harness", "cli,pi", "--lang", "en", "--yes"]);
 
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   const tail = result.stdout.slice(result.stdout.lastIndexOf("Not done:"));
   assert.match(tail, /^Not done:\n {6}- Cannot reach [^\n]+\n {6}- pi CLI not found; skipping pi extension install\.\n==> Onboarding guide \(for your agent\): \S+\n$/);
 
-  const zh = run(["--harness", "dsh,pi", "--lang", "zh", "--yes"]);
+  const zh = run(["--harness", "cli,pi", "--lang", "zh", "--yes"]);
   assert.equal(zh.status, 0, `${zh.stdout}\n${zh.stderr}`);
   assert.match(zh.stdout, /未完成：\n {6}- 無法連線[^\n]+\n {6}- 未找到 pi 命令，跳過 pi 擴充安裝。\n==> 接入引導（給 Agent 看）： https:\/\/docs\.openviking\.net\/agents\/zh\/onboarding\.md\n$/);
-});
-
-test("run from inside a dsh session, the plugin goes into that session's profile", (t) => {
-  const { dshLog, run } = detachedInstaller(t);
-
-  const result = run(["--harness", "dsh", "--lang", "en", "--yes"], { DSH_SHELL: "1", DSH_PROFILE: "tui" });
-
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(readFileSync(dshLog, "utf8"), /^plugin --profile tui add /m);
-  assert.match(result.stdout, /Next: start a new dsh session: dsh --profile tui\n/);
-
-  // --dsh-profile still wins, and DSH_PROFILE alone (outside a dsh shell) is not a session.
-  const chosen = run(["--harness", "dsh", "--lang", "en", "--yes", "--dsh-profile", "headless"], { DSH_SHELL: "1", DSH_PROFILE: "tui" });
-  assert.match(chosen.stdout, /Next: start a new dsh session: dsh --profile headless\n/);
-  const outside = run(["--harness", "dsh", "--lang", "en", "--yes"], { DSH_PROFILE: "tui" });
-  assert.match(outside.stdout, /Next: start a new dsh session: dsh --profile web\n/);
-});
-
-// DeepSeek Harness Desktop's launcher inside a fake app bundle. It behaves
-// like the real one for the calls the installer makes: every boot of the
-// desktop profile, --dump-config included, is refused, and so is a plugin
-// command before Desktop has created its profile.
-const desktopLauncher = "DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh";
-// The installer looks in /Applications before ~/Applications, so on a Mac with
-// Desktop installed these tests would find (and run) the real app instead.
-const realDesktop = process.platform === "darwin" && existsSync(join("/Applications", desktopLauncher))
-  && "DeepSeek Harness Desktop is installed in /Applications";
-
-function fakeDsHDesktop(dir, { home = dir, apps = join(home, "Applications"), initialized = true, failAdd = false } = {}) {
-  const launcher = join(apps, desktopLauncher);
-  const log = join(dir, "dsh-desktop.log");
-  const profile = join(home, ".dsh", "profiles", "desktop");
-  mkdirSync(join(launcher, ".."), { recursive: true });
-  mkdirSync(profile, { recursive: true });
-  if (initialized) {
-    writeFileSync(join(profile, "package.json"), '{"dsh":{"profile":{"bundles":["@deepseek-ai/dsh-base","@deepseek-ai/dsh-web-app"]}}}\n');
-  }
-  writeFileSync(launcher, [
-    "#!/bin/sh",
-    `echo "$*" >> "${log}"`,
-    'case " $* " in *" --dump-config "*) echo \'error: profile "desktop" is managed exclusively by the Electron application\' >&2; exit 1 ;; esac',
-    '[ "$1" = plugin ] || { echo "error: profile \\"desktop\\" is managed exclusively by the Electron application" >&2; exit 1; }',
-    'manifest="${DSH_HOME:-$HOME/.dsh}/profiles/desktop/package.json"',
-    '[ -f "$manifest" ] || { echo "dsh: Error: Open DeepSeek Harness Desktop once to initialize its profile, then fully quit it before running dsh plugin --profile desktop." >&2; exit 1; }',
-    'case "$4" in',
-    failAdd
-      ? '  add) echo "ERR_PNPM_FETCH_404 GET https://registry.example/@openviking%2fdsh-memory-plugin: Not Found - 404" >&2; exit 1 ;;'
-      : '  add) echo \'{"dsh":{"profile":{"bundles":["@deepseek-ai/dsh-base","@deepseek-ai/dsh-web-app","@openviking/dsh-memory-plugin"]}},"dependencies":{"@openviking/dsh-memory-plugin":"^1.0.0"}}\' > "$manifest" ;;',
-    '  ls) cat "$manifest" ;;',
-    "esac",
-    "",
-  ].join("\n"), { mode: 0o755 });
-  return { launcher, log, profile };
-}
-
-function fakeUname(bin, os) {
-  writeFileSync(join(bin, "uname"), `#!/bin/sh\ncase "$1" in -m) echo arm64 ;; *) echo ${os} ;; esac\n`, { mode: 0o755 });
-}
-
-// `running`: true or false for every call, or the number of calls that still
-// find Desktop running.
-function fakePgrep(bin, running) {
-  const log = join(bin, "pgrep.log");
-  writeFileSync(join(bin, "pgrep"), [
-    "#!/bin/sh",
-    `echo "$*" >> "${log}"`,
-    typeof running === "number"
-      ? `[ "$(wc -l < "${log}")" -le ${running} ]`
-      : `exit ${running ? 0 : 1}`,
-    "",
-  ].join("\n"), { mode: 0o755 });
-}
-
-test("macOS detects DeepSeek Harness Desktop under ~/Applications and selects it", { skip: realDesktop }, (t) => {
-  const home = makeTempHome(t);
-  const bin = join(home, "fake-bin");
-  mkdirSync(bin);
-  fakeUname(bin, "Darwin");
-  fakeDsHDesktop(home);
-
-  const result = runInstallerPrelude(`
-HAVE_CURSOR=0
-INTERACTIVE=0
-REQUESTED_HARNESSES=""
-select_harnesses
-printf '%s:%s:%s\\n' "$HAVE_DSH" "$HAVE_DSH_DESKTOP" "$SELECTED_HARNESSES"
-printf '%s\\n' "$(resolve_dsh_desktop_cli)"
-tui_reset_bin_selection
-tui_finish_selection
-printf '%s|%s\\n' "$(tui_bin_label dsh-desktop dsh-desktop)" "$SELECTED_HARNESSES"
-`, { HOME: home, PATH: `${bin}:/usr/bin:/bin`, OPENVIKING_DSH_DESKTOP_CLI: undefined, DSH_HOME: undefined });
-
-  assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.stdout.trim().split("\n"), [
-    "0:1:dsh-desktop,cli",
-    join(home, "Applications", desktopLauncher),
-    "DeepSeek Harness Desktop|dsh-desktop,cli",
-  ]);
-});
-
-test("a dsh on PATH that is Desktop's launcher is Desktop, not the npm CLI", { skip: realDesktop }, (t) => {
-  const home = makeTempHome(t);
-  const bin = join(home, "fake-bin");
-  mkdirSync(bin);
-  fakeUname(bin, "Darwin");
-  // Outside ~/Applications, so only the PATH link finds it.
-  const { launcher } = fakeDsHDesktop(home, { apps: join(home, "elsewhere") });
-  symlinkSync(launcher, join(bin, "dsh"));
-
-  const result = runInstallerPrelude(`
-printf '%s:%s:%s\\n' "$HAVE_DSH" "$HAVE_DSH_DESKTOP" "$(resolve_dsh_desktop_cli)"
-install_dsh >&2
-`, { HOME: home, PATH: `${bin}:/usr/bin:/bin`, OPENVIKING_DSH_DESKTOP_CLI: undefined, DSH_HOME: undefined });
-
-  assert.equal(result.status, 0, result.stderr);
-  assert.equal(result.stdout.trim(), `0:1:${join(bin, "dsh")}`);
-  // Asked for the npm CLI, it says why that dsh is not used.
-  assert.match(result.stderr, /The dsh on PATH is the one inside DeepSeek Harness Desktop, not the npm dsh CLI/);
-});
-
-test("Linux never offers DeepSeek Harness Desktop", (t) => {
-  const home = makeTempHome(t);
-  const bin = join(home, "fake-bin");
-  mkdirSync(bin);
-  fakeUname(bin, "Linux");
-  fakeDsHDesktop(home);
-
-  const result = runInstallerPrelude(`
-HAVE_CURSOR=0
-INTERACTIVE=0
-REQUESTED_HARNESSES=""
-select_harnesses
-printf '%s:%s\\n' "$HAVE_DSH_DESKTOP" "$SELECTED_HARNESSES"
-idx=0
-while [ "$idx" -lt "$(tui_selectable_count)" ]; do printf '%s ' "$(tui_item_at "$idx")"; idx=$((idx + 1)); done
-printf '\\n'
-SELECTED_HARNESSES=dsh-desktop
-(validate_selected_harnesses) || printf 'rejected:%s\\n' "$?"
-`, {
-    HOME: home,
-    PATH: `${bin}:/usr/bin:/bin`,
-    OPENVIKING_DSH_DESKTOP_CLI: join(home, "Applications", desktopLauncher),
-    DSH_HOME: undefined,
-  });
-
-  assert.equal(result.status, 0, result.stderr);
-  const [detected, rows, rejected] = result.stdout.trim().split("\n");
-  assert.equal(detected, "0:claude,codex,cli");
-  assert.doesNotMatch(rows, /dsh-desktop/);
-  assert.match(rows, /dsh\|dsh /);
-  assert.equal(rejected, "rejected:2");
-  assert.match(result.stderr, /macOS only/);
-});
-
-test("--dsh-profile desktop routes the dsh harness to dsh-desktop", () => {
-  const result = runInstallerPrelude(`
-SELECTED_HARNESSES="claude,dsh,dsh-desktop"
-PUBLIC_SELECTED_HARNESSES=""
-DSH_PROFILE_ARG=desktop
-select_dsh_profile
-printf '%s\\n' "$SELECTED_HARNESSES"
-SELECTED_HARNESSES="dsh"
-DSH_PROFILE_ARG=headless
-select_dsh_profile
-printf '%s:%s\\n' "$SELECTED_HARNESSES" "$DSH_PROFILE"
-`);
-
-  assert.equal(result.status, 0, result.stderr);
-  assert.deepEqual(result.stdout.trim().split("\n"), ["claude,dsh-desktop", "dsh:headless"]);
-});
-
-function desktopInstaller(t, options = {}, transform) {
-  const flow = detachedInstaller(t, transform);
-  const bin = join(flow.home, "bin");
-  fakeUname(bin, "Darwin");
-  fakePgrep(bin, options.running ?? false);
-  const desktop = fakeDsHDesktop(join(flow.home, ".."), { home: flow.home, ...options });
-  const log = () => (existsSync(desktop.log) ? readFileSync(desktop.log, "utf8") : "");
-  return { ...flow, ...desktop, bin, log };
-}
-
-test("dsh-desktop installs through Desktop's own launcher and never asks it to boot", { skip: realDesktop }, (t) => {
-  const { home, dshLog, launcher, log, bin, run } = desktopInstaller(t);
-
-  // The npm dsh on PATH must not be handed Desktop's profile.
-  const result = run(["--harness", "dsh", "--dsh-profile", "desktop", "--lang", "en", "--yes", "--url", "http://127.0.0.1:9", "--api-key", ""]);
-
-  const out = `${result.stdout}\n${result.stderr}`;
-  assert.equal(result.status, 0, out);
-  assert.equal(existsSync(dshLog), false);
-  assert.match(result.stdout, /Selected harnesses: dsh-desktop\n/);
-  assert.match(result.stdout, /\[3\/4\] DeepSeek Harness Desktop bundle/);
-  assert.match(log(), /^plugin --profile desktop add @openviking\/dsh-memory-plugin@latest$/m);
-  assert.match(log(), /^plugin --profile desktop ls$/m);
-  assert.doesNotMatch(log(), /--dump-config/);
-  // Only this user's app main process: its Host and this launcher run the
-  // same executable with arguments.
-  assert.equal(readFileSync(join(bin, "pgrep.log"), "utf8"),
-    `-u ${process.getuid()} -f DeepSeek Harness\\.app/Contents/MacOS/DeepSeek Harness( -psn_[0-9_]+)?$\n`);
-  assert.match(result.stdout, /Reopen DeepSeek Harness Desktop to load it\./);
-  assert.match(result.stdout, /dsh-desktop: @openviking\/dsh-memory-plugin installed in DeepSeek Harness Desktop/);
-  assert.match(result.stdout, /dsh-desktop: plugin enabled in the Desktop profile/);
-  assert.doesNotMatch(out, /Validation reported issues/);
-  const shown = launcher.replace(home, "~");
-  assert.ok(result.stdout.includes(`"${shown}" plugin --profile desktop add @openviking/dsh-memory-plugin@latest`), result.stdout);
-  assert.ok(result.stdout.includes(`Uninstall: with Desktop quit, "${launcher}" plugin --profile desktop rm @openviking/dsh-memory-plugin; or Plugins page`), result.stdout);
-});
-
-test("an uninitialized Desktop profile gets the Plugins-page steps instead of a failing add", { skip: realDesktop }, (t) => {
-  const { log, run } = desktopInstaller(t, { initialized: false });
-
-  const result = run(["--harness", "dsh-desktop", "--lang", "en", "--yes", "--url", "http://127.0.0.1:9", "--api-key", ""]);
-
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.equal(log(), "");
-  assert.match(result.stdout, /has not set up its profile yet: open it once, quit it with ⌘Q and re-run this installer/);
-  assert.match(result.stdout, /Plugins → Add plugin → enter @openviking\/dsh-memory-plugin → Install, then turn it on if its switch is off/);
-  assert.match(result.stdout, /DeepSeek Harness Desktop: nothing; the steps for its Plugins page are printed/);
-});
-
-test("a running Desktop is warned about with --yes and blocks the add when it is not quit", { skip: realDesktop }, (t) => {
-  const yes = desktopInstaller(t, { running: true });
-  const result = yes.run(["--harness", "dsh-desktop", "--lang", "en", "--yes", "--url", "http://127.0.0.1:9", "--api-key", ""]);
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /DeepSeek Harness Desktop is running; installing anyway\. Quit it with ⌘Q/);
-  assert.match(yes.log(), /^plugin --profile desktop add /m);
-
-  // Interactive: asked to quit, still running after Enter, so nothing is added.
-  const interactiveFlow = `INTERACTIVE=1
-exec 3</dev/null
-tui_menu() { TUI_MENU_CHOICE="$2"; }
-DSH_DESKTOP_QUIT_WAIT=1
-${mainMarker}`;
-  const asked = desktopInstaller(t, { running: true }, (source) => source.replace(mainMarker, interactiveFlow));
-  const interactive = asked.run(["--harness", "dsh-desktop", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", ""]);
-  assert.equal(interactive.status, 0, `${interactive.stdout}\n${interactive.stderr}`);
-  assert.match(interactive.stdout, /Quit it with ⌘Q, then press Enter:/);
-  assert.match(interactive.stdout, /Waiting for DeepSeek Harness Desktop to exit/);
-  assert.match(interactive.stdout, /still running; it was not changed/);
-  assert.doesNotMatch(asked.log(), /\badd\b/);
-  assert.match(interactive.stdout, /Next: open DeepSeek Harness Desktop: Plugins → Add plugin/);
-
-  // Quitting shuts the Host down first, so Desktop may outlive the Enter by a
-  // few seconds: the installer waits for it rather than giving up.
-  const quitting = desktopInstaller(t, { running: 2 }, (source) => source.replace(mainMarker, interactiveFlow));
-  const waited = quitting.run(["--harness", "dsh-desktop", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", ""]);
-  assert.equal(waited.status, 0, `${waited.stdout}\n${waited.stderr}`);
-  assert.match(waited.stdout, /Waiting for DeepSeek Harness Desktop to exit/);
-  assert.doesNotMatch(waited.stdout, /still running/);
-  assert.match(quitting.log(), /^plugin --profile desktop add /m);
-});
-
-test("a failed Desktop add shows the launcher's own error", { skip: realDesktop }, (t) => {
-  const { launcher, run } = desktopInstaller(t, { failAdd: true });
-
-  const result = run(["--harness", "dsh-desktop", "--lang", "en", "--yes", "--url", "http://127.0.0.1:9", "--api-key", ""]);
-
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /dsh plugin add failed for DeepSeek Harness Desktop:\n {6}ERR_PNPM_FETCH_404/);
-  assert.ok(result.stdout.includes(`run it manually: "${launcher}" plugin --profile desktop add @openviking/dsh-memory-plugin@latest`), result.stdout);
-  assert.match(result.stdout, /Plugins → Add plugin → enter @openviking\/dsh-memory-plugin → Install/);
-});
-
-test("without Node.js, a Mac with Desktop is told how to install from its Plugins page", { skip: realDesktop }, (t) => {
-  const { log, run } = desktopInstaller(t, {}, (source) => source.replace("command -v node >/dev/null 2>&1 || {", "false || {"));
-
-  const result = run(["--harness", "dsh-desktop", "--lang", "en", "--yes"]);
-
-  assert.equal(result.status, 1, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stderr, /node not found/);
-  assert.match(result.stdout, /Plugins → Add plugin → enter @openviking\/dsh-memory-plugin → Install, then turn it on if its switch is off/);
-  assert.match(result.stdout, /ovcli\.conf: \{"url": "<server-url>", "api_key": "<api-key>"\}/);
-  assert.equal(log(), "");
 });

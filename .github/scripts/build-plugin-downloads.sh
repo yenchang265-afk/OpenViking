@@ -70,8 +70,7 @@ jq -n \
   --arg bundle_url "${BASE}/releases/latest/memory-plugin-marketplace.zip" \
   '{schema: 1, harnesses: (
       {codex: {version: $version, git_url: $git_url}}
-      + (["claude", "cursor", "trae", "trae-cli", "trae-cn", "zcode", "kimicode", "codebuddy",
-          "opencode", "pi", "dsh"] | map({key: ., value: {version: $version, bundle_url: $bundle_url}}) | from_entries)
+      + (["claude", "trae-cli", "opencode", "pi"] | map({key: ., value: {version: $version, bundle_url: $bundle_url}}) | from_entries)
     )}' > "${OUT}/releases/latest/channels.json"
 
 echo "Built plugin downloads ${VERSION} for ${BASE}"

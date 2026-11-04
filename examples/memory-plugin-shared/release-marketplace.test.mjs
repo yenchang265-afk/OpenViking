@@ -222,8 +222,8 @@ test("a Claude-format wrapper sharing Claude Code's config keeps the URL marketp
   }
 });
 
-test("release marketplace archive supports ZCode and pi TOS installs", () => {
-  const tmp = mkdtempSync(join(tmpdir(), "openviking-zcode-release-"));
+test("release marketplace archive supports pi TOS installs", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "openviking-pi-release-"));
   try {
     const stage = join(tmp, "memory-plugin-marketplace");
     const staged = run("bash", [stageScript, stage]);
@@ -241,97 +241,8 @@ test("release marketplace archive supports ZCode and pi TOS installs", () => {
 
     const home = join(tmp, "home");
     mkdirSync(home, { recursive: true });
-    const installed = run("bash", [
-      installer,
-      "--harness", "zcode",
-      "--dist", "tos",
-      "--source", "archive",
-      "--lang", "en",
-      "--url", "http://127.0.0.1:9",
-      "--api-key", "",
-      "--yes",
-    ], {
-      env: {
-        ...process.env,
-        HOME: home,
-        OPENVIKING_HOME: join(home, ".openviking"),
-        OPENVIKING_MARKETPLACE_ARCHIVE_URL: `file://${join(tmp, "memory-plugin-marketplace.zip")}`,
-        OPENVIKING_DOWNLOAD_BASE: "https://downloads.example.invalid",
-        OPENVIKING_SKIP_VERSION_CHECK: "1",
-      },
-    });
-    assert.equal(installed.status, 0, `${installed.stdout}\n${installed.stderr}`);
-
-    const integrationRoot = join(home, ".openviking", "agent-integrations", "zcode");
-    assert.ok(existsSync(join(integrationRoot, "plugin.json")));
-    assert.equal(existsSync(join(integrationRoot, ".claude-plugin")), false);
-    assert.ok(existsSync(join(integrationRoot, "scripts", "hook.mjs")));
-    assert.ok(existsSync(join(integrationRoot, "hosts", "zcode.mjs")));
-    assert.ok(existsSync(join(integrationRoot, "hosts", "zcode-capture.mjs")));
-    // An installation is for one client: the other hosts' configuration
-    // directories are not copied with it.
-    assert.equal(existsSync(join(integrationRoot, "hosts", "zcode", "hooks.json")), true);
-    assert.equal(existsSync(join(integrationRoot, "hosts", "cursor")), false);
-    // ZCode imports the runtime the installer assembles beside it, the way
-    // cursor and trae do, rather than a copy committed into its own tree.
-    const sharedRoot = join(home, ".openviking", "agent-integrations", "memory-plugin-shared", "lib");
-    assert.ok(existsSync(join(sharedRoot, "async-writer.mjs")));
-    assert.ok(existsSync(join(sharedRoot, "capture-utils.mjs")));
-    assert.ok(existsSync(join(sharedRoot, "mcp-proxy-config.mjs")));
-    assert.equal(existsSync(join(integrationRoot, "scripts", "shared")), false);
-
-    const config = JSON.parse(readFileSync(join(home, ".zcode", "cli", "config.json"), "utf8"));
-    assert.equal(config.hooks.enabled, true);
-    assert.deepEqual(Object.keys(config.hooks.events), [
-      "SessionStart",
-      "UserPromptSubmit",
-      "PreToolUse",
-      "Stop",
-    ]);
-    assert.ok(config.mcp.servers.openviking);
-
-    // The hook commands point across the plugin boundary at the runtime the
-    // installer assembles from the archive, so an entry the manifest forgot to
-    // carry is a hooks.json naming a script that is not there.
-    const commands = JSON.stringify(config.hooks.events)
-      .split(/"/u)
-      .filter((part) => part.includes("# openviking-memory"));
-    assert.ok(commands.length > 0, "no OpenViking hook commands were installed");
-    for (const command of commands) {
-      const script = /'([^']*\.mjs)'/u.exec(command)?.[1];
-      assert.ok(script, `${command} names no script`);
-      assert.ok(existsSync(script), `${script} is missing after install`);
-    }
-
     const bin = join(tmp, "bin");
     mkdirSync(bin);
-    writeFileSync(join(bin, "kimi"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
-    const kimiInstalled = run("bash", [
-      installer,
-      "--harness", "kimicode",
-      "--dist", "tos",
-      "--source", "archive",
-      "--lang", "en",
-      "--url", "http://127.0.0.1:9",
-      "--api-key", "",
-      "--yes",
-    ], {
-      env: {
-        ...process.env,
-        HOME: home,
-        PATH: `${bin}:${process.env.PATH}`,
-        OPENVIKING_HOME: join(home, ".openviking"),
-        OPENVIKING_MARKETPLACE_ARCHIVE_URL: `file://${join(tmp, "memory-plugin-marketplace.zip")}`,
-        OPENVIKING_DOWNLOAD_BASE: "https://downloads.example.invalid",
-        OPENVIKING_SKIP_VERSION_CHECK: "1",
-      },
-    });
-    assert.equal(kimiInstalled.status, 0, kimiInstalled.stdout + kimiInstalled.stderr);
-    const kimiRoot = join(home, ".kimi-code", "plugins", "managed", "openviking-memory");
-    assert.ok(existsSync(join(kimiRoot, "kimi.plugin.json")));
-    assert.ok(existsSync(join(kimiRoot, "agent-integrations", "kimicode", "scripts", "hook.mjs")));
-    assert.ok(existsSync(join(kimiRoot, "agent-integrations", "memory-plugin-shared", "lib", "agent-hook-runtime.mjs")));
-
     writeFileSync(join(bin, "pi"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
     const piArgs = [installer, "--harness", "pi", "--dist", "tos", "--source", "archive",
       "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"];
@@ -401,10 +312,10 @@ test("staging rejects an archive missing a generated shared copy", () => {
 
     const restaged = run("bash", [stageScript, stage]);
     assert.equal(restaged.status, 0, `${restaged.stdout}\n${restaged.stderr}`);
-    rmSync(join(stage, "agent-hook-plugin", "plugin.json"));
+    rmSync(join(stage, "codex-memory-plugin", ".codex-plugin", "plugin.json"));
     const missingManifest = run("node", [archiveCheck, stage, ...stagedDirs]);
     assert.equal(missingManifest.status, 1, `${missingManifest.stdout}\n${missingManifest.stderr}`);
-    assert.match(missingManifest.stderr, /agent-hook-plugin\/plugin\.json/);
+    assert.match(missingManifest.stderr, /codex-memory-plugin\/\.codex-plugin\/plugin\.json/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
@@ -525,13 +436,13 @@ test("the docs download tree holds what the installer fetches, under the address
     const channels = JSON.parse(readFileSync(join(out, "releases", "latest", "channels.json"), "utf8"));
     assert.equal(channels.schema, 1);
     assert.deepEqual(Object.keys(channels.harnesses).sort(), [
-      "claude", "codebuddy", "codex", "cursor", "dsh", "kimicode", "opencode", "pi", "trae", "trae-cli", "trae-cn", "zcode",
+      "claude", "codex", "opencode", "pi", "trae-cli",
     ]);
     assert.deepEqual(channels.harnesses.codex, {
       version,
       git_url: "https://docs.example.invalid/dl/plugins/memory-plugins.git",
     });
-    assert.deepEqual(channels.harnesses.cursor, {
+    assert.deepEqual(channels.harnesses.opencode, {
       version,
       bundle_url: "https://docs.example.invalid/dl/releases/latest/memory-plugin-marketplace.zip",
     });

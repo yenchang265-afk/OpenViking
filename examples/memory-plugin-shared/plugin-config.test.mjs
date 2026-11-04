@@ -11,7 +11,6 @@ import { loadAgentHookConfig } from "./lib/agent-hook-runtime.mjs";
 import { loadConfig as loadClaudeCode } from "../claude-code-memory-plugin/scripts/config.mjs";
 import { loadConfig as loadCodex } from "../codex-memory-plugin/scripts/config.mjs";
 import { loadConfig as loadOpencode } from "../opencode-plugin/lib/config.mjs";
-import { resolveConfig as loadDsh } from "../dsh-memory-plugin/config.mjs";
 import { loadConfig as loadPi } from "../pi-coding-agent-extension/config.ts";
 
 /**
@@ -39,12 +38,6 @@ const LOADERS = {
     // This plugin reads the repo-context switch as a section, not a flag.
     owns: ["repoContext"],
   },
-  dsh: {
-    harness: "dsh",
-    load: (cwd) => loadDsh({}, process.env, cwd),
-    options: { manifestUrl: new URL("../dsh-memory-plugin/package.json", import.meta.url), deriveEffectivePeer: true },
-    owns: ["peerId"],
-  },
   pi: {
     harness: "pi",
     load: (cwd) => loadPi(cwd),
@@ -59,9 +52,9 @@ const LOADERS = {
   codebuddy: { harness: "codebuddy", load: (cwd) => loadAgentHookConfig("codebuddy", cwd), options: { logFile: "codebuddy-hooks.log" }, owns: [] },
 };
 
-// openclaw declares its own settings in TypeScript and still resolves them
-// itself; it joins this table when it moves onto the shared loader.
-const WITHOUT_A_SHARED_LOADER = new Set(["openclaw"]);
+// The dsh and openclaw plugins were removed from this tree; the schema still
+// names them for configs written while they shipped.
+const WITHOUT_A_SHARED_LOADER = new Set(["dsh", "openclaw"]);
 
 const SEND_ONLY_WHEN_CONFIGURED = KNOBS.filter((knob) => knob.sendOnlyWhenConfigured);
 

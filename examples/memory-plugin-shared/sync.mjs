@@ -55,12 +55,6 @@ export const TARGETS = [
   },
 ];
 
-// Harnesses that vendor nothing: the installer copies the canonical runtime to
-// `$OV_HOME/agent-integrations/memory-plugin-shared/lib` and they import it by
-// the relative path that resolves both there and here. None remain since the
-// agent-hook-plugin hosts were removed, so `lib/MANIFEST` is empty.
-export const ASSEMBLED_ROOTS = [];
-
 export const GENERATED_HEADER = "// GENERATED FROM examples/memory-plugin-shared/lib. DO NOT EDIT.\n";
 
 // Skills are copied verbatim — a generated-from banner ahead of the `---`
@@ -251,25 +245,6 @@ export async function sharedClosure(seeds) {
   return [...generated].sort();
 }
 
-// The installer reads this file instead of computing the closure itself: it
-// runs against a marketplace archive, a flat layout where this generator finds
-// no plugin sources and would silently resolve an empty list.
-export const MANIFEST_PATH = join(SHARED_DIR, "MANIFEST");
-
-/** The closure the installer has to assemble for the harnesses that vendor nothing. */
-export async function assembledClosure() {
-  const seeds = new Set();
-  for (const root of ASSEMBLED_ROOTS) {
-    const { seeds: found, missing } = await directSharedImports({ root, dir: SHARED_DIR });
-    if (missing.length) {
-      const detail = missing.map((m) => `${m.name} (imported by ${m.importer})`).join(", ");
-      throw new Error(`the assembled runtime is missing: ${detail}`);
-    }
-    for (const seed of found) seeds.add(seed);
-  }
-  return sharedClosure([...seeds]);
-}
-
 /**
  * Whether TypeScript in the plugin imports the shared copies, so they need
  * their `.d.mts` declarations. TypeScript that imports none of them (a Claude
@@ -330,12 +305,6 @@ async function copySharedFile(file, targetDir, typed) {
   }
 }
 
-async function writeManifest(files) {
-  const staging = `${MANIFEST_PATH}.${process.pid}.tmp`;
-  await writeFile(staging, files.map((file) => `${file}\n`).join(""), "utf-8");
-  await rename(staging, MANIFEST_PATH);
-}
-
 async function copySkill(skill, targetDir) {
   const sourceDir = join(SKILLS_DIR, skill);
   for (const file of (await readdir(sourceDir)).sort()) {
@@ -374,11 +343,6 @@ async function main() {
       process.stdout.write(`stale  ${file} in ${relative(ROOT, target.dir)} — nothing imports it; delete it\n`);
     }
   }
-
-  const assembled = await assembledClosure();
-  await writeManifest(assembled);
-  process.stdout.write(`wrote ${relative(ROOT, MANIFEST_PATH)}\n`);
-  for (const file of assembled) claimed.add(file);
 
   const unclaimed = (await readdir(SHARED_DIR))
     .filter((file) => file.endsWith(".mjs") && !claimed.has(file))

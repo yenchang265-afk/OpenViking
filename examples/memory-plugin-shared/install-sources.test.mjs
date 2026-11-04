@@ -45,6 +45,11 @@ function writeExecutable(file, body) {
   writeFileSync(file, body, { mode: 0o755 });
 }
 
+// OpenCode installs from the bundle; the installer only needs it on PATH.
+function writeFakeOpencode(bin) {
+  writeExecutable(join(bin, "opencode"), "#!/bin/sh\nexit 0\n");
+}
+
 function installEnv(home, bin, extraEnv) {
   return {
     ...process.env,
@@ -82,7 +87,7 @@ function runAsync(home, bin, args, extraEnv = {}) {
   });
 }
 
-test("a default install of cursor, zcode and opencode downloads the bundle once and never runs git", () => {
+test("a default install of opencode downloads the bundle once and never runs git", () => {
   const home = mkdtempSync(join(work, "home-"));
   const bin = join(home, "bin");
   const log = join(home, "calls.log");
@@ -93,7 +98,7 @@ test("a default install of cursor, zcode and opencode downloads the bundle once 
   writeExecutable(join(bin, "opencode"), "#!/bin/sh\nexit 0\n");
 
   const result = run(home, bin, [
-    "--harness", "cursor,zcode,opencode", "--lang", "en",
+    "--harness", "opencode", "--lang", "en",
     "--url", "http://127.0.0.1:9", "--api-key", "", "--yes",
   ]);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
@@ -101,8 +106,6 @@ test("a default install of cursor, zcode and opencode downloads the bundle once 
   const calls = existsSync(log) ? readFileSync(log, "utf8").split("\n").filter(Boolean) : [];
   assert.deepEqual(calls.filter((line) => line.startsWith("git ")), []);
   assert.equal(calls.filter((line) => line.includes("memory-plugin-marketplace.zip")).length, 1, calls.join("\n"));
-  assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "cursor", "scripts", "hook.mjs")));
-  assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "zcode", "scripts", "hook.mjs")));
   assert.ok(existsSync(join(home, ".config", "opencode", "plugins", "openviking", "index.mjs")));
 });
 
@@ -381,7 +384,8 @@ test("of several download locations, the first to answer serves the whole instal
   }
 
   // With none answering, the first one is named in what fails.
-  const none = run(home, bin, ["--harness", "cursor", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"], {
+  writeFakeOpencode(bin);
+  const none = run(home, bin, ["--harness", "opencode", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"], {
     OPENVIKING_DOWNLOAD_BASE: "http://127.0.0.1:1/dl http://127.0.0.1:1/other",
   });
   assert.equal(none.status, 1, `${none.stdout}\n${none.stderr}`);
@@ -451,9 +455,10 @@ test("retired GitHub-channel options are accepted, announced and ignored", () =>
   const home = mkdtempSync(join(work, "home-"));
   const bin = join(home, "bin");
   mkdirSync(bin);
+  writeFakeOpencode(bin);
   const notice = /The GitHub install channel was removed and its options are ignored/;
   const install = (args, extraEnv) => run(home, bin, [
-    "--harness", "cursor", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes", ...args,
+    "--harness", "opencode", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes", ...args,
   ], extraEnv);
 
   for (const [args, extraEnv] of [
@@ -476,6 +481,7 @@ test("the installer runs when bash reads it from stdin", () => {
   const home = mkdtempSync(join(work, "home-"));
   const bin = join(home, "bin");
   mkdirSync(bin);
+  writeFakeOpencode(bin);
   const piped = (args) => spawnSync("/bin/bash", ["-s", "--", ...args], {
     cwd: home,
     env: installEnv(home, bin, {}),
@@ -486,18 +492,19 @@ test("the installer runs when bash reads it from stdin", () => {
   const help = piped(["--help"]);
   assert.equal(help.status, 0, help.stderr);
   assert.match(help.stdout, /^Usage: install\.sh/);
-  const installed = piped(["--harness", "cursor", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"]);
+  const installed = piped(["--harness", "opencode", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"]);
   assert.equal(installed.status, 0, `${installed.stdout}\n${installed.stderr}`);
-  assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "cursor", "scripts", "hook.mjs")));
+  assert.ok(existsSync(join(home, ".config", "opencode", "plugins", "openviking", "index.mjs")));
 });
 
 test("a copy that is not a release build runs the release installer", () => {
   const home = mkdtempSync(join(work, "home-"));
   const bin = join(home, "bin");
   mkdirSync(bin);
+  writeFakeOpencode(bin);
   const release = join(home, "tos", "memory-plugin-shared", "install.sh");
   mkdirSync(dirname(release), { recursive: true });
-  const args = ["--harness", "cursor", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"];
+  const args = ["--harness", "opencode", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"];
   // A lib/install beside the script would be taken for the installer's own
   // helpers, so the release copy runs alone in a directory it then removes.
   const tmp = join(home, "tmp");
@@ -522,7 +529,7 @@ test("a copy that is not a release build runs the release installer", () => {
   const kept = run(home, bin, args, reexec);
   assert.equal(kept.status, 0, `${kept.stdout}\n${kept.stderr}`);
   assert.match(kept.stdout, /Could not fetch the release installer; continuing with this copy/);
-  assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "cursor", "scripts", "hook.mjs")));
+  assert.ok(existsSync(join(home, ".config", "opencode", "plugins", "openviking", "index.mjs")));
 });
 
 // The release resolver: a local stand-in for the install site answers each
@@ -550,7 +557,7 @@ function bundleAnswer(overrides = {}) {
     status: 200,
     body: {
       schema: 1,
-      harness: "cursor",
+      harness: "opencode",
       version: "9.9.9",
       bundle_url: `file://${pinnedZip}`,
       sha256: pinnedSha256,
@@ -568,11 +575,12 @@ function resolverHome() {
   mkdirSync(bin);
   const realCurl = spawnSync("bash", ["-c", "command -v curl"], { encoding: "utf8" }).stdout.trim();
   writeExecutable(join(bin, "curl"), `#!/bin/sh\necho "curl $*" >> "${log}"\nexec "${realCurl}" "$@"\n`);
+  writeFakeOpencode(bin);
   const downloads = () => readFileSync(log, "utf8").split("\n").filter((line) => line.includes("memory-plugin-marketplace.zip"));
   return { home, bin, downloads };
 }
 
-const cursorArgs = ["--harness", "cursor", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"];
+const opencodeArgs = ["--harness", "opencode", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes"];
 const latestZip = `file://${tosBase}/releases/latest/memory-plugin-marketplace.zip`;
 
 test("the resolver pins the release each harness installs, asked for under its public name", async () => {
@@ -587,24 +595,24 @@ esac
 exit 0
 `);
   answers = {
-    cursor: bundleAnswer(),
+    opencode: bundleAnswer(),
     "trae-cli": { status: 200, body: { schema: 1, harness: "trae-cli", version: "9.9.9", git_url: pinnedGit } },
   };
   requests.length = 0;
 
   const result = await runAsync(home, bin, [
-    "--harness", "cursor,trae-cli", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes",
+    "--harness", "opencode,trae-cli", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes",
   ], siteEnv);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 
-  assert.deepEqual(requests.map((r) => r.path).sort(), ["/install/v1/cursor.json", "/install/v1/trae-cli.json"]);
+  assert.deepEqual(requests.map((r) => r.path).sort(), ["/install/v1/opencode.json", "/install/v1/trae-cli.json"]);
   for (const { agent } of requests) assert.match(agent, /^openviking-installer\/dev \((darwin|linux); [^;)]+\)$/);
   assert.equal(downloads().length, 1);
   assert.match(downloads()[0], /releases\/v9\.9\.9\/memory-plugin-marketplace\.zip/);
   assert.ok(readFileSync(traeLog, "utf8").split("\n").includes(`plugin marketplace add ${pinnedGit}`));
   assert.match(result.stdout, /Release: 9\.9\.9/);
   assert.doesNotMatch(result.stdout, /Removes the deprecated TRAE CLI Hooks integration/);
-  assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "cursor", "scripts", "hook.mjs")));
+  assert.ok(existsSync(join(home, ".config", "opencode", "plugins", "openviking", "index.mjs")));
 });
 
 test("an answer naming another download location is read from the one in use", async () => {
@@ -612,15 +620,15 @@ test("an answer naming another download location is read from the one in use", a
   const other = "http://127.0.0.1:1/dl";
   const env = { ...siteEnv, OPENVIKING_DOWNLOAD_BASE: `file://${tosBase} ${other}/` };
 
-  answers = { cursor: bundleAnswer({ bundle_url: `${other}/releases/v9.9.9/memory-plugin-marketplace.zip`, source_url: `${other}/source.zip` }) };
-  const pinned = await runAsync(home, bin, cursorArgs, env);
+  answers = { opencode: bundleAnswer({ bundle_url: `${other}/releases/v9.9.9/memory-plugin-marketplace.zip`, source_url: `${other}/source.zip` }) };
+  const pinned = await runAsync(home, bin, opencodeArgs, env);
   assert.equal(pinned.status, 0, `${pinned.stdout}\n${pinned.stderr}`);
   assert.deepEqual(downloads().map((line) => line.split(" ").pop()), [`file://${pinnedZip}`]);
 
   // The docs site's channel data carries no checksum: its version is shown
   // and the latest bundle is installed.
-  answers = { cursor: { status: 200, body: { schema: 1, harness: "cursor", version: "20260929-0123456789", bundle_url: `${other}/releases/latest/memory-plugin-marketplace.zip` } } };
-  const latest = await runAsync(home, bin, cursorArgs, env);
+  answers = { opencode: { status: 200, body: { schema: 1, harness: "opencode", version: "20260929-0123456789", bundle_url: `${other}/releases/latest/memory-plugin-marketplace.zip` } } };
+  const latest = await runAsync(home, bin, opencodeArgs, env);
   assert.equal(latest.status, 0, `${latest.stdout}\n${latest.stderr}`);
   assert.match(latest.stdout, /Release: 20260929-0123456789/);
   assert.equal(downloads().pop().split(" ").pop(), latestZip);
@@ -634,9 +642,9 @@ test("an unavailable or untrusted resolver answer falls back to the latest relea
     bundleAnswer({ schema: 2 }),
   ]) {
     const { home, bin, downloads } = resolverHome();
-    answers = { cursor: answer };
+    answers = { opencode: answer };
     requests.length = 0;
-    const result = await runAsync(home, bin, cursorArgs, siteEnv);
+    const result = await runAsync(home, bin, opencodeArgs, siteEnv);
     assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.equal(requests.length, 1);
     assert.deepEqual(downloads().map((line) => line.split(" ").pop()), [latestZip]);
@@ -645,26 +653,26 @@ test("an unavailable or untrusted resolver answer falls back to the latest relea
 });
 
 test("a bundle that does not match the resolver's checksum is not installed", async () => {
-  answers = { cursor: bundleAnswer({ sha256: "0".repeat(64) }) };
+  answers = { opencode: bundleAnswer({ sha256: "0".repeat(64) }) };
   const { home, bin } = resolverHome();
-  const mismatch = await runAsync(home, bin, cursorArgs, siteEnv);
+  const mismatch = await runAsync(home, bin, opencodeArgs, siteEnv);
   assert.equal(mismatch.status, 1, `${mismatch.stdout}\n${mismatch.stderr}`);
   assert.match(mismatch.stderr, /does not match the checksum the release published/);
   assert.match(mismatch.stderr, new RegExp(`got ${pinnedSha256}`));
   assert.equal(existsSync(join(home, ".openviking", "memory-plugin-marketplace")), false);
-  assert.equal(existsSync(join(home, ".openviking", "agent-integrations", "cursor")), false);
+  assert.equal(existsSync(join(home, ".config", "opencode", "plugins", "openviking")), false);
 
   // An explicit bundle URL replaces the resolver's, checksum included.
-  const overridden = await runAsync(home, bin, cursorArgs, { ...siteEnv, OPENVIKING_MARKETPLACE_ARCHIVE_URL: latestZip });
+  const overridden = await runAsync(home, bin, opencodeArgs, { ...siteEnv, OPENVIKING_MARKETPLACE_ARCHIVE_URL: latestZip });
   assert.equal(overridden.status, 0, `${overridden.stdout}\n${overridden.stderr}`);
-  assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "cursor", "scripts", "hook.mjs")));
+  assert.ok(existsSync(join(home, ".config", "opencode", "plugins", "openviking", "index.mjs")));
 });
 
 test("OPENVIKING_SKIP_VERSION_CHECK skips the version check", async () => {
-  answers = { cursor: bundleAnswer() };
+  answers = { opencode: bundleAnswer() };
   requests.length = 0;
   const { home, bin, downloads } = resolverHome();
-  const result = await runAsync(home, bin, cursorArgs, { ...siteEnv, OPENVIKING_SKIP_VERSION_CHECK: "1" });
+  const result = await runAsync(home, bin, opencodeArgs, { ...siteEnv, OPENVIKING_SKIP_VERSION_CHECK: "1" });
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
   assert.deepEqual(requests, []);
   assert.deepEqual(downloads().map((line) => line.split(" ").pop()), [latestZip]);

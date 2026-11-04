@@ -29,8 +29,6 @@ import {
   resolvePeer,
   sessionId,
 } from "./import-history.mjs";
-import { HOSTS as HOOK_HOSTS } from "../agent-hook-plugin/hosts/index.mjs";
-import { deriveDshSessionId } from "../dsh-memory-plugin/session-id.mjs";
 import { deriveAgentSessionId } from "./lib/agent-hook-runtime.mjs";
 import { resolveConnection as libConnection } from "./lib/credentials.mjs";
 import { buildPluginConfig } from "./lib/plugin-config.mjs";
@@ -38,6 +36,17 @@ import { deriveCodexSessionId, deriveHarnessSessionId } from "./lib/session-mode
 import { resolveEffectivePeerId } from "./lib/workspace-peer.mjs";
 
 const SCRIPT = join(dirname(fileURLToPath(import.meta.url)), "import-history.mjs");
+
+// The session prefixes the removed agent-hook-plugin hosts used, and the id
+// rule of the removed dsh plugin: transcripts those plugins captured live keep
+// these ids on the server, so the importer still has to recognize them.
+const HOOK_HOST_PREFIXES = { codebuddy: "cb-", cursor: "cu-", kimicode: "kc-", trae: "tr-", "trae-cn": "trcn-", zcode: "zc-" };
+function deriveDshSessionId(sessionId) {
+  const original = deriveHarnessSessionId("dsh-", String(sessionId));
+  const portable = original.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_").replace(/[. ]+$/g, (m) => "_".repeat(m.length));
+  if (portable === original) return original;
+  return `${portable}__${createHash("sha256").update(original).digest("hex").slice(0, 12)}`;
+}
 const NOW = Date.parse("2026-10-13T12:00:00Z");
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -870,9 +879,9 @@ test("--input: session ids, live ids and peers follow each host's plugin", async
   // Live ids, against the plugins' own derivations.
   const ids = ["ses_4f2a9c", "sess_01J9ZX", "0199AAAA-bbbb-7ccc-8ddd-eeeeeeeeeeee", "a:b/c d?.", "im?a"];
   for (const id of ids) {
-    for (const [name, host] of Object.entries(HOOK_HOSTS)) {
+    for (const [name, prefix] of Object.entries(HOOK_HOST_PREFIXES)) {
       const key = name.replace(/-/g, "_");
-      assert.equal(liveSessionId(key, id), deriveAgentSessionId(host.prefix, { session_id: id }), `${name} ${id}`);
+      assert.equal(liveSessionId(key, id), deriveAgentSessionId(prefix, { session_id: id }), `${name} ${id}`);
     }
     assert.equal(liveSessionId("opencode", id), deriveHarnessSessionId("oc-", id), `opencode ${id}`);
     assert.equal(liveSessionId("pi", id), deriveHarnessSessionId("pi-", id), `pi ${id}`);

@@ -13,9 +13,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  MANIFEST_PATH,
   ROOT,
-  assembledClosure,
   importSpecifiers,
   resolveTargets,
 } from "../../examples/memory-plugin-shared/sync.mjs";
@@ -198,16 +196,11 @@ export async function requiredArchiveFiles(stagedNames) {
   }
 
   // The plugins that vendor a copy of the shared runtime ship what the sync put
-  // there, and the harnesses that vendor nothing ship the closure the installer
-  // assembles for them, named by the manifest the installer reads.
+  // there.
   for (const target of await resolveTargets()) {
     const dir = relative(EXAMPLES, target.dir);
     if (dir.startsWith("..") || !staged.has(dir.split(sep)[0])) continue;
     for (const file of target.files) required.add(join(dir, file));
-  }
-  if (staged.has("memory-plugin-shared")) {
-    addIfStaged(MANIFEST_PATH);
-    for (const file of await assembledClosure()) addIfStaged(join(dirname(MANIFEST_PATH), file));
   }
 
   return [...required].sort();

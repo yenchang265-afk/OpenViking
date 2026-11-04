@@ -14,11 +14,6 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 // wiring so a harness cannot silently fall back to stateless recall again.
 const CALL_SITES = [
   {
-    name: "the thin-harness hook forwards its derived session id",
-    file: join(ROOT, "examples", "agent-hook-plugin", "scripts", "hook.mjs"),
-    pattern: /recallForPrompt\([^)]*\{[^}]*\bsessionId\b/s,
-  },
-  {
     name: "OpenCode recall forwards the mapped OV session id",
     file: join(ROOT, "examples", "opencode-plugin", "lib", "memory-recall.mjs"),
     pattern: /sessionId:\s*sessionID\s*\?\s*sessionManager\.getMappedSessionId\(sessionID\)/,

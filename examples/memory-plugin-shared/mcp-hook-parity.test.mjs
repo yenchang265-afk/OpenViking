@@ -2,9 +2,8 @@
  * A harness's hooks and its MCP proxy must reach the server as the same caller.
  *
  * They run in different processes, and the proxy's process sees only what its
- * host hands it: Codex forwards the names in `.mcp.json`'s `env_vars`, DSH
- * drops credential-shaped names and adds the bundle's forwarded connection,
- * the others inherit everything. Each
+ * host hands it: Codex forwards the names in `.mcp.json`'s `env_vars`, the
+ * others inherit everything. Each
  * row below states that rule, and every scenario runs the hook loader on the
  * full environment and the proxy on what that rule lets through, then compares
  * what goes on the wire. Comparing the resolved connection alone would miss
@@ -17,18 +16,12 @@ import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { after, before, test } from "node:test";
 
-import { loadAgentHookConfig } from "./lib/agent-hook-runtime.mjs";
 import { ROOT } from "./sync.mjs";
 import { scrubOpenVikingEnv, writeCredentialFiles } from "./testing/support.mjs";
-import { HOSTS } from "../agent-hook-plugin/hosts/index.mjs";
-import { readProxyConfig as agentHookProxy } from "../agent-hook-plugin/servers/mcp-proxy.mjs";
 import { loadConfig as loadClaudeCode } from "../claude-code-memory-plugin/scripts/config.mjs";
 import { readProxyConfig as claudeCodeProxy } from "../claude-code-memory-plugin/servers/mcp-proxy.mjs";
 import { loadConfig as loadCodex } from "../codex-memory-plugin/scripts/config.mjs";
 import { readProxyConfig as codexProxy } from "../codex-memory-plugin/servers/mcp-proxy.mjs";
-import { resolveConfig as loadDsh } from "../dsh-memory-plugin/config.mjs";
-import { buildMcpConfig as dshMcpConfig } from "../dsh-memory-plugin/mcp-env.mjs";
-import { readProxyConfig as dshProxy } from "../dsh-memory-plugin/servers/mcp-proxy.mjs";
 import { loadConfig as loadOpencode } from "../opencode-plugin/lib/config.mjs";
 import { readProxyConfig as opencodeProxy } from "../opencode-plugin/servers/mcp-proxy.mjs";
 
@@ -38,11 +31,6 @@ const pick = (env, names) => Object.fromEntries(names.filter((name) => name in e
 
 const CODEX_ENV_VARS = JSON.parse(readFileSync(join(ROOT, "examples", "codex-memory-plugin", ".mcp.json"), "utf-8"))
   .mcpServers["openviking-memory"].env_vars;
-
-// What a DSH child inherits: the parent's environment minus the names
-// `@deepseek-ai/dsh-subprocess` treats as credentials.
-const DSH_SCRUBBED = /KEY|PASSWORD|SECRET|TOKEN/i;
-const dshInherited = (env) => Object.fromEntries(Object.entries(env).filter(([name]) => !DSH_SCRUBBED.test(name)));
 
 const HARNESSES = [
   {
@@ -67,37 +55,13 @@ const HARNESSES = [
     hook: ({ env, cwd }) => loadOpencode("", cwd, { env }),
     proxy: ({ env }) => opencodeProxy(env),
   },
-  // The installer names the client in the MCP server's environment.
-  ...Object.keys(HOSTS).map((client) => ({
-    name: client,
-    dir: "agent-hook-plugin",
-    section: client.replace(/-/g, "_"),
-    hook: ({ env, cwd }) => loadAgentHookConfig(client, cwd, { env }),
-    proxy: ({ env }) => agentHookProxy({ ...env, OPENVIKING_HOOK_SOURCE: client }),
-  })),
-  // A hand-written MCP entry that names no client.
-  {
-    name: "agent-hook",
-    dir: "agent-hook-plugin",
-    section: "agent_hook",
-    hook: ({ env, cwd }) => loadAgentHookConfig("agent-hook", cwd, { env }),
-    proxy: ({ env }) => agentHookProxy(env),
-  },
-  {
-    name: "dsh",
-    dir: "dsh-memory-plugin",
-    section: "dsh",
-    hook: ({ env, cwd, host }) => loadDsh({ workspacePeer: false, ...host }, env, cwd),
-    proxy: ({ env, hook, otherDir }) => dshProxy({ ...dshInherited(env), ...dshMcpConfig(hook).env }, otherDir),
-  },
 ];
 
 const URL = "https://ov.example.com";
 
 /**
  * `ovcli` and `ov` are the two files, or a function of the harness for a
- * section named after it; `env` is added to the hook's environment; `host` is
- * what an embedding host passes (dsh reads it, the rest have none); `expect`
+ * section named after it; `env` is added to the hook's environment; `expect`
  * pins the answer as well, so both sides cannot agree on a wrong one.
  */
 const SCENARIOS = [
@@ -156,11 +120,6 @@ const SCENARIOS = [
     expect: () => ({ mcpUrl: "https://mcp.example.com/custom" }),
   },
   {
-    name: "a connection the host named",
-    ovcli: { url: URL, api_key: "sk-cli", account: "acct-cli" },
-    host: { endpoint: "https://host.example.com", apiKey: "sk-host", user: "usr-host", authMode: "api_key" },
-  },
-  {
     name: "a workspace file that tries to move the connection",
     ovcli: { url: URL, api_key: "sk-cli", account: "acct-cli" },
     workspace: {
@@ -197,7 +156,7 @@ async function runScenario(scenario, harness) {
       writeFileSync(join(cwd, ".openviking", "config.json"), JSON.stringify(scenario.workspace));
     }
     const env = { ...files.env, ...scenario.env };
-    const hook = harness.hook({ env, cwd, host: scenario.host || {} });
+    const hook = harness.hook({ env, cwd });
     const proxy = harness.proxy({ env, hook, otherDir });
     return { hook: wire(hook), proxy: wire(proxy) };
   } finally {
@@ -222,13 +181,10 @@ for (const scenario of SCENARIOS) {
   });
 }
 
-test("every proxy that ships beside hooks has a row, and so does every hook client", () => {
+test("every proxy that ships beside hooks has a row", () => {
   const shipped = readdirSync(join(ROOT, "examples"), { withFileTypes: true })
     .filter((entry) => entry.isDirectory() && existsSync(join(ROOT, "examples", entry.name, "servers", "mcp-proxy.mjs")))
     .map((entry) => entry.name)
     .sort();
   assert.deepEqual([...new Set(HARNESSES.map((harness) => harness.dir))].sort(), shipped);
-
-  const names = new Set(HARNESSES.map((harness) => harness.name));
-  for (const client of Object.keys(HOSTS)) assert.ok(names.has(client), `${client} needs a row`);
 });

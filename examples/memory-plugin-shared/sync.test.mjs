@@ -5,9 +5,9 @@ import { join, relative } from "node:path";
 import test from "node:test";
 
 // Imported, not re-declared: the copies kept here had drifted from sync.mjs
-// (dsh, opencode and agent-plugins were all missing modules the sync actually
+// (opencode and agent-plugins were both missing modules the sync actually
 // ships), so a stale vendored file went unnoticed by this very test.
-import { GENERATED_HEADER, ROOT, SHARED_DIR, SKILLS_DIR, SKILL_TARGETS, assembledClosure, resolveTargets } from "./sync.mjs";
+import { GENERATED_HEADER, ROOT, SHARED_DIR, SKILLS_DIR, SKILL_TARGETS, resolveTargets } from "./sync.mjs";
 
 test("vendored shared modules are synchronized", async () => {
   const files = (await readdir(SHARED_DIR)).filter((file) => file.endsWith(".mjs")).sort();
@@ -96,9 +96,6 @@ test("the portable agent-plugins bundle stays connection-only", async () => {
 test("every shared module is reachable from some plugin", async () => {
   const targets = await resolveTargets();
   const claimed = new Set(targets.flatMap((target) => target.files));
-  // cursor, trae and zcode vendor nothing: the installer assembles their
-  // runtime instead, so they claim through the manifest it reads.
-  for (const entry of await assembledClosure()) claimed.add(entry);
   const files = (await readdir(SHARED_DIR)).filter((file) => file.endsWith(".mjs")).sort();
   assert.deepEqual(
     files.filter((file) => !claimed.has(file)),

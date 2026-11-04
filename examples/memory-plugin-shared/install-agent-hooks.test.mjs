@@ -56,19 +56,7 @@ function runInstaller(home, args, extraEnv = {}, script = installer) {
   });
 }
 
-function runInstall(home, harnesses = "cursor,trae,trae-cn,zcode") {
-  const result = runInstaller(home, [
-    "--harness", harnesses,
-    "--source", "dev",
-    "--lang", "en",
-    "--url", "http://127.0.0.1:9",
-    "--api-key", "",
-    "--yes",
-  ]);
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-}
-
-function runUninstall(home, harnesses = "cursor,trae,trae-cn,zcode") {
+function runUninstall(home, harnesses) {
   const result = runInstaller(home, [
     "--harness", harnesses,
     "--uninstall",
@@ -76,54 +64,6 @@ function runUninstall(home, harnesses = "cursor,trae,trae-cn,zcode") {
   ]);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
 }
-
-test("Kimi installs a self-contained native bundle without legacy config edits", () => {
-  const home = mkdtempSync(join(tmpdir(), "openviking-kimi-hooks-"));
-  try {
-    writeJson(join(home, ".kimi-code", "plugins", "installed.json"), {
-      version: 1,
-      plugins: [{ id: "third-party", root: "/third-party", enabled: false }],
-    });
-
-    const result = runInstaller(home, [
-      "--harness", "kimicode",
-      "--source", "dev",
-      "--lang", "en",
-      "--url", "http://127.0.0.1:9",
-      "--api-key", "",
-      "--yes",
-    ]);
-    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-
-    const root = join(home, ".kimi-code", "plugins", "managed", "openviking-memory");
-    const manifest = JSON.parse(readFileSync(join(root, "kimi.plugin.json"), "utf8"));
-    assert.deepEqual(manifest.hooks.map((hook) => hook.event), [
-      "SessionStart", "UserPromptSubmit", "PreToolUse", "Stop", "PreCompact", "SessionEnd", "Interrupt",
-    ]);
-    assert.equal(manifest.hooks[0].env.OPENVIKING_PENDING_REPLAY_LIMIT, "2");
-    assert.match(manifest.mcpServers.openviking.args[0], /agent-integrations\/kimicode\/servers\/mcp-proxy\.mjs$/);
-    assert.ok(existsSync(join(root, "agent-integrations", "kimicode", "scripts", "hook.mjs")));
-    assert.ok(existsSync(join(root, "agent-integrations", "memory-plugin-shared", "lib", "agent-hook-runtime.mjs")));
-    assert.equal(existsSync(join(root, "agent-integrations", "memory-plugin-shared", "lib", "install")), false);
-    assert.equal(existsSync(join(root, "agent-integrations", "kimicode", "tests")), false);
-    assert.equal(existsSync(join(root, "agent-integrations", "kimicode", "hosts", "cursor.mjs")), false);
-    assert.equal(existsSync(join(root, "agent-integrations", "kimicode", "hosts", "zcode.mjs")), false);
-    assert.equal(existsSync(join(home, ".kimi-code", "config.toml")), false);
-    assert.equal(existsSync(join(home, ".kimi-code", "mcp.json")), false);
-
-    const registry = JSON.parse(readFileSync(join(home, ".kimi-code", "plugins", "installed.json"), "utf8"));
-    assert.deepEqual(registry.plugins.map((plugin) => plugin.id).sort(), ["openviking-memory", "third-party"]);
-    assert.ok(existsSync(join(home, ".openviking", "agent-integrations", "kimicode", "lib", "install", "kimicode-plugin.mjs")));
-
-    const removed = runInstaller(home, ["--harness", "kimicode", "--uninstall", "--yes"]);
-    assert.equal(removed.status, 0, `${removed.stdout}\n${removed.stderr}`);
-    assert.equal(existsSync(root), false);
-    const after = JSON.parse(readFileSync(join(home, ".kimi-code", "plugins", "installed.json"), "utf8"));
-    assert.deepEqual(after.plugins.map((plugin) => plugin.id), ["third-party"]);
-  } finally {
-    rmSync(home, { recursive: true, force: true });
-  }
-});
 
 test("TraeCode CLI 2.0 installs the Codex plugin alias and removes the deprecated integration", () => {
   const home = mkdtempSync(join(tmpdir(), "openviking-trae-cli-hooks-"));
@@ -310,257 +250,109 @@ exit 0
   }
 });
 
-test("combined hook-host install preserves unrelated hooks and is idempotent", () => {
-  const home = mkdtempSync(join(tmpdir(), "openviking-agent-hooks-"));
+
+// The hook hosts (Cursor, TRAE, TRAE CN, ZCode, Kimi Code, CodeBuddy Code) are
+// no longer installed, but `--uninstall` still removes what an earlier
+// installer set up. These seed the files that install wrote.
+function seedCursorInstall(home, ovHome = join(home, ".openviking")) {
+  const root = join(ovHome, "agent-integrations", "cursor");
+  const hook = `OPENVIKING_INTEGRATION_ID=openviking-memory node ${join(root, "scripts", "hook.mjs")} stop cursor # openviking-memory`;
+  mkdirSync(join(root, "scripts"), { recursive: true });
+  writeFileSync(join(root, "scripts", "hook.mjs"), "");
+  writeJson(join(home, ".cursor", "hooks.json"), {
+    version: 1,
+    hooks: { stop: [{ command: "third-party" }, { command: hook }], sessionStart: [{ command: hook }] },
+  });
+  writeJson(join(home, ".cursor", "mcp.json"), {
+    mcpServers: {
+      openviking: { command: "node", args: [join(root, "servers", "mcp-proxy.mjs")] },
+      other: { command: "other-server" },
+    },
+  });
+  mkdirSync(join(home, ".cursor", "rules"), { recursive: true });
+  writeFileSync(join(home, ".cursor", "rules", "openviking-memory.mdc"), "");
+  for (const skill of ["openviking-memory", "openviking-skills", "ov-experience-memory"]) {
+    mkdirSync(join(home, ".cursor", "skills", skill), { recursive: true });
+  }
+  return root;
+}
+
+function seedSharedRuntime(ovHome) {
+  const shared = join(ovHome, "agent-integrations", "memory-plugin-shared", "lib");
+  cpSync(join(checkout, "examples", "memory-plugin-shared", "lib", "install"), join(shared, "install"), { recursive: true });
+  return dirname(shared);
+}
+
+const ownCommands = (file) => hookCommands(JSON.parse(readFileSync(file, "utf8")))
+  .filter((command) => command.includes("openviking-memory"));
+
+test("installing a hook host is refused and points at --uninstall", () => {
+  const home = mkdtempSync(join(tmpdir(), "openviking-hook-host-refused-"));
   try {
-    const cursorHooks = join(home, ".cursor", "hooks.json");
-    const cursorMcpPath = join(home, ".cursor", "mcp.json");
-    const traeHooks = join(home, ".trae", "hooks.json");
-    const traeCnHooks = join(home, ".trae-cn", "hooks.json");
-    const zcodeConfig = join(home, ".zcode", "cli", "config.json");
-    const thirdPartyShellHook = { command: "third-party shell audit" };
-    writeJson(cursorHooks, { version: 1, hooks: {
-      stop: [{ command: "third-party stop" }],
-      postToolUse: [{ command: "node /tmp/openviking/cursor-hook.mjs postToolUse # openviking-memory" }],
-      beforeShellExecution: [
-        thirdPartyShellHook,
-        {
-          command: "OPENVIKING_INTEGRATION_ID='openviking-memory' OPENVIKING_INTEGRATION_VERSION='0.3.0' OPENVIKING_HOOK_SOURCE='cursor' 'node' '/tmp/openviking/agent-integrations/cursor/scripts/uri-guard.mjs' cursor # openviking-memory",
-          timeout: 5,
-        },
-      ],
-    } });
-    writeJson(traeHooks, { version: 1, hooks: { Stop: [
-      { hooks: [{ type: "command", command: "third-party trae" }] },
-      { hooks: [{ type: "command", command: "OPENVIKING_HOOK_SOURCE=trae node /tmp/openviking/claude-code-memory-plugin/scripts/trae-auto-capture.mjs" }] },
-    ] } });
-    writeJson(traeCnHooks, { version: 1, hooks: { Stop: [{ hooks: [{ type: "command", command: "third-party trae-cn" }] }] } });
-    writeJson(cursorMcpPath, { mcpServers: {
-      "ov-mcp-server": { url: "https://example.com/mcp" },
-      "third-party": { url: "https://third-party.example/mcp" },
-    } });
-    const traeCnMcp = process.platform === "darwin"
-      ? join(home, "Library", "Application Support", "Trae CN", "User", "mcp.json")
-      : join(home, ".trae-cn", "mcp.json");
-    writeJson(traeCnMcp, { mcpServers: {
-      "ov-mcp-server": { url: "https://api.vikingdb.cn-beijing.volces.com/openviking/mcp" },
-      "third-party": { url: "http://127.0.0.1:3000/mcp" },
-    } });
-
-    runInstall(home);
-    const firstInstallTimes = Object.fromEntries(["cursor", "trae", "trae-cn"].map((client) => {
-      const manifest = JSON.parse(readFileSync(join(home, ".openviking", "agent-integrations", client, "integration.json"), "utf8"));
-      return [client, { installedAt: manifest.installedAt, updatedAt: manifest.updatedAt }];
-    }));
-    runInstall(home);
-
-    const cursor = JSON.parse(readFileSync(cursorHooks, "utf8"));
-    assert.equal(cursor.hooks.stop.filter((entry) => entry.command.includes("scripts/hook.mjs")).length, 1);
-    assert.ok(cursor.hooks.stop.some((entry) => entry.command === "third-party stop"));
-    assert.ok(cursor.hooks.stop.some((entry) => entry.command.includes(installedNode)));
-    assert.ok(cursor.hooks.stop.some((entry) => entry.command.includes("OPENVIKING_INTEGRATION_ID='openviking-memory'")));
-    assert.ok(cursor.hooks.stop.some((entry) => entry.command.includes("OPENVIKING_HOOK_SOURCE='cursor'")));
-    assert.equal(cursor.hooks.beforeReadFile.filter((entry) => entry.command.includes("uri-guard.mjs")).length, 1);
-    assert.equal(cursor.hooks.afterMCPExecution.filter((entry) => entry.command.includes("scripts/hook.mjs")).length, 1);
-    assert.deepEqual(cursor.hooks.beforeShellExecution, [thirdPartyShellHook]);
-    assert.equal(Boolean(cursor.hooks.postToolUse), false);
-
-    for (const [file, label] of [[traeHooks, "trae"], [traeCnHooks, "trae-cn"]]) {
-      const config = JSON.parse(readFileSync(file, "utf8"));
-      assert.equal(config.hooks.Stop.filter((entry) => JSON.stringify(entry).includes("scripts/hook.mjs")).length, 1, label);
-      assert.ok(config.hooks.Stop.some((entry) => JSON.stringify(entry).includes(`third-party ${label}`)), label);
-      assert.equal(config.hooks.Stop.some((entry) => JSON.stringify(entry).includes("trae-auto-capture.mjs")), false, label);
-      assert.ok(config.hooks.Stop.some((entry) => JSON.stringify(entry).includes(`OPENVIKING_HOOK_SOURCE='${label}'`)), label);
-      assert.equal(
-        config.hooks.PreToolUse.filter((entry) => JSON.stringify(entry).includes("uri-guard.mjs")).length,
-        1,
-        label,
-      );
+    for (const host of ["cursor", "trae", "trae-cn", "zcode", "kimicode", "codebuddy"]) {
+      const result = runInstaller(home, [
+        "--harness", host, "--source", "dev", "--lang", "en", "--url", "http://127.0.0.1:9", "--api-key", "", "--yes",
+      ]);
+      assert.equal(result.status, 2, `${host}: ${result.stdout}\n${result.stderr}`);
+      assert.match(result.stderr, new RegExp(`no longer installs ${host}; --uninstall removes an earlier install`));
     }
-    const zcodeEvents = JSON.parse(readFileSync(zcodeConfig, "utf8")).hooks.events;
-    assert.equal(
-      zcodeEvents.PreToolUse.filter((entry) => JSON.stringify(entry).includes("uri-guard.mjs")).length,
-      1,
-    );
-
-    const cursorServers = JSON.parse(readFileSync(cursorMcpPath, "utf8")).mcpServers;
-    const cursorMcp = cursorServers.openviking;
-    assert.equal(cursorMcp.command, installedNode);
-    assert.equal(cursorMcp.env.OPENVIKING_INTEGRATION_ID, "openviking-memory");
-    assert.equal(cursorMcp.env.OPENVIKING_HOOK_SOURCE, "cursor");
-    assert.ok(cursorServers["ov-mcp-server"], "unknown legacy aliases must be preserved");
-    assert.ok(cursorServers["third-party"]);
-    assert.match(readFileSync(join(home, ".cursor", "rules", "openviking-memory.mdc"), "utf8"), /OpenViking/);
-    assert.match(readFileSync(join(home, ".cursor", "skills", "openviking-memory", "SKILL.md"), "utf8"), /OpenViking Memory/);
-    assert.match(readFileSync(join(home, ".cursor", "skills", "ov-experience-memory", "SKILL.md"), "utf8"), /OpenViking Experience Memory/);
-    const shared = join(home, ".openviking", "agent-integrations", "memory-plugin-shared", "lib");
-    assert.ok(existsSync(join(shared, "agent-hook-runtime.mjs")));
-    assert.ok(existsSync(join(shared, "batch-send.mjs")));
-    assert.ok(existsSync(join(shared, "mcp-proxy-core.mjs")));
-    assert.ok(existsSync(join(shared, "uri-guard.mjs")));
-    for (const client of ["cursor", "trae", "trae-cn"]) {
-      const root = join(home, ".openviking", "agent-integrations", client);
-      assert.ok(existsSync(join(root, "plugin.json")), `${client}: host-neutral plugin manifest is missing`);
-      assert.equal(existsSync(join(root, ".claude-plugin")), false, `${client}: stale Claude manifest directory`);
-      const manifest = JSON.parse(readFileSync(join(home, ".openviking", "agent-integrations", client, "integration.json"), "utf8"));
-      assert.equal(manifest.id, "openviking-memory");
-      assert.equal(manifest.client, client);
-      assert.equal(manifest.installMode, "managed-native");
-      assert.equal(manifest.source, "dev");
-      assert.deepEqual(
-        { installedAt: manifest.installedAt, updatedAt: manifest.updatedAt },
-        firstInstallTimes[client],
-        `${client} manifest must be idempotent`,
-      );
-    }
-    const doctor = spawnSync(
-      process.execPath,
-      [join(home, ".openviking", "agent-integrations", "cursor", "scripts", "ov-memory-doctor.mjs"), "cursor", "--offline", "--no-color"],
-      { env: { ...process.env, HOME: home }, encoding: "utf8" },
-    );
-    const version = JSON.parse(readFileSync(join(checkout, "examples", "agent-hook-plugin", "plugin.json"), "utf8")).version;
-    assert.ok(doctor.stdout.includes(`version ${version}, client cursor`));
-    // A hooks.json entry that names a script the install did not put on disk
-    // fails only when the host first runs it, so the rendered commands are
-    // checked against the tree they were rendered for.
-    for (const [file, label] of [[cursorHooks, "cursor"], [traeHooks, "trae"], [traeCnHooks, "trae-cn"]]) {
-      const commands = hookCommands(JSON.parse(readFileSync(file, "utf8")))
-        .filter((command) => command.includes("# openviking-memory"));
-      assert.ok(commands.length > 0, `${label}: no OpenViking hook commands were installed`);
-      for (const command of commands) {
-        const script = /'([^']*\.mjs)'/u.exec(command)?.[1];
-        assert.ok(script, `${label}: ${command} names no script`);
-        assert.ok(existsSync(script), `${label}: ${script} is missing after install`);
-      }
-    }
-    for (const [client, event] of [["cursor", "sessionStart"], ["trae", "session-start"], ["trae-cn", "session-start"]]) {
-      const hook = join(home, ".openviking", "agent-integrations", client, "scripts", "hook.mjs");
-      const smoke = spawnSync(process.execPath, [hook, event, client], {
-        env: { ...process.env, HOME: home, OPENVIKING_MEMORY_ENABLED: "0" },
-        input: "{}",
-        encoding: "utf8",
-      });
-      assert.equal(smoke.status, 0, `${client}: ${smoke.stderr}`);
-      assert.equal(smoke.stderr, "", client);
-    }
-    for (const client of ["cursor", "trae", "trae-cn"]) {
-      const guard = join(
-        home,
-        ".openviking",
-        "agent-integrations",
-        client,
-        "scripts",
-        "uri-guard.mjs",
-      );
-      const input = client === "cursor"
-        ? { file_path: "viking://resources/project/file.md" }
-        : { tool_name: "Read", tool_input: { file_path: "viking://resources/project/file.md" } };
-      const guarded = spawnSync(process.execPath, [guard, client], {
-        env: { ...process.env, HOME: home },
-        input: JSON.stringify(input),
-        encoding: "utf8",
-      });
-      assert.equal(guarded.status, 0, `${client}: ${guarded.stderr}`);
-      assert.match(guarded.stdout, /deny/, `${client}: ${guarded.stderr}`);
-    }
-    const traeMcp = process.platform === "darwin"
-      ? join(home, "Library", "Application Support", "Trae", "User", "mcp.json")
-      : join(home, ".trae", "mcp.json");
-    assert.ok(JSON.parse(readFileSync(traeMcp, "utf8")).mcpServers.openviking);
-    assert.equal(JSON.parse(readFileSync(traeMcp, "utf8")).mcpServers.openviking.env.OPENVIKING_HOOK_SOURCE, "trae");
-    const traeCnServers = JSON.parse(readFileSync(traeCnMcp, "utf8")).mcpServers;
-    assert.ok(traeCnServers.openviking);
-    assert.equal(traeCnServers.openviking.env.OPENVIKING_HOOK_SOURCE, "trae-cn");
-    assert.ok(traeCnServers["third-party"]);
-    assert.equal(Boolean(traeCnServers["ov-mcp-server"]), false);
-
-    runUninstall(home);
-    assert.ok(JSON.parse(readFileSync(cursorHooks, "utf8")).hooks.stop.some((entry) => entry.command === "third-party stop"));
-    assert.equal(JSON.parse(readFileSync(cursorHooks, "utf8")).hooks.stop.some((entry) => entry.command.includes("scripts/hook.mjs")), false);
-    const cursorServersAfterUninstall = JSON.parse(readFileSync(cursorMcpPath, "utf8")).mcpServers;
-    assert.ok(cursorServersAfterUninstall["ov-mcp-server"]);
-    assert.ok(cursorServersAfterUninstall["third-party"]);
-    assert.equal(Boolean(cursorServersAfterUninstall.openviking), false);
-    assert.equal(existsSync(join(home, ".cursor", "rules", "openviking-memory.mdc")), false);
-    assert.equal(existsSync(join(home, ".cursor", "skills", "openviking-memory")), false);
-    assert.equal(Boolean(JSON.parse(readFileSync(traeMcp, "utf8")).mcpServers.openviking), false);
-    assert.equal(Boolean(JSON.parse(readFileSync(traeCnMcp, "utf8")).mcpServers.openviking), false);
-    assert.ok(JSON.parse(readFileSync(traeCnMcp, "utf8")).mcpServers["third-party"]);
-    // Every event the installer wrote has to come back empty, the URI guard's
-    // included: a surviving entry runs a script the uninstall just deleted.
-    const cursorEventsAfter = JSON.parse(readFileSync(cursorHooks, "utf8")).hooks;
-    assert.deepEqual(cursorEventsAfter.beforeReadFile || [], [], "beforeReadFile");
-    assert.deepEqual(cursorEventsAfter.beforeShellExecution, [thirdPartyShellHook]);
-    for (const [file, label] of [[traeHooks, "trae"], [traeCnHooks, "trae-cn"]]) {
-      assert.deepEqual(JSON.parse(readFileSync(file, "utf8")).hooks.PreToolUse || [], [], label);
-    }
-    assert.deepEqual(
-      JSON.parse(readFileSync(zcodeConfig, "utf8")).hooks?.events?.PreToolUse || [],
-      [],
-      "zcode",
-    );
-    // A backup taken while removing entries would keep a copy of them, so the
-    // uninstall writes none and reclaims the one the install left.
-    for (const file of [cursorHooks, cursorMcpPath, traeHooks, traeMcp, traeCnHooks, traeCnMcp]) {
-      assert.equal(existsSync(`${file}.bak`), false, `${file}.bak`);
-    }
-    assert.equal(existsSync(join(home, ".openviking", "agent-integrations", "memory-plugin-shared")), false);
+    assert.equal(existsSync(join(home, ".openviking")), false);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
 });
 
-// Installing the thin harnesses together lets one client's verification pass
-// against a directory another client happened to create, so each is installed
-// into a HOME of its own.
-for (const client of ["cursor", "trae", "trae-cn", "zcode"]) {
-  test(`${client} installs and verifies on its own`, () => {
-    const home = mkdtempSync(join(tmpdir(), `openviking-solo-${client}-`));
-    try {
-      const result = runInstaller(home, [
-        "--harness", client,
-        "--source", "dev",
-        "--lang", "en",
-        "--url", "http://127.0.0.1:9",
-        "--api-key", "",
-        "--yes",
-      ]);
-      assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-      assert.doesNotMatch(result.stdout, new RegExp(`^!!\\s+${client}:`, "mu"), result.stdout);
-      assert.ok(existsSync(join(home, ".openviking", "agent-integrations", client, "scripts", "hook.mjs")));
-    } finally {
-      rmSync(home, { recursive: true, force: true });
-    }
-  });
-}
-
-test("validation fails a hook host whose files are missing or whose hook does not run", () => {
-  const home = mkdtempSync(join(tmpdir(), "openviking-validate-hooks-"));
+test("uninstall removes an earlier hook-host install, keeps unrelated entries and is idempotent", () => {
+  const home = mkdtempSync(join(tmpdir(), "openviking-uninstall-hooks-"));
   try {
-    runInstall(home);
-    const source = readFileSync(installer, "utf8");
-    const prelude = source.slice(0, source.indexOf("# ---------------------------------------------------------------------------\n# Main\n"));
-    const validate = (client) => spawnSync("bash", [], {
-      env: { ...process.env, HOME: home, OPENVIKING_HOME: join(home, ".openviking") },
-      input: `${prelude}\nNODE_BIN="$(command -v node)"\nvalidate_hook_host ${client}\n`,
-      encoding: "utf8",
+    const ovHome = join(home, ".openviking");
+    const root = seedCursorInstall(home);
+    const shared = seedSharedRuntime(ovHome);
+    const traeHooks = join(home, ".trae", "hooks.json");
+    writeJson(traeHooks, {
+      hooks: { "session-start": [{ command: `node ${join(ovHome, "agent-integrations", "trae", "scripts", "hook.mjs")} session-start trae # openviking-memory` }] },
     });
+    mkdirSync(join(ovHome, "agent-integrations", "trae"), { recursive: true });
 
-    for (const client of ["cursor", "trae", "trae-cn", "zcode"]) {
-      const result = validate(client);
-      assert.equal(result.status, 0, `${client}: ${result.stdout}\n${result.stderr}`);
-      assert.match(result.stdout, new RegExp(`${client}: hooks and MCP are configured`));
+    runUninstall(home, "cursor,trae");
+    const hooksPath = join(home, ".cursor", "hooks.json");
+    const mcp = JSON.parse(readFileSync(join(home, ".cursor", "mcp.json"), "utf8"));
+    assert.deepEqual(ownCommands(hooksPath), []);
+    assert.deepEqual(hookCommands(JSON.parse(readFileSync(hooksPath, "utf8"))), ["third-party"]);
+    assert.equal(Boolean(mcp.mcpServers.openviking), false);
+    assert.ok(mcp.mcpServers.other);
+    assert.deepEqual(ownCommands(traeHooks), []);
+    assert.equal(existsSync(join(home, ".cursor", "rules", "openviking-memory.mdc")), false);
+    assert.equal(existsSync(join(home, ".cursor", "skills", "openviking-memory")), false);
+    assert.equal(existsSync(root), false);
+    assert.equal(existsSync(join(ovHome, "agent-integrations", "trae")), false);
+    // The last hook host gone, the shared runtime goes with it.
+    assert.equal(existsSync(shared), false);
+
+    runUninstall(home, "cursor,trae");
+    assert.deepEqual(hookCommands(JSON.parse(readFileSync(hooksPath, "utf8"))), ["third-party"]);
+  } finally {
+    rmSync(home, { recursive: true, force: true });
+  }
+});
+
+test("uninstall without --harness removes the hook hosts it detects", () => {
+  const home = mkdtempSync(join(tmpdir(), "openviking-uninstall-detected-"));
+  try {
+    seedCursorInstall(home);
+    const result = runInstaller(home, ["--uninstall", "--lang", "en", "--yes"]);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /Selected harnesses: cursor\n/);
+    assert.deepEqual(ownCommands(join(home, ".cursor", "hooks.json")), []);
+
+    const empty = mkdtempSync(join(tmpdir(), "openviking-uninstall-nothing-"));
+    try {
+      const none = runInstaller(empty, ["--uninstall", "--lang", "en", "--yes"]);
+      assert.equal(none.status, 0, `${none.stdout}\n${none.stderr}`);
+      assert.match(none.stdout, /No integration to uninstall was found/);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
     }
-
-    rmSync(join(home, ".cursor", "skills", "openviking-skills"), { recursive: true });
-    const incomplete = validate("cursor");
-    assert.equal(incomplete.status, 1);
-    assert.match(incomplete.stdout, /cursor: OpenViking hook or MCP config is incomplete/);
-
-    writeFileSync(join(home, ".openviking", "agent-integrations", "zcode", "scripts", "hook.mjs"), "process.exit(3);\n");
-    const broken = validate("zcode");
-    assert.equal(broken.status, 1);
-    assert.match(broken.stdout, /zcode: installed Hook runtime failed its smoke test/);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
@@ -573,20 +365,16 @@ test("validation fails a hook host whose files are missing or whose hook does no
 test("uninstall with no installer runtime on disk removes what it can and fetches nothing", () => {
   const home = mkdtempSync(join(tmpdir(), "openviking-uninstall-sourceless-"));
   try {
-    runInstall(home, "cursor");
+    const root = seedCursorInstall(home);
     const detached = join(home, "install.sh");
     cpSync(installer, detached);
-    rmSync(join(home, ".openviking", "agent-integrations", "memory-plugin-shared"), {
-      recursive: true,
-      force: true,
-    });
     const result = runInstaller(home, ["--harness", "cursor", "--uninstall", "--lang", "en", "--yes"], {
       OPENVIKING_DOWNLOAD_BASE: "file:///nonexistent",
     }, detached);
     const output = `${result.stdout}\n${result.stderr}`;
     assert.equal(result.status, 0, output);
     assert.equal(existsSync(join(home, ".openviking", "memory-plugin-marketplace")), false);
-    assert.equal(existsSync(join(home, ".openviking", "agent-integrations", "cursor")), false);
+    assert.equal(existsSync(root), false);
     assert.equal(existsSync(join(home, ".cursor", "rules", "openviking-memory.mdc")), false);
     // The host's own files could not be edited, so the uninstall has to name them.
     assert.match(result.stdout, /by hand from:.*\.cursor\/hooks\.json/u, output);
@@ -598,59 +386,37 @@ test("uninstall with no installer runtime on disk removes what it can and fetche
 // A symlinked OPENVIKING_HOME puts a symlink in every helper path the installer
 // resolves under it; a detached script (no lib/ sibling) reads its helpers
 // from there, as the documented piped uninstall does.
-test("cursor installs and uninstalls through a symlinked OPENVIKING_HOME", () => {
+test("uninstall reads its helpers through a symlinked OPENVIKING_HOME", () => {
   const home = mkdtempSync(join(tmpdir(), "openviking-symlinked-home-"));
   try {
     const realOvHome = join(home, "real-openviking");
     mkdirSync(realOvHome);
     const ovHome = join(home, ".openviking");
     symlinkSync(realOvHome, ovHome, "dir");
-    const hooksPath = join(home, ".cursor", "hooks.json");
-    const mcpPath = join(home, ".cursor", "mcp.json");
+    seedCursorInstall(home, ovHome);
+    seedSharedRuntime(ovHome);
     const detached = join(home, "install.sh");
     cpSync(installer, detached);
-
-    const installed = runInstaller(home, [
-      "--harness", "cursor",
-      "--source", "dev",
-      "--lang", "en",
-      "--url", "http://127.0.0.1:9",
-      "--api-key", "",
-      "--yes",
-    ], { OPENVIKING_HOME: ovHome });
-    assert.equal(installed.status, 0, `${installed.stdout}\n${installed.stderr}`);
-    assert.ok(hookCommands(JSON.parse(readFileSync(hooksPath, "utf8"))).some((command) => command.includes("openviking-memory")));
-    assert.ok(JSON.parse(readFileSync(mcpPath, "utf8")).mcpServers.openviking);
 
     const removed = runInstaller(home, ["--harness", "cursor", "--uninstall", "--lang", "en", "--yes"], {
       OPENVIKING_HOME: ovHome,
     }, detached);
     assert.equal(removed.status, 0, `${removed.stdout}\n${removed.stderr}`);
-    assert.deepEqual(
-      hookCommands(JSON.parse(readFileSync(hooksPath, "utf8"))).filter((command) => command.includes("openviking-memory")),
-      [],
-    );
-    assert.equal(Boolean(JSON.parse(readFileSync(mcpPath, "utf8")).mcpServers?.openviking), false);
+    assert.deepEqual(ownCommands(join(home, ".cursor", "hooks.json")), []);
+    assert.equal(Boolean(JSON.parse(readFileSync(join(home, ".cursor", "mcp.json"), "utf8")).mcpServers?.openviking), false);
   } finally {
     rmSync(home, { recursive: true, force: true });
   }
 });
 
-test("malformed existing agent JSON fails without overwriting user configuration", () => {
+test("malformed existing agent JSON fails the uninstall without overwriting user configuration", () => {
   const home = mkdtempSync(join(tmpdir(), "openviking-agent-invalid-json-"));
   try {
     const hooks = join(home, ".cursor", "hooks.json");
     mkdirSync(dirname(hooks), { recursive: true });
     const original = '{"hooks":{"stop":[{"command":"third-party"}]},}';
     writeFileSync(hooks, original);
-    const result = runInstaller(home, [
-      "--harness", "cursor",
-      "--source", "dev",
-      "--lang", "en",
-      "--url", "http://127.0.0.1:9",
-      "--api-key", "",
-      "--yes",
-    ]);
+    const result = runInstaller(home, ["--harness", "cursor", "--uninstall", "--lang", "en", "--yes"]);
     assert.notEqual(result.status, 0, `${result.stdout}\n${result.stderr}`);
     assert.equal(readFileSync(hooks, "utf8"), original);
   } finally {

@@ -9,7 +9,7 @@
 
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -91,7 +91,7 @@ test("sync runs through a symlinked directory", () => {
     for (const { skill } of SKILL_TARGETS) mkdirSync(join(tree, "examples/skills", skill), { recursive: true });
     const result = runThroughLink(tmp, tree, "examples/memory-plugin-shared/sync.mjs");
     assert.equal(result.status, 0, output(result));
-    assert.ok(existsSync(join(shared, "lib/MANIFEST")), output(result));
+    assert.match(result.stdout, /^synced /m, output(result));
   });
 });
 

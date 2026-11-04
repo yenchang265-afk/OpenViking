@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 #
-# OpenViking Memory Plugin shared installer for Claude Code, Codex, Cursor,
-# TRAE / TRAE CN, TraeCode CLI 2.0, ZCode, Kimi Code, CodeBuddy Code,
-# OpenCode, pi, DeepSeek Harness (dsh) and DeepSeek Harness Desktop.
+# OpenViking Memory Plugin shared installer for Claude Code, Codex,
+# TraeCode CLI 2.0, OpenCode and pi.
 #
 # In short:
 #   - Open source. This script and every OpenViking file it installs are
@@ -42,8 +41,7 @@
 #   The OpenViking server given: GET /health, and /api/v1/system/status with
 #       the API key.
 #   The npm registry npm is configured with: the CLI (@openviking/cli and its
-#       binary for this platform), pi's dependencies (npm ci) and the dsh
-#       package (dsh plugin add, for DeepSeek Harness Desktop too).
+#       binary for this platform) and pi's dependencies (npm ci).
 # docs.openviking.ai is hosted on GitHub Pages. The script itself never
 # contacts github.com and never runs git.
 #
@@ -55,21 +53,10 @@
 #              (plugin enabled, plugin hooks on)
 #   trae-cli   the same through the TraeCode CLI, then removes the hooks an older
 #              installer added to ~/.trae/cli/hooks.json and ~/.trae/traecli.toml
-#   cursor     ~/.cursor/hooks.json, ~/.cursor/mcp.json, ~/.cursor/rules, ~/.cursor/skills
-#   trae       ~/.trae/hooks.json and TRAE's mcp.json (trae-cn: ~/.trae-cn, TRAE CN)
-#   zcode      ~/.zcode/cli/config.json, ~/.zcode/hooks.json, ~/.zcode/mcp.json
-#   kimicode   ~/.kimi-code/plugins
-#   codebuddy  a local marketplace registered with codebuddy, installed from ~/.codebuddy/plugins
 #   opencode   ~/.config/opencode/plugins/openviking, openviking.js, opencode.json(c)
 #   pi         ~/.pi/agent/extensions/openviking
-#   dsh        dsh plugin add into the chosen profile
-#   dsh-desktop (macOS) dsh plugin add into Desktop's profile, with the dsh
-#              command inside DeepSeek Harness.app, while Desktop is quit
 #   cli        npm install -g @openviking/cli: ov in npm's global bin directory,
 #              or in ~/.local/bin when that needs sudo
-# Cursor, TRAE, TRAE CN and ZCode run their hooks from
-# ~/.openviking/agent-integrations, where Kimi Code keeps its uninstall helper and
-# CodeBuddy Code its managed marketplace.
 # The plugin bundle is unpacked to ~/.openviking/memory-plugin-marketplace when
 # a harness installs from it.
 #
@@ -85,10 +72,11 @@
 # neither a published build nor part of a checkout downloads and runs the
 # published copy of this script.
 #
-# Uninstall: Cursor, TRAE, TRAE CN, ZCode, Kimi Code and CodeBuddy Code with
-#   curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harness <list>
-# The other harnesses with the commands the install prints at the end, such as
+# Uninstall: the harnesses with the commands the install prints at the end, such as
 #   claude plugin uninstall openviking-memory@openviking && claude plugin marketplace remove openviking
+# Integrations earlier installers set up for Cursor, TRAE, TRAE CN, ZCode,
+# Kimi Code and CodeBuddy Code, which this one no longer installs, come off with
+#   curl -fsSL https://openviking.ai/install | bash -s -- --uninstall --yes --harness <list>
 #
 # Optional check of this script (needs github.com; the install does not): a
 # published copy is the file examples/memory-plugin-shared/install.sh of the
@@ -126,7 +114,6 @@ OVCLI_CONF="${OPENVIKING_CLI_CONFIG_FILE:-$OV_HOME/ovcli.conf}"
 # (openviking-memory@openviking) and its per-id config stable across modes.
 MARKETPLACE_NAME="${OPENVIKING_MARKETPLACE_NAME:-openviking}"
 PLUGIN_NAME="openviking-memory"
-DSH_PACKAGE="@openviking/dsh-memory-plugin"
 CLI_PACKAGE="@openviking/cli"
 CLI_PREFIX=""       # npm prefix the CLI goes to; set by choose_cli_prefix
 # Until a display language is saved here, ov asks for one, and without a
@@ -149,22 +136,9 @@ PUBLIC_SELECTED_HARNESSES=""
 TRAECODE_CLI_BIN=""
 CLAUDE_BINS_ARG="${OPENVIKING_CLAUDE_BINS:-${OPENVIKING_CLAUDE_BIN:-}}"
 CODEX_BINS_ARG="${OPENVIKING_CODEX_BINS:-${OPENVIKING_CODEX_BIN:-}}"
-DSH_PROFILE_ARG="${OPENVIKING_DSH_PROFILE:-}"
-DSH_PROFILE_DEFAULT="web"
-# dsh exports the running session's profile to the shells its agent starts.
-DSH_SESSION_PROFILE=""
-[ "${DSH_SHELL:-}" != "1" ] || DSH_SESSION_PROFILE="${DSH_PROFILE:-}"
-DSH_PROFILE=""
 # What was asked for but not done, one line each; repeated at the end of the
 # output, where an agent reading it looks first.
 NOT_DONE=""
-# DeepSeek Harness Desktop keeps its own profile, which only the dsh command
-# inside its app bundle may change (npm dsh refuses it), and no dsh can boot it.
-DSH_DESKTOP_APP="DeepSeek Harness.app"
-DSH_DESKTOP_LAUNCHER="Contents/Resources/runtime/cli/bin/dsh"
-DSH_DESKTOP_CLI=""        # Desktop's dsh command; set by select_dsh_profile
-DSH_DESKTOP_INSTALLED=0   # 1 once its plugin add succeeded
-DSH_DESKTOP_QUIT_WAIT=20  # seconds a quit Desktop gets to shut its Host down
 SOURCE_ARG=""
 DIST_ARG=""
 LANG_ARG=""
@@ -239,13 +213,12 @@ usage() {
 Usage: install.sh [options]
 
 Options:
-  --harness LIST     Comma-separated harnesses: claude, codex, cursor, trae, trae-cn, trae-cli, zcode, kimicode, codebuddy, opencode, pi, dsh, dsh-desktop, cli.
+  --harness LIST     Comma-separated harnesses: claude, codex, trae-cli, opencode, pi, cli.
                      Use trae-cli for TraeCode CLI 2.0 (installed through its Codex-compatible plugin format).
-                     dsh is the dsh CLI from npm; dsh-desktop is DeepSeek Harness Desktop (macOS only).
                      cli is the OpenViking CLI (ov), installed from npm. Without --harness: the detected ones and cli.
+                     With --uninstall: cursor, trae, trae-cn, trae-cli, zcode, kimicode, codebuddy.
   --claude-bin LIST  Comma-separated Claude-format CLI commands (default: claude).
   --codex-bin LIST   Comma-separated Codex-format CLI commands (default: codex).
-  --dsh-profile NAME DeepSeek Harness profile to install into (default: web). desktop selects dsh-desktop instead.
   --lang LANG        en | zh (default: asked first, with the system locale preselected;
                      with --yes or no terminal, the system locale).
   --source MODE      Advanced: archive (the OpenViking release) | dev (this checkout's plugins).
@@ -257,9 +230,9 @@ Options:
   --user ID          Optional OpenViking user.
   --statusline       Register the Claude Code statusline without asking.
   --no-statusline    Skip the statusline prompt.
-  --uninstall        Remove the Cursor, TRAE, TRAE CN, ZCode, Kimi Code and CodeBuddy Code integrations,
-                     plus any legacy TraeCode CLI hook config. Claude Code, Codex, OpenCode,
-                     pi, dsh and dsh-desktop are removed with the commands the install prints at the end.
+  --uninstall        Remove the Cursor, TRAE, TRAE CN, ZCode, Kimi Code and CodeBuddy Code integrations
+                     earlier installers set up, plus any legacy TraeCode CLI hook config. Claude Code,
+                     Codex, OpenCode and pi are removed with the commands the install prints at the end.
   --yes, -y          Ask nothing: use defaults and install without asking for confirmation.
 
 Environment:
@@ -268,10 +241,6 @@ Environment:
   OPENVIKING_LANG                       Same as --lang.
   OPENVIKING_CLAUDE_BINS                Same as --claude-bin.
   OPENVIKING_CODEX_BINS                 Same as --codex-bin.
-  OPENVIKING_DSH_PROFILE                Same as --dsh-profile.
-  OPENVIKING_DSH_DESKTOP_CLI            The dsh command inside DeepSeek Harness.app to use for dsh-desktop
-                                        (default: found under /Applications, ~/Applications or on PATH).
-  DSH_HOME                              DeepSeek Harness home holding Desktop's profile (default: ~/.dsh).
   OPENVIKING_DOWNLOAD_BASE              Download locations, separated by spaces; the first to answer is used
                                         (default: https://docs.openviking.net/dl https://docs.openviking.ai/dl).
                                         OPENVIKING_TOS_BASE is read as well.
@@ -290,7 +259,6 @@ while [ "$#" -gt 0 ]; do
     --harness) REQUESTED_HARNESSES="${2:-}"; shift 2 ;;
     --claude-bin|--claude-bins) CLAUDE_BINS_ARG="${2:-}"; shift 2 ;;
     --codex-bin|--codex-bins) CODEX_BINS_ARG="${2:-}"; shift 2 ;;
-    --dsh-profile) DSH_PROFILE_ARG="${2:-}"; shift 2 ;;
     --dist) DIST_ARG="${2:-}"; shift 2 ;;
     --lang) LANG_ARG="${2:-}"; shift 2 ;;
     --source) SOURCE_ARG="${2:-}"; shift 2 ;;
@@ -516,58 +484,8 @@ EOF
   return 1
 }
 
-dsh_home() { printf '%s' "${DSH_HOME:-$HOME/.dsh}"; }
-
-follow_symlinks() { # follow_symlinks <path> -> the file it finally points at
-  local path="$1" dir target hops=0
-  while [ -L "$path" ] && [ "$hops" -lt 40 ]; do
-    dir="$(cd "$(dirname "$path")" && pwd -P)" || break
-    target="$(readlink "$path")" || break
-    case "$target" in
-      /*) path="$target" ;;
-      *) path="$dir/$target" ;;
-    esac
-    hops=$((hops + 1))
-  done
-  printf '%s' "$path"
-}
-
-# Desktop's "Manage dsh Command…" links /usr/local/bin/dsh to the launcher in
-# its app bundle. That dsh is Desktop, not the npm CLI: what it adds to the
-# CLI's profiles never reaches Desktop.
-is_dsh_desktop_launcher() { # is_dsh_desktop_launcher <path>
-  case "$(follow_symlinks "$1")" in
-    *.app/"$DSH_DESKTOP_LAUNCHER") return 0 ;;
-  esac
-  return 1
-}
-
-have_npm_dsh() {
-  local found
-  found="$(command -v dsh 2>/dev/null)" || return 1
-  ! is_dsh_desktop_launcher "$found"
-}
-
-# The launcher works from its absolute path, so registering it on PATH is
-# optional. Desktop ships for macOS and Windows only.
-resolve_dsh_desktop_cli() {
-  [ "$DSH_DESKTOP_OFFERED" -eq 1 ] || return 1
-  local candidate
-  for candidate in "${OPENVIKING_DSH_DESKTOP_CLI:-}" \
-    "/Applications/$DSH_DESKTOP_APP/$DSH_DESKTOP_LAUNCHER" \
-    "$HOME/Applications/$DSH_DESKTOP_APP/$DSH_DESKTOP_LAUNCHER"; do
-    if [ -n "$candidate" ] && [ -x "$candidate" ]; then
-      printf '%s' "$candidate"
-      return 0
-    fi
-  done
-  candidate="$(command -v dsh 2>/dev/null)" || return 1
-  is_dsh_desktop_launcher "$candidate" || return 1
-  printf '%s' "$candidate"
-}
-
 refresh_available_harnesses() {
-  HAVE_CLAUDE=0; HAVE_CODEX=0; HAVE_CURSOR=0; HAVE_TRAE=0; HAVE_TRAE_CN=0; HAVE_TRAE_CLI=0; HAVE_OPENCODE=0; HAVE_PI=0; HAVE_ZCODE=0; HAVE_KIMICODE=0; HAVE_CODEBUDDY=0; HAVE_DSH=0; HAVE_DSH_DESKTOP=0
+  HAVE_CLAUDE=0; HAVE_CODEX=0; HAVE_CURSOR=0; HAVE_TRAE=0; HAVE_TRAE_CN=0; HAVE_TRAE_CLI=0; HAVE_OPENCODE=0; HAVE_PI=0; HAVE_ZCODE=0; HAVE_KIMICODE=0; HAVE_CODEBUDDY=0
   has_available_bin "$CLAUDE_BINS" && HAVE_CLAUDE=1
   has_available_bin "$CODEX_BINS" && HAVE_CODEX=1
   { command -v cursor >/dev/null 2>&1 || command -v cursor-agent >/dev/null 2>&1 || [ -d "/Applications/Cursor.app" ] || [ -d "$HOME/.cursor" ]; } && HAVE_CURSOR=1
@@ -576,8 +494,6 @@ refresh_available_harnesses() {
   { command -v trae-cli >/dev/null 2>&1 || command -v traecli >/dev/null 2>&1 || command -v traex >/dev/null 2>&1; } && HAVE_TRAE_CLI=1
   command -v opencode >/dev/null 2>&1 && HAVE_OPENCODE=1
   command -v pi >/dev/null 2>&1 && HAVE_PI=1
-  have_npm_dsh && HAVE_DSH=1
-  { resolve_dsh_desktop_cli >/dev/null || { [ "$DSH_DESKTOP_OFFERED" -eq 1 ] && [ -d "$(dsh_home)/profiles/desktop" ]; }; } && HAVE_DSH_DESKTOP=1
   { command -v zcode >/dev/null 2>&1 || [ -d "$HOME/.zcode" ]; } && HAVE_ZCODE=1
   { command -v kimi >/dev/null 2>&1 || [ -d "$HOME/.kimi-code" ]; } && HAVE_KIMICODE=1
   { command -v codebuddy >/dev/null 2>&1 || [ -d "$HOME/.codebuddy" ]; } && HAVE_CODEBUDDY=1
@@ -705,11 +621,6 @@ NODE
 CLAUDE_BINS="$(normalize_bin_list "$CLAUDE_BINS_ARG" claude)"
 CODEX_BINS="$(normalize_bin_list "$CODEX_BINS_ARG" codex)"
 
-HAVE_CLAUDE=0; HAVE_CODEX=0; HAVE_CURSOR=0; HAVE_TRAE=0; HAVE_TRAE_CN=0; HAVE_TRAE_CLI=0; HAVE_OPENCODE=0; HAVE_PI=0; HAVE_ZCODE=0; HAVE_DSH=0; HAVE_DSH_DESKTOP=0
-# DeepSeek Harness Desktop is released for macOS and Windows; of the systems
-# this script runs on, only macOS ever offers it.
-DSH_DESKTOP_OFFERED=0
-[ "$(uname -s)" != "Darwin" ] || DSH_DESKTOP_OFFERED=1
 refresh_available_harnesses
 
 TUI_CLAUDE_BINS="$CLAUDE_BINS"
@@ -720,14 +631,6 @@ SEL_CLAUDE_BINS=""
 SEL_CODEX_BINS=""
 SEL_OPENCODE=0
 SEL_PI=0
-SEL_DSH=0
-SEL_DSH_DESKTOP=0
-SEL_CURSOR_APP=0
-SEL_TRAE=0
-SEL_TRAE_CN=0
-SEL_ZCODE=0
-SEL_KIMICODE=0
-SEL_CODEBUDDY=0
 SEL_CLI=0
 TUI_CURSOR=0; TUI_LINES=0
 
@@ -742,7 +645,7 @@ EOF
 }
 
 tui_selectable_count() {
-  printf '%s' $(( $(list_count "$TUI_CLAUDE_BINS") + $(list_count "$TUI_CODEX_BINS") + 10 + DSH_DESKTOP_OFFERED ))
+  printf '%s' $(( $(list_count "$TUI_CLAUDE_BINS") + $(list_count "$TUI_CODEX_BINS") + 3 ))
 }
 
 tui_total_count() {
@@ -768,24 +671,6 @@ EOF
   if [ "$i" -eq "$idx" ]; then printf 'opencode|opencode'; return 0; fi
   i=$((i + 1))
   if [ "$i" -eq "$idx" ]; then printf 'pi|pi'; return 0; fi
-  i=$((i + 1))
-  if [ "$i" -eq "$idx" ]; then printf 'dsh|dsh'; return 0; fi
-  i=$((i + 1))
-  if [ "$DSH_DESKTOP_OFFERED" -eq 1 ]; then
-    if [ "$i" -eq "$idx" ]; then printf 'dsh-desktop|dsh-desktop'; return 0; fi
-    i=$((i + 1))
-  fi
-  if [ "$i" -eq "$idx" ]; then printf 'cursor|cursor'; return 0; fi
-  i=$((i + 1))
-  if [ "$i" -eq "$idx" ]; then printf 'trae|trae'; return 0; fi
-  i=$((i + 1))
-  if [ "$i" -eq "$idx" ]; then printf 'trae-cn|trae-cn'; return 0; fi
-  i=$((i + 1))
-  if [ "$i" -eq "$idx" ]; then printf 'zcode|zcode'; return 0; fi
-  i=$((i + 1))
-  if [ "$i" -eq "$idx" ]; then printf 'kimicode|kimi'; return 0; fi
-  i=$((i + 1))
-  if [ "$i" -eq "$idx" ]; then printf 'codebuddy|codebuddy'; return 0; fi
   i=$((i + 1))
   if [ "$i" -eq "$idx" ]; then printf 'cli|ov'; return 0; fi
   printf 'add|'
@@ -815,8 +700,6 @@ tui_bin_label() {
     codex:trae-cli|codex:traecli|codex:traex) printf 'TraeCode CLI 2.0' ;;
     opencode:*) printf 'OpenCode' ;;
     pi:*) printf 'pi' ;;
-    dsh:*) printf 'DeepSeek Harness' ;;
-    dsh-desktop:*) printf 'DeepSeek Harness Desktop' ;;
     cursor:*) printf 'Cursor' ;;
     trae:*) printf 'TRAE' ;;
     trae-cn:*) printf 'TRAE CN' ;;
@@ -839,41 +722,15 @@ tui_bin_selected() {
     [ "$SEL_OPENCODE" -eq 1 ]
   elif [ "$kind" = "pi" ]; then
     [ "$SEL_PI" -eq 1 ]
-  elif [ "$kind" = "dsh" ]; then
-    [ "$SEL_DSH" -eq 1 ]
-  elif [ "$kind" = "dsh-desktop" ]; then
-    [ "$SEL_DSH_DESKTOP" -eq 1 ]
-  elif [ "$kind" = "cursor" ]; then
-    [ "$SEL_CURSOR_APP" -eq 1 ]
-  elif [ "$kind" = "trae" ]; then
-    [ "$SEL_TRAE" -eq 1 ]
-  elif [ "$kind" = "trae-cn" ]; then
-    [ "$SEL_TRAE_CN" -eq 1 ]
-  elif [ "$kind" = "zcode" ]; then
-    [ "$SEL_ZCODE" -eq 1 ]
-  elif [ "$kind" = "kimicode" ]; then
-    [ "$SEL_KIMICODE" -eq 1 ]
-  elif [ "$kind" = "codebuddy" ]; then
-    [ "$SEL_CODEBUDDY" -eq 1 ]
   elif [ "$kind" = "cli" ]; then
     [ "$SEL_CLI" -eq 1 ]
   else
-    [ "$SEL_KIMICODE" -eq 1 ]
+    return 1
   fi
 }
 
 tui_bin_detected() { # tui_bin_detected <kind> <bin>
-  case "$1" in
-    cursor) [ "$HAVE_CURSOR" -eq 1 ] ;;
-    trae) [ "$HAVE_TRAE" -eq 1 ] ;;
-    trae-cn) [ "$HAVE_TRAE_CN" -eq 1 ] ;;
-    zcode) [ "$HAVE_ZCODE" -eq 1 ] ;;
-    kimicode) [ "$HAVE_KIMICODE" -eq 1 ] ;;
-    codebuddy) [ "$HAVE_CODEBUDDY" -eq 1 ] ;;
-    dsh) [ "$HAVE_DSH" -eq 1 ] ;;
-    dsh-desktop) [ "$HAVE_DSH_DESKTOP" -eq 1 ] ;;
-    *) command -v "$2" >/dev/null 2>&1 ;;
-  esac
+  command -v "$2" >/dev/null 2>&1
 }
 
 tui_set_all_bins() {
@@ -881,14 +738,6 @@ tui_set_all_bins() {
   SEL_CODEX_BINS="$TUI_CODEX_BINS"
   SEL_OPENCODE=1
   SEL_PI=1
-  SEL_DSH=1
-  SEL_DSH_DESKTOP="$DSH_DESKTOP_OFFERED"
-  SEL_CURSOR_APP=1
-  SEL_TRAE=1
-  SEL_TRAE_CN=1
-  SEL_ZCODE=1
-  SEL_KIMICODE=1
-  SEL_CODEBUDDY=1
   SEL_CLI=1
 }
 
@@ -904,27 +753,10 @@ tui_toggle_bin() {
   elif [ "$kind" = "pi" ]; then
     SEL_PI=$((1 - SEL_PI))
     return 0
-  elif [ "$kind" = "dsh" ]; then
-    SEL_DSH=$((1 - SEL_DSH))
-    return 0
-  elif [ "$kind" = "dsh-desktop" ]; then
-    SEL_DSH_DESKTOP=$((1 - SEL_DSH_DESKTOP)); return 0
-  elif [ "$kind" = "cursor" ]; then
-    SEL_CURSOR_APP=$((1 - SEL_CURSOR_APP)); return 0
-  elif [ "$kind" = "trae" ]; then
-    SEL_TRAE=$((1 - SEL_TRAE)); return 0
-  elif [ "$kind" = "trae-cn" ]; then
-    SEL_TRAE_CN=$((1 - SEL_TRAE_CN)); return 0
-  elif [ "$kind" = "zcode" ]; then
-    SEL_ZCODE=$((1 - SEL_ZCODE)); return 0
-  elif [ "$kind" = "kimicode" ]; then
-    SEL_KIMICODE=$((1 - SEL_KIMICODE)); return 0
-  elif [ "$kind" = "codebuddy" ]; then
-    SEL_CODEBUDDY=$((1 - SEL_CODEBUDDY)); return 0
   elif [ "$kind" = "cli" ]; then
     SEL_CLI=$((1 - SEL_CLI)); return 0
   else
-    SEL_KIMICODE=$((1 - SEL_KIMICODE)); return 0
+    return 0
   fi
   if list_contains_line "$selected" "$bin"; then
     while IFS= read -r item; do
@@ -999,15 +831,7 @@ tui_reset_bin_selection() {
   SEL_CODEX_BINS=""
   SEL_OPENCODE=0
   SEL_PI=0
-  SEL_DSH=0
-  SEL_DSH_DESKTOP=0
-  SEL_CURSOR_APP=0
-  SEL_TRAE=0
-  SEL_TRAE_CN=0
-  SEL_ZCODE=0
-  SEL_KIMICODE=0
-  SEL_CODEBUDDY=0
-  SEL_CLI=$((1 - UNINSTALL))
+  SEL_CLI=1
   while IFS= read -r bin; do
     [ -n "$bin" ] || continue
     if command -v "$bin" >/dev/null 2>&1; then
@@ -1028,14 +852,6 @@ $TUI_CODEX_BINS
 EOF
   if command -v opencode >/dev/null 2>&1; then SEL_OPENCODE=1; any=1; fi
   if command -v pi >/dev/null 2>&1; then SEL_PI=1; any=1; fi
-  if [ "$HAVE_DSH" -eq 1 ]; then SEL_DSH=1; any=1; fi
-  if [ "$HAVE_DSH_DESKTOP" -eq 1 ]; then SEL_DSH_DESKTOP=1; any=1; fi
-  if [ "$HAVE_CURSOR" -eq 1 ]; then SEL_CURSOR_APP=1; any=1; fi
-  if [ "$HAVE_TRAE" -eq 1 ]; then SEL_TRAE=1; any=1; fi
-  if [ "$HAVE_TRAE_CN" -eq 1 ]; then SEL_TRAE_CN=1; any=1; fi
-  if [ "$HAVE_ZCODE" -eq 1 ]; then SEL_ZCODE=1; any=1; fi
-  if [ "$HAVE_KIMICODE" -eq 1 ]; then SEL_KIMICODE=1; any=1; fi
-  if [ "$HAVE_CODEBUDDY" -eq 1 ]; then SEL_CODEBUDDY=1; any=1; fi
   if [ "$any" -ne 1 ]; then
     SEL_CLAUDE_BINS="$TUI_CLAUDE_BINS"
     SEL_CODEX_BINS="$TUI_CODEX_BINS"
@@ -1122,9 +938,7 @@ tui_add_compatible_cli() {
 
 tui_has_selection() {
   [ -n "$(list_words "$SEL_CLAUDE_BINS")" ] || [ -n "$(list_words "$SEL_CODEX_BINS")" ] \
-    || [ "$SEL_OPENCODE" -eq 1 ] || [ "$SEL_PI" -eq 1 ] || [ "$SEL_DSH" -eq 1 ] || [ "$SEL_DSH_DESKTOP" -eq 1 ] || [ "$SEL_CURSOR_APP" -eq 1 ] \
-    || [ "$SEL_TRAE" -eq 1 ] || [ "$SEL_TRAE_CN" -eq 1 ] || [ "$SEL_ZCODE" -eq 1 ] \
-    || [ "$SEL_KIMICODE" -eq 1 ] || [ "$SEL_CODEBUDDY" -eq 1 ] || [ "$SEL_CLI" -eq 1 ]
+    || [ "$SEL_OPENCODE" -eq 1 ] || [ "$SEL_PI" -eq 1 ] || [ "$SEL_CLI" -eq 1 ]
 }
 
 tui_finish_selection() {
@@ -1135,14 +949,6 @@ tui_finish_selection() {
   [ -n "$(list_words "$CODEX_BINS")" ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}codex"
   [ "$SEL_OPENCODE" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}opencode"
   [ "$SEL_PI" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}pi"
-  [ "$SEL_DSH" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}dsh"
-  [ "$SEL_DSH_DESKTOP" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}dsh-desktop"
-  [ "$SEL_CURSOR_APP" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}cursor"
-  [ "$SEL_TRAE" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}trae"
-  [ "$SEL_TRAE_CN" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}trae-cn"
-  [ "$SEL_ZCODE" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}zcode"
-  [ "$SEL_KIMICODE" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}kimicode"
-  [ "$SEL_CODEBUDDY" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}codebuddy"
   [ "$SEL_CLI" -eq 1 ] && SELECTED_HARNESSES="${SELECTED_HARNESSES:+$SELECTED_HARNESSES,}cli"
   return 0
 }
@@ -1205,28 +1011,37 @@ tui_select_harnesses() {
   tui_finish_selection
 }
 
+# The integrations --uninstall removes: the hook hosts earlier installers set up.
+UNINSTALL_HARNESSES="cursor trae trae-cn trae-cli zcode kimicode codebuddy"
+
+detected_uninstall_harnesses() {
+  local detected=""
+  [ "$HAVE_CURSOR" -eq 1 ] && detected="cursor"
+  [ "$HAVE_TRAE" -eq 1 ] && detected="${detected:+$detected,}trae"
+  [ "$HAVE_TRAE_CN" -eq 1 ] && detected="${detected:+$detected,}trae-cn"
+  [ "$HAVE_ZCODE" -eq 1 ] && detected="${detected:+$detected,}zcode"
+  [ "$HAVE_KIMICODE" -eq 1 ] && detected="${detected:+$detected,}kimicode"
+  [ "$HAVE_CODEBUDDY" -eq 1 ] && detected="${detected:+$detected,}codebuddy"
+  printf '%s' "$detected"
+}
+
 select_harnesses() {
   local detected="" reply default
   [ "$HAVE_CLAUDE" -eq 1 ] && detected="claude"
   [ "$HAVE_CODEX" -eq 1 ] && detected="${detected:+$detected,}codex"
-  [ "$HAVE_CURSOR" -eq 1 ] && detected="${detected:+$detected,}cursor"
-  [ "$HAVE_TRAE" -eq 1 ] && detected="${detected:+$detected,}trae"
-  [ "$HAVE_TRAE_CN" -eq 1 ] && detected="${detected:+$detected,}trae-cn"
   [ "$HAVE_OPENCODE" -eq 1 ] && detected="${detected:+$detected,}opencode"
   [ "$HAVE_PI" -eq 1 ] && detected="${detected:+$detected,}pi"
-  [ "$HAVE_DSH" -eq 1 ] && detected="${detected:+$detected,}dsh"
-  [ "$HAVE_DSH_DESKTOP" -eq 1 ] && detected="${detected:+$detected,}dsh-desktop"
-  [ "$HAVE_ZCODE" -eq 1 ] && detected="${detected:+$detected,}zcode"
-  [ "$HAVE_KIMICODE" -eq 1 ] && detected="${detected:+$detected,}kimicode"
-  [ "$HAVE_CODEBUDDY" -eq 1 ] && detected="${detected:+$detected,}codebuddy"
 
   if [ -n "$REQUESTED_HARNESSES" ]; then
     SELECTED_HARNESSES="$REQUESTED_HARNESSES"
     normalize_trae_cli_harness
     return
   fi
-  default="${detected:-claude,codex}"
-  [ "$UNINSTALL" -eq 1 ] || default="$default,cli"
+  if [ "$UNINSTALL" -eq 1 ]; then
+    SELECTED_HARNESSES="$(detected_uninstall_harnesses)"
+    return
+  fi
+  default="${detected:-claude,codex},cli"
   if [ "$INTERACTIVE" -eq 1 ] && [ -w /dev/tty ]; then
     tui_select_harnesses
   elif [ "$INTERACTIVE" -eq 1 ]; then
@@ -1237,218 +1052,6 @@ select_harnesses() {
   else
     SELECTED_HARNESSES="$default"
   fi
-}
-
-route_dsh_to_desktop() { # route_dsh_to_desktop <harness-list> -> the list with dsh-desktop for dsh
-  local h out=""
-  while IFS= read -r h; do
-    [ -n "$h" ] || continue
-    if [ "$h" = "dsh" ]; then h="dsh-desktop"; fi
-    case ",$out," in
-      *",$h,"*) ;;
-      *) out="${out:+$out,}$h" ;;
-    esac
-  done <<EOF
-$(split_harnesses "$1")
-EOF
-  printf '%s' "$out"
-}
-
-select_dsh_profile() {
-  # npm dsh refuses Desktop's profile, so `--dsh-profile desktop` means the
-  # dsh-desktop harness, which goes through Desktop's own dsh command.
-  if [ "$DSH_PROFILE_ARG" = "desktop" ] && contains_harness dsh; then
-    SELECTED_HARNESSES="$(route_dsh_to_desktop "$SELECTED_HARNESSES")"
-    [ -z "$PUBLIC_SELECTED_HARNESSES" ] || PUBLIC_SELECTED_HARNESSES="$(route_dsh_to_desktop "$PUBLIC_SELECTED_HARNESSES")"
-  fi
-  if contains_harness dsh-desktop; then
-    DSH_DESKTOP_CLI="$(resolve_dsh_desktop_cli || true)"
-  fi
-  contains_harness dsh || return 0
-  if [ -n "$DSH_PROFILE_ARG" ]; then
-    DSH_PROFILE="$DSH_PROFILE_ARG"
-    return 0
-  fi
-  # Run from inside a dsh session, install into the profile that session uses.
-  DSH_PROFILE="${DSH_SESSION_PROFILE:-$DSH_PROFILE_DEFAULT}"
-}
-
-# Sets DSH_SPEC and DSH_ORIGIN to what `<command> plugin add` installs.
-dsh_select_spec() { # dsh_select_spec <dsh-command> <profile>
-  local cmd="$1" profile="$2" local_dir packed
-  # `@latest` rather than a bare name: pnpm keeps an already-satisfying install
-  # when the name carries no version, so a profile holding a dev build would
-  # never fall back to the published package.
-  DSH_SPEC="$DSH_PACKAGE@latest"
-  DSH_ORIGIN="npm"
-  # npm is the bundle's only distribution channel; only dev mode installs
-  # something other than the published package. It still has to arrive as a
-  # real package rather than a link: a linked source tree resolves its dsh
-  # peers from its own realpath and misses the profile's hoisted node_modules,
-  # so the checkout gets packed first.
-  if [ "$SOURCE_MODE" = "dev" ] && ensure_bundle && local_dir="$(plugin_dir_on_disk dsh-memory-plugin)"; then
-    if packed="$(dsh_pack_local "$local_dir")"; then
-      DSH_SPEC="$packed"
-      DSH_ORIGIN="$local_dir"
-      # A dev re-install usually carries the same version, and pnpm treats an
-      # already-satisfied version as a no-op no matter which tarball it is
-      # pointed at, so the edited sources would never reach the profile.
-      # Dropping the package first forces the reinstall. Only done for local
-      # sources: it is a downgrade in robustness when `add` can fail on network.
-      "$cmd" plugin --profile "$profile" rm "$DSH_PACKAGE" >/dev/null 2>&1 || true
-    fi
-  fi
-}
-
-install_dsh() {
-  step_heading "$(t 'DeepSeek Harness bundle' 'DeepSeek Harness 外掛')"
-  if ! have_npm_dsh; then
-    if command -v dsh >/dev/null 2>&1; then
-      not_done "$(t 'The dsh on PATH is the one inside DeepSeek Harness Desktop, not the npm dsh CLI; skipping DeepSeek Harness install (use --harness dsh-desktop for Desktop).' 'PATH 中的 dsh 是 DeepSeek Harness Desktop 自帶的，不是 npm 安裝的 dsh CLI，跳過 DeepSeek Harness 安裝（Desktop 請用 --harness dsh-desktop）。')"
-    else
-      not_done "$(t 'dsh CLI not found; skipping DeepSeek Harness install.' '未找到 dsh 命令，跳過 DeepSeek Harness 安裝。')"
-    fi
-    return 0
-  fi
-  local profile="${DSH_PROFILE:-$DSH_PROFILE_DEFAULT}"
-  dsh_select_spec dsh "$profile"
-  if dsh plugin --profile "$profile" add "$DSH_SPEC" >/dev/null 2>&1; then
-    info "$(t 'DeepSeek Harness bundle installed into profile:' 'DeepSeek Harness 外掛已安裝到 profile：') $profile ($(t 'source' '來源'): $DSH_ORIGIN)"
-  else
-    not_done "$(t 'dsh plugin add failed; run it manually:' 'dsh plugin add 失敗；請手動執行：') dsh plugin --profile $profile add $DSH_SPEC"
-  fi
-}
-
-# Desktop creates its profile on first launch; its dsh refuses to run before.
-dsh_desktop_initialized() { [ -f "$(dsh_home)/profiles/desktop/package.json" ]; }
-
-# Closing Desktop's window only hides it. The main process runs the app's
-# executable with no arguments (older macOS adds -psn_*); its Host and any dsh
-# command pass some. Only this user's Desktop counts.
-dsh_desktop_running() {
-  if command -v pgrep >/dev/null 2>&1; then
-    pgrep -u "$(id -u)" -f "DeepSeek Harness\.app/Contents/MacOS/DeepSeek Harness( -psn_[0-9_]+)?\$" >/dev/null 2>&1
-  elif command -v osascript >/dev/null 2>&1; then
-    [ "$(osascript -e 'application "DeepSeek Harness" is running' 2>/dev/null)" = "true" ]
-  else
-    return 1
-  fi
-}
-
-# Desktop does not lock its profile against the dsh command, and only loads
-# a change when it starts, so it should be quit first. Fails when it is still
-# running after the user was asked to quit it.
-dsh_desktop_quit_first() {
-  local reply waited=0
-  dsh_desktop_running || return 0
-  if [ "$INTERACTIVE" -ne 1 ]; then
-    warn "$(t 'DeepSeek Harness Desktop is running; installing anyway. Quit it with ⌘Q (closing the window only hides it) and reopen it to load the plugin.' 'DeepSeek Harness Desktop 正在執行，仍繼續安裝。請用 ⌘Q 退出（關閉視窗只是隱藏）後重新開啟，外掛才會載入。')"
-    return 0
-  fi
-  warn "$(t 'DeepSeek Harness Desktop is running. Closing its window only hides it.' 'DeepSeek Harness Desktop 正在執行。關閉視窗只是隱藏它。')"
-  ask "$(t 'Quit it with ⌘Q, then press Enter: ' '請用 ⌘Q 退出後按回車：')"
-  read_tty reply
-  # Quitting first shuts its Host down, which may take it a few seconds.
-  while dsh_desktop_running && [ "$waited" -lt "$DSH_DESKTOP_QUIT_WAIT" ]; do
-    [ "$waited" -gt 0 ] || info "$(t 'Waiting for DeepSeek Harness Desktop to exit...' '等待 DeepSeek Harness Desktop 退出…')"
-    sleep 1
-    waited=$((waited + 1))
-  done
-  dsh_desktop_running || return 0
-  not_done "$(t 'DeepSeek Harness Desktop is still running; it was not changed.' 'DeepSeek Harness Desktop 仍在執行，未做修改。')"
-  return 1
-}
-
-dsh_desktop_plugins_page_steps() {
-  info "$(t 'Install it from DeepSeek Harness Desktop instead: Plugins → Add plugin → enter' '也可以在 DeepSeek Harness Desktop 中安裝：外掛 → 新增外掛 → 輸入') $DSH_PACKAGE → $(t 'Install, then turn it on if its switch is off' '安裝，開關未開啟時再開啟')"
-}
-
-install_dsh_desktop() {
-  step_heading "$(t 'DeepSeek Harness Desktop bundle' 'DeepSeek Harness Desktop 外掛')"
-  local cli="$DSH_DESKTOP_CLI" output
-  if [ -z "$cli" ]; then
-    not_done "$(t "The dsh command inside $DSH_DESKTOP_APP was not found (set OPENVIKING_DSH_DESKTOP_CLI to it)." "未找到 $DSH_DESKTOP_APP 中的 dsh 命令（可用 OPENVIKING_DSH_DESKTOP_CLI 指定）。")"
-    dsh_desktop_plugins_page_steps
-    return 0
-  fi
-  if ! dsh_desktop_initialized; then
-    not_done "$(t 'DeepSeek Harness Desktop has not set up its profile yet: open it once, quit it with ⌘Q and re-run this installer.' 'DeepSeek Harness Desktop 尚未初始化其 profile：請先開啟一次，用 ⌘Q 退出後重新執行本安裝指令碼。') ($(t 'not found:' '未找到：') $(short_path "$(dsh_home)/profiles/desktop/package.json"))"
-    dsh_desktop_plugins_page_steps
-    return 0
-  fi
-  if ! dsh_desktop_quit_first; then
-    dsh_desktop_plugins_page_steps
-    return 0
-  fi
-  dsh_select_spec "$cli" desktop
-  if output="$("$cli" plugin --profile desktop add "$DSH_SPEC" 2>&1)"; then
-    DSH_DESKTOP_INSTALLED=1
-    info "$(t 'DeepSeek Harness Desktop bundle installed' 'DeepSeek Harness Desktop 外掛已安裝') ($(t 'source' '來源'): $DSH_ORIGIN)"
-    info "$(t 'Reopen DeepSeek Harness Desktop to load it.' '重新開啟 DeepSeek Harness Desktop 後生效。')"
-  else
-    warn "$(t 'dsh plugin add failed for DeepSeek Harness Desktop:' 'DeepSeek Harness Desktop 的 dsh plugin add 失敗：')"
-    printf '%s\n' "$output" | tail -n 5 | sed 's/^/      /'
-    not_done "$(t 'With Desktop quit, run it manually:' '退出 Desktop 後手動執行：') \"$cli\" plugin --profile desktop add $DSH_SPEC"
-    dsh_desktop_plugins_page_steps
-  fi
-}
-
-# Fingerprint of the checkout's shipped sources. pnpm keys a file: dependency by
-# path, so a re-pack under the same name is treated as already satisfied and the
-# edited sources never reach the profile. Naming the tarball after its content
-# means an unchanged checkout stays a no-op while an edited one reinstalls.
-dsh_sha256() {
-  if command -v shasum >/dev/null 2>&1; then
-    shasum -a 256
-  elif command -v sha256sum >/dev/null 2>&1; then
-    sha256sum
-  else
-    return 1
-  fi
-}
-
-dsh_have_sha256() {
-  command -v shasum >/dev/null 2>&1 || command -v sha256sum >/dev/null 2>&1
-}
-
-dsh_source_files() { # dsh_source_files <plugin-dir>
-  ( cd "$1" 2>/dev/null && find . -type f \
-      -not -path "./node_modules/*" -not -name "*.tgz" -print0 ) | LC_ALL=C sort -z
-}
-
-dsh_source_fingerprint() { # dsh_source_fingerprint <plugin-dir>
-  local dir="$1"
-  dsh_have_sha256 || return 1
-  {
-    dsh_source_files "$dir" | tr '\0' '\n'
-    dsh_source_files "$dir" | ( cd "$dir" && xargs -0 cat 2>/dev/null )
-  } | dsh_sha256 | cut -c1-12
-}
-
-dsh_pack_local() { # dsh_pack_local <plugin-dir> -> tarball path
-  local dir="$1" dest="$OV_HOME/dsh-memory-plugin" name fingerprint target
-  command -v npm >/dev/null 2>&1 || {
-    warn "$(t 'npm not found; installing the published dsh package instead of the local checkout.' '未找到 npm，將安裝已釋出的 dsh 包而非本地 checkout。')" >&2
-    return 1
-  }
-  fingerprint="$(dsh_source_fingerprint "$dir")" || {
-    warn "$(t 'no sha256 tool found; installing the published dsh package instead of the local checkout.' '未找到 sha256 工具，將安裝已釋出的 dsh 包而非本地 checkout。')" >&2
-    return 1
-  }
-  target="$dest/$fingerprint/openviking-dsh-memory-plugin.tgz"
-  if [ -f "$target" ]; then
-    printf '%s' "$target"
-    return 0
-  fi
-  rm -rf "$dest"
-  mkdir -p "$dest/$fingerprint" || return 1
-  name="$( (cd "$dir" && npm pack --pack-destination "$dest/$fingerprint" 2>/dev/null) | tail -1 )"
-  [ -n "$name" ] && [ -f "$dest/$fingerprint/$name" ] || {
-    warn "$(t 'npm pack failed for the local dsh checkout; installing the published package instead.' '本地 dsh checkout 打包失敗，將改裝已釋出的包。')" >&2
-    return 1
-  }
-  mv "$dest/$fingerprint/$name" "$target" || return 1
-  printf '%s' "$target"
 }
 
 select_compatible_bins() {
@@ -1476,15 +1079,18 @@ select_compatible_bins() {
 
 validate_selected_harnesses() {
   local h bad=0
+  if [ "$UNINSTALL" -eq 1 ] && [ -z "$SELECTED_HARNESSES" ]; then
+    info "$(t 'No integration to uninstall was found; pass --harness to name one:' '未找到需要解除安裝的整合；可用 --harness 指定：') $(printf '%s' "$UNINSTALL_HARNESSES" | tr ' ' ',')"
+    exit 0
+  fi
   while IFS= read -r h; do
     case "$h" in
-      claude|codex|cursor|trae|trae-cn|opencode|pi|zcode|kimicode|codebuddy|dsh|cli) ;;
-      dsh-desktop)
-        [ "$DSH_DESKTOP_OFFERED" -eq 1 ] || {
-          err "$(t 'DeepSeek Harness Desktop (dsh-desktop) is installed by this script on macOS only; on Windows, add the plugin from its Plugins page.' '本指令碼僅在 macOS 上安裝 DeepSeek Harness Desktop（dsh-desktop）；Windows 上請在其“外掛”頁新增。')"
+      claude|codex|opencode|pi|cli) ;;
+      cursor|trae|trae-cn|trae-cli|zcode|kimicode|codebuddy)
+        [ "$UNINSTALL" -eq 1 ] || {
+          err "$(t "This installer no longer installs $h; --uninstall removes an earlier install." "本安裝指令碼已不再安裝 ${h}；--uninstall 可移除之前的安裝。")"
           bad=1
         } ;;
-      trae-cli) [ "$UNINSTALL" -eq 1 ] || bad=1 ;;
       *) err "Unsupported harness: $h"; bad=1 ;;
     esac
   done <<EOF
@@ -1521,12 +1127,8 @@ EOF
   fi
   if contains_harness opencode && command -v opencode >/dev/null 2>&1; then ok=1; fi
   if contains_harness pi && command -v pi >/dev/null 2>&1; then ok=1; fi
-  if contains_harness dsh && have_npm_dsh; then ok=1; fi
-  # Without its dsh command, Desktop still gets the steps for its Plugins page.
-  if contains_harness dsh-desktop; then ok=1; fi
   if contains_harness cli; then ok=1; fi
-  # Cursor and TRAE are config-driven integrations. They may be installed
-  # before the desktop app itself, so a CLI in PATH is not required.
+  # Removing an earlier hook-host integration needs no CLI in PATH.
   if contains_harness cursor || contains_harness trae || contains_harness trae-cn || contains_harness trae-cli || contains_harness zcode || contains_harness kimicode || contains_harness codebuddy; then ok=1; fi
   if [ "$ok" -ne 1 ]; then
     err "$(t 'No selected compatible CLI command was found in PATH.' '未在 PATH 中找到任何已選擇的相容 CLI 命令。')"
@@ -1839,15 +1441,12 @@ reexec_release_installer() { # reexec_release_installer <original-args...>
 }
 
 # The names the release resolver knows: a Codex-format CLI counts as the
-# TraeCode CLI when it is one, otherwise as Codex, and Desktop installs the
-# same dsh package.
+# TraeCode CLI when it is one, otherwise as Codex.
 resolver_harnesses() {
   local h bin out=""
   while IFS= read -r h; do
     [ -n "$h" ] && [ "$h" != "cli" ] || continue
-    if [ "$h" = "dsh-desktop" ]; then
-      out="$(append_csv_list "$out" dsh)"
-    elif [ "$h" = "codex" ]; then
+    if [ "$h" = "codex" ]; then
       while IFS= read -r bin; do
         [ -n "$bin" ] || continue
         case "$(bin_basename "$bin")" in
@@ -1980,7 +1579,7 @@ plugin_dir_on_disk() { # plugin_dir_on_disk <plugin-subdir>
 }
 
 # The installer's own JavaScript: the JSONC editor OpenCode's config needs and
-# the hooks/mcp merge every config-driven host installs through. It is not part
+# the hooks/mcp cleanup --uninstall runs for the hook hosts. It is not part
 # of the runtime the plugins ship, so it travels with whatever copy of this
 # script is running rather than with `lib/MANIFEST`.
 #
@@ -2537,86 +2136,9 @@ install_codex() {
 }
 
 # ---------------------------------------------------------------------------
-# Cursor / TRAE lifecycle hooks
+# Hook hosts earlier installers set up (Cursor, TRAE, ZCode, Kimi Code,
+# CodeBuddy Code): uninstall only
 # ---------------------------------------------------------------------------
-
-AGENT_HOOK_HOSTS="cursor trae zcode kimicode codebuddy"
-
-copy_agent_integration() { # copy_agent_integration <host> <dest-name> [destination]
-  local host="$1" dest_name="$2" explicit_dest="${3:-}" source dest tmp other
-  source="$(plugin_dir_on_disk agent-hook-plugin)" || {
-    err "$(t 'Agent integration sources not found:' '未找到 Agent 接入原始碼：') agent-hook-plugin"
-    return 1
-  }
-  dest="${explicit_dest:-$OV_HOME/agent-integrations/$dest_name}"
-  tmp="$dest.tmp"
-  rm -rf "$tmp"
-  mkdir -p "$tmp"
-  (cd "$source" && tar --exclude node_modules --exclude .git -cf - .) | (cd "$tmp" && tar -xf -)
-  # One plugin serves every config-driven host; an installation is for one
-  # client, so the other hosts' configuration directories do not travel with it.
-  for other in $AGENT_HOOK_HOSTS; do
-    [ "$other" = "$host" ] || rm -rf "$tmp/hosts/$other"
-  done
-  # Preserve the first-install timestamp across managed upgrades. The package
-  # descriptor is copied from source; integration.json records this machine's
-  # installation and must survive replacing the runtime directory.
-  [ -f "$dest/integration.json" ] && cp "$dest/integration.json" "$tmp/integration.json"
-  rm -rf "$dest"
-  mkdir -p "$(dirname "$dest")"
-  mv "$tmp" "$dest"
-  printf '%s' "$dest"
-}
-
-# Thin hook hosts keep only their client-specific adapters in the repository.
-# Assemble a self-contained installation by adding the canonical shared runtime
-# at install time instead of committing generated copies for every client.
-assemble_agent_integration() { # assemble_agent_integration <host> <dest-name> [bundle-root]
-  local host="$1" dest_name="$2" bundle_root="${3:-}" root_dest root shared shared_dest manifest file
-  if [ -n "$bundle_root" ]; then
-    root_dest="$bundle_root/agent-integrations/$dest_name"
-    shared_dest="$bundle_root/agent-integrations/memory-plugin-shared/lib"
-  else
-    root_dest="$OV_HOME/agent-integrations/$dest_name"
-    shared_dest="$OV_HOME/agent-integrations/memory-plugin-shared/lib"
-  fi
-  root="$(copy_agent_integration "$host" "$dest_name" "$root_dest")" || return 1
-  shared="$(plugin_dir_on_disk memory-plugin-shared)" || {
-    err "$(t 'Shared agent runtime not found.' '未找到共享 Agent 執行時。')"
-    return 1
-  }
-  # The closure of what the hook hosts import, written by sync.mjs and
-  # shipped beside the modules. Regenerating it here is not an option: the
-  # generator finds no plugin sources in a flat marketplace archive.
-  manifest="$shared/lib/MANIFEST"
-  [ -s "$manifest" ] || {
-    err "$(t 'Shared runtime manifest is missing or empty:' '共享執行時清單缺失或為空：') $manifest"
-    return 1
-  }
-  rm -rf "$shared_dest.tmp"
-  mkdir -p "$shared_dest.tmp"
-  while read -r file || [ -n "$file" ]; do
-    [ -n "$file" ] || continue
-    cp "$shared/lib/$file" "$shared_dest.tmp/$file" || return 1
-  done < "$manifest"
-  cp "$manifest" "$shared_dest.tmp/MANIFEST"
-  # Config-driven installs retain the uninstall helpers beside the shared
-  # runtime. A native Kimi bundle persists its one helper outside the plugin,
-  # so carrying every installer module inside that bundle would be dead weight.
-  if [ -z "$bundle_root" ]; then
-    cp -R "$shared/lib/install" "$shared_dest.tmp/install" || return 1
-  fi
-  rm -rf "$shared_dest"
-  mkdir -p "$(dirname "$shared_dest")"
-  mv "$shared_dest.tmp" "$shared_dest"
-  printf '%s' "$root"
-}
-
-agent_write_json_configs() { # agent_write_json_configs <kind> <hooks> <mcp> <root> <client-id> <node-bin>
-  local lib
-  lib="$(require_install_lib_dir)" || return 1
-  "$NODE_BIN" "$lib/host-json-config.mjs" write "$1" "$2" "$3" "$4" "$5" "$6" "$SOURCE_MODE"
-}
 
 agent_remove_json_configs() { # agent_remove_json_configs <hooks> [mcp]
   local lib
@@ -2716,7 +2238,7 @@ const tmp = `${configPath}.${process.pid}.tmp`;
 fs.writeFileSync(tmp, JSON.stringify(config, null, 2) + "\n");
 fs.renameSync(tmp, configPath);
 CLEAN_NODE
-    # Clean up intermediate files generated by agent_write_json_configs
+    # Clean up the intermediate files earlier installers wrote
     rm -f "$HOME/.zcode/hooks.json" "$HOME/.zcode/mcp.json" 2>/dev/null
     rm -rf "$OV_HOME/agent-integrations/zcode"
     info "$(t 'Removed ZCode OpenViking hooks and MCP config.' '已移除 ZCode OpenViking hooks 與 MCP 配置。')"
@@ -2801,18 +2323,6 @@ cursor_mcp_path() {
   printf '%s' "$HOME/.cursor/mcp.json"
 }
 
-cursor_legacy_claude_plugins() {
-  local registry="$CC_CONFIG_DIR/plugins/installed_plugins.json"
-  [ -f "$registry" ] || return 0
-  "$NODE_BIN" - "$registry" "$PLUGIN_ID" <<'NODE' 2>/dev/null || true
-const fs = require("node:fs");
-const [file, currentId] = process.argv.slice(2);
-const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
-const ids = Object.keys(parsed.plugins || {}).filter((id) => /openviking/i.test(id) && id !== currentId);
-process.stdout.write(ids.join(", "));
-NODE
-}
-
 trae_mcp_path() { # trae_mcp_path <client-id>
   local client_id="$1"
   if [ "$(uname -s)" = "Darwin" ]; then
@@ -2826,210 +2336,6 @@ trae_mcp_path() { # trae_mcp_path <client-id>
   else
     printf '%s' "$HOME/.trae/mcp.json"
   fi
-}
-
-install_cursor() {
-  step_heading "$(t 'Cursor integration' 'Cursor 整合')"
-  local root hooks_path mcp_path skill skill_tmp legacy_plugins
-  ensure_bundle
-  root="$(assemble_agent_integration cursor cursor)" || return 1
-  hooks_path="$HOME/.cursor/hooks.json"
-  mcp_path="$(cursor_mcp_path)"
-  agent_write_json_configs cursor "$hooks_path" "$mcp_path" "$root" cursor "$NODE_BIN"
-  mkdir -p "$HOME/.cursor/rules" "$HOME/.cursor/skills"
-  cp "$root/hosts/cursor/rules/openviking-memory.mdc" "$HOME/.cursor/rules/openviking-memory.mdc"
-  for skill in openviking-memory openviking-skills ov-experience-memory; do
-    skill_tmp="$HOME/.cursor/skills/$skill.tmp"
-    rm -rf "$skill_tmp"
-    cp -R "$root/hosts/cursor/skills/$skill" "$skill_tmp"
-    rm -rf "$HOME/.cursor/skills/$skill"
-    mv "$skill_tmp" "$HOME/.cursor/skills/$skill"
-  done
-  info "$(t 'Cursor hooks installed:' 'Cursor hooks 已安裝：') $hooks_path"
-  info "$(t 'Cursor MCP installed:' 'Cursor MCP 已安裝：') $mcp_path"
-  info "$(t 'Cursor Rule and Skill installed under ~/.cursor.' 'Cursor Rule 與 Skill 已安裝到 ~/.cursor。')"
-  legacy_plugins="$(cursor_legacy_claude_plugins)"
-  if [ -n "$legacy_plugins" ]; then
-    warn "$(t 'Cursor may also import these older Claude OpenViking plugins and run duplicate Hooks:' 'Cursor 還可能匯入以下舊版 Claude OpenViking 外掛並重復執行 Hook：') $legacy_plugins"
-    warn "$(t 'Upgrade or remove those legacy plugin ids, then restart Cursor.' '請升級或移除這些舊外掛 id，然後重啟 Cursor。')"
-  fi
-}
-
-zcode_mcp_path() {
-  printf '%s' "$HOME/.zcode/mcp.json"
-}
-
-zcode_merge_config() { # zcode_merge_config <config_path> <hooks_path> <mcp_path>
-  local lib
-  lib="$(require_install_lib_dir)" || return 1
-  "$NODE_BIN" "$lib/host-json-config.mjs" merge-zcode "$1" "$2" "$3"
-}
-
-install_zcode() {
-  step_heading "$(t 'ZCode integration' 'ZCode 整合')"
-  local root hooks_path mcp_path config_path
-  ensure_bundle
-  root="$(assemble_agent_integration zcode zcode)" || return 1
-  hooks_path="$HOME/.zcode/hooks.json"
-  mcp_path="$(zcode_mcp_path)"
-  config_path="$HOME/.zcode/cli/config.json"
-  mkdir -p "$HOME/.zcode/cli"
-  agent_write_json_configs zcode "$hooks_path" "$mcp_path" "$root" zcode "$NODE_BIN"
-  # ZCode reads hooks from config.json → hooks.events, not a standalone hooks.json.
-  # Merge the generated hooks.json and mcp.json into config.json so ZCode picks them up.
-  zcode_merge_config "$config_path" "$hooks_path" "$mcp_path" \
-    || { warn "$(t 'Failed to merge ZCode config' 'ZCode 配置合併失敗')"; return 1; }
-  info "$(t 'ZCode hooks installed:' 'ZCode hooks 已安裝：') $config_path (hooks.events)"
-  info "$(t 'ZCode MCP installed:' 'ZCode MCP 已安裝：') $config_path (mcp.servers)"
-}
-
-install_kimicode() {
-  step_heading "$(t 'Kimi Code CLI integration' 'Kimi Code CLI 整合')"
-  local bundle kimi_home install_lib persisted_dir persisted_tmp persisted_backup root
-  ensure_bundle
-  bundle="$OV_HOME/agent-integrations/kimicode-bundle.$$"
-  rm -rf "$bundle"
-  mkdir -p "$bundle"
-  root="$(assemble_agent_integration kimicode kimicode "$bundle")" || {
-    rm -rf "$bundle"
-    return 1
-  }
-  rm -rf "$root/tests"
-  rm -f "$root/README.md" "$root/README_CN.md" "$root/DESIGN.md" "$root/plugin.json"
-  cp "$root/hosts/kimicode/kimi.plugin.json" "$bundle/kimi.plugin.json" || {
-    rm -rf "$bundle"
-    return 1
-  }
-  cp "$root/hosts/kimicode/runtime-index.mjs" "$root/hosts/index.mjs" || {
-    rm -rf "$bundle"
-    return 1
-  }
-  local host_module
-  for host_module in "$root"/hosts/*.mjs; do
-    case "$(basename "$host_module")" in
-      index.mjs|incremental-turn-capture.mjs|kimicode.mjs|kimicode-turns.mjs) ;;
-      *) rm -f "$host_module" ;;
-    esac
-  done
-  rm -rf "$root/hosts/kimicode"
-  kimi_home="${KIMI_CODE_HOME:-$HOME/.kimi-code}"
-  install_lib="$(require_install_lib_dir)" || { rm -rf "$bundle"; return 1; }
-  persisted_dir="$OV_HOME/agent-integrations/kimicode/lib/install"
-  persisted_tmp="$persisted_dir.tmp.$$"
-  persisted_backup="$persisted_dir.previous.$$"
-  rm -rf "$persisted_tmp"
-  mkdir -p "$persisted_tmp"
-  cp "$install_lib/kimicode-plugin.mjs" "$persisted_tmp/kimicode-plugin.mjs" || {
-    rm -rf "$bundle" "$persisted_tmp"
-    return 1
-  }
-  mkdir -p "$(dirname "$persisted_dir")"
-  rm -rf "$persisted_backup"
-  [ ! -e "$persisted_dir" ] || mv "$persisted_dir" "$persisted_backup"
-  mv "$persisted_tmp" "$persisted_dir" || {
-    [ ! -e "$persisted_backup" ] || mv "$persisted_backup" "$persisted_dir"
-    rm -rf "$bundle"
-    return 1
-  }
-  "$NODE_BIN" "$persisted_dir/kimicode-plugin.mjs" install "$kimi_home" "$bundle" || {
-    rm -rf "$bundle" "$persisted_dir"
-    [ ! -e "$persisted_backup" ] || mv "$persisted_backup" "$persisted_dir"
-    return 1
-  }
-  rm -rf "$persisted_backup"
-  rm -rf "$bundle"
-  info "$(t 'Kimi Code native plugin installed:' 'Kimi Code 原生外掛已安裝：') openviking-memory"
-}
-
-install_codebuddy() {
-  step_heading "$(t 'CodeBuddy Code CLI integration' 'CodeBuddy Code CLI 整合')"
-  local bundle root config marketplace version host_module
-  ensure_bundle
-  bundle="$OV_HOME/agent-integrations/codebuddy-bundle.$$"
-  rm -rf "$bundle"
-  mkdir -p "$bundle"
-  root="$(assemble_agent_integration codebuddy codebuddy "$bundle")" || { rm -rf "$bundle"; return 1; }
-  rm -rf "$root/tests"
-  rm -f "$root/README.md" "$root/README_CN.md" "$root/DESIGN.md" "$root/plugin.json"
-  # Keep this host's config directory aside before the adapters are pruned.
-  config="$bundle/codebuddy-config"
-  cp -R "$root/hosts/codebuddy" "$config" || { rm -rf "$bundle"; return 1; }
-  cp "$config/runtime-index.mjs" "$root/hosts/index.mjs" || { rm -rf "$bundle"; return 1; }
-  for host_module in "$root"/hosts/*.mjs; do
-    case "$(basename "$host_module")" in
-      index.mjs|incremental-turn-capture.mjs|codebuddy.mjs|codebuddy-turns.mjs) ;;
-      *) rm -f "$host_module" ;;
-    esac
-  done
-  rm -rf "$root/hosts/codebuddy"
-  # The plugin directory CodeBuddy copies into its cache has to carry the whole
-  # agent-hook layout: the adapters import `../../memory-plugin-shared/lib`,
-  # which only resolves when the shared runtime sits beside them under
-  # agent-integrations/ (the shape the Kimi Code bundle uses).
-  mkdir -p "$bundle/openviking-memory"
-  mv "$bundle/agent-integrations" "$bundle/openviking-memory/agent-integrations" || { rm -rf "$bundle"; return 1; }
-  root="$bundle/openviking-memory"
-  # Flatten the config directory into the layout CodeBuddy reads: the manifest
-  # under .codebuddy-plugin/, hooks under hooks/, MCP at the root.
-  mkdir -p "$root/.codebuddy-plugin" "$root/hooks"
-  cp "$config/plugin.json" "$root/.codebuddy-plugin/plugin.json" || { rm -rf "$bundle"; return 1; }
-  cp "$config/hooks.json" "$root/hooks/hooks.json" || { rm -rf "$bundle"; return 1; }
-  cp "$config/.mcp.json" "$root/.mcp.json" || { rm -rf "$bundle"; return 1; }
-  cp -R "$config/skills" "$root/skills" || { rm -rf "$bundle"; return 1; }
-  rm -rf "$config"
-  # A marketplace cannot reference a source outside itself, so the marketplace
-  # root is the plugin's parent directory (hosts/codebuddy/DESIGN.md §9).
-  # CodeBuddy resolves an installed plugin by the manifest version, so the
-  # marketplace entry pins the same one the plugin manifest reports.
-  marketplace="$bundle"
-  version="$("$NODE_BIN" -e 'process.stdout.write(String(JSON.parse(require("node:fs").readFileSync(process.argv[1],"utf8")).version||""))' "$root/.codebuddy-plugin/plugin.json")"
-  "$NODE_BIN" - "$marketplace" "$version" <<'NODE' || { rm -rf "$bundle"; return 1; }
-const fs = require("node:fs");
-const path = require("node:path");
-const root = process.argv[2];
-const version = process.argv[3];
-fs.mkdirSync(path.join(root, ".codebuddy-plugin"), { recursive: true });
-fs.writeFileSync(path.join(root, ".codebuddy-plugin", "marketplace.json"), JSON.stringify({
-  name: "openviking",
-  description: "OpenViking plugins for the CodeBuddy Code CLI (managed by the OpenViking installer).",
-  owner: { name: "OpenViking" },
-  plugins: [{
-    name: "openviking-memory",
-    description: "Long-term semantic memory for CodeBuddy Code, powered by OpenViking.",
-    version,
-    source: "./openviking-memory",
-    category: "productivity",
-  }],
-}, null, 2) + "\n");
-NODE
-  # Swap the assembled marketplace into place, then register and install
-  # through the host CLI when it is on PATH.
-  rm -rf "$OV_HOME/agent-integrations/codebuddy"
-  mkdir -p "$OV_HOME/agent-integrations/codebuddy"
-  mv "$bundle" "$OV_HOME/agent-integrations/codebuddy/marketplace" || { rm -rf "$bundle"; return 1; }
-  marketplace="$OV_HOME/agent-integrations/codebuddy/marketplace"
-  if command -v codebuddy >/dev/null 2>&1; then
-    codebuddy plugin marketplace add "$marketplace" >/dev/null 2>&1 \
-      || warn "$(t 'Could not register the local marketplace with codebuddy.' '未能向 codebuddy 註冊本地 marketplace。')"
-    if codebuddy plugin install openviking-memory@openviking -s user >/dev/null 2>&1; then
-      info "$(t 'CodeBuddy Code plugin installed:' 'CodeBuddy Code 外掛已安裝：') openviking-memory"
-    else
-      warn "$(t 'Marketplace registered; install the plugin with:' 'marketplace 已註冊；用這條命令安裝外掛：') codebuddy plugin install openviking-memory@openviking"
-    fi
-  else
-    warn "$(t 'codebuddy CLI not found in PATH. Register the marketplace with' 'PATH 中未找到 codebuddy CLI。用這條命令註冊 marketplace：') codebuddy plugin marketplace add $marketplace"
-  fi
-}
-install_trae_variant() { # install_trae_variant <trae|trae-cn>
-  local client_id="$1" root hooks_path mcp_path
-  step_heading "$(tui_bin_label "$client_id" "$client_id") $(t 'integration' '整合')"
-  ensure_bundle
-  root="$(assemble_agent_integration trae "$client_id")" || return 1
-  hooks_path="$HOME/.$client_id/hooks.json"
-  mcp_path="$(trae_mcp_path "$client_id")"
-  agent_write_json_configs trae "$hooks_path" "$mcp_path" "$root" "$client_id" "$NODE_BIN"
-  info "$client_id hooks: $hooks_path"
-  info "$client_id MCP: $mcp_path"
 }
 
 # ---------------------------------------------------------------------------
@@ -3159,44 +2465,9 @@ install_pi() {
 # Validation
 # ---------------------------------------------------------------------------
 
-# Cursor, TRAE, TRAE CN and ZCode run the same hook runtime; they differ only
-# in where their hooks and MCP entries live and in the session-start event name.
-validate_hook_host() { # validate_hook_host <client>
-  local client="$1" root="$OV_HOME/agent-integrations/$1" shared="$OV_HOME/agent-integrations/memory-plugin-shared/lib"
-  local hooks mcp event file complete=1
-  set -- "$root/scripts/hook.mjs" "$root/scripts/uri-guard.mjs" "$root/integration.json" "$shared/agent-hook-runtime.mjs"
-  case "$client" in
-    cursor)
-      hooks="$HOME/.cursor/hooks.json"; mcp="$(cursor_mcp_path)"; event=sessionStart
-      set -- "$@" "$root/plugin.json" "$shared/uri-guard.mjs" "$HOME/.cursor/rules/openviking-memory.mdc" \
-        "$HOME/.cursor/skills/openviking-memory/SKILL.md" "$HOME/.cursor/skills/openviking-skills/SKILL.md" \
-        "$HOME/.cursor/skills/ov-experience-memory/SKILL.md"
-      ;;
-    zcode) hooks="$HOME/.zcode/cli/config.json"; mcp="$hooks"; event=session-start ;;
-    *) hooks="$HOME/.$client/hooks.json"; mcp="$(trae_mcp_path "$client")"; event=session-start ;;
-  esac
-  for file in "$@"; do
-    [ -f "$file" ] || complete=0
-  done
-  grep -q 'scripts/hook.mjs' "$hooks" 2>/dev/null \
-    && grep -q 'scripts/uri-guard.mjs' "$hooks" 2>/dev/null \
-    && grep -q 'OPENVIKING_INTEGRATION_ID' "$hooks" 2>/dev/null \
-    && grep -q 'mcp-proxy.mjs' "$mcp" 2>/dev/null || complete=0
-  if [ "$complete" -eq 0 ]; then
-    warn "$client: $(t 'OpenViking hook or MCP config is incomplete' 'OpenViking hook 或 MCP 配置不完整')"
-    return 1
-  fi
-  "$NODE_BIN" --check "$root/scripts/hook.mjs" && "$NODE_BIN" --check "$root/scripts/uri-guard.mjs" || return 1
-  if ! printf '%s' '{}' | OPENVIKING_MEMORY_ENABLED=0 "$NODE_BIN" "$root/scripts/hook.mjs" "$event" "$client" >/dev/null; then
-    warn "$client: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
-    return 1
-  fi
-  info "$client: $(t 'hooks and MCP are configured' 'hooks 與 MCP 已配置')"
-}
-
 validate_install() {
   step_heading "$(t 'Validation' '安裝校驗')"
-  local ok=1 agent_fatal=0 cached list bin client
+  local ok=1 cached list bin
   if contains_harness claude; then
     while IFS= read -r bin; do
       [ -n "$bin" ] || continue
@@ -3236,61 +2507,6 @@ EOF
     done <<EOF
 $CODEX_BINS
 EOF
-  fi
-  for client in cursor trae trae-cn zcode; do
-    contains_harness "$client" || continue
-    validate_hook_host "$client" || { ok=0; agent_fatal=1; }
-  done
-  if contains_harness kimicode; then
-    local kimi_home="${KIMI_CODE_HOME:-$HOME/.kimi-code}"
-    local kimi_root="$kimi_home/plugins/managed/openviking-memory"
-    local kimi_installer="$OV_HOME/agent-integrations/kimicode/lib/install/kimicode-plugin.mjs"
-    if [ -f "$kimi_installer" ] \
-      && "$NODE_BIN" "$kimi_installer" verify "$kimi_home" \
-      && [ -f "$kimi_root/kimi.plugin.json" ] \
-      && [ -f "$kimi_root/agent-integrations/kimicode/scripts/hook.mjs" ] \
-      && [ -f "$kimi_root/agent-integrations/kimicode/scripts/uri-guard.mjs" ] \
-      && [ -f "$kimi_root/agent-integrations/kimicode/servers/mcp-proxy.mjs" ] \
-      && [ -f "$kimi_root/agent-integrations/memory-plugin-shared/lib/agent-hook-runtime.mjs" ]; then
-      "$NODE_BIN" --check "$kimi_root/agent-integrations/kimicode/scripts/hook.mjs" \
-        || { ok=0; agent_fatal=1; }
-      if ! printf '%s' '{}' | env HOME="$HOME" OPENVIKING_MEMORY_ENABLED=0 \
-        "$NODE_BIN" "$kimi_root/agent-integrations/kimicode/scripts/hook.mjs" session-start kimicode >/dev/null; then
-        warn "kimicode: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
-        ok=0; agent_fatal=1
-      fi
-      info "kimicode: $(t 'native plugin installed (Hooks + MCP)' '原生外掛已安裝（Hooks + MCP）')"
-    else
-      warn "kimicode: $(t 'native plugin installation is incomplete' '原生外掛安裝不完整')"
-      ok=0; agent_fatal=1
-    fi
-  fi
-  if contains_harness codebuddy; then
-    local cb_root="$OV_HOME/agent-integrations/codebuddy/marketplace/openviking-memory"
-    local cb_ai="$cb_root/agent-integrations/codebuddy"
-    if [ -f "$cb_root/.codebuddy-plugin/plugin.json" ] \
-      && [ -f "$cb_root/hooks/hooks.json" ] \
-      && [ -f "$cb_root/.mcp.json" ] \
-      && [ -f "$cb_ai/scripts/hook.mjs" ] \
-      && [ -f "$cb_ai/scripts/uri-guard.mjs" ] \
-      && [ -f "$cb_ai/servers/mcp-proxy.mjs" ] \
-      && [ -f "$cb_root/agent-integrations/memory-plugin-shared/lib/agent-hook-runtime.mjs" ]; then
-      "$NODE_BIN" --check "$cb_ai/scripts/hook.mjs" || { ok=0; agent_fatal=1; }
-      if ! printf '%s' '{}' | OPENVIKING_MEMORY_ENABLED=0 \
-        "$NODE_BIN" "$cb_ai/scripts/hook.mjs" session-start codebuddy >/dev/null; then
-        warn "codebuddy: $(t 'installed Hook runtime failed its smoke test' '已安裝的 Hook 執行時 smoke test 失敗')"
-        ok=0; agent_fatal=1
-      fi
-      if command -v codebuddy >/dev/null 2>&1 \
-        && ! codebuddy plugin list 2>/dev/null | grep -q 'openviking-memory'; then
-        warn "codebuddy: $(t 'plugin is assembled but not installed through the host CLI' '外掛已組裝但未通過宿主 CLI 安裝')"
-        ok=0; agent_fatal=1
-      fi
-      info "codebuddy: $(t 'plugin assembled (Hooks + MCP + skills)' '外掛已組裝（Hooks + MCP + skills）')"
-    else
-      warn "codebuddy: $(t 'plugin assembly is incomplete' '外掛組裝不完整')"
-      ok=0; agent_fatal=1
-    fi
   fi
   if contains_harness opencode; then
     local ocfg="$HOME/.config/opencode/opencode.json"
@@ -3344,47 +2560,9 @@ EOF
       node --check "$HOME/.pi/agent/extensions/openviking/shared/mcp-proxy-config.mjs" || ok=0
     fi
   fi
-  if contains_harness dsh && have_npm_dsh; then
-    local dsh_profile="${DSH_PROFILE:-$DSH_PROFILE_DEFAULT}"
-    if dsh plugin --profile "$dsh_profile" ls 2>/dev/null | grep -q "$DSH_PACKAGE"; then
-      info "dsh: $DSH_PACKAGE $(t 'installed in profile' '已安裝到 profile') $dsh_profile"
-    else
-      warn "dsh: $DSH_PACKAGE $(t 'not found in profile' '未在 profile 中找到') $dsh_profile"
-      ok=0
-    fi
-    if dsh --profile "$dsh_profile" --dump-config 2>/dev/null | grep -q 'openviking-memory-runtime'; then
-      info "dsh: $(t 'plugin composed into the profile' '外掛已合入 profile')"
-    else
-      warn "dsh: $(t 'plugin not present in the composed profile' '合成後的 profile 中沒有該外掛')"
-      ok=0
-    fi
-  fi
-  if contains_harness dsh-desktop && [ "$DSH_DESKTOP_INSTALLED" -eq 1 ]; then
-    if str_contains "$("$DSH_DESKTOP_CLI" plugin --profile desktop ls 2>/dev/null || true)" "$DSH_PACKAGE"; then
-      info "dsh-desktop: $DSH_PACKAGE $(t 'installed in DeepSeek Harness Desktop' '已安裝到 DeepSeek Harness Desktop')"
-    else
-      warn "dsh-desktop: $DSH_PACKAGE $(t 'not found in DeepSeek Harness Desktop' '未在 DeepSeek Harness Desktop 中找到')"
-      ok=0
-    fi
-    # No dsh boots Desktop's profile, so there is no --dump-config to read;
-    # Desktop loads the bundles its profile manifest lists.
-    if "$NODE_BIN" -e '
-      const m = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
-      process.exit((m.dsh?.profile?.bundles ?? []).includes(process.argv[2]) ? 0 : 1);
-    ' "$(dsh_home)/profiles/desktop/package.json" "$DSH_PACKAGE" 2>/dev/null; then
-      info "dsh-desktop: $(t 'plugin enabled in the Desktop profile' '外掛已在 Desktop profile 中啟用')"
-    else
-      warn "dsh-desktop: $(t 'plugin not enabled in the Desktop profile; enable it on the Plugins page' 'Desktop profile 中未啟用該外掛；請在“外掛”頁啟用')"
-      ok=0
-    fi
-  fi
   if [ -n "$MKT_DIR" ] && [ -f "$MKT_DIR/claude-code-memory-plugin/scripts/marketplace.test.mjs" ] && [ -d "$MKT_DIR/../.git" ]; then
     node --test "$MKT_DIR/claude-code-memory-plugin/scripts/marketplace.test.mjs" \
       "$MKT_DIR/codex-memory-plugin/scripts/marketplace.test.mjs" || ok=0
-  fi
-  if [ "$agent_fatal" -ne 0 ]; then
-    err "$(t 'Installation validation failed. No success result will be reported.' '安裝校驗失敗，不會報告安裝成功。')"
-    return 1
   fi
   if [ "$ok" -ne 1 ]; then
     warn "$(t 'Validation reported issues — the install may still work; check the messages above.' '校驗發現問題——安裝可能仍然可用，請檢查上方輸出。')"
@@ -3465,7 +2643,7 @@ count_steps() {
   STEP_TOTAL=3
   if contains_harness claude; then STEP_TOTAL=$((STEP_TOTAL + $(list_count "$CLAUDE_BINS"))); fi
   if contains_harness codex; then STEP_TOTAL=$((STEP_TOTAL + $(list_count "$CODEX_BINS"))); fi
-  for h in cursor trae trae-cn zcode kimicode codebuddy opencode pi dsh dsh-desktop cli; do
+  for h in opencode pi cli; do
     if contains_harness "$h"; then STEP_TOTAL=$((STEP_TOTAL + 1)); fi
   done
 }
@@ -3482,8 +2660,6 @@ print_selection() {
   if contains_harness claude; then info "$(t 'Claude-format commands:' 'Claude 格式命令：') $(list_words "$CLAUDE_BINS")"; fi
   if [ -n "$TRAECODE_CLI_BIN" ]; then info "TraeCode CLI 2.0: $TRAECODE_CLI_BIN"; fi
   if contains_harness codex && [ -z "$TRAECODE_CLI_BIN" ]; then info "$(t 'Codex-format commands:' 'Codex 格式命令：') $(list_words "$CODEX_BINS")"; fi
-  if contains_harness dsh; then info "$(t 'DeepSeek Harness profile:' 'DeepSeek Harness profile：') ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT}"; fi
-  if contains_harness dsh-desktop && [ -n "$DSH_DESKTOP_CLI" ]; then info "$(t 'DeepSeek Harness Desktop command:' 'DeepSeek Harness Desktop 命令：') $(short_path "$DSH_DESKTOP_CLI")"; fi
 }
 
 plan_item() { printf '      %s\n' "$*"; }
@@ -3574,48 +2750,14 @@ EOF
 $CODEX_BINS
 EOF
   fi
-  if [ "$SOURCE_MODE" = "archive" ] && { contains_harness cursor || contains_harness trae || contains_harness trae-cn \
-    || contains_harness zcode || contains_harness kimicode || contains_harness codebuddy || contains_harness opencode || contains_harness pi; }; then
+  if [ "$SOURCE_MODE" = "archive" ] && { contains_harness opencode || contains_harness pi; }; then
     plan_item "$bundle ($(t 'plugin bundle download' '下載外掛包'))"
-  fi
-  if contains_harness cursor; then
-    plan_paths Cursor "$HOME/.cursor/hooks.json" "$(cursor_mcp_path)" "$HOME/.cursor/rules/openviking-memory.mdc" \
-      "$HOME/.cursor/skills/openviking-memory" "$HOME/.cursor/skills/openviking-skills" \
-      "$HOME/.cursor/skills/ov-experience-memory" "$OV_HOME/agent-integrations/cursor"
-  fi
-  if contains_harness trae; then
-    plan_paths TRAE "$HOME/.trae/hooks.json" "$(trae_mcp_path trae)" "$OV_HOME/agent-integrations/trae"
-  fi
-  if contains_harness trae-cn; then
-    plan_paths "TRAE CN" "$HOME/.trae-cn/hooks.json" "$(trae_mcp_path trae-cn)" "$OV_HOME/agent-integrations/trae-cn"
-  fi
-  if contains_harness zcode; then
-    plan_paths ZCode "$HOME/.zcode/cli/config.json" "$HOME/.zcode/hooks.json" "$(zcode_mcp_path)" "$OV_HOME/agent-integrations/zcode"
-  fi
-  if contains_harness cursor || contains_harness trae || contains_harness trae-cn || contains_harness zcode; then
-    plan_paths "$(t 'Shared hook runtime' '共享 hook 執行時')" "$OV_HOME/agent-integrations/memory-plugin-shared"
-  fi
-  if contains_harness kimicode; then
-    plan_paths "Kimi Code" "${KIMI_CODE_HOME:-$HOME/.kimi-code}/plugins" "$OV_HOME/agent-integrations/kimicode"
-  fi
-  if contains_harness codebuddy; then
-    plan_paths "CodeBuddy Code" "$HOME/.codebuddy/plugins" "$OV_HOME/agent-integrations/codebuddy"
   fi
   if contains_harness opencode && command -v opencode >/dev/null 2>&1; then
     plan_paths OpenCode "$HOME/.config/opencode/plugins/openviking" "$HOME/.config/opencode/plugins/openviking.js" "$(opencode_config_file)"
   fi
   if contains_harness pi && command -v pi >/dev/null 2>&1; then
     plan_paths pi "$HOME/.pi/agent/extensions/openviking"
-  fi
-  if contains_harness dsh && have_npm_dsh; then
-    plan_item "dsh plugin --profile ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT} add $DSH_PACKAGE@latest"
-  fi
-  if contains_harness dsh-desktop; then
-    if [ -n "$DSH_DESKTOP_CLI" ] && dsh_desktop_initialized; then
-      plan_item "\"$(short_path "$DSH_DESKTOP_CLI")\" plugin --profile desktop add $DSH_PACKAGE@latest ($(t 'DeepSeek Harness Desktop, which must be quit' 'DeepSeek Harness Desktop，需先退出'))"
-    else
-      plan_item "DeepSeek Harness Desktop: $(t 'nothing; the steps for its Plugins page are printed' '不修改；改為給出其“外掛”頁的安裝步驟')"
-    fi
   fi
   if contains_harness cli && [ -n "$CLI_PREFIX" ]; then
     plan_item "npm install -g $CLI_PACKAGE@latest ($(short_path "$CLI_PREFIX/bin/ov"))"
@@ -3683,9 +2825,8 @@ onboarding_url() {
 }
 
 print_next_steps() {
-  local label updates rerun uninstall doctor client remove line
+  local label updates rerun remove line
   rerun="$(t 're-run this installer' '重新執行本安裝指令碼')"
-  uninstall="$INSTALL_COMMAND --uninstall --yes --harness"
   heading "$(t 'Done' '完成')"
   if [ -n "$RELEASE_VERSION" ]; then info "$(t 'Release:' '釋出版本：') $RELEASE_VERSION"; fi
   info "$(t 'Credentials:' '憑據：') $OVCLI_CONF"
@@ -3726,40 +2867,12 @@ EOF
 $CODEX_BINS
 EOF
   fi
-  for client in cursor trae trae-cn zcode; do
-    contains_harness "$client" || continue
-    label="$(tui_bin_label "$client" "$client")"
-    doctor="node $(short_path "$OV_HOME/agent-integrations/$client/scripts/ov-memory-doctor.mjs")"
-    next_steps "$label" "$(t "restart $label" "重啟 $label")" "$rerun" "$doctor" "$uninstall $client"
-  done
-  if contains_harness kimicode; then
-    next_steps "Kimi Code" "$(t 'start a new session (not /reload)' '新建會話（不要用 /reload）')" "$rerun" "" "$uninstall kimicode"
-  fi
-  if contains_harness codebuddy; then
-    next_steps "CodeBuddy Code" "$(t 'run /reload-plugins or start a new session' '執行 /reload-plugins 或新建會話')" "$rerun" "" "$uninstall codebuddy"
-  fi
   if contains_harness opencode && command -v opencode >/dev/null 2>&1; then
     next_steps OpenCode "$(t 'restart OpenCode' '重啟 OpenCode')" "$rerun" "" \
       "$(t "rm -rf ~/.config/opencode/plugins/openviking ~/.config/opencode/plugins/openviking.js, then remove mcp.openviking from $(short_path "$(opencode_config_file)")" "rm -rf ~/.config/opencode/plugins/openviking ~/.config/opencode/plugins/openviking.js，再刪除 $(short_path "$(opencode_config_file)") 中的 mcp.openviking")"
   fi
   if contains_harness pi && command -v pi >/dev/null 2>&1; then
     next_steps pi "$(t 'restart pi' '重啟 pi')" "$rerun" "" "rm -rf ~/.pi/agent/extensions/openviking"
-  fi
-  if contains_harness dsh && have_npm_dsh; then
-    next_steps "DeepSeek Harness" "$(t "start a new dsh session: dsh --profile ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT}" "新開一個 dsh 會話：dsh --profile ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT}")" "$rerun" "" \
-      "dsh plugin --profile ${DSH_PROFILE:-$DSH_PROFILE_DEFAULT} rm $DSH_PACKAGE"
-  fi
-  if contains_harness dsh-desktop && [ "$DSH_DESKTOP_INSTALLED" -eq 1 ]; then
-    next_steps "DeepSeek Harness Desktop" \
-      "$(t 'quit DeepSeek Harness Desktop with ⌘Q if it is open, reopen it and start a new conversation' '如 DeepSeek Harness Desktop 已開啟，用 ⌘Q 退出後重新開啟，再新建對話')" \
-      "$(t 're-run this installer, or update it on the Plugins page' '重新執行本安裝指令碼，或在“外掛”頁更新')" \
-      "\"$DSH_DESKTOP_CLI\" plugin --profile desktop ls" \
-      "$(t "with Desktop quit, \"$DSH_DESKTOP_CLI\" plugin --profile desktop rm $DSH_PACKAGE; or Plugins page → $DSH_PACKAGE → Uninstall" "退出 Desktop 後執行 \"$DSH_DESKTOP_CLI\" plugin --profile desktop rm $DSH_PACKAGE；或在“外掛”頁 → $DSH_PACKAGE → 解除安裝")"
-  elif contains_harness dsh-desktop; then
-    next_steps "DeepSeek Harness Desktop" \
-      "$(t "open DeepSeek Harness Desktop: Plugins → Add plugin → enter $DSH_PACKAGE → Install, then turn it on if its switch is off" "開啟 DeepSeek Harness Desktop：外掛 → 新增外掛 → 輸入 $DSH_PACKAGE → 安裝，開關未開啟時再開啟")" \
-      "$(t 'on the Plugins page' '在“外掛”頁')" "" \
-      "$(t "Plugins page → $DSH_PACKAGE → Uninstall" "“外掛”頁 → $DSH_PACKAGE → 解除安裝")"
   fi
   if [ "$CLI_INSTALLED" -eq 1 ]; then
     next_steps "CLI (ov)" "$(t 'run ov health, which uses the same credentials' '執行 ov health，它使用同一份憑據')" "$rerun" "" \
@@ -3793,11 +2906,6 @@ case "$(uname -s)" in
 esac
 command -v node >/dev/null 2>&1 || {
   err "$(t 'node not found. Install Node.js 18+.' '未找到 node，請先安裝 Node.js 18+。')"
-  # Desktop brings its own runtime, so a Mac with only Desktop has no Node.js.
-  if [ "$HAVE_DSH_DESKTOP" -eq 1 ]; then
-    dsh_desktop_plugins_page_steps
-    info "$(t 'Then write the server to' '再把服務寫入') $OVCLI_CONF: {\"url\": \"<server-url>\", \"api_key\": \"<api-key>\"}"
-  fi
   exit 1
 }
 NODE_BIN="$(command -v node)"
@@ -3806,7 +2914,6 @@ NODE_MAJOR="$("$NODE_BIN" -p 'Number(process.versions.node.split(".")[0])')"
 command -v curl >/dev/null 2>&1 || warn "$(t 'curl not found; the server check is skipped and downloads will fail.' '未找到 curl：將跳過服務檢查，下載也會失敗。')"
 
 select_harnesses
-select_dsh_profile
 validate_selected_harnesses
 select_compatible_bins
 refresh_available_harnesses
@@ -3847,16 +2954,8 @@ if contains_harness codex; then
 $CODEX_BINS
 EOF
 fi
-if contains_harness cursor; then install_cursor; fi
-if contains_harness trae; then install_trae_variant trae; fi
-if contains_harness trae-cn; then install_trae_variant trae-cn; fi
-if contains_harness zcode; then install_zcode; fi
-if contains_harness kimicode; then install_kimicode; fi
-if contains_harness codebuddy; then install_codebuddy; fi
 if contains_harness opencode; then install_opencode; fi
 if contains_harness pi; then install_pi; fi
-if contains_harness dsh; then install_dsh; fi
-if contains_harness dsh-desktop; then install_dsh_desktop; fi
 if contains_harness cli; then install_cli; fi
 validate_install
 print_next_steps

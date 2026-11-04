@@ -11,7 +11,6 @@ import { withMockOpenViking, writeJson } from "./testing/support.mjs";
 import { makeAgentFetchJSON } from "./lib/agent-hook-runtime.mjs";
 import { makeFetchJSON as ccMakeFetchJSON } from "../claude-code-memory-plugin/scripts/lib/ov-session.mjs";
 import { makeFetchJSON as codexMakeFetchJSON } from "../codex-memory-plugin/scripts/ov-session.mjs";
-import { OpenVikingClient } from "../dsh-memory-plugin/client.mjs";
 import { fetchJSON as opencodeFetchJSON } from "../opencode-plugin/lib/utils.mjs";
 import { OVClient } from "../pi-coding-agent-extension/client.ts";
 
@@ -24,7 +23,7 @@ import { OVClient } from "../pi-coding-agent-extension/client.ts";
  *
  * These assertions pin the one shape. They are also what makes the later merge
  * into a single HTTP module provable as a no-op on the wire: if the merged
- * builder drifts, six harnesses fail here at once.
+ * builder drifts, five harnesses fail here at once.
  */
 
 const BASE_URL = "http://127.0.0.1:1933";
@@ -74,10 +73,6 @@ const STACKS = [
   {
     name: "opencode client",
     send: (cfg) => opencodeFetchJSON(cfg, "/health", {}, { actorPeerId: cfg.peerId }),
-  },
-  {
-    name: "dsh client",
-    send: (cfg) => new OpenVikingClient(cfg).fetchJSON("/health"),
   },
   {
     name: "pi client",

@@ -51,33 +51,18 @@ process.stdin.on("end", () => {
 '
 }
 
-# Each host-facing manifest must report the distributed agent-hook version.
-# Kimi also exposes kimi.plugin.json to the host and its marketplace, and
-# CodeBuddy resolves its installed plugin by the manifest version, so keep
-# both aligned with the integration and root manifests.
-PAIRED=(
-)
-
 failed=0
-for entry in "${PAIRED[@]}"; do
-  host="${entry%%:*}"
-  integration="${entry#*:}"
-  [ -f "$host" ] && [ -f "$integration" ] || continue
-  host_version="$(read_version "" "$host")"
-  integration_version="$(read_version "" "$integration")"
-  if [ "$host_version" != "$integration_version" ]; then
-    echo "::error file=$host::$host says $host_version and $integration says $integration_version."
-    failed=1
-  fi
-done
 
 for entry in "${PLUGINS[@]}"; do
   dir="${entry%%:*}"
   manifest="${entry#*:}"
 
-  # Test-only edits do not change the distributed plugin runtime.
+  # Test-only edits do not change the distributed plugin runtime, and neither
+  # does lib/MANIFEST: it listed what the removed hook hosts assembled at
+  # install time, and no plugin ever vendored it.
   changed="$(git diff --name-only "$BASE_REF...HEAD" -- "$dir" "$SHARED_LIB" \
-    ':(exclude)**/*.test.mjs' ':(exclude)**/tests/**' | grep -v '/node_modules/' || true)"
+    ':(exclude)**/*.test.mjs' ':(exclude)**/tests/**' \
+    ":(exclude)$SHARED_LIB/MANIFEST" | grep -v '/node_modules/' || true)"
   [ -n "$changed" ] || continue
 
   # A plugin added in this branch has no baseline version to compare against.
