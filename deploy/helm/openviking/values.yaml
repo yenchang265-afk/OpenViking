@@ -115,18 +115,18 @@ config:
       - "*"
   embedding:
     dense:
-      api_base: "https://ark.cn-beijing.volces.com/api/v3"
+      api_base: "https://api.openai.com/v1"
       api_key: ""
-      provider: "volcengine"
-      dimension: 1024
-      model: "doubao-embedding-vision-251215"
-      input: "multimodal"
+      provider: "openai"
+      dimension: 1536
+      model: "text-embedding-3-small"
+      input: "text"
     max_concurrent: 10
   vlm:
-    api_base: "https://ark.cn-beijing.volces.com/api/v3"
+    api_base: "https://api.openai.com/v1"
     api_key: ""
-    provider: "volcengine"
-    model: "doubao-seed-2-0-lite-260428"
+    provider: "openai"
+    model: "gpt-5.4"
     temperature: 0.0
     max_retries: 2
     thinking: false
