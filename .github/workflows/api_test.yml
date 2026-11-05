@@ -217,7 +217,7 @@ jobs:
               "root_api_key": "test-root-api-key"
             },
             "vlm": {
-              "provider": "volcengine",
+              "provider": "openai",
               "api_key": "dummy-vlm-api-key",
               "model": "doubao-seed-2-1-lite-260915",
               "api_base": "https://ark.cn-beijing.volces.com/api/v3",
@@ -226,7 +226,7 @@ jobs:
             },
             "embedding": {
               "dense": {
-                "provider": "volcengine",
+                "provider": "openai",
                 "api_key": "dummy-embedding-api-key",
                 "model": "doubao-embedding-vision-251215",
                 "api_base": "https://ark.cn-beijing.volces.com/api/v3",
@@ -294,7 +294,7 @@ jobs:
               "root_api_key": "test-root-api-key"
             },
             "vlm": {
-              "provider": "volcengine",
+              "provider": "openai",
               "api_key": "dummy-vlm-api-key",
               "model": "doubao-seed-2-1-lite-260915",
               "api_base": "https://ark.cn-beijing.volces.com/api/v3",
@@ -303,7 +303,7 @@ jobs:
             },
             "embedding": {
               "dense": {
-                "provider": "volcengine",
+                "provider": "openai",
                 "api_key": "dummy-embedding-api-key",
                 "model": "doubao-embedding-vision-251215",
                 "api_base": "https://ark.cn-beijing.volces.com/api/v3",
