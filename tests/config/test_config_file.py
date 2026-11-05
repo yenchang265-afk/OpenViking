@@ -186,7 +186,7 @@ def test_partial_credentials_use_the_effective_legacy_provider(
 def test_provider_switch_does_not_reuse_legacy_headers_or_endpoint(config_file):
     path, raw = config_file
     raw["vlm"].update(
-        provider="volcengine",
+        provider="kimi",
         api_base="https://old.example/api/v3",
         extra_headers={"Authorization": "old"},
     )

@@ -94,7 +94,7 @@ class ImageGenerationTool(Tool):
         api_base: str | None = None,
         send_callback: Callable[[OutboundMessage], Awaitable[None]] | None = None,
     ):
-        self.gen_image_model = gen_image_model or "openai/doubao-seedream-4-5-251128"
+        self.gen_image_model = gen_image_model or "openai/gpt-image-1"
         self.api_key = api_key
         self.api_base = api_base
         self._send_callback = send_callback

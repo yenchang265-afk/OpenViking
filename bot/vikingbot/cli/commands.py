@@ -471,7 +471,7 @@ def _make_provider(config, langfuse_client: Any = None):
         )
 
     # When provider is explicitly set, use VLMFactory to get the correct
-    # backend (e.g. VolcEngineVLM for volcengine, OpenAIVLM for openai).
+    # backend (e.g. OpenAIVLM for openai, LiteLLMVLMProvider for litellm).
     # The VLM backend handles model name resolution internally, so no
     # manual LiteLLM prefix is needed.
     if provider_name:

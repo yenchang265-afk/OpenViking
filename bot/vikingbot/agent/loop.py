@@ -385,7 +385,7 @@ class AgentLoop:
             memory_window: Maximum number of messages to keep in session memory (default: 50).
             brave_api_key: Optional API key for Brave search integration.
             exa_api_key: Optional API key for Exa search integration.
-            gen_image_model: Optional model identifier for image generation (default: openai/doubao-seedream-4-5-251128).
+            gen_image_model: Optional model identifier for image generation (default: openai/gpt-image-1).
             exec_config: Optional configuration for the exec tool (command execution).
             cron_service: Optional CronService for scheduled task management.
             session_manager: Optional SessionManager for session persistence. If not provided, a new one is created.
@@ -416,7 +416,7 @@ class AgentLoop:
         self.memory_window = memory_window
         self.brave_api_key = brave_api_key
         self.exa_api_key = exa_api_key
-        self.gen_image_model = gen_image_model or "openai/doubao-seedream-4-5-251128"
+        self.gen_image_model = gen_image_model or "openai/gpt-image-1"
         self.exec_config = exec_config or ExecToolConfig()
         self.cron_service = cron_service
         self.sandbox_manager = sandbox_manager

@@ -84,7 +84,7 @@ def test_make_provider_passes_default_thinking_to_vlm_adapter(monkeypatch):
                 thinking=True,
                 api_key="ak-test",
                 api_base="https://example.invalid",
-                provider="volcengine",
+                provider="openai",
                 extra_headers={},
                 timeout=None,
             )
@@ -157,9 +157,7 @@ async def test_vlm_adapter_routes_litellm_thinking_parameters(
     ("configured_max_tokens", "expected_max_tokens"),
     [(None, None), (8192, 8192)],
 )
-@pytest.mark.parametrize("thinking", [True, False])
-async def test_vlm_adapter_volcengine_stream_respects_optional_max_tokens(
-    thinking,
+async def test_vlm_adapter_openai_stream_respects_optional_max_tokens(
     configured_max_tokens,
     expected_max_tokens,
 ):
@@ -189,12 +187,13 @@ async def test_vlm_adapter_volcengine_stream_respects_optional_max_tokens(
             return response
 
     vlm = SimpleNamespace(
-        provider="volcengine",
+        provider="openai",
         model="ep-test",
         temperature=0.0,
         max_tokens=configured_max_tokens,
-        thinking=thinking,
+        thinking=False,
         extra_headers=None,
+        _build_text_kwargs=lambda **kw: {"messages": kw["messages"]},
         get_async_client=lambda: SimpleNamespace(
             chat=SimpleNamespace(completions=FakeCompletions())
         ),
@@ -213,7 +212,7 @@ async def test_vlm_adapter_volcengine_stream_respects_optional_max_tokens(
     ]
 
     assert events[-1].response.content == "ok"
-    assert captured["thinking"] == {"type": "enabled" if thinking else "disabled"}
+    assert captured["stream"] is True
     if expected_max_tokens is None:
         assert "max_tokens" not in captured
     else:

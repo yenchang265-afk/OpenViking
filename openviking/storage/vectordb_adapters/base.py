@@ -488,7 +488,6 @@ class CollectionAdapter(ABC):
         if decay_request is not None and self.mode != "opengauss":
             from openviking.utils.time_decay import (
                 build_time_decay_fusion_spec,
-                build_time_decay_post_process_ops,
             )
             from openviking.utils.time_utils import parse_iso_datetime
 
@@ -504,12 +503,6 @@ class CollectionAdapter(ABC):
                         "scale_ms": spec.scale_ms,
                         "decay": spec.decay,
                     }
-                }
-            elif self.mode in {"vikingdb", "volcengine"}:
-                advance = {
-                    "post_process_ops": build_time_decay_post_process_ops(
-                        protection=protection, origin=origin
-                    )
                 }
             else:
                 raise NotImplementedError(f"Time decay is not supported by {self.mode}")

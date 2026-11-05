@@ -355,9 +355,8 @@ def _stdin_stdout_tty() -> bool:
 
 
 # Environment variables that commonly carry each provider's API key, keyed by
-# the internal provider string (BytePlus shares "volcengine").
+# the internal provider string.
 _PROVIDER_ENV_KEYS: dict[str, list[str]] = {
-    "volcengine": ["ARK_API_KEY"],
     "openai": ["OPENAI_API_KEY"],
     "kimi": ["KIMI_API_KEY", "MOONSHOT_API_KEY"],
     "glm": ["GLM_API_KEY", "ZHIPUAI_API_KEY"],
@@ -739,22 +738,6 @@ class CloudProvider:
 
 CLOUD_PROVIDERS: list[CloudProvider] = [
     CloudProvider(
-        "VolcEngine (火山引擎)",
-        "volcengine",
-        "https://ark.cn-beijing.volces.com/api/v3",
-        "doubao-embedding-vision-251215",
-        1024,
-        "doubao-seed-2-1-lite-260915",
-    ),
-    CloudProvider(
-        "BytePlus",
-        "volcengine",
-        "https://ark.ap-southeast.bytepluses.com/api/v3",
-        "skylark-embedding-vision-251215",
-        1024,
-        "seed-2-0-lite-260428",
-    ),
-    CloudProvider(
         "OpenAI",
         "openai",
         "https://api.openai.com/v1",
@@ -765,136 +748,7 @@ CLOUD_PROVIDERS: list[CloudProvider] = [
 ]
 
 
-@dataclass
-class AccessPlan:
-    label: str
-    api_base: str
-    default_embedding_model: str
-    default_embedding_dim: int
-    default_vlm_model: str
-    desc: str
-
-
-# VolcEngine Ark access tiers. The two subscription plans share the same
-# default models; pay-as-you-go uses the versioned model IDs.
-VOLCENGINE_PLANS: list[AccessPlan] = [
-    AccessPlan(
-        "Agent Plan",
-        "https://ark.cn-beijing.volces.com/api/plan/v3",
-        "doubao-embedding-vision",
-        1024,
-        "doubao-seed-2.1-lite",
-        "(subscription — agent workloads)",
-    ),
-    AccessPlan(
-        "Coding Plan",
-        "https://ark.cn-beijing.volces.com/api/coding/v3",
-        "doubao-embedding-vision",
-        1024,
-        "doubao-seed-2.1-lite",
-        "(subscription — coding assistants)",
-    ),
-    AccessPlan(
-        "Pay-as-you-go API",
-        "https://ark.cn-beijing.volces.com/api/v3",
-        "doubao-embedding-vision-251215",
-        1024,
-        "doubao-seed-2-1-lite-260915",
-        "(billed by API usage)",
-    ),
-]
-
-# BytePlus ModelArk access tiers.
-BYTEPLUS_PLANS: list[AccessPlan] = [
-    AccessPlan(
-        "ModelArk Coding Plan",
-        "https://ark.ap-southeast.bytepluses.com/api/coding/v3",
-        "skylark-embedding-vision",
-        1024,
-        "dola-seed-2.0-lite",
-        "(subscription — coding assistants)",
-    ),
-    AccessPlan(
-        "Pay-as-you-go API",
-        "https://ark.ap-southeast.bytepluses.com/api/v3",
-        "skylark-embedding-vision-251215",
-        1024,
-        "seed-2-0-lite-260428",
-        "(billed by API usage)",
-    ),
-]
-
-# Cloud providers with a plan submenu, keyed by CLOUD_PROVIDERS label; the
-# domain identifies the provider's own endpoints (both share the "volcengine"
-# provider string, so the domain is what tells them apart).
-_PLAN_MENUS: dict[str, tuple[str, list[AccessPlan]]] = {
-    "VolcEngine (火山引擎)": ("volces.com", VOLCENGINE_PLANS),
-    "BytePlus": ("bytepluses.com", BYTEPLUS_PLANS),
-}
-
-
-def _plan_seed_for(current: dict[str, Any], domain: str) -> str | None:
-    """api_base worth seeding a plan menu with — only an existing endpoint on
-    the same domain, never another provider's."""
-    api_base = str(current.get("api_base") or "")
-    if current.get("provider") == "volcengine" and domain in api_base:
-        return api_base
-    return None
-
-
-def _plan_index_for(plans: list[AccessPlan], api_base: str) -> int | None:
-    """0-based *plans* index matching *api_base*, or None."""
-    for i, plan in enumerate(plans):
-        if plan.api_base == api_base:
-            return i
-    return None
-
-
-def _select_access_plan(
-    provider_label: str,
-    plans: list[AccessPlan],
-    current_api_base: str | None = None,
-    *,
-    allow_back: bool = False,
-) -> AccessPlan | object:
-    """Plan submenu. ``_GO_BACK`` when the user navigated back.
-
-    *current_api_base* seeds the default; a current endpoint that matches no
-    plan (e.g. a proxy) is offered as an extra "keep" option that preserves
-    the endpoint with the pay-as-you-go default models.
-    """
-    options = [(p.label, p.desc) for p in plans]
-    current_idx = _plan_index_for(plans, current_api_base or "")
-    keep_custom = bool(current_api_base) and current_idx is None
-    if keep_custom:
-        options.append(("Custom endpoint", f"(keep current: {current_api_base})"))
-    if current_idx is not None:
-        default = current_idx + 1
-    elif keep_custom:
-        default = len(options)
-    else:
-        default = 1
-    choice = _prompt_choice(
-        f"{provider_label} access:", options, default=default, allow_back=allow_back
-    )
-    if choice == 0:
-        return _GO_BACK
-    if keep_custom and choice == len(options):
-        payg = plans[-1]
-        return AccessPlan(
-            "Custom endpoint",
-            str(current_api_base),
-            payg.default_embedding_model,
-            payg.default_embedding_dim,
-            payg.default_vlm_model,
-            "",
-        )
-    return plans[choice - 1]
-
-
 _WIZARD_VLM_OPTIONS: list[tuple[str, str]] = [
-    ("VolcEngine (火山引擎)", "(API)"),
-    ("BytePlus", "(API)"),
     ("OpenAI", "(API)"),
     ("OpenAI Codex", "(Subscription)"),
     ("Kimi", "(Subscription API Key)"),
@@ -903,8 +757,8 @@ _WIZARD_VLM_OPTIONS: list[tuple[str, str]] = [
     ("Local via Ollama", "(no API key, runs on this machine)"),
 ]
 
-_WIZARD_VLM_OLLAMA_CHOICE = 8  # index of "Local via Ollama" in _WIZARD_VLM_OPTIONS
-_WIZARD_VLM_CUSTOM_CHOICE = 7  # index of "Custom (OpenAI-compatible)" in _WIZARD_VLM_OPTIONS
+_WIZARD_VLM_OLLAMA_CHOICE = 6  # index of "Local via Ollama" in _WIZARD_VLM_OPTIONS
+_WIZARD_VLM_CUSTOM_CHOICE = 5  # index of "Custom (OpenAI-compatible)" in _WIZARD_VLM_OPTIONS
 
 
 # ---------------------------------------------------------------------------
@@ -1226,18 +1080,16 @@ def _vlm_option_index_for(current: dict[str, Any]) -> int:
     provider = str(current.get("provider") or "")
     api_base = str(current.get("api_base") or "")
     model = str(current.get("model") or "")
-    if provider == "volcengine":
-        return 2 if "bytepluses" in api_base else 1
     if provider == "openai-codex":
-        return 4
+        return 2
     if provider == "kimi":
-        return 5
+        return 3
     if provider == "glm":
-        return 6
+        return 4
     if provider == "litellm" and model.startswith("ollama/"):
         return _WIZARD_VLM_OLLAMA_CHOICE
     if provider == "openai":
-        return 3 if "api.openai.com" in api_base else 7
+        return 1 if "api.openai.com" in api_base else _WIZARD_VLM_CUSTOM_CHOICE
     return 1
 
 
@@ -1289,7 +1141,6 @@ def _prompt_cloud_vlm(
     reuse_key: tuple[str, str] | None = None,
     allow_back: bool = False,
     current: dict[str, Any] | None = None,
-    plan_seed: str | None = None,
 ) -> tuple[dict[str, Any] | None | object, bool | None]:
     """VLM provider selection (cloud APIs, subscriptions, or local Ollama).
 
@@ -1300,8 +1151,7 @@ def _prompt_cloud_vlm(
     *reuse_key* is an optional ``(provider, api_key)`` from the embedding step,
     offered for reuse when the VLM provider matches. *current* (the existing
     VLM config, if any) seeds the menu position, model default, and offers to
-    keep the existing API key. *plan_seed* is a VolcEngine api_base from the
-    embedding step, used to default the plan menu to the same tier.
+    keep the existing API key.
     """
     current = current or {}
     options = list(_WIZARD_VLM_OPTIONS)
@@ -1321,7 +1171,6 @@ def _prompt_cloud_vlm(
             return str(current["model"])
         return fallback
 
-    cloud_plan: AccessPlan | None = None
     while True:
         vlm_mode = _prompt_choice(
             "VLM provider:", options, default=default_idx, allow_back=allow_back
@@ -1355,38 +1204,21 @@ def _prompt_cloud_vlm(
                 return None, None
             return custom, None
 
-        if vlm_mode <= len(CLOUD_PROVIDERS):
-            menu = _PLAN_MENUS.get(CLOUD_PROVIDERS[vlm_mode - 1].label)
-            if menu:  # pick plan / pay-as-you-go first
-                domain, plans = menu
-                seed = _plan_seed_for(current, domain) or (
-                    plan_seed if plan_seed and domain in plan_seed else None
-                )
-                selected = _select_access_plan(
-                    CLOUD_PROVIDERS[vlm_mode - 1].label, plans, seed, allow_back=True
-                )
-                if selected is _GO_BACK:
-                    continue  # back to the provider menu
-                cloud_plan = selected
-
         break
 
-    if vlm_mode in (1, 2, 3):  # VolcEngine / BytePlus / OpenAI — same order as CLOUD_PROVIDERS
+    if vlm_mode <= len(CLOUD_PROVIDERS):  # same order as CLOUD_PROVIDERS
         vlm_choice = CLOUD_PROVIDERS[vlm_mode - 1]
         print(f"\n  {_bold(f'{vlm_choice.label} VLM configuration')}")
         vlm_api_key = _prompt_vlm_api_key(vlm_choice.provider, reuse_key, reuse_prompt)
         if not vlm_api_key:
             print(f"  {_red('API key is required')}")
             return None, None
-        default_vlm_model = (
-            cloud_plan.default_vlm_model if cloud_plan else vlm_choice.default_vlm_model
-        )
         vlm_model = _prompt_required_input(
-            "Model", default=_default_model(vlm_choice.provider, default_vlm_model)
+            "Model", default=_default_model(vlm_choice.provider, vlm_choice.default_vlm_model)
         )
-        vlm_api_base = cloud_plan.api_base if cloud_plan else vlm_choice.default_api_base
+        vlm_api_base = vlm_choice.default_api_base
         vlm_provider = vlm_choice.provider
-    elif vlm_mode == 4:
+    elif vlm_mode == 2:
         _ensure_codex_auth()
         print(f"\n  {_bold('Codex VLM configuration')}")
         vlm_model = _prompt_required_input(
@@ -1395,7 +1227,7 @@ def _prompt_cloud_vlm(
         vlm_api_base = _DEFAULT_CODEX_BASE_URL
         vlm_api_key = None
         vlm_provider = "openai-codex"
-    elif vlm_mode == 5:
+    elif vlm_mode == 3:
         print(f"\n  {_bold('Kimi VLM configuration')}")
         vlm_api_key = _prompt_vlm_api_key("kimi", reuse_key, reuse_prompt)
         if not vlm_api_key:
@@ -1406,7 +1238,7 @@ def _prompt_cloud_vlm(
         )
         vlm_api_base = _DEFAULT_KIMI_BASE_URL
         vlm_provider = "kimi"
-    elif vlm_mode == 6:
+    elif vlm_mode == 4:
         print(f"\n  {_bold('GLM VLM configuration')}")
         vlm_api_key = _prompt_vlm_api_key("glm", reuse_key, reuse_prompt)
         if not vlm_api_key:
@@ -1437,13 +1269,6 @@ def _cloud_provider_index_for(section: dict[str, Any]) -> int:
     for i, p in enumerate(CLOUD_PROVIDERS, 1):
         if p.provider == provider and p.default_api_base == api_base:
             return i
-    # Same provider + same endpoint domain — covers plan endpoints, which
-    # never equal default_api_base (VolcEngine and BytePlus share the
-    # "volcengine" provider string, so the domain is the disambiguator).
-    for i, p in enumerate(CLOUD_PROVIDERS, 1):
-        menu = _PLAN_MENUS.get(p.label)
-        if p.provider == provider and menu and menu[0] in api_base:
-            return i
     for i, p in enumerate(CLOUD_PROVIDERS, 1):
         if p.provider == provider:
             return i
@@ -1467,7 +1292,6 @@ def _prompt_cloud_embedding(
     default_idx = _cloud_provider_index_for(current) if current else 1
 
     provider: CloudProvider | None = None
-    plan: AccessPlan | None = None
     while True:
         choice = _prompt_choice(
             "Embedding provider:", provider_options, default=default_idx, allow_back=allow_back
@@ -1483,25 +1307,14 @@ def _prompt_cloud_embedding(
             return custom
 
         provider = CLOUD_PROVIDERS[choice - 1]
-        menu = _PLAN_MENUS.get(provider.label)
-        if menu:
-            domain, plans = menu
-            selected = _select_access_plan(
-                provider.label, plans, _plan_seed_for(current, domain), allow_back=True
-            )
-            if selected is _GO_BACK:
-                continue  # back to the provider menu
-            plan = selected
         break
 
     assert provider is not None
     same_provider = bool(current) and current.get("provider") == provider.provider
 
-    api_base = plan.api_base if plan else provider.default_api_base
-    default_embedding_model = (
-        plan.default_embedding_model if plan else provider.default_embedding_model
-    )
-    default_embedding_dim = plan.default_embedding_dim if plan else provider.default_embedding_dim
+    api_base = provider.default_api_base
+    default_embedding_model = provider.default_embedding_model
+    default_embedding_dim = provider.default_embedding_dim
 
     print(f"\n  {_bold('Embedding configuration')}")
     embedding_api_key = ""
@@ -1800,11 +1613,8 @@ def _wizard_two_step() -> tuple[dict[str, Any] | None | object, bool | None]:
         reuse_key = None
         if isinstance(dense, dict) and dense.get("api_key"):
             reuse_key = (dense["provider"], dense["api_key"])
-        plan_seed = None
-        if dense.get("provider") == "volcengine" and dense.get("api_base"):
-            plan_seed = str(dense["api_base"])
         vlm_config, vlm_ollama = _prompt_cloud_vlm(
-            allow_skip=True, reuse_key=reuse_key, allow_back=True, plan_seed=plan_seed
+            allow_skip=True, reuse_key=reuse_key, allow_back=True
         )
         if vlm_config is _GO_BACK:
             continue  # back to Step 1
@@ -2048,7 +1858,7 @@ def _prompt_embedding_flow(
         choice = _prompt_choice(
             "Embedding setup:",
             [
-                ("Cloud API", "(VolcEngine, BytePlus, OpenAI)"),
+                ("Cloud API", "(OpenAI)"),
                 ("Local via Ollama", "(no API key, runs on this machine)"),
                 ("Lightweight CPU embedding", "(llama.cpp, ~24 MB, no Ollama needed)"),
             ],
@@ -2220,7 +2030,7 @@ def _summarize_model(section: dict[str, Any]) -> str:
     text = f"{provider} · {model}"
     api_base = str(section.get("api_base") or "")
     if api_base:
-        # The endpoint distinguishes e.g. VolcEngine plans from pay-as-you-go.
+        # The endpoint distinguishes e.g. OpenAI from an OpenAI-compatible proxy.
         text += f" @ {api_base.removeprefix('https://').removeprefix('http://')}"
     if section.get("dimension"):
         text += f" ({section['dimension']}d)"

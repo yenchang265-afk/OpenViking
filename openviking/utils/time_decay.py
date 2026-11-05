@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from numbers import Real
 from typing import Any, Optional
 
-from openviking.utils.time_utils import format_iso8601, parse_iso_datetime
+from openviking.utils.time_utils import parse_iso_datetime
 
 # This curve is an internal ranking contract; it is intentionally not part of
 # ov.conf or ovcli.conf.
@@ -99,36 +99,3 @@ def build_time_decay_fusion_spec(
         scale_ms=parse_duration_ms(EVENT_TIME_DECAY_SCALE, parameter_name="time-decay scale"),
         decay=EVENT_TIME_DECAY_DECAY,
     )
-
-
-def build_time_decay_post_process_ops(
-    *,
-    protection: str,
-    origin: Optional[datetime] = None,
-    field: str = "updated_at",
-) -> list[dict[str, Any]]:
-    """Build the fixed VikingDB score-fusion operator for event results."""
-    protection_ms = parse_duration_ms(protection, parameter_name="events_time_decay_protection")
-    addition = {
-        "factor": 1,
-        "base_value_from": "decay_func",
-        "field": field,
-        "func": "exp",
-        "origin": format_iso8601(origin or datetime.now(timezone.utc)),
-        "scale": EVENT_TIME_DECAY_SCALE,
-        "decay": EVENT_TIME_DECAY_DECAY,
-    }
-    # VikingDB defaults an omitted offset to zero but rejects explicit zero
-    # durations (including "0m", "0h", and "0d").
-    if protection_ms > 0:
-        addition["offset"] = protection
-
-    return [
-        {
-            "op": "score_fusion",
-            "fusion_by": "multiply",
-            "normalize_for_origin_score": {"enable": False},
-            "normalize_for_addition_score": {"enable": False},
-            "addition_score": [addition],
-        }
-    ]
