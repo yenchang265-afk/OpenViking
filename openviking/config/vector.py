@@ -43,8 +43,6 @@ BACKEND_CONNECTIONS = frozenset(
     {
         "path",
         "url",
-        "volcengine",
-        "vikingdb",
         "cuvs",
         "opengauss",
         "elasticsearch",
@@ -78,9 +76,7 @@ def resolve_effective_embedding(cluster: EmbeddingConfig, account: Any) -> Embed
     override = _account_values(account)
     base = cluster.model_dump(exclude_unset=True)
     # The default local section is synthesized by the model validator.
-    account_modes = {
-        mode for mode in MODEL_SECTIONS if isinstance(override.get(mode), dict)
-    }
+    account_modes = {mode for mode in MODEL_SECTIONS if isinstance(override.get(mode), dict)}
     if account_modes:
         # A declared Account mode replaces the Cluster mode set. Keeping an
         # unrelated Cluster mode would make valid hybrid/sparse overrides fail
@@ -101,9 +97,7 @@ def resolve_effective_embedding(cluster: EmbeddingConfig, account: Any) -> Embed
             # Account request. Cluster-maintained runtime switches remain.
             dropped = PROVIDER_BINDING | PROVIDER_SPECIFIC_ISOLATED
             base[mode] = {
-                key: value
-                for key, value in (base.get(mode) or {}).items()
-                if key not in dropped
+                key: value for key, value in (base.get(mode) or {}).items() if key not in dropped
             }
             for index, credential in enumerate(supplied.get("credentials") or []):
                 if not isinstance(credential, dict) or not credential.get("provider"):
@@ -156,7 +150,7 @@ def validate_vector_settings(
     sparse = embedding.hybrid is not None or embedding.sparse is not None
     if vectordb.sparse_weight < 0 or (vectordb.sparse_weight > 0 and not sparse):
         raise ValueError("vectordb.sparse_weight requires a sparse or hybrid embedding")
-    if vectordb.backend in {"local", "cuvs", "http", "volcengine", "vikingdb"}:
+    if vectordb.backend in {"local", "cuvs", "http"}:
         if vectordb.distance_metric not in {"cosine", "l2", "ip"}:
             raise ValueError("vectordb.distance_metric must be cosine, l2 or ip")
     if sparse and vectordb.backend == "cuvs" and vectordb.cuvs:

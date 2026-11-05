@@ -49,7 +49,7 @@ class ProviderSpec:
 
     # Provider-specific way to request reasoning/thinking, if supported by the protocol.
     thinking_param: str = (
-        ""  # volcengine_thinking | dashscope_enable_thinking | openai_reasoning_effort
+        ""  # dashscope_enable_thinking | openai_reasoning_effort
     )
 
     @property
@@ -152,24 +152,6 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
         default_api_base="",
         strip_model_prefix=False,
         model_overrides=(),
-    ),
-    # VolcEngine (火山引擎): OpenAI-compatible gateway
-    ProviderSpec(
-        name="volcengine",
-        keywords=("volcengine", "volces", "ark"),
-        env_key="VOLC_API_KEY",
-        display_name="VolcEngine",
-        litellm_prefix="volcengine",
-        skip_prefixes=("volcengine/",),
-        env_extras=(),
-        is_gateway=False,
-        is_local=False,
-        detect_by_key_prefix="",
-        detect_by_base_keyword="",
-        default_api_base="https://ark.cn-beijing.volces.com/api/v3",
-        strip_model_prefix=False,
-        model_overrides=(),
-        thinking_param="volcengine_thinking",
     ),
     # Gemini: needs "gemini/" prefix for LiteLLM.
     ProviderSpec(

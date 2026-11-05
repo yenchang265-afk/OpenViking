@@ -45,19 +45,19 @@ cat > ~/.openviking/ov.conf << EOF
     "root_api_key": "test-root-api-key"
   },
   "vlm": {
-    "provider": "volcengine",
+    "provider": "openai",
     "api_key": "dummy-vlm-api-key",
-    "model": "doubao-seed-2-0-mini-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
+    "model": "gpt-5.4-mini",
+    "api_base": "https://api.openai.com/v1",
     "temperature": 0.1,
     "max_retries": 3
   },
   "embedding": {
     "dense": {
-      "provider": "volcengine",
+      "provider": "openai",
       "api_key": "dummy-embedding-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
       "dimension": 1024,
       "input": "multimodal"
     }
