@@ -66,6 +66,8 @@ The local tools operate inside the current session's sandbox, whose paths may di
 
 ## Web
 
+`web_search` and `web_fetch` are disabled by default (on-premise deployment) and are only available when `tools.web.enabled` is true. If they are not in your tool list, do not attempt to reach external websites; rely on OpenViking context and local files instead.
+
 - Use `web_search` to discover relevant public sources. Use `web_fetch` when the URL is already known or when a search result needs full-text inspection.
 - For recent or changeable facts, verify against current sources rather than relying on memory.
 - Prefer primary or authoritative sources when available, and include useful source links in the response.
