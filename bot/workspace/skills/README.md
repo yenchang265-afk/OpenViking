@@ -18,8 +18,8 @@ The skill format and metadata structure follow OpenClaw's conventions to maintai
 | Skill | Description |
 |-------|-------------|
 | `github` | Interact with GitHub using the `gh` CLI |
-| `github-proxy` | GitHub 國內訪問加速，使用 githubproxy.cc 代理加速 GitHub 倉庫克隆、檔案下載等操作 |
 | `weather` | Get weather info using wttr.in and Open-Meteo |
 | `summarize` | Summarize URLs, files, and YouTube videos |
 | `tmux` | Remote-control tmux sessions |
 | `skill-creator` | Create new skills |
+> **On-premise default:** skills that call external services (`github`, `weather`, `summarize`) are not in the default `skills` list. Add them to `bot.skills` explicitly if your deployment may reach the internet.

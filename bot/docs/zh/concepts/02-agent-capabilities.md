@@ -36,7 +36,7 @@ Skill 可以編排多個工具，但不會自動獲得額外許可權。工具�
 |------|------|------|
 | 檔案 | `read_file`、`write_file`、`edit_file`、`list_dir` | 操作工作區檔案 |
 | 命令 | `exec` | 在沙箱後端執行 shell 命令 |
-| 網路 | `web_search`、`web_fetch` | 搜尋和讀取網頁 |
+| 網路 | `web_search`、`web_fetch` | 搜尋和讀取網頁；預設停用，設定 `tools.web.enabled: true` 啟用 |
 | OpenViking | `openviking_list/search/grep/glob/multi_read` | 瀏覽、檢索和讀取上下文 |
 | OpenViking | `openviking_rule_search`（Beta） | 檢索適用於具體任務的已編譯約束 |
 | OpenViking | `openviking_add_resource`、`openviking_memory_commit` | 新增資源和提交記憶 |

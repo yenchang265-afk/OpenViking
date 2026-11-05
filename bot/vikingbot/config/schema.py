@@ -642,8 +642,14 @@ class OpenVikingConfig(BaseModel):
 
 
 class WebToolsConfig(BaseModel):
-    """Web tools configuration."""
+    """Web tools configuration.
 
+    Disabled by default for on-premise deployments: when ``enabled`` is False,
+    ``web_search`` and ``web_fetch`` are not registered, so the agent has no
+    built-in tool that reaches the public internet.
+    """
+
+    enabled: bool = False
     search: WebSearchConfig = Field(default_factory=WebSearchConfig)
 
 
@@ -840,14 +846,13 @@ class Config(BaseSettings):
     hooks: list[str] = Field(["vikingbot.hooks.builtins.openviking_hooks.hooks"])
     skills: list[str] = Field(
         default_factory=lambda: [
-            "github-proxy",
-            "github",
+            # Skills that call external services (github, weather, summarize) are
+            # left out by default for on-premise deployments; add them back here
+            # explicitly if the deployment is allowed to reach the internet.
             "memory",
             "cron",
-            "weather",
             "tmux",
             "skill-creator",
-            "summarize",
         ]
     )
     storage_workspace: Optional[str] = None  # From ov.conf root level storage.workspace

@@ -408,7 +408,7 @@ For the complete loading order, file responsibilities, and customization boundar
 | Category | Tools |
 |----------|-------|
 | Files and commands | `read_file`, `write_file`, `edit_file`, `list_dir`, `exec` |
-| Web | `web_search`, `web_fetch` |
+| Web (disabled by default; set `tools.web.enabled: true`) | `web_search`, `web_fetch` |
 | OpenViking | `openviking_list`, `openviking_search`, `openviking_rule_search`, `openviking_grep`, `openviking_glob`, `openviking_multi_read`, `openviking_add_resource`, `openviking_memory_commit` |
 | Other | `message`, `generate_image`, `cron`, `spawn` |
 

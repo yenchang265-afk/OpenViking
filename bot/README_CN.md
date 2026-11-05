@@ -405,7 +405,7 @@ Agent 實際使用的活動目錄還取決於 `bot.sandbox.mode`：
 | 類別 | 工具 |
 |------|------|
 | 檔案與命令 | `read_file`、`write_file`、`edit_file`、`list_dir`、`exec` |
-| Web | `web_search`、`web_fetch` |
+| Web（預設停用；設定 `tools.web.enabled: true` 啟用） | `web_search`、`web_fetch` |
 | OpenViking | `openviking_list`、`openviking_search`、`openviking_rule_search`、`openviking_grep`、`openviking_glob`、`openviking_multi_read`、`openviking_add_resource`、`openviking_memory_commit` |
 | 其他 | `message`、`generate_image`、`cron`、`spawn` |
 

@@ -85,16 +85,18 @@ def register_default_tools(
             )
         )
 
-    # Web tools
-    registry.register(
-        WebSearchTool(
-            backend="auto",
-            brave_api_key=brave_api_key,
-            exa_api_key=exa_api_key,
-            tavily_api_key=tavily_api_key,
+    # Web tools reach the public internet; only register them when explicitly
+    # enabled (tools.web.enabled), so on-premise deployments stay offline.
+    if config.tools.web.enabled:
+        registry.register(
+            WebSearchTool(
+                backend="auto",
+                brave_api_key=brave_api_key,
+                exa_api_key=exa_api_key,
+                tavily_api_key=tavily_api_key,
+            )
         )
-    )
-    registry.register(WebFetchTool())
+        registry.register(WebFetchTool())
 
     # Open Viking tools
     if include_viking_tools:
