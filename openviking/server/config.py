@@ -235,7 +235,8 @@ class UsageAuditConfig(BaseModel):
     """Product usage and audit projection configuration."""
 
     enabled: bool = True
-    backend: Literal["sqlite"] = "sqlite"
+    backend: Literal["sqlite", "mysql"] = "sqlite"
+    mysql: Dict[str, Any] = Field(default_factory=dict, repr=False)
     sqlite_path: Optional[str] = None
     queue_size: int = Field(10_000, gt=0)
     batch_size: int = Field(500, gt=0)
@@ -377,7 +378,14 @@ class AccountStoreConfig(BaseModel):
         return normalized
 
 
+class TransferTokenConfig(BaseModel):
+    """Backend for the one-use credentials in MCP transfer URLs."""
+
+    provider: Literal["memory", "redis"] = "memory"
+
+
 class ServerConfig(BaseModel):
+    deployment_mode: Literal["standalone", "shared"] = "standalone"
     host: str = "127.0.0.1"
     port: int = 1933
     workers: int = 1
@@ -438,6 +446,7 @@ class ServerConfig(BaseModel):
     # behind a reverse proxy that does not forward X-Forwarded-* headers.
     public_base_url: Optional[str] = None
     upload_signed_ttl_seconds: int = 600
+    transfer_tokens: TransferTokenConfig = Field(default_factory=TransferTokenConfig)
     temp_upload: TempUploadConfig = Field(default_factory=TempUploadConfig)
     upload: UploadConfig = Field(default_factory=UploadConfig)
     user_config_defaults: UserConfigDefaults = Field(default_factory=UserConfigDefaults)

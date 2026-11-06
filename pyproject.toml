@@ -266,6 +266,7 @@ openviking = [
     "bin/ov.exe",
     "server/account_stores/sql/*.sql",
     "server/account_stores/sql/changes/*.sql",
+    "server/oauth/*.sql",
     "service/sql/*.sql",
     "service/sql/changes/*.sql",
     "storage/vectordb/engine/*.abi3.so",

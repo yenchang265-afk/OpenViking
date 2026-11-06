@@ -1,12 +1,11 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
-"""In-memory store for short-lived upload tokens used by the MCP progressive upload flow.
+"""Single-use transfer credentials for MCP uploads and downloads.
 
 Issued by the MCP ``add_resource`` tool when a caller passes a local-file path; consumed by
 ``POST /api/v1/resources/temp_upload`` when the request carries a ``?token=`` instead of an
-API key. Tokens are 10-character base62 strings indexed in a process-local dict — no signing
-key, no on-disk state, no replay-set bookkeeping. ``dict.pop`` doubles as the
-consume-and-burn primitive.
+API key. Tokens are 10-character base62 strings indexed in memory or Redis.
+Both backends consume and burn a token atomically, without a signing key.
 
 The token carries the identity bound at issue time (account/user/role and OAuth origin),
 the caller's actor peer scope (``actor_peer_id``), and the business params
@@ -24,18 +23,23 @@ carry the resolved ``uri`` of one file and are consumed by ``GET /api/v1/content
 Keeping the two stores apart means an upload token can never be redeemed for a download, or
 the reverse.
 
-Single-worker only: tokens are lost on restart and not shared across uvicorn workers.
-Multi-worker deployments should rely on the shared-mode TempUploadStore for the actual
-file payload; only the brief upload-token handshake is process-local.
+Local deployments keep credentials in memory. The Redis backend shares them across
+workers and replicas, using SET NX with expiry and atomic GETDEL consumption.
 """
 
 from __future__ import annotations
 
+import asyncio
+import hashlib
 import secrets
 import string
 import time
+from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from threading import RLock
+from typing import Any, Optional, Tuple
+
+from pydantic import TypeAdapter
 
 from openviking.resource.processing_mode import DEFAULT_PROCESSING_MODE, ProcessingMode
 from openviking.server.identity import Role
@@ -53,7 +57,7 @@ class UploadTokenError(Exception):
 class _TokenInfo:
     account_id: str
     user_id: str
-    role: Role
+    role: str
     to: str
     parent: str
     reason: str
@@ -97,8 +101,32 @@ class ConsumedUploadToken:
 
 
 class UploadTokenStore:
-    def __init__(self) -> None:
+    def __init__(self, *, redis: Any = None, namespace: str = "") -> None:
         self._store: dict[str, _TokenInfo] = {}
+        self._redis = redis
+        self._namespace = namespace
+        self._lock = RLock()
+
+    def configure(self, *, redis: Any = None, namespace: str = "") -> None:
+        """Select a backend at startup; never fall back locally on backend errors."""
+        with self._lock:
+            self._store.clear()
+            self._redis = redis
+            self._namespace = namespace
+
+    def _key(self, token: str) -> str:
+        # Do not store bearer credentials in Redis key names or diagnostics.
+        return self._namespace + hashlib.sha256(token.encode()).hexdigest()
+
+    async def aissue(self, *args: Any, **kwargs: Any) -> Tuple[str, float]:
+        if self._redis is None:
+            return self.issue(*args, **kwargs)
+        return await asyncio.to_thread(self.issue, *args, **kwargs)
+
+    async def aconsume(self, token: str) -> ConsumedUploadToken:
+        if self._redis is None:
+            return self.consume(token)
+        return await asyncio.to_thread(self.consume, token)
 
     def issue(
         self,
@@ -130,7 +158,8 @@ class UploadTokenStore:
         from the later upload request's headers, which could be spoofed. Returns
         (token, expires_at).
         """
-        self._purge_expired()
+        with self._lock:
+            self._purge_expired()
         expires_at = time.time() + max(1, ttl_seconds)
         info = _TokenInfo(
             account_id,
@@ -155,8 +184,17 @@ class UploadTokenStore:
         )
         for _ in range(8):
             token = "".join(secrets.choice(_TOKEN_ALPHABET) for _ in range(_TOKEN_LENGTH))
-            if token not in self._store:
-                self._store[token] = info
+            if self._redis is not None:
+                payload = _TOKEN_ADAPTER.dump_json(info)
+                inserted = self._redis.set(
+                    self._key(token), payload, nx=True, ex=max(1, ttl_seconds)
+                )
+            else:
+                with self._lock:
+                    inserted = token not in self._store
+                    if inserted:
+                        self._store[token] = info
+            if inserted:
                 return token, expires_at
         raise RuntimeError("upload_token_store: failed to mint a unique token after 8 attempts")
 
@@ -164,7 +202,12 @@ class UploadTokenStore:
         """Pop the token and validate it. Returns the bound identity + business params."""
         if not token:
             raise UploadTokenError("missing upload token")
-        info = self._store.pop(token, None)
+        if self._redis is not None:
+            raw = self._redis.getdel(self._key(token))
+            info = _TOKEN_ADAPTER.validate_json(raw) if raw is not None else None
+        else:
+            with self._lock:
+                info = self._store.pop(token, None)
         if info is None:
             raise UploadTokenError("unknown or already-consumed upload token")
         if info.expires_at < time.time():
@@ -192,11 +235,20 @@ class UploadTokenStore:
 
     def peek(self, token: str) -> Optional[_TokenInfo]:
         """Read a token without consuming. Test helper only."""
-        return self._store.get(token)
+        if self._redis is not None:
+            raw = self._redis.get(self._key(token))
+            return _TOKEN_ADAPTER.validate_json(raw) if raw is not None else None
+        with self._lock:
+            return self._store.get(token)
 
     def clear(self) -> None:
         """Reset state. Test helper only."""
-        self._store.clear()
+        if self._redis is not None:
+            raise RuntimeError(
+                "Shared transfer tokens expire automatically; bulk clear is disabled"
+            )
+        with self._lock:
+            self._store.clear()
 
     def _purge_expired(self) -> None:
         now = time.time()
@@ -205,5 +257,40 @@ class UploadTokenStore:
                 self._store.pop(token, None)
 
 
+_TOKEN_ADAPTER = TypeAdapter(_TokenInfo)
+
 upload_token_store = UploadTokenStore()
 download_token_store = UploadTokenStore()
+
+
+@asynccontextmanager
+async def transfer_token_lifespan(config):
+    """Own the shared connection for the lifetime of one server worker."""
+    handle = None
+    try:
+        if config.transfer_tokens.provider == "redis":
+            from openviking.server.account_stores.redis_client import create_redis_client
+            from openviking_cli.utils.config.open_viking_config import get_openviking_config
+
+            ov_config = get_openviking_config()
+            if ov_config.cache is None or ov_config.cache.provider != "redis":
+                raise ValueError(
+                    "server.transfer_tokens.provider=redis requires cache.provider=redis"
+                )
+            handle = create_redis_client(ov_config.cache.params, asynchronous=False)
+            await asyncio.to_thread(handle.client.ping)
+            prefix = f"openviking:{ov_config.service_name}:transfer:"
+            upload_token_store.configure(redis=handle.client, namespace=prefix + "upload:")
+            download_token_store.configure(redis=handle.client, namespace=prefix + "download:")
+        else:
+            upload_token_store.configure()
+            download_token_store.configure()
+        yield
+    finally:
+        upload_token_store.configure()
+        download_token_store.configure()
+        if handle is not None:
+            # redis-py's synchronous clients own synchronous connection pools.
+            await asyncio.to_thread(handle.client.close)
+            for sentinel in handle.sentinel_clients:
+                await asyncio.to_thread(sentinel.close)

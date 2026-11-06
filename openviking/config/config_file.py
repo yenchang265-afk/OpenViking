@@ -72,7 +72,11 @@ def _validate(content: str, server_overrides: dict | None = None) -> OpenVikingC
         if server_overrides:
             server_config = server_config.model_copy(update=server_overrides)
         validate_server_config(server_config)
-        return OpenVikingConfig.from_dict(expanded)
+        config = OpenVikingConfig.from_dict(expanded)
+        from openviking.server.shared_deployment import validate_shared_deployment
+
+        validate_shared_deployment(server_config, config)
+        return config
     except (Exception, SystemExit) as exc:
         # Startup validators exit on failure; API validation must keep the server alive.
         # Validation errors may contain API keys from rejected input.
@@ -87,6 +91,11 @@ def _parse(content: str) -> dict:
         return raw
     except ValueError as exc:
         raise ValueError("ov.conf must contain a JSON object") from exc
+
+
+def _shared_startup(content: str) -> bool:
+    raw = _parse(expand_env_vars(content.lstrip("\ufeff"), "ov.conf"))
+    return (raw.get("server") or {}).get("deployment_mode") == "shared"
 
 
 def _read(path: Path, server_overrides: dict | None = None):
@@ -177,7 +186,8 @@ def read_config_file(server_overrides: dict | None = None) -> dict:
         "form_readonly": _form_readonly(content),
         "revision": _revision(data),
         "file_path": str(path),
-        "writable": bool(path.stat().st_mode & 0o222)
+        "writable": not _shared_startup(content)
+        and bool(path.stat().st_mode & 0o222)
         and os.access(path, os.W_OK)
         and os.access(path.parent, os.W_OK),
         "restart_required": (
@@ -302,6 +312,10 @@ def _config_file_lock(path: Path):
 def save_config_file(content: str, revision: str, server_overrides: dict | None = None) -> dict:
     """Save one startup-file revision; never update the running configuration."""
     path = _path()
+    if _shared_startup(path.read_text(encoding="utf-8")):
+        raise ValueError(
+            "Shared deployment configuration is managed externally; update all replicas together"
+        )
     with _config_file_lock(path):
         data, _, _ = _read(path, server_overrides)
         if not revision or revision != _revision(data):

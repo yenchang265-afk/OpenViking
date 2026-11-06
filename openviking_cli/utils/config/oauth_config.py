@@ -3,12 +3,12 @@
 """OAuth 2.1 configuration.
 
 All issued tokens (access, refresh, authorization code, OTP) are opaque random
-strings stored as SHA-256 hashes in ``{workspace}/oauth.db``. Access tokens
+strings stored as SHA-256 hashes in SQLite or shared MySQL. Access tokens
 carry an ``ovat_`` prefix used as a fast-path discriminator in the bearer
 auth path.
 """
 
-from typing import Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,7 +18,7 @@ class OAuthConfig(BaseModel):
 
     OAuth is layered on top of `AuthMode.API_KEY`: when enabled, the existing
     `Authorization: Bearer <token>` path is augmented with a prefix
-    discriminator (``ovat_``) that resolves OAuth-issued tokens via SQLite
+    discriminator (``ovat_``) that resolves OAuth-issued tokens via the configured
     lookup to the same `ResolvedIdentity` shape. Disabled by default — turning
     it on registers `/oauth/*` routes and the well-known metadata endpoints.
     """
@@ -27,6 +27,9 @@ class OAuthConfig(BaseModel):
         default=False,
         description="Enable OAuth 2.1 endpoints (DCR, authorize, token, well-known metadata).",
     )
+
+    backend: Literal["sqlite", "mysql"] = "sqlite"
+    mysql: dict[str, Any] = Field(default_factory=dict, repr=False)
 
     issuer: Optional[str] = Field(
         default=None,
