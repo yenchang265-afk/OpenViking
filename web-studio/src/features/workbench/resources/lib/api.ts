@@ -234,18 +234,31 @@ export async function fetchFsStat(
 export async function saveFileContent(
   uri: string,
   content: string,
+  expectedContent?: string,
 ): Promise<void> {
   try {
-    await getOvResult<ContentWriteResult>(
-      postContentWrite({
-        body: {
-          uri,
-          content,
-          mode: 'replace',
-          wait: false,
-        },
-      }),
-    )
+    const digest =
+      expectedContent === undefined
+        ? undefined
+        : await crypto.subtle.digest(
+            'SHA-256',
+            new TextEncoder().encode(expectedContent),
+          )
+    const body = {
+      uri,
+      content,
+      mode: 'replace',
+      wait: false,
+      ...(digest
+        ? {
+            expected_content_sha256: Array.from(
+              new Uint8Array(digest),
+              (byte) => byte.toString(16).padStart(2, '0'),
+            ).join(''),
+          }
+        : {}),
+    }
+    await getOvResult<ContentWriteResult>(postContentWrite({ body }))
   } catch (error) {
     throw toVikingApiError(error)
   }

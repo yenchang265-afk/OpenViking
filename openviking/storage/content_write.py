@@ -7,6 +7,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import hashlib
 import os
 import sys
 from collections import defaultdict
@@ -354,6 +355,7 @@ class ContentWriteCoordinator:
         tag_mode: str = "replace",
         acl: AclSpec | Dict[str, Any] | None = None,
         resolve_conflicts: bool = False,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         task = None
         task_id = None
@@ -387,6 +389,7 @@ class ContentWriteCoordinator:
                 resolve_conflicts=resolve_conflicts,
                 root_operation="content_write",
                 root_task_factory=create_root_task,
+                expected_content_sha256=expected_content_sha256,
             )
         except BaseException as exc:
             if task_id is not None and not _root_owns_failure(exc):
@@ -550,6 +553,7 @@ class ContentWriteCoordinator:
         resolve_conflicts: bool = False,
         root_operation: str = "content_write",
         root_task_factory: Callable[[], Awaitable[Any]] | None = None,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         self._validate_mode(mode)
         processing_mode = normalize_processing_mode(processing_mode)
@@ -602,6 +606,7 @@ class ContentWriteCoordinator:
                 ctx=ctx,
                 root_operation=root_operation,
                 root_task_factory=root_task_factory,
+                expected_content_sha256=expected_content_sha256,
             )
 
         root_uri = await self._resolve_root_uri(
@@ -625,6 +630,7 @@ class ContentWriteCoordinator:
                 ingest_options=ingest_options,
                 root_operation=root_operation,
                 root_task_factory=root_task_factory,
+                expected_content_sha256=expected_content_sha256,
             )
 
         return await self._write_direct_with_refresh(
@@ -641,6 +647,7 @@ class ContentWriteCoordinator:
             ingest_options=ingest_options,
             root_operation=root_operation,
             root_task_factory=root_task_factory,
+            expected_content_sha256=expected_content_sha256,
             resolve_conflicts=resolve_conflicts,
         )
 
@@ -1903,6 +1910,7 @@ class ContentWriteCoordinator:
         root_operation: str = "content_write",
         root_task_factory: Callable[[], Awaitable[Any]] | None = None,
         resolve_conflicts: bool = False,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         # ``.abstract.md`` / ``.overview.md`` are generated sidecars whose body is
         # re-embedded in place (no LLM regeneration and no RNFV plan). Keep that
@@ -1920,6 +1928,7 @@ class ContentWriteCoordinator:
                 ingest_options=ingest_options,
                 root_operation=root_operation,
                 root_task_factory=root_task_factory,
+                expected_content_sha256=expected_content_sha256,
             )
 
         lock_path = self._viking_fs._uri_to_path(uri, ctx=ctx)
@@ -1935,7 +1944,9 @@ class ContentWriteCoordinator:
         lock_settled = False
         lock_guard = PathLockGuard(self._viking_fs._async_agfs, lease)
         try:
-            target_state = await self._classify_locked_write_target(uri, ctx=ctx)
+            target_state = await self._classify_locked_write_target(
+                uri, ctx=ctx, expected_content_sha256=expected_content_sha256
+            )
             target_preexisting = target_state.preexisting
             is_new_file = target_state.is_new_file
             previous_content = None
@@ -2163,6 +2174,7 @@ class ContentWriteCoordinator:
         ingest_options: IngestOptions | None = None,
         root_operation: str = "content_write",
         root_task_factory: Callable[[], Awaitable[Any]] | None = None,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         """Re-embed a manually edited L0/L1 sidecar body without LLM regeneration."""
         lock_path = self._viking_fs._uri_to_path(uri, ctx=ctx)
@@ -2183,7 +2195,9 @@ class ContentWriteCoordinator:
         try:
             # Preserve the public invariant that generated sidecars cannot be
             # materialized, while keeping the state check inside the exact lock.
-            await self._classify_locked_write_target(uri, ctx=ctx)
+            await self._classify_locked_write_target(
+                uri, ctx=ctx, expected_content_sha256=expected_content_sha256
+            )
             previous_content = await self._viking_fs.read_file(uri, ctx=ctx)
             await self._write_in_place(
                 uri, content, mode=mode, ctx=ctx, lease_ref=lease, existing_raw=previous_content
@@ -2331,6 +2345,7 @@ class ContentWriteCoordinator:
         ctx: RequestContext,
         root_operation: str = "content_write",
         root_task_factory: Callable[[], Awaitable[Any]] | None = None,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         lock_path = self._viking_fs._uri_to_path(uri, ctx=ctx)
         lock_guard = PathLockGuard(self._viking_fs._async_agfs)
@@ -2348,7 +2363,9 @@ class ContentWriteCoordinator:
             raise
 
         try:
-            target_state = await self._classify_locked_write_target(uri, ctx=ctx)
+            target_state = await self._classify_locked_write_target(
+                uri, ctx=ctx, expected_content_sha256=expected_content_sha256
+            )
             final_bytes = await self._write_in_place(
                 uri,
                 content,
@@ -2419,6 +2436,7 @@ class ContentWriteCoordinator:
         uri: str,
         *,
         ctx: RequestContext,
+        expected_content_sha256: str | None = None,
     ) -> _LockedWriteTarget:
         """Classify a target under its write lease and reject directories or invalid new files."""
         stat = await self._safe_stat(uri, ctx=ctx, allow_not_found=True)
@@ -2428,7 +2446,14 @@ class ContentWriteCoordinator:
                 raise InvalidArgumentError(
                     f"write only supports existing files, got directory: {uri}"
                 )
+            if expected_content_sha256 is not None:
+                current = await self._viking_fs.read_file(uri, ctx=ctx)
+                current_bytes = current.encode("utf-8") if isinstance(current, str) else current
+                if hashlib.sha256(current_bytes).hexdigest() != expected_content_sha256:
+                    raise ConflictError(f"File changed since it was opened: {uri}")
             return _LockedWriteTarget(True, ({"": FormalEntry(is_dir=False)}, True))
+        if expected_content_sha256 is not None:
+            raise ConflictError(f"File was removed since it was opened: {uri}")
         if is_abstract_overview_uri(uri):
             raise InvalidArgumentError(f"cannot create generated abstract overview directly: {uri}")
         self._validate_create_extension(uri)
@@ -2654,6 +2679,7 @@ class ContentWriteCoordinator:
         ingest_options: IngestOptions | None = None,
         root_operation: str = "content_write",
         root_task_factory: Callable[[], Awaitable[Any]] | None = None,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         lock_path = self._viking_fs._uri_to_path(uri, ctx=ctx)
         lock_guard = PathLockGuard(self._viking_fs._async_agfs)
@@ -2671,7 +2697,9 @@ class ContentWriteCoordinator:
             raise
 
         try:
-            target_state = await self._classify_locked_write_target(uri, ctx=ctx)
+            target_state = await self._classify_locked_write_target(
+                uri, ctx=ctx, expected_content_sha256=expected_content_sha256
+            )
             is_new_file = target_state.is_new_file
             write_kwargs = {
                 "mode": mode,

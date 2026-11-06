@@ -144,6 +144,7 @@ async def test_write_forwards_processing_mode_to_service(monkeypatch):
             uri="viking://resources/demo.md",
             content="updated",
             processing_mode="vectors_only",
+            expected_content_sha256="a" * 64,
         ),
         ctx,
     )
@@ -151,6 +152,7 @@ async def test_write_forwards_processing_mode_to_service(monkeypatch):
     assert response["status"] == "ok"
     assert seen["processing_mode"] == "vectors_only"
     assert seen["edit_source"] == "manual"
+    assert seen["expected_content_sha256"] == "a" * 64
 
 
 async def test_write_forwards_tags_and_tag_mode_to_service(monkeypatch):
@@ -470,3 +472,12 @@ async def test_maintenance_reindex_endpoint_removed(client):
         json={"uri": "viking://resources/demo", "wait": True},
     )
     assert response.status_code == 404
+
+
+def test_write_rejects_invalid_editor_precondition():
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        WriteContentRequest(
+            uri="viking://resources/demo.md", content="draft", expected_content_sha256="invalid"
+        )
