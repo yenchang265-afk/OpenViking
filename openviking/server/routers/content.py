@@ -59,6 +59,7 @@ class WriteContentRequest(BaseModel):
     # Who made the edit; versions of Compile outputs record it (console edit = manual).
     edit_source: Literal["manual", "agent", "compile"] = "manual"
     # Mark this edit as conflict resolution.
+    expected_content_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     resolve_conflicts: bool = False
 
 
@@ -296,6 +297,7 @@ async def write(
             acl=request.acl,
             edit_source=request.edit_source,
             resolve_conflicts=request.resolve_conflicts,
+            expected_content_sha256=request.expected_content_sha256,
         ),
     )
     return Response(
