@@ -61,6 +61,7 @@ from .retrieval_config import RetrievalConfig
 from .rules_config import RulesConfig
 from .runtime_field import RuntimeField
 from .storage_config import StorageConfig
+from .studio_config import StudioFeaturesConfig
 from .telemetry_config import TelemetryConfig
 from .ttl_config import TTLConfig
 from .vlm_config import VLMConfig
@@ -250,6 +251,8 @@ class RuntimeConfigSettings(BaseModel):
 
 class OpenVikingConfig(BaseModel):
     """Main configuration for OpenViking."""
+
+    studio_features: StudioFeaturesConfig = RuntimeField(default_factory=StudioFeaturesConfig)
 
     connections: ConnectionsConfig = Field(default_factory=ConnectionsConfig, repr=False)
 

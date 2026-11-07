@@ -396,3 +396,17 @@ The API key is missing or invalid, the key belongs to a different server, or the
 - [Web Studio internationalization contribution guide](./CONTRIBUTING.md): translation ownership, dynamic server text, and the review checklist.
 - [OpenViking server deployment](../docs/en/guides/03-deployment.md): server-side deployment details.
 - [VikingBot validation with OpenViking Server](../bot/docs/vikingbot-phase1-validation-with-openviking-server.md): bot proxy validation flow.
+
+### Studio feature switches
+
+A root connection can enable or disable workspace and extension pages under
+**Connection Settings → Studio features**. All features start enabled. The policy
+is stored in cluster runtime configuration (`studio_features`), applies to all
+Studio users, and requires no restart. Other open Studio clients refresh it every
+15 seconds. Management and connection settings remain available for recovery.
+
+Disabled pages disappear from navigation and cannot mount through a direct URL.
+These are Studio presentation switches; they do not disable the service APIs.
+Authenticated clients read `GET /api/v1/studio/features`; only root may update
+individual switches using `PATCH /api/v1/admin/studio/features` with a sparse
+object such as `{"compile": false}`.

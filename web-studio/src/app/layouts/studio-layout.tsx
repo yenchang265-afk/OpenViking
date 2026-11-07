@@ -1,3 +1,4 @@
+import { useStudioFeatureToggles } from '#/features/connection/hooks/use-studio-feature-toggles'
 import type { NavItem, NavSubItem } from '#/app/navigation/workbench-navigation'
 import { StudioHeader } from '#/app/layouts/studio-header'
 import { StudioManagementNavigation } from '#/app/navigation/studio-management-navigation'
@@ -109,12 +110,14 @@ export function StudioLayout({ children }: { children: React.ReactNode }) {
     pathname === '/oauth/verify' ||
     pathname.startsWith('/oauth/verify/') ||
     pathname === '/admin/oauth/verify'
+  const toggles = useStudioFeatureToggles()
   const capabilities = useStudioCapabilities()
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     const feature = featureForPath(item.to)
     return (
       !feature ||
       (service.ready &&
+        toggles.isEnabled(feature.id) &&
         isStudioFeatureVisible(
           provider,
           feature,

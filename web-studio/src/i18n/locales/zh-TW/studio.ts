@@ -1,4 +1,26 @@
 const studio = {
+  featureToggles: {
+    title: 'Studio 功能',
+    description:
+      '控制所有 Studio 使用者的功能顯示。變更無須重新啟動，服務 API 仍可使用。',
+    error: '無法載入或儲存功能設定，請重試。',
+    features: {
+      filesystem: '檔案系統',
+      directory: '目錄',
+      memories: '記憶',
+      retrieval: '檢索',
+      skills: '技能',
+      sessions: '工作階段',
+      tasks: '任務',
+      home: '首頁',
+      vikingbot: 'VikingBot',
+      compile: '編譯',
+      agentExperience: '代理經驗',
+      requestLogs: '請求日誌',
+      watches: '監看',
+      monitoring: '監控',
+    },
+  },
   credentialStorage: {
     plaintext:
       '當前環境無法加密儲存憑據。連線將以明文儲存在此瀏覽器中，重新整理後仍可使用。使用 HTTPS 並允許瀏覽器儲存可啟用自動加密。',
@@ -184,6 +206,10 @@ const studio = {
   directoryDescription: '瀏覽自己的上下文，以及獲得授權的共享資源。',
   directoryError: '無法開啟目錄：目錄可能不存在，或當前身份沒有訪問許可權。',
   states: {
+    featureDisabled: {
+      title: '功能已停用',
+      description: 'Root 管理員已在 Studio 停用此功能。',
+    },
     trustedCredentialRequired: {
       title: '請配置 Trusted 認證憑據',
       description:

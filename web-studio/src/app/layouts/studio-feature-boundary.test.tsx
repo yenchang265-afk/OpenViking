@@ -4,6 +4,9 @@ import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, expect, it, vi } from 'vitest'
 
 const state = vi.hoisted(() => ({
+  featureEnabled: true,
+  featurePending: false,
+  featureError: false,
   pathname: '/compile',
   provider: 'volcengine',
   ready: true,
@@ -11,6 +14,13 @@ const state = vi.hoisted(() => ({
   role: 'admin',
   mode: 'api_key',
   controlKey: 'mock-admin',
+}))
+vi.mock('#/features/connection/hooks/use-studio-feature-toggles', () => ({
+  useStudioFeatureToggles: () => ({
+    isEnabled: () => state.featureEnabled,
+    isPending: state.featurePending,
+    isError: state.featureError,
+  }),
 }))
 vi.mock('@tanstack/react-router', () => ({
   useRouterState: () => state.pathname,
@@ -44,6 +54,9 @@ vi.mock('react-i18next', () => ({
 }))
 afterEach(() => {
   cleanup()
+  state.featureEnabled = true
+  state.featurePending = false
+  state.featureError = false
   state.provider = 'volcengine'
   state.ready = true
   state.mode = 'api_key'
@@ -197,3 +210,31 @@ it('requires the trusted credential before mounting data pages', () => {
     screen.getByText('states.trustedCredentialRequired.title'),
   ).toBeTruthy()
 })
+
+it('blocks disabled features before rendering children even for root', () => {
+  state.provider = 'opensource'
+  state.role = 'root'
+  state.pathname = '/compile'
+  state.featureEnabled = false
+  render(
+    <StudioFeatureBoundary>
+      <span data-testid="disabled-child" />
+    </StudioFeatureBoundary>,
+  )
+  expect(screen.queryByTestId('disabled-child')).toBeNull()
+  expect(screen.getByText('states.featureDisabled.title')).toBeTruthy()
+})
+it.each(['featurePending', 'featureError'] as const)(
+  'does not mount children while feature policy is %s',
+  (field) => {
+    state.provider = 'opensource'
+    state.pathname = '/compile'
+    state[field] = true
+    render(
+      <StudioFeatureBoundary>
+        <span data-testid="disabled-child" />
+      </StudioFeatureBoundary>,
+    )
+    expect(screen.queryByTestId('disabled-child')).toBeNull()
+  },
+)

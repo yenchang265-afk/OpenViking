@@ -1316,3 +1316,17 @@ async def remove_group_member(
         account_id, group_id, user_id
     )
     return Response(status="ok", result={"removed": removed})
+
+@router.patch("/studio/features")
+@require_auth_root
+async def patch_studio_features(
+    request: Request,
+    body: dict[str, Any],
+    ctx: RequestContext = Depends(get_request_context),
+):
+    """Persist sparse Studio presentation switches in cluster configuration."""
+    try:
+        await _get_runtime_config_manager().patch_cluster({"studio_features": body})
+    except (ConfigPatchError, ValueError) as exc:
+        raise InvalidArgumentError(str(exc)) from exc
+    return Response(status="ok", result=get_openviking_config().studio_features.model_dump())
