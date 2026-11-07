@@ -45,6 +45,7 @@ import { Route as ConnectionsNewRouteImport } from './routes/connections/new'
 import { Route as ConnectionsProfileIdRouteImport } from './routes/connections/$profileId'
 import { Route as CompileNewRouteImport } from './routes/compile/new'
 import { Route as AgentExperienceExperienceUriRouteImport } from './routes/agent-experience/$experienceUri'
+import { Route as AdminStudioFeaturesRouteImport } from './routes/admin/studio-features'
 import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminConfigurationRouteImport } from './routes/admin/configuration'
 import { Route as AdminUsersRouteRouteImport } from './routes/admin/users/route'
@@ -252,6 +253,11 @@ const AgentExperienceExperienceUriRoute =
     path: '/$experienceUri',
     getParentRoute: () => AgentExperienceRouteRoute,
   } as any)
+const AdminStudioFeaturesRoute = AdminStudioFeaturesRouteImport.update({
+  id: '/studio-features',
+  path: '/studio-features',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -413,6 +419,7 @@ export interface FileRoutesByFullPath {
   '/admin/users': typeof AdminUsersRouteRouteWithChildren
   '/admin/configuration': typeof AdminConfigurationRouteWithChildren
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/studio-features': typeof AdminStudioFeaturesRoute
   '/agent-experience/$experienceUri': typeof AgentExperienceExperienceUriRoute
   '/compile/new': typeof CompileNewRoute
   '/connections/$profileId': typeof ConnectionsProfileIdRoute
@@ -469,6 +476,7 @@ export interface FileRoutesByTo {
   '/playground': typeof PlaygroundRoute
   '/users': typeof UsersRouteWithChildren
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/studio-features': typeof AdminStudioFeaturesRoute
   '/agent-experience/$experienceUri': typeof AgentExperienceExperienceUriRoute
   '/compile/new': typeof CompileNewRoute
   '/connections/$profileId': typeof ConnectionsProfileIdRoute
@@ -533,6 +541,7 @@ export interface FileRoutesById {
   '/admin/users': typeof AdminUsersRouteRouteWithChildren
   '/admin/configuration': typeof AdminConfigurationRouteWithChildren
   '/admin/settings': typeof AdminSettingsRoute
+  '/admin/studio-features': typeof AdminStudioFeaturesRoute
   '/agent-experience/$experienceUri': typeof AgentExperienceExperienceUriRoute
   '/compile/new': typeof CompileNewRoute
   '/connections/$profileId': typeof ConnectionsProfileIdRoute
@@ -598,6 +607,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/configuration'
     | '/admin/settings'
+    | '/admin/studio-features'
     | '/agent-experience/$experienceUri'
     | '/compile/new'
     | '/connections/$profileId'
@@ -654,6 +664,7 @@ export interface FileRouteTypes {
     | '/playground'
     | '/users'
     | '/admin/settings'
+    | '/admin/studio-features'
     | '/agent-experience/$experienceUri'
     | '/compile/new'
     | '/connections/$profileId'
@@ -717,6 +728,7 @@ export interface FileRouteTypes {
     | '/admin/users'
     | '/admin/configuration'
     | '/admin/settings'
+    | '/admin/studio-features'
     | '/agent-experience/$experienceUri'
     | '/compile/new'
     | '/connections/$profileId'
@@ -1041,6 +1053,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AgentExperienceExperienceUriRouteImport
       parentRoute: typeof AgentExperienceRouteRoute
     }
+    '/admin/studio-features': {
+      id: '/admin/studio-features'
+      path: '/studio-features'
+      fullPath: '/admin/studio-features'
+      preLoaderRoute: typeof AdminStudioFeaturesRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
     '/admin/settings': {
       id: '/admin/settings'
       path: '/settings'
@@ -1280,6 +1299,7 @@ interface AdminRouteRouteChildren {
   AdminUsersRouteRoute: typeof AdminUsersRouteRouteWithChildren
   AdminConfigurationRoute: typeof AdminConfigurationRouteWithChildren
   AdminSettingsRoute: typeof AdminSettingsRoute
+  AdminStudioFeaturesRoute: typeof AdminStudioFeaturesRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminConnectionsProfileIdRoute: typeof AdminConnectionsProfileIdRoute
   AdminConnectionsNewRoute: typeof AdminConnectionsNewRoute
@@ -1294,6 +1314,7 @@ const AdminRouteRouteChildren: AdminRouteRouteChildren = {
   AdminUsersRouteRoute: AdminUsersRouteRouteWithChildren,
   AdminConfigurationRoute: AdminConfigurationRouteWithChildren,
   AdminSettingsRoute: AdminSettingsRoute,
+  AdminStudioFeaturesRoute: AdminStudioFeaturesRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminConnectionsProfileIdRoute: AdminConnectionsProfileIdRoute,
   AdminConnectionsNewRoute: AdminConnectionsNewRoute,

@@ -4413,6 +4413,9 @@ async def test_studio_features_root_permissions_validation_and_persistence(
     account_id, admin_headers = template_account
     url = "/api/v1/admin/studio/features"
     read_url = "/api/v1/studio/features"
+    root_read = await lightweight_admin_client.get(read_url, headers=root_headers())
+    assert root_read.status_code == 200
+    assert all(root_read.json()["result"].values())
     initial = await lightweight_admin_client.get(read_url, headers=admin_headers)
     assert initial.status_code == 200
     assert all(initial.json()["result"].values())

@@ -400,7 +400,7 @@ The API key is missing or invalid, the key belongs to a different server, or the
 ### Studio feature switches
 
 A root connection can enable or disable workspace and extension pages under
-**Connection Settings → Studio features**. All features start enabled. The policy
+**Administration → Studio features** (also linked from Connection Settings). All features start enabled. The policy
 is stored in cluster runtime configuration (`studio_features`), applies to all
 Studio users, and requires no restart. Other open Studio clients refresh it every
 15 seconds. Management and connection settings remain available for recovery.

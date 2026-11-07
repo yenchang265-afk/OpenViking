@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { cleanup, render, screen } from '@testing-library/react'
 import type { ComponentType } from 'react'
+import type * as TanstackRouter from '@tanstack/react-router'
 import { afterEach, expect, it, vi } from 'vitest'
 
 import { Route } from '#/routes/settings/route'
@@ -41,6 +42,21 @@ vi.mock('#/features/connection/hooks/use-studio-feature-toggles', () => ({
     isEnabled: () => true,
     mutation: { isPending: false, isError: false, mutate: vi.fn() },
   }),
+}))
+vi.mock('@tanstack/react-router', async (importOriginal) => ({
+  ...(await importOriginal<typeof TanstackRouter>()),
+  Link: ({
+    to,
+    children,
+    ...props
+  }: {
+    to: string
+    children: React.ReactNode
+  }) => (
+    <a href={to} {...props}>
+      {children}
+    </a>
+  ),
 }))
 vi.mock('#/shared/api/admin', () => ({ probeStudioConnection: probe }))
 vi.mock('#/features/connection/hooks/use-app-connection', () => ({
@@ -117,10 +133,19 @@ it('keeps service configuration out of connection settings for both providers', 
   const view = render(content())
   expect(screen.queryByRole('tab', { name: 'tabs.configuration' })).toBeNull()
   expect(screen.getByTestId('connection-profiles')).toBeTruthy()
+  expect(screen.queryAllByRole('switch')).toHaveLength(0)
+  expect(
+    screen
+      .getByRole('link', { name: 'featureToggles.openSettings' })
+      .getAttribute('href'),
+  ).toBe('/admin/studio-features')
   serviceState.provider = 'volcengine'
   view.rerender(content())
   expect(screen.queryByRole('tab', { name: 'tabs.configuration' })).toBeNull()
   expect(screen.queryByTestId('configuration-editor')).toBeNull()
+  expect(
+    screen.queryByRole('link', { name: 'featureToggles.openSettings' }),
+  ).toBeNull()
   expect(screen.getByTestId('connection-profiles')).toBeTruthy()
   client.clear()
   Object.assign(serviceState, { provider: 'opensource', role: 'user', key: '' })

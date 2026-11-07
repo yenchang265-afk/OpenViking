@@ -1,5 +1,32 @@
 const studio = {
   featureToggles: {
+    subtitle: 'Choose which features appear for all Studio users.',
+    rootOnly: 'Root only',
+    openSettings: 'Manage Studio features',
+    saving: 'Saving changes…',
+    saved: 'All changes saved',
+    loading: 'Loading features…',
+    retry: 'Retry',
+    groups: {
+      workspace: 'Workspace',
+      extensions: 'Extensions',
+    },
+    descriptions: {
+      filesystem: 'Browse and edit stored files.',
+      directory: 'Explore the context directory.',
+      memories: 'Manage long-term context.',
+      retrieval: 'Search and explore knowledge.',
+      skills: 'Manage reusable agent skills.',
+      sessions: 'Review conversations.',
+      tasks: 'Track background work.',
+      home: 'View the workspace overview.',
+      vikingbot: 'Access the assistant workspace.',
+      compile: 'Build reusable knowledge.',
+      agentExperience: 'Review agent insights.',
+      requestLogs: 'Review requests and usage.',
+      watches: 'Manage automatic resource refreshes.',
+      monitoring: 'Inspect service health and activity.',
+    },
     title: 'Studio features',
     description:
       'Control feature visibility for all Studio users. Changes apply without a restart. Service APIs remain available.',

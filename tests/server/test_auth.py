@@ -97,6 +97,12 @@ def test_root_key_allowlist_rejects_removed_sync_paths(path: str):
     assert not _api_key_root_can_access_path(path)
 
 
+def test_root_key_can_read_only_the_global_studio_feature_policy():
+    assert _api_key_root_can_access_path("/api/v1/studio/features")
+    assert not _api_key_root_can_access_path("/api/v1/studio/features/private")
+    assert not _api_key_root_can_access_path("/api/v1/content/read")
+
+
 def _make_request(
     path: str,
     headers: dict[str, str] | None = None,
