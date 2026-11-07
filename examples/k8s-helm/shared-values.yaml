@@ -1,0 +1,105 @@
+# Use a build containing the shared-state backends. This file is an overlay on
+# deploy/helm/openviking/values.yaml; provision schemas before installing it.
+replicaCount: 2
+persistence:
+  enabled: false
+config:
+  service_name: openviking-production
+  enable_watch_scheduler: false
+  connections:
+    mysql:
+      host: mysql
+      port: 3306
+      user: openviking
+      password: "${OPENVIKING_MYSQL_PASSWORD}"
+      database: openviking
+    redis:
+      endpoints: ["redis://redis:6379"]
+      password_env: OPENVIKING_REDIS_PASSWORD
+    s3:
+      bucket: openviking
+      endpoint: https://s3.us-east-1.amazonaws.com
+      region: us-east-1
+      access_key: "${OPENVIKING_S3_ACCESS_KEY}"
+      secret_key: "${OPENVIKING_S3_SECRET_KEY}"
+    elasticsearch:
+      hosts: ["https://elasticsearch:9200"]
+      username: "${OPENVIKING_ES_USER}"
+      password: "${OPENVIKING_ES_PASSWORD}"
+  embedding:
+    dense:
+      api_key: "${OPENVIKING_MODEL_API_KEY}"
+  vlm:
+    api_key: "${OPENVIKING_MODEL_API_KEY}"
+  cache:
+    backend: redis
+    params:
+      default_ttl_seconds: 300
+  storage:
+    agfs:
+      backend: s3
+      s3:
+        prefix: production/
+        cache_enabled: false
+      tiered:
+        enabled: true
+        backend: mysql
+        small_threshold_bytes: 1048576
+        import_existing: false
+        mysql:
+          max_connections: 16
+      queuefs:
+        backend: cache
+        mode: shared
+        recover_stale_sec: 86400
+      pathlock:
+        backend: cache
+      cachefs:
+        backend: cache
+        multi_instance: true
+    vectordb:
+      backend: elasticsearch
+    task_store:
+      backend: mysql
+  server:
+    deployment_mode: shared
+    auth_mode: api_key
+    root_api_key: "${OPENVIKING_ROOT_API_KEY}"
+    transfer_tokens:
+      backend: redis
+    temp_upload:
+      default_mode: shared
+    account_store:
+      backend: mysql
+    observability:
+      usage_audit:
+        backend: mysql
+  oauth:
+    enabled: true
+    backend: mysql
+    issuer: https://ov.example.com
+extraEnv:
+  - name: OPENVIKING_MODEL_API_KEY
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: model-api-key}
+  - name: OPENVIKING_ROOT_API_KEY
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: root-api-key}
+  - name: OPENVIKING_MYSQL_PASSWORD
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: mysql-password}
+  - name: OPENVIKING_REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: redis-password}
+  - name: OPENVIKING_S3_ACCESS_KEY
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: s3-access-key}
+  - name: OPENVIKING_S3_SECRET_KEY
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: s3-secret-key}
+  - name: OPENVIKING_ES_USER
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: es-user}
+  - name: OPENVIKING_ES_PASSWORD
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: es-password}

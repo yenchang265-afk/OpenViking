@@ -15,6 +15,18 @@ def _save_form(settings: dict, revision: str) -> dict:
     return save_config_file(draft["content"], revision)
 
 
+def test_shared_startup_file_cannot_be_edited_on_one_replica(tmp_path, monkeypatch):
+    from openviking.config import config_file as module
+
+    path = tmp_path / "shared.conf"
+    original = '{"server":{"deployment_mode":"shared"}}'
+    path.write_text(original)
+    monkeypatch.setattr(module, "_path", lambda: path)
+    with pytest.raises(ValueError, match="managed externally"):
+        save_config_file('{}', hashlib.sha256(original.encode()).hexdigest())
+    assert path.read_text() == original
+
+
 @pytest.fixture
 def config_file(tmp_path, monkeypatch):
     path = tmp_path / "custom.conf"

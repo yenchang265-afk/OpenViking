@@ -57,6 +57,8 @@ class RagfsBindingConfig:
         cachefs = getattr(self.agfs, "cachefs", None)
         cachefs_backend = getattr(cachefs, "backend", "local")
         pathlock = self.agfs.pathlock.model_dump(mode="json", exclude_none=True)
+        # Native sectioned config keeps its existing provider wire spelling.
+        pathlock["provider"] = pathlock.pop("backend")
         if pathlock.get("provider") == "sqlite":
             sqlite_path = pathlock.get("sqlite_path")
             if sqlite_path is None:
@@ -541,6 +543,9 @@ def _serialize_tiered_params(tiered: Any) -> Dict[str, Any]:
         if value is not None:
             params[f"tiered_{key}"] = value
     engine = _get_config_value(tiered, backend)
+    shared = getattr(engine, "_connection", None)
+    if shared is not None:
+        params["tiered_dsn"] = shared.tiered_dsn()
     for key in _TIERED_BACKEND_KEYS:
         value = _get_config_value(engine, key) if engine is not None else None
         if value is not None:
@@ -814,6 +819,15 @@ def mount_agfs_backend(agfs: Any, config: RagfsBindingConfig | Any) -> None:
         if isinstance(config, RagfsBindingConfig)
         else DEFAULT_SERVICE_NAME,
     )
+
+    if any("tiered_dsn" in plugin.get("config", {}) for plugin in config.values()):
+        capabilities = getattr(agfs, "get_capabilities", None)
+        features = capabilities().get("features", []) if callable(capabilities) else []
+        if "tiered_shared_connection" not in features:
+            raise RuntimeError(
+                "Tiered storage with connections.mysql requires an updated RAGFS native binding; "
+                "rebuild the image or native extension before starting"
+            )
 
     for plugin_name, plugin_config in config.items():
         mount_path = plugin_config["path"]

@@ -69,12 +69,21 @@ async def init_usage_audit_from_server_config(
             app.state.usage_audit_runtime = None
         return None
 
-    store = SQLiteUsageAuditStore(
-        _resolve_sqlite_path(config),
-        usage_retention_days=usage_config.usage_retention_days,
-        audit_retention_days=usage_config.audit_retention_days,
-        audit_retention_per_account=usage_config.audit_retention_per_account,
-    )
+    store_options = {
+        "usage_retention_days": usage_config.usage_retention_days,
+        "audit_retention_days": usage_config.audit_retention_days,
+        "audit_retention_per_account": usage_config.audit_retention_per_account,
+    }
+    if usage_config.backend == "mysql":
+        from .mysql_store import MySQLUsageAuditStore
+
+        store = MySQLUsageAuditStore(
+            service_name=get_openviking_config().service_name,
+            params=usage_config.mysql,
+            **store_options,
+        )
+    else:
+        store = SQLiteUsageAuditStore(_resolve_sqlite_path(config), **store_options)
     await store.initialize()
 
     worker = UsageAuditWorker(
@@ -103,7 +112,7 @@ async def init_usage_audit_from_server_config(
     )
     if app is not None:
         app.state.usage_audit_runtime = runtime
-    logger.info("Usage/Audit store initialized with sqlite backend")
+    logger.info("Usage/Audit store initialized with %s backend", usage_config.backend)
     return runtime
 
 

@@ -74,16 +74,30 @@ async def task_event_stream(
     *,
     complete: bool,
     heartbeat: float = TASK_EVENTS_HEARTBEAT_SECONDS,
+    resync_interval: float | None = None,
 ) -> AsyncGenerator[str, None]:
     """Yield SSE frames: ``ready`` once subscribed, then ``task``, ``resync``
     or an idle ``ping``."""
     subscription = feed.subscribe(visible)
+    loop = asyncio.get_running_loop()
+    next_resync = loop.time() + resync_interval if resync_interval else None
     try:
         yield _sse("ready", {"complete": complete})
         while True:
+            if next_resync is not None and loop.time() >= next_resync:
+                yield _sse("resync", {})
+                next_resync = loop.time() + resync_interval
+                continue
+            timeout = heartbeat
+            if next_resync is not None:
+                timeout = min(timeout, max(0, next_resync - loop.time()))
             try:
-                item = await subscription.next(heartbeat)
+                item = await subscription.next(timeout)
             except asyncio.TimeoutError:
+                if next_resync is not None and loop.time() >= next_resync:
+                    yield _sse("resync", {})
+                    next_resync = loop.time() + resync_interval
+                    continue
                 # An event, not a comment: browser clients never see comments.
                 yield _sse("ping", {})
                 continue
@@ -107,12 +121,14 @@ async def stream_task_events(
     false with several workers, where only this worker's changes are pushed.
     """
     config = getattr(request.app.state, "config", None)
-    complete = getattr(config, "workers", 1) <= 1
+    shared = getattr(config, "deployment_mode", "standalone") == "shared"
+    complete = not shared and getattr(config, "workers", 1) <= 1
     return _ClosingStreamingResponse(
         task_event_stream(
             get_task_tracker().change_feed,
             _task_visibility(_ctx, task_type, include_internal),
             complete=complete,
+            resync_interval=1.0 if shared else None,
         ),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},

@@ -23,6 +23,7 @@ from .config_utils import (
     warn_unknown_config_fields,
     warn_unknown_fields,
 )
+from .connections_config import ConnectionsConfig, resolve_connections
 from .consts import (
     DEFAULT_CONFIG_DIR,
     DEFAULT_OV_CONF,
@@ -249,6 +250,20 @@ class RuntimeConfigSettings(BaseModel):
 
 class OpenVikingConfig(BaseModel):
     """Main configuration for OpenViking."""
+
+    connections: ConnectionsConfig = Field(default_factory=ConnectionsConfig, repr=False)
+
+    @model_validator(mode="before")
+    @classmethod
+    def inherit_connections(cls, data):
+        return resolve_connections(data) if isinstance(data, dict) else data
+
+    @model_validator(mode="after")
+    def bind_tiered_mysql_connection(self):
+        mysql = self.storage.agfs.tiered.mysql
+        # An explicitly configured legacy DSN remains an independent override.
+        mysql._connection = self.connections.mysql if mysql.dsn_env is None else None
+        return self
 
     default_account: Optional[str] = Field(
         default="default", description="Default account identifier"

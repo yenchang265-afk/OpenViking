@@ -1177,6 +1177,8 @@ fn settings_reject_invalid_values() {
             ConfigValue::String("1starts_with_digit".into()),
         ),
         ("tiered_dsn_env", ConfigValue::String(String::new())),
+        ("tiered_dsn", ConfigValue::String(String::new())),
+        ("tiered_dsn", ConfigValue::Bool(true)),
         ("tiered_backend", ConfigValue::String("mariadb".into())),
         ("tiered_backend", ConfigValue::String("postgres".into())),
         ("tiered_backend", ConfigValue::Bool(true)),
@@ -1200,6 +1202,45 @@ fn settings_reject_invalid_values() {
             matches!(TieredSettings::from_params(&map), Err(Error::Config(_))),
             "{key}={value:?} should be rejected"
         );
+    }
+}
+
+#[test]
+fn resolved_connection_is_redacted_and_cannot_mix_with_legacy_env() {
+    let mut map = params(&[
+        ("tiered_enabled", ConfigValue::Bool(true)),
+        (
+            "tiered_dsn",
+            ConfigValue::String("mysql://user:secret@localhost/db".into()),
+        ),
+    ]);
+    let settings = TieredSettings::from_params(&map).unwrap().unwrap();
+    assert!(settings.dsn.is_some());
+    assert!(!format!("{settings:?}").contains("secret"));
+    map.insert(
+        "tiered_dsn_env".into(),
+        ConfigValue::String("LEGACY_DSN".into()),
+    );
+    assert!(TieredSettings::from_params(&map).is_err());
+}
+
+#[cfg(feature = "tiered")]
+#[tokio::test]
+async fn resolved_connection_does_not_require_an_environment_variable() {
+    let map = params(&[
+        ("tiered_enabled", ConfigValue::Bool(true)),
+        (
+            "tiered_dsn",
+            ConfigValue::String("invalid-secret-url".into()),
+        ),
+    ]);
+    let settings = TieredSettings::from_params(&map).unwrap().unwrap();
+    match connect_store(&settings).await {
+        Err(Error::Config(message)) => {
+            assert!(message.contains("not a valid mysql:// URL"));
+            assert!(!message.contains("invalid-secret-url"));
+        }
+        _ => panic!("expected sanitized URL validation failure, not an env lookup"),
     }
 }
 

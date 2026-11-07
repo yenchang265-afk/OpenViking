@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+import importlib
+import inspect
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -59,17 +61,23 @@ class RedisClientHandle:
 
     async def close(self) -> None:
         try:
-            close = getattr(self.client, "aclose", None)
+            close = getattr(self.client, "aclose", None) or getattr(self.client, "close", None)
             if close is not None:
-                await close()
+                result = close()
+                if inspect.isawaitable(result):
+                    await result
         finally:
             for sentinel in self.sentinel_clients:
-                close = getattr(sentinel, "aclose", None)
+                close = getattr(sentinel, "aclose", None) or getattr(sentinel, "close", None)
                 if close is not None:
-                    await close()
+                    result = close()
+                    if inspect.isawaitable(result):
+                        await result
 
 
-def create_redis_client(raw_params: dict[str, object], **options: Any) -> RedisClientHandle:
+def create_redis_client(
+    raw_params: dict[str, object], *, asynchronous: bool = True, **options: Any
+) -> RedisClientHandle:
     """Create a redis-py client for standalone, cluster, or Sentinel Redis."""
     try:
         config = RedisCacheConfig.model_validate(raw_params)
@@ -92,9 +100,10 @@ def create_redis_client(raw_params: dict[str, object], **options: Any) -> RedisC
         "max_connections": config.pool_size,
         **options,
     }
+    module = "redis.asyncio" if asynchronous else "redis"
 
     if config.mode == "standalone":
-        from redis.asyncio import Redis
+        Redis = importlib.import_module(module).Redis
 
         return RedisClientHandle(
             Redis.from_url(
@@ -106,7 +115,8 @@ def create_redis_client(raw_params: dict[str, object], **options: Any) -> RedisC
         )
 
     if config.mode == "cluster":
-        from redis.asyncio.cluster import ClusterNode, RedisCluster
+        cluster = importlib.import_module(module + ".cluster")
+        ClusterNode, RedisCluster = cluster.ClusterNode, cluster.RedisCluster
 
         return RedisClientHandle(
             RedisCluster(
@@ -117,7 +127,7 @@ def create_redis_client(raw_params: dict[str, object], **options: Any) -> RedisC
             )
         )
 
-    from redis.asyncio.sentinel import Sentinel
+    Sentinel = importlib.import_module(module + ".sentinel").Sentinel
 
     sentinel_common = {
         "decode_responses": True,

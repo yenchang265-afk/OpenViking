@@ -8,9 +8,12 @@ from enum import Enum
 from typing import Any, List, Literal, Optional
 from urllib.parse import urlparse
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from openviking_cli.utils.logger import get_logger
+
+from .backend_config import BackendSelectorConfig
+from .connections_config import MySQLConnectionConfig
 
 logger = get_logger(__name__)
 
@@ -27,12 +30,14 @@ class TieredMySQLConfig(BaseModel):
     """MySQL (8+) or MariaDB store for size-tiered storage."""
 
     model_config = ConfigDict(extra="forbid")
+    _connection: MySQLConnectionConfig | None = PrivateAttr(default=None)
 
     dsn_env: Optional[str] = Field(
         default=None,
         min_length=1,
         description="Environment variable holding the DSN "
-        "(mysql://user:pass@host:3306/db). Unset uses RAGFS_TIERED_DSN. "
+        "(mysql://user:pass@host:3306/db). Unset inherits connections.mysql when "
+        "configured, otherwise uses RAGFS_TIERED_DSN. "
         "The DSN itself is never stored in config.",
     )
 
@@ -124,12 +129,14 @@ class S3Config(BaseModel):
 
     access_key: Optional[str] = Field(
         default=None,
+        repr=False,
         description="S3 access key ID (required; RAGFS has no default credential chain). "
         'Use "${VAR}" to read it from the environment.',
     )
 
     secret_key: Optional[str] = Field(
         default=None,
+        repr=False,
         description="S3 secret access key corresponding to the access key ID (required). "
         'Use "${VAR}" to read it from the environment.',
     )
@@ -548,7 +555,7 @@ class StorageCircuitBreakerConfig(BaseModel):
         return self
 
 
-class AGFSPathLockConfig(BaseModel):
+class AGFSPathLockConfig(BackendSelectorConfig):
     """Configuration for the native RAGFS path lock service."""
 
     @model_validator(mode="after")
@@ -564,6 +571,7 @@ class AGFSPathLockConfig(BaseModel):
 
     provider: str = Field(
         default="filesystem",
+        alias="backend",
         description="PathLock provider: 'filesystem' | 'memory' | 'sqlite' | 'cache'",
     )
     sqlite_path: Optional[str] = Field(

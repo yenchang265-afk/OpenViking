@@ -252,6 +252,8 @@ class TempUploadStore:
         upload_mode: str,
         ctx: RequestContext,
     ) -> str:
+        if self.server_config.deployment_mode == "shared" and upload_mode != "shared":
+            raise InvalidArgumentError("Shared deployments require upload_mode='shared'.")
         if upload_mode == "local":
             return await self._save_local(upload_file)
         if upload_mode == "shared":

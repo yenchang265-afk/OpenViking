@@ -352,7 +352,18 @@ def create_app(
             str(resolved_config_path) if resolved_config_path is not None else config_path
         )
 
+    from openviking_cli.utils.config.connections_config import resolve_connections
+
+    root_config = get_openviking_config()
+    connections = getattr(root_config, "connections", None)
+    if connections is not None and (connections.mysql is not None or connections.redis is not None):
+        resolved = resolve_connections({"connections": connections, "server": config.model_dump()})
+        config = ServerConfig.model_validate(resolved["server"])
     validate_server_config(config)
+
+    from openviking.server.shared_deployment import validate_shared_deployment
+
+    validate_shared_deployment(config, get_openviking_config())
 
     usage_reporter_unset = object()
     usage_reporter = usage_reporter_unset
@@ -366,6 +377,14 @@ def create_app(
         return usage_reporter
 
     def _configure_session_runtime(service_obj) -> None:  # noqa: ANN001
+        if config.deployment_mode == "shared":
+            scheduler = getattr(service_obj, "watch_scheduler", None)
+            if scheduler is not None and scheduler.is_running:
+                raise ValueError("Stop resource watches before enabling shared mode")
+        resources = getattr(service_obj, "resources", None)
+        watch_setter = getattr(resources, "set_watch_requests_enabled", None)
+        if callable(watch_setter):
+            watch_setter(config.deployment_mode != "shared")
         sessions = getattr(service_obj, "sessions", None)
         tool_output_setter = getattr(sessions, "set_tool_output_externalization_config", None)
         if callable(tool_output_setter):
@@ -399,7 +418,7 @@ def create_app(
     bot_gateway_token = load_bot_gateway_token() if config.with_bot else ""
 
     @asynccontextmanager
-    async def lifespan(app: FastAPI):
+    async def service_lifespan(app: FastAPI):
         """Application lifespan handler."""
         nonlocal service
         _configure_default_executor(config)
@@ -446,7 +465,7 @@ def create_app(
 
             oauth_gc_task = asyncio.create_task(_oauth_gc_loop(oauth_store))
             app.state.oauth_gc_task = oauth_gc_task
-            logger.info("OAuth 2.1 store initialized at %s", oauth_store._db_path)
+            logger.info("OAuth 2.1 store initialized (%s)", type(oauth_store).__name__)
 
         # Start TaskTracker cleanup loop
         task_tracker = get_task_tracker()
@@ -526,6 +545,13 @@ def create_app(
                 logger.warning("Auth plugin shutdown failed: %s", e)
         if usage_reporter is not usage_reporter_unset and usage_reporter is not None:
             await usage_reporter.close()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        from openviking.server.upload_token_store import transfer_token_lifespan
+
+        async with transfer_token_lifespan(config), service_lifespan(app):
+            yield
 
     app = FastAPI(
         title="Business Context Platform API",
@@ -760,7 +786,14 @@ def create_app(
 
             _workspace = _Path(ov_cfg.storage.workspace).expanduser().resolve()
             _workspace.mkdir(parents=True, exist_ok=True)
-            _route_store = OAuthStore(_workspace / ov_cfg.oauth.db_filename)
+            if ov_cfg.oauth.backend == "mysql":
+                from openviking.server.oauth.mysql_store import MySQLOAuthStore
+
+                _route_store = MySQLOAuthStore(
+                    service_name=ov_cfg.service_name, params=ov_cfg.oauth.mysql,
+                )
+            else:
+                _route_store = OAuthStore(_workspace / ov_cfg.oauth.db_filename)
             # Resolution order for the AS issuer URL:
             #   1. OPENVIKING_PUBLIC_BASE_URL env var (deployment override)
             #   2. oauth.issuer in ov.conf (operator config)
@@ -816,6 +849,8 @@ def create_app(
                 [r.path for r in sdk_routes],
             )
     except Exception as e:  # noqa: BLE001
+        if get_openviking_config().oauth.enabled:
+            raise
         logger.warning("Skipping OAuth router registration: %s", e)
 
     # Favicon routes — always registered so /favicon.* and /mcp/favicon.* never

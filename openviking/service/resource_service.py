@@ -219,12 +219,17 @@ class ResourceService:
         self._resource_processor = resource_processor
         self._skill_processor = skill_processor
         self._watch_scheduler = watch_scheduler
+        self._watch_requests_enabled = True
         self._resource_memory_link_service = resource_memory_link_service
         self._background_tasks: set[asyncio.Task[Any]] = set()
         # Background skill runs whose body has not started, keyed to their task id.
         self._unstarted_skill_tasks: Dict[asyncio.Task[Any], tuple[str, str, str]] = {}
         self._connector_delegate: Optional["ConnectorDelegate"] = None
         self.compile_versions: Optional[Any] = None
+
+    def set_watch_requests_enabled(self, enabled: bool) -> None:
+        """Disable watch options when the deployment has no coordinated scheduler."""
+        self._watch_requests_enabled = enabled
 
     def set_dependencies(
         self,
@@ -1683,6 +1688,8 @@ class ResourceService:
             ConflictError: Incompatible target occupancy or ambiguous cancellation by URI
             InvalidArgumentError: If the URI scope is not 'resources'
         """
+        if not self._watch_requests_enabled and (watch_interval != 0 or is_active is not None):
+            raise FailedPreconditionError("Resource watches are unavailable in shared deployments")
         self._ensure_initialized()
         has_target = bool((to or "").strip() or (parent or "").strip())
         if is_active is False and (watch_interval <= 0 or not has_target):

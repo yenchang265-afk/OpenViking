@@ -92,3 +92,34 @@ async def test_events_path_is_not_captured_by_task_lookup():
     route = next(r for r in task_router.router.routes if r.matches(scope)[0] == Match.FULL)
 
     assert route.endpoint is task_router.stream_task_events
+
+
+async def test_shared_stream_refreshes_even_without_local_changes():
+    feed = TaskChangeFeed()
+    stream = task_router.task_event_stream(
+        feed, lambda task: True, complete=False, resync_interval=0.01,
+    )
+    assert _parse(await anext(stream)) == ("ready", {"complete": False})
+    assert _parse(await anext(stream)) == ("resync", {})
+    assert _parse(await anext(stream)) == ("resync", {})
+    await stream.aclose()
+    assert not feed.has_subscribers()
+
+
+async def test_local_activity_cannot_starve_shared_refresh():
+    import asyncio
+
+    feed = TaskChangeFeed()
+    stream = task_router.task_event_stream(
+        feed, lambda task: True, complete=False, resync_interval=0.01,
+    )
+    await anext(stream)
+    for i in range(20):
+        feed.publish(_record(), lambda: {"task_id": "t1"})
+        await asyncio.sleep(0.002)
+        event, _ = _parse(await anext(stream))
+        if event == "resync":
+            break
+    else:
+        pytest.fail("local task events starved the shared-state refresh")
+    await stream.aclose()

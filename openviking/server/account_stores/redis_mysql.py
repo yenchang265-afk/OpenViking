@@ -32,6 +32,7 @@ from openviking.server.account_stores.redis_client import (
 )
 from openviking_cli.exceptions import InvalidArgumentError, UnavailableError
 from openviking_cli.utils import get_logger
+from openviking_cli.utils.config.backend_config import backend_name
 from openviking_cli.utils.config.config_utils import normalize_service_name
 
 logger = get_logger(__name__)
@@ -212,11 +213,11 @@ class RedisMySQLAccountStore(AccountStore):
             }
         if not isinstance(cache_spec, dict):
             raise InvalidArgumentError("redis_mysql account storage requires cache parameters")
-        unknown_cache_fields = set(cache_spec) - {"provider", "params"}
+        unknown_cache_fields = set(cache_spec) - {"backend", "provider", "params"}
         if unknown_cache_fields:
             names = ", ".join(sorted(unknown_cache_fields))
             raise InvalidArgumentError(f"Unknown Redis cache fields: {names}")
-        cache_provider = cache_spec.get("provider")
+        cache_provider = backend_name(cache_spec, "account_store.params.cache")
         cache_params = cache_spec.get("params")
         if cache_provider != "redis" or not isinstance(cache_params, dict):
             raise InvalidArgumentError(

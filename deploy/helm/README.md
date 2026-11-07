@@ -10,6 +10,11 @@ Deploy OpenViking on Kubernetes using Helm.
 
 ## Installation
 
+For disposable server pods and multiple replicas, use the
+[shared-state deployment guide](../../docs/en/guides/23-shared-deployment.md)
+and [shared values overlay](../../examples/k8s-helm/shared-values.yaml).
+Local storage remains the default; simply raising `replicaCount` is rejected.
+
 ### Quick Start
 
 ```bash

@@ -1,5 +1,12 @@
-{{- if gt (int .Values.replicaCount) 1 }}
+{{- $shared := eq (dig "server" "deployment_mode" "standalone" .Values.config) "shared" }}
+{{- if and (gt (int .Values.replicaCount) 1) (not $shared) }}
 {{- fail "replicaCount must be 1. OpenViking uses RocksDB which does not support concurrent access from multiple pods sharing the same PVC." }}
+{{- end }}
+{{- if and $shared .Values.persistence.enabled }}
+{{- fail "Shared deployments require persistence.enabled=false; each replica uses disposable scratch space." }}
+{{- end }}
+{{- if and $shared (or .Values.gateway.enabled .Values.bot.enabled) }}
+{{- fail "Shared deployments must run the gateway and bot separately." }}
 {{- end }}
 apiVersion: apps/v1
 kind: Deployment
@@ -13,7 +20,14 @@ spec:
     matchLabels:
       {{- include "openviking.selectorLabels" . | nindent 6 }}
   strategy:
+    {{- if $shared }}
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+    {{- else }}
     type: Recreate
+    {{- end }}
   template:
     metadata:
       annotations:
