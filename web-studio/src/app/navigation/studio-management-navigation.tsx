@@ -13,6 +13,7 @@ import {
   BracesIcon,
   ServerCogIcon,
   ShieldCheckIcon,
+  SlidersHorizontalIcon,
   UserRoundIcon,
   UsersRoundIcon,
   WaypointsIcon,
@@ -60,7 +61,7 @@ export function StudioManagementNavigation({
   gatewayOnly?: boolean
   developmentMode?: boolean
 }) {
-  const { t } = useTranslation(['appShell', 'settings'])
+  const { t } = useTranslation(['appShell', 'settings', 'studio'])
   const serviceItems = [
     ...(isRoot && !gatewayOnly
       ? ([
@@ -90,9 +91,21 @@ export function StudioManagementNavigation({
         ] as const)
       : []),
   ]
+  const administrationItems = [
+    ...(!developmentMode ? managementItems : []),
+    ...(isRoot
+      ? ([
+          {
+            to: '/admin/studio-features',
+            title: 'studio:featureToggles.title',
+            icon: SlidersHorizontalIcon,
+          },
+        ] as const)
+      : []),
+  ]
   const groups = [
-    ...(!gatewayOnly && !developmentMode
-      ? [{ label: 'appShell:modes.management', items: managementItems }]
+    ...(!gatewayOnly && administrationItems.length > 0
+      ? [{ label: 'appShell:modes.management', items: administrationItems }]
       : []),
     ...(serviceItems.length
       ? [{ label: 'appShell:sidebar.groups.services', items: serviceItems }]

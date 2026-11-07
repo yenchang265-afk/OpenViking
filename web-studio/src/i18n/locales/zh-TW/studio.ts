@@ -1,5 +1,32 @@
 const studio = {
   featureToggles: {
+    subtitle: '選擇所有 Studio 使用者可見的功能。',
+    rootOnly: '僅限 Root',
+    openSettings: '管理 Studio 功能',
+    saving: '正在儲存變更…',
+    saved: '所有變更已儲存',
+    loading: '正在載入功能…',
+    retry: '重試',
+    groups: {
+      workspace: '工作區',
+      extensions: '擴充功能',
+    },
+    descriptions: {
+      filesystem: '瀏覽與編輯儲存的檔案。',
+      directory: '探索上下文目錄。',
+      memories: '管理長期記憶與上下文。',
+      retrieval: '搜尋與探索知識。',
+      skills: '管理可重複使用的代理技能。',
+      sessions: '檢視對話紀錄。',
+      tasks: '追蹤背景工作。',
+      home: '檢視工作區總覽。',
+      vikingbot: '開啟助理工作區。',
+      compile: '建立可重複使用的知識。',
+      agentExperience: '檢視代理經驗與洞察。',
+      requestLogs: '檢視請求與用量。',
+      watches: '管理資源的自動更新。',
+      monitoring: '檢視服務健康狀態與活動。',
+    },
     title: 'Studio 功能',
     description:
       '控制所有 Studio 使用者的功能顯示。變更無須重新啟動，服務 API 仍可使用。',

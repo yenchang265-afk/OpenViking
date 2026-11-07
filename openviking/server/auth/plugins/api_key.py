@@ -16,6 +16,7 @@ from openviking_cli.exceptions import PermissionDeniedError, UnauthenticatedErro
 
 _API_KEY_ROOT_ALLOWED_PATHS = {
     "/api/v1/system/status",
+    "/api/v1/studio/features",
     "/api/v1/system/wait",
     "/api/v1/debug/health",
 }

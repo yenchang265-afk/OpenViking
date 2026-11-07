@@ -39,7 +39,13 @@ it.each([false, true])(
       '/admin/users/permissions',
       '/admin/users/memory-templates',
       '/admin/configuration',
-      ...(isRoot ? ['/admin/configuration/server', '/admin/vikingbot'] : []),
+      ...(isRoot
+        ? [
+            '/admin/studio-features',
+            '/admin/configuration/server',
+            '/admin/vikingbot',
+          ]
+        : []),
     ])
     expect(links[1].hasAttribute('data-active')).toBe(true)
     expect(links[0].hasAttribute('data-active')).toBe(false)
@@ -57,8 +63,7 @@ it('highlights only server configuration in the service management group', () =>
   )
   const server = screen.getByRole('link', { name: 'Server configuration' })
   const configuration = screen.getByRole('link', {
-    name: 'Configuration',
-    exact: true,
+    name: /^Configuration$/,
   })
   expect(server.hasAttribute('data-active')).toBe(true)
   expect(configuration.hasAttribute('data-active')).toBe(false)
@@ -105,4 +110,32 @@ it('keeps unavailable membership pages out of local development while exposing s
   ).toBeTruthy()
   expect(screen.queryByRole('link', { name: /^Users$/ })).toBeNull()
   expect(screen.queryByRole('link', { name: /^User groups$/ })).toBeNull()
+})
+
+it('highlights Studio features under administration for root', () => {
+  render(
+    <SidebarProvider>
+      <StudioManagementNavigation pathname="/admin/studio-features" isRoot />
+    </SidebarProvider>,
+  )
+  const link = screen.getByRole('link', { name: 'Studio features' })
+  expect(link.getAttribute('href')).toBe('/admin/studio-features')
+  expect(link.hasAttribute('data-active')).toBe(true)
+  expect(link.closest('[data-slot="sidebar-group"]')).toBe(
+    screen
+      .getByRole('link', { name: /^Configuration$/ })
+      .closest('[data-slot="sidebar-group"]'),
+  )
+})
+it('hides Studio features for standalone gateways', () => {
+  render(
+    <SidebarProvider>
+      <StudioManagementNavigation
+        pathname="/admin/gateway"
+        isRoot
+        gatewayOnly
+      />
+    </SidebarProvider>,
+  )
+  expect(screen.queryByRole('link', { name: 'Studio features' })).toBeNull()
 })

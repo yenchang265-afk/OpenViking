@@ -70,6 +70,7 @@ export const STUDIO_FEATURES = [
     to: '/monitoring',
     probe: '/api/v1/observer/system',
   },
+  { id: 'studioFeatures', domain: 'management', to: '/admin/studio-features' },
   { id: 'gateway', domain: 'management', to: '/admin/gateway' },
   { id: 'botManagement', domain: 'management', to: '/admin/vikingbot' },
   { id: 'configuration', domain: 'management', to: '/admin/configuration' },
