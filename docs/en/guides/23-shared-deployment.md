@@ -67,6 +67,15 @@ Keep startup configuration identical and managed externally. The startup-file
 editor is read-only in shared mode; runtime account/cluster settings continue to
 use their shared AGFS documents.
 
+The example enables size-tiered AGFS storage: files smaller than 1 MiB and the
+path index live in MySQL; larger files live in S3. Set the Secret's
+`tiered-mysql-dsn` entry to `mysql://openviking:<url-encoded-password>@mysql:3306/openviking`.
+All replicas must use the same DSN and table. Git storage defaults to the tiered
+AGFS backend too. Tiered AGFS creates its index tables on first mount. For an
+existing untiered bucket, stop untiered writers and follow the
+[tiered-storage migration instructions](01-configuration.md#size-tiered-storage)
+before starting replicas; `import_existing` stays false in the example.
+
 Provision account and task tables through your database migration system using:
 
 - `openviking/server/account_stores/sql/init.sql` and applicable changes;

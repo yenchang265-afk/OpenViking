@@ -28,6 +28,15 @@ config:
         secret_key: "${OPENVIKING_S3_SECRET_KEY}"
         prefix: production/
         cache_enabled: false
+      tiered:
+        enabled: true
+        backend: mysql
+        small_threshold_bytes: 1048576
+        import_existing: false
+        mysql:
+          dsn_env: RAGFS_TIERED_DSN
+          table: agfs_entries
+          max_connections: 16
       queuefs:
         backend: cache
         mode: shared
@@ -92,6 +101,9 @@ extraEnv:
   - name: OPENVIKING_MYSQL_PASSWORD
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: mysql-password}
+  - name: RAGFS_TIERED_DSN
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: tiered-mysql-dsn}
   - name: OPENVIKING_REDIS_PASSWORD
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: redis-password}
