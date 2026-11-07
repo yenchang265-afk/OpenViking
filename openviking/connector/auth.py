@@ -57,16 +57,24 @@ def extract_credential_reference(
 def validate_credential_reference(value: Any) -> Dict[str, Any]:
     """Validate the OpenViking-managed credential reference shape.
 
-    ``binding_version`` is optional (DingTalk sends a positive integer). All
-    other fields are non-empty strings and ``type`` is ``oauth``. The reference
-    is forwarded verbatim to the unified resolver, so the kernel never inspects
-    platform-specific credential fields here.
+    ``binding_version`` is optional (DingTalk sends a positive integer), and so
+    is ``ov_account_id``; historical DingTalk references without it use the
+    default data space. All other fields are non-empty strings and ``type`` is
+    ``oauth``. The reference is forwarded to the unified resolver, so the kernel
+    never inspects platform-specific credential fields here.
     """
     if not isinstance(value, dict):
         raise InvalidArgumentError(
             "connector_auth_config contains an invalid credential reference."
         )
-    extra = set(value) - set(_CREDENTIAL_REF_REQUIRED_KEYS) - {"binding_version"}
+    extra = (
+        set(value)
+        - set(_CREDENTIAL_REF_REQUIRED_KEYS)
+        - {
+            "binding_version",
+            "ov_account_id",
+        }
+    )
     if extra or any(key not in value for key in _CREDENTIAL_REF_REQUIRED_KEYS):
         raise InvalidArgumentError(
             "connector_auth_config contains an invalid credential reference."
@@ -83,11 +91,24 @@ def validate_credential_reference(value: Any) -> Dict[str, Any]:
         raise InvalidArgumentError(
             "connector_auth_config credential reference must be an OAuth type."
         )
+    if "ov_account_id" in value:
+        ov_account_id = value["ov_account_id"]
+        if not isinstance(ov_account_id, str) or not ov_account_id.strip():
+            raise InvalidArgumentError(
+                "connector_auth_config ov_account_id must be a non-empty string."
+            )
+        reference["ov_account_id"] = ov_account_id.strip()
+    elif reference["platform"] == "dingtalk":
+        reference["ov_account_id"] = "default"
     if "binding_version" in value:
         binding_version = value["binding_version"]
         if isinstance(binding_version, bool) or not isinstance(binding_version, int):
             raise InvalidArgumentError("connector_auth_config binding_version must be an integer.")
         reference["binding_version"] = binding_version
+    if reference["platform"] == "dingtalk" and reference.get("binding_version", 0) <= 0:
+        raise InvalidArgumentError(
+            "DingTalk credential reference requires a positive binding_version."
+        )
     return reference
 
 
@@ -101,6 +122,16 @@ async def resolve_connector_auth_config(
     ``auth_config`` for the target Connector, and the kernel forwards it
     verbatim without persisting any token or application secret.
     """
+    reference = validate_credential_reference(reference)
+    if reference["platform"] == "dingtalk":
+        if reference["ov_account_id"] != ctx.account_id:
+            raise InvalidArgumentError(
+                "Credential reference does not belong to the current OpenViking data space."
+            )
+        if reference["ov_user_id"] != ctx.user.user_id:
+            raise InvalidArgumentError(
+                "Credential reference does not belong to the current OpenViking user."
+            )
     resolve_url = credential_resolve_url()
     if not resolve_url:
         raise InvalidArgumentError(

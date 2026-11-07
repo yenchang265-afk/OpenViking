@@ -99,6 +99,8 @@ where
 enum S3FailureClass {
     Timeout,
     Transient,
+    /// The bucket or account ran out of storage quota; retrying does not help.
+    QuotaExceeded,
     Permanent,
 }
 
@@ -107,6 +109,7 @@ impl S3FailureClass {
         match self {
             Self::Timeout => Error::timeout(message),
             Self::Transient => Error::Network(message),
+            Self::QuotaExceeded => Error::quota_exceeded(message),
             Self::Permanent => Error::internal(message),
         }
     }
@@ -124,6 +127,29 @@ const TRANSIENT_S3_ERROR_CODES: &[&str] = &[
     "ServiceUnavailable",
 ];
 
+/// Markers S3/TOS-compatible services use for exhausted storage quota.
+///
+/// Throttling (429, `SlowDown`, ...) stays [`S3FailureClass::Transient`] so the
+/// resilience layer keeps retrying it; only quota exhaustion gets its own kind.
+const QUOTA_S3_ERROR_MARKERS: &[&str] = &[
+    "edquot",
+    "quotaexceeded",
+    "quota_exceeded",
+    "quota exceeded",
+    "disk quota",
+    "storage quota",
+    "bucket quota",
+];
+
+fn is_quota_s3_error(code: Option<&str>, message: Option<&str>) -> bool {
+    let text = [code.unwrap_or_default(), message.unwrap_or_default()]
+        .join(" ")
+        .to_ascii_lowercase();
+    QUOTA_S3_ERROR_MARKERS
+        .iter()
+        .any(|marker| text.contains(marker))
+}
+
 fn is_transient_s3_status(status: u16) -> bool {
     matches!(status, 429 | 500 | 502 | 503 | 504)
 }
@@ -140,6 +166,9 @@ where
         SdkError::DispatchFailure(failure) if failure.is_timeout() => S3FailureClass::Timeout,
         SdkError::DispatchFailure(failure) if failure.is_user() => S3FailureClass::Permanent,
         SdkError::DispatchFailure(_) | SdkError::ResponseError(_) => S3FailureClass::Transient,
+        SdkError::ServiceError(se) if is_quota_s3_error(se.err().code(), se.err().message()) => {
+            S3FailureClass::QuotaExceeded
+        }
         SdkError::ServiceError(se) => {
             let transient_code = se
                 .err()
@@ -1908,6 +1937,26 @@ mod tests {
                 assert!(message.contains("raw=HTTP 403: service error"));
             }
             other => panic!("expected internal error, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn test_s3_quota_error_preserves_metadata() {
+        let err = format_sdk_s3_error(
+            "PutObject",
+            "bucket=test-bucket key=tenant/a.txt",
+            &service_sdk_error(403, "EDQUOT"),
+        );
+
+        assert_eq!(err.kind_name(), "quota_exceeded");
+        match err {
+            Error::QuotaExceeded(message) => {
+                assert!(message.contains("S3 PutObject error"));
+                assert!(message.contains("code=EDQUOT"));
+                assert!(message.contains("request_id=req-123"));
+                assert!(message.contains("extended_request_id=ext-456"));
+            }
+            other => panic!("expected quota error, got {other:?}"),
         }
     }
 

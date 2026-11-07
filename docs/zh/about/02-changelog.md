@@ -7,6 +7,8 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
 
 ## 未釋出
 
+- **LangGraph Store 發現錯誤**：非語義 `search()` 和 `list_namespaces()` 現在會傳播
+  後端檔案列表查詢失敗，包括許可權和服務不可用錯誤。明確不存在的名稱空間根路徑仍返回空結果。
 - **移除舊會話遷移（不相容變更）**：刪除舊遷移實現、`ov admin migrate`（含 `--cleanup`）
   及 Python、TypeScript、Go SDK 的對應方法。保留僅 ROOT 可呼叫的
   `POST /api/v1/admin/migrate` 入口，當前返回 `400 / INVALID_ARGUMENT`，不建立任務。

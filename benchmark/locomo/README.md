@@ -10,7 +10,6 @@ benchmark/locomo/
 │   ├── run_eval.py     # 執行 QA 評估
 │   ├── judge.py        # LLM 裁判打分
 │   ├── import_to_ov.py # 匯入資料到 OpenViking
-│   ├── import_and_eval_one.sh  # 單題/批次測試指令碼
 │   ├── stat_judge_result.py    # 統計評分結果
 │   ├── run_full_eval.sh        # 一鍵執行完整評測流程
 │   ├── data/           # 測試資料目錄
@@ -68,7 +67,7 @@ bash run_full_eval.sh --skip-import  # 跳過匯入，僅評測
 
 ### 單題/批次測試
 
-使用 `import_and_eval_one.sh` 可以快速測試單個問題或批次測試某個 sample：
+`run_full_eval.sh` 通過位置引數支援單題測試和批次測試某個 sample：
 
 ```bash
 cd benchmark/locomo/vikingbot
@@ -76,15 +75,15 @@ cd benchmark/locomo/vikingbot
 
 **單題測試：**
 ```bash
-./import_and_eval_one.sh 0 2          # sample 索引 0, question 2
-./import_and_eval_one.sh conv-26 2    # sample_id conv-26, question 2
-./import_and_eval_one.sh conv-26 2 --skip-import  # 跳過匯入
+./run_full_eval.sh 0 2                        # sample 索引 0, question 2
+./run_full_eval.sh conv-26 2                  # sample_id conv-26, question 2
+./run_full_eval.sh conv-26 2 --skip-import    # 跳過匯入
 ```
 
 **批次測試單個 sample：**
 ```bash
-./import_and_eval_one.sh conv-26       # conv-26 所有問題
-./import_and_eval_one.sh conv-26 --skip-import
+./run_full_eval.sh conv-26                    # conv-26 所有問題
+./run_full_eval.sh conv-26 --skip-import      # 跳過匯入
 ```
 
 ### 分步使用說明

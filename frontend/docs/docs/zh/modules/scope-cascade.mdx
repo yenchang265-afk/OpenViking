@@ -1,0 +1,35 @@
+# ScopeCascade 級聯選擇
+
+只接入三個 API 適配函式，無需在業務側重寫請求狀態和級聯邏輯。`useScopeCascade` 返回穩定的例項控制器，不訂閱三級資料；`ScopeCascade` 的三個葉子選擇器分別訂閱，保持獨立更新，不依賴 `memo`。
+
+## 基礎用法
+
+```tsx file="../../_demos/scope-cascade-basic.tsx" preview
+
+```
+
+必填項只有三個介面，返回 `Promise<readonly ScopeSwitcherOption[]>`，即 `{ id, label, icon?, description?, disabled? }`。鑑權、介面地址、響應對映和許可權仍由適配函式負責。保持函式引用穩定；任一適配函式變化都會取消請求並重置全部選擇。不同帳號使用獨立例項或 React `key` 隔離。
+
+| 介面            | 引數                                                      |
+| --------------- | --------------------------------------------------------- |
+| `loadLibraries` | `signal: AbortSignal`                                     |
+| `loadSpaces`    | `libraryId: string, signal: AbortSignal`                  |
+| `loadUsers`     | `libraryId: string, spaceId: string, signal: AbortSignal` |
+
+掛載後加載庫列表，不自動選擇首項。選庫後清空空間和使用者，再載入空間；選空間後清空使用者，再載入使用者；選使用者只更新本級。重複選擇同一身份不更新。協調器取消過期請求，即使介面忽略 signal，舊結果也不能覆蓋新資料。解除安裝取消全部請求，並支援 Strict Mode 的建立/清理流程。
+
+預設檢視封裝本地搜尋、載入/空態/錯誤、重試及獨立展開狀態。每級 `refresh()` 僅過載本級；重新整理上級不會過載下游，除非當前選中項消失或被停用，此時清空並停用下游。介面錯誤隻影響本級。當前版本載入完整列表，不內建服務端搜尋和分頁；這些場景可使用純檢視元件自行接入。
+
+## 自定義檢視
+
+```tsx file="../../_demos/scope-cascade-custom.tsx" preview
+
+```
+
+在各個葉子元件內部呼叫 `useScopeCascadeLevel(controller.levels[index])`，不要在根元件集中訂閱三級。快照提供 `options`、`selected`、`loading`、`error`、`enabled`、`parentIds`、`scopeKey`；每級提供 `select(option)` 和 `refresh()`。自定義檢視以 `scopeKey` 為 key 重置上游改變後的區域性狀態。
+
+業務內容區要獲取完整身份時，可獨立訂閱使用者通道：`parentIds[0]` 為庫，`parentIds[1]` 為空間，`selected?.id` 為使用者。僅在 `enabled && selected` 時請求業務內容；上游切換會先清空下游選擇，再通知訂閱者。
+
+## 檢視屬性
+
+`ScopeCascade` 必填 `controller`。可選 `levelNames` 按庫/空間/使用者順序指定名稱，`labels` 設定載入、搜尋、空態和錯誤文案，`retryLabel` 設定重試按鈕文案。`className`、`style` 等 HTML 屬性透傳給佈局容器。單獨使用 Hook 不需要 CSS；預設檢視引入 `@openviking/react/modules/scope-cascade/style.css`。

@@ -13,12 +13,11 @@ import json_repair
 from openviking.compile import file_ops
 from openviking.compile.hashing import content_hash
 from openviking.compile.models import COMPILE_DRAFT_ROOT
-from openviking.compile.pipeline_io import ROOT, TaskFiles, retry_allowed
+from openviking.compile.pipeline_io import TaskFiles, retry_allowed
 from openviking.compile.renderer import validate_relative_file_path
 from openviking.compile.results import FileResponse, RecordResponse
 from openviking.compile.schemas import result_schema
 from openviking.compile.skill_resources import EvidenceReader
-from openviking.compile.target_tools import GlobTool
 from openviking.compile.tool import Tool
 
 # Lines returned by one read_file call when no limit is given.
@@ -332,53 +331,36 @@ def agent_runner(limits):
 
     Each call has fresh history, a private scratch root and its stage's iteration
     limit. Large files are submitted by reference, then hashed and checked. Every
-    model request goes through the task's bounded, metered JsonModel.call. Final
-    review can browse task files, with writes confined to its staged outputs.
+    model request goes through the task's bounded, metered JsonModel.call.
     """
 
     async def run(system, data, schema, validate, model, *, stage="agent"):
         sandbox = model.files.sandbox
-        final_review = stage == "final_review_agent"
-        root = ROOT if final_review else f"{COMPILE_DRAFT_ROOT}/{uuid.uuid4().hex}"
+        root = f"{COMPILE_DRAFT_ROOT}/{uuid.uuid4().hex}"
         evidence = EvidenceReader(model.files, data)
-        submit = EmitResult(
-            schema, validate, None if final_review else sandbox, root, data, model.metrics
-        )
+        submit = EmitResult(schema, validate, sandbox, root, data, model.metrics)
         assignment = data
         if not model.fits(system, data, schema):
             assignment = await prepare_assignment(data, sandbox, root)
             evidence.delivered.clear()
         tools: dict[str, Tool] = {"emit": submit}
-        if final_review and model.resources:
-            # Staging holds only this run's outputs; review checks references in the target.
-            glob = GlobTool(model.resources.client, data["target"])
-            tools[glob.name] = glob
         if model.resources:
             tools[model.resources.name] = model.resources
         if evidence.allowed - evidence.delivered:
             tools[evidence.name] = evidence
-        for name in (
-            "read_file",
-            "write_file",
-            "edit_file",
-            *(["list_dir"] if final_review else []),
-        ):
-            tools[name] = ScratchFileTool(
-                name, sandbox, root, data["artifact_directory"] if final_review else None
-            )
+        for name in ("read_file", "write_file", "edit_file"):
+            tools[name] = ScratchFileTool(name, sandbox, root)
         schemas = [tool.to_schema() for tool in tools.values()]
         messages: list[dict[str, Any]] = [
             {
                 "role": "system",
-                # These stages define their own file access and submission rules.
-                "content": system
-                + ("" if stage == "map_agent" or final_review else _AGENT_INSTRUCTIONS),
+                # Map defines its own file access and submission rules.
+                "content": system + ("" if stage == "map_agent" else _AGENT_INSTRUCTIONS),
             },
             {"role": "user", "content": json.dumps(assignment, ensure_ascii=False)},
         ]
         failures: Counter = Counter()
-        iterations = limits.final_review_iterations if final_review else limits.subagent_iterations
-        for _ in range(iterations):
+        for _ in range(limits.subagent_iterations):
             response = await model.call(stage, messages, schemas, max_tokens=model.max_tokens)
             if response.finish_reason in {"length", "max_tokens"}:
                 # Never execute incomplete tool calls from truncated output.

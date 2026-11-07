@@ -413,6 +413,25 @@ JSON 輸出 - 錯誤：
 | PUT | `/api/v1/skills/{skill_name}` | 更新技能 |
 | DELETE | `/api/v1/skills/{skill_name}` | 刪除技能 |
 
+### [MCP 與即時上下文](26-mcp-live-context.md)
+
+| 方法 | 路徑 | 說明 |
+|------|------|------|
+| POST | `/api/v1/mcps/validate` | 校驗 MCP Server 連線並發現工具，不儲存配置 |
+| POST | `/api/v1/mcps` | 註冊 MCP Server 併發布工具目錄 |
+| GET | `/api/v1/mcps` | 列出已註冊 MCP Server |
+| GET | `/api/v1/mcps/{name}` | 檢視 MCP Server 和當前工具定義 |
+| GET | `/api/v1/mcps/status` | 檢查 MCP Server 是否可訪問 |
+| POST | `/api/v1/mcps/{name}/sync` | 同步工具目錄並報告受影響的即時上下文掛載 |
+| DELETE | `/api/v1/mcps/{name}` | 刪除 MCP Server 和工具目錄 |
+| POST | `/api/v1/mcps/find` | 語義檢索 MCP 工具 |
+| POST | `/api/v1/mcps/invoke` | 呼叫 MCP 工具 |
+| POST | `/api/v1/mcps/mount` | 建立或替換一個 MCP 即時上下文節點 |
+| POST | `/api/v1/mcps/batch-mount` | 批次建立或替換即時上下文節點 |
+| DELETE | `/api/v1/mcps/mount` | 刪除一個掛載及其節點 |
+| POST | `/api/v1/mcps/batch-unmount` | 批次刪除掛載及其節點 |
+| GET | `/api/v1/mcps/mounts` | 查詢 MCP Server 或工具的掛載 |
+
 ### [會話](05-sessions.md)、[記憶](16-memory.md)與 [Agent 進化](19-agent-evolution.md)
 
 | 方法 | 路徑 | 說明 |
@@ -428,6 +447,7 @@ JSON 輸出 - 錯誤：
 | GET | `/api/v1/sessions/{session_id}/archives/{archive_id}` | 獲取會話歸檔 |
 | DELETE | `/api/v1/sessions/{session_id}` | 刪除會話 |
 | POST | `/api/v1/sessions/{session_id}/commit` | 歸檔會話並提取記憶 |
+| POST | `/api/v1/sessions/{session_id}/archives/{archive_id}/retry` | 重試失敗或無主的會話歸檔 |
 | POST | `/api/v1/sessions/{session_id}/messages` | 新增單條訊息 |
 | POST | `/api/v1/sessions/{session_id}/messages/batch` | 批量添加消息 |
 | POST | `/api/v1/search/recall` | 已棄用：search 介面 `mode="context"` 之上的輕量預設 |
@@ -505,9 +525,11 @@ JSON 輸出 - 錯誤：
 |------|------|------|
 | GET | `/api/v1/admin/configuration` | 獲取 Cluster 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/configuration` | 更新 Cluster 層執行時配置 |
+| GET | `/api/v1/studio/features` | 獲取 Studio 功能開關（任何已認證使用者） |
+| PATCH | `/api/v1/admin/studio/features` | 更新 Studio 功能開關（ROOT） |
 | POST | `/api/v1/admin/configuration/test-model` | 測試草稿模型或 Embedding 連線，不儲存配置 |
 | POST | `/api/v1/admin/restart` | 請求支援該能力的服務程序優雅重啟（僅 ROOT） |
-| GET | `/api/v1/admin/accounts/{account_id}/configuration` | 獲取 Account 層顯式執行時配置 |
+| GET | `/api/v1/admin/accounts/{account_id}/configuration` | 獲取 Account 配置及生效的 Agent 進化開關 |
 | PATCH | `/api/v1/admin/accounts/{account_id}/configuration` | 更新 Account 層執行時配置 |
 | GET | `/api/v1/admin/agent-evolution` | 獲取 Agent 進化狀態（deprecated） |
 | PUT | `/api/v1/admin/agent-evolution` | 更新 Agent 進化狀態（deprecated） |
@@ -525,8 +547,11 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/admin/accounts/{account_id}/users` | 註冊使用者 |
 | GET | `/api/v1/admin/accounts/{account_id}/users` | 列出使用者 |
 | GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 獲取單個使用者的無憑據成員資訊（user_id、role） |
-| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 獲取使用者記憶策略 |
-| PATCH | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 更新使用者記憶策略 |
+| GET | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 獲取使用者新增位置、記憶策略和 TTL |
+| PATCH | `/api/v1/admin/accounts/{account_id}/users/{user_id}/settings` | 更新使用者新增位置、記憶策略和 TTL |
+| GET | `/api/v1/user-settings/add-locations` | 讀取當前使用者的新增位置（deprecated） |
+| PATCH | `/api/v1/user-settings/add-locations` | 更新當前使用者的新增位置（deprecated） |
+| DELETE | `/api/v1/user-settings/add-locations` | 清除當前使用者的新增位置設定（deprecated） |
 | DELETE | `/api/v1/admin/accounts/{account_id}/users/{user_id}` | 移除使用者 |
 | PUT | `/api/v1/admin/accounts/{account_id}/users/{user_id}/role` | 在 USER 與 ADMIN 之間變更使用者角色 |
 | POST | `/api/v1/admin/accounts/{account_id}/users/{user_id}/key` | 重新生成使用者 Key |
@@ -535,7 +560,7 @@ JSON 輸出 - 錯誤：
 | DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}` | 刪除使用者組 |
 | GET | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 列出使用者組成員 |
 | PUT | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 批次新增使用者組成員 |
-| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members/{user_id}` | 移除使用者組成員 |
+| DELETE | `/api/v1/admin/accounts/{account_id}/groups/{group_id}/members` | 批次移除使用者組成員 |
 | GET | `/api/v1/privacy-configs` | 列出隱私配置分類 |
 | GET | `/api/v1/privacy-configs/tree` | 樹形列出當前目標和欄位後設資料，不返回值 |
 | POST | `/api/v1/privacy-configs/scan` | 掃描或修復正文中的登記值 |
@@ -625,4 +650,4 @@ JSON 輸出 - 錯誤：
 | 資料生命週期 | Watch、快照、OVPack |
 | 運維與觀測 | 系統、任務、Observer、Metrics |
 | 身份與治理 | 管理員、ACL、隱私配置 |
-| 協議與擴充 | OpenViking Assets、WebDAV、Agent Runtime API、VikingBot API |
+| 協議與擴充 | MCP 與即時上下文、OpenViking Assets、WebDAV、Agent Runtime API、VikingBot API |

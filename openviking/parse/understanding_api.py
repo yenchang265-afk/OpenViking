@@ -43,6 +43,7 @@ from openviking.parse.temp import get_parser_download_temp_dir
 from openviking.storage.viking_fs import get_viking_fs
 from openviking.utils.zip_safe import safe_extract_zip
 from openviking_cli.exceptions import InvalidArgumentError
+from openviking_cli.utils.config.open_viking_config import ParserApiConfig
 from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -64,11 +65,11 @@ class UnderstandingAPI(BaseParser):
     UnderstandingAPI: Third-party parse client.
     """
 
-    def __init__(self):
-        from openviking_cli.utils.config.open_viking_config import get_openviking_config
+    def __init__(self, parser_api: Optional[ParserApiConfig] = None):
+        if parser_api is None:
+            from openviking_cli.utils.config.open_viking_config import get_openviking_config
 
-        ov_config = get_openviking_config()
-        parser_api = ov_config.parser_api
+            parser_api = get_openviking_config().parser_api
         raw_host = (parser_api.host or "").rstrip("/")
         self._api_host = raw_host
         self._api_base = raw_host if raw_host.endswith("/api/v3") else f"{raw_host}/api/v3"
@@ -83,7 +84,7 @@ class UnderstandingAPI(BaseParser):
 
         if not self._api_host:
             raise ValueError("parser_api.host is required for UnderstandingAPI")
-        if not self._api_key:
+        if not self._api_key.strip():
             raise ValueError("parser_api.api_key is required for UnderstandingAPI")
 
         self._video_exts = {e.lstrip(".") for e in VIDEO_EXTENSIONS}
@@ -132,7 +133,7 @@ class UnderstandingAPI(BaseParser):
             ("http://", "https://")
         ):
             url = original_source
-        elif prepared_file_id:
+        elif prepared_file_id or prepared_response_id:
             local_path = None
         else:
             local_path = source_path
@@ -143,7 +144,9 @@ class UnderstandingAPI(BaseParser):
             doc_type = resolved_extension or Path(parsed.path).suffix.lower().lstrip(".")
         else:
             inferred_name = local_path.name if local_path is not None else Path(source_str).name
-            if not prepared_file_id and (local_path is None or not local_path.is_file()):
+            if not (prepared_file_id or prepared_response_id) and (
+                local_path is None or not local_path.is_file()
+            ):
                 raise ValueError(
                     "UnderstandingAPI supports http(s) URLs or local files. "
                     "Got an invalid local file path."
@@ -224,8 +227,9 @@ class UnderstandingAPI(BaseParser):
         except UnderstandingAPIError:
             raise
         except Exception as exc:
-            logger.warning("[UnderstandingAPI] Parse failed: %s; meta=%s", exc, task_meta)
-            raise UnderstandingAPIError(str(exc), task_meta) from exc
+            message = self._redact_error(str(exc))
+            logger.warning("[UnderstandingAPI] Parse failed: %s; meta=%s", message, task_meta)
+            raise UnderstandingAPIError(message, task_meta) from exc
 
         content_type = (
             "video"
@@ -369,7 +373,21 @@ class UnderstandingAPI(BaseParser):
                         texts.append(text)
             if texts:
                 summary["output_text"] = texts
-        return summary
+
+        def redact(value):
+            if isinstance(value, str):
+                return self._redact_error(value)
+            if isinstance(value, dict):
+                return {key: redact(item) for key, item in value.items()}
+            if isinstance(value, list):
+                return [redact(item) for item in value]
+            return value
+
+        return redact(summary)
+
+    def _redact_error(self, message: str) -> str:
+        api_key = getattr(self, "_api_key", "")
+        return message.replace(api_key, "[redacted]") if api_key else message
 
     def _error_message(self, obj: Any) -> str:
         """Extract the failure reason without adding remote identifiers."""
@@ -638,7 +656,9 @@ class UnderstandingAPI(BaseParser):
             parts=[{"part_number": n, "etag": e} for n, e in sorted(parts.items())],
         )
         if complete_obj.get("status") != "active" or not complete_obj.get("id"):
-            raise RuntimeError(f"uploads complete did not return file object: {complete_obj}")
+            raise RuntimeError(
+                f"uploads complete did not return file object: {self._safe_error_summary(complete_obj)}"
+            )
         return complete_obj
 
     async def _download_zip(self, zip_url: str) -> Path:

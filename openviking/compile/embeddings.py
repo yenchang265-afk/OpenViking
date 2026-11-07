@@ -11,7 +11,11 @@ from openviking.core.path_variables import resolve_path_variables
 from openviking.core.uri_validation import validate_request_viking_uri
 from openviking.models.embedder.base import embed_compat
 from openviking.server.identity import RequestContext
-from openviking_cli.exceptions import InvalidArgumentError
+from openviking_cli.exceptions import (
+    EmbeddingFailedError,
+    InvalidArgumentError,
+    OpenVikingError,
+)
 
 
 async def compile_embeddings(
@@ -43,9 +47,15 @@ async def compile_embeddings(
     # Small chunks also bound providers whose embed_async implementation has no limiter.
     vectors = []
     for start in range(0, len(texts), 4):
-        batch = await asyncio.gather(
-            *(embed_compat(embedder, text) for text in texts[start : start + 4])
-        )
+        try:
+            batch = await asyncio.gather(
+                *(embed_compat(embedder, text) for text in texts[start : start + 4])
+            )
+        except OpenVikingError:
+            raise
+        except Exception as exc:
+            # Match the REST contract so Shuffle can fall back to text routing.
+            raise EmbeddingFailedError(f"Compile embedding failed: {exc}") from exc
         for result in batch:
             vector = result.dense_vector
             if not vector or len(vector) > 8192 or not all(math.isfinite(x) for x in vector):

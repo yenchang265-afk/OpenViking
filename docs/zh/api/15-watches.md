@@ -13,7 +13,7 @@ Watch API 管理資源的週期檢查、暫停、恢復和手動觸發。
 通過 `task_id` 定位任務，或通過 `to_uri` 查詢唯一可訪問的任務。多個 Connector Watch 可以共享目標；此時按 URI 操作會返回 `409 Conflict`，需要改用 `task_id`。同時提供兩個引數時，它們必須指向同一任務，否則返回 `400`。
 
 **操作**：
-- **列出**（`GET /api/v1/watches`）— 返回 `{tasks, total}`；可傳 `?active_only=true` 過濾；傳 `?to_uri=...` 時降級為單任務查詢
+- **列出**（`GET /api/v1/watches`）— 返回 `{tasks, total}`；可傳 `?active_only=true` 過濾、`?limit=100` 分頁，或 `?to_uri=...` 查詢單個任務
 - **檢視**（`GET /api/v1/watches/{task_id}`）— 檢視單個任務；可選 `?to_uri=` 做跨鍵一致性校驗
 - **更新**（`PATCH /api/v1/watches/{task_id}` 或 `PATCH /api/v1/watches?to_uri=...`）— 部分更新 `watch_interval`、`is_active`、`reason`、`instruction`。`is_active` 與 `watch_interval` 獨立：修改 `is_active` 可在不丟失配置週期的前提下暫停/恢復任務。
 - **刪除**（`DELETE /api/v1/watches/{task_id}` 或 `DELETE /api/v1/watches?to_uri=...`）
@@ -29,6 +29,25 @@ Watch API 管理資源的週期檢查、暫停、恢復和手動觸發。
 
 對每個單任務端點，路徑中的 `{task_id}` 都可用查詢引數 `?to_uri=` 替代。CLI 的 `<key>` 引數會自動分類：任何以 `viking://` 開頭的值走 by-URI 路徑，其他值視為 task_id（其它 scheme 如 `http://` 會在本地直接報錯，避免靜默 404）。
 
+**`GET /watches` 分頁**
+
+| 引數 | 型別 | 說明 |
+|------|------|------|
+| limit | integer | 每頁 1–200 條；傳入後啟用分頁。 |
+| cursor | string | 使用上一頁返回的 `next_cursor`；單獨傳 cursor 時每頁預設 100 條。 |
+| active_only | boolean | 預設 false；後續頁需保持同一過濾條件。 |
+
+分頁返回 `{tasks, total, has_more, next_cursor}`。`total` 是當前可見且符合過濾條件
+的 Watch 總數；末頁 `next_cursor` 為 `null`。按 `created_at DESC, task_id DESC`
+排序。使用相同服務和表的 MySQL 節點可共享游標；請求身份和過濾條件必須一致。
+非法游標、分頁與 `to_uri` 單任務查詢混用返回 `400`。不傳 `limit/cursor` 時
+保留原來的不分頁響應。
+
+每頁讀取當前資料，不提供跨請求快照；首頁之後新增且排在游標之前的 Watch 需從
+首頁重新查詢，刪除游標對應的 Watch 不影響繼續翻頁。MySQL 使用游標條件和
+`LIMIT`，只把公開欄位讀入應用，不讀取鑑權和 checkpoint。File 從已有記憶體快取
+掃描並選出一頁，不重讀磁碟快照，也不排序整個列表。精確總數仍需統計匹配記錄。
+
 **`PATCH /watches` 請求體**（欄位均可選，至少需提供一個）
 
 | 欄位 | 型別 | 說明 |
@@ -37,6 +56,12 @@ Watch API 管理資源的週期檢查、暫停、恢復和手動觸發。
 | is_active | bool | 切換啟用狀態而保留配置週期（暫停 / 恢復）。 |
 | reason | string | 更新該監控任務的記錄原因。 |
 | instruction | string | 更新語義處理指令。 |
+
+自動排程在目標鎖內讀取當前引數並佔用 Watch，凍結本輪引數後才完成 due 選取。
+佔用後的引數修改從下一輪生效。暫停阻止後續自動選取，已選取或正在執行的任務繼續執行；暫停期間
+仍可手動觸發。
+
+託管 Connector 的控制面還可獨立提交 `credential_state` 通知，不能與上述欄位組合。該物件包含引用歸屬欄位 `account_id`、`resource_id`、`user_id`、`ov_user_id`、`ov_account_id`、`type`、`platform`，以及正整數儲存版本 `version` 和布林值 `authorized`。核心核對 watch 私有引用並忽略過期或重複通知；撤銷時記錄自動暫停，重新授權時僅恢復自動暫停的任務。手動暫停/恢復清除自動暫停標記，執行歷史保留。通知水位和暫停標記只儲存在私有 watch 資料中，不出現在查詢響應；歷史無標記的暫停任務保留原狀態。
 
 未識別字段會被拒絕，並返回 HTTP `400` 和 `INVALID_ARGUMENT`（請求模型使用 `extra="forbid"`）。未傳欄位保留原值。
 
@@ -48,6 +73,14 @@ Watch API 管理資源的週期檢查、暫停、恢復和手動觸發。
 # 列出活躍監控任務（去掉 ?active_only 可同時包含已暫停的任務）
 curl -s "http://localhost:1933/api/v1/watches?active_only=true" \
   -H "X-API-Key: your-key"
+
+# 首頁；後續頁攜帶返回的 next_cursor，並保持過濾條件
+curl -s "http://localhost:1933/api/v1/watches?active_only=true&limit=100" \
+  -H "X-API-Key: your-key"
+curl -sG "http://localhost:1933/api/v1/watches" \
+  -H "X-API-Key: your-key" \
+  --data-urlencode "active_only=true" --data-urlencode "limit=100" \
+  --data-urlencode "cursor=<next_cursor>"
 
 # 暫停一個監控任務而保留其檢查週期
 curl -X PATCH "http://localhost:1933/api/v1/watches/<task_id>" \

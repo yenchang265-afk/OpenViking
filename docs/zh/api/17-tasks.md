@@ -15,10 +15,15 @@
 **任務狀態**：
 - `pending`: 任務等待執行
 - `running`: 任務執行中
-- `cancelling`: 已請求取消，正在等待該任務的持久化佇列訊息和程序內工作結束
+- `cancelling`: 已請求取消，正在等待執行中的佇列工作退出
 - `completed`: 任務成功完成
 - `failed`: 任務失敗
 - `cancelled`: 任務已取消
+
+取消會立即結算待執行的 Work 和 Inline Work。Inline 沒有佇列訊息，執行程序
+退出後無法通過訊息恢復，因此它不阻塞 Task 進入 cancelled。仍存活的遠端程序
+會繼續輪詢本地活躍任務的取消狀態，收到訊號可能延遲一個輪詢週期（當前為 30 秒）；
+協程清理還可能需要更長時間。取消不會回滾已經完成的業務寫入。
 
 **程式碼入口**：
 - `openviking/server/routers/tasks.py:get_task()` - HTTP 路由

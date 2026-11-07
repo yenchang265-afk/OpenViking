@@ -848,6 +848,18 @@ class VikingClient:
             "target_uri": target_uri,
         }
 
+    async def find_mcp_tools(self, query: str, limit: int = 10) -> Dict[str, Any]:
+        """Discover OpenViking-managed MCP tools with complete definitions."""
+        return await self.client.find_mcp_tools(query, limit=limit)
+
+    async def invoke_mcp_tool(
+        self,
+        tool_uri: str,
+        arguments: Optional[Mapping[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """Invoke an OpenViking-managed MCP tool using the current identity."""
+        return await self.client.invoke_mcp_tool(tool_uri, arguments=arguments)
+
     async def search_user_memory(self, query: str, user_id: str) -> list[Any]:
         effective_user_id = self._effective_user_id(user_id)
         uri_user_memory = self._memory_target_uri(effective_user_id)
@@ -1289,6 +1301,10 @@ class VikingClient:
         keep_recent_turn_count: Optional[int] = None,
         retained_message_token_budget: Optional[int] = None,
         min_raw_tail_steps: Optional[int] = None,
+        session_window_context: Optional[int] = None,
+        summary_token_ratio: Optional[float] = None,
+        retained_token_ratio: Optional[float] = None,
+        reasoning_effort: Optional[str] = None,
     ) -> Dict[str, Any]:
         await self.ensure_session(
             session_id,
@@ -1306,6 +1322,10 @@ class VikingClient:
                 "keep_recent_turn_count": keep_recent_turn_count,
                 "retained_message_token_budget": retained_message_token_budget,
                 "min_raw_tail_steps": min_raw_tail_steps,
+                "session_window_context": session_window_context,
+                "summary_token_ratio": summary_token_ratio,
+                "retained_token_ratio": retained_token_ratio,
+                "reasoning_effort": reasoning_effort,
             }.items()
             if value is not None
         }
@@ -1327,6 +1347,10 @@ class VikingClient:
         keep_recent_turn_count: Optional[int] = None,
         retained_message_token_budget: Optional[int] = None,
         min_raw_tail_steps: Optional[int] = None,
+        session_window_context: Optional[int] = None,
+        summary_token_ratio: Optional[float] = None,
+        retained_token_ratio: Optional[float] = None,
+        reasoning_effort: Optional[str] = None,
     ):
         """Append messages to a stable session and commit it."""
         session_user_id = self._effective_session_user_id(user_id)
@@ -1351,6 +1375,10 @@ class VikingClient:
                 "keep_recent_turn_count": keep_recent_turn_count,
                 "retained_message_token_budget": retained_message_token_budget,
                 "min_raw_tail_steps": min_raw_tail_steps,
+                "session_window_context": session_window_context,
+                "summary_token_ratio": summary_token_ratio,
+                "retained_token_ratio": retained_token_ratio,
+                "reasoning_effort": reasoning_effort,
             }.items()
             if value is not None
         }

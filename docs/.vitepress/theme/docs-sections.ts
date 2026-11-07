@@ -208,6 +208,9 @@ export const sections: DocSection[] = [
         p('context-compilation/04-daily-report'),
         p('context-compilation/05-knowledge-distillation'),
         p('context-compilation/06-memory-consolidation')
+      ]),
+      g('Live context integration and arrangement', '即時上下文接入和編排', [
+        p('guides/24-live-context-arrangement')
       ])
     ]
   },
@@ -273,6 +276,7 @@ export const sections: DocSection[] = [
         p('api/26-rules')
       ]),
       g('Data and extension APIs', '資料與擴充 API', [
+        p('api/26-mcp-live-context'),
         p('api/11-snapshot'),
         p('api/14-ovpack'),
         p('api/22-openviking-assets'),

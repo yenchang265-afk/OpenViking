@@ -1,0 +1,95 @@
+# 快速開始
+
+OpenViking UI 是構建 OpenViking AI 應用介面的 React 基礎。OpenViking 是面向 AI 智慧體的上下文資料庫；本 workspace 提供 Rslib 構建、雙語文件、分層目錄約定與樣式隔離方案。應用負責業務介面、資料、認證與流程編排。
+
+包提供 FileTree、FilePreview、Tui、ScopeSwitcher、AgentConnect 五個佔位檢視元件、五種檔案型別圖示，以及四個業務模組佔位元件。當前範圍見[元件概覽](../components/)和[模組概覽](../modules/)；業務 Hook 尚未實現。
+
+## 本地執行
+
+使用 Node.js 22.12 或更新版本。在倉庫根目錄執行：
+
+```bash
+cd frontend
+npm ci
+npm run dev
+```
+
+開啟 Rspress 輸出的 `/ui/` 地址。英文使用 `/ui/`，簡體中文使用 `/ui/zh/`；頂部語言選單支援在對應頁面間切換。
+
+workspace 開發外掛會在文件伺服器啟動前執行 Rslib watch。文件示例通過公開匯出使用構建產物，不使用原始碼別名。React 和 ReactDOM 為 peer dependencies，宣告支援 React 18.2 和 React 19；文件應用使用 React 19。
+
+## 組織應用程式碼
+
+- `packages/react/src/components/`：可複用檢視，通過 props 接收處理後的資料，通過回調錶達使用者意圖。
+- `packages/react/src/modules/`：四個可匯入的佔位元件，業務 Hook 與組合互動後續遷入。
+- `packages/react/src/hooks/` 與 `utils/`：包內共享邏輯，沒有公開子路徑。
+- `docs/docs/en/` 與 `docs/docs/zh/`：對應的雙語文件頁面；共用的可執行示例放在 `docs/docs/_demos/`。
+
+應用專屬流程與認證留在應用層；模組 Hook 通過共享 Client 載入資料。元件不獲取業務資料，也不依賴應用路由。
+
+## 公開入口
+
+根入口 `@openviking/react` 當前匯出 `FileTree`、`Tui`、`ScopeSwitcher`、`AgentConnect` 與四個業務模組佔位元件及其主 Props 型別；`FilePreview` 只從 `components/file-preview` 子路徑匯出，因為它的型別依賴可選的 `@ark-design/ui`。行型別、選項型別、控制代碼與文案包等子型別一律從子路徑匯入。`@openviking/react/icons` 提供五種檔案型別圖示。
+
+沒有 `components` 或 `modules` 分類聚合 JavaScript 入口。業務佔位元件使用獨立的 `modules/<模組>` 入口：
+
+```tsx
+import { FileBrowser } from '@openviking/react/modules/file-browser';
+import '@openviking/react/modules/file-browser/style.css';
+
+<FileBrowser />;
+```
+
+四個模組的 props 已定型——請求配置、受控狀態、回撥、插槽與文案——但佔位元件本體仍只消費 `className`、`style` 與一個文案欄位，且均無需 Provider。可執行示例與完整屬性表見[業務模組](../modules/)。
+
+業務模組將按具體能力組合取數 Hook 與檢視，從對應模組入口分別匯出 Hook 和組合檢視，接入方可只複用 Hook 並自行組裝 UI。認證、帳號作用域、路由、許可權及完整頁面流程由宿主負責。業務 Hook 及跨模組公共 Hook 當前尚無實現或匯出。
+
+模組規劃聚焦個人終端：`file-browser` 將目錄、搜尋和預覽作為一個整體，統一維護資源選擇、結果定位、內容載入與重新整理聯動；宿主可按需受控指定當前資源。`console` 將對話檢視與 TUI 作為一個互動面板，內部協調模式切換、工具欄和公共上下文，各自保留會話與命令狀態。Agent 接入、任務管理和當前 User 的用量統計分別接入。宿主負責模組間佈局、導航與聯動；產品引導、資源與 Skill 匯入流程及同步配置由宿主負責，經驗看板和會話內容通過檔案瀏覽模組的預覽擴充套件接入，管理後臺不在此範圍內。這些互動仍為規劃，當前模組元件僅展示佔位內容。
+
+請求配置通過 `@openviking/react/client` 的 `OpenVikingProvider` 下發：`baseURL` 與身份欄位（`apiKey`、`accountId`、`userId`、`resourceId`），請求頭由 Client 組裝。請求客戶端已作為 `@openviking/react/client` 子路徑落地：基於 `fetch` 的 `createOvClient`，以及 `OvRequestOptions`、`OvClient` 與 `OvClientError`。模組和獨立 Hook 可通過 `requestOptions` 按欄位覆蓋，優先順序為區域性配置、最近的 Provider、庫預設值；`baseURL` 為空表示同源請求。標準 API 接入無需逐模組實現 Adapter，非標準閘道器集中在宿主請求接入層適配。Provider 已實現並匯出；模組 Hook 尚未實現。
+
+## 樣式
+
+樣式使用 `ov-` 字首的穩定類名，變數使用 `--ov-ui-` 字首，不引入全域性 reset。JavaScript 匯入不會自動載入 CSS；按需選擇整包、分類集合或獨立樣式：
+
+```ts
+import '@openviking/react/style.css';
+// 也可選擇 @openviking/react/components/style.css
+// 或 @openviking/react/modules/style.css。
+// 獨立入口：@openviking/react/<分類>/<模組>/style.css。
+```
+
+Rslib 將 ESM JavaScript、TypeScript 宣告和 CSS 輸出到 `packages/react/dist/`。每個公開樣式入口可獨立使用；模組樣式當前覆蓋佔位檢視，組合檢視遷入後須包含其元件依賴。後續單獨使用 Hook 無需 CSS。
+
+可以在容器元素上調整主題變數，也可以直接指定具體的元件類名：
+
+```css
+.my-workbench {
+  --ov-ui-radius: 4px;
+  --ov-ui-row-hover: rgb(0 0 0 / 6%);
+}
+
+.my-workbench .ov-file-tree__row {
+  height: 32px;
+}
+```
+
+## 構建與檢查
+
+在 `frontend/` 中執行：
+
+```bash
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm run preview
+```
+
+`lint` 先構建元件庫，再通過 Rslint 檢查程式碼規則與型別，並使用 Prettier 檢查格式。`typecheck` 檢查元件庫、構建配置與文件 TypeScript 專案。`test` 構建元件庫並驗證公開包入口。`build` 生成元件庫和靜態文件，站點輸出到 `docs/doc_build/`。
+
+在 `npm run lint --` 後傳入檔案或加引號的 glob，可限定格式檢查和 lint 的目標；型別檢查仍覆蓋配置的完整專案。JavaScript 和 TypeScript 檔案最多 200 行，不計空行和純註釋行。
+
+## 部署
+
+`frontend/` 下的變更觸發 UI 檢查。在 `main` 上，現有產品文件部署會將 UI 站點合併到同一完整產物或儲存桶的 `/ui/` 路徑。npm 釋出使用獨立的標籤觸發流程，本地構建與測試不會發布包。

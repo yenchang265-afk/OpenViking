@@ -16,6 +16,8 @@ from typing import Any
 from loguru import logger
 
 from openviking.models.model_error import model_error_kind
+from openviking.models.vlm.base import ToolResultMediaMode
+from openviking.utils.message_format import tool_images_as_user_messages
 from openviking.utils.model_retry import effective_max_retries, retry_async
 from openviking.utils.multimodal import redact_image_data_urls
 from openviking_cli.utils import get_logger
@@ -256,7 +258,7 @@ class VLMProviderAdapter(LLMProvider):
         tools: list[dict[str, Any]] | None = None,
         model: str | None = None,
         max_tokens: int | None = None,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         session_id: str | None = None,
         thinking: bool | None = None,
         reasoning_effort: str | None = None,
@@ -290,8 +292,13 @@ class VLMProviderAdapter(LLMProvider):
             # without exposing tools, so per-response usage is preserved.
             response_tools = tools if tools is not None else []
             completion_overrides = {}
+            request_messages = (
+                tool_images_as_user_messages(messages)
+                if self._tool_result_media_mode(self._vlm) == "user_message"
+                else messages
+            )
             result = await self._vlm.get_completion_async(
-                messages=messages,
+                messages=request_messages,
                 thinking=thinking if thinking is not None else getattr(self._vlm, "thinking", None),
                 tools=response_tools,
                 tool_choice="auto" if response_tools else None,
@@ -323,7 +330,7 @@ class VLMProviderAdapter(LLMProvider):
         tools: list[dict[str, Any]] | None = None,
         model: str | None = None,
         max_tokens: int | None = None,
-        temperature: float = 0.7,
+        temperature: float | None = None,
         session_id: str | None = None,
     ) -> AsyncIterator[LLMStreamEvent]:
         if not self._supports_native_stream(self._vlm):
@@ -426,7 +433,7 @@ class VLMProviderAdapter(LLMProvider):
         tools: list[dict[str, Any]] | None,
         model: str | None,
         max_tokens: int | None,
-        temperature: float,
+        temperature: float | None,
     ) -> AsyncIterator[LLMStreamEvent]:
         """Retry before the first event; never replay emitted output."""
 
@@ -466,7 +473,7 @@ class VLMProviderAdapter(LLMProvider):
         tools: list[dict[str, Any]] | None,
         model: str | None,
         max_tokens: int | None,
-        temperature: float,
+        temperature: float | None,
     ) -> AsyncIterator[LLMStreamEvent]:
         """Release the HTTP response after normal or failed SDK iteration."""
         kwargs = self._build_stream_kwargs(
@@ -543,8 +550,10 @@ class VLMProviderAdapter(LLMProvider):
         tools: list[dict[str, Any]] | None,
         model: str | None,
         max_tokens: int | None,
-        temperature: float,
+        temperature: float | None,
     ) -> dict[str, Any]:
+        if self._tool_result_media_mode(vlm) == "user_message":
+            messages = tool_images_as_user_messages(messages)
         configured_max_tokens = getattr(vlm, "max_tokens", None)
         effective_max_tokens = max_tokens if max_tokens is not None else configured_max_tokens
         # A wrapped credential owns its model.  The model passed by AgentLoop is
@@ -665,30 +674,18 @@ class VLMProviderAdapter(LLMProvider):
         return self._default_model
 
     def supports_tool_result_media(self, model: str | None = None) -> bool:
-        """Return true only for backends with native rich tool-result support."""
-        return self._backend_supports_tool_result_media(self._vlm)
+        """Accept image evidence without predicting the endpoint's model capabilities."""
+        return True
 
-    @classmethod
-    def _backend_supports_tool_result_media(cls, vlm: Any) -> bool:
-        instances = getattr(vlm, "_vlm_instances", None)
-        if instances is not None:
-            return bool(instances) and all(
-                cls._backend_supports_tool_result_media(item) for item in instances
-            )
+    def should_inline_tool_result_media(self, model: str | None = None) -> bool:
+        """Keep ordinary chats native-only; Compile's scoped providers opt in."""
+        return self._tool_result_media_mode(self._vlm) == "native"
 
-        primary = getattr(vlm, "primary", None)
-        backup = getattr(vlm, "backup", None)
-        if primary is not None and backup is not None:
-            return cls._backend_supports_tool_result_media(
-                primary
-            ) and cls._backend_supports_tool_result_media(backup)
-
-        resolve_provider = getattr(vlm, "resolved_provider", None)
-        provider = (
-            resolve_provider() if callable(resolve_provider) else getattr(vlm, "provider", "")
-        )
-        provider = str(provider or "").lower()
-        return provider in {"anthropic", "openai-codex"}
+    @staticmethod
+    def _tool_result_media_mode(vlm: Any) -> ToolResultMediaMode:
+        capability = getattr(vlm, "tool_result_media_mode", None)
+        mode = capability() if callable(capability) else None
+        return "native" if mode == "native" else "user_message"
 
     # ------------------------------------------------------------------
     # Langfuse helpers

@@ -10,6 +10,7 @@ import pytest
 import openviking.storage.viking_fs as viking_fs_module
 from openviking.server.identity import RequestContext, Role
 from openviking.storage.acl import AclEntry, AclLevel, AclMode, DirectAcl, EffectiveAcl
+from openviking.storage.expr import And, PathScope, RawDSL
 from openviking.storage.viking_fs import _DEFAULT_GREP_FILE_CONCURRENCY, VikingFS
 from openviking.storage.viking_fs import _grep as grep_module
 from openviking_cli.exceptions import InvalidArgumentError, PermissionDeniedError
@@ -18,6 +19,36 @@ from openviking_cli.session.user_id import UserIdentifier
 
 class _DummyAgfs:
     pass
+
+
+def test_build_grep_scope_filter_preserves_existing_shape():
+    build_scope = getattr(grep_module, "_build_grep_scope_filter", None)
+    assert callable(build_scope)
+
+    tag_filter = {"op": "must", "field": "search_tags", "conds": ["env=prod"]}
+    assert build_scope(
+        "viking://resources",
+        3,
+        exclude_uri="viking://resources/archive",
+        tag_filter=tag_filter,
+    ) == And(
+        [
+            And(
+                [
+                    PathScope("uri", "viking://resources", depth=3),
+                    RawDSL(
+                        {
+                            "op": "must_not",
+                            "field": "uri",
+                            "conds": ["viking://resources/archive"],
+                            "para": "-d=-1",
+                        }
+                    ),
+                ]
+            ),
+            RawDSL(tag_filter),
+        ]
+    )
 
 
 @pytest.fixture

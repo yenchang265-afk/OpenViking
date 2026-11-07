@@ -220,5 +220,7 @@ def _drop_pinned(value: Any, client: Any) -> Any:
 
 def target_tools(client: Any) -> dict[str, Tool]:
     """Tools the direct Compile stage wraps with target and source scoping."""
-    tools: list[Tool] = [SearchTool(client), MultiReadTool(client), DiffPathsTool(client)]
+    # Sources are preloaded by the runner, so the direct stage no longer discovers
+    # them through openviking_diff_paths (upstream #6884).
+    tools: list[Tool] = [SearchTool(client), MultiReadTool(client)]
     return {tool.name: tool for tool in tools}

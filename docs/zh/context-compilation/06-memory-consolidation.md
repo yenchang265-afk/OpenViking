@@ -17,28 +17,26 @@
 
 ## 怎麼用
 
-把 `--skill` 設為哨兵值 **`memory`**，`--to` 指向 **memories 根目錄或某個記憶型別目錄**即可：
+使用 `ov compile memory` 即可，等價於 `ov compile --skill memory`。`--to` 可選，預設 `viking://~/memories`，其中 `~` 代表當前請求使用者；也可以顯式指向 **memories 根目錄或某個記憶型別目錄**：
 
 ```bash
 # 整理 entities（就地去重 / 合併 / 規範化）
-ov compile \
+ov compile memory \
   --to viking://user/<user_id>/memories/entities \
-  --skill memory \
   --instruction "合併明顯重複的實體，但不同實體不要合併；保留每個實體的獨立事實"
 ```
 
 也可以整理其它記憶型別，比如偏好：
 
 ```bash
-ov compile \
-  --to viking://user/<user_id>/memories/preferences \
-  --skill memory
+ov compile memory \
+  --to viking://user/<user_id>/memories/preferences
 ```
 
 一次整理所有已存在且已啟用的型別，使用同一個任務、同一個 ExtractLoop：
 
 ```bash
-ov compile --to viking://user/<user_id>/memories --skill memory \
+ov compile memory \
   --instruction "整理已有記憶，保留獨立事實，不要合併不同物件"
 ```
 
@@ -50,8 +48,8 @@ ov compile --to viking://user/<user_id>/memories --skill memory \
 
 | 引數 | 說明 |
 |------|------|
-| `--skill memory` | 固定的哨兵值，觸發記憶整理模式（不會被當作真實 Skill 解析）。 |
-| `--to` | 必填，可為 **memories 根目錄**（`.../memories`）或**某個記憶型別目錄**（如 `.../memories/entities`）；不接受使用者根目錄。 |
+| `memory` | 記憶整理子命令，等價於 `--skill memory`；兩種寫法不可混用。 |
+| `--to` | 僅記憶模式可省略，預設 `viking://~/memories`；其它 Compile Skill 必須顯式傳入。可為 **memories 根目錄**（`.../memories`）或**某個記憶型別目錄**（如 `.../memories/entities`）；不接受使用者根目錄。 |
 | `--from` | 記憶模式下**不接受**——整理不引入外部來源，只處理 `--to` 空間內已有的記憶。 |
 | `--instruction` | 可選。作為整理指令（軟提示）交給模型。用來點破模型自己判斷不出來的合併，比如"阿珍就是陳靜嫻，請合併"。 |
 

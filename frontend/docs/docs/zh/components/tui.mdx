@@ -1,0 +1,111 @@
+# Tui 命令控制台
+
+命令控制台的主體：當前命令記錄、結果與輸入區，包括空態、建議與輸入幫助。執行由宿主負責；命令傳送、資源開啟和複製成功後通過回撥通知，失敗時不觸發對應回撥。
+
+當前是佔位元件：只渲染一個固定尺寸的空殼，不消費 props，宿主可先對著已釋出的型別準備接入，真實檢視後續遷入。下方型別描述真實檢視的介面，佔位實現會被替換。
+
+## 基礎用法
+
+```tsx file="../../_demos/tui-basic.tsx" preview
+
+```
+
+佔位尺寸為 360 × 560，代表記錄區與輸入區。
+
+## 元件邊界
+
+Tui 只包含當前命令記錄與結果、空態，以及帶建議和幫助的命令輸入區。新建會話、歷史記錄面板、檢視與使用者切換、外層工具欄、底部快捷鍵說明，由宿主通過獨立元件組合。
+
+宿主處理會話和歷史操作後，更新 `records` 與 `value`。歷史結果複用同一套記錄檢視；Tui 不維護歷史列表、專門的歷史預覽狀態，也不提供外層工具欄或動作插槽。
+
+命令匹配、候選列表、高亮與鍵盤選擇、引數提示和幫助面板屬於元件內部能力。命令名稱、引數、說明與示例統一複用 CLI 的共享命令後設資料，宿主不逐條配置建議或渲染幫助。接受補全或提示時通過 `onValueChange` 更新輸入；顯式提交的命令傳送成功後才觸發 `onSubmit`。
+
+當前僅調整公開型別契約，補全、幫助面板和 CLI 共享命令後設資料接入尚未實現。後設資料載入與傳輸由共享適配層負責，元件不自行取數。
+
+## 屬性
+
+公開的 props 從同一子路徑以型別匯出，以原始碼為準：
+
+```tsx
+import type {
+  TuiLabels,
+  TuiProps,
+  TuiRecord,
+  TuiRecordContent,
+  TuiSearchResultItem,
+} from '@openviking/react/components/tui';
+```
+
+下表說明公開的型別契約；當前佔位元件尚不接受這些屬性。
+
+| 屬性          | 型別                      | 預設值       | 說明                                                                           |
+| ------------- | ------------------------- | ------------ | ------------------------------------------------------------------------------ |
+| records       | readonly TuiRecord[]      | 必填         | 當前展示的執行記錄，按提交順序排列；會話與歷史切換後由宿主更新。               |
+| value         | string                    | 必填         | 受控輸入值。                                                                   |
+| disabled      | boolean                   | false        | 停用命令輸入與提交，提示文案由 `labels.unavailableMessage` 提供。              |
+| emptyState    | ReactNode                 | labels.empty | 無記錄時展示的完整空態，可包含標題、說明與快捷入口；傳 `null` 時隱藏。         |
+| labels        | TuiLabels                 | —            | 統一的介面文案與引導提示。                                                     |
+| onValueChange | (value: string) => void   | —            | 上報輸入變化，包含內部接受的補全與引數提示；填入不提交命令。省略時輸入框只讀。 |
+| onSubmit      | (command: string) => void | —            | 命令傳送成功後觸發，失敗時不觸發。省略時不能提交命令。                         |
+| onOpenUri     | (uri: string) => void     | —            | 資源成功開啟後觸發，引數為已開啟的 URI；失敗時不觸發。                         |
+| onCopy        | (text: string) => void    | —            | 複製成功後觸發，引數為已複製的文本；失敗時不觸發。省略回撥不影響複製。         |
+
+`onSubmit` 在命令成功傳送後通知宿主已傳送的命令文本，不負責執行傳送，傳送失敗時不觸發。該通知不表示後臺命令已經執行完成，操作是否成功不依賴通知回撥的返回值。宿主通過 `records` 更新後續結果與錯誤；後臺任務記錄仍為 `pending` 時，不阻止後續提交。
+
+`emptyState` 是完整自定義空態的唯一入口。標題、說明、快捷入口及其互動由宿主在節點內組合。省略時展示 `labels.empty`，傳 `null` 時隱藏空態內容。
+
+### 結果內容
+
+`TuiRecordContent` 包含一種通用文本與六種結構化結果：
+
+| variant          | 資料            | 說明                         |
+| ---------------- | --------------- | ---------------------------- |
+| text             | text, format?   | 通用輸出，格式預設為 plain。 |
+| search-list      | items, summary? | 檢索結果與彙總。             |
+| resource-preview | title, content  | 資源正文預覽。               |
+| resource-tree    | items, title?   | 資源條目與明細。             |
+| status           | rows, title?    | 鍵值狀態行。                 |
+| write-result     | lines, title?   | 寫入操作結果。               |
+| command-help     | sections        | 按分組展示可用命令。         |
+
+`text.format` 支援 `plain` 和 `markdown`，預設為 `plain`。JSON 格式化為字串後通過 `text` 展示。失敗通過 `TuiRecord.status: 'error'` 表達，錯誤正文使用文本結果，不單獨定義錯誤內容變體。
+
+命令幫助由共享命令定義生成，其他結果由共享適配層統一轉換，宿主複用同一套轉換。這些變體定義統一展示的目標契約，共享結果轉換與實際檢視仍待實現。
+
+### 文案與引導提示
+
+通用介面文案通過 `labels` 配置，預設使用內建英文。命令相關的引數提示與說明由共享命令後設資料生成。
+
+| 屬性                      | 型別   | 說明                                                          |
+| ------------------------- | ------ | ------------------------------------------------------------- |
+| labels.unavailableMessage | string | `disabled` 為 `true` 時的不可用提示；僅修改文案不會停用元件。 |
+| labels.pending            | string | 等待中的狀態文本。                                            |
+| labels.empty              | string | 無記錄且未提供 `emptyState` 時展示的預設提示。                |
+
+`disabled` 預設為 `false`。設為 `true` 時停用命令輸入與提交，提示內容由 `labels.unavailableMessage` 定製。
+
+### 檢索結果詳情
+
+`TuiSearchResultItem` 支援以下可選展示欄位：
+
+| 屬性         | 型別      | 說明                                                                   |
+| ------------ | --------- | ---------------------------------------------------------------------- |
+| levelLabel   | string    | 標題旁的內容層級標籤。                                                 |
+| typeLabel    | string    | 分數旁的結果型別標籤。                                                 |
+| scoreLabel   | string    | 宿主格式化後的分數文案。                                               |
+| scoreDetails | ReactNode | 懸停或鍵盤聚焦分數時展示的宿主詳情內容，僅在提供 `scoreLabel` 時顯示。 |
+
+### 等待中的記錄
+
+`TuiRecord` 為 `pending` 時，元件根據 `command` 匹配共享命令定義並選擇對應骨架，無法匹配時使用通用骨架。等待期間可省略 `content`，宿主無需指定骨架形態。
+
+佔位元件和樣式的匯入方式：
+
+```tsx
+import { Tui } from '@openviking/react/components/tui';
+import '@openviking/react/components/tui/style.css';
+```
+
+## 實現範圍
+
+元件渲染檢視，並通知已完成的互動與成功的操作。操作執行、取數、持久化、許可權與網路連線由接入層負責，成功通知不承擔這些操作。當前佔位元件尚未實現操作執行或成功通知。

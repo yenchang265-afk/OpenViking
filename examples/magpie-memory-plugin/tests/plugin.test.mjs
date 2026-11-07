@@ -11,6 +11,7 @@ import OpenVikingMemory from "../index.mjs";
 import { injectContext, loadConfig, recallRequest, request } from "../runtime.mjs";
 import { estimateTokens } from "../shared/profile-inject.mjs";
 import { buildOvHeaders } from "../shared/ov-http.mjs";
+import { onRequest } from "../hooks.mjs";
 
 async function fixture(t, handler = () => ({ rendered: "viking://~/memories/preference.md\nUse TypeScript." }), profile = "") {
   const dir = await mkdtemp(join(tmpdir(), "ov-magpie-test-"));
@@ -51,7 +52,19 @@ test("Magpie applies its defaults without changing shared plugin defaults", asyn
   const f = await fixture(t);
   const cfg = await loadConfig(f.env);
   assert.equal(cfg.mcpEnabled, false);
-  assert.equal(cfg.recallContextTimeoutMs, 700);
+  assert.equal(cfg.recallContextTimeoutMs, 2000);
+  assert.equal(cfg.captureWithoutSession, false);
+  await f.save({ plugin: { captureWithoutSession: true, magpie: { captureWithoutSession: false } } });
+  assert.equal((await loadConfig(f.env)).captureWithoutSession, false);
+  assert.equal((await loadConfig(f.env, { captureWithoutSession: true })).captureWithoutSession, true);
+  await f.save({ plugin: { captureWithoutSession: true, magpie: { captureWithoutSession: null } } });
+  assert.equal((await loadConfig(f.env)).captureWithoutSession, true);
+  assert.equal((await loadConfig(f.env, { captureWithoutSession: false })).captureWithoutSession, false);
+  await assert.rejects(loadConfig(f.env, { captureWithoutSession: "true" }), /invalid/);
+  await f.save();
+  assert.equal((await loadConfig(f.env, { recallContextTimeoutMs: 4500 })).recallContextTimeoutMs, 4500);
+  await f.save({ plugin: { recallContextTimeoutMs: 700 } });
+  assert.equal((await loadConfig(f.env)).recallContextTimeoutMs, 700);
   await f.save({ plugin: { recallMaxTokens: 900, magpie: { recallMaxTokens: 1200, recallContextTimeoutMs: 350 } } });
   const custom = await loadConfig(f.env);
   assert.equal(custom.recallMaxTokens, 1200);
@@ -351,6 +364,66 @@ test("slow recall respects its timeout; redirects do not forward credentials", a
   assert.equal(target.calls.length, 0);
 });
 
+for (const { hostBudget, profileDelay, minimumWait } of [
+  { hostBudget: 1000, profileDelay: 1500, minimumWait: 600 },
+  { hostBudget: 3000, profileDelay: 2500, minimumWait: 1900 },
+]) {
+  test(`a ${hostBudget} ms host budget preserves completed search when profile times out`, async (t) => {
+    let searchReturned = false;
+    const f = await fixture(t, async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      searchReturned = true;
+      return { rendered: "Completed search memory" };
+    }, async () => {
+      await new Promise((resolve) => setTimeout(resolve, profileDelay));
+      return "Late profile memory";
+    });
+    const previous = process.env.OPENVIKING_CLI_CONFIG_FILE;
+    process.env.OPENVIKING_CLI_CONFIG_FILE = f.path;
+    t.after(() => { if (previous === undefined) delete process.env.OPENVIKING_CLI_CONFIG_FILE; else process.env.OPENVIKING_CLI_CONFIG_FILE = previous; });
+    const ctx = context({ session: "", signal: AbortSignal.timeout(hostBudget),
+      options: { autoCapture: false, gatewayTimeoutMs: hostBudget } });
+    const started = performance.now();
+    const output = await onRequest(body(), ctx);
+    const elapsed = performance.now() - started;
+    assert.ok(searchReturned);
+    assert.match(output.messages.at(-1).content, /Completed search memory/);
+    assert.doesNotMatch(output.messages.at(-1).content, /Late profile memory/);
+    assert.equal(ctx.signal.aborted, false);
+    assert.equal(ctx.reports.at(-1)[0], "ready");
+    assert.ok(elapsed >= minimumWait, `returned too early: ${elapsed} ms`);
+    assert.ok(elapsed < hostBudget, `exceeded host budget: ${elapsed} ms`);
+  });
+}
+
+test("host cancellation discards completed search while profile is still pending", async (t) => {
+  let searchReturned = false;
+  const f = await fixture(t, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    searchReturned = true;
+    return { rendered: "Completed search memory" };
+  }, async () => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return "Late profile memory";
+  });
+  const ctx = context({ session: "", options: { gatewayTimeoutMs: 3000 }, signal: AbortSignal.timeout(500) });
+  assert.equal(await recallRequest(body(), ctx, f.env), undefined);
+  assert.ok(searchReturned);
+  assert.equal(ctx.signal.aborted, true);
+  assert.deepEqual(ctx.reports, [["unavailable", 0]]);
+});
+
+test("host budget validation and elapsed setup time prevent requests below the HTTP minimum", async (t) => {
+  const f = await fixture(t);
+  for (const gatewayTimeoutMs of [undefined, "3000", 99, 10001, 1000.5, 100]) {
+    const ctx = context({ session: "", options: { gatewayTimeoutMs } });
+    assert.equal(await recallRequest(body(), ctx, f.env, undefined, performance.now() - 750), undefined);
+    assert.deepEqual(ctx.reports, [["unavailable", 0]]);
+  }
+  assert.equal(f.calls.length, 0);
+  assert.equal(f.profileCalls.length, 0);
+});
+
 test("concurrent identities cannot share recalled results or credentials", async (t) => {
   const a = await fixture(t, () => ({ rendered: "memory-A" }));
   const b = await fixture(t, () => ({ rendered: "memory-B" }));
@@ -390,6 +463,33 @@ test("tools require opt-in, validate arguments and use the same file connection"
   assert.equal(writes[1].body.role, "user");
   assert.match(writes[2].path, /\/commit$/);
   assert.ok(f.calls.every((c) => c.headers.authorization === "Bearer test-secret"));
+});
+
+test("Rule search preserves complete constraints, opt-in, identity and errors", async (t) => {
+  const rendered = "完整规则\n".repeat(17000) + "LAST RULE";
+  const f = await fixture(t, (call, res) => {
+    if (call.body?.task_context === "fail") res.statusCode = 503;
+    return { rendered };
+  });
+  const previous = process.env.OPENVIKING_CLI_CONFIG_FILE;
+  process.env.OPENVIKING_CLI_CONFIG_FILE = f.path;
+  t.after(() => { if (previous === undefined) delete process.env.OPENVIKING_CLI_CONFIG_FILE; else process.env.OPENVIKING_CLI_CONFIG_FILE = previous; });
+  const { tool } = await OpenVikingMemory();
+  const ctx = { abort: new AbortController().signal };
+  await assert.rejects(tool.rule_search.execute({ task_context: "deploy" }, ctx), /disabled/);
+  await f.save({ actor_peer_id: "project", plugin: { magpie: { mcpEnabled: true } } });
+  const task_context = "plan".repeat(10000);
+  assert.equal(await tool.rule_search.execute({ task_context, rule_probability_threshold: 0 }, ctx), rendered);
+  assert.equal(f.calls[0].path, "/api/v1/rules/search");
+  assert.deepEqual(f.calls[0].body, { task_context, rule_probability_threshold: 0 });
+  assert.equal(f.calls[0].headers.authorization, "Bearer test-secret");
+  assert.equal(f.calls[0].headers["x-openviking-user"], "test-user");
+  assert.equal(f.calls[0].headers["x-openviking-actor-peer"], "project");
+  for (const threshold of [null, -1, 2, "0.5", NaN]) {
+    await assert.rejects(tool.rule_search.execute({ task_context: "deploy", rule_probability_threshold: threshold }, ctx), /invalid/);
+  }
+  assert.equal(f.calls.length, 1);
+  await assert.rejects(tool.rule_search.execute({ task_context: "fail" }, ctx), /unavailable/);
 });
 
 test("actual Magpie Bun host loads package, runs recall and exposes working tools", {
@@ -441,6 +541,13 @@ test("actual Magpie Bun host loads package, runs recall and exposes working tool
     assert.deepEqual(run.body.tools, body().tools);
     await rpc("gatewayRequest", { operation: "close", id: run.id, token: run.token });
   }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const run = await rpc("gatewayRequest", { operation: "begin", body: body(),
+      context: { origin: "local", session: "", agent: "host-agent", protocol: "chat", query: "TypeScript?" } });
+    assert.match(JSON.stringify(run.body), /Use TypeScript/);
+    await rpc("gatewayRequest", { operation: "close", id: run.id, token: run.token });
+  }
+  assert.equal(stderr.split("OpenViking capture: no-session").length - 1, 1);
   const result = await rpc("tool", { spec, name: "find", args: { query: "TypeScript" }, ms: 5000 });
   assert.match(result.text, /Use TypeScript/);
   const states = await rpc("gatewayStates", {});
@@ -544,10 +651,9 @@ test("separate host processes coordinate and replay the same private ledger", as
   assert.equal(count, 1);
 });
 
-test("unknown histories, missing sessions, explicit auxiliary requests and stored Responses skip recall", async (t) => {
+test("unknown histories, explicit auxiliary requests and stored Responses skip recall", async (t) => {
   const f = await fixture(t);
   const cases = [
-    [body(), context({ session: "" })],
     [{ ...body(), messages: [...body().messages, { role: "assistant", content: "unknown answer" }, { role: "user", content: "next" }] }, context()],
     [{ ...body(), metadata: { request_kind: "auxiliary" } }, context()],
     [{ model: "test-model", store: true, input: "question" }, context({ protocol: "responses" })],
@@ -683,4 +789,43 @@ test("CJK profile and combined recall respect token budgets and replay their sna
   await f.save({ plugin: { magpie: { profileTokenBudget: 1000, recallMaxTokens: 4000 } } });
   assert.deepEqual(await recallRequest(body(), context(), f.env), first);
   assert.equal(f.profileCalls.length, 1);
+});
+
+
+test("capture defaults on and preserves explicit file/host false", async (t) => {
+  const f = await fixture(t);
+  assert.equal((await loadConfig(f.env)).autoCapture, true);
+  assert.equal((await loadConfig(f.env, { autoCapture: false })).autoCapture, false);
+  for (const plugin of [{ autoCapture: false }, { magpie: { autoCapture: false } }]) {
+    await f.save({ plugin }); assert.equal((await loadConfig(f.env)).autoCapture, false);
+  }
+});
+
+test("sessionless full histories recall independently without writing state", async (t) => {
+  let memory = "First memory";
+  const f = await fixture(t, () => ({ rendered: memory }));
+  const messages = [{ role: "user", content: "Earlier" }, { role: "assistant", content: "Reply" }, { role: "user", content: "Latest question" }];
+  for (const protocol of ["chat", "anthropic", "responses", "gemini"]) {
+    const wire = protocol === "responses" ? { store: false, input: messages }
+      : protocol === "gemini" ? { contents: messages.map(m => ({ role: m.role === "assistant" ? "model" : m.role, parts: [{ text: m.content }] })) }
+      : { messages };
+    memory = "First memory";
+    assert.match(JSON.stringify(await recallRequest(wire, context({ protocol, session: "" }), f.env)), /First memory/);
+    memory = "Second memory";
+    const out = await recallRequest(wire, context({ protocol, session: undefined }), f.env);
+    assert.match(JSON.stringify(out), /Second memory/);
+    assert.doesNotMatch(JSON.stringify(out), /First memory/);
+  }
+  assert.equal(f.calls.length, 8);
+  await assert.rejects(readdir(join(f.dir, "state")), { code: "ENOENT" });
+});
+
+test("sessionless native ownership never persists across requests", async (t) => {
+  const f = await fixture(t);
+  await f.save({ plugin: { magpie: { nativeAgents: ["native"] } } });
+  assert.equal(await recallRequest(body(), context({ session: "", agent: "native" }), f.env), undefined);
+  assert.ok(await recallRequest(body(), context({ session: "", agent: "ordinary" }), f.env));
+  await f.save({ plugin: { bypassSession: true } });
+  assert.equal(await recallRequest(body(), context({ session: "" }), f.env), undefined);
+  await assert.rejects(readdir(join(f.dir, "state")), { code: "ENOENT" });
 });

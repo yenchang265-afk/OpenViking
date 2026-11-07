@@ -13,7 +13,7 @@ from loguru import logger
 
 from openviking.compile import entry
 from openviking.compile.hashing import content_hash, digest
-from openviking.compile.models import CompileFailure, has_directory_plan, utc_now
+from openviking.compile.models import CompileFailure, utc_now
 from openviking.compile.ops import finalize as finalize_op
 from openviking.compile.ops import map as map_op
 from openviking.compile.ops import reduce as reduce_op
@@ -166,11 +166,7 @@ class Pipeline:
         self.noop = False
         failed = False
         try:
-            sources = (
-                []
-                if has_directory_plan(self.changes) and self.changes.get("head")
-                else await self.seed(batches)
-            )
+            sources = await self.seed(batches)
             runtime = await self.files.get("runtime")
             if runtime is None:
                 runtime = {
@@ -306,6 +302,7 @@ class Pipeline:
                         revisions,
                         REVIEW_PROMPT + self.output_instructions,
                         planning_context,
+                        completed_ops={n.op for n in nodes[:position]},
                     )
                     if accepted:
                         decision, suffix = accepted

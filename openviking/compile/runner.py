@@ -164,6 +164,34 @@ async def list_source_files(
     return sorted(files)
 
 
+async def list_pipeline_source_files(client: Any, request: SanitizedCompileRequest) -> list[str]:
+    """Select unique full-scan and added/modified inputs; listing errors propagate."""
+    changes = request.changes
+    if not (has_directory_plan(changes) and changes.get("head")):
+        return await list_source_files(client, request.from_)
+    files = set(await list_source_files(client, changes["full_dirs"], allow_empty=True))
+    roots = changes["diff_dirs"]
+    if roots:
+        offset = 0
+        while True:
+            page = await client.diff_paths(
+                roots, base=changes["base"], head=changes["head"], offset=offset
+            )
+            for change in page["changes"]:
+                uri = str(change.get("uri") or "").rstrip("/")
+                if not uri or not any(uri == root or relative_uri_path(root, uri) for root in roots):
+                    raise ValueError(f"Source inventory returned an out-of-scope URI: {uri}")
+                if change["change_type"] in {"added", "modified"}:
+                    files.add(uri)
+            if not page["has_more"]:
+                break
+            next_offset = page["next_offset"]
+            if not isinstance(next_offset, int) or next_offset <= offset:
+                raise ValueError("Source inventory pagination did not advance")
+            offset = next_offset
+    return sorted(files)
+
+
 class CompileRunner:
     """Execute one Compile attempt against an in-process OpenViking client."""
 
@@ -322,14 +350,16 @@ class CompileRunner:
             }
 
         await progress("pipeline", {})
-        ordered: list[str] = []
-        if not (has_directory_plan(request.changes) and request.changes.get("head")):
-            ordered = (
-                source_files
-                if source_files is not None
-                else await list_source_files(client, request.from_)
-            )
+        ordered = (
+            source_files
+            if source_files is not None
+            else await list_pipeline_source_files(client, request)
+        )
         await pipeline.files.put("inputs", dict.fromkeys(ordered, "pending"))
+        # Smaller chunks let extraction retry ranges independently.
+        source_limits = self.limits.model_copy(
+            update={"source_batch_chars": min(self.limits.source_batch_chars, 10_000)}
+        )
 
         async def source_batches():
             """Retain at most one read batch of source bodies while seeding task shards."""
@@ -350,7 +380,7 @@ class CompileRunner:
                         raise content
                     else:
                         readable.append((uri, content))
-                for batch in pack_source_batches(readable, self.limits):
+                for batch in pack_source_batches(readable, source_limits):
                     yield batch
 
         stage = "pipeline"

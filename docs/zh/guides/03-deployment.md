@@ -352,6 +352,7 @@ docker compose up -d
 - 共享的帳號登錄表：預設 `file` store 搭配 `server.api_key_watch_enabled: true`（各例項會在 `api_key_watch_interval_seconds` 內重新載入使用者與金鑰），或改用 `server.account_store.provider` 為 `mysql` / `redis_mysql`。兩者都沒設時，在某個例項建立的使用者或金鑰，其他例項要重啟後才看得到。
 - CacheFS 使用共享快取時，每個例項都要設 `storage.agfs.cachefs.multi_instance: true`，詳見 [RAGFS 快取指南](14-ragfs-cache.md)。
 - 只在其中一個例項設 `enable_watch_scheduler: true`。Watch 任務是共享的，但排程器只在單一行程內防止重複執行，所以每個開啟的例項都會重新匯入每個到期的 watch。
+- 所有例項共用同一個 `encryption.local.root_key`（或共享的 `vault` provider）。即使 `encryption.enabled` 為 `false`，持久任務與 Connector watch 儲存的憑據仍會加密；預設的單例項 `~/.openviking/master.key` 無法解密其他例項的任務。
 - readiness 檢查請用 `/ready`，不要用 `/health`。`/health` 只表示行程還活著；`/ready` 還會實際連一次 PathLock 與 QueueFS 使用的快取服務，連不上時回 503。liveness 請維持用 `/health`，否則快取一斷線，所有例項會同時被重啟。
 
 MySQL Task store 與帳號 store 需要 `mysql` / `redis-mysql` extras，Docker 映像檔已內建。

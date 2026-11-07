@@ -10,6 +10,7 @@ redelivered and the provider runs the task again from the beginning.
 from __future__ import annotations
 
 import asyncio
+import base64
 import dataclasses
 import hashlib
 import json
@@ -17,6 +18,7 @@ from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Iterable, Mapping, Protocol
 from uuid import uuid4
 
+from openviking.crypto.encryptor import MAGIC, build_credential_encryptor
 from openviking.pyagfs import GitConcurrentCommitError
 from openviking.server.identity import RequestContext, Role
 from openviking.service.task_domain import TaskPatch
@@ -28,14 +30,17 @@ from openviking.service.task_tracker_concurrency import (
 )
 from openviking.service.task_work_index import bind_task_context
 from openviking.storage.errors import ResourceBusyError
-from openviking.storage.queuefs import QueueManager, get_queue_manager
-from openviking_cli.exceptions import ConflictError
+from openviking_cli.exceptions import ConflictError, FailedPreconditionError
 from openviking_cli.session.user_id import UserIdentifier
 from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
 
 _ACTIVE_STATUSES = frozenset({"pending", "running", "cancelling"})
+_CREDENTIAL_PROVIDER = "encrypted_external_task"
+# Task auth fields holding forwarded credentials; encrypted at rest.
+_PRIVATE_AUTH_FIELDS = ("external_request_private",)
+_instance: ExternalTaskService | None = None
 # Started attempts per task, counting re-runs after restarts. A task that keeps
 # dying with the process must not crash-loop and re-spend model tokens forever.
 MAX_TASK_ATTEMPTS = 3
@@ -43,6 +48,34 @@ MAX_TASK_ATTEMPTS = 3
 OUTCOME_WRITE_ATTEMPTS = 3
 # Wait between provider finalization attempts while its output is locked.
 FINISH_RETRY_SECONDS = 1.0
+
+
+def get_queue_manager() -> Any:
+    """Return the QueueFS manager, resolved on each call.
+
+    QueueFS imports parsers/VikingFS, so providers stay importable without it,
+    and a patched ``openviking.storage.queuefs.get_queue_manager`` takes effect.
+    """
+    from openviking.storage import queuefs
+
+    return queuefs.get_queue_manager()
+
+
+def _external_task_queue() -> str:
+    from openviking.storage.queuefs import QueueManager
+
+    return QueueManager.EXTERNAL_TASK
+
+
+def set_external_task_service(service: ExternalTaskService | None) -> None:
+    global _instance
+    _instance = service
+
+
+def get_external_task_service() -> ExternalTaskService:
+    if _instance is None:
+        raise RuntimeError("ExternalTaskService is not initialized")
+    return _instance
 
 
 class ExternalTaskError(RuntimeError):
@@ -126,7 +159,8 @@ class ExternalTaskProvider(Protocol):
 class ExternalTaskService:
     """Own durable task state while registered providers perform the work in-process."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, credential_encryptor: Any = None) -> None:
+        self.credential_encryptor = credential_encryptor
         self._providers: dict[str, ExternalTaskProvider] = {}
         # Restored before workers start, then accessed only by the ExternalTask
         # queue's loop. Restored owners may include multiple
@@ -166,12 +200,45 @@ class ExternalTaskService:
         current_role, current_groups = current
         stored = Role(ctx.role)
         now = stored if current_role is None else Role(current_role)
+        try:
+            # Keep the submit-time role only while the current role still permits it
+            # (Role's token-downgrade allowlist); otherwise run as the current role.
+            keep_stored = now.allows_token_role(stored)
+        except ValueError:
+            keep_stored = False
         return dataclasses.replace(
             ctx,
-            # A same-rank change of role still takes the current role.
-            role=stored if stored == now or stored.rank < now.rank else now,
+            role=stored if keep_stored else now,
             group_ids=tuple(group for group in ctx.group_ids if group in set(current_groups)),
         )
+
+    def _credential_encryptor(self) -> Any:
+        if self.credential_encryptor is None:
+            from openviking_cli.utils.config.open_viking_config import get_openviking_config
+
+            self.credential_encryptor = build_credential_encryptor(
+                get_openviking_config().encryption
+            )
+        return self.credential_encryptor
+
+    async def _encrypt_auth(self, account_id: str, auth: Mapping[str, Any]) -> dict[str, Any]:
+        encrypted = dict(auth)
+        try:
+            for field in _PRIVATE_AUTH_FIELDS:
+                value = self._mapping(auth.get(field))
+                if not value:
+                    continue
+                plaintext = json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode()
+                ciphertext = await self._credential_encryptor().encrypt(account_id, plaintext)
+                encrypted[field] = {
+                    "provider": _CREDENTIAL_PROVIDER,
+                    "ciphertext": base64.b64encode(ciphertext).decode("ascii"),
+                }
+        except Exception as exc:
+            raise FailedPreconditionError(
+                "Cannot encrypt external task credentials; check encryption key configuration"
+            ) from exc
+        return encrypted
 
     def register(self, provider: ExternalTaskProvider) -> None:
         if provider.task_type in self._providers:
@@ -226,8 +293,14 @@ class ExternalTaskService:
         ctx: RequestContext,
         idempotency_key: str | None = None,
         submission_payload: Mapping[str, Any] | None = None,
+        task_id: str | None = None,
+        on_task_created: Callable[[TaskRecord], Awaitable[None]] | None = None,
     ) -> TaskRecord:
-        """``submission_payload`` (default ``payload``) is what idempotent retries must match."""
+        """``submission_payload`` (default ``payload``) is what idempotent retries must match.
+
+        ``on_task_created`` runs after the task record exists and before it is queued;
+        a provider that submits to a remote runtime persists the remote id there.
+        """
 
         async def create_task():
             return await self._create(
@@ -238,11 +311,13 @@ class ExternalTaskService:
                 ctx=ctx,
                 idempotency_key=idempotency_key,
                 submission_payload=submission_payload,
+                task_id=task_id,
+                on_task_created=on_task_created,
             )
 
-        if not idempotency_key:
+        if not idempotency_key and task_id is None:
             return await create_task()
-        key = submission_task_id(ctx, task_type, "", idempotency_key)
+        key = task_id or submission_task_id(ctx, task_type, "", idempotency_key)
 
         async def serialized():
             async with self._submission_locks.acquire(key):
@@ -260,6 +335,8 @@ class ExternalTaskService:
         ctx: RequestContext,
         idempotency_key: str | None = None,
         submission_payload: Mapping[str, Any] | None = None,
+        task_id: str | None = None,
+        on_task_created: Callable[[TaskRecord], Awaitable[None]] | None = None,
     ) -> TaskRecord:
         provider = self._provider(task_type)
         tracker = get_task_tracker()
@@ -267,7 +344,7 @@ class ExternalTaskService:
             payload if submission_payload is None else submission_payload, private_payload
         )
         token = uuid4().hex
-        task_id = (
+        task_id = task_id or (
             submission_task_id(ctx, task_type, provider.task_id_prefix, idempotency_key)
             if idempotency_key
             else f"{provider.task_id_prefix}{token}"
@@ -286,10 +363,13 @@ class ExternalTaskService:
                     else {}
                 ),
             },
-            auth={
-                "request_identity": request_identity(ctx),
-                "external_request_private": dict(private_payload or {}),
-            },
+            auth=await self._encrypt_auth(
+                ctx.account_id,
+                {
+                    "request_identity": request_identity(ctx),
+                    "external_request_private": dict(private_payload or {}),
+                },
+            ),
         )
         if idempotency_key and task.meta.get("submission_hash") != request_hash:
             raise ConflictError("Idempotency-Key was already used with different parameters")
@@ -300,6 +380,8 @@ class ExternalTaskService:
             return task
         enqueued = False
         try:
+            if on_task_created is not None:
+                await on_task_created(task)
             await tracker.patch_task(
                 task.task_id,
                 TaskPatch(stage="queued"),
@@ -308,7 +390,7 @@ class ExternalTaskService:
             )
             with bind_task_context(task.task_id, ctx.account_id, ctx.user.user_id):
                 await get_queue_manager().enqueue(
-                    QueueManager.EXTERNAL_TASK,
+                    _external_task_queue(),
                     {
                         "task_id": task.task_id,
                         "account_id": ctx.account_id,
@@ -368,7 +450,7 @@ class ExternalTaskService:
         if task.status == TaskStatus.PENDING:
             with bind_task_context(task.task_id, ctx.account_id, ctx.user.user_id):
                 await get_queue_manager().enqueue(
-                    QueueManager.EXTERNAL_TASK,
+                    _external_task_queue(),
                     {
                         "task_id": task.task_id,
                         "account_id": ctx.account_id,
@@ -504,6 +586,8 @@ class ExternalTaskService:
                 user_id=user_id,
             )
             auth = await self._task_auth(task_id, account_id, user_id)
+            # Providers run with the task's decrypted private auth, as on_finish does.
+            task.auth = auth
             ctx = await self._current_identity(restore_request_context(auth, account_id, user_id))
             await tracker.start(task_id, account_id=account_id, user_id=user_id, stage="running")
             result = await provider.run(task, payload, ctx, progress=progress, cancelled=cancelled)
@@ -569,13 +653,31 @@ class ExternalTaskService:
             user_id=user_id,
         )
 
-    @staticmethod
-    async def _task_auth(task_id: str, account_id: str, user_id: str) -> dict[str, Any]:
-        return await get_task_tracker().get_task_auth(
+    async def _task_auth(self, task_id: str, account_id: str, user_id: str) -> dict[str, Any]:
+        auth = await get_task_tracker().get_task_auth(
             task_id,
             account_id=account_id,
             user_id=user_id,
         )
+        try:
+            for field in _PRIVATE_AUTH_FIELDS:
+                value = auth.get(field)
+                # Read tasks persisted before credential encryption was introduced.
+                if not isinstance(value, dict) or value.get("provider") != _CREDENTIAL_PROVIDER:
+                    continue
+                ciphertext = base64.b64decode(value["ciphertext"], validate=True)
+                if not ciphertext.startswith(MAGIC):
+                    raise ValueError("Invalid encrypted credential envelope")
+                plaintext = await self._credential_encryptor().decrypt(account_id, ciphertext)
+                decoded = json.loads(plaintext)
+                if not isinstance(decoded, dict):
+                    raise ValueError("Invalid external task credentials")
+                auth[field] = decoded
+        except Exception as exc:
+            raise FailedPreconditionError(
+                "Cannot decrypt external task credentials; check encryption key configuration"
+            ) from exc
+        return auth
 
     @staticmethod
     def _mapping(value: Any) -> dict[str, Any]:
@@ -591,6 +693,15 @@ class ExternalTaskService:
     ) -> bool:
         tracker = get_task_tracker()
         task = await tracker.get(task_id, account_id=account_id, user_id=user_id)
+        if task is not None and (
+            task.status in {TaskStatus.COMPLETED, TaskStatus.FAILED}
+            or task.result is not None
+            or task.error is not None
+        ):
+            # Another worker or a deletion already ended the task (its credentials are
+            # cleared): never apply this attempt's effects or overwrite that outcome.
+            self._release(task)
+            return True
         if snapshot.stage is not None or snapshot.meta:
             stage = snapshot.stage or snapshot.status
             meta = snapshot.meta or {}
@@ -617,6 +728,8 @@ class ExternalTaskService:
         if task is not None:
             on_finish = getattr(self._providers.get(task.task_type), "on_finish", None)
             if on_finish is not None:
+                # Providers finalize with the private auth (credentials) of the task.
+                task.auth = await self._task_auth(task_id, account_id, user_id)
 
                 async def finish():
                     """Keep lock retries inside cancellation-protected provider finalization."""
@@ -665,6 +778,8 @@ class ExternalTaskService:
 
 
 __all__ = [
+    "get_external_task_service",
+    "set_external_task_service",
     "ExternalTaskError",
     "ExternalTaskProvider",
     "ExternalTaskService",

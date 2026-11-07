@@ -28,7 +28,7 @@ def configuration():
         cache=NS(provider="redis"),
         gateway=NS(enabled=False),
         oauth=NS(enabled=True, backend="mysql"),
-        encryption=NS(enabled=False),
+        encryption=NS(enabled=False, provider="local", local=NS(root_key="0" * 64)),
         storage=NS(
             vectordb=NS(backend="elasticsearch"),
             task_store=NS(provider="mysql"),
@@ -124,6 +124,14 @@ def test_encrypted_replicas_require_explicit_shared_root_key():
         validate_shared_deployment(server, config)
     config.encryption.local.root_key = "0" * 64
     validate_shared_deployment(server, config)
+
+
+def test_unencrypted_replicas_still_share_the_credential_root_key():
+    # Durable-task and Watch credentials are encrypted even with encryption disabled.
+    server, config = configuration()
+    config.encryption = NS(enabled=False, provider="local", local=NS(root_key=None))
+    with pytest.raises(ValueError, match="shared encryption.local.root_key"):
+        validate_shared_deployment(server, config)
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,9 @@
 # DeepSeek Harness
 
-為 [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）及 DeepSeek Harness Desktop 桌面應用接入跨專案、跨會話的長期記憶。安裝後每次對話都會自動召回相關記憶並捕獲新內容，模型也會直接拿到 OpenViking 工具以及 `openviking-memory`、`openviking-skills`、`ov-experience-memory` 三個技能，無需額外配置。
+為 [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)（`dsh`）及 DeepSeek Harness Desktop 桌面應用接入跨專案、跨會話的長期記憶。安裝後每次對話都會自動召回相關記憶並捕獲新內容，模型也會直接拿到 OpenViking 工具以及 `openviking-memory`、`openviking-skills`、`ov-experience-memory`、`openviking-rule-search` 四個技能，無需額外配置。
+
+Rule skill 需要 `0.5.33` 或更新的外掛包，以及在 `/mcp` 釋出 `rule_search`
+的服務端版本。升級兩端後重連 DSH。
 
 原始碼：[examples/dsh-memory-plugin](https://github.com/volcengine/OpenViking/tree/main/examples/dsh-memory-plugin)
 
@@ -112,7 +115,7 @@ Windows 上安裝器不可用，只能用這種方式；macOS 上不想跑安裝
 
 每個 DSH 會話對映為 OpenViking 中的 `dsh-<session-id>`，子 agent 各自擁有獨立會話。
 
-模型看到的工具面就是 OpenViking 的 MCP 工具集，經由與其他記憶整合相同的 stdio 代理接入，以 `mcp__openviking__` 字首釋出。由於該代理每個 profile 只起一個程序，`mcp__openviking__remember` 寫入的是服務端一個短生命週期的會話而不是當前會話（對話本身仍由自動捕獲記錄）。設定 `OPENVIKING_RECALL_PEER_SCOPE=actor` 後，固定的 `OPENVIKING_PEER_ID` 才會把該 profile 的工具呼叫歸屬到同一個 peer；預設 `all` 不傳送 actor-peer 頭。多個工作區需要不同工具身份時，使用獨立 profile/程序。外掛同時附帶三個共享技能：`openviking-memory` 讓模型知道何時該檢索、讀取和寫入，`openviking-skills` 講如何查詢、使用、建立、共享和遷移存放在 OpenViking 裡的技能，`ov-experience-memory` 讓模型在執行類任務前檢索並應用以往任務的 Experience。外掛預設捕獲工具結果（`captureToolResults: true`），服務端據此把該技能的讀取關聯回所用的 Experience；設為 `false` 時，它只檢索和應用 Experience。
+模型看到的工具面就是 OpenViking 的 MCP 工具集，經由與其他記憶整合相同的 stdio 代理接入，以 `mcp__openviking__` 字首釋出。由於該代理每個 profile 只起一個程序，`mcp__openviking__remember` 寫入的是服務端一個短生命週期的會話而不是當前會話（對話本身仍由自動捕獲記錄）。設定 `OPENVIKING_RECALL_PEER_SCOPE=actor` 後，固定的 `OPENVIKING_PEER_ID` 才會把該 profile 的工具呼叫歸屬到同一個 peer；預設 `all` 不傳送 actor-peer 頭。多個工作區需要不同工具身份時，使用獨立 profile/程序。外掛同時附帶四個共享技能：`openviking-memory` 讓模型知道何時該檢索、讀取和寫入，`openviking-skills` 講如何查詢、使用、建立、共享和遷移存放在 OpenViking 裡的技能，`ov-experience-memory` 讓模型在執行類任務前檢索並應用以往任務的 Experience，`openviking-rule-search` 則呼叫服務端釋出的 `mcp__openviking__rule_search` 工具檢查任務相關 Rule。外掛預設捕獲工具結果（`captureToolResults: true`），服務端據此把該技能的讀取關聯回所用的 Experience；設為 `false` 時，它只檢索和應用 Experience。
 
 檔案工具誤把 `viking://` URI 當本地路徑時，呼叫會被攔截，並提示改用對應的 OpenViking 工具；寫入或編輯的若是 `viking://~/skills/<name>/` 這類技能目錄，提示的工具是 `mcp__openviking__add_skill`，它用完整的 `SKILL.md` 文本建立或替換整個技能。shell 命令帶 `viking://` URI 時照常執行，模型會收到一條改用 OpenViking 工具的提示，URI 是有意傳入的資料時可以忽略。
 

@@ -15,6 +15,7 @@ from openviking.core.namespace import classify_uri, uri_parts
 from openviking.core.path_variables import resolve_path_variables
 from openviking.core.uri_validation import validate_request_viking_uri
 from openviking.server.identity import RequestContext
+from openviking.service.compile_targets import commit_snapshot
 from openviking.service.external_task_service import ExternalTaskError
 from openviking.service.fs_service import FSService
 from openviking.session.memory.consolidation_context_provider import (
@@ -98,9 +99,18 @@ async def _discover_memory_types(
 class MemoryCompileRunner:
     """Validate and execute memory-mode Compile tasks."""
 
-    def __init__(self, fs: FSService, vikingdb: Any = None) -> None:
+    def __init__(
+        self,
+        fs: FSService,
+        vikingdb: Any = None,
+        *,
+        runtime_config_manager: Any = None,
+        vlm_resolver=None,
+    ) -> None:
         self._fs = fs
         self._vikingdb = vikingdb
+        self._runtime_config_manager = runtime_config_manager
+        self._vlm_resolver = vlm_resolver
 
     def set_vikingdb(self, vikingdb: Any) -> None:
         self._vikingdb = vikingdb
@@ -159,6 +169,8 @@ class MemoryCompileRunner:
         try:
             with tracer.start_as_current_span(name="compile.memory.consolidate"):
                 trace_id = tracer.get_trace_id() or ""
+                # Recovery snapshot of the target before any memory is rewritten.
+                await self._snapshot(target, task_id, "start", ctx)
                 try:
                     result = await self._consolidate(
                         target=target,
@@ -191,10 +203,26 @@ class MemoryCompileRunner:
                     raise ExternalTaskError(
                         "MEMORY_CONSOLIDATION_FAILED", str(exc), result=result
                     ) from exc
+                await self._snapshot(target, task_id, "finish", ctx)
                 return result
         finally:
             if root_token is not None and reset_root_observability_context is not None:
                 reset_root_observability_context(root_token)
+
+    async def _snapshot(self, target: str, task_id: str, phase: str, ctx: RequestContext) -> None:
+        """Snapshot the target for recovery; failures are logged and cancellation propagates."""
+        try:
+            oid = await commit_snapshot(
+                self._fs._ensure_initialized(),
+                [target],
+                f"memory compile {task_id} {phase}",
+                ctx,
+                wait_busy=False,
+            )
+            if oid is None:
+                logger.warning("Memory compile %s %s snapshot is unavailable", task_id, phase)
+        except Exception as exc:
+            logger.warning("Memory compile %s %s snapshot failed: %s", task_id, phase, exc)
 
     async def _consolidate(
         self,
@@ -231,7 +259,16 @@ class MemoryCompileRunner:
         if not memory_types:
             return result
         config = get_openviking_config()
-        vlm = config.vlm.get_vlm_instance()
+        vlm = (
+            await self._vlm_resolver.get_vlm(ctx.account_id)
+            if self._vlm_resolver is not None
+            else config.vlm.get_vlm_instance()
+        )
+        from openviking.config.generation import get_output_language_override
+
+        output_language_override = await get_output_language_override(
+            self._runtime_config_manager, ctx.account_id, cluster_config=config
+        )
         provider = ConsolidationExtractContextProvider(
             memory_types=memory_types,
             target_directory=target,
@@ -239,6 +276,7 @@ class MemoryCompileRunner:
             memory_registry=registry,
             ctx=ctx,
             viking_fs=viking_fs,
+            output_language_override=output_language_override,
         )
 
         extract_context = provider.get_extract_context()

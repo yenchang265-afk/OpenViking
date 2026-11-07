@@ -18,11 +18,12 @@ that.
 
 ## Tools Exposed
 
-Seven curated tools, all auto-discovered by Open WebUI:
+Eight curated tools, all auto-discovered by Open WebUI:
 
 | Tool | OpenViking endpoint | Purpose |
 | --- | --- | --- |
 | `ov_search` | `POST /api/v1/search/find` | Semantic search across memories, resources, skills |
+| `ov_rule_search` | `POST /api/v1/rules/search` | Check task-specific constraints and return complete Rules, including conditions and exceptions |
 | `ov_recall_memories` | `POST /api/v1/search/find` (scoped to `viking://~/memories/`) | Recall personal memories for the current query |
 | `ov_add_memory` | `POST /api/v1/content/write` to `viking://~/memories/<name>` | Persist a new memory |
 | `ov_list_memories` | `GET /api/v1/fs/ls?uri=viking://~/memories/` | Browse the memories directory |
@@ -57,7 +58,7 @@ curl http://localhost:8765/openapi.json | jq '.paths | keys'
 
 1. Open WebUI → **Settings** → **Tools** → **Add Tool Server**.
 2. Paste the URL where this server is reachable, e.g. `http://localhost:8765`.
-3. Open WebUI fetches `/openapi.json`, lists all seven tools, and presents
+3. Open WebUI fetches `/openapi.json`, lists all eight tools, and presents
    them to the LLM as callable tools on every chat turn.
 
 No copy-pasting Python files, no admin-panel uploads. The same tool server is
@@ -178,9 +179,9 @@ Open WebUI 支援兩種工具整合方式：把 Python "Functions" 貼上進管�
 或對接外部 OpenAPI 工具伺服器（自動從 `/openapi.json` 發現工具）。
 本外掛實現第二種方式——純 HTTP 轉發，不重複實現任何業務邏輯。
 
-### 暴露的 7 個工具
+### 暴露的 8 個工具
 
-`ov_search`、`ov_recall_memories`、`ov_add_memory`、`ov_list_memories`、
+`ov_search`、`ov_rule_search`、`ov_recall_memories`、`ov_add_memory`、`ov_list_memories`、
 `ov_read_resource`、`ov_add_resource`、`ov_session_status`。詳見上方表格。
 
 ### 快速開始
@@ -197,7 +198,11 @@ OV_API_KEY=your-key python -m openviking_openwebui
 
 進入 Open WebUI 的 **設定 → 工具 → 新增工具伺服器**，貼上
 `http://localhost:8765`。Open WebUI 會自動讀取 `/openapi.json`
-並把全部 7 個工具暴露給模型。
+並把全部 8 個工具暴露給模型。
+
+`ov_rule_search` 接收 `task_context` 與可選的 `rule_probability_threshold`
+（預設 `0.65`），呼叫 `POST /api/v1/rules/search` 並返回完整 Rule。
+在受約束的操作或回覆前呼叫，逐條檢查適用條件、例外和正文。
 
 ### 環境變數
 

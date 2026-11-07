@@ -96,6 +96,7 @@ const workspace = {
       defaultTitle: 'Business Context Platform',
     },
     navigation: {
+      arranger: { title: 'Arrange' },
       compile: { title: 'Compile' },
       home: {
         title: 'Home',

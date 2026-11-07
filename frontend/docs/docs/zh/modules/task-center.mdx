@@ -1,0 +1,91 @@
+# TaskCenter 任務中心
+
+兩個任務列表合成一個模組：資料來源匯入與知識編譯。每個頁簽有自己的資料來源、列與定時語義。模組自己取數，宿主提供配置、受控狀態、列配置、插槽與文案。
+
+元件當前是佔位實現：展示模組名稱與佔位文案。下面的 props 已定型，接入方可以先完成容器與狀態接入；組合檢視與 `useTaskCenter` 隨後補充。
+
+## 基礎用法
+
+```tsx file="../../_demos/task-center-placeholder.tsx" preview
+
+```
+
+## 兩個頁籤
+
+| 頁籤         | 資料來源         | 定時的含義                         |
+| ------------ | ---------------- | ---------------------------------- |
+| 資料來源匯入 | 定時同步的 watch | 固定間隔（分鐘），到點重新匯入資源 |
+| 知識編譯     | 編譯目標         | 每日或每週的固定時刻，到點重新編譯 |
+
+兩者不是同一個欄位的兩種展示。watch 按間隔重新匯入；編譯目標按牆鍾時刻重跑。
+
+## 模組負責什麼
+
+- 每個頁籤的列表、載入/空態/失敗狀態，以及頁籤內的表頭篩選。
+- 定時列，含編輯控制元件。
+- 從當前身份判斷「其他成員任務」範圍是否可用。
+
+## 宿主負責什麼
+
+- 通過 Provider 提供請求配置，模組可用 `requestOptions` 逐欄位覆蓋。
+- 登入、帳號作用域與許可權。
+- 任務詳情：由模組內部以抽屜展示，宿主不參與開啟任務。
+- 寫入定時變更。`onSaveScheduleInterval` 與 `onSaveCompileSchedule` 返回 Promise：寫入成功後 resolve，模組重新取數；失敗則 reject，模組保留編輯內容並展示 `labels.saveFailed`。兩者分開是因為匯入任務按間隔同步，編譯目標按每日或每週的固定時刻更新。
+- 工具欄，通過 `slots.toolbar` 注入。行末操作內建：詳情入口與定時編輯。
+
+## 列
+
+省略 `columns` 時，每個頁籤使用自己的內建列與預設順序：
+
+| 頁籤         | 內建列                                                                       |
+| ------------ | ---------------------------------------------------------------------------- |
+| 資料來源匯入 | 資源名稱、定時同步、資料來源、最近更新時間、任務建立時間、路徑               |
+| 知識編譯     | 目錄、狀態、衝突檔案數、任務型別、定時更新、最近更新時間、任務建立時間、路徑 |
+
+傳 `columns.import` 或 `columns.compile` 可以調整順序、隱藏或覆蓋某一列，也可以新增列：
+
+```tsx
+<TaskCenter
+  columns={{
+    compile: [
+      { key: 'name', width: 280 },
+      { key: 'schedule' },
+      { key: 'conflicts', title: '衝突數' },
+      {
+        key: 'artifacts',
+        title: '產物',
+        render: (row) => <Artifacts uri={row.toUri} />,
+      },
+    ],
+  }}
+/>
+```
+
+自定義 key 必須提供 `render`；內建 key 省略時使用預設單元格。
+
+## 屬性
+
+模組從子路徑和根入口匯出 `TaskCenterProps`。`TaskCenterTab`、`TaskCenterScope`、`TaskCenterLabels`、`TaskCenterSlots`、行型別與列型別只從子路徑匯出。
+
+| 屬性                     | 型別                                              | 預設值   | 說明                                                                                                                                                                                        |
+| ------------------------ | ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tab`                    | `'import' \| 'compile'`                           | —        | 受控的當前頁籤。傳入時由宿主決定，模組只上報切換意圖。                                                                                                                                      |
+| `defaultTab`             | `'import' \| 'compile'`                           | `import` | 非受控時的初始頁籤。                                                                                                                                                                        |
+| `scope`                  | `'mine' \| 'others'`                              | —        | 受控的可見範圍。傳入時由宿主決定。                                                                                                                                                          |
+| `defaultScope`           | `'mine' \| 'others'`                              | `mine`   | 非受控時的初始範圍。                                                                                                                                                                        |
+| `columns`                | `TaskCenterColumns`                               | —        | 各頁籤的列配置。省略時使用各自的內建列與預設順序。                                                                                                                                          |
+| `onTabChange`            | `(tab: TaskCenterTab) => void`                    | —        | 頁籤變化後觸發。                                                                                                                                                                            |
+| `onScopeChange`          | `(scope: TaskCenterScope) => void`                | —        | 可見範圍變化後觸發。                                                                                                                                                                        |
+| `onSaveScheduleInterval` | `(row, intervalMinutes: number) => Promise<void>` | —        | 儲存匯入任務的同步間隔。寫入成功後 resolve，模組重新取數；reject 時保留編輯內容並展示 `labels.saveFailed`。                                                                                 |
+| `onSaveCompileSchedule`  | `(row, schedule \| null) => Promise<void>`        | —        | 儲存編譯目標的定時規則。引數與原生 `update_schedule` 同形——`{ frequency: 'daily', hour, minute }` 或 `{ frequency: 'weekly', weekday, hour, minute }`——宿主可直接轉發。傳 `null` 關閉定時。 |
+| `onOpenResource`         | `(uri: string) => void`                           | —        | 開啟資源時觸發，例如匯入任務的目標路徑。                                                                                                                                                    |
+| `slots`                  | `TaskCenterSlots`                                 | —        | `toolbar` 與 `emptyState`。                                                                                                                                                                 |
+| `labels`                 | `TaskCenterLabels`                                | —        | 可替換文案：頁籤與範圍名稱、佔位說明 `description`、`empty`、`error`、`retry`、定時列及其狀態文案。                                                                                         |
+| `className`              | `string`                                          | —        | 容器附加類名。                                                                                                                                                                              |
+| `style`                  | `CSSProperties`                                   | —        | 容器樣式覆蓋。                                                                                                                                                                              |
+
+文案為純文本，宿主可將自身的翻譯結果對映到這些屬性。props 裡沒有資料欄位——資料由模組自己載入，任務狀態歸任務資料來源，不在模組內複製維護。
+
+「其他成員任務」是否出現取決於當前身份，由模組自行讀取，沒有許可權開關；宿主已解析過身份也不需要重複傳入。
+
+佔位元件當前只消費 `className`、`style`、`labels.title` 與 `labels.description`。

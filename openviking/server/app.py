@@ -41,6 +41,7 @@ from openviking.server.routers import (
     content_router,
     debug_router,
     filesystem_router,
+    mcps_router,
     metrics_router,
     observer_router,
     openviking_assets_router,
@@ -210,19 +211,23 @@ async def _initialize_runtime_state(
     durable_tasks = getattr(service, "external_tasks", None)
     if durable_tasks is not None:
         durable_tasks.defer_until_identity_policy()
-    if config.ttl_adapter is not None and config.ttl_adapter.enabled:
 
-        async def install_ttl_hooks():
-            await _initialize_auth_plugin(app, service, config)
-            await _initialize_ttl_adapter(app, service, config)
-
-        await service.initialize(before_background_start=install_ttl_hooks)
-        await service.apply_agent_evolution_config()
-    else:
-        await service.initialize()
-        await service.apply_agent_evolution_config()
+    async def install_write_guards():
         await _initialize_auth_plugin(app, service, config)
         await _initialize_ttl_adapter(app, service, config)
+        from openviking.service.deletion import setup_deletion
+
+        app.state.deletion_service = await setup_deletion(
+            service=service,
+            manager=app.state.api_key_manager,
+            oauth_store=getattr(app.state, "oauth_store", None),
+            usage_audit_runtime=getattr(app.state, "usage_audit_runtime", None),
+            gateway_app=getattr(app.state, "gateway_app", None),
+            require_registered_identity=config.get_effective_auth_mode() == "api_key",
+        )
+
+    await service.initialize(before_background_start=install_write_guards)
+    await service.apply_agent_evolution_config()
     manager = getattr(app.state, "api_key_manager", None)
     auth_mode = config.get_effective_auth_mode()
     if durable_tasks is not None:
@@ -242,16 +247,6 @@ async def _initialize_runtime_state(
         compile_scheduler.set_identity_resolver(
             manager.resolve_identity, manager.get_user_group_ids
         )
-    from openviking.service.deletion import setup_deletion
-
-    app.state.deletion_service = await setup_deletion(
-        service=service,
-        manager=app.state.api_key_manager,
-        oauth_store=getattr(app.state, "oauth_store", None),
-        usage_audit_runtime=getattr(app.state, "usage_audit_runtime", None),
-        gateway_app=getattr(app.state, "gateway_app", None),
-        require_registered_identity=config.get_effective_auth_mode() == "api_key",
-    )
     logger.info("OpenVikingService initialization complete")
 
 
@@ -378,7 +373,7 @@ def create_app(
 
     def _configure_session_runtime(service_obj) -> None:  # noqa: ANN001
         if config.deployment_mode == "shared":
-            scheduler = getattr(service_obj, "watch_scheduler", None)
+            scheduler = getattr(service_obj, "watch_runtime", None)
             if scheduler is not None and scheduler.is_running:
                 raise ValueError("Stop resource watches before enabling shared mode")
         resources = getattr(service_obj, "resources", None)
@@ -736,6 +731,7 @@ def create_app(
     app.include_router(resources_router)
     app.include_router(rules_router)
     app.include_router(filesystem_router)
+    app.include_router(mcps_router)
     app.include_router(content_router)
     app.include_router(console_router)
     app.include_router(search_router)

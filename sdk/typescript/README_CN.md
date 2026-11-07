@@ -20,7 +20,7 @@ const results = await client.search("部署文件", {
 });
 ```
 
-SDK 與 Python `openviking-sdk`、Go SDK 使用相同的 HTTP API、身份請求頭、響應信封和錯誤碼，覆蓋資源與技能、檔案系統與內容、資源關係、檢索、會話、OVPack、快照、任務、Watch、Observer 狀態和租戶管理介面。
+SDK 與 Python `openviking-sdk`、Go SDK 使用相同的 HTTP API、身份請求頭、響應信封和錯誤碼，覆蓋資源與技能、MCP Server 與即時上下文、檔案系統與內容、資源關係、檢索、會話、OVPack、快照、任務、Watch、Observer 狀態和租戶管理介面。
 
 Node.js 中存在的本地檔案路徑會自動上傳，目錄會先壓縮後上傳；其他字串會作為 URL 或服務端路徑傳送。
 
@@ -61,6 +61,59 @@ await client.commitSession("s1", { keepRecentCount: 0, eventTags: [] });
 ```
 
 使用共享臨時儲存的部署可設定 `uploadMode: "shared"`；服務端也接受 `"local"`（預設值）。
+
+## MCP Server 與即時上下文
+
+```ts
+await client.addMCP(
+  "weather",
+  "https://mcp.example.com/api",
+  { Authorization: "Bearer token" },
+  { targetUri: "viking://agent/tools" },
+);
+// 工具摘要和索引預設在後臺繼續處理。
+// 需要等待完成時，將 { wait: true } 作為第四個引數傳入。
+const tools = await client.findMCPTools("當前天氣", 5);
+const mounted = await client.mountMCPTool(
+  "viking://agent/tools/weather/current.json",
+  "viking://resources/arranger/beijing-weather.md",
+  "北京天氣",
+  {
+    description: "北京區域的即時天氣。",
+    timeoutSeconds: 60,
+    arguments: { city: "Beijing" },
+    tags: ["project=weather", "kind=live-context"],
+    wait: true,
+  },
+);
+const batchMounted = await client.batchMountMCPTools(
+  [
+    {
+      toolUri: "viking://agent/tools/weather/current.json",
+      nodeUri: "viking://resources/arranger/shanghai-weather.md",
+      title: "上海天氣",
+      arguments: { city: "Shanghai" },
+    },
+  ],
+  { wait: true },
+);
+await client.batchUnmountMCPTools(
+  ["viking://resources/arranger/shanghai-weather.md"],
+  { wait: true },
+);
+const syncResult = await client.syncMCP("weather", {
+  targetUri: "viking://agent/tools",
+});
+console.log(syncResult.changes, syncResult.affected_mounts);
+```
+
+客戶端還提供 `removeMCP`、`listMCPs`、`validateMCP`、`getMCP`、
+`getMCPStatus`、`invokeMCPTool`、`batchMountMCPTools`、`unmountMCPTool`、
+`batchUnmountMCPTools` 和 `listMCPMounts`。
+
+註冊預設寫入 `viking://~/tools`。帳號共享 Server 需傳
+`targetUri: "viking://agent/tools"`。`listMCPs` 和 `findMCPTools`
+未指定路徑時合併兩個空間，其他名稱型操作預設使用使用者空間。
 
 OVPack 匯出和備份與 Python、Go SDK 契約一致：內容會流式寫入 Node.js 本地檔案，並返回最終檔案路徑。
 
