@@ -170,7 +170,15 @@ PRESET_DIRECTORIES: Dict[str, DirectoryDefinition] = {
         path="",
         abstract="Resources scope. Independent knowledge and resource storage, not bound to specific account or Agent.",
         overview="Globally shared resource storage, organized by project/topic. "
-        "No preset subdirectory structure, users create project directories as needed.",
+        "The assets directory stores files referenced by resources; users create project directories as needed.",
+        children=[
+            DirectoryDefinition(
+                path="assets",
+                abstract="Shared asset library for files referenced by resources.",
+                overview="Stores images and other assets referenced by resource documents. "
+                "The directory is shared across projects.",
+            ),
+        ],
     ),
     "agent": DirectoryDefinition(
         path="",

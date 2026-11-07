@@ -264,6 +264,40 @@ export async function saveFileContent(
   }
 }
 
+/** Keep documents that reference shared editor assets valid after an asset rename. */
+export async function updateResourceImageReferences(
+  oldName: string,
+  newName: string,
+): Promise<void> {
+  const { entries } = await fetchFsList('viking://resources', {
+    recursive: true,
+    absLimit: 10000,
+    output: 'original',
+  })
+  for (const entry of entries) {
+    const isDocument = ['.md', '.markdown', '.html', '.htm'].some((ext) =>
+      entry.name.toLowerCase().endsWith(ext),
+    )
+    if (entry.isDir || !isDocument) continue
+    const { content } = await fetchFileContent(entry.uri)
+    const relative = entry.uri.slice('viking://resources/'.length)
+    const maxDepth = Math.max(0, relative.split('/').length - 1)
+    let updated = content
+    for (let depth = 0; depth <= maxDepth; depth++) {
+      const prefix = `${'../'.repeat(depth)}assets/`
+      updated = updated
+        .split(`${prefix}${oldName}`)
+        .join(`${prefix}${encodeURIComponent(newName)}`)
+        .split(`${prefix}${encodeURIComponent(oldName)}`)
+        .join(`${prefix}${encodeURIComponent(newName)}`)
+    }
+    updated = updated
+      .split(`viking://resources/assets/${oldName}`)
+      .join(`viking://resources/assets/${encodeURIComponent(newName)}`)
+    if (updated !== content) await saveFileContent(entry.uri, updated, content)
+  }
+}
+
 export async function removeResource(
   uri: string,
   options: { recursive?: boolean } = {},

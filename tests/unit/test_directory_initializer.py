@@ -77,8 +77,10 @@ async def test_initialize_account_workspace_batches_preset_directories(monkeypat
         "viking://agent/tools",
         "viking://agent/payments",
     }
-    expected_uris = {"viking://resources", *expected_agent_uris, *expected_user_uris}
-    assert account_count == 6
+    expected_uris = {
+        "viking://resources", "viking://resources/assets", *expected_agent_uris, *expected_user_uris
+    }
+    assert account_count == 7
     assert user_count == len(expected_user_uris)
     assert set(viking_fs.contexts) == expected_uris
     assert f"{user_root}/memories/preferences" not in viking_fs.contexts
@@ -170,10 +172,10 @@ async def test_system_assets_sync_only_for_account_initialization():
 
     viking_fs.contexts.clear()
     viking_fs.write_leases.clear()
-    assert await service.initialize_account_workspace(ctx) == (6, 7)
+    assert await service.initialize_account_workspace(ctx) == (7, 7)
     agfs.pathlock_acquire_tree.assert_awaited_once_with("/local/acme")
     agfs.pathlock_release.assert_awaited_once_with(lease)
-    assert viking_fs.write_leases == [lease] * 13
+    assert viking_fs.write_leases == [lease] * 14
     await initializer.initialize_account_directories(ctx)
     await initializer.initialize_user_directories(ctx)
 
@@ -268,7 +270,7 @@ async def test_workspace_init_retries_a_transient_lock_conflict(no_lock_backoff)
 
     account_count, _ = await initializer.initialize_account_workspace(ctx)
 
-    assert account_count == 6
+    assert account_count == 7
     assert viking_fs.write_calls.count("viking://agent") == 3
     assert viking_fs.contexts["viking://agent"]["abstract"]
 
