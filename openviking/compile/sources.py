@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 from typing import Iterable
 from urllib.parse import urlsplit
 
+from openviking.compile import media
 from openviking.compile.models import CompileFailure, CompileLimits
 from openviking.parse.parsers.media.utils import get_media_type
 
@@ -62,19 +63,18 @@ def is_image_source(uri: str) -> bool:
     return get_media_type(urlsplit(uri).path, None) == "image"
 
 
-async def read_source(client, uri) -> str:
-    """Read a text source; reject images before their bytes are decoded as text.
-
-    The in-server tool loop delivers text-only tool results, so image evidence
-    cannot reach the model; upstream's multimodal image reads are not ported.
-    """
-    if is_image_source(uri):
+async def read_source(client, uri) -> str | CompileSourceRange:
+    """Keep text reads intact; load image sources as one evidence range with their bytes."""
+    if not is_image_source(uri):
+        return await client.read_raw(uri)
+    if not media.is_inline_image(uri):
         raise CompileFailure(
-            "UNSUPPORTED_MEDIA",
-            f"In-server Compile cannot read image evidence: {uri}",
-            stage="pipeline",
+            "INVALID_ARGUMENT", f"Unsupported Compile image format: {uri}", stage="pipeline"
         )
-    return await client.read_raw(uri)
+    result = await media.read_image(client, uri)
+    if not result["success"]:
+        raise CompileFailure("SOURCE_READ_FAILED", f"{uri}: {result['content']}", stage="pipeline")
+    return CompileSourceRange(uri, 0, 0, 0, 0, "", image=result["image"], sha256=result["sha256"])
 
 
 def split_source(
@@ -180,22 +180,37 @@ def split_source(
 def pack_source_batches(
     sources: Iterable[tuple[str, str | CompileSourceRange]], limits: CompileLimits
 ) -> list[list[CompileSourceRange]]:
-    """Pack exact source ranges in input order, bounded only by characters.
+    """Pack exact source ranges and images in input order within text/media budgets.
 
     Adjacent ranges may share a batch when they fit. Small files share remaining
     capacity; original URIs remain the citation targets for all ranges. Source text
-    and repeated context both count toward ``source_batch_chars``.
+    and repeated context both count toward ``source_batch_chars``; a batch also holds
+    at most ``media.MAX_INLINE_IMAGES`` images within the inline media byte budget.
     """
     batches: list[list[CompileSourceRange]] = []
     batch: list[CompileSourceRange] = []
-    size = 0
+    size = image_count = media_bytes = 0
     for uri, content in sources:
         for part in split_source(uri, content, limits.source_batch_chars):
-            if batch and size + part.input_chars > limits.source_batch_chars:
+            chars, part_bytes = part.input_chars, 0
+            if part.image:
+                part_bytes = media.inline_media_bytes([{"content": [part.image]}])
+                if chars > limits.source_batch_chars or part_bytes > media.MAX_INLINE_MEDIA_BYTES:
+                    raise CompileFailure(
+                        "MEDIA_LIMIT", "Image exceeds the source batch budget", stage="pipeline"
+                    )
+            if batch and (
+                size + chars > limits.source_batch_chars
+                or image_count + bool(part.image) > media.MAX_INLINE_IMAGES
+                or media_bytes + part_bytes > media.MAX_INLINE_MEDIA_BYTES
+            ):
                 batches.append(batch)
                 batch, size = [], 0
+                image_count = media_bytes = 0
             batch.append(part)
-            size += part.input_chars
+            size += chars
+            image_count += bool(part.image)
+            media_bytes += part_bytes
     if batch:
         batches.append(batch)
     return batches

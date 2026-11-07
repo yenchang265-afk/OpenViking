@@ -54,6 +54,10 @@ These Skills ship with OpenViking (`openviking/system_assets/compile/example-ski
 
 Besides compiling source material into new knowledge artifacts with a Skill, `ov compile` has a special mode — set `--skill` to `memory` to consolidate an existing **memory** directory in place (dedup, merge, split, compact) on the memory framework instead of the Skill pipeline. See [Memory Consolidation](./06-memory-consolidation.md).
 
+## Image sources
+
+PNG, JPEG, GIF and WebP files under `--from` are compiled as evidence, alongside text. The model views each original image and can cite it like a text excerpt. Images need a `vlm` model with vision support, and they use far more tokens than text. Each image is limited to the inline media budget (about 3.75 MiB), and one request carries at most four images. An image that is too large, or whose bytes don't match its format, fails on its own and is reported in the task's errors; the rest of the Compile continues. Other image formats are rejected.
+
 ## Prerequisites
 
 - A running OpenViking service with a `vlm` model configured. The `--skill memory` mode takes no `--from`. The default endpoint is `http://localhost:1933`; remote use needs an API Key — see [Authentication](../guides/04-authentication.md). No service yet? Start with the [Quick Start](../getting-started/02-quickstart.md).
