@@ -1,3 +1,4 @@
+import { StudioFeatureSettings } from '#/features/connection/components/studio-feature-settings'
 import { ConnectionProfilesList } from '#/features/connection/components/connection-profiles'
 import { useTranslation } from 'react-i18next'
 
@@ -10,6 +11,7 @@ export function ConnectionSettingsPage() {
         {t('appShell:footer.connection')}
       </h1>
       <ConnectionProfilesList />
+      <StudioFeatureSettings />
     </div>
   )
 }

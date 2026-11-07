@@ -35,6 +35,13 @@ const {
   config: { url: 'http://localhost:1933', selection: 'auto' },
   healthState: { value: null as null | Record<string, unknown> },
 }))
+vi.mock('#/features/connection/hooks/use-studio-feature-toggles', () => ({
+  useStudioFeatureToggles: () => ({
+    data: {},
+    isEnabled: () => true,
+    mutation: { isPending: false, isError: false, mutate: vi.fn() },
+  }),
+}))
 vi.mock('#/shared/api/admin', () => ({ probeStudioConnection: probe }))
 vi.mock('#/features/connection/hooks/use-app-connection', () => ({
   useAppConnection: () => ({

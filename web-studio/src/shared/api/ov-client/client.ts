@@ -135,9 +135,12 @@ function canUseControlCredential(config: InternalAxiosRequestConfig): boolean {
   if (config.method?.toUpperCase() !== 'GET') return false
   const path = resolvePathname(config.url)
   return (
-    ['/health', '/api/v1/system/status', '/api/v1/debug/health'].includes(
-      path,
-    ) ||
+    [
+      '/health',
+      '/api/v1/system/status',
+      '/api/v1/debug/health',
+      '/api/v1/studio/features',
+    ].includes(path) ||
     ['/api/v1/console/', '/api/v1/observer/'].some((prefix) =>
       path.startsWith(prefix),
     ) ||

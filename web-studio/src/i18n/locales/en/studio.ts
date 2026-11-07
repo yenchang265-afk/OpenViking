@@ -1,4 +1,26 @@
 const studio = {
+  featureToggles: {
+    title: 'Studio features',
+    description:
+      'Control feature visibility for all Studio users. Changes apply without a restart. Service APIs remain available.',
+    error: 'Unable to load or save features. Try again.',
+    features: {
+      filesystem: 'Filesystem',
+      directory: 'Directory',
+      memories: 'Memories',
+      retrieval: 'Retrieval',
+      skills: 'Skills',
+      sessions: 'Sessions',
+      tasks: 'Tasks',
+      home: 'Home',
+      vikingbot: 'VikingBot',
+      compile: 'Compile',
+      agentExperience: 'Agent Experience',
+      requestLogs: 'Request Logs',
+      watches: 'Watches',
+      monitoring: 'Monitoring',
+    },
+  },
   credentialStorage: {
     plaintext:
       'Encrypted credential storage is unavailable. Connections are saved unencrypted in this browser so they remain available after reload. Use HTTPS and allow browser storage for automatic encryption.',
@@ -208,6 +230,10 @@ const studio = {
   directoryError:
     'Unable to open this directory. It may be missing or inaccessible to your identity.',
   states: {
+    featureDisabled: {
+      title: 'Feature disabled',
+      description: 'A root administrator has disabled this feature in Studio.',
+    },
     trustedCredentialRequired: {
       title: 'Configure trusted authentication',
       description:

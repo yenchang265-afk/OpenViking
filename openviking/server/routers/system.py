@@ -325,3 +325,11 @@ async def check_consistency(
         ctx=ctx,
     )
     return Response(status="ok", result=result)
+
+
+@router.get("/api/v1/studio/features")
+async def get_studio_features(ctx: RequestContext = Depends(get_request_context)):
+    """Return presentation policy to any authenticated Studio user."""
+    from openviking_cli.utils.config import get_openviking_config
+
+    return Response(status="ok", result=get_openviking_config().studio_features.model_dump())
