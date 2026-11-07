@@ -60,7 +60,7 @@ required; MySQL remains the task authority.
 
 ## Provision and deploy
 
-The [shared Helm values](../../../examples/k8s-helm/shared-values.yaml) provide an
+The [shared Helm values](https://github.com/yenchang265-afk/OpenViking/blob/main/examples/k8s-helm/shared-values.yaml) provide an
 overlay for two replicas with disposable `emptyDir` workspaces. Fill in service
 addresses, TLS settings, model credentials, and the referenced Kubernetes Secret.
 Keep startup configuration identical and managed externally. The startup-file
