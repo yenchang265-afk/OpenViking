@@ -102,6 +102,7 @@ function detectLanguage(filename: string): string | null {
 
 export interface CodeEditorHandle {
   getContent: () => string
+  insertText: (text: string) => void
 }
 
 function accessExtensions(readOnly: boolean) {
@@ -180,6 +181,12 @@ export const CodeEditor = forwardRef<CodeEditorHandle, CodeEditorProps>(
 
     useImperativeHandle(ref, () => ({
       getContent: () => viewRef.current?.state.doc.toString() ?? initialContent,
+      insertText: (text) => {
+        const view = viewRef.current
+        if (!view || readOnlyRef.current) return
+        view.dispatch(view.state.replaceSelection(text))
+        view.focus()
+      },
     }))
 
     useEffect(() => {

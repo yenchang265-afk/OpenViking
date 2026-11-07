@@ -1666,6 +1666,7 @@ class FSService:
         edit_source: Literal["manual", "agent", "compile"] = "manual",
         commit_content: Optional[Callable[..., Awaitable[Any]]] = None,
         resolve_conflicts: bool = False,
+        expected_content_sha256: str | None = None,
     ) -> Dict[str, Any]:
         """Write content and refresh it after persisting managed output versions.
 
@@ -1698,6 +1699,7 @@ class FSService:
             tag_mode=tag_mode,
             acl=acl,
             resolve_conflicts=resolve_conflicts,
+            expected_content_sha256=expected_content_sha256,
         )
         if self.compile_versions is None or edit_source == "compile":
             return await write()

@@ -48,11 +48,26 @@ vi.mock('#/shared/components/code-editor', async () => {
   const React = await import('react')
   return {
     CodeEditor: React.forwardRef(
-      ({ initialContent }: { initialContent: string }, ref) => {
+      (
+        {
+          initialContent,
+          onChange,
+        }: { initialContent: string; onChange?: (content: string) => void },
+        ref,
+      ) => {
         React.useImperativeHandle(ref, () => ({
           getContent: () => initialContent,
         }))
-        return <div data-testid="editor-content">{initialContent}</div>
+        return (
+          <div data-testid="editor-content">
+            {initialContent}
+            <input
+              aria-label="test-editor"
+              value={initialContent}
+              onChange={(event) => onChange?.(event.target.value)}
+            />
+          </div>
+        )
       },
     ),
   }
@@ -1440,5 +1455,88 @@ describe('FilePreview complete-content editing', () => {
     fireEvent.click(screen.getByRole('button', { name: 'filePreview.edit' }))
     await waitFor(() => expect(toast.error).toHaveBeenCalled())
     expect(screen.queryByTestId('editor-content')).toBeNull()
+  })
+})
+
+describe('FilePreview draft protection and conflicts', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    previewState.override = { content: '# Original', fileType: 'markdown' }
+    vi.mocked(saveFileContent).mockResolvedValue(undefined)
+  })
+  afterEach(() => {
+    cleanup()
+    previewState.override = null
+    vi.restoreAllMocks()
+  })
+  it('saves the draft with the original content as its server precondition using Ctrl+S', async () => {
+    renderPreview(file, undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.edit' }))
+    const editor = await screen.findByLabelText('test-editor')
+    fireEvent.change(editor, { target: { value: '# Draft' } })
+    fireEvent.keyDown(editor, { key: 's', ctrlKey: true })
+    await waitFor(() =>
+      expect(saveFileContent).toHaveBeenCalledWith(
+        file.uri,
+        '# Draft',
+        '# Original',
+      ),
+    )
+    await waitFor(() =>
+      expect(screen.queryByLabelText('test-editor')).toBeNull(),
+    )
+  })
+  it('keeps the draft when selecting another file is declined and guards page unload', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const view = renderPreview(file, undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.edit' }))
+    fireEvent.change(await screen.findByLabelText('test-editor'), {
+      target: { value: '# Draft' },
+    })
+    const unload = new Event('beforeunload', { cancelable: true })
+    window.dispatchEvent(unload)
+    expect(unload.defaultPrevented).toBe(true)
+    view.rerender(
+      <FilePreview
+        file={{
+          ...file,
+          uri: 'viking://resources/wiki/other.md',
+          name: 'other.md',
+        }}
+        onClose={vi.fn()}
+        showCloseButton={false}
+      />,
+    )
+    expect(confirm).toHaveBeenCalled()
+    expect(screen.getByTestId('editor-content').textContent).toBe('# Draft')
+  })
+  it('retains a rejected draft and shows the current server content for merging', async () => {
+    vi.mocked(saveFileContent).mockRejectedValue({
+      statusCode: 409,
+      message: 'Conflict',
+    })
+    vi.mocked(getContentDownload).mockResolvedValue({
+      data: '# Latest',
+    } as never)
+    renderPreview(file, undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.edit' }))
+    fireEvent.change(await screen.findByLabelText('test-editor'), {
+      target: { value: '# Draft' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.save' }))
+    await screen.findByText('# Latest')
+    expect(screen.getByTestId('editor-content').textContent).toBe('# Draft')
+    fireEvent.click(
+      screen.getByRole('button', { name: 'filePreview.editor.merged' }),
+    )
+    vi.mocked(saveFileContent).mockResolvedValue(undefined)
+    fireEvent.click(screen.getByRole('button', { name: 'filePreview.save' }))
+    await waitFor(() =>
+      expect(saveFileContent).toHaveBeenLastCalledWith(
+        file.uri,
+        '# Draft',
+        '# Latest',
+      ),
+    )
   })
 })

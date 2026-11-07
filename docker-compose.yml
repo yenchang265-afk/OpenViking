@@ -101,6 +101,9 @@ services:
     ports:
       # Bound to localhost; openviking reaches it via http://seaweedfs:8333.
       - "127.0.0.1:8333:8333"
+      # Local file browser and cluster dashboard.
+      - "127.0.0.1:8888:8888"
+      - "127.0.0.1:9333:9333"
     volumes:
       - seaweedfs_data:/data
     networks:

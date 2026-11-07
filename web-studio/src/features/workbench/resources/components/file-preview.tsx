@@ -1,11 +1,21 @@
 import i18n from '#/i18n/core'
 import { formatDateTime } from '#/i18n/format'
+import { useRouter } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import hljs from 'highlight.js/lib/core'
-import { Loader2, Pencil, Save, X, XCircle } from 'lucide-react'
+import {
+  Loader2,
+  Pencil,
+  Save,
+  X,
+  XCircle,
+  Maximize2,
+  Minimize2,
+} from 'lucide-react'
 import type { ComponentProps, ReactNode } from 'react'
 import {
   createContext,
+  useCallback,
   isValidElement,
   lazy,
   Suspense,
@@ -51,7 +61,19 @@ import {
   normalizeReadContent,
 } from '#/shared/lib/viking-fs'
 import type { VikingFsEntry } from '#/shared/types/viking-fs'
-import type { CodeEditorHandle } from '#/shared/components/code-editor'
+import { HtmlEditPreview } from './html-edit-preview'
+import {
+  resolveMarkdownAssetTarget,
+  safeDecodeUri,
+} from '../lib/markdown-assets'
+import type { MarkdownAssetTarget } from '../lib/markdown-assets'
+import type { FileEditHandle } from './file-edit-workspace'
+
+const LazyFileEditWorkspace = lazy(() =>
+  import('./file-edit-workspace').then((module) => ({
+    default: module.FileEditWorkspace,
+  })),
+)
 
 const LazyCodeEditor = lazy(() =>
   import('#/shared/components/code-editor').then((m) => ({
@@ -317,81 +339,6 @@ function useDirectoryPreview(file: VikingFsEntry | null) {
     overviewQuery.error,
     overviewQuery.isLoading,
   ])
-}
-
-function dirnameVikingUri(fileUri: string): string {
-  if (fileUri === vikingPrefix) {
-    return vikingPrefix
-  }
-
-  const trimmed = fileUri.endsWith('/') ? fileUri.slice(0, -1) : fileUri
-  const idx = trimmed.lastIndexOf('/')
-  if (idx < vikingPrefix.length) {
-    return vikingPrefix
-  }
-  return `${trimmed.slice(0, idx + 1)}`
-}
-
-/** Resolve a decoded file path without interpreting literal # or percent signs. */
-function resolveRelativeVikingUri(
-  baseFileUri: string,
-  rawPath: string,
-): string {
-  const baseDir = dirnameVikingUri(baseFileUri)
-  const baseBody = baseDir.slice(vikingPrefix.length, -1)
-
-  const baseSegments = baseBody ? baseBody.split('/').filter(Boolean) : []
-  const relativeSegments = rawPath.split('/').filter(Boolean)
-
-  const merged = [...baseSegments]
-  for (const segment of relativeSegments) {
-    if (segment === '.') {
-      continue
-    }
-    if (segment === '..') {
-      merged.pop()
-      continue
-    }
-    merged.push(segment)
-  }
-
-  const resolved = `${vikingPrefix}${merged.join('/')}`
-  return resolved
-}
-
-type MarkdownAssetTarget =
-  | { kind: 'external'; value: string }
-  | { kind: 'raw'; value: string }
-  | { kind: 'viking'; value: string }
-
-function safeDecodeUri(value: string): string {
-  try {
-    return decodeURIComponent(value)
-  } catch {
-    return value
-  }
-}
-
-function resolveMarkdownAssetTarget(
-  assetPath: string,
-  fileUri: string,
-): MarkdownAssetTarget {
-  const trimmed = assetPath.trim()
-  if (!trimmed || trimmed.startsWith('#')) {
-    return { kind: 'raw', value: trimmed }
-  }
-
-  if (/^(https?:|data:|blob:|mailto:|tel:)/i.test(trimmed)) {
-    return { kind: 'external', value: trimmed }
-  }
-
-  // Split URL components before decoding; %23 is literal filename data.
-  const decoded = safeDecodeUri(trimmed.split(/[?#]/, 1)[0])
-
-  const vikingUri = decoded.startsWith(vikingPrefix)
-    ? decoded
-    : resolveRelativeVikingUri(fileUri, decoded)
-  return { kind: 'viking', value: vikingUri }
 }
 
 function resolveMarkdownAssetUrl(target: MarkdownAssetTarget): string {
@@ -1393,7 +1340,37 @@ function JsonlPreview({ content }: { content: string }) {
   )
 }
 
-export function FilePreview({
+export function FilePreview(props: FilePreviewProps) {
+  const { t } = useTranslation('resources')
+  const [activeFile, setActiveFile] = useState(props.file)
+  const activeFileRef = useRef(props.file)
+  const draftState = useRef({ dirty: false, busy: false })
+  const onDraftState = useCallback((dirty: boolean, busy: boolean) => {
+    draftState.current = { dirty, busy }
+  }, [])
+  useEffect(() => {
+    if (activeFileRef.current?.uri !== props.file?.uri) {
+      if (draftState.current.busy) return
+      if (
+        draftState.current.dirty &&
+        !window.confirm(t('filePreview.editor.discard'))
+      )
+        return
+    }
+    activeFileRef.current = props.file
+    setActiveFile(props.file)
+  }, [props.file, t])
+  return (
+    <FilePreviewContent
+      {...props}
+      key={activeFile?.uri ?? ''}
+      file={activeFile}
+      onDraftState={onDraftState}
+    />
+  )
+}
+
+function FilePreviewContent({
   readOnly = false,
   defaultReadLimit,
   file,
@@ -1401,7 +1378,10 @@ export function FilePreview({
   onClose,
   onNavigate,
   showCloseButton = true,
-}: FilePreviewProps) {
+  onDraftState,
+}: FilePreviewProps & {
+  onDraftState: (dirty: boolean, busy: boolean) => void
+}) {
   const { t } = useTranslation('resources')
   const isJsonPath = Boolean(
     file && !file.isDir && file.name.toLowerCase().endsWith('.json'),
@@ -1464,12 +1444,50 @@ export function FilePreview({
     Set<DirectoryLevelId>
   >(new Set(['abstract', 'overview']))
   const [editing, setEditing] = useState(false)
+  const [draftDirty, setDraftDirty] = useState(false)
+  const router = useRouter({ warn: false }) as
+    | ReturnType<typeof useRouter>
+    | undefined
+  useEffect(() => {
+    if (!router || !editing) return
+    return router.history.block({
+      blockerFn: () => {
+        if (savingRef.current) return true
+        if (draftDirty && !window.confirm(t('filePreview.editor.discard')))
+          return true
+        onDraftState(false, false)
+        setDraftDirty(false)
+        return false
+      },
+      enableBeforeUnload: false,
+    })
+  }, [router, editing, draftDirty, t, onDraftState])
+  const [fullscreen, setFullscreen] = useState(false)
+  useEffect(() => {
+    if (!editing) return
+    const preventUnload = (event: BeforeUnloadEvent) => {
+      if (!draftDirty && !savingRef.current) return
+      event.preventDefault()
+      event.returnValue = ''
+    }
+    window.addEventListener('beforeunload', preventUnload)
+    return () => window.removeEventListener('beforeunload', preventUnload)
+  }, [editing, draftDirty])
+  const discard = () =>
+    !draftDirty || window.confirm(t('filePreview.editor.discard'))
+
   const [saving, setSaving] = useState(false)
+  const savingRef = useRef(false)
+  useEffect(() => {
+    onDraftState(editing && draftDirty, saving)
+  }, [editing, draftDirty, saving, onDraftState])
   const [loadingEditor, setLoadingEditor] = useState(false)
   const [editorContent, setEditorContent] = useState('')
+  const editorBaseline = useRef('')
+  const [conflictContent, setConflictContent] = useState<string | null>(null)
   const fileUriRef = useRef(file?.uri)
   fileUriRef.current = file?.uri
-  const editorRef = useRef<CodeEditorHandle>(null)
+  const editorRef = useRef<FileEditHandle>(null)
   const { invalidatePreview } = useInvalidateVikingFs()
 
   const canEdit =
@@ -1485,6 +1503,8 @@ export function FilePreview({
     setMarkdownMode('preview')
     setJsonMode('preview')
     setEditing(false)
+    setDraftDirty(false)
+    setFullscreen(false)
     setLoadingEditor(false)
     setEditorContent('')
     setActiveDirectoryLevels(new Set(['abstract', 'overview']))
@@ -1623,6 +1643,9 @@ export function FilePreview({
       ) {
         throw new Error(t('filePreview.largeFileSkipped'))
       }
+      setDraftDirty(false)
+      editorBaseline.current = content
+      setConflictContent(null)
       setEditorContent(content)
       setEditing(true)
     } catch (err) {
@@ -1634,15 +1657,43 @@ export function FilePreview({
   }
 
   const handleSave = async () => {
-    if (!file || !editorRef.current) return
+    if (!file || !editorRef.current || savingRef.current) return
+    savingRef.current = true
     setSaving(true)
+    onDraftState(true, true)
+    const editor = editorRef.current
     try {
-      await saveFileContent(file.uri, editorRef.current.getContent())
+      const content = editor.getContent()
+      await editor.saveAssets()
+      // A lost response can follow a committed write; do not roll back its images.
+      editor.retainAssets()
+      await saveFileContent(file.uri, content, editorBaseline.current)
+      editor.markSaved()
       invalidatePreview(file.uri)
+      setDraftDirty(false)
+      setFullscreen(false)
       setEditing(false)
     } catch (err) {
+      if (
+        err &&
+        typeof err === 'object' &&
+        'statusCode' in err &&
+        err.statusCode === 409
+      ) {
+        try {
+          const latest = await getContentDownload({
+            query: { uri: file.uri },
+            responseType: 'text',
+            throwOnError: true,
+          })
+          if (typeof latest.data === 'string') setConflictContent(latest.data)
+        } catch {
+          /* Keep the draft when the latest version cannot be fetched. */
+        }
+      }
       toast.error(t('filePreview.saveFailed'), { description: String(err) })
     } finally {
+      savingRef.current = false
       setSaving(false)
     }
   }
@@ -1682,7 +1733,23 @@ export function FilePreview({
     isJsonFile
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div
+      className={
+        fullscreen
+          ? 'fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-background'
+          : 'flex h-full min-h-0 flex-col overflow-hidden'
+      }
+      onKeyDown={(event) => {
+        if (
+          editing &&
+          (event.ctrlKey || event.metaKey) &&
+          event.key.toLowerCase() === 's'
+        ) {
+          event.preventDefault()
+          void handleSave()
+        }
+      }}
+    >
       {showHeader ? (
         <div className="flex min-h-14 shrink-0 items-center justify-between border-b px-4">
           <div className="flex min-w-0 items-center gap-2">
@@ -1697,7 +1764,12 @@ export function FilePreview({
                   size="sm"
                   variant="ghost"
                   disabled={saving}
-                  onClick={() => setEditing(false)}
+                  onClick={() => {
+                    if (discard()) {
+                      setEditing(false)
+                      setFullscreen(false)
+                    }
+                  }}
                 >
                   <XCircle className="mr-1 size-3.5" />
                   {t('filePreview.cancel')}
@@ -1730,19 +1802,66 @@ export function FilePreview({
               )
             )}
           </div>
-          {showCloseButton ? (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="size-10"
-              onClick={onClose}
-            >
-              <X className="size-4" />
-            </Button>
-          ) : null}
+          <div className="flex items-center gap-1">
+            {editing && (
+              <Button
+                size="icon"
+                variant="ghost"
+                aria-label={t(
+                  fullscreen
+                    ? 'filePreview.editor.exitFullscreen'
+                    : 'filePreview.editor.fullscreen',
+                )}
+                onClick={() => setFullscreen(!fullscreen)}
+              >
+                {fullscreen ? (
+                  <Minimize2 className="size-4" />
+                ) : (
+                  <Maximize2 className="size-4" />
+                )}
+              </Button>
+            )}
+            {showCloseButton ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="size-10"
+                disabled={saving}
+                onClick={() => {
+                  if (!editing || discard()) {
+                    onDraftState(false, false)
+                    setDraftDirty(false)
+                    onClose()
+                  }
+                }}
+              >
+                <X className="size-4" />
+              </Button>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
+      {editing && conflictContent !== null && (
+        <div className="max-h-64 shrink-0 overflow-auto border-b p-3">
+          <p className="text-sm">{t('filePreview.editor.conflict')}</p>
+          <details>
+            <summary>{t('filePreview.editor.latest')}</summary>
+            <pre className="whitespace-pre-wrap text-xs">{conflictContent}</pre>
+          </details>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={saving}
+            onClick={() => {
+              editorBaseline.current = conflictContent
+              setConflictContent(null)
+            }}
+          >
+            {t('filePreview.editor.merged')}
+          </Button>
+        </div>
+      )}
       {editing && preview?.content != null ? (
         <div className="min-h-0 flex-1 p-2">
           <Suspense
@@ -1753,11 +1872,55 @@ export function FilePreview({
               </div>
             }
           >
-            <LazyCodeEditor
+            <LazyFileEditWorkspace
+              key={file.uri}
               ref={editorRef}
+              uri={file.uri}
               initialContent={editorContent}
               filename={file.name}
+              markdown={isMarkdown}
               isDark={isDark}
+              saving={saving}
+              onChange={(content) => setDraftDirty(content !== editorContent)}
+              renderPreview={(content, images) =>
+                !isMarkdown ? (
+                  <HtmlEditPreview
+                    content={content}
+                    uri={file.uri}
+                    images={images}
+                  />
+                ) : (
+                  <article className="prose prose-sm max-w-none dark:prose-invert">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      rehypePlugins={[
+                        rehypeRaw,
+                        [rehypeSanitize, markdownSanitizeSchema],
+                      ]}
+                      urlTransform={transformDirectoryMarkdownUrl}
+                      components={{
+                        ...markdownComponents,
+                        img: ({ src, alt }) => {
+                          const staged = images.find(
+                            (image) => image.path === src,
+                          )
+                          return staged ? (
+                            <img src={staged.previewUrl} alt={alt || ''} />
+                          ) : (
+                            <MarkdownImage
+                              src={src}
+                              alt={alt}
+                              fileUri={file.uri}
+                            />
+                          )
+                        },
+                      }}
+                    >
+                      {content}
+                    </ReactMarkdown>
+                  </article>
+                )
+              }
             />
           </Suspense>
         </div>

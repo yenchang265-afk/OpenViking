@@ -375,3 +375,69 @@ def test_plan_statuses_prioritize_parent_freshness_over_file_semantic_work(
     )
 
     assert coordinator._plan_statuses(work, wait=wait, queue_status=queue_status) == expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("path", ["direct", "memory", "file_only", "sidecar"])
+async def test_stale_editor_write_rejected_under_lock(ctx, path):
+    """Every write path checks the original bytes before committing or dispatching."""
+    from hashlib import sha256
+
+    from openviking_cli.exceptions import ConflictError
+
+    fake_fs = _FakeVikingFS()
+    fake_fs.stat = AsyncMock(return_value={"isDir": False})
+    coordinator = ContentWriteCoordinator(viking_fs=fake_fs)
+    kwargs = {
+        "uri": "viking://resources/demo/note.md",
+        "root_uri": "viking://resources/demo",
+        "content": "my draft",
+        "mode": "replace",
+        "response_mode": "replace",
+        "ctx": ctx,
+        "expected_content_sha256": sha256(b"old version").hexdigest(),
+    }
+    if path == "direct":
+        write = coordinator._write_direct_with_refresh
+        kwargs.update(context_type="resource", wait=False, telemetry_id="test")
+    elif path == "memory":
+        write = coordinator._write_memory_with_refresh
+        kwargs.update(telemetry_id="test")
+    elif path == "sidecar":
+        write = coordinator._write_abstract_overview_with_refresh
+        kwargs.update(
+            uri="viking://resources/demo/.abstract.md", context_type="resource", telemetry_id="test"
+        )
+    else:
+        write = coordinator._write_file_only
+        kwargs.update(context_type="resource")
+    with pytest.raises(ConflictError, match="changed since"):
+        await write(**kwargs)
+    fake_fs.write_file.assert_not_awaited()
+    fake_fs.write_file_bytes.assert_not_awaited()
+    assert fake_fs._async_agfs.release_calls == ["lock-1"]
+
+
+@pytest.mark.asyncio
+async def test_editor_precondition_accepts_exact_original_bytes(ctx):
+    from hashlib import sha256
+
+    from openviking_cli.exceptions import ConflictError
+
+    fake_fs = _FakeVikingFS()
+    fake_fs.stat = AsyncMock(return_value={"isDir": False})
+    fake_fs.read_file.return_value = "原始\r\ncontent"
+    coordinator = ContentWriteCoordinator(viking_fs=fake_fs)
+    target = await coordinator._classify_locked_write_target(
+        "viking://resources/demo/note.md",
+        ctx=ctx,
+        expected_content_sha256=sha256("原始\r\ncontent".encode()).hexdigest(),
+    )
+    assert target.preexisting
+    coordinator._safe_stat = AsyncMock(return_value={"not_found": True})
+    with pytest.raises(ConflictError, match="removed since"):
+        await coordinator._classify_locked_write_target(
+            "viking://resources/demo/note.md",
+            ctx=ctx,
+            expected_content_sha256="0" * 64,
+        )
