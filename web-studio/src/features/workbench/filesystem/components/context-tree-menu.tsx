@@ -39,6 +39,7 @@ import {
   createTextFile,
   fetchFsStat,
   moveResource,
+  updateResourceImageReferences,
 } from '#/features/workbench/resources/lib/api'
 import {
   fileNameFromUri,
@@ -265,6 +266,12 @@ export function ContextTreeMenu({
     if (toUri === fromUri) return
     await ensureNameFree(toUri, name)
     await moveResource(fromUri, toUri)
+    if (fromUri.startsWith('viking://resources/assets/')) {
+      await updateResourceImageReferences(
+        fromUri.slice(fromUri.lastIndexOf('/') + 1),
+        toUri.slice(toUri.lastIndexOf('/') + 1),
+      )
+    }
     toast.success(t('explorer.nameDialog.renamed', { name }))
     // Marks follow the renamed entry and anything below it.
     setSelection(
