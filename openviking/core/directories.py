@@ -216,6 +216,51 @@ PRESET_DIRECTORIES: Dict[str, DirectoryDefinition] = {
 }
 
 
+def _immutable_preset_directory_uris() -> set[str]:
+    """Return namespace roots and every directory materialized from presets."""
+    protected = {
+        "viking://resources",
+        "viking://agent",
+        "viking://system",
+        "viking://system/example-skills",
+        "viking://user",
+    }
+
+    def add_tree(root: str, definition: DirectoryDefinition) -> None:
+        for child in definition.children:
+            uri = f"{root}/{child.path}".rstrip("/")
+            protected.add(uri)
+            add_tree(uri, child)
+
+    for scope in ("resources", "agent"):
+        add_tree(f"viking://{scope}", PRESET_DIRECTORIES[scope])
+    return protected
+
+
+def is_preset_directory_uri(uri: str) -> bool:
+    """Check whether a URI names an immutable built-in directory."""
+    normalized = uri.rstrip("/")
+    if normalized in _immutable_preset_directory_uris():
+        return True
+
+    parts = normalized.removeprefix("viking://").split("/")
+    if len(parts) < 2 or parts[0] != "user":
+        return False
+
+    relative = parts[2:]
+    if not relative:
+        return True
+
+    def contains_path(definition: DirectoryDefinition, target: tuple[str, ...], prefix: tuple[str, ...] = ()) -> bool:
+        for child in definition.children:
+            child_path = prefix + tuple(child.path.split("/"))
+            if child_path == target or contains_path(child, target, child_path):
+                return True
+        return False
+
+    return contains_path(PRESET_DIRECTORIES["user"], tuple(relative))
+
+
 class DirectoryInitializer:
     """Initialize preset directory structure."""
 

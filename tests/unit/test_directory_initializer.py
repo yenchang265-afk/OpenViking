@@ -301,3 +301,24 @@ async def test_workspace_init_does_not_retry_other_write_errors(no_lock_backoff)
         if c.kwargs.get("uri") == "viking://agent"
     ]
     assert len(agent_calls) == 1
+
+
+def test_preset_directories_are_immutable_targets():
+    from openviking.core.directories import is_preset_directory_uri
+
+    for uri in (
+        "viking://resources",
+        "viking://resources/assets",
+        "viking://agent",
+        "viking://agent/skills",
+        "viking://system",
+        "viking://user",
+        "viking://user/alice",
+        "viking://user/alice/memories",
+        "viking://user/alice/memories/events",
+    ):
+        assert is_preset_directory_uri(uri)
+
+    assert not is_preset_directory_uri("viking://resources/project")
+    assert not is_preset_directory_uri("viking://user/alice/resources/project")
+    assert not is_preset_directory_uri("viking://agent/my-workspace")

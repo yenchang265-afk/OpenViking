@@ -649,6 +649,10 @@ class FSService:
         wait: bool = False,
     ) -> Optional[Dict[str, Any]]:
         """Remove content and refresh derived data without changing Compile metadata."""
+        from openviking.core.directories import is_preset_directory_uri
+
+        if is_preset_directory_uri(uri):
+            raise InvalidArgumentError(f"built-in directory cannot be deleted: {uri}")
         viking_fs = self._ensure_initialized()
         await viking_fs._ensure_access(uri, ctx, action=AclAction.MANAGE)
         delete_ctx = replace(ctx, bypass_acl=True)
@@ -1083,6 +1087,10 @@ class FSService:
 
     async def mv(self, from_uri: str, to_uri: str, ctx: RequestContext) -> None:
         """Move a resource without exposing a cancellable partial transaction."""
+        from openviking.core.directories import is_preset_directory_uri
+
+        if is_preset_directory_uri(from_uri):
+            raise InvalidArgumentError(f"built-in directory cannot be renamed or moved: {from_uri}")
         from_uri = VikingFS._normalize_transfer_uri(from_uri)
         to_uri = VikingFS._normalize_transfer_uri(to_uri)
         self._reject_storage_internal_target(to_uri)
