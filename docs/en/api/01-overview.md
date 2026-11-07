@@ -530,6 +530,8 @@ This catalog follows the routes actually mounted by the server. Each group headi
 |--------|------|-------------|
 | GET | `/api/v1/admin/configuration` | Get explicit Cluster runtime configuration |
 | PATCH | `/api/v1/admin/configuration` | Update Cluster runtime configuration |
+| GET | `/api/v1/studio/features` | Get Studio feature switches (any authenticated user) |
+| PATCH | `/api/v1/admin/studio/features` | Update Studio feature switches (ROOT) |
 | POST | `/api/v1/admin/configuration/test-model` | Test a draft model or embedding connection without saving it |
 | POST | `/api/v1/admin/restart` | Request a graceful restart of a supported server process (ROOT only) |
 | GET | `/api/v1/admin/accounts/{account_id}/configuration` | Get Account settings and the effective Agent Evolution switch |

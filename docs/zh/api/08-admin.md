@@ -528,6 +528,17 @@ PATCH 會先做結構校驗，再構造合併後的配置：未知路徑和執�
 
 檔案含美元符號、Windows `%VAR%` 引用或轉義的美元/百分號時，讀取和預覽返回 `form_readonly: true`，不返回模型表單資料，並拒絕表單修改。請使用檔案模式編輯原文，包括帶引號和未帶引號的環境變數引用。驗證沿用啟動時對原文展開環境變數的流程，儲存不會重新序列化文件。檔案校驗會應用 CLI 啟動引數覆蓋，與重啟時的處理一致。
 
+#### Studio 功能開關
+
+Studio 透過 `GET /api/v1/studio/features` 讀取介面開關，任何已認證使用者都可呼叫。
+ROOT 透過 `PATCH /api/v1/admin/studio/features` 修改開關，只需傳送要變更的項目。
+開關儲存在 Cluster 執行時配置（`studio_features`）中，響應返回完整的生效值。
+
+```http
+GET /api/v1/studio/features
+PATCH /api/v1/admin/studio/features
+```
+
 #### 草稿模型連線測試
 
 ROOT 可以測試草稿 VLM 或 Embedding 連線，而不儲存或釋出提交的配置。

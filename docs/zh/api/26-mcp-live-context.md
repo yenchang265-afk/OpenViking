@@ -28,7 +28,7 @@
 | POST | `/api/v1/mcps` | 註冊 Server 併發布工具目錄 |
 | GET | `/api/v1/mcps` | 列出已註冊 Server |
 | GET | `/api/v1/mcps/{name}` | 檢視 Server 和當前工具定義 |
-| GET | `/api/v1/mcps/status?name=...` | 檢查 Server 是否可訪問 |
+| GET | `/api/v1/mcps/status` | 檢查 Server 是否可訪問 |
 | POST | `/api/v1/mcps/{name}/sync` | 同步工具目錄並報告受影響掛載 |
 | DELETE | `/api/v1/mcps/{name}` | 刪除 Server 和工具目錄 |
 | POST | `/api/v1/mcps/find` | 語義檢索工具 |

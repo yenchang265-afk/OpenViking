@@ -525,6 +525,8 @@ JSON 輸出 - 錯誤：
 |------|------|------|
 | GET | `/api/v1/admin/configuration` | 獲取 Cluster 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/configuration` | 更新 Cluster 層執行時配置 |
+| GET | `/api/v1/studio/features` | 獲取 Studio 功能開關（任何已認證使用者） |
+| PATCH | `/api/v1/admin/studio/features` | 更新 Studio 功能開關（ROOT） |
 | POST | `/api/v1/admin/configuration/test-model` | 測試草稿模型或 Embedding 連線，不儲存配置 |
 | POST | `/api/v1/admin/restart` | 請求支援該能力的服務程序優雅重啟（僅 ROOT） |
 | GET | `/api/v1/admin/accounts/{account_id}/configuration` | 獲取 Account 配置及生效的 Agent 進化開關 |

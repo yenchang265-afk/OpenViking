@@ -632,6 +632,19 @@ Draft previews (`source=file&dry_run=true`) accept optional VLM/Embedding form `
 other sections remain editable through the complete file.
 File reads and previews return `form_readonly: true` when the document contains dollar signs, Windows `%VAR%` references, or escaped dollar/percent signs. Model form data is omitted and form patches are rejected. Use file mode to edit the original text, including quoted and unquoted environment references. Validation follows startup expansion of the original text; saves do not serialize the document. CLI startup arguments are reapplied during validation, as during restart.
 
+#### Studio Feature Switches
+
+Studio reads its presentation switches with `GET /api/v1/studio/features`; any
+authenticated user may call it. ROOT changes them with
+`PATCH /api/v1/admin/studio/features`, sending only the switches to change. The
+values are saved in the Cluster runtime configuration (`studio_features`) and the
+response returns the full effective set.
+
+```http
+GET /api/v1/studio/features
+PATCH /api/v1/admin/studio/features
+```
+
 #### Draft Model Connection Test
 
 ROOT can test a draft VLM or Embedding connection without saving or publishing
