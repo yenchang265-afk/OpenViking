@@ -372,14 +372,10 @@ def create_app(
         return usage_reporter
 
     def _configure_session_runtime(service_obj) -> None:  # noqa: ANN001
-        if config.deployment_mode == "shared":
-            scheduler = getattr(service_obj, "watch_runtime", None)
-            if scheduler is not None and scheduler.is_running:
-                raise ValueError("Stop resource watches before enabling shared mode")
         resources = getattr(service_obj, "resources", None)
         watch_setter = getattr(resources, "set_watch_requests_enabled", None)
         if callable(watch_setter):
-            watch_setter(config.deployment_mode != "shared")
+            watch_setter(True)
         sessions = getattr(service_obj, "sessions", None)
         tool_output_setter = getattr(sessions, "set_tool_output_externalization_config", None)
         if callable(tool_output_setter):

@@ -36,6 +36,10 @@ def raw_config(tmp_path):
         "storage": {
             "workspace": str(tmp_path / "workspace"),
             "task_store": {"provider": "mysql", "params": {"maxsize": 3}},
+            "watch_store": {
+                "provider": "mysql",
+                "params": {"credential_encryption_key": "a" * 43 + "="},
+            },
             "agfs": {
                 "backend": "s3",
                 "s3": {
@@ -77,6 +81,7 @@ def test_all_mysql_backends_inherit_one_connection(raw_config, tmp_path):
     server = load_server_config(str(path))
     for params in (
         config.storage.task_store.params,
+        config.storage.watch_store.params,
         config.oauth.mysql,
         server.account_store.params,
         server.observability.usage_audit.mysql,

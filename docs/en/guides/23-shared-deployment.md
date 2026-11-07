@@ -38,12 +38,16 @@ because other replicas may still be executing them. Recovery after a worker cras
 can therefore be delayed by this threshold. Validate recovery timing with your
 own ingestion sizes before deployment.
 
-Resource watches are intentionally unavailable in this first shared-mode release.
-Set `enable_watch_scheduler: false`: no watch registry is loaded and no watch
-refresh loop runs. Requests carrying watch options are rejected before ingestion;
-watch-management endpoints report that the scheduler is unavailable. Existing
-persisted watch definitions are retained for standalone use, but do not execute
-in shared mode. One-off ingestion remains available.
+Resource watches use `storage.watch_store.provider: mysql` in shared mode.
+Provision `openviking/service/sql/001_watch_tasks.sql` and configure the same
+`storage.watch_store.params.credential_encryption_key` on every replica (a
+base64-encoded 32-byte key). Watch connections inherit `connections.mysql`.
+Every replica serves the Watch API. Set `enable_watch_scheduler: true` on
+replicas that should participate in scheduling, with `watch_leader_provider`
+set to `auto` or `cache`; both use the shared Redis leader lease with MySQL.
+Replicas with scheduling disabled still serve watch requests. File watch stores
+and process-local leadership are rejected in shared mode. Existing file watch
+records are not automatically migrated to MySQL.
 
 Workers may keep scratch files, downloaded inputs, open connections, and derived
 in-memory caches. No later request should require a previous request's pod.
@@ -115,7 +119,8 @@ before starting replicas; `import_existing` stays false in the example.
 Provision account and task tables through your database migration system using:
 
 - `openviking/server/account_stores/sql/init.sql` and applicable changes;
-- `openviking/service/sql/task_store_init.sql` and applicable changes.
+- `openviking/service/sql/task_store_init.sql` and applicable changes;
+- `openviking/service/sql/001_watch_tasks.sql` for watches.
 
 Provision OAuth and usage/audit tables from the same configuration the server
 will load. Review the DDL first, then explicitly apply it:

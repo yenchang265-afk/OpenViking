@@ -58,8 +58,12 @@ def validate_shared_deployment(server, config):
     require(not config.gateway.enabled, "run the gateway separately with shared storage")
     require(not server.with_bot, "run VikingBot separately")
     require(
-        not config.enable_watch_scheduler,
-        "enable_watch_scheduler must be false; resource watches are unavailable in shared mode",
+        storage.watch_store.provider == "mysql",
+        "storage.watch_store.provider must be mysql",
+    )
+    require(
+        config.watch_leader_provider in {"auto", "cache"},
+        "watch_leader_provider must be auto or cache in shared mode",
     )
     require(
         not agfs.tiered.enabled or agfs.tiered.backend == "mysql",
