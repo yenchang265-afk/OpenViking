@@ -23,7 +23,8 @@ def configuration():
         observability={"usage_audit": {"backend": "mysql"}},
     )
     config = NS(
-        enable_watch_scheduler=False,
+        enable_watch_scheduler=True,
+        watch_leader_provider="auto",
         git=NS(enabled=True, backend="s3"),
         cache=NS(provider="redis"),
         gateway=NS(enabled=False),
@@ -32,6 +33,7 @@ def configuration():
         storage=NS(
             vectordb=NS(backend="elasticsearch"),
             task_store=NS(provider="mysql"),
+            watch_store=NS(provider="mysql"),
             agfs=NS(
                 backend="s3",
                 s3=NS(cache_enabled=False),
@@ -90,7 +92,8 @@ def test_shared_helm_example_passes_real_config_validation(tmp_path, monkeypatch
         ("config", "storage.task_store.provider", "file"),
         ("config", "oauth.backend", "sqlite"),
         ("config", "gateway.enabled", True),
-        ("config", "enable_watch_scheduler", True),
+        ("config", "storage.watch_store.provider", "file"),
+        ("config", "watch_leader_provider", "local"),
         ("config", "git.backend", "local"),
         ("server", "account_store.provider", "file"),
         ("server", "transfer_tokens.provider", "memory"),
@@ -134,17 +137,32 @@ def test_unencrypted_replicas_still_share_the_credential_root_key():
         validate_shared_deployment(server, config)
 
 
-@pytest.mark.parametrize(
-    "options", [{"watch_interval": 60}, {"is_active": False}, {"watch_interval": -1}]
-)
-async def test_shared_resource_requests_reject_watch_options_before_ingestion(options):
-    from openviking.server.identity import RequestContext, Role
-    from openviking.service.resource_service import ResourceService
-    from openviking_cli.exceptions import FailedPreconditionError
-    from openviking_cli.session.user_id import UserIdentifier
+@pytest.mark.parametrize("scheduler_enabled", [True, False])
+@pytest.mark.parametrize("leader_provider", ["auto", "cache"])
+def test_shared_watches_allow_distributed_leadership(scheduler_enabled, leader_provider):
+    server, config = configuration()
+    config.enable_watch_scheduler = scheduler_enabled
+    config.watch_leader_provider = leader_provider
+    validate_shared_deployment(server, config)
 
-    service = ResourceService()
-    service.set_watch_requests_enabled(False)
-    ctx = RequestContext(user=UserIdentifier("acct", "alice"), role=Role.USER)
-    with pytest.raises(FailedPreconditionError, match="watches are unavailable"):
-        await service.add_resource("https://example.test/doc", ctx=ctx, **options)
+
+def test_shared_app_allows_running_watch_runtime(monkeypatch):
+    from unittest.mock import Mock
+
+    from openviking.server.app import create_app
+    from openviking_cli.utils.config.open_viking_config import OpenVikingConfig
+
+    server, shared = configuration()
+    config = OpenVikingConfig.from_dict({})
+    object.__setattr__(config, "storage", shared.storage)
+    object.__setattr__(config, "cache", shared.cache)
+    object.__setattr__(config, "encryption", shared.encryption)
+    config.git.backend = "s3"
+    config.enable_watch_scheduler = True
+    config.watch_leader_provider = "auto"
+    config.service_name = "test-shared"
+    monkeypatch.setattr("openviking.server.app.get_openviking_config", lambda: config)
+    resources = NS(set_watch_requests_enabled=Mock())
+    service = NS(resources=resources, watch_runtime=NS(is_running=True))
+    create_app(config=server, service=service)
+    resources.set_watch_requests_enabled.assert_called_once_with(True)

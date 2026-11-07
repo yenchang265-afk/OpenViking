@@ -173,6 +173,10 @@ def resolve_connections(data: dict[str, Any]) -> dict[str, Any]:
     if str(backend_name(task_store) or "").strip().lower() == "mysql":
         fill(task_store, "params", "storage.task_store.params")
 
+    watch_store = block(storage, "watch_store", "storage.watch_store")
+    if str(backend_name(watch_store) or "").strip().lower() == "mysql":
+        fill(watch_store, "params", "storage.watch_store.params")
+
     server = block(result, "server", "server")
     account = block(server, "account_store", "server.account_store")
     provider = str(backend_name(account) or "").strip().lower()

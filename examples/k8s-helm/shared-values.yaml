@@ -5,7 +5,8 @@ persistence:
   enabled: false
 config:
   service_name: openviking-production
-  enable_watch_scheduler: false
+  enable_watch_scheduler: true
+  watch_leader_provider: cache
   connections:
     mysql:
       host: mysql
@@ -61,6 +62,10 @@ config:
       backend: elasticsearch
     task_store:
       backend: mysql
+    watch_store:
+      provider: mysql
+      params:
+        credential_encryption_key: "${OPENVIKING_WATCH_ENCRYPTION_KEY}"
   server:
     deployment_mode: shared
     auth_mode: api_key
@@ -94,6 +99,9 @@ extraEnv:
   - name: OPENVIKING_ENCRYPTION_ROOT_KEY
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: encryption-root-key}
+  - name: OPENVIKING_WATCH_ENCRYPTION_KEY
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: watch-encryption-key}
   - name: OPENVIKING_MYSQL_PASSWORD
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: mysql-password}

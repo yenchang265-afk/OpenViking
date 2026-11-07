@@ -36,7 +36,7 @@ class WatchStoreConfig(BaseModel):
     """Watch store: the VikingFS control file for one node, MySQL when nodes share Watches."""
 
     provider: str = "file"
-    params: Dict[str, Any] = Field(default_factory=dict)
+    params: Dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @model_validator(mode="after")
     def normalize_provider(self):
