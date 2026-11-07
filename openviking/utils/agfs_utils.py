@@ -57,6 +57,8 @@ class RagfsBindingConfig:
         cachefs = getattr(self.agfs, "cachefs", None)
         cachefs_backend = getattr(cachefs, "backend", "local")
         pathlock = self.agfs.pathlock.model_dump(mode="json", exclude_none=True)
+        # Native sectioned config keeps its existing provider wire spelling.
+        pathlock["provider"] = pathlock.pop("backend")
         if pathlock.get("provider") == "sqlite":
             sqlite_path = pathlock.get("sqlite_path")
             if sqlite_path is None:

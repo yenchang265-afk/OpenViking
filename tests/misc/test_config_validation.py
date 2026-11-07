@@ -713,7 +713,7 @@ def test_openviking_config_dump_uses_only_canonical_cache_schema():
 
     dumped = config.model_dump(mode="json")
 
-    assert dumped["cache"] == {"provider": "redis", "params": {}}
+    assert dumped["cache"] == {"backend": "redis", "params": {}}
     assert dumped["storage"]["agfs"]["cachefs"]["backend"] == "cache"
     assert "cache" not in dumped["storage"]["agfs"]
 

@@ -352,14 +352,12 @@ def create_app(
             str(resolved_config_path) if resolved_config_path is not None else config_path
         )
 
-    from openviking_cli.utils.config.connections_config import resolve_mysql_connections
+    from openviking_cli.utils.config.connections_config import resolve_connections
 
     root_config = get_openviking_config()
     connections = getattr(root_config, "connections", None)
-    if connections is not None and connections.mysql is not None:
-        resolved = resolve_mysql_connections(
-            {"connections": connections, "server": config.model_dump()}
-        )
+    if connections is not None and (connections.mysql is not None or connections.redis is not None):
+        resolved = resolve_connections({"connections": connections, "server": config.model_dump()})
         config = ServerConfig.model_validate(resolved["server"])
     validate_server_config(config)
 

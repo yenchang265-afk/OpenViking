@@ -14,6 +14,7 @@ from openviking.server.auth.registry import get_registry
 from openviking.server.identity import AuthMode
 from openviking_cli.utils import get_logger
 from openviking_cli.utils.config.agent_evolution_config import AgentEvolutionConfig
+from openviking_cli.utils.config.backend_config import BackendSelectorConfig
 from openviking_cli.utils.config.config_loader import (
     load_json_config,
     resolve_config_path,
@@ -24,7 +25,7 @@ from openviking_cli.utils.config.config_utils import (
     normalize_service_name,
     warn_unknown_config_fields,
 )
-from openviking_cli.utils.config.connections_config import resolve_mysql_connections
+from openviking_cli.utils.config.connections_config import resolve_connections
 from openviking_cli.utils.config.consts import (
     DEFAULT_CONFIG_DIR,
     DEFAULT_OV_CONF,
@@ -361,10 +362,10 @@ class ToolOutputExternalizationConfig(BaseModel):
     failure_mode: Literal["reject", "preserve_raw", "preview_only"] = "preserve_raw"
 
 
-class AccountStoreConfig(BaseModel):
+class AccountStoreConfig(BackendSelectorConfig):
     """Startup-only selection of the complete account store provider."""
 
-    provider: str = "file"
+    provider: str = Field(default="file", alias="backend")
     params: Dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @field_validator("provider")
@@ -379,10 +380,10 @@ class AccountStoreConfig(BaseModel):
         return normalized
 
 
-class TransferTokenConfig(BaseModel):
+class TransferTokenConfig(BackendSelectorConfig):
     """Backend for the one-use credentials in MCP transfer URLs."""
 
-    provider: Literal["memory", "redis"] = "memory"
+    provider: Literal["memory", "redis"] = Field(default="memory", alias="backend")
 
 
 class ServerConfig(BaseModel):
@@ -599,7 +600,7 @@ def load_server_config(config_path: Optional[str] = None) -> ServerConfig:
             f"See: https://openviking.ai/docs"
         )
 
-    data = resolve_mysql_connections(load_json_config(path))
+    data = resolve_connections(load_json_config(path))
     server_data = data.get("server", {})
     if server_data is None:
         server_data = {}

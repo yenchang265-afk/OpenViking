@@ -461,6 +461,22 @@ fn pathlock_config_from_ov_conf(path: &str, service_name: &str) -> Result<PathLo
     pathlock_config_from_canonical_ov_conf(&json, service_name)
 }
 
+fn normalize_backend(value: &serde_json::Value) -> Result<serde_json::Value, String> {
+    let mut value = value.clone();
+    if let Some(object) = value.as_object_mut() {
+        if let Some(backend) = object.remove("backend") {
+            if object
+                .get("provider")
+                .is_some_and(|provider| provider != &backend)
+            {
+                return Err("backend and legacy provider must not conflict".to_string());
+            }
+            object.insert("provider".to_string(), backend);
+        }
+    }
+    Ok(value)
+}
+
 /// Parse PathLock configuration from the canonical `storage.agfs.pathlock` section.
 fn pathlock_config_from_canonical_ov_conf(
     json: &serde_json::Value,
@@ -472,7 +488,7 @@ fn pathlock_config_from_canonical_ov_conf(
         .and_then(|agfs| agfs.get("pathlock"));
     match pathlock {
         Some(pathlock) => {
-            let mut pathlock = pathlock.clone();
+            let mut pathlock = normalize_backend(pathlock)?;
             if pathlock.get("provider").and_then(serde_json::Value::as_str) == Some("sqlite")
                 && pathlock
                     .get("sqlite_path")
@@ -505,7 +521,8 @@ fn pathlock_config_from_value(
     value: &serde_json::Value,
     service_name: &str,
 ) -> Result<PathLockConfig, String> {
-    let pathlock = value
+    let normalized = normalize_backend(value)?;
+    let pathlock = normalized
         .as_object()
         .ok_or_else(|| "pathlock config must be an object".to_string())?;
     const FIELDS: &[&str] = &[
@@ -604,12 +621,7 @@ fn cache_config_from_canonical_ov_conf(
     )
 }
 
-/// Parse canonical cache configuration and optionally require its shared Runtime.
-fn cache_config_from_canonical_ov_conf_with_runtime(
-    json: &serde_json::Value,
-    force_runtime: bool,
-    service_name: &str,
-) -> Result<RagfsCacheConfig, String> {
+fn validate_removed_cache_schema(json: &serde_json::Value) -> Result<(), String> {
     let agfs = json.get("storage").and_then(|storage| storage.get("agfs"));
     if agfs.and_then(|agfs| agfs.get("cache")).is_some() {
         return Err(
@@ -633,6 +645,20 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
                 + "cache.provider/cache.params",
         );
     }
+
+    Ok(())
+}
+
+/// Parse canonical cache configuration and optionally require its shared Runtime.
+fn cache_config_from_canonical_ov_conf_with_runtime(
+    json: &serde_json::Value,
+    force_runtime: bool,
+    service_name: &str,
+) -> Result<RagfsCacheConfig, String> {
+    validate_removed_cache_schema(json)?;
+    let agfs = json.get("storage").and_then(|storage| storage.get("agfs"));
+    let queuefs = agfs.and_then(|agfs| agfs.get("queuefs"));
+    let queuefs_backend = optional_backend(queuefs, "storage.agfs.queuefs", "sqlite")?;
 
     let cachefs = agfs.and_then(|agfs| agfs.get("cachefs"));
     let cachefs_backend = optional_backend(cachefs, "storage.agfs.cachefs", "local")?;
@@ -664,8 +690,10 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
     if !config.runtime_enabled {
         return Ok(config);
     }
-    let cache = json
-        .get("cache")
+    let normalized_cache =
+        normalize_backend(json.get("cache").unwrap_or(&serde_json::Value::Null))?;
+    let cache = Some(&normalized_cache)
+        .filter(|cache| !cache.is_null())
         .ok_or_else(|| {
             "top-level cache.provider/cache.params is required when AGFS uses cache-backed modules"
                 .to_string()
@@ -676,7 +704,7 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
         .get("provider")
         .and_then(serde_json::Value::as_str)
         .ok_or_else(|| "top-level cache.provider must be a string".to_string())?;
-    let params = cache
+    let mut params = cache
         .get("params")
         .map(|params| {
             params
@@ -686,6 +714,41 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
         .transpose()?
         .cloned()
         .unwrap_or_default();
+    if provider == "redis" {
+        if let Some(shared) = json.get("connections").and_then(|c| c.get("redis")) {
+            let shared = shared
+                .as_object()
+                .ok_or("connections.redis must be an object")?;
+            if !shared.contains_key("endpoints") {
+                return Err("connections.redis.endpoints is required".to_string());
+            }
+            let connection_fields = [
+                "endpoints",
+                "mode",
+                "username",
+                "password",
+                "password_env",
+                "db",
+                "master_name",
+                "sentinel_username",
+                "sentinel_password",
+                "sentinel_password_env",
+                "tls_insecure_skip_verify",
+            ];
+            if connection_fields
+                .iter()
+                .any(|field| params.contains_key(*field))
+            {
+                if !params.contains_key("endpoints") {
+                    return Err("cache.params contains a partial redis connection".to_string());
+                }
+            } else {
+                let mut inherited = shared.clone();
+                inherited.extend(params);
+                params = inherited;
+            }
+        }
+    }
     config.provider = provider_kind(provider.to_string())?;
     match config.provider {
         CacheProviderKind::Redis => parse_redis_config(&mut config.redis, &params, "cache.params")?,
@@ -1739,7 +1802,14 @@ impl RAGFSBindingClient {
                     .as_deref()
                     .ok_or_else(|| "service_name is required".to_string())?;
                 if inline_cache_configured {
-                    cache_config_from_ov_conf_with_runtime(path, false, service_name)
+                    // Keep rejecting removed schemas without reparsing unresolved
+                    // connection placeholders overridden by the supplied config.
+                    let raw = fs::read_to_string(path)
+                        .map_err(|_| "failed to read ov.conf".to_string())?;
+                    let json = serde_json::from_str(&raw)
+                        .map_err(|_| "failed to parse ov.conf".to_string())?;
+                    validate_removed_cache_schema(&json)?;
+                    Ok(RagfsCacheConfig::default())
                 } else if inline_pathlock_configured {
                     cache_config_from_ov_conf_with_runtime(path, pathlock_uses_cache, service_name)
                 } else {
@@ -3617,6 +3687,72 @@ mod tests {
         });
 
         fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn constructor_inline_cache_overrides_unresolved_file_cache() {
+        let path =
+            std::env::temp_dir().join(format!("ov-inline-cache-{}.json", std::process::id()));
+        fs::write(
+            &path,
+            r#"{
+            "service_name": "test-service",
+            "cache": {"backend": "redis", "params": {"endpoints": ["${UNRESOLVED_REDIS}"]}},
+            "storage": {"agfs": {"cachefs": {"backend": "cache"}}}
+        }"#,
+        )
+        .unwrap();
+        Python::initialize();
+        Python::attach(|py| {
+            let cache = PyDict::new(py);
+            cache.set_item("enabled", false).unwrap();
+            cache.set_item("runtime_enabled", false).unwrap();
+            cache.set_item("provider", "redis").unwrap();
+            let config = PyDict::new(py);
+            config.set_item("service_name", "test-service").unwrap();
+            config.set_item("cache", cache).unwrap();
+            let kwargs = PyDict::new(py);
+            kwargs
+                .set_item("config_path", path.to_str().unwrap())
+                .unwrap();
+            kwargs.set_item("config", config).unwrap();
+            assert!(py
+                .get_type::<RAGFSBindingClient>()
+                .call((), Some(&kwargs))
+                .is_ok());
+        });
+        fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn canonical_backend_alias_and_shared_redis_connection() {
+        let mut json = serde_json::json!({
+            "connections": {"redis": {"endpoints": ["redis://shared:6379"]}},
+            "cache": {"backend": "redis", "params": {"default_ttl_seconds": 300}},
+            "storage": {"agfs": {"pathlock": {"backend": "cache"}}}
+        });
+        assert_eq!(
+            pathlock_config_from_canonical_ov_conf(&json, "test")
+                .unwrap()
+                .provider,
+            "cache"
+        );
+        let inherited = cache_config_from_canonical_ov_conf(&json, "test").unwrap();
+        assert_eq!(inherited.redis.endpoints, vec!["redis://shared:6379"]);
+        assert_eq!(inherited.redis.default_ttl_seconds, 300);
+        json["cache"]["params"]["password"] = serde_json::json!("private");
+        assert!(cache_config_from_canonical_ov_conf(&json, "test")
+            .unwrap_err()
+            .contains("partial"));
+        json["cache"]["params"] = serde_json::json!({});
+        json["connections"]["redis"] = serde_json::json!({});
+        assert!(cache_config_from_canonical_ov_conf(&json, "test")
+            .unwrap_err()
+            .contains("connections.redis.endpoints"));
+        json["cache"]["provider"] = serde_json::json!("dynamic");
+        assert!(cache_config_from_canonical_ov_conf(&json, "test")
+            .unwrap_err()
+            .contains("conflict"));
     }
 
     #[test]

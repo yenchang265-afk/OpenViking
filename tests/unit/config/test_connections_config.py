@@ -227,3 +227,146 @@ def test_tiered_mount_passes_shared_connection_to_compatible_binding(raw_config)
     client.get_capabilities.return_value = {"features": ["tiered", "tiered_shared_connection"]}
     mount_agfs_backend(client, config.storage.agfs)
     assert any("tiered_dsn" in call.args[2] for call in client.mount.call_args_list)
+
+
+def test_all_shared_connections_and_canonical_selectors(raw_config):
+    raw_config["connections"].update(
+        {
+            "redis": {"endpoints": ["rediss://redis:6379"], "password": "redis-secret"},
+            "s3": raw_config["storage"]["agfs"]["s3"],
+            "elasticsearch": {
+                "hosts": ["https://es:9200"],
+                "username": "ov",
+                "password": "es-secret",
+            },
+        }
+    )
+    raw_config["cache"] = {"backend": "redis", "params": {"default_ttl_seconds": 300}}
+    raw_config["storage"]["agfs"]["s3"] = {"prefix": "production/"}
+    raw_config["storage"]["agfs"]["pathlock"] = {"backend": "cache"}
+    raw_config["storage"]["vectordb"] = {"backend": "elasticsearch"}
+    raw_config["storage"]["task_store"] = {"backend": "mysql"}
+    original = deepcopy(raw_config)
+    config = OpenVikingConfig.model_validate(raw_config)
+    assert raw_config == original
+    assert config.cache.params["password"] == "redis-secret"
+    assert config.cache.params["default_ttl_seconds"] == 300
+    assert config.storage.agfs.s3.bucket == "test"
+    assert config.storage.agfs.s3.prefix == "production/"
+    assert config.storage.vectordb.elasticsearch.password == "es-secret"
+    assert "redis-secret" not in repr(config)
+    assert "es-secret" not in repr(config)
+    assert config.storage.task_store.params["host"] == "mysql.internal"
+    dumped = config.model_dump()
+    assert dumped["cache"]["backend"] == "redis"
+    assert "provider" not in dumped["cache"]
+    assert dumped["embedding"]["dense"]["provider"] == "openai"
+    OpenVikingConfig.model_validate(dumped)
+
+
+@pytest.mark.parametrize(
+    "kind,section,field,partial",
+    [
+        ("redis", "cache", "params", {"password": "private"}),
+        ("s3", "agfs", "s3", {"bucket": "other"}),
+        ("elasticsearch", "vectordb", "elasticsearch", {"password": "private"}),
+    ],
+)
+def test_partial_connections_never_mix_credentials(kind, section, field, partial):
+    defaults = {
+        "redis": {"endpoints": ["redis://redis:6379"]},
+        "s3": {
+            "endpoint": "https://s3",
+            "region": "us-east-1",
+            "bucket": "ov",
+            "access_key": "key",
+            "secret_key": "secret",
+        },
+        "elasticsearch": {"hosts": ["https://es:9200"]},
+    }
+    selected = {"backend": kind, field: partial}
+    raw = {"connections": {kind: defaults[kind]}}
+    if section == "cache":
+        raw[section] = selected
+    else:
+        raw["storage"] = {section: selected}
+    with pytest.raises(ValueError, match="partial"):
+        resolve_mysql_connections(raw)
+
+
+def test_backend_alias_conflicts_and_legacy_support():
+    from openviking_cli.utils.config.cache_config import CacheConfig
+
+    assert CacheConfig(provider="redis").model_dump()["backend"] == "redis"
+    assert CacheConfig(backend="redis", provider="redis").provider == "redis"
+    with pytest.raises(ValueError, match="conflict"):
+        CacheConfig(backend="redis", provider="dynamic")
+
+
+def test_untiered_s3_git_inherits_connection(raw_config):
+    raw_config["connections"]["s3"] = raw_config["storage"]["agfs"]["s3"]
+    raw_config["storage"]["agfs"]["s3"] = {"prefix": "data/"}
+    raw_config["storage"]["agfs"].pop("tiered")
+    config = OpenVikingConfig.model_validate(raw_config)
+    assert config.git.backend == "s3"
+    assert config.git.s3.bucket == "test"
+    assert config.git.s3.secret_key == "test"
+
+
+def test_complete_inline_redis_does_not_inherit_auth():
+    raw = {
+        "connections": {"redis": {"endpoints": ["rediss://central:6379"], "password": "secret"}},
+        "cache": {"backend": "redis", "params": {"endpoints": ["redis://local:6379"]}},
+    }
+    resolved = resolve_mysql_connections(raw)
+    assert resolved["cache"]["params"] == {"endpoints": ["redis://local:6379"]}
+
+
+def test_redis_mysql_nested_cache_inherits_connection(raw_config):
+    raw_config["connections"]["redis"] = {"endpoints": ["redis://shared:6379"]}
+    raw_config["server"]["account_store"] = {
+        "backend": "redis_mysql",
+        "params": {"cache": {"backend": "redis", "params": {"pool_size": 8}}},
+    }
+    params = resolve_mysql_connections(raw_config)["server"]["account_store"]["params"]
+    assert params["cache"]["params"]["endpoints"] == ["redis://shared:6379"]
+    assert params["cache"]["params"]["pool_size"] == 8
+    assert params["mysql"]["host"] == "mysql.internal"
+
+
+def test_inline_elasticsearch_does_not_inherit_central_auth():
+    raw = {
+        "connections": {"elasticsearch": {"hosts": ["https://central:9200"], "api_key": "secret"}},
+        "storage": {
+            "vectordb": {
+                "backend": "elasticsearch",
+                "elasticsearch": {"hosts": ["http://local:9200"]},
+            }
+        },
+    }
+    resolved = resolve_mysql_connections(raw)
+    assert resolved["storage"]["vectordb"]["elasticsearch"] == {"hosts": ["http://local:9200"]}
+
+
+def test_programmatic_server_inherits_redis_without_central_mysql(monkeypatch):
+    from openviking.server import app as app_module
+    from openviking.server import dependencies
+    from openviking.server.config import ServerConfig
+
+    root = OpenVikingConfig(connections={"redis": {"endpoints": ["redis://shared:6379"]}})
+    monkeypatch.setattr(app_module, "get_openviking_config", lambda: root)
+    monkeypatch.setattr(dependencies, "_server_config", dependencies.get_server_config())
+    server = ServerConfig(
+        account_store={
+            "backend": "redis_mysql",
+            "params": {
+                "mysql": {"user": "ov", "password": "secret", "database": "ov"},
+                "cache": {"backend": "redis"},
+            },
+        }
+    )
+    app = app_module.create_app(config=server)
+    assert app.state.config.account_store.params["cache"]["params"]["endpoints"] == [
+        "redis://shared:6379"
+    ]
+    assert "params" not in server.account_store.params["cache"]

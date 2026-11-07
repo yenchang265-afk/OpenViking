@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, model_validator
 
 from openviking_cli.utils.logger import get_logger
 
+from .backend_config import BackendSelectorConfig
 from .connections_config import MySQLConnectionConfig
 
 logger = get_logger(__name__)
@@ -128,12 +129,14 @@ class S3Config(BaseModel):
 
     access_key: Optional[str] = Field(
         default=None,
+        repr=False,
         description="S3 access key ID (required; RAGFS has no default credential chain). "
         'Use "${VAR}" to read it from the environment.',
     )
 
     secret_key: Optional[str] = Field(
         default=None,
+        repr=False,
         description="S3 secret access key corresponding to the access key ID (required). "
         'Use "${VAR}" to read it from the environment.',
     )
@@ -552,7 +555,7 @@ class StorageCircuitBreakerConfig(BaseModel):
         return self
 
 
-class AGFSPathLockConfig(BaseModel):
+class AGFSPathLockConfig(BackendSelectorConfig):
     """Configuration for the native RAGFS path lock service."""
 
     @model_validator(mode="after")
@@ -568,6 +571,7 @@ class AGFSPathLockConfig(BaseModel):
 
     provider: str = Field(
         default="filesystem",
+        alias="backend",
         description="PathLock provider: 'filesystem' | 'memory' | 'sqlite' | 'cache'",
     )
     sqlite_path: Optional[str] = Field(

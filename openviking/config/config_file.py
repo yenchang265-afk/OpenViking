@@ -11,7 +11,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from openviking_cli.utils.config.config_loader import expand_env_vars
-from openviking_cli.utils.config.connections_config import resolve_mysql_connections
+from openviking_cli.utils.config.connections_config import resolve_connections
 from openviking_cli.utils.config.embedding_config import EmbeddingCredential
 from openviking_cli.utils.config.open_viking_config import (
     OpenVikingConfig,
@@ -66,7 +66,7 @@ def _validate(content: str, server_overrides: dict | None = None) -> OpenVikingC
     try:
         from openviking.server.config import ServerConfig, validate_server_config
 
-        expanded = resolve_mysql_connections(
+        expanded = resolve_connections(
             json.loads(expand_env_vars(content.lstrip("\ufeff"), "ov.conf"))
         )
         server = expanded.get("server")

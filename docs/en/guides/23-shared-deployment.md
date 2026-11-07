@@ -70,9 +70,25 @@ use their shared AGFS documents.
 Configure MySQL once in `connections.mysql` (host, port, database, user, password,
 and optional `ssl`). Every selected MySQL backend inherits those connection
 details automatically, including tiered AGFS. No connection name or separate
-DSN environment variable is needed. Provider/backend selections remain explicit;
+DSN environment variable is needed. Backend selections remain explicit;
 defining a connection does not enable a subsystem. Pool sizes, tables and retention
 stay in their subsystem settings.
+
+Configure the other shared services in `connections.redis`, `connections.s3`, and
+`connections.elasticsearch`. Redis endpoint/topology/authentication settings feed
+`cache.params`; TTL and pool settings stay in `cache.params`. S3 endpoint, bucket,
+region, and credentials feed the selected AGFS and Git S3 backends; prefix and cache
+policy stay local. Elasticsearch hosts, authentication, and TLS feed the selected
+vector backend; index and request policies stay local.
+
+Storage selectors use `backend`, including cache, path locks, task/account stores,
+and transfer tokens. The old `provider` spelling remains accepted; conflicting
+`backend` and `provider` values are rejected. LLM `provider` still selects a model
+vendor. Complete inline connections remain independent overrides. When central
+connections exist, partial connection overrides are rejected: Redis requires
+`endpoints`, S3 requires endpoint/region/bucket/access_key/secret_key, and
+Elasticsearch requires `hosts`. Secrets from central and inline connections are
+never combined.
 
 Using the central connection for tiered storage requires a matching rebuilt native
 extension: startup refuses an older binding rather than allowing it to silently
@@ -89,7 +105,9 @@ hostname in both Python and native storage; custom CA/client certificates use
 
 The example enables size-tiered AGFS storage: files smaller than 1 MiB and the
 path index live in MySQL; larger files live in S3. Git storage defaults to the tiered
-AGFS backend too. Tiered AGFS creates its index tables on first mount. For an
+AGFS backend too. Tiered AGFS creates its index tables on first mount. Table names are optional: the
+defaults are `agfs_entries` and `agfs_git_entries` for Git; set a custom table only
+when separate namespaces need isolation. For an
 existing untiered bucket, stop untiered writers and follow the
 [tiered-storage migration instructions](01-configuration.md#size-tiered-storage)
 before starting replicas; `import_existing` stays false in the example.

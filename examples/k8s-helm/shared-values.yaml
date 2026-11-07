@@ -13,26 +13,32 @@ config:
       user: openviking
       password: "${OPENVIKING_MYSQL_PASSWORD}"
       database: openviking
+    redis:
+      endpoints: ["redis://redis:6379"]
+      password_env: OPENVIKING_REDIS_PASSWORD
+    s3:
+      bucket: openviking
+      endpoint: https://s3.us-east-1.amazonaws.com
+      region: us-east-1
+      access_key: "${OPENVIKING_S3_ACCESS_KEY}"
+      secret_key: "${OPENVIKING_S3_SECRET_KEY}"
+    elasticsearch:
+      hosts: ["https://elasticsearch:9200"]
+      username: "${OPENVIKING_ES_USER}"
+      password: "${OPENVIKING_ES_PASSWORD}"
   embedding:
     dense:
       api_key: "${OPENVIKING_MODEL_API_KEY}"
   vlm:
     api_key: "${OPENVIKING_MODEL_API_KEY}"
   cache:
-    provider: redis
+    backend: redis
     params:
-      endpoints: ["redis://redis:6379"]
-      password_env: OPENVIKING_REDIS_PASSWORD
       default_ttl_seconds: 300
   storage:
     agfs:
       backend: s3
       s3:
-        bucket: openviking
-        endpoint: https://s3.us-east-1.amazonaws.com
-        region: us-east-1
-        access_key: "${OPENVIKING_S3_ACCESS_KEY}"
-        secret_key: "${OPENVIKING_S3_SECRET_KEY}"
         prefix: production/
         cache_enabled: false
       tiered:
@@ -41,35 +47,30 @@ config:
         small_threshold_bytes: 1048576
         import_existing: false
         mysql:
-          table: agfs_entries
           max_connections: 16
       queuefs:
         backend: cache
         mode: shared
         recover_stale_sec: 86400
       pathlock:
-        provider: cache
+        backend: cache
       cachefs:
         backend: cache
         multi_instance: true
     vectordb:
       backend: elasticsearch
-      elasticsearch:
-        hosts: ["https://elasticsearch:9200"]
-        username: "${OPENVIKING_ES_USER}"
-        password: "${OPENVIKING_ES_PASSWORD}"
     task_store:
-      provider: mysql
+      backend: mysql
   server:
     deployment_mode: shared
     auth_mode: api_key
     root_api_key: "${OPENVIKING_ROOT_API_KEY}"
     transfer_tokens:
-      provider: redis
+      backend: redis
     temp_upload:
       default_mode: shared
     account_store:
-      provider: mysql
+      backend: mysql
     observability:
       usage_audit:
         backend: mysql

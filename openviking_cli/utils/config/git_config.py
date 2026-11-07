@@ -1,6 +1,7 @@
 # Copyright (c) 2026 Beijing Volcano Engine Technology Co., Ltd.
 # SPDX-License-Identifier: AGPL-3.0
 """Git version control configuration for OpenViking."""
+
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field, model_validator
@@ -42,11 +43,13 @@ class GitS3Config(BaseModel):
     )
     access_key: Optional[str] = Field(
         default=None,
+        repr=False,
         description="S3 access key ID read directly from config. "
         "When empty, the SDK default credentials chain is used.",
     )
     secret_key: Optional[str] = Field(
         default=None,
+        repr=False,
         description="S3 secret access key read directly from config. "
         "When empty, the SDK default credentials chain is used.",
     )

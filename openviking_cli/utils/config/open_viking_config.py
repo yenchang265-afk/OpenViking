@@ -23,7 +23,7 @@ from .config_utils import (
     warn_unknown_config_fields,
     warn_unknown_fields,
 )
-from .connections_config import ConnectionsConfig, resolve_mysql_connections
+from .connections_config import ConnectionsConfig, resolve_connections
 from .consts import (
     DEFAULT_CONFIG_DIR,
     DEFAULT_OV_CONF,
@@ -255,8 +255,8 @@ class OpenVikingConfig(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def inherit_mysql_connections(cls, data):
-        return resolve_mysql_connections(data) if isinstance(data, dict) else data
+    def inherit_connections(cls, data):
+        return resolve_connections(data) if isinstance(data, dict) else data
 
     @model_validator(mode="after")
     def bind_tiered_mysql_connection(self):

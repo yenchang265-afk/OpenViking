@@ -372,9 +372,9 @@ class ElasticsearchConfig(BaseModel):
         default_factory=lambda: ["http://127.0.0.1:9200"],
         description="Elasticsearch node URLs",
     )
-    api_key: Optional[str] = Field(default=None, description="Elasticsearch API key")
+    api_key: Optional[str] = Field(default=None, repr=False, description="Elasticsearch API key")
     username: Optional[str] = Field(default=None, description="Basic auth user")
-    password: Optional[str] = Field(default=None, description="Basic auth password")
+    password: Optional[str] = Field(default=None, repr=False, description="Basic auth password")
     ca_certs: Optional[str] = Field(
         default=None, description="Path to a CA bundle for TLS verification"
     )

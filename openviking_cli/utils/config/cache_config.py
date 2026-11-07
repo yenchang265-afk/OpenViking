@@ -2,13 +2,15 @@
 # SPDX-License-Identifier: AGPL-3.0
 from typing import Any, Dict
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import Field, model_validator
+
+from .backend_config import BackendSelectorConfig
 
 
-class CacheConfig(BaseModel):
+class CacheConfig(BackendSelectorConfig):
     """Global cache Provider configuration shared by RAGFS modules."""
 
-    provider: str = Field(description="Cache Provider name")
+    provider: str = Field(alias="backend", description="Cache backend name")
     params: Dict[str, Any] = Field(
         default_factory=dict,
         description="Provider-owned configuration parameters",

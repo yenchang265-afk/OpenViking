@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field, model_validator
 from openviking_cli.utils.logger import get_logger
 
 from .agfs_config import AGFSConfig
+from .backend_config import BackendSelectorConfig
 from .parse_output_config import ParseOutputConfig
 from .transaction_config import TransactionConfig
 from .vectordb_config import VectorDBBackendConfig
@@ -15,10 +16,10 @@ from .vectordb_config import VectorDBBackendConfig
 logger = get_logger(__name__)
 
 
-class TaskStoreConfig(BaseModel):
+class TaskStoreConfig(BackendSelectorConfig):
     """Durable Task/Work backend selection."""
 
-    provider: str = "file"
+    provider: str = Field(default="file", alias="backend")
     params: Dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @model_validator(mode="after")
