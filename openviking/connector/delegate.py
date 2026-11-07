@@ -1022,7 +1022,7 @@ class ConnectorDelegate:
         submitting again. Connector has no remote cancellation API: cancelling only
         stops monitoring here.
         """
-        auth = await get_external_task_service().task_auth(task)
+        auth = task.auth or {}
         key = str(auth.get("external_task_id") or "").strip()
         if not key:
             raise ExternalTaskError(

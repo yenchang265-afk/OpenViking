@@ -184,10 +184,15 @@ class ExternalTaskService:
         current_role, current_groups = current
         stored = Role(ctx.role)
         now = stored if current_role is None else Role(current_role)
+        try:
+            # Keep the submit-time role only while the current role still permits it
+            # (Role's token-downgrade allowlist); otherwise run as the current role.
+            keep_stored = now.allows_token_role(stored)
+        except ValueError:
+            keep_stored = False
         return dataclasses.replace(
             ctx,
-            # A same-rank change of role still takes the current role.
-            role=stored if stored == now or stored.rank < now.rank else now,
+            role=stored if keep_stored else now,
             group_ids=tuple(group for group in ctx.group_ids if group in set(current_groups)),
         )
 
@@ -565,6 +570,8 @@ class ExternalTaskService:
                 user_id=user_id,
             )
             auth = await self._task_auth(task_id, account_id, user_id)
+            # Providers run with the task's decrypted private auth, as on_finish does.
+            task.auth = auth
             ctx = await self._current_identity(restore_request_context(auth, account_id, user_id))
             await tracker.start(task_id, account_id=account_id, user_id=user_id, stage="running")
             result = await provider.run(task, payload, ctx, progress=progress, cancelled=cancelled)
@@ -656,11 +663,6 @@ class ExternalTaskService:
             ) from exc
         return auth
 
-    async def task_auth(self, task: TaskRecord) -> dict[str, Any]:
-        """Return the task's decrypted private auth (credentials, remote task id)."""
-        assert task.account_id is not None and task.user_id is not None
-        return await self._task_auth(task.task_id, task.account_id, task.user_id)
-
     @staticmethod
     def _mapping(value: Any) -> dict[str, Any]:
         return dict(value) if isinstance(value, dict) else {}
@@ -675,6 +677,15 @@ class ExternalTaskService:
     ) -> bool:
         tracker = get_task_tracker()
         task = await tracker.get(task_id, account_id=account_id, user_id=user_id)
+        if task is not None and (
+            task.status in {TaskStatus.COMPLETED, TaskStatus.FAILED}
+            or task.result is not None
+            or task.error is not None
+        ):
+            # Another worker or a deletion already ended the task (its credentials are
+            # cleared): never apply this attempt's effects or overwrite that outcome.
+            self._release(task)
+            return True
         if snapshot.stage is not None or snapshot.meta:
             stage = snapshot.stage or snapshot.status
             meta = snapshot.meta or {}

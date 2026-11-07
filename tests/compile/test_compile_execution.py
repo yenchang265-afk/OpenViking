@@ -41,9 +41,9 @@ async def test_review_failures_preserve_plan_and_cancellation(failure):
     args = (runtime, Node("mapped", "map", "sources", task="extract"), [], "", set(), 0, "", {})
     if failure == "cancel":
         with pytest.raises(asyncio.CancelledError):
-            await review.run(*args)
+            await review.run(*args, completed_ops=set())
     else:
-        assert await review.run(*args) is None
+        assert await review.run(*args, completed_ops=set()) is None
     assert runtime.contract is contract
 
 
