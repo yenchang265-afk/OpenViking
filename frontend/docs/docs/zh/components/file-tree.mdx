@@ -50,7 +50,7 @@ treeRef.current?.scrollToRow('resources', { block: 'center' });
 | 屬性                      | 型別                                      | 預設值 | 說明                                         |
 | ------------------------- | ----------------------------------------- | ------ | -------------------------------------------- |
 | `rows`                    | `readonly FileTreeRow[]`                  | 必填   | 按渲染順序排列的可見行。                     |
-| `operations`              | `FileTreeOperations`                      | —      | 非同步執行能力；省略方法時停用對應操作。       |
+| `operations`              | `FileTreeOperations`                      | —      | 非同步執行能力；省略方法時停用對應操作。     |
 | `selectedId`              | `string \| null`                          | —      | 當前選中的行 id，由宿主持有。                |
 | `isReady`                 | `boolean`                                 | `true` | 首次載入是否完成。                           |
 | `loadingFallback`         | `ReactNode`                               | —      | 首次載入期間替代行列表顯示。                 |
@@ -89,7 +89,7 @@ import '@openviking/react/components/file-tree/style.css';
 | `ov-file-tree__rows`        | 行容器     | 行的縱向排列。                 |
 | `ov-file-tree__row`         | 行         | 單行條目，帶 `data-selected`。 |
 | `ov-file-tree__row:hover`   | 行         | 懸停背景。                     |
-| `ov-file-tree__toggle`      | 展開按鈕   | 展開與摺疊控制元件。               |
+| `ov-file-tree__toggle`      | 展開按鈕   | 展開與摺疊控制元件。           |
 | `ov-file-tree__chevron`     | 摺疊箭頭   | 有 `data-expanded` 時旋轉。    |
 | `ov-file-tree__label`       | 名稱       | 行主文本。                     |
 | `ov-file-tree__description` | 描述       | 名稱旁的次要文本。             |

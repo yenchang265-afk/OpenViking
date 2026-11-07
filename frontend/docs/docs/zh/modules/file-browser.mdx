@@ -75,7 +75,7 @@ import {
 | `requestOptions` | `OvRequestOptions`              | —      | 請求配置覆蓋，逐欄位覆蓋最近的 Provider。                                                                                              |
 | `uri`            | `string`                        | —      | 受控的當前資源 URI。傳入時由宿主決定當前資源，模組只上報切換意圖。                                                                     |
 | `defaultUri`     | `string`                        | —      | 非受控時的初始資源 URI。省略時不選中任何資源。                                                                                         |
-| `toolbarActions` | `ReactNode`                     | —      | 工具欄左側的宿主入口，用 `FileBrowserToolbarButton` 組合。搜尋、重新整理與入口之間的分隔線由模組負責。                                     |
+| `toolbarActions` | `ReactNode`                     | —      | 工具欄左側的宿主入口，用 `FileBrowserToolbarButton` 組合。搜尋、重新整理與入口之間的分隔線由模組負責。                                 |
 | `onUriChange`    | `(uri: string \| null) => void` | —      | 當前資源變化後觸發；清除選中時傳入 `null`。                                                                                            |
 | `labels`         | `FileBrowserLabels`             | —      | 可替換文案：`title`、`description`、`searchPlaceholder`、`searchEmpty`、`refresh`、`empty`、`error`、`retry`。未提供時沿用英文預設值。 |
 | `className`      | `string`                        | —      | 容器附加類名。                                                                                                                         |

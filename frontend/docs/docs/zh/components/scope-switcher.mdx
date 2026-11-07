@@ -55,7 +55,7 @@
 | `total`                                  | 已載入數或總數超過 10，或搜尋詞非空時顯示搜尋框。                  |
 | `onScroll(metrics)`                      | 傳出 `scrollTop`、`scrollHeight`、`clientHeight`，分頁由宿主處理。 |
 | `renderPanel({ search, list })`          | 組合標題、操作及底部入口。                                         |
-| `renderOption(content, option)`          | 擴充套件或替換行內容，內嵌按鈕/連結不觸發行選擇。                      |
+| `renderOption(content, option)`          | 擴充套件或替換行內容，內嵌按鈕/連結不觸發行選擇。                  |
 | `emptyFallback`、`errorFallback`         | 自定義空態、錯誤態和重試入口。                                     |
 
 選項必填 `id`、`label`，可選 `icon`、`description`、`disabled`。文案包含 `loading`、`searchPlaceholder`、`empty`、`noMatch`、`error`，預設英文，本地化文案傳給各級選擇器。

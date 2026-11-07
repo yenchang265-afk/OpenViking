@@ -14,10 +14,10 @@
 
 ## 兩類頁籤
 
-| 型別              | 由誰渲染     | 典型用途             |
-| ----------------- | ------------ | -------------------- |
+| 型別              | 由誰渲染     | 典型用途               |
+| ----------------- | ------------ | ---------------------- |
 | `kind: 'file'`    | 元件         | 檔案原文、原始碼、文件 |
-| `kind: 'content'` | 宿主原樣渲染 | 看板、圖譜、摘要     |
+| `kind: 'content'` | 宿主原樣渲染 | 看板、圖譜、摘要       |
 
 兩類共享外殼——頁籤行、路徑麵包屑、複製路徑與標題行插槽。差異在正文怎麼來，以及預覽/原始碼切換隻屬於檔案頁籤：內容頁籤需要多種檢視時在 `content` 裡自行實現。
 
@@ -65,27 +65,27 @@ previewRef.current?.setActiveTab('dashboard');
 | 屬性                 | 型別                         | 預設值  | 說明                                   |
 | -------------------- | ---------------------------- | ------- | -------------------------------------- |
 | `key`                | `string`                     | 必填    | 頁籤唯一標識。                         |
-| `title`              | `ReactNode`                  | 檔名  | 頁籤行顯示內容；內容頁籤必填。         |
+| `title`              | `ReactNode`                  | 檔名    | 頁籤行顯示內容；內容頁籤必填。         |
 | `icon`               | `ReactNode`                  | 按格式  | 頁籤圖示。                             |
 | `labels`             | `Partial<FilePreviewLabels>` | —       | 覆蓋該頁籤的文案。                     |
 | `disabled`           | `boolean`                    | `false` | 停用該頁籤。                           |
 | `onOpenParent`       | `(path: string) => void`     | —       | 上級目錄成功開啟後觸發；失敗時不觸發。 |
 | `onCopyPath`         | `(path: string) => void`     | —       | 路徑複製成功後通知。                   |
-| `showViewModeSwitch` | `boolean`                    | `true`  | 預覽/原始碼切換；僅檔案頁籤生效。        |
+| `showViewModeSwitch` | `boolean`                    | `true`  | 預覽/原始碼切換；僅檔案頁籤生效。      |
 | `slots`              | `FilePreviewHeaderSlots`     | —       | `actions`、`titleExtra`。              |
 
 檔案頁籤額外提供：
 
-| 屬性            | 型別                            | 預設值 | 說明                                                                                     |
-| --------------- | ------------------------------- | ------ | ---------------------------------------------------------------------------------------- |
-| `source`        | `FilePreviewSource`             | 必填   | 內容與檔名。                                                                           |
+| 屬性            | 型別                            | 預設值 | 說明                                                                                       |
+| --------------- | ------------------------------- | ------ | ------------------------------------------------------------------------------------------ |
+| `source`        | `FilePreviewSource`             | 必填   | 內容與檔名。                                                                               |
 | `operations`    | `FilePreviewOperations`         | —      | 非同步執行能力：`openParent(path)`、`download()`、`openUri(uri)`，均返回 `Promise<void>`。 |
-| `resources`     | `readonly FileViewerResource[]` | —      | 伴隨資源，例如 3D 貼圖。                                                                 |
-| `editing`       | `FilePreviewEditing`            | —      | 編輯能力；不傳即只讀。                                                                   |
-| `slots`         | `FilePreviewFileTabSlots`       | —      | 增加三類狀態兜底。                                                                       |
-| `onCopyContent` | `(text: string) => void`        | —      | 正文複製成功後通知。                                                                     |
-| `onDownload`    | `() => void`                    | —      | 下載操作成功後觸發；失敗時不觸發。                                                       |
-| `onOpenUri`     | `(uri: string) => void`         | —      | 正文資源成功開啟後觸發；失敗時不觸發。                                                   |
+| `resources`     | `readonly FileViewerResource[]` | —      | 伴隨資源，例如 3D 貼圖。                                                                   |
+| `editing`       | `FilePreviewEditing`            | —      | 編輯能力；不傳即只讀。                                                                     |
+| `slots`         | `FilePreviewFileTabSlots`       | —      | 增加三類狀態兜底。                                                                         |
+| `onCopyContent` | `(text: string) => void`        | —      | 正文複製成功後通知。                                                                       |
+| `onDownload`    | `() => void`                    | —      | 下載操作成功後觸發；失敗時不觸發。                                                         |
+| `onOpenUri`     | `(uri: string) => void`         | —      | 正文資源成功開啟後觸發；失敗時不觸發。                                                     |
 
 ```tsx
 import { FilePreview } from '@openviking/react/components/file-preview';
@@ -110,8 +110,8 @@ import '@openviking/react/components/file-preview/style.css';
 | `ov-file-preview__tab-title`       | 頁籤標題 | 截斷的頁籤文本。               |
 | `ov-file-preview__header`          | 頭部     | 路徑行與操作區。               |
 | `ov-file-preview__breadcrumb`      | 麵包屑   | 上級目錄導航按鈕。             |
-| `ov-file-preview__header-actions`  | 操作區   | 切換、按鈕與擴充套件操作。         |
-| `ov-file-preview__action`          | 圖示按鈕 | 方形純圖示控制元件。               |
+| `ov-file-preview__header-actions`  | 操作區   | 切換、按鈕與擴充套件操作。     |
+| `ov-file-preview__action`          | 圖示按鈕 | 方形純圖示控制元件。           |
 | `ov-file-preview__button`          | 按鈕     | 次要按鈕。                     |
 | `ov-file-preview__button--primary` | 按鈕     | 主要（儲存）按鈕。             |
 | `ov-file-preview__switch`          | 切換組   | 編輯與預覽切換容器。           |
