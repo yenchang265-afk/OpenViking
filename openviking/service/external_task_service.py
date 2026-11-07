@@ -30,7 +30,6 @@ from openviking.service.task_tracker_concurrency import (
 )
 from openviking.service.task_work_index import bind_task_context
 from openviking.storage.errors import ResourceBusyError
-from openviking.storage.queuefs import QueueManager, get_queue_manager
 from openviking_cli.exceptions import ConflictError, FailedPreconditionError
 from openviking_cli.session.user_id import UserIdentifier
 from openviking_cli.utils.logger import get_logger
@@ -49,6 +48,23 @@ MAX_TASK_ATTEMPTS = 3
 OUTCOME_WRITE_ATTEMPTS = 3
 # Wait between provider finalization attempts while its output is locked.
 FINISH_RETRY_SECONDS = 1.0
+
+
+def get_queue_manager() -> Any:
+    """Return the QueueFS manager, resolved on each call.
+
+    QueueFS imports parsers/VikingFS, so providers stay importable without it,
+    and a patched ``openviking.storage.queuefs.get_queue_manager`` takes effect.
+    """
+    from openviking.storage import queuefs
+
+    return queuefs.get_queue_manager()
+
+
+def _external_task_queue() -> str:
+    from openviking.storage.queuefs import QueueManager
+
+    return QueueManager.EXTERNAL_TASK
 
 
 def set_external_task_service(service: ExternalTaskService | None) -> None:
@@ -374,7 +390,7 @@ class ExternalTaskService:
             )
             with bind_task_context(task.task_id, ctx.account_id, ctx.user.user_id):
                 await get_queue_manager().enqueue(
-                    QueueManager.EXTERNAL_TASK,
+                    _external_task_queue(),
                     {
                         "task_id": task.task_id,
                         "account_id": ctx.account_id,
@@ -434,7 +450,7 @@ class ExternalTaskService:
         if task.status == TaskStatus.PENDING:
             with bind_task_context(task.task_id, ctx.account_id, ctx.user.user_id):
                 await get_queue_manager().enqueue(
-                    QueueManager.EXTERNAL_TASK,
+                    _external_task_queue(),
                     {
                         "task_id": task.task_id,
                         "account_id": ctx.account_id,

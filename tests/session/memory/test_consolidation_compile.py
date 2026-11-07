@@ -209,7 +209,7 @@ async def test_root_compile_creates_one_task_and_one_loop(monkeypatch, language_
     payload = await runner.prepare(target=target, instruction="整理全部已有记忆", ctx=_ctx())
     result = await runner.run("cmp_root", payload, _ctx())
 
-    service.finalize_compile_directories.assert_not_awaited()
+    service.finalize_compile_directories.assert_awaited_once_with(target, _ctx())
 
     vlm.get_completion_async.assert_awaited_once()
     fs.glob.assert_awaited_once()
