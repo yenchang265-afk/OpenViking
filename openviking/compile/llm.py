@@ -6,6 +6,7 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
+from openviking.compile import media
 from openviking.models.model_error import ModelErrorKind, model_error_kind
 from openviking_cli.utils.logger import get_logger
 
@@ -93,7 +94,8 @@ class CompileProvider:
         try:
             async with self._semaphore:
                 result = await self._vlm.get_completion_async(
-                    messages=messages,
+                    # Models without native tool-result images get them as user messages.
+                    messages=media.prepare_messages(self._vlm, messages),
                     thinking=thinking
                     if thinking is not None
                     else getattr(self._vlm, "thinking", None),

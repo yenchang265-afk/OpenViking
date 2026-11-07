@@ -54,6 +54,10 @@ Skill 決定輸出內容和結構。倉庫提供以下示例，其中 LLM Wiki �
 
 除了用 Skill 把來源材料編譯成新的知識產物，`ov compile` 還有一種特殊模式——把 `--skill` 設為 `memory`，即可基於記憶框架而非 Skill 流水線，對已有的**記憶**目錄做就地整理（去重、合併、拆分、精簡）。詳見 [記憶整理](./06-memory-consolidation.md)。
 
+## 圖片來源
+
+`--from` 下的 PNG、JPEG、GIF 和 WebP 檔案會和文本一起作為證據編譯。模型會檢視每張原始圖片，並可以像引用文本片段一樣引用它。圖片需要支援視覺的 `vlm` 模型，消耗的 token 也遠多於文本。每張圖片受內嵌媒體預算限制（約 3.75 MiB），單次請求最多攜帶四張圖片。過大或內容與格式不符的圖片會單獨失敗，並記錄在任務的錯誤中，其餘內容照常編譯。其他圖片格式會被拒絕。
+
 ## 前置條件
 
 - 一個已配置 `vlm` 模型的 OpenViking 服務。`--skill memory` 模式不傳 `--from`。預設端點是 `http://localhost:1933`；遠端使用需要 API Key，參見 [鑑權](../guides/04-authentication.md)。沒有服務先看 [快速開始](../getting-started/02-quickstart.md)。

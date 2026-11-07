@@ -16,8 +16,9 @@ import json_repair
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
+from openviking.compile import media
 from openviking.compile.hashing import digest
-from openviking.compile.models import COMPILE_STAGING_ROOT
+from openviking.compile.models import COMPILE_STAGING_ROOT, CompileFailure
 from openviking.compile.results import FileResponse, RouteBatchResponse
 from openviking.compile.schemas import result_schema
 from openviking.compile.skill_resources import EvidenceReader
@@ -261,6 +262,10 @@ class JsonModel:
         Diagnostics contain budgets, usage and failure categories, never reasoning.
         A cancelled or timed-out request cannot be accepted as a partial response.
         """
+        if media.inline_media_bytes(messages) > media.MAX_INLINE_MEDIA_BYTES:
+            raise CompileFailure(
+                "MEDIA_LIMIT", "Compile image request exceeds the inline media budget", stage=stage
+            )
         self.metrics[f"{stage}_calls"] += 1
         number = self.metrics[f"{stage}_calls"]
         started = time.monotonic()
@@ -511,6 +516,11 @@ class JsonModel:
                             value = "Error: " + str(exc)[:800]
                         else:
                             retries.pop(f"read:{call.name}", None)
+                        multimodal = (
+                            value if isinstance(value, media.MultimodalToolResult) else None
+                        )
+                        if multimodal:
+                            value = multimodal.text
                         try:
                             content = json.loads(
                                 value, object_hook=lambda v: v.get("text", v.get("excerpts", v))
@@ -521,8 +531,15 @@ class JsonModel:
                         progress = progress or fingerprint not in seen_results
                         if fingerprint in seen_results:
                             value = "Unchanged: same tool result. Use previous results or submit."
+                            multimodal = None
                         seen_results.add(fingerprint)
-                        messages.append({"role": "tool", "tool_call_id": call.id, "content": value})
+                        messages.append(
+                            {
+                                "role": "tool",
+                                "tool_call_id": call.id,
+                                "content": multimodal.content if multimodal else value,
+                            }
+                        )
                     stalled_rounds = 0 if progress else stalled_rounds + 1
                     if stalled_rounds >= 3:
                         raise ModelCallLimitError(f"{stage}: tool calls made no progress")
