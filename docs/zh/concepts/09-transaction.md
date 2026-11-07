@@ -524,12 +524,18 @@ filesystem 與 Redis 是相互獨立的鎖協調域，Redis 的 acquire **不會
 不同 owner，兩個程序也可能同時寫業務檔案；等待舊 token 過期不能替代退出檢查。
 
 新 handoff 包含 `handle_mode`；舊訊息缺少該欄位時仍可恢復。
-消費者遇到 Provider 變化或舊 token 不可用時，按完整邏輯路徑和 Exact/Tree
-型別重新加鎖，獲得新 owner 後才執行任務。優先使用 `covered_paths`；
+native adopt 只接管仍有效的 source holder；來源消失、過期或 Provider 變化時返回
+`HandoffRecoveryRequired`。消費者通過 `adopt_or_reacquire` 統一校驗帳號和覆蓋範圍，
+按完整邏輯路徑和 Exact/Tree 型別在原 owner 下重新加鎖，獲得新的 holder、
+`lease_ref` 和 `ownership_ref` 後才執行任務。優先使用 `covered_paths`；
 舊 `.path.ovlock` 可反解 Tree 路徑，無法反解的 Exact 檔名使用任務自身的
 完整路徑請求。不會只恢復混合批次中的部分路徑。
-重新加鎖遇到衝突或服務錯誤時保留任務重試；非法覆蓋、失效引用和重複 adopt
-不會觸發重新加鎖。舊 `.ovlock` 檔案無需掃描或複製到 Redis。
+重新加鎖遇到衝突或服務錯誤時保留任務重試；非法覆蓋和失效的本地所有權引用
+不會觸發重新加鎖。重複投遞的來源 holder 已被消費時也走上述恢復流程，
+業務寫入需保證冪等。舊 `.ovlock` 檔案無需掃描或複製到 Redis。
+
+`owner_lease_ref` 是當前程序中仍有效的本地所有權憑證，包含 `lease_ref` 和
+`ownership_ref`，不能用於跨重啟或 Provider 遷移恢復。
 
 恢復必須攜帶有效帳號上下文；缺少上下文或覆蓋路徑不屬於該帳號時拒絕恢復。
 語義任務優先保留 `covered_paths` 中的 Exact/Tree 型別；歷史訊息缺少覆蓋型別、

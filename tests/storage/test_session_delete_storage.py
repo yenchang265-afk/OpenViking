@@ -34,6 +34,7 @@ def storage():
         ls=AsyncMock(return_value=[]),
         pathlock_acquire_tree=AsyncMock(return_value=lease),
         pathlock_acquire_exact=AsyncMock(return_value=lease),
+        pathlock_acquire_batch=AsyncMock(return_value=lease),
         pathlock_release=AsyncMock(),
         rm=AsyncMock(return_value={}),
     )

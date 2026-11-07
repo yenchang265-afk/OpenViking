@@ -251,16 +251,28 @@ def test_snapshot_id_must_be_a_commit():
         )
 
 
-@pytest.mark.asyncio
-async def test_final_review_stages_and_reads_back_through_real_scratch(tmp_path):
-    from openviking.compile.hashing import content_hash
-    from openviking.compile.ops import finalize as finalize_op
-    from openviking.compile.pipeline_io import ROOT, TaskFiles
+def _finalize_runtime(files):
+    return SimpleNamespace(
+        skill_target=False,
+        skill="# Skill",
+        target="viking://resources/wiki",
+        request=SimpleNamespace(wiki_links=False, instruction="Compile"),
+        files=files,
+        evidence={"r1": {"uri": "viking://resources/raw/a.md"}},
+        model=SimpleNamespace(agent_runner=AsyncMock(), timeout=30),
+        output_instructions="",
+        output_format="files",
+        changes=None,
+        warnings=[],
+        old={},
+        metrics={},
+        client=SimpleNamespace(),
+    )
 
-    scratch = ScratchDir(tmp_path / "task")
-    scratch.reset()
-    files = TaskFiles(scratch)
-    body = "# Topic\n\nReviewed body.\n"
+
+async def _store_artifact(files, body: str) -> None:
+    from openviking.compile.hashing import content_hash
+
     await files.put(
         "artifacts/a1",
         {
@@ -272,44 +284,41 @@ async def test_final_review_stages_and_reads_back_through_real_scratch(tmp_path)
             "source_refs": ["r1"],
         },
     )
-    staged = {}
 
-    async def agent_runner(prompt, data, schema, validate, model, *, stage):
-        assert stage == "final_review_agent"
-        directory = data["artifact_directory"]
-        # The review edits a staged file in place; validation must read it back.
-        await scratch.write_file(f"{ROOT}/{directory}/notes/topic.md", body + "Edited.\n")
-        decision = schema(excluded={})
-        await validate(decision)
-        staged["listing"] = await scratch.list_files(f"{ROOT}/{directory}", max_entries=None)
-        return decision
 
-    runtime = SimpleNamespace(
-        skill_target=False,
-        skill="# Skill",
-        target="viking://resources/wiki",
-        request=SimpleNamespace(wiki_links=False, instruction="Compile"),
-        files=files,
-        evidence={"r1": {"uri": "viking://resources/raw/a.md"}},
-        model=SimpleNamespace(agent_runner=agent_runner, timeout=30),
-        output_instructions="",
-        output_format="files",
-        changes=None,
-        warnings=[],
-        old={},
-        metrics={},
-        client=SimpleNamespace(),
-    )
+@pytest.mark.asyncio
+async def test_finalize_publishes_validated_artifacts_without_a_review_agent(tmp_path):
+    from openviking.compile.ops import finalize as finalize_op
+    from openviking.compile.pipeline_io import TaskFiles
+
+    scratch = ScratchDir(tmp_path / "task")
+    scratch.reset()
+    files = TaskFiles(scratch)
+    body = "# Topic\n\nReviewed body.\n"
+    await _store_artifact(files, body)
+    runtime = _finalize_runtime(files)
 
     rendered = await finalize_op.run(runtime, ["artifacts/a1"])
 
-    assert [entry.path.rsplit("/", 2)[-2:] for entry in staged["listing"]] == [
-        ["notes", "topic.md"]
-    ]
+    runtime.model.agent_runner.assert_not_awaited()
     assert not runtime.warnings, runtime.warnings
     (operation,) = rendered.operations
     assert operation["uri"] == "viking://resources/wiki/notes/topic.md"
-    assert operation["content"].endswith("Edited.\n")
+    assert operation["content"] == body
+
+
+@pytest.mark.asyncio
+async def test_finalize_rejects_empty_artifacts_before_publication(tmp_path):
+    from openviking.compile.ops import finalize as finalize_op
+    from openviking.compile.pipeline_io import TaskFiles
+
+    scratch = ScratchDir(tmp_path / "task")
+    scratch.reset()
+    files = TaskFiles(scratch)
+    await _store_artifact(files, "  \n")
+
+    with pytest.raises(ValueError, match="Empty output: notes/topic.md"):
+        await finalize_op.run(_finalize_runtime(files), ["artifacts/a1"])
 
 
 @pytest.mark.asyncio

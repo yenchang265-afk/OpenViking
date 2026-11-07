@@ -432,15 +432,19 @@ class CustomAuthPlugin(AuthPlugin):
 
 ### 自定義角色
 
-內建的 `Role` 類支援動態註冊自定義角色及許可權等級：
+內建的 `Role` 類支援動態註冊自定義角色，並通過顯式允許表維護 token 降權檢查：
 
 ```python
 from openviking.server.identity import Role
 
-Role.register("operator", rank=1)  # 降權檢查時，與 ADMIN 同級
+# 該角色只接受自身角色的 token
+Role.register("reviewer")
+
+# 若自定義角色需要接受更低角色的 token，顯式宣告允許範圍
+Role.register("operator", allowed_token_roles={Role.ADMIN, Role.USER})
 ```
 
-rank 用於降權檢查，不會繼承 ADMIN 的介面許可權。`require_role()` 和 `require_auth_role()` 按角色名檢查，路由需要明確允許該自定義角色。
+已註冊的角色始終可以攜帶自身角色的 token；`allowed_token_roles` 只用於擴大允許範圍。降權檢查使用允許表，不再比較數值 rank，因此不會繼承 ADMIN 的介面許可權。`require_role()` 和 `require_auth_role()` 按角色名檢查，路由需要明確允許該自定義角色。`rank` 引數僅為相容舊呼叫而保留，已不再參與授權判斷。
 
 ---
 
@@ -479,7 +483,7 @@ ACL 使用者組是例外：組和成員通過 [Admin API](../api/08-admin.md#�
 - 攜帶受信部署自身的 `root_api_key`。對於 `/api/v1/admin/*`，服務端校驗該 key 後會將請求視為 ROOT。
 - 如果 Admin 路由指向具體 account/user，也可以同時攜帶 `X-OpenViking-Account` + `X-OpenViking-User`。這些 header 必須與目標 URL 匹配，並會保留為請求身份；授權仍來自受信 `root_api_key`。
 
-角色更新 API 僅用於身份管理變更操作，支援在 USER 與 ADMIN 之間切換，包括提升和降級。ROOT 可操作任意帳戶，ADMIN 僅限本帳戶。Trusted Admin API 的管理許可權來自已校驗的部署 root key，無需也不支援建立 ROOT 使用者。
+角色更新 API 僅用於身份管理變更操作，支援在 USER 與 ADMIN 之間切換，包括提升和降級。ROOT 可操作任意帳戶，ADMIN 僅限本帳戶。Trusted Admin API 的管理許可權來自已校驗的部署 root key，無需也不支援建立 ROOT 使用者。GLOBAL 身份只能由 ROOT 建立、銷燬、輪換和修改；任何身份（包括 ROOT）都不能將現有角色與 GLOBAL 相互轉換，需要銷燬後重建。ADMIN 和 USER 只能感知其存在，不能將其作為角色變更、金鑰輪換或使用者組操作的目標。
 
 配置了 root key 的 Trusted 部署可直接呼叫上面的 Admin API，無需先切換到 API Key 模式或註冊閘道器管理員。
 

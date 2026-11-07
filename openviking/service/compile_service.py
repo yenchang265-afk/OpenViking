@@ -173,9 +173,20 @@ class CompileService:
     def lifecycle(self) -> CompileLifecycle | None:
         return self._lifecycle
 
-    def configure_memory_runner(self, vikingdb: Any = None) -> None:
+    def configure_memory_runner(
+        self,
+        vikingdb: Any = None,
+        *,
+        runtime_config_manager: Any = None,
+        vlm_resolver=None,
+    ) -> None:
         """Install the in-process memory-consolidation runner for `--skill memory`."""
-        self._memory_runner = MemoryCompileRunner(self._fs, vikingdb=vikingdb)
+        self._memory_runner = MemoryCompileRunner(
+            self._fs,
+            vikingdb=vikingdb,
+            runtime_config_manager=runtime_config_manager,
+            vlm_resolver=vlm_resolver,
+        )
 
     def configure_runtime(
         self,
@@ -360,7 +371,7 @@ class CompileService:
         if self._lifecycle is None or "compile" not in payload:
             return task
         if locked_record is not None:
-            await self._lifecycle.record_queued(task, locked_record=locked_record)
+            await self._require_lifecycle().record_queued(task, locked_record=locked_record)
         else:
             self._schedule_history(task, preparation=preparation)
         return task
@@ -387,12 +398,16 @@ class CompileService:
         self._history_tasks.add(background)
         background.add_done_callback(self._history_tasks.discard)
 
-    async def on_start(self, task: TaskRecord) -> Any:
+    async def on_start(self, task: TaskRecord) -> str | ExternalTaskSnapshot | None:
         if self._lifecycle is None:
             return "proceed"
         return await self._lifecycle.on_start(task)
 
-    async def on_finish(self, task: TaskRecord, snapshot: ExternalTaskSnapshot) -> Any:
+    async def on_finish(
+        self,
+        task: TaskRecord,
+        snapshot: ExternalTaskSnapshot,
+    ) -> ExternalTaskSnapshot:
         if self._lifecycle is None:
             return snapshot
         return await self._lifecycle.on_finish(task, snapshot)

@@ -44,8 +44,8 @@ magpie plugin add ./examples/magpie-memory-plugin
   "magpie": {
     "enabled": true,
     "autoRecall": true,
-    "autoCapture": false,
-    "recallContextTimeoutMs": 700,
+    "autoCapture": true,
+    "recallContextTimeoutMs": 2000,
     "recallMaxTokens": 1600,
     "recallPeerScope": "all",
     "mcpEnabled": false
@@ -62,12 +62,33 @@ magpie plugin add ./examples/magpie-memory-plugin
 OIDC 配置使用 `oidc_token`（或 `api_key`）作為 Bearer Token。兩者由服務端解析身份，不斷言帳戶或使用者。
 配置型別、別名、範圍和召回請求體複用已有共享模組；檔案讀取策略、宿主超時、工具預設關閉等適配放在 Magpie 自身目錄，不改變其他外掛。
 Magpie 的檔案讀取策略排除環境變數和 workspace 層。
-工具和採集分別需要 `plugin.magpie.mcpEnabled: true`、`plugin.magpie.autoCapture: true` 顯式開啟，共享設定不會直接開啟這兩項能力。
+工具仍需 `plugin.magpie.mcpEnabled: true` 顯式開啟。採集預設開啟；宿主選項或客戶端配置中顯式設定的 `autoCapture: false` 仍然生效。優先順序為宿主選項、Magpie 專屬配置、共享配置。
 
 Magpie 的“選項”支援 `autoRecall`、`autoCapture`、`mcpEnabled`、`recallMaxTokens`、
-`recallContextTimeoutMs`、`nativeAgents`，優先於本外掛的檔案行為配置；Hook 和工具使用同一套設定。
+`recallContextTimeoutMs`、`captureWithoutSession`、`nativeAgents`，優先於本外掛的檔案行為配置；Hook 和工具使用同一套設定。
 服務連線、憑據和身份仍只從檔案讀取。`gatewayTimeoutMs` 控制宿主 Hook 預算。
-包內示例不會自動儲存；未填寫的欄位繼續沿用檔案設定或預設值。開啟工具或採集必須填寫布林值 `true`。
+包內示例不會自動儲存；未填寫的欄位繼續沿用檔案設定或預設值。記憶工具預設關閉，設定 `mcpEnabled: true` 可開啟。自動採集預設開啟，無需額外配置；如需關閉，設定 `autoCapture: false`。
+
+`captureWithoutSession` 是 Magpie 專屬的布林配置，預設 `false`。客戶端無法傳遞穩定會話 ID 時，
+可在 Magpie“選項”中顯式開啟：
+
+```json
+{
+  "autoCapture": true,
+  "captureWithoutSession": true
+}
+```
+
+也可在 `ovcli.conf` 的 `plugin.magpie` 或共享 `plugin` 中設定，優先順序仍為宿主選項、專屬配置、共享配置。
+有真實會話 ID 時優先使用真實 ID。派生 ID 僅用於採集，無宿主會話時召回仍然無狀態。
+派生輸入為 Agent、工作目錄、協議和經過現有采集清洗/過濾的首條使用者訊息；切換模型不會改變 ID，
+OV 連線和憑據仍按現有規則隔離。
+
+同一客戶端作用域內，相同開場的獨立對話可能合併。如果兩段歷史出現分歧，採集會跳過與已寫入歷史
+衝突的快照。改寫或刪除開場訊息可能拆分會話，或因歷史無法識別而跳過採集。開啟後請新建對話，
+不回填未知的已有歷史。
+`autoCapture: false` 仍關閉所有自動採集。通過檔案配置且無宿主覆蓋時，關閉本開關會暫停派生會話的
+待同步佇列，重新開啟後可恢復。與 `autoCapture` 一樣，已入隊快照保留入隊時的宿主選項覆蓋。
 
 不會修改檔案、合併環境變數中的憑據，或回退讀取 `ov.conf`、Root Key、Gateway Token。
 配置缺失、損壞或服務不可用時，召回跳過，模型請求繼續；不會沿用舊配置。
@@ -83,7 +104,12 @@ Magpie 的“選項”支援 `autoRecall`、`autoCapture`、`mcpEnabled`、`reca
   資料讀取與檢索在召回超時預算內並行執行；任一路失敗時仍可使用另一路結果。
   資料遵守 `profileTokenBudget`，且最多佔 `recallMaxTokens` 的一半，使用共享的中日韓字元 token 估算器；
   資料與檢索結果合計不超過 `recallMaxTokens`，與首輪決策一起持久化；重試和後續輪次回放原始快照。
-- 僅處理宿主確認為本機的 `local`、`magpie-key` 請求，並要求 Magpie 提供非空會話 ID。
+- 僅處理宿主確認為本機的 `local`、`magpie-key` 請求。沒有會話 ID 時，新使用者請求使用無狀態召回：不讀寫持久化召回帳本、不重放 Profile 快照；除非顯式設定 `captureWithoutSession: true`，否則不採集對話。重複請求可能獲得不同的召回結果。
+  開啟採集但未開啟雜湊相容時，首次符合條件卻缺少會話 ID 的使用者請求，會在 Magpie 外掛宿主日誌中輸出
+  `OpenViking capture: no-session`，建議客戶端傳遞穩定的會話 ID 請求頭，或瞭解會話誤合併限制後顯式開啟 `captureWithoutSession`。
+  每個外掛宿主程序只提示一次，不含對話正文或憑據，也不覆蓋召回狀態。
+  當前 Magpie 會忽略自定義 `report()` 狀態碼，獨立的 UI 採集狀態仍需宿主支援。
+  原生外掛接管、關閉、bypass、輔助請求不會觸發此提示。
   共享閘道器 Key、轉發請求或身份缺失時跳過，始終使用檔案中配置的 OV 身份。
 - 只有新的文本使用者訊息觸發檢索。工具續輪只回放已有記憶；重試複用首次決策，
   包括無結果和失敗的決策。同樣的問題出現在後續新輪次時仍可重新檢索。
@@ -99,8 +125,28 @@ Magpie 的“選項”支援 `autoRecall`、`autoCapture`、`mcpEnabled`、`reca
   Magpie 自身跳過內部標題/分類請求；外掛也跳過明確標記的輔助、壓縮、標題和子 Agent 請求。
 - `autoRecall: false` 關閉新檢索，但仍回放已知歷史；外掛整體關閉則停止兩者。
   查詢過濾、召回引數、預算和結果相關性使用共享模組。
-- 預設 700ms 檢索預算。提高超時時也應提高 Magpie 的 `gatewayTimeoutMs`，為狀態讀寫留餘量。
-  請求取消會中止檢索。Actor 範圍需要明確填寫 `actor_peer_id`，缺失時跳過。
+- 預設 2000ms 檢索預算，可在 Magpie“選項”或 `plugin.magpie` 中配置
+  `recallContextTimeoutMs`；已有顯式配置繼續生效。實際 HTTP 超時還受客戶端 `timeout`、
+  9000ms 上限及宿主預算限制：從宿主預算扣除已耗費的準備時間，並預留 200ms 用於結果組裝、
+  狀態讀寫和序列化。檢索與 Profile 共用內部截止訊號，一路超時仍可使用另一路已完成的結果。
+  剩餘不足 100ms 時不再發起 HTTP 請求；宿主取消時仍放棄本次注入。
+  宿主沒有提供整個 Hook 鏈的剩餘截止時間，因此預留時間不能保證避開更早的外部取消。
+  Actor 範圍需要明確填寫 `actor_peer_id`，缺失時跳過。
+
+連線託管或遠端服務時，請在 Magpie 的“選項”中同時儲存兩個預算（合併到已有選項）：
+
+```json
+{
+  "recallContextTimeoutMs": 2000,
+  "gatewayTimeoutMs": 3000
+}
+```
+
+包內選項示例包含這組值，但升級不會重寫已儲存的選項。未設定 `gatewayTimeoutMs` 時，
+Magpie 仍預設使用 1000ms 的宿主預算，外掛會自動縮短 HTTP 等待以適配該預算。
+已有安裝如需使用完整 2000ms 檢索預算，仍須顯式提高宿主預算。宿主預算應高於檢索預算，
+為配置和狀態讀寫留餘量（Magpie 允許的上限為 10000ms）。如需繼續增加檢索預算，
+請同步調整兩個值，並確保 `ovcli.conf` 頂層的 `timeout`（秒）足夠。召回失敗仍會放行模型請求。
 
 ### 本機回放狀態
 
@@ -121,8 +167,8 @@ Anthropic 協議內容塊的快取註解不參與召回錨點計算；原始請�
 
 ## 自動採集與原生外掛避讓
 
-採集預設關閉。在 `ovcli.conf` 中設定 `plugin.magpie.autoCapture: true`，或在 Magpie 的“選項”中儲存
-`"autoCapture": true` 後啟用。完整對話先寫入本地佇列，再由獨立後臺任務增量寫入按連線、Agent、
+有可靠會話 ID 的請求預設開啟採集。在 `ovcli.conf` 中設定 `plugin.magpie.autoCapture: false`，或在 Magpie 的“選項”中儲存
+`"autoCapture": false` 可關閉。已有顯式關閉設定繼續生效；未配置該項的安裝或升級將開啟採集，把完整對話提交到配置的 OpenViking 服務。完整對話先寫入本地佇列，再由獨立後臺任務增量寫入按連線、Agent、
 會話、workspace、協議隔離的 OV Session；不儲存系統指令、注入記憶、宿主提醒和私有推理。
 啟用後應新建會話：首輪會繫結當前連線和第一條使用者訊息，且該使用者訊息之前不能存在可採集的助手或工具內容。未知的已有歷史，包括切換憑據後的舊對話，
 會跳過採集，避免把之前的私有內容複製到新身份。
@@ -170,8 +216,12 @@ worker 在追加訊息或 commit 前重新讀取配置，檢查連線身份、�
 工具預設關閉。設定 `plugin.magpie.mcpEnabled: true`，或在 Magpie 選項中儲存 `mcpEnabled: true`，然後在 Magpie Library/MCP 路由
 中為需要的 Agent 開啟外掛服務。也可通過 Magpie 的 `/mcp/magpie/tools` 訪問。
 
-提供 `status`、`find`、`read`、`ls`、`remember`，實際名稱由 Magpie 加外掛字首。
+提供 `status`、`find`、`rule_search`、`read`、`ls`、`remember`，實際名稱由 Magpie 加外掛字首。
 `status` 檢查鑑權後的連線；`read` 最多讀取 200 行，`ls` 最多返回 100 項。
+
+`rule_search` 接收 `task_context` 與可選的 `rule_probability_threshold`（預設 `0.65`），
+通過 `POST /api/v1/rules/search` 返回完整 Rule。執行受約束的操作或回覆前，
+逐條檢查條件、例外和正文，遵守所有適用規則。npm 安裝時工具名為 `magpie-plugin_rule_search`。
 
 **工具回呼不提供呼叫者的認證身份。開啟工具意味著將當前檔案的 OV 身份授權給能呼叫
 該 MCP 服務的呼叫者。** 共享閘道器應保持關閉，除非允許的工具呼叫者都應擁有該訪問許可權。

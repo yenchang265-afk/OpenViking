@@ -1,0 +1,85 @@
+# AgentConnect Agent 接入
+
+Agent 接入檢視。頁籤、當前頁籤的條目與詳情正文都由宿主傳入；元件渲染列表與詳情，並上報切換與複製意圖。
+
+當前是佔位元件：只渲染一個固定尺寸的空殼，不消費 props，宿主可先對著已釋出的包開發，真實檢視後續遷入。下方的 props 契約是已對齊的形態，佔位實現會被替換。
+
+## 基礎用法
+
+```tsx file="../../_demos/agent-connect-basic.tsx" preview
+
+```
+
+佔位尺寸為 960 × 640，對齊整頁檢視。
+
+## 結構
+
+檢視分三塊：
+
+- **頁籤**：頂部，由 `tabs` 與 `activeTabId` 宣告。
+- **列表**：左側，當前頁籤的條目，來自 `items`。
+- **詳情**：右側，選中項的正文，來自 `detail`。
+
+元件不持有目錄，也不持有正文內容。條目從哪來、正文怎麼渲染、複製意味著什麼，都由宿主決定。
+
+## 屬性
+
+### AgentConnectProps
+
+| 屬性          | 型別                             | 預設值 | 說明                                                                                   |
+| ------------- | -------------------------------- | ------ | -------------------------------------------------------------------------------------- |
+| `tabs`        | `readonly AgentConnectTab[]`     | 必填   | 頂部頁籤。                                                                             |
+| `activeTabId` | `string`                         | 必填   | 當前頁籤 id，由宿主持有。                                                              |
+| `items`       | `readonly AgentConnectItem[]`    | 必填   | 當前頁簽下的條目。                                                                     |
+| `selectedId`  | `string`                         | —      | 當前選中條目 id，由宿主持有。                                                          |
+| `detail`      | `AgentConnectDetail`             | —      | 選中項的詳情；不傳時右側不渲染正文。                                                   |
+| `labels`      | `AgentConnectLabels`             | 英文   | 可替換文案。                                                                           |
+| `onTabChange` | `(tabId: string) => void`        | —      | 切換頁籤時觸發。                                                                       |
+| `onSelect`    | `(item) => void`                 | —      | 選中條目時觸發。                                                                       |
+| `onCopy`      | `(text: string) => void`         | —      | 複製成功後觸發，用於埋點或額外反饋；複製由元件完成。不傳時仍渲染複製按鈕，只是不通知。 |
+| 其餘屬性      | `HTMLAttributes<HTMLDivElement>` | —      | 標準 div 屬性，`children` 已排除。                                                     |
+
+### AgentConnectTab
+
+| 屬性    | 型別     | 說明           |
+| ------- | -------- | -------------- |
+| `id`    | `string` | 頁籤唯一標識。 |
+| `label` | `string` | 頁籤顯示文本。 |
+
+### AgentConnectItem
+
+| 屬性          | 型別        | 說明                         |
+| ------------- | ----------- | ---------------------------- |
+| `id`          | `string`    | 條目唯一標識。               |
+| `name`        | `string`    | 條目名稱。                   |
+| `description` | `string`    | 列表中的一句話說明。         |
+| `icon`        | `ReactNode` | 條目圖示，可以是圖片或節點。 |
+
+### AgentConnectDetail
+
+| 屬性          | 型別                | 說明                                           |
+| ------------- | ------------------- | ---------------------------------------------- |
+| `title`       | `string`            | 詳情標題，通常與選中條目同名。                 |
+| `icon`        | `ReactNode`         | 標題旁的圖示。                                 |
+| `description` | `string`            | 標題下方的說明文字。                           |
+| `tags`        | `readonly string[]` | 標題下方的標籤，例如「SDK」「境外」。          |
+| `content`     | `ReactNode`         | 正文內容，可以是 Markdown 渲染後的節點。       |
+| `copyText`    | `string`            | 複製按鈕寫入剪貼簿的純文本；不傳時不渲染按鈕。 |
+
+### AgentConnectLabels
+
+| 屬性           | 說明               |
+| -------------- | ------------------ |
+| `instructions` | 正文區域的標題。   |
+| `copy`         | 複製按鈕文案。     |
+| `copied`       | 複製成功後的提示。 |
+| `empty`        | 沒有條目時的提示。 |
+
+```tsx
+import { AgentConnect } from '@openviking/react/components/agent-connect';
+import '@openviking/react/components/agent-connect/style.css';
+```
+
+## 實現範圍
+
+元件只渲染檢視並上報意圖。目錄載入、Markdown 渲染、許可權、埋點與任何網路連線都由宿主負責。

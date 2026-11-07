@@ -71,10 +71,13 @@ def validate_shared_deployment(server, config):
         "enabled Git version storage must use a shared s3 or agfs backend",
     )
     encryption = config.encryption
-    if encryption.enabled and encryption.provider == "local":
+    # Saved credentials (durable tasks, Connector watches) are encrypted even when
+    # file encryption is disabled, so every replica needs the same root key.
+    if encryption.provider == "local":
         require(
             bool(encryption.local.root_key),
-            "local encryption requires an explicit shared encryption.local.root_key",
+            "local encryption requires an explicit shared encryption.local.root_key "
+            "(saved credentials are encrypted even when encryption.enabled is false)",
         )
     if errors:
         raise ValueError("Invalid shared deployment configuration:\n- " + "\n- ".join(errors))

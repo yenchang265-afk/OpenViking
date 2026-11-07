@@ -102,11 +102,13 @@ OpenViking 的配置分為兩個層級：
 | Cluster | `agent_evolution` | 動態配置 | ROOT 可通過 Admin API 修改，作為叢集預設值使用。 |
 | Account | `agent_evolution` | 動態配置 | ROOT 或該 Account 的 ADMIN 可修改。Agent Evolution 為相容舊行為保留已廢棄的 Cluster 整段回退。 |
 | Account | `github`、`acl` | 動態配置 | ROOT 或該 Account 的 ADMIN 可修改；不回退到 Cluster。 |
+| Account | `output_language_override`、`memory.extraction_enabled` | 動態配置 | ROOT 或該 Account 的 ADMIN 可修改。生成內容使用任務所屬 Account 的配置，未配置時由業務層使用 Cluster 預設值。 |
 | Account | `vlm`、`query_planner` | 動態配置 | 僅 ROOT 可讀寫。每段已配置的模型配置都必須包含 `model` 和非空 `credentials` 陣列，`timeout` 可選；ADMIN 無法讀取或修改這兩段配置。 |
+| Account | `parser_api.api_key` | 動態配置 | 僅 ROOT 可讀寫。已配置的段必須包含非空白 Key；外部解析使用任務所屬 Account 的憑證。 |
 | Account | `embedding` | 部分動態 | 僅 ROOT 可讀寫。憑證、重試、併發、故障回切和熔斷引數可動態修改；模型身份、向量空間欄位、文本來源和輸入 token 上限僅能在建立時設定。 |
 | Account | `vectordb` | 僅建立時配置 | 僅 ROOT 可在 Account 建立請求的 `settings` 中設定，後續新增、修改和重置均被拒絕。Account 專屬連線僅支援 `http` 遠端後端。 |
 
-Cluster 的 `embedding`、`vlm`、`query_planner`、`memory`、儲存、解析器、檢索等普通配置仍然是啟動配置。Account 的 `memory` 不在當前 Account 配置 API 範圍內。
+Cluster 的 `embedding`、`vlm`、`query_planner`、`memory`、儲存、解析器、檢索等普通配置仍然是啟動配置。Account 的 `memory` 僅開放 `extraction_enabled`。
 
 Account 與 Cluster 配置分別儲存和釋出。Account 未配置時是否使用 Cluster
 屬於業務預設行為，不是配置框架中的隱式繼承。VLM 業務解析器負責這項策略：
@@ -149,10 +151,40 @@ PATCH /api/v1/admin/accounts/{account_id}/configuration
 ```
 
 PATCH 採用三態語義：欄位缺失表示不修改，具體值表示設定或替換，`null`
-表示從當前作用域刪除該值。物件遞迴合併，陣列整體替換。響應只返回該作用域
-的配置，不返回業務組合後的有效配置。宣告式 `fallback` 已廢棄，只支援整段
+表示從當前作用域刪除該值。物件遞迴合併，陣列整體替換。響應主要返回該作用域
+的顯式配置；Account configuration 額外保證 `agent_evolution.enabled` 為實際生效值，
+其他欄位不補全預設值。宣告式 `fallback` 已廢棄，只支援整段
 配置，且僅用於相容舊行為；新功能需要在業務解析器中實現 Cluster 預設值。
 詳見 [Admin API - 執行時配置](../api/08-admin.md#runtime-configuration)。
+
+## Account 內容生成配置
+
+建立 Account 時應在 `settings` 中顯式提供所需預設值，也可以通過 Account
+配置介面更新：
+
+```json
+{
+  "settings": {
+    "output_language_override": "en",
+    "memory": {"extraction_enabled": false}
+  }
+}
+```
+
+語言欄位未配置或為 `null` 時使用 Cluster 語言；顯式 `""` 啟用自動語言判斷，
+即使 Cluster 指定了語言也不使用它。語言標識沿用現有生成規則。這項配置覆蓋
+文本資源摘要、目錄 overview、Working Memory、記憶抽取和手動記憶整理。
+圖片摘要提示詞保持原有語言行為；音影片摘要優先使用媒體自身語言，僅在媒體語言
+無法識別時使用配置語言兜底。
+
+`memory` 整段未配置或為 `null` 時使用 Cluster 抽取開關。整段存在時使用其
+`extraction_enabled`，程式預設值為 `true`；`{}` 或刪除最後一個欄位會保留
+這個程式預設值。`false` 關閉 SessionCommit 長期記憶抽取；開啟時仍遵守 user/peer
+策略。Working Memory 和手動 `compile --skill memory` 仍可使用。
+
+語言生成和抽取開關判斷分別在需要時讀取各自的 Account 配置；再次執行讀取
+更新後的配置。排隊任務儲存 owner 身份，不儲存這些配置值。
+顯式 Account 配置不隨 Cluster 預設值改變。
 
 ## Account Embedding 與 VectorDB
 
@@ -771,6 +803,7 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 | `forward_api_key` | bool | 僅 LiteLLM 使用。覆蓋是否把 `api_key` 透傳給 LiteLLM。預設情況下，OpenViking 不會把佔位 key 透傳給 `bedrock/`、`sagemaker/`、`vertex_ai/` 等 AWS/GCP 原生鑑權路由；如果明確使用 LiteLLM 的 Bedrock bearer-token API-key 鑑權，可設為 `true` |
 | `model` | str | 模型名稱 |
 | `api_base` | str | API 端點（可選） |
+| `temperature` | float 或 null | 取樣溫度（預設：`null`）。省略或設為 `null` 時請求不攜帶該欄位，使用服務端預設值 |
 | `thinking` | bool | 啟用思考模式（僅對部分火山模型生效，預設：`false`） |
 | `max_concurrent` | int | 語義處理階段 LLM 最大併發呼叫數（預設：`32`） |
 | `max_retries` | int | VLM provider 瞬時錯誤的最大重試次數（預設：`3`；`0` 表示停用重試） |
@@ -789,6 +822,8 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 | `media.file_processing_timeout` | float | Provider 側媒體預處理最長等待秒數（預設：`1800`） |
 | `media.file_poll_interval` | float | Provider 側媒體預處理輪詢間隔秒數（預設：`3`） |
 | `media.video_fps` | float | Provider 支援時使用的影片取樣幀率，範圍 `0.2` 到 `5.0`（預設：`1.0`） |
+
+`vlm` 及單獨配置的 `query_planner` 預設不指定溫度；省略 `temperature` 或設定 `"temperature": null` 均使用服務端預設取樣設定，適用於固定模型和自動路由模型。同一配置下的所有憑據共享此設定，VikingBot 的獨立配置和呼叫介面也預設不指定溫度。現有顯式數字配置保留各後端原有處理邏輯；如需延續原 VLM 預設溫度，可顯式設定 `"temperature": 0.0`（需模型支援）。從原預設值改為服務端預設值後，輸出隨機性可能變化；具體介面需支援省略溫度引數。思考模式及其支援的引數仍由具體模型決定。
 
 `vlm.max_retries` 僅對瞬時錯誤生效，例如 `429`、`5xx`、超時和連線錯誤；認證、鑑權、欠費等永久錯誤不會自動重試。退避策略為指數退避，初始延遲 `0.5s`，上限 `8s`，並帶隨機抖動。
 
@@ -1009,6 +1044,32 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 需要 GitHub、GitLab 或 Azure DevOps 專屬 URL 語義時，應配置到對應的平臺欄位；
 其他 Git 主機統一新增到 `code_hosting_domains`。
 
+#### 语法包下载与镜像（网络受限 / 离线）
+
+`tree-sitter-language-pack.process()` 首次解析某种语言时，会按需从 GitHub Releases 下载语法整包（单个平台包内含全部语言，约 20MB），下载后缓存在本地，之后的解析直接读缓存、不再联网。
+
+- **Docker 部署**：镜像在构建阶段已执行 `download_all()` 预热全部语法，并校验所有语言就绪（缺失则镜像构建失败）；生产环境直接命中镜像内缓存，无需也不会访问 GitHub。
+- **个人本地使用（非 Docker）**：默认仍按需从 GitHub 下载，不会强制预取。如果你的网络无法访问 GitHub，可把环境变量指向 OpenViking 随包内置的代理清单（下载地址已改写为公共代理 `gh-proxy.com`）：
+
+```bash
+# 1. 找到随包安装的代理清单路径
+python -c "import openviking.parse.parsers.code.ast as m, os; print(os.path.join(os.path.dirname(m.__file__), 'assets', 'parsers.ghproxy.json'))"
+
+# 2. 指向它（建议写入 ~/.zshrc / ~/.bashrc）
+export TREE_SITTER_LANGUAGE_PACK_MANIFEST_URL="file://<上一步输出的绝对路径>"
+```
+
+说明：
+
+- 该环境变量只替换**清单文件**地址；清单内各平台整包 URL 已改写为代理地址，整包也会走代理，`sha256` 保持不变。
+- 想彻底离线，可在能联网时手动预热一次，之后全程使用本地缓存：
+
+```bash
+python -c "from tree_sitter_language_pack import download_all; download_all()"
+```
+
+- 如需使用自建镜像，把环境变量指向你自己的 `parsers.json`（同步改写其中的整包 URL）即可，支持 `http(s)://` 与 `file://`。
+
 ### pdf
 
 PDF 解析配置。支援三種策略：`local`（本地 pdfplumber）、`mineru`（遠端 MinerU API）、`auto`（先本地、失敗回退 MinerU）。
@@ -1046,7 +1107,7 @@ PDF 解析配置。支援三種策略：`local`（本地 pdfplumber）、`mineru
 | `enable` | `false` | 啟用外部解析。 |
 | `extensions` | `[]` | 交給外部解析的副檔名；轉為小寫並去掉開頭的點。 |
 | `host` | `""` | 帶協議的 API 地址，如 `https://parser.example.com`；啟用時必填。 |
-| `api_key` | `""` | 外部 API 憑證；啟用時必填。 |
+| `api_key` | `""` | 相容舊獨享部署的憑證，僅在 Account 未配置 `parser_api` 段時使用；啟動外部解析操作時必須有可用 Key。 |
 | `enable_resumable_upload` | `false` | 啟用斷點續傳。 |
 | `upload_simple_max_bytes` | `536870912`（512 MiB） | 簡單上傳的大小閾值。 |
 | `upload_part_size_bytes` | `8388608`（8 MiB） | 分片上傳的分片大小。 |
@@ -1055,6 +1116,24 @@ PDF 解析配置。支援三種策略：`local`（本地 pdfplumber）、`mineru
 | `poll_interval_ms` | `3000` | 結果輪詢間隔，單位毫秒。 |
 
 大小、超時和輪詢引數都必須大於零。
+
+共享部署应通过 `POST /api/v1/admin/accounts` 为每个 Account 配置
+`settings.parser_api.api_key`，或通过
+`PATCH /api/v1/admin/accounts/{account_id}/configuration` 更新。该段仅 ROOT
+可读写；ADMIN 响应不返回该段，ADMIN 修改请求（包括 `null`）均被拒绝。
+Account 只拥有凭证，host、路由、上传和超时参数仍由 Cluster 维护。
+Account 已配置时，远端认证失败不会回退到 Cluster Key。普通 add-resource
+`args.api_key` 和 `args.parser_api` 均被拒绝。
+
+上传、提交、轮询、目录导入（包括嵌套 ZIP）和任务恢复都使用任务所属 Account。队列消息仅保存 owner
+和远端 file/response ID，不保存解析 Key。执行中的一次解析调用使用已取得的 Key，
+下一次调用或恢复读取最新 Key。轮换必须保持同一远端身份，并确保新 Key 能访问已有
+远端 ID；权限错误直接失败，不重新提交或尝试其他凭证。结果 ZIP URL 的下载不附带
+解析服务的 Authorization 头。
+
+内置文件配置源通过 AGFS 持久化 Account 配置，开启 `encryption.enabled=true`
+时沿用现有文件加密；该开关默认关闭。本次改动不会加密宿主机上的 `ov.conf`，
+也不改变自定义配置源的加密行为。
 
 ### rerank
 
@@ -1232,6 +1311,7 @@ Choice 不受這個 Noul 專用開關影響，始終將全部候選放入共享 
 | `agfs` | object | RAGFS（Rust 實現的 AGFS）配置 | {} |
 | `vectordb` | object | 向量庫儲存配置 | {} |
 | `task_store` | object | 持久化 Task/Work 後端配置 | `{"provider":"file"}` |
+| `watch_store` | object | Watch 儲存：`file`（單節點）或 `mysql`（多節點共享） | `{"provider":"file"}` |
 
 
 ```json
@@ -1288,6 +1368,84 @@ Task/Work/Event 記錄，用於隔離共用同一套表的多個 OpenViking 部�
 再按順序執行變更指令碼；升級使用舊 TaskStore 表的庫前，先執行
 `openviking/service/sql/changes/0001_task_store_service_name.sql`。同一部署
 不要同時讓 FileStore 和 MySQL 表作為寫入端。
+
+#### watch_store
+
+默认的 `file` provider 与旧版本一样，把 Watch 任务保存在内部控制文件
+`viking://resources/.watch_tasks.json` 中，只供单个 OpenViking 进程使用。任务启动时
+一次性加载到内存；开始运行和关联 Task 只更新内存，创建、配置、checkpoint、
+结果、删除及目标变化时写完整任务快照，内容相同的 patch 不落盘。即使其它 Watch
+发生变化，也不会保存运行占用；重启后与旧版本一样，按保存的计划重新调度过期 Watch。
+快照及其 tmp/backup 文件均为内部控制状态。当 Watch
+元数据本身需要共享存储时使用 `mysql`：安装 `openviking[mysql]`，并执行
+`openviking/service/sql/001_watch_tasks.sql`。MySQL 的 `params` 与 `task_store`
+使用相同的连接字段；`params.table` 默认为 `ov_watch_tasks`。必须配置
+`params.credential_encryption_key`：一个 base64 编码的 32 字节密钥，用于以 AES-GCM
+加密存储每个 Watch 的私有 `auth_state`（数据源 token）和 `connector_states`，密文与
+task ID 绑定。所有节点必须使用同一密钥，更换密钥会导致已有 Watch 凭证无法解密。
+`file` 模式下这些状态仍由 VikingFS 文件加密保护。
+
+候选查询按剩余并发容量分批读取 Watch ID、归属和目标 URI。Manager 的 `due()` 在
+目标 PathLock 内调用 `begin_run()`，在同一事务中读取一次当前 Watch 并占用，
+提交时直接使用快照，不再读取 Watch。占用后的参数修改从下一轮生效。
+`running()` 只读取归属和运行 ID、开始时间、Connector 标记、
+instruction 及数据库时间，不搬运或解密鉴权、Connector 状态和 checkpoint。
+
+MySQL 持久化占用、真实 Task 关联和终态结算，本轮 checkpoint 版本与之前一样
+保存在 payload 中，结算不会用旧 checkpoint 覆盖新配置。缺失 Task
+沿用现有宽限期及重试语义，创建 Task 后、关联 Watch 前崩溃的窗口仍可能造成重复导入。
+
+Watch 列表分页使用建表脚本中的 `list` 和 `list_all` 索引。若此前已创建 Watch 表，
+需执行一次索引更新；自定义表名时同步替换表名及索引名：
+
+```sql
+ALTER TABLE ov_watch_tasks
+  DROP INDEX ix_ov_watch_tasks_list,
+  ADD INDEX ix_ov_watch_tasks_list
+    (service_name(128), account_id(128), user_id(128), deleted, created_at, task_id),
+  ADD INDEX ix_ov_watch_tasks_list_all
+    (service_name, deleted, created_at, task_id);
+```
+
+```json
+{
+  "storage": {
+    "watch_store": {
+      "provider": "mysql",
+      "params": {
+        "user": "openviking",
+        "password": "change-me",
+        "database": "openviking",
+        "host": "127.0.0.1",
+        "port": 3306,
+        "table": "ov_watch_tasks",
+        "credential_encryption_key": "base64-encoded-32-byte-key"
+      }
+    }
+  }
+}
+```
+
+所有节点都提供 Watch API。`enable_watch_scheduler=true` 的节点可以运行后台 Watch
+调度器。`watch_leader_provider` 选择 leader 模式：`auto` 保持按存储类型推导的默认值，
+`local` 将 leader 限制在本进程内，`cache` 使用 AGFS CacheRuntime 的共享 leader 租约。
+leader 每 15 秒拉取到期 Watch 并结算已结束的运行。File 和 MySQL 共用 Runtime
+的轮询与有限并发派发流程。后台派发在 leader 内存中维护
+未结束的 Watch 运行和提交中的协程占用（默认上限 4）。接管时通过已有运行扫描
+恢复占用（File 为本进程状态，MySQL 为持久化行），后续派发不额外查询占用。
+手动触发和首次导入独立受理，扫描发现后计入
+后台占用。File 目标移动没有 1000 条 Watch 上限，MySQL 仍保留该事务限制。
+一次运行就是
+对应的 ingestion Task：运行占用目标期间，Watch 行记录该 Task ID，且只有在持有
+目标 Tree PathLock 时才能开始运行。提交在创建 Task 前停止（服务停机、身份删除、
+失败）时立即结算；Task 超过 1 小时仍不存在时，阻止后续提交并按 error 结算。
+运行超过 3 小时会请求取消；若 Task 仍非终态，则通过 TaskTracker 记录超时错误。
+Connector 导入没有本地 Work，其 Task 会成为 failed，再结算 Watch 并释放占用。
+仍有未结束本地 Work 的 Task 保持占用，直到 Work 结算。已有终态保持不变。
+该超时表示结束本轮本地跟踪，不保证远端执行已经停止。
+
+对与被占用 Watch 目标重叠的路径执行 `mv`、`cp`、`rm`、`mkdir` 时，最多等待
+10 秒，之后返回可重试的 busy 错误。
 
 #### agfs (RAGFS)
 
@@ -1785,9 +1943,9 @@ acl_direct_grants
 acl_inherited_grants
 ```
 
-每個元素使用 `{mask}:{principal}` 格式，其中 `1` 表示 `read`、`3` 表示 `write`、`7` 表示 `manage`。
+每項授權使用 `{mask}:{principal}` 格式，其中 `1` 表示 `read`、`3` 表示 `write`、`7` 表示 `manage`。空 grants 儲存為 `["none"]`，這也是兩個欄位的預設值；該標記不改變 `acl_mode`。
 
-本地 backend 會在啟動時為存量 collection 增加欄位並重建標量索引。舊記錄不做全量回填；缺失 ACL 欄位按 `acl_mode=none` 和空列表讀取。
+本地 backend 會在啟動時為存量 collection 增加欄位並重建標量索引。舊記錄不做全量回填；缺失 ACL 欄位按 `acl_mode=none` 和空許可權讀取。
 
 遠端 backend 的存量 collection 需要由部署方預先新增這些欄位和 scalar index，OpenViking 只校驗 schema。許可權模型詳見 [資源訪問控制（ACL）](../concepts/15-acl.md)。
 
@@ -2096,21 +2254,23 @@ schema 變更按順序存放於 `openviking/server/account_stores/sql/changes/`�
 }
 ```
 
-`redis_mysql` 需要安裝 `redis-mysql` extra，並在引數中巢狀同一份 MySQL 配置。
-其 `cache` 配置沿用頂層 `cache` 的 `provider/params` 結構，目前 Python
-客戶端支援 `standalone`、`cluster` 和 `sentinel` 三種 Redis 部署模式。
-它預設以固定 60 秒 TTL 快取 API Key 繫結、User、每個 User 的 Group ID 和刪除記錄。
-快取重建與同一 Account 的修改共用 Redis 租約，正常快取命中不獲取該租約。修改會先
-提交 MySQL，再失效相關快取。Redis 不可用時 MySQL 修改仍會成功，遺留快取最多保持到
-固定 TTL 到期。快取回填同時維護 Account
-級、按過期時間排序的 key 索引；每次寫入已索引快取時會清理過期成員，因此刪除或重建
-Account 時只會清理該 Account 當前的 User、Group、刪除記錄和憑據快取。API Key 繫結會
-校驗 Account 和 User 的憑據 fence，所以正常的換 Key、吊銷和刪 User 會使舊繫結失效。
-索引的最後一個有序集合成員被移除後，Redis 會自動刪除空索引；清理結束時不再單獨刪除
-索引，避免失去租約的舊請求誤刪新回填的索引。建立身份或換 Key 會同時清除攜帶和未攜帶
-User 提示的負快取。
-Redis 連線和命令超時通過 `cache.params.connect_timeout_ms` 和
-`cache.params.command_timeout_ms` 配置，未配置時均為 5000 毫秒；這不是整個請求的總超時。
+`redis_mysql` 需要安裝 `redis-mysql` extra。`mysql` 部分使用與 MySQL provider
+相同的引數；`cache` 部分沿用頂層快取的 `provider/params` 結構，支援
+`standalone`、`cluster` 和 `sentinel` 三種 Redis 部署模式。
+
+MySQL 是資料來源，Redis 快取鑑權結果、使用者資訊、組和刪除狀態。快取未命中或
+Redis 讀取失敗時會查詢 MySQL。通過 `cache.params.ttl_seconds` 配置快取有效期，
+預設 60 秒；命中不會延長有效期。
+
+憑據、許可權和刪除狀態變更會失效相關快取。如果失效操作失敗，快取可能保持舊值
+直到 TTL 到期。共享同一快取的例項應一起升級，舊、新快取格式無法互相失效。
+快取版本後設資料不會自動過期，需要計入 Redis 容量規劃。舊的 `lock_ttl_seconds`
+和 `lock_wait_seconds` 配置相容接受，但不再使用。
+
+Redis 連線和命令超時分別通過 `cache.params.connect_timeout_ms` 和
+`cache.params.command_timeout_ms` 配置，預設均為 5000 毫秒；它們不是整個請求的
+總超時。`cache.params.pool_size` 應按併發 Redis 請求數配置，預設 32，下面示例
+使用 100；連線池耗盡會觸發連線錯誤並轉為查詢 MySQL。
 
 ```json
 {
@@ -2138,9 +2298,8 @@ Redis 連線和命令超時通過 `cache.params.connect_timeout_ms` 和
             "password_env": "OPENVIKING_REDIS_PASSWORD",
             "sentinel_password_env": "OPENVIKING_SENTINEL_PASSWORD",
             "key_prefix": "ov:account-auth",
-            "ttl_seconds": 60,
-            "lock_ttl_seconds": 60,
-            "lock_wait_seconds": 30
+            "pool_size": 100,
+            "ttl_seconds": 60
           }
         }
       }
@@ -2157,9 +2316,8 @@ Redis 連線和命令超時通過 `cache.params.connect_timeout_ms` 和
 
 支援的 add target URI：
 
-- `resource_uri` 作為 `add_resource` 的預設父目錄使用，等價於 `parent=<uri>, create_parent=true`。它必須是當前請求使用者可寫的 resource 目錄 URI，支援 `viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://user/{user_id}/resources` 或 `viking://user/{user_id}/resources/...`、`viking://user/{user_id}/peers/{peer_id}/resources` 或 `viking://user/{user_id}/peers/{peer_id}/resources/...`。`viking://~/...` 家目錄別名會按請求使用者解析。
-- `skill_uri` 作為 `add_skill` 的預設目標根目錄使用。v1 只允許 `viking://~/skills` 和 `viking://agent/skills`；不支援顯式寫成 `viking://user/{user_id}/skills`。
-- 舊寫法相容：早期配置中的 `viking://user/resources` 和 `viking://user/skills` 會在配置載入時自動歸一化為 `viking://~/resources` 和 `viking://~/skills`，並列印一條 info 日誌。新配置請直接使用 `viking://~/...`；在 `add_targets` 之外，無 uid 的寫法會在請求入口被拒絕。
+- `resource_uri` 作為 `add_resource` 的預設父目錄使用，等價於 `parent=<uri>, create_parent=true`。它必須是當前請求使用者可寫的 resource 目錄 URI，支援 `viking://resources` 或 `viking://resources/...`、`viking://~/resources` 或 `viking://~/resources/...`、`viking://~/peers/{peer_id}/resources` 或 `viking://~/peers/{peer_id}/resources/...`。`viking://~/...` 家目錄別名會按請求使用者解析。
+- `skill_uri` 作為 `add_skill` 的預設目標根目錄使用。支援 `viking://~/skills` 和 `viking://agent/skills`。
 
 ### 執行時配置來源 {#runtime-configuration-source}
 

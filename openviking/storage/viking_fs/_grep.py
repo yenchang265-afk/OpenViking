@@ -10,7 +10,8 @@ from typing import Any, Callable, Dict, List, Optional, Set
 from openviking.core.namespace import is_session_uri
 from openviking.pyagfs.exceptions import AGFSNotSupportedError
 from openviking.server.identity import RequestContext
-from openviking.storage.expr import And, PathScope, RawDSL
+from openviking.storage.expr import FilterExpr, RawDSL
+from openviking.storage.scope_filter import build_scope_filter, merge_filters
 from openviking.storage.viking_fs._base import logger
 from openviking_cli.exceptions import InvalidArgumentError, PermissionDeniedError
 
@@ -20,6 +21,35 @@ _FULLTEXT_UNSUPPORTED_CACHE_TTL = 60.0
 
 def _pkg():
     return sys.modules[__package__]
+
+
+def _build_grep_scope_filter(
+    uri: str,
+    level_limit: Optional[int],
+    *,
+    exclude_uri: Optional[str] = None,
+    tag_filter: Optional[Dict[str, Any]] = None,
+) -> Optional[FilterExpr]:
+    """Build grep's bounded path scope without changing its filter shape."""
+    scope = build_scope_filter(
+        target_directories=[uri],
+        target_depth=level_limit,
+    )
+    if exclude_uri:
+        scope = merge_filters(
+            scope,
+            RawDSL(
+                {
+                    "op": "must_not",
+                    "field": "uri",
+                    "conds": [exclude_uri],
+                    "para": "-d=-1",
+                }
+            ),
+        )
+    if tag_filter is not None:
+        scope = merge_filters(scope, RawDSL(tag_filter))
+    return scope
 
 
 class _GrepMixin:
@@ -65,6 +95,9 @@ class _GrepMixin:
         """
         # stat() authorizes the requested path.
         # Skip vector_store.count() — the count field is not needed for grep.
+        # GLOBAL reads are scoped to the owner policy before traversal (#6973).
+        ctx = self.authorize_read(self._ctx_or_default(ctx), [uri])
+        await self._ensure_traversable(uri, ctx)
         await self.stat(uri, ctx=ctx, skip_count=True)
 
         tags_by_uri: Dict[str, List[str]] = {}
@@ -74,11 +107,10 @@ class _GrepMixin:
                 return {"matches": [], "count": 0, "match_count": 0, "files_scanned": 0}
             records = await self._grep_tag_records(
                 vector_store,
-                And(
-                    [
-                        PathScope("uri", uri, depth=level_limit),
-                        RawDSL(tag_filter),
-                    ]
+                _build_grep_scope_filter(
+                    uri,
+                    level_limit,
+                    tag_filter=tag_filter,
                 ),
                 ctx,
                 ordered=await self._vector_backend_is_opengauss(vector_store, ctx),
@@ -125,7 +157,11 @@ class _GrepMixin:
         after_context=0,
     ):
         """Filesystem grep path: prefer native agfs grep and fall back if unavailable."""
-        native_safe = content_transform is None and allowed_uris is None
+        native_safe = (
+            content_transform is None
+            and allowed_uris is None
+            and self._ctx_or_default(ctx).data_access is None
+        )
         if native_safe:
             try:
                 # Session grep historically used the Python fallback, where
@@ -258,7 +294,8 @@ class _GrepMixin:
         excluded_path = None
         if exclude_uri:
             normalized_excluded_uri = exclude_uri.rstrip("/")
-            await self._ensure_access(normalized_excluded_uri, ctx)
+            if self._ctx_or_default(ctx).data_access is None:
+                await self._ensure_access(normalized_excluded_uri, ctx)
             excluded_path = self._uri_to_path(normalized_excluded_uri, ctx=ctx)
 
         try:
@@ -379,7 +416,8 @@ class _GrepMixin:
         excluded_prefix = None
         if exclude_uri:
             excluded_prefix = exclude_uri.rstrip("/")
-            await self._ensure_access(excluded_prefix, ctx)
+            if self._ctx_or_default(ctx).data_access is None:
+                await self._ensure_access(excluded_prefix, ctx)
         file_uris = await self._collect_grep_files(
             uri,
             excluded_prefix=excluded_prefix,
@@ -573,14 +611,12 @@ class _GrepMixin:
         if before_context > 0:
             start = max(0, line_index - before_context)
             match["before_context"] = [
-                {"line": index + 1, "content": lines[index]}
-                for index in range(start, line_index)
+                {"line": index + 1, "content": lines[index]} for index in range(start, line_index)
             ]
         if after_context > 0:
             end = min(len(lines), line_index + after_context + 1)
             match["after_context"] = [
-                {"line": index + 1, "content": lines[index]}
-                for index in range(line_index + 1, end)
+                {"line": index + 1, "content": lines[index]} for index in range(line_index + 1, end)
             ]
         return match
 

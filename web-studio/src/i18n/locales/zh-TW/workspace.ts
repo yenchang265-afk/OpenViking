@@ -94,6 +94,7 @@ const workspace = {
       defaultTitle: 'Business Context Platform',
     },
     navigation: {
+      arranger: { title: '編排' },
       compile: { title: '編譯' },
       home: {
         title: '首頁',

@@ -1,0 +1,53 @@
+# 圖示
+
+檔案型別圖示通過公開入口 `@openviking/react/icons` 提供。它們複用工作區的 SVG 原始檔，隨 React 包一起交付。
+
+## 可執行示例
+
+通過尺寸按鈕調整五個裝飾性圖示。單獨的 PDF 圖示演示有意義的 `alt` 描述，尺寸為 24 × 24 畫素。中英文文件共用同一份示例，示例說明使用英文；應用可自行提供本地化的 `alt` 文案。
+
+```tsx file="../../_demos/icons-basic.tsx" preview
+
+```
+
+## 可用圖示
+
+| 匯出        | 檔案型別 |
+| ----------- | -------- |
+| `AudioIcon` | 音訊     |
+| `PdfIcon`   | PDF      |
+| `PptIcon`   | 簡報 |
+| `VideoIcon` | 影片     |
+| `WordIcon`  | 文本文件 |
+
+## 屬性
+
+每個元件渲染為 `img`，接收不含 ref 的標準圖片屬性；`src` 和 `srcSet` 由元件管理，不對呼叫方開放。
+
+| 屬性        | 型別               | 預設值 | 說明                                 |
+| ----------- | ------------------ | ------ | ------------------------------------ |
+| `width`     | `number \| string` | `16`   | 圖片寬度。                           |
+| `height`    | `number \| string` | `16`   | 圖片高度。                           |
+| `alt`       | `string`           | `''`   | 無障礙描述；裝飾性圖示使用空字串。 |
+| `className` | `string`           | —      | 為圖片元素新增類名。                 |
+| 其他屬性    | 圖片屬性           | —      | 標準圖片屬性，包括 `aria-*`。        |
+
+```tsx
+import { PdfIcon } from '@openviking/react/icons';
+
+export default function Example() {
+  return (
+    <PdfIcon width={24} height={24} className="file-icon" alt="PDF 文件" />
+  );
+}
+```
+
+## 無障礙
+
+相鄰文字已經說明檔案型別時，保留空 `alt`，避免重複播報。圖示獨立傳達資訊時，提供應用語言下的描述。圖示本身不具有互動行為；放入操作控制元件時，由應用負責按鈕語義、鍵盤互動和焦點樣式。
+
+## 資源與樣式
+
+SVG 以 data URL 內聯到構建後的 JavaScript 中，無需單獨請求 SVG，也無需為這些圖示匯入樣式表。應用使用內容安全策略時，須在 `img-src` 中允許 `data:`。
+
+通過 `width`、`height`、`className` 或 `style` 調整圖片的尺寸與位置。SVG 使用固定配色，修改 CSS `color` 不會改變圖示顏色。

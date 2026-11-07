@@ -14,6 +14,7 @@ export const Route = createFileRoute('/compile/new')({
     skill: vikingUri(s.skill),
     from: vikingUri(s.from),
     to: vikingUri(s.to),
+    target: vikingUri(s.target),
   }),
   component: NewCompile,
 })

@@ -37,8 +37,8 @@ function withinTokens(value, budget) {
 const outcome = (error) => error.code === "unconfigured" ? "unbound"
   : ["unauthorized", "invalid"].includes(error.code) ? error.code : "unavailable";
 
-export async function recallRequest(body, ctx, env = process.env, resolvedConfig) {
-  if (!["local", "magpie-key"].includes(ctx.origin) || !text(ctx.session)) {
+export async function recallRequest(body, ctx, env = process.env, resolvedConfig, startedAt = performance.now()) {
+  if (!["local", "magpie-key"].includes(ctx.origin)) {
     ctx.report?.("unbound", 0); return;
   }
   const conversation = describeConversation(body, ctx.protocol);
@@ -52,13 +52,13 @@ export async function recallRequest(body, ctx, env = process.env, resolvedConfig
     if (cfg.recallPeerScope === "actor" && !cfg.peerId) { ctx.report?.("unbound", 0); return; }
     // No plaintext credentials/queries enter filenames or logs. Changing the
     // connection identity, agent, workspace or model starts a different scope.
-    const scope = connectionScope(cfg, ctx, body.model || ctx.model || "");
-    const result = await withRecallLedger(dataDirectory(cfg), scope, ctx.signal, async (decisions) => {
+    const bound = Boolean(text(ctx.session));
+    const decide = async (decisions) => {
       const { users, latest, fresh, anchors } = conversation;
       // Missing earlier decisions means a restart with lost state, a rewritten
       // history or an unknown compaction. Never attach old memory by text alone.
       const required = fresh ? users.slice(0, -1) : users;
-      if (required.some((index) => !Object.hasOwn(decisions, anchors[index]))) return { outcome: "unbound" };
+      if (bound && required.some((index) => !Object.hasOwn(decisions, anchors[index]))) return { outcome: "unbound" };
       const anchor = anchors[latest];
       if (fresh && !Object.hasOwn(decisions, anchor)) {
         let block = "", code = "skipped";
@@ -68,16 +68,29 @@ export async function recallRequest(body, ctx, env = process.env, resolvedConfig
             const shouldSearch = query.length >= cfg.minQueryLength;
             const recallBody = buildContextSearchBody(cfg, { excludeUris: cfg.recallExcludeUris });
             recallBody.query = query.slice(0, 16000);
-            const timeoutMs = Math.min(cfg.recallContextTimeoutMs || cfg.timeoutMs, cfg.timeoutMs, 9000);
+            // Match Magpie's per-hook option validation; the host exposes no remaining deadline.
+            const configuredBudget = ctx.options?.gatewayTimeoutMs;
+            const hostBudgetMs = Number.isInteger(configuredBudget) && configuredBudget >= 100 && configuredBudget <= 10000
+              ? configuredBudget : 1000;
+            // Reserve 200 ms for result assembly, ledger I/O and host serialization.
+            // This is a tested safety margin, not a guarantee against earlier host cancellation.
+            const reserveMs = 200;
+            const remainingMs = hostBudgetMs - (performance.now() - startedAt) - reserveMs;
+            const timeoutMs = Math.floor(Math.min(cfg.recallContextTimeoutMs || cfg.timeoutMs, cfg.timeoutMs, 9000, remainingMs));
+            // HTTP enforces a 100 ms minimum: do not start work that cannot fit.
+            if (timeoutMs < 100) throw new PluginError("timeout");
+            // End both HTTP waits together without treating our deadline as host cancellation.
+            const deadline = AbortSignal.timeout(timeoutMs);
+            const requestSignal = ctx.signal ? AbortSignal.any([ctx.signal, deadline]) : deadline;
             // A profile holds stable facts that semantic search may not rank.
             // Read it only on the first user turn; later turns replay that
             // exact snapshot. Both reads share the host's wall-clock budget.
             const [search, profile] = await Promise.allSettled([
               shouldSearch
-                ? request(cfg, "/api/v1/search/search", { body: recallBody, signal: ctx.signal, timeoutMs })
+                ? request(cfg, "/api/v1/search/search", { body: recallBody, signal: requestSignal, timeoutMs })
                 : Promise.resolve(""),
               users.length === 1
-                ? request(cfg, `/api/v1/content/read?${new URLSearchParams({ uri: "viking://~/memories/profile.md" })}`, { signal: ctx.signal, timeoutMs })
+                ? request(cfg, `/api/v1/content/read?${new URLSearchParams({ uri: "viking://~/memories/profile.md" })}`, { signal: requestSignal, timeoutMs })
                 : Promise.resolve(""),
             ]);
             ctx.signal?.throwIfAborted();
@@ -106,7 +119,12 @@ export async function recallRequest(body, ctx, env = process.env, resolvedConfig
       }
       const output = replayContext(body, ctx.protocol, conversation, decisions);
       return { body: output, outcome: output ? "ready" : decisions[anchor]?.outcome || "skipped" };
-    });
+    };
+    // Stateless requests recall only for this request. They never read/write
+    // a ledger or reuse another conversation's profile/ownership decisions.
+    const result = bound
+      ? await withRecallLedger(dataDirectory(cfg), connectionScope(cfg, ctx, body.model || ctx.model || ""), ctx.signal, decide)
+      : await decide({});
     ctx.report?.(result.outcome, result.body ? Buffer.byteLength(JSON.stringify(result.body)) - Buffer.byteLength(JSON.stringify(body)) : 0);
     return result.body;
   } catch (error) {

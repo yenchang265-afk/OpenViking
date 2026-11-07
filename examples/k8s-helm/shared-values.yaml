@@ -78,6 +78,12 @@ config:
     enabled: true
     backend: mysql
     issuer: https://ov.example.com
+  # Saved credentials are encrypted even with encryption disabled; every replica
+  # must share one root key (64 hex characters).
+  encryption:
+    provider: local
+    local:
+      root_key: "${OPENVIKING_ENCRYPTION_ROOT_KEY}"
 extraEnv:
   - name: OPENVIKING_MODEL_API_KEY
     valueFrom:
@@ -85,6 +91,9 @@ extraEnv:
   - name: OPENVIKING_ROOT_API_KEY
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: root-api-key}
+  - name: OPENVIKING_ENCRYPTION_ROOT_KEY
+    valueFrom:
+      secretKeyRef: {name: openviking-backends, key: encryption-root-key}
   - name: OPENVIKING_MYSQL_PASSWORD
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: mysql-password}

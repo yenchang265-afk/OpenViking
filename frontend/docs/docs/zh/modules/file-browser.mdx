@@ -1,0 +1,86 @@
+# FileBrowser 檔案瀏覽
+
+目錄導航、搜尋與內容預覽作為一個模組。模組自己取數，宿主提供配置、受控的當前資源、工具欄入口與文案。
+
+元件當前是佔位實現：只展示模組名稱與佔位文案。下面的 props 已定型，接入方可以先完成容器與狀態接入；組合檢視與 `useFileBrowser` 隨後補充。
+
+## 基礎用法
+
+```tsx file="../../_demos/file-browser-placeholder.tsx" preview
+
+```
+
+## 範圍
+
+模組只覆蓋檔案樹與檔案預覽兩塊。命令面板屬於 `console`。
+
+## 模組負責什麼
+
+- 目錄、搜尋、當前 URI 與預覽載入在模組內協調：點選目錄節點或搜尋結果即移動選中並載入預覽，切換資源時丟棄過期請求。
+- 儲存、重新命名或刪除後重新整理受影響的目錄、搜尋結果與預覽。
+- 搜尋、目錄與預覽區域的佈局。
+- 工具欄裡的搜尋框與重新整理按鈕，以及行級狀態，例如上傳進度、衝突標記與保留策略設定。
+- 預覽頁籤。某個資源有哪些頁籤由資源本身決定，宿主不需要提供。
+- 搜尋檢視。搜尋是本模組內部的私有檢視，不是公開的元件或模組：從工具欄或 ⌘K 開啟，選中結果後移動目錄樹並載入預覽。它不對外匯出——離開目錄樹，搜尋就沒有去處。`console` 的 `@` 引用是基於同類介面的另一個檢視，不是這一個。
+
+## 宿主負責什麼
+
+- 通過 Provider 提供請求配置，模組可用 `requestOptions` 逐欄位覆蓋。
+- 登入、帳號作用域、路由與許可權。
+- 工具欄入口，例如連線 Agent、匯入資源。用 `FileBrowserToolbarButton` 在 `toolbarActions` 裡組合，保證與模組內建按鈕外觀一致。只靠點選不夠時，入口可以包在氣泡或下拉里。
+- 接入彈窗、匯入流程與引導。模組都不內建。
+
+## 工具欄入口
+
+搜尋框、重新整理按鈕與分隔線由模組渲染。宿主通過 `toolbarActions` 新增自己的入口，用 `FileBrowserToolbarButton` 保證樣式一致：
+
+```tsx
+import {
+  FileBrowser,
+  FileBrowserToolbarButton,
+} from '@openviking/react/modules/file-browser';
+
+<FileBrowser
+  toolbarActions={
+    <>
+      <FileBrowserToolbarButton icon={<ConnectIcon />} onClick={connect}>
+        連線 Agent
+      </FileBrowserToolbarButton>
+      <FileBrowserToolbarButton icon={<UploadIcon />} onClick={openImport}>
+        匯入資源
+      </FileBrowserToolbarButton>
+    </>
+  }
+/>;
+```
+
+`toolbarActions` 是節點，所以需要選單的入口直接把自己的按鈕包起來，不需要再加欄位：
+
+```tsx
+<Popover content={<ResourceMenu />} trigger="hover">
+  <FileBrowserToolbarButton icon={<UploadIcon />}>
+    匯入資源
+  </FileBrowserToolbarButton>
+</Popover>
+```
+
+入口之間的分隔線由 CSS 相鄰兄弟選擇器處理，宿主傳幾個、怎麼巢狀都不影響。
+
+## 屬性
+
+模組從子路徑和根入口匯出 `FileBrowserProps`，`FileBrowserToolbarButton`、`FileBrowserToolbarButtonProps` 與 `FileBrowserLabels` 只從子路徑匯出。
+
+| 屬性             | 型別                            | 預設值 | 說明                                                                                                                                   |
+| ---------------- | ------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `requestOptions` | `OvRequestOptions`              | —      | 請求配置覆蓋，逐欄位覆蓋最近的 Provider。                                                                                              |
+| `uri`            | `string`                        | —      | 受控的當前資源 URI。傳入時由宿主決定當前資源，模組只上報切換意圖。                                                                     |
+| `defaultUri`     | `string`                        | —      | 非受控時的初始資源 URI。省略時不選中任何資源。                                                                                         |
+| `toolbarActions` | `ReactNode`                     | —      | 工具欄左側的宿主入口，用 `FileBrowserToolbarButton` 組合。搜尋、重新整理與入口之間的分隔線由模組負責。                                     |
+| `onUriChange`    | `(uri: string \| null) => void` | —      | 當前資源變化後觸發；清除選中時傳入 `null`。                                                                                            |
+| `labels`         | `FileBrowserLabels`             | —      | 可替換文案：`title`、`description`、`searchPlaceholder`、`searchEmpty`、`refresh`、`empty`、`error`、`retry`。未提供時沿用英文預設值。 |
+| `className`      | `string`                        | —      | 容器附加類名。                                                                                                                         |
+| `style`          | `CSSProperties`                 | —      | 容器樣式覆蓋。                                                                                                                         |
+
+文案為純文本，宿主可將自身的翻譯結果對映到這些屬性。props 裡沒有資料欄位——資料由模組自己載入。
+
+佔位元件當前只消費 `className`、`style`、`labels.title` 與 `labels.description`。

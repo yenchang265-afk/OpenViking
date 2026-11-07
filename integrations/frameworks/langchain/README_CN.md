@@ -44,6 +44,12 @@ finally:
 
 外部傳入的 client 仍由呼叫方管理。通過 `url=` 建立的 client 由介面卡管理。
 
+`create_openviking_tools` 的 retrieval、agent 和 admin profile 都包含
+`viking_rule_search`。傳入 `task_context` 與可選的 `rule_probability_threshold`
+（預設 `0.65`），在操作或回覆前檢查已編譯的約束。工具返回完整 Rule，不截斷正文。
+需要支援 `rule_search` 的 SDK client 和提供 `POST /api/v1/rules/search` 的服務端；
+呼叫錯誤不能視為沒有適用 Rule。
+
 ## 匯入遷移
 
 從 v0.5.0 之後的下一個服務端版本開始，舊的 `openviking.integrations.langchain`

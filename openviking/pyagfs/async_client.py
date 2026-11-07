@@ -527,20 +527,46 @@ class AsyncAGFSClient:
                     fs_ctx, requests, timeout_secs, owner_lease_ref
                 )
             )
-            try:
-                return await asyncio.shield(future)
-            except asyncio.CancelledError as cancelled:
-
-                async def release_acquired() -> None:
-                    await self.pathlock_release(await future, fs_ctx=fs_ctx)
-
-                try:
-                    await run_to_completion(release_acquired)
-                finally:
-                    raise cancelled
+            return await self._settle_pathlock_acquisition(future, fs_ctx)
 
         # The native async path skips ``run``; keep it behind the mount's breaker.
         return await guard_storage_call(requests[0]["path"], acquire)
+
+    async def pathlock_reacquire_batch(
+        self,
+        requests: list[Dict[str, str]],
+        owner_id: str,
+        timeout_secs: float = 0.0,
+        *,
+        fs_ctx: Dict[str, str] | None = None,
+    ) -> Dict[str, Any]:
+        """Acquire fresh holders under the durable owner validated by the recovery helper."""
+        path = requests[0]["path"] if requests else "/"
+        fs_ctx = _fs_ctx_or_default(path, fs_ctx)
+
+        async def reacquire() -> Dict[str, Any]:
+            future = asyncio.ensure_future(
+                self._client.pathlock_reacquire_batch_async(fs_ctx, requests, owner_id, timeout_secs)
+            )
+            return await self._settle_pathlock_acquisition(future, fs_ctx)
+
+        return await guard_storage_call(path, reacquire)
+
+    async def _settle_pathlock_acquisition(
+        self, future: asyncio.Future[Dict[str, Any]], fs_ctx: Dict[str, str]
+    ) -> Dict[str, Any]:
+        """Release a lease that finishes acquisition after Python cancellation."""
+        try:
+            return await asyncio.shield(future)
+        except asyncio.CancelledError as cancelled:
+
+            async def release_acquired() -> None:
+                await self.pathlock_release(await future, fs_ctx=fs_ctx)
+
+            try:
+                await run_to_completion(release_acquired)
+            finally:
+                raise cancelled
 
     async def pathlock_as_borrowed(
         self,

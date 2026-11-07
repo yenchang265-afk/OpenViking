@@ -1,0 +1,35 @@
+# 業務模組
+
+三個個人終端模組已提供佔位元件，可先接入佈局。props 已定型——請求配置、受控狀態、回撥、插槽與文案——但每個元件仍只展示模組名稱與可替換的佔位文案；業務 Hook、API 請求和模組內部互動隨實際能力遷入後補充。
+
+props 裡沒有資料欄位。模組通過 Hook 自己取數，宿主給配置與受控值，模組通過回撥上報變化。
+
+| 模組                             | 元件          | 目標能力   |
+| -------------------------------- | ------------- | ---------- |
+| [`file-browser`](./file-browser) | `FileBrowser` | 檔案瀏覽。 |
+| [`console`](./console)           | `Console`     | 互動面板。 |
+| [`task-center`](./task-center)   | `TaskCenter`  | 任務中心。 |
+
+## 預覽
+
+示例使用公開模組入口和模組集合樣式。網格佈局屬於文件示例，應用自行決定頁面佈局。
+
+```tsx file="../../_demos/modules-basic.tsx" preview
+
+```
+
+## 匯入與樣式
+
+從 `@openviking/react/modules/<模組>` 匯入元件及其 Props / Labels / Slots 型別。三個元件的本體與主 Props 型別也從根入口 `@openviking/react` 匯出；Labels、Slots 與列舉型別只從子路徑匯入。
+
+JavaScript 不載入 CSS。單模組使用 `@openviking/react/modules/<模組>/style.css`，全部模組使用 `@openviking/react/modules/style.css`，整庫使用 `@openviking/react/style.css`，每個樣式入口均可獨立消費。沒有 `@openviking/react/modules` 分類聚合 JavaScript 入口。
+
+當前佔位元件接受 `className`、`style` 和 `labels`，無需 Provider。業務 Hook、共享 Client 與 `OpenVikingProvider` 仍為規劃，尚未匯出。
+
+## 宿主職責
+
+頁面佈局、認證、帳號作用域、路由和許可權由宿主負責。產品引導、資源與 Skill 匯入流程及同步配置留在宿主；管理後臺不在這些模組的範圍內。
+
+## 級聯選擇
+
+[ScopeCascade 級聯選擇](./scope-cascade) 提供已實現的請求與級聯 Hook 及預設檢視。只需傳三個宿主介面，各級獨立訂閱。

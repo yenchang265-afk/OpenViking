@@ -1,0 +1,71 @@
+# ScopeSwitcher 作用域選擇
+
+由獨立選擇器組合的作用域麵包屑。`ScopeSwitcher` 只負責佈局；每一級宿主獨立維護請求、選項、載入/錯誤和搜尋狀態，並渲染一個 `ScopeSelector`。
+
+業務側只傳三個介面即可接入的用法見 [ScopeCascade 級聯選擇](../modules/scope-cascade)。下方保留純檢視層的自定義接入示例。
+
+## 基礎用法
+
+```tsx file="../../_demos/scope-switcher-basic.tsx" preview
+
+```
+
+```tsx
+<ScopeSwitcher>
+  <LibrarySelector />
+  <SpaceSelector />
+  <UserSelector />
+</ScopeSwitcher>
+```
+
+各級宿主直接返回 `ScopeSelector`，不額外包裹 DOM。CSS 在相鄰選擇器間新增分隔符。固定層級與可切換層級可混用，不需要的層級直接省略。窄屏自動換行，手機使用底部面板。
+
+## 更新邊界
+
+原來的 `levels` 陣列介面已替換成 `children`。根元件沒有共享狀態、資料訂閱或變化的 Context 值。各級選擇器預設獨立維護展開狀態，選中後關閉面板；傳入 `visible` 時可由本級宿主控制。搜尋、選項和請求也各歸本級宿主，不使用 `memo`。
+
+靜態示例為每個例項建立獨立的身份資料來源，各級通過 `useSyncExternalStore` 訂閱自己的通道。只有本級選中身份或祖先身份變化才替換快照：換庫更新庫並清空空間、使用者；換空間更新空間並清空使用者；換使用者只更新使用者。先更新全部受影響快照，再通知訂閱者，避免讀到混合身份。重複選擇同一身份不更新。請求、搜尋和展開狀態不進入共享資料來源。
+
+該資料來源只是**宿主接入示例**，不是庫強制要求的 Store，也不是全域性單例。已有資料層可提供相同的定向訂閱能力。祖先身份作為下游宿主子樹的 `key`，變化時重置舊選項、搜尋、錯誤、展開狀態，並取消舊請求。本級選中值變化不會重新請求本級列表。邊界外的祖先更新仍可能觸發普通 React 渲染，這個介面不承諾隔絕任意祖先更新。
+
+## 三個非同步介面串聯
+
+```tsx file="../../_demos/scope-switcher-async.tsx" preview
+
+```
+
+本示例現使用 `useScopeCascade` 和 `ScopeCascade`，業務側只需傳三個介面。級聯清空、請求、取消、本地搜尋和重試均已封裝，詳見 [ScopeCascade](../modules/scope-cascade) 的完整介面和自定義檢視示例。
+
+## 屬性
+
+`ScopeSwitcherProps` 為標準 `HTMLAttributes<HTMLDivElement>`，包含 `children`、`className`、`style` 等，不再接收 `levels` 或共享文案。
+
+`ScopeSelectorProps` 包含必填 `level: ScopeSwitcherLevel` 和可選 `labels: ScopeSwitcherLabels`。
+
+層級公共欄位：`kind`、`key`、`selectedLabel`，可選 `ariaLabel`、`icon`、`tag`。`kind: 'fixed'` 只顯示不可互動的標籤；`kind: 'selectable'` 還接收：
+
+| 欄位                                     | 行為                                                               |
+| ---------------------------------------- | ------------------------------------------------------------------ |
+| `options`、`selectedId`                  | 必填，宿主持有選項和選擇，未選擇時 id 傳 `''`。                    |
+| `disabled`、`busy`                       | 分別停用觸發器、全部選項行。                                       |
+| `loading`、`error`                       | 用載入態或錯誤態替換列表。                                         |
+| `visible`、`onVisibleChange`             | 可選受控展開狀態及通知；不傳 `visible` 時獨立維護。                |
+| `onSelect(option)`                       | 關閉面板並上報選擇意圖，宿主更新身份。                             |
+| `searchKeyword`、`onSearchKeywordChange` | 本級宿主控制搜尋，不傳回調則不顯示搜尋框。                         |
+| `total`                                  | 已載入數或總數超過 10，或搜尋詞非空時顯示搜尋框。                  |
+| `onScroll(metrics)`                      | 傳出 `scrollTop`、`scrollHeight`、`clientHeight`，分頁由宿主處理。 |
+| `renderPanel({ search, list })`          | 組合標題、操作及底部入口。                                         |
+| `renderOption(content, option)`          | 擴充套件或替換行內容，內嵌按鈕/連結不觸發行選擇。                      |
+| `emptyFallback`、`errorFallback`         | 自定義空態、錯誤態和重試入口。                                     |
+
+選項必填 `id`、`label`，可選 `icon`、`description`、`disabled`。文案包含 `loading`、`searchPlaceholder`、`empty`、`noMatch`、`error`，預設英文，本地化文案傳給各級選擇器。
+
+方向鍵及 Home/End 移動焦點，Enter/空格選擇，Escape 關閉並返回觸發器。點選外部或焦點離開時關閉面板。觸發器尺寸、圖示及選項間 4px 間距保持不變。
+
+```tsx
+import {
+  ScopeSwitcher,
+  ScopeSelector,
+} from '@openviking/react/components/scope-switcher';
+import '@openviking/react/components/scope-switcher/style.css';
+```

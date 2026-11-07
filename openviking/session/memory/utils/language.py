@@ -185,17 +185,23 @@ def _detect_language_from_text(user_text: str, fallback_language: str) -> str:
     return fallback
 
 
-def resolve_with_override(config, detect: Callable[[], str]) -> str:
+def resolve_with_override(
+    config, detect: Callable[[], str], *, output_language_override: str | None = None
+) -> str:
     """Return config override if set, else call `detect()`.
 
     The callable returns the detected output language, letting callers choose
     the detector (text vs conversation vs messages) without duplicating the
-    override resolution logic. Either way the result is normalized to a
-    supported output language (``en`` or ``zh-TW``).
+    override resolution logic. An explicit string takes precedence over config;
+    ``""`` enables detection, while ``None`` retains the legacy config lookup.
+    Either way the result is normalized to a supported output language
+    (``en`` or ``zh-TW``).
     """
-    if config is None:
-        config = get_openviking_config()
-    override = (getattr(config, "output_language_override", None) or "").strip()
+    if output_language_override is None:
+        if config is None:
+            config = get_openviking_config()
+        output_language_override = getattr(config, "output_language_override", None)
+    override = (output_language_override or "").strip()
     return normalize_output_language(override or detect())
 
 
@@ -204,10 +210,15 @@ def resolve_output_language_from_text(
     config=None,
     *,
     fallback_language: str = "en",
+    output_language_override: str | None = None,
 ) -> str:
     """Resolve output language from text with an explicit fallback language."""
     fallback = (fallback_language or "en").strip() or "en"
-    return resolve_with_override(config, lambda: _detect_language_from_text(text, fallback))
+    return resolve_with_override(
+        config,
+        lambda: _detect_language_from_text(text, fallback),
+        output_language_override=output_language_override,
+    )
 
 
 def strip_language_detection_noise(text: str) -> str:
@@ -215,17 +226,24 @@ def strip_language_detection_noise(text: str) -> str:
     return _URI_LANGUAGE_NOISE_RE.sub(" ", text or "")
 
 
-def resolve_output_language(text: str, config=None) -> str:
-    """Resolve output language from text, honoring config override before detection.
+def resolve_output_language(
+    text: str, config=None, *, output_language_override: str | None = None
+) -> str:
+    """Resolve output language from text, honoring overrides before detection.
 
     Text without a usable language signal resolves to English.
     """
     return resolve_output_language_from_text(
-        text, config=config, fallback_language=DEFAULT_OUTPUT_LANGUAGE
+        text,
+        config=config,
+        fallback_language=DEFAULT_OUTPUT_LANGUAGE,
+        output_language_override=output_language_override,
     )
 
 
-def resolve_output_language_from_conversation(conversation: str, config=None) -> str:
+def resolve_output_language_from_conversation(
+    conversation: str, config=None, *, output_language_override: str | None = None
+) -> str:
     """Resolve output language from a conversation, honoring config override.
 
     When no override is set, uses `detect_language_from_conversation` which
@@ -234,6 +252,7 @@ def resolve_output_language_from_conversation(conversation: str, config=None) ->
     return resolve_with_override(
         config,
         lambda: detect_language_from_conversation(conversation, DEFAULT_OUTPUT_LANGUAGE),
+        output_language_override=output_language_override,
     )
 
 

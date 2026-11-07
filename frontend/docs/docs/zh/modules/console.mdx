@@ -1,0 +1,44 @@
+# Console 互動面板
+
+對話檢視與 TUI 合併為一個面板，內部協調模式切換、工具欄與資源上下文。模組自己取數，宿主提供配置、受控模式、插槽與文案。
+
+元件當前是佔位實現：只展示模組名稱與佔位文案。下面的 props 已定型，接入方可以先完成容器與狀態接入；組合檢視與 `useConsole` 隨後補充。
+
+## 基礎用法
+
+```tsx file="../../_demos/console-placeholder.tsx" preview
+
+```
+
+## 模組負責什麼
+
+- 當前模式、公共工具欄與內容區域，操作按當前模式分發。
+- 對話的會話、訊息流、附件與記憶提交；命令的定義、執行、取消與記錄。
+- 兩種模式各自保留狀態，切換時互不影響。
+
+## 宿主負責什麼
+
+- 通過 Provider 提供請求配置，模組可用 `requestOptions` 逐欄位覆蓋。
+- 登入、身份切換、路由與許可權。
+- 開啟資源：模組通過 `onOpenUri` 上報，不直接操作其他模組的私有狀態。
+- 輸入區上方與工具欄中的入口，通過 `slots` 注入。
+
+## 屬性
+
+模組從子路徑和根入口匯出 `ConsoleProps`，`ConsoleMode`、`ConsoleLabels` 與 `ConsoleSlots` 只從子路徑匯出。
+
+| 屬性             | 型別                          | 預設值         | 說明                                                                                                       |
+| ---------------- | ----------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| `requestOptions` | `OvRequestOptions`            | —              | 請求配置覆蓋，逐欄位覆蓋最近的 Provider。                                                                  |
+| `mode`           | `'conversation' \| 'command'` | —              | 受控的當前模式。傳入時由宿主決定模式，模組只上報切換意圖。                                                 |
+| `defaultMode`    | `'conversation' \| 'command'` | `conversation` | 非受控時的初始模式。                                                                                       |
+| `onModeChange`   | `(mode: ConsoleMode) => void` | —              | 模式變化後觸發。                                                                                           |
+| `onOpenUri`      | `(uri: string) => void`       | —              | 資源成功開啟後觸發；失敗時不觸發。                                                                         |
+| `slots`          | `ConsoleSlots`                | —              | `toolbar`、`conversationContext` 與 `commandHelp`。                                                        |
+| `labels`         | `ConsoleLabels`               | —              | 可替換文案：`conversation`、`command`、`error`、`retry` 與佔位說明 `description`。未提供時沿用英文預設值。 |
+| `className`      | `string`                      | —              | 容器附加類名。                                                                                             |
+| `style`          | `CSSProperties`               | —              | 容器樣式覆蓋。                                                                                             |
+
+文案為純文本，宿主可將自身的翻譯結果對映到這些屬性。props 裡沒有資料欄位——資料由模組自己載入。
+
+佔位元件當前只消費 `className`、`style`、`labels.conversation` 與 `labels.description`。

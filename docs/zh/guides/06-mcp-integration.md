@@ -3,6 +3,8 @@
 OpenViking Server 內建 [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) 端點。支援 Streamable HTTP 的客戶端可直接連線；只支援 stdio 的客戶端可使用 [Agent Plugins 包](../agent-integrations/15-agent-plugins.md)提供的代理。
 
 > **快速接入？** 見 [MCP 客戶端](../agent-integrations/06-mcp-clients.md) 獲取各平臺配置片段和注意事項。本頁面覆蓋完整的工具參考和進階配置。
+>
+> **接入外部 MCP Server？** 見[即時上下文接入與編排](24-live-context-arrangement.md)，瞭解 `ov mcps`、Tool Catalog、即時節點、Studio Arranger 和 Context as Code。
 
 ## 前提條件
 
@@ -124,9 +126,12 @@ claude mcp add --transport http openviking \
 
 | 工具 | 說明 | 主要引數 |
 |------|------|----------|
+| `find_mcp_tools` | 按使用者意圖語義檢索已註冊的上游 MCP 工具。返回按相關度排序的候選項，包含 `uri`、`score` 和完整 MCP `tool` 定義（含 `inputSchema` 與 annotations）。可直接將返回的 `uri` 作為 `invoke_mcp_tool.tool_uri`，無需額外呼叫 `read` | `query`, `limit`（預設 10） |
+| `invoke_mcp_tool` | 執行 `find_mcp_tools` 選出的工具。OpenViking 在服務端解析上游 Server 和憑證，並透明保留上游返回的 `content`、`structuredContent` 與 `isError`。上游工具可能產生外部副作用，呼叫不會自動重試 | `tool_uri`, `arguments`（可選，必須符合檢索結果中的 `tool.inputSchema`） |
 | `find` | 無 session 上下文的快速語義檢索。只傳 `context_type="skill"` 時改走包級 skill 檢索：每個 skill 包只返回一條命中，URI 指向該包的 `SKILL.md`，摘要取自 skill 本身，即使命中的是包內輔助檔案也是如此；不傳 `target_uri` 時同時檢索自己的 skill 和帳戶共享的 `viking://agent/skills`。`skill` 與其它 context_type 混用時仍走通用檢索路徑 | `query`, `target_uri`(可選), `limit`, `min_score`, `level`(可選), `context_type`(可選), `read_content`(可選——直接內聯每條命中的內容), `events_time_decay_protection`(可選) |
 | `search` | 深度語義檢索；`mode="context"` 組裝可直接注入的上下文，並替代原 `recall` 工具。`list` 模式下每個 skill 包也只出一條命中，URI 指向 `SKILL.md`、摘要取自包本身，但 `limit` 在合併之前生效，所以一個包在多個檔案上命中時會佔掉多個名額，返回條數少於 `limit` | `query`, `mode`（`list` 或 `context`）, `target_uri`（僅 list 模式）, `session_id`(可選), `limit`, `min_score`, `level`（list 模式）, `context_type`(可選), `events_time_decay_protection`（兩種模式均可選），以及 context 模式的 `quotas`, `purpose`, `max_tokens`, `detail` 或 `detail_by_category`, `dedup_turns`, `exclude_uris`, `peer_scope`, 標量 `other_peer_penalty` 或按類別設定的 `other_peer_penalties`, `rewrite`（`off` 或 `auto`） |
-| `read` | 讀取一個或多個 `viking://` URI 的內容。PNG、JPEG、GIF、WebP 返回 MCP 原生圖片內容；WAV、MP3、FLAC、OGG、M4A 返回原生音訊內容。MCP 沒有標準影片內容塊，因此暫不支援影片；需要原始位元組時用 `download` | `uris`（單個字串或陣列）, `offset`, `limit`（文本行數） |
+| `rule_search` | 檢索適用於具體任務上下文的已啟用 Rule。呼叫方仍需依據已知事實判斷每條 Rule 的 `applies_when` 與 `exception` | `task_context`, `rule_probability_threshold`（可選，預設 `0.65`） |
+| `read` | 讀取一個或多個 `viking://` URI 的內容。PNG、JPEG、GIF、WebP 返回 MCP 原生圖片內容；WAV、MP3、FLAC、OGG、M4A 返回原生音訊內容。MCP 沒有標準影片內容塊，因此暫不支援影片；需要原始位元組時用 `download` | `uri`（讀一個檔案）或 `uris`（陣列，一次讀多個檔案）, `offset`, `limit`（文本行數） |
 | `download` | 返回一個短時有效、只能使用一次的 URL，用 `curl` 獲取單個檔案的原始位元組（任意型別，包括 PDF、圖片、壓縮包、音訊和影片）；不返回檔案內容。不支援目錄 | `uri` |
 | `list` | 列出 `viking://` 目錄下的條目 | `uri`, `recursive`(可選) |
 | `tree` | 以縮排形式展示 `viking://` URI 下的遞迴目錄樹——當需要全面瞭解檔案樹結構時使用（單層列表用 `list`，按檔名查詢用 `glob`） | `uri`(可選), `level_limit`(預設 3), `node_limit`(預設 1000), `include_abstract`(可選——同時展示每個目錄的摘要；skill 目錄的摘要就是它的名字和描述) |

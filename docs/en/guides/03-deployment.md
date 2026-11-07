@@ -357,6 +357,7 @@ When the instances share one deployment (same `service_name`, Redis, object stor
 - A shared account registry: `server.api_key_watch_enabled: true` with the default `file` store (instances reload users and keys within `api_key_watch_interval_seconds`), or `server.account_store.provider` `mysql` / `redis_mysql`. Without either, a user or key created on one instance stays unknown to the others until they restart.
 - `storage.agfs.cachefs.multi_instance: true` on every instance when CacheFS uses the shared cache. See the [RAGFS cache guide](14-ragfs-cache.md).
 - `enable_watch_scheduler: true` on exactly one instance. Watch tasks are shared, but the scheduler only prevents overlapping runs inside one process, so every enabled instance would re-import every due watch.
+- One `encryption.local.root_key` shared by every instance (or a shared `vault` provider). Saved credentials of durable tasks and Connector watches are encrypted even when `encryption.enabled` is `false`, and the default per-instance `~/.openviking/master.key` cannot decrypt another instance's tasks.
 - Readiness checks against `/ready`, not `/health`. `/health` only reports that the process is alive; `/ready` also round-trips the cache provider used by PathLock and QueueFS and returns 503 while it is unreachable. Keep liveness on `/health`, or a cache outage restarts every instance at once.
 
 The MySQL Task and account stores need the `mysql` / `redis-mysql` extras, which the Docker image installs.
