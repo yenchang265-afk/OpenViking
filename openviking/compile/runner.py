@@ -365,7 +365,7 @@ class CompileRunner:
             """Retain at most one read batch of source bodies while seeding task shards."""
             for start in range(0, len(ordered), 8):
                 uris = ordered[start : start + 8]
-                # Image sources fail per file instead of being decoded as text.
+                # Unreadable sources (including invalid or oversized images) fail per file.
                 contents = await asyncio.gather(
                     *(read_source(client, uri) for uri in uris), return_exceptions=True
                 )

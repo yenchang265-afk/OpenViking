@@ -12,6 +12,7 @@ import json_repair
 
 from openviking.compile import file_ops
 from openviking.compile.hashing import content_hash
+from openviking.compile.media import MultimodalToolResult
 from openviking.compile.models import COMPILE_DRAFT_ROOT
 from openviking.compile.pipeline_io import TaskFiles, retry_allowed
 from openviking.compile.renderer import validate_relative_file_path
@@ -402,7 +403,9 @@ def agent_runner(limits):
                     result = await tool.execute(**call.arguments)
                 except (ValueError, TypeError, KeyError, OSError) as exc:
                     result = "Error: " + str(exc)[:800]
-                messages.append({"role": "tool", "tool_call_id": call.id, "content": result})
+                # Image evidence keeps its content parts; the provider adapts the transport.
+                content = result.content if isinstance(result, MultimodalToolResult) else result
+                messages.append({"role": "tool", "tool_call_id": call.id, "content": content})
             if submit.result is not None:
                 return submit.result
             if not submit.can_retry:

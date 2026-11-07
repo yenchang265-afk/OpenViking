@@ -330,3 +330,41 @@ async def test_target_that_is_a_file_fails(tmp_path, stub_pipeline):
     with pytest.raises(CompileFailure) as raised:
         await attempt
     assert raised.value.code == "INVALID_ARGUMENT"
+
+
+class _ImageClient(_Client):
+    """A source tree with text, a valid PNG and a file that only looks like an image."""
+
+    FILES = {
+        "viking://resources/raw/a.md": None,
+        "viking://resources/raw/diagram.png": b"\x89PNG\r\n\x1a\npixels",
+        "viking://resources/raw/broken.png": b"not an image",
+    }
+
+    async def stat(self, uri):
+        data = self.FILES.get(uri)
+        if data is None:
+            return {"isDir": not uri.endswith(".md")}
+        return {"isDir": False, "size": len(data)}
+
+    async def list_resources(self, uri, node_limit, offset=0):
+        page = [
+            {"uri": item, "isDir": False, "modTime": "2026-01-01"} for item in sorted(self.FILES)
+        ]
+        return page[offset : offset + node_limit]
+
+    async def download_bytes(self, uri):
+        return self.FILES[uri]
+
+
+@pytest.mark.asyncio
+async def test_image_sources_reach_the_pipeline_and_bad_images_fail_alone(tmp_path, stub_pipeline):
+    attempt, _ = _run(tmp_path, _ImageClient(), _request())
+    await attempt
+
+    parts = [part for batch in stub_pipeline.seen_batches for part in batch]
+    images = [part for part in parts if part.image]
+    assert [part.uri for part in images] == ["viking://resources/raw/diagram.png"]
+    assert images[0].image["image_url"]["url"].startswith("data:image/png;base64,")
+    assert any(part.uri == "viking://resources/raw/a.md" for part in parts)
+    assert all(part.uri != "viking://resources/raw/broken.png" for part in parts)
