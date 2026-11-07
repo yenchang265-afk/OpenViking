@@ -24,6 +24,7 @@ from openviking_cli.utils.config.config_utils import (
     normalize_service_name,
     warn_unknown_config_fields,
 )
+from openviking_cli.utils.config.connections_config import resolve_mysql_connections
 from openviking_cli.utils.config.consts import (
     DEFAULT_CONFIG_DIR,
     DEFAULT_OV_CONF,
@@ -364,7 +365,7 @@ class AccountStoreConfig(BaseModel):
     """Startup-only selection of the complete account store provider."""
 
     provider: str = "file"
-    params: Dict[str, Any] = Field(default_factory=dict)
+    params: Dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @field_validator("provider")
     @classmethod
@@ -598,7 +599,7 @@ def load_server_config(config_path: Optional[str] = None) -> ServerConfig:
             f"See: https://openviking.ai/docs"
         )
 
-    data = load_json_config(path)
+    data = resolve_mysql_connections(load_json_config(path))
     server_data = data.get("server", {})
     if server_data is None:
         server_data = {}

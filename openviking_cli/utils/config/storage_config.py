@@ -19,7 +19,7 @@ class TaskStoreConfig(BaseModel):
     """Durable Task/Work backend selection."""
 
     provider: str = "file"
-    params: Dict[str, Any] = Field(default_factory=dict)
+    params: Dict[str, Any] = Field(default_factory=dict, repr=False)
 
     @model_validator(mode="after")
     def normalize_provider(self):

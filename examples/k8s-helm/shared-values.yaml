@@ -6,6 +6,13 @@ persistence:
 config:
   service_name: openviking-production
   enable_watch_scheduler: false
+  connections:
+    mysql:
+      host: mysql
+      port: 3306
+      user: openviking
+      password: "${OPENVIKING_MYSQL_PASSWORD}"
+      database: openviking
   embedding:
     dense:
       api_key: "${OPENVIKING_MODEL_API_KEY}"
@@ -34,7 +41,6 @@ config:
         small_threshold_bytes: 1048576
         import_existing: false
         mysql:
-          dsn_env: RAGFS_TIERED_DSN
           table: agfs_entries
           max_connections: 16
       queuefs:
@@ -54,11 +60,6 @@ config:
         password: "${OPENVIKING_ES_PASSWORD}"
     task_store:
       provider: mysql
-      params:
-        host: mysql
-        user: openviking
-        password: "${OPENVIKING_MYSQL_PASSWORD}"
-        database: openviking
   server:
     deployment_mode: shared
     auth_mode: api_key
@@ -69,28 +70,13 @@ config:
       default_mode: shared
     account_store:
       provider: mysql
-      params:
-        host: mysql
-        user: openviking
-        password: "${OPENVIKING_MYSQL_PASSWORD}"
-        database: openviking
     observability:
       usage_audit:
         backend: mysql
-        mysql:
-          host: mysql
-          user: openviking
-          password: "${OPENVIKING_MYSQL_PASSWORD}"
-          database: openviking
   oauth:
     enabled: true
     backend: mysql
     issuer: https://ov.example.com
-    mysql:
-      host: mysql
-      user: openviking
-      password: "${OPENVIKING_MYSQL_PASSWORD}"
-      database: openviking
 extraEnv:
   - name: OPENVIKING_MODEL_API_KEY
     valueFrom:
@@ -101,9 +87,6 @@ extraEnv:
   - name: OPENVIKING_MYSQL_PASSWORD
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: mysql-password}
-  - name: RAGFS_TIERED_DSN
-    valueFrom:
-      secretKeyRef: {name: openviking-backends, key: tiered-mysql-dsn}
   - name: OPENVIKING_REDIS_PASSWORD
     valueFrom:
       secretKeyRef: {name: openviking-backends, key: redis-password}

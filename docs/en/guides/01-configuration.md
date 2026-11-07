@@ -1690,7 +1690,7 @@ Engine settings live in the sub-block named after `backend`, so adding an engine
 
 | Field | Type | Description | Default |
 |------|------|------|--------|
-| `dsn_env` | str | Environment variable holding the DSN `mysql://user:pass@host:3306/db` | unset (`RAGFS_TIERED_DSN`) |
+| `dsn_env` | str | Legacy environment variable holding the DSN `mysql://user:pass@host:3306/db`; an explicit value overrides the shared connection | unset (inherits `connections.mysql`, otherwise `RAGFS_TIERED_DSN`) |
 | `table` | str | Index table name (letters, digits, `_`, up to 60 characters). Git history uses `agfs_git_entries` while this is `agfs_entries`, otherwise `<table>_git` | unset (`agfs_entries`) |
 | `max_connections` | int | Connection pool size (1–256) | unset (16) |
 
@@ -1717,7 +1717,7 @@ Engine settings live in the sub-block named after `backend`, so adding an engine
 }
 ```
 
-Start the server with the DSN in the environment, for example `RAGFS_TIERED_DSN=mysql://openviking:<password>@mysql:3306/openviking`. The DSN is read from the environment only, never from `ov.conf`. Add `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem` to require TLS. The table is created on first start. If tiering is enabled and the variable is missing, the mount fails at startup instead of silently falling back to untiered storage. The compose file ships a MariaDB sidecar (MySQL-compatible) under the `tiered` profile: set `MARIADB_PASSWORD` in `.env`, then run `docker compose --profile tiered up -d mariadb`. It publishes host port 3306; set `MARIADB_HOST_PORT` if the host already uses that port.
+Start the server with the DSN in the environment, for example `RAGFS_TIERED_DSN=mysql://openviking:<password>@mysql:3306/openviking`. This legacy DSN is read from the environment. Alternatively, configure `connections.mysql` once and omit `tiered.mysql.dsn_env`: tiered storage inherits the shared connection automatically, including its TLS settings, without a separate DSN variable. See the [shared connection example](23-shared-deployment.md#provision-and-deploy). Add `?ssl-mode=VERIFY_CA&ssl-ca=/path/ca.pem` to require TLS. The table is created on first start. If tiering is enabled and the variable is missing, the mount fails at startup instead of silently falling back to untiered storage. The compose file ships a MariaDB sidecar (MySQL-compatible) under the `tiered` profile: set `MARIADB_PASSWORD` in `.env`, then run `docker compose --profile tiered up -d mariadb`. It publishes host port 3306; set `MARIADB_HOST_PORT` if the host already uses that port.
 
 The old location `storage.agfs.s3.tiered` is rejected at startup with a message naming the new one, instead of being ignored: ignoring it would mount an empty-looking bucket over already migrated data.
 

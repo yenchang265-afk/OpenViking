@@ -2004,6 +2004,8 @@ impl RAGFSBindingClient {
             features.push("s3fs");
             #[cfg(feature = "tiered")]
             features.push("tiered");
+            #[cfg(feature = "tiered")]
+            features.push("tiered_shared_connection");
             m.insert(
                 "features".to_string(),
                 features.into_pyobject(py)?.into_any().unbind(),

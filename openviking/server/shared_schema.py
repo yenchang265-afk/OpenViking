@@ -18,10 +18,10 @@ async def provision(config_path, apply=False):
     from openviking.server.account_stores.mysql import MySQLAccountStore
     from openviking.server.config import load_server_config
     from openviking.server.oauth.mysql_store import metadata as oauth
-    from openviking_cli.utils.config.open_viking_config import get_openviking_config
+    from openviking_cli.utils.config.open_viking_config import OpenVikingConfigSingleton
 
     server = load_server_config(config_path)
-    config = get_openviking_config()
+    config = OpenVikingConfigSingleton.initialize(config_path=config_path)
     selections = []
     if config.oauth.enabled and config.oauth.backend == "mysql":
         selections.append((oauth, config.oauth.mysql))

@@ -7,7 +7,7 @@ image does not add them.
 
 | Authority | Shared backend |
 |---|---|
-| Content, sessions, staged sources, upload sessions, runtime account/cluster settings | S3 through AGFS |
+| Content, sessions, staged sources, upload sessions, runtime account/cluster settings | S3 through AGFS; MySQL + S3 when tiered |
 | Git version objects and refs, when enabled | Shared S3 or AGFS Git backend |
 | Vectors | Elasticsearch, openGauss, or a remote vector HTTP service |
 | Queues, path locks, coherent filesystem cache | Redis |
@@ -67,10 +67,28 @@ Keep startup configuration identical and managed externally. The startup-file
 editor is read-only in shared mode; runtime account/cluster settings continue to
 use their shared AGFS documents.
 
+Configure MySQL once in `connections.mysql` (host, port, database, user, password,
+and optional `ssl`). Every selected MySQL backend inherits those connection
+details automatically, including tiered AGFS. No connection name or separate
+DSN environment variable is needed. Provider/backend selections remain explicit;
+defining a connection does not enable a subsystem. Pool sizes, tables and retention
+stay in their subsystem settings.
+
+Using the central connection for tiered storage requires a matching rebuilt native
+extension: startup refuses an older binding rather than allowing it to silently
+use a legacy DSN environment variable.
+
+Complete legacy inline connections remain supported as independent overrides.
+With central defaults present, a partial inline host/user/password/database/TLS
+override is rejected to avoid accidentally mixing credentials. Tiered storage
+can still use a separately configured legacy `mysql.dsn_env`; an explicit
+`dsn_env` overrides the central connection for that mount. Credentials and TLS
+settings must match on every replica. `ssl: true` verifies the certificate and
+hostname in both Python and native storage; custom CA/client certificates use
+`ssl: {"ca": "/path/ca.pem", "cert": "/path/client.pem", "key": "/path/client.key"}`.
+
 The example enables size-tiered AGFS storage: files smaller than 1 MiB and the
-path index live in MySQL; larger files live in S3. Set the Secret's
-`tiered-mysql-dsn` entry to `mysql://openviking:<url-encoded-password>@mysql:3306/openviking`.
-All replicas must use the same DSN and table. Git storage defaults to the tiered
+path index live in MySQL; larger files live in S3. Git storage defaults to the tiered
 AGFS backend too. Tiered AGFS creates its index tables on first mount. For an
 existing untiered bucket, stop untiered writers and follow the
 [tiered-storage migration instructions](01-configuration.md#size-tiered-storage)

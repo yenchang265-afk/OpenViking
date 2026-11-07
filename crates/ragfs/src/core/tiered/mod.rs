@@ -14,6 +14,7 @@
 //! | `tiered_enabled` | `false` | wrap the mount |
 //! | `tiered_backend` | `mysql` | small-file store engine (only `mysql`: MySQL 8+ or MariaDB) |
 //! | `tiered_small_threshold_bytes` | 1 MiB | files below this stay inline |
+//! | `tiered_dsn` | unset | resolved shared connection supplied by the application binding |
 //! | `tiered_dsn_env` | `RAGFS_TIERED_DSN` | env var holding `mysql://user:pass@host:3306/db` |
 //! | `tiered_table` | `agfs_entries` | index table name |
 //! | `tiered_max_connections` | 16 | SQL pool size |
@@ -84,6 +85,16 @@ impl TieredBackend {
     }
 }
 
+/// A resolved MySQL DSN whose debug representation never exposes credentials.
+#[derive(Clone, PartialEq, Eq)]
+pub struct TieredDsn(String);
+
+impl std::fmt::Debug for TieredDsn {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("[REDACTED]")
+    }
+}
+
 /// Validated `tiered_*` mount parameters.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TieredSettings {
@@ -91,7 +102,9 @@ pub struct TieredSettings {
     pub backend: TieredBackend,
     /// Files smaller than this many bytes stay inline.
     pub small_threshold_bytes: u64,
-    /// Env var that holds the store DSN (the DSN itself is never in config).
+    /// Resolved shared connection supplied by the application binding.
+    pub dsn: Option<TieredDsn>,
+    /// Legacy env var used when no resolved shared connection was supplied.
     pub dsn_env: String,
     /// Index table name.
     pub table: String,
@@ -134,6 +147,20 @@ impl TieredSettings {
         if dsn_env.is_empty() {
             return Err(Error::config("tiered_dsn_env must not be empty"));
         }
+        let dsn = if params.contains_key("tiered_dsn") {
+            if params.contains_key("tiered_dsn_env") {
+                return Err(Error::config(
+                    "tiered_dsn and tiered_dsn_env are mutually exclusive",
+                ));
+            }
+            let value = string_param(params, "tiered_dsn", "")?;
+            if value.trim().is_empty() {
+                return Err(Error::config("tiered_dsn must not be empty"));
+            }
+            Some(TieredDsn(value))
+        } else {
+            None
+        };
         let table = string_param(params, "tiered_table", DEFAULT_TABLE)?;
         if !is_valid_table_name(&table) {
             return Err(Error::config(format!(
@@ -145,6 +172,7 @@ impl TieredSettings {
         Ok(Some(Self {
             backend,
             small_threshold_bytes: threshold as u64,
+            dsn,
             dsn_env,
             table,
             max_connections: max_connections as u32,
@@ -245,12 +273,15 @@ fn is_valid_table_name(name: &str) -> bool {
 /// Connect the production [`TierStore`] described by `settings`.
 #[cfg(feature = "tiered")]
 pub async fn connect_store(settings: &TieredSettings) -> Result<Arc<dyn TierStore>> {
-    let dsn = std::env::var(&settings.dsn_env).map_err(|_| {
-        Error::config(format!(
-            "tiered storage is enabled but env var {} is not set",
-            settings.dsn_env
-        ))
-    })?;
+    let dsn = match &settings.dsn {
+        Some(value) => value.0.clone(),
+        None => std::env::var(&settings.dsn_env).map_err(|_| {
+            Error::config(format!(
+                "tiered storage is enabled but env var {} is not set",
+                settings.dsn_env
+            ))
+        })?,
+    };
     match settings.backend {
         TieredBackend::Mysql => {
             let store =
@@ -282,12 +313,17 @@ pub async fn maybe_wrap(
     let tiered = TieredFileSystem::new(store, Arc::from(raw), settings.small_threshold_bytes)
         .with_import_exclude(settings.import_exclude);
     if tiered.has_blobs_without_index().await? {
+        let dsn_source = if settings.dsn.is_some() {
+            "connections.mysql".to_string()
+        } else {
+            format!("env {}", settings.dsn_env)
+        };
         // Mounting would hide every file, and GC would see every blob as unreferenced.
         return Err(Error::config(format!(
-            "tiered storage index (table '{}', DSN from env {}) is empty but mount '{}' \
+            "tiered storage index (table '{}', DSN from {}) is empty but mount '{}' \
              already holds tiered blobs under {}; the DSN or table probably points at the \
              wrong database. Refusing to mount",
-            settings.table, settings.dsn_env, config.mount_path, BLOB_ROOT
+            settings.table, dsn_source, config.mount_path, BLOB_ROOT
         )));
     }
     if settings.import_existing {
