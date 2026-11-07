@@ -1,3 +1,4 @@
+import { useStudioFeatureToggles } from '#/features/connection/hooks/use-studio-feature-toggles'
 import { useAppConnection } from '#/features/connection/hooks/use-app-connection'
 import { useStudioCapabilities } from '#/features/connection/hooks/use-studio-capabilities'
 import { useStudioService } from '#/features/connection/hooks/use-studio-service'
@@ -33,6 +34,7 @@ export function StudioFeatureBoundary({ children }: { children: ReactNode }) {
   const probe = feature && 'probe' in feature ? feature.probe : undefined
   const cloudProbe =
     service.ready && service.provider === 'volcengine' && Boolean(probe)
+  const toggles = useStudioFeatureToggles()
   const capabilities = useStudioCapabilities()
   const capability = feature ? capabilities[feature.id] : undefined
   if (
@@ -105,6 +107,24 @@ export function StudioFeatureBoundary({ children }: { children: ReactNode }) {
     connection.adminApiKey
   )
     reason = 'managementRequired'
+  if (
+    !reason &&
+    feature?.domain !== 'management' &&
+    feature &&
+    service.provider === 'opensource' &&
+    toggles.isPending
+  )
+    reason = 'checking'
+  if (
+    !reason &&
+    feature?.domain !== 'management' &&
+    feature &&
+    service.provider === 'opensource' &&
+    toggles.isError
+  )
+    reason = 'unknown'
+  if (!reason && feature && !toggles.isEnabled(feature.id))
+    reason = 'featureDisabled'
   if (!reason) return children
   return (
     <section

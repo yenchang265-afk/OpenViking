@@ -282,3 +282,13 @@ describe('workbench credential isolation', () => {
     expect(readRequestHeader(requests[0], 'X-API-Key')).toBe('root-key')
   })
 })
+
+it('reads Studio feature policy with a data key or a root-only connection', async () => {
+  const { client, requests } = createRecordingClient()
+  client.setConnection({ adminApiKey: 'root-key', apiKey: '' })
+  await client.instance.get('/api/v1/studio/features')
+  expect(readRequestHeader(requests[0], 'X-API-Key')).toBe('root-key')
+  client.setConnection({ adminApiKey: 'root-key', apiKey: 'user-key' })
+  await client.instance.get('/api/v1/studio/features')
+  expect(readRequestHeader(requests[1], 'X-API-Key')).toBe('user-key')
+})

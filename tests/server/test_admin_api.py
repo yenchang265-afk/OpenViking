@@ -4400,3 +4400,57 @@ async def test_user_point_read_sees_peer_process_writes_without_a_list(
         assert rerole.json()["result"] == {"user_id": "bob", "role": "admin"}
     finally:
         await writer.close()
+
+async def test_studio_features_root_permissions_validation_and_persistence(
+    lightweight_admin_client,
+    lightweight_admin_app,
+    template_account,
+):
+    from openviking.config.scope import ConfigScope
+    from openviking.server.routers.system import router as system_router
+
+    lightweight_admin_app.include_router(system_router)
+    account_id, admin_headers = template_account
+    url = "/api/v1/admin/studio/features"
+    read_url = "/api/v1/studio/features"
+    initial = await lightweight_admin_client.get(read_url, headers=admin_headers)
+    assert initial.status_code == 200
+    assert all(initial.json()["result"].values())
+    denied = await lightweight_admin_client.patch(
+        url, json={"compile": False}, headers=admin_headers
+    )
+    assert denied.status_code == 403
+    user = await lightweight_admin_client.post(
+        f"/api/v1/admin/accounts/{account_id}/users",
+        json={"user_id": "feature-user"},
+        headers=admin_headers,
+    )
+    assert user.status_code == 200
+    user_headers = {"X-API-Key": user.json()["result"]["user_key"]}
+    user_denied = await lightweight_admin_client.patch(
+        url, json={"compile": False}, headers=user_headers
+    )
+    assert user_denied.status_code == 403
+    user_read = await lightweight_admin_client.get(read_url, headers=user_headers)
+    assert user_read.status_code == 200
+    anonymous = await lightweight_admin_client.patch(url, json={"compile": False})
+    assert anonymous.status_code == 401
+    for patch in ({"unknown": False}, {"compile": "false"}, {"users": False}):
+        invalid = await lightweight_admin_client.patch(url, json=patch, headers=root_headers())
+        assert invalid.status_code == 400, invalid.text
+    changed = await lightweight_admin_client.patch(
+        url, json={"compile": False}, headers=root_headers()
+    )
+    assert changed.status_code == 200, changed.text
+    assert changed.json()["result"]["compile"] is False
+    assert changed.json()["result"]["skills"] is True
+    manager = lightweight_admin_app.state.fake_service.runtime_config_manager
+    stored = await manager.get_settings(ConfigScope.cluster())
+    assert stored["studio_features"] == {"compile": False}
+    read = await lightweight_admin_client.get(read_url, headers=admin_headers)
+    assert read.json()["result"]["compile"] is False
+    restored = await lightweight_admin_client.patch(
+        url, json={"compile": True}, headers=root_headers()
+    )
+    assert restored.status_code == 200
+    assert restored.json()["result"]["compile"] is True
