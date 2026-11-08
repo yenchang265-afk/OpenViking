@@ -87,6 +87,14 @@ jobs:
           tests/vectordb/test_cuvs_collection.py \
           tests/vectordb/test_str_to_uint64.py
 
+    - name: Check in-server Compile against upstream
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        # The transform formats with ruff; keep the version pinned in UPSTREAM.json.
+        python -m pip install --quiet "ruff==$(python -c 'import json;print(json.load(open("openviking/compile/UPSTREAM.json"))["ruff_version"])')"
+        python scripts/compile_upstream_sync.py check
+
     - name: Run Compile, Connector, Watch and durable-task unit tests
       shell: bash
       run: |

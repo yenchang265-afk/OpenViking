@@ -1,0 +1,21 @@
+{
+  "repository": "https://github.com/volcengine/OpenViking.git",
+  "path": "bot/vikingbot/compile",
+  "commit": "a17f9745d0659f55adf7d3e08dc4496898504fcf",
+  "ruff_version": "0.16.9",
+  "upstream_only": {
+    "router.py": "bot HTTP routes; the server exposes Compile through openviking/server/routers/compile.py",
+    "sandbox.py": "bot sandbox credentials; in-server Compile has no command execution",
+    "service.py": "bot task runtime; replaced by runner.py on the durable ExternalTask queue",
+    "store.py": "bot-local task status store; tasks live on the ExternalTask queue"
+  },
+  "diverged": {
+    "models.py": "drops bot request/task models; CompileFailure carries a diagnostic result",
+    "pipeline_agent.py": "drops the bot AgentLoop adapter; agent_loop.py runs child agents",
+    "skill_resources.py": "no local Skill copies for scripts, since nothing executes them",
+    "ops/map.py": "no Skill-script hint in the Map prompt",
+    "renderer.py": "zh-TW headings",
+    "plan.py": "decodes JSON-encoded objects some providers send for nested arguments",
+    "pipeline.py": "names the first job failure when no final artifact remains"
+  }
+}

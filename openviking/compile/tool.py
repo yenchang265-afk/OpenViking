@@ -8,14 +8,15 @@ from typing import Any
 class Tool:
     """A function tool exposed to the model; subclasses set the schema and implement execute.
 
-    Compile calls ``execute(**arguments)`` directly with the model's parsed arguments.
+    Compile calls ``execute(None, **arguments)`` with the model's parsed arguments.
+    The first argument is upstream's tool context, which in-server tools ignore.
     """
 
     name: str
     description: str
     parameters: dict[str, Any]
 
-    async def execute(self, **kwargs: Any) -> str:
+    async def execute(self, tool_context: Any = None, **kwargs: Any) -> str:
         raise NotImplementedError
 
     def to_schema(self) -> dict[str, Any]:

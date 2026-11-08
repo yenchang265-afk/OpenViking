@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from openviking.compile.agent_loop import ScratchFileTool, agent_runner
 from openviking.compile.llm import ChatResponse, CompileProvider, ToolCallRequest
 from openviking.compile.models import CompileLimits
-from openviking.compile.pipeline_agent import ScratchFileTool, agent_runner
 from openviking.compile.pipeline_io import TaskFiles
 from openviking.compile.plan import ReviewDecision
 from openviking.compile.scratch import ScratchDir

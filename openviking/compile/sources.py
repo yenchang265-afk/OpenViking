@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from typing import Iterable
 from urllib.parse import urlsplit
 
-from openviking.compile import media
+from openviking.compile._compat import VikingMultiReadTool
 from openviking.compile.models import CompileFailure, CompileLimits
 from openviking.parse.parsers.media.utils import get_media_type
 
@@ -58,20 +58,15 @@ class CompileSourceRange:
         return len(self.content) + len(self.context)
 
 
-def is_image_source(uri: str) -> bool:
-    """Classify a source by its path extension, as the media parser does."""
-    return get_media_type(urlsplit(uri).path, None) == "image"
-
-
 async def read_source(client, uri) -> str | CompileSourceRange:
-    """Keep text reads intact; load image sources as one evidence range with their bytes."""
-    if not is_image_source(uri):
+    """Keep text reads intact; consume image sources through multi-read's native reader."""
+    if get_media_type(urlsplit(uri).path, None) != "image":
         return await client.read_raw(uri)
-    if not media.is_inline_image(uri):
+    if VikingMultiReadTool._media_kind(uri) != "image":
         raise CompileFailure(
             "INVALID_ARGUMENT", f"Unsupported Compile image format: {uri}", stage="pipeline"
         )
-    result = await media.read_image(client, uri)
+    result = await VikingMultiReadTool._read_image(client, uri)
     if not result["success"]:
         raise CompileFailure("SOURCE_READ_FAILED", f"{uri}: {result['content']}", stage="pipeline")
     return CompileSourceRange(uri, 0, 0, 0, 0, "", image=result["image"], sha256=result["sha256"])
@@ -89,7 +84,7 @@ def split_source(
     """
     if isinstance(content, CompileSourceRange):
         return [content]
-    if is_image_source(uri):
+    if get_media_type(urlsplit(uri).path, None) == "image":
         raise CompileFailure(
             "INVALID_ARGUMENT", "Image evidence must not be split as text", stage="pipeline"
         )
@@ -180,29 +175,34 @@ def split_source(
 def pack_source_batches(
     sources: Iterable[tuple[str, str | CompileSourceRange]], limits: CompileLimits
 ) -> list[list[CompileSourceRange]]:
-    """Pack exact source ranges and images in input order within text/media budgets.
+    """Pack exact source ranges and image references within existing text/media budgets.
 
     Adjacent ranges may share a batch when they fit. Small files share remaining
     capacity; original URIs remain the citation targets for all ranges. Source text
-    and repeated context both count toward ``source_batch_chars``; a batch also holds
-    at most ``media.MAX_INLINE_IMAGES`` images within the inline media byte budget.
+    and repeated context both count toward ``source_batch_chars``.
     """
     batches: list[list[CompileSourceRange]] = []
     batch: list[CompileSourceRange] = []
-    size = image_count = media_bytes = 0
+    size = 0
+    image_count = media_bytes = 0
     for uri, content in sources:
         for part in split_source(uri, content, limits.source_batch_chars):
             chars, part_bytes = part.input_chars, 0
             if part.image:
-                part_bytes = media.inline_media_bytes([{"content": [part.image]}])
-                if chars > limits.source_batch_chars or part_bytes > media.MAX_INLINE_MEDIA_BYTES:
+                from openviking.compile._compat import _inline_media_bytes
+
+                part_bytes = _inline_media_bytes([{"content": [part.image]}])
+                if (
+                    chars > limits.source_batch_chars
+                    or part_bytes > VikingMultiReadTool._MAX_INLINE_MEDIA_BYTES
+                ):
                     raise CompileFailure(
                         "MEDIA_LIMIT", "Image exceeds the source batch budget", stage="pipeline"
                     )
             if batch and (
                 size + chars > limits.source_batch_chars
-                or image_count + bool(part.image) > media.MAX_INLINE_IMAGES
-                or media_bytes + part_bytes > media.MAX_INLINE_MEDIA_BYTES
+                or image_count + bool(part.image) > VikingMultiReadTool._MAX_INLINE_IMAGES
+                or media_bytes + part_bytes > VikingMultiReadTool._MAX_INLINE_MEDIA_BYTES
             ):
                 batches.append(batch)
                 batch, size = [], 0

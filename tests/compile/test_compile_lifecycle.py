@@ -6,9 +6,9 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from openviking.compile.agent_loop import ScratchFileTool
 from openviking.compile.models import CompileFailure
 from openviking.compile.ov_client import InProcessVikingClient
-from openviking.compile.pipeline_agent import ScratchFileTool
 from openviking.compile.scratch import ScratchDir
 from openviking.service.compile_service import _validate_changes
 from openviking.service.external_task_service import ExternalTaskSnapshot

@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock
 import pytest
 
 from openviking.compile import media
+from openviking.compile.agent_loop import agent_runner
 from openviking.compile.llm import ChatResponse, CompileProvider, ToolCallRequest
 from openviking.compile.models import CompileFailure, CompileLimits
-from openviking.compile.pipeline_agent import agent_runner
 from openviking.compile.pipeline_io import JsonModel, TaskFiles
 from openviking.compile.plan import ReviewDecision
 from openviking.compile.scratch import ScratchDir
