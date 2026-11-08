@@ -47,14 +47,12 @@ export interface QueueStatusCardProps {
   title?: string
   /** Observer system 返回的 queue 元件的 status 原始文本 */
   status?: string
-  isHealthy?: boolean
   customRows?: ParsedQueueRow[]
 }
 
 export function QueueStatusCard({
   title,
   status = '',
-  isHealthy = true,
   customRows,
 }: QueueStatusCardProps) {
   const { t } = useTranslation('monitoringPage')

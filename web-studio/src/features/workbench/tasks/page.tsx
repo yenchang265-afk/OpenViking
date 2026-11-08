@@ -224,14 +224,6 @@ export function TasksRoute() {
     return `${y}/${m}/${d} ${hh}:${mm}:${ss}`
   }
 
-  const getTaskTotalSteps = (taskType?: string): number => {
-    if (taskType === 'session_commit') return 1
-    if (taskType === 'admin_reindex' || taskType === 'snapshot_restore_reindex')
-      return 2
-    if (taskType === 'connector_import') return 4
-    return 3
-  }
-
   const renderStatus = (task: TaskRecord) => {
     const taskId = task.task_id
     const status = normalizeTaskStatus(task.status)
@@ -296,9 +288,6 @@ export function TasksRoute() {
   }
 
   const renderQueuePipeline = (task: TaskRecord) => {
-    const status = normalizeTaskStatus(task.status)
-    const type = task.task_type
-
     interface StepItem {
       name: string
       state: 'completed' | 'running' | 'pending' | 'failed'
@@ -382,7 +371,6 @@ export function TasksRoute() {
 
     for (const item of allTasks) {
       const st = normalizeTaskStatus(item.status)
-      const qStatus = (item.result as any)?.queue_status
 
       if (item.task_type === 'session_commit') {
         if (st === 'running') map.SessionCommit.processing++
@@ -664,7 +652,6 @@ export function TasksRoute() {
           <QueueStatusCard
             title={t('labels.taskQueueStatus')}
             customRows={kpiData.typeRows}
-            isHealthy={kpiData.failed === 0}
           />
         </div>
 
@@ -673,7 +660,6 @@ export function TasksRoute() {
           <QueueStatusCard
             title={t('labels.processQueueStatus')}
             customRows={queueRows}
-            isHealthy={kpiData.failed === 0}
           />
         </div>
       </div>

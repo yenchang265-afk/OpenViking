@@ -21,6 +21,9 @@ import { MAX_UPLOAD_FILES } from '#/features/workbench/resources/lib/upload'
 import type { UploadLimits } from '#/features/workbench/resources/lib/upload-limits'
 import type { TFunction } from 'i18next'
 
+// Identity translator: assertions read the translation keys.
+const t = ((key: string) => key) as unknown as TFunction<'addResource'>
+
 const MIB = 1024 * 1024
 // Echo the key and interpolation options so assertions can check the size shown.
 const echoT = ((key: string, options?: unknown) =>
@@ -98,7 +101,7 @@ describe('UploadResourceFields', () => {
         onFilesChange={(update) => {
           current = typeof update === 'function' ? update(current) : update
         }}
-        t={(key) => key}
+        t={t}
         filters={NO_FILTERS}
         limits={LIMITS}
       />,
@@ -134,7 +137,7 @@ describe('UploadResourceFields', () => {
         onFilesChange={(update) => {
           current = typeof update === 'function' ? update(current) : update
         }}
-        t={(key) => key}
+        t={t}
         filters={NO_FILTERS}
         limits={LIMITS}
       />,
@@ -160,7 +163,7 @@ describe('UploadResourceFields', () => {
         onFilesChange={(update) => {
           current = typeof update === 'function' ? update(current) : update
         }}
-        t={(key) => key}
+        t={t}
         filters={NO_FILTERS}
         limits={LIMITS}
       />,

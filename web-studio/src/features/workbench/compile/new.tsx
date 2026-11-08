@@ -16,7 +16,8 @@ export type NewCompileSearch = {
 export function NewCompile() {
   const { identityScopeKey } = useAppConnection()
   const navigate = useNavigate()
-  const { fromTask, skill, from, to, target } = getRouteApi('/compile/new').useSearch()
+  const { fromTask, skill, from, to, target } =
+    getRouteApi('/compile/new').useSearch()
   const [prefill] = useState<CompilePrefill | undefined>(() =>
     !target && (skill || from || to) ? { skill, from, to } : undefined,
   )
