@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '#/shared/ui/table'
 import { formatNumber } from '#/i18n/format'
-import { formatBytes, formatHitRate } from '#/shared/lib/cache-stats'
+import { formatHitRate } from '#/shared/lib/cache-stats'
 import type { CacheLookupStats, CacheStats } from '#/shared/lib/cache-stats'
 
 function HitRateBar({ rate }: { rate: number | null }) {
@@ -70,13 +70,10 @@ export function CacheStatsContent({ stats }: { stats: CacheStats }) {
         <Stat label={t('cache.overall')} value={formatHitRate(stats.hitRate)} />
         <Stat label={t('cache.lookups')} value={formatNumber(stats.lookups)} />
         <Stat
-          label={t('cache.bytesFromCache')}
-          value={formatBytes(stats.bytesFromCache)}
+          label={t('cache.bypasses')}
+          value={formatNumber(stats.bypasses)}
         />
-        <Stat
-          label={t('cache.bytesFromBackend')}
-          value={formatBytes(stats.bytesFromBackend)}
-        />
+        <Stat label={t('cache.errors')} value={formatNumber(stats.errors)} />
       </div>
 
       <section className="grid gap-2">

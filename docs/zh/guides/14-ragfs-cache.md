@@ -1,14 +1,14 @@
 # RAGFS 快取
 
-RAGFS 快取是 OpenViking 的可選讀快取層，用於加速檔案全量讀取和目錄讀取。它只作為加速層，不作為事實資料來源；資料仍以 backend filesystem 為準。
+RAGFS 快取是 OpenViking 的可選查詢結果快取層，用於加速 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep`。它只作為加速層，不作為事實資料來源；資料仍以 backend filesystem 為準。
 
 CachedFileSystem 適用前提：
 
-- 多個 OpenViking / RAGFS 程序共用同一 cache namespace（同一快取 Provider 上的相同 `service_name`）時，每個程序都要設定 `storage.agfs.cachefs.multi_instance: true`。見下文「多實例部署」。
+- 多個 OpenViking / RAGFS 程序共用同一 cache namespace（同一快取 Provider 上的相同 `service_name`）時，每個程序都設定 `storage.agfs.cachefs.multi_instance: true`。詳見下方「多實例」。
 - 檔案和目錄變更都經過 RAGFS。
 - backend 不被外部繞過 RAGFS 直接修改。
-- 所有實例看到同一個 backend，且 backend 寫入返回後，所有實例都能讀到。S3 或 SeaweedFS、MariaDB 小檔案分層符合要求；每個 pod 各自的本機磁碟不符合。
-- 快取 Provider 的同一 key 寫入、刪除或遞增成功後，後續讀取不會返回舊值。
+- 所有實例看到同一個 backend，且 backend 寫入返回後對每個實例都可見。S3 或 SeaweedFS 以及 MariaDB 小檔案層符合要求；每個 pod 各自的本機磁碟不符合。
+- 快取 Provider 的同一 key 寫入或刪除成功後，後續讀取不會返回舊值。
 
 這些前提只適用於讀快取層。QueueFS 和 PathLock 也複用 CacheRuntime，但有各自的一致性規則。
 
@@ -34,7 +34,7 @@ openviking-server doctor
       "pool_size": 32,
       "connect_timeout_ms": 1000,
       "command_timeout_ms": 1000,
-      "default_ttl_seconds": 3600
+      "default_ttl_seconds": 300
     }
   },
   "storage": {
@@ -42,9 +42,7 @@ openviking-server doctor
     "agfs": {
       "backend": "local",
       "cachefs": {
-        "backend": "cache",
-        "max_file_size_bytes": 1048576,
-        "bypass_prefixes": ["/queue", "/tmp"]
+        "backend": "cache"
       },
       "pathlock": {
         "provider": "cache",
@@ -87,7 +85,7 @@ openviking-server
 將 `storage.agfs.pathlock.provider` 設為 `cache`，即可通過共享 Redis
 CacheRuntime 協調多個 OpenViking 程序的路徑鎖。OpenViking 會從頂層
 `service_name` 生成 PathLock Redis namespace。獨立部署應使用不同
-`service_name`。Cache PathLock 只支援內建 Redis Provider。CachedFileSystem 的快取一致性不依賴 PathLock，而是使用自己的版本計數器（見「一致性與失效」）。
+`service_name`。Cache PathLock 只支援內建 Redis Provider；多個實例共用 CacheFS 時，分散式路徑鎖不能取代 `storage.agfs.cachefs.multi_instance`。
 
 Redis HASH key 按邏輯路徑 scope 拆分：
 
@@ -116,8 +114,6 @@ Redis HASH key 按邏輯路徑 scope 拆分：
 | Redis `mode="singleton"` | `mode="standalone"` |
 | `tls_enabled=true` | endpoint 使用 `rediss://` |
 | `read_from_replica` | 已刪除，所有讀命令統一訪問主節點 |
-
-CacheFS key 由 `ov:cache:v1` 改為 `ov:cache:v2`，快取 envelope 改為格式版本 2。升級後快取會清空一次。新舊版本不會讀取對方的條目，但舊實例不會遞增新版本的計數器，因此**不要讓新舊版本同時使用同一個 namespace**。升級整個叢集時：先在每個實例上把 `storage.agfs.cachefs.backend` 設為 `local`，部署新版本，再重新啟用 CacheFS。也可以先停止所有舊實例，再啟動新實例。
 
 ## DynamicProvider
 
@@ -152,10 +148,7 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
 | `backend` | str | `"local"` | `local` 沿用原邏輯；`cache` 啟用 CachedFileSystem |
-| `max_file_size_bytes` | int | `1048576` | 允許進入快取的最大完整檔案大小 |
-| `traversal_mode` | str | `"backend"` | 遞迴 API 使用 backend 遍歷或 `cached_traversal` |
-| `bypass_prefixes` | list[str] | `[]` | 強制繞過快取的路徑字首 |
-| `multi_instance` | bool | `false` | 多個程序共用快取 namespace 時，在每個實例上設定。需要 `backend="cache"`、支援原子 `incrby` 的 Provider，使用 Redis 時還需要 `default_ttl_seconds > 0` |
+| `multi_instance` | bool | `false` | 多個實例共用此 cache namespace：每次寫入返回前刪除受影響的 bucket。需要 `backend: "cache"` 且快取預設 TTL 大於 `0`。詳見「多實例」 |
 
 `storage.agfs.pathlock` 控制 PathLock 儲存：
 
@@ -173,12 +166,14 @@ Redis 配置：
 | `username` | `""` | Redis ACL 使用者名稱 |
 | `password_env` | `""` | 存放 Redis 密碼的環境變數名 |
 | `pool_size` | `32` | 命令併發數 |
-| `connect_timeout_ms` | `1000` | 連線超時 |
-| `command_timeout_ms` | `20` | 命令超時 |
-| `default_ttl_seconds` | `3600` | 預設 TTL；`0` 表示不設定 TTL |
+| `connect_timeout_ms` | `10000` | 連線超時，單位為毫秒 |
+| `command_timeout_ms` | `0` | 命令超時，單位為毫秒；`0` 表示不設定命令超時 |
+| `default_ttl_seconds` | `300` | CacheFS query bucket 使用的 runtime 預設 TTL；`0` 表示不設定 TTL |
 | `tls_insecure_skip_verify` | `false` | 跳過 `rediss://` 證書校驗，僅用於受控測試環境 |
 
 所有 Redis 讀命令均傳送到主節點，避免 QueueFS 讀取到延遲的佇列狀態。需要傳輸加密時使用 Redis TLS，CacheRuntime 不額外增加應用層資料加密格式。
+
+當 `command_timeout_ms=0` 時，CacheRuntime 不會主動中斷慢 Redis 命令。它也不會在固定時長後自動回源。
 
 DynamicProvider 配置：
 
@@ -201,7 +196,7 @@ DynamicProvider 配置：
 
 RAGFS 將 Provider 訪問和各業務消費者分開：
 
-- `CachedFileSystem`：實現檔案系統語義，包括 cache hit/miss、backend 回源、回填、失效、版本校驗和指標。
+- `CachedFileSystem`：實現檔案系統語義，包括 cache hit/miss、backend 回源、回填、失效、request 校驗和指標。
 - `CacheRuntime`：向業務層提供統一基礎操作，啟動時繫結內建 RedisProvider 或外部 DynamicProvider。
 - `QueueFS` 和 `RedisPathLockProvider`：複用共享 CacheRuntime 儲存佇列和分散式鎖。RedisPathLockProvider 要求使用內建 RedisProvider。
 
@@ -223,78 +218,84 @@ RedisPathLockProvider 依賴 Redis Lua，因此只使用 RedisProvider。檔案�
 
 ## 快取物件
 
-RAGFS 主要快取三類物件。
+RAGFS 快取只讀查詢結果。不再儲存舊的路徑物件快取。
 
-### 檔案快取
+### Query Bucket
 
-檔案 key 使用穩定名稱空間和路徑 hash：
-
-```text
-<service_name>:ov:cache:v2:file:<hash(path)>
-```
-
-檔案 value 是 `CacheEnvelope`，包含檔案內容、物件型別、路徑，以及它所依賴的版本計數器快照。全量讀取命中後，RAGFS 會先校驗 envelope 和每個記錄的計數器，再返回內容。
-
-預設策略會優先快取 `.abstract.md` 和 `.overview.md` 這類摘要檔案；超過 `max_file_size_bytes` 的檔案不會進入快取。非全量 range read 也會繞過快取。
-
-### 目錄快取
-
-目錄 key：
+每個路徑和操作對應一個 HASH bucket：
 
 ```text
-<service_name>:ov:cache:v2:dir:<hash(path)>
+{<service_name>}:ov:cache:v1:<path_key>:<op>
 ```
 
-目錄快取儲存 backend 原始 `read_dir` entries，而不是許可權過濾後的最終結果。許可權、角色和 agent context 仍在 OpenViking 上層即時處理。
+每個 bucket 保留 `__epoch` field，用於儲存隨機版本 token。查詢 field 使用
+`xxh3_128(canonical_request_json)`，value 是 `QueryCacheEnvelope`，包含：
 
-這樣同一份目錄快取可以服務 `ls`、`tree`、`glob`、`grep` 的檔案收集階段，以及刪除或移動前的路徑收集。
+- `request`
+- `payload`
 
-### 版本計數器
+RAGFS 返回快取前會比較已存 `request` 和當前請求。這樣可以防止 hash 碰撞或請求編碼變化導致誤讀。
 
-兩類計數器決定 envelope 是否仍然有效：
+支援的操作：
+
+- `stat`
+- `read_dir`
+- `tree_directory`
+- `glob_directory`
+- `grep`
+
+### Query Index
+
+所有活躍 bucket 會註冊到一個 ZSET：
 
 ```text
-<service_name>:ov:cache:v2:ver:<hash(path)>       單一路徑的物件版本
-<service_name>:ov:cache:v2:subtree:<hash(scope)>  單一目錄 scope 的 generation
+{<service_name>}:ov:cacheidx:v1
 ```
 
-`path` 的 envelope 會記錄 `path` 的物件版本，以及每個嚴格祖先 scope（不含 `path` 本身）的 subtree generation。不需要記錄 `subtree(path)`：每個會 bump 它的操作也會 bump `ver(path)`。計數器以十進位整數儲存，因此 Provider 可以用原子 `INCRBY` 遞增。遺失的計數器（過期或被淘汰）會以隨機值通過 `SET NX` 重建，所有實例都會採用同一個值，舊 envelope 也不會意外匹配。
-
-`remove_all` 和目錄 `rename` 可能讓 Provider 中殘留子孫 key。RAGFS 會 bump subtree generation，讓所有子孫 envelope 校驗失敗，後續真實讀取會回源並重建快取。
+ZSET member 是 bucket key。score 是 `expire_at_ms`。Redis hash tag 會讓 bucket 和 index 落在同一個 cluster slot，CacheFS 可以用一個 Lua 指令碼同時更新兩者。寫入發生時，RAGFS 通過這個 index 找到受影響 bucket，不掃描全部 Redis key。
 
 ## 一致性與失效
 
-RAGFS 用兩條規則維持快取正確：
+RAGFS 不需要分散式寫鎖。每次寫入後，RAGFS 物理刪除受影響的 query bucket。
 
-1. **先快照再讀取。** miss 時，RAGFS 在讀取 backend *之前*先讀取 envelope 需要的計數器，並把快照存入 envelope。
-2. **先變更再遞增。** 每次 backend 變更之後，RAGFS 遞增受影響的計數器。只有所有記錄的計數器都仍是記錄值時，才返回快取命中。
+普通路徑變更會在記憶體中構造受影響 bucket：
 
-因此與變更競爭的回填永遠不會通過校驗：快照若早於遞增，就不再匹配；快照若晚於遞增，backend 讀取已經包含該變更。這在多個程序之間同樣成立，不需要分散式寫鎖。
+- 精確路徑 bucket：`stat`、`read_dir`、`tree_directory`、`glob_directory`、`grep`
+- 父目錄 bucket：`read_dir(parent)`
+- 祖先遞迴 bucket：`tree_directory`、`glob_directory`、`grep`
 
-各操作遞增的計數器：
+然後對每個 bucket 執行一個指令碼，原子完成 `UNLINK` bucket 和 `ZREM` index member。
 
-| 操作 | 遞增的計數器 |
-|------|--------------|
-| `create`、`write`、`write_from_path`、`truncate`、`chmod` | `ver(path)`、`ver(parent)` |
-| `mkdir`、`remove`、`remove_all` | `subtree(path)`、`ver(path)`、`ver(parent)` |
-| `rename`、`replace` | 兩個路徑的 `subtree` 和 `ver`，以及兩個父目錄的 `ver` |
-| `ensure_parent_dirs` | 每個祖先 scope 的 `ver` |
-
-變更後 RAGFS 仍會刪除受影響的 `file` 和 `dir` key，但只是為了釋放空間；真正讓條目失效的是計數器遞增。
-
-典型寫入順序：
+對遞迴路徑操作，如 `remove_all`、`rename`、`replace`，RAGFS 還會掃描 query index：
 
 ```text
-獲取程序內操作鎖
--> 執行 backend 變更
--> 遞增受影響的計數器（INCRBY）
--> 刪除受影響的 file/dir key
--> 返回結果
+ZSCAN {<service_name>}:ov:cacheidx:v1 MATCH '{<service_name>}:ov:cache:v1:<path_key>/*:*' COUNT 1000
 ```
 
-### 多實例部署
+命中的後代 bucket 會通過同一個 bucket/index 指令碼刪除。
+快取 miss 後，原子指令碼會在回源前取得 `__epoch` 並註冊 bucket。
+另一個指令碼只在 epoch 未變化時寫入 query field 並重新整理 index。
+`UNLINK` 成功後會刪除 epoch，因此舊查詢無法重新寫入陳舊資料。
+無 TTL 配置下，未完成回填的 epoch 在 300 秒後過期；成功回填仍永久保留。
 
-多個 OpenViking 實例可以共用同一個 cache namespace（相同 `service_name`、相同 Redis）。每個實例都能命中其他實例回填的快取，每次遞增也會作用於所有實例。請在每個實例上設定 `multi_instance: true`：
+未啟用 `multi_instance` 時的典型寫入順序：
+
+```text
+執行 backend 變更
+-> 投遞非同步失效任務
+-> 返回結果
+後臺任務 -> ZSCAN 獲取後代 bucket
+後臺任務 -> 構造精確路徑和祖先 bucket
+後臺任務 -> 對每個 bucket 執行 bucket/index 刪除指令碼
+```
+
+啟用 `multi_instance` 時，相同步驟在返回結果前執行。bucket 刪除並行執行，失敗時以帶抖動的 10、20、40 ms 退避重試三次。
+
+如果 Provider 失敗，RAGFS 會以當前請求的 backend 結果為準，記錄快取錯誤，並且不快取這次結果。
+
+### 多實例
+
+多個 OpenViking 實例可以共用一個 cache namespace（相同 `service_name`、相同 Redis）。每個實例都能命中其他實例回填的快取，每次失效也會作用到所有實例。在每個實例上設定 `multi_instance: true`：
 
 ```json
 {
@@ -306,23 +307,24 @@ RAGFS 用兩條規則維持快取正確：
 }
 ```
 
-多實例模式改變兩件事：
+未設定時，失效在寫入返回後於背景執行。單一程序內這段時間很短，但另一個實例若在寫入後立即讀取（例如寫入方通知了它），仍可能拿到舊的目錄列表或 `stat`。設定 `multi_instance` 後，寫入要等受影響的 bucket 刪除後才返回，因此寫入返回後才開始的讀取都會未命中並讀取 backend。已在進行中的讀取由上述 epoch 檢查保護。
 
-- 完整寫入不再用寫入的位元組回填快取。否則兩個實例寫入同一檔案時，回填順序可能與 backend 寫入順序相反。改由下一次讀取回填。
-- Provider 必須支援原子 `incrby`，否則啟動失敗（內建 Redis Provider 支援；DynamicProvider 必須匯出該函式）。使用 Redis 時，`default_ttl_seconds` 必須大於 `0`。
+此模式下寫入耗時較長：每次寫入都要等待 bucket 刪除（每批 16 個 bucket 約一次 Redis 往返，遞迴操作另加一次 `ZSCAN`）。
 
-前提與剩餘風險：
+快取預設 TTL 必須大於 `0`（使用 Redis 時為 `default_ttl_seconds`），否則啟動失敗。
 
-- backend 必須讓所有實例具備寫後可讀的一致性（見本頁開頭的前提）。
-- 計數器遞增在重試（10、50、200 ms）後仍失敗時，寫入仍會成功，失敗的實例會對該路徑繞過快取，並累加 `invalidation_failures`。**其他實例可能繼續返回舊條目，直到其 TTL 到期。** 請對此計數器設定告警，並在命中率允許的範圍內縮短 `default_ttl_seconds`。
-- Redis Sentinel 和 Cluster 採用非同步複製。故障切換可能遺失舊主節點已確認的遞增，影響同樣以 TTL 為上限。可考慮在主節點設定 `min-replicas-to-write`。
-- Redis Cluster 模式下，同一路徑的計數器位於不同 slot，miss 時會逐個 key 讀取。
+要求與剩餘風險：
 
-未啟用 `multi_instance` 時，同一程序內的寫入由操作鎖序列化，完整寫入也會回填快取。不支援 `incrby` 的 Provider 會退回 GET+SET 遞增，僅適用於單一程序。
+- backend 必須為每個實例提供寫後讀一致性（見本頁開頭的前提）。
+- bucket 刪除重試後仍失敗時，寫入照樣成功，`invalidation_failures` 會增加。**其他實例在 bucket TTL 到期前可能返回舊結果。** 請對此計數器設定告警，並在命中率允許的範圍內盡量縮短 `default_ttl_seconds`。
+- Redis Sentinel 和 Cluster 為非同步複製。故障切換可能遺失舊主節點已確認的刪除，影響同樣以 TTL 為上限。可考慮在主節點設定 `min-replicas-to-write`。
+- 下方的請求合併僅限單一程序。多個實例同時未命中同一查詢時，各自會讀取一次 backend。
+
+從先前的檔案內容 CacheFS 升級：其 `max_file_size_bytes`、`traversal_mode` 和 `bypass_prefixes` 選項會被忽略，檔案讀取不再快取，其 `ov:cache:v2:*` 鍵也不再讀取。這些鍵會隨 TTL 到期，或以 `redis-cli --scan --pattern '<service_name>:ov:cache:v2:*' | xargs redis-cli unlink` 刪除。
 
 ## 請求合併
 
-當多個請求同時讀取同一個未快取的小檔案或目錄時，`CachedFileSystem` 會用程序內 inflight 表合併請求：
+當多個請求同時讀取同一個未快取查詢時，`CachedFileSystem` 會用程序內 inflight 表合併請求：
 
 ```text
 第一個 miss 請求成為 leader，負責回源和回填。
@@ -332,47 +334,34 @@ RAGFS 用兩條規則維持快取正確：
 
 這隻減少同一 OpenViking 程序內的重複 backend 訪問，不改變 Provider 的一致性邊界。
 
-## 快取策略
+## 快取範圍
 
-RAGFS 會自動繞過不適合快取的路徑：
-
-- 鎖檔案：`.path.ovlock`、`*.lock`、`*.lck`
-- 控制文件：`enqueue`、`dequeue`、`peek`、`ack`
-- 瞬時狀態：`heartbeat`、`lease`、`cursor`、`offset`、`pid`
-- 使用者通過 `bypass_prefixes` 指定的路徑字首
-
-許可權敏感目錄建議加入 `bypass_prefixes`。如果目錄原始 entries 本身就依賴呼叫者許可權，不應快取該目錄。
+CacheFS 只快取 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep` 的查詢結果。快取鍵由路徑、操作型別和查詢引數生成。寫操作成功後會主動刪除受影響的查詢 bucket。`.path.ovlock`、`.exact.ovlock.*` 等 PathLock 內部檔案不會進入查詢快取；直接查詢這些檔案時繞過 CacheFS。
 
 ## 故障與觀測
 
 快取層不能影響檔案系統正確性：
 
 - `get` 失敗：回源 backend。
-- `put` 失敗：記錄錯誤，路徑進入 bypass。
-- `delete` 失敗：記錄錯誤，路徑或 scope 進入 bypass。
-- 計數器遞增失敗：重試後仍失敗則累加 invalidation failure，並讓該路徑在本實例上進入 bypass。
+- `put` 失敗：記錄錯誤，保留 backend 結果。
+- `delete` 失敗：重試後記錄錯誤並累計 `invalidation_failures`，TTL 兜底。
 - Provider 不可用：不返回舊快取，以 backend 結果為準。
 
 建議重點觀察：
 
-- cache hit / miss / bypass
-- stale versions（計數器已變動而被拒絕的條目）
-- invalidation failures（重試後仍失敗的計數器遞增）
+- query hit / miss
 - provider get / put / delete 延遲
 - cache set / delete 失敗
-- inflight leader / follower / backend saved
-- backend fallback 位元組數
-
-啟用 CacheFS 後，OpenViking Studio 會在首頁儀表板顯示整體快取命中率，並在「監控 → 快取」中依操作（`read`、`read_dir`、`tree`、`grep`）顯示明細。兩者都讀取 `GET /api/v1/console/cache`，統計自伺服器啟動以來的計數。命中率為 `hits / (hits + misses)`，因策略而略過的讀取另行統計。同一端點也會回報 `stale_versions` 和 `invalidation_failures`。同樣的計數也以 `openviking_ragfs_cache_requests_total`、`openviking_ragfs_cache_operation_requests_total`、`openviking_ragfs_cache_stale_versions_total` 和 `openviking_ragfs_cache_invalidation_failures_total` 指標匯出。
+- `invalidation_failures`（啟用 `multi_instance` 時，其他實例在 TTL 到期前可能返回過期結果）
+- backend fallback 次數
 
 ## 推薦使用順序
 
 1. 關閉快取驗證 backend 基線行為。
 2. 用內建 `redis` 驗證真實遠端快取收益。
 3. 對高效能或閉源快取系統使用獨立釋出的 DynamicProvider `.so`。
-4. 先快取摘要檔案和 raw `read_dir`，再擴充到更多普通小檔案。
-5. 將鎖、控制面和許可權敏感路徑加入 `bypass_prefixes`。
+4. 快取 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep` 查詢結果。
 
-RAGFS 快取負責按檔案系統語義失效，Provider 負責決定快取物件放在哪裡。backend 仍是事實來源，快取命中必須先通過 envelope 和版本校驗才會返回。
+RAGFS 快取負責按檔案系統語義失效，Provider 負責決定快取物件放在哪裡。backend 仍是事實來源，快取命中必須先通過 request 校驗才會返回。
 
 啟用後，將重複讀取和檔案更新後的失效行為與基線比較。確認返回內容保持最新，再判斷命中率提升是否帶來收益。

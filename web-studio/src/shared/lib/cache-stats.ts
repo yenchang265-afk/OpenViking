@@ -8,7 +8,13 @@ import type {
 export const CACHE_STATS_REFETCH_MS = 30_000
 
 /** Display order for known operations; unknown ones follow as reported. */
-export const CACHE_OPERATIONS = ['read', 'read_dir', 'tree', 'grep'] as const
+export const CACHE_OPERATIONS = [
+  'stat',
+  'read_dir',
+  'tree',
+  'glob',
+  'grep',
+] as const
 
 export type CacheLookupStats = {
   hitRate: number | null

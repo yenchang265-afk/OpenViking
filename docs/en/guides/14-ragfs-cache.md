@@ -1,6 +1,6 @@
 # RAGFS Cache
 
-RAGFS cache is an optional read-cache layer for OpenViking. It speeds up full file reads and directory reads. It is only an acceleration layer, not the source of truth; backend filesystem data remains authoritative.
+RAGFS cache is an optional read-cache layer for OpenViking query results. It speeds up `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep`. It is only an acceleration layer, not the source of truth; backend filesystem data remains authoritative.
 
 CachedFileSystem assumptions:
 
@@ -8,7 +8,7 @@ CachedFileSystem assumptions:
 - File and directory changes go through RAGFS.
 - The backend is not modified externally by bypassing RAGFS.
 - Every instance sees the same backend, and a backend write is visible to every instance once it returns. S3 or SeaweedFS and the MariaDB small-file tier qualify; separate local disks per pod do not.
-- After a cache Provider successfully writes, deletes, or increments one key, later reads of that key do not return the old value.
+- After a cache Provider successfully writes or deletes one key, later reads of that key do not return the old value.
 
 These assumptions apply to the read-cache layer. QueueFS and PathLock also use
 CacheRuntime, but define their own consistency rules.
@@ -35,7 +35,7 @@ Configure the global top-level `cache` Provider, then select `backend=cache` und
       "pool_size": 32,
       "connect_timeout_ms": 1000,
       "command_timeout_ms": 1000,
-      "default_ttl_seconds": 3600
+      "default_ttl_seconds": 300
     }
   },
   "storage": {
@@ -43,9 +43,7 @@ Configure the global top-level `cache` Provider, then select `backend=cache` und
     "agfs": {
       "backend": "local",
       "cachefs": {
-        "backend": "cache",
-        "max_file_size_bytes": 1048576,
-        "bypass_prefixes": ["/queue", "/tmp"]
+        "backend": "cache"
       },
       "pathlock": {
         "provider": "cache",
@@ -88,9 +86,9 @@ Available Providers:
 Set `storage.agfs.pathlock.provider` to `cache` to coordinate path locks
 between OpenViking processes through the shared Redis CacheRuntime.
 OpenViking derives the PathLock Redis namespace from top-level `service_name`.
-Use distinct service names for independent deployments. CachedFileSystem
-does not rely on PathLock for cache consistency; it uses its own version
-counters (see "Consistency and Invalidation").
+Use distinct service names for independent deployments. Distributed path
+locking does not replace `storage.agfs.cachefs.multi_instance` when several
+instances share CacheFS.
 Cache-backed PathLock only supports the built-in Redis Provider.
 
 Redis HASH keys are partitioned by logical path scope:
@@ -124,15 +122,6 @@ Legacy cache configuration is no longer accepted. Migrate before upgrading:
 | Redis `mode="singleton"` | `mode="standalone"` |
 | `tls_enabled=true` | use `rediss://` endpoints |
 | `read_from_replica` | removed; all reads use the primary |
-
-CacheFS keys moved from `ov:cache:v1` to `ov:cache:v2`, and cache envelopes to
-format version 2. The cache starts empty once after the upgrade. Old and new
-versions never read each other's entries, but an old instance does not bump
-the new version counters, so **do not run old and new versions against the
-same namespace at the same time**. To upgrade a fleet: set
-`storage.agfs.cachefs.backend` to `local` on every instance, roll out the new
-version, then switch CacheFS back on. Stopping every old instance before
-starting the new ones also works.
 
 ## DynamicProvider
 
@@ -168,10 +157,7 @@ The top-level `cache` section is a sibling of `storage`:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `backend` | str | `"local"` | `local` preserves existing behavior; `cache` enables CachedFileSystem |
-| `max_file_size_bytes` | int | `1048576` | Maximum full-file object size admitted to cache |
-| `traversal_mode` | str | `"backend"` | Use backend traversal or `cached_traversal` for recursive APIs |
-| `bypass_prefixes` | list[str] | `[]` | Path prefixes that always bypass cache |
-| `multi_instance` | bool | `false` | Set on every instance when several processes share the cache namespace. Requires `backend="cache"`, a Provider with atomic `incrby`, and (with Redis) `default_ttl_seconds > 0` |
+| `multi_instance` | bool | `false` | Several instances share this cache namespace: delete affected buckets before each write returns. Requires `backend: "cache"` and a cache default TTL greater than `0`. See "Multiple Instances" |
 
 `storage.agfs.pathlock` controls PathLock storage:
 
@@ -189,12 +175,14 @@ Redis configuration:
 | `username` | `""` | Redis ACL username |
 | `password_env` | `""` | Environment variable that stores the Redis password |
 | `pool_size` | `32` | Command concurrency |
-| `connect_timeout_ms` | `1000` | Connection timeout |
-| `command_timeout_ms` | `20` | Command timeout |
-| `default_ttl_seconds` | `3600` | Default TTL; `0` means no TTL |
+| `connect_timeout_ms` | `10000` | Connection timeout in milliseconds |
+| `command_timeout_ms` | `0` | Command timeout in milliseconds; `0` disables command timeouts |
+| `default_ttl_seconds` | `300` | Runtime default TTL used by CacheFS query buckets; `0` means no TTL |
 | `tls_insecure_skip_verify` | `false` | Skip certificate verification for `rediss://`; intended only for controlled test environments |
 
 All Redis reads are sent to the primary node so QueueFS does not observe stale queue state. CacheRuntime relies on Redis transport security when required and does not add a separate application-layer value encryption format.
+
+With `command_timeout_ms=0`, CacheRuntime does not time out slow Redis commands. It also does not automatically fall back after a fixed interval.
 
 DynamicProvider configuration:
 
@@ -217,7 +205,7 @@ OpenViking uses `cache.params.library` to load the dynamic library. All remainin
 
 RAGFS separates Provider access from its consumers:
 
-- `CachedFileSystem`: implements filesystem semantics, including cache hit/miss handling, backend fallback, cache fill, invalidation, version checks, and metrics.
+- `CachedFileSystem`: implements filesystem semantics, including cache hit/miss handling, backend fallback, cache fill, invalidation, request checks, and metrics.
 - `CacheRuntime`: exposes common primitive operations and binds either the built-in RedisProvider or an external DynamicProvider during startup.
 - `QueueFS` and `RedisPathLockProvider`: reuse the shared CacheRuntime for queue and distributed-lock storage. RedisPathLockProvider requires the built-in RedisProvider.
 
@@ -240,98 +228,89 @@ ABI.
 
 ## Cache Objects
 
-RAGFS mainly caches three object types.
+RAGFS caches read-only query results. It no longer stores legacy path-object cache entries.
 
-### File Cache
+### Query Bucket
 
-File keys use a stable namespace and path hash:
-
-```text
-<service_name>:ov:cache:v2:file:<hash(path)>
-```
-
-The file value is a `CacheEnvelope` containing file content, object kind, path, and a snapshot of the version counters it depends on. After a full-read cache hit, RAGFS validates the envelope and every recorded counter before returning the content.
-
-The default policy prefers summary files such as `.abstract.md` and `.overview.md`. Files larger than `max_file_size_bytes` are not admitted to cache. Non-full range reads also bypass the cache.
-
-### Directory Cache
-
-Directory key:
+Each path and operation has one HASH bucket:
 
 ```text
-<service_name>:ov:cache:v2:dir:<hash(path)>
+{<service_name>}:ov:cache:v1:<path_key>:<op>
 ```
 
-The directory cache stores raw backend `read_dir` entries, not permission-filtered final results. Permission, role, and agent-context filtering still happens in the OpenViking upper layer at request time.
+Each bucket reserves `__epoch` for a random generation token. Query fields use
+`xxh3_128(canonical_request_json)` and store a `QueryCacheEnvelope` containing:
 
-This lets one directory cache object serve `ls`, `tree`, `glob`, the file-collection phase of `grep`, and path collection before delete or move operations.
+- `request`
+- `payload`
 
-### Version Counters
+RAGFS compares the stored `request` with the current request before returning the cached payload. This protects against hash collisions and request encoding changes.
 
-Two kinds of counters decide whether an envelope is still valid:
+Supported operations:
+
+- `stat`
+- `read_dir`
+- `tree_directory`
+- `glob_directory`
+- `grep`
+
+### Query Index
+
+All active buckets are registered in one ZSET:
 
 ```text
-<service_name>:ov:cache:v2:ver:<hash(path)>       object version of one path
-<service_name>:ov:cache:v2:subtree:<hash(scope)>  generation of one directory scope
+{<service_name>}:ov:cacheidx:v1
 ```
 
-An envelope for `path` records the object version of `path` and the subtree
-generation of every strict ancestor scope. It does not need `subtree(path)`
-itself: every operation that bumps it also bumps `ver(path)`. Counters are
-decimal integers, so the Provider can advance them with an atomic `INCRBY`.
-A missing counter (expired or evicted) is re-created from a random value with
-`SET NX`, so every instance adopts the same value and old envelopes never
-match by accident.
-
-`remove_all` and directory `rename` can leave descendant keys behind in the
-Provider. RAGFS bumps the subtree generation, so every descendant envelope
-fails its check. Later real reads fall back to the backend and rebuild the
-cache.
+The ZSET member is the bucket key. The score is `expire_at_ms`. The Redis hash tag keeps buckets and the index in the same cluster slot so CacheFS can update them in one Lua script. This index lets writes delete affected buckets without scanning all Redis keys.
 
 ## Consistency and Invalidation
 
-RAGFS keeps the cache correct with two rules:
+RAGFS does not need a distributed write lock. It physically deletes query buckets affected by each write.
 
-1. **Snapshot before reading.** On a miss, RAGFS reads the counters an envelope
-   needs *before* it reads the backend, and stores that snapshot in the
-   envelope.
-2. **Bump after changing.** After every backend change, RAGFS bumps the
-   affected counters. A cache hit is returned only if every recorded counter
-   still has its recorded value.
+For a normal path change, RAGFS builds the affected bucket list in memory:
 
-A fill that raced a change therefore never validates: either its snapshot came
-before the bump and no longer matches, or it came after the bump and the
-backend read already included the change. This holds across processes, so no
-distributed write lock is needed.
+- exact path buckets: `stat`, `read_dir`, `tree_directory`, `glob_directory`, `grep`
+- parent bucket: `read_dir(parent)`
+- ancestor recursive buckets: `tree_directory`, `glob_directory`, `grep`
 
-Counters bumped by each operation:
+It then runs one script per bucket to `UNLINK` the bucket and `ZREM` its index member atomically.
 
-| Operation | Bumped counters |
-|-----------|-----------------|
-| `create`, `write`, `write_from_path`, `truncate`, `chmod` | `ver(path)`, `ver(parent)` |
-| `mkdir`, `remove`, `remove_all` | `subtree(path)`, `ver(path)`, `ver(parent)` |
-| `rename`, `replace` | `subtree` and `ver` of both paths, `ver` of both parents |
-| `ensure_parent_dirs` | `ver` of every ancestor scope |
-
-RAGFS still deletes the affected `file` and `dir` keys after a change, but only
-to free space; the bump is what invalidates.
-
-Typical write order:
+For recursive path operations such as `remove_all`, `rename`, and `replace`, RAGFS also scans the query index:
 
 ```text
-Acquire the in-process operation lock
--> Apply backend change
--> Bump the affected counters (INCRBY)
--> Delete the affected file/dir keys
--> Return result
+ZSCAN {<service_name>}:ov:cacheidx:v1 MATCH '{<service_name>}:ov:cache:v1:<path_key>/*:*' COUNT 1000
 ```
+
+Matched descendant buckets are deleted by the same bucket/index script.
+After a miss, an atomic script captures `__epoch` and registers the bucket before backend fallback.
+Another script fills the query field and refreshes the index only when that epoch is still current.
+A successful `UNLINK` removes the epoch, so an older query cannot restore stale data.
+Pending no-TTL epochs expire after 300 seconds; successful fills remain persistent.
+
+Typical write order without `multi_instance`:
+
+```text
+Apply backend change
+-> Schedule asynchronous invalidation
+-> Return result
+Background task -> ZSCAN descendant buckets
+Background task -> Build exact-path and ancestor buckets
+Background task -> Run bucket/index delete script for each bucket
+```
+
+With `multi_instance`, the same steps run before the result is returned. Bucket
+deletes run concurrently and retry three times with jittered 10, 20 and 40 ms
+backoff.
+
+If a Provider fails, RAGFS treats the backend as authoritative for the current request. It records the cache error and does not cache that result.
 
 ### Multiple Instances
 
 Several OpenViking instances can share one cache namespace (same
 `service_name`, same Redis). Each sees the other instances' fills as cache
-hits, and every bump reaches all of them. Set `multi_instance: true` on every
-instance:
+hits, and every invalidation reaches all of them. Set `multi_instance: true`
+on every instance:
 
 ```json
 {
@@ -343,37 +322,44 @@ instance:
 }
 ```
 
-Multi-instance mode changes two things:
+Without it, invalidation runs in the background after the write returns. In
+one process that window is short, but another instance that reads right after
+the write (for example because the writer told it to) can still get the old
+listing or `stat`. With `multi_instance`, the write returns only after the
+affected buckets are gone, so any read that starts after the write returned
+misses and reads the backend. The epoch check above covers reads that were
+already in flight.
 
-- A full write no longer fills the cache with the written bytes. Two instances
-  writing the same file could otherwise fill in the opposite order of their
-  backend writes. The next read fills the cache instead.
-- Startup fails unless the Provider supports atomic `incrby` (the built-in
-  Redis Provider does; a DynamicProvider must export it). With Redis,
-  `default_ttl_seconds` must be greater than `0`.
+Writes take longer in this mode: each one waits for its bucket deletes
+(roughly one Redis round trip per batch of 16 buckets, plus a `ZSCAN` for
+recursive operations).
+
+Startup fails unless the cache default TTL is greater than `0` (with Redis,
+`default_ttl_seconds`).
 
 Requirements and remaining risks:
 
 - The backend must give every instance read-after-write consistency (see the
   assumptions at the top of this page).
-- If a bump still fails after retries (10, 50, and 200 ms), the write succeeds,
-  the failing instance bypasses the cache for that path, and
-  `invalidation_failures` goes up. **Other instances can serve the old entry
-  until its TTL expires.** Alert on this counter and keep
+- If a bucket delete still fails after retries, the write succeeds and
+  `invalidation_failures` goes up. **Other instances can serve the old result
+  until the bucket's TTL expires.** Alert on this counter and keep
   `default_ttl_seconds` as short as your hit rate allows.
 - Redis Sentinel and Cluster replicate asynchronously. A failover can lose a
-  bump the old primary had acknowledged, with the same TTL-bounded effect.
+  delete the old primary had acknowledged, with the same TTL-bounded effect.
   Consider `min-replicas-to-write` on the primary.
-- In Redis Cluster mode the counters of one path live in different slots, so a
-  miss reads them one key at a time.
+- Request coalescing (below) is per process. Instances that miss the same query
+  at the same time each read the backend once.
 
-Without `multi_instance`, writers in one process are serialized by its
-operation lock, and a full write also fills the cache. Providers without
-`incrby` then fall back to GET+SET bumps, which are only safe for one process.
+Upgrading from the earlier file-content CacheFS: its
+`max_file_size_bytes`, `traversal_mode` and `bypass_prefixes` options are
+ignored, file reads are no longer cached, and its `ov:cache:v2:*` keys are not
+read. They expire with their TTL, or delete them with
+`redis-cli --scan --pattern '<service_name>:ov:cache:v2:*' | xargs redis-cli unlink`.
 
 ## Request Coalescing
 
-When multiple requests read the same uncached small file or directory at the same time, `CachedFileSystem` uses an in-process inflight table to coalesce them:
+When multiple requests read the same uncached query at the same time, `CachedFileSystem` uses an in-process inflight table to coalesce them:
 
 ```text
 The first miss becomes the leader and performs backend fallback and cache fill.
@@ -383,56 +369,34 @@ The inflight entry is removed after the request completes.
 
 This only reduces duplicate backend access within one OpenViking process. It does not change the Provider consistency boundary.
 
-## Cache Policy
+## Cache Scope
 
-RAGFS automatically bypasses paths that are not suitable for caching:
-
-- Lock files: `.path.ovlock`, `*.lock`, `*.lck`
-- Control files: `enqueue`, `dequeue`, `peek`, `ack`
-- Transient state: `heartbeat`, `lease`, `cursor`, `offset`, `pid`
-- Path prefixes configured through `bypass_prefixes`
-
-Add permission-sensitive directories to `bypass_prefixes`. If raw directory entries themselves depend on the caller's permissions, that directory should not be cached.
+CacheFS only stores query results for `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep`. Cache keys are derived from the path, operation name, and query parameters. Successful writes actively remove affected query buckets. Runtime-internal PathLock files such as `.path.ovlock` and `.exact.ovlock.*` are excluded from query cache payloads, and direct queries against those files bypass CacheFS.
 
 ## Failure and Observability
 
 The cache layer must not affect filesystem correctness:
 
 - `get` failure: fall back to backend.
-- `put` failure: record the error and put the path into bypass.
-- `delete` failure: record the error and put the path or scope into bypass.
-- Counter bump failure: retry, then count an invalidation failure and put the path into bypass on this instance.
+- `put` failure: record the error and keep the backend result.
+- `delete` failure: retry, then record the error and count `invalidation_failures`; TTL remains the fallback.
 - Provider unavailable: do not return old cache; use backend results as authoritative.
 
 Recommended signals to watch:
 
-- cache hit / miss / bypass
-- stale versions (entries rejected because a counter moved)
-- invalidation failures (bumps that failed after retries)
+- query hit / miss
 - provider get / put / delete latency
 - cache set / delete failures
-- inflight leader / follower / backend saved
-- backend fallback bytes
-
-When CacheFS is enabled, OpenViking Studio shows the overall cache hit rate on
-the Home dashboard and a per-operation breakdown (`read`, `read_dir`, `tree`,
-`grep`) under Monitoring → Cache. Both read `GET /api/v1/console/cache`, which
-reports counters since server start. Hit rate is `hits / (hits + misses)`;
-reads bypassed by policy are counted separately. The same endpoint also reports
-`stale_versions` and `invalidation_failures`. The same counters are exported
-as `openviking_ragfs_cache_requests_total`,
-`openviking_ragfs_cache_operation_requests_total`,
-`openviking_ragfs_cache_stale_versions_total`, and
-`openviking_ragfs_cache_invalidation_failures_total`.
+- `invalidation_failures` (with `multi_instance`, other instances may serve stale results until the TTL)
+- backend fallbacks
 
 ## Recommended Rollout
 
 1. Disable caching to validate baseline backend behavior.
 2. Use the built-in `redis` Provider to validate remote-cache benefits.
 3. Use an independently released DynamicProvider `.so` for high-performance or closed-source cache systems.
-4. Cache summary files and raw `read_dir` first, then expand to more regular small files.
-5. Add lock, control-plane, and permission-sensitive paths to `bypass_prefixes`.
+4. Cache `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep` query results.
 
-RAGFS cache handles invalidation according to filesystem semantics; the Provider decides where cache objects live. The backend remains the source of truth, and every cache hit must pass envelope and version validation before it is returned.
+RAGFS cache handles invalidation according to filesystem semantics; the Provider decides where cache objects live. The backend remains the source of truth, and every cache hit must pass request validation before it is returned.
 
 After enabling the cache, compare repeated reads and invalidation after a file update against the baseline. A higher hit rate is useful only if the returned contents remain current.

@@ -21,24 +21,24 @@ describe('CacheStatsContent', () => {
           hits: 4,
           misses: 1,
           operations: [
-            { operation: 'read', hits: 3, misses: 1, bypasses: 7 },
+            { operation: 'stat', hits: 3, misses: 1, bypasses: 7 },
             { operation: 'tree', hits: 1, misses: 0, bypasses: 0 },
           ],
-          kinds: [{ kind: 'file', hits: 3, misses: 1 }],
+          kinds: [{ kind: 'query', hits: 3, misses: 1 }],
         })}
       />,
     )
 
-    const readRow = screen
-      .getByText('cache.operations.read')
+    const statRow = screen
+      .getByText('cache.operations.stat')
       .closest('tr') as HTMLElement
-    expect(within(readRow).getByText('75.0%')).toBeTruthy()
-    expect(within(readRow).getByText('7')).toBeTruthy()
+    expect(within(statRow).getByText('75.0%')).toBeTruthy()
+    expect(within(statRow).getByText('7')).toBeTruthy()
     const treeRow = screen
       .getByText('cache.operations.tree')
       .closest('tr') as HTMLElement
     expect(within(treeRow).getByText('100%')).toBeTruthy()
-    expect(screen.getByText('cache.kinds.file')).toBeTruthy()
+    expect(screen.getByText('cache.kinds.query')).toBeTruthy()
     expect(screen.getByText('80.0%')).toBeTruthy()
   })
 

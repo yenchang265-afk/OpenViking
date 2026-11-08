@@ -213,8 +213,7 @@ const workspace = {
       hits: 'Hits',
       kind: 'Object type',
       kinds: {
-        directory: 'Directories',
-        file: 'Files',
+        query: 'Query results',
       },
       loadFailed: 'Could not load cache statistics',
       lookups: 'Lookups',
@@ -222,20 +221,22 @@ const workspace = {
       noLookups: 'No cache lookups yet',
       operation: 'Operation',
       operations: {
+        glob: 'Glob',
         grep: 'Grep',
-        read: 'Read file',
         read_dir: 'List directory',
+        stat: 'Stat',
         tree: 'Tree',
       },
       operationHints: {
-        grep: 'File and directory reads during cached grep traversal',
-        read: 'Full-file reads',
+        glob: 'Glob results',
+        grep: 'Grep results',
         read_dir: 'Directory listings (ls)',
-        tree: 'Directory reads during cached tree traversal',
+        stat: 'File and directory metadata',
+        tree: 'Tree results',
       },
       overall: 'Overall hit rate',
       sinceStart:
-        'Counters cover all cached mounts since the server started. Hit rate excludes bypassed reads.',
+        'Counters cover all cached mounts since the server started. Hit rate excludes bypassed queries.',
     },
     detail: {
       noData: 'No monitoring data',

@@ -1,8 +1,8 @@
 name: RAGFS Cache Tests
 
 # CacheFS and the cache runtime only compile with the `cache` feature, so no
-# other workflow runs their tests. A Redis service lets the real-Redis race
-# and runtime tests run instead of skipping on a missing REDIS_URL. A Redis
+# other workflow runs their tests. A Redis service lets the real-Redis
+# multi-instance and runtime tests run instead of skipping on a missing REDIS_URL. A Redis
 # primary plus Sentinel runs the same tests again through Sentinel discovery.
 
 on:
@@ -97,16 +97,12 @@ jobs:
             ${{ runner.os }}-target-ragfs-cache-
 
       # Unit tests whose path names the cache (CacheFS, cache runtime, the
-      # multi-instance race and stress tests, and cache-backed QueueFS/git).
-      # The skipped test already fails on main: its mock panics on the
-      # queuefs.release_recovery_leader.v1 script. Drop the skip once fixed.
+      # multi-instance tests, and cache-backed QueueFS/git).
       - name: Unit tests
-        run: >-
-          cargo test -p ragfs --features cache,test-utils --lib cache --
-          --skip shutdown_reaches_cache_queuefs_through_stats_wrapper
+        run: cargo test -p ragfs --features cache,test-utils --lib cache
 
       - name: Integration tests
         run: >-
           cargo test -p ragfs --features cache,test-utils
           --test cache_runtime --test redis_runtime --test dynamic_provider
-          --test cache_latency
+          --test cache_latency --test cache_multi_instance_redis

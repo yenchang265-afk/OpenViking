@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional
 
-_OPERATION_ORDER = ("read", "read_dir", "tree", "grep")
-_KIND_ORDER = ("file", "directory")
+_OPERATION_ORDER = ("stat", "read_dir", "tree", "glob", "grep")
+_KIND_ORDER = ("query",)
 
 
 def _hit_rate(hits: int, misses: int) -> Optional[float]:
@@ -35,14 +35,14 @@ def summarize_cache_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
     ``records`` is the flat list returned by the RAGFS binding's ``metrics()``.
     CacheFS only emits ``ragfs_cache_*`` series when at least one mount is
     wrapped by the cache, so their absence means CacheFS is disabled. Hit rates
-    count cache lookups only; reads bypassed by policy are reported separately.
+    count cache lookups only; queries that skipped the cache are reported as
+    bypasses.
     """
     kinds: dict[str, dict[str, int]] = {}
     operations: dict[str, dict[str, int]] = {}
     totals = {
         "bypasses": 0,
         "errors": 0,
-        "stale_versions": 0,
         "invalidation_failures": 0,
         "backend_saved": 0,
         "bytes_from_cache": 0,
@@ -70,15 +70,13 @@ def summarize_cache_metrics(records: list[dict[str, Any]]) -> dict[str, Any]:
             )
             if key:
                 counts[key] += value
-        elif name == "ragfs_cache_policy_bypasses_total":
-            totals["bypasses"] += value
+            if key == "bypasses":
+                totals["bypasses"] += value
         elif name == "ragfs_cache_errors_total":
             totals["errors"] += value
-        elif name == "ragfs_cache_stale_versions_total":
-            totals["stale_versions"] += value
         elif name == "ragfs_cache_invalidation_failures_total":
-            # Bumps that failed after retries: other instances may serve stale
-            # entries for the affected paths until the cache TTL expires.
+            # Bucket deletes that failed after retries: other instances may serve
+            # stale results for the affected paths until the cache TTL expires.
             totals["invalidation_failures"] += value
         elif name == "ragfs_cache_inflight_events_total" and labels.get("event") == "backend_saved":
             totals["backend_saved"] += value

@@ -1556,10 +1556,7 @@ The top-level `cache` section is a sibling of `storage`. Its public shape is Pro
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `backend` | str | `local` keeps the original filesystem path; `cache` enables the CacheFS wrapper | `local` |
-| `max_file_size_bytes` | int | Maximum full-file object size admitted to cache | `1048576` |
-| `traversal_mode` | str | `backend` or `cached_traversal` | `backend` |
-| `bypass_prefixes` | array[str] | Path prefixes that bypass cache | `[]` |
-| `multi_instance` | bool | Set on every instance when several OpenViking processes share the cache namespace; disables write-through fill and requires a Provider with atomic `incrby` and, with Redis, `default_ttl_seconds > 0`. See the RAGFS cache guide | `false` |
+| `multi_instance` | bool | Set on every instance when several OpenViking processes share the cache namespace; CacheFS then deletes affected cache entries before each write returns, and requires a cache default TTL greater than 0. See the RAGFS cache guide | `false` |
 
 `storage.agfs.pathlock` selects the PathLock storage provider:
 
