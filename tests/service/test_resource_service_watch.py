@@ -330,6 +330,11 @@ class TestWatchTaskCreation:
         tags,
         tag_mode,
     ):
+        # Resolve the remote host without the network; the public-target guard still runs.
+        monkeypatch.setattr(
+            "openviking.utils.network_guard._resolve_host_addresses",
+            lambda host: {"93.184.215.14"},
+        )
         to_uri = "viking://resources/watch_tag_policy"
         await resource_service._execute_resource_ingestion(
             path="https://example.org/doc",
