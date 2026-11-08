@@ -324,8 +324,8 @@ seconds, for example `123 ns = 0.000000123 seconds`.
 | `openviking_ragfs_s3_attempts_total` | Counter | `operation` | S3 HTTP attempts; minus `s3_requests_total` is the number of retries |
 | `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API call duration including retries and backoff |
 | `openviking_ragfs_s3_inflight_requests` | Gauge | none | S3 API calls currently in flight |
-| `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | query cache hits and misses; `kind="query"` |
-| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | query cache `hit`/`miss`/`bypass` per operation: `stat`, `read_dir`, `tree`, `glob`, `grep` |
+| `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | query and file-read cache hits and misses; `kind="query"` |
+| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | cache `hit`/`miss`/`bypass` per operation: `read` (full-file reads; ranged and oversized reads are bypasses), `stat`, `read_dir`, `tree`, `glob`, `grep` |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | none | backend loads after cache misses |
 | `openviking_ragfs_cache_operations_total` | Counter | `operation` | cache get/put/delete attempts |
 | `openviking_ragfs_cache_invalidations_total` | Counter | none | completed invalidations |

@@ -1,6 +1,6 @@
 # RAGFS Cache
 
-RAGFS cache is an optional read-cache layer for OpenViking query results. It speeds up `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep`. It is only an acceleration layer, not the source of truth; backend filesystem data remains authoritative.
+RAGFS cache is an optional read-cache layer for OpenViking query results and file contents. It speeds up full-file `read`, `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep`. It is only an acceleration layer, not the source of truth; backend filesystem data remains authoritative.
 
 CachedFileSystem assumptions:
 
@@ -157,6 +157,7 @@ The top-level `cache` section is a sibling of `storage`:
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `backend` | str | `"local"` | `local` preserves existing behavior; `cache` enables CachedFileSystem |
+| `max_file_size_bytes` | int | `1048576` | Largest file whose full contents CacheFS caches. Ranged reads and larger files go to the backend; `0` disables file-content caching |
 | `multi_instance` | bool | `false` | Several instances share this cache namespace: delete affected buckets before each write returns. Requires `backend: "cache"` and a cache default TTL greater than `0`. See "Multiple Instances" |
 
 `storage.agfs.pathlock` controls PathLock storage:
@@ -248,6 +249,7 @@ RAGFS compares the stored `request` with the current request before returning th
 
 Supported operations:
 
+- `read` (full-file reads up to `max_file_size_bytes`)
 - `stat`
 - `read_dir`
 - `tree_directory`
@@ -270,7 +272,7 @@ RAGFS does not need a distributed write lock. It physically deletes query bucket
 
 For a normal path change, RAGFS builds the affected bucket list in memory:
 
-- exact path buckets: `stat`, `read_dir`, `tree_directory`, `glob_directory`, `grep`
+- exact path buckets: `read`, `stat`, `read_dir`, `tree_directory`, `glob_directory`, `grep`
 - parent bucket: `read_dir(parent)`
 - ancestor recursive buckets: `tree_directory`, `glob_directory`, `grep`
 
@@ -351,10 +353,9 @@ Requirements and remaining risks:
 - Request coalescing (below) is per process. Instances that miss the same query
   at the same time each read the backend once.
 
-Upgrading from the earlier file-content CacheFS: its
-`max_file_size_bytes`, `traversal_mode` and `bypass_prefixes` options are
-ignored, file reads are no longer cached, and its `ov:cache:v2:*` keys are not
-read. They expire with their TTL, or delete them with
+Upgrading from the earlier version-counter CacheFS: its `traversal_mode` and
+`bypass_prefixes` options are ignored (`max_file_size_bytes` keeps its meaning),
+and its `ov:cache:v2:*` keys are not read. They expire with their TTL, or delete them with
 `redis-cli --scan --pattern '<service_name>:ov:cache:v2:*' | xargs redis-cli unlink`.
 
 ## Request Coalescing
@@ -369,9 +370,29 @@ The inflight entry is removed after the request completes.
 
 This only reduces duplicate backend access within one OpenViking process. It does not change the Provider consistency boundary.
 
+### File Contents
+
+A full-file `read` (offset 0, no size) of a file up to `max_file_size_bytes`
+uses a `read` bucket on the file's path. It follows the same epoch, fill and
+invalidation rules as the query buckets, so a write, `truncate`, `rename`,
+`replace` or `remove_all` drops it like the file's `stat`. Its field holds the
+raw bytes behind a small binary header that records the path, not JSON.
+
+Ranged reads, files over the limit, and runtime-internal files go to the
+backend and count as `read` bypasses. `read_to_path` downloads stream from the
+backend.
+
+On a single-backend mount with encryption, CacheFS sits below the encryption
+layer, so the cache holds ciphertext and each hit is decrypted. Multi-write
+mounts encrypt inside each backend, which puts CacheFS above encryption; there,
+file contents are never cached while encryption is configured.
+
+Size Redis for the files you let in: each cached file takes up to
+`max_file_size_bytes` until its TTL.
+
 ## Cache Scope
 
-CacheFS only stores query results for `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep`. Cache keys are derived from the path, operation name, and query parameters. Successful writes actively remove affected query buckets. Runtime-internal PathLock files such as `.path.ovlock` and `.exact.ovlock.*` are excluded from query cache payloads, and direct queries against those files bypass CacheFS.
+CacheFS stores full-file contents up to `max_file_size_bytes` and query results for `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep`. Cache keys are derived from the path, operation name, and query parameters. Successful writes actively remove affected query buckets. Runtime-internal PathLock files such as `.path.ovlock` and `.exact.ovlock.*` are excluded from query cache payloads, and direct queries against those files bypass CacheFS.
 
 ## Failure and Observability
 
@@ -395,7 +416,7 @@ Recommended signals to watch:
 1. Disable caching to validate baseline backend behavior.
 2. Use the built-in `redis` Provider to validate remote-cache benefits.
 3. Use an independently released DynamicProvider `.so` for high-performance or closed-source cache systems.
-4. Cache `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep` query results.
+4. Cache full-file reads and `stat`, `read_dir`, `tree_directory`, `glob_directory`, and `grep` query results.
 
 RAGFS cache handles invalidation according to filesystem semantics; the Provider decides where cache objects live. The backend remains the source of truth, and every cache hit must pass request validation before it is returned.
 

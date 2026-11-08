@@ -6,6 +6,8 @@ use std::time::Duration;
 /// Filesystem query that consulted the cache.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CacheOperation {
+    /// Full-file `read`.
+    Read,
     /// `stat`.
     Stat,
     /// `read_dir` (`ls`).
@@ -20,11 +22,12 @@ pub enum CacheOperation {
 
 impl CacheOperation {
     /// Number of operations tracked per wrapper.
-    pub const COUNT: usize = 5;
+    pub const COUNT: usize = 6;
 
     /// Every operation in a stable export order.
     pub const fn all() -> [Self; Self::COUNT] {
         [
+            Self::Read,
             Self::Stat,
             Self::ReadDir,
             Self::Tree,
@@ -36,6 +39,7 @@ impl CacheOperation {
     /// Stable metric label value.
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::Read => "read",
             Self::Stat => "stat",
             Self::ReadDir => "read_dir",
             Self::Tree => "tree",
@@ -56,7 +60,8 @@ pub struct CacheOperationSnapshot {
     pub hits: u64,
     /// Lookups that fell through to the backend.
     pub misses: u64,
-    /// Queries that skipped the cache (internal paths or unencodable requests).
+    /// Requests that skipped the cache (ranged reads, internal paths,
+    /// unencodable requests).
     pub bypasses: u64,
 }
 

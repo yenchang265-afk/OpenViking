@@ -394,6 +394,14 @@ class AGFSCacheFSConfig(BaseModel):
         default="local",
         description="CacheFS backend: 'local' | 'cache'",
     )
+    max_file_size_bytes: int = Field(
+        default=1024 * 1024,
+        ge=0,
+        description=(
+            "Largest file whose full contents CacheFS caches; ranged reads and "
+            "larger files go to the backend. 0 disables file-content caching"
+        ),
+    )
     multi_instance: bool = Field(
         default=False,
         description=(

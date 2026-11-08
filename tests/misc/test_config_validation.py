@@ -572,6 +572,20 @@ def test_cachefs_multi_instance_reaches_binding_dict():
     assert binding["cache"]["multi_instance"] is True
 
 
+def test_cachefs_max_file_size_defaults_to_one_mib_and_rejects_negative():
+    config = OpenVikingConfig.model_validate(_multi_instance_config({}))
+    assert config.storage.agfs.cachefs.max_file_size_bytes == 1024 * 1024
+    binding = RagfsBindingConfig(
+        agfs=config.storage.agfs,
+        cache=config.cache,
+        service_name=config.service_name,
+    ).to_binding_dict()
+    assert binding["cache"]["max_file_size_bytes"] == 1024 * 1024
+
+    with pytest.raises(ValueError, match="max_file_size_bytes"):
+        AGFSConfig(path="/tmp/ov-test", cachefs={"backend": "cache", "max_file_size_bytes": -1})
+
+
 def test_cachefs_multi_instance_defaults_off():
     config = OpenVikingConfig.model_validate(
         {
@@ -715,10 +729,14 @@ def test_openviking_config_dump_uses_only_canonical_cache_schema():
     ).to_binding_dict()
 
     assert dumped["cache"] == {"backend": "redis", "params": {}}
-    # Options of the removed file-content CacheFS are ignored.
-    assert dumped["storage"]["agfs"]["cachefs"] == {"backend": "cache", "multi_instance": False}
+    # traversal_mode and bypass_prefixes from the earlier CacheFS are ignored.
+    assert dumped["storage"]["agfs"]["cachefs"] == {
+        "backend": "cache",
+        "max_file_size_bytes": 1024,
+        "multi_instance": False,
+    }
     assert "cache" not in dumped["storage"]["agfs"]
-    assert "max_file_size_bytes" not in binding["cache"]
+    assert binding["cache"]["max_file_size_bytes"] == 1024
     assert "traversal_mode" not in binding["cache"]
     assert "bypass_prefixes" not in binding["cache"]
 

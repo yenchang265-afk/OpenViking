@@ -9,6 +9,7 @@ export const CACHE_STATS_REFETCH_MS = 30_000
 
 /** Display order for known operations; unknown ones follow as reported. */
 export const CACHE_OPERATIONS = [
+  'read',
   'stat',
   'read_dir',
   'tree',

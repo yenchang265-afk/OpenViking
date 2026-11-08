@@ -156,6 +156,7 @@ def _build_provider_cache_config(
             "provider": provider,
             "multi_instance": cachefs_enabled
             and bool(getattr(cachefs_model, "multi_instance", False)),
+            "max_file_size_bytes": int(getattr(cachefs_model, "max_file_size_bytes", 1024 * 1024)),
         }
     )
     if provider == "redis":

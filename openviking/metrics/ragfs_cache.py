@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Optional
 
-_OPERATION_ORDER = ("stat", "read_dir", "tree", "glob", "grep")
+_OPERATION_ORDER = ("read", "stat", "read_dir", "tree", "glob", "grep")
 _KIND_ORDER = ("query",)
 
 

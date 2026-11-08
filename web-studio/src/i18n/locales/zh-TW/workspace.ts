@@ -210,7 +210,7 @@ const workspace = {
       hits: '命中',
       kind: '物件類型',
       kinds: {
-        query: '查詢結果',
+        query: '查詢與檔案讀取',
       },
       loadFailed: '快取統計載入失敗',
       lookups: '查詢次數',
@@ -220,6 +220,7 @@ const workspace = {
       operations: {
         glob: 'Glob',
         grep: 'Grep',
+        read: '讀取檔案',
         read_dir: '列出目錄',
         stat: 'Stat',
         tree: '目錄樹',
@@ -227,6 +228,7 @@ const workspace = {
       operationHints: {
         glob: 'Glob 結果',
         grep: 'Grep 結果',
+        read: '完整檔案讀取；部分讀取與超過大小上限的讀取會略過快取',
         read_dir: '目錄列表（ls）',
         stat: '檔案與目錄中繼資料',
         tree: '目錄樹結果',

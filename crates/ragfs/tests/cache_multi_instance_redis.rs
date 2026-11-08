@@ -157,6 +157,11 @@ async fn multi_instance_mutations_are_visible_on_the_other_instance_when_they_re
         // Fill b's cache, then confirm it is served from Redis.
         assert_eq!(names(&b, "/docs/sub").await, ["a.txt"], "{mode}");
         assert_eq!(b.stat("/docs/sub/a.txt").await.unwrap().size, 2, "{mode}");
+        assert_eq!(
+            b.read("/docs/sub/a.txt", 0, 0).await.unwrap(),
+            b"v1",
+            "{mode}"
+        );
         names(&b, "/docs").await;
         let hits = b.metrics().snapshot().query_hits;
         assert_eq!(names(&b, "/docs/sub").await, ["a.txt"], "{mode}");
@@ -170,10 +175,16 @@ async fn multi_instance_mutations_are_visible_on_the_other_instance_when_they_re
             .unwrap();
         assert_eq!(names(&b, "/docs/sub").await, ["a.txt", "b.txt"], "{mode}");
         assert_eq!(b.stat("/docs/sub/a.txt").await.unwrap().size, 9, "{mode}");
+        assert_eq!(
+            b.read("/docs/sub/a.txt", 0, 0).await.unwrap(),
+            b"v2-longer",
+            "{mode}"
+        );
 
         a.rename("/docs/sub", "/docs/moved").await.unwrap();
         assert_eq!(names(&b, "/docs").await, ["moved"], "{mode}");
         assert!(b.stat("/docs/sub/a.txt").await.is_err(), "{mode}");
+        assert!(b.read("/docs/sub/a.txt", 0, 0).await.is_err(), "{mode}");
 
         names(&b, "/docs/moved").await;
         b.stat("/docs/moved/b.txt").await.unwrap();

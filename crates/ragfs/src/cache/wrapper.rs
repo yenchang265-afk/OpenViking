@@ -1,6 +1,6 @@
 //! A transparent [`FileSystem`](crate::FileSystem) cache wrapper.
 
-use super::envelope::QueryCacheEnvelope;
+use super::envelope::{decode_file_content, encode_file_content, QueryCacheEnvelope};
 use super::{CacheMetrics, CacheOperation};
 use crate::cache_runtime::{
     CacheError, CacheResult, CacheRuntime, ScriptDefinition, ScriptRequest, ScriptValue,
@@ -33,6 +33,10 @@ const QUERY_INDEX_GC_TRIGGER_THRESHOLD: u64 = 64;
 const UNLINK_MAX_RETRIES: u32 = 3;
 const UNLINK_RETRY_BASE_MS: u64 = 10;
 const UNLINK_CONCURRENCY: usize = 16;
+/// Default largest file whose full contents CacheFS stores.
+pub const DEFAULT_MAX_FILE_SIZE_BYTES: usize = 1024 * 1024;
+/// HASH field holding a file's contents in its `read` bucket.
+const FILE_CONTENT_FIELD: &str = "content";
 const PENDING_EPOCH_TTL_MS: u64 = 300_000;
 const BEGIN_FILL_SCRIPT_ID: &str = "ragfs.cache.query.begin_fill.v1";
 const FILL_SCRIPT_ID: &str = "ragfs.cache.query.fill_if_epoch.v1";
@@ -127,6 +131,7 @@ pub struct CachedFileSystem {
     index_gc_changes: Arc<AtomicU64>,
     index_gc_running: Arc<AtomicBool>,
     multi_instance: bool,
+    max_file_size_bytes: usize,
 }
 
 impl CachedFileSystem {
@@ -158,7 +163,18 @@ impl CachedFileSystem {
             index_gc_changes: Arc::new(AtomicU64::new(0)),
             index_gc_running: Arc::new(AtomicBool::new(false)),
             multi_instance: false,
+            max_file_size_bytes: DEFAULT_MAX_FILE_SIZE_BYTES,
         }
+    }
+
+    /// Cache full-file reads of files up to this size; `0` disables file caching.
+    ///
+    /// Ranged reads always go to the backend. A file's `read` bucket is
+    /// invalidated with its other exact-path buckets, so file contents follow
+    /// the same epoch and multi-instance rules as query results.
+    pub fn with_max_file_size_bytes(mut self, max_file_size_bytes: usize) -> Self {
+        self.max_file_size_bytes = max_file_size_bytes;
+        self
     }
 
     /// Make invalidation safe for several instances sharing one namespace.
@@ -485,6 +501,62 @@ impl CachedFileSystem {
         result
     }
 
+    /// Load a full file through its `read` bucket, coalescing concurrent misses.
+    async fn get_or_fill_file(&self, path: &str, normalized: &str) -> Result<Vec<u8>> {
+        let bucket_key = self.query_bucket_key(normalized, "read");
+        if let Ok(Some(value)) = self.cache_hash_get(&bucket_key, FILE_CONTENT_FIELD).await {
+            if let Some(data) = self.decode_file(&value, normalized) {
+                self.metrics.operation_hit(CacheOperation::Read);
+                return Ok(data);
+            }
+        }
+        self.metrics.operation_miss(CacheOperation::Read);
+
+        let inflight_key = format!("{bucket_key}:{FILE_CONTENT_FIELD}");
+        let (inflight, _) = self.acquire_inflight(&inflight_key).await;
+        let inflight_guard = inflight.lock().await;
+
+        let epoch = match self.begin_query_fill(&bucket_key, FILE_CONTENT_FIELD).await {
+            Ok((epoch, Some(value))) => match self.decode_file(&value, normalized) {
+                Some(data) => {
+                    drop(inflight_guard);
+                    self.release_inflight(&inflight_key, &inflight).await;
+                    return Ok(data);
+                }
+                None => Some(epoch),
+            },
+            Ok((epoch, None)) => Some(epoch),
+            Err(_) => None,
+        };
+        let result = self.backend.read(path, 0, 0).await;
+        if let Ok(data) = &result {
+            self.metrics.backend_fallback();
+            if let Some(epoch) = epoch.filter(|_| data.len() <= self.max_file_size_bytes) {
+                match encode_file_content(normalized, data) {
+                    Ok(value) => {
+                        self.cache_hash_put(&bucket_key, epoch, FILE_CONTENT_FIELD, value)
+                            .await;
+                    }
+                    Err(_) => self.metrics.error(),
+                }
+            }
+        }
+        drop(inflight_guard);
+        self.release_inflight(&inflight_key, &inflight).await;
+        result
+    }
+
+    /// Decode cached file contents, counting corrupt values as cache errors.
+    fn decode_file(&self, value: &[u8], normalized: &str) -> Option<Vec<u8>> {
+        match decode_file_content(value, normalized) {
+            Ok(data) => data,
+            Err(_) => {
+                self.metrics.error();
+                None
+            }
+        }
+    }
+
     async fn acquire_inflight(&self, key: &str) -> (Arc<Mutex<()>>, bool) {
         let mut inflight = self.inflight.lock().await;
         if let Some(lock) = inflight.get(key) {
@@ -657,6 +729,7 @@ impl CachedFileSystem {
     fn collect_path_change_buckets_for(service_name: &str, path: &str, keys: &mut Vec<String>) {
         let normalized = normalize_path(path);
         for op in [
+            "read",
             "stat",
             "read_dir",
             "tree_directory",
@@ -714,7 +787,13 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn read(&self, path: &str, offset: u64, size: u64) -> Result<Vec<u8>> {
-        self.backend.read(path, offset, size).await
+        let normalized = normalize_path(path);
+        let full_read = offset == 0 && size == 0;
+        if !full_read || self.max_file_size_bytes == 0 || is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::Read);
+            return self.backend.read(path, offset, size).await;
+        }
+        self.get_or_fill_file(path, &normalized).await
     }
 
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
@@ -731,7 +810,7 @@ impl FileSystem for CachedFileSystem {
     }
 
     async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
-        // File contents are not cached; let the backend stream the download.
+        // Downloads stream from the backend instead of going through the file cache.
         self.backend.read_to_path(path, dst).await
     }
 
@@ -1047,6 +1126,7 @@ impl FileSystem for CachedFileSystem {
 /// Map a query bucket operation name to its metric label.
 fn query_operation(op: &str) -> CacheOperation {
     match op {
+        "read" => CacheOperation::Read,
         "stat" => CacheOperation::Stat,
         "read_dir" => CacheOperation::ReadDir,
         "tree_directory" => CacheOperation::Tree,
@@ -1185,3 +1265,7 @@ mod tests;
 #[cfg(test)]
 #[path = "tests/test_multi_instance.rs"]
 mod multi_instance_tests;
+
+#[cfg(test)]
+#[path = "tests/test_file_cache.rs"]
+mod file_cache_tests;

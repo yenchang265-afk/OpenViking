@@ -151,6 +151,7 @@ export type ConsoleCacheKindStats = ConsoleCacheLookupCounts & {
 }
 
 export type ConsoleCacheOperation =
+  | 'read'
   | 'stat'
   | 'read_dir'
   | 'tree'

@@ -83,7 +83,8 @@
                 }]
             },
             "cachefs": {
-                "backend": "local"
+                "backend": "local",
+                "max_file_size_bytes": 1048576
             },
             "queuefs": {
                 "backend": "sqlite"

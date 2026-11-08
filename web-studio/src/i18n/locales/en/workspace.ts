@@ -213,7 +213,7 @@ const workspace = {
       hits: 'Hits',
       kind: 'Object type',
       kinds: {
-        query: 'Query results',
+        query: 'Queries and file reads',
       },
       loadFailed: 'Could not load cache statistics',
       lookups: 'Lookups',
@@ -223,6 +223,7 @@ const workspace = {
       operations: {
         glob: 'Glob',
         grep: 'Grep',
+        read: 'Read file',
         read_dir: 'List directory',
         stat: 'Stat',
         tree: 'Tree',
@@ -230,6 +231,7 @@ const workspace = {
       operationHints: {
         glob: 'Glob results',
         grep: 'Grep results',
+        read: 'Full-file reads; ranged and oversized reads are bypassed',
         read_dir: 'Directory listings (ls)',
         stat: 'File and directory metadata',
         tree: 'Tree results',

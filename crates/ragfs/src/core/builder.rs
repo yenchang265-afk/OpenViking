@@ -81,6 +81,8 @@ pub struct CacheFsConfig {
     pub service_name: String,
     /// Several instances share this namespace: invalidate before mutations return.
     pub multi_instance: bool,
+    /// Largest file whose full contents CacheFS stores; `0` disables file caching.
+    pub max_file_size_bytes: usize,
 }
 
 #[cfg(feature = "cache")]
@@ -90,6 +92,7 @@ impl Default for CacheFsConfig {
             enabled: false,
             service_name: String::new(),
             multi_instance: false,
+            max_file_size_bytes: crate::cache::DEFAULT_MAX_FILE_SIZE_BYTES,
         }
     }
 }
@@ -208,7 +211,8 @@ pub async fn build_configured_stack(
                     .clone(),
                 cache.cachefs.service_name,
             )
-            .with_cache_multi_instance(cache.cachefs.multi_instance),
+            .with_cache_multi_instance(cache.cachefs.multi_instance)
+            .with_cache_max_file_size_bytes(cache.cachefs.max_file_size_bytes),
         )
     } else if let Some(runtime) = runtime.as_ref() {
         Arc::new(MountableFS::with_shared_cache_runtime(runtime.clone()))

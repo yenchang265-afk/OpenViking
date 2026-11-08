@@ -1,6 +1,6 @@
 # RAGFS 快取
 
-RAGFS 快取是 OpenViking 的可選查詢結果快取層，用於加速 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep`。它只作為加速層，不作為事實資料來源；資料仍以 backend filesystem 為準。
+RAGFS 快取是 OpenViking 的可選查詢結果與檔案內容快取層，用於加速完整檔案 `read`、`stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep`。它只作為加速層，不作為事實資料來源；資料仍以 backend filesystem 為準。
 
 CachedFileSystem 適用前提：
 
@@ -148,6 +148,7 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
 | `backend` | str | `"local"` | `local` 沿用原邏輯；`cache` 啟用 CachedFileSystem |
+| `max_file_size_bytes` | int | `1048576` | CacheFS 快取完整內容的單檔案上限。部分讀取與更大的檔案直接讀取 backend；`0` 停用檔案內容快取 |
 | `multi_instance` | bool | `false` | 多個實例共用此 cache namespace：每次寫入返回前刪除受影響的 bucket。需要 `backend: "cache"` 且快取預設 TTL 大於 `0`。詳見「多實例」 |
 
 `storage.agfs.pathlock` 控制 PathLock 儲存：
@@ -238,6 +239,7 @@ RAGFS 返回快取前會比較已存 `request` 和當前請求。這樣可以防
 
 支援的操作：
 
+- `read`（不超過 `max_file_size_bytes` 的完整檔案讀取）
 - `stat`
 - `read_dir`
 - `tree_directory`
@@ -260,7 +262,7 @@ RAGFS 不需要分散式寫鎖。每次寫入後，RAGFS 物理刪除受影響�
 
 普通路徑變更會在記憶體中構造受影響 bucket：
 
-- 精確路徑 bucket：`stat`、`read_dir`、`tree_directory`、`glob_directory`、`grep`
+- 精確路徑 bucket：`read`、`stat`、`read_dir`、`tree_directory`、`glob_directory`、`grep`
 - 父目錄 bucket：`read_dir(parent)`
 - 祖先遞迴 bucket：`tree_directory`、`glob_directory`、`grep`
 
@@ -320,7 +322,7 @@ ZSCAN {<service_name>}:ov:cacheidx:v1 MATCH '{<service_name>}:ov:cache:v1:<path_
 - Redis Sentinel 和 Cluster 為非同步複製。故障切換可能遺失舊主節點已確認的刪除，影響同樣以 TTL 為上限。可考慮在主節點設定 `min-replicas-to-write`。
 - 下方的請求合併僅限單一程序。多個實例同時未命中同一查詢時，各自會讀取一次 backend。
 
-從先前的檔案內容 CacheFS 升級：其 `max_file_size_bytes`、`traversal_mode` 和 `bypass_prefixes` 選項會被忽略，檔案讀取不再快取，其 `ov:cache:v2:*` 鍵也不再讀取。這些鍵會隨 TTL 到期，或以 `redis-cli --scan --pattern '<service_name>:ov:cache:v2:*' | xargs redis-cli unlink` 刪除。
+從先前的版本計數器 CacheFS 升級：其 `traversal_mode` 和 `bypass_prefixes` 選項會被忽略（`max_file_size_bytes` 意義不變），其 `ov:cache:v2:*` 鍵也不再讀取。這些鍵會隨 TTL 到期，或以 `redis-cli --scan --pattern '<service_name>:ov:cache:v2:*' | xargs redis-cli unlink` 刪除。
 
 ## 請求合併
 
@@ -334,9 +336,19 @@ ZSCAN {<service_name>}:ov:cacheidx:v1 MATCH '{<service_name>}:ov:cache:v1:<path_
 
 這隻減少同一 OpenViking 程序內的重複 backend 訪問，不改變 Provider 的一致性邊界。
 
+### 檔案內容
+
+不超過 `max_file_size_bytes` 的完整檔案 `read`（offset 為 0、未指定 size）使用該檔案路徑上的 `read` bucket。它沿用與查詢 bucket 相同的 epoch、回填與失效規則，因此寫入、`truncate`、`rename`、`replace` 或 `remove_all` 會像刪除該檔案的 `stat` 一樣刪除它。欄位內容是原始位元組，前面加一個記錄路徑的小型二進位標頭，而不是 JSON。
+
+部分讀取、超過上限的檔案與執行期內部檔案直接讀取 backend，並計為 `read` 略過。`read_to_path` 下載直接從 backend 串流。
+
+在單一 backend 且啟用加密的 mount 上，CacheFS 位於加密層之下，因此快取中存的是密文，每次命中都會解密。多寫入 mount 在每個 backend 內加密，CacheFS 因此位於加密層之上；在這種 mount 上，只要設定了加密，就永遠不快取檔案內容。
+
+請依允許快取的檔案估算 Redis 容量：每個快取的檔案在 TTL 到期前最多佔用 `max_file_size_bytes`。
+
 ## 快取範圍
 
-CacheFS 只快取 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep` 的查詢結果。快取鍵由路徑、操作型別和查詢引數生成。寫操作成功後會主動刪除受影響的查詢 bucket。`.path.ovlock`、`.exact.ovlock.*` 等 PathLock 內部檔案不會進入查詢快取；直接查詢這些檔案時繞過 CacheFS。
+CacheFS 快取不超過 `max_file_size_bytes` 的完整檔案內容，以及 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep` 的查詢結果。快取鍵由路徑、操作型別和查詢引數生成。寫操作成功後會主動刪除受影響的查詢 bucket。`.path.ovlock`、`.exact.ovlock.*` 等 PathLock 內部檔案不會進入查詢快取；直接查詢這些檔案時繞過 CacheFS。
 
 ## 故障與觀測
 
@@ -360,7 +372,7 @@ CacheFS 只快取 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 
 1. 關閉快取驗證 backend 基線行為。
 2. 用內建 `redis` 驗證真實遠端快取收益。
 3. 對高效能或閉源快取系統使用獨立釋出的 DynamicProvider `.so`。
-4. 快取 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep` 查詢結果。
+4. 快取完整檔案讀取以及 `stat`、`read_dir`、`tree_directory`、`glob_directory` 和 `grep` 查詢結果。
 
 RAGFS 快取負責按檔案系統語義失效，Provider 負責決定快取物件放在哪裡。backend 仍是事實來源，快取命中必須先通過 request 校驗才會返回。
 

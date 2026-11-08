@@ -9,4 +9,4 @@ mod metrics;
 mod wrapper;
 
 pub use metrics::{CacheMetrics, CacheMetricsSnapshot, CacheOperation, CacheOperationSnapshot};
-pub use wrapper::CachedFileSystem;
+pub use wrapper::{CachedFileSystem, DEFAULT_MAX_FILE_SIZE_BYTES};

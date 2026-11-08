@@ -320,6 +320,7 @@ struct RagfsCacheConfig {
     provider: CacheProviderKind,
     service_name: String,
     multi_instance: bool,
+    max_file_size_bytes: usize,
     redis: RedisCacheConfig,
     dynamic: DynamicCacheConfig,
 }
@@ -367,6 +368,7 @@ impl Default for RagfsCacheConfig {
             provider: CacheProviderKind::Redis,
             service_name: String::new(),
             multi_instance: false,
+            max_file_size_bytes: ragfs::cache::DEFAULT_MAX_FILE_SIZE_BYTES,
             redis: RedisCacheConfig::default(),
             dynamic: DynamicCacheConfig::default(),
         }
@@ -441,6 +443,7 @@ impl RagfsCacheConfig {
                 enabled: self.enabled,
                 service_name: self.service_name.clone(),
                 multi_instance: self.multi_instance,
+                max_file_size_bytes: self.max_file_size_bytes,
             },
         })
     }
@@ -671,6 +674,7 @@ fn cache_config_from_canonical_ov_conf_with_runtime(
             .as_object()
             .ok_or_else(|| "storage.agfs.cachefs must be an object".to_string())?;
         config.multi_instance = bool_field(cachefs, "multi_instance", false)?;
+        config.max_file_size_bytes = max_file_size_field(cachefs, config.max_file_size_bytes)?;
     }
     // Reject multi_instance without CacheFS before the early return below; the
     // TTL check runs again once the provider params are parsed.
@@ -788,6 +792,7 @@ fn cache_config_from_value(
     let provider = string_field(cache, "provider", "redis")?;
     config.provider = provider_kind(provider)?;
     config.multi_instance = bool_field(cache, "multi_instance", false)?;
+    config.max_file_size_bytes = max_file_size_field(cache, config.max_file_size_bytes)?;
 
     if let Some(redis) = cache.get("redis") {
         let redis = redis
@@ -1012,6 +1017,15 @@ fn usize_field(
 ) -> Result<usize, String> {
     let value = u64_field(object, key, default as u64)?;
     usize::try_from(value).map_err(|_| format!("{key} must fit in usize"))
+}
+
+/// Parse the CacheFS file-size limit, where `0` disables file-content caching.
+fn max_file_size_field(
+    object: &serde_json::Map<String, serde_json::Value>,
+    default: usize,
+) -> Result<usize, String> {
+    let value = u64_field_allow_zero(object, "max_file_size_bytes", default as u64)?;
+    usize::try_from(value).map_err(|_| "max_file_size_bytes must fit in usize".to_string())
 }
 
 fn string_array_field(
@@ -4310,6 +4324,42 @@ mod tests {
         )
         .unwrap_err();
         assert!(error.contains("default_ttl_seconds"), "{error}");
+    }
+
+    #[test]
+    fn cachefs_max_file_size_defaults_to_one_mib_and_is_configurable() {
+        let template = |cachefs: &str| {
+            format!(
+                r#"{{"service_name": "test-service",
+                    "cache": {{"provider": "redis", "params": {{}}}},
+                    "storage": {{"agfs": {{"cachefs": {cachefs}}}}}}}"#
+            )
+        };
+        let default =
+            parse_cache_config("cachefs-file-default", &template(r#"{"backend": "cache"}"#))
+                .unwrap();
+        assert_eq!(default.max_file_size_bytes, 1024 * 1024);
+
+        let disabled = parse_cache_config(
+            "cachefs-file-off",
+            &template(r#"{"backend": "cache", "max_file_size_bytes": 0}"#),
+        )
+        .unwrap();
+        assert_eq!(disabled.max_file_size_bytes, 0);
+
+        let runtime = cache_config_from_value(
+            &serde_json::json!({"enabled": true, "max_file_size_bytes": 4096}),
+            "test-service",
+        )
+        .unwrap();
+        assert_eq!(runtime.max_file_size_bytes, 4096);
+
+        let error = parse_cache_config(
+            "cachefs-file-type",
+            &template(r#"{"backend": "cache", "max_file_size_bytes": "big"}"#),
+        )
+        .unwrap_err();
+        assert!(error.contains("max_file_size_bytes"), "{error}");
     }
 
     #[test]

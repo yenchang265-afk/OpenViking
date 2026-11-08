@@ -133,6 +133,14 @@ async fn measure_depth(config: &RedisProviderConfig, depth: usize) {
         dir_hits.push(started.elapsed());
     }
 
+    reader.read(&path, 0, 0).await.unwrap();
+    let mut read_hits = Vec::with_capacity(SAMPLES);
+    for _ in 0..SAMPLES {
+        let started = Instant::now();
+        reader.read(&path, 0, 0).await.unwrap();
+        read_hits.push(started.elapsed());
+    }
+
     // Background invalidation: the write returns before buckets are deleted.
     let mut single_writes = Vec::with_capacity(SAMPLES / 4);
     for _ in 0..SAMPLES / 4 {
@@ -164,6 +172,7 @@ async fn measure_depth(config: &RedisProviderConfig, depth: usize) {
 
     report(&format!("depth {depth} stat hit"), stat_hits);
     report(&format!("depth {depth} read_dir hit"), dir_hits);
+    report(&format!("depth {depth} read hit"), read_hits);
     report(&format!("depth {depth} stat miss+fill"), misses);
     report(&format!("depth {depth} write single"), single_writes);
     report(&format!("depth {depth} write multi"), multi_writes);
