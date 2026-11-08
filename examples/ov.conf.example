@@ -8,7 +8,7 @@
         "root_api_key": null,
         "cors_origins": ["*"],
         "agent_evolution": {
-            "enabled": false,
+            "enabled": false
         },
         "observability": {
             "metrics": {
@@ -16,7 +16,7 @@
                 "account_dimension": {
                     "enabled": true,
                     "max_active_accounts": 100,
-                    "metric_allowlist": ["openviking_*"],
+                    "metric_allowlist": ["openviking_*"]
                 },
                 "exporters": {
                     "prometheus": {"enabled": true},
@@ -27,9 +27,9 @@
                         "endpoint": "localhost:4317",
                         "service_name": "openviking-server",
                         "export_interval_ms": 10000,
-                        "headers": {},
-                    },
-                },
+                        "headers": {}
+                    }
+                }
             },
             "traces": {
                 "enabled": false,
@@ -37,7 +37,7 @@
                 "tls": {"insecure": false},
                 "endpoint": "localhost:4317",
                 "service_name": "openviking-server",
-                "headers": {},
+                "headers": {}
             },
             "logs": {
                 "enabled": false,
@@ -45,9 +45,9 @@
                 "tls": {"insecure": false},
                 "endpoint": "localhost:4317",
                 "service_name": "openviking-server",
-                "headers": {},
-            },
-        },
+                "headers": {}
+            }
+        }
     },
     "cache": {
         "provider": "redis",
@@ -57,15 +57,15 @@
             "pool_size": 32,
             "connect_timeout_ms": 1000,
             "command_timeout_ms": 1000,
-            "default_ttl_seconds": 3600,
-        },
+            "default_ttl_seconds": 3600
+        }
     },
     "storage": {
         "workspace": "./data",
         "vectordb": {
             "name": "context",
             "backend": "local",
-            "project": "default",
+            "project": "default"
         },
         "agfs": {
             "backend": "local",
@@ -85,10 +85,10 @@
             "cachefs": {
                 "backend": "local",
                 "max_file_size_bytes": 1048576,
-                "bypass_prefixes": ["/queue", "/tmp"],
+                "bypass_prefixes": ["/queue", "/tmp"]
             },
             "queuefs": {
-                "backend": "sqlite",
+                "backend": "sqlite"
             },
             "pathlock": {
                 "provider": "filesystem",
@@ -103,9 +103,9 @@
                 "prefix": "",
                 "use_ssl": true,
                 "auto_detect_content_type": false,
-                "disable_batch_delete": false,
-            },
-        },
+                "disable_batch_delete": false
+            }
+        }
     },
     "queue_workers": {
         "external_parse": {"max_concurrent": 4},
@@ -114,7 +114,7 @@
             "file_vectorization_concurrency": 8
         },
         "session_commit": {"max_concurrent": 8},
-        "external_task": {"max_concurrent": 10},
+        "external_task": {"max_concurrent": 10}
     },
     "compile_api": {
         "shuffle_batch_size": 4
@@ -129,11 +129,11 @@
             "api_base": "https://api.openai.com/v1",
             "dimension": 1536,
             "provider": "openai",
-            "input": "text",
+            "input": "text"
         },
         "text_source": "content_only",
         "max_input_tokens": 4096,
-        "circuit_breaker": {"failure_threshold": 5, "reset_timeout": 60, "max_reset_timeout": 600},
+        "circuit_breaker": {"failure_threshold": 5, "reset_timeout": 60, "max_reset_timeout": 600}
     },
     "embedding_ollama_example": {
         "_comment": "For local deployment with Ollama (no API key required):",
@@ -142,8 +142,8 @@
             "model": "nomic-embed-text",
             "api_base": "http://localhost:11434/v1",
             "dimension": 768,
-            "input": "text",
-        },
+            "input": "text"
+        }
     },
     "vlm": {
         "model": "gpt-4o-mini",
@@ -159,8 +159,8 @@
             "file_processing_timeout": 1800,
             "file_poll_interval": 3,
             "max_concurrent": 2,
-            "video_fps": 1.0,
-        },
+            "video_fps": 1.0
+        }
     },
     "vlm_codex_example": {
         "_comment": "For Codex OAuth via subscription. Complete sign-in from `openviking-server init`. OV stores tokens in ~/.openviking/codex_auth.json and can bootstrap from an existing Codex CLI auth file if needed.",
@@ -169,7 +169,7 @@
         "api_base": "https://chatgpt.com/backend-api/codex",
         "reasoning_effort": "xhigh",
         "temperature": 0.0,
-        "max_retries": 2,
+        "max_retries": 2
     },
     "vlm_kimi_example": {
         "_comment": "For Kimi Coding subscription. OpenViking applies the recommended provider defaults automatically.",
@@ -178,7 +178,7 @@
         "api_key": "{your-kimi-subscription-api-key}",
         "api_base": "https://api.kimi.com/coding",
         "temperature": 0.0,
-        "max_retries": 2,
+        "max_retries": 2
     },
     "vlm_glm_example": {
         "_comment": "For GLM Coding Plan via Z.AI subscription API key. Use a vision-capable model for multimodal parsing.",
@@ -187,13 +187,13 @@
         "api_key": "{your-zai-api-key}",
         "api_base": "https://api.z.ai/api/coding/paas/v4",
         "temperature": 0.0,
-        "max_retries": 2,
+        "max_retries": 2
     },
     "rerank": {
         "provider": "cohere",
         "api_key": "{your-api-key}",
         "model_name": "rerank-v3.5",
-        "threshold": 0.1,
+        "threshold": 0.1
     },
     "rerank_openai_example": {
         "_comment": "For OpenAI-compatible rerank providers (e.g. DashScope qwen3-rerank):",
@@ -201,7 +201,7 @@
         "api_key": "{your-api-key}",
         "api_base": "https://dashscope.aliyuncs.com/compatible-api/v1/reranks",
         "model": "qwen3-rerank",
-        "threshold": 0.1,
+        "threshold": 0.1
     },
     "rerank_jev_example": {
         "_comment": "For direct Jev access through the TypeSafe System One API:",
@@ -209,7 +209,7 @@
         "api_key": "{your-typesafe-api-key}",
         "model": "jev-latest",
         "log_payloads": false,
-        "threshold": 0.1,
+        "threshold": 0.1
     },
     "rerank_jev_vercel_example": {
         "_comment": "For Jev through Vercel AI Gateway (TypeSafe-compatible endpoint):",
@@ -217,20 +217,20 @@
         "api_key": "{your-vercel-ai-gateway-api-key}",
         "api_base": "https://ai-gateway.vercel.sh/typesafe/v1/systemone",
         "model": "typesafe-ai/jev",
-        "threshold": 0.1,
+        "threshold": 0.1
     },
     "rules": {
         "jev_rule_matcher": {
             "provider": "typesafe",
             "api_key": "{your-typesafe-api-key}",
             "timeout": 30,
-            "log_payloads": false,
+            "log_payloads": false
         },
-        "scenario_irrelevance_threshold": 0.9,
+        "scenario_irrelevance_threshold": 0.9
     },
     "retrieval": {
         "recall_intent_timeout_s": 5.0,
-        "recall_rewrite_timeout_s": 30.0,
+        "recall_rewrite_timeout_s": 30.0
     },
     "auto_generate_l0": true,
     "auto_generate_l1": true,
@@ -243,7 +243,7 @@
         "extraction_enabled": true,
         "extraction_output_format": "python",
         "maintenance_review_tokens": 1000,
-        "session_skill_extraction_enabled": false,
+        "session_skill_extraction_enabled": false
     },
     "ingest": {
         "enabled": false,
@@ -256,20 +256,20 @@
             "codex": {"enabled": false, "mode": "backfill"},
             "opencode": {"enabled": false, "mode": "watch", "experimental": true},
             "hermes": {"enabled": false, "mode": "both", "user_field": "sender"},
-            "openclaw": {"enabled": false, "mode": "both", "user_field": "sender"},
-        },
+            "openclaw": {"enabled": false, "mode": "both", "user_field": "sender"}
+        }
     },
     "bot": {
         "gateway": {
             "host": "127.0.0.1",
             "port": 18790,
-            "token": null,
+            "token": null
         },
         "ov_server": {
             "server_url": null,
             "api_key_type": "user",
-            "api_key": null,
-        },
+            "api_key": null
+        }
     },
     "log": {
         "level": "INFO",
@@ -277,7 +277,7 @@
         "output": "stdout",
         "rotation": true,
         "rotation_days": 3,
-        "rotation_interval": "midnight",
+        "rotation_interval": "midnight"
     },
     "parsers": {
         "pdf": {
@@ -292,7 +292,7 @@
                 "backend": "hybrid-auto-engine",
                 "lang_list": ["ch"],
                 "parse_method": "auto"
-            },
+            }
         },
         "code": {
             "github_raw_domain": "raw.githubusercontent.com",
@@ -308,7 +308,7 @@
                 "git.sr.ht"
             ],
             "github_domains": ["github.com", "www.github.com"],
-            "gitlab_domains": ["gitlab.com", "www.gitlab.com"],
+            "gitlab_domains": ["gitlab.com", "www.gitlab.com"]
         },
         "image": {
             "enable_ocr": false,
@@ -325,35 +325,35 @@
             "enable_transcription": true,
             "transcription_model": "whisper-large-v3",
             "language": null,
-            "extract_metadata": true,
+            "extract_metadata": true
         },
         "video": {
             "extract_frames": true,
             "frame_interval": 10.0,
             "enable_transcription": true,
             "enable_vlm_description": false,
-            "max_duration": 3600.0,
+            "max_duration": 3600.0
         },
         "markdown": {
             "preserve_links": true,
             "extract_frontmatter": true,
             "include_metadata": true,
-            "max_heading_depth": 3,
+            "max_heading_depth": 3
         },
         "anydoc": {
-            "enabled": true,
+            "enabled": true
         },
         "html": {
             "extract_text_only": false,
             "preserve_structure": true,
             "clean_html": true,
-            "extract_metadata": true,
+            "extract_metadata": true
         },
         "text": {
             "detect_language": true,
             "split_by_paragraphs": true,
             "max_paragraph_length": 1000,
-            "preserve_line_breaks": false,
+            "preserve_line_breaks": false
         },
         "webfeed": {
             "max_pages": 200,
@@ -363,14 +363,14 @@
             "same_host_only": true,
             "respect_robots": true,
             "max_depth": 2,
-            "suggest_feed": true,
-        },
+            "suggest_feed": true
+        }
     },
     "encryption": {
         "enabled": true,
         "provider": "local",
         "local": {"key_file": "~/.openviking/master.key"},
-        "api_key_hashing": {"enabled": false},
+        "api_key_hashing": {"enabled": false}
     },
     "encryption_vault_example": {
         "_comment": "For HashiCorp Vault integration:",
@@ -383,7 +383,7 @@
             "kv_mount_point": "secret",
             "kv_version": 1,
             "root_key_name": "openviking-root-key",
-            "encrypted_root_key_key": "openviking-encrypted-root-key",
-        },
-    },
+            "encrypted_root_key_key": "openviking-encrypted-root-key"
+        }
+    }
 }

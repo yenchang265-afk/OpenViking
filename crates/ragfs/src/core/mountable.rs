@@ -1955,6 +1955,12 @@ mod tests {
         use crate::plugins::QueueFSPlugin;
 
         let provider = Arc::new(MemoryMockProvider::new().with_script_handler(|request| {
+            // Stopping QueueFS releases its recovery-leader lease, held or not.
+            if request.script_id == "queuefs.release_recovery_leader.v1" {
+                return crate::cache_runtime::ScriptResult::encode(
+                    &crate::cache_runtime::ScriptValue::Boolean(false),
+                );
+            }
             panic!(
                 "script execution is outside this shutdown test's scope: {}",
                 request.script_id
