@@ -317,16 +317,14 @@ RAGFS 通過一次原生 `metrics()` 呼叫讀取檔案系統、Cache、multi-ba
 | `openviking_ragfs_s3_attempts_total` | Counter | `operation` | S3 HTTP 嘗試次數；減去 `s3_requests_total` 即重試次數 |
 | `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API 呼叫耗時（含重試與退避） |
 | `openviking_ragfs_s3_inflight_requests` | Gauge | 無 | 進行中的 S3 API 呼叫數 |
-| `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | 檔案和目錄快取命中、未命中次數 |
-| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | 依檔案系統操作（`read`、`read_dir`、`tree`、`grep`）統計的快取 `hit`/`miss`/`bypass` 次數 |
+| `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | 查詢與檔案讀取快取的命中、未命中次數；`kind="query"` |
+| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | 依操作（`read`（完整檔案讀取；部分讀取與超過上限的讀取計為略過）、`stat`、`read_dir`、`tree`、`glob`、`grep`）統計的快取 `hit`/`miss`/`bypass` 次數 |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | 無 | 快取未命中後的後端讀取次數 |
-| `openviking_ragfs_cache_operations_total` | Counter | `operation` | 快取 put/delete 嘗試次數 |
+| `openviking_ragfs_cache_operations_total` | Counter | `operation` | 快取 get/put/delete 嘗試次數 |
 | `openviking_ragfs_cache_invalidations_total` | Counter | 無 | 已完成的快取失效次數 |
-| `openviking_ragfs_cache_errors_total` | Counter | 無 | 旁路模式下忽略的快取錯誤數 |
-| `openviking_ragfs_cache_policy_bypasses_total` | Counter | 無 | 繞過快取的讀取次數 |
-| `openviking_ragfs_cache_bytes_total` | Counter | `source` | 來自後端和快取的位元組數 |
+| `openviking_ragfs_cache_errors_total` | Counter | 無 | provider 或快取資料錯誤數 |
+| `openviking_ragfs_cache_invalidation_failures_total` | Counter | 無 | 重試後仍失敗的快取 bucket 刪除次數；啟用 `multi_instance` 時，其他實例在快取 TTL 到期前可能讀到這些路徑的過期結果 |
 | `openviking_ragfs_cache_operation_duration_seconds_total` | Counter | `operation` | get/put/delete 累計耗時 |
-| `openviking_ragfs_cache_inflight_events_total` | Counter | `event` | leader/follower/backend_saved 次數 |
 | `openviking_ragfs_multiwrite_background_tasks` | Gauge | 無 | 每個 mount 的活躍 flush runtime，值為 `0` 或 `1` |
 | `openviking_ragfs_multiwrite_pending_events` | Gauge | 無 | 已提交且正在排隊、執行中或重試中的事件數 |
 | `openviking_ragfs_multiwrite_errors_total` | Counter | `worker` | `flush`、`checkpoint`、`catch_up`、`gc` 的最終失敗次數 |

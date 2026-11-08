@@ -1906,6 +1906,15 @@ mod tests {
         let mut perms = std::fs::metadata(&blocked_dir).unwrap().permissions();
         perms.set_mode(0);
         std::fs::set_permissions(&blocked_dir, perms).unwrap();
+        if std::fs::read_dir(&blocked_dir).is_ok() {
+            // Root (or CAP_DAC_OVERRIDE) ignores mode 0, so the unreadable subtree
+            // this test needs cannot be created here.
+            let mut restore = std::fs::metadata(&blocked_dir).unwrap().permissions();
+            restore.set_mode(old_mode);
+            std::fs::set_permissions(&blocked_dir, restore).unwrap();
+            eprintln!("skipping: directory permissions are not enforced for this user");
+            return;
+        }
 
         let first = fs
             .glob_directory("/", "**/*.md", false, Some(2), None, None)

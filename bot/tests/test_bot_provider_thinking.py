@@ -164,9 +164,11 @@ async def test_vlm_adapter_preserves_native_media_and_adapts_mixed_credential_ch
     class UnverifiedConfig(litellm.OpenAIGPTConfig):
         pass
 
-    monkeypatch.setattr(
-        ProviderConfigManager, "get_provider_chat_config", lambda **kwargs: UnverifiedConfig()
-    )
+    if mixed:
+        # Only the LiteLLM backup needs an unverified transport (user-message images).
+        monkeypatch.setattr(
+            ProviderConfigManager, "get_provider_chat_config", lambda **kwargs: UnverifiedConfig()
+        )
     native = VLMFactory.create({"provider": "openai-codex", "model": "gpt-5.3-codex"})
     backup = (
         # A LiteLLM route without verified tool-media support takes user-message images.

@@ -11,24 +11,24 @@ describe('normalizeCacheStats', () => {
       operations: [
         { operation: 'grep', hits: 0, misses: 0, bypasses: 2 },
         { operation: 'custom', hits: 1, misses: 1 },
-        { operation: 'read', hits: 3, misses: 1, hit_rate: 'bad' },
+        { operation: 'stat', hits: 3, misses: 1, hit_rate: 'bad' },
         { hits: 9 },
       ],
-      kinds: [{ kind: 'file', hits: 3, misses: 1 }],
+      kinds: [{ kind: 'query', hits: 3, misses: 1 }],
     })
 
     expect(stats.enabled).toBe(true)
     expect(stats.hitRate).toBe(0.75)
     expect(stats.lookups).toBe(4)
     expect(stats.operations.map((item) => item.operation)).toEqual([
-      'read',
+      'stat',
       'grep',
       'custom',
     ])
     expect(stats.operations[0].hitRate).toBe(0.75)
     expect(stats.operations[1]).toMatchObject({ bypasses: 2, hitRate: null })
     expect(stats.kinds).toEqual([
-      { hitRate: 0.75, hits: 3, kind: 'file', misses: 1 },
+      { hitRate: 0.75, hits: 3, kind: 'query', misses: 1 },
     ])
   })
 

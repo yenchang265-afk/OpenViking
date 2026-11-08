@@ -16,8 +16,6 @@ use super::stats_wrapper::StatsWrappedFS;
 
 use super::errors::{Error, Result};
 #[cfg(feature = "cache")]
-use crate::cache::CachePolicy;
-#[cfg(feature = "cache")]
 use crate::cache_runtime::{
     CacheOperation, CacheRuntime, DynamicProviderConfig, RedisProviderConfig,
 };
@@ -81,8 +79,10 @@ pub struct CacheFsConfig {
     pub enabled: bool,
     /// OpenViking instance name used by CacheFS keys.
     pub service_name: String,
-    /// Existing CacheFS policy and traversal settings.
-    pub policy: CachePolicy,
+    /// Several instances share this namespace: invalidate before mutations return.
+    pub multi_instance: bool,
+    /// Largest file whose full contents CacheFS stores; `0` disables file caching.
+    pub max_file_size_bytes: usize,
 }
 
 #[cfg(feature = "cache")]
@@ -91,7 +91,8 @@ impl Default for CacheFsConfig {
         Self {
             enabled: false,
             service_name: String::new(),
-            policy: CachePolicy::default(),
+            multi_instance: false,
+            max_file_size_bytes: crate::cache::DEFAULT_MAX_FILE_SIZE_BYTES,
         }
     }
 }
@@ -102,7 +103,7 @@ impl Default for CacheFsConfig {
 pub struct CacheStackConfig {
     /// One global provider. `None` means no Runtime is initialized.
     pub provider: Option<CacheRuntimeProviderConfig>,
-    /// CacheFS enablement and policy.
+    /// CacheFS enablement.
     pub cachefs: CacheFsConfig,
 }
 
@@ -181,20 +182,38 @@ pub async fn build_configured_stack(
         None => None,
     };
     if cache.cachefs.enabled {
-        validate_cachefs_provider(
+        runtime
+            .as_ref()
+            .expect("cache provider is validated")
+            .require_operations(&[
+                CacheOperation::Hget,
+                CacheOperation::Hset,
+                CacheOperation::Expire,
+                CacheOperation::Zadd,
+                CacheOperation::Zscan,
+                CacheOperation::ZrangeByScore,
+                CacheOperation::Zrem,
+                CacheOperation::Unlink,
+                CacheOperation::ExecuteScript,
+            ])
+            .map_err(|error| Error::config(format!("CacheFS provider is incompatible: {error}")))?;
+        validate_cachefs_multi_instance(
             runtime.as_ref().expect("cache provider is validated"),
-            &cache.cachefs.policy,
+            cache.cachefs.multi_instance,
         )?;
     }
     let mountable = if cache.cachefs.enabled {
-        Arc::new(MountableFS::with_cache_runtime(
-            runtime
-                .as_ref()
-                .expect("cache provider is validated")
-                .clone(),
-            cache.cachefs.service_name,
-            cache.cachefs.policy,
-        ))
+        Arc::new(
+            MountableFS::with_cache_runtime(
+                runtime
+                    .as_ref()
+                    .expect("cache provider is validated")
+                    .clone(),
+                cache.cachefs.service_name,
+            )
+            .with_cache_multi_instance(cache.cachefs.multi_instance)
+            .with_cache_max_file_size_bytes(cache.cachefs.max_file_size_bytes),
+        )
     } else if let Some(runtime) = runtime.as_ref() {
         Arc::new(MountableFS::with_shared_cache_runtime(runtime.clone()))
     } else {
@@ -203,27 +222,18 @@ pub async fn build_configured_stack(
     build_stack_with_mountable_and_runtime(config, mountable, runtime).await
 }
 
-/// Check that the shared provider supports every operation CacheFS issues.
+/// Require a cache TTL when several instances share the CacheFS namespace.
+///
+/// A bucket delete that fails after retries leaves an entry other instances can
+/// still read; the TTL is what bounds that window.
 #[cfg(feature = "cache")]
-fn validate_cachefs_provider(runtime: &CacheRuntime, policy: &CachePolicy) -> Result<()> {
-    let operations = [
-        CacheOperation::Get,
-        CacheOperation::Set,
-        CacheOperation::Del,
-        CacheOperation::Mget,
-    ]
-    .into_iter()
-    // Without atomic INCRBY, bumps from different processes can overwrite each other.
-    .chain(policy.multi_instance().then_some(CacheOperation::IncrBy))
-    .collect::<Vec<_>>();
-    runtime.require_operations(&operations).map_err(|error| {
-        let hint = if policy.multi_instance() {
-            " (cachefs multi_instance requires atomic incrby)"
-        } else {
-            ""
-        };
-        Error::config(format!("CacheFS provider is incompatible{hint}: {error}"))
-    })
+fn validate_cachefs_multi_instance(runtime: &CacheRuntime, multi_instance: bool) -> Result<()> {
+    if multi_instance && runtime.default_ttl().map_or(true, |ttl| ttl.is_zero()) {
+        return Err(Error::config(
+            "cachefs multi_instance requires a cache default TTL greater than 0".to_string(),
+        ));
+    }
+    Ok(())
 }
 
 async fn build_stack_with_mountable_and_runtime(
@@ -442,21 +452,26 @@ mod tests {
 
     #[cfg(feature = "cache")]
     #[test]
-    fn multi_instance_cachefs_requires_atomic_incr_by() {
+    fn multi_instance_cachefs_requires_a_cache_ttl() {
         use crate::cache_runtime::MemoryMockProvider;
+        use std::time::Duration;
 
-        let without_incr_by = CacheRuntime::memory_with_provider(Arc::new(
-            MemoryMockProvider::new().without_incr_by(),
-        ));
-        let single = CachePolicy::default();
-        let multi = CachePolicy::default().with_multi_instance(true);
+        let runtime = |ttl| {
+            CacheRuntime::memory_with_provider_and_default_ttl(
+                Arc::new(MemoryMockProvider::new()),
+                ttl,
+            )
+        };
+        let without_ttl = runtime(None);
 
-        assert!(validate_cachefs_provider(&without_incr_by, &single).is_ok());
-        let error = validate_cachefs_provider(&without_incr_by, &multi)
+        assert!(validate_cachefs_multi_instance(&without_ttl, false).is_ok());
+        let error = validate_cachefs_multi_instance(&without_ttl, true)
             .unwrap_err()
             .to_string();
         assert!(error.contains("multi_instance"), "{error}");
-        assert!(validate_cachefs_provider(&CacheRuntime::memory(), &multi).is_ok());
+        assert!(
+            validate_cachefs_multi_instance(&runtime(Some(Duration::from_secs(60))), true).is_ok()
+        );
     }
 
     #[tokio::test]

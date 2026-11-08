@@ -210,8 +210,7 @@ const workspace = {
       hits: '命中',
       kind: '物件類型',
       kinds: {
-        directory: '目錄',
-        file: '檔案',
+        query: '查詢與檔案讀取',
       },
       loadFailed: '快取統計載入失敗',
       lookups: '查詢次數',
@@ -219,20 +218,24 @@ const workspace = {
       noLookups: '尚無快取查詢',
       operation: '操作',
       operations: {
+        glob: 'Glob',
         grep: 'Grep',
         read: '讀取檔案',
         read_dir: '列出目錄',
+        stat: 'Stat',
         tree: '目錄樹',
       },
       operationHints: {
-        grep: '快取 grep 遍歷時的檔案與目錄讀取',
-        read: '完整檔案讀取',
+        glob: 'Glob 結果',
+        grep: 'Grep 結果',
+        read: '完整檔案讀取；部分讀取與超過大小上限的讀取會略過快取',
         read_dir: '目錄列表（ls）',
-        tree: '快取 tree 遍歷時的目錄讀取',
+        stat: '檔案與目錄中繼資料',
+        tree: '目錄樹結果',
       },
       overall: '整體命中率',
       sinceStart:
-        '統計涵蓋伺服器啟動以來所有啟用快取的掛載點。命中率不含略過的讀取。',
+        '統計涵蓋伺服器啟動以來所有啟用快取的掛載點。命中率不含略過的查詢。',
     },
     detail: {
       noData: '暫無監控資料',

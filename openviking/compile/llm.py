@@ -107,11 +107,18 @@ class CompileProvider:
             raise
         except Exception as exc:
             logger.warning("[COMPILE] VLM call failed: %s", exc)
-            return ChatResponse(
-                content=f"Error calling VLM: {exc}",
-                finish_reason="error",
-                error_kind=model_error_kind(exc),
-            )
+            kind = model_error_kind(exc)
+            content = f"Error calling VLM: {exc}"
+            if (
+                kind in {ModelErrorKind.INVALID_REQUEST, ModelErrorKind.UNSUPPORTED}
+                and media.inline_media_bytes(messages) > 0
+            ):
+                # Image capability is not declared reliably, so explain a likely cause here.
+                content += (
+                    " (this request carried image evidence; image sources need a"
+                    " vision-capable vlm model)"
+                )
+            return ChatResponse(content=content, finish_reason="error", error_kind=kind)
         if isinstance(result, str):
             return ChatResponse(content=result)
         return ChatResponse(

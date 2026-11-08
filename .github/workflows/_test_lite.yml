@@ -86,3 +86,22 @@ jobs:
           tests/vectordb/test_cuvs_index.py \
           tests/vectordb/test_cuvs_collection.py \
           tests/vectordb/test_str_to_uint64.py
+
+    - name: Run Compile, Connector, Watch and durable-task unit tests
+      shell: bash
+      run: |
+        # A minimal server config; these suites mock storage and models.
+        mkdir -p "$RUNNER_TEMP/ov-workspace"
+        printf '{"storage":{"workspace":"%s"}}' "$RUNNER_TEMP/ov-workspace" > "$RUNNER_TEMP/ov.conf"
+        export OPENVIKING_CONFIG_FILE="$RUNNER_TEMP/ov.conf"
+        # Some suites import the ragfs_python binding directly.
+        export PYTHONPATH="openviking/lib${PYTHONPATH:+:$PYTHONPATH}"
+        uv run --no-sync pytest -q -o addopts='' \
+          tests/compile \
+          tests/server/test_compile_studio.py \
+          tests/session/memory/test_consolidation_compile.py \
+          tests/connector \
+          tests/service/test_resource_service_connector.py \
+          tests/service/test_resource_service_watch.py \
+          tests/resource \
+          tests/server/test_shared_deployment.py

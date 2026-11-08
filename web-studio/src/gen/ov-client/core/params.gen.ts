@@ -62,7 +62,7 @@ type KeyMap = Map<
     }
 >;
 
-const buildKeyMap = (fields: FieldsConfig, map?: KeyMap): KeyMap => {
+function buildKeyMap(fields: FieldsConfig, map?: KeyMap): KeyMap {
   if (!map) {
     map = new Map();
   }
@@ -85,7 +85,7 @@ const buildKeyMap = (fields: FieldsConfig, map?: KeyMap): KeyMap => {
   }
 
   return map;
-};
+}
 
 interface Params {
   body?: unknown;
@@ -94,16 +94,16 @@ interface Params {
   query: Record<string, unknown>;
 }
 
-const stripEmptySlots = (params: Params) => {
+function stripEmptySlots(params: Params): void {
   for (const [slot, value] of Object.entries(params)) {
     if (slot === 'body') continue;
     if (value && typeof value === 'object' && !Array.isArray(value) && !Object.keys(value).length) {
       delete params[slot as Slot];
     }
   }
-};
+}
 
-export const buildClientParams = (args: ReadonlyArray<unknown>, fields: FieldsConfig) => {
+export function buildClientParams(args: ReadonlyArray<unknown>, fields: FieldsConfig): Params {
   const params: Params = {
     headers: Object.create(null),
     path: Object.create(null),
@@ -112,14 +112,14 @@ export const buildClientParams = (args: ReadonlyArray<unknown>, fields: FieldsCo
 
   const map = buildKeyMap(fields);
 
-  const writeSlot = (slot: Slot, key: string, value: unknown) => {
+  function writeSlot(slot: Slot, key: string, value: unknown): void {
     let record = params[slot] as Record<string, unknown> | undefined;
     if (record === undefined) {
       record = Object.create(null) as Record<string, unknown>;
       params[slot] = record;
     }
     record[key] = value;
-  };
+  }
 
   let config: FieldsConfig[number] | undefined;
 
@@ -175,4 +175,4 @@ export const buildClientParams = (args: ReadonlyArray<unknown>, fields: FieldsCo
   stripEmptySlots(params);
 
   return params;
-};
+}

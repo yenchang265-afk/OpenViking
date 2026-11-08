@@ -21,7 +21,10 @@ import '@xyflow/react/dist/style.css'
 
 import type { VikingFsEntry } from '#/shared/types/viking-fs'
 import { cn } from '#/shared/lib/utils'
-import { normalizeVikingUri, parentVikingUri } from '../-lib/uri'
+import {
+  normalizeVikingUri,
+  parentVikingUri,
+} from '#/features/workbench/arranger/lib/uri'
 
 type GraphData = {
   entry: VikingFsEntry

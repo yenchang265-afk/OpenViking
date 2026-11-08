@@ -324,16 +324,14 @@ seconds, for example `123 ns = 0.000000123 seconds`.
 | `openviking_ragfs_s3_attempts_total` | Counter | `operation` | S3 HTTP attempts; minus `s3_requests_total` is the number of retries |
 | `openviking_ragfs_s3_request_duration_seconds` | Histogram | `operation` | S3 API call duration including retries and backoff |
 | `openviking_ragfs_s3_inflight_requests` | Gauge | none | S3 API calls currently in flight |
-| `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | file/directory cache hits and misses |
-| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | cache `hit`/`miss`/`bypass` per filesystem operation: `read`, `read_dir`, `tree`, `grep` |
+| `openviking_ragfs_cache_requests_total` | Counter | `kind, result` | query and file-read cache hits and misses; `kind="query"` |
+| `openviking_ragfs_cache_operation_requests_total` | Counter | `operation, result` | cache `hit`/`miss`/`bypass` per operation: `read` (full-file reads; ranged and oversized reads are bypasses), `stat`, `read_dir`, `tree`, `glob`, `grep` |
 | `openviking_ragfs_cache_backend_fallbacks_total` | Counter | none | backend loads after cache misses |
-| `openviking_ragfs_cache_operations_total` | Counter | `operation` | cache put/delete attempts |
+| `openviking_ragfs_cache_operations_total` | Counter | `operation` | cache get/put/delete attempts |
 | `openviking_ragfs_cache_invalidations_total` | Counter | none | completed invalidations |
-| `openviking_ragfs_cache_errors_total` | Counter | none | cache errors hidden by bypass mode |
-| `openviking_ragfs_cache_policy_bypasses_total` | Counter | none | reads bypassing cache |
-| `openviking_ragfs_cache_bytes_total` | Counter | `source` | bytes from backend/cache |
+| `openviking_ragfs_cache_errors_total` | Counter | none | provider or cache-data errors |
+| `openviking_ragfs_cache_invalidation_failures_total` | Counter | none | cache bucket deletes that still failed after retries; with `multi_instance`, other instances may serve stale results for those paths until the cache TTL |
 | `openviking_ragfs_cache_operation_duration_seconds_total` | Counter | `operation` | cumulative get/put/delete duration |
-| `openviking_ragfs_cache_inflight_events_total` | Counter | `event` | leader/follower/backend_saved counts |
 | `openviking_ragfs_multiwrite_background_tasks` | Gauge | none | active flush runtime, `0` or `1` per mount |
 | `openviking_ragfs_multiwrite_pending_events` | Gauge | none | submitted events that are queued, executing, or awaiting retry |
 | `openviking_ragfs_multiwrite_errors_total` | Counter | `worker` | final failures for `flush`, `checkpoint`, `catch_up`, or `gc` |

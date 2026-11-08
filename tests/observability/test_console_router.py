@@ -323,26 +323,19 @@ async def test_console_cache_reports_overall_and_per_operation_hit_rates(ragfs_s
     ragfs_service(
         [
             _counter("ragfs_operation_results_total", 9, plugin="localfs", operation="read"),
-            _counter("ragfs_cache_requests_total", 6, kind="file", result="hit"),
-            _counter("ragfs_cache_requests_total", 2, kind="file", result="miss"),
-            _counter("ragfs_cache_requests_total", 1, kind="directory", result="hit"),
-            _counter("ragfs_cache_requests_total", 1, kind="directory", result="miss"),
-            _counter("ragfs_cache_operation_requests_total", 6, operation="read", result="hit"),
-            _counter("ragfs_cache_operation_requests_total", 2, operation="read", result="miss"),
-            _counter("ragfs_cache_operation_requests_total", 3, operation="read", result="bypass"),
+            _counter("ragfs_cache_requests_total", 7, kind="query", result="hit"),
+            _counter("ragfs_cache_requests_total", 3, kind="query", result="miss"),
+            _counter("ragfs_cache_operation_requests_total", 6, operation="stat", result="hit"),
+            _counter("ragfs_cache_operation_requests_total", 2, operation="stat", result="miss"),
+            _counter("ragfs_cache_operation_requests_total", 3, operation="stat", result="bypass"),
             _counter("ragfs_cache_operation_requests_total", 0, operation="tree", result="hit"),
             _counter("ragfs_cache_operation_requests_total", 0, operation="tree", result="miss"),
             _counter("ragfs_cache_operation_requests_total", 1, operation="read_dir", result="hit"),
             _counter(
                 "ragfs_cache_operation_requests_total", 1, operation="read_dir", result="miss"
             ),
-            _counter("ragfs_cache_policy_bypasses_total", 3),
             _counter("ragfs_cache_errors_total", 1),
-            _counter("ragfs_cache_stale_versions_total", 5),
             _counter("ragfs_cache_invalidation_failures_total", 2),
-            _counter("ragfs_cache_bytes_total", 600, source="cache"),
-            _counter("ragfs_cache_bytes_total", 200, source="backend"),
-            _counter("ragfs_cache_inflight_events_total", 4, event="backend_saved"),
         ]
     )
     transport = httpx.ASGITransport(app=_app_with_runtime(None, request_context=_user_ctx))
@@ -356,15 +349,11 @@ async def test_console_cache_reports_overall_and_per_operation_hit_rates(ragfs_s
     assert result["hit_rate"] == pytest.approx(0.7)
     assert result["bypasses"] == 3
     assert result["errors"] == 1
-    assert result["stale_versions"] == 5
     assert result["invalidation_failures"] == 2
-    assert result["bytes_from_cache"] == 600
-    assert result["bytes_from_backend"] == 200
-    assert result["backend_saved"] == 4
-    assert [kind["kind"] for kind in result["kinds"]] == ["file", "directory"]
-    assert result["kinds"][1]["hit_rate"] == pytest.approx(0.5)
+    assert "stale_versions" not in result
+    assert [kind["kind"] for kind in result["kinds"]] == ["query"]
     assert result["operations"] == [
-        {"operation": "read", "hits": 6, "misses": 2, "bypasses": 3, "hit_rate": 0.75},
+        {"operation": "stat", "hits": 6, "misses": 2, "bypasses": 3, "hit_rate": 0.75},
         {"operation": "read_dir", "hits": 1, "misses": 1, "bypasses": 0, "hit_rate": 0.5},
         {"operation": "tree", "hits": 0, "misses": 0, "bypasses": 0, "hit_rate": None},
     ]

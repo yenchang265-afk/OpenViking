@@ -147,13 +147,15 @@ export type ConsoleCacheLookupCounts = {
 }
 
 export type ConsoleCacheKindStats = ConsoleCacheLookupCounts & {
-  kind?: 'file' | 'directory' | (string & {})
+  kind?: 'query' | (string & {})
 }
 
 export type ConsoleCacheOperation =
   | 'read'
+  | 'stat'
   | 'read_dir'
   | 'tree'
+  | 'glob'
   | 'grep'
   | (string & {})
 

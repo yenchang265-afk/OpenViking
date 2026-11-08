@@ -10,6 +10,7 @@ import {
 } from '@testing-library/react'
 import type { PropsWithChildren } from 'react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { hasStudioAccountScope } from '#/features/connection/lib/studio-mode'
 
 const state = vi.hoisted(() => ({
   role: 'root',
@@ -406,7 +407,9 @@ it.each([
 ] as const)(
   'omits Account and User controls and directory queries when the page has no Account scope: %s',
   (path) => {
-    mount(path, false)
+    // The header derives the scope from the page path; these pages are management pages.
+    expect(hasStudioAccountScope(path)).toBe(false)
+    mount('/admin/settings', hasStudioAccountScope(path))
     expect(
       screen.getByRole('button', { name: 'connections.switch' }),
     ).toBeTruthy()

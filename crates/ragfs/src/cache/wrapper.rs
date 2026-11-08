@@ -1,42 +1,122 @@
 //! A transparent [`FileSystem`](crate::FileSystem) cache wrapper.
 
-use super::envelope::{CacheEnvelope, CacheObjectKind};
-use super::versions::{
-    ancestor_scopes, normalize_path, KeyKind, VersionMemo, VersionSnapshot, VersionStore,
+use super::envelope::{decode_file_content, encode_file_content, QueryCacheEnvelope};
+use super::{CacheMetrics, CacheOperation};
+use crate::cache_runtime::{
+    CacheError, CacheResult, CacheRuntime, ScriptDefinition, ScriptRequest, ScriptValue,
 };
-use super::{CacheMetrics, CacheOperation, CachePolicy, CacheTraversalMode};
-use crate::cache_runtime::{CacheResult, CacheRuntime, SetOptions, SetResult};
-use crate::core::filesystem::{
-    apply_read_dir_options, compile_grep_regex, is_excluded_path, normalize_prefix_path,
-    paginate_entries, relative_depth, relative_match_file,
-};
-use crate::core::grep::GrepLineCollector;
-use crate::core::types::GrepContextLine;
+use crate::core::filesystem::{apply_read_dir_options, normalize_prefix_path};
+use crate::core::internal_names::is_hidden_internal_name;
 use crate::core::{
-    FileInfo, FileSystem, GlobPage, GrepMatch, GrepOptions, GrepResult, ListSortBy,
-    MultiWriteWrappedFS, Result, SortOrder, TreeEntry, WriteFlag,
+    FileInfo, FileSystem, GlobPage, GrepOptions, GrepResult, ListSortBy, Result, SortOrder,
+    TreeEntry, WriteFlag,
 };
 use async_trait::async_trait;
 use bytes::Bytes;
-use futures::future::join_all;
 use futures::stream::{self, StreamExt};
-use regex::Regex;
+use rand::Rng;
+use serde::de::DeserializeOwned;
+use serde::Serialize;
+use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::future::Future;
 use std::path::Path;
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio::sync::{Mutex, RwLock, RwLockWriteGuard};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use tokio::sync::Mutex;
+use tracing::{error, warn};
+use uuid::Uuid;
+use xxhash_rust::xxh3::xxh3_128;
 
-const GREP_CACHE_FILE_CONCURRENCY: usize = 8;
-/// Backoff between attempts to bump counters that failed after a mutation.
-const BUMP_RETRY_DELAYS: [Duration; 3] = [
-    Duration::from_millis(10),
-    Duration::from_millis(50),
-    Duration::from_millis(200),
+const QUERY_INDEX_GC_TRIGGER_THRESHOLD: u64 = 64;
+const UNLINK_MAX_RETRIES: u32 = 3;
+const UNLINK_RETRY_BASE_MS: u64 = 10;
+const UNLINK_CONCURRENCY: usize = 16;
+/// Default largest file whose full contents CacheFS stores.
+pub const DEFAULT_MAX_FILE_SIZE_BYTES: usize = 1024 * 1024;
+/// HASH field holding a file's contents in its `read` bucket.
+const FILE_CONTENT_FIELD: &str = "content";
+const PENDING_EPOCH_TTL_MS: u64 = 300_000;
+const BEGIN_FILL_SCRIPT_ID: &str = "ragfs.cache.query.begin_fill.v1";
+const FILL_SCRIPT_ID: &str = "ragfs.cache.query.fill_if_epoch.v1";
+const DELETE_BUCKET_SCRIPT_ID: &str = "ragfs.cache.query.delete_bucket.v1";
+const BEGIN_FILL_SCRIPT: &str = r#"
+local epoch = redis.call("HGET", KEYS[1], "__epoch")
+local created = 0
+local now_ms = tonumber(ARGV[5])
+local score
+if not epoch then
+    epoch = ARGV[2]
+    created = 1
+    redis.call("HSET", KEYS[1], "__epoch", epoch)
+end
+local value = redis.call("HGET", KEYS[1], ARGV[1])
+local ttl = tonumber(ARGV[3])
+if ttl > 0 then
+    redis.call("PEXPIRE", KEYS[1], ttl)
+    score = now_ms + ttl
+elseif created == 1 then
+    redis.call("PEXPIRE", KEYS[1], ARGV[4])
+    score = now_ms + tonumber(ARGV[4])
+else
+    local pttl = redis.call("PTTL", KEYS[1])
+    if pttl >= 0 then score = now_ms + pttl
+    else score = tonumber(ARGV[6]) end
+end
+redis.call("ZADD", KEYS[2], score, KEYS[1])
+if value then return { epoch, 1, value } end
+return { epoch, 0 }
+"#;
+const FILL_SCRIPT: &str = r#"
+if redis.call("HGET", KEYS[1], "__epoch") ~= ARGV[1] then return 0 end
+redis.call("HSET", KEYS[1], ARGV[2], ARGV[3])
+local ttl = tonumber(ARGV[4])
+local score
+if ttl > 0 then
+    redis.call("PEXPIRE", KEYS[1], ttl)
+    score = tonumber(ARGV[5]) + ttl
+else
+    redis.call("PERSIST", KEYS[1])
+    score = tonumber(ARGV[6])
+end
+redis.call("ZADD", KEYS[2], score, KEYS[1])
+return 1
+"#;
+const DELETE_BUCKET_SCRIPT: &str = r#"
+if #ARGV > 0 then
+    if ARGV[1] ~= "cleanup_expired" then
+        return redis.error_reply("unsupported delete bucket mode")
+    end
+    local members = redis.call("ZRANGEBYSCORE", KEYS[1], ARGV[2], ARGV[3], "LIMIT", 0, ARGV[4])
+    if #members == 0 then return 0 end
+    local expired = {}
+    for _, member in ipairs(members) do
+        if redis.call("EXISTS", member) == 0 then
+            expired[#expired + 1] = member
+        end
+    end
+    if #expired == 0 then return 0 end
+    return redis.call("ZREM", KEYS[1], unpack(expired))
+end
+redis.call("UNLINK", KEYS[1])
+redis.call("ZREM", KEYS[2], KEYS[1])
+return 1
+"#;
+const SCRIPT_DEFINITIONS: &[ScriptDefinition] = &[
+    ScriptDefinition {
+        id: BEGIN_FILL_SCRIPT_ID,
+        redis_lua: BEGIN_FILL_SCRIPT,
+    },
+    ScriptDefinition {
+        id: FILL_SCRIPT_ID,
+        redis_lua: FILL_SCRIPT,
+    },
+    ScriptDefinition {
+        id: DELETE_BUCKET_SCRIPT_ID,
+        redis_lua: DELETE_BUCKET_SCRIPT,
+    },
 ];
-
-/// Counter bumps that failed, as `(key, normalized path)` pairs.
-type PendingBumps = Vec<(String, String)>;
 
 /// A provider-independent read-through filesystem cache.
 ///
@@ -45,12 +125,13 @@ type PendingBumps = Vec<(String, String)>;
 pub struct CachedFileSystem {
     backend: Box<dyn FileSystem>,
     runtime: Arc<CacheRuntime>,
-    versions: VersionStore,
-    policy: CachePolicy,
+    service_name: String,
     metrics: Arc<CacheMetrics>,
-    operation_lock: RwLock<()>,
     inflight: Mutex<HashMap<String, Arc<Mutex<()>>>>,
-    bypass_scopes: RwLock<Vec<String>>,
+    index_gc_changes: Arc<AtomicU64>,
+    index_gc_running: Arc<AtomicBool>,
+    multi_instance: bool,
+    max_file_size_bytes: usize,
 }
 
 impl CachedFileSystem {
@@ -59,35 +140,59 @@ impl CachedFileSystem {
         backend: Box<dyn FileSystem>,
         runtime: Arc<CacheRuntime>,
         service_name: impl Into<String>,
-        policy: CachePolicy,
     ) -> Self {
-        Self::build(backend, runtime, service_name.into(), policy)
+        Self::build(backend, runtime, service_name.into())
     }
 
     fn build(
         backend: Box<dyn FileSystem>,
         runtime: Arc<CacheRuntime>,
         service_name: String,
-        policy: CachePolicy,
     ) -> Self {
-        let versions = VersionStore::new(Arc::clone(&runtime), service_name);
-        if policy.multi_instance() && !versions.atomic_bump() {
-            // The stack builder rejects this; direct callers only get a warning.
-            tracing::warn!(
-                "CacheFS multi_instance mode without atomic INCRBY: concurrent bumps \
-                 from different processes can be lost"
-            );
+        for definition in SCRIPT_DEFINITIONS {
+            runtime
+                .register_script(*definition)
+                .expect("CacheFS script registration must succeed");
         }
         Self {
             backend,
-            versions,
             runtime,
-            policy,
+            service_name,
             metrics: Arc::new(CacheMetrics::default()),
-            operation_lock: RwLock::new(()),
             inflight: Mutex::new(HashMap::new()),
-            bypass_scopes: RwLock::new(Vec::new()),
+            index_gc_changes: Arc::new(AtomicU64::new(0)),
+            index_gc_running: Arc::new(AtomicBool::new(false)),
+            multi_instance: false,
+            max_file_size_bytes: DEFAULT_MAX_FILE_SIZE_BYTES,
         }
+    }
+
+    /// Cache full-file reads of files up to this size; `0` disables file caching.
+    ///
+    /// Ranged reads always go to the backend. A file's `read` bucket is
+    /// invalidated with its other exact-path buckets, so file contents follow
+    /// the same epoch and multi-instance rules as query results.
+    pub fn with_max_file_size_bytes(mut self, max_file_size_bytes: usize) -> Self {
+        self.max_file_size_bytes = max_file_size_bytes;
+        self
+    }
+
+    /// Make invalidation safe for several instances sharing one namespace.
+    ///
+    /// Single-instance mode invalidates in the background after a mutation
+    /// returns. Multi-instance mode deletes the affected buckets before the
+    /// mutation returns, so a read on any instance that starts after the write
+    /// returned cannot hit an entry the write made stale. A delete that still
+    /// fails after retries is counted in `invalidation_failures`; the entry then
+    /// lives until the cache TTL, which is why multi-instance mode requires one.
+    pub fn with_multi_instance(mut self, multi_instance: bool) -> Self {
+        self.multi_instance = multi_instance;
+        self
+    }
+
+    /// Return whether invalidation runs before mutations return.
+    pub fn multi_instance(&self) -> bool {
+        self.multi_instance
     }
 
     /// Return this wrapper's cache metrics.
@@ -105,613 +210,348 @@ impl CachedFileSystem {
         self.backend.as_ref()
     }
 
-    fn wraps_multiwrite(&self) -> bool {
-        let any = self.backend.as_ref() as &dyn std::any::Any;
-        any.downcast_ref::<MultiWriteWrappedFS>().is_some()
-    }
-
     /// Invalidate cache objects affected by a write that bypassed this wrapper.
-    ///
-    /// Raw writers may also have created missing parent directories, so every
-    /// ancestor listing is invalidated, not only the direct parent.
     pub(crate) async fn invalidate_external_write(&self, path: &str) {
-        let guard = self.operation_lock.write().await;
-        let scopes = ancestor_scopes(&parent_path(path));
-        let counters = std::iter::once((KeyKind::Object, path))
-            .chain(scopes.iter().map(|scope| (KeyKind::Object, scope.as_str())))
-            .collect::<Vec<_>>();
-        let pending = self.bump_counters(&counters).await;
-        self.invalidate_path_objects(path).await;
-        for scope in &scopes {
-            self.cache_delete(&self.directory_key(scope), scope).await;
-        }
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
     }
 
-    async fn tree_directory_via_cache(
-        &self,
-        path: &str,
-        show_hidden: bool,
-        node_limit: Option<usize>,
-        level_limit: Option<usize>,
-        offset: Option<usize>,
-        sort_by: Option<ListSortBy>,
-        sort_order: Option<SortOrder>,
-        directories_only: bool,
-    ) -> Result<Vec<TreeEntry>> {
-        enum TreeTask {
-            VisitDir(String),
-            Emit(TreeEntry),
-        }
-
-        let base_path = normalize_prefix_path(path);
-        let mut result = Vec::new();
-        let mut stack = vec![TreeTask::VisitDir(base_path.clone())];
-        let traversal_limit = node_limit.map(|limit| offset.unwrap_or(0).saturating_add(limit));
-
-        while let Some(task) = stack.pop() {
-            if traversal_limit.is_some_and(|limit| result.len() >= limit) {
-                break;
-            }
-
-            match task {
-                TreeTask::Emit(entry) => result.push(entry),
-                TreeTask::VisitDir(current_path) => {
-                    if let Some(limit) = level_limit {
-                        let current_rel = relative_match_file(&base_path, &current_path);
-                        if relative_depth(&current_rel) >= limit {
-                            continue;
-                        }
-                    }
-
-                    let entries = self
-                        .read_dir_for(
-                            CacheOperation::Tree,
-                            &current_path,
-                            None,
-                            None,
-                            sort_by,
-                            sort_order,
-                        )
-                        .await?;
-                    for entry in entries.into_iter().rev() {
-                        let is_hidden_file = !entry.is_dir && entry.name.starts_with('.');
-                        if is_hidden_file && !show_hidden {
-                            continue;
-                        }
-
-                        let entry_path = if current_path == "/" {
-                            format!("/{}", entry.name)
-                        } else {
-                            format!("{}/{}", current_path, entry.name)
-                        };
-                        let rel_path = relative_match_file(&base_path, &entry_path);
-                        let is_dir = entry.is_dir;
-                        let tree_entry = TreeEntry {
-                            path: entry_path.clone(),
-                            rel_path,
-                            info: entry,
-                            extra: HashMap::new(),
-                        };
-
-                        if is_dir {
-                            stack.push(TreeTask::VisitDir(entry_path));
-                        }
-                        if is_dir || !directories_only {
-                            stack.push(TreeTask::Emit(tree_entry));
-                        }
-                    }
-                }
-            }
-        }
-
-        Ok(paginate_entries(result, offset, node_limit))
-    }
-
-    async fn grep_via_cache(
-        &self,
-        path: &str,
-        pattern: &str,
-        options: GrepOptions<'_>,
-    ) -> Result<GrepResult> {
-        enum GrepTask {
-            Visit { path: String, is_dir: Option<bool> },
-        }
-
-        let re = compile_grep_regex(pattern, options.case_insensitive)?;
-        let base_path = normalize_prefix_path(path);
-        let normalized_exclude = options.exclude_path.map(normalize_prefix_path);
-        let options = GrepOptions {
-            exclude_path: normalized_exclude.as_deref(),
-            ..options
-        };
-        let mut result = GrepResult::new();
-        let generation_cache = VersionMemo::default();
-        let mut file_batch = Vec::new();
-        let mut stack = vec![GrepTask::Visit {
-            path: base_path.clone(),
-            is_dir: None,
-        }];
-
-        while let Some(GrepTask::Visit {
-            path: current_path,
-            is_dir,
-        }) = stack.pop()
-        {
-            if options
-                .node_limit
-                .is_some_and(|limit| result.count >= limit)
-            {
-                break;
-            }
-
-            if let Some(exclude) = normalized_exclude.as_deref() {
-                if is_excluded_path(&current_path, exclude) {
-                    continue;
-                }
-            }
-
-            let is_dir = match is_dir {
-                Some(is_dir) => is_dir,
-                None => self.stat(&current_path).await?.is_dir,
-            };
-            if is_dir {
-                self.flush_grep_file_batch(
-                    &mut file_batch,
-                    &base_path,
-                    &re,
-                    options,
-                    &mut result,
-                    &generation_cache,
-                )
-                .await?;
-                if options
-                    .node_limit
-                    .is_some_and(|limit| result.count >= limit)
-                {
-                    break;
-                }
-
-                if !options.recursive && current_path != base_path {
-                    continue;
-                }
-
-                if let Some(limit) = options.level_limit {
-                    let rel = relative_match_file(&base_path, &current_path);
-                    if relative_depth(&rel) >= limit {
-                        continue;
-                    }
-                }
-
-                let entries = self
-                    .read_dir_with_generation_cache(
-                        CacheOperation::Grep,
-                        &current_path,
-                        &generation_cache,
-                    )
-                    .await?;
-                for entry in entries.into_iter().rev() {
-                    let entry_path = if current_path == "/" {
-                        format!("/{}", entry.name)
-                    } else {
-                        format!("{}/{}", current_path, entry.name)
-                    };
-                    stack.push(GrepTask::Visit {
-                        path: entry_path,
-                        is_dir: Some(entry.is_dir),
-                    });
-                }
-            } else {
-                if let Some(limit) = options.level_limit {
-                    let rel = relative_match_file(&base_path, &current_path);
-                    if relative_depth(&rel) > limit {
-                        continue;
-                    }
-                }
-
-                file_batch.push(current_path);
-                if file_batch.len() >= GREP_CACHE_FILE_CONCURRENCY {
-                    self.flush_grep_file_batch(
-                        &mut file_batch,
-                        &base_path,
-                        &re,
-                        options,
-                        &mut result,
-                        &generation_cache,
-                    )
-                    .await?;
-                }
-            }
-        }
-
-        self.flush_grep_file_batch(
-            &mut file_batch,
-            &base_path,
-            &re,
-            options,
-            &mut result,
-            &generation_cache,
-        )
-        .await?;
-
-        Ok(result)
-    }
-
-    async fn flush_grep_file_batch(
-        &self,
-        file_batch: &mut Vec<String>,
-        base_path: &str,
-        re: &Regex,
-        options: GrepOptions<'_>,
-        result: &mut GrepResult,
-        generation_cache: &VersionMemo,
-    ) -> Result<()> {
-        if file_batch.is_empty()
-            || options
-                .node_limit
-                .is_some_and(|limit| result.count >= limit)
-        {
-            file_batch.clear();
-            return Ok(());
-        }
-
-        let remaining_limit = options
-            .node_limit
-            .map(|limit| limit.saturating_sub(result.count))
-            .unwrap_or(usize::MAX);
-        let files = std::mem::take(file_batch);
-        let mut indexed = stream::iter(files.into_iter().enumerate())
-            .map(|(index, path)| async move {
-                let matches = self
-                    .grep_cached_file(
-                        &path,
-                        base_path,
-                        re,
-                        remaining_limit,
-                        options.before_context,
-                        options.after_context,
-                        generation_cache,
-                    )
-                    .await;
-                (index, matches)
-            })
-            .buffer_unordered(GREP_CACHE_FILE_CONCURRENCY)
-            .collect::<Vec<_>>()
-            .await;
-
-        indexed.sort_by_key(|(index, _)| *index);
-        for (_, matches) in indexed {
-            for item in matches? {
-                if options
-                    .node_limit
-                    .is_some_and(|limit| result.count >= limit)
-                {
-                    return Ok(());
-                }
-                result.matches.push(item);
-                result.count += 1;
-            }
-        }
-
-        Ok(())
-    }
-
-    async fn grep_cached_file(
-        &self,
-        path: &str,
-        base_path: &str,
-        re: &Regex,
-        remaining_limit: usize,
-        before_context: usize,
-        after_context: usize,
-        generation_cache: &VersionMemo,
-    ) -> Result<Vec<GrepMatch>> {
-        let content = self
-            .read_with_generation_cache(CacheOperation::Grep, path, 0, 0, generation_cache)
-            .await?;
-        let content_str = String::from_utf8_lossy(&content);
-        let rel_file = relative_match_file(base_path, path);
-        let mut result = GrepResult {
-            matches: Vec::with_capacity(remaining_limit.min(64)),
-            count: 0,
-        };
-        let mut collector = GrepLineCollector::new(
-            rel_file.clone(),
-            before_context,
-            after_context,
-            remaining_limit,
-            &mut result,
-        );
-
-        for (line_index, line) in content_str.lines().enumerate() {
-            let is_match = re.is_match(line);
-            if !collector.consume_line(
-                &rel_file,
-                GrepContextLine {
-                    line: (line_index + 1) as u64,
-                    content: line.to_string(),
-                },
-                is_match,
-            ) {
-                break;
-            }
-        }
-
-        drop(collector);
-        Ok(result.matches)
-    }
-
-    async fn cache_get(&self, key: &str) -> CacheResult<Option<Bytes>> {
+    /// Read one query cache field from a provider HASH bucket.
+    async fn cache_hash_get(&self, key: &str, field: &str) -> CacheResult<Option<Bytes>> {
         let started = Instant::now();
-        let result = self.runtime.get(key).await;
+        let result = self.runtime.hget(key, field).await;
         self.metrics.get(started.elapsed());
+        match result {
+            Ok(value) => Ok(value),
+            Err(error) => {
+                self.metrics.error();
+                Err(error)
+            }
+        }
+    }
+
+    /// Capture the bucket epoch, index the bucket, and recheck one missed field atomically.
+    async fn begin_query_fill(
+        &self,
+        key: &str,
+        field: &str,
+    ) -> CacheResult<(Bytes, Option<Bytes>)> {
+        let started = Instant::now();
+        let result = self
+            .runtime
+            .execute_script(ScriptRequest {
+                script_id: BEGIN_FILL_SCRIPT_ID.to_string(),
+                keys: vec![key.to_string(), self.query_index_key()],
+                args: vec![
+                    Bytes::copy_from_slice(field.as_bytes()),
+                    Bytes::from(Uuid::new_v4().to_string()),
+                    Bytes::from(self.default_ttl_ms().to_string()),
+                    Bytes::from(PENDING_EPOCH_TTL_MS.to_string()),
+                    Bytes::from(current_time_ms().to_string()),
+                    Bytes::from(u64::MAX.to_string()),
+                ],
+            })
+            .await
+            .and_then(|result| result.decode());
+        self.metrics.get(started.elapsed());
+        match result {
+            Ok(ScriptValue::Array(values)) => match values.as_slice() {
+                [ScriptValue::Bytes(epoch), ScriptValue::Integer(0)] => {
+                    Ok((Bytes::copy_from_slice(epoch), None))
+                }
+                [ScriptValue::Bytes(epoch), ScriptValue::Integer(1), ScriptValue::Bytes(value)] => {
+                    Ok((
+                        Bytes::copy_from_slice(epoch),
+                        Some(Bytes::copy_from_slice(value)),
+                    ))
+                }
+                _ => Err(CacheError::InvalidData(
+                    "CacheFS begin-fill script returned invalid data".to_string(),
+                )),
+            },
+            Ok(value) => Err(CacheError::InvalidData(format!(
+                "CacheFS begin-fill script returned {value:?}"
+            ))),
+            Err(error) => Err(error),
+        }
+        .inspect_err(|_| self.metrics.error())
+    }
+
+    /// Store one query field and final index score only when its epoch is still current.
+    async fn cache_hash_put(&self, key: &str, epoch: Bytes, field: &str, value: Bytes) -> bool {
+        let started = Instant::now();
+        let result = self
+            .runtime
+            .execute_script(ScriptRequest {
+                script_id: FILL_SCRIPT_ID.to_string(),
+                keys: vec![key.to_string(), self.query_index_key()],
+                args: vec![
+                    epoch,
+                    Bytes::copy_from_slice(field.as_bytes()),
+                    value,
+                    Bytes::from(self.default_ttl_ms().to_string()),
+                    Bytes::from(current_time_ms().to_string()),
+                    Bytes::from(u64::MAX.to_string()),
+                ],
+            })
+            .await
+            .and_then(|result| result.decode());
+        self.metrics.put(started.elapsed());
+        match result {
+            Ok(ScriptValue::Integer(1)) => return true,
+            Ok(ScriptValue::Integer(0)) => return false,
+            Ok(_) | Err(_) => {
+                self.metrics.error();
+                return false;
+            }
+        }
+    }
+
+    /// Return the configured cache TTL in milliseconds, or zero when disabled.
+    fn default_ttl_ms(&self) -> u64 {
+        self.runtime
+            .default_ttl()
+            .map(|ttl| ttl.as_millis().min(u128::from(u64::MAX)) as u64)
+            .unwrap_or(0)
+    }
+
+    /// Delete query cache buckets and remove them from the provider index atomically.
+    async fn delete_query_buckets(
+        runtime: Arc<CacheRuntime>,
+        metrics: Arc<CacheMetrics>,
+        index_key: String,
+        mut keys: Vec<String>,
+        affected_path: String,
+    ) {
+        if keys.is_empty() {
+            return;
+        }
+        keys.sort();
+        keys.dedup();
+
+        let started = Instant::now();
+        let deleted_count = stream::iter(keys.into_iter().enumerate())
+            .map(|(index, key)| {
+                let runtime = Arc::clone(&runtime);
+                let metrics = Arc::clone(&metrics);
+                let index_key = index_key.clone();
+                let affected_path = affected_path.clone();
+                async move {
+                    Self::delete_query_bucket(
+                        &runtime,
+                        &metrics,
+                        &index_key,
+                        &key,
+                        index,
+                        &affected_path,
+                    )
+                    .await
+                }
+            })
+            .buffer_unordered(UNLINK_CONCURRENCY)
+            .collect::<Vec<bool>>()
+            .await
+            .into_iter()
+            .filter(|deleted| *deleted)
+            .count();
+        metrics.delete(started.elapsed());
+        if deleted_count > 0 {
+            metrics.invalidation();
+        }
+    }
+
+    /// Delete one query bucket, retrying with jittered backoff.
+    async fn delete_query_bucket(
+        runtime: &CacheRuntime,
+        metrics: &CacheMetrics,
+        index_key: &str,
+        key: &str,
+        index: usize,
+        affected_path: &str,
+    ) -> bool {
+        for attempt in 0..=UNLINK_MAX_RETRIES {
+            let result = runtime
+                .execute_script(ScriptRequest {
+                    script_id: DELETE_BUCKET_SCRIPT_ID.to_string(),
+                    keys: vec![key.to_string(), index_key.to_string()],
+                    args: Vec::new(),
+                })
+                .await;
+            match result {
+                Ok(_) => return true,
+                Err(_) if attempt < UNLINK_MAX_RETRIES => {
+                    metrics.error();
+                    let delay_ms = (UNLINK_RETRY_BASE_MS << attempt)
+                        + rand::thread_rng().gen_range(0..=UNLINK_RETRY_BASE_MS);
+                    tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+                }
+                Err(err) => {
+                    metrics.error();
+                    metrics.invalidation_failure();
+                    error!(
+                        path = %affected_path,
+                        bucket_index = index,
+                        retry_count = UNLINK_MAX_RETRIES,
+                        error = %err,
+                        "query cache invalidation delete failed; entry may be stale until its TTL"
+                    );
+                }
+            }
+        }
+        false
+    }
+
+    /// Return a cached query payload when the stored request matches.
+    async fn probe_query<T>(&self, bucket_key: &str, query_hash: &str, request: &Value) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        let value = match self.cache_hash_get(bucket_key, query_hash).await {
+            Ok(value) => value?,
+            Err(_) => return None,
+        };
+        self.decode_query(&value, request)
+    }
+
+    /// Decode one query envelope and require an exact request match.
+    fn decode_query<T>(&self, value: &[u8], request: &Value) -> Option<T>
+    where
+        T: DeserializeOwned,
+    {
+        let envelope = match QueryCacheEnvelope::<T>::decode(&value) {
+            Ok(envelope) if envelope.request_matches(request) => envelope,
+            Ok(_) => return None,
+            Err(_) => {
+                self.metrics.error();
+                return None;
+            }
+        };
+
+        Some(envelope.into_payload())
+    }
+
+    /// Store one query payload in its HASH bucket.
+    async fn fill_query<T>(
+        &self,
+        bucket_key: &str,
+        epoch: Bytes,
+        query_hash: &str,
+        request: Value,
+        payload: &T,
+    ) where
+        T: Serialize,
+    {
+        match QueryCacheEnvelope::new(request, payload).encode() {
+            Ok(value) => {
+                self.cache_hash_put(bucket_key, epoch, query_hash, value)
+                    .await;
+            }
+            Err(_) => self.metrics.error(),
+        }
+    }
+
+    /// Load one query through the HASH cache, coalescing concurrent misses.
+    async fn get_or_fill_query<T, F, Fut>(
+        &self,
+        op: &str,
+        path: &str,
+        request: Value,
+        query_hash: String,
+        load: F,
+    ) -> Result<T>
+    where
+        T: Serialize + DeserializeOwned,
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<T>>,
+    {
+        let normalized = normalize_path(path);
+        let bucket_key = self.query_bucket_key(&normalized, op);
+        let operation = query_operation(op);
+        if let Some(payload) = self.probe_query(&bucket_key, &query_hash, &request).await {
+            self.metrics.operation_hit(operation);
+            return Ok(payload);
+        }
+        self.metrics.operation_miss(operation);
+
+        let inflight_key = format!("{bucket_key}:{query_hash}");
+        let (inflight, _) = self.acquire_inflight(&inflight_key).await;
+        let inflight_guard = inflight.lock().await;
+
+        let epoch = match self.begin_query_fill(&bucket_key, &query_hash).await {
+            Ok((epoch, Some(value))) => match self.decode_query::<T>(&value, &request) {
+                Some(payload) => {
+                    drop(inflight_guard);
+                    self.release_inflight(&inflight_key, &inflight).await;
+                    return Ok(payload);
+                }
+                None => Some(epoch),
+            },
+            Ok((epoch, None)) => Some(epoch),
+            Err(_) => None,
+        };
+        let result = load().await;
+        if let Ok(value) = &result {
+            self.metrics.backend_fallback();
+            if let Some(epoch) = epoch {
+                self.fill_query(&bucket_key, epoch, &query_hash, request, value)
+                    .await;
+            }
+        }
+        drop(inflight_guard);
+        self.release_inflight(&inflight_key, &inflight).await;
         result
     }
 
-    async fn cache_put(&self, key: &str, value: Bytes, affected_path: &str) -> bool {
-        let started = Instant::now();
-        let result = self.runtime.set(key, value, SetOptions::default()).await;
-        self.metrics.put(started.elapsed());
-        match result {
-            Ok(SetResult::Applied) => true,
-            Ok(SetResult::ConditionNotMet) => {
-                self.metrics.error();
-                self.mark_bypass(affected_path).await;
-                false
-            }
-            Err(_) => {
-                self.metrics.error();
-                self.mark_bypass(affected_path).await;
-                false
+    /// Load a full file through its `read` bucket, coalescing concurrent misses.
+    async fn get_or_fill_file(&self, path: &str, normalized: &str) -> Result<Vec<u8>> {
+        let bucket_key = self.query_bucket_key(normalized, "read");
+        if let Ok(Some(value)) = self.cache_hash_get(&bucket_key, FILE_CONTENT_FIELD).await {
+            if let Some(data) = self.decode_file(&value, normalized) {
+                self.metrics.operation_hit(CacheOperation::Read);
+                return Ok(data);
             }
         }
-    }
+        self.metrics.operation_miss(CacheOperation::Read);
 
-    async fn cache_delete(&self, key: &str, affected_path: &str) {
-        let started = Instant::now();
-        let result = self.runtime.del(&[key.to_string()]).await;
-        self.metrics.delete(started.elapsed());
-        match result {
-            Ok(_) => self.metrics.invalidation(),
-            Err(_) => {
-                self.metrics.error();
-                self.mark_bypass(affected_path).await;
-            }
-        }
-    }
+        let inflight_key = format!("{bucket_key}:{FILE_CONTENT_FIELD}");
+        let (inflight, _) = self.acquire_inflight(&inflight_key).await;
+        let inflight_guard = inflight.lock().await;
 
-    async fn mark_bypass(&self, path: &str) {
-        let normalized = normalize_path(path);
-        let mut scopes = self.bypass_scopes.write().await;
-        if scopes
-            .iter()
-            .any(|scope| is_same_or_descendant(&normalized, scope))
-        {
-            return;
-        }
-        scopes.retain(|scope| !is_same_or_descendant(scope, &normalized));
-        scopes.push(normalized);
-    }
-
-    async fn is_runtime_bypassed(&self, path: &str) -> bool {
-        let normalized = normalize_path(path);
-        self.bypass_scopes
-            .read()
-            .await
-            .iter()
-            .any(|scope| is_same_or_descendant(&normalized, scope))
-    }
-
-    /// Bump counters after a backend mutation so other instances stop
-    /// trusting entries filled before it. Returns the bumps that failed; the
-    /// caller hands them to [`Self::settle_bumps`] together with its lock.
-    async fn bump_counters(&self, counters: &[(KeyKind, &str)]) -> PendingBumps {
-        let mut pending = Vec::<(String, String)>::new();
-        for (kind, path) in counters {
-            let key = self.versions.key(*kind, path);
-            if !pending.iter().any(|(existing, _)| existing == &key) {
-                pending.push((key, normalize_path(path)));
-            }
-        }
-        self.attempt_bumps(pending).await
-    }
-
-    async fn attempt_bumps(&self, pending: PendingBumps) -> PendingBumps {
-        let results = join_all(pending.iter().map(|(key, _)| async move {
-            let started = Instant::now();
-            let result = self.versions.bump(key).await;
-            self.metrics.put(started.elapsed());
-            result
-        }))
-        .await;
-        pending
-            .into_iter()
-            .zip(results)
-            .filter_map(|(counter, result)| match result {
-                Ok(()) => {
-                    self.metrics.invalidation();
-                    None
+        let epoch = match self.begin_query_fill(&bucket_key, FILE_CONTENT_FIELD).await {
+            Ok((epoch, Some(value))) => match self.decode_file(&value, normalized) {
+                Some(data) => {
+                    drop(inflight_guard);
+                    self.release_inflight(&inflight_key, &inflight).await;
+                    return Ok(data);
                 }
-                Err(_) => {
-                    self.metrics.error();
-                    Some(counter)
-                }
-            })
-            .collect()
-    }
-
-    /// Retry failed bumps, then release the mutation's operation lock.
-    ///
-    /// The bump is the commit point for every instance sharing the namespace,
-    /// so failed bumps are retried before this instance falls back to a local
-    /// bypass. Other instances may then serve stale entries until their TTL.
-    /// Atomic bumps do not need the lock, so it is released before the retry
-    /// backoff instead of stalling every other operation in this process.
-    async fn settle_bumps(&self, guard: RwLockWriteGuard<'_, ()>, mut pending: PendingBumps) {
-        let _guard = if self.versions.atomic_bump() {
-            drop(guard);
-            None
-        } else {
-            Some(guard)
-        };
-        for delay in BUMP_RETRY_DELAYS {
-            if pending.is_empty() {
-                return;
-            }
-            tokio::time::sleep(delay).await;
-            pending = self.attempt_bumps(pending).await;
-        }
-        for (key, path) in pending {
-            self.metrics.invalidation_failure();
-            tracing::error!(
-                path = %path,
-                key = %key,
-                "CacheFS counter bump failed; other instances may serve stale \
-                 entries for this path until the cache TTL expires"
-            );
-            self.mark_bypass(&path).await;
-        }
-    }
-
-    /// Check an envelope's recorded counters. A mismatch against the traversal
-    /// memo is re-checked against live counters: the memo may be older than
-    /// an entry another instance filled after a bump.
-    async fn validate(
-        &self,
-        envelope: &CacheEnvelope,
-        memo: Option<&VersionMemo>,
-    ) -> CacheResult<bool> {
-        match self.versions.matches(envelope.versions(), memo).await {
-            Ok(false) if memo.is_some() => self.versions.matches(envelope.versions(), None).await,
-            result => result,
-        }
-    }
-
-    /// Return a validated cached file, recording a hit for `record_hit` when set.
-    async fn probe_file(
-        &self,
-        key: &str,
-        path: &str,
-        record_hit: Option<CacheOperation>,
-    ) -> Option<Vec<u8>> {
-        self.probe_file_with_generation_cache(key, path, record_hit, None)
-            .await
-    }
-
-    async fn probe_file_with_generation_cache(
-        &self,
-        key: &str,
-        path: &str,
-        record_hit: Option<CacheOperation>,
-        generation_cache: Option<&VersionMemo>,
-    ) -> Option<Vec<u8>> {
-        let value = match self.cache_get(key).await {
-            Ok(value) => value?,
-            Err(_) => {
-                self.metrics.error();
-                self.mark_bypass(path).await;
-                return None;
-            }
-        };
-
-        let envelope = match CacheEnvelope::decode(&value) {
-            Ok(envelope) if envelope.matches(CacheObjectKind::File, path) => envelope,
-            _ => {
-                self.metrics.error();
-                self.cache_delete(key, path).await;
-                return None;
-            }
-        };
-
-        match self.validate(&envelope, generation_cache).await {
-            Ok(true) => match envelope.into_file() {
-                Ok(data) => {
-                    if let Some(operation) = record_hit {
-                        self.metrics.file_hit(operation, data.len());
-                    }
-                    Some(data)
-                }
-                Err(_) => {
-                    self.metrics.error();
-                    self.cache_delete(key, path).await;
-                    None
-                }
+                None => Some(epoch),
             },
-            Ok(false) => {
-                self.metrics.stale_version();
-                self.cache_delete(key, path).await;
-                None
-            }
-            Err(_) => {
-                self.metrics.error();
-                self.mark_bypass(path).await;
-                None
+            Ok((epoch, None)) => Some(epoch),
+            Err(_) => None,
+        };
+        let result = self.backend.read(path, 0, 0).await;
+        if let Ok(data) = &result {
+            self.metrics.backend_fallback();
+            if let Some(epoch) = epoch.filter(|_| data.len() <= self.max_file_size_bytes) {
+                match encode_file_content(normalized, data) {
+                    Ok(value) => {
+                        self.cache_hash_put(&bucket_key, epoch, FILE_CONTENT_FIELD, value)
+                            .await;
+                    }
+                    Err(_) => self.metrics.error(),
+                }
             }
         }
+        drop(inflight_guard);
+        self.release_inflight(&inflight_key, &inflight).await;
+        result
     }
 
-    /// Return validated cached entries, recording a hit for `record_hit` when set.
-    async fn probe_directory(
-        &self,
-        key: &str,
-        path: &str,
-        record_hit: Option<CacheOperation>,
-    ) -> Option<Vec<FileInfo>> {
-        self.probe_directory_with_generation_cache(key, path, record_hit, None)
-            .await
-    }
-
-    async fn probe_directory_with_generation_cache(
-        &self,
-        key: &str,
-        path: &str,
-        record_hit: Option<CacheOperation>,
-        generation_cache: Option<&VersionMemo>,
-    ) -> Option<Vec<FileInfo>> {
-        let value = match self.cache_get(key).await {
-            Ok(value) => value?,
+    /// Decode cached file contents, counting corrupt values as cache errors.
+    fn decode_file(&self, value: &[u8], normalized: &str) -> Option<Vec<u8>> {
+        match decode_file_content(value, normalized) {
+            Ok(data) => data,
             Err(_) => {
                 self.metrics.error();
-                self.mark_bypass(path).await;
-                return None;
-            }
-        };
-
-        let envelope = match CacheEnvelope::decode(&value) {
-            Ok(envelope) if envelope.matches(CacheObjectKind::Directory, path) => envelope,
-            _ => {
-                self.metrics.error();
-                self.cache_delete(key, path).await;
-                return None;
-            }
-        };
-
-        match self.validate(&envelope, generation_cache).await {
-            Ok(true) => match envelope.into_directory() {
-                Ok(entries) => {
-                    if !self.policy.cache_directory_entries(path, entries.len()) {
-                        self.cache_delete(key, path).await;
-                        return None;
-                    }
-                    if let Some(operation) = record_hit {
-                        self.metrics.read_dir_hit(operation);
-                    }
-                    Some(entries)
-                }
-                Err(_) => {
-                    self.metrics.error();
-                    self.cache_delete(key, path).await;
-                    None
-                }
-            },
-            Ok(false) => {
-                self.metrics.stale_version();
-                self.cache_delete(key, path).await;
-                None
-            }
-            Err(_) => {
-                self.metrics.error();
-                self.mark_bypass(path).await;
                 None
             }
         }
@@ -738,470 +578,239 @@ impl CachedFileSystem {
         }
     }
 
-    async fn read_with_generation_cache(
-        &self,
-        operation: CacheOperation,
-        path: &str,
-        offset: u64,
-        size: u64,
-        generation_cache: &VersionMemo,
-    ) -> Result<Vec<u8>> {
-        if offset != 0
-            || size != 0
-            || !self.policy.cache_file(path, 0)
-            || self.is_runtime_bypassed(path).await
-        {
-            self.metrics.policy_bypass(operation);
-            return self.backend.read(path, offset, size).await;
+    /// Invalidate the query buckets affected by one changed path.
+    async fn invalidate_path(&self, path: &str) {
+        if is_encryption_temp_path(path) {
+            return;
         }
+        self.note_query_index_change();
+        let mut keys = Vec::new();
+        self.collect_path_change_buckets(path, &mut keys);
+        self.run_invalidation(Self::delete_query_buckets(
+            Arc::clone(&self.runtime),
+            Arc::clone(&self.metrics),
+            self.query_index_key(),
+            keys,
+            normalize_path(path),
+        ))
+        .await;
+    }
 
-        let _operation_guard = self.operation_lock.read().await;
-        if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass(operation);
-            return self.backend.read(path, offset, size).await;
+    /// Invalidate the query buckets of one changed path and its descendants.
+    async fn invalidate_descendants(&self, path: &str) {
+        if is_encryption_temp_path(path) {
+            return;
         }
-
-        let normalized = normalize_path(path);
-        let key = self.file_key(&normalized);
-        if let Some(data) = self
-            .probe_file_with_generation_cache(
-                &key,
-                &normalized,
-                Some(operation),
-                Some(generation_cache),
+        self.note_query_index_change();
+        let path = normalize_path(path);
+        let runtime = Arc::clone(&self.runtime);
+        let metrics = Arc::clone(&self.metrics);
+        let service_name = self.service_name.clone();
+        let index_key = self.query_index_key();
+        self.run_invalidation(async move {
+            let mut keys = Self::indexed_descendant_query_buckets(
+                Arc::clone(&runtime),
+                Arc::clone(&metrics),
+                &index_key,
+                &service_name,
+                &path,
             )
-            .await
-        {
-            return Ok(data);
-        }
-        self.metrics.file_miss(operation);
-
-        let (inflight, leader) = self.acquire_inflight(&key).await;
-        if leader {
-            self.metrics.inflight_leader();
-        } else {
-            self.metrics.inflight_follower();
-        }
-        let inflight_guard = inflight.lock().await;
-
-        if !leader {
-            if let Some(data) = self
-                .probe_file_with_generation_cache(&key, &normalized, None, Some(generation_cache))
-                .await
-            {
-                self.metrics.inflight_backend_saved();
-                drop(inflight_guard);
-                self.release_inflight(&key, &inflight).await;
-                return Ok(data);
-            }
-        }
-
-        // Snapshot before the backend read: a mutation that lands after it
-        // bumps a recorded counter, so a late fill can never validate.
-        // Snapshot live counters, not the traversal memo: a memoized value that
-        // moved since the traversal started would make this fill stale for
-        // every other reader the moment it is written.
-        let versions = self.versions.snapshot(&normalized, None).await;
-        let data = self.backend.read(path, 0, 0).await;
-        if let Ok(value) = &data {
-            self.metrics.backend_fallback(value.len());
-            self.fill_file(&key, &normalized, value, versions).await;
-        }
-        drop(inflight_guard);
-        self.release_inflight(&key, &inflight).await;
-        data
-    }
-
-    async fn read_dir_with_generation_cache(
-        &self,
-        operation: CacheOperation,
-        path: &str,
-        generation_cache: &VersionMemo,
-    ) -> Result<Vec<FileInfo>> {
-        if !self.policy.cache_directory(path) || self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass(operation);
-            return self.backend.read_dir(path, None, None, None, None).await;
-        }
-
-        let _operation_guard = self.operation_lock.read().await;
-        if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass(operation);
-            return self.backend.read_dir(path, None, None, None, None).await;
-        }
-
-        let normalized = normalize_path(path);
-        let key = self.directory_key(&normalized);
-        if let Some(entries) = self
-            .probe_directory_with_generation_cache(
-                &key,
-                &normalized,
-                Some(operation),
-                Some(generation_cache),
-            )
-            .await
-        {
-            return Ok(entries);
-        }
-        self.metrics.read_dir_miss(operation);
-
-        let (inflight, leader) = self.acquire_inflight(&key).await;
-        if leader {
-            self.metrics.inflight_leader();
-        } else {
-            self.metrics.inflight_follower();
-        }
-        let inflight_guard = inflight.lock().await;
-
-        if !leader {
-            if let Some(entries) = self
-                .probe_directory_with_generation_cache(
-                    &key,
-                    &normalized,
-                    None,
-                    Some(generation_cache),
-                )
-                .await
-            {
-                self.metrics.inflight_backend_saved();
-                drop(inflight_guard);
-                self.release_inflight(&key, &inflight).await;
-                return Ok(entries);
-            }
-        }
-
-        let versions = self.versions.snapshot(&normalized, None).await;
-        let entries = self.backend.read_dir(path, None, None, None, None).await;
-        if let Ok(value) = &entries {
-            self.metrics.backend_fallback(0);
-            self.fill_directory(&key, &normalized, value, versions)
-                .await;
-        }
-        drop(inflight_guard);
-        self.release_inflight(&key, &inflight).await;
-        entries
-    }
-
-    /// Read a directory through the cache, attributing lookups to `operation`.
-    async fn read_dir_for(
-        &self,
-        operation: CacheOperation,
-        path: &str,
-        offset: Option<usize>,
-        limit: Option<usize>,
-        sort_by: Option<ListSortBy>,
-        sort_order: Option<SortOrder>,
-    ) -> Result<Vec<FileInfo>> {
-        if !self.policy.cache_directory(path) || self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass(operation);
-            return self
-                .backend
-                .read_dir(path, offset, limit, sort_by, sort_order)
-                .await;
-        }
-
-        let _operation_guard = self.operation_lock.read().await;
-        if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass(operation);
-            return self
-                .backend
-                .read_dir(path, offset, limit, sort_by, sort_order)
-                .await;
-        }
-
-        let normalized = normalize_path(path);
-        let key = self.directory_key(&normalized);
-        if let Some(entries) = self
-            .probe_directory(&key, &normalized, Some(operation))
-            .await
-        {
-            return Ok(apply_read_dir_options(
-                entries, offset, limit, sort_by, sort_order,
-            ));
-        }
-        self.metrics.read_dir_miss(operation);
-
-        let (inflight, leader) = self.acquire_inflight(&key).await;
-        if leader {
-            self.metrics.inflight_leader();
-        } else {
-            self.metrics.inflight_follower();
-        }
-        let inflight_guard = inflight.lock().await;
-
-        if !leader {
-            if let Some(entries) = self.probe_directory(&key, &normalized, None).await {
-                self.metrics.inflight_backend_saved();
-                drop(inflight_guard);
-                self.release_inflight(&key, &inflight).await;
-                return Ok(apply_read_dir_options(
-                    entries, offset, limit, sort_by, sort_order,
-                ));
-            }
-        }
-
-        let versions = self.versions.snapshot(&normalized, None).await;
-        let entries = self.backend.read_dir(path, None, None, None, None).await;
-        if let Ok(value) = &entries {
-            self.metrics.backend_fallback(0);
-            self.fill_directory(&key, &normalized, value, versions)
-                .await;
-        }
-        drop(inflight_guard);
-        self.release_inflight(&key, &inflight).await;
-        entries.map(|entries| apply_read_dir_options(entries, offset, limit, sort_by, sort_order))
-    }
-
-    /// Store `data` with the counter snapshot taken before it was read.
-    async fn fill_file(
-        &self,
-        key: &str,
-        path: &str,
-        data: &[u8],
-        versions: CacheResult<Vec<VersionSnapshot>>,
-    ) {
-        if !self.policy.cache_file(path, data.len()) {
-            return;
-        }
-        let Ok(versions) = versions else {
-            self.metrics.error();
-            return;
-        };
-        match CacheEnvelope::file(path.to_string(), data.to_vec(), versions).encode() {
-            Ok(value) => {
-                self.cache_put(key, value, path).await;
-            }
-            Err(_) => self.metrics.error(),
-        }
-    }
-
-    /// Store raw entries with the counter snapshot taken before they were read.
-    async fn fill_directory(
-        &self,
-        key: &str,
-        path: &str,
-        entries: &[FileInfo],
-        versions: CacheResult<Vec<VersionSnapshot>>,
-    ) {
-        if !self.policy.cache_directory_entries(path, entries.len()) {
-            return;
-        }
-        let Ok(versions) = versions else {
-            self.metrics.error();
-            return;
-        };
-        match CacheEnvelope::directory(path.to_string(), entries.to_vec(), versions).encode() {
-            Ok(value) => {
-                self.cache_put(key, value, path).await;
-            }
-            Err(_) => self.metrics.error(),
-        }
-    }
-
-    /// Bump counters for a change to the object at `path` (content, mode, or
-    /// existence) so its own entries and its parent listing stop matching.
-    async fn bump_object(&self, path: &str) -> PendingBumps {
-        let parent = parent_path(path);
-        self.bump_counters(&[(KeyKind::Object, path), (KeyKind::Object, &parent)])
-            .await
-    }
-
-    /// Bump counters for a change that can affect everything below `path`.
-    async fn bump_subtree(&self, path: &str) -> PendingBumps {
-        let parent = parent_path(path);
-        self.bump_counters(&[
-            (KeyKind::Subtree, path),
-            (KeyKind::Object, path),
-            (KeyKind::Object, &parent),
-        ])
-        .await
-    }
-
-    /// Bump counters for a move of `from` onto `to`.
-    async fn bump_move(&self, from: &str, to: &str) -> PendingBumps {
-        let (from_parent, to_parent) = (parent_path(from), parent_path(to));
-        self.bump_counters(&[
-            (KeyKind::Subtree, from),
-            (KeyKind::Subtree, to),
-            (KeyKind::Object, from),
-            (KeyKind::Object, to),
-            (KeyKind::Object, &from_parent),
-            (KeyKind::Object, &to_parent),
-        ])
-        .await
-    }
-
-    async fn invalidate_path_objects(&self, path: &str) {
-        self.cache_delete(&self.file_key(path), path).await;
-        self.cache_delete(&self.directory_key(path), path).await;
-    }
-
-    async fn invalidate_parent_directory(&self, path: &str) {
-        let parent = parent_path(path);
-        self.cache_delete(&self.directory_key(&parent), &parent)
             .await;
+            Self::collect_path_change_buckets_for(&service_name, &path, &mut keys);
+            Self::delete_query_buckets(runtime, metrics, index_key, keys, path).await;
+        })
+        .await;
     }
 
-    fn file_key(&self, path: &str) -> String {
-        self.versions.key(KeyKind::File, path)
+    /// Await invalidation in multi-instance mode, otherwise run it in the background.
+    async fn run_invalidation<F>(&self, task: F)
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        if self.multi_instance {
+            task.await;
+        } else {
+            tokio::spawn(task);
+        }
     }
 
-    fn directory_key(&self, path: &str) -> String {
-        self.versions.key(KeyKind::Directory, path)
+    /// Record one write-driven invalidation and trigger bounded index GC when needed.
+    fn note_query_index_change(&self) {
+        let changes = self.index_gc_changes.fetch_add(1, Ordering::Relaxed) + 1;
+        if changes < QUERY_INDEX_GC_TRIGGER_THRESHOLD {
+            return;
+        }
+        if self.index_gc_running.swap(true, Ordering::AcqRel) {
+            return;
+        }
+        self.index_gc_changes.store(0, Ordering::Relaxed);
+
+        let runtime = Arc::clone(&self.runtime);
+        let metrics = Arc::clone(&self.metrics);
+        let index_key = self.query_index_key();
+        let running = Arc::clone(&self.index_gc_running);
+        tokio::spawn(async move {
+            Self::cleanup_expired_query_index_members(
+                runtime,
+                metrics,
+                index_key,
+                QUERY_INDEX_GC_TRIGGER_THRESHOLD << 1,
+            )
+            .await;
+            running.store(false, Ordering::Release);
+        });
     }
 
-    #[cfg(test)]
-    pub(super) fn generation_key(&self, path: &str) -> String {
-        self.versions.key(KeyKind::Subtree, path)
+    /// Remove a bounded batch of expired query index members.
+    async fn cleanup_expired_query_index_members(
+        runtime: Arc<CacheRuntime>,
+        metrics: Arc<CacheMetrics>,
+        index_key: String,
+        limit: u64,
+    ) {
+        let limit = u32::try_from(limit).unwrap_or(u32::MAX);
+        let max_score = current_time_ms() as f64;
+        match runtime
+            .execute_script(ScriptRequest {
+                script_id: DELETE_BUCKET_SCRIPT_ID.to_string(),
+                keys: vec![index_key.clone()],
+                args: vec![
+                    Bytes::from_static(b"cleanup_expired"),
+                    Bytes::from(f64::NEG_INFINITY.to_string()),
+                    Bytes::from(max_score.to_string()),
+                    Bytes::from(limit.to_string()),
+                ],
+            })
+            .await
+        {
+            Ok(_) => {}
+            Err(error) => {
+                metrics.error();
+                warn!(
+                    index_key = %index_key,
+                    limit = limit,
+                    error = %error,
+                    "query cache index gc cleanup failed"
+                );
+            }
+        }
+    }
+
+    /// Return indexed query buckets below one path by scanning the global index.
+    async fn indexed_descendant_query_buckets(
+        runtime: Arc<CacheRuntime>,
+        metrics: Arc<CacheMetrics>,
+        index_key: &str,
+        service_name: &str,
+        path: &str,
+    ) -> Vec<String> {
+        let pattern = query_descendant_pattern(service_name, path);
+        match runtime.zscan_match(index_key, &pattern, 1_000).await {
+            Ok(keys) => keys,
+            Err(error) => {
+                metrics.error();
+                warn!(
+                    path = %path,
+                    pattern = %pattern,
+                    error = %error,
+                    "query cache descendant scan failed"
+                );
+                Vec::new()
+            }
+        }
+    }
+
+    /// Collect exact and ancestor query buckets affected by a path change.
+    fn collect_path_change_buckets(&self, path: &str, keys: &mut Vec<String>) {
+        Self::collect_path_change_buckets_for(&self.service_name, path, keys);
+    }
+
+    /// Collect exact and ancestor query buckets for the provided service name.
+    fn collect_path_change_buckets_for(service_name: &str, path: &str, keys: &mut Vec<String>) {
+        let normalized = normalize_path(path);
+        for op in [
+            "read",
+            "stat",
+            "read_dir",
+            "tree_directory",
+            "glob_directory",
+            "grep",
+        ] {
+            keys.push(query_bucket_key(service_name, &normalized, op));
+        }
+
+        let parent = parent_path(&normalized);
+        keys.push(query_bucket_key(service_name, &parent, "read_dir"));
+        for scope in ancestor_scopes(&parent) {
+            for op in ["tree_directory", "glob_directory", "grep", "stat"] {
+                keys.push(query_bucket_key(service_name, &scope, op));
+            }
+        }
+    }
+
+    fn query_bucket_key(&self, path: &str, op: &str) -> String {
+        query_bucket_key(&self.service_name, path, op)
+    }
+
+    fn query_index_key(&self) -> String {
+        format!("{{{}}}:ov:cacheidx:v1", self.service_name)
     }
 }
 
 #[async_trait]
 impl FileSystem for CachedFileSystem {
     async fn create(&self, path: &str) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.create(path).await?;
-        let pending = self.bump_object(path).await;
-        self.invalidate_path_objects(path).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(())
     }
 
     async fn mkdir(&self, path: &str, mode: u32) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.mkdir(path, mode).await?;
-        let pending = self.bump_subtree(path).await;
-        self.cache_delete(&self.directory_key(path), path).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(())
     }
 
     async fn remove(&self, path: &str) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.remove(path).await?;
-        let pending = self.bump_subtree(path).await;
-        self.invalidate_path_objects(path).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(())
     }
 
     async fn remove_all(&self, path: &str) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         let result = self.backend.remove_all(path).await;
         // Recursive deletion is not transactional: a backend can remove part of
-        // the subtree before reporting an error. Invalidate conservatively so
+        // the descendant range before reporting an error. Invalidate conservatively so
         // provider-backed caches cannot continue serving deleted objects.
-        let pending = self.bump_subtree(path).await;
-        self.invalidate_path_objects(path).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_descendants(path).await;
         result
     }
 
     async fn read(&self, path: &str, offset: u64, size: u64) -> Result<Vec<u8>> {
-        if offset != 0
-            || size != 0
-            || !self.policy.cache_file(path, 0)
-            || self.is_runtime_bypassed(path).await
-        {
-            self.metrics.policy_bypass(CacheOperation::Read);
-            return self.backend.read(path, offset, size).await;
-        }
-
-        let _operation_guard = self.operation_lock.read().await;
-        if self.is_runtime_bypassed(path).await {
-            self.metrics.policy_bypass(CacheOperation::Read);
-            return self.backend.read(path, offset, size).await;
-        }
-
         let normalized = normalize_path(path);
-        let key = self.file_key(&normalized);
-        if let Some(data) = self
-            .probe_file(&key, &normalized, Some(CacheOperation::Read))
-            .await
-        {
-            return Ok(data);
+        let full_read = offset == 0 && size == 0;
+        if !full_read || self.max_file_size_bytes == 0 || is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::Read);
+            return self.backend.read(path, offset, size).await;
         }
-        self.metrics.file_miss(CacheOperation::Read);
-
-        let (inflight, leader) = self.acquire_inflight(&key).await;
-        if leader {
-            self.metrics.inflight_leader();
-        } else {
-            self.metrics.inflight_follower();
-        }
-        let inflight_guard = inflight.lock().await;
-
-        if !leader {
-            if let Some(data) = self.probe_file(&key, &normalized, None).await {
-                self.metrics.inflight_backend_saved();
-                drop(inflight_guard);
-                self.release_inflight(&key, &inflight).await;
-                return Ok(data);
-            }
-        }
-
-        let versions = self.versions.snapshot(&normalized, None).await;
-        let data = self.backend.read(path, 0, 0).await;
-        if let Ok(value) = &data {
-            self.metrics.backend_fallback(value.len());
-            self.fill_file(&key, &normalized, value, versions).await;
-        }
-        drop(inflight_guard);
-        self.release_inflight(&key, &inflight).await;
-        data
+        self.get_or_fill_file(path, &normalized).await
     }
 
     async fn write(&self, path: &str, data: &[u8], offset: u64, flags: WriteFlag) -> Result<u64> {
-        let guard = self.operation_lock.write().await;
         let written = self.backend.write(path, data, offset, flags).await?;
-        let normalized = normalize_path(path);
-        let key = self.file_key(&normalized);
-        let pending = self.bump_object(&normalized).await;
-        self.cache_delete(&key, &normalized).await;
-        // Across processes a concurrent writer's fill can land after a newer
-        // backend write, so multi-instance mode leaves filling to the next read.
-        if !self.policy.multi_instance()
-            && pending.is_empty()
-            && offset == 0
-            && matches!(
-                flags,
-                WriteFlag::Create | WriteFlag::CreateNew | WriteFlag::Truncate
-            )
-            && self.policy.cache_file(&normalized, data.len())
-            && !self.is_runtime_bypassed(&normalized).await
-        {
-            // The operation lock serializes this process's writers, so a
-            // snapshot taken after this write's own bump is current.
-            let versions = self.versions.snapshot(&normalized, None).await;
-            self.fill_file(&key, &normalized, data, versions).await;
-        }
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(written)
     }
 
-    /// Stream `src` to the backend, then invalidate like `write`.
-    ///
-    /// The bytes are never in memory here, so the file cache is not refilled;
-    /// the next full read misses and fills it.
     async fn write_from_path(&self, path: &str, src: &Path, flags: WriteFlag) -> Result<u64> {
-        let guard = self.operation_lock.write().await;
+        // Forward so backends can stream the upload instead of buffering it.
         let written = self.backend.write_from_path(path, src, flags).await?;
-        let normalized = normalize_path(path);
-        let key = self.file_key(&normalized);
-        let pending = self.bump_object(&normalized).await;
-        self.cache_delete(&key, &normalized).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(written)
     }
 
-    /// Stream from the backend, bypassing the file cache like ranged reads do.
     async fn read_to_path(&self, path: &str, dst: &Path) -> Result<u64> {
-        self.metrics.policy_bypass(CacheOperation::Read);
+        // Downloads stream from the backend instead of going through the file cache.
         self.backend.read_to_path(path, dst).await
     }
 
@@ -1213,83 +822,100 @@ impl FileSystem for CachedFileSystem {
         sort_by: Option<ListSortBy>,
         sort_order: Option<SortOrder>,
     ) -> Result<Vec<FileInfo>> {
-        self.read_dir_for(
-            CacheOperation::ReadDir,
-            path,
-            offset,
-            limit,
-            sort_by,
-            sort_order,
-        )
+        let normalized = normalize_path(path);
+        if is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::ReadDir);
+            return self
+                .backend
+                .read_dir(path, offset, limit, sort_by, sort_order)
+                .await;
+        }
+
+        let (request, query_hash) = match canonical_query_request(json!({
+            "path": normalized.as_str(),
+            "offset": offset,
+            "limit": limit,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+        })) {
+            Ok(request) => request,
+            Err(_) => {
+                self.metrics.error();
+                self.metrics.operation_bypass(CacheOperation::ReadDir);
+                return self
+                    .backend
+                    .read_dir(path, offset, limit, sort_by, sort_order)
+                    .await;
+            }
+        };
+        self.get_or_fill_query("read_dir", &normalized, request, query_hash, || async {
+            let mut entries = self
+                .backend
+                .read_dir(path, None, None, sort_by, sort_order)
+                .await?;
+            entries.retain(|entry| !is_hidden_internal_name(&entry.name));
+            Ok(apply_read_dir_options(
+                entries, offset, limit, sort_by, sort_order,
+            ))
+        })
         .await
     }
 
+    async fn read_internal_dir(&self, path: &str) -> Result<Vec<FileInfo>> {
+        self.backend.read_internal_dir(path).await
+    }
+
     async fn stat(&self, path: &str) -> Result<FileInfo> {
-        self.backend.stat(path).await
+        let normalized = normalize_path(path);
+        if is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::Stat);
+            return self.backend.stat(path).await;
+        }
+
+        let (request, query_hash) = match canonical_query_request(json!({
+            "path": normalized.as_str(),
+        })) {
+            Ok(request) => request,
+            Err(_) => {
+                self.metrics.error();
+                self.metrics.operation_bypass(CacheOperation::Stat);
+                return self.backend.stat(path).await;
+            }
+        };
+        self.get_or_fill_query("stat", &normalized, request, query_hash, || async {
+            self.backend.stat(path).await
+        })
+        .await
     }
 
     async fn rename(&self, old_path: &str, new_path: &str) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.rename(old_path, new_path).await?;
-        let pending = self.bump_move(old_path, new_path).await;
-        self.invalidate_path_objects(old_path).await;
-        self.invalidate_path_objects(new_path).await;
-        self.invalidate_parent_directory(old_path).await;
-        self.invalidate_parent_directory(new_path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_descendants(old_path).await;
+        self.invalidate_descendants(new_path).await;
         Ok(())
     }
 
     async fn replace(&self, src_path: &str, dst_path: &str) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.replace(src_path, dst_path).await?;
-        let pending = self.bump_move(src_path, dst_path).await;
-        self.invalidate_path_objects(src_path).await;
-        self.invalidate_path_objects(dst_path).await;
-        self.invalidate_parent_directory(src_path).await;
-        self.invalidate_parent_directory(dst_path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(src_path).await;
+        self.invalidate_path(dst_path).await;
         Ok(())
     }
 
     async fn chmod(&self, path: &str, mode: u32) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.chmod(path, mode).await?;
-        let pending = self.bump_object(path).await;
-        self.invalidate_path_objects(path).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(())
     }
 
     async fn truncate(&self, path: &str, size: u64) -> Result<()> {
-        let guard = self.operation_lock.write().await;
         self.backend.truncate(path, size).await?;
-        let pending = self.bump_object(path).await;
-        self.cache_delete(&self.file_key(path), path).await;
-        self.invalidate_parent_directory(path).await;
-        self.settle_bumps(guard, pending).await;
+        self.invalidate_path(path).await;
         Ok(())
     }
 
     async fn exists(&self, path: &str) -> bool {
         self.backend.exists(path).await
-    }
-
-    async fn ensure_parent_dirs(&self, path: &str, mode: u32) -> Result<()> {
-        let guard = self.operation_lock.write().await;
-        self.backend.ensure_parent_dirs(path, mode).await?;
-        let scopes = ancestor_scopes(&parent_path(path));
-        let counters = scopes
-            .iter()
-            .map(|scope| (KeyKind::Object, scope.as_str()))
-            .collect::<Vec<_>>();
-        let pending = self.bump_counters(&counters).await;
-        for scope in &scopes {
-            self.cache_delete(&self.directory_key(scope), scope).await;
-        }
-        self.settle_bumps(guard, pending).await;
-        Ok(())
     }
 
     async fn grep(
@@ -1298,13 +924,39 @@ impl FileSystem for CachedFileSystem {
         pattern: &str,
         options: GrepOptions<'_>,
     ) -> Result<GrepResult> {
-        if self.policy.traversal_mode() == CacheTraversalMode::CachedTraversal
-            && !self.wraps_multiwrite()
-        {
-            return self.grep_via_cache(path, pattern, options).await;
+        let normalized = normalize_path(path);
+        if is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::Grep);
+            return self.backend.grep(path, pattern, options).await;
         }
 
-        self.backend.grep(path, pattern, options).await
+        let (request, query_hash) = match canonical_query_request(json!({
+            "path": normalized.as_str(),
+            "pattern": pattern,
+            "recursive": options.recursive,
+            "case_insensitive": options.case_insensitive,
+            "node_limit": options.node_limit,
+            "exclude_path": options.exclude_path.map(normalize_prefix_path),
+            "level_limit": options.level_limit,
+            "before_context": options.before_context,
+            "after_context": options.after_context,
+        })) {
+            Ok(request) => request,
+            Err(_) => {
+                self.metrics.error();
+                self.metrics.operation_bypass(CacheOperation::Grep);
+                return self.backend.grep(path, pattern, options).await;
+            }
+        };
+        self.get_or_fill_query("grep", &normalized, request, query_hash, || async {
+            let mut result = self.backend.grep(path, pattern, options).await?;
+            result
+                .matches
+                .retain(|entry| !is_internal_entry_path(&entry.file));
+            result.count = result.matches.len();
+            Ok(result)
+        })
+        .await
     }
 
     async fn tree_directory(
@@ -1318,11 +970,12 @@ impl FileSystem for CachedFileSystem {
         sort_order: Option<SortOrder>,
         directories_only: bool,
     ) -> Result<Vec<TreeEntry>> {
-        if self.policy.traversal_mode() == CacheTraversalMode::CachedTraversal
-            && !self.wraps_multiwrite()
-        {
+        let normalized = normalize_path(path);
+        if is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::Tree);
             return self
-                .tree_directory_via_cache(
+                .backend
+                .tree_directory(
                     path,
                     show_hidden,
                     node_limit,
@@ -1335,18 +988,62 @@ impl FileSystem for CachedFileSystem {
                 .await;
         }
 
-        self.backend
-            .tree_directory(
-                path,
-                show_hidden,
-                node_limit,
-                level_limit,
-                offset,
-                sort_by,
-                sort_order,
-                directories_only,
-            )
-            .await
+        let (request, query_hash) = match canonical_query_request(json!({
+            "path": normalized.as_str(),
+            "show_hidden": show_hidden,
+            "node_limit": node_limit,
+            "level_limit": level_limit,
+            "offset": offset,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+            "directories_only": directories_only,
+        })) {
+            Ok(request) => request,
+            Err(_) => {
+                self.metrics.error();
+                self.metrics.operation_bypass(CacheOperation::Tree);
+                return self
+                    .backend
+                    .tree_directory(
+                        path,
+                        show_hidden,
+                        node_limit,
+                        level_limit,
+                        offset,
+                        sort_by,
+                        sort_order,
+                        directories_only,
+                    )
+                    .await;
+            }
+        };
+        self.get_or_fill_query(
+            "tree_directory",
+            &normalized,
+            request,
+            query_hash,
+            || async {
+                let mut entries = self
+                    .backend
+                    .tree_directory(
+                        path,
+                        show_hidden,
+                        node_limit,
+                        level_limit,
+                        offset,
+                        sort_by,
+                        sort_order,
+                        directories_only,
+                    )
+                    .await?;
+                entries.retain(|entry| {
+                    !is_hidden_internal_name(&entry.info.name)
+                        && !is_internal_entry_path(&entry.path)
+                });
+                Ok(entries)
+            },
+        )
+        .await
     }
 
     async fn glob_directory(
@@ -1358,19 +1055,175 @@ impl FileSystem for CachedFileSystem {
         level_limit: Option<usize>,
         continuation_token: Option<String>,
     ) -> Result<GlobPage> {
-        self.backend
-            .glob_directory(
-                path,
-                pattern,
-                show_hidden,
-                page_size,
-                level_limit,
-                continuation_token,
-            )
-            .await
+        let normalized = normalize_path(path);
+        if is_internal_cache_path(&normalized) {
+            self.metrics.operation_bypass(CacheOperation::Glob);
+            return self
+                .backend
+                .glob_directory(
+                    path,
+                    pattern,
+                    show_hidden,
+                    page_size,
+                    level_limit,
+                    continuation_token,
+                )
+                .await;
+        }
+
+        let (request, query_hash) = match canonical_query_request(json!({
+            "path": normalized.as_str(),
+            "pattern": pattern,
+            "show_hidden": show_hidden,
+            "page_size": page_size,
+            "level_limit": level_limit,
+            "continuation_token": continuation_token.as_deref(),
+        })) {
+            Ok(request) => request,
+            Err(_) => {
+                self.metrics.error();
+                self.metrics.operation_bypass(CacheOperation::Glob);
+                return self
+                    .backend
+                    .glob_directory(
+                        path,
+                        pattern,
+                        show_hidden,
+                        page_size,
+                        level_limit,
+                        continuation_token,
+                    )
+                    .await;
+            }
+        };
+        self.get_or_fill_query(
+            "glob_directory",
+            &normalized,
+            request,
+            query_hash,
+            || async {
+                let mut page = self
+                    .backend
+                    .glob_directory(
+                        path,
+                        pattern,
+                        show_hidden,
+                        page_size,
+                        level_limit,
+                        continuation_token,
+                    )
+                    .await?;
+                page.entries.retain(|entry| {
+                    !is_hidden_internal_name(&entry.name) && !is_internal_entry_path(&entry.path)
+                });
+                Ok(page)
+            },
+        )
+        .await
     }
 }
 
+/// Map a query bucket operation name to its metric label.
+fn query_operation(op: &str) -> CacheOperation {
+    match op {
+        "read" => CacheOperation::Read,
+        "stat" => CacheOperation::Stat,
+        "read_dir" => CacheOperation::ReadDir,
+        "tree_directory" => CacheOperation::Tree,
+        "glob_directory" => CacheOperation::Glob,
+        _ => CacheOperation::Grep,
+    }
+}
+
+/// Build a stable JSON request value and its field hash.
+fn canonical_query_request(request: Value) -> CacheResult<(Value, String)> {
+    let canonical =
+        serde_json::to_vec(&request).map_err(|error| CacheError::InvalidData(error.to_string()))?;
+    let hash = format!("{:032x}", xxh3_128(&canonical));
+    Ok((request, hash))
+}
+
+/// Return the current Unix timestamp in milliseconds, saturating at u64::MAX.
+fn current_time_ms() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
+        .min(u128::from(u64::MAX)) as u64
+}
+
+/// Build one query HASH bucket key from service, path, and operation.
+fn query_bucket_key(service_name: &str, path: &str, op: &str) -> String {
+    let normalized = normalize_path(path);
+    format!(
+        "{{{}}}:ov:cache:v1:{}:{}",
+        service_name,
+        encode_path_key(&normalized),
+        op
+    )
+}
+
+/// Build the Redis glob pattern for descendant query buckets under one path.
+fn query_descendant_pattern(service_name: &str, path: &str) -> String {
+    let normalized = normalize_path(path);
+    if normalized == "/" {
+        return format!("{{{}}}:ov:cache:v1:*", service_name);
+    }
+    format!(
+        "{{{}}}:ov:cache:v1:{}/*:*",
+        service_name,
+        encode_path_key(&normalized)
+    )
+}
+
+/// Percent-encode a normalized path for use in provider bucket keys.
+fn encode_path_key(path: &str) -> String {
+    let mut encoded = String::with_capacity(path.len());
+    for ch in path.chars() {
+        match ch {
+            ':' => encoded.push_str("%3A"),
+            '%' => encoded.push_str("%25"),
+            '*' => encoded.push_str("%2A"),
+            '?' => encoded.push_str("%3F"),
+            '[' => encoded.push_str("%5B"),
+            ']' => encoded.push_str("%5D"),
+            _ => encoded.push(ch),
+        }
+    }
+    encoded
+}
+
+/// Return true when a normalized query path names a runtime-internal file.
+fn is_internal_cache_path(path: &str) -> bool {
+    let normalized = normalize_path(path);
+    is_encryption_temp_path(&normalized)
+        || normalized
+            .rsplit('/')
+            .next()
+            .is_some_and(is_hidden_internal_name)
+}
+
+/// Return true when a path names the encryption staging directory or one of its descendants.
+fn is_encryption_temp_path(path: &str) -> bool {
+    let normalized = normalize_path(path);
+    normalized.ends_with("/temp/.encrypt_stage") || normalized.contains("/temp/.encrypt_stage/")
+}
+
+/// Return true when a result path names a runtime-internal file.
+fn is_internal_entry_path(path: &str) -> bool {
+    path.rsplit('/').next().is_some_and(is_hidden_internal_name)
+}
+
+/// Normalize one query path into the cache key path form.
+fn normalize_path(path: &str) -> String {
+    if path.is_empty() || path == "/" {
+        "/".to_string()
+    } else {
+        format!("/{}", path.trim_matches('/'))
+    }
+}
+
+/// Return the normalized parent path for one normalized or unnormalized path.
 fn parent_path(path: &str) -> String {
     let normalized = normalize_path(path);
     if normalized == "/" {
@@ -1388,153 +1241,31 @@ fn parent_path(path: &str) -> String {
         .unwrap_or_else(|| "/".to_string())
 }
 
-fn is_same_or_descendant(path: &str, scope: &str) -> bool {
-    scope == "/"
-        || path == scope
-        || path
-            .strip_prefix(scope)
-            .is_some_and(|suffix| suffix.starts_with('/'))
+/// Return all ancestor scopes from root through the provided path.
+fn ancestor_scopes(path: &str) -> Vec<String> {
+    let normalized = normalize_path(path);
+    if normalized == "/" {
+        return vec!["/".to_string()];
+    }
+
+    let mut scopes = vec!["/".to_string()];
+    let mut current = String::new();
+    for component in normalized.trim_start_matches('/').split('/') {
+        current.push('/');
+        current.push_str(component);
+        scopes.push(current.clone());
+    }
+    scopes
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::cache::CacheOperationSnapshot;
-    use crate::plugins::memfs::MemFileSystem;
+#[path = "tests/test_wrapper.rs"]
+mod tests;
 
-    async fn cached_memfs(mode: CacheTraversalMode) -> CachedFileSystem {
-        let backend = MemFileSystem::new();
-        backend.mkdir("/docs", 0o755).await.unwrap();
-        backend
-            .write("/docs/a.md", b"alpha\nbeta\n", 0, WriteFlag::Create)
-            .await
-            .unwrap();
-        CachedFileSystem::with_runtime(
-            Box::new(backend),
-            CacheRuntime::memory(),
-            "operation-metrics-test",
-            CachePolicy::default().with_traversal_mode(mode),
-        )
-    }
+#[cfg(test)]
+#[path = "tests/test_multi_instance.rs"]
+mod multi_instance_tests;
 
-    fn counts(hits: u64, misses: u64, bypasses: u64) -> CacheOperationSnapshot {
-        CacheOperationSnapshot {
-            hits,
-            misses,
-            bypasses,
-        }
-    }
-
-    #[tokio::test]
-    async fn cached_traversal_attributes_lookups_to_tree_and_grep() {
-        let fs = cached_memfs(CacheTraversalMode::CachedTraversal).await;
-
-        fs.tree_directory("/docs", false, None, None, None, None, None, false)
-            .await
-            .unwrap();
-        fs.tree_directory("/docs", false, None, None, None, None, None, false)
-            .await
-            .unwrap();
-        let options = GrepOptions {
-            recursive: true,
-            ..GrepOptions::default()
-        };
-        fs.grep("/docs", "beta", options).await.unwrap();
-        fs.read_dir("/docs", None, None, None, None).await.unwrap();
-
-        let snapshot = fs.metrics().snapshot();
-        assert_eq!(snapshot.operation(CacheOperation::Tree), counts(1, 1, 0));
-        // The directory was filled by `tree`; the file is read for the first time.
-        assert_eq!(snapshot.operation(CacheOperation::Grep), counts(1, 1, 0));
-        assert_eq!(snapshot.operation(CacheOperation::ReadDir), counts(1, 0, 0));
-        assert_eq!(snapshot.operation(CacheOperation::Read), counts(0, 0, 0));
-        assert_eq!(snapshot.read_dir_hits, 3);
-        assert_eq!(snapshot.file_misses, 1);
-    }
-
-    /// A traversal memo older than a bump must not reject (and delete) an
-    /// entry that was filled after the bump with the current counter values.
-    #[tokio::test]
-    async fn stale_traversal_memo_keeps_a_fresh_entry() {
-        let fs = cached_memfs(CacheTraversalMode::CachedTraversal).await;
-        assert_eq!(fs.read("/docs/a.md", 0, 0).await.unwrap(), b"alpha\nbeta\n");
-
-        let memo = VersionMemo::default();
-        let key = fs.generation_key("/docs");
-        let live = fs.versions.snapshot("/docs/a.md", None).await.unwrap();
-        let current = live
-            .iter()
-            .find(|snapshot| snapshot.key == key)
-            .unwrap()
-            .value;
-        memo.lock().await.insert(key, current - 1);
-
-        let data = fs
-            .read_with_generation_cache(CacheOperation::Grep, "/docs/a.md", 0, 0, &memo)
-            .await
-            .unwrap();
-        assert_eq!(data, b"alpha\nbeta\n");
-        let snapshot = fs.metrics().snapshot();
-        assert_eq!(snapshot.operation(CacheOperation::Grep), counts(1, 0, 0));
-        assert_eq!(snapshot.stale_versions, 0);
-    }
-
-    /// A generation key that expires (or is evicted) must never be restored to an
-    /// old value: a later bump would then reproduce a generation some surviving
-    /// cache entry already recorded, and that entry would validate again.
-    #[tokio::test]
-    async fn lost_generation_key_never_revalidates_deleted_subtree() {
-        use crate::core::mountable::ArcFileSystem;
-
-        let backend: Arc<dyn FileSystem> = Arc::new(MemFileSystem::new());
-        backend.mkdir("/p", 0o755).await.unwrap();
-        backend
-            .write("/p/x", b"v1", 0, WriteFlag::Create)
-            .await
-            .unwrap();
-        backend
-            .write("/p/y", b"y", 0, WriteFlag::Create)
-            .await
-            .unwrap();
-        let runtime = CacheRuntime::memory();
-        let instance = || {
-            CachedFileSystem::with_runtime(
-                Box::new(ArcFileSystem(backend.clone())),
-                runtime.clone(),
-                "generation-loss-test",
-                CachePolicy::default(),
-            )
-        };
-        let (a, b, c) = (instance(), instance(), instance());
-
-        // C remembers the current generation of /p.
-        c.read("/p/x", 0, 0).await.unwrap();
-        // A deletes the subtree (one bump of /p); it is recreated without further
-        // bumps, and B caches the new content under the bumped generation.
-        a.remove_all("/p").await.unwrap();
-        backend.mkdir("/p", 0o755).await.unwrap();
-        backend
-            .write("/p/x", b"v2", 0, WriteFlag::Create)
-            .await
-            .unwrap();
-        backend
-            .write("/p/y", b"y", 0, WriteFlag::Create)
-            .await
-            .unwrap();
-        assert_eq!(b.read("/p/x", 0, 0).await.unwrap(), b"v2");
-
-        // The /p generation key expires while B's entry for /p/x survives.
-        runtime.del(&[c.generation_key("/p")]).await.unwrap();
-        // C touches the subtree again, then A deletes it.
-        c.read("/p/y", 0, 0).await.unwrap();
-        a.remove_all("/p").await.unwrap();
-
-        assert!(
-            matches!(
-                b.read("/p/x", 0, 0).await,
-                Err(crate::core::Error::NotFound(_))
-            ),
-            "B must not serve content deleted after the generation key was lost"
-        );
-    }
-}
+#[cfg(test)]
+#[path = "tests/test_file_cache.rs"]
+mod file_cache_tests;

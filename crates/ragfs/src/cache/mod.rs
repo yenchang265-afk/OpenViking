@@ -6,14 +6,7 @@
 
 mod envelope;
 mod metrics;
-#[cfg(test)]
-mod multi_instance_tests;
-mod policy;
-#[cfg(test)]
-mod stress_tests;
-mod versions;
 mod wrapper;
 
 pub use metrics::{CacheMetrics, CacheMetricsSnapshot, CacheOperation, CacheOperationSnapshot};
-pub use policy::{CacheDecision, CachePolicy, CacheTraversalMode, CacheTreeMode};
-pub use wrapper::CachedFileSystem;
+pub use wrapper::{CachedFileSystem, DEFAULT_MAX_FILE_SIZE_BYTES};

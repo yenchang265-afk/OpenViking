@@ -1,4 +1,4 @@
-//! CacheFS hit/miss latency against a real Redis.
+//! CacheFS query hit/miss and write latency against a real Redis.
 //!
 //! Ignored by default. Run with:
 //! `REDIS_URL=redis://127.0.0.1:6379 cargo test --features cache --test cache_latency -- --ignored --nocapture`
@@ -8,7 +8,7 @@
 //! It uses only the public API so the same file can be run on an older
 //! checkout to compare before/after numbers.
 
-use ragfs::cache::{CachePolicy, CachedFileSystem};
+use ragfs::cache::CachedFileSystem;
 use ragfs::cache_runtime::{CacheRuntime, RedisProviderConfig};
 use ragfs::core::{FileInfo, FileSystem, ListSortBy, Result, SortOrder};
 use ragfs::plugins::MemFileSystem;
@@ -103,39 +103,83 @@ async fn measure_depth(config: &RedisProviderConfig, depth: usize) {
         .unwrap();
 
     let service = format!("ragfs-latency-{}-{depth}", std::process::id());
-    let instance = || async {
-        CachedFileSystem::with_runtime(
-            Box::new(Shared(Arc::clone(&backend))),
-            CacheRuntime::redis(config.clone()).await.unwrap(),
-            service.clone(),
-            CachePolicy::default(),
-        )
+    let instance = |multi_instance: bool| {
+        let (backend, config, service) = (Arc::clone(&backend), config.clone(), service.clone());
+        async move {
+            CachedFileSystem::with_runtime(
+                Box::new(Shared(backend)),
+                CacheRuntime::redis(config).await.unwrap(),
+                service,
+            )
+            .with_multi_instance(multi_instance)
+        }
     };
-    let (writer, reader) = (instance().await, instance().await);
+    let single = instance(false).await;
+    let (writer, reader) = (instance(true).await, instance(true).await);
+
+    reader.stat(&path).await.unwrap();
+    let mut stat_hits = Vec::with_capacity(SAMPLES);
+    for _ in 0..SAMPLES {
+        let started = Instant::now();
+        reader.stat(&path).await.unwrap();
+        stat_hits.push(started.elapsed());
+    }
+
+    reader.read_dir(&dir, None, None, None, None).await.unwrap();
+    let mut dir_hits = Vec::with_capacity(SAMPLES);
+    for _ in 0..SAMPLES {
+        let started = Instant::now();
+        reader.read_dir(&dir, None, None, None, None).await.unwrap();
+        dir_hits.push(started.elapsed());
+    }
 
     reader.read(&path, 0, 0).await.unwrap();
-    let mut hits = Vec::with_capacity(SAMPLES);
+    let mut read_hits = Vec::with_capacity(SAMPLES);
     for _ in 0..SAMPLES {
         let started = Instant::now();
         reader.read(&path, 0, 0).await.unwrap();
-        hits.push(started.elapsed());
+        read_hits.push(started.elapsed());
     }
 
+    // Background invalidation: the write returns before buckets are deleted.
+    let mut single_writes = Vec::with_capacity(SAMPLES / 4);
+    for _ in 0..SAMPLES / 4 {
+        let started = Instant::now();
+        single
+            .write(&path, &payload, 0, WriteFlag::None)
+            .await
+            .unwrap();
+        single_writes.push(started.elapsed());
+    }
+    tokio::time::sleep(Duration::from_millis(200)).await;
+
+    let mut multi_writes = Vec::with_capacity(SAMPLES / 4);
     let mut misses = Vec::with_capacity(SAMPLES / 4);
     for _ in 0..SAMPLES / 4 {
-        // An in-place write invalidates without the write-through fill, so
-        // the reader's next read is a real miss.
+        reader.stat(&path).await.unwrap();
+        // Awaited invalidation: the write returns after its buckets are gone,
+        // so the reader's next stat is a real miss.
+        let started = Instant::now();
         writer
             .write(&path, &payload, 0, WriteFlag::None)
             .await
             .unwrap();
+        multi_writes.push(started.elapsed());
         let started = Instant::now();
-        reader.read(&path, 0, 0).await.unwrap();
+        reader.stat(&path).await.unwrap();
         misses.push(started.elapsed());
     }
 
-    report(&format!("depth {depth} hit"), hits);
-    report(&format!("depth {depth} miss+fill"), misses);
+    report(&format!("depth {depth} stat hit"), stat_hits);
+    report(&format!("depth {depth} read_dir hit"), dir_hits);
+    report(&format!("depth {depth} read hit"), read_hits);
+    report(&format!("depth {depth} stat miss+fill"), misses);
+    report(&format!("depth {depth} write single"), single_writes);
+    report(&format!("depth {depth} write multi"), multi_writes);
+    assert!(
+        writer.metrics().snapshot().invalidation_failures == 0,
+        "invalidation must not fail against a healthy Redis"
+    );
 }
 
 #[tokio::test]
@@ -155,8 +199,8 @@ async fn cachefs_hit_and_miss_latency() {
             },
         )
     });
-    // Comma-separated cluster seeds. Counters of one path sit in different
-    // slots, so this shows the cost of per-key reads in Cluster mode.
+    // Comma-separated cluster seeds. Every CacheFS key shares the
+    // `{service_name}` hash tag, so all of them live in one slot.
     let cluster = std::env::var("REDIS_CLUSTER_URLS").ok().map(|urls| {
         (
             "cluster",

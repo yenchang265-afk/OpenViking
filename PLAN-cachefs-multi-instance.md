@@ -1,6 +1,8 @@
 # Plan: Multi-Instance CacheFS
 
-Status: **Implemented** 2026-10-29 on branch `worktree-cachefs-multi-instance-plan` (T1–T15). T16 (deployment check) is left for a manual run.
+Status: **Superseded** 2026-11-08. Upstream #6346 replaced the file-content CacheFS this plan targeted with query-driven caching (epoch-checked HASH buckets, no file-content cache). The `multi_instance` flag now makes those bucket deletes run before each mutation returns; see `docs/en/guides/14-ragfs-cache.md`, "Multiple Instances". The version-counter design below is kept for history only.
+
+Previous status: Implemented 2026-10-29 on branch `worktree-cachefs-multi-instance-plan` (T1–T15). T16 (deployment check) is left for a manual run.
 
 ## Implementation notes
 

@@ -43,6 +43,10 @@ vi.mock('#/features/connection/hooks/use-studio-service', () => ({
 vi.mock('#/features/connection/hooks/use-studio-capabilities', () => ({
   useStudioCapabilities: () => ({}),
 }))
+vi.mock('#/features/connection/hooks/use-studio-feature-toggles', () => ({
+  // Every Studio feature is enabled; toggles are covered by their own tests.
+  useStudioFeatureToggles: () => ({ data: {}, isEnabled: () => true }),
+}))
 vi.mock('#/features/admin/gateway/lib/use-gateway', () => ({
   useGateway: () => ({ allowed: false }),
 }))

@@ -18,9 +18,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/shared/ui/tabs'
 import { formatDateTime } from '#/i18n/format'
 import { cn } from '#/shared/lib/utils'
 
-import { parseLiveContextMetadata, readLiveContext } from '../-lib/api'
-import { formatLiveContextResult } from '../-lib/live-result'
-import type { LiveContextMount, McpCatalogTool } from '../-lib/model'
+import {
+  parseLiveContextMetadata,
+  readLiveContext,
+} from '#/features/workbench/arranger/lib/api'
+import { formatLiveContextResult } from '#/features/workbench/arranger/lib/live-result'
+import type {
+  LiveContextMount,
+  McpCatalogTool,
+} from '#/features/workbench/arranger/lib/model'
 
 export function LiveContextInspector({
   document,

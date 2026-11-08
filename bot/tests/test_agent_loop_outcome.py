@@ -418,7 +418,7 @@ async def test_context_build_messages_can_skip_system_prompt(temp_dir: Path):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("scope", ["disabled", "native", "chat", "compile"])
+@pytest.mark.parametrize("scope", ["disabled", "native", "chat"])
 async def test_agent_loop_gates_multimodal_result_by_provider(make_loop, monkeypatch, scope):
     content = [
         {"type": "text", "text": "Source: viking://resources/image.png"},
@@ -429,8 +429,7 @@ async def test_agent_loop_gates_multimodal_result_by_provider(make_loop, monkeyp
     ]
 
     provider: LLMProvider
-    if scope in {"chat", "compile"}:
-        from vikingbot.compile.service import _CompileProvider
+    if scope == "chat":
         from vikingbot.integrations.langfuse import LangfuseClient
         from vikingbot.providers.vlm_adapter import VLMProviderAdapter
 
@@ -446,9 +445,7 @@ async def test_agent_loop_gates_multimodal_result_by_provider(make_loop, monkeyp
         )
         monkeypatch.setattr(vlm, "get_completion_async", completion)
         adapter = VLMProviderAdapter(vlm, "kimi-k2", langfuse_client=LangfuseClient())
-        provider = (
-            _CompileProvider(adapter, asyncio.Semaphore(1)) if scope == "compile" else adapter
-        )
+        provider = adapter
     else:
         provider = _MediaProvider([[_image_call("call-1")]], supports_media=scope == "native")
     loop = make_loop(provider=provider, max_iterations=2)
@@ -467,10 +464,10 @@ async def test_agent_loop_gates_multimodal_result_by_provider(make_loop, monkeyp
         else completion.await_args_list[-1].kwargs["messages"]
     )
     tool_message = next(message for message in sent if message["role"] == "tool")
-    assert bool(loop_module._inline_media_bytes(sent)) == (scope in {"native", "compile"})
+    assert bool(loop_module._inline_media_bytes(sent)) == (scope == "native")
     if scope == "native":
         assert tool_message["content"] == content
-    elif scope != "compile":
+    else:
         assert tool_message["content"].startswith("Image resource.")
         assert "tool-result media policy" in tool_message["content"]
     assert tools_used[0]["result"] == "Image resource."

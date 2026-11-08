@@ -7,6 +7,7 @@ import {
   reindexResource,
   removeResource,
 } from '#/features/workbench/resources/lib/api'
+import type * as OvClientModule from '#/shared/api/ov-client/index'
 
 const {
   clientGetMock,
@@ -23,7 +24,7 @@ const {
 }))
 
 vi.mock('#/shared/api/ov-client/index', async (importOriginal) => {
-  const original = await importOriginal()
+  const original = await importOriginal<typeof OvClientModule>()
   return {
     ...original,
     deleteFs: deleteFsMock,

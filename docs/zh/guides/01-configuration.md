@@ -1535,10 +1535,8 @@ Redis 名稱空間。
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `backend` | str | `local` 完全沿用原檔案系統；`cache` 啟用 CacheFS wrapper | `local` |
-| `max_file_size_bytes` | int | 允許快取的單檔案最大位元組數 | `1048576` |
-| `traversal_mode` | str | `backend` 或 `cached_traversal` | `backend` |
-| `bypass_prefixes` | array[str] | 繞過快取的路徑字首 | `[]` |
-| `multi_instance` | bool | 多個 OpenViking 程序共用快取 namespace 時，在每個實例上設定；停用寫入回填，並要求 Provider 支援原子 `incrby`，使用 Redis 時還需要 `default_ttl_seconds > 0`。詳見 RAGFS 快取指南 | `false` |
+| `max_file_size_bytes` | int | CacheFS 快取完整內容的單檔案上限；部分讀取與更大的檔案直接讀取 backend；`0` 停用檔案內容快取 | `1048576` |
+| `multi_instance` | bool | 多個 OpenViking 程序共用快取 namespace 時，在每個實例上設定；CacheFS 會在每次寫入返回前刪除受影響的快取項目，並要求快取預設 TTL 大於 0。詳見 RAGFS 快取指南 | `false` |
 
 `storage.agfs.pathlock` 選擇 PathLock 儲存 Provider：
 

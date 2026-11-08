@@ -1,5 +1,6 @@
 """Image evidence in in-server Compile: loading, batching, evidence reads and transport."""
 
+import asyncio
 import base64
 from collections import Counter
 from types import SimpleNamespace
@@ -170,7 +171,7 @@ async def test_provider_adapts_tool_images_to_the_vlm_transport(mode):
         },
     ]
 
-    await CompileProvider(vlm, __import__("asyncio").Semaphore(1)).chat(messages=messages)
+    await CompileProvider(vlm, asyncio.Semaphore(1)).chat(messages=messages)
 
     sent = vlm.get_completion_async.await_args.kwargs["messages"]
     if mode == "native":
@@ -184,3 +185,25 @@ async def test_provider_adapts_tool_images_to_the_vlm_transport(mode):
             for part in sent[1]["content"]
             if isinstance(sent[1]["content"], list)
         )
+
+
+@pytest.mark.parametrize("with_image", [True, False])
+async def test_rejected_image_requests_name_the_likely_cause(with_image):
+    from openviking.models.model_error import ModelError, ModelErrorKind
+
+    vlm = SimpleNamespace(
+        model="text-only-model",
+        thinking=None,
+        tool_result_media_mode=lambda: "native",
+        get_completion_async=AsyncMock(
+            side_effect=ModelError(ModelErrorKind.INVALID_REQUEST, "image_url is not supported")
+        ),
+    )
+    content = [{"type": "text", "text": "{}"}, *([image_part()] if with_image else [])]
+    messages = [{"role": "tool", "tool_call_id": "read", "content": content}]
+
+    response = await CompileProvider(vlm, asyncio.Semaphore(1)).chat(messages=messages)
+
+    assert response.finish_reason == "error"
+    assert response.error_kind == ModelErrorKind.INVALID_REQUEST
+    assert ("vision-capable vlm model" in response.content) is with_image
