@@ -16,6 +16,7 @@
     "ops/map.py": "no Skill-script hint in the Map prompt",
     "renderer.py": "zh-TW headings",
     "plan.py": "decodes JSON-encoded objects some providers send for nested arguments",
-    "pipeline.py": "names the first job failure when no final artifact remains"
+    "pipeline.py": "names the first job failure when no final artifact remains",
+    "pipeline_io.py": "no remote-sandbox branch in TaskFiles.put: scratch files are local and nothing executes commands"
   }
 }

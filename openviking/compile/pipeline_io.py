@@ -6,7 +6,6 @@ import asyncio
 import inspect
 import json
 import posixpath
-import shlex
 import time
 import uuid
 from collections import Counter
@@ -128,17 +127,11 @@ class TaskFiles:
         temporary = reference + "." + uuid.uuid4().hex + ".tmp"
         await self.sandbox.write_file(temporary, json.dumps(value, ensure_ascii=False))
         local_path = self.sandbox.local_file_path(temporary)
-        if local_path is not None:
-            # Both names share the sandbox-validated parent; only the suffix differs.
-            await asyncio.to_thread(
-                local_path.replace, local_path.with_name(posixpath.basename(reference))
-            )
-            return reference
-        paths = [
-            shlex.quote(posixpath.join(self.sandbox.sandbox_cwd, p)) for p in (temporary, reference)
-        ]
-        output = await self.sandbox.execute(f"mv -f -- {paths[0]} {paths[1]}")
-        self.sandbox._ensure_command_succeeded(output, "Compile state publication")
+        # Scratch files are always local; there is no remote sandbox to exec mv in.
+        # Both names share the sandbox-validated parent; only the suffix differs.
+        await asyncio.to_thread(
+            local_path.replace, local_path.with_name(posixpath.basename(reference))
+        )
         return reference
 
     async def get(self, path: str) -> Any:
