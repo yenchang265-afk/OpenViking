@@ -9,10 +9,10 @@ from dataclasses import asdict
 from loguru import logger
 
 from openviking.compile import file_ops
+from openviking.compile._compat import Tool
 from openviking.compile.plan import PLANNING_RULES, ReviewDecision, parse_plan
 from openviking.compile.results import Group, Record
 from openviking.compile.skill_resources import EvidenceReader
-from openviking.compile.tool import Tool
 
 REVIEW_PROMPT = """## Stage Review
 

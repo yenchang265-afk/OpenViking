@@ -20,6 +20,7 @@ from urllib.parse import quote
 from pydantic import TypeAdapter
 
 from openviking.compile import file_ops
+from openviking.compile.agent_loop import agent_runner
 from openviking.compile.llm import CompileProvider
 from openviking.compile.models import (
     CompileErrorInfo,
@@ -31,7 +32,6 @@ from openviking.compile.models import (
 )
 from openviking.compile.ops import finalize as finalize_op
 from openviking.compile.pipeline import Pipeline
-from openviking.compile.pipeline_agent import agent_runner
 from openviking.compile.renderer import RenderedBundle
 from openviking.compile.scratch import ScratchDir
 from openviking.compile.sources import pack_source_batches, read_source

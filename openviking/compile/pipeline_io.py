@@ -16,14 +16,14 @@ import json_repair
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
-from openviking.compile import media
+from openviking.compile._compat import MultimodalToolResult, cal_str_tokens
 from openviking.compile.hashing import digest
 from openviking.compile.models import COMPILE_STAGING_ROOT, CompileFailure
 from openviking.compile.results import FileResponse, RouteBatchResponse
 from openviking.compile.schemas import result_schema
 from openviking.compile.skill_resources import EvidenceReader
 from openviking.models.model_error import ModelError
-from openviking.utils.token_estimation import estimate_text_tokens
+from openviking.utils.media_limits import MAX_INLINE_TOOL_RESULT_MEDIA_BYTES
 from openviking_cli.exceptions import NotFoundError
 
 T = TypeVar("T")
@@ -111,9 +111,10 @@ class ModelCallLimitError(ModelCallError):
 
 
 class TaskFiles:
-    """Small independently replaced shards in the task's scratch directory.
+    """Small independently replaced shards, accessed through the sandbox's file API.
 
-    The task owns these paths. Same-directory rename publishes a complete JSON file.
+    The task owns these paths. Same-directory rename publishes a complete JSON file;
+    host-accessible sandboxes use native replacement, remote ones use exec/mv.
     A missing or interrupted cache shard is a cache miss, never successful work.
     """
 
@@ -126,7 +127,8 @@ class TaskFiles:
         temporary = reference + "." + uuid.uuid4().hex + ".tmp"
         await self.sandbox.write_file(temporary, json.dumps(value, ensure_ascii=False))
         local_path = self.sandbox.local_file_path(temporary)
-        # Both names share the scratch-validated parent; only the suffix differs.
+        # Scratch files are always local; there is no remote sandbox to exec mv in.
+        # Both names share the sandbox-validated parent; only the suffix differs.
         await asyncio.to_thread(
             local_path.replace, local_path.with_name(posixpath.basename(reference))
         )
@@ -262,7 +264,10 @@ class JsonModel:
         Diagnostics contain budgets, usage and failure categories, never reasoning.
         A cancelled or timed-out request cannot be accepted as a partial response.
         """
-        if media.inline_media_bytes(messages) > media.MAX_INLINE_MEDIA_BYTES:
+        from openviking.compile._compat import _inline_media_bytes
+
+        media_bytes = _inline_media_bytes(messages)
+        if media_bytes > MAX_INLINE_TOOL_RESULT_MEDIA_BYTES:
             raise CompileFailure(
                 "MEDIA_LIMIT", "Compile image request exceeds the inline media budget", stage=stage
             )
@@ -289,8 +294,8 @@ class JsonModel:
             if self.resources and stage not in {"plan", "review", "route", "combine"}
             else 0,
         }
-        self.metrics["estimated_input_tokens"] += estimate_text_tokens(
-            json.dumps([messages, tools], ensure_ascii=False)
+        self.metrics["estimated_input_tokens"] += cal_str_tokens(
+            json.dumps([messages, tools], ensure_ascii=False), text_type="mixed"
         )
         try:
             async with asyncio.timeout(seconds):
@@ -516,9 +521,7 @@ class JsonModel:
                             value = "Error: " + str(exc)[:800]
                         else:
                             retries.pop(f"read:{call.name}", None)
-                        multimodal = (
-                            value if isinstance(value, media.MultimodalToolResult) else None
-                        )
+                        multimodal = value if isinstance(value, MultimodalToolResult) else None
                         if multimodal:
                             value = multimodal.text
                         try:
