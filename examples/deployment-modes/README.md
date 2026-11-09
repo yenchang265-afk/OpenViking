@@ -31,7 +31,7 @@ the transition steps in
 ## First-time setup on the stack examples
 
 These steps start a new deployment from an image, with the storage services
-already running. The local example skips steps 4 and 5.
+already running. The local example skips step 4.
 
 | Service | Must be ready |
 |---|---|
@@ -76,43 +76,27 @@ Copy an example to `/srv/openviking/ov.conf`, then set your service hosts,
 
 ### 4. Create tables
 
-This needs a `mysql` or `mariadb` client, since the image has none.
+Apply [`schema.sql`](schema.sql) once, connected to the empty database, using a
+`mysql` or `mariadb` client (the image has none). Or paste the whole file into your
+SQL client and run it top to bottom.
 
 ```sh
-set -o pipefail
-export MYSQL_PWD='<db password>'
-P=$(docker run --rm --entrypoint /app/.venv/bin/python "$IMAGE" -c \
-  "import importlib.util as u; print(u.find_spec('openviking').submodule_search_locations[0])")
-for f in server/account_stores/sql/init.sql \
-         service/sql/task_store_init.sql \
-         service/sql/001_watch_tasks.sql \
-         server/account_stores/sql/changes/0001_account_user_list_indexes.sql \
-         service/sql/changes/0001_task_store_service_name.sql; do
-  docker run --rm --entrypoint cat "$IMAGE" "$P/$f" \
-    | mysql -h <db host> -u openviking openviking || { echo "FAILED: $f"; break; }
-done
-unset MYSQL_PWD
+mysql -h <db host> -u openviking -p openviking < schema.sql
 ```
 
-Run this once only; the scripts fail on a second run. The `changes/` files are
-required, because `task_store_init.sql` has no `service_name` column. For other
-images, list `changes/` in each directory and apply anything new in number order,
-skipping `0000_template.sql`.
+This creates 12 tables, including `ov_oauth_records`, which stays unused while OAuth
+is off. A second run fails on existing tables. The server creates its tiered storage
+tables itself on first mount.
 
-### 5. Create usage and audit tables
+`schema.sql` is a snapshot of one image, named in its header. If your image is newer,
+compare these against the header's image, and apply anything new in number order:
 
-```sh
-docker run --rm --network <net> --env-file ov.env \
-  -v "$PWD/ov.conf:/app/.openviking/ov.conf:ro" \
-  --entrypoint /app/.venv/bin/python "$IMAGE" \
-  -m openviking.server.shared_schema --config /app/.openviking/ov.conf --apply
-```
+- `openviking/server/account_stores/sql/changes/`
+- `openviking/service/sql/changes/`
+- `python -m openviking.server.shared_schema --config <ov.conf>`, which prints the
+  usage, audit and OAuth DDL for what the config enables
 
-This also creates OAuth tables if OAuth is enabled, and prints nothing on success.
-Remove `--apply` to review the DDL first. Without OAuth, the database now has 11
-tables, including `ov_request_audit` and `ov_usage_buckets`.
-
-### 6. Start one instance
+### 5. Start one instance
 
 ```sh
 docker run -d --name openviking --network <net> \
@@ -125,7 +109,7 @@ curl -s http://127.0.0.1:1933/ready
 The entrypoint enables the bot by default and shared mode rejects an embedded bot,
 so keep it disabled here. Wait for `"status":"ready"` with every check `ok`.
 
-### 7. Create the first account
+### 6. Create the first account
 
 ```sh
 ROOT=$(grep '^OPENVIKING_ROOT_API_KEY=' ov.env | cut -d= -f2-)
@@ -136,7 +120,7 @@ curl -X POST http://127.0.0.1:1933/api/v1/admin/accounts \
 
 `user_key` in the response is that admin's API key, so save it.
 
-### 8. Smoke test
+### 7. Smoke test
 
 ```sh
 curl -H "X-API-Key: <user_key>" 'http://127.0.0.1:1933/api/v1/fs/ls?uri=viking://'
@@ -146,10 +130,10 @@ Then log in at `http://127.0.0.1:1933/studio/` with the user key and upload a sm
 file. Confirm it indexes and that search finds it, which exercises S3, MySQL, Redis,
 Elasticsearch and the embedding model together. The root key cannot call data APIs.
 
-### 9. Add replicas and the bot
+### 8. Add replicas and the bot
 
 Both are optional. Give replicas the same `ov.conf` and secrets, and add them only
-after step 8 passes. Run exactly one bot, separately, with persistent storage;
+after step 7 passes. Run exactly one bot, separately, with persistent storage;
 the guide's
 [Separate VikingBot for Studio](../../docs/en/guides/23-shared-deployment.md#separate-vikingbot-for-studio)
 section covers the setup.
