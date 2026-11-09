@@ -31,6 +31,25 @@ Shared mode validates these choices before serving requests. It also rejects
 embedded gateway/bot processes, local authorities, and multi-write backups.
 Run the gateway separately with its supported shared-storage configuration.
 
+### Separate VikingBot for Studio
+
+Keep `server.with_bot: false` and set `server.external_bot_api_url` to
+`http://127.0.0.1:18790`. Configure a nonempty `bot.gateway.token` shared by
+the server and bot. This enables Studio's bot proxy without starting an embedded
+bot. Run exactly one bot with persistent storage for its sessions, cron jobs,
+and managed channel records.
+
+Studio management requires loopback access to the bot. For local Docker use,
+run the bot with `--network container:openviking`, mount the persistent
+`~/.openviking` directory at `/app/.openviking`, and start it with
+`--entrypoint vikingbot <image> gateway --config /app/.openviking/ov.conf`.
+Set `bot.gateway.host` to `127.0.0.1` and `bot.ov_server.server_url` to
+`http://127.0.0.1:1933`. Recreate the bot whenever the server container is
+recreated, because its network namespace belongs to that server container.
+
+In Studio, use a user/admin API key for VikingBot chat at `/studio/vikingbot/`.
+Use the root API key to manage channel connections at `/studio/admin/vikingbot/`.
+
 QueueFS must use `mode: shared`. Choose a positive `recover_stale_sec` longer
 than the maximum permitted job duration; the example uses one day. The standalone
 default of zero recovers all processing messages at startup and is rejected here

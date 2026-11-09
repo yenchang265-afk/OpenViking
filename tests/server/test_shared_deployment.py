@@ -146,13 +146,21 @@ def test_shared_watches_allow_distributed_leadership(scheduler_enabled, leader_p
     validate_shared_deployment(server, config)
 
 
-def test_shared_app_allows_running_watch_runtime(monkeypatch):
+@pytest.mark.parametrize("external_bot", [False, True])
+def test_shared_app_allows_running_watch_runtime(monkeypatch, external_bot):
     from unittest.mock import Mock
 
     from openviking.server.app import create_app
     from openviking_cli.utils.config.open_viking_config import OpenVikingConfig
 
     server, shared = configuration()
+    if external_bot:
+        server.external_bot_api_url = "http://127.0.0.1:18790"
+        monkeypatch.setattr("openviking.server.app.load_bot_gateway_token", lambda: "test-token")
+    bot_url = Mock()
+    bot_token = Mock()
+    monkeypatch.setattr("openviking.server.routers.bot.set_bot_api_url", bot_url)
+    monkeypatch.setattr("openviking.server.routers.bot.set_bot_api_key", bot_token)
     config = OpenVikingConfig.from_dict({})
     object.__setattr__(config, "storage", shared.storage)
     object.__setattr__(config, "cache", shared.cache)
@@ -166,3 +174,24 @@ def test_shared_app_allows_running_watch_runtime(monkeypatch):
     service = NS(resources=resources, watch_runtime=NS(is_running=True))
     create_app(config=server, service=service)
     resources.set_watch_requests_enabled.assert_called_once_with(True)
+    assert server.with_bot is False
+    if external_bot:
+        bot_url.assert_called_once_with(server.external_bot_api_url)
+        bot_token.assert_called_once_with("test-token")
+    else:
+        bot_url.assert_not_called()
+        bot_token.assert_not_called()
+
+
+def test_external_bot_requires_gateway_token(monkeypatch):
+    from openviking.server.app import create_app
+    from openviking.server.config import ServerConfig
+    from openviking_cli.utils.config.open_viking_config import OpenVikingConfig
+
+    monkeypatch.setattr(
+        "openviking.server.app.get_openviking_config", lambda: OpenVikingConfig.from_dict({})
+    )
+    monkeypatch.setattr("openviking.server.app.load_bot_gateway_token", lambda: "")
+    server = ServerConfig(external_bot_api_url="http://127.0.0.1:18790", auth_mode="dev")
+    with pytest.raises(ValueError, match="requires bot.gateway.token"):
+        create_app(config=server)
