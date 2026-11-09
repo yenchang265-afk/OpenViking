@@ -63,10 +63,15 @@ dependencies = [
     # TIFF heap overflow (GHSA-w889-685w-c8fh, GHSA-332p-7hrc-92wf).
     "certifi>=2026.10.19",
     "pillow>=13.0.0",
+    # filelock 4.2.1 fixes CVE-2026-112907..112940 (needs litellm>=1.108.3, which
+    # lifts filelock<4.0); twisted (via scrapy) 26.10.0 fixes CVE-2026-115774..115877,
+    # CVE-2026-83813 and GHSA-vpp8-g58w-m8mp.
+    "filelock>=4.2.1",
+    "twisted>=26.10.0",
     "protobuf>=6.33.5",
     "pdfminer-six>=20251230",
     "typer>=0.12.0",
-    "litellm>=1.102.4,<1.104.1",
+    "litellm>=1.108.3,<1.108.4",
     "python-multipart>=0.0.31",
     # Pin the parsing stack to avoid unvalidated upstream API and grammar changes.
     "tree-sitter==0.25.2",

@@ -14,9 +14,13 @@
   },
   "devDependencies": {
     "markdown-it-task-lists": "^2.1.1",
-    "vitepress": "1.6.4"
+    "vitepress": "1.6.4",
+    "vite": "6.4.5"
   },
   "dependencies": {
     "ogl": "^1.0.11"
+  },
+  "overrides": {
+    "vite": "$vite"
   }
 }

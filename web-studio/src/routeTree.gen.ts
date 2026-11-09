@@ -9,173 +9,73 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UsersRouteImport } from './routes/users'
-import { Route as PlaygroundRouteImport } from './routes/playground'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
-import { Route as MemoriesRouteImport } from './routes/memories'
-import { Route as GatewayRouteImport } from './routes/gateway'
-import { Route as ConfigRouteImport } from './routes/config'
-import { Route as WatchesRouteRouteImport } from './routes/watches/route'
-import { Route as VikingbotRouteRouteImport } from './routes/vikingbot/route'
-import { Route as TasksRouteRouteImport } from './routes/tasks/route'
-import { Route as SkillsRouteRouteImport } from './routes/skills/route'
-import { Route as SettingsRouteRouteImport } from './routes/settings/route'
-import { Route as SessionsRouteRouteImport } from './routes/sessions/route'
-import { Route as RetrievalRouteRouteImport } from './routes/retrieval/route'
-import { Route as RequestLogsRouteRouteImport } from './routes/request-logs/route'
-import { Route as PermissionsRouteRouteImport } from './routes/permissions/route'
-import { Route as MonitoringRouteRouteImport } from './routes/monitoring/route'
-import { Route as HomeRouteRouteImport } from './routes/home/route'
-import { Route as FilesystemRouteRouteImport } from './routes/filesystem/route'
-import { Route as DirectoryRouteRouteImport } from './routes/directory/route'
-import { Route as ArrangerRouteRouteImport } from './routes/arranger/route'
-import { Route as AgentExperienceRouteRouteImport } from './routes/agent-experience/route'
-import { Route as AdminRouteRouteImport } from './routes/admin/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as VikingbotIndexRouteImport } from './routes/vikingbot/index'
-import { Route as SessionsIndexRouteImport } from './routes/sessions/index'
-import { Route as CompileIndexRouteImport } from './routes/compile/index'
-import { Route as AgentExperienceIndexRouteImport } from './routes/agent-experience/index'
+import { Route as AdminRouteRouteImport } from './routes/admin/route'
+import { Route as AgentExperienceRouteRouteImport } from './routes/agent-experience/route'
+import { Route as ArrangerRouteRouteImport } from './routes/arranger/route'
+import { Route as ConfigRouteImport } from './routes/config'
+import { Route as DirectoryRouteRouteImport } from './routes/directory/route'
+import { Route as FilesystemRouteRouteImport } from './routes/filesystem/route'
+import { Route as GatewayRouteImport } from './routes/gateway'
+import { Route as HomeRouteRouteImport } from './routes/home/route'
+import { Route as MemoriesRouteImport } from './routes/memories'
+import { Route as MonitoringRouteRouteImport } from './routes/monitoring/route'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as PermissionsRouteRouteImport } from './routes/permissions/route'
+import { Route as PlaygroundRouteImport } from './routes/playground'
+import { Route as RequestLogsRouteRouteImport } from './routes/request-logs/route'
+import { Route as RetrievalRouteRouteImport } from './routes/retrieval/route'
+import { Route as SessionsRouteRouteImport } from './routes/sessions/route'
+import { Route as SettingsRouteRouteImport } from './routes/settings/route'
+import { Route as SkillsRouteRouteImport } from './routes/skills/route'
+import { Route as TasksRouteRouteImport } from './routes/tasks/route'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as VikingbotRouteRouteImport } from './routes/vikingbot/route'
+import { Route as WatchesRouteRouteImport } from './routes/watches/route'
 import { Route as AdminIndexRouteImport } from './routes/admin/index'
-import { Route as UsersSplatRouteImport } from './routes/users.$'
-import { Route as OauthVerifyRouteImport } from './routes/oauth/verify'
-import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
-import { Route as GatewaySplatRouteImport } from './routes/gateway.$'
-import { Route as ConnectionsUserKeyRouteImport } from './routes/connections/user-key'
-import { Route as ConnectionsNewRouteImport } from './routes/connections/new'
-import { Route as ConnectionsProfileIdRouteImport } from './routes/connections/$profileId'
-import { Route as CompileNewRouteImport } from './routes/compile/new'
-import { Route as AgentExperienceExperienceUriRouteImport } from './routes/agent-experience/$experienceUri'
-import { Route as AdminStudioFeaturesRouteImport } from './routes/admin/studio-features'
-import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
 import { Route as AdminConfigurationRouteImport } from './routes/admin/configuration'
-import { Route as AdminUsersRouteRouteImport } from './routes/admin/users/route'
 import { Route as AdminGatewayRouteRouteImport } from './routes/admin/gateway/route'
-import { Route as AdminVikingbotIndexRouteImport } from './routes/admin/vikingbot/index'
-import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
-import { Route as AdminGatewayIndexRouteImport } from './routes/admin/gateway/index'
-import { Route as AdminConfigurationIndexRouteImport } from './routes/admin/configuration/index'
+import { Route as AdminSettingsRouteImport } from './routes/admin/settings'
+import { Route as AdminStudioFeaturesRouteImport } from './routes/admin/studio-features'
+import { Route as AdminUsersRouteRouteImport } from './routes/admin/users/route'
+import { Route as AgentExperienceIndexRouteImport } from './routes/agent-experience/index'
+import { Route as AgentExperienceExperienceUriRouteImport } from './routes/agent-experience/$experienceUri'
+import { Route as CompileIndexRouteImport } from './routes/compile/index'
+import { Route as CompileNewRouteImport } from './routes/compile/new'
+import { Route as ConnectionsProfileIdRouteImport } from './routes/connections/$profileId'
+import { Route as ConnectionsNewRouteImport } from './routes/connections/new'
+import { Route as ConnectionsUserKeyRouteImport } from './routes/connections/user-key'
+import { Route as GatewaySplatRouteImport } from './routes/gateway.$'
+import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
+import { Route as OauthVerifyRouteImport } from './routes/oauth/verify'
+import { Route as SessionsIndexRouteImport } from './routes/sessions/index'
+import { Route as UsersSplatRouteImport } from './routes/users.$'
+import { Route as VikingbotIndexRouteImport } from './routes/vikingbot/index'
 import { Route as AdminAgentEvolutionIndexRouteImport } from './routes/admin/agent-evolution/index'
-import { Route as CompileTasksTaskIdRouteImport } from './routes/compile/tasks/$taskId'
-import { Route as AdminUsersPermissionsRouteImport } from './routes/admin/users/permissions'
-import { Route as AdminUsersMemoryTemplatesRouteImport } from './routes/admin/users/memory-templates'
-import { Route as AdminUsersGroupsRouteImport } from './routes/admin/users/groups'
-import { Route as AdminOauthVerifyRouteImport } from './routes/admin/oauth/verify'
-import { Route as AdminOauthConsentRouteImport } from './routes/admin/oauth/consent'
-import { Route as AdminGatewayRequestsRouteImport } from './routes/admin/gateway/requests'
-import { Route as AdminGatewayKeysRouteImport } from './routes/admin/gateway/keys'
-import { Route as AdminGatewayConnectRouteImport } from './routes/admin/gateway/connect'
-import { Route as AdminConnectionsNewRouteImport } from './routes/admin/connections/new'
-import { Route as AdminConnectionsProfileIdRouteImport } from './routes/admin/connections/$profileId'
+import { Route as AdminConfigurationIndexRouteImport } from './routes/admin/configuration/index'
 import { Route as AdminConfigurationServerRouteImport } from './routes/admin/configuration/server'
-import { Route as AdminGatewayUpstreamsIndexRouteImport } from './routes/admin/gateway/upstreams/index'
+import { Route as AdminConnectionsProfileIdRouteImport } from './routes/admin/connections/$profileId'
+import { Route as AdminConnectionsNewRouteImport } from './routes/admin/connections/new'
+import { Route as AdminGatewayIndexRouteImport } from './routes/admin/gateway/index'
+import { Route as AdminGatewayConnectRouteImport } from './routes/admin/gateway/connect'
+import { Route as AdminGatewayKeysRouteImport } from './routes/admin/gateway/keys'
+import { Route as AdminGatewayRequestsRouteImport } from './routes/admin/gateway/requests'
+import { Route as AdminOauthConsentRouteImport } from './routes/admin/oauth/consent'
+import { Route as AdminOauthVerifyRouteImport } from './routes/admin/oauth/verify'
+import { Route as AdminUsersIndexRouteImport } from './routes/admin/users/index'
+import { Route as AdminUsersGroupsRouteImport } from './routes/admin/users/groups'
+import { Route as AdminUsersMemoryTemplatesRouteImport } from './routes/admin/users/memory-templates'
+import { Route as AdminUsersPermissionsRouteImport } from './routes/admin/users/permissions'
+import { Route as AdminVikingbotIndexRouteImport } from './routes/admin/vikingbot/index'
+import { Route as CompileTasksTaskIdRouteImport } from './routes/compile/tasks/$taskId'
 import { Route as AdminGatewayProfilesIndexRouteImport } from './routes/admin/gateway/profiles/index'
-import { Route as AdminGatewayUpstreamsUpstreamIdRouteImport } from './routes/admin/gateway/upstreams/$upstreamId'
 import { Route as AdminGatewayProfilesProfileIdRouteImport } from './routes/admin/gateway/profiles/$profileId'
+import { Route as AdminGatewayUpstreamsIndexRouteImport } from './routes/admin/gateway/upstreams/index'
+import { Route as AdminGatewayUpstreamsUpstreamIdRouteImport } from './routes/admin/gateway/upstreams/$upstreamId'
 
-const UsersRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlaygroundRoute = PlaygroundRouteImport.update({
-  id: '/playground',
-  path: '/playground',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MemoriesRoute = MemoriesRouteImport.update({
-  id: '/memories',
-  path: '/memories',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GatewayRoute = GatewayRouteImport.update({
-  id: '/gateway',
-  path: '/gateway',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfigRoute = ConfigRouteImport.update({
-  id: '/config',
-  path: '/config',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const WatchesRouteRoute = WatchesRouteRouteImport.update({
-  id: '/watches',
-  path: '/watches',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const VikingbotRouteRoute = VikingbotRouteRouteImport.update({
-  id: '/vikingbot',
-  path: '/vikingbot',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TasksRouteRoute = TasksRouteRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SkillsRouteRoute = SkillsRouteRouteImport.update({
-  id: '/skills',
-  path: '/skills',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRouteRoute = SettingsRouteRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SessionsRouteRoute = SessionsRouteRouteImport.update({
-  id: '/sessions',
-  path: '/sessions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RetrievalRouteRoute = RetrievalRouteRouteImport.update({
-  id: '/retrieval',
-  path: '/retrieval',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RequestLogsRouteRoute = RequestLogsRouteRouteImport.update({
-  id: '/request-logs',
-  path: '/request-logs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PermissionsRouteRoute = PermissionsRouteRouteImport.update({
-  id: '/permissions',
-  path: '/permissions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MonitoringRouteRoute = MonitoringRouteRouteImport.update({
-  id: '/monitoring',
-  path: '/monitoring',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HomeRouteRoute = HomeRouteRouteImport.update({
-  id: '/home',
-  path: '/home',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FilesystemRouteRoute = FilesystemRouteRouteImport.update({
-  id: '/filesystem',
-  path: '/filesystem',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DirectoryRouteRoute = DirectoryRouteRouteImport.update({
-  id: '/directory',
-  path: '/directory',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ArrangerRouteRoute = ArrangerRouteRouteImport.update({
-  id: '/arranger',
-  path: '/arranger',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentExperienceRouteRoute = AgentExperienceRouteRouteImport.update({
-  id: '/agent-experience',
-  path: '/agent-experience',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRouteRoute = AdminRouteRouteImport.update({
@@ -183,90 +83,114 @@ const AdminRouteRoute = AdminRouteRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AgentExperienceRouteRoute = AgentExperienceRouteRouteImport.update({
+  id: '/agent-experience',
+  path: '/agent-experience',
   getParentRoute: () => rootRouteImport,
 } as any)
-const VikingbotIndexRoute = VikingbotIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => VikingbotRouteRoute,
-} as any)
-const SessionsIndexRoute = SessionsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => SessionsRouteRoute,
-} as any)
-const CompileIndexRoute = CompileIndexRouteImport.update({
-  id: '/compile/',
-  path: '/compile/',
+const ArrangerRouteRoute = ArrangerRouteRouteImport.update({
+  id: '/arranger',
+  path: '/arranger',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AgentExperienceIndexRoute = AgentExperienceIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AgentExperienceRouteRoute,
+const ConfigRoute = ConfigRouteImport.update({
+  id: '/config',
+  path: '/config',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DirectoryRouteRoute = DirectoryRouteRouteImport.update({
+  id: '/directory',
+  path: '/directory',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FilesystemRouteRoute = FilesystemRouteRouteImport.update({
+  id: '/filesystem',
+  path: '/filesystem',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GatewayRoute = GatewayRouteImport.update({
+  id: '/gateway',
+  path: '/gateway',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HomeRouteRoute = HomeRouteRouteImport.update({
+  id: '/home',
+  path: '/home',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MemoriesRoute = MemoriesRouteImport.update({
+  id: '/memories',
+  path: '/memories',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MonitoringRouteRoute = MonitoringRouteRouteImport.update({
+  id: '/monitoring',
+  path: '/monitoring',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PermissionsRouteRoute = PermissionsRouteRouteImport.update({
+  id: '/permissions',
+  path: '/permissions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaygroundRoute = PlaygroundRouteImport.update({
+  id: '/playground',
+  path: '/playground',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequestLogsRouteRoute = RequestLogsRouteRouteImport.update({
+  id: '/request-logs',
+  path: '/request-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RetrievalRouteRoute = RetrievalRouteRouteImport.update({
+  id: '/retrieval',
+  path: '/retrieval',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionsRouteRoute = SessionsRouteRouteImport.update({
+  id: '/sessions',
+  path: '/sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRouteRoute = SettingsRouteRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SkillsRouteRoute = SkillsRouteRouteImport.update({
+  id: '/skills',
+  path: '/skills',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRouteRoute = TasksRouteRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VikingbotRouteRoute = VikingbotRouteRouteImport.update({
+  id: '/vikingbot',
+  path: '/vikingbot',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WatchesRouteRoute = WatchesRouteRouteImport.update({
+  id: '/watches',
+  path: '/watches',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const UsersSplatRoute = UsersSplatRouteImport.update({
-  id: '/$',
-  path: '/$',
-  getParentRoute: () => UsersRoute,
-} as any)
-const OauthVerifyRoute = OauthVerifyRouteImport.update({
-  id: '/oauth/verify',
-  path: '/oauth/verify',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OauthConsentRoute = OauthConsentRouteImport.update({
-  id: '/oauth/consent',
-  path: '/oauth/consent',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GatewaySplatRoute = GatewaySplatRouteImport.update({
-  id: '/$',
-  path: '/$',
-  getParentRoute: () => GatewayRoute,
-} as any)
-const ConnectionsUserKeyRoute = ConnectionsUserKeyRouteImport.update({
-  id: '/connections/user-key',
-  path: '/connections/user-key',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConnectionsNewRoute = ConnectionsNewRouteImport.update({
-  id: '/connections/new',
-  path: '/connections/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConnectionsProfileIdRoute = ConnectionsProfileIdRouteImport.update({
-  id: '/connections/$profileId',
-  path: '/connections/$profileId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CompileNewRoute = CompileNewRouteImport.update({
-  id: '/compile/new',
-  path: '/compile/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgentExperienceExperienceUriRoute =
-  AgentExperienceExperienceUriRouteImport.update({
-    id: '/$experienceUri',
-    path: '/$experienceUri',
-    getParentRoute: () => AgentExperienceRouteRoute,
-  } as any)
-const AdminStudioFeaturesRoute = AdminStudioFeaturesRouteImport.update({
-  id: '/studio-features',
-  path: '/studio-features',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminSettingsRoute = AdminSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
 const AdminConfigurationRoute = AdminConfigurationRouteImport.update({
@@ -274,35 +198,91 @@ const AdminConfigurationRoute = AdminConfigurationRouteImport.update({
   path: '/configuration',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminUsersRouteRoute = AdminUsersRouteRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
 const AdminGatewayRouteRoute = AdminGatewayRouteRouteImport.update({
   id: '/gateway',
   path: '/gateway',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminVikingbotIndexRoute = AdminVikingbotIndexRouteImport.update({
-  id: '/vikingbot/',
-  path: '/vikingbot/',
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminUsersRouteRoute,
+const AdminStudioFeaturesRoute = AdminStudioFeaturesRouteImport.update({
+  id: '/studio-features',
+  path: '/studio-features',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminGatewayIndexRoute = AdminGatewayIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AdminGatewayRouteRoute,
+const AdminUsersRouteRoute = AdminUsersRouteRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminConfigurationIndexRoute = AdminConfigurationIndexRouteImport.update({
+const AgentExperienceIndexRoute = AgentExperienceIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => AdminConfigurationRoute,
+  getParentRoute: () => AgentExperienceRouteRoute,
+} as any)
+const AgentExperienceExperienceUriRoute =
+  AgentExperienceExperienceUriRouteImport.update({
+    id: '/$experienceUri',
+    path: '/$experienceUri',
+    getParentRoute: () => AgentExperienceRouteRoute,
+  } as any)
+const CompileIndexRoute = CompileIndexRouteImport.update({
+  id: '/compile/',
+  path: '/compile/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CompileNewRoute = CompileNewRouteImport.update({
+  id: '/compile/new',
+  path: '/compile/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectionsProfileIdRoute = ConnectionsProfileIdRouteImport.update({
+  id: '/connections/$profileId',
+  path: '/connections/$profileId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectionsNewRoute = ConnectionsNewRouteImport.update({
+  id: '/connections/new',
+  path: '/connections/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectionsUserKeyRoute = ConnectionsUserKeyRouteImport.update({
+  id: '/connections/user-key',
+  path: '/connections/user-key',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GatewaySplatRoute = GatewaySplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => GatewayRoute,
+} as any)
+const OauthConsentRoute = OauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OauthVerifyRoute = OauthVerifyRouteImport.update({
+  id: '/oauth/verify',
+  path: '/oauth/verify',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SessionsIndexRoute = SessionsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => SessionsRouteRoute,
+} as any)
+const UsersSplatRoute = UsersSplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => UsersRoute,
+} as any)
+const VikingbotIndexRoute = VikingbotIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => VikingbotRouteRoute,
 } as any)
 const AdminAgentEvolutionIndexRoute =
   AdminAgentEvolutionIndexRouteImport.update({
@@ -310,14 +290,66 @@ const AdminAgentEvolutionIndexRoute =
     path: '/agent-evolution/',
     getParentRoute: () => AdminRouteRoute,
   } as any)
-const CompileTasksTaskIdRoute = CompileTasksTaskIdRouteImport.update({
-  id: '/compile/tasks/$taskId',
-  path: '/compile/tasks/$taskId',
-  getParentRoute: () => rootRouteImport,
+const AdminConfigurationIndexRoute = AdminConfigurationIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminConfigurationRoute,
 } as any)
-const AdminUsersPermissionsRoute = AdminUsersPermissionsRouteImport.update({
-  id: '/permissions',
-  path: '/permissions',
+const AdminConfigurationServerRoute =
+  AdminConfigurationServerRouteImport.update({
+    id: '/server',
+    path: '/server',
+    getParentRoute: () => AdminConfigurationRoute,
+  } as any)
+const AdminConnectionsProfileIdRoute =
+  AdminConnectionsProfileIdRouteImport.update({
+    id: '/connections/$profileId',
+    path: '/connections/$profileId',
+    getParentRoute: () => AdminRouteRoute,
+  } as any)
+const AdminConnectionsNewRoute = AdminConnectionsNewRouteImport.update({
+  id: '/connections/new',
+  path: '/connections/new',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminGatewayIndexRoute = AdminGatewayIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminGatewayRouteRoute,
+} as any)
+const AdminGatewayConnectRoute = AdminGatewayConnectRouteImport.update({
+  id: '/connect',
+  path: '/connect',
+  getParentRoute: () => AdminGatewayRouteRoute,
+} as any)
+const AdminGatewayKeysRoute = AdminGatewayKeysRouteImport.update({
+  id: '/keys',
+  path: '/keys',
+  getParentRoute: () => AdminGatewayRouteRoute,
+} as any)
+const AdminGatewayRequestsRoute = AdminGatewayRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
+  getParentRoute: () => AdminGatewayRouteRoute,
+} as any)
+const AdminOauthConsentRoute = AdminOauthConsentRouteImport.update({
+  id: '/oauth/consent',
+  path: '/oauth/consent',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminOauthVerifyRoute = AdminOauthVerifyRouteImport.update({
+  id: '/oauth/verify',
+  path: '/oauth/verify',
+  getParentRoute: () => AdminRouteRoute,
+} as any)
+const AdminUsersIndexRoute = AdminUsersIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AdminUsersRouteRoute,
+} as any)
+const AdminUsersGroupsRoute = AdminUsersGroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
   getParentRoute: () => AdminUsersRouteRoute,
 } as any)
 const AdminUsersMemoryTemplatesRoute =
@@ -326,52 +358,32 @@ const AdminUsersMemoryTemplatesRoute =
     path: '/memory-templates',
     getParentRoute: () => AdminUsersRouteRoute,
   } as any)
-const AdminUsersGroupsRoute = AdminUsersGroupsRouteImport.update({
-  id: '/groups',
-  path: '/groups',
+const AdminUsersPermissionsRoute = AdminUsersPermissionsRouteImport.update({
+  id: '/permissions',
+  path: '/permissions',
   getParentRoute: () => AdminUsersRouteRoute,
 } as any)
-const AdminOauthVerifyRoute = AdminOauthVerifyRouteImport.update({
-  id: '/oauth/verify',
-  path: '/oauth/verify',
+const AdminVikingbotIndexRoute = AdminVikingbotIndexRouteImport.update({
+  id: '/vikingbot/',
+  path: '/vikingbot/',
   getParentRoute: () => AdminRouteRoute,
 } as any)
-const AdminOauthConsentRoute = AdminOauthConsentRouteImport.update({
-  id: '/oauth/consent',
-  path: '/oauth/consent',
-  getParentRoute: () => AdminRouteRoute,
+const CompileTasksTaskIdRoute = CompileTasksTaskIdRouteImport.update({
+  id: '/compile/tasks/$taskId',
+  path: '/compile/tasks/$taskId',
+  getParentRoute: () => rootRouteImport,
 } as any)
-const AdminGatewayRequestsRoute = AdminGatewayRequestsRouteImport.update({
-  id: '/requests',
-  path: '/requests',
-  getParentRoute: () => AdminGatewayRouteRoute,
-} as any)
-const AdminGatewayKeysRoute = AdminGatewayKeysRouteImport.update({
-  id: '/keys',
-  path: '/keys',
-  getParentRoute: () => AdminGatewayRouteRoute,
-} as any)
-const AdminGatewayConnectRoute = AdminGatewayConnectRouteImport.update({
-  id: '/connect',
-  path: '/connect',
-  getParentRoute: () => AdminGatewayRouteRoute,
-} as any)
-const AdminConnectionsNewRoute = AdminConnectionsNewRouteImport.update({
-  id: '/connections/new',
-  path: '/connections/new',
-  getParentRoute: () => AdminRouteRoute,
-} as any)
-const AdminConnectionsProfileIdRoute =
-  AdminConnectionsProfileIdRouteImport.update({
-    id: '/connections/$profileId',
-    path: '/connections/$profileId',
-    getParentRoute: () => AdminRouteRoute,
+const AdminGatewayProfilesIndexRoute =
+  AdminGatewayProfilesIndexRouteImport.update({
+    id: '/profiles/',
+    path: '/profiles/',
+    getParentRoute: () => AdminGatewayRouteRoute,
   } as any)
-const AdminConfigurationServerRoute =
-  AdminConfigurationServerRouteImport.update({
-    id: '/server',
-    path: '/server',
-    getParentRoute: () => AdminConfigurationRoute,
+const AdminGatewayProfilesProfileIdRoute =
+  AdminGatewayProfilesProfileIdRouteImport.update({
+    id: '/profiles/$profileId',
+    path: '/profiles/$profileId',
+    getParentRoute: () => AdminGatewayRouteRoute,
   } as any)
 const AdminGatewayUpstreamsIndexRoute =
   AdminGatewayUpstreamsIndexRouteImport.update({
@@ -379,22 +391,10 @@ const AdminGatewayUpstreamsIndexRoute =
     path: '/upstreams/',
     getParentRoute: () => AdminGatewayRouteRoute,
   } as any)
-const AdminGatewayProfilesIndexRoute =
-  AdminGatewayProfilesIndexRouteImport.update({
-    id: '/profiles/',
-    path: '/profiles/',
-    getParentRoute: () => AdminGatewayRouteRoute,
-  } as any)
 const AdminGatewayUpstreamsUpstreamIdRoute =
   AdminGatewayUpstreamsUpstreamIdRouteImport.update({
     id: '/upstreams/$upstreamId',
     path: '/upstreams/$upstreamId',
-    getParentRoute: () => AdminGatewayRouteRoute,
-  } as any)
-const AdminGatewayProfilesProfileIdRoute =
-  AdminGatewayProfilesProfileIdRouteImport.update({
-    id: '/profiles/$profileId',
-    path: '/profiles/$profileId',
     getParentRoute: () => AdminGatewayRouteRoute,
   } as any)
 
@@ -814,151 +814,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/playground': {
-      id: '/playground'
-      path: '/playground'
-      fullPath: '/playground'
-      preLoaderRoute: typeof PlaygroundRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/memories': {
-      id: '/memories'
-      path: '/memories'
-      fullPath: '/memories'
-      preLoaderRoute: typeof MemoriesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gateway': {
-      id: '/gateway'
-      path: '/gateway'
-      fullPath: '/gateway'
-      preLoaderRoute: typeof GatewayRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/config': {
-      id: '/config'
-      path: '/config'
-      fullPath: '/config'
-      preLoaderRoute: typeof ConfigRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/watches': {
-      id: '/watches'
-      path: '/watches'
-      fullPath: '/watches'
-      preLoaderRoute: typeof WatchesRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/vikingbot': {
-      id: '/vikingbot'
-      path: '/vikingbot'
-      fullPath: '/vikingbot'
-      preLoaderRoute: typeof VikingbotRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tasks': {
-      id: '/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof TasksRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/skills': {
-      id: '/skills'
-      path: '/skills'
-      fullPath: '/skills'
-      preLoaderRoute: typeof SkillsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sessions': {
-      id: '/sessions'
-      path: '/sessions'
-      fullPath: '/sessions'
-      preLoaderRoute: typeof SessionsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/retrieval': {
-      id: '/retrieval'
-      path: '/retrieval'
-      fullPath: '/retrieval'
-      preLoaderRoute: typeof RetrievalRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/request-logs': {
-      id: '/request-logs'
-      path: '/request-logs'
-      fullPath: '/request-logs'
-      preLoaderRoute: typeof RequestLogsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/permissions': {
-      id: '/permissions'
-      path: '/permissions'
-      fullPath: '/permissions'
-      preLoaderRoute: typeof PermissionsRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/monitoring': {
-      id: '/monitoring'
-      path: '/monitoring'
-      fullPath: '/monitoring'
-      preLoaderRoute: typeof MonitoringRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/home': {
-      id: '/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof HomeRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/filesystem': {
-      id: '/filesystem'
-      path: '/filesystem'
-      fullPath: '/filesystem'
-      preLoaderRoute: typeof FilesystemRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/directory': {
-      id: '/directory'
-      path: '/directory'
-      fullPath: '/directory'
-      preLoaderRoute: typeof DirectoryRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/arranger': {
-      id: '/arranger'
-      path: '/arranger'
-      fullPath: '/arranger'
-      preLoaderRoute: typeof ArrangerRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent-experience': {
-      id: '/agent-experience'
-      path: '/agent-experience'
-      fullPath: '/agent-experience'
-      preLoaderRoute: typeof AgentExperienceRouteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -968,123 +828,158 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/agent-experience': {
+      id: '/agent-experience'
+      path: '/agent-experience'
+      fullPath: '/agent-experience'
+      preLoaderRoute: typeof AgentExperienceRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/vikingbot/': {
-      id: '/vikingbot/'
-      path: '/'
-      fullPath: '/vikingbot/'
-      preLoaderRoute: typeof VikingbotIndexRouteImport
-      parentRoute: typeof VikingbotRouteRoute
-    }
-    '/sessions/': {
-      id: '/sessions/'
-      path: '/'
-      fullPath: '/sessions/'
-      preLoaderRoute: typeof SessionsIndexRouteImport
-      parentRoute: typeof SessionsRouteRoute
-    }
-    '/compile/': {
-      id: '/compile/'
-      path: '/compile'
-      fullPath: '/compile/'
-      preLoaderRoute: typeof CompileIndexRouteImport
+    '/arranger': {
+      id: '/arranger'
+      path: '/arranger'
+      fullPath: '/arranger'
+      preLoaderRoute: typeof ArrangerRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/agent-experience/': {
-      id: '/agent-experience/'
-      path: '/'
-      fullPath: '/agent-experience/'
-      preLoaderRoute: typeof AgentExperienceIndexRouteImport
-      parentRoute: typeof AgentExperienceRouteRoute
+    '/config': {
+      id: '/config'
+      path: '/config'
+      fullPath: '/config'
+      preLoaderRoute: typeof ConfigRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/directory': {
+      id: '/directory'
+      path: '/directory'
+      fullPath: '/directory'
+      preLoaderRoute: typeof DirectoryRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/filesystem': {
+      id: '/filesystem'
+      path: '/filesystem'
+      fullPath: '/filesystem'
+      preLoaderRoute: typeof FilesystemRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gateway': {
+      id: '/gateway'
+      path: '/gateway'
+      fullPath: '/gateway'
+      preLoaderRoute: typeof GatewayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/home': {
+      id: '/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof HomeRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/memories': {
+      id: '/memories'
+      path: '/memories'
+      fullPath: '/memories'
+      preLoaderRoute: typeof MemoriesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/monitoring': {
+      id: '/monitoring'
+      path: '/monitoring'
+      fullPath: '/monitoring'
+      preLoaderRoute: typeof MonitoringRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/permissions': {
+      id: '/permissions'
+      path: '/permissions'
+      fullPath: '/permissions'
+      preLoaderRoute: typeof PermissionsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playground': {
+      id: '/playground'
+      path: '/playground'
+      fullPath: '/playground'
+      preLoaderRoute: typeof PlaygroundRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/request-logs': {
+      id: '/request-logs'
+      path: '/request-logs'
+      fullPath: '/request-logs'
+      preLoaderRoute: typeof RequestLogsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/retrieval': {
+      id: '/retrieval'
+      path: '/retrieval'
+      fullPath: '/retrieval'
+      preLoaderRoute: typeof RetrievalRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sessions': {
+      id: '/sessions'
+      path: '/sessions'
+      fullPath: '/sessions'
+      preLoaderRoute: typeof SessionsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/skills': {
+      id: '/skills'
+      path: '/skills'
+      fullPath: '/skills'
+      preLoaderRoute: typeof SkillsRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vikingbot': {
+      id: '/vikingbot'
+      path: '/vikingbot'
+      fullPath: '/vikingbot'
+      preLoaderRoute: typeof VikingbotRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/watches': {
+      id: '/watches'
+      path: '/watches'
+      fullPath: '/watches'
+      preLoaderRoute: typeof WatchesRouteRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/': {
       id: '/admin/'
       path: '/'
       fullPath: '/admin/'
       preLoaderRoute: typeof AdminIndexRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/users/$': {
-      id: '/users/$'
-      path: '/$'
-      fullPath: '/users/$'
-      preLoaderRoute: typeof UsersSplatRouteImport
-      parentRoute: typeof UsersRoute
-    }
-    '/oauth/verify': {
-      id: '/oauth/verify'
-      path: '/oauth/verify'
-      fullPath: '/oauth/verify'
-      preLoaderRoute: typeof OauthVerifyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/oauth/consent': {
-      id: '/oauth/consent'
-      path: '/oauth/consent'
-      fullPath: '/oauth/consent'
-      preLoaderRoute: typeof OauthConsentRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gateway/$': {
-      id: '/gateway/$'
-      path: '/$'
-      fullPath: '/gateway/$'
-      preLoaderRoute: typeof GatewaySplatRouteImport
-      parentRoute: typeof GatewayRoute
-    }
-    '/connections/user-key': {
-      id: '/connections/user-key'
-      path: '/connections/user-key'
-      fullPath: '/connections/user-key'
-      preLoaderRoute: typeof ConnectionsUserKeyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/connections/new': {
-      id: '/connections/new'
-      path: '/connections/new'
-      fullPath: '/connections/new'
-      preLoaderRoute: typeof ConnectionsNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/connections/$profileId': {
-      id: '/connections/$profileId'
-      path: '/connections/$profileId'
-      fullPath: '/connections/$profileId'
-      preLoaderRoute: typeof ConnectionsProfileIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/compile/new': {
-      id: '/compile/new'
-      path: '/compile/new'
-      fullPath: '/compile/new'
-      preLoaderRoute: typeof CompileNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agent-experience/$experienceUri': {
-      id: '/agent-experience/$experienceUri'
-      path: '/$experienceUri'
-      fullPath: '/agent-experience/$experienceUri'
-      preLoaderRoute: typeof AgentExperienceExperienceUriRouteImport
-      parentRoute: typeof AgentExperienceRouteRoute
-    }
-    '/admin/studio-features': {
-      id: '/admin/studio-features'
-      path: '/studio-features'
-      fullPath: '/admin/studio-features'
-      preLoaderRoute: typeof AdminStudioFeaturesRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/settings': {
-      id: '/admin/settings'
-      path: '/settings'
-      fullPath: '/admin/settings'
-      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
     '/admin/configuration': {
@@ -1094,13 +989,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminConfigurationRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/users': {
-      id: '/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AdminUsersRouteRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
     '/admin/gateway': {
       id: '/admin/gateway'
       path: '/gateway'
@@ -1108,33 +996,117 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGatewayRouteRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/vikingbot/': {
-      id: '/admin/vikingbot/'
-      path: '/vikingbot'
-      fullPath: '/admin/vikingbot/'
-      preLoaderRoute: typeof AdminVikingbotIndexRouteImport
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/users/': {
-      id: '/admin/users/'
-      path: '/'
-      fullPath: '/admin/users/'
-      preLoaderRoute: typeof AdminUsersIndexRouteImport
-      parentRoute: typeof AdminUsersRouteRoute
+    '/admin/studio-features': {
+      id: '/admin/studio-features'
+      path: '/studio-features'
+      fullPath: '/admin/studio-features'
+      preLoaderRoute: typeof AdminStudioFeaturesRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
-    '/admin/gateway/': {
-      id: '/admin/gateway/'
-      path: '/'
-      fullPath: '/admin/gateway/'
-      preLoaderRoute: typeof AdminGatewayIndexRouteImport
-      parentRoute: typeof AdminGatewayRouteRoute
+    '/admin/users': {
+      id: '/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AdminUsersRouteRouteImport
+      parentRoute: typeof AdminRouteRoute
     }
-    '/admin/configuration/': {
-      id: '/admin/configuration/'
+    '/agent-experience/': {
+      id: '/agent-experience/'
       path: '/'
-      fullPath: '/admin/configuration/'
-      preLoaderRoute: typeof AdminConfigurationIndexRouteImport
-      parentRoute: typeof AdminConfigurationRoute
+      fullPath: '/agent-experience/'
+      preLoaderRoute: typeof AgentExperienceIndexRouteImport
+      parentRoute: typeof AgentExperienceRouteRoute
+    }
+    '/agent-experience/$experienceUri': {
+      id: '/agent-experience/$experienceUri'
+      path: '/$experienceUri'
+      fullPath: '/agent-experience/$experienceUri'
+      preLoaderRoute: typeof AgentExperienceExperienceUriRouteImport
+      parentRoute: typeof AgentExperienceRouteRoute
+    }
+    '/compile/': {
+      id: '/compile/'
+      path: '/compile'
+      fullPath: '/compile/'
+      preLoaderRoute: typeof CompileIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compile/new': {
+      id: '/compile/new'
+      path: '/compile/new'
+      fullPath: '/compile/new'
+      preLoaderRoute: typeof CompileNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connections/$profileId': {
+      id: '/connections/$profileId'
+      path: '/connections/$profileId'
+      fullPath: '/connections/$profileId'
+      preLoaderRoute: typeof ConnectionsProfileIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connections/new': {
+      id: '/connections/new'
+      path: '/connections/new'
+      fullPath: '/connections/new'
+      preLoaderRoute: typeof ConnectionsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connections/user-key': {
+      id: '/connections/user-key'
+      path: '/connections/user-key'
+      fullPath: '/connections/user-key'
+      preLoaderRoute: typeof ConnectionsUserKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gateway/$': {
+      id: '/gateway/$'
+      path: '/$'
+      fullPath: '/gateway/$'
+      preLoaderRoute: typeof GatewaySplatRouteImport
+      parentRoute: typeof GatewayRoute
+    }
+    '/oauth/consent': {
+      id: '/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/oauth/consent'
+      preLoaderRoute: typeof OauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oauth/verify': {
+      id: '/oauth/verify'
+      path: '/oauth/verify'
+      fullPath: '/oauth/verify'
+      preLoaderRoute: typeof OauthVerifyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sessions/': {
+      id: '/sessions/'
+      path: '/'
+      fullPath: '/sessions/'
+      preLoaderRoute: typeof SessionsIndexRouteImport
+      parentRoute: typeof SessionsRouteRoute
+    }
+    '/users/$': {
+      id: '/users/$'
+      path: '/$'
+      fullPath: '/users/$'
+      preLoaderRoute: typeof UsersSplatRouteImport
+      parentRoute: typeof UsersRoute
+    }
+    '/vikingbot/': {
+      id: '/vikingbot/'
+      path: '/'
+      fullPath: '/vikingbot/'
+      preLoaderRoute: typeof VikingbotIndexRouteImport
+      parentRoute: typeof VikingbotRouteRoute
     }
     '/admin/agent-evolution/': {
       id: '/admin/agent-evolution/'
@@ -1143,60 +1115,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAgentEvolutionIndexRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/compile/tasks/$taskId': {
-      id: '/compile/tasks/$taskId'
-      path: '/compile/tasks/$taskId'
-      fullPath: '/compile/tasks/$taskId'
-      preLoaderRoute: typeof CompileTasksTaskIdRouteImport
-      parentRoute: typeof rootRouteImport
+    '/admin/configuration/': {
+      id: '/admin/configuration/'
+      path: '/'
+      fullPath: '/admin/configuration/'
+      preLoaderRoute: typeof AdminConfigurationIndexRouteImport
+      parentRoute: typeof AdminConfigurationRoute
     }
-    '/admin/users/permissions': {
-      id: '/admin/users/permissions'
-      path: '/permissions'
-      fullPath: '/admin/users/permissions'
-      preLoaderRoute: typeof AdminUsersPermissionsRouteImport
-      parentRoute: typeof AdminUsersRouteRoute
+    '/admin/configuration/server': {
+      id: '/admin/configuration/server'
+      path: '/server'
+      fullPath: '/admin/configuration/server'
+      preLoaderRoute: typeof AdminConfigurationServerRouteImport
+      parentRoute: typeof AdminConfigurationRoute
     }
-    '/admin/users/memory-templates': {
-      id: '/admin/users/memory-templates'
-      path: '/memory-templates'
-      fullPath: '/admin/users/memory-templates'
-      preLoaderRoute: typeof AdminUsersMemoryTemplatesRouteImport
-      parentRoute: typeof AdminUsersRouteRoute
-    }
-    '/admin/users/groups': {
-      id: '/admin/users/groups'
-      path: '/groups'
-      fullPath: '/admin/users/groups'
-      preLoaderRoute: typeof AdminUsersGroupsRouteImport
-      parentRoute: typeof AdminUsersRouteRoute
-    }
-    '/admin/oauth/verify': {
-      id: '/admin/oauth/verify'
-      path: '/oauth/verify'
-      fullPath: '/admin/oauth/verify'
-      preLoaderRoute: typeof AdminOauthVerifyRouteImport
+    '/admin/connections/$profileId': {
+      id: '/admin/connections/$profileId'
+      path: '/connections/$profileId'
+      fullPath: '/admin/connections/$profileId'
+      preLoaderRoute: typeof AdminConnectionsProfileIdRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/oauth/consent': {
-      id: '/admin/oauth/consent'
-      path: '/oauth/consent'
-      fullPath: '/admin/oauth/consent'
-      preLoaderRoute: typeof AdminOauthConsentRouteImport
+    '/admin/connections/new': {
+      id: '/admin/connections/new'
+      path: '/connections/new'
+      fullPath: '/admin/connections/new'
+      preLoaderRoute: typeof AdminConnectionsNewRouteImport
       parentRoute: typeof AdminRouteRoute
     }
-    '/admin/gateway/requests': {
-      id: '/admin/gateway/requests'
-      path: '/requests'
-      fullPath: '/admin/gateway/requests'
-      preLoaderRoute: typeof AdminGatewayRequestsRouteImport
-      parentRoute: typeof AdminGatewayRouteRoute
-    }
-    '/admin/gateway/keys': {
-      id: '/admin/gateway/keys'
-      path: '/keys'
-      fullPath: '/admin/gateway/keys'
-      preLoaderRoute: typeof AdminGatewayKeysRouteImport
+    '/admin/gateway/': {
+      id: '/admin/gateway/'
+      path: '/'
+      fullPath: '/admin/gateway/'
+      preLoaderRoute: typeof AdminGatewayIndexRouteImport
       parentRoute: typeof AdminGatewayRouteRoute
     }
     '/admin/gateway/connect': {
@@ -1206,33 +1157,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGatewayConnectRouteImport
       parentRoute: typeof AdminGatewayRouteRoute
     }
-    '/admin/connections/new': {
-      id: '/admin/connections/new'
-      path: '/connections/new'
-      fullPath: '/admin/connections/new'
-      preLoaderRoute: typeof AdminConnectionsNewRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/connections/$profileId': {
-      id: '/admin/connections/$profileId'
-      path: '/connections/$profileId'
-      fullPath: '/admin/connections/$profileId'
-      preLoaderRoute: typeof AdminConnectionsProfileIdRouteImport
-      parentRoute: typeof AdminRouteRoute
-    }
-    '/admin/configuration/server': {
-      id: '/admin/configuration/server'
-      path: '/server'
-      fullPath: '/admin/configuration/server'
-      preLoaderRoute: typeof AdminConfigurationServerRouteImport
-      parentRoute: typeof AdminConfigurationRoute
-    }
-    '/admin/gateway/upstreams/': {
-      id: '/admin/gateway/upstreams/'
-      path: '/upstreams'
-      fullPath: '/admin/gateway/upstreams/'
-      preLoaderRoute: typeof AdminGatewayUpstreamsIndexRouteImport
+    '/admin/gateway/keys': {
+      id: '/admin/gateway/keys'
+      path: '/keys'
+      fullPath: '/admin/gateway/keys'
+      preLoaderRoute: typeof AdminGatewayKeysRouteImport
       parentRoute: typeof AdminGatewayRouteRoute
+    }
+    '/admin/gateway/requests': {
+      id: '/admin/gateway/requests'
+      path: '/requests'
+      fullPath: '/admin/gateway/requests'
+      preLoaderRoute: typeof AdminGatewayRequestsRouteImport
+      parentRoute: typeof AdminGatewayRouteRoute
+    }
+    '/admin/oauth/consent': {
+      id: '/admin/oauth/consent'
+      path: '/oauth/consent'
+      fullPath: '/admin/oauth/consent'
+      preLoaderRoute: typeof AdminOauthConsentRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/oauth/verify': {
+      id: '/admin/oauth/verify'
+      path: '/oauth/verify'
+      fullPath: '/admin/oauth/verify'
+      preLoaderRoute: typeof AdminOauthVerifyRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/admin/users/': {
+      id: '/admin/users/'
+      path: '/'
+      fullPath: '/admin/users/'
+      preLoaderRoute: typeof AdminUsersIndexRouteImport
+      parentRoute: typeof AdminUsersRouteRoute
+    }
+    '/admin/users/groups': {
+      id: '/admin/users/groups'
+      path: '/groups'
+      fullPath: '/admin/users/groups'
+      preLoaderRoute: typeof AdminUsersGroupsRouteImport
+      parentRoute: typeof AdminUsersRouteRoute
+    }
+    '/admin/users/memory-templates': {
+      id: '/admin/users/memory-templates'
+      path: '/memory-templates'
+      fullPath: '/admin/users/memory-templates'
+      preLoaderRoute: typeof AdminUsersMemoryTemplatesRouteImport
+      parentRoute: typeof AdminUsersRouteRoute
+    }
+    '/admin/users/permissions': {
+      id: '/admin/users/permissions'
+      path: '/permissions'
+      fullPath: '/admin/users/permissions'
+      preLoaderRoute: typeof AdminUsersPermissionsRouteImport
+      parentRoute: typeof AdminUsersRouteRoute
+    }
+    '/admin/vikingbot/': {
+      id: '/admin/vikingbot/'
+      path: '/vikingbot'
+      fullPath: '/admin/vikingbot/'
+      preLoaderRoute: typeof AdminVikingbotIndexRouteImport
+      parentRoute: typeof AdminRouteRoute
+    }
+    '/compile/tasks/$taskId': {
+      id: '/compile/tasks/$taskId'
+      path: '/compile/tasks/$taskId'
+      fullPath: '/compile/tasks/$taskId'
+      preLoaderRoute: typeof CompileTasksTaskIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/admin/gateway/profiles/': {
       id: '/admin/gateway/profiles/'
@@ -1241,18 +1234,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminGatewayProfilesIndexRouteImport
       parentRoute: typeof AdminGatewayRouteRoute
     }
-    '/admin/gateway/upstreams/$upstreamId': {
-      id: '/admin/gateway/upstreams/$upstreamId'
-      path: '/upstreams/$upstreamId'
-      fullPath: '/admin/gateway/upstreams/$upstreamId'
-      preLoaderRoute: typeof AdminGatewayUpstreamsUpstreamIdRouteImport
-      parentRoute: typeof AdminGatewayRouteRoute
-    }
     '/admin/gateway/profiles/$profileId': {
       id: '/admin/gateway/profiles/$profileId'
       path: '/profiles/$profileId'
       fullPath: '/admin/gateway/profiles/$profileId'
       preLoaderRoute: typeof AdminGatewayProfilesProfileIdRouteImport
+      parentRoute: typeof AdminGatewayRouteRoute
+    }
+    '/admin/gateway/upstreams/': {
+      id: '/admin/gateway/upstreams/'
+      path: '/upstreams'
+      fullPath: '/admin/gateway/upstreams/'
+      preLoaderRoute: typeof AdminGatewayUpstreamsIndexRouteImport
+      parentRoute: typeof AdminGatewayRouteRoute
+    }
+    '/admin/gateway/upstreams/$upstreamId': {
+      id: '/admin/gateway/upstreams/$upstreamId'
+      path: '/upstreams/$upstreamId'
+      fullPath: '/admin/gateway/upstreams/$upstreamId'
+      preLoaderRoute: typeof AdminGatewayUpstreamsUpstreamIdRouteImport
       parentRoute: typeof AdminGatewayRouteRoute
     }
   }
