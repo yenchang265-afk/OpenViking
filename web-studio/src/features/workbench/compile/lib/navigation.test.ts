@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// The router reads a DOM-less environment as SSR and skips client navigation.
 import { compileListReturn } from '#/features/workbench/compile/lib/navigation'
 import {
   createMemoryHistory,

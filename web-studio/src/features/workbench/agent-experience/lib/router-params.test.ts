@@ -1,3 +1,5 @@
+// @vitest-environment jsdom
+// The router reads a DOM-less environment as SSR and skips client navigation.
 import { describe, expect, it } from 'vitest'
 
 // These tests pin down the @tanstack/router param round-trip that the list and
