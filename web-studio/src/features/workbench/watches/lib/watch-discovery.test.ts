@@ -18,9 +18,11 @@ const watch: WatchTask = {
   lastExecutionTime: null,
   nextExecutionTime: '2026-08-10T01:00:00Z',
   path: 'https://github.com/volcengine/OpenViking',
+  proxyHost: null,
   reason: '',
   taskId: 'watch-1',
   toUri: 'viking://resources/OpenViking/',
+  viaProxy: false,
   watchInterval: 60,
 }
 

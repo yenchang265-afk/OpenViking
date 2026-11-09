@@ -78,6 +78,13 @@ def register_parser_network_adapter(adapter: ParserNetworkAdapter) -> None:
         _adapter = adapter
 
 
+def current_parser_network_adapter() -> ParserNetworkAdapter | None:
+    """Return the registered adapter, or None."""
+
+    with _lock:
+        return _adapter
+
+
 def reset_parser_network_adapter() -> None:
     """Reset the adapter. Intended for tests and runtime reinitialization."""
 
@@ -156,6 +163,7 @@ __all__ = [
     "ParserNetworkContext",
     "ParserNetworkOperation",
     "create_parser_httpx_client",
+    "current_parser_network_adapter",
     "open_parser_url",
     "overlay_parser_subprocess_env",
     "register_parser_network_adapter",

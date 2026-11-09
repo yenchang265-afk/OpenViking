@@ -9,9 +9,13 @@ export type WatchTask = {
   lastExecutionTime: string | null
   nextExecutionTime: string | null
   path: string
+  /** Proxy `host:port`; the server sends it to root users only. */
+  proxyHost: string | null
   reason: string
   taskId: string
   toUri: string
+  /** True when an admin-configured proxy fetches this source. */
+  viaProxy: boolean
   watchInterval: number
 }
 
@@ -61,9 +65,11 @@ export function normalizeWatchTask(value: unknown): WatchTask | null {
     lastExecutionTime: optionalString(task?.last_execution_time),
     nextExecutionTime: optionalString(task?.next_execution_time),
     path,
+    proxyHost: optionalString(task?.proxy_host),
     reason: optionalString(task?.reason) ?? '',
     taskId,
     toUri,
+    viaProxy: task?.via_proxy === true,
     watchInterval,
   }
 }

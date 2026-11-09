@@ -1044,6 +1044,45 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 需要 GitHub、GitLab 或 Azure DevOps 專屬 URL 語義時，應配置到對應的平臺欄位；
 其他 Git 主機統一新增到 `code_hosting_domains`。
 
+#### 依來源主機設定出口代理 {#egress-proxies-per-source-host}
+
+伺服器必須透過企業代理伺服器存取來源主機（例如 Azure DevOps）時，設定
+`code.egress_proxies`。代理只能由伺服器設定指定；API 請求與 Studio 都無法設定，
+因此使用者無法改變伺服器流量的去向。每個鍵都是不含其他部分的主機名稱，採完全比對：
+
+```json
+{
+  "code": {
+    "egress_proxies": {
+      "dev.azure.com": {
+        "url": "http://proxy.corp:8080",
+        "username": "svc-ov",
+        "password": "${OV_ADO_PROXY_PASSWORD}",
+        "ca_file": "/etc/ov/corp-ca.pem"
+      }
+    }
+  }
+}
+```
+
+| 欄位 | 必填 | 說明 |
+|------|------|------|
+| `url` | 是 | `http://host:port`；不可含帳密、路徑或查詢字串。不接受 HTTPS 代理網址 |
+| `username` | 否 | 代理 Basic 驗證使用者 |
+| `password` | 否 | 代理密碼，需同時設定 `username`。請用 `${ENV_VAR}`，不要寫入明文 |
+| `ca_file` | 否 | 會檢查 TLS 的代理所用 CA 檔；經代理的來源改用此檔取代系統 CA |
+
+此路由套用於來源網址為該主機 HTTP(S) 的 Git 指令（clone、fetch、`ls-remote`、
+監看探測）、Git 封存下載、HTTP 資源擷取與網頁爬取。路由依來源網址決定，並涵蓋整個擷取過程，
+包括重新導向及網頁爬取時追蹤到的其他主機。伺服器自身的 `NO_PROXY` 不適用於經代理的擷取。
+SSH Git 網址一律不經代理。
+Embedding、模型與儲存流量維持直連。無效設定會讓伺服器在啟動時停止；錯誤訊息
+只列出主機與欄位，不會包含密碼。Git 設定檔中針對網址的 `http.<url>.proxy`
+對 Git 指令仍有較高優先權。管理員設定編輯器儲存時也會拒絕無效設定。不在程式碼託管清單中的主機仍須通過公網位址檢查，
+該檢查會在本機解析主機。
+
+Studio 的「定時同步」頁面會以「代理」標記經代理的同步。
+
 #### 语法包下载与镜像（网络受限 / 离线）
 
 `tree-sitter-language-pack.process()` 首次解析某种语言时，会按需从 GitHub Releases 下载语法整包（单个平台包内含全部语言，约 20MB），下载后缓存在本地，之后的解析直接读缓存、不再联网。

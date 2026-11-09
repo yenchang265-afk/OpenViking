@@ -201,6 +201,10 @@ ov task watch rm viking://resources/guide.md
 }
 ```
 
+當 [`code.egress_proxies`](../guides/01-configuration.md#egress-proxies-per-source-host)
+讓任務來源經代理擷取時，REST 回應會加入 `"via_proxy": true`；ROOT 呼叫者另會取得
+`proxy_host`（`host:port`，不含帳密）。直連來源不會出現這兩個欄位，且它們不會寫入任務。
+
 `source_type` 是可選的來源後設資料。顯式 Connector `add_type` 優先（例如 `tos`）；
 原生匯入返回 `git`、`url` 或 `local`。歷史任務或
 無法分類的任務返回 `null`。

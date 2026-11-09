@@ -18,6 +18,11 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 
 from openviking.core.namespace import classify_uri, uri_parts
 from openviking.core.uri_validation import validate_content_target_uri, validate_viking_uri
+from openviking.parse.network import (
+    ParserNetworkContext,
+    ParserNetworkOperation,
+    overlay_parser_subprocess_env,
+)
 from openviking.server.identity import RequestContext
 from openviking.server.local_input_guard import require_remote_resource_source
 from openviking.utils.git_auth import (
@@ -325,6 +330,11 @@ async def preflight_git_repository(
         )
     elif normalized_username:
         _append_git_process_config(env, "credential.username", normalized_username)
+
+    env = overlay_parser_subprocess_env(
+        ParserNetworkContext(ParserNetworkOperation.GIT_COMMAND, repo_url),
+        env,
+    )
 
     command = ["git", "ls-remote", "--exit-code", repo_url]
     if normalized_branch:

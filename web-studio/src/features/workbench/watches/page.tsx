@@ -58,6 +58,7 @@ import {
 
 import { EditWatchDialog } from '#/features/workbench/watches/components/edit-watch-dialog'
 import { WatchHistorySheet } from '#/features/workbench/watches/components/watch-history-sheet'
+import { WatchProxyBadge } from '#/features/workbench/watches/components/watch-proxy-badge'
 import type {
   UpdateWatchInput,
   WatchTask,
@@ -454,11 +455,14 @@ export function WatchManagementPage() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div
-                        className="max-w-64 truncate text-xs"
-                        title={watch.path}
-                      >
-                        {watch.path}
+                      <div className="flex max-w-64 items-center gap-2">
+                        <div className="truncate text-xs" title={watch.path}>
+                          {watch.path}
+                        </div>
+                        <WatchProxyBadge
+                          proxyHost={watch.proxyHost}
+                          viaProxy={watch.viaProxy}
+                        />
                       </div>
                     </TableCell>
                     <TableCell>

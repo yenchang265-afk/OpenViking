@@ -1059,6 +1059,49 @@ Use `github_domains`, `gitlab_domains`, or `azure_devops_domains` when the host
 needs those platform-specific URL semantics. Add other Git hosts to
 `code_hosting_domains`.
 
+#### Egress proxies per source host
+
+Set `code.egress_proxies` when the server must reach a source host, such as
+Azure DevOps, through a corporate proxy. Only server config can set a proxy; API
+requests and Studio cannot, so users cannot redirect server traffic. Each key is
+a bare host name, matched exactly:
+
+```json
+{
+  "code": {
+    "egress_proxies": {
+      "dev.azure.com": {
+        "url": "http://proxy.corp:8080",
+        "username": "svc-ov",
+        "password": "${OV_ADO_PROXY_PASSWORD}",
+        "ca_file": "/etc/ov/corp-ca.pem"
+      }
+    }
+  }
+}
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `url` | Yes | `http://host:port`; no credentials, path, or query. HTTPS proxy URLs are rejected |
+| `username` | No | Proxy Basic-auth user |
+| `password` | No | Proxy password; requires `username`. Use `${ENV_VAR}` rather than a literal |
+| `ca_file` | No | CA bundle for a TLS-inspecting proxy. It replaces the system CAs for routed sources |
+
+The route applies to Git commands (clone, fetch, `ls-remote`, watch probes),
+Git archive downloads, HTTP resource fetches, and web crawls whose source URL
+uses HTTP(S) on that host. The source URL picks the route, which then covers
+the whole fetch, including redirects and other hosts a web crawl follows. The
+server's own `NO_PROXY` does not apply to routed fetches. SSH Git URLs are never proxied. Embedding, model,
+and storage traffic stays direct. Invalid entries stop the server at startup;
+error messages name the host and field but never the password. A scoped
+`http.<url>.proxy` setting in a Git config file still takes precedence for Git
+commands. Invalid entries are also rejected when the admin config editor saves.
+Hosts that are not on a code-hosting list still pass the public
+address check, which resolves them locally.
+
+The Studio **Scheduled Sync** page marks proxied syncs with a **Proxy** badge.
+
 ### pdf
 
 PDF parsing configuration. Three strategies are supported: `local` (local pdfplumber), `mineru` (remote MinerU API), and `auto` (try local first, fall back to MinerU).
