@@ -1,0 +1,122 @@
+{
+  "service_name": "openviking-server",
+  "enable_watch_scheduler": true,
+  "watch_leader_provider": "cache",
+  "server": {
+    "deployment_mode": "standalone",
+    "host": "0.0.0.0",
+    "port": 1933,
+    "auth_mode": "api_key",
+    "root_api_key": "${OPENVIKING_ROOT_API_KEY}",
+    "account_store": {
+      "backend": "mysql"
+    },
+    "transfer_tokens": {
+      "backend": "redis"
+    },
+    "temp_upload": {
+      "default_mode": "shared"
+    },
+    "observability": {
+      "usage_audit": {
+        "backend": "mysql"
+      }
+    }
+  },
+  "connections": {
+    "mysql": {
+      "host": "mariadb",
+      "port": 3306,
+      "user": "openviking",
+      "password": "${OPENVIKING_MYSQL_PASSWORD}",
+      "database": "openviking"
+    },
+    "redis": {
+      "mode": "standalone",
+      "endpoints": ["redis://redis:6379"],
+      "password_env": "OPENVIKING_REDIS_PASSWORD",
+      "db": 0
+    },
+    "s3": {
+      "bucket": "openviking",
+      "endpoint": "http://seaweedfs:8333",
+      "region": "us-east-1",
+      "access_key": "${OPENVIKING_S3_ACCESS_KEY}",
+      "secret_key": "${OPENVIKING_S3_SECRET_KEY}",
+      "use_ssl": false,
+      "use_path_style": true
+    },
+    "elasticsearch": {
+      "hosts": ["http://elasticsearch:9200"]
+    }
+  },
+  "cache": {
+    "backend": "redis",
+    "params": {
+      "command_timeout_ms": 1000,
+      "default_ttl_seconds": 300
+    }
+  },
+  "storage": {
+    "workspace": "/app/.openviking/data",
+    "agfs": {
+      "backend": "s3",
+      "s3": {
+        "prefix": "ov/",
+        "directory_marker_mode": "none",
+        "cache_enabled": false
+      },
+      "tiered": {
+        "enabled": true,
+        "backend": "mysql",
+        "import_existing": false
+      },
+      "queuefs": {
+        "backend": "cache",
+        "mode": "shared",
+        "recover_stale_sec": 86400
+      },
+      "pathlock": {
+        "backend": "cache"
+      },
+      "cachefs": {
+        "backend": "cache",
+        "multi_instance": true
+      }
+    },
+    "vectordb": {
+      "backend": "elasticsearch"
+    },
+    "task_store": {
+      "backend": "mysql"
+    },
+    "watch_store": {
+      "provider": "mysql",
+      "params": {
+        "credential_encryption_key": "${OPENVIKING_WATCH_ENCRYPTION_KEY}"
+      }
+    }
+  },
+  "encryption": {
+    "provider": "local",
+    "local": {
+      "root_key": "${OPENVIKING_ENCRYPTION_ROOT_KEY}"
+    }
+  },
+  "embedding": {
+    "dense": {
+      "provider": "ollama",
+      "model": "qwen3-embedding:0.6b",
+      "api_base": "http://ollama:11434/v1",
+      "dimension": 1024
+    }
+  },
+  "vlm": {
+    "provider": "litellm",
+    "model": "ollama_chat/qwen3:8b",
+    "api_key": "ollama",
+    "api_base": "http://ollama:11434",
+    "temperature": 0.0,
+    "timeout": 300
+  }
+}
