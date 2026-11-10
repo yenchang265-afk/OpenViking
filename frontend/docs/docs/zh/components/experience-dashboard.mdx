@@ -33,7 +33,7 @@ import '@openviking/react/components/experience-dashboard/style.css';
 | `page`               | `number`，預設 `0`                                        | 當前頁，從零開始                                                                                 |
 | `hasMore`            | `boolean`，預設 `false`                                   | 是否還有下一頁                                                                                   |
 | `startIndex`         | `number`，預設 `0`                                        | 當前列表之前已有多少條，用於行序號                                                               |
-| `states`             | 分割槽狀態物件                                              | `list`、`outcomes`、`trajectories`、`sources`、`tests` 各自接收 `{ loading?, error?, onRetry? }` |
+| `states`             | 分割槽狀態物件                                            | `list`、`outcomes`、`trajectories`、`sources`、`tests` 各自接收 `{ loading?, error?, onRetry? }` |
 | `locale`             | `en-US` / `zh-CN`，省略時繼承語言作用域，最終預設 `en-US` | 預設文案與相對時間                                                                               |
 | `onTabChange`        | `(tab) => void`                                           | 頁籤切換意圖                                                                                     |
 | `onDaysChange`       | `(days: number) => void`                                  | 時間範圍切換意圖                                                                                 |

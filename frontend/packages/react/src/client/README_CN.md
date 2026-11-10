@@ -34,11 +34,11 @@ Provider 掛載本身不發請求，也不讀取瀏覽器中儲存的憑證。
 | `baseURL`     | —                      | 服務地址及可選閘道器字首，不含 `/api/v1`。空字串表示同源。                                   |
 | `apiKey`      | `X-API-Key`            | 開源版使用。函式形式每次請求重新求值，可讀取輪換後的憑證。                                   |
 | `accountId`   | `X-OpenViking-Account` | OpenViking 帳號，對應資料空間。                                                              |
-| `userId`      | `X-OpenViking-User`    | 帳號內的使用者。                                                                               |
+| `userId`      | `X-OpenViking-User`    | 帳號內的使用者。                                                                             |
 | `resourceId`  | `V-Resource-Id`        | 當前庫。資料面介面需要它。                                                                   |
 | `credentials` | —                      | 傳給 `fetch` 的 `RequestCredentials`。預設 `include`，可按需覆蓋為 `same-origin` 或 `omit`。 |
 | `signal`      | —                      | 呼叫方的 `AbortSignal`。                                                                     |
-| `fetch`       | —                      | 傳輸層覆蓋，用於測試或沒有全域性 `fetch` 的平臺。                                              |
+| `fetch`       | —                      | 傳輸層覆蓋，用於測試或沒有全域性 `fetch` 的平臺。                                            |
 
 欄位省略或為空字串時不傳送對應請求頭。商業版的控制面介面只需 Cookie，因此不傳 `apiKey`，也不傳身份頭。
 

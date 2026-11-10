@@ -35,7 +35,7 @@ CLI 詳情提供「手動終端安裝」「通過 AI Agent 安裝」兩個內部
 | `selectedId`      | `string`                             | 當前分組首項                                            | 可選受控條目；主流首項為 `codex`，開發首項為 `mcp`。不屬於當前分組時顯示該分組首項。 |
 | `onTabChange`     | `(tabId: AgentConnectTabId) => void` | —                                                       | 頁籤選擇通知，方向鍵、Home、End 也會觸發。                                           |
 | `onSelect`        | `(item: AgentConnectItem) => void`   | —                                                       | 返回內建條目的 `id` 與當前語言的 `name`。                                            |
-| `onCopy`          | `(text: string) => void`             | —                                                       | 複製成功後返回實際複製的程式碼塊或完整正文；元件負責剪貼簿寫入。                       |
+| `onCopy`          | `(text: string) => void`             | —                                                       | 複製成功後返回實際複製的程式碼塊或完整正文；元件負責剪貼簿寫入。                     |
 | 其餘屬性          | `HTMLAttributes<HTMLDivElement>`     | —                                                       | 標準 div 屬性；不接收 `children`。                                                   |
 
 主流條目 ID：`codex`、`claude-code`、`doubao`、`workbuddy`、`trae`、`cursor`、`openclaw`、`hermes`、`opencode`、`deepseek-harness`、`deerflow`、`pi`、`zcode`、`kimi-code`。開發條目 ID：`mcp`、`cli`、`api`、`sdk`。非受控例項分別記住兩個分組的選擇。

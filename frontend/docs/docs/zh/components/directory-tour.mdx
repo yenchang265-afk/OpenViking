@@ -28,7 +28,7 @@ import '@openviking/react/components/directory-tour/style.css';
 
 | 屬性                           | 說明                                                                                                     |
 | ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `locale`                       | 繼承上層 / en-US：`zh-CN` 或 `en-US`。內建控制元件文案隨語言變化，labels 可逐項覆蓋。                        |
+| `locale`                       | 繼承上層 / en-US：`zh-CN` 或 `en-US`。內建控制元件文案隨語言變化，labels 可逐項覆蓋。                    |
 | `open` / `steps`               | 必填；開啟狀態與步驟配置。空步驟不渲染。                                                                 |
 | `locateTarget(target, signal)` | 可取消的宿主定位函式，返回已渲染的元素或 null。建議用 useCallback 保持穩定；取消後不得繼續展開舊作用域。 |
 | `currentStep` / `onStepChange` | 可選受控下標與變化事件，從 0 開始。                                                                      |

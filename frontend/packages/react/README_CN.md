@@ -12,7 +12,7 @@ OpenViking AI 應用介面的 React 基礎：構建工具、文件、分層目�
 
 | 原始碼目錄                                                                | 公開入口                                      | 職責                                                                |
 | ------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------- |
-| [components/directory-tour](./src/components/directory-tour/README.md)    | `@openviking/react/components/directory-tour` | 目錄錨點引導，支援宿主非同步定位、獨立高亮與異常恢復                  |
+| [components/directory-tour](./src/components/directory-tour/README.md)    | `@openviking/react/components/directory-tour` | 目錄錨點引導，支援宿主非同步定位、獨立高亮與異常恢復                |
 | [components/file-tree](./src/components/file-tree/README_CN.md)           | `@openviking/react/components/file-tree`      | 目錄樹渲染、展開、選中與事件回傳；檢視為佔位實現                    |
 | [components/file-preview](./src/components/file-preview/README_CN.md)     | `@openviking/react/components/file-preview`   | 只讀預覽狀態與擴充套件頁籤；檢視為佔位實現                          |
 | [components/tui](./src/components/tui/README_CN.md)                       | `@openviking/react/components/tui`            | 已確認的命令記錄、結果與輸入區型別；檢視仍為佔位實現                |

@@ -77,11 +77,11 @@
 
 判定只看路徑形狀，與節點型別無關。`viking://user/{id}/memories` 與 `viking://user/{id}/memories/` 都命中 `memories`；`viking://resources` 命中 `sharedResources`，而 `viking://resources/docs` 不再命中——內建說明只覆蓋固定層級，更深層的節點由宿主自己決定。
 
-| 分組       | 鍵                                                                                                         |
-| ---------- | ---------------------------------------------------------------------------------------------------------- |
+| 分組         | 鍵                                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
 | 使用者作用域 | `userRoot`、`memories`、`peers`、`privacy`、`userResources`、`sessions`、`skills`                          |
-| 長期記憶   | `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories`、`experiences` |
-| 共享與根級 | `sharedResources`、`agentRoot`、`memoryRoot`、`resourceRoot`、`sessionRoot`、`systemRoot`                  |
+| 長期記憶     | `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories`、`experiences` |
+| 共享與根級   | `sharedResources`、`agentRoot`、`memoryRoot`、`resourceRoot`、`sessionRoot`、`systemRoot`                  |
 
 長期記憶下的九個鍵只在浮層裡顯示說明：這些目錄的名稱本身已經說明用途，行內再掛一行字會擠掉同級節點。
 
@@ -138,7 +138,7 @@ treeRef.current?.scrollToRow('resources', { block: 'center' });
 | ------------------------- | ------------------------------------------------------ | ---------------- | -------------------------------------------- |
 | `locale`                  | `'zh-CN' \| 'en-US'`                                   | 繼承上層 / en-US | 內建中英文文案。                             |
 | `rows`                    | `readonly FileTreeRow[]`                               | 必填             | 按渲染順序排列的可見行。                     |
-| `operations`              | `FileTreeOperations`                                   | —                | 非同步執行能力；省略方法時停用對應操作。       |
+| `operations`              | `FileTreeOperations`                                   | —                | 非同步執行能力；省略方法時停用對應操作。     |
 | `selectedId`              | `string \| null`                                       | —                | 當前選中的行 id，由宿主持有。                |
 | `isReady`                 | `boolean`                                              | `true`           | 首次載入是否完成。                           |
 | `loadingFallback`         | `ReactNode`                                            | —                | 首次載入期間替代行列表顯示。                 |
@@ -155,9 +155,9 @@ treeRef.current?.scrollToRow('resources', { block: 'center' });
 | `onLoadMore`              | `(row: FileTreeLoadMoreRow) => void`                   | —                | 下一頁子節點載入成功後觸發；失敗時不觸發。   |
 | `onRetry`                 | `(row: FileTreeErrorRow) => void`                      | —                | 重新載入成功後觸發；重試失敗時不觸發。       |
 | `search`                  | `boolean \| { disabled?: boolean }`                    | `false`          | 顯示內建搜尋入口。                           |
-| `refresh`                 | `boolean \| { disabled?: boolean; loading?: boolean }` | `false`          | 顯示內建重新整理按鈕。                           |
+| `refresh`                 | `boolean \| { disabled?: boolean; loading?: boolean }` | `false`          | 顯示內建重新整理按鈕。                       |
 | `onSearch`                | `() => void`                                           | —                | 搜尋介面成功開啟後通知。                     |
-| `onRefresh`               | `() => void`                                           | —                | 重新整理成功後通知。                             |
+| `onRefresh`               | `() => void`                                           | —                | 重新整理成功後通知。                         |
 | `onOpenRetentionSettings` | `(uri: string) => void`                                | —                | 保留策略設定成功開啟後觸發；失敗時不觸發。   |
 | 其他屬性                  | `HTMLAttributes<HTMLDivElement>`                       | —                | 標準 div 屬性。                              |
 

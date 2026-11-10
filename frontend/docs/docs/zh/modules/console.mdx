@@ -61,7 +61,7 @@
 | `locale`             | `'zh-CN' \| 'en-US'`          | 繼承上層 / en-US | 選擇內建中英文文案。                                                                                             |
 | `quickCommands`      | `readonly string[]`           | 內建五條         | 終端空態展示的快捷命令名稱，按序取自命令目錄，未命中的名稱跳過，重複名稱只保留首次出現；傳空陣列不展示內建空態。 |
 | `scopeKey`           | `string`                      | —                | 動態身份的顯式隔離標識                                                                                           |
-| `onModeChange`       | `(mode: ConsoleMode) => void` | —                | 使用者請求不同模式時觸發；受控值仍由宿主更新                                                                       |
+| `onModeChange`       | `(mode: ConsoleMode) => void` | —                | 使用者請求不同模式時觸發；受控值仍由宿主更新                                                                     |
 | `onOpenUri`          | `(uri: string) => void`       | —                | 資源連結啟用時上報開啟意圖，宿主負責實際導航                                                                     |
 | `conversation`       | `Partial<VikingBotProps>`     | —                | 對話資料、會話操作、快捷輸入、引用與附件回撥；省略草稿屬性時使用 Console 的例項內草稿。                          |
 | `slots`              | `ConsoleSlots`                | —                | `toolbar`、`conversationContext`、`commandHelp`                                                                  |

@@ -66,16 +66,16 @@
 | `listKey`            | `string`                                         | —                | 身份作用域標識；值變化時重置展示狀態。                                |
 | `composerRef`        | `RefObject<VikingBotComposerRef \| null>`        | —                | 輸入區的命令式入口。                                                  |
 | `onDraftChange`      | `(value: string) => void`                        | —                | 草稿變化時觸發。                                                      |
-| `onFilesAdded`       | `(files: readonly File[]) => void`               | —                | 上報使用者選擇或拖入的檔案。                                            |
+| `onFilesAdded`       | `(files: readonly File[]) => void`               | —                | 上報使用者選擇或拖入的檔案。                                          |
 | `onAttachmentRemove` | `(attachment: VikingBotAttachment) => void`      | —                | 移除一個附件。                                                        |
 | `onSend`             | `(draft: VikingBotDraft) => void`                | —                | 上報傳送意圖；不傳時不能傳送。                                        |
 | `onCancel`           | `() => void`                                     | —                | 停止正在進行的回覆。                                                  |
 | `onOpenUri`          | `(uri: string) => void`                          | —                | 開啟訊息中引用的資源。                                                |
-| `onCopy`             | `(text: string) => void`                         | —                | 接管訊息文本複製；省略時使用者訊息使用 Ark 內建複製。                   |
+| `onCopy`             | `(text: string) => void`                         | —                | 接管訊息文本複製；省略時使用者訊息使用 Ark 內建複製。                 |
 | `onMessageAction`    | `(messageId: string, actionKey: string) => void` | —                | 觸發一條訊息宣告的動作。                                              |
 | `labels`             | `VikingBotLabels`                                | locale           | 可替換文案。                                                          |
 | `sessions`           | `VikingBotSessions`                              | —                | 宿主提供的會話資料與操作                                              |
-| `headerActions`      | `ReactNode`                                      | —                | 可選頂欄擴充套件控制元件                                                      |
+| `headerActions`      | `ReactNode`                                      | —                | 可選頂欄擴充套件控制元件                                              |
 | `quickInputs`        | `readonly VikingBotQuickInput[]`                 | —                | 宿主提供的快捷輸入                                                    |
 | `onQuickInputSelect` | `(input: VikingBotQuickInput) => void`           | —                | 接管預設草稿填入行為                                                  |
 | `references`         | `VikingBotReferences`                            | —                | 受控引用選擇與資源候選                                                |

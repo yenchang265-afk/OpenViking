@@ -32,10 +32,10 @@ Markdown 內圖片可通過 `resources` 按原始圖片地址匹配；動態鑑�
 
 ## 兩類頁籤
 
-| 型別              | 由誰渲染     | 典型用途             |
-| ----------------- | ------------ | -------------------- |
+| 型別              | 由誰渲染     | 典型用途               |
+| ----------------- | ------------ | ---------------------- |
 | `kind: 'file'`    | 元件         | 檔案原文、原始碼、文件 |
-| `kind: 'content'` | 宿主原樣渲染 | 看板、圖譜、摘要     |
+| `kind: 'content'` | 宿主原樣渲染 | 看板、圖譜、摘要       |
 
 兩類共享外殼——頁籤行、路徑麵包屑與標題行動作區。差異在正文怎麼來，以及預覽/原始碼切換隻屬於檔案頁籤：內容頁籤需要多種檢視時在 `content` 裡自行實現。
 
@@ -87,7 +87,7 @@ previewRef.current?.setActiveTab('dashboard');
 | 屬性           | 型別                         | 預設值  | 說明                                   |
 | -------------- | ---------------------------- | ------- | -------------------------------------- |
 | `key`          | `string`                     | 必填    | 頁籤唯一標識。                         |
-| `title`        | `ReactNode`                  | 檔名  | 頁籤行顯示內容；內容頁籤必填。         |
+| `title`        | `ReactNode`                  | 檔名    | 頁籤行顯示內容；內容頁籤必填。         |
 | `icon`         | `ReactNode`                  | —       | 頁籤圖示，由宿主提供；省略則不顯示。   |
 | `labels`       | `Partial<FilePreviewLabels>` | —       | 覆蓋該頁籤的文案。                     |
 | `disabled`     | `boolean`                    | `false` | 停用該頁籤。                           |
@@ -109,8 +109,8 @@ previewRef.current?.setActiveTab('dashboard');
 
 | 屬性             | 型別                               | 預設值         | 說明                                                                                              |
 | ---------------- | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
-| `source`         | `FilePreviewSource`                | 必填           | 內容與檔名。                                                                                    |
-| `operations`     | `FilePreviewOperations`            | —              | 非同步執行能力：`openParent(path)`、`download()`，均返回 `Promise<void>`。                          |
+| `source`         | `FilePreviewSource`                | 必填           | 內容與檔名。                                                                                      |
+| `operations`     | `FilePreviewOperations`            | —              | 非同步執行能力：`openParent(path)`、`download()`，均返回 `Promise<void>`。                        |
 | `resources`      | `readonly FileViewerResource[]`    | —              | 伴隨資源，例如 3D 貼圖。                                                                          |
 | `levels`         | `readonly FilePreviewLevel[]`      | —              | 分級內容，每項獨立提供 source，可覆蓋 resources 與 editing。                                      |
 | `activeLevelKey` | `string`                           | 第一個可用層級 | 受控層級。                                                                                        |
@@ -153,8 +153,8 @@ import '@openviking/react/components/file-preview/style.css';
 | `ov-file-preview__tab-title`       | 頁籤標題 | 截斷的頁籤文本。               |
 | `ov-file-preview__header`          | 頭部     | 路徑行與操作區。               |
 | `ov-file-preview__breadcrumb`      | 麵包屑   | 上級目錄導航按鈕。             |
-| `ov-file-preview__header-actions`  | 操作區   | 切換、按鈕與擴充套件操作。         |
-| `ov-file-preview__action`          | 圖示按鈕 | 方形純圖示控制元件。               |
+| `ov-file-preview__header-actions`  | 操作區   | 切換、按鈕與擴充套件操作。     |
+| `ov-file-preview__action`          | 圖示按鈕 | 方形純圖示控制元件。           |
 | `ov-file-preview__button`          | 按鈕     | 次要按鈕。                     |
 | `ov-file-preview__button--primary` | 按鈕     | 主要（儲存）按鈕。             |
 | `ov-file-preview__switch`          | 切換組   | 編輯與預覽切換容器。           |
