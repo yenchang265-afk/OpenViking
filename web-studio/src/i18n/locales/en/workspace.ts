@@ -807,6 +807,11 @@ const workspace = {
       nextRun: 'Next sync',
       actions: 'Actions',
     },
+    proxy: {
+      badge: 'Proxy',
+      hint: 'Fetched through a proxy configured by the platform admin.',
+      hostHint: 'Fetched through the proxy at {{host}}.',
+    },
     status: {
       active: 'Enabled',
       disabled: 'Disabled',

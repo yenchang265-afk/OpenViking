@@ -205,6 +205,11 @@ Listing tasks returns:
 }
 ```
 
+When [`code.egress_proxies`](../guides/01-configuration.md#egress-proxies-per-source-host)
+routes a task's source through a proxy, REST responses add `"via_proxy": true`;
+ROOT callers also get `proxy_host` (`host:port`, never credentials). Both fields
+are omitted for direct sources and are not stored on the task.
+
 `source_type` is optional provenance metadata. Explicit Connector `add_type` values take
 precedence (for example, `tos`); native imports report `git`, `url`, or `local`. Legacy or unclassified watches return `null`.
 

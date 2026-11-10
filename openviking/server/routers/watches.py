@@ -8,18 +8,19 @@ single-resource endpoint accepts either path parameter ``{task_id}`` or
 query parameter ``?to_uri=``. Cross-key conflict returns 400.
 """
 
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from fastapi import APIRouter, Body, Depends, Path, Query
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from openviking.core.uri_validation import validate_request_viking_uri
+from openviking.parse.egress_proxy import egress_proxy_host_for
 from openviking.resource import watch_manager as wm_mod
 from openviking.resource.watch_manager import WatchManager, WatchTask
 from openviking.resource.watch_pagination import DEFAULT_WATCH_PAGE_SIZE, MAX_WATCH_PAGE_SIZE
 from openviking.server.auth import get_request_context
 from openviking.server.dependencies import get_service
-from openviking.server.identity import RequestContext
+from openviking.server.identity import RequestContext, Role
 from openviking.server.models import Response
 from openviking_cli.exceptions import (
     FailedPreconditionError,
@@ -99,6 +100,18 @@ def _wm() -> WatchManager:
 
 def _identity(ctx: RequestContext):
     return (ctx.account_id, ctx.user.user_id, str(ctx.role))
+
+
+def _watch_view(task: Dict[str, Any], ctx: RequestContext) -> Dict[str, Any]:
+    """Add proxy routing to a response without changing the stored task.
+
+    Unrouted tasks are returned as is. Only ROOT sees the internal proxy address.
+    """
+    proxy_host = egress_proxy_host_for(task.get("path"))
+    if proxy_host is None:
+        return task
+    view = {**task, "via_proxy": True}
+    return {**view, "proxy_host": proxy_host} if ctx.role == Role.ROOT else view
 
 
 async def _resolve_task(
@@ -181,7 +194,7 @@ async def list_or_get_watch(
         task = await wm.get_task_by_uri(to_uri, account_id, user_id, role)
         if task is None or (active_only and not task.is_active):
             raise NotFoundError(to_uri, "watch_task")
-        return Response(status="ok", result=task.to_dict())
+        return Response(status="ok", result=_watch_view(task.to_dict(), _ctx))
     if limit is not None or cursor is not None:
         page = await wm.get_tasks_page(
             account_id,
@@ -194,7 +207,7 @@ async def list_or_get_watch(
         return Response(
             status="ok",
             result={
-                "tasks": page.tasks,
+                "tasks": [_watch_view(task, _ctx) for task in page.tasks],
                 "total": page.total,
                 "has_more": page.next_cursor is not None,
                 "next_cursor": page.next_cursor,
@@ -202,7 +215,8 @@ async def list_or_get_watch(
         )
     tasks = await wm.get_all_tasks(account_id, user_id, role, active_only=active_only)
     return Response(
-        status="ok", result={"tasks": [t.to_dict() for t in tasks], "total": len(tasks)}
+        status="ok",
+        result={"tasks": [_watch_view(t.to_dict(), _ctx) for t in tasks], "total": len(tasks)},
     )
 
 
@@ -222,7 +236,7 @@ async def get_watch(
 ):
     """Get a single watch task by ID."""
     task = await _resolve_task(task_id, to_uri, _ctx)
-    return Response(status="ok", result=task.to_dict())
+    return Response(status="ok", result=_watch_view(task.to_dict(), _ctx))
 
 
 async def _patch_impl(target: WatchTask, body: UpdateWatchRequest, ctx: RequestContext):
@@ -257,7 +271,7 @@ async def _patch_impl(target: WatchTask, body: UpdateWatchRequest, ctx: RequestC
         raise _translate_perm(e, target.to_uri or target.task_id) from e
     except ValueError as e:
         raise NotFoundError(target.task_id, "watch_task") from e
-    return Response(status="ok", result=updated.to_dict())
+    return Response(status="ok", result=_watch_view(updated.to_dict(), ctx))
 
 
 @router.patch("/watches/{task_id}")

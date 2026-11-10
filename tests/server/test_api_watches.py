@@ -123,6 +123,83 @@ async def test_list_cursor_pagination(client: httpx.AsyncClient, watch_manager):
     assert set(legacy) == {"tasks", "total"}
 
 
+@pytest.fixture
+def ado_proxy():
+    from openviking.parse.egress_proxy import configure_egress_proxies
+
+    configure_egress_proxies(
+        SimpleNamespace(
+            egress_proxies={
+                "dev.azure.com": {
+                    "url": "http://proxy.corp:8080",
+                    "username": "svc",
+                    "password": "pr0xy-s3cret",
+                }
+            }
+        )
+    )
+    yield
+    configure_egress_proxies(SimpleNamespace(egress_proxies={}))
+
+
+ADO_REPO = "https://dev.azure.com/org/project/_git/repo"
+
+
+async def test_root_sees_proxy_host_on_every_read_shape(
+    client: httpx.AsyncClient, watch_manager, ado_proxy
+):
+    task = await _seed(watch_manager, path=ADO_REPO)
+    responses = [
+        (await client.get("/api/v1/watches")).json()["result"]["tasks"][0],
+        (await client.get("/api/v1/watches", params={"limit": 10})).json()["result"]["tasks"][0],
+        (await client.get("/api/v1/watches", params={"to_uri": task.to_uri})).json()["result"],
+        (await client.get(f"/api/v1/watches/{task.task_id}")).json()["result"],
+        (await client.patch(f"/api/v1/watches/{task.task_id}", json={"reason": "x"})).json()[
+            "result"
+        ],
+    ]
+    for body in responses:
+        assert body["via_proxy"] is True
+        assert body["proxy_host"] == "proxy.corp:8080"
+        assert "pr0xy-s3cret" not in str(body)
+        assert "svc" not in str(body)
+
+
+async def test_non_root_sees_badge_flag_without_proxy_host(
+    client: httpx.AsyncClient, watch_manager, app, ado_proxy
+):
+    from openviking.server.auth import get_request_context
+    from openviking.server.identity import RequestContext, Role
+    from openviking_cli.session.user_id import UserIdentifier
+
+    task = await _seed(watch_manager, path=ADO_REPO)
+    app.dependency_overrides[get_request_context] = lambda: RequestContext(
+        user=UserIdentifier(account_id="default", user_id="default"),
+        role=Role.ADMIN,
+    )
+    try:
+        body = (await client.get(f"/api/v1/watches/{task.task_id}")).json()["result"]
+    finally:
+        app.dependency_overrides.pop(get_request_context, None)
+    assert body["via_proxy"] is True
+    assert "proxy_host" not in body
+
+
+async def test_unrouted_watch_response_is_unchanged(
+    client: httpx.AsyncClient, watch_manager, ado_proxy
+):
+    task = await _seed(watch_manager, path="https://example.com/foo")
+    body = (await client.get(f"/api/v1/watches/{task.task_id}")).json()["result"]
+    assert body == task.to_dict()
+
+
+async def test_proxy_view_is_not_persisted(client: httpx.AsyncClient, watch_manager, ado_proxy):
+    task = await _seed(watch_manager, path=ADO_REPO)
+    await client.get(f"/api/v1/watches/{task.task_id}")
+    stored = await watch_manager.get_task(task.task_id)
+    assert "via_proxy" not in stored.to_dict()
+
+
 async def test_list_pagination_empty(client: httpx.AsyncClient):
     response = await client.get("/api/v1/watches", params={"limit": 10})
     assert response.status_code == 200

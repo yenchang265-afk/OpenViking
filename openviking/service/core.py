@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Awaitable, Callable, Optional
 
 from openviking.core.directories import DirectoryInitializer
 from openviking.core.namespace import canonical_user_root
+from openviking.parse.egress_proxy import configure_egress_proxies
 from openviking.privacy.sanitizer import PrivacySanitizer
 from openviking.privacy.service import UserPrivacyConfigService
 from openviking.resource.watch_manager import WatchManager
@@ -510,6 +511,8 @@ class OpenVikingService:
             return
 
         self._ensure_data_dir_lock_acquired()
+        # Only the lock holder installs routes; before anything fetches a source.
+        configure_egress_proxies(self._config.code)
         await get_task_tracker().load()
 
         if self._vikingdb_manager is None:
@@ -904,6 +907,7 @@ class OpenVikingService:
 
     async def close(self) -> None:
         """Close OpenViking and release resources."""
+        configure_egress_proxies(None)
         if self._watch_runtime is not None:
             await self._watch_runtime.stop()
             self._watch_runtime = None

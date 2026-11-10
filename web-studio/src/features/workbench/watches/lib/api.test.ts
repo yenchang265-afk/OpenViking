@@ -36,6 +36,38 @@ const watch = {
   watch_interval: 1440,
 }
 
+describe('normalizeWatchTask proxy routing', () => {
+  it('defaults to a direct route when the server omits proxy fields', () => {
+    expect(normalizeWatchTask(watch)).toMatchObject({
+      proxyHost: null,
+      viaProxy: false,
+    })
+  })
+
+  it('reads the route flag and the root-only proxy host', () => {
+    expect(
+      normalizeWatchTask({
+        ...watch,
+        proxy_host: 'proxy.corp:8080',
+        via_proxy: true,
+      }),
+    ).toMatchObject({ proxyHost: 'proxy.corp:8080', viaProxy: true })
+  })
+
+  it('shows the flag without a host for non-root users', () => {
+    expect(normalizeWatchTask({ ...watch, via_proxy: true })).toMatchObject({
+      proxyHost: null,
+      viaProxy: true,
+    })
+  })
+
+  it('treats a non-boolean flag as a direct route', () => {
+    expect(normalizeWatchTask({ ...watch, via_proxy: 'yes' })).toMatchObject({
+      viaProxy: false,
+    })
+  })
+})
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -49,9 +81,11 @@ describe('watch API normalization', () => {
       lastExecutionTime: null,
       nextExecutionTime: '2026-08-11T10:00:00',
       path: 'https://github.com/volcengine/OpenViking',
+      proxyHost: null,
       reason: 'Track upstream changes',
       taskId: 'watch-1',
       toUri: 'viking://resources/OpenViking',
+      viaProxy: false,
       watchInterval: 1440,
     })
   })

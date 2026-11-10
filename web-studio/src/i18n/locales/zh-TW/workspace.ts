@@ -776,6 +776,11 @@ const workspace = {
       nextRun: '下次同步',
       actions: '操作',
     },
+    proxy: {
+      badge: '代理',
+      hint: '透過平臺管理員設定的代理伺服器擷取。',
+      hostHint: '透過代理伺服器 {{host}} 擷取。',
+    },
     status: {
       active: '已啟用',
       disabled: '已關閉',

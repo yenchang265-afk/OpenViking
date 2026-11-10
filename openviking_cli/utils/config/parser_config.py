@@ -8,10 +8,11 @@ scattered across different modules. All configurations inherit from ParserConfig
 and can be loaded from ov.conf files.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
+from openviking_cli.utils.config.egress_proxy_config import parse_egress_proxies
 from openviking_cli.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -199,6 +200,8 @@ class CodeHostingConfig(ParserConfig):
         github_domains: List of GitHub domains (github.com, www.github.com)
         gitlab_domains: List of GitLab domains (gitlab.com, www.gitlab.com)
         azure_devops_domains: List of Azure DevOps domains (dev.azure.com, ssh.dev.azure.com)
+        egress_proxies: Proxy per source host, as {host: {url, username, password, ca_file}}.
+            Validated on load. Hidden from repr because it may hold a password.
     """
 
     # Code hosting platform configuration
@@ -206,6 +209,7 @@ class CodeHostingConfig(ParserConfig):
     github_domains: list = None
     gitlab_domains: list = None
     azure_devops_domains: list = None
+    egress_proxies: dict = field(default=None, repr=False)
 
     def __post_init__(self):
         """Initialize default values for mutable fields."""
@@ -231,6 +235,9 @@ class CodeHostingConfig(ParserConfig):
                 "ssh.dev.azure.com",
                 "vs-ssh.visualstudio.com",
             ]
+        if self.egress_proxies is None:
+            self.egress_proxies = {}
+        parse_egress_proxies(self.egress_proxies)
 
 
 @dataclass
