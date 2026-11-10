@@ -1,86 +1,133 @@
 # FileBrowser 檔案瀏覽
 
-目錄導航、搜尋與內容預覽作為一個模組。模組自己取數，宿主提供配置、受控的當前資源、工具欄入口與文案。
+可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
 
-元件當前是佔位實現：只展示模組名稱與佔位文案。下面的 props 已定型，接入方可以先完成容器與狀態接入；組合檢視與 `useFileBrowser` 隨後補充。
+目錄導航、搜尋與內容預覽作為一個模組。模組自己取數，宿主提供配置、受控的當前資源、接入配置、匯入互動與文案。
+
+元件已實現目錄樹、搜尋與預覽的聯動：目錄按需展開並分頁，點選檔案載入預覽，搜尋結果選中後同樣開啟預覽。取數和聯動 Hook 內建，宿主直接使用元件。
 
 ## 基礎用法
 
-```tsx file="../../_demos/file-browser-placeholder.tsx" preview
+示例用固定資料，不訪問網路：
+
+```tsx file="../../_demos/file-browser-basic.tsx" preview
 
 ```
 
 ## 範圍
 
-模組只覆蓋檔案樹與檔案預覽兩塊。命令面板屬於 `console`。
+模組包含檔案樹、檔案預覽與頂部入口。命令面板屬於 `console`。
 
 ## 模組負責什麼
 
-- 目錄、搜尋、當前 URI 與預覽載入在模組內協調：點選目錄節點或搜尋結果即移動選中並載入預覽，切換資源時丟棄過期請求。
+- 目錄、搜尋、當前 URI 與預覽載入在模組內協調：點選目錄節點或搜尋結果即移動選中並載入預覽，切換資源時丟棄過期請求。點目錄同時展開它並把它設為當前資源，右側顯示該目錄的 L1 概覽（為空時回落到 L0 摘要）。
 - 儲存、重新命名或刪除後重新整理受影響的目錄、搜尋結果與預覽。
-- 搜尋、目錄與預覽區域的佈局。
-- 工具欄裡的搜尋框與重新整理按鈕，以及行級狀態，例如上傳進度、衝突標記與保留策略設定。
+- 搜尋、目錄與預覽區域的佈局，包括樹與詳情之間的可拖拽分隔條。樹預設 352px，可在 200px 到「給詳情留出可讀寬度」的上限之間拖動，分隔條獲得焦點後方向鍵同樣能改寬。
+- 頂部連線與匯入入口、工具欄裡的搜尋框與重新整理按鈕，以及行級狀態，例如上傳進度、衝突標記與保留策略設定。
 - 預覽頁籤。某個資源有哪些頁籤由資源本身決定，宿主不需要提供。
+- 正文裡的系統後設資料。記憶檔案末尾的 `MEMORY_FIELDS` 註釋是服務端寫的內部欄位，不屬於正文：預設讀取已由服務端剝掉，宿主經自定義傳輸層或閘道器把請求變成原始讀取（`raw=true`）時它會原樣返回，模組按同一規則再剝一次——只認位於檔案末尾的那一塊，正文中間的同形註釋保留，且只在記憶名稱空間生效。判斷「是不是檔案末尾」以是否讀到末尾為準：首屏沒讀滿預覽上限時響應就是整個檔案；讀滿了會再取一次全文，剝完自己按上限切分，因此不會把首屏末尾的正文註釋誤當成尾註，也能認出被上限截斷在關閉標記之前的尾註。行邊界、空白與「單詞字元」都按服務端（Python）的規則判定，而不是 JS 的 `split('\n')` / `trim()` / `\b`——這幾組集合並不相同，照搬會在預設讀取路徑上刪掉服務端已經保留的正文。
 - 搜尋檢視。搜尋是本模組內部的私有檢視，不是公開的元件或模組：從工具欄或 ⌘K 開啟，選中結果後移動目錄樹並載入預覽。它不對外匯出——離開目錄樹，搜尋就沒有去處。`console` 的 `@` 引用是基於同類介面的另一個檢視，不是這一個。
 
 ## 宿主負責什麼
 
 - 通過 Provider 提供請求配置，模組可用 `requestOptions` 逐欄位覆蓋。
 - 登入、帳號作用域、路由與許可權。
-- 工具欄入口，例如連線 Agent、匯入資源。用 `FileBrowserToolbarButton` 在 `toolbarActions` 裡組合，保證與模組內建按鈕外觀一致。只靠點選不夠時，入口可以包在氣泡或下拉里。
-- 接入彈窗、匯入流程與引導。模組都不內建。
+- 接入憑證與產品專屬的匯入流程，通過 `agentConnect`、`onImportResources` 與可選的 `renderImportResources` 接入。
 
-## 工具欄入口
+## 入口與工具欄
 
-搜尋框、重新整理按鈕與分隔線由模組渲染。宿主通過 `toolbarActions` 新增自己的入口，用 `FileBrowserToolbarButton` 保證樣式一致：
+模組內建連線與匯入入口，其下是搜尋框與重新整理按鈕。`Popover` 與 `ResourceMenu` 由宿主提供，預設原生按鈕直接作為 `Popover` 的 `children`，供其接管 ref、事件與定位：
 
 ```tsx
-import {
-  FileBrowser,
-  FileBrowserToolbarButton,
-} from '@openviking/react/modules/file-browser';
+import { FileBrowser } from '@openviking/react/modules/file-browser';
+import '@openviking/react/modules/file-browser/style.css';
 
 <FileBrowser
-  toolbarActions={
-    <>
-      <FileBrowserToolbarButton icon={<ConnectIcon />} onClick={connect}>
-        連線 Agent
-      </FileBrowserToolbarButton>
-      <FileBrowserToolbarButton icon={<UploadIcon />} onClick={openImport}>
-        匯入資源
-      </FileBrowserToolbarButton>
-    </>
-  }
+  locale="zh-CN"
+  agentConnect={{ apiKey: 'demo-api-key', locale: 'zh-CN' }}
+  renderImportResources={(trigger) => (
+    <Popover content={<ResourceMenu />} trigger="click">
+      {trigger}
+    </Popover>
+  )}
+  labels={{
+    entries: {
+      connectAgent: '連線 Agent',
+      importResources: '匯入資源',
+      close: '關閉',
+    },
+  }}
 />;
 ```
 
-`toolbarActions` 是節點，所以需要選單的入口直接把自己的按鈕包起來，不需要再加欄位：
+傳入 `agentConnect` 顯示連線入口，點選後從右側滑出接入抽屜；省略時隱藏。`renderImportResources(trigger)` 接收帶預設圖示與文案的原生按鈕，宿主可包裝按鈕或返回替代節點；完全替換時由宿主繫結互動。僅需點選互動時，傳入 `onImportResources` 即顯示預設匯入按鈕，無需提供渲染插槽。插槽包裝預設按鈕時保留點選回撥；返回 `null` 隱藏匯入入口。同時省略 `onImportResources` 和 `renderImportResources` 時隱藏匯入入口。只顯示一個入口時不畫分隔線，全部隱藏時不渲染入口條。
+
+只需點選回撥時：
 
 ```tsx
-<Popover content={<ResourceMenu />} trigger="hover">
-  <FileBrowserToolbarButton icon={<UploadIcon />}>
-    匯入資源
-  </FileBrowserToolbarButton>
-</Popover>
+<FileBrowser locale="zh-CN" onImportResources={openImport} />
 ```
 
-入口之間的分隔線由 CSS 相鄰兄弟選擇器處理，宿主傳幾個、怎麼巢狀都不影響。
+## 目錄樹寬度
+
+樹與詳情之間有一條可拖拽的分隔條，把指標放在上面左右拖就能改樹寬；分隔條獲得焦點後，左右方向鍵每次調整 16px。
+
+- 預設 352px，與設計稿一致；最小 200px，再窄就只剩圖示可辨。
+- 上限是 520px 與「容器寬度減去詳情區 320px、分隔條 24px」中的較小值。宿主把模組放進窄欄時，樹會跟著收窄，不會把詳情擠沒。
+- 拖動只改變當前例項的寬度，不寫 `localStorage`：寬度屬於佈局，要不要記住是宿主的決定。
+
+寬度由模組自己持有，並以 `--ov-file-browser-tree-width` 寫在容器上——想改預設值或另做佈局聯動時讀它即可，但覆蓋它不會改變實際寬度，因為拖動的結果會立刻寫回同一個變數。要固定寬度，請把模組包在定寬容器裡，由容器的寬度上限約束。
+
+分隔條的無障礙名稱來自 `labels.resizeTree`，預設跟隨 locale，也可單獨覆蓋。
+
+## 失敗態
+
+讀不到和讀到空是兩件事，模組分開呈現：
+
+- 目錄列表失敗時，樹裡顯示失敗行與重試按鈕，而不是「沒有檔案」。根目錄失敗也一樣——把它畫成空態會讓 403 看起來像目錄本來就沒有內容。
+- 預覽失敗時，右側顯示失敗態：`labels.error` 作結論、服務端返回的原始訊息作原因、`labels.retry` 作重試。有選中的資源卻讀不出來時不會回落到空態插畫。
+- 只有真正沒選中資源時才顯示空態。
+- 搜尋失敗同樣顯示原因與重試，而不是「沒有匹配結果」：兩者在介面上完全不同，混成空態會讓一次 403 看起來像搜尋確實沒有命中。結論用 `labels.searchFailed`，原因取服務端返回的訊息。
+- 目錄的兩級摘要各自可能失敗。失敗的一級保留失敗原因而不是變成空正文——空正文意味著「還沒生成」，與「取不到」（後端故障、許可權不足）是兩件事；兩級都失敗時整個預覽進入失敗態。服務端沒給訊息時用 `labels.summaryFailed` 兜底，因此這句提示也跟隨介面語言。
+
+失敗態的重試會重新取數目錄、當前預覽與進行中的搜尋——外部改動之後，只刷樹會讓右側繼續顯示舊正文。
 
 ## 屬性
 
-模組從子路徑和根入口匯出 `FileBrowserProps`，`FileBrowserToolbarButton`、`FileBrowserToolbarButtonProps` 與 `FileBrowserLabels` 只從子路徑匯出。
+模組從子路徑和根入口匯出 `FileBrowserProps`；`FileBrowserLabels` 只從子路徑匯出。入口條 `FileBrowserEntries` 屬於元件層，從 `@openviking/react/components/file-browser-entries` 匯入。
 
-| 屬性             | 型別                            | 預設值 | 說明                                                                                                                                   |
-| ---------------- | ------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `requestOptions` | `OvRequestOptions`              | —      | 請求配置覆蓋，逐欄位覆蓋最近的 Provider。                                                                                              |
-| `uri`            | `string`                        | —      | 受控的當前資源 URI。傳入時由宿主決定當前資源，模組只上報切換意圖。                                                                     |
-| `defaultUri`     | `string`                        | —      | 非受控時的初始資源 URI。省略時不選中任何資源。                                                                                         |
-| `toolbarActions` | `ReactNode`                     | —      | 工具欄左側的宿主入口，用 `FileBrowserToolbarButton` 組合。搜尋、重新整理與入口之間的分隔線由模組負責。                                 |
-| `onUriChange`    | `(uri: string \| null) => void` | —      | 當前資源變化後觸發；清除選中時傳入 `null`。                                                                                            |
-| `labels`         | `FileBrowserLabels`             | —      | 可替換文案：`title`、`description`、`searchPlaceholder`、`searchEmpty`、`refresh`、`empty`、`error`、`retry`。未提供時沿用英文預設值。 |
-| `className`      | `string`                        | —      | 容器附加類名。                                                                                                                         |
-| `style`          | `CSSProperties`                 | —      | 容器樣式覆蓋。                                                                                                                         |
+| 屬性                    | 型別                                   | 預設值           | 說明                                                                                                                                                                                                                                                                                                                                            |
+| ----------------------- | -------------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `requestOptions`        | `OvRequestOptions`                     | —                | 請求配置覆蓋，逐欄位覆蓋最近的 Provider。                                                                                                                                                                                                                                                                                                       |
+| `uri`                   | `string`                               | —                | 受控的當前資源 URI。傳入時由宿主決定當前資源，模組只上報切換意圖。                                                                                                                                                                                                                                                                              |
+| `defaultUri`            | `string`                               | —                | 非受控時的初始資源 URI。省略時不選中任何資源。                                                                                                                                                                                                                                                                                                  |
+| `agentConnect`          | `AgentConnectProps`                    | —                | 啟用內建連線入口與右側接入抽屜。                                                                                                                                                                                                                                                                                                                |
+| `onUriChange`           | `(uri: string \| null) => void`        | —                | 當前資源變化後觸發，引數為新的 URI。簽名允許 `null`（上游契約），但模組目前不會主動上報：沒有取消選中的互動，宿主不要依賴它來收起詳情區。                                                                                                                                                                                                       |
+| `onImportResources`     | `() => void`                           | —                | 預設匯入按鈕的點選回撥；單獨傳入即可顯示入口。                                                                                                                                                                                                                                                                                                  |
+| `rootUri`               | `string`                               | `viking://`      | 目錄樹的根，宿主據此把瀏覽範圍收斂到某個子樹。                                                                                                                                                                                                                                                                                                  |
+| `defaultExpandedUri`    | `string`                               | —                | 首次載入後自動展開到的路徑，逐級展開並載入。省略時只展開根，其餘摺疊。                                                                                                                                                                                                                                                                          |
+| `locale`                | `'zh-CN' \| 'en-US'`                   | 繼承上層 / en-US | 內建中英文文案。                                                                                                                                                                                                                                                                                                                                |
+| `renderImportResources` | `(trigger: ReactElement) => ReactNode` | —                | 可選，包裝或替換預設匯入按鈕；省略時使用預設按鈕，返回 `null` 隱藏入口。                                                                                                                                                                                                                                                                        |
+| `labels`                | `FileBrowserLabels`                    | —                | 可替換文案：`searchPlaceholder`、`searchEmpty`、`searchFailed`、`loading`、`refresh`、`empty`、`error`、`retry`、`previewMode`、`sourceMode`、`history`、`copyPath`、`viewSwitch`、`resizeTree`，`summaryEmpty`、`summaryFailed`（某一級摘要請求失敗且服務端沒給訊息時的兜底文案），以及透傳給入口、樹與預覽的 `entries` / `tree` / `preview`。 |
+| `className`             | `string`                               | —                | 容器附加類名。                                                                                                                                                                                                                                                                                                                                  |
+| `style`                 | `CSSProperties`                        | —                | 容器樣式覆蓋。                                                                                                                                                                                                                                                                                                                                  |
 
 文案為純文本，宿主可將自身的翻譯結果對映到這些屬性。props 裡沒有資料欄位——資料由模組自己載入。
 
-佔位元件當前只消費 `className`、`style`、`labels.title` 與 `labels.description`。
+模組通過 `useFileBrowser` 自己取數，宿主無需提供目錄或預覽資料；`labels.entries`、`labels.tree` 與 `labels.preview` 分別透傳給入口條、檔案樹與檔案預覽元件。
+
+`labels.formatCharacterCount(count)` 可覆蓋預覽底部的字元數文案，預設隨 `locale` 切換。
+
+## 內建看板
+
+使用者的 `memories/experiences` 目錄與直接 `.md` 檔案自動提供經驗看板；Wiki 根據編譯配置或 `compile_target=true` 資源標記識別，後代檔案與目錄複用 Wiki 看板。標記優先，不因配置列表缺失而隱藏。普通資源沒有 Wiki 頁籤；已識別的 Wiki 在零衝突時仍保留看板。
+
+發現和配置匹配使用原生介面在當前身份下解析的 URI，支援 `viking://~/...` 根目錄及 Wiki 子檔案別名；宿主收到的看板 URI 與回撥仍保留原始寫法。示例底部可切換規範 URI 與 `~` 別名驗證同一檔案。
+
+檔案樹圖示直接開啟看板，預覽頁籤可切回正文。看板樣式已包含在 FileBrowser 的 `style.css` 內。檢視獨立 [WikiDashboard](../components/wiki-dashboard) 和 [ExperienceDashboard](../components/experience-dashboard) 的介面範圍與宿主資料用法。
+
+`dashboardKinds?: readonly ('wiki' | 'experience')[]` 預設啟用兩類，傳空陣列停用發現和入口。宿主據產品許可權篩選型別；例如 `dashboardKinds={['experience']}` 關閉 Wiki 入口與編譯配置查詢。服務端仍執行資源許可權。
+
+`renderDashboard?: (dashboard: FileBrowserDashboard) => ReactNode` 允許宿主接入閘道器資料或替換組合檢視；返回空值使用原生預設檢視。描述含 `kind`、`uri`，Wiki 還可含 `pendingConflicts` 與 `isRoot`。
+
+`labels.dashboard` 可覆蓋兩個頁籤標題、三個樹入口名稱及發現失敗文案。看板內部文案由其自身的 `labels` 覆蓋，宿主可通過 `renderDashboard` 傳入。

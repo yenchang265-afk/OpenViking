@@ -85,6 +85,7 @@ Studio 無法為你載入閘道器時，會用一張設定卡片代替閘道器�
 | 400 "Request model is missing"、415 "Compressed request bodies are not supported" | 只出現在限定了模型的金鑰上：請求體必須寫明模型，且不能經過壓縮編碼。 |
 | 404 "This upstream is an exact endpoint for … only" | 金鑰繫結的上游關閉了**拼接協議介面路徑**（見[直接發往完整請求地址](07-upstreams.md#exact-endpoint)），只接受該協議的介面地址，而客戶端呼叫了別的路徑，例如 `/v1/models`。 |
 | 404 "No allowed upstream matches this protocol and model" | 金鑰繫結的已啟用上游中，沒有一個使用客戶端呼叫的 API 並提供所請求的模型。檢查上游的協議、模型和別名、是否啟用，以及金鑰繫結了哪些上游。 |
+| 400 `peer_invalid` "X-OpenViking-Actor-Peer must be one path segment…" | 請求的 Peer 不是合法的 Peer ID，例如含有 `/` 或空格。見[按 Peer 區分記憶](03-connect-clients.md#peer)。 |
 | 403 "Upstream URL is not allowed" | `X-OpenViking-Upstream-URL` 與金鑰繫結的任何上游的 Base URL 都不相同。見[按請求指定上游](07-upstreams.md#upstream-url-header)。 |
 | 401 "Upstream API key is missing" | 上游要求每個客戶端在 `X-OpenViking-Upstream-Key` 中自帶 API Key，或者由閘道器保管 API Key 的上游沒有填寫。見[憑證](07-upstreams.md#credentials)。 |
 | 403 "Coding Plan upstreams are disabled; configure a model API key" | 上游被標記為 [Coding Plan 金鑰](07-upstreams.md#coding-plan-keys)。改用模型 API Key，或者有意勾選**允許通過閘道器使用這個套餐**。 |

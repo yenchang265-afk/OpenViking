@@ -2,15 +2,18 @@
 
 [English](README.md) / 中文
 
+可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
+
 面向資源瀏覽的目錄樹。宿主把樹狀態展平成有序行列表傳進來，通過 `operations` 提供非同步執行能力；元件負責渲染、鍵盤互動，並在操作成功後通知。
 
-> **當前是佔位實現。** 它已按公開 props 渲染全部已定義的行型別，接入方可對著 API 開發，但樣式、圖示與互動細節都會調整，檢視後續按本文契約重寫。
+元件渲染五種行型別，按 `depth` 縮排並繪製祖先連線，處理鍵盤導航；選中、展開、分頁與重試通過 `operations` 執行。
 
 ```tsx
 import { FileTree } from '@openviking/react/components/file-tree';
 import '@openviking/react/components/file-tree/style.css';
 
 <FileTree
+  locale="zh-CN"
   rows={rows}
   selectedId={selectedId}
   operations={{
@@ -58,11 +61,13 @@ type FileTreeRow =
 - 不請求任何資料，不建連線，不做許可權判斷。
 - 不維護展開集合與選中項——兩者都是受控的。
 - 點選目錄與點選檔案共用 `operations.select`，由宿主按 `row.type` 分流；選中成功後通過 `onSelect` 通知。
-- 工具欄、搜尋、匯入來源、許可權流程屬於頁面層，通過 `slots.toolbar` 注入。
+- 搜尋彈窗、匯入來源與許可權流程由宿主實現；`slots.toolbar` 可追加自定義操作。
 
 ## 擴充套件點
 
 **行尾與懸停**：`renderDashboard` 放行尾指示器（例如看板入口），`renderRowTooltip` 放懸停內容。兩者返回 `null` 即不顯示；看板判定屬於產品語義，元件不內建路徑規則。
+
+**目錄說明**：元件按行 `uri` 的路徑結構判定目錄語義，對固定的 `viking://` 層級內建說明與觸發行為文案。行自帶的 `description` 優先，`labels.info` 可逐鍵覆蓋，傳空字串表示該鍵不顯示。判定規則在元件內，宿主不需要傳。
 
 **行級一次性效果**：高亮、閃爍、臨時描邊不屬於樹的屬性。元件給每條行元素設定 `data-file-tree-row-id`（常量 `FILE_TREE_ROW_ATTRIBUTE`），頁面層可直接查詢該元素，也可以用 `getRowAttributes` 按行資料追加屬性，或用 `ref` 控制代碼的 `getRowElement` / `scrollToRow`。三種方式可組合，都不改變元件狀態。
 
@@ -70,10 +75,16 @@ type FileTreeRow =
 
 ## 主題
 
-樣式區域性化，不修改應用的全域性樣式。顏色、圓角、焦點環通過 `--ov-ui-*` 變數覆蓋，完整清單見元件文件的主題變量表。
+樣式區域性化，不修改應用的全域性樣式。主題變數在根節點宣告，預設值取主題無關的中性色，淺色與暗色背景上都能正常閱讀。
 
 ## 文件與開發
 
-- 屬性表、可執行示例、主題變數見[元件文件](../../../../../docs/docs/en/components/file-tree.mdx)（[中文](../../../../../docs/docs/zh/components/file-tree.mdx)）。
+- 屬性表與可執行示例見[元件文件](../../../../../docs/docs/en/components/file-tree.mdx)（[中文](../../../../../docs/docs/zh/components/file-tree.mdx)）。
 - 開發與構建命令見[前端工作區 README](../../../../../README.md)，模組約定見[包說明](../../../README.md)。
 - 獨立樣式入口 `@openviking/react/components/file-tree/style.css`，與 JS 入口分離，可按需引入。
+
+## 可選搜尋與重新整理
+
+`search`、`refresh` 預設隱藏，傳 `true` 分別開啟。通過 `operations.search` 開啟宿主搜尋介面，通過 `operations.refresh` 重新整理資料；缺少執行方法時停用按鈕。重新整理等待時自動停用並顯示旋轉圖示，失敗後恢復且不觸發成功通知。
+
+`search={{ disabled: true }}` 控制搜尋停用態；`refresh={{ disabled, loading }}` 控制重新整理停用態與宿主載入態。用 `labels.search`、`labels.refresh` 替換文案，用 `onSearch`、`onRefresh` 接收成功通知。搜尋不自行過濾行、不註冊全域性快捷鍵。`slots.toolbar` 位於內建控制元件上方，兩個入口都可單獨關閉。

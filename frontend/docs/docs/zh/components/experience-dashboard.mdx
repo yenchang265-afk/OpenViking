@@ -1,0 +1,47 @@
+# ExperienceDashboard 經驗看板
+
+`ExperienceDashboard` 是純 UI 元件，展示 Agent 經驗列表、應用效果、來源和可選測試材料。元件不感知介面，不需要 Provider；取數與資料適配由 [FileBrowser](../modules/file-browser) 的內部 Hook 或宿主完成。佈局、卡片和 SVG 參考火山版 `release/openviking/2026-11-12`。
+
+## 示例
+
+```tsx file="../../_demos/experience-dashboard-basic.tsx" preview
+
+```
+
+固定展示資料可切換目錄、檔案、補充指標及失敗狀態。缺少指標時顯示“—”，已提供的零值顯示 `0`；只有提供 `testMaterials` 時顯示測試頁籤。
+
+## 接入
+
+```tsx
+import { ExperienceDashboard } from '@openviking/react/components/experience-dashboard';
+import '@openviking/react/components/experience-dashboard/style.css';
+
+<ExperienceDashboard uri="experience-id" kind="file" data={{}} />;
+```
+
+元件只上報互動意圖，不發起請求。URI 變化會重置本地互動；介面狀態、分頁及響應過期處理由外層完成。
+
+## 屬性
+
+| 屬性                 | 型別 / 預設值                                             | 說明                                                                                             |
+| -------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `uri`                | `string`，必填                                            | 當前資源標識                                                                                     |
+| `kind`               | `directory` / `file`，必填                                | 明確展示列表或檔案看板；不根據 URI 猜測資源型別                                                  |
+| `data`               | `ExperienceDashboardData`                                 | 展示模型：經驗、指標、結果分佈、軌跡、來源、測試材料                                             |
+| `tab`                | `impact` / `source` / `test`                              | 受控頁籤；省略時元件本地維護，預設 `impact`                                                      |
+| `days`               | `number`                                                  | 受控時間範圍；省略時本地維護，預設 `7`；`0` 表示全部                                             |
+| `page`               | `number`，預設 `0`                                        | 當前頁，從零開始                                                                                 |
+| `hasMore`            | `boolean`，預設 `false`                                   | 是否還有下一頁                                                                                   |
+| `startIndex`         | `number`，預設 `0`                                        | 當前列表之前已有多少條，用於行序號                                                               |
+| `states`             | 分割槽狀態物件                                              | `list`、`outcomes`、`trajectories`、`sources`、`tests` 各自接收 `{ loading?, error?, onRetry? }` |
+| `locale`             | `en-US` / `zh-CN`，省略時繼承語言作用域，最終預設 `en-US` | 預設文案與相對時間                                                                               |
+| `onTabChange`        | `(tab) => void`                                           | 頁籤切換意圖                                                                                     |
+| `onDaysChange`       | `(days: number) => void`                                  | 時間範圍切換意圖                                                                                 |
+| `onPageChange`       | `(page: number) => void`                                  | 翻頁意圖；省略時翻頁按鈕停用                                                                     |
+| `onOpenUri`          | `(uri: string) => void`                                   | 開啟資源意圖                                                                                     |
+| `labels`             | `Partial<ExperienceDashboardLabels>`                      | 覆蓋文案                                                                                         |
+| `className`、`style` | HTML 屬性                                                 | 佈局與樣式，其餘 HTML 屬性透傳                                                                   |
+
+受控 `tab` 和 `days` 由呼叫方在回撥後更新；元件不修改它們。各分割槽的錯誤和重試互相獨立。UI 內建頁籤鍵盤互動、軌跡展示、測試材料複製和窄容器滾動，業務 Hook 不作為公開 API。
+
+文案覆蓋為 `undefined` 時繼承預設值，空字串保留為顯式覆蓋。測試材料更新保留當前頁籤與時間範圍；移除測試材料時，僅失效的測試頁籤回退到應用效果。

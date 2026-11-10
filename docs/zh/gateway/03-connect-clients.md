@@ -40,9 +40,22 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 
 對話會沿用開始時的設定，所以修改後的請求頭從下一段新對話起生效，例如換一個新的 `X-OpenViking-Session` 值。與所有 `X-OpenViking-*` 請求頭一樣，它不會轉發給服務商。
 
+## 按 Peer 區分記憶 {#peer}
+
+一把金鑰服務多個互動物件時（例如一個機器人以同一個 OpenViking 使用者的身份和很多人對話），客戶端可以用 `X-OpenViking-Actor-Peer` 請求頭寫明每個請求的互動物件，例如 `X-OpenViking-Actor-Peer: review-agent`。它的值是 OpenViking 的 [Peer](../getting-started/20-peers.md) ID，請求頭名稱與 OpenViking 自身的 API 和 SDK 相同。帶上 Peer 後，閘道器會：
+
+- 按這個 Peer 召回：召回在使用者自己的記憶之外加上這個 Peer 的記憶。其他 Peer 的記憶仍可能被召回，只是分數會略微扣減，因為閘道器沿用 OpenViking 預設的 `peer_scope`，即 `all`。OpenViking 工具不按 Peer 收窄；
+- 儲存時給這個請求的使用者訊息標上這個 `peer_id`，OpenViking 提交會話時就能提取關於這個 Peer 的記憶。助手回覆儲存時不帶 Peer。
+
+Peer 屬於每個請求，不屬於對話；帶不帶 Peer，閘道器[識別對話](#how-conversations-are-recognized)的方式都一樣。同一段對話（例如機器人所在的群聊）可以包含來自多個 Peer 的使用者訊息：每條訊息沿用第一次把它發到閘道器的那個請求的 Peer，客戶端之後修改或刪掉更早的訊息也不變；每個請求按自己的 Peer 召回。
+
+請求不帶這個請求頭時，使用金鑰的[預設 Peer](09-gateway-keys.md#default-peer)（如果簽發時設定了）；兩者都沒有時，行為不變。請求頭的值為空白時，同樣回退到預設 Peer。值必須是單個路徑段，只能包含字母、數字、`_`、`.`、`-`，最多一個 `@`。其他值在請求到達服務商之前返回 400 `peer_invalid`。與所有 `X-OpenViking-*` 請求頭一樣，它不會轉發給服務商。
+
+Peer 不是訪問邊界：持有金鑰的人可以填任意 Peer，也可以不填。需要各自獨立記憶的人，請各發一把金鑰，見[每人一把金鑰](09-gateway-keys.md#one-key-per-person)。
+
 ## 在客戶端裡新增請求頭 {#add-a-header}
 
-上面兩個請求頭都要隨每個請求傳送。各客戶端的新增方式：
+上面這些請求頭都要隨每個請求傳送。各客戶端的新增方式：
 
 | 客戶端 | 如何新增請求頭 |
 | --- | --- |

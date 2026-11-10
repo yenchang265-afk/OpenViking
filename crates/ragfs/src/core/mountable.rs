@@ -99,6 +99,7 @@ struct MountCacheConfig {
     service_name: String,
     multi_instance: bool,
     max_file_size_bytes: usize,
+    shared_redis_ttl: Option<Duration>,
 }
 
 impl MountableFS {
@@ -297,6 +298,16 @@ impl MountableFS {
     /// Create a MountableFS backed by the unified CacheRuntime.
     #[cfg(feature = "cache")]
     pub fn with_cache_runtime(runtime: Arc<CacheRuntime>, service_name: impl Into<String>) -> Self {
+        Self::with_cache_runtime_and_shared_redis_ttl(runtime, service_name, None)
+    }
+
+    /// Create a MountableFS backed by the unified CacheRuntime and a shared-Redis TTL.
+    #[cfg(feature = "cache")]
+    pub fn with_cache_runtime_and_shared_redis_ttl(
+        runtime: Arc<CacheRuntime>,
+        service_name: impl Into<String>,
+        shared_redis_ttl: Option<Duration>,
+    ) -> Self {
         Self {
             mounts: Arc::new(RwLock::new(Trie::new())),
             registry: Arc::new(RwLock::new(HashMap::new())),
@@ -308,6 +319,7 @@ impl MountableFS {
                 service_name: service_name.into(),
                 multi_instance: false,
                 max_file_size_bytes: crate::cache::DEFAULT_MAX_FILE_SIZE_BYTES,
+                shared_redis_ttl,
             }),
             cache_runtime: Some(runtime),
         }
@@ -505,7 +517,8 @@ impl MountableFS {
                                 &cache.service_name,
                             )
                             .with_multi_instance(cache.multi_instance)
-                            .with_max_file_size_bytes(max_file_size_bytes),
+                            .with_max_file_size_bytes(max_file_size_bytes)
+                            .with_shared_redis_ttl(cache.shared_redis_ttl),
                         )
                     }
                     None => arc,
@@ -579,7 +592,8 @@ impl MountableFS {
                     &cache.service_name,
                 )
                 .with_multi_instance(cache.multi_instance)
-                .with_max_file_size_bytes(cache.max_file_size_bytes),
+                .with_max_file_size_bytes(cache.max_file_size_bytes)
+                .with_shared_redis_ttl(cache.shared_redis_ttl),
             ),
             None => fs,
         }
@@ -1341,6 +1355,42 @@ mod tests {
     /// Helper to create a PluginConfig for tests with new fields defaulted.
     fn test_config(name: &str, mount_path: &str) -> PluginConfig {
         PluginConfig::single_backend(name, mount_path, HashMap::new())
+    }
+
+    /// Verifies the shared-Redis TTL reaches the mount cache configuration.
+    #[cfg(feature = "cache")]
+    #[test]
+    fn shared_redis_ttl_reaches_the_mount_cache_config() {
+        use crate::cache_runtime::MemoryMockProvider;
+
+        let runtime = CacheRuntime::memory_with_provider(Arc::new(MemoryMockProvider::new()));
+        let mountable = MountableFS::with_cache_runtime_and_shared_redis_ttl(
+            runtime,
+            "cache-ttl-test",
+            Some(Duration::from_secs(60)),
+        );
+
+        assert_eq!(
+            mountable
+                .cache
+                .as_ref()
+                .and_then(|cache| cache.shared_redis_ttl),
+            Some(Duration::from_secs(60))
+        );
+
+        let without_override = MountableFS::with_cache_runtime_and_shared_redis_ttl(
+            CacheRuntime::memory_with_provider(Arc::new(MemoryMockProvider::new())),
+            "cache-ttl-test",
+            None,
+        );
+
+        assert_eq!(
+            without_override
+                .cache
+                .as_ref()
+                .and_then(|cache| cache.shared_redis_ttl),
+            None
+        );
     }
 
     /// Helper to create a simple multi-write PluginConfig for tests.

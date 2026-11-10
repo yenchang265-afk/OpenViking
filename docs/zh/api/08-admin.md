@@ -99,6 +99,44 @@ Python SDK 提供對應的 `admin_create_group`、`admin_list_groups`、`admin_l
 
 ## API 參考
 
+### metric_inventory
+
+流式匯出供離線報表使用的後設資料清單。即使只掃描一個帳號，也要求 **ROOT** 認證。清單包含帳號作用域、使用者標識與角色、檔案後設資料、技能後設資料及向量記錄後設資料；不包含檔案正文、向量值或憑證。
+
+**HTTP API**
+
+```http
+GET /api/v1/admin/metric-inventory?account_id=acme&page_size=500
+X-API-Key: your-root-api-key
+```
+
+| 查詢引數     | 型別    | 預設值 | 說明                                                     |
+| ------------ | ------- | ------ | -------------------------------------------------------- |
+| `account_id` | string  | 不傳   | 可選的完整帳號 ID；不傳時掃描所有已註冊帳號。            |
+| `page_size`  | integer | `500`  | 內部掃描批次大小，範圍 `1` 至 `1000`，不限制匯出總行數。 |
+
+響應為流式 `application/x-ndjson`，每行一個 JSON 物件，不使用常規的 `status` / `result` 包裝。每個物件帶有 `event_name`，其值為 `inventory_scope`、`inventory_user`、`inventory_file`、`inventory_skill`、`inventory_vector_record`，或最終的 `inventory_batch_end` 標記。
+
+```bash
+curl --no-buffer 'http://localhost:1933/api/v1/admin/metric-inventory?account_id=acme&page_size=500' \
+  -H 'X-API-Key: your-root-api-key'
+```
+
+最後一行說明掃描是否完成：
+
+```json
+{
+  "event_name": "inventory_batch_end",
+  "status": "complete",
+  "row_count": 0,
+  "scan_started_at": 1794268800000,
+  "scan_finished_at": 1794268800010,
+  "consistency": "scan_window"
+}
+```
+
+以上標記僅為示例。匯出描述一個掃描時間視窗，不是原子快照；`row_count` 為最終標記之前已輸出的行數。掃描失敗（包括指定的 `account_id` 不存在）時，最終標記的 `status` 為 `"failed"`，且沒有 `consistency` 欄位。開始流式響應後，僅有 HTTP 成功狀態不足以證明掃描完整；消費方必須收到最終 `complete` 標記，才能替換現有清單。缺失最終標記或收到失敗標記均表示匯出不完整。
+
 ### account / user 存在性查詢
 
 建立 Account/User 前可用兩個精確判存介面替代“列出後本地比對”。二者都命中記憶體登錄檔，時間複雜度 O(1)，且只返回無憑據資訊；開啟 `server.api_key_watch_enabled` 時直接讀記憶體，關閉時會回退讀取持久化的登錄檔。

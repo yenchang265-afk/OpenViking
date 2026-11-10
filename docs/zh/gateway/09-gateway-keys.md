@@ -68,17 +68,21 @@ description: 簽發把客戶端接入 OpenViking 閘道器的閘道器金鑰，�
 
 **允許的模型**預設留空，表示允許這把金鑰所綁[上游](07-upstreams.md#upstreams)提供的全部模型。要限制時，填入客戶端傳送的模型名稱，包括別名。之後這把金鑰的模型列表只顯示這些名稱，請求其他模型會在到達服務商之前被拒絕。設定了允許模型的金鑰還要求每個請求都寫明模型；具體報錯見[客戶端收到閘道器返回的錯誤](12-troubleshooting.md#clients-get-an-error-from-the-gateway)。
 
+### 設定預設 Peer {#default-peer}
+
+金鑰可以帶一個預設 [Peer](03-connect-clients.md#peer)：請求沒帶 `X-OpenViking-Actor-Peer` 請求頭時就用它；請求帶了這個請求頭時，以請求頭為準。通過[管理 API](../api/25-gateway.md#gateway-keys) 簽發金鑰時用 `default_peer_id` 設定。Studio 暫時還不顯示這個欄位。
+
 ## 簽發之後 {#after-issuing}
 
 [閘道器金鑰](#gateway-keys)一經簽發就不能再改，但它發起的對話屬於它的使用者。
 
-- **金鑰不能編輯。** 要更換上下文配置、上游、允許的模型或使用者，就簽發新金鑰，再吊銷舊的。
+- **金鑰不能編輯。** 要更換上下文配置、上游、允許的模型、預設 Peer 或使用者，就簽發新金鑰，再吊銷舊的。
 - **對話屬於使用者，不屬於金鑰。** 客戶端傳送相同的會話 ID 時，同一使用者的新金鑰會接著原來的[對話](03-connect-clients.md#how-conversations-are-recognized)，換金鑰不會打斷對話。
 - **吊銷**（在**金鑰**標籤頁點**吊銷**，再點**吊銷金鑰**確認）後，這把金鑰立即失效。使用者的對話狀態和日誌保留，直到被顯式刪除或過期。尚未儲存到 OpenViking 的內容（例如最新一條回覆），只有在用新金鑰繼續這段對話時才會儲存。
 
 ### 每人一把金鑰 {#one-key-per-person}
 
-記憶屬於[閘道器金鑰](#gateway-keys)背後的 OpenViking 使用者，所以共用一把金鑰的人也共用這位使用者的記憶。請給每人簽發一把金鑰。想讓不同客戶端使用不同的上下文配置，或者想單獨吊銷某個客戶端，再按客戶端分開簽發。
+記憶屬於[閘道器金鑰](#gateway-keys)背後的 OpenViking 使用者，所以共用一把金鑰的人也共用這位使用者的記憶。請給每人簽發一把金鑰。想讓不同客戶端使用不同的上下文配置，或者想單獨吊銷某個客戶端，再按客戶端分開簽發。[Peer](03-connect-clients.md#peer) 能在同一位使用者的記憶裡區分不同的互動物件，但其他 Peer 的記憶仍可能被召回，持有金鑰的人也可以自己選 Peer，所以它代替不了分開簽發金鑰。
 
 ### 使用者的 OpenViking API 金鑰變了 {#when-the-openviking-key-changes}
 

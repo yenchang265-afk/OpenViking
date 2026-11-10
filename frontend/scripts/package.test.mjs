@@ -32,6 +32,32 @@ test('JavaScript entries resolve and import without browser globals', async () =
   }
 });
 
+test('business entries expose components without headless Hooks', async () => {
+  const root = await import('@openviking/react');
+  assert.equal(
+    Object.keys(root).some((name) => /^use[A-Z]/.test(name)),
+    false,
+  );
+  for (const path of [
+    'modules/file-browser',
+    'modules/console',
+    'modules/scope-cascade',
+    'components/wiki-dashboard',
+    'components/experience-dashboard',
+  ]) {
+    const entry = await import('@openviking/react/' + path);
+    assert.equal(
+      Object.keys(entry).some((name) => /^use[A-Z]/.test(name)),
+      false,
+      path,
+    );
+  }
+  for (const name of ['wiki-dashboard', 'experience-dashboard']) {
+    assert.equal(`./modules/${name}` in manifest.exports, false);
+    assert.ok(`./components/${name}` in manifest.exports);
+  }
+});
+
 test('public stylesheets resolve through package exports', async () => {
   for (const entry of Object.keys(manifest.exports)) {
     if (!entry.endsWith('.css')) continue;

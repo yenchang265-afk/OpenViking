@@ -564,6 +564,42 @@ OpenViking 倉庫裡已經提供了可直接匯入的 dashboard JSON：
 - 看某一次具體請求為什麼慢、token 花在哪、資源處理卡在哪個階段：看 `telemetry`
 - 看一段時間內請求量、錯誤率、時延是否持續惡化：看 `/metrics`
 
+## 可選 Kafka 事件上報
+
+安裝 `openviking[reporting]` 並啟用 `server.observability.reporting.enabled` 後，
+事件上報讀取外部 JSON（`NACOS_CONFIG_FILE`）或配置的 Nacos 服務。
+Kafka 的地址、認證和 topic 來自該配置的 `kafka`，不能寫入業務程式碼。
+該功能預設關閉，業務呼叫不會因上報失敗而中斷。
+
+上報器使用記憶體佇列；`telemetry.queue_capacity` 必須為正整數，預設 `1024`。
+佇列滿、投遞重試耗盡或程序退出時可能丟失事件。投遞失敗和丟棄事件會輸出取樣告警，
+日誌只包含數量。此上報器適用於允許少量丟失的分析統計，不提供持久化審計或計費帳本
+保證。停止服務時應預留優雅退出時間，等待佇列傳送完成。
+
+部署可通過 `OV_METRICS_ACCOUNT_ID` 和 `OV_RESOURCE_ID` 繫結外層雲帳號與例項，
+原始資料空間和成員保留為 `ov_account_id`、`ov_user_id`。僅當部署能夠確定模型憑據
+歸屬時，設定 `OV_MODEL_COST_BEARER=customer` 或 `ov`；未設定時保持 `unknown`。
+混用不同歸屬的憑據時，可信部署配置應在每個 VLM／Embedding 憑據上分別設定
+`cost_bearer`（`ov`、`customer` 或 `unknown`）。實際選中的憑據將此後設資料帶入成功及失敗
+呼叫事件，候選憑據切換時分別歸屬。明確的 `unknown` 不會被端點規則或整庫預設值改寫；
+只有未攜帶憑據後設資料的歷史呼叫才依次使用 `telemetry.model_cost_bearers` 精確規則和
+部署預設值，衝突規則保持 `unknown`。上報不包含原文、提示詞或 API Key。
+
+共享記憶批處理根據本批輸入請求確定上報歸屬，不使用長期存活的定時協程繼承的舊請求。
+多個提交共用的模型呼叫只上報一次，通過 `source_task_ids` 保留已知來源任務；無法確定
+唯一歸屬時，`task_id`、`request_id` 為空。不能將這次呼叫展開為多條，也不能把整次 Token
+用量重複計到每個來源任務。檔案變更能明確匹配輸入操作時，恢復該操作的完整任務來源；
+真正合並多個任務的寫入也採用上述多來源表達。空間和成員身份仍來自本批請求上下文。
+資源增量重新匯入的刪除路徑也會在計劃刪除成功後上報刪除事件。
+
+空間級模型憑據通過 ROOT 的配置介面下發或輪換時，`cost_bearer` 與該憑據一同儲存，
+並傳遞到實際 VLM／Embedding 客戶端。模型配置章節仍只允許 ROOT 修改，空間管理員
+和普通成員不能通過配置介面指定費用歸屬。
+
+可選 Nacos 上報器優先使用明確配置的 `nacos_namespace`、`nacos_data_id`、`nacos_group`，
+其次讀取 `NACOS_NAMESPACE`、`NACOS_DATA_ID`、`NACOS_GROUP`，預設分別為 `public`、
+`global_configs`、`DEFAULT_GROUP`。
+
 ## 相關文件
 
 - [使用 Prometheus 和 Grafana 檢視 OpenViking 指標](11-grafana-prometheus.md) - 從 `/metrics` 到 Prometheus、Grafana dashboard 的完整操作流程

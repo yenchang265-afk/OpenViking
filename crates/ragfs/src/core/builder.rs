@@ -9,6 +9,8 @@
 //! When pathlock is enabled, `PathLockWrappedFS` sits between `StatsWrappedFS` and `MountableFS`.
 
 use std::sync::Arc;
+#[cfg(feature = "cache")]
+use std::time::Duration;
 
 use super::filesystem::FileSystem;
 use super::mountable::MountableFS;
@@ -83,6 +85,8 @@ pub struct CacheFsConfig {
     pub multi_instance: bool,
     /// Largest file whose full contents CacheFS stores; `0` disables file caching.
     pub max_file_size_bytes: usize,
+    /// Optional TTL override for query buckets on a shared Redis service.
+    pub shared_redis_ttl: Option<Duration>,
 }
 
 #[cfg(feature = "cache")]
@@ -93,6 +97,7 @@ impl Default for CacheFsConfig {
             service_name: String::new(),
             multi_instance: false,
             max_file_size_bytes: crate::cache::DEFAULT_MAX_FILE_SIZE_BYTES,
+            shared_redis_ttl: None,
         }
     }
 }
@@ -204,12 +209,13 @@ pub async fn build_configured_stack(
     }
     let mountable = if cache.cachefs.enabled {
         Arc::new(
-            MountableFS::with_cache_runtime(
+            MountableFS::with_cache_runtime_and_shared_redis_ttl(
                 runtime
                     .as_ref()
                     .expect("cache provider is validated")
                     .clone(),
                 cache.cachefs.service_name,
+                cache.cachefs.shared_redis_ttl,
             )
             .with_cache_multi_instance(cache.cachefs.multi_instance)
             .with_cache_max_file_size_bytes(cache.cachefs.max_file_size_bytes),

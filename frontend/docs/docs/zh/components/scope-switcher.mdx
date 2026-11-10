@@ -1,5 +1,7 @@
 # ScopeSwitcher 作用域選擇
 
+可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
+
 由獨立選擇器組合的作用域麵包屑。`ScopeSwitcher` 只負責佈局；每一級宿主獨立維護請求、選項、載入/錯誤和搜尋狀態，並渲染一個 `ScopeSelector`。
 
 業務側只傳三個介面即可接入的用法見 [ScopeCascade 級聯選擇](../modules/scope-cascade)。下方保留純檢視層的自定義接入示例。
@@ -11,14 +13,14 @@
 ```
 
 ```tsx
-<ScopeSwitcher>
+<ScopeSwitcher locale="zh-CN">
   <LibrarySelector />
   <SpaceSelector />
   <UserSelector />
 </ScopeSwitcher>
 ```
 
-各級宿主直接返回 `ScopeSelector`，不額外包裹 DOM。CSS 在相鄰選擇器間新增分隔符。固定層級與可切換層級可混用，不需要的層級直接省略。窄屏自動換行，手機使用底部面板。
+各級宿主直接返回 `ScopeSelector`，不額外包裹 DOM。CSS 在相鄰選擇器間新增分隔符。固定層級與可切換層級可混用，不需要的層級直接省略。整行不換行：空間不足時各層級收縮、標籤省略，因此無論文案長短外框始終保持 32px 高。手機使用底部面板。
 
 ## 更新邊界
 
@@ -28,39 +30,85 @@
 
 該資料來源只是**宿主接入示例**，不是庫強制要求的 Store，也不是全域性單例。已有資料層可提供相同的定向訂閱能力。祖先身份作為下游宿主子樹的 `key`，變化時重置舊選項、搜尋、錯誤、展開狀態，並取消舊請求。本級選中值變化不會重新請求本級列表。邊界外的祖先更新仍可能觸發普通 React 渲染，這個介面不承諾隔絕任意祖先更新。
 
+## 宿主自定義面板
+
+`renderPanel` 把元件渲染好的 `search` 與 `list` 交給宿主，面板裡的標題、操作、底部入口和說明都由宿主排布。示例照控制台的樣子拼出「全部庫 / 選擇資料空間 / 選擇 User」三套面板。
+
+宿主接管面板內容後，面板高度上限不變：多出來的內容在面板內滾動，不會把面板撐高。
+
+```tsx file="../../_demos/scope-switcher-panel.tsx" preview
+
+```
+
+## 只讀層級
+
+個人終端裡庫與資料空間跟隨登入態固定，只有 User 可切換。固定層級用 `kind: 'fixed'`，不渲染按鈕也不展開面板，幾何尺寸與可切換層級一致，整行仍是一條完整的麵包屑。
+
+```tsx file="../../_demos/scope-switcher-readonly.tsx" preview
+
+```
+
 ## 三個非同步介面串聯
 
 ```tsx file="../../_demos/scope-switcher-async.tsx" preview
 
 ```
 
-本示例現使用 `useScopeCascade` 和 `ScopeCascade`，業務側只需傳三個介面。級聯清空、請求、取消、本地搜尋和重試均已封裝，詳見 [ScopeCascade](../modules/scope-cascade) 的完整介面和自定義檢視示例。
+本示例現使用 `ScopeCascade`，業務側只需傳三個介面。級聯清空、請求、取消、本地搜尋和重試均已封裝，詳見 [ScopeCascade](../modules/scope-cascade) 的完整介面和身份變化回撥。
 
 ## 屬性
 
 `ScopeSwitcherProps` 為標準 `HTMLAttributes<HTMLDivElement>`，包含 `children`、`className`、`style` 等，不再接收 `levels` 或共享文案。
 
-`ScopeSelectorProps` 包含必填 `level: ScopeSwitcherLevel` 和可選 `labels: ScopeSwitcherLabels`。
+`ScopeSelectorProps` 按 `kind` 分成兩種形態，公共必填欄位是 `identity`，`locale` 可選並繼承上層語言，另有可選的 `trigger` 和 `labels`。
 
-層級公共欄位：`kind`、`key`、`selectedLabel`，可選 `ariaLabel`、`icon`、`tag`。`kind: 'fixed'` 只顯示不可互動的標籤；`kind: 'selectable'` 還接收：
+`identity` 是層級身份，不隨請求變化：必填 `key`，可選 `ariaLabel`、`tag`。
 
-| 欄位                                     | 行為                                                               |
-| ---------------------------------------- | ------------------------------------------------------------------ |
-| `options`、`selectedId`                  | 必填，宿主持有選項和選擇，未選擇時 id 傳 `''`。                    |
-| `disabled`、`busy`                       | 分別停用觸發器、全部選項行。                                       |
-| `loading`、`error`                       | 用載入態或錯誤態替換列表。                                         |
-| `visible`、`onVisibleChange`             | 可選受控展開狀態及通知；不傳 `visible` 時獨立維護。                |
-| `onSelect(option)`                       | 關閉面板並上報選擇意圖，宿主更新身份。                             |
-| `searchKeyword`、`onSearchKeywordChange` | 本級宿主控制搜尋，不傳回調則不顯示搜尋框。                         |
-| `total`                                  | 已載入數或總數超過 10，或搜尋詞非空時顯示搜尋框。                  |
-| `onScroll(metrics)`                      | 傳出 `scrollTop`、`scrollHeight`、`clientHeight`，分頁由宿主處理。 |
-| `renderPanel({ search, list })`          | 組合標題、操作及底部入口。                                         |
-| `renderOption(content, option)`          | 擴充套件或替換行內容，內嵌按鈕/連結不觸發行選擇。                  |
-| `emptyFallback`、`errorFallback`         | 自定義空態、錯誤態和重試入口。                                     |
+`trigger` 是觸發器上展示的內容：可選 `label`、`icon`。不傳時從 `data.options` 裡按 `data.selectedId` 取對應項；固定層級沒有 `data`，因此在 `trigger.label` 裡給出文本。
 
-選項必填 `id`、`label`，可選 `icon`、`description`、`disabled`。文案包含 `loading`、`searchPlaceholder`、`empty`、`noMatch`、`error`，預設英文，本地化文案傳給各級選擇器。
+`kind: 'fixed'` 只顯示不可互動的標籤，不接收資料、狀態、回撥或插槽。
 
-方向鍵及 Home/End 移動焦點，Enter/空格選擇，Escape 關閉並返回觸發器。點選外部或焦點離開時關閉面板。觸發器尺寸、圖示及選項間 4px 間距保持不變。
+`kind: 'selectable'` 還接收四組欄位，按變化頻率分開，呼叫方可以只替換變化的那一組：
+
+| 分組      | 欄位                                       | 行為                                                                |
+| --------- | ------------------------------------------ | ------------------------------------------------------------------- |
+| `data`    | `options`、`selectedId`                    | 必填，宿主持有選項和選擇，未選擇時 id 傳 `''`。                     |
+| `data`    | `total`                                    | 已載入數或總數超過 10，或搜尋詞非空時顯示搜尋框。                   |
+| `state`   | `loading`、`error`                         | 用載入態或錯誤態替換列表。                                          |
+| `state`   | `disabled`、`busy`                         | 分別停用觸發器、全部選項行。                                        |
+| `state`   | `visible`、`searchKeyword`                 | 受控展開狀態與搜尋詞；不傳 `visible` 時本級獨立維護。               |
+| `actions` | `onSelect(option)`                         | 關閉面板並上報選擇意圖，宿主更新身份。                              |
+| `actions` | `onVisibleChange`、`onSearchKeywordChange` | 開合與搜尋詞變化通知；不傳 `onSearchKeywordChange` 則不顯示搜尋框。 |
+| `actions` | `onScroll(metrics)`                        | 傳出 `scrollTop`、`scrollHeight`、`clientHeight`，分頁由宿主處理。  |
+| `slots`   | `renderPanel({ search, list })`            | 組合標題、操作及底部入口。                                          |
+| `slots`   | `renderOption(content, option)`            | 擴充套件或替換行內容，內嵌按鈕/連結不觸發行選擇。                       |
+| `slots`   | `emptyFallback`、`errorFallback`           | 自定義空態、錯誤態和重試入口。                                      |
+
+### 選中值歸一化由宿主負責
+
+`ScopeSelector` 嚴格按 `data.selectedId` 渲染。id 為空或不在 `options` 裡時，列表裡沒有任何一行被標記為選中；id 命中一個停用項時照常標記選中（停用只阻止互動，不抹掉選中態），直到宿主把它歸一化掉。這兩種情況下元件都不會替宿主改值或呼叫 `actions.onSelect`。
+
+作用域始終要有一個確定的值，因此請在資料到達後檢查選中值是否仍然有效，無效則改選第一個可選項，並把結果寫回 URL 與請求引數。`ScopeCascade` 已經內建這層：它的 controller 在權威列表到達後完成回退、清空下游並載入下一級。
+
+判定只看 `options`：當前值只是被搜尋過濾出 `visibleOptions` 時仍然有效，不會因為搜尋就切走作用域。
+
+選項必填 `id`、`label`，可選 `icon`、`description`、`disabled`。文案包含 `loading`、`searchPlaceholder`、`empty`、`noMatch`、`error`，預設跟隨 locale，本地化覆蓋傳給各級選擇器。
+
+圖示由宿主傳入，元件不內建。需要預設圖示時從 `@openviking/react/icons` 取 `LibraryIcon`、`SpaceIcon`、`UserIcon`；使用 [ScopeCascade](../modules/scope-cascade) 時預設檢視會在適配函式沒給 `icon` 時自動補上這三個。
+
+方向鍵及 Home/End 移動焦點，Enter/空格選擇，Escape 關閉並返回觸發器。點選外部或焦點離開時關閉面板。
+
+## 外觀
+
+整行 32px 高，無描邊。每一段是獨立的 32px 高、16px 圓角膠囊，左右 8px 內邊距、圖示與文字間距 8px，文字 13px、字重 500。懸停、聚焦和展開時描主色邊框；常態保留透明描邊，因此邊框出現時不會引起位移。
+
+帶下拉的層級在懸停、聚焦和展開時給按鈕鋪淺底，與面板裡選項行的反饋一致。不帶下拉的層級（`kind: 'fixed'`）幾何引數完全相同，只去掉箭頭和懸停反饋，因此只讀的作用域仍屬於同一條麵包屑。相鄰層級由 CSS 畫出 `#c9cbd4` 的 `/`。
+
+面板內懸停行鋪淺底，選中行常駐主色淺底、文字加粗、行尾顯示勾選；文字顏色不變，設計稿用字重和底色區分選中。搜尋命中片段染主色，不加黃底。
+
+選項行首圖示裝在一個 24px 的底槽裡：純白底、0.5px `#edeef2` 描邊、12px 圓角，圖形本身保持 14px。宿主渲染圓形頭像時把 `--ov-ui-scope-switcher-option-icon-radius` 設為 `50%`。
+
+主題變數宣告在 `.ov-scope-switcher` 上，可只覆蓋其中一條：`--ov-ui-scope-switcher-divider`、`-icon`、`-option-icon`、`-option-icon-size`、`-option-icon-radius`、`-row-hover`、`-row-selected`、`-tag-background`、`-tag-text`、`-panel-width`、`-option-height`。與庫內其他元件共用的顏色取自公共變數 `--ov-ui-text`、`--ov-ui-border`、`--ov-ui-surface`、`--ov-ui-primary`、`--ov-ui-text-muted`。
 
 ```tsx
 import {

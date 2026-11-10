@@ -116,7 +116,7 @@ Relevant memory from OpenViking. It is this user's own saved history (past conve
 - **設定只對新對話生效。** 一段對話始終沿用開始時的上下文配置和上游，所以 Claude Code、Codex 這類長期執行的客戶端，要開始新對話才會用上修改後的配置。詳見[修改何時生效](06-manage-in-studio.md#when-changes-take-effect)。
 - **改動過的歷史會重新儲存。** 客戶端編輯或刪除了之前的訊息、在回答儲存後重新生成，或者自己壓縮了對話時，閘道器把當前的完整歷史儲存到一個新的 OpenViking 會話，已經儲存的輪次留在舊會話裡。
 - **特別長的會話可能碰到請求大小上限。** 閘道器壓縮對話後，客戶端仍然傳送完整歷史，而超過 32 MiB 的請求體預設會被拒絕。詳見[副作用](05-long-conversations.md#side-effects)。
-- **一個金鑰只對應一位記憶歸屬者。** 共用一個金鑰的人共享它背後那位 OpenViking 使用者的記憶，所以應該一人一個金鑰。詳見[每人一把金鑰](09-gateway-keys.md#one-key-per-person)。
+- **一個金鑰只對應一位記憶歸屬者。** 共用一個金鑰的人共享它背後那位 OpenViking 使用者的記憶，所以應該一人一個金鑰。詳見[每人一把金鑰](09-gateway-keys.md#one-key-per-person)。[Peer](03-connect-clients.md#peer) 能在記憶裡區分這位使用者的不同互動物件，但不會隱藏其他 Peer 的記憶，也不隔離訪問許可權。
 - **客戶端不能用訂閱帳號登入。** 帶 Claude 訂閱令牌的請求會被拒絕。請為上游配置服務商的 API Key，或者把訂閱代理作為[自定義上游](07-upstreams.md#custom-upstreams)接在閘道器後面。Codex 就可以這樣通過 CLIProxyAPI 使用 ChatGPT 訂閱，見[使用 ChatGPT 訂閱](03-connect-clients.md#codex-chatgpt-subscription)。其他訂閱服務請自行確認其使用條款。
 - **Responses 需要完整歷史。** 依賴服務商端已存狀態的 Responses 請求不補充記憶，直接轉發，詳見[客戶端要求](04-openviking-tools.md#client-requirements)。
 - **其他介面直接轉發。** 三種模型 API 和模型列表之外的介面（例如 embeddings）不補充記憶，直接轉發給金鑰繫結的、提供所請求模型且優先順序最高的上游。

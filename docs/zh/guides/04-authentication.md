@@ -68,7 +68,8 @@ uv pip install "openviking[auth]"
   "server": {
     "auth_mode": "oidc",
     "oidc": {
-      "issuer": "https://your-company.okta.com"
+      "issuer": "https://your-company.okta.com",
+      "audience": "openviking"
     }
   }
 }
@@ -78,6 +79,8 @@ uv pip install "openviking[auth]"
 - `account_id` → 所有使用者在同一組織（"default"）
 - `user_id` → 使用 OIDC 標準欄位 `sub`
 - `role` → 預設為 `user`
+
+預設對映要求 `sub` 符合 OpenViking 的 ID 規則。Auth0 等提供方的 `sub` 包含 `|` 時，需要顯式配置專用身份欄位，見下方 [身份校驗與特殊字元](#身份校驗與特殊字元)。
 
 啟動後用有效的 OIDC token 請求資料介面，驗證身份對映和訪問許可權；匿名 `/health` 成功只證明服務可訪問。
 
@@ -186,8 +189,7 @@ OIDC Claims: {
         "user_id": {
           "source": "claim",
           "claim": "sub",
-          "prefix": "user-",
-          "normalize": "lowercase"
+          "prefix": "user-"
         },
         "role": {
           "source": "claim",
@@ -204,6 +206,42 @@ OIDC Claims: {
   }
 }
 ```
+
+### 身份校驗與特殊字元
+
+OIDC 按管理員配置完成對映後，原樣校驗 `account_id` 和 `user_id`，不再自動替換字元。ID 不能為空，只能包含英文字母、數字、`_`、`.`、`@` 和 `-`，不能是 `.` 或 `..`，且最多包含一個 `@`；`account_id` 還不能以 `_` 開頭。不符合規則時返回 HTTP 401（`UNAUTHENTICATED`），錯誤資訊指出身份對映失敗。
+
+例如預設對映下，`sub=alice_prod` 仍是使用者 `alice_prod`；`sub=alice|prod` 會被拒絕，不會再改成 `alice_prod`。
+
+Auth0 的 `auth0|123` 等編號不能直接作為 OpenViking 使用者 ID。部署管理員可以讓公司登入系統提供另一個符合規則的使用者編號，再告訴 OpenViking 讀取哪個欄位。下面以使用者張三為例。
+
+**先配置登入系統。** 給張三分配穩定、唯一的編號 `u_1001`，並讓登入系統在簽發登入憑證（Token）時帶上它。憑證中的相關內容如下：
+
+```json
+{
+  "sub": "auth0|123",
+  "openviking_user_id": "u_1001"
+}
+```
+
+這裡的 `openviking_user_id` 是示例欄位名，`u_1001` 是張三的使用者編號；其他使用者應有各自不同的編號。
+
+**再配置 OpenViking。** 在 `ov.conf` 中將 `server.oidc.identity.user_id` 配置為：
+
+```json
+{
+  "source": "claim",
+  "claim": "openviking_user_id"
+}
+```
+
+`source: claim` 表示從登入憑證中取值，`claim: openviking_user_id` 表示讀取名為 `openviking_user_id` 的欄位。實際欄位名以登入系統簽發的內容為準，兩邊必須一致；只改 `ov.conf` 不會生成該欄位，欄位缺失時認證失敗。
+
+張三登入後，客戶端把憑證原樣交給 OpenViking。OpenViking 驗證簽名，再讀出 `u_1001`，以使用者 `u_1001` 的身份處理請求。客戶端不能修改簽名欄位，也不能通過請求頭另選身份。
+
+選用的使用者欄位不能由普通使用者自行修改，管理員須保證它在對應 OpenViking 帳戶內穩定且唯一。服務端只校驗 ID 格式，不檢查自定義對映是否唯一；小寫轉換、正則擷取或共用使用者 fallback 都可能把不同使用者合併。帳戶對映可以有意將多個使用者分到同一帳戶，但不能合併本應隔離的租戶。
+
+**升級影響：** 已移除將不支援的字元自動替換為 `_` 的行為。原本合法的 ID 和資料路徑保持不變；依賴自動替換的使用者，需要管理員核驗資料歸屬後，再將專用欄位對映到原本的本地 ID。改變對映後的 ID 會改變資料名稱空間，OpenViking 不會自動重新命名或遷移舊資料。
 
 ### LDAP 完整配置
 
@@ -276,11 +314,12 @@ OIDC Claims: {
 {
   "user_id": {
     "source": "claim",
-    "claims": ["username", "email", "sub"],
-    "fallback": "guest"
+    "claims": ["username", "email", "sub"]
   }
 }
 ```
+
+使用者欄位全部缺失時應拒絕認證，不要回退到共用的 `guest` 使用者。管理員仍須保證不同來源的欄位值不會把不同使用者對映到同一身份。
 
 #### 3. 組合欄位
 

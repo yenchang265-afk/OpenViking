@@ -523,6 +523,7 @@ JSON 輸出 - 錯誤：
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
+| GET | `/api/v1/admin/metric-inventory` | 流式匯出供離線報表使用的後設資料清單（僅 ROOT） |
 | GET | `/api/v1/admin/configuration` | 獲取 Cluster 層顯式執行時配置 |
 | PATCH | `/api/v1/admin/configuration` | 更新 Cluster 層執行時配置 |
 | GET | `/api/v1/studio/features` | 獲取 Studio 功能開關（任何已認證使用者） |
