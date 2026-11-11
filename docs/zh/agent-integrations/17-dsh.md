@@ -119,6 +119,32 @@ Windows 上安裝器不可用，只能用這種方式；macOS 上不想跑安裝
 
 檔案工具誤把 `viking://` URI 當本地路徑時，呼叫會被攔截，並提示改用對應的 OpenViking 工具；寫入或編輯的若是 `viking://~/skills/<name>/` 這類技能目錄，提示的工具是 `mcp__openviking__add_skill`，它用完整的 `SKILL.md` 文本建立或替換整個技能。shell 命令帶 `viking://` URI 時照常執行，模型會收到一條改用 OpenViking 工具的提示，URI 是有意傳入的資料時可以忽略。
 
+### 客戶端召回壓縮
+
+壓縮預設關閉。要讓 DSH 配置的模型承擔摘要生成，而不使用服務端 query planner，
+將下面欄位合併到 `~/.openviking/ovcli.conf`，然後重啟 DSH：
+
+```json
+{"plugin":{"dsh":{"recallCompress":"client","recallCompressTimeoutMs":10000}}}
+```
+
+外掛通過 `ctx.llm.stream()` 發起一次不帶工具的請求，使用 agent 的
+`options.provider` 和 `options.model`。可用 `recallCompressModel` 指定同一 provider
+下的其他模型，用 `recallCompressThinking` 指定 provider 支援的推理級別。
+憑據和端點由 DSH 的 provider 配置管理，不使用 OpenViking 服務端憑據。
+DSH 不使用 `recallCompressBaseUrl` 或 CLI 壓縮器探測配置。“客戶端”指由 DSH
+呼叫模型；只有 DSH provider 指向本地模型服務時，推理才在本機執行。
+外掛不會推斷僅由宿主請求中介軟體實現的模型切換；這種情況下應明確配置壓縮模型，
+或使用目標模型重啟會話。
+
+`client` 不請求服務端 rewrite。`auto` 在宿主模型和介面可用時優先客戶端壓縮，
+否則仍使用服務端 `rewrite: "auto"`。`server` 和 `off` 保持原有行為。
+`client` 下宿主壓縮器不可用時保留未壓縮片段。短輸入跳過模型呼叫，輸入上限、
+帶引用摘要處理和失敗回退複用共享實現。超時、失敗流或格式錯誤回退到預算內的
+原片段，明確無關才不注入。取消會結束等待並通知 adapter；不遵守取消訊號的
+adapter 可能繼續請求，但遲到的結果不會注入。輔助訊息不追加到會話，也不採集為
+記憶。摘要快取按連線、身份、會話和模型隔離，壓縮狀態通過 DSH 日誌記錄。
+
 <details>
 <summary><b>配置</b></summary>
 

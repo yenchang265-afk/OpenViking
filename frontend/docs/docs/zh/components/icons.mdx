@@ -1,10 +1,10 @@
 # 圖示
 
-檔案型別圖示通過公開入口 `@openviking/react/icons` 提供。它們複用工作區的 SVG 原始檔，隨 React 包一起交付。
+操作圖示、檔案型別圖示與作用域層級圖示通過公開入口 `@openviking/react/icons` 提供。它們複用工作區的 SVG 原始檔，隨 React 包一起交付。
 
 ## 可執行示例
 
-通過尺寸按鈕調整五個裝飾性圖示。單獨的 PDF 圖示演示有意義的 `alt` 描述，尺寸為 24 × 24 畫素。中英文文件共用同一份示例，示例說明使用英文；應用可自行提供本地化的 `alt` 文案。
+通過尺寸按鈕調整裝飾性圖示。單獨的 PDF 圖示演示有意義的 `aria-label` 描述，尺寸為 24 × 24 畫素。下方一行是三個作用域層級圖示。中英文文件共用同一份示例，示例說明使用英文；應用可自行提供本地化的 `aria-label` 文案。
 
 ```tsx file="../../_demos/icons-basic.tsx" preview
 
@@ -12,42 +12,67 @@
 
 ## 可用圖示
 
-| 匯出        | 檔案型別 |
-| ----------- | -------- |
-| `AudioIcon` | 音訊     |
-| `PdfIcon`   | PDF      |
-| `PptIcon`   | 簡報     |
-| `VideoIcon` | 影片     |
-| `WordIcon`  | 文本文件 |
+| 匯出             | 用途                            |
+| ---------------- | ------------------------------- |
+| `ArrowRightIcon` | 火山版 CLI 快捷命令使用的右箭頭 |
+| `AudioIcon`      | 音訊                            |
+| `PdfIcon`        | PDF                             |
+| `PptIcon`        | 簡報                            |
+| `VideoIcon`      | 影片                            |
+| `WordIcon`       | 文本文件                        |
+| `LibraryIcon`    | 庫（按名稱取色的圓形漸變塊）    |
+| `SpaceIcon`      | 資料空間                        |
+| `UserIcon`       | 帳號 / User                     |
+
+`LibraryIcon` 沒有固定字形，按 `name` 取一種圓形漸變塊，同一個名字始終取到同一種漸變；它渲染為 `span` 色塊，不接收 SVG 屬性。`SpaceIcon` 與 `UserIcon` 是 14 × 14 的 `currentColor` 描邊圖形，隨文字顏色變化。
+
+`ScopeCascade` 的預設檢視已內建這三個層級圖示：適配函式返回的選項沒有 `icon` 時自動補上本級預設圖示，返回了 `icon` 就照用宿主的。單獨使用 `ScopeSelector` 時圖示完全由呼叫方傳入。
 
 ## 屬性
 
-每個元件渲染為 `img`，接收不含 ref 的標準圖片屬性；`src` 和 `srcSet` 由元件管理，不對呼叫方開放。
+檔案型別圖示、`ArrowRightIcon`、`SpaceIcon` 與 `UserIcon` 渲染為內聯 `svg`，接收不含 `children` 的標準 SVG 屬性。`LibraryIcon` 只接收 `name`。
 
-| 屬性        | 型別               | 預設值 | 說明                               |
-| ----------- | ------------------ | ------ | ---------------------------------- |
-| `width`     | `number \| string` | `16`   | 圖片寬度。                         |
-| `height`    | `number \| string` | `16`   | 圖片高度。                         |
-| `alt`       | `string`           | `''`   | 無障礙描述；裝飾性圖示使用空字串。 |
-| `className` | `string`           | —      | 為圖片元素新增類名。               |
-| 其他屬性    | 圖片屬性           | —      | 標準圖片屬性，包括 `aria-*`。      |
+| 屬性         | 型別               | 預設值                         | 說明                                       |
+| ------------ | ------------------ | ------------------------------ | ------------------------------------------ |
+| `width`      | `number \| string` | `16`；`ArrowRightIcon` 為 `14` | 圖示寬度。                                 |
+| `height`     | `number \| string` | `16`；`ArrowRightIcon` 為 `14` | 圖示高度。                                 |
+| `aria-label` | `string`           | —                              | 無障礙描述；裝飾性圖示省略，SVG 保持隱藏。 |
+| `className`  | `string`           | —                              | 為 SVG 元素新增類名。                      |
+| 其他屬性     | SVG 屬性           | —                              | 標準 SVG 屬性，包括 `aria-*` 與 `role`。   |
+
+`LibraryIcon` 的 `name` 決定漸變取值，預設空字串，即第一種漸變。
 
 ```tsx
 import { PdfIcon } from '@openviking/react/icons';
 
 export default function Example() {
   return (
-    <PdfIcon width={24} height={24} className="file-icon" alt="PDF 文件" />
+    <PdfIcon
+      width={24}
+      height={24}
+      className="file-icon"
+      aria-label="PDF 文件"
+    />
   );
 }
 ```
 
 ## 無障礙
 
-相鄰文字已經說明檔案型別時，保留空 `alt`，避免重複播報。圖示獨立傳達資訊時，提供應用語言下的描述。圖示本身不具有互動行為；放入操作控制元件時，由應用負責按鈕語義、鍵盤互動和焦點樣式。
+相鄰文字已經說明檔案型別時省略 `aria-label`，SVG 保持 `aria-hidden`，避免重複播報。圖示獨立傳達資訊時，提供應用語言下的 `aria-label`。圖示本身不具有互動行為；放入操作控制元件時，由應用負責按鈕語義、鍵盤互動和焦點樣式。
 
 ## 資源與樣式
 
-SVG 以 data URL 內聯到構建後的 JavaScript 中，無需單獨請求 SVG，也無需為這些圖示匯入樣式表。應用使用內容安全策略時，須在 `img-src` 中允許 `data:`。
+圖示以內聯 SVG 元素的形式打包進 JavaScript，沒有獨立資源請求，也不需要為它們匯入樣式表或配置內容安全策略。
 
-通過 `width`、`height`、`className` 或 `style` 調整圖片的尺寸與位置。SVG 使用固定配色，修改 CSS `color` 不會改變圖示顏色。
+通過 `width`、`height`、`className` 或 `style` 調整尺寸與位置。檔案型別圖示保留固定配色；`ArrowRightIcon`、`SpaceIcon` 與 `UserIcon` 使用 `currentColor`，隨 CSS `color` 改色。`LibraryIcon` 的尺寸寫死在元件內，需要別的尺寸時在外面套一層容器。
+
+`LibraryIcon` 的五組漸變來自主題基線，宿主可以用公開變數逐組覆蓋，不必改元件：
+
+```css
+:root {
+  --ov-ui-color-library-swatch-1: linear-gradient(145deg, #e0f7fa, #80deea);
+}
+```
+
+基線裡的 `--ov-ui-library-swatch-1-default` … `-5-default` 是私有預設值，亮暗主題共用同一套——它們是設計稿的身份色，不隨主題變化。宿主未載入庫樣式表時，元件仍用同一份調色盤繪製：顏色只維護在 `packages/icons/library-swatches.json`，CSS 側由 `npm run sync:swatches` 從它生成，因此兩條路徑不會出現配色差異。

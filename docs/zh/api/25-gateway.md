@@ -71,6 +71,7 @@ OpenViking 拒絕 API 金鑰時，返回 401 `openviking_http_401`。
 | `status` | 服務商返回的 HTTP 狀態碼 |
 | `upstream_id`、`credential_id` | 處理請求的上游，以及發出請求的閘道器金鑰 |
 | `session`、`protocol` | 對話及其協議，[重置儲存](#gateway-keys)時要用 |
+| `peer` | 請求的 [Peer](../gateway/03-connect-clients.md#peer)，來自 `X-OpenViking-Actor-Peer` 或金鑰的預設 Peer |
 | `degradation` | 異常程式碼，見[降級請求的異常](../gateway/12-troubleshooting.md#issues-on-degraded-requests) |
 | `recall_reason`、`recall_count`、`recall_ms` | 記憶檢索的結果程式碼、補充的條數和檢索耗時，見[沒有補充記憶](../gateway/12-troubleshooting.md#no-memory-is-added) |
 | `replay_hits` | 原樣放回記憶的歷史訊息數 |
@@ -190,6 +191,7 @@ Anthropic 測試同時在 `x-api-key` 和 `Authorization: Bearer` 中傳送金�
 | `models` | 否 | 允許的模型名（客戶端傳送的名稱，包括別名）；空列表表示不限。 |
 | `user_id` | 否 | 金鑰歸屬的 OpenViking 使用者，預設是呼叫方自己。root 不是帳號裡的使用者，必須指定使用者（或提供 `openviking_key`）。user 只能填自己。 |
 | `openviking_key` | 否 | 該使用者的 OpenViking API 金鑰。通常不用填，見下文。 |
+| `default_peer_id` | 否 | 請求沒帶 `X-OpenViking-Actor-Peer` 請求頭時使用的 Peer，見[按 Peer 區分記憶](../gateway/03-connect-clients.md#peer)。規則與訊息的 `peer_id` 相同；空白表示不設定。 |
 
 閘道器需要拿到目標使用者的 OpenViking API 金鑰，之後以這個使用者的身份檢索和儲存記憶：
 
@@ -219,7 +221,7 @@ curl -X POST "$SERVER_URL/gateway/admin/keys?account_id=team" \
 }
 ```
 
-立即儲存響應中的 `key`，閘道器只保留它的雜湊。`GET` 返回同樣的欄位，但沒有 `key`。閘道器金鑰不能修改，沒有對應的 `PUT`；要換上下文配置、上游、模型或使用者，就簽發新金鑰，再吊銷舊的。
+立即儲存響應中的 `key`，閘道器只保留它的雜湊。`GET` 返回同樣的欄位，但沒有 `key`。閘道器金鑰不能修改，沒有對應的 `PUT`；要換上下文配置、上游、模型、預設 Peer 或使用者，就簽發新金鑰，再吊銷舊的。
 
 使用者的 OpenViking API 金鑰重新生成或使用者被刪除後，繫結它的閘道器金鑰會失效並被刪除，使用者資料保留，見[閘道器金鑰](../gateway/09-gateway-keys.md#gateway-keys)。
 

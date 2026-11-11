@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/volcengine/OpenViking.git",
   "path": "bot/vikingbot/compile",
-  "commit": "a17f9745d0659f55adf7d3e08dc4496898504fcf",
+  "commit": "f7e83b2d739905b50215cd7739199a564b9b044b",
   "ruff_version": "0.16.9",
   "upstream_only": {
     "router.py": "bot HTTP routes; the server exposes Compile through openviking/server/routers/compile.py",

@@ -933,7 +933,7 @@ result = collection.search_by_vector(
 
 ### 4. 資源管理
 
-- 使用完畢後呼叫 `collection.close()` 釋放資源
+- Collection 由持有它的 Adapter 或 Project 顯式呼叫 `collection.close()` 釋放資源；重新開啟同一路徑前必須完成關閉。物件析構不執行關閉。
 - 合理設定 TTL 自動清理過期資料
 - 定期監控索引大小和記憶體使用
 

@@ -176,7 +176,7 @@ ov mcps add -p viking://agent/tools --wait '{"mcpServers":{"weather":{"url":"htt
 
 ### 列出、檢視和檢查狀態
 
-`GET /api/v1/mcps` 未指定 `target_uri` 時合併使用者空間和共享空間的 Server，每項用 `root_uri` 標識所屬空間。`GET /api/v1/mcps/{name}` 和狀態介面預設操作使用者空間；使用同名共享 Server 時必須指定 `target_uri=viking://agent/tools`。連線失敗仍是成功的 HTTP 響應，但 `result.status` 為 `error`。
+`GET /api/v1/mcps` 未指定 `target_uri` 時合併使用者空間和共享空間的 Server，每項用 `root_uri` 標識所屬空間。`GET /api/v1/mcps/{name}` 和 `GET /api/v1/mcps/status?name=...` 預設操作使用者空間；使用同名共享 Server 時必須指定 `target_uri=viking://agent/tools`。連線失敗仍是成功的 HTTP 響應，但 `result.status` 為 `error`。
 
 **SDK 與 CLI**
 

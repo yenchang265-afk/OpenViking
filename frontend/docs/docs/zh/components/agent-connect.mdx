@@ -1,8 +1,6 @@
 # AgentConnect Agent 接入
 
-Agent 接入檢視。頁籤、當前頁籤的條目與詳情正文都由宿主傳入；元件渲染列表與詳情，並上報切換與複製意圖。
-
-當前是佔位元件：只渲染一個固定尺寸的空殼，不消費 props，宿主可先對著已釋出的包開發，真實檢視後續遷入。下方的 props 契約是已對齊的形態，佔位實現會被替換。
+Agent 接入檢視。內建中英文接入內容與圖示。呼叫方提供 `API Key`，可選的 `locale` 覆蓋上層語言。
 
 ## 基礎用法
 
@@ -10,76 +8,38 @@ Agent 接入檢視。頁籤、當前頁籤的條目與詳情正文都由宿主�
 
 ```
 
-佔位尺寸為 960 × 640，對齊整頁檢視。
+示例使用虛構的 `demo-api-key`。預設寬 1000px、最小高度 949px；左側列表 200px、間距 40px、詳情寬 660px，窄容器橫向滾動。
 
-## 結構
+「接入主流 Agent」展示 Codex、Claude Code、豆包工作、WorkBuddy、TRAE、Cursor、OpenClaw、Hermes Agent、OpenCode、DeepSeek Harness、DeerFlow、pi、ZCode、Kimi Code，共十四項。「開發自己的 Agent」展示 MCP、CLI、API、SDK，使用同一列表與詳情佈局。
 
-檢視分三塊：
+「境外」標籤預設不展示；傳入 `showOverseasTag={true}` 後，Codex、Claude Code、Cursor、OpenClaw、Hermes Agent、OpenCode、pi 的詳情保留原接入標籤並增加「境外」標籤。DeerFlow 詳情支援 MemoryManager 和 MCP 兩種說明切換，複製當前說明；預設選中 MemoryManager。
 
-- **頁籤**：頂部，由 `tabs` 與 `activeTabId` 宣告。
-- **列表**：左側，當前頁籤的條目，來自 `items`。
-- **詳情**：右側，選中項的正文，來自 `detail`。
+CLI 詳情提供「手動終端安裝」「通過 AI Agent 安裝」兩個內部頁籤，預設手動安裝；分別展示本地 CLI 操作步驟和傳送給 AI Agent 的安裝配置提示詞。頁籤採用參考元件的下劃線樣式，複製當前頁籤正文，切換後複製反饋重置。
 
-元件不持有目錄，也不持有正文內容。條目從哪來、正文怎麼渲染、複製意味著什麼，都由宿主決定。
+切換條目會更新說明、標籤與正文。內容來自元件內建的本地文件快照，不在執行時載入遠端 JSON 或 Markdown。安裝器提示通過 `--harness` 指定當前 Agent 和 `cli`，服務地址與金鑰採用 Shell 字面值轉義；TRAE 對應國際版。自定義 Hermes 地址使用 Custom 配置步驟。文件外鏈僅供使用者或其 Agent 閱讀，元件不執行安裝命令。
+
+指南支援 Markdown 和白名單 HTML 標籤，例如 `<strong>`、`<br>`、`<details>`、`<summary>` 及表格。渲染時過濾指令碼、事件屬性和不安全連結；程式碼內標籤保持原樣，不載入指南圖片。複製仍保留原始 Markdown。
+
+每個程式碼塊均支援獨立複製，包括安裝器命令。API Key 預設脫敏，可通過程式碼塊上的「顯示 API Key」「隱藏 API Key」切換，同一指南最多顯示一個程式碼塊的金鑰。無論顯示狀態如何，複製均使用原始金鑰；切換指南或憑據後恢復脫敏。
 
 ## 屬性
 
-### AgentConnectProps
+| 屬性              | 型別                                 | 預設值                                                  | 說明                                                                                 |
+| ----------------- | ------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `apiKey`          | `string`                             | 必填                                                    | 呼叫方提供的 API Key；展示脫敏，複製使用原值。                                       |
+| `locale`          | `'zh-CN' \| 'en-US'`                 | 繼承上層 / en-US                                        | 標題、頁籤、目錄、正文和反饋的語言。                                                 |
+| `baseUrl`         | `string`                             | `https://api.vikingdb.cn-beijing.volces.com/openviking` | 接入服務地址；拼接子路徑及 API 示例變數時移除末尾斜槓，安裝命令與獨立地址保留原值。  |
+| `agreementUrl`    | `string`                             | —                                                       | 宿主協議連結；提供時顯示可訪問的協議引用，未提供時僅顯示資料訪問提示。               |
+| `showOverseasTag` | `boolean`                            | `false`                                                 | 是否展示適用 Agent 的「境外」標籤。                                                  |
+| `activeTabId`     | `'mainstream' \| 'custom'`           | `mainstream`                                            | 可選受控頁籤；未傳時由元件維護。                                                     |
+| `selectedId`      | `string`                             | 當前分組首項                                            | 可選受控條目；主流首項為 `codex`，開發首項為 `mcp`。不屬於當前分組時顯示該分組首項。 |
+| `onTabChange`     | `(tabId: AgentConnectTabId) => void` | —                                                       | 頁籤選擇通知，方向鍵、Home、End 也會觸發。                                           |
+| `onSelect`        | `(item: AgentConnectItem) => void`   | —                                                       | 返回內建條目的 `id` 與當前語言的 `name`。                                            |
+| `onCopy`          | `(text: string) => void`             | —                                                       | 複製成功後返回實際複製的程式碼塊或完整正文；元件負責剪貼簿寫入。                     |
+| 其餘屬性          | `HTMLAttributes<HTMLDivElement>`     | —                                                       | 標準 div 屬性；不接收 `children`。                                                   |
 
-| 屬性          | 型別                             | 預設值 | 說明                                                                                   |
-| ------------- | -------------------------------- | ------ | -------------------------------------------------------------------------------------- |
-| `tabs`        | `readonly AgentConnectTab[]`     | 必填   | 頂部頁籤。                                                                             |
-| `activeTabId` | `string`                         | 必填   | 當前頁籤 id，由宿主持有。                                                              |
-| `items`       | `readonly AgentConnectItem[]`    | 必填   | 當前頁簽下的條目。                                                                     |
-| `selectedId`  | `string`                         | —      | 當前選中條目 id，由宿主持有。                                                          |
-| `detail`      | `AgentConnectDetail`             | —      | 選中項的詳情；不傳時右側不渲染正文。                                                   |
-| `labels`      | `AgentConnectLabels`             | 英文   | 可替換文案。                                                                           |
-| `onTabChange` | `(tabId: string) => void`        | —      | 切換頁籤時觸發。                                                                       |
-| `onSelect`    | `(item) => void`                 | —      | 選中條目時觸發。                                                                       |
-| `onCopy`      | `(text: string) => void`         | —      | 複製成功後觸發，用於埋點或額外反饋；複製由元件完成。不傳時仍渲染複製按鈕，只是不通知。 |
-| 其餘屬性      | `HTMLAttributes<HTMLDivElement>` | —      | 標準 div 屬性，`children` 已排除。                                                     |
+主流條目 ID：`codex`、`claude-code`、`doubao`、`workbuddy`、`trae`、`cursor`、`openclaw`、`hermes`、`opencode`、`deepseek-harness`、`deerflow`、`pi`、`zcode`、`kimi-code`。開發條目 ID：`mcp`、`cli`、`api`、`sdk`。非受控例項分別記住兩個分組的選擇。
 
-### AgentConnectTab
+複製需要安全上下文和 Clipboard API 許可權。複製期間阻止重複操作；成功顯示「已複製」，失敗顯示「複製失敗，請重試」。切換條目、指南、語言、憑據或地址後清空反饋和 pending 狀態，舊請求完成不再通知宿主；返回舊指南也不恢復舊反饋。已開始的剪貼簿寫入無法取消。複製回撥包含金鑰，宿主應按憑據處理。
 
-| 屬性    | 型別     | 說明           |
-| ------- | -------- | -------------- |
-| `id`    | `string` | 頁籤唯一標識。 |
-| `label` | `string` | 頁籤顯示文本。 |
-
-### AgentConnectItem
-
-| 屬性          | 型別        | 說明                         |
-| ------------- | ----------- | ---------------------------- |
-| `id`          | `string`    | 條目唯一標識。               |
-| `name`        | `string`    | 條目名稱。                   |
-| `description` | `string`    | 列表中的一句話說明。         |
-| `icon`        | `ReactNode` | 條目圖示，可以是圖片或節點。 |
-
-### AgentConnectDetail
-
-| 屬性          | 型別                | 說明                                           |
-| ------------- | ------------------- | ---------------------------------------------- |
-| `title`       | `string`            | 詳情標題，通常與選中條目同名。                 |
-| `icon`        | `ReactNode`         | 標題旁的圖示。                                 |
-| `description` | `string`            | 標題下方的說明文字。                           |
-| `tags`        | `readonly string[]` | 標題下方的標籤，例如「SDK」「境外」。          |
-| `content`     | `ReactNode`         | 正文內容，可以是 Markdown 渲染後的節點。       |
-| `copyText`    | `string`            | 複製按鈕寫入剪貼簿的純文本；不傳時不渲染按鈕。 |
-
-### AgentConnectLabels
-
-| 屬性           | 說明               |
-| -------------- | ------------------ |
-| `instructions` | 正文區域的標題。   |
-| `copy`         | 複製按鈕文案。     |
-| `copied`       | 複製成功後的提示。 |
-| `empty`        | 沒有條目時的提示。 |
-
-```tsx
-import { AgentConnect } from '@openviking/react/components/agent-connect';
-import '@openviking/react/components/agent-connect/style.css';
-```
-
-## 實現範圍
-
-元件只渲染檢視並上報意圖。目錄載入、Markdown 渲染、許可權、埋點與任何網路連線都由宿主負責。
+圖示已包含在 JS 構建中，開發方式圖示沿用參考元件原始 SVG。樣式從 `@openviking/react/components/agent-connect/style.css` 引入。暗色跟隨宿主 `.dark`，保留 Codex 的透明外底與原始白色符號。

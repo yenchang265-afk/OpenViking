@@ -1,44 +1,74 @@
 # Console 互動面板
 
-對話檢視與 TUI 合併為一個面板，內部協調模式切換、工具欄與資源上下文。模組自己取數，宿主提供配置、受控模式、插槽與文案。
+可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
 
-元件當前是佔位實現：只展示模組名稱與佔位文案。下面的 props 已定型，接入方可以先完成容器與狀態接入；組合檢視與 `useConsole` 隨後補充。
+`Console` 組合 `Tui` 與 `VikingBot`，管理原生 API 命令、執行記錄和兩種模式的草稿。切換模式保留記錄和草稿。
+
+命令側已接通原生 API。對話側按火山版 `release/openviking/2026-11-12` 提供會話操作區、新版歡迎空態、快捷輸入、附件和引用選擇；通過 `conversation` 傳入 VikingBot 的資料與回撥。真實對話、流式回覆、上傳及會話持久化由宿主接入。
+
+面板沿用火山版的膠囊模式切換、圖示工具欄和終端快速體驗佈局。快捷項填入命令並聚焦輸入框，不自動執行；命令歷史只包含當前面板的本地記錄，點選可重新填入。歷史與新建按鈕支援懸停和鍵盤聚焦提示；新建會話始終可用，會取消當前請求並清空本地記錄、錯誤和命令草稿，不刪除服務端資料。新建按鈕文案通過 `labels.clear` 替換；其他預設文案也可通過 `labels` 定製。
+
+歷史日期取自提交命令時的前端時間戳，按本地時區以 `YYYY-MM-DD HH:mm` 展示。
+
+`Console` 預設撐滿宿主的寬高，不限制面板寬度；宿主需提供明確高度或可伸展的 flex 佈局。示例的 720px 高度僅用於演示。
 
 ## 基礎用法
 
-```tsx file="../../_demos/console-placeholder.tsx" preview
+預設選中 VikingBot（`conversation`）。宿主可通過 `defaultMode="command"` 改為初始選中終端；需要受控切換時，使用 `mode` 與 `onModeChange`。
+
+示例使用固定模擬服務。輸入 `ov ls viking://resources/demo` 或 `ov read viking://resources/demo/notes.md` 體驗結果與資源連結，不訪問真實服務。
+
+對話示例使用固定會話、快捷輸入和資源候選；`+` 僅在瀏覽器內選擇附件，不上傳，傳送未接入。真實會話、流式回覆和持久化由宿主通過 `conversation` 接入。
+
+```tsx file="../../_demos/console-basic.tsx" preview
 
 ```
 
-## 模組負責什麼
+真實接入時，在宿主通過 `OpenVikingProvider` 配置 `baseURL`、憑證和身份；無需逐模組提供 Adapter。`baseURL` 不包含 `/api/v1`，未配置時使用同源地址。模組掛載不請求，顯式提交命令才訪問服務。
 
-- 當前模式、公共工具欄與內容區域，操作按當前模式分發。
-- 對話的會話、訊息流、附件與記憶提交；命令的定義、執行、取消與記錄。
-- 兩種模式各自保留狀態，切換時互不影響。
+## 執行行為
 
-## 宿主負責什麼
+同一例項同時執行一條命令，等待請求期間停用輸入。失敗資訊顯示在對應的命令結果中，可重新提交命令；寫入失敗可能已被服務端接受，重新提交前先核查結果。新建會話會中止 HTTP 請求並忽略遲到結果，不保證撤銷服務端已接受的操作。清空記錄只移除本地歷史和錯誤，不刪除服務端資源。
 
-- 通過 Provider 提供請求配置，模組可用 `requestOptions` 逐欄位覆蓋。
-- 登入、身份切換、路由與許可權。
-- 開啟資源：模組通過 `onOpenUri` 上報，不直接操作其他模組的私有狀態。
-- 輸入區上方與工具欄中的入口，通過 `slots` 注入。
+記錄與草稿只在記憶體中儲存。服務、身份配置或 `scopeKey` 變化時清空狀態、取消舊請求；解除安裝同樣取消。若身份由穩定函式動態返回，宿主須同步更新 `scopeKey`，或用身份作為元件 `key`。
+
+## 命令範圍
+
+命令可使用 `ov name`、`/name` 或裸名稱。帶空格的引數使用單引號或雙引號，支援反斜線轉義。以 `--` 開頭的正文應加引號，如 `ov write viking://resources/a.md "--heading"`；也可通過 `--` 結束選項解析：`ov write viking://resources/a.md -- --heading`。字串選項值同樣支援引號，如 `--description "--example"`。引數按資料解析，不執行 Shell；未知選項、重複選項、缺失引數和無效 URI 會生成失敗記錄。
+
+| 能力 | 命令                                                                                                   |
+| ---- | ------------------------------------------------------------------------------------------------------ |
+| 本地 | `help`、`clear`                                                                                        |
+| 服務 | `health`、`status`                                                                                     |
+| 瀏覽 | `ls [uri]`、`tree [uri]`、`stat <uri>`                                                                 |
+| 內容 | `read <uri>`、`abstract <uri>`、`overview <uri>`                                                       |
+| 檢索 | `find <query>`、`search <query>`、`grep <pattern>`、`glob <pattern>`                                   |
+| 寫入 | `mkdir <uri>`、`write <uri> <content>`、`cp <from_uri> <to_uri>`、`mv <from_uri> <to_uri>`、`rm <uri>` |
+| 任務 | `task list`、`task status <id>`、`task cancel <id>`                                                    |
+
+完整選項見執行時 `ov help` 和輸入區引數提示。選項名沿用原生欄位，例如 `--target_uri`、`--case_insensitive`。`ls` / `tree` 預設返回至多 100 條；通過 `--limit` 和 `--offset` 分頁，`tree` 另支援 `--level_limit`。`write` 預設覆蓋，使用 `--mode create` 建立，或 `--mode append` 追加。`task cancel` 請求服務端協作取消；新建會話只中止瀏覽器的 HTTP 請求。
+
+這是瀏覽器可用的原生命令子集。CLI 本機配置、登入、上傳下載、資源匯入、會話和編譯命令不在本期範圍內。完成 HTTP 請求表示介面已返回，非同步操作的最終結果須通過任務命令查詢。
 
 ## 屬性
 
-模組從子路徑和根入口匯出 `ConsoleProps`，`ConsoleMode`、`ConsoleLabels` 與 `ConsoleSlots` 只從子路徑匯出。
+根入口只匯出 `Console` 與 `ConsoleProps`。模式、文案和插槽型別從 `@openviking/react/modules/console` 匯出，取數與狀態 Hook 保持內部實現。JS 不載入 CSS；組合檢視使用 `@openviking/react/modules/console/style.css`，已包含 Tui 與 VikingBot 所需樣式。
 
-| 屬性             | 型別                          | 預設值         | 說明                                                                                                       |
-| ---------------- | ----------------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
-| `requestOptions` | `OvRequestOptions`            | —              | 請求配置覆蓋，逐欄位覆蓋最近的 Provider。                                                                  |
-| `mode`           | `'conversation' \| 'command'` | —              | 受控的當前模式。傳入時由宿主決定模式，模組只上報切換意圖。                                                 |
-| `defaultMode`    | `'conversation' \| 'command'` | `conversation` | 非受控時的初始模式。                                                                                       |
-| `onModeChange`   | `(mode: ConsoleMode) => void` | —              | 模式變化後觸發。                                                                                           |
-| `onOpenUri`      | `(uri: string) => void`       | —              | 資源成功開啟後觸發；失敗時不觸發。                                                                         |
-| `slots`          | `ConsoleSlots`                | —              | `toolbar`、`conversationContext` 與 `commandHelp`。                                                        |
-| `labels`         | `ConsoleLabels`               | —              | 可替換文案：`conversation`、`command`、`error`、`retry` 與佔位說明 `description`。未提供時沿用英文預設值。 |
-| `className`      | `string`                      | —              | 容器附加類名。                                                                                             |
-| `style`          | `CSSProperties`               | —              | 容器樣式覆蓋。                                                                                             |
+| 屬性                 | 型別                          | 預設值           | 說明                                                                                                             |
+| -------------------- | ----------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `mode`               | `ConsoleMode`                 | —                | 受控模式，只通過回撥上報切換意圖                                                                                 |
+| `defaultMode`        | `ConsoleMode`                 | `conversation`   | 非受控初始模式                                                                                                   |
+| `locale`             | `'zh-CN' \| 'en-US'`          | 繼承上層 / en-US | 選擇內建中英文文案。                                                                                             |
+| `quickCommands`      | `readonly string[]`           | 內建五條         | 終端空態展示的快捷命令名稱，按序取自命令目錄，未命中的名稱跳過，重複名稱只保留首次出現；傳空陣列不展示內建空態。 |
+| `scopeKey`           | `string`                      | —                | 動態身份的顯式隔離標識                                                                                           |
+| `onModeChange`       | `(mode: ConsoleMode) => void` | —                | 使用者請求不同模式時觸發；受控值仍由宿主更新                                                                     |
+| `onOpenUri`          | `(uri: string) => void`       | —                | 資源連結啟用時上報開啟意圖，宿主負責實際導航                                                                     |
+| `conversation`       | `Partial<VikingBotProps>`     | —                | 對話資料、會話操作、快捷輸入、引用與附件回撥；省略草稿屬性時使用 Console 的例項內草稿。                          |
+| `slots`              | `ConsoleSlots`                | —                | `toolbar`、`conversationContext`、`commandHelp`                                                                  |
+| `labels`             | `ConsoleLabels`               | —                | 面板文案；`tui` 與 `vikingBot` 繼續定製內部檢視文案                                                              |
+| `requestOptions`     | `OvRequestOptions`            | —                | 逐欄位覆蓋最近 Provider 的地址、身份和訊號                                                                       |
+| `className`、`style` | 標準 HTML 屬性                | —                | 根容器樣式，其餘 HTML 屬性也透傳                                                                                 |
 
-文案為純文本，宿主可將自身的翻譯結果對映到這些屬性。props 裡沒有資料欄位——資料由模組自己載入。
+認證、許可權、帳號切換、頁面佈局與跨模組資源導航由宿主負責。
 
-佔位元件當前只消費 `className`、`style`、`labels.conversation` 與 `labels.description`。
+Console 省略 `locale` 時繼承最近的語言作用域，最終預設 `en-US`。切換語言會更新已有命令幫助、引數錯誤和取消提示，保留請求、記錄 ID 與草稿；服務端返回的正文和錯誤原文保持原值。

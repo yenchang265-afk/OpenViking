@@ -1,16 +1,52 @@
 # FileTree 檔案樹
 
+可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
+
 展平後的檔案樹。樹狀態由宿主持有，宿主按順序傳入可見行；元件負責渲染並通知成功的操作。
 
-當前為佔位實現：渲染全部文件化的行型別並遵守公開 props，方便消費方先按 API 接入。樣式、圖示與互動細節仍會調整，檢視後續按本文契約重寫。
+元件渲染宿主展平後的行列表，並處理選中、展開、分頁與鍵盤互動。內建搜尋入口與重新整理按鈕均可選；搜尋彈窗、資料請求與匯入流程由宿主提供。
+
+## 控制台樣式與可選工具欄
+
+樹行、縮排、淺色選中態以及 32px 搜尋和重新整理控制元件對齊火山版控制台。下面使用固定的公開示例資料；搜尋彈窗與重新整理請求由示例宿主模擬。
+
+```tsx file="../../_demos/file-tree-console.tsx" preview
+
+```
+
+通過 `search`、`refresh` 分別開啟入口，預設均隱藏。`operations.search` 開啟宿主搜尋介面，`operations.refresh` 執行重新整理；省略對應執行方法時按鈕停用。重新整理 Promise 等待期間自動停用按鈕並旋轉圖示，重複點選不會重複執行；失敗後恢復按鈕且不觸發 `onRefresh`，錯誤提示由宿主負責。
+
+```tsx
+<FileTree
+  locale="zh-CN"
+  rows={rows}
+  search
+  refresh={{ loading: isRefreshing, disabled: !canRefresh }}
+  operations={{ search: openSearch, refresh: reloadTree }}
+  labels={{ search: '搜尋檔案…', refresh: '重新整理上下文目錄' }}
+  onRefresh={() => notifySuccess()}
+/>
+```
+
+`search={{ disabled: true }}` 可禁用搜索。搜尋是入口而非本地過濾框，元件不會假設當前已載入的行覆蓋全部檔案，也不會註冊全域性快捷鍵。如果宿主已提供快捷鍵，可以把提示加入 `labels.search`。`slots.toolbar` 保留，並顯示在內建控制元件上方，適合放連線 Agent、匯入資源等操作。
 
 ## 基礎用法
 
-展開目錄檢視子節點。行來自 `rows`；選中與展開由使用方控制。
+行來自 `rows`，展開由使用方控制。下面的示例自己維護展開集合，把樹狀態展平成 `FileTreeRow[]` 並渲染，演示五種行型別與內建目錄說明的實際效果。
 
 ```tsx file="../../_demos/file-tree-basic.tsx" preview
 
 ```
+
+示例演示三種宿主職責：
+
+- **非同步載入**：展開目錄先出現 `Loading…` 行，400ms 後換成子節點，對應 `FileTreeLoadingRow`。
+- **分頁載入**：每次只加載 3 個子節點，還有剩餘時出現 `Load more`，點一次追加一頁，對應 `FileTreeLoadMoreRow`。`archive` 有 9 個檔案，分三頁載入完。
+- **行尾圖示**：`renderDashboard` 渲染的互斥標記。`memories/experiences` 顯示 Agent 經驗看板圖示；`project-wiki` 是 Wiki 根目錄，行首用書本圖示替代資料夾，行尾顯示綠色看板圖示；`archive` 同樣按 Wiki 處理，但有待確認衝突，圖示變成橙色並帶感嘆號。
+
+目錄名後跟著的是內建說明，`memories`、`peers`、`privacy` 等都有。
+
+示例直接掛載 `<FileTree />`，只保留樹資料與展開、分頁狀態這些宿主該持有的部分。
 
 ## 行的組織方式
 
@@ -24,11 +60,62 @@
 
 只需產出資料來源真正需要的行。一次性返回全部子節點的宿主不會產出 `load-more`。
 
+行按內容撐開，不把內容壓進容器寬度：名稱完整顯示，容器橫向滾動。層級很深時縮排同樣靠橫向滾動獲得空間，深層節點不會互相擠壓。說明文字限寬 200px 並按需省略——它是補充資訊，一條長說明會把行拉到幾百畫素寬，反而讓橫向滾動更難用。
+
+名稱是辨認節點的唯一依據，因此不做省略；宿主想收緊寬度時改容器，而不是讓元件截斷名稱。
+
 ## 插槽與宿主內容
 
-- `slots.toolbar` —— 搜尋、匯入來源、重新整理。元件不知道里面有什麼。
+- `slots.toolbar` —— 內建搜尋與重新整理上方的自定義內容，例如連線 Agent、匯入來源。
+- `slots.spinner` —— 替換目錄載入子節點時的轉圈，按 12 × 12 顯示。省略時用內建的 `FileTreeSpinner`（純 CSS 圓環，不依賴圖示資源）。
 - `renderDashboard` —— 行尾指示器，例如看板入口。
-- `renderRowTooltip` —— 懸停內容，延遲與定位由元件處理。
+- `renderRowTooltip` —— 懸停內容，延遲與定位由元件處理。省略時元件按 `uri` 渲染內建浮層（說明、觸發行為、路徑）。
+
+## 目錄說明
+
+元件按行 `uri` 的路徑結構判定目錄語義，內建一份說明與觸發行為文案。宿主不需要傳任何欄位就能拿到說明；需要改文案時用 `labels.info` 逐鍵覆蓋。
+
+判定只看路徑形狀，與節點型別無關。`viking://user/{id}/memories` 與 `viking://user/{id}/memories/` 都命中 `memories`；`viking://resources` 命中 `sharedResources`，而 `viking://resources/docs` 不再命中——內建說明只覆蓋固定層級，更深層的節點由宿主自己決定。
+
+| 分組         | 鍵                                                                                                         |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| 使用者作用域 | `userRoot`、`memories`、`peers`、`privacy`、`userResources`、`sessions`、`skills`                          |
+| 長期記憶     | `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories`、`experiences` |
+| 共享與根級   | `sharedResources`、`agentRoot`、`memoryRoot`、`resourceRoot`、`sessionRoot`、`systemRoot`                  |
+
+長期記憶下的九個鍵只在浮層裡顯示說明：這些目錄的名稱本身已經說明用途，行內再掛一行字會擠掉同級節點。
+
+**文案優先順序**：行上給了 `description` 時用宿主的，內建說明不生效；沒給才用內建。這樣宿主始終能完全接管。
+
+```tsx
+<FileTree
+  locale="zh-CN"
+  rows={rows}
+  labels={{
+    info: {
+      description: { userRoot: '當前使用者' },
+      triggerBehavior: { memories: '提交會話時自動沉澱' },
+      field: { description: '說明', triggerBehavior: '觸發行為', path: '路徑' },
+    },
+  }}
+/>
+```
+
+`labels.info.description` 與 `triggerBehavior` 都是 `Partial<Record<FileTreeInfoKey, string>>`，只寫要改的鍵。傳空字串表示該鍵不顯示。
+
+判定與文案也以純函式形式從元件子路徑匯出，宿主可以複用同一套規則組裝自己的檢視：
+
+```ts
+import {
+  resolveFileTreeInfoKey,
+  showsInlineDescription,
+  resolveInfoCopy,
+} from '@openviking/react/components/file-tree';
+
+resolveFileTreeInfoKey('viking://user/alice/memories/profile.md'); // 'profile'
+showsInlineDescription('profile'); // false，只在浮層顯示
+resolveInfoCopy('memories', { description: { memories: '自定義' } });
+```
 
 ## 一次性效果
 
@@ -47,26 +134,32 @@ treeRef.current?.scrollToRow('resources', { block: 'center' });
 
 ## 屬性
 
-| 屬性                      | 型別                                      | 預設值 | 說明                                         |
-| ------------------------- | ----------------------------------------- | ------ | -------------------------------------------- |
-| `rows`                    | `readonly FileTreeRow[]`                  | 必填   | 按渲染順序排列的可見行。                     |
-| `operations`              | `FileTreeOperations`                      | —      | 非同步執行能力；省略方法時停用對應操作。     |
-| `selectedId`              | `string \| null`                          | —      | 當前選中的行 id，由宿主持有。                |
-| `isReady`                 | `boolean`                                 | `true` | 首次載入是否完成。                           |
-| `loadingFallback`         | `ReactNode`                               | —      | 首次載入期間替代行列表顯示。                 |
-| `errorFallback`           | `ReactNode`                               | —      | 存在整樹級錯誤行時顯示。                     |
-| `emptyFallback`           | `ReactNode`                               | —      | `rows` 為空時顯示。                          |
-| `slots`                   | `FileTreeSlots`                           | —      | `toolbar` 插槽，渲染在行列表上方。           |
-| `labels`                  | `FileTreeLabels`                          | 英文   | 可替換文案。                                 |
-| `getRowAttributes`        | `(row) => HTMLAttributes<HTMLDivElement>` | —      | 按行追加屬性，`className` 會與元件類名合併。 |
-| `renderDashboard`         | `(row) => ReactNode`                      | —      | 行尾指示器，返回 `null` 不顯示。             |
-| `renderRowTooltip`        | `(row) => ReactNode`                      | —      | 懸停內容，返回 `null` 不顯示。               |
-| `onSelect`                | `(row: FileTreeEntryRow) => void`         | —      | 選中成功後觸發；失敗時不觸發。               |
-| `onToggleExpand`          | `(row: FileTreeEntryRow) => void`         | —      | 展開或摺疊成功後觸發；失敗時不觸發。         |
-| `onLoadMore`              | `(row: FileTreeLoadMoreRow) => void`      | —      | 下一頁子節點載入成功後觸發；失敗時不觸發。   |
-| `onRetry`                 | `(row: FileTreeErrorRow) => void`         | —      | 重新載入成功後觸發；重試失敗時不觸發。       |
-| `onOpenRetentionSettings` | `(uri: string) => void`                   | —      | 保留策略設定成功開啟後觸發；失敗時不觸發。   |
-| 其他屬性                  | `HTMLAttributes<HTMLDivElement>`          | —      | 標準 div 屬性。                              |
+| 屬性                      | 型別                                                   | 預設值           | 說明                                         |
+| ------------------------- | ------------------------------------------------------ | ---------------- | -------------------------------------------- |
+| `locale`                  | `'zh-CN' \| 'en-US'`                                   | 繼承上層 / en-US | 內建中英文文案。                             |
+| `rows`                    | `readonly FileTreeRow[]`                               | 必填             | 按渲染順序排列的可見行。                     |
+| `operations`              | `FileTreeOperations`                                   | —                | 非同步執行能力；省略方法時停用對應操作。     |
+| `selectedId`              | `string \| null`                                       | —                | 當前選中的行 id，由宿主持有。                |
+| `isReady`                 | `boolean`                                              | `true`           | 首次載入是否完成。                           |
+| `loadingFallback`         | `ReactNode`                                            | —                | 首次載入期間替代行列表顯示。                 |
+| `errorFallback`           | `ReactNode`                                            | —                | 存在整樹級錯誤行時顯示。                     |
+| `emptyFallback`           | `ReactNode`                                            | —                | `rows` 為空時顯示。                          |
+| `slots`                   | `FileTreeSlots`                                        | —                | `toolbar` 與 `spinner` 插槽。                |
+| `labels`                  | `FileTreeLabels`                                       | locale           | 可替換文案。                                 |
+| `getRowAttributes`        | `(row) => HTMLAttributes<HTMLDivElement>`              | —                | 按行追加屬性，`className` 會與元件類名合併。 |
+| `renderDashboard`         | `(row) => ReactNode`                                   | —                | 行尾指示器，返回 `null` 不顯示。             |
+| `renderRowIcon`           | `(row) => ReactNode`                                   | —                | 檔案行的行首圖示；省略時用通用檔案圖示。     |
+| `renderRowTooltip`        | `(row) => ReactNode`                                   | —                | 懸停內容，返回 `null` 不顯示。               |
+| `onSelect`                | `(row: FileTreeEntryRow) => void`                      | —                | 選中成功後觸發；失敗時不觸發。               |
+| `onToggleExpand`          | `(row: FileTreeEntryRow) => void`                      | —                | 展開或摺疊成功後觸發；失敗時不觸發。         |
+| `onLoadMore`              | `(row: FileTreeLoadMoreRow) => void`                   | —                | 下一頁子節點載入成功後觸發；失敗時不觸發。   |
+| `onRetry`                 | `(row: FileTreeErrorRow) => void`                      | —                | 重新載入成功後觸發；重試失敗時不觸發。       |
+| `search`                  | `boolean \| { disabled?: boolean }`                    | `false`          | 顯示內建搜尋入口。                           |
+| `refresh`                 | `boolean \| { disabled?: boolean; loading?: boolean }` | `false`          | 顯示內建重新整理按鈕。                       |
+| `onSearch`                | `() => void`                                           | —                | 搜尋介面成功開啟後通知。                     |
+| `onRefresh`               | `() => void`                                           | —                | 重新整理成功後通知。                         |
+| `onOpenRetentionSettings` | `(uri: string) => void`                                | —                | 保留策略設定成功開啟後觸發；失敗時不觸發。   |
+| 其他屬性                  | `HTMLAttributes<HTMLDivElement>`                       | —                | 標準 div 屬性。                              |
 
 ```tsx
 import { FileTree } from '@openviking/react/components/file-tree';
@@ -75,49 +168,30 @@ import '@openviking/react/components/file-tree/style.css';
 
 ## 無障礙
 
-使用 `role="tree"` 與 `role="treeitem"`，並輸出 `aria-level`、`aria-selected`、`aria-expanded`。方向鍵在行間移動，左右鍵展開與摺疊，回車與空格選中。狀態通過可見文本表達，不只依賴顏色。
+行使用 `role="tree"` 與 `role="treeitem"`，輸出 `aria-level`、`aria-selected`、`aria-expanded`。方向鍵在行間移動，左右鍵展開與摺疊，回車與空格選中。狀態通過可見文本表達，不只依賴顏色。
 
-## 類名
+## 樣式
 
-類名帶 `ov-` 字首。塊名為 `ov-file-tree`，元素使用 `ov-file-tree__<元素>`。
+類名帶 `ov-` 字首，塊名為 `ov-file-tree`，元素使用 `ov-file-tree__<元素>`。顏色取自包級主題基線 `--ov-ui-color-*`（見 [入門](/guide/getting-started) 的樣式章節），元件私有變數從基線派生，宿主可整組或逐條覆蓋。樣式通過獨立入口引入：
 
-| 類名                        | 元素       | 用途                           |
-| --------------------------- | ---------- | ------------------------------ |
-| `ov-file-tree`              | 根節點     | 縱向佈局與基礎排版。           |
-| `ov-file-tree__toolbar`     | 工具欄插槽 | 行區域上方的宿主工具欄。       |
-| `ov-file-tree__body`        | 滾動區域   | 承載行的滾動容器。             |
-| `ov-file-tree__rows`        | 行容器     | 行的縱向排列。                 |
-| `ov-file-tree__row`         | 行         | 單行條目，帶 `data-selected`。 |
-| `ov-file-tree__row:hover`   | 行         | 懸停背景。                     |
-| `ov-file-tree__toggle`      | 展開按鈕   | 展開與摺疊控制元件。           |
-| `ov-file-tree__chevron`     | 摺疊箭頭   | 有 `data-expanded` 時旋轉。    |
-| `ov-file-tree__label`       | 名稱       | 行主文本。                     |
-| `ov-file-tree__description` | 描述       | 名稱旁的次要文本。             |
-| `ov-file-tree__level`       | 層級標籤   | 上下文層級徽標。               |
-| `ov-file-tree__expiry`      | 過期提示   | 過期文案及其操作按鈕。         |
-| `ov-file-tree__tooltip`     | 提示浮層   | 行的懸浮提示。                 |
-| `ov-file-tree__child-row`   | 子行       | 載入、空態與錯誤行。           |
-| `ov-file-tree__state`       | 狀態面板   | 整高的載入、空態與錯誤檢視。   |
-
-```css
-.my-workbench .ov-file-tree__row {
-  height: 32px;
-}
+```tsx
+import '@openviking/react/components/file-tree/style.css';
 ```
 
-## 主題變數
-
-| CSS 變數               | 預設值                 | 用途             |
-| ---------------------- | ---------------------- | ---------------- |
-| `--ov-ui-text`         | `#1f2329`              | 行文本顏色。     |
-| `--ov-ui-text-muted`   | `#8f959e`              | 次要文本與圖示。 |
-| `--ov-ui-row-hover`    | `rgb(0 0 0 / 4%)`      | 行懸停背景。     |
-| `--ov-ui-row-selected` | `rgb(37 99 197 / 10%)` | 選中行背景。     |
-| `--ov-ui-focus-ring`   | `#2563c5`              | 鍵盤焦點環。     |
-| `--ov-ui-chip`         | `rgb(0 0 0 / 6%)`      | 層級標記背景。   |
-| `--ov-ui-warning`      | `#b26a00`              | 過期提示文字。   |
-| `--ov-ui-radius`       | `6px`                  | 行與浮層的圓角。 |
+| CSS 變數                         | 預設值                        | 用途           |
+| -------------------------------- | ----------------------------- | -------------- |
+| `--ov-ui-file-tree-text`         | `--ov-ui-color-text-1`        | 行文字。       |
+| `--ov-ui-file-tree-text-muted`   | `--ov-ui-color-text-3`        | 次要文字。     |
+| `--ov-ui-file-tree-icon`         | `--ov-ui-color-text-2`        | 行首圖示。     |
+| `--ov-ui-file-tree-row-hover`    | `--ov-ui-color-bg-5`          | 懸停背景。     |
+| `--ov-ui-file-tree-row-selected` | `--ov-ui-color-primary-light` | 選中背景。     |
+| `--ov-ui-file-tree-guide`        | `--ov-ui-color-border-1`      | 層級豎線。     |
+| `--ov-ui-file-tree-spinner`      | `--ov-ui-color-primary`       | 載入指示。     |
+| `--ov-ui-file-tree-action`       | `--ov-ui-color-primary`       | 行內文字操作。 |
+| `--ov-ui-file-tree-row-height`   | `32px`                        | 行高。         |
+| `--ov-ui-file-tree-row-radius`   | `4px`                         | 行圓角。       |
+| `--ov-ui-file-tree-indent`       | `20px`                        | 每級縮排。     |
 
 ## 實現範圍
 
-目錄載入、分頁、搜尋、許可權與導航仍由宿主負責，通過 `operations` 提供非同步執行能力；成功後元件才觸發對應通知，失敗時不觸發。省略方法時停用該操作，省略通知不影響執行。
+目錄載入、分頁、搜尋、許可權與導航由宿主負責，通過 `operations` 提供非同步執行能力；成功後元件才觸發對應通知，失敗時不觸發。省略方法時停用該操作，省略通知不影響執行。

@@ -1576,6 +1576,7 @@ Redis 名稱空間。
 | `backend` | str | `local` 完全沿用原檔案系統；`cache` 啟用 CacheFS wrapper | `local` |
 | `max_file_size_bytes` | int | CacheFS 快取完整內容的單檔案上限；部分讀取與更大的檔案直接讀取 backend；`0` 停用檔案內容快取 | `1048576` |
 | `multi_instance` | bool | 多個 OpenViking 程序共用快取 namespace 時，在每個實例上設定；CacheFS 會在每次寫入返回前刪除受影響的快取項目，並要求快取預設 TTL 大於 0。詳見 RAGFS 快取指南 | `false` |
+| `shared_redis_ttl_seconds` | int | 統一覆蓋查詢 bucket 的 TTL；`0` 表示沿用 Provider 預設 TTL。僅當 CacheFS 與 QueueFS、cache PathLock 或 expiry 排程共用同一個 Redis 服務時生效 | `0` |
 
 `storage.agfs.pathlock` 選擇 PathLock 儲存 Provider：
 
@@ -2240,6 +2241,7 @@ ov add-resource ./docs --exclude "*.tmp"
 | `root_api_key` | str | `api_key` 模式必填的 Root API Key；`trusted` 模式在所有部署中均必填，包括 localhost，不負責解析普通使用者身份 | `null` |
 | `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"`、`"mysql"` 和 `"redis_mysql"`；統一持久化 Account、User、Group 和 API Key。`"file"` 相容現有 AGFS JSON 登錄檔，並由 Provider 自身維護程序內查詢索引。`"redis_mysql"` 保持 MySQL 為權威儲存，並增加共享 Redis 認證和請求身份讀取快取。 | `"file"` |
 | `account_store.params` | object | Provider 啟動引數。不能通過這裡覆蓋框架注入的 VikingFS 和 File Provider API Key Hash 配置。 | `{}` |
+| `account_store.params.read_only` | bool | 僅 File Provider。只讀取 writer 已建立的登錄檔，啟動時不寫鎖、不初始化、不遷移憑據，並拒絕身份變更。副本資料盤仍保持只讀掛載，設定 `reconcile_system_assets_on_startup=false`；開啟 `api_key_watch_enabled` 感知 writer 的變更。登錄檔缺失時拒絕啟動。 | `false` |
 | `profile_enabled` | bool | 是否允許 HTTP 請求通過 `profile=1` 開啟請求級 cProfile。關閉時服務端會忽略該請求引數；開啟後，CLI 可以顯示返回的 `profile`，而 Python HTTP client 預設只觸發服務端 profile，不會把頂層 `profile` 欄位自動附著到大多數 SDK 返回值上。 | `false` |
 | `cors_origins` | list | CORS 允許的來源 | `["*"]` |
 | `public_base_url` | str | MCP `add_resource` 和 `add_skill` 工具向客戶端返回的上傳指令裡使用的對外可見 base URL。解析順序：環境變數 `OPENVIKING_PUBLIC_BASE_URL` → 本欄位 → 請求頭 `X-Forwarded-Host` / `X-Forwarded-Proto` → 請求頭 `Host` → 監聽地址兜底。當 server 部署在反向代理後且代理不轉發 `X-Forwarded-*` 時，請顯式設定本欄位（或環境變數）。 | `null` |

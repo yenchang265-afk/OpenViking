@@ -150,6 +150,9 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 | `backend` | str | `"local"` | `local` 沿用原邏輯；`cache` 啟用 CachedFileSystem |
 | `max_file_size_bytes` | int | `1048576` | CacheFS 快取完整內容的單檔案上限。部分讀取與更大的檔案直接讀取 backend；`0` 停用檔案內容快取 |
 | `multi_instance` | bool | `false` | 多個實例共用此 cache namespace：每次寫入返回前刪除受影響的 bucket。需要 `backend: "cache"` 且快取預設 TTL 大於 `0`。詳見「多實例」 |
+| `shared_redis_ttl_seconds` | int | `0` | 當 CacheFS 與 QueueFS、cache PathLock 或 expiry 排程共用同一個 Redis 服務時，統一覆蓋查詢 bucket 的 TTL；`0` 表示沿用 Provider 預設 TTL |
+
+`shared_redis_ttl_seconds` 統一作用於 `stat`、`read_dir`、`tree_directory`、`glob_directory`、`grep` 和檔案內容 `read` bucket，不表達檔案級優先順序。共享 Redis 時可將該值設為低於 Provider 的 `default_ttl_seconds`，以縮短快取保留時間。CacheFS 使用獨立 Redis 服務時，OpenViking 會忽略該選項。
 
 `storage.agfs.pathlock` 控制 PathLock 儲存：
 
@@ -366,6 +369,15 @@ CacheFS 快取不超過 `max_file_size_bytes` 的完整檔案內容，以及 `st
 - cache set / delete 失敗
 - `invalidation_failures`（啟用 `multi_instance` 時，其他實例在 TTL 到期前可能返回過期結果）
 - backend fallback 次數
+
+## 共享 Redis 部署
+
+CacheFS 查詢 bucket 可以與 QueueFS、cache PathLock 和 expiry 排程共用同一個 Redis 服務。Redis 的 `maxmemory` 和淘汰策略作用於整個服務，因此 `shared_redis_ttl_seconds` 只是快取保留時間的上限，不是容量預留，也不能保證有狀態 key 一定不被淘汰。
+
+- 當快取應為有狀態負載讓出容量時，將 `shared_redis_ttl_seconds` 設為低於 `cache.redis.default_ttl_seconds`。
+- 保持 `shared_redis_ttl_seconds=0` 可沿用 Provider 預設 TTL。
+- 如果需要硬性的容量隔離，請使用獨立 Redis 服務；僅切換邏輯 database 不會隔離 `maxmemory` 或淘汰策略。
+- 共用同一個服務時，應同時觀察 `used_memory`、`evicted_keys` 和快取 hit/miss 指標。
 
 ## 推薦使用順序
 

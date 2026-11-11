@@ -1,13 +1,31 @@
 # OpenViking for Magpie
 
-為經過 Magpie 閘道器的模型請求自動召回 OpenViking 記憶，直接讀取現有
-`ovcli.conf`，無需在 Magpie 中重複填寫服務地址和憑據。
+一個外掛提供兩項可獨立控制的能力：
 
-市場展示名稱為 **OpenViking**，npm 分發包名為 `@openviking/magpie-plugin`；兩者獨立配置。
+- **記憶**：為經過 Magpie 的模型請求召回 OpenViking 上下文，按需採集對話並提供記憶工具。
+- **模型管理**：在 **Agents → OpenViking** 切換 OV/VikingBot 使用的模型，自動儲存配置、重啟並驗證生效。Query Planner 可通過外掛 Options 的 `queryMode` / `queryModel` 單獨指定模型，預設保留現有 Query 配置。
+
+市場展示名稱為 **OpenViking**，統一 npm 包名為 `@openviking/magpie-plugin`。發現頁歸為「閘道器中介軟體」；已安裝頁可同時識別 Agent 與請求 Hook。沒有額外頁面或設定面板，不修改 Magpie 宿主。
+
+## 功能開關與遷移
+
+在 Magpie 的外掛 Options 中分別設定 `memoryEnabled`、`modelsEnabled`（均預設為 true）：
+
+```json
+{ "memoryEnabled": false, "modelsEnabled": true, "restartOnChange": true }
+```
+
+上例只啟用模型管理；記憶關閉時不會召回、採集或註冊記憶工具。`modelsEnabled: false` 暫停模型同步；需要恢復原模型時，先在 Agent 行斷開接入。現有記憶配置和憑據讀取規則保持相容，Root 憑據只用於模型管理。
+
+從兩個外掛合併時，將原記憶外掛的啟用狀態遷為 `memoryEnabled`，將原模型外掛的狀態遷為 `modelsEnabled`，合併保留各自 Options。不要僅因為新外掛整體開啟，就把原先關閉的記憶功能開啟。
+
+舊的 `@openviking/magpie-models-plugin` 已停止單獨打包。通用手動遷移方式：備份 Options，在舊模型 Agent 行斷開並等待恢復完成，移除兩個舊安裝項，安裝統一包並寫回功能開關和原選項，再重新選擇模型。不要同時保留新舊模型外掛，以免重複註冊 Agent。如採用原地遷移，需保留 Agent ID、安裝路徑、選擇檔案和恢復日誌，並核對遷移前後的 `ov.conf` 與 OV 例項未變化。
+
+模型配置 API、Root 許可權、Bot 檢測、自動重啟和恢復限制見 [模型管理說明](models/README_CN.md)。模型管理不是長期記憶功能，不會自動啟用 Bot。
 
 ## 安裝
 
-首次 npm 釋出完成後，在 Magpie 中安裝 OpenViking：
+統一版本 0.2.0 尚未釋出；當前請按下文從原始碼安裝。釋出後可安裝：
 
 ```sh
 magpie plugin add @openviking/magpie-plugin
@@ -25,7 +43,7 @@ magpie plugin add ./examples/magpie-memory-plugin
 ```
 
 本地目錄安裝需要先生成共享模組。`npm pack` 會自動生成並打包這些模組。
-按 npm 包名安裝需要先完成首次釋出；直接將整個 OpenViking 倉庫作為外掛安裝不會選中此子目錄。
+按 npm 包名安裝需要對應版本已釋出；直接將整個 OpenViking 倉庫作為外掛安裝不會選中此子目錄。
 
 需要支援非同步閘道器 Hook 和宿主 `origin` 分類的 Magpie，以及支援
 `POST /api/v1/search/search` 的 `mode: "context"` 的 OV 服務。
@@ -54,7 +72,7 @@ magpie plugin add ./examples/magpie-memory-plugin
 ```
 
 行為配置沿用共享外掛欄位名，`plugin.magpie` 覆蓋 `plugin` 的同名設定；
-全域 `plugin.enabled: false` 始終關閉本外掛。連線讀取頂層的 `url`、`api_key`、
+全域 `plugin.enabled: false` 同時關閉記憶功能、模型自動同步和自動重啟；顯式執行的恢復 CLI 仍可使用。連線讀取頂層的 `url`、`api_key`、
 `account`、`user`、`actor_peer_id`、`timeout`（秒）、`extra_headers`（或 CLI 別名 `extra_header`），支援身份欄位的已有別名。
 帳戶、使用者請求頭沿用共享客戶端的身份處理方式，需要與服務端認證模式匹配。
 自定義請求頭不能覆蓋鑑權、身份或傳輸請求頭，包括 `X-API-Key`。

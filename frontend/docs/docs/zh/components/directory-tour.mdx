@@ -1,0 +1,47 @@
+# DirectoryTour 目錄定位引導
+
+獨立於 FileTree 的非模態分步引導。按照「使用者記憶 → 對話記錄 → 個人資料 → 團隊公共資料 → Agent 經驗 → 物件記憶」定位目錄，顯示高亮和講解卡片，不改變檔案選中狀態。
+
+```tsx file="../../_demos/directory-tour-basic.tsx" preview
+
+```
+
+## 使用邊界
+
+元件不請求後端、不管理帳號、不儲存完成狀態。宿主通過 `locateTarget(target, signal)` 載入目錄、展開父級、等待目標行渲染，再返回對應的 `HTMLElement`。可直接使用 FileTree 的 `getRowElement(id)`。元件隨後滾動、高亮並跟隨該元素定位；原生 Popover API 將卡片放入瀏覽器頂層，不建立全屏遮罩或 SVG。
+
+帳號或空間切換時，宿主關閉元件或更換 `key`。沒有命中節點、定位異常或超時會顯示重試與跳過，不會靜默標記完成。最終回撥攜帶 `skippedStepIds`，宿主決定是否算完成。關閉和完成回撥均由宿主將 `open` 設為 `false`。
+
+## 匯入
+
+```tsx
+import {
+  DirectoryTour,
+  openVikingDirectoryTourSteps,
+} from '@openviking/react/components/directory-tour';
+import type {
+  DirectoryTourStep,
+  DirectoryTourTarget,
+} from '@openviking/react/components/directory-tour';
+import '@openviking/react/components/directory-tour/style.css';
+```
+
+| 屬性                           | 說明                                                                                                     |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `locale`                       | 繼承上層 / en-US：`zh-CN` 或 `en-US`。內建控制元件文案隨語言變化，labels 可逐項覆蓋。                    |
+| `open` / `steps`               | 必填；開啟狀態與步驟配置。空步驟不渲染。                                                                 |
+| `locateTarget(target, signal)` | 可取消的宿主定位函式，返回已渲染的元素或 null。建議用 useCallback 保持穩定；取消後不得繼續展開舊作用域。 |
+| `currentStep` / `onStepChange` | 可選受控下標與變化事件，從 0 開始。                                                                      |
+| `defaultStep`                  | 非受控模式的起始下標，預設 0；關閉後重新開始。                                                           |
+| `placement`                    | 優先 right 或 left，預設 right；空間不足自動翻轉並限制在視口內。                                         |
+| `locateTimeout`                | 定位超時毫秒數，預設 10000。                                                                             |
+| `onClose`                      | 關閉按鈕或 Escape；宿主負責關閉。                                                                        |
+| `onComplete(result)`           | 最後一步繼續或跳過，返回跳過的步驟 ID。宿主負責關閉與持久化。                                            |
+| `labels`                       | 下一步、知道了、重試、跳過、載入和錯誤文案，以及進度格式函式。                                           |
+| `className` / `style`          | 浮層根節點樣式，可繼承或覆蓋 `--ov-ui-color-*` 主題變數。                                                |
+
+每步包含 `id`、語義 `target`、`title`、`description`，可選 `illustration` 和 `nextLabel`。預設六步配置是英文，語義 target 區分使用者私有 resources 與根級公共 resources；不內建某個帳號的路徑。插畫通過 ReactNode 插槽傳入，元件沒有內部 CDN 依賴。
+
+## 可訪問性與異常處理
+
+講解卡片使用非模態 dialog，開啟後可鍵盤操作，支援 Escape 退出，關閉時恢復仍存在的原焦點。定位中不能前進；重試、切步和解除安裝會取消舊定位。滾動、視窗變化及目標尺寸變化會重新計算位置，目標滾出可見區域時隱藏講解卡片。支援服務端渲染，服務端不建立浮層。

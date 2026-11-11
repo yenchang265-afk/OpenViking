@@ -449,7 +449,9 @@ ov stat viking://resources/my-project/docs
 
 `id` 欄位（僅檔案）是 VikingDB 中向量記錄的確定性主鍵，對 level 2（常規檔案）記錄按 `md5(f"{account_id}:{uri}")` 計算。該值與向量集合 schema 中的 `id` 欄位一致，可用於直接交叉引用向量記錄而無需額外查詢。目錄不返回此欄位，因為一個目錄在多個語義層（L0 abstract、L1 overview）下可能對應多條向量記錄，id 不唯一。由於索引是非同步生成的，新返回的 ID 可能暫時無法解析；對應向量記錄被刪除後，按 ID 查詢也會失敗。這兩種情況下，`stat(id)` 都會返回 `NOT_FOUND`，並在原因中提示資料可能尚未索引或已經刪除。
 
-`count` 欄位（僅目錄）包含該目錄下的專案（檔案和子目錄）估計數量（來自向量索引）。
+`count` 欄位（僅目錄）統計目錄 URI 子樹下當前呼叫方可見的 `level=2` 向量記錄數。它受非同步索引進度和孤兒記錄清理影響，不是物理檔案系統條目數；`ls`、`tree` 和 `glob` 通過 `extra_fields=count` 按需返回該欄位。
+
+**破壞性變更：** `count` 以前包含所有已索引的向量層級；現在只統計當前呼叫方可見的 `level=2` 記錄。
 
 在大小寫不敏感的 `localfs` 上，`stat` 也可能通過大小寫別名返回真實檔案或目錄的後設資料。例如 `viking://resources/docs/REPORT.md` 可能命中真實的 `viking://resources/docs/report.md`；大小寫敏感系統上，別名目標不存在時返回 `NOT_FOUND`。
 

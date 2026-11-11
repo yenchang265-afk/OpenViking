@@ -79,6 +79,20 @@ V2 write event 記錄。只有在 backup 已與 primary 對齊，或明確跳過
 舊多寫協議和舊遷移欄位直接拒絕。啟用多寫前必須建立完整備份；回滾二進位制
 前必須先恢復該備份。
 
+## Backup 配置變更
+
+當配置中的 backup 名稱集合與已持久化的 `backend_states` 不一致時，啟動流程
+會重置 V2 multi-write metadata，並對 primary 當前檔案重新執行 full import。該
+路徑覆蓋新增、刪除和更名 backup。
+
+配置變更期間會重新掃描 primary 當前檔案，並驅動 backup catch-up。該過程會帶來
+額外 I/O，前臺 IOPS 可能升高。建議在維護視窗內執行，且切換期間不進行業務寫入。
+
+reset + full import 只列舉 primary 當前仍存在的檔案，不會保留舊 segment 中的
+刪除或移動歷史。若保留的 backup 已經存在 primary 中不再存在的舊檔案，切換後這些
+舊檔案可能繼續殘留在 backup 側。若切換期間同時發生寫入、刪除或移動操作，backup
+側也可能產生少量髒資料，主要表現為舊路徑或舊版本檔案殘留。
+
 ## 驗證
 
 使用普通檔案 API 驗證 primary 讀寫。使用[指標](../concepts/12-metrics.md)

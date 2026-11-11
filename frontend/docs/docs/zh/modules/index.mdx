@@ -1,14 +1,13 @@
 # 業務模組
 
-三個個人終端模組已提供佔位元件，可先接入佈局。props 已定型——請求配置、受控狀態、回撥、插槽與文案——但每個元件仍只展示模組名稱與可替換的佔位文案；業務 Hook、API 請求和模組內部互動隨實際能力遷入後補充。
+FileBrowser 提供目錄、搜尋與預覽聯動；Console 提供原生命令面板，ScopeCascade 提供級聯選擇。取數與狀態 Hook 均內建。對話服務由宿主接入。
 
-props 裡沒有資料欄位。模組通過 Hook 自己取數，宿主給配置與受控值，模組通過回撥上報變化。
+模組通過 Hook 讀取原生介面，宿主提供配置、受控值與回撥。兩個看板還接受可選 `data`，供閘道器或宿主提供額外資料；傳入後不發起原生請求。
 
 | 模組                             | 元件          | 目標能力   |
 | -------------------------------- | ------------- | ---------- |
 | [`file-browser`](./file-browser) | `FileBrowser` | 檔案瀏覽。 |
 | [`console`](./console)           | `Console`     | 互動面板。 |
-| [`task-center`](./task-center)   | `TaskCenter`  | 任務中心。 |
 
 ## 預覽
 
@@ -20,11 +19,36 @@ props 裡沒有資料欄位。模組通過 Hook 自己取數，宿主給配置�
 
 ## 匯入與樣式
 
-從 `@openviking/react/modules/<模組>` 匯入元件及其 Props / Labels / Slots 型別。三個元件的本體與主 Props 型別也從根入口 `@openviking/react` 匯出；Labels、Slots 與列舉型別只從子路徑匯入。
+從 `@openviking/react/modules/<模組>` 匯入元件及其 Props / Labels / Slots 型別。模組元件的本體與主 Props 型別也從根入口 `@openviking/react` 匯出；Labels、Slots 與列舉型別只從子路徑匯入。
 
 JavaScript 不載入 CSS。單模組使用 `@openviking/react/modules/<模組>/style.css`，全部模組使用 `@openviking/react/modules/style.css`，整庫使用 `@openviking/react/style.css`，每個樣式入口均可獨立消費。沒有 `@openviking/react/modules` 分類聚合 JavaScript 入口。
 
-當前佔位元件接受 `className`、`style` 和 `labels`，無需 Provider。業務 Hook、共享 Client 與 `OpenVikingProvider` 仍為規劃，尚未匯出。
+模組請求繼承 `@openviking/react/client` 提供的 `OpenVikingProvider`，Hook 不作為公開 API。FileBrowser 自動載入目錄；Console 掛載本身不發請求，提交命令後才訪問服務。
+
+## Provider
+
+模組不通過 props 接收 Client，而是在內部 Hook 中從 Context 取用。所有模組都必須包在 `@openviking/react/client` 的 `OpenVikingProvider` 內，在 Provider 上統一配置服務地址、身份與憑證；沒有 Provider，模組拿不到可用的請求配置：FileBrowser 不會發起請求、保持空態，Console 只能退回同源預設 Client 且不帶身份配置。
+
+```tsx
+import { OpenVikingProvider } from '@openviking/react/client';
+import { FileBrowser } from '@openviking/react/modules/file-browser';
+import { Console } from '@openviking/react/modules/console';
+import '@openviking/react/modules/style.css';
+
+<OpenVikingProvider
+  locale="zh-CN"
+  baseURL={endpoint}
+  apiKey={apiKey}
+  accountId={accountId}
+  userId={userId}
+  resourceId={libraryId}
+>
+  <FileBrowser />
+  <Console />
+</OpenVikingProvider>;
+```
+
+Provider 通過 Context 下發配置：模組不接收 `baseURL` 或憑證作為 props；訪問其他知識庫的模組只用 `requestOptions` 覆蓋該欄位。巢狀 Provider 時，內層只覆蓋自己宣告的欄位，其餘繼承外層。
 
 ## 宿主職責
 
@@ -32,4 +56,4 @@ JavaScript 不載入 CSS。單模組使用 `@openviking/react/modules/<模組>/s
 
 ## 級聯選擇
 
-[ScopeCascade 級聯選擇](./scope-cascade) 提供已實現的請求與級聯 Hook 及預設檢視。只需傳三個宿主介面，各級獨立訂閱。
+[ScopeCascade 級聯選擇](./scope-cascade) 內建請求與級聯狀態。只需傳三個宿主介面，各級內部獨立訂閱。
