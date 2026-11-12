@@ -1,208 +1,411 @@
 # FilePreview 檔案預覽
 
-可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
+帶頁籤的檔案預覽：按格式渲染檔案正文，提供路徑麵包屑、預覽與原始碼切換、文本編輯和宿主自定義操作。
 
-帶頁籤的檔案預覽。宿主給出內容與檔名，元件負責格式識別、頁籤行、內容區標題行與正文。
+## 何時使用
 
-正文已接入按需載入的 FileViewerCore，支援 Markdown、圖片、程式碼、表格、PDF、Office 和音影片。元件保留控制台式檔案標籤、路徑欄和頁尾。
+- 需要在應用裡預覽 Markdown、程式碼、JSON、表格、PDF、Office 文件、圖片和音影片，並保留路徑、頁籤和操作區時。
+- 需要在同一塊區域裡切換檔案、目錄摘要（L0 摘要、L1 總覽）和宿主自己的內容（看板、圖譜）時：三者分別對應 `file`、`directory`、`content` 三種頁籤。
+- 需要自己決定資料來源、儲存方式和導航時：元件不發起請求，也不需要 `OpenVikingProvider`。使用 [FileBrowser](../modules/file-browser) 時預覽已經內建，不需要單獨接入。
 
-## 基礎用法
+## 引入
 
-至少傳入一個頁籤。檔案頁籤攜帶 `source`，內容頁籤攜帶由宿主自行渲染的節點。
+FilePreview 用可選 peer `@ark-design/ui` 的 FileViewer 渲染正文。版本需滿足 `>=0.0.0-beta.7`，用 `beta` 標籤或具體版本號安裝；它把 `@arco-design/web-react`、`three` 和 `@types/three` 宣告為必需 peer，需要一併安裝：
 
-```tsx file="../../_demos/file-preview-basic.tsx" preview
-
+```bash
+npm install @ark-design/ui@beta @arco-design/web-react three@^0.180.0 @types/three@^0.180.0
 ```
-
-## 分級內容與圖片
-
-```tsx file="../../_demos/file-preview-console.tsx" preview
-
-```
-
-檔案頁籤可提供 `levels`：每項包含 `key`、`label`、`source`，可選 `resources`、`disabled`、`editing`。元件在路徑下方顯示分級切換，未指定時選第一個可用層級。`activeLevelKey` 與 `onLevelChange` 可控制當前層級；停用項不可選。切換層級會丟棄草稿、恢復預覽模式；讀取或儲存期間禁止切換。層級預設只讀，只有該項明確提供 `editing` 才可編輯。
-
-各級內容由宿主載入；目錄可提供 L0 摘要與 L1 總覽，檔案可增加 L2 正文。元件不自行讀取服務端摘要。`source` 仍為必填，作為沒有可用層級時的回落來源。
-
-原始圖片用 `source.url` 或 `source.file`，不要把二進位制圖片當成 `source.content` 文本傳入。圖片在白色面板內按比例居中，右下角顯示原始畫素尺寸；點選可放大。
-
-Markdown 內圖片可通過 `resources` 按原始圖片地址匹配；動態鑑權圖片使用 `resolveImage(src, source): Promise<string>`，宿主根據當前層級的 `source.path` 解析相對路徑或 Viking URI 並返回可訪問地址。宿主管理請求、取消和 blob URL 回收。每層可提供獨立 `resources`，省略時繼承檔案頁籤資源。元件不會自動把 `viking://` 轉成 HTTP 地址。
-
-`slots.footer` 可放更新時間與內容解析說明，採用左右對齊佈局；許可權徽標繼續使用 `slots.titleExtra`，動作選單由 `slots.actions` 提供。
-
-## 兩類頁籤
-
-| 型別              | 由誰渲染     | 典型用途               |
-| ----------------- | ------------ | ---------------------- |
-| `kind: 'file'`    | 元件         | 檔案原文、原始碼、文件 |
-| `kind: 'content'` | 宿主原樣渲染 | 看板、圖譜、摘要       |
-
-兩類共享外殼——頁籤行、路徑麵包屑與標題行動作區。差異在正文怎麼來，以及預覽/原始碼切換隻屬於檔案頁籤：內容頁籤需要多種檢視時在 `content` 裡自行實現。
-
-**元件不內建動作按鈕。** 複製正文、下載、預覽/原始碼切換、編輯這些按鈕依賴宿主的產品語義與文案，放在元件裡既無法裁剪也難換形態，因此由宿主在 `slots.actions` 裡渲染。元件通過該插槽的函式形式給出 `FilePreviewActions` 上下文——當前檢視模式、編輯態、各項能力是否可用，以及改變它們的方法；狀態仍由元件維護，宿主不需要接管。
-
-複製路徑是例外：有 `source.path` 的檔案在任何宿主下都需要它，因此內建在麵包屑末尾。
-
-當前頁籤可通過 `activeKey` / `onActiveKeyChange` 受控，也可通過 `defaultActiveKey` 指定初始值；支援 ref 控制代碼：
-
-```tsx
-const previewRef = useRef<FilePreviewHandle>(null);
-previewRef.current?.setActiveTab('dashboard');
-```
-
-## 內容從哪來
-
-`source` 接受三種互斥輸入，按順序取第一個有值的：
-
-- `content` —— 內聯文本，會編碼成位元組交給底座。
-- `file` —— `File` 或 `Blob`，直接透傳。
-- `url` —— 可訪問連結，元件不自行鑑權。
-
-`fileName` 必填，同時決定格式識別與頁籤預設標題。
-
-## 狀態
-
-載入中、失敗與格式不支援都不是 props：載入與失敗由元件判定，格式是否可預覽由底座判定。三種狀態都可以通過插槽替換：
-
-- `slots.loadingFallback`
-- `slots.errorFallback`
-- `slots.unsupportedFallback` —— 交給底座接管整個不支援態，因此傳了它之後底座原本給出的下載入口也不再出現
-
-宿主提供非同步 `editing.save` 執行儲存，可選提供 `editing.loadContent` 讀取完整文本；返回 `undefined` 表示放棄編輯，拒絕時顯示讀取失敗提示。儲存失敗時保留草稿並顯示錯誤。`editing.onSave` 僅通知儲存成功，`editing.onCancel` 通知草稿已被丟棄。儲存中阻止重複提交與頁籤切換。
-
-執行能力與通知分開：操作成功後才觸發對應的 `on…` 回撥，失敗時不觸發。省略方法時隱藏或停用對應入口，通知本身不承擔操作。Markdown 連結通過 `operations.openUri` 交給宿主解析和導航。
-
-## 屬性
-
-| 屬性     | 型別                                             | 預設值 | 說明                                                                                     |
-| -------- | ------------------------------------------------ | ------ | ---------------------------------------------------------------------------------------- |
-| `tabs`   | `readonly [FilePreviewTab, ...FilePreviewTab[]]` | 必填   | 至少一個頁籤，初始展示第一個。                                                           |
-| `labels` | `FilePreviewLabels`                              | locale | 元件自渲染部分的文案（複製路徑、載入與失敗態、空檔案與截斷提示）；動作按鈕的文案歸宿主。 |
-| 其餘屬性 | `HTMLAttributes<HTMLDivElement>`                 | —      | 標準 div 屬性。                                                                          |
-
-### 頁簽字段
-
-兩類頁籤共有：
-
-| 屬性           | 型別                         | 預設值  | 說明                                   |
-| -------------- | ---------------------------- | ------- | -------------------------------------- |
-| `key`          | `string`                     | 必填    | 頁籤唯一標識。                         |
-| `title`        | `ReactNode`                  | 檔名    | 頁籤行顯示內容；內容頁籤必填。         |
-| `icon`         | `ReactNode`                  | —       | 頁籤圖示，由宿主提供；省略則不顯示。   |
-| `labels`       | `Partial<FilePreviewLabels>` | —       | 覆蓋該頁籤的文案。                     |
-| `disabled`     | `boolean`                    | `false` | 停用該頁籤。                           |
-| `onOpenParent` | `(path: string) => void`     | —       | 上級目錄成功開啟後觸發；失敗時不觸發。 |
-| `onCopyPath`   | `(path: string) => void`     | —       | 路徑複製成功後通知。                   |
-
-`slots.titleExtra` 渲染在路徑與複製按鈕之後、動作組之前，用於標題旁的附加標記，例如許可權標籤、狀態徽標或版本號。元件不判斷標記的含義與樣式，傳入什麼就渲染什麼；不傳時不佔位。
-
-```tsx
-{
-  kind: 'file',
-  key: 'file',
-  source: { content, fileName: 'JC-17-A.md', path },
-  slots: { titleExtra: <Tag>可管理</Tag> },
-}
-```
-
-檔案頁籤額外提供：
-
-| 屬性             | 型別                               | 預設值         | 說明                                                                                              |
-| ---------------- | ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------- |
-| `source`         | `FilePreviewSource`                | 必填           | 內容與檔名。                                                                                      |
-| `operations`     | `FilePreviewOperations`            | —              | 非同步執行能力：`openParent(path)`、`download()`，均返回 `Promise<void>`。                        |
-| `resources`      | `readonly FileViewerResource[]`    | —              | 伴隨資源，例如 3D 貼圖。                                                                          |
-| `levels`         | `readonly FilePreviewLevel[]`      | —              | 分級內容，每項獨立提供 source，可覆蓋 resources 與 editing。                                      |
-| `activeLevelKey` | `string`                           | 第一個可用層級 | 受控層級。                                                                                        |
-| `onLevelChange`  | `(key: string) => void`            | —              | 切換意圖；受控時由宿主更新 activeLevelKey。                                                       |
-| `resolveImage`   | `(src, source) => Promise<string>` | —              | 宿主解析 Markdown 圖片，返回可訪問 URL。                                                          |
-| `editing`        | `FilePreviewEditing`               | —              | 編輯能力；不傳即只讀。                                                                            |
-| `slots`          | `FilePreviewFileTabSlots`          | —              | `actions`（節點或接收上下文的函式）、`titleExtra`、`footer`，以及載入、失敗、格式不支援三類兜底。 |
-| `onCopyContent`  | `(text: string) => void`           | —              | 正文複製成功後通知。                                                                              |
-| `onDownload`     | `() => void`                       | —              | 下載操作成功後觸發；失敗時不觸發。                                                                |
-| `onOpenUri`      | `(uri: string) => void`            | —              | 正文資源成功開啟後觸發；失敗時不觸發。                                                            |
-
-內容頁籤額外提供：
-
-| 屬性      | 型別        | 預設值 | 說明                                                       |
-| --------- | ----------- | ------ | ---------------------------------------------------------- |
-| `content` | `ReactNode` | 必填   | 頁籤正文，鋪滿頁籤行以下的整個區域，由宿主自行排版與滾動。 |
-
-內容頁籤沒有內容區標題行，也不消費 `slots`——那一整塊都是宿主的，沒有元件提供的標題行或狀態可填。元件也不在 `content` 外面套容器，套一層只會限制宿主的排版。需要工具欄、標題或狀態提示時，都寫在自己的 `content` 裡。
 
 ```tsx
 import { FilePreview } from '@openviking/react/components/file-preview';
 import '@openviking/react/components/file-preview/style.css';
 ```
 
-複製由元件完成，宿主只需渲染按鈕並呼叫 `actions.copyContent()` / `actions.copyPath()`，兩者返回是否成功。`onCopyContent` / `onCopyPath` 在複製成功後觸發，接收已複製的值；失敗時不觸發。
+`style.css` 已包含 FileViewer 的樣式，不需要另外引入。正文的顏色取自 Arco 的主題變數，需要在應用入口再載入一份顏色主題，見下方的「主題變數」。
 
-## 無障礙
+## 程式碼演示
 
-頁籤行使用 `role="tablist"` 與 `role="tab"` 按鈕並上報 `aria-selected`。圖示按鈕都帶 `aria-label` 與 `title` 提示。路徑麵包屑只在傳入 `operations.openParent` 時才可點選。
+### 基礎用法
 
-## 類名
+三個頁籤分別是可編輯的 Markdown、原生圖片預覽和宿主渲染的內容頁籤。點選路徑層級、正文裡的連結，或在預覽與原始碼之間切換，結果顯示在示例下方。
 
-類名帶 `ov-` 字首。塊名為 `ov-file-preview`，元素使用 `ov-file-preview__<元素>`。
+```tsx file="../../_demos/file-preview-basic.tsx" preview
 
-| 類名                               | 元素     | 用途                           |
-| ---------------------------------- | -------- | ------------------------------ |
-| `ov-file-preview`                  | 根節點   | 縱向佈局與基礎排版。           |
-| `ov-file-preview__tab-row`         | 頁籤欄   | 可橫向滾動的頁籤行。           |
-| `ov-file-preview__tab`             | 頁籤     | 單個頁籤，帶 `aria-selected`。 |
-| `ov-file-preview__tab-title`       | 頁籤標題 | 截斷的頁籤文本。               |
-| `ov-file-preview__header`          | 頭部     | 路徑行與操作區。               |
-| `ov-file-preview__breadcrumb`      | 麵包屑   | 上級目錄導航按鈕。             |
-| `ov-file-preview__header-actions`  | 操作區   | 切換、按鈕與擴充套件操作。     |
-| `ov-file-preview__action`          | 圖示按鈕 | 方形純圖示控制元件。           |
-| `ov-file-preview__button`          | 按鈕     | 次要按鈕。                     |
-| `ov-file-preview__button--primary` | 按鈕     | 主要（儲存）按鈕。             |
-| `ov-file-preview__switch`          | 切換組   | 編輯與預覽切換容器。           |
-| `ov-file-preview__switch-item`     | 切換項   | 單個切換，帶 `data-active`。   |
-| `ov-file-preview__body`            | 滾動區域 | 內容滾動容器。                 |
-| `ov-file-preview__pre`             | 預覽文本 | 只讀文本內容。                 |
-| `ov-file-preview__textarea`        | 編輯器   | 可編輯文本域。                 |
-| `ov-file-preview__state`           | 狀態面板 | 整高的載入、空態與錯誤檢視。   |
-
-```css
-.my-workbench .ov-file-preview__tab {
-  max-width: 180px;
-}
 ```
+
+示例用 `slots.actions` 渲染了自己的工具欄，按鈕來自文件站內部控制元件，應用裡換成自己的按鈕元件。
+
+### 分級內容與圖片
+
+用 `levels` 為同一個檔案提供 L0、L1、L2 三級內容，Markdown 裡的相對路徑與 `viking://` 圖片由 `resolveImage` 解析。切換層級檢查各級圖片，在「原始圖片」裡點選圖片可以放大。
+
+```tsx file="../../_demos/file-preview-console.tsx" preview
+
+```
+
+示例使用固定的模擬資料；「空檔案」和「圖片失敗」演示對應的狀態。
+
+### 注入操作
+
+通過 `actions` 注入宿主操作：一個操作顯示為按鈕，多個操作收進「…」選單。切換操作佈局，勾選「模擬失敗」檢視失敗提示，其餘核取方塊控制內建入口的顯隱。
+
+```tsx file="../../_demos/file-preview-actions.tsx" preview
+
+```
+
+模擬操作等待 2 秒；執行期間切換頁籤或勾選「自定義工具欄」，同一資源的操作仍保持鎖定。
+
+### 狀態兜底
+
+切換檔案型別和讀取狀態，對比內建狀態與 `slots` 裡的自定義狀態。
+
+```tsx file="../../_demos/file-preview-fallbacks.tsx" preview
+
+```
+
+示例故意使用無效的圖片和影片資料觸發錯誤態；選擇「不支援的格式」可以下載示例的原始內容。
+
+## API
+
+### FilePreview
+
+| 引數              | 說明                                                                  | 型別                                             | 預設值                   |
+| ----------------- | --------------------------------------------------------------------- | ------------------------------------------------ | ------------------------ |
+| tabs              | 頁籤列表，至少一個，用 `kind` 區分檔案、目錄和內容頁籤                | `readonly [FilePreviewTab, ...FilePreviewTab[]]` | 必填                     |
+| activeKey         | 受控的當前頁籤，找不到對應頁籤時顯示第一個                            | `string`                                         | -                        |
+| defaultActiveKey  | 非受控時的初始頁籤                                                    | `string`                                         | 第一個頁籤               |
+| toolbar           | 統一設定所有頁籤的內建入口，頂層設為 `false` 的入口，頁籤無法重新開啟 | `FilePreviewToolbarOptions`                      | -                        |
+| onActiveKeyChange | 切換頁籤時觸發，引數為新頁籤的 `key`，受控時由宿主更新 `activeKey`    | `(key: string) => void`                          | -                        |
+| labels            | 覆蓋介面文案，頁籤的 `labels` 優先                                    | `FilePreviewLabels`                              | -                        |
+| locale            | 介面語言，規則見[國際化](../guide/i18n)                               | `'zh-CN' \| 'en-US'`                             | 繼承上級，預設 `'en-US'` |
+| ref               | 取得命令式控制代碼，切換頁籤或訪問 FileViewer                             | `Ref<FilePreviewHandle>`                         | -                        |
+| className、style  | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                | HTML 屬性                                        | -                        |
+
+### FilePreviewTabBase
+
+三種頁籤共有的欄位。內容頁籤沒有標題行，`toolbar`、`onOpenParent`、`onCopyPath` 和 `labels` 對它無效。
+
+| 引數         | 說明                                                                                          | 型別                         | 預設值                                         |
+| ------------ | --------------------------------------------------------------------------------------------- | ---------------------------- | ---------------------------------------------- |
+| key          | 頁籤的唯一標識                                                                                | `string`                     | 必填                                           |
+| title        | 頁籤行顯示的內容，可以是文本或帶樣式的節點                                                    | `ReactNode`                  | 檔案頁簽為 `source.fileName`，目錄頁簽為 `key` |
+| icon         | 頁籤圖示，省略時不佔圖示位，按檔名取圖示可用 `@openviking/react/icons` 的 `getFileTypeIcon` | `ReactNode`                  | -                                              |
+| disabled     | 停用該頁籤，停用後不能選中                                                                    | `boolean`                    | `false`                                        |
+| toolbar      | 隱藏該頁籤的內建入口，不能重新開啟頂層已關閉的入口                                            | `FilePreviewToolbarOptions`  | -                                              |
+| onOpenParent | 檔案頁籤的 `operations.openParent` 完成後觸發，引數為被點選層級的完整 URI，目錄頁籤不觸發     | `(uri: string) => void`      | -                                              |
+| onCopyPath   | 路徑複製成功後觸發，引數為已複製的路徑                                                        | `(path: string) => void`     | -                                              |
+| labels       | 覆蓋該頁籤的文案，優先於頂層 `labels`                                                         | `Partial<FilePreviewLabels>` | -                                              |
+
+### FilePreviewFileTab
+
+按格式渲染 `source` 的頁籤，包含 `FilePreviewTabBase` 的全部欄位。
+
+| 引數           | 說明                                                                                 | 型別                                                          | 預設值  |
+| -------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------- | ------- |
+| kind           | 頁籤型別，固定為 `'file'`                                                            | `'file'`                                                      | 必填    |
+| source         | 要預覽的內容與檔案資訊，有可用的 `levels` 時渲染當前層級的 `source`                  | `FilePreviewSource`                                           | 必填    |
+| loading        | 正文還在讀取：正文區顯示載入態，頁籤行和路徑行照常顯示，此時 `source` 可以沒有內容   | `boolean`                                                     | `false` |
+| operations     | 非同步執行能力，省略的方法對應的入口不可用                                             | `FilePreviewOperations`                                       | -       |
+| resources      | 伴隨資源，按 `key` 匹配 Markdown 裡的圖片地址，可以是相對路徑或 `viking://` URI      | `readonly FileViewerResource[]`                               | -       |
+| levels         | 分級內容，每級有自己的 `source`、`resources` 和 `editing`                            | `readonly FilePreviewLevel[]`                                 | -       |
+| activeLevelKey | 受控的當前層級，省略時使用第一個未停用的層級                                         | `string`                                                      | -       |
+| resolveImage   | 解析 Markdown 裡的圖片地址並返回可訪問的 URL，請求、取消和 Blob URL 的回收由宿主負責 | `(src: string, source: FilePreviewSource) => Promise<string>` | -       |
+| editing        | 編輯能力，省略時只讀，是否可編輯只取決於它；啟用 `levels` 後只取當前層級的 `editing` | `FilePreviewEditing`                                          | -       |
+| actions        | 標題行裡的宿主操作，陣列或接收上下文的函式，規則見「注意」                           | `FilePreviewActionSource`                                     | -       |
+| onLevelChange  | 切換層級時觸發，引數為新層級的 `key`，受控時由宿主更新 `activeLevelKey`              | `(key: string) => void`                                       | -       |
+| onOpenUri      | Markdown 裡的連結通過 `operations.openUri` 開啟後觸發，引數為被點選的連結地址        | `(uri: string) => void`                                       | -       |
+| slots          | 標題行、頁尾與狀態插槽                                                               | `FilePreviewFileTabSlots`                                     | -       |
+
+### FilePreviewDirectoryTab
+
+目錄的多級摘要，例如 L0 摘要與 L1 總覽，包含 `FilePreviewTabBase` 的全部欄位。摘要只讀，沒有 `editing`。
+
+| 引數                | 說明                                                           | 型別                                                                   | 預設值  |
+| ------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------- | ------- |
+| kind                | 頁籤型別，固定為 `'directory'`                                 | `'directory'`                                                          | 必填    |
+| levels              | 摘要層級，至少一級，多於一級時在標題行下顯示切換頁籤           | `readonly [FilePreviewDirectoryLevel, ...FilePreviewDirectoryLevel[]]` | 必填    |
+| loading             | 摘要還在讀取：正文區顯示內建載入態，層級切換等資料到達後再顯示 | `boolean`                                                              | `false` |
+| activeLevelKey      | 受控的當前層級                                                 | `string`                                                               | -       |
+| defaultLevelKey     | 非受控時的初始層級                                             | `string`                                                               | 第一級  |
+| resources           | 各層級共用的伴隨資源，層級自己的 `resources` 優先              | `readonly FileViewerResource[]`                                        | -       |
+| resolveImage        | 解析當前層級 Markdown 裡的圖片地址，規則同文件頁籤             | `(src: string, source: FilePreviewSource) => Promise<string>`          | -       |
+| operations          | 非同步執行能力，目錄頁籤只使用 `openParent`                      | `FilePreviewOperations`                                                | -       |
+| actions             | 標題行裡的宿主操作，上下文裡的 `source` 和 `path` 指向當前層級 | `FilePreviewActionSource`                                              | -       |
+| onActiveLevelChange | 層級變化時觸發，引數為新層級的 `key`                           | `(key: string) => void`                                                | -       |
+| slots               | 標題行、頁尾與狀態插槽，與檔案頁籤相同                         | `FilePreviewFileTabSlots`                                              | -       |
+
+### FilePreviewContentTab
+
+展示宿主自己的內容，例如看板或圖譜，包含 `FilePreviewTabBase` 的全部欄位。
+
+| 引數    | 說明                                                 | 型別        | 預設值 |
+| ------- | ---------------------------------------------------- | ----------- | ------ |
+| kind    | 頁籤型別，固定為 `'content'`                         | `'content'` | 必填   |
+| title   | 頁籤行顯示的內容，內容頁籤沒有檔名可以回落         | `ReactNode` | 必填   |
+| content | 頁籤正文，鋪滿頁籤行以下的區域，排版與滾動由宿主負責 | `ReactNode` | 必填   |
+
+### FilePreviewSource
+
+`content`、`file`、`url` 同時提供時，按這個順序取第一個有值的；三者都沒有時顯示「不支援預覽」狀態。
+
+| 引數      | 說明                                                                                      | 型別           | 預設值  |
+| --------- | ----------------------------------------------------------------------------------------- | -------------- | ------- |
+| fileName  | 檔名，用於識別格式和顯示標題，無副檔名的檔案按檔名匹配，例如 `Dockerfile`、`Makefile` | `string`       | 必填    |
+| content   | 文本內容，適用於 Markdown、JSON、程式碼等，只有空字串顯示「檔案為空」                     | `string`       | -       |
+| file      | 二進位制檔案，適用於 PDF、Office 文件、表格和圖片等                                         | `File \| Blob` | -       |
+| url       | 可訪問的檔案地址，元件不做鑑權                                                            | `string`       | -       |
+| path      | 完整路徑，顯示為麵包屑並作為複製路徑的內容，省略時麵包屑只顯示檔名                      | `string`       | -       |
+| fileType  | 顯式的格式提示，優先於副檔名與 MIME                                                       | `string`       | -       |
+| truncated | 正文只讀取了一部分，為 `true` 時在檔案頁籤的正文下方提示                                  | `boolean`      | `false` |
+
+### FilePreviewLevel
+
+檔案頁籤 `levels` 的一級內容。
+
+| 引數      | 說明                                           | 型別                            | 預設值  |
+| --------- | ---------------------------------------------- | ------------------------------- | ------- |
+| key       | 層級的唯一標識                                 | `string`                        | 必填    |
+| label     | 層級切換按鈕顯示的內容                         | `ReactNode`                     | 必填    |
+| source    | 該層級的內容與檔案資訊                         | `FilePreviewSource`             | 必填    |
+| resources | 該層級的伴隨資源，省略時使用頁籤的 `resources` | `readonly FileViewerResource[]` | -       |
+| disabled  | 停用該層級，停用後不能選中                     | `boolean`                       | `false` |
+| editing   | 該層級的編輯能力，省略時該層級只讀             | `FilePreviewEditing`            | -       |
+
+### FilePreviewDirectoryLevel
+
+目錄頁籤 `levels` 的一級摘要。
+
+| 引數      | 說明                                           | 型別                            | 預設值 |
+| --------- | ---------------------------------------------- | ------------------------------- | ------ |
+| key       | 層級的唯一標識，用於切換與受控狀態             | `string`                        | 必填   |
+| label     | 層級切換頁籤顯示的內容，例如「L0 摘要」        | `ReactNode`                     | 必填   |
+| source    | 該層級的正文來源，與檔案頁籤的 `source` 相同   | `FilePreviewSource`             | 必填   |
+| resources | 該層級的伴隨資源，省略時使用頁籤的 `resources` | `readonly FileViewerResource[]` | -      |
+
+### FilePreviewOperations
+
+元件呼叫這些方法執行操作，Promise 完成後才觸發對應的 `onOpenParent`、`onOpenUri`，拒絕時靜默，不觸發通知。
+
+| 引數       | 說明                                                                                             | 型別                             | 預設值 |
+| ---------- | ------------------------------------------------------------------------------------------------ | -------------------------------- | ------ |
+| openParent | 開啟被點選的祖先層級，引數是該層級的完整 URI，省略時麵包屑的層級不可點選                         | `(uri: string) => Promise<void>` | -      |
+| openUri    | 開啟 Markdown 裡被點選的連結，引數是 Markdown 裡寫的原始地址，傳入後由宿主接管導航並解析相對路徑 | `(uri: string) => Promise<void>` | -      |
+
+### FilePreviewEditing
+
+| 引數        | 說明                                                                                                                  | 型別                                                          | 預設值 |
+| ----------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- | ------ |
+| save        | 儲存草稿，拋錯或 reject 時保留草稿並顯示儲存失敗的提示                                                                | `(value: string) => Promise<void>`                            | 必填   |
+| loadContent | 進入編輯時讀取完整文本，返回 `undefined` 放棄本次編輯；省略時使用 `content` 或 `file` 的文本，只提供 `url` 時必須提供 | `(source: FilePreviewSource) => Promise<string \| undefined>` | -      |
+| onSave      | 儲存成功後觸發，引數為已儲存的文本                                                                                    | `(value: string) => void`                                     | -      |
+| onCancel    | 取消編輯，或切換頁籤、層級而丟棄草稿後觸發，引數為丟棄的文本；儲存成功時不觸發                                        | `(value: string) => void`                                     | -      |
+
+### FilePreviewAction
+
+| 引數      | 說明                                                               | 型別            | 預設值  |
+| --------- | ------------------------------------------------------------------ | --------------- | ------- |
+| key       | 操作的穩定標識，同一組內唯一                                       | `string`        | 必填    |
+| icon      | 圖示，按鈕的無障礙名稱來自 `label`，圖示作為裝飾隱藏               | `ReactNode`     | 必填    |
+| label     | 懸停和聚焦時的提示、選單項文字，同時是按鈕的無障礙名稱             | `string`        | 必填    |
+| onClick   | 點選時呼叫，可以返回 Promise，返回值被忽略，拋錯或 reject 視為失敗 | `() => unknown` | 必填    |
+| disabled  | 禁止點選                                                           | `boolean`       | `false` |
+| className | 附加到按鈕和選單項上的類名                                         | `string`        | -       |
+
+### FilePreviewToolbarOptions
+
+為 `false` 的入口始終隱藏，即使頁籤提供了對應能力；頁籤的 `toolbar` 只能進一步隱藏頂層允許顯示的入口。
+
+| 引數       | 說明                                            | 型別      | 預設值 |
+| ---------- | ----------------------------------------------- | --------- | ------ |
+| copyPath   | 路徑旁的複製按鈕，有路徑時顯示                  | `boolean` | `true` |
+| viewSwitch | 預覽與原始碼切換，當前格式同時支援兩種檢視時顯示  | `boolean` | `true` |
+| edit       | 編輯按鈕，當前檔案或層級提供了 `editing` 時顯示 | `boolean` | `true` |
+
+### FilePreviewHeaderSlots
+
+標題行與頁尾的插槽。
+
+| 引數         | 說明                                                                                 | 型別                                                        | 預設值 |
+| ------------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------- | ------ |
+| actions      | 替換預設工具欄，包含編輯時的儲存與取消，傳 `null` 隱藏整個操作區，函式形式接收上下文 | `ReactNode \| ((actions: FilePreviewActions) => ReactNode)` | -      |
+| extraActions | 追加到預設工具欄末尾的節點，編輯時隱藏，設定了 `actions` 時不渲染                    | `ReactNode`                                                 | -      |
+| titleExtra   | 路徑旁的附加內容，例如許可權標記、狀態徽標或版本號，元件不解釋它                       | `ReactNode`                                                 | -      |
+| footer       | 正文下方的補充資訊，例如更新時間和內容來源說明，位於滾動區之外，多個子節點左右對齊   | `ReactNode`                                                 | -      |
+
+### FilePreviewFileTabSlots
+
+包含 `FilePreviewHeaderSlots` 的全部欄位，另有載入、失敗和格式不支援時的替代內容，不傳時使用內建狀態。
+
+| 引數                | 說明                                                                                | 型別                               | 預設值 |
+| ------------------- | ----------------------------------------------------------------------------------- | ---------------------------------- | ------ |
+| loadingFallback     | 讀取中的替代內容，`loading` 為 `true` 時也使用                                      | `ReactNode`                        | -      |
+| errorFallback       | 讀取失敗時的替代內容，替換內建的失敗提示和重試按鈕                                  | `ReactNode`                        | -      |
+| unsupportedFallback | 格式無法預覽時的替代內容，傳入後接管整個不支援態，FileViewer 的下載入口隨之不再顯示 | `ReactNode`                        | -      |
+| confirmFallback     | 大檔案確認態的替代元件，收到 `onConfirm`、`onCancel` 等屬性                         | `ComponentType<ConfirmSlotProps>`  | -      |
+| downloadFallback    | 無法內聯預覽時的替代元件，收到 `onDownload`、`onRetry` 等屬性                       | `ComponentType<DownloadSlotProps>` | -      |
+
+### FilePreviewActions
+
+元件傳給 `actions` 函式和 `slots.actions` 渲染函式的上下文，只讀取，不需要自己構造。
+
+| 引數          | 說明                                                             | 型別                                  | 預設值 |
+| ------------- | ---------------------------------------------------------------- | ------------------------------------- | ------ |
+| source        | 當前正文的來源，啟用分級內容後指向當前層級                       | `FilePreviewSource`                   | -      |
+| path          | 當前路徑，啟用分級內容後指向當前層級                             | `string`                              | -      |
+| viewMode      | 當前檢視模式，`'preview'` 或 `'source'`                          | `FilePreviewViewMode`                 | -      |
+| setViewMode   | 切換檢視模式                                                     | `(mode: FilePreviewViewMode) => void` | -      |
+| canSwitchView | 當前格式是否同時支援預覽與原始碼，為 `false` 時不要渲染切換控制元件    | `boolean`                             | -      |
+| editing       | 是否處於編輯態                                                   | `boolean`                             | -      |
+| busy          | 是否有儲存或讀取正在進行                                         | `boolean`                             | -      |
+| canEdit       | 是否可以進入編輯：提供了 `editing`，不是圖片或影片，且不在編輯態 | `boolean`                             | -      |
+| startEditing  | 進入編輯態，先讀取完整文本                                       | `() => void`                          | -      |
+| saveEditing   | 儲存草稿，成功時返回 `true`                                      | `() => Promise<boolean>`              | -      |
+| cancelEditing | 放棄草稿並退出編輯態                                             | `() => void`                          | -      |
+| canCopyPath   | 是否有可複製的路徑                                               | `boolean`                             | -      |
+| copyPath      | 複製路徑，成功時返回 `true`                                      | `() => Promise<boolean>`              | -      |
+
+### FilePreviewLabels
+
+所有欄位都是可選的 `string`，省略的欄位使用當前語言的預設文案。
+
+| 引數           | 說明                                                                   | 型別     | 預設值                 |
+| -------------- | ---------------------------------------------------------------------- | -------- | ---------------------- |
+| previewImage   | 放大圖片按鈕的無障礙名稱，後接檔名                                   | `string` | `'放大圖片'`           |
+| closePreview   | 放大圖片彈窗裡關閉按鈕的文字                                           | `string` | `'關閉預覽'`           |
+| showHiddenPath | 麵包屑裡摺疊層級的「…」按鈕的無障礙名稱                                | `string` | `'顯示隱藏的路徑層級'` |
+| copyPath       | 複製路徑按鈕的提示與無障礙名稱                                         | `string` | `'複製路徑'`           |
+| copied         | 路徑複製成功的反饋                                                     | `string` | `'已複製'`             |
+| copyFailed     | 路徑複製失敗的反饋                                                     | `string` | `'複製失敗'`           |
+| moreActions    | 多個操作收起後的「…」按鈕的提示與無障礙名稱                            | `string` | `'更多操作'`           |
+| actionFailed   | 注入的操作失敗時的提示，後接錯誤資訊                                   | `string` | `'操作失敗'`           |
+| previewMode    | 檢視切換裡「預覽」的文字                                               | `string` | `'預覽'`               |
+| sourceMode     | 檢視切換裡「原始碼」的文字                                               | `string` | `'原始碼'`               |
+| viewSwitch     | 檢視切換按鈕組的無障礙名稱                                             | `string` | `'顯示模式'`           |
+| edit           | 編輯按鈕的提示與無障礙名稱                                             | `string` | `'編輯'`               |
+| editFile       | 元件不渲染這條文案，設定它沒有效果                                     | `string` | `'編輯檔案'`           |
+| save           | 編輯時儲存按鈕的文字                                                   | `string` | `'儲存編輯'`           |
+| editor         | 編輯區文本框的無障礙名稱                                               | `string` | `'編輯正文'`           |
+| leaveEditing   | 編輯時取消按鈕的文字，讀取失敗後退出編輯的按鈕也使用它                 | `string` | `'取消編輯'`           |
+| retry          | 重試按鈕的文字                                                         | `string` | `'重試'`               |
+| loadFailed     | 讀取檔案失敗的提示，進入編輯時讀取失敗也使用它                         | `string` | `'檔案載入失敗'`       |
+| saveFailed     | 儲存失敗的提示                                                         | `string` | `'儲存失敗'`           |
+| unsupported    | 沒有可用來源時的提示，格式不受支援的提示由 FileViewer 按 `locale` 顯示 | `string` | `'不支援預覽此格式'`   |
+| loading        | 載入提示                                                               | `string` | `'載入中…'`            |
+| fileEmpty      | `content` 為空字串時的提示                                           | `string` | `'該檔案為空'`         |
+| noContent      | 元件不渲染這條文案，設定它沒有效果                                     | `string` | `'暫無可顯示內容'`     |
+| truncated      | `source.truncated` 為 `true` 時的提示                                  | `string` | `'僅顯示部分內容'`     |
+
+### FilePreviewHandle
+
+通過 `ref` 取得，用於命令式切換頁籤和訪問 FileViewer。
+
+| 引數            | 說明                                                                                                            | 型別                         | 預設值 |
+| --------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------- | ------ |
+| setActiveTab    | 切換到指定頁籤，頁籤不存在、被停用、已是當前頁籤或正在儲存時返回 `false`                                        | `(key: string) => boolean`   | -      |
+| getActiveTab    | 返回當前頁籤的 `key`                                                                                            | `() => string`               | -      |
+| getViewerHandle | 返回當前檔案頁籤的 FileViewer 控制代碼，用於翻頁、搜尋和縮放，當前不是檔案頁籤、是圖片或影片、尚未就緒時返回 `null` | `() => ViewerHandle \| null` | -      |
+
+### 其他型別
+
+- `FilePreviewTab`：`FilePreviewFileTab`、`FilePreviewDirectoryTab` 和 `FilePreviewContentTab` 的聯合型別，用 `kind` 區分。
+- `FilePreviewActionItems`：由單個 `FilePreviewAction` 或 `FilePreviewAction[]`（一組操作）組成的陣列。
+- `FilePreviewActionSource`：`FilePreviewActionItems`，或接收 `FilePreviewActions` 並返回它的函式。
+- `FilePreviewViewMode`：`'preview' | 'source'`。
+- `FilePreviewComponent`：`FilePreview` 的型別，`ref` 為 `FilePreviewHandle`。
+
+## 注意
+
+### 頁籤與佈局
+
+- 尺寸：元件的寬高都是 `100%`，給父容器設定確定的高度；正文在元件內部滾動。
+- 按需載入：FileViewer 在首次渲染檔案正文時才載入，匯入元件時不載入它，也不訪問 `window`、`document`。
+- 內容頁籤：沒有標題行，也沒有 `slots`，元件不在 `content` 外套容器，也不提供滾動，工具欄、標題和滾動容器寫在 `content` 裡。
+- 目錄頁籤：摘要只讀，沒有 `editing`；只有一個層級時不顯示層級切換。
+- 兩種 `levels`：檔案頁籤的 `levels` 顯示為路徑行下的按鈕組，每級可以單獨提供 `editing`，回呼是 `onLevelChange`；目錄頁籤的 `levels` 顯示為標題行下的下劃線頁籤，回呼是 `onActiveLevelChange`。
+- 鍵盤：頁籤行和目錄頁籤的層級切換支援方向鍵、Home 和 End；儲存期間所有頁籤停用。
+- 匯出：元件和型別從 `@openviking/react/components/file-preview` 匯出，包根入口不匯出 `FilePreview`；`FileViewerResource`、`ViewerHandle`、`ConfirmSlotProps` 和 `DownloadSlotProps` 從 `@ark-design/ui/file-viewer/core` 匯入。
+
+### 內容與格式
+
+- 二進位制內容：PDF、Office 文件和圖片用 `source.file` 或 `source.url` 傳入，不要解碼成字串放進 `content`。
+- 支援的格式：Markdown、程式碼、JSON 與 JSONL、純文本、HTML、diff 與 patch、CSV、TSV、XLSX、PDF、DOCX、PPTX、圖片、影片，以及 MP3、WAV 音訊；CAD 與 3D 模型不在其中。具體副檔名以 `@ark-design/ui` 的渲染器為準。
+- 圖片與影片：使用瀏覽器原生元素顯示，按副檔名（png、jpg、jpeg、gif、webp、avif、bmp、ico、svg；mp4、webm、mov）、`fileType` 或 MIME 識別，能否顯示取決於瀏覽器。
+- 圖片與影片的邊界：沒有原始碼檢視，也不能編輯；音訊（mp3、wav）由 FileViewer 播放。
+- 圖片顯示：按比例居中，右下角顯示原始畫素尺寸，點選在彈窗裡放大；影片使用原生播放控制元件，不自動播放。
+- 地址生命週期：元件為圖片和影片的 `content`、`file` 建立的 Blob URL，在來源替換或解除安裝時回收；`url` 和 `resolveImage` 返回的地址由宿主管理。
+- Markdown 後設資料：開頭的 YAML 後設資料在預覽裡顯示為程式碼塊，原始碼、編輯、儲存和複製仍使用原文。
+- 點陣背景：Markdown 正文及 PDF、Word、PPT 的頁面外圍顯示點陣背景，隨宿主主題切換，底色和點色見下方「主題變數」。
+- Markdown 圖片：先匹配 `resources`，未命中再呼叫 `resolveImage`，`resolveImage` 拒絕時使用圖片的原始地址；元件不會把 `viking://` 轉成 HTTP 地址。
+- Markdown 連結：只有 Markdown 觸發 `operations.openUri`，元件傳出 Markdown 裡寫的原始地址，不補全相對路徑。
+- JSON 日誌：`.json` 和 `.jsonl` 渲染為 JSON 樹，會話日誌等需要自己呈現的結構化檔案，用內容頁籤渲染。
+- 大檔案：元件不判斷檔案大小，FileViewer 需要確認時顯示確認態，可用 `slots.confirmFallback` 替換；編輯文本的長度上限由宿主在 `editing` 裡處理。
+- 增強功能：上一張與下一張、相鄰圖片預載入和影片轉錄不在元件內，在預覽區外組合，或通過 `slots.actions`、`slots.footer` 注入。
+- FileViewer 自帶的控制元件：元件不顯示它的下載、全屏、翻頁、搜尋和縮放入口；翻頁、搜尋、縮放用 `getViewerHandle()`，下載用注入的操作。
+
+### 路徑與麵包屑
+
+- 層級：`source.path` 按 `/` 拆成層級，協議字首（如 `viking://`）顯示在首層，最後一級是當前檔名。
+- 沒有路徑：省略 `source.path` 時麵包屑只顯示檔名，也沒有複製路徑按鈕。
+- 導航：每個祖先層級都是按鈕，點選時把該層級的完整 URI（如 `viking://a/b`）傳給 `operations.openParent`，不限於直接父級；沒有 `operations.openParent` 時按鈕停用。
+- 絕對路徑：`/a/b/c.md` 的祖先保留開頭的 `/`，相對路徑保持原樣。
+- 摺疊：放不下時，先把首層之後的中間層級收進「…」選單，仍放不下才連首層一起收起，選單裡的層級同樣呼叫 `operations.openParent`。
+- 複製路徑：使用 `navigator.clipboard`，需要安全上下文（HTTPS 或 localhost）；失敗時顯示 `labels.copyFailed`，不觸發 `onCopyPath`。
+
+### 操作與編輯
+
+- 操作的呈現：沒有操作時不顯示入口，一個操作顯示為圖示按鈕，兩個及以上收進「…」選單。
+- 分組：連續的單個操作合併成一組，每個非空陣列單獨成組，空陣列被忽略且不打斷相鄰的單個操作，組之間顯示分隔線。
+- 函式形式：`actions` 和 `slots.actions` 可以是函式，在渲染時呼叫，只根據上下文返回內容，不要在裡面發請求或更新狀態。
+- 失敗：失敗提示顯示在該資源的工具欄旁，再次點選即可重試。
+- 鎖定：同一資源的注入操作在執行期間保持鎖定，切換頁籤、層級或替換 `slots.actions` 不會重置，其他資源和其他元件例項互不影響；資源以 `source.path` 標識，沒有路徑時用頁籤的 `key` 和 `fileName`。
+- 編輯時：注入的操作與 `slots.extraActions` 暫時隱藏，工具欄顯示儲存和取消，檢視切換停用。
+- 替換工具欄：設定 `slots.actions` 後，預設工具欄連同儲存和取消一起被替換，用上下文裡的 `startEditing`、`saveEditing`、`cancelEditing` 自己渲染。
+- 編輯流程：點選編輯進入原始碼檢視並顯示文本框，儲存或取消後回到預覽；儲存期間禁止切換頁籤、層級和重複提交，儲存失敗時保留草稿並顯示 `labels.saveFailed`。
+
+### 文案與狀態
+
+- `labels` 的範圍：只覆蓋元件自己渲染的文案；FileViewer 渲染的文案（大檔案確認、無法預覽時的提示、各格式渲染器裡的提示）隨 `locale` 切換，不能逐條覆蓋。
+- 整體替換：需要自定義 FileViewer 的狀態時，用 `slots` 裡的 `confirmFallback`、`unsupportedFallback`、`downloadFallback` 整體替換。
+- 圖片與影片的狀態：同樣使用 `loadingFallback`、`errorFallback`，沒有來源時使用 `unsupportedFallback`。
+- 不支援的格式：傳入 `unsupportedFallback` 後接管整個不支援態，FileViewer 原本提供的下載入口隨之不再顯示。
+- 下載入口：`downloadFallback` 收到 `onDownload` 和 `onRetry`，與 `unsupportedFallback` 同時傳入時優先使用它。
 
 ## 主題變數
 
-顏色取自 OpenViking 控制台使用的設計規範，只取色值，不引入它的元件樣式。暗色只認宿主放在 `<html>` 上的 `.dark` 類，不讀 `prefers-color-scheme`——系統偏好可能與宿主實際呈現的主題不一致。
+外殼的顏色取自 `--ov-ui-color-*`：在應用根節點或任意祖先上設定它們即可換膚，未設定時使用下表的預設值，規則見[快速開始](../guide/getting-started)。暗色讀取 `<html>` 上的 `.dark` 類，不讀取 `prefers-color-scheme`。
 
-**主題基線**（`--ov-ui-color-*`，定義在包級 `theme.css`，與 FileTree 等元件共用）。元件私有變數都從這些值派生，宿主改基線即可整體換膚：
+| 變數                             | 亮色              | 暗色                     | 用途               |
+| -------------------------------- | ----------------- | ------------------------ | ------------------ |
+| `--ov-ui-color-primary`          | `#5252ff`         | `#5f5fff`                | 主色，焦點環       |
+| `--ov-ui-color-primary-hover`    | `#7075ff`         | `#7075ff`                | 主色懸停           |
+| `--ov-ui-color-text-1`           | `#0b0b0f`         | `#c7ccd6`                | 正文               |
+| `--ov-ui-color-text-3`           | `#6e718c`         | `#737a87`                | 次要文字           |
+| `--ov-ui-color-border-2`         | `#e1e4f2`         | `#2e3138`                | 分隔線與邊框       |
+| `--ov-ui-color-bg-1`             | `#ffffff`         | `#131416`                | 面板底色           |
+| `--ov-ui-color-bg-5`             | `#f1f2f9`         | `#23252a`                | 懸停背景           |
+| `--ov-ui-color-preview-backdrop` | `#f8f8f8`         | `#202227`                | 預覽外圍的點陣底色 |
+| `--ov-ui-color-preview-dot`      | `rgb(0 0 0 / 8%)` | `rgb(255 255 255 / 12%)` | 點陣的點色         |
 
-| CSS 變數                      | 亮色      | 暗色      | 用途           |
-| ----------------------------- | --------- | --------- | -------------- |
-| `--ov-ui-color-primary`       | `#5252ff` | `#5f5fff` | 主色。         |
-| `--ov-ui-color-primary-hover` | `#7075ff` | `#7075ff` | 主色懸停。     |
-| `--ov-ui-color-text-1`        | `#0b0b0f` | `#c7ccd6` | 正文。         |
-| `--ov-ui-color-text-3`        | `#6e718c` | `#737a87` | 次要文字。     |
-| `--ov-ui-color-border-2`      | `#e1e4f2` | `#2e3138` | 分隔線與邊框。 |
-| `--ov-ui-color-bg-1`          | `#ffffff` | `#131416` | 面板底色。     |
-| `--ov-ui-color-bg-5`          | `#f1f2f9` | `#23252a` | 懸停背景。     |
+只調整本元件時，在元件根節點上覆蓋 `--ov-ui-file-preview-*`：
 
-**元件變數**（`--ov-ui-file-preview-*`），需要只調這一處時直接覆蓋：
+```css
+.my-workbench .ov-file-preview {
+  --ov-ui-file-preview-accent: #0f766e;
+}
+```
 
-| CSS 變數                            | 預設值                           | 用途                     |
-| ----------------------------------- | -------------------------------- | ------------------------ |
-| `--ov-ui-file-preview-accent`       | 同 `--ov-ui-color-primary`       | 麵包屑與主按鈕。         |
-| `--ov-ui-file-preview-accent-hover` | 同 `--ov-ui-color-primary-hover` | 連結與「…」懸停。        |
-| `--ov-ui-file-preview-border`       | 同 `--ov-ui-color-border-2`      | 分隔線與邊框。           |
-| `--ov-ui-file-preview-row-hover`    | 同 `--ov-ui-color-bg-5`          | 懸停背景。               |
-| `--ov-ui-file-preview-surface`      | 同 `--ov-ui-color-bg-1`          | 頁籤與選單背景。         |
-| `--ov-ui-file-preview-text`         | 同 `--ov-ui-color-text-1`        | 正文。                   |
-| `--ov-ui-file-preview-text-muted`   | 同 `--ov-ui-color-text-3`        | 次要文字與圖示。         |
-| `--ov-ui-file-preview-focus-ring`   | 同 `--ov-ui-color-primary`       | 鍵盤焦點環。             |
-| `--ov-ui-radius`                    | `6px`                            | 圓角。                   |
-| `--ov-ui-font-mono`                 | `ui-monospace, monospace`        | 路徑、正文與編輯器文字。 |
+| 變數                                | 說明                           | 預設值                        |
+| ----------------------------------- | ------------------------------ | ----------------------------- |
+| `--ov-ui-file-preview-accent`       | 強調色，例如選中的分級標籤     | `--ov-ui-color-primary`       |
+| `--ov-ui-file-preview-accent-hover` | 路徑層級與「…」按鈕的懸停色    | `--ov-ui-color-primary-hover` |
+| `--ov-ui-file-preview-border`       | 分隔線與邊框                   | `--ov-ui-color-border-2`      |
+| `--ov-ui-file-preview-focus-ring`   | 鍵盤焦點環                     | `--ov-ui-color-primary`       |
+| `--ov-ui-file-preview-row-hover`    | 懸停背景                       | `--ov-ui-color-bg-5`          |
+| `--ov-ui-file-preview-surface`      | 頁籤、選單和麵板的底色         | `--ov-ui-color-bg-1`          |
+| `--ov-ui-file-preview-text`         | 正文與選中頁籤的文字           | `--ov-ui-color-text-1`        |
+| `--ov-ui-file-preview-text-muted`   | 次要文字與圖示                 | `--ov-ui-color-text-3`        |
+| `--ov-ui-file-preview-text-path`    | 路徑麵包屑的文字               | `--ov-ui-color-text-3`        |
+| `--ov-ui-radius`                    | 圓角，用於編輯區和麵包屑選單項 | `6px`                         |
+| `--ov-ui-font-mono`                 | 路徑與編輯區的字型             | `ui-monospace, monospace`     |
 
-## 實現範圍
-
-元件渲染外殼並通知成功的操作。讀取、儲存、下載與導航由宿主提供執行能力，成功通知不執行這些操作。
-
-`labels.showHiddenPath` 可覆蓋摺疊路徑選單按鈕的無障礙名稱，預設中文為“顯示隱藏的路徑層級”、英文為“Show hidden path levels”。
+正文由 `@ark-design/ui` 渲染，顏色主要取自 Arco 的 `--color-*`、`--primary-*` 變數。在應用入口載入一份 Arco 顏色主題，例如 `@ark-design/ui/styles/aml-theme.css` 或 `@arco-design/web-react/dist/css/arco.css`；未載入時這些變數沒有值，正文的顏色樣式不會生效。暗色下還要在 `<body>` 上設定 `arco-theme="dark"`，與 `<html>` 上的 `.dark` 同時生效。

@@ -1,0 +1,170 @@
+# VikingBot 無頭對話
+
+管理對話請求、流式內容和會話，供 Console 或獨立 VikingBot 宿主複用。此模組不匯出組合元件，也沒有 CSS 入口。
+
+## 引入
+
+```tsx
+import {
+  useVikingBotChat,
+  useVikingBotSessions,
+} from '@openviking/react/modules/viking-bot';
+```
+
+## 程式碼演示
+
+`VikingBot` 保持純檢視。獨立使用時，從 `@openviking/react/modules/viking-bot` 匯入 `useVikingBotChat` 與 `useVikingBotSessions`，繼承 `OpenVikingProvider` 的請求配置；無 Provider 時默認同源。下面使用固定模擬服務，不訪問真實資料。
+
+```tsx file="../../_demos/viking-bot-headless.tsx" preview
+
+```
+
+## API
+
+### 配置
+
+| 引數            | 說明                                                        | 型別                                               | 預設值                      |
+| --------------- | ----------------------------------------------------------- | -------------------------------------------------- | --------------------------- |
+| locale          | 介面與本庫錯誤文案語言，不改變原始內容或重啟請求            | `'zh-CN' \| 'en-US'`                               | 繼承 Provider，否則 `en-US` |
+| enabled         | 停用時不自動請求，也不執行操作                              | `boolean`                                          | `true`                      |
+| requestOptions  | 覆蓋 Provider 的請求配置                                    | `OvRequestOptions`                                 | 繼承 Provider               |
+| scopeKey        | 動態身份變化時更新，取消舊身份請求並清理狀態                | `string`                                           | -                           |
+| service         | 穩定的服務物件；兩個 Hook 分別接受對話或會話服務契約        | `VikingBotChatService` / `VikingBotSessionService` | 原生服務                    |
+| sessionId       | 對話 Hook 當前會話                                          | `string`                                           | 首次傳送時建立              |
+| initialMessages | 對話 Hook 的初始訊息；保持引用穩定                          | `readonly VikingBotMessage[]`                      | `[]`                        |
+| persist         | 對話完成後儲存訊息；服務未提供 `saveMessage` 時由後端持久化 | `boolean`                                          | `true`                      |
+
+### 返回值與操作
+
+`useVikingBotChat` 返回 `sessionId`、`messages`、`streaming`、`status`、`error` 與獨立的 `persistenceError`；`send(string | VikingBotDraft)` 返回是否收到正常結束事件，失敗或取消返回 `false`，並保留已收到的內容。`abort()` 停止，`selectSession(id)` 讀取歷史，`reset()` 開始空白會話，`reload()` 重讀當前歷史，`setMessages()` 在空閒時替換本地記錄。新會話在首次傳送時建立。`persist` 預設 `true`；原生介面不儲存臨時推理。
+
+`useVikingBotSessions` 返回 `sessions`、`isLoading`、`error`、`refresh()`、`create()` 和 `remove(id)`；建立失敗返回 `undefined`，刪除失敗返回 `false`，失敗後可重試。預設掛載載入列表；`enabled: false` 停用自動請求及操作。
+
+兩者支援 `requestOptions`、`scopeKey` 和穩定的 `service`。`sessionId`、`initialMessages`、`persist` 是對話配置；穩定儲存 `service` 與 `initialMessages` 引用。服務、會話或身份變化會重建請求歸屬並取消舊請求；語言變化只更新介面和本庫錯誤文案。原始輸入、AI 回覆和後端錯誤不翻譯。商業版宿主把 TOP 的穩定事件 ID、delta/snapshot 與終止狀態轉換成 `VikingBotChatEvent`，並省略 `saveMessage` 以避免重複持久化；認證、CSRF、監控和產品副作用留在宿主。
+
+`canInterrupt` 表示服務是否提供 `interrupt`。宿主僅在它為 `true` 時傳 `onCancel`；不支援該能力的商業版介面卡不顯示停止入口。`abort()` 也可用於本地連線清理，但斷開前端連線不等於後端任務已停止。原生介面卡支援生成中追問，火山版當前介面卡不啟用。
+
+`canSteer` 表示介面卡是否實現 `steer(input, signal)`。獨立檢視將它對映到 `canSendWhileStreaming`，並傳入 `isSubmitting`；兩項檢視屬性預設分別為 `false`，不包含協議判斷。生成中呼叫同一個 `send()` 會走 steer，返回是否接受；空閒時呼叫會建立正常請求，等待整次流完成。已接受追問會在下一條 iteration 事件處切分助手段落和使用者輸入，保持渲染與持久化順序一致。
+
+## 組合使用
+
+[Console](./console) 已內建消費此模組。獨立宿主使用 [VikingBot](../components/viking-bot) 時單獨引入該元件的樣式；本模組不包含 UI、CSS 或瀏覽器全域依賴，不從包根或 Console 入口轉匯出 Hook。
+
+## Adapter API
+
+所有方法均接收本次操作的 `AbortSignal`，介面卡必須響應取消；失敗時 reject/throw，保留後端錯誤。原生歷史通過 session 元資訊中的 URI 讀取完整 `messages.jsonl`（`limit: -1`），不使用有預算的 `/context`。普通斷流儲存已完成段落和已接受輸入，未完成回覆僅保留當前介面，不作為完整助手訊息寫入歷史；傳送仍返回 `false`，狀態保持錯誤，不把未完成回覆視為成功。
+
+### VikingBotChatInput
+
+| 引數        | 說明             | 型別                             | 預設值 |
+| ----------- | ---------------- | -------------------------------- | ------ |
+| sessionId   | 會話標識         | `string`                         | 必填   |
+| text        | 提交的正文       | `string`                         | 必填   |
+| attachments | 宿主已上傳的附件 | `readonly VikingBotAttachment[]` | 必填   |
+| references  | 資源引用         | `readonly VikingBotReference[]`  | -      |
+
+### VikingBotChatService
+
+| 引數          | 說明                                                  | 型別                                                                                    | 預設值 |
+| ------------- | ----------------------------------------------------- | --------------------------------------------------------------------------------------- | ------ |
+| stream        | 流式請求；必須發出 complete 或 interrupted 終止事件   | `(input: VikingBotChatInput, signal: AbortSignal) => AsyncIterable<VikingBotChatEvent>` | 必填   |
+| createSession | 新建會話                                              | `(signal: AbortSignal) => Promise<VikingBotSession>`                                    | 必填   |
+| loadMessages  | 讀取完整會話歷史                                      | `(id: string, signal: AbortSignal) => Promise<readonly VikingBotMessage[]>`             | 必填   |
+| saveMessage   | 逐條儲存；後端自動持久化時省略，避免重複              | `(id: string, message: VikingBotMessage, signal: AbortSignal) => Promise<void>`         | 可選   |
+| interrupt     | 實際中斷後端生成；與本地斷開連線不同                  | `(id: string, signal: AbortSignal) => Promise<{ interrupted: boolean }>`                | 可選   |
+| steer         | 向當前流追加輸入；accepted 僅表示接受，不表示回覆完成 | `(input: VikingBotChatInput, signal: AbortSignal) => Promise<{ accepted: boolean }>`    | 可選   |
+
+### VikingBotSessionService
+
+| 引數          | 說明         | 型別                                                            | 預設值 |
+| ------------- | ------------ | --------------------------------------------------------------- | ------ |
+| listSessions  | 讀取會話列表 | `(signal: AbortSignal) => Promise<readonly VikingBotSession[]>` | 必填   |
+| createSession | 新建會話     | `(signal: AbortSignal) => Promise<VikingBotSession>`            | 必填   |
+| removeSession | 刪除會話     | `(id: string, signal: AbortSignal) => Promise<void>`            | 必填   |
+
+### VikingBotChatEvent
+
+| 引數        | 說明                                                         | 型別                                                                     | 預設值 |
+| ----------- | ------------------------------------------------------------ | ------------------------------------------------------------------------ | ------ |
+| reasoning   | delta=true 追加；false 替換；id 可選，穩定 ID 更新同一推理項 | `{ type: 'reasoning'; text: string; delta: boolean; id?: string }`       | -      |
+| text        | delta=true 追加正文；false 替換當前正文片段                  | `{ type: 'text'; text: string; delta: boolean }`                         | -      |
+| iteration   | 下一次模型迭代邊界；將已接受追問歸入新的交流段               | `{ type: 'iteration'; iteration: number }`                               | -      |
+| tool        | 每次實際呼叫唯一 ID；相同引數也不得合併                      | `{ type: 'tool'; part: VikingBotToolPart }`                              | -      |
+| tool-result | 通過 id 對應呼叫；原生無 ID 協議按 FIFO 配對                 | `{ type: 'tool-result'; id: string; output: string; isError?: boolean }` | -      |
+| complete    | 正常結束；可選 text 是最終正文快照                           | `{ type: 'complete'; text?: string }`                                    | -      |
+| interrupted | 中斷終止；保留已有內容，send 返回 false                      | `{ type: 'interrupted' }`                                                | -      |
+
+`canInterrupt` / `canSteer` 由對應方法是否存在決定。`steer` 返回 `accepted: false` 表示未接受輸入；不要發出虛假的使用者訊息。事件流沒有終止事件就結束會報 `BOT_STREAM_TRUNCATED`。
+
+### VikingBotHookOptions
+
+| 引數           | 說明               | 型別                 | 預設值    |
+| -------------- | ------------------ | -------------------- | --------- |
+| locale         | 文案語言           | `'zh-CN' \| 'en-US'` | Inherited |
+| enabled        | 自動請求與操作開關 | `boolean`            | true      |
+| scopeKey       | 動態身份隔離標識   | `string`             | -         |
+| requestOptions | 請求覆蓋           | `OvRequestOptions`   | Inherited |
+
+### UseVikingBotChatOptions
+
+繼承 `VikingBotHookOptions`.
+
+| 引數            | 說明                   | 型別                          | 預設值 |
+| --------------- | ---------------------- | ----------------------------- | ------ |
+| sessionId       | 當前會話               | `string`                      | -      |
+| initialMessages | 初始訊息，引用須穩定   | `readonly VikingBotMessage[]` | []     |
+| persist         | 是否儲存訊息           | `boolean`                     | true   |
+| service         | 後端介面卡，引用須穩定 | `VikingBotChatService`        | Native |
+
+### UseVikingBotSessionsOptions
+
+繼承 `VikingBotHookOptions`.
+
+| 引數    | 說明                   | 型別                      | 預設值 |
+| ------- | ---------------------- | ------------------------- | ------ |
+| service | 後端介面卡，引用須穩定 | `VikingBotSessionService` | Native |
+
+### VikingBotChatState
+
+| 引數             | 說明                           | 型別                                            | 預設值 |
+| ---------------- | ------------------------------ | ----------------------------------------------- | ------ |
+| sessionId        | 當前會話                       | `string`                                        | -      |
+| messages         | 當前訊息                       | `readonly VikingBotMessage[]`                   | []     |
+| streaming        | 尚未併入 messages 的流片段     | `VikingBotStreamingState`                       | -      |
+| status           | 請求狀態                       | `'idle' \| 'loading' \| 'streaming' \| 'error'` | idle   |
+| isSubmitting     | 等待追問確認                   | `boolean`                                       | false  |
+| error            | 請求錯誤                       | `Error`                                         | -      |
+| persistenceError | 獨立的儲存錯誤，不改判傳送成功 | `Error`                                         | -      |
+
+### VikingBotChatResult
+
+繼承 `VikingBotChatState`.
+
+| 引數          | 說明                                                       | 型別                                                    | 預設值             |
+| ------------- | ---------------------------------------------------------- | ------------------------------------------------------- | ------------------ |
+| canInterrupt  | 是否提供 interrupt                                         | `boolean`                                               | Service capability |
+| canSteer      | 是否提供 steer                                             | `boolean`                                               | Service capability |
+| send          | 空閒時等待流結束；生成中等待追加接受；失敗或中斷返回 false | `(input: string \| VikingBotDraft) => Promise<boolean>` | -                  |
+| abort         | 清理本地請求；有 interrupt 時同時請求後端中斷              | `() => Promise<void>`                                   | -                  |
+| reset         | 開始空白會話，首次傳送時建立                               | `() => void`                                            | -                  |
+| selectSession | 取消舊流並載入選定會話                                     | `(id: string) => void`                                  | -                  |
+| reload        | 重讀歷史，等待本例項儲存完成                               | `() => Promise<void>`                                   | -                  |
+| setMessages   | 僅空閒時替換本地訊息                                       | `(messages: readonly VikingBotMessage[]) => void`       | -                  |
+
+### VikingBotSessionsState
+
+| 引數      | 說明         | 型別                          | 預設值 |
+| --------- | ------------ | ----------------------------- | ------ |
+| sessions  | 會話列表     | `readonly VikingBotSession[]` | []     |
+| isLoading | 列表載入狀態 | `boolean`                     | false  |
+| error     | 請求錯誤     | `Error`                       | -      |
+
+### VikingBotSessionsResult
+
+繼承 `VikingBotSessionsState`.
+
+| 引數    | 說明                               | 型別                                           | 預設值 |
+| ------- | ---------------------------------- | ---------------------------------------------- | ------ |
+| refresh | 重新整理列表；失敗記錄在 error，可重試 | `() => Promise<void>`                          | -      |
+| create  | 新建，失敗返回 undefined           | `() => Promise<VikingBotSession \| undefined>` | -      |
+| remove  | 刪除，失敗返回 false               | `(id: string) => Promise<boolean>`             | -      |

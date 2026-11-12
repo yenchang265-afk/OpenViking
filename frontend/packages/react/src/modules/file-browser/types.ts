@@ -1,6 +1,17 @@
+import type { FileBrowserWorkflowLabels } from './preview-workflow-types.js';
+export type { FileBrowserWorkflowLabels } from './preview-workflow-types.js';
+import type {
+  FileBrowserPreviewActions,
+  FileBrowserPreviewSlots,
+} from './preview-types.js';
+export type {
+  FileBrowserPreviewActions,
+  FileBrowserPreviewSlots,
+  FileBrowserPreviewActionContext,
+} from './preview-types.js';
 import type { Locale } from '../../shared/locale.js';
 import type { AgentConnectProps } from '../../components/agent-connect/index.js';
-import type { FileBrowserEntriesLabels } from '../../components/file-browser-entries/index.js';
+import type { FileBrowserActionBarLabels } from '../../components/file-browser-action-bar/index.js';
 import type { FileBrowserDashboard } from './dashboard-model.js';
 import type {
   FilePreviewLabels,
@@ -12,6 +23,11 @@ import type {
   FileTreeRow,
 } from '../../components/file-tree/index.js';
 import type { OvRequestOptions } from '../../client/index.js';
+import type {
+  FileBrowserAclLabels,
+  FileBrowserAclOptions,
+} from './acl-types.js';
+import type { SearchMode } from './search-types.js';
 import type {
   ComponentPropsWithRef,
   HTMLAttributes,
@@ -37,6 +53,12 @@ export interface FileBrowserDashboardLabels {
 }
 
 export interface FileBrowserLabels {
+  workflows?: Partial<FileBrowserWorkflowLabels>;
+  systemDirectory?: string;
+  accessDenied?: string;
+  traverseOnly?: string;
+  /** 权限管理文案。Permission management copy. */
+  acl?: FileBrowserAclLabels;
   /** 预览底部字符数。Character count in the preview footer. */
   formatCharacterCount?: (count: number) => string;
   /** 未选中资源时的提示。Message shown when no resource is selected. */
@@ -47,12 +69,58 @@ export interface FileBrowserLabels {
   retry?: string;
   /** 刷新按钮的无障碍名称。Accessible name of the refresh control. */
   refresh?: string;
-  /** 搜索框占位文案。Search placeholder. */
+  /** 搜索入口的文案。Label of the search trigger. */
   searchPlaceholder?: string;
+  /** 内置搜索弹窗的无障碍标题。Accessible title of the built-in search dialog. */
+  searchTitle?: string;
+  /** 尚未输入查询时的标题。Title shown before any query is entered. */
+  searchEmptyTitle?: string;
+  /** 尚未输入查询时的说明。Explanation shown before any query is entered. */
+  searchHint?: string;
   /** 搜索无结果提示。Message shown when a search returns nothing. */
   searchEmpty?: string;
   /** 搜索请求失败的结论，原因由服务端返回。Conclusion when the search request fails; the reason comes from the server. */
   searchFailed?: string;
+  /** 各检索方式的输入提示。Input placeholder of each retrieval mode. */
+  searchModePlaceholders?: Record<SearchMode, string>;
+  /** 各检索方式的说明。One-line description of each retrieval mode. */
+  searchModeHints?: Record<SearchMode, string>;
+  /** 高级筛选面板的标题。Title of the advanced filter panel. */
+  searchAdvanced?: string;
+  /** 清空筛选。Clears the filters. */
+  searchClear?: string;
+  /** 目录筛选的标题。Title of the directory filter. */
+  searchScopes?: string;
+  /** 选择目录的入口。Entry that opens the directory picker. */
+  searchPickScope?: string;
+  /** 目录筛选项为空时的说明。Shown when no scope can be filtered. */
+  searchScopesUnsupported?: string;
+  /** 内容层级的标题。Title of the content-level filter. */
+  searchLevels?: string;
+  /** 三级内容的名称。Names of the three content levels. */
+  searchLevelLabels?: [string, string, string];
+  /** 时间筛选的标题。Title of the time filter. */
+  searchTime?: string;
+  /** 按创建时间。Filter by creation time. */
+  searchCreatedAt?: string;
+  /** 按更新时间。Filter by update time. */
+  searchUpdatedAt?: string;
+  /** 起始时间。Start of the time range. */
+  searchSince?: string;
+  /** 结束时间。End of the time range. */
+  searchUntil?: string;
+  /** 忽略大小写。Case-insensitive matching. */
+  searchIgnoreCase?: string;
+  /** 某个筛选在当前检索方式下不可用的原因。Why a filter is unavailable in the current mode. */
+  searchFilterUnsupported?: string;
+  /** 检索结果数量，参数为条数。Result count; receives the number. */
+  searchResultCount?: (count: number) => string;
+  /** 结果数量与模式之间的分隔说明。Copy between the count and the mode chip. */
+  searchVia?: string;
+  /** 切换检索方式的入口。Entry that switches the retrieval mode. */
+  searchSwitchMode?: string;
+  /** 高级筛选按钮的无障碍名称。Accessible name of the advanced-filter button. */
+  searchAdvancedLabel?: string;
   /** 搜索进行中的提示。Message shown while a search runs. */
   searchLoading?: string;
   /** 预览读取正文时的提示。Message shown while the preview reads a resource. */
@@ -69,6 +137,14 @@ export interface FileBrowserLabels {
   download?: string;
   /** 版本历史按钮的无障碍名称。Accessible name of the version-history button. */
   history?: string;
+  importPack?: string;
+  exportPack?: string;
+  deleteFile?: string;
+  deleteTitle?: string;
+  deleteMessage?: (name: string) => string;
+  deleteFailed?: string;
+  deleteCancel?: string;
+  deleteConfirm?: string;
   /** 视图切换分组的无障碍名称。Accessible name of the view-switch group. */
   viewSwitch?: string;
   /** 树与详情之间分隔条的无障碍名称。Accessible name of the divider between the tree and the detail. */
@@ -88,8 +164,8 @@ export interface FileBrowserLabels {
    * generated yet", and the two call for different actions.
    */
   summaryFailed?: string;
-  /** 入口条与接入抽屉文案。Copy of the entry row and connection drawer. */
-  entries?: FileBrowserEntriesLabels;
+  /** 操作栏与接入抽屉文案。Copy of the action bar and connection drawer. */
+  actionBar?: FileBrowserActionBarLabels;
   /** 目录树文案。Copy of the file tree. */
   tree?: FileTreeLabels;
   dashboard?: FileBrowserDashboardLabels;
@@ -101,25 +177,34 @@ export interface FileBrowserLabels {
  * 文件浏览模块的属性。
  *
  * 模块自己通过 Hook 取数，props 里没有数据字段：宿主给配置、受控的当前资源、
- * 接入配置、导入交互、文案与请求配置。入口条、目录、搜索、预览页签与行级
- * 状态都在模块内维护。
+ * 接入配置、导入交互、文案与请求配置。操作栏、目录、搜索、预览页签与行级
+ * 状态都在模块内维护，包含基础搜索弹窗与接口调用。
  *
- * 模块包含文件树、文件预览与顶部入口。命令面板属于 `console`。
+ * 模块包含文件树、文件预览与顶部操作栏。命令面板属于 `console`。
  *
  * Props of the file browser module.
  *
  * The module loads its own data through a Hook, so no prop carries data: the
  * host supplies configuration, the controlled current resource, import interactions,
- * copy and request configuration. The entry row, directory, search, preview tabs
- * and per-row state all live inside the module.
+ * copy and request configuration. The action bar, directory, search, preview tabs
+ * and per-row state all live inside the module, including basic search UI and requests.
  *
- * The module includes the file tree, file preview and top entries. The command panel
+ * The module includes the file tree, file preview and top action bar. The command panel
  * belongs to `console`.
  */
 export interface FileBrowserProps extends Omit<
   HTMLAttributes<HTMLDivElement>,
   'onSelect' | 'children'
 > {
+  /**
+   * 共享资源 ACL；默认关闭。开启后显示有效权限并通过 Modal 管理授权。
+   * Shared-resource ACL, off by default. Shows effective permissions and manages grants in a Modal.
+   */
+  acl?: boolean | FileBrowserAclOptions;
+  /** 禁用预览编辑、导入与文件删除。Disables preview editing, import and file deletion. */
+  readOnly?: boolean;
+  /** 内置预览操作的显隐开关，默认按资源能力显示。Visibility flags for native preview operations. */
+  previewActions?: FileBrowserPreviewActions;
   /** 可选文案语言；继承上层，最终默认英文。Optional locale; inherits or defaults to en-US. */
   locale?: Locale;
   /**
@@ -198,6 +283,14 @@ export interface FileBrowserProps extends Omit<
     trigger: ReactElement<ComponentPropsWithRef<'button'>>,
   ) => ReactNode;
   /**
+   * 文件与目录的预览操作区。actions 替换默认按钮（含编辑态保存、取消），null 隐藏；
+   * extraActions 追加到默认工具栏。自定义 actions 时需自行渲染追加操作与编辑按钮。
+   * File and directory preview actions. actions replaces the defaults (including
+   * Save/Cancel); null hides them. extraActions appends to the default toolbar.
+   * Custom actions render their own extras and editing controls.
+   */
+  previewSlots?: FileBrowserPreviewSlots;
+  /**
    * 可替换文案，未提供的项使用当前 locale 的内置文案。
    * Replaceable copy; omitted fields follow locale.
    */
@@ -219,6 +312,7 @@ export interface FileBrowserProps extends Omit<
  */
 export interface FileBrowserApi {
   dashboards: ReadonlyMap<string, FileBrowserDashboard>;
+  previewDashboard?: FileBrowserDashboard;
   dashboardError: Error | null;
   /** 按渲染顺序排列的可见行。Visible rows in render order. */
   rows: readonly FileTreeRow[];
@@ -226,12 +320,6 @@ export interface FileBrowserApi {
   selectedId: string | null;
   /** 当前资源 URI。Current resource URI. */
   currentUri: string | null;
-  /** 当前查询词。The current query. */
-  query: string;
-  /** 是否正在展示搜索结果。Whether search results are showing. */
-  searching: boolean;
-  /** 搜索是否进行中。Whether a search is running. */
-  searchLoading: boolean;
   /** 刷新是否进行中。Whether a refresh is running. */
   refreshing: boolean;
   /** 预览底部元信息，例如字符数与更新时间；没有时为 `undefined`。 */
@@ -250,15 +338,6 @@ export interface FileBrowserApi {
    */
   treeError: Error | null;
   /**
-   * 搜索请求本身的失败原因。与「搜索成功但没有结果」不同：前者要显示原因与重试，
-   * 后者才是空态文案。
-   *
-   * Why the search request failed. It differs from "the search succeeded but matched
-   * nothing": the former needs the reason and a retry, only the latter is the empty
-   * copy.
-   */
-  searchError: Error | null;
-  /**
    * 当前资源预览的失败原因。选中了资源但读不出来时用它区分「读失败」与「什么
    * 都没选」。
    *
@@ -276,6 +355,7 @@ export interface FileBrowserApi {
 
 /** 模块 Hook 暴露的操作。Operations the module Hook exposes. */
 export interface FileBrowserActions {
+  openUri: (uri: string) => Promise<void>;
   openDashboard: (uri: string) => void;
   /** 选中条目。Selects an entry. */
   select: (row: FileTreeEntryRow) => Promise<void>;
@@ -289,13 +369,18 @@ export interface FileBrowserActions {
   refresh: () => Promise<void>;
   /** 切换预览页签。Switches the preview tab. */
   setPreviewKey: (key: string) => void;
-  /** 更新查询词；空串回到目录树。Updates the query; an empty string returns to the tree. */
-  setQuery: (query: string) => void;
+  /**
+   * 打开任意资源：选中它、逐级展开祖先，让预览跟上。搜索结果点击后走这条路径。
+   * Opens any resource: selects it, expands its ancestors level by level and lets the
+   * preview follow. A search result click goes through this.
+   */
+  openResource: (uri: string) => Promise<void>;
 }
 
 /** Internal options for the composed FileBrowser loader. */
 export interface UseFileBrowserOptions {
   rootUri: string;
+  accessLabels?: Pick<FileBrowserLabels, 'accessDenied' | 'traverseOnly'>;
   /** Built-in copy; inherits the Provider locale, otherwise en-US. */
   locale?: Locale;
   dashboardLabels?: FileBrowserDashboardLabels;

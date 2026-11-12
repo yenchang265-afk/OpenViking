@@ -398,6 +398,7 @@ JSON 輸出 - 錯誤：
 | POST | `/api/v1/content/write` | 寫入內容並重新整理語義索引 |
 | POST | `/api/v1/content/batch-write` | 寫入多個檔案並重新整理索引 |
 | POST | `/api/v1/content/set_tags` | 設定檢索標籤 |
+| POST | `/api/v1/content/batch_set_tags` | 批次設定 1～50 個 URI 的檢索標籤 |
 | POST | `/api/v1/content/ensure_directory_index` | 確保既有目錄的索引就緒，僅在兩層摘要都缺失時建立 L0 |
 | POST | `/api/v1/content/reindex` | 重建語義或向量索引 |
 

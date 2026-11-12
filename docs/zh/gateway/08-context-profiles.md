@@ -19,7 +19,7 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 | 召回記憶 | 用每條新的使用者訊息檢索 OpenViking，把相關內容附加到這條訊息上。 | 檢索範圍：記憶、資源、技能 · 單條訊息預算：1,600 token · 單個上下文視窗預算：30,000 token · 相關度閾值：0.35 · 超時時間：2 秒 |
 | 儲存對話 | 把完成的輪次寫入 OpenViking 會話並提交，供 OpenViking 提取記憶。 | 最新回覆等待時長：600 秒 · 提交閾值：20,000 token · 保留最近訊息：10 |
 | 長對話 | 對話接近上下文視窗時，讓同一個模型寫摘要，替換之前的訊息。 | 壓縮：開啟 · 壓縮時機：視窗的 0.9 · 摘要長度上限：8,000 token · Agent 自管上下文視窗：關閉 |
-| OpenViking 工具 | 讓模型在回答時使用 OpenViking 的工具。 | 開啟 · 只勾選只讀工具，見 [OpenViking 工具](04-openviking-tools.md) |
+| OpenViking 工具 | 讓模型在回答時使用 OpenViking 的工具。 | 開啟 · 勾選全部工具，見 [OpenViking 工具](04-openviking-tools.md) |
 
 每個部分都有自己的開關，長對話部分的壓縮和 Agent 自管上下文視窗各有一個。召回和儲存相互獨立，只召回不儲存、只儲存不召回都可以。
 
@@ -53,6 +53,7 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 | **相關度閾值** | 0.35 | 只附加相關度不低於該值的結果，取值 0 到 1。值越高，附加的內容越少、越貼切。 |
 | **超時時間** | 2 秒 | 一次檢索最多等多久。 |
 | **檢索文本長度**（在**進階設定**中） | 8,000 個字元 | 取訊息的多少字元作為檢索文本。 |
+| **Peer 範圍**（在**進階設定**中） | 所有 Peer，當前 Peer 優先 | 除使用者自己的記憶外，召回和 OpenViking 工具能看到哪些 Peer 的記憶。 |
 | **按分類限量**（在**進階設定**中） | 關閉 | 每個分類最多附加多少條。 |
 
 這些設定如何配合：
@@ -63,6 +64,7 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 - **預算。** 每條訊息最多補充**單條訊息預算**和**單個上下文視窗預算**剩餘額度中較小的那個；剩餘額度不足 64 token 時跳過檢索。無論是閘道器還是客戶端壓縮了對話，單個上下文視窗預算都重新計算。這裡的 token 數是偏保守的估算，不是服務商的計費數。
 - **關閉召回。** 把**單個上下文視窗預算**設為 0 就等於關閉召回；**單條訊息預算**最小為 64。
 - **超時。** OpenViking 在**超時時間**內沒有返回時，這條訊息不帶記憶發給模型，之後也不會補上，客戶端重試也一樣。
+- **Peer 範圍。** 主要用於請求會帶 [Peer](03-connect-clients.md#peer) 的金鑰。**所有 Peer，當前 Peer 優先**在使用者自己的記憶之外加上這個請求的 Peer 的記憶，其他 Peer 的記憶仍可能被召回，只是分數略有扣減。**僅當前 Peer**讓召回和 OpenViking 工具都查不到、讀不到其他 Peer 的記憶；不帶 Peer 的請求與預設值相同。見[只召回當前 Peer](03-connect-clients.md#peer-scope)。
 - **按分類限量。** 可以給事件、實體、偏好、經驗、資源和技能六類分別設條數上限，只檢索上限大於 0 的類別。關閉時，所有來源放在一起排序。
 
 ### 召回摘要 {#recall-summary}
@@ -93,13 +95,14 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 - 下一條使用者訊息到達時，上一輪就會儲存。**最新回覆等待時長**針對的是最後一輪，這樣短對話也能被提交。
 - 會話中待提交的內容達到**提交閾值**時提交一次。每次提交後，OpenViking 在後臺提取記憶。
 - 提交後，會話中保留最新的若干完整輪次，至少包含**保留最近訊息**條訊息。
+- OpenViking 預設提取所有已啟用的[記憶型別](../api/16-memory.md)。只提取其中一部分時，用管理 API 或 `X-OpenViking-Context` 請求頭把 `capture_memory_types` 設為這些型別的名稱，例如 `["preferences","events"]`；設為空列表時只儲存對話，不提取記憶。Studio 中沒有這項設定，在 Studio 中儲存配置時保留原值。OpenViking 不認識的名稱會使儲存失敗，見[配置參考](13-configuration.md#profile-saving)。
 
 ## 長對話和 OpenViking 工具 {#long-conversations-and-tools}
 
 編輯頁的最後兩個部分各有專門的頁面：
 
 - **長對話**部分包括**壓縮**及其**壓縮時機**和**摘要長度上限**、實驗性的 **Agent 自管上下文視窗**及其**軟提醒時機**和**硬提醒時機**，以及**進階設定**中的**預設上下文視窗**。詳見[閘道器中的長對話](05-long-conversations.md#long-conversations)；視窗較小的模型需要設定視窗大小，見[設定模型的上下文視窗](05-long-conversations.md#context-window)。
-- **OpenViking 工具**部分包括**工具**清單和**顯示工具呼叫**，**進階設定**中還有**每次請求的工具輪數**、**單次呼叫超時**、**結果大小上限**、**總時長**和 **Token 預算**。詳見[選擇工具](04-openviking-tools.md#choose-tools)和[上限](04-openviking-tools.md#limits)。閘道器執行所選工具時不經過客戶端的許可權確認，勾選會修改資料的工具之前，請先閱讀[風險和控制點](04-openviking-tools.md#risks-and-controls)。
+- **OpenViking 工具**部分包括**工具**清單和**顯示工具呼叫**，**進階設定**中還有**每次請求的工具輪數**、**單次呼叫超時**、**結果大小上限**、**總時長**和 **Token 預算**。詳見[選擇工具](04-openviking-tools.md#choose-tools)和[上限](04-openviking-tools.md#limits)。閘道器執行所選工具時不經過客戶端的許可權確認，決定讓模型使用會修改資料的工具之前，請先閱讀[風險和控制點](04-openviking-tools.md#risks-and-controls)。
 
 每項設定的 API 名稱和取值範圍見[配置參考](13-configuration.md#context-profile-settings)。
 
@@ -111,7 +114,7 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 X-OpenViking-Context: {"recall":false,"max_tokens":800,"context_types":["memory"]}
 ```
 
-- **能改什麼。** 除 `name` 和 `client_overrides` 以外的所有設定。請求頭沒有給出的欄位沿用配置中的值。`{"disabled_tools":[]}` 表示提供全部 OpenViking 工具，包括會修改資料的工具和服務端以後新增的工具。
+- **能改什麼。** 除 `name` 和 `client_overrides` 以外的所有設定。請求頭沒有給出的欄位沿用配置中的值。工具許可權只能收窄：請求頭裡的 `disabled_tools` 會追加到配置已取消勾選的工具上，`gateway_tools` 只能關閉 OpenViking 工具、不能重新開啟，所以 `{"disabled_tools":[]}` 或 `{"gateway_tools":true}` 不會提供配置不提供的工具。
 - **何時生效。** 與儲存配置的修改一樣，對話會沿用開始時的設定：只有對話第一個請求裡的請求頭決定設定。之後的請求頭仍會校驗，所以無效的請求頭，或開關關閉後的任何請求頭，仍會報錯。
 - **錯誤。** 開關關閉時，帶這個請求頭的請求一律返回 403 `context_override_not_allowed`，而不是按已儲存的設定處理。開關開啟時，請求頭有下列情況之一會返回 400 `context_override_invalid`：
   - 不是 JSON 物件；
@@ -119,7 +122,7 @@ X-OpenViking-Context: {"recall":false,"max_tokens":800,"context_types":["memory"
   - 取值越界。
 - **請求日誌。** [請求詳情](10-overview-and-requests.md#request-details)中列出客戶端在請求頭裡傳入了哪些欄位，只記名稱，不記取值。
 
-這個開關預設開啟，所以持有使用這份配置的金鑰的人可以修改任意欄位，包括預算和會修改資料的工具。對 `default` 配置來說，這也包括所有[直接使用 OpenViking API 金鑰](09-gateway-keys.md#openviking-keys)的客戶端。需要鎖定的配置請關閉它。各客戶端如何傳送這個請求頭，見[覆蓋上下文配置](03-connect-clients.md#override-profile-settings)。
+這個開關預設開啟，所以持有使用這份配置的金鑰的人可以修改任意欄位，包括預算，也可以再排除更多工具。對 `default` 配置來說，這也包括所有[直接使用 OpenViking API 金鑰](09-gateway-keys.md#openviking-keys)的客戶端。需要鎖定的配置請關閉它。各客戶端如何傳送這個請求頭，見[覆蓋上下文配置](03-connect-clients.md#override-profile-settings)。
 
 ## 下一步 {#next-steps}
 

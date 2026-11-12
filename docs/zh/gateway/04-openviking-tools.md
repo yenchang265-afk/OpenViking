@@ -69,7 +69,7 @@ description: 讓模型通過 OpenViking 閘道器代為執行的工具檢索、�
 
 > **警告**：勾選的工具直接執行，不經過客戶端的許可權確認，寫入和刪除資料的工具也一樣；工具呼叫提示只在呼叫之後報告，不是確認步驟。如果使用者需要逐次確認工具呼叫，請改用 OpenViking 外掛或 MCP 伺服器（見[閘道器還是外掛](../guides/15-gateway.md#gateway-or-plugin)）。模型能做的事以該使用者自己的 OpenViking 許可權為上限。
 
-勾選會修改資料的工具前，先確認能接受這一點。給聊天應用用的配置，建議至少不勾選 `forget` 和 `set_acl`。
+會修改資料的工具（包括 `forget` 和 `set_acl`）預設也是勾選的，請先確認能接受這一點，否則取消勾選。給聊天應用用的配置，建議至少取消勾選 `forget` 和 `set_acl`。
 
 管理員能控制的地方：
 
@@ -82,21 +82,16 @@ description: 讓模型通過 OpenViking 閘道器代為執行的工具檢索、�
 
 ## 選擇工具 {#choose-tools}
 
-[上下文配置](08-context-profiles.md#context-profiles)中 **OpenViking 工具**部分的**工具**清單，決定模型能拿到哪些 OpenViking 工具。新建的上下文配置預設開啟 **OpenViking 工具**，用**使用推薦設定建立**新建的也一樣；除了閘道器已知會修改資料的工具，其餘工具預設都勾選：
+[上下文配置](08-context-profiles.md#context-profiles)中 **OpenViking 工具**部分的**工具**清單，決定模型能拿到哪些 OpenViking 工具。新建的上下文配置預設開啟 **OpenViking 工具**，用**使用推薦設定建立**新建的也一樣；所有工具預設都勾選，包括 `remember`、`write`、`edit`、`add_resource`、`forget`、`set_acl` 等會修改資料的工具。
 
-| 預設狀態 | 工具 |
-| --- | --- |
-| 勾選 | `find`、`search`、`grep`、`glob`、`list`、`tree`、`read`、`download`、`list_watches`、`get_acl`、`list_users`、`list_groups`、`health` |
-| 不勾選（會修改資料） | `remember`、`write`、`edit`、`add_resource`、`add_skill`、`forget`、`set_acl`、`cancel_watch` |
-
-想讓模型儲存記憶就勾選 `remember`，想讓它匯入網頁或附件就勾選 `add_resource`。勾選任何會修改資料的工具之前，請先看[風險和控制點](#risks-and-controls)中的警告。
+不想讓模型使用的工具取消勾選即可。決定讓模型使用會修改資料的工具之前，請先看[風險和控制點](#risks-and-controls)中的警告。
 
 每個[上游](07-upstreams.md#upstreams)的**允許 OpenViking 工具**預設開啟。兩個開關都開啟時，新對話獲得選中的工具，名稱加上 `openviking_` 字首，例如 `openviking_find`、`openviking_read`。工具定義隨對話中的每個請求傳送，全部工具約佔 3,500 個輸入 token，所以取消用不到的工具也能省 token。
 
 關於工具清單，還有幾點需要知道：
 
-- **清單來源**：**工具**清單來自你的 OpenViking 服務，Studio 會說明每個工具的用途；OpenViking 為工具提供了標註時，還會在旁邊顯示**只讀**或**會修改資料**。OpenViking 把 `search` 標為**會修改資料**，但閘道器仍預設勾選它。
-- **以後新增的工具**：OpenViking 以後新增的工具會預設可用，已有對話仍沿用開始時的工具清單。已有的上下文配置保留原來的勾選。
+- **清單來源**：**工具**清單來自你的 OpenViking 服務，Studio 會說明每個工具的用途；OpenViking 為工具提供了標註時，還會在旁邊顯示**只讀**或**會修改資料**。
+- **以後新增的工具**：OpenViking 以後新增的工具會預設可用，已有對話仍沿用開始時的工具清單。已有的上下文配置保留原來的勾選。沒有儲存 `default` 配置的帳號使用部署的 `default_profile`，除非它設定了 `disabled_tools`，否則提供全部工具。
 - **root 看到的清單為空**：OpenViking 不允許 root API 金鑰呼叫它的工具，所以 root 檢視時，閘道器用當前帳號中某把[閘道器金鑰](09-gateway-keys.md#gateway-keys)背後的 OpenViking 金鑰讀取清單。帳號裡還沒有閘道器金鑰時，清單可能為空，Studio 顯示提示“**簽發閘道器金鑰後即可載入工具清單。**”請先簽發一把金鑰，或者用使用者、帳號管理員的身份登入後再編輯配置。在此之前儲存的配置沿用預設勾選。
 - **`download` 需要 shell**：`download` 返回一條一次性的 `curl` 命令，所以客戶端需要有 shell 工具，而且客戶端要能訪問這條連結。哪些名稱算 shell 工具、連結指向哪裡，見[通過客戶端的 shell 工具](#import-with-a-shell-tool)。
 

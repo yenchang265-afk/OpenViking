@@ -508,6 +508,7 @@ curl -X POST "http://localhost:1933/api/v1/fs/attrs/set_tags" \
   -H "X-API-Key: your-key" \
   -H "Content-Type: application/json" \
   -d '{"uri":"viking://resources/docs","tags":["team=search"],"mode":"append","recursive":true}'
+
 ```
 
 **CLI**
@@ -518,6 +519,8 @@ ov attrs get viking://resources/docs/api.md tags
 ov attrs get viking://user/alice/memories/experiences/foo.md memory.resource_refs
 ov attrs set-tags viking://resources/docs/api.md --tags team=search,env=prod
 ov attrs set-tags viking://resources/docs --tags team=search --mode append --recursive
+ov attrs batch-set-tags viking://resources/docs/api.md viking://resources/docs/guide.md \
+  --tags count+=1 --mode append
 ```
 
 `set-tags` 的目錄目標會更新目錄語義記錄；`recursive=true` 還會更新已有子檔案和子目錄語義記錄。
@@ -560,6 +563,8 @@ ov attrs set-tags viking://resources/docs --tags team=search --mode append --rec
 ```
 
 `attrs.memory` 來自 `MEMORY_FIELDS` 元資訊，已去掉正文內容。`attrs.tags` 是 `attrs set-tags` 和搜尋過濾使用的顯式檢索標籤。
+
+批次請求接受 1～50 個 URI，會對規範化後的 URI 去重，並按輸入順序返回 `items` 和 `failed`；單項失敗不會讓整個 HTTP 請求失敗。
 
 ---
 

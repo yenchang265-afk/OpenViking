@@ -119,12 +119,14 @@ ContextBuilder 實際讀取按 `sandbox.mode` 選擇的活動 Workspace：
 
 ### 啟動檔案
 
-ContextBuilder 在每輪構建系統提示時，按 `AGENTS.md`、`SOUL.md`、`TOOLS.md`、`IDENTITY.md` 的順序讀取存在且非空的檔案：
+ContextBuilder 在每輪構建系統提示時，按本地 `AGENTS.md`、Agent 指令、本地 `TOOLS.md`、本地 `IDENTITY.md` 的順序讀取存在且非空的檔案。
+
+配置 OpenViking 且當前使用者的 `viking://~/memories/soul.md` 可讀取、非空時，Agent 指令優先使用該檔案；否則使用本地 `SOUL.md`。遠端讀取超時為 5 秒，檔案缺失或讀取失敗也會回退本地。每輪只注入這兩個檔案中的一個，下一輪重新讀取並選擇。
 
 | 檔案 | 適合定義的內容 |
 |------|----------------|
 | `AGENTS.md` | 全域工作方式、任務流程、輸出約束和必須遵守的專案規則 |
-| `SOUL.md` | 人格、價值觀、語氣、回答風格和預設行為偏好 |
+| OpenViking `memories/soul.md`，本地 `SOUL.md` 兜底 | 人格、價值觀、語氣、回答風格和預設行為偏好 |
 | `TOOLS.md` | 工具選擇原則、呼叫順序、副作用確認和安全邊界 |
 | `IDENTITY.md` | Agent 名稱、角色、職責範圍和身份背景 |
 
@@ -142,7 +144,7 @@ ContextBuilder 在每輪構建系統提示時，按 `AGENTS.md`、`SOUL.md`、`T
 
 首次使用活動 Workspace 時，VikingBot 從安裝包中的 `bot/workspace` 複製啟動檔案、內建 Skill 模板和輔助目錄。模板初始化不會覆蓋已有的啟動檔案定製。
 
-應直接修改活動 Workspace。ContextBuilder 每輪重新讀取啟動檔案，因此儲存 `SOUL.md`、`AGENTS.md`、`TOOLS.md` 或 `IDENTITY.md` 後，通常下一輪對話即可生效，無需重啟 Gateway。修改安裝包或倉庫中的 `bot/workspace` 隻影響以後建立的新 Workspace。
+應修改當前選用的指令來源：OpenViking `soul.md` 可用時編輯該遠端檔案，本地兜底則編輯活動 Workspace 中的 `SOUL.md`。ContextBuilder 每輪重新讀取啟動檔案，因此儲存當前指令檔案、`AGENTS.md`、`TOOLS.md` 或 `IDENTITY.md` 後，通常下一輪對話即可生效，無需重啟 Gateway。修改安裝包或倉庫中的 `bot/workspace` 隻影響以後建立的新 Workspace。
 
 啟動檔案等同於系統級提示的一部分，應限制寫許可權，並且不要存放 API Key、Token 或其他秘密。
 

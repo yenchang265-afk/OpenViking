@@ -566,9 +566,10 @@ OpenViking 倉庫裡已經提供了可直接匯入的 dashboard JSON：
 
 ## 可選 Kafka 事件上報
 
-安裝 `openviking[reporting]` 並啟用 `server.observability.reporting.enabled` 後，
-事件上報讀取外部 JSON（`NACOS_CONFIG_FILE`）或配置的 Nacos 服務。
-Kafka 的地址、認證和 topic 來自該配置的 `kafka`，不能寫入業務程式碼。
+安裝 `openviking[reporting]`，並在 `ov.conf` 中開啟 `server.observability.reporting.enabled`
+和 `server.observability.reporting.telemetry.enabled`。
+上報器從 `reporting.kafka` 讀取 Kafka 的地址、認證和 topic，
+從 `reporting.telemetry` 讀取佇列和部署標識。
 該功能預設關閉，業務呼叫不會因上報失敗而中斷。
 
 上報器使用記憶體佇列；`telemetry.queue_capacity` 必須為正整數，預設 `1024`。
@@ -576,7 +577,8 @@ Kafka 的地址、認證和 topic 來自該配置的 `kafka`，不能寫入業�
 日誌只包含數量。此上報器適用於允許少量丟失的分析統計，不提供持久化審計或計費帳本
 保證。停止服務時應預留優雅退出時間，等待佇列傳送完成。
 
-部署可通過 `OV_METRICS_ACCOUNT_ID` 和 `OV_RESOURCE_ID` 繫結外層雲帳號與例項，
+部署可在 `reporting.telemetry.deployment` 中設定 `account_id`、`resource_id` 和 `region`。
+`OV_METRICS_ACCOUNT_ID`、`OV_RESOURCE_ID` 和 `OV_REGION` 仍可用作後備值。
 原始資料空間和成員保留為 `ov_account_id`、`ov_user_id`。僅當部署能夠確定模型憑據
 歸屬時，設定 `OV_MODEL_COST_BEARER=customer` 或 `ov`；未設定時保持 `unknown`。
 混用不同歸屬的憑據時，可信部署配置應在每個 VLM／Embedding 憑據上分別設定
@@ -596,9 +598,23 @@ Kafka 的地址、認證和 topic 來自該配置的 `kafka`，不能寫入業�
 並傳遞到實際 VLM／Embedding 客戶端。模型配置章節仍只允許 ROOT 修改，空間管理員
 和普通成員不能通過配置介面指定費用歸屬。
 
-可選 Nacos 上報器優先使用明確配置的 `nacos_namespace`、`nacos_data_id`、`nacos_group`，
-其次讀取 `NACOS_NAMESPACE`、`NACOS_DATA_ID`、`NACOS_GROUP`，預設分別為 `public`、
-`global_configs`、`DEFAULT_GROUP`。
+以下是 `ov.conf` 中 `server.observability.reporting` 的示例值。
+
+```json
+{
+  "enabled": true,
+  "kafka": {
+    "bootstrap_servers": "broker.example:9092",
+    "topic": "metric-log"
+  },
+  "telemetry": {
+    "enabled": true
+  }
+}
+```
+
+遷移時，將 Nacos 或外部 JSON 中的 `kafka` 和 `telemetry` 移到上述位置，再重啟核心。
+`reporting` 中的字串按字面值讀取，Kafka 憑據應填入實際值。
 
 ## 相關文件
 

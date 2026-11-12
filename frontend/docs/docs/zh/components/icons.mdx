@@ -1,73 +1,130 @@
-# 圖示
+# Icons 圖示
 
-操作圖示、檔案型別圖示與作用域層級圖示通過公開入口 `@openviking/react/icons` 提供。它們複用工作區的 SVG 原始檔，隨 React 包一起交付。
+元件庫內建的圖示：箭頭、檔案型別、作用域層級和看板圖示以 React 元件提供，渲染為內聯 SVG；另有按檔名選擇檔案型別圖示的函式。
 
-## 可執行示例
+## 何時使用
 
-通過尺寸按鈕調整裝飾性圖示。單獨的 PDF 圖示演示有意義的 `aria-label` 描述，尺寸為 24 × 24 畫素。下方一行是三個作用域層級圖示。中英文文件共用同一份示例，示例說明使用英文；應用可自行提供本地化的 `aria-label` 文案。
+- 需要與元件庫介面一致的圖示時，例如為 [ScopeSwitcher](./scope-switcher) 的選項或 [FileTree](./file-tree) 的行提供圖示。
+- 需要按檔名顯示對應型別的圖示時，使用 `getFileTypeIcon`。
+
+## 引入
+
+```tsx
+import { PdfIcon, getFileTypeIcon } from '@openviking/react/icons';
+```
+
+圖示以內聯 SVG 打包進 JavaScript，沒有單獨的資源請求，不需要匯入樣式表。
+
+## 程式碼演示
+
+### 基礎用法
+
+切換 16、24、32 畫素檢視第一行圖示的尺寸變化；第二行是三個作用域層級圖示，最後的 PDF 圖示傳入了 `aria-label`。
 
 ```tsx file="../../_demos/icons-basic.tsx" preview
 
 ```
 
-## 可用圖示
+## API
 
-| 匯出             | 用途                            |
-| ---------------- | ------------------------------- |
-| `ArrowRightIcon` | 火山版 CLI 快捷命令使用的右箭頭 |
-| `AudioIcon`      | 音訊                            |
-| `PdfIcon`        | PDF                             |
-| `PptIcon`        | 簡報                            |
-| `VideoIcon`      | 影片                            |
-| `WordIcon`       | 文本文件                        |
-| `LibraryIcon`    | 庫（按名稱取色的圓形漸變塊）    |
-| `SpaceIcon`      | 資料空間                        |
-| `UserIcon`       | 帳號 / User                     |
+### 圖示元件通用屬性
 
-`LibraryIcon` 沒有固定字形，按 `name` 取一種圓形漸變塊，同一個名字始終取到同一種漸變；它渲染為 `span` 色塊，不接收 SVG 屬性。`SpaceIcon` 與 `UserIcon` 是 14 × 14 的 `currentColor` 描邊圖形，隨文字顏色變化。
+清單中的圖示元件（`LibraryIcon` 除外）渲染為內聯 `svg`，接收 `IconProps`。
 
-`ScopeCascade` 的預設檢視已內建這三個層級圖示：適配函式返回的選項沒有 `icon` 時自動補上本級預設圖示，返回了 `icon` 就照用宿主的。單獨使用 `ScopeSelector` 時圖示完全由呼叫方傳入。
+| 引數             | 說明                                                                                             | 型別                      | 預設值                     |
+| ---------------- | ------------------------------------------------------------------------------------------------ | ------------------------- | -------------------------- |
+| width            | 圖示寬度                                                                                         | `number \| string`        | 圖示自帶的尺寸，見圖示清單 |
+| height           | 圖示高度                                                                                         | `number \| string`        | 圖示自帶的尺寸，見圖示清單 |
+| aria-label       | 無障礙名稱；省略時 SVG 帶 `aria-hidden`，作為裝飾；傳入後圖標保留在無障礙樹中                    | `string`                  | -                          |
+| className、style | 為 SVG 元素設定類名和內聯樣式；跟隨文字顏色的圖示用 `color` 改色                                 | `string`、`CSSProperties` | -                          |
+| 其他屬性         | 標準 SVG 屬性，包括 `aria-*` 和 `role`，不接收 `children`；顯式傳入的 `aria-hidden` 優先於預設值 | SVG 屬性                  | -                          |
 
-## 屬性
+### 圖示清單
 
-檔案型別圖示、`ArrowRightIcon`、`SpaceIcon` 與 `UserIcon` 渲染為內聯 `svg`，接收不含 `children` 的標準 SVG 屬性。`LibraryIcon` 只接收 `name`。
+預設尺寸的單位為畫素，顏色一欄標明圖示是否跟隨 CSS `color`。
 
-| 屬性         | 型別               | 預設值                         | 說明                                       |
-| ------------ | ------------------ | ------------------------------ | ------------------------------------------ |
-| `width`      | `number \| string` | `16`；`ArrowRightIcon` 為 `14` | 圖示寬度。                                 |
-| `height`     | `number \| string` | `16`；`ArrowRightIcon` 為 `14` | 圖示高度。                                 |
-| `aria-label` | `string`           | —                              | 無障礙描述；裝飾性圖示省略，SVG 保持隱藏。 |
-| `className`  | `string`           | —                              | 為 SVG 元素新增類名。                      |
-| 其他屬性     | SVG 屬性           | —                              | 標準 SVG 屬性，包括 `aria-*` 與 `role`。   |
+| 匯出                      | 說明                                     | 預設尺寸 | 顏色                                                       |
+| ------------------------- | ---------------------------------------- | -------- | ---------------------------------------------------------- |
+| `ArrowRightIcon`          | 右箭頭                                   | 14       | 跟隨 `color`                                               |
+| `ArrowUpRightIcon`        | 右上箭頭                                 | 12       | 固定配色                                                   |
+| `ChevronRightIcon`        | 向右的尖括號，用作展開指示               | 16       | 跟隨 `color`                                               |
+| `FolderIcon`              | 資料夾                                   | 16       | 跟隨 `color`                                               |
+| `FolderOpenIcon`          | 開啟的資料夾                             | 16       | 跟隨 `color`                                               |
+| `DirectoryTourFolderIcon` | 開啟的資料夾                             | 11.2     | 固定配色                                                   |
+| `DocumentIcon`            | 通用檔案                                 | 16       | 跟隨 `color`                                               |
+| `AudioIcon`               | 音訊檔案                                 | 16       | 固定配色                                                   |
+| `PdfIcon`                 | PDF 檔案                                 | 16       | 固定配色                                                   |
+| `PptIcon`                 | 簡報                                 | 16       | 固定配色                                                   |
+| `VideoIcon`               | 影片檔案                                 | 16       | 固定配色                                                   |
+| `WordIcon`                | Word 文件                                | 16       | 固定配色                                                   |
+| `LibraryIcon`             | 知識庫，按名稱取色的圓形漸變色塊         | 14       | 五組漸變，見「主題變數」                                   |
+| `SpaceIcon`               | 資料空間                                 | 14       | 跟隨 `color`                                               |
+| `UserIcon`                | 使用者                                     | 14       | 跟隨 `color`                                               |
+| `ExperienceBoardIcon`     | 經驗看板，儀表盤佈局圖形                 | 14       | 跟隨 `color`                                               |
+| `WikiBoardIcon`           | Wiki 看板，與 `ExperienceBoardIcon` 同形 | 14       | 跟隨 `color`                                               |
+| `WikiConflictBoardIcon`   | Wiki 衝突看板，帶警告角標                | 12       | 跟隨 `color`，角標底色取 `--ov-ui-color-dashboard-surface` |
+| `WikiBookIcon`            | 開啟的書本                               | 16       | 跟隨 `color`                                               |
+| `WikiWarningIcon`         | 警告                                     | 14       | 跟隨 `color`                                               |
+| `WikiSuccessIcon`         | 成功                                     | 14       | 跟隨 `color`                                               |
+| `WikiEditIcon`            | 編輯                                     | 14       | 跟隨 `color`                                               |
+| `WikiHistoryIcon`         | 歷史記錄                                 | 12       | 跟隨 `color`                                               |
+| `WikiDiscussIcon`         | 討論                                     | 14       | 跟隨 `color`                                               |
+| `FileInputIcon`           | 檔案輸入                                 | 14       | 跟隨 `color`                                               |
+| `ScanSearchIcon`          | 掃描檢索                                 | 14       | 跟隨 `color`                                               |
+| `ActivityIcon`            | 活動曲線                                 | 14       | 跟隨 `color`                                               |
 
-`LibraryIcon` 的 `name` 決定漸變取值，預設空字串，即第一種漸變。
+### LibraryIcon
+
+固定為 14 × 14 的圓形漸變色塊，渲染為 `span`，不接收 SVG 屬性，也不進入無障礙樹。
+
+| 引數 | 說明                                                                   | 型別     | 預設值 |
+| ---- | ---------------------------------------------------------------------- | -------- | ------ |
+| name | 決定使用五組漸變中的哪一組，同一個名稱始終得到同一組；省略時使用第一組 | `string` | `''`   |
+
+### VikingBotIcon
+
+對話相關的圖示，用 `name` 選擇，其餘屬性同圖示元件通用屬性。
+
+| 引數          | 說明                                                                                         | 型別                                                                                                                              | 預設值 |
+| ------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| name          | 圖示名稱，依次為燈泡、書本、影片、報告、歷史、新建會話、移除、工具、上下文資料夾、關閉上下文 | `'bulb' \| 'book' \| 'video' \| 'report' \| 'history' \| 'newSession' \| 'remove' \| 'tool' \| 'contextFolder' \| 'contextClose'` | 必填   |
+| width、height | 圖示尺寸                                                                                     | `number \| string`                                                                                                                | `16`   |
+
+### 檔案型別圖示函式
+
+| 函式                     | 說明                                                                           | 型別                                                  |
+| ------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `getFileTypeIcon`        | 取得檔名對應的圖示元件，沒有匹配時返回通用檔案圖示                           | `(name: string) => FileTypeIconComponent`             |
+| `resolveFileTypeIconKey` | 取得檔名對應的圖示鍵，沒有匹配時返回 `'default'`                             | `(name: string) => string`                            |
+| `getFileTypeColor`       | 取得圖示鍵的品牌色，`scheme` 預設為 `'light'`，未登記的鍵返回 `'currentColor'` | `(key: string, scheme?: 'light' \| 'dark') => string` |
+
+`name` 可以是檔名或路徑，只取最後一段並忽略大小寫：先匹配完整檔名，再按副檔名從長到短匹配（`tar.gz` 先於 `gz`），都沒有命中時使用通用檔案圖示。
+
+返回的檔案型別圖示使用 `currentColor`，PDF、PPT、Word、音訊和影片圖示除外，它們自帶固定配色。用 `getFileTypeColor` 取得品牌色後設置 `color`：
 
 ```tsx
-import { PdfIcon } from '@openviking/react/icons';
+import {
+  getFileTypeColor,
+  getFileTypeIcon,
+  resolveFileTypeIconKey,
+} from '@openviking/react/icons';
 
-export default function Example() {
+function FileTypeIcon({ name }: { name: string }) {
+  const Icon = getFileTypeIcon(name);
   return (
-    <PdfIcon
-      width={24}
-      height={24}
-      className="file-icon"
-      aria-label="PDF 文件"
+    <Icon
+      aria-hidden="true"
+      width={16}
+      height={16}
+      style={{ color: getFileTypeColor(resolveFileTypeIconKey(name)) }}
     />
   );
 }
 ```
 
-## 無障礙
+## 主題變數
 
-相鄰文字已經說明檔案型別時省略 `aria-label`，SVG 保持 `aria-hidden`，避免重複播報。圖示獨立傳達資訊時，提供應用語言下的 `aria-label`。圖示本身不具有互動行為；放入操作控制元件時，由應用負責按鈕語義、鍵盤互動和焦點樣式。
-
-## 資源與樣式
-
-圖示以內聯 SVG 元素的形式打包進 JavaScript，沒有獨立資源請求，也不需要為它們匯入樣式表或配置內容安全策略。
-
-通過 `width`、`height`、`className` 或 `style` 調整尺寸與位置。檔案型別圖示保留固定配色；`ArrowRightIcon`、`SpaceIcon` 與 `UserIcon` 使用 `currentColor`，隨 CSS `color` 改色。`LibraryIcon` 的尺寸寫死在元件內，需要別的尺寸時在外面套一層容器。
-
-`LibraryIcon` 的五組漸變來自主題基線，宿主可以用公開變數逐組覆蓋，不必改元件：
+`LibraryIcon` 有五組漸變，亮色和暗色主題使用同一組。用 `--ov-ui-color-library-swatch-1` 到 `--ov-ui-color-library-swatch-5` 逐組覆蓋；沒有載入庫樣式表時，元件使用內建的同一組漸變。
 
 ```css
 :root {
@@ -75,4 +132,9 @@ export default function Example() {
 }
 ```
 
-基線裡的 `--ov-ui-library-swatch-1-default` … `-5-default` 是私有預設值，亮暗主題共用同一套——它們是設計稿的身份色，不隨主題變化。宿主未載入庫樣式表時，元件仍用同一份調色盤繪製：顏色只維護在 `packages/icons/library-swatches.json`，CSS 側由 `npm run sync:swatches` 從它生成，因此兩條路徑不會出現配色差異。
+## 注意
+
+- 清單中的圖示預設帶 `aria-hidden`，作為裝飾。圖示單獨傳達資訊時，傳入應用語言的 `aria-label`；旁邊的文字已經說明含義時省略，避免重複播報。
+- `getFileTypeIcon` 返回的元件用於裝飾時，請顯式傳入 `aria-hidden`。
+- 圖示沒有互動行為：放進按鈕時，按鈕語義、鍵盤互動和焦點樣式由宿主提供。
+- 型別 `IconProps`、`IconComponent`、`FileTypeIconComponent` 和 `VikingBotIconName` 同樣從 `@openviking/react/icons` 匯出；包根入口不匯出圖示。

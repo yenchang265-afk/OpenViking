@@ -1,0 +1,197 @@
+# 登入與認證表單
+
+六個元件，覆蓋選擇登入方式、郵箱或 API Key 登入、請求重置郵件、設定密碼和確認邀請。
+
+## 何時使用
+
+- `EmailLoginForm`：用郵箱和密碼登入，可附帶忘記密碼入口。
+- `ApiKeyLoginForm`：用 API Key 登入，輸入內容預設遮蔽，可切換顯示。
+- `PasswordResetRequestForm`：使用者忘記密碼時請求傳送重置郵件，支援重新發送並顯示等待秒數。
+- `PasswordSetupForm`：首次設定密碼，或通過郵件連結重置密碼。
+- `LoginMethodSelector`：宿主支援多種登入方式時，讓使用者先選擇一種。
+- `InvitationConfirmation`：展示邀請資訊，讓使用者接受、拒絕或稍後處理。
+- 請求、登入態和頁面跳轉由宿主負責：這些元件只負責輸入、校驗和展示，不發起請求，也不需要 `OpenVikingProvider`。
+
+## 引入
+
+```tsx
+import { EmailLoginForm } from '@openviking/react/components/auth/email-login-form';
+import '@openviking/react/components/auth/email-login-form/style.css';
+
+import { ApiKeyLoginForm } from '@openviking/react/components/auth/api-key-login-form';
+import '@openviking/react/components/auth/api-key-login-form/style.css';
+
+import { PasswordResetRequestForm } from '@openviking/react/components/auth/password-reset-request-form';
+import '@openviking/react/components/auth/password-reset-request-form/style.css';
+
+import { PasswordSetupForm } from '@openviking/react/components/auth/password-setup-form';
+import '@openviking/react/components/auth/password-setup-form/style.css';
+
+import { LoginMethodSelector } from '@openviking/react/components/auth/login-method-selector';
+import '@openviking/react/components/auth/login-method-selector/style.css';
+
+import { InvitationConfirmation } from '@openviking/react/components/auth/invitation-confirmation';
+import '@openviking/react/components/auth/invitation-confirmation/style.css';
+```
+
+## 程式碼演示
+
+### 基礎用法
+
+示例覆蓋提交等待、失敗提示、協議確認和重置郵件的已傳送狀態。點選頂部按鈕切換元件，提交後用「Complete simulation」或「Fail simulation」結束等待，取消勾選「Configure agreements」可以去掉協議確認。
+
+```tsx file="../../_demos/auth-forms.tsx" preview
+
+```
+
+示例只模擬狀態，不傳送請求，也不建立帳號。設定密碼頁的強度規則由示例傳入的 `validatePassword` 提供，不是元件的預設規則。
+
+## API
+
+### 公共屬性
+
+`EmailLoginForm`、`ApiKeyLoginForm`、`PasswordResetRequestForm` 和 `PasswordSetupForm` 都支援以下屬性。
+
+| 引數        | 說明                                                                   | 型別                  | 預設值                   |
+| ----------- | ---------------------------------------------------------------------- | --------------------- | ------------------------ |
+| loading     | 宿主處理提交期間設定：停用輸入和提交，並顯示忙碌狀態                   | `boolean`             | `false`                  |
+| disabled    | 停用輸入和提交                                                         | `boolean`             | `false`                  |
+| error       | 顯示在提交按鈕上方的錯誤提示，元件不解析後端錯誤碼                     | `ReactNode`           | -                        |
+| title       | 表單標題，渲染為 `h2`                                                  | `ReactNode`           | -                        |
+| description | 標題下方的說明                                                         | `ReactNode`           | -                        |
+| back        | 表單頂部的返回入口，沒有 `onClick` 時不顯示                            | `AuthAction`          | -                        |
+| agreements  | 協議配置；`items` 非空時顯示協議勾選框，未勾選的提交會先彈出確認對話方塊 | `AuthAgreements`      | -                        |
+| labels      | 覆蓋介面文案，欄位見 `AuthLabels`                                      | `Partial<AuthLabels>` | -                        |
+| locale      | 介面語言，規則見[國際化](../guide/i18n)                                | `'zh-CN' \| 'en-US'`  | 繼承上級，預設 `'en-US'` |
+| className   | 附加到根元素的類名                                                     | `string`              | -                        |
+
+### EmailLoginForm
+
+公共屬性見上表。
+
+| 引數           | 說明                                                                                    | 型別                                                    | 預設值  |
+| -------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------- |
+| defaultEmail   | 郵箱輸入框的初始值，只在首次渲染時生效                                                  | `string`                                                | `''`    |
+| readOnlyEmail  | 郵箱輸入框設為只讀，值仍參與校驗和提交                                                  | `boolean`                                               | `false` |
+| forgotPassword | 密碼輸入框標籤右側的忘記密碼入口，沒有 `onClick` 時不顯示                               | `AuthAction`                                            | -       |
+| alternateLogin | 表單底部切換到其他登入方式的入口，沒有 `onClick` 時不顯示                               | `AuthAction`                                            | -       |
+| onSubmit       | 校驗通過且協議（如已配置）已同意後觸發；`email` 已去除首尾空白，`password` 保持輸入原樣 | `(values: { email: string; password: string }) => void` | -       |
+
+### ApiKeyLoginForm
+
+公共屬性見上表。
+
+| 引數           | 說明                                                          | 型別                                   | 預設值 |
+| -------------- | ------------------------------------------------------------- | -------------------------------------- | ------ |
+| alternateLogin | 表單底部切換到其他登入方式的入口，沒有 `onClick` 時不顯示     | `AuthAction`                           | -      |
+| onSubmit       | 校驗通過且協議（如已配置）已同意後觸發，`apiKey` 保持輸入原樣 | `(values: { apiKey: string }) => void` | -      |
+
+### PasswordResetRequestForm
+
+公共屬性見上表。
+
+| 引數         | 說明                                                                                      | 型別                                    | 預設值 |
+| ------------ | ----------------------------------------------------------------------------------------- | --------------------------------------- | ------ |
+| defaultEmail | 郵箱輸入框的初始值，只在首次渲染時生效                                                    | `string`                                | `''`   |
+| sentMessage  | 郵件已傳送的結果：輸入框裡的郵箱與 `email` 一致時顯示 `message`，並把提交按鈕改為重新發送 | `{ email: string; message: ReactNode }` | -      |
+| retryAfter   | 距離可以再次傳送的剩餘秒數，由宿主持續更新；大於 0 時停用整個表單，提交按鈕顯示剩餘秒數   | `number`                                | `0`    |
+| onSubmit     | 校驗通過且協議（如已配置）已同意後觸發，`email` 已去除首尾空白                            | `(values: { email: string }) => void`   | -      |
+
+### PasswordSetupForm
+
+公共屬性見上表。
+
+| 引數             | 說明                                                                                  | 型別                                        | 預設值 |
+| ---------------- | ------------------------------------------------------------------------------------- | ------------------------------------------- | ------ |
+| account          | 要設定密碼的帳號，顯示在輸入框上方，下方附帶 `labels.account` 的說明                  | `ReactNode`                                 | -      |
+| passwordHint     | 密碼規則提示，顯示在兩個輸入框下方                                                    | `ReactNode`                                 | -      |
+| validatePassword | 校驗新密碼：返回錯誤文案表示不通過，返回 `undefined` 表示通過；省略時只檢查必填和一致 | `(password: string) => string \| undefined` | -      |
+| onSubmit         | 校驗通過且協議（如已配置）已同意後觸發，`password` 保持輸入原樣                       | `(values: { password: string }) => void`    | -      |
+
+### LoginMethodSelector
+
+| 引數        | 說明                                                                                                                   | 型別                                                                             | 預設值  |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------- |
+| methods     | 登入方式列表，按順序顯示為按鈕：`id` 傳給 `onSelect`，`label` 是按鈕文案，`icon` 顯示在文案前，`disabled` 只停用該方式 | `readonly { id: string; label: string; icon?: ReactNode; disabled?: boolean }[]` | 必填    |
+| onSelect    | 點選登入方式時觸發，引數為該方式的 `id`                                                                                | `(id: string) => void`                                                           | -       |
+| disabled    | 停用全部登入方式                                                                                                       | `boolean`                                                                        | `false` |
+| title       | 標題，渲染為 `h2`                                                                                                      | `ReactNode`                                                                      | -       |
+| description | 標題下方的說明                                                                                                         | `ReactNode`                                                                      | -       |
+| className   | 附加到根元素的類名                                                                                                     | `string`                                                                         | -       |
+
+### InvitationConfirmation
+
+| 引數        | 說明                                                            | 型別                                             | 預設值                   |
+| ----------- | --------------------------------------------------------------- | ------------------------------------------------ | ------------------------ |
+| details     | 邀請資訊，每項顯示為一行，`label` 在左，`value` 在右            | `readonly { label: string; value: ReactNode }[]` | 必填                     |
+| onAccept    | 點選接受按鈕時觸發                                              | `() => void`                                     | -                        |
+| acceptLabel | 接受按鈕的文案，預設值隨 `locale` 切換                          | `string`                                         | `'接受邀請'`             |
+| decline     | 拒絕邀請的入口，顯示在接受按鈕之後，沒有 `onClick` 時不顯示     | `AuthAction`                                     | -                        |
+| defer       | 稍後處理邀請的入口，顯示在拒絕入口之後，沒有 `onClick` 時不顯示 | `AuthAction`                                     | -                        |
+| loading     | 宿主處理接受期間設定：停用全部按鈕，並顯示忙碌狀態              | `boolean`                                        | `false`                  |
+| disabled    | 停用全部按鈕                                                    | `boolean`                                        | `false`                  |
+| error       | 顯示在按鈕上方的錯誤提示                                        | `ReactNode`                                      | -                        |
+| title       | 標題，渲染為 `h2`                                               | `ReactNode`                                      | -                        |
+| description | 標題下方的說明                                                  | `ReactNode`                                      | -                        |
+| locale      | 介面語言，規則見[國際化](../guide/i18n)                         | `'zh-CN' \| 'en-US'`                             | 繼承上級，預設 `'en-US'` |
+| className   | 附加到根元素的類名                                              | `string`                                         | -                        |
+
+### AuthAction
+
+| 引數    | 說明                                           | 型別         | 預設值 |
+| ------- | ---------------------------------------------- | ------------ | ------ |
+| label   | 入口文案，元件不翻譯，由宿主提供當前語言的文本 | `string`     | 必填   |
+| onClick | 點選時觸發，省略時不顯示該入口                 | `() => void` | -      |
+
+### AuthAgreements
+
+| 引數         | 說明                                                                                                     | 型別                                                                                  | 預設值 |
+| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ |
+| items        | 協議列表，在勾選框和確認對話方塊中顯示為連結並在新標籤頁開啟；陣列為空時不啟用協議                         | `readonly { label: string; href: string }[]`                                          | 必填   |
+| confirmation | 確認對話方塊的文案，省略的項使用 `labels` 的 `agreementTitle`、`agreementDescription`、`agree` 和 `cancel` | `{ title?: string; description?: string; confirmText?: string; cancelText?: string }` | -      |
+
+### AuthLabels
+
+預設值列出 `zh-CN` 的內建文案。
+
+| 引數                 | 說明                                               | 型別     | 預設值                           |
+| -------------------- | -------------------------------------------------- | -------- | -------------------------------- |
+| email                | 郵箱輸入框的標籤                                   | `string` | `'郵箱'`                         |
+| password             | 登入密碼輸入框的標籤                               | `string` | `'密碼'`                         |
+| apiKey               | API Key 輸入框的標籤                               | `string` | `'API Key'`                      |
+| newPassword          | 新密碼輸入框的標籤                                 | `string` | `'新密碼'`                       |
+| confirmation         | 確認新密碼輸入框的標籤                             | `string` | `'確認新密碼'`                   |
+| showPassword         | 密碼和 API Key 輸入框中「顯示」按鈕的無障礙名稱    | `string` | `'顯示密碼'`                     |
+| hidePassword         | 密碼和 API Key 輸入框中「隱藏」按鈕的無障礙名稱    | `string` | `'隱藏密碼'`                     |
+| required             | 必填項為空時的錯誤提示                             | `string` | `'此項為必填項。'`               |
+| invalidEmail         | 郵箱為空或格式不正確時的錯誤提示                   | `string` | `'請輸入有效的郵箱地址。'`       |
+| mismatch             | 兩次輸入的密碼不一致時的錯誤提示                   | `string` | `'兩次輸入的密碼不一致。'`       |
+| login                | `EmailLoginForm` 和 `ApiKeyLoginForm` 的提交按鈕   | `string` | `'登入'`                         |
+| send                 | `PasswordResetRequestForm` 的提交按鈕              | `string` | `'傳送重置郵件'`                 |
+| resend               | 已傳送郵件後 `PasswordResetRequestForm` 的提交按鈕 | `string` | `'重新發送郵件'`                 |
+| confirm              | `PasswordSetupForm` 的提交按鈕                     | `string` | `'確認並登入'`                   |
+| agreementPrefix      | 協議勾選框中，協議連結前的文案                     | `string` | `'我已閱讀並同意'`               |
+| agreementTitle       | 確認對話方塊的標題                                   | `string` | `'閱讀並同意協議'`               |
+| agreementDescription | 確認對話方塊的說明，後面接協議連結                   | `string` | `'請閱讀並同意以下協議後繼續。'` |
+| agree                | 確認對話方塊的同意按鈕                               | `string` | `'同意並繼續'`                   |
+| cancel               | 確認對話方塊的取消按鈕                               | `string` | `'取消'`                         |
+| account              | `PasswordSetupForm` 中帳號下方的說明               | `string` | `'登入帳號'`                     |
+
+## 注意
+
+- 提交時先校驗輸入，再處理協議：已勾選則直接觸發 `onSubmit`，未勾選則彈出確認對話方塊，點選同意會勾選協議並觸發 `onSubmit`。
+- 確認對話方塊使用原生 `<dialog>` 的 `showModal()`，需要瀏覽器支援。取消或按 Esc 會關閉對話方塊，保留輸入，不勾選協議，也不提交。
+- 元件不發起請求，也忽略 `onSubmit` 的返回值。宿主在處理期間設定 `loading`，失敗時通過 `error` 展示，成功後的跳轉也由宿主完成。
+- 表單的 `loading` 和 `disabled` 停用輸入、提交按鈕和 `forgotPassword`，`back` 和 `alternateLogin` 仍可點選；`InvitationConfirmation` 的 `loading` 和 `disabled` 停用全部按鈕。
+- 輸入內容、欄位錯誤、密碼顯隱和協議勾選儲存在表單內部。更換帳號或協議內容時，給表單設定新的 `key` 重新掛載，才會清空輸入和已同意的協議。
+- 郵箱按基本格式校驗，為空時同樣提示郵箱無效。登入密碼和 API Key 只檢查非空，不套用新密碼的強度規則。
+- `PasswordSetupForm` 檢查兩次輸入一致，密碼強度只由 `validatePassword` 決定，元件沒有預設強度規則。
+- 把 `required`、`invalidEmail` 或 `mismatch` 設為空字串，只會隱藏對應的錯誤文案，校驗結果不變。
+- 密碼和 API Key 只儲存在輸入框狀態裡，元件不會儲存、記錄或去除首尾空白；郵箱在提交前去除首尾空白。
+- 輸入框設定了 `autocomplete`，密碼管理器可以識別：郵箱登入用 `username` 和 `current-password`，設定密碼用 `new-password`，API Key 輸入框為 `off`。
+- `LoginMethodSelector` 沒有內建文案，不提供 `locale` 和 `labels`。`InvitationConfirmation` 只有接受按鈕一條內建文案，用 `acceptLabel` 修改，不提供 `labels`。
+- `InvitationConfirmation` 只展示 `details`，`onAccept`、`decline` 和 `defer` 只通知宿主。邀請預覽、狀態判斷，以及展示登入、設定密碼還是確認加入，由宿主決定。
+- 每個元件最寬 440px，寬度隨容器收縮，居中和整頁佈局由宿主決定。
+- 六個元件共用同一份樣式，各 `style.css` 入口內容相同；同一頁面用到多個元件時，引入其中一個即可。
+- 顏色取自 `--ov-ui-color-*` 主題變數，暗色模式跟隨 `<html>` 上的 `.dark` 類，詳見[快速開始](../guide/getting-started)。
+- 型別從各元件子路徑匯出：`AuthAction`、`AuthAgreements` 和 `AuthLabels` 可從四個表單的子路徑匯入，`AuthAction` 也可從 `invitation-confirmation` 匯入。包根入口只匯出六個元件和它們的 Props 型別。

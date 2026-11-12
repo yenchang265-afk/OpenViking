@@ -1,9 +1,10 @@
+import { Button } from '../../shared/primitives/button/button.js';
 import type { Locale } from '../../shared/locale.js';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import type { TuiRecord } from '../../components/tui/index.js';
+import type { CommandConsoleRecord } from '../../components/command-console/index.js';
 import { ConsoleIcon } from '../../icons/console-icons.js';
-import { Tooltip } from '../../shared/components/tooltip/index.js';
+import { Tooltip } from '../../shared/primitives/tooltip/index.js';
 import { ConsoleHistory } from './console-history.js';
 import type { ConsoleMode } from './types.js';
 import type { consoleLabels } from './labels.js';
@@ -25,7 +26,7 @@ export function ConsoleToolbar({
   panelId: string;
   locale: Locale;
   labels: ReturnType<typeof consoleLabels>;
-  records: readonly TuiRecord[];
+  records: readonly CommandConsoleRecord[];
   isExecuting: boolean;
   onModeChange: (mode: ConsoleMode) => void;
   onClear: () => void;
@@ -70,9 +71,12 @@ export function ConsoleToolbar({
             content={labels.clear}
             className="ov-console__action-tooltip"
           >
-            <button
+            <Button
+              size="small"
+              type="text"
+              iconOnly
               className="ov-console__action"
-              type="button"
+              htmlType="button"
               aria-label={labels.clear}
               onClick={() => {
                 setSessionVersion((version) => version + 1);
@@ -80,7 +84,7 @@ export function ConsoleToolbar({
               }}
             >
               <ConsoleIcon name="newSession" />
-            </button>
+            </Button>
           </Tooltip>
         </div>
       ) : (

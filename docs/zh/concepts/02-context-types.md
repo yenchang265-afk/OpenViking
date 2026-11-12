@@ -88,8 +88,6 @@ results = client.find(
 | **preferences** | `~/memories/preferences/` | 按主題組織的使用者偏好 |
 | **entities** | `~/memories/entities/` | 人物、專案、組織等實體知識 |
 | **events** | `~/memories/events/` | 決策、里程碑等事件記錄 |
-| **identity** | `~/memories/identity.md` | 助手的名稱、形象、氣質和自我介紹 |
-| **soul** | `~/memories/soul.md` | 助手的核心原則、邊界、風格和連續性 |
 | **cases** | `~/memories/cases/` | 用於訓練和評估的任務案例 |
 | **trajectories** | `~/memories/trajectories/` | 可複用的任務執行軌跡 |
 | **experiences** | `~/memories/experiences/` | 從執行結果中提煉的可複用經驗 |
@@ -97,6 +95,8 @@ results = client.find(
 表中的 `~/...` 使用家目錄別名 `viking://~`，服務端會按認證身份將其展開為 `viking://user/{user_id}/...`。當記憶策略允許 Peer 記憶時，支援 Peer 的型別會寫入 `viking://user/{user_id}/peers/{peer_id}/memories/...`。記憶型別可通過自定義模板擴充或調整。
 
 Schema 定義的 `memories/tools/` 和 `memories/skills/` 型別已停用。它們與存放在 `viking://user/{user_id}/skills/{skill_name}/SKILL.md` 下的獨立 Skill 不同，後者仍然保留並受支援。
+
+`memories/soul.md` 是靜態 Agent 指令檔案，建立使用者工作區時按原 Soul 的預設正文初始化。可通過檔案介面編輯，不參與 session commit 的自動提取或合併。已有使用者在初始化或下次提取 Self 記憶時，若缺少 `soul.md` 則按預設內容補齊；已有 `soul.md` 和 `identity.md` 均保持原樣。
 
 ### 使用
 

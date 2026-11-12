@@ -69,7 +69,7 @@ from openviking.utils.git_auth import (
 )
 from openviking.utils.ingest_options import IngestOptions
 from openviking.utils.media_processor import _smart_stem
-from openviking.utils.network_guard import ensure_public_remote_target
+from openviking.utils.network_guard import RequestValidator, ensure_public_remote_target
 from openviking.utils.path_safety import normalize_storage_target_uri
 from openviking.utils.resource_processor import ResourceProcessor
 from openviking.utils.skill_processor import SkillProcessingPreparation, SkillProcessor
@@ -1052,6 +1052,7 @@ class ResourceService:
             source_info = await self._preflight_git_source(
                 path,
                 auth_config=preflight_git_auth,
+                request_validator=processor_kwargs.get("request_validator"),
                 branch=processor_kwargs.get("branch") or processor_kwargs.get("ref"),
                 commit=processor_kwargs.get("commit"),
             )
@@ -1466,6 +1467,7 @@ class ResourceService:
         source: str,
         *,
         auth_config: Optional[GitHttpAuthConfig] = None,
+        request_validator: Optional[RequestValidator] = None,
         branch: Optional[str] = None,
         commit: Optional[str] = None,
     ) -> _ResourceSourceInfo:
@@ -1495,15 +1497,15 @@ class ResourceService:
             ref = "HEAD"
             ls_remote_args = ["git", "ls-remote", repo_url, "HEAD"]
 
+        env = build_git_http_auth_env(auth_config, repo_url) if auth_config is not None else None
+        env = overlay_parser_subprocess_env(
+            ParserNetworkContext(ParserNetworkOperation.GIT_COMMAND, repo_url),
+            env,
+            request_validator=request_validator,
+        )
+
         proc = None
         try:
-            env = (
-                build_git_http_auth_env(auth_config, repo_url) if auth_config is not None else None
-            )
-            env = overlay_parser_subprocess_env(
-                ParserNetworkContext(ParserNetworkOperation.GIT_COMMAND, repo_url),
-                env,
-            )
             proc = await asyncio.create_subprocess_exec(
                 *ls_remote_args,
                 env=env,
@@ -2466,12 +2468,19 @@ class ResourceService:
         if not watch_manager:
             return
 
+        from openviking.connector.delegate import ConnectorDelegate
+
         existing_task = await watch_manager.get_task_by_uri(
             to_uri=to_uri,
             account_id=ctx.account_id,
             user_id=ctx.user.user_id,
             role=str(ctx.role),
         )
+        if existing_task and ConnectorDelegate.is_watch_auth_state(existing_task.auth_state):
+            logger.info(
+                f"[ResourceService] Skip deactivating Connector watch task {existing_task.task_id} for {to_uri}"
+            )
+            return
         if existing_task:
             await watch_manager.update_task(
                 task_id=existing_task.task_id,
@@ -2775,11 +2784,11 @@ class ResourceService:
         }
 
     async def cancel_skill_processing(self, task_id: str, ctx: RequestContext) -> None:
-        """Stop one failed update's work before its caller restores the old package."""
+        """Stop one failed update's work before its caller releases the package lock."""
         from openviking.service.task_tracker import get_task_tracker
 
         tracker = get_task_tracker()
-        task = await tracker.cancel_skill_update_for_rollback(
+        task = await tracker.cancel_skill_processing(
             task_id, account_id=ctx.account_id, user_id=ctx.user.user_id
         )
         if task is None:

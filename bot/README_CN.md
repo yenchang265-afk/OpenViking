@@ -363,22 +363,25 @@ Agent 實際使用的活動目錄還取決於 `bot.sandbox.mode`：
 | `per-session` | `<workspace>/<session-key>` |
 | `per-channel` | `<workspace>/<channel-key>` |
 
-例如，預設配置下應修改 `~/.openviking/data/bot/workspace/shared/SOUL.md`。
+例如，預設的本地 Soul 檔案位於 `~/.openviking/data/bot/workspace/shared/SOUL.md`。
 
 ### 定製 Agent
 
 首次使用某個活動 Workspace 時，VikingBot 會從內建 `bot/workspace` 模板複製初始檔案。常用定製入口如下：
 
+配置 OpenViking 後，VikingBot 每輪讀取當前使用者的 `viking://~/memories/soul.md`，優先使用該檔案替代本地 `SOUL.md`。檔案不存在、為空、讀取失敗或讀取超過 5 秒時，回退到本地 `SOUL.md`；未配置 OpenViking 時直接使用本地 `SOUL.md`。
+
 | 檔案或目錄 | 作用 | 載入方式 |
 |------------|------|----------|
-| `SOUL.md` | 人格、價值觀和表達風格 | 每輪自動加入系統提示 |
+| OpenViking `memories/soul.md` | Agent 指令 | 每輪優先於本地 `SOUL.md` 載入 |
+| `SOUL.md` | 人格、價值觀和表達風格 | OpenViking Agent 指令不可用時的本地兜底 |
 | `AGENTS.md` | 全域工作規則和任務約束；可按需建立 | 每輪自動加入系統提示 |
 | `IDENTITY.md` | Agent 名稱、角色和身份背景；可按需建立 | 每輪自動加入系統提示 |
 | `TOOLS.md` | 工具選擇、呼叫邊界和安全規則 | 每輪自動加入系統提示 |
 | `skills/<name>/SKILL.md` | 某類任務的操作流程和配套資源 | 先注入摘要，需要時漸進載入全文 |
 | `HEARTBEAT.md` | 週期檢查的任務清單 | 僅由 Heartbeat 讀取 |
 
-例如，可以修改活動 Workspace 中的 `SOUL.md`：
+例如，可以修改活動 Workspace 中的 `SOUL.md` 來定製本地兜底內容：
 
 ```markdown
 # Soul
@@ -391,7 +394,7 @@ Agent 實際使用的活動目錄還取決於 `bot.sandbox.mode`：
 - 不確定時明確說明假設，不編造結果
 ```
 
-儲存後通常會在下一輪 Agent 對話中生效，無需重啟 Gateway。`SOUL.md` 只能改變提示行為，不能繞過 Channel 許可權、工具可見性或 Sandbox 限制。
+當前選用的指令檔案儲存後，通常會在下一輪 Agent 對話中生效，無需重啟 Gateway。使用 OpenViking `soul.md` 時，應編輯該遠端檔案，本地 `SOUL.md` 不會同時注入。這些指令只能改變提示行為，不能繞過 Channel 許可權、工具可見性或 Sandbox 限制。
 
 > [!NOTE]
 > 請修改活動 Workspace 中的檔案。倉庫或安裝包中的 `bot/workspace` 是初始化模板，不會覆蓋已經存在的 Workspace。不要在啟動檔案中儲存 API Key 等秘密。

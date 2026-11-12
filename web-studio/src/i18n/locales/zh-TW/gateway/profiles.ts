@@ -19,7 +19,7 @@ const profiles = {
   empty: {
     title: '還沒有上下文配置',
     description:
-      '每個閘道器金鑰都需要一份上下文配置。推薦設定會為每條新訊息召回記憶、儲存對話、為長對話生成摘要，並讓模型使用只讀的 Business Context Platform 工具，之後可以隨時修改。',
+      '每個閘道器金鑰都需要一份上下文配置。推薦設定會為每條新訊息召回記憶、儲存對話、為長對話生成摘要，並讓模型使用全部 Business Context Platform 工具，之後可以隨時修改。',
     readOnly: '等待閘道器管理員新增上下文配置。',
   },
   summary: {
@@ -65,7 +65,7 @@ const profiles = {
   clientOverrides: {
     label: '允許客戶端覆蓋設定',
     description:
-      '客戶端可以用 X-OpenViking-Context 請求頭為新對話修改下面的任意設定，包括預算和會修改資料的工具。配置需要保持原樣時，請關閉此項。',
+      '客戶端可以用 X-OpenViking-Context 請求頭為新對話修改下面的任意設定，包括預算；工具只能再排除，不能多提供。配置需要保持原樣時，請關閉此項。',
   },
   recall: {
     title: '召回記憶',
@@ -116,6 +116,13 @@ const profiles = {
       label: '檢索文本長度',
       description:
         '召回用最新一條使用者訊息作為檢索文本，超出這個長度的部分會被截掉。',
+    },
+    peerScope: {
+      label: 'Peer 範圍',
+      description:
+        '除使用者自己的記憶外，召回和 Business Context Platform 工具能看到哪些 Peer 的記憶。',
+      all: '所有 Peer，當前 Peer 優先',
+      actor: '僅當前 Peer',
     },
     quotas: {
       label: '按分類限量',
@@ -196,7 +203,7 @@ const profiles = {
     available: {
       label: '工具',
       description:
-        '推薦設定勾選只讀工具，會修改資料的工具不勾選。以後新增的工具會自動啟用。上游也需要允許使用 Business Context Platform 工具。',
+        '推薦設定勾選全部工具，包括會修改資料的工具。以後新增的工具會自動啟用。上游也需要允許使用 Business Context Platform 工具。',
     },
     empty: '簽發閘道器金鑰後即可載入工具清單。',
     loadFailed: '無法載入 Business Context Platform 工具',

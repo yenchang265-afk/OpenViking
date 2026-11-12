@@ -1,45 +1,73 @@
 # AgentConnect Agent 接入
 
-Agent 接入檢視。內建中英文接入內容與圖示。呼叫方提供 `API Key`，可選的 `locale` 覆蓋上層語言。
+Agent 接入面板，列出主流 Agent 和 MCP、CLI、API、SDK 四種開發方式，展示接入說明和可複製的程式碼塊，其中的 API Key 預設脫敏。
 
-## 基礎用法
+## 何時使用
+
+- 需要引導使用者把 OpenViking 接入 Codex、Claude Code、Cursor 等 Agent，或通過 MCP、CLI、API、SDK 自行開發時。
+- 需要自己決定 API Key 和服務地址的來源時：元件只負責展示和複製，不發起請求，也不需要 `OpenVikingProvider`。
+- 需要放在檔案瀏覽區頂部時，使用 [FileBrowserActionBar](./file-browser-action-bar)，它通過 `agentConnect` 在右側抽屜中展示本元件。
+
+## 引入
+
+```tsx
+import { AgentConnect } from '@openviking/react/components/agent-connect';
+import '@openviking/react/components/agent-connect/style.css';
+```
+
+## 程式碼演示
+
+### 基礎用法
+
+切換「接入主流 Agent」「開發自己的 Agent」兩個頁籤，選擇左側條目檢視接入說明。點選程式碼塊上的按鈕可以複製，也可以顯示或隱藏其中的 API Key。
 
 ```tsx file="../../_demos/agent-connect-basic.tsx" preview
 
 ```
 
-示例使用虛構的 `demo-api-key`。預設寬 1000px、最小高度 949px；左側列表 200px、間距 40px、詳情寬 660px，窄容器橫向滾動。
+示例中的 `apiKey` 僅用於演示，請換成宿主自己的金鑰。
 
-「接入主流 Agent」展示 Codex、Claude Code、豆包工作、WorkBuddy、TRAE、Cursor、OpenClaw、Hermes Agent、OpenCode、DeepSeek Harness、DeerFlow、pi、ZCode、Kimi Code，共十四項。「開發自己的 Agent」展示 MCP、CLI、API、SDK，使用同一列表與詳情佈局。
+## API
 
-「境外」標籤預設不展示；傳入 `showOverseasTag={true}` 後，Codex、Claude Code、Cursor、OpenClaw、Hermes Agent、OpenCode、pi 的詳情保留原接入標籤並增加「境外」標籤。DeerFlow 詳情支援 MemoryManager 和 MCP 兩種說明切換，複製當前說明；預設選中 MemoryManager。
+### AgentConnect
 
-CLI 詳情提供「手動終端安裝」「通過 AI Agent 安裝」兩個內部頁籤，預設手動安裝；分別展示本地 CLI 操作步驟和傳送給 AI Agent 的安裝配置提示詞。頁籤採用參考元件的下劃線樣式，複製當前頁籤正文，切換後複製反饋重置。
+| 引數             | 說明                                                                                               | 型別                                        | 預設值                                                  |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------- |
+| apiKey           | 寫入接入說明的 API Key，介面脫敏顯示，複製時使用原值                                               | `string`                                    | 必填                                                    |
+| baseUrl          | OpenViking 服務地址，替換接入說明裡的預設地址                                                      | `string`                                    | `https://api.vikingdb.cn-beijing.volces.com/openviking` |
+| agreementUrl     | 使用者協議連結，提供後頁尾顯示協議連結，省略時只顯示資料訪問提示                                     | `string`                                    | -                                                       |
+| showOverseasTag  | 「境外」標籤的範圍：省略時標記 Codex 和 Claude Code，`true` 標記全部適用的 Agent，`false` 隱藏標籤 | `boolean`                                   | -                                                       |
+| activeTabId      | 受控的當前頁籤，省略時由元件維護                                                                   | `'mainstream' \| 'custom'`                  | `'mainstream'`                                          |
+| selectedId       | 受控的選中條目，取值為 `AgentConnectItem` 的 `id`，當前頁籤不含該條目時顯示第一項                  | `string`                                    | 當前頁籤的第一項                                        |
+| onTabChange      | 選擇頁籤時觸發，點選、方向鍵、Home、End 都會觸發                                                   | `(tabId: 'mainstream' \| 'custom') => void` | -                                                       |
+| onSelect         | 選擇條目時觸發                                                                                     | `(item: AgentConnectItem) => void`          | -                                                       |
+| onCopy           | 複製成功後觸發，引數是實際複製的程式碼塊或整段說明，包含原始 API Key                                 | `(text: string) => void`                    | -                                                       |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                            | `'zh-CN' \| 'en-US'`                        | 繼承上級，預設 `'en-US'`                                |
+| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                             | HTML 屬性                                   | -                                                       |
 
-切換條目會更新說明、標籤與正文。內容來自元件內建的本地文件快照，不在執行時載入遠端 JSON 或 Markdown。安裝器提示通過 `--harness` 指定當前 Agent 和 `cli`，服務地址與金鑰採用 Shell 字面值轉義；TRAE 對應國際版。自定義 Hermes 地址使用 Custom 配置步驟。文件外鏈僅供使用者或其 Agent 閱讀，元件不執行安裝命令。
+### AgentConnectItem
 
-指南支援 Markdown 和白名單 HTML 標籤，例如 `<strong>`、`<br>`、`<details>`、`<summary>` 及表格。渲染時過濾指令碼、事件屬性和不安全連結；程式碼內標籤保持原樣，不載入指南圖片。複製仍保留原始 Markdown。
+| 引數 | 說明                     | 型別     | 預設值 |
+| ---- | ------------------------ | -------- | ------ |
+| id   | 內建條目的標識，取值見下 | `string` | 必填   |
+| name | 條目在當前語言下的名稱   | `string` | 必填   |
 
-每個程式碼塊均支援獨立複製，包括安裝器命令。API Key 預設脫敏，可通過程式碼塊上的「顯示 API Key」「隱藏 API Key」切換，同一指南最多顯示一個程式碼塊的金鑰。無論顯示狀態如何，複製均使用原始金鑰；切換指南或憑據後恢復脫敏。
+內建條目的 `id`：
 
-## 屬性
+- `mainstream` 頁籤（接入主流 Agent）：`codex`、`claude-code`、`doubao`、`workbuddy`、`trae`、`cursor`、`openclaw`、`hermes`、`opencode`、`deepseek-harness`、`deerflow`、`pi`、`zcode`、`kimi-code`。
+- `custom` 頁籤（開發自己的 Agent）：`mcp`、`cli`、`api`、`sdk`。
 
-| 屬性              | 型別                                 | 預設值                                                  | 說明                                                                                 |
-| ----------------- | ------------------------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `apiKey`          | `string`                             | 必填                                                    | 呼叫方提供的 API Key；展示脫敏，複製使用原值。                                       |
-| `locale`          | `'zh-CN' \| 'en-US'`                 | 繼承上層 / en-US                                        | 標題、頁籤、目錄、正文和反饋的語言。                                                 |
-| `baseUrl`         | `string`                             | `https://api.vikingdb.cn-beijing.volces.com/openviking` | 接入服務地址；拼接子路徑及 API 示例變數時移除末尾斜槓，安裝命令與獨立地址保留原值。  |
-| `agreementUrl`    | `string`                             | —                                                       | 宿主協議連結；提供時顯示可訪問的協議引用，未提供時僅顯示資料訪問提示。               |
-| `showOverseasTag` | `boolean`                            | `false`                                                 | 是否展示適用 Agent 的「境外」標籤。                                                  |
-| `activeTabId`     | `'mainstream' \| 'custom'`           | `mainstream`                                            | 可選受控頁籤；未傳時由元件維護。                                                     |
-| `selectedId`      | `string`                             | 當前分組首項                                            | 可選受控條目；主流首項為 `codex`，開發首項為 `mcp`。不屬於當前分組時顯示該分組首項。 |
-| `onTabChange`     | `(tabId: AgentConnectTabId) => void` | —                                                       | 頁籤選擇通知，方向鍵、Home、End 也會觸發。                                           |
-| `onSelect`        | `(item: AgentConnectItem) => void`   | —                                                       | 返回內建條目的 `id` 與當前語言的 `name`。                                            |
-| `onCopy`          | `(text: string) => void`             | —                                                       | 複製成功後返回實際複製的程式碼塊或完整正文；元件負責剪貼簿寫入。                     |
-| 其餘屬性          | `HTMLAttributes<HTMLDivElement>`     | —                                                       | 標準 div 屬性；不接收 `children`。                                                   |
+## 注意
 
-主流條目 ID：`codex`、`claude-code`、`doubao`、`workbuddy`、`trae`、`cursor`、`openclaw`、`hermes`、`opencode`、`deepseek-harness`、`deerflow`、`pi`、`zcode`、`kimi-code`。開發條目 ID：`mcp`、`cli`、`api`、`sdk`。非受控例項分別記住兩個分組的選擇。
-
-複製需要安全上下文和 Clipboard API 許可權。複製期間阻止重複操作；成功顯示「已複製」，失敗顯示「複製失敗，請重試」。切換條目、指南、語言、憑據或地址後清空反饋和 pending 狀態，舊請求完成不再通知宿主；返回舊指南也不恢復舊反饋。已開始的剪貼簿寫入無法取消。複製回撥包含金鑰，宿主應按憑據處理。
-
-圖示已包含在 JS 構建中，開發方式圖示沿用參考元件原始 SVG。樣式從 `@openviking/react/components/agent-connect/style.css` 引入。暗色跟隨宿主 `.dark`，保留 Codex 的透明外底與原始白色符號。
+- Agent 目錄、接入說明和圖示內建，不提供增刪或替換的 prop。語言只能通過 `locale` 切換，元件沒有語言選擇介面。
+- 接入內容和圖示隨元件打包，不需要配置資源地址，執行時不請求遠端文件。元件不執行說明裡的命令，只負責展示和複製。
+- 預設寬 1000px、最小高度 949px，容器更窄時橫向滾動。
+- 程式碼塊裡的 API Key 預設顯示為 `••••••••`，點選程式碼塊上的「顯示 API Key」檢視原值，同一份說明裡一次只顯示一個程式碼塊的金鑰。複製始終使用原始金鑰，與顯示狀態無關。
+- 元件不持久化 `apiKey`，也不把它寫進 DOM 屬性。`onCopy` 收到的文本包含原始 API Key，宿主按憑據處理，不要寫入日誌。
+- 複製使用 Clipboard API，需要安全上下文（如 HTTPS）和剪貼簿許可權。失敗時顯示「複製失敗，請重試」，不會呼叫 `onCopy`。
+- DeerFlow 和 CLI 的詳情帶有說明頁籤：DeerFlow 為 MemoryManager 與 MCP，CLI 為「手動終端安裝」與「通過 AI Agent 安裝」。預設選中第一個，複製的是當前選中的說明。
+- 切換條目、說明頁籤、語言、`apiKey` 或 `baseUrl` 後，金鑰顯示和複製反饋恢復初始狀態。此前發起的複製完成後不再更新介面，也不呼叫 `onCopy`。
+- TRAE 的安裝命令面向國際版。
+- Hermes 使用自定義 `baseUrl`（不同於預設地址）時，說明改用 Custom 連線步驟。
+- 「境外」標籤顯示在詳情標籤行的末尾，按 Agent 產品的歸屬標記，不根據它使用的模型推斷部署地區。`showOverseasTag` 為 `true` 時，除 Codex 和 Claude Code 外，還標記 Cursor、OpenClaw、Hermes Agent、OpenCode 和 pi。
+- 型別從 `@openviking/react/components/agent-connect` 匯出，包根入口只匯出元件和 `AgentConnectProps`。

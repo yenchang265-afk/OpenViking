@@ -1,20 +1,21 @@
 import { LocaleProvider, useLocale } from '../../shared/locale-context.js';
-import { useCallback, useId, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 
-import { ResizableHandle } from '../../shared/components/resizable/index.js';
-import { FileBrowserDetail } from './file-browser-detail.js';
-import { FileBrowserEmpty } from './file-browser-empty.js';
-import { FileBrowserFailure } from './file-browser-failure.js';
+import { ResizableHandle } from '../../shared/primitives/resizable/index.js';
+import { FileBrowserPreviewPane } from './file-browser-preview-pane.js';
 import {
   TREE_DEFAULT_WIDTH,
   TREE_MIN_WIDTH,
   resolveTreeMaxWidth,
 } from './file-browser-layout.js';
 import { FileBrowserTreePane } from './file-browser-tree-pane.js';
+import { FileBrowserSearch } from './file-browser-search.js';
 import { resolveLabels, resolvePreviewLabels } from './file-browser-labels.js';
 import { useContainerWidth } from './use-container-width.js';
+import { useSearchShortcut } from './use-search-shortcut.js';
 import { useFileBrowser } from './use-file-browser.js';
+import { useFileBrowserAcl } from './use-file-browser-acl.js';
 import type { FileBrowserProps } from './types.js';
 
 export type {
@@ -25,13 +26,13 @@ export type {
 } from './types.js';
 
 /**
- * 文件浏览模块的组合视图，对齐控制台设计稿：左侧目录树（入口条、搜索行、树），
+ * 文件浏览模块的组合视图：左侧目录树（操作栏、搜索行、树），
  * 右侧详情区（面包屑、标题行、正文、底部元信息）。两栏之间有一条可拖拽的
  * 分隔条，拖动改树宽；取数与联动都在 {@link useFileBrowser} 里，这里只组装
  * 视图。
  *
- * The file browser module's composite view, matching the console design: the tree
- * on the left (entry row, search row, tree) and the detail pane on the right
+ * The file browser module's composite view: the tree
+ * on the left (action bar, search row, tree) and the detail pane on the right
  * (breadcrumb, header, body, footer). A draggable divider between them resizes the
  * tree; loading and coordination live in {@link useFileBrowser}, and this only
  * assembles the view.
@@ -45,9 +46,13 @@ export function FileBrowser({
   agentConnect,
   dashboardKinds,
   renderDashboard,
+  acl,
+  readOnly,
+  previewActions,
   onUriChange,
   onImportResources,
   renderImportResources,
+  previewSlots,
   labels,
   requestOptions,
   className,
@@ -55,12 +60,19 @@ export function FileBrowser({
   ...rest
 }: FileBrowserProps) {
   const locale = useLocale(localeProp);
+  const [searchOpen, setSearchOpen] = useState(false);
+  // 高级面板开着的时候，左栏的漏斗也直接打开弹窗并落在展开态，与弹窗内的开关
+  // 共用同一个意图。关闭弹窗时一并收起。
+  //
+  // While the advanced panel is open, the left column's funnel also opens the dialog
+  // straight into the expanded state: both switches express the same intent. Closing
+  // the dialog collapses it too.
+  const [searchAdvanced, setSearchAdvanced] = useState(false);
   const [internalUri, setInternalUri] = useState<string | null>(
     () => defaultUri ?? null,
   );
   const [preferredTreeWidth, setPreferredTreeWidth] =
     useState(TREE_DEFAULT_WIDTH);
-  const searchId = useId();
   // `uri !== undefined` 才是受控：传了空字符串也算宿主接管，而不是「没传」。
   // 模块自身不会主动清空选中——点目录行与点面包屑祖先都带具体 URI，没有「取消
   // 选中」的交互——因此这里不需要为 `null` 单独留一条分支。
@@ -126,18 +138,49 @@ export function FileBrowser({
     controlled: isControlled,
     summaryLabels,
     formatCharacterCount: text.formatCharacterCount,
+    accessLabels: {
+      accessDenied: text.accessDenied,
+      traverseOnly: text.traverseOnly,
+    },
     defaultExpandedUri,
     currentUri,
     requestOptions,
     onUriChange: changeUri,
   });
+  const permissions = useFileBrowserAcl({
+    uri: browser.currentUri,
+    acl,
+    locale,
+    labels: labels?.acl,
+    requestOptions,
+    refresh: browser.actions.refresh,
+  });
+
+  // 同一个页面可能挂多个实例，只有最近交互过的那个响应 ⌘K——否则一次按键会让
+  // 所有实例同时弹出搜索框。归属规则与交互记录都在 `useSearchShortcut` 里。
+  //
+  // Several instances can share one page, so only the one interacted with last answers
+  // ⌘K — otherwise one press opens every instance's dialog at once. The ownership rule
+  // and the interaction tracking live in `useSearchShortcut`.
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const shortcut = useSearchShortcut(containerRef, () =>
+    setSearchOpen((open) => {
+      if (open) setSearchAdvanced(false);
+      return !open;
+    }),
+  );
 
   return (
     <LocaleProvider locale={locale}>
       <div
         {...rest}
-        ref={layoutRef}
+        ref={(node) => {
+          layoutRef.current = node;
+          containerRef.current = node;
+        }}
         className={['ov-file-browser', className].filter(Boolean).join(' ')}
+        onPointerDownCapture={shortcut.onPointerDownCapture}
+        onFocusCapture={shortcut.onFocusCapture}
         style={
           {
             ...style,
@@ -150,22 +193,26 @@ export function FileBrowser({
       >
         <div className="ov-file-browser__tree">
           <FileBrowserTreePane
+            rootUri={rootUri}
             entries={{
               agentConnect,
               onImportResources,
               renderImportResources,
-              labels: labels?.entries,
+              labels: labels?.actionBar,
             }}
-            searchId={searchId}
+            onSearch={() => setSearchOpen(true)}
+            onAdvancedSearch={() => {
+              setSearchAdvanced(true);
+              setSearchOpen(true);
+            }}
+            advancedOpen={searchAdvanced && searchOpen}
             browser={browser}
             treeLabels={text.tree}
             locale={locale}
             dashboardLabels={labels?.dashboard}
             searchPlaceholder={text.searchPlaceholder}
+            advancedLabel={text.searchAdvancedLabel}
             refreshLabel={text.refresh}
-            searchLoading={text.searchLoading}
-            searchEmpty={text.searchEmpty}
-            searchErrorLabel={text.searchFailed}
             retryLabel={text.retry}
           />
         </div>
@@ -179,46 +226,35 @@ export function FileBrowser({
           className="ov-file-browser__resizer"
         />
 
-        {browser.previewTabs && browser.previewTabs.length > 0 ? (
-          <FileBrowserDetail
-            tabs={browser.previewTabs}
-            activeKey={browser.previewKey}
-            locale={locale}
-            labels={previewLabels}
-            footer={browser.previewFooter}
-            viewLabels={{
-              preview: text.previewMode,
-              source: text.sourceMode,
-              copyPath: text.copyPath,
-              copyContent: text.copyContent,
-              download: text.download,
-              viewSwitch: text.viewSwitch,
-            }}
-            onActiveKeyChange={browser.actions.setPreviewKey}
-          />
-        ) : // 读失败与「没选中」是两件事：前者有选中的资源却取不到内容，必须显示
-        // 原因与重试；后者才是空态插画。把失败画成空态会让一次 403 看起来像「还
-        // 没选文件」。
-        //
-        // A read failure and "nothing selected" are two different things: the former
-        // has a selected resource it could not load and needs the reason plus a retry,
-        // while only the latter is the empty-state artwork. Painting a failure as the
-        // empty state makes a 403 look like "no file selected yet".
-        browser.currentUri && browser.previewError ? (
-          <div className="ov-file-browser__detail">
-            <FileBrowserFailure
-              message={text.error}
-              detail={browser.previewError.message}
-              retryLabel={text.retry}
-              onRetry={() => void browser.actions.refresh()}
-            />
-          </div>
-        ) : (
-          <div className="ov-file-browser__detail">
-            <FileBrowserEmpty label={text.empty} />
-          </div>
-        )}
+        <FileBrowserPreviewPane
+          browser={browser}
+          permissions={permissions}
+          rootUri={rootUri}
+          locale={locale}
+          text={text}
+          previewLabels={previewLabels}
+          readOnly={readOnly}
+          previewActions={previewActions}
+          previewSlots={previewSlots}
+          requestOptions={requestOptions}
+        />
       </div>
+      {permissions.drawer}
+      <FileBrowserSearch
+        open={searchOpen}
+        locale={locale}
+        rootUri={rootUri}
+        triggerRef={layoutRef}
+        text={text}
+        requestOptions={requestOptions}
+        advancedOpen={searchAdvanced}
+        onToggleAdvanced={setSearchAdvanced}
+        onOpenResource={(next) => void browser.actions.openResource(next)}
+        onClose={() => {
+          setSearchOpen(false);
+          setSearchAdvanced(false);
+        }}
+      />
     </LocaleProvider>
   );
 }

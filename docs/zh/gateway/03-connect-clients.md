@@ -36,7 +36,7 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 
 ## 覆蓋上下文配置 {#override-profile-settings}
 
-客戶端可以用 `X-OpenViking-Context` 請求頭，為新對話修改金鑰所用上下文配置的設定。它的值是一個 JSON 物件，列出要修改的欄位，例如 `{"recall":false}` 表示不召回，`{"disabled_tools":[]}` 表示提供全部 OpenViking 工具，包括會修改資料的工具。配置需要開啟**允許客戶端覆蓋設定**（預設開啟）；請求頭能包含什麼、可能返回哪些錯誤，見[允許客戶端覆蓋設定](08-context-profiles.md#client-overrides)。各客戶端的新增方式見[在客戶端裡新增請求頭](#add-a-header)。
+客戶端可以用 `X-OpenViking-Context` 請求頭，為新對話修改金鑰所用上下文配置的設定。它的值是一個 JSON 物件，列出要修改的欄位，例如 `{"recall":false}` 表示不召回，`{"disabled_tools":["forget","set_acl"]}` 表示不提供這兩個工具；請求頭只能比配置多排除工具，不能提供配置不提供的工具。配置需要開啟**允許客戶端覆蓋設定**（預設開啟）；請求頭能包含什麼、可能返回哪些錯誤，見[允許客戶端覆蓋設定](08-context-profiles.md#client-overrides)。各客戶端的新增方式見[在客戶端裡新增請求頭](#add-a-header)。
 
 對話會沿用開始時的設定，所以修改後的請求頭從下一段新對話起生效，例如換一個新的 `X-OpenViking-Session` 值。與所有 `X-OpenViking-*` 請求頭一樣，它不會轉發給服務商。
 
@@ -44,14 +44,26 @@ description: 把 Claude Code、Codex、聊天應用、SDK 等客戶端接入 Ope
 
 一把金鑰服務多個互動物件時（例如一個機器人以同一個 OpenViking 使用者的身份和很多人對話），客戶端可以用 `X-OpenViking-Actor-Peer` 請求頭寫明每個請求的互動物件，例如 `X-OpenViking-Actor-Peer: review-agent`。它的值是 OpenViking 的 [Peer](../getting-started/20-peers.md) ID，請求頭名稱與 OpenViking 自身的 API 和 SDK 相同。帶上 Peer 後，閘道器會：
 
-- 按這個 Peer 召回：召回在使用者自己的記憶之外加上這個 Peer 的記憶。其他 Peer 的記憶仍可能被召回，只是分數會略微扣減，因為閘道器沿用 OpenViking 預設的 `peer_scope`，即 `all`。OpenViking 工具不按 Peer 收窄；
+- 按這個 Peer 召回：召回在使用者自己的記憶之外加上這個 Peer 的記憶。預設情況下，其他 Peer 的記憶仍可能被召回，只是分數會略微扣減，OpenViking 工具也不按 Peer 收窄；[只召回當前 Peer](#peer-scope) 會同時改變這兩點；
 - 儲存時給這個請求的使用者訊息標上這個 `peer_id`，OpenViking 提交會話時就能提取關於這個 Peer 的記憶。助手回覆儲存時不帶 Peer。
 
 Peer 屬於每個請求，不屬於對話；帶不帶 Peer，閘道器[識別對話](#how-conversations-are-recognized)的方式都一樣。同一段對話（例如機器人所在的群聊）可以包含來自多個 Peer 的使用者訊息：每條訊息沿用第一次把它發到閘道器的那個請求的 Peer，客戶端之後修改或刪掉更早的訊息也不變；每個請求按自己的 Peer 召回。
 
 請求不帶這個請求頭時，使用金鑰的[預設 Peer](09-gateway-keys.md#default-peer)（如果簽發時設定了）；兩者都沒有時，行為不變。請求頭的值為空白時，同樣回退到預設 Peer。值必須是單個路徑段，只能包含字母、數字、`_`、`.`、`-`，最多一個 `@`。其他值在請求到達服務商之前返回 400 `peer_invalid`。與所有 `X-OpenViking-*` 請求頭一樣，它不會轉發給服務商。
 
-Peer 不是訪問邊界：持有金鑰的人可以填任意 Peer，也可以不填。需要各自獨立記憶的人，請各發一把金鑰，見[每人一把金鑰](09-gateway-keys.md#one-key-per-person)。
+### 只召回當前 Peer {#peer-scope}
+
+不希望為某個互動物件召回時帶出其他互動物件的記憶，可以在上下文配置[召回記憶](08-context-profiles.md#recall-memory)部分的**進階設定**裡，把 **Peer 範圍**設為**僅當前 Peer**（`recall_peer_scope: "actor"`）。預設值是**所有 Peer，當前 Peer 優先**（`all`），即上文描述的行為。設為**僅當前 Peer**後：
+
+- 召回只返回使用者自己的記憶和這個請求的 Peer 的記憶；
+- 閘道器替模型執行的 OpenViking 工具呼叫也帶上這個請求的 Peer，因此同樣查不到、讀不到其他 Peer 的記憶；
+- 請求既沒帶請求頭、金鑰也沒有預設 Peer 時，沒有可以對齊的 Peer，召回和工具呼叫都與預設值相同。
+
+只想對某一段對話生效、不改配置時，傳送 `X-OpenViking-Context: {"recall_peer_scope":"actor"}`（見[覆蓋上下文配置](#override-profile-settings)）；關閉**允許客戶端覆蓋設定**後，客戶端就改不了它。
+
+和所有配置項一樣，它在對話開始時就固定下來，而 Peer 仍取自每個請求。它限定的是每個請求召回什麼，而不是對話裡已有的內容：為某個 Peer 召回的記憶會留在對話歷史裡，其他 Peer 之後的請求也會帶著這段歷史；儲存到使用者 OpenViking 會話裡的對話包含所有 Peer 的訊息，`openviking_grep`、`openviking_read` 等 OpenViking 工具仍然讀得到。
+
+所以即使設為**僅當前 Peer**，Peer 也不是訪問邊界：持有金鑰的人可以填任意 Peer，也可以不填。需要各自獨立記憶的人，請各發一把金鑰，見[每人一把金鑰](09-gateway-keys.md#one-key-per-person)。
 
 ## 在客戶端裡新增請求頭 {#add-a-header}
 
