@@ -38,7 +38,7 @@ Git may reuse conflict resolutions, but they still need review and staging.
   The provider-removal commit explicitly left wizard and bot registry references
   for follow-up. Investigate relevant changes rather than deleting all matches.
 
-Last documented upstream sync: branch `sync/upstream-20261112-142017`, through
+Last documented upstream sync: PR #132, merge `4fac34c20`, through
 upstream `51f0e8e` (previous: PR #129 through `f7e83b2`). Confirm ancestry with
 Git; update this note after each accepted sync.
 
