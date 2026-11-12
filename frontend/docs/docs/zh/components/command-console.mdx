@@ -85,18 +85,18 @@ import '@openviking/react/components/command-console/style.css';
 
 ### CommandConsoleTextContent
 
-| 引數    | 說明                                                                                               | 型別                    | 預設值    |
-| ------- | -------------------------------------------------------------------------------------------------- | ----------------------- | --------- |
-| variant | 結果型別，固定為 `'text'`                                                                          | `'text'`                | 必填      |
+| 引數    | 說明                                                                                                 | 型別                    | 預設值    |
+| ------- | ---------------------------------------------------------------------------------------------------- | ----------------------- | --------- |
+| variant | 結果型別，固定為 `'text'`                                                                            | `'text'`                | 必填      |
 | text    | 文本內容；`format` 為 `'plain'` 且整段是合法 JSON 時，縮排後顯示為可複製的程式碼塊，原始內容保持不變 | `string`                | 必填      |
-| format  | 文本格式：`'plain'` 按原文顯示，`'markdown'` 渲染為 Markdown（支援 GFM）                           | `'plain' \| 'markdown'` | `'plain'` |
+| format  | 文本格式：`'plain'` 按原文顯示，`'markdown'` 渲染為 Markdown（支援 GFM）                             | `'plain' \| 'markdown'` | `'plain'` |
 
 ### CommandConsoleSearchListContent
 
-| 引數    | 說明                                               | 型別                                        | 預設值 |
-| ------- | -------------------------------------------------- | ------------------------------------------- | ------ |
-| variant | 結果型別，固定為 `'search-list'`                   | `'search-list'`                             | 必填   |
-| items   | 檢索結果，為空時顯示 `labels.noResult`             | `readonly CommandConsoleSearchResultItem[]` | 必填   |
+| 引數    | 說明                                             | 型別                                        | 預設值 |
+| ------- | ------------------------------------------------ | ------------------------------------------- | ------ |
+| variant | 結果型別，固定為 `'search-list'`                 | `'search-list'`                             | 必填   |
+| items   | 檢索結果，為空時顯示 `labels.noResult`           | `readonly CommandConsoleSearchResultItem[]` | 必填   |
 | summary | 列表上方的彙總資訊，字串中的資源地址自動成為連結 | `ReactNode`                                 | -      |
 
 ### CommandConsoleSearchResultItem
@@ -115,15 +115,15 @@ import '@openviking/react/components/command-console/style.css';
 
 ### CommandConsoleResourcePreviewContent
 
-| 引數          | 說明                                                             | 型別                 | 預設值 |
-| ------------- | ---------------------------------------------------------------- | -------------------- | ------ |
-| variant       | 結果型別，固定為 `'resource-preview'`                            | `'resource-preview'` | 必填   |
-| title         | 資源標題，與命令名相同時不顯示                                   | `string`             | 必填   |
+| 引數          | 說明                                                               | 型別                 | 預設值 |
+| ------------- | ------------------------------------------------------------------ | -------------------- | ------ |
+| variant       | 結果型別，固定為 `'resource-preview'`                              | `'resource-preview'` | 必填   |
+| title         | 資源標題，與命令名相同時不顯示                                     | `string`             | 必填   |
 | content       | 資源正文，通常是檔案內容；整段是合法 JSON 時顯示為可複製的程式碼塊 | `string`             | 必填   |
-| meta          | 標題上方的元資訊，例如型別和大小，用 `·` 連線                    | `readonly string[]`  | -      |
-| description   | 沒有 `meta` 時顯示的一行說明                                     | `string`             | -      |
-| uri           | 資源自身的 URI，顯示在正文上方並作為連結                         | `string`             | -      |
-| navigationUri | 點選 `uri` 時傳給 `onOpenUri` 的地址，省略時使用 `uri`           | `string`             | -      |
+| meta          | 標題上方的元資訊，例如型別和大小，用 `·` 連線                      | `readonly string[]`  | -      |
+| description   | 沒有 `meta` 時顯示的一行說明                                       | `string`             | -      |
+| uri           | 資源自身的 URI，顯示在正文上方並作為連結                           | `string`             | -      |
+| navigationUri | 點選 `uri` 時傳給 `onOpenUri` 的地址，省略時使用 `uri`             | `string`             | -      |
 
 ### CommandConsoleResourceTreeContent
 
@@ -163,16 +163,16 @@ import '@openviking/react/components/command-console/style.css';
 | 引數    | 說明                                                                                  | 型別                               | 預設值     |
 | ------- | ------------------------------------------------------------------------------------- | ---------------------------------- | ---------- |
 | label   | 行標籤，同一結果內唯一                                                                | `string`                           | 必填       |
-| value   | 行內容，字串中的資源地址自動成為連結                                                | `ReactNode`                        | 必填       |
+| value   | 行內容，字串中的資源地址自動成為連結                                                  | `ReactNode`                        | 必填       |
 | variant | 展示形態：`'inline'` 單行，`'long-text'` 自動換行的長文本，`'pre'` 保留換行的等寬文本 | `'inline' \| 'long-text' \| 'pre'` | `'inline'` |
 
 ### CommandConsoleWriteResultContent
 
-| 引數    | 說明                                                     | 型別                   | 預設值 |
-| ------- | -------------------------------------------------------- | ---------------------- | ------ |
-| variant | 結果型別，固定為 `'write-result'`                        | `'write-result'`       | 必填   |
+| 引數    | 說明                                                   | 型別                   | 預設值 |
+| ------- | ------------------------------------------------------ | ---------------------- | ------ |
+| variant | 結果型別，固定為 `'write-result'`                      | `'write-result'`       | 必填   |
 | lines   | 結果行，每行單獨一塊顯示；字串中的資源地址自動成為連結 | `readonly ReactNode[]` | 必填   |
-| title   | 標題，與命令名相同時不顯示                               | `string`               | -      |
+| title   | 標題，與命令名相同時不顯示                             | `string`               | -      |
 
 ### CommandConsoleCommandHelpContent
 
@@ -202,7 +202,7 @@ import '@openviking/react/components/command-console/style.css';
 | 引數  | 說明                                                                                                       | 型別     | 預設值 |
 | ----- | ---------------------------------------------------------------------------------------------------------- | -------- | ------ |
 | name  | 對應 `commands` 裡的命令名，空態裡顯示該命令的名稱和說明；找不到命令的名稱會被跳過，重複的名稱只保留第一個 | `string` | 必填   |
-| value | 點選後原樣填入輸入區的文本，不補字首，也不提交；空字串會清空輸入                                         | `string` | 必填   |
+| value | 點選後原樣填入輸入區的文本，不補字首，也不提交；空字串會清空輸入                                           | `string` | 必填   |
 
 ### CommandConsoleCommandDefinition
 

@@ -77,7 +77,7 @@ import '@openviking/react/components/scope-switcher/style.css';
 | trigger  | 觸發器上顯示的文本和圖示；`fixed` 層級沒有 `data`，需要在這裡提供 `label`               | `ScopeSwitcherTrigger`    | -                        |
 | data     | 選項和當前選中項，`fixed` 層級不接收                                                    | `ScopeSwitcherData`       | `selectable` 時必填      |
 | state    | 載入、錯誤、停用、展開和搜尋詞等互動狀態，僅 `selectable` 接收                          | `ScopeSwitcherState`      | -                        |
-| actions  | 選擇、展開、搜尋和滾動的回呼，僅 `selectable` 接收                                      | `ScopeSwitcherActions`    | -                        |
+| actions  | 選擇、展開、搜尋和滾動的回撥，僅 `selectable` 接收                                      | `ScopeSwitcherActions`    | -                        |
 | slots    | 替換面板、選項行、空態和錯誤態的內容，僅 `selectable` 接收                              | `ScopeSwitcherSlots`      | -                        |
 | labels   | 覆蓋介面文案                                                                            | `ScopeSwitcherLabels`     | -                        |
 | locale   | 介面語言，規則見[國際化](../guide/i18n)                                                 | `'zh-CN' \| 'en-US'`      | 繼承上級，預設 `'en-US'` |
@@ -114,7 +114,7 @@ import '@openviking/react/components/scope-switcher/style.css';
 | ----------- | ------------------------------------------ | ----------- | ------- |
 | id          | 選項的唯一標識                             | `string`    | 必填    |
 | label       | 選項文本，搜尋命中的片段會高亮             | `string`    | 必填    |
-| icon        | 行首圖示，例如庫、資料空間或使用者的頭像     | `ReactNode` | -       |
+| icon        | 行首圖示，例如庫、資料空間或使用者的頭像   | `ReactNode` | -       |
 | description | 顯示在文本下方的次要說明，例如套餐或地址   | `string`    | -       |
 | disabled    | 停用該選項：置灰顯示，不響應點選和鍵盤選擇 | `boolean`   | `false` |
 

@@ -39,7 +39,7 @@ import '@openviking/react/components/directory-tour/style.css';
 
 ```
 
-示例用 `DirectoryTourIntro` 渲染卡片，影片和「編輯」只觸發示例裡的回呼，已讀狀態只儲存在記憶體裡，實際應用需要自己持久化。
+示例用 `DirectoryTourIntro` 渲染卡片，影片和「編輯」只觸發示例裡的回撥，已讀狀態只儲存在記憶體裡，實際應用需要自己持久化。
 
 ### 尺寸約束
 
@@ -55,22 +55,22 @@ import '@openviking/react/components/directory-tour/style.css';
 
 ### DirectoryTour
 
-| 引數             | 說明                                                                                                                                                   | 型別                                                                            | 預設值                   |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------ |
-| open             | 是否顯示引導                                                                                                                                           | `boolean`                                                                       | 必填                     |
-| steps            | 步驟列表，為空陣列時不渲染；只有一項時不顯示進度                                                                                                       | `readonly DirectoryTourStep[]`                                                  | 必填                     |
-| currentStep      | 當前步驟的下標，從 0 開始；提供後為受控模式，需要在 `onStepChange` 裡更新                                                                              | `number`                                                                        | -                        |
-| defaultStep      | 非受控模式的起始下標；關閉後重新開啟，從這裡重新開始                                                                                                   | `number`                                                                        | `0`                      |
-| placement        | 卡片優先出現在目錄行的哪一側；放不下時換到另一側，兩側都放不下時放在上方或下方                                                                         | `'right' \| 'left'`                                                             | `'right'`                |
-| locateTimeout    | 定位的等待時間（毫秒），超時後跳過該步                                                                                                                 | `number`                                                                        | `10000`                  |
+| 引數             | 說明                                                                                                                                                       | 型別                                                                            | 預設值                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------ |
+| open             | 是否顯示引導                                                                                                                                               | `boolean`                                                                       | 必填                     |
+| steps            | 步驟列表，為空陣列時不渲染；只有一項時不顯示進度                                                                                                           | `readonly DirectoryTourStep[]`                                                  | 必填                     |
+| currentStep      | 當前步驟的下標，從 0 開始；提供後為受控模式，需要在 `onStepChange` 裡更新                                                                                  | `number`                                                                        | -                        |
+| defaultStep      | 非受控模式的起始下標；關閉後重新開啟，從這裡重新開始                                                                                                       | `number`                                                                        | `0`                      |
+| placement        | 卡片優先出現在目錄行的哪一側；放不下時換到另一側，兩側都放不下時放在上方或下方                                                                             | `'right' \| 'left'`                                                             | `'right'`                |
+| locateTimeout    | 定位的等待時間（毫秒），超時後跳過該步                                                                                                                     | `number`                                                                        | `10000`                  |
 | locateTarget     | 返回步驟對應的目錄行元素：宿主載入並展開目錄，等目錄行渲染後再返回，`null` 表示找不到。`signal` 在切換步驟、解除安裝或超時時中止；不傳時所有步驟都會被跳過 | `(target: string, signal: AbortSignal) => Promise<DirectoryTourAnchor \| null>` | -                        |
-| onStepChange     | 步驟變化時觸發，包括自動跳過，引數為新的下標                                                                                                           | `(index: number) => void`                                                       | -                        |
-| onClose          | 點選關閉按鈕或按 Escape 時觸發；不傳時不顯示關閉按鈕，也不處理 Escape                                                                                  | `() => void`                                                                    | -                        |
-| onComplete       | 最後一步結束時觸發（點選確認、呼叫 `context.complete()` 或該步被跳過），引數包含被跳過的步驟 id；之後不再渲染，宿主負責關閉與持久化                    | `(result: DirectoryTourResult) => void`                                         | -                        |
-| renderContent    | 替換定位成功後的卡片內容；此時 `title` 只作為對話方塊的無障礙名稱，`description` 不顯示                                                                  | `(context: DirectoryTourContentContext) => ReactNode`                           | -                        |
-| labels           | 覆蓋介面文案                                                                                                                                           | `DirectoryTourLabels`                                                           | -                        |
-| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                                                                | `'zh-CN' \| 'en-US'`                                                            | 繼承上級，預設 `'en-US'` |
-| className、style | 卡片根節點的類名和樣式，可用來設定尺寸和主題變數                                                                                                       | `string`、`CSSProperties`                                                       | -                        |
+| onStepChange     | 步驟變化時觸發，包括自動跳過，引數為新的下標                                                                                                               | `(index: number) => void`                                                       | -                        |
+| onClose          | 點選關閉按鈕或按 Escape 時觸發；不傳時不顯示關閉按鈕，也不處理 Escape                                                                                      | `() => void`                                                                    | -                        |
+| onComplete       | 最後一步結束時觸發（點選確認、呼叫 `context.complete()` 或該步被跳過），引數包含被跳過的步驟 id；之後不再渲染，宿主負責關閉與持久化                        | `(result: DirectoryTourResult) => void`                                         | -                        |
+| renderContent    | 替換定位成功後的卡片內容；此時 `title` 只作為對話方塊的無障礙名稱，`description` 不顯示                                                                    | `(context: DirectoryTourContentContext) => ReactNode`                           | -                        |
+| labels           | 覆蓋介面文案                                                                                                                                               | `DirectoryTourLabels`                                                           | -                        |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                                                                    | `'zh-CN' \| 'en-US'`                                                            | 繼承上級，預設 `'en-US'` |
+| className、style | 卡片根節點的類名和樣式，可用來設定尺寸和主題變數                                                                                                           | `string`、`CSSProperties`                                                       | -                        |
 
 ### DirectoryTourStep
 
@@ -140,7 +140,7 @@ import '@openviking/react/components/directory-tour/style.css';
 
 | 步驟 id              | `target`          | 介紹的目錄                |
 | -------------------- | ----------------- | ------------------------- |
-| `memories`           | `userMemories`    | 使用者記憶（memories）      |
+| `memories`           | `userMemories`    | 使用者記憶（memories）    |
 | `sessions`           | `userSessions`    | 對話記錄（sessions）      |
 | `personal-resources` | `userResources`   | 個人資料（resources）     |
 | `shared-resources`   | `sharedResources` | 團隊公共資料（resources） |

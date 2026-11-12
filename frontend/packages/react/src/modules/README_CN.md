@@ -11,7 +11,7 @@ VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `u
 | --------------- | -------------- | ----------------------------------------- | ----------------------------------------------------------------- |
 | `file-browser`  | `FileBrowser`  | `@openviking/react/modules/file-browser`  | 圍繞同一個當前資源的目錄樹、搜尋與檔案預覽                        |
 | `console`       | `Console`      | `@openviking/react/modules/console`       | 同一面板內的對話（`VikingBot`）與命令（`CommandConsole`）兩種模式 |
-| `scope-cascade` | `ScopeCascade` | `@openviking/react/modules/scope-cascade` | 級聯的庫、空間與使用者選擇器                                        |
+| `scope-cascade` | `ScopeCascade` | `@openviking/react/modules/scope-cascade` | 級聯的庫、空間與使用者選擇器                                      |
 | `viking-bot`    | 無頭 Hook      | `@openviking/react/modules/viking-bot`    | 對話請求、流式狀態與會話管理，無組合檢視或 CSS                    |
 
 每個區塊還有樣式入口 `@openviking/react/modules/<區塊>/style.css`，它包含所組合元件的樣式。用法、屬性和示例見[區塊文件](../../../../docs/docs/zh/modules/index.mdx)。
@@ -24,7 +24,7 @@ VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `u
 - 標準接入只需要服務地址與鑑權，不要求逐區塊實現資料 Adapter。非標準閘道器由宿主在請求接入層統一適配。登入、帳號作用域、路由、許可權執行、頁面佈局及產品專屬流程由宿主負責。
 - 區塊粒度以共同完成的互動流程為準：目錄、搜尋和預覽組成 `file-browser`；對話與命令組成 `console`。宿主組合區塊，不按內部檢視分別接入。
 
-依賴方向是單向的：`modules/` → `components/` → `shared/`，以及 `modules/` → `client/`。元件是純檢視，只接收資料、狀態和回呼，不取數，也不從 `modules/` 匯入任何東西。僅一個區塊使用的 Hook、型別和工具留在該區塊目錄；多個區塊共用的程式碼再放入 `src/shared/`。
+依賴方向是單向的：`modules/` → `components/` → `shared/`，以及 `modules/` → `client/`。元件是純檢視，只接收資料、狀態和回撥，不取數，也不從 `modules/` 匯入任何東西。僅一個區塊使用的 Hook、型別和工具留在該區塊目錄；多個區塊共用的程式碼再放入 `src/shared/`。
 
 ## 請求契約與預設配置
 

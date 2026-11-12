@@ -35,11 +35,11 @@ Provider 掛載本身不發請求，也不讀取瀏覽器中儲存的憑證。�
 | `baseURL`     | -                      | 服務地址及可選閘道器字首，不含 `/api/v1`。空字串表示同源。                                                               |
 | `apiKey`      | `X-API-Key`            | 開源版的憑證。                                                                                                           |
 | `accountId`   | `X-OpenViking-Account` | OpenViking 帳號 ID，對應資料空間。                                                                                       |
-| `userId`      | `X-OpenViking-User`    | 帳號內的使用者 ID。                                                                                                        |
+| `userId`      | `X-OpenViking-User`    | 帳號內的使用者 ID。                                                                                                      |
 | `resourceId`  | `V-Resource-Id`        | 當前庫 ID。資料面介面需要它。                                                                                            |
 | `signal`      | -                      | 中止請求的 `AbortSignal`。                                                                                               |
 | `credentials` | -                      | 傳給 `fetch` 的 `RequestCredentials`。預設 `include`，可覆蓋為 `same-origin` 或 `omit`。只能在 Provider 或客戶端上設定。 |
-| `fetch`       | -                      | 替換全域 `fetch`，用於測試、鏈路追蹤或沒有全域 `fetch` 的平臺。只能在 Provider 或客戶端上設定。                          |
+| `fetch`       | -                      | 替換全域性 `fetch`，用於測試、鏈路追蹤或沒有全域性 `fetch` 的平臺。只能在 Provider 或客戶端上設定。                      |
 
 四個身份欄位也可以傳函式，返回字串或字串的 Promise。函式每次請求求值一次，因此可以讀取輪換後的憑證。身份欄位省略或為空字串時不傳送對應請求頭。
 
@@ -166,7 +166,7 @@ await client.request({
 
 ## 替換傳輸層
 
-預設傳輸層呼叫全域 `fetch`。要讓請求經過自己的函式，把 `fetch` 傳給 `OpenVikingProvider` 或 `createOvClient`，例如新增鏈路追蹤，或在測試裡返回固定響應：
+預設傳輸層呼叫全域性 `fetch`。要讓請求經過自己的函式，把 `fetch` 傳給 `OpenVikingProvider` 或 `createOvClient`，例如新增鏈路追蹤，或在測試裡返回固定響應：
 
 ```tsx
 const fixedFetch: typeof fetch = async () =>
@@ -183,6 +183,6 @@ const fixedFetch: typeof fetch = async () =>
 
 ## 服務端渲染
 
-匯入 `@openviking/react/client` 沒有副作用，在服務端渲染階段是安全的。`createOvClient` 需要一個 `fetch`，可以是全域的，也可以是你傳入的，兩者都沒有就會拋錯。
+匯入 `@openviking/react/client` 沒有副作用，在服務端渲染階段是安全的。`createOvClient` 需要一個 `fetch`，可以是全域性的，也可以是你傳入的，兩者都沒有就會拋錯。
 
 客戶端的測試位於 `packages/react/test/client*.test.mjs`，在 `frontend/` 下執行 `npm test`（見[前端工作區 README](../../../../README.md)）。

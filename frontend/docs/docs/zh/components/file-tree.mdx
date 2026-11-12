@@ -5,7 +5,7 @@ FileTree 把宿主提供的行渲染成可展開、可鍵盤操作的檔案樹�
 ## 何時使用
 
 - 資料由宿主載入和管理（分頁、懶載入、許可權裁剪）時：把樹狀態展平成有序的行傳入，展開、選中和載入更多由宿主執行，元件在操作成功後通知。
-- 需要自己決定搜尋介面、匯入入口和行尾操作時：元件只渲染並觸發回呼，不發起請求，也不需要 `OpenVikingProvider`。
+- 需要自己決定搜尋介面、匯入入口和行尾操作時：元件只渲染並觸發回撥，不發起請求，也不需要 `OpenVikingProvider`。
 - 使用 [FileBrowser](../modules/file-browser) 時，檔案樹已經內建，不需要單獨接入。
 
 ## 引入
@@ -31,42 +31,42 @@ import '@openviking/react/components/file-tree/style.css';
 
 ### FileTree
 
-| 引數                    | 說明                                                                                      | 型別                                                   | 預設值                      |
-| ----------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------- |
-| rows                    | 按渲染順序排列的可見行                                                                    | `readonly FileTreeRow[]`                               | 必填                        |
-| selectedId              | 當前選中的行 `id`，由宿主持有                                                             | `string \| null`                                       | -                           |
-| rootOrder               | 根目錄順序，`'context'` 按 `user`、`session`、`agent`、`resources` 排列，其他目錄在後     | `'input' \| 'context'`                                 | `'input'`                   |
-| isReady                 | 首次載入是否完成，為 `false` 時顯示 `loadingFallback` 而不是行                            | `boolean`                                              | `true`                      |
-| loadingFallback         | 首次載入期間顯示的內容，省略時顯示 `labels.loading`                                       | `ReactNode`                                            | -                           |
-| errorFallback           | 整樹載入失敗時顯示的內容，通常包含標題和重試入口，省略時顯示錯誤行的 `message`            | `ReactNode`                                            | -                           |
-| emptyFallback           | `rows` 為空時顯示的內容，省略時顯示 `labels.empty`                                        | `ReactNode`                                            | -                           |
-| operations              | 非同步執行能力，省略某個方法時對應操作不可用；Promise 被 reject 表示失敗，不觸發 `on…` 回呼 | `FileTreeOperations`                                   | -                           |
-| search                  | 顯示內建搜尋入口，`false` 隱藏，`{ disabled: true }` 停用                                 | `boolean \| { disabled?: boolean }`                    | `true`                      |
-| refresh                 | 顯示內建重新整理按鈕，`false` 隱藏，`disabled` 停用，`loading` 由宿主控制載入態               | `boolean \| { disabled?: boolean; loading?: boolean }` | `true`                      |
-| loading                 | 重新整理按鈕的受控載入態，與重新整理 Promise、`refresh.loading` 合併，不影響已有行                | `boolean`                                              | `false`                     |
-| getRowAttributes        | 為每一行（包括載入、分頁等狀態行）追加 HTML 屬性，`className` 和 `style` 與元件自身的合併 | `(row: FileTreeRow) => HTMLAttributes<HTMLDivElement>` | -                           |
-| renderDashboard         | 渲染行尾指示器，例如看板入口，返回 `null` 時不顯示，內容和點選行為由宿主決定              | `(row: FileTreeEntryRow) => ReactNode`                 | -                           |
-| renderRowIcon           | 渲染檔案行的行首圖示，目錄行始終使用內建資料夾圖示，返回 `null` 時使用內建檔案圖示        | `(row: FileTreeEntryRow) => ReactNode`                 | 內建檔案圖示                |
-| renderRowTooltip        | 渲染行的懸停浮層，提供後不再顯示內建的目錄說明，返回 `null` 時該行不顯示浮層              | `(row: FileTreeEntryRow) => ReactNode`                 | 按 `uri` 生成的內建目錄說明 |
-| onSelect                | 條目選中成功後觸發                                                                        | `(row: FileTreeEntryRow) => void`                      | -                           |
-| onToggleExpand          | 目錄展開或摺疊成功後觸發                                                                  | `(row: FileTreeEntryRow) => void`                      | -                           |
-| onLoadMore              | 下一頁子節點載入成功後觸發                                                                | `(row: FileTreeLoadMoreRow) => void`                   | -                           |
-| onRetry                 | 子節點重新載入成功後觸發                                                                  | `(row: FileTreeErrorRow) => void`                      | -                           |
-| onOpenRetentionSettings | 保留策略設定開啟成功後觸發，引數為行的 `uri`                                              | `(uri: string) => void`                                | -                           |
-| onSearch                | 搜尋操作成功後觸發                                                                        | `() => void`                                           | -                           |
-| onRefresh               | 重新整理成功後觸發                                                                            | `() => void`                                           | -                           |
-| slots                   | 自定義工具欄和載入轉圈                                                                    | `FileTreeSlots`                                        | -                           |
-| labels                  | 覆蓋介面文案                                                                              | `FileTreeLabels`                                       | -                           |
-| locale                  | 介面語言，規則見[國際化](../guide/i18n)                                                   | `'zh-CN' \| 'en-US'`                                   | 繼承上級，預設 `'en-US'`    |
-| className、style        | 外觀與佈局，其餘 HTML 屬性透傳到根元素，`aria-label` 同時作為樹的無障礙名稱               | HTML 屬性                                              | -                           |
-| ref                     | 取得 `FileTreeHandle`，用於查詢行元素或滾動到某一行                                       | `Ref<FileTreeHandle>`                                  | -                           |
+| 引數                    | 說明                                                                                        | 型別                                                   | 預設值                      |
+| ----------------------- | ------------------------------------------------------------------------------------------- | ------------------------------------------------------ | --------------------------- |
+| rows                    | 按渲染順序排列的可見行                                                                      | `readonly FileTreeRow[]`                               | 必填                        |
+| selectedId              | 當前選中的行 `id`，由宿主持有                                                               | `string \| null`                                       | -                           |
+| rootOrder               | 根目錄順序，`'context'` 按 `user`、`session`、`agent`、`resources` 排列，其他目錄在後       | `'input' \| 'context'`                                 | `'input'`                   |
+| isReady                 | 首次載入是否完成，為 `false` 時顯示 `loadingFallback` 而不是行                              | `boolean`                                              | `true`                      |
+| loadingFallback         | 首次載入期間顯示的內容，省略時顯示 `labels.loading`                                         | `ReactNode`                                            | -                           |
+| errorFallback           | 整樹載入失敗時顯示的內容，通常包含標題和重試入口，省略時顯示錯誤行的 `message`              | `ReactNode`                                            | -                           |
+| emptyFallback           | `rows` 為空時顯示的內容，省略時顯示 `labels.empty`                                          | `ReactNode`                                            | -                           |
+| operations              | 非同步執行能力，省略某個方法時對應操作不可用；Promise 被 reject 表示失敗，不觸發 `on…` 回撥 | `FileTreeOperations`                                   | -                           |
+| search                  | 顯示內建搜尋入口，`false` 隱藏，`{ disabled: true }` 停用                                   | `boolean \| { disabled?: boolean }`                    | `true`                      |
+| refresh                 | 顯示內建重新整理按鈕，`false` 隱藏，`disabled` 停用，`loading` 由宿主控制載入態             | `boolean \| { disabled?: boolean; loading?: boolean }` | `true`                      |
+| loading                 | 重新整理按鈕的受控載入態，與重新整理 Promise、`refresh.loading` 合併，不影響已有行          | `boolean`                                              | `false`                     |
+| getRowAttributes        | 為每一行（包括載入、分頁等狀態行）追加 HTML 屬性，`className` 和 `style` 與元件自身的合併   | `(row: FileTreeRow) => HTMLAttributes<HTMLDivElement>` | -                           |
+| renderDashboard         | 渲染行尾指示器，例如看板入口，返回 `null` 時不顯示，內容和點選行為由宿主決定                | `(row: FileTreeEntryRow) => ReactNode`                 | -                           |
+| renderRowIcon           | 渲染檔案行的行首圖示，目錄行始終使用內建資料夾圖示，返回 `null` 時使用內建檔案圖示          | `(row: FileTreeEntryRow) => ReactNode`                 | 內建檔案圖示                |
+| renderRowTooltip        | 渲染行的懸停浮層，提供後不再顯示內建的目錄說明，返回 `null` 時該行不顯示浮層                | `(row: FileTreeEntryRow) => ReactNode`                 | 按 `uri` 生成的內建目錄說明 |
+| onSelect                | 條目選中成功後觸發                                                                          | `(row: FileTreeEntryRow) => void`                      | -                           |
+| onToggleExpand          | 目錄展開或摺疊成功後觸發                                                                    | `(row: FileTreeEntryRow) => void`                      | -                           |
+| onLoadMore              | 下一頁子節點載入成功後觸發                                                                  | `(row: FileTreeLoadMoreRow) => void`                   | -                           |
+| onRetry                 | 子節點重新載入成功後觸發                                                                    | `(row: FileTreeErrorRow) => void`                      | -                           |
+| onOpenRetentionSettings | 保留策略設定開啟成功後觸發，引數為行的 `uri`                                                | `(uri: string) => void`                                | -                           |
+| onSearch                | 搜尋操作成功後觸發                                                                          | `() => void`                                           | -                           |
+| onRefresh               | 重新整理成功後觸發                                                                          | `() => void`                                           | -                           |
+| slots                   | 自定義工具欄和載入轉圈                                                                      | `FileTreeSlots`                                        | -                           |
+| labels                  | 覆蓋介面文案                                                                                | `FileTreeLabels`                                       | -                           |
+| locale                  | 介面語言，規則見[國際化](../guide/i18n)                                                     | `'zh-CN' \| 'en-US'`                                   | 繼承上級，預設 `'en-US'`    |
+| className、style        | 外觀與佈局，其餘 HTML 屬性透傳到根元素，`aria-label` 同時作為樹的無障礙名稱                 | HTML 屬性                                              | -                           |
+| ref                     | 取得 `FileTreeHandle`，用於查詢行元素或滾動到某一行                                         | `Ref<FileTreeHandle>`                                  | -                           |
 
 ### FileTreeOperations
 
 | 引數                  | 說明                                                                         | 型別                                          | 預設值 |
 | --------------------- | ---------------------------------------------------------------------------- | --------------------------------------------- | ------ |
 | search                | 開啟宿主的搜尋介面，省略時搜尋入口停用                                       | `() => Promise<void>`                         | -      |
-| refresh               | 重新整理目錄，等待期間重新整理按鈕顯示載入態，省略時重新整理按鈕停用                     | `() => Promise<void>`                         | -      |
+| refresh               | 重新整理目錄，等待期間重新整理按鈕顯示載入態，省略時重新整理按鈕停用         | `() => Promise<void>`                         | -      |
 | select                | 選中條目，點選目錄和點選檔案都會呼叫，按 `row.type` 區分，省略時選中不起作用 | `(row: FileTreeEntryRow) => Promise<void>`    | -      |
 | toggleExpand          | 展開或摺疊目錄，省略時展開箭頭停用                                           | `(row: FileTreeEntryRow) => Promise<void>`    | -      |
 | loadMore              | 載入下一頁子節點，省略時「載入更多」按鈕停用                                 | `(row: FileTreeLoadMoreRow) => Promise<void>` | -      |
@@ -77,7 +77,7 @@ import '@openviking/react/components/file-tree/style.css';
 
 | 引數    | 說明                                                                             | 型別        | 預設值        |
 | ------- | -------------------------------------------------------------------------------- | ----------- | ------------- |
-| toolbar | 顯示在內建搜尋和重新整理上方，可放匯入來源等宿主操作                                 | `ReactNode` | -             |
+| toolbar | 顯示在內建搜尋和重新整理上方，可放匯入來源等宿主操作                             | `ReactNode` | -             |
 | spinner | 替換展開箭頭位置、載入行和「載入更多」行裡的轉圈，內建轉圈是 12 × 12 的 CSS 圓環 | `ReactNode` | 內建 CSS 圓環 |
 
 ### FileTreeHandle
@@ -95,7 +95,7 @@ import '@openviking/react/components/file-tree/style.css';
 | ------------- | ----------------------------------------------------------------------------------- | --------------------- |
 | `'entry'`     | 目錄或檔案，每個節點一行                                                            | `FileTreeEntryRow`    |
 | `'loading'`   | 目錄的子節點載入中，插在父節點下方，也可以不產出，改用條目行的 `busy`               | `FileTreeLoadingRow`  |
-| `'load-more'` | 子節點分頁且還有下一頁時的「載入更多」行，一次性返回全部子節點的資料來源不需要        | `FileTreeLoadMoreRow` |
+| `'load-more'` | 子節點分頁且還有下一頁時的「載入更多」行，一次性返回全部子節點的資料來源不需要      | `FileTreeLoadMoreRow` |
 | `'error'`     | 子節點載入失敗，帶重試按鈕；`rows` 裡只有這一行且沒有 `parentId` 時表示整樹載入失敗 | `FileTreeErrorRow`    |
 | `'empty'`     | 已展開但沒有子節點的目錄                                                            | `FileTreeEmptyRow`    |
 
@@ -115,15 +115,15 @@ import '@openviking/react/components/file-tree/style.css';
 | 引數        | 說明                                                                                                      | 型別                                     | 預設值  |
 | ----------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ------- |
 | kind        | 行型別，固定為 `'entry'`                                                                                  | `'entry'`                                | 必填    |
-| uri         | 資源標識，在回呼裡原樣回傳，也用於匹配內建目錄說明                                                        | `string`                                 | 必填    |
+| uri         | 資源標識，在回撥裡原樣回傳，也用於匹配內建目錄說明                                                        | `string`                                 | 必填    |
 | name        | 顯示名稱，完整顯示不省略                                                                                  | `string`                                 | 必填    |
 | type        | 節點型別                                                                                                  | `'directory' \| 'file'`                  | 必填    |
 | hasChildren | 目錄是否有可載入的子節點，明確沒有子節點時傳 `false`，此時不顯示展開箭頭                                  | `boolean`                                | `true`  |
 | expanded    | 目錄當前是否展開                                                                                          | `boolean`                                | `false` |
-| disabled    | 行可見但不能選中和展開，例如沒有詳情許可權的節點                                                            | `boolean`                                | `false` |
+| disabled    | 行可見但不能選中和展開，例如沒有詳情許可權的節點                                                          | `boolean`                                | `false` |
 | selectable  | 為 `false` 時不能選中，目錄仍可展開，例如僅可遍歷的目錄                                                   | `boolean`                                | `true`  |
-| access      | 在行尾顯示許可權標記：只讀、無許可權或僅可遍歷，只做展示，行為由 `disabled` 和 `selectable` 控制              | `'read-only' \| 'denied' \| 'container'` | -       |
-| description | 名稱後的說明文字，省略時按 `uri` 使用內建目錄說明，空字串表示不顯示                                     | `string`                                 | -       |
+| access      | 在行尾顯示許可權標記：只讀、無許可權或僅可遍歷，只做展示，行為由 `disabled` 和 `selectable` 控制          | `'read-only' \| 'denied' \| 'container'` | -       |
+| description | 名稱後的說明文字，省略時按 `uri` 使用內建目錄說明，空字串表示不顯示                                       | `string`                                 | -       |
 | levelLabel  | 行尾的簡短標記，例如摘要層級或上下文層級                                                                  | `string`                                 | -       |
 | busy        | 節點上有進行中的載入或寫入，目錄行用轉圈替換展開箭頭，其他行在名稱後顯示轉圈                              | `boolean`                                | `false` |
 | expiresAt   | 過期時間的顯示文本，顯示在名稱後，提供 `operations.openRetentionSettings` 時可點選，`null` 或省略時不顯示 | `string \| null`                         | -       |
@@ -180,10 +180,10 @@ import '@openviking/react/components/file-tree/style.css';
 | 引數         | 說明                                        | 型別                 | 預設值            |
 | ------------ | ------------------------------------------- | -------------------- | ----------------- |
 | readOnly     | `access` 為 `'read-only'` 時的標記文案      | `string`             | `只讀`            |
-| noAccess     | `access` 為 `'denied'` 時的標記文案         | `string`             | `無許可權`          |
+| noAccess     | `access` 為 `'denied'` 時的標記文案         | `string`             | `無許可權`        |
 | traverseOnly | `access` 為 `'container'` 時的標記文案      | `string`             | `僅可遍歷`        |
 | search       | 搜尋入口的文案                              | `string`             | `搜尋檔案 ⌘+K...` |
-| refresh      | 重新整理按鈕的提示文案和無障礙名稱              | `string`             | `重新整理檔案樹`      |
+| refresh      | 重新整理按鈕的提示文案和無障礙名稱          | `string`             | `重新整理檔案樹`  |
 | empty        | 空樹和空目錄的提示                          | `string`             | `暫無檔案`        |
 | error        | 子節點或整樹載入失敗時的預設提示            | `string`             | `載入失敗`        |
 | retry        | 「重試」按鈕文案                            | `string`             | `重試`            |
@@ -197,11 +197,11 @@ import '@openviking/react/components/file-tree/style.css';
 
 未提供的鍵使用當前語言的內建文案。
 
-| 引數            | 說明                                                                                 | 型別                                                                | 預設值                     |
-| --------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------- | -------------------------- |
+| 引數            | 說明                                                                               | 型別                                                                | 預設值                     |
+| --------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------- | -------------------------- |
 | description     | 按鍵覆蓋「說明」，顯示在浮層中，部分鍵也顯示在名稱後，空字串表示不顯示             | `Partial<Record<FileTreeInfoKey, string>>`                          | -                          |
 | triggerBehavior | 按鍵覆蓋「觸發行為」（節點在什麼條件下寫入或生成），只顯示在浮層，空字串表示不顯示 | `Partial<Record<FileTreeInfoKey, string>>`                          | -                          |
-| field           | 浮層裡各行的欄位名                                                                   | `{ description?: string; triggerBehavior?: string; path?: string }` | `說明`、`觸發行為`、`路徑` |
+| field           | 浮層裡各行的欄位名                                                                 | `{ description?: string; triggerBehavior?: string; path?: string }` | `說明`、`觸發行為`、`路徑` |
 
 ### FileTreeInfoKey
 
@@ -242,7 +242,7 @@ import '@openviking/react/components/file-tree/style.css';
 | ------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
 | `resolveFileTreeInfoKey`  | 按 URI 的路徑結構返回目錄說明鍵，沒有匹配時返回 `null`                                             | `(uri: string) => FileTreeInfoKey \| null`                                                                  |
 | `showsInlineDescription`  | 該鍵的說明是否顯示在名稱後，長期記憶下的九個鍵（`profile` 到 `experiences`）和 `null` 返回 `false` | `(key: FileTreeInfoKey \| null) => boolean`                                                                 |
-| `resolveInfoCopy`         | 返回該鍵的說明和觸發行為：先取傳入的 `labels`，沒有時取內建英文文案，空字串返回 `undefined`      | `(key: FileTreeInfoKey, labels?: FileTreeInfoLabels) => { description?: string; triggerBehavior?: string }` |
+| `resolveInfoCopy`         | 返回該鍵的說明和觸發行為：先取傳入的 `labels`，沒有時取內建英文文案，空字串返回 `undefined`        | `(key: FileTreeInfoKey, labels?: FileTreeInfoLabels) => { description?: string; triggerBehavior?: string }` |
 | `splitVikingUri`          | 把 URI 拆成小寫的路徑段，忽略 `viking://` 字首、查詢串和末尾斜槓                                   | `(uri: string) => string[]`                                                                                 |
 | `DEFAULT_INFO_LABELS`     | 內建的英文目錄說明文案                                                                             | `FileTreeInfoLabels`                                                                                        |
 | `FILE_TREE_ROW_ATTRIBUTE` | 行元素上儲存行 `id` 的屬性名                                                                       | `'data-file-tree-row-id'`                                                                                   |
@@ -264,8 +264,8 @@ import '@openviking/react/components/file-tree/style.css';
 
 ### 操作與通知
 
-- `operations` 的方法返回 `Promise<void>`，完成表示成功，被 reject 表示失敗。成功後才觸發對應的 `on…` 回呼，失敗時不觸發。
-- 省略某個方法，對應操作不可用：展開箭頭、「載入更多」、「重試」、搜尋和重新整理按鈕停用，點選行不會選中。省略 `on…` 回呼不影響操作執行。
+- `operations` 的方法返回 `Promise<void>`，完成表示成功，被 reject 表示失敗。成功後才觸發對應的 `on…` 回撥，失敗時不觸發。
+- 省略某個方法，對應操作不可用：展開箭頭、「載入更多」、「重試」、搜尋和重新整理按鈕停用，點選行不會選中。省略 `on…` 回撥不影響操作執行。
 - 同一操作（同一行的選中、展開、載入更多、重試，或搜尋、重新整理）尚未完成時，重複觸發會被忽略。
 
 ### 選中、鍵盤與許可權

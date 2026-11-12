@@ -10,10 +10,10 @@
 
 ## 區塊列表
 
-| 區塊                                     | 說明                                                                                                                                           | 匯入路徑                                  | 請求配置                                           |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------------------------- |
+| 區塊                                     | 說明                                                                                                                                             | 匯入路徑                                  | 請求配置                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------- |
 | [FileBrowser 檔案瀏覽](./file-browser)   | 目錄樹、搜尋和檔案預覽組成的檔案瀏覽區塊：讀取 OpenViking 的目錄和內容，支援預覽、編輯、匯入匯出、歷史版本和許可權管理，並內建 Wiki 與經驗看板。 | `@openviking/react/modules/file-browser`  | 需要 `OpenVikingProvider`，支援 `requestOptions`   |
-| [Console 互動面板](./console)            | 在一塊麵板裡提供對話和命令兩種模式：對話模式通過 VikingBot 無頭模組接通原生對話；命令模式把 `ov` 命令傳送到 OpenViking 原生 API 並展示結果。   | `@openviking/react/modules/console`       | 需要 `OpenVikingProvider`，支援 `requestOptions`   |
+| [Console 互動面板](./console)            | 在一塊麵板裡提供對話和命令兩種模式：對話模式通過 VikingBot 無頭模組接通原生對話；命令模式把 `ov` 命令傳送到 OpenViking 原生 API 並展示結果。     | `@openviking/react/modules/console`       | 需要 `OpenVikingProvider`，支援 `requestOptions`   |
 | [ScopeCascade 級聯選擇](./scope-cascade) | 依次選擇知識庫、資料空間和使用者的三級選擇器：上級變化時，下級清空並重新載入，三級都選中後通過 `onChange` 返回完整身份。                         | `@openviking/react/modules/scope-cascade` | 不需要 `OpenVikingProvider`，沒有 `requestOptions` |
 
 ## 無頭模組
@@ -64,11 +64,11 @@ ScopeCascade 不走共享 Client，沒有 `requestOptions`，也不需要 Provid
 | baseURL     | 服務地址及可選的閘道器字首，不含 `/api/v1`，空字串表示同源請求                                       | `string`                                      | `''`                     |
 | apiKey      | 憑證，作為 `X-API-Key` 請求頭髮送；商業版由瀏覽器 Cookie 鑑權，不需要傳入                            | `string \| (() => string \| Promise<string>)` | -                        |
 | accountId   | OpenViking 帳號 ID，對應資料空間，作為 `X-OpenViking-Account` 請求頭髮送                             | `string \| (() => string \| Promise<string>)` | -                        |
-| userId      | 帳號內的使用者 ID，作為 `X-OpenViking-User` 請求頭髮送                                                 | `string \| (() => string \| Promise<string>)` | -                        |
+| userId      | 帳號內的使用者 ID，作為 `X-OpenViking-User` 請求頭髮送                                               | `string \| (() => string \| Promise<string>)` | -                        |
 | resourceId  | 當前庫 ID，決定請求落在哪個庫，作為 `V-Resource-Id` 請求頭髮送                                       | `string \| (() => string \| Promise<string>)` | -                        |
 | credentials | 傳給 `fetch` 的 `credentials`，決定是否攜帶 Cookie；跨源請求仍遵循服務端 CORS 和瀏覽器的 Cookie 策略 | `'include' \| 'same-origin' \| 'omit'`        | `'include'`              |
 | signal      | 中止請求的訊號，觸發後進行中的請求被取消                                                             | `AbortSignal`                                 | -                        |
-| fetch       | 替換全域 `fetch`，用於測試、鏈路追蹤或沒有全域 `fetch` 的環境                                        | `typeof fetch`                                | 全域 `fetch`             |
+| fetch       | 替換全域性 `fetch`，用於測試、鏈路追蹤或沒有全域性 `fetch` 的環境                                    | `typeof fetch`                                | 全域性 `fetch`           |
 | locale      | 子樹的介面語言，規則見[國際化](../guide/i18n)                                                        | `'zh-CN' \| 'en-US'`                          | 繼承上級，預設 `'en-US'` |
 | children    | 使用這套請求配置的子樹                                                                               | `ReactNode`                                   | -                        |
 

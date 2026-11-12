@@ -43,7 +43,7 @@ import '@openviking/react/components/experience-dashboard/style.css';
 | startIndex       | 當前頁之前已有的經驗數，目錄檢視的序號從 `startIndex + 1` 開始                                                               | `number`                                                                                                    | `0`                      |
 | states           | 各區域的載入與錯誤狀態，鍵的含義見「注意」                                                                                   | `Partial<Record<'list' \| 'outcomes' \| 'trajectories' \| 'sources' \| 'tests', ExperienceDashboardState>>` | `{}`                     |
 | onTabChange      | 切換頁籤時觸發，引數為目標頁籤                                                                                               | `(tab: 'impact' \| 'source' \| 'test') => void`                                                             | -                        |
-| onDaysChange     | 切換統計時間範圍時觸發，引數為所選天數；元件不按範圍過濾 `data`，請在回呼裡重新載入資料                                      | `(days: number) => void`                                                                                    | -                        |
+| onDaysChange     | 切換統計時間範圍時觸發，引數為所選天數；元件不按範圍過濾 `data`，請在回撥裡重新載入資料                                      | `(days: number) => void`                                                                                    | -                        |
 | onPageChange     | 點選上一頁或下一頁時觸發，引數為目標頁碼；省略時翻頁按鈕停用                                                                 | `(page: number) => void`                                                                                    | -                        |
 | onOpenUri        | 點選經驗或軌跡名稱、測試材料的「開啟」按鈕時觸發，引數為對應的 URI；省略時這些按鈕停用                                       | `(uri: string) => void`                                                                                     | -                        |
 | labels           | 覆蓋介面文案                                                                                                                 | `Partial<ExperienceDashboardLabels>`                                                                        | -                        |
@@ -65,15 +65,15 @@ import '@openviking/react/components/experience-dashboard/style.css';
 
 ### ExperienceItem
 
-| 引數            | 說明                                                                                                  | 型別     | 預設值 |
-| --------------- | ----------------------------------------------------------------------------------------------------- | -------- | ------ |
-| uri             | 經驗檔案的 URI，同時作為列表項的 key，需要唯一                                                        | `string` | 必填   |
-| name            | 經驗名稱，點選時觸發 `onOpenUri`                                                                      | `string` | 必填   |
+| 引數            | 說明                                                                                                | 型別     | 預設值 |
+| --------------- | --------------------------------------------------------------------------------------------------- | -------- | ------ |
+| uri             | 經驗檔案的 URI，同時作為列表項的 key，需要唯一                                                      | `string` | 必填   |
+| name            | 經驗名稱，點選時觸發 `onOpenUri`                                                                    | `string` | 必填   |
 | modTime         | 最近修改時間，可被 `Date.parse` 解析的字串；不足 7 天顯示相對時間，更早顯示日期，無法解析時原樣顯示 | `string` | -      |
-| injectionCount  | 被注入上下文的次數，省略時顯示「—」                                                                   | `number` | -      |
-| recallCount     | 被召回的次數，省略時顯示「—」                                                                         | `number` | -      |
-| description     | 經驗描述，列表不顯示                                                                                  | `string` | -      |
-| trajectoryCount | 關聯的軌跡數，列表不顯示                                                                              | `number` | -      |
+| injectionCount  | 被注入上下文的次數，省略時顯示「—」                                                                 | `number` | -      |
+| recallCount     | 被召回的次數，省略時顯示「—」                                                                       | `number` | -      |
+| description     | 經驗描述，列表不顯示                                                                                | `string` | -      |
+| trajectoryCount | 關聯的軌跡數，列表不顯示                                                                            | `number` | -      |
 
 ### ExperienceTrajectory
 
@@ -82,7 +82,7 @@ import '@openviking/react/components/experience-dashboard/style.css';
 | uri         | 軌跡的 URI，同時作為列表項的 key，需要唯一 | `string` | 必填   |
 | name        | 軌跡名稱，點選時觸發 `onOpenUri`           | `string` | 必填   |
 | description | 軌跡說明                                   | `string` | -      |
-| created_at  | 建立時間，按傳入的字串原樣顯示           | `string` | -      |
+| created_at  | 建立時間，按傳入的字串原樣顯示             | `string` | -      |
 | updated_at  | 更新時間，介面不顯示                       | `string` | -      |
 
 ### data.testMaterials

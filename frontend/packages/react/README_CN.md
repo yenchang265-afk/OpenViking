@@ -90,7 +90,7 @@ export function Browser({ apiKey }: { apiKey: string }) {
 | 匯入路徑                              | 提供                                                                                                                                                                              |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@openviking/react`                   | 業務元件和區塊，以及各自的主 Props 型別，例如 `FileTree` 與 `FileTreeProps`。`FilePreview` 除外，需要從它的子路徑匯入。                                                           |
-| `@openviking/react/components/<名稱>` | 單個元件及其相關型別（行、選項、控制代碼、文案），例如 `components/file-tree`。同族元件放在分組目錄下，例如 `components/auth/email-login-form`。                                      |
+| `@openviking/react/components/<名稱>` | 單個元件及其相關型別（行、選項、控制代碼、文案），例如 `components/file-tree`。同族元件放在分組目錄下，例如 `components/auth/email-login-form`。                                  |
 | `@openviking/react/modules/<名稱>`    | 區塊 `file-browser`、`console`、`scope-cascade`，或 `viking-bot` 無頭模組。                                                                                                       |
 | `@openviking/react/client`            | `OpenVikingProvider` 與請求客戶端（`createOvClient`、`OvClientError` 等）。                                                                                                       |
 | `@openviking/react/icons`             | 圖示元件與檔案型別圖示函式。                                                                                                                                                      |

@@ -54,12 +54,12 @@ import { PdfIcon, getFileTypeIcon } from '@openviking/react/icons';
 | `DocumentIcon`            | 通用檔案                                 | 16       | 跟隨 `color`                                               |
 | `AudioIcon`               | 音訊檔案                                 | 16       | 固定配色                                                   |
 | `PdfIcon`                 | PDF 檔案                                 | 16       | 固定配色                                                   |
-| `PptIcon`                 | 簡報                                 | 16       | 固定配色                                                   |
+| `PptIcon`                 | 簡報                                     | 16       | 固定配色                                                   |
 | `VideoIcon`               | 影片檔案                                 | 16       | 固定配色                                                   |
 | `WordIcon`                | Word 文件                                | 16       | 固定配色                                                   |
 | `LibraryIcon`             | 知識庫，按名稱取色的圓形漸變色塊         | 14       | 五組漸變，見「主題變數」                                   |
 | `SpaceIcon`               | 資料空間                                 | 14       | 跟隨 `color`                                               |
-| `UserIcon`                | 使用者                                     | 14       | 跟隨 `color`                                               |
+| `UserIcon`                | 使用者                                   | 14       | 跟隨 `color`                                               |
 | `ExperienceBoardIcon`     | 經驗看板，儀表盤佈局圖形                 | 14       | 跟隨 `color`                                               |
 | `WikiBoardIcon`           | Wiki 看板，與 `ExperienceBoardIcon` 同形 | 14       | 跟隨 `color`                                               |
 | `WikiConflictBoardIcon`   | Wiki 衝突看板，帶警告角標                | 12       | 跟隨 `color`，角標底色取 `--ov-ui-color-dashboard-surface` |
@@ -94,8 +94,8 @@ import { PdfIcon, getFileTypeIcon } from '@openviking/react/icons';
 
 | 函式                     | 說明                                                                           | 型別                                                  |
 | ------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| `getFileTypeIcon`        | 取得檔名對應的圖示元件，沒有匹配時返回通用檔案圖示                           | `(name: string) => FileTypeIconComponent`             |
-| `resolveFileTypeIconKey` | 取得檔名對應的圖示鍵，沒有匹配時返回 `'default'`                             | `(name: string) => string`                            |
+| `getFileTypeIcon`        | 取得檔名對應的圖示元件，沒有匹配時返回通用檔案圖示                             | `(name: string) => FileTypeIconComponent`             |
+| `resolveFileTypeIconKey` | 取得檔名對應的圖示鍵，沒有匹配時返回 `'default'`                               | `(name: string) => string`                            |
 | `getFileTypeColor`       | 取得圖示鍵的品牌色，`scheme` 預設為 `'light'`，未登記的鍵返回 `'currentColor'` | `(key: string, scheme?: 'light' \| 'dark') => string` |
 
 `name` 可以是檔名或路徑，只取最後一段並忽略大小寫：先匹配完整檔名，再按副檔名從長到短匹配（`tar.gz` 先於 `gz`），都沒有命中時使用通用檔案圖示。

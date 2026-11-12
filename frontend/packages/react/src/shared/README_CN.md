@@ -43,7 +43,7 @@
 
 ## 說明
 
-- Button 與 Input 只複用 Arco 的互動邏輯。視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT），不使用 Arco 預設皮膚，顏色對映到 `src/theme.css` 的 `--ov-ui-color-*`，宿主可以覆蓋。不引入全域 reset、私有圖示或字型資源。Arco 的宣告見 [`LICENSE.arco-design`](../../LICENSE.arco-design)。
+- Button 與 Input 只複用 Arco 的互動邏輯。視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT），不使用 Arco 預設皮膚，顏色對映到 `src/theme.css` 的 `--ov-ui-color-*`，宿主可以覆蓋。不引入全域性 reset、私有圖示或字型資源。Arco 的宣告見 [`LICENSE.arco-design`](../../LICENSE.arco-design)。
 - 文件站通過 `docs/internal-controls.ts` 使用獨立的私有 `Button` 構建產物（`rslib.config.ts` 中的 `docs-controls` 入口），npm 包不包含它。示例裡的 `#demo-controls` 僅供文件站使用，宿主接入時換成自己的按鈕。
 - 測試通過 `scripts/test.mjs` 裡的私有構建訪問 `button`、`input` 和 `modal`，不經過包匯出。
 

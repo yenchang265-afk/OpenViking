@@ -52,18 +52,18 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 
 `EmailLoginForm`、`ApiKeyLoginForm`、`PasswordResetRequestForm` 和 `PasswordSetupForm` 都支援以下屬性。
 
-| 引數        | 說明                                                                   | 型別                  | 預設值                   |
-| ----------- | ---------------------------------------------------------------------- | --------------------- | ------------------------ |
-| loading     | 宿主處理提交期間設定：停用輸入和提交，並顯示忙碌狀態                   | `boolean`             | `false`                  |
-| disabled    | 停用輸入和提交                                                         | `boolean`             | `false`                  |
-| error       | 顯示在提交按鈕上方的錯誤提示，元件不解析後端錯誤碼                     | `ReactNode`           | -                        |
-| title       | 表單標題，渲染為 `h2`                                                  | `ReactNode`           | -                        |
-| description | 標題下方的說明                                                         | `ReactNode`           | -                        |
-| back        | 表單頂部的返回入口，沒有 `onClick` 時不顯示                            | `AuthAction`          | -                        |
+| 引數        | 說明                                                                     | 型別                  | 預設值                   |
+| ----------- | ------------------------------------------------------------------------ | --------------------- | ------------------------ |
+| loading     | 宿主處理提交期間設定：停用輸入和提交，並顯示忙碌狀態                     | `boolean`             | `false`                  |
+| disabled    | 停用輸入和提交                                                           | `boolean`             | `false`                  |
+| error       | 顯示在提交按鈕上方的錯誤提示，元件不解析後端錯誤碼                       | `ReactNode`           | -                        |
+| title       | 表單標題，渲染為 `h2`                                                    | `ReactNode`           | -                        |
+| description | 標題下方的說明                                                           | `ReactNode`           | -                        |
+| back        | 表單頂部的返回入口，沒有 `onClick` 時不顯示                              | `AuthAction`          | -                        |
 | agreements  | 協議配置；`items` 非空時顯示協議勾選框，未勾選的提交會先彈出確認對話方塊 | `AuthAgreements`      | -                        |
-| labels      | 覆蓋介面文案，欄位見 `AuthLabels`                                      | `Partial<AuthLabels>` | -                        |
-| locale      | 介面語言，規則見[國際化](../guide/i18n)                                | `'zh-CN' \| 'en-US'`  | 繼承上級，預設 `'en-US'` |
-| className   | 附加到根元素的類名                                                     | `string`              | -                        |
+| labels      | 覆蓋介面文案，欄位見 `AuthLabels`                                        | `Partial<AuthLabels>` | -                        |
+| locale      | 介面語言，規則見[國際化](../guide/i18n)                                  | `'zh-CN' \| 'en-US'`  | 繼承上級，預設 `'en-US'` |
+| className   | 附加到根元素的類名                                                       | `string`              | -                        |
 
 ### EmailLoginForm
 
@@ -145,8 +145,8 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 
 ### AuthAgreements
 
-| 引數         | 說明                                                                                                     | 型別                                                                                  | 預設值 |
-| ------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ |
+| 引數         | 說明                                                                                                       | 型別                                                                                  | 預設值 |
+| ------------ | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------ |
 | items        | 協議列表，在勾選框和確認對話方塊中顯示為連結並在新標籤頁開啟；陣列為空時不啟用協議                         | `readonly { label: string; href: string }[]`                                          | 必填   |
 | confirmation | 確認對話方塊的文案，省略的項使用 `labels` 的 `agreementTitle`、`agreementDescription`、`agree` 和 `cancel` | `{ title?: string; description?: string; confirmText?: string; cancelText?: string }` | -      |
 
@@ -171,10 +171,10 @@ import '@openviking/react/components/auth/invitation-confirmation/style.css';
 | resend               | 已傳送郵件後 `PasswordResetRequestForm` 的提交按鈕 | `string` | `'重新發送郵件'`                 |
 | confirm              | `PasswordSetupForm` 的提交按鈕                     | `string` | `'確認並登入'`                   |
 | agreementPrefix      | 協議勾選框中，協議連結前的文案                     | `string` | `'我已閱讀並同意'`               |
-| agreementTitle       | 確認對話方塊的標題                                   | `string` | `'閱讀並同意協議'`               |
-| agreementDescription | 確認對話方塊的說明，後面接協議連結                   | `string` | `'請閱讀並同意以下協議後繼續。'` |
-| agree                | 確認對話方塊的同意按鈕                               | `string` | `'同意並繼續'`                   |
-| cancel               | 確認對話方塊的取消按鈕                               | `string` | `'取消'`                         |
+| agreementTitle       | 確認對話方塊的標題                                 | `string` | `'閱讀並同意協議'`               |
+| agreementDescription | 確認對話方塊的說明，後面接協議連結                 | `string` | `'請閱讀並同意以下協議後繼續。'` |
+| agree                | 確認對話方塊的同意按鈕                             | `string` | `'同意並繼續'`                   |
+| cancel               | 確認對話方塊的取消按鈕                             | `string` | `'取消'`                         |
 | account              | `PasswordSetupForm` 中帳號下方的說明               | `string` | `'登入帳號'`                     |
 
 ## 注意

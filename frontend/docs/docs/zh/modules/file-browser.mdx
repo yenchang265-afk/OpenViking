@@ -78,13 +78,13 @@ import '@openviking/react/modules/file-browser/style.css';
 
 | 引數                  | 說明                                                                                                               | 型別                                                                    | 預設值                   |
 | --------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- | ------------------------ |
-| uri                   | 受控的當前資源 URI：傳入（包括空字串）後由宿主決定，空字串表示不選中資源                                       | `string`                                                                | -                        |
+| uri                   | 受控的當前資源 URI：傳入（包括空字串）後由宿主決定，空字串表示不選中資源                                           | `string`                                                                | -                        |
 | defaultUri            | 非受控時的初始資源 URI，省略時不選中資源                                                                           | `string`                                                                | -                        |
 | onUriChange           | 選中的資源變化後觸發，引數是新的 URI；沒有取消選中的操作，不會收到 `null`                                          | `(uri: string \| null) => void`                                         | -                        |
 | rootUri               | 目錄樹的根，把瀏覽和搜尋的範圍限定在這個子樹內                                                                     | `string`                                                                | `'viking://'`            |
 | defaultExpandedUri    | 首次載入後自動展開到的路徑，逐級載入；省略時只展開根目錄                                                           | `string`                                                                | -                        |
-| readOnly              | 禁止編輯、匯入和刪除，編譯配置只能檢視；不影響許可權管理彈窗，授權只讀請用 `acl.readOnly`                            | `boolean`                                                               | `false`                  |
-| acl                   | 開啟共享資源的許可權顯示與授權管理，型別見下方 `FileBrowserAclOptions`                                               | `boolean \| FileBrowserAclOptions`                                      | `false`                  |
+| readOnly              | 禁止編輯、匯入和刪除，編譯配置只能檢視；不影響許可權管理彈窗，授權只讀請用 `acl.readOnly`                          | `boolean`                                                               | `false`                  |
+| acl                   | 開啟共享資源的許可權顯示與授權管理，型別見下方 `FileBrowserAclOptions`                                             | `boolean \| FileBrowserAclOptions`                                      | `false`                  |
 | agentConnect          | 顯示「連線 Agent」按鈕，點選後從右側開啟接入抽屜，引數見 [AgentConnect](../components/agent-connect)；省略時不顯示 | `AgentConnectProps`                                                     | -                        |
 | onImportResources     | 點選「匯入資源」按鈕時觸發，傳入後顯示該按鈕                                                                       | `() => void`                                                            | -                        |
 | renderImportResources | 包裝或替換「匯入資源」按鈕，返回 `null` 隱藏，用法見 [FileBrowserActionBar](../components/file-browser-action-bar) | `(trigger: ReactElement<ComponentPropsWithRef<'button'>>) => ReactNode` | -                        |
@@ -104,11 +104,11 @@ import '@openviking/react/modules/file-browser/style.css';
 | 引數        | 說明                                                                                                                                          | 型別      | 預設值 |
 | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------- | --------- | ------ |
 | copyPath    | 「複製路徑」按鈕，位於麵包屑旁；預覽有路徑時顯示                                                                                              | `boolean` | `true` |
-| viewSwitch  | 「預覽 / 原始碼」切換；只在同時支援兩種檢視的格式上顯示，圖片、影片和 `viking://system` 下的目錄不支援                                          | `boolean` | `true` |
+| viewSwitch  | 「預覽 / 原始碼」切換；只在同時支援兩種檢視的格式上顯示，圖片、影片和 `viking://system` 下的目錄不支援                                        | `boolean` | `true` |
 | edit        | 編輯按鈕；只在可寫且格式可編輯的檔案上顯示，經驗檔案、`viking://system` 下的資源和 L0/L1 摘要不可編輯                                         | `boolean` | `true` |
-| copyContent | 「複製內容」操作，複製當前預覽的文本或目錄摘要，超過預覽行數上限時只複製已顯示的部分；二進位制媒體和 `viking://system` 下的目錄不顯示           | `boolean` | `true` |
+| copyContent | 「複製內容」操作，複製當前預覽的文本或目錄摘要，超過預覽行數上限時只複製已顯示的部分；二進位制媒體和 `viking://system` 下的目錄不顯示         | `boolean` | `true` |
 | download    | 「下載」操作，下載檔案的原始內容；只在檔案上顯示                                                                                              | `boolean` | `true` |
-| history     | 「檢視歷史版本」操作；在使用者 `memories/experiences` 下直接的經驗檔案，以及 Wiki 裡的檔案和目錄上顯示                                          | `boolean` | `true` |
+| history     | 「檢視歷史版本」操作；在使用者 `memories/experiences` 下直接的經驗檔案，以及 Wiki 裡的檔案和目錄上顯示                                        | `boolean` | `true` |
 | configure   | 「編譯配置」操作；只在 Wiki 編譯目標的根目錄上顯示，只讀時仍可檢視                                                                            | `boolean` | `true` |
 | importPack  | 「匯入 .ovpack」操作；只在可寫的目錄上顯示，且目錄位於 `viking://user`（含 `viking://~`）或 `viking://resources` 下                           | `boolean` | `true` |
 | exportPack  | 「匯出 .ovpack」操作；在 `viking://user`（含 `viking://~`）或 `viking://resources` 下的檔案和目錄上顯示，`.relations.json` 等內部控制檔案除外 | `boolean` | `true` |
@@ -116,11 +116,11 @@ import '@openviking/react/modules/file-browser/style.css';
 
 ### FileBrowserPreviewSlots
 
-| 引數         | 說明                                                                                              | 型別                                                                                               | 預設值 |
-| ------------ | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------ |
+| 引數         | 說明                                                                                                | 型別                                                                                               | 預設值 |
+| ------------ | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ------ |
 | actions      | 替換整個操作區，`null` 隱藏；替換後需要自己渲染儲存、取消和追加的操作，複製路徑和許可權標籤不受影響 | `ReactNode \| ((context: FileBrowserPreviewActionContext) => ReactNode)`                           | -      |
-| extraActions | 追加到預設操作區末尾，編輯狀態下隱藏                                                              | `ReactNode`                                                                                        | -      |
-| actionItems  | 替換預設的操作列表；函式形式可以通過 `context.defaultActions` 複用、追加或重排預設操作            | `FilePreviewActionItems \| ((context: FileBrowserPreviewActionContext) => FilePreviewActionItems)` | -      |
+| extraActions | 追加到預設操作區末尾，編輯狀態下隱藏                                                                | `ReactNode`                                                                                        | -      |
+| actionItems  | 替換預設的操作列表；函式形式可以通過 `context.defaultActions` 複用、追加或重排預設操作              | `FilePreviewActionItems \| ((context: FileBrowserPreviewActionContext) => FilePreviewActionItems)` | -      |
 
 操作列表的每一項是單個操作或一組操作（陣列），格式見 [FilePreview](../components/file-preview)。
 
@@ -130,8 +130,8 @@ import '@openviking/react/modules/file-browser/style.css';
 
 | 引數           | 說明                                                                  | 型別                     | 預設值 |
 | -------------- | --------------------------------------------------------------------- | ------------------------ | ------ |
-| defaultActions | 內建操作，已按資源能力、`previewActions`、`readOnly` 和許可權過濾       | `FilePreviewActionItems` | -      |
-| canDelete      | 當前使用者能否刪除當前資源，不受 `previewActions.delete` 影響           | `boolean`                | -      |
+| defaultActions | 內建操作，已按資源能力、`previewActions`、`readOnly` 和許可權過濾     | `FilePreviewActionItems` | -      |
+| canDelete      | 當前使用者能否刪除當前資源，不受 `previewActions.delete` 影響         | `boolean`                | -      |
 | deleteFile     | 開啟內建的刪除確認框，不會關閉預覽頁籤；`canDelete` 為 `false` 時無效 | `() => void`             | -      |
 
 `defaultActions` 分三組：複製內容、下載、歷史版本和編譯配置；匯入和匯出 .ovpack；刪除。各操作的 `key` 依次是 `copyContent`、`download`、`history`、`configure`、`importPack`、`exportPack`、`delete`。
@@ -140,12 +140,12 @@ import '@openviking/react/modules/file-browser/style.css';
 
 `acl` 傳入物件時的配置，全部可選；傳入 `true` 等同於不設定任何選項。
 
-| 引數              | 說明                                                                                                             | 型別                                                                                                                                          | 預設值   |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
-| readOnly          | 禁止修改授權，仍可檢視                                                                                           | `boolean`                                                                                                                                     | `false`  |
+| 引數              | 說明                                                                                                                   | 型別                                                                                                                                          | 預設值   |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| readOnly          | 禁止修改授權，仍可檢視                                                                                                 | `boolean`                                                                                                                                     | `false`  |
 | resolvePermission | 返回當前使用者在資源上的有效許可權，未知時返回 `undefined`；省略時讀取 `fs/stat` 的 `permission`，缺失時探測管理許可權 | `(uri: string, context: FileBrowserAclContext) => Promise<FileBrowserAclLevel \| undefined>`                                                  | 內建實現 |
-| listPrincipals    | 返回可新增的 User 或 Group，`page` 從 1 開始；省略時呼叫帳號的使用者和使用者組介面，不讀取憑證                       | `(query: { type: 'user' \| 'group'; keyword: string; page: number }, context: FileBrowserAclContext) => Promise<FileBrowserAclPrincipalPage>` | 內建實現 |
-| onChange          | 授權儲存成功後觸發，儲存失敗時不觸發；回呼丟擲的錯誤不影響儲存結果                                               | `(report: FileBrowserAclReport) => void`                                                                                                      | -        |
+| listPrincipals    | 返回可新增的 User 或 Group，`page` 從 1 開始；省略時呼叫帳號的使用者和使用者組介面，不讀取憑證                         | `(query: { type: 'user' \| 'group'; keyword: string; page: number }, context: FileBrowserAclContext) => Promise<FileBrowserAclPrincipalPage>` | 內建實現 |
+| onChange          | 授權儲存成功後觸發，儲存失敗時不觸發；回撥丟擲的錯誤不影響儲存結果                                                     | `(report: FileBrowserAclReport) => void`                                                                                                      | -        |
 
 ### FileBrowserAclContext
 
@@ -170,7 +170,7 @@ import '@openviking/react/modules/file-browser/style.css';
 | 引數              | 說明                 | 型別                                  | 預設值 |
 | ----------------- | -------------------- | ------------------------------------- | ------ |
 | uri               | 資源 URI             | `string`                              | -      |
-| acl_mode          | 許可權模式             | `'none' \| 'inherit' \| 'restricted'` | -      |
+| acl_mode          | 許可權模式           | `'none' \| 'inherit' \| 'restricted'` | -      |
 | direct_entries    | 直接授予該資源的授權 | `FileBrowserAclEntry[]`               | -      |
 | inherited_entries | 從上級繼承的授權     | `FileBrowserAclEntry[]`               | -      |
 | effective_entries | 實際生效的授權       | `FileBrowserAclEntry[]`               | -      |
@@ -179,10 +179,10 @@ import '@openviking/react/modules/file-browser/style.css';
 
 授權報告裡的一條授權，只讀取，不需要自己構造。
 
-| 引數      | 說明                                                                    | 型別                  | 預設值 |
-| --------- | ----------------------------------------------------------------------- | --------------------- | ------ |
+| 引數      | 說明                                                                      | 型別                  | 預設值 |
+| --------- | ------------------------------------------------------------------------- | --------------------- | ------ |
 | principal | 被授權的成員，格式為 `user:<id>` 或 `group:<id>`，`user:*` 表示全部使用者 | `string`              | -      |
-| level     | 授權級別                                                                | `FileBrowserAclLevel` | -      |
+| level     | 授權級別                                                                  | `FileBrowserAclLevel` | -      |
 
 ### FileBrowserAclLevel
 
@@ -204,70 +204,70 @@ import '@openviking/react/modules/file-browser/style.css';
 
 所有項都可省略，省略的項跟隨 `locale`。
 
-| 引數                    | 說明                                                                                          | 型別                                 | 預設值                                   |
-| ----------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------ | ---------------------------------------- |
-| empty                   | 沒有選中資源時的提示                                                                          | `string`                             | `'從左側選中一個檔案預覽'`               |
-| error                   | 預覽讀取失敗的結論，原因顯示服務端返回的訊息                                                  | `string`                             | `'目錄載入失敗'`                         |
-| retry                   | 失敗狀態和看板載入失敗提示裡的重試按鈕                                                        | `string`                             | `'重試'`                                 |
-| refresh                 | 重新整理按鈕的無障礙名稱                                                                          | `string`                             | `'重新整理'`                                 |
-| loading                 | 預覽讀取內容時的提示                                                                          | `string`                             | `'載入中…'`                              |
-| resizeTree              | 樹與預覽之間分隔條的無障礙名稱                                                                | `string`                             | `'調整目錄樹寬度'`                       |
-| systemDirectory         | 選中 `viking://system` 下的目錄時，預覽區的提示                                               | `string`                             | `'選擇此目錄中的檔案以預覽內容。'`       |
-| accessDenied            | 當前資源是無權檢視的節點（`access: 'denied'`）時，預覽區顯示的原因                            | `string`                             | `'無權檢視此節點。'`                     |
+| 引數                    | 說明                                                                                          | 型別                                 | 預設值                                     |
+| ----------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------ |
+| empty                   | 沒有選中資源時的提示                                                                          | `string`                             | `'從左側選中一個檔案預覽'`                 |
+| error                   | 預覽讀取失敗的結論，原因顯示服務端返回的訊息                                                  | `string`                             | `'目錄載入失敗'`                           |
+| retry                   | 失敗狀態和看板載入失敗提示裡的重試按鈕                                                        | `string`                             | `'重試'`                                   |
+| refresh                 | 重新整理按鈕的無障礙名稱                                                                      | `string`                             | `'重新整理'`                               |
+| loading                 | 預覽讀取內容時的提示                                                                          | `string`                             | `'載入中…'`                                |
+| resizeTree              | 樹與預覽之間分隔條的無障礙名稱                                                                | `string`                             | `'調整目錄樹寬度'`                         |
+| systemDirectory         | 選中 `viking://system` 下的目錄時，預覽區的提示                                               | `string`                             | `'選擇此目錄中的檔案以預覽內容。'`         |
+| accessDenied            | 當前資源是無權檢視的節點（`access: 'denied'`）時，預覽區顯示的原因                            | `string`                             | `'無權檢視此節點。'`                       |
 | traverseOnly            | 當前資源是隻能展開的節點（`access: 'container'`）時，預覽區顯示的原因                         | `string`                             | `'此目錄僅可展開以訪問有許可權的子節點。'` |
-| searchPlaceholder       | 搜尋入口按鈕的文案                                                                            | `string`                             | `'搜尋檔案和內容'`                       |
-| searchTitle             | 搜尋彈窗的無障礙標題                                                                          | `string`                             | `'搜尋檔案和內容'`                       |
-| searchEmptyTitle        | 尚未輸入查詢時的標題                                                                          | `string`                             | `'開始搜尋'`                             |
-| searchHint              | 尚未輸入查詢時的說明                                                                          | `string`                             | `'輸入關鍵詞後即可搜尋上下文檔案或目錄'` |
-| searchLoading           | 搜尋進行中的提示                                                                              | `string`                             | `'搜尋中…'`                              |
-| searchEmpty             | 搜尋沒有結果時的提示                                                                          | `string`                             | `'沒有匹配的資源'`                       |
-| searchFailed            | 搜尋失敗的結論，原因顯示服務端返回的訊息                                                      | `string`                             | `'搜尋失敗'`                             |
-| searchModePlaceholders  | 各檢索方式的輸入提示，按 `find` / `search` / `grep` / `glob` 逐項覆蓋                         | `Record<SearchMode, string>`         | 見內建文案                               |
-| searchModeHints         | 各檢索方式下拉里的說明                                                                        | `Record<SearchMode, string>`         | 見內建文案                               |
-| searchAdvanced          | 進階篩選面板的標題                                                                            | `string`                             | `'進階選項'`                             |
-| searchClear             | 清空篩選                                                                                      | `string`                             | `'清空'`                                 |
-| searchScopes            | 目錄篩選的標題                                                                                | `string`                             | `'目錄'`                                 |
-| searchPickScope         | 選擇目錄的入口                                                                                | `string`                             | `'選擇目錄'`                             |
-| searchScopesUnsupported | 當前根不支援按目錄篩選時的說明                                                                | `string`                             | `'當前範圍不支援按目錄篩選'`             |
-| searchLevels            | 內容層級篩選的標題                                                                            | `string`                             | `'內容'`                                 |
-| searchLevelLabels       | 三級內容的名稱                                                                                | `[string, string, string]`           | `['L0 摘要', 'L1 總覽', 'L2 全文']`      |
-| searchTime              | 時間篩選的標題                                                                                | `string`                             | `'時間'`                                 |
-| searchCreatedAt         | 按建立時間                                                                                    | `string`                             | `'按建立時間'`                           |
-| searchUpdatedAt         | 按更新時間                                                                                    | `string`                             | `'按更新時間'`                           |
-| searchSince             | 起始時間                                                                                      | `string`                             | `'起始時間'`                             |
-| searchUntil             | 結束時間                                                                                      | `string`                             | `'結束時間'`                             |
-| searchIgnoreCase        | 忽略大小寫                                                                                    | `string`                             | `'忽略大小寫'`                           |
-| searchFilterUnsupported | 某個篩選在當前檢索方式下不可用的原因                                                          | `string`                             | `'當前檢索方式不支援此篩選'`             |
-| searchResultCount       | 檢索結果數量，引數為條數                                                                      | `(count: number) => string`          | `'檢索到 N 條結果'`                      |
-| searchVia               | 結果數量與模式之間的分隔說明                                                                  | `string`                             | `'向量檢索方式'`                         |
-| searchSwitchMode        | 切換檢索方式的入口                                                                            | `string`                             | `'切換'`                                 |
-| searchAdvancedLabel     | 進階篩選按鈕的無障礙名稱                                                                      | `string`                             | `'進階篩選'`                             |
-| previewMode             | 「預覽 / 原始碼」切換裡的「預覽」                                                               | `string`                             | `'預覽'`                                 |
-| sourceMode              | 「預覽 / 原始碼」切換裡的「原始碼」                                                               | `string`                             | `'原始碼'`                                 |
-| viewSwitch              | 檢視切換分組的無障礙名稱                                                                      | `string`                             | `'切換檢視'`                             |
-| copyPath                | 「複製路徑」按鈕的文案                                                                        | `string`                             | `'複製路徑'`                             |
-| copyContent             | 「複製內容」操作的文案                                                                        | `string`                             | `'複製內容'`                             |
-| download                | 「下載」操作的文案                                                                            | `string`                             | `'下載'`                                 |
-| history                 | 「歷史版本」操作的文案，也是彈窗的標題                                                        | `string`                             | `'檢視歷史版本'`                         |
-| importPack              | 「匯入 .ovpack」操作的文案，也是彈窗的標題                                                    | `string`                             | `'匯入 .ovpack'`                         |
-| exportPack              | 「匯出 .ovpack」操作的文案                                                                    | `string`                             | `'匯出 .ovpack'`                         |
-| deleteFile              | 「刪除文件」操作的文案                                                                        | `string`                             | `'刪除文件'`                             |
-| deleteTitle             | 刪除確認框的標題                                                                              | `string`                             | `'刪除文件？'`                           |
-| deleteMessage           | 刪除確認框的說明，引數是檔名                                                                | `(name: string) => string`           | 內建說明                                 |
-| deleteFailed            | 刪除失敗的提示                                                                                | `string`                             | `'刪除文件失敗'`                         |
-| deleteCancel            | 刪除確認框的取消按鈕                                                                          | `string`                             | `'取消'`                                 |
-| deleteConfirm           | 刪除確認框的確認按鈕                                                                          | `string`                             | `'刪除'`                                 |
-| l0Summary               | 目錄預覽裡 L0 摘要的頁簽名                                                                    | `string`                             | `'L0 摘要'`                              |
-| l1Overview              | 目錄預覽裡 L1 總覽的頁簽名                                                                    | `string`                             | `'L1 總覽'`                              |
-| summaryEmpty            | 目錄某一級摘要尚未生成時的提示；預覽目前不顯示它，覆蓋不會生效                                | `string`                             | `'暫無生成內容'`                         |
-| summaryFailed           | 某一級摘要讀取失敗且服務端沒有返回訊息時的提示                                                | `string`                             | `'摘要載入失敗。'`                       |
-| formatCharacterCount    | 預覽底部字元數的文案                                                                          | `(count: number) => string`          | 按 `locale` 格式化，如 `'1,234 個字元'`  |
-| actionBar               | 傳給 [FileBrowserActionBar](../components/file-browser-action-bar) 操作欄的文案，包括接入抽屜 | `FileBrowserActionBarLabels`         | -                                        |
-| tree                    | 傳給 [FileTree](../components/file-tree) 檔案樹的文案                                         | `FileTreeLabels`                     | -                                        |
-| preview                 | 傳給 [FilePreview](../components/file-preview) 檔案預覽的文案，優先於上面同名的項             | `FilePreviewLabels`                  | -                                        |
-| dashboard               | 看板頁籤標題、看板圖示名稱和看板載入失敗的文案                                                | `FileBrowserDashboardLabels`         | -                                        |
-| acl                     | 許可權標籤和授權彈窗的文案                                                                      | `FileBrowserAclLabels`               | -                                        |
-| workflows               | 編譯配置、歷史版本和匯入 .ovpack 彈窗的文案                                                   | `Partial<FileBrowserWorkflowLabels>` | -                                        |
+| searchPlaceholder       | 搜尋入口按鈕的文案                                                                            | `string`                             | `'搜尋檔案和內容'`                         |
+| searchTitle             | 搜尋彈窗的無障礙標題                                                                          | `string`                             | `'搜尋檔案和內容'`                         |
+| searchEmptyTitle        | 尚未輸入查詢時的標題                                                                          | `string`                             | `'開始搜尋'`                               |
+| searchHint              | 尚未輸入查詢時的說明                                                                          | `string`                             | `'輸入關鍵詞後即可搜尋上下文檔案或目錄'`   |
+| searchLoading           | 搜尋進行中的提示                                                                              | `string`                             | `'搜尋中…'`                                |
+| searchEmpty             | 搜尋沒有結果時的提示                                                                          | `string`                             | `'沒有匹配的資源'`                         |
+| searchFailed            | 搜尋失敗的結論，原因顯示服務端返回的訊息                                                      | `string`                             | `'搜尋失敗'`                               |
+| searchModePlaceholders  | 各檢索方式的輸入提示，按 `find` / `search` / `grep` / `glob` 逐項覆蓋                         | `Record<SearchMode, string>`         | 見內建文案                                 |
+| searchModeHints         | 各檢索方式下拉里的說明                                                                        | `Record<SearchMode, string>`         | 見內建文案                                 |
+| searchAdvanced          | 高階篩選面板的標題                                                                            | `string`                             | `'進階選項'`                               |
+| searchClear             | 清空篩選                                                                                      | `string`                             | `'清空'`                                   |
+| searchScopes            | 目錄篩選的標題                                                                                | `string`                             | `'目錄'`                                   |
+| searchPickScope         | 選擇目錄的入口                                                                                | `string`                             | `'選擇目錄'`                               |
+| searchScopesUnsupported | 當前根不支援按目錄篩選時的說明                                                                | `string`                             | `'當前範圍不支援按目錄篩選'`               |
+| searchLevels            | 內容層級篩選的標題                                                                            | `string`                             | `'內容'`                                   |
+| searchLevelLabels       | 三級內容的名稱                                                                                | `[string, string, string]`           | `['L0 摘要', 'L1 總覽', 'L2 全文']`        |
+| searchTime              | 時間篩選的標題                                                                                | `string`                             | `'時間'`                                   |
+| searchCreatedAt         | 按建立時間                                                                                    | `string`                             | `'按建立時間'`                             |
+| searchUpdatedAt         | 按更新時間                                                                                    | `string`                             | `'按更新時間'`                             |
+| searchSince             | 起始時間                                                                                      | `string`                             | `'起始時間'`                               |
+| searchUntil             | 結束時間                                                                                      | `string`                             | `'結束時間'`                               |
+| searchIgnoreCase        | 忽略大小寫                                                                                    | `string`                             | `'忽略大小寫'`                             |
+| searchFilterUnsupported | 某個篩選在當前檢索方式下不可用的原因                                                          | `string`                             | `'當前檢索方式不支援此篩選'`               |
+| searchResultCount       | 檢索結果數量，引數為條數                                                                      | `(count: number) => string`          | `'檢索到 N 條結果'`                        |
+| searchVia               | 結果數量與模式之間的分隔說明                                                                  | `string`                             | `'向量檢索方式'`                           |
+| searchSwitchMode        | 切換檢索方式的入口                                                                            | `string`                             | `'切換'`                                   |
+| searchAdvancedLabel     | 高階篩選按鈕的無障礙名稱                                                                      | `string`                             | `'高階篩選'`                               |
+| previewMode             | 「預覽 / 原始碼」切換裡的「預覽」                                                             | `string`                             | `'預覽'`                                   |
+| sourceMode              | 「預覽 / 原始碼」切換裡的「原始碼」                                                           | `string`                             | `'原始碼'`                                 |
+| viewSwitch              | 檢視切換分組的無障礙名稱                                                                      | `string`                             | `'切換檢視'`                               |
+| copyPath                | 「複製路徑」按鈕的文案                                                                        | `string`                             | `'複製路徑'`                               |
+| copyContent             | 「複製內容」操作的文案                                                                        | `string`                             | `'複製內容'`                               |
+| download                | 「下載」操作的文案                                                                            | `string`                             | `'下載'`                                   |
+| history                 | 「歷史版本」操作的文案，也是彈窗的標題                                                        | `string`                             | `'檢視歷史版本'`                           |
+| importPack              | 「匯入 .ovpack」操作的文案，也是彈窗的標題                                                    | `string`                             | `'匯入 .ovpack'`                           |
+| exportPack              | 「匯出 .ovpack」操作的文案                                                                    | `string`                             | `'匯出 .ovpack'`                           |
+| deleteFile              | 「刪除文件」操作的文案                                                                        | `string`                             | `'刪除文件'`                               |
+| deleteTitle             | 刪除確認框的標題                                                                              | `string`                             | `'刪除文件？'`                             |
+| deleteMessage           | 刪除確認框的說明，引數是檔名                                                                  | `(name: string) => string`           | 內建說明                                   |
+| deleteFailed            | 刪除失敗的提示                                                                                | `string`                             | `'刪除文件失敗'`                           |
+| deleteCancel            | 刪除確認框的取消按鈕                                                                          | `string`                             | `'取消'`                                   |
+| deleteConfirm           | 刪除確認框的確認按鈕                                                                          | `string`                             | `'刪除'`                                   |
+| l0Summary               | 目錄預覽裡 L0 摘要的頁簽名                                                                    | `string`                             | `'L0 摘要'`                                |
+| l1Overview              | 目錄預覽裡 L1 總覽的頁簽名                                                                    | `string`                             | `'L1 總覽'`                                |
+| summaryEmpty            | 目錄某一級摘要尚未生成時的提示；預覽目前不顯示它，覆蓋不會生效                                | `string`                             | `'暫無生成內容'`                           |
+| summaryFailed           | 某一級摘要讀取失敗且服務端沒有返回訊息時的提示                                                | `string`                             | `'摘要載入失敗。'`                         |
+| formatCharacterCount    | 預覽底部字元數的文案                                                                          | `(count: number) => string`          | 按 `locale` 格式化，如 `'1,234 個字元'`    |
+| actionBar               | 傳給 [FileBrowserActionBar](../components/file-browser-action-bar) 操作欄的文案，包括接入抽屜 | `FileBrowserActionBarLabels`         | -                                          |
+| tree                    | 傳給 [FileTree](../components/file-tree) 檔案樹的文案                                         | `FileTreeLabels`                     | -                                          |
+| preview                 | 傳給 [FilePreview](../components/file-preview) 檔案預覽的文案，優先於上面同名的項             | `FilePreviewLabels`                  | -                                          |
+| dashboard               | 看板頁籤標題、看板圖示名稱和看板載入失敗的文案                                                | `FileBrowserDashboardLabels`         | -                                          |
+| acl                     | 許可權標籤和授權彈窗的文案                                                                    | `FileBrowserAclLabels`               | -                                          |
+| workflows               | 編譯配置、歷史版本和匯入 .ovpack 彈窗的文案                                                   | `Partial<FileBrowserWorkflowLabels>` | -                                          |
 
 ### FileBrowserDashboardLabels
 
@@ -303,7 +303,7 @@ import '@openviking/react/modules/file-browser/style.css';
 | sources      | 來源目錄輸入框的標籤               | `string` | `'來源目錄（每行一個）'`              |
 | skill        | 技能輸入框的標籤                   | `string` | `'技能 URI'`                          |
 | instruction  | 指令輸入框的標籤                   | `string` | `'指令'`                              |
-| automatic    | 自動更新核取方塊的標籤               | `string` | `'自動更新'`                          |
+| automatic    | 自動更新核取方塊的標籤             | `string` | `'自動更新'`                          |
 | schedule     | 定時更新選擇框的標籤               | `string` | `'定時更新'`                          |
 | noSchedule   | 「不設定定時更新」選項             | `string` | `'不設定定時更新'`                    |
 | daily        | 「每天」選項                       | `string` | `'每天'`                              |
@@ -315,49 +315,49 @@ import '@openviking/react/modules/file-browser/style.css';
 
 所有項都可省略，省略的項跟隨 `locale`。
 
-| 引數                     | 說明                                       | 型別     | 預設值                                                                   |
-| ------------------------ | ------------------------------------------ | -------- | ------------------------------------------------------------------------ |
-| title                    | 授權彈窗的標題                             | `string` | `'管理節點許可權'`                                                         |
-| manage                   | 許可權標籤詳情裡開啟授權彈窗的按鈕           | `string` | `'管理許可權'`                                                             |
-| read                     | `read` 級別的名稱                          | `string` | `'可閱讀'`                                                               |
-| write                    | `write` 級別的名稱                         | `string` | `'可編輯'`                                                               |
-| manageLevel              | `manage` 級別的名稱                        | `string` | `'可管理'`                                                               |
-| readDescription          | 許可權標籤詳情裡對 `read` 的說明             | `string` | `'可檢視節點內容，不能編輯或管理節點許可權。'`                             |
-| writeDescription         | 許可權標籤詳情裡對 `write` 的說明            | `string` | `'可檢視並編輯內容，不能管理節點許可權。'`                                 |
-| manageDescription        | 許可權標籤詳情裡對 `manage` 的說明           | `string` | `'可管理該節點的許可權配置。'`                                             |
-| effectivePermission      | 許可權標籤詳情裡「有效許可權」的標籤           | `string` | `'當前 User 有效許可權'`                                                   |
-| addPrincipal             | 新增成員區域的標題                         | `string` | `'新增 User 或 Group'`                                                   |
+| 引數                     | 說明                                       | 型別     | 預設值                                                                       |
+| ------------------------ | ------------------------------------------ | -------- | ---------------------------------------------------------------------------- |
+| title                    | 授權彈窗的標題                             | `string` | `'管理節點許可權'`                                                           |
+| manage                   | 許可權標籤詳情裡開啟授權彈窗的按鈕         | `string` | `'管理許可權'`                                                               |
+| read                     | `read` 級別的名稱                          | `string` | `'可閱讀'`                                                                   |
+| write                    | `write` 級別的名稱                         | `string` | `'可編輯'`                                                                   |
+| manageLevel              | `manage` 級別的名稱                        | `string` | `'可管理'`                                                                   |
+| readDescription          | 許可權標籤詳情裡對 `read` 的說明           | `string` | `'可檢視節點內容，不能編輯或管理節點許可權。'`                               |
+| writeDescription         | 許可權標籤詳情裡對 `write` 的說明          | `string` | `'可檢視並編輯內容，不能管理節點許可權。'`                                   |
+| manageDescription        | 許可權標籤詳情裡對 `manage` 的說明         | `string` | `'可管理該節點的許可權配置。'`                                               |
+| effectivePermission      | 許可權標籤詳情裡「有效許可權」的標籤       | `string` | `'當前 User 有效許可權'`                                                     |
+| addPrincipal             | 新增成員區域的標題                         | `string` | `'新增 User 或 Group'`                                                       |
 | search                   | 成員搜尋框的佔位文案                       | `string` | `'搜尋使用者或使用者組'`                                                     |
-| users                    | 成員選擇裡 User 頁籤的名稱                 | `string` | `'User'`                                                                 |
-| groups                   | 成員選擇裡 Group 頁籤的名稱                | `string` | `'Group'`                                                                |
-| allUsers                 | 全部使用者（`user:*`）的名稱                 | `string` | `'全部 User'`                                                            |
-| administrator            | 固定的管理員行的名稱                       | `string` | `'資料空間管理員'`                                                       |
-| administratorDescription | 管理員行的說明                             | `string` | `'管理員始終保留隱式管理許可權。'`                                         |
-| direct                   | 授權來源「直接授權」的名稱                 | `string` | `'直接授權'`                                                             |
-| inherited                | 授權來源「繼承自上級」的名稱               | `string` | `'從父級目錄繼承許可權'`                                                   |
-| remove                   | 授權選單裡的移除項                         | `string` | `'移除許可權'`                                                             |
-| add                      | 新增成員的確認按鈕                         | `string` | `'新增'`                                                                 |
-| cancel                   | 取消按鈕                                   | `string` | `'取消'`                                                                 |
-| confirm                  | 確認按鈕                                   | `string` | `'確定'`                                                                 |
-| close                    | 彈窗關閉按鈕的無障礙名稱                   | `string` | `'關閉許可權管理'`                                                         |
-| retry                    | 重試按鈕                                   | `string` | `'重試'`                                                                 |
-| loadMore                 | 成員列表的「載入更多」按鈕                 | `string` | `'載入更多'`                                                             |
-| loading                  | 載入許可權和成員時的提示                     | `string` | `'正在載入許可權…'`                                                        |
-| saving                   | 儲存中的提示                               | `string` | `'正在儲存…'`                                                            |
-| saved                    | 儲存成功的提示                             | `string` | `'許可權已儲存'`                                                           |
-| loadFailed               | 許可權讀取失敗的提示                         | `string` | `'許可權載入失敗'`                                                         |
-| saveFailed               | 許可權儲存失敗的提示                         | `string` | `'許可權儲存失敗'`                                                         |
+| users                    | 成員選擇裡 User 頁籤的名稱                 | `string` | `'User'`                                                                     |
+| groups                   | 成員選擇裡 Group 頁籤的名稱                | `string` | `'Group'`                                                                    |
+| allUsers                 | 全部使用者（`user:*`）的名稱               | `string` | `'全部 User'`                                                                |
+| administrator            | 固定的管理員行的名稱                       | `string` | `'資料空間管理員'`                                                           |
+| administratorDescription | 管理員行的說明                             | `string` | `'管理員始終保留隱式管理許可權。'`                                           |
+| direct                   | 授權來源「直接授權」的名稱                 | `string` | `'直接授權'`                                                                 |
+| inherited                | 授權來源「繼承自上級」的名稱               | `string` | `'從父級目錄繼承許可權'`                                                     |
+| remove                   | 授權選單裡的移除項                         | `string` | `'移除許可權'`                                                               |
+| add                      | 新增成員的確認按鈕                         | `string` | `'新增'`                                                                     |
+| cancel                   | 取消按鈕                                   | `string` | `'取消'`                                                                     |
+| confirm                  | 確認按鈕                                   | `string` | `'確定'`                                                                     |
+| close                    | 彈窗關閉按鈕的無障礙名稱                   | `string` | `'關閉許可權管理'`                                                           |
+| retry                    | 重試按鈕                                   | `string` | `'重試'`                                                                     |
+| loadMore                 | 成員列表的「載入更多」按鈕                 | `string` | `'載入更多'`                                                                 |
+| loading                  | 載入許可權和成員時的提示                   | `string` | `'正在載入許可權…'`                                                          |
+| saving                   | 儲存中的提示                               | `string` | `'正在儲存…'`                                                                |
+| saved                    | 儲存成功的提示                             | `string` | `'許可權已儲存'`                                                             |
+| loadFailed               | 許可權讀取失敗的提示                       | `string` | `'許可權載入失敗'`                                                           |
+| saveFailed               | 許可權儲存失敗的提示                       | `string` | `'許可權儲存失敗'`                                                           |
 | principalsFailed         | 成員列表載入失敗的提示                     | `string` | `'使用者或使用者組載入失敗'`                                                 |
-| empty                    | 沒有可新增成員時的提示                     | `string` | `'暫無可新增成員'`                                                       |
-| noMatches                | 搜尋沒有匹配的成員時的提示                 | `string` | `'暫無匹配結果'`                                                         |
-| restricted               | 節點不繼承上級許可權時的說明                 | `string` | `'當前節點不繼承父目錄的許可權。'`                                         |
-| restore                  | 「恢復繼承」按鈕                           | `string` | `'恢復繼承'`                                                             |
-| stopTitle                | 停止繼承確認的標題                         | `string` | `'停止繼承上級許可權？'`                                                   |
+| empty                    | 沒有可新增成員時的提示                     | `string` | `'暫無可新增成員'`                                                           |
+| noMatches                | 搜尋沒有匹配的成員時的提示                 | `string` | `'暫無匹配結果'`                                                             |
+| restricted               | 節點不繼承上級許可權時的說明               | `string` | `'當前節點不繼承父目錄的許可權。'`                                           |
+| restore                  | 「恢復繼承」按鈕                           | `string` | `'恢復繼承'`                                                                 |
+| stopTitle                | 停止繼承確認的標題                         | `string` | `'停止繼承上級許可權？'`                                                     |
 | stopDescription          | 停止繼承確認的說明                         | `string` | `'確定後，此節點將不再繼承父級目錄的許可權，並按當前設定的訪問許可權生效。'` |
-| restoreTitle             | 恢復繼承確認的標題                         | `string` | `'恢復繼承上級許可權？'`                                                   |
-| restoreDescription       | 恢復繼承確認的說明                         | `string` | `'將清空本節點的直接授權，重新跟隨上級許可權。'`                           |
-| restoreRemoved           | 恢復繼承時，列出將失效的直接授權前的引導語 | `string` | `'以下直接授權將不再生效：'`                                             |
-| readOnly                 | `acl.readOnly` 開啟時彈窗裡的提示          | `string` | `'宿主已禁止修改許可權。'`                                                 |
+| restoreTitle             | 恢復繼承確認的標題                         | `string` | `'恢復繼承上級許可權？'`                                                     |
+| restoreDescription       | 恢復繼承確認的說明                         | `string` | `'將清空本節點的直接授權，重新跟隨上級許可權。'`                             |
+| restoreRemoved           | 恢復繼承時，列出將失效的直接授權前的引導語 | `string` | `'以下直接授權將不再生效：'`                                                 |
+| readOnly                 | `acl.readOnly` 開啟時彈窗裡的提示          | `string` | `'宿主已禁止修改許可權。'`                                                   |
 
 ## 注意
 
@@ -403,7 +403,7 @@ import '@openviking/react/modules/file-browser/style.css';
 
 - 結果按 URI 去重；`grep` 例外——同一檔案的多行命中是不同結果，各帶自己的行號。
 - `glob` 的模式不含 `/` 時自動補 `**/` 字首；目錄命中去掉尾斜槓後再參與導航，目錄這一事實記在 `isDir` 上。
-- 進階面板的篩選項按當前方式啟用或停用，停用的分割槽保留可見並置灰，標題旁說明原因。目錄候選從 `rootUri` 派生，使用者根用 `~` 別名；切換根時失效的已選目錄會被丟棄。
+- 高階面板的篩選項按當前方式啟用或停用，停用的分割槽保留可見並置灰，標題旁說明原因。目錄候選從 `rootUri` 派生，使用者根用 `~` 別名；切換根時失效的已選目錄會被丟棄。
 - 點選結果關閉彈窗、在樹中定位該資源並開啟預覽。
 
 ### 預覽操作區

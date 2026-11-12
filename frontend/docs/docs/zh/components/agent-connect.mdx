@@ -35,13 +35,13 @@ import '@openviking/react/components/agent-connect/style.css';
 | ---------------- | -------------------------------------------------------------------------------------------------- | ------------------------------------------- | ------------------------------------------------------- |
 | apiKey           | 寫入接入說明的 API Key，介面脫敏顯示，複製時使用原值                                               | `string`                                    | 必填                                                    |
 | baseUrl          | OpenViking 服務地址，替換接入說明裡的預設地址                                                      | `string`                                    | `https://api.vikingdb.cn-beijing.volces.com/openviking` |
-| agreementUrl     | 使用者協議連結，提供後頁尾顯示協議連結，省略時只顯示資料訪問提示                                     | `string`                                    | -                                                       |
+| agreementUrl     | 使用者協議連結，提供後頁尾顯示協議連結，省略時只顯示資料訪問提示                                   | `string`                                    | -                                                       |
 | showOverseasTag  | 「境外」標籤的範圍：省略時標記 Codex 和 Claude Code，`true` 標記全部適用的 Agent，`false` 隱藏標籤 | `boolean`                                   | -                                                       |
 | activeTabId      | 受控的當前頁籤，省略時由元件維護                                                                   | `'mainstream' \| 'custom'`                  | `'mainstream'`                                          |
 | selectedId       | 受控的選中條目，取值為 `AgentConnectItem` 的 `id`，當前頁籤不含該條目時顯示第一項                  | `string`                                    | 當前頁籤的第一項                                        |
 | onTabChange      | 選擇頁籤時觸發，點選、方向鍵、Home、End 都會觸發                                                   | `(tabId: 'mainstream' \| 'custom') => void` | -                                                       |
 | onSelect         | 選擇條目時觸發                                                                                     | `(item: AgentConnectItem) => void`          | -                                                       |
-| onCopy           | 複製成功後觸發，引數是實際複製的程式碼塊或整段說明，包含原始 API Key                                 | `(text: string) => void`                    | -                                                       |
+| onCopy           | 複製成功後觸發，引數是實際複製的程式碼塊或整段說明，包含原始 API Key                               | `(text: string) => void`                    | -                                                       |
 | locale           | 介面語言，規則見[國際化](../guide/i18n)                                                            | `'zh-CN' \| 'en-US'`                        | 繼承上級，預設 `'en-US'`                                |
 | className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                             | HTML 屬性                                   | -                                                       |
 

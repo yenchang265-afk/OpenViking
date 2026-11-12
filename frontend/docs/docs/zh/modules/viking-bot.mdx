@@ -48,7 +48,7 @@ import {
 
 ## 組合使用
 
-[Console](./console) 已內建消費此模組。獨立宿主使用 [VikingBot](../components/viking-bot) 時單獨引入該元件的樣式；本模組不包含 UI、CSS 或瀏覽器全域依賴，不從包根或 Console 入口轉匯出 Hook。
+[Console](./console) 已內建消費此模組。獨立宿主使用 [VikingBot](../components/viking-bot) 時單獨引入該元件的樣式；本模組不包含 UI、CSS 或瀏覽器全域性依賴，不從包根或 Console 入口轉匯出 Hook。
 
 ## Adapter API
 
@@ -163,8 +163,8 @@ import {
 
 繼承 `VikingBotSessionsState`.
 
-| 引數    | 說明                               | 型別                                           | 預設值 |
-| ------- | ---------------------------------- | ---------------------------------------------- | ------ |
+| 引數    | 說明                                   | 型別                                           | 預設值 |
+| ------- | -------------------------------------- | ---------------------------------------------- | ------ |
 | refresh | 重新整理列表；失敗記錄在 error，可重試 | `() => Promise<void>`                          | -      |
-| create  | 新建，失敗返回 undefined           | `() => Promise<VikingBotSession \| undefined>` | -      |
-| remove  | 刪除，失敗返回 false               | `(id: string) => Promise<boolean>`             | -      |
+| create  | 新建，失敗返回 undefined               | `() => Promise<VikingBotSession \| undefined>` | -      |
+| remove  | 刪除，失敗返回 false                   | `(id: string) => Promise<boolean>`             | -      |

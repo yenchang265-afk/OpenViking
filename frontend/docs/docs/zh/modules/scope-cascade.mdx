@@ -37,17 +37,17 @@ import '@openviking/react/modules/scope-cascade/style.css';
 
 ### ScopeCascade
 
-| 引數             | 說明                                                                                                               | 型別                                                                                                   | 預設值                                                                             |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| loadLibraries    | 載入知識庫列表，掛載時呼叫；`signal` 在請求過期時中止                                                              | `(signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>`                                     | 必填                                                                               |
-| loadSpaces       | 載入知識庫下的資料空間，選中知識庫後呼叫                                                                           | `(libraryId: string, signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>`                  | 必填                                                                               |
-| loadUsers        | 載入資料空間下的使用者，選中資料空間後呼叫                                                                           | `(libraryId: string, spaceId: string, signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>` | 必填                                                                               |
-| levelNames       | 三級的名稱，依次為知識庫、資料空間、使用者；未選中時顯示在觸發器上，同時是觸發器的無障礙名稱                         | `readonly [string, string, string]`                                                                    | `zh-CN`：`['知識庫', '資料空間', '使用者']`；`en-US`：`['Library', 'Space', 'User']` |
-| onChange         | 選擇變化時觸發，三級都選中時引數為 `ScopeCascadeSelection`，身份不完整時為 `null`；同一身份不重複觸發              | `(selection: ScopeCascadeSelection \| null) => void`                                                   | -                                                                                  |
-| retryLabel       | 載入失敗後重試按鈕的文案                                                                                           | `string`                                                                                               | `zh-CN`：`'重試'`；`en-US`：`'Retry'`                                              |
-| labels           | 覆蓋介面文案：載入中 `loading`、搜尋框佔位 `searchPlaceholder`、無選項 `empty`、無匹配 `noMatch`、載入失敗 `error` | `ScopeSwitcherLabels`                                                                                  | -                                                                                  |
-| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                            | `'zh-CN' \| 'en-US'`                                                                                   | 繼承上級，預設 `'en-US'`                                                           |
-| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                             | HTML 屬性                                                                                              | -                                                                                  |
+| 引數             | 說明                                                                                                               | 型別                                                                                                   | 預設值                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| loadLibraries    | 載入知識庫列表，掛載時呼叫；`signal` 在請求過期時中止                                                              | `(signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>`                                     | 必填                                                                                 |
+| loadSpaces       | 載入知識庫下的資料空間，選中知識庫後呼叫                                                                           | `(libraryId: string, signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>`                  | 必填                                                                                 |
+| loadUsers        | 載入資料空間下的使用者，選中資料空間後呼叫                                                                         | `(libraryId: string, spaceId: string, signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>` | 必填                                                                                 |
+| levelNames       | 三級的名稱，依次為知識庫、資料空間、使用者；未選中時顯示在觸發器上，同時是觸發器的無障礙名稱                       | `readonly [string, string, string]`                                                                    | `zh-CN`：`['知識庫', '資料空間', '使用者']`；`en-US`：`['Library', 'Space', 'User']` |
+| onChange         | 選擇變化時觸發，三級都選中時引數為 `ScopeCascadeSelection`，身份不完整時為 `null`；同一身份不重複觸發              | `(selection: ScopeCascadeSelection \| null) => void`                                                   | -                                                                                    |
+| retryLabel       | 載入失敗後重試按鈕的文案                                                                                           | `string`                                                                                               | `zh-CN`：`'重試'`；`en-US`：`'Retry'`                                                |
+| labels           | 覆蓋介面文案：載入中 `loading`、搜尋框佔位 `searchPlaceholder`、無選項 `empty`、無匹配 `noMatch`、載入失敗 `error` | `ScopeSwitcherLabels`                                                                                  | -                                                                                    |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                            | `'zh-CN' \| 'en-US'`                                                                                   | 繼承上級，預設 `'en-US'`                                                             |
+| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                             | HTML 屬性                                                                                              | -                                                                                    |
 
 ### ScopeSwitcherOption
 
@@ -67,7 +67,7 @@ import '@openviking/react/modules/scope-cascade/style.css';
 | --------- | ----------------- | -------- | ------ |
 | libraryId | 選中的知識庫 id   | `string` | 必填   |
 | spaceId   | 選中的資料空間 id | `string` | 必填   |
-| userId    | 選中的使用者 id     | `string` | 必填   |
+| userId    | 選中的使用者 id   | `string` | 必填   |
 
 ## 注意
 

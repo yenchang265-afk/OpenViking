@@ -1,6 +1,6 @@
 # VikingBot 對話
 
-展示宿主提供的會話訊息，並提供輸入區和待確認互動區：傳送、停止、開啟資源等操作通過回呼交給宿主，元件不發起請求。
+展示宿主提供的會話訊息，並提供輸入區和待確認互動區：傳送、停止、開啟資源等操作通過回撥交給宿主，元件不發起請求。
 
 ## 何時使用
 
@@ -44,7 +44,7 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### 使用者訊息
 
-使用者訊息靠右顯示，附件在氣泡外，只有附件時不生成空氣泡；點選附件或複製按鈕，回呼收到的內容顯示在示例下方。
+使用者訊息靠右顯示，附件在氣泡外，只有附件時不生成空氣泡；點選附件或複製按鈕，回撥收到的內容顯示在示例下方。
 
 ```tsx file="../../_demos/viking-bot-user-messages.tsx" preview
 
@@ -52,7 +52,7 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### 檔案與目錄引用
 
-輸入區的引用標籤顯示完整 URI，同名檔案也能區分；只顯示前 5 個，其餘收進 `+N`，點選標籤或傳送，回呼收到的內容顯示在示例下方。
+輸入區的引用標籤顯示完整 URI，同名檔案也能區分；只顯示前 5 個，其餘收進 `+N`，點選標籤或傳送，回撥收到的內容顯示在示例下方。
 
 ```tsx file="../../_demos/viking-bot-references.tsx" preview
 
@@ -90,14 +90,14 @@ import '@openviking/react/components/viking-bot/style.css';
 | onDraftChange         | 草稿變化時觸發；省略時輸入內容不會上報，也不能傳送                                                                             | `(value: string) => void`                        | -                        |
 | onSend                | 傳送時觸發，引數為文本、附件和引用；草稿和附件由宿主清空，省略時不能傳送                                                       | `(draft: VikingBotDraft) => void`                | -                        |
 | onCancel              | 點選停止時觸發；省略時回覆期間不顯示停止按鈕                                                                                   | `() => void`                                     | -                        |
-| onFilesAdded          | 使用者選擇或拖入檔案時觸發，上傳由宿主完成；設定後顯示新增檔案按鈕                                                               | `(files: readonly File[]) => void`               | -                        |
+| onFilesAdded          | 使用者選擇或拖入檔案時觸發，上傳由宿主完成；設定後顯示新增檔案按鈕                                                             | `(files: readonly File[]) => void`               | -                        |
 | onAttachmentRemove    | 點選附件的移除按鈕時觸發；省略時不顯示移除按鈕                                                                                 | `(attachment: VikingBotAttachment) => void`      | -                        |
 | onOpenUri             | 開啟訊息中的資源、定位當前會話或開啟輸入區的引用標籤時觸發，引數為資源 URI                                                     | `(uri: string) => void`                          | -                        |
-| onCopy                | 接管複製，包括會話標識；省略時使用者訊息使用內建複製，助手回覆不顯示覆制按鈕                                                     | `(text: string) => void`                         | -                        |
+| onCopy                | 接管複製，包括會話標識；省略時使用者訊息使用內建複製，助手回覆不顯示覆制按鈕                                                   | `(text: string) => void`                         | -                        |
 | onMessageAction       | 點選訊息上的動作按鈕時觸發                                                                                                     | `(messageId: string, actionKey: string) => void` | -                        |
 | onQuickInputSelect    | 接管快捷輸入的點選，設定後不再自動填入草稿                                                                                     | `(input: VikingBotQuickInput) => void`           | -                        |
 | header                | 替換頭部，內建的會話操作區不再顯示；`null` 時不顯示頭部                                                                        | `ReactNode`                                      | -                        |
-| headerActions         | 頭部會話操作區裡的額外控制元件；設定了 `header` 時不顯示                                                                           | `ReactNode`                                      | -                        |
+| headerActions         | 頭部會話操作區裡的額外控制元件；設定了 `header` 時不顯示                                                                       | `ReactNode`                                      | -                        |
 | footer                | 顯示在訊息區和輸入區之間的內容                                                                                                 | `ReactNode`                                      | -                        |
 | emptyState            | 沒有訊息和流式內容時顯示的內容；省略時顯示歡迎區（文案為 `labels.welcomeTitle`、`labels.welcomeDescription`），`null` 時不顯示 | `ReactNode`                                      | -                        |
 | messageList           | 替換訊息區，包含空態；`null` 時不顯示                                                                                          | `ReactNode`                                      | -                        |
@@ -151,7 +151,7 @@ import '@openviking/react/components/viking-bot/style.css';
 | text        | 推理文本                                                                    | `string`           | 必填    |
 | running     | 是否仍在生成                                                                | `boolean`          | `false` |
 | groupId     | 所屬執行塊的標識，相鄰且 `groupId` 相同的推理和工具呼叫片段合併為一個執行塊 | `string`           | -       |
-| startedAt   | 開始時間，毫秒時間戳或 ISO 時間字串                                       | `number \| string` | -       |
+| startedAt   | 開始時間，毫秒時間戳或 ISO 時間字串                                         | `number \| string` | -       |
 | completedAt | 結束時間，格式同 `startedAt`                                                | `number \| string` | -       |
 | durationMs  | 耗時，單位毫秒；不足 1000 時不顯示                                          | `number`           | -       |
 
@@ -184,7 +184,7 @@ import '@openviking/react/components/viking-bot/style.css';
 | output      | 呼叫輸出文本，能解析為 JSON 時格式化顯示                                             | `string`                                           | -      |
 | results     | 檢索結果卡片，設定且非空時取代原始輸出；宿主把檢索響應轉換成卡片，元件不識別工具名稱 | `readonly VikingBotToolResultLink[]`               | -      |
 | durationMs  | 耗時，單位毫秒；不足 1000 時不顯示                                                   | `number`                                           | -      |
-| startedAt   | 開始時間，毫秒時間戳或 ISO 時間字串                                                | `number \| string`                                 | -      |
+| startedAt   | 開始時間，毫秒時間戳或 ISO 時間字串                                                  | `number \| string`                                 | -      |
 | completedAt | 結束時間，格式同 `startedAt`                                                         | `number \| string`                                 | -      |
 | groupId     | 所屬執行塊的標識                                                                     | `string`                                           | -      |
 | server      | MCP 服務名，工具標題顯示為 `server.name`                                             | `string`                                           | -      |
@@ -206,7 +206,7 @@ import '@openviking/react/components/viking-bot/style.css';
 
 | 引數  | 說明                                                           | 型別     | 預設值 |
 | ----- | -------------------------------------------------------------- | -------- | ------ |
-| uri   | 資源 URI，點選卡片時傳給 `onOpenUri`，未提供回呼時卡片不可點選 | `string` | 必填   |
+| uri   | 資源 URI，點選卡片時傳給 `onOpenUri`，未提供回撥時卡片不可點選 | `string` | 必填   |
 | label | 卡片標題，省略時取 URI 的最後一段                              | `string` | -      |
 | score | 相似度，顯示為保留兩位小數的數值                               | `number` | -      |
 
@@ -239,15 +239,15 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### VikingBotAttachment
 
-| 引數         | 說明                                                    | 型別                                             | 預設值 |
-| ------------ | ------------------------------------------------------- | ------------------------------------------------ | ------ |
-| key          | 附件的唯一標識                                          | `string`                                         | 必填   |
-| name         | 檔名                                                  | `string`                                         | 必填   |
-| status       | 上傳狀態；為 `'error'` 時在檔名後顯示失敗提示         | `'pending' \| 'uploading' \| 'ready' \| 'error'` | -      |
-| errorMessage | 上傳失敗時的提示，省略時顯示 `labels.toolError`         | `string`                                         | -      |
-| previewUrl   | 預覽地址，輸入區不使用，原樣回傳給回呼                  | `string`                                         | -      |
-| mimeType     | MIME 型別，輸入區不使用，原樣回傳給回呼                 | `string`                                         | -      |
-| sizeBytes    | 位元組大小，未知時為 `null`，輸入區不使用，原樣回傳給回呼 | `number \| null`                                 | -      |
+| 引數         | 說明                                                      | 型別                                             | 預設值 |
+| ------------ | --------------------------------------------------------- | ------------------------------------------------ | ------ |
+| key          | 附件的唯一標識                                            | `string`                                         | 必填   |
+| name         | 檔名                                                      | `string`                                         | 必填   |
+| status       | 上傳狀態；為 `'error'` 時在檔名後顯示失敗提示             | `'pending' \| 'uploading' \| 'ready' \| 'error'` | -      |
+| errorMessage | 上傳失敗時的提示，省略時顯示 `labels.toolError`           | `string`                                         | -      |
+| previewUrl   | 預覽地址，輸入區不使用，原樣回傳給回撥                    | `string`                                         | -      |
+| mimeType     | MIME 型別，輸入區不使用，原樣回傳給回撥                   | `string`                                         | -      |
+| sizeBytes    | 位元組大小，未知時為 `null`，輸入區不使用，原樣回傳給回撥 | `number \| null`                                 | -      |
 
 ### VikingBotDraft
 
@@ -274,10 +274,10 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### VikingBotSession
 
-| 引數      | 說明                                                     | 型別     | 預設值 |
-| --------- | -------------------------------------------------------- | -------- | ------ |
-| id        | 會話 ID                                                  | `string` | 必填   |
-| title     | 會話標題                                                 | `string` | 必填   |
+| 引數      | 說明                                                   | 型別     | 預設值 |
+| --------- | ------------------------------------------------------ | -------- | ------ |
+| id        | 會話 ID                                                | `string` | 必填   |
+| title     | 會話標題                                               | `string` | 必填   |
 | updatedAt | 最近更新時間，ISO 時間字串；省略或無法解析時不顯示時間 | `string` | -      |
 
 ### VikingBotQuickInput
@@ -291,15 +291,15 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ### VikingBotReferences
 
-| 引數          | 說明                                                                                                               | 型別                                                  | 預設值  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------- | ------- |
+| 引數          | 說明                                                                                                                 | 型別                                                  | 預設值  |
+| ------------- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------- |
 | rows          | 可選擇的檔案和目錄，使用 [FileTree](./file-tree) 的行結構；展開、分頁和許可權過濾由宿主完成，`disabled` 的行不能選擇 | `readonly FileTreeRow[]`                              | 必填    |
-| selected      | 已選中的引用，受控                                                                                                 | `readonly VikingBotReference[]`                       | 必填    |
-| onChange      | 選擇或移除引用時觸發，引數為完整的新列表                                                                           | `(references: readonly VikingBotReference[]) => void` | 必填    |
-| onQueryChange | 搜尋詞變化時觸發，宿主據此返回過濾後的 `rows`；省略時元件按名稱和 URI 在 `rows` 內過濾                             | `(query: string) => void`                             | -       |
-| onExpand      | 展開或摺疊目錄時觸發，引數為目錄 URI，宿主據此更新 `rows`                                                          | `(uri: string) => void`                               | -       |
-| isLoading     | 候選是否正在載入                                                                                                   | `boolean`                                             | `false` |
-| error         | 候選的載入錯誤，設定後取代列表顯示                                                                                 | `string`                                              | -       |
+| selected      | 已選中的引用，受控                                                                                                   | `readonly VikingBotReference[]`                       | 必填    |
+| onChange      | 選擇或移除引用時觸發，引數為完整的新列表                                                                             | `(references: readonly VikingBotReference[]) => void` | 必填    |
+| onQueryChange | 搜尋詞變化時觸發，宿主據此返回過濾後的 `rows`；省略時元件按名稱和 URI 在 `rows` 內過濾                               | `(query: string) => void`                             | -       |
+| onExpand      | 展開或摺疊目錄時觸發，引數為目錄 URI，宿主據此更新 `rows`                                                            | `(uri: string) => void`                               | -       |
+| isLoading     | 候選是否正在載入                                                                                                     | `boolean`                                             | `false` |
+| error         | 候選的載入錯誤，設定後取代列表顯示                                                                                   | `string`                                              | -       |
 
 ### VikingBotReference
 
@@ -328,11 +328,11 @@ import '@openviking/react/components/viking-bot/style.css';
 | onValueChange         | 輸入變化時觸發；省略時輸入內容不會上報，也不能傳送                        | `(value: string) => void`                   | -                        |
 | onSend                | 傳送時觸發，引數為文本、附件和引用；草稿和附件由宿主清空，省略時不能傳送  | `(draft: VikingBotDraft) => void`           | -                        |
 | onCancel              | 點選停止時觸發；省略時回覆期間不顯示停止按鈕                              | `() => void`                                | -                        |
-| onFilesAdded          | 使用者選擇或拖入檔案時觸發，上傳由宿主完成；設定後顯示新增檔案按鈕          | `(files: readonly File[]) => void`          | -                        |
+| onFilesAdded          | 使用者選擇或拖入檔案時觸發，上傳由宿主完成；設定後顯示新增檔案按鈕        | `(files: readonly File[]) => void`          | -                        |
 | onAttachmentRemove    | 點選附件的移除按鈕時觸發；省略時不顯示移除按鈕                            | `(attachment: VikingBotAttachment) => void` | -                        |
 | onOpenUri             | 點選引用標籤時觸發，引數為引用的 URI                                      | `(uri: string) => void`                     | -                        |
 | onQuickInputSelect    | 接管快捷輸入的點選，設定後不再自動填入草稿                                | `(input: VikingBotQuickInput) => void`      | -                        |
-| actions               | 工具欄裡附件和引用按鈕之後的額外控制元件                                      | `ReactNode`                                 | -                        |
+| actions               | 工具欄裡附件和引用按鈕之後的額外控制元件                                  | `ReactNode`                                 | -                        |
 | labels                | 覆蓋介面文案，全部鍵見 `DEFAULT_LABELS`                                   | `VikingBotLabels`                           | -                        |
 | locale                | 介面語言，規則見[國際化](../guide/i18n)                                   | `'zh-CN' \| 'en-US'`                        | 繼承上級，預設 `'en-US'` |
 | className             | 附加到根元素的類名                                                        | `string`                                    | -                        |
@@ -357,7 +357,7 @@ import '@openviking/react/components/viking-bot/style.css';
 | streaming       | 助手仍在生成時已產生的片段，顯示在 `insertIndex` 處                                                    | `VikingBotStreamingState`                        | -                        |
 | listKey         | 列表的身份標識，值變化時重置展示狀態                                                                   | `string`                                         | `'viking-bot'`           |
 | onOpenUri       | 開啟訊息中的資源時觸發，引數為資源 URI                                                                 | `(uri: string) => void`                          | -                        |
-| onCopy          | 接管複製；省略時使用者訊息使用內建複製，助手回覆不顯示覆制按鈕                                           | `(text: string) => void`                         | -                        |
+| onCopy          | 接管複製；省略時使用者訊息使用內建複製，助手回覆不顯示覆制按鈕                                         | `(text: string) => void`                         | -                        |
 | onMessageAction | 點選訊息上的動作按鈕時觸發                                                                             | `(messageId: string, actionKey: string) => void` | -                        |
 | renderMessage   | 自定義單條訊息的渲染，替換內建的正文、時間、複製和動作區；收到的是合併後的訊息，流式內容仍使用內建渲染 | `(message: VikingBotMessage) => ReactNode`       | -                        |
 | footer          | 顯示在最後一條訊息之後的內容                                                                           | `ReactNode`                                      | -                        |
@@ -370,7 +370,7 @@ import '@openviking/react/components/viking-bot/style.css';
 | 引數      | 說明                                                                   | 型別                     | 預設值                   |
 | --------- | ---------------------------------------------------------------------- | ------------------------ | ------------------------ |
 | sessions  | 會話資料和操作，規則同 `VikingBot` 的 `sessions`；省略時只顯示 `extra` | `VikingBotSessions`      | -                        |
-| extra     | 額外控制元件，顯示在會話標識之後、歷史會話和新建會話按鈕之前               | `ReactNode`              | -                        |
+| extra     | 額外控制元件，顯示在會話標識之後、歷史會話和新建會話按鈕之前           | `ReactNode`              | -                        |
 | onOpenUri | 點選定位按鈕時觸發，引數為 `sessions.currentUri`                       | `(uri: string) => void`  | -                        |
 | onCopy    | 接管會話標識的複製；省略時寫入剪貼簿                                   | `(text: string) => void` | -                        |
 | labels    | 覆蓋介面文案，全部鍵見 `DEFAULT_LABELS`                                | `VikingBotLabels`        | -                        |
@@ -505,4 +505,4 @@ import '@openviking/react/components/viking-bot/style.css';
 
 ## 請求與會話
 
-使用 [VikingBot 無頭模組](../modules/viking-bot) 獲取請求、會話和狀態管理；元件本身只接收資料與回呼。[Console](../modules/console) 已內建接入該模組。
+使用 [VikingBot 無頭模組](../modules/viking-bot) 獲取請求、會話和狀態管理；元件本身只接收資料與回撥。[Console](../modules/console) 已內建接入該模組。
