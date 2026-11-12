@@ -161,6 +161,7 @@ AGENTS.md
 !/frontend/packages/react/src/components/AGENTS.md
 !/frontend/packages/react/src/pages/AGENTS.md
 AGENTS.md.local
+.codegraph/
 
 # Git worktrees
 .worktrees/
