@@ -1,5 +1,7 @@
 # Volcengine Model Purchase Guide
 
+> **Upstream-only guide:** Native `volcengine` / `vikingdb` model providers are removed in this fork. The purchase and configuration instructions below apply to upstream OpenViking, not this checkout. For this fork, use [supported model configuration](01-configuration.md) and [fork compatibility](../configuration/03-fork.md).
+
 For self-hosted OpenViking, this guide covers activating Volcano Ark models, obtaining an API key, and verifying the server configuration. Managed OpenViking clients do not need these local model settings; see the [Quick Start](../getting-started/02-quickstart.md).
 
 ## Overview

@@ -1,3 +1,5 @@
+> This is the `yenchang265-afk/OpenViking` fork. Read [fork compatibility](docs/en/configuration/03-fork.md) for supported providers, source installation, and differences from upstream packages.
+
 <div align="center">
 
 <a href="https://openviking.ai/" target="_blank">

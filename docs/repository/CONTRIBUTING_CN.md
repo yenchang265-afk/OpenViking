@@ -259,6 +259,17 @@ CI 會根據受影響路徑執行相應檢查。CI 通過是必要條件，但�
 專案文件位於 `docs/en/` 和 `docs/zh/`。程式碼示例必須可執行，語言應清晰簡潔；當對應
 翻譯存在時，應同步更新兩種語言。
 
+更新文件與示例後，請從倉庫根目錄執行文件檢查：
+
+```bash
+npm --prefix docs ci
+npm --prefix docs run check:docs
+npm --prefix docs run check:api
+npm --prefix docs run test:theme
+npm --prefix docs run docs:build
+python3 docs/scripts/check-built-anchors.py
+```
+
 ## 社群
 
 請保持尊重、包容、建設性，並聚焦技術討論。開放式設計或使用討論請前往

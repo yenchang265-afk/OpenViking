@@ -1,3 +1,5 @@
+> このリポジトリは `yenchang265-afk/OpenViking` のフォークです。対応プロバイダー、ソースからのインストール、上流パッケージとの差異は [Fork compatibility](../en/configuration/03-fork.md) を参照してください。
+
 <div align="center">
 
 <a href="https://openviking.ai/" target="_blank">

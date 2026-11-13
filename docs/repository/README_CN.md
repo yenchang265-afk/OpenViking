@@ -1,3 +1,5 @@
+> 本倉庫為 `yenchang265-afk/OpenViking` 分支。支援的提供程式、原始碼安裝方式與上游套件差異，請參閱[分支相容性](../zh/configuration/03-fork.md)。
+
 <div align="center">
 
 <a href="https://openviking.ai/" target="_blank">

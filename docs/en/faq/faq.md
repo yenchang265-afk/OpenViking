@@ -1,5 +1,7 @@
 # FAQ
 
+> This repository is a fork. See [fork compatibility](../configuration/03-fork.md) before installing packages or selecting providers. Set `OPENAI_API_KEY` (and `COHERE_API_KEY` if enabling rerank) for the examples below.
+
 ## Basic Concepts
 
 ### What is OpenViking? What problems does it solve?
@@ -67,7 +69,7 @@ viking://
 
 - **Python Version**: 3.10 or higher
 - **Build Tools** (if installing from source or on unsupported platforms): Rust/Cargo, GCC 9+ or Clang 11+
-- **Required Dependencies**: Embedding model (Volcengine Doubao recommended)
+- **Required Dependencies**: Embedding model supported by this fork (for example, OpenAI or local)
 - **Optional Dependencies**:
   - VLM (Vision Language Model): For multimodal content processing and semantic extraction
   - Rerank model: For improved retrieval precision
@@ -100,30 +102,33 @@ Create `~/.openviking/ov.conf` under your home directory. Replace the example mo
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "input": "text",
+      "api_base": "https://api.openai.com/v1"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "api_key": "your-api-key",
-    "model": "doubao-seed-2-0-lite-260428",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3"
+    "provider": "openai",
+    "api_key": "${OPENAI_API_KEY}",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1"
   },
   "rerank": {
-    "provider": "vikingdb",
-    "ak": "your-access-key",
-    "sk": "your-secret-key",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028"
+    "provider": "cohere",
+    "api_key": "${COHERE_API_KEY}",
+    "model_name": "rerank-v3.5"
   },
   "storage": {
     "workspace": "./data",
-    "agfs": { "backend": "local" },
-    "vectordb": { "backend": "local" }
+    "agfs": {
+      "backend": "local"
+    },
+    "vectordb": {
+      "backend": "local"
+    }
   }
 }
 ```
@@ -134,13 +139,11 @@ Config files at the default path `~/.openviking/ov.conf` are loaded automaticall
 
 | Provider | Description |
 |---------|-------------|
-| `volcengine` | Volcengine Embedding API (Recommended) |
 | `openai` | OpenAI Embedding API |
-| `vikingdb` | VikingDB Embedding API |
 | `jina` | Jina AI Embedding API |
 | `ollama` | Ollama (local OpenAI-compatible server, no API key required) |
 
-Supports Dense, Sparse, and Hybrid embedding modes.
+This fork implements dense embedding only; sparse and hybrid configurations are unsupported.
 
 ## Usage Guide
 
