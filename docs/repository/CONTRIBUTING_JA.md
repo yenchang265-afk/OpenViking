@@ -277,6 +277,17 @@ CIは影響するパスに応じてチェックを実行します。CIの成功�
 プロジェクトドキュメントは`docs/en/`と`docs/zh/`にあります。コード例は実行可能にし、
 明確で簡潔な表現を使用してください。対応する翻訳がある場合は両言語を更新してください。
 
+ページやサンプルを更新したら、リポジトリのルートでドキュメントを検証してください。
+
+```bash
+npm --prefix docs ci
+npm --prefix docs run check:docs
+npm --prefix docs run check:api
+npm --prefix docs run test:theme
+npm --prefix docs run docs:build
+python3 docs/scripts/check-built-anchors.py
+```
+
 ## コミュニティ
 
 敬意を持ち、包括的かつ建設的に、技術的な議論へ集中してください。自由形式の設計や使用方法の

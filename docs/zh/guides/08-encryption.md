@@ -8,7 +8,7 @@ OpenViking 可以按帳戶加密儲存中新寫入的檔案。加解密由儲存
 
 - **透明加密**：API 無變化，應用層無感知
 - **多租戶隔離**：不同帳戶使用獨立金鑰
-- **三種金鑰提供程式**：Local、Vault、火山引擎 KMS
+- **兩種金鑰提供程式**：Local、Vault
 - **向後相容**：未加密的舊檔案仍可正常讀取
 
 加密功能的概念說明見 [資料加密](../concepts/10-encryption.md)。
@@ -148,7 +148,6 @@ test()
 |---------|---------|------|------|
 | **Local** | 開發環境、單節點部署 | 簡單，無需外部服務 | 需要管理本地金鑰許可權和獨立金鑰備份 |
 | **Vault** | 生產環境、多雲部署 | 企業級金鑰管理，支援版本控制 | 需要部署和維護 Vault |
-| **Volcengine KMS** | 火山引擎雲部署 | 雲原生金鑰管理服務 | 僅限火山引擎環境 |
 
 ---
 
@@ -216,7 +215,7 @@ ov system crypto init-key -f ~/.openviking/master.key
   `~/.openviking/master.key`。
 - 內聯金鑰不會自動生成；金鑰丟失或改變後，已有加密資料將無法讀取。
 - 此時必須把 `ov.conf` 當作金鑰檔案管理：只允許服務使用者讀取、安全備份，並且禁止提交到版本控制。
-- 生產環境需要集中式金鑰管理時，仍建議使用 Vault 或 KMS。
+- 生產環境需要集中式金鑰管理時，仍建議使用 Vault。
 
 ---
 
@@ -316,71 +315,7 @@ path "transit/decrypt/openviking-root-key" {
 
 ## Volcengine KMS 模式詳細指南
 
-### 前置條件
-
-1. 已開通火山引擎 KMS 服務
-2. 已建立對稱金鑰
-3. 有有效的 Access Key 和 Secret Key
-
-### 建立 KMS 金鑰
-
-1. 訪問 [火山引擎 KMS 控制台](https://console.volcengine.com/kms)
-2. 點選"建立金鑰"
-3. 選擇"對稱金鑰"，演算法選擇 `AES_256`
-4. 記錄金鑰 ID
-
-### 配置 OpenViking
-
-```json
-{
-  "encryption": {
-    "enabled": true,
-    "provider": "volcengine_kms",
-    "volcengine_kms": {
-      "key_id": "d926aa0d-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "region": "cn-beijing",
-      "access_key": "AKLTxxxxxxxxxxxxxxxxxx",
-      "secret_key": "Tmpxxxxxxxxxxxxxxxxxxxxxx",
-      "endpoint": null,
-      "key_file": "~/.openviking/openviking-volcengine-root-key.enc"
-    }
-  }
-}
-```
-
-**配置引數說明**：
-
-| 引數 | 說明 | 預設值 |
-|------|------|--------|
-| `key_id` | KMS 金鑰 ID | 必需 |
-| `region` | 區域 | 必需 |
-| `access_key` | Access Key | 必需 |
-| `secret_key` | Secret Key | 必需 |
-| `endpoint` | 自定義 KMS 端點（可選） | `null`（使用預設端點） |
-| `key_file` | 加密根金鑰本地快取檔案路徑 | `"~/.openviking/openviking-volcengine-root-key.enc"` |
-
-### 許可權建議
-
-為 Access Key 配置最小許可權：
-
-```json
-{
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "kms:Encrypt",
-        "kms:Decrypt"
-      ],
-      "Resource": [
-        "trn:kms:*:*:key/d926aa0d-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      ]
-    }
-  ]
-}
-```
-
----
+此分支已移除 `volcengine_kms`，只支援 `local` 和 `vault`。原有 KMS 加密資料需使用仍支援該提供程式的部署解密並匯出，再匯入新部署。保留原始金鑰與備份；僅修改 provider 無法轉換現有密文。
 
 ## 驗證加密
 
@@ -470,18 +405,11 @@ Error: Failed to connect to Vault
 
 ### 火山 KMS 認證失敗
 
-```
-Error: Invalid credentials
-```
-
-**解決方案**：
-1. 檢查 Access Key 和 Secret Key 是否正確
-2. 確認金鑰有足夠許可權
-3. 驗證區域配置正確
+此分支已移除 `volcengine_kms`，只支援 `local` 和 `vault`。原有 KMS 加密資料需使用仍支援該提供程式的部署解密並匯出，再匯入新部署。保留原始金鑰與備份；僅修改 provider 無法轉換現有密文。
 
 ### 已有密文無法讀取
 
-檢查原根金鑰、provider 配置、account 身份和密文是否仍然完整。Vault 需要保留 Transit key 和存放封裝根金鑰的 KV 條目；KMS 需要保留 KMS key 和本地封裝金鑰檔案。不要通過生成新根金鑰修復舊密文的讀取問題。
+檢查原根金鑰、provider 配置、account 身份和密文是否仍然完整。Vault 需要保留 Transit key 和存放封裝根金鑰的 KV 條目。不要通過生成新根金鑰修復舊密文的讀取問題。
 
 部分讀取會先載入並校驗整個加密檔案，再返回所需的明文切片。部分讀取返回密文時，記錄服務版本，在測試副本上比較完整讀取與部分讀取，核對儲存加密配置和相關修復後再升級。保留原資料及金鑰，以便回退。
 

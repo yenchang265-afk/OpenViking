@@ -40,7 +40,7 @@ OpenViking uses the following standard directory structure under `~/.openviking/
 #### 1. Server Config (`~/.openviking/ov.conf`)
 
 Create the configuration file with at minimum the following configuration.
-Note 1: Replace the api-key with your own api-key. If you don't have one, ask the user to get one (follow the Volcengine Ark platform guide).
+Note 1: Replace the api-key with your own api-key. For the example below, set `OPENAI_API_KEY` to your OpenAI API key. Use only providers supported by this fork.
 Note 2: Replace the root_api_key with your own root-api-key. Ask the user to set one — it will be used for authentication when the CLI connects to the server.
 
 ```json
@@ -55,28 +55,32 @@ Note 2: Replace the root_api_key with your own root-api-key. Ask the user to set
   },
   "parsers": {
     "code": {
-      "gitlab_domains": ["code.byted.org"],
-      "azure_devops_domains": ["ssh.dev.azure.com", "vs-ssh.visualstudio.com"]
+      "gitlab_domains": [
+        "code.byted.org"
+      ],
+      "azure_devops_domains": [
+        "ssh.dev.azure.com",
+        "vs-ssh.visualstudio.com"
+      ]
     }
   },
   "embedding": {
     "dense": {
-        "model": "doubao-embedding-vision-251215",
-        "api_key": "your-volcengine-api-key",
-        "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-        "dimension": 1024,
-        "input": "multimodal",
-        "provider": "volcengine"
+      "model": "text-embedding-3-small",
+      "api_key": "${OPENAI_API_KEY}",
+      "api_base": "https://api.openai.com/v1",
+      "dimension": 1536,
+      "input": "text",
+      "provider": "openai"
     }
   },
   "vlm": {
-    "model": "doubao-seed-1-8-251228",
-    "api_key": "your-volcengine-api-key",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
+    "model": "gpt-5.4",
+    "api_key": "${OPENAI_API_KEY}",
+    "api_base": "https://api.openai.com/v1",
     "temperature": 0.0,
     "max_retries": 2,
-    "provider": "volcengine",
-    "thinking": false
+    "provider": "openai"
   },
   "log": {
     "level": "INFO",

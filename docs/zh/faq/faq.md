@@ -1,5 +1,7 @@
 # 常見問題
 
+> 本倉庫為分支版本。安裝套件或選擇提供程式前，請先閱讀[分支相容性](../configuration/03-fork.md)。以下示例需設定 `OPENAI_API_KEY`；啟用 rerank 時另需 `COHERE_API_KEY`。
+
 ## 基礎概念
 
 ### OpenViking 是什麼？解決什麼問題？
@@ -98,30 +100,33 @@ pip install openviking --upgrade --force-reinstall
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "input": "text",
+      "api_base": "https://api.openai.com/v1"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "api_key": "your-api-key",
-    "model": "doubao-seed-2-0-lite-260428",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3"
+    "provider": "openai",
+    "api_key": "${OPENAI_API_KEY}",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1"
   },
   "rerank": {
-    "provider": "vikingdb",
-    "ak": "your-access-key",
-    "sk": "your-secret-key",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028"
+    "provider": "cohere",
+    "api_key": "${COHERE_API_KEY}",
+    "model_name": "rerank-v3.5"
   },
   "storage": {
     "workspace": "./data",
-    "agfs": { "backend": "local" },
-    "vectordb": { "backend": "local" }
+    "agfs": {
+      "backend": "local"
+    },
+    "vectordb": {
+      "backend": "local"
+    }
   }
 }
 ```
@@ -132,13 +137,11 @@ pip install openviking --upgrade --force-reinstall
 
 | Provider | 說明 |
 |------|------|
-| `volcengine` | 火山引擎 Embedding API（推薦） |
 | `openai` | OpenAI Embedding API |
-| `vikingdb` | VikingDB Embedding API |
 | `jina` | Jina AI Embedding API |
 | `ollama` | Ollama（本地 OpenAI 相容伺服器，無需 API Key） |
 
-支援 Dense、Sparse 和 Hybrid 三種 Embedding 模式。
+此分支僅實作 Dense Embedding；不支援 Sparse 與 Hybrid 配置。
 
 ## 使用指南
 

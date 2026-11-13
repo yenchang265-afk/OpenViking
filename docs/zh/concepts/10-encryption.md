@@ -40,13 +40,12 @@ OpenViking 採用信封加密（Envelope Encryption）架構，使用三層金�
 
 ## 金鑰提供程式
 
-OpenViking 支援三種金鑰提供程式，適應不同的部署場景：
+OpenViking 支援兩種金鑰提供程式，適應不同的部署場景：
 
 | 提供程式 | 適用場景 | Root Key 儲存 | 特點 |
 |---------|---------|--------------|------|
 | **Local** | 開發環境、單節點部署 | 本地檔案 `~/.openviking/master.key` | 簡單，無需外部服務 |
 | **Vault** | 生產環境、多雲部署 | 經 Transit 加密後存入 Vault KV | 由 Vault 保護根金鑰 |
-| **Volcengine KMS** | 火山引擎雲部署 | 經 KMS 加密後存入本地 `key_file` | 由 KMS 保護根金鑰 |
 
 ### Local（本地文件）
 
@@ -93,24 +92,7 @@ ov system crypto init-key --output-file ~/.openviking/master.key
 
 ### Volcengine KMS（火山引擎）
 
-適合火山引擎雲部署：
-
-```json
-{
-  "encryption": {
-    "enabled": true,
-    "provider": "volcengine_kms",
-    "volcengine_kms": {
-      "key_id": "d926aa0d-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "region": "cn-beijing",
-      "access_key": "AKLTxxxxxxxxxxxxxxxxxx",
-      "secret_key": "Tmpxxxxxxxxxxxxxxxxxxxxxx",
-      "endpoint": null,
-      "key_file": "~/.openviking/openviking-volcengine-root-key.enc"
-    }
-  }
-}
-```
+此分支已移除 `volcengine_kms`，只支援 `local` 和 `vault`。原有 KMS 加密資料需使用仍支援該提供程式的部署解密並匯出，再匯入新部署。保留原始金鑰與備份；僅修改 provider 無法轉換現有密文。
 
 ## 工作原理
 

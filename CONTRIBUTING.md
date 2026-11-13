@@ -290,6 +290,17 @@ Project documentation lives under `docs/en/` and `docs/zh/`. Keep examples runna
 use concise language, and update both languages when the changed documentation has a
 corresponding translation.
 
+Run the documentation checks from the repository root after updating pages or examples:
+
+```bash
+npm --prefix docs ci
+npm --prefix docs run check:docs
+npm --prefix docs run check:api
+npm --prefix docs run test:theme
+npm --prefix docs run docs:build
+python3 docs/scripts/check-built-anchors.py
+```
+
 ## Community
 
 Be respectful, inclusive, constructive, and focused on the technical discussion.

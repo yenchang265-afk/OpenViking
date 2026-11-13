@@ -257,6 +257,7 @@ export const sections: DocSection[] = [
         p('api/01-overview'),
         p('configuration/01-server'),
         p('configuration/02-client'),
+        p('configuration/03-fork'),
         p('guides/06-mcp-integration')
       ]),
       g('Resources and retrieval APIs', '資源與檢索 API', [

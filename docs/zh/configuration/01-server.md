@@ -1,5 +1,7 @@
 # 服務端配置欄位
 
+> 本倉庫為分支版本。安裝套件或選擇提供程式前，請先閱讀[分支相容性](../configuration/03-fork.md)。以下示例需設定 `OPENAI_API_KEY`；啟用 rerank 時另需 `COHERE_API_KEY`。
+
 首次配置建議使用 `openviking-server init`，儲存後執行 `openviking-server doctor`。
 
 OpenViking 服務端讀取 `ov.conf`。預設路徑是：
@@ -53,7 +55,7 @@ openviking-server --config /path/to/ov.conf
 |---|---|---|---|
 | `default_account` | string | `"default"` | Service context 使用的預設帳號 |
 | `default_user` | string | `"default"` | Service context 使用的預設使用者 |
-| `embedding` | object | 內建本地 Dense 模型 | 向量化模型和稀疏/混合檢索配置；預設使用 `local` / `bge-small-zh-v1.5-f16` |
+| `embedding` | object | 內建本地 Dense 模型 | 此分支的 Dense 向量化模型；預設使用 `local` / `bge-small-zh-v1.5-f16` |
 | `vlm` | object | 空配置 | 內容理解、摘要和記憶抽取使用的模型；使用相關能力前需要配置可用模型 |
 | `query_planner` | object / `null` | `null` | 檢索意圖分析和召回改寫使用的模型。未配置或為空時回退到 `vlm`；`auto` 模式的召回改寫要求配置叢集級 `query_planner`，或帳戶級 `query_planner` / `vlm` 覆蓋項 |
 | `rerank` | object | disabled | 檢索結果重排模型 |
@@ -89,39 +91,32 @@ API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置會複用部分
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "<your-ark-api-key>",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "dimension": 1536,
+      "input": "text"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}",
     "temperature": 0,
-    "max_retries": 3,
-    "thinking": false
+    "max_retries": 3
   },
   "query_planner": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
-    "thinking": false
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
   },
   "rerank": {
-    "provider": "vikingdb",
-    "ak": "<your-volcengine-ak>",
-    "sk": "<your-volcengine-sk>",
-    "host": "api-vikingdb.vikingdb.cn-beijing.volces.com",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028",
-    "threshold": 0.1,
-    "max_input_tokens": 0
+    "provider": "cohere",
+    "api_key": "${COHERE_API_KEY}",
+    "model_name": "rerank-v3.5"
   }
 }
 ```
@@ -140,7 +135,7 @@ API 型 `embedding`、`vlm`、`query_planner` 和 `rerank` 配置會複用部分
 
 | 欄位 | 型別 / 可選值 | 作用 |
 |---|---|---|
-| `provider` | `openai`、`volcengine`、`azure`、`ollama`、`local` 等 | Dense Embedding 服務 |
+| `provider` | `openai`、`azure`、`ollama`、`local` 等 | Dense Embedding 服務 |
 | `dimension` | integer，`> 0` | 向量維度，必須與模型輸出及已有集合一致 |
 | `input` | `"text"` / `"multimodal"` | 輸入型別 |
 | `encoding_format` | `"float"` / `"base64"` | OpenAI 相容介面的向量編碼格式 |
@@ -233,7 +228,7 @@ Compiler 會優先忠實提煉原文中的物件、操作、前提和場景，�
 
 | 欄位 | 型別 / 可選值 | 預設值 | 作用 |
 |---|---|---|---|
-| `provider` | `vikingdb`、`cohere`、`openai`、`litellm`、`jev` / `null` | `null` | Rerank 服務型別；省略時根據憑證欄位推斷 |
+| `provider` | `cohere`、`openai`、`litellm`、`jev` / `null` | `null` | Rerank 服務型別；省略時根據憑證欄位推斷 |
 | `model` | string / `null` | `null` | OpenAI 相容、LiteLLM 或 Jev Rerank 模型 |
 | `mode` | `noul`、`choice` 或 `null` | `noul` | Jev Rerank 模式；`null` 同樣使用 `noul` |
 | `threshold` | number | `0.1` | 判定結果相關的最低 Rerank 分數；只過濾模型產出的 Rerank 分數，不過濾向量分數；請求中的 `score_threshold` 優先 |
@@ -242,7 +237,7 @@ Compiler 會優先忠實提煉原文中的物件、操作、前提和場景，�
 
 Rerank 沒有單獨的 `enabled` 欄位；配置了對應 provider 所需的憑證後才會啟用。
 
-`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai/v1/systemone`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe/v1/systemone`，模型 `typesafe-ai/jev`），兩者協議相同。Rerank 的 `api_base` 可以是服務根地址或完整 System One URL；缺少 `/v1/systemone` 時會自動追加。預設 `noul` 模式獨立評估每個候選；可選的 `choice` 模式橫向比較所有候選並返回相對機率，使用時應將 `threshold` 設為 `0`。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`vikingdb` 需要 `ak` 和 `sk`，`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
+`jev` 通過現有 `api_base` 和 `model` 欄位同時支援 TypeSafe 直連（`https://api.typesafe.ai/v1/systemone`，模型 `jev-latest`）和 Vercel AI Gateway 的 TypeSafe 相容端點（`https://ai-gateway.vercel.sh/typesafe/v1/systemone`，模型 `typesafe-ai/jev`），兩者協議相同。Rerank 的 `api_base` 可以是服務根地址或完整 System One URL；缺少 `/v1/systemone` 時會自動追加。預設 `noul` 模式獨立評估每個候選；可選的 `choice` 模式橫向比較所有候選並返回相對機率，使用時應將 `threshold` 設為 `0`。顯式指定 `provider` 時必須提供該 provider 所需的憑證：`cohere` 和 `jev` 需要 `api_key`，`openai` 需要 `api_key` 和 `api_base`，`litellm` 需要 `model`。憑證不全的配置在載入時即被拒絕。
 
 ## 檢索配置
 
@@ -598,20 +593,19 @@ Parser 或 Understanding API 後端自身的限制和上傳行為。
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "<your-ark-api-key>",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "dimension": 1536,
+      "input": "text"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
-    "thinking": false
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
   },
   "storage": {
     "workspace": "./data"
