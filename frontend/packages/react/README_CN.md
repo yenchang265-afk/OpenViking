@@ -2,96 +2,110 @@
 
 [English](README.md) / 中文
 
-公開 UI 元件、組合模組 均支援可選的 `locale: 'zh-CN' | 'en-US'`。Props 覆蓋最近的模組或 Provider，均未配置時預設 `en-US`。已有 `labels` 保留逐項覆蓋能力，業務內容、插槽和回撥文案仍由宿主提供。
+用於在 OpenViking（面向 AI 智慧體的上下文資料庫）之上構建應用介面的 React 業務元件與區塊。
+VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `useVikingBotChat`、`useVikingBotSessions` 及契約。Console 預設內建呼叫；獨立 VikingBot 宿主也可直接使用。它不匯出組合檢視或 CSS，Hook 不從包根或 Console 轉匯出。
 
-OpenViking AI 應用介面的 React 基礎：構建工具、文件、分層目錄與區域性化樣式。FileTree、Tui 與 FilePreview 已提供可用檢視，另附五種檔案型別圖示。Console 提供原生命令面板與受控對話檢視，ScopeCascade 提供三級級聯選擇器，FileBrowser 提供目錄、預覽與看板聯動。
+## 安裝
 
-本包沿用倉庫的 AGPL-3.0-only 許可證。當 `react@<version>` 標籤與本包 manifest 中的版本一致時，釋出工作流會將其釋出到 npm。
+```bash
+npm install @openviking/react
+```
 
-## 模組目錄
+`react` 與 `react-dom` 是 peer 依賴（`^18.2.0 || ^19.0.0`）。FileBrowser 通過 FilePreview 展示檔案內容，FilePreview 還需要可選的 peer 依賴 `@ark-design/ui`，版本和需要配套安裝的包見 [FilePreview 頁面](../../docs/docs/zh/components/file-preview.mdx)。
 
-| 原始碼目錄                                                                | 公開入口                                      | 職責                                                                |
-| ------------------------------------------------------------------------- | --------------------------------------------- | ------------------------------------------------------------------- |
-| [components/directory-tour](./src/components/directory-tour/README.md)    | `@openviking/react/components/directory-tour` | 目錄錨點引導，支援宿主非同步定位、獨立高亮與異常恢復                |
-| [components/file-tree](./src/components/file-tree/README_CN.md)           | `@openviking/react/components/file-tree`      | 目錄樹渲染、展開、選中與事件回傳；檢視為佔位實現                    |
-| [components/file-preview](./src/components/file-preview/README_CN.md)     | `@openviking/react/components/file-preview`   | 只讀預覽狀態與擴充套件頁籤；檢視為佔位實現                          |
-| [components/tui](./src/components/tui/README_CN.md)                       | `@openviking/react/components/tui`            | 已確認的命令記錄、結果與輸入區型別；檢視仍為佔位實現                |
-| [components/scope-switcher](./src/components/scope-switcher/README_CN.md) | `@openviking/react/components/scope-switcher` | 無狀態作用域佈局與獨立 ScopeSelector，提供選項、面板及搜尋互動      |
-| [components/agent-connect](./src/components/agent-connect/README_CN.md)   | `@openviking/react/components/agent-connect`  | 固定 Figma 接入檢視，內建原始圖示、文案與剪貼簿反饋                 |
-| [components/viking-bot](./src/components/viking-bot/README_CN.md)         | `@openviking/react/components/viking-bot`     | 對話檢視契約，按契約渲染的檢視仍為佔位實現                          |
-| [modules](./src/modules/README_CN.md)                                     | `@openviking/react/modules/<模組>`            | Console 面板、ScopeCascade 級聯選擇與 FileBrowser 聯動              |
-| [client](./src/client/index.ts)                                           | `@openviking/react/client`                    | 框架無關的請求客戶端：`createOvClient`、`OvClient`、`OvClientError` |
-| [hooks](./src/hooks/README_CN.md)、[utils](./src/utils/README_CN.md)      | 僅包內使用                                    | 跨模組 Hook 與純工具                                                |
+## 快速開始
 
-元件按各自契約逐步實現。FileTree 已按契約渲染全部行型別並實現鍵盤互動；FilePreview 已實現頁籤外殼、標題操作與純文本預覽、編輯基礎，正文尚未接入 FileViewer。ScopeSwitcher 已實現無狀態佈局，獨立 ScopeSelector 子元件管理本級展開，資料訂閱、搜尋與請求由宿主提供。Tui 只渲染固定尺寸空殼；AgentConnect 按 Figma 佈局內建中英文 Agent 與開發接入詳情和原始圖示，由呼叫方提供金鑰與語言，支援可選受控選擇和剪貼簿反饋，具體限制見各自文件。包還提供五種檔案型別圖示。
-元件通過 props 接收檢視資料與狀態，通過回調錶達使用者意圖，遵循 [元件目錄約定](./src/components/AGENTS.md)。[modules](./src/modules/README_CN.md) 按業務能力規劃 Hook 與檢視：Hook 負責取數、狀態和操作，組合檢視將其接入元件。完整頁面與產品專屬流程由宿主負責，管理後臺不在本期範圍內。`console` 已匯出原生命令組合檢視，編排 Hook 保持內部實現，對話通過宿主提供的資料與回撥接入；`file-browser` 提供目錄、預覽與看板聯動。
+### 業務元件
 
-模組預設通過共享 Client 消費 OpenViking 原生 API，由 Provider 下發 `baseURL`、headers 等配置，模組可通過 `requestOptions` 區域性覆蓋。標準接入無需逐模組實現 Adapter；非標準閘道器集中在宿主請求接入層適配。請求契約——`OvRequestOptions`、`OvClient` 與 `OvClientError`——來自 `@openviking/react/client` 子路徑，自帶基於 `fetch` 的實現；Provider 從同一子路徑匯出；業務 Hook 均為模組內部實現；ScopeCascade 按宿主提供的三個介面適配函式接入，不依賴 Provider。詳見[請求約定](./src/modules/README_CN.md#請求契約與預設配置)。
-
-### Props 約定
-
-同一套 props 由不同宿主接入。宿主之間的流程與介面不同，互動與 UI 對齊，因此：
-
-- 元件只接收**已適配的資料**：檔案條目、頁籤與內容來源由模組 Hook 或宿主對映成包內型別，元件不引用任一宿主的資料模型。
-- 狀態用受控欄位表達，回撥只上報意圖，不返回業務資料。
-- 介面文案內建中英文，通過可選的 `locale: 'zh-CN' | 'en-US'` 選擇；已有 labels 可逐項覆蓋，動態文案由宿主在接入層對映 i18next 或 Starling。
-- 圖示、擴充套件頁籤、額外欄位、工具欄動作通過插槽或節點傳入，元件不繫結第三方 UI 庫。
-- 列表型元件按上層展開後的行/項渲染，分頁、載入、錯誤、空態由模組 Hook 或宿主提供。
-
-`WikiDashboard` 從 `@openviking/react/components/wiki-dashboard` 匯出，`ExperienceDashboard` 從 `@openviking/react/components/experience-dashboard` 匯出。兩者均為純 UI，接收展示資料和狀態；原生取數及響應適配由 FileBrowser 內部負責；元件和主 Props 型別同時從根入口匯出。FileBrowser 自動識別 Wiki/經驗入口，並接受 `dashboardKinds` 和 `renderDashboard` 接入宿主許可權與閘道器資料。各自樣式通過元件的 `style.css` 匯出，FileBrowser 樣式已包含兩類看板。詳見[看板文件](../../docs/docs/zh/components/index.mdx)。
-
-## 公開入口與樣式
-
-- 根入口只匯出各元件、各業務模組的元件本體與主 Props 型別（`<元件名>Props`），當前為 `FileTree`、`Tui`、`ScopeSwitcher`、`ScopeSelector`、`ScopeCascade`、`AgentConnect` 、Console、FileBrowser、WikiDashboard 與 ExperienceDashboard；行型別、選項型別、控制代碼與文案包等子型別只從 `components/<元件>`、`modules/<模組>` 子路徑匯出。`FilePreview` 不在根入口：它的型別依賴可選的 `@ark-design/ui`，放進根宣告會讓該 peer 變成必需。ScopeCascade 從 `modules/scope-cascade` 匯出元件，訂閱 Hook 保持內部實現，Console 從 `modules/console` 匯出組合檢視，編排 Hook 保持內部實現；FileBrowser 提供目錄與看板聯動。不提供 `@openviking/react/components` 或 `@openviking/react/modules` 分類聚合 JS 入口。包匯出顯式列舉，內部檔案不開放。
-- 元件只提供明確列出的分層子路徑，不保留舊路徑別名。
-- JS 入口共享實現，不隱式載入 CSS。整包、元件集合與單模組樣式由同一份原始碼構建，選擇所需範圍匯入即可。
-
-| 範圍         | CSS 入口                                        |
-| ------------ | ----------------------------------------------- |
-| 整包         | `@openviking/react/style.css`                   |
-| 元件集合     | `@openviking/react/components/style.css`        |
-| 單元件       | `@openviking/react/components/<模組>/style.css` |
-| 業務模組集合 | `@openviking/react/modules/style.css`           |
-| 單業務模組   | `@openviking/react/modules/<模組>/style.css`    |
-
-各 CSS 入口可獨立使用，並包含所依賴的元件樣式。所有業務 Hook 和控制器均為內部實現，不提供無頭 Hook 公開入口。
+業務元件只渲染傳入的資料，不發請求。引入元件和樣式，並給容器設定高度：
 
 ```tsx
+import { useState } from 'react';
+import {
+  FileTree,
+  type FileTreeRow,
+} from '@openviking/react/components/file-tree';
+import '@openviking/react/components/file-tree/style.css';
+
+const rows: FileTreeRow[] = [
+  {
+    kind: 'entry',
+    id: 'viking://resources',
+    uri: 'viking://resources',
+    name: 'resources',
+    type: 'directory',
+    depth: 0,
+    expanded: true,
+  },
+  {
+    kind: 'entry',
+    id: 'viking://resources/intro.md',
+    uri: 'viking://resources/intro.md',
+    name: 'intro.md',
+    type: 'file',
+    depth: 1,
+  },
+];
+
+export function Tree() {
+  const [selectedId, setSelectedId] = useState<string>();
+  return (
+    <div style={{ height: 320 }}>
+      <FileTree
+        rows={rows}
+        selectedId={selectedId}
+        operations={{ select: async (row) => setSelectedId(row.id) }}
+      />
+    </div>
+  );
+}
+```
+
+### 區塊
+
+區塊自己從 OpenViking API 取數。把它放進 `OpenVikingProvider`，由 Provider 持有服務地址和憑證：
+
+```tsx
+import { OpenVikingProvider } from '@openviking/react/client';
 import { FileBrowser } from '@openviking/react/modules/file-browser';
 import '@openviking/react/modules/file-browser/style.css';
 
-<FileBrowser
-  locale="zh-CN"
-  labels={{ title: '檔案瀏覽', description: '佔位元件，待接入。' }}
-/>;
+export function Browser({ apiKey }: { apiKey: string }) {
+  return (
+    <OpenVikingProvider baseURL="https://ov.example.com" apiKey={apiKey}>
+      <div style={{ height: 600 }}>
+        <FileBrowser />
+      </div>
+    </OpenVikingProvider>
+  );
+}
 ```
 
-Console 的原生命令通過 Provider 請求配置接入，僅在顯式提交命令後訪問服務；對話資料和回撥由宿主提供。
+`baseURL` 是不含 `/api/v1` 的服務地址。其餘身份欄位、各區塊的 `requestOptions` 覆蓋，以及 Provider 的完整規則見[區塊概覽](../../docs/docs/zh/modules/index.mdx)。
 
-經驗看板屬於預覽擴充套件；任務進度先歸所屬模組；API Key 展示控制元件按需複用，憑證建立及管理由宿主負責。本次不新增這些獨立模組。
+## 入口
 
-## 圖示
+所有 JavaScript 入口都是 ESM。不提供 `@openviking/react/components`、`@openviking/react/modules` 這類整類聚合的入口。
 
-```tsx
-import { PdfIcon } from '@openviking/react/icons';
+| 匯入路徑                              | 提供                                                                                                                                                                              |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@openviking/react`                   | 業務元件和區塊，以及各自的主 Props 型別，例如 `FileTree` 與 `FileTreeProps`。`FilePreview` 除外，需要從它的子路徑匯入。                                                           |
+| `@openviking/react/components/<名稱>` | 單個元件及其相關型別（行、選項、控制代碼、文案），例如 `components/file-tree`。同族元件放在分組目錄下，例如 `components/auth/email-login-form`。                                  |
+| `@openviking/react/modules/<名稱>`    | 區塊 `file-browser`、`console`、`scope-cascade`，或 `viking-bot` 無頭模組。                                                                                                       |
+| `@openviking/react/client`            | `OpenVikingProvider` 與請求客戶端（`createOvClient`、`OvClientError` 等）。                                                                                                       |
+| `@openviking/react/icons`             | 圖示元件與檔案型別圖示函式。                                                                                                                                                      |
+| `…/style.css`                         | 樣式。JavaScript 不會引入 CSS，用到什麼引入什麼：整包用 `@openviking/react/style.css`，一類用 `components/style.css` 或 `modules/style.css`，單個元件或區塊用各自的 `style.css`。 |
 
-<PdfIcon width={20} height={20} className="file-icon" alt="PDF" />;
-```
+每個樣式入口都可以獨立使用，並包含所依賴元件的樣式。
 
-圖示預設以 16 × 16 的圖片渲染。裝飾性圖示可沿用預設空 `alt`，用於傳達檔案型別時可提供描述。SVG 隨構建產物內聯，宿主直接消費包匯出。
+## 文件
 
-React 與 ReactDOM 為 peer dependencies（`^18.2.0 || ^19.0.0`），由 Rslib 自動 externalize。Rslib 產出共享的 ESM JavaScript 與宣告檔案，以及獨立構建的 CSS 入口。公開入口 `@openviking/react/style.css` 指向 `dist/style.css`。樣式區域性化，不重置應用樣式。
+- [快速開始](../../docs/docs/zh/guide/getting-started.mdx)
+- [國際化](../../docs/docs/zh/guide/i18n.mdx)：`locale` 與 `labels`
+- [業務元件](../../docs/docs/zh/components/index.mdx)：概覽頁連結到每個業務元件的頁面
+- [區塊](../../docs/docs/zh/modules/index.mdx)：概覽頁介紹 `OpenVikingProvider` 與 `requestOptions`，每個區塊一個頁面
+- [請求客戶端](./src/client/README_CN.md)：`createOvClient`、事件流、錯誤與介面路徑
 
-在 `frontend/` 下執行 `npm run build:lib` 生成 `packages/react/dist/`。文件開發與部署見[前端工作區 README](../../README.md)。
+## 許可證
 
-### ScopeCascade
-
-將三個引用穩定的介面適配函式直接傳給 `<ScopeCascade {...api} onChange={handleSelection} />`。介面返回 `{ id, label }` 選項並接收 `AbortSignal`。元件內建請求、級聯、取消、重試和各級獨立訂閱。`onChange` 返回完整 `{ libraryId, spaceId, userId }` 身份，身份不完整時返回 `null`。從 `@openviking/react/modules/scope-cascade` 匯入元件和 Props，並引入對應 `/style.css`。
-
-## 內建文案維護
-
-內建語言資源就近放在各元件、模組的 `locales/en-US.ts` 與 `locales/zh-CN.ts`，隨程式碼一起維護。共同的語言型別、預設值和逐項覆蓋規則位於內部 `src/shared/locale.ts`；該檔案不存放業務詞條，也不提供公開入口。模組僅維護流程文案，元件預設文案由元件自己維護。
-
-動態文案使用型別化格式化函式，日期與數字使用 `Intl`。`npm test` 自動檢查中英文 key、字串佔位符和格式化函式引數數量，型別檢查約束引數型別。已有 `labels` 的未定義項繼承當前語言，空字串作為顯式覆蓋保留。
-
-在 `OpenVikingProvider` 上配置子樹語言。模組與元件的可選 `locale` Props 覆蓋最近的語言作用域，最終預設 `en-US`。內部 `src/shared/locale-context.tsx` 由各公開入口共享，與請求 Client 配置分離，切換語言保留請求和狀態。
+`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal 與 Drawer 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。

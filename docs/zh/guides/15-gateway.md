@@ -85,7 +85,7 @@ OpenViking 也能以外掛形式接入 Agent，例如 Claude Code、Codex、Curs
 | 模型登入方式 | 需要服務商的 API Key，由閘道器保管，或[由客戶端各自傳送](../gateway/03-connect-clients.md#bring-your-own-provider-key)。客戶端不能用訂閱帳號登入，可以改用[訂閱反代上游](../gateway/07-upstreams.md#custom-upstreams)。Codex 可以通過 [CLIProxyAPI](../gateway/03-connect-clients.md#codex-chatgpt-subscription) 使用 ChatGPT 訂閱；其他訂閱服務請自行確認其使用條款。 | 不經手模型呼叫，Agent 原來怎麼登入就怎麼登入，訂閱也可以。 |
 | 召回 | 每條新的使用者訊息召回一次，結果附加在這條訊息末尾；檢索預設最多等 2 秒。預設檢索記憶、資源和技能。 | 在 Agent 的提問事件裡進行。多數外掛會帶上會話 ID，讓服務端結合對話擴充查詢；自動召回不含資源。 |
 | 儲存 | 晚一輪儲存已完成的輪次，連同客戶端自己的工具呼叫和結果。子 Agent 請求和雜項請求不儲存。 | 跟隨 Agent 的事件，通常在每輪結束時。子 Agent 各不相同：Claude Code、OpenCode 和 DSH 存成單獨的會話，Codex 併入主會話，Hermes 不儲存。 |
-| OpenViking 工具 | 由閘道器在回覆過程中執行，不支援工具或 MCP 的客戶端也能用。預設只開放只讀工具。呼叫[不經過客戶端的許可權確認](../gateway/04-openviking-tools.md#risks-and-controls)，每次呼叫顯示一行提示。 | 由 Agent 當作自己的工具執行，呼叫和結果出現在對話記錄裡，遵循 Agent 的工具許可權設定。 |
+| OpenViking 工具 | 由閘道器在回覆過程中執行，不支援工具或 MCP 的客戶端也能用。預設開放全部工具。呼叫[不經過客戶端的許可權確認](../gateway/04-openviking-tools.md#risks-and-controls)，每次呼叫顯示一行提示。 | 由 Agent 當作自己的工具執行，呼叫和結果出現在對話記錄裡，遵循 Agent 的工具許可權設定。 |
 | 提示詞快取 | 在後續請求裡把每個記憶塊逐位元組原樣放回，快取字首保持不變。**概覽**頁顯示快取命中率。 | 因外掛而異。基於 hook 的外掛把記憶塊交給 Agent，由 Agent 儲存在自己的歷史裡；pi 和 OpenCode v2 也會讓之前的召回保持不變；OpenClaw 每輪在系統提示詞裡重建召回內容。 |
 | 長對話 | 接近模型上下文視窗時由閘道器壓縮，任何客戶端都適用，包括從不壓縮的應用。[實驗性的 Agent 自管上下文視窗](../gateway/05-long-conversations.md#experimental-agent-managed-context-windows)讓模型自己決定何時開啟新視窗。 | 由 Agent 自己壓縮，多數外掛會先提交已捕獲的內容。pi 和 OpenClaw 可以用 OpenViking 的摘要替換 Agent 的摘要。 |
 | 按專案區分記憶 | 看不到工作目錄。要按專案隔離，就給每個專案一個繫結不同 OpenViking 使用者的閘道器金鑰。 | 基於共享外掛程式碼的外掛會自動給記憶標上當前程式碼倉庫。 |

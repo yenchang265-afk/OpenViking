@@ -1,114 +1,14 @@
 # ScopeSwitcher 作用域選擇
 
-可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
+由多級獨立選擇器組成的作用域麵包屑：`ScopeSwitcher` 負責排列，每一級（例如庫、資料空間、使用者）用一個 `ScopeSelector` 展示當前值並切換。
 
-由獨立選擇器組合的作用域麵包屑。`ScopeSwitcher` 只負責佈局；每一級宿主獨立維護請求、選項、載入/錯誤和搜尋狀態，並渲染一個 `ScopeSelector`。
+## 何時使用
 
-業務側只傳三個介面即可接入的用法見 [ScopeCascade 級聯選擇](../modules/scope-cascade)。下方保留純檢視層的自定義接入示例。
+- 在頁面頭部用麵包屑展示並切換庫、資料空間、使用者等多級作用域。
+- 需要自己控制每一級的請求、選項、搜尋和分頁時：元件只負責展示，不發起請求，也不需要 `OpenVikingProvider`。
+- 只想傳入三個載入函式完成「庫 → 資料空間 → 使用者」級聯時，使用 [ScopeCascade](../modules/scope-cascade)，它已內建 ScopeSwitcher。
 
-## 基礎用法
-
-```tsx file="../../_demos/scope-switcher-basic.tsx" preview
-
-```
-
-```tsx
-<ScopeSwitcher locale="zh-CN">
-  <LibrarySelector />
-  <SpaceSelector />
-  <UserSelector />
-</ScopeSwitcher>
-```
-
-各級宿主直接返回 `ScopeSelector`，不額外包裹 DOM。CSS 在相鄰選擇器間新增分隔符。固定層級與可切換層級可混用，不需要的層級直接省略。整行不換行：空間不足時各層級收縮、標籤省略，因此無論文案長短外框始終保持 32px 高。手機使用底部面板。
-
-## 更新邊界
-
-原來的 `levels` 陣列介面已替換成 `children`。根元件沒有共享狀態、資料訂閱或變化的 Context 值。各級選擇器預設獨立維護展開狀態，選中後關閉面板；傳入 `visible` 時可由本級宿主控制。搜尋、選項和請求也各歸本級宿主，不使用 `memo`。
-
-靜態示例為每個例項建立獨立的身份資料來源，各級通過 `useSyncExternalStore` 訂閱自己的通道。只有本級選中身份或祖先身份變化才替換快照：換庫更新庫並清空空間、使用者；換空間更新空間並清空使用者；換使用者只更新使用者。先更新全部受影響快照，再通知訂閱者，避免讀到混合身份。重複選擇同一身份不更新。請求、搜尋和展開狀態不進入共享資料來源。
-
-該資料來源只是**宿主接入示例**，不是庫強制要求的 Store，也不是全域性單例。已有資料層可提供相同的定向訂閱能力。祖先身份作為下游宿主子樹的 `key`，變化時重置舊選項、搜尋、錯誤、展開狀態，並取消舊請求。本級選中值變化不會重新請求本級列表。邊界外的祖先更新仍可能觸發普通 React 渲染，這個介面不承諾隔絕任意祖先更新。
-
-## 宿主自定義面板
-
-`renderPanel` 把元件渲染好的 `search` 與 `list` 交給宿主，面板裡的標題、操作、底部入口和說明都由宿主排布。示例照控制台的樣子拼出「全部庫 / 選擇資料空間 / 選擇 User」三套面板。
-
-宿主接管面板內容後，面板高度上限不變：多出來的內容在面板內滾動，不會把面板撐高。
-
-```tsx file="../../_demos/scope-switcher-panel.tsx" preview
-
-```
-
-## 只讀層級
-
-個人終端裡庫與資料空間跟隨登入態固定，只有 User 可切換。固定層級用 `kind: 'fixed'`，不渲染按鈕也不展開面板，幾何尺寸與可切換層級一致，整行仍是一條完整的麵包屑。
-
-```tsx file="../../_demos/scope-switcher-readonly.tsx" preview
-
-```
-
-## 三個非同步介面串聯
-
-```tsx file="../../_demos/scope-switcher-async.tsx" preview
-
-```
-
-本示例現使用 `ScopeCascade`，業務側只需傳三個介面。級聯清空、請求、取消、本地搜尋和重試均已封裝，詳見 [ScopeCascade](../modules/scope-cascade) 的完整介面和身份變化回撥。
-
-## 屬性
-
-`ScopeSwitcherProps` 為標準 `HTMLAttributes<HTMLDivElement>`，包含 `children`、`className`、`style` 等，不再接收 `levels` 或共享文案。
-
-`ScopeSelectorProps` 按 `kind` 分成兩種形態，公共必填欄位是 `identity`，`locale` 可選並繼承上層語言，另有可選的 `trigger` 和 `labels`。
-
-`identity` 是層級身份，不隨請求變化：必填 `key`，可選 `ariaLabel`、`tag`。
-
-`trigger` 是觸發器上展示的內容：可選 `label`、`icon`。不傳時從 `data.options` 裡按 `data.selectedId` 取對應項；固定層級沒有 `data`，因此在 `trigger.label` 裡給出文本。
-
-`kind: 'fixed'` 只顯示不可互動的標籤，不接收資料、狀態、回撥或插槽。
-
-`kind: 'selectable'` 還接收四組欄位，按變化頻率分開，呼叫方可以只替換變化的那一組：
-
-| 分組      | 欄位                                       | 行為                                                                |
-| --------- | ------------------------------------------ | ------------------------------------------------------------------- |
-| `data`    | `options`、`selectedId`                    | 必填，宿主持有選項和選擇，未選擇時 id 傳 `''`。                     |
-| `data`    | `total`                                    | 已載入數或總數超過 10，或搜尋詞非空時顯示搜尋框。                   |
-| `state`   | `loading`、`error`                         | 用載入態或錯誤態替換列表。                                          |
-| `state`   | `disabled`、`busy`                         | 分別停用觸發器、全部選項行。                                        |
-| `state`   | `visible`、`searchKeyword`                 | 受控展開狀態與搜尋詞；不傳 `visible` 時本級獨立維護。               |
-| `actions` | `onSelect(option)`                         | 關閉面板並上報選擇意圖，宿主更新身份。                              |
-| `actions` | `onVisibleChange`、`onSearchKeywordChange` | 開合與搜尋詞變化通知；不傳 `onSearchKeywordChange` 則不顯示搜尋框。 |
-| `actions` | `onScroll(metrics)`                        | 傳出 `scrollTop`、`scrollHeight`、`clientHeight`，分頁由宿主處理。  |
-| `slots`   | `renderPanel({ search, list })`            | 組合標題、操作及底部入口。                                          |
-| `slots`   | `renderOption(content, option)`            | 擴充套件或替換行內容，內嵌按鈕/連結不觸發行選擇。                   |
-| `slots`   | `emptyFallback`、`errorFallback`           | 自定義空態、錯誤態和重試入口。                                      |
-
-### 選中值歸一化由宿主負責
-
-`ScopeSelector` 嚴格按 `data.selectedId` 渲染。id 為空或不在 `options` 裡時，列表裡沒有任何一行被標記為選中；id 命中一個停用項時照常標記選中（停用只阻止互動，不抹掉選中態），直到宿主把它歸一化掉。這兩種情況下元件都不會替宿主改值或呼叫 `actions.onSelect`。
-
-作用域始終要有一個確定的值，因此請在資料到達後檢查選中值是否仍然有效，無效則改選第一個可選項，並把結果寫回 URL 與請求引數。`ScopeCascade` 已經內建這層：它的 controller 在權威列表到達後完成回退、清空下游並載入下一級。
-
-判定只看 `options`：當前值只是被搜尋過濾出 `visibleOptions` 時仍然有效，不會因為搜尋就切走作用域。
-
-選項必填 `id`、`label`，可選 `icon`、`description`、`disabled`。文案包含 `loading`、`searchPlaceholder`、`empty`、`noMatch`、`error`，預設跟隨 locale，本地化覆蓋傳給各級選擇器。
-
-圖示由宿主傳入，元件不內建。需要預設圖示時從 `@openviking/react/icons` 取 `LibraryIcon`、`SpaceIcon`、`UserIcon`；使用 [ScopeCascade](../modules/scope-cascade) 時預設檢視會在適配函式沒給 `icon` 時自動補上這三個。
-
-方向鍵及 Home/End 移動焦點，Enter/空格選擇，Escape 關閉並返回觸發器。點選外部或焦點離開時關閉面板。
-
-## 外觀
-
-整行 32px 高，無描邊。每一段是獨立的 32px 高、16px 圓角膠囊，左右 8px 內邊距、圖示與文字間距 8px，文字 13px、字重 500。懸停、聚焦和展開時描主色邊框；常態保留透明描邊，因此邊框出現時不會引起位移。
-
-帶下拉的層級在懸停、聚焦和展開時給按鈕鋪淺底，與面板裡選項行的反饋一致。不帶下拉的層級（`kind: 'fixed'`）幾何引數完全相同，只去掉箭頭和懸停反饋，因此只讀的作用域仍屬於同一條麵包屑。相鄰層級由 CSS 畫出 `#c9cbd4` 的 `/`。
-
-面板內懸停行鋪淺底，選中行常駐主色淺底、文字加粗、行尾顯示勾選；文字顏色不變，設計稿用字重和底色區分選中。搜尋命中片段染主色，不加黃底。
-
-選項行首圖示裝在一個 24px 的底槽裡：純白底、0.5px `#edeef2` 描邊、12px 圓角，圖形本身保持 14px。宿主渲染圓形頭像時把 `--ov-ui-scope-switcher-option-icon-radius` 設為 `50%`。
-
-主題變數宣告在 `.ov-scope-switcher` 上，可只覆蓋其中一條：`--ov-ui-scope-switcher-divider`、`-icon`、`-option-icon`、`-option-icon-size`、`-option-icon-radius`、`-row-hover`、`-row-selected`、`-tag-background`、`-tag-text`、`-panel-width`、`-option-height`。與庫內其他元件共用的顏色取自公共變數 `--ov-ui-text`、`--ov-ui-border`、`--ov-ui-surface`、`--ov-ui-primary`、`--ov-ui-text-muted`。
+## 引入
 
 ```tsx
 import {
@@ -117,3 +17,202 @@ import {
 } from '@openviking/react/components/scope-switcher';
 import '@openviking/react/components/scope-switcher/style.css';
 ```
+
+## 程式碼演示
+
+### 基礎用法
+
+依次點開三級選擇器：切換庫會清空資料空間和使用者，上級未選定時下級保持停用。
+
+```tsx file="../../_demos/scope-switcher-basic.tsx" preview
+
+```
+
+示例裡每一級是一個返回 `ScopeSelector` 的宿主元件，選中值由宿主儲存，並用上級的 id 作為 `key` 重置下級。
+
+### 自定義面板
+
+`renderPanel` 把元件渲染好的 `search` 和 `list` 交給宿主，示例在其中加上標題、「建立」按鈕和底部入口。
+
+```tsx file="../../_demos/scope-switcher-panel.tsx" preview
+
+```
+
+宿主接管面板後，面板高度上限不變：內容過多時在面板內滾動，不會把面板撐高。
+
+### 只讀層級
+
+庫和資料空間用 `kind="fixed"` 固定展示，只有 User 可以切換：固定層級沒有按鈕和麵板，尺寸與可切換層級一致。
+
+```tsx file="../../_demos/scope-switcher-readonly.tsx" preview
+
+```
+
+### 非同步級聯
+
+示例使用區塊 [ScopeCascade](../modules/scope-cascade)：傳入三個載入函式，級聯清空、請求取消、本地搜尋和重試由它處理。
+
+```tsx file="../../_demos/scope-switcher-async.tsx" preview
+
+```
+
+每級返回 12 項，超過 10 項，所以面板裡出現搜尋框。
+
+## API
+
+### ScopeSwitcher
+
+| 引數             | 說明                                                                                        | 型別                 | 預設值                   |
+| ---------------- | ------------------------------------------------------------------------------------------- | -------------------- | ------------------------ |
+| children         | 各級的 `ScopeSelector`，從左到右排列，相鄰兩級之間自動繪製分隔符 `/`                        | `ReactNode`          | -                        |
+| locale           | 其中所有 `ScopeSelector` 的介面語言，規則見[國際化](../guide/i18n)；同時寫入根節點的 `lang` | `'zh-CN' \| 'en-US'` | 繼承上級，預設 `'en-US'` |
+| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                      | HTML 屬性            | -                        |
+
+### ScopeSelector
+
+| 引數     | 說明                                                                                    | 型別                      | 預設值                   |
+| -------- | --------------------------------------------------------------------------------------- | ------------------------- | ------------------------ |
+| kind     | 層級形態：`'fixed'` 只顯示當前值，不可點選；`'selectable'` 顯示可展開的觸發器和下拉麵板 | `'fixed' \| 'selectable'` | 必填                     |
+| identity | 層級的標識、無障礙名稱和末尾標記                                                        | `ScopeSwitcherIdentity`   | 必填                     |
+| trigger  | 觸發器上顯示的文本和圖示；`fixed` 層級沒有 `data`，需要在這裡提供 `label`               | `ScopeSwitcherTrigger`    | -                        |
+| data     | 選項和當前選中項，`fixed` 層級不接收                                                    | `ScopeSwitcherData`       | `selectable` 時必填      |
+| state    | 載入、錯誤、停用、展開和搜尋詞等互動狀態，僅 `selectable` 接收                          | `ScopeSwitcherState`      | -                        |
+| actions  | 選擇、展開、搜尋和滾動的回撥，僅 `selectable` 接收                                      | `ScopeSwitcherActions`    | -                        |
+| slots    | 替換面板、選項行、空態和錯誤態的內容，僅 `selectable` 接收                              | `ScopeSwitcherSlots`      | -                        |
+| labels   | 覆蓋介面文案                                                                            | `ScopeSwitcherLabels`     | -                        |
+| locale   | 介面語言，規則見[國際化](../guide/i18n)                                                 | `'zh-CN' \| 'en-US'`      | 繼承上級，預設 `'en-US'` |
+
+`ScopeSelectorProps` 是 `ScopeSelectorFixedProps` 與 `ScopeSelectorSelectableProps` 的聯合型別，兩者共有的屬性定義在 `ScopeSelectorBaseProps` 中。
+
+### ScopeSwitcherIdentity
+
+| 引數      | 說明                                                                                              | 型別        | 預設值 |
+| --------- | ------------------------------------------------------------------------------------------------- | ----------- | ------ |
+| key       | 層級的穩定標識，例如 `'library'`、`'space'`、`'user'`，供宿主區分層級，元件不讀取它               | `string`    | 必填   |
+| ariaLabel | 觸發器和麵板的無障礙名稱，例如「切換庫」；不傳時觸發器沒有 `aria-label`，面板以觸發器上的文本命名 | `string`    | -      |
+| tag       | 觸發器末尾的標記，例如套餐名                                                                      | `ReactNode` | -      |
+
+### ScopeSwitcherTrigger
+
+| 引數  | 說明                                                                                                                                 | 型別        | 預設值 |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------ | ----------- | ------ |
+| label | 觸發器上顯示的當前值；不傳時取 `data.options` 裡 `selectedId` 對應項的 `label`，都沒有時為空。當前值不在已載入的選項裡時，由宿主提供 | `string`    | -      |
+| icon  | 觸發器上的圖示或頭像；不傳時使用選中項的 `icon`                                                                                      | `ReactNode` | -      |
+
+### ScopeSwitcherData
+
+| 引數           | 說明                                                                                       | 型別                             | 預設值           |
+| -------------- | ------------------------------------------------------------------------------------------ | -------------------------------- | ---------------- |
+| options        | 該層級的完整選項，按給定順序渲染；用來判斷當前選中值是否仍然有效，因此不要只放當前搜尋結果 | `readonly ScopeSwitcherOption[]` | 必填             |
+| visibleOptions | 面板裡實際顯示的選項；搜尋過濾和分頁追加走這裡，不影響選中值的有效性判斷                   | `readonly ScopeSwitcherOption[]` | `options`        |
+| selectedId     | 當前選中項的 `id`，未選擇時傳 `''`                                                         | `string`                         | 必填             |
+| total          | 該層級的總條數，用於判斷是否顯示搜尋框                                                     | `number`                         | `options` 的條數 |
+
+### ScopeSwitcherOption
+
+| 引數        | 說明                                       | 型別        | 預設值  |
+| ----------- | ------------------------------------------ | ----------- | ------- |
+| id          | 選項的唯一標識                             | `string`    | 必填    |
+| label       | 選項文本，搜尋命中的片段會高亮             | `string`    | 必填    |
+| icon        | 行首圖示，例如庫、資料空間或使用者的頭像   | `ReactNode` | -       |
+| description | 顯示在文本下方的次要說明，例如套餐或地址   | `string`    | -       |
+| disabled    | 停用該選項：置灰顯示，不響應點選和鍵盤選擇 | `boolean`   | `false` |
+
+### ScopeSwitcherState
+
+| 引數          | 說明                                                                                          | 型別      | 預設值  |
+| ------------- | --------------------------------------------------------------------------------------------- | --------- | ------- |
+| loading       | 選項正在首次載入：面板顯示載入文案，不顯示列表                                                | `boolean` | `false` |
+| error         | 選項載入失敗：面板顯示 `slots.errorFallback`，沒有時顯示 `labels.error`                       | `boolean` | `false` |
+| busy          | 該層級有變更正在進行，例如正在切換資料空間：停用整個列表，避免併發選擇                        | `boolean` | `false` |
+| disabled      | 該層級暫時不可切換：觸發器不響應點選，面板不展開                                              | `boolean` | `false` |
+| visible       | 面板是否展開；提供後為受控模式，需要在 `actions.onVisibleChange` 裡寫回，不傳時由本級自行維護 | `boolean` | -       |
+| searchKeyword | 當前搜尋詞，由宿主儲存；選項文本中命中的片段高亮，非空時即使選項不超過 10 條也會顯示搜尋框    | `string`  | `''`    |
+
+### ScopeSwitcherActions
+
+| 引數                  | 說明                                               | 型別                                            | 預設值 |
+| --------------------- | -------------------------------------------------- | ----------------------------------------------- | ------ |
+| onSelect              | 選中某一項時觸發；元件先關閉面板，選中值由宿主更新 | `(option: ScopeSwitcherOption) => void`         | -      |
+| onVisibleChange       | 面板展開或關閉時觸發，引數為變化後的狀態           | `(visible: boolean) => void`                    | -      |
+| onSearchKeywordChange | 搜尋詞變化時觸發；提供後才會顯示搜尋框             | `(keyword: string) => void`                     | -      |
+| onScroll              | 選項列表滾動時觸發，宿主據此載入下一頁             | `(metrics: ScopeSwitcherScrollMetrics) => void` | -      |
+
+### ScopeSwitcherSlots
+
+| 引數          | 說明                                                                                         | 型別                                                             | 預設值                                        |
+| ------------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------------------------- |
+| renderPanel   | 接管面板內容：`search` 和 `list` 是元件渲染好的搜尋框和列表，標題、操作和底部入口由宿主排布  | `(panel: ScopeSwitcherPanelContent) => ReactNode`                | 只渲染 `search` 和 `list`                     |
+| renderOption  | 在預設行內容的基礎上追加或替換，例如行尾的「更多」選單；行的點選、選中和鍵盤互動仍由元件處理 | `(content: ReactNode, option: ScopeSwitcherOption) => ReactNode` | 預設行內容                                    |
+| emptyFallback | 沒有選項時替代列表顯示的內容                                                                 | `ReactNode`                                                      | `labels.empty`，有搜尋詞時為 `labels.noMatch` |
+| errorFallback | 載入失敗時替代列表顯示的內容，例如帶重試入口                                                 | `ReactNode`                                                      | `labels.error`                                |
+
+### ScopeSwitcherPanelContent
+
+`renderPanel` 的引數。
+
+| 引數   | 說明                                 | 型別        | 預設值 |
+| ------ | ------------------------------------ | ----------- | ------ |
+| search | 搜尋框；搜尋框不顯示時為空節點       | `ReactNode` | -      |
+| list   | 選項列表，以及載入、空、失敗三種狀態 | `ReactNode` | -      |
+
+### ScopeSwitcherScrollMetrics
+
+`onScroll` 的引數。
+
+| 引數         | 說明             | 型別     | 預設值 |
+| ------------ | ---------------- | -------- | ------ |
+| scrollTop    | 列表已滾動的距離 | `number` | -      |
+| scrollHeight | 列表內容的總高度 | `number` | -      |
+| clientHeight | 列表的可視高度   | `number` | -      |
+
+### ScopeSwitcherLabels
+
+預設值依次為 `zh-CN`、`en-US` 的內建文案。
+
+| 引數              | 說明                                                        | 型別     | 預設值                                        |
+| ----------------- | ----------------------------------------------------------- | -------- | --------------------------------------------- |
+| loading           | 載入提示                                                    | `string` | `'載入中…'` / `'Loading…'`                    |
+| searchPlaceholder | 搜尋框內的提示文字，同時是它的無障礙名稱                    | `string` | `'搜尋'` / `'Search'`                         |
+| empty             | 沒有選項時的提示                                            | `string` | `'暫無選項'` / `'No options'`                 |
+| noMatch           | 有搜尋詞但沒有命中時的提示；只設置了 `empty` 時沿用 `empty` | `string` | `'沒有匹配項'` / `'No matches'`               |
+| error             | 載入失敗時的提示                                            | `string` | `'選項載入失敗'` / `'Unable to load options'` |
+
+## 注意
+
+- `ScopeSwitcher` 只負責佈局和語言，不儲存選中值。每一級的選項、選中值、搜尋詞和請求由宿主傳給對應的 `ScopeSelector`。
+- 相鄰層級之間的分隔符 `/` 由樣式繪製，因此 `ScopeSelector` 要直接作為 `ScopeSwitcher` 的子節點；自定義的層級元件直接返回 `ScopeSelector`，不要再包一層 DOM。
+- 固定層級和可切換層級可以混用，不需要的層級直接省略。
+- 選中值由宿主歸一化：`ScopeSelector` 嚴格按 `data.selectedId` 渲染。`selectedId` 為空或不在 `options` 裡時沒有任何一行顯示為選中，命中停用項時仍顯示為選中；元件不會改寫選中值，也不會呼叫 `onSelect`。
+- 資料到達後，宿主檢查 `selectedId` 是否仍在 `options` 裡（只被搜尋過濾出 `visibleOptions` 不算失效），無效則改選第一個可選項，並把結果寫回 URL 和請求引數。[ScopeCascade](../modules/scope-cascade) 已內建這一步。
+- 上級的選中項變化後，給下級層級的宿主元件設定包含上級 id 的 `key`，下級重新掛載，舊的選項、搜尋詞、錯誤和展開狀態隨之清空。
+- 展開狀態預設由各級自己維護，選擇後面板關閉。提供 `state.visible` 後改為受控，宿主在 `actions.onVisibleChange` 裡寫回；選擇時元件先請求關閉再呼叫 `onSelect`，宿主可以等非同步操作完成後再關閉面板。
+- 搜尋框在兩個條件同時滿足時顯示：提供了 `actions.onSearchKeywordChange`，並且 `options`、`visibleOptions`、`total` 中最大的條數超過 10，或搜尋詞非空。選項的過濾由宿主完成，元件高亮命中的片段，不區分大小寫。
+- 搜尋框的顯示閾值 10 以常量 `SCOPE_SWITCHER_SEARCH_THRESHOLD` 匯出，不能通過屬性修改。
+- 鍵盤：在觸發器上按 ArrowDown 或 ArrowUp 展開面板；在選項行上，方向鍵迴圈移動焦點，Home、End 跳到首尾，Enter 或空格選擇，Escape 關閉面板並把焦點還給觸發器。點選面板外部或焦點離開選擇器時，面板同樣關閉。
+- 面板展開後，焦點先落在搜尋框，沒有搜尋框時落在選中項，沒有選中項時落在第一個可選項。選擇後焦點回到觸發器，焦點已移到別處時不搶回。
+- 停用選項，以及 `busy` 時的全部選項，不能選擇，方向鍵也會跳過它們。`renderOption` 裡內嵌的按鈕、連結和輸入框不會觸發行選擇。
+- 觸發器帶有 `aria-haspopup="dialog"` 和 `aria-expanded`，面板是 `dialog`，列表是 `listbox`，選項行是帶 `aria-selected` 的 `option`。
+- 圖示由宿主通過 `trigger.icon` 和 `option.icon` 傳入，元件不內建層級圖示。預設圖示可以從 `@openviking/react/icons` 取 `LibraryIcon`、`SpaceIcon`、`UserIcon`；ScopeCascade 會給適配函式沒有返回 `icon` 的選項自動補上這三個。
+- 整行固定 32px 高，不換行；空間不足時各層級收縮、文本省略，單級觸發器最寬 260px。
+- 視口寬度不超過 600px 時，面板改為貼底的整寬麵板；更寬時，最後一級的面板右對齊展開。
+- 包根入口匯出 `ScopeSwitcher`、`ScopeSelector`、`ScopeSwitcherProps` 和 `ScopeSelectorProps`；其餘型別和 `SCOPE_SWITCHER_SEARCH_THRESHOLD` 從 `@openviking/react/components/scope-switcher` 匯入。
+
+## 主題變數
+
+變數宣告在 `.ov-scope-switcher` 上，通過 `ScopeSwitcher` 的 `style` 或自己的 CSS 覆蓋其中任意一條，設定在祖先節點上不會生效。共用的顏色取自 `--ov-ui-color-*`，規則見[快速開始](../guide/getting-started)，在祖先節點上設定即可覆蓋。
+
+| 變數                                        | 說明                                                               | 預設值                        |
+| ------------------------------------------- | ------------------------------------------------------------------ | ----------------------------- |
+| `--ov-ui-scope-switcher-icon`               | 觸發器圖示和展開箭頭的顏色                                         | `--ov-ui-color-text-2`        |
+| `--ov-ui-scope-switcher-option-icon`        | 選項行首圖示的顏色                                                 | `--ov-ui-scope-switcher-icon` |
+| `--ov-ui-scope-switcher-option-icon-size`   | 選項行首圖示底槽的尺寸                                             | `24px`                        |
+| `--ov-ui-scope-switcher-option-icon-radius` | 選項行首圖示底槽的圓角，渲染圓形頭像時設為 `50%`                   | `12px`                        |
+| `--ov-ui-scope-switcher-row-hover`          | 選項行懸停時的底色                                                 | `--ov-ui-color-fill-hover`    |
+| `--ov-ui-scope-switcher-tag-background`     | `identity.tag` 的底色                                              | `--ov-ui-color-bg-5`          |
+| `--ov-ui-scope-switcher-tag-text`           | `identity.tag` 的文字色                                            | `--ov-ui-color-text-2`        |
+| `--ov-ui-scope-switcher-panel-width`        | 下拉麵板的寬度                                                     | `272px`                       |
+| `--ov-ui-scope-switcher-option-height`      | 選項行的最小高度                                                   | `44px`                        |
+| `--ov-ui-scope-switcher-option-gap`         | 相鄰選項行的間距                                                   | `2px`                         |
+| `--ov-ui-scope-switcher-list-max-height`    | 選項列表的最大高度，超出後在列表內滾動                             | `288px`                       |
+| `--ov-ui-scope-switcher-panel-max-height`   | 面板的最大高度，另受視口高度限制；`renderPanel` 接管內容時同樣適用 | 列表最大高度加 `54px`         |

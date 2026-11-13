@@ -233,12 +233,6 @@ peer_enabled: true
   - 作用：記錄持久的執行經驗及其替代的舊記憶
   - 關鍵欄位：`experience_name`、`content`、`supersedes`（可選；不替換其他經驗時可省略）
 
-- `identity`
-  - 生效環節：agent identity 記憶落盤階段
-  - 影響能力：agent 身份設定的長期一致性
-  - 作用：定義 agent 的名字、形象、風格、自我介紹等身份欄位
-  - 關鍵欄位：`name`、`creature`、`vibe`、`emoji`、`avatar`、`introduction`
-
 - `preferences`
   - 生效環節：偏好型記憶落盤與更新階段
   - 影響能力：使用者偏好 recall 和後續個性化表現
@@ -256,12 +250,6 @@ peer_enabled: true
   - 影響能力：skill 使用統計、經驗沉澱與推薦流程
   - 作用：定義 skill 使用次數、成功率、適用場景等資訊
   - 關鍵欄位：`skill_name`、`total_executions`、`success_count`、`fail_count`、`best_for`、`recommended_flow`
-
-- `soul`
-  - 生效環節：agent soul 記憶落盤階段
-  - 影響能力：agent 核心邊界、連續性和長期人格穩定性
-  - 作用：定義 agent 的核心真值、邊界、風格和連續性
-  - 關鍵欄位：`core_truths`、`boundaries`、`vibe`、`continuity`
 
 - `tools`（預設停用）
   - 生效環節：工具使用記憶落盤與更新階段

@@ -38,6 +38,9 @@ npm install -g @openviking/cli
 ov language zh-CN
 ```
 
+指令碼或 Agent 也可以在命令環境中設定 `OPENVIKING_LANG=en` 或 `OPENVIKING_LANG=zh-CN`，
+無須寫入語言設定檔案即可通過初始化檢查。已有的語言設定仍優先於環境變數。
+
 確認終端可以找到 CLI 並輸出版本號：
 
 ```bash

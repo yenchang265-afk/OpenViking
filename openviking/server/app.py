@@ -371,7 +371,8 @@ def create_app(
             usage_reporter = build_usage_reporter(config.usage_reporter)
         return usage_reporter
 
-    def _configure_session_runtime(service_obj) -> None:  # noqa: ANN001
+    def _configure_service_runtime(service_obj) -> None:  # noqa: ANN001
+        service_obj.user_config_defaults = config.user_config_defaults
         resources = getattr(service_obj, "resources", None)
         watch_setter = getattr(resources, "set_watch_requests_enabled", None)
         if callable(watch_setter):
@@ -404,7 +405,7 @@ def create_app(
             auto_commit_setter(config.user_config_defaults.auto_commit_policy)
 
     if service is not None:
-        _configure_session_runtime(service)
+        _configure_service_runtime(service)
 
     bot_proxy_enabled = config.with_bot or bool(config.external_bot_api_url)
     bot_gateway_token = load_bot_gateway_token() if bot_proxy_enabled else ""
@@ -425,7 +426,7 @@ def create_app(
             service = OpenVikingService()
 
         assert service is not None
-        _configure_session_runtime(service)
+        _configure_service_runtime(service)
         set_service(service)
 
         from openviking.metrics.global_api import (

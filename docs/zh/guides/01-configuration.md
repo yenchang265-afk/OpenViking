@@ -53,10 +53,10 @@ openviking-server doctor
 
 ```
 
-如果 `provider` 是 `openai-codex`，並且 Codex OAuth 已經就緒，則 `vlm.api_key` 可以省略。
+如果 `provider` 是 `openai-codex`，並且 Codex OAuth 已經就緒，則 `vlm.api_key` 可以省略。將 `vlm.api_base` 設為 `https://api.openai.com/v1` 時，也支援標準 OpenAI API Key；參見 [VLM 配置](#vlm)。
 
-頂層 `service_name` 預設是 `"openviking-server"`。使用 cache 的模組會把它作為
-Redis 名稱空間。OTel 的 `service_name` 顯式配置時保持原值，省略時繼承該值。
+頂層 `service_name` 預設是 `"openviking-server"`，用於隔離 coordination 狀態和
+使用 cache 的模組的 Redis 名稱空間。OTel 的 `service_name` 顯式配置時保持原值，省略時繼承該值。
 
 ### ov.conf 的有序憑據陣列
 
@@ -799,10 +799,10 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 
 | 引數 | 型別 | 說明 |
 |------|------|------|
-| `api_key` | str | API Key。`openai-codex` 在 Codex OAuth 可用時可省略；使用 provider 原生憑據的 `litellm` 路由也可省略 |
+| `api_key` | str | API Key。`openai-codex` 在 Codex OAuth 可用時可省略；使用標準 OpenAI API Key 時須同時設定 `api_base: "https://api.openai.com/v1"`。使用 provider 原生憑據的 `litellm` 路由也可省略 |
 | `forward_api_key` | bool | 僅 LiteLLM 使用。覆蓋是否把 `api_key` 透傳給 LiteLLM。預設情況下，OpenViking 不會把佔位 key 透傳給 `bedrock/`、`sagemaker/`、`vertex_ai/` 等 AWS/GCP 原生鑑權路由；如果明確使用 LiteLLM 的 Bedrock bearer-token API-key 鑑權，可設為 `true` |
 | `model` | str | 模型名稱 |
-| `api_base` | str | API 端點（可選） |
+| `api_base` | str | API 端點（可選）。`openai-codex` 預設使用 ChatGPT Codex 後端；使用標準 OpenAI API Key 時設為 `https://api.openai.com/v1` |
 | `temperature` | float 或 null | 取樣溫度（預設：`null`）。省略或設為 `null` 時請求不攜帶該欄位，使用服務端預設值 |
 | `thinking` | bool | 啟用思考模式（僅對部分火山模型生效，預設：`false`） |
 | `max_concurrent` | int | 語義處理階段 LLM 最大併發呼叫數（預設：`32`） |
@@ -843,13 +843,35 @@ VLM 配置返回 `is_available() == false` 時，通用檔案摘要會返回空�
 
 **支持的 provider：**
 - `volcengine`：火山引擎 VLM API
-- `openai`：OpenAI 兼容 VLM API
-- `openai-codex`：通過 ChatGPT/Codex OAuth 使用 Codex VLM
+- `openai`：OpenAI 相容 VLM API
+- `openai-codex`：通過 ChatGPT/Codex OAuth，或顯式 API Key 和端點使用 Responses API
 - `kimi`：Kimi Coding 訂閱端點，內建 provider 預設配置
 - `glm`：Z.AI GLM Coding Plan 端點，使用 OpenAI 相容請求格式
 - `litellm`：LiteLLM VLM API，支援 `bedrock/`、`sagemaker/`、`vertex_ai/`、`azure/` 等顯式 LiteLLM 路由
 
-對於 `openai-codex`，請通過 `openviking-server init` 完成鑑權，再使用 `openviking-server doctor` 做校驗。
+對於使用 OAuth 的 `openai-codex`，請通過 `openviking-server init` 完成鑑權，再使用 `openviking-server doctor` 做校驗。
+
+**使用 API Key 呼叫 Responses API**
+
+使用標準 OpenAI API Key 呼叫 Responses API 時，請在 `openai-codex` 配置中同時設定
+`api_key` 和 `api_base`。顯式配置 key 後會跳過 Codex OAuth。
+將以下 `vlm` 段合併到 `ov.conf`，替換 key 和 model 佔位值：
+
+```json
+{
+  "vlm": {
+    "provider": "openai-codex",
+    "api_key": "YOUR_OPENAI_API_KEY",
+    "api_base": "https://api.openai.com/v1",
+    "model": "YOUR_RESPONSES_MODEL",
+    "reasoning_effort": "medium"
+  }
+}
+```
+
+請選擇支援所需工具和推理強度的 Responses 模型。該路徑使用 `/v1/responses`；
+`provider: "openai"` 使用 Chat Completions。僅設定 `api_key` 不會切換到 OpenAI API
+端點：省略 `api_base` 時仍預設使用 Codex 後端。
 
 對於 `litellm`，當底層路由使用環境變數或 provider 原生憑據時可以省略
 `api_key`，例如 Bedrock/SageMaker 的 AWS IAM/IRSA，或 Vertex AI 的
@@ -1021,7 +1043,7 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 
 #### 遠端資源網路防護
 
-通過 URL 拉取資源時，預設網路檢查會拒絕解析到非公網地址的目標。普通公網 URL 無需加入程式碼託管白名單；列入白名單的可信程式碼主機會跳過地址範圍檢查。接入自建 GitHub Enterprise / GitLab / Azure DevOps 時，可將主機加入 `code` 下對應的平臺列表：
+通過 URL 拉取資源時，預設網路檢查會拒絕解析到非公網地址的目標。普通公網 URL 無需加入程式碼託管白名單；列入白名單的可信程式碼主機可以訪問私有網路，但仍須通過 DNS 地址檢查。迴環、link-local、未指定、組播、保留地址和已知雲後設資料地址始終被拒絕，白名單和 `allow_private_networks` 均不能放行這些目標。接入自建 GitHub Enterprise / GitLab / Azure DevOps 時，可將主機加入 `code` 下對應的平臺列表：
 
 | 欄位 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
@@ -1030,7 +1052,7 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 | `azure_devops_domains` | list[str] | 允許的 Azure DevOps 主機 | `["dev.azure.com", "ssh.dev.azure.com", "vs-ssh.visualstudio.com"]` |
 | `code_hosting_domains` | list[str] | 允許的通用程式碼託管主機 | `["github.com", "gitlab.com", "gitcode.com", "gitee.com", "bitbucket.org", "codeberg.org", "gitea.com", "atomgit.com", "git.sr.ht"]` |
 
-如果需要允許其他私有網路目標（例如內部映象），可將頂層 `allow_private_networks` 設為 `true`。該開關預設關閉；`localhost` 及其子域等本地主機名仍會被拒絕。下面同時演示啟用私有網路訪問和新增程式碼主機：
+如果需要允許其他私有網路目標（例如內部映象），可將頂層 `allow_private_networks` 設為 `true`。該開關預設關閉，啟用後仍受上述地址限制；`localhost` 及其子域也會被拒絕。下面同時演示啟用私有網路訪問和新增程式碼主機：
 
 ```json
 {
@@ -1042,7 +1064,7 @@ ollama pull guoxuter/ov_intent_analysis_sft:v7_q8
 ```
 
 需要 GitHub、GitLab 或 Azure DevOps 專屬 URL 語義時，應配置到對應的平臺欄位；
-其他 Git 主機統一新增到 `code_hosting_domains`。
+其他 Git 主機統一新增到 `code_hosting_domains`。HTTP 服務的 Git 預檢、clone 和 fetch 不跟隨 HTTP 重定向，請提供最終倉庫 URL；GitHub/GitLab ZIP 下載保留重定向支援，並在請求每個跳轉目標前進行同樣的地址校驗。
 
 #### 依來源主機設定出口代理 {#egress-proxies-per-source-host}
 
@@ -1465,23 +1487,22 @@ ALTER TABLE ov_watch_tasks
 }
 ```
 
-所有节点都提供 Watch API。`enable_watch_scheduler=true` 的节点可以运行后台 Watch
-调度器。`watch_leader_provider` 选择 leader 模式：`auto` 保持按存储类型推导的默认值，
-`local` 将 leader 限制在本进程内，`cache` 使用 AGFS CacheRuntime 的共享 leader 租约。
-leader 每 15 秒拉取到期 Watch 并结算已结束的运行。File 和 MySQL 共用 Runtime
-的轮询与有限并发派发流程。后台派发在 leader 内存中维护
-未结束的 Watch 运行和提交中的协程占用（默认上限 4）。接管时通过已有运行扫描
-恢复占用（File 为本进程状态，MySQL 为持久化行），后续派发不额外查询占用。
-手动触发和首次导入独立受理，扫描发现后计入
-后台占用。File 目标移动没有 1000 条 Watch 上限，MySQL 仍保留该事务限制。
-一次运行就是
-对应的 ingestion Task：运行占用目标期间，Watch 行记录该 Task ID，且只有在持有
-目标 Tree PathLock 时才能开始运行。提交在创建 Task 前停止（服务停机、身份删除、
-失败）时立即结算；Task 超过 1 小时仍不存在时，阻止后续提交并按 error 结算。
-运行超过 3 小时会请求取消；若 Task 仍非终态，则通过 TaskTracker 记录超时错误。
-Connector 导入没有本地 Work，其 Task 会成为 failed，再结算 Watch 并释放占用。
-仍有未结束本地 Work 的 Task 保持占用，直到 Work 结算。已有终态保持不变。
-该超时表示结束本轮本地跟踪，不保证远端执行已经停止。
+所有節點都提供 Watch API。`enable_watch_scheduler=true` 的節點可以執行後臺 Watch
+排程器，通過 [AGFS coordination](#coordination-配置) 選主。
+leader 每 15 秒拉取到期 Watch 並結算已結束的執行。File 和 MySQL 共用 Runtime
+的輪詢與有限併發派發流程。後臺派發在 leader 記憶體中維護
+未結束的 Watch 執行和提交中的協程佔用（預設上限 4）。接管時通過已有執行掃描
+恢復佔用（File 為本程序狀態，MySQL 為持久化行），後續派發不額外查詢佔用。
+手動觸發和首次匯入獨立受理，掃描發現後計入
+後臺佔用。File 目標移動沒有 1000 條 Watch 上限，MySQL 仍保留該事務限制。
+一次執行就是
+對應的 ingestion Task：執行佔用目標期間，Watch 行記錄該 Task ID，且只有在持有
+目標 Tree PathLock 時才能開始執行。提交在建立 Task 前停止（服務停機、身份刪除、
+失敗）時立即結算；Task 超過 1 小時仍不存在時，阻止後續提交併按 error 結算。
+執行超過 3 小時會請求取消；若 Task 仍非終態，則通過 TaskTracker 記錄超時錯誤。
+Connector 匯入沒有本地 Work，其 Task 會成為 failed，再結算 Watch 並釋放佔用。
+仍有未結束本地 Work 的 Task 保持佔用，直到 Work 結算。已有終態保持不變。
+該超時表示結束本輪本地跟蹤，不保證遠端執行已經停止。
 
 对与被占用 Watch 目标重叠的路径执行 `mv`、`cp`、`rm`、`mkdir` 时，最多等待
 10 秒，之后返回可重试的 busy 错误。
@@ -1493,6 +1514,7 @@ Connector 导入没有本地 Work，其 Task 会成为 failed，再结算 Watch 
 | `backend` | str | `"local"`、`"s3"` 或 `"memory"` | `"local"` |
 | `timeout` | float | 請求超時時間（秒） | `10.0` |
 | `backups` | object | 多寫儲存配置。配置後頂層 `backend` 作為 primary，`backups.items[]` 作為 backup | `null` |
+| `coordination` | object | Watch 選主和語義任務 revision | `{"provider":"memory"}` |
 | `queuefs` | object | QueueFS 配置。控制 `/queue` 的名稱空間模式、後端和執行時引數 | `{ "mode": "shared", "backend": "sqlite", "recover_stale_sec": 0, "busy_timeout_ms": 5000 }` |
 | `queue_db_path` | str（可選）| 舊版相容欄位，用於覆蓋 QueueFS 的 sqlite 資料庫檔案路徑。已被 `storage.agfs.queuefs.db_path` 取代。未設定時預設為 `{storage.workspace}/_system/queue/queue.db`。適用於 workspace 卷不支援 sqlite 的場景（例如某些網路檔案系統） | `null` |
 | `fs_executor_threads` | int | 執行阻塞式儲存呼叫的專用執行緒池大小，與預設 executor 隔離，避免後端緩慢（如高延遲 S3）拖垮向量資料庫等其他阻塞工作 | `64` |
@@ -1510,6 +1532,22 @@ RAGFS 預設使用 Rust binding 模式，通過 Rust 實現直接訪問檔案系
 
 > [!WARNING]
 > `storage.agfs` 已不再支援 AGFS HTTP client 模式，也無需再配置舊的 HTTP client 入口。當前 AGFS / RAGFS 檔案系統訪問僅通過 Rust binding（`RAGFSBindingClient`）在程序內完成。這不影響 OpenViking server 的 HTTP API、`ov` CLI，或 `AsyncHTTPClient` / `SyncHTTPClient` 訪問 OpenViking 服務端的能力。
+
+##### Coordination 配置
+
+`storage.agfs.coordination` 管理 Watch 選主及用於跳過過時語義任務的 revision。
+參與協調的節點須共享同一後端和頂層 `service_name`。
+
+| 引數 | 型別 | 說明 | 預設值 |
+|------|------|------|--------|
+| `provider` | str | `memory`：程序內；`sqlite`：同機；`cache`：複用頂層共享 CacheRuntime | `"memory"` |
+| `sqlite_path` | str / null | 使用 `sqlite` 時必填：本地磁碟上共享資料庫的絕對路徑，不能位於 EFS/NFS | `null` |
+| `operation_timeout_ms` | int | 單次 cache 協調操作的截止時間（毫秒），僅用於 cache，必須為正數 | `5000` |
+
+`watch_leader_provider` 已 deprecated，下個版本移除。未顯式指定 coordination provider 時，
+`auto`（預設）在 File WatchStore 下選擇 `memory`、MySQL 下選擇 `cache`；
+`local` 對映為 `memory`，`cache` 對映為 `cache`。
+遷移時顯式設定 `storage.agfs.coordination.provider`，並刪除舊欄位。
 
 ##### 主備儲存配置
 
@@ -1559,7 +1597,7 @@ Python 配置層仍接受舊 sync、retry、operations、excludes 和 redirects
 ##### 全域 Cache Provider、CacheFS 與 PathLock 配置
 
 頂層 `service_name` 表示當前 OpenViking 部署名。CacheFS、`backend=cache`
-的 QueueFS、Cache PathLock 和 cache-backed 多寫 metadata 都會從它生成
+的 QueueFS，以及使用 cache 的 PathLock、coordination 和多寫 metadata 都會從它生成
 Redis 名稱空間。
 
 全域 `cache` 與 `storage` 並列，標準配置只包含 Provider 名稱和 Provider 自有引數：
@@ -1594,7 +1632,7 @@ workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
 
 多個容器或主機共享 EFS 時，使用下面的共享 Redis PathLock 配置。
 所有副本必須連線同一個 Redis 部署，並使用相同的頂層 `service_name` 和鎖過期配置。
-示例同時使用 Redis QueueFS，避免預設的 SQLite 佇列資料庫落在 EFS。
+示例同時使用 Redis QueueFS 和 coordination，避免 SQLite 狀態落在 EFS。
 
 ```json
 {
@@ -1621,6 +1659,9 @@ workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
       "queuefs": {
         "backend": "cache"
       },
+      "coordination": {
+        "provider": "cache"
+      },
       "pathlock": {
         "provider": "cache",
         "lock_expire_secs": 30.0
@@ -1630,7 +1671,7 @@ workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
 }
 ```
 
-標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
+標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
 
 請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，用頂層 `service_name` 生成共享 Redis 名稱，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
 

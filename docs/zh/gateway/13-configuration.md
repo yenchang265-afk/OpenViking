@@ -188,6 +188,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | 相關度閾值 | `score_threshold` | `0.35` | 0–1 | 接受的最低相關度分數。 |
 | 超時時間 | `recall_timeout` | `2`（秒） | 大於 0，最多 30 | 檢索最多等多久，超時後訊息不帶記憶繼續傳送。 |
 | 檢索文本長度 | `query_max_chars` | `8000` | 3–32,000 | 取訊息的多少個字元作為檢索文本。 |
+| Peer 範圍 | `recall_peer_scope` | `all` | `all`、`actor` | `all`：當前請求的 Peer 優先，其他 Peer 的記憶仍可能被召回。`actor`：召回和 OpenViking 工具只能查到、讀到使用者自己的記憶和當前請求的 Peer 的記憶，見[只召回當前 Peer](03-connect-clients.md#peer-scope)。 |
 | 按分類限量 | `quotas` | `{}`（關閉） | 鍵：`events`、`entities`、`preferences`、`experiences`、`resources`、`skills`；設定時至少一項大於 0（僅 Studio 校驗） | 每個分類最多取的條數；只檢索大於 0 的分類。 |
 
 管理 API 儲存 `context_types` 和 `quotas` 的鍵時不做校驗。`quotas` 裡出現未知的鍵時，OpenViking 會拒絕檢索請求，導致每次召回都失敗。
@@ -202,6 +203,9 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | 最新回覆等待時長 | `idle_seconds` | `600`（秒） | 1 及以上 | 停頓多久之後儲存最後一輪並提交會話。 |
 | 提交閾值 | `commit_tokens` | `20000` | 1 及以上 | 會話中待提交的 token 數達到這個值時提交。 |
 | 保留最近訊息 | `keep_recent_messages` | `10` | 0–1,000 | 提交後會話中保留的訊息數。 |
+| （僅 API） | `capture_memory_types` | `null`（所有已啟用的型別） | 記憶型別名稱，例如 `preferences`、`events`；`[]` 表示不提取 | OpenViking 從儲存的對話中提取哪些記憶型別。 |
+
+管理 API 儲存 `capture_memory_types` 時不檢查名稱。閘道器為對話建立 OpenViking 會話時，OpenViking 會拒絕它不認識或已停用的記憶型別：對話的內容都不會儲存，儲存狀態先顯示**重試中**，再顯示**已暫停**，原因為 `openviking_http_400`。修正後的配置只對之後開始的對話生效。`cases` 和 `trajectories` 只隨 `experiences` 一起提取：列出 `experiences` 時會同時加入這兩種，不列出時這兩種會被去掉，因此只列這兩種時不提取任何記憶。
 
 ### 長對話 {#profile-long-conversations}
 
@@ -224,7 +228,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | Studio 名稱 | API 名稱 | 預設值 | 取值範圍 | 含義 |
 | --- | --- | --- | --- | --- |
 | OpenViking 工具 | `gateway_tools` | `true` | | 為 Chat Completions、完整歷史的 Responses 和 Anthropic Messages 提供 OpenViking 工具。 |
-| 工具（未勾選的項） | `disabled_tools` | 會修改資料的 8 個工具 | OpenViking 工具原名，不帶 `openviking_` | 新對話不提供這些工具，其餘可用工具都提供，包括以後新增的。 |
+| 工具（未勾選的項） | `disabled_tools` | `[]`（不排除） | OpenViking 工具原名，不帶 `openviking_` | 新對話不提供這些工具，其餘可用工具都提供，包括以後新增的。 |
 | 顯示工具呼叫 | `show_tool_calls` | `true` | | 每次 OpenViking 工具呼叫都在回覆里加一行提示。 |
 | 每次請求的工具輪數 | `tool_max_rounds` | `null`（不限） | 1 及以上 | 工具呼叫達到這個輪數後，拒絕繼續呼叫 OpenViking 工具。 |
 | 單次呼叫超時 | `tool_timeout_seconds` | `30`（秒） | 大於 0，最多 120 | 超時的呼叫向模型返回錯誤。 |
@@ -232,7 +236,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | 總時長 | `tool_total_seconds` | `null`（不限） | 大於 0 | 超過這個秒數模型仍在呼叫工具時，請求失敗。 |
 | Token 預算 | `tool_total_tokens` | `null`（不限） | 1,024 及以上 | 工具呼叫和結果在一次請求中最多增加的估算 token 數，用完後拒絕繼續呼叫 OpenViking 工具。 |
 
-API 請求省略 `disabled_tools` 時使用預設列表；列表為空且 `gateway_tools` 開啟時，提供全部可用工具。
+API 請求省略 `disabled_tools` 時使用空列表，`gateway_tools` 開啟時提供全部可用工具。
 
 ## 上游設定 {#upstream-settings}
 

@@ -1,47 +1,115 @@
 # ExperienceDashboard 經驗看板
 
-`ExperienceDashboard` 是純 UI 元件，展示 Agent 經驗列表、應用效果、來源和可選測試材料。元件不感知介面，不需要 Provider；取數與資料適配由 [FileBrowser](../modules/file-browser) 的內部 Hook 或宿主完成。佈局、卡片和 SVG 參考火山版 `release/openviking/2026-11-12`。
+展示 Agent 經驗的使用情況：目錄檢視列出經驗檔案，檔案檢視展示單個經驗的應用效果、來源軌跡和測試材料。
 
-## 示例
+## 何時使用
+
+- 需要在檔案瀏覽中檢視經驗的使用效果，並跳轉到具體的經驗或軌跡時。
+- 需要自己決定資料來源、分頁和頁面佈局時：元件只負責展示，不發起請求，也不需要 `OpenVikingProvider`。
+- 使用 [FileBrowser](../modules/file-browser) 時，看板已經內建，不需要單獨接入。
+
+## 引入
+
+```tsx
+import { ExperienceDashboard } from '@openviking/react/components/experience-dashboard';
+import '@openviking/react/components/experience-dashboard/style.css';
+```
+
+## 程式碼演示
+
+### 基礎用法
+
+切換「經驗目錄」「經驗檔案」「宿主資料」「失敗狀態」檢視四種狀態，頁籤支援方向鍵和 Home/End。「宿主資料」補充了應用效果指標和測試材料：未提供 `effect` 時指標顯示「—」，提供 `testMaterials` 後才出現「測試」頁籤。
 
 ```tsx file="../../_demos/experience-dashboard-basic.tsx" preview
 
 ```
 
-固定展示資料可切換目錄、檔案、補充指標及失敗狀態。缺少指標時顯示“—”，已提供的零值顯示 `0`；只有提供 `testMaterials` 時顯示測試頁籤。
+示例使用固定資料：點選經驗名稱進入檔案檢視，點選軌跡名稱只顯示收到的 URI。
 
-## 接入
+## API
 
-```tsx
-import { ExperienceDashboard } from '@openviking/react/components/experience-dashboard';
-import '@openviking/react/components/experience-dashboard/style.css';
+### ExperienceDashboard
 
-<ExperienceDashboard uri="experience-id" kind="file" data={{}} />;
-```
+| 引數             | 說明                                                                                                                         | 型別                                                                                                        | 預設值                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------ |
+| uri              | 當前資源的 URI，變化時重置頁籤、時間範圍等內部狀態                                                                           | `string`                                                                                                    | 必填                     |
+| kind             | 展示模式，不根據 `uri` 推斷：`directory` 列出經驗檔案，`file` 展示單個經驗的看板                                             | `'directory' \| 'file'`                                                                                     | 必填                     |
+| data             | 展示資料，沒有資料的區域顯示 `states` 對應的狀態                                                                             | `ExperienceDashboardData`                                                                                   | `{}`                     |
+| tab              | 檔案檢視的當前頁籤：`impact` 應用效果、`source` 來源追溯、`test` 測試。傳入後受控，需要在 `onTabChange` 裡更新               | `'impact' \| 'source' \| 'test'`                                                                            | `'impact'`               |
+| days             | 檔案檢視「應用效果」頁籤的統計時間範圍，單位為天，可選 `7`、`30`，`0` 表示全部時間。傳入後受控，需要在 `onDaysChange` 裡更新 | `number`                                                                                                    | `7`                      |
+| page             | 當前頁碼，從 0 開始                                                                                                          | `number`                                                                                                    | `0`                      |
+| hasMore          | 是否還有下一頁                                                                                                               | `boolean`                                                                                                   | `false`                  |
+| startIndex       | 當前頁之前已有的經驗數，目錄檢視的序號從 `startIndex + 1` 開始                                                               | `number`                                                                                                    | `0`                      |
+| states           | 各區域的載入與錯誤狀態，鍵的含義見「注意」                                                                                   | `Partial<Record<'list' \| 'outcomes' \| 'trajectories' \| 'sources' \| 'tests', ExperienceDashboardState>>` | `{}`                     |
+| onTabChange      | 切換頁籤時觸發，引數為目標頁籤                                                                                               | `(tab: 'impact' \| 'source' \| 'test') => void`                                                             | -                        |
+| onDaysChange     | 切換統計時間範圍時觸發，引數為所選天數；元件不按範圍過濾 `data`，請在回撥裡重新載入資料                                      | `(days: number) => void`                                                                                    | -                        |
+| onPageChange     | 點選上一頁或下一頁時觸發，引數為目標頁碼；省略時翻頁按鈕停用                                                                 | `(page: number) => void`                                                                                    | -                        |
+| onOpenUri        | 點選經驗或軌跡名稱、測試材料的「開啟」按鈕時觸發，引數為對應的 URI；省略時這些按鈕停用                                       | `(uri: string) => void`                                                                                     | -                        |
+| labels           | 覆蓋介面文案                                                                                                                 | `Partial<ExperienceDashboardLabels>`                                                                        | -                        |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                                      | `'zh-CN' \| 'en-US'`                                                                                        | 繼承上級，預設 `'en-US'` |
+| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                                       | HTML 屬性                                                                                                   | -                        |
 
-元件只上報互動意圖，不發起請求。URI 變化會重置本地互動；介面狀態、分頁及響應過期處理由外層完成。
+### ExperienceDashboardData
 
-## 屬性
+| 引數            | 說明                                                                                                        | 型別                                                                                                      | 預設值 |
+| --------------- | ----------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------ |
+| experiences     | 目錄檢視的經驗列表                                                                                          | `readonly ExperienceItem[]`                                                                               | -      |
+| total           | 經驗總數，顯示在目錄檢視的標題後，省略時不顯示                                                              | `number`                                                                                                  | -      |
+| effect          | 應用效果指標：注入上下文次數、檢索召回次數，以及 0 到 1 的注入率（顯示為百分比）；省略時三項指標都顯示「—」 | `{ injectionCount: number; recallCount: number; injectionRate: number }`                                  | -      |
+| outcomes        | 任務結果分佈，固定按任務成功、部分成功、未完成、失敗、未知的順序顯示，未提供的結果按 0 計                   | `readonly { outcome: 'success' \| 'partial' \| 'unfinished' \| 'failure' \| 'unknown'; count: number }[]` | -      |
+| trajectories    | 「應用效果」頁籤中的應用軌跡，按傳入順序顯示                                                                | `readonly ExperienceTrajectory[]`                                                                         | -      |
+| trajectoryTotal | 應用軌跡總數，顯示在標題後，省略時不顯示                                                                    | `number`                                                                                                  | -      |
+| sources         | 「來源追溯」頁籤中生成該經驗的軌跡，按傳入順序顯示                                                          | `readonly ExperienceTrajectory[]`                                                                         | -      |
+| testMaterials   | 測試材料，欄位見下方 `data.testMaterials`；提供後（包括空陣列）才顯示「測試」頁籤                           | `readonly { id: string; title: string; content: string; taskQuery?: string; uri?: string }[]`             | -      |
 
-| 屬性                 | 型別 / 預設值                                             | 說明                                                                                             |
-| -------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `uri`                | `string`，必填                                            | 當前資源標識                                                                                     |
-| `kind`               | `directory` / `file`，必填                                | 明確展示列表或檔案看板；不根據 URI 猜測資源型別                                                  |
-| `data`               | `ExperienceDashboardData`                                 | 展示模型：經驗、指標、結果分佈、軌跡、來源、測試材料                                             |
-| `tab`                | `impact` / `source` / `test`                              | 受控頁籤；省略時元件本地維護，預設 `impact`                                                      |
-| `days`               | `number`                                                  | 受控時間範圍；省略時本地維護，預設 `7`；`0` 表示全部                                             |
-| `page`               | `number`，預設 `0`                                        | 當前頁，從零開始                                                                                 |
-| `hasMore`            | `boolean`，預設 `false`                                   | 是否還有下一頁                                                                                   |
-| `startIndex`         | `number`，預設 `0`                                        | 當前列表之前已有多少條，用於行序號                                                               |
-| `states`             | 分割槽狀態物件                                            | `list`、`outcomes`、`trajectories`、`sources`、`tests` 各自接收 `{ loading?, error?, onRetry? }` |
-| `locale`             | `en-US` / `zh-CN`，省略時繼承語言作用域，最終預設 `en-US` | 預設文案與相對時間                                                                               |
-| `onTabChange`        | `(tab) => void`                                           | 頁籤切換意圖                                                                                     |
-| `onDaysChange`       | `(days: number) => void`                                  | 時間範圍切換意圖                                                                                 |
-| `onPageChange`       | `(page: number) => void`                                  | 翻頁意圖；省略時翻頁按鈕停用                                                                     |
-| `onOpenUri`          | `(uri: string) => void`                                   | 開啟資源意圖                                                                                     |
-| `labels`             | `Partial<ExperienceDashboardLabels>`                      | 覆蓋文案                                                                                         |
-| `className`、`style` | HTML 屬性                                                 | 佈局與樣式，其餘 HTML 屬性透傳                                                                   |
+### ExperienceItem
 
-受控 `tab` 和 `days` 由呼叫方在回撥後更新；元件不修改它們。各分割槽的錯誤和重試互相獨立。UI 內建頁籤鍵盤互動、軌跡展示、測試材料複製和窄容器滾動，業務 Hook 不作為公開 API。
+| 引數            | 說明                                                                                                | 型別     | 預設值 |
+| --------------- | --------------------------------------------------------------------------------------------------- | -------- | ------ |
+| uri             | 經驗檔案的 URI，同時作為列表項的 key，需要唯一                                                      | `string` | 必填   |
+| name            | 經驗名稱，點選時觸發 `onOpenUri`                                                                    | `string` | 必填   |
+| modTime         | 最近修改時間，可被 `Date.parse` 解析的字串；不足 7 天顯示相對時間，更早顯示日期，無法解析時原樣顯示 | `string` | -      |
+| injectionCount  | 被注入上下文的次數，省略時顯示「—」                                                                 | `number` | -      |
+| recallCount     | 被召回的次數，省略時顯示「—」                                                                       | `number` | -      |
+| description     | 經驗描述，列表不顯示                                                                                | `string` | -      |
+| trajectoryCount | 關聯的軌跡數，列表不顯示                                                                            | `number` | -      |
 
-文案覆蓋為 `undefined` 時繼承預設值，空字串保留為顯式覆蓋。測試材料更新保留當前頁籤與時間範圍；移除測試材料時，僅失效的測試頁籤回退到應用效果。
+### ExperienceTrajectory
+
+| 引數        | 說明                                       | 型別     | 預設值 |
+| ----------- | ------------------------------------------ | -------- | ------ |
+| uri         | 軌跡的 URI，同時作為列表項的 key，需要唯一 | `string` | 必填   |
+| name        | 軌跡名稱，點選時觸發 `onOpenUri`           | `string` | 必填   |
+| description | 軌跡說明                                   | `string` | -      |
+| created_at  | 建立時間，按傳入的字串原樣顯示             | `string` | -      |
+| updated_at  | 更新時間，介面不顯示                       | `string` | -      |
+
+### data.testMaterials
+
+`data.testMaterials` 陣列中每一項的欄位。
+
+| 引數      | 說明                                                                                      | 型別     | 預設值 |
+| --------- | ----------------------------------------------------------------------------------------- | -------- | ------ |
+| id        | 材料的唯一標識                                                                            | `string` | 必填   |
+| title     | 材料標題                                                                                  | `string` | 必填   |
+| content   | 材料正文，按行顯示：`User:`、`Assistant:` 開頭的行突出角色，`# ` 開頭的行加粗；可一鍵複製 | `string` | 必填   |
+| taskQuery | 任務描述                                                                                  | `string` | -      |
+| uri       | 來源軌跡的 URI；提供後顯示覆制按鈕和「開啟」按鈕，點選「開啟」觸發 `onOpenUri`            | `string` | -      |
+
+### ExperienceDashboardState
+
+| 引數    | 說明                                                   | 型別            | 預設值  |
+| ------- | ------------------------------------------------------ | --------------- | ------- |
+| loading | 區域沒有資料時顯示載入狀態，優先於錯誤狀態             | `boolean`       | `false` |
+| error   | 區域沒有資料時顯示錯誤狀態和 `error.message`           | `Error \| null` | -       |
+| onRetry | 點選「重試」時觸發，元件不自行發起請求；省略時按鈕停用 | `() => void`    | -       |
+
+## 注意
+
+- `states` 按區域設定，僅在該區域沒有資料時顯示，各區域的錯誤和重試互相獨立：`list` 對應目錄檢視的經驗列表，`outcomes` 對應任務結果分佈，`trajectories` 對應應用軌跡，`sources` 對應來源追溯，`tests` 對應測試材料。
+- 分頁控制元件在 `page > 0` 或 `hasMore` 為 `true` 時出現：目錄檢視翻的是經驗列表，檔案檢視只在「應用效果」頁簽出現，翻的是應用軌跡。對應區域的 `loading` 為 `true` 時翻頁按鈕停用。
+- 測試材料更新時保留當前頁籤和時間範圍；`testMaterials` 變為 `undefined` 時，已選中的「測試」頁籤回退到「應用效果」。
+- 複製使用 `navigator.clipboard.writeText`，它只在 HTTPS 或 localhost 下可用；不可用或被瀏覽器拒絕時，按鈕顯示「複製失敗」。
+- 元件高度為 `100%`，內容超出時在元件內部滾動，請給父容器設定高度。目錄檢視的表格最小寬度為 560px，容器更窄時橫向滾動。
+- 型別從 `@openviking/react/components/experience-dashboard` 匯出，包括 `ExperienceDashboardTab` 和 `ExperienceOutcome`；包根入口只匯出元件和 `ExperienceDashboardProps`。

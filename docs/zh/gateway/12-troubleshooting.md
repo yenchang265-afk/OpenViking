@@ -143,7 +143,7 @@ OpenViking 異常期間，請求照常發給模型，只是不帶記憶；儲存
 | --- | --- | --- |
 | 缺少最新的一輪 | 儲存晚一輪：下一條訊息到達時，上一輪才會出現；最後一輪要等**最新回覆等待時長**（預設 10 分鐘）。 | 稍等，或者傳送下一條訊息。 |
 | **儲存**列顯示**已關閉** | 上下文配置不儲存對話。 | 在上下文配置中開啟儲存；修改只對新對話生效（見[修改何時生效](06-manage-in-studio.md#when-changes-take-effect)）。 |
-| **重試中**或**已暫停** | 儲存失敗，展開的行會顯示原因。 | 修復原因（例如讓 OpenViking 恢復訪問）後，閘道器會在 5 分鐘內重試。原因為 `gateway_key_revoked` 時：簽發的閘道器金鑰需要重新簽發，之後的下一個請求會恢復儲存；OpenViking 金鑰若記錄過期、被驅逐或收到 401，下一個有效請求會恢復儲存（account 租戶模式；`tenancy: key` 下換用新金鑰會開始新的對話）。對話一直暫停時，用**重新同步對話…**（見[重新同步對話](10-overview-and-requests.md#resync-a-conversation)）。 |
+| **重試中**或**已暫停** | 儲存失敗，展開的行會顯示原因。 | 修復原因（例如讓 OpenViking 恢復訪問）後，閘道器會在 5 分鐘內重試。原因為 `gateway_key_revoked` 時：簽發的閘道器金鑰需要重新簽發，之後的下一個請求會恢復儲存；OpenViking 金鑰若記錄過期、被驅逐或收到 401，下一個有效請求會恢復儲存（account 租戶模式；`tenancy: key` 下換用新金鑰會開始新的對話）。修改 `capture_memory_types` 後出現 `openviking_http_400` 時，先在配置中改正名稱，再開始新的對話；進行中的對話保留原來的設定（見[儲存對話](13-configuration.md#profile-saving)）。對話一直暫停時，用**重新同步對話…**（見[重新同步對話](10-overview-and-requests.md#resync-a-conversation)）。 |
 | **檢測到 OpenViking 外掛**（`plugin_present`） | 檢測到 OpenViking 外掛的對話，閘道器不儲存任何內容。 | 正常行為；同一個客戶端在外掛和閘道器之間二選一。 |
 | 會話裡只有部分對話 | 以下情況下，閘道器會把當前歷史寫進新的 `gateway-…` 會話：客戶端編輯、重新生成或壓縮了歷史（`history_changed`、`history_changed_during_delivery`），已在**最新回覆等待時長**之後儲存的一輪又繼續了（`continued_after_idle`），或者有人用了**重新同步對話…**（`manual_reset`）。之前的輪次留在舊會話裡。 | 到舊會話裡找，見[儲存狀態](10-overview-and-requests.md#saving-status)。 |
 | 完全看不到 `gateway-…` 會話 | 你檢視時用的 OpenViking 使用者，不是閘道器金鑰背後的那個使用者。 | 換成那個使用者檢視。 |

@@ -38,8 +38,21 @@ Git may reuse conflict resolutions, but they still need review and staging.
   The provider-removal commit explicitly left wizard and bot registry references
   for follow-up. Investigate relevant changes rather than deleting all matches.
 
-Last documented upstream sync: PR #129, merge `be1b144df`, through upstream
-`f7e83b2`. Confirm ancestry with Git; update this note after each accepted sync.
+Last documented upstream sync: PR #132, merge `4fac34c20`, through
+upstream `51f0e8e` (previous: PR #129 through `f7e83b2`). Confirm ancestry with
+Git; update this note after each accepted sync.
+
+## Chinese text conventions
+
+The fork's Chinese docs (`docs/zh`, `bot/docs/zh`, top-level `*_CN.md`)
+are Traditional Chinese (Taiwan), converted with OpenCC `s2twp` plus term fixes
+(全域, 帳號/帳戶, 回呼, 連接器, 進階). Upstream edits these files in Simplified, so
+resolve them as a 3-way merge of the fork file against the *converted* merge base
+and *converted* upstream side, and convert newly added upstream zh docs. Web Studio
+uses `zh-TW` locales instead of upstream `zh-CN`; port upstream `zh-CN` changes
+there. Exception: `frontend/` zh docs and `README_CN.md` files use plain `s2twp`
+(only 賬→帳; they keep 回撥, 全域性); realign their tables with prettier 3.6.
+Frontend React sources, demos, tests and site config stay Simplified.
 
 Merge sync PRs with a merge commit, never squash. Squashing #120 dropped the
 upstream parents, so the next sync replayed already-synced commits; #129 fixed it

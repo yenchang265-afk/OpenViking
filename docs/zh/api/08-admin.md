@@ -268,7 +268,7 @@ ROOT 可管理任意 Account；ADMIN 僅可管理自己 Account 的模板；普�
 
 | 方法 | 路徑 | 用途 |
 |------|------|------|
-| GET | `/api/v1/admin/accounts/{account_id}/memory-templates` | 列出六類開放模板、完整預設值及生效值 |
+| GET | `/api/v1/admin/accounts/{account_id}/memory-templates` | 列出四類開放模板、完整預設值及生效值 |
 | GET | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 查詢單個模板 |
 | PUT | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 補齊併發布單個模板 |
 | DELETE | `/api/v1/admin/accounts/{account_id}/memory-templates/{memory_type}` | 刪除該模板覆蓋，恢復部署預設值 |
@@ -282,7 +282,7 @@ ROOT 可管理任意 Account；ADMIN 僅可管理自己 Account 的模板；普�
 需要恢復該型別的部署預設值時，呼叫 DELETE。
 
 核心接收原有 Memory YAML 結構對應的 JSON 物件，並在介面層強制校驗以下白名單。
-僅開放下列六類別範本；Experience、Cases、Trajectories 等其他型別不開放查詢或編輯，
+僅開放下列四類別範本；Experience、Cases、Trajectories 等其他型別不開放查詢或編輯，
 不支援通過介面新增、刪除或重新命名 Memory Type。DELETE 僅移除自定義覆蓋，不刪除模板型別。
 
 | 模板 | 可編輯項 | 用途 |
@@ -291,19 +291,17 @@ ROOT 可管理任意 Account；ADMIN 僅可管理自己 Account 的模板；普�
 | `events` | `description`；`fields.event_name.description`、`fields.summary.description`；`content_template` | 事件範圍、原子性與排除項；名稱語言、粒度和格式；摘要事實、日期和語言；Summary、時間、ChatLog 的標題、順序和展示方式 |
 | `preferences` | `description`；`fields.topic.description`、`fields.content.description` | 偏好、習慣、反感及與 Profile/Event 的邊界；主題粒度、語言和命名；正文語義、條目和 Markdown 要求 |
 | `entities` | `description`；`fields.category.description`、`fields.name.description`、`fields.content.description` | 實體與關係範圍；分類法、語言和粒度；實體命名；卡片事實、章節、語言和長度 |
-| `soul` | `description`；`fields.core_truths.description`、`fields.boundaries.description`、`fields.vibe.description`、`fields.continuity.description`；`content_template` | 核心原則、邊界、氣質和連續性的抽取表達；四個欄位的標題、順序和固定文案 |
-| `identity` | `description`；`fields.creature.description`、`fields.name.description`、`fields.vibe.description`、`fields.avatar.description`、`fields.emoji.description`、`fields.introduction.description`；`content_template` | 身份資訊範圍；身份、名稱、氣質、頭像、Emoji、自我介紹的欄位要求；正文標籤、順序和固定文案 |
 
 表中 `fields.<name>.description` 表示在 `fields` 陣列中按 `name` 定位並修改
 `description`，不是替換整個欄位。JSON 屬性名統一小寫（`description`，不是
 `Description`）。Profile 的 `fields.content` 僅開放其 description，不開放欄位本身。
 
-除白名單說明文字和三個正文模板外，所有配置均鎖定為部署預設值，包括：
+除白名單說明文字和 Events 正文模板外，所有配置均鎖定為部署預設值，包括：
 `memory_type`、`enabled`、`operation_mode`、`stage`、`peer_enabled`、
 `directory`、`filename_template`、所有欄位的名稱/型別/`merge_op`/`init_value`、
 `embedding_template` 和 `overview_template`，以及未開放的欄位說明。
 例如 Profile 保留 `profile.md` 和 content 的 `merge_op=patch`；Events 保留
-`add_only` 以及 `goal/ranges` 的說明；Identity 的 Name immutable 規則不變。
+`add_only` 以及 `goal/ranges` 的說明。
 Profile、Preferences、Entities 不開放 `content_template`。
 改寫 topic/category/name/event_name 的生成說明仍可能間接影響未來的目錄或檔名，
 但不允許修改目錄/檔名模板本身。
@@ -412,13 +410,11 @@ Registry；無關型別變更不會觸發拆批。不同 Schema 分開合併、�
 允許修改標題、順序、固定文案，按條件顯示/隱藏欄位。不要求保留預設標題或輸出全部欄位；
 但隱藏欄位不等於停止抽取/刪除該欄位，也不會刪除原始 Session 或系統儲存的欄位後設資料。
 Events 的預設 embedding 模板引用正文，因此正文變化也可能影響後續檢索輸入。
-路徑、檔名、欄位定義、merge_op（包括 Identity name 的 immutable）仍鎖定。
+路徑、檔名、欄位定義、merge_op 仍鎖定。
 
 | 型別 | 正文中可引用的欄位 |
 | --- | --- |
 | events | event_name、goal、summary、ranges |
-| soul | core_truths、boundaries、vibe、continuity |
-| identity | name、creature、vibe、emoji、avatar、introduction |
 
 `language` 屬於說明模板的變數，不屬於上述正文變數。
 正文不要引用其他 Account/User、請求上下文或任意 Python 物件。
@@ -451,7 +447,7 @@ Events 的預設 embedding 模板引用正文，因此正文變化也可能影�
 
 模板 UTF-8 大小 ≤ 64 KiB，AST 節點 ≤ 2048，渲染正文 ≤ 1 MiB（不含系統追加後設資料）。
 與部署預設值不同的 Account 正文在釋出時和抽取載入時驗證，執行時使用受限 Jinja 環境，只提供白名單欄位/方法。
-內建 Events、Soul、Identity 正文也滿足受限語法；僅修改標題、末尾換行或 CRLF 換行後仍可校驗釋出。這些改動不會繞過校驗，也不會被標記為部署原樣正文。
+內建 Events 正文也滿足受限語法；僅修改標題、末尾換行或 CRLF 換行後仍可校驗釋出。這些改動不會繞過校驗，也不會被標記為部署原樣正文。
 受限路徑渲染失敗會報告錯誤並停止該次檔案寫入，不走舊的空正文 fallback。
 原樣繼承的正文繼續使用部署渲染器，包括原有錯誤/fallback 語義，不受上述受限渲染器的原始碼、AST、正文輸出上限約束；
 完整帳戶 YAML 仍受 1 MiB 上限約束。
@@ -466,17 +462,6 @@ Events 的預設 embedding 模板引用正文，因此正文變化也可能影�
 
 ```json
 {"content_template": "# {{ event_name.strip() }}\n\n## 事件摘要\n{{ summary.strip() or '待補充' }}"}
-```
-
-示例：Soul 的分節展示：
-
-```jinja
-{% for title, text in [('核心價值', core_truths), ('邊界', boundaries), ('氣質', vibe), ('連續性', continuity)] %}
-{% if text.strip() %}
-## {{ title }}
-{{ text.strip() }}
-{% endif %}
-{% endfor %}
 ```
 
 ### Runtime Configuration

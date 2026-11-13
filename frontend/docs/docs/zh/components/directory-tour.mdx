@@ -1,47 +1,177 @@
-# DirectoryTour 目錄定位引導
+# DirectoryTour 目錄引導
 
-獨立於 FileTree 的非模態分步引導。按照「使用者記憶 → 對話記錄 → 個人資料 → 團隊公共資料 → Agent 經驗 → 物件記憶」定位目錄，顯示高亮和講解卡片，不改變檔案選中狀態。
+分步介紹目錄的非模態引導：依次定位宿主指定的目錄行，在旁邊顯示高亮和講解卡片，不改變檔案選中狀態。
+
+## 何時使用
+
+- 使用者首次進入檔案瀏覽，需要依次介紹 memories、sessions、resources 等目錄時。
+- 新目錄首次出現，需要用一張自定義卡片介紹它時。
+- 目錄如何載入、展開，以及何時算「已讀」由宿主決定：元件只負責定位、高亮和卡片，不發起請求，不儲存完成狀態，也不需要 `OpenVikingProvider`。需要遮罩並阻止頁面操作的模態引導不適用。
+
+## 引入
+
+```tsx
+import {
+  DirectoryTour,
+  DirectoryTourIntro,
+  openVikingDirectoryTourSteps,
+} from '@openviking/react/components/directory-tour';
+import '@openviking/react/components/directory-tour/style.css';
+```
+
+## 程式碼演示
+
+### 基礎用法
+
+點選「瞭解 OV 目錄樹」開始六步引導；先勾選「模擬 sessions 不存在」再開始，該步會因找不到目錄行而被自動跳過。
 
 ```tsx file="../../_demos/directory-tour-basic.tsx" preview
 
 ```
 
-## 使用邊界
+示例用 [FileTree](./file-tree) 的 `getRowElement` 定位目錄行，引導結束時 `onComplete` 通過 `skippedStepIds` 返回被跳過的步驟。
 
-元件不請求後端、不管理帳號、不儲存完成狀態。宿主通過 `locateTarget(target, signal)` 載入目錄、展開父級、等待目標行渲染，再返回對應的 `HTMLElement`。可直接使用 FileTree 的 `getRowElement(id)`。元件隨後滾動、高亮並跟隨該元素定位；原生 Popover API 將卡片放入瀏覽器頂層，不建立全屏遮罩或 SVG。
+### 自定義內容
 
-帳號或空間切換時，宿主關閉元件或更換 `key`。沒有命中節點、定位異常或超時會顯示重試與跳過，不會靜默標記完成。最終回撥攜帶 `skippedStepIds`，宿主決定是否算完成。關閉和完成回撥均由宿主將 `open` 設為 `false`。
+勾選「模擬團隊經驗目錄出現」，單步引導會高亮整個目錄分組，卡片內容由 `renderContent` 渲染。
 
-## 匯入
+```tsx file="../../_demos/directory-tour-team.tsx" preview
 
-```tsx
-import {
-  DirectoryTour,
-  openVikingDirectoryTourSteps,
-} from '@openviking/react/components/directory-tour';
-import type {
-  DirectoryTourStep,
-  DirectoryTourTarget,
-} from '@openviking/react/components/directory-tour';
-import '@openviking/react/components/directory-tour/style.css';
 ```
 
-| 屬性                           | 說明                                                                                                     |
-| ------------------------------ | -------------------------------------------------------------------------------------------------------- |
-| `locale`                       | 繼承上層 / en-US：`zh-CN` 或 `en-US`。內建控制元件文案隨語言變化，labels 可逐項覆蓋。                    |
-| `open` / `steps`               | 必填；開啟狀態與步驟配置。空步驟不渲染。                                                                 |
-| `locateTarget(target, signal)` | 可取消的宿主定位函式，返回已渲染的元素或 null。建議用 useCallback 保持穩定；取消後不得繼續展開舊作用域。 |
-| `currentStep` / `onStepChange` | 可選受控下標與變化事件，從 0 開始。                                                                      |
-| `defaultStep`                  | 非受控模式的起始下標，預設 0；關閉後重新開始。                                                           |
-| `placement`                    | 優先 right 或 left，預設 right；空間不足自動翻轉並限制在視口內。                                         |
-| `locateTimeout`                | 定位超時毫秒數，預設 10000。                                                                             |
-| `onClose`                      | 關閉按鈕或 Escape；宿主負責關閉。                                                                        |
-| `onComplete(result)`           | 最後一步繼續或跳過，返回跳過的步驟 ID。宿主負責關閉與持久化。                                            |
-| `labels`                       | 下一步、知道了、重試、跳過、載入和錯誤文案，以及進度格式函式。                                           |
-| `className` / `style`          | 浮層根節點樣式，可繼承或覆蓋 `--ov-ui-color-*` 主題變數。                                                |
+示例用 `DirectoryTourIntro` 渲染卡片，影片和「編輯」只觸發示例裡的回撥，已讀狀態只儲存在記憶體裡，實際應用需要自己持久化。
 
-每步包含 `id`、語義 `target`、`title`、`description`，可選 `illustration` 和 `nextLabel`。預設六步配置是英文，語義 target 區分使用者私有 resources 與根級公共 resources；不內建某個帳號的路徑。插畫通過 ReactNode 插槽傳入，元件沒有內部 CDN 依賴。
+### 尺寸約束
 
-## 可訪問性與異常處理
+在下拉框中選擇一種尺寸約束，點選「測試尺寸約束」檢視長內容下的卡片。
 
-講解卡片使用非模態 dialog，開啟後可鍵盤操作，支援 Escape 退出，關閉時恢復仍存在的原焦點。定位中不能前進；重試、切步和解除安裝會取消舊定位。滾動、視窗變化及目標尺寸變化會重新計算位置，目標滾出可見區域時隱藏講解卡片。支援服務端渲染，服務端不建立浮層。
+```tsx file="../../_demos/directory-tour-sizing.tsx" preview
+
+```
+
+`className` 和 `style` 裡的尺寸約束保持 CSS 原有語義，卡片始終限制在可視視口內，長內容在卡片內滾動，百分比高度相對於佈局視口計算。
+
+## API
+
+### DirectoryTour
+
+| 引數             | 說明                                                                                                                                                       | 型別                                                                            | 預設值                   |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------ |
+| open             | 是否顯示引導                                                                                                                                               | `boolean`                                                                       | 必填                     |
+| steps            | 步驟列表，為空陣列時不渲染；只有一項時不顯示進度                                                                                                           | `readonly DirectoryTourStep[]`                                                  | 必填                     |
+| currentStep      | 當前步驟的下標，從 0 開始；提供後為受控模式，需要在 `onStepChange` 裡更新                                                                                  | `number`                                                                        | -                        |
+| defaultStep      | 非受控模式的起始下標；關閉後重新開啟，從這裡重新開始                                                                                                       | `number`                                                                        | `0`                      |
+| placement        | 卡片優先出現在目錄行的哪一側；放不下時換到另一側，兩側都放不下時放在上方或下方                                                                             | `'right' \| 'left'`                                                             | `'right'`                |
+| locateTimeout    | 定位的等待時間（毫秒），超時後跳過該步                                                                                                                     | `number`                                                                        | `10000`                  |
+| locateTarget     | 返回步驟對應的目錄行元素：宿主載入並展開目錄，等目錄行渲染後再返回，`null` 表示找不到。`signal` 在切換步驟、解除安裝或超時時中止；不傳時所有步驟都會被跳過 | `(target: string, signal: AbortSignal) => Promise<DirectoryTourAnchor \| null>` | -                        |
+| onStepChange     | 步驟變化時觸發，包括自動跳過，引數為新的下標                                                                                                               | `(index: number) => void`                                                       | -                        |
+| onClose          | 點選關閉按鈕或按 Escape 時觸發；不傳時不顯示關閉按鈕，也不處理 Escape                                                                                      | `() => void`                                                                    | -                        |
+| onComplete       | 最後一步結束時觸發（點選確認、呼叫 `context.complete()` 或該步被跳過），引數包含被跳過的步驟 id；之後不再渲染，宿主負責關閉與持久化                        | `(result: DirectoryTourResult) => void`                                         | -                        |
+| renderContent    | 替換定位成功後的卡片內容；此時 `title` 只作為對話方塊的無障礙名稱，`description` 不顯示                                                                    | `(context: DirectoryTourContentContext) => ReactNode`                           | -                        |
+| labels           | 覆蓋介面文案                                                                                                                                               | `DirectoryTourLabels`                                                           | -                        |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                                                                    | `'zh-CN' \| 'en-US'`                                                            | 繼承上級，預設 `'en-US'` |
+| className、style | 卡片根節點的類名和樣式，可用來設定尺寸和主題變數                                                                                                           | `string`、`CSSProperties`                                                       | -                        |
+
+### DirectoryTourStep
+
+| 引數         | 說明                                                            | 型別        | 預設值                                  |
+| ------------ | --------------------------------------------------------------- | ----------- | --------------------------------------- |
+| id           | 步驟的唯一標識，`onComplete` 用它報告被跳過的步驟               | `string`    | 必填                                    |
+| target       | 目錄的語義名，原樣傳給 `locateTarget`；預設步驟的六個取值見下方 | `string`    | 必填                                    |
+| title        | 卡片標題                                                        | `ReactNode` | 必填                                    |
+| description  | 標題下方的說明                                                  | `ReactNode` | 必填                                    |
+| illustration | 卡片頂部的插畫；六個預設 `target` 有內建插畫，傳 `null` 隱藏    | `ReactNode` | 預設 `target` 的內建插畫                |
+| cardWidth    | 卡片寬度（CSS 畫素），不會超出可視視口                          | `number`    | `270`                                   |
+| nextLabel    | 本步主按鈕的文案                                                | `string`    | `labels.next`，最後一步為 `labels.done` |
+
+### DirectoryTourAnchor
+
+`locateTarget` 返回的型別：一個 `HTMLElement`，或一組連續的目錄行 `readonly HTMLElement[]`。陣列的第一項決定卡片位置，其中仍在文件裡的行共同組成高亮範圍。
+
+### DirectoryTourContentContext
+
+`renderContent` 的引數。
+
+| 引數     | 說明                                                  | 型別                | 預設值 |
+| -------- | ----------------------------------------------------- | ------------------- | ------ |
+| step     | 當前步驟                                              | `DirectoryTourStep` | -      |
+| index    | 當前步驟的下標，從 0 開始                             | `number`            | -      |
+| total    | 步驟總數                                              | `number`            | -      |
+| complete | 確認當前步驟：進入下一步，最後一步時觸發 `onComplete` | `() => void`        | -      |
+| close    | 關閉引導，等同於點選關閉按鈕，呼叫 `onClose`          | `() => void`        | -      |
+
+### DirectoryTourResult
+
+`onComplete` 的引數。
+
+| 引數           | 說明                                                  | 型別                | 預設值 |
+| -------------- | ----------------------------------------------------- | ------------------- | ------ |
+| skippedStepIds | 被自動跳過的步驟 id，按跳過的先後排列，沒有則為空陣列 | `readonly string[]` | -      |
+
+### DirectoryTourLabels
+
+預設值依次為 `zh-CN`、`en-US` 的內建文案。
+
+| 引數                               | 說明                                                             | 型別                                         | 預設值                         |
+| ---------------------------------- | ---------------------------------------------------------------- | -------------------------------------------- | ------------------------------ |
+| close                              | 關閉按鈕的無障礙名稱                                             | `string`                                     | `'關閉引導'` / `'Close guide'` |
+| next                               | 非最後一步的主按鈕文案                                           | `string`                                     | `'下一步'` / `'Next'`          |
+| done                               | 最後一步的主按鈕文案，同時是 `DirectoryTourIntro` 確認按鈕的文案 | `string`                                     | `'知道了'` / `'Got it'`        |
+| progress                           | 進度文案，`current` 從 1 開始；單步引導不顯示                    | `(current: number, total: number) => string` | 「當前/總數」，如 `1/6`        |
+| locating、unavailable、retry、skip | 不會顯示，設定後無效果                                           | `string`                                     | -                              |
+
+### DirectoryTourIntro
+
+卡片內容的展示元件，通常在 `renderContent` 裡使用。影片播放、編輯等操作放在 `media` 和 `features` 中，由宿主處理。
+
+| 引數        | 說明                                                                                                                                             | 型別                                | 預設值                   |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ------------------------ |
+| title       | 標題                                                                                                                                             | `ReactNode`                         | 必填                     |
+| description | 標題下方的說明                                                                                                                                   | `ReactNode`                         | 必填                     |
+| features    | 說明下方的要點列表，每項一行                                                                                                                     | `readonly ReactNode[]`              | -                        |
+| media       | 標題上方的媒體區域，例如封面圖                                                                                                                   | `ReactNode`                         | -                        |
+| onDone      | 點選確認按鈕時觸發，通常傳入 `context.complete`                                                                                                  | `() => void`                        | -                        |
+| labels      | 覆蓋確認按鈕的文案，只有 `done`                                                                                                                  | `Pick<DirectoryTourLabels, 'done'>` | -                        |
+| locale      | 介面語言，規則見[國際化](../guide/i18n)；在 `renderContent` 裡不繼承 `DirectoryTour` 的 `locale`，需要在這裡傳入，或由 `OpenVikingProvider` 提供 | `'zh-CN' \| 'en-US'`                | 繼承上級，預設 `'en-US'` |
+
+### openVikingDirectoryTourSteps
+
+六步預設，文案為英文，每步的 `target` 取下表的值。元件不內建任何帳號的路徑，由宿主在 `locateTarget` 裡把 `target` 對映到目錄行：`userResources` 是使用者私有的 resources 目錄，`sharedResources` 是團隊共享的根級 resources 目錄。
+
+| 步驟 id              | `target`          | 介紹的目錄                |
+| -------------------- | ----------------- | ------------------------- |
+| `memories`           | `userMemories`    | 使用者記憶（memories）    |
+| `sessions`           | `userSessions`    | 對話記錄（sessions）      |
+| `personal-resources` | `userResources`   | 個人資料（resources）     |
+| `shared-resources`   | `sharedResources` | 團隊公共資料（resources） |
+| `experiences`        | `userExperiences` | Agent 經驗（experiences） |
+| `peers`              | `userPeers`       | 物件記憶（peers）         |
+
+## 注意
+
+- `locateTarget` 由宿主實現：載入並展開目錄，等目錄行渲染後返回它的元素，例如 [FileTree](./file-tree) 的 `getRowElement(id)`。元件隨後把它滾動到可見區域，並在旁邊顯示高亮和卡片。
+- 用 `useCallback` 保持 `locateTarget` 的引用穩定，引用變化會重新定位當前步驟；`signal` 中止後不要繼續展開舊作用域的目錄。
+- 找不到目錄行時自動跳過該步：`locateTarget` 返回 `null` 或丟擲錯誤、超過 `locateTimeout`、目錄行被移除都會跳過，定位期間卡片保持隱藏。
+- 所有步驟都被跳過時，`onComplete` 仍會觸發，`skippedStepIds` 包含全部步驟的 id。
+- `onClose` 和 `onComplete` 觸發後，由宿主把 `open` 設為 `false`；是否已讀，以及按使用者或空間持久化，也由宿主處理。帳號或空間切換時，關閉引導或更換元件的 `key`。
+- 受控模式下，自動跳過同樣觸發 `onStepChange`，宿主需要更新 `currentStep`。進度保持原步驟編號，例如從 1/6 直接跳到 3/6。
+- `locateTarget` 可以返回一組連續的目錄行：第一行決定卡片位置，仍在文件裡的行組成高亮範圍。摺疊後移除的行退出高亮，新載入的行需要宿主重新定位（更新 `locateTarget` 或重新開啟引導）。
+- 位置隨滾動、視窗縮放和目錄行尺寸變化更新，卡片限制在可視視口內，包括縮放和軟鍵盤的影響；目錄行滾出可見區域時，卡片和高亮一起隱藏。
+- 卡片是非模態 `dialog`：顯示後獲得焦點，按 Escape 觸發 `onClose`，關閉時焦點回到原來的元素（該元素仍在文件裡時）。宿主控制元件已用 `preventDefault()` 處理的 Escape，卡片不再響應。
+- 卡片通過瀏覽器的 Popover API 渲染在頂層，不需要設定 `z-index`，也不會建立全屏遮罩或 SVG，需要瀏覽器支援該 API。
+- 服務端渲染時不建立浮層；初始 `open` 為 `true` 時，在 hydration 完成後才建立。
+- 預設步驟的文案是英文，其他語言需要自己提供 `title` 和 `description`。六個預設 `target` 的插畫隨 JS 打包，不需要託管圖片。
+- 包根入口只匯出 `DirectoryTour` 和 `DirectoryTourProps`；`DirectoryTourIntro`、`openVikingDirectoryTourSteps` 和其餘型別從 `@openviking/react/components/directory-tour` 匯入。
+
+## 主題變數
+
+卡片掛在 `document.body` 下，會繼承目錄行上生效的 `--ov-ui-*` 變數，祖先節點上 `class`、`style`、`data-theme` 的變化也會同步到卡片。下列變數可以通過 `className` 或 `style` 直接設定，優先順序高於繼承值。
+
+| 變數                                | 說明                                     | 預設值                   |
+| ----------------------------------- | ---------------------------------------- | ------------------------ |
+| `--ov-ui-directory-tour-primary`    | 高亮描邊、焦點環和主按鈕的顏色           | `--ov-ui-color-primary`  |
+| `--ov-ui-directory-tour-background` | 卡片背景色                               | `--ov-ui-color-bg-1`     |
+| `--ov-ui-directory-tour-text`       | 卡片文字色                               | `--ov-ui-color-text-1`   |
+| `--ov-ui-directory-tour-secondary`  | `description` 和 `features` 的文字色     | `--ov-ui-color-text-2`   |
+| `--ov-ui-directory-tour-muted`      | 進度和 `DirectoryTourIntro` 說明的文字色 | `--ov-ui-color-text-3`   |
+| `--ov-ui-directory-tour-border`     | 卡片描邊色                               | `--ov-ui-color-border-3` |

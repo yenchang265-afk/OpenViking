@@ -40,7 +40,7 @@ ov compile memory \
   --instruction "整理已有記憶，保留獨立事實，不要合併不同物件"
 ```
 
-根目錄下已存在的 `profile.md`、`identity.md`、`soul.md` 也會納入；停用或未註冊的型別會跳過。使用者 memories 根目錄不包含 `peers/*/memories`，整理 peer 記憶需要明確指定該 peer 的 memories 根目錄。
+根目錄下已存在的 `profile.md` 也會納入；靜態指令檔案 `soul.md` 不參與整理；停用或未註冊的型別會跳過。使用者 memories 根目錄不包含 `peers/*/memories`，整理 peer 記憶需要明確指定該 peer 的 memories 根目錄。
 
 命令同樣立即返回一個任務 ID，用 `ov task status <id>` 檢視結果、用 `ov task cancel <id>` 取消。
 

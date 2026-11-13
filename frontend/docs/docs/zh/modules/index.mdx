@@ -1,33 +1,43 @@
-# 業務模組
+# 區塊
 
-FileBrowser 提供目錄、搜尋與預覽聯動；Console 提供原生命令面板，ScopeCascade 提供級聯選擇。取數與狀態 Hook 均內建。對話服務由宿主接入。
+區塊自帶資料載入和狀態管理，從 `@openviking/react` 匯入後放進頁面，就能得到一塊完整的功能：檔案瀏覽、命令面板或級聯選擇。
 
-模組通過 Hook 讀取原生介面，宿主提供配置、受控值與回撥。兩個看板還接受可選 `data`，供閘道器或宿主提供額外資料；傳入後不發起原生請求。
+## 何時使用
 
-| 模組                             | 元件          | 目標能力   |
-| -------------------------------- | ------------- | ---------- |
-| [`file-browser`](./file-browser) | `FileBrowser` | 檔案瀏覽。 |
-| [`console`](./console)           | `Console`     | 互動面板。 |
+- 想直接得到檔案瀏覽或命令面板，由區塊負責請求、分頁和狀態時：FileBrowser 和 Console 通過 `OpenVikingProvider` 請求 OpenViking 原生 API。
+- 需要依次選擇知識庫、資料空間和使用者時：ScopeCascade 通過你提供的三個載入函式取數，不請求 OpenViking 原生 API。
+- 只需要純檢視、資料由自己載入時，使用[業務元件](../components/)，它們不需要 `OpenVikingProvider`。
 
-## 預覽
+## 區塊列表
 
-示例使用公開模組入口和模組集合樣式。網格佈局屬於文件示例，應用自行決定頁面佈局。
+| 區塊                                     | 說明                                                                                                                                             | 匯入路徑                                  | 請求配置                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------- | -------------------------------------------------- |
+| [FileBrowser 檔案瀏覽](./file-browser)   | 目錄樹、搜尋和檔案預覽組成的檔案瀏覽區塊：讀取 OpenViking 的目錄和內容，支援預覽、編輯、匯入匯出、歷史版本和許可權管理，並內建 Wiki 與經驗看板。 | `@openviking/react/modules/file-browser`  | 需要 `OpenVikingProvider`，支援 `requestOptions`   |
+| [Console 互動面板](./console)            | 在一塊麵板裡提供對話和命令兩種模式：對話模式通過 VikingBot 無頭模組接通原生對話；命令模式把 `ov` 命令傳送到 OpenViking 原生 API 並展示結果。     | `@openviking/react/modules/console`       | 需要 `OpenVikingProvider`，支援 `requestOptions`   |
+| [ScopeCascade 級聯選擇](./scope-cascade) | 依次選擇知識庫、資料空間和使用者的三級選擇器：上級變化時，下級清空並重新載入，三級都選中後通過 `onChange` 返回完整身份。                         | `@openviking/react/modules/scope-cascade` | 不需要 `OpenVikingProvider`，沒有 `requestOptions` |
 
-```tsx file="../../_demos/modules-basic.tsx" preview
+## 無頭模組
 
+[VikingBot](./viking-bot) 提供 `useVikingBotChat`、`useVikingBotSessions` 及契約，從 `@openviking/react/modules/viking-bot` 引入。Console 內部複用同一模組；獨立宿主可以把狀態接入 VikingBot 或自己的檢視。此入口不匯出元件或 CSS，Hook 不從包根或 Console 轉匯出。
+
+## 引入
+
+```tsx
+import { FileBrowser } from '@openviking/react/modules/file-browser';
+import '@openviking/react/modules/file-browser/style.css';
 ```
 
-## 匯入與樣式
+區塊的子路徑是 `modules`：從 `@openviking/react/modules/<名稱>` 匯入，完整路徑見上表。根入口 `@openviking/react` 也匯出區塊本體和主 Props 型別，例如 `FileBrowser` 和 `FileBrowserProps`；Labels、Slots 和列舉等其他型別只從子路徑匯入。沒有 `@openviking/react/modules` 這樣的聚合入口。
 
-從 `@openviking/react/modules/<模組>` 匯入元件及其 Props / Labels / Slots 型別。模組元件的本體與主 Props 型別也從根入口 `@openviking/react` 匯出；Labels、Slots 與列舉型別只從子路徑匯入。
+JavaScript 匯入不會載入 CSS，從下面選一個樣式入口，每個入口都可以單獨使用：
 
-JavaScript 不載入 CSS。單模組使用 `@openviking/react/modules/<模組>/style.css`，全部模組使用 `@openviking/react/modules/style.css`，整庫使用 `@openviking/react/style.css`，每個樣式入口均可獨立消費。沒有 `@openviking/react/modules` 分類聚合 JavaScript 入口。
+- `@openviking/react/modules/<名稱>/style.css`：單個區塊，已包含它用到的元件的樣式。
+- `@openviking/react/modules/style.css`：全部區塊。
+- `@openviking/react/style.css`：整個元件庫。
 
-模組請求繼承 `@openviking/react/client` 提供的 `OpenVikingProvider`，Hook 不作為公開 API。FileBrowser 自動載入目錄；Console 掛載本身不發請求，提交命令後才訪問服務。
+## 請求配置
 
-## Provider
-
-模組不通過 props 接收 Client，而是在內部 Hook 中從 Context 取用。所有模組都必須包在 `@openviking/react/client` 的 `OpenVikingProvider` 內，在 Provider 上統一配置服務地址、身份與憑證；沒有 Provider，模組拿不到可用的請求配置：FileBrowser 不會發起請求、保持空態，Console 只能退回同源預設 Client 且不帶身份配置。
+FileBrowser 和 Console 通過最近的 `OpenVikingProvider` 請求 OpenViking 原生 API，必須放在 Provider 內。在應用根部放一個 Provider，服務地址和憑證只配置這一次，區塊本身不接收這些 props：
 
 ```tsx
 import { OpenVikingProvider } from '@openviking/react/client';
@@ -35,25 +45,64 @@ import { FileBrowser } from '@openviking/react/modules/file-browser';
 import { Console } from '@openviking/react/modules/console';
 import '@openviking/react/modules/style.css';
 
-<OpenVikingProvider
-  locale="zh-CN"
-  baseURL={endpoint}
-  apiKey={apiKey}
-  accountId={accountId}
-  userId={userId}
-  resourceId={libraryId}
->
+<OpenVikingProvider baseURL={endpoint} apiKey={apiKey}>
   <FileBrowser />
   <Console />
 </OpenVikingProvider>;
 ```
 
-Provider 通過 Context 下發配置：模組不接收 `baseURL` 或憑證作為 props；訪問其他知識庫的模組只用 `requestOptions` 覆蓋該欄位。巢狀 Provider 時，內層只覆蓋自己宣告的欄位，其餘繼承外層。
+沒有 Provider 時，FileBrowser 不發起請求，目錄樹一直停在載入狀態；Console 使用不帶身份資訊的同源預設 Client。
 
-## 宿主職責
+ScopeCascade 不走共享 Client，沒有 `requestOptions`，也不需要 Provider；放在 Provider 內時，它只繼承 Provider 的 `locale`。
 
-頁面佈局、認證、帳號作用域、路由和許可權由宿主負責。產品引導、資源與 Skill 匯入流程及同步配置留在宿主；管理後臺不在這些模組的範圍內。
+### OpenVikingProvider
 
-## 級聯選擇
+欄位省略時繼承外層 Provider，最外層省略時使用「預設值」一列。
 
-[ScopeCascade 級聯選擇](./scope-cascade) 內建請求與級聯狀態。只需傳三個宿主介面，各級內部獨立訂閱。
+| 引數        | 說明                                                                                                 | 型別                                          | 預設值                   |
+| ----------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------- | ------------------------ |
+| baseURL     | 服務地址及可選的閘道器字首，不含 `/api/v1`，空字串表示同源請求                                       | `string`                                      | `''`                     |
+| apiKey      | 憑證，作為 `X-API-Key` 請求頭髮送；商業版由瀏覽器 Cookie 鑑權，不需要傳入                            | `string \| (() => string \| Promise<string>)` | -                        |
+| accountId   | OpenViking 帳號 ID，對應資料空間，作為 `X-OpenViking-Account` 請求頭髮送                             | `string \| (() => string \| Promise<string>)` | -                        |
+| userId      | 帳號內的使用者 ID，作為 `X-OpenViking-User` 請求頭髮送                                               | `string \| (() => string \| Promise<string>)` | -                        |
+| resourceId  | 當前庫 ID，決定請求落在哪個庫，作為 `V-Resource-Id` 請求頭髮送                                       | `string \| (() => string \| Promise<string>)` | -                        |
+| credentials | 傳給 `fetch` 的 `credentials`，決定是否攜帶 Cookie；跨源請求仍遵循服務端 CORS 和瀏覽器的 Cookie 策略 | `'include' \| 'same-origin' \| 'omit'`        | `'include'`              |
+| signal      | 中止請求的訊號，觸發後進行中的請求被取消                                                             | `AbortSignal`                                 | -                        |
+| fetch       | 替換全域性 `fetch`，用於測試、鏈路追蹤或沒有全域性 `fetch` 的環境                                    | `typeof fetch`                                | 全域性 `fetch`           |
+| locale      | 子樹的介面語言，規則見[國際化](../guide/i18n)                                                        | `'zh-CN' \| 'en-US'`                          | 繼承上級，預設 `'en-US'` |
+| children    | 使用這套請求配置的子樹                                                                               | `ReactNode`                                   | -                        |
+
+- 身份欄位 `apiKey`、`accountId`、`userId` 和 `resourceId` 也可以傳函式，每次請求重新求值，因此能讀到輪換後的憑證。
+- `fetch`、`signal` 和函式形式的身份欄位按引用比較，變化會建立新的 Client，使用它的區塊隨之重置，請保持它們的引用穩定。
+- Provider 掛載時不發請求，也不讀取瀏覽器裡儲存的憑證。
+
+### 覆蓋請求配置
+
+FileBrowser 和 Console 有可選的 `requestOptions` 屬性，型別是 `@openviking/react/client` 匯出的 `OvRequestOptions`，用來只改這一個區塊的請求配置，例如讓它訪問另一個庫：
+
+```tsx
+const otherLibrary = { resourceId: 'library-b' };
+
+<FileBrowser requestOptions={otherLibrary} />;
+```
+
+`OvRequestOptions` 包含 `baseURL`、`apiKey`、`accountId`、`userId`、`resourceId` 和 `signal`，含義與上表相同；`credentials` 和 `fetch` 只能在 Provider 上設定。覆蓋規則如下：
+
+- 逐欄位解析，優先順序從高到低：區塊的 `requestOptions`、最近的 `OpenVikingProvider`、庫預設值。
+- 巢狀 Provider 時，內層只覆蓋自己宣告的欄位，其餘繼承外層。
+- 欄位省略或為 `undefined` 表示繼承；`baseURL` 傳 `''` 則明確表示同源。
+- 身份欄位傳 `''` 清除繼承到的值，請求不再發送對應請求頭。
+- 覆蓋只作用於這一個區塊，不修改 Provider，也不影響其他區塊。
+- `requestOptions` 物件要保持引用穩定，在元件外定義或用 `useMemo`；各區塊在它變化後的行為見各自頁面的「注意」。
+
+## 程式碼演示
+
+### 基礎用法
+
+並排放置 FileBrowser 和 Console，樣式來自 `modules/style.css`。
+
+```tsx file="../../_demos/modules-basic.tsx" preview
+
+```
+
+示例沒有包 `OpenVikingProvider`，只用來檢視樣式：FileBrowser 的目錄樹停在載入狀態，Console 不帶身份資訊。網格佈局屬於示例，應用自行決定佈局。

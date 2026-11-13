@@ -30,6 +30,8 @@ OpenViking 的所有重要變更都將記錄在此檔案中。
     空閒 SSE 流每 15 秒傳送一條註釋心跳；OpenViking 以 402 或 403 拒絕金鑰的請求會被拒絕，
     不再轉發；儲存時收到 OpenViking 401、且 `/health` 也返回 401 時，會以 `gateway_key_revoked`
     暫停儲存。
+  - 上下文配置現在預設勾選全部 OpenViking 工具，包括 `forget`、`set_acl` 等會修改資料的工具；之前的版本預設不勾選其中 8 個。已儲存的配置和進行中的對話保持原來的工具。沒有儲存 `default` 配置的帳號，以及省略 `disabled_tools` 的管理 API 請求，現在會得到全部工具；要保留原來的勾選，請設定 `default_profile.disabled_tools` 或儲存一份 `default` 配置。
+  - `X-OpenViking-Context` 只能收窄工具許可權：`disabled_tools` 會追加到配置的排除列表上，`gateway_tools` 不能重新開啟工具。之前靠傳送 `{"disabled_tools":[]}` 或 `{"gateway_tools":true}` 拿到配置不提供的工具的客戶端，升級後不再拿到；請改為修改配置。
 - **火山引擎 KMS `key_file`（升級需操作）**：`encryption.volcengine_kms.key_file` 現在對服務端和閘道器
   都會生效；此前版本忽略該欄位，根金鑰始終位於 `~/.openviking/openviking-volcengine-root-key.enc`。
   如果配置了 `key_file`，升級前把該檔案移到配置的路徑。配置的檔案不存在而預設檔案存在時，

@@ -142,7 +142,7 @@ commit() 分兩階段執行：
 
 提交會話後，OpenViking 會根據對話內容和當前記憶策略，提取對後續互動有價值的資訊，並儲存到當前使用者的記憶空間。當對話涉及穩定的 Peer 時，相關記憶也可以儲存到對應的 Peer 空間。
 
-OpenViking 內建 `profile`、`preferences`、`entities`、`events`、`identity`、`soul`、`cases`、`trajectories` 和 `experiences` 等記憶型別，也支援根據業務需要自定義。完整用途與路徑見 [上下文型別](./02-context-types.md)。
+OpenViking 內建 `profile`、`preferences`、`entities`、`events`、`cases`、`trajectories` 和 `experiences` 等記憶型別，也支援根據業務需要自定義。完整用途與路徑見 [上下文型別](./02-context-types.md)。
 
 在 `memory_policy.memory_types` 中，`experiences` 會啟用完整的 Agent Evolution 流程，並自動啟用 `cases` 和 `trajectories`。如果沒有 `experiences`，顯式傳入的 `cases` 和 `trajectories` 會被靜默忽略，不會報錯。
 
@@ -169,8 +169,8 @@ Agent Evolution 還要求生效的 `agent_evolution.enabled` 開關已開啟。�
   "operations": {
     "adds": [
       {
-        "uri": "viking://user/alice/memories/identity.md",
-        "memory_type": "identity",
+        "uri": "viking://user/alice/memories/profile.md",
+        "memory_type": "profile",
         "after": "新建立的檔案內容"
       }
     ],
@@ -239,7 +239,6 @@ viking://user/{user_id}/sessions/{session_id}/
 
 viking://~/memories/
 ├── profile.md
-├── identity.md
 ├── soul.md
 ├── preferences/
 ├── entities/

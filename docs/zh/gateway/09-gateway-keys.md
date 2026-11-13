@@ -82,7 +82,7 @@ description: 簽發把客戶端接入 OpenViking 閘道器的閘道器金鑰，�
 
 ### 每人一把金鑰 {#one-key-per-person}
 
-記憶屬於[閘道器金鑰](#gateway-keys)背後的 OpenViking 使用者，所以共用一把金鑰的人也共用這位使用者的記憶。請給每人簽發一把金鑰。想讓不同客戶端使用不同的上下文配置，或者想單獨吊銷某個客戶端，再按客戶端分開簽發。[Peer](03-connect-clients.md#peer) 能在同一位使用者的記憶裡區分不同的互動物件，但其他 Peer 的記憶仍可能被召回，持有金鑰的人也可以自己選 Peer，所以它代替不了分開簽發金鑰。
+記憶屬於[閘道器金鑰](#gateway-keys)背後的 OpenViking 使用者，所以共用一把金鑰的人也共用這位使用者的記憶。請給每人簽發一把金鑰。想讓不同客戶端使用不同的上下文配置，或者想單獨吊銷某個客戶端，再按客戶端分開簽發。[Peer](03-connect-clients.md#peer) 能在同一位使用者的記憶裡區分不同的互動物件，但除非上下文配置設為[僅當前 Peer](03-connect-clients.md#peer-scope)，其他 Peer 的記憶仍可能被召回；而且持有金鑰的人也可以自己選 Peer，所以它代替不了分開簽發金鑰。
 
 ### 使用者的 OpenViking API 金鑰變了 {#when-the-openviking-key-changes}
 

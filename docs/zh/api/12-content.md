@@ -607,7 +607,7 @@ Content-Type: application/json
 
 ### set_tags()
 
-設定用於檢索過濾的顯式 `k=v` 標籤。`replace` 替換已有標籤，`append` 追加標籤，`clear` 顯式清空已有標籤；對目錄設定 `recursive=true` 時會更新目錄下的檔案。省略 `tags` 或傳入空陣列配合 `replace` 都是 no-op；只有 `clear` 會清空，且會忽略同時傳入的標籤值。
+設定用於檢索過濾的顯式標籤。`replace` 替換已有標籤，`append` 按輸入順序執行 `k=v`、`k+=number`、`k-=number`，`clear` 清空已有標籤。算術操作使用有限十進位制數，key 不存在時按 0 處理，結果允許為負數；該過程是讀改寫，不保證併發原子性。對目錄設定 `recursive=true` 時會更新目錄下的檔案。
 
 **Python SDK**
 
@@ -618,6 +618,12 @@ result = client.set_tags(
     mode="replace",
     recursive=True,
 )
+
+batch = client.batch_set_tags(
+    ["viking://resources/project/a.md", "viking://resources/project/b.md"],
+    ["used_count+=1"],
+    mode="append",
+)
 ```
 
 **TypeScript SDK**
@@ -627,6 +633,11 @@ const result = await client.setTags(
   "viking://resources/project/",
   ["team=search", "env=prod"],
   { mode: "replace", recursive: true },
+);
+const batch = await client.batchSetTags(
+  ["viking://resources/project/a.md", "viking://resources/project/b.md"],
+  ["used_count+=1"],
+  { mode: "append" },
 );
 ```
 
@@ -639,12 +650,19 @@ result, err := client.SetTags(
     []string{"team=search", "env=prod"},
     &openviking.SetTagsOptions{Mode: "replace", Recursive: true},
 )
+batch, err := client.BatchSetTags(
+    ctx,
+    []string{"viking://resources/project/a.md", "viking://resources/project/b.md"},
+    []string{"used_count+=1"},
+    &openviking.SetTagsOptions{Mode: "append"},
+)
 ```
 
 **HTTP API**
 
 ```http
 POST /api/v1/content/set_tags
+POST /api/v1/content/batch_set_tags
 Content-Type: application/json
 ```
 
@@ -662,6 +680,8 @@ curl -X POST http://localhost:1933/api/v1/content/set_tags \
 
 `POST /api/v1/fs/attrs/set_tags` 是等價相容路徑，當前 Python、TypeScript、Go SDK 和 CLI 使用該路徑。
 
+批次介面接受 1～50 個 URI，返回 `items` 和 `failed`。目標沒有語義記錄時仍屬於成功項，`tags_updated=false`；只有真實異常進入 `failed`。
+
 **CLI**
 
 ```bash
@@ -669,6 +689,10 @@ ov set-tags viking://resources/project/ \
   --tags team=search,env=prod \
   --mode replace \
   --recursive
+
+ov attrs batch-set-tags \
+  viking://resources/project/a.md viking://resources/project/b.md \
+  --tags used_count+=1 --mode append
 ```
 
 **響應**

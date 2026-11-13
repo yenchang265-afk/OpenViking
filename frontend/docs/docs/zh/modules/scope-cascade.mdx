@@ -1,35 +1,81 @@
 # ScopeCascade 級聯選擇
 
-可選 `locale: 'zh-CN' | 'en-US'` 覆蓋最近的模組或 Provider；均未配置時預設 `en-US`。已有 `labels` 可逐項覆蓋。業務內容仍由宿主提供。
+依次選擇知識庫、資料空間和使用者的三級選擇器：上級變化時，下級清空並重新載入，三級都選中後通過 `onChange` 返回完整身份。
 
-直接向 `ScopeCascade` 傳入三個 API 適配函式。請求、級聯、取消、重試和各級訂閱均內建，不需要建立控制器或呼叫 Hook。
+## 何時使用
 
-## 基礎用法
+- 需要依次選擇知識庫、資料空間和使用者，再按選中的身份載入業務資料時。
+- 資料來自宿主自己的介面時：元件通過三個載入函式取數，請求、級聯、取消和重試都由元件管理。它不請求 OpenViking 原生 API，因此沒有 `requestOptions`，也不需要 `OpenVikingProvider`；其他區塊的請求配置見[區塊概覽](../modules/)。
+- 需要自己管理各級資料、自定義面板或固定某一級時，改用 [ScopeSwitcher](../components/scope-switcher)。
+
+## 引入
+
+```tsx
+import { ScopeCascade } from '@openviking/react/modules/scope-cascade';
+import '@openviking/react/modules/scope-cascade/style.css';
+```
+
+## 程式碼演示
+
+### 基礎用法
+
+切換知識庫，資料空間和使用者會清空並重新載入。示例使用延遲 450 ms 的模擬介面，掛載後每一級自動選中第一個選項。
 
 ```tsx file="../../_demos/scope-cascade-basic.tsx" preview
 
 ```
 
-三個介面返回 `Promise<readonly ScopeSwitcherOption[]>`，選項為 `{ id, label, icon?, description?, disabled? }`。鑑權、介面地址和響應對映由適配函式負責。保持函式引用穩定；適配函式變化會取消舊請求並重置全部選擇。帳號切換可用元件 `key` 隔離。
+### 選擇結果
 
-預設檢視內建三個層級圖示：庫用 `LibraryIcon`（按 id 取色的圓形漸變塊），空間與使用者用 `SpaceIcon`、`UserIcon`。適配函式返回的選項沒有 `icon` 時自動補上本級預設圖示，返回了 `icon` 就照用宿主的。
-
-| 介面            | 引數                                                      |
-| --------------- | --------------------------------------------------------- |
-| `loadLibraries` | `signal: AbortSignal`                                     |
-| `loadSpaces`    | `libraryId: string, signal: AbortSignal`                  |
-| `loadUsers`     | `libraryId: string, spaceId: string, signal: AbortSignal` |
-
-掛載後加載庫列表，每級預設選擇第一個可用項並繼續載入下一級。切換上級時先清空下游，舊請求即使忽略 signal 也不能覆蓋新結果。各級內部獨立訂閱，錯誤隻影響本級；預設檢視封裝本地搜尋、載入、空態、錯誤與重試。當前載入完整列表，不提供服務端搜尋或分頁。
-
-## 接收身份變化
+三級都選中時 `onChange` 返回完整身份，身份不完整時返回 `null`；示例把收到的結果顯示在下方，宿主在結果非空時再載入業務資料。
 
 ```tsx file="../../_demos/scope-cascade-selection.tsx" preview
 
 ```
 
-`onChange(selection)` 返回完整的 `{ libraryId, spaceId, userId }`。初始化、上級切換或介面重置導致身份不完整時返回 `null`；同一身份的重新整理不重複上報。宿主在非空時載入對應業務資料，不需要訂閱內部狀態。
+## API
 
-## 屬性
+### ScopeCascade
 
-三個 `load*` 介面必填。`onChange` 可選，`levelNames` 按庫、空間、使用者順序指定名稱；`labels` 設定載入、搜尋、空態和錯誤文案，`retryLabel` 設定重試按鈕文案。`className`、`style` 等 HTML 屬性透傳給佈局容器。引入 `@openviking/react/modules/scope-cascade/style.css` 使用預設樣式。
+| 引數             | 說明                                                                                                               | 型別                                                                                                   | 預設值                                                                               |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ |
+| loadLibraries    | 載入知識庫列表，掛載時呼叫；`signal` 在請求過期時中止                                                              | `(signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>`                                     | 必填                                                                                 |
+| loadSpaces       | 載入知識庫下的資料空間，選中知識庫後呼叫                                                                           | `(libraryId: string, signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>`                  | 必填                                                                                 |
+| loadUsers        | 載入資料空間下的使用者，選中資料空間後呼叫                                                                         | `(libraryId: string, spaceId: string, signal: AbortSignal) => Promise<readonly ScopeSwitcherOption[]>` | 必填                                                                                 |
+| levelNames       | 三級的名稱，依次為知識庫、資料空間、使用者；未選中時顯示在觸發器上，同時是觸發器的無障礙名稱                       | `readonly [string, string, string]`                                                                    | `zh-CN`：`['知識庫', '資料空間', '使用者']`；`en-US`：`['Library', 'Space', 'User']` |
+| onChange         | 選擇變化時觸發，三級都選中時引數為 `ScopeCascadeSelection`，身份不完整時為 `null`；同一身份不重複觸發              | `(selection: ScopeCascadeSelection \| null) => void`                                                   | -                                                                                    |
+| retryLabel       | 載入失敗後重試按鈕的文案                                                                                           | `string`                                                                                               | `zh-CN`：`'重試'`；`en-US`：`'Retry'`                                                |
+| labels           | 覆蓋介面文案：載入中 `loading`、搜尋框佔位 `searchPlaceholder`、無選項 `empty`、無匹配 `noMatch`、載入失敗 `error` | `ScopeSwitcherLabels`                                                                                  | -                                                                                    |
+| locale           | 介面語言，規則見[國際化](../guide/i18n)                                                                            | `'zh-CN' \| 'en-US'`                                                                                   | 繼承上級，預設 `'en-US'`                                                             |
+| className、style | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                             | HTML 屬性                                                                                              | -                                                                                    |
+
+### ScopeSwitcherOption
+
+載入函式返回的選項。
+
+| 引數        | 說明                                                                                       | 型別        | 預設值  |
+| ----------- | ------------------------------------------------------------------------------------------ | ----------- | ------- |
+| id          | 選項的唯一標識；上級的 `id` 會傳給下一級的載入函式，三級的 `id` 組成 `onChange` 返回的身份 | `string`    | 必填    |
+| label       | 顯示文本，搜尋時按它過濾並高亮匹配的片段                                                   | `string`    | 必填    |
+| icon        | 選項行首的圖示，省略時使用本級預設圖示                                                     | `ReactNode` | -       |
+| description | 顯示在標籤下方的次要說明                                                                   | `string`    | -       |
+| disabled    | 停用該選項：置灰、不可點選，也不會被自動選中                                               | `boolean`   | `false` |
+
+### ScopeCascadeSelection
+
+| 引數      | 說明              | 型別     | 預設值 |
+| --------- | ----------------- | -------- | ------ |
+| libraryId | 選中的知識庫 id   | `string` | 必填   |
+| spaceId   | 選中的資料空間 id | `string` | 必填   |
+| userId    | 選中的使用者 id   | `string` | 必填   |
+
+## 注意
+
+- 載入函式需要保持引用穩定，例如定義在元件外，或用 `useCallback` 包裹。任一函式的引用變化，都會取消進行中的請求、清空全部選擇並從知識庫重新載入。
+- 切換帳號時，給元件設定 `key={accountId}`，讓選擇狀態一起重置。
+- 掛載後先載入知識庫，每一級自動選中第一個未停用的選項，再載入下一級。上級沒有選中項時，下級保持停用；某一級沒有可選項時，下級保持停用，`onChange` 返回 `null`。
+- 上級變化時，下級先清空再重新載入。遲到的舊響應即使載入函式忽略了 `signal`，也會被丟棄。
+- 某一級載入失敗時，只有該級顯示錯誤和重試按鈕，下級保持停用；點選重試只重新載入該級。
+- 每一級一次返回完整列表，不支援服務端搜尋和分頁。超過 10 項時顯示搜尋框，在本地按選項文字過濾。
+- 選項沒有 `icon` 時，知識庫顯示 [LibraryIcon](../components/icons)（按 `id` 取色的圓形漸變色塊），資料空間和使用者分別顯示 `SpaceIcon`、`UserIcon`；載入函式返回了 `icon` 就使用它。
+- 型別從 `@openviking/react/modules/scope-cascade` 匯出：`ScopeCascadeProps`、`ScopeCascadeSelection`，以及三個載入函式合在一起的 `ScopeCascadeApi`；`ScopeSwitcherOption` 和 `ScopeSwitcherLabels` 從 `@openviking/react/components/scope-switcher` 匯出。包根入口只匯出元件和 `ScopeCascadeProps`。

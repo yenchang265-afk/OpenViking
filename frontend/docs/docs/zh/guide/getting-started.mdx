@@ -1,127 +1,150 @@
 # 快速開始
 
-公開 UI 元件、組合模組 均支援可選的 `locale: 'zh-CN' | 'en-US'`。Props 覆蓋最近的模組或 Provider，均未配置時預設 `en-US`。已有 `labels` 保留逐項覆蓋能力，業務內容、插槽和回撥文案仍由宿主提供。
+`@openviking/react` 是 OpenViking 的 React 元件庫，提供檔案樹、檔案預覽、命令控制台、對話、登入表單和看板等[業務元件](../components/)，以及自帶資料載入的[區塊](../modules/)。文件裡的「宿主」指嵌入這些元件的你的應用。
 
-OpenViking UI 是構建 OpenViking AI 應用介面的 React 基礎。OpenViking 是面向 AI 智慧體的上下文資料庫；本 workspace 提供 Rslib 構建、雙語文件、分層目錄約定與樣式隔離方案。應用負責業務介面、資料、認證與流程編排。
-
-包提供 FileTree、FilePreview、Tui、ScopeSwitcher、AgentConnect 五個檢視元件、五種檔案型別圖示，以及兩個業務模組佔位元件。FileTree、FilePreview 與 Tui 已按契約實現，ScopeSwitcher 為無狀態佈局，AgentConnect 仍為固定尺寸佔位。當前範圍見[元件概覽](../components/)和[模組概覽](../modules/)；業務 Hook 尚未實現。
-
-## 本地執行
-
-使用 Node.js 22.12 或更新版本。在倉庫根目錄執行：
+## 安裝
 
 ```bash
-cd frontend
-npm ci
-npm run dev
+npm install @openviking/react
 ```
 
-開啟 Rspress 輸出的 `/ui/` 地址。簡體中文使用 `/ui/`，英文使用 `/ui/en/`；頂部語言選單支援在對應頁面間切換。
+`react` 和 `react-dom` 是 peer 依賴，版本範圍是 `^18.2.0 || ^19.0.0`。包只提供 ESM 入口。
 
-workspace 開發外掛會在文件伺服器啟動前執行 Rslib watch。文件示例通過公開匯出使用構建產物，不使用原始碼別名。React 和 ReactDOM 為 peer dependencies，宣告支援 React 18.2 和 React 19；文件應用使用 React 19。
+FilePreview 和 VikingBot 用可選 peer 依賴 `@ark-design/ui` 渲染，內建它們的 FileBrowser 和 Console 同樣需要。版本和配套包見 [FilePreview](../components/file-preview) 與 [VikingBot](../components/viking-bot) 頁面的「引入」。
 
-## 組織應用程式碼
+## 引入樣式
 
-- `packages/react/src/components/`：可複用檢視，通過 props 接收處理後的資料，通過回調錶達使用者意圖。
-- `packages/react/src/modules/`：兩個可匯入的佔位元件，業務 Hook 與組合互動後續遷入。
-- `packages/react/src/hooks/` 與 `utils/`：包內共享邏輯，沒有公開子路徑。
-- `docs/docs/en/` 與 `docs/docs/zh/`：對應的雙語文件頁面；共用的可執行示例放在 `docs/docs/_demos/`。
+JavaScript 匯入不會自動載入 CSS，按需選擇一個樣式入口：
 
-應用專屬流程與認證留在應用層；模組 Hook 通過共享 Client 載入資料。元件不獲取業務資料，也不依賴應用路由。
+```ts
+// 整個元件庫：全部業務元件、區塊和主題
+import '@openviking/react/style.css';
 
-## 公開入口
+// 全部業務元件，或全部區塊
+import '@openviking/react/components/style.css';
+import '@openviking/react/modules/style.css';
 
-根入口 `@openviking/react` 當前匯出 `FileTree`、`Tui`、`ScopeSwitcher`、`AgentConnect` 與兩個業務模組佔位元件及其主 Props 型別；`FilePreview` 只從 `components/file-preview` 子路徑匯出，因為它的型別依賴可選的 `@ark-design/ui`。行型別、選項型別、控制代碼與文案包等子型別一律從子路徑匯入。`@openviking/react/icons` 提供五種檔案型別圖示。
+// 單個業務元件或區塊
+import '@openviking/react/components/file-tree/style.css';
+import '@openviking/react/modules/file-browser/style.css';
+```
 
-沒有 `components` 或 `modules` 分類聚合 JavaScript 入口。業務佔位元件使用獨立的 `modules/<模組>` 入口：
+每個入口都可以單獨使用，並已包含所用元件的樣式。圖示（`@openviking/react/icons`）不需要樣式表。
+
+## 使用一個業務元件
+
+業務元件是純檢視：資料由你傳入，使用者的操作通過回撥交給宿主，元件不發起請求。下面的 FileTree 把你提供的行渲染成檔案樹：
 
 ```tsx
+import { useState } from 'react';
+import {
+  FileTree,
+  type FileTreeRow,
+} from '@openviking/react/components/file-tree';
+import '@openviking/react/components/file-tree/style.css';
+
+const rows: FileTreeRow[] = [
+  {
+    kind: 'entry',
+    id: 'viking://resources',
+    uri: 'viking://resources',
+    name: 'resources',
+    type: 'directory',
+    depth: 0,
+    expanded: true,
+  },
+  {
+    kind: 'entry',
+    id: 'viking://resources/intro.md',
+    uri: 'viking://resources/intro.md',
+    name: 'intro.md',
+    type: 'file',
+    depth: 1,
+  },
+];
+
+export function Tree() {
+  const [selectedId, setSelectedId] = useState<string>();
+  return (
+    <div style={{ height: 320 }}>
+      <FileTree
+        rows={rows}
+        selectedId={selectedId}
+        search={false}
+        refresh={false}
+        operations={{ select: async (row) => setSelectedId(row.id) }}
+      />
+    </div>
+  );
+}
+```
+
+FileTree 的高度是父容器的 100%，所以外層要設定高度。示例沒有提供搜尋和重新整理的實現，用 `search={false}` 和 `refresh={false}` 隱藏了這兩個入口。
+
+匯入規則：
+
+- 元件和它的型別從 `@openviking/react/components/<名稱>` 匯入，例如 `file-tree`，每個元件的確切路徑見它頁面的「引入」。
+- 根入口 `@openviking/react` 也匯出元件本體和主 Props 型別，例如 `FileTree` 和 `FileTreeProps`；其餘型別只從子路徑匯入。
+- FilePreview 是例外：它依賴可選 peer `@ark-design/ui`，只從 `@openviking/react/components/file-preview` 子路徑匯出，不在根入口裡。
+
+## 使用一個區塊
+
+FileBrowser 和 Console 自己讀取 OpenViking 原生 API，需要放在 `OpenVikingProvider` 內，由 Provider 提供服務地址和憑證。下面以 FileBrowser 為例：
+
+```tsx
+import { OpenVikingProvider } from '@openviking/react/client';
 import { FileBrowser } from '@openviking/react/modules/file-browser';
 import '@openviking/react/modules/file-browser/style.css';
 
-<FileBrowser locale="zh-CN" />;
-```
-
-兩個模組的 props 已定型——請求配置、受控狀態、回撥、插槽與文案——但佔位元件本體仍只消費 `className`、`style` 與一個文案欄位，且均無需 Provider。可執行示例與完整屬性表見[業務模組](../modules/)。
-
-業務模組將按具體能力組合取數 Hook 與檢視，從對應模組入口匯出元件和必要型別，Hook 為內部實現。認證、帳號作用域、路由、許可權及完整頁面流程由宿主負責。當前不提供業務無頭 Hook 公開入口。
-
-模組規劃聚焦個人終端：`file-browser` 將目錄、搜尋和預覽作為一個整體，統一維護資源選擇、結果定位、內容載入與重新整理聯動；宿主可按需受控指定當前資源。`console` 將對話檢視與 TUI 作為一個互動面板，內部協調模式切換、工具欄和公共上下文，各自保留會話與命令狀態。Agent 接入作為獨立能力接入。宿主負責模組間佈局、導航與聯動；產品引導、資源與 Skill 匯入流程及同步配置由宿主負責，經驗看板和會話內容通過檔案瀏覽模組的預覽擴充套件接入，管理後臺不在此範圍內。這些互動仍為規劃，當前模組元件僅展示佔位內容。
-
-請求配置通過 `@openviking/react/client` 的 `OpenVikingProvider` 下發：`baseURL` 與身份欄位（`apiKey`、`accountId`、`userId`、`resourceId`），請求頭由 Client 組裝。請求客戶端已作為 `@openviking/react/client` 子路徑落地：基於 `fetch` 的 `createOvClient`，以及 `OvRequestOptions`、`OvClient` 與 `OvClientError`。模組可通過 `requestOptions` 按欄位覆蓋，優先順序為區域性配置、最近的 Provider、庫預設值；`baseURL` 為空表示同源請求。標準 API 接入無需逐模組實現 Adapter，非標準閘道器集中在宿主請求接入層適配。取數與狀態 Hook 均內建，不提供無頭公開介面。
-
-## 樣式
-
-樣式使用 `ov-` 字首的穩定類名，變數使用 `--ov-ui-` 字首，不引入全域性 reset。JavaScript 匯入不會自動載入 CSS；按需選擇整包、分類集合或獨立樣式：
-
-```ts
-import '@openviking/react/style.css';
-// 也可選擇 @openviking/react/components/style.css
-// 或 @openviking/react/modules/style.css。
-// 獨立入口：@openviking/react/<分類>/<模組>/style.css。
-```
-
-Rslib 將 ESM JavaScript、TypeScript 宣告和 CSS 輸出到 `packages/react/dist/`。每個公開樣式入口可獨立使用；模組樣式當前覆蓋佔位檢視，組合檢視遷入後須包含其元件依賴。
-
-### 主題
-
-顏色來自包級主題基線 `--ov-ui-color-*`（定義在 `packages/react/src/theme.css`），取值對齊 OpenViking 控制台的設計規範。所有元件私有變數都從基線派生，因此改基線即可整體換膚：
-
-```css
-.my-workbench {
-  --ov-ui-color-primary: #5252ff;
-  --ov-ui-color-bg-5: #f1f2f9;
-  --ov-ui-color-border-2: #e1e4f2;
+export function Browser({ apiKey }: { apiKey: string }) {
+  return (
+    <OpenVikingProvider baseURL="https://ov.example.com" apiKey={apiKey}>
+      <div style={{ height: 600 }}>
+        <FileBrowser />
+      </div>
+    </OpenVikingProvider>
+  );
 }
 ```
 
-暗色只認宿主放在 `<html>` 上的 `.dark` 類，不讀 `prefers-color-scheme`——系統偏好可能與宿主實際呈現的主題不一致。基線自帶一套暗色取值，宿主切換 `.dark` 即可生效；需要精確配色時整組覆蓋。
+- `baseURL` 是服務地址，不含 `/api/v1`。
+- FileBrowser 的高度是父容器的 100%，外層要設定高度。
+- FileBrowser 預覽檔案內容需要先安裝可選 peer 依賴 `@ark-design/ui`，見上文「安裝」。
+- 登入、帳號作用域和路由由宿主負責。
+- 其餘身份欄位、`requestOptions` 和各區塊的規則見[區塊](../modules/)。
 
-只想調整單個元件時，覆蓋它的 `--ov-ui-<元件>-*` 變數，或直接指定類名：
+## 主題
+
+元件的顏色讀取 `--ov-ui-color-*` 變數。庫本身不定義這些變數：在應用根節點或任意祖先元素上設定它們，元件就使用你的值；沒有設定時，元件使用內建的預設色。
 
 ```css
 .my-workbench {
-  --ov-ui-radius: 4px;
+  --ov-ui-color-primary: #0f766e;
+  --ov-ui-color-bg-5: #eef5f4;
+  --ov-ui-color-border-2: #d4e4e1;
 }
+```
 
+寫在 `:root` 上則對整個應用生效。帶有「主題變數」一節的元件頁會列出該元件讀取的變數。
+
+暗色只認 `<html>` 上的 `.dark` 類，不讀 `prefers-color-scheme`，因為系統偏好可能與你的應用實際呈現的主題不一致。出現 `.dark` 後，元件自動切換到內建的暗色預設值。你設定的變數在亮色和暗色下都生效，需要暗色專用的值時，在 `.dark` 下再宣告一次：
+
+```css
+.dark .my-workbench {
+  --ov-ui-color-primary: #5eead4;
+}
+```
+
+只想調整單個元件時，覆蓋它的 `--ov-ui-<元件>-*` 變數。這些變數宣告在元件的根元素上，設定在祖先元素上不會生效，要寫在元件自己的選擇器上：
+
+```css
 .my-workbench .ov-file-tree {
   --ov-ui-file-tree-row-height: 28px;
-  width: 320px;
 }
 ```
 
-## 構建與檢查
+## 下一步
 
-在 `frontend/` 中執行：
-
-```bash
-npm run lint
-npm run typecheck
-npm test
-npm run build
-npm run preview
-```
-
-`lint` 先構建元件庫，再通過 Rslint 檢查程式碼規則與型別，並使用 Prettier 檢查格式。`typecheck` 檢查元件庫、構建配置與文件 TypeScript 專案。`test` 構建元件庫並驗證公開包入口。`build` 生成元件庫和靜態文件，站點輸出到 `docs/doc_build/`。
-
-在 `npm run lint --` 後傳入檔案或加引號的 glob，可限定格式檢查和 lint 的目標；型別檢查仍覆蓋配置的完整專案。JavaScript 和 TypeScript 檔案最多 200 行，不計空行和純註釋行。
-
-## 部署
-
-`frontend/` 下的變更觸發 UI 檢查。在 `main` 上，現有產品文件部署會將 UI 站點合併到同一完整產物或儲存桶的 `/ui/` 路徑。npm 釋出使用獨立的標籤觸發流程，本地構建與測試不會發布包。
-
-## 內建文案與語言切換
-
-元件和模組採用本地的型別化中英文語言包，共用輕量解析規則。譯文在各自目錄就近維護，不依賴宿主的 i18next 或翻譯平臺。已有 `labels` 的未定義項繼承當前語言；空字串保留為顯式覆蓋。
-
-獨立使用 `useConsole`、`useFileBrowser` 時可傳入 `locale`；省略時繼承最近的 Provider，否則預設 `en-US`。切換語言會更新庫生成的提示、命令幫助和摘要標題，不重新發起請求，也不清空會話或草稿；服務端正文、錯誤原文和 AI 回覆保持原值。
-
-### 語言繼承
-
-在 `OpenVikingProvider` 上統一設定 `locale`，元件、組合模組 均可省略該屬性。模組 Props 覆蓋 Provider，作用於模組內建檢視和宿主插槽；元件顯式 Props 再覆蓋模組。巢狀 Provider 省略時繼承外層，顯式指定時覆蓋。全鏈路均未配置時預設 `en-US`，`labels` 仍可逐項覆蓋文案。
-
-示例使用固定離線服務。切換三個選擇框，再提交 `ov read`，可對比錯誤提示的語言。語言變化保留請求、記錄、草稿和服務端原文。
-
-```tsx file="../../_demos/locale-inheritance.tsx" preview
-
-```
+- [業務元件總覽](../components/)：全部業務元件的簡介和用法。
+- [區塊](../modules/)：`OpenVikingProvider`、`requestOptions` 和各區塊。
+- [國際化](./i18n)：用 `locale` 切換語言，用 `labels` 覆蓋文案。

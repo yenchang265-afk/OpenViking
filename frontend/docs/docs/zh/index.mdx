@@ -2,20 +2,20 @@
 pageType: home
 hero:
   name: OpenViking UI
-  text: 讓智慧體的上下文看得見。
-  tagline: 面向 OpenViking AI 應用介面的 React 基礎，提供構建工具、文件設施與 UI 開發約定。
+  text: OpenViking 的 React 元件庫
+  tagline: 檔案樹、檔案預覽、命令控制台、對話、登入表單和看板，用來搭建 OpenViking 應用的介面。
   actions:
     - theme: brand
       text: 快速開始
       link: /guide/getting-started
     - theme: alt
-      text: 瀏覽元件
+      text: 瀏覽業務元件
       link: /components/
 features:
-  - title: 把上下文帶到介面中
-    details: 圍繞 OpenViking 以檔案組織的知識、記憶與技能，構建供使用者檢視和操作的應用介面。
-  - title: 從開發基礎開始
-    details: 使用 Rslib 構建、雙語文件、分層目錄與區域性樣式約定，在此基礎上實現應用的業務介面。
-  - title: 接入你的應用
-    details: 按需使用 FileTree、FilePreview 與檔案型別圖示；資料、認證與業務流程由應用負責。
+  - title: 業務元件
+    details: FileTree、FilePreview、CommandConsole、VikingBot、認證表單和看板等純檢視，資料由你傳入，元件不發起請求。
+  - title: 區塊
+    details: FileBrowser 和 Console 在 OpenVikingProvider 內讀取 OpenViking 原生 API，直接得到檔案瀏覽和命令面板。
+  - title: 按需引入
+    details: 執行 npm install @openviking/react，再引入需要的元件和樣式；每個業務元件和區塊都有獨立的子路徑，支援 React 18.2 和 19。
 ---
