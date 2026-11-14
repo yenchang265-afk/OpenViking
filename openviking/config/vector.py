@@ -45,6 +45,7 @@ BACKEND_CONNECTIONS = frozenset(
         "url",
         "cuvs",
         "opengauss",
+        "pgvector",
         "elasticsearch",
         "custom_params",
     }

@@ -55,6 +55,7 @@ const DIRS: Record<string, Entry[]> = {
     { uri: 'viking://agent', isDir: true },
     { uri: 'viking://resources', isDir: true },
     { uri: USER, isDir: true },
+    { uri: 'viking://system', isDir: true },
   ],
   [USER]: [
     { uri: MEMORIES, isDir: true },
@@ -208,7 +209,9 @@ export function offlineFetch(
       if (query?.trim().toLowerCase() === 'error')
         return Promise.resolve(searchFailure());
       return Promise.resolve(
-        ok(semanticSearch(query ?? '', Object.values(DIRS).flat(), USER)),
+        ok(
+          semanticSearch(query ?? '', Object.values(DIRS).flat(), USER, FILES),
+        ),
       );
     }
     case '/api/v1/search/grep': {

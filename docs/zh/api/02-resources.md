@@ -181,7 +181,7 @@ Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源�
 | instruction | string | 否 | "" | 語義提取的處理指令（實驗特性） |
 | wait | bool | 否 | False | 是否等待語義處理和向量化完成才返回 |
 | timeout | float | 否 | None | 已廢棄：僅為相容舊請求保留，傳入值會被忽略；HTTP 超時使用客戶端配置 |
-| strict | bool | 否 | False | 是否使用嚴格模式 |
+| strict | bool | 否 | False | 嚴格掃描/解析；false 僅首次原生匯入可部分成功，更新不完整始終失敗 |
 | ignore_dirs | string | 否 | None | 要忽略的目錄名（逗號分隔） |
 | include | string | 否 | None | 包含的文件模式（glob） |
 | exclude | string | 否 | None | 排除的文件模式（glob） |
@@ -225,13 +225,43 @@ Connector 要求精確的 `to` 目標，不支援 `wait=true`。`tos://` 來源�
 - Connector 匯入設定 `is_active=false` 時會在提交前建立暫停狀態的 Watch；原生 Git 匯入會通過資源佇列透傳 `is_active`，解析出最終資源 URI 後再建立 Watch。兩種情況下首次匯入均執行一次，週期排程保持關閉。
 - Watch task 的憑據狀態（例如 Git `args.auth_config`）儲存在內部控制檔案 `viking://resources/.watch_tasks.json` 中，不會出現在 watch API/MCP/CLI 返回裡。若啟用了 VikingFS 檔案加密，該控制檔案會靜態加密；否則服務端控制檔案中會包含這些明文私有狀態。
 - 本地目錄輸入會遵循 `.gitignore`（根目錄和子目錄，標準 Git 語義）；`ignore_dirs`、`include`、`exclude` 會在此基礎上進一步過濾。
-- 目錄匯入僅在至少一個入選檔案成功時採用 best-effort：失敗檔案寫入 `meta.failed_files`，成功檔案正常提交。巢狀 ZIP 的葉子失敗使用 `bundle.zip/path/to/file` 形式的歸檔限定路徑，並保留遠端任務 ID。如果沒有任何檔案成功，或篩選後沒有可處理檔案，任務會失敗且不會保留空資源目錄。
+- 首次非嚴格原生目錄匯入僅在至少一個入選檔案成功時允許部分成功：失敗檔案寫入 `meta.failed_files`，成功檔案正常提交。巢狀 ZIP 的葉子失敗使用 `bundle.zip/path/to/file` 形式的歸檔限定路徑，並保留遠端任務 ID。如果沒有任何檔案成功，或篩選後沒有可處理檔案，任務會失敗且不會保留空資源目錄。
 - `args.parse_mode=no_split` 仍呼叫正常的格式 Parser。PDF、Word、PowerPoint、HTML 等受支援文件會轉換為 Markdown，但跳過按標題、段落和長度拆分。目錄匯入會對每個受支援文件分別應用該規則，並繼續遵循 `.gitignore`、篩選引數和 `preserve_structure`。該模式下，配置為走 Understanding 的目錄檔案會回退到對應的原生 Parser；沒有原生解析能力的檔案會寫入 `meta.failed_files`，但不會阻止其他入選檔案成功匯入。
 - 對單檔案輸入使用 `no_split` 時，如果解析結果恰好只有一個可見檔案且未指定 `to`，該檔案會直接放到解析出的父目錄下（例如 `guide.md` 寫入 `viking://resources/guide.md`），不會建立同名上層目錄，也不會生成目錄級 `.abstract.md` / `.overview.md`。如果解析結果還包含圖片等其他可見檔案，則保留上層目錄。顯式指定的 `to` 始終作為最終 URI 原樣保留。
 - `no_split` 只改變 Markdown 正文的儲存佈局，不改變語義處理、檔案向量化和內部 embedding 分塊。Markdown 相對連結會按同一個 no-split 輸出佈局解析，不會再指向僅拆分模式存在的路徑。該模式下不會為目錄檔案呼叫 Understanding。
 - 如果要直接建立或更新純文本內容，請使用 [content/write](12-content.md#write)，不要使用 `add_resource`。資源匯入和內容寫入後都會自動重新整理語義與 embedding。
 
 #### 3. 使用示例
+
+##### 非嚴格首次匯入
+
+僅對新目標的首次原生匯入，`strict=false`（預設）允許部分文件失敗時提交成功部分，
+返回 `status="partial"`、`import_complete=false`、`failed_files`。
+`strict=true` 拒絕殘缺首次匯入；主動過濾和不支援格式沿用既有掃描語義，不新增策略引數。
+
+**已有資源更新保持原規則：**存在實際讀取/解析失敗項時，即使 strict=false 也不提交
+本輪成功部分，不刪除、隔離或重建舊目錄及索引；舊正文、標籤、目標/子項 ACL 和祖先
+摘要保持不變。完整更新走原流程。本次不提供源撤權後的自動舊資料清理。
+
+首次判定針對最終目標 URI，在目標鎖核心對：本次任務擁有新預約、目標無業務/摘要內容、
+當前帳戶目標範圍無殘留索引/ACL。不查詢已完成 Task 或 Watch 既往執行記錄；
+舊正文、後設資料及索引/ACL 全部刪除後，同 URI 可重新預約並部分匯入。
+舊空目錄、檔案已刪但索引還在、上次部分成功後的補齊都屬於更新；索引查詢失敗不放行，
+build_index=false 同樣檢查。
+
+認證失敗、根節點不可訪問、零成功文件仍失敗。非同步受理不等於匯入完成，需要讀取 Task。
+Watch 首次部分成功不推進源 checkpoint；後續重新整理屬於更新，不完整就失敗。
+不承諾跨儲存原子事務或回滾；委託 Connector 繼續沿用既有外部處理行為。
+
+```python
+await client.add_resource(
+    "https://github.com/example/docs",
+    to="viking://resources/new-docs",
+    options={"strict": False, "watch_interval": 60},
+)
+```
+
+CLI 預設非嚴格首次匯入，--strict 要求完整；REST 用既有 strict 欄位，MCP 預設非嚴格。
 
 以下示例使用預設非同步模式，不設定等待引數。提交後儲存 `task_id`，通過 [任務 API](17-tasks.md) 查詢狀態；只有任務為 `completed` 時，才讀取摘要或檢索本次匯入的內容。
 

@@ -141,7 +141,9 @@ class ExternalTaskProvider(Protocol):
     task_type: str
     task_id_prefix: str
 
-    def serialization_key(self, payload: Mapping[str, Any]) -> str | None: ...
+    def serialization_key(self, payload: Mapping[str, Any]) -> str | None:
+        """Return the provider's serial scheduling key, or None for independent deliveries."""
+        ...
 
     async def run(
         self,
@@ -256,8 +258,17 @@ class ExternalTaskService:
         return provider
 
     def _serialization_key(self, task: TaskRecord) -> tuple[str | None, str, str] | None:
-        key = self._provider(task.task_type).serialization_key(task.meta["request"])
-        return (task.account_id, task.task_type, key) if key is not None else None
+        target = self._provider(task.task_type).serialization_key(task.meta["request"])
+        return (task.account_id, task.task_type, target) if target is not None else None
+
+    def queue_serial_key(self, task: TaskRecord) -> str | None:
+        """Scope an explicit provider key across users of the same account."""
+        key = self._serialization_key(task)
+        if key is None:
+            return None
+        account_id, task_type, target = key
+        scope = [account_id, task_type, "target", target]
+        return json.dumps(scope, ensure_ascii=False, separators=(",", ":"))
 
     async def restore_tasks(self, tasks: Iterable[TaskRecord]) -> None:
         """Reserve submitted work before any recovered queue delivery can run."""
@@ -396,6 +407,7 @@ class ExternalTaskService:
                         "account_id": ctx.account_id,
                         "user_id": ctx.user.user_id,
                     },
+                    serial_key=self.queue_serial_key(task),
                 )
             enqueued = True
             current = await tracker.get(
@@ -456,6 +468,7 @@ class ExternalTaskService:
                         "account_id": ctx.account_id,
                         "user_id": ctx.user.user_id,
                     },
+                    serial_key=self.queue_serial_key(task),
                 )
 
     async def execute(self, task_id: str, account_id: str, user_id: str) -> bool:

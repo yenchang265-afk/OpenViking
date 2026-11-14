@@ -350,6 +350,7 @@ class DirectoryParser(BaseParser):
                             "ok": False,
                             "meta": error_meta if isinstance(error_meta, dict) else {},
                             "error": str(error),
+                            "error_code": str(getattr(error, "code", "")),
                         }
                     else:
                         try:
@@ -376,6 +377,7 @@ class DirectoryParser(BaseParser):
                                 "ok": False,
                                 "meta": getattr(sub_result, "meta", {}) or {},
                                 "error": str(exc),
+                                "error_code": str(getattr(exc, "code", "")),
                             }
                 elif job["native_parser_unavailable"]:
                     error = (
@@ -602,6 +604,8 @@ class DirectoryParser(BaseParser):
                     entry[key] = meta[key]
         if detail.get("error"):
             entry["error"] = str(detail["error"])
+            if detail.get("error_code"):
+                entry["error_code"] = detail["error_code"]
         return entry
 
     @staticmethod
@@ -747,7 +751,7 @@ class DirectoryParser(BaseParser):
         if preserve_structure:
             parent = str(PurePosixPath(classified_file.rel_path).parent)
             dest = (
-                    _normalize_output_target(f"{target_uri}/{parent}", target_writer)
+                _normalize_output_target(f"{target_uri}/{parent}", target_writer)
                 if parent != "."
                 else target_uri
             )
@@ -861,6 +865,7 @@ class DirectoryParser(BaseParser):
                     "ok": False,
                     "meta": meta if isinstance(meta, dict) else {},
                     "error": str(exc),
+                    "error_code": str(getattr(exc, "code", "")),
                 }
         else:
             try:

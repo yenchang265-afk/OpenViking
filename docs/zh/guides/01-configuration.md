@@ -1620,8 +1620,9 @@ Redis 名稱空間。
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `provider` | str | `filesystem`、`memory`、`sqlite` 或 `cache`；`cache` 複用 Redis CacheRuntime | `filesystem` |
+| `provider` | str | `filesystem`、`memory`、`sqlite`、`postgres` 或 `cache`；`postgres` 直連 PostgreSQL，`cache` 複用 Redis CacheRuntime | `filesystem` |
 | `sqlite_path` | str / null | 可顯式覆蓋本地共享鎖資料庫的絕對路徑。見 [SQLite 配置](../configuration/01-server.md#storage) | 使用 `sqlite` 時為 `{storage.workspace}/_system/pathlock/pathlock.db` |
+| `postgres_dsn_env` | str / null | `postgres` 必填；儲存 PostgreSQL DSN 的環境變數名。見 [PostgreSQL 配置](../configuration/01-server.md#postgresql-pathlock) | `null` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數；不得小於 `1.0` | `30.0` |
 | `lock_timeout_secs` | float | 已廢棄且忽略；執行時等待超時固定為 `0.0` | `0.0` |
 
@@ -1630,7 +1631,35 @@ SQLite PathLock 僅適用於同一主機上的程序共享同一個本地磁碟�
 workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
 詳見 [SQLite 部署限制](../configuration/01-server.md#storage)。
 
-多個容器或主機共享 EFS 時，使用下面的共享 Redis PathLock 配置。
+不使用 Redis 的多程序或多主機 PathLock 協調，可將下面片段合入 `ov.conf`，
+並在每個服務和 worker 啟動前設定對應環境變數：
+
+```json
+{
+  "service_name": "production",
+  "storage": {
+    "agfs": {
+      "pathlock": {
+        "provider": "postgres",
+        "postgres_dsn_env": "OV_POSTGRES_DSN",
+        "lock_expire_secs": 30.0
+      }
+    }
+  }
+}
+```
+
+```sh
+export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=openviking password=YOUR_PASSWORD sslmode=require'
+```
+
+所有參與者必須連線同一可寫 PostgreSQL 主庫，使用相同的頂層 `service_name`
+和過期時長。PostgreSQL PathLock 獨立於 `cache.provider/cache.params`，
+不會啟用 CacheFS，也不會改變 QueueFS、業務檔案儲存或向量後端的併發限制。
+特別是預設 SQLite 佇列不適合在 EFS 上跨主機共享。
+配置和驗證步驟見 [PostgreSQL PathLock 配置](../configuration/01-server.md#postgresql-pathlock)。
+
+多個容器或主機共享 EFS 時，也可使用下面的共享 Redis PathLock 配置。
 所有副本必須連線同一個 Redis 部署，並使用相同的頂層 `service_name` 和鎖過期配置。
 示例同時使用 Redis QueueFS 和 coordination，避免 SQLite 狀態落在 EFS。
 
@@ -1671,7 +1700,7 @@ workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
 }
 ```
 
-標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
+標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。只要這些模組都沒有選擇 cache Provider，就不解析 `cache.params`，也不連線 CacheRuntime；PathLock 使用 PostgreSQL 時同樣如此。
 
 請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，用頂層 `service_name` 生成共享 Redis 名稱，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
 
@@ -1943,7 +1972,7 @@ MySQL／MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（兩者的預設值）
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `backend` | str | VectorDB 後端型別: 'local'（基於檔案）, 'http'（遠端服務）, 'cuvs'（本地儲存 + GPU dense search）、'opengauss'（openGauss DataVec）或 'elasticsearch'（Elasticsearch 8.x） | "local" |
+| `backend` | str | VectorDB 後端型別: 'local'（基於檔案）, 'http'（遠端服務）, 'cuvs'（本地儲存 + GPU dense search）、'opengauss'（openGauss DataVec）、'pgvector'（PostgreSQL）或 'elasticsearch'（Elasticsearch 8.x） | "local" |
 | `name` | str | VectorDB 的集合名稱 | "context" |
 | `url` | str | 'http' 型別的遠端服務 URL（例如 `http://localhost:5000`） | null |
 | `project_name` | str | 專案名稱（別名 project） | "default" |
@@ -1952,6 +1981,7 @@ MySQL／MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（兩者的預設值）
 | `sparse_weight` | float | 混合向量搜尋的稀疏權重，僅在使用混合索引時生效 | 0.0 |
 | `elasticsearch` | object | 'elasticsearch' 後端的配置，見下文 | - |
 | `cuvs` | object | NVIDIA cuVS 配置，也用於在 'local' 下顯式開啟視訊記憶體感知自動模式，參見 [cuVS 使用指南](./16-cuvs.md) | - |
+| `pgvector` | object | PostgreSQL 連線池和 flat/HNSW 引數，參見 [pgvector 使用指南](./25-pgvector.md) | - |
 
 預設使用本地模式
 ```
@@ -2280,7 +2310,7 @@ ov add-resource ./docs --exclude "*.tmp"
 | `port` | int | 繫結埠 | `1933` |
 | `auth_mode` | str / null | 內建模式：`"dev"`、`"api_key"`、`"trusted"`、`"oidc"`、`"ldap"`。省略或設為 null 時，有非空 `root_api_key` 則推導為 `api_key`，否則為 `dev`。 | `null` |
 | `root_api_key` | str | `api_key` 模式必填的 Root API Key；`trusted` 模式在所有部署中均必填，包括 localhost，不負責解析普通使用者身份 | `null` |
-| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"`、`"mysql"` 和 `"redis_mysql"`；統一持久化 Account、User、Group 和 API Key。`"file"` 相容現有 AGFS JSON 登錄檔，並由 Provider 自身維護程序內查詢索引。`"redis_mysql"` 保持 MySQL 為權威儲存，並增加共享 Redis 認證和請求身份讀取快取。 | `"file"` |
+| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"`、`"mysql"`、`"postgres"` 和 `"redis_mysql"`；統一持久化 Account、User、Group 和 API Key。`"file"` 相容現有 AGFS JSON 登錄檔，並由 Provider 自身維護程序內查詢索引。`"postgres"` 直接使用 PostgreSQL。`"redis_mysql"` 保持 MySQL 為權威儲存，並增加共享 Redis 認證和請求身份讀取快取。 | `"file"` |
 | `account_store.params` | object | Provider 啟動引數。不能通過這裡覆蓋框架注入的 VikingFS 和 File Provider API Key Hash 配置。 | `{}` |
 | `account_store.params.read_only` | bool | 僅 File Provider。只讀取 writer 已建立的登錄檔，啟動時不寫鎖、不初始化、不遷移憑據，並拒絕身份變更。副本資料盤仍保持只讀掛載，設定 `reconcile_system_assets_on_startup=false`；開啟 `api_key_watch_enabled` 感知 writer 的變更。登錄檔缺失時拒絕啟動。 | `false` |
 | `profile_enabled` | bool | 是否允許 HTTP 請求通過 `profile=1` 開啟請求級 cProfile。關閉時服務端會忽略該請求引數；開啟後，CLI 可以顯示返回的 `profile`，而 Python HTTP client 預設只觸發服務端 profile，不會把頂層 `profile` 欄位自動附著到大多數 SDK 返回值上。 | `false` |
@@ -2333,6 +2363,48 @@ schema 變更按順序存放於 `openviking/server/account_stores/sql/changes/`�
   }
 }
 ```
+
+PostgreSQL Account Store 使用 `postgres` provider，安裝 `pip install 'openviking[postgres]'`。
+它直接通過 psycopg 3 和 SQLAlchemy 連線 PostgreSQL，無需 Redis 或 pgvector。
+先由遷移帳號執行
+`openviking/server/account_stores/sql/postgres/init.sql`，啟動不會建立或遷移表。
+執行帳號需要目標 schema 的 `USAGE`、五張 `ov_accounts*` 表的
+`SELECT, INSERT, UPDATE, DELETE` 和三個主鍵序列的 `USAGE, SELECT`，
+無需表所有權或 schema `CREATE` 許可權。新部署首次啟動會建立 `default` 帳號。
+
+```json
+{
+  "service_name": "production",
+  "server": {
+    "account_store": {
+      "provider": "postgres",
+      "params": {
+        "host": "db.example.com",
+        "port": 5432,
+        "user": "openviking",
+        "password": "secret",
+        "database": "openviking",
+        "maxsize": 10,
+        "connect_timeout": 10,
+        "sslmode": "verify-full",
+        "sslrootcert": "/etc/ssl/certs/postgres-ca.pem",
+        "credential_storage": "hash"
+      }
+    }
+  }
+}
+```
+
+`service_name` 是必填的部署隔離邊界，同庫部署應使用不同值。
+PG 憑證儲存支援與 MySQL 相同的 `hash` 和 `encrypted` 模式及
+`credential_encryption_key`，不儲存明文。`maxsize` 是每個 Store 例項的連線池上限
+（預設 10）；`connect_timeout` 是建連超時秒數（預設 10）。`password` 可省略，
+使用 libpq 支援的認證方式；`host` 也可填寫 Unix socket 目錄。
+`sslmode` 預設 `prefer`，還支援 `disable`、`allow`、`require`、`verify-ca`、
+`verify-full`，客戶端證書可通過 `sslcert` / `sslkey` 配置。
+跨例項認證直接讀取 PG 最新已提交狀態；使用者分頁及統計使用同一 MVCC 快照。
+已有 File/MySQL 帳號資料不會自動遷移。此設定僅替換 Account Store；
+Task、Work 和 Watch 的儲存配置分別獨立。
 
 `redis_mysql` 需要安裝 `redis-mysql` extra。`mysql` 部分使用與 MySQL provider
 相同的引數；`cache` 部分沿用頂層快取的 `provider/params` 結構，支援
@@ -2709,7 +2781,7 @@ Task 記錄檔案位於所屬帳號的系統目錄：
       }
     },
     "vectordb": {
-      "backend": "local|cuvs|http|opengauss|elasticsearch",
+      "backend": "local|cuvs|http|opengauss|pgvector|elasticsearch",
       "url": "string",
       "project": "string"
     }

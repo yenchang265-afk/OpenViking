@@ -95,7 +95,7 @@ description: 建立上下文配置，決定 OpenViking 閘道器為每個閘道�
 - 下一條使用者訊息到達時，上一輪就會儲存。**最新回覆等待時長**針對的是最後一輪，這樣短對話也能被提交。
 - 會話中待提交的內容達到**提交閾值**時提交一次。每次提交後，OpenViking 在後臺提取記憶。
 - 提交後，會話中保留最新的若干完整輪次，至少包含**保留最近訊息**條訊息。
-- OpenViking 預設提取所有已啟用的[記憶型別](../api/16-memory.md)。只提取其中一部分時，用管理 API 或 `X-OpenViking-Context` 請求頭把 `capture_memory_types` 設為這些型別的名稱，例如 `["preferences","events"]`；設為空列表時只儲存對話，不提取記憶。Studio 中沒有這項設定，在 Studio 中儲存配置時保留原值。OpenViking 不認識的名稱會使儲存失敗，見[配置參考](13-configuration.md#profile-saving)。
+- OpenViking Server 0.5.0 及以上版本預設繼承使用者的記憶策略，包括[記憶型別](../api/16-memory.md)限制。要為會話策略指定型別，用管理 API 或 `X-OpenViking-Context` 請求頭把 `capture_memory_types` 設為這些型別的名稱，例如 `["preferences","events"]`；設為空列表時只儲存對話，不提取記憶。Studio 中沒有這項設定，在 Studio 中儲存配置時保留原值。OpenViking 不認識的名稱會使儲存失敗，見[配置參考](13-configuration.md#profile-saving)。
 
 ## 長對話和 OpenViking 工具 {#long-conversations-and-tools}
 

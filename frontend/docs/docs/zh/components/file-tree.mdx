@@ -25,7 +25,7 @@ import '@openviking/react/components/file-tree/style.css';
 
 ```
 
-示例使用離線模擬資料：行尾的看板圖示由 `renderDashboard` 提供，檔案型別圖示由 `renderRowIcon` 提供，搜尋只顯示 `onSearch` 事件，不開啟搜尋介面。勾選「宿主控制 loading」可單獨檢視受控的重新整理載入態。
+示例使用離線模擬資料：行尾的看板圖示由 `renderRowTrailing` 提供，檔案型別圖示由 `renderRowIcon` 提供，搜尋只顯示 `onSearch` 事件，不開啟搜尋介面。勾選「宿主控制 loading」可單獨檢視受控的重新整理載入態。
 
 ## API
 
@@ -45,7 +45,7 @@ import '@openviking/react/components/file-tree/style.css';
 | refresh                 | 顯示內建重新整理按鈕，`false` 隱藏，`disabled` 停用，`loading` 由宿主控制載入態             | `boolean \| { disabled?: boolean; loading?: boolean }` | `true`                      |
 | loading                 | 重新整理按鈕的受控載入態，與重新整理 Promise、`refresh.loading` 合併，不影響已有行          | `boolean`                                              | `false`                     |
 | getRowAttributes        | 為每一行（包括載入、分頁等狀態行）追加 HTML 屬性，`className` 和 `style` 與元件自身的合併   | `(row: FileTreeRow) => HTMLAttributes<HTMLDivElement>` | -                           |
-| renderDashboard         | 渲染行尾指示器，例如看板入口，返回 `null` 時不顯示，內容和點選行為由宿主決定                | `(row: FileTreeEntryRow) => ReactNode`                 | -                           |
+| renderRowTrailing       | 渲染行尾標記，例如看板入口或狀態角標，返回 `null` 時不顯示，內容和點選行為由宿主決定        | `(row: FileTreeEntryRow) => ReactNode`                 | -                           |
 | renderRowIcon           | 渲染檔案行的行首圖示，目錄行始終使用內建資料夾圖示，返回 `null` 時使用內建檔案圖示          | `(row: FileTreeEntryRow) => ReactNode`                 | 內建檔案圖示                |
 | renderRowTooltip        | 渲染行的懸停浮層，提供後不再顯示內建的目錄說明，返回 `null` 時該行不顯示浮層                | `(row: FileTreeEntryRow) => ReactNode`                 | 按 `uri` 生成的內建目錄說明 |
 | onSelect                | 條目選中成功後觸發                                                                          | `(row: FileTreeEntryRow) => void`                      | -                           |
@@ -271,7 +271,7 @@ import '@openviking/react/components/file-tree/style.css';
 ### 選中、鍵盤與許可權
 
 - 點選目錄和點選檔案都呼叫 `operations.select`，宿主按 `row.type` 區分。點選展開箭頭只調用 `operations.toggleExpand`，不會選中。
-- `renderDashboard` 返回的內容在行內，點選會冒泡到行並觸發選中。需要獨立的點選行為時呼叫 `event.stopPropagation()`，示例中的看板圖示就是這樣處理的。
+- `renderRowTrailing` 返回的內容在行內，點選會冒泡到行並觸發選中。需要獨立的點選行為時呼叫 `event.stopPropagation()`，示例中的看板圖示就是這樣處理的。
 - 鍵盤：上下方向鍵移動焦點，右鍵展開目錄，左鍵摺疊目錄，Enter 和空格選中。
 - 樹使用 `role="tree"`，行使用 `role="treeitem"` 並輸出 `aria-level`（`depth` 加 1）、`aria-selected`、`aria-expanded` 和 `aria-disabled`，用 `aria-label` 給樹命名。
 - 許可權狀態由宿主提供，元件不發鑑權請求：`disabled` 的行不能選中和展開，`selectable: false` 的行不能選中但可以展開，`access` 只在行尾顯示文字標記，不改變行為。
@@ -323,7 +323,8 @@ treeRef.current?.scrollToRow('resources', { block: 'center' });
 - 樹的根元素高度為 `100%`，內容在樹內部滾動，需要給外層容器設定高度。
 - 行寬按內容撐開，名稱完整顯示，容器橫向滾動。層級很深時縮排同樣靠橫向滾動獲得空間。
 - 說明文字最寬 200px，超出省略，避免長說明撐寬整行。
-- `renderDashboard` 返回的內容緊跟在名稱和其他標記之後，要靠右對齊時給它設定 `margin-left: auto`，示例就是這樣做的。
+- Chromium 瀏覽器在各平臺使用統一的捲軸樣式：內容溢位時佔用 12px 空間，滑塊寬 8px，顏色採用 macOS 原生捲軸的淺色與暗色配色。懸停捲軸時顯示軌道和邊線，滑塊在淺色下懸停加深、暗色下懸停變亮。
+- `renderRowTrailing` 返回的內容顯示在行右端；行內還有層級、許可權等行尾標記時，它緊跟在這些標記之後。
 
 ## 主題變數
 
