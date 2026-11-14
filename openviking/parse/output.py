@@ -490,7 +490,6 @@ class LocalParseOutputStore(ParseOutputStore):
 
         def _copy() -> None:
             target.parent.mkdir(parents=True, exist_ok=True)
-            self._check_case_conflict(target)
             shutil.copyfile(local_path, target)
 
         await asyncio.to_thread(_copy)

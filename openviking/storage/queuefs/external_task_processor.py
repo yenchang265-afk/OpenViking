@@ -7,8 +7,8 @@ from __future__ import annotations
 import json
 from typing import Any, Dict, Optional
 
+from openviking.service import external_task_service
 from openviking.service.external_task_service import ExternalTaskService
-from openviking.service.task_tracker import get_task_tracker
 from openviking.storage.queuefs.named_queue import DequeueHandlerBase
 from openviking.storage.queuefs.process_result import ProcessResult
 
@@ -44,12 +44,12 @@ class ExternalTaskProcessor(DequeueHandlerBase):
         # Escaped execution/persistence errors leave this delivery open for recovery.
         if not await self._service.execute(task_id, account_id, user_id):
             return ProcessResult.retry()
-        task = await get_task_tracker().get(task_id, account_id=account_id, user_id=user_id)
+        # Resolve the tracker the service uses, so one patch point covers both.
+        tracker = external_task_service.get_task_tracker()
+        task = await tracker.get(task_id, account_id=account_id, user_id=user_id)
         if task is not None and task.error:
             return ProcessResult.failed(task.error)
-        if await get_task_tracker().is_cancellation_requested(
-            task_id, account_id=account_id, user_id=user_id
-        ):
+        if await tracker.is_cancellation_requested(task_id, account_id=account_id, user_id=user_id):
             return ProcessResult.cancelled()
         return ProcessResult.success()
 

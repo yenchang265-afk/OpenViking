@@ -1417,7 +1417,7 @@ def test_removed_vectordb_backends_are_rejected(backend):
 
     message = str(exc_info.value)
     assert f"'{backend}'" in message
-    assert "Must be one of: ['local', 'cuvs', 'http', 'opengauss', 'elasticsearch']" in message
+    assert "Must be one of: ['local', 'cuvs', 'http', 'opengauss', 'elasticsearch', 'pgvector']" in message
 
 
 def test_opengauss_backend_is_accepted_with_defaults():
