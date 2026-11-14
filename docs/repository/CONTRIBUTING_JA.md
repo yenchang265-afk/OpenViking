@@ -94,7 +94,7 @@ OpenVikingでは、焦点が絞られ、十分に理解された変更を重視�
 
 ### 前提条件
 
-- Python 3.11以上
+- Python 3.11.5以上
 - ソースビルド、Rust Binding、同梱`ov` CLIの開発にはRust 1.94.1以上
 - `sdk/go`の開発時のみGo 1.22以上
 - C++17対応コンパイラ：GCC 9以上またはClang 11以上
@@ -276,6 +276,17 @@ CIは影響するパスに応じてチェックを実行します。CIの成功�
 
 プロジェクトドキュメントは`docs/en/`と`docs/zh/`にあります。コード例は実行可能にし、
 明確で簡潔な表現を使用してください。対応する翻訳がある場合は両言語を更新してください。
+
+ページやサンプルを更新したら、リポジトリのルートでドキュメントを検証してください。
+
+```bash
+npm --prefix docs ci
+npm --prefix docs run check:docs
+npm --prefix docs run check:api
+npm --prefix docs run test:theme
+npm --prefix docs run docs:build
+python3 docs/scripts/check-built-anchors.py
+```
 
 ## コミュニティ
 

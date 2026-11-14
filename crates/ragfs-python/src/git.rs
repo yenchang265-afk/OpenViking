@@ -115,13 +115,15 @@ fn build_snapshot_log_store(
     match cfg.snapshot.log.provider.as_str() {
         "none" => Ok(None),
         "sqlite" => {
+            // Raw binding configurations predate SnapshotLog and have no workspace
+            // from which to derive its path. Keep their Git service usable without
+            // the optional index; server configurations resolve this path earlier.
+            let Some(path) = cfg.snapshot.log.sqlite.path.clone() else {
+                warn!("snapshot log sqlite path not configured; falling back to git scan");
+                return Ok(None);
+            };
             let handle = tokio::runtime::Handle::try_current().map_err(|_| {
                 PyRuntimeError::new_err("build_snapshot_log_store must run inside a tokio runtime")
-            })?;
-            let path = cfg.snapshot.log.sqlite.path.clone().ok_or_else(|| {
-                PyValueError::new_err(
-                    "git.snapshot.log.sqlite.path is required for sqlite provider",
-                )
             })?;
             match handle
                 .block_on(async move { ragfs::git::SqliteSnapshotLogStore::connect(&path).await })
@@ -796,8 +798,9 @@ mod tests {
         let mut cfg = local_cfg("/unused");
         cfg.backend = "agfs".into();
         cfg.local = None;
+        cfg.snapshot = Default::default();
         let svc = build_git_service(&cfg, fs).expect("build ok");
-        assert!(svc.is_some());
+        assert!(svc.unwrap().snapshot_log_store.is_none());
     }
 
     #[tokio::test]
@@ -812,9 +815,10 @@ mod tests {
     #[tokio::test]
     async fn build_git_service_local_returns_some() {
         let fs = Arc::new(MountableFS::new()) as Arc<dyn ragfs::core::FileSystem>;
-        let cfg = local_cfg("/tmp/ov-git-test-local");
+        let mut cfg = local_cfg("/tmp/ov-git-test-local");
+        cfg.snapshot = Default::default();
         let svc = build_git_service(&cfg, fs).expect("build ok");
-        assert!(svc.is_some());
+        assert!(svc.unwrap().snapshot_log_store.is_none());
     }
 
     #[tokio::test]

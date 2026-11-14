@@ -97,6 +97,8 @@ memory 僅協調同一個客戶端內的操作。租約有效期間，共享同�
 | `git.snapshot.log.provider` | `sqlite` | `snapshot/log?paths=...` 的路徑歷史索引 provider：`sqlite`、`mysql` 或 `none` |
 | `git.snapshot.log.sqlite.path` | `{storage.workspace}/_system/snapshot/log/snapshot_log.db` | 可選 SQLite 資料庫絕對路徑。留空時每個 workspace 使用自己的索引庫 |
 
+上述工作區預設路徑由 OpenViking 服務端解析。直接使用 RAGFS binding 配置時沒有工作區預設值：若省略 SQLite 路徑，快照功能仍可使用，路徑歷史會回退為掃描 Git 提交。這類呼叫方可設定明確的 SQLite 絕對路徑來啟用索引。
+
 > 通常把 `git.local.base_dir` 留空即可，讓快照資料自動落在工作區下的 `.ovgit` 目錄，便於和資源資料一起備份與遷移。
 
 ### S3 後端（推薦用於分散式/雲端部署）

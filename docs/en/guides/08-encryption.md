@@ -8,7 +8,7 @@ OpenViking can encrypt newly written files with account-specific keys. The stora
 
 - **Transparent encryption**: No API changes, application layer unaware
 - **Multi-tenant isolation**: Different accounts use independent keys
-- **Three key providers**: Local, Vault, Volcengine KMS
+- **Two key providers**: Local and Vault
 - **Backward compatible**: Unencrypted old files still readable
 
 See [Data Encryption](../concepts/10-encryption.md) for conceptual explanations.
@@ -148,7 +148,6 @@ Enable Argon2id one-way hashing to stop storing recoverable API key values:
 |----------|----------|------|------|
 | **Local** | Dev environments, single-node | Simple, no external services | Requires local secret permissions and separate key backups |
 | **Vault** | Production, multi-cloud | Enterprise-grade KMS, version control | Requires deploying and maintaining Vault |
-| **Volcengine KMS** | Volcengine cloud | Cloud-native KMS service | Volcengine-only |
 
 ---
 
@@ -218,7 +217,7 @@ two Local configurations.
   data unreadable.
 - Treat `ov.conf` as a key file: restrict it to the service user, back it up securely, and never
   commit it to version control.
-- Prefer Vault or KMS when production deployments need centralized secret management.
+- Prefer Vault when production deployments need centralized secret management.
 
 ---
 
@@ -318,71 +317,7 @@ For KV v1, replace `secret/data/openviking-encrypted-root-key` with `secret/open
 
 ## Volcengine KMS Mode Detailed Guide
 
-### Prerequisites
-
-1. Volcengine KMS service activated
-2. Symmetric key created
-3. Valid Access Key and Secret Key
-
-### Create KMS Key
-
-1. Visit [Volcengine KMS Console](https://console.volcengine.com/kms)
-2. Click "Create Key"
-3. Select "Symmetric Key", algorithm `AES_256`
-4. Record the Key ID
-
-### Configure OpenViking
-
-```json
-{
-  "encryption": {
-    "enabled": true,
-    "provider": "volcengine_kms",
-    "volcengine_kms": {
-      "key_id": "d926aa0d-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "region": "cn-beijing",
-      "access_key": "AKLTxxxxxxxxxxxxxxxxxx",
-      "secret_key": "Tmpxxxxxxxxxxxxxxxxxxxxxx",
-      "endpoint": null,
-      "key_file": "~/.openviking/openviking-volcengine-root-key.enc"
-    }
-  }
-}
-```
-
-**Configuration Parameters**:
-
-| Parameter | Description | Default |
-|-----------|-------------|---------|
-| `key_id` | KMS Key ID | Required |
-| `region` | Region | Required |
-| `access_key` | Access Key | Required |
-| `secret_key` | Secret Key | Required |
-| `endpoint` | Custom KMS endpoint (optional) | `null` (use default endpoint) |
-| `key_file` | Local cache file path for encrypted root key | `"~/.openviking/openviking-volcengine-root-key.enc"` |
-
-### Permission Recommendations
-
-Configure minimal permissions for the Access Key:
-
-```json
-{
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "kms:Encrypt",
-        "kms:Decrypt"
-      ],
-      "Resource": [
-        "trn:kms:*:*:key/d926aa0d-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-      ]
-    }
-  ]
-}
-```
-
----
+This fork removed `volcengine_kms` and supports only `local` and `vault`. Decrypt and export existing KMS-encrypted data using a deployment that still supports that provider before importing it into the new deployment. Retain original keys and backups; changing the provider alone does not convert existing ciphertext.
 
 ## Verifying Encryption
 
@@ -472,18 +407,11 @@ Error: Failed to connect to Vault
 
 ### Volcengine KMS Authentication Failed
 
-```
-Error: Invalid credentials
-```
-
-**Solution**:
-1. Check Access Key and Secret Key are correct
-2. Confirm key has sufficient permissions
-3. Verify region configuration is correct
+This fork removed `volcengine_kms` and supports only `local` and `vault`. Decrypt and export existing KMS-encrypted data using a deployment that still supports that provider before importing it into the new deployment. Retain original keys and backups; changing the provider alone does not convert existing ciphertext.
 
 ### Existing ciphertext cannot be read
 
-Check that the deployment still has the original root key, provider settings, account identity, and intact ciphertext. For Vault, retain both the Transit key and the KV entry containing the wrapped root key; for KMS, retain the KMS key and local wrapped-key file. Do not generate a replacement root key to repair access to existing ciphertext.
+Check that the deployment still has the original root key, provider settings, account identity, and intact ciphertext. For Vault, retain both the Transit key and the KV entry containing the wrapped root key. Do not generate a replacement root key to repair access to existing ciphertext.
 
 Partial reads load and authenticate the full encrypted file, then return the requested plaintext slice. If a partial read returns ciphertext, record the server version and compare full and partial reads on a copied test file. Check the storage encryption configuration and relevant fixes before upgrading, and keep the original data and keys available for rollback.
 

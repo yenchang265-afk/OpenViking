@@ -22,17 +22,25 @@ from openviking.storage.viking_fs import VikingFS
 from openviking_cli.session.user_id import UserIdentifier
 
 
+@pytest.fixture(params=[False, True], ids=["legacy-git-config", "indexed-git-config"])
+def indexed_snapshot_log(request):
+    return request.param
+
+
 @pytest.fixture(params=["filesystem", "memory", "sqlite", "postgres"])
-def snapshot_binding_config(tmp_path, request):
+def snapshot_binding_config(tmp_path, request, indexed_snapshot_log):
     provider = request.param
     if provider == "postgres" and not os.environ.get("OV_TEST_PG_DSN"):
         pytest.skip("set OV_TEST_PG_DSN to a disposable PostgreSQL database")
     fs_root = tmp_path / "fs"
     fs_root.mkdir()
     config = tmp_path / "ragfs.toml"
-    config.write_text(
+    git_config = (
         f'[git]\nenabled=true\nbackend="local"\n[git.local]\nbase_dir="{tmp_path / "git"}"\n'
     )
+    if indexed_snapshot_log:
+        git_config += f'\n[git.snapshot.log.sqlite]\npath="{tmp_path / "snapshot-log.db"}"\n'
+    config.write_text(git_config)
     pathlock = {"provider": provider}
     if provider == "sqlite":
         pathlock["sqlite_path"] = str(tmp_path / "pathlock.db")
@@ -45,10 +53,12 @@ def snapshot_binding_config(tmp_path, request):
 
 
 @pytest.fixture
-def snapshot_env(snapshot_binding_config):
+def snapshot_env(snapshot_binding_config, tmp_path, indexed_snapshot_log):
     client_type, _ = get_binding_client()
     kwargs, fs_root = snapshot_binding_config
     client = client_type(**kwargs)
+    if indexed_snapshot_log:
+        assert (tmp_path / "snapshot-log.db").is_file()
     client.mount("localfs", "/local", {"local_dir": str(fs_root)})
     return VikingFS(agfs=client), fs_root
 

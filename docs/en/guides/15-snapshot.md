@@ -99,6 +99,8 @@ Configuration reference:
 | `git.snapshot.log.provider` | `sqlite` | Path history index provider for `snapshot/log?paths=...`: `sqlite`, `mysql`, or `none` |
 | `git.snapshot.log.sqlite.path` | `{storage.workspace}/_system/snapshot/log/snapshot_log.db` | Optional absolute SQLite database path. When omitted, each workspace gets its own index DB |
 
+These workspace defaults are resolved by the OpenViking server. Raw RAGFS binding configurations have no workspace default: if the SQLite path is omitted, snapshots remain available and path history falls back to scanning Git commits. Set an explicit absolute SQLite path to enable the index for those callers.
+
 > Usually leave `git.local.base_dir` empty so snapshot data lands in `.ovgit` under the workspace, making it easy to back up and migrate alongside resource data.
 
 ### S3 Backend (recommended for distributed / cloud deployments)

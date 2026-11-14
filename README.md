@@ -1,3 +1,5 @@
+> This is the `yenchang265-afk/OpenViking` fork. Read [fork compatibility](docs/en/configuration/03-fork.md) for supported providers, source installation, and differences from upstream packages.
+
 <div align="center">
 
 <a href="https://openviking.ai/" target="_blank">
@@ -123,7 +125,7 @@ The memory evaluation used [Doubao 2.0 Pro](https://console.volcengine.com/ark/r
 
 ## Quick start
 
-Set up an OpenViking server first; if you already have one, skip to [Use it with your agent](#use-it-with-your-agent). Deploying your own needs uv, Python 3.11+ and a model provider with an embedding model and a VLM.
+Set up an OpenViking server first; if you already have one, skip to [Use it with your agent](#use-it-with-your-agent). Deploying your own needs uv, Python 3.11.5+ and a model provider with an embedding model and a VLM.
 
 <details open>
 <summary><strong>Let your agent deploy it</strong></summary>
