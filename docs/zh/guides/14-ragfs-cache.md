@@ -10,7 +10,8 @@ CachedFileSystem 適用前提：
 - 所有實例看到同一個 backend，且 backend 寫入返回後對每個實例都可見。S3 或 SeaweedFS 以及 MariaDB 小檔案層符合要求；每個 pod 各自的本機磁碟不符合。
 - 快取 Provider 的同一 key 寫入或刪除成功後，後續讀取不會返回舊值。
 
-這些前提只適用於讀快取層。QueueFS 和 PathLock 也複用 CacheRuntime，但有各自的一致性規則。
+這些前提只適用於讀快取層。QueueFS 和 PathLock 在選擇 cache 後端時複用
+CacheRuntime，但有各自的一致性規則。PostgreSQL PathLock 使用獨立的資料庫連線。
 
 ## 快速開始
 
@@ -87,6 +88,11 @@ CacheRuntime 協調多個 OpenViking 程序的路徑鎖。OpenViking 會從頂�
 `service_name` 生成 PathLock Redis namespace。獨立部署應使用不同
 `service_name`。Cache PathLock 只支援內建 Redis Provider；多個實例共用 CacheFS 時，分散式路徑鎖不能取代 `storage.agfs.cachefs.multi_instance`。
 
+分散式 PathLock 也可選擇 `provider="postgres"`，通過共享 PostgreSQL 主庫協調，
+無需 Redis 或 CacheRuntime。它獨立於 `cache.provider` 配置，不會啟用 CacheFS
+或改變 QueueFS。詳見 [PostgreSQL PathLock 配置](../configuration/01-server.md#postgresql-pathlock)。
+無論使用哪種 PathLock，CachedFileSystem 都保留單寫者前提。
+
 Redis HASH key 按邏輯路徑 scope 拆分：
 
 ```text
@@ -158,7 +164,8 @@ Cache PathLock 和 cache-backed 多寫 metadata 提供 Redis namespace。
 
 | 引數 | 型別 | 預設值 | 說明 |
 |------|------|--------|------|
-| `provider` | str | `"filesystem"` | `filesystem`、`memory`、`sqlite` 或 `cache`；見 [SQLite 配置](../configuration/01-server.md#storage) |
+| `provider` | str | `"filesystem"` | `filesystem`、`memory`、`sqlite`、`postgres` 或 `cache`；見 [SQLite 配置](../configuration/01-server.md#storage) 和 [PostgreSQL 配置](../configuration/01-server.md#postgresql-pathlock) |
+| `postgres_dsn_env` | str / null | `null` | `postgres` 必填；儲存 DSN 的服務程序環境變數名 |
 | `lock_expire_secs` | float | `30.0` | 鎖 stale 超時；不得小於 `1.0` |
 
 Redis 配置：

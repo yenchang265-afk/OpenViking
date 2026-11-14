@@ -150,6 +150,9 @@ ov snapshot commit -m "v1 initial import" --paths viking://resources/my_md.md -o
 
 過濾發生在限制返回數量之前，因此 `limit=10` 和 `paths=[X]` 表示最多返回 10 條與 X 有關的提交，而不是先取最近 10 條提交再過濾。
 
+當傳入 `paths` 時，服務端可使用 `ov.conf` 中的 `git.snapshot.log`
+路徑歷史索引。該索引從快照提交派生，不改變本 API 的請求或響應格式。
+
 為限制儲存開銷，過濾請求最多檢查 1,000 條提交。如果尚未收集到請求數量的匹配結果，並且仍存在未檢查的更早歷史，介面將返回 `INVALID_ARGUMENT` 錯誤，而不是返回不完整的歷史列表。非過濾請求不受該掃描預算限制，因為每檢查一條提交都會推進返回數量限制。
 
 **Python SDK (HTTP)**

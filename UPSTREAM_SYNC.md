@@ -34,12 +34,16 @@ Git may reuse conflict resolutions, but they still need review and staging.
 - Volcengine KMS stays removed. Keep the `0x03` envelope marker for stored-data
   compatibility. Keep fork image defaults and fork project URLs.
   Reference: `d97c2fe724bc`.
+- The Feishu Drive accessor stays removed; drop upstream Feishu-only helpers and
+  examples (e.g. `_source_skipped_items`). The Volcengine/VikingDB vector adapters
+  and remote `path_glob`/grep sections stay removed; upstream backends such as
+  `pgvector` are added next to the fork's `elasticsearch`.
 - These are scoped fork decisions, not a blanket ban on every Volcengine string.
   The provider-removal commit explicitly left wizard and bot registry references
   for follow-up. Investigate relevant changes rather than deleting all matches.
 
-Last documented upstream sync: PR #132, merge `4fac34c20`, through
-upstream `51f0e8e` (previous: PR #129 through `f7e83b2`). Confirm ancestry with
+Last documented upstream sync: branch `claude/dazzling-thompson-ijelq8`, through
+upstream `90f4edc` (previous: PR #132, merge `4fac34c20`, through `51f0e8e`). Confirm ancestry with
 Git; update this note after each accepted sync.
 
 ## Chinese text conventions
