@@ -1,3 +1,5 @@
+> 本倉庫為 `yenchang265-afk/OpenViking` 分支。支援的提供程式、原始碼安裝方式與上游套件差異，請參閱[分支相容性](../zh/configuration/03-fork.md)。
+
 <div align="center">
 
 <a href="https://openviking.ai/" target="_blank">
@@ -123,7 +125,7 @@ OpenViking 0.3.22 的評測覆蓋長對話使用者記憶（LoCoMo）和多輪�
 
 ## 快速開始
 
-先準備一個 OpenViking 服務；已經有服務的話，直接跳到[接入你的 Agent](#接入你的-agent)。自部署需要 uv、Python 3.11+，以及一個提供 embedding 模型和 VLM 的模型服務。
+先準備一個 OpenViking 服務；已經有服務的話，直接跳到[接入你的 Agent](#接入你的-agent)。自部署需要 uv、Python 3.11.5+，以及一個提供 embedding 模型和 VLM 的模型服務。
 
 <details open>
 <summary><strong>讓 agent 幫你部署</strong></summary>

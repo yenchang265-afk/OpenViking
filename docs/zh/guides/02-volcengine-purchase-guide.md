@@ -1,5 +1,7 @@
 # 火山引擎模型購買指南
 
+> **僅適用於上游版本：** 此分支已移除原生 `volcengine` / `vikingdb` 模型提供程式。以下購買與配置步驟適用於上游 OpenViking，不適用於本倉庫版本。此分支請使用[支援的模型配置](01-configuration.md)，並參閱[分支相容性](../configuration/03-fork.md)。
+
 本指南適用於自建 OpenViking：開通火山方舟模型、取得 API Key，並驗證服務端配置。使用託管 OpenViking 時，無需在客戶端配置這些模型，見[快速開始](../getting-started/02-quickstart.md)。
 
 ## 概述

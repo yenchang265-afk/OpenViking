@@ -1,3 +1,5 @@
+> このリポジトリは `yenchang265-afk/OpenViking` のフォークです。対応プロバイダー、ソースからのインストール、上流パッケージとの差異は [Fork compatibility](../en/configuration/03-fork.md) を参照してください。
+
 <div align="center">
 
 <a href="https://openviking.ai/" target="_blank">
@@ -121,7 +123,7 @@ OpenViking 0.3.22 は、長い会話でのユーザーメモリ（LoCoMo）と�
 
 ## クイックスタート
 
-まず OpenViking サーバーを用意します。すでにある場合は[エージェントと組み合わせて使う](#エージェントと組み合わせて使う)に進んでください。自前でデプロイするには、uv、Python 3.11+、そして embedding モデルと VLM を提供するモデルプロバイダーが必要です。
+まず OpenViking サーバーを用意します。すでにある場合は[エージェントと組み合わせて使う](#エージェントと組み合わせて使う)に進んでください。自前でデプロイするには、uv、Python 3.11.5+、そして embedding モデルと VLM を提供するモデルプロバイダーが必要です。
 
 <details open>
 <summary><strong>エージェントにデプロイしてもらう</strong></summary>

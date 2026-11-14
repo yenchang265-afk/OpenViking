@@ -86,7 +86,13 @@ class TestFsCp:
                     resources = found.json().get("result", {}).get("resources", [])
                     assert any(item.get("uri") == uri for item in resources), found.text
 
-            assert api_client.fs_rm(source).status_code == 200
+            # Copy queues a parent semantic refresh that can still hold a path
+            # lease after cp returns. Finish it before testing source deletion.
+            settled = api_client.system_wait()
+            assert settled.status_code == 200, settled.text
+
+            removed = api_client.fs_rm(source)
+            assert removed.status_code == 200, removed.text
             assert api_client.fs_read(target).status_code == 200
         finally:
             api_client.fs_rm(source)

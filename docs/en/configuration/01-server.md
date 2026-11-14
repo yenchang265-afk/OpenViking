@@ -1,5 +1,7 @@
 # Server configuration fields
 
+> This repository is a fork. See [fork compatibility](../configuration/03-fork.md) before installing packages or selecting providers. Set `OPENAI_API_KEY` (and `COHERE_API_KEY` if enabling rerank) for the examples below.
+
 For initial setup, run `openviking-server init`, then run `openviking-server doctor` after saving the configuration.
 
 The OpenViking server reads `ov.conf`. The default path is:
@@ -53,7 +55,7 @@ Optional sections use their defaults when omitted. Unknown fields in `ov.conf` a
 |---|---|---|---|
 | `default_account` | string | `"default"` | Default account for the service context |
 | `default_user` | string | `"default"` | Default user for the service context |
-| `embedding` | object | built-in local dense model | Dense, sparse, and hybrid embedding; defaults to `local` / `bge-small-zh-v1.5-f16` |
+| `embedding` | object | built-in local dense model | Dense embedding in this fork; defaults to `local` / `bge-small-zh-v1.5-f16` |
 | `vlm` | object | empty config | Content understanding, summaries, and memory extraction; configure a working model before using these capabilities |
 | `query_planner` | object / `null` | `null` | Model for retrieval intent analysis and recall rewriting. Falls back to `vlm` when omitted or empty; recall rewrite in `auto` mode requires a configured cluster `query_planner` or an account-level `query_planner` or `vlm` override |
 | `rerank` | object | disabled | Retrieval result reranking |
@@ -89,39 +91,32 @@ API-based `embedding`, `vlm`, `query_planner`, and `rerank` configurations reuse
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "<your-ark-api-key>",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "dimension": 1536,
+      "input": "text"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}",
     "temperature": 0,
-    "max_retries": 3,
-    "thinking": false
+    "max_retries": 3
   },
   "query_planner": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
-    "thinking": false
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
   },
   "rerank": {
-    "provider": "vikingdb",
-    "ak": "<your-volcengine-ak>",
-    "sk": "<your-volcengine-sk>",
-    "host": "api-vikingdb.vikingdb.cn-beijing.volces.com",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028",
-    "threshold": 0.1,
-    "max_input_tokens": 0
+    "provider": "cohere",
+    "api_key": "${COHERE_API_KEY}",
+    "model_name": "rerank-v3.5"
   }
 }
 ```
@@ -140,7 +135,7 @@ API-based `embedding`, `vlm`, `query_planner`, and `rerank` configurations reuse
 
 | Field | Type / values | Purpose |
 |---|---|---|
-| `provider` | `openai`, `volcengine`, `azure`, `ollama`, `local`, etc. | Dense embedding service |
+| `provider` | `openai`, `azure`, `ollama`, `local`, etc. | Dense embedding service |
 | `dimension` | integer, `> 0` | Vector dimension; must match model output and existing collections |
 | `input` | `"text"` / `"multimodal"` | Input type |
 | `encoding_format` | `"float"` / `"base64"` | OpenAI-compatible vector encoding |
@@ -241,7 +236,7 @@ discard source restrictions. Empty does not mean unknown or inapplicable.
 
 | Field | Type / values | Default | Purpose |
 |---|---|---|---|
-| `provider` | `vikingdb`, `cohere`, `openai`, `litellm`, `jev` / `null` | `null` | Rerank service; inferred from credentials when omitted |
+| `provider` | `cohere`, `openai`, `litellm`, `jev` / `null` | `null` | Rerank service; inferred from credentials when omitted |
 | `model` | string / `null` | `null` | OpenAI-compatible, LiteLLM, or Jev rerank model |
 | `mode` | `noul`, `choice`, or `null` | `noul` | Jev rerank mode; `null` also uses `noul` |
 | `threshold` | number | `0.1` | Minimum rerank score considered relevant; filters only model rerank scores, never vector scores, and a request `score_threshold` overrides it |
@@ -250,7 +245,7 @@ discard source restrictions. Empty does not mean unknown or inapplicable.
 
 Rerank has no separate `enabled` field. It becomes available when the required provider credentials are configured.
 
-`jev` supports direct TypeSafe access (`https://api.typesafe.ai/v1/systemone`, model `jev-latest`) and Vercel AI Gateway's TypeSafe-compatible endpoint (`https://ai-gateway.vercel.sh/typesafe/v1/systemone`, model `typesafe-ai/jev`) through the existing `api_base` and `model` fields; both speak the same protocol. For rerank, `api_base` may be either the service root or the complete System One URL; `/v1/systemone` is appended when absent. Its default `noul` mode scores each candidate independently. The optional `choice` mode compares all candidates and returns relative probabilities; set `threshold` to `0` when using it. Setting `provider` explicitly requires the credentials that provider needs: `ak` and `sk` for `vikingdb`, `api_key` for `cohere` and `jev`, `api_key` and `api_base` for `openai`, `model` for `litellm`. An incomplete block is rejected when the configuration loads.
+`jev` supports direct TypeSafe access (`https://api.typesafe.ai/v1/systemone`, model `jev-latest`) and Vercel AI Gateway's TypeSafe-compatible endpoint (`https://ai-gateway.vercel.sh/typesafe/v1/systemone`, model `typesafe-ai/jev`) through the existing `api_base` and `model` fields; both speak the same protocol. For rerank, `api_base` may be either the service root or the complete System One URL; `/v1/systemone` is appended when absent. Its default `noul` mode scores each candidate independently. The optional `choice` mode compares all candidates and returns relative probabilities; set `threshold` to `0` when using it. Setting `provider` explicitly requires the credentials that provider needs: `api_key` for `cohere` and `jev`, `api_key` and `api_base` for `openai`, `model` for `litellm`. An incomplete block is rejected when the configuration loads.
 
 ## Retrieval Settings
 
@@ -622,20 +617,19 @@ Provider-, parser-, storage-, and encryption-specific fields are documented in [
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "<your-ark-api-key>",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "dimension": 1536,
+      "input": "text"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
-    "thinking": false
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
   },
   "storage": {
     "workspace": "./data"

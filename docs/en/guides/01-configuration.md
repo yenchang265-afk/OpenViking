@@ -1,5 +1,7 @@
 # Configure models and services
 
+> This repository is a fork. See [fork compatibility](../configuration/03-fork.md) before installing packages or selecting providers. Set `OPENAI_API_KEY` (and `COHERE_API_KEY` if enabling rerank) for the examples below.
+
 Use this guide to choose models, combine configuration examples and understand configuration scope. For field lookups, see [server configuration](../configuration/01-server.md) or [client configuration](../configuration/02-client.md). For a first deployment, start with [deployment paths](00-overview.md).
 
 OpenViking uses a JSON configuration file (`~/.openviking/ov.conf`) for settings.
@@ -15,7 +17,7 @@ openviking-server init
 openviking-server doctor
 ```
 
-`openviking-server init` prompts for embedding and VLM settings separately. For API-based VLM choices such as `OpenAI`, `Volcengine`, `Kimi`, and `GLM`, enter the VLM API key when prompted. If you want to use Codex as the VLM provider, choose `OpenAI Codex`; the wizard can import existing Codex auth or guide you through login directly.
+`openviking-server init` prompts for embedding and VLM settings separately. For API-based VLM choices such as `OpenAI`, `Kimi`, and `GLM`, enter the VLM API key when prompted. If you want to use Codex as the VLM provider, choose `OpenAI Codex`; the wizard can import existing Codex auth or guide you through login directly.
 
 ## Configuration File
 
@@ -64,7 +66,7 @@ naming the variable; write `\u0024{VAR}` to keep a literal `${VAR}` in a value.
 
 ### Ordered credentials in ov.conf
 
-`vlm` and `query_planner` support an ordered `credentials` array. Embedding supports the same array inside each configured `dense`, `sparse`, or `hybrid` section. Index 0 has the highest priority; later entries provide failover credentials. The model sections remain JSON objects, and existing single-credential configurations remain supported.
+`vlm` and `query_planner` support an ordered `credentials` array. Embedding supports the same array inside `dense`. Index 0 has the highest priority; later entries provide failover credentials. The model sections remain JSON objects, and existing single-credential configurations remain supported.
 
 Merge the following fields into your `ov.conf`; set `PRIMARY_API_KEY` and `BACKUP_API_KEY` before starting the server:
 
@@ -217,33 +219,6 @@ See [Admin configuration API](../api/08-admin.md#runtime-configuration) for perm
 ## Configuration Examples
 
 <details>
-<summary><b>Volcengine (Doubao Models)</b></summary>
-
-```json
-{
-  "embedding": {
-    "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215",
-      "input": "multimodal",
-      "batch_size": 32
-    }
-  },
-  "vlm": {
-    "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key"  : "your-volcengine-api-key",
-    "provider" : "volcengine",
-    "model"    : "doubao-seed-2-0-lite-260428"
-  }
-}
-```
-
-</details>
-
-<details>
 <summary><b>OpenAI Models</b></summary>
 
 ```json
@@ -269,7 +244,7 @@ See [Admin configuration API](../api/08-admin.md#runtime-configuration) for perm
 </details>
 
 <details>
-<summary><b>Volcengine Embedding + Codex VLM</b></summary>
+<summary><b>OpenAI Embedding + Codex VLM</b></summary>
 
 Use `openviking-server init` to complete the Codex login/import step, then run `openviking-server doctor`.
 
@@ -277,17 +252,18 @@ Use `openviking-server init` to complete the Codex login/import step, then run `
 {
   "embedding": {
     "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215"
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small",
+      "input": "text"
     }
   },
   "vlm": {
-    "provider" : "openai-codex",
-    "model"    : "gpt-5.6-terra",
-    "api_base" : "https://chatgpt.com/backend-api/codex",
+    "provider": "openai-codex",
+    "model": "gpt-5.6-terra",
+    "api_base": "https://chatgpt.com/backend-api/codex",
     "reasoning_effort": "xhigh"
   }
 }
@@ -298,24 +274,25 @@ OpenAI [retired `gpt-5.4` from Codex with ChatGPT sign-in](https://learn.chatgpt
 </details>
 
 <details>
-<summary><b>Volcengine Embedding + Kimi Coding VLM</b></summary>
+<summary><b>OpenAI Embedding + Kimi Coding VLM</b></summary>
 
 ```json
 {
   "embedding": {
     "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215"
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small",
+      "input": "text"
     }
   },
   "vlm": {
-    "provider" : "kimi",
-    "model"    : "kimi-code",
-    "api_key"  : "your-kimi-subscription-api-key",
-    "api_base" : "https://api.kimi.com/coding"
+    "provider": "kimi",
+    "model": "kimi-code",
+    "api_key": "your-kimi-subscription-api-key",
+    "api_base": "https://api.kimi.com/coding"
   }
 }
 ```
@@ -325,24 +302,25 @@ OpenAI [retired `gpt-5.4` from Codex with ChatGPT sign-in](https://learn.chatgpt
 </details>
 
 <details>
-<summary><b>Volcengine Embedding + GLM Coding Plan VLM</b></summary>
+<summary><b>OpenAI Embedding + GLM Coding Plan VLM</b></summary>
 
 ```json
 {
   "embedding": {
     "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215"
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small",
+      "input": "text"
     }
   },
   "vlm": {
-    "provider" : "glm",
-    "model"    : "glm-4.6v",
-    "api_key"  : "your-zai-api-key",
-    "api_base" : "https://api.z.ai/api/coding/paas/v4"
+    "provider": "glm",
+    "model": "glm-4.6v",
+    "api_key": "your-zai-api-key",
+    "api_base": "https://api.z.ai/api/coding/paas/v4"
   }
 }
 ```
@@ -355,7 +333,7 @@ Use a vision-capable GLM model such as `glm-4.6v` or `glm-5v-turbo` when OpenVik
 
 ### embedding
 
-Embedding model configuration for vector search, supporting dense, sparse, and hybrid modes.
+Embedding model configuration for vector search, supporting dense vectors in this fork.
 
 #### Dense Embedding
 
@@ -367,11 +345,12 @@ Embedding model configuration for vector search, supporting dense, sparse, and h
     "text_source": "content_only",
     "max_input_tokens": 4096,
     "dense": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "input": "text",
+      "api_base": "https://api.openai.com/v1"
     }
   }
 }
@@ -385,7 +364,7 @@ Embedding model configuration for vector search, supporting dense, sparse, and h
 | `max_retries` | int | Maximum retry attempts for transient embedding provider errors (`embedding.max_retries`, default: `3`; `0` disables retry) |
 | `text_source` | str | Text used for vectorizing text files. `content_only` reads raw content, `summary_first` uses summary when available and falls back to content, `summary_only` is a deprecated alias for `summary_first`; existing configurations still load, log a warning, and normalize to `summary_first`. Default: `content_only` |
 | `max_input_tokens` | int | Maximum estimated raw text tokens sent to the embedding model when content is used. Default: `4096` |
-| `provider` | str | `"openai"`, `"azure"`, `"volcengine"`, `"vikingdb"`, `"jina"`, `"ollama"`, `"gemini"`, `"voyage"`, `"dashscope"`, `"minimax"`, `"cohere"`, `"litellm"`, or `"local"` |
+| `provider` | str | `"openai"`, `"azure"`, `"jina"`, `"ollama"`, `"gemini"`, `"voyage"`, `"dashscope"`, `"minimax"`, `"cohere"`, `"litellm"`, or `"local"` |
 | `api_key` | str | API key |
 | `model` | str | Model name |
 | `dimension` | int | Vector dimension. For Voyage, this maps to `output_dimension` |
@@ -422,18 +401,15 @@ When the embedding provider experiences consecutive transient failures (e.g. `42
 
 | Model | Dimension | Input Type | Notes |
 |-------|-----------|------------|-------|
-| `doubao-embedding-vision-251215` | 1024 | multimodal | Recommended |
-| `doubao-embedding-250615` | 1024 | text | Text only |
+| `text-embedding-3-small` | 1536 | text | OpenAI |
+| `bge-small-zh-v1.5-f16` | 512 | text | local |
 
 With `input: "multimodal"`, OpenViking can embed text, images (PNG, JPG, etc.), and mixed content. Image-to-image search requires this mode; text-only embedding models continue to index image summaries but cannot accept image queries.
 
-Hybrid image support depends on the dense channel. The complete mixed input goes to dense, while sparse receives only text; image-only inputs skip sparse. Volcengine hybrid keeps one combined request for text-only input and uses separate multimodal dense and text-only sparse requests for mixed input. Keep the dense model and dimension compatible with the vectors already stored in the index.
 
 **Supported providers:**
 - `openai`: OpenAI Embedding API
 - `azure`: Azure OpenAI Embedding API
-- `volcengine`: Volcengine Embedding API
-- `vikingdb`: VikingDB Embedding API
 - `jina`: Jina AI Embedding API
 - `ollama`: Ollama local OpenAI-compatible Embedding API
 - `voyage`: Voyage AI Embedding API
@@ -521,23 +497,6 @@ For Azure OpenAI, `model` must be the embedding deployment name configured in Az
       "extra_headers": {
         "GroupId": "your-group-id"
       }
-    }
-  }
-}
-```
-
-**vikingdb provider example:**
-
-```json
-{
-  "embedding": {
-    "dense": {
-      "provider": "vikingdb",
-      "model": "bge_large_zh",
-      "ak": "your-access-key",
-      "sk": "your-secret-key",
-      "region": "cn-beijing",
-      "dimension": 1024
     }
   }
 }
@@ -718,73 +677,11 @@ On first use, OpenViking downloads the model to `~/.cache/openviking/models` unl
 
 #### Sparse Embedding
 
-> This example uses `doubao-embedding-vision-251215`. Check sparse text-output support for your selected model in the Ark [embedding documentation](https://docs.volcengine.com/docs/ark/vectorization?lang=zh&redirect=1).
-
-```json
-{
-  "embedding": {
-    "sparse": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215"
-    }
-  }
-}
-```
-
-Sparse output is a provider capability, not an endpoint inferred from
-`storage.vectordb.sparse_weight`. OpenViking currently implements `sparse` and
-`hybrid` embedding providers for `volcengine` and `vikingdb`. The
-OpenAI-compatible, Ollama, and built-in `local` providers are dense-only; a
-self-hosted `/v1/embeddings` endpoint is therefore not treated as a sparse
-endpoint, and OpenViking does not probe a separate
-`/v1/embeddings/sparse` route.
-
-There is no automatic BM25 or other sparse-vector fallback when the configured
-embedder returns only dense vectors. To use hybrid retrieval, configure a
-supported sparse/hybrid provider and set `storage.vectordb.sparse_weight > 0`.
-Model memory requirements are provider/model-specific and are not controlled by
-OpenViking; size self-hosted models against their provider documentation before
-enabling them in production.
+This fork has no sparse or hybrid embedding implementation. Configure `embedding.dense` only; setting `storage.vectordb.sparse_weight` does not add a sparse embedding model.
 
 #### Hybrid Embedding
 
-Two approaches are supported:
-
-**Option 1: Single hybrid model**
-
-```json
-{
-  "embedding": {
-    "hybrid": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024
-    }
-  }
-}
-```
-
-**Option 2: Combine dense + sparse**
-
-```json
-{
-  "embedding": {
-    "dense": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024
-    },
-    "sparse": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215"
-    }
-  }
-}
-```
+This fork has no sparse or hybrid embedding implementation. Configure `embedding.dense` only; setting `storage.vectordb.sparse_weight` does not add a sparse embedding model.
 
 ### vlm
 
@@ -793,18 +690,11 @@ Vision Language Model for semantic extraction (L0/L1 generation).
 ```json
 {
   "vlm": {
-    "provider": "volcengine",
-    "api_key": "your-api-key",
-    "model": "doubao-seed-2-0-lite-260428",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "max_retries": 3,
-    "media": {
-      "enabled": true,
-      "max_concurrent": 2,
-      "file_processing_timeout": 1800,
-      "file_poll_interval": 3,
-      "video_fps": 1.0
-    }
+    "provider": "openai",
+    "api_key": "${OPENAI_API_KEY}",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "max_retries": 3
   }
 }
 ```
@@ -818,7 +708,7 @@ Vision Language Model for semantic extraction (L0/L1 generation).
 | `model` | str | Model name |
 | `api_base` | str | API endpoint (optional). For `openai-codex`, defaults to the ChatGPT Codex backend; set `https://api.openai.com/v1` with a standard OpenAI API key |
 | `temperature` | float or null | Sampling temperature (default: `null`). Omit or set to `null` to leave it out of requests and use the provider default |
-| `thinking` | bool | Enable thinking mode for VolcEngine models (default: `false`) |
+| `thinking` | bool | Legacy field; the native Volcengine backend is absent in this fork |
 | `max_concurrent` | int | Maximum concurrent semantic LLM calls (default: `32`) |
 | `max_retries` | int | Maximum retry attempts for transient VLM provider errors (default: `3`; `0` disables retry) |
 | `credentials` | array | Ordered VLM credential/model list, with index 0 having the highest priority. Each item can override `provider`, `model`, `api_key`, `api_base`, `api_version`, `extra_headers`, `extra_request_body`, `reasoning_effort`, and `keepalive_expiry` |
@@ -845,8 +735,8 @@ The `vlm` and any dedicated `query_planner` configuration leave temperature unsp
 
 | Model | Notes |
 |-------|-------|
-| `doubao-seed-2-0-lite-260428` | Recommended for semantic extraction |
-| `doubao-pro-32k` | For longer context |
+| `gpt-5.4` | OpenAI API |
+| `gpt-5.6-terra` | Codex OAuth |
 
 When resources are added, VLM generates:
 
@@ -856,7 +746,6 @@ When resources are added, VLM generates:
 When the VLM configuration reports `is_available() == false`, generic file summaries are empty and directory overviews fall back to a not-ready placeholder. Paths such as local code-skeleton extraction retain their own behavior. Do not treat this as completed semantic indexing; inspect the model configuration and processing task.
 
 **Supported providers:**
-- `volcengine`: Volcengine VLM API
 - `openai`: OpenAI-compatible VLM API
 - `openai-codex`: Responses API via ChatGPT/Codex OAuth or an explicit API key and endpoint
 - `kimi`: Kimi Coding subscription endpoint with built-in provider defaults
@@ -942,51 +831,7 @@ For example, to disable thinking on Ollama:
 
 **Audio/video understanding**
 
-Audio and video understanding is an optional capability of the configured VLM. It uses the same provider, model, credentials, client, request timeout, retries, headers, maximum output tokens, failover chain, and token accounting as other VLM calls. Enable it with the nested `vlm.media` controls; there is no separate media model configuration.
-
-```json
-{
-  "vlm": {
-    "provider": "volcengine",
-    "api_key": "${VOLCENGINE_API_KEY}",
-    "model": "${VOLCENGINE_MODEL}",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "timeout": 1200,
-    "max_retries": 3,
-    "max_tokens": 4096,
-    "media": {
-      "enabled": true,
-      "file_processing_timeout": 1800,
-      "file_poll_interval": 3,
-      "max_concurrent": 2,
-      "video_fps": 1.0
-    }
-  }
-}
-```
-
-`vlm.extra_request_body` also applies to the Ark Responses request for audio/video, for example `{"service_tier": "flex", "thinking": {"type": "disabled"}}`. Use fields supported by the selected model and Responses API. Explicit extra body fields override generated request fields through the SDK, including `store`; response storage defaults to `false` unless you explicitly override it. These fields are not forwarded to file upload, status, or deletion requests.
-
-The VLM `model` value is the corresponding Ark model endpoint ID. `video_fps` applies only to video and controls the frame sampling rate sent to Ark.
-
-The recommended starting models for audio and video understanding are `doubao-seed-2-0-lite-260428` and `doubao-seed-2-0-mini-260428`. These are recommended examples, not an exhaustive compatibility list; Ark continues to update its models and input capabilities. See Ark's official [video input capability list](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#ff5ef604) and [audio input capability list](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#9619c0ba) for other supported models. If `model` is an `ep-*` inference endpoint ID, verify that its underlying foundation model supports the corresponding media input. OpenViking does not validate audio or video model capabilities while loading configuration.
-
-**Ingestible and understandable formats**
-
-| Type | Stored by the existing parser | Understood by Ark in this release |
-|------|-------------------------------|-----------------------------------|
-| Audio | MP3, WAV, OGG, FLAC, AAC, M4A, OPUS, AC3 | MP3, WAV, AAC, M4A |
-| Video | MP4, AVI, MOV, MKV, WEBM, FLV, WMV, TS | MP4, AVI, MOV |
-
-Formats outside the understanding column continue to follow the existing parser and storage behavior; OpenViking does not transcode them or send them to the understanding model. When such a file is recognized as an audio or video leaf, an empty media summary is indexed using its filename.
-
-For a supported file, OpenViking uploads the media to the Ark Files API without explicitly setting `expire_at`, so file retention follows Ark's default policy. After processing completes, OpenViking references the file's `file_id` from the Responses API with response storage disabled by default, then attempts to delete the Ark file under a short cleanup deadline. Remote deletion is best-effort and does not replace an otherwise successful result if cleanup fails; a file whose deletion fails or times out continues to follow Ark's default retention policy. Local temporary files are removed independently even when remote cleanup fails or is cancelled.
-
-- A successful summary for a directory containing exactly one audio or video file becomes that directory's L1 directly, with L0 derived through the existing semantic path. No second generic VLM summarization is performed.
-- Media in a mixed directory contributes its summary to the existing generic VLM aggregation.
-- Disabled media understanding, an unsupported understanding format, or a final model failure yields an empty media summary. Generic directory L0/L1 generation keeps its existing behavior, while a recognized audio or video leaf uses its filename for the DETAIL vector and BM25 content. Provider errors and media-understanding status text are not written to the media summary or leaf index.
-
-Media processing sends file content to the configured external provider. Disabled response storage and best-effort deletion reduce unintended retention but do not replace the provider's own privacy and retention controls; uploaded files do not receive an explicit expiration time, so their retention period is determined by Ark's default policy. Ark Files storage/processing and Responses model tokens can incur provider charges, so review your provider's privacy, retention, and billing terms before enabling this feature. See the official Volcengine Ark documentation for [audio understanding](https://docs.volcengine.com/docs/82379/2377589?lang=zh) and [video understanding](https://docs.volcengine.com/docs/82379/1895586?lang=zh).
+The native Ark VLM backend was removed in this fork. No remaining VLM backend implements audio/video understanding. The `vlm.media` fields remain in the schema, but enabling them does not add media understanding to a backend.
 
 ### compile_api
 
@@ -1197,22 +1042,8 @@ encryption behavior for custom configuration sources.
 
 ### rerank
 
-Reranking model for search result refinement. Supports VikingDB (Volcengine), Cohere,
+Reranking model for search result refinement. Supports Cohere,
 OpenAI-compatible APIs, LiteLLM, and Jev.
-
-**Volcengine (VikingDB):**
-
-```json
-{
-  "rerank": {
-    "provider": "vikingdb",
-    "ak": "your-access-key",
-    "sk": "your-secret-key",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028"
-  }
-}
-```
 
 **OpenAI-compatible provider (e.g. DashScope):**
 
@@ -1309,10 +1140,8 @@ using Choice through MCP.
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `provider` | str | `"vikingdb"`, `"cohere"`, `"openai"`, `"litellm"`, or `"jev"`. Auto-detected if omitted. |
-| `ak` | str | VikingDB Access Key (vikingdb provider only) |
-| `sk` | str | VikingDB Secret Key (vikingdb provider only) |
-| `model_name` | str | Model name (vikingdb provider only, default: `doubao-seed-rerank`) |
+| `provider` | str | `"cohere"`, `"openai"`, `"litellm"`, or `"jev"`. Auto-detected if omitted. |
+| `model_name` | str | Cohere model name (default: `rerank-v3.5`) |
 | `api_key` | str | API key (for `openai`, `cohere`, or `jev` providers) |
 | `api_base` | str | Complete endpoint URL (for `openai` or `jev`; Jev defaults to `https://api.typesafe.ai/v1/systemone`, Vercel uses `https://ai-gateway.vercel.sh/typesafe/v1/systemone`; custom Jev URLs are used unchanged) |
 | `model` | str | Model name for OpenAI-compatible, LiteLLM, or Jev providers |
@@ -1325,7 +1154,6 @@ using Choice through MCP.
 | `extra_headers` | object | Custom HTTP headers (for OpenAI-compatible providers, optional) |
 
 **Supported providers:**
-- `vikingdb`: Volcengine VikingDB Rerank API (uses AK/SK)
 - `cohere`: Cohere Rerank API
 - `openai`: OpenAI-compatible Rerank API
 - `litellm`: LiteLLM Rerank API
@@ -2622,7 +2450,7 @@ At-rest encryption protects newly written files with account-specific keys throu
 {
   "encryption": {
     "enabled": true,
-    "provider": "local|vault|volcengine_kms"
+    "provider": "local|vault"
   }
 }
 ```
@@ -2630,7 +2458,7 @@ At-rest encryption protects newly written files with account-specific keys throu
 | Parameter | Type | Description | Default |
 |-----------|------|-------------|---------|
 | `enabled` | bool | Whether encryption is enabled | `false` |
-| `provider` | str | Key provider: `"local"`, `"vault"`, or `"volcengine_kms"` | - |
+| `provider` | str | Key provider: `"local"` or `"vault"` | - |
 | `api_key_hashing.enabled` | bool | File-provider only: whether to apply Argon2id one-way hashing to API key values (independent of file-level `enabled`); see [Encryption Guide](./08-encryption.md) | `false` |
 
 ### Local
@@ -2686,31 +2514,7 @@ Suitable for production and multi-cloud deployments:
 
 ### Volcengine KMS
 
-Suitable for Volcengine cloud deployments:
-
-```json
-{
-  "encryption": {
-    "enabled": true,
-    "provider": "volcengine_kms",
-    "volcengine_kms": {
-      "key_id": "kms-key-id-xxx",
-      "region": "cn-beijing",
-      "access_key": "AKLTxxxxxxxx",
-      "secret_key": "Tmpxxxxxxxx"
-    }
-  }
-}
-```
-
-| Parameter | Type | Description | Default |
-|-----------|------|-------------|---------|
-| `volcengine_kms.key_id` | str | KMS key ID | - |
-| `volcengine_kms.region` | str | Region | `"cn-beijing"` |
-| `volcengine_kms.access_key` | str | Volcengine Access Key | - |
-| `volcengine_kms.secret_key` | str | Volcengine Secret Key | - |
-
-For detailed encryption explanations, see [Data Encryption](../concepts/10-encryption.md). For complete usage instructions, see [Encryption Guide](./08-encryption.md).
+This fork removed `volcengine_kms`. Use `local` or `vault`. Existing KMS-encrypted data must be decrypted and exported by a deployment that still supports that provider, then imported into the new deployment. Changing the provider alone does not convert existing ciphertext.
 
 ## Configuration Structure
 
@@ -2724,12 +2528,13 @@ This illustrates the main sections, not a complete runnable configuration or JSO
     "text_source": "content_only",
     "max_input_tokens": 4096,
     "dense": {
-      "provider": "volcengine",
-      "api_key": "string",
-      "model": "string",
+      "provider": "openai",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "gpt-5.4",
       "dimension": 1024,
       "input": "multimodal",
-      "encoding_format": "float|base64"
+      "encoding_format": "float|base64",
+      "api_base": "https://api.openai.com/v1"
     }
   },
   "vlm": {
@@ -2744,7 +2549,7 @@ This illustrates the main sections, not a complete runnable configuration or JSO
     "extra_request_body": {}
   },
   "rerank": {
-    "provider": "vikingdb|cohere|openai|litellm|jev",
+    "provider": "cohere|openai|litellm|jev",
     "api_key": "string",
     "model": "string",
     "api_base": "string",
@@ -2757,7 +2562,7 @@ This illustrates the main sections, not a complete runnable configuration or JSO
   },
   "encryption": {
     "enabled": false,
-    "provider": "local|vault|volcengine_kms",
+    "provider": "local|vault",
     "local": {
       "key_file": "~/.openviking/master.key"
     },
@@ -2766,12 +2571,6 @@ This illustrates the main sections, not a complete runnable configuration or JSO
       "token": "string",
       "mount_point": "transit",
       "key_name": "openviking-root"
-    },
-    "volcengine_kms": {
-      "key_id": "string",
-      "region": "cn-beijing",
-      "access_key": "string",
-      "secret_key": "string"
     }
   },
   "storage": {
@@ -2798,13 +2597,15 @@ This illustrates the main sections, not a complete runnable configuration or JSO
       "provider": "file",
       "params": {}
     },
-    "cors_origins": ["*"]
+    "cors_origins": [
+      "*"
+    ]
   }
 }
 ```
 
 Notes:
-- `storage.vectordb.sparse_weight` controls hybrid (dense + sparse) indexing/search. It only takes effect when you use a hybrid index; set it > 0 to enable sparse signals.
+- `storage.vectordb.sparse_weight` controls hybrid (dense + sparse) indexing/search. It only takes effect when you use a hybrid index; this fork has no sparse embedding implementation.
 
 ## Troubleshooting
 
@@ -2848,7 +2649,7 @@ Check the provider error to determine whether the limit applies to request count
 
 ## Related Documentation
 
-- [Volcengine Purchase Guide](./02-volcengine-purchase-guide.md) - API key setup
+- [Volcengine Purchase Guide](./02-volcengine-purchase-guide.md) - upstream-only API key setup
 - [API Overview](../api/01-overview.md) - Client initialization
 - [Server Deployment](./03-deployment.md) - Server configuration
 - [Context Layers](../concepts/03-context-layers.md) - L0/L1/L2
