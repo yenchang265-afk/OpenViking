@@ -56,6 +56,8 @@ and *converted* upstream side, and convert newly added upstream zh docs. Web Stu
 uses `zh-TW` locales instead of upstream `zh-CN`; port upstream `zh-CN` changes
 there. Exception: `frontend/` zh docs and `README_CN.md` files use plain `s2twp`
 (only 賬→帳; they keep 回撥, 全域性); realign their tables with prettier 3.6.
+The generated `frontend/docs/docs/zh/guide/changelog.md` stays Simplified, byte-identical
+to upstream (`npm run check:release-notes` regenerates it from `CHANGELOG.md`).
 Frontend React sources, demos, tests and site config stay Simplified.
 
 Merge sync PRs with a merge commit, never squash. Squashing #120 dropped the
