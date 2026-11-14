@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "openviking"
 dynamic = ["version", "readme"]
 description = "An Agent-native context database"
-requires-python = ">=3.11"
+requires-python = ">=3.11.5"
 authors = [
     {name = "ByteDance", email = "noreply@bytedance.com"}
 ]
@@ -68,6 +68,8 @@ dependencies = [
     # CVE-2026-83813 and GHSA-vpp8-g58w-m8mp.
     "filelock>=4.2.1",
     "twisted>=26.10.0",
+    # CVE-2026-126190: avoid polynomial-time descendant selector evaluation.
+    "soupsieve>=4.0.0",
     "protobuf>=6.33.5",
     "pdfminer-six>=20251230",
     "typer>=0.12.0",

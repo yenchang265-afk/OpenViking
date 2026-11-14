@@ -94,7 +94,7 @@ OpenVikingでは、焦点が絞られ、十分に理解された変更を重視�
 
 ### 前提条件
 
-- Python 3.11以上
+- Python 3.11.5以上
 - ソースビルド、Rust Binding、同梱`ov` CLIの開発にはRust 1.94.1以上
 - `sdk/go`の開発時のみGo 1.22以上
 - C++17対応コンパイラ：GCC 9以上またはClang 11以上
