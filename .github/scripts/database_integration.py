@@ -3,8 +3,9 @@
 import argparse
 import json
 import os
-import xml.etree.ElementTree as ET
 from pathlib import Path
+
+import defusedxml.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[2]
 ACCOUNT_CASES = {

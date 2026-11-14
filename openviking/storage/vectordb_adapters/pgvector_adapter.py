@@ -166,6 +166,7 @@ class PgvectorCollection(OpenGaussCollection):
             cursor.execute("SET LOCAL enable_indexscan = off")
         else:
             ef = int(meta["search_params"].get("ef_search", 100))
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- ef is coerced with int()
             cursor.execute(f"SET LOCAL hnsw.ef_search = {ef}")
             cursor.execute("SET LOCAL hnsw.iterative_scan = 'strict_order'")
 
@@ -451,7 +452,9 @@ class PgvectorCollectionAdapter(OpenGaussCollectionAdapter):
     def _execute_cleanup(self):
         cursor = self._conn.cursor()
         try:
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _quote_identifier
             cursor.execute(f"DROP TABLE {_quote_identifier(self._collection_name)}")
+            # nosemgrep: python.sqlalchemy.security.sqlalchemy-execute-raw-query.sqlalchemy-execute-raw-query -- identifiers validated by _quote_identifier; values bound as %s
             cursor.execute(
                 f"DELETE FROM {_quote_identifier(_META_TABLE)} WHERE table_name = %s",
                 (self._collection_name,),
