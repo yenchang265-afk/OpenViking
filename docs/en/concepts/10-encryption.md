@@ -41,13 +41,12 @@ OpenViking uses an Envelope Encryption architecture with a three-layer key syste
 
 ## Key Providers
 
-OpenViking supports three key providers for different deployment scenarios:
+OpenViking supports two key providers for different deployment scenarios:
 
 | Provider | Use Case | Root Key Storage | Features |
 |----------|----------|-----------------|----------|
 | **Local** | Dev environments, single-node deployments | Local file `~/.openviking/master.key` | Simple, no external services |
 | **Vault** | Production, multi-cloud | Transit-encrypted value stored in Vault KV | Vault protects the root key |
-| **Volcengine KMS** | Volcengine cloud deployments | KMS-encrypted value stored in local `key_file` | KMS protects the root key |
 
 ### Local (File)
 
@@ -94,24 +93,7 @@ Suitable for production and multi-cloud deployments:
 
 ### Volcengine KMS
 
-Suitable for Volcengine cloud deployments:
-
-```json
-{
-  "encryption": {
-    "enabled": true,
-    "provider": "volcengine_kms",
-    "volcengine_kms": {
-      "key_id": "d926aa0d-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      "region": "cn-beijing",
-      "access_key": "AKLTxxxxxxxxxxxxxxxxxx",
-      "secret_key": "Tmpxxxxxxxxxxxxxxxxxxxxxx",
-      "endpoint": null,
-      "key_file": "~/.openviking/openviking-volcengine-root-key.enc"
-    }
-  }
-}
-```
+This fork removed `volcengine_kms` and supports only `local` and `vault`. Decrypt and export existing KMS-encrypted data using a deployment that still supports that provider before importing it into the new deployment. Retain original keys and backups; changing the provider alone does not convert existing ciphertext.
 
 ## How It Works
 

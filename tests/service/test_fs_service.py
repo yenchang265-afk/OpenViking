@@ -1313,12 +1313,21 @@ async def test_resource_mv_watch_write_failure_preserves_existing_target_files(
     write = viking_fs.write_file
     failure = OSError("Watch metadata write failed")
 
+    write_bytes = viking_fs.write_file_bytes
+
     async def fail_watch_write(uri, *args, **kwargs):
         if uri == FileWatchStore.STORAGE_TMP_URI:
             raise failure
         return await write(uri, *args, **kwargs)
 
+    async def fail_watch_write_bytes(uri, *args, **kwargs):
+        if uri == FileWatchStore.STORAGE_TMP_URI:
+            raise failure
+        return await write_bytes(uri, *args, **kwargs)
+
     monkeypatch.setattr(viking_fs, "write_file", fail_watch_write)
+    # The watch store persists its control document as raw bytes.
+    monkeypatch.setattr(viking_fs, "write_file_bytes", fail_watch_write_bytes)
     with pytest.raises(OSError) as raised:
         await service.mv(source, target, ctx=request_context)
     assert raised.value is failure
@@ -1771,6 +1780,9 @@ def _listing_viking_fs(entries):
 
     async def finalize(entries, *args, **kwargs):
         return await VikingFS._finalize_listing_entries(enrichment, entries, *args, **kwargs)
+
+    # VikingFS.ls annotates each entry's effective access before finalizing.
+    entries = [{"access": "manage", **entry} for entry in entries]
 
     return SimpleNamespace(ls=AsyncMock(return_value=entries), _finalize_listing_entries=finalize)
 

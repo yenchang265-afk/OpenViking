@@ -1,5 +1,7 @@
 # 配置模型與服務
 
+> 本倉庫為分支版本。安裝套件或選擇提供程式前，請先閱讀[分支相容性](../configuration/03-fork.md)。以下示例需設定 `OPENAI_API_KEY`；啟用 rerank 時另需 `COHERE_API_KEY`。
+
 本文用於選擇模型、組合配置示例和理解生效範圍。只查欄位時，請看[服務端配置欄位](../configuration/01-server.md)或[客戶端配置欄位](../configuration/02-client.md)；首次部署從[部署路徑](00-overview.md)開始。
 
 OpenViking 使用 JSON 配置檔案（`ov.conf`）進行設定。配置檔案支援 Embedding、VLM、Rerank、儲存、解析器等多個模組的配置。
@@ -15,7 +17,7 @@ openviking-server init
 openviking-server doctor
 ```
 
-`openviking-server init` 會分別引導你填寫 Embedding 和 VLM 的配置。對於 `OpenAI`、`Volcengine`、`Kimi`、`GLM` 這類 API 型 VLM，按提示填寫對應的 VLM API Key；如果要使用 Codex 作為 VLM，請選擇 `OpenAI Codex`，嚮導會自動幫你處理已有 Codex 鑑權的匯入，或直接引導你完成登入。
+`openviking-server init` 會分別引導你填寫 Embedding 和 VLM 的配置。對於 `OpenAI`、`Kimi`、`GLM` 這類 API 型 VLM，按提示填寫對應的 VLM API Key；如果要使用 Codex 作為 VLM，請選擇 `OpenAI Codex`，嚮導會自動幫你處理已有 Codex 鑑權的匯入，或直接引導你完成登入。
 
 ## 快速開始
 
@@ -60,7 +62,7 @@ openviking-server doctor
 
 ### ov.conf 的有序憑據陣列
 
-`vlm` 和 `query_planner` 支援有序的 `credentials` 陣列；Embedding 在已配置的 `dense`、`sparse` 或 `hybrid` 節內支援同樣的陣列。索引 0 優先順序最高，後續元素提供故障切換憑據。模型配置節仍是 JSON 物件，原有單憑據配置繼續相容。
+`vlm` 和 `query_planner` 支援有序的 `credentials` 陣列；Embedding 在 `dense` 節內支援同樣的陣列。索引 0 優先順序最高，後續元素提供故障切換憑據。模型配置節仍是 JSON 物件，原有單憑據配置繼續相容。
 
 將以下欄位合併到你的 `ov.conf`，並在啟動服務前設定 `PRIMARY_API_KEY` 和 `BACKUP_API_KEY`：
 
@@ -207,32 +209,6 @@ Account 複用 Cluster 連線並保留資料過濾。遠端資源由外部控制
 ## 配置示例
 
 <details>
-<summary><b>火山引擎（豆包模型）</b></summary>
-
-```json
-{
-  "embedding": {
-    "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215",
-      "input": "multimodal"
-    }
-  },
-  "vlm": {
-    "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key"  : "your-volcengine-api-key",
-    "provider" : "volcengine",
-    "model"    : "doubao-seed-2-0-lite-260428"
-  }
-}
-```
-
-</details>
-
-<details>
 <summary><b>OpenAI 模型</b></summary>
 
 ```json
@@ -258,7 +234,7 @@ Account 複用 Cluster 連線並保留資料過濾。遠端資源由外部控制
 </details>
 
 <details>
-<summary><b>火山引擎 Embedding + Codex VLM</b></summary>
+<summary><b>OpenAI Embedding + Codex VLM</b></summary>
 
 使用 `openviking-server init` 完成 Codex 登入/匯入後，再執行 `openviking-server doctor`。
 
@@ -266,17 +242,18 @@ Account 複用 Cluster 連線並保留資料過濾。遠端資源由外部控制
 {
   "embedding": {
     "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215"
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small",
+      "input": "text"
     }
   },
   "vlm": {
-    "provider" : "openai-codex",
-    "model"    : "gpt-5.6-terra",
-    "api_base" : "https://chatgpt.com/backend-api/codex",
+    "provider": "openai-codex",
+    "model": "gpt-5.6-terra",
+    "api_base": "https://chatgpt.com/backend-api/codex",
     "reasoning_effort": "xhigh"
   }
 }
@@ -287,24 +264,25 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 </details>
 
 <details>
-<summary><b>火山引擎 Embedding + Kimi Coding VLM</b></summary>
+<summary><b>OpenAI Embedding + Kimi Coding VLM</b></summary>
 
 ```json
 {
   "embedding": {
     "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215"
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small",
+      "input": "text"
     }
   },
   "vlm": {
-    "provider" : "kimi",
-    "model"    : "kimi-code",
-    "api_key"  : "your-kimi-subscription-api-key",
-    "api_base" : "https://api.kimi.com/coding"
+    "provider": "kimi",
+    "model": "kimi-code",
+    "api_key": "your-kimi-subscription-api-key",
+    "api_base": "https://api.kimi.com/coding"
   }
 }
 ```
@@ -314,24 +292,25 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 </details>
 
 <details>
-<summary><b>火山引擎 Embedding + GLM Coding Plan VLM</b></summary>
+<summary><b>OpenAI Embedding + GLM Coding Plan VLM</b></summary>
 
 ```json
 {
   "embedding": {
     "dense": {
-      "api_base" : "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key"  : "your-volcengine-api-key",
-      "provider" : "volcengine",
-      "dimension": 1024,
-      "model"    : "doubao-embedding-vision-251215"
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "provider": "openai",
+      "dimension": 1536,
+      "model": "text-embedding-3-small",
+      "input": "text"
     }
   },
   "vlm": {
-    "provider" : "glm",
-    "model"    : "glm-4.6v",
-    "api_key"  : "your-zai-api-key",
-    "api_base" : "https://api.z.ai/api/coding/paas/v4"
+    "provider": "glm",
+    "model": "glm-4.6v",
+    "api_key": "your-zai-api-key",
+    "api_base": "https://api.z.ai/api/coding/paas/v4"
   }
 }
 ```
@@ -344,7 +323,7 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 
 ### embedding
 
-用於向量搜尋的 Embedding 模型配置，支援 dense、sparse 和 hybrid 三種模式。
+用於向量搜尋的 Embedding 模型配置，此分支僅實作 dense 模式。
 
 #### Dense Embedding
 
@@ -356,12 +335,13 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
     "text_source": "content_only",
     "max_input_tokens": 4096,
     "dense": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024,
-      "input": "multimodal",
-      "batch_size": 32
+      "provider": "openai",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "input": "text",
+      "batch_size": 32,
+      "api_base": "https://api.openai.com/v1"
     }
   }
 }
@@ -375,7 +355,7 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 | `max_retries` | int | Embedding provider 瞬時錯誤的最大重試次數（`embedding.max_retries`，預設：`3`；`0` 表示停用重試） |
 | `text_source` | str | 文本檔案向量化時使用的文本來源。`content_only` 讀取原文內容；`summary_first` 優先使用摘要，沒有摘要時回退到原文；`summary_only` 已棄用，作為 `summary_first` 的相容別名；舊配置仍可載入，會記錄警告並歸一為 `summary_first`。預設：`content_only` |
 | `max_input_tokens` | int | 使用原文內容向量化時，傳送給 embedding 模型的最大估算 token 數。預設：`4096` |
-| `provider` | str | `"openai"`、`"azure"`、`"volcengine"`、`"vikingdb"`、`"jina"`、`"ollama"`、`"gemini"`、`"voyage"`、`"dashscope"`、`"minimax"`、`"cohere"`、`"litellm"` 或 `"local"` |
+| `provider` | str | `"openai"`、`"azure"`、`"jina"`、`"ollama"`、`"gemini"`、`"voyage"`、`"dashscope"`、`"minimax"`、`"cohere"`、`"litellm"` 或 `"local"` |
 | `api_key` | str | API Key |
 | `model` | str | 模型名稱 |
 | `dimension` | int | 向量維度；Voyage 對應 `output_dimension` |
@@ -412,18 +392,15 @@ OpenAI 已於 2026 年 8 月 31 日[停止在 ChatGPT 登入的 Codex 中提供 
 
 | 模型 | 維度 | 輸入型別 | 說明 |
 |------|------|----------|------|
-| `doubao-embedding-vision-251215` | 1024 | multimodal | 推薦 |
-| `doubao-embedding-250615` | 1024 | text | 僅文本 |
+| `text-embedding-3-small` | 1536 | text | OpenAI |
+| `bge-small-zh-v1.5-f16` | 512 | text | local |
 
 使用 `input: "multimodal"` 時，OpenViking 可以嵌入文本、圖片（PNG、JPG 等）和混合內容。以圖搜圖需要該模式；純文本 embedding 模型仍會索引圖片 summary，但不能接收圖片查詢。
 
-Hybrid 是否支援圖片取決於 dense 通道。圖文完整輸入進入 dense，sparse 只接收文字；純圖輸入跳過 sparse。Volcengine hybrid 對純文本保留一次合併請求，對圖文分別請求多模態 dense 和文本 sparse。dense 模型和維度應與索引中已有的向量保持相容。
 
 **支援的 provider:**
 - `openai`: OpenAI Embedding API
 - `azure`: Azure OpenAI Embedding API
-- `volcengine`: 火山引擎 Embedding API
-- `vikingdb`: VikingDB Embedding API
 - `jina`: Jina AI Embedding API
 - `ollama`: Ollama 本地 OpenAI 兼容 Embedding API
 - `voyage`: Voyage AI Embedding API
@@ -511,23 +488,6 @@ Hybrid 是否支援圖片取決於 dense 通道。圖文完整輸入進入 dense
       "extra_headers": {
         "GroupId": "your-group-id"
       }
-    }
-  }
-}
-```
-
-**vikingdb provider 配置示例:**
-
-```json
-{
-  "embedding": {
-    "dense": {
-      "provider": "vikingdb",
-      "model": "bge_large_zh",
-      "ak": "your-access-key",
-      "sk": "your-secret-key",
-      "region": "cn-beijing",
-      "dimension": 1024
     }
   }
 }
@@ -706,71 +666,11 @@ pip install "openviking[local-embed]"
 
 #### Sparse Embedding
 
-> 以下示例使用 `doubao-embedding-vision-251215`。所選模型是否支援文本 sparse 輸出，請核對方舟[向量化文件](https://docs.volcengine.com/docs/ark/vectorization?lang=zh&redirect=1)。
-
-```json
-{
-  "embedding": {
-    "sparse": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215"
-    }
-  }
-}
-```
-
-Sparse 輸出是 embedding provider 的能力，不會因為設定
-`storage.vectordb.sparse_weight` 就自動出現。OpenViking 當前只為
-`volcengine` 和 `vikingdb` 實現了 `sparse` / `hybrid` embedding provider；
-OpenAI 相容介面、Ollama 和內建 `local` provider 目前都只支援 dense。
-因此，自託管的 `/v1/embeddings` 不會被自動當成 sparse 介面，OpenViking
-也不會額外探測 `/v1/embeddings/sparse` 路由。
-
-當 provider 只返回 dense vector 時，OpenViking 不會自動補充 BM25 或其他
-sparse-vector 兜底。若要啟用混合檢索，需要配置受支援的 sparse/hybrid
-provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的記憶體需求
-取決於具體 provider 和模型，不由 OpenViking 控制；生產啟用前請按模型文件
-評估資源佔用。
+此分支未提供 sparse 或 hybrid embedding 的實作。請只配置 `embedding.dense`；設定 `storage.vectordb.sparse_weight` 不會新增稀疏向量模型。
 
 #### Hybrid Embedding
 
-支援兩種方式：
-
-**方式一：使用單一混合模型**
-
-```json
-{
-  "embedding": {
-    "hybrid": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024
-    }
-  }
-}
-```
-
-**方式二：組合 dense + sparse**
-
-```json
-{
-  "embedding": {
-    "dense": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215",
-      "dimension": 1024
-    },
-    "sparse": {
-      "provider": "volcengine",
-      "api_key": "your-api-key",
-      "model": "doubao-embedding-vision-251215"
-    }
-  }
-}
-```
+此分支未提供 sparse 或 hybrid embedding 的實作。請只配置 `embedding.dense`；設定 `storage.vectordb.sparse_weight` 不會新增稀疏向量模型。
 
 ### vlm
 
@@ -779,18 +679,11 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 ```json
 {
   "vlm": {
-    "provider": "volcengine",
-    "api_key": "your-api-key",
-    "model": "doubao-seed-2-0-lite-260428",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "max_retries": 3,
-    "media": {
-      "enabled": true,
-      "max_concurrent": 2,
-      "file_processing_timeout": 1800,
-      "file_poll_interval": 3,
-      "video_fps": 1.0
-    }
+    "provider": "openai",
+    "api_key": "${OPENAI_API_KEY}",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "max_retries": 3
   }
 }
 ```
@@ -804,7 +697,7 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 | `model` | str | 模型名稱 |
 | `api_base` | str | API 端點（可選）。`openai-codex` 預設使用 ChatGPT Codex 後端；使用標準 OpenAI API Key 時設為 `https://api.openai.com/v1` |
 | `temperature` | float 或 null | 取樣溫度（預設：`null`）。省略或設為 `null` 時請求不攜帶該欄位，使用服務端預設值 |
-| `thinking` | bool | 啟用思考模式（僅對部分火山模型生效，預設：`false`） |
+| `thinking` | bool | 舊欄位；此分支已移除原生 Volcengine 後端 |
 | `max_concurrent` | int | 語義處理階段 LLM 最大併發呼叫數（預設：`32`） |
 | `max_retries` | int | VLM provider 瞬時錯誤的最大重試次數（預設：`3`；`0` 表示停用重試） |
 | `credentials` | array | 有序 VLM 憑據/模型列表，索引 0 優先順序最高。每項可單獨覆蓋 `provider`、`model`、`api_key`、`api_base`、`api_version`、`extra_headers`、`extra_request_body`、`reasoning_effort` 和 `keepalive_expiry` |
@@ -831,8 +724,8 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 
 | 模型 | 說明 |
 |------|------|
-| `doubao-seed-2-0-lite-260428` | 推薦用於語義提取 |
-| `doubao-pro-32k` | 用於更長上下文 |
+| `gpt-5.4` | OpenAI API |
+| `gpt-5.6-terra` | Codex OAuth |
 
 新增資源時，VLM 生成：
 
@@ -842,7 +735,6 @@ provider，並設定 `storage.vectordb.sparse_weight > 0`。自託管模型的�
 VLM 配置返回 `is_available() == false` 時，通用檔案摘要會返回空內容，目錄概覽會退回“尚未就緒”的佔位內容；可由本地解析器提取的程式碼骨架等仍按各自路徑處理。這種狀態不能視為已完成語義索引，應檢查模型配置和對應處理任務。
 
 **支持的 provider：**
-- `volcengine`：火山引擎 VLM API
 - `openai`：OpenAI 相容 VLM API
 - `openai-codex`：通過 ChatGPT/Codex OAuth，或顯式 API Key 和端點使用 Responses API
 - `kimi`：Kimi Coding 訂閱端點，內建 provider 預設配置
@@ -926,51 +818,7 @@ LiteLLM 的 Bedrock bearer-token API-key 鑑權，請設定 `forward_api_key=tru
 
 **音影片理解**
 
-音訊和影片理解是當前 VLM 的可選能力，複用相同的 provider、模型、憑據、client、請求超時、重試、請求頭、最大輸出 token、故障切換鏈路和 token 統計。通過巢狀的 `vlm.media` 引數啟用，不再單獨配置媒體模型。
-
-```json
-{
-  "vlm": {
-    "provider": "volcengine",
-    "api_key": "${VOLCENGINE_API_KEY}",
-    "model": "${VOLCENGINE_MODEL}",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "timeout": 1200,
-    "max_retries": 3,
-    "max_tokens": 4096,
-    "media": {
-      "enabled": true,
-      "file_processing_timeout": 1800,
-      "file_poll_interval": 3,
-      "max_concurrent": 2,
-      "video_fps": 1.0
-    }
-  }
-}
-```
-
-`vlm.extra_request_body` 也適用於音影片的方舟 Responses 請求，例如 `{"service_tier": "flex", "thinking": {"type": "disabled"}}`。請使用所選模型和 Responses API 支援的欄位。顯式配置的額外欄位通過 SDK 覆蓋自動生成的請求欄位，包括 `store`；響應儲存預設設為 `false`，僅在顯式配置時覆蓋。這些欄位不會傳給檔案上傳、狀態查詢或刪除請求。
-
-VLM 的 `model` 填寫對應的方舟模型 endpoint ID。`video_fps` 僅用於影片，控制傳送給方舟的影片取樣幀率。
-
-推薦使用 `doubao-seed-2-0-lite-260428` 或 `doubao-seed-2-0-mini-260428` 作為音影片理解模型。它們是可直接採用的推薦示例，並非完整的支援模型列表；方舟會持續更新模型及其輸入能力。影片理解的可選模型請參考方舟官方[影片輸入能力列表](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#ff5ef604)，音訊理解的可選模型請參考方舟官方[音訊輸入能力列表](https://console.volcengine.com/ark/region:cn-beijing/docs/82379/1330310?lang=zh#9619c0ba)。如果 `model` 填寫的是 `ep-*` 推理接入點 ID，請確認該接入點背後的基礎模型支援對應的媒體輸入。OpenViking 不會在配置載入時校驗模型的音訊或影片能力。
-
-**可接入格式與可理解格式**
-
-| 型別 | 現有 Parser 可接入並儲存 | 本版本可由方舟理解 |
-|------|--------------------------|--------------------|
-| 音訊 | MP3、WAV、OGG、FLAC、AAC、M4A、OPUS、AC3 | MP3、WAV、AAC、M4A |
-| 影片 | MP4、AVI、MOV、MKV、WEBM、FLV、WMV、TS | MP4、AVI、MOV |
-
-不在“可理解”列中的格式繼續沿用現有 Parser 和儲存行為；OpenViking 不會對這些檔案轉碼，也不會把它們傳送給理解模型。當檔案被識別為音訊或影片葉子節點時，空媒體摘要會使用檔名入庫。
-
-對於支援的檔案，OpenViking 將媒體上傳到方舟 Files API，且不顯式指定 `expire_at`，因此檔案保留時間遵循方舟的預設策略。檔案處理完成後，OpenViking 通過預設停用響應儲存的 Responses API 請求引用其 `file_id`，最後在較短的清理超時內嘗試刪除方舟檔案。遠端刪除屬於 best-effort；如果刪除失敗或超時，不會覆蓋已經成功的理解結果，檔案將繼續遵循方舟的預設保留策略。本地臨時檔案獨立清理，即使遠端清理失敗或請求被取消也會刪除。
-
-- 目錄中只有一個音訊或影片檔案且理解成功時，該摘要直接成為目錄 L1，並通過現有語義鏈路派生 L0，不再呼叫通用 VLM 做第二次總結。
-- 媒體位於混合目錄時，其摘要仍參與現有通用 VLM 聚合。
-- 音影片理解未啟用、理解格式不支援或模型最終失敗時，媒體摘要為空；目錄 L0/L1 生成保持原有通用行為，被識別為音訊或影片的葉子節點則使用檔名作為 DETAIL 向量和 BM25 內容。Provider 錯誤和媒體理解狀態文字不會寫入媒體摘要或葉子索引。
-
-媒體處理會把檔案內容傳送給所配置的外部 provider。停用響應儲存和 best-effort 刪除可以降低非預期留存風險，但不能替代 provider 自身的隱私與留存控制；上傳檔案未顯式指定過期時間，其保留週期由方舟的預設策略決定。方舟 Files 的儲存/處理以及 Responses 的模型 token 可能產生費用；啟用前請確認 provider 的隱私、留存和計費條款。詳見火山方舟官方[音訊理解文件](https://docs.volcengine.com/docs/82379/2377589?lang=zh)和[影片理解文件](https://docs.volcengine.com/docs/82379/1895586?lang=zh)。
+此分支已移除原生 Ark VLM 後端，未提供音訊/影片理解實作。`vlm.media` 欄位仍保留，但啟用它們不會為現有後端新增媒體理解能力。
 
 ### compile_api
 
@@ -1198,22 +1046,8 @@ Account 已配置时，远端认证失败不会回退到 Cluster Key。普通 ad
 
 ### rerank
 
-用於搜尋結果精排的 Rerank 模型。支援 VikingDB（火山引擎）、Cohere、OpenAI
+用於搜尋結果精排的 Rerank 模型。支援 Cohere、OpenAI
 兼容接口、LiteLLM 和 Jev。
-
-**火山引擎 (VikingDB):**
-
-```json
-{
-  "rerank": {
-    "provider": "vikingdb",
-    "ak": "your-access-key",
-    "sk": "your-secret-key",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028"
-  }
-}
-```
 
 **OpenAI 兼容提供方 (如 DashScope):**
 
@@ -1306,10 +1140,8 @@ Choice 不受這個 Noul 專用開關影響，始終將全部候選放入共享 
 
 | 引數 | 型別 | 說明 |
 |------|------|------|
-| `provider` | str | `"vikingdb"`、`"cohere"`、`"openai"`、`"litellm"` 或 `"jev"`。省略時基於欄位自動識別。 |
-| `ak` | str | VikingDB Access Key（僅 `vikingdb` 提供方使用） |
-| `sk` | str | VikingDB Secret Key（僅 `vikingdb` 提供方使用） |
-| `model_name` | str | 模型名稱（僅 `vikingdb` 提供方使用，預設：`doubao-seed-rerank`） |
+| `provider` | str | `"cohere"`、`"openai"`、`"litellm"` 或 `"jev"`。省略時基於欄位自動識別。 |
+| `model_name` | str | Cohere 模型名稱（預設：`rerank-v3.5`） |
 | `api_key` | str | API Key（用於 `openai`、`cohere` 或 `jev` 提供方） |
 | `api_base` | str | 完整介面地址（用於 `openai` 或 `jev`；Jev 預設為 `https://api.typesafe.ai/v1/systemone`，Vercel 使用 `https://ai-gateway.vercel.sh/typesafe/v1/systemone`；自定義 Jev URL 會原樣使用） |
 | `model` | str | 模型名稱（用於 OpenAI 相容、LiteLLM 或 `jev` 提供方） |
@@ -1322,7 +1154,6 @@ Choice 不受這個 Noul 專用開關影響，始終將全部候選放入共享 
 | `extra_headers` | object | 自定義 HTTP 請求頭（OpenAI 相容 provider 可用，可選） |
 
 **支持的提供方:**
-- `vikingdb`: 火山引擎 VikingDB Rerank API (使用 AK/SK)
 - `cohere`: Cohere Rerank API
 - `openai`: OpenAI 相容的 Rerank 介面
 - `litellm`: LiteLLM Rerank 介面
@@ -1620,8 +1451,9 @@ Redis 名稱空間。
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `provider` | str | `filesystem`、`memory`、`sqlite` 或 `cache`；`cache` 複用 Redis CacheRuntime | `filesystem` |
+| `provider` | str | `filesystem`、`memory`、`sqlite`、`postgres` 或 `cache`；`postgres` 直連 PostgreSQL，`cache` 複用 Redis CacheRuntime | `filesystem` |
 | `sqlite_path` | str / null | 可顯式覆蓋本地共享鎖資料庫的絕對路徑。見 [SQLite 配置](../configuration/01-server.md#storage) | 使用 `sqlite` 時為 `{storage.workspace}/_system/pathlock/pathlock.db` |
+| `postgres_dsn_env` | str / null | `postgres` 必填；儲存 PostgreSQL DSN 的環境變數名。見 [PostgreSQL 配置](../configuration/01-server.md#postgresql-pathlock) | `null` |
 | `lock_expire_secs` | float | 未重新整理的鎖進入 stale 狀態前的秒數；不得小於 `1.0` | `30.0` |
 | `lock_timeout_secs` | float | 已廢棄且忽略；執行時等待超時固定為 `0.0` | `0.0` |
 
@@ -1630,7 +1462,35 @@ SQLite PathLock 僅適用於同一主機上的程序共享同一個本地磁碟�
 workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
 詳見 [SQLite 部署限制](../configuration/01-server.md#storage)。
 
-多個容器或主機共享 EFS 時，使用下面的共享 Redis PathLock 配置。
+不使用 Redis 的多程序或多主機 PathLock 協調，可將下面片段合入 `ov.conf`，
+並在每個服務和 worker 啟動前設定對應環境變數：
+
+```json
+{
+  "service_name": "production",
+  "storage": {
+    "agfs": {
+      "pathlock": {
+        "provider": "postgres",
+        "postgres_dsn_env": "OV_POSTGRES_DSN",
+        "lock_expire_secs": 30.0
+      }
+    }
+  }
+}
+```
+
+```sh
+export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=openviking password=YOUR_PASSWORD sslmode=require'
+```
+
+所有參與者必須連線同一可寫 PostgreSQL 主庫，使用相同的頂層 `service_name`
+和過期時長。PostgreSQL PathLock 獨立於 `cache.provider/cache.params`，
+不會啟用 CacheFS，也不會改變 QueueFS、業務檔案儲存或向量後端的併發限制。
+特別是預設 SQLite 佇列不適合在 EFS 上跨主機共享。
+配置和驗證步驟見 [PostgreSQL PathLock 配置](../configuration/01-server.md#postgresql-pathlock)。
+
+多個容器或主機共享 EFS 時，也可使用下面的共享 Redis PathLock 配置。
 所有副本必須連線同一個 Redis 部署，並使用相同的頂層 `service_name` 和鎖過期配置。
 示例同時使用 Redis QueueFS 和 coordination，避免 SQLite 狀態落在 EFS。
 
@@ -1671,7 +1531,7 @@ workspace 位於 EFS 時，預設 `sqlite_path` 也會落在 EFS。
 }
 ```
 
-標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。全部模組使用本地 Provider 時不解析 `cache.params`，也不連線 Provider。
+標準配置沒有全域 `cache.enabled`，也沒有各模組自己的 Redis namespace 欄位。當 CacheFS 或 QueueFS 選擇 `backend=cache`、PathLock 或 coordination 選擇 `provider=cache`，或多寫選擇 `backups.provider=cache` 時初始化 CacheRuntime。Cache PathLock 當前只支援 `cache.provider=redis`，不支援 DynamicProvider。只要這些模組都沒有選擇 cache Provider，就不解析 `cache.params`，也不連線 CacheRuntime；PathLock 使用 PostgreSQL 時同樣如此。
 
 請把 Provider 引數遷移到頂層 `cache.provider/cache.params`，用頂層 `service_name` 生成共享 Redis 名稱，業務模組改為 `cachefs.backend="cache"`、`queuefs.backend="cache"` 或 `backups.provider="cache"`；Redis 的 `singleton` 改為 `standalone`，`tls_enabled` 改為使用 `rediss://` endpoint。
 
@@ -1943,7 +1803,7 @@ MySQL／MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（兩者的預設值）
 
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
-| `backend` | str | VectorDB 後端型別: 'local'（基於檔案）, 'http'（遠端服務）, 'cuvs'（本地儲存 + GPU dense search）、'opengauss'（openGauss DataVec）或 'elasticsearch'（Elasticsearch 8.x） | "local" |
+| `backend` | str | VectorDB 後端型別: 'local'（基於檔案）, 'http'（遠端服務）, 'cuvs'（本地儲存 + GPU dense search）、'opengauss'（openGauss DataVec）、'pgvector'（PostgreSQL）或 'elasticsearch'（Elasticsearch 8.x） | "local" |
 | `name` | str | VectorDB 的集合名稱 | "context" |
 | `url` | str | 'http' 型別的遠端服務 URL（例如 `http://localhost:5000`） | null |
 | `project_name` | str | 專案名稱（別名 project） | "default" |
@@ -1952,6 +1812,7 @@ MySQL／MariaDB 設定：`max_allowed_packet` ≥ 16 MiB（兩者的預設值）
 | `sparse_weight` | float | 混合向量搜尋的稀疏權重，僅在使用混合索引時生效 | 0.0 |
 | `elasticsearch` | object | 'elasticsearch' 後端的配置，見下文 | - |
 | `cuvs` | object | NVIDIA cuVS 配置，也用於在 'local' 下顯式開啟視訊記憶體感知自動模式，參見 [cuVS 使用指南](./16-cuvs.md) | - |
+| `pgvector` | object | PostgreSQL 連線池和 flat/HNSW 引數，參見 [pgvector 使用指南](./25-pgvector.md) | - |
 
 預設使用本地模式
 ```
@@ -2280,7 +2141,7 @@ ov add-resource ./docs --exclude "*.tmp"
 | `port` | int | 繫結埠 | `1933` |
 | `auth_mode` | str / null | 內建模式：`"dev"`、`"api_key"`、`"trusted"`、`"oidc"`、`"ldap"`。省略或設為 null 時，有非空 `root_api_key` 則推導為 `api_key`，否則為 `dev`。 | `null` |
 | `root_api_key` | str | `api_key` 模式必填的 Root API Key；`trusted` 模式在所有部署中均必填，包括 localhost，不負責解析普通使用者身份 | `null` |
-| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"`、`"mysql"` 和 `"redis_mysql"`；統一持久化 Account、User、Group 和 API Key。`"file"` 相容現有 AGFS JSON 登錄檔，並由 Provider 自身維護程序內查詢索引。`"redis_mysql"` 保持 MySQL 為權威儲存，並增加共享 Redis 認證和請求身份讀取快取。 | `"file"` |
+| `account_store.provider` | str | 完整 Account Store Provider。內建 `"file"`、`"mysql"`、`"postgres"` 和 `"redis_mysql"`；統一持久化 Account、User、Group 和 API Key。`"file"` 相容現有 AGFS JSON 登錄檔，並由 Provider 自身維護程序內查詢索引。`"postgres"` 直接使用 PostgreSQL。`"redis_mysql"` 保持 MySQL 為權威儲存，並增加共享 Redis 認證和請求身份讀取快取。 | `"file"` |
 | `account_store.params` | object | Provider 啟動引數。不能通過這裡覆蓋框架注入的 VikingFS 和 File Provider API Key Hash 配置。 | `{}` |
 | `account_store.params.read_only` | bool | 僅 File Provider。只讀取 writer 已建立的登錄檔，啟動時不寫鎖、不初始化、不遷移憑據，並拒絕身份變更。副本資料盤仍保持只讀掛載，設定 `reconcile_system_assets_on_startup=false`；開啟 `api_key_watch_enabled` 感知 writer 的變更。登錄檔缺失時拒絕啟動。 | `false` |
 | `profile_enabled` | bool | 是否允許 HTTP 請求通過 `profile=1` 開啟請求級 cProfile。關閉時服務端會忽略該請求引數；開啟後，CLI 可以顯示返回的 `profile`，而 Python HTTP client 預設只觸發服務端 profile，不會把頂層 `profile` 欄位自動附著到大多數 SDK 返回值上。 | `false` |
@@ -2333,6 +2194,48 @@ schema 變更按順序存放於 `openviking/server/account_stores/sql/changes/`�
   }
 }
 ```
+
+PostgreSQL Account Store 使用 `postgres` provider，安裝 `pip install 'openviking[postgres]'`。
+它直接通過 psycopg 3 和 SQLAlchemy 連線 PostgreSQL，無需 Redis 或 pgvector。
+先由遷移帳號執行
+`openviking/server/account_stores/sql/postgres/init.sql`，啟動不會建立或遷移表。
+執行帳號需要目標 schema 的 `USAGE`、五張 `ov_accounts*` 表的
+`SELECT, INSERT, UPDATE, DELETE` 和三個主鍵序列的 `USAGE, SELECT`，
+無需表所有權或 schema `CREATE` 許可權。新部署首次啟動會建立 `default` 帳號。
+
+```json
+{
+  "service_name": "production",
+  "server": {
+    "account_store": {
+      "provider": "postgres",
+      "params": {
+        "host": "db.example.com",
+        "port": 5432,
+        "user": "openviking",
+        "password": "secret",
+        "database": "openviking",
+        "maxsize": 10,
+        "connect_timeout": 10,
+        "sslmode": "verify-full",
+        "sslrootcert": "/etc/ssl/certs/postgres-ca.pem",
+        "credential_storage": "hash"
+      }
+    }
+  }
+}
+```
+
+`service_name` 是必填的部署隔離邊界，同庫部署應使用不同值。
+PG 憑證儲存支援與 MySQL 相同的 `hash` 和 `encrypted` 模式及
+`credential_encryption_key`，不儲存明文。`maxsize` 是每個 Store 例項的連線池上限
+（預設 10）；`connect_timeout` 是建連超時秒數（預設 10）。`password` 可省略，
+使用 libpq 支援的認證方式；`host` 也可填寫 Unix socket 目錄。
+`sslmode` 預設 `prefer`，還支援 `disable`、`allow`、`require`、`verify-ca`、
+`verify-full`，客戶端證書可通過 `sslcert` / `sslkey` 配置。
+跨例項認證直接讀取 PG 最新已提交狀態；使用者分頁及統計使用同一 MVCC 快照。
+已有 File/MySQL 帳號資料不會自動遷移。此設定僅替換 Account Store；
+Task、Work 和 Watch 的儲存配置分別獨立。
 
 `redis_mysql` 需要安裝 `redis-mysql` extra。`mysql` 部分使用與 MySQL provider
 相同的引數；`cache` 部分沿用頂層快取的 `provider/params` 結構，支援
@@ -2496,7 +2399,7 @@ Redis 連線和命令超時分別通過 `cache.params.connect_timeout_ms` 和
 {
   "encryption": {
     "enabled": true,
-    "provider": "local|vault|volcengine_kms"
+    "provider": "local|vault"
   }
 }
 ```
@@ -2504,7 +2407,7 @@ Redis 連線和命令超時分別通過 `cache.params.connect_timeout_ms` 和
 | 引數 | 型別 | 說明 | 預設值 |
 |------|------|------|--------|
 | `enabled` | bool | 是否啟用加密 | `false` |
-| `provider` | str | 金鑰提供程式：`"local"`、`"vault"` 或 `"volcengine_kms"` | - |
+| `provider` | str | 金鑰提供程式：`"local"` 或 `"vault"` | - |
 | `api_key_hashing.enabled` | bool | 僅 File Provider：是否對 API key 欄位啟用 Argon2id 單向雜湊（與檔案級 `enabled` 獨立控制），詳見 [加密指南](./08-encryption.md) | `false` |
 
 ### Local
@@ -2559,31 +2462,7 @@ Redis 連線和命令超時分別通過 `cache.params.connect_timeout_ms` 和
 
 ### Volcengine KMS（火山引擎）
 
-適合火山引擎雲部署：
-
-```json
-{
-  "encryption": {
-    "enabled": true,
-    "provider": "volcengine_kms",
-    "volcengine_kms": {
-      "key_id": "kms-key-id-xxx",
-      "region": "cn-beijing",
-      "access_key": "AKLTxxxxxxxx",
-      "secret_key": "Tmpxxxxxxxx"
-    }
-  }
-}
-```
-
-| 引數 | 型別 | 說明 | 預設值 |
-|------|------|------|--------|
-| `volcengine_kms.key_id` | str | KMS 金鑰 ID | - |
-| `volcengine_kms.region` | str | 區域 | `"cn-beijing"` |
-| `volcengine_kms.access_key` | str | 火山引擎 Access Key | - |
-| `volcengine_kms.secret_key` | str | 火山引擎 Secret Key | - |
-
-加密功能的詳細說明見 [資料加密](../concepts/10-encryption.md)，完整使用流程見 [加密指南](./08-encryption.md)。
+此分支已移除 `volcengine_kms`。請使用 `local` 或 `vault`；原有 KMS 加密資料需在仍支援該提供程式的部署中解密並匯出，再匯入新部署。僅修改 provider 無法轉換現有密文。
 
 ## storage.transaction 段
 
@@ -2648,12 +2527,13 @@ Task 記錄檔案位於所屬帳號的系統目錄：
     "text_source": "content_only",
     "max_input_tokens": 4096,
     "dense": {
-      "provider": "volcengine",
-      "api_key": "string",
-      "model": "string",
+      "provider": "openai",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "gpt-5.4",
       "dimension": 1024,
       "input": "multimodal",
-      "encoding_format": "float|base64"
+      "encoding_format": "float|base64",
+      "api_base": "https://api.openai.com/v1"
     }
   },
   "vlm": {
@@ -2668,7 +2548,7 @@ Task 記錄檔案位於所屬帳號的系統目錄：
     "extra_request_body": {}
   },
   "rerank": {
-    "provider": "vikingdb|cohere|openai|litellm|jev",
+    "provider": "cohere|openai|litellm|jev",
     "api_key": "string",
     "model": "string",
     "api_base": "string",
@@ -2681,7 +2561,7 @@ Task 記錄檔案位於所屬帳號的系統目錄：
   },
   "encryption": {
     "enabled": false,
-    "provider": "local|vault|volcengine_kms",
+    "provider": "local|vault",
     "local": {
       "key_file": "~/.openviking/master.key"
     },
@@ -2690,12 +2570,6 @@ Task 記錄檔案位於所屬帳號的系統目錄：
       "token": "string",
       "mount_point": "transit",
       "key_name": "openviking-root"
-    },
-    "volcengine_kms": {
-      "key_id": "string",
-      "region": "cn-beijing",
-      "access_key": "string",
-      "secret_key": "string"
     }
   },
   "storage": {
@@ -2709,7 +2583,7 @@ Task 記錄檔案位於所屬帳號的系統目錄：
       }
     },
     "vectordb": {
-      "backend": "local|cuvs|http|opengauss|elasticsearch",
+      "backend": "local|cuvs|http|opengauss|pgvector|elasticsearch",
       "url": "string",
       "project": "string"
     }
@@ -2722,13 +2596,15 @@ Task 記錄檔案位於所屬帳號的系統目錄：
       "provider": "file",
       "params": {}
     },
-    "cors_origins": ["string"]
+    "cors_origins": [
+      "string"
+    ]
   }
 }
 ```
 
 說明：
-- `storage.vectordb.sparse_weight` 用於混合（dense + sparse）索引/檢索的權重，僅在使用 hybrid 索引時生效；設定為 > 0 才會啟用 sparse 訊號。
+- `storage.vectordb.sparse_weight` 用於混合（dense + sparse）索引/檢索的權重，僅在使用 hybrid 索引時生效；此分支未提供 sparse embedding 實作。
 
 ## 故障排除
 
@@ -2772,7 +2648,7 @@ Error: Rate limit exceeded
 
 ## 相關文件
 
-- [火山引擎購買指南](./02-volcengine-purchase-guide.md) - API Key 獲取
+- [火山引擎購買指南](./02-volcengine-purchase-guide.md) - 僅適用於上游版本
 - [API 概覽](../api/01-overview.md) - 客戶端初始化
 - [服務部署](./03-deployment.md) - Server 配置
 - [上下文層級](../concepts/03-context-layers.md) - L0/L1/L2

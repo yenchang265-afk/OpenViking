@@ -453,19 +453,20 @@ OpenViking 服務端配置與 OpenClaw 外掛配置是兩層配置，位置不�
   },
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "$ARK_API_KEY",
-      "model": "doubao-embedding-vision-250615",
-      "dimension": 2048
+      "provider": "openai",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "model": "text-embedding-3-small",
+      "dimension": 1536,
+      "input": "text"
     },
     "max_concurrent": 10
   },
   "vlm": {
-    "provider": "volcengine",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "$ARK_API_KEY",
-    "model": "doubao-seed-2-0-lite-260428",
+    "provider": "openai",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}",
+    "model": "gpt-5.4",
     "max_concurrent": 20
   }
 }
@@ -503,8 +504,8 @@ mkdir -p ~/.openviking
 $EDITOR ~/.openviking/ov.conf
 
 # 不建議把真實 key 寫進文件或命令歷史；優先通過環境變數注入
-export ARK_API_KEY=<your-ark-key>
-# 或 OpenAI provider：export OPENAI_API_KEY=<your-openai-key>
+export OPENAI_API_KEY=<your-openai-key>
+# 上面的 OpenAI 示例使用 OPENAI_API_KEY
 
 openviking-server doctor
 openviking-server --host 127.0.0.1 --port 1933
@@ -521,7 +522,7 @@ openviking-server --host 127.0.0.1 --port 1933
 注意事項：
 
 - `ov.conf` 是服務端模型與儲存配置，決定服務端如何做 embedding、VLM 抽取、resource 解析和 session archive；外掛不會讀取或修改這個檔案。
-- `api_key` 欄位建議寫成 `$ARK_API_KEY`、`$OPENAI_API_KEY` 這類環境變數佔位，並在啟動服務前匯出真實 key，避免金鑰落盤或進入 Git。
+- `api_key` 欄位建議寫成 `$OPENAI_API_KEY` 這類環境變數佔位，並在啟動服務前匯出真實 key，避免金鑰落盤或進入 Git。
 - 切換 embedding 模型或 `dimension` 後，歷史向量索引可能不相容；本地測試環境可清理 workspace 後重建，生產環境需要按服務端遷移/重建索引方案處理。
 - `workspace` 要放在服務端程序有讀寫許可權且磁碟容量足夠的位置，長期記憶、資源索引、歸檔和日誌都會持續增長。
 
@@ -537,7 +538,7 @@ python3 -m pip install openviking --upgrade --force-reinstall
 openviking-server init
 
 # 3. 匯出模型 provider key，或提前寫入自定義 ov.conf
-export ARK_API_KEY=<your-ark-key>
+export OPENAI_API_KEY=<your-openai-key>
 
 # 4. 檢查服務端配置和 provider 可用性
 openviking-server doctor

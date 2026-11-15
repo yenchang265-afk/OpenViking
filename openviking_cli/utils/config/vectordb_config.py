@@ -450,6 +450,29 @@ class ElasticsearchConfig(BaseModel):
         return self
 
 
+class PgvectorConfig(BaseModel):
+    """PostgreSQL + pgvector. Credentials are resolved from a DSN environment variable."""
+
+    dsn_env: str = Field(default="OV_POSTGRES_DSN", min_length=1)
+    index_type: Literal["flat", "hnsw"] = "flat"
+    connection_pool_min_size: int = Field(default=1, ge=1)
+    connection_pool_max_size: int = Field(default=10, ge=1)
+    candidate_limit: int = Field(default=1000, ge=1, le=10000)
+    m: int = Field(default=16, ge=2, le=100)
+    ef_construction: int = Field(default=64, ge=4, le=1000)
+    ef_search: int = Field(default=100, ge=1, le=1000)
+
+    @model_validator(mode="after")
+    def validate_pool(self):
+        if self.connection_pool_min_size > self.connection_pool_max_size:
+            raise ValueError("pgvector pool minimum must not exceed maximum")
+        if self.ef_construction < 2 * self.m:
+            raise ValueError("pgvector ef_construction must be at least twice m")
+        return self
+
+    model_config = {"extra": "forbid"}
+
+
 class VectorDBBackendConfig(BaseModel):
     """
     Configuration for VectorDB backend.
@@ -461,7 +484,8 @@ class VectorDBBackendConfig(BaseModel):
     backend: str = Field(
         default="local",
         description=(
-            "VectorDB backend type: 'local', 'cuvs', 'http', 'opengauss', or 'elasticsearch'"
+            "VectorDB backend type: 'local', 'cuvs', 'http', 'opengauss', "
+            "'pgvector', or 'elasticsearch'"
         ),
     )
 
@@ -524,6 +548,8 @@ class VectorDBBackendConfig(BaseModel):
         description="Custom parameters for custom backend adapters",
     )
 
+    pgvector: Optional[PgvectorConfig] = Field(default=None)
+
     @model_validator(mode="after")
     def validate_config(self):
         """Validate configuration completeness and consistency"""
@@ -533,6 +559,7 @@ class VectorDBBackendConfig(BaseModel):
             "http",
             "opengauss",
             "elasticsearch",
+            "pgvector",
         ]
 
         # Allow custom backend classes (containing dot) without standard validation
@@ -553,6 +580,15 @@ class VectorDBBackendConfig(BaseModel):
             if not self.url:
                 raise ValueError("VectorDB http backend requires 'url' to be set")
 
+        elif self.backend == "pgvector":
+            if self.pgvector is None:
+                raise ValueError("VectorDB pgvector backend requires 'pgvector' config")
+            if self.distance_metric not in {"cosine", "l2", "ip", "l1"}:
+                raise ValueError("pgvector distance_metric must be cosine, l2, ip or l1")
+            if self.dimension > 16000:
+                raise ValueError("pgvector vector supports at most 16000 dimensions")
+            if self.dimension > 2000 and self.pgvector.index_type == "hnsw":
+                raise ValueError("pgvector vector HNSW supports at most 2000 dimensions; use flat")
         elif self.backend == "opengauss":
             if not self.opengauss:
                 raise ValueError("VectorDB opengauss backend requires 'opengauss' config")

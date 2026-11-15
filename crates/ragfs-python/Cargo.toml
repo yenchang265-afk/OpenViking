@@ -19,7 +19,7 @@ s3 = ["ragfs/s3"]
 tiered = ["ragfs/tiered"]
 
 [dependencies]
-ragfs = { path = "../ragfs", features = ["cache"] }
+ragfs = { path = "../ragfs", features = ["cache", "postgres"] }
 pyo3 = { version = "0.29", features = ["abi3", "abi3-py310"] }
 pyo3-async-runtimes = { version = "0.29", features = ["tokio-runtime"] }
 tokio = { version = "1", features = ["full"] }

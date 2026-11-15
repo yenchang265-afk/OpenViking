@@ -3,6 +3,14 @@ name: 17. Docs
 on:
   pull_request:
     paths:
+      # Validate links in every component guide and API docs when contracts change.
+      - '**/*.md'
+      - '**/*.mdx'
+      - '**/*.rst'
+      - 'openviking/server/routers/**'
+      - 'openviking_gateway/management.py'
+      - 'openviking_gateway/config.py'
+      - 'sdk/typescript/src/client.ts'
       - 'docs/**'
       - 'frontend/**'
       - '.github/actions/build-ui/**'
@@ -12,6 +20,14 @@ on:
   push:
     branches: [ main ]
     paths:
+      # Validate links in every component guide and API docs when contracts change.
+      - '**/*.md'
+      - '**/*.mdx'
+      - '**/*.rst'
+      - 'openviking/server/routers/**'
+      - 'openviking_gateway/management.py'
+      - 'openviking_gateway/config.py'
+      - 'sdk/typescript/src/client.ts'
       - 'docs/**'
       - 'frontend/**'
       - '.github/actions/build-ui/**'

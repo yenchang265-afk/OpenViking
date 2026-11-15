@@ -1,18 +1,24 @@
+import { useRenderErrors } from './file-browser-labels.js';
+import { ErrorBoundary } from '../../shared/error-boundary/error-boundary.js';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject } from 'react';
+import SearchCloseIcon from '../../../../icons/svg/file-browser/search-close.svg?react';
 import { useOvClient } from '../../client/provider.js';
 import type { OvRequestOptions } from '../../client/types.js';
 import { Modal } from '../../shared/primitives/modal/modal.js';
 import type { Locale } from '../../shared/locale.js';
 import { FileBrowserSearchAdvanced } from './file-browser-search-advanced.js';
 import { FileBrowserSearchHeader } from './file-browser-search-header.js';
+import { useSearchHighlight } from './use-search-highlight.js';
+import type { FileBrowserHandle } from './types.js';
 import { FileBrowserSearchResults } from './file-browser-search-results.js';
 import type { ResolvedLabels } from './file-browser-labels.js';
 import {
   buildScopeOptions,
-  flattenResult,
+  isSearchScopeAllowed,
   normalizeFilters,
 } from './search-model.js';
+import { flattenResult } from './search-hit-order.js';
 import type { SearchFilters, SearchMode } from './search-types.js';
 import { DEFAULT_SEARCH_MODE, EMPTY_FILTERS } from './search-types.js';
 import { useFsSearch } from './use-fs-search.js';
@@ -31,7 +37,7 @@ interface FileBrowserSearchProps {
   advancedOpen: boolean;
   onToggleAdvanced: (open: boolean) => void;
   /** 打开结果：定位到树并加载预览。Opens a result: locates it in the tree and previews it. */
-  onOpenResource: (uri: string) => void;
+  onOpenResource: FileBrowserHandle['openResource'];
   onClose: () => void;
 }
 
@@ -61,38 +67,43 @@ export function FileBrowserSearch({
   onClose,
 }: FileBrowserSearchProps) {
   const client = useOvClient();
+  const renderErrors = useRenderErrors(locale);
   const inputRef = useRef<HTMLInputElement>(null);
   const [draft, setDraft] = useState('');
   const [query, setQuery] = useState('');
+  const [composing, setComposing] = useState(false);
+  const [generation, setGeneration] = useState(0);
   const [mode, setMode] = useState<SearchMode>(DEFAULT_SEARCH_MODE);
   const [filters, setFilters] = useState<SearchFilters>(EMPTY_FILTERS);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   const scopes = useMemo(() => buildScopeOptions(rootUri), [rootUri]);
 
-  // 只保留仍在当前根候选项里的 scopes。`filters.scopes` 会跨 `rootUri` 变化保留，
+  // 只保留仍在当前候选目录范围内的 scopes。`filters.scopes` 会跨 `rootUri` 变化保留，
   // 若根从 project-a 换成 project-b，勾选状态还指着 project-a——面板显示未勾选，
   // 请求却仍发 `target_uri: ["viking://resources/project-a"]`，结果来自当前树之外。
   // 渲染时算一次即可，不必另存一份 state 再同步。
   //
-  // Keep only the scopes still offered by the current root. `filters.scopes` survives a
+  // Keep only scopes within the directories offered by the current root. `filters.scopes` survives a
   // `rootUri` change, so after switching from project-a to project-b the selection still
   // names project-a: the panel shows nothing checked while the request still sends
   // `target_uri: ["viking://resources/project-a"]`, returning results from outside the
   // current tree. Computing it during render needs no mirrored state.
   const effectiveFilters = useMemo(() => {
     if (filters.scopes.length === 0) return filters;
-    const allowed = new Set(scopes.map((option) => option.uri));
-    const scopes_ = filters.scopes.filter((uri) => allowed.has(uri));
+    const scopes_ = filters.scopes.filter((uri) =>
+      isSearchScopeAllowed(scopes, uri),
+    );
     return scopes_.length === filters.scopes.length
       ? filters
       : { ...filters, scopes: scopes_ };
   }, [filters, scopes]);
 
+  const awaitingQuery = open && !composing && draft.trim() !== query.trim();
   const search = useFsSearch({
     client,
     mode,
-    query: open ? query : '',
+    query: open && !composing && !awaitingQuery ? query : '',
+    generation,
     filters: effectiveFilters,
     rootUri,
     requestOptions,
@@ -105,10 +116,10 @@ export function FileBrowserSearch({
   // with no corresponding element event; a query or open change clears the previous
   // timer, as does unmounting.
   useEffect(() => {
-    if (!open) return;
+    if (!open || composing) return;
     const timer = setTimeout(() => setQuery(draft), DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [draft, open]);
+  }, [draft, open, composing]);
 
   // 打开时把焦点放进输入框：弹窗一出现就该能直接打字。
   // Moves focus into the input when the dialog opens, so typing can start at once.
@@ -125,23 +136,36 @@ export function FileBrowserSearch({
   const close = () => {
     setDraft('');
     setQuery('');
+    setComposing(false);
     setMode(DEFAULT_SEARCH_MODE);
     setFilters(EMPTY_FILTERS);
-    setMenuOpen(false);
     onClose();
   };
 
-  const hits = flattenResult(search.result);
+  const hits = useMemo(() => flattenResult(search.result), [search.result]);
   const openResult = (uri: string) => {
-    onOpenResource(uri);
     close();
+    void onOpenResource(uri).catch(() => {});
   };
+  const retry = () => {
+    inputRef.current?.focus();
+    setGeneration((value) => value + 1);
+  };
+  const { active, activeIndex, listId, onHighlight, onKeyDown } =
+    useSearchHighlight(
+      hits,
+      composing,
+      openResult,
+      search.error ? retry : undefined,
+    );
 
   return (
     <Modal
       open={open}
       title={text.searchTitle}
       locale={locale}
+      closeLabel={text.searchDismiss}
+      closeIcon={<SearchCloseIcon aria-hidden="true" />}
       triggerRef={triggerRef}
       className={[
         'ov-file-browser-search',
@@ -157,41 +181,67 @@ export function FileBrowserSearch({
         text={text}
         inputRef={inputRef}
         advancedOpen={advancedOpen}
+        inputProps={{
+          role: 'combobox',
+          'aria-autocomplete': 'list',
+          'aria-expanded': !!active,
+          'aria-controls': active ? listId : undefined,
+          'aria-activedescendant': active
+            ? `${listId}-${activeIndex}`
+            : undefined,
+          onKeyDown,
+          onCompositionStart: () => setComposing(true),
+          onCompositionEnd: (event) => {
+            setDraft(event.currentTarget.value);
+            setComposing(false);
+          },
+        }}
         onChange={setDraft}
         onToggleAdvanced={() => onToggleAdvanced(!advancedOpen)}
       />
       <div className="ov-file-browser-search__content">
         <div className="ov-file-browser-search__results">
-          <FileBrowserSearchResults
-            mode={mode}
-            hits={hits}
-            loading={search.loading}
-            error={search.error}
-            searched={search.result !== null}
-            text={text}
-            menuOpen={menuOpen}
-            onToggleMenu={() => setMenuOpen((value) => !value)}
-            onCloseMenu={() => setMenuOpen(false)}
-            onSelectMode={(next) => {
-              setMode(next);
-              // 切模式时把筛选收敛到新模式真正会用的形态，显示与请求才不会脱节。
-              // Collapse the filters to what the new mode actually uses, so the display
-              // and the request cannot drift apart.
-              setFilters((current) => normalizeFilters(current, next));
-              setMenuOpen(false);
-            }}
-            onOpen={openResult}
-          />
+          <ErrorBoundary
+            message={renderErrors.search}
+            resetKeys={[rootUri, query, mode]}
+          >
+            <FileBrowserSearchResults
+              mode={mode}
+              hits={hits}
+              listId={listId}
+              activeIndex={activeIndex}
+              query={query.trim()}
+              onHighlight={onHighlight}
+              onRetry={retry}
+              fallbackFocusRef={inputRef}
+              loading={search.loading || (awaitingQuery && !!draft.trim())}
+              error={search.error}
+              searched={search.result !== null}
+              text={text}
+              onSelectMode={(next) => {
+                setMode(next);
+                // 切模式时把筛选收敛到新模式真正会用的形态，显示与请求才不会脱节。
+                // Collapse the filters to what the new mode actually uses, so the display
+                // and the request cannot drift apart.
+                setFilters((current) => normalizeFilters(current, next));
+              }}
+              onOpen={openResult}
+            />
+          </ErrorBoundary>
         </div>
         {advancedOpen ? (
           <FileBrowserSearchAdvanced
             mode={mode}
             filters={effectiveFilters}
             scopes={scopes}
+            requestOptions={requestOptions}
             locale={locale}
             text={text}
             onChange={setFilters}
-            onClose={() => onToggleAdvanced(false)}
+            onClose={() => {
+              onToggleAdvanced(false);
+              inputRef.current?.focus();
+            }}
           />
         ) : null}
       </div>

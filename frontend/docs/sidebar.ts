@@ -25,6 +25,7 @@ const guide: Group[] = [
     pages: [
       { slug: 'getting-started', zh: '快速开始', en: 'Getting started' },
       { slug: 'i18n', zh: '国际化', en: 'Internationalization' },
+      { slug: 'changelog', zh: '发布日志', en: 'Release notes' },
     ],
   },
 ];
@@ -115,11 +116,6 @@ const modules: Group[] = [
     pages: [
       { slug: 'file-browser', zh: 'FileBrowser 文件浏览', en: 'FileBrowser' },
       { slug: 'console', zh: 'Console 交互面板', en: 'Console' },
-      {
-        slug: 'viking-bot',
-        zh: 'VikingBot 无头对话',
-        en: 'VikingBot headless chat',
-      },
     ],
   },
   {

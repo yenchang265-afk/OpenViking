@@ -395,4 +395,4 @@ openviking-server --with-bot
 
 - [Web Studio 國際化貢獻指南](./CONTRIBUTING_CN.md)：翻譯歸屬、服務端動態文本和審查清單。
 - [OpenViking server deployment](../docs/en/guides/03-deployment.md)：服務端部署說明。
-- [VikingBot validation with OpenViking Server](../bot/docs/vikingbot-phase1-validation-with-openviking-server.md)：Bot proxy 驗證流程。
+- [VikingBot validation with OpenViking Server](../docs/zh/guides/17-vikingbot.md)：Bot proxy 驗證流程。

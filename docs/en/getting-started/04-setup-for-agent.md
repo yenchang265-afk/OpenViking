@@ -196,7 +196,7 @@ Only add these when the provider requires them, when the README examples explici
 
 #### Path A: Standard minimal install
 
-Use a Python 3.11+ virtual environment, or follow the [Quick Start](02-quickstart.md) with `uv tool install`. In an activated virtual environment:
+Use a Python 3.11.5+ virtual environment, or follow the [Quick Start](02-quickstart.md) with `uv tool install`. In an activated virtual environment:
 
 ```bash
 python -m pip install --upgrade openviking

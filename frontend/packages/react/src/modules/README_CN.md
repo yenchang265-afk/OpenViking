@@ -3,7 +3,6 @@
 [English](README.md) / 中文
 
 `modules/` 存放區塊。每個區塊由內部 Hook 和組合元件組成：Hook 載入資料、適配資料並維護狀態，組合元件把 Hook 返回的資料和操作接入 `components/` 的檢視。宿主直接使用組合元件，自行組裝完整頁面。
-VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `useVikingBotChat`、`useVikingBotSessions` 及契約。Console 預設內建呼叫；獨立 VikingBot 宿主也可直接使用。它不匯出組合檢視或 CSS，Hook 不從包根或 Console 轉匯出。
 
 ## 區塊
 
@@ -12,7 +11,6 @@ VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `u
 | `file-browser`  | `FileBrowser`  | `@openviking/react/modules/file-browser`  | 圍繞同一個當前資源的目錄樹、搜尋與檔案預覽                        |
 | `console`       | `Console`      | `@openviking/react/modules/console`       | 同一面板內的對話（`VikingBot`）與命令（`CommandConsole`）兩種模式 |
 | `scope-cascade` | `ScopeCascade` | `@openviking/react/modules/scope-cascade` | 級聯的庫、空間與使用者選擇器                                      |
-| `viking-bot`    | 無頭 Hook      | `@openviking/react/modules/viking-bot`    | 對話請求、流式狀態與會話管理，無組合檢視或 CSS                    |
 
 每個區塊還有樣式入口 `@openviking/react/modules/<區塊>/style.css`，它包含所組合元件的樣式。用法、屬性和示例見[區塊文件](../../../../docs/docs/zh/modules/index.mdx)。
 
@@ -20,7 +18,7 @@ VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `u
 
 - `useFileBrowser` 與 `useConsole` 是內部實現。它們通過共享 Client 呼叫 OpenViking 原生 API，繼承 Provider 的請求配置，管理載入、空態、錯誤、分頁、重新整理、重試，並清理仍在進行的請求。`ScopeCascade` 自己不發請求：三個載入函式由宿主提供。`Console` 通過 VikingBot 模組傳送原生對話請求，也允許宿主通過 `conversation` 接管。
 - 組合元件把 Hook 返回的資料和操作交給 `components/` 的檢視，並協調區塊內的互動。
-- 除上述 VikingBot 無頭模組外，宿主直接使用組合元件，不匯出其內部 Hook 或控制器。
+- 宿主直接使用組合元件，不匯出其內部 Hook 或控制器。
 - 標準接入只需要服務地址與鑑權，不要求逐區塊實現資料 Adapter。非標準閘道器由宿主在請求接入層統一適配。登入、帳號作用域、路由、許可權執行、頁面佈局及產品專屬流程由宿主負責。
 - 區塊粒度以共同完成的互動流程為準：目錄、搜尋和預覽組成 `file-browser`；對話與命令組成 `console`。宿主組合區塊，不按內部檢視分別接入。
 

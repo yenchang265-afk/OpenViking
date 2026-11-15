@@ -33,6 +33,7 @@ export const sections: DocSection[] = [
         p('getting-started/08-resources'),
         p('getting-started/09-memory'),
         p('getting-started/10-skills'),
+        p('getting-started/24-live-context'),
         p('getting-started/16-rules'),
         p('getting-started/06-evaluate')
       ]),
@@ -243,7 +244,9 @@ export const sections: DocSection[] = [
       g('Storage and performance', '儲存與效能', [
         p('guides/13-multi-write-storage'),
         p('guides/14-ragfs-cache'),
-        p('guides/16-cuvs')
+        p('guides/16-cuvs'),
+        p('guides/25-pgvector'),
+        p('guides/26-pgvector-directory-filtering')
       ])
     ]
   },
@@ -257,6 +260,7 @@ export const sections: DocSection[] = [
         p('api/01-overview'),
         p('configuration/01-server'),
         p('configuration/02-client'),
+        p('configuration/03-fork'),
         p('guides/06-mcp-integration')
       ]),
       g('Resources and retrieval APIs', '資源與檢索 API', [

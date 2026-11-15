@@ -12,7 +12,7 @@ build-backend = "setuptools.build_meta"
 name = "openviking"
 dynamic = ["version", "readme"]
 description = "An Agent-native context database"
-requires-python = ">=3.11"
+requires-python = ">=3.11.5"
 authors = [
     {name = "ByteDance", email = "noreply@bytedance.com"}
 ]
@@ -68,6 +68,8 @@ dependencies = [
     # CVE-2026-83813 and GHSA-vpp8-g58w-m8mp.
     "filelock>=4.2.1",
     "twisted>=26.10.0",
+    # CVE-2026-126190: avoid polynomial-time descendant selector evaluation.
+    "soupsieve>=4.0.0",
     "protobuf>=6.33.5",
     "pdfminer-six>=20251230",
     "typer>=0.12.0",
@@ -112,6 +114,10 @@ expiry = [
 gateway-fast = [
     "uvloop>=0.21; sys_platform != 'win32'",
     "httptools>=0.6",
+]
+postgres = [
+    "psycopg[binary]>=3.2,<4",
+    "SQLAlchemy[asyncio]>=2.0.54,<2.1",
 ]
 mysql = [
     "aiomysql>=0.2.0,<1",
@@ -235,6 +241,10 @@ elasticsearch = [
   "elasticsearch>=8.12,<9",
 ]
 
+pgvector = [
+    "psycopg2-binary>=2.9,<3",
+]
+
 [project.urls]
 Homepage = "https://github.com/yenchang265-afk/OpenViking"
 Documentation = "https://openviking.ai"
@@ -277,6 +287,7 @@ openviking = [
     "server/account_stores/sql/*.sql",
     "server/account_stores/sql/changes/*.sql",
     "server/oauth/*.sql",
+    "server/account_stores/sql/postgres/*.sql",
     "service/sql/*.sql",
     "service/sql/changes/*.sql",
     "storage/vectordb/engine/*.abi3.so",

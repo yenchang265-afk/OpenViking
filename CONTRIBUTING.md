@@ -102,7 +102,7 @@ area first, then mention `@qin-ctx`, `@ZaynJarvis`, or `@zhoujh01`.
 
 ### Prerequisites
 
-- Python 3.11+
+- Python 3.11.5+
 - Rust 1.94.1+ for source builds, Rust bindings, and the bundled `ov` CLI
 - Go 1.22+ only for development under `sdk/go`
 - A C++17 compiler: GCC 9+ or Clang 11+
@@ -289,6 +289,17 @@ does not replace author validation or maintainer review.
 Project documentation lives under `docs/en/` and `docs/zh/`. Keep examples runnable,
 use concise language, and update both languages when the changed documentation has a
 corresponding translation.
+
+Run the documentation checks from the repository root after updating pages or examples:
+
+```bash
+npm --prefix docs ci
+npm --prefix docs run check:docs
+npm --prefix docs run check:api
+npm --prefix docs run test:theme
+npm --prefix docs run docs:build
+python3 docs/scripts/check-built-anchors.py
+```
 
 ## Community
 

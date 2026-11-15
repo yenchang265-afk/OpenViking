@@ -27,6 +27,14 @@ import '@openviking/react/components/file-browser-action-bar/style.css';
 
 示例中的匯入回撥是空函式，`apiKey` 僅用於演示。
 
+### 從其他入口開啟
+
+「快速開始」與操作欄共用同一個抽屜。從「快速開始」開啟並關閉抽屜後，外層將接入指引標記為已檢視。
+
+```tsx file="../../_demos/file-browser-action-bar-controlled.tsx" preview
+
+```
+
 ### 自定義匯入操作
 
 用 `renderImportResources` 包裹預設的匯入按鈕。點選「匯入資源」，下方狀態行會更新，說明包裹後 `onImportResources` 仍會觸發。
@@ -41,15 +49,17 @@ import '@openviking/react/components/file-browser-action-bar/style.css';
 
 ### FileBrowserActionBar
 
-| 引數                  | 說明                                                                                                            | 型別                                                                    | 預設值                   |
-| --------------------- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
-| agentConnect          | 顯示「連線 Agent」，點選後在右側抽屜中展示 [AgentConnect](./agent-connect)，引數透傳，`locale` 省略時跟隨操作欄 | `AgentConnectProps`                                                     | -                        |
-| onConnectAgent        | 點選「連線 Agent」時觸發；未傳 `agentConnect` 時，傳入它即顯示該操作，點選後的流程由宿主處理                    | `() => void`                                                            | -                        |
-| onImportResources     | 傳入後顯示「匯入資源」，點選時觸發                                                                              | `() => void`                                                            | -                        |
-| renderImportResources | 傳入後顯示「匯入資源」，`trigger` 是預設按鈕（已繫結 `onImportResources`），可包裹或替換，返回 `null` 時隱藏    | `(trigger: ReactElement<ComponentPropsWithRef<'button'>>) => ReactNode` | -                        |
-| labels                | 覆蓋介面文案                                                                                                    | `FileBrowserActionBarLabels`                                            | -                        |
-| locale                | 介面語言，規則見[國際化](../guide/i18n)                                                                         | `'zh-CN' \| 'en-US'`                                                    | 繼承上級，預設 `'en-US'` |
-| className、style      | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                          | HTML 屬性                                                               | -                        |
+| 引數                     | 說明                                                                                                            | 型別                                                                    | 預設值                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------- | ------------------------ |
+| agentConnect             | 顯示「連線 Agent」，點選後在右側抽屜中展示 [AgentConnect](./agent-connect)，引數透傳，`locale` 省略時跟隨操作欄 | `AgentConnectProps`                                                     | -                        |
+| agentConnectOpen         | 傳入 `agentConnect` 後可控制內建接入抽屜；省略時由操作欄管理開關                                                | `boolean`                                                               | -                        |
+| onAgentConnectOpenChange | 使用者請求開啟或關閉時觸發，關閉按鈕、遮罩和 Escape 均支援；宿主直接改屬性時不觸發                              | `(open: boolean) => void`                                               | -                        |
+| onConnectAgent           | 點選「連線 Agent」時觸發；未傳 `agentConnect` 時，傳入它即顯示該操作，點選後的流程由宿主處理                    | `() => void`                                                            | -                        |
+| onImportResources        | 傳入後顯示「匯入資源」，點選時觸發                                                                              | `() => void`                                                            | -                        |
+| renderImportResources    | 傳入後顯示「匯入資源」，`trigger` 是預設按鈕（已繫結 `onImportResources`），可包裹或替換，返回 `null` 時隱藏    | `(trigger: ReactElement<ComponentPropsWithRef<'button'>>) => ReactNode` | -                        |
+| labels                   | 覆蓋介面文案                                                                                                    | `FileBrowserActionBarLabels`                                            | -                        |
+| locale                   | 介面語言，規則見[國際化](../guide/i18n)                                                                         | `'zh-CN' \| 'en-US'`                                                    | 繼承上級，預設 `'en-US'` |
+| className、style         | 外觀與佈局，其餘 HTML 屬性透傳到根元素                                                                          | HTML 屬性                                                               | -                        |
 
 ### FileBrowserActionBarLabels
 
@@ -67,7 +77,7 @@ import '@openviking/react/components/file-browser-action-bar/style.css';
 - `renderImportResources` 返回 `null`、`undefined` 或布林值時，隱藏「匯入資源」。返回不含 `trigger` 的替代節點時，`onImportResources` 不再生效，點選由宿主自己處理。
 - `trigger` 是轉發 ref 的 `button` 元素，可以作為宿主 `Popover` 等元件的直接子節點。
 - 抽屜渲染在 `document.body` 下，從右側滑出，最寬 1000px 且不超過視口寬度；內容最小寬 720px，視口更窄時在抽屜內橫向滾動。
-- 點選關閉按鈕、點選遮罩或按 Esc 關閉抽屜。開啟期間焦點被限制在抽屜內、頁面不可滾動，關閉後焦點回到「連線 Agent」按鈕。
+- 點選關閉按鈕、點選遮罩或按 Esc 關閉抽屜。開啟期間焦點被限制在抽屜內、頁面不可滾動，關閉後焦點回到開啟前的位置。
 - 抽屜沿用觸發按鈕處生效的 `--ov-ui-color-*` 主題變數，在區域性容器裡覆蓋主題變數時，抽屜無需另外處理。
 - 操作欄高度固定 32px，寬度跟隨父容器；兩個操作等分寬度，文案過長時以省略號截斷。
 - 底色取自 `--ov-ui-color-primary-light`，文字和分隔線取自 `--ov-ui-color-primary`，覆蓋這兩個變數即可換色，主題規則見[快速開始](../guide/getting-started)。

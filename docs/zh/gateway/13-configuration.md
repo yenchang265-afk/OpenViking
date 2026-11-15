@@ -162,7 +162,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | `auxiliary_patterns` | 正規表示式，不區分大小寫 | 分別與 Messages 的 `system` 欄位、Responses 的 `instructions` 和最後一條使用者訊息匹配，命中的請求算作**輔助請求**。Chat Completions `messages` 和 Responses `input` 裡的 system、developer 訊息不參與匹配，這類客戶端要匹配使用者訊息裡的文本。 |
 | `noise_patterns` | 正規表示式，區分大小寫 | 閘道器讀取對話時忽略這些文本：不參與請求分類和記憶檢索，也不寫入儲存的訊息和工具結果，但仍原樣發給模型。刪完為空的使用者訊息不算新使用者訊息，請求按同一輪的延續處理。 |
 | `noise_tags` | 標籤名 | `<tag …>…</tag>` 塊（不區分大小寫），處理方式同 `noise_patterns`。 |
-| `plugin_tags` | 標籤名 | 系統提示詞或客戶端訊息中出現 `<tag`，表示客戶端裡執行著 OpenViking 記憶外掛。該對話此後閘道器只做轉發：不加記憶、不提供 OpenViking 工具、不儲存（見[兩者同時使用時](../guides/15-gateway.md#when-both-are-in-use)）。只新增外掛自己寫入的標籤。 |
+| `plugin_tags` | 標籤名 | 系統提示詞或客戶端訊息中出現程式碼之外的完整 `<tag>…</tag>` 塊，表示客戶端裡執行著 OpenViking 記憶外掛。該對話此後閘道器只做轉發：不加記憶、不提供 OpenViking 工具、不儲存（見[兩者同時使用時](../guides/15-gateway.md#when-both-are-in-use)）。只新增外掛自己寫入的標籤。 |
 
 - **`add` 追加到內建列表，`remove` 從內建列表中去掉條目。** `remove` 的條目要和 `client-rules.json` 裡的寫法完全一致。沒有匹配到任何條目的 `remove`（例如升級後內建條目改了寫法）會被忽略，啟動時列印警告。內建列表不能整體替換，這樣後續版本新增的條目仍然生效。
 - **只匹配客戶端自己寫的文本。** 用客戶端自己提示詞裡的整句，不要用短語。使用者訊息一旦命中，這一整輪都算輔助請求，不檢索也不儲存；如果模式還能命中主對話的系統提示詞，對話裡的每個請求都會這樣。噪聲模式要錨定整條訊息（JSON 裡寫作 `"\\A…\\Z"`），避免從真實訊息裡刪掉文字。
@@ -203,7 +203,7 @@ OPENVIKING_GATEWAY_MANAGEMENT_KEY='<management-key>'
 | 最新回覆等待時長 | `idle_seconds` | `600`（秒） | 1 及以上 | 停頓多久之後儲存最後一輪並提交會話。 |
 | 提交閾值 | `commit_tokens` | `20000` | 1 及以上 | 會話中待提交的 token 數達到這個值時提交。 |
 | 保留最近訊息 | `keep_recent_messages` | `10` | 0–1,000 | 提交後會話中保留的訊息數。 |
-| （僅 API） | `capture_memory_types` | `null`（所有已啟用的型別） | 記憶型別名稱，例如 `preferences`、`events`；`[]` 表示不提取 | OpenViking 從儲存的對話中提取哪些記憶型別。 |
+| （僅 API） | `capture_memory_types` | `null`（Server 0.5.0 及以上繼承使用者策略） | 記憶型別名稱，例如 `preferences`、`events`；`[]` 表示不提取 | OpenViking 從儲存的對話中提取哪些記憶型別。顯式列表設定會話策略。 |
 
 管理 API 儲存 `capture_memory_types` 時不檢查名稱。閘道器為對話建立 OpenViking 會話時，OpenViking 會拒絕它不認識或已停用的記憶型別：對話的內容都不會儲存，儲存狀態先顯示**重試中**，再顯示**已暫停**，原因為 `openviking_http_400`。修正後的配置只對之後開始的對話生效。`cases` 和 `trajectories` 只隨 `experiences` 一起提取：列出 `experiences` 時會同時加入這兩種，不列出時這兩種會被去掉，因此只列這兩種時不提取任何記憶。
 

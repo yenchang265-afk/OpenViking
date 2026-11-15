@@ -1,5 +1,7 @@
 # Server configuration fields
 
+> This repository is a fork. See [fork compatibility](../configuration/03-fork.md) before installing packages or selecting providers. Set `OPENAI_API_KEY` (and `COHERE_API_KEY` if enabling rerank) for the examples below.
+
 For initial setup, run `openviking-server init`, then run `openviking-server doctor` after saving the configuration.
 
 The OpenViking server reads `ov.conf`. The default path is:
@@ -53,7 +55,7 @@ Optional sections use their defaults when omitted. Unknown fields in `ov.conf` a
 |---|---|---|---|
 | `default_account` | string | `"default"` | Default account for the service context |
 | `default_user` | string | `"default"` | Default user for the service context |
-| `embedding` | object | built-in local dense model | Dense, sparse, and hybrid embedding; defaults to `local` / `bge-small-zh-v1.5-f16` |
+| `embedding` | object | built-in local dense model | Dense embedding in this fork; defaults to `local` / `bge-small-zh-v1.5-f16` |
 | `vlm` | object | empty config | Content understanding, summaries, and memory extraction; configure a working model before using these capabilities |
 | `query_planner` | object / `null` | `null` | Model for retrieval intent analysis and recall rewriting. Falls back to `vlm` when omitted or empty; recall rewrite in `auto` mode requires a configured cluster `query_planner` or an account-level `query_planner` or `vlm` override |
 | `rerank` | object | disabled | Retrieval result reranking |
@@ -89,39 +91,32 @@ API-based `embedding`, `vlm`, `query_planner`, and `rerank` configurations reuse
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "<your-ark-api-key>",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "dimension": 1536,
+      "input": "text"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}",
     "temperature": 0,
-    "max_retries": 3,
-    "thinking": false
+    "max_retries": 3
   },
   "query_planner": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
-    "thinking": false
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
   },
   "rerank": {
-    "provider": "vikingdb",
-    "ak": "<your-volcengine-ak>",
-    "sk": "<your-volcengine-sk>",
-    "host": "api-vikingdb.vikingdb.cn-beijing.volces.com",
-    "model_name": "doubao-seed-rerank",
-    "model_version": "251028",
-    "threshold": 0.1,
-    "max_input_tokens": 0
+    "provider": "cohere",
+    "api_key": "${COHERE_API_KEY}",
+    "model_name": "rerank-v3.5"
   }
 }
 ```
@@ -140,7 +135,7 @@ API-based `embedding`, `vlm`, `query_planner`, and `rerank` configurations reuse
 
 | Field | Type / values | Purpose |
 |---|---|---|
-| `provider` | `openai`, `volcengine`, `azure`, `ollama`, `local`, etc. | Dense embedding service |
+| `provider` | `openai`, `azure`, `ollama`, `local`, etc. | Dense embedding service |
 | `dimension` | integer, `> 0` | Vector dimension; must match model output and existing collections |
 | `input` | `"text"` / `"multimodal"` | Input type |
 | `encoding_format` | `"float"` / `"base64"` | OpenAI-compatible vector encoding |
@@ -241,7 +236,7 @@ discard source restrictions. Empty does not mean unknown or inapplicable.
 
 | Field | Type / values | Default | Purpose |
 |---|---|---|---|
-| `provider` | `vikingdb`, `cohere`, `openai`, `litellm`, `jev` / `null` | `null` | Rerank service; inferred from credentials when omitted |
+| `provider` | `cohere`, `openai`, `litellm`, `jev` / `null` | `null` | Rerank service; inferred from credentials when omitted |
 | `model` | string / `null` | `null` | OpenAI-compatible, LiteLLM, or Jev rerank model |
 | `mode` | `noul`, `choice`, or `null` | `noul` | Jev rerank mode; `null` also uses `noul` |
 | `threshold` | number | `0.1` | Minimum rerank score considered relevant; filters only model rerank scores, never vector scores, and a request `score_threshold` overrides it |
@@ -250,7 +245,7 @@ discard source restrictions. Empty does not mean unknown or inapplicable.
 
 Rerank has no separate `enabled` field. It becomes available when the required provider credentials are configured.
 
-`jev` supports direct TypeSafe access (`https://api.typesafe.ai/v1/systemone`, model `jev-latest`) and Vercel AI Gateway's TypeSafe-compatible endpoint (`https://ai-gateway.vercel.sh/typesafe/v1/systemone`, model `typesafe-ai/jev`) through the existing `api_base` and `model` fields; both speak the same protocol. For rerank, `api_base` may be either the service root or the complete System One URL; `/v1/systemone` is appended when absent. Its default `noul` mode scores each candidate independently. The optional `choice` mode compares all candidates and returns relative probabilities; set `threshold` to `0` when using it. Setting `provider` explicitly requires the credentials that provider needs: `ak` and `sk` for `vikingdb`, `api_key` for `cohere` and `jev`, `api_key` and `api_base` for `openai`, `model` for `litellm`. An incomplete block is rejected when the configuration loads.
+`jev` supports direct TypeSafe access (`https://api.typesafe.ai/v1/systemone`, model `jev-latest`) and Vercel AI Gateway's TypeSafe-compatible endpoint (`https://ai-gateway.vercel.sh/typesafe/v1/systemone`, model `typesafe-ai/jev`) through the existing `api_base` and `model` fields; both speak the same protocol. For rerank, `api_base` may be either the service root or the complete System One URL; `/v1/systemone` is appended when absent. Its default `noul` mode scores each candidate independently. The optional `choice` mode compares all candidates and returns relative probabilities; set `threshold` to `0` when using it. Setting `provider` explicitly requires the credentials that provider needs: `api_key` for `cohere` and `jev`, `api_key` and `api_base` for `openai`, `model` for `litellm`. An incomplete block is rejected when the configuration loads.
 
 ## Retrieval Settings
 
@@ -301,9 +296,10 @@ Search and Find requests default to `limit: 10`; override the limit on each API 
 |---|---|---|---|
 | `workspace` | path | `"./data"` | OpenViking workspace |
 | `agfs.backend` | `local`, `memory`, `s3` | `local` | File and metadata backend |
-| `agfs.pathlock.provider` | `filesystem`, `memory`, `sqlite`, `cache` | `filesystem` | Path lock storage |
+| `agfs.pathlock.provider` | `filesystem`, `memory`, `sqlite`, `postgres`, `cache` | `filesystem` | Path lock storage; `postgres` uses PostgreSQL directly, `cache` uses Redis |
 | `agfs.pathlock.sqlite_path` | absolute local file path | `{workspace}/_system/pathlock/pathlock.db` for `sqlite` | Shared SQLite lock database; optional override |
-| `vectordb.backend` | `local`, `cuvs`, `http`, `opengauss`, `elasticsearch` | `local` | Vector database backend |
+| `agfs.pathlock.postgres_dsn_env` | environment variable name / `null` | `null` | Required for `postgres`; names the server environment variable containing the PostgreSQL DSN |
+| `vectordb.backend` | `local`, `cuvs`, `http`, `opengauss`, `pgvector`, `elasticsearch` | `local` | Vector database backend; see [pgvector setup](../guides/25-pgvector.md) |
 | `vectordb.dimension` | integer | follows Embedding | Vector collection dimension |
 | `parse_output.mode` | `agfs`, `local` | `agfs` | Backend for intermediate parser artifacts |
 | `parse_output.local_root` | path or `null` | system temp directory | Root directory used by local parser artifacts |
@@ -332,7 +328,7 @@ retries still report Busy to the manager; logical lock Conflict is not retried. 
 additional synchronization I/O compared with `NORMAL`.
 Lease heartbeats refresh owned paths in one SQLite transaction (bounded batches
 for large leases). `stale_locks_removed` includes tokens recovered by committed
-atomic SQLite/Redis acquisitions; failed transactions do not increment the count.
+atomic SQLite/PostgreSQL/Redis acquisitions; failed transactions do not increment the count.
 
 SQLite acquisitions completely delete expired tokens belonging to other owners
 that conflict with the request: the target path, ancestor Tree locks, and all
@@ -347,16 +343,104 @@ updates also add synchronization I/O. If `storage.workspace` is on EFS, the
 default database path is on EFS too. Moving it to each container's local disk
 creates independent lock authorities and cannot coordinate replicas.
 
-For multiple containers or hosts sharing EFS, use shared Redis PathLock:
+#### PostgreSQL PathLock
+
+For multiple containers or hosts sharing EFS, use PostgreSQL PathLock or shared Redis PathLock.
+PostgreSQL coordinates participating processes directly without Redis or a top-level
+`cache` configuration. Merge this minimal fragment into your server's `ov.conf`:
+
+```json
+{
+  "service_name": "production",
+  "storage": {
+    "agfs": {
+      "pathlock": {
+        "provider": "postgres",
+        "postgres_dsn_env": "OV_POSTGRES_DSN",
+        "lock_expire_secs": 30.0
+      }
+    }
+  }
+}
+```
+
+Set the DSN in every server and worker environment before startup:
+
+```sh
+export OV_POSTGRES_DSN='host=pg.example.com port=5432 dbname=openviking user=openviking password=YOUR_PASSWORD sslmode=require'
+```
+
+Use PostgreSQL 13+ with UTF8 server encoding. All participants protecting the same
+files must use the same writable primary, database, top-level `service_name`, provider,
+and expiry duration. Different service names create independent lock namespaces;
+read replicas cannot coordinate lock operations. No PostgreSQL extension is required.
+`lock_expire_secs` must be at least `1.0` second and defaults to `30.0`.
+
+`postgres_dsn_env` is a nonempty environment variable name, not the DSN itself.
+Both PostgreSQL URLs and key/value DSNs are accepted. Credentials are read at
+initialization; restart every server and worker after rotating them.
+For remote connections, use `sslmode=require`; the native TLS connector verifies
+the certificate and hostname using the system trust store. Use `sslmode=disable`
+only for a disposable local test database.
+
+On first startup, the provider creates `public.ov_pathlock_tokens`,
+`public.path_prefix_2048(text)`, and lookup, expiry, and subtree indexes.
+The initialization role needs CONNECT to the database and USAGE/CREATE on the
+`public` schema. The runtime role needs SELECT, INSERT, UPDATE, DELETE on the
+table and EXECUTE on the helper. A migration role can pre-provision these objects
+and grant runtime permissions before startup. Pre-provision the helper with:
+
+```sql
+CREATE FUNCTION public.path_prefix_2048(text) RETURNS bytea
+LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS 'SELECT pg_catalog.substring(pg_catalog.convert_to($1, ''UTF8''), 1, 2048)';
+```
+
+Initialization creates the helper only when absent; an existing helper must use
+this definition. Upgrading the earlier `(namespace,path)` primary key requires
+the table owner and all old provider instances to be stopped. Index creation
+is transactional and subject to DDL timeouts; pre-provision indexes for large tables.
+Source installations must rebuild the Python native binding when upgrading its
+PostgreSQL support. Rust integrations enable `ragfs/postgres`.
+
+To verify coordination, start two processes with the same settings. Hold a Tree
+lease in one and request an Exact lease below that root in the other; the second
+acquisition must conflict until release or expiry takeover. PostgreSQL can lock
+nonexistent logical paths without creating business directories. Explicit-path
+snapshot commits use the runtime provider's handle mode to select Tree locks for
+missing PostgreSQL targets; see [snapshot semantics](../guides/15-snapshot.md).
+The primary's clock determines lock timestamps and expiry; batches commit in full
+or roll back, and holders renew and release independently.
+
+Operations within one namespace are serialized; measure acquisition and renewal
+at the intended concurrency. Prevent split brain and account for committed-lock
+loss during failover with asynchronous replication. PathLock does not provide
+storage-side fencing after lease loss or change CachedFileSystem's single-writer
+requirement, local vector storage's process lock, or other backend concurrency limits.
+
+| Symptom | Check |
+| --- | --- |
+| Unknown `postgres` provider | Rebuild or upgrade the native binding |
+| Missing DSN | Export the configured variable in every server and worker environment |
+| Schema initialization fails | Check UTF8 encoding, permissions, object ownership, and migration duration |
+| Participants do not conflict | Check primary, database, service name, provider, and expiry settings |
+| Database `Busy` | Check database contention and load; distinguish it from a logical path conflict |
+
+#### Redis PathLock
+
+For Redis coordination,
 set `storage.agfs.pathlock.provider="cache"` and top-level `cache.provider="redis"`.
 All replicas must use the same Redis deployment, top-level `service_name`, and
 lock expiry setting. See the [shared Redis configuration example](../guides/01-configuration.md).
-Shared QueueFS must also use a backend suitable for that deployment, such as
+With either PathLock provider, shared QueueFS must also use a backend suitable for that deployment, such as
 `storage.agfs.queuefs.backend="cache"`; changing PathLock alone does not change
 the default SQLite queue backend.
 
-Stop all participating processes before switching providers:
-SQLite and filesystem lock files do not share a protocol. Do not delete the database,
+#### Provider switches and upgrades
+
+Stop all participating processes and renewal tasks before switching providers:
+Filesystem, SQLite, PostgreSQL, and Redis maintain independent lock authorities.
+Do not mix providers for processes writing the same files. Do not delete the SQLite database,
 WAL, or SHM files while participants are running. Crashed owners' tokens become
 eligible for takeover after `lock_expire_secs` (default 30 seconds). This setting
 does not change the workspace process lock or other backend concurrency constraints.
@@ -622,20 +706,19 @@ Provider-, parser-, storage-, and encryption-specific fields are documented in [
 {
   "embedding": {
     "dense": {
-      "provider": "volcengine",
-      "model": "doubao-embedding-vision-251215",
-      "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-      "api_key": "<your-ark-api-key>",
-      "dimension": 1024,
-      "input": "multimodal"
+      "provider": "openai",
+      "model": "text-embedding-3-small",
+      "api_base": "https://api.openai.com/v1",
+      "api_key": "${OPENAI_API_KEY}",
+      "dimension": 1536,
+      "input": "text"
     }
   },
   "vlm": {
-    "provider": "volcengine",
-    "model": "doubao-seed-2-0-code-preview-260215",
-    "api_base": "https://ark.cn-beijing.volces.com/api/v3",
-    "api_key": "<your-ark-api-key>",
-    "thinking": false
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "api_base": "https://api.openai.com/v1",
+    "api_key": "${OPENAI_API_KEY}"
   },
   "storage": {
     "workspace": "./data"

@@ -3,7 +3,6 @@
 [English](README.md) / 中文
 
 用於在 OpenViking（面向 AI 智慧體的上下文資料庫）之上構建應用介面的 React 業務元件與區塊。
-VikingBot 是無頭模組：從 `@openviking/react/modules/viking-bot` 匯入 `useVikingBotChat`、`useVikingBotSessions` 及契約。Console 預設內建呼叫；獨立 VikingBot 宿主也可直接使用。它不匯出組合檢視或 CSS，Hook 不從包根或 Console 轉匯出。
 
 ## 安裝
 
@@ -91,7 +90,7 @@ export function Browser({ apiKey }: { apiKey: string }) {
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@openviking/react`                   | 業務元件和區塊，以及各自的主 Props 型別，例如 `FileTree` 與 `FileTreeProps`。`FilePreview` 除外，需要從它的子路徑匯入。                                                           |
 | `@openviking/react/components/<名稱>` | 單個元件及其相關型別（行、選項、控制代碼、文案），例如 `components/file-tree`。同族元件放在分組目錄下，例如 `components/auth/email-login-form`。                                  |
-| `@openviking/react/modules/<名稱>`    | 區塊 `file-browser`、`console`、`scope-cascade`，或 `viking-bot` 無頭模組。                                                                                                       |
+| `@openviking/react/modules/<名稱>`    | 區塊 `file-browser`、`console`、`scope-cascade`。                                                                                                                                 |
 | `@openviking/react/client`            | `OpenVikingProvider` 與請求客戶端（`createOvClient`、`OvClientError` 等）。                                                                                                       |
 | `@openviking/react/icons`             | 圖示元件與檔案型別圖示函式。                                                                                                                                                      |
 | `…/style.css`                         | 樣式。JavaScript 不會引入 CSS，用到什麼引入什麼：整包用 `@openviking/react/style.css`，一類用 `components/style.css` 或 `modules/style.css`，單個元件或區塊用各自的 `style.css`。 |
@@ -108,4 +107,4 @@ export function Browser({ apiKey }: { apiKey: string }) {
 
 ## 許可證
 
-`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal 與 Drawer 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。
+`@openviking/react` 使用 AGPL-3.0-only 許可證，與 OpenViking 倉庫一致（[LICENSE](../../../LICENSE)）。內部的 Button、Input、Modal、Drawer 與 Notification 改編自 Arco Design（MIT），宣告隨包保留在 `LICENSE.arco-design`；Button 與 Input 的視覺規則改編自 `@arco-design/theme-ve-o-aml-design@0.0.36`（MIT）。圖示的來源與授權（包括 Apache-2.0 的檔案型別圖示）記錄在 [`packages/icons`](../icons/README.md)。

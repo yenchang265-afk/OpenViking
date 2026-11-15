@@ -17,4 +17,7 @@
 
 先從[觀測與排障入口](05-observability.md)選擇工具。單次請求看[操作遙測](07-operation-telemetry.md)，時間趨勢看 [Prometheus / Grafana](11-grafana-prometheus.md)，指標含義查[指標口徑](../concepts/12-metrics.md)。常見問題見[FAQ](../faq/faq.md)。
 
-有儲存或效能需求時，再選擇[主備儲存](13-multi-write-storage.md)、[RAGFS 快取](14-ragfs-cache.md)或 [cuVS](16-cuvs.md)。這些是按需配置項，不是首次部署的必經步驟。
+有儲存或效能需求時，再選擇[主備儲存](13-multi-write-storage.md)、[RAGFS 快取](14-ragfs-cache.md)、[cuVS](16-cuvs.md) 或 [PostgreSQL + pgvector](25-pgvector.md)。這些是按需配置項，不是首次部署的必經步驟。
+
+需要在不使用 Redis 的情況下跨程序或主機共享路徑鎖時，參見
+[PostgreSQL PathLock 配置](../configuration/01-server.md#postgresql-pathlock)。
